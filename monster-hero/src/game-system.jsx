@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5e8fc3440e3933e3
+// generated-sha256: 3a6a8efaec989652
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-12 07:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-12 07:56"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3126,20 +3126,35 @@ const RHYTHM_SORT_ORDERS = Object.freeze([
   Object.freeze({ id:'length', label:'長さ順',  note:'曲が短い順。軽く1曲遊びたいときに' }),
 ]);
 const RHYTHM_SORT_IDS = Object.freeze(RHYTHM_SORT_ORDERS.map(item => item.id));
-// eventOnly … イベントの対象曲だけに絞るか(2026-09-11・ユーザー指示
-//   「ソートにイベント曲だけ出てくるのほしいね」)。並び替えではなく絞り込みなので、
-//   並び替えの一覧には混ぜず、別のボタンにしてある。
-//   ★開催していないときは、この値が true でも絞らない(画面側で見る)。
+// ジャンル(曲の絞り込み)。2026-09-11・ユーザー指示
+// 「対象曲のところをジャンルに変えて、その中から選べるようにしよう。イベント曲、オリジナル、MF とか。
+//   ジャンルを決めないとだから、とりあえずイベント曲だけ選べるようにすればおけ」。
+//
+// ★ジャンルを増やすときは、ここへ1件足して、曲の側に見分けるための印を付ける。
+//   画面(29-rhythm-screens.jsx)は書き換えない。
+// ★whileEvent:true を付けたものは、イベントを開催しているあいだだけ選べる。
+//   開催していないときに選ぶと一覧が空になるため。
+const RHYTHM_GENRES = Object.freeze([
+  Object.freeze({ id:'all',   label:'すべて',       note:'遊べる曲を全部' }),
+  Object.freeze({ id:'event', label:'🏆 イベント曲', note:'いま開催しているイベントの対象曲', whileEvent:true }),
+]);
+const RHYTHM_GENRE_IDS = Object.freeze(RHYTHM_GENRES.map(item => item.id));
+// genre … 曲の絞り込み(2026-09-11)。並び替えではないので、並び替えの一覧には混ぜない。
+//   ★開催していないときは、保存値が 'event' のままでも絞らない(画面側で見る)。
 //     そうしないと、イベントが終わったあとに一覧が空の人が出てしまう。
-//   ★新しい項目なので、持っていない既存ユーザーは既定値(false)で補われる(CLAUDE.md ⑦)。
-const DEFAULT_RHYTHM_SELECT_VIEW = Object.freeze({ sort:'added', desc:false, noticeOpen:true, eventOnly:false });
+//   ★新しい項目なので、持っていない既存ユーザーは既定値('all')で補われる(CLAUDE.md ⑦)。
+//   ★短いあいだ eventOnly(真偽値)で持っていたので、その値も読める形にしてある。
+//     消さずに読み替えるだけ。true だった人は 'event' を選んでいた扱いになる。
+const DEFAULT_RHYTHM_SELECT_VIEW = Object.freeze({ sort:'added', desc:false, noticeOpen:true, genre:'all' });
 const normalizeRhythmSelectView = value => {
   const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  const genre = RHYTHM_GENRE_IDS.includes(source.genre) ? source.genre
+    : (source.eventOnly === true ? 'event' : DEFAULT_RHYTHM_SELECT_VIEW.genre);
   return {
     sort: RHYTHM_SORT_IDS.includes(source.sort) ? source.sort : DEFAULT_RHYTHM_SELECT_VIEW.sort,
     desc: typeof source.desc === 'boolean' ? source.desc : DEFAULT_RHYTHM_SELECT_VIEW.desc,
     noticeOpen: typeof source.noticeOpen === 'boolean' ? source.noticeOpen : DEFAULT_RHYTHM_SELECT_VIEW.noticeOpen,
-    eventOnly: typeof source.eventOnly === 'boolean' ? source.eventOnly : DEFAULT_RHYTHM_SELECT_VIEW.eventOnly,
+    genre,
   };
 };
 // ノーツ速度は見た目のtravelだけを変える。1.0〜12.0を0.1刻みで選べ、6.0は従来の見た目(2150ms)を維持する。
@@ -3342,7 +3357,10 @@ const normalizeBgmArrangement = value => Object.fromEntries(Object.entries(DEFAU
 const Audio_ = (() => {
   let Tone = null, ready = false, loading = null, started = false;
   let reverb = null, seBus = null;
-  let audioCtx = null, bgmGain = null;
+  let audioCtx = null, bgmGain = null, masterOut = null, analyser = null, analyserData = null;
+  // AudioContextが「動いているつもりで止まっていないか」を見るための控え。
+  // Androidでは state が running のままでも音が出なくなることがあり、state だけでは気づけない
+  let ctxTimeMark = null, ctxRebuildCount = 0, toneLoadFailed = false;
   const buffers = new Map();
   const loadingBuffers = new Map();
   // previewRequest は試聴の「この呼び出しが今も最新か」を見るための番号。
@@ -3367,10 +3385,10 @@ const Audio_ = (() => {
       const s = document.createElement('script');
       s.src = 'https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js';
       s.onload = () => { Tone = window.Tone; res(); };
-      s.onerror = () => { res(); };
+      s.onerror = () => { toneLoadFailed = true; res(); };
       document.head.appendChild(s);
     }).then(async () => {
-      if (!Tone) return;
+      if (!Tone) { toneLoadFailed = true; return; }
       try {
         seBus = new Tone.Gain(_gainFromPct(seVolumePct)).toDestination();
         reverb = new Tone.Reverb({ decay: 2.4, wet: 0.22 }).connect(seBus);
@@ -3456,6 +3474,23 @@ const Audio_ = (() => {
 
   // HTMLAudioElementはiOSの消音スイッチを無視するため使用しない。mp3を取得・デコードし、
   // BGMもジングルもAudioBufferSourceNodeだけで出力する。
+  //
+  // 出口(destination)の手前に、素通しのgainと音量計(analyser)を1つだけ挟む。
+  // 音は変えない。「コードの上では鳴らしているのに端末から聞こえない」を切り分けるため、
+  // 実際に流れている波形の大きさを設定画面から見られるようにする
+  const buildAudioGraph = (ctx) => {
+    masterOut = ctx.createGain();
+    masterOut.gain.value = 1;
+    analyser = ctx.createAnalyser();
+    analyser.fftSize = 2048;
+    analyser.smoothingTimeConstant = 0;
+    try { analyserData = new Float32Array(analyser.fftSize); } catch (e) { analyserData = null; }
+    masterOut.connect(analyser);
+    analyser.connect(ctx.destination);
+    bgmGain = ctx.createGain();
+    bgmGain.gain.value = _bgmGain(bgmVolumePct);
+    bgmGain.connect(masterOut);
+  };
   const getAudioCtx = () => {
     if (audioCtx) return audioCtx;
     if (typeof window === 'undefined') return null;
@@ -3463,16 +3498,31 @@ const Audio_ = (() => {
     if (!AC) return null;
     try {
       audioCtx = new AC();
-      bgmGain = audioCtx.createGain();
-      bgmGain.gain.value = _bgmGain(bgmVolumePct);
-      bgmGain.connect(audioCtx.destination);
+      buildAudioGraph(audioCtx);
+      ctxTimeMark = null;
       bindResumeOnGesture();
-    } catch (e) { audioCtx = null; bgmGain = null; }
+    } catch (e) { audioCtx = null; bgmGain = null; masterOut = null; analyser = null; analyserData = null; }
     return audioCtx;
   };
   // AudioContextは端末側の自動再生制限・省電力・他アプリの音声フォーカスで止められる。
   // 止まったまま start() しても無音になるだけなので、次のタップで必ず復帰させる。
-  // タップはuser activationが有効な唯一の機会なので、ここでresume()を呼ぶ意味がある
+  // タップはuser activationが有効な唯一の機会なので、ここでresume()を呼ぶ意味がある。
+  //
+  // ここから下は、AudioContext.currentTime が実時間どおりに進んでいるかを見る仕掛け。
+  // Androidでは、出力先の切り替え(Bluetooth・イヤホン)・他アプリとの音の取り合い・省電力のあとに、
+  // state は running のままなのに時計だけ止まり、何を鳴らしても無音になることがある。
+  // この状態は resume() では戻らないので、state を見るだけでは永久に気づけない
+  const ctxClockStalled = () => {
+    const ctx = audioCtx;
+    if (!ctx || ctx.state !== 'running') return false;
+    const now = Date.now(), time = ctx.currentTime;
+    if (!ctxTimeMark) { ctxTimeMark = { at: now, time }; return false; }
+    const elapsed = now - ctxTimeMark.at;
+    if (elapsed < 500) return false;
+    const advanced = time - ctxTimeMark.time;
+    ctxTimeMark = { at: now, time };
+    return advanced < (elapsed / 1000) * 0.2;
+  };
   let resumeOnGestureBound = false;
   const bindResumeOnGesture = () => {
     if (resumeOnGestureBound || typeof document === 'undefined') return;
@@ -3482,7 +3532,7 @@ const Audio_ = (() => {
       if (!ctx || ctx.state === 'running') return;
       let done = null;
       try { done = ctx.resume(); } catch (e) {}
-      const after = () => { if (audioCtx && audioCtx.state === 'running' && enabled && !pageHidden && currentKey && !bgmSource && !jingleSource && !previewSource) playBGM(currentKey); };
+      const after = () => { ctxTimeMark = null; if (audioCtx && audioCtx.state === 'running' && enabled && !pageHidden && currentKey && !bgmSource && !jingleSource && !previewSource) playBGM(currentKey); };
       if (done && done.then) done.then(after, () => {}); else setTimeout(after, 0);
     };
     ['pointerdown', 'touchstart', 'click', 'keydown'].forEach(type => {
@@ -3589,6 +3639,64 @@ const Audio_ = (() => {
     } catch (e) { if (request === previewRequest && previewKey === track.id) stopPreview(true); return false; }
   };
   const stopBGM = () => { currentKey = null; ++bgmRequest; stopPreview(false); stopJingles(); stopOthers(); };
+
+  // BGMの出口を丸ごと作り直す。設定画面の「音を鳴らし直す」から呼ぶ。
+  // 「running なのに時計が止まっている」「resume しても戻らない」状態は、
+  // いまのAudioContextを捨てて新しく作る以外に戻す手がない(Androidで実際に起きる)。
+  // 音ゲーの演奏中だけは作り直さない(鳴っている曲のハンドルが死に、譜面とずれるため)。
+  const rebuildAudioCtx = async () => {
+    if (activeRhythmGains.size) return false;
+    const old = audioCtx, resumeKey = currentKey;
+    ++bgmRequest; ++previewRequest;
+    stopSource(bgmSource); bgmSource = null; bgmSourceKey = null;
+    stopSource(previewSource); previewSource = null; previewKey = null;
+    stopJingles();
+    audioCtx = null; bgmGain = null; masterOut = null; analyser = null; analyserData = null; ctxTimeMark = null;
+    // 音源(AudioBuffer)は作り直したcontextのサンプリングレートが違うと速さが変わってしまう。
+    // 取り直しても通信キャッシュから読めるので、ここは安全側に倒して捨てる
+    buffers.clear(); loadingBuffers.clear();
+    try { if (old && old.state !== 'closed') await old.close(); } catch (e) {}
+    const ctx = getAudioCtx();
+    if (!ctx) return false;
+    ctxRebuildCount++;
+    // 効果音(Tone)はTone自身のAudioContextで鳴っているので、ここでは触らない。
+    // 止まっていることがあるので、起こすところだけやる
+    if (Tone) { try { await Tone.start(); started = true; } catch (e) {} }
+    try { await ctx.resume(); } catch (e) {}
+    currentKey = resumeKey;
+    if (enabled && resumeKey && !pageHidden) playBGM(resumeKey);
+    return ctx.state === 'running';
+  };
+  // いま出口へ実際に流れている波形の大きさ(0〜1)。鳴っていなければ0。
+  // 「アプリは鳴らしているのに端末から聞こえない」のか「そもそも鳴っていない」のかを分ける
+  const outputLevel = () => {
+    if (!analyser || !analyserData) return null;
+    try {
+      analyser.getFloatTimeDomainData(analyserData);
+      let peak = 0;
+      for (let i = 0; i < analyserData.length; i++) { const v = Math.abs(analyserData[i]); if (v > peak) peak = v; }
+      return peak;
+    } catch (e) { return null; }
+  };
+  // 効果音エンジン(Tone)を通さず、素のWeb Audioだけで短い音を鳴らす。
+  // 「Toneが読めていないだけ」なのか「出口そのものが死んでいる」のかを分けるため
+  const playTestTone = async () => {
+    const ctx = await ensureAudioCtxRunning();
+    if (!ctx || !masterOut) return false;
+    try {
+      const osc = ctx.createOscillator(), gain = ctx.createGain(), at = ctx.currentTime;
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(880, at);
+      osc.frequency.setValueAtTime(1320, at + 0.16);
+      gain.gain.setValueAtTime(0, at);
+      gain.gain.linearRampToValueAtTime(0.3, at + 0.02);
+      gain.gain.linearRampToValueAtTime(0, at + 0.42);
+      osc.connect(gain); gain.connect(masterOut);
+      osc.start(at); osc.stop(at + 0.45);
+      setTimeout(() => { try { osc.disconnect(); gain.disconnect(); } catch (e) {} }, 900);
+      return true;
+    } catch (e) { return false; }
+  };
   // 音ゲーの時刻は AudioContext.currentTime と再生offsetだけを正本にする。
   // BufferSourceNodeは一度stopしたら再利用せず、再開のたびにoffsetから作り直す。
   // options.autoStart:false を渡すと「音源の用意だけして、まだ鳴らさない」。
@@ -3614,9 +3722,10 @@ const Audio_ = (() => {
         const raw=Math.max(0,Math.min(1,Number(rhythmVolumePct)/100))*safeTrackGain(track);
         dropGainEntry(); gainEntry={node:rhythmGain,raw}; activeRhythmGains.add(gainEntry);
         rhythmGain.gain.value=enabled?raw:0;
-        // 音ゲー専用の音量なので、メインのBGM音量(bgmGain)は経由せず直接destinationへ繋ぐ。
+        // 音ゲー専用の音量なので、メインのBGM音量(bgmGain)は経由しない。
         // 全体ミュート(enabled)だけはactiveRhythmGains経由で共通に反映する。
-        nextSource.buffer=buffer; nextSource.loop=loop; nextSource.connect(rhythmGain);rhythmGain.connect(ctx.destination);
+        // 出口の手前(masterOut)だけは通す。音は変わらず、音量計で鳴っているか見られるようになる
+        nextSource.buffer=buffer; nextSource.loop=loop; nextSource.connect(rhythmGain);rhythmGain.connect(masterOut||ctx.destination);
         source=nextSource; offsetSeconds=offset; startedAt=ctx.currentTime; playing=true;
         nextSource.onended=()=>{if(source===nextSource&&playing){playing=false;naturallyEnded=true;source=null;}};
         nextSource.start(0,offset); return true;
@@ -3679,7 +3788,7 @@ const Audio_ = (() => {
       jingleTimer = setTimeout(backToBGM, Math.ceil(buffer.duration * 1000) + 250);
     } catch (e) { if (currentKey) playBGM(currentKey); }
   };
-  const setPageHidden = (hidden) => { pageHidden = !!hidden; if (pageHidden) { ++bgmRequest; stopPreview(false); stopOthers(); stopJingles(); } else if (currentKey) playBGM(currentKey); };
+  const setPageHidden = (hidden) => { pageHidden = !!hidden; ctxTimeMark = null; if (pageHidden) { ++bgmRequest; stopPreview(false); stopOthers(); stopJingles(); } else if (currentKey) playBGM(currentKey); };
   const setEnabled = async (on) => { enabled = !!on; if (typeof window !== 'undefined') window.__mhAudioEnabled = enabled; applyRhythmMute(); if (!enabled) { ++bgmRequest; stopPreview(false); stopOthers(); stopJingles(); } else if (currentKey) playBGM(currentKey); await ensure(); };
   const isEnabled = () => enabled;
   // いま実際に鳴っている曲を、外(検査)から見るための口。
@@ -3712,6 +3821,40 @@ const Audio_ = (() => {
   if (typeof window !== 'undefined') {
     try { window.__mhAudioDebug = debugPlayingTracks; window.__mhAudioExpectedSrc = debugExpectedSrc; } catch (e) {}
   }
+  // 「音が出ない」を端末の上で切り分けるための一式(音量設定の「音が出ないとき」から見る)。
+  // 画面から呼ぶだけの読み取りなので、ゲームの動きは変えない
+  const diagnose = () => {
+    const ctx = audioCtx;
+    let toneState = 'none';
+    if (Tone) { try { toneState = (Tone.getContext && Tone.getContext().state) || 'none'; } catch (e) { toneState = 'none'; } }
+    return {
+      enabled, pageHidden,
+      bgmVolumePct, seVolumePct,
+      ctxState: ctx ? ctx.state : 'none',
+      sampleRate: ctx ? Math.round(ctx.sampleRate) : 0,
+      // getAudioCtx()を呼ばない(見ただけで出口を作らない)。作る前は判定しようがないので false。
+      // 画面を隠しているあいだは時計も止まるので、そこは見ない(戻った直後の誤判定を防ぐ)
+      stalled: ctx && !pageHidden ? ctxClockStalled() : false,
+      rebuilds: ctxRebuildCount,
+      toneLoaded: !!Tone, toneReady: ready, toneState, toneFailed: toneLoadFailed,
+      level: outputLevel(),
+      playing: debugPlayingTracks().playing,
+    };
+  };
+  // 音が実際に出ているかを外(検査)から確かめるための口。
+  // tools/audio/audio-output-check.js が、鳴らしてから音量計の値を読む。
+  // プレイヤーの画面には何も出ないし、ゲームの動きも変えない
+  if (typeof window !== 'undefined') {
+    try { window.__mhAudioDiagnose = () => diagnose(); window.__mhAudioTestTone = () => playTestTone(); } catch (e) {}
+  }
+  // 設定画面の「音を鳴らし直す」。出口を作り直して、テスト音まで鳴らす
+  const repair = async () => {
+    if (!enabled) { enabled = true; if (typeof window !== 'undefined') window.__mhAudioEnabled = true; applyRhythmMute(); }
+    const rebuilt = await rebuildAudioCtx();
+    const ctx = await ensureAudioCtxRunning();
+    const beeped = await playTestTone();
+    return { rebuilt, beeped, running: !!ctx && ctx.state === 'running' };
+  };
   const setSeVolume = (pct) => { seVolumePct = pct; if (seBus && Tone) { try { seBus.gain.rampTo(_gainFromPct(pct), 0.05); } catch (e) {} } };
   const setBgmVolume = (pct) => { bgmVolumePct = pct; applyTrackGain(resolveTrack(previewKey || currentKey)); if (pct <= 0) { stopPreview(false); stopOthers(); } else if (enabled && currentKey && !previewKey) playBGM(currentKey); };
   const resumeIfNeeded = async () => { await ensureAudioCtxRunning(); if (Tone) { try { await Tone.start(); started = true; } catch (e) {} } if (enabled && currentKey && !bgmSource) playBGM(currentKey); };
@@ -3786,7 +3929,7 @@ const Audio_ = (() => {
     fusion: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const v = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'triangle' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.25, release: 0.5 }, volume: -10 }).connect(reverb); const seq = [[0,'C5','8n'],[0.12,'E5','8n'],[0.24,'G5','8n'],[0.36,'C6','8n'],[0.48,'E6','4n']]; seq.forEach(([tt, n, d]) => v.triggerAttackRelease(n, d, t + tt)); const bt = t + 0.6; const bell = new Tone.MetalSynth({ frequency: 800, envelope: { attack: 0.001, decay: 0.6, release: 0.3 }, harmonicity: 8, modulationIndex: 20, resonance: 5000, octaves: 1.5, volume: -14 }).connect(reverb); bell.triggerAttackRelease('16n', bt); const sparkle = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'sine' }, envelope: { attack: 0.005, decay: 0.4, sustain: 0.1, release: 0.5 }, volume: -12 }).connect(reverb); ['C6','E6','G6','C7'].forEach((n, i) => sparkle.triggerAttackRelease(n, '8n', bt + i * 0.03)); setTimeout(() => { try { v.dispose(); bell.dispose(); sparkle.dispose(); } catch (e) {} }, 2200); }
   };
 
-  return { playBGM, stopBGM, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, se };
+  return { playBGM, stopBGM, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se };
 })();
 
 // ---- part: 15-dye-and-art.jsx ----
@@ -3912,6 +4055,12 @@ const getColorSwatchHex = (rawColorId) => {
 //
 // 人魚2体の目は髪と同系色で、色だけでは分離できないため実測した範囲で必ず染色対象から外す。
 const UNDINE_EYE_BOXES = [[0.370, 0.152, 0.438, 0.196], [0.498, 0.152, 0.567, 0.196]];
+// モッチーの目も染色①(体)に入っていて、白で染めると瞳まで白くなり薄く見えていた
+// (2026-09-11 にユーザーが指摘)。正式マスク(mocchi-dye-mask.PNG)側で目を透明にして
+// 染めないようにしたので、ここは「狙って外した範囲」の宣言。
+// image/dye-edge-check はこの範囲を塗り残しに数えない。
+// 値は元絵から目(暗い楕円＋中の白いハイライト)を実測し、輪郭のアンチエイリアス分を含めたもの。
+const MOCCHI_EYE_BOXES = [[0.333, 0.183, 0.392, 0.245], [0.603, 0.183, 0.663, 0.245]];
 // ウンディーネの肌は、顔・首・耳・両腕・尾を別々に実測した範囲で判定する。
 // 一枚の胴体矩形にすると衣装を巻き込み、反対に細すぎると髪の下の肩や首が消えるため、
 // 輪郭の曲がりに合わせた小矩形を重ねている。色相条件も併用するので、矩形内の髪・衣装は染まらない。
@@ -3951,9 +4100,9 @@ const MASU_COLOR_REGION_HUES = {
   // モッチーは見えている部分がすべてどれかの部位に属するので、境目を残すと
   // 部位と部位のあいだに元の色の筋が出てしまう。切ることで境目がぴったり合う。
   Mocchi: [
-    { hue: 332, sMin: 0.06, noEdgeGuard: true },
-    { hue: 90, sMin: 0.2, noEdgeGuard: true },
-    { hue: [35, 12], sMin: 0.22, vMin: 0.3, noEdgeGuard: true },
+    { hue: 332, sMin: 0.06, noEdgeGuard: true, notBbox: MOCCHI_EYE_BOXES },
+    { hue: 90, sMin: 0.2, noEdgeGuard: true, notBbox: MOCCHI_EYE_BOXES },
+    { hue: [35, 12], sMin: 0.22, vMin: 0.3, noEdgeGuard: true, notBbox: MOCCHI_EYE_BOXES },
   ],
   // 2026年に新規イラストへ差し替え。体(明るい黄)と瞳(暗い黄褐色)は同じ色相のため、
   // 明度で明暗を分けて別部位にしている(白目・彩度の低い部分は染色対象外のまま)。
@@ -4451,7 +4600,7 @@ const _getMiaExactRegion = (nx, ny) => {
   return region < 3 ? region : -1;
 };
 const UNDINE_EXACT_REGION_SIZE = [256, 384];
-const UNDINE_EXACT_REGION_2BIT = "//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////8/AMD/////////////////////////////////////////////////////////////////////////////////AAAA8P//////////////////////////////////////////////////////////////////////////////AAAAAADw////////////////////////////////////////////////////////////////////////////AwAAAAAAAPD/////////////////////////////////////////////////////////////////////////DwAAAAAAAAAA/////////////////////////////////////////////////////////////////////////wAAAAAAAAAAAMD//////////////////////////////////////////////////////////////////////w8AAAAAAAAAAAAA//////////////////////////////////////////////////////////////////////8AAAAAAAAAAAAAAPD///////////////////////////////////////////////////////////////////8/AAAAAAAAAAAAAAAA////////////////////////////////////////////////////////////////////AwAAAAAAAAAAAAAAAPz//////////////////////////////////////////////////////////////////wAAAAAAAAAAAAAAAADw/////////////////////////////////////////////////////////////////w8AAAAAAAAAAAAAAAAAwP////////////////////////////////////////////////////////////////8DAAAAAAAAAAAAAAAAAAD/////////////////////////////////////////////////////////////////AAAAAAAAAAAAAAAAAAAA8P//////////////////////////////////////////////////////////////PwAAAAAAAAAAAAAAAAAAAPD//////////////////////////////////////////////////////////////w8AAAAAAAAAAAAAAAAAAADA//////////////////////////////////////////////////////////////8DAAAAAAAAAAAAAAAAAAAAAP//////////////////////////////////////////////////////////////AAAAAAAAAAAAAAAAAAAAAAD8////////////////////////////////////////////////////////////PwAAAAAAAAAAAAAAAAAAAAAA8P///////////////////////////////////////////////////////////w8AAAAAAAAAAAAAAAAAAAAAAMD///////////////////////////////////////////////////////////8PAAAAAAAAAAAAAAAAAAAAAADA////////////////////////////////////////////////////////////AwAAAAAAAAAAAAAAAAAAAAAAAP///////////////////////////////////////////////////////////wAAAAAAAAAAAAAAAAAAAAAAAAD8/////////////////////////////////////////////////////////z8AAAAAAAAAAAAAAAAAAAAAAAAA/P////////////////////////////////////////////////////////8/AAAAAAAAAAAAAAAAAAAAAAAAAPD/////////////////////////////////////////////////////////DwAAAAAAAAAAAAAAAAAAAAAAAADw/////////////////////////////////////////////////////////w8AAAAAAAAAAAAAAAAAAAAAAAAAwP////////////////////////////////////////////////////////8DAAAAAAAAAAAAAAAAAAAAAAAAAMD/////////////////////////////////////////////////////////AwAAAAAAAAAAAAAAAAAAAAAAAAAA/////////////////////////////////////////////////////////wAAAAAAAAAAAAAAAAAAAAAAAAAAAP////////////////////////////////////////////////////////8AAAAAAAAAAAAAAAAAAAAAAAAAAAD8//////////////////////////////////////////////////////8/AAAAAAAAAAAAABAAAAAAAAAAAAAA/P//////////////////////////////////////////////////////PwAAAAAAAAAAAFVVFQAAAAAAAAAAAPz//////////////////////////////////////////////////////w8AAAAAAAAAAMBVVRUAAAAAAAAAAADw//////////////////////////////////////////////////////8PAAAAAAAAwABAVVUVAAAAAAAAAAAA8P//////////////////////////////////////////////////////DwAAAAAAAEAAQFVVFQAMAAAAAAAAAPD//////////////////////////////////////////////////////wMAAAAAAABQAFBVVdUANAAAAAAAAADw//////////////////////////////////////////////////////8DAAAAAAAAUABQVVVVABQAAAAAAAAAwP//////////////////////////////////////////////////////AwAAAAAAAFQAUFVVVQDUAAAAAAAAAMD//////////////////////////////////////////////////////wAAAAAAAABUAFBVVVUAVAAAAAAAAADA//////////////////////////////////////////////////////8AAAAAAAAAVQBcVVVVAFQDAAAAAAAAwP//////////////////////////////////////////////////////AAAAAAAAAFUAVFVVVQBXAQAAAAAAAMD//////////////////////////////////////////////////////wAAAAAAAEBVA1RVVVUAVQEAAAAAAADA//////////////////////////////////////////////////////8AAAAAAABAVQFUVVVVAFUFAAAAAAAAAP//////////////////////////////////////////////////////AAAAAAAAUFUBVFVVVUBVBQAAAAAAAAD/////////////////////////////////////////////////////PwAAAAAAEFBVDVRVVVVAVTUwAAAAAAAA/////////////////////////////////////////////////////z8AAAAAABBcVQVUVVXVUFUVEAAAAAAAAP////////////////////////////////////////////////////8/AAAAAAAUVFU1VFVV1VBVFdAAAAAAAAD/////////////////////////////////////////////////////PwAAAAAAFFRVFVRVVRVUVdVQAAAAAAAA/////////////////////////////////////////////////////z8AAAAAABVUVVVUVVUVV1VVUAMAAAAAAP////////////////////////////////////////////////////8/AAAAAAAVV1VVX1VV1VVVVVQBAAAAAMD/////////////////////////////////////////////////////PwAAAABAFVVVVV1VVVVVVVVUDQAAAADA/////////////////////////////////////////////////////z8AAAAAQNVVVVVVVVVVVVVVVAUAAAAAwP////////////////////////////////////////////////////8/AAAAAHBVVVVVVVVVVVVVVVUFAAAAAMD/////////////////////////////////////////////////////PwAAAABQVVVVVVVVVVVVVVVVNQAAAADA/////////////////////////////////////////////////////z8AAAAAUFVVVVVVVVVVVVVVVRUAAAAAwP///////////////////////////////////////////////////181AAAAAFBVVVVVVVVVVVVVVVUVAAAAAHBV/f///////////////////////////////////////////////39VVVUNAABQVVV/VVVVVVVV/VdVFQAAAFdVVdX///////////////////////////////////////////////9/VVVVFQAAUFX//19VVVVV9f//VxUAAEBVVVX1/////////////////////////////////////////////////1VVVRUAAFDV//9/VVVVVfX//18VAABAVVVV/f////////////////////////////////////////////////9VVVUVAABQ/f//f1VVVVX1////FQAAQFVVVf//////////////////////////////////////////////////V1VVFQAAUP3//39VVVVV/f///xcAAEBVVdX//////////////////////////////////////////////////19VVRUAAFD9//9/VVVVVf3///8VAABAVVX1//////////////////////////////////////////////////9/VVUVAABQ/f//f1VVVVX9////NQAAwFVV/f///////////////////////////////////////////////////1dVFQAAUP3//39VVVVV/f//fwUAAEBVVf////////////////////////////////////////////////////9fVRUAAHD1//9/VVVVVfX//38FAABAVdX/////////////////////////////////////////////////////f1UVAABA9f//f1VVVVX1//9fBQAAQFX1//////////////////////////////////////////////////////9UFQAAQNX//19VVVVV9f//Vw0AAEBV/P//////////////////////////////////////////////////////cBUAAMBV//9fVVVVVdX//1cBAABAFfz//////////////////////////////////////////////////////wAVAAAAVf3/V1VVVVXV/39VAQAAQAH8/////////////////////////////////////////////////////z8AEAAAEFfV/1VVVVVVVf1XVRAAAMAA/P////////////////////////////////////////////////////8/AAAAAFBXVVVVVVVVVVVVVdUVAAAAAPz/////////////////////////////////////////////////////PwAAAABwVVVVVVVVVVVVVVVVFQAAAAD8/////////////////////////////////////////////////////z8AAAAAQFVVVVVVVVVVVVVVVQUAAAAA/P////////////////////////////////////////////////////8/AAAAAEBVVVVVVVVVVVVVVVUFAAAAAPz/////////////////////////////////////////////////////PwAAAAAAVVVVVVVVVVVVVVVVDQAAAAD8/////////////////////////////////////////////////////z8AAAAAAFVVVVVVVVVVVVVVVQEAAAAA/P////////////////////////////////////////////////////8/AAAAAABUVVVVVVVVVVVVVVUDAAAAAPz/////////////////////////////////////////////////////PwAAAAAAVFVVVVVVVVVVVVVVAAAAAAD8/////////////////////////////////////////////////////z8AAAAAAFBVVVVVVVVVVVVVFQAAAAAA8P////////////////////////////////////////////////////8/AAAAAABAVVVVVVVVVVVVVQUAAAAAAPD/////////////////////////////////////////////////////PwAAAAAAAFdVVVVVVVVVVVUDAAAAAADw/////////////////////////////////////////////////////z8AAAAAAABQVVVVVVVVVVUVAAAAAAAA8P////////////////////////////////////////////////////8/AAAAAAAAAFVVVVVVVVVVAQAAAAAAAPD/////////////////////////////////////////////////////PwAAAAAAAABQVVVVVVVVFQAAAAAAAADw/////////////////////////////////////////////////////z8AAAAAAAAAAFRVVVVVVQAAAAAAAAAA8P////////////////////////////////////////////////////8/AAAAAAAAAAAAVFVVVQMAAAAAAAAAAMD/////////////////////////////////////////////////////DwAAAAAAAAAAAFBVVdUAAAAAAAAAAADA/////////////////////////////////////////////////////w8AAAAAAAAAAABQVVXVAAAAAAAAAAAAwP////////////////////////////////////////////////////8PAAAAAAAAAAAAUFVV1QAAAAAAAAAAAMD/////////////////////////////////////////////////////DwAAAAAAAAAAAFBVVdUAAAAAAAAAAAAA/////////////////////////////////////////////////////w8AAAAAAAAAAABQVVXVAAAAAAAAAAAAAP////////////////////////////////////////////////////8PAAAAAAAAAAAAWFVVVQMAAAAAAAAAAAD/////////////////////////////////////////////////////DwAAAAAAAAAAwFZVVVULAAAAAAAAAAAA/////////////////////////////////////////////////////wMAAAAAAAAAALBWVVVVKwAAAAAAAAAAAPz///////////////////////////////////////////////////8DAAAAAAAAAACsVlVVVasAAAAAAAAAAAD8////////////////////////////////////////////////////AwAAAAAAAADAqVZVVVWqBwAAAAAAAAAA/P///////////////////////////////////////////////////wMAAAAAAAAAVapWVVVVqlYBAAAAAAAAAPD///////////////////////////////////////////////////8AAAAAAAAAVJWqVlVVVapaVQAAAAAAAADw////////////////////////////////////////////////////AAAAAAAAQFW1qlZVVdWqelUFAAAAAAAA8P///////////////////////////////////////////////////wAAAAAAAFxVpapWVVWVqmpV1QAAAAAAAMD///////////////////////////////////////////////////8AAAAAAABUVamqVlVVtaqqVVUAAAAAAADA//////////////////////////////////////////////////8/AAAAAAAAUFWpql5VVaWqqldVAAAAAAAAAP//////////////////////////////////////////////////PwAAAAAAAFBVqqpaVVWtqqpWVQAAAAAAAAD//////////////////////////////////////////////////z8AAAAAAABQVaqqWlVVqaqqXtUAAAAAAAAA//////////////////////////////////////////////////8/AAAAAAAAUJWqqnpVVaqqqloVAAAAAAAAAPz/////////////////////////////////////////////////DwAAAAAAQECVqqpqVdWqqqpaFQwAAAAAAAD8/////////////////////////////////////////////////w8AAAAAAEBBpaqqalWVqqqqajUHAAAAAAAA8P////////////////////////////////////////////////8PAAAAAADA9aWqqqpVpaqqqmpFBQAAAAAAAPD/////////////////////////////////////////////////AwAAAAAAAFWtqqqqVa2qqqrqXQUAAAAAAADA/////////////////////////////////////////////////wMAAAAAAABVqaqqqlepqqqqqlUFAAAAAAAAwP////////////////////////////////////////////////8DAAAAAAAAVamqqqpWqqqqqqpVDQAAAAAAAAD/////////////////////////////////////////////////AAAAAAAAAFWpqqqqnqqqqqqqVQEAAAAAAAAA/////////////////////////////////////////////////wAAAAAAAABXqaqqqrqqqqqqqlUBAAAAAAAAAPz//////////////////////////////////////////////z8AAAAAAAAAVKmqqqqqqqqqqqpVAQAAAAAAAAD8//////////////////////////////////////////////8/AAAAAAAQAFSpqqqqqqqqqqqqVQAQAAAAAAAA8P//////////////////////////////////////////////PwAAAAAAUABUqaqqqqqqqqqqqlUAFAAAAAAAAMD//////////////////////////////////////////////w8AAAAAAFABUKmqqqqqqqqqqqrVABUAAAAAAADA//////////////////////////////////////////////8PAAAAAABUBVCpqqqqqqqqqqqqFUBVAAAAAAAAAP//////////////////////////////////////////////AwAAAAAAVBVwqaqqqqqqqqqqqjVQVQAAAAAAAAD//////////////////////////////////////////////wMAAAAAAFRVQK2qqqqqqqqqqqoFVFUAAAAAAAAA/P////////////////////////////////////////////8AAAAAAABVVcWlqqqqqqqqqqrqTVVVAwAAAAAAAPD/////////////////////////////////////////////AAAAAAAAVVXVpaqqqqqqqqqqalVVVQEAAAAAAADw////////////////////////////////////////////PwAAAAAAAFVVVaWqqqqqqqqqqmpVVVUBAAAAAAAAwP///////////////////////////////////////////z8AAAAAAEBVVVWlqqqqqqqqqqrqVVVVAQAAAAAAAAD///////////////////////////////////////////8PAAAAAABAVVVVtaqqqqqqqqqqOlVVVQUAAAAAAAAA////////////////////////////////////////////DwAAAAAAQFVVVbGqqqqqqqqqqgpVVVUFAAAAAAAAAPz//////////////////////////////////////////wMAAAAAAFBVVVWhqqqqqqqqqqoKVFVVBQAAAAAAAADw//////////////////////////////////////////8AAAAAAABQVVVVoKqqqqqqqqqqClRVVTUAAAAAAAAA8P//////////////////////////////////////////AAAAAAAAUFVVVaCqqqqqqqqqqgpUVVUVAAAAAAAAAMD/////////////////////////////////////////PwAAAAAAAFRVVdWwqqqqqqqqqqo6UFVVFQAAAAAAAAAA/////////////////////////////////////////z8AAAAAAABUVVUVgKqqqqqqqqqqClBVVdUAAAAAAAAAAP////////////////////////////////////////8PAAAAAAAAVFVVFYCqqqqqqqqqqgpAVVVVAAAAAAAAAAD8////////////////////////////////////////DwAAAAAAAFVVVQWAqqqqqqqqqqoKQFVVVQAAAAAAAAAA8P///////////////////////////////////////wMAAAAAAABVVVUFgKqqqqqqqqqqDkBVVVUBAAAAAAAAAMD///////////////////////////////////////8AAAAAAABAVVVVDbCqqqqqqqqqqgoAVVVVAQAAAAAAAADA////////////////////////////////////////AAAAAAAAQFVVVQGgqqqqqqqqqqoqAFVVVQUAAAAAAAAAAP//////////////////////////////////////PwAAAAAAAFBVVVUBoKqqqqqqqqqqOgBXVVUFAAAAAAAAAAD8/////////////////////////////////////z8AAAAAAABUVVVVAKCqqqqqqqqqqgoAVFVVFQAAAAAAAAAA/P////////////////////////////////////8PAAAAAAAAVFVVVQCgqqqqqqqqqqo6AFRVVdUAAAAAAAAAAPD/////////////////////////////////////DwAAAAAAAFVVVdUAoKqqqqqqqqqqKgBQVVVVAAAAAAAAAADA/////////////////////////////////////wMAAAAAAMBVVVUVAKiqqqqqqqqqqqoAUFVVVQEAAAAAMAAAAP////////////////////////////////////8AAAAAAABAVVVVFQCoqqqqqqqqqqqqAFBVVVUBAAAAAMAAAAD/////////////////////////////////////AAAMAAAAUFVVVTUAqqqqqqqqqqqqqgJAVVVVBQAAAADAAwAA/P//////////////////////////////////PwAAAAAAAFxVVVUFAKqqqqqqqqqqqqoOQFVVVTUAAAAAAA8AAPD//////////////////////////////////z8AAAMAAABUVVVVBYCqqqqqqqqqqqqqCkBVVVUVAAAAAAAPAADw//////////////////////////////////8PAMAAAAAAV1VVVQGAqqqqqqqqqqqqqirAVVVV1QAAAAAAPwAAwP//////////////////////////////////DwDAAAAAAFVVVVUBoKqqqqqqqqqqqqoqAFVVVVUAAAAAAPwAAAD//////////////////////////////////wMA8AAAAEBVVVVVA6CqqqqqqqqqqqqqqgBVVVVVAwAAAAD8AwAA/P////////////////////////////////8DADwAAABAVVVVVQCoqqqqqqqqqqqqqqoDVFVVVQEAAAAA8A8AAPz/////////////////////////////////AAA8AAAAUFVVVVUAq6qqqqqqqqqqqqqqAFRVVVUNAAAAAPA/AADw/////////////////////////////////wAAPwAAAFBVVVUVAKqqqqqqqqqqqqqqqgBcVVVVBQAAAADwPwAAwP///////////////////////////////z8AwA8AAABUVVVVNQCqqqqqqqqqqqqqqqoAUFVVVTUAAAAAwP8AAMD///////////////////////////////8/AMAPAAAAVFVVVQWAqqqqqqqqqqqqqqqqAnBVVVUVAAAAAMD/AwAA////////////////////////////////DwDwDwAAAFVVVVUNgKqqqqqqqqqqqqqqqg5AVVVVFQAAAAAA/w8AAPz//////////////////////////////w8A8AMAAABVVVVVAaCqqqqqqqqqqqqqqqoKAFVVVVUAAAAAAP8/AAD8//////////////////////////////8DAPwDAABAVVVVVQCgqqqqqqqqqqqqqqqqOgBVVVVVAAAAAAD8PwAA8P//////////////////////////////AwD/AwAAQFVVVVUAqKqqqqqqqqqqqqqqqioAVFVVVQEAAAAA/P8AAPD//////////////////////////////wAA/wAAAHBVVVUVAKiqqqqqqqqqqqqqqqrqAFxVVVUBAAAAAPz/AwDA//////////////////////////////8AwP8AAABQVVVVNQCoqqqqqqqqqqqqqqqqqgBQVVVVDQAAAADw/w8AAP//////////////////////////////AMD/AAAAXFVVVQUAqKqqqqqqqqqqqqqqqqoCQFVVVQUAAAAA8P8PAAD//////////////////////////////wDw/wAAAFRVVVUBAKiqqqqqqqqqqqqqqqqqAkBVVVUFAAAAAMD/PwAA/P///////////////////////////z8A8D8AAABUVVVVAwCqqqqqqqqqqqqqqqqqqg4AVVVVFQAAAADA//8AAPz///////////////////////////8/APw/AAAAVVVVVQAAqqqqqqqqqqqqqqqqqqoKAFRVVRUAAAAAwP//AADw////////////////////////////PwD8PwAAAFVVVRUAgKqqqqqqqqqqqqqqqqqqOgBUVVXVAAAAAAD//wMA8P///////////////////////////w8A/D8AAEBVVVUFAICqqqqqqqqqqqqqqqqqqioAUFVVVQAAAAAA//8PAMD///////////////////////////8PAP8/AABAVVVVBQCwqqqqqqqqqqqqqqqqqqoqAEBVVVUDAAAAAP//DwDA////////////////////////////DwD/PwAAUFVVVQEAoKqqqqq6qqqqqqqqqqqqqgBAVVVVAQAAAAD8/z8AwP///////////////////////////w/A/z8AAFRVVVUAAKyqqqqq16qqqqqqqqqqqqoAAFVVVQUAAAAA/P//AAD///////////////////////////8PwP8/AABVVVVVAACoqqqqalWpqqqqqqqqqqqqAgBUVVUVAAAAAPz//wAA////////////////////////////D8D/PwBAVVVVFQAAqKqqql5VtaqqqqqqqqqqqgIAVFVVVQAAAADw//8DAPz//////////////////////////w/w/z8AUFVVVQUAAKqqqqpVVVWqqqqqqqqqqqoOAFBVVVUBAAAA8P//AwD8//////////////////////////8P8P8/AFxVVVUFAACqqqpaVVVVraqqqqqqqqqqCgBQVVVVDQAAAPD//w8A/P//////////////////////////D/D/PwBXVVVVBQDAqqqqV1VVVdWqqqqqqqqqqgoAUFVVVTUAAADA//8PAPD//////////////////////////w/w/z8AVVVVVQUAgKqqalVVVVVVqaqqqqqqqqoqAFBVVVXVAAAAwP//PwDw//////////////////////////8P8P8/QFVVVVUFAICqqlZVVVVVVdWqqqqqqqqqKgBQVVVVVQAAAMD//z8A8P//////////////////////////D/D/P1BVVVVVBQCgqupVVVVVVVVVraqqqqqqqioAcFVVVVUBAADA//8/APD//////////////////////////w/8//9UVVVVVQUAoKpeVVVVVVVVVVWqqqqqqqqqAEBVVVVVBQAAwP///wDw//////////////////////////8P/P//VFVVVVUBAKCqV1VVVVVVVVVVlaqqqqqqqgBAVVVVVTUAAMD///8AwP//////////////////////////P/z//1VVVVVVAQCoqlVVVVVVVVVVVVW1qqqqqqoAQFVVVVUVAAAA////A8D//////////////////////////z/8/39VVVVVVQMAqKpVVVVVVVVVVVVVVfWqqqqqAwBVVVVV1QAAAP///wPA//////////////////////////8//P9/VVVVVVUAAKiqVVVVVVVVVVVVVVVVVa+qqgIAVVVVVVUAAAD///8DwP////////////////////////////D/X1VVVVXVAACr6lVVVVVVVVVVVVVVVVVVraoCAFRVVVVVAwAA////D8D////////////////////////////w/19VVVVVFQAAqmpVVVVVVVVVVVVVVVVVVa2qAgBUVVVVVQEAAP///w/A////////////////////////////8/9XVVVVVwUAAKpqVVVVVVVVVVVVVVVVVVWlqg4AUFVVVVUNAAD///8PwP//////////////////////////////V1VVVVcFAACqalVVVVVVVVVVVVVVVVVVpaoKAFAVVVVVBQAA////D8D//////////////////////////////1VVVdVVAQAAq2pVVVVVVVVVVVVVVVVVVaWqDgBAFVVVVQUAAP///z/A//////////////////////////////9VVVUVVQMAAKh6VVVVVVVVVVVVVVVVVVWlqgIAwNVUVVU1AMD///8/wP//////////////////////////////VVVVNVUAAACgWlVVVVVVVVVVVVVVVVVVpaoCAABVVFVVFQDA////P8D//////////////////////////////1VVVQUVAAAAgFpVVVVVVVVVVVVVVVVVVaWqAAAAVFBVVRUAwP///z/A/////////////////////////////39VVVUNBQAAAABaVVVVVVVVVVVVVVVVVVW1KgAAABBQVVUVAMD///8/wP////////////////////////////9/VVVVAQAADAAAWFVVVVVVVVVVVVVVVVVVtQoAAAAAcFVVFQDA////P8D/////////////////////////////f1VVVQMAAAwAAFBVVVVVVVVVVVVVVVVVVbUCAAAAAEBVVTQA8P///z/A//////////////////////////////9f1VUAAAAPAABcVVVVVVVVVVVVVVVVVVWVAAAAAADAFVUAAPD///8/wP//////////////////////////////X1XVAAAADwAAVFVVVVVVVVVVVVVVVVVVFQAAAAAAANVUAAD8////P8D//////////////////////////////1919QAAAA8AAFRVVVVVVVVVVVVVVVVVVRUAAAAAAAAUUAAA/P///z/w//////////////////////////////9///0AAAAPAABUVVVVVVVVVVVVVVVVVVUVAAAAAAAAAAAAAP////8/8P//////////////////////////////////AAAAPwAAVFVVVVVVVVVVVVVVVVVVFQAAAAAAAAwAAAD/////P/D//////////////////////////////////wAAwD8AAFRVVVVVVVVVVVVVVVVVVRUAAAAAAAAMAADA/////z/8//////////////////////////////////8AAMA/AABUVVVVVVVVVVVVVVVVVVUVAAAAAAAADAAA8P////8//P//////////////////////////////////AADA/wAAVFVVVVVVVVVVVVVVVVVVFQAAAAAAAA8AAPz/////D/z//////////////////////////////////wMAwP8AAFRVVVVVVVVVVVVVVVVVVRUAAAAAAAAPAAD//////w////////////////////////////////////8DAMD/AABUVVVVVVVVVVVVVVVVVVUVAAAAAAAADwAA///////P////////////////////////////////////AwDA/wMAVFVVVVVVVVVVVVVVVVVVFQAAAAAAwA8AAP//////w////////////////////////////////////w8AwP8DAFRVVVVVVVVVVVVVVVVVVRUAAAAAAMAPAMD///////P///////////////////////////////////8PAMD/DwBXVVVVVVVVVVVVVVVVVVU1AAAAAADwDwDA///////8////////////////////////////////////DwDA/w8AV1VVVVVVVVVVVVVVVVVVNQAAAAAA/A8A8P///////////////////////////////////////////z8AwP8/AFdVVVVVVVVVVVVVVVVVVQUAAAAAAPwPAPz///////////////////////////////////////////8/AAD/PwBXVVVVVVVVVVVVVVVVVVUFAAAAAAD/AwD8/////////////////////////////////////////////wAA//8AV1VVVVVVVVVVVVVVVVVVBQAAAADA/wMA//////////////////////////////////////////////8AAP//A1dVVVVVVVVVVVVVVVVVVQUAAAAA8P8DwP//////////////////////////////////////////////AwD//w9XVVVVVVVVVVVVVVVVVVUFAAAAAPD/AMD//////////////////////////////////////////////w8A//8PVFVVVVVVVVVVVVVVVVVVBQAAAAD8/wDw//////////////////////////////////////////////8PAPz/P1RVVVVVVVVVVVVVVVVVVQUAAAAA//8A/P//////////////////////////////////////////////PwD8//9XVVVVVVVVVVVVVVVVVVUNAAAAwP8/AP////////////////////////////////////////////////8A/P//V1VVVVVVVVVVVVVVVVVVAQAAAPD/P8D/////////////////////////////////////////////////A/D//1dVVVVVVVVVVVVVVVVVVQEAAADw/w/w/////////////////////////////////////////////////w/A//9XVVVVVVVVVVVVVVVVVVUBAAAA/P8D//////////////////////////////////////////////////8/wP//V1VVVVVVVVVVVVVVVVVVAQAAAP//w////////////////////////////////////////////////////wD//1dVVVVVVVVVVVVVVVVVVQMAAAD///z///////////////////////////////////////////////////8P/P9XVVVVVVVVVVVVVVVVVVUAAADA////////////////////////////////////////////////////////////V1VVVVVVVVVVVVVVVVVVAAADwP///////////////////////////////////////////////////////////1dVVVVVVVVVVVVVVVVVVQAAA8D///////////////////////////////////////////////////////////9XVVVVVVVVVVVVVVVVVVUAAAPw////////////////////////////////////////////////////////////V1VVVVVVVVVVVVVVVVVVAMAD8P///////////////////////////////////////////////////////////1dVVVVVVVVVVVVVVVVV1QDAA/D///////////////////////////////////////////////////////////9fVVVVVVVVVVVVVVVVVRUAwAPw////////////////////////////////////////////////////////////X1VVVVVVVVVVVVVVVVUVAPAP8P///////////////////////////////////////////////////////////19VVVVVVVVVVVVVVVVVFQDwD/D///////////////////////////////////////////////////////////9fVVVVVVVVVVVVVVVVVRUA/A/w////////////////////////////////////////////////////////////X1VVVVVVVVVVVVVVVVUVAPwP8P///////////////////////////////////////////////////////////19VVVVVVVVVVVVVVVVVFQD/P/D///////////////////////////////////////////////////////////9/VVVVVVVVVVVVVVVVVTXA/z/w////////////////////////////////////////////////////////////f1VVVVVVVVVVVVVVVVU1wP//8P///////////////////////////////////////////////////////////39VVVVVVVVVVVVVVVVVNfD///D///////////////////////////////////////////////////////////9/VVVVVVVVVVVVVVVVVQX8///D/////////////////////////////////////////////////////////////1VVVVVVVVVVVVVVVVUF////z/////////////////////////////////////////////////////////////9VVVVVVVVVVVVVVVVVxf///z//////////////////////////////////////////////////////////////VVVVVVVVVVVVVVVVVfX//////////////////////////////////////////////////////////////////1VVVVVVVVVVVVVVVVX1//////////////////////////////////////////////////////////////////9XVVVVVVVVVVVVVVVV9f//////////////////////////////////////////////////////////////////V1VVVVVVVVVVVVVVVfX//////////////////////////////////////////////////////////////////1dVVVVVVVVVVVVVVVXV//////////////////////////////////////////////////////////////////9fVVVVVVVVVVVVVVVV1f//////////////////////////////////////////////////////////////////X1VVVVVVVVVVVVVVVdX//////////////////////////////////////////////////////////////////19VVVVVVVVVVVVVVVXV//////////////////////////////////////////////////////////////////9/VVVVVVVVVVVVVVVV1f//////////////////////////////////////////////////////////////////f1VVVVVVVVVVVVVVVdX//////////////////////////////////////////////////////////////////39VVVVVVVVVVVVVVVVV////////////////////////////////////////////////////////////////////VVVVVVVVVVVVVVVVVf///////////////////////////////////////////////////////////////////1VVVVVVVVVVVVVVVVX///////////////////////////////////////////////////////////////////9XVVVVVVVVVVVVVVVV////////////////////////////////////////////////////////////////////V1VVVVVVVVVVVVVVVf3//////////////////////////////////////////////////////////////////1dVVVVVVVVVVVVVVVX9//////////////////////////////////////////////////////////////////9fVVVVVVVVVVVVVVVV/f//////////////////////////////////////////////////////////////////X1VVVVVVVVVVVVVVVfX//////////////////////////////////////////////////////////////////39VVVVVVVVVVVVVVVX1//////////////////////////////////////////////////////////////////9/VVVVVVVVVVVVVVVV9f///////////////////////////////////////////////////////////////////1VVVVVVVVVVVVVVVdX///////////////////////////////////////////////////////////////////9VVVVVVVVVVVVVVVXV////////////////////////////////////////////////////////////////////V1VVVVVVVVVVVVVVVf///////////////////////////////////////////////////////////////////19VVVVVVVVVVVVVVVX///////////////////////////////////////////////////////////////////9fVVVVVVVVVVVVVVVV/f//////////////////////////////////////////////////////////////////f1VVVVVVVVVVVVVVVf3//////////////////////////////////////////////////////////////////39VVVVVVVVVVVVVVVX1////////////////////////////////////////////////////////////////////VVVVVVVVVVVVVVVV9f///////////////////////////////////////////////////////////////////1dVVVVVVVVVVVVVVdX///////////////////////////////////////////////////////////////////9XVVVVVVVVVVVVVVXV////////////////////////////////////////////////////////////////////X1VVVVVVVVVVVVVVVf///////////////////////////////////////////////////////////////////39VVVVVVVVVVVVVVVX9//////////////////////////////////////////////////////////////////9/VVVVVVVVVVVVVVVV/f///////////////////////////////////////////////////////////////////1VVVVVVVVVVVVVVVfX///////////////////////////////////////////////////////////////////9XVVVVVVVVVVVVVVX1////////////////////////////////////////////////////////////////////V1VVVVVVVVVVVVVV1f///////////////////////////////////////////////////////////////////19VVVVVVVVVVVVVVVX///////////////////////////////////////////////////////////////////9/VVVVVVVVVVVVVVVV/////////////////////////////////////////////////////////////////////1VVVVVVVVVVVVVVVf3///////////////////////////////////////////////////////////////////9XVVVVVVVVVVVVVVX1////////////////////////////////////////////////////////////////////X1VVVVVVVVVVVVVV9f///////////////////////////////////////////////////////////////////39VVVVVVVVVVVVVVdX/////////////////////////////////////////////////////////////////////VVVVVVVVVVVVVVVV/////////////////////////////////////////////////////////////////////1dVVVVVVVVVVVVVVf////////////////////////////////////////////////////////////////////9fVVVVVVVVVVVVVVX9////////////////////////////////////////////////////////////////////f1VVVVVVVVVVVVVV9f////////////////////////////////////////////////////////////////////9VVVVVVVVVVVVVVdX/////////////////////////////////////////////////////////////////////V1VVVVVVVVVVVVVV/////////////////////////////////////////////////////////////////////19VVVVVVVVVVVVVVf3///////////////////////////////////////////////////////////////////9/VVVVVVVVVVVVVVX9/////////////////////////////////////////////////////////////////////1VVVVVVVVVVVVVV9f////////////////////////////////////////////////////////////////////9fVVVVVVVVVVVVVdX/////////////////////////////////////////////////////////////////////f1VVVVVVVVVVVVVV//////////////////////////////////////////////////////////////////////9VVVVVVVVVVVVVVfX/////////////////////////////////////////////////////////////////////X1VVVVVVVVVVVVXV/////////////////////////////////////////////////////////////////////39VVVVVVVVVVVVVVfX/////////////////////////////////////////////////////////////////////V1VVVVVVVVVVVVVV/f///////////////////////////////////////////////////////////////////19VVVVVVVVVVVVVVVVV9f//////////////////////////////////////////////////////////////////VVVVVVVVVVVVVVVVVVVVVVX9/////////////////////////////////////////////////////////////19VVVVVVVVVVVVVVVVVVVVVVfX/////////////////////////////////////////////////////////////VVVVVVVVVVVVVVVVVVVVVVVV/////////////////////////////////////////////////////////////19VVVVVVVVVVVVVVVVVVVVVVdX/////////////////////////////////////////////////////////////VVVVVVVVVVVVVVVVVVVVVVVV/f///////////////////////////////////////////////////////////39VVVVVVVVVVVVVVVVVVVVVVdX/////////////////////////////////////////////////////////////X1VVVVVVVVVVVVVVVVVVVVVV//////////////////////////////////////////////////////////////9XVVVVVVVVVVVVVVVVVVVVVf3//////////////////////////////////////////////////////////////1dVVVVVVVVVVVVVVVVVVVXV//////////////////////////////////////////////////////////////9/VVVVVVVVVVVVVVVVVVVVVf///////////////////////////////////////////////////////////////1VVVVVVVVVVVVVVVVVVVVX9//////////////////////////////////////////////////////////////9XVVVVVVVVVVVVVVVVVVVV9f//////////////////////////////////////////////////////////////X1VVVVVVVVVVVVVVVVVVVdX//////////////////////////////////////////////////////////////19VVVVVVVVVVVVVVVVVVVVV//////////////////////////////////////////////////////////////9/VVVVVVVVVVVVVVVVVVVVVf3/////////////////////////////////////////////////////////////f1VVVVVVVVVVVVVVVVVVVVX1//////////////////////////////////////////////////////////////9VVVVVVVVVVVVVVVVVVVVV9f//////////////////////////////////////////////////////////////VVVVVVVVVVVVVVVVVVVVVdX//////////////////////////////////////////////////////////////1VVVVVVVVVVVVVVVVVVVVVV//////////////////////////////////////////////////////////////9VVVVVVVVVVVVVVVVVVVVVVf//////////////////////////////////////////////////////////////VVVVVVVVVVVVVVVVVVVVVVX9/////////////////////////////////////////////////////////////1dVVVVVVV1VVVVVVVVVVVVV/f////////////////////////////////////////////////////////////9XVVVVVVX1VVVVVVVVVVVVVfX/////////////////////////////////////////////////////////////V1VVVVVV1V9VVVVVVVVVVVX1/////////////////////////////////////////////////////////////1dVVVVVVVX/VVVVVVVVVVVV1f////////////////////////////////////////////////////////////9XVVVVVVVV/V9VVVVVVVVVVdX/////////////////////////////////////////////////////////////V1VVVVVVVf3/V1VVVVVVVVXV/////////////////////////////////////////////////////////////1dVVVVVVVX1//9XVVX1//9VVf////////////////////////////////////////////////////////////9XVVVVVVVV9f//////////f1X/////////////////////////////////////////////////////////////V1VVVVVVVdX///////////9X/////////////////////////////////////////////////////////////1dVVVVVVVVV////////////X/3///////////////////////////////////////////////////////////9XVVVVVVVVVf/////////////9////////////////////////////////////////////////////////////V1VVVVVVVVX9/////////////////////////////////////////////////////////////////////////1dVVVVVVVVV/f////////////////////////////////////////////////////////////////////////9XVVVVVVVVVf3/////////////////////////////////////////////////////////////////////////V1VVVVVVVVX1/////////////////////////////////////////////////////////////////////////1dVVVVVVVVV9f////////////////////////////////////////////////////////////////////////9XVVVVVVVVVfX/////////////////////////////////////////////////////////////////////////V1VVVVVVVVXV/////////////////////////////////////////////////////////////////////////1dVVVVVVVVV1f////////////////////////////////////////////////////////////////////////9XVVVVVVVVVdX/////////////////////////////////////////////////////////////////////////X1VVVVVVVVXV/////////////////////////////////////////////////////////////////////////19VVVVVVVVVVf////////////////////////////////////////////////////////////////////////9fVVVVVVVVVVX/////////////////////////////////////////////////////////////////////////X1VVVVVVVVVV/////////////////////////////////////////////////////////////////////////19VVVVVVVVVVf////////////////////////////////////////////////////////////////////////9/VVVVVVVVVVX/////////////////////////////////////////////////////////////////////////f1VVVVVVVVVV/////////////////////////////////////////////////////////////////////////39VVVVVVVVVVf//////////////////////////////////////////////////////////////////////////VVVVVVVVVVX//////////////////////////////////////////////////////////////////////////1VVVVVVVVVV//////////////////////////////////////////////////////////////////////////9VVVVVVVVVVf//////////////////////////////////////////////////////////////////////////V1VVVVVVVVX//////////////////////////////////////////////////////////////////////////1dVVVVVVVXV//////////////////////////////////////////////////////////////////////////9fVVVVVVVV1f//////////////////////////////////////////////////////////////////////////X1VVVVVVVdX//////////////////////////////////////////////////////////////////////////39VVVVVVVXV//////////////////////////////////////////////////////////////////////////9/VVVVVVVV1f///////////////////////////////////////////////////////////////////////////1VVVVVVVdX///////////////////////////////////////////////////////////////////////////9XVVVVVVX1////////////////////////////////////////////////////////////////////////////V1VVVVVV9f///////////////////////////////////////////////////////////////////////////19VVVVVVfX///////////////////////////////////////////////////////////////////////////9/VVVVVVX1/////////////////////////////////////////////////////////////////////////////1VVVVVV9f////////////////////////////////////////////////////////////////////////////9VVVVVVdX/////////////////////////////////////////////////////////////////////////////V1VVVVXV/////////////////////////////////////////////////////////////////////////////19VVVVV1f////////////////////////////////////////////////////////////////////////////9/VVVVVdX//////////////////////////////////////////////////////////////////////////////1dVVVXV//////////////////////////////////////////////////////////////////////////////9fVVVVVf//////////////////////////////////////////////////////////////////////////////f1VVVVX///////////////////////////////////////////////////////////////////////////////9VVVVV////////////////////////////////////////////////////////////////////////////////X1VVVf3///////////////////////////////////////////////////////////////////////////////9VVVX9////////////////////////////////////////////////////////////////////////////////X1VV9f////////////////////////////////////////////////////////////////////////////////9VVfX/////////////////////////////////////////////////////////////////////////////////X1XV//////////////////////////////////////////////////////////////////////////////////9VVf//////////////////////////////////////////////////////////////////////////////////f1X///////////////////////////////////////////////////////////////////////////////////9f/f//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////";
+const UNDINE_EXACT_REGION_2BIT = "////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////AwAA////////////////////////////////////////////////////////////////////////////////PwAAAAD/////////////////////////////////////////////////////////////////////////////PwAAAAAAAP///////////////////////////////////////////////////////////////////////////wAAAAAAAADA/////////////////////////////////////////////////////////////////////////wMAAAAAAAAAAPz//////////////////////////////////////////////////////////////////////z8AAAAAAAAAAADA//////////////////////////////////////////////////////////////////////8DAAAAAAAAAAAAAPz/////////////////////////////////////////////////////////////////////AAAAAAAAAAAAAADw////////////////////////////////////////////////////////////////////DwAAAAAAAAAAAAAAAP///////////////////////////////////////////////////////////////////wAAAAAAAAAAAAAAAAD8/////////////////////////////////////////////////////////////////z8AAAAAAAAAAAAAAAAA8P////////////////////////////////////////////////////////////////8PAAAAAAAAAAAAAAAAAMD/////////////////////////////////////////////////////////////////AwAAAAAAAAAAAAAAAAAA/////////////////////////////////////////////////////////////////wAAAAAAAAAAAAAAAAAAAPz//////////////////////////////////////////////////////////////w8AAAAAAAAAAAAAAAAAAADw//////////////////////////////////////////////////////////////8PAAAAAAAAAAAAAAAAAAAAwP//////////////////////////////////////////////////////////////AwAAAAAAAAAAAAAAAAAAAMD//////////////////////////////////////////////////////////////wAAAAAAAAAAAAAAAAAAAAAA/////////////////////////////////////////////////////////////z8AAAAAAAAAAAAAAAAAAAAAAPz///////////////////////////////////////////////////////////8PAAAAAAAAAAAAAAAAAAAAAAD8////////////////////////////////////////////////////////////AwAAAAAAAAAAAAAAAAAAAAAA8P///////////////////////////////////////////////////////////wAAAAAAAAAAAAAAAAAAAAAAAMD///////////////////////////////////////////////////////////8AAAAAAAAAAAAAAAAAAAAAAADA//////////////////////////////////////////////////////////8/AAAAAAAAAAAAAAAAAAAAAAAAAP//////////////////////////////////////////////////////////PwAAAAAAAAAAAAAAAAAAAAAAAAD//////////////////////////////////////////////////////////w8AAAAAAAAAAAAAAAAAAAAAAAAA/P////////////////////////////////////////////////////////8DAAAAAAAAAAAAAAAAAAAAAAAAAPz/////////////////////////////////////////////////////////AwAAAAAAAAAAAAAAAAAAAAAAAAD8/////////////////////////////////////////////////////////wAAAAAAAAAAAAAAAAAAAAAAAAAA8P////////////////////////////////////////////////////////8AAAAAAAAAAAAAAAAAAAAAAAAAAPD/////////////////////////////////////////////////////////AAAAAAAAAAAAABAAAAAAAAAAAADA////////////////////////////////////////////////////////PwAAAAAAAAAAAFVVFQAAAAAAAAAAwP///////////////////////////////////////////////////////z8AAAAAAAAAAEBVVRUAAAAAAAAAAMD///////////////////////////////////////////////////////8/AAAAAAAAQABAVVUVAAAAAAAAAAAA////////////////////////////////////////////////////////DwAAAAAAAEAAQFVVFQAAAAAAAAAAAP///////////////////////////////////////////////////////w8AAAAAAABQAFBVVRUABAAAAAAAAAD///////////////////////////////////////////////////////8PAAAAAAAAUABQVVUVABQAAAAAAAAA////////////////////////////////////////////////////////AwAAAAAAAFQAUFVVVQAUAAAAAAAAAPz//////////////////////////////////////////////////////wMAAAAAAABUAFBVVVUAVAAAAAAAAAD8//////////////////////////////////////////////////////8DAAAAAAAAVQBUVVVVAFQAAAAAAAAA/P//////////////////////////////////////////////////////AwAAAAAAAFUAVFVVVQBVAQAAAAAAAPz//////////////////////////////////////////////////////wMAAAAAAEBVAFRVVVUAVQEAAAAAAAD8//////////////////////////////////////////////////////8AAAAAAABAVQFUVVVVAFUFAAAAAAAA/P//////////////////////////////////////////////////////AAAAAAAAUFUBVFVVVUBVBQAAAAAAAPD//////////////////////////////////////////////////////wAAAAAAEFBVAVRVVVVAVQUAAAAAAADw//////////////////////////////////////////////////////8AAAAAAABQVQVUVVUVUFUVEAAAAAAA8P//////////////////////////////////////////////////////AAAAAAAEVFUFVFVVFVBVFRAAAAAAAPD//////////////////////////////////////////////////////wAAAAAAFFRVFVRVVRVUVRVQAAAAAADw//////////////////////////////////////////////////////8AAAAAABVUVVVUVVUVVVVVUAAAAAAA8P//////////////////////////////////////////////////////AAAAAAAVVVVVVFVVVVVVVVQBAAAAAPD//////////////////////////////////////////////////////wAAAABAFVVVVVVVVVVVVVVUAQAAAADw//////////////////////////////////////////////////////8AAAAAQBVVVVVVVVVVVVVVVQUAAAAA8P//////////////////////////////////////////////////////AAAAAFBVVVVVVVVVVVVVVVUFAAAAAPD//////////////////////////////////////////////////////wAAAABQVVVVVVVVVVVVVVVVBQAAAAD8//////////////////////////////////////////////////////8AAAAAUFVVVVVVVVVVVVVVVRUAAAAA/P//////////////////////////////////////////////////////AAAAAFBVVVVVVVVVVVVVVVUVAAAAAPz//////////////////////////////////////////////////////1UFAABQVdX/VVVVVVVV/19VFQAAAFVVVf3/////////////////////////////////////////////////VVVVFQAAUFX//19VVVVV9f//VxUAAEBVVVX9/////////////////////////////////////////////////1VVVRUAAFD1//9fVVVVVfX//18VAABAVVVV//////////////////////////////////////////////////9XVVUVAABQ/f//f1VVVVX9////FQAAQFVV1f//////////////////////////////////////////////////X1VVFQAAUP///39VVVVV/f///xUAAEBVVdX//////////////////////////////////////////////////39VVRUAAFD9//9/VVVVVf3///8VAABAVVX1////////////////////////////////////////////////////VVUVAABQ/f//f1VVVVX9////BQAAQFVV/f///////////////////////////////////////////////////1dVFQAAUP3//39VVVVV/f//fwUAAEBVVf////////////////////////////////////////////////////9fVRUAAFD1//9/VVVVVf3//38FAABAVfX/////////////////////////////////////////////////////f1UVAABA9f//f1VVVVX1//9fBQAAQFX9//////////////////////////////////////////////////////9XFQAAQNX//19VVVVV9f//VwEAAEBV////////////////////////////////////////////////////////UxUAAEBV//9fVVVVVdX//1UBAABAFf///////////////////////////////////////////////////////wMVAAAAVf3/V1VVVVXV/39VAAAAQAH///////////////////////////////////////////////////////8DAAAAEFTV/1VVVVVVVf1VVRAAAAAA////////////////////////////////////////////////////////AwAAAFBVVVVVVVVVVVVVVVUVAAAAAP///////////////////////////////////////////////////////wMAAABQVVVVVVVVVVVVVVVVBQAAAAD///////////////////////////////////////////////////////8DAAAAQFVVVVVVVVVVVVVVVQUAAAAA////////////////////////////////////////////////////////AwAAAEBVVVVVVVVVVVVVVVUFAAAAAP///////////////////////////////////////////////////////wMAAAAAVVVVVVVVVVVVVVVVAQAAAAD///////////////////////////////////////////////////////8DAAAAAFVVVVVVVVVVVVVVVQEAAAAA/P//////////////////////////////////////////////////////AwAAAABUVVVVVVVVVVVVVVUAAAAAAPz//////////////////////////////////////////////////////wMAAAAAVFVVVVVVVVVVVVVVAAAAAAD8//////////////////////////////////////////////////////8DAAAAAFBVVVVVVVVVVVVVFQAAAAAA/P//////////////////////////////////////////////////////AwAAAABAVVVVVVVVVVVVVQUAAAAAAPz//////////////////////////////////////////////////////wMAAAAAAFRVVVVVVVVVVVUAAAAAAAD8//////////////////////////////////////////////////////8DAAAAAABQVVVVVVVVVVUVAAAAAAAA/P//////////////////////////////////////////////////////AwAAAAAAAFVVVVVVVVVVAQAAAAAAAPz//////////////////////////////////////////////////////wMAAAAAAABQVVVVVVVVFQAAAAAAAADw//////////////////////////////////////////////////////8DAAAAAAAAAFRVVVVVVQAAAAAAAAAA8P//////////////////////////////////////////////////////AwAAAAAAAAAAUFVVVQAAAAAAAAAAAPD//////////////////////////////////////////////////////wMAAAAAAAAAAFBVVRUAAAAAAAAAAADw//////////////////////////////////////////////////////8DAAAAAAAAAABQVVUVAAAAAAAAAAAA8P//////////////////////////////////////////////////////AwAAAAAAAAAAUFVVFQAAAAAAAAAAAPD//////////////////////////////////////////////////////wMAAAAAAAAAAFBVVRUAAAAAAAAAAADw//////////////////////////////////////////////////////8AAAAAAAAAAABQVVUVAAAAAAAAAAAAwP//////////////////////////////////////////////////////AAAAAAAAAAAAVFVVVQAAAAAAAAAAAMD//////////////////////////////////////////////////////wAAAAAAAAAAgFZVVVUKAAAAAAAAAADA//////////////////////////////////////////////////////8AAAAAAAAAAKBWVVVVKQAAAAAAAAAAwP//////////////////////////////////////////////////////AAAAAAAAAACoVlVVVakAAAAAAAAAAAD//////////////////////////////////////////////////////wAAAAAAAABAqlVVVVWqBQAAAAAAAAAA//////////////////////////////////////////////////////8AAAAAAAAAVapWVVVVqlYBAAAAAAAAAP//////////////////////////////////////////////////////AAAAAAAAVJWqVlVVVapaVQAAAAAAAAD//////////////////////////////////////////////////////wAAAAAAQFWlqlZVVZWqWlUFAAAAAAAA//////////////////////////////////////////////////////8AAAAAAFBVpapWVVWVqmpVFQAAAAAAAPz///////////////////////////////////////////////////8/AAAAAABUVamqVlVVpaqqVVUAAAAAAAD8////////////////////////////////////////////////////PwAAAAAAUFWpqlZVVaWqqlVVAAAAAAAA/P///////////////////////////////////////////////////z8AAAAAAFBVqqpaVVWpqqpWVQAAAAAAAPD///////////////////////////////////////////////////8/AAAAAABQVaqqWlVVqaqqVhUAAAAAAADw////////////////////////////////////////////////////PwAAAAAAUJWqqlpVVaqqqloVAAAAAAAA8P///////////////////////////////////////////////////z8AAAAAAECVqqpqVZWqqqpaFQQAAAAAAMD///////////////////////////////////////////////////8/AAAAAEBBpaqqalWVqqqqagUFAAAAAADA////////////////////////////////////////////////////DwAAAAAARaWqqqpVpaqqqmpFBQAAAAAAwP///////////////////////////////////////////////////w8AAAAAAFWlqqqqVamqqqpqVQUAAAAAAAD///////////////////////////////////////////////////8PAAAAAABVqaqqqlWpqqqqqlUBAAAAAAAA////////////////////////////////////////////////////DwAAAAAAVamqqqpWqqqqqqpVAQAAAAAAAPz//////////////////////////////////////////////////wMAAAAAAFWpqqqqlqqqqqqqVQEAAAAAAAD8//////////////////////////////////////////////////8DAAAAAABVqaqqqqqqqqqqqlUBAAAAAAAA8P//////////////////////////////////////////////////AwAAAAAAVKmqqqqqqqqqqqpVAQAAAAAAAPD//////////////////////////////////////////////////wMAAAAQAFSpqqqqqqqqqqqqVQAQAAAAAADA//////////////////////////////////////////////////8AAAAAUABUqaqqqqqqqqqqqlUAFAAAAAAAwP//////////////////////////////////////////////////AAAAAFABUKmqqqqqqqqqqqoVABUAAAAAAAD//////////////////////////////////////////////////wAAAABUBVCpqqqqqqqqqqqqFUAVAAAAAAAA//////////////////////////////////////////////////8AAAAAVBVQqaqqqqqqqqqqqgVQVQAAAAAAAPz///////////////////////////////////////////////8/AAAAAFRVQKWqqqqqqqqqqqoFVFUAAAAAAAD8////////////////////////////////////////////////PwAAAABVVUWlqqqqqqqqqqpqQVVVAAAAAAAA8P///////////////////////////////////////////////z8AAAAAVVVVpaqqqqqqqqqqalVVVQEAAAAAAPD///////////////////////////////////////////////8PAAAAAFVVVaWqqqqqqqqqqmpVVVUBAAAAAADA////////////////////////////////////////////////DwAAAEBVVVWlqqqqqqqqqqpqVVVVAQAAAAAAwP///////////////////////////////////////////////w8AAABAVVVVhaqqqqqqqqqqClVVVQUAAAAAAAD///////////////////////////////////////////////8DAAAAQFVVVaGqqqqqqqqqqgpVVVUFAAAAAAAA/P//////////////////////////////////////////////AwAAAFBVVVWhqqqqqqqqqqoKVFVVBQAAAAAAAPz//////////////////////////////////////////////wMAAABQVVVVoKqqqqqqqqqqClRVVQUAAAAAAADw//////////////////////////////////////////////8AAAAAUFVVVaCqqqqqqqqqqgpUVVUVAAAAAAAAwP//////////////////////////////////////////////AAAAAFRVVRWgqqqqqqqqqqoKUFVVFQAAAAAAAMD//////////////////////////////////////////////wAAAABUVVUVgKqqqqqqqqqqClBVVRUAAAAAAAAA/////////////////////////////////////////////z8AAAAAVFVVFYCqqqqqqqqqqgpQVVVVAAAAAAAAAP////////////////////////////////////////////8/AAAAAFVVVQWAqqqqqqqqqqoCQFVVVQAAAAAAAAD8////////////////////////////////////////////PwAAAABVVVUFgKqqqqqqqqqqAkBVVVUBAAAAAAAA8P///////////////////////////////////////////w8AAABAVVVVAaCqqqqqqqqqqgoAVVVVAQAAAAAAAPD///////////////////////////////////////////8PAAAAQFVVVQGgqqqqqqqqqqoKAFVVVQUAAAAAAADA////////////////////////////////////////////AwAAAFBVVVUBoKqqqqqqqqqqCgBVVVUFAAAAAAAAAP///////////////////////////////////////////wMAAABUVVVVAKCqqqqqqqqqqgoAVFVVFQAAAAAAAAD///////////////////////////////////////////8DAAAAVFVVVQCgqqqqqqqqqqoKAFRVVRUAAAAAAAAA/P//////////////////////////////////////////AAAAAFVVVRUAoKqqqqqqqqqqKgBQVVVVAAAAAAAAAPD//////////////////////////////////////////wAAAEBVVVUVAKiqqqqqqqqqqqoAUFVVVQEAAAAAAADA/////////////////////////////////////////z8AAABAVVVVFQCoqqqqqqqqqqqqAFBVVVUBAAAAAAAAwP////////////////////////////////////////8/AAAAUFVVVQUAqqqqqqqqqqqqqgJQVVVVBQAAAAAAAAD/////////////////////////////////////////PwAAAFBVVVUFAKqqqqqqqqqqqqoCQFVVVQUAAAAAAAAA/P///////////////////////////////////////w8AAABUVVVVBYCqqqqqqqqqqqqqCkBVVVUVAAAAAAAAAPz///////////////////////////////////////8PAAAAVVVVVQGAqqqqqqqqqqqqqipAVVVVFQAAAAAAAADw////////////////////////////////////////AwAAAFVVVVUBoKqqqqqqqqqqqqoqAFVVVVUAAAAAAAAAwP///////////////////////////////////////wMAAEBVVVVVAKCqqqqqqqqqqqqqqgBVVVVVAAAAAAAAAMD///////////////////////////////////////8DAABAVVVVVQCoqqqqqqqqqqqqqqoAVFVVVQEAAAAAAAAA////////////////////////////////////////AAAAUFVVVVUAqKqqqqqqqqqqqqqqAFRVVVUBAAAAAAAAAPz//////////////////////////////////////wAAAFBVVVUVAKqqqqqqqqqqqqqqqgBUVVVVBQAAAAAAAAD8//////////////////////////////////////8AAABUVVVVBQCqqqqqqqqqqqqqqqoAUFVVVQUAAAAAAAAA8P////////////////////////////////////8/AAAAVFVVVQWAqqqqqqqqqqqqqqqqAlBVVVUVAAAAAAAAAPD/////////////////////////////////////PwAwAFVVVVUBgKqqqqqqqqqqqqqqqgJAVVVVFQAAAAAAAADA/////////////////////////////////////w8AAABVVVVVAaCqqqqqqqqqqqqqqqoKAFVVVVUAAAAAAAAAAP////////////////////////////////////8PAAxAVVVVVQCgqqqqqqqqqqqqqqqqCgBVVVVVAAAAAAMAAAD/////////////////////////////////////DwAMQFVVVVUAqKqqqqqqqqqqqqqqqioAVFVVVQAAAAAMAAAA/P///////////////////////////////////wMAD1BVVVUVAKiqqqqqqqqqqqqqqqoqAFRVVVUBAAAAPAAAAPz///////////////////////////////////8DAA9QVVVVBQCoqqqqqqqqqqqqqqqqqgBQVVVVAQAAADwAAADw////////////////////////////////////A8ADUFVVVQUAqKqqqqqqqqqqqqqqqqoAQFVVVQUAAAD8AAAA8P///////////////////////////////////wPAA1RVVVUBAKiqqqqqqqqqqqqqqqqqAkBVVVUFAAAA8AMAAMD///////////////////////////////////8A8ANUVVVVAACqqqqqqqqqqqqqqqqqqgIAVVVVFQAAAPAPAADA////////////////////////////////////APADVVVVVQAAqqqqqqqqqqqqqqqqqqoKAFRVVRUAAADwDwAAAP///////////////////////////////////wDwA1VVVRUAgKqqqqqqqqqqqqqqqqqqCgBUVVUVAAAA8D8AAAD///////////////////////////////////8A/ENVVVUFAICqqqqqqqqqqqqqqqqqqioAUFVVVQAAAPD/AAAA/P////////////////////////////////8/APxDVVVVBQCgqqqqqqqqqqqqqqqqqqoqAEBVVVUAAADA/wMAAPz/////////////////////////////////PwD/U1VVVQEAoKqqqqqqqqqqqqqqqqqqqgBAVVVVAQAAwP8DAAD8/////////////////////////////////z8A/1dVVVUAAKiqqqqqVaqqqqqqqqqqqqoAAFVVVQUAAMD/DwAA8P////////////////////////////////8/AP9XVVUVAACoqqqqalWpqqqqqqqqqqqqAgBUVVUVAADA/w8AAPD/////////////////////////////////P8D/V1VVFQAAqKqqqlZVpaqqqqqqqqqqqgIAVFVVVQAAwP8/AADA/////////////////////////////////z/A/1dVVQUAAKqqqqpVVVWqqqqqqqqqqqoCAFBVVVUBAMD//wAAwP////////////////////////////////8/wP9XVVUFAACqqqpaVVVVqaqqqqqqqqqqCgBQVVVVAQDA//8AAMD/////////////////////////////////P8D/V1VVBQCAqqqqVVVVVZWqqqqqqqqqqgoAUFVVVQUAwP//AwAA/////////////////////////////////z/w/1dVVQUAgKqqalVVVVVVqaqqqqqqqqoqAFBVVVUVAMD//wMAAP////////////////////////////////8P8P9VVVUFAICqqlZVVVVVVZWqqqqqqqqqKgBQVVVVVQDA//8PAAD/////////////////////////////////P/D/VVVVBQCgqmpVVVVVVVVVpaqqqqqqqioAQFVVVVUBwP//DwAA/////////////////////////////////z/0f1VVVQEAoKpWVVVVVVVVVVWqqqqqqqqqAEBVVVVVBcD//z8AAPz///////////////////////////////8/9H9VVVUBAKCqVVVVVVVVVVVVlaqqqqqqqgBAVVVVVQXA//8/AAD8////////////////////////////////f/VfVVVVAQCoqlVVVVVVVVVVVVWVqqqqqqoAQFVVVVUVwP///wAA/P///////////////////////////////3/1X1VVVQAAqKpVVVVVVVVVVVVVVZWqqqqqAABVVVVVFcD///8AAPz///////////////////////////////9/9V9VVVUAAKiqVVVVVVVVVVVVVVVVVamqqgIAVVVVVVXA////AwD8////////////////////////////////f/VXVVUVAACqalVVVVVVVVVVVVVVVVVVqaoCAFRVVVVVwP///wMA8P/////////////////////////////////1V1VVFQAAqmpVVVVVVVVVVVVVVVVVVaWqAgBUVVVVVcH///8DAPD/////////////////////////////////9VdVVQUAAKpqVVVVVVVVVVVVVVVVVVWlqgIAUFVVVVXB////DwDw//////////////////////////////////VVVVUFAACqalVVVVVVVVVVVVVVVVVVpaoCAFBVVVVVxf///w8A8P/////////////////////////////////3VRVVAQAAqmpVVVVVVVVVVVVVVVVVVaWqAgBAFVVVVfX///8PAPD/////////////////////////////////11UVVQAAAKhaVVVVVVVVVVVVVVVVVVWlqgIAQFVUVVX1////PwDw/////////////////////////////////19VBVUAAACgWlVVVVVVVVVVVVVVVVVVpaoAAABVVFVV9f///z8A8P////////////////////////////////9/VQUVAAAAgFpVVVVVVVVVVVVVVVVVVaWqAAAAFFBVVfX///8/APD/////////////////////////////////f1UBBQAAAABaVVVVVVVVVVVVVVVVVVWlKgAAAABQVVX9////PwDw/////////////////////////////////39VAQAAAAAAWFVVVVVVVVVVVVVVVVVVlQoAAAAAUFVV/f////8A8P////////////////////////////////9/VQAAAAAAAFBVVVVVVVVVVVVVVVVVVZUCAAAAAEBVVfz/////APD/////////////////////////////////f1UAAAAAAABQVVVVVVVVVVVVVVVVVVWVAAAAAABAFVX//////wDw/////////////////////////////////38VAAAAAAAAVFVVVVVVVVVVVVVVVVVVFQAAAAAAABVU//////8A8P////////////////////////////////9/FQAAAAAAAFRVVVVVVVVVVVVVVVVVVRUAAAAAAAAUUP//////APz/////////////////////////////////fwUAAAAAAABUVVVVVVVVVVVVVVVVVVUVAAAAAAAAAAD//////wD8/////////////////////////////////38FAAAAwAAAVFVVVVVVVVVVVVVVVVVVFQAAAAAAAADA//////8A/P////////////////////////////////9/BQAAAMADAFRVVVVVVVVVVVVVVVVVVRUAAAAAAAAAwP//////APz/////////////////////////////////fwEAAADAAwBUVVVVVVVVVVVVVVVVVVUVAAAAAAAAAPD//////wD///////////////////////////////////8NAAAAwAMAVFVVVVVVVVVVVVVVVVVVFQAAAAAAAADw//////8A////////////////////////////////////Pw8AAMADAFRVVVVVVVVVVVVVVVVVVRUAAAAAAAAA8P//////AP////////////////////////////////////8PAADADwBUVVVVVVVVVVVVVVVVVVUVAAAAAAAAAPz//////8D/////////////////////////////////////DwAAwA8AVFVVVVVVVVVVVVVVVVVVFQAAAAAAwAD8///////A/////////////////////////////////////w8AAMAPAFRVVVVVVVVVVVVVVVVVVQUAAAAAAMAA//////8/8P////////////////////////////////////8/AADADwBUVVVVVVVVVVVVVVVVVVUFAAAAAADwAP//////P/D/////////////////////////////////////PwAA8D8AVFVVVVVVVVVVVVVVVVVVBQAAAAAA8AD//////z/8/////////////////////////////////////z8AAPA/AFRVVVVVVVVVVVVVVVVVVQUAAAAAAPzA//////8//P////////////////////////////////////8/AADw/wBUVVVVVVVVVVVVVVVVVVUFAAAAAAA/wP//////D////////////////////////////////////////wAA8P8AVFVVVVVVVVVVVVVVVVVVBQAAAAAAP/D//////8////////////////////////////////////////8AAPD/AFRVVVVVVVVVVVVVVVVVVQUAAAAAwD/w///////z////////////////////////////////////////AwDw/wNUVVVVVVVVVVVVVVVVVVUFAAAAAPA//P///////////////////////////////////////////////wMA8P8DVFVVVVVVVVVVVVVVVVVVBQAAAADwD/z///////////////////////////////////////////////8DAMD/D1RVVVVVVVVVVVVVVVVVVQEAAAAA/A//////////////////////////////////////////////////DwDA/z9VVVVVVVVVVVVVVVVVVVUBAAAAAP/D/////////////////////////////////////////////////z8AwP9/VVVVVVVVVVVVVVVVVVVVAQAAAMD/w/////////////////////////////////////////////////8/AMD//1VVVVVVVVVVVVVVVVVVVQEAAADw//D//////////////////////////////////////////////////wDA//9VVVVVVVVVVVVVVVVVVVUBAAAA/P/8//////////////////////////////////////////////////8AwP//V1VVVVVVVVVVVVVVVVVVAQAAAPw/////////////////////////////////////////////////////A8D//19VVVVVVVVVVVVVVVVVVQAAAAD//////////////////////////////////////////////////////w8A//9fVVVVVVVVVVVVVVVVVVUAAADA//////////////////////////////////////////////////////8/AP//X1VVVVVVVVVVVVVVVVVVAAAA8P///////////////////////////////////////////////////////wD//19VVVVVVVVVVVVVVVVVVQAAAPD///////////////////////////////////////////////////////8D/P9fVVVVVVVVVVVVVVVVVVUAAAD8////////////////////////////////////////////////////////D/D/f1VVVVVVVVVVVVVVVVVVAAAA///////////////////////////////////////////////////////////w/39VVVVVVVVVVVVVVVVVFQAAAP//////////////////////////////////////////////////////////z/9/VVVVVVVVVVVVVVVVVRUAAMD/////////////////////////////////////////////////////////////f1VVVVVVVVVVVVVVVVUVAADA/////////////////////////////////////////////////////////////39VVVVVVVVVVVVVVVVVFQAAwP////////////////////////////////////////////////////////////9/VVVVVVVVVVVVVVVVVRUAAPD/////////////////////////////////////////////////////////////f1VVVVVVVVVVVVVVVVUVAADw/////////////////////////////////////////////////////////////39VVVVVVVVVVVVVVVVVFQAA8P//////////////////////////////////////////////////////////////VVVVVVVVVVVVVVVVVQUAAPD//////////////////////////////////////////////////////////////1VVVVVVVVVVVVVVVVUFADDw//////////////////////////////////////////////////////////////9VVVVVVVVVVVVVVVVVBQAw8P//////////////////////////////////////////////////////////////VVVVVVVVVVVVVVVVVQUA/PD//////////////////////////////////////////////////////////////1VVVVVVVVVVVVVVVVUFAPzw//////////////////////////////////////////////////////////////9VVVVVVVVVVVVVVVVVBQD88P//////////////////////////////////////////////////////////////V1VVVVVVVVVVVVVVVRUA//P//////////////////////////////////////////////////////////////1dVVVVVVVVVVVVVVVVVVf/z//////////////////////////////////////////////////////////////9XVVVVVVVVVVVVVVVVVdX/z///////////////////////////////////////////////////////////////V1VVVVVVVVVVVVVVVVXV/////////////////////////////////////////////////////////////////19VVVVVVVVVVVVVVVVV1f////////////////////////////////////////////////////////////////9fVVVVVVVVVVVVVVVVVdX/////////////////////////////////////////////////////////////////X1VVVVVVVVVVVVVVVVXV/////////////////////////////////////////////////////////////////19VVVVVVVVVVVVVVVVV1f////////////////////////////////////////////////////////////////9/VVVVVVVVVVVVVVVVVdX/////////////////////////////////////////////////////////////////f1VVVVVVVVVVVVVVVVXV/////////////////////////////////////////////////////////////////39VVVVVVVVVVVVVVVVV1f//////////////////////////////////////////////////////////////////VVVVVVVVVVVVVVVVVdX//////////////////////////////////////////////////////////////////1VVVVVVVVVVVVVVVVXV//////////////////////////////////////////////////////////////////9VVVVVVVVVVVVVVVVV1f//////////////////////////////////////////////////////////////////VVVVVVVVVVVVVVVVVVX//////////////////////////////////////////////////////////////////1dVVVVVVVVVVVVVVVVV//////////////////////////////////////////////////////////////////9XVVVVVVVVVVVVVVVVVf//////////////////////////////////////////////////////////////////X1VVVVVVVVVVVVVVVVX//////////////////////////////////////////////////////////////////19VVVVVVVVVVVVVVVVV//////////////////////////////////////////////////////////////////9fVVVVVVVVVVVVVVVVVf3/////////////////////////////////////////////////////////////////f1VVVVVVVVVVVVVVVVX9/////////////////////////////////////////////////////////////////39VVVVVVVVVVVVVVVVV/f//////////////////////////////////////////////////////////////////VVVVVVVVVVVVVVVVVfX//////////////////////////////////////////////////////////////////1VVVVVVVVVVVVVVVVX1//////////////////////////////////////////////////////////////////9XVVVVVVVVVVVVVVVV9f//////////////////////////////////////////////////////////////////V1VVVVVVVVVVVVVVVdX//////////////////////////////////////////////////////////////////19VVVVVVVVVVVVVVVXV//////////////////////////////////////////////////////////////////9fVVVVVVVVVVVVVVVV1f//////////////////////////////////////////////////////////////////f1VVVVVVVVVVVVVVVVX//////////////////////////////////////////////////////////////////39VVVVVVVVVVVVVVVVV////////////////////////////////////////////////////////////////////VVVVVVVVVVVVVVVVVf3//////////////////////////////////////////////////////////////////1dVVVVVVVVVVVVVVVX9//////////////////////////////////////////////////////////////////9XVVVVVVVVVVVVVVVV9f//////////////////////////////////////////////////////////////////X1VVVVVVVVVVVVVVVfX//////////////////////////////////////////////////////////////////39VVVVVVVVVVVVVVVXV//////////////////////////////////////////////////////////////////9/VVVVVVVVVVVVVVVVVf///////////////////////////////////////////////////////////////////1VVVVVVVVVVVVVVVVX///////////////////////////////////////////////////////////////////9XVVVVVVVVVVVVVVVV/f//////////////////////////////////////////////////////////////////X1VVVVVVVVVVVVVVVf3//////////////////////////////////////////////////////////////////19VVVVVVVVVVVVVVVX1//////////////////////////////////////////////////////////////////9/VVVVVVVVVVVVVVVV9f///////////////////////////////////////////////////////////////////1VVVVVVVVVVVVVVVdX///////////////////////////////////////////////////////////////////9XVVVVVVVVVVVVVVVV////////////////////////////////////////////////////////////////////X1VVVVVVVVVVVVVVVf///////////////////////////////////////////////////////////////////39VVVVVVVVVVVVVVVX9////////////////////////////////////////////////////////////////////VVVVVVVVVVVVVVVV9f///////////////////////////////////////////////////////////////////1dVVVVVVVVVVVVVVfX///////////////////////////////////////////////////////////////////9fVVVVVVVVVVVVVVXV////////////////////////////////////////////////////////////////////f1VVVVVVVVVVVVVVVf////////////////////////////////////////////////////////////////////9VVVVVVVVVVVVVVVX9////////////////////////////////////////////////////////////////////V1VVVVVVVVVVVVVV/f///////////////////////////////////////////////////////////////////19VVVVVVVVVVVVVVfX///////////////////////////////////////////////////////////////////9/VVVVVVVVVVVVVVXV/////////////////////////////////////////////////////////////////////1VVVVVVVVVVVVVVVf////////////////////////////////////////////////////////////////////9fVVVVVVVVVVVVVVX9////////////////////////////////////////////////////////////////////f1VVVVVVVVVVVVVV1f////////////////////////////////////////////////////////////////////9VVVVVVVVVVVVVVVX9////////////////////////////////////////////////////////////////////X1VVVVVVVVVVVVVVVf3///////////////////////////////////////////////////////////////////9VVVVVVVVVVVVVVVVVVVXV////////////////////////////////////////////////////////////////V1VVVVVVVVVVVVVVVVVVVVX1/////////////////////////////////////////////////////////////39VVVVVVVVVVVVVVVVVVVVVVfX/////////////////////////////////////////////////////////////V1VVVVVVVVVVVVVVVVVVVVVV/f///////////////////////////////////////////////////////////39VVVVVVVVVVVVVVVVVVVVVVdX/////////////////////////////////////////////////////////////V1VVVVVVVVVVVVVVVVVVVVVV/f////////////////////////////////////////////////////////////9VVVVVVVVVVVVVVVVVVVVVVdX/////////////////////////////////////////////////////////////X1VVVVVVVVVVVVVVVVVVVVVV/f////////////////////////////////////////////////////////////9XVVVVVVVVVVVVVVVVVVVVVfX//////////////////////////////////////////////////////////////1dVVVVVVVVVVVVVVVVVVVXV////////////////////////////////////////////////////////////////V1VVVVVVVVVVVVVVVVVVVf3///////////////////////////////////////////////////////////////9fVVVVVVVVVVVVVVVVVVX1////////////////////////////////////////////////////////////////f1VVVVVVVVVVVVVVVVVV1f///////////////////////////////////////////////////////////////39VVVVVVVVVVVVVVVVVVVX/////////////////////////////////////////////////////////////////VVVVVVVVVVVVVVVVVVVV/f///////////////////////////////////////////////////////////////1VVVVVVVVVVVVVVVVVVVfX///////////////////////////////////////////////////////////////9VVVVVVVVVVVVVVVVVVVXV////////////////////////////////////////////////////////////////V1VVVVVVVVVVVVVVVVVV1f///////////////////////////////////////////////////////////////1dVVVVVVVVVVVVVVVVVVVX///////////////////////////////////////////////////////////////9XVVVVVVVVVVVVVVVVVVVV/f//////////////////////////////////////////////////////////////V1VVVVVVVVVVVVVVVVVVVfX//////////////////////////////////////////////////////////////1dVVVVVVVVVVVVVVVVVVVX1//////////////////////////////////////////////////////////////9fVVVVVVVVVVVVVVVVVVVV1f//////////////////////////////////////////////////////////////X1VVVVVVVVVVVVVVVVVVVdX//////////////////////////////////////////////////////////////19VVVVVVVX1VVVVVVVVVVVV//////////////////////////////////////////////////////////////9fVVVVVVVV1V9VVVVVVVVVVf//////////////////////////////////////////////////////////////X1VVVVVVVdX/VVVVVVVVVVX9/////////////////////////////////////////////////////////////19VVVVVVVVV/39VVVVVVVVV/f////////////////////////////////////////////////////////////9fVVVVVVVVVf//X1VVVf1VVf3/////////////////////////////////////////////////////////////f1VVVVVVVVX9/////////1/1/////////////////////////////////////////////////////////////39VVVVVVVVV/f//////////9f////////////////////////////////////////////////////////////9/VVVVVVVVVfX///////////f/////////////////////////////////////////////////////////////f1VVVVVVVVX1/////////////////////////////////////////////////////////////////////////39VVVVVVVVV9f////////////////////////////////////////////////////////////////////////9/VVVVVVVVVfX/////////////////////////////////////////////////////////////////////////f1VVVVVVVVXV/////////////////////////////////////////////////////////////////////////39VVVVVVVVV1f//////////////////////////////////////////////////////////////////////////VVVVVVVVVdX//////////////////////////////////////////////////////////////////////////1VVVVVVVVXV//////////////////////////////////////////////////////////////////////////9VVVVVVVVV1f//////////////////////////////////////////////////////////////////////////VVVVVVVVVdX//////////////////////////////////////////////////////////////////////////1VVVVVVVVXV//////////////////////////////////////////////////////////////////////////9XVVVVVVVVVf//////////////////////////////////////////////////////////////////////////V1VVVVVVVVX//////////////////////////////////////////////////////////////////////////1dVVVVVVVVV//////////////////////////////////////////////////////////////////////////9XVVVVVVVV1f//////////////////////////////////////////////////////////////////////////X1VVVVVVVdX//////////////////////////////////////////////////////////////////////////19VVVVVVVXV//////////////////////////////////////////////////////////////////////////9fVVVVVVVV1f//////////////////////////////////////////////////////////////////////////f1VVVVVVVdX//////////////////////////////////////////////////////////////////////////39VVVVVVVXV////////////////////////////////////////////////////////////////////////////VVVVVVVV1f///////////////////////////////////////////////////////////////////////////1VVVVVVVfX///////////////////////////////////////////////////////////////////////////9XVVVVVVX1////////////////////////////////////////////////////////////////////////////V1VVVVVV9f///////////////////////////////////////////////////////////////////////////19VVVVVVfX///////////////////////////////////////////////////////////////////////////9/VVVVVVX9////////////////////////////////////////////////////////////////////////////f1VVVVVV/f////////////////////////////////////////////////////////////////////////////9VVVVVVf3/////////////////////////////////////////////////////////////////////////////V1VVVVX9/////////////////////////////////////////////////////////////////////////////19VVVVV/f////////////////////////////////////////////////////////////////////////////9fVVVVVf3/////////////////////////////////////////////////////////////////////////////f1VVVVX9//////////////////////////////////////////////////////////////////////////////9VVVVV/f//////////////////////////////////////////////////////////////////////////////V1VVVf3//////////////////////////////////////////////////////////////////////////////19VVVX9////////////////////////////////////////////////////////////////////////////////VVVV/f///////////////////////////////////////////////////////////////////////////////1dVVf3///////////////////////////////////////////////////////////////////////////////9fVVX9////////////////////////////////////////////////////////////////////////////////f1VV9f////////////////////////////////////////////////////////////////////////////////9VVfX/////////////////////////////////////////////////////////////////////////////////X1X1/////////////////////////////////////////////////////////////////////////////////39V1f//////////////////////////////////////////////////////////////////////////////////V9X//////////////////////////////////////////////////////////////////////////////////39V////////////////////////////////////////////////////////////////////////////////////V/3//////////////////////////////////////////////////////////////////////////////////3/1////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////";
 let _undineExactRegionBytes = null;
 const _getUndineExactRegion = (nx, ny) => {
   if (!_undineExactRegionBytes) {
@@ -5574,6 +5723,79 @@ const VolumeSlider = ({ label, icon, value, onChange, onInteractStart, gradient,
       </div>
       <button onClick={()=>step(1)} className="shrink-0 w-6 h-6 rounded-lg bg-slate-800 border border-white/10 text-slate-300 font-black text-xs active:scale-90 active:bg-slate-700 flex items-center justify-center select-none">＋</button>
       <span className="w-6 shrink-0 text-right text-[9px] font-mono font-black text-slate-300">{value}</span>
+    </div>
+  );
+};
+
+// 音量設定の中に置く「音が出ないとき」。
+// (2026-09-11・ユーザー報告「Google Pixel 9a でゲーム自体の音が出ない」)
+// 音が出ない原因は、アプリ側(出口が止まっている・効果音エンジンが読めていない)と
+// 端末側(メディア音量・マナーモード・別の機器へつながっている)に分かれるが、
+// どちらなのかは画面に何も出ないと切り分けようがない。
+// 出口へ実際に流れている音の大きさをメーターで見せて、そこを分けられるようにする。
+//   メーターが動く → 音は作れている。端末側(音量・出力先)を確かめる
+//   メーターが動かない → アプリ側。「音を鳴らし直す」で出口を作り直す
+const AudioTroubleshootPanel = ({ info, peak, muted, onTest, onRepair, repairing }) => {
+  const state = !info ? 'unknown' : info.ctxState === 'none' ? 'none' : info.ctxState !== 'running' ? 'suspended' : info.stalled ? 'stalled' : 'running';
+  const stateView = {
+    running: { label: '音を出せています', tone: 'text-emerald-300' },
+    stalled: { label: '止まっています', tone: 'text-red-300' },
+    suspended: { label: 'お休み中（画面をさわると戻ります）', tone: 'text-amber-300' },
+    none: { label: 'まだ開いていません', tone: 'text-slate-400' },
+    unknown: { label: '調べられませんでした', tone: 'text-slate-400' },
+  }[state];
+  // 波形の山(0〜1)は小さい音ほど見えにくいので、平方根で引き伸ばしてから%にする
+  const meterPct = Math.max(0, Math.min(100, Math.round(Math.sqrt(Math.max(0, Number(peak) || 0)) * 100)));
+  const sounding = meterPct >= 3;
+  // 効果音(Tone)はBGMとは別の出口で鳴っている。BGMが出ていても効果音だけ止まることがあるので分けて出す
+  const seView = !info ? { label: '不明', tone: 'text-slate-400' }
+    : info.toneFailed ? { label: '読み込めていません（効果音だけ出ません）', tone: 'text-red-300' }
+    : !info.toneReady ? { label: '読み込み中', tone: 'text-amber-300' }
+    : info.toneState !== 'running' ? { label: 'お休み中（「音を鳴らし直す」で戻ります）', tone: 'text-amber-300' }
+    : { label: '準備できています', tone: 'text-emerald-300' };
+  const playing = (info && info.playing && info.playing[0]) || null;
+  // はじめて遊ぶ端末は、音量が最小の1から始まる(いきなり大きな音を出さないため)。
+  // 音量1のBGMは音量100の1/500ほどしかなく、「音が出ない」と区別がつかないので、
+  // 音がオンなのに小さすぎるときはここで名指しで知らせる
+  const lowVolume = !!info && !muted && (info.bgmVolumePct <= 10 || info.seVolumePct <= 10);
+  const row = (label, value, tone) => (
+    <div className="flex items-start justify-between gap-2 py-1">
+      <span className="shrink-0 text-[10px] font-black text-slate-400">{label}</span>
+      <span className={`text-right text-[10px] font-black ${tone || 'text-slate-200'}`}>{value}</span>
+    </div>
+  );
+  return (
+    <div data-audio-troubleshoot className="mt-2 rounded-2xl border border-white/10 bg-slate-950/70 p-3 text-left">
+      {muted && <p className="mb-2 rounded-xl border border-amber-400/40 bg-amber-950/40 px-2 py-1.5 text-[10px] font-black text-amber-200">いまゲームの音はオフです。上の「🔇 音がオフです」を押してオンにしてください。</p>}
+      {lowVolume && <p data-audio-low-volume className="mb-2 rounded-xl border border-amber-400/40 bg-amber-950/40 px-2 py-1.5 text-[10px] font-black leading-relaxed text-amber-200">音量がとても小さいままです（BGM {info.bgmVolumePct} ／ SE {info.seVolumePct}）。はじめて遊ぶときは音量1から始まるので、上のスライダーを右へ動かしてください。</p>}
+      {row('音の出口', stateView.label, stateView.tone)}
+      {row('効果音エンジン', seView.label, seView.tone)}
+      {row('いま鳴っている曲', playing ? playing.src : 'なし', playing ? 'text-slate-200' : 'text-slate-400')}
+      <div className="mt-2">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[10px] font-black text-slate-400">実際に出ている音</span>
+          <span className={`text-[10px] font-black ${sounding ? 'text-emerald-300' : 'text-slate-400'}`}>{sounding ? '出ています' : '出ていません'}</span>
+        </div>
+        <div className="mt-1 h-2.5 w-full overflow-hidden rounded-full border border-white/10 bg-slate-800">
+          <div data-audio-meter className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-lime-300 transition-[width] duration-100" style={{ width: `${meterPct}%` }}></div>
+        </div>
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <button type="button" onClick={onTest} className="min-h-[44px] rounded-xl border border-indigo-300/40 bg-indigo-700 px-2 text-[11px] font-black text-white active:scale-95">🔔 テスト音</button>
+        <button type="button" onClick={onRepair} disabled={repairing} className="min-h-[44px] rounded-xl border border-fuchsia-300/40 bg-fuchsia-700 px-2 text-[11px] font-black text-white active:scale-95 disabled:opacity-60">{repairing ? '直しています…' : '🔧 音を鳴らし直す'}</button>
+      </div>
+      <p className="mt-2 text-[10px] leading-relaxed text-slate-400">
+        テスト音を押してもメーターが動かないときは、ゲーム側で音が止まっています。「音を鳴らし直す」を押してください。
+      </p>
+      <p className="mt-1 text-[10px] leading-relaxed text-slate-400">
+        メーターは動くのに聞こえないときは、端末側です。次を確かめてください。
+      </p>
+      <ul className="mt-1 space-y-0.5 text-[10px] leading-relaxed text-slate-400">
+        <li>・音量ボタンを押して、出てくる「メディア」の音量を上げる（着信音の音量とは別です）</li>
+        <li>・マナーモード／サイレントモード／おやすみ時間モードを切る</li>
+        <li>・Bluetoothイヤホンやスピーカーにつながっていないか確かめる</li>
+        <li>・音楽や動画を再生している別のアプリを閉じる</li>
+      </ul>
     </div>
   );
 };
@@ -7677,6 +7899,11 @@ const helpDataRows = (id) => {
         const { main, sub } = monsterLineageOf(mon.id);
         return [mon.name, `${main.name} × ${sub.name}（${monsterCategoryName(monsterCategoryOf(mon.id))}）`];
       });
+    // イベントの回数ボーナス。難易度ごとの割合を実データから出す
+    // (ヘルプへ手で書き写すと、割合を変えたときに古いままになる)
+    case 'rhythmEventPlayBonus':
+      return RHYTHM_DEMO_DIFFICULTY_IDS.map(id =>
+        [RHYTHM_DEMO_DIFFICULTY_LABELS[id]?.name || id, rhythmEventPlayBonusPercentText(id)]);
     // 極限チャレンジの難易度。閲覧可能な準備中難易度も倍率は実データから出す
     case 'extremeDifficulties':
       return PUBLIC_EXTREME_DIFFICULTIES.map(s => [s.label, s.available
@@ -7866,6 +8093,7 @@ const helpDataRows = (id) => {
 const HELP_DATA_TITLES = {
   difficulties: '難易度と倍率',
   extremeDifficulties: '極限チャレンジの難易度',
+  rhythmEventPlayBonus: 'イベントの回数ボーナス（1回あたり）',
   levelUpPointMultipliers: 'レベルアップでもらえる強化ポイント',
   speciesChallengeLineages: '種族チャレンジで選べる種族',
   speciesChallengeRewards: '種族チャレンジの難易度と初回クリア報酬',
@@ -8252,6 +8480,20 @@ const collectBondRankingEntries = (rankingPool) => {
   });
   return deduped.sort((a,b)=>b.bondLevel-a.bondLevel||a.userName.localeCompare(b.userName,'ja'));
 };
+
+// 絆Lvランキングの一覧(1人 × 1個体)を、総合力の高い順へ並べ直す。
+// 取り出す一覧・重複のまとめ方は絆Lvとまったく同じで、並べる数字だけが替わる。
+//
+// 総合力は育成スナップショット(detail.power)にだけ入っている「その記録を出したときの値」。
+//   ・いまのデータで計算し直さない … 種のバランスを変えると過去の順位まで動いてしまう
+//   ・残っていない古い記録は載せない … 参考値を本物の順位へ混ぜない(「情報なし」の行も作らない)
+const collectPowerRankingEntries = (bondEntries) => (Array.isArray(bondEntries) ? bondEntries : [])
+  .map(entry => {
+    const power = Number(entry?.detail?.power);
+    return (entry && Number.isFinite(power) && power > 0) ? { ...entry, power: Math.round(power) } : null;
+  })
+  .filter(Boolean)
+  .sort((a, b) => b.power - a.power || String(a.userName||'').localeCompare(String(b.userName||''), 'ja'));
 
 // ランキングに出すモンスターの絵。記録にはIDだけが入っているので、同梱の絵を引いて使う。
 // 画像を埋め込んでいた頃の古い記録は、そのimgUrlをそのまま使って表示できるようにしておく。
@@ -10026,10 +10268,23 @@ const RHYTHM_EVENT_RANKING_DISPLAY_LIMIT = 50;
 const RHYTHM_EVENT_SONG_SELECT_BASE = 'identity_key,user_name,song_id,difficulty_id,score,scored_at,level,icon';
 const RHYTHM_EVENT_SONG_SELECT = `${RHYTHM_EVENT_SONG_SELECT_BASE},party`;
 const RHYTHM_EVENT_TOTAL_SELECT = 'identity_key,user_name,total_score,song_count,last_scored_at,level,icon';
+// 回数ボーナス込みの集計(2026-09-11・ユーザー指示)。
+// score / total_score は**加点込み**の値で返ってくるので、並べ替え(order=score.desc)も
+// 上位50件の切り出しも加点込みで行われる。素点と加点は別の列で受け取り、「内訳」に出す。
+// ★関数がまだ無い環境(SQL未適用)では、加点なしのこれまでの関数へ戻って順位を出す。
+//   加点と内訳が出ないだけで画面は壊れない(docs/sql/rankings/RHYTHM_EVENT_BONUS_IPHONE_STEPS.md)。
+// ★play_counts(難易度ごとの回数)は、そこまで入れたSQLを流した環境でだけ返る。
+//   party と同じく、無ければ1段落として取り直す(内訳の難易度の行が出ないだけ)
+const RHYTHM_EVENT_SONG_BONUS_SELECT_BASE = `${RHYTHM_EVENT_SONG_SELECT},base_score,bonus_score,play_count`;
+const RHYTHM_EVENT_SONG_BONUS_SELECT = `${RHYTHM_EVENT_SONG_BONUS_SELECT_BASE},play_counts`;
+const RHYTHM_EVENT_TOTAL_BONUS_SELECT_BASE = `${RHYTHM_EVENT_TOTAL_SELECT},base_total,bonus_total,play_count`;
+const RHYTHM_EVENT_TOTAL_BONUS_SELECT = `${RHYTHM_EVENT_TOTAL_BONUS_SELECT_BASE},play_counts`;
 // 「そのビュー・関数はまだ無い」という応答かどうか。通信の失敗や権限の失敗と取り違えない
 //   PGRST202 … Could not find the function public.rhythm_event_totals(...) in the schema cache
 //   PGRST205 … Could not find the table 'public.rhythm_week_window' in the schema cache
 //   42P01 / 42883 … relation / function does not exist
+// ★_bonus 付きの関数名も rhythm_event_song_bests / rhythm_event_totals を含むので、
+//   この判定でそのまま拾える。呼ぶ側は「加点なしへ戻す」ためにこれを捕まえる
 const rhythmEventRankingMissing = (status, body) => {
   if (status !== 404 && status !== 400) return false;
   const text = String(body || '');
@@ -10041,7 +10296,7 @@ const rhythmEventRankingMissing = (status, body) => {
 const rhythmEventDetailColumnMissing = (status, body) => {
   if (status !== 400 && status !== 404) return false;
   const text = String(body || '');
-  return /party/i.test(text) && /PGRST100|PGRST202|42703|does not exist|column|Could not find/i.test(text);
+  return /party|play_counts/i.test(text) && /PGRST100|PGRST202|42703|does not exist|column|Could not find/i.test(text);
 };
 const rhythmEventNotReadyError = () => {
   const error = new Error('rhythm event ranking is not ready');
@@ -10095,7 +10350,7 @@ const sbFetchRhythmWeekWindow = async ({ requestId = 'untracked' } = {}) => {
   return { startMs, endMs };
 };
 // 期間×対象曲の「曲ごとベスト」。部門1つぶん(=曲1つぶん)を取りにいく
-const sbFetchRhythmEventSongBests = async ({ songId, fromMs, toMs, limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' }) => {
+const sbFetchRhythmEventSongBests = async ({ songId, fromMs, toMs, bonusRates = null, limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' }) => {
   const filter = Array.isArray(identityKeys) && identityKeys.length
     ? `&identity_key=in.(${identityKeys.map(k => encodeURIComponent(`"${k}"`)).join(',')})`
     : '';
@@ -10105,6 +10360,27 @@ const sbFetchRhythmEventSongBests = async ({ songId, fromMs, toMs, limit = RHYTH
       + `&order=score.desc,scored_at.asc&limit=${limit}${filter}`,
     body, label: 'rhythm-event-song', requestId,
   });
+  // 回数ボーナスを使うイベントでは、加点込みの関数を先に試す。
+  // 関数がまだ無い環境では加点なしへ戻す(順位は出る。加点と内訳だけ出ない)
+  if (bonusRates) {
+    const askBonus = (select) => sbFetchRhythmEventRows({
+      url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_song_bests_bonus?select=${select}`
+        + `&order=score.desc,scored_at.asc&limit=${limit}${filter}`,
+      body: { ...body, bonus_rates: bonusRates }, label: 'rhythm-event-song-bonus', requestId,
+    });
+    try {
+      return await askBonus(RHYTHM_EVENT_SONG_BONUS_SELECT);
+    } catch (error) {
+      // 「play_counts という列は無い」だけなら、その列を外してもう一度頼む。
+      // 関数そのものが無いときは、下の加点なしの経路へ落ちる
+      if (error && error.detailColumnMissing) {
+        try { return await askBonus(RHYTHM_EVENT_SONG_BONUS_SELECT_BASE); }
+        catch (retryError) { rankingLog(requestId, 'rhythm-event-song-bonus-fallback', { message: retryError?.message || String(retryError) }); }
+      } else {
+        rankingLog(requestId, 'rhythm-event-song-bonus-fallback', { message: error?.message || String(error) });
+      }
+    }
+  }
   try {
     return await ask(RHYTHM_EVENT_SONG_SELECT);
   } catch (error) {
@@ -10118,16 +10394,60 @@ const sbFetchRhythmEventSongBests = async ({ songId, fromMs, toMs, limit = RHYTH
   }
 };
 // 期間×対象曲の「総合」。対象曲それぞれのその週のベストを単純合算したもの(§6.3)
-const sbFetchRhythmEventTotals = async ({ songIds, fromMs, toMs, limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' }) => {
+const sbFetchRhythmEventTotals = async ({ songIds, fromMs, toMs, bonusRates = null, limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' }) => {
   const filter = Array.isArray(identityKeys) && identityKeys.length
     ? `&identity_key=in.(${identityKeys.map(k => encodeURIComponent(`"${k}"`)).join(',')})`
     : '';
+  const body = { song_ids: songIds, from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() };
+  // 曲の部門と同じく、加点込みの関数を先に試して、無ければ加点なしへ戻す
+  if (bonusRates) {
+    const askBonus = (select) => sbFetchRhythmEventRows({
+      url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals_bonus?select=${select}`
+        + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
+      body: { ...body, bonus_rates: bonusRates }, label: 'rhythm-event-total-bonus', requestId,
+    });
+    try {
+      return await askBonus(RHYTHM_EVENT_TOTAL_BONUS_SELECT);
+    } catch (error) {
+      if (error && error.detailColumnMissing) {
+        try { return await askBonus(RHYTHM_EVENT_TOTAL_BONUS_SELECT_BASE); }
+        catch (retryError) { rankingLog(requestId, 'rhythm-event-total-bonus-fallback', { message: retryError?.message || String(retryError) }); }
+      } else {
+        rankingLog(requestId, 'rhythm-event-total-bonus-fallback', { message: error?.message || String(error) });
+      }
+    }
+  }
   return sbFetchRhythmEventRows({
     url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals?select=${RHYTHM_EVENT_TOTAL_SELECT}`
       + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
-    body: { song_ids: songIds, from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() },
-    label: 'rhythm-event-total', requestId,
+    body, label: 'rhythm-event-total', requestId,
   });
+};
+// 回数ボーナスの内訳(素点・加点・回数)を取り出す。加点なしの関数から取った行には
+// これらの列が無いので、baseScore を null にして「内訳を出さない」と伝える。
+// 曲の部門は base_score/bonus_score、総合は base_total/bonus_total という名前で返る
+const rhythmEventBonusFields = (row, baseKey) => {
+  const bonusKey = baseKey === 'base_total' ? 'bonus_total' : 'bonus_score';
+  const base = Number(row?.[baseKey]);
+  if (!Number.isFinite(base)) return { baseScore: null, bonusScore: 0, playCount: 0 };
+  return {
+    baseScore: base,
+    bonusScore: Number.isFinite(Number(row?.[bonusKey])) ? Number(row[bonusKey]) : 0,
+    playCount: Number.isFinite(Number(row?.play_count)) ? Number(row.play_count) : 0,
+    // 難易度ごとの回数({MASTER:2, HARD:1} の形)。返ってこない環境では空にして、
+    // 内訳の難易度の行を出さない(0回と書かないため)
+    playCounts: rhythmEventPlayCountsFromRow(row?.play_counts),
+  };
+};
+// 難易度ごとの回数。壊れた値・知らない難易度が混ざっていても落ちないように通す
+const rhythmEventPlayCountsFromRow = (value) => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  const out = {};
+  for (const [id, count] of Object.entries(value)) {
+    const n = Math.floor(Number(count));
+    if (typeof id === 'string' && id && Number.isFinite(n) && n > 0) out[id] = n;
+  }
+  return out;
 };
 // 生の行を画面用の形へ整える。壊れた値でも落ちないよう、数として確かめてから使う
 const rhythmEventSongEntryFromRow = (row) => ({
@@ -10141,6 +10461,9 @@ const rhythmEventSongEntryFromRow = (row) => ({
   // 判定の内訳。「この曲」タブと同じく party の先頭要素を読む(rhythmRankingEntryFromRow と同じ形)。
   // SQL未適用の環境・内訳が保存される前の古い記録では null になり、詳細ボタンが出ないだけ
   detail: (Array.isArray(row?.party) && row.party[0] && typeof row.party[0] === 'object') ? row.party[0] : null,
+  // 回数ボーナスの内訳。加点なしの関数から取ったときは列そのものが無いので null になり、
+  // 画面は内訳の枠を出さない(加点していないのに「+0」と出さないため)
+  ...rhythmEventBonusFields(row, 'base_score'),
 });
 const rhythmEventTotalEntryFromRow = (row) => ({
   identityKey: typeof row?.identity_key === 'string' ? row.identity_key : '',
@@ -10149,6 +10472,7 @@ const rhythmEventTotalEntryFromRow = (row) => ({
   songCount: Number(row?.song_count) || 0,
   level: Number(row?.level) || 0,
   icon: row?.icon ?? null,
+  ...rhythmEventBonusFields(row, 'base_total'),
 });
 
 // 検査(tools/ranking/rhythm-breeder-id-check.js)からモンビーの送信だけを直接叩けるようにする。
@@ -11368,6 +11692,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
   const setView=next=>{if(typeof onView==='function')onView(next);};
   const state=normalizeRhythmSelectView(view);
   const [sortOpen,setSortOpen]=React.useState(false);
+  const [genreOpen,setGenreOpen]=React.useState(false);
   // ジャケットを大きく見ているか(2026-09-08・ユーザー指示「モンビー中のジャケットをタップすると拡大画像が見れるように」)。
   // 画面(gameState)は増やさない。曲えらびの上に重ねるだけなので、閉じれば元の場所に戻る。
   const [artZoom,setArtZoom]=React.useState(false);
@@ -11404,12 +11729,20 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
     const event=(released&&typeof rhythmLimitedEventAt==='function')?rhythmLimitedEventAt(Date.now()):null;
     return new Set((event&&Array.isArray(event.songIds))?event.songIds:[]);
   })();
-  // 対象曲だけに絞るか。★開催していないときは絞らない(保存値が true のままでも)。
+  // いま選べるジャンル。★イベント中だけのもの(whileEvent)は、開催していなければ出さない。
+  //   ジャンルが1つ(すべて)だけなら、えらぶ意味が無いのでボタンごと出さない
+  const genres=RHYTHM_GENRES.filter(item=>!item.whileEvent||eventSongIds.size>0);
+  //   保存値が「いま選べないジャンル」を指しているときは「すべて」に倒す。
   //   そうしないと、イベントが終わったあとに一覧が空になる人が出る
-  const eventFilterOn=eventSongIds.size>0&&state.eventOnly===true;
+  const genre=genres.find(item=>item.id===state.genre)||genres[0];
+  const genreMatches=entry=>{
+    if(!genre||genre.id==='all')return true;
+    if(genre.id==='event')return eventSongIds.has(entry.songId);
+    // ★ジャンルを増やしたらここへ1行。曲の側の印を見て決める
+    return true;
+  };
   // 画面に並べる順。並び替えも絞り込みも**見え方だけ**で、遊べる曲も選んでいる曲も変えない。
-  const list=rhythmSortSongs(
-    eventFilterOn?playable.filter(entry=>eventSongIds.has(entry.songId)):playable,
+  const list=rhythmSortSongs(playable.filter(genreMatches),
     {sort:state.sort,desc:state.desc,levelOf:rowLevel,difficulties});
   const sortLabel=(RHYTHM_SORT_ORDERS.find(item=>item.id===state.sort)||RHYTHM_SORT_ORDERS[0]).label;
   // 選んでいる曲を鳴らすのは App本体(rhythmPreviewTrackId)。ここでは鳴らさない。
@@ -11536,14 +11869,14 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
           <span className="truncate">並び替え：{sortLabel}{state.desc?'（逆）':''}</span>
           <span aria-hidden="true" className="shrink-0 text-slate-400">▾</span>
         </button>
-        {/* ★イベント開催中だけ出る絞り込み。並び替えと同じ行に置いて、縦を1行も増やさない
-            (2026-09-11・ユーザー指示「ソートにイベント曲だけ出てくるのほしいね」)。
-            並び替えの一覧へ混ぜなかったのは、これが並び順ではなく絞り込みのため */}
-        {eventSongIds.size>0&&<button type="button" data-rhythm-song-event-filter aria-pressed={state.eventOnly===true}
-          onClick={()=>setView({...state,eventOnly:!(state.eventOnly===true)})}
-          title={state.eventOnly===true?'すべての曲を出す':'イベントの対象曲だけにする'}
-          className={`flex h-[44px] shrink-0 items-center gap-1 rounded-xl border px-2 text-[11px] font-black ${state.eventOnly===true?'border-amber-300 bg-amber-500/25 text-amber-100':'border-amber-300/40 bg-slate-900/80 text-amber-200'}`}>
-          <span aria-hidden="true">🏆</span><span>対象曲</span>
+        {/* ★ジャンルの絞り込み。並び替えと同じ行に置いて、縦を1行も増やさない
+            (2026-09-11・ユーザー指示「対象曲のところをジャンルに変えて、その中から選べるようにしよう」)。
+            並び替えの一覧へ混ぜないのは、これが並び順ではなく絞り込みのため。
+            えらべるジャンルが1つ(すべて)だけのときは、ボタンごと出さない */}
+        {genres.length>1&&<button type="button" data-rhythm-song-genre={genre?genre.id:'all'} onClick={()=>setGenreOpen(true)}
+          className={`flex h-[44px] min-w-0 flex-1 items-center justify-between gap-1 rounded-xl border px-3 text-[11px] font-black ${genre&&genre.id!=='all'?'border-amber-300 bg-amber-500/20 text-amber-100':'border-white/15 bg-slate-900/80 text-slate-200'}`}>
+          <span className="truncate">{genre&&genre.id!=='all'?genre.label:'ジャンル：すべて'}</span>
+          <span aria-hidden="true" className="shrink-0 text-slate-400">▾</span>
         </button>}
         {notice&&<button type="button" data-rhythm-song-notice-toggle aria-pressed={state.noticeOpen}
           onClick={()=>setView({...state,noticeOpen:!state.noticeOpen})}
@@ -11684,6 +12017,29 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
       <button type="button" data-rhythm-song-art-close onClick={()=>setArtZoom(false)}
         className="mt-3 min-h-[52px] w-full max-w-xs rounded-xl bg-slate-700 text-sm font-black text-white"
         style={{minHeight:'52px'}}>とじる</button>
+    </div>}
+    {genreOpen&&<div data-rhythm-genre-sheet className="fixed inset-0 z-[9000] flex items-end justify-center"
+      style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.72)',zIndex:9000}}
+      onClick={()=>setGenreOpen(false)}>
+      <section onClick={e=>e.stopPropagation()}
+        className="max-h-[80%] w-full max-w-md overflow-y-auto rounded-t-3xl border-t border-amber-300/60 bg-slate-900 p-4"
+        style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
+        <h3 className="text-sm font-black text-white">ジャンル</h3>
+        <p className="mt-1 text-[10px] font-bold text-slate-400">出す曲を絞るだけです。遊べる曲・自己ベスト・全国ランキングは変わりません。</p>
+        <div className="mt-3 space-y-1.5">
+          {genres.map(item=>{
+            const on=!!genre&&item.id===genre.id;
+            return <button key={item.id} type="button" data-rhythm-genre-option={item.id} aria-pressed={on}
+              onClick={()=>{setView({...state,genre:item.id});setGenreOpen(false);}}
+              className={`flex min-h-[52px] w-full flex-col justify-center rounded-xl border-2 px-3 text-left ${on?'border-amber-300 bg-amber-500/20':'border-white/15 bg-slate-950/60'}`}>
+              <b className="text-xs font-black text-white">{on?'● ':''}{item.label}</b>
+              <small className="text-[10px] font-bold text-slate-400">{item.note}</small>
+            </button>;
+          })}
+        </div>
+        <button type="button" data-rhythm-genre-close onClick={()=>setGenreOpen(false)}
+          className="mt-3 min-h-[52px] w-full rounded-xl bg-slate-700 text-sm font-black text-white">とじる</button>
+      </section>
     </div>}
     {sortOpen&&<div data-rhythm-sort-sheet className="fixed inset-0 z-[9000] flex items-end justify-center"
       style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.72)',zIndex:9000}}
@@ -11978,7 +12334,10 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
   },[monsterSignature,settings.sideMonsterOpacity,settings.sideMonsterMotion,settings.lightweightMode,settings.effectAmount]);
   const abilityTimerRef=useRef(null),abilityRevisionRef=useRef(0),abilityBadgeRef=useRef(null);
   const emptyCounts=()=>Object.fromEntries(RHYTHM_JUDGMENT_IDS.map(id=>[id,0]));
-  const makeRuntimeNotes=()=>chart.notes.map((note,index)=>({...note,index,done:false,activePointerId:null,holdJudgment:null,holdDeltaMs:0,...(note.type==='SLIDE'?{_rhythmSlideRenderPoints:rhythmSlidePoints(note)}:{})}));
+  // HOLD/SLIDEの追従を難易度ごとにやさしくする値を、演奏を始めるときにノーツへ焼き込む。
+  // 譜面データ(data/rhythm-mode.js)は触らないので、保存データにもランキングにも影響しない。
+  // 判定の関数は note からこの2つを読む(rhythmSlideTrackingTolerance / evaluatePosition)。
+  const makeRuntimeNotes=()=>{const tracking=rhythmSlideTrackingFor(difficulty.id);return chart.notes.map((note,index)=>({...note,index,done:false,activePointerId:null,holdJudgment:null,holdDeltaMs:0,_rhythmSlideToleranceBonusLanes:tracking.toleranceBonusLanes,_rhythmTrackingGraceMs:tracking.graceMs,...(note.type==='SLIDE'?{_rhythmSlideRenderPoints:rhythmSlidePoints(note)}:{})}));};
   const initialView=()=>({status:'loading',score:0,combo:0,maxCombo:0,last:'',fastSlow:'',counts:emptyCounts(),fast:0,slow:0,life:RHYTHM_LIFE_MAX,ability:null,result:null});
   const [view,setView]=useState(initialView);
   /* 演奏を始める前のカウントダウン(READY→3→2→1)。
@@ -12104,7 +12463,7 @@ const measureTravel=useCallback(()=>{
   return result;
 },[settings.noteStartPosition]);
 // --- 判定ラインの「幅」を描く ---
-// 上下のふちがGOOD(前後0.2秒)の端、内側の明るいところがMARVELOUS(前後0.055秒)。
+// 上下のふちがGOOD(前後0.17秒)の端、内側の明るいところがMARVELOUS(前後0.055秒)。
 // 何ピクセルになるかはノーツ速度(travelMs)と画面の高さで変わるので、実測から毎回出す。
 // 書き込むのは「前と違うときだけ」。位置が変わらないフレームでは何もしないので、
 // 毎フレームの塗り直しは増えない。判定・スコアには一切関与しない見た目だけの処理。
@@ -12323,8 +12682,11 @@ if(!note.done&&note.activePointerId===null&&note.releasedAtMs!=null){
 // 誰も押していない → MISS」にそのまま当たっていた。始点から240ms以上たった HOLD を離すと、
 // 上の猶予(200ms)を見る前に次のフレームで MISS になり、「離してから置き直す」持ち替えが
 // 実際にはできていなかった(rhythm-input-scenario-check.js で見つけた)。
-if(!note.done&&note.activePointerId===null&&note.releasedAtMs==null&&!placeable&&songTimeMs-(note.timeMs+settings.judgmentTimingOffsetMs)>RHYTHM_INPUT_MATCH_WINDOW_MS){note.done=true;note._rhythmUnplaceable=true;return;}
-if(!note.done&&note.activePointerId===null&&note.releasedAtMs==null&&songTimeMs-(note.timeMs+settings.judgmentTimingOffsetMs)>RHYTHM_INPUT_MATCH_WINDOW_MS)applyJudgment(note,'MISS',songTimeMs-note.timeMs);if(canvasNotes){paintCanvasNote(note);return;}
+// 回収は RHYTHM_MISS_RECLAIM_MS(判定窓＋入力が遅れて届きうるぶん)で見る。
+// フレームの時刻と入力の時刻が最大80msずれるため、判定窓ちょうどで回収すると
+// 「窓の内側で叩いたのにノーツがもう無い」が起きる(rhythm-mode.js の該当コメント)。
+if(!note.done&&note.activePointerId===null&&note.releasedAtMs==null&&!placeable&&songTimeMs-(note.timeMs+settings.judgmentTimingOffsetMs)>RHYTHM_MISS_RECLAIM_MS){note.done=true;note._rhythmUnplaceable=true;return;}
+if(!note.done&&note.activePointerId===null&&note.releasedAtMs==null&&songTimeMs-(note.timeMs+settings.judgmentTimingOffsetMs)>RHYTHM_MISS_RECLAIM_MS)applyJudgment(note,'MISS',songTimeMs-note.timeMs);if(canvasNotes){paintCanvasNote(note);return;}
 const el=laneRefs.current[note.index];if(!el)return;
 // 失敗したHOLD/SLIDEはその場で消さず、譜面上の終端まで薄いグレーで流し続ける。
 // 「もう取れない」ことが見えるようにするための表示だけの扱いで、判定・スコアには関与しない。
@@ -12580,7 +12942,7 @@ scheduleTick();};
     「高さ0・背景なし＝見えない線」になる。実機で「演奏を始めたときに
     下部の判定ラインがないときがある」と報告された(2026-09-05)。
     判定ラインは音ゲーでいちばん大事な目印なので、外部CSSに依存させない */}
-{/* 判定ラインの「幅」。上下のふちがGOOD(前後0.2秒)の端、内側の明るいところがMARVELOUS(前後0.055秒)で、
+{/* 判定ラインの「幅」。上下のふちがGOOD(前後0.17秒)の端、内側の明るいところがMARVELOUS(前後0.055秒)で、
     その真ん中に下の判定ラインがちょうど乗る。位置と高さはノーツ速度と画面の高さで変わるので、
     実測から updateJudgmentBand が書き込む。見た目だけの要素で、判定・スコアには関与しない。
     判定ラインと同じ理由でTailwindに頼らず直接書く(CDNのCSSが間に合わなくても必ず出す) */}
@@ -14050,25 +14412,36 @@ function RhythmRankingScreen({
         // 開催していないあいだはイベントのタブそのものを出さない
         ...(eventReleased&&limitedEvent?[{id:'event',label:'イベント'}]:[]),
       ];
+      // ★タブも部門も、押すたびに取り直す(2026-09-11・ユーザー指摘「総合だけ反映が遅い」)。
+      //   「初めて開いたときだけ」にしていたため、一度見た部門は古い順位のまま残っていた。
+      //   総合は"イベントタブを開いた瞬間"に読むので、いちばん最初に取った内容が
+      //   そのまま貼り付き、遊んで戻ってきても更新されなかった。
+      //   曲別はあとから初めて開くことが多く、そのときに取るので新しく見えていた。
+      //   ★読み直しているあいだも前の順位は消さない(loadRhythmEventRanking 側)。
+      //     取れたら差し替わるので、画面が一瞬空になることはない。
       const openTab=(tab)=>{
         setRhythmRankingTab(tab);
-        // 初めて開いたときだけ取りにいく。タブを往復するたびに通信しない
-        if(tab==='total'&&total.status==='idle')loadRhythmTotalRanking&&loadRhythmTotalRanking();
+        if(tab==='total')loadRhythmTotalRanking&&loadRhythmTotalRanking();
         const kind=tab==='weekly'?'weekly':(tab==='event'?'limited':null);
-        if(kind&&(!boards[kind]||boards[kind].status==='idle'))loadRhythmEventRanking&&loadRhythmEventRanking(kind,RHYTHM_EVENT_TOTAL_DIVISION);
+        if(kind){
+          // その種別でいま見ている部門をそのまま読み直す(初回は総合)
+          const want=(rhythmEventDivision&&rhythmEventDivision[kind])||RHYTHM_EVENT_TOTAL_DIVISION;
+          loadRhythmEventRanking&&loadRhythmEventRanking(kind,want);
+        }
       };
-      // 部門も、初めて開いたときだけ取りにいく
       const openDivision=(divisionId)=>{
         if(!boardKind)return;
         setRhythmEventDivision&&setRhythmEventDivision(prev=>({...prev,[boardKind]:divisionId}));
-        const board=event.boards&&event.boards[divisionId];
-        if(!board||board.status==='idle')loadRhythmEventRanking&&loadRhythmEventRanking(boardKind,divisionId);
+        loadRhythmEventRanking&&loadRhythmEventRanking(boardKind,divisionId);
       };
       const refresh=()=>{
         if(boardTab)loadRhythmEventRanking&&loadRhythmEventRanking(boardKind,eventDivisionId);
         else if(totalTabOpen)loadRhythmTotalRanking&&loadRhythmTotalRanking();
         else loadRhythmRanking(song);
       };
+      // ランク(S/SS/…)を決める点数。回数ボーナス込みの点だと満点を超えてしまうので、
+      // 素点が返っているときはそちらを使う(素点が無い＝加点なしの集計ならそのまま)
+      const eventRankScore=(entry)=>entry&&entry.baseScore!==null&&entry.baseScore!==undefined?entry.baseScore:(entry?.score||0);
       const totalRow=(entry,rank,mine)=>(
         <div data-rhythm-total-row className={`flex items-center gap-2 rounded-2xl border p-2 ${mine?'border-amber-300/60 bg-amber-500/10':'border-white/10 bg-slate-900/80'}`}>
           <b className="w-8 shrink-0 text-center text-xs font-black text-amber-200">{rank?`${rank}`:'—'}</b>
@@ -14093,13 +14466,17 @@ function RhythmRankingScreen({
             <p className="text-[9px] text-slate-400">{RHYTHM_DEMO_DIFFICULTY_LABELS[entry.difficultyId]?.name||entry.difficultyId||'-'} ・ Lv.{entry.level}</p>
           </div>
           <div className="shrink-0 text-right">
+            {/* ★一覧に出る数は**回数ボーナス込み**(2026-09-11・ユーザー指示
+                「加点分含めたスコアが表に出て、内訳を見るボタンをつけて…」)。
+                ランクだけは素点で決める。加点で満点を超えてSSS+に化けないようにするため */}
             <p className="font-mono text-sm font-black text-fuchsia-100">{entry.score.toLocaleString()}</p>
-            <p className={`text-[10px] font-black ${RHYTHM_RANK_COLORS[rhythmRankForScore(entry.score)]}`}>{rhythmRankForScore(entry.score)}</p>
+            <p className={`text-[10px] font-black ${RHYTHM_RANK_COLORS[rhythmRankForScore(eventRankScore(entry))]}`}>{rhythmRankForScore(eventRankScore(entry))}</p>
+            {entry.bonusScore>0&&<p className="text-[9px] font-black text-amber-300">+{entry.bonusScore.toLocaleString()}（{entry.playCount}回）</p>}
           </div>
-          {/* ★判定の内訳。「この曲」タブと同じ見た目・同じモーダルを使う
+          {/* ★判定の内訳とスコアの内訳。「この曲」タブと同じ見た目・同じモーダルを使う
               (2026-09-11・ユーザー指摘「イベント側の対象曲のほうの詳細がない」)。
-              内訳が無い行(SQL未適用・古い記録)ではボタンを出さない */}
-          {entry.detail&&<button data-rhythm-event-detail-row onClick={()=>setRhythmRankingDetail(entry)}
+              どちらも無い行(SQL未適用・古い記録)ではボタンを出さない */}
+          {(entry.detail||entry.baseScore!==null)&&<button data-rhythm-event-detail-row onClick={()=>setRhythmRankingDetail(entry)}
             className="shrink-0 min-h-[44px] rounded-lg border border-white/20 px-2 text-[9px] font-black text-slate-200">詳細</button>}
         </div>
       );
@@ -14114,7 +14491,11 @@ function RhythmRankingScreen({
           </div>
           <div className="shrink-0 text-right">
             <p className="font-mono text-sm font-black text-fuchsia-100">{entry.totalScore.toLocaleString()}</p>
+            {entry.bonusScore>0&&<p className="text-[9px] font-black text-amber-300">+{entry.bonusScore.toLocaleString()}（{entry.playCount}回）</p>}
           </div>
+          {/* 総合には判定の内訳が無いので、押せるのは回数ボーナスの内訳があるときだけ */}
+          {entry.baseScore!==null&&<button data-rhythm-event-bonus-row onClick={()=>setRhythmRankingDetail(entry)}
+            className="shrink-0 min-h-[44px] rounded-lg border border-white/20 px-2 text-[9px] font-black text-slate-200">内訳</button>}
         </div>
       );
       const eventRow=(entry,rank,mine)=>eventSongId?eventSongRow(entry,rank,mine):eventTotalRow(entry,rank,mine);
@@ -14252,24 +14633,56 @@ function RhythmRankingScreen({
             ))}
           </ol>}
         </div>
-        {rhythmRankingDetail&&(
+        {/* 詳細。曲の行(判定の内訳を持つ)と総合の行(持たない)の両方から開く。
+            回数ボーナスの内訳は、素点が返っているときだけ出す
+            (2026-09-11・ユーザー指示「加点分含めたスコアが表に出て、内訳を見るボタンを
+             つけて、そこで加点分と合わせた詳細スコアが見れるようにしたい」) */}
+        {rhythmRankingDetail&&(()=>{
+          const isTotal=rhythmRankingDetail.totalScore!==undefined&&rhythmRankingDetail.totalScore!==null;
+          const shownScore=Number(isTotal?rhythmRankingDetail.totalScore:rhythmRankingDetail.score)||0;
+          const baseScore=(rhythmRankingDetail.baseScore===null||rhythmRankingDetail.baseScore===undefined)?null:Number(rhythmRankingDetail.baseScore);
+          const bonusScore=Number(rhythmRankingDetail.bonusScore)||0;
+          const playCount=Number(rhythmRankingDetail.playCount)||0;
+          // 難易度ごとの回数(2026-09-12・ユーザー指示「難易度別回数の内訳もあったほうがいい」)。
+          // 返ってこない環境(SQL未適用)では空になり、この段は出ない
+          const playCountRows=rhythmEventPlayCountRows(rhythmRankingDetail.playCounts,RHYTHM_DEMO_DIFFICULTY_IDS);
+          return (
           <div data-rhythm-ranking-detail-modal className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-3" onClick={()=>setRhythmRankingDetail(null)}>
             <div className="w-full max-w-md rounded-2xl border border-amber-300/40 bg-slate-900 p-4" onClick={e=>e.stopPropagation()}>
               <div className="mb-2 flex items-center justify-between">
                 <h3 className="text-sm font-black text-amber-200">{rhythmRankingDetail.userName} のリザルト</h3>
                 <button aria-label="閉じる" data-rhythm-ranking-detail-close onClick={()=>setRhythmRankingDetail(null)} className="min-h-[44px] min-w-[44px] px-2 text-slate-400">✕</button>
               </div>
-              <p className="text-[10px] text-slate-400">{RHYTHM_DEMO_DIFFICULTY_LABELS[rhythmRankingDetail.difficultyId]?.name||rhythmRankingDetail.difficultyId} / スコア {rhythmRankingDetail.score.toLocaleString()} / ランク {rhythmRankForScore(rhythmRankingDetail.score)}</p>
-              <p className="mt-1 text-[10px] text-slate-400">最大コンボ {rhythmRankingDetail.detail?.maxCombo??'-'}</p>
-              <dl className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]">
-                {RHYTHM_JUDGMENT_IDS.map(id=><React.Fragment key={id}><dt className="text-slate-400">{id}</dt><dd className="text-right font-mono text-white">{rhythmRankingDetail.detail?.judgments?.[id]??0}</dd></React.Fragment>)}
-              </dl>
-              <p className="mt-2 text-[9px] font-black text-amber-200">
-                {rhythmRankingDetail.detail?.allMarvelous?'ALL MARVELOUS!!':rhythmRankingDetail.detail?.allExcellent?'ALL EXCELLENT!!':rhythmRankingDetail.detail?.fullCombo?'FULL COMBO!':''}
-              </p>
+              {isTotal
+                ?<p className="text-[10px] text-slate-400">総合 {rhythmRankingDetail.songCount}曲 / スコア {shownScore.toLocaleString()}</p>
+                :<p className="text-[10px] text-slate-400">{RHYTHM_DEMO_DIFFICULTY_LABELS[rhythmRankingDetail.difficultyId]?.name||rhythmRankingDetail.difficultyId} / スコア {shownScore.toLocaleString()} / ランク {rhythmRankForScore(baseScore===null?shownScore:baseScore)}</p>}
+              {baseScore!==null&&(
+              <dl data-rhythm-bonus-breakdown className="mt-2 rounded-xl border border-fuchsia-300/30 bg-fuchsia-500/10 p-2 text-[10px]">
+                <div className="flex items-center justify-between"><dt className="text-slate-300">素点（ベスト）</dt><dd className="font-mono text-white">{baseScore.toLocaleString()}</dd></div>
+                <div className="mt-1 flex items-center justify-between"><dt className="text-slate-300">遊んだ回数</dt><dd className="font-mono text-white">{playCount}回</dd></div>
+                {playCountRows.length>0&&<div data-rhythm-bonus-difficulties className="mt-0.5 space-y-0.5 border-l border-white/15 pl-2">
+                  {playCountRows.map(row=>(
+                    <div key={row.id} className="flex items-center justify-between text-[9px]">
+                      <dt className="text-slate-400">{RHYTHM_DEMO_DIFFICULTY_LABELS[row.id]?.name||row.id}<span className="ml-1 text-fuchsia-300/80">{row.rateText}</span></dt>
+                      <dd className="font-mono text-slate-200">{row.count}回</dd>
+                    </div>
+                  ))}
+                </div>}
+                <div className="mt-1 flex items-center justify-between"><dt className="text-slate-300">回数ボーナス</dt><dd className="font-mono font-black text-amber-300">+{bonusScore.toLocaleString()}</dd></div>
+                <div className="mt-1 flex items-center justify-between border-t border-white/15 pt-1"><dt className="font-black text-amber-200">合計（順位に使う点）</dt><dd className="font-mono font-black text-amber-200">{shownScore.toLocaleString()}</dd></div>
+              </dl>)}
+              {!isTotal&&(<React.Fragment>
+                <p className="mt-1 text-[10px] text-slate-400">最大コンボ {rhythmRankingDetail.detail?.maxCombo??'-'}</p>
+                <dl className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]">
+                  {RHYTHM_JUDGMENT_IDS.map(id=><React.Fragment key={id}><dt className="text-slate-400">{id}</dt><dd className="text-right font-mono text-white">{rhythmRankingDetail.detail?.judgments?.[id]??0}</dd></React.Fragment>)}
+                </dl>
+                <p className="mt-2 text-[9px] font-black text-amber-200">
+                  {rhythmRankingDetail.detail?.allMarvelous?'ALL MARVELOUS!!':rhythmRankingDetail.detail?.allExcellent?'ALL EXCELLENT!!':rhythmRankingDetail.detail?.fullCombo?'FULL COMBO!':''}
+                </p>
+              </React.Fragment>)}
             </div>
-          </div>
-        )}
+          </div>);
+        })()}
         {boardTab&&eventDetailOpen&&(
         <div data-rhythm-event-detail role="dialog" aria-modal="true" aria-label="イベント詳細"
           className="fixed inset-0 z-[80000] flex items-center justify-center bg-slate-950/95 p-4"
@@ -14321,6 +14734,21 @@ function RhythmRankingScreen({
                 className="rounded-2xl border border-amber-300/40 bg-amber-500/5 p-2 text-[10px] leading-tight text-slate-200">
                 <b className="text-amber-200">∞周回 ×{RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE}</b>　クイックの∞周回を裏で回しながら対象曲を演奏すると、入る周回数がふだん（×{RHYTHM_PLAY_RUN_LOOP_SCALE}）の{RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE}倍になります
               </p>
+              {/* 回数ボーナス(2026-09-11・ユーザー指示)。遊んだ回数が順位に効くことは、
+                  ランキングを見ているだけでは分からないので、報酬の表と同じ場所で伝える。
+                  割合の表は RHYTHM_EVENT_PLAY_BONUS_RATES から作る(数字を書き写さない) */}
+              {rhythmEventPlayBonusRates(eventDefinition)&&<div data-rhythm-event-play-bonus
+                className="rounded-2xl border border-fuchsia-300/40 bg-fuchsia-500/5 p-2 text-[10px] leading-tight text-slate-200">
+                <b className="text-fuchsia-200">回数ボーナス</b>　対象曲を遊んだ回数ぶん、自分のベストスコアに加点されます（上限なし）。ランキングに出ている点は加点込みで、「詳細」「内訳」から素点との内訳を見られます。
+                <ul className="mt-1 space-y-0.5">
+                  {RHYTHM_DEMO_DIFFICULTY_IDS.map(id=>(
+                    <li key={id} className="flex items-baseline gap-2">
+                      <b className="w-14 shrink-0 font-black text-fuchsia-200">{RHYTHM_DEMO_DIFFICULTY_LABELS[id]?.name||id}</b>
+                      <span className="min-w-0 flex-1 text-slate-200">{rhythmEventPlayBonusPercentText(id)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>}
               {/* 受け取り方。いつ・どこで受け取るのかが分からないと、終わったあとに迷う */}
               <p className="text-[9px] leading-relaxed text-slate-400">
                 報酬はイベントが終わったあと、ゲームを開いたときに受け取れます。受け取れるのは終了から2週間までです。順位は終了した時点で決まるので、遅れて受け取っても内容は変わりません。
@@ -14757,7 +15185,25 @@ function MasuReincarnateAnimation({
   reincarnateAnimation,
 }) {
   return (
-<div className="mh-reincarnation-animation" role="status" aria-live="polite"><div className="mh-reincarnation-light"></div><div className="mh-reincarnation-mon mh-reincarnate-stack"><DyedMonsterImage baseId={reincarnateAnimation.masu.baseId} src={reincarnateAnimation.base?.iconUrl||reincarnateAnimation.base?.imgUrl} alt={reincarnateAnimation.masu.name} masuColors={getMasuColors(reincarnateAnimation.masu)} className="w-full h-full object-contain"/><SoulRankAura soulRankStage={normalizeMasuProgression(reincarnateAnimation.masu).soulRankStage} className="is-ceremony"/><RebirthStars count={reincarnateAnimation.masu.rebirthCount} className="mh-rebirth-stars-overlay"/></div><div className="mh-reincarnation-copy"><b>転生完了！</b><span>Lv.{reincarnateAnimation.fromLevel} → Lv.{reincarnateAnimation.nextLevel}</span><span>{reincarnateAnimation.raisesSkill===false?`固有技ポイント +1（所持 ${reincarnateAnimation.keptSkillPoints}）`:`${reincarnateAnimation.skillName} Lv.${reincarnateAnimation.skillLevel}へ進化`}</span><span>強化ポイント {reincarnateAnimation.nextPoints} を振り直せます</span></div></div>
+<div className="mh-reincarnation-animation" role="status" aria-live="polite">
+      {/* 層の順番はCSSのz-indexで決めている(放射光0 → 本体1 → 粒2 → 輪3 → 閃光5 → 文字6)。
+          魂格オーラは魂格を持つ個体にしか出ないので、ここに並ぶ層だけで演出が成立するようにしてある */}
+      <div className="mh-reincarnation-light"></div>
+      <div className="mh-reincarnation-rays" aria-hidden="true"></div>
+      <div className="mh-reincarnation-mon mh-reincarnate-stack"><DyedMonsterImage baseId={reincarnateAnimation.masu.baseId} src={reincarnateAnimation.base?.iconUrl||reincarnateAnimation.base?.imgUrl} alt={reincarnateAnimation.masu.name} masuColors={getMasuColors(reincarnateAnimation.masu)} className="w-full h-full object-contain"/><SoulRankAura soulRankStage={normalizeMasuProgression(reincarnateAnimation.masu).soulRankStage} className="is-ceremony"/><RebirthStars count={reincarnateAnimation.masu.rebirthCount} className="mh-rebirth-stars-overlay"/></div>
+      {/* ① ほどけた魂が上へ昇る。--x は左右のばらけ方 */}
+      <div className="mh-reincarnation-souls" aria-hidden="true">{[-30,16,-8,34,-38,6,24,-18,40,-12,28,-24].map((x,i)=><i key={i} style={{'--i':i,'--x':x}}/>)}</div>
+      {/* ② 外周から中央へ集まる光 */}
+      <div className="mh-reincarnation-converge" aria-hidden="true">{Array.from({length:8},(_,i)=><i key={i} style={{'--i':i}}/>)}</div>
+      <div className="mh-reincarnation-halo" aria-hidden="true"></div>
+      <div className="mh-reincarnation-halo is-second" aria-hidden="true"></div>
+      <div className="mh-reincarnation-flash" aria-hidden="true"></div>
+      <div className="mh-reincarnation-title" aria-hidden="true">転　生</div>
+      {/* 何回目の転生かをその場で出す。一覧・詳細と同じバッジを大きくしただけなので、
+          あとから見返したときに同じ印で結び付く */}
+      <div className="mh-reincarnation-mark"><ReincarnateBadge count={normalizeMasuProgression(reincarnateAnimation.masu).reincarnateCount}/></div>
+      <div className="mh-reincarnation-copy"><b>転生完了！</b><span>Lv.{reincarnateAnimation.fromLevel} → Lv.{reincarnateAnimation.nextLevel}</span><span>{reincarnateAnimation.raisesSkill===false?`固有技ポイント +1（所持 ${reincarnateAnimation.keptSkillPoints}）`:`${reincarnateAnimation.skillName} Lv.${reincarnateAnimation.skillLevel}へ進化`}</span><span>強化ポイント {reincarnateAnimation.nextPoints} を振り直せます</span></div>
+    </div>
   );
 }
 
@@ -16030,7 +16476,7 @@ function PickHeroAllyScreen({
               mon: m,
               selected: proHeroPreset?.heroBaseId===m.id,
               disabled: !scenarioPicksHero(m.id),
-              onSelect: ()=>{if(proHeroPreset?.heroBaseId===m.id){setupMon(m,proHeroPreset.heroDistance);return;}setProHeroPreset(null);setCurrentPickingMon(m);advanceRunStage('PICK_SLOT');},
+              onSelect: ()=>{setProHeroPreset(null);setCurrentPickingMon(m);advanceRunStage('PICK_SLOT');},
               onDetail: ()=>setCurrentPickingMon(m),
               selectLabel: `${m.name}を勇者モンに選ぶ`,
               activeClass: 'active:bg-indigo-900/30',
@@ -16559,12 +17005,65 @@ function MasuRegisterModal({
 // ・施設へ入る7つの行き先は props(onOpen*)で受け取る。画面は行き先の名前を持たない
 // ・かぶせもの3つは「HOME にいて、チュートリアルが終わっていて、前の会話が片付いていたら」
 //   という順番で出る。その条件は MonsterHeroGame 側に残し、ここは中身だけを持つ
+// イベント開催中の角バッジ(2026-09-11・ユーザー指示
+// 「右上とか左上とか専用バッジを付けるようにして」「そこそこ派手目に / キラキラ強調されてるような」)。
+//
+// ★この機能ぶんのCSSは、ここで <style> を置いて閉じる。70-bootstrap.jsx の大きなCSSへ
+//   書き足したときは、1行に複数の規則が並ぶ場所へ入って @media の内側になり、
+//   文書へ一度も読み込まれなかった(実ブラウザで 0件 / 全1161規則)。
+//   さらに消すときに同じ行の続きまで巻き込んで、横画面の配置を壊した。
+//   ここへ閉じておけば、ほかのCSSを壊しようがない。
+// ★位置は超越バッジ・魂格バッジと同じ「角へ少しはみ出す」置き方にそろえる。
+// ★動きを減らす設定の人には光らせない(prefers-reduced-motion)。
+// ★位置と見た目は style で直に持たせる。配置の検査(home-layout-check.js)は
+//   このCSSを読み込まないので、クラスだけに頼ると検査の中で「ただの文字」になり、
+//   ボタンが横に広がって施設の位置がずれてしまう(実際に落ちた)。
+//   クラスのほうは「光り方・動き」だけを足す係にする。
+const HOME_EVENT_BADGE_STYLE = Object.freeze({
+  position:'absolute', top:'-10px', right:'-9px', zIndex:8,
+  display:'block', overflow:'hidden', padding:'2px 7px',
+  border:'1px solid #fff3c4', borderRadius:'999px',
+  background:'linear-gradient(135deg,#f59e0b,#fde047 45%,#f97316)',
+  color:'#4a1d00', fontSize:'8px', fontWeight:1000, fontStyle:'normal',
+  lineHeight:1.6, whiteSpace:'nowrap', textShadow:'0 1px 0 #fff8', pointerEvents:'none',
+  boxShadow:'0 0 0 1px #0006,0 2px 8px #000a,0 0 10px #fbbf24cc,0 0 18px #f59e0b80',
+});
+const HOME_EVENT_BADGE_CSS = `
+.mh-home-event-badge{animation:mhHomeEventBadgePulse 1.6s ease-in-out infinite}
+.mh-home-event-badge::after{content:'';position:absolute;top:0;bottom:0;left:-60%;width:45%;
+  background:linear-gradient(100deg,#fff0,#ffffffcc,#fff0);
+  animation:mhHomeEventBadgeShine 2.4s ease-in-out infinite}
+@keyframes mhHomeEventBadgePulse{
+  0%,100%{box-shadow:0 0 0 1px #0006,0 2px 8px #000a,0 0 10px #fbbf24cc,0 0 18px #f59e0b80;transform:scale(1)}
+  50%{box-shadow:0 0 0 1px #0006,0 2px 8px #000a,0 0 16px #fde047,0 0 30px #f59e0bcc;transform:scale(1.06)}}
+@keyframes mhHomeEventBadgeShine{0%{left:-60%}55%{left:120%}100%{left:120%}}
+@media(prefers-reduced-motion:reduce){
+  .mh-home-event-badge{animation:none;transform:none}
+  .mh-home-event-badge::after{display:none}}
+`;
 function HomeScreen({
   assistantBondUp, breederIcon, breederLevel, breederName, breederPoints, gifts, gold,
   hasUnreadChangelog, homeBackgroundReady, homePastureMasumons, masuMons, missions,
   onOpenBattle, onOpenManagement, onOpenMarket, onOpenProfile, onOpenRhythm, onOpenSettings,
   onOpenTemple, openChangelog, openGiftBox, openMissions, resolveIconUrl, spotClass,
 }) {
+  // ★バッジのCSSは <head> へ1回だけ入れる。HOMEのDOMへ <style> を混ぜると、
+  //   配置の検査(home-layout-check.js)が施設の位置を測るときに数がずれる。
+  //   head なら画面の中身に影響しない。
+  React.useEffect(()=>{
+    if(typeof document==='undefined')return;
+    if(document.getElementById('mh-home-event-badge-css'))return;
+    const tag=document.createElement('style');
+    tag.id='mh-home-event-badge-css';
+    tag.textContent=HOME_EVENT_BADGE_CSS;
+    document.head.appendChild(tag);
+  },[]);
+  // モンヒロビートのイベントを開催しているか。描くたびに数え直す(上の★のとおり)
+  const homeRhythmEventOpen=(()=>{
+    const released=(typeof RELEASE_FLAGS!=='undefined'&&RELEASE_FLAGS&&RELEASE_FLAGS.rhythmWeeklyRanking===true);
+    if(!released||typeof rhythmLimitedEventAt!=='function')return false;
+    return !!rhythmLimitedEventAt(Date.now());
+  })();
   return (
 
       <main className="mh-home-scene" aria-label="村の広場">
@@ -16590,7 +17089,14 @@ function HomeScreen({
               2026-09-04に正式名称を「モンスタービート」から「モンヒロビート」へ変更)。
               公開フラグが立つまでは修行と同じように「準備中」の案内だけを出し、本編からは遊べない。
               中身はデバッグ画面の「音ゲー体験版」から確認できる */}
-          <button className="mh-home-facility rhythm" onClick={onOpenRhythm} aria-label={RHYTHM_MODE_PUBLIC_RELEASE?"モンヒロビート":"モンヒロビート（準備中）"}><span>🎵 モンヒロビート{!RHYTHM_MODE_PUBLIC_RELEASE&&<small>準備中</small>}</span></button>
+          {/* ★イベント開催中は、その遊びのボタンに札を出す(2026-09-11・ユーザー指示
+              「イベント開催中は対応してるコンテンツボタンのとこにイベント開催中みたいなのがほしい」)。
+              HOMEを開いた時点で「いま何かやっている」と分かるようにする。
+              ★期間の判定は描くたびに行う(読み込み時に1回だけ決めると、開きっぱなしの端末で
+                古いままになる・CLAUDE.md ⑥-4)。開催していなければ何も出ない。
+              ★いまのイベントはモンヒロビートの曲だけを対象にするので、札もここだけ。
+                ほかの遊びを対象にするイベントを作るときは、そのボタンにも同じ em を足す */}
+          <button className="mh-home-facility rhythm" onClick={onOpenRhythm} aria-label={RHYTHM_MODE_PUBLIC_RELEASE?"モンヒロビート":"モンヒロビート（準備中）"}><span>🎵 モンヒロビート{!RHYTHM_MODE_PUBLIC_RELEASE&&<small>準備中</small>}{homeRhythmEventOpen&&<em data-home-event-badge className="mh-home-event-badge" style={HOME_EVENT_BADGE_STYLE}>✨開催中✨</em>}</span></button>
           <button className={`mh-home-facility battle${spotClass('battle')}`} onClick={onOpenBattle} aria-label="バトル"><span><Sword size={25}/>バトル</span></button>
         </nav>
         <button onClick={openMissions} className={`mh-home-mission${spotClass('reward')}`}><List size={16}/>ミッション
@@ -17983,6 +18489,10 @@ function MonsterHeroGame() {
     Object.prototype.hasOwnProperty.call(DIFFICULTY_SETTINGS, rankingViewDiff) ? rankingViewDiff : BATTLE_DEFAULT_DIFFICULTY);
   const [rankingKind, setRankingKind] = useState('score'); // 'score' | 'breeder' | 'bond'
   const [bondRankMonFilter, setBondRankMonFilter] = useState('all'); // 絆レベルランキングのモンスター種別フィルタ
+  // 総合力ランキングのモンスター種別フィルタ。絆Lvランキングと同じ「すべて＋種族別」の並び。
+  // 元になる一覧(bond_levels の正本 ＋ rankings の編成)は絆Lvとまったく同じものを使うので、
+  // タブを1つ増やしても通信は増えない
+  const [powerRankMonFilter, setPowerRankMonFilter] = useState('all');
   // 種族チャレンジランキングのタブ。
   // 'allSpecies' なら種族を問わないその難易度の全国ランキング、
   // 血統idならその種族×難易度の全国ランキング、'selfBest' なら自分の種族別ベストの比較
@@ -17990,7 +18500,7 @@ function MonsterHeroGame() {
   // 新しいバトルの入口(バトルモード再編・第2段階)。
   // 「バトル → バトルモード選択 → 難易度選択」の3画面と、そこから開くランキング。
   // まだデバッグ設定からだけ開ける。ふだんの「バトル」はこれまでどおり BATTLE_MENU のまま
-  const [modeSelectTab, setModeSelectTab] = useState('mode'); // 'mode' | 'breeder' | 'bond'
+  const [modeSelectTab, setModeSelectTab] = useState('mode'); // 'mode' | 'breeder' | 'bond' | 'power'
   // スコアランキングを「どのモードのぶんとして」見ているか。チャレンジとプロの2つだけ
   const [scoreRankingMode, setScoreRankingMode] = useState(BATTLE_MODE_CHALLENGE);
   // ランキングから戻る先。モード選択カードから開いたか、難易度カードから開いたかで変わる
@@ -18651,6 +19161,30 @@ function MonsterHeroGame() {
   const changeSeVolume = (v) => { const nv = Math.max(0, Math.min(100, v)); setSeVolumeRaw(nv); noteUltraAudioManualChange(); setQuickMuted(false); if (!audioUnlocked) setAudioUnlocked(true); Audio_.unlock(true); };
   const changeBgmVolume = (v) => { const nv = Math.max(0, Math.min(100, v)); setBgmVolumeRaw(nv); noteUltraAudioManualChange(); setQuickMuted(false); if (!audioUnlocked) setAudioUnlocked(true); Audio_.unlock(true); };
   const audioMuted = !audioOn;
+  // 「音が出ないとき」(音量設定の中)。開いているあいだだけ音の出口を見張る
+  const [showAudioDiag, setShowAudioDiag] = useState(false);
+  const [audioDiag, setAudioDiag] = useState(null);
+  const [audioDiagPeak, setAudioDiagPeak] = useState(0);
+  const [audioRepairing, setAudioRepairing] = useState(false);
+  const audioDiagPeakRef = useRef(0);
+  const enableSoundForCheck = () => {
+    if (!audioUnlocked) setAudioUnlocked(true);
+    if (quickMuted) toggleQuickMute();
+  };
+  // テスト音は効果音エンジン(Tone)を通さない素の音。
+  // 「Toneが読めていないだけ」なのか「出口そのものが死んでいる」のかを分けるため
+  const testAudioOutput = async () => {
+    enableSoundForCheck();
+    try { await Audio_.unlock(); } catch {}
+    try { await Audio_.playTestTone(); } catch {}
+  };
+  const repairAudioOutput = async () => {
+    if (audioRepairing) return;
+    setAudioRepairing(true);
+    enableSoundForCheck();
+    try { await Audio_.repair(); } catch {}
+    setAudioRepairing(false);
+  };
   const selectAutoRuntimeBgm = (trackId) => {
     if (trackId !== '__none__' && !BGM_TRACK_BY_ID[trackId]) return;
     setAutoBgmOverride(trackId);
@@ -19151,6 +19685,16 @@ function MonsterHeroGame() {
       ? bondRankingAll.slice(0, 50)
       : bondRankingAll.filter(x => bondEntryLineageId(x) === bondRankMonFilter).slice(0, 50)
   ), [bondRankingAll, bondRankMonFilter, bondEntryLineageId]);
+  // 総合力ランキング。絆Lvランキングとまったく同じ一覧(1人 × 1個体)を、
+  // 記録に残っている「その周回の時点の総合力」で並べ直したもの。
+  // 並べ替えの中身は collectPowerRankingEntries が正本(画面側に式を書き写さない)
+  const powerRankingAll = useMemo(() => collectPowerRankingEntries(bondRankingAll), [bondRankingAll]);
+  // 種族タブの絞り込みは絆Lvと同じ血統idで行う(bondEntryLineageId をそのまま使う)
+  const powerRanking = useMemo(() => (
+    powerRankMonFilter === 'all'
+      ? powerRankingAll.slice(0, 50)
+      : powerRankingAll.filter(x => bondEntryLineageId(x) === powerRankMonFilter).slice(0, 50)
+  ), [powerRankingAll, powerRankMonFilter, bondEntryLineageId]);
   const emptyRankingStatus = { loading:false, refreshing:false, error:null, fetched:false };
   const rankingStatus = (key) => rankingStatusByKey[key] || emptyRankingStatus;
   const saveRankingCache = (patch) => {
@@ -19290,12 +19834,19 @@ function MonsterHeroGame() {
     rhythmEventRankingRequestRef.current = { ...rhythmEventRankingRequestRef.current, [kind]: requestId };
     const wanted = divisionId || RHYTHM_EVENT_TOTAL_DIVISION;
     const stale = () => rhythmEventRankingRequestRef.current[kind] !== requestId;
-    setRhythmBoard(kind, prev => ({
-      ...prev,
-      status: prev.status === 'ready' ? 'ready' : 'loading',
-      error: null,
-      boards: { ...prev.boards, [wanted]: { status:'loading', entries:[], self:null } },
-    }));
+    // ★すでに出ている順位は消さない。読み直しのたびに一覧が空になると、
+    //   タブや部門を押すたびに画面がちらつく(2026-09-11・押すたびに取り直す形へ変えたため)。
+    //   取れたら差し替わる。まだ一度も取れていない部門だけ「読み込み中」にする。
+    setRhythmBoard(kind, prev => {
+      const before = (prev.boards && prev.boards[wanted]) || null;
+      const keep = before && before.status === 'ready';
+      return {
+        ...prev,
+        status: prev.status === 'ready' ? 'ready' : 'loading',
+        error: null,
+        boards: { ...prev.boards, [wanted]: keep ? before : { status:'loading', entries:[], self:null } },
+      };
+    });
     try {
       const breederId = await ensureBreederId();
       const selfKeys = rhythmTotalRankingSelfKeys(breederId, breederName);
@@ -19311,9 +19862,12 @@ function MonsterHeroGame() {
       const songId = rhythmEventDivisionSongId(wanted);
       const division = (songId && event.songIds.includes(songId)) ? wanted : RHYTHM_EVENT_TOTAL_DIVISION;
       const targetSongId = rhythmEventDivisionSongId(division);
+      // 回数ボーナスを使うイベントでは、割合を渡して加点込みで集計してもらう。
+      // 使わないイベント(週間)では null なので、これまでどおりの集計になる
+      const bonusRates = rhythmEventPlayBonusRates(event);
       const fetchRows = (options) => targetSongId
-        ? sbFetchRhythmEventSongBests({ songId:targetSongId, fromMs:range.startMs, toMs:range.endMs, ...options })
-        : sbFetchRhythmEventTotals({ songIds:[...event.songIds], fromMs:range.startMs, toMs:range.endMs, ...options });
+        ? sbFetchRhythmEventSongBests({ songId:targetSongId, fromMs:range.startMs, toMs:range.endMs, bonusRates, ...options })
+        : sbFetchRhythmEventTotals({ songIds:[...event.songIds], fromMs:range.startMs, toMs:range.endMs, bonusRates, ...options });
       const fromRow = targetSongId ? rhythmEventSongEntryFromRow : rhythmEventTotalEntryFromRow;
       const rows = await fetchRows({ requestId:`rhythm-${kind}-${division}-${Date.now()}` });
       if (stale()) return;
@@ -20252,11 +20806,14 @@ function MonsterHeroGame() {
       const breederId = await ensureBreederId();
       const selfKeys = rhythmTotalRankingSelfKeys(breederId, breederName);
       const prizes = [];
+      // ★順位の出し方は画面と**同じ**にする。回数ボーナスを使うイベントでここを渡し忘れると、
+      //   「ランキングでは1位だったのに報酬が来ない」が起きる
+      const bonusRates = rhythmEventPlayBonusRates(event);
       for (const divisionId of rhythmEventDivisionIds(event)) {
         const songId = rhythmEventDivisionSongId(divisionId);
         const rows = songId
-          ? await sbFetchRhythmEventSongBests({ songId, fromMs:range.startMs, toMs:range.endMs, limit:RHYTHM_EVENT_REWARD_RANKS, requestId:`rhythm-reward-${event.id}-${divisionId}` })
-          : await sbFetchRhythmEventTotals({ songIds:[...event.songIds], fromMs:range.startMs, toMs:range.endMs, limit:RHYTHM_EVENT_REWARD_RANKS, requestId:`rhythm-reward-${event.id}-total` });
+          ? await sbFetchRhythmEventSongBests({ songId, fromMs:range.startMs, toMs:range.endMs, bonusRates, limit:RHYTHM_EVENT_REWARD_RANKS, requestId:`rhythm-reward-${event.id}-${divisionId}` })
+          : await sbFetchRhythmEventTotals({ songIds:[...event.songIds], fromMs:range.startMs, toMs:range.endMs, bonusRates, limit:RHYTHM_EVENT_REWARD_RANKS, requestId:`rhythm-reward-${event.id}-total` });
         const fromRow = songId ? rhythmEventSongEntryFromRow : rhythmEventTotalEntryFromRow;
         const entries = (Array.isArray(rows) ? rows : []).map(fromRow);
         const index = entries.findIndex(entry => selfKeys.includes(entry.identityKey));
@@ -20270,7 +20827,7 @@ function MonsterHeroGame() {
       let participation = null;
       if (rhythmEventParticipationReward(event)) {
         const mine = await sbFetchRhythmEventTotals({
-          songIds:[...event.songIds], fromMs:range.startMs, toMs:range.endMs,
+          songIds:[...event.songIds], fromMs:range.startMs, toMs:range.endMs, bonusRates,
           limit:selfKeys.length, identityKeys:selfKeys, requestId:`rhythm-reward-${event.id}-join`,
         });
         const played = (Array.isArray(mine) ? mine : []).map(rhythmEventTotalEntryFromRow)
@@ -20528,6 +21085,25 @@ function MonsterHeroGame() {
   // 音量の保存値そのものは変えないので、モンビーを出れば元の音量へ戻る
   useEffect(() => { Audio_.setSeVolume((ultraEcoSession || rhythmScreenOpen) ? 0 : seVolume); }, [seVolume, ultraEcoSession, rhythmScreenOpen]);
   useEffect(() => { Audio_.setBgmVolume(bgmVolume); }, [bgmVolume]);
+  // 「音が出ないとき」を開いているあいだだけ、出口の状態と実際に出ている音を見張る。
+  // 閉じたら必ず止める(鳴らしているあいだ中ずっと測り続けない)
+  useEffect(() => {
+    if (!showAudioSettings || !showAudioDiag) return;
+    audioDiagPeakRef.current = 0;
+    setAudioDiagPeak(0);
+    const tick = () => {
+      let info = null;
+      try { info = Audio_.diagnose(); } catch { info = null; }
+      setAudioDiag(info);
+      const level = Number.isFinite(info?.level) ? info.level : 0;
+      // 一瞬の音でもメーターが見えるように、山は少しずつ下げながら保つ
+      audioDiagPeakRef.current = Math.max(level, audioDiagPeakRef.current * 0.82);
+      setAudioDiagPeak(audioDiagPeakRef.current);
+    };
+    tick();
+    const timer = setInterval(tick, 120);
+    return () => clearInterval(timer);
+  }, [showAudioSettings, showAudioDiag]);
 
   // 新バージョン検知: ホーム画面アプリ/背面タブ復帰時は自動再読み込みされず古いバージョンの
   // ままタップしても反応しないように見える不具合が繰り返し報告されたため、version.jsonを
@@ -27407,7 +27983,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   ) : showTitleSettings ? (
     <div className="mh-title-modal" onPointerDown={e=>e.stopPropagation()}><div className="mh-title-dialog"><div className="mh-dialog-head"><h3>設定</h3><button onClick={()=>setShowTitleSettings(false)}><X size={18}/></button></div><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowAudioSettings(true)}}>🔊 音量設定 <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowBgmArrangement(true)}}>🎼 BGMアレンジ <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowBackup(true)}}>🛡️ データ引き継ぎ <ChevronRight size={18}/></button></div></div>
   ) : showAudioSettings ? (
-    <div className="mh-title-modal"><div className="mh-title-dialog"><div className="mh-dialog-head"><h3>音量設定</h3><button onClick={()=>setShowAudioSettings(false)}><X size={18}/></button></div><button className="mh-dialog-choice" onClick={toggleQuickMute}>{audioMuted?'🔇 音がオフです':'🔊 音はオンです'}</button><VolumeSlider label="SE" icon="🔔" value={seVolume} onChange={changeSeVolume} gradient="from-cyan-500 to-indigo-500" thumbRing="border-indigo-400"/><VolumeSlider label="BGM" icon="🎵" value={bgmVolume} onChange={changeBgmVolume} gradient="from-fuchsia-500 to-pink-500" thumbRing="border-fuchsia-400"/></div></div>
+    <div className="mh-title-modal"><div className="mh-title-dialog" style={{maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',overflowY:'auto'}}><div className="mh-dialog-head"><h3>音量設定</h3><button onClick={()=>setShowAudioSettings(false)}><X size={18}/></button></div><button className="mh-dialog-choice" onClick={toggleQuickMute}>{audioMuted?'🔇 音がオフです':'🔊 音はオンです'}</button><VolumeSlider label="SE" icon="🔔" value={seVolume} onChange={changeSeVolume} gradient="from-cyan-500 to-indigo-500" thumbRing="border-indigo-400"/><VolumeSlider label="BGM" icon="🎵" value={bgmVolume} onChange={changeBgmVolume} gradient="from-fuchsia-500 to-pink-500" thumbRing="border-fuchsia-400"/><button className="mh-dialog-choice mt-3" aria-expanded={showAudioDiag} onClick={()=>setShowAudioDiag(v=>!v)}>🔧 音が出ないとき {showAudioDiag?'▲':'▼'}</button>{showAudioDiag&&<AudioTroubleshootPanel info={audioDiag} peak={audioDiagPeak} muted={audioMuted} onTest={testAudioOutput} onRepair={repairAudioOutput} repairing={audioRepairing}/>}</div></div>
   ) : showBgmArrangement ? (
     <div className="mh-title-modal"><div className="mh-title-dialog" style={{maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',overflowY:'auto'}}><div className="mh-dialog-head"><h3>BGMアレンジ</h3><button onClick={closeBgmArrangement}><X size={18}/></button></div>{(()=>{const categories=[
       {id:'basic',label:'基本',items:[['home','HOME BGM'],['title','タイトル BGM'],['autoBattle','AUTOモード BGM'],['management','M/B管理 BGM'],['clear','ゲームクリア BGM'],
@@ -27489,6 +28065,19 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           colors: Array.isArray(entry.colors) ? entry.colors : [] }
       : null;
     return <article key={`bond-${entry?.userName||'unknown'}-${entry?.masuId||entry?.monsterId||entry?.monName}-${index}`} data-ranking-kind="bond" className={`${rankingCardClass(index)} p-2`}><div className="grid grid-cols-[28px_32px_minmax(0,1fr)_auto] items-center gap-2 min-w-0">{rankingPlace(index)}{rankingBreederIcon(entry)}<b className="truncate text-[10px]">{entry?.userName||'名無しのブリーダー'}</b><strong className="text-xs text-pink-300 whitespace-nowrap">絆Lv.{level}</strong></div><div className="ml-[76px] mt-1 flex items-center gap-2 min-w-0 rounded-lg bg-black/35 px-2 py-1"><span data-ranking-soul-badge className="relative w-7 h-7 shrink-0 overflow-visible">{entry?.imgUrl?<img src={entry.imgUrl} alt="" className="w-7 h-7 object-contain"/>:<span className="block w-7 text-center">{entry?.emoji||'❓'}</span>}{entry?.detail&&<TranscendenceBadge transcended={entry.detail?.transcended===true} soulRankStage={entry.detail?.soulRankStage} small/>}</span><b className="truncate flex-1 text-[10px]">{entry.monName}</b>{/* 育て方が記録に残っている個体だけ開ける。古い記録は押せない状態にして理由をその場に出す */}<button onClick={()=>{ if (detailMember) setRankingMonsterDetail(detailMember); }} disabled={!detailMember} data-bond-detail={detailMember?'open':'none'} className={`shrink-0 px-2 py-1 rounded-lg border text-[9px] font-black leading-none ${detailMember?'border-indigo-400/60 bg-indigo-500/20 text-indigo-100 active:scale-95':'border-white/10 bg-black/20 text-slate-600'}`}>{detailMember?'詳細 ›':'情報なし'}</button></div></article>;
+  };
+  // 総合力専用カード。絆Lvのカードと同じ並び(順位・アイコン・名前・数字／下に個体)で、
+  // いちばん大きく出す数字だけが絆Lvから総合力へ替わる。絆Lvは個体の行へ小さく添える。
+  const renderPowerRankingEntry = (entry, index) => {
+    const level = Number(entry?.bondLevel);
+    // 「詳細 ›」で開くのは絆Lvランキングとまったく同じ1体ぶんの画面。
+    // 総合力の一覧は detail がある記録だけを載せているので、ここは必ず開ける
+    const detailMember = entry?.detail
+      ? { baseId: entry.monsterId, monsterId: entry.monsterId, name: entry.monName,
+          masuId: entry.masuId, bondLevel: level, detail: entry.detail,
+          colors: Array.isArray(entry.colors) ? entry.colors : [] }
+      : null;
+    return <article key={`power-${entry?.userName||'unknown'}-${entry?.masuId||entry?.monsterId||entry?.monName}-${index}`} data-ranking-kind="power" className={`${rankingCardClass(index)} p-2`}><div className="grid grid-cols-[28px_32px_minmax(0,1fr)_auto] items-center gap-2 min-w-0">{rankingPlace(index)}{rankingBreederIcon(entry)}<b className="truncate text-[10px]">{entry?.userName||'名無しのブリーダー'}</b><strong className="flex items-baseline gap-1 whitespace-nowrap"><span className="text-[7px] font-black uppercase tracking-widest text-amber-400/80">総合力</span><span className="font-mono text-xs tabular-nums text-amber-200">{formatMonsterPower(entry?.power)}</span></strong></div><div className="ml-[76px] mt-1 flex items-center gap-2 min-w-0 rounded-lg bg-black/35 px-2 py-1"><span data-ranking-soul-badge className="relative w-7 h-7 shrink-0 overflow-visible">{entry?.imgUrl?<img src={entry.imgUrl} alt="" className="w-7 h-7 object-contain"/>:<span className="block w-7 text-center">{entry?.emoji||'❓'}</span>}{entry?.detail&&<TranscendenceBadge transcended={entry.detail?.transcended===true} soulRankStage={entry.detail?.soulRankStage} small/>}</span><b className="truncate flex-1 text-[10px]">{entry.monName}</b>{Number.isFinite(level)&&level>0&&<span className="shrink-0 text-[9px] font-black text-pink-300 whitespace-nowrap">絆Lv.{level}</span>}<button onClick={()=>{ if (detailMember) setRankingMonsterDetail(detailMember); }} disabled={!detailMember} data-power-detail={detailMember?'open':'none'} className={`shrink-0 px-2 py-1 rounded-lg border text-[9px] font-black leading-none ${detailMember?'border-indigo-400/60 bg-indigo-500/20 text-indigo-100 active:scale-95':'border-white/10 bg-black/20 text-slate-600'}`}>{detailMember?'詳細 ›':'情報なし'}</button></div></article>;
   };
   // そのモード・難易度の端末記録。画面のあちこちで if を並べないための小さな入口。
   // 保存先はモードごとに分かれている(mh_ / mh_quick_ / mh_pro_)
@@ -27642,6 +28231,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 絆Lvランキング。こちらもモードでは分かれず、モンスターの種類で絞る
   const renderBondRankingBody = () => (
     <><div className="flex gap-1 overflow-x-auto pb-1.5 shrink-0">{[{id:'all',label:'すべて'},...bondRankingLineages.map(l=>({id:l.id,label:`${l.name}種`}))].map(t=><button key={t.id} onClick={()=>setBondRankMonFilter(t.id)} className={`px-2.5 py-1 rounded-full text-[8px] font-black shrink-0 border ${bondRankMonFilter===t.id?'bg-pink-600 border-pink-400':'bg-slate-900 border-white/10 text-slate-400'}`}>{t.label}</button>)}</div><div className="flex-1 overflow-y-auto mh-scroll space-y-1.5">{bondRankingLoading&&bondRankingData&&<div className="text-center text-[9px] text-indigo-300">更新中…</div>}{bondRankingError&&bondRankingData&&<div className="text-center text-[9px] text-amber-300">{bondRankingError}</div>}{bondRanking.map(renderBondRankingEntry)}{bondRanking.length===0&&(bondRankingLoading&&!bondRankingData?<div className="text-center text-slate-400 py-8">Loading...</div>:bondRankingError&&!bondRankingData?rankingRetryButton(()=>loadRankings(null,true,true,'bond')):rankingEmptyText)}</div></>
+  );
+  // 総合力ランキング。絆Lvランキングと同じデータ・同じ取得(levelKind='bond')を使う。
+  // タブを開いたときに呼ぶ loadRankings も 'bond' のままなので、通信はこれまでと同じ回数のまま
+  const renderPowerRankingBody = () => (
+    <><div className="flex gap-1 overflow-x-auto pb-1.5 shrink-0">{[{id:'all',label:'すべて'},...bondRankingLineages.map(l=>({id:l.id,label:`${l.name}種`}))].map(t=><button key={t.id} onClick={()=>setPowerRankMonFilter(t.id)} className={`px-2.5 py-1 rounded-full text-[8px] font-black shrink-0 border ${powerRankMonFilter===t.id?'bg-amber-600 border-amber-400':'bg-slate-900 border-white/10 text-slate-400'}`}>{t.label}</button>)}</div><div className="flex-1 overflow-y-auto mh-scroll space-y-1.5">{bondRankingLoading&&bondRankingData&&<div className="text-center text-[9px] text-indigo-300">更新中…</div>}{bondRankingError&&bondRankingData&&<div className="text-center text-[9px] text-amber-300">{bondRankingError}</div>}{powerRanking.map(renderPowerRankingEntry)}{powerRanking.length===0&&(bondRankingLoading&&!bondRankingData?<div className="text-center text-slate-400 py-8">Loading...</div>:bondRankingError&&!bondRankingData?rankingRetryButton(()=>loadRankings(null,true,true,'bond')):rankingEmptyText)}{powerRanking.length>0&&<p className="rounded-xl border border-white/10 bg-slate-900/60 p-3 text-center text-[9px] leading-relaxed text-slate-400">総合力は、その記録を出したときの値をそのまま並べています。育て方が記録に残る前の古い記録は載りません。</p>}</div></>
   );
   if (bootPhase === 'TITLE') return (
     <><main className="mh-title-gate" aria-label="Monster Hero タイトル画面">
@@ -28244,9 +28838,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {/* 上のタブ。スコアランキングはモードごとに分かれるのでここには置かず、
                   モードのカードと難易度のカードから開く。ここに並ぶのはモードで分かれない2つだけ */}
               {/* 練習中はランキングへ移らせない(台本がモード選択のまま進むため) */}
-              <div className={`grid grid-cols-3 gap-1 mb-2 shrink-0 rounded-xl bg-slate-900/60 p-0.5 border border-white/5${battleTutorialSpotClass('modeRankTabs')}`}>
-                {[['mode','モード選択'],['breeder','ブリーダーLv'],['bond','絆Lv']].map(([key,label])=>(
-                  <button key={key} disabled={!!battleTutorial} onClick={()=>{setModeSelectTab(key);if(key==='mode')return;addAssistantBond('ranking');if(key==='bond')setBondRankMonFilter('all');loadRankings(null,true,false,key);}} aria-label={key==='mode'?'モード選択':`${label}ランキング`} className={`min-h-[38px] rounded-lg text-[10px] font-black active:scale-95 disabled:opacity-40 ${modeSelectTab===key?'bg-indigo-600 text-white':'text-slate-400'}`}>{label}</button>
+              {/* 4つ並ぶので字だけ小さくする。「ブリーダーLv」を略さず正式な見出しのまま入れるため */}
+              <div className={`grid grid-cols-4 gap-1 mb-2 shrink-0 rounded-xl bg-slate-900/60 p-0.5 border border-white/5${battleTutorialSpotClass('modeRankTabs')}`}>
+                {/* 総合力は絆Lvとまったく同じ一覧を並べ直したものなので、取得も絆Lvと同じ 'bond' を呼ぶ
+                    (タブ名をそのまま levelKind へ渡すと、存在しない 'power' の取得になってしまう) */}
+                {[['mode','モード選択'],['breeder','ブリーダーLv'],['bond','絆Lv'],['power','総合力']].map(([key,label])=>(
+                  <button key={key} disabled={!!battleTutorial} onClick={()=>{setModeSelectTab(key);if(key==='mode')return;addAssistantBond('ranking');if(key==='bond')setBondRankMonFilter('all');if(key==='power')setPowerRankMonFilter('all');loadRankings(null,true,false,key==='power'?'bond':key);}} aria-label={key==='mode'?'モード選択':`${label}ランキング`} className={`min-h-[38px] rounded-lg text-[9px] leading-tight font-black active:scale-95 disabled:opacity-40 ${modeSelectTab===key?'bg-indigo-600 text-white':'text-slate-400'}`}>{label}</button>
                 ))}
               </div>
               {modeSelectTab==='mode'&&<div className="flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll">
@@ -28294,6 +28891,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               </div>}
               {modeSelectTab==='breeder'&&<div className="flex-1 min-h-0 flex flex-col"><div className="shrink-0 w-full mb-2.5"><AssistantBubble scene="ranking" compact/></div>{renderBreederRankingBody()}</div>}
               {modeSelectTab==='bond'&&<div className="flex-1 min-h-0 flex flex-col"><div className="shrink-0 w-full mb-2.5"><AssistantBubble scene="ranking" compact/></div>{renderBondRankingBody()}</div>}
+              {modeSelectTab==='power'&&<div className="flex-1 min-h-0 flex flex-col"><div className="shrink-0 w-full mb-2.5"><AssistantBubble scene="ranking" compact/></div>{renderPowerRankingBody()}</div>}
             </div>
           </div>);
         })()}
@@ -28625,14 +29223,19 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const base=Object.values(ALL_PLAYER_MONSTERS)[0];
           if(!base)return null;
           const previewMasu=(count)=>({id:`reincarnate-preview-${count}`,baseId:base.id,name:base.name,bondXp:0,rebirthCount:3,reincarnateCount:count,colors:[]});
-          const playPreview=()=>{const masu=previewMasu(3);setReincarnateAnimation({masu,base,fromLevel:100,nextLevel:1,raisesSkill:false,keptSkillPoints:1,nextPoints:13});setTimeout(()=>setReincarnateAnimation(null),4100);};
+          // 魂格オーラは魂格を持つ個体にしか出ない。演出そのものは魂格0でも成立していないといけないので、
+          // 「魂格なし」と「魂格あり」の両方をここから再生できるようにしてある
+          const playPreview=(soulRankStage=0)=>{const masu={...previewMasu(3),soulRankStage};setReincarnateAnimation({masu,base,fromLevel:100,nextLevel:1,raisesSkill:false,keptSkillPoints:1,nextPoints:13});setTimeout(()=>setReincarnateAnimation(null),4100);};
           return <main data-mh-screen className="flex-1 flex flex-col h-full min-h-0 p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
             <header className="flex items-center gap-2 mb-3 shrink-0"><button onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><div><small className="text-[8px] font-black text-cyan-300">DEBUG・本番と同じ ReincarnateAura / RebirthStars</small><h2 className="text-sm font-black">転生表示確認</h2></div></header>
             <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
             <p className="mb-3 text-[9px] leading-relaxed text-slate-400">表示用の一時データだけを使います。所持マスモン・転生回数・ダイヤは変更も保存もしません。</p>
             <section className="grid grid-cols-2 gap-3">{[0,1,2,3].map(count=>{const masu=previewMasu(count);return <article key={count} className="rounded-2xl border border-white/10 bg-slate-900/90 p-3 text-center"><div className="relative mx-auto w-16 h-16 mh-reincarnate-stack"><div className="relative z-[1] w-16 h-16 overflow-hidden rounded-full border border-pink-400/40"><DyedMonsterImage baseId={base.id} src={base.iconUrl||base.imgUrl} alt={base.name} masuColors={[]} className="w-full h-full object-cover"/></div><SoulRankAura soulRankStage={Math.max(0,Math.min(5,count))}/><RebirthStars count={3} className="mh-rebirth-stars-overlay"/></div><b className="mt-3 block text-[11px] text-white">{count===0?'未転生':count===1?'1回：青画像':count===2?'2回：黄画像':'3回：赤画像'}</b></article>})}</section>
             </div>
-            <button onClick={playPreview} className="mt-3 shrink-0 min-h-[52px] rounded-2xl border-2 border-violet-300 bg-gradient-to-r from-violet-700 to-blue-600 text-sm font-black text-white active:scale-95">転生演出を再生</button>
+            <div className="mt-3 shrink-0 grid grid-cols-2 gap-2">
+              <button data-reincarnate-preview="plain" onClick={()=>playPreview(0)} className="min-h-[52px] rounded-2xl border-2 border-violet-300 bg-gradient-to-r from-violet-700 to-blue-600 text-[12px] font-black text-white active:scale-95">転生演出を再生<small className="block text-[8px] font-black text-violet-200">魂格なし</small></button>
+              <button data-reincarnate-preview="soul" onClick={()=>playPreview(4)} className="min-h-[52px] rounded-2xl border-2 border-rose-300 bg-gradient-to-r from-rose-700 to-amber-600 text-[12px] font-black text-white active:scale-95">転生演出を再生<small className="block text-[8px] font-black text-rose-100">魂格Ⅳ</small></button>
+            </div>
           </main>;
         })()}
 
@@ -33049,7 +33652,56 @@ const createAnimationStyle = () => {
     @media(prefers-reduced-motion:reduce){.mh-transcend-animation *{animation-duration:.01ms!important;animation-iteration-count:1!important}.mh-transcend-copy,.mh-transcend-mark,.mh-transcend-title{opacity:1;transform:none}.mh-transcend-flash,.mh-transcend-shock,.mh-transcend-rays,.mh-transcend-converge{display:none}}
     .mh-rebirth-stars-overlay,.mh-home-masumon-stars{z-index:4}.mh-home-masumon-bob>div:first-child,.mh-reincarnation-mon>div:first-child{position:relative;z-index:1}
 
-    .mh-reincarnation-animation{position:fixed;inset:0;z-index:51000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at 50% 48%,#172554 0,#0f172a 34%,#020617 70%);pointer-events:auto;touch-action:none}.mh-reincarnation-light{position:absolute;inset:0;z-index:0;background:radial-gradient(circle at 50% 48%,#fff 0,#fff8 24%,transparent 62%);opacity:0;pointer-events:none;animation:mhReincarnationLight 4s ease-out forwards}.mh-reincarnation-mon{position:relative;z-index:1;width:140px;height:140px;animation:mhReincarnationMon 4s ease-out forwards}.mh-reincarnate-aura.is-ceremony{inset:-48%;opacity:0;animation:mhReincarnationAura 4s cubic-bezier(.2,.75,.25,1) forwards}.mh-reincarnate-aura.is-ceremony .is-main{animation-duration:1.45s}.mh-reincarnate-aura.is-ceremony .is-back{animation-duration:1.8s}.mh-reincarnate-aura.is-ceremony .is-foot{animation-duration:1.1s}.mh-reincarnate-aura.is-ceremony img{filter:brightness(1.1) drop-shadow(0 0 8px #fff8)}.mh-reincarnation-copy{position:absolute;bottom:calc(8% + env(safe-area-inset-bottom));z-index:4;display:flex;flex-direction:column;align-items:center;color:#e0f2fe;font-size:11px;font-weight:900;animation:mhReincarnationCopy 4s ease-out forwards}.mh-reincarnation-copy b{font-size:25px;color:#fff;text-shadow:0 0 12px #818cf8}.mh-reincarnation-copy span{margin-top:2px}@keyframes mhReincarnationLight{0%,43%{opacity:0}48%{opacity:.36}56%,100%{opacity:0}}@keyframes mhReincarnationMon{0%{opacity:1;transform:translateY(8px) scale(.96)}18%{transform:none}42%{transform:scale(1.02)}55%,100%{opacity:1;transform:none}}@keyframes mhReincarnationAura{0%,16%{opacity:0;transform:scale(.88)}30%{opacity:.86;transform:scale(1)}47%{opacity:1;transform:scale(1.13);filter:brightness(1.45)}64%{opacity:.9;transform:scale(1);filter:brightness(1)}100%{opacity:1;transform:scale(1);filter:brightness(1)}}@keyframes mhReincarnationCopy{0%,55%{opacity:0;transform:translateY(12px)}68%,88%{opacity:1;transform:none}100%{opacity:0}}@media(max-height:620px){.mh-reincarnation-copy{bottom:calc(4% + env(safe-area-inset-bottom))}}@media(prefers-reduced-motion:reduce){.mh-reincarnate-flame,.mh-reincarnate-sparks,.mh-reincarnate-sparks::before,.mh-reincarnate-sparks::after{animation:none}.mh-reincarnation-animation *{animation-duration:.01ms!important}}
+    /* 転生の演出。「一度ほどけて、生まれ直す」を4秒で見せる。
+       魂格オーラ(SoulRankAura)は魂格を持つ個体にしか出ないため、以前はオーラの無い個体だと
+       全面光と文字だけになり、限界突破・超越の演出と比べて明らかに地味だった
+       (2026-09-11・ユーザー指摘「転生のオーラをなくしたから転生したときの演出が地味になった」)。
+       そこで、オーラの有無に関係なく必ず出る層をCSSだけで足してある(画像は増やさない)。
+         ① 魂がほどける  … 本体から光の粒が上へ昇る
+         ② 収束          … 外から中央へ光が集まり、繭の輪が閉じる
+         ③ 閃光          … 白フラッシュ。本体がいったん白へ飛ぶ
+         ④ 生まれ直し    … 衝撃波の輪2枚・回転する放射光・本体が弾んで戻る
+         ⑤ 名乗り        … 「転　生」の大文字 →「転生 ×N」のバッジ → 結果のコピー
+       色は 藍→紫→シアン。金/桃の超越、琥珀の限界突破と取り違えないため。 */
+    .mh-reincarnation-animation{position:fixed;inset:0;z-index:51000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at 50% 48%,#172554 0,#0f172a 34%,#020617 70%);pointer-events:auto;touch-action:none}
+    /* 全面光。既存の穏やかな広がり(本体より背面)はそのまま残す */
+    .mh-reincarnation-light{position:absolute;inset:0;z-index:0;background:radial-gradient(circle at 50% 48%,#fff 0,#fff8 24%,transparent 62%);opacity:0;pointer-events:none;animation:mhReincarnationLight 4s ease-out forwards}
+    /* ④ 回転する放射光。生まれ直した瞬間に開いて、ゆっくり閉じる */
+    /* 中心は transform では決めない(回転と拭き合うため)。left/top と負のマージンで据える */
+    .mh-reincarnation-rays{position:absolute;z-index:0;left:50%;top:48%;width:180vmax;height:180vmax;margin:-90vmax 0 0 -90vmax;opacity:0;pointer-events:none;background:repeating-conic-gradient(from 0deg,#a5b4fc55 0 4deg,transparent 4deg 16deg);animation:mhReincarnationRays 4s ease-out forwards}
+    .mh-reincarnation-mon{position:relative;z-index:1;width:140px;height:140px;animation:mhReincarnationMon 4s cubic-bezier(.2,.8,.3,1) forwards}
+    /* ① ほどけた魂。本体の足元から8粒が上へ昇り続ける */
+    /* 本体より縦に長い枠にして、足元から出た光が頭の上まで抜けていくようにする */
+    .mh-reincarnation-souls{position:absolute;z-index:2;width:190px;height:300px;pointer-events:none}
+    .mh-reincarnation-souls i{position:absolute;left:50%;bottom:8%;width:7px;height:7px;margin-left:-3.5px;border-radius:50%;background:radial-gradient(circle,#fff,#bae6fd 42%,#818cf8);box-shadow:0 0 12px #a5b4fc,0 0 22px #38bdf877;opacity:0;animation:mhReincarnationSoul 2.3s ease-out infinite;animation-delay:calc(var(--i)*.13s)}
+    /* ② 収束。外周8方向から中央へ吸い込まれ、繭が閉じる */
+    .mh-reincarnation-converge{position:absolute;inset:0;z-index:2;pointer-events:none}
+    .mh-reincarnation-converge i{position:absolute;left:50%;top:48%;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;background:radial-gradient(circle,#fff,#c7d2fe 45%,#6366f1);box-shadow:0 0 14px #a5b4fc,0 0 30px #6366f199;opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-62vmin);animation:mhReincarnationConverge 1.15s cubic-bezier(.35,0,.2,1) .18s forwards}
+    /* ④ 衝撃波の輪。繭が割れて広がる */
+    .mh-reincarnation-halo{position:absolute;z-index:3;width:170px;height:170px;border-radius:50%;border:3px solid #c7d2fe;box-shadow:0 0 24px #818cf8aa,inset 0 0 22px #38bdf866;opacity:0;pointer-events:none;animation:mhReincarnationHalo 4s cubic-bezier(.15,.75,.3,1) forwards}
+    .mh-reincarnation-halo.is-second{width:230px;height:230px;border-color:#67e8f9;border-width:2px;box-shadow:0 0 22px #22d3eeaa,inset 0 0 20px #818cf866;animation-delay:.16s}
+    /* ③ 閃光 */
+    .mh-reincarnation-flash{position:absolute;inset:0;z-index:5;background:#fff;opacity:0;pointer-events:none;animation:mhReincarnationFlash 4s ease-out forwards}
+    /* ⑤ 名乗り */
+    .mh-reincarnation-title{position:absolute;z-index:6;top:calc(env(safe-area-inset-top) + 21%);font-size:clamp(36px,14vw,62px);font-weight:1000;letter-spacing:.14em;color:#f5f3ff;opacity:0;pointer-events:none;text-shadow:0 0 18px #818cf8,0 0 44px #38bdf8;animation:mhReincarnationTitle 4s ease-out forwards}
+    .mh-reincarnation-mark{position:absolute;z-index:6;top:62%;opacity:0;transform:scale(.4);pointer-events:none;animation:mhReincarnationMark 4s ease-out forwards}
+    .mh-reincarnation-mark .mh-reincarnate-badge{position:relative;left:auto;bottom:auto;transform:none;padding:7px 16px;border-width:2px;font-size:17px;box-shadow:0 2px 12px #020617,0 0 20px #818cf8}
+    .mh-reincarnate-aura.is-ceremony{inset:-48%;opacity:0;animation:mhReincarnationAura 4s cubic-bezier(.2,.75,.25,1) forwards}.mh-reincarnate-aura.is-ceremony .is-main{animation-duration:1.45s}.mh-reincarnate-aura.is-ceremony .is-back{animation-duration:1.8s}.mh-reincarnate-aura.is-ceremony .is-foot{animation-duration:1.1s}.mh-reincarnate-aura.is-ceremony img{filter:brightness(1.1) drop-shadow(0 0 8px #fff8)}
+    .mh-reincarnation-copy{position:absolute;bottom:calc(8% + env(safe-area-inset-bottom));z-index:6;display:flex;flex-direction:column;align-items:center;padding:0 14px;text-align:center;color:#e0f2fe;font-size:11px;font-weight:900;animation:mhReincarnationCopy 4s ease-out forwards}.mh-reincarnation-copy b{font-size:25px;color:#fff;text-shadow:0 0 12px #818cf8}.mh-reincarnation-copy span{margin-top:2px}
+    @keyframes mhReincarnationLight{0%,43%{opacity:0}48%{opacity:.36}56%,100%{opacity:0}}
+    /* 本体: 沈む → 白へ飛ぶ(閃光) → 小さく生まれ直して弾む → 等倍 */
+    @keyframes mhReincarnationMon{0%{opacity:1;transform:translateY(10px) scale(.96);filter:none}20%{transform:translateY(2px) scale(.99);filter:brightness(1.15)}28%{transform:translateY(0) scale(.9);filter:brightness(2.6) saturate(.25)}32%{opacity:.9;transform:scale(.62);filter:brightness(4) saturate(0)}35%{opacity:.25;transform:scale(.34);filter:brightness(5) saturate(0)}40%{opacity:1;transform:scale(.5);filter:brightness(2.2) saturate(.5)}48%{transform:scale(1.14);filter:none}54%{transform:scale(.97)}60%,100%{opacity:1;transform:none;filter:none}}
+    @keyframes mhReincarnationSoul{0%{opacity:0;transform:translate(calc(var(--x)*1px),0) scale(.45)}14%{opacity:1;transform:translate(calc(var(--x)*1.3px),-30px) scale(1)}100%{opacity:0;transform:translate(calc(var(--x)*2.4px),-215px) scale(.25)}}
+    @keyframes mhReincarnationConverge{0%{opacity:0}22%{opacity:1}88%{opacity:1;transform:rotate(calc(var(--i)*45deg)) translateY(-7vmin) scale(.7)}100%{opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(0) scale(.2)}}
+    @keyframes mhReincarnationFlash{0%,30%{opacity:0}34%{opacity:.92}46%,100%{opacity:0}}
+    @keyframes mhReincarnationHalo{0%,31%{opacity:0;transform:scale(.18)}37%{opacity:1;transform:scale(.55)}62%{opacity:.35;transform:scale(1.75)}80%,100%{opacity:0;transform:scale(2.3)}}
+    @keyframes mhReincarnationRays{0%,31%{opacity:0;transform:rotate(0) scale(.7)}40%{opacity:.8;transform:rotate(12deg) scale(1)}66%{opacity:.28;transform:rotate(30deg) scale(1.06)}100%{opacity:0;transform:rotate(44deg) scale(1.1)}}
+    @keyframes mhReincarnationTitle{0%,31%{opacity:0;transform:scale(1.85);letter-spacing:.5em}39%{opacity:1;transform:scale(1);letter-spacing:.14em}50%{opacity:1}60%,100%{opacity:0;transform:scale(.94)}}
+    @keyframes mhReincarnationMark{0%,50%{opacity:0;transform:scale(.4)}57%{opacity:1;transform:scale(1.18)}62%{transform:scale(1)}100%{opacity:1;transform:scale(1)}}
+    @keyframes mhReincarnationAura{0%,16%{opacity:0;transform:scale(.88)}30%{opacity:.86;transform:scale(1)}47%{opacity:1;transform:scale(1.13);filter:brightness(1.45)}64%{opacity:.9;transform:scale(1);filter:brightness(1)}100%{opacity:1;transform:scale(1);filter:brightness(1)}}
+    @keyframes mhReincarnationCopy{0%,55%{opacity:0;transform:translateY(12px)}64%,97%{opacity:1;transform:none}100%{opacity:0}}
+    @media(max-height:620px){.mh-reincarnation-copy{bottom:calc(4% + env(safe-area-inset-bottom))}.mh-reincarnation-mon{width:118px;height:118px}.mh-reincarnation-souls{width:160px;height:250px}.mh-reincarnation-title{top:calc(env(safe-area-inset-top) + 13%);font-size:clamp(30px,11vw,50px)}.mh-reincarnation-mark{top:64%}.mh-reincarnation-mark .mh-reincarnate-badge{padding:5px 12px;font-size:14px}}
+    @media(prefers-reduced-motion:reduce){.mh-reincarnate-flame,.mh-reincarnate-sparks,.mh-reincarnate-sparks::before,.mh-reincarnate-sparks::after{animation:none}.mh-reincarnation-animation *{animation-duration:.01ms!important}.mh-reincarnation-souls,.mh-reincarnation-converge,.mh-reincarnation-rays,.mh-reincarnation-halo,.mh-reincarnation-flash,.mh-reincarnation-title{display:none}.mh-reincarnation-copy,.mh-reincarnation-mark{opacity:1;transform:none}}
     /* 限界突破の演出。転生とは別物として、上へ突き抜ける光と、最後に増える星で見せる */
     .mh-breakthrough-animation{position:fixed;inset:0;z-index:51000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle,#f59e0b55,#020617 64%);pointer-events:auto;touch-action:none}
     .mh-breakthrough-ring{position:absolute;width:210px;height:210px;border:4px solid #fcd34d;border-radius:50%;animation:mhBreakRing 3.6s cubic-bezier(.2,.7,.3,1) forwards}
@@ -33081,7 +33733,8 @@ const createAnimationStyle = () => {
     @keyframes mhBreakStar{0%,55%{opacity:0;transform:scale(0) rotate(-90deg)}70%{opacity:1;transform:scale(2.1) rotate(20deg)}85%{transform:scale(.9) rotate(0)}100%{opacity:1;transform:scale(1.25)}}
     @keyframes mhBreakOldStar{0%,55%{opacity:.35}100%{opacity:1}}
     @media(prefers-reduced-motion:reduce){.mh-breakthrough-ring,.mh-breakthrough-ring::after,.mh-breakthrough-beam,.mh-breakthrough-mon,.mh-breakthrough-cap,.mh-breakthrough-stars>*,.mh-breakthrough-copy{animation:none}.mh-breakthrough-stars>*{opacity:1}}
-    .mh-rebirth-animation{position:fixed;inset:0;z-index:51000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle,#7c3aed88,#020617 62%);pointer-events:auto;touch-action:none}.mh-rebirth-circle{position:absolute;width:240px;height:240px;border:3px solid #c4b5fd;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fde68a;font-size:150px;animation:mhRebirthCircle 4s ease-in-out forwards}.mh-rebirth-glow{position:absolute;width:100%;height:42%;background:linear-gradient(90deg,transparent,#fff8,transparent);filter:blur(14px);animation:mhRebirthGlow 4s ease-in-out forwards}.mh-rebirth-mon{position:relative;width:145px;height:145px;animation:mhRebirthFloat 4s ease-in-out forwards}.mh-rebirth-copy{position:absolute;bottom:calc(8% + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;color:#fff;font-size:11px;font-weight:900;animation:mhRebirthCopy 4s ease-out forwards}.mh-rebirth-copy b{font-size:20px;color:#fde68a}.mh-rebirth-copy span{margin-top:2px}@keyframes mhRebirthCircle{0%{opacity:0;transform:scale(.3) rotate(0)}25%{opacity:1}100%{opacity:.25;transform:scale(1.5) rotate(180deg)}}@keyframes mhRebirthGlow{0%,20%{opacity:0}40%,70%{opacity:1}100%{opacity:0}}@keyframes mhRebirthFloat{0%{transform:translateY(30px);filter:brightness(1)}45%{transform:translateY(-25px);filter:brightness(2)}60%{filter:brightness(0)}78%{filter:brightness(3)}100%{transform:translateY(0);filter:brightness(1)}}@keyframes mhRebirthCopy{0%,55%{opacity:0;transform:translateY(20px)}68%,100%{opacity:1;transform:none}}.mh-donation-animation{position:fixed;inset:0;z-index:33000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at center,#7c3aed55 0,#020617 58%);pointer-events:auto;touch-action:none}.mh-donation-beam{position:absolute;width:150px;height:110%;background:linear-gradient(90deg,transparent,#fff9c477,transparent);filter:blur(8px);animation:mhDonationBeam 1.5s ease-in-out forwards}.mh-donation-monster{position:absolute;width:96px;height:96px;filter:drop-shadow(0 0 22px #fff);animation:mhDonationRise 1.25s ease-in forwards}.mh-donation-gem{position:absolute;color:#fde68a;opacity:0;filter:drop-shadow(0 0 18px #fbbf24);animation:mhDonationGem .55s 1s ease-out forwards}.mh-donation-particles i{position:absolute;left:50%;top:50%;width:6px;height:6px;border-radius:50%;background:#fde68a;box-shadow:0 0 8px #fff;opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-20px);animation:mhDonationParticle .55s 1s ease-out forwards}.mh-donation-copy{position:absolute;bottom:calc(15% + env(safe-area-inset-bottom));font-size:14px;font-weight:1000;color:#f5d0fe;text-shadow:0 0 12px #a855f7}@keyframes mhDonationRise{0%{transform:translateY(25px) scale(1);opacity:1}55%{transform:translateY(-28px) scale(1.08);opacity:1}100%{transform:translateY(-55px) scale(.05);opacity:0;filter:drop-shadow(0 0 50px #fff)}}@keyframes mhDonationBeam{0%{opacity:0;transform:scaleX(.2)}35%{opacity:1;transform:scaleX(1)}100%{opacity:0;transform:scaleX(.1)}}@keyframes mhDonationGem{to{opacity:1;transform:scale(1.2)}}@keyframes mhDonationParticle{0%{opacity:1}100%{opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-95px) scale(.2)}}@keyframes mhHomeMasumonWalk{0%,100%{translate:0 0}50%{translate:0 -5px}}@keyframes mhHomeBattlePulse{50%{filter:brightness(1.16);box-shadow:0 0 34px #d8b4fddd,inset 0 0 26px #ffdc8366}}@media(max-width:350px){.mh-home-player-copy strong{max-width:80px}.mh-home-wallet{width:124px}.mh-home-facility>span{font-size:9px;padding:6px 8px}.mh-home-facility.battle>span{min-width:140px;font-size:18px}}@media(max-height:620px){.mh-home-facility.management,.mh-home-facility.temple{top:13%;height:32%}/* 背の低い端末では、みゅあの吹き出しがM/B管理の看板にかからないよう少し下げる */.mh-home-facility.management>span,.mh-home-facility.temple>span{top:45%}.mh-home-facility.market{top:43%}.mh-home-facility.battle{height:30%}}@media(prefers-reduced-motion:reduce){.mh-home-background,.mh-home-player,.mh-home-facility>span{transition:none}.mh-home-facility.battle>span{animation:none}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:none}}
+    .mh-rebirth-animation{position:fixed;inset:0;z-index:51000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle,#7c3aed88,#020617 62%);pointer-events:auto;touch-action:none}.mh-rebirth-circle{position:absolute;width:240px;height:240px;border:3px solid #c4b5fd;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fde68a;font-size:150px;animation:mhRebirthCircle 4s ease-in-out forwards}.mh-rebirth-glow{position:absolute;width:100%;height:42%;background:linear-gradient(90deg,transparent,#fff8,transparent);filter:blur(14px);animation:mhRebirthGlow 4s ease-in-out forwards}.mh-rebirth-mon{position:relative;width:145px;height:145px;animation:mhRebirthFloat 4s ease-in-out forwards}.mh-rebirth-copy{position:absolute;bottom:calc(8% + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;color:#fff;font-size:11px;font-weight:900;animation:mhRebirthCopy 4s ease-out forwards}.mh-rebirth-copy b{font-size:20px;color:#fde68a}.mh-rebirth-copy span{margin-top:2px}@keyframes mhRebirthCircle{0%{opacity:0;transform:scale(.3) rotate(0)}25%{opacity:1}100%{opacity:.25;transform:scale(1.5) rotate(180deg)}}@keyframes mhRebirthGlow{0%,20%{opacity:0}40%,70%{opacity:1}100%{opacity:0}}@keyframes mhRebirthFloat{0%{transform:translateY(30px);filter:brightness(1)}45%{transform:translateY(-25px);filter:brightness(2)}60%{filter:brightness(0)}78%{filter:brightness(3)}100%{transform:translateY(0);filter:brightness(1)}}@keyframes mhRebirthCopy{0%,55%{opacity:0;transform:translateY(20px)}68%,100%{opacity:1;transform:none}}.mh-donation-animation{position:fixed;inset:0;z-index:33000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at center,#7c3aed55 0,#020617 58%);pointer-events:auto;touch-action:none}.mh-donation-beam{position:absolute;width:150px;height:110%;background:linear-gradient(90deg,transparent,#fff9c477,transparent);filter:blur(8px);animation:mhDonationBeam 1.5s ease-in-out forwards}.mh-donation-monster{position:absolute;width:96px;height:96px;filter:drop-shadow(0 0 22px #fff);animation:mhDonationRise 1.25s ease-in forwards}.mh-donation-gem{position:absolute;color:#fde68a;opacity:0;filter:drop-shadow(0 0 18px #fbbf24);animation:mhDonationGem .55s 1s ease-out forwards}.mh-donation-particles i{position:absolute;left:50%;top:50%;width:6px;height:6px;border-radius:50%;background:#fde68a;box-shadow:0 0 8px #fff;opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-20px);animation:mhDonationParticle .55s 1s ease-out forwards}.mh-donation-copy{position:absolute;bottom:calc(15% + env(safe-area-inset-bottom));font-size:14px;font-weight:1000;color:#f5d0fe;text-shadow:0 0 12px #a855f7}@keyframes mhDonationRise{0%{transform:translateY(25px) scale(1);opacity:1}55%{transform:translateY(-28px) scale(1.08);opacity:1}100%{transform:translateY(-55px) scale(.05);opacity:0;filter:drop-shadow(0 0 50px #fff)}}@keyframes mhDonationBeam{0%{opacity:0;transform:scaleX(.2)}35%{opacity:1;transform:scaleX(1)}100%{opacity:0;transform:scaleX(.1)}}@keyframes mhDonationGem{to{opacity:1;transform:scale(1.2)}}@keyframes mhDonationParticle{0%{opacity:1}100%{opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-95px) scale(.2)}}@keyframes mhHomeMasumonWalk{0%,100%{translate:0 0}50%{translate:0 -5px}}@keyframes mhHomeBattlePulse{50%{filter:brightness(1.16);box-shadow:0 0 34px #d8b4fddd,inset 0 0 26px #ffdc8366}}@media(max-width:350px){.mh-home-player-copy strong{max-width:80px}.mh-home-wallet{width:124px}.mh-home-facility>span{font-size:9px;padding:6px 8px}.mh-home-facility.battle>span{min-width:140px;font-size:18px}
+    }@media(max-height:620px){.mh-home-facility.management,.mh-home-facility.temple{top:13%;height:32%}/* 背の低い端末では、みゅあの吹き出しがM/B管理の看板にかからないよう少し下げる */.mh-home-facility.management>span,.mh-home-facility.temple>span{top:45%}.mh-home-facility.market{top:43%}.mh-home-facility.battle{height:30%}}@media(prefers-reduced-motion:reduce){.mh-home-background,.mh-home-player,.mh-home-facility>span{transition:none}.mh-home-facility.battle>span{animation:none}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:none}}
     .mh-home-mission{position:absolute;z-index:5;right:5%;top:65%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #fbbf24aa;border-radius:13px;background:#422006e8;color:#fef3c7;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-mission em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-mission:active{transform:scale(.94);filter:brightness(1.25)}/* はじめての案内で説明中の場所だけを明るく浮かび上がらせる。暗幕(z-index:90000)より前に出す。
    施設だけでなく、ミッション/ギフトの本体・みゅあの吹き出しも対象にする(そこも案内するため) */.is-tutorial-spot{z-index:90001}.mh-home-facility.is-tutorial-spot>span,.mh-home-mission.is-tutorial-spot,.mh-home-gift.is-tutorial-spot,.mh-home-assistant.is-tutorial-spot,.mh-home-settings.is-tutorial-spot{border-color:#fce7f3;filter:brightness(1.5) saturate(1.15);box-shadow:0 0 0 4px #f472b6,0 0 0 10px #f472b655,0 0 46px 12px #f472b6cc;animation:mhTutorialSpot 1.35s ease-in-out infinite}.mh-home-assistant.is-tutorial-spot{border-radius:18px}.mh-home-settings.is-tutorial-spot{position:relative;border-radius:11px}/* どこを指しているかが一目で分かるように、光る枠の上に矢印を出す */.mh-home-facility.is-tutorial-spot>span::before,.mh-home-mission.is-tutorial-spot::before,.mh-home-gift.is-tutorial-spot::before,.mh-home-assistant.is-tutorial-spot::before,.mh-home-settings.is-tutorial-spot::before{content:'▼';position:absolute;left:50%;bottom:100%;margin-bottom:5px;transform:translateX(-50%);color:#fbcfe8;font-size:19px;line-height:1;text-shadow:0 0 12px #f472b6,0 2px 4px #000;animation:mhTutorialArrow .9s ease-in-out infinite;pointer-events:none}/* 設定は画面のいちばん上にあるので、矢印は下側から上を指す */.mh-home-settings.is-tutorial-spot::before{content:'▲';top:100%;bottom:auto;margin:5px 0 0}@keyframes mhTutorialSpot{50%{box-shadow:0 0 0 6px #fbcfe8,0 0 0 15px #f472b644,0 0 62px 18px #f472b6}}@keyframes mhTutorialArrow{50%{transform:translateX(-50%) translateY(-7px)}}/* バトルチュートリアルで「ここを操作して」と示す枠。ふだんの画面の上に重ねるので、   暗幕は張らず、光る枠だけで示す(押せる場所はそのまま押せる) */.is-battle-tutorial-spot{border-radius:18px;outline:3px solid #f472b6;outline-offset:3px;box-shadow:0 0 0 7px #f472b644,0 0 34px 6px #f472b6aa;animation:mhBattleSpot 1.3s ease-in-out infinite}@keyframes mhBattleSpot{50%{outline-color:#fbcfe8;box-shadow:0 0 0 10px #f472b633,0 0 46px 10px #f472b6}}@media(prefers-reduced-motion:reduce){.is-battle-tutorial-spot{animation:none}}@media(prefers-reduced-motion:reduce){.is-tutorial-spot,.is-tutorial-spot>span,.is-tutorial-spot::before,.is-tutorial-spot>span::before{animation:none}}.mh-home-assistant{position:absolute;z-index:5;left:3%;width:70%;top:calc(72px + env(safe-area-inset-top));pointer-events:auto}@media(max-width:350px){.mh-home-assistant{width:62%}}
     .mh-gift-list{display:flex;flex-direction:column;gap:5px}.mh-gift-card{display:flex;flex-direction:column;min-height:80px;padding:5px 8px}.mh-gift-heading{display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0;height:18px}.mh-gift-heading h3{display:flex;align-items:center;gap:4px;min-width:0;font-size:12px;line-height:18px;color:#fff}.mh-gift-heading h3 span{flex:none;padding:1px 4px;border-radius:5px;background:#78350f;color:#fde68a;font-size:8px;line-height:14px}.mh-gift-heading h3 b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mh-gift-heading>em{flex:none;padding:1px 6px;border-radius:999px;font-size:8px;line-height:15px;font-style:normal;font-weight:900}.mh-gift-main{display:flex;align-items:center;justify-content:space-between;gap:6px;min-height:37px}.mh-gift-rewards{display:flex;flex:1;flex-wrap:wrap;align-items:center;gap:2px 7px;min-width:0;color:#fde68a;font-size:11px;line-height:15px;font-weight:900}.mh-gift-rewards span{overflow-wrap:anywhere}.mh-gift-main>button{flex:none;min-width:76px;height:36px;padding:0 10px;border-radius:10px;background:#0891b2;color:#fff;font-size:12px;font-weight:900;white-space:nowrap}.mh-gift-main>button:disabled{background:#334155;color:#64748b}.mh-gift-deadline{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#64748b;font-size:8px;line-height:12px}

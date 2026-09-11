@@ -473,8 +473,13 @@ check('モードカードは選択難易度固定でなくモード内最高ス�
     && has('highestModeScore(extremeBestScores,PUBLIC_EXTREME_DIFFICULTIES.map(setting=>setting.id))')
     && has("ranked?'最高スコア'")
     && has("ranked?`${modeBestScore.toLocaleString()} pt`"));
-check('上のタブはモード選択・ブリーダーLv・絆Lvの3つ',
-  has("{[['mode','モード選択'],['breeder','ブリーダーLv'],['bond','絆Lv']].map(([key,label])=>("));
+check('上のタブはモード選択・ブリーダーLv・絆Lv・総合力の4つ',
+  has("{[['mode','モード選択'],['breeder','ブリーダーLv'],['bond','絆Lv'],['power','総合力']].map(([key,label])=>(")
+    && has('grid grid-cols-4 gap-1 mb-2 shrink-0 rounded-xl bg-slate-900/60'));
+// 総合力は絆Lvと同じ一覧を並べ直すだけなので、取得は 'bond' を呼ぶ。
+// タブ名をそのまま levelKind へ渡すと、存在しない 'power' の取得になって一覧が永久に空になる
+check("総合力タブの取得は levelKind='bond' を呼ぶ",
+  has("loadRankings(null,true,false,key==='power'?'bond':key)"));
 // スコアランキングはモードごとに分かれるので、上のタブには置かない
 check('上のタブにスコアランキングを混ぜない',
   !/\[\['mode','モード選択'\],\['score'/.test(source) && !has("['score','スコア'],['breeder'"));
@@ -647,11 +652,12 @@ check('チャレンジ・クイックの供モン一覧はこれまでどおり2
 check('プロだけ供モン候補の画面をはさむ',
   has("if (isProMode(runMode)) {") && has("advanceRunStage('PICK_PRO_ALLIES');")
     && has("{gameState==='PICK_PRO_ALLIES'&&(") && has('<PickProAlliesScreen'));
-check('プロ開始時に有効な前回編成だけを初期選択へ入れる',
+check('プロ開始時は有効な前回編成を初期表示に使うが、勇者の配置距離は毎回選び直す',
   has('setProHeroPreset(savedHero&&lastProParty.heroDistance!==null?{heroBaseId:savedHero.id,heroDistance:lastProParty.heroDistance}:null);')
     && has('lastProParty.allyBaseIds.map(id=>baseMons.find(mon=>mon.id===id)).filter(mon=>mon&&mon.id!==savedHero?.id)')
     && has('selected: proHeroPreset?.heroBaseId===m.id')
-    && has('setupMon(m,proHeroPreset.heroDistance)'));
+    && has("onSelect: ()=>{setProHeroPreset(null);setCurrentPickingMon(m);advanceRunStage('PICK_SLOT');},")
+    && !has('setupMon(m,proHeroPreset.heroDistance)'));
 check('勇者を変更しても有効な前回供モンを残し、同じ種だけ外す',
   has('setProAllyPool(prev=>prev.filter(mon=>mon.id!==m.id));'));
 check('候補が5体そろうまで始められない',

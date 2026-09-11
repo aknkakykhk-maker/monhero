@@ -494,25 +494,36 @@ function RhythmRankingScreen({
         // 開催していないあいだはイベントのタブそのものを出さない
         ...(eventReleased&&limitedEvent?[{id:'event',label:'イベント'}]:[]),
       ];
+      // ★タブも部門も、押すたびに取り直す(2026-09-11・ユーザー指摘「総合だけ反映が遅い」)。
+      //   「初めて開いたときだけ」にしていたため、一度見た部門は古い順位のまま残っていた。
+      //   総合は"イベントタブを開いた瞬間"に読むので、いちばん最初に取った内容が
+      //   そのまま貼り付き、遊んで戻ってきても更新されなかった。
+      //   曲別はあとから初めて開くことが多く、そのときに取るので新しく見えていた。
+      //   ★読み直しているあいだも前の順位は消さない(loadRhythmEventRanking 側)。
+      //     取れたら差し替わるので、画面が一瞬空になることはない。
       const openTab=(tab)=>{
         setRhythmRankingTab(tab);
-        // 初めて開いたときだけ取りにいく。タブを往復するたびに通信しない
-        if(tab==='total'&&total.status==='idle')loadRhythmTotalRanking&&loadRhythmTotalRanking();
+        if(tab==='total')loadRhythmTotalRanking&&loadRhythmTotalRanking();
         const kind=tab==='weekly'?'weekly':(tab==='event'?'limited':null);
-        if(kind&&(!boards[kind]||boards[kind].status==='idle'))loadRhythmEventRanking&&loadRhythmEventRanking(kind,RHYTHM_EVENT_TOTAL_DIVISION);
+        if(kind){
+          // その種別でいま見ている部門をそのまま読み直す(初回は総合)
+          const want=(rhythmEventDivision&&rhythmEventDivision[kind])||RHYTHM_EVENT_TOTAL_DIVISION;
+          loadRhythmEventRanking&&loadRhythmEventRanking(kind,want);
+        }
       };
-      // 部門も、初めて開いたときだけ取りにいく
       const openDivision=(divisionId)=>{
         if(!boardKind)return;
         setRhythmEventDivision&&setRhythmEventDivision(prev=>({...prev,[boardKind]:divisionId}));
-        const board=event.boards&&event.boards[divisionId];
-        if(!board||board.status==='idle')loadRhythmEventRanking&&loadRhythmEventRanking(boardKind,divisionId);
+        loadRhythmEventRanking&&loadRhythmEventRanking(boardKind,divisionId);
       };
       const refresh=()=>{
         if(boardTab)loadRhythmEventRanking&&loadRhythmEventRanking(boardKind,eventDivisionId);
         else if(totalTabOpen)loadRhythmTotalRanking&&loadRhythmTotalRanking();
         else loadRhythmRanking(song);
       };
+      // ランク(S/SS/…)を決める点数。回数ボーナス込みの点だと満点を超えてしまうので、
+      // 素点が返っているときはそちらを使う(素点が無い＝加点なしの集計ならそのまま)
+      const eventRankScore=(entry)=>entry&&entry.baseScore!==null&&entry.baseScore!==undefined?entry.baseScore:(entry?.score||0);
       const totalRow=(entry,rank,mine)=>(
         <div data-rhythm-total-row className={`flex items-center gap-2 rounded-2xl border p-2 ${mine?'border-amber-300/60 bg-amber-500/10':'border-white/10 bg-slate-900/80'}`}>
           <b className="w-8 shrink-0 text-center text-xs font-black text-amber-200">{rank?`${rank}`:'—'}</b>
@@ -537,13 +548,17 @@ function RhythmRankingScreen({
             <p className="text-[9px] text-slate-400">{RHYTHM_DEMO_DIFFICULTY_LABELS[entry.difficultyId]?.name||entry.difficultyId||'-'} ・ Lv.{entry.level}</p>
           </div>
           <div className="shrink-0 text-right">
+            {/* ★一覧に出る数は**回数ボーナス込み**(2026-09-11・ユーザー指示
+                「加点分含めたスコアが表に出て、内訳を見るボタンをつけて…」)。
+                ランクだけは素点で決める。加点で満点を超えてSSS+に化けないようにするため */}
             <p className="font-mono text-sm font-black text-fuchsia-100">{entry.score.toLocaleString()}</p>
-            <p className={`text-[10px] font-black ${RHYTHM_RANK_COLORS[rhythmRankForScore(entry.score)]}`}>{rhythmRankForScore(entry.score)}</p>
+            <p className={`text-[10px] font-black ${RHYTHM_RANK_COLORS[rhythmRankForScore(eventRankScore(entry))]}`}>{rhythmRankForScore(eventRankScore(entry))}</p>
+            {entry.bonusScore>0&&<p className="text-[9px] font-black text-amber-300">+{entry.bonusScore.toLocaleString()}（{entry.playCount}回）</p>}
           </div>
-          {/* ★判定の内訳。「この曲」タブと同じ見た目・同じモーダルを使う
+          {/* ★判定の内訳とスコアの内訳。「この曲」タブと同じ見た目・同じモーダルを使う
               (2026-09-11・ユーザー指摘「イベント側の対象曲のほうの詳細がない」)。
-              内訳が無い行(SQL未適用・古い記録)ではボタンを出さない */}
-          {entry.detail&&<button data-rhythm-event-detail-row onClick={()=>setRhythmRankingDetail(entry)}
+              どちらも無い行(SQL未適用・古い記録)ではボタンを出さない */}
+          {(entry.detail||entry.baseScore!==null)&&<button data-rhythm-event-detail-row onClick={()=>setRhythmRankingDetail(entry)}
             className="shrink-0 min-h-[44px] rounded-lg border border-white/20 px-2 text-[9px] font-black text-slate-200">詳細</button>}
         </div>
       );
@@ -558,7 +573,11 @@ function RhythmRankingScreen({
           </div>
           <div className="shrink-0 text-right">
             <p className="font-mono text-sm font-black text-fuchsia-100">{entry.totalScore.toLocaleString()}</p>
+            {entry.bonusScore>0&&<p className="text-[9px] font-black text-amber-300">+{entry.bonusScore.toLocaleString()}（{entry.playCount}回）</p>}
           </div>
+          {/* 総合には判定の内訳が無いので、押せるのは回数ボーナスの内訳があるときだけ */}
+          {entry.baseScore!==null&&<button data-rhythm-event-bonus-row onClick={()=>setRhythmRankingDetail(entry)}
+            className="shrink-0 min-h-[44px] rounded-lg border border-white/20 px-2 text-[9px] font-black text-slate-200">内訳</button>}
         </div>
       );
       const eventRow=(entry,rank,mine)=>eventSongId?eventSongRow(entry,rank,mine):eventTotalRow(entry,rank,mine);
@@ -696,24 +715,56 @@ function RhythmRankingScreen({
             ))}
           </ol>}
         </div>
-        {rhythmRankingDetail&&(
+        {/* 詳細。曲の行(判定の内訳を持つ)と総合の行(持たない)の両方から開く。
+            回数ボーナスの内訳は、素点が返っているときだけ出す
+            (2026-09-11・ユーザー指示「加点分含めたスコアが表に出て、内訳を見るボタンを
+             つけて、そこで加点分と合わせた詳細スコアが見れるようにしたい」) */}
+        {rhythmRankingDetail&&(()=>{
+          const isTotal=rhythmRankingDetail.totalScore!==undefined&&rhythmRankingDetail.totalScore!==null;
+          const shownScore=Number(isTotal?rhythmRankingDetail.totalScore:rhythmRankingDetail.score)||0;
+          const baseScore=(rhythmRankingDetail.baseScore===null||rhythmRankingDetail.baseScore===undefined)?null:Number(rhythmRankingDetail.baseScore);
+          const bonusScore=Number(rhythmRankingDetail.bonusScore)||0;
+          const playCount=Number(rhythmRankingDetail.playCount)||0;
+          // 難易度ごとの回数(2026-09-12・ユーザー指示「難易度別回数の内訳もあったほうがいい」)。
+          // 返ってこない環境(SQL未適用)では空になり、この段は出ない
+          const playCountRows=rhythmEventPlayCountRows(rhythmRankingDetail.playCounts,RHYTHM_DEMO_DIFFICULTY_IDS);
+          return (
           <div data-rhythm-ranking-detail-modal className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-3" onClick={()=>setRhythmRankingDetail(null)}>
             <div className="w-full max-w-md rounded-2xl border border-amber-300/40 bg-slate-900 p-4" onClick={e=>e.stopPropagation()}>
               <div className="mb-2 flex items-center justify-between">
                 <h3 className="text-sm font-black text-amber-200">{rhythmRankingDetail.userName} のリザルト</h3>
                 <button aria-label="閉じる" data-rhythm-ranking-detail-close onClick={()=>setRhythmRankingDetail(null)} className="min-h-[44px] min-w-[44px] px-2 text-slate-400">✕</button>
               </div>
-              <p className="text-[10px] text-slate-400">{RHYTHM_DEMO_DIFFICULTY_LABELS[rhythmRankingDetail.difficultyId]?.name||rhythmRankingDetail.difficultyId} / スコア {rhythmRankingDetail.score.toLocaleString()} / ランク {rhythmRankForScore(rhythmRankingDetail.score)}</p>
-              <p className="mt-1 text-[10px] text-slate-400">最大コンボ {rhythmRankingDetail.detail?.maxCombo??'-'}</p>
-              <dl className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]">
-                {RHYTHM_JUDGMENT_IDS.map(id=><React.Fragment key={id}><dt className="text-slate-400">{id}</dt><dd className="text-right font-mono text-white">{rhythmRankingDetail.detail?.judgments?.[id]??0}</dd></React.Fragment>)}
-              </dl>
-              <p className="mt-2 text-[9px] font-black text-amber-200">
-                {rhythmRankingDetail.detail?.allMarvelous?'ALL MARVELOUS!!':rhythmRankingDetail.detail?.allExcellent?'ALL EXCELLENT!!':rhythmRankingDetail.detail?.fullCombo?'FULL COMBO!':''}
-              </p>
+              {isTotal
+                ?<p className="text-[10px] text-slate-400">総合 {rhythmRankingDetail.songCount}曲 / スコア {shownScore.toLocaleString()}</p>
+                :<p className="text-[10px] text-slate-400">{RHYTHM_DEMO_DIFFICULTY_LABELS[rhythmRankingDetail.difficultyId]?.name||rhythmRankingDetail.difficultyId} / スコア {shownScore.toLocaleString()} / ランク {rhythmRankForScore(baseScore===null?shownScore:baseScore)}</p>}
+              {baseScore!==null&&(
+              <dl data-rhythm-bonus-breakdown className="mt-2 rounded-xl border border-fuchsia-300/30 bg-fuchsia-500/10 p-2 text-[10px]">
+                <div className="flex items-center justify-between"><dt className="text-slate-300">素点（ベスト）</dt><dd className="font-mono text-white">{baseScore.toLocaleString()}</dd></div>
+                <div className="mt-1 flex items-center justify-between"><dt className="text-slate-300">遊んだ回数</dt><dd className="font-mono text-white">{playCount}回</dd></div>
+                {playCountRows.length>0&&<div data-rhythm-bonus-difficulties className="mt-0.5 space-y-0.5 border-l border-white/15 pl-2">
+                  {playCountRows.map(row=>(
+                    <div key={row.id} className="flex items-center justify-between text-[9px]">
+                      <dt className="text-slate-400">{RHYTHM_DEMO_DIFFICULTY_LABELS[row.id]?.name||row.id}<span className="ml-1 text-fuchsia-300/80">{row.rateText}</span></dt>
+                      <dd className="font-mono text-slate-200">{row.count}回</dd>
+                    </div>
+                  ))}
+                </div>}
+                <div className="mt-1 flex items-center justify-between"><dt className="text-slate-300">回数ボーナス</dt><dd className="font-mono font-black text-amber-300">+{bonusScore.toLocaleString()}</dd></div>
+                <div className="mt-1 flex items-center justify-between border-t border-white/15 pt-1"><dt className="font-black text-amber-200">合計（順位に使う点）</dt><dd className="font-mono font-black text-amber-200">{shownScore.toLocaleString()}</dd></div>
+              </dl>)}
+              {!isTotal&&(<React.Fragment>
+                <p className="mt-1 text-[10px] text-slate-400">最大コンボ {rhythmRankingDetail.detail?.maxCombo??'-'}</p>
+                <dl className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]">
+                  {RHYTHM_JUDGMENT_IDS.map(id=><React.Fragment key={id}><dt className="text-slate-400">{id}</dt><dd className="text-right font-mono text-white">{rhythmRankingDetail.detail?.judgments?.[id]??0}</dd></React.Fragment>)}
+                </dl>
+                <p className="mt-2 text-[9px] font-black text-amber-200">
+                  {rhythmRankingDetail.detail?.allMarvelous?'ALL MARVELOUS!!':rhythmRankingDetail.detail?.allExcellent?'ALL EXCELLENT!!':rhythmRankingDetail.detail?.fullCombo?'FULL COMBO!':''}
+                </p>
+              </React.Fragment>)}
             </div>
-          </div>
-        )}
+          </div>);
+        })()}
         {boardTab&&eventDetailOpen&&(
         <div data-rhythm-event-detail role="dialog" aria-modal="true" aria-label="イベント詳細"
           className="fixed inset-0 z-[80000] flex items-center justify-center bg-slate-950/95 p-4"
@@ -765,6 +816,21 @@ function RhythmRankingScreen({
                 className="rounded-2xl border border-amber-300/40 bg-amber-500/5 p-2 text-[10px] leading-tight text-slate-200">
                 <b className="text-amber-200">∞周回 ×{RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE}</b>　クイックの∞周回を裏で回しながら対象曲を演奏すると、入る周回数がふだん（×{RHYTHM_PLAY_RUN_LOOP_SCALE}）の{RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE}倍になります
               </p>
+              {/* 回数ボーナス(2026-09-11・ユーザー指示)。遊んだ回数が順位に効くことは、
+                  ランキングを見ているだけでは分からないので、報酬の表と同じ場所で伝える。
+                  割合の表は RHYTHM_EVENT_PLAY_BONUS_RATES から作る(数字を書き写さない) */}
+              {rhythmEventPlayBonusRates(eventDefinition)&&<div data-rhythm-event-play-bonus
+                className="rounded-2xl border border-fuchsia-300/40 bg-fuchsia-500/5 p-2 text-[10px] leading-tight text-slate-200">
+                <b className="text-fuchsia-200">回数ボーナス</b>　対象曲を遊んだ回数ぶん、自分のベストスコアに加点されます（上限なし）。ランキングに出ている点は加点込みで、「詳細」「内訳」から素点との内訳を見られます。
+                <ul className="mt-1 space-y-0.5">
+                  {RHYTHM_DEMO_DIFFICULTY_IDS.map(id=>(
+                    <li key={id} className="flex items-baseline gap-2">
+                      <b className="w-14 shrink-0 font-black text-fuchsia-200">{RHYTHM_DEMO_DIFFICULTY_LABELS[id]?.name||id}</b>
+                      <span className="min-w-0 flex-1 text-slate-200">{rhythmEventPlayBonusPercentText(id)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>}
               {/* 受け取り方。いつ・どこで受け取るのかが分からないと、終わったあとに迷う */}
               <p className="text-[9px] leading-relaxed text-slate-400">
                 報酬はイベントが終わったあと、ゲームを開いたときに受け取れます。受け取れるのは終了から2週間までです。順位は終了した時点で決まるので、遅れて受け取っても内容は変わりません。

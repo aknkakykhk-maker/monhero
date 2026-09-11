@@ -430,6 +430,10 @@ function MonsterHeroGame() {
     Object.prototype.hasOwnProperty.call(DIFFICULTY_SETTINGS, rankingViewDiff) ? rankingViewDiff : BATTLE_DEFAULT_DIFFICULTY);
   const [rankingKind, setRankingKind] = useState('score'); // 'score' | 'breeder' | 'bond'
   const [bondRankMonFilter, setBondRankMonFilter] = useState('all'); // 絆レベルランキングのモンスター種別フィルタ
+  // 総合力ランキングのモンスター種別フィルタ。絆Lvランキングと同じ「すべて＋種族別」の並び。
+  // 元になる一覧(bond_levels の正本 ＋ rankings の編成)は絆Lvとまったく同じものを使うので、
+  // タブを1つ増やしても通信は増えない
+  const [powerRankMonFilter, setPowerRankMonFilter] = useState('all');
   // 種族チャレンジランキングのタブ。
   // 'allSpecies' なら種族を問わないその難易度の全国ランキング、
   // 血統idならその種族×難易度の全国ランキング、'selfBest' なら自分の種族別ベストの比較
@@ -437,7 +441,7 @@ function MonsterHeroGame() {
   // 新しいバトルの入口(バトルモード再編・第2段階)。
   // 「バトル → バトルモード選択 → 難易度選択」の3画面と、そこから開くランキング。
   // まだデバッグ設定からだけ開ける。ふだんの「バトル」はこれまでどおり BATTLE_MENU のまま
-  const [modeSelectTab, setModeSelectTab] = useState('mode'); // 'mode' | 'breeder' | 'bond'
+  const [modeSelectTab, setModeSelectTab] = useState('mode'); // 'mode' | 'breeder' | 'bond' | 'power'
   // スコアランキングを「どのモードのぶんとして」見ているか。チャレンジとプロの2つだけ
   const [scoreRankingMode, setScoreRankingMode] = useState(BATTLE_MODE_CHALLENGE);
   // ランキングから戻る先。モード選択カードから開いたか、難易度カードから開いたかで変わる
@@ -1098,6 +1102,30 @@ function MonsterHeroGame() {
   const changeSeVolume = (v) => { const nv = Math.max(0, Math.min(100, v)); setSeVolumeRaw(nv); noteUltraAudioManualChange(); setQuickMuted(false); if (!audioUnlocked) setAudioUnlocked(true); Audio_.unlock(true); };
   const changeBgmVolume = (v) => { const nv = Math.max(0, Math.min(100, v)); setBgmVolumeRaw(nv); noteUltraAudioManualChange(); setQuickMuted(false); if (!audioUnlocked) setAudioUnlocked(true); Audio_.unlock(true); };
   const audioMuted = !audioOn;
+  // 「音が出ないとき」(音量設定の中)。開いているあいだだけ音の出口を見張る
+  const [showAudioDiag, setShowAudioDiag] = useState(false);
+  const [audioDiag, setAudioDiag] = useState(null);
+  const [audioDiagPeak, setAudioDiagPeak] = useState(0);
+  const [audioRepairing, setAudioRepairing] = useState(false);
+  const audioDiagPeakRef = useRef(0);
+  const enableSoundForCheck = () => {
+    if (!audioUnlocked) setAudioUnlocked(true);
+    if (quickMuted) toggleQuickMute();
+  };
+  // テスト音は効果音エンジン(Tone)を通さない素の音。
+  // 「Toneが読めていないだけ」なのか「出口そのものが死んでいる」のかを分けるため
+  const testAudioOutput = async () => {
+    enableSoundForCheck();
+    try { await Audio_.unlock(); } catch {}
+    try { await Audio_.playTestTone(); } catch {}
+  };
+  const repairAudioOutput = async () => {
+    if (audioRepairing) return;
+    setAudioRepairing(true);
+    enableSoundForCheck();
+    try { await Audio_.repair(); } catch {}
+    setAudioRepairing(false);
+  };
   const selectAutoRuntimeBgm = (trackId) => {
     if (trackId !== '__none__' && !BGM_TRACK_BY_ID[trackId]) return;
     setAutoBgmOverride(trackId);
@@ -1598,6 +1626,16 @@ function MonsterHeroGame() {
       ? bondRankingAll.slice(0, 50)
       : bondRankingAll.filter(x => bondEntryLineageId(x) === bondRankMonFilter).slice(0, 50)
   ), [bondRankingAll, bondRankMonFilter, bondEntryLineageId]);
+  // 総合力ランキング。絆Lvランキングとまったく同じ一覧(1人 × 1個体)を、
+  // 記録に残っている「その周回の時点の総合力」で並べ直したもの。
+  // 並べ替えの中身は collectPowerRankingEntries が正本(画面側に式を書き写さない)
+  const powerRankingAll = useMemo(() => collectPowerRankingEntries(bondRankingAll), [bondRankingAll]);
+  // 種族タブの絞り込みは絆Lvと同じ血統idで行う(bondEntryLineageId をそのまま使う)
+  const powerRanking = useMemo(() => (
+    powerRankMonFilter === 'all'
+      ? powerRankingAll.slice(0, 50)
+      : powerRankingAll.filter(x => bondEntryLineageId(x) === powerRankMonFilter).slice(0, 50)
+  ), [powerRankingAll, powerRankMonFilter, bondEntryLineageId]);
   const emptyRankingStatus = { loading:false, refreshing:false, error:null, fetched:false };
   const rankingStatus = (key) => rankingStatusByKey[key] || emptyRankingStatus;
   const saveRankingCache = (patch) => {
@@ -1737,12 +1775,19 @@ function MonsterHeroGame() {
     rhythmEventRankingRequestRef.current = { ...rhythmEventRankingRequestRef.current, [kind]: requestId };
     const wanted = divisionId || RHYTHM_EVENT_TOTAL_DIVISION;
     const stale = () => rhythmEventRankingRequestRef.current[kind] !== requestId;
-    setRhythmBoard(kind, prev => ({
-      ...prev,
-      status: prev.status === 'ready' ? 'ready' : 'loading',
-      error: null,
-      boards: { ...prev.boards, [wanted]: { status:'loading', entries:[], self:null } },
-    }));
+    // ★すでに出ている順位は消さない。読み直しのたびに一覧が空になると、
+    //   タブや部門を押すたびに画面がちらつく(2026-09-11・押すたびに取り直す形へ変えたため)。
+    //   取れたら差し替わる。まだ一度も取れていない部門だけ「読み込み中」にする。
+    setRhythmBoard(kind, prev => {
+      const before = (prev.boards && prev.boards[wanted]) || null;
+      const keep = before && before.status === 'ready';
+      return {
+        ...prev,
+        status: prev.status === 'ready' ? 'ready' : 'loading',
+        error: null,
+        boards: { ...prev.boards, [wanted]: keep ? before : { status:'loading', entries:[], self:null } },
+      };
+    });
     try {
       const breederId = await ensureBreederId();
       const selfKeys = rhythmTotalRankingSelfKeys(breederId, breederName);
@@ -1758,9 +1803,12 @@ function MonsterHeroGame() {
       const songId = rhythmEventDivisionSongId(wanted);
       const division = (songId && event.songIds.includes(songId)) ? wanted : RHYTHM_EVENT_TOTAL_DIVISION;
       const targetSongId = rhythmEventDivisionSongId(division);
+      // 回数ボーナスを使うイベントでは、割合を渡して加点込みで集計してもらう。
+      // 使わないイベント(週間)では null なので、これまでどおりの集計になる
+      const bonusRates = rhythmEventPlayBonusRates(event);
       const fetchRows = (options) => targetSongId
-        ? sbFetchRhythmEventSongBests({ songId:targetSongId, fromMs:range.startMs, toMs:range.endMs, ...options })
-        : sbFetchRhythmEventTotals({ songIds:[...event.songIds], fromMs:range.startMs, toMs:range.endMs, ...options });
+        ? sbFetchRhythmEventSongBests({ songId:targetSongId, fromMs:range.startMs, toMs:range.endMs, bonusRates, ...options })
+        : sbFetchRhythmEventTotals({ songIds:[...event.songIds], fromMs:range.startMs, toMs:range.endMs, bonusRates, ...options });
       const fromRow = targetSongId ? rhythmEventSongEntryFromRow : rhythmEventTotalEntryFromRow;
       const rows = await fetchRows({ requestId:`rhythm-${kind}-${division}-${Date.now()}` });
       if (stale()) return;
@@ -2699,11 +2747,14 @@ function MonsterHeroGame() {
       const breederId = await ensureBreederId();
       const selfKeys = rhythmTotalRankingSelfKeys(breederId, breederName);
       const prizes = [];
+      // ★順位の出し方は画面と**同じ**にする。回数ボーナスを使うイベントでここを渡し忘れると、
+      //   「ランキングでは1位だったのに報酬が来ない」が起きる
+      const bonusRates = rhythmEventPlayBonusRates(event);
       for (const divisionId of rhythmEventDivisionIds(event)) {
         const songId = rhythmEventDivisionSongId(divisionId);
         const rows = songId
-          ? await sbFetchRhythmEventSongBests({ songId, fromMs:range.startMs, toMs:range.endMs, limit:RHYTHM_EVENT_REWARD_RANKS, requestId:`rhythm-reward-${event.id}-${divisionId}` })
-          : await sbFetchRhythmEventTotals({ songIds:[...event.songIds], fromMs:range.startMs, toMs:range.endMs, limit:RHYTHM_EVENT_REWARD_RANKS, requestId:`rhythm-reward-${event.id}-total` });
+          ? await sbFetchRhythmEventSongBests({ songId, fromMs:range.startMs, toMs:range.endMs, bonusRates, limit:RHYTHM_EVENT_REWARD_RANKS, requestId:`rhythm-reward-${event.id}-${divisionId}` })
+          : await sbFetchRhythmEventTotals({ songIds:[...event.songIds], fromMs:range.startMs, toMs:range.endMs, bonusRates, limit:RHYTHM_EVENT_REWARD_RANKS, requestId:`rhythm-reward-${event.id}-total` });
         const fromRow = songId ? rhythmEventSongEntryFromRow : rhythmEventTotalEntryFromRow;
         const entries = (Array.isArray(rows) ? rows : []).map(fromRow);
         const index = entries.findIndex(entry => selfKeys.includes(entry.identityKey));
@@ -2717,7 +2768,7 @@ function MonsterHeroGame() {
       let participation = null;
       if (rhythmEventParticipationReward(event)) {
         const mine = await sbFetchRhythmEventTotals({
-          songIds:[...event.songIds], fromMs:range.startMs, toMs:range.endMs,
+          songIds:[...event.songIds], fromMs:range.startMs, toMs:range.endMs, bonusRates,
           limit:selfKeys.length, identityKeys:selfKeys, requestId:`rhythm-reward-${event.id}-join`,
         });
         const played = (Array.isArray(mine) ? mine : []).map(rhythmEventTotalEntryFromRow)
@@ -2975,6 +3026,25 @@ function MonsterHeroGame() {
   // 音量の保存値そのものは変えないので、モンビーを出れば元の音量へ戻る
   useEffect(() => { Audio_.setSeVolume((ultraEcoSession || rhythmScreenOpen) ? 0 : seVolume); }, [seVolume, ultraEcoSession, rhythmScreenOpen]);
   useEffect(() => { Audio_.setBgmVolume(bgmVolume); }, [bgmVolume]);
+  // 「音が出ないとき」を開いているあいだだけ、出口の状態と実際に出ている音を見張る。
+  // 閉じたら必ず止める(鳴らしているあいだ中ずっと測り続けない)
+  useEffect(() => {
+    if (!showAudioSettings || !showAudioDiag) return;
+    audioDiagPeakRef.current = 0;
+    setAudioDiagPeak(0);
+    const tick = () => {
+      let info = null;
+      try { info = Audio_.diagnose(); } catch { info = null; }
+      setAudioDiag(info);
+      const level = Number.isFinite(info?.level) ? info.level : 0;
+      // 一瞬の音でもメーターが見えるように、山は少しずつ下げながら保つ
+      audioDiagPeakRef.current = Math.max(level, audioDiagPeakRef.current * 0.82);
+      setAudioDiagPeak(audioDiagPeakRef.current);
+    };
+    tick();
+    const timer = setInterval(tick, 120);
+    return () => clearInterval(timer);
+  }, [showAudioSettings, showAudioDiag]);
 
   // 新バージョン検知: ホーム画面アプリ/背面タブ復帰時は自動再読み込みされず古いバージョンの
   // ままタップしても反応しないように見える不具合が繰り返し報告されたため、version.jsonを
@@ -9854,7 +9924,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   ) : showTitleSettings ? (
     <div className="mh-title-modal" onPointerDown={e=>e.stopPropagation()}><div className="mh-title-dialog"><div className="mh-dialog-head"><h3>設定</h3><button onClick={()=>setShowTitleSettings(false)}><X size={18}/></button></div><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowAudioSettings(true)}}>🔊 音量設定 <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowBgmArrangement(true)}}>🎼 BGMアレンジ <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowBackup(true)}}>🛡️ データ引き継ぎ <ChevronRight size={18}/></button></div></div>
   ) : showAudioSettings ? (
-    <div className="mh-title-modal"><div className="mh-title-dialog"><div className="mh-dialog-head"><h3>音量設定</h3><button onClick={()=>setShowAudioSettings(false)}><X size={18}/></button></div><button className="mh-dialog-choice" onClick={toggleQuickMute}>{audioMuted?'🔇 音がオフです':'🔊 音はオンです'}</button><VolumeSlider label="SE" icon="🔔" value={seVolume} onChange={changeSeVolume} gradient="from-cyan-500 to-indigo-500" thumbRing="border-indigo-400"/><VolumeSlider label="BGM" icon="🎵" value={bgmVolume} onChange={changeBgmVolume} gradient="from-fuchsia-500 to-pink-500" thumbRing="border-fuchsia-400"/></div></div>
+    <div className="mh-title-modal"><div className="mh-title-dialog" style={{maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',overflowY:'auto'}}><div className="mh-dialog-head"><h3>音量設定</h3><button onClick={()=>setShowAudioSettings(false)}><X size={18}/></button></div><button className="mh-dialog-choice" onClick={toggleQuickMute}>{audioMuted?'🔇 音がオフです':'🔊 音はオンです'}</button><VolumeSlider label="SE" icon="🔔" value={seVolume} onChange={changeSeVolume} gradient="from-cyan-500 to-indigo-500" thumbRing="border-indigo-400"/><VolumeSlider label="BGM" icon="🎵" value={bgmVolume} onChange={changeBgmVolume} gradient="from-fuchsia-500 to-pink-500" thumbRing="border-fuchsia-400"/><button className="mh-dialog-choice mt-3" aria-expanded={showAudioDiag} onClick={()=>setShowAudioDiag(v=>!v)}>🔧 音が出ないとき {showAudioDiag?'▲':'▼'}</button>{showAudioDiag&&<AudioTroubleshootPanel info={audioDiag} peak={audioDiagPeak} muted={audioMuted} onTest={testAudioOutput} onRepair={repairAudioOutput} repairing={audioRepairing}/>}</div></div>
   ) : showBgmArrangement ? (
     <div className="mh-title-modal"><div className="mh-title-dialog" style={{maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',overflowY:'auto'}}><div className="mh-dialog-head"><h3>BGMアレンジ</h3><button onClick={closeBgmArrangement}><X size={18}/></button></div>{(()=>{const categories=[
       {id:'basic',label:'基本',items:[['home','HOME BGM'],['title','タイトル BGM'],['autoBattle','AUTOモード BGM'],['management','M/B管理 BGM'],['clear','ゲームクリア BGM'],
@@ -9936,6 +10006,19 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           colors: Array.isArray(entry.colors) ? entry.colors : [] }
       : null;
     return <article key={`bond-${entry?.userName||'unknown'}-${entry?.masuId||entry?.monsterId||entry?.monName}-${index}`} data-ranking-kind="bond" className={`${rankingCardClass(index)} p-2`}><div className="grid grid-cols-[28px_32px_minmax(0,1fr)_auto] items-center gap-2 min-w-0">{rankingPlace(index)}{rankingBreederIcon(entry)}<b className="truncate text-[10px]">{entry?.userName||'名無しのブリーダー'}</b><strong className="text-xs text-pink-300 whitespace-nowrap">絆Lv.{level}</strong></div><div className="ml-[76px] mt-1 flex items-center gap-2 min-w-0 rounded-lg bg-black/35 px-2 py-1"><span data-ranking-soul-badge className="relative w-7 h-7 shrink-0 overflow-visible">{entry?.imgUrl?<img src={entry.imgUrl} alt="" className="w-7 h-7 object-contain"/>:<span className="block w-7 text-center">{entry?.emoji||'❓'}</span>}{entry?.detail&&<TranscendenceBadge transcended={entry.detail?.transcended===true} soulRankStage={entry.detail?.soulRankStage} small/>}</span><b className="truncate flex-1 text-[10px]">{entry.monName}</b>{/* 育て方が記録に残っている個体だけ開ける。古い記録は押せない状態にして理由をその場に出す */}<button onClick={()=>{ if (detailMember) setRankingMonsterDetail(detailMember); }} disabled={!detailMember} data-bond-detail={detailMember?'open':'none'} className={`shrink-0 px-2 py-1 rounded-lg border text-[9px] font-black leading-none ${detailMember?'border-indigo-400/60 bg-indigo-500/20 text-indigo-100 active:scale-95':'border-white/10 bg-black/20 text-slate-600'}`}>{detailMember?'詳細 ›':'情報なし'}</button></div></article>;
+  };
+  // 総合力専用カード。絆Lvのカードと同じ並び(順位・アイコン・名前・数字／下に個体)で、
+  // いちばん大きく出す数字だけが絆Lvから総合力へ替わる。絆Lvは個体の行へ小さく添える。
+  const renderPowerRankingEntry = (entry, index) => {
+    const level = Number(entry?.bondLevel);
+    // 「詳細 ›」で開くのは絆Lvランキングとまったく同じ1体ぶんの画面。
+    // 総合力の一覧は detail がある記録だけを載せているので、ここは必ず開ける
+    const detailMember = entry?.detail
+      ? { baseId: entry.monsterId, monsterId: entry.monsterId, name: entry.monName,
+          masuId: entry.masuId, bondLevel: level, detail: entry.detail,
+          colors: Array.isArray(entry.colors) ? entry.colors : [] }
+      : null;
+    return <article key={`power-${entry?.userName||'unknown'}-${entry?.masuId||entry?.monsterId||entry?.monName}-${index}`} data-ranking-kind="power" className={`${rankingCardClass(index)} p-2`}><div className="grid grid-cols-[28px_32px_minmax(0,1fr)_auto] items-center gap-2 min-w-0">{rankingPlace(index)}{rankingBreederIcon(entry)}<b className="truncate text-[10px]">{entry?.userName||'名無しのブリーダー'}</b><strong className="flex items-baseline gap-1 whitespace-nowrap"><span className="text-[7px] font-black uppercase tracking-widest text-amber-400/80">総合力</span><span className="font-mono text-xs tabular-nums text-amber-200">{formatMonsterPower(entry?.power)}</span></strong></div><div className="ml-[76px] mt-1 flex items-center gap-2 min-w-0 rounded-lg bg-black/35 px-2 py-1"><span data-ranking-soul-badge className="relative w-7 h-7 shrink-0 overflow-visible">{entry?.imgUrl?<img src={entry.imgUrl} alt="" className="w-7 h-7 object-contain"/>:<span className="block w-7 text-center">{entry?.emoji||'❓'}</span>}{entry?.detail&&<TranscendenceBadge transcended={entry.detail?.transcended===true} soulRankStage={entry.detail?.soulRankStage} small/>}</span><b className="truncate flex-1 text-[10px]">{entry.monName}</b>{Number.isFinite(level)&&level>0&&<span className="shrink-0 text-[9px] font-black text-pink-300 whitespace-nowrap">絆Lv.{level}</span>}<button onClick={()=>{ if (detailMember) setRankingMonsterDetail(detailMember); }} disabled={!detailMember} data-power-detail={detailMember?'open':'none'} className={`shrink-0 px-2 py-1 rounded-lg border text-[9px] font-black leading-none ${detailMember?'border-indigo-400/60 bg-indigo-500/20 text-indigo-100 active:scale-95':'border-white/10 bg-black/20 text-slate-600'}`}>{detailMember?'詳細 ›':'情報なし'}</button></div></article>;
   };
   // そのモード・難易度の端末記録。画面のあちこちで if を並べないための小さな入口。
   // 保存先はモードごとに分かれている(mh_ / mh_quick_ / mh_pro_)
@@ -10089,6 +10172,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 絆Lvランキング。こちらもモードでは分かれず、モンスターの種類で絞る
   const renderBondRankingBody = () => (
     <><div className="flex gap-1 overflow-x-auto pb-1.5 shrink-0">{[{id:'all',label:'すべて'},...bondRankingLineages.map(l=>({id:l.id,label:`${l.name}種`}))].map(t=><button key={t.id} onClick={()=>setBondRankMonFilter(t.id)} className={`px-2.5 py-1 rounded-full text-[8px] font-black shrink-0 border ${bondRankMonFilter===t.id?'bg-pink-600 border-pink-400':'bg-slate-900 border-white/10 text-slate-400'}`}>{t.label}</button>)}</div><div className="flex-1 overflow-y-auto mh-scroll space-y-1.5">{bondRankingLoading&&bondRankingData&&<div className="text-center text-[9px] text-indigo-300">更新中…</div>}{bondRankingError&&bondRankingData&&<div className="text-center text-[9px] text-amber-300">{bondRankingError}</div>}{bondRanking.map(renderBondRankingEntry)}{bondRanking.length===0&&(bondRankingLoading&&!bondRankingData?<div className="text-center text-slate-400 py-8">Loading...</div>:bondRankingError&&!bondRankingData?rankingRetryButton(()=>loadRankings(null,true,true,'bond')):rankingEmptyText)}</div></>
+  );
+  // 総合力ランキング。絆Lvランキングと同じデータ・同じ取得(levelKind='bond')を使う。
+  // タブを開いたときに呼ぶ loadRankings も 'bond' のままなので、通信はこれまでと同じ回数のまま
+  const renderPowerRankingBody = () => (
+    <><div className="flex gap-1 overflow-x-auto pb-1.5 shrink-0">{[{id:'all',label:'すべて'},...bondRankingLineages.map(l=>({id:l.id,label:`${l.name}種`}))].map(t=><button key={t.id} onClick={()=>setPowerRankMonFilter(t.id)} className={`px-2.5 py-1 rounded-full text-[8px] font-black shrink-0 border ${powerRankMonFilter===t.id?'bg-amber-600 border-amber-400':'bg-slate-900 border-white/10 text-slate-400'}`}>{t.label}</button>)}</div><div className="flex-1 overflow-y-auto mh-scroll space-y-1.5">{bondRankingLoading&&bondRankingData&&<div className="text-center text-[9px] text-indigo-300">更新中…</div>}{bondRankingError&&bondRankingData&&<div className="text-center text-[9px] text-amber-300">{bondRankingError}</div>}{powerRanking.map(renderPowerRankingEntry)}{powerRanking.length===0&&(bondRankingLoading&&!bondRankingData?<div className="text-center text-slate-400 py-8">Loading...</div>:bondRankingError&&!bondRankingData?rankingRetryButton(()=>loadRankings(null,true,true,'bond')):rankingEmptyText)}{powerRanking.length>0&&<p className="rounded-xl border border-white/10 bg-slate-900/60 p-3 text-center text-[9px] leading-relaxed text-slate-400">総合力は、その記録を出したときの値をそのまま並べています。育て方が記録に残る前の古い記録は載りません。</p>}</div></>
   );
   if (bootPhase === 'TITLE') return (
     <><main className="mh-title-gate" aria-label="Monster Hero タイトル画面">
@@ -10691,9 +10779,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {/* 上のタブ。スコアランキングはモードごとに分かれるのでここには置かず、
                   モードのカードと難易度のカードから開く。ここに並ぶのはモードで分かれない2つだけ */}
               {/* 練習中はランキングへ移らせない(台本がモード選択のまま進むため) */}
-              <div className={`grid grid-cols-3 gap-1 mb-2 shrink-0 rounded-xl bg-slate-900/60 p-0.5 border border-white/5${battleTutorialSpotClass('modeRankTabs')}`}>
-                {[['mode','モード選択'],['breeder','ブリーダーLv'],['bond','絆Lv']].map(([key,label])=>(
-                  <button key={key} disabled={!!battleTutorial} onClick={()=>{setModeSelectTab(key);if(key==='mode')return;addAssistantBond('ranking');if(key==='bond')setBondRankMonFilter('all');loadRankings(null,true,false,key);}} aria-label={key==='mode'?'モード選択':`${label}ランキング`} className={`min-h-[38px] rounded-lg text-[10px] font-black active:scale-95 disabled:opacity-40 ${modeSelectTab===key?'bg-indigo-600 text-white':'text-slate-400'}`}>{label}</button>
+              {/* 4つ並ぶので字だけ小さくする。「ブリーダーLv」を略さず正式な見出しのまま入れるため */}
+              <div className={`grid grid-cols-4 gap-1 mb-2 shrink-0 rounded-xl bg-slate-900/60 p-0.5 border border-white/5${battleTutorialSpotClass('modeRankTabs')}`}>
+                {/* 総合力は絆Lvとまったく同じ一覧を並べ直したものなので、取得も絆Lvと同じ 'bond' を呼ぶ
+                    (タブ名をそのまま levelKind へ渡すと、存在しない 'power' の取得になってしまう) */}
+                {[['mode','モード選択'],['breeder','ブリーダーLv'],['bond','絆Lv'],['power','総合力']].map(([key,label])=>(
+                  <button key={key} disabled={!!battleTutorial} onClick={()=>{setModeSelectTab(key);if(key==='mode')return;addAssistantBond('ranking');if(key==='bond')setBondRankMonFilter('all');if(key==='power')setPowerRankMonFilter('all');loadRankings(null,true,false,key==='power'?'bond':key);}} aria-label={key==='mode'?'モード選択':`${label}ランキング`} className={`min-h-[38px] rounded-lg text-[9px] leading-tight font-black active:scale-95 disabled:opacity-40 ${modeSelectTab===key?'bg-indigo-600 text-white':'text-slate-400'}`}>{label}</button>
                 ))}
               </div>
               {modeSelectTab==='mode'&&<div className="flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll">
@@ -10741,6 +10832,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               </div>}
               {modeSelectTab==='breeder'&&<div className="flex-1 min-h-0 flex flex-col"><div className="shrink-0 w-full mb-2.5"><AssistantBubble scene="ranking" compact/></div>{renderBreederRankingBody()}</div>}
               {modeSelectTab==='bond'&&<div className="flex-1 min-h-0 flex flex-col"><div className="shrink-0 w-full mb-2.5"><AssistantBubble scene="ranking" compact/></div>{renderBondRankingBody()}</div>}
+              {modeSelectTab==='power'&&<div className="flex-1 min-h-0 flex flex-col"><div className="shrink-0 w-full mb-2.5"><AssistantBubble scene="ranking" compact/></div>{renderPowerRankingBody()}</div>}
             </div>
           </div>);
         })()}
@@ -11072,14 +11164,19 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const base=Object.values(ALL_PLAYER_MONSTERS)[0];
           if(!base)return null;
           const previewMasu=(count)=>({id:`reincarnate-preview-${count}`,baseId:base.id,name:base.name,bondXp:0,rebirthCount:3,reincarnateCount:count,colors:[]});
-          const playPreview=()=>{const masu=previewMasu(3);setReincarnateAnimation({masu,base,fromLevel:100,nextLevel:1,raisesSkill:false,keptSkillPoints:1,nextPoints:13});setTimeout(()=>setReincarnateAnimation(null),4100);};
+          // 魂格オーラは魂格を持つ個体にしか出ない。演出そのものは魂格0でも成立していないといけないので、
+          // 「魂格なし」と「魂格あり」の両方をここから再生できるようにしてある
+          const playPreview=(soulRankStage=0)=>{const masu={...previewMasu(3),soulRankStage};setReincarnateAnimation({masu,base,fromLevel:100,nextLevel:1,raisesSkill:false,keptSkillPoints:1,nextPoints:13});setTimeout(()=>setReincarnateAnimation(null),4100);};
           return <main data-mh-screen className="flex-1 flex flex-col h-full min-h-0 p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
             <header className="flex items-center gap-2 mb-3 shrink-0"><button onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><div><small className="text-[8px] font-black text-cyan-300">DEBUG・本番と同じ ReincarnateAura / RebirthStars</small><h2 className="text-sm font-black">転生表示確認</h2></div></header>
             <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
             <p className="mb-3 text-[9px] leading-relaxed text-slate-400">表示用の一時データだけを使います。所持マスモン・転生回数・ダイヤは変更も保存もしません。</p>
             <section className="grid grid-cols-2 gap-3">{[0,1,2,3].map(count=>{const masu=previewMasu(count);return <article key={count} className="rounded-2xl border border-white/10 bg-slate-900/90 p-3 text-center"><div className="relative mx-auto w-16 h-16 mh-reincarnate-stack"><div className="relative z-[1] w-16 h-16 overflow-hidden rounded-full border border-pink-400/40"><DyedMonsterImage baseId={base.id} src={base.iconUrl||base.imgUrl} alt={base.name} masuColors={[]} className="w-full h-full object-cover"/></div><SoulRankAura soulRankStage={Math.max(0,Math.min(5,count))}/><RebirthStars count={3} className="mh-rebirth-stars-overlay"/></div><b className="mt-3 block text-[11px] text-white">{count===0?'未転生':count===1?'1回：青画像':count===2?'2回：黄画像':'3回：赤画像'}</b></article>})}</section>
             </div>
-            <button onClick={playPreview} className="mt-3 shrink-0 min-h-[52px] rounded-2xl border-2 border-violet-300 bg-gradient-to-r from-violet-700 to-blue-600 text-sm font-black text-white active:scale-95">転生演出を再生</button>
+            <div className="mt-3 shrink-0 grid grid-cols-2 gap-2">
+              <button data-reincarnate-preview="plain" onClick={()=>playPreview(0)} className="min-h-[52px] rounded-2xl border-2 border-violet-300 bg-gradient-to-r from-violet-700 to-blue-600 text-[12px] font-black text-white active:scale-95">転生演出を再生<small className="block text-[8px] font-black text-violet-200">魂格なし</small></button>
+              <button data-reincarnate-preview="soul" onClick={()=>playPreview(4)} className="min-h-[52px] rounded-2xl border-2 border-rose-300 bg-gradient-to-r from-rose-700 to-amber-600 text-[12px] font-black text-white active:scale-95">転生演出を再生<small className="block text-[8px] font-black text-rose-100">魂格Ⅳ</small></button>
+            </div>
           </main>;
         })()}
 

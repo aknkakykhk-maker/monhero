@@ -426,10 +426,21 @@ check('壊れた行でも数として扱う',
 // 画面の結線
 check('タブにイベントを出している',
   screen.includes("{id:'event',label:'イベント'}")&&screen.includes('data-rhythm-ranking-tabs'));
-check('週間・イベントのタブを初めて開いたときだけ取りにいく',
-  screen.includes("if(kind&&(!boards[kind]||boards[kind].status==='idle'))loadRhythmEventRanking"));
-check('部門も初めて開いたときだけ取りにいく',
-  screen.includes('const openDivision=(divisionId)=>{')&&screen.includes("if(!board||board.status==='idle')loadRhythmEventRanking"));
+// ★2026-09-11・ユーザー指摘「イベントランキングの総合だけ反映が遅い」。
+//   「初めて開いたときだけ取りにいく」にしていたため、一度見た部門は古い順位のまま
+//   残っていた。とくに総合はイベントタブを開いた瞬間に読むので、最初の内容が貼り付いた。
+//   押すたびに取り直す形へ変えた。前の順位は消さないので画面はちらつかない。
+check('週間・イベントのタブは押すたびに取り直す',
+  screen.includes('const want=(rhythmEventDivision&&rhythmEventDivision[kind])||RHYTHM_EVENT_TOTAL_DIVISION;')
+  &&screen.includes('loadRhythmEventRanking&&loadRhythmEventRanking(kind,want);')
+  &&!screen.includes("if(kind&&(!boards[kind]||boards[kind].status==='idle'))loadRhythmEventRanking"));
+check('部門も押すたびに取り直す',
+  screen.includes('const openDivision=(divisionId)=>{')
+  &&screen.includes('loadRhythmEventRanking&&loadRhythmEventRanking(boardKind,divisionId);')
+  &&!screen.includes("if(!board||board.status==='idle')loadRhythmEventRanking"));
+check('読み直しのあいだも前の順位を消さない',
+  app.includes('const keep = before && before.status === \'ready\';')
+  &&app.includes('boards: { ...prev.boards, [wanted]: keep ? before : { status:\'loading\', entries:[], self:null } },'));
 check('更新ボタンは開いているタブのほうを読み直す',screen.includes('if(boardTab)loadRhythmEventRanking&&loadRhythmEventRanking(boardKind,eventDivisionId);'));
 check('残り時間を出している',screen.includes('data-rhythm-event-remaining')&&screen.includes('rhythmEventRemainingText('));
 check('自分の記録を上に固定で出す',screen.includes('data-rhythm-event-self-empty')&&screen.includes('eventBoard.self'));

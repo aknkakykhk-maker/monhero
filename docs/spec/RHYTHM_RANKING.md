@@ -458,6 +458,64 @@ const RHYTHM_EVENTS = Object.freeze([
 - 画像を参照するファイルが増えたので、`tools/stamp-version.js` の `IMAGE_HOST_FILES` と
   `tools/image-asset-check.js` の `sources` の**両方**へ `data/rhythm-event.js` を足した
 
+### 7.2 回数ボーナス（2026-09-11・ユーザー指示）
+
+> 「イベントランキングでただスコアを競うだけだと、うまい人が毎回上位に行くけど、
+> それはそれでいいけど頑張った人が報われるシステムにもしたい。
+> 例えばやった回数×1%の加点がかかるみたいな」
+
+イベント定義に `playBonus: true` を書くと、**期間中にその曲を遊んだ回数ぶん**、
+その人のベストスコアへ加点する。
+
+    加点 = ベストスコア × （期間中の1回ごとの割合の合計）
+    表に出るスコア = ベストスコア + 加点
+
+| 難易度 | 1回あたり |
+| --- | --- |
+| EASY | +0.1% |
+| NORMAL | +0.2% |
+| HARD | +0.3% |
+| EXPERT | +0.5% |
+| MASTER | +0.7% |
+
+- 割合は `monster-hero/data/rhythm-event.js` の `RHYTHM_EVENT_PLAY_BONUS_RATES`。
+  **問い合わせのたびに引数で渡す**ので、数字を変えてもSQLは流し直さない
+- 1回あたりの割合は**その回を遊んだ難易度**で決まる。
+  EASYを何度も回すより、MASTERを数回のほうが大きい
+- **上限は付けない**（ユーザー指示「回数で抜かれたら抜き返せばいいから、上限とかはいらない」）。
+  SQL側で1回あたりを 0〜0.1 へ丸めているのは上限ではなく**書き間違いよけ**
+  （`0.007` のつもりで `7` と書くと1回で+700%になるため）
+- 総合の部門は、対象曲それぞれの**加点込みのスコア**を足し合わせたもの。
+  結局その対象曲ぶんの回数が効く
+- **ランク（S/SS/…）は素点で決める。** 加点込みの点で決めると満点を超えて評価が化ける
+- 週間ランキング（`kind:'weekly'`）には付けない。`playBonus` を書いたイベントだけ
+
+**なぜサーバー側で足すのか。** 並べ替え（`order=score.desc`）と上位50件の切り出しは
+PostgREST がしている。端末で加点すると「50件を切り出したあと」の加点になり、
+**加点すれば50位以内に入るはずの人が一覧から消える**。だから加点込みの値を
+`score` / `total_score` として返し、それで並べる。
+
+実体は `public.rhythm_event_song_bests_bonus` / `public.rhythm_event_totals_bonus`
+（§8.4・`docs/sql/rankings/RHYTHM_EVENT_BONUS_APPLY.sql`）。
+加点なしの `rhythm_event_song_bests` / `rhythm_event_totals` はそのまま残してあり、
+関数がまだ無い環境ではアプリがそちらへ自動で戻る（順位は出て、加点と内訳だけ出ない）。
+
+**画面での見せ方**（ユーザー指示「加点分含めたスコアが表に出て、内訳を見るボタンをつけて、
+そこで加点分と合わせた詳細スコアが見れるようにしたいね」）。
+
+- 一覧に出る点は**加点込み**。加点があった行には `+12,345（7回）` を小さく添える
+- 曲の部門は「詳細」、総合の部門は「内訳」ボタンから、
+  **素点 / 遊んだ回数 / 回数ボーナス / 合計** の4行を出す
+- 「遊んだ回数」の下に**難易度ごとの回数**を並べる（2026-09-12・ユーザー指示
+  「難易度別回数の内訳もあったほうがいい」）。0回の難易度は出さない。
+  数はSQLが `play_counts`（`{"MASTER":2,"HARD":1}` の形）で返す。
+  総合の部門では対象曲ぶんを足し合わせたものになる
+- 難易度ごとの割合は「🎁 イベント詳細」に出す。数字は `RHYTHM_EVENT_PLAY_BONUS_RATES` から作る
+- ヘルプの表（`{t:'data', id:'rhythmEventPlayBonus'}`）も同じ実データから作る
+
+**報酬の受け取りも同じ計算で見る。** `checkRhythmEventRewards` にも同じ割合を渡す。
+渡し忘れると「ランキングでは1位だったのに報酬が来ない」が起きる。
+
 ---
 
 ## 8. Supabase の設計
@@ -784,6 +842,7 @@ grant execute on function public.rhythm_event_song_bests(text[], timestamptz, ti
 | `tools/mode/rhythm-total-ranking-check.js` | 合算の集計（曲ごとベスト→合計）・同点処理・表示件数・達成率 |
 | `tools/mode/rhythm-identity-check.js` | `identity_key` の決め方（§4.4 の3ケース）と、IDが無い行の引き継ぎ |
 | `tools/mode/rhythm-event-window-check.js`（**実装済み**） | 月曜5:00 JST の週境界、期間限定の開始・終了、対象曲の組み方（§6.5）、部門の数、公開フラグ |
+| `tools/mode/rhythm-play-bonus-check.js`（**実装済み**） | 回数ボーナスの割合、加点をサーバー側で足していること、関数が無い環境での戻し方、内訳の表示、ランクが素点で決まること、報酬の受け取りへ同じ割合を渡していること（§7.2） |
 | `tools/mode/rhythm-song-count-check.js` | 曲数を数字で書き写した場所が無いこと（分母・理論満点・ヘルプ・SQL）（§5.1） |
 | `tools/mode/rhythm-song-id-hyphen-check.js` | songId にハイフンが入っていないこと |
 | 既存 `tools/mode/rhythm-ranking-check.js` | 既存の曲別ランキングが変わっていないこと |

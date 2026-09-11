@@ -444,6 +444,79 @@ const VolumeSlider = ({ label, icon, value, onChange, onInteractStart, gradient,
     </div>
   );
 };
+
+// 音量設定の中に置く「音が出ないとき」。
+// (2026-09-11・ユーザー報告「Google Pixel 9a でゲーム自体の音が出ない」)
+// 音が出ない原因は、アプリ側(出口が止まっている・効果音エンジンが読めていない)と
+// 端末側(メディア音量・マナーモード・別の機器へつながっている)に分かれるが、
+// どちらなのかは画面に何も出ないと切り分けようがない。
+// 出口へ実際に流れている音の大きさをメーターで見せて、そこを分けられるようにする。
+//   メーターが動く → 音は作れている。端末側(音量・出力先)を確かめる
+//   メーターが動かない → アプリ側。「音を鳴らし直す」で出口を作り直す
+const AudioTroubleshootPanel = ({ info, peak, muted, onTest, onRepair, repairing }) => {
+  const state = !info ? 'unknown' : info.ctxState === 'none' ? 'none' : info.ctxState !== 'running' ? 'suspended' : info.stalled ? 'stalled' : 'running';
+  const stateView = {
+    running: { label: '音を出せています', tone: 'text-emerald-300' },
+    stalled: { label: '止まっています', tone: 'text-red-300' },
+    suspended: { label: 'お休み中（画面をさわると戻ります）', tone: 'text-amber-300' },
+    none: { label: 'まだ開いていません', tone: 'text-slate-400' },
+    unknown: { label: '調べられませんでした', tone: 'text-slate-400' },
+  }[state];
+  // 波形の山(0〜1)は小さい音ほど見えにくいので、平方根で引き伸ばしてから%にする
+  const meterPct = Math.max(0, Math.min(100, Math.round(Math.sqrt(Math.max(0, Number(peak) || 0)) * 100)));
+  const sounding = meterPct >= 3;
+  // 効果音(Tone)はBGMとは別の出口で鳴っている。BGMが出ていても効果音だけ止まることがあるので分けて出す
+  const seView = !info ? { label: '不明', tone: 'text-slate-400' }
+    : info.toneFailed ? { label: '読み込めていません（効果音だけ出ません）', tone: 'text-red-300' }
+    : !info.toneReady ? { label: '読み込み中', tone: 'text-amber-300' }
+    : info.toneState !== 'running' ? { label: 'お休み中（「音を鳴らし直す」で戻ります）', tone: 'text-amber-300' }
+    : { label: '準備できています', tone: 'text-emerald-300' };
+  const playing = (info && info.playing && info.playing[0]) || null;
+  // はじめて遊ぶ端末は、音量が最小の1から始まる(いきなり大きな音を出さないため)。
+  // 音量1のBGMは音量100の1/500ほどしかなく、「音が出ない」と区別がつかないので、
+  // 音がオンなのに小さすぎるときはここで名指しで知らせる
+  const lowVolume = !!info && !muted && (info.bgmVolumePct <= 10 || info.seVolumePct <= 10);
+  const row = (label, value, tone) => (
+    <div className="flex items-start justify-between gap-2 py-1">
+      <span className="shrink-0 text-[10px] font-black text-slate-400">{label}</span>
+      <span className={`text-right text-[10px] font-black ${tone || 'text-slate-200'}`}>{value}</span>
+    </div>
+  );
+  return (
+    <div data-audio-troubleshoot className="mt-2 rounded-2xl border border-white/10 bg-slate-950/70 p-3 text-left">
+      {muted && <p className="mb-2 rounded-xl border border-amber-400/40 bg-amber-950/40 px-2 py-1.5 text-[10px] font-black text-amber-200">いまゲームの音はオフです。上の「🔇 音がオフです」を押してオンにしてください。</p>}
+      {lowVolume && <p data-audio-low-volume className="mb-2 rounded-xl border border-amber-400/40 bg-amber-950/40 px-2 py-1.5 text-[10px] font-black leading-relaxed text-amber-200">音量がとても小さいままです（BGM {info.bgmVolumePct} ／ SE {info.seVolumePct}）。はじめて遊ぶときは音量1から始まるので、上のスライダーを右へ動かしてください。</p>}
+      {row('音の出口', stateView.label, stateView.tone)}
+      {row('効果音エンジン', seView.label, seView.tone)}
+      {row('いま鳴っている曲', playing ? playing.src : 'なし', playing ? 'text-slate-200' : 'text-slate-400')}
+      <div className="mt-2">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[10px] font-black text-slate-400">実際に出ている音</span>
+          <span className={`text-[10px] font-black ${sounding ? 'text-emerald-300' : 'text-slate-400'}`}>{sounding ? '出ています' : '出ていません'}</span>
+        </div>
+        <div className="mt-1 h-2.5 w-full overflow-hidden rounded-full border border-white/10 bg-slate-800">
+          <div data-audio-meter className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-lime-300 transition-[width] duration-100" style={{ width: `${meterPct}%` }}></div>
+        </div>
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <button type="button" onClick={onTest} className="min-h-[44px] rounded-xl border border-indigo-300/40 bg-indigo-700 px-2 text-[11px] font-black text-white active:scale-95">🔔 テスト音</button>
+        <button type="button" onClick={onRepair} disabled={repairing} className="min-h-[44px] rounded-xl border border-fuchsia-300/40 bg-fuchsia-700 px-2 text-[11px] font-black text-white active:scale-95 disabled:opacity-60">{repairing ? '直しています…' : '🔧 音を鳴らし直す'}</button>
+      </div>
+      <p className="mt-2 text-[10px] leading-relaxed text-slate-400">
+        テスト音を押してもメーターが動かないときは、ゲーム側で音が止まっています。「音を鳴らし直す」を押してください。
+      </p>
+      <p className="mt-1 text-[10px] leading-relaxed text-slate-400">
+        メーターは動くのに聞こえないときは、端末側です。次を確かめてください。
+      </p>
+      <ul className="mt-1 space-y-0.5 text-[10px] leading-relaxed text-slate-400">
+        <li>・音量ボタンを押して、出てくる「メディア」の音量を上げる（着信音の音量とは別です）</li>
+        <li>・マナーモード／サイレントモード／おやすみ時間モードを切る</li>
+        <li>・Bluetoothイヤホンやスピーカーにつながっていないか確かめる</li>
+        <li>・音楽や動画を再生している別のアプリを閉じる</li>
+      </ul>
+    </div>
+  );
+};
 const DIST_APTITUDE_MULT = { G: 0.8, F: 0.85, E: 0.9, D: 0.95, C: 1.0, B: 1.05, A: 1.1, S: 1.15, 'S+': 1.175, SS: 1.2, 'SS+': 1.225, M: 1.25 };
 const DIST_APTITUDE_COLOR = { S: "text-yellow-300 bg-yellow-950/60 border-yellow-400/50", 'S+': "text-yellow-300 bg-yellow-950/60 border-yellow-400/50", SS: "text-yellow-300 bg-yellow-950/60 border-yellow-400/50", 'SS+': "text-yellow-300 bg-yellow-950/60 border-yellow-400/50", M: "text-fuchsia-300 bg-gradient-to-br from-purple-950/70 to-pink-950/70 border-fuchsia-400/60", A: "text-red-400 bg-red-950/60 border-red-400/50", B: "text-pink-300 bg-pink-950/60 border-pink-400/50", C: "text-green-300 bg-green-950/60 border-green-400/50", D: "text-teal-300 bg-teal-950/60 border-teal-400/50", E: "text-cyan-300 bg-cyan-950/60 border-cyan-400/50", F: "text-purple-300 bg-purple-950/60 border-purple-400/50", G: "text-slate-400 bg-slate-800/60 border-slate-500/50" };
 

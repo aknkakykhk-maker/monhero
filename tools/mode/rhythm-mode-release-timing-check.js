@@ -10,7 +10,7 @@ vm.createContext(context);
 vm.runInContext(prefix+'\nthis.out={RHYTHM_GESTURE_RUNTIME,rhythmJudgeRelease,rhythmWorseJudgment};\nthis.out2={RHYTHM_FLOATING_NOTES};',context);
 const {RHYTHM_GESTURE_RUNTIME:runtime,rhythmJudgeRelease,rhythmWorseJudgment}=context.out;
 let failed=0;const check=(name,ok)=>{console.log(`${ok?'✓':'✗'} ${name}`);if(!ok)failed++;};
-for(const [delta,expected] of [[0,'MARVELOUS'],[55,'MARVELOUS'],[56,'EXCELLENT'],[100,'EXCELLENT'],[101,'GREAT'],[150,'GREAT'],[151,'GOOD'],[200,'GOOD'],[201,'BAD'],[240,'BAD'],[241,'MISS'],[-241,'MISS']])check(`終端 ${delta}ms => ${expected}`,rhythmJudgeRelease(delta)===expected);
+for(const [delta,expected] of [[0,'MARVELOUS'],[55,'MARVELOUS'],[56,'EXCELLENT'],[100,'EXCELLENT'],[101,'GREAT'],[150,'GREAT'],[151,'GOOD'],[170,'GOOD'],[171,'BAD'],[185,'BAD'],[186,'MISS'],[-186,'MISS']])check(`終端 ${delta}ms => ${expected}`,rhythmJudgeRelease(delta)===expected);
 check('開始と終了の悪い方を採用',rhythmWorseJudgment('MARVELOUS','GOOD')==='GOOD'&&rhythmWorseJudgment('GREAT','EXCELLENT')==='GREAT');
 const fresh=(kind='HOLD',startJudgment='MARVELOUS',startDelta=0)=>{runtime.clear();now=0;rafCb=null;const note={type:kind,timeMs:1000,endTimeMs:2000,lane:0,done:false,holdJudgment:null,holdDeltaMs:0,index:0};runtime.bind('touch:1',note,kind,1000,0);note.holdJudgment=startJudgment;note.holdDeltaMs=startDelta;return note;};
 let note=fresh();now=1000;runtime.release('touch:1');check('HOLDは終端ちょうどでMARVELOUS',note.holdJudgment==='MARVELOUS'&&note._rhythmReleaseDeltaMs===0);
@@ -31,13 +31,13 @@ note=fresh();now=709;runtime.release('touch:1',true);
 check('指が取り消されたときはMISSで確定する',note.holdJudgment==='MISS');
 // 【2026-09-07】離すのが遅いほう(押しっぱなしを含む)は GOOD より下にしない(rhythmJudgeReleaseLenient)。
 // 早く離すほうは音が終わる前に手を離しているので、これまでどおり判定表で見る。
-note=fresh();now=1241;runtime.release('touch:1');check('240msより遅い離しはGOODで止まる(MISSにしない)',note.holdJudgment==='GOOD');
+note=fresh();now=1241;runtime.release('touch:1');check('判定窓より遅い離しはGOODで止まる(MISSにしない)',note.holdJudgment==='GOOD');
 note=fresh();now=1900;runtime.release('touch:1');check('どれだけ遅く離してもGOODより下にならない',note.holdJudgment==='GOOD');
 note=fresh('HOLD','GREAT',80);now=1500;runtime.release('touch:1');check('始点がGREATで遅く離すと、GREATとGOODの悪いほう(GOOD)',note.holdJudgment==='GOOD');
-check('早すぎる離しは今までどおりMISS',rhythmJudgeRelease(-241)==='MISS');
+check('早すぎる離しは今までどおりMISS',rhythmJudgeRelease(-186)==='MISS');
 note=fresh();now=1000;runtime.release('touch:1',true);check('touchcancel/pointercancelはMISS',note.holdJudgment==='MISS');
-note=fresh();now=1090;let cb=rafCb;cb&&cb();check('終端100ms前から旧自動成功を+241msへ延期',note.endTimeMs===2241);
-now=1220;cb=rafCb;cb&&cb();check('押しっぱなしは+240ms到達前にGOODで確定する(MISSにしない)',note.holdJudgment==='GOOD');
+note=fresh();now=1090;let cb=rafCb;cb&&cb();check('終端100ms前から旧自動成功を判定窓の直後(+186ms)へ延期',note.endTimeMs===2186);
+now=1220;cb=rafCb;cb&&cb();check('押しっぱなしは判定窓の到達前にGOODで確定する(MISSにしない)',note.holdJudgment==='GOOD');
 now=1180;runtime.release('touch:1');check('確定後でも+180msで離せばGOODのまま',note.holdJudgment==='GOOD');
 note=fresh('SLIDE');const session=[...runtime._sessions.values()][0];session.failed=true;now=1000;runtime.release('touch:1');check('SLIDE途中追従失敗は終端が合ってもMISS',note.holdJudgment==='MISS');
 check('HOLDもruntimeへbindする',source.includes("originalType==='HOLD'||originalType==='FLICK'||originalType==='SLIDE'"));

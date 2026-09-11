@@ -3,7 +3,7 @@
 //
 //   node tools/mode/rhythm-near-note-match-check.js
 //
-// 判定ランクの幅(最大±240ms)と「どのノーツを狙った入力か」は別問題。
+// 判定ランクの幅(最大±185ms)と「どのノーツを狙った入力か」は別問題。
 // 単純な近い方は遅押しを次へ飛ばし、過去側100%固定は次ノーツ直前の早押しを前へ吸う。
 // 現行は前75%へ寄せた所有境界を使い、次側の早取りはMARVELOUS窓以内へ制限する。
 'use strict';
@@ -18,12 +18,13 @@ const source=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js'),
 const prefix=source.split('const emptyRhythmChart',1)[0];
 const ctx={console,performance:{now:()=>0},requestAnimationFrame:()=>1,cancelAnimationFrame:()=>{}};
 vm.createContext(ctx);
-vm.runInContext(prefix+'\nthis.out={rhythmMatchInputBatch,RHYTHM_INPUT_MATCH_WINDOW_MS,RHYTHM_JUDGMENTS,RHYTHM_TAP_TARGET_PREVIOUS_SHARE,RHYTHM_TAP_TARGET_UPCOMING_MAX_EARLY_MS};',ctx);
+vm.runInContext(prefix+'\nthis.out={rhythmMatchInputBatch,RHYTHM_INPUT_MATCH_WINDOW_MS,RHYTHM_JUDGMENTS,RHYTHM_TAP_TARGET_PREVIOUS_SHARE,RHYTHM_TAP_TARGET_UPCOMING_MAX_EARLY_MS,RHYTHM_COMBO_SAFE_WINDOW_MS};',ctx);
 const {
   rhythmMatchInputBatch,
   RHYTHM_INPUT_MATCH_WINDOW_MS:WINDOW,
   RHYTHM_TAP_TARGET_PREVIOUS_SHARE:PREVIOUS_SHARE,
   RHYTHM_TAP_TARGET_UPCOMING_MAX_EARLY_MS:UPCOMING_EARLY,
+  RHYTHM_COMBO_SAFE_WINDOW_MS:SAFE,
 }=ctx.out;
 
 const note=(timeMs,index,extra={})=>({type:'TAP',timeMs,lane:2,subLane:5,subLaneWidth:2,
@@ -32,7 +33,12 @@ const hit=(notes,at,coordinate=6,offset=0)=>{
   const result=rhythmMatchInputBatch(notes,[{inputKey:`k${at}`,lane:2,subLaneCoordinate:coordinate}],at,offset);
   return result[0].target?result[0].target.index:null;
 };
-const switchDelay=gap=>Math.max(gap*PREVIOUS_SHARE,gap-UPCOMING_EARLY);
+// 【2026-09-11】所有境界に上限が付いた。
+// 前ノーツがもうBADにしかならない位置(GOODの窓の外)まで落ちていて、次ノーツはまだ
+// コンボがつながる範囲にいるなら、そこで次へ渡す。どちらを取っても取らなかったほうは
+// 見逃しMISSになるので、捨てるならBADにしかならないほうを捨てる(rhythmChooseTapTarget)。
+const comboSwitchDelay=gap=>Math.max(SAFE+1,gap-SAFE);
+const switchDelay=gap=>Math.min(Math.max(gap*PREVIOUS_SHARE,gap-UPCOMING_EARLY),comboSwitchDelay(gap));
 
 ok('所有境界は前75%寄せ',PREVIOUS_SHARE===.75,String(PREVIOUS_SHARE));
 ok('次ノーツの早取り上限はMARVELOUS窓55ms',UPCOMING_EARLY===55,String(UPCOMING_EARLY));
@@ -102,9 +108,12 @@ for(const offset of [50,-50]){
 }
 
 console.log('\n--- 実装ガード ---');
+// 引数の並びまで丸ごと一致で見ていたので、候補の比べ方に項目が増えるたびに落ちていた
+// (2026-09-11に「同じ時刻なら細いほうを優先」を足して落ちた)。
+// ここで見たいのは「過去側と未来側を別々のbestへ絞っているか」なので、そこだけを見る。
 ok('過去側と未来側を別々に絞る',
-  /passedBest=candidate\(passedBest,note,index,noteTime,inside,distance,true\)/.test(source)
-  &&/upcomingBest=candidate\(upcomingBest,note,index,noteTime,inside,distance,false\)/.test(source));
+  /passedBest=candidate\(passedBest,note,index,noteTime,inside,distance,true/.test(source)
+  &&/upcomingBest=candidate\(upcomingBest,note,index,noteTime,inside,distance,false/.test(source));
 ok('共通の所有境界関数を通す',
   /const rhythmChooseTapTarget=\(passed,upcoming,now\)=>/.test(source)
   &&/const chosen=rhythmChooseTapTarget\(passedBest,upcomingBest,now\);/.test(source));

@@ -11,24 +11,42 @@ const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分�
 // ここで機械的に止める。
 //
 // 【見ているもの】
-// pure:true の部品に、React / フック / JSX / document / window / storeGet・storeSet・localStorage /
-// Audio_ / fetch / setTimeout・requestAnimationFrame が(コメントを除いて)1つも無いこと。
-// 逆に pure でない部品に何があってもよい(そちらは段階的に減らす)。
+// React / フック / JSX / document / window / storeGet・storeSet・storeList・localStorage /
+// Audio_ / fetch / setTimeout・setInterval・requestAnimationFrame を、
+// **その部品の外から降ってくる名前として**使っていないこと。
+//
+// 【名前で弾くのをやめた理由】(2026-09-11)
+// 以前はコメントを消して正規表現を当てていたため、「引数で受け取った storeGet」まで弾いていた。
+// 実際に 19-difficulties-and-rules.jsx の persistSpeciesChallengeClearRewardTransaction は
+//   ({ progress, ownedItems, ..., storeSet, storeGet }) => ...
+// と保存の道具を**引数で受け取る**形で、本体も検査も自前の storeGet/storeSet を渡して呼んでいる。
+// つまり「vm から追加のスタブ無しで呼べる」というねらいはすでに満たしているのに、
+// 名前が同じというだけで pure:true にできなかった。
+//
+// そこで undefined-reference-check.js と同じくBabelで解析し、スコープをたどって
+// **その部品の中で宣言されていない参照だけ**をNGにする。
+//   ・引数・const・let で受け取っている  → その部品の中の名前なのでOK(依存性注入)
+//   ・どこにも宣言が無い                 → 外のグローバルを掴んでいるのでNG
+// 文字列やコメントの中の綴りを拾うこともなくなる。
 const fs = require('fs');
 const path = require('path');
+const parser = require('@babel/parser');
+const traverse = require('@babel/traverse').default;
 const { PARTS_DIR, PARTS_MANIFEST } = require(path.join(TOOLS_DIR, 'harness'));
 
-const FORBIDDEN = [
-  ['React / フック', /\bReact\b|\buse(?:State|Effect|LayoutEffect|Ref|Memo|Callback|Context|Reducer)\b/],
-  ['JSX', /<[A-Za-z][\w.]*(?:\s[^<>]*)?\/?>/],
-  ['document', /\bdocument\b/],
-  ['window', /\bwindow\b/],
-  ['保存(storeGet / storeSet / storeList / localStorage)', /\bstore(?:Get|Set|List)\b|\blocalStorage\b/],
-  ['Audio_', /\bAudio_\b/],
-  ['fetch', /\bfetch\s*\(/],
-  ['タイマー(setTimeout / setInterval / requestAnimationFrame)', /\bset(?:Timeout|Interval)\s*\(|\brequestAnimationFrame\b/],
-];
-const stripComments = (src) => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+// 外から降ってきたら困る名前 → 表示するときの分類
+const FORBIDDEN = new Map([
+  ['React', 'React / フック'],
+  ['useState', 'React / フック'], ['useEffect', 'React / フック'], ['useLayoutEffect', 'React / フック'],
+  ['useRef', 'React / フック'], ['useMemo', 'React / フック'], ['useCallback', 'React / フック'],
+  ['useContext', 'React / フック'], ['useReducer', 'React / フック'],
+  ['document', 'document'],
+  ['window', 'window'],
+  ['storeGet', '保存'], ['storeSet', '保存'], ['storeList', '保存'], ['localStorage', '保存'],
+  ['Audio_', 'Audio_'],
+  ['fetch', 'fetch'],
+  ['setTimeout', 'タイマー'], ['setInterval', 'タイマー'], ['requestAnimationFrame', 'タイマー'],
+]);
 
 let failed = 0;
 const check = (label, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${label}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };
@@ -38,16 +56,39 @@ const pureParts = manifest.parts.filter(p => p.pure === true);
 check('pure:true の部品が parts.json にある', pureParts.length >= 5, `${pureParts.length}個: ${pureParts.map(p => p.file).join(', ')}`);
 
 for (const part of pureParts) {
-  const src = stripComments(fs.readFileSync(path.join(PARTS_DIR, part.file), 'utf8'));
-  const hits = [];
-  for (const [label, re] of FORBIDDEN) {
-    const m = src.match(re);
-    if (m) {
-      const line = src.slice(0, m.index).split('\n').length;
-      hits.push(`${label}(${line}行目付近: ${m[0].slice(0, 40)})`);
-    }
+  const source = fs.readFileSync(path.join(PARTS_DIR, part.file), 'utf8');
+  let ast;
+  try {
+    ast = parser.parse(source, { sourceType: 'script', plugins: ['jsx'] });
+  } catch (e) {
+    check(`${part.file} を解析できる`, false, e.message);
+    continue;
   }
-  check(`${part.file} は画面・保存・音・通信・タイマーを参照しない`, hits.length === 0, hits.join(' / '));
+  const hits = [];
+  const seen = new Set();
+  traverse(ast, {
+    JSXElement(p) {
+      const line = p.node.loc.start.line;
+      const key = `JSX:${line}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      hits.push(`JSX(${line}行目)`);
+    },
+    Identifier(p) {
+      const name = p.node.name;
+      const label = FORBIDDEN.get(name);
+      if (!label) return;
+      if (!p.isReferencedIdentifier()) return;
+      // その部品の中で宣言されていれば、外の名前ではない(引数で受け取った保存など)
+      if (p.scope.getBinding(name)) return;
+      const line = p.node.loc.start.line;
+      const key = `${name}:${line}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      hits.push(`${label}(${line}行目: ${name})`);
+    },
+  });
+  check(`${part.file} は画面・保存・音・通信・タイマーを外から掴まない`, hits.length === 0, hits.slice(0, 5).join(' / '));
 }
 
 console.log(failed ? `${failed}件のNGがあります` : 'すべてOK');

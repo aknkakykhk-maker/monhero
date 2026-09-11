@@ -103,6 +103,36 @@ check('霊炎は魂格Ⅰ〜Ⅴの色画像を共通表示から選ぶ',source.i
 check('転生霊炎は独立スタックの本体背面に置き、限界突破★を前面に保つ',source.includes('.mh-reincarnate-stack{isolation:isolate}.mh-reincarnate-aura{position:absolute;z-index:-1;')&&source.includes('mh-reincarnation-mon mh-reincarnate-stack')&&source.includes('.mh-rebirth-stars-overlay,.mh-home-masumon-stars{z-index:4}'));
 check('転生霊炎は主炎・残光・足元炎を別周期で重ね、少量の火花を添える',source.includes('mh-reincarnate-flame is-main')&&source.includes('mh-reincarnate-flame is-back')&&source.includes('mh-reincarnate-flame is-foot')&&source.includes('mh-reincarnate-sparks')&&source.includes('@keyframes mhReincarnateMain')&&source.includes('@keyframes mhReincarnateBack')&&source.includes('@keyframes mhReincarnateFoot')&&source.includes('@keyframes mhReincarnateSpark'));
 check('転生完了時は共通の多層オーラを速め、一度燃え上がって通常状態へ戻す',source.includes('.mh-reincarnate-aura.is-ceremony .is-main{animation-duration:1.45s}')&&source.includes('@keyframes mhReincarnationAura')&&source.includes('47%{opacity:1;transform:scale(1.13);filter:brightness(1.45)}')&&source.includes('100%{opacity:1;transform:scale(1);filter:brightness(1)}'));
+// 魂格オーラは魂格を持つ個体にしか出ない。オーラ抜きでも演出が成立していないと、
+// 「転生したのに全面光と文字だけ」という地味な見え方に戻ってしまう
+// (2026-09-11・ユーザー指摘「転生のオーラをなくしたから転生したときの演出が地味になった」)
+check('転生演出はオーラに頼らない層を必ず持つ',
+  ['mh-reincarnation-souls','mh-reincarnation-converge','mh-reincarnation-halo','mh-reincarnation-rays',
+   'mh-reincarnation-flash','mh-reincarnation-title','mh-reincarnation-mark']
+    .every(cls=>source.includes(`className="${cls}"`)||source.includes(`className="${cls} is-second"`))
+  &&source.includes('<div className="mh-reincarnation-title" aria-hidden="true">転\u3000生</div>'));
+check('何回目の転生かを演出の中で出す',
+  source.includes('<div className="mh-reincarnation-mark"><ReincarnateBadge count={normalizeMasuProgression(reincarnateAnimation.masu).reincarnateCount}/></div>'));
+// 放射光は repeating-conic-gradient でないと1本しか出ない(最後の色が360degまで伸びる)
+check('放射光は繰り返す放射になっている',
+  source.includes('background:repeating-conic-gradient(from 0deg,#a5b4fc55 0 4deg,transparent 4deg 16deg)')
+  &&source.includes('margin:-90vmax 0 0 -90vmax'));
+// 「転　生」は本体の上、「転生 ×N」は本体の下。どちらもモンスターに重ねない
+check('大きい文字とバッジは本体と重ならない位置に置く',
+  source.includes('.mh-reincarnation-title{position:absolute;z-index:6;top:calc(env(safe-area-inset-top) + 21%)')
+  &&source.includes('.mh-reincarnation-mark{position:absolute;z-index:6;top:62%'));
+// 本体は「白へ飛ぶ → 小さく生まれ直して弾む」。ここが無いと生まれ変わった感じが出ない
+check('本体は一度白へ飛んでから生まれ直す',
+  /@keyframes mhReincarnationMon\{[^}]*\}[\s\S]{0,400}?35%\{opacity:\.25;transform:scale\(\.34\)/.test(source)
+  &&source.includes('48%{transform:scale(1.14);filter:none}'));
+// 結果(Lv・ポイント)を読む時間を必ず残す。演出は4.1秒で閉じる
+check('結果のコピーは1秒以上出したままにする',
+  source.includes('@keyframes mhReincarnationCopy{0%,55%{opacity:0;transform:translateY(12px)}64%,97%{opacity:1;transform:none}100%{opacity:0}}')
+  &&source.includes('setReincarnateAnimation(null); setReincarnateSelectedId(null)'));
+// 動きを減らす設定では、重い層を出さずに結果だけ見せる
+check('動きを減らす設定では重い層を出さない',
+  /@media\(prefers-reduced-motion:reduce\)\{[^}]*\}[\s\S]{0,600}?\.mh-reincarnation-souls,\.mh-reincarnation-converge,\.mh-reincarnation-rays,\.mh-reincarnation-halo,\.mh-reincarnation-flash,\.mh-reincarnation-title\{display:none\}/.test(source)
+  &&source.includes('.mh-reincarnation-copy,.mh-reincarnation-mark{opacity:1;transform:none}'));
 check('転生完了の全面光は本体より背面で、発光フィルターはオーラだけに掛ける',source.includes('.mh-reincarnation-light{position:absolute;inset:0;z-index:0;')&&source.includes('.mh-reincarnation-mon{position:relative;z-index:1;')&&!source.includes('.mh-reincarnation-mon{position:relative;width'));
 check('HOMEの霊炎は文字なしで、限界突破★を変えない',source.includes('object-fit:contain')&&source.includes('<SoulRankAura soulRankStage={masu.soulRankStage} className="is-home"/>')&&source.includes('<RebirthStars count={masu.rebirthCount} className="mh-home-masumon-stars"/>')&&!/mh-reincarnate-aura[^}]*ReincarnateBadge/.test(source));
 check('神殿BGMを限界突破・転生の画面でも継続',/MASU_REBIRTH:\s*'temple'/.test(source)&&/MASU_REINCARNATE:\s*'temple'/.test(source));

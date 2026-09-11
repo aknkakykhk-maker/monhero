@@ -9,8 +9,9 @@ if(logic){const c={RHYTHM_JUDGMENTS:D.RHYTHM_JUDGMENTS,RHYTHM_SCORE_WEIGHTS:D.RH
   // 判定の幅は 2026-09-05 にゆるくした（MARVELOUS 25→40 / EXCELLENT 50→75 /
   // GREAT 100→130 / GOOD 150→170）。見ているのは「境界のちょうど内側と外側」で変わらない。
   // 2026-09-05、ユーザー指示で2回目の緩和(まだ全然むずい)。
-  // 40/75/130/170/200 → 55/100/150/200/240。見張るのは「境界の内と外で判定が変わる」こと。
-  [[0,'MARVELOUS'],[55,'MARVELOUS'],[56,'EXCELLENT'],[100,'EXCELLENT'],[101,'GREAT'],[150,'GREAT'],[151,'GOOD'],[200,'GOOD'],[201,'BAD'],[240,'BAD'],[241,'MISS'],[-55,'MARVELOUS'],[-240,'BAD'],[-241,'MISS']].forEach(([ms,id])=>check(`判定境界 ${ms}ms = ${id}`,L.rhythmJudgeTap(ms)===id));
+  // 55/100/150/170/185(2026-09-11にGOOD 200→170 / BAD 240→185)。
+  // 見張るのは「境界の内と外で判定が変わる」こと。
+  [[0,'MARVELOUS'],[55,'MARVELOUS'],[56,'EXCELLENT'],[100,'EXCELLENT'],[101,'GREAT'],[150,'GREAT'],[151,'GOOD'],[170,'GOOD'],[171,'BAD'],[185,'BAD'],[186,'MISS'],[-55,'MARVELOUS'],[-185,'BAD'],[-186,'MISS']].forEach(([ms,id])=>check(`判定境界 ${ms}ms = ${id}`,L.rhythmJudgeTap(ms)===id));
   check('早押し/遅押しをFAST/SLOWへ分類',L.rhythmFastSlow(-1)==='FAST'&&L.rhythmFastSlow(1)==='SLOW'&&L.rhythmFastSlow(0)===null);
   check('GOODまでコンボ継続、BAD/MISSで切断',['MARVELOUS','EXCELLENT','GREAT','GOOD'].every(id=>L.rhythmComboAfter(4,id)===5)&&['BAD','MISS'].every(id=>L.rhythmComboAfter(4,id)===0));
   const all={MARVELOUS:10,EXCELLENT:0,GREAT:0,GOOD:0,BAD:0,MISS:0};check('判定90%＋コンボ10%でALL MARVELOUSがmaxScore一致',L.rhythmCalculateScore({judgments:all,maxCombo:10,totalNotes:10,maxScore:600000})===600000);
@@ -21,7 +22,11 @@ check('20〜30秒・5レーン・複数/連続を含むTAP限定譜面',chart.du
 // 取り逃しの確定は、判定表のいちばん広い窓(BAD)から引く。
 // 数字を直書きすると、判定表を広げたときに「BADの範囲なのに先にMISSになる」ことが起きる
 // (実際に受付240ms・MISS確定200msでズレていた。2026-09-05に直した)
-check('受付幅を過ぎた未処理ノーツを自動MISS',/songTimeMs-\(note\.timeMs\+settings\.judgmentTimingOffsetMs\)>RHYTHM_INPUT_MATCH_WINDOW_MS\)applyJudgment\(note,'MISS'/.test(game));
+// 【2026-09-11】回収は判定窓＋入力が遅れて届きうるぶん(RHYTHM_MISS_RECLAIM_MS)で見る。
+// フレームと入力で時計が最大80msずれるため、判定窓ちょうどで回収すると
+// 「窓の内側で叩いたのにノーツがもう無い」が起きる。
+check('受付幅＋入力の遅れを過ぎた未処理ノーツを自動MISS',/songTimeMs-\(note\.timeMs\+settings\.judgmentTimingOffsetMs\)>RHYTHM_MISS_RECLAIM_MS\)applyJudgment\(note,'MISS'/.test(game));
+check('回収の猶予は判定窓＋入力の最大遅れから作る(数字を直接書かない)',/const RHYTHM_MISS_RECLAIM_MS = RHYTHM_INPUT_MATCH_WINDOW_MS \+ RHYTHM_INPUT_AGE_MAX_MS;/.test(data));
 check('songTimeはAudioContext.currentTimeと実再生開始時刻が正本',game.includes('startedAt=ctx.currentTime')&&game.includes('offsetSeconds+(playing?ctx.currentTime-startedAt:0)')&&game.includes('songTimeMs:()=>songTimeSeconds()*1000'));
 check('判定処理はDate.now/setInterval/CSS animationを基準にしない',!logic?.includes('Date.now')&&!logic?.includes('setInterval')&&game.includes('requestAnimationFrame(tick)'));
 // 2026-09-05: 第3引数 options を足した(autoStart:false で「用意だけして鳴らさない」)。

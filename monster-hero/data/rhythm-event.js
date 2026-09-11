@@ -95,12 +95,65 @@ const RHYTHM_EVENTS = Object.freeze([
       close_to_your_heart: 'tiger',
     }),
     totalReward: 'heroProof',
+    // 回数ボーナス(2026-09-11・ユーザー指示)。遊んだ回数ぶん自分のベストへ加点する。
+    // 割合は RHYTHM_EVENT_PLAY_BONUS_RATES(難易度ごと)。イベントごとに入り切りできるよう、
+    // ここに書いたときだけ効く(週間ランキングには付かない)
+    playBonus: true,
     // 参加報酬(2026-09-11・ユーザー指示「3曲すべて遊んだらもらえる」)。
     // 入賞しなくても、対象曲を**すべて**遊べばもらえる。個数は仕様書 §9.2 の候補のまま。
     // songs は「何曲遊べば成立か」。書かなければ参加報酬は無し
     participationReward: Object.freeze({ songs: 3, gold: 3000, psyche: 50 }),
   }),
 ]);
+
+// ===== 回数ボーナス(2026-09-11・ユーザー指示) =====
+//
+// 「ただスコアを競うだけだと、うまい人が毎回上位に行く。それはそれでいいけど、
+//   頑張った人が報われるシステムにもしたい」。
+// 期間中にその曲を遊んだ回数ぶん、自分のベストスコアへ加点する。
+//
+//   加点 = ベストスコア × (期間中の1回ごとの割合の合計)
+//
+// ★1回あたりの割合は、**その回を遊んだ難易度**で決まる(下の表)。
+//   EASYを何度も回すより、MASTERを1回のほうが大きい。
+// ★上限は付けない(2026-09-11・ユーザー指示「回数で抜かれたら抜き返せばいいから、
+//   上限とかはいらないと思う」)。
+// ★数えるのは**その部門の曲**を遊んだ回数。総合部門は対象曲それぞれの
+//   「加点込みのスコア」を足したものなので、結局その3曲ぶんの回数が効く。
+// ★足し算は**サーバー(SQL)側**で行う。端末で足すと、上位50件を切り出したあとの加点になり、
+//   「加点すれば50位以内に入るはずの人」が一覧から消える(並べ替えはサーバーがしている)。
+//   実体は docs/sql/rankings/RHYTHM_EVENT_BONUS_APPLY.sql。
+// ★ここの数字を変えても**SQLは流し直さない**。割合は問い合わせのたびに渡している。
+const RHYTHM_EVENT_PLAY_BONUS_RATES = Object.freeze({
+  EASY: 0.001, NORMAL: 0.002, HARD: 0.003, EXPERT: 0.005, MASTER: 0.007,
+});
+// そのイベントで回数ボーナスを使うか。使わないイベント(週間など)では null を返し、
+// 呼ぶ側は加点なしの集計へ回る
+const rhythmEventPlayBonusRates = (event) =>
+  (event && event.playBonus === true) ? RHYTHM_EVENT_PLAY_BONUS_RATES : null;
+// 画面・ヘルプへ出す割合の文字列。書かれていない難易度は「なし」
+const rhythmEventPlayBonusPercentText = (difficultyId) => {
+  const rate = Number(RHYTHM_EVENT_PLAY_BONUS_RATES[difficultyId]);
+  if (!Number.isFinite(rate) || rate <= 0) return 'なし';
+  return `1回ごとに +${(rate * 100).toFixed(1)}%`;
+};
+// 内訳の1行へ添える短いほう(「+0.7%」だけ)。幅の無い場所で使う
+const rhythmEventPlayBonusRateText = (difficultyId) => {
+  const rate = Number(RHYTHM_EVENT_PLAY_BONUS_RATES[difficultyId]);
+  if (!Number.isFinite(rate) || rate <= 0) return '';
+  return `+${(rate * 100).toFixed(1)}%`;
+};
+// 難易度ごとの回数を、画面へ出す並び(EASY→MASTER)へそろえる。
+// 0回の難易度は出さない。知らない難易度が混ざっていたら最後にそのまま並べる
+// (2026-09-12・ユーザー指示「難易度別回数の内訳もあったほうがいい」)
+const rhythmEventPlayCountRows = (playCounts, difficultyIds) => {
+  const counts = (playCounts && typeof playCounts === 'object') ? playCounts : {};
+  const known = Array.isArray(difficultyIds) ? difficultyIds : [];
+  const rest = Object.keys(counts).filter(id => !known.includes(id)).sort();
+  return [...known, ...rest]
+    .map(id => ({ id, count: Math.max(0, Math.floor(Number(counts[id]) || 0)), rateText: rhythmEventPlayBonusRateText(id) }))
+    .filter(row => row.count > 0);
+};
 
 // ===== 報酬(docs/spec/RHYTHM_RANKING.md §9) =====
 //

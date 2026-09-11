@@ -49,7 +49,12 @@ ok('変更時に保存ボタンを明示',game.includes("data-dirty={dirty?'true
 ok('試聴はボタンの直接イベントから既存音声経路を使う',game.includes('onClick={previewBgm}')&&game.includes("Audio_.startRhythmTrack('atsu_cup_theme',draft.bgmVolume)")&&game.includes('onClick={()=>RHYTHM_NOTE_SE_RUNTIME.preview(draft)}')&&data.includes('preview:settings=>play(settings)'));
 ok('音ゲーBGM音量だけを専用gainへ反映(メインのbgmGainは経由しない)',
   game.includes('const raw=Math.max(0,Math.min(1,Number(rhythmVolumePct)/100))*safeTrackGain(track);')
-  &&game.includes('rhythmGain.connect(ctx.destination);')
+  // 2026-09-11: 「音が出ないとき」の音量メーターを足したとき、出口が masterOut(計測用の
+  // ノード)経由になった。メーターが無い環境では ctx.destination へ落ちる。
+  // どちらでも「メインの bgmGain を経由していない」ことに変わりはないので、両方を通す
+  &&(game.includes('rhythmGain.connect(masterOut||ctx.destination);')
+     ||game.includes('rhythmGain.connect(ctx.destination);'))
+  &&!/rhythmGain\.connect\(bgmGain/.test(game)
   // 2026-09-05: 曲は「画面が組み上がってから」鳴らすので autoStart:false を渡している。
   // 音量が専用gainへ渡るところは変わっていない
   &&game.includes('Audio_.startRhythmTrack(song.bgmTrackId,settings.bgmVolume,{autoStart:false})'));

@@ -43,8 +43,8 @@ const ctx={console,navigator:{},performance:{now:()=>0},requestAnimationFrame:()
     addEventListener(){},removeEventListener(){},querySelector:()=>null,querySelectorAll:()=>[]}};
 ctx.window=ctx;ctx.globalThis=ctx;
 vm.createContext(ctx);
-vm.runInContext(src+'\nglobalThis.__m=rhythmMatchInputBatch;globalThis.__W=RHYTHM_INPUT_MATCH_WINDOW_MS;',ctx);
-const match=ctx.__m,WINDOW=ctx.__W;
+vm.runInContext(src+'\nglobalThis.__m=rhythmMatchInputBatch;globalThis.__W=RHYTHM_INPUT_MATCH_WINDOW_MS;globalThis.__S=RHYTHM_COMBO_SAFE_WINDOW_MS;',ctx);
+const match=ctx.__m,WINDOW=ctx.__W,SAFE=ctx.__S;
 
 let failed=0;
 const check=(name,ok,detail='')=>{console.log(`${ok?'OK':'NG'}: ${name}${detail?` — ${detail}`:''}`);if(!ok)failed++;};
@@ -123,10 +123,19 @@ check('2本の指で叩けば2つとも取れる',
     .filter(r=>r.target).length===2);
 
 console.log('\n--- 受け付ける範囲 ---');
-check(`前後${WINDOW}msの外は取らない`,
-  hit([note(0,1000,4)],5,1000+WINDOW+1)===null&&hit([note(0,1000,4)],5,1000-WINDOW-1)===null);
-check(`前後${WINDOW}msちょうどは取る`,
-  hit([note(0,1000,4)],5,1000+WINDOW)===0&&hit([note(0,1000,4)],5,1000-WINDOW)===0);
+check(`遅れ側 ${WINDOW}msの外は取らない`,hit([note(0,1000,4)],5,1000+WINDOW+1)===null);
+check(`遅れ側 ${WINDOW}msちょうどは取る`,hit([note(0,1000,4)],5,1000+WINDOW)===0);
+// 【2026-09-11】早押し側だけ「コンボがつながる範囲(GOODの窓)」までに狭めた。
+// まだ来ていないTAPをBADで取ると、叩き直せたはずのノーツを消してコンボまで切る。
+// 空打ちにはペナルティが無いので、取らずに残すほうが必ず得(rhythm-mode.js の該当コメント)。
+// 遅れ側は放っておけば確実に見逃しMISSなので、BADでも拾えたほうがまし＝据え置き。
+check(`早押し側 ${SAFE}msちょうど(GOODの端)は取る`,hit([note(0,1000,4)],5,1000-SAFE)===0);
+check(`早押し側 ${SAFE}msより早い(BADにしかならない)TAPは取らない`,
+  hit([note(0,1000,4)],5,1000-SAFE-1)===null&&hit([note(0,1000,4)],5,1000-WINDOW)===null);
+check(`早押しで取らなかったノーツは残り、叩き直せる`,(()=>{
+  const notes=[note(0,1000,4)];
+  return hit(notes,5,1000-WINDOW)===null&&hit(notes,5,1000)===0;
+})());
 
 console.log('');
 if(failed){console.log(`${failed}件のNGがあります`);process.exit(1);}
