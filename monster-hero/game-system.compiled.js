@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: fe6d64e87c11789d
+// source-sha256: 4c351068c314139f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 63e9d4e46d040190
+// generated-sha256: a7d5852f731754c1
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 19:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 19:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -14336,6 +14336,20 @@ const collectBondRankingEntries = rankingPool => {
   });
   return deduped.sort((a, b) => b.bondLevel - a.bondLevel || a.userName.localeCompare(b.userName, 'ja'));
 };
+
+// 絆Lvランキングの一覧(1人 × 1個体)を、総合力の高い順へ並べ直す。
+// 取り出す一覧・重複のまとめ方は絆Lvとまったく同じで、並べる数字だけが替わる。
+//
+// 総合力は育成スナップショット(detail.power)にだけ入っている「その記録を出したときの値」。
+//   ・いまのデータで計算し直さない … 種のバランスを変えると過去の順位まで動いてしまう
+//   ・残っていない古い記録は載せない … 参考値を本物の順位へ混ぜない(「情報なし」の行も作らない)
+const collectPowerRankingEntries = bondEntries => (Array.isArray(bondEntries) ? bondEntries : []).map(entry => {
+  const power = Number(entry?.detail?.power);
+  return entry && Number.isFinite(power) && power > 0 ? {
+    ...entry,
+    power: Math.round(power)
+  } : null;
+}).filter(Boolean).sort((a, b) => b.power - a.power || String(a.userName || '').localeCompare(String(b.userName || ''), 'ja'));
 
 // ランキングに出すモンスターの絵。記録にはIDだけが入っているので、同梱の絵を引いて使う。
 // 画像を埋め込んでいた頃の古い記録は、そのimgUrlをそのまま使って表示できるようにしておく。
@@ -34364,6 +34378,10 @@ function MonsterHeroGame() {
   const rankingViewKey = rankingDifficultyKey(Object.prototype.hasOwnProperty.call(DIFFICULTY_SETTINGS, rankingViewDiff) ? rankingViewDiff : BATTLE_DEFAULT_DIFFICULTY);
   const [rankingKind, setRankingKind] = useState('score'); // 'score' | 'breeder' | 'bond'
   const [bondRankMonFilter, setBondRankMonFilter] = useState('all'); // 絆レベルランキングのモンスター種別フィルタ
+  // 総合力ランキングのモンスター種別フィルタ。絆Lvランキングと同じ「すべて＋種族別」の並び。
+  // 元になる一覧(bond_levels の正本 ＋ rankings の編成)は絆Lvとまったく同じものを使うので、
+  // タブを1つ増やしても通信は増えない
+  const [powerRankMonFilter, setPowerRankMonFilter] = useState('all');
   // 種族チャレンジランキングのタブ。
   // 'allSpecies' なら種族を問わないその難易度の全国ランキング、
   // 血統idならその種族×難易度の全国ランキング、'selfBest' なら自分の種族別ベストの比較
@@ -34371,7 +34389,7 @@ function MonsterHeroGame() {
   // 新しいバトルの入口(バトルモード再編・第2段階)。
   // 「バトル → バトルモード選択 → 難易度選択」の3画面と、そこから開くランキング。
   // まだデバッグ設定からだけ開ける。ふだんの「バトル」はこれまでどおり BATTLE_MENU のまま
-  const [modeSelectTab, setModeSelectTab] = useState('mode'); // 'mode' | 'breeder' | 'bond'
+  const [modeSelectTab, setModeSelectTab] = useState('mode'); // 'mode' | 'breeder' | 'bond' | 'power'
   // スコアランキングを「どのモードのぶんとして」見ているか。チャレンジとプロの2つだけ
   const [scoreRankingMode, setScoreRankingMode] = useState(BATTLE_MODE_CHALLENGE);
   // ランキングから戻る先。モード選択カードから開いたか、難易度カードから開いたかで変わる
@@ -35872,6 +35890,12 @@ function MonsterHeroGame() {
     return monsterId ? monsterLineageOf(monsterId).main.id : null;
   }, []);
   const bondRanking = useMemo(() => bondRankMonFilter === 'all' ? bondRankingAll.slice(0, 50) : bondRankingAll.filter(x => bondEntryLineageId(x) === bondRankMonFilter).slice(0, 50), [bondRankingAll, bondRankMonFilter, bondEntryLineageId]);
+  // 総合力ランキング。絆Lvランキングとまったく同じ一覧(1人 × 1個体)を、
+  // 記録に残っている「その周回の時点の総合力」で並べ直したもの。
+  // 並べ替えの中身は collectPowerRankingEntries が正本(画面側に式を書き写さない)
+  const powerRankingAll = useMemo(() => collectPowerRankingEntries(bondRankingAll), [bondRankingAll]);
+  // 種族タブの絞り込みは絆Lvと同じ血統idで行う(bondEntryLineageId をそのまま使う)
+  const powerRanking = useMemo(() => powerRankMonFilter === 'all' ? powerRankingAll.slice(0, 50) : powerRankingAll.filter(x => bondEntryLineageId(x) === powerRankMonFilter).slice(0, 50), [powerRankingAll, powerRankMonFilter, bondEntryLineageId]);
   const emptyRankingStatus = {
     loading: false,
     refreshing: false,
@@ -48435,6 +48459,63 @@ function MonsterHeroGame() {
       className: `shrink-0 px-2 py-1 rounded-lg border text-[9px] font-black leading-none ${detailMember ? 'border-indigo-400/60 bg-indigo-500/20 text-indigo-100 active:scale-95' : 'border-white/10 bg-black/20 text-slate-600'}`
     }, detailMember ? '詳細 ›' : '情報なし')));
   };
+  // 総合力専用カード。絆Lvのカードと同じ並び(順位・アイコン・名前・数字／下に個体)で、
+  // いちばん大きく出す数字だけが絆Lvから総合力へ替わる。絆Lvは個体の行へ小さく添える。
+  const renderPowerRankingEntry = (entry, index) => {
+    const level = Number(entry?.bondLevel);
+    // 「詳細 ›」で開くのは絆Lvランキングとまったく同じ1体ぶんの画面。
+    // 総合力の一覧は detail がある記録だけを載せているので、ここは必ず開ける
+    const detailMember = entry?.detail ? {
+      baseId: entry.monsterId,
+      monsterId: entry.monsterId,
+      name: entry.monName,
+      masuId: entry.masuId,
+      bondLevel: level,
+      detail: entry.detail,
+      colors: Array.isArray(entry.colors) ? entry.colors : []
+    } : null;
+    return /*#__PURE__*/React.createElement("article", {
+      key: `power-${entry?.userName || 'unknown'}-${entry?.masuId || entry?.monsterId || entry?.monName}-${index}`,
+      "data-ranking-kind": "power",
+      className: `${rankingCardClass(index)} p-2`
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-[28px_32px_minmax(0,1fr)_auto] items-center gap-2 min-w-0"
+    }, rankingPlace(index), rankingBreederIcon(entry), /*#__PURE__*/React.createElement("b", {
+      className: "truncate text-[10px]"
+    }, entry?.userName || '名無しのブリーダー'), /*#__PURE__*/React.createElement("strong", {
+      className: "flex items-baseline gap-1 whitespace-nowrap"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-[7px] font-black uppercase tracking-widest text-amber-400/80"
+    }, "\u7DCF\u5408\u529B"), /*#__PURE__*/React.createElement("span", {
+      className: "font-mono text-xs tabular-nums text-amber-200"
+    }, formatMonsterPower(entry?.power)))), /*#__PURE__*/React.createElement("div", {
+      className: "ml-[76px] mt-1 flex items-center gap-2 min-w-0 rounded-lg bg-black/35 px-2 py-1"
+    }, /*#__PURE__*/React.createElement("span", {
+      "data-ranking-soul-badge": true,
+      className: "relative w-7 h-7 shrink-0 overflow-visible"
+    }, entry?.imgUrl ? /*#__PURE__*/React.createElement("img", {
+      src: entry.imgUrl,
+      alt: "",
+      className: "w-7 h-7 object-contain"
+    }) : /*#__PURE__*/React.createElement("span", {
+      className: "block w-7 text-center"
+    }, entry?.emoji || '❓'), entry?.detail && /*#__PURE__*/React.createElement(TranscendenceBadge, {
+      transcended: entry.detail?.transcended === true,
+      soulRankStage: entry.detail?.soulRankStage,
+      small: true
+    })), /*#__PURE__*/React.createElement("b", {
+      className: "truncate flex-1 text-[10px]"
+    }, entry.monName), Number.isFinite(level) && level > 0 && /*#__PURE__*/React.createElement("span", {
+      className: "shrink-0 text-[9px] font-black text-pink-300 whitespace-nowrap"
+    }, "\u7D46Lv.", level), /*#__PURE__*/React.createElement("button", {
+      onClick: () => {
+        if (detailMember) setRankingMonsterDetail(detailMember);
+      },
+      disabled: !detailMember,
+      "data-power-detail": detailMember ? 'open' : 'none',
+      className: `shrink-0 px-2 py-1 rounded-lg border text-[9px] font-black leading-none ${detailMember ? 'border-indigo-400/60 bg-indigo-500/20 text-indigo-100 active:scale-95' : 'border-white/10 bg-black/20 text-slate-600'}`
+    }, detailMember ? '詳細 ›' : '情報なし')));
+  };
   // そのモード・難易度の端末記録。画面のあちこちで if を並べないための小さな入口。
   // 保存先はモードごとに分かれている(mh_ / mh_quick_ / mh_pro_)
   const modeRecordFor = (mode, diff) => isQuickMode(mode) ? {
@@ -48682,6 +48763,31 @@ function MonsterHeroGame() {
   }, bondRankingError), bondRanking.map(renderBondRankingEntry), bondRanking.length === 0 && (bondRankingLoading && !bondRankingData ? /*#__PURE__*/React.createElement("div", {
     className: "text-center text-slate-400 py-8"
   }, "Loading...") : bondRankingError && !bondRankingData ? rankingRetryButton(() => loadRankings(null, true, true, 'bond')) : rankingEmptyText)));
+  // 総合力ランキング。絆Lvランキングと同じデータ・同じ取得(levelKind='bond')を使う。
+  // タブを開いたときに呼ぶ loadRankings も 'bond' のままなので、通信はこれまでと同じ回数のまま
+  const renderPowerRankingBody = () => /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-1 overflow-x-auto pb-1.5 shrink-0"
+  }, [{
+    id: 'all',
+    label: 'すべて'
+  }, ...bondRankingLineages.map(l => ({
+    id: l.id,
+    label: `${l.name}種`
+  }))].map(t => /*#__PURE__*/React.createElement("button", {
+    key: t.id,
+    onClick: () => setPowerRankMonFilter(t.id),
+    className: `px-2.5 py-1 rounded-full text-[8px] font-black shrink-0 border ${powerRankMonFilter === t.id ? 'bg-amber-600 border-amber-400' : 'bg-slate-900 border-white/10 text-slate-400'}`
+  }, t.label))), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 overflow-y-auto mh-scroll space-y-1.5"
+  }, bondRankingLoading && bondRankingData && /*#__PURE__*/React.createElement("div", {
+    className: "text-center text-[9px] text-indigo-300"
+  }, "\u66F4\u65B0\u4E2D\u2026"), bondRankingError && bondRankingData && /*#__PURE__*/React.createElement("div", {
+    className: "text-center text-[9px] text-amber-300"
+  }, bondRankingError), powerRanking.map(renderPowerRankingEntry), powerRanking.length === 0 && (bondRankingLoading && !bondRankingData ? /*#__PURE__*/React.createElement("div", {
+    className: "text-center text-slate-400 py-8"
+  }, "Loading...") : bondRankingError && !bondRankingData ? rankingRetryButton(() => loadRankings(null, true, true, 'bond')) : rankingEmptyText), powerRanking.length > 0 && /*#__PURE__*/React.createElement("p", {
+    className: "rounded-xl border border-white/10 bg-slate-900/60 p-3 text-center text-[9px] leading-relaxed text-slate-400"
+  }, "\u7DCF\u5408\u529B\u306F\u3001\u305D\u306E\u8A18\u9332\u3092\u51FA\u3057\u305F\u3068\u304D\u306E\u5024\u3092\u305D\u306E\u307E\u307E\u4E26\u3079\u3066\u3044\u307E\u3059\u3002\u80B2\u3066\u65B9\u304C\u8A18\u9332\u306B\u6B8B\u308B\u524D\u306E\u53E4\u3044\u8A18\u9332\u306F\u8F09\u308A\u307E\u305B\u3093\u3002")));
   if (bootPhase === 'TITLE') return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("main", {
     className: "mh-title-gate",
     "aria-label": "Monster Hero \u30BF\u30A4\u30C8\u30EB\u753B\u9762"
@@ -50448,8 +50554,8 @@ function MonsterHeroGame() {
       }, "\u30D0\u30C8\u30EB")), /*#__PURE__*/React.createElement("div", {
         className: "w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1"
       }, /*#__PURE__*/React.createElement("div", {
-        className: `grid grid-cols-3 gap-1 mb-2 shrink-0 rounded-xl bg-slate-900/60 p-0.5 border border-white/5${battleTutorialSpotClass('modeRankTabs')}`
-      }, [['mode', 'モード選択'], ['breeder', 'ブリーダーLv'], ['bond', '絆Lv']].map(([key, label]) => /*#__PURE__*/React.createElement("button", {
+        className: `grid grid-cols-4 gap-1 mb-2 shrink-0 rounded-xl bg-slate-900/60 p-0.5 border border-white/5${battleTutorialSpotClass('modeRankTabs')}`
+      }, [['mode', 'モード選択'], ['breeder', 'ブリーダーLv'], ['bond', '絆Lv'], ['power', '総合力']].map(([key, label]) => /*#__PURE__*/React.createElement("button", {
         key: key,
         disabled: !!battleTutorial,
         onClick: () => {
@@ -50457,10 +50563,11 @@ function MonsterHeroGame() {
           if (key === 'mode') return;
           addAssistantBond('ranking');
           if (key === 'bond') setBondRankMonFilter('all');
-          loadRankings(null, true, false, key);
+          if (key === 'power') setPowerRankMonFilter('all');
+          loadRankings(null, true, false, key === 'power' ? 'bond' : key);
         },
         "aria-label": key === 'mode' ? 'モード選択' : `${label}ランキング`,
-        className: `min-h-[38px] rounded-lg text-[10px] font-black active:scale-95 disabled:opacity-40 ${modeSelectTab === key ? 'bg-indigo-600 text-white' : 'text-slate-400'}`
+        className: `min-h-[38px] rounded-lg text-[9px] leading-tight font-black active:scale-95 disabled:opacity-40 ${modeSelectTab === key ? 'bg-indigo-600 text-white' : 'text-slate-400'}`
       }, label))), modeSelectTab === 'mode' && /*#__PURE__*/React.createElement("div", {
         className: "flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll"
       }, /*#__PURE__*/React.createElement("div", {
@@ -50619,7 +50726,14 @@ function MonsterHeroGame() {
       }, /*#__PURE__*/React.createElement(AssistantBubble, {
         scene: "ranking",
         compact: true
-      })), renderBondRankingBody())));
+      })), renderBondRankingBody()), modeSelectTab === 'power' && /*#__PURE__*/React.createElement("div", {
+        className: "flex-1 min-h-0 flex flex-col"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "shrink-0 w-full mb-2.5"
+      }, /*#__PURE__*/React.createElement(AssistantBubble, {
+        scene: "ranking",
+        compact: true
+      })), renderPowerRankingBody())));
     })(), gameState === 'EXTREME_DIFFICULTY_SELECT' && (() => {
       // 公開中の極限難易度を並べる。バトルデバッグも同じ導線を使い、保存だけを無効化する。
       const difficulties = ALL_EXTREME_DIFFICULTIES.filter(setting => setting.available || debugBattle && setting.debugAvailable);
