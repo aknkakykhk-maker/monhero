@@ -290,35 +290,68 @@ CDNが届く環境では今までどおり測る。黙って通すのではな�
   **隣の画面のスクロール領域を拾って偶然通っていた**。窓が正確になって `PICK_SLOT` /
   `QUICK_GROWTH` に縦スクロールが無いことが見えた
 
-### 残っている12本
+### 残り12本のその後(2026-09-11 の続き)
+
+12本のうち **11本を直し、残り1本**になった。PR #1282 / #1286 / #1290 と、このPR。
+
+通しで回した結果は `合計 407 本 / OK 403 / NG 4`。NG 4本のうち**本当に落ちているのは1本**で、
+残り3本は通しでだけ落ちるもの(下の「一時的に落ちることがあるもの」)。
 
 **本当の不具合(4本)**
 
-| 検査 | 中身 | 難しさ |
+| 検査 | 何だったか | どう直したか |
 | --- | --- | --- |
-| `image/dye-edge-check` | ウンディーネの染色マスクが今の立ち絵を覆えていない(輪郭の塗り残し22.9%) | **絵の描き直しが要る** |
-| `layout-consistency-check` | `PICK_SLOT` / `QUICK_GROWTH` に縦スクロールが無く、背の低い端末で戻るボタンが切れる | 実機で見た目を確かめたい |
-| `masu/fusion-detail-check` | ランキングへ送る1体ぶんの記録が 546→732バイトになり700バイトの枠を超えた | 既定値の項目を書かない形にする。ランキングに触るので慎重に |
-| `mode/rhythm-first-run-layout-check` | プレイエリアが潰れたままでも「遊べる形」と判定して、見えないノーツをMISSにしてライフを削る | STEP 9 の領域。実機確認が要る |
+| `masu/fusion-detail-check` | ランキングへ送る1体ぶんの記録が 546→732バイトになり700バイトの枠を超えた | 超越・魂格の項目を**既定値のときは書かない**形にした(普通 337 / 超越 464 / 魂格 445バイト)。`rankingDetailToMasu` の戻りは3ケースとも前と完全一致で、`RANKING_DETAIL_VERSION` も 6 のまま |
+| `layout-consistency-check` | `PICK_SLOT` / `QUICK_GROWTH` に縦スクロールが無く、背の低い端末で戻るボタンが切れる | 枠の並びと起動演出に縦スクロールを足した。**中央寄せはスクロールする箱の内側**(`min-h-full` の箱)へ置く — `justify-center` を直接付けると上が切れる |
+| `mode/rhythm-first-run-layout-check` | プレイエリアが潰れたままでも「遊べる形」と判定し、見えないノーツをMISSにしてライフを削る | 判定に**下限**(画面の25%未満なら組み上がっていない)を足した。canvasノーツ化で崩れ方が「積み上がる」から「潰れる」へ変わり、上限だけでは素通りしていた |
+| `image/dye-edge-check` | ウンディーネの染色マスクが今の立ち絵を覆えていない(輪郭の塗り残し22.89% / 上限5%) | **未着手。ユーザーの手が要る**(下記) |
 
-**この環境では確かめられないもの(4本)** — Tailwind の CDN と音の自動再生が満たせない
+**この環境では確かめられないとしていたもの(4本)** — すべて「検査の見かたが古いまま」だった
 
-`audio/title-bgm-check` / `browser/feature-check` / `ranking/ranking-check` /
-`ranking/breeder-ranking-browser-check`。いずれも「起動にタイトル画面が挟まった」ことへの
-追随が要る(`tools/ranking/breeder-ranking-paging-check.js:66-88` がお手本になる)。
+| 検査 | 何が古かったか |
+| --- | --- |
+| `browser/feature-check` | 起動導線(タイトル画面が挟まった)・`.mh-title-build`・未読の印・既読キー・ミュートの見かた |
+| `ranking/ranking-check` | 英字の「Ranking」ボタンが無くなり、スコアは別画面(`BATTLE_SCORE_RANKING`)へ。難易度タブの字は `Master`(`MASTER` ではない)。取得件数の上限が 20→50 |
+| `ranking/breeder-ranking-browser-check` | Chromiumの実体パス・起動導線・「全難易度まとめて1回」に変わった取得・タブの並び |
+| `audio/title-bgm-check` | BGMが `<audio>` から Web Audio へ移り、`HTMLMediaElement.play()` の差し替えでは**何も捕まえられず素通り**していた |
 
 **その他(4本)**
 
-- `assistant/momosuke-check` … ももすけに4場面(`quickRhythmIntro` / `quickRhythmBackground` /
-  `autoQuickRunSettings` / `ragnarokDifficulty`)ぶんセリフが無く、みゅあのセリフへ落ちている。
-  **データの書き足しが要る**(文面はユーザーの好みが入るので、確認してから入れたい)
-- `masu/bulk-enhance-check` … 起動時に「お詫びの配布」のモーダルが全画面を覆って実クリックを吸う。
-  `addInitScript` で配布済みフラグを立ててから始める形にすれば直る
-- `masu/fusion-animation-browser-check` … 起動の流れとボタンの文言が古い
-- `boot/event-replay-check` … 週末ゲリラ杯の実装から落ちている別件
+- `assistant/momosuke-check` … ももすけへ4場面(`quickRhythmIntro` / `quickRhythmBackground` /
+  `autoQuickRunSettings` / `ragnarokDifficulty`)ぶんのセリフを足した
+- `masu/bulk-enhance-check` … 起動時の「お詫びの配布」を `addInitScript` で配布済みにしてから始める形へ
+- `masu/fusion-animation-browser-check` … 染めた絵の数え方を `canvas` から
+  スライドイン中の `data:` URL の `<img>` へ
+- `boot/event-replay-check` … 週末ゲリラ杯のスキップを中身で見る形へ。描画テストのスタブも補った
+
+### 残っている1本 — ウンディーネの染色マスク
+
+`image/dye-edge-check` の「輪郭の塗り残し 22.89%(上限5%)/ 内側の塗り残し 2.18%(上限0.2%)」。
+**染めても元の色の縁が残る**状態で、検査の見かたではなく絵そのものの問題。
+
+分かっていること。
+
+- 部位マップは `UNDINE_EXACT_REGION_2BIT`(`15-dye-and-art.jsx`)で、大きさは **256×384**。
+  立ち絵は `images/monsters/undine.PNG` の **1024×1536** なので、マスクの1画素が元絵の16画素ぶんになる
+- 見本は `tools/art-sources/dye-masks/undine-dye-mask.PNG`(同じ256×384)。
+  `node tools/image/undine-dye-mask-check.js` は見本と97.85%一致で**通る**ので、
+  埋め込みは見本に忠実。**見本のほうが今の立ち絵の輪郭を覆えていない**
+- 同じ縦長(1024×1536)のヤオビクニは 4.66% で収まっている。解像度だけの問題ではない
+- 高解像度書き出し(`MASK_HIRES_BASE_IDS`)にウンディーネは入っているが、
+  にじみへの塗り足しは**半透明の画素にしか効かない**(不透明な内側を潰さないため)ので、
+  輪郭が不透明なところは埋まらない
+
+直すには、デバッグ画面の「染色マスクエディタ」で**今の立ち絵に合わせてマスクを引き直し**、
+書き出したPNGを見本へ置き換える必要がある。検査を緩める形では直さない。
 
 ### 一時的に落ちることがあるもの(NGではない)
 
-- `mode/difficulty-item-check` … 共有の配信(`serve.py`)が要る検査。`run-checks.js` が
-  隣の検査のためにサーバを止めた直後に当たると `ERR_CONNECTION_REFUSED` で落ちる。
-  サーバを立てて単体で回すと 19/19 で通る
+`--area all`(407本)を通しで回すと、単体では通るのに落ちるものがいくつかある。
+**いずれも単体で回すと通る**ので、NGを数えるときは1本ずつ確かめ直すこと。
+
+| 検査 | 落ち方 | なぜ |
+| --- | --- | --- |
+| `boot/boot-check` | 0.4秒で `EADDRINUSE` | **直した(このPR)。** 自分で :8899 に配信を立てる検査なのに、共有の配信(`tools/serve.py`)が先に開いていると即死していた。`run-checks.js` は「既に開いていたらそれを使う」ので止められず、ぶつかり続ける。検査側も同じ判断(開いていればそれを使う)をするようにした |
+| `mode/difficulty-item-check` | 12/19。「最大にすると増える経験値が変わる」など | 共有の配信が要る検査。隣の検査のためにサーバが止まった直後に当たると落ちる。また通しで回すと機械が混み合い、待ち時間の足りない項目が出る |
+| `mode/rhythm-run-progress-check` | 13/14。「戻ったあとも∞周回のまま進む」 | 同上。オート周回が次のWAVEへ進むのを待つ項目で、混み合っていると待ちきれない |
+
