@@ -59,6 +59,36 @@ for (const file of files) {
   ]) {
     check(`${rel}: ${when}の理由を渡している`, compact.includes(`stopAllAuto('${reason}')`), reason);
   }
+
+  // ---- アプリに戻ったら自動で続ける(2026-09-11・ユーザー指示) ----
+  // 「アプリが裏に回ったから止まった」ぶんだけ。負けたとき・諦めたとき・自分で切ったときは続けない
+  check(`${rel}: 戻ってきたときに、止まっていた周回を続けようとする`,
+    /onVisible\s*=\s*\(\)\s*=>\s*\{[\s\S]{0,240}?resumeAutoAfterVisibleRef\.current\(\)/.test(src));
+  check(`${rel}: 続ける中身は毎レンダー入れ直す(古いstateを掴まない)`,
+    compact.includes('resumeAutoAfterVisibleRef.current=resumeQuickRunAfterVisible;'));
+  const resumeBody = (() => {
+    const from = compact.indexOf('constresumeQuickRunAfterVisible=()=>{');
+    if (from < 0) return '';
+    return compact.slice(from, from + 600);
+  })();
+  check(`${rel}: 続ける判定がある`, resumeBody.length > 0);
+  check(`${rel}: 止まっていないときは何もしない`,
+    resumeBody.includes('if(!progress||!progress.finished)returnfalse;'));
+  check(`${rel}: 裏に回った以外の理由(負けた・諦めた・自分で切った)では続けない`,
+    resumeBody.includes("if(progress.reason!=='hidden')returnfalse;"));
+  check(`${rel}: 見えていないあいだは続けない`,
+    resumeBody.includes("document.visibilityState==='hidden')returnfalse;"));
+  check(`${rel}: 続けるのは既存の「再開する」と同じ処理を通す`,
+    resumeBody.includes('returnresumeQuickRunFromRhythm();'));
+  // ★負けたときに動きださない二重の守り。理由の取り違えがあっても、勝負がついていれば再開しない
+  const resumeFromRhythmBody = (() => {
+    const from = compact.indexOf('constresumeQuickRunFromRhythm=()=>{');
+    if (from < 0) return '';
+    return compact.slice(from, from + 600);
+  })();
+  check(`${rel}: 勝負がついているときは、再開処理そのものが断る`,
+    resumeFromRhythmBody.includes('if(runResultFinishedRef.current)returnfalse;')
+    && resumeFromRhythmBody.includes('if(!runStageRef.current)returnfalse;'));
 }
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
