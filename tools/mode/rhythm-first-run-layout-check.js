@@ -79,23 +79,41 @@ html,body{height:100%;margin:0}
     // 組み上がっていない状態はTailwindを止めているあいだずっと続くので、
     // 待っても「崩れたまま演奏が始まっている」という見たい場面は壊れない。
     await page.waitForSelector('[data-rhythm-play-area]',{timeout:30000}).catch(()=>{});
-    await page.waitForFunction(()=>document.querySelectorAll('[data-rhythm-note]').length>0,
-      undefined,{timeout:30000}).catch(()=>{});
+    // ノーツの描き方は2つある。要素版は [data-rhythm-note] が1個ずつ並ぶが、
+    // canvas 版(2026-09-07・公開フラグ rhythmCanvasNotes=true。いまの公開はこちら)は
+    // [data-rhythm-note-canvas] 1枚へ毎フレーム描くので、要素は1つも出てこない。
+    // 要素を待つ書き方のままだと30秒まるまる待ってから測ることになり、
+    // そのあいだに崩れたまま曲が進んでしまう。どちらの描き方でも「置かれた」ところまでを待つ
+    await page.waitForSelector('[data-rhythm-note-canvas],[data-rhythm-note]',{timeout:30000}).catch(()=>{});
 
+    // canvas 版は「透明でない画素が描かれているか」で、画面にノーツが出ているかを見る。
+    // canvas は毎フレーム全面を消してから描き、判定ラインは要素なので、描かれていれば必ずノーツ
     const snap=()=>page.evaluate(()=>{
       const area=document.querySelector('[data-rhythm-play-area]');
+      const canvas=document.querySelector('[data-rhythm-note-canvas]');
       const notes=[...document.querySelectorAll('[data-rhythm-note]')];
       const onScreen=notes.filter(n=>{const s=getComputedStyle(n);
         if(s.display==='none'||s.opacity==='0')return false;
         const r=n.getBoundingClientRect();return r.height>0&&r.bottom>0&&r.top<window.innerHeight;});
-      return {area:area?Math.round(area.getBoundingClientRect().height):null,notes:notes.length,onScreen:onScreen.length,
+      let painted=0;
+      if(canvas&&canvas.width>0&&canvas.height>0){
+        try{const d=canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data;
+          for(let i=3;i<d.length;i+=4){if(d[i]>8){painted++;if(painted>32)break;}}
+        }catch{painted=0;}
+      }
+      return {area:area?Math.round(area.getBoundingClientRect().height):null,canvas:!!canvas,
+        notes:notes.length,onScreen:canvas?painted:onScreen.length,
         life:Number((document.querySelector('[data-rhythm-life-value]')||{}).textContent||0)};
     });
 
     const entered=await snap();
-    ok('演奏画面へ入れている',entered.notes>0,`ノーツ${entered.notes}個 / エリア高さ${entered.area}px`);
-    ok('組み上がる前は画面が実際に崩れている',entered.area>844,
-      `エリア高さ${entered.area}px（画面は844px。この状態を作れていないと検査にならない）`);
+    ok('演奏画面へ入れている',entered.area!==null&&(entered.canvas||entered.notes>0),
+      `エリア高さ${entered.area}px / 描き方=${entered.canvas?'canvas':`要素${entered.notes}個`}`);
+    // 組み上がる前の崩れ方は描き方で変わる。要素版は譜面のぶんだけ要素が縦に積み上がって
+    // 画面より大きくなり(実測3352px)、canvas 版は中身が絶対配置だけになって潰れる(実測18px)。
+    // どちらも「組み上がったあとの844px付近」から大きく外れた状態。これを作れていないと検査にならない
+    ok('組み上がる前は画面が実際に崩れている',entered.area!==null&&(entered.area<600||entered.area>844),
+      `エリア高さ${entered.area}px（画面は844px。組み上がると844px付近になる）`);
 
     // 組み上がらないまま4秒すごす
     await page.waitForTimeout(4000);
@@ -107,12 +125,22 @@ html,body{height:100%;margin:0}
     await page.addStyleTag({content:LAYOUT_CSS});
     // 「1.5秒待つ」だと、機械が混んでいる回だけノーツがまだ流れてこず落ちていた。
     // 出るまで待って、それでも出なければNGにする（見たいことは変えていない）。
-    await page.waitForFunction(()=>[...document.querySelectorAll('[data-rhythm-note]')].some(note=>{
-      const style=getComputedStyle(note);
-      if(style.display==='none'||style.opacity==='0')return false;
-      const rect=note.getBoundingClientRect();
-      return rect.height>0&&rect.bottom>0&&rect.top<window.innerHeight;
-    }),undefined,{timeout:20000}).catch(()=>{});
+    await page.waitForFunction(()=>{
+      const canvas=document.querySelector('[data-rhythm-note-canvas]');
+      if(canvas){
+        if(!(canvas.width>0&&canvas.height>0))return false;
+        try{const d=canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data;
+          for(let i=3;i<d.length;i+=4)if(d[i]>8)return true;
+        }catch{return false;}
+        return false;
+      }
+      return [...document.querySelectorAll('[data-rhythm-note]')].some(note=>{
+        const style=getComputedStyle(note);
+        if(style.display==='none'||style.opacity==='0')return false;
+        const rect=note.getBoundingClientRect();
+        return rect.height>0&&rect.bottom>0&&rect.top<window.innerHeight;
+      });
+    },undefined,{timeout:20000,polling:200}).catch(()=>{});
     const after=await snap();
     ok('組み上がったら大きさを測り直している',after.area!==null&&after.area<=844,
       `エリア高さ${after.area}px（覚えたままの古い値で固まっていないか）`);

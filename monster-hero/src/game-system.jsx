@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 25263a81d602dc38
+// generated-sha256: f4b54cd2012f89eb
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 17:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 18:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11969,6 +11969,12 @@ const rhythmTravelLooksReady=(areaRect,lineRect)=>{
   // (実測: レイアウトが効く前は 844pxの画面で 3352px になっていた)
   const viewportHeight=typeof window!=='undefined'&&window.innerHeight>0?window.innerHeight:0;
   if(viewportHeight>0&&areaRect.height>viewportHeight*1.5)return false;
+  // 逆に、画面に対して極端に小さいプレイエリアも「まだ組み上がっていない」。
+  // ノーツを canvas 1枚へ描くようにしてから(2026-09-07)、スタイルが効く前の崩れ方が
+  // 「要素が縦に積み上がって大きくなる」から「中身が絶対配置だけになって潰れる」へ変わった。
+  // (実測: 844pxの画面で 18px)。この値を遊べる形とみなすと、見えないノーツをMISSにして
+  // ライフだけが減る――2026-09-05の不具合がそのまま裏返しの形で戻る
+  if(viewportHeight>0&&areaRect.height<viewportHeight*0.25)return false;
   // 判定ラインに厚みが無いなら、まだ形が決まっていない。
   // 以前は「中心がエリアの中にあること」しか見ておらず、線が高さ0のまま
   // エリアの先頭に居る状態(スタイルが効く前)をそのまま通していた
