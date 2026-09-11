@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d7230ac5442035c2
+// source-sha256: 6ef68c08f44a7c89
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5c60664254cf28fa
+// generated-sha256: d54cf8a5721a8e2d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 12:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 12:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -25103,7 +25103,7 @@ function RhythmRankingScreen({
   }, rhythmEventPeriodText(eventDefinition, eventRange))), /*#__PURE__*/React.createElement("p", {
     "data-rhythm-event-remaining": true,
     className: "shrink-0 text-[10px] font-black text-fuchsia-200"
-  }, eventRange ? rhythmEventRemainingText(eventRange.endMs - eventNowMs) : '—')), /*#__PURE__*/React.createElement("div", {
+  }, eventRange ? rhythmEventRemainingText(eventRange.endMs - eventNowMs) : '—')), eventDivisions.length > 1 && /*#__PURE__*/React.createElement("div", {
     "data-rhythm-event-divisions": true,
     className: "mb-3 flex flex-wrap gap-1"
   }, eventDivisions.map(division => /*#__PURE__*/React.createElement("button", {
@@ -25144,11 +25144,11 @@ function RhythmRankingScreen({
   }, /*#__PURE__*/React.createElement("p", {
     "data-rhythm-event-self-empty": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-center text-[10px] text-slate-300"
-  }, eventLimited ? 'まだあなたの記録がありません。対象曲を1曲でも遊ぶとここに載ります。' : '今週はまだあなたの記録がありません。対象曲を1曲でも遊ぶとここに載ります。'), /*#__PURE__*/React.createElement("button", {
+  }, eventLimited ? 'まだあなたの記録がありません。対象曲を1曲でも遊ぶとここに載ります。' : '今週はまだあなたの記録がありません。どの曲でも1曲遊ぶとここに載ります。'), /*#__PURE__*/React.createElement("button", {
     "data-rhythm-event-play": true,
     onClick: onGoToSongSelect,
     className: "mt-2 w-full min-h-[44px] rounded-xl border border-fuchsia-300/40 bg-slate-900/70 px-3 text-[10px] font-black text-fuchsia-100"
-  }, "\u25B6 \u5BFE\u8C61\u66F2\u3092\u3048\u3089\u3076")), eventBoard.entries.length === 0 && /*#__PURE__*/React.createElement("p", {
+  }, "\u25B6 ", eventLimited ? '対象曲をえらぶ' : '曲をえらぶ')), eventBoard.entries.length === 0 && /*#__PURE__*/React.createElement("p", {
     "data-rhythm-event-empty": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
   }, eventLimited ? 'まだ記録がありません。最初の1件になってみましょう。' : '今週はまだ記録がありません。最初の1件になってみましょう。'), eventBoard.entries.length > 0 && /*#__PURE__*/React.createElement("ol", {
@@ -34903,7 +34903,9 @@ function MonsterHeroGame() {
   const RHYTHM_EVENT_NOTICE_KEY = 'mh_rhythm_event_notice_v1';
   const [rhythmEventNoticeSeen, setRhythmEventNoticeSeen] = useState(null);
   const rhythmEventReleased = RELEASE_FLAGS.rhythmWeeklyRanking === true;
-  const rhythmSongSelectEvent = rhythmEventReleased ? rhythmActiveEvent(Date.now()) : null;
+  // ★知らせるのは期間限定イベントだけ(2026-09-11・ユーザー指示で、週間は対象曲を持たなくなった)。
+  //   週間は公開曲すべてが対象で毎週同じなので、曲えらびで知らせることが無い
+  const rhythmSongSelectEvent = rhythmEventReleased ? rhythmLimitedEventAt(Date.now()) : null;
   // 読めなかったとき(seen が null のまま)は「見た扱い」にして出さない。
   // 案内が二度出るより、出ないほうが害が小さい(クイック連携の案内と同じ考え方)
   const rhythmEventNoticeVisible = !!rhythmSongSelectEvent && typeof rhythmEventNoticeSeen === 'string' && rhythmEventNoticeSeen !== rhythmSongSelectEvent.id;

@@ -38,8 +38,8 @@ check('公開曲の一覧を抽出できる',!!demoIds);
 const context={console};
 vm.createContext(context);
 vm.runInContext(`${demoIds}\n${eventData}\n`
-  +'this.out={RHYTHM_WEEK_MS,RHYTHM_WEEK_ANCHOR_MS,RHYTHM_WEEKLY_ROTATION,RHYTHM_EVENTS,RHYTHM_DEMO_SONG_IDS,'
-  +'rhythmWeekStartMs,rhythmWeekWindow,rhythmWeekIndex,rhythmWeekId,rhythmWeeklyEvent,rhythmActiveEvent,rhythmLimitedEventAt,'
+  +'this.out={RHYTHM_WEEK_MS,RHYTHM_WEEK_ANCHOR_MS,RHYTHM_EVENTS,RHYTHM_DEMO_SONG_IDS,'
+  +'rhythmWeekStartMs,rhythmWeekWindow,rhythmWeekId,rhythmWeeklyEvent,rhythmLimitedEventAt,'
   +'rhythmEventWindow,rhythmEventRemainingText,rhythmEventDivisions,rhythmEventDivisionSongId,rhythmEventSong,'
   +'rhythmEventPeriodText,rhythmEventSongsLabel,rhythmEventDivisionReward,rhythmEventRewardForRank,rhythmEventHasRewards,'
   +'rhythmEventSongDivisionId,RHYTHM_EVENT_REWARD_RANKS,rhythmEventsAwaitingReward,'
@@ -83,41 +83,38 @@ check('週のIDは weekly_YYYY_MM_DD の形',/^weekly_\d{4}_\d{2}_\d{2}$/.test(O
   check('同じ週なら同じID・週が変われば別のID',a===b&&a!==c,`${a} / ${c}`);
 }
 
-// ② 対象曲の組み方
-const rotation=O.RHYTHM_WEEKLY_ROTATION.map(entry=>entry.songIds);
-check('対象曲の組が1つ以上ある',rotation.length>0,`${rotation.length}週ぶん`);
-check('どの週も3曲以上',rotation.every(ids=>ids.length>=3));
-check('対象曲は公開曲の一覧にあるものだけ',(()=>{
-  const unknown=rotation.flat().filter(id=>!O.RHYTHM_DEMO_SONG_IDS.includes(id));
-  return unknown.length===0||console.log(`   未公開の曲: ${unknown.join(', ')}`)===undefined&&false;
-})());
-check('同じ週の中で曲が重複していない',rotation.every(ids=>new Set(ids).size===ids.length));
-check('となりあう週で同じ曲を選ばない(最後→先頭の折り返しも見る)',(()=>{
-  for(let i=0;i<rotation.length;i++){
-    const next=rotation[(i+1)%rotation.length];
-    const dup=rotation[i].filter(id=>next.includes(id));
-    if(rotation.length>1&&dup.length>0){console.log(`   ${i}週目と${(i+1)%rotation.length}週目: ${dup.join(', ')}`);return false;}
-  }
-  return true;
-})());
-check('一巡すると公開曲がひととおり対象になる',(()=>{
-  const covered=new Set(rotation.flat());
-  const missing=O.RHYTHM_DEMO_SONG_IDS.filter(id=>!covered.has(id));
-  if(missing.length){console.log(`   まだ一度も対象にならない曲: ${missing.join(', ')}`);return false;}
-  return true;
-})(),`${rotation.length}週で${O.RHYTHM_DEMO_SONG_IDS.length}曲`);
-check('週が変われば対象曲も変わる',(()=>{
-  if(rotation.length<2)return true;
-  const a=O.rhythmWeeklyEvent(O.RHYTHM_WEEK_ANCHOR_MS).songIds.join(',');
-  const b=O.rhythmWeeklyEvent(O.RHYTHM_WEEK_ANCHOR_MS+O.RHYTHM_WEEK_MS).songIds.join(',');
-  return a!==b;
-})());
-check('基準より前の週でも対象曲が決まる(負の週番号)',(()=>{
-  const event=O.rhythmWeeklyEvent(O.RHYTHM_WEEK_ANCHOR_MS-5*O.RHYTHM_WEEK_MS);
-  return !!event&&event.songIds.length>=3;
-})());
-check('いまも必ず開催中(週間かイベントのどちらかが必ず立つ)',!!O.rhythmActiveEvent(Date.now()),
-  (O.rhythmActiveEvent(Date.now())||{}).id);
+// ② 週間ランキングは対象曲を持たない(2026-09-11・ユーザー指示
+//    「週間ランキングはそれのみにして、対応曲があるのはイベントのほうにして」)
+{
+  const week=O.rhythmWeeklyEvent(Date.now());
+  check('週間は公開曲すべてが対象',!!week
+    &&week.songIds.length===O.RHYTHM_DEMO_SONG_IDS.length
+    &&week.songIds.every(id=>O.RHYTHM_DEMO_SONG_IDS.includes(id)),`${week?week.songIds.length:0}曲`);
+  check('週間の部門は総合1つだけ',(()=>{
+    const divisions=O.rhythmEventDivisions(week,[]);
+    return divisions.length===1&&divisions[0].id===O.RHYTHM_EVENT_TOTAL_DIVISION;
+  })());
+  check('曲を足せば週間の対象も自動で増える(曲の一覧を書き写していない)',
+    !/songIds: Object\.freeze\(\[\s*'/.test(eventData.slice(0,eventData.indexOf('const RHYTHM_EVENTS')))
+    &&eventData.includes('songIds: Object.freeze([...published])'));
+  check('週が変わっても対象曲は変わらない(毎週同じ全曲)',
+    O.rhythmWeeklyEvent(Date.now()).songIds.join(',')
+    ===O.rhythmWeeklyEvent(Date.now()+7*24*3600*1000).songIds.join(','));
+  check('週が変わればIDは変わる(集計する期間が変わる)',
+    O.rhythmWeeklyEvent(Date.now()).id!==O.rhythmWeeklyEvent(Date.now()+7*24*3600*1000).id);
+  check('対象曲を持つのはイベントだけ',(()=>{
+    const limitedEvents=(O.RHYTHM_EVENTS||[]).filter(e=>e.kind==='limited');
+    return limitedEvents.every(e=>O.rhythmEventDivisions(e,[]).length===e.songIds.length+1);
+  })());
+  check('画面は部門が1つのときボタンを出さない',
+    screen.includes('{eventDivisions.length>1&&<div data-rhythm-event-divisions'));
+  check('曲えらびの案内は期間限定のときだけ',
+    app.includes('rhythmEventReleased ? rhythmLimitedEventAt(Date.now()) : null')
+    &&!app.includes('rhythmActiveEvent('));
+  check('廃止した仕組みが残っていない(ローテーション・rhythmActiveEvent)',
+    !eventData.includes('RHYTHM_WEEKLY_ROTATION')
+    &&!/const rhythmActiveEvent =/.test(eventData));
+}
 
 // --- 報酬の受け取り(§9.1) ---
 {
@@ -223,12 +220,12 @@ check('期間限定イベントどうしが重なっていない(同時に成立
   }
   return true;
 })());
-// 境界そのもの。開始ちょうどで始まり、終了ちょうどで週間へ戻る
+// 境界そのもの。開始ちょうどで始まり、終了ちょうどで終わる
 check('開始・終了の境界で入れ替わる',limited.every(e=>{
   const start=Date.parse(e.startAt),end=Date.parse(e.endAt);
-  const at=(ms)=>O.rhythmActiveEvent(ms);
-  return at(start-1).kind==='weekly'&&at(start).id===e.id
-    &&at(end-1).id===e.id&&at(end).kind==='weekly';
+  const at=(ms)=>O.rhythmLimitedEventAt(ms);
+  return at(start-1)===null&&(at(start)||{}).id===e.id
+    &&(at(end-1)||{}).id===e.id&&at(end)===null;
 }));
 // ★2026-09-11・ユーザー指示「週間ランキングとイベントランキングは別々に作ったほうがいい」。
 //   もとの仕様(§7)の「期間限定のあいだ週間を休む」は取り消した。両方が同時に動く。
@@ -259,9 +256,8 @@ check('期間の文を出し分ける',(()=>{
     return /\d+\/\d+\([日月火水木金土]\) \d+:\d\d 〜 \d+\/\d+\([日月火水木金土]\) \d+:\d\d/.test(text);
   });
 })(),limited.length?O.rhythmEventPeriodText(limited[0],O.rhythmEventWindow(limited[0],null)):'');
-check('対象曲の見出しも出し分ける',
-  O.rhythmEventSongsLabel(O.rhythmWeeklyEvent(Date.now()))==='今週の対象曲'
-  &&limited.every(e=>O.rhythmEventSongsLabel(e)==='対象曲'));
+// 対象曲を持つのは期間限定だけなので、見出しはいつも「対象曲」
+check('対象曲の見出しは「対象曲」',limited.every(e=>O.rhythmEventSongsLabel(e)==='対象曲'));
 
 // --- 報酬(docs/spec/RHYTHM_RANKING.md §9) ---
 // 1位から5位まで、個数は5/4/3/2/1・プシュケーは1,000/800/600/400/200。6位以下は無し。
@@ -317,7 +313,8 @@ check('画面は期間の文と対象曲の見出しを出し分ける',
 
 // ④ 部門と点数
 {
-  const event=O.rhythmWeeklyEvent(Date.now());
+  // 部門が分かれるのは期間限定だけ。週間は総合1つ(上で確かめている)
+  const event=(O.RHYTHM_EVENTS||[]).find(e=>e.kind==='limited')||O.rhythmWeeklyEvent(Date.now());
   const divisions=O.rhythmEventDivisions(event,event.songIds.map(songId=>({songId,displayName:`曲${songId}`})));
   check('部門は 対象曲の数+1(総合)',divisions.length===event.songIds.length+1,`${divisions.length}部門`);
   check('最後の部門が総合',divisions[divisions.length-1].id===O.RHYTHM_EVENT_TOTAL_DIVISION);
@@ -472,9 +469,11 @@ check('ランキング画面に読み物を置いていない',
   &&!rankingScreenBody.includes('<RhythmLandscapeHint')
   &&!rankingScreenBody.includes('<AssistantBubble'));
 // 週間の「毎週月曜5:00」の話を期間限定のあいだに出すと、週間が動いていると誤解される
-check('期間限定のあいだは助手のセリフも切り替える',
-  (assistants.match(/rhythmWeeklyEvent: \{\n\s*limited: \[/g)||[]).length>=3
-  &&(screen.match(/scene="rhythmWeeklyEvent" condition=\{/g)||[]).length>=1);
+// 曲えらびの案内は期間限定のときだけ出るので、セリフもイベントの話でそろえる
+check('助手のセリフは期間限定イベントの話',
+  (assistants.match(/rhythmWeeklyEvent: \[/g)||[]).length>=3
+  &&!assistants.includes('今週の対象曲だよ')
+  &&(assistants.match(/期間限定/g)||[]).length>=3);
 check('助手3人ぶんのセリフがある',(assistants.match(/rhythmWeeklyEvent: \[/g)||[]).length>=3);
 check('曲えらびの案内は週ごとに1度だけ',
   screen.includes('data-rhythm-event-notice')&&screen.includes('data-rhythm-event-notice-close')

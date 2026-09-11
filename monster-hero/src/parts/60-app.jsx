@@ -2554,7 +2554,9 @@ function MonsterHeroGame() {
   const RHYTHM_EVENT_NOTICE_KEY = 'mh_rhythm_event_notice_v1';
   const [rhythmEventNoticeSeen, setRhythmEventNoticeSeen] = useState(null);
   const rhythmEventReleased = RELEASE_FLAGS.rhythmWeeklyRanking === true;
-  const rhythmSongSelectEvent = rhythmEventReleased ? rhythmActiveEvent(Date.now()) : null;
+  // ★知らせるのは期間限定イベントだけ(2026-09-11・ユーザー指示で、週間は対象曲を持たなくなった)。
+  //   週間は公開曲すべてが対象で毎週同じなので、曲えらびで知らせることが無い
+  const rhythmSongSelectEvent = rhythmEventReleased ? rhythmLimitedEventAt(Date.now()) : null;
   // 読めなかったとき(seen が null のまま)は「見た扱い」にして出さない。
   // 案内が二度出るより、出ないほうが害が小さい(クイック連携の案内と同じ考え方)
   const rhythmEventNoticeVisible = !!rhythmSongSelectEvent && typeof rhythmEventNoticeSeen === 'string'

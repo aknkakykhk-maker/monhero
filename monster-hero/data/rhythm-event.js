@@ -30,8 +30,6 @@ const rhythmWeekWindow = (nowMs) => {
   const startMs = rhythmWeekStartMs(nowMs);
   return { startMs, endMs: startMs + RHYTHM_WEEK_MS };
 };
-// 基準週を0とした通し番号。ローテーションのどこを使うかを決めるのに使う
-const rhythmWeekIndex = (nowMs) => Math.round((rhythmWeekStartMs(nowMs) - RHYTHM_WEEK_ANCHOR_MS) / RHYTHM_WEEK_MS);
 // 週のID。フェーズ4で報酬の受取フラグの一部になるので、**あとから形を変えない**(§7)。
 // 月曜5:00 JSTの日付そのままで weekly_YYYY_MM_DD になる
 const rhythmWeekId = (nowMs) => {
@@ -40,29 +38,23 @@ const rhythmWeekId = (nowMs) => {
   return `weekly_${jst.getUTCFullYear()}_${pad(jst.getUTCMonth() + 1)}_${pad(jst.getUTCDate())}`;
 };
 
-// ===== 今週の対象曲 =====
+// ===== 週間ランキング =====
 //
-// 3曲の組を手で選んで並べ、週ごとに順に回す(§5.7「いまは手で選ぶ」)。
-// ★ローテーションにしたのは、毎週デプロイしないと週間ランキングが消える作りにしないため。
-//   一覧が一巡したら先頭へ戻るので、放っておいても必ずその週の3曲が決まる。
-// ★組み方の決めごと
-//   ・となりあう週で同じ曲を選ばない(最後の組と先頭の組のあいだも見る)
-//   ・一巡すると公開曲がひととおり対象になる
-//   ・正式譜面が完成している曲(=曲えらびに並んでいる曲)からだけ選ぶ(§6.4)
-//   曲を足したらここへも組を足す。tools/mode/rhythm-event-window-check.js が上の3つを見張る。
-const RHYTHM_WEEKLY_ROTATION = Object.freeze([
-  Object.freeze({ songIds: Object.freeze(['monster_hero', 'toriko', 'crossing_field']) }),
-  Object.freeze({ songIds: Object.freeze(['kiki_issen', 'kaze_ga_soyogu', 'nothing_without_you']) }),
-  Object.freeze({ songIds: Object.freeze(['stay_with_me', 'dullahan', '4u_hitasura']) }),
-  Object.freeze({ songIds: Object.freeze(['mf_ichika_mix', 'close_to_your_heart', 'kindan_no_resistance']) }),
-  Object.freeze({ songIds: Object.freeze(['six_eternel_remix', 'dullahan_clockwork', 'monster_hero_another']) }),
-  Object.freeze({ songIds: Object.freeze(['eiki_boss_remix', 'pandora_boss_remix', 'kaze_ga_soyogu']) }),
-]);
+// ★2026-09-11・ユーザー指示「週間ランキングはそれのみにして、対応曲があるのは
+//   イベントのほうにして」。**週間に対象曲は無い**。公開曲すべてが対象で、
+//   部門も分けない1本のランキングにする。
+//   (それまでは3曲の組を週ごとに回していたが、対象曲の仕組みはイベント専用にした)
+//
+// 中身は「総合」ランキングの今週ぶん。曲ごとのベストを全曲ぶん合計して competing…
+// ではなく、曲ごとのベストを全曲ぶん合計して競う。違うのは数える期間だけ。
+//   総合   … ずっと(はじめてからの全期間)
+//   週間   … 今週だけ(月曜5:00 JST 区切り)
+//
+// ★曲の一覧をここに書かない。公開曲が増えれば、そのまま週間の対象も増える(§5.1)。
 
 // 期間限定イベント(kind:'limited')。
-// 開催中は週間を休む(§7「同時に成立するイベントは1つまで」)ので、
-// ここへ1件書くと、その期間だけ週間ランキングの代わりにイベントが出る。
-// id は受取フラグの一部になるので、**あとから変えない**。
+// 週間とは別のタブで、同時に動く(§7・2026-09-11にユーザーが決めた)。
+// **対象曲を持つのはこちらだけ**。id は受取フラグの一部になるので、**あとから変えない**。
 //
 // rewardLineageBySongId … その曲の部門の1〜5位へ配る超越の実の種族(主血統id)。
 //   書かなければ、その部門の報酬はプシュケーだけになる。
@@ -160,23 +152,16 @@ const rhythmEventHasRewards = (event) => {
 const rhythmEventPublishedSongIds = () =>
   (typeof RHYTHM_DEMO_SONG_IDS !== 'undefined' && Array.isArray(RHYTHM_DEMO_SONG_IDS)) ? RHYTHM_DEMO_SONG_IDS : null;
 
-// その週の週間イベント。対象曲のうち、いま公開されている曲だけを残す
-// (曲を下げたときに「押せるのに無い曲」が部門として並ばないようにするため)
+// その週の週間ランキング。対象は**公開曲すべて**で、部門は分けない(§6.3)。
+// 公開曲の一覧が読めないときだけ null を返す(データの読み込み順が前後したとき)
 const rhythmWeeklyEvent = (nowMs) => {
-  if (!Array.isArray(RHYTHM_WEEKLY_ROTATION) || RHYTHM_WEEKLY_ROTATION.length === 0) return null;
-  const size = RHYTHM_WEEKLY_ROTATION.length;
-  const index = ((rhythmWeekIndex(nowMs) % size) + size) % size;
-  const entry = RHYTHM_WEEKLY_ROTATION[index];
   const published = rhythmEventPublishedSongIds();
-  const songIds = (entry && Array.isArray(entry.songIds) ? entry.songIds : [])
-    .filter(songId => typeof songId === 'string' && songId
-      && (!published || published.includes(songId)));
-  if (songIds.length === 0) return null;
+  if (!published || published.length === 0) return null;
   return Object.freeze({
     id: rhythmWeekId(nowMs),
     kind: 'weekly',
     name: '今週のモンヒロビート',
-    songIds: Object.freeze(songIds),
+    songIds: Object.freeze([...published]),
   });
 };
 
@@ -196,14 +181,9 @@ const rhythmLimitedEventAt = (nowMs) => {
   }) || null;
 };
 
-// いま成立しているイベント。期間限定があればそちらを優先し、その週の週間は休む(§7)。
-// weekStartMs にはサーバーから受け取った週の始まりを渡す(渡さなければ端末の時計で見当をつける)
-const rhythmActiveEvent = (nowMs, weekStartMs) => {
-  const now = Number.isFinite(Number(nowMs)) ? Number(nowMs) : 0;
-  const limited = rhythmLimitedEventAt(now);
-  if (limited) return limited;
-  return rhythmWeeklyEvent(Number.isFinite(Number(weekStartMs)) ? Number(weekStartMs) : now);
-};
+// ★rhythmActiveEvent は廃止した(2026-09-11)。週間と期間限定は別のタブで同時に動くので、
+//   「いま成立しているのはどちらか」を1つに決める必要がなくなった。
+//   曲えらびの案内は期間限定のときだけ出す(週間は対象曲を持たないので、知らせることが無い)。
 
 // そのイベントの期間。週間はサーバーの週の窓、期間限定は定義に書いた日時
 const rhythmEventWindow = (event, weekWindow) => {
@@ -248,8 +228,10 @@ const rhythmEventDivisionSongId = (divisionId) => {
 // displayName だけだと見分けがつかない)。2か所に名前の作り方を書かない。
 const rhythmEventSong = (songId, songs) =>
   (Array.isArray(songs) ? songs : []).find(entry => entry && entry.songId === songId) || null;
+// 部門の一覧。**対象曲を持つのはイベントだけ**なので、週間は総合1つだけになる
+// (2026-09-11・ユーザー指示)。数は対象曲の数から作るので、3曲でも5曲でも画面は変えない
 const rhythmEventDivisions = (event, songs) => {
-  const songIds = event && Array.isArray(event.songIds) ? event.songIds : [];
+  const songIds = (event && event.kind === 'limited' && Array.isArray(event.songIds)) ? event.songIds : [];
   return [
     ...songIds.map(songId => ({
       id: rhythmEventSongDivisionId(songId),
@@ -290,8 +272,8 @@ const rhythmEventPeriodText = (event, range) => {
   }
   return '毎週 月曜 5:00 に切り替わります';
 };
-// 対象曲の見出し。週間は「今週の対象曲」、期間限定はイベントの名前で呼ぶ
-const rhythmEventSongsLabel = (event) => (event && event.kind === 'limited') ? '対象曲' : '今週の対象曲';
+// 対象曲の見出し。対象曲を持つのは期間限定だけなので、いつも「対象曲」でよい
+const rhythmEventSongsLabel = (event) => '対象曲';
 
 // ===== 報酬の受け取り(docs/spec/RHYTHM_RANKING.md §9.1) =====
 //

@@ -610,15 +610,17 @@ function RhythmRankingScreen({
                   {eventRange?rhythmEventRemainingText(eventRange.endMs-eventNowMs):'—'}
                 </p>
               </div>
-              {/* 部門。対象曲ごと＋総合で、数は対象曲の数から作る */}
-              <div data-rhythm-event-divisions className="mb-3 flex flex-wrap gap-1">
+              {/* 部門。対象曲ごと＋総合で、数は対象曲の数から作る。
+                  ★対象曲を持つのはイベントだけなので、週間では部門が総合1つになり、
+                    ボタンそのものを出さない(2026-09-11・ユーザー指示) */}
+              {eventDivisions.length>1&&<div data-rhythm-event-divisions className="mb-3 flex flex-wrap gap-1">
                 {eventDivisions.map(division=>(
                   <button key={division.id} data-rhythm-event-division={division.id} onClick={()=>openDivision(division.id)}
                     className={`min-h-[44px] flex-1 basis-[45%] rounded-xl border px-2 py-1 text-[10px] font-black leading-tight ${division.id===eventDivisionId?'border-fuchsia-300/60 bg-fuchsia-500/15 text-fuchsia-100':'border-white/10 bg-slate-900/60 text-slate-400'}`}>
                     {division.songId?(rhythmSongFullName(division.song)||division.songId):'総合'}
                   </button>
                 ))}
-              </div>
+              </div>}
               {/* その部門の報酬。何を狙って遊ぶのかが分からないと、そもそも参加してもらえない。
                   順位も個数もデータから作るので、ここに数字を書き写さない */}
               {eventReward&&<div data-rhythm-event-rewards className="mb-3 rounded-2xl border border-amber-300/40 bg-amber-500/5 p-2">
@@ -642,9 +644,9 @@ function RhythmRankingScreen({
                 {/* ★自分の行は上に固定しない(2026-09-11・ユーザー指示)。一覧の中で色を変えて示す。
                     まだ1曲も遊んでいない人にだけ、対象曲への入口を出す */}
                 {!eventBoard.self&&<div className="mb-3">
-                  <p data-rhythm-event-self-empty className="rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-center text-[10px] text-slate-300">{eventLimited?'まだあなたの記録がありません。対象曲を1曲でも遊ぶとここに載ります。':'今週はまだあなたの記録がありません。対象曲を1曲でも遊ぶとここに載ります。'}</p>
+                  <p data-rhythm-event-self-empty className="rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-center text-[10px] text-slate-300">{eventLimited?'まだあなたの記録がありません。対象曲を1曲でも遊ぶとここに載ります。':'今週はまだあなたの記録がありません。どの曲でも1曲遊ぶとここに載ります。'}</p>
                   <button data-rhythm-event-play onClick={onGoToSongSelect}
-                    className="mt-2 w-full min-h-[44px] rounded-xl border border-fuchsia-300/40 bg-slate-900/70 px-3 text-[10px] font-black text-fuchsia-100">▶ 対象曲をえらぶ</button>
+                    className="mt-2 w-full min-h-[44px] rounded-xl border border-fuchsia-300/40 bg-slate-900/70 px-3 text-[10px] font-black text-fuchsia-100">▶ {eventLimited?'対象曲をえらぶ':'曲をえらぶ'}</button>
                 </div>}
                 {eventBoard.entries.length===0&&<p data-rhythm-event-empty className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">{eventLimited?'まだ記録がありません。最初の1件になってみましょう。':'今週はまだ記録がありません。最初の1件になってみましょう。'}</p>}
                 {eventBoard.entries.length>0&&<ol data-rhythm-event-list className="space-y-2">
