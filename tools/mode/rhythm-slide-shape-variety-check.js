@@ -101,6 +101,21 @@ const shallow=slides.filter(s=>{
 ok('0.5レーン未満しか振らない折り返しは無い（読めない形にしない）',shallow.length===0,
   shallow.length?`${shallow.length}本 例: ${shallow[0].file} ${shallow[0].lanes.join('→')}`:'');
 
+console.log('\n--- 中継点の間隔に緩急があるか（加速・減速）---');
+// 音が片道で動いている伸びには、中継点の間隔をだんだん詰める／広げる形を当てる
+// (ドラムフィル・ライザー・着地して伸びる音)。行き来している音には当てない
+// (折り返し点そのものが形なので、間隔をいじると読めなくなる)。
+const gapsOf=s=>{const g=s.note.slidePoints.map(p=>Number(p.grid));
+  const out=[];for(let i=1;i<g.length;i++)out.push(g[i]-g[i-1]);return out;};
+const longEnough=slides.filter(s=>gapsOf(s).length>=3);
+const varyingGaps=longEnough.filter(s=>new Set(gapsOf(s)).size>1);
+ok('中継点の間隔が一定でないSLIDEがある',varyingGaps.length>=longEnough.length*.3,
+  `${varyingGaps.length}/${longEnough.length}本`);
+// 詰めすぎ・広げすぎで読めなくならないこと
+const extreme=longEnough.filter(s=>{const g=gapsOf(s);return Math.max(...g)>=Math.min(...g)*8;});
+ok('間隔の差が8倍以上に開くSLIDEは無い',extreme.length===0,
+  extreme.length?`${extreme.length}本 例: ${extreme[0].file} ${gapsOf(extreme[0]).join(',')}`:'');
+
 console.log('\n--- 止めたままでも通るSLIDEを増やしていないか ---');
 // 【2026-09-12・生成結果の検証で見つけた問題】
 // 経路の振れ幅の半分が追従の許容以下だと、指を止めたままでも許容の内側に居続けられる。
@@ -143,6 +158,7 @@ ok('刻みのしきい値が0.5半音相当になっている',/const HEIGHT_TUR
 ok('音が向きを変えた位置を中継点として置く',/const turningPoints=\[\];/.test(generator)
   &&/for\(const index of turningPoints\)/.test(generator));
 ok('中継点には上限がある',/const SLIDE_MAX_POINTS=\d+;/.test(generator));
+ok('片道の音には加速・減速を当てる',/const paceName=!oneWay\?'even':rising\?'accel':'decel';/.test(generator));
 ok('山と谷は必ず中継点として通す',/sampled\.add\(peakIndex\);sampled\.add\(valleyIndex\);/.test(generator));
 ok('太さの下限があり、幅1まで細くしない',/const floorWidth=Math\.min\(width,2\);/.test(generator));
 ok('全中継点へ同じ太さを入れる書き方へ戻っていない',

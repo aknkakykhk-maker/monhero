@@ -1774,8 +1774,30 @@ function slidePathFor(reserved,startLane,width,P,onset){
   // 振れ幅が追従の許容より小さいと「指を止めたままでも通るSLIDE」になるので、
   // **山と谷の位置は必ず点として通す**(2026-09-12・生成結果の検証で判明)。
   const peakIndex=heights.indexOf(hi),valleyIndex=heights.indexOf(lo);
+  // 【加速・減速】(2026-09-12)
+  // 中継点の間隔を等間隔ではなく、だんだん詰める／広げる。
+  // ドラムフィル・スネアロール・加速するライザー、rit./accel. のテンポ表現に当てる。
+  // 音の高さが**片道で**動いている(行き来していない)ときだけ使う。
+  // 行き来している音は折り返し点そのものが形なので、間隔をいじると読めなくなる。
+  //   accel … 後半ほど詰まる（せり上がって最後に畳みかける音）
+  //   decel … 後半ほど広がる（着地して伸びる音）
+  // どちらも合計の長さは変えないので、譜面のタイミングはずれない。
+  const oneWay=waviness<.2;
+  const rising=heights[heights.length-1]>heights[0];
+  const paceName=!oneWay?'even':rising?'accel':'decel';
+  // 0..1 を、詰まる/広がる向きへ曲げる。even はそのまま
+  const pace=t=>paceName==='accel'?1-Math.pow(1-t,1.7)
+    :paceName==='decel'?Math.pow(t,1.7)
+    :t;
   const sampled=new Set();
-  for(let i=0;i<heights.length;i+=step)sampled.add(i);
+  {
+    // 等間隔で何点取るかは今までどおり step から決め、置く位置だけを pace で曲げる
+    const count=Math.max(2,Math.ceil((heights.length-1)/step)+1);
+    for(let k=0;k<count;k++){
+      const t=count>1?k/(count-1):0;
+      sampled.add(Math.max(0,Math.min(heights.length-1,Math.round(pace(t)*(heights.length-1)))));
+    }
+  }
   sampled.add(peakIndex);sampled.add(valleyIndex);
   // 【ジグザグ(カクカク)を出すのはここ】(2026-09-12)
   // 等間隔で刻むだけだと、音が行って戻る「折り返し点」をまたいでしまい、
