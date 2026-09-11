@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9a8cc961fef75643
+// generated-sha256: 745fd89b41a2c2d2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 13:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 13:05"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -16456,7 +16456,19 @@ function HomeUpdateGuideOverlay({
   activeAssistant, assistantBondLevelNow, assistantCallStyle, breederName, finishUpdateGuide,
   selectedAssistantId, setUpdateGuidePage, updateGuidePage, updateGuideQueue,
 }) {
-const notice=updateGuideQueue[0];const pages=Array.isArray(notice.pages)&&notice.pages.length?notice.pages:['新しいアップデートがあるよ♪'];const page=Math.min(updateGuidePage,pages.length-1);const last=page===pages.length-1;const who=activeAssistant;return(
+const notice=updateGuideQueue[0];const who=activeAssistant;
+// ★選んでいる助手が自分の口調で話す(2026-09-11・ユーザー指示)。
+//   その助手のセリフが用意されていない告知は、今までどおり更新履歴の本文をそのまま読む。
+//   1ページは文字列でも { e, t } でも書ける(既存の告知は文字列のまま動く)
+const pages=(typeof assistantNoticePagesFor==='function')
+  ?assistantNoticePagesFor(notice,who&&who.id)
+  :(Array.isArray(notice.pages)&&notice.pages.length?notice.pages:['新しいアップデートがあるよ♪']);
+const page=Math.min(updateGuidePage,pages.length-1);const last=page===pages.length-1;
+const pageText=(typeof assistantNoticePageText==='function')?assistantNoticePageText(pages[page]):String(pages[page]||'');
+const pageExpression=(typeof assistantNoticePageExpression==='function')
+  ?assistantNoticePageExpression(pages[page],notice.expression||'happy')
+  :(notice.expression||'happy');
+return(
     <div className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:76000,backgroundColor:'rgba(2,6,23,.94)'}} role="dialog" aria-modal="true" aria-label={notice.title}>
       <div className="w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] overflow-y-auto rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
         {notice.debugOnly&&<div className="mb-2 rounded-lg bg-fuchsia-700 px-2 py-1 text-center text-[9px] font-black text-white">DEBUG・通常ログインでは表示されません</div>}
@@ -16467,7 +16479,7 @@ const notice=updateGuideQueue[0];const pages=Array.isArray(notice.pages)&&notice
           onError={e=>{e.currentTarget.style.display='none';}} decoding="async"
           className="mb-3 w-full max-h-[42vh] rounded-2xl border border-pink-400/50 object-contain"/>}
         <h2 className="mb-1 text-center text-base font-black text-pink-200">{notice.title}</h2><p className="mb-3 text-center text-[10px] font-bold text-slate-400">{page+1} / {pages.length}</p>
-        <div className="flex items-end gap-2"><AssistantFace who={who} size={76} accent={who.accent} expression={notice.expression||'happy'}/><div className="flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-3 text-[13px] font-bold leading-relaxed text-white">{assistantSpeakText(pages[page],breederName,assistantBondLevelNow,assistantCallStyle,selectedAssistantId)}</div></div>
+        <div className="flex items-end gap-2"><AssistantFace who={who} size={76} accent={who.accent} expression={pageExpression}/><div className="flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-3 text-[13px] font-bold leading-relaxed text-white">{assistantSpeakText(pageText,breederName,assistantBondLevelNow,assistantCallStyle,selectedAssistantId)}</div></div>
         {!last?<button onClick={()=>setUpdateGuidePage(page+1)} className="mt-4 min-h-[50px] w-full rounded-2xl bg-pink-500 text-sm font-black text-slate-950">次へ</button>:<div className={`mt-4 grid ${notice.destination?'grid-cols-2':'grid-cols-1'} gap-2`}>{notice.destination&&<button onClick={()=>finishUpdateGuide(notice.destination)} className="min-h-[50px] rounded-2xl bg-pink-500 text-sm font-black text-slate-950">{notice.buttonLabel||'見に行く'}</button>}<button onClick={()=>finishUpdateGuide()} className="min-h-[50px] rounded-2xl bg-slate-700 text-sm font-black text-white">{notice.destination?'あとで':'閉じる'}</button></div>}
       </div>
     </div>);

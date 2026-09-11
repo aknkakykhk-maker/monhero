@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 69f5f84805152e8b
+// source-sha256: 3fb89cd3f0df31cb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9a8cc961fef75643
+// generated-sha256: 745fd89b41a2c2d2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 13:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 13:05"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -31466,10 +31466,15 @@ function HomeUpdateGuideOverlay({
   updateGuideQueue
 }) {
   const notice = updateGuideQueue[0];
-  const pages = Array.isArray(notice.pages) && notice.pages.length ? notice.pages : ['新しいアップデートがあるよ♪'];
+  const who = activeAssistant;
+  // ★選んでいる助手が自分の口調で話す(2026-09-11・ユーザー指示)。
+  //   その助手のセリフが用意されていない告知は、今までどおり更新履歴の本文をそのまま読む。
+  //   1ページは文字列でも { e, t } でも書ける(既存の告知は文字列のまま動く)
+  const pages = typeof assistantNoticePagesFor === 'function' ? assistantNoticePagesFor(notice, who && who.id) : Array.isArray(notice.pages) && notice.pages.length ? notice.pages : ['新しいアップデートがあるよ♪'];
   const page = Math.min(updateGuidePage, pages.length - 1);
   const last = page === pages.length - 1;
-  const who = activeAssistant;
+  const pageText = typeof assistantNoticePageText === 'function' ? assistantNoticePageText(pages[page]) : String(pages[page] || '');
+  const pageExpression = typeof assistantNoticePageExpression === 'function' ? assistantNoticePageExpression(pages[page], notice.expression || 'happy') : notice.expression || 'happy';
   return /*#__PURE__*/React.createElement("div", {
     className: "fixed inset-0 flex items-end justify-center",
     style: {
@@ -31507,10 +31512,10 @@ function HomeUpdateGuideOverlay({
     who: who,
     size: 76,
     accent: who.accent,
-    expression: notice.expression || 'happy'
+    expression: pageExpression
   }), /*#__PURE__*/React.createElement("div", {
     className: "flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-3 text-[13px] font-bold leading-relaxed text-white"
-  }, assistantSpeakText(pages[page], breederName, assistantBondLevelNow, assistantCallStyle, selectedAssistantId))), !last ? /*#__PURE__*/React.createElement("button", {
+  }, assistantSpeakText(pageText, breederName, assistantBondLevelNow, assistantCallStyle, selectedAssistantId))), !last ? /*#__PURE__*/React.createElement("button", {
     onClick: () => setUpdateGuidePage(page + 1),
     className: "mt-4 min-h-[50px] w-full rounded-2xl bg-pink-500 text-sm font-black text-slate-950"
   }, "\u6B21\u3078") : /*#__PURE__*/React.createElement("div", {

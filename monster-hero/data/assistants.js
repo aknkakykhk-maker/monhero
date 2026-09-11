@@ -131,8 +131,60 @@ const assistantUpdateNoticeFromChangelog = entry => {
     // 告知画像。更新履歴の項目に書いた image をそのまま持ってくる(2か所に書かない)
     image: typeof entry.image === 'string' && entry.image ? entry.image : null,
     pages: items.slice(), destination,
+    // 助手ごとのセリフ(あれば)。無ければ items をそのまま読む
+    scripts: ASSISTANT_UPDATE_NOTICE_SCRIPTS[meta.id.trim()] || null,
     buttonLabel: meta.buttonLabel || (meta.type === 'market' ? 'マーケットを見る' : meta.type === 'mode' ? 'バトルへ行く' : undefined),
   };
+};
+// ---------- 告知を助手の言葉で話す ----------
+// 2026-09-11・ユーザー指示「説明をみゅあの…そのほうがいい。ただ助手を変えてる場合も
+// あるからみゅあじゃなくて助手にして」。
+//
+// 更新履歴(data/changelog.js)の items は「あとから読み返す記録」なので事務的な文のまま。
+// 起動したときに出る告知は、**選んでいる助手が自分の口調で話す**。
+// ここへ書かなかった告知は、今までどおり items をそのまま読む(既存の告知は何も変わらない)。
+//
+//   ASSISTANT_UPDATE_NOTICE_SCRIPTS[告知id][助手id] = [{ e:表情, t:セリフ }, …]
+//
+// ★呼び方の決めごと: みゅあ・ももすけは「モンビー」、ききは「モンヒロビート」
+//   (2026-09-11・ユーザー指示)。
+const ASSISTANT_UPDATE_NOTICE_SCRIPTS = {
+  update_notice_rhythm_weekend_cup_v1: {
+    mua: [
+      { e:'excited',  t:'{name}、モンビーで大会が始まったよ！ その名も「週末ゲリラ杯」♪' },
+      { e:'happy',    t:'対象は3曲。「Monster Hero」「風がそよぐ場所」「Close To Your Heart」だよ。' },
+      { e:'normal',   t:'この期間に出したスコアだけで競うの。今までの記録は持ち込めないから、いま始めても間に合うよ♪' },
+      { e:'normal',   t:'順位は曲ごとと、3曲ぜんぶの合計の2種類。1曲だけでも合計に載るから気楽にね。' },
+      { e:'wink',     t:'ごほうびは順位のぶんと、3曲ぜんぶ遊んだらもらえるぶん。どっちもあるよ♡' },
+      { e:'excited',  t:'終わるのは9月14日(月)の朝5時！ 全国ランキングの「イベント」から行けるからね♪' },
+    ],
+    kiki: [
+      { e:'happy',    t:'{name}、モンヒロビートで大会が始まりまつ。「週末ゲリラ杯」でつ。' },
+      { e:'normal',   t:'対象は3曲。「Monster Hero」「風がそよぐ場所」「Close To Your Heart」でつ。' },
+      { e:'normal',   t:'この期間に出したスコアだけで競いまつ。これまでの記録は持ち込めませんので、今から始めても間に合いまつ。' },
+      { e:'normal',   t:'順位は曲ごとと、3曲の合計の2種類でつ。1曲だけでも合計に載りまつよ。' },
+      { e:'happy',    t:'ごほうびは順位のぶんと、3曲すべて遊んだ方へのぶんがありまつ♪' },
+      { e:'wink',     t:'9月14日(月)の5時まででつ。全国ランキングの「イベント」からどうぞ。' },
+    ],
+    momosuke: [
+      { e:'excited',  t:'{name}、モンビーで大会だよ！ 「週末ゲリラ杯」、ももが持ってきたの♡' },
+      { e:'wink',     t:'対象は3曲ね。「Monster Hero」「風がそよぐ場所」「Close To Your Heart」。' },
+      { e:'happy',    t:'この期間に出した点だけで勝負だから。過去の記録？ 関係ないない♪' },
+      { e:'normal',   t:'順位は曲ごとと、3曲の合計。1曲でも合計に載るよ。' },
+      { e:'wink',     t:'ごほうびは順位のぶんと、3曲ぜんぶ遊んだぶん。欲張っていいからね♡' },
+      { e:'excited',  t:'締め切りは9月14日(月)の5時！ 「イベント」から来てよ、待ってるから♪' },
+    ],
+  },
+};
+// 告知の1ページ。文字列でも { e, t } でも書けるようにして、既存の告知(文字列)をそのまま通す
+const assistantNoticePageText = page => (page && typeof page === 'object') ? String(page.t || '') : String(page || '');
+const assistantNoticePageExpression = (page, fallback) => (page && typeof page === 'object' && page.e) ? page.e : fallback;
+// その助手のセリフがあればそれを、無ければ更新履歴の本文(items)をそのまま使う
+const assistantNoticePagesFor = (notice, assistantId) => {
+  const scripts = notice && notice.scripts;
+  const lines = scripts && scripts[assistantId];
+  if (Array.isArray(lines) && lines.length) return lines;
+  return (notice && Array.isArray(notice.pages) && notice.pages.length) ? notice.pages : ['新しいアップデートがあるよ♪'];
 };
 const ASSISTANT_CHANGELOG_UPDATE_NOTICES =
   ((typeof CHANGELOG !== 'undefined' && Array.isArray(CHANGELOG)) ? CHANGELOG : [])
