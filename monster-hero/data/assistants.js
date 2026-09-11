@@ -522,6 +522,13 @@ const ASSISTANT_SCENES = {
     help: 'rhythm/rhythm-mode',
     lines: [],
   },
+  // 全国ランキングの「総合」タブ(全曲合算・2026-09-11)。
+  // ヘルプと更新履歴は探しに行った人しか読まないので、画面のなかでも伝える(CLAUDE.md ⑤)。
+  // 本文は下の addAssistantLinePack から合流する。
+  rhythmTotalRanking: {
+    help: 'rhythm/rhythm-ranking',
+    lines: [],
+  },
   // マスモン設定(モンスターノーツ)。本文は下の addAssistantLinePack から合流する。
   rhythmMonsters: {
     help: 'rhythm/rhythm-monster-note-display',
@@ -1170,6 +1177,13 @@ addAssistantLinePack({
       { e:'normal', t:'EXPERTとMASTERは、1つ下の難易度をクリアすると開くよ。' },
       { e:'happy', t:'横画面にすると、曲の一覧と選んだ曲を並べて見られるよ♪' },
     ],
+    rhythmTotalRanking: [
+      { e:'excited', t:'「総合」は、曲ごとのいちばん良いスコアを全曲ぶん足した合計で競うよ♪' },
+      { e:'happy', t:'難易度は問わないの。得意な難易度で1曲ずつ埋めていけば、それだけで伸びるよ。' },
+      { e:'normal', t:'まだ遊んでいない曲があると、下にボタンが出るよ。そこから曲えらびへ戻れるの。' },
+      { e:'normal', t:'新しい曲が増えたら、その曲ぶんがまるごと伸びしろになるよ。' },
+      { e:'wink', t:'1曲でも遊べば載るからね。{name}、まずは1曲だけでもどうかな？' },
+    ],
     rhythmMonsters: [
       { e:'excited', t:'ここで決めた子は、曲の途中で金色のノーツになって出てくるよ♪' },
       { e:'normal', t:'上から順に登場するよ。1体につき1回、多くて4回ね。' },
@@ -1796,6 +1810,13 @@ addAssistantLinePack({
       { e:'normal',  t:'EXPERTとMASTERは、1つ下の難易度をクリアすると開きまつ。' },
       { e:'happy',   t:'横画面にすると、一覧と選んだ曲を並べて見られまつ♪' },
     ],
+    rhythmTotalRanking: [
+      { e:'normal',  t:'「総合」は、曲ごとのいちばん良いスコアを全曲ぶん足した合計で競いまつ。' },
+      { e:'happy',   t:'難易度は問いません。得意な難易度で1曲ずつ埋めるだけでも伸びまつ♪' },
+      { e:'normal',  t:'まだ遊んでいない曲があると、下にボタンが出まつ。そこから曲えらびへ戻れまつ。' },
+      { e:'normal',  t:'新しい曲が増えたら、その曲ぶんがまるごと伸びしろになりまつ。' },
+      { e:'happy',   t:'1曲でも遊べば載りまつよ。{name}、まずは1曲いかがでつか？' },
+    ],
     rhythmMonsters: [
       { e:'normal',  t:'ここで決めた子は、曲の途中で金色のノーツになって出てきまつ。' },
       { e:'normal',  t:'上から順に登場でつ。1体につき1回、多くて4回まで。' },
@@ -2377,6 +2398,13 @@ addAssistantLinePack({
       { e:'wink',     t:'ムズいと思ったら、オプションでノーツ速度を下げていいからね？ ……下げるんだ♡' },
       { e:'normal',   t:'EXPERTとMASTERは、ひとつ下をクリアすれば開くよ。' },
       { e:'happy',    t:'横画面にすると一覧と選んだ曲が並ぶよ。見やすいほうでどうぞ♪' },
+    ],
+    rhythmTotalRanking: [
+      { e:'excited',  t:'「総合」は全曲の合計勝負だよ。1曲ずつ埋めれば、それだけで上がってく♪' },
+      { e:'normal',   t:'難易度は関係ないの。得意なとこで点を取ればいいんだから。' },
+      { e:'happy',    t:'まだの曲があると下にボタン出るよ。押せばそのまま曲えらびへ戻れる。' },
+      { e:'normal',   t:'新しい曲が来たら、そのぶんまるごと伸びしろね。' },
+      { e:'wink',     t:'1曲でも載るからさ。{name}、とりあえず1曲やってきなよ♡' },
     ],
     rhythmMonsters: [
       { e:'excited',  t:'ここで決めた子、曲の途中で金色になって飛んでくるよ♪' },

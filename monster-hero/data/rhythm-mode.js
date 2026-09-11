@@ -12620,6 +12620,25 @@ const rhythmRankingEntryFromRow=(row)=>{
   };
 };
 
+// ブリーダー別 全曲合算ランキング(2026-09-11)。
+// 「曲ごとのベスト1件(難易度は問わない)を全曲ぶん足した合計」で競う
+// (docs/spec/RHYTHM_RANKING.md §3)。集計そのものはSupabase側のビューが行うので、
+// ここにあるのは画面に出す「全体でどこまで来たか」を出すための道具だけ。
+//
+// ★曲数をどこにも書かない(docs/spec/RHYTHM_RANKING.md §5.1)。
+//   公開曲を1行足したら、分母も達成率も自動で付いてくる。数字を書き写した場所を作らない。
+const rhythmTotalRankingSongCount=(songs)=>rhythmDemoSongs(songs||[]).length;
+// 全曲すべてでMASTER満点を取ったときの合計(公開曲数 × MASTERの満点)
+const rhythmTotalRankingMaxScore=(songs)=>rhythmTotalRankingSongCount(songs)
+  *RHYTHM_DIFFICULTIES.reduce((max,d)=>Math.max(max,Number(d.maxScore)||0),0);
+// 理論満点に対してどこまで来たか(%)。曲が増えると誰の値も下がるが、それが正しい
+// (まだ遊んでいない曲があるということなので)
+const rhythmTotalRankingProgress=(totalScore,songs)=>{
+  const max=rhythmTotalRankingMaxScore(songs);
+  if(!(max>0))return 0;
+  return Math.max(0,Math.min(100,(Number(totalScore)||0)/max*100));
+};
+
 const installRhythmGestureVisuals=()=>{
   if(typeof document==='undefined'||typeof MutationObserver==='undefined')return;
   if(document.documentElement.dataset.rhythmGestureVisuals==='ready')return;

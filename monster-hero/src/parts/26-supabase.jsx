@@ -646,6 +646,79 @@ const sbFetchRhythmRankings = async (difficultyKeys, limit=RHYTHM_RANKING_FETCH_
   }
 };
 
+// ===== ブリーダー別 全曲合算ランキング(2026-09-11) =====
+//
+// 「曲ごとのベスト1件(難易度は問わない)を全曲ぶん足した合計」で競う
+// (docs/spec/RHYTHM_RANKING.md §3)。集計は Supabase 側のビュー rhythm_total_rankings が行う。
+//
+// ★端末側で合算しない理由: 合算には全曲・全難易度の記録が要る。1プレイ=1行で増え続ける
+//   うえ曲も増えるので、端末が全部取りにいく作りにすると、記録が貯まるほど確実に
+//   「読み込みが終わらない」状態へ近づく(2026-07に実際に起きている)。集計済みの数十行だけを
+//   受け取る形なら、曲が何曲増えても通信量は変わらない。
+//
+// ★ビューがまだ無い環境(SQL未適用)では404が返る。これはエラーではなく「まだ準備中」として
+//   扱う。そうしておけば、SQLの適用とアプリの公開の順番が前後しても画面が壊れない。
+const RHYTHM_TOTAL_RANKING_SELECT = 'identity_key,user_name,total_score,song_count,level,icon';
+const RHYTHM_TOTAL_RANKING_DISPLAY_LIMIT = 50;
+// 「そのビューはまだ無い」という応答かどうか。通信の失敗や権限の失敗と取り違えない
+//   PGRST205 … Could not find the table 'public.rhythm_total_rankings' in the schema cache
+//   42P01    … relation "public.rhythm_total_rankings" does not exist
+const rhythmTotalRankingMissing = (status, body) => {
+  if (status !== 404 && status !== 400) return false;
+  const text = String(body || '');
+  if (!/rhythm_total_rankings/i.test(text)) return false;
+  return /PGRST205|PGRST200|42P01|does not exist|Could not find the/i.test(text);
+};
+const sbFetchRhythmTotalRankings = async ({ limit=RHYTHM_TOTAL_RANKING_DISPLAY_LIMIT, identityKeys=null, requestId='untracked' } = {}) => {
+  // identityKeys を渡すと、その人の行だけを取りにいく(50位圏外の自分を出すため)
+  const filter = Array.isArray(identityKeys) && identityKeys.length
+    ? `&identity_key=in.(${identityKeys.map(k=>encodeURIComponent(`"${k}"`)).join(',')})`
+    : '';
+  const url = `${SUPABASE_URL}/rest/v1/rhythm_total_rankings?select=${RHYTHM_TOTAL_RANKING_SELECT}`
+    + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`;
+  rankingLog(requestId, 'rhythm-total-request-start', { limit, identityKeys, url, view: 'rhythm_total_rankings' });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  try {
+    const res = await fetch(url, { headers: SB_HEADERS, signal: controller.signal });
+    const body = await res.text();
+    if (!res.ok) {
+      if (rhythmTotalRankingMissing(res.status, body)) {
+        rankingLog(requestId, 'rhythm-total-view-missing', { status: res.status });
+        const error = new Error('rhythm total ranking view is not ready');
+        error.notReady = true;
+        throw error;
+      }
+      throw new Error(`rhythm total ranking fetch ${res.status} ${res.statusText}; url=${url}; response=${body || '(empty)'}`);
+    }
+    try {
+      return JSON.parse(body);
+    } catch (e) {
+      throw new Error(`invalid JSON; url=${url}; response=${body || '(empty)'}; error=${e.message}`);
+    }
+  } catch (error) {
+    if (error?.name === 'AbortError') throw new Error('rhythm total ranking fetch timed out after 15000ms');
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+};
+// Supabaseの生の行を画面用の形へ整える。合計点・曲数は数として確かめてから使う
+const rhythmTotalRankingEntryFromRow = (row) => ({
+  identityKey: typeof row?.identity_key === 'string' ? row.identity_key : '',
+  userName: row?.user_name || '名無しのブリーダー',
+  totalScore: Number(row?.total_score) || 0,
+  songCount: Number(row?.song_count) || 0,
+  level: Number(row?.level) || 0,
+  icon: row?.icon ?? null,
+});
+// 自分がどの行かを見分けるためのキー。IDがある人はそのID、IDが付く前からの人は name:<名前>。
+// どちらの記録も持っている人がいるので、両方を候補として渡す(§4.4)
+const rhythmTotalRankingSelfKeys = (breederId, breederName) => [
+  typeof breederId === 'string' && breederId ? breederId : null,
+  `name:${breederName || '名無しのブリーダー'}`,
+].filter(Boolean);
+
 // 検査(tools/ranking/rhythm-breeder-id-check.js)からモンビーの送信だけを直接叩けるようにする。
 // 「breeder_id の列がまだ無い環境でもスコアが保存できること」は、実際に1曲遊ばないと通らない
 // 経路だと確かめるのに何分もかかるうえ、落ちたときの被害(記録が1件も残らない)が大きい。

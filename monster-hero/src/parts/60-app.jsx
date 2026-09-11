@@ -1673,6 +1673,42 @@ function MonsterHeroGame() {
     return ()=>{cancelled=true;clearTimeout(timer);if(handle)handle.stop();};
   },[rhythmPreviewTrackId,rhythmSettings.bgmVolume]);
   const [rhythmRankingDetail, setRhythmRankingDetail] = useState(null);
+  // ブリーダー別 全曲合算ランキング(2026-09-11)。集計はSupabase側のビューが行い、
+  // ここは受け取って並べるだけ(docs/spec/RHYTHM_RANKING.md §3)。
+  // status:'notReady' は「ビューをまだ作っていない」状態。SQLの適用とアプリの公開の
+  // 順番が前後しても画面が壊れないよう、エラーではなく準備中として扱う。
+  // 'song' = この曲のランキング / 'total' = 全曲合算
+  const [rhythmRankingTab, setRhythmRankingTab] = useState('song');
+  const [rhythmTotalRanking, setRhythmTotalRanking] = useState({ status:'idle', entries:[], self:null, error:null });
+  const rhythmTotalRankingRequestRef = useRef(0);
+  const loadRhythmTotalRanking = useCallback(async () => {
+    const requestId = ++rhythmTotalRankingRequestRef.current;
+    setRhythmTotalRanking(prev => ({ ...prev, status:'loading', error:null }));
+    try {
+      const breederId = await ensureBreederId();
+      const selfKeys = rhythmTotalRankingSelfKeys(breederId, breederName);
+      const rows = await sbFetchRhythmTotalRankings({ requestId:`rhythm-total-${Date.now()}` });
+      if (rhythmTotalRankingRequestRef.current !== requestId) return;
+      const entries = (Array.isArray(rows) ? rows : []).map(rhythmTotalRankingEntryFromRow);
+      // 自分が上位に入っていればその順位を使う。入っていなければ自分の行だけ取りにいく
+      const selfIndex = entries.findIndex(entry => selfKeys.includes(entry.identityKey));
+      let self = selfIndex >= 0 ? { ...entries[selfIndex], rank: selfIndex + 1 } : null;
+      if (!self) {
+        const mine = await sbFetchRhythmTotalRankings({ limit:selfKeys.length, identityKeys:selfKeys, requestId:`rhythm-total-self-${Date.now()}` });
+        if (rhythmTotalRankingRequestRef.current !== requestId) return;
+        const mineEntries = (Array.isArray(mine) ? mine : []).map(rhythmTotalRankingEntryFromRow);
+        // IDのある記録と、IDが付く前の記録の両方を持っている人がいる。合計の高いほうを自分とする
+        const best = mineEntries.sort((a,b)=>b.totalScore-a.totalScore)[0];
+        if (best) self = { ...best, rank: null };
+      }
+      setRhythmTotalRanking({ status:'ready', entries, self, error:null });
+    } catch (e) {
+      if (rhythmTotalRankingRequestRef.current !== requestId) return;
+      if (e?.notReady) { setRhythmTotalRanking({ status:'notReady', entries:[], self:null, error:null }); return; }
+      console.error('[rhythm-total-ranking] fetch failed:', e && e.message ? e.message : e);
+      setRhythmTotalRanking({ status:'error', entries:[], self:null, error:e?.message || String(e) });
+    }
+  }, [breederName]);
   const rhythmRankingRequestRef = useRef(0);
   // 難易度合算(体験版で遊べる難易度をまとめて取得)のランキングを読み込む。
   // 同じユーザーの複数行は読み込み側で最高得点の1件だけへ畳む(rhythmRankingDedupeByUser)。
@@ -11014,11 +11050,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {gameState==='RHYTHM_RANKING'&&(
           <RhythmRankingScreen
             loadRhythmRanking={loadRhythmRanking}
+            loadRhythmTotalRanking={loadRhythmTotalRanking}
             onBackToSongSelect={()=>setGameState('RHYTHM_DEMO_HOME')}
+            onGoToSongSelect={()=>setGameState('RHYTHM_DEMO_HOME')}
             rankingBreederIcon={rankingBreederIcon}
             rhythmRanking={rhythmRanking}
             rhythmRankingDetail={rhythmRankingDetail}
+            rhythmRankingTab={rhythmRankingTab}
+            rhythmTotalRanking={rhythmTotalRanking}
             setRhythmRankingDetail={setRhythmRankingDetail}
+            setRhythmRankingTab={setRhythmRankingTab}
           />
         )}
 
