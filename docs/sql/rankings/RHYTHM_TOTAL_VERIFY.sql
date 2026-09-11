@@ -48,30 +48,37 @@ with facts as (
   select 7, 'そのうち breeder_id が入っている記録',
          (select count(*)::text from public.rhythm_scores where breeder_id is not null)
   union all
-  select 8, '曲の数(記録がある曲)',
-         (select count(distinct song_id)::text from public.rhythm_scores)
+  -- ★ここが「いま遊べる公開曲の数」と合わないときは、もう遊べない曲の記録が
+  --   合算に混ざっている。RHYTHM_TOTAL_SONGS.sql でどの曲かを確かめ、
+  --   RHYTHM_TOTAL_EXCLUDE.sql で除外する(記録そのものは消さない)
+  select 8, '曲の数(合算に入っている曲)',
+         (select count(distinct b.song_id)::text from public.rhythm_song_bests b)
   union all
-  select 9, '合算に載るブリーダー数',
+  select 9, '合算に入っている曲の一覧',
+         (select coalesce(string_agg(distinct b.song_id, ', ' order by b.song_id), 'なし')
+            from public.rhythm_song_bests b)
+  union all
+  select 10, '合算に載るブリーダー数',
          (select count(*)::text from public.rhythm_total_rankings)
   union all
-  select 10, '上位3人(名前 / 合計点 / 曲数)',
+  select 11, '上位3人(名前 / 合計点 / 曲数)',
          (select coalesce(string_agg(line, ' | '), 'なし') from (
             select user_name || ' / ' || total_score || ' / ' || song_count || '曲' as line
               from public.rhythm_total_rankings
              order by total_score desc, last_scored_at asc limit 3) t)
   union all
-  select 11, '同名で複数のIDが観測されている名前',
+  select 12, '同名で複数のIDが観測されている名前',
          (select coalesce(string_agg(user_name, ', ' order by user_name), 'なし')
             from (select user_name from public.rhythm_scores
                    where breeder_id is not null
                    group by user_name having count(distinct breeder_id) > 1) t)
   union all
   -- ここが0でないなら、IDの無い古い記録がIDへ寄せられている(=過去の記録が引き継げている)
-  select 12, 'IDの無い記録のうち、名前からIDへ寄せられた件数',
+  select 13, 'IDの無い記録のうち、名前からIDへ寄せられた件数',
          (select count(*)::text from public.rhythm_identified_scores
            where breeder_id is null and identity_key not like 'name:%')
   union all
-  select 13, 'rankings のRLS(有効であること)',
+  select 14, 'rankings のRLS(有効であること)',
          (select case when c.relrowsecurity then '有効' else '無効' end
             from pg_class c join pg_namespace n on n.oid=c.relnamespace
            where n.nspname='public' and c.relname='rankings')
