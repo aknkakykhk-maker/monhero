@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d54cf8a5721a8e2d
+// generated-sha256: d359beb378e8c57b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 12:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 12:32"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -10887,6 +10887,20 @@ const rhythmEventRewardItem=(reward)=>{
   if(reward.kind==='rainbowFruit')return {id:RAINBOW_TRANSCEND_FRUIT_ITEM_ID,name:RAINBOW_TRANSCEND_FRUIT_ITEM.name,emoji:'🌈'};
   return null;
 };
+// イベントの告知画像。画像が無いイベントでは何も出さない。
+// ★読めなかったときは黙って消す。壊れた画像のアイコンが残ると、
+//   「絵が出ない」より見た目が悪い(綴り間違いは image-asset-check.js が先に捕まえる)
+const RhythmEventBanner=({event,className=''})=>{
+  const src=rhythmEventBanner(event);
+  const [failed,setFailed]=React.useState(false);
+  React.useEffect(()=>{setFailed(false);},[src]);
+  if(!src||failed)return null;
+  return (
+    <img data-rhythm-event-banner src={src} alt={`${event&&event.name?event.name:'イベント'}の告知`}
+      onError={()=>setFailed(true)} loading="lazy" decoding="async"
+      className={`w-full rounded-2xl border border-fuchsia-300/30 ${className}`}/>
+  );
+};
 // 参加報酬の1行。ダイヤと虹のプシュケーだけなので、アイテムの実体は要らない
 const rhythmEventParticipationText=(reward)=>{
   if(!reward)return '';
@@ -13587,6 +13601,7 @@ function RhythmSongSelectScreen({
               <AssistantBubble scene="rhythmWeeklyEvent" condition={rhythmEventNotice.kind==='limited'?'limited':null} compact/>
               {/* 期間限定のときはイベントの名前を出す。「今週の対象曲」のままだと、
                   週間ランキングが動いていると誤解される */}
+              <RhythmEventBanner event={rhythmEventNotice} className="mt-1"/>
               {rhythmEventNotice.kind==='limited'&&<p className="mt-1 truncate text-[10px] font-black text-amber-200">🏆 {rhythmEventNotice.name} 開催中！</p>}
               <p className="mt-1 text-[10px] font-black leading-tight text-fuchsia-100">{rhythmEventSongsLabel(rhythmEventNotice)}：{eventSongTitles.join(' ／ ')}</p>
               <button type="button" data-rhythm-event-notice-open onClick={onOpenEventRanking}
@@ -13974,6 +13989,8 @@ function RhythmRankingScreen({
             {event.status==='closed'&&<p data-rhythm-event-closed className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">いま開催しているイベントはありません。次の開催をお待ちください。</p>}
             {event.status==='error'&&<p data-rhythm-event-error className="rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200">読み込めませんでした。電波の良い場所で「更新」をお試しください。</p>}
             {event.status==='ready'&&eventDefinition&&(<>
+              {/* 告知画像。あるときだけ、期間の帯の上に出す */}
+              <RhythmEventBanner event={eventDefinition} className="mb-3"/>
               {/* 期間はサーバーが決める。残り時間の見た目だけ端末の時計で数える */}
               <div data-rhythm-event-window className="mb-3 flex items-center gap-2 rounded-2xl border border-fuchsia-300/40 bg-slate-900/70 p-2">
                 <div className="min-w-0 flex-1">

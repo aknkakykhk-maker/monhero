@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6ef68c08f44a7c89
+// source-sha256: bd601d081ab9c4f0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d54cf8a5721a8e2d
+// generated-sha256: d359beb378e8c57b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 12:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 12:32"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -19109,6 +19109,29 @@ const rhythmEventRewardItem = reward => {
   };
   return null;
 };
+// イベントの告知画像。画像が無いイベントでは何も出さない。
+// ★読めなかったときは黙って消す。壊れた画像のアイコンが残ると、
+//   「絵が出ない」より見た目が悪い(綴り間違いは image-asset-check.js が先に捕まえる)
+const RhythmEventBanner = ({
+  event,
+  className = ''
+}) => {
+  const src = rhythmEventBanner(event);
+  const [failed, setFailed] = React.useState(false);
+  React.useEffect(() => {
+    setFailed(false);
+  }, [src]);
+  if (!src || failed) return null;
+  return /*#__PURE__*/React.createElement("img", {
+    "data-rhythm-event-banner": true,
+    src: src,
+    alt: `${event && event.name ? event.name : 'イベント'}の告知`,
+    onError: () => setFailed(true),
+    loading: "lazy",
+    decoding: "async",
+    className: `w-full rounded-2xl border border-fuchsia-300/30 ${className}`
+  });
+};
 // 参加報酬の1行。ダイヤと虹のプシュケーだけなので、アイテムの実体は要らない
 const rhythmEventParticipationText = reward => {
   if (!reward) return '';
@@ -24560,6 +24583,9 @@ function RhythmSongSelectScreen({
     scene: "rhythmWeeklyEvent",
     condition: rhythmEventNotice.kind === 'limited' ? 'limited' : null,
     compact: true
+  }), /*#__PURE__*/React.createElement(RhythmEventBanner, {
+    event: rhythmEventNotice,
+    className: "mt-1"
   }), rhythmEventNotice.kind === 'limited' && /*#__PURE__*/React.createElement("p", {
     className: "mt-1 truncate text-[10px] font-black text-amber-200"
   }, "\uD83C\uDFC6 ", rhythmEventNotice.name, " \u958B\u50AC\u4E2D\uFF01"), /*#__PURE__*/React.createElement("p", {
@@ -25090,7 +25116,10 @@ function RhythmRankingScreen({
   }, "\u3044\u307E\u958B\u50AC\u3057\u3066\u3044\u308B\u30A4\u30D9\u30F3\u30C8\u306F\u3042\u308A\u307E\u305B\u3093\u3002\u6B21\u306E\u958B\u50AC\u3092\u304A\u5F85\u3061\u304F\u3060\u3055\u3044\u3002"), event.status === 'error' && /*#__PURE__*/React.createElement("p", {
     "data-rhythm-event-error": true,
     className: "rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200"
-  }, "\u8AAD\u307F\u8FBC\u3081\u307E\u305B\u3093\u3067\u3057\u305F\u3002\u96FB\u6CE2\u306E\u826F\u3044\u5834\u6240\u3067\u300C\u66F4\u65B0\u300D\u3092\u304A\u8A66\u3057\u304F\u3060\u3055\u3044\u3002"), event.status === 'ready' && eventDefinition && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+  }, "\u8AAD\u307F\u8FBC\u3081\u307E\u305B\u3093\u3067\u3057\u305F\u3002\u96FB\u6CE2\u306E\u826F\u3044\u5834\u6240\u3067\u300C\u66F4\u65B0\u300D\u3092\u304A\u8A66\u3057\u304F\u3060\u3055\u3044\u3002"), event.status === 'ready' && eventDefinition && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(RhythmEventBanner, {
+    event: eventDefinition,
+    className: "mb-3"
+  }), /*#__PURE__*/React.createElement("div", {
     "data-rhythm-event-window": true,
     className: "mb-3 flex items-center gap-2 rounded-2xl border border-fuchsia-300/40 bg-slate-900/70 p-2"
   }, /*#__PURE__*/React.createElement("div", {

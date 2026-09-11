@@ -588,6 +588,20 @@ const rhythmEventRewardItem=(reward)=>{
   if(reward.kind==='rainbowFruit')return {id:RAINBOW_TRANSCEND_FRUIT_ITEM_ID,name:RAINBOW_TRANSCEND_FRUIT_ITEM.name,emoji:'🌈'};
   return null;
 };
+// イベントの告知画像。画像が無いイベントでは何も出さない。
+// ★読めなかったときは黙って消す。壊れた画像のアイコンが残ると、
+//   「絵が出ない」より見た目が悪い(綴り間違いは image-asset-check.js が先に捕まえる)
+const RhythmEventBanner=({event,className=''})=>{
+  const src=rhythmEventBanner(event);
+  const [failed,setFailed]=React.useState(false);
+  React.useEffect(()=>{setFailed(false);},[src]);
+  if(!src||failed)return null;
+  return (
+    <img data-rhythm-event-banner src={src} alt={`${event&&event.name?event.name:'イベント'}の告知`}
+      onError={()=>setFailed(true)} loading="lazy" decoding="async"
+      className={`w-full rounded-2xl border border-fuchsia-300/30 ${className}`}/>
+  );
+};
 // 参加報酬の1行。ダイヤと虹のプシュケーだけなので、アイテムの実体は要らない
 const rhythmEventParticipationText=(reward)=>{
   if(!reward)return '';

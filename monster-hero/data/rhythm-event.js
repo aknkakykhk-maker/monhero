@@ -56,6 +56,11 @@ const rhythmWeekId = (nowMs) => {
 // 週間とは別のタブで、同時に動く(§7・2026-09-11にユーザーが決めた)。
 // **対象曲を持つのはこちらだけ**。id は受取フラグの一部になるので、**あとから変えない**。
 //
+// banner … 告知用の画像(images/events/…)。イベントタブの上と曲えらびの案内に出す。
+//   書かなければ画像は出ない(仕組みだけあって画像が無い状態でも画面は壊れない)。
+//   ★入れる前に軽くすること(CLAUDE.md ⑥-2)。横1080px・JPEG・quality 80・mozjpeg で
+//     150KB以内が目安。起動時には読まない(開いたときに初めて読む)ので、
+//     index.html の SIZES には入らない。
 // rewardLineageBySongId … その曲の部門の1〜5位へ配る超越の実の種族(主血統id)。
 //   書かなければ、その部門の報酬はプシュケーだけになる。
 // totalReward … 総合部門の1〜5位へ配るもの。'heroProof'(勇者の証) か 'rainbowFruit'(虹の超越の実)。
@@ -72,6 +77,10 @@ const RHYTHM_EVENTS = Object.freeze([
     name: 'モンヒロビート 週末ゲリラ杯',
     startAt: '2026-09-11T15:00:00+09:00',
     endAt: '2026-09-14T05:00:00+09:00',
+    // ★告知画像ができたら、ここへ banner の行を足す(書き方は上の説明のとおり)。
+    //   コメントの中でも画像のパスをクォートで囲むと、キャッシュキーを打つ側が
+    //   実在しない画像として拾ってしまうので、見本はクォート無しで書く:
+    //   banner: images/events/weekend-2026-09-11.jpg
     songIds: Object.freeze(['monster_hero', 'kaze_ga_soyogu', 'close_to_your_heart']),
     rewardLineageBySongId: Object.freeze({
       monster_hero: 'suezo',
@@ -274,6 +283,13 @@ const rhythmEventPeriodText = (event, range) => {
 };
 // 対象曲の見出し。対象曲を持つのは期間限定だけなので、いつも「対象曲」でよい
 const rhythmEventSongsLabel = (event) => '対象曲';
+
+// 告知用の画像。書かれていない・形がおかしいときは null(画像を出さない)
+const rhythmEventBanner = (event) => {
+  const banner = event && event.banner;
+  return (typeof banner === 'string' && /^images\/[^\s]+\.(png|jpe?g|webp)(\?v=[0-9a-f]+)?$/i.test(banner))
+    ? banner : null;
+};
 
 // ===== 報酬の受け取り(docs/spec/RHYTHM_RANKING.md §9.1) =====
 //

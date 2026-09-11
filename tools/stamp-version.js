@@ -92,6 +92,8 @@ const IMAGE_HOST_FILES = [
   'data/breeder.js',
   // 曲えらびのジャケット(images/song-art/…)もここから参照している
   'data/rhythm-mode.js',
+  // イベントの告知画像(images/events/…)
+  'data/rhythm-event.js',
 ];
 let imageCount = 0, imageChanged = 0;
 for (const rel of IMAGE_HOST_FILES) {

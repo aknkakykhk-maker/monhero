@@ -41,7 +41,7 @@ vm.runInContext(`${demoIds}\n${eventData}\n`
   +'this.out={RHYTHM_WEEK_MS,RHYTHM_WEEK_ANCHOR_MS,RHYTHM_EVENTS,RHYTHM_DEMO_SONG_IDS,'
   +'rhythmWeekStartMs,rhythmWeekWindow,rhythmWeekId,rhythmWeeklyEvent,rhythmLimitedEventAt,'
   +'rhythmEventWindow,rhythmEventRemainingText,rhythmEventDivisions,rhythmEventDivisionSongId,rhythmEventSong,'
-  +'rhythmEventPeriodText,rhythmEventSongsLabel,rhythmEventDivisionReward,rhythmEventRewardForRank,rhythmEventHasRewards,'
+  +'rhythmEventPeriodText,rhythmEventSongsLabel,rhythmEventBanner,rhythmEventDivisionReward,rhythmEventRewardForRank,rhythmEventHasRewards,'
   +'rhythmEventSongDivisionId,RHYTHM_EVENT_REWARD_RANKS,rhythmEventsAwaitingReward,'
   +'normalizeRhythmEventRewardClaims,rhythmEventDivisionIds,rhythmEventParticipationReward,rhythmEventParticipationCleared,'
   +'rhythmEventSongDivisionId,rhythmEventMaxScore,rhythmEventEntryScore,RHYTHM_EVENT_TOTAL_DIVISION};',context);
@@ -114,6 +114,53 @@ check('週のIDは weekly_YYYY_MM_DD の形',/^weekly_\d{4}_\d{2}_\d{2}$/.test(O
   check('廃止した仕組みが残っていない(ローテーション・rhythmActiveEvent)',
     !eventData.includes('RHYTHM_WEEKLY_ROTATION')
     &&!/const rhythmActiveEvent =/.test(eventData));
+}
+
+// --- 告知画像(2026-09-11・ユーザー指示「告知用画像を表示できる仕組みを作って」) ---
+{
+  const fsx=require('fs');
+  const withBanner=(O.RHYTHM_EVENTS||[]).filter(e=>O.rhythmEventBanner(e));
+  console.log(`--  告知画像つきイベント: ${withBanner.length?withBanner.map(e=>e.id).join(', '):'なし'}`);
+  check('告知画像が実在する',withBanner.every(e=>{
+    const rel=O.rhythmEventBanner(e).split('?')[0];
+    return fsx.existsSync(path.join(ROOT,'monster-hero',rel));
+  }),withBanner.map(e=>O.rhythmEventBanner(e).split('?')[0]).join(' / '));
+  // 起動時に読むものを増やさない。開いたときに初めて読むのが正しい(CLAUDE.md ⑥-2)
+  check('告知画像は起動時に読み込まない',withBanner.every(e=>{
+    const rel=O.rhythmEventBanner(e).split('?')[0];
+    return !html.includes(`"${rel}"`);
+  }));
+  // スマホの通信量に直接効くので、入れる前に軽くする(CLAUDE.md ⑥-2)
+  check('告知画像は軽い(200KB以内)',withBanner.every(e=>{
+    const rel=O.rhythmEventBanner(e).split('?')[0];
+    const file=path.join(ROOT,'monster-hero',rel);
+    return !fsx.existsSync(file)||fsx.statSync(file).size<=200*1024;
+  }),withBanner.map(e=>{
+    const file=path.join(ROOT,'monster-hero',O.rhythmEventBanner(e).split('?')[0]);
+    return fsx.existsSync(file)?`${(fsx.statSync(file).size/1024).toFixed(0)}KB`:'?';
+  }).join(' / '));
+  check('書き方がおかしい画像は出さない',
+    O.rhythmEventBanner(null)===null&&O.rhythmEventBanner({banner:''})===null
+    &&O.rhythmEventBanner({banner:'../secret.png'})===null
+    &&O.rhythmEventBanner({banner:'images/events/a.jpg'})==='images/events/a.jpg');
+  check('画像が無いイベントでも画面は壊れない',
+    O.rhythmEventBanner(O.rhythmWeeklyEvent(Date.now()))===null
+    &&game.includes('if(!src||failed)return null;'));
+  check('読めなかったら黙って消す(壊れたアイコンを残さない)',
+    game.includes('onError={()=>setFailed(true)}'));
+  check('イベントタブと曲えらびの両方に出す',
+    (screen.match(/<RhythmEventBanner /g)||[]).length>=2);
+  // キャッシュキーを打つ側と、使われていない画像を探す側の両方へ登録が要る
+  check('画像を参照するファイルとして登録してある',
+    read('tools/stamp-version.js').includes("'data/rhythm-event.js',")
+    &&read('tools/image-asset-check.js').includes("'data/rhythm-event.js',"));
+  check('キャッシュキーが中身と一致している',withBanner.every(e=>{
+    const [rel,query]=O.rhythmEventBanner(e).split('?');
+    const file=path.join(ROOT,'monster-hero',rel);
+    if(!fsx.existsSync(file))return false;
+    const want=require('crypto').createHash('sha256').update(fsx.readFileSync(file)).digest('hex').slice(0,12);
+    return (query||'').replace(/^v=/,'')===want;
+  }));
 }
 
 // --- 報酬の受け取り(§9.1) ---
