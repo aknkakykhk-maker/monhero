@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 20152a88c16e6c3a
+// generated-sha256: 62a7741a6572bb73
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 18:33"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 18:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -9979,7 +9979,13 @@ const rhythmTotalRankingSelfKeys = (breederId, breederName) => [
 // ★関数がまだ無い環境(SQL未適用)では404が返る。合算と同じく「準備中」として扱い、
 //   SQLの適用とアプリの公開の順番が前後しても画面が壊れないようにする。
 const RHYTHM_EVENT_RANKING_DISPLAY_LIMIT = 50;
-const RHYTHM_EVENT_SONG_SELECT = 'identity_key,user_name,song_id,difficulty_id,score,scored_at,level,icon';
+// ★party(判定の内訳)は、SQLを適用した環境でだけ返ってくる。
+//   未適用の環境へ頼むと PostgREST が「そんな列は無い」と断ってくるので、
+//   そのときは party 無しでもう一度取りにいく(詳細ボタンが出ないだけで、順位は出る)。
+//   こうしておけば、SQLの適用とアプリの公開はどちらが先でもよい
+//   (docs/sql/rankings/RHYTHM_EVENT_DETAIL_IPHONE_STEPS.md)。
+const RHYTHM_EVENT_SONG_SELECT_BASE = 'identity_key,user_name,song_id,difficulty_id,score,scored_at,level,icon';
+const RHYTHM_EVENT_SONG_SELECT = `${RHYTHM_EVENT_SONG_SELECT_BASE},party`;
 const RHYTHM_EVENT_TOTAL_SELECT = 'identity_key,user_name,total_score,song_count,last_scored_at,level,icon';
 // 「そのビュー・関数はまだ無い」という応答かどうか。通信の失敗や権限の失敗と取り違えない
 //   PGRST202 … Could not find the function public.rhythm_event_totals(...) in the schema cache
@@ -9990,6 +9996,13 @@ const rhythmEventRankingMissing = (status, body) => {
   const text = String(body || '');
   if (!/rhythm_week_window|rhythm_event_song_bests|rhythm_event_totals/i.test(text)) return false;
   return /PGRST202|PGRST205|PGRST200|42P01|42883|does not exist|Could not find the/i.test(text);
+};
+// 「party という列は無い」という応答かどうか(SQL未適用の環境)。
+// ビューや関数そのものが無い場合(rhythmEventRankingMissing)とは別に見る。
+const rhythmEventDetailColumnMissing = (status, body) => {
+  if (status !== 400 && status !== 404) return false;
+  const text = String(body || '');
+  return /party/i.test(text) && /PGRST100|PGRST202|42703|does not exist|column|Could not find/i.test(text);
 };
 const rhythmEventNotReadyError = () => {
   const error = new Error('rhythm event ranking is not ready');
@@ -10011,7 +10024,10 @@ const sbFetchRhythmEventRows = async ({ url, body = null, label, requestId = 'un
         rankingLog(requestId, `${label}-not-ready`, { status: res.status });
         throw rhythmEventNotReadyError();
       }
-      throw new Error(`${label} fetch ${res.status} ${res.statusText}; url=${url}; response=${text || '(empty)'}`);
+      const failure = new Error(`${label} fetch ${res.status} ${res.statusText}; url=${url}; response=${text || '(empty)'}`);
+      // 「party という列は無い」だけなら、呼んだ側が party 無しで取り直せるように印を付ける
+      if (rhythmEventDetailColumnMissing(res.status, text)) failure.detailColumnMissing = true;
+      throw failure;
     }
     try {
       return JSON.parse(text);
@@ -10044,12 +10060,23 @@ const sbFetchRhythmEventSongBests = async ({ songId, fromMs, toMs, limit = RHYTH
   const filter = Array.isArray(identityKeys) && identityKeys.length
     ? `&identity_key=in.(${identityKeys.map(k => encodeURIComponent(`"${k}"`)).join(',')})`
     : '';
-  return sbFetchRhythmEventRows({
-    url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_song_bests?select=${RHYTHM_EVENT_SONG_SELECT}`
+  const body = { song_ids: [songId], from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() };
+  const ask = (select) => sbFetchRhythmEventRows({
+    url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_song_bests?select=${select}`
       + `&order=score.desc,scored_at.asc&limit=${limit}${filter}`,
-    body: { song_ids: [songId], from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() },
-    label: 'rhythm-event-song', requestId,
+    body, label: 'rhythm-event-song', requestId,
   });
+  try {
+    return await ask(RHYTHM_EVENT_SONG_SELECT);
+  } catch (error) {
+    // ★party が無い環境(SQL未適用)なら、party 無しで取り直す。
+    //   「まだ準備中(notReady)」はそのまま投げ直す。取り違えると、
+    //   本当に土台が無いときまで2回問い合わせることになる
+    if (error && error.notReady) throw error;
+    if (!error || !error.detailColumnMissing) throw error;
+    rankingLog(requestId, 'rhythm-event-song-retry-without-detail', {});
+    return ask(RHYTHM_EVENT_SONG_SELECT_BASE);
+  }
 };
 // 期間×対象曲の「総合」。対象曲それぞれのその週のベストを単純合算したもの(§6.3)
 const sbFetchRhythmEventTotals = async ({ songIds, fromMs, toMs, limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' }) => {
@@ -10072,6 +10099,9 @@ const rhythmEventSongEntryFromRow = (row) => ({
   score: Number(row?.score) || 0,
   level: Number(row?.level) || 0,
   icon: row?.icon ?? null,
+  // 判定の内訳。「この曲」タブと同じく party の先頭要素を読む(rhythmRankingEntryFromRow と同じ形)。
+  // SQL未適用の環境・内訳が保存される前の古い記録では null になり、詳細ボタンが出ないだけ
+  detail: (Array.isArray(row?.party) && row.party[0] && typeof row.party[0] === 'object') ? row.party[0] : null,
 });
 const rhythmEventTotalEntryFromRow = (row) => ({
   identityKey: typeof row?.identity_key === 'string' ? row.identity_key : '',
@@ -13993,6 +14023,11 @@ function RhythmRankingScreen({
             <p className="font-mono text-sm font-black text-fuchsia-100">{entry.score.toLocaleString()}</p>
             <p className={`text-[10px] font-black ${RHYTHM_RANK_COLORS[rhythmRankForScore(entry.score)]}`}>{rhythmRankForScore(entry.score)}</p>
           </div>
+          {/* ★判定の内訳。「この曲」タブと同じ見た目・同じモーダルを使う
+              (2026-09-11・ユーザー指摘「イベント側の対象曲のほうの詳細がない」)。
+              内訳が無い行(SQL未適用・古い記録)ではボタンを出さない */}
+          {entry.detail&&<button data-rhythm-event-detail-row onClick={()=>setRhythmRankingDetail(entry)}
+            className="shrink-0 min-h-[44px] rounded-lg border border-white/20 px-2 text-[9px] font-black text-slate-200">詳細</button>}
         </div>
       );
       // イベントの「総合」部門の1行。分母は対象曲の数から作る(曲数を書き写さない)
