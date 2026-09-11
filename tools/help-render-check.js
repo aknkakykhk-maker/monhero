@@ -20,6 +20,7 @@ const assistantsData = fs.readFileSync(path.join(root, 'monster-hero/data/assist
 const lineagesData = fs.readFileSync(path.join(root, 'monster-hero/data/lineages.js'), 'utf8');
 const allyMonstersData = fs.readFileSync(path.join(root, 'monster-hero/data/ally-monsters.js'), 'utf8');
 const rhythmModeData = fs.readFileSync(path.join(root, 'monster-hero/data/rhythm-mode.js'), 'utf8');
+const rhythmEventData = fs.readFileSync(path.join(root, 'monster-hero/data/rhythm-event.js'), 'utf8');
 const grab = (text, a, b) => text.slice(text.indexOf(a), text.indexOf(b));
 // t:'data' の表は本番の helpDataRows() が実データから作るので、その定義と材料もそのまま持ち込む
 const dataTablePrelude = [
@@ -54,6 +55,9 @@ const dataTablePrelude = [
   // 難易度定義・ランクしきい値・曲と譜面の実データから作る。切り出すと材料が足りなくなるので
   // data/rhythm-mode.js をまるごと持ち込む（このファイルは単体で読める作りになっている）
   rhythmModeData,
+  // イベントの回数ボーナスの表は data/rhythm-event.js の割合から作るので、そちらも持ち込む
+  // (このファイルは単体で読める作りになっている。曲の一覧が要る所は typeof で守ってある)
+  rhythmEventData,
   // 曲一覧が使う曲名の組み立て。helpDataRows より前にあるので、別に持ち込む
   grab(source, 'const rhythmSongFullName =', 'const helpDataRows = (id)'),
   grab(source, 'const helpDataRows = (id)', '// ===== 助手(ナビゲーター) ここから ====='),

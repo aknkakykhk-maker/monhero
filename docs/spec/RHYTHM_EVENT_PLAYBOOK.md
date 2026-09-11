@@ -45,6 +45,7 @@ Object.freeze({
   songIds: Object.freeze(['monster_hero', 'kaze_ga_soyogu', 'close_to_your_heart']),
   rewardLineageBySongId: Object.freeze({ monster_hero:'suezo', kaze_ga_soyogu:'mocchi', close_to_your_heart:'tiger' }),
   totalReward: 'heroProof',
+  playBonus: true,                       // 回数ボーナスを付けるなら書く（書かなければ加点なし）
   participationReward: Object.freeze({ songs: 3, gold: 3000, psyche: 50 }),
 }),
 ```
@@ -52,6 +53,9 @@ Object.freeze({
 - 部門は「対象曲ごと＋総合」。**数は `songIds` から自動で作られる**ので、3曲でも5曲でも画面は変わらない
 - `rewardLineageBySongId` の血統idは実在するものだけ（検査が見る）
 - **SQLは触らない。** 対象曲と期間は引数で渡すので、関数の定義はそのまま使い回す
+- `playBonus: true` を書くと、期間中に対象曲を遊んだ回数ぶん自分のベストへ加点される
+  （割合は `RHYTHM_EVENT_PLAY_BONUS_RATES`。仕様は `RHYTHM_RANKING.md` §7.2）。
+  **割合を変えてもSQLは流し直さない**（問い合わせのたびに引数で渡している）
 
 ## 2. 告知画像を2枚つくる — `monster-hero/images/events/`
 
@@ -153,6 +157,7 @@ node tools/undefined-reference-check.js
 node tools/jsx-text-brace-check.js
 node tools/render-error-check.js
 node tools/mode/rhythm-event-window-check.js
+node tools/mode/rhythm-play-bonus-check.js   # 回数ボーナスを付けたイベントのとき
 node tools/assistant/assistant-update-notice-check.js
 node tools/boot/changelog-order-check.js
 node tools/image-asset-check.js
@@ -185,6 +190,8 @@ node tools/image-asset-check.js
 | 曲えらびが1画面に収まらない | 吹き出し・告知画像・対象曲・ボタンを縦に積んでいた | 初回だけ出す形に戻す（×で閉じたら出ない） |
 | イベントタブで順位が見えない | 告知画像と報酬表を一覧の上に積んでいた | 詳細へ移す |
 | 詳細が下にずれる | 下から生やす形（`items-end`）だった | 真ん中に出し、高さを `--mh-vh` から引く |
+| 総合の順位だけ反映が遅い | タブを開いたときに一度取ったきりだった | タブ・部門を押すたびに取り直す（前の順位は消さない） |
+| 回数ボーナスを端末で足すと上位が消える | 並べ替えと上位50件の切り出しはサーバーがしている | 加点はSQLの中でやり、加点込みの値で並べる（§7.2） |
 
 **共通の教訓**: 「時刻で出し入れするもの」は、**読み込んだときに1回だけ決まる値を使わない**。
 `enabled` のような静的な値も、`HIDDEN_UPDATE_NOTICE_IDS` のような静的な集合も、

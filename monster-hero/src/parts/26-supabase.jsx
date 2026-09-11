@@ -740,10 +740,19 @@ const RHYTHM_EVENT_RANKING_DISPLAY_LIMIT = 50;
 const RHYTHM_EVENT_SONG_SELECT_BASE = 'identity_key,user_name,song_id,difficulty_id,score,scored_at,level,icon';
 const RHYTHM_EVENT_SONG_SELECT = `${RHYTHM_EVENT_SONG_SELECT_BASE},party`;
 const RHYTHM_EVENT_TOTAL_SELECT = 'identity_key,user_name,total_score,song_count,last_scored_at,level,icon';
+// 回数ボーナス込みの集計(2026-09-11・ユーザー指示)。
+// score / total_score は**加点込み**の値で返ってくるので、並べ替え(order=score.desc)も
+// 上位50件の切り出しも加点込みで行われる。素点と加点は別の列で受け取り、「内訳」に出す。
+// ★関数がまだ無い環境(SQL未適用)では、加点なしのこれまでの関数へ戻って順位を出す。
+//   加点と内訳が出ないだけで画面は壊れない(docs/sql/rankings/RHYTHM_EVENT_BONUS_IPHONE_STEPS.md)。
+const RHYTHM_EVENT_SONG_BONUS_SELECT = `${RHYTHM_EVENT_SONG_SELECT},base_score,bonus_score,play_count`;
+const RHYTHM_EVENT_TOTAL_BONUS_SELECT = `${RHYTHM_EVENT_TOTAL_SELECT},base_total,bonus_total,play_count`;
 // 「そのビュー・関数はまだ無い」という応答かどうか。通信の失敗や権限の失敗と取り違えない
 //   PGRST202 … Could not find the function public.rhythm_event_totals(...) in the schema cache
 //   PGRST205 … Could not find the table 'public.rhythm_week_window' in the schema cache
 //   42P01 / 42883 … relation / function does not exist
+// ★_bonus 付きの関数名も rhythm_event_song_bests / rhythm_event_totals を含むので、
+//   この判定でそのまま拾える。呼ぶ側は「加点なしへ戻す」ためにこれを捕まえる
 const rhythmEventRankingMissing = (status, body) => {
   if (status !== 404 && status !== 400) return false;
   const text = String(body || '');
@@ -809,7 +818,7 @@ const sbFetchRhythmWeekWindow = async ({ requestId = 'untracked' } = {}) => {
   return { startMs, endMs };
 };
 // 期間×対象曲の「曲ごとベスト」。部門1つぶん(=曲1つぶん)を取りにいく
-const sbFetchRhythmEventSongBests = async ({ songId, fromMs, toMs, limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' }) => {
+const sbFetchRhythmEventSongBests = async ({ songId, fromMs, toMs, bonusRates = null, limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' }) => {
   const filter = Array.isArray(identityKeys) && identityKeys.length
     ? `&identity_key=in.(${identityKeys.map(k => encodeURIComponent(`"${k}"`)).join(',')})`
     : '';
@@ -819,6 +828,19 @@ const sbFetchRhythmEventSongBests = async ({ songId, fromMs, toMs, limit = RHYTH
       + `&order=score.desc,scored_at.asc&limit=${limit}${filter}`,
     body, label: 'rhythm-event-song', requestId,
   });
+  // 回数ボーナスを使うイベントでは、加点込みの関数を先に試す。
+  // 関数がまだ無い環境では加点なしへ戻す(順位は出る。加点と内訳だけ出ない)
+  if (bonusRates) {
+    try {
+      return await sbFetchRhythmEventRows({
+        url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_song_bests_bonus?select=${RHYTHM_EVENT_SONG_BONUS_SELECT}`
+          + `&order=score.desc,scored_at.asc&limit=${limit}${filter}`,
+        body: { ...body, bonus_rates: bonusRates }, label: 'rhythm-event-song-bonus', requestId,
+      });
+    } catch (error) {
+      rankingLog(requestId, 'rhythm-event-song-bonus-fallback', { message: error?.message || String(error) });
+    }
+  }
   try {
     return await ask(RHYTHM_EVENT_SONG_SELECT);
   } catch (error) {
@@ -832,16 +854,41 @@ const sbFetchRhythmEventSongBests = async ({ songId, fromMs, toMs, limit = RHYTH
   }
 };
 // 期間×対象曲の「総合」。対象曲それぞれのその週のベストを単純合算したもの(§6.3)
-const sbFetchRhythmEventTotals = async ({ songIds, fromMs, toMs, limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' }) => {
+const sbFetchRhythmEventTotals = async ({ songIds, fromMs, toMs, bonusRates = null, limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' }) => {
   const filter = Array.isArray(identityKeys) && identityKeys.length
     ? `&identity_key=in.(${identityKeys.map(k => encodeURIComponent(`"${k}"`)).join(',')})`
     : '';
+  const body = { song_ids: songIds, from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() };
+  // 曲の部門と同じく、加点込みの関数を先に試して、無ければ加点なしへ戻す
+  if (bonusRates) {
+    try {
+      return await sbFetchRhythmEventRows({
+        url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals_bonus?select=${RHYTHM_EVENT_TOTAL_BONUS_SELECT}`
+          + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
+        body: { ...body, bonus_rates: bonusRates }, label: 'rhythm-event-total-bonus', requestId,
+      });
+    } catch (error) {
+      rankingLog(requestId, 'rhythm-event-total-bonus-fallback', { message: error?.message || String(error) });
+    }
+  }
   return sbFetchRhythmEventRows({
     url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals?select=${RHYTHM_EVENT_TOTAL_SELECT}`
       + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
-    body: { song_ids: songIds, from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() },
-    label: 'rhythm-event-total', requestId,
+    body, label: 'rhythm-event-total', requestId,
   });
+};
+// 回数ボーナスの内訳(素点・加点・回数)を取り出す。加点なしの関数から取った行には
+// これらの列が無いので、baseScore を null にして「内訳を出さない」と伝える。
+// 曲の部門は base_score/bonus_score、総合は base_total/bonus_total という名前で返る
+const rhythmEventBonusFields = (row, baseKey) => {
+  const bonusKey = baseKey === 'base_total' ? 'bonus_total' : 'bonus_score';
+  const base = Number(row?.[baseKey]);
+  if (!Number.isFinite(base)) return { baseScore: null, bonusScore: 0, playCount: 0 };
+  return {
+    baseScore: base,
+    bonusScore: Number.isFinite(Number(row?.[bonusKey])) ? Number(row[bonusKey]) : 0,
+    playCount: Number.isFinite(Number(row?.play_count)) ? Number(row.play_count) : 0,
+  };
 };
 // 生の行を画面用の形へ整える。壊れた値でも落ちないよう、数として確かめてから使う
 const rhythmEventSongEntryFromRow = (row) => ({
@@ -855,6 +902,9 @@ const rhythmEventSongEntryFromRow = (row) => ({
   // 判定の内訳。「この曲」タブと同じく party の先頭要素を読む(rhythmRankingEntryFromRow と同じ形)。
   // SQL未適用の環境・内訳が保存される前の古い記録では null になり、詳細ボタンが出ないだけ
   detail: (Array.isArray(row?.party) && row.party[0] && typeof row.party[0] === 'object') ? row.party[0] : null,
+  // 回数ボーナスの内訳。加点なしの関数から取ったときは列そのものが無いので null になり、
+  // 画面は内訳の枠を出さない(加点していないのに「+0」と出さないため)
+  ...rhythmEventBonusFields(row, 'base_score'),
 });
 const rhythmEventTotalEntryFromRow = (row) => ({
   identityKey: typeof row?.identity_key === 'string' ? row.identity_key : '',
@@ -863,6 +913,7 @@ const rhythmEventTotalEntryFromRow = (row) => ({
   songCount: Number(row?.song_count) || 0,
   level: Number(row?.level) || 0,
   icon: row?.icon ?? null,
+  ...rhythmEventBonusFields(row, 'base_total'),
 });
 
 // 検査(tools/ranking/rhythm-breeder-id-check.js)からモンビーの送信だけを直接叩けるようにする。

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: fe0c1342ee253bd8
+// generated-sha256: 1cb6491c7bba4ca3
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 23:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 23:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7899,6 +7899,11 @@ const helpDataRows = (id) => {
         const { main, sub } = monsterLineageOf(mon.id);
         return [mon.name, `${main.name} × ${sub.name}（${monsterCategoryName(monsterCategoryOf(mon.id))}）`];
       });
+    // イベントの回数ボーナス。難易度ごとの割合を実データから出す
+    // (ヘルプへ手で書き写すと、割合を変えたときに古いままになる)
+    case 'rhythmEventPlayBonus':
+      return RHYTHM_DEMO_DIFFICULTY_IDS.map(id =>
+        [RHYTHM_DEMO_DIFFICULTY_LABELS[id]?.name || id, rhythmEventPlayBonusPercentText(id)]);
     // 極限チャレンジの難易度。閲覧可能な準備中難易度も倍率は実データから出す
     case 'extremeDifficulties':
       return PUBLIC_EXTREME_DIFFICULTIES.map(s => [s.label, s.available
@@ -8088,6 +8093,7 @@ const helpDataRows = (id) => {
 const HELP_DATA_TITLES = {
   difficulties: '難易度と倍率',
   extremeDifficulties: '極限チャレンジの難易度',
+  rhythmEventPlayBonus: 'イベントの回数ボーナス（1回あたり）',
   levelUpPointMultipliers: 'レベルアップでもらえる強化ポイント',
   speciesChallengeLineages: '種族チャレンジで選べる種族',
   speciesChallengeRewards: '種族チャレンジの難易度と初回クリア報酬',
@@ -10262,10 +10268,19 @@ const RHYTHM_EVENT_RANKING_DISPLAY_LIMIT = 50;
 const RHYTHM_EVENT_SONG_SELECT_BASE = 'identity_key,user_name,song_id,difficulty_id,score,scored_at,level,icon';
 const RHYTHM_EVENT_SONG_SELECT = `${RHYTHM_EVENT_SONG_SELECT_BASE},party`;
 const RHYTHM_EVENT_TOTAL_SELECT = 'identity_key,user_name,total_score,song_count,last_scored_at,level,icon';
+// 回数ボーナス込みの集計(2026-09-11・ユーザー指示)。
+// score / total_score は**加点込み**の値で返ってくるので、並べ替え(order=score.desc)も
+// 上位50件の切り出しも加点込みで行われる。素点と加点は別の列で受け取り、「内訳」に出す。
+// ★関数がまだ無い環境(SQL未適用)では、加点なしのこれまでの関数へ戻って順位を出す。
+//   加点と内訳が出ないだけで画面は壊れない(docs/sql/rankings/RHYTHM_EVENT_BONUS_IPHONE_STEPS.md)。
+const RHYTHM_EVENT_SONG_BONUS_SELECT = `${RHYTHM_EVENT_SONG_SELECT},base_score,bonus_score,play_count`;
+const RHYTHM_EVENT_TOTAL_BONUS_SELECT = `${RHYTHM_EVENT_TOTAL_SELECT},base_total,bonus_total,play_count`;
 // 「そのビュー・関数はまだ無い」という応答かどうか。通信の失敗や権限の失敗と取り違えない
 //   PGRST202 … Could not find the function public.rhythm_event_totals(...) in the schema cache
 //   PGRST205 … Could not find the table 'public.rhythm_week_window' in the schema cache
 //   42P01 / 42883 … relation / function does not exist
+// ★_bonus 付きの関数名も rhythm_event_song_bests / rhythm_event_totals を含むので、
+//   この判定でそのまま拾える。呼ぶ側は「加点なしへ戻す」ためにこれを捕まえる
 const rhythmEventRankingMissing = (status, body) => {
   if (status !== 404 && status !== 400) return false;
   const text = String(body || '');
@@ -10331,7 +10346,7 @@ const sbFetchRhythmWeekWindow = async ({ requestId = 'untracked' } = {}) => {
   return { startMs, endMs };
 };
 // 期間×対象曲の「曲ごとベスト」。部門1つぶん(=曲1つぶん)を取りにいく
-const sbFetchRhythmEventSongBests = async ({ songId, fromMs, toMs, limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' }) => {
+const sbFetchRhythmEventSongBests = async ({ songId, fromMs, toMs, bonusRates = null, limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' }) => {
   const filter = Array.isArray(identityKeys) && identityKeys.length
     ? `&identity_key=in.(${identityKeys.map(k => encodeURIComponent(`"${k}"`)).join(',')})`
     : '';
@@ -10341,6 +10356,19 @@ const sbFetchRhythmEventSongBests = async ({ songId, fromMs, toMs, limit = RHYTH
       + `&order=score.desc,scored_at.asc&limit=${limit}${filter}`,
     body, label: 'rhythm-event-song', requestId,
   });
+  // 回数ボーナスを使うイベントでは、加点込みの関数を先に試す。
+  // 関数がまだ無い環境では加点なしへ戻す(順位は出る。加点と内訳だけ出ない)
+  if (bonusRates) {
+    try {
+      return await sbFetchRhythmEventRows({
+        url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_song_bests_bonus?select=${RHYTHM_EVENT_SONG_BONUS_SELECT}`
+          + `&order=score.desc,scored_at.asc&limit=${limit}${filter}`,
+        body: { ...body, bonus_rates: bonusRates }, label: 'rhythm-event-song-bonus', requestId,
+      });
+    } catch (error) {
+      rankingLog(requestId, 'rhythm-event-song-bonus-fallback', { message: error?.message || String(error) });
+    }
+  }
   try {
     return await ask(RHYTHM_EVENT_SONG_SELECT);
   } catch (error) {
@@ -10354,16 +10382,41 @@ const sbFetchRhythmEventSongBests = async ({ songId, fromMs, toMs, limit = RHYTH
   }
 };
 // 期間×対象曲の「総合」。対象曲それぞれのその週のベストを単純合算したもの(§6.3)
-const sbFetchRhythmEventTotals = async ({ songIds, fromMs, toMs, limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' }) => {
+const sbFetchRhythmEventTotals = async ({ songIds, fromMs, toMs, bonusRates = null, limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' }) => {
   const filter = Array.isArray(identityKeys) && identityKeys.length
     ? `&identity_key=in.(${identityKeys.map(k => encodeURIComponent(`"${k}"`)).join(',')})`
     : '';
+  const body = { song_ids: songIds, from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() };
+  // 曲の部門と同じく、加点込みの関数を先に試して、無ければ加点なしへ戻す
+  if (bonusRates) {
+    try {
+      return await sbFetchRhythmEventRows({
+        url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals_bonus?select=${RHYTHM_EVENT_TOTAL_BONUS_SELECT}`
+          + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
+        body: { ...body, bonus_rates: bonusRates }, label: 'rhythm-event-total-bonus', requestId,
+      });
+    } catch (error) {
+      rankingLog(requestId, 'rhythm-event-total-bonus-fallback', { message: error?.message || String(error) });
+    }
+  }
   return sbFetchRhythmEventRows({
     url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals?select=${RHYTHM_EVENT_TOTAL_SELECT}`
       + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
-    body: { song_ids: songIds, from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() },
-    label: 'rhythm-event-total', requestId,
+    body, label: 'rhythm-event-total', requestId,
   });
+};
+// 回数ボーナスの内訳(素点・加点・回数)を取り出す。加点なしの関数から取った行には
+// これらの列が無いので、baseScore を null にして「内訳を出さない」と伝える。
+// 曲の部門は base_score/bonus_score、総合は base_total/bonus_total という名前で返る
+const rhythmEventBonusFields = (row, baseKey) => {
+  const bonusKey = baseKey === 'base_total' ? 'bonus_total' : 'bonus_score';
+  const base = Number(row?.[baseKey]);
+  if (!Number.isFinite(base)) return { baseScore: null, bonusScore: 0, playCount: 0 };
+  return {
+    baseScore: base,
+    bonusScore: Number.isFinite(Number(row?.[bonusKey])) ? Number(row[bonusKey]) : 0,
+    playCount: Number.isFinite(Number(row?.play_count)) ? Number(row.play_count) : 0,
+  };
 };
 // 生の行を画面用の形へ整える。壊れた値でも落ちないよう、数として確かめてから使う
 const rhythmEventSongEntryFromRow = (row) => ({
@@ -10377,6 +10430,9 @@ const rhythmEventSongEntryFromRow = (row) => ({
   // 判定の内訳。「この曲」タブと同じく party の先頭要素を読む(rhythmRankingEntryFromRow と同じ形)。
   // SQL未適用の環境・内訳が保存される前の古い記録では null になり、詳細ボタンが出ないだけ
   detail: (Array.isArray(row?.party) && row.party[0] && typeof row.party[0] === 'object') ? row.party[0] : null,
+  // 回数ボーナスの内訳。加点なしの関数から取ったときは列そのものが無いので null になり、
+  // 画面は内訳の枠を出さない(加点していないのに「+0」と出さないため)
+  ...rhythmEventBonusFields(row, 'base_score'),
 });
 const rhythmEventTotalEntryFromRow = (row) => ({
   identityKey: typeof row?.identity_key === 'string' ? row.identity_key : '',
@@ -10385,6 +10441,7 @@ const rhythmEventTotalEntryFromRow = (row) => ({
   songCount: Number(row?.song_count) || 0,
   level: Number(row?.level) || 0,
   icon: row?.icon ?? null,
+  ...rhythmEventBonusFields(row, 'base_total'),
 });
 
 // 検査(tools/ranking/rhythm-breeder-id-check.js)からモンビーの送信だけを直接叩けるようにする。
@@ -14351,6 +14408,9 @@ function RhythmRankingScreen({
         else if(totalTabOpen)loadRhythmTotalRanking&&loadRhythmTotalRanking();
         else loadRhythmRanking(song);
       };
+      // ランク(S/SS/…)を決める点数。回数ボーナス込みの点だと満点を超えてしまうので、
+      // 素点が返っているときはそちらを使う(素点が無い＝加点なしの集計ならそのまま)
+      const eventRankScore=(entry)=>entry&&entry.baseScore!==null&&entry.baseScore!==undefined?entry.baseScore:(entry?.score||0);
       const totalRow=(entry,rank,mine)=>(
         <div data-rhythm-total-row className={`flex items-center gap-2 rounded-2xl border p-2 ${mine?'border-amber-300/60 bg-amber-500/10':'border-white/10 bg-slate-900/80'}`}>
           <b className="w-8 shrink-0 text-center text-xs font-black text-amber-200">{rank?`${rank}`:'—'}</b>
@@ -14375,13 +14435,17 @@ function RhythmRankingScreen({
             <p className="text-[9px] text-slate-400">{RHYTHM_DEMO_DIFFICULTY_LABELS[entry.difficultyId]?.name||entry.difficultyId||'-'} ・ Lv.{entry.level}</p>
           </div>
           <div className="shrink-0 text-right">
+            {/* ★一覧に出る数は**回数ボーナス込み**(2026-09-11・ユーザー指示
+                「加点分含めたスコアが表に出て、内訳を見るボタンをつけて…」)。
+                ランクだけは素点で決める。加点で満点を超えてSSS+に化けないようにするため */}
             <p className="font-mono text-sm font-black text-fuchsia-100">{entry.score.toLocaleString()}</p>
-            <p className={`text-[10px] font-black ${RHYTHM_RANK_COLORS[rhythmRankForScore(entry.score)]}`}>{rhythmRankForScore(entry.score)}</p>
+            <p className={`text-[10px] font-black ${RHYTHM_RANK_COLORS[rhythmRankForScore(eventRankScore(entry))]}`}>{rhythmRankForScore(eventRankScore(entry))}</p>
+            {entry.bonusScore>0&&<p className="text-[9px] font-black text-amber-300">+{entry.bonusScore.toLocaleString()}（{entry.playCount}回）</p>}
           </div>
-          {/* ★判定の内訳。「この曲」タブと同じ見た目・同じモーダルを使う
+          {/* ★判定の内訳とスコアの内訳。「この曲」タブと同じ見た目・同じモーダルを使う
               (2026-09-11・ユーザー指摘「イベント側の対象曲のほうの詳細がない」)。
-              内訳が無い行(SQL未適用・古い記録)ではボタンを出さない */}
-          {entry.detail&&<button data-rhythm-event-detail-row onClick={()=>setRhythmRankingDetail(entry)}
+              どちらも無い行(SQL未適用・古い記録)ではボタンを出さない */}
+          {(entry.detail||entry.baseScore!==null)&&<button data-rhythm-event-detail-row onClick={()=>setRhythmRankingDetail(entry)}
             className="shrink-0 min-h-[44px] rounded-lg border border-white/20 px-2 text-[9px] font-black text-slate-200">詳細</button>}
         </div>
       );
@@ -14396,7 +14460,11 @@ function RhythmRankingScreen({
           </div>
           <div className="shrink-0 text-right">
             <p className="font-mono text-sm font-black text-fuchsia-100">{entry.totalScore.toLocaleString()}</p>
+            {entry.bonusScore>0&&<p className="text-[9px] font-black text-amber-300">+{entry.bonusScore.toLocaleString()}（{entry.playCount}回）</p>}
           </div>
+          {/* 総合には判定の内訳が無いので、押せるのは回数ボーナスの内訳があるときだけ */}
+          {entry.baseScore!==null&&<button data-rhythm-event-bonus-row onClick={()=>setRhythmRankingDetail(entry)}
+            className="shrink-0 min-h-[44px] rounded-lg border border-white/20 px-2 text-[9px] font-black text-slate-200">内訳</button>}
         </div>
       );
       const eventRow=(entry,rank,mine)=>eventSongId?eventSongRow(entry,rank,mine):eventTotalRow(entry,rank,mine);
@@ -14534,24 +14602,45 @@ function RhythmRankingScreen({
             ))}
           </ol>}
         </div>
-        {rhythmRankingDetail&&(
+        {/* 詳細。曲の行(判定の内訳を持つ)と総合の行(持たない)の両方から開く。
+            回数ボーナスの内訳は、素点が返っているときだけ出す
+            (2026-09-11・ユーザー指示「加点分含めたスコアが表に出て、内訳を見るボタンを
+             つけて、そこで加点分と合わせた詳細スコアが見れるようにしたい」) */}
+        {rhythmRankingDetail&&(()=>{
+          const isTotal=rhythmRankingDetail.totalScore!==undefined&&rhythmRankingDetail.totalScore!==null;
+          const shownScore=Number(isTotal?rhythmRankingDetail.totalScore:rhythmRankingDetail.score)||0;
+          const baseScore=(rhythmRankingDetail.baseScore===null||rhythmRankingDetail.baseScore===undefined)?null:Number(rhythmRankingDetail.baseScore);
+          const bonusScore=Number(rhythmRankingDetail.bonusScore)||0;
+          const playCount=Number(rhythmRankingDetail.playCount)||0;
+          return (
           <div data-rhythm-ranking-detail-modal className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-3" onClick={()=>setRhythmRankingDetail(null)}>
             <div className="w-full max-w-md rounded-2xl border border-amber-300/40 bg-slate-900 p-4" onClick={e=>e.stopPropagation()}>
               <div className="mb-2 flex items-center justify-between">
                 <h3 className="text-sm font-black text-amber-200">{rhythmRankingDetail.userName} のリザルト</h3>
                 <button aria-label="閉じる" data-rhythm-ranking-detail-close onClick={()=>setRhythmRankingDetail(null)} className="min-h-[44px] min-w-[44px] px-2 text-slate-400">✕</button>
               </div>
-              <p className="text-[10px] text-slate-400">{RHYTHM_DEMO_DIFFICULTY_LABELS[rhythmRankingDetail.difficultyId]?.name||rhythmRankingDetail.difficultyId} / スコア {rhythmRankingDetail.score.toLocaleString()} / ランク {rhythmRankForScore(rhythmRankingDetail.score)}</p>
-              <p className="mt-1 text-[10px] text-slate-400">最大コンボ {rhythmRankingDetail.detail?.maxCombo??'-'}</p>
-              <dl className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]">
-                {RHYTHM_JUDGMENT_IDS.map(id=><React.Fragment key={id}><dt className="text-slate-400">{id}</dt><dd className="text-right font-mono text-white">{rhythmRankingDetail.detail?.judgments?.[id]??0}</dd></React.Fragment>)}
-              </dl>
-              <p className="mt-2 text-[9px] font-black text-amber-200">
-                {rhythmRankingDetail.detail?.allMarvelous?'ALL MARVELOUS!!':rhythmRankingDetail.detail?.allExcellent?'ALL EXCELLENT!!':rhythmRankingDetail.detail?.fullCombo?'FULL COMBO!':''}
-              </p>
+              {isTotal
+                ?<p className="text-[10px] text-slate-400">総合 {rhythmRankingDetail.songCount}曲 / スコア {shownScore.toLocaleString()}</p>
+                :<p className="text-[10px] text-slate-400">{RHYTHM_DEMO_DIFFICULTY_LABELS[rhythmRankingDetail.difficultyId]?.name||rhythmRankingDetail.difficultyId} / スコア {shownScore.toLocaleString()} / ランク {rhythmRankForScore(baseScore===null?shownScore:baseScore)}</p>}
+              {baseScore!==null&&(
+              <dl data-rhythm-bonus-breakdown className="mt-2 rounded-xl border border-fuchsia-300/30 bg-fuchsia-500/10 p-2 text-[10px]">
+                <div className="flex items-center justify-between"><dt className="text-slate-300">素点（ベスト）</dt><dd className="font-mono text-white">{baseScore.toLocaleString()}</dd></div>
+                <div className="mt-1 flex items-center justify-between"><dt className="text-slate-300">遊んだ回数</dt><dd className="font-mono text-white">{playCount}回</dd></div>
+                <div className="mt-1 flex items-center justify-between"><dt className="text-slate-300">回数ボーナス</dt><dd className="font-mono font-black text-amber-300">+{bonusScore.toLocaleString()}</dd></div>
+                <div className="mt-1 flex items-center justify-between border-t border-white/15 pt-1"><dt className="font-black text-amber-200">合計（順位に使う点）</dt><dd className="font-mono font-black text-amber-200">{shownScore.toLocaleString()}</dd></div>
+              </dl>)}
+              {!isTotal&&(<React.Fragment>
+                <p className="mt-1 text-[10px] text-slate-400">最大コンボ {rhythmRankingDetail.detail?.maxCombo??'-'}</p>
+                <dl className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]">
+                  {RHYTHM_JUDGMENT_IDS.map(id=><React.Fragment key={id}><dt className="text-slate-400">{id}</dt><dd className="text-right font-mono text-white">{rhythmRankingDetail.detail?.judgments?.[id]??0}</dd></React.Fragment>)}
+                </dl>
+                <p className="mt-2 text-[9px] font-black text-amber-200">
+                  {rhythmRankingDetail.detail?.allMarvelous?'ALL MARVELOUS!!':rhythmRankingDetail.detail?.allExcellent?'ALL EXCELLENT!!':rhythmRankingDetail.detail?.fullCombo?'FULL COMBO!':''}
+                </p>
+              </React.Fragment>)}
             </div>
-          </div>
-        )}
+          </div>);
+        })()}
         {boardTab&&eventDetailOpen&&(
         <div data-rhythm-event-detail role="dialog" aria-modal="true" aria-label="イベント詳細"
           className="fixed inset-0 z-[80000] flex items-center justify-center bg-slate-950/95 p-4"
@@ -14603,6 +14692,21 @@ function RhythmRankingScreen({
                 className="rounded-2xl border border-amber-300/40 bg-amber-500/5 p-2 text-[10px] leading-tight text-slate-200">
                 <b className="text-amber-200">∞周回 ×{RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE}</b>　クイックの∞周回を裏で回しながら対象曲を演奏すると、入る周回数がふだん（×{RHYTHM_PLAY_RUN_LOOP_SCALE}）の{RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE}倍になります
               </p>
+              {/* 回数ボーナス(2026-09-11・ユーザー指示)。遊んだ回数が順位に効くことは、
+                  ランキングを見ているだけでは分からないので、報酬の表と同じ場所で伝える。
+                  割合の表は RHYTHM_EVENT_PLAY_BONUS_RATES から作る(数字を書き写さない) */}
+              {rhythmEventPlayBonusRates(eventDefinition)&&<div data-rhythm-event-play-bonus
+                className="rounded-2xl border border-fuchsia-300/40 bg-fuchsia-500/5 p-2 text-[10px] leading-tight text-slate-200">
+                <b className="text-fuchsia-200">回数ボーナス</b>　対象曲を遊んだ回数ぶん、自分のベストスコアに加点されます（上限なし）。ランキングに出ている点は加点込みで、「詳細」「内訳」から素点との内訳を見られます。
+                <ul className="mt-1 space-y-0.5">
+                  {RHYTHM_DEMO_DIFFICULTY_IDS.map(id=>(
+                    <li key={id} className="flex items-baseline gap-2">
+                      <b className="w-14 shrink-0 font-black text-fuchsia-200">{RHYTHM_DEMO_DIFFICULTY_LABELS[id]?.name||id}</b>
+                      <span className="min-w-0 flex-1 text-slate-200">{rhythmEventPlayBonusPercentText(id)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>}
               {/* 受け取り方。いつ・どこで受け取るのかが分からないと、終わったあとに迷う */}
               <p className="text-[9px] leading-relaxed text-slate-400">
                 報酬はイベントが終わったあと、ゲームを開いたときに受け取れます。受け取れるのは終了から2週間までです。順位は終了した時点で決まるので、遅れて受け取っても内容は変わりません。
@@ -19716,9 +19820,12 @@ function MonsterHeroGame() {
       const songId = rhythmEventDivisionSongId(wanted);
       const division = (songId && event.songIds.includes(songId)) ? wanted : RHYTHM_EVENT_TOTAL_DIVISION;
       const targetSongId = rhythmEventDivisionSongId(division);
+      // 回数ボーナスを使うイベントでは、割合を渡して加点込みで集計してもらう。
+      // 使わないイベント(週間)では null なので、これまでどおりの集計になる
+      const bonusRates = rhythmEventPlayBonusRates(event);
       const fetchRows = (options) => targetSongId
-        ? sbFetchRhythmEventSongBests({ songId:targetSongId, fromMs:range.startMs, toMs:range.endMs, ...options })
-        : sbFetchRhythmEventTotals({ songIds:[...event.songIds], fromMs:range.startMs, toMs:range.endMs, ...options });
+        ? sbFetchRhythmEventSongBests({ songId:targetSongId, fromMs:range.startMs, toMs:range.endMs, bonusRates, ...options })
+        : sbFetchRhythmEventTotals({ songIds:[...event.songIds], fromMs:range.startMs, toMs:range.endMs, bonusRates, ...options });
       const fromRow = targetSongId ? rhythmEventSongEntryFromRow : rhythmEventTotalEntryFromRow;
       const rows = await fetchRows({ requestId:`rhythm-${kind}-${division}-${Date.now()}` });
       if (stale()) return;
@@ -20657,11 +20764,14 @@ function MonsterHeroGame() {
       const breederId = await ensureBreederId();
       const selfKeys = rhythmTotalRankingSelfKeys(breederId, breederName);
       const prizes = [];
+      // ★順位の出し方は画面と**同じ**にする。回数ボーナスを使うイベントでここを渡し忘れると、
+      //   「ランキングでは1位だったのに報酬が来ない」が起きる
+      const bonusRates = rhythmEventPlayBonusRates(event);
       for (const divisionId of rhythmEventDivisionIds(event)) {
         const songId = rhythmEventDivisionSongId(divisionId);
         const rows = songId
-          ? await sbFetchRhythmEventSongBests({ songId, fromMs:range.startMs, toMs:range.endMs, limit:RHYTHM_EVENT_REWARD_RANKS, requestId:`rhythm-reward-${event.id}-${divisionId}` })
-          : await sbFetchRhythmEventTotals({ songIds:[...event.songIds], fromMs:range.startMs, toMs:range.endMs, limit:RHYTHM_EVENT_REWARD_RANKS, requestId:`rhythm-reward-${event.id}-total` });
+          ? await sbFetchRhythmEventSongBests({ songId, fromMs:range.startMs, toMs:range.endMs, bonusRates, limit:RHYTHM_EVENT_REWARD_RANKS, requestId:`rhythm-reward-${event.id}-${divisionId}` })
+          : await sbFetchRhythmEventTotals({ songIds:[...event.songIds], fromMs:range.startMs, toMs:range.endMs, bonusRates, limit:RHYTHM_EVENT_REWARD_RANKS, requestId:`rhythm-reward-${event.id}-total` });
         const fromRow = songId ? rhythmEventSongEntryFromRow : rhythmEventTotalEntryFromRow;
         const entries = (Array.isArray(rows) ? rows : []).map(fromRow);
         const index = entries.findIndex(entry => selfKeys.includes(entry.identityKey));
@@ -20675,7 +20785,7 @@ function MonsterHeroGame() {
       let participation = null;
       if (rhythmEventParticipationReward(event)) {
         const mine = await sbFetchRhythmEventTotals({
-          songIds:[...event.songIds], fromMs:range.startMs, toMs:range.endMs,
+          songIds:[...event.songIds], fromMs:range.startMs, toMs:range.endMs, bonusRates,
           limit:selfKeys.length, identityKeys:selfKeys, requestId:`rhythm-reward-${event.id}-join`,
         });
         const played = (Array.isArray(mine) ? mine : []).map(rhythmEventTotalEntryFromRow)

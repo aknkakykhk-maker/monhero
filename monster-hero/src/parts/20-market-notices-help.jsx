@@ -272,6 +272,11 @@ const helpDataRows = (id) => {
         const { main, sub } = monsterLineageOf(mon.id);
         return [mon.name, `${main.name} × ${sub.name}（${monsterCategoryName(monsterCategoryOf(mon.id))}）`];
       });
+    // イベントの回数ボーナス。難易度ごとの割合を実データから出す
+    // (ヘルプへ手で書き写すと、割合を変えたときに古いままになる)
+    case 'rhythmEventPlayBonus':
+      return RHYTHM_DEMO_DIFFICULTY_IDS.map(id =>
+        [RHYTHM_DEMO_DIFFICULTY_LABELS[id]?.name || id, rhythmEventPlayBonusPercentText(id)]);
     // 極限チャレンジの難易度。閲覧可能な準備中難易度も倍率は実データから出す
     case 'extremeDifficulties':
       return PUBLIC_EXTREME_DIFFICULTIES.map(s => [s.label, s.available
@@ -461,6 +466,7 @@ const helpDataRows = (id) => {
 const HELP_DATA_TITLES = {
   difficulties: '難易度と倍率',
   extremeDifficulties: '極限チャレンジの難易度',
+  rhythmEventPlayBonus: 'イベントの回数ボーナス（1回あたり）',
   levelUpPointMultipliers: 'レベルアップでもらえる強化ポイント',
   speciesChallengeLineages: '種族チャレンジで選べる種族',
   speciesChallengeRewards: '種族チャレンジの難易度と初回クリア報酬',
