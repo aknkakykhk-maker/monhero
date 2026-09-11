@@ -350,6 +350,12 @@ const rhythmTravelLooksReady=(areaRect,lineRect)=>{
   // (実測: レイアウトが効く前は 844pxの画面で 3352px になっていた)
   const viewportHeight=typeof window!=='undefined'&&window.innerHeight>0?window.innerHeight:0;
   if(viewportHeight>0&&areaRect.height>viewportHeight*1.5)return false;
+  // 逆に、画面に対して極端に小さいプレイエリアも「まだ組み上がっていない」。
+  // ノーツを canvas 1枚へ描くようにしてから(2026-09-07)、スタイルが効く前の崩れ方が
+  // 「要素が縦に積み上がって大きくなる」から「中身が絶対配置だけになって潰れる」へ変わった。
+  // (実測: 844pxの画面で 18px)。この値を遊べる形とみなすと、見えないノーツをMISSにして
+  // ライフだけが減る――2026-09-05の不具合がそのまま裏返しの形で戻る
+  if(viewportHeight>0&&areaRect.height<viewportHeight*0.25)return false;
   // 判定ラインに厚みが無いなら、まだ形が決まっていない。
   // 以前は「中心がエリアの中にあること」しか見ておらず、線が高さ0のまま
   // エリアの先頭に居る状態(スタイルが効く前)をそのまま通していた
