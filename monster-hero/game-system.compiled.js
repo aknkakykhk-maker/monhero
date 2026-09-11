@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 00ab96aca001e150
+// source-sha256: e6923982023f5241
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9681410bdbf8b66d
+// generated-sha256: ae8cf9ffd3a7f4f5
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 15:58"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 16:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -9872,7 +9872,13 @@ const CHANGELOG_ENTRIES = (typeof CHANGELOG !== 'undefined' ? CHANGELOG : []).fi
 })).slice().sort((a, b) => changelogSortKey(b) > changelogSortKey(a) ? 1 : changelogSortKey(b) < changelogSortKey(a) ? -1 : 0);
 // 更新履歴から作る助手の告知も、隠している項目のぶんは出さない
 // (data/assistants.js は公開フラグも dev も見られないため、ここで落とす)
-const HIDDEN_UPDATE_NOTICE_IDS = new Set((typeof CHANGELOG !== 'undefined' ? CHANGELOG : []).filter(entry => !changelogForPlayers(entry, CHANGELOG_READ_AT_MS) && typeof entry?.assistantNotice?.id === 'string').map(entry => entry.assistantNotice.id.trim()));
+// ★時刻待ちの項目(visibleFrom)は、ここでは隠さない。
+//   この集合は読み込んだときに1回だけ作るので、開始より前に起動した端末では
+//   その時刻になっても告知を永久に出せなくなる
+//   (2026-09-11・ユーザー指摘「やってる最中の人が見れてないらしい」の正体)。
+//   告知を出す期間は assistantNotice の notifyFrom / notifyUntil が見るたびに数える。
+//   ここで隠すのは「作業メモ(dev)」と「まだ公開していない機能(releaseFlag)」だけ。
+const HIDDEN_UPDATE_NOTICE_IDS = new Set((typeof CHANGELOG !== 'undefined' ? CHANGELOG : []).filter(entry => !(entry && entry.dev !== true && releasedForPlayers(entry)) && typeof entry?.assistantNotice?.id === 'string').map(entry => entry.assistantNotice.id.trim()));
 // どのタブへ出すかを決める。
 // 「不具合情報」は不具合の話をまとめる場所なので、調査中(issue)だけでなく
 // 直したもの(fix)もここへ出す。「更新情報」は新機能・改善・マーケットだけになる
