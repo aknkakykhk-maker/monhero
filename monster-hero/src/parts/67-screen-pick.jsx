@@ -420,13 +420,15 @@ function PickSlotScreen({
   return (
 
     <div style={{position:"absolute",inset:0,backgroundColor:"#020617",zIndex:30000}} className="absolute inset-0 z-[3000] flex flex-col items-center justify-center p-6 text-center overflow-hidden">
-      {currentPickingMon?.imgUrl?(<DyedMonsterImage baseId={currentPickingMon.id} src={currentPickingMon.imgUrl} alt="mon" masuColors={currentPickingMon.colors} className="w-28 h-28 mb-4 object-contain animate-bounce drop-shadow-[0_0_40px_rgba(99,102,241,0.4)] scale-110"/>):(<div className="text-7xl mb-4 animate-bounce drop-shadow-[0_0_40px_rgba(99,102,241,0.4)]">{currentPickingMon?.emoji}</div>)}
-      <h2 className="text-lg font-black mb-1 italic uppercase tracking-widest text-indigo-400">配置場所を決定せよ</h2>
-      <div className="w-full max-w-xs mb-2"><AssistantBubble scene="pickSlot" compact/></div>
+      {currentPickingMon?.imgUrl?(<DyedMonsterImage baseId={currentPickingMon.id} src={currentPickingMon.imgUrl} alt="mon" masuColors={currentPickingMon.colors} className="shrink-0 w-28 h-28 mb-4 object-contain animate-bounce drop-shadow-[0_0_40px_rgba(99,102,241,0.4)] scale-110"/>):(<div className="text-7xl mb-4 animate-bounce drop-shadow-[0_0_40px_rgba(99,102,241,0.4)]">{currentPickingMon?.emoji}</div>)}
+      <h2 className="shrink-0 text-lg font-black mb-1 italic uppercase tracking-widest text-indigo-400">配置場所を決定せよ</h2>
+      <div className="shrink-0 w-full max-w-xs mb-2"><AssistantBubble scene="pickSlot" compact/></div>
       {/* 間合い適性はどこに置いても4距離すべてに入る。ここの%は「このモンスターを加えた後の各距離の補正値」 */}
-      <div className="text-[9px] text-slate-400 font-bold mb-5 leading-relaxed px-2">間合い適性はどこに置いても4距離すべてに加算されます。<br/>配置は「敵と同じ距離で攻撃する」ことと、覚える距離撃に影響します。</div>
+      <div className="shrink-0 text-[9px] text-slate-400 font-bold mb-5 leading-relaxed px-2">間合い適性はどこに置いても4距離すべてに加算されます。<br/>配置は「敵と同じ距離で攻撃する」ことと、覚える距離撃に影響します。</div>
       {/* 練習中は押せる枠だけを光らせる。枠全体を囲むと「どれを押すのか」が分からなかった */}
-      <div className="grid grid-cols-2 gap-4 w-full max-w-xs">
+      {/* 背の低い端末では、ここが縮んでスクロールする。戻るボタンを画面の外へ押し出さないため。
+          となりの教えカードえらび(PickTeachingScreen)と同じ作りにそろえてある */}
+      <div className="grid grid-cols-2 gap-4 w-full max-w-xs overflow-y-auto min-h-0 p-1 flex-1 content-center mh-scroll">
         {slots.map((s,i)=>{const grade=getDistAptitude(currentPickingMon,i); const after=distTotalBonus(i)+aptGradeToPct(grade);
           return(<button key={i} disabled={s!==null||!scenarioPicksSlot(i)} onClick={()=>setupMon(currentPickingMon,i)} className={`h-24 rounded-2xl border-2 flex flex-col items-center justify-center transition-all disabled:opacity-20${scenarioPicksSlot(i)?battleTutorialSpotClass('slots'):''} ${RANGE_STYLES[i].bg} ${RANGE_STYLES[i].border} ${s?'opacity-100 shadow-xl':'opacity-90 ring-2 ring-white/20 animate-pulse'} active:scale-90`}>
           <span className={`text-[10px] font-black mb-1 uppercase px-3 py-0.5 rounded-full ${RANGE_STYLES[i].labelBg} ${RANGE_STYLES[i].text} border border-white/10 shadow-md`}>{RANGE_LABELS[i]}距離</span>
@@ -437,7 +439,7 @@ function PickSlotScreen({
       {/* 種族チャレンジは通常の勇者選択(PICK_HERO)を持たないので、選び直しは
           種族チャレンジの編成画面(出撃確認)へ戻す。ここを分けないと、種族の縛りが
           外れた通常の勇者選択へ入り込んでしまう */}
-      <button disabled={!!battleTutorial} onClick={onRepick} className="mt-8 text-slate-400 flex items-center gap-2 font-black uppercase text-[10px] active:scale-90 disabled:opacity-25"><ArrowLeft size={14}/> モンスターを選び直す</button>
+      <button disabled={!!battleTutorial} onClick={onRepick} className="shrink-0 mt-8 text-slate-400 flex items-center gap-2 font-black uppercase text-[10px] active:scale-90 disabled:opacity-25"><ArrowLeft size={14}/> モンスターを選び直す</button>
     </div>
   
   );

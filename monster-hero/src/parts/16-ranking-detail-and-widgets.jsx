@@ -84,15 +84,21 @@ const rankingMasuDetail = (masu) => {
     inheritedReincarnateCount: inheritedReincarnateCountOf(masu),
     levelCap: num(masu.levelCap) || null,
     // 超越(v5)。levelCap だけでは足りない。超越済みかどうかでレベル上限そのものが
-    // 400/500 と変わるため、印が無いと Lv.400 へ丸められてしまう
-    transcended: isTranscended(masu),
-    transcendPoints: num(masu.transcendPoints),
-    transcendStatPoints: normalizeTranscendStatPoints(masu.transcendStatPoints),
-    transcendAptBoosts: normalizeTranscendAptBoosts(masu.transcendAptBoosts),
+    // 400/500 と変わるため、印が無いと Lv.400 へ丸められてしまう。
+    // 既定値(未超越・0・空)のときは項目ごと入れない。読む側(rankingDetailToMasu)は
+    // 項目が無い記録を既定値で読むので、見え方は変わらないまま記録だけ小さくなる
+    ...(isTranscended(masu) ? { transcended: true } : {}),
+    ...(num(masu.transcendPoints) > 0 ? { transcendPoints: num(masu.transcendPoints) } : {}),
+    ...(Object.values(normalizeTranscendStatPoints(masu.transcendStatPoints)).some(v => v > 0)
+      ? { transcendStatPoints: normalizeTranscendStatPoints(masu.transcendStatPoints) } : {}),
+    ...(normalizeTranscendAptBoosts(masu.transcendAptBoosts).some(v => v > 0)
+      ? { transcendAptBoosts: normalizeTranscendAptBoosts(masu.transcendAptBoosts) } : {}),
     // 魂格(v6)。未使用Pは保存せず、記録時の段階・全振り分け・使用済みPだけ固定する。
-    soulRankStage: normalizeSoulRankStage(masu.soulRankStage),
-    soulTraitLevels: normalizeSoulTraitLevels(masu.soulTraitLevels),
-    soulSpentPoints: soulTraitSpentPoints(masu),
+    ...(normalizeSoulRankStage(masu.soulRankStage) > 0
+      ? { soulRankStage: normalizeSoulRankStage(masu.soulRankStage) } : {}),
+    ...(Object.keys(normalizeSoulTraitLevels(masu.soulTraitLevels)).length > 0
+      ? { soulTraitLevels: normalizeSoulTraitLevels(masu.soulTraitLevels) } : {}),
+    ...(soulTraitSpentPoints(masu) > 0 ? { soulSpentPoints: soulTraitSpentPoints(masu) } : {}),
     statPoints: { hp: num(sp.hp), atk: num(sp.atk), def: num(sp.def), guts: num(sp.guts) },
     // 間合い適性は「グレードの文字」の配列(['C','M','C','C'] など)。数値ではないので
     // 数に直そうとすると全部0になり、ランキング側だけ全距離Cに見えてしまう
