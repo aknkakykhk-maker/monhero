@@ -45,7 +45,18 @@ html,body{height:100%;margin:0}
 const travelProgress=p=>p<0?p*.72:p>1?1+(p-1)*1.28:p*(.54+.46*p);
 // 既定のノーツ速度 6.0 のときに、ノーツが出てから判定ラインへ着くまでの時間
 const TRAVEL_MS=2150;
-const GOOD_MS=200,MARVELOUS_MS=55;
+// 判定の幅だけは実データから読む。ここへ数字を書き写すと、判定表を変えたときに
+// 「帯は正しく縮んでいるのに検査だけが古い数字で落ちる」が起きる(2026-09-11に実際に起きた)。
+// 曲がり方の式(travelProgress)は意図的に書き写したままにする。あちらは
+// 片方だけ変わったことに気づくための二重化なので、性格が違う。
+const judgmentWindow=id=>{
+  const source=require('fs').readFileSync(
+    require('path').resolve(__dirname,'../../monster-hero/data/rhythm-mode.js'),'utf8');
+  const hit=new RegExp(`id:'${id}',\\s*windowMs:\\s*(\\d+)`).exec(source);
+  if(!hit)throw new Error(`判定 ${id} の windowMs を rhythm-mode.js から読めませんでした`);
+  return Number(hit[1]);
+};
+const GOOD_MS=judgmentWindow('GOOD'),MARVELOUS_MS=judgmentWindow('MARVELOUS');
 
 (async()=>{
   let playwright;

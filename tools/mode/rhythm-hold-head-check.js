@@ -53,7 +53,7 @@ check('帯の幅の割合は変えていない',rhythm.includes('const RHYTHM_BO
 // 受け付ける範囲は判定表のいちばん外側から作る形。ここも触っていない
 check('受け付ける範囲は判定表から作るまま',
   /const RHYTHM_INPUT_MATCH_WINDOW_MS = RHYTHM_JUDGMENTS\s*\n\s*\.reduce\(/.test(rhythm));
-check('いちばん外側の判定(BAD 240ms)は変えていない',/id:'BAD'[^}]*windowMs:\s*240/.test(rhythm));
+check('いちばん外側の判定(BAD 185ms)のまま',/id:'BAD'[^}]*windowMs:\s*185/.test(rhythm));
 
 console.log('');
 if(failed){console.log(`${failed}件のNGがあります`);process.exit(1);}
