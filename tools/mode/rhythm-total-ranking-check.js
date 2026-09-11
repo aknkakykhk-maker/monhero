@@ -94,12 +94,14 @@ check('壊れた行でも数として扱う',
   supa.includes('totalScore: Number(row?.total_score) || 0')&&supa.includes('songCount: Number(row?.song_count) || 0'));
 
 // --- 画面の結線 ---
+// タブの並びは「この曲 / 総合 / イベント」。イベントは週間ランキング(フェーズ3)で足した。
+// 出す・出さないはそれぞれの公開フラグが決めるので、並びは配列から作っている
 check('タブを出している(この曲 / 総合)',
   screen.includes('data-rhythm-ranking-tabs')&&screen.includes("data-rhythm-ranking-tab={tab.id}")
-  &&screen.includes("{id:'song',label:'この曲'},{id:'total',label:'総合'}"));
+  &&screen.includes("{id:'song',label:'この曲'},")&&screen.includes("{id:'total',label:'総合'}"));
 check('総合タブを初めて開いたときだけ取りにいく',
   screen.includes("if(tab==='total'&&total.status==='idle')loadRhythmTotalRanking"));
-check('更新ボタンは開いているタブのほうを読み直す',screen.includes('const refresh=()=>{ if(totalTab)'));
+check('更新ボタンは開いているタブのほうを読み直す',screen.includes('else if(totalTab)loadRhythmTotalRanking'));
 check('自分の記録を上に固定で出す',screen.includes('あなたの記録')&&screen.includes('total.self'));
 check('まだ記録のない曲から曲えらびへ戻れる',screen.includes('data-rhythm-total-remaining'));
 check('新しい画面(gameState)を増やしていない',!/'RHYTHM_TOTAL_RANKING'/.test(app)&&!/'RHYTHM_TOTAL_RANKING'/.test(screen));
@@ -111,7 +113,8 @@ check('この曲のランキングの取得は変えていない',
   supa.includes('const sbFetchRhythmRankings = async (difficultyKeys, limit=RHYTHM_RANKING_FETCH_LIMIT, offset=0,')
   &&app.includes('const keys = rhythmRankingCombinedMembers(song.songId);'));
 check('この曲の一覧は総合タブでは出さない',
-  screen.includes("{!totalTab&&rhythmRanking.status==='ready'&&rhythmRanking.entries.length>0&&"));
+  screen.includes('const songTab=!totalTab&&!eventTab;')
+  &&screen.includes("{songTab&&rhythmRanking.status==='ready'&&rhythmRanking.entries.length>0&&"));
 
 // --- 公開フラグ(機能と案内をまとめて出し入れする) ---
 // ★集計はSupabase側のビューが行うので、SQLを適用するまで中身が出せない。
@@ -125,15 +128,18 @@ check('公開フラグを持っている',
 check('画面はフラグでタブごと出し分ける',
   screen.includes('const totalReleased=RELEASE_FLAGS.rhythmTotalRanking===true;')
   &&screen.includes('const totalTab=totalReleased&&')
-  &&screen.includes('{totalReleased&&<div data-rhythm-ranking-tabs'));
+  &&screen.includes("...(totalReleased?[{id:'total',label:'総合'}]:[]),"));
 check('ヘルプの「総合」の説明も同じフラグで出す',(()=>{
   const topic=(help.split("id:'rhythm-ranking'")[1]||'').split('id:\'rhythm-')[0];
   // 助手のひとこと(assistant)はトピック単位なのでフラグを持てない。そちらは
-  // 「公開したら助手のひとことも『総合』に触れる」で別に見るため、本文のブロックだけを対象にする
+  // 「公開したら助手のひとことも『総合』に触れる」で別に見るため、本文のブロックだけを対象にする。
+  // ★週間ランキング(フェーズ3)の説明も本文で「総合」に触れるので、
+  //   「どちらかの公開フラグを持っていること」を見る。フラグの無い説明が混ざらないようにする
   const totalNotes=topic.split('\n')
     .filter(line=>line.includes("{t:'"))
     .filter(line=>line.includes('「総合」')||line.includes('同じブリーダー名'));
-  return totalNotes.length>0&&totalNotes.every(line=>line.includes("releaseFlag:'rhythmTotalRanking'"));
+  return totalNotes.length>0&&totalNotes.every(line=>
+    line.includes("releaseFlag:'rhythmTotalRanking'")||line.includes("releaseFlag:'rhythmWeeklyRanking'"));
 })());
 check('更新履歴も同じフラグで出す',(()=>{
   const at=changelog.indexOf('モンヒロビートに「総合」ランキングを追加しました');

@@ -719,6 +719,122 @@ const rhythmTotalRankingSelfKeys = (breederId, breederName) => [
   `name:${breederName || '名無しのブリーダー'}`,
 ].filter(Boolean);
 
+// ===== 週間ランキング / イベントランキング(2026-09-11) =====
+//
+// 週間は「その週のあいだに出した記録だけ」で競う(docs/spec/RHYTHM_RANKING.md §6)。
+// 常設の合算(rhythm_total_rankings)とは別枠で、互いに影響しない。
+//
+// ★期間の正本はサーバー。rhythm_week_window から今週の始まり・終わりを受け取る。
+//   端末の時計を進めても週は変わらない(§6.1)。残り時間の見た目だけ端末時計で数える。
+// ★対象曲はクライアント側の静的データ(data/rhythm-event.js)。Supabase側は
+//   「期間×曲ごとの集計」までを汎用に返し、どの曲を対象にするかは知らない(§6.4)。
+//   そのおかげで、イベントを差し替えるのにSQLを触らなくて済む。
+// ★関数がまだ無い環境(SQL未適用)では404が返る。合算と同じく「準備中」として扱い、
+//   SQLの適用とアプリの公開の順番が前後しても画面が壊れないようにする。
+const RHYTHM_EVENT_RANKING_DISPLAY_LIMIT = 50;
+const RHYTHM_EVENT_SONG_SELECT = 'identity_key,user_name,song_id,difficulty_id,score,scored_at,level,icon';
+const RHYTHM_EVENT_TOTAL_SELECT = 'identity_key,user_name,total_score,song_count,last_scored_at,level,icon';
+// 「そのビュー・関数はまだ無い」という応答かどうか。通信の失敗や権限の失敗と取り違えない
+//   PGRST202 … Could not find the function public.rhythm_event_totals(...) in the schema cache
+//   PGRST205 … Could not find the table 'public.rhythm_week_window' in the schema cache
+//   42P01 / 42883 … relation / function does not exist
+const rhythmEventRankingMissing = (status, body) => {
+  if (status !== 404 && status !== 400) return false;
+  const text = String(body || '');
+  if (!/rhythm_week_window|rhythm_event_song_bests|rhythm_event_totals/i.test(text)) return false;
+  return /PGRST202|PGRST205|PGRST200|42P01|42883|does not exist|Could not find the/i.test(text);
+};
+const rhythmEventNotReadyError = () => {
+  const error = new Error('rhythm event ranking is not ready');
+  error.notReady = true;
+  return error;
+};
+// 取得の共通部分。集計済みの行しか返ってこないので、待ち時間は合算と同じ15秒で足りる
+const sbFetchRhythmEventRows = async ({ url, body = null, label, requestId = 'untracked' }) => {
+  rankingLog(requestId, `${label}-request-start`, { url, body });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  try {
+    const res = await fetch(url, body
+      ? { method: 'POST', headers: SB_HEADERS, body: JSON.stringify(body), signal: controller.signal }
+      : { headers: SB_HEADERS, signal: controller.signal });
+    const text = await res.text();
+    if (!res.ok) {
+      if (rhythmEventRankingMissing(res.status, text)) {
+        rankingLog(requestId, `${label}-not-ready`, { status: res.status });
+        throw rhythmEventNotReadyError();
+      }
+      throw new Error(`${label} fetch ${res.status} ${res.statusText}; url=${url}; response=${text || '(empty)'}`);
+    }
+    try {
+      return JSON.parse(text);
+    } catch (e) {
+      throw new Error(`invalid JSON; url=${url}; response=${text || '(empty)'}; error=${e.message}`);
+    }
+  } catch (error) {
+    if (error?.name === 'AbortError') throw new Error(`${label} fetch timed out after 15000ms`);
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+};
+// 今週の始まり・終わり(月曜5:00 JST区切り)。1行だけ返る
+const sbFetchRhythmWeekWindow = async ({ requestId = 'untracked' } = {}) => {
+  const rows = await sbFetchRhythmEventRows({
+    url: `${SUPABASE_URL}/rest/v1/rhythm_week_window?select=week_start,week_end&limit=1`,
+    label: 'rhythm-week-window', requestId,
+  });
+  const row = Array.isArray(rows) ? rows[0] : null;
+  const startMs = Date.parse(String(row?.week_start || ''));
+  const endMs = Date.parse(String(row?.week_end || ''));
+  // 値が読めないときは「準備中」に倒す。端末時計で代用すると、サーバーと違う期間の
+  // 順位を「今週」として見せてしまう(期間の正本はサーバー・§6.1)
+  if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs <= startMs) throw rhythmEventNotReadyError();
+  return { startMs, endMs };
+};
+// 期間×対象曲の「曲ごとベスト」。部門1つぶん(=曲1つぶん)を取りにいく
+const sbFetchRhythmEventSongBests = async ({ songId, fromMs, toMs, limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' }) => {
+  const filter = Array.isArray(identityKeys) && identityKeys.length
+    ? `&identity_key=in.(${identityKeys.map(k => encodeURIComponent(`"${k}"`)).join(',')})`
+    : '';
+  return sbFetchRhythmEventRows({
+    url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_song_bests?select=${RHYTHM_EVENT_SONG_SELECT}`
+      + `&order=score.desc,scored_at.asc&limit=${limit}${filter}`,
+    body: { song_ids: [songId], from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() },
+    label: 'rhythm-event-song', requestId,
+  });
+};
+// 期間×対象曲の「総合」。対象曲それぞれのその週のベストを単純合算したもの(§6.3)
+const sbFetchRhythmEventTotals = async ({ songIds, fromMs, toMs, limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' }) => {
+  const filter = Array.isArray(identityKeys) && identityKeys.length
+    ? `&identity_key=in.(${identityKeys.map(k => encodeURIComponent(`"${k}"`)).join(',')})`
+    : '';
+  return sbFetchRhythmEventRows({
+    url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals?select=${RHYTHM_EVENT_TOTAL_SELECT}`
+      + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
+    body: { song_ids: songIds, from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() },
+    label: 'rhythm-event-total', requestId,
+  });
+};
+// 生の行を画面用の形へ整える。壊れた値でも落ちないよう、数として確かめてから使う
+const rhythmEventSongEntryFromRow = (row) => ({
+  identityKey: typeof row?.identity_key === 'string' ? row.identity_key : '',
+  userName: row?.user_name || '名無しのブリーダー',
+  songId: typeof row?.song_id === 'string' ? row.song_id : '',
+  difficultyId: typeof row?.difficulty_id === 'string' ? row.difficulty_id : '',
+  score: Number(row?.score) || 0,
+  level: Number(row?.level) || 0,
+  icon: row?.icon ?? null,
+});
+const rhythmEventTotalEntryFromRow = (row) => ({
+  identityKey: typeof row?.identity_key === 'string' ? row.identity_key : '',
+  userName: row?.user_name || '名無しのブリーダー',
+  totalScore: Number(row?.total_score) || 0,
+  songCount: Number(row?.song_count) || 0,
+  level: Number(row?.level) || 0,
+  icon: row?.icon ?? null,
+});
+
 // 検査(tools/ranking/rhythm-breeder-id-check.js)からモンビーの送信だけを直接叩けるようにする。
 // 「breeder_id の列がまだ無い環境でもスコアが保存できること」は、実際に1曲遊ばないと通らない
 // 経路だと確かめるのに何分もかかるうえ、落ちたときの被害(記録が1件も残らない)が大きい。

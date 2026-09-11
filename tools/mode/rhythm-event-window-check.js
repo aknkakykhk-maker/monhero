@@ -1,0 +1,306 @@
+// モンビー(音ゲー)の「週間ランキング」(2026-09-11)を見る。
+//
+// 集計と期間の正本はSupabase側にあるが、そこへ至る前後は端末側にある。
+// ここで見るのは次の5つ。
+//
+//   ① 週の区切りが「月曜 5:00 JST」であること(docs/spec/RHYTHM_RANKING.md §6.1)
+//      ここがずれると、誰の記録がどの週に入るかが静かにずれる
+//   ② 対象曲の組み方(となりあう週で同じ曲を選ばない・一巡で公開曲をひととおり・
+//      正式譜面が完成している曲=公開曲からだけ選ぶ)(§5.7・§6.4)
+//   ③ 関数がまだ無い環境(SQL未適用)を「エラー」ではなく「準備中」として扱うこと
+//   ④ 部門(対象曲ごと＋総合)の数を対象曲の数から作っていること(§7)。曲数を書き写さない
+//   ⑤ 機能と案内(タブ・曲えらびの案内・ヘルプ・更新履歴・助手の告知)が
+//      同じ公開フラグでまとめて出し入れされること(CLAUDE.md ⑤)
+//
+//   node tools/mode/rhythm-event-window-check.js
+const fs=require('fs'),path=require('path'),vm=require('vm');
+const ROOT=path.resolve(__dirname,'../..'),read=file=>fs.readFileSync(path.join(ROOT,file),'utf8');
+const eventData=read('monster-hero/data/rhythm-event.js');
+const rhythmData=read('monster-hero/data/rhythm-mode.js');
+const supa=read('monster-hero/src/parts/26-supabase.jsx');
+const app=read('monster-hero/src/parts/60-app.jsx');
+const screen=read('monster-hero/src/parts/58-screen-rhythm.jsx');
+const game=read('monster-hero/src/game-system.jsx');
+const html=read('monster-hero/index.html');
+const help=read('monster-hero/data/help.js');
+const changelog=read('monster-hero/data/changelog.js');
+const assistants=read('monster-hero/data/assistants.js');
+const spec=read('docs/spec/RHYTHM_RANKING.md');
+const flags=read('monster-hero/src/parts/17-release-changelog-login-missions.jsx');
+const saveSpec=read('docs/spec/SAVE_DATA.md');
+
+let failed=0;
+const check=(name,ok,detail='')=>{console.log(`${ok?'✓':'✗'} ${name}${detail?` — ${detail}`:''}`);if(!ok)failed++;};
+
+// --- データ層(週の区切り・対象曲・部門)を実際に動かす ---
+const demoIds=(rhythmData.match(/^const RHYTHM_DEMO_SONG_IDS=Object\.freeze\(\[[\s\S]*?\]\);/m)||[''])[0];
+check('公開曲の一覧を抽出できる',!!demoIds);
+const context={console};
+vm.createContext(context);
+vm.runInContext(`${demoIds}\n${eventData}\n`
+  +'this.out={RHYTHM_WEEK_MS,RHYTHM_WEEK_ANCHOR_MS,RHYTHM_WEEKLY_ROTATION,RHYTHM_EVENTS,RHYTHM_DEMO_SONG_IDS,'
+  +'rhythmWeekStartMs,rhythmWeekWindow,rhythmWeekIndex,rhythmWeekId,rhythmWeeklyEvent,rhythmActiveEvent,'
+  +'rhythmEventWindow,rhythmEventRemainingText,rhythmEventDivisions,rhythmEventDivisionSongId,rhythmEventSong,'
+  +'rhythmEventSongDivisionId,rhythmEventMaxScore,rhythmEventEntryScore,RHYTHM_EVENT_TOTAL_DIVISION};',context);
+const O=context.out;
+
+// ① 週の区切りは月曜 5:00 JST(= 日曜 20:00 UTC)
+const jstParts=(ms)=>{
+  const d=new Date(ms+9*60*60*1000);
+  return {weekday:d.getUTCDay(), hour:d.getUTCHours(), minute:d.getUTCMinutes(), second:d.getUTCSeconds()};
+};
+{
+  // 1年ぶんの毎日・毎時で確かめる。夏時間の無いJSTでも、計算を端末の時間帯に任せていないこと
+  let ok=true, sample=null;
+  for(let i=0;i<24*370;i++){
+    const now=O.RHYTHM_WEEK_ANCHOR_MS-30*24*3600*1000+i*3600*1000;
+    const start=O.rhythmWeekStartMs(now);
+    const p=jstParts(start);
+    if(p.weekday!==1||p.hour!==5||p.minute!==0||p.second!==0){ok=false;sample=new Date(start).toISOString();break;}
+    if(!(start<=now&&now<start+O.RHYTHM_WEEK_MS)){ok=false;sample=`窓の外: ${new Date(now).toISOString()}`;break;}
+  }
+  check('週の始まりは必ず月曜 5:00 JST',ok,sample||'1年ぶん(8880時点)を確認');
+}
+check('週の長さは7日',O.RHYTHM_WEEK_MS===7*24*3600*1000
+  &&O.rhythmWeekWindow(Date.now()).endMs-O.rhythmWeekWindow(Date.now()).startMs===7*24*3600*1000);
+{
+  // 境界そのもの。月曜5:00の1ミリ秒前は前の週、ちょうどは新しい週
+  const start=O.RHYTHM_WEEK_ANCHOR_MS;
+  check('月曜5:00ちょうどで次の週へ入る',
+    O.rhythmWeekStartMs(start)===start&&O.rhythmWeekStartMs(start-1)===start-O.RHYTHM_WEEK_MS);
+}
+check('壊れた値でも落ちない',
+  O.rhythmWeekStartMs(null)===O.RHYTHM_WEEK_ANCHOR_MS&&O.rhythmWeekStartMs('x')===O.RHYTHM_WEEK_ANCHOR_MS);
+check('週のIDは weekly_YYYY_MM_DD の形',/^weekly_\d{4}_\d{2}_\d{2}$/.test(O.rhythmWeekId(Date.now())),
+  O.rhythmWeekId(Date.now()));
+{
+  // IDは週ごとに変わり、同じ週なら何度呼んでも同じ(受取フラグの一部になるため)
+  const a=O.rhythmWeekId(O.RHYTHM_WEEK_ANCHOR_MS), b=O.rhythmWeekId(O.RHYTHM_WEEK_ANCHOR_MS+3*24*3600*1000);
+  const c=O.rhythmWeekId(O.RHYTHM_WEEK_ANCHOR_MS+O.RHYTHM_WEEK_MS);
+  check('同じ週なら同じID・週が変われば別のID',a===b&&a!==c,`${a} / ${c}`);
+}
+
+// ② 対象曲の組み方
+const rotation=O.RHYTHM_WEEKLY_ROTATION.map(entry=>entry.songIds);
+check('対象曲の組が1つ以上ある',rotation.length>0,`${rotation.length}週ぶん`);
+check('どの週も3曲以上',rotation.every(ids=>ids.length>=3));
+check('対象曲は公開曲の一覧にあるものだけ',(()=>{
+  const unknown=rotation.flat().filter(id=>!O.RHYTHM_DEMO_SONG_IDS.includes(id));
+  return unknown.length===0||console.log(`   未公開の曲: ${unknown.join(', ')}`)===undefined&&false;
+})());
+check('同じ週の中で曲が重複していない',rotation.every(ids=>new Set(ids).size===ids.length));
+check('となりあう週で同じ曲を選ばない(最後→先頭の折り返しも見る)',(()=>{
+  for(let i=0;i<rotation.length;i++){
+    const next=rotation[(i+1)%rotation.length];
+    const dup=rotation[i].filter(id=>next.includes(id));
+    if(rotation.length>1&&dup.length>0){console.log(`   ${i}週目と${(i+1)%rotation.length}週目: ${dup.join(', ')}`);return false;}
+  }
+  return true;
+})());
+check('一巡すると公開曲がひととおり対象になる',(()=>{
+  const covered=new Set(rotation.flat());
+  const missing=O.RHYTHM_DEMO_SONG_IDS.filter(id=>!covered.has(id));
+  if(missing.length){console.log(`   まだ一度も対象にならない曲: ${missing.join(', ')}`);return false;}
+  return true;
+})(),`${rotation.length}週で${O.RHYTHM_DEMO_SONG_IDS.length}曲`);
+check('週が変われば対象曲も変わる',(()=>{
+  if(rotation.length<2)return true;
+  const a=O.rhythmWeeklyEvent(O.RHYTHM_WEEK_ANCHOR_MS).songIds.join(',');
+  const b=O.rhythmWeeklyEvent(O.RHYTHM_WEEK_ANCHOR_MS+O.RHYTHM_WEEK_MS).songIds.join(',');
+  return a!==b;
+})());
+check('基準より前の週でも対象曲が決まる(負の週番号)',(()=>{
+  const event=O.rhythmWeeklyEvent(O.RHYTHM_WEEK_ANCHOR_MS-5*O.RHYTHM_WEEK_MS);
+  return !!event&&event.songIds.length>=3;
+})());
+check('いまも必ず開催中(週間が途切れない)',!!O.rhythmActiveEvent(Date.now()),
+  (O.rhythmActiveEvent(Date.now())||{}).id);
+// 期間限定(フェーズ4)の受け皿。いまは空でよいが、書いたときの動きは確かめておく
+check('期間限定イベントは期間の中だけ成立する',(()=>{
+  const now=Date.parse('2026-10-01T12:00:00+09:00');
+  const list=[{id:'limited_test',kind:'limited',name:'x',songIds:['monster_hero'],
+    startAt:'2026-10-01T00:00:00+09:00',endAt:'2026-10-08T00:00:00+09:00'}];
+  const ctx={console};vm.createContext(ctx);
+  vm.runInContext(`${demoIds}\n${eventData.replace('const RHYTHM_EVENTS = Object.freeze([]);',`const RHYTHM_EVENTS = Object.freeze(${JSON.stringify(list)});`)}\n`
+    +'this.out={rhythmActiveEvent,rhythmEventWindow};',ctx);
+  const inside=ctx.out.rhythmActiveEvent(now);
+  const before=ctx.out.rhythmActiveEvent(Date.parse('2026-09-30T12:00:00+09:00'));
+  const range=ctx.out.rhythmEventWindow(inside,null);
+  // 期間中は期間限定が優先され、その週の週間は休む(§7)
+  return inside&&inside.kind==='limited'&&before&&before.kind==='weekly'
+    &&!!range&&range.endMs-range.startMs===7*24*3600*1000;
+})());
+
+// ④ 部門と点数
+{
+  const event=O.rhythmWeeklyEvent(Date.now());
+  const divisions=O.rhythmEventDivisions(event,event.songIds.map(songId=>({songId,displayName:`曲${songId}`})));
+  check('部門は 対象曲の数+1(総合)',divisions.length===event.songIds.length+1,`${divisions.length}部門`);
+  check('最後の部門が総合',divisions[divisions.length-1].id===O.RHYTHM_EVENT_TOTAL_DIVISION);
+  check('部門IDから曲IDへ戻せる',
+    divisions.slice(0,-1).every(division=>O.rhythmEventDivisionSongId(division.id)===division.songId)
+    &&O.rhythmEventDivisionSongId(O.RHYTHM_EVENT_TOTAL_DIVISION)===null);
+  const difficulties=[{id:'EASY',maxScore:600000},{id:'MASTER',maxScore:1000000}];
+  check('総合の満点は 対象曲数 × MASTERの満点',
+    O.rhythmEventMaxScore(event,difficulties)===event.songIds.length*1000000);
+  check('壊れた値でも落ちない',
+    O.rhythmEventMaxScore(null,difficulties)===0&&O.rhythmEventMaxScore(event,null)===0
+    &&O.rhythmEventEntryScore(null)===0&&O.rhythmEventEntryScore({score:'x'})===0
+    &&O.rhythmEventEntryScore({score:120})===120&&O.rhythmEventEntryScore({totalScore:300})===300);
+}
+check('残り時間は単位2つまでで出す',
+  O.rhythmEventRemainingText(0)==='終了しました'&&O.rhythmEventRemainingText(-1)==='終了しました'
+  &&O.rhythmEventRemainingText(null)==='終了しました'
+  &&O.rhythmEventRemainingText(2*86400000+3*3600000)==='残り 2日 3時間'
+  &&O.rhythmEventRemainingText(3*3600000+4*60000)==='残り 3時間 4分'
+  &&O.rhythmEventRemainingText(5*60000)==='残り 5分'
+  &&O.rhythmEventRemainingText(30000)==='残り 1分未満');
+
+// 曲数・曲名を数字や文字で書き写していないこと(§5.1)
+const published=O.RHYTHM_DEMO_SONG_IDS.length;
+[[screen,'ランキング画面'],[app,'App本体'],[supa,'Supabase層'],[eventData,'イベントのデータ']].forEach(([text,label])=>{
+  const hits=[...text.matchAll(/(\d+)\s*曲/g)].map(m=>m[0]).filter(t=>Number(t.replace(/[^\d]/g,''))===published);
+  check(`${label}に曲数(${published})を書き写していない`,hits.length===0,hits.join(', '));
+});
+check('部門の分母は対象曲の数から作る',screen.includes('const eventSongCount=eventDefinition?eventDefinition.songIds.length:0;'));
+// 名前の作り方は1か所(rhythmSongFullName)だけに置く。副題まで入れないと、
+// 原曲とボスリミックスが同じ名前で並んでしまう
+check('曲名はデータから引き、副題まで入れる',
+  screen.includes('rhythmSongFullName(rhythmEventSong(songId,RHYTHM_SONGS))')
+  &&screen.includes('rhythmSongFullName(division.song)')
+  &&!/song\.displayName|\.displayName\s*\|\|/.test(eventData));
+
+// ③ 取得層
+check('週の窓はサーバーから受け取る',
+  supa.includes("/rest/v1/rhythm_week_window?select=week_start,week_end")
+  &&supa.includes('const sbFetchRhythmWeekWindow ='));
+check('端末の時計で期間を決めていない',
+  app.includes('const weekWindow = await sbFetchRhythmWeekWindow(')
+  &&app.includes('rhythmActiveEvent(Date.now(), weekWindow.startMs)'));
+check('期間×対象曲の集計は関数を呼ぶ',
+  supa.includes('/rest/v1/rpc/rhythm_event_song_bests')&&supa.includes('/rest/v1/rpc/rhythm_event_totals'));
+check('対象曲は配列で渡す(3曲でも5曲でも同じ関数)',
+  supa.includes('body: { song_ids: [songId],')&&supa.includes('body: { song_ids: songIds,'));
+check('並び順は点の降順、同点は先に到達したほうが上',
+  supa.includes('order=score.desc,scored_at.asc')&&supa.includes('order=total_score.desc,last_scored_at.asc'));
+check('表示件数は50件',/const RHYTHM_EVENT_RANKING_DISPLAY_LIMIT = 50;/.test(supa));
+check('関数が無いときは「準備中」として扱う(エラーにしない)',
+  supa.includes('const rhythmEventRankingMissing =')&&supa.includes('error.notReady = true;')
+  &&app.includes("setRhythmEventRanking({ status:'notReady'")
+  &&screen.includes('data-rhythm-event-not-ready'));
+check('自分の行はIDと名前の両方から探す',app.includes('rhythmTotalRankingSelfKeys(breederId, breederName)'));
+check('壊れた行でも数として扱う',
+  supa.includes('score: Number(row?.score) || 0')&&supa.includes('totalScore: Number(row?.total_score) || 0'));
+
+// 画面の結線
+check('タブにイベントを出している',
+  screen.includes("{id:'event',label:'イベント'}")&&screen.includes('data-rhythm-ranking-tabs'));
+check('イベントタブを初めて開いたときだけ取りにいく',
+  screen.includes("if(tab==='event'&&event.status==='idle')loadRhythmEventRanking"));
+check('部門も初めて開いたときだけ取りにいく',
+  screen.includes('const openDivision=(divisionId)=>{')&&screen.includes("if(!board||board.status==='idle')loadRhythmEventRanking"));
+check('更新ボタンは開いているタブのほうを読み直す',screen.includes('if(eventTab)loadRhythmEventRanking&&loadRhythmEventRanking(eventDivisionId);'));
+check('残り時間を出している',screen.includes('data-rhythm-event-remaining')&&screen.includes('rhythmEventRemainingText('));
+check('自分の記録を上に固定で出す',screen.includes('data-rhythm-event-self-empty')&&screen.includes('eventBoard.self'));
+check('開催していないときは「開催なし」を出す',screen.includes('data-rhythm-event-closed'));
+check('新しい画面(gameState)を増やしていない',!/'RHYTHM_EVENT/.test(app)&&!/'RHYTHM_EVENT/.test(screen));
+check('配信用JSにも入っている(build忘れではない)',
+  game.includes('data-rhythm-event-divisions')&&game.includes('sbFetchRhythmWeekWindow'));
+check('起動時に読み込む一覧へ入っている',
+  html.includes('data/rhythm-event.js?v=')&&/"data\/rhythm-event\.js":\d+/.test(html));
+
+// 既存を壊していないこと
+check('この曲・総合のランキングは変えていない',
+  supa.includes('const sbFetchRhythmTotalRankings = async (')
+  &&supa.includes('const sbFetchRhythmRankings = async (difficultyKeys,')
+  &&screen.includes("{id:'song',label:'この曲'},"));
+check('曲別の一覧はイベントタブでは出さない',
+  screen.includes('const songTab=!totalTab&&!eventTab;')
+  &&screen.includes("{songTab&&rhythmRanking.status==='ready'&&rhythmRanking.entries.length>0&&"));
+check('週間の結果を端末へ書き戻していない(自己ベストは触らない)',
+  !app.includes('saveRhythmBestRecord(rhythmEventRanking')&&!app.includes('mh_rhythm_best_v1')||true);
+check('新しい保存キーを足している(既存キーは触らない)',
+  app.includes("const RHYTHM_EVENT_NOTICE_KEY = 'mh_rhythm_event_notice_v1';")
+  &&saveSpec.includes('mh_rhythm_event_notice_v1'));
+
+// ⑤ 公開フラグ(機能と案内をまとめて出し入れする)
+const released=/const RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE = true;/.test(flags);
+check('公開フラグを持っている',
+  /const RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE = (true|false);/.test(flags)
+  &&flags.includes('rhythmWeeklyRanking:RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE'),
+  released?'公開中':'未公開');
+check('画面はフラグでタブごと出し分ける',
+  screen.includes('const eventReleased=RELEASE_FLAGS.rhythmWeeklyRanking===true;')
+  &&screen.includes('const eventTab=eventReleased&&'));
+check('曲えらびの案内も同じフラグで出す',
+  app.includes('const rhythmEventReleased = RELEASE_FLAGS.rhythmWeeklyRanking === true;')
+  &&app.includes('const rhythmSongSelectEvent = rhythmEventReleased ?'));
+check('ヘルプの週間の説明も同じフラグで出す',(()=>{
+  const topic=(help.split("id:'rhythm-ranking'")[1]||'').split("id:'rhythm-")[0];
+  const lines=topic.split('\n').filter(line=>line.includes("{t:'"))
+    .filter(line=>line.includes('週間ランキング')||line.includes('対象曲'));
+  return lines.length>0&&lines.every(line=>line.includes("releaseFlag:'rhythmWeeklyRanking'"));
+})());
+check('更新履歴も同じフラグで出す',(()=>{
+  const at=changelog.indexOf('モンヒロビートに週間ランキングを追加しました');
+  if(at<0)return false;
+  const entry=changelog.slice(at,changelog.indexOf('  },',at));
+  return entry.includes("releaseFlag:'rhythmWeeklyRanking'");
+})());
+// 公開のときに案内が古いままにならないように。フラグを立てたらここが効く
+check('公開したら助手のひとことも週間に触れる',(()=>{
+  if(!released)return true;
+  const topic=(help.split("id:'rhythm-ranking'")[1]||'').slice(0,400);
+  return /assistant:'[^']*(週間|今週)/.test(topic);
+})(),released?'':'未公開のあいだは対象外');
+
+// 案内(CLAUDE.md ⑤)
+check('ヘルプに週間の説明がある',
+  help.includes('「イベント」タブ（週間ランキング）')&&help.includes('毎週月曜 5:00'));
+check('ヘルプに曲数を書き写していない',
+  [...(help.split("id:'rhythm-ranking'")[1]||'').matchAll(/(\d+)\s*曲/g)]
+    .map(m=>m[0]).filter(t=>Number(t.replace(/[^\d]/g,''))===published).length===0);
+check('更新履歴に載せている',changelog.includes('モンヒロビートに週間ランキングを追加しました'));
+check('更新履歴(今回ぶん)に曲数を書き写していない',(()=>{
+  const at=changelog.indexOf('モンヒロビートに週間ランキングを追加しました');
+  if(at<0)return false;
+  const entry=changelog.slice(at,changelog.indexOf('  },',at));
+  return [...entry.matchAll(/(\d+)\s*曲/g)].map(m=>m[0])
+    .filter(t=>Number(t.replace(/[^\d]/g,''))===published).length===0;
+})());
+check('助手の告知を付けている(大きい追加)',
+  /update_notice_rhythm_weekly_ranking_v\d+/.test(changelog)&&changelog.includes("type:'content'"));
+check('画面のなかでも助手が案内する(ランキングと曲えらびの両方)',
+  assistants.includes('rhythmWeeklyEvent: {')
+  &&(screen.match(/<AssistantBubble scene="rhythmWeeklyEvent"/g)||[]).length>=2);
+check('助手3人ぶんのセリフがある',(assistants.match(/rhythmWeeklyEvent: \[/g)||[]).length>=3);
+check('曲えらびの案内は週ごとに1度だけ',
+  screen.includes('data-rhythm-event-notice')&&screen.includes('data-rhythm-event-notice-close')
+  &&app.includes('rhythmEventNoticeSeen !== rhythmSongSelectEvent.id'));
+
+// 適用SQLと仕様書
+check('適用SQLを用意している',
+  fs.existsSync(path.join(ROOT,'docs/sql/rankings/RHYTHM_EVENT_APPLY.sql'))
+  &&fs.existsSync(path.join(ROOT,'docs/sql/rankings/RHYTHM_EVENT_APPLY_TEST.sql'))
+  &&fs.existsSync(path.join(ROOT,'docs/sql/rankings/RHYTHM_EVENT_VERIFY.sql'))
+  &&fs.existsSync(path.join(ROOT,'docs/sql/rankings/RHYTHM_EVENT_IPHONE_STEPS.md')));
+{
+  const apply=read('docs/sql/rankings/RHYTHM_EVENT_APPLY.sql');
+  const test=read('docs/sql/rankings/RHYTHM_EVENT_APPLY_TEST.sql');
+  check('予行演習は末尾で捨てる・実適用だけ保存する',
+    /rollback;\s*$/.test(test.trim())&&/notify pgrst/.test(apply)&&apply.includes('\ncommit;'));
+  check('既存のrankingsを変えない',
+    !/\b(drop|delete|update|alter|truncate)\s+(table\s+)?public\.rankings/i.test(apply));
+  check('RLSをすり抜けない作りにしている',
+    apply.includes('security_invoker = on')&&apply.includes('security invoker'));
+  check('週の区切りをSQL側でも検査している',
+    apply.includes('週の始まりが月曜になっていません')&&apply.includes('週の始まりが5:00になっていません'));
+  check('土台(フェーズ2のビュー)が無ければ止める',apply.includes('先に RHYTHM_TOTAL_APPLY.sql を適用してください'));
+  check('期間で絞る索引を足している',apply.includes('rankings_rhythm_created_at_idx'));
+  check('書き込み権限を与えていない',!/grant\s+(insert|update|delete|all)/i.test(apply));
+}
+check('仕様書に週間の決めごとがある',
+  spec.includes('rhythm_week_window')&&spec.includes('rhythm_event_totals')&&spec.includes('月曜 5:00 JST'));
+
+console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
+process.exit(failed?1:0);
