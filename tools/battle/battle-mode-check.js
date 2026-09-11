@@ -652,11 +652,12 @@ check('チャレンジ・クイックの供モン一覧はこれまでどおり2
 check('プロだけ供モン候補の画面をはさむ',
   has("if (isProMode(runMode)) {") && has("advanceRunStage('PICK_PRO_ALLIES');")
     && has("{gameState==='PICK_PRO_ALLIES'&&(") && has('<PickProAlliesScreen'));
-check('プロ開始時に有効な前回編成だけを初期選択へ入れる',
+check('プロ開始時は有効な前回編成を初期表示に使うが、勇者の配置距離は毎回選び直す',
   has('setProHeroPreset(savedHero&&lastProParty.heroDistance!==null?{heroBaseId:savedHero.id,heroDistance:lastProParty.heroDistance}:null);')
     && has('lastProParty.allyBaseIds.map(id=>baseMons.find(mon=>mon.id===id)).filter(mon=>mon&&mon.id!==savedHero?.id)')
     && has('selected: proHeroPreset?.heroBaseId===m.id')
-    && has('setupMon(m,proHeroPreset.heroDistance)'));
+    && has("onSelect: ()=>{setProHeroPreset(null);setCurrentPickingMon(m);advanceRunStage('PICK_SLOT');},")
+    && !has('setupMon(m,proHeroPreset.heroDistance)'));
 check('勇者を変更しても有効な前回供モンを残し、同じ種だけ外す',
   has('setProAllyPool(prev=>prev.filter(mon=>mon.id!==m.id));'));
 check('候補が5体そろうまで始められない',

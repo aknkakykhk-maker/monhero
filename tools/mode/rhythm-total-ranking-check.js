@@ -99,8 +99,10 @@ check('壊れた行でも数として扱う',
 check('タブを出している(この曲 / 総合)',
   screen.includes('data-rhythm-ranking-tabs')&&screen.includes("data-rhythm-ranking-tab={tab.id}")
   &&screen.includes("{id:'song',label:'この曲'},")&&screen.includes("{id:'total',label:'総合'}"));
-check('総合タブを初めて開いたときだけ取りにいく',
-  screen.includes("if(tab==='total'&&total.status==='idle')loadRhythmTotalRanking"));
+// ★2026-09-11。押すたびに取り直す形へ変えた(イベントの総合が古いまま残っていたため)
+check('総合タブは押すたびに取り直す',
+  screen.includes("if(tab==='total')loadRhythmTotalRanking&&loadRhythmTotalRanking();")
+  &&!screen.includes("if(tab==='total'&&total.status==='idle')loadRhythmTotalRanking"));
 check('更新ボタンは開いているタブのほうを読み直す',screen.includes('else if(totalTabOpen)loadRhythmTotalRanking'));
 check('自分の記録を上に固定で出す',screen.includes('あなたの記録')&&screen.includes('total.self'));
 check('まだ記録のない曲から曲えらびへ戻れる',screen.includes('data-rhythm-total-remaining'));
