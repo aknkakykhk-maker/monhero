@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 62f31cec6d21293e
+// source-sha256: b2aea4510ee3a7dc
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: db0fcf2876012d15
+// generated-sha256: f2c4365fb2624d3c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 09:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 10:01"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -9783,11 +9783,22 @@ const QUICK_RHYTHM_LINK_PUBLIC_RELEASE = true;
 // 2026-09-08・実機で比べてもらい、マスモンの絵が残る・失敗した HOLD/SLIDE が消える・触った FLICK の帯が残る、を直したうえで
 // ユーザー「問題なし」→ 公開。デバッグ画面の「ノーツの描き方」で「要素」を選べば従来の描き方へ戻せる。
 const RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE = true;
+// モンヒロビートの「総合」ランキング(全曲合算・docs/spec/RHYTHM_RANKING.md §3)。
+// ★集計はSupabase側のビュー(rhythm_total_rankings)が行うので、
+//   docs/sql/rankings/RHYTHM_TOTAL_APPLY.sql を適用するまで中身が出せない。
+//   false のあいだはタブそのものを出さず、ヘルプ・更新履歴・助手の告知もまとめて隠す。
+//   こうしておかないと「説明だけ先に出る」ことになる(CLAUDE.md ⑤)。実際に一度そうしてしまった
+//   (2026-09-11・ユーザー指摘「総合ランキングがまだできてないのにお知らせでできたみたいに書かれてる」)。
+//   SQLを適用して RHYTHM_TOTAL_VERIFY.sql で上位が並ぶことを確かめたら true にする。
+//   true にするときは、ヘルプの助手のひとことも「総合」に触れた文へ変える
+//   (tools/mode/rhythm-total-ranking-check.js が見張る)。
+const RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE = false;
 const RELEASE_FLAGS = {
   speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE,
   rhythmMode: RHYTHM_MODE_PUBLIC_RELEASE,
   quickRhythmLink: QUICK_RHYTHM_LINK_PUBLIC_RELEASE,
-  rhythmCanvasNotes: RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE
+  rhythmCanvasNotes: RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE,
+  rhythmTotalRanking: RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE
 };
 // releaseFlag = そのフラグが立つまで出さない。unreleasedFlag = そのフラグが立ったら出さない。
 // 逆向きの名札が要るのは「準備中です」の案内で、公開したあとも残っていると
@@ -16827,6 +16838,87 @@ const sbFetchRhythmRankings = async (difficultyKeys, limit = RHYTHM_RANKING_FETC
     clearTimeout(timer);
   }
 };
+
+// ===== ブリーダー別 全曲合算ランキング(2026-09-11) =====
+//
+// 「曲ごとのベスト1件(難易度は問わない)を全曲ぶん足した合計」で競う
+// (docs/spec/RHYTHM_RANKING.md §3)。集計は Supabase 側のビュー rhythm_total_rankings が行う。
+//
+// ★端末側で合算しない理由: 合算には全曲・全難易度の記録が要る。1プレイ=1行で増え続ける
+//   うえ曲も増えるので、端末が全部取りにいく作りにすると、記録が貯まるほど確実に
+//   「読み込みが終わらない」状態へ近づく(2026-07に実際に起きている)。集計済みの数十行だけを
+//   受け取る形なら、曲が何曲増えても通信量は変わらない。
+//
+// ★ビューがまだ無い環境(SQL未適用)では404が返る。これはエラーではなく「まだ準備中」として
+//   扱う。そうしておけば、SQLの適用とアプリの公開の順番が前後しても画面が壊れない。
+const RHYTHM_TOTAL_RANKING_SELECT = 'identity_key,user_name,total_score,song_count,level,icon';
+const RHYTHM_TOTAL_RANKING_DISPLAY_LIMIT = 50;
+// 「そのビューはまだ無い」という応答かどうか。通信の失敗や権限の失敗と取り違えない
+//   PGRST205 … Could not find the table 'public.rhythm_total_rankings' in the schema cache
+//   42P01    … relation "public.rhythm_total_rankings" does not exist
+const rhythmTotalRankingMissing = (status, body) => {
+  if (status !== 404 && status !== 400) return false;
+  const text = String(body || '');
+  if (!/rhythm_total_rankings/i.test(text)) return false;
+  return /PGRST205|PGRST200|42P01|does not exist|Could not find the/i.test(text);
+};
+const sbFetchRhythmTotalRankings = async ({
+  limit = RHYTHM_TOTAL_RANKING_DISPLAY_LIMIT,
+  identityKeys = null,
+  requestId = 'untracked'
+} = {}) => {
+  // identityKeys を渡すと、その人の行だけを取りにいく(50位圏外の自分を出すため)
+  const filter = Array.isArray(identityKeys) && identityKeys.length ? `&identity_key=in.(${identityKeys.map(k => encodeURIComponent(`"${k}"`)).join(',')})` : '';
+  const url = `${SUPABASE_URL}/rest/v1/rhythm_total_rankings?select=${RHYTHM_TOTAL_RANKING_SELECT}` + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`;
+  rankingLog(requestId, 'rhythm-total-request-start', {
+    limit,
+    identityKeys,
+    url,
+    view: 'rhythm_total_rankings'
+  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  try {
+    const res = await fetch(url, {
+      headers: SB_HEADERS,
+      signal: controller.signal
+    });
+    const body = await res.text();
+    if (!res.ok) {
+      if (rhythmTotalRankingMissing(res.status, body)) {
+        rankingLog(requestId, 'rhythm-total-view-missing', {
+          status: res.status
+        });
+        const error = new Error('rhythm total ranking view is not ready');
+        error.notReady = true;
+        throw error;
+      }
+      throw new Error(`rhythm total ranking fetch ${res.status} ${res.statusText}; url=${url}; response=${body || '(empty)'}`);
+    }
+    try {
+      return JSON.parse(body);
+    } catch (e) {
+      throw new Error(`invalid JSON; url=${url}; response=${body || '(empty)'}; error=${e.message}`);
+    }
+  } catch (error) {
+    if (error?.name === 'AbortError') throw new Error('rhythm total ranking fetch timed out after 15000ms');
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+};
+// Supabaseの生の行を画面用の形へ整える。合計点・曲数は数として確かめてから使う
+const rhythmTotalRankingEntryFromRow = row => ({
+  identityKey: typeof row?.identity_key === 'string' ? row.identity_key : '',
+  userName: row?.user_name || '名無しのブリーダー',
+  totalScore: Number(row?.total_score) || 0,
+  songCount: Number(row?.song_count) || 0,
+  level: Number(row?.level) || 0,
+  icon: row?.icon ?? null
+});
+// 自分がどの行かを見分けるためのキー。IDがある人はそのID、IDが付く前からの人は name:<名前>。
+// どちらの記録も持っている人がいるので、両方を候補として渡す(§4.4)
+const rhythmTotalRankingSelfKeys = (breederId, breederName) => [typeof breederId === 'string' && breederId ? breederId : null, `name:${breederName || '名無しのブリーダー'}`].filter(Boolean);
 
 // 検査(tools/ranking/rhythm-breeder-id-check.js)からモンビーの送信だけを直接叩けるようにする。
 // 「breeder_id の列がまだ無い環境でもスコアが保存できること」は、実際に1曲遊ばないと通らない
@@ -24442,15 +24534,63 @@ function RhythmMonstersScreen({
 }
 function RhythmRankingScreen({
   loadRhythmRanking,
+  loadRhythmTotalRanking,
   onBackToSongSelect,
+  onGoToSongSelect,
   rankingBreederIcon,
   rhythmRanking,
   rhythmRankingDetail,
-  setRhythmRankingDetail
+  rhythmRankingTab,
+  rhythmTotalRanking,
+  setRhythmRankingDetail,
+  setRhythmRankingTab
 }) {
   // 曲えらびから開いたときの曲を追いかける。曲が5つになったので、
   // ここを固定にすると「別の曲のランキングを見ているのに曲名が違う」ことになる。
   const song = RHYTHM_SONGS.find(entry => entry.songId === rhythmRanking.songId) || rhythmDemoSong(RHYTHM_SONGS);
+  // 「この曲」と「総合(全曲合算)」の出し分け(2026-09-11)。
+  // 画面(gameState)は増やさない。増やすとヘルプの対応表・戻り先・BGMの引き継ぎが
+  // それぞれ別の場所にあるため、どこかで必ず抜ける(CLAUDE.md ⑤)。
+  //
+  // ★公開フラグが立つまでタブごと出さない。集計はSupabase側のビューが行うので、
+  //   SQLを適用するまで中身が無い。機能と案内(ヘルプ・更新履歴・助手の告知)を
+  //   同じフラグでまとめて出し入れし、「説明だけ先に出る」を起こさない。
+  const totalReleased = RELEASE_FLAGS.rhythmTotalRanking === true;
+  const totalTab = totalReleased && rhythmRankingTab === 'total';
+  const total = rhythmTotalRanking || {
+    status: 'idle',
+    entries: [],
+    self: null
+  };
+  // 曲数も理論満点もデータから作る。曲が増えても、ここは書き換えない
+  // (docs/spec/RHYTHM_RANKING.md §5.1)
+  const totalSongCount = rhythmTotalRankingSongCount(RHYTHM_SONGS);
+  const openTab = tab => {
+    setRhythmRankingTab(tab);
+    // 初めて開いたときだけ取りにいく。タブを往復するたびに通信しない
+    if (tab === 'total' && total.status === 'idle') loadRhythmTotalRanking && loadRhythmTotalRanking();
+  };
+  const refresh = () => {
+    if (totalTab) loadRhythmTotalRanking && loadRhythmTotalRanking();else loadRhythmRanking(song);
+  };
+  const totalRow = (entry, rank, mine) => /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-total-row": true,
+    className: `flex items-center gap-2 rounded-2xl border p-2 ${mine ? 'border-amber-300/60 bg-amber-500/10' : 'border-white/10 bg-slate-900/80'}`
+  }, /*#__PURE__*/React.createElement("b", {
+    className: "w-8 shrink-0 text-center text-xs font-black text-amber-200"
+  }, rank ? `${rank}` : '—'), rankingBreederIcon(entry), /*#__PURE__*/React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "truncate text-xs font-black text-white"
+  }, entry.userName), /*#__PURE__*/React.createElement("p", {
+    className: "text-[9px] text-slate-400"
+  }, entry.songCount, " / ", totalSongCount, "\u66F2 \u30FB Lv.", entry.level)), /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 text-right"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "font-mono text-sm font-black text-amber-200"
+  }, entry.totalScore.toLocaleString()), /*#__PURE__*/React.createElement("p", {
+    className: "text-[9px] text-slate-400"
+  }, rhythmTotalRankingProgress(entry.totalScore, RHYTHM_SONGS).toFixed(1), "%")));
   return /*#__PURE__*/React.createElement("main", {
     "data-rhythm-ranking": true,
     className: "flex h-full flex-1 flex-col bg-slate-950 text-white"
@@ -24470,27 +24610,74 @@ function RhythmRankingScreen({
   }, "\uD83C\uDFC6 \u5168\u56FD\u30E9\u30F3\u30AD\u30F3\u30B0"), /*#__PURE__*/React.createElement("button", {
     "aria-label": "\u66F4\u65B0",
     "data-rhythm-ranking-refresh": true,
-    onClick: () => loadRhythmRanking(song),
+    onClick: refresh,
     className: "ml-auto min-h-[44px] px-2 text-[10px] font-black text-amber-200"
-  }, "\u66F4\u65B0")), /*#__PURE__*/React.createElement("div", {
+  }, "\u66F4\u65B0")), totalReleased && /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-ranking-tabs": true,
+    className: "flex shrink-0 gap-1 border-b border-white/10 bg-slate-950/95 px-3 pb-2 pt-1"
+  }, [{
+    id: 'song',
+    label: 'この曲'
+  }, {
+    id: 'total',
+    label: '総合'
+  }].map(tab => /*#__PURE__*/React.createElement("button", {
+    key: tab.id,
+    "data-rhythm-ranking-tab": tab.id,
+    onClick: () => openTab(tab.id),
+    className: `min-h-[44px] flex-1 rounded-xl border px-2 text-[11px] font-black ${rhythmRankingTab === tab.id ? 'border-amber-300/60 bg-amber-500/15 text-amber-100' : 'border-white/10 bg-slate-900/60 text-slate-400'}`
+  }, tab.label))), /*#__PURE__*/React.createElement("div", {
     className: "flex-1 overflow-y-auto mh-scroll px-3 pb-6 pt-3",
     style: {
       paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))'
     }
   }, /*#__PURE__*/React.createElement(RhythmLandscapeHint, {
     className: "mb-3"
-  }), /*#__PURE__*/React.createElement("p", {
+  }), totalTab ? /*#__PURE__*/React.createElement("p", {
     className: "mb-3 rounded-2xl border border-amber-300/40 bg-amber-500/10 p-3 text-[10px] font-bold leading-relaxed text-amber-100"
-  }, "\u300C", song?.displayName || '—', "\u300D\u306EEASY\u301CMASTER\u3092\u307E\u3068\u3081\u305F\u5408\u7B97\u30E9\u30F3\u30AD\u30F3\u30B0\u3067\u3059\u3002\u96E3\u6613\u5EA6\u304C\u9AD8\u3044\u307B\u3069\u6E80\u70B9\u3082\u9AD8\u3044\u305F\u3081\u3001\u9AD8\u3044\u96E3\u6613\u5EA6\u3067\u6311\u3080\u307B\u3069\u4E0A\u4F4D\u306B\u8FD1\u3065\u304D\u307E\u3059\u3002\u81EA\u5206\u306E\u30B9\u30B3\u30A2\u306F\u3044\u3061\u3070\u3093\u9AD8\u30441\u4EF6\u3060\u3051\u304C\u8F09\u308A\u307E\u3059\u3002"), rhythmRanking.status === 'loading' && /*#__PURE__*/React.createElement("p", {
+  }, "\u66F2\u3054\u3068\u306E\u3044\u3061\u3070\u3093\u826F\u3044\u30B9\u30B3\u30A2\u3092\u3001\u5168", totalSongCount, "\u66F2\u3076\u3093\u8DB3\u3057\u5408\u308F\u305B\u305F\u5408\u8A08\u3067\u7AF6\u3046\u30E9\u30F3\u30AD\u30F3\u30B0\u3067\u3059\u3002\u96E3\u6613\u5EA6\u306F\u554F\u3044\u307E\u305B\u3093\uFF08\u9AD8\u3044\u96E3\u6613\u5EA6\u307B\u3069\u6E80\u70B9\u3082\u9AD8\u3044\u306E\u3067\u3001\u4E0A\u3092\u72D9\u3046\u307B\u3069\u6709\u5229\u3067\u3059\uFF09\u3002\u904A\u3093\u3060\u66F2\u304C\u5897\u3048\u308B\u307B\u3069\u5408\u8A08\u3082\u4F38\u3073\u307E\u3059\u3002") : /*#__PURE__*/React.createElement("p", {
+    className: "mb-3 rounded-2xl border border-amber-300/40 bg-amber-500/10 p-3 text-[10px] font-bold leading-relaxed text-amber-100"
+  }, "\u300C", song?.displayName || '—', "\u300D\u306EEASY\u301CMASTER\u3092\u307E\u3068\u3081\u305F\u5408\u7B97\u30E9\u30F3\u30AD\u30F3\u30B0\u3067\u3059\u3002\u96E3\u6613\u5EA6\u304C\u9AD8\u3044\u307B\u3069\u6E80\u70B9\u3082\u9AD8\u3044\u305F\u3081\u3001\u9AD8\u3044\u96E3\u6613\u5EA6\u3067\u6311\u3080\u307B\u3069\u4E0A\u4F4D\u306B\u8FD1\u3065\u304D\u307E\u3059\u3002\u81EA\u5206\u306E\u30B9\u30B3\u30A2\u306F\u3044\u3061\u3070\u3093\u9AD8\u30441\u4EF6\u3060\u3051\u304C\u8F09\u308A\u307E\u3059\u3002"), totalTab && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(AssistantBubble, {
+    scene: "rhythmTotalRanking",
+    compact: true
+  }), total.status === 'loading' && /*#__PURE__*/React.createElement("p", {
+    "data-rhythm-total-loading": true,
+    className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
+  }, "\u8AAD\u307F\u8FBC\u307F\u4E2D\u2026"), total.status === 'notReady' && /*#__PURE__*/React.createElement("p", {
+    "data-rhythm-total-not-ready": true,
+    className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
+  }, "\u7DCF\u5408\u30E9\u30F3\u30AD\u30F3\u30B0\u306F\u305F\u3060\u3044\u307E\u6E96\u5099\u4E2D\u3067\u3059\u3002\u3082\u3046\u3057\u3070\u3089\u304F\u304A\u5F85\u3061\u304F\u3060\u3055\u3044\u3002"), total.status === 'error' && /*#__PURE__*/React.createElement("p", {
+    "data-rhythm-total-error": true,
+    className: "rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200"
+  }, "\u8AAD\u307F\u8FBC\u3081\u307E\u305B\u3093\u3067\u3057\u305F\u3002\u96FB\u6CE2\u306E\u826F\u3044\u5834\u6240\u3067\u300C\u66F4\u65B0\u300D\u3092\u304A\u8A66\u3057\u304F\u3060\u3055\u3044\u3002"), total.status === 'ready' && /*#__PURE__*/React.createElement(React.Fragment, null, total.self && /*#__PURE__*/React.createElement("div", {
+    className: "mb-3"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "mb-1 text-[9px] font-black text-amber-200"
+  }, "\u3042\u306A\u305F\u306E\u8A18\u9332"), totalRow(total.self, total.self.rank, true), total.self.songCount < totalSongCount && /*#__PURE__*/React.createElement("button", {
+    "data-rhythm-total-remaining": true,
+    onClick: onGoToSongSelect,
+    className: "mt-2 w-full min-h-[44px] rounded-xl border border-amber-300/40 bg-slate-900/70 px-3 text-[10px] font-black text-amber-100"
+  }, "\u307E\u3060\u8A18\u9332\u306E\u306A\u3044\u66F2\u304C ", totalSongCount - total.self.songCount, " \u66F2\u3042\u308A\u307E\u3059 \u25B6 \u66F2\u3092\u3048\u3089\u3076")), !total.self && /*#__PURE__*/React.createElement("p", {
+    "data-rhythm-total-self-empty": true,
+    className: "mb-3 rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-center text-[10px] text-slate-300"
+  }, "\u307E\u3060\u3042\u306A\u305F\u306E\u8A18\u9332\u304C\u3042\u308A\u307E\u305B\u3093\u30021\u66F2\u3067\u3082\u904A\u3076\u3068\u3053\u3053\u306B\u8F09\u308A\u307E\u3059\u3002"), total.entries.length === 0 && /*#__PURE__*/React.createElement("p", {
+    "data-rhythm-total-empty": true,
+    className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
+  }, "\u307E\u3060\u8A18\u9332\u304C\u3042\u308A\u307E\u305B\u3093\u3002\u6700\u521D\u306E1\u4EF6\u306B\u306A\u3063\u3066\u307F\u307E\u3057\u3087\u3046\u3002"), total.entries.length > 0 && /*#__PURE__*/React.createElement("ol", {
+    "data-rhythm-total-list": true,
+    className: "space-y-2"
+  }, total.entries.map((entry, index) => /*#__PURE__*/React.createElement("li", {
+    key: `${entry.identityKey}-${index}`
+  }, totalRow(entry, index + 1, !!total.self && entry.identityKey === total.self.identityKey)))))), !totalTab && rhythmRanking.status === 'loading' && /*#__PURE__*/React.createElement("p", {
     "data-rhythm-ranking-loading": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
-  }, "\u8AAD\u307F\u8FBC\u307F\u4E2D\u2026"), rhythmRanking.status === 'error' && /*#__PURE__*/React.createElement("p", {
+  }, "\u8AAD\u307F\u8FBC\u307F\u4E2D\u2026"), !totalTab && rhythmRanking.status === 'error' && /*#__PURE__*/React.createElement("p", {
     "data-rhythm-ranking-error": true,
     className: "rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200"
-  }, "\u8AAD\u307F\u8FBC\u3081\u307E\u305B\u3093\u3067\u3057\u305F\u3002\u96FB\u6CE2\u306E\u826F\u3044\u5834\u6240\u3067\u300C\u66F4\u65B0\u300D\u3092\u304A\u8A66\u3057\u304F\u3060\u3055\u3044\u3002"), rhythmRanking.status === 'ready' && rhythmRanking.entries.length === 0 && /*#__PURE__*/React.createElement("p", {
+  }, "\u8AAD\u307F\u8FBC\u3081\u307E\u305B\u3093\u3067\u3057\u305F\u3002\u96FB\u6CE2\u306E\u826F\u3044\u5834\u6240\u3067\u300C\u66F4\u65B0\u300D\u3092\u304A\u8A66\u3057\u304F\u3060\u3055\u3044\u3002"), !totalTab && rhythmRanking.status === 'ready' && rhythmRanking.entries.length === 0 && /*#__PURE__*/React.createElement("p", {
     "data-rhythm-ranking-empty": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
-  }, "\u307E\u3060\u8A18\u9332\u304C\u3042\u308A\u307E\u305B\u3093\u3002\u6700\u521D\u306E1\u4EF6\u306B\u306A\u3063\u3066\u307F\u307E\u3057\u3087\u3046\u3002"), rhythmRanking.status === 'ready' && rhythmRanking.entries.length > 0 && /*#__PURE__*/React.createElement("ol", {
+  }, "\u307E\u3060\u8A18\u9332\u304C\u3042\u308A\u307E\u305B\u3093\u3002\u6700\u521D\u306E1\u4EF6\u306B\u306A\u3063\u3066\u307F\u307E\u3057\u3087\u3046\u3002"), !totalTab && rhythmRanking.status === 'ready' && rhythmRanking.entries.length > 0 && /*#__PURE__*/React.createElement("ol", {
     "data-rhythm-ranking-list": true,
     className: "space-y-2"
   }, rhythmRanking.entries.map((entry, index) => /*#__PURE__*/React.createElement("li", {
@@ -32626,6 +32813,81 @@ function MonsterHeroGame() {
     };
   }, [rhythmPreviewTrackId, rhythmSettings.bgmVolume]);
   const [rhythmRankingDetail, setRhythmRankingDetail] = useState(null);
+  // ブリーダー別 全曲合算ランキング(2026-09-11)。集計はSupabase側のビューが行い、
+  // ここは受け取って並べるだけ(docs/spec/RHYTHM_RANKING.md §3)。
+  // status:'notReady' は「ビューをまだ作っていない」状態。SQLの適用とアプリの公開の
+  // 順番が前後しても画面が壊れないよう、エラーではなく準備中として扱う。
+  // 'song' = この曲のランキング / 'total' = 全曲合算
+  const [rhythmRankingTab, setRhythmRankingTab] = useState('song');
+  const [rhythmTotalRanking, setRhythmTotalRanking] = useState({
+    status: 'idle',
+    entries: [],
+    self: null,
+    error: null
+  });
+  const rhythmTotalRankingRequestRef = useRef(0);
+  const loadRhythmTotalRanking = useCallback(async () => {
+    const requestId = ++rhythmTotalRankingRequestRef.current;
+    setRhythmTotalRanking(prev => ({
+      ...prev,
+      status: 'loading',
+      error: null
+    }));
+    try {
+      const breederId = await ensureBreederId();
+      const selfKeys = rhythmTotalRankingSelfKeys(breederId, breederName);
+      const rows = await sbFetchRhythmTotalRankings({
+        requestId: `rhythm-total-${Date.now()}`
+      });
+      if (rhythmTotalRankingRequestRef.current !== requestId) return;
+      const entries = (Array.isArray(rows) ? rows : []).map(rhythmTotalRankingEntryFromRow);
+      // 自分が上位に入っていればその順位を使う。入っていなければ自分の行だけ取りにいく
+      const selfIndex = entries.findIndex(entry => selfKeys.includes(entry.identityKey));
+      let self = selfIndex >= 0 ? {
+        ...entries[selfIndex],
+        rank: selfIndex + 1
+      } : null;
+      if (!self) {
+        const mine = await sbFetchRhythmTotalRankings({
+          limit: selfKeys.length,
+          identityKeys: selfKeys,
+          requestId: `rhythm-total-self-${Date.now()}`
+        });
+        if (rhythmTotalRankingRequestRef.current !== requestId) return;
+        const mineEntries = (Array.isArray(mine) ? mine : []).map(rhythmTotalRankingEntryFromRow);
+        // IDのある記録と、IDが付く前の記録の両方を持っている人がいる。合計の高いほうを自分とする
+        const best = mineEntries.sort((a, b) => b.totalScore - a.totalScore)[0];
+        if (best) self = {
+          ...best,
+          rank: null
+        };
+      }
+      setRhythmTotalRanking({
+        status: 'ready',
+        entries,
+        self,
+        error: null
+      });
+    } catch (e) {
+      if (rhythmTotalRankingRequestRef.current !== requestId) return;
+      if (e?.notReady) {
+        setRhythmTotalRanking({
+          status: 'notReady',
+          entries: [],
+          self: null,
+          error: null
+        });
+        return;
+      }
+      console.error('[rhythm-total-ranking] fetch failed:', e && e.message ? e.message : e);
+      setRhythmTotalRanking({
+        status: 'error',
+        entries: [],
+        self: null,
+        error: e?.message || String(e)
+      });
+    }
+  }, [breederName]);
   const rhythmRankingRequestRef = useRef(0);
   // 難易度合算(体験版で遊べる難易度をまとめて取得)のランキングを読み込む。
   // 同じユーザーの複数行は読み込み側で最高得点の1件だけへ畳む(rhythmRankingDedupeByUser)。
@@ -48796,11 +49058,16 @@ function MonsterHeroGame() {
       setRhythmMonsterPickerOpen: setRhythmMonsterPickerOpen
     }), gameState === 'RHYTHM_RANKING' && /*#__PURE__*/React.createElement(RhythmRankingScreen, {
       loadRhythmRanking: loadRhythmRanking,
+      loadRhythmTotalRanking: loadRhythmTotalRanking,
       onBackToSongSelect: () => setGameState('RHYTHM_DEMO_HOME'),
+      onGoToSongSelect: () => setGameState('RHYTHM_DEMO_HOME'),
       rankingBreederIcon: rankingBreederIcon,
       rhythmRanking: rhythmRanking,
       rhythmRankingDetail: rhythmRankingDetail,
-      setRhythmRankingDetail: setRhythmRankingDetail
+      rhythmRankingTab: rhythmRankingTab,
+      rhythmTotalRanking: rhythmTotalRanking,
+      setRhythmRankingDetail: setRhythmRankingDetail,
+      setRhythmRankingTab: setRhythmRankingTab
     }), gameState === 'RHYTHM_DEBUG' && /*#__PURE__*/React.createElement("main", {
       "data-rhythm-debug-screen": true,
       className: "flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white",
