@@ -1782,11 +1782,22 @@ function slidePathFor(reserved,startLane,width,P,onset){
   // 「MASTERがいちばん厳しい」状態がそのまま戻る。
   // 基準の太さが1のノーツ(細いSLIDE)だけは1のままにする。
   const floorWidth=Math.min(width,2);
+  // 【太る方向へも1段だけ出す】(2026-09-12・実曲で確かめて判明)
+  // 細くする方向だけだと、基準の太さが下限と同じ難易度では**1本も変化が出ない**。
+  // 実際 six_eternel_beat の MASTER は基準幅2＝下限2で、SLIDE 14本すべて太さ一定だった
+  // (HARD 8/10本・EXPERT 8/12本は変化していた)。
+  // 太くなる向きは追従の許容が広がる側なので、難しくはならない。
+  // 上限はその難易度が持っている太さの範囲(PROFILES.widths)の中で基準+1段まで。
+  const ceilWidth=Math.min(available[available.length-1],width+1);
+  // shape は 0.55〜1.0 を返す。真ん中(0.775)を基準の太さに合わせ、
+  // 上下へ同じだけ振る。こうすると steady 以外は必ず細い側と太い側の両方を使う。
+  const SHAPE_MID=.775;
   const widthAt=t=>{
-    const scaled=width*shape(Math.max(0,Math.min(1,t)));
+    const shaped=shape(Math.max(0,Math.min(1,t)));
+    const scaled=width+(shaped-SHAPE_MID)/(1-SHAPE_MID);
     let best=available[0];
     for(const candidate of available)if(Math.abs(candidate-scaled)<Math.abs(best-scaled))best=candidate;
-    return Math.max(floorWidth,Math.min(width,best));
+    return Math.max(floorWidth,Math.min(ceilWidth,best));
   };
   const lastIndex=heights.length-1;
   // 刻みを粗くすると、音がいちばん高い/低いところを飛び越えてしまい、
