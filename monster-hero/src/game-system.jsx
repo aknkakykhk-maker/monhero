@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2b6cf000c5f7f715
+// generated-sha256: 64a3a253e16f4c58
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 10:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 11:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5592,7 +5592,16 @@ const RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE = true;
 // 2026-09-11・ユーザーが RHYTHM_TOTAL_APPLY.sql を適用し、13人・1位16,485,177点が並ぶことを
 // 確かめたうえで公開。タブ・ヘルプ・更新履歴・助手の告知がここで同時に出る。
 const RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE = true;
-const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE };
+// モンヒロビートの「週間ランキング」(docs/spec/RHYTHM_RANKING.md §6。フェーズ3)。
+// ★期間の窓(rhythm_week_window)と期間×対象曲の集計(rhythm_event_song_bests /
+//   rhythm_event_totals)はSupabase側に置くので、
+//   docs/sql/rankings/RHYTHM_EVENT_APPLY.sql を適用するまで中身が出せない。
+//   false のあいだはイベントタブも曲えらびの案内も出さず、ヘルプ・更新履歴・助手の告知も
+//   まとめて隠す。総合ランキングのときに一度「まだ遊べないのにお知らせだけ出た」を
+//   やってしまっているので、同じことを繰り返さない(CLAUDE.md ⑤)。
+//   SQLを適用して RHYTHM_EVENT_VERIFY.sql で今週の窓と順位が並ぶことを確かめたら true にする。
+const RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE = false;
+const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE, rhythmWeeklyRanking:RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE };
 // releaseFlag = そのフラグが立つまで出さない。unreleasedFlag = そのフラグが立ったら出さない。
 // 逆向きの名札が要るのは「準備中です」の案内で、公開したあとも残っていると
 // 遊べているのに準備中の項目が並ぶ(ヘルプのモンヒロビートで実際にそうなっていた・2026-09-06)。
@@ -9896,6 +9905,122 @@ const rhythmTotalRankingSelfKeys = (breederId, breederName) => [
   `name:${breederName || '名無しのブリーダー'}`,
 ].filter(Boolean);
 
+// ===== 週間ランキング / イベントランキング(2026-09-11) =====
+//
+// 週間は「その週のあいだに出した記録だけ」で競う(docs/spec/RHYTHM_RANKING.md §6)。
+// 常設の合算(rhythm_total_rankings)とは別枠で、互いに影響しない。
+//
+// ★期間の正本はサーバー。rhythm_week_window から今週の始まり・終わりを受け取る。
+//   端末の時計を進めても週は変わらない(§6.1)。残り時間の見た目だけ端末時計で数える。
+// ★対象曲はクライアント側の静的データ(data/rhythm-event.js)。Supabase側は
+//   「期間×曲ごとの集計」までを汎用に返し、どの曲を対象にするかは知らない(§6.4)。
+//   そのおかげで、イベントを差し替えるのにSQLを触らなくて済む。
+// ★関数がまだ無い環境(SQL未適用)では404が返る。合算と同じく「準備中」として扱い、
+//   SQLの適用とアプリの公開の順番が前後しても画面が壊れないようにする。
+const RHYTHM_EVENT_RANKING_DISPLAY_LIMIT = 50;
+const RHYTHM_EVENT_SONG_SELECT = 'identity_key,user_name,song_id,difficulty_id,score,scored_at,level,icon';
+const RHYTHM_EVENT_TOTAL_SELECT = 'identity_key,user_name,total_score,song_count,last_scored_at,level,icon';
+// 「そのビュー・関数はまだ無い」という応答かどうか。通信の失敗や権限の失敗と取り違えない
+//   PGRST202 … Could not find the function public.rhythm_event_totals(...) in the schema cache
+//   PGRST205 … Could not find the table 'public.rhythm_week_window' in the schema cache
+//   42P01 / 42883 … relation / function does not exist
+const rhythmEventRankingMissing = (status, body) => {
+  if (status !== 404 && status !== 400) return false;
+  const text = String(body || '');
+  if (!/rhythm_week_window|rhythm_event_song_bests|rhythm_event_totals/i.test(text)) return false;
+  return /PGRST202|PGRST205|PGRST200|42P01|42883|does not exist|Could not find the/i.test(text);
+};
+const rhythmEventNotReadyError = () => {
+  const error = new Error('rhythm event ranking is not ready');
+  error.notReady = true;
+  return error;
+};
+// 取得の共通部分。集計済みの行しか返ってこないので、待ち時間は合算と同じ15秒で足りる
+const sbFetchRhythmEventRows = async ({ url, body = null, label, requestId = 'untracked' }) => {
+  rankingLog(requestId, `${label}-request-start`, { url, body });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  try {
+    const res = await fetch(url, body
+      ? { method: 'POST', headers: SB_HEADERS, body: JSON.stringify(body), signal: controller.signal }
+      : { headers: SB_HEADERS, signal: controller.signal });
+    const text = await res.text();
+    if (!res.ok) {
+      if (rhythmEventRankingMissing(res.status, text)) {
+        rankingLog(requestId, `${label}-not-ready`, { status: res.status });
+        throw rhythmEventNotReadyError();
+      }
+      throw new Error(`${label} fetch ${res.status} ${res.statusText}; url=${url}; response=${text || '(empty)'}`);
+    }
+    try {
+      return JSON.parse(text);
+    } catch (e) {
+      throw new Error(`invalid JSON; url=${url}; response=${text || '(empty)'}; error=${e.message}`);
+    }
+  } catch (error) {
+    if (error?.name === 'AbortError') throw new Error(`${label} fetch timed out after 15000ms`);
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+};
+// 今週の始まり・終わり(月曜5:00 JST区切り)。1行だけ返る
+const sbFetchRhythmWeekWindow = async ({ requestId = 'untracked' } = {}) => {
+  const rows = await sbFetchRhythmEventRows({
+    url: `${SUPABASE_URL}/rest/v1/rhythm_week_window?select=week_start,week_end&limit=1`,
+    label: 'rhythm-week-window', requestId,
+  });
+  const row = Array.isArray(rows) ? rows[0] : null;
+  const startMs = Date.parse(String(row?.week_start || ''));
+  const endMs = Date.parse(String(row?.week_end || ''));
+  // 値が読めないときは「準備中」に倒す。端末時計で代用すると、サーバーと違う期間の
+  // 順位を「今週」として見せてしまう(期間の正本はサーバー・§6.1)
+  if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs <= startMs) throw rhythmEventNotReadyError();
+  return { startMs, endMs };
+};
+// 期間×対象曲の「曲ごとベスト」。部門1つぶん(=曲1つぶん)を取りにいく
+const sbFetchRhythmEventSongBests = async ({ songId, fromMs, toMs, limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' }) => {
+  const filter = Array.isArray(identityKeys) && identityKeys.length
+    ? `&identity_key=in.(${identityKeys.map(k => encodeURIComponent(`"${k}"`)).join(',')})`
+    : '';
+  return sbFetchRhythmEventRows({
+    url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_song_bests?select=${RHYTHM_EVENT_SONG_SELECT}`
+      + `&order=score.desc,scored_at.asc&limit=${limit}${filter}`,
+    body: { song_ids: [songId], from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() },
+    label: 'rhythm-event-song', requestId,
+  });
+};
+// 期間×対象曲の「総合」。対象曲それぞれのその週のベストを単純合算したもの(§6.3)
+const sbFetchRhythmEventTotals = async ({ songIds, fromMs, toMs, limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' }) => {
+  const filter = Array.isArray(identityKeys) && identityKeys.length
+    ? `&identity_key=in.(${identityKeys.map(k => encodeURIComponent(`"${k}"`)).join(',')})`
+    : '';
+  return sbFetchRhythmEventRows({
+    url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals?select=${RHYTHM_EVENT_TOTAL_SELECT}`
+      + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
+    body: { song_ids: songIds, from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() },
+    label: 'rhythm-event-total', requestId,
+  });
+};
+// 生の行を画面用の形へ整える。壊れた値でも落ちないよう、数として確かめてから使う
+const rhythmEventSongEntryFromRow = (row) => ({
+  identityKey: typeof row?.identity_key === 'string' ? row.identity_key : '',
+  userName: row?.user_name || '名無しのブリーダー',
+  songId: typeof row?.song_id === 'string' ? row.song_id : '',
+  difficultyId: typeof row?.difficulty_id === 'string' ? row.difficulty_id : '',
+  score: Number(row?.score) || 0,
+  level: Number(row?.level) || 0,
+  icon: row?.icon ?? null,
+});
+const rhythmEventTotalEntryFromRow = (row) => ({
+  identityKey: typeof row?.identity_key === 'string' ? row.identity_key : '',
+  userName: row?.user_name || '名無しのブリーダー',
+  totalScore: Number(row?.total_score) || 0,
+  songCount: Number(row?.song_count) || 0,
+  level: Number(row?.level) || 0,
+  icon: row?.icon ?? null,
+});
+
 // 検査(tools/ranking/rhythm-breeder-id-check.js)からモンビーの送信だけを直接叩けるようにする。
 // 「breeder_id の列がまだ無い環境でもスコアが保存できること」は、実際に1曲遊ばないと通らない
 // 経路だと確かめるのに何分もかかるうえ、落ちたときの被害(記録が1件も残らない)が大きい。
@@ -13258,18 +13383,23 @@ function RhythmInfoScreen({
 }
 
 function RhythmSongSelectScreen({
-  catchingUp, difficulty, dismissQuickRhythmBackground, handleGiveUp, mainHero,
-  onExit, onOpenHelp, onOpenMonsterSlots, onOpenOptions, onOpenRanking,
+  catchingUp, difficulty, dismissQuickRhythmBackground, dismissRhythmEventNotice, handleGiveUp, mainHero,
+  onExit, onOpenEventRanking, onOpenHelp, onOpenMonsterSlots, onOpenOptions, onOpenRanking,
   onPlaySong, quickClearCounts, quickRhythmBackgroundVisible, quickRunDetailOpen, quickRunFinishReasonText,
   quickRunPendingRewards, quickRunProgress, quickRunResumable, quickRunStartError, quickRunStopConfirm,
   repeatTemplateForNewRun, resultProcessing, resumeQuickRunFromRhythm, returnToBackgroundRun, returnToHome,
-  rhythmBackgroundRun, rhythmBestRecords, rhythmSelectView, rhythmSelectedDifficultyId, rhythmSelectedSongId,
+  rhythmBackgroundRun, rhythmBestRecords, rhythmEventNotice, rhythmSelectView, rhythmSelectedDifficultyId, rhythmSelectedSongId,
   rhythmSongListScrollRef, runStage, runStageRef, saveRhythmSelectView, setQuickRunDetailOpen,
   setQuickRunStartError, setQuickRunStopConfirm, setRhythmSelectedDifficultyId, setRhythmSelectedSongId, spotClass,
   startQuickRunFromRhythm, wave,
 }) {
       const songs=rhythmDemoSongs(RHYTHM_SONGS);
       const difficulties=rhythmDemoDifficultyList(RHYTHM_DIFFICULTIES);
+      // 今週の対象曲の名前。曲名はデータから引くので、ここに書き写さない。
+      // 副題まで入れるのは rhythmSongFullName の役目(原曲とリミックスが同じ displayName を持つため)
+      const eventSongTitles=rhythmEventNotice
+        ?rhythmEventNotice.songIds.map(songId=>rhythmSongFullName(rhythmEventSong(songId,RHYTHM_SONGS))||songId)
+        :[];
       // ===== クイック∞周回の進捗(docs/spec/QUICK_RHYTHM_LINK.md PR6) =====
       // 1行の帯は、縦持ちならヘッダーの下、横持ちならヘッダーの空きへ入れる。
       // 横は上のタブに余白があるので、そこを使えば曲の一覧を押し下げずに済む
@@ -13412,6 +13542,20 @@ function RhythmSongSelectScreen({
                   className="mt-1.5 min-h-[44px] w-full rounded-xl border border-white/15 text-[10px] font-black text-slate-400 active:scale-[.98]">⏹ ここで周回をやめる</button>)}
           </div>}
         </div>}
+        {/* 週間ランキングの「今週の対象曲」案内(docs/spec/RHYTHM_RANKING.md §10.2)。
+            その週の初回に1度だけ出す。閉じるか、その週にもう一度見たら出ない。
+            ★ヘルプと更新履歴は探しに行った人しか読まないので、画面のなかでも伝える(CLAUDE.md ⑤) */}
+        {rhythmEventNotice&&<div data-rhythm-event-notice className="shrink-0 border-b border-fuchsia-400/20 bg-slate-950/90 px-2 py-1">
+          <div className="flex items-start gap-1">
+            <div className="min-w-0 flex-1">
+              <AssistantBubble scene="rhythmWeeklyEvent" compact/>
+              <p className="mt-1 truncate text-[10px] font-black text-fuchsia-100">今週の対象曲：{eventSongTitles.join(' ／ ')}</p>
+              <button type="button" data-rhythm-event-notice-open onClick={onOpenEventRanking}
+                className="mt-1 min-h-[44px] w-full rounded-xl border border-fuchsia-400/40 px-2 text-[10px] font-black text-fuchsia-200 active:scale-[.98]">🏆 週間ランキングを見る</button>
+            </div>
+            <button type="button" data-rhythm-event-notice-close onClick={dismissRhythmEventNotice} aria-label="この案内を閉じる" className="min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black">×</button>
+          </div>
+        </div>}
         {/* 裏で周回したままモンビーを開いた最初の1回だけ(PR8) */}
         {quickRhythmBackgroundVisible&&<div data-quick-rhythm-background className="shrink-0 border-b border-fuchsia-400/20 bg-slate-950/90 px-2 py-1">
           <div className="flex items-start gap-1">
@@ -13553,9 +13697,10 @@ function RhythmMonstersScreen({
 }
 
 function RhythmRankingScreen({
-  loadRhythmRanking, loadRhythmTotalRanking, onBackToSongSelect, onGoToSongSelect,
-  rankingBreederIcon, rhythmRanking, rhythmRankingDetail, rhythmRankingTab, rhythmTotalRanking,
-  setRhythmRankingDetail, setRhythmRankingTab,
+  loadRhythmEventRanking, loadRhythmRanking, loadRhythmTotalRanking, onBackToSongSelect, onGoToSongSelect,
+  rankingBreederIcon, rhythmEventDivision, rhythmEventRanking, rhythmRanking, rhythmRankingDetail,
+  rhythmRankingTab, rhythmTotalRanking,
+  setRhythmEventDivision, setRhythmRankingDetail, setRhythmRankingTab,
 }) {
       // 曲えらびから開いたときの曲を追いかける。曲が5つになったので、
       // ここを固定にすると「別の曲のランキングを見ているのに曲名が違う」ことになる。
@@ -13573,12 +13718,53 @@ function RhythmRankingScreen({
       // 曲数も理論満点もデータから作る。曲が増えても、ここは書き換えない
       // (docs/spec/RHYTHM_RANKING.md §5.1)
       const totalSongCount=rhythmTotalRankingSongCount(RHYTHM_SONGS);
+      // 週間ランキング(2026-09-11・docs/spec/RHYTHM_RANKING.md §6)。
+      // ★ここも公開フラグが立つまでタブごと出さない。期間の窓と集計はSupabase側の
+      //   ビュー・関数が行うので、SQLを適用するまで中身が出せない(総合タブと同じ考え方)。
+      // ★部門(対象曲ごと＋総合)の数は対象曲の数から作る。3曲でも5曲でも画面は書き換えない。
+      const eventReleased=RELEASE_FLAGS.rhythmWeeklyRanking===true;
+      const eventTab=eventReleased&&rhythmRankingTab==='event';
+      const songTab=!totalTab&&!eventTab;
+      const event=rhythmEventRanking||{status:'idle',window:null,event:null,boards:{}};
+      const eventDefinition=event.event||null;
+      const eventDivisions=eventDefinition?rhythmEventDivisions(eventDefinition,RHYTHM_SONGS):[];
+      const eventDivisionId=eventDivisions.some(division=>division.id===rhythmEventDivision)
+        ?rhythmEventDivision:RHYTHM_EVENT_TOTAL_DIVISION;
+      const eventBoard=(event.boards&&event.boards[eventDivisionId])||{status:'idle',entries:[],self:null};
+      const eventSongId=rhythmEventDivisionSongId(eventDivisionId);
+      const eventRange=rhythmEventWindow(eventDefinition,event.window);
+      const eventSongCount=eventDefinition?eventDefinition.songIds.length:0;
+      // 残り時間だけは端末の時計で数える(1秒ごとにサーバーへ聞きに行かないため・§6.1)。
+      // 30秒ごとに数え直せば「残り ◯時間 ◯分」の表示には足りる
+      const [eventNowMs,setEventNowMs]=React.useState(()=>Date.now());
+      React.useEffect(()=>{
+        if(!eventTab)return undefined;
+        setEventNowMs(Date.now());
+        const timer=setInterval(()=>setEventNowMs(Date.now()),30000);
+        return ()=>clearInterval(timer);
+      },[eventTab]);
+      const rankingTabs=[
+        {id:'song',label:'この曲'},
+        ...(totalReleased?[{id:'total',label:'総合'}]:[]),
+        ...(eventReleased?[{id:'event',label:'イベント'}]:[]),
+      ];
       const openTab=(tab)=>{
         setRhythmRankingTab(tab);
         // 初めて開いたときだけ取りにいく。タブを往復するたびに通信しない
         if(tab==='total'&&total.status==='idle')loadRhythmTotalRanking&&loadRhythmTotalRanking();
+        if(tab==='event'&&event.status==='idle')loadRhythmEventRanking&&loadRhythmEventRanking(eventDivisionId);
       };
-      const refresh=()=>{ if(totalTab)loadRhythmTotalRanking&&loadRhythmTotalRanking(); else loadRhythmRanking(song); };
+      // 部門も、初めて開いたときだけ取りにいく
+      const openDivision=(divisionId)=>{
+        setRhythmEventDivision&&setRhythmEventDivision(divisionId);
+        const board=event.boards&&event.boards[divisionId];
+        if(!board||board.status==='idle')loadRhythmEventRanking&&loadRhythmEventRanking(divisionId);
+      };
+      const refresh=()=>{
+        if(eventTab)loadRhythmEventRanking&&loadRhythmEventRanking(eventDivisionId);
+        else if(totalTab)loadRhythmTotalRanking&&loadRhythmTotalRanking();
+        else loadRhythmRanking(song);
+      };
       const totalRow=(entry,rank,mine)=>(
         <div data-rhythm-total-row className={`flex items-center gap-2 rounded-2xl border p-2 ${mine?'border-amber-300/60 bg-amber-500/10':'border-white/10 bg-slate-900/80'}`}>
           <b className="w-8 shrink-0 text-center text-xs font-black text-amber-200">{rank?`${rank}`:'—'}</b>
@@ -13593,6 +13779,36 @@ function RhythmRankingScreen({
           </div>
         </div>
       );
+      // イベントの「対象曲」部門の1行。難易度は問わないので、遊んだ難易度も出す
+      const eventSongRow=(entry,rank,mine)=>(
+        <div data-rhythm-event-row className={`flex items-center gap-2 rounded-2xl border p-2 ${mine?'border-fuchsia-300/60 bg-fuchsia-500/10':'border-white/10 bg-slate-900/80'}`}>
+          <b className="w-8 shrink-0 text-center text-xs font-black text-fuchsia-200">{rank?`${rank}`:'—'}</b>
+          {rankingBreederIcon(entry)}
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-xs font-black text-white">{entry.userName}</p>
+            <p className="text-[9px] text-slate-400">{RHYTHM_DEMO_DIFFICULTY_LABELS[entry.difficultyId]?.name||entry.difficultyId||'-'} ・ Lv.{entry.level}</p>
+          </div>
+          <div className="shrink-0 text-right">
+            <p className="font-mono text-sm font-black text-fuchsia-100">{entry.score.toLocaleString()}</p>
+            <p className={`text-[10px] font-black ${RHYTHM_RANK_COLORS[rhythmRankForScore(entry.score)]}`}>{rhythmRankForScore(entry.score)}</p>
+          </div>
+        </div>
+      );
+      // イベントの「総合」部門の1行。分母は対象曲の数から作る(曲数を書き写さない)
+      const eventTotalRow=(entry,rank,mine)=>(
+        <div data-rhythm-event-row className={`flex items-center gap-2 rounded-2xl border p-2 ${mine?'border-fuchsia-300/60 bg-fuchsia-500/10':'border-white/10 bg-slate-900/80'}`}>
+          <b className="w-8 shrink-0 text-center text-xs font-black text-fuchsia-200">{rank?`${rank}`:'—'}</b>
+          {rankingBreederIcon(entry)}
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-xs font-black text-white">{entry.userName}</p>
+            <p className="text-[9px] text-slate-400">{entry.songCount} / {eventSongCount}曲 ・ Lv.{entry.level}</p>
+          </div>
+          <div className="shrink-0 text-right">
+            <p className="font-mono text-sm font-black text-fuchsia-100">{entry.totalScore.toLocaleString()}</p>
+          </div>
+        </div>
+      );
+      const eventRow=(entry,rank,mine)=>eventSongId?eventSongRow(entry,rank,mine):eventTotalRow(entry,rank,mine);
       return (
       <main data-rhythm-ranking className="flex h-full flex-1 flex-col bg-slate-950 text-white">
         <header className="z-10 flex shrink-0 items-center gap-2 border-b border-amber-400/15 bg-slate-950/95 px-3 py-1" style={{paddingTop:'calc(0.25rem + env(safe-area-inset-top))'}}>
@@ -13601,8 +13817,8 @@ function RhythmRankingScreen({
           <button aria-label="更新" data-rhythm-ranking-refresh onClick={refresh} className="ml-auto min-h-[44px] px-2 text-[10px] font-black text-amber-200">更新</button>
         </header>
         {/* タブ。押したときに初めて取りにいく。公開前はタブごと出さない */}
-        {totalReleased&&<div data-rhythm-ranking-tabs className="flex shrink-0 gap-1 border-b border-white/10 bg-slate-950/95 px-3 pb-2 pt-1">
-          {[{id:'song',label:'この曲'},{id:'total',label:'総合'}].map(tab=>(
+        {rankingTabs.length>1&&<div data-rhythm-ranking-tabs className="flex shrink-0 gap-1 border-b border-white/10 bg-slate-950/95 px-3 pb-2 pt-1">
+          {rankingTabs.map(tab=>(
             <button key={tab.id} data-rhythm-ranking-tab={tab.id} onClick={()=>openTab(tab.id)}
               className={`min-h-[44px] flex-1 rounded-xl border px-2 text-[11px] font-black ${rhythmRankingTab===tab.id?'border-amber-300/60 bg-amber-500/15 text-amber-100':'border-white/10 bg-slate-900/60 text-slate-400'}`}>
               {tab.label}
@@ -13611,11 +13827,17 @@ function RhythmRankingScreen({
         </div>}
         <div className="flex-1 overflow-y-auto mh-scroll px-3 pb-6 pt-3" style={{paddingBottom:'calc(1.5rem + env(safe-area-inset-bottom))'}}>
           <RhythmLandscapeHint className="mb-3"/>
-          {totalTab?(
+          {totalTab&&(
             <p className="mb-3 rounded-2xl border border-amber-300/40 bg-amber-500/10 p-3 text-[10px] font-bold leading-relaxed text-amber-100">
               曲ごとのいちばん良いスコアを、全{totalSongCount}曲ぶん足し合わせた合計で競うランキングです。難易度は問いません（高い難易度ほど満点も高いので、上を狙うほど有利です）。遊んだ曲が増えるほど合計も伸びます。
             </p>
-          ):(
+          )}
+          {eventTab&&(
+            <p className="mb-3 rounded-2xl border border-fuchsia-300/40 bg-fuchsia-500/10 p-3 text-[10px] font-bold leading-relaxed text-fuchsia-100">
+              今週の対象曲で競うランキングです。<b className="text-white">その週のあいだに出した記録だけ</b>が載ります（先週までの記録は載りませんが、自己ベストと「総合」にはそのまま残ります）。難易度は問いません。1曲でも遊べば「総合」にも載ります。
+            </p>
+          )}
+          {songTab&&(
             <p className="mb-3 rounded-2xl border border-amber-300/40 bg-amber-500/10 p-3 text-[10px] font-bold leading-relaxed text-amber-100">
               「{song?.displayName||'—'}」のEASY〜MASTERをまとめた合算ランキングです。難易度が高いほど満点も高いため、高い難易度で挑むほど上位に近づきます。自分のスコアはいちばん高い1件だけが載ります。
             </p>
@@ -13649,10 +13871,61 @@ function RhythmRankingScreen({
               </ol>}
             </>)}
           </>)}
-          {!totalTab&&rhythmRanking.status==='loading'&&<p data-rhythm-ranking-loading className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">読み込み中…</p>}
-          {!totalTab&&rhythmRanking.status==='error'&&<p data-rhythm-ranking-error className="rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200">読み込めませんでした。電波の良い場所で「更新」をお試しください。</p>}
-          {!totalTab&&rhythmRanking.status==='ready'&&rhythmRanking.entries.length===0&&<p data-rhythm-ranking-empty className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">まだ記録がありません。最初の1件になってみましょう。</p>}
-          {!totalTab&&rhythmRanking.status==='ready'&&rhythmRanking.entries.length>0&&<ol data-rhythm-ranking-list className="space-y-2">
+          {eventTab&&(<>
+            <AssistantBubble scene="rhythmWeeklyEvent" compact/>
+            {event.status==='loading'&&<p data-rhythm-event-loading className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">読み込み中…</p>}
+            {/* 集計のしたくがまだのとき。エラーではないので、赤い表示にはしない */}
+            {event.status==='notReady'&&<p data-rhythm-event-not-ready className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">週間ランキングはただいま準備中です。もうしばらくお待ちください。</p>}
+            {event.status==='closed'&&<p data-rhythm-event-closed className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">いま開催しているイベントはありません。次の開催をお待ちください。</p>}
+            {event.status==='error'&&<p data-rhythm-event-error className="rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200">読み込めませんでした。電波の良い場所で「更新」をお試しください。</p>}
+            {event.status==='ready'&&eventDefinition&&(<>
+              {/* 期間はサーバーが決める。残り時間の見た目だけ端末の時計で数える */}
+              <div data-rhythm-event-window className="mb-3 flex items-center gap-2 rounded-2xl border border-fuchsia-300/40 bg-slate-900/70 p-2">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[11px] font-black text-fuchsia-100">{eventDefinition.name}</p>
+                  <p className="text-[9px] text-slate-400">毎週 月曜 5:00 に切り替わります</p>
+                </div>
+                <p data-rhythm-event-remaining className="shrink-0 text-[10px] font-black text-fuchsia-200">
+                  {eventRange?rhythmEventRemainingText(eventRange.endMs-eventNowMs):'—'}
+                </p>
+              </div>
+              {/* 部門。対象曲ごと＋総合で、数は対象曲の数から作る */}
+              <div data-rhythm-event-divisions className="mb-3 flex flex-wrap gap-1">
+                {eventDivisions.map(division=>(
+                  <button key={division.id} data-rhythm-event-division={division.id} onClick={()=>openDivision(division.id)}
+                    className={`min-h-[44px] flex-1 basis-[45%] rounded-xl border px-2 py-1 text-[10px] font-black leading-tight ${division.id===eventDivisionId?'border-fuchsia-300/60 bg-fuchsia-500/15 text-fuchsia-100':'border-white/10 bg-slate-900/60 text-slate-400'}`}>
+                    {division.songId?(rhythmSongFullName(division.song)||division.songId):'総合'}
+                  </button>
+                ))}
+              </div>
+              {eventBoard.status==='loading'&&<p data-rhythm-event-board-loading className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">読み込み中…</p>}
+              {eventBoard.status==='error'&&<p data-rhythm-event-board-error className="rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200">この部門を読み込めませんでした。「更新」をお試しください。</p>}
+              {eventBoard.status==='ready'&&(<>
+                {/* 自分の位置は上に固定で出す。50位に入っていない人でも、いまどこにいるかが分かるように */}
+                {eventBoard.self&&<div className="mb-3">
+                  <p className="mb-1 text-[9px] font-black text-fuchsia-200">あなたの記録</p>
+                  {eventRow(eventBoard.self,eventBoard.self.rank,true)}
+                </div>}
+                {!eventBoard.self&&<div className="mb-3">
+                  <p data-rhythm-event-self-empty className="rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-center text-[10px] text-slate-300">今週はまだあなたの記録がありません。対象曲を1曲でも遊ぶとここに載ります。</p>
+                  <button data-rhythm-event-play onClick={onGoToSongSelect}
+                    className="mt-2 w-full min-h-[44px] rounded-xl border border-fuchsia-300/40 bg-slate-900/70 px-3 text-[10px] font-black text-fuchsia-100">▶ 対象曲をえらぶ</button>
+                </div>}
+                {eventBoard.entries.length===0&&<p data-rhythm-event-empty className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">今週はまだ記録がありません。最初の1件になってみましょう。</p>}
+                {eventBoard.entries.length>0&&<ol data-rhythm-event-list className="space-y-2">
+                  {eventBoard.entries.map((entry,index)=>(
+                    <li key={`${entry.identityKey}-${index}`}>
+                      {eventRow(entry,index+1,!!eventBoard.self&&entry.identityKey===eventBoard.self.identityKey)}
+                    </li>
+                  ))}
+                </ol>}
+              </>)}
+            </>)}
+          </>)}
+          {songTab&&rhythmRanking.status==='loading'&&<p data-rhythm-ranking-loading className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">読み込み中…</p>}
+          {songTab&&rhythmRanking.status==='error'&&<p data-rhythm-ranking-error className="rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200">読み込めませんでした。電波の良い場所で「更新」をお試しください。</p>}
+          {songTab&&rhythmRanking.status==='ready'&&rhythmRanking.entries.length===0&&<p data-rhythm-ranking-empty className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">まだ記録がありません。最初の1件になってみましょう。</p>}
+          {songTab&&rhythmRanking.status==='ready'&&rhythmRanking.entries.length>0&&<ol data-rhythm-ranking-list className="space-y-2">
             {rhythmRanking.entries.map((entry,index)=>(
               <li key={`${entry.userName}-${index}`} data-rhythm-ranking-row className="flex items-center gap-2 rounded-2xl border border-white/10 bg-slate-900/80 p-2">
                 <b className="w-6 shrink-0 text-center text-xs font-black text-amber-200">{index+1}</b>
@@ -17775,6 +18048,77 @@ function MonsterHeroGame() {
       setRhythmTotalRanking({ status:'error', entries:[], self:null, error:e?.message || String(e) });
     }
   }, [breederName]);
+  // 週間ランキング(2026-09-11・docs/spec/RHYTHM_RANKING.md §6)。
+  // その週のあいだに出した記録だけで競う。常設の合算(総合タブ)とは別枠で、互いに影響しない。
+  //
+  // ★期間の正本はサーバー(rhythm_week_window)。端末の時計を進めても週は変わらない。
+  //   対象曲はクライアント側の静的データ(data/rhythm-event.js)で、SQLは対象曲を知らない。
+  // ★部門は「対象曲ごと＋総合」。開いた部門だけを取りにいく(往復するたびに通信しない)。
+  // status:'notReady' は「関数をまだ作っていない」状態。合算と同じくエラー扱いにしない。
+  // status:'closed'   は「いま開催しているイベントが無い」状態(期間限定の合間など)。
+  const [rhythmEventDivision, setRhythmEventDivision] = useState(RHYTHM_EVENT_TOTAL_DIVISION);
+  const [rhythmEventRanking, setRhythmEventRanking] = useState({ status:'idle', window:null, event:null, boards:{}, error:null });
+  const rhythmEventRankingRequestRef = useRef(0);
+  const loadRhythmEventRanking = useCallback(async (divisionId) => {
+    const requestId = ++rhythmEventRankingRequestRef.current;
+    const wanted = divisionId || RHYTHM_EVENT_TOTAL_DIVISION;
+    const stale = () => rhythmEventRankingRequestRef.current !== requestId;
+    setRhythmEventRanking(prev => ({
+      ...prev,
+      status: prev.status === 'ready' ? 'ready' : 'loading',
+      error: null,
+      boards: { ...prev.boards, [wanted]: { status:'loading', entries:[], self:null } },
+    }));
+    try {
+      const breederId = await ensureBreederId();
+      const selfKeys = rhythmTotalRankingSelfKeys(breederId, breederName);
+      const weekWindow = await sbFetchRhythmWeekWindow({ requestId:`rhythm-week-${Date.now()}` });
+      if (stale()) return;
+      // 週の始まりはサーバーのものを使う。対象曲はその週に対応する組を静的データから引く
+      const event = rhythmActiveEvent(Date.now(), weekWindow.startMs);
+      const range = rhythmEventWindow(event, weekWindow);
+      if (!event || !range) { setRhythmEventRanking({ status:'closed', window:weekWindow, event:null, boards:{}, error:null }); return; }
+      // 週が変わっていたら、前の週ぶんの一覧は捨てる(古い順位を見せない)
+      const keepBoards = (prev) => (prev.event && prev.event.id === event.id) ? prev.boards : {};
+      // 押した部門が今のイベントに無いとき(週をまたいだ直後など)は総合へ倒す
+      const songId = rhythmEventDivisionSongId(wanted);
+      const division = (songId && event.songIds.includes(songId)) ? wanted : RHYTHM_EVENT_TOTAL_DIVISION;
+      const targetSongId = rhythmEventDivisionSongId(division);
+      const fetchRows = (options) => targetSongId
+        ? sbFetchRhythmEventSongBests({ songId:targetSongId, fromMs:range.startMs, toMs:range.endMs, ...options })
+        : sbFetchRhythmEventTotals({ songIds:[...event.songIds], fromMs:range.startMs, toMs:range.endMs, ...options });
+      const fromRow = targetSongId ? rhythmEventSongEntryFromRow : rhythmEventTotalEntryFromRow;
+      const rows = await fetchRows({ requestId:`rhythm-event-${division}-${Date.now()}` });
+      if (stale()) return;
+      const entries = (Array.isArray(rows) ? rows : []).map(fromRow);
+      // 自分が上位に入っていればその順位を使う。入っていなければ自分の行だけ取りにいく
+      const selfIndex = entries.findIndex(entry => selfKeys.includes(entry.identityKey));
+      let self = selfIndex >= 0 ? { ...entries[selfIndex], rank: selfIndex + 1 } : null;
+      if (!self) {
+        const mine = await fetchRows({ limit:selfKeys.length, identityKeys:selfKeys, requestId:`rhythm-event-${division}-self-${Date.now()}` });
+        if (stale()) return;
+        const mineEntries = (Array.isArray(mine) ? mine : []).map(fromRow);
+        // IDのある記録と、IDが付く前の記録の両方を持っている人がいる。高いほうを自分とする
+        const best = mineEntries.sort((a,b)=>rhythmEventEntryScore(b)-rhythmEventEntryScore(a))[0];
+        if (best) self = { ...best, rank: null };
+      }
+      setRhythmEventRanking(prev => ({
+        status:'ready', window:weekWindow, event, error:null,
+        boards: { ...keepBoards(prev), [division]: { status:'ready', entries, self } },
+      }));
+      setRhythmEventDivision(division);
+    } catch (e) {
+      if (stale()) return;
+      if (e?.notReady) { setRhythmEventRanking({ status:'notReady', window:null, event:null, boards:{}, error:null }); return; }
+      console.error('[rhythm-event-ranking] fetch failed:', e && e.message ? e.message : e);
+      setRhythmEventRanking(prev => ({
+        ...prev,
+        status: prev.status === 'ready' ? 'ready' : 'error',
+        error: e?.message || String(e),
+        boards: { ...prev.boards, [wanted]: { status:'error', entries:[], self:null } },
+      }));
+    }
+  }, [breederName]);
   const rhythmRankingRequestRef = useRef(0);
   // 難易度合算(体験版で遊べる難易度をまとめて取得)のランキングを読み込む。
   // 同じユーザーの複数行は読み込み側で最高得点の1件だけへ畳む(rhythmRankingDedupeByUser)。
@@ -18525,6 +18869,27 @@ function MonsterHeroGame() {
   // 裏で周回したままモンビーを開いた最初の1回だけ
   const quickRhythmBackgroundVisible = quickRhythmGuideReleased && !quickRhythmBackgroundSeen && rhythmBackgroundRun;
   const dismissQuickRhythmBackground = () => { setQuickRhythmBackgroundSeen(true); storeSet(QUICK_RHYTHM_BACKGROUND_KEY, true, false); };
+  // ---- 曲えらびでの「今週の対象曲」案内(docs/spec/RHYTHM_RANKING.md §10.2) ----
+  // ヘルプと更新履歴は探しに行った人しか読まない。週間ランキングは
+  // 「開いて初めて気づく」仕組みなので、曲えらびでも1度だけみゅあが伝える(CLAUDE.md ⑤)。
+  // ★保存キーは新しく足す(既存の mh_* は触らない・CLAUDE.md ⑦)。中身は「見たイベントのID」。
+  //   対象曲は週ごとに変わるので、週が変われば新しいIDになり、その週の初回にもう一度だけ出る。
+  // ★公開フラグが false のあいだは、ヘルプ・更新履歴・告知と同じくこれも出さない。
+  // ★ここで使う週はサーバーではなく端末の時計。案内(どの曲が対象か)を出すだけで、
+  //   順位の期間はランキング画面がサーバーから受け取ったものを使う(§6.1)。
+  const RHYTHM_EVENT_NOTICE_KEY = 'mh_rhythm_event_notice_v1';
+  const [rhythmEventNoticeSeen, setRhythmEventNoticeSeen] = useState(null);
+  const rhythmEventReleased = RELEASE_FLAGS.rhythmWeeklyRanking === true;
+  const rhythmSongSelectEvent = rhythmEventReleased ? rhythmActiveEvent(Date.now()) : null;
+  // 読めなかったとき(seen が null のまま)は「見た扱い」にして出さない。
+  // 案内が二度出るより、出ないほうが害が小さい(クイック連携の案内と同じ考え方)
+  const rhythmEventNoticeVisible = !!rhythmSongSelectEvent && typeof rhythmEventNoticeSeen === 'string'
+    && rhythmEventNoticeSeen !== rhythmSongSelectEvent.id;
+  const dismissRhythmEventNotice = () => {
+    if (!rhythmSongSelectEvent) return;
+    setRhythmEventNoticeSeen(rhythmSongSelectEvent.id);
+    storeSet(RHYTHM_EVENT_NOTICE_KEY, rhythmSongSelectEvent.id, false);
+  };
   // ---- 演奏で止まっていたぶんの追いつき(PR7) ----
   // 追いつける上限は「1曲ぶん」。長い曲でも5分までにして、
   // タブを閉じていた時間まで遡ることは決してしない(∞周回の既存方針と同じ)
@@ -19199,6 +19564,11 @@ function MonsterHeroGame() {
       // 見た扱い(=出さない)にする。案内が二度出るより、出ないほうが害が小さい
       setQuickRhythmIntroSeen(await storeGet(QUICK_RHYTHM_INTRO_KEY, true, false) !== false);
       setQuickRhythmBackgroundSeen(await storeGet(QUICK_RHYTHM_BACKGROUND_KEY, true, false) !== false);
+      // 週間ランキングの「今週の対象曲」案内。見たイベントのIDを覚えておく(週が変わればまた1度だけ出る)
+      {
+        const seenEventId = await storeGet(RHYTHM_EVENT_NOTICE_KEY, '', false);
+        setRhythmEventNoticeSeen(typeof seenEventId === 'string' ? seenEventId : '');
+      }
       const compensationNoticeSeen = await storeGet('mh_masu_level_cap_compensation_notice_seen_v1', false, false);
       if (compensationNotice?.diamonds > 0 && !compensationNoticeSeen) setLevelCapCompensation(compensationNotice);
       // #827の誤式で34/35凸の過去レベルへ倍率が遡及され、既に増えた分だけを先に1回修復する。
@@ -27012,9 +27382,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             catchingUp={catchingUp}
             difficulty={difficulty}
             dismissQuickRhythmBackground={dismissQuickRhythmBackground}
+            dismissRhythmEventNotice={dismissRhythmEventNotice}
             handleGiveUp={handleGiveUp}
             mainHero={mainHero}
             onExit={()=>{if(rhythmBackgroundRun){returnToBackgroundRun();return;}setGameState(RHYTHM_MODE_PUBLIC_RELEASE?'HOME':'DEBUG_SETTINGS');}}
+            onOpenEventRanking={()=>{dismissRhythmEventNotice();setRhythmRankingTab('event');loadRhythmEventRanking(rhythmEventDivision);setGameState('RHYTHM_RANKING');}}
             onOpenHelp={()=>{setRhythmHelpTopicId(null);setGameState('RHYTHM_DEMO_HELP');}}
             onOpenMonsterSlots={()=>{setRhythmMonsterPickerOpen(true);setGameState('RHYTHM_DEMO_MONSTERS');}}
             onOpenOptions={()=>{setRhythmOptionsBack('RHYTHM_DEMO_HOME');setGameState('RHYTHM_OPTIONS');}}
@@ -27036,6 +27408,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             returnToHome={returnToHome}
             rhythmBackgroundRun={rhythmBackgroundRun}
             rhythmBestRecords={rhythmBestRecords}
+            rhythmEventNotice={rhythmEventNoticeVisible?rhythmSongSelectEvent:null}
             rhythmSelectView={rhythmSelectView}
             rhythmSelectedDifficultyId={rhythmSelectedDifficultyId}
             rhythmSelectedSongId={rhythmSelectedSongId}
@@ -27094,15 +27467,19 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             自分のスコアはいちばん高い1件だけが載る(rhythmRankingDedupeByUser)。 */}
         {gameState==='RHYTHM_RANKING'&&(
           <RhythmRankingScreen
+            loadRhythmEventRanking={loadRhythmEventRanking}
             loadRhythmRanking={loadRhythmRanking}
             loadRhythmTotalRanking={loadRhythmTotalRanking}
             onBackToSongSelect={()=>setGameState('RHYTHM_DEMO_HOME')}
             onGoToSongSelect={()=>setGameState('RHYTHM_DEMO_HOME')}
             rankingBreederIcon={rankingBreederIcon}
+            rhythmEventDivision={rhythmEventDivision}
+            rhythmEventRanking={rhythmEventRanking}
             rhythmRanking={rhythmRanking}
             rhythmRankingDetail={rhythmRankingDetail}
             rhythmRankingTab={rhythmRankingTab}
             rhythmTotalRanking={rhythmTotalRanking}
+            setRhythmEventDivision={setRhythmEventDivision}
             setRhythmRankingDetail={setRhythmRankingDetail}
             setRhythmRankingTab={setRhythmRankingTab}
           />

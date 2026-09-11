@@ -34,7 +34,16 @@ const RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE = true;
 // 2026-09-11・ユーザーが RHYTHM_TOTAL_APPLY.sql を適用し、13人・1位16,485,177点が並ぶことを
 // 確かめたうえで公開。タブ・ヘルプ・更新履歴・助手の告知がここで同時に出る。
 const RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE = true;
-const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE };
+// モンヒロビートの「週間ランキング」(docs/spec/RHYTHM_RANKING.md §6。フェーズ3)。
+// ★期間の窓(rhythm_week_window)と期間×対象曲の集計(rhythm_event_song_bests /
+//   rhythm_event_totals)はSupabase側に置くので、
+//   docs/sql/rankings/RHYTHM_EVENT_APPLY.sql を適用するまで中身が出せない。
+//   false のあいだはイベントタブも曲えらびの案内も出さず、ヘルプ・更新履歴・助手の告知も
+//   まとめて隠す。総合ランキングのときに一度「まだ遊べないのにお知らせだけ出た」を
+//   やってしまっているので、同じことを繰り返さない(CLAUDE.md ⑤)。
+//   SQLを適用して RHYTHM_EVENT_VERIFY.sql で今週の窓と順位が並ぶことを確かめたら true にする。
+const RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE = false;
+const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE, rhythmWeeklyRanking:RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE };
 // releaseFlag = そのフラグが立つまで出さない。unreleasedFlag = そのフラグが立ったら出さない。
 // 逆向きの名札が要るのは「準備中です」の案内で、公開したあとも残っていると
 // 遊べているのに準備中の項目が並ぶ(ヘルプのモンヒロビートで実際にそうなっていた・2026-09-06)。
