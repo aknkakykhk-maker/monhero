@@ -463,6 +463,18 @@ function RhythmRankingScreen({
         })).filter(entry=>!!entry.reward)
         :[];
       const eventReward=eventRewardRanks.length>0;
+      // ★詳細では「いま見ている部門」ではなく、全部門ぶんの報酬を出す
+      //   (2026-09-11・ユーザー指示「詳細ページは部門別とか全報酬とか細かいことまとめていれても
+      //    いいんじゃない？」)。部門を切り替えないと何がもらえるか分からない状態だった。
+      //   部門の数も順位の数も個数もデータから作るので、ここに数字を書き写さない
+      const eventRewardsByDivision=eventDefinition
+        ?eventDivisions.map(division=>({
+          division,
+          ranks:Array.from({length:RHYTHM_EVENT_REWARD_RANKS},(_,index)=>({
+            rank:index+1,reward:rhythmEventRewardForRank(eventDefinition,division.id,index+1),
+          })).filter(entry=>!!entry.reward),
+        })).filter(entry=>entry.ranks.length>0)
+        :[];
       // 参加報酬(入賞しなくても、対象曲をすべて遊べばもらえる)
       const eventParticipation=rhythmEventParticipationReward(eventDefinition);
       const eventLimited=boardKind==='limited';
@@ -718,23 +730,35 @@ function RhythmRankingScreen({
               <b className="text-fuchsia-200">{rhythmEventSongsLabel(eventDefinition)}</b>　
               {eventDivisions.filter(division=>division.songId).map(division=>rhythmSongFullName(division.song)||division.songId).join(' ／ ')}
             </p>}
-        {/* その部門の報酬。何を狙って遊ぶのかが分からないと、そもそも参加してもらえない。
-        順位も個数もデータから作るので、ここに数字を書き写さない */}
-        {eventReward&&<div data-rhythm-event-rewards className="mb-3 rounded-2xl border border-amber-300/40 bg-amber-500/5 p-2">
-        <p className="mb-1 text-[9px] font-black text-amber-200">この部門の報酬（終了後に受け取れます）</p>
-        <ul className="space-y-0.5">
-        {eventRewardRanks.map(({rank,reward})=>(
-        <li key={rank} className="flex items-baseline gap-2 text-[10px] leading-tight">
-        <b className="w-7 shrink-0 text-right font-black text-amber-200">{rank}位</b>
-        <span className="min-w-0 flex-1 text-slate-200">{rhythmEventRewardText(reward)}</span>
-        </li>
-        ))}
-        </ul>
-        {/* 参加報酬。入賞しなくてももらえるので、順位の表とは分けて出す */}
-        {eventParticipation&&<p data-rhythm-event-participation className="mt-2 border-t border-amber-300/20 pt-2 text-[10px] leading-tight text-slate-200">
-        <b className="text-amber-200">参加報酬</b>　対象曲を{eventParticipation.songs}曲すべて遊ぶと {rhythmEventParticipationText(eventParticipation)}
-        </p>}
-        </div>}
+            {/* 部門ごとの報酬。どの部門で何位を狙うと何がもらえるかを、切り替えずに見渡せるようにする */}
+            {eventRewardsByDivision.length>0&&<div data-rhythm-event-rewards className="space-y-2">
+              <p className="text-[10px] font-black text-amber-200">部門ごとの報酬（終了後に受け取れます）</p>
+              {eventRewardsByDivision.map(({division,ranks})=>(
+                <div key={division.id} data-rhythm-event-reward-division={division.id}
+                  className="rounded-2xl border border-amber-300/40 bg-amber-500/5 p-2">
+                  <p className="mb-1 truncate text-[10px] font-black text-fuchsia-100">
+                    {division.songId?(rhythmSongFullName(division.song)||division.songId):'総合（対象曲の合計）'}
+                  </p>
+                  <ul className="space-y-0.5">
+                    {ranks.map(({rank,reward})=>(
+                      <li key={rank} className="flex items-baseline gap-2 text-[10px] leading-tight">
+                        <b className="w-7 shrink-0 text-right font-black text-amber-200">{rank}位</b>
+                        <span className="min-w-0 flex-1 text-slate-200">{rhythmEventRewardText(reward)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+              {/* 参加報酬。入賞しなくてももらえるので、順位の表とは分けて出す */}
+              {eventParticipation&&<p data-rhythm-event-participation
+                className="rounded-2xl border border-fuchsia-300/40 bg-fuchsia-500/5 p-2 text-[10px] leading-tight text-slate-200">
+                <b className="text-fuchsia-200">参加報酬</b>　対象曲を{eventParticipation.songs}曲すべて遊ぶと {rhythmEventParticipationText(eventParticipation)}
+              </p>}
+              {/* 受け取り方。いつ・どこで受け取るのかが分からないと、終わったあとに迷う */}
+              <p className="text-[9px] leading-relaxed text-slate-400">
+                報酬はイベントが終わったあと、ゲームを開いたときに受け取れます。受け取れるのは終了から2週間までです。順位は終了した時点で決まるので、遅れて受け取っても内容は変わりません。
+              </p>
+            </div>}
             <button type="button" data-rhythm-event-detail-close onClick={()=>setEventDetailOpen(false)}
               className="mt-3 w-full min-h-[50px] rounded-2xl bg-white text-sm font-black text-black active:scale-95">とじる</button>
           </div>
