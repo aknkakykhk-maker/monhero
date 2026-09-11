@@ -1751,12 +1751,19 @@ function MonsterHeroGame() {
     rhythmEventRankingRequestRef.current = { ...rhythmEventRankingRequestRef.current, [kind]: requestId };
     const wanted = divisionId || RHYTHM_EVENT_TOTAL_DIVISION;
     const stale = () => rhythmEventRankingRequestRef.current[kind] !== requestId;
-    setRhythmBoard(kind, prev => ({
-      ...prev,
-      status: prev.status === 'ready' ? 'ready' : 'loading',
-      error: null,
-      boards: { ...prev.boards, [wanted]: { status:'loading', entries:[], self:null } },
-    }));
+    // ★すでに出ている順位は消さない。読み直しのたびに一覧が空になると、
+    //   タブや部門を押すたびに画面がちらつく(2026-09-11・押すたびに取り直す形へ変えたため)。
+    //   取れたら差し替わる。まだ一度も取れていない部門だけ「読み込み中」にする。
+    setRhythmBoard(kind, prev => {
+      const before = (prev.boards && prev.boards[wanted]) || null;
+      const keep = before && before.status === 'ready';
+      return {
+        ...prev,
+        status: prev.status === 'ready' ? 'ready' : 'loading',
+        error: null,
+        boards: { ...prev.boards, [wanted]: keep ? before : { status:'loading', entries:[], self:null } },
+      };
+    });
     try {
       const breederId = await ensureBreederId();
       const selfKeys = rhythmTotalRankingSelfKeys(breederId, breederName);

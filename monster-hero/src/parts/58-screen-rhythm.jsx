@@ -494,19 +494,27 @@ function RhythmRankingScreen({
         // 開催していないあいだはイベントのタブそのものを出さない
         ...(eventReleased&&limitedEvent?[{id:'event',label:'イベント'}]:[]),
       ];
+      // ★タブも部門も、押すたびに取り直す(2026-09-11・ユーザー指摘「総合だけ反映が遅い」)。
+      //   「初めて開いたときだけ」にしていたため、一度見た部門は古い順位のまま残っていた。
+      //   総合は"イベントタブを開いた瞬間"に読むので、いちばん最初に取った内容が
+      //   そのまま貼り付き、遊んで戻ってきても更新されなかった。
+      //   曲別はあとから初めて開くことが多く、そのときに取るので新しく見えていた。
+      //   ★読み直しているあいだも前の順位は消さない(loadRhythmEventRanking 側)。
+      //     取れたら差し替わるので、画面が一瞬空になることはない。
       const openTab=(tab)=>{
         setRhythmRankingTab(tab);
-        // 初めて開いたときだけ取りにいく。タブを往復するたびに通信しない
-        if(tab==='total'&&total.status==='idle')loadRhythmTotalRanking&&loadRhythmTotalRanking();
+        if(tab==='total')loadRhythmTotalRanking&&loadRhythmTotalRanking();
         const kind=tab==='weekly'?'weekly':(tab==='event'?'limited':null);
-        if(kind&&(!boards[kind]||boards[kind].status==='idle'))loadRhythmEventRanking&&loadRhythmEventRanking(kind,RHYTHM_EVENT_TOTAL_DIVISION);
+        if(kind){
+          // その種別でいま見ている部門をそのまま読み直す(初回は総合)
+          const want=(rhythmEventDivision&&rhythmEventDivision[kind])||RHYTHM_EVENT_TOTAL_DIVISION;
+          loadRhythmEventRanking&&loadRhythmEventRanking(kind,want);
+        }
       };
-      // 部門も、初めて開いたときだけ取りにいく
       const openDivision=(divisionId)=>{
         if(!boardKind)return;
         setRhythmEventDivision&&setRhythmEventDivision(prev=>({...prev,[boardKind]:divisionId}));
-        const board=event.boards&&event.boards[divisionId];
-        if(!board||board.status==='idle')loadRhythmEventRanking&&loadRhythmEventRanking(boardKind,divisionId);
+        loadRhythmEventRanking&&loadRhythmEventRanking(boardKind,divisionId);
       };
       const refresh=()=>{
         if(boardTab)loadRhythmEventRanking&&loadRhythmEventRanking(boardKind,eventDivisionId);

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 532ef7a92464e882
+// generated-sha256: cb091a059d9b98e6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 19:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 22:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -14111,19 +14111,27 @@ function RhythmRankingScreen({
         // 開催していないあいだはイベントのタブそのものを出さない
         ...(eventReleased&&limitedEvent?[{id:'event',label:'イベント'}]:[]),
       ];
+      // ★タブも部門も、押すたびに取り直す(2026-09-11・ユーザー指摘「総合だけ反映が遅い」)。
+      //   「初めて開いたときだけ」にしていたため、一度見た部門は古い順位のまま残っていた。
+      //   総合は"イベントタブを開いた瞬間"に読むので、いちばん最初に取った内容が
+      //   そのまま貼り付き、遊んで戻ってきても更新されなかった。
+      //   曲別はあとから初めて開くことが多く、そのときに取るので新しく見えていた。
+      //   ★読み直しているあいだも前の順位は消さない(loadRhythmEventRanking 側)。
+      //     取れたら差し替わるので、画面が一瞬空になることはない。
       const openTab=(tab)=>{
         setRhythmRankingTab(tab);
-        // 初めて開いたときだけ取りにいく。タブを往復するたびに通信しない
-        if(tab==='total'&&total.status==='idle')loadRhythmTotalRanking&&loadRhythmTotalRanking();
+        if(tab==='total')loadRhythmTotalRanking&&loadRhythmTotalRanking();
         const kind=tab==='weekly'?'weekly':(tab==='event'?'limited':null);
-        if(kind&&(!boards[kind]||boards[kind].status==='idle'))loadRhythmEventRanking&&loadRhythmEventRanking(kind,RHYTHM_EVENT_TOTAL_DIVISION);
+        if(kind){
+          // その種別でいま見ている部門をそのまま読み直す(初回は総合)
+          const want=(rhythmEventDivision&&rhythmEventDivision[kind])||RHYTHM_EVENT_TOTAL_DIVISION;
+          loadRhythmEventRanking&&loadRhythmEventRanking(kind,want);
+        }
       };
-      // 部門も、初めて開いたときだけ取りにいく
       const openDivision=(divisionId)=>{
         if(!boardKind)return;
         setRhythmEventDivision&&setRhythmEventDivision(prev=>({...prev,[boardKind]:divisionId}));
-        const board=event.boards&&event.boards[divisionId];
-        if(!board||board.status==='idle')loadRhythmEventRanking&&loadRhythmEventRanking(boardKind,divisionId);
+        loadRhythmEventRanking&&loadRhythmEventRanking(boardKind,divisionId);
       };
       const refresh=()=>{
         if(boardTab)loadRhythmEventRanking&&loadRhythmEventRanking(boardKind,eventDivisionId);
@@ -19425,12 +19433,19 @@ function MonsterHeroGame() {
     rhythmEventRankingRequestRef.current = { ...rhythmEventRankingRequestRef.current, [kind]: requestId };
     const wanted = divisionId || RHYTHM_EVENT_TOTAL_DIVISION;
     const stale = () => rhythmEventRankingRequestRef.current[kind] !== requestId;
-    setRhythmBoard(kind, prev => ({
-      ...prev,
-      status: prev.status === 'ready' ? 'ready' : 'loading',
-      error: null,
-      boards: { ...prev.boards, [wanted]: { status:'loading', entries:[], self:null } },
-    }));
+    // ★すでに出ている順位は消さない。読み直しのたびに一覧が空になると、
+    //   タブや部門を押すたびに画面がちらつく(2026-09-11・押すたびに取り直す形へ変えたため)。
+    //   取れたら差し替わる。まだ一度も取れていない部門だけ「読み込み中」にする。
+    setRhythmBoard(kind, prev => {
+      const before = (prev.boards && prev.boards[wanted]) || null;
+      const keep = before && before.status === 'ready';
+      return {
+        ...prev,
+        status: prev.status === 'ready' ? 'ready' : 'loading',
+        error: null,
+        boards: { ...prev.boards, [wanted]: keep ? before : { status:'loading', entries:[], self:null } },
+      };
+    });
     try {
       const breederId = await ensureBreederId();
       const selfKeys = rhythmTotalRankingSelfKeys(breederId, breederName);
