@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e8a5cb3bfcd46896
+// source-sha256: eea67bcf52aecc95
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ee8bc7fecb552b0b
+// generated-sha256: 373569fd72948d4b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 19:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 19:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4655,25 +4655,45 @@ const RHYTHM_SORT_ORDERS = Object.freeze([Object.freeze({
   note: '曲が短い順。軽く1曲遊びたいときに'
 })]);
 const RHYTHM_SORT_IDS = Object.freeze(RHYTHM_SORT_ORDERS.map(item => item.id));
-// eventOnly … イベントの対象曲だけに絞るか(2026-09-11・ユーザー指示
-//   「ソートにイベント曲だけ出てくるのほしいね」)。並び替えではなく絞り込みなので、
-//   並び替えの一覧には混ぜず、別のボタンにしてある。
-//   ★開催していないときは、この値が true でも絞らない(画面側で見る)。
+// ジャンル(曲の絞り込み)。2026-09-11・ユーザー指示
+// 「対象曲のところをジャンルに変えて、その中から選べるようにしよう。イベント曲、オリジナル、MF とか。
+//   ジャンルを決めないとだから、とりあえずイベント曲だけ選べるようにすればおけ」。
+//
+// ★ジャンルを増やすときは、ここへ1件足して、曲の側に見分けるための印を付ける。
+//   画面(29-rhythm-screens.jsx)は書き換えない。
+// ★whileEvent:true を付けたものは、イベントを開催しているあいだだけ選べる。
+//   開催していないときに選ぶと一覧が空になるため。
+const RHYTHM_GENRES = Object.freeze([Object.freeze({
+  id: 'all',
+  label: 'すべて',
+  note: '遊べる曲を全部'
+}), Object.freeze({
+  id: 'event',
+  label: '🏆 イベント曲',
+  note: 'いま開催しているイベントの対象曲',
+  whileEvent: true
+})]);
+const RHYTHM_GENRE_IDS = Object.freeze(RHYTHM_GENRES.map(item => item.id));
+// genre … 曲の絞り込み(2026-09-11)。並び替えではないので、並び替えの一覧には混ぜない。
+//   ★開催していないときは、保存値が 'event' のままでも絞らない(画面側で見る)。
 //     そうしないと、イベントが終わったあとに一覧が空の人が出てしまう。
-//   ★新しい項目なので、持っていない既存ユーザーは既定値(false)で補われる(CLAUDE.md ⑦)。
+//   ★新しい項目なので、持っていない既存ユーザーは既定値('all')で補われる(CLAUDE.md ⑦)。
+//   ★短いあいだ eventOnly(真偽値)で持っていたので、その値も読める形にしてある。
+//     消さずに読み替えるだけ。true だった人は 'event' を選んでいた扱いになる。
 const DEFAULT_RHYTHM_SELECT_VIEW = Object.freeze({
   sort: 'added',
   desc: false,
   noticeOpen: true,
-  eventOnly: false
+  genre: 'all'
 });
 const normalizeRhythmSelectView = value => {
   const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  const genre = RHYTHM_GENRE_IDS.includes(source.genre) ? source.genre : source.eventOnly === true ? 'event' : DEFAULT_RHYTHM_SELECT_VIEW.genre;
   return {
     sort: RHYTHM_SORT_IDS.includes(source.sort) ? source.sort : DEFAULT_RHYTHM_SELECT_VIEW.sort,
     desc: typeof source.desc === 'boolean' ? source.desc : DEFAULT_RHYTHM_SELECT_VIEW.desc,
     noticeOpen: typeof source.noticeOpen === 'boolean' ? source.noticeOpen : DEFAULT_RHYTHM_SELECT_VIEW.noticeOpen,
-    eventOnly: typeof source.eventOnly === 'boolean' ? source.eventOnly : DEFAULT_RHYTHM_SELECT_VIEW.eventOnly
+    genre
   };
 };
 // ノーツ速度は見た目のtravelだけを変える。1.0〜12.0を0.1刻みで選べ、6.0は従来の見た目(2150ms)を維持する。
@@ -19853,6 +19873,7 @@ const RhythmSongSelect = ({
   };
   const state = normalizeRhythmSelectView(view);
   const [sortOpen, setSortOpen] = React.useState(false);
+  const [genreOpen, setGenreOpen] = React.useState(false);
   // ジャケットを大きく見ているか(2026-09-08・ユーザー指示「モンビー中のジャケットをタップすると拡大画像が見れるように」)。
   // 画面(gameState)は増やさない。曲えらびの上に重ねるだけなので、閉じれば元の場所に戻る。
   const [artZoom, setArtZoom] = React.useState(false);
@@ -19893,11 +19914,20 @@ const RhythmSongSelect = ({
     const event = released && typeof rhythmLimitedEventAt === 'function' ? rhythmLimitedEventAt(Date.now()) : null;
     return new Set(event && Array.isArray(event.songIds) ? event.songIds : []);
   })();
-  // 対象曲だけに絞るか。★開催していないときは絞らない(保存値が true のままでも)。
+  // いま選べるジャンル。★イベント中だけのもの(whileEvent)は、開催していなければ出さない。
+  //   ジャンルが1つ(すべて)だけなら、えらぶ意味が無いのでボタンごと出さない
+  const genres = RHYTHM_GENRES.filter(item => !item.whileEvent || eventSongIds.size > 0);
+  //   保存値が「いま選べないジャンル」を指しているときは「すべて」に倒す。
   //   そうしないと、イベントが終わったあとに一覧が空になる人が出る
-  const eventFilterOn = eventSongIds.size > 0 && state.eventOnly === true;
+  const genre = genres.find(item => item.id === state.genre) || genres[0];
+  const genreMatches = entry => {
+    if (!genre || genre.id === 'all') return true;
+    if (genre.id === 'event') return eventSongIds.has(entry.songId);
+    // ★ジャンルを増やしたらここへ1行。曲の側の印を見て決める
+    return true;
+  };
   // 画面に並べる順。並び替えも絞り込みも**見え方だけ**で、遊べる曲も選んでいる曲も変えない。
-  const list = rhythmSortSongs(eventFilterOn ? playable.filter(entry => eventSongIds.has(entry.songId)) : playable, {
+  const list = rhythmSortSongs(playable.filter(genreMatches), {
     sort: state.sort,
     desc: state.desc,
     levelOf: rowLevel,
@@ -20050,19 +20080,17 @@ const RhythmSongSelect = ({
   }, "\u4E26\u3073\u66FF\u3048\uFF1A", sortLabel, state.desc ? '（逆）' : ''), /*#__PURE__*/React.createElement("span", {
     "aria-hidden": "true",
     className: "shrink-0 text-slate-400"
-  }, "\u25BE")), eventSongIds.size > 0 && /*#__PURE__*/React.createElement("button", {
+  }, "\u25BE")), genres.length > 1 && /*#__PURE__*/React.createElement("button", {
     type: "button",
-    "data-rhythm-song-event-filter": true,
-    "aria-pressed": state.eventOnly === true,
-    onClick: () => setView({
-      ...state,
-      eventOnly: !(state.eventOnly === true)
-    }),
-    title: state.eventOnly === true ? 'すべての曲を出す' : 'イベントの対象曲だけにする',
-    className: `flex h-[44px] shrink-0 items-center gap-1 rounded-xl border px-2 text-[11px] font-black ${state.eventOnly === true ? 'border-amber-300 bg-amber-500/25 text-amber-100' : 'border-amber-300/40 bg-slate-900/80 text-amber-200'}`
+    "data-rhythm-song-genre": genre ? genre.id : 'all',
+    onClick: () => setGenreOpen(true),
+    className: `flex h-[44px] min-w-0 flex-1 items-center justify-between gap-1 rounded-xl border px-3 text-[11px] font-black ${genre && genre.id !== 'all' ? 'border-amber-300 bg-amber-500/20 text-amber-100' : 'border-white/15 bg-slate-900/80 text-slate-200'}`
   }, /*#__PURE__*/React.createElement("span", {
-    "aria-hidden": "true"
-  }, "\uD83C\uDFC6"), /*#__PURE__*/React.createElement("span", null, "\u5BFE\u8C61\u66F2")), notice && /*#__PURE__*/React.createElement("button", {
+    className: "truncate"
+  }, genre && genre.id !== 'all' ? genre.label : 'ジャンル：すべて'), /*#__PURE__*/React.createElement("span", {
+    "aria-hidden": "true",
+    className: "shrink-0 text-slate-400"
+  }, "\u25BE")), notice && /*#__PURE__*/React.createElement("button", {
     type: "button",
     "data-rhythm-song-notice-toggle": true,
     "aria-pressed": state.noticeOpen,
@@ -20274,7 +20302,54 @@ const RhythmSongSelect = ({
     style: {
       minHeight: '52px'
     }
-  }, "\u3068\u3058\u308B")), sortOpen && /*#__PURE__*/React.createElement("div", {
+  }, "\u3068\u3058\u308B")), genreOpen && /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-genre-sheet": true,
+    className: "fixed inset-0 z-[9000] flex items-end justify-center",
+    style: {
+      position: 'fixed',
+      inset: 0,
+      backgroundColor: 'rgba(0,0,0,0.72)',
+      zIndex: 9000
+    },
+    onClick: () => setGenreOpen(false)
+  }, /*#__PURE__*/React.createElement("section", {
+    onClick: e => e.stopPropagation(),
+    className: "max-h-[80%] w-full max-w-md overflow-y-auto rounded-t-3xl border-t border-amber-300/60 bg-slate-900 p-4",
+    style: {
+      paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+    }
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-sm font-black text-white"
+  }, "\u30B8\u30E3\u30F3\u30EB"), /*#__PURE__*/React.createElement("p", {
+    className: "mt-1 text-[10px] font-bold text-slate-400"
+  }, "\u51FA\u3059\u66F2\u3092\u7D5E\u308B\u3060\u3051\u3067\u3059\u3002\u904A\u3079\u308B\u66F2\u30FB\u81EA\u5DF1\u30D9\u30B9\u30C8\u30FB\u5168\u56FD\u30E9\u30F3\u30AD\u30F3\u30B0\u306F\u5909\u308F\u308A\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("div", {
+    className: "mt-3 space-y-1.5"
+  }, genres.map(item => {
+    const on = !!genre && item.id === genre.id;
+    return /*#__PURE__*/React.createElement("button", {
+      key: item.id,
+      type: "button",
+      "data-rhythm-genre-option": item.id,
+      "aria-pressed": on,
+      onClick: () => {
+        setView({
+          ...state,
+          genre: item.id
+        });
+        setGenreOpen(false);
+      },
+      className: `flex min-h-[52px] w-full flex-col justify-center rounded-xl border-2 px-3 text-left ${on ? 'border-amber-300 bg-amber-500/20' : 'border-white/15 bg-slate-950/60'}`
+    }, /*#__PURE__*/React.createElement("b", {
+      className: "text-xs font-black text-white"
+    }, on ? '● ' : '', item.label), /*#__PURE__*/React.createElement("small", {
+      className: "text-[10px] font-bold text-slate-400"
+    }, item.note));
+  })), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "data-rhythm-genre-close": true,
+    onClick: () => setGenreOpen(false),
+    className: "mt-3 min-h-[52px] w-full rounded-xl bg-slate-700 text-sm font-black text-white"
+  }, "\u3068\u3058\u308B"))), sortOpen && /*#__PURE__*/React.createElement("div", {
     "data-rhythm-sort-sheet": true,
     className: "fixed inset-0 z-[9000] flex items-end justify-center",
     style: {
@@ -31433,6 +31508,12 @@ function HomeScreen({
   resolveIconUrl,
   spotClass
 }) {
+  // モンヒロビートのイベントを開催しているか。描くたびに数え直す(上の★のとおり)
+  const homeRhythmEventOpen = (() => {
+    const released = typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS && RELEASE_FLAGS.rhythmWeeklyRanking === true;
+    if (!released || typeof rhythmLimitedEventAt !== 'function') return false;
+    return !!rhythmLimitedEventAt(Date.now());
+  })();
   return /*#__PURE__*/React.createElement("main", {
     className: "mh-home-scene",
     "aria-label": "\u6751\u306E\u5E83\u5834"
@@ -31510,7 +31591,9 @@ function HomeScreen({
     className: "mh-home-facility rhythm",
     onClick: onOpenRhythm,
     "aria-label": RHYTHM_MODE_PUBLIC_RELEASE ? "モンヒロビート" : "モンヒロビート（準備中）"
-  }, /*#__PURE__*/React.createElement("span", null, "\uD83C\uDFB5 \u30E2\u30F3\u30D2\u30ED\u30D3\u30FC\u30C8", !RHYTHM_MODE_PUBLIC_RELEASE && /*#__PURE__*/React.createElement("small", null, "\u6E96\u5099\u4E2D"))), /*#__PURE__*/React.createElement("button", {
+  }, /*#__PURE__*/React.createElement("span", null, "\uD83C\uDFB5 \u30E2\u30F3\u30D2\u30ED\u30D3\u30FC\u30C8", !RHYTHM_MODE_PUBLIC_RELEASE && /*#__PURE__*/React.createElement("small", null, "\u6E96\u5099\u4E2D"), homeRhythmEventOpen && /*#__PURE__*/React.createElement("em", {
+    "data-home-event-badge": true
+  }, "\uD83C\uDFC6 \u30A4\u30D9\u30F3\u30C8\u958B\u50AC\u4E2D"))), /*#__PURE__*/React.createElement("button", {
     className: `mh-home-facility battle${spotClass('battle')}`,
     onClick: onOpenBattle,
     "aria-label": "\u30D0\u30C8\u30EB"
@@ -60169,7 +60252,9 @@ const createAnimationStyle = () => {
     @keyframes mhBreakStar{0%,55%{opacity:0;transform:scale(0) rotate(-90deg)}70%{opacity:1;transform:scale(2.1) rotate(20deg)}85%{transform:scale(.9) rotate(0)}100%{opacity:1;transform:scale(1.25)}}
     @keyframes mhBreakOldStar{0%,55%{opacity:.35}100%{opacity:1}}
     @media(prefers-reduced-motion:reduce){.mh-breakthrough-ring,.mh-breakthrough-ring::after,.mh-breakthrough-beam,.mh-breakthrough-mon,.mh-breakthrough-cap,.mh-breakthrough-stars>*,.mh-breakthrough-copy{animation:none}.mh-breakthrough-stars>*{opacity:1}}
-    .mh-rebirth-animation{position:fixed;inset:0;z-index:51000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle,#7c3aed88,#020617 62%);pointer-events:auto;touch-action:none}.mh-rebirth-circle{position:absolute;width:240px;height:240px;border:3px solid #c4b5fd;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fde68a;font-size:150px;animation:mhRebirthCircle 4s ease-in-out forwards}.mh-rebirth-glow{position:absolute;width:100%;height:42%;background:linear-gradient(90deg,transparent,#fff8,transparent);filter:blur(14px);animation:mhRebirthGlow 4s ease-in-out forwards}.mh-rebirth-mon{position:relative;width:145px;height:145px;animation:mhRebirthFloat 4s ease-in-out forwards}.mh-rebirth-copy{position:absolute;bottom:calc(8% + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;color:#fff;font-size:11px;font-weight:900;animation:mhRebirthCopy 4s ease-out forwards}.mh-rebirth-copy b{font-size:20px;color:#fde68a}.mh-rebirth-copy span{margin-top:2px}@keyframes mhRebirthCircle{0%{opacity:0;transform:scale(.3) rotate(0)}25%{opacity:1}100%{opacity:.25;transform:scale(1.5) rotate(180deg)}}@keyframes mhRebirthGlow{0%,20%{opacity:0}40%,70%{opacity:1}100%{opacity:0}}@keyframes mhRebirthFloat{0%{transform:translateY(30px);filter:brightness(1)}45%{transform:translateY(-25px);filter:brightness(2)}60%{filter:brightness(0)}78%{filter:brightness(3)}100%{transform:translateY(0);filter:brightness(1)}}@keyframes mhRebirthCopy{0%,55%{opacity:0;transform:translateY(20px)}68%,100%{opacity:1;transform:none}}.mh-donation-animation{position:fixed;inset:0;z-index:33000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at center,#7c3aed55 0,#020617 58%);pointer-events:auto;touch-action:none}.mh-donation-beam{position:absolute;width:150px;height:110%;background:linear-gradient(90deg,transparent,#fff9c477,transparent);filter:blur(8px);animation:mhDonationBeam 1.5s ease-in-out forwards}.mh-donation-monster{position:absolute;width:96px;height:96px;filter:drop-shadow(0 0 22px #fff);animation:mhDonationRise 1.25s ease-in forwards}.mh-donation-gem{position:absolute;color:#fde68a;opacity:0;filter:drop-shadow(0 0 18px #fbbf24);animation:mhDonationGem .55s 1s ease-out forwards}.mh-donation-particles i{position:absolute;left:50%;top:50%;width:6px;height:6px;border-radius:50%;background:#fde68a;box-shadow:0 0 8px #fff;opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-20px);animation:mhDonationParticle .55s 1s ease-out forwards}.mh-donation-copy{position:absolute;bottom:calc(15% + env(safe-area-inset-bottom));font-size:14px;font-weight:1000;color:#f5d0fe;text-shadow:0 0 12px #a855f7}@keyframes mhDonationRise{0%{transform:translateY(25px) scale(1);opacity:1}55%{transform:translateY(-28px) scale(1.08);opacity:1}100%{transform:translateY(-55px) scale(.05);opacity:0;filter:drop-shadow(0 0 50px #fff)}}@keyframes mhDonationBeam{0%{opacity:0;transform:scaleX(.2)}35%{opacity:1;transform:scaleX(1)}100%{opacity:0;transform:scaleX(.1)}}@keyframes mhDonationGem{to{opacity:1;transform:scale(1.2)}}@keyframes mhDonationParticle{0%{opacity:1}100%{opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-95px) scale(.2)}}@keyframes mhHomeMasumonWalk{0%,100%{translate:0 0}50%{translate:0 -5px}}@keyframes mhHomeBattlePulse{50%{filter:brightness(1.16);box-shadow:0 0 34px #d8b4fddd,inset 0 0 26px #ffdc8366}}@media(max-width:350px){.mh-home-player-copy strong{max-width:80px}.mh-home-wallet{width:124px}.mh-home-facility>span{font-size:9px;padding:6px 8px}.mh-home-facility.battle>span{min-width:140px;font-size:18px}}@media(max-height:620px){.mh-home-facility.management,.mh-home-facility.temple{top:13%;height:32%}/* 背の低い端末では、みゅあの吹き出しがM/B管理の看板にかからないよう少し下げる */.mh-home-facility.management>span,.mh-home-facility.temple>span{top:45%}.mh-home-facility.market{top:43%}.mh-home-facility.battle{height:30%}}@media(prefers-reduced-motion:reduce){.mh-home-background,.mh-home-player,.mh-home-facility>span{transition:none}.mh-home-facility.battle>span{animation:none}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:none}}
+    .mh-rebirth-animation{position:fixed;inset:0;z-index:51000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle,#7c3aed88,#020617 62%);pointer-events:auto;touch-action:none}.mh-rebirth-circle{position:absolute;width:240px;height:240px;border:3px solid #c4b5fd;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fde68a;font-size:150px;animation:mhRebirthCircle 4s ease-in-out forwards}.mh-rebirth-glow{position:absolute;width:100%;height:42%;background:linear-gradient(90deg,transparent,#fff8,transparent);filter:blur(14px);animation:mhRebirthGlow 4s ease-in-out forwards}.mh-rebirth-mon{position:relative;width:145px;height:145px;animation:mhRebirthFloat 4s ease-in-out forwards}.mh-rebirth-copy{position:absolute;bottom:calc(8% + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;color:#fff;font-size:11px;font-weight:900;animation:mhRebirthCopy 4s ease-out forwards}.mh-rebirth-copy b{font-size:20px;color:#fde68a}.mh-rebirth-copy span{margin-top:2px}@keyframes mhRebirthCircle{0%{opacity:0;transform:scale(.3) rotate(0)}25%{opacity:1}100%{opacity:.25;transform:scale(1.5) rotate(180deg)}}@keyframes mhRebirthGlow{0%,20%{opacity:0}40%,70%{opacity:1}100%{opacity:0}}@keyframes mhRebirthFloat{0%{transform:translateY(30px);filter:brightness(1)}45%{transform:translateY(-25px);filter:brightness(2)}60%{filter:brightness(0)}78%{filter:brightness(3)}100%{transform:translateY(0);filter:brightness(1)}}@keyframes mhRebirthCopy{0%,55%{opacity:0;transform:translateY(20px)}68%,100%{opacity:1;transform:none}}.mh-donation-animation{position:fixed;inset:0;z-index:33000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at center,#7c3aed55 0,#020617 58%);pointer-events:auto;touch-action:none}.mh-donation-beam{position:absolute;width:150px;height:110%;background:linear-gradient(90deg,transparent,#fff9c477,transparent);filter:blur(8px);animation:mhDonationBeam 1.5s ease-in-out forwards}.mh-donation-monster{position:absolute;width:96px;height:96px;filter:drop-shadow(0 0 22px #fff);animation:mhDonationRise 1.25s ease-in forwards}.mh-donation-gem{position:absolute;color:#fde68a;opacity:0;filter:drop-shadow(0 0 18px #fbbf24);animation:mhDonationGem .55s 1s ease-out forwards}.mh-donation-particles i{position:absolute;left:50%;top:50%;width:6px;height:6px;border-radius:50%;background:#fde68a;box-shadow:0 0 8px #fff;opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-20px);animation:mhDonationParticle .55s 1s ease-out forwards}.mh-donation-copy{position:absolute;bottom:calc(15% + env(safe-area-inset-bottom));font-size:14px;font-weight:1000;color:#f5d0fe;text-shadow:0 0 12px #a855f7}@keyframes mhDonationRise{0%{transform:translateY(25px) scale(1);opacity:1}55%{transform:translateY(-28px) scale(1.08);opacity:1}100%{transform:translateY(-55px) scale(.05);opacity:0;filter:drop-shadow(0 0 50px #fff)}}@keyframes mhDonationBeam{0%{opacity:0;transform:scaleX(.2)}35%{opacity:1;transform:scaleX(1)}100%{opacity:0;transform:scaleX(.1)}}@keyframes mhDonationGem{to{opacity:1;transform:scale(1.2)}}@keyframes mhDonationParticle{0%{opacity:1}100%{opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-95px) scale(.2)}}@keyframes mhHomeMasumonWalk{0%,100%{translate:0 0}50%{translate:0 -5px}}@keyframes mhHomeBattlePulse{50%{filter:brightness(1.16);box-shadow:0 0 34px #d8b4fddd,inset 0 0 26px #ffdc8366}}@media(max-width:350px){.mh-home-player-copy strong{max-width:80px}.mh-home-wallet{width:124px}.mh-home-facility>span{font-size:9px;padding:6px 8px}.mh-home-facility.battle>span{min-width:140px;font-size:18px}
+    /* イベント開催中の札(2026-09-11)。ボタンの上へ出すので、中の文字とぶつからない */
+    .mh-home-facility>span>em{position:absolute;left:50%;bottom:calc(100% + 4px);transform:translateX(-50%);display:block;padding:2px 7px;border:1px solid #fcd34d;border-radius:999px;background:#7c2d12f2;color:#fde68a;font-size:8px;font-weight:1000;font-style:normal;line-height:1.4;white-space:nowrap;box-shadow:0 2px 8px #0009;text-shadow:none}}@media(max-height:620px){.mh-home-facility.management,.mh-home-facility.temple{top:13%;height:32%}/* 背の低い端末では、みゅあの吹き出しがM/B管理の看板にかからないよう少し下げる */.mh-home-facility.management>span,.mh-home-facility.temple>span{top:45%}.mh-home-facility.market{top:43%}.mh-home-facility.battle{height:30%}}@media(prefers-reduced-motion:reduce){.mh-home-background,.mh-home-player,.mh-home-facility>span{transition:none}.mh-home-facility.battle>span{animation:none}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:none}}
     .mh-home-mission{position:absolute;z-index:5;right:5%;top:65%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #fbbf24aa;border-radius:13px;background:#422006e8;color:#fef3c7;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-mission em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-mission:active{transform:scale(.94);filter:brightness(1.25)}/* はじめての案内で説明中の場所だけを明るく浮かび上がらせる。暗幕(z-index:90000)より前に出す。
    施設だけでなく、ミッション/ギフトの本体・みゅあの吹き出しも対象にする(そこも案内するため) */.is-tutorial-spot{z-index:90001}.mh-home-facility.is-tutorial-spot>span,.mh-home-mission.is-tutorial-spot,.mh-home-gift.is-tutorial-spot,.mh-home-assistant.is-tutorial-spot,.mh-home-settings.is-tutorial-spot{border-color:#fce7f3;filter:brightness(1.5) saturate(1.15);box-shadow:0 0 0 4px #f472b6,0 0 0 10px #f472b655,0 0 46px 12px #f472b6cc;animation:mhTutorialSpot 1.35s ease-in-out infinite}.mh-home-assistant.is-tutorial-spot{border-radius:18px}.mh-home-settings.is-tutorial-spot{position:relative;border-radius:11px}/* どこを指しているかが一目で分かるように、光る枠の上に矢印を出す */.mh-home-facility.is-tutorial-spot>span::before,.mh-home-mission.is-tutorial-spot::before,.mh-home-gift.is-tutorial-spot::before,.mh-home-assistant.is-tutorial-spot::before,.mh-home-settings.is-tutorial-spot::before{content:'▼';position:absolute;left:50%;bottom:100%;margin-bottom:5px;transform:translateX(-50%);color:#fbcfe8;font-size:19px;line-height:1;text-shadow:0 0 12px #f472b6,0 2px 4px #000;animation:mhTutorialArrow .9s ease-in-out infinite;pointer-events:none}/* 設定は画面のいちばん上にあるので、矢印は下側から上を指す */.mh-home-settings.is-tutorial-spot::before{content:'▲';top:100%;bottom:auto;margin:5px 0 0}@keyframes mhTutorialSpot{50%{box-shadow:0 0 0 6px #fbcfe8,0 0 0 15px #f472b644,0 0 62px 18px #f472b6}}@keyframes mhTutorialArrow{50%{transform:translateX(-50%) translateY(-7px)}}/* バトルチュートリアルで「ここを操作して」と示す枠。ふだんの画面の上に重ねるので、   暗幕は張らず、光る枠だけで示す(押せる場所はそのまま押せる) */.is-battle-tutorial-spot{border-radius:18px;outline:3px solid #f472b6;outline-offset:3px;box-shadow:0 0 0 7px #f472b644,0 0 34px 6px #f472b6aa;animation:mhBattleSpot 1.3s ease-in-out infinite}@keyframes mhBattleSpot{50%{outline-color:#fbcfe8;box-shadow:0 0 0 10px #f472b633,0 0 46px 10px #f472b6}}@media(prefers-reduced-motion:reduce){.is-battle-tutorial-spot{animation:none}}@media(prefers-reduced-motion:reduce){.is-tutorial-spot,.is-tutorial-spot>span,.is-tutorial-spot::before,.is-tutorial-spot>span::before{animation:none}}.mh-home-assistant{position:absolute;z-index:5;left:3%;width:70%;top:calc(72px + env(safe-area-inset-top));pointer-events:auto}@media(max-width:350px){.mh-home-assistant{width:62%}}
     .mh-gift-list{display:flex;flex-direction:column;gap:5px}.mh-gift-card{display:flex;flex-direction:column;min-height:80px;padding:5px 8px}.mh-gift-heading{display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0;height:18px}.mh-gift-heading h3{display:flex;align-items:center;gap:4px;min-width:0;font-size:12px;line-height:18px;color:#fff}.mh-gift-heading h3 span{flex:none;padding:1px 4px;border-radius:5px;background:#78350f;color:#fde68a;font-size:8px;line-height:14px}.mh-gift-heading h3 b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mh-gift-heading>em{flex:none;padding:1px 6px;border-radius:999px;font-size:8px;line-height:15px;font-style:normal;font-weight:900}.mh-gift-main{display:flex;align-items:center;justify-content:space-between;gap:6px;min-height:37px}.mh-gift-rewards{display:flex;flex:1;flex-wrap:wrap;align-items:center;gap:2px 7px;min-width:0;color:#fde68a;font-size:11px;line-height:15px;font-weight:900}.mh-gift-rewards span{overflow-wrap:anywhere}.mh-gift-main>button{flex:none;min-width:76px;height:36px;padding:0 10px;border-radius:10px;background:#0891b2;color:#fff;font-size:12px;font-weight:900;white-space:nowrap}.mh-gift-main>button:disabled{background:#334155;color:#64748b}.mh-gift-deadline{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#64748b;font-size:8px;line-height:12px}
