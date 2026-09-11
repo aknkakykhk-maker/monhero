@@ -72,8 +72,12 @@ const tabbed = new Set([...changelogEntriesOfTab('update'), ...changelogEntriesO
 check('タブごとの一覧にも出ない', devEntries.every(e => !tabbed.has(e.title)));
 check('出す・出さないを1か所(changelogForPlayers)で決めている',
   typeof changelogForPlayers === 'function'
-  && game.includes('.filter(changelogForPlayers)')
-  && /const changelogForPlayers = \(entry\) => !!entry && entry\.dev !== true && releasedForPlayers\(entry\)/.test(game));
+  && /\.filter\(entry => changelogForPlayers\(entry, CHANGELOG_READ_AT_MS\)\)/.test(game)
+  && /const changelogForPlayers = \(entry, nowMs\) => !!entry && entry\.dev !== true && releasedForPlayers\(entry\) && changelogVisibleNow\(entry, nowMs\)/.test(game));
+// ★filter へ関数を直に渡すと第2引数が添字になり、nowMs が 0,1,2… になって
+//   visibleFrom の項目が永久に出なくなる。実際に踏みかけたので機械で見張る。
+check('changelogForPlayers を filter へ直に渡していない(添字が nowMs に化ける)',
+  !/\.filter\(changelogForPlayers\)/.test(game));
 
 // ---- ② 助手の告知にもならない ----
 const devNotices = devEntries.map(e => e && e.assistantNotice && e.assistantNotice.id).filter(Boolean);
@@ -110,6 +114,33 @@ check('プレオープン後に直したぶんは出ている',
 // ---- ⑤ 書き方の説明が残っている ----
 check('changelog.js に dev:true の使い分けが書いてある',
   changelogSrc.includes('【dev:true について】') && changelogSrc.includes('公開初日に遊ぶ人がこれを読んで意味が分かるか'));
+
+// ---- ⑥ 時刻で出しはじめる項目(visibleFrom) ----
+// 週末ゲリラ杯を先に公開へ乗せたとき、助手の告知だけ notifyFrom で止めていて、
+// お知らせ一覧のほうは素通しだった(2026-09-11・ユーザー指摘「お知らせに出ちゃってる」)。
+const timedEntries = CHANGELOG.filter(e => e && typeof e.visibleFrom === 'string');
+check('visibleFrom を書いた項目がある(仕組みそのものが消えていない)',
+  timedEntries.length > 0, `${timedEntries.length}件`);
+for (const entry of timedEntries) {
+  const from = Date.parse(entry.visibleFrom);
+  check(`「${entry.title}」の visibleFrom が日時として読める`, Number.isFinite(from), entry.visibleFrom);
+  if (!Number.isFinite(from)) continue;
+  check(`「${entry.title}」は開始の1ミリ秒前には出ない`, changelogForPlayers(entry, from - 1) === false);
+  check(`「${entry.title}」は開始ちょうどで出る`, changelogForPlayers(entry, from) === true);
+  check(`「${entry.title}」は開始のあとも出たままになる`, changelogForPlayers(entry, from + 86400000) === true);
+  // 助手の告知を持つなら、一覧に出るまでは告知も出さない(両方が同時に出はじめる)
+  const noticeId = entry.assistantNotice && entry.assistantNotice.id;
+  if (noticeId) check(`「${entry.title}」の告知の notifyFrom が visibleFrom とそろっている`,
+    Date.parse(entry.assistantNotice.notifyFrom || '') === from,
+    `${entry.assistantNotice.notifyFrom} / ${entry.visibleFrom}`);
+}
+// visibleFrom を書いていない項目は、いつ見ても今までどおり出る
+const plainEntry = CHANGELOG.find(e => e && !e.dev && !e.releaseFlag && !e.visibleFrom);
+check('visibleFrom を書いていない項目は時刻に左右されない',
+  !!plainEntry && changelogForPlayers(plainEntry, 0) === true && changelogForPlayers(plainEntry, Date.now()) === true);
+// 書き間違いで項目が永久に消えないこと(CLAUDE.md ⑦「消さない」へ倒す)
+check('visibleFrom が読めない値でも項目は消えない',
+  changelogForPlayers({ type:'update', title:'x', visibleFrom:'いつか' }, 0) === true);
 
 console.log(failed === 0 ? '\nすべてOK' : `\n${failed}件のNGがあります`);
 process.exit(failed === 0 ? 0 : 1);
