@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 63e9d4e46d040190
+// generated-sha256: ee8bc7fecb552b0b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 19:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 19:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6395,7 +6395,10 @@ const DEFAULT_AUTO_SETTINGS = Object.freeze({
   // 「1周目に自分で組んだ編成」= 周回テンプレートだけを使う。
   // ★新しい保存キーは作らず、既存の mh_auto_settings_v1 へ項目を足す形にしてある。
   //   項目の無い既存ユーザーは normalizeAutoSettings が未設定で補う
-  quickRun:{ heroRosterEntry:null, distance:null, difficulty:null },
+  // autoStart … モンヒロビートを開いたときに、この編成で∞周回を自動で始めるか
+  //   (2026-09-11・ユーザー指示「モンビーを開いたら自動でクイックに入る機能」)。
+  //   既定はOFF。既存ユーザーの端末で、ある日いきなり裏でバトルが始まらないようにする
+  quickRun:{ heroRosterEntry:null, distance:null, difficulty:null, autoStart:false },
 });
 const normalizeAutoReserveAmount = (value) => {
   const amount = Number(value);
@@ -6432,6 +6435,8 @@ const normalizeAutoSettings = (value, validRosterEntries = null, validDifficulty
     heroRosterEntry:quickHero && (!valid || valid.has(quickHero)) ? quickHero : null,
     distance:Number.isInteger(quickDistanceRaw) && quickDistanceRaw >= 0 && quickDistanceRaw <= 3 ? quickDistanceRaw : null,
     difficulty:quickDifficulty && (!quickDifficultyIds || quickDifficultyIds.has(quickDifficulty)) ? quickDifficulty : null,
+    // true と書いてあるときだけON。項目の無い既存ユーザー・壊れた値はOFFへ倒す
+    autoStart:rawQuick.autoStart === true,
   };
   return { strategy:AUTO_STRATEGIES.includes(source.strategy) ? source.strategy : 'random', allies, breakthroughReserve, quickRun };
 };
@@ -6443,6 +6448,13 @@ const autoQuickRunConfigured = (settings) => {
     && typeof quick.heroRosterEntry === 'string' && quick.heroRosterEntry.length > 0
     && Number.isInteger(quick.distance) && quick.distance >= 0 && quick.distance <= 3
     && typeof quick.difficulty === 'string' && quick.difficulty.length > 0);
+};
+// モンヒロビートを開いたときに、自動で∞周回を始めてよいか。
+// ★3つとも決まっていることが前提。決まっていなければ、スイッチがONでも始めない
+//   (始めようがないため。設定画面のスイッチも、そろうまでは押せないようにしてある)
+const autoQuickRunAutoStartEnabled = (settings) => {
+  if (!autoQuickRunConfigured(settings)) return false;
+  return settings.quickRun.autoStart === true;
 };
 
 // AUTOの1ターンぶんの選択だけを組み立てる。実際の選択stateや戦闘進行には触れず、
@@ -19842,6 +19854,11 @@ function MonsterHeroGame() {
   // モンビーを開いているか(演奏中も含む)。開いている間はランが進んでも画面を切り替えない。
   // 演奏中に画面がバトルへ飛ぶのを防ぐため、RHYTHM_PLAY もここへ入れる
   const rhythmScreenOpen = [...RHYTHM_BACKGROUND_RUN_SCREENS,'RHYTHM_PLAY'].includes(gameState);
+  // 「モンヒロビートへ入った瞬間」を見分けるための一覧(自動で∞周回を始める判定に使う)。
+  // ★裏で回してよい画面より広く取る。オプション・遊びかたもモンビーの中なので、
+  //   そこから曲えらびへ戻っただけで「入り直した」と数えると、周回が何度も立ち上がる。
+  //   デバッグ画面(RHYTHM_DEBUG)と、未公開のときに出る案内(RHYTHM_INFO)は入口ではないので入れない
+  const RHYTHM_AUTO_START_SCREENS = [...RHYTHM_BACKGROUND_RUN_SCREENS,'RHYTHM_PLAY','RHYTHM_OPTIONS'];
   // 裏で周回してよい状態か。
   //  ・クイックの∞周回だけ(チャレンジ・プロ・極限・種族は全国ランキング対象なので裏で回さない)
   //  ・演奏中は止める(曲が終われば自動で再開する)
@@ -25676,6 +25693,35 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     else beginQuickRunProgress();
     return true;
   };
+  // ===== モンヒロビートを開いたら自動で∞周回を始める =====
+  // (2026-09-11・ユーザー指示「オート設定にモンビー中のオート周回を設定している場合に
+  //  モンビーを開いたら自動でクイックに入る機能を追加したい /
+  //  その機能をオート周回設定のとこでオンオフ切り替えられるように」)。
+  //
+  // ★始めるのは「モンヒロビートへ入った瞬間」だけ。曲えらびにいるあいだ何度も試さない。
+  //   演奏・オプション・ランキングもモンビーの中なので、そこから曲えらびへ戻っただけでは
+  //   「入った瞬間」にならない(戻るたびに新しい周回が始まってしまうため)。
+  // ★次のときは何もしない(黙って見送る)。
+  //   ・スイッチがOFF／事前設定が3つそろっていない
+  //   ・すでに周回が回っている
+  //   ・ほかのモードのバトルが続いている(クイック以外を裏で回さない・CLAUDE.md ⑦)
+  //   ・公開フラグが下りている
+  const rhythmAutoStartInsideRef = useRef(false);
+  useEffect(() => {
+    const inside = RHYTHM_AUTO_START_SCREENS.includes(gameState);
+    const wasInside = rhythmAutoStartInsideRef.current;
+    rhythmAutoStartInsideRef.current = inside;
+    if (!inside || wasInside) return;                                  // 入った瞬間だけ
+    if (!quickRhythmGuideReleased) return;
+    if (!autoQuickRunAutoStartEnabled(autoSettings)) return;
+    // すでに回っている(止まっていない)なら、そのまま続ける
+    if (quickRunProgressRef.current && !quickRunProgressRef.current.finished) return;
+    // まだ勝負のついていない挑戦の上へ、新しいランを重ねない(startQuickRunFromRhythm と同じ条件)
+    if (runStageRef.current && !runResultFinishedRef.current) return;
+    // 事前設定から編成を作れないとき(勇者モンがいない・難易度が未解放)は黙って見送る
+    if (!repeatTemplateFromAutoSettings()) return;
+    startQuickRunFromRhythm();
+  }, [gameState]);
   // バトル内ではAUTO系を1ボタンで循環する。表示用stateは持たず、既存の同期refから次の状態だけを決める。
   const cycleBattleAuto = () => {
     if(autoRepeatRef.current){setAutoBattleEnabled(false);return;}
@@ -27750,7 +27796,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {/* モンヒロビートから∞周回を始めるための事前設定(docs/spec/QUICK_RHYTHM_LINK.md PR5)。
                   3つとも決めたときだけ使う。決めていないあいだは、これまでどおり
                   「1周目に自分で組んだ編成」をそのまま繰り返す */}
-              <section className="space-y-3"><div><h3 className="text-sm font-black text-indigo-200">3. モンヒロビート中に回すクイック周回</h3><p className="text-[9px] leading-relaxed text-slate-400 mt-1">モンヒロビートから∞周回を始めるときの編成です。勇者モン・配置距離・難易度の3つを決めると使えます。決めていないあいだは、いつもどおりバトル画面で1周目を組んでから∞にしてください。</p></div><div className="rounded-2xl border border-fuchsia-500/30 bg-slate-900 p-3 space-y-2"><label className="block text-xs font-black text-white" htmlFor="auto-quick-hero">勇者モン</label><select id="auto-quick-hero" value={draftAutoSettings.quickRun?.heroRosterEntry||''} onChange={event=>updateDraftAutoQuickRun({heroRosterEntry:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-slate-600 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">未設定（この機能を使わない）</option>{monsterRosterIds.filter(entry=>!!resolveRosterEntryToMon(entry)).map(entry=><option key={entry} value={entry}>{autoRosterLabel(entry)}</option>)}</select>{renderAutoAllySummary(draftAutoSettings.quickRun?.heroRosterEntry)}<div><div className="text-[10px] font-black text-slate-300 mb-1.5">配置距離</div><div className="grid grid-cols-4 gap-1">{ranges.filter(([slot])=>slot!==null).map(([slot,label])=><button key={label} onClick={()=>updateDraftAutoQuickRun({distance:slot})} aria-pressed={draftAutoSettings.quickRun?.distance===slot} className={`min-h-[44px] min-w-0 rounded-lg border text-[10px] font-black active:scale-95 ${draftAutoSettings.quickRun?.distance===slot?'ring-2 ring-white border-white':''} ${RANGE_STYLES[slot].labelBg} ${RANGE_STYLES[slot].border}`}>{label}</button>)}</div></div><div><label className="block text-[10px] font-black text-slate-300 mb-1.5" htmlFor="auto-quick-difficulty">難易度</label><select id="auto-quick-difficulty" value={draftAutoSettings.quickRun?.difficulty||''} onChange={event=>updateDraftAutoQuickRun({difficulty:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-slate-600 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">未設定</option>{Object.entries(QUICK_DIFFICULTY_SETTINGS).map(([key,setting])=>{const unlocked=isQuickDifficultyUnlocked(key,clearCounts,proClearCounts,extremeDifficultyClearCounts);return <option key={key} value={key} disabled={!unlocked}>{setting.label}{unlocked?'':'（未解放）'}</option>;})}</select></div><div className="pt-1"><AssistantBubble scene="autoQuickRunSettings" compact/></div><p className="text-[9px] leading-relaxed text-slate-400">{autoQuickRunConfigured(draftAutoSettings)?'✅ 3つとも決まっています。モンヒロビートから周回を始められます。':'まだ使えません（3つとも決めると使えます）。'}</p></div></section>
+              <section className="space-y-3"><div><h3 className="text-sm font-black text-indigo-200">3. モンヒロビート中に回すクイック周回</h3><p className="text-[9px] leading-relaxed text-slate-400 mt-1">モンヒロビートから∞周回を始めるときの編成です。勇者モン・配置距離・難易度の3つを決めると使えます。決めていないあいだは、いつもどおりバトル画面で1周目を組んでから∞にしてください。</p></div><div className="rounded-2xl border border-fuchsia-500/30 bg-slate-900 p-3 space-y-2"><label className="block text-xs font-black text-white" htmlFor="auto-quick-hero">勇者モン</label><select id="auto-quick-hero" value={draftAutoSettings.quickRun?.heroRosterEntry||''} onChange={event=>updateDraftAutoQuickRun({heroRosterEntry:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-slate-600 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">未設定（この機能を使わない）</option>{monsterRosterIds.filter(entry=>!!resolveRosterEntryToMon(entry)).map(entry=><option key={entry} value={entry}>{autoRosterLabel(entry)}</option>)}</select>{renderAutoAllySummary(draftAutoSettings.quickRun?.heroRosterEntry)}<div><div className="text-[10px] font-black text-slate-300 mb-1.5">配置距離</div><div className="grid grid-cols-4 gap-1">{ranges.filter(([slot])=>slot!==null).map(([slot,label])=><button key={label} onClick={()=>updateDraftAutoQuickRun({distance:slot})} aria-pressed={draftAutoSettings.quickRun?.distance===slot} className={`min-h-[44px] min-w-0 rounded-lg border text-[10px] font-black active:scale-95 ${draftAutoSettings.quickRun?.distance===slot?'ring-2 ring-white border-white':''} ${RANGE_STYLES[slot].labelBg} ${RANGE_STYLES[slot].border}`}>{label}</button>)}</div></div><div><label className="block text-[10px] font-black text-slate-300 mb-1.5" htmlFor="auto-quick-difficulty">難易度</label><select id="auto-quick-difficulty" value={draftAutoSettings.quickRun?.difficulty||''} onChange={event=>updateDraftAutoQuickRun({difficulty:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-slate-600 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">未設定</option>{Object.entries(QUICK_DIFFICULTY_SETTINGS).map(([key,setting])=>{const unlocked=isQuickDifficultyUnlocked(key,clearCounts,proClearCounts,extremeDifficultyClearCounts);return <option key={key} value={key} disabled={!unlocked}>{setting.label}{unlocked?'':'（未解放）'}</option>;})}</select></div><div><div className="text-[10px] font-black text-slate-300 mb-1.5">モンヒロビートを開いたら自動で始める</div><button type="button" data-auto-quick-run-autostart aria-pressed={draftAutoSettings.quickRun?.autoStart===true} disabled={!autoQuickRunConfigured(draftAutoSettings)} onClick={()=>updateDraftAutoQuickRun({autoStart:!(draftAutoSettings.quickRun?.autoStart===true)})} className={`flex min-h-[48px] w-full items-center justify-between gap-2 rounded-xl border px-3 text-left active:scale-[.99] disabled:opacity-50 ${draftAutoSettings.quickRun?.autoStart===true?'border-fuchsia-300 bg-fuchsia-900/50':'border-slate-600 bg-slate-950'}`}><span className="min-w-0 flex-1 text-[11px] font-black text-white">{draftAutoSettings.quickRun?.autoStart===true?'ON（開いたらすぐ回しはじめる）':'OFF（自分で「始める」を押す）'}</span><span className={`shrink-0 rounded-md px-2 py-0.5 text-[10px] font-black ${draftAutoSettings.quickRun?.autoStart===true?'bg-fuchsia-500 text-white':'bg-slate-700 text-slate-300'}`}>{draftAutoSettings.quickRun?.autoStart===true?'ON':'OFF'}</span></button><p className="mt-1 text-[9px] leading-relaxed text-slate-400">ONにすると、HOMEなどからモンヒロビートを開いたときに、この編成でクイックの∞周回が裏で始まります。すでに周回しているとき・ほかのモードのバトルが続いているときは何もしません。曲えらびの上の帯から、いつでも止められます。</p></div><div className="pt-1"><AssistantBubble scene="autoQuickRunSettings" compact/></div><p className="text-[9px] leading-relaxed text-slate-400">{autoQuickRunConfigured(draftAutoSettings)?'✅ 3つとも決まっています。モンヒロビートから周回を始められます。':'まだ使えません（3つとも決めると使えます）。'}</p></div></section>
               <section data-auto-breakthrough-bulk-settings className="rounded-2xl border border-cyan-500/40 bg-cyan-950/20 p-3 space-y-3">
                 <div><h3 className="text-sm font-black text-cyan-200">4. AUTO∞ 自動限界突破</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-slate-300">現在所有しているマスモンをまとめて設定し、限界突破で使い切らないようダイヤと虹のプシュケーを残せます。</p></div>
                 <div className="rounded-xl border border-cyan-500/30 bg-slate-950/70 p-3 space-y-2">
