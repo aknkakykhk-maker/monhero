@@ -3,6 +3,7 @@ const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分�
 const fs = require('fs');
 const vm = require('vm');
 const path = require('path');
+const { screenSource } = require(path.join(TOOLS_DIR, 'harness'));
 const source = fs.readFileSync(path.join(TOOLS_DIR, '..', 'monster-hero', 'src', 'game-system.jsx'), 'utf8');
 const prefix = source.slice(0, source.indexOf('// =====================================================================\n// AUDIO:'));
 const context = { BREEDER_MARKET_ITEMS: [] /* 本体が読み込み時に push するため空で用意 */, React: { Component: class { setState() {} }, PureComponent: class { setState() {} }, createElement:()=>null, useState(){}, useEffect(){}, useCallback(){}, useMemo(){}, useRef(){} } };
@@ -17,7 +18,15 @@ check('0体を保存できる', normalizeHomePastureIds([],owned,valid).length==
 check('旧セーブは現在の1体表示で初期化する', JSON.stringify(normalizeHomePastureIds(null,owned,valid))===JSON.stringify(['m1']));
 check('5体を保存し6体目は除外する', JSON.stringify(normalizeHomePastureIds(['m1','m2','m3','m4','m5','m6'],owned,valid))===JSON.stringify(['m1','m2','m3','m4','m5']));
 check('重複・未所持・不明な種を除外する', JSON.stringify(normalizeHomePastureIds(['m1','m1','gone','m7'],owned,valid))===JSON.stringify(['m1']));
-check('HOMEだけで歩行コンポーネントを生成する', /gameState==='HOME'[\s\S]*homePastureMasumons\.map\([\s\S]*HomeWalkingMasumon/.test(source));
+// HOME は 69-screen-home.jsx へ切り出した。並びが本体より前になるので「gameState==='HOME' の
+// あとに homePastureMasumons.map が出てくる」では見られない。本体の呼び出しと画面の中身の2段で見る
+check('HOMEだけで歩行コンポーネントを生成する', (() => {
+  const home = screenSource('HOME', 'HomeScreen');
+  return /gameState==='HOME'&&\(\s*<HomeScreen/.test(source)
+    && /homePastureMasumons\.map\([\s\S]*HomeWalkingMasumon/.test(home)
+    // 歩くマスモンを作っているのは HOME だけ(ほかの画面へ広がっていないこと)
+    && (source.match(/<HomeWalkingMasumon/g) || []).length === 1;
+})());
 check('画面離脱と非表示でタイマーを破棄する', /return \(\) => \{ mountedRef\.current = false; clearMotionTimer\(\); document\.removeEventListener\('visibilitychange'/.test(source));
 check('保存キーと選択上限を実装する', source.includes("storeSet('mh_home_pasture_ids',next,false)") && /prev\.length>=5 \? prev/.test(source));
 check('個体の下位置をz-indexへ反映する', source.includes('zIndex:Math.round(motion.y)'));

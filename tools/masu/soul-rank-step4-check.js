@@ -1,8 +1,9 @@
 // 魂格 STEP4「戦闘接続」の回帰検査。
 // 正式ビルド後: node tools/masu/soul-rank-step4-check.js
 const fs=require('fs'),path=require('path');
-const {REPO_ROOT,loadDyeModule}=require('../harness');
-const app=fs.readFileSync(path.join(REPO_ROOT,'monster-hero/src/parts/60-app.jsx'),'utf8');
+const {REPO_ROOT,loadDyeModule,readAppSource}=require('../harness');
+// バトル画面は 71-screen-battle.jsx へ切り出したので、本体と切り出した画面を合わせて見る
+const app=readAppSource();
 const prog=fs.readFileSync(path.join(REPO_ROOT,'monster-hero/src/parts/11-masu-progression.jsx'),'utf8');
 const hits=fs.readFileSync(path.join(REPO_ROOT,'monster-hero/src/parts/22-enemy-and-bond-entries.jsx'),'utf8');
 const auto=fs.readFileSync(path.join(REPO_ROOT,'monster-hero/src/parts/18-points-and-auto.jsx'),'utf8');
