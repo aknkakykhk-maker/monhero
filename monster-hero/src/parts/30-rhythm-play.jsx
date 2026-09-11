@@ -840,6 +840,9 @@ scheduleTick();};
     <span className="text-[10px] font-black tracking-wider text-fuchsia-200">クイック∞周回</span>
     <b className="text-lg font-black leading-none text-white">+{quickRunAward.loops}周</b>
   </div>
+  {/* イベントの対象曲だけ、ふだんの2倍ではなく3倍で入る(2026-09-11・ユーザー指示)。
+      入った周回数だけでは「この曲だから多かった」と気づけないので、その場で言う */}
+  {quickRunAward.eventBoosted&&<div data-rhythm-result-quick-run-event className="mt-1.5 rounded-xl border border-amber-300/50 bg-amber-950/40 px-2 py-1 text-[10px] font-black text-amber-200">🏆 イベント対象曲 ×{quickRunAward.scale}（ふだんの曲は ×{RHYTHM_PLAY_RUN_LOOP_SCALE}）</div>}
   <div className="mt-1 text-[11px] font-black text-slate-200">{quickRunAward.fromLoop}周目 <span className="text-slate-500">→</span> {quickRunAward.toLoop}周目</div>
   <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] font-bold text-slate-300">
     <span>経験値 <b className="text-cyan-300">+{Number(quickRunAward.xp||0).toLocaleString()}</b></span>

@@ -26,7 +26,17 @@ const run = async (browser, scenario) => {
       inheritedUniques: [], fusionHistory: [], createdAt: Date.now(),
     });
     put('mh_breeder_name', '合体演出テスト');
-    put('mh_intro_done', true);
+    put('mh_breeder_icon', 'Mocchi');
+    // 名前とアイコンが両方そろっていないと「はじめての設定」からやり直しになる(60-app.jsx の wasOnboarded 判定)。
+    // mh_intro_done は実装がもう読まない古いキーなので、いまのキーで既存プレイヤーの印を付ける
+    put('mh_onboarded', true);
+    put('mh_tutorial_seen_v1', true);
+    put('mh_battle_tutorial_seen_v1', true);
+    put('mh_battle_tutorial_guide_shown_v1', true);
+    put('mh_kiki_intro_seen_v1', true);
+    put('mh_momosuke_intro_seen_v1', true);
+    put('mh_inherited_unique_level_compensation_v1', true);
+    put('mh_inherited_unique_level_compensation_pending_v1', false);
     put('mh_gold', 999999);
     put('mh_owned_items', { rainbow_psyche: 9999 });
     put('mh_masu_mons', [
@@ -35,9 +45,31 @@ const run = async (browser, scenario) => {
       makeMasu('fusion-next-sub', 'Golem', '次の副・ゴーレム', 50, ['green', 'yellow', 'blue']),
     ]);
   }, scenario);
+  // 外部CDN(Tailwind)へ出られない環境では読み込み待ちで先へ進めなくなるので、先に落とす
+  await page.route('**cdn.tailwindcss.com**', route => route.abort()).catch(() => {});
   await page.goto(URL, { waitUntil: 'load', timeout: 60000 });
+  const pointerDown = selector => page.evaluate(sel => {
+    const node = document.querySelector(sel);
+    if (node) node.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+    return !!node;
+  }, selector);
+  await page.waitForFunction(() => document.body.innerText.includes('TAP TO START'), { timeout: 40000 });
   await page.getByRole('button', { name: 'TAP TO START' }).click();
-  await page.waitForTimeout(800);
+  // 事前ロードの次はタイトル画面。HOMEへ進むボタンは文字を持たず、onPointerDown でしか動かない
+  await page.waitForFunction(() => !!document.querySelector('button[aria-label="トップ画面へ進む"]'), { timeout: 40000 });
+  await pointerDown('button[aria-label="トップ画面へ進む"]');
+  await page.waitForTimeout(2500);
+  // ログインボーナス・お知らせがHOMEに重なることがあるので閉じておく
+  for (let i = 0; i < 8; i++) {
+    const closed = await page.evaluate(() => {
+      const node = [...document.querySelectorAll('button')].find(x => /受け取|閉じる|あとで|スキップ/.test(x.textContent || ''));
+      if (node) node.click();
+      return !!node;
+    });
+    if (!closed) break;
+    await page.waitForTimeout(500);
+  }
+  await page.waitForFunction(() => !!document.querySelector('button[aria-label="神殿"]'), { timeout: 40000 });
 
   const clickButton = async pattern => {
     const clicked = await page.evaluate(source => {
@@ -55,8 +87,8 @@ const run = async (browser, scenario) => {
   await clickButton(/^合体$/);
   await clickButton(/主・染色モッチー/);
   await clickButton(/副・染色スエゾー/);
-  await clickButton(/この副1体で確認へ/);
-  await page.waitForFunction(() => document.body.innerText.includes('合体の最終確認'));
+  await clickButton(/副1体で確認へ/);
+  await page.waitForFunction(() => document.body.innerText.includes('合体の確認'));
 
   const action = scenario.breakthrough ? /限界突破 .*して合体/ : scenario.name === 'normal' ? /合体する|通常合体/ : /通常合体/;
   await clickButton(action);
@@ -65,7 +97,14 @@ const run = async (browser, scenario) => {
   const phase1 = await page.evaluate(() => ({
     left: [...document.querySelectorAll('*')].some(node => getComputedStyle(node).animationName === 'fusionSlideInLeft'),
     right: [...document.querySelectorAll('*')].some(node => getComputedStyle(node).animationName === 'fusionSlideInRight'),
-    dyedImages: document.querySelectorAll('canvas').length,
+    // ★染めた絵の数え方。以前は DOM の <canvas> を数えていたが、DyedMonsterImage は
+    //   canvas を画面に出さず、染め直した層を data URL の <img> にして元絵へ重ねる作り
+    //   (15-dye-and-art.jsx)。canvas は作る過程で使うだけなので、数えると常に0になる。
+    //   スライドインしている2体の中で「重ねられた層」を数える形にした(直接的で、より厳しい)
+    dyedImages: [...document.querySelectorAll('*')]
+      .filter(node => /^fusionSlideIn(Left|Right)$/.test(getComputedStyle(node).animationName))
+      .reduce((sum, node) => sum + [...node.querySelectorAll('img')]
+        .filter(img => (img.getAttribute('src') || '').startsWith('data:')).length, 0),
   }));
   await page.screenshot({ path: path.join(outDir, `fusion-${scenario.name}-slide.png`) });
   await page.waitForFunction(() => [...document.querySelectorAll('*')].some(node => getComputedStyle(node).animationName === 'fusionMergeShake'));
@@ -86,8 +125,8 @@ const run = async (browser, scenario) => {
   }));
   await page.screenshot({ path: path.join(outDir, `fusion-${scenario.name}-continued.png`) });
   await clickButton(/次の副・ゴーレム/);
-  await clickButton(/この副1体で確認へ/);
-  const nextFusionReady = await page.waitForFunction(() => document.body.innerText.includes('合体の最終確認')).then(() => true);
+  await clickButton(/副1体で確認へ/);
+  const nextFusionReady = await page.waitForFunction(() => document.body.innerText.includes('合体の確認')).then(() => true);
   await page.close();
   if (errors.length || !phase1.left || !phase1.right || phase1.dyedImages < 2 || !merge || !flash || !result || Object.values(continued).some(value => !value) || !nextFusionReady) {
     throw new Error(JSON.stringify({ errors, phase1, merge, flash, result, continued, nextFusionReady }));

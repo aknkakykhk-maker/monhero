@@ -239,7 +239,11 @@ function PressRepeatButton({ onPress, disabled, className, children, ...props })
   const startPress = event => {
     if (disabled || (event.pointerType === 'mouse' && event.button !== 0)) return;
     clearPress(); longPressedRef.current = false;
-    event.currentTarget.setPointerCapture?.(event.pointerId);
+    // ★指の捕捉は「できたら嬉しい」程度のもの。?. はメソッドが無い場合しか守らず、
+    //   メソッドはあるのに捕捉できない状況(その指がもう離れている等)では例外を投げる。
+    //   ここで投げると下の長押しタイマーが登録されず、押しっぱなしが効かなくなる。
+    //   音ゲー側(30-rhythm-play.jsx)と同じく try で囲って、失敗しても先へ進む
+    try { event.currentTarget.setPointerCapture?.(event.pointerId); } catch {}
     delayRef.current = setTimeout(() => {
       longPressedRef.current = true; onPress();
       repeatRef.current = setInterval(onPress, 110);

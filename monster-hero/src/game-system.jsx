@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: fc6e5c370dca0b76
+// generated-sha256: 6ca27986cb806714
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 19:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 19:14"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -10393,7 +10393,11 @@ function PressRepeatButton({ onPress, disabled, className, children, ...props })
   const startPress = event => {
     if (disabled || (event.pointerType === 'mouse' && event.button !== 0)) return;
     clearPress(); longPressedRef.current = false;
-    event.currentTarget.setPointerCapture?.(event.pointerId);
+    // ★指の捕捉は「できたら嬉しい」程度のもの。?. はメソッドが無い場合しか守らず、
+    //   メソッドはあるのに捕捉できない状況(その指がもう離れている等)では例外を投げる。
+    //   ここで投げると下の長押しタイマーが登録されず、押しっぱなしが効かなくなる。
+    //   音ゲー側(30-rhythm-play.jsx)と同じく try で囲って、失敗しても先へ進む
+    try { event.currentTarget.setPointerCapture?.(event.pointerId); } catch {}
     delayRef.current = setTimeout(() => {
       longPressedRef.current = true; onPress();
       repeatRef.current = setInterval(onPress, 110);
@@ -12570,6 +12574,9 @@ scheduleTick();};
     <span className="text-[10px] font-black tracking-wider text-fuchsia-200">クイック∞周回</span>
     <b className="text-lg font-black leading-none text-white">+{quickRunAward.loops}周</b>
   </div>
+  {/* イベントの対象曲だけ、ふだんの2倍ではなく3倍で入る(2026-09-11・ユーザー指示)。
+      入った周回数だけでは「この曲だから多かった」と気づけないので、その場で言う */}
+  {quickRunAward.eventBoosted&&<div data-rhythm-result-quick-run-event className="mt-1.5 rounded-xl border border-amber-300/50 bg-amber-950/40 px-2 py-1 text-[10px] font-black text-amber-200">🏆 イベント対象曲 ×{quickRunAward.scale}（ふだんの曲は ×{RHYTHM_PLAY_RUN_LOOP_SCALE}）</div>}
   <div className="mt-1 text-[11px] font-black text-slate-200">{quickRunAward.fromLoop}周目 <span className="text-slate-500">→</span> {quickRunAward.toLoop}周目</div>
   <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] font-bold text-slate-300">
     <span>経験値 <b className="text-cyan-300">+{Number(quickRunAward.xp||0).toLocaleString()}</b></span>
@@ -13728,7 +13735,7 @@ function RhythmSongSelectScreen({
                 //    追いつき方式のころの説明が残っていた)。
                 //   まだその難易度をクリアしていない人には入らないので、そこも言い分ける
                 :rhythmPlayRunLoopsAllowed(difficulty,quickClearCounts)
-                  ?'ここにいるあいだも周回は進みます。演奏中は止まりますが、曲を最後まで演奏すると、その曲の長さぶんの周回がクリア扱いで入ります（2分台までは2周・3分台は3周…）。'
+                  ?'ここにいるあいだも周回は進みます。演奏中は止まりますが、曲を最後まで演奏すると、その曲の長さぶんの周回がクリア扱いで入ります（2分台までは4周・3分台は6周…）。イベント開催中は、その対象曲だけ3倍（2分台6周・3分台9周）になります。'
                   :'ここにいるあいだも周回は進みます。演奏中は止まり、そのぶんは曲のあとに速く進んで取り戻します。この難易度をクイックで一度クリアすると、演奏したぶんがそのまま周回クリアとして入るようになります。'}</p>
             {/* ===== ここから操作。状態は3つだけ(2026-09-07に整理) =====
                   ① 回っている                … バトルへ戻る ／ ここで周回をやめる
@@ -14323,6 +14330,12 @@ function RhythmRankingScreen({
                 className="rounded-2xl border border-fuchsia-300/40 bg-fuchsia-500/5 p-2 text-[10px] leading-tight text-slate-200">
                 <b className="text-fuchsia-200">参加報酬</b>　対象曲を{eventParticipation.songs}曲すべて遊ぶと {rhythmEventParticipationText(eventParticipation)}
               </p>}
+              {/* ∞周回の倍率(2026-09-11・ユーザー指示「イベント時は対象曲は3倍」)。
+                  報酬の表と同じ場所に置く。対象曲を遊ぶ理由が順位だけではなくなるため */}
+              <p data-rhythm-event-loop-bonus
+                className="rounded-2xl border border-amber-300/40 bg-amber-500/5 p-2 text-[10px] leading-tight text-slate-200">
+                <b className="text-amber-200">∞周回 ×{RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE}</b>　クイックの∞周回を裏で回しながら対象曲を演奏すると、入る周回数がふだん（×{RHYTHM_PLAY_RUN_LOOP_SCALE}）の{RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE}倍になります
+              </p>
               {/* 受け取り方。いつ・どこで受け取るのかが分からないと、終わったあとに迷う */}
               <p className="text-[9px] leading-relaxed text-slate-400">
                 報酬はイベントが終わったあと、ゲームを開いたときに受け取れます。受け取れるのは終了から2週間までです。順位は終了した時点で決まるので、遅れて受け取っても内容は変わりません。
@@ -19988,10 +20001,18 @@ function MonsterHeroGame() {
   // 今回の演奏が何周ぶんになるか。0 なら何も起きない(いつもどおり)。
   // ★過去にその難易度をクイックでクリアしていないと 0。
   //   勝てないほど高い難易度でも演奏さえすればクリア扱い、を防ぐ(ユーザー指示)
+  // いまその曲にかかる倍率。ふだんは2倍、開催中のイベントの対象曲だけ3倍
+  // (2026-09-11・ユーザー指示「現状の2倍」「イベント時は対象曲は3倍」)。
+  // ★イベントは**呼ばれるたびに**引き直す。読み込み時に1回だけ決めると、開いたままの端末で
+  //   開催・終了をまたいだときに古い倍率が残る(CLAUDE.md ⑥-4)。
+  const rhythmPlayRunLoopEventNow = () =>
+    (RELEASE_FLAGS.rhythmWeeklyRanking === true && typeof rhythmLimitedEventAt === 'function')
+      ? rhythmLimitedEventAt(Date.now()) : null;
+  const rhythmPlayRunLoopScaleFor = (song) => rhythmPlayRunLoopScale(song ? song.songId : null, rhythmPlayRunLoopEventNow());
   const rhythmPlayLoopsFor = (song, rhythmDifficulty) => {
     if (!runStageRef.current || !autoRepeatRef.current || !isQuickMode(runMode)) return 0;
     if (!rhythmPlayRunLoopsAllowed(difficulty, quickClearCounts)) return 0;
-    return rhythmPlayRunLoops(rhythmPlaySongDurationMs(song, rhythmDifficulty));
+    return rhythmPlayRunLoops(rhythmPlaySongDurationMs(song, rhythmDifficulty), rhythmPlayRunLoopScaleFor(song));
   };
   // ★配るものは「実際に1周クリアしたとき」とそろえる。
   //   経験値とダイヤだけにしていたころは、演奏するより裏で回したほうが得になっていた
@@ -20002,9 +20023,12 @@ function MonsterHeroGame() {
   //   「実際に1周勝ったとき」と必ず一致する。
   // ★触らないのは記録(最高スコア・最高WAVE)だけ。演奏にはスコアが無く、
   //   埋める値そのものが存在しないため(CLAUDE.md ⑦「消さない・上書きしない」)。
-  const awardRhythmPlayRunLoops = async (loops) => {
+  // loopScale … その演奏にかかっていた倍率。曲リザルトで「イベント対象曲 ×3」と出すためだけに使う
+  //   (配る量そのものは loops に織り込み済みなので、ここで掛け直さない)
+  const awardRhythmPlayRunLoops = async (loops, loopScale = RHYTHM_PLAY_RUN_LOOP_SCALE) => {
     const count = Math.max(0, Math.trunc(Number(loops) || 0));
     if (count <= 0) return null;
+    const scale = Number.isFinite(Number(loopScale)) && Number(loopScale) > 0 ? Number(loopScale) : RHYTHM_PLAY_RUN_LOOP_SCALE;
     const { goldMult, xpMult } = runRewardMultipliers();
     const policy = quickRewardPolicyRunRef.current;
     // ---- ブリーダー経験値 ----
@@ -20079,7 +20103,8 @@ function MonsterHeroGame() {
     const fromLoop = quickRunProgressRef.current ? quickRunProgressRef.current.loops : 0;
     for (let i = 0; i < count; i++) countQuickRunLoop();
     const toLoop = quickRunProgressRef.current ? quickRunProgressRef.current.loops : fromLoop;
-    return { loops: count, xp: xpGain, gold: goldGain, bond: bondGain, psyche: psycheGain, fromLoop, toLoop };
+    return { loops: count, xp: xpGain, gold: goldGain, bond: bondGain, psyche: psycheGain, fromLoop, toLoop,
+      scale, eventBoosted: scale > RHYTHM_PLAY_RUN_LOOP_SCALE };
   };
   // ---- 画面のなかでの使い方案内(docs/spec/QUICK_RHYTHM_LINK.md PR8) ----
   // ヘルプと更新履歴は探しに行った人しか読まない。この連携は遊んでいるだけでは
@@ -28871,7 +28896,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 練習(tutorial)は記録も報酬も動かさないので、その前に判定しない
           if(rhythmPlay.from!=='tutorial'){
             const loops=rhythmPlayLoopsFor(rhythmPlay.song,rhythmPlay.difficulty);
-            const awarded=loops>0?await awardRhythmPlayRunLoops(loops):null;
+            const loopScale=rhythmPlayRunLoopScaleFor(rhythmPlay.song);
+            const awarded=loops>0?await awardRhythmPlayRunLoops(loops,loopScale):null;
             if(awarded){
               setRhythmPlayRunAward(awarded);
               // 限界突破も、通常の周回が終わったときと同じように走らせる

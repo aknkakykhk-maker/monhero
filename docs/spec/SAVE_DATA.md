@@ -111,6 +111,7 @@
 | `mh_rhythm_rank_pending_v1` | object[] | 全国ランキングへ送れなかったモンビーの記録(次回に再送) |
 | `mh_rhythm_perf_v1` | boolean / `false` | 性能計測(デバッグ限定)の ON/OFF |
 | `mh_rhythm_event_notice_v1` | string / `''` | 曲えらびで「今週の対象曲」の案内を見たイベントのID(週が変わると新しいIDになり、その週の初回にもう一度だけ出る。`docs/spec/RHYTHM_RANKING.md` §10.2) |
+| `mh_changelog_timed_seen_fix_v1` | boolean / `false` | `visibleFrom` 付きの更新履歴（時刻が来てから出る項目）を、一度きりで未読へ戻したか。開始前に一覧を開いた端末で既読になり、公開時刻にNEWが付かなかったための補正フラグ（二重適用を防ぐ） |
 | `mh_rhythm_event_story_v1` | string[] / `[]` | イベントの会話ストーリーを最後まで見たイベントのID(開催中に1度だけ流すためのフラグ。回想からはいつでも見られる) |
 | `mh_rhythm_event_reward_v1` | string[] / `[]` | イベント報酬を受け取り済みのイベントID。二重受取を防ぐためのフラグ(入賞しなかった場合もここへ入れて、問い合わせ直さないようにする。`docs/spec/RHYTHM_RANKING.md` §9.1) |
 | `mh_rhythm_canvas_v1` | `'canvas'` / `'dom'` / 未設定 | デバッグ画面の「ノーツの描き方」の上書き(未設定なら公開フラグに従う) |
@@ -127,6 +128,7 @@
 | `mh_masu_level_cap_compensation_notice_v1` / `mh_masu_level_cap_compensation_notice_seen_v1` | 上記移行で配ったダイヤの補償の案内と、その既読 |
 | `mh_inherited_unique_level_compensation_v1` / `mh_inherited_unique_level_compensation_pending_v1` | 継承固有技Lvの補償を一度だけ行うフラグと、その途中経過 |
 | `mh_unique_lineage_dedupe_migrated_v1` | 継承固有技の系統IDの重複を一度だけ整理した記録 |
+| `mh_changelog_timed_seen_fix_v1` | 時刻で出しはじめるお知らせ(`visibleFrom`)を、始まる前に既読にしてしまった端末で一度だけ未読へ戻した記録。外すのは `visibleFrom` を持つ項目だけで、ほかの既読には触らない |
 | `mh_monster_roster_sets_migrated_v1` | 編成セット形式への一度きり移行 |
 | `mh_login_pt_to_xp_v1` | 誤って配ったログインポイントを XP へ一度だけ振り替えた記録 |
 | `mh_bgm_dullahan_default_migrated_v1` / `mh_bgm_quick_extreme_default_migrated_v1` | BGM の既定曲を変えたときの一度きりの入れ替え(自分で選んだ曲には触らない) |
