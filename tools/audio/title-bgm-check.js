@@ -1,17 +1,20 @@
 const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分類フォルダから見た1つ上
 // タイトルBGMが「最初のタップだけで」鳴るかを確認する。
 //
-// PCのブラウザは自動再生の制限がゆるく、ユーザー操作から少し遅れて play() を呼んでも
+// PCのブラウザは自動再生の制限がゆるく、ユーザー操作から少し遅れて音を出しても
 // 鳴ってしまうため、そのままではiPhone等で起きる不具合を再現できない。
 // そこで iOS と同じ厳しさを再現する:
 //
-//   ・音声のロックが外れるのは「ユーザー操作と同じ処理の流れの中で呼ばれた play()」だけ
-//   ・await などで待ってから呼んだ play() は拒否される(NotAllowedError)
+//   ・AudioContext を動かせるのは「ユーザー操作と同じ処理の流れの中で呼ばれた resume()」だけ
+//   ・await などで待ってから呼んだ resume() は効かず、止まったままになる
 //   ・一度ロックが外れれば、以降は自由に鳴らせる
 //
 // この条件で「タップ → タイトルBGMが鳴る」ことを確かめる。
-// 修正前は resume() の完了を待ってから play() を呼んでいたため、ここで拒否され、
+// 修正前は resume() の完了を待ってから鳴らし始めていたため、ここで止められ、
 // 次のタップ(=別ページへの移動)でようやく鳴り出す状態になっていた。
+//
+// BGMは <audio> ではなく Web Audio で鳴らしているので、鳴っているかどうかは
+// ゲーム側が出している window.__mhAudioDebug() から見る。
 //
 //   python3 tools/serve.py   でリポジトリのルートを配信した状態で
 //   node audio/title-bgm-check.js
@@ -29,17 +32,35 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
   page.on('pageerror', (e) => fatal.push(e.message));
 
   await page.addInitScript(() => {
-    localStorage.setItem('mh_breeder_name', JSON.stringify('テストブリーダー'));
-    localStorage.setItem('mh_intro_done', JSON.stringify(true));
+    const put = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+    put('mh_breeder_name', 'テストブリーダー');
+    put('mh_intro_done', true);
+    // ★トップ画面まで進んだときに「はじめての設定」や助手えらびへ落ちないよう、
+    //   済みの印もそろえる(名前だけではブリーダーのアイコン待ちで止まる)
+    put('mh_breeder_icon', 'Mocchi');
+    put('mh_onboarded', true);
+    put('mh_tutorial_seen_v1', true);
+    put('mh_battle_tutorial_seen_v1', true);
+    put('mh_battle_tutorial_guide_shown_v1', true);
+    put('mh_masu_migrated', true);
+    put('mh_kiki_intro_seen_v1', true);
+    put('mh_momosuke_intro_seen_v1', true);
+    put('mh_assistant_selected_v1', 'mua');
+    put('mh_assistant_unlock_seen_v1', true);
+    put('mh_update_notice_seen_v1', true);
+    put('mh_rhythm_event_story_v1', ['monbeat_cup_2026_09']);
+    put('mh_inherited_unique_level_compensation_v1', true);
+    put('mh_inherited_unique_level_compensation_pending_v1', false);
+    put('mh_masu_level_cap_compensation_notice_seen_v1', true);
   });
   // iOS相当の自動再生制限を再現する
   await page.addInitScript(() => {
-    window.__audio = { unlocked: false, rejected: 0 };
-    // iOSでは、ユーザー操作の最中に作ったAudioContextでも「止まった状態」から始まり、
-    // resume() は音声スレッドとのやり取りぶんだけ実際に待たされる。
-    // PCのChromiumは操作中に作れば即座に動き出すため、そのままでは不具合を再現できない。
-    // ここで state と resume() を差し替えて、iOSと同じ「止まった状態から始まり、
-    // 再開には一呼吸かかる」挙動にする(実際の音は本物のcontextで鳴らす)
+    window.__audio = { unlocked: false, rejected: 0, calls: [] };
+    // ★BGMは <audio> ではなく Web Audio(AudioBufferSourceNode)で鳴らしている。
+    //   以前は HTMLMediaElement.play() を差し替えて「拒否された再生」を数えていたが、
+    //   <audio> を1つも使わなくなったので何も捕まえられず、鳴っていなくても素通りしていた。
+    //   iOSで実際に効く制限は「AudioContext を動かせるのは、ユーザー操作と同じ処理の
+    //   流れの中で呼んだ resume() だけ」という形なので、そこを差し替えて再現する。
     const ACProto = (window.AudioContext || window.webkitAudioContext).prototype;
     // state/resume は AudioContext ではなく BaseAudioContext 側に定義されているので、
     // プロトタイプの鎖をたどって本物を探す
@@ -51,56 +72,56 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
       return null;
     };
     const stateDesc = findDesc('state');
-    const suspended = new WeakSet();
-    const seen = new WeakSet();
+    // ロックが外れた context だけ、本物の state を見せる。
+    // 外れるまでは何度読んでも「止まっている」と答える(iOSと同じ)。
+    // PCのChromiumは操作中に作れば即座に動き出すため、そのままでは不具合を再現できない
+    const unlockedCtx = new WeakSet();
     Object.defineProperty(ACProto, 'state', {
       configurable: true,
-      get() {
-        if (!seen.has(this)) { seen.add(this); suspended.add(this); }
-        return suspended.has(this) ? 'suspended' : stateDesc.get.call(this);
-      },
+      get() { return unlockedCtx.has(this) ? stateDesc.get.call(this) : 'suspended'; },
     });
-    const origResume = findDesc('resume').value;
-    ACProto.resume = function () {
-      const self = this;
-      return new Promise((resolve) => setTimeout(() => {
-        suspended.delete(self);
-        try { origResume.call(self).then(resolve, resolve); } catch (e) { resolve(); }
-      }, 0));
-    };
     // window.event は「イベントを配る処理が動いている最中」だけ値が入る。
     // await をひとつでも挟むと null に戻るので、「操作と同じ流れの中で呼ばれたか」を
     // これで判定できる(iOSの自動再生制限とほぼ同じ条件になる)
     const inGesture = () => {
       const e = window.event;
-      return !!e && /^(pointerdown|pointerup|touchstart|touchend|mousedown|mouseup|click)$/.test(e.type);
+      return !!e && /^(pointerdown|pointerup|touchstart|touchend|mousedown|mouseup|click|keydown)$/.test(e.type);
     };
-    const origPlay = HTMLMediaElement.prototype.play;
-    HTMLMediaElement.prototype.play = function () {
-      const a = window.__audio;
+    const origResume = findDesc('resume').value;
+    ACProto.resume = function () {
+      const self = this;
       const g = inGesture();
-      if (!a.unlocked && !g) {
-        a.rejected++;
-        return Promise.reject(new DOMException('play() は操作の直後ではないので拒否されました', 'NotAllowedError'));
-      }
-      if (g) a.unlocked = true;
-      (a.calls = a.calls || []).push({ src: (this.src||'').split('/').pop(), ev: (window.event && window.event.type) || null, g });
-      return origPlay.call(this);
+      const a = window.__audio;
+      a.calls.push({ ev: (window.event && window.event.type) || null, g });
+      // 操作の流れから外れて呼ばれた resume() は、iOSでは効かない。
+      // 例外にはならず「止まったまま」になるだけなので、ここでも同じ形にする
+      if (!a.unlocked && !g) { a.rejected++; return Promise.resolve(); }
+      a.unlocked = true;
+      // iOSでは resume() は音声スレッドとのやり取りぶんだけ実際に待たされる
+      return new Promise((resolve) => setTimeout(() => {
+        unlockedCtx.add(self);
+        try { origResume.call(self).then(resolve, resolve); } catch (e) { resolve(); }
+      }, 0));
     };
   });
 
-  const playing = () => page.evaluate(() => [...document.querySelectorAll('audio')]
-    .filter(a => !a.paused).map(a => (a.src || '').split('/').pop()));
+  // いま鳴っている曲は、ゲーム側が出している window.__mhAudioDebug() から見る
+  // (Web Audio なので document.querySelectorAll('audio') では1つも見えない)。
+  // 止まった context のまま start() を呼んでも音にはならないので、
+  // ctxState が running のときだけ「鳴っている」と数える
+  const playing = () => page.evaluate(() => {
+    try {
+      const d = window.__mhAudioDebug && window.__mhAudioDebug();
+      if (!d || d.ctxState !== 'running') return [];
+      return (d.playing || []).map((e) => String(e.src || ''));
+    } catch (e) { return []; }
+  });
+  // 場面ごとに鳴るべき曲は、ゲーム側の既定(DEFAULT_BGM_ARRANGEMENT)から引く。
+  // ファイル名(bgm-title.mp3 など)を検査へ書き写すと、既定を変えたときに黙って落ちる
+  const expectedSrc = (scene) => page.evaluate((key) => {
+    try { return (window.__mhAudioExpectedSrc && window.__mhAudioExpectedSrc(key)) || null; } catch (e) { return null; }
+  }, scene);
   const bodyText = () => page.evaluate(() => (document.body ? document.body.innerText.replace(/\s+/g, ' ') : ''));
-  // 画面の外に出ている要素でも押せるDOM側のクリック(Tailwindが無い環境では
-  // レイアウトが崩れて座標が当てにならないため、タイトル以外はこちらで操作する)
-  const clickText = async (src) => page.evaluate((s) => {
-    const rx = new RegExp(s);
-    const b = [...document.querySelectorAll('button')].find(x => rx.test((x.innerText || '').replace(/\s+/g, ' ').trim()));
-    if (!b) return false;
-    b.click();
-    return true;
-  }, src);
   // 起動画面だけは実機と同じ「指でのタップ」で操作する。
   // 指を離したときのclickがどこへ届くかを確かめたいので、本物の操作でなければ意味がない
   const tapText = async (src) => {
@@ -137,31 +158,65 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
   await tapText('TAP TO START');
 
   // タイトルBGMが鳴り出すまで待つ(最大6秒)
+  const titleSrc = await expectedSrc('title');
   let titleOk = false;
   for (let i = 0; i < 12; i++) {
     await page.waitForTimeout(500);
-    if ((await playing()).some(s => s === 'bgm-title.mp3')) { titleOk = true; break; }
+    const now = await playing();
+    if (now.length && (!titleSrc || now.some(s => s === titleSrc))) { titleOk = true; break; }
   }
   const state = await page.evaluate(() => window.__audio);
   if (process.env.DEBUG_BGM) {
-    console.log('  play() 呼び出し:', JSON.stringify(state.calls));
-    console.log('  audio要素:', JSON.stringify(await page.evaluate(() => [...document.querySelectorAll('audio')].map(a => ({ src: (a.src||'').split('/').pop(), paused: a.paused, ready: a.readyState })))));
+    console.log('  resume() 呼び出し:', JSON.stringify(state.calls));
+    console.log('  音の状態:', JSON.stringify(await page.evaluate(() => { try { return window.__mhAudioDebug && window.__mhAudioDebug(); } catch (e) { return null; } })));
   }
-  check('タップだけでタイトルBGMが鳴る(他ページへ移動しなくてよい)', titleOk, `拒否された再生 ${state.rejected}回`);
-  check('タイトル画面が表示されている', (await bodyText()).includes('Monster Hero'));
+  check('タップだけでタイトルBGMが鳴る(他ページへ移動しなくてよい)', titleOk,
+    `${titleSrc ? '既定は ' + titleSrc + ' / ' : ''}効かなかった再開 ${state.rejected}回`);
+  // ★タイトル画面かどうかは、そこにしか無い表示(PLAYER ID)で見る。
+  //   「Monster Hero」は aria-label と画像のaltにしか無いので innerText には出てこない。
+  //   BGMは画面の描き替えより先に鳴り出すので、ここで描き上がりを待つ
+  await page.waitForFunction(() => !!document.querySelector('.mh-title-gate'), { timeout: 20000 }).catch(() => {});
+  check('タイトル画面が表示されている', (await bodyText()).includes('PLAYER ID'));
   const leaked = await page.evaluate(() => window.__leaked || []);
   check('起動タップがトップ画面まで届かない(誤ってボタンを押さない)', leaked.length === 0, leaked.join(',') || 'なし');
 
-  // 別ページへ行って戻ってきても、タイトルBGMに戻る
-  if (await clickText('プロフィール')) {
-    await page.waitForTimeout(2000);
-    const p = await playing();
-    check('プロフィールでプロフィールBGMに切り替わる', p.some(s => s === 'bgm-profile.mp3'), p.join(',') || '(無音)');
-    // プロフィールからトップへ戻るボタンは矢印アイコンだけなので、文字では探せない
-    await page.evaluate(() => { const b = document.querySelector('button.p-3.text-slate-400'); if (b) b.click(); });
+  // ★以前はここで「プロフィールへ行って戻るとタイトルBGMに戻る」を見ていた。
+  //   いまタイトルは起動時の1画面(bootPhase==='TITLE')で、あとから戻る道が無い。
+  //   「場面が変わればBGMも切り替わる」を見る目的は、タイトル→トップ画面で果たせる
+  const homeSrc = await expectedSrc('home');
+  // ★このボタンは onClick ではなく onPointerDown で動く(user activation を
+  //   逃がさないため)。click() では何も起きないので pointerdown を送る
+  const entered = await page.evaluate(() => {
+    const b = document.querySelector('button[aria-label="トップ画面へ進む"]');
+    if (!b || b.disabled) return false;
+    b.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+    return true;
+  });
+  if (entered) {
     await page.waitForTimeout(2500);
-    const t = await playing();
-    check('タイトルへ戻るとタイトルBGMに戻る', t.some(s => s === 'bgm-title.mp3'), t.join(',') || '(無音)');
+    // ログインボーナス・ギフトなど、トップ画面に重なるものを閉じる。
+    // 押すのは「重なりの中のボタン」だけ(本文で探すとHOMEのギフトを押して別の画面へ行く)
+    for (let i = 0; i < 8; i++) {
+      const closed = await page.evaluate(() => {
+        const inOverlay = (el) => { for (let e = el; e && e !== document.body; e = e.parentElement) {
+          const st = getComputedStyle(e); if (st.position === 'fixed' || Number(st.zIndex) > 1000) return true; } return false; };
+        const b = [...document.querySelectorAll('button')]
+          .find((x) => inOverlay(x) && /^(確認|閉じる|とじる|OK|受け取る|つぎへ|次へ|わかった|はい|スキップ|あとで)$/.test((x.innerText || '').trim()));
+        if (b) b.click();
+        return !!b;
+      });
+      await page.waitForTimeout(600);
+      if (!closed) break;
+    }
+    let homeOk = false;
+    for (let i = 0; i < 20; i++) {
+      await page.waitForTimeout(500);
+      if ((await playing()).some(s => s === homeSrc)) { homeOk = true; break; }
+    }
+    check('トップ画面へ進むとHOMEのBGMへ切り替わる', homeOk,
+      `既定は ${homeSrc} / いま ${(await playing()).join(',') || '(無音)'}`);
+  } else {
+    check('トップ画面へ進むボタンがある', false, 'button[aria-label="トップ画面へ進む"] が押せません');
   }
 
   check('操作中に致命的なJSエラーが出ない', fatal.length === 0, fatal.slice(0, 2).join(' / '));
