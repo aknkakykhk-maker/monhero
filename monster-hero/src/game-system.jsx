@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6ca27986cb806714
+// generated-sha256: a9993efa330239ae
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 19:14"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 19:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -249,15 +249,35 @@ const isQuickDifficultyUnlocked = (difficulty, challengeClears, proClears, extre
 // ★見るのは「曲の決められた長さ」だけ。実際にかかった時間・ポーズ・やり直しは一切見ない。
 //   そうしないと、止めている時間だけ稼げてしまう。
 //   2分25秒 → 2周 / 3分00秒 → 3周 / 3分30秒 → 3周（分の切り捨て、下限2周）。
+//
+// ★ここで出るのは「もとの周回数」で、実際に入るのはこれへ倍率を掛けたぶん
+//   (2026-09-11・ユーザー指示「モンヒロの無限周回での演奏中の周回数を上げたい /
+//    現状の2倍にしても良さそう / イベント時は対象曲は3倍」)。
+//   ふだんは2倍、開催中のイベントの対象曲だけ3倍(2倍の代わりに3倍。重ねがけはしない)。
+//   2分25秒 → 4周(イベント対象曲なら6周) / 3分00秒 → 6周(同9周)。
 const RHYTHM_PLAY_RUN_LOOP_MIN = 2;
+const RHYTHM_PLAY_RUN_LOOP_SCALE = 2;
+const RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE = 3;
 // ※「演奏で ◯周ぶん入りました」を曲えらびの帯へ出していたころは、時間で消すための
 //   RHYTHM_PLAY_RUN_AWARD_SHOW_MS を置いていた。いまは曲リザルトで出すので不要
 //   (2026-09-07・ユーザー提案「曲リザルトの画面で出すほうがいい。
 //    そうしたら帯にわざわざ何周分追加とか表示する必要もない」)。
-const rhythmPlayRunLoops = (durationMs) => {
+const rhythmPlayRunLoops = (durationMs, scale = RHYTHM_PLAY_RUN_LOOP_SCALE) => {
   const ms = Number(durationMs);
   if (!Number.isFinite(ms) || ms <= 0) return 0;
-  return Math.max(RHYTHM_PLAY_RUN_LOOP_MIN, Math.floor(ms / 60000));
+  const mult = Number(scale);
+  const safeMult = Number.isFinite(mult) && mult > 0 ? mult : RHYTHM_PLAY_RUN_LOOP_SCALE;
+  const base = Math.max(RHYTHM_PLAY_RUN_LOOP_MIN, Math.floor(ms / 60000));
+  return Math.floor(base * safeMult);
+};
+// その曲にかける倍率。開催中のイベント(rhythmLimitedEventAt で引いたもの)の
+// 対象曲なら3倍、それ以外は2倍。
+// ★イベントは引数で受け取る。ここで時刻を1回だけ見て決め打ちにすると、開きっぱなしの
+//   端末で「開催したのに倍率が上がらない／終わったのに上がったまま」になる(CLAUDE.md ⑥-4)。
+const rhythmPlayRunLoopScale = (songId, event) => {
+  const ids = (event && Array.isArray(event.songIds)) ? event.songIds : null;
+  const id = songId === null || songId === undefined ? '' : String(songId);
+  return (id && ids && ids.includes(id)) ? RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE : RHYTHM_PLAY_RUN_LOOP_SCALE;
 };
 // 演奏を「周回クリア扱い」にしてよいか。
 // ★過去にその難易度をクイックで1回でもクリアしていること(2026-09-07・ユーザー指示)。
