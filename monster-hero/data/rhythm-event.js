@@ -45,8 +45,8 @@ const rhythmWeekId = (nowMs) => {
 //   部門も分けない1本のランキングにする。
 //   (それまでは3曲の組を週ごとに回していたが、対象曲の仕組みはイベント専用にした)
 //
-// 中身は「総合」ランキングの今週ぶん。曲ごとのベストを全曲ぶん合計して competing…
-// ではなく、曲ごとのベストを全曲ぶん合計して競う。違うのは数える期間だけ。
+// 中身は「総合」ランキングの今週ぶん。曲ごとのベストを全曲ぶん合計して競う。
+// 「総合」と違うのは数える期間だけ。
 //   総合   … ずっと(はじめてからの全期間)
 //   週間   … 今週だけ(月曜5:00 JST 区切り)
 //
@@ -77,10 +77,9 @@ const RHYTHM_EVENTS = Object.freeze([
     name: 'モンヒロビート 週末ゲリラ杯',
     startAt: '2026-09-11T15:00:00+09:00',
     endAt: '2026-09-14T05:00:00+09:00',
-    // ★告知画像ができたら、ここへ banner の行を足す(書き方は上の説明のとおり)。
-    //   コメントの中でも画像のパスをクォートで囲むと、キャッシュキーを打つ側が
-    //   実在しない画像として拾ってしまうので、見本はクォート無しで書く:
-    //   banner: images/events/weekend-2026-09-11.jpg
+    // 告知画像(横長)。イベントタブの上に出す。起動時の告知は正方形のほうを使う
+    // (更新履歴の image。縦に余裕がある場所なので、大きい絵のほうが映える)
+    banner: 'images/events/monbeat-event-2026-09-11-wide.jpg?v=628fda574507',
     songIds: Object.freeze(['monster_hero', 'kaze_ga_soyogu', 'close_to_your_heart']),
     rewardLineageBySongId: Object.freeze({
       monster_hero: 'suezo',

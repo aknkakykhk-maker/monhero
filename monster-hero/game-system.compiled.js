@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bd601d081ab9c4f0
+// source-sha256: 1dd802c70abbba0e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d359beb378e8c57b
+// generated-sha256: df74b9f12c9bfdf1
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 12:32"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 12:49"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4851,7 +4851,8 @@ const DEFAULT_BGM_ARRANGEMENT = Object.freeze({
   result: 'original_result',
   gameOver: 'original_game_over',
   kikiIntro: 'original_event_01',
-  momosukeIntro: 'six_eternel_remix'
+  momosukeIntro: 'six_eternel_remix',
+  monbeatCupEvent: 'kaze_ga_soyogu'
 });
 // 設定欄を足したときに「前からある近い設定」を引き継ぐための対応表。
 // 種族チャレンジの3枠はチャレンジと同じ曲から始めるので、まだ自分で選んでいない人には
@@ -4897,9 +4898,12 @@ const BGM_ARRANGEMENT_LEGACY_FALLBACK = Object.freeze({
 // 二重適用は専用フラグ(BGM_PRO_DEFAULT_MIGRATION_KEY)で防ぐ。
 // 会話イベントごとのBGM設定名。イベントを足すときはここへ1行足せば、
 // 通常再生・イベント回想の両方で同じ曲が鳴る(画面側の分岐を増やさない)
+// 会話イベントのid → BGMの枠。枠を足したら DEFAULT_BGM_ARRANGEMENT にも既定曲を書く
+// (既存プレイヤーの保存値には新しい枠が無いので、normalizeBgmArrangement が既定で埋める)
 const EVENT_BGM_SCENES = Object.freeze({
   kiki_intro: 'kikiIntro',
-  momosuke_intro: 'momosukeIntro'
+  momosuke_intro: 'momosukeIntro',
+  monbeat_cup_2026_09: 'monbeatCupEvent'
 });
 const BGM_PRO_DEFAULT_MIGRATION_KEY = 'mh_bgm_pro_default_migrated_v1';
 const BGM_PRO_PREVIOUS_DEFAULTS = Object.freeze({
@@ -31484,7 +31488,16 @@ function HomeUpdateGuideOverlay({
     }
   }, notice.debugOnly && /*#__PURE__*/React.createElement("div", {
     className: "mb-2 rounded-lg bg-fuchsia-700 px-2 py-1 text-center text-[9px] font-black text-white"
-  }, "DEBUG\u30FB\u901A\u5E38\u30ED\u30B0\u30A4\u30F3\u3067\u306F\u8868\u793A\u3055\u308C\u307E\u305B\u3093"), /*#__PURE__*/React.createElement("h2", {
+  }, "DEBUG\u30FB\u901A\u5E38\u30ED\u30B0\u30A4\u30F3\u3067\u306F\u8868\u793A\u3055\u308C\u307E\u305B\u3093"), notice.image && /*#__PURE__*/React.createElement("img", {
+    "data-update-notice-image": true,
+    src: notice.image,
+    alt: `${notice.title}のお知らせ`,
+    onError: e => {
+      e.currentTarget.style.display = 'none';
+    },
+    decoding: "async",
+    className: "mb-3 w-full max-h-[42vh] rounded-2xl border border-pink-400/50 object-contain"
+  }), /*#__PURE__*/React.createElement("h2", {
     className: "mb-1 text-center text-base font-black text-pink-200"
   }, notice.title), /*#__PURE__*/React.createElement("p", {
     className: "mb-3 text-center text-[10px] font-bold text-slate-400"
@@ -34943,6 +34956,44 @@ function MonsterHeroGame() {
     setRhythmEventNoticeSeen(rhythmSongSelectEvent.id);
     storeSet(RHYTHM_EVENT_NOTICE_KEY, rhythmSongSelectEvent.id, false);
   };
+  // ---- イベントの会話ストーリー(2026-09-11・ユーザー指示) ----
+  // 「みゅあの前にイベント発生で、助手たちの会話ストーリーも入れてほしい。
+  //   そのあとに助手からの説明みたいな」。
+  //
+  // 流れ: 会話(3人) → 助手の告知(ルール説明) → 遊びに行く。
+  // 会話の再生はイベント回想と同じ仕組みを使う(台本・立ち絵・BGMの切り替えが全部そろっている)。
+  // 違いは live:true を渡すことだけで、そのときは見出しを「回想・」にしない。
+  //
+  // ★見たかどうかは新しい保存キーへイベントIDの配列で残す(既存キーは触らない・CLAUDE.md ⑦)。
+  //   配列にしてあるので、次のイベントで会話を足しても保存の形を変えずに済む。
+  // ★開催中だけ流す。終わったあとに初めて起動した人へ「開催します」とは言わない
+  //   (回想からはいつでも見られる)。
+  const RHYTHM_EVENT_STORY_KEY = 'mh_rhythm_event_story_v1';
+  const MONBEAT_CUP_STORY_ID = 'monbeat_cup_2026_09';
+  const [rhythmEventStorySeen, setRhythmEventStorySeen] = useState(null);
+  const rhythmEventStorySeenRef = useRef(null);
+  const [rhythmEventStoryPending, setRhythmEventStoryPending] = useState(null);
+  const markRhythmEventStorySeen = async storyId => {
+    const seen = normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current);
+    if (seen.includes(storyId)) return;
+    const next = [...seen, storyId];
+    rhythmEventStorySeenRef.current = next;
+    setRhythmEventStorySeen(next);
+    await storeSet(RHYTHM_EVENT_STORY_KEY, next, false);
+  };
+  // HOMEへ着いて、ほかの会話(きき・ももすけ)が終わってから流す。
+  // 起動の途中やタイトルの上に重ねない
+  useEffect(() => {
+    if (!rhythmEventStoryPending) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME' && onboarded && !onboardingPreview && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && !eventReplay)) return;
+    const storyId = rhythmEventStoryPending;
+    setRhythmEventStoryPending(null);
+    setEventReplay({
+      id: storyId,
+      step: 0,
+      live: true
+    });
+  }, [rhythmEventStoryPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay]);
   // ---- イベント報酬の受け取り(docs/spec/RHYTHM_RANKING.md §9.1) ----
   // サーバー処理を持たないので、イベントが終わったあとに端末が順位を問い合わせ、
   // その場で受け取る。受け取ったイベントのIDを新しい保存キーへ残して二重受取を防ぐ(CLAUDE.md ⑦)。
@@ -35916,6 +35967,13 @@ function MonsterHeroGame() {
       // 見た扱い(=出さない)にする。案内が二度出るより、出ないほうが害が小さい
       setQuickRhythmIntroSeen((await storeGet(QUICK_RHYTHM_INTRO_KEY, true, false)) !== false);
       setQuickRhythmBackgroundSeen((await storeGet(QUICK_RHYTHM_BACKGROUND_KEY, true, false)) !== false);
+      // イベントの会話ストーリーを見たかどうか。流すかどうかの判定は、
+      // wasOnboarded が決まったあと(きき・ももすけの会話と同じところ)で行う
+      {
+        const seenStories = normalizeRhythmEventRewardClaims(await storeGet(RHYTHM_EVENT_STORY_KEY, [], false));
+        rhythmEventStorySeenRef.current = seenStories;
+        setRhythmEventStorySeen(seenStories);
+      }
       // イベント報酬の受け取り済みの一覧。壊れていても落ちないよう正規化を通す
       {
         const claims = normalizeRhythmEventRewardClaims(await storeGet(RHYTHM_EVENT_REWARD_KEY, [], false));
@@ -36218,6 +36276,12 @@ function MonsterHeroGame() {
           await storeSet(MOMOSUKE_INTRO_SEEN_KEY, true, false);
           setMomosukeIntroSeenFlag(true);
         } catch {}
+      }
+      // モンヒロビートのイベント会話。開催中で、まだ見ていなければHOMEで1度だけ流す。
+      // ★ここに置くのは wasOnboarded が決まったあとだから。前に置くと
+      //   「Cannot access 'wasOnboarded' before initialization」で画面が真っ白になる
+      if (RELEASE_FLAGS.rhythmWeeklyRanking === true && wasOnboarded && rhythmLimitedEventAt(Date.now()) && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(MONBEAT_CUP_STORY_ID)) {
+        setRhythmEventStoryPending(MONBEAT_CUP_STORY_ID);
       }
       const seenUpdateIds = normalizeSeenUpdateNoticeIds(await storeGet(UPDATE_NOTICE_SEEN_KEY, [], false));
       // 新規プレイヤーには、その時点ですでに公開済みの案内を見せない。既存プレイヤーだけ未読を並べる。
@@ -37398,7 +37462,8 @@ function MonsterHeroGame() {
   // 今後イベントを増やすときは、そのイベントの既読フラグをここへ1行足すだけでよい
   const EVENT_REPLAY_UNLOCK_FLAGS = {
     kikiIntroSeen: kikiIntroSeenFlag,
-    momosukeIntroSeen: momosukeIntroSeenFlag
+    momosukeIntroSeen: momosukeIntroSeenFlag,
+    monbeatCupEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONBEAT_CUP_STORY_ID)
   };
   // alwaysUnlocked のイベントは、本編でまだ見ていなくても回想から見られる
   const isEventReplayUnlocked = event => !!(event && event.alwaysUnlocked) || !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];
@@ -45472,7 +45537,21 @@ function MonsterHeroGame() {
     }, /*#__PURE__*/React.createElement("b", null, c.title), /*#__PURE__*/React.createElement("small", null, open ? '閉じる ▲' : '詳細 ▼')), open && /*#__PURE__*/React.createElement("div", {
       className: "mh-changelog-detail",
       "data-changelog-detail": true
-    }, (c.items || []).map((x, j) => /*#__PURE__*/React.createElement("p", {
+    }, c.image && /*#__PURE__*/React.createElement("img", {
+      "data-changelog-image": true,
+      src: c.image,
+      alt: `${c.title}のお知らせ`,
+      onError: e => {
+        e.currentTarget.style.display = 'none';
+      },
+      loading: "lazy",
+      decoding: "async",
+      style: {
+        width: '100%',
+        borderRadius: '12px',
+        marginBottom: '8px'
+      }
+    }), (c.items || []).map((x, j) => /*#__PURE__*/React.createElement("p", {
       key: j
     }, "\u30FB", x))));
   })))) : showTitleSettings ? /*#__PURE__*/React.createElement("div", {
@@ -45566,7 +45645,7 @@ function MonsterHeroGame() {
     }, {
       id: 'event',
       label: 'イベント',
-      items: [['kikiIntro', 'きき加入イベント BGM']]
+      items: [['kikiIntro', 'きき加入イベント BGM'], ['momosukeIntro', 'ももすけ登場イベント BGM'], ['monbeatCupEvent', 'モンヒロビート大会イベント BGM']]
     }, {
       id: 'other',
       label: 'その他',
@@ -55722,7 +55801,7 @@ function MonsterHeroGame() {
       markMomosukeIntroSeen: markMomosukeIntroSeen,
       momosukeIntroStep: momosukeIntroStep,
       setMomosukeIntroStep: setMomosukeIntroStep
-    }), bootPhase === 'GAME' && gameState === 'HOME' && onboarded && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && updateGuideQueue.length > 0 && /*#__PURE__*/React.createElement(HomeUpdateGuideOverlay, {
+    }), bootPhase === 'GAME' && gameState === 'HOME' && onboarded && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && !eventReplay && !rhythmEventStoryPending && updateGuideQueue.length > 0 && /*#__PURE__*/React.createElement(HomeUpdateGuideOverlay, {
       activeAssistant: activeAssistant,
       assistantBondLevelNow: assistantBondLevelNow,
       assistantCallStyle: assistantCallStyle,
@@ -55755,6 +55834,8 @@ function MonsterHeroGame() {
           return;
         }
         if (event && event.id === 'momosuke_intro') markMomosukeIntroSeen();
+        // イベントの会話も、最後まで見たら「見た」にする(次の起動で重ねて流さない)
+        if (event && event.id === MONBEAT_CUP_STORY_ID) void markRhythmEventStorySeen(MONBEAT_CUP_STORY_ID);
         setEventReplay(null);
       };
       /* 途中でやめる。最後まで見ていないので「見たことがある」は立てない
@@ -55790,7 +55871,7 @@ function MonsterHeroGame() {
         }
       }, /*#__PURE__*/React.createElement("p", {
         className: "mb-2 text-center text-[10px] font-black tracking-widest text-fuchsia-300"
-      }, "\u56DE\u60F3\u30FB", event?.title || ''), /*#__PURE__*/React.createElement("div", {
+      }, eventReplay.live ? '' : '回想・', event?.title || ''), /*#__PURE__*/React.createElement("div", {
         className: "mb-3 flex items-end justify-center gap-3"
       }, cast.map(who => {
         const talking = who.id === line.who;

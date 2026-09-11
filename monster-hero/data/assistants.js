@@ -105,6 +105,20 @@ const assistantIdOrDefault = (id) => (ASSISTANTS.some(a => a.id === id) ? id : D
 // 以前あった 'feature' は「それ以外ぜんぶ」の受け皿になって告知が増えすぎたので廃止した。
 // ここに無い種別は無視される(告知にならない)ので、書き間違えても勝手には出ない。
 const ASSISTANT_UPDATE_NOTICE_TYPES = new Set(['market', 'mode', 'content']);
+// 期間を決めて出す告知(イベントなど)のための時刻。書かれていなければ「いつでも」
+const assistantNoticeTimeMs = value => {
+  const t = Date.parse(String(value || ''));
+  return Number.isFinite(t) ? t : null;
+};
+// いま出してよい告知かどうか。notifyFrom / notifyUntil を書いたものだけ期間で絞る。
+// ★これが無いと、公開した瞬間にみゅあが「開催します」と言ってしまう(開始より前なのに)。
+const assistantNoticeWithinPeriod = (meta, nowMs = Date.now()) => {
+  const from = assistantNoticeTimeMs(meta && meta.notifyFrom);
+  const until = assistantNoticeTimeMs(meta && meta.notifyUntil);
+  if (from !== null && nowMs < from) return false;
+  if (until !== null && nowMs >= until) return false;
+  return true;
+};
 const assistantUpdateNoticeFromChangelog = entry => {
   const meta = entry && entry.assistantNotice;
   if (!meta || !ASSISTANT_UPDATE_NOTICE_TYPES.has(meta.type) || typeof meta.id !== 'string' || !meta.id.trim()) return null;
@@ -112,7 +126,10 @@ const assistantUpdateNoticeFromChangelog = entry => {
   if (!entry.title || !items.length) return null;
   const destination = meta.type === 'market' ? 'market' : meta.type === 'mode' ? 'battle' : meta.destination;
   return {
-    id: meta.id.trim(), enabled: true, title: entry.title, expression: meta.expression || 'excited',
+    id: meta.id.trim(), enabled: assistantNoticeWithinPeriod(meta), title: entry.title,
+    expression: meta.expression || 'excited',
+    // 告知画像。更新履歴の項目に書いた image をそのまま持ってくる(2か所に書かない)
+    image: typeof entry.image === 'string' && entry.image ? entry.image : null,
     pages: items.slice(), destination,
     buttonLabel: meta.buttonLabel || (meta.type === 'market' ? 'マーケットを見る' : meta.type === 'mode' ? 'バトルへ行く' : undefined),
   };
@@ -3252,6 +3269,50 @@ const ASSISTANT_MOMOSUKE_INTRO = [
 // この会話の中だけで使う、3人がお互いを呼ぶ名前。画面の見出しにも使う
 const ASSISTANT_MOMOSUKE_INTRO_CALLS = { mua: 'もも', kiki: 'ももさん', momosuke: 'みゅあねぇ／ききちゃん' };
 
+// ---------- モンヒロビート 週末ゲリラ杯(2026-09-11) ----------
+// 2026-09-11・ユーザー指示「みゅあの前にイベント発生で、助手たちの会話ストーリーも入れてほしい。
+// そのあとに助手からの説明みたいな」。
+//
+// 流れ: この会話 → みゅあ(設定している助手)の告知でルールを説明 → 遊びに行く。
+// 会話では「何が始まったか」の空気だけを作り、細かいルール(報酬の個数・順位)は
+// 告知とヘルプに任せる。ここへ数字を書くと、次のイベントで必ず古くなる。
+//
+// ★曲は「風がそよぐ場所」(ユーザー指示)。EVENT_BGM_SCENES 経由で鳴らす。
+// ★正式名称は「モンヒロビート」。略称「モンビー」を使うのは、ももすけが愛称として
+//   呼ぶところだけ(CLAUDE.md の名前の決めごと)。
+const ASSISTANT_MONBEAT_CUP_EVENT = [
+  // 導入: ももすけが騒いでいる
+  { who:'momosuke', e:'excited',  t:'ねぇねぇ、聞いて聞いて〜！ 大ニュース♪' },
+  { who:'mua',      e:'surprise', t:'わ、びっくりした。どうしたの、もも？' },
+  { who:'kiki',     e:'normal',   t:'そんなに慌てて、何かありまつか？' },
+  // 発表
+  { who:'momosuke', e:'wink',     t:'モンヒロビートでね、はじめての大会やることになったの♡' },
+  { who:'momosuke', e:'excited',  t:'その名も「週末ゲリラ杯」！ ……ふふ、ゲリラだから急なのは許してね♪' },
+  { who:'kiki',     e:'surprise', t:'ゲリラ……。準備の時間はどこへ行ったんでつか。' },
+  { who:'mua',      e:'happy',    t:'まあまあ。急だからこそ、みんな横一線ってことでしょ？' },
+  // 中身
+  { who:'momosuke', e:'happy',    t:'対象は3曲だけ。しかも、その期間に出したスコアだけで競うの。' },
+  { who:'momosuke', e:'excited',  t:'つまりつまり、しゅうまつげりらはい……あれ、言いにくっ。' },
+  { who:'mua',      e:'wink',     t:'自分で付けた名前でしょ、それ♪' },
+  { who:'kiki',     e:'normal',   t:'つまり、これまでの記録は持ち込めないということでつね。' },
+  { who:'momosuke', e:'excited',  t:'そういうこと！ だから今からでも間に合うんだよ〜♪' },
+  // 報酬(中身は書かない。数字は告知とヘルプに任せる)
+  { who:'kiki',     e:'happy',    t:'ごほうびもあると聞きまつたが。' },
+  { who:'momosuke', e:'wink',     t:'順位のごほうびと、遊んだだけでもらえるぶん、どっちもあるよ♡' },
+  { who:'mua',      e:'excited',  t:'えっ、じゃあ遊ばないと損じゃない！' },
+  // 助手たちのやる気
+  { who:'momosuke', e:'happy',    t:'ちなみに、ももはもう3曲ぜんぶ叩いてきたけど？' },
+  { who:'kiki',     e:'surprise', t:'……告知より先に遊んでたんでつか。' },
+  { who:'mua',      e:'troubled', t:'もも、それはさすがにズルくない？' },
+  { who:'momosuke', e:'wink',     t:'えー？ 早い者勝ちでしょ〜♪' },
+  // 締め。このあとみゅあ(設定している助手)の告知へ続く
+  { who:'mua',      e:'excited',  t:'よーし、{name}！ あたしたちも行こ？' },
+  { who:'kiki',     e:'happy',    t:'{name}、いってらっしゃい。記録、楽しみにしてまつね♪' },
+  { who:'momosuke', e:'excited',  t:'それじゃ、週末ゲリラ杯……スタート！♡' },
+];
+// 会話の中だけの呼び名(回想の一覧にも使う)
+const ASSISTANT_MONBEAT_CUP_EVENT_CALLS = { mua: 'もも', kiki: 'ももさん', momosuke: 'みゅあねぇ／ききちゃん' };
+
 // ---------- イベント回想 ----------
 // 一度見た会話イベントを、プロフィール画面から何度でも見返せるようにするための一覧。
 // 台本(script)は既存のシーン定義をそのまま参照し、ここで二重に持たない。
@@ -3273,6 +3334,9 @@ const EVENT_REPLAYS = [
   // 新しく始めた人は最初の助手選択でももすけを選べるので、そもそも本編では流れない。
   // その人たちも、あとから「どういう経緯で来たのか」を見られるようにするため。
   { id: 'momosuke_intro', title: 'ももすけ登場 ～モンヒロビート～', script: ASSISTANT_MOMOSUKE_INTRO, calls: ASSISTANT_MOMOSUKE_INTRO_CALLS, unlockedKey: 'momosukeIntroSeen', alwaysUnlocked: true },
+  // イベント開催の会話(2026-09-11)。開催中に1度だけ本編で流れ、そのあとは回想からいつでも見られる。
+  // 期間が終わっても回想には残る(そのときどういう会話だったかを見返せるように)
+  { id: 'monbeat_cup_2026_09', title: '週末ゲリラ杯 ～はじめての大会～', script: ASSISTANT_MONBEAT_CUP_EVENT, calls: ASSISTANT_MONBEAT_CUP_EVENT_CALLS, unlockedKey: 'monbeatCupEventSeen' },
 ];
 
 // ---------- 助手ごとのあいさつ・村の案内 ----------

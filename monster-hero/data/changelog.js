@@ -52,7 +52,15 @@ const CHANGELOG = [
     // ★週間ランキングと同じ公開フラグで出す。イベントもそのタブの上で動くため。
     date: "2026-09-11 11:39", type:'update', title:'【週末限定】モンヒロビート 週末ゲリラ杯を開催します', status:'new',
     releaseFlag:'rhythmWeeklyRanking',
-    assistantNotice: { id:'update_notice_rhythm_weekend_cup_v1', type:'content' },
+    // 告知画像。みゅあの告知(起動したとき)と、お知らせの一覧を開いたときに出る。
+    // ★開催中しか意味が無いので、notifyFrom / notifyUntil で出す期間を決める。
+    //   これが無いと、公開した瞬間(開始より前)にみゅあが「開催します」と言ってしまう。
+    image: 'images/events/monbeat-event-2026-09-11.jpg?v=bdcbebca070b',
+    assistantNotice: {
+      id:'update_notice_rhythm_weekend_cup_v1', type:'content',
+      notifyFrom:'2026-09-11T15:00:00+09:00', notifyUntil:'2026-09-14T05:00:00+09:00',
+      destination:'RHYTHM_DEMO_HOME', buttonLabel:'モンヒロビートへ',
+    },
     items:[
       '9月11日(金) 15:00 から 9月14日(月) 5:00 まで、期間限定の「モンヒロビート 週末ゲリラ杯」を開催します。全国ランキングの「イベント」タブから参加できます。',
       '対象曲は「Monster Hero」「風がそよぐ場所」「Close To Your Heart」の3曲です。開催中に出した記録だけが載ります。難易度は問いません。',

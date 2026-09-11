@@ -90,7 +90,7 @@ if (fs.existsSync(imagesRoot)) walk(imagesRoot);
 // キャッシュキーを付ける側の一覧(tools/stamp-version.js の IMAGE_HOST_FILES)とは
 // 役割が違うので別々に持つが、画像を参照するファイルを増やしたら**両方**へ足す。
 const sources = [...DATA_FILES, 'data/assistants.js', 'data/ally-monsters.js', 'data/enemy-monsters.js',
-  'data/rhythm-mode.js', 'data/rhythm-event.js', 'src/game-system.jsx']
+  'data/rhythm-mode.js', 'data/rhythm-event.js', 'data/changelog.js', 'src/game-system.jsx']
   .map((rel) => path.join(WEB_ROOT, rel))
   .filter((p) => fs.existsSync(p))
   .map((p) => fs.readFileSync(p, 'utf8'))

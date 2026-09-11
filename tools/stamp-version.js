@@ -94,6 +94,7 @@ const IMAGE_HOST_FILES = [
   'data/rhythm-mode.js',
   // イベントの告知画像(images/events/…)
   'data/rhythm-event.js',
+  'data/changelog.js',
 ];
 let imageCount = 0, imageChanged = 0;
 for (const rel of IMAGE_HOST_FILES) {

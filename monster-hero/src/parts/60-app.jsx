@@ -2566,6 +2566,41 @@ function MonsterHeroGame() {
     setRhythmEventNoticeSeen(rhythmSongSelectEvent.id);
     storeSet(RHYTHM_EVENT_NOTICE_KEY, rhythmSongSelectEvent.id, false);
   };
+  // ---- イベントの会話ストーリー(2026-09-11・ユーザー指示) ----
+  // 「みゅあの前にイベント発生で、助手たちの会話ストーリーも入れてほしい。
+  //   そのあとに助手からの説明みたいな」。
+  //
+  // 流れ: 会話(3人) → 助手の告知(ルール説明) → 遊びに行く。
+  // 会話の再生はイベント回想と同じ仕組みを使う(台本・立ち絵・BGMの切り替えが全部そろっている)。
+  // 違いは live:true を渡すことだけで、そのときは見出しを「回想・」にしない。
+  //
+  // ★見たかどうかは新しい保存キーへイベントIDの配列で残す(既存キーは触らない・CLAUDE.md ⑦)。
+  //   配列にしてあるので、次のイベントで会話を足しても保存の形を変えずに済む。
+  // ★開催中だけ流す。終わったあとに初めて起動した人へ「開催します」とは言わない
+  //   (回想からはいつでも見られる)。
+  const RHYTHM_EVENT_STORY_KEY = 'mh_rhythm_event_story_v1';
+  const MONBEAT_CUP_STORY_ID = 'monbeat_cup_2026_09';
+  const [rhythmEventStorySeen, setRhythmEventStorySeen] = useState(null);
+  const rhythmEventStorySeenRef = useRef(null);
+  const [rhythmEventStoryPending, setRhythmEventStoryPending] = useState(null);
+  const markRhythmEventStorySeen = async (storyId) => {
+    const seen = normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current);
+    if (seen.includes(storyId)) return;
+    const next = [...seen, storyId];
+    rhythmEventStorySeenRef.current = next;
+    setRhythmEventStorySeen(next);
+    await storeSet(RHYTHM_EVENT_STORY_KEY, next, false);
+  };
+  // HOMEへ着いて、ほかの会話(きき・ももすけ)が終わってから流す。
+  // 起動の途中やタイトルの上に重ねない
+  useEffect(() => {
+    if (!rhythmEventStoryPending) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME' && onboarded && !onboardingPreview
+      && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && !eventReplay)) return;
+    const storyId = rhythmEventStoryPending;
+    setRhythmEventStoryPending(null);
+    setEventReplay({ id: storyId, step: 0, live: true });
+  }, [rhythmEventStoryPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay]);
   // ---- イベント報酬の受け取り(docs/spec/RHYTHM_RANKING.md §9.1) ----
   // サーバー処理を持たないので、イベントが終わったあとに端末が順位を問い合わせ、
   // その場で受け取る。受け取ったイベントのIDを新しい保存キーへ残して二重受取を防ぐ(CLAUDE.md ⑦)。
@@ -3351,6 +3386,13 @@ function MonsterHeroGame() {
       // 見た扱い(=出さない)にする。案内が二度出るより、出ないほうが害が小さい
       setQuickRhythmIntroSeen(await storeGet(QUICK_RHYTHM_INTRO_KEY, true, false) !== false);
       setQuickRhythmBackgroundSeen(await storeGet(QUICK_RHYTHM_BACKGROUND_KEY, true, false) !== false);
+      // イベントの会話ストーリーを見たかどうか。流すかどうかの判定は、
+      // wasOnboarded が決まったあと(きき・ももすけの会話と同じところ)で行う
+      {
+        const seenStories = normalizeRhythmEventRewardClaims(await storeGet(RHYTHM_EVENT_STORY_KEY, [], false));
+        rhythmEventStorySeenRef.current = seenStories;
+        setRhythmEventStorySeen(seenStories);
+      }
       // イベント報酬の受け取り済みの一覧。壊れていても落ちないよう正規化を通す
       {
         const claims = normalizeRhythmEventRewardClaims(await storeGet(RHYTHM_EVENT_REWARD_KEY, [], false));
@@ -3628,6 +3670,14 @@ function MonsterHeroGame() {
       setMomosukeIntroSeenFlag(momosukeIntroSeen === true);
       if (wasOnboarded && momosukeIntroSeen !== true && kikiIntroSeen === true) setMomosukeIntroStep(0);
       else if (!wasOnboarded && momosukeIntroSeen !== true) { try { await storeSet(MOMOSUKE_INTRO_SEEN_KEY, true, false); setMomosukeIntroSeenFlag(true); } catch {} }
+      // モンヒロビートのイベント会話。開催中で、まだ見ていなければHOMEで1度だけ流す。
+      // ★ここに置くのは wasOnboarded が決まったあとだから。前に置くと
+      //   「Cannot access 'wasOnboarded' before initialization」で画面が真っ白になる
+      if (RELEASE_FLAGS.rhythmWeeklyRanking === true && wasOnboarded
+        && rhythmLimitedEventAt(Date.now())
+        && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(MONBEAT_CUP_STORY_ID)) {
+        setRhythmEventStoryPending(MONBEAT_CUP_STORY_ID);
+      }
       const seenUpdateIds = normalizeSeenUpdateNoticeIds(await storeGet(UPDATE_NOTICE_SEEN_KEY, [], false));
       // 新規プレイヤーには、その時点ですでに公開済みの案内を見せない。既存プレイヤーだけ未読を並べる。
       // プロフィール確定時にも再度seedするため、初回設定の途中で閉じても通知ラッシュにならない。
@@ -4528,7 +4578,8 @@ function MonsterHeroGame() {
   // イベント回想の解放判定。EVENT_REPLAYS側はunlockedKeyという「呼び名」しか持たないので、
   // その名前→実際のstateの対応をここで持つ(データファイルはgame-system.jsxの状態を見られないため)。
   // 今後イベントを増やすときは、そのイベントの既読フラグをここへ1行足すだけでよい
-  const EVENT_REPLAY_UNLOCK_FLAGS = { kikiIntroSeen: kikiIntroSeenFlag, momosukeIntroSeen: momosukeIntroSeenFlag };
+  const EVENT_REPLAY_UNLOCK_FLAGS = { kikiIntroSeen: kikiIntroSeenFlag, momosukeIntroSeen: momosukeIntroSeenFlag,
+    monbeatCupEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONBEAT_CUP_STORY_ID) };
   // alwaysUnlocked のイベントは、本編でまだ見ていなくても回想から見られる
   const isEventReplayUnlocked = (event) => !!(event && event.alwaysUnlocked) || !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];
   // 助手を切り替える。仲良し度も呼び方も助手ごとに分けてあるので、切り替えても何も失われない
@@ -9591,7 +9642,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             {/* 一覧は日付・札・見出しだけ。本文(items)は押した項目だけ出す(1つ開くと他は閉じる) */}
             return <article key={c.id} data-changelog-type={c.type||'update'} data-changelog-open={open?'1':'0'} className={changelogUnreadIds[changelogTab].includes(c.id)?'unread':''}><time>{c.date}{changelogUnreadIds[changelogTab].includes(c.id)&&<em>NEW</em>}</time><span className="mh-changelog-kind" data-kind={changelogTypeOf(c).tone}>{changelogTypeOf(c).label}</span>
               <button type="button" className="mh-changelog-head" data-changelog-toggle aria-expanded={open} onClick={()=>setChangelogOpenId(open?null:c.id)}><b>{c.title}</b><small>{open?'閉じる ▲':'詳細 ▼'}</small></button>
-              {open&&<div className="mh-changelog-detail" data-changelog-detail>{(c.items||[]).map((x,j)=><p key={j}>・{x}</p>)}</div>}
+              {/* 開いたときだけ本文を出す。告知画像があれば本文の上に出す
+                  (期間中いつでもここから見返せるように・2026-09-11・ユーザー指示) */}
+              {open&&<div className="mh-changelog-detail" data-changelog-detail>
+                {c.image&&<img data-changelog-image src={c.image} alt={`${c.title}のお知らせ`}
+                  onError={e=>{e.currentTarget.style.display='none';}} loading="lazy" decoding="async"
+                  style={{width:'100%',borderRadius:'12px',marginBottom:'8px'}}/>}
+                {(c.items||[]).map((x,j)=><p key={j}>・{x}</p>)}
+              </div>}
             </article>;})}</div>
       </div>
     </div>
@@ -9607,7 +9665,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // 既定値は今まで鳴っていた曲そのものなので、これまでの音は変わらない
         ['enhance','準備・強化フェーズ BGM'],['result','WAVE後リザルト BGM'],['gameOver','敗北 BGM']]},
       {id:'battle',label:'バトル'},
-      {id:'event',label:'イベント',items:[['kikiIntro','きき加入イベント BGM']]},
+      {id:'event',label:'イベント',items:[['kikiIntro','きき加入イベント BGM'],['momosukeIntro','ももすけ登場イベント BGM'],['monbeatCupEvent','モンヒロビート大会イベント BGM']]},
       {id:'other',label:'その他',items:[['market','マーケット BGM'],['temple','神殿 BGM'],['trainingMenu','修行メニュー BGM'],['trainingBoard','修行中 BGM']]},
     ];const battleModes=BGM_BATTLE_MODE_TABS;const selected=categories.find(category=>category.id===bgmArrangementCategory)||categories[0];const selectedMode=battleModes.find(mode=>mode.id===bgmArrangementBattleMode)||battleModes[0];const items=selected.id==='battle'?selectedMode.items:selected.items;return <><div role="tablist" aria-label="BGMカテゴリ" className="grid grid-cols-4 gap-1 mb-3">{categories.map(category=><button key={category.id} type="button" role="tab" aria-selected={selected.id===category.id} onClick={()=>setBgmArrangementCategory(category.id)} className={`min-h-[44px] rounded-xl border px-1 text-[10px] font-black ${selected.id===category.id?'bg-indigo-600 border-indigo-300 text-white':'bg-slate-900 border-white/15 text-slate-300'}`}>{category.label}</button>)}</div>{selected.id==='battle'&&<div role="tablist" aria-label="バトルモード" className={`grid ${battleModes.length>=5?'grid-cols-5':'grid-cols-4'} gap-1 mb-4`}>{battleModes.map(mode=><button key={mode.id} type="button" role="tab" aria-selected={selectedMode.id===mode.id} onClick={()=>setBgmArrangementBattleMode(mode.id)} className={`min-h-[44px] rounded-xl border px-1 text-[10px] font-black ${selectedMode.id===mode.id?'bg-fuchsia-700 border-fuchsia-300 text-white':'bg-slate-900 border-white/15 text-slate-300'}`}>{mode.label}</button>)}</div>}<div className="space-y-4">{selected.id==='other'&&[
       ['autoVictoryJingle','AUTO時 敵撃破ファンファーレ'],
@@ -13628,7 +13686,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       )}
 
       {/* 助手(みゅあ)のデバッグ表示。デバッグ設定からだけ開ける。通常のプレイでは出ない */}
-      {bootPhase==='GAME'&&gameState==='HOME'&&onboarded&&tutorialStep==null&&kikiIntroStep==null&&momosukeIntroStep==null&&updateGuideQueue.length>0&&(
+      {/* ★会話ストーリーが先。流している途中・流す予約があるあいだは、助手の告知を出さない
+          (2026-09-11・ユーザー指示「みゅあの前にイベント発生で会話、そのあとに助手からの説明」) */}
+      {bootPhase==='GAME'&&gameState==='HOME'&&onboarded&&tutorialStep==null&&kikiIntroStep==null&&momosukeIntroStep==null&&!eventReplay&&!rhythmEventStoryPending&&updateGuideQueue.length>0&&(
         <HomeUpdateGuideOverlay
           activeAssistant={activeAssistant} assistantBondLevelNow={assistantBondLevelNow}
           assistantCallStyle={assistantCallStyle} breederName={breederName}
@@ -13665,6 +13725,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const next=()=>{
           if(!last){ setEventReplay(r=>r&&({...r,step:r.step+1})); return; }
           if(event&&event.id==='momosuke_intro') markMomosukeIntroSeen();
+          // イベントの会話も、最後まで見たら「見た」にする(次の起動で重ねて流さない)
+          if(event&&event.id===MONBEAT_CUP_STORY_ID) void markRhythmEventStorySeen(MONBEAT_CUP_STORY_ID);
           setEventReplay(null);
         };
         /* 途中でやめる。最後まで見ていないので「見たことがある」は立てない
@@ -13675,7 +13737,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         <div className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:77000,backgroundColor:'rgba(2,6,23,.95)'}} role="dialog" aria-modal="true" aria-label={`イベント回想: ${event?.title||''}`}>
           <button type="button" onClick={next} aria-label="次へ" className="absolute inset-0 w-full h-full" style={{background:'transparent'}}/>
           <div className="relative w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] overflow-y-auto mh-scroll rounded-t-3xl border-t-2 border-x-2 border-fuchsia-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))',pointerEvents:'none'}}>
-            <p className="mb-2 text-center text-[10px] font-black tracking-widest text-fuchsia-300">回想・{event?.title||''}</p>
+            <p className="mb-2 text-center text-[10px] font-black tracking-widest text-fuchsia-300">{eventReplay.live?'':'回想・'}{event?.title||''}</p>
             <div className="mb-3 flex items-end justify-center gap-3">
               {cast.map(who=>{
                 const talking=who.id===line.who;
