@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bca0c32b322da7b8
+// source-sha256: fe680be0f52ed9a6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 62a7741a6572bb73
+// generated-sha256: 9266ee6bfb80bb6a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 18:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 18:49"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -19836,6 +19836,16 @@ const RhythmSongSelect = ({
     const id = difficulty && ids.includes(difficulty.id) ? difficulty.id : ids[ids.length - 1];
     return Number(entry.difficulties[id].level) || 0;
   };
+  // ★イベントの対象曲は、一覧で見てすぐ分かるようにする
+  //   (2026-09-11・ユーザー指示「イベント曲は見てすぐ分かるようにして」)。
+  //   曲えらびの案内は初回に1度だけで、閉じるともう出ない。だから「いまどれを遊べば
+  //   イベントに載るのか」を知る場所が、この一覧のほかに無かった。
+  //   ★曲のidはイベントの定義から引く(ここに書き写さない)。開催していなければ何も出ない。
+  const eventSongIds = (() => {
+    const released = typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS && RELEASE_FLAGS.rhythmWeeklyRanking === true;
+    const event = released && typeof rhythmLimitedEventAt === 'function' ? rhythmLimitedEventAt(Date.now()) : null;
+    return new Set(event && Array.isArray(event.songIds) ? event.songIds : []);
+  })();
   // 画面に並べる順。並び替えは**見え方だけ**で、遊べる曲も選んでいる曲も変えない。
   const list = rhythmSortSongs(playable, {
     sort: state.sort,
@@ -20017,6 +20027,7 @@ const RhythmSongSelect = ({
   }, blocks.map(copy => list.map(entry => {
     const main = copy === 1;
     const selected = !!song && entry.songId === song.songId;
+    const eventSong = eventSongIds.has(entry.songId);
     return /*#__PURE__*/React.createElement("li", {
       key: `${copy}-${entry.songId}`,
       "aria-hidden": main ? undefined : 'true'
@@ -20030,7 +20041,7 @@ const RhythmSongSelect = ({
       tabIndex: main ? undefined : -1,
       "aria-pressed": selected,
       onClick: () => setSongId(entry.songId),
-      className: `flex w-full min-h-[64px] items-center gap-2 rounded-xl border px-2 py-1.5 text-left ${selected ? 'border-fuchsia-300 bg-fuchsia-900/50' : 'border-white/10 bg-slate-900/70'}`
+      className: `flex w-full min-h-[64px] items-center gap-2 rounded-xl border px-2 py-1.5 text-left ${selected ? 'border-fuchsia-300 bg-fuchsia-900/50' : eventSong ? 'border-amber-300/50 bg-amber-500/[0.07]' : 'border-white/10 bg-slate-900/70'}`
     }), /*#__PURE__*/React.createElement("span", {
       className: "w-10 shrink-0 text-center"
     }, /*#__PURE__*/React.createElement("small", {
@@ -20073,7 +20084,11 @@ const RhythmSongSelect = ({
       }));
     }), /*#__PURE__*/React.createElement("small", {
       className: "ml-1 text-[9px] font-bold text-slate-400"
-    }, (difficulties || []).filter(item => rhythmChartPlayable(entry, item.id)).length, "\u96E3\u6613\u5EA6")))));
+    }, (difficulties || []).filter(item => rhythmChartPlayable(entry, item.id)).length, "\u96E3\u6613\u5EA6"), eventSong && /*#__PURE__*/React.createElement("small", _extends({}, main ? {
+      'data-rhythm-song-event': entry.songId
+    } : {}, {
+      className: "ml-auto shrink-0 rounded-md border border-amber-300/60 bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-black text-amber-200"
+    }), "\uD83C\uDFC6 \u30A4\u30D9\u30F3\u30C8\u5BFE\u8C61")))));
   }))))), /*#__PURE__*/React.createElement("aside", {
     "data-rhythm-song-detail": true,
     className: "shrink-0 border-t border-white/10 bg-slate-950/90 px-3 py-2 landscape:w-[42%] landscape:max-w-[420px] landscape:overflow-y-auto landscape:border-l landscape:border-t-0 landscape:py-3",
