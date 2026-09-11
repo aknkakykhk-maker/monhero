@@ -540,6 +540,11 @@ function RhythmRankingScreen({
             <p className="font-mono text-sm font-black text-fuchsia-100">{entry.score.toLocaleString()}</p>
             <p className={`text-[10px] font-black ${RHYTHM_RANK_COLORS[rhythmRankForScore(entry.score)]}`}>{rhythmRankForScore(entry.score)}</p>
           </div>
+          {/* ★判定の内訳。「この曲」タブと同じ見た目・同じモーダルを使う
+              (2026-09-11・ユーザー指摘「イベント側の対象曲のほうの詳細がない」)。
+              内訳が無い行(SQL未適用・古い記録)ではボタンを出さない */}
+          {entry.detail&&<button data-rhythm-event-detail-row onClick={()=>setRhythmRankingDetail(entry)}
+            className="shrink-0 min-h-[44px] rounded-lg border border-white/20 px-2 text-[9px] font-black text-slate-200">詳細</button>}
         </div>
       );
       // イベントの「総合」部門の1行。分母は対象曲の数から作る(曲数を書き写さない)

@@ -408,8 +408,10 @@ check('週間の期間はサーバーから受け取る',
   &&app.includes("rhythmWeeklyEvent(weekWindow.startMs) : rhythmLimitedEventAt(Date.now())"));
 check('期間×対象曲の集計は関数を呼ぶ',
   supa.includes('/rest/v1/rpc/rhythm_event_song_bests')&&supa.includes('/rest/v1/rpc/rhythm_event_totals'));
+// ★行の文字列そのままを見ない。曲ごとのほうは party の取り直しを足したときに
+//   body を変数へ出したので、1行の形だけを見ていると中身が正しくても落ちる(2026-09-11)
 check('対象曲は配列で渡す(3曲でも5曲でも同じ関数)',
-  supa.includes('body: { song_ids: [songId],')&&supa.includes('body: { song_ids: songIds,'));
+  /song_ids: \[songId\],/.test(supa)&&/song_ids: songIds,/.test(supa));
 check('並び順は点の降順、同点は先に到達したほうが上',
   supa.includes('order=score.desc,scored_at.asc')&&supa.includes('order=total_score.desc,last_scored_at.asc'));
 check('表示件数は50件',/const RHYTHM_EVENT_RANKING_DISPLAY_LIMIT = 50;/.test(supa));
