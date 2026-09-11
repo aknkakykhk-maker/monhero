@@ -314,6 +314,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
   const setView=next=>{if(typeof onView==='function')onView(next);};
   const state=normalizeRhythmSelectView(view);
   const [sortOpen,setSortOpen]=React.useState(false);
+  const [genreOpen,setGenreOpen]=React.useState(false);
   // ジャケットを大きく見ているか(2026-09-08・ユーザー指示「モンビー中のジャケットをタップすると拡大画像が見れるように」)。
   // 画面(gameState)は増やさない。曲えらびの上に重ねるだけなので、閉じれば元の場所に戻る。
   const [artZoom,setArtZoom]=React.useState(false);
@@ -350,12 +351,20 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
     const event=(released&&typeof rhythmLimitedEventAt==='function')?rhythmLimitedEventAt(Date.now()):null;
     return new Set((event&&Array.isArray(event.songIds))?event.songIds:[]);
   })();
-  // 対象曲だけに絞るか。★開催していないときは絞らない(保存値が true のままでも)。
+  // いま選べるジャンル。★イベント中だけのもの(whileEvent)は、開催していなければ出さない。
+  //   ジャンルが1つ(すべて)だけなら、えらぶ意味が無いのでボタンごと出さない
+  const genres=RHYTHM_GENRES.filter(item=>!item.whileEvent||eventSongIds.size>0);
+  //   保存値が「いま選べないジャンル」を指しているときは「すべて」に倒す。
   //   そうしないと、イベントが終わったあとに一覧が空になる人が出る
-  const eventFilterOn=eventSongIds.size>0&&state.eventOnly===true;
+  const genre=genres.find(item=>item.id===state.genre)||genres[0];
+  const genreMatches=entry=>{
+    if(!genre||genre.id==='all')return true;
+    if(genre.id==='event')return eventSongIds.has(entry.songId);
+    // ★ジャンルを増やしたらここへ1行。曲の側の印を見て決める
+    return true;
+  };
   // 画面に並べる順。並び替えも絞り込みも**見え方だけ**で、遊べる曲も選んでいる曲も変えない。
-  const list=rhythmSortSongs(
-    eventFilterOn?playable.filter(entry=>eventSongIds.has(entry.songId)):playable,
+  const list=rhythmSortSongs(playable.filter(genreMatches),
     {sort:state.sort,desc:state.desc,levelOf:rowLevel,difficulties});
   const sortLabel=(RHYTHM_SORT_ORDERS.find(item=>item.id===state.sort)||RHYTHM_SORT_ORDERS[0]).label;
   // 選んでいる曲を鳴らすのは App本体(rhythmPreviewTrackId)。ここでは鳴らさない。
@@ -482,14 +491,14 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
           <span className="truncate">並び替え：{sortLabel}{state.desc?'（逆）':''}</span>
           <span aria-hidden="true" className="shrink-0 text-slate-400">▾</span>
         </button>
-        {/* ★イベント開催中だけ出る絞り込み。並び替えと同じ行に置いて、縦を1行も増やさない
-            (2026-09-11・ユーザー指示「ソートにイベント曲だけ出てくるのほしいね」)。
-            並び替えの一覧へ混ぜなかったのは、これが並び順ではなく絞り込みのため */}
-        {eventSongIds.size>0&&<button type="button" data-rhythm-song-event-filter aria-pressed={state.eventOnly===true}
-          onClick={()=>setView({...state,eventOnly:!(state.eventOnly===true)})}
-          title={state.eventOnly===true?'すべての曲を出す':'イベントの対象曲だけにする'}
-          className={`flex h-[44px] shrink-0 items-center gap-1 rounded-xl border px-2 text-[11px] font-black ${state.eventOnly===true?'border-amber-300 bg-amber-500/25 text-amber-100':'border-amber-300/40 bg-slate-900/80 text-amber-200'}`}>
-          <span aria-hidden="true">🏆</span><span>対象曲</span>
+        {/* ★ジャンルの絞り込み。並び替えと同じ行に置いて、縦を1行も増やさない
+            (2026-09-11・ユーザー指示「対象曲のところをジャンルに変えて、その中から選べるようにしよう」)。
+            並び替えの一覧へ混ぜないのは、これが並び順ではなく絞り込みのため。
+            えらべるジャンルが1つ(すべて)だけのときは、ボタンごと出さない */}
+        {genres.length>1&&<button type="button" data-rhythm-song-genre={genre?genre.id:'all'} onClick={()=>setGenreOpen(true)}
+          className={`flex h-[44px] min-w-0 flex-1 items-center justify-between gap-1 rounded-xl border px-3 text-[11px] font-black ${genre&&genre.id!=='all'?'border-amber-300 bg-amber-500/20 text-amber-100':'border-white/15 bg-slate-900/80 text-slate-200'}`}>
+          <span className="truncate">{genre&&genre.id!=='all'?genre.label:'ジャンル：すべて'}</span>
+          <span aria-hidden="true" className="shrink-0 text-slate-400">▾</span>
         </button>}
         {notice&&<button type="button" data-rhythm-song-notice-toggle aria-pressed={state.noticeOpen}
           onClick={()=>setView({...state,noticeOpen:!state.noticeOpen})}
@@ -630,6 +639,29 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
       <button type="button" data-rhythm-song-art-close onClick={()=>setArtZoom(false)}
         className="mt-3 min-h-[52px] w-full max-w-xs rounded-xl bg-slate-700 text-sm font-black text-white"
         style={{minHeight:'52px'}}>とじる</button>
+    </div>}
+    {genreOpen&&<div data-rhythm-genre-sheet className="fixed inset-0 z-[9000] flex items-end justify-center"
+      style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.72)',zIndex:9000}}
+      onClick={()=>setGenreOpen(false)}>
+      <section onClick={e=>e.stopPropagation()}
+        className="max-h-[80%] w-full max-w-md overflow-y-auto rounded-t-3xl border-t border-amber-300/60 bg-slate-900 p-4"
+        style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
+        <h3 className="text-sm font-black text-white">ジャンル</h3>
+        <p className="mt-1 text-[10px] font-bold text-slate-400">出す曲を絞るだけです。遊べる曲・自己ベスト・全国ランキングは変わりません。</p>
+        <div className="mt-3 space-y-1.5">
+          {genres.map(item=>{
+            const on=!!genre&&item.id===genre.id;
+            return <button key={item.id} type="button" data-rhythm-genre-option={item.id} aria-pressed={on}
+              onClick={()=>{setView({...state,genre:item.id});setGenreOpen(false);}}
+              className={`flex min-h-[52px] w-full flex-col justify-center rounded-xl border-2 px-3 text-left ${on?'border-amber-300 bg-amber-500/20':'border-white/15 bg-slate-950/60'}`}>
+              <b className="text-xs font-black text-white">{on?'● ':''}{item.label}</b>
+              <small className="text-[10px] font-bold text-slate-400">{item.note}</small>
+            </button>;
+          })}
+        </div>
+        <button type="button" data-rhythm-genre-close onClick={()=>setGenreOpen(false)}
+          className="mt-3 min-h-[52px] w-full rounded-xl bg-slate-700 text-sm font-black text-white">とじる</button>
+      </section>
     </div>}
     {sortOpen&&<div data-rhythm-sort-sheet className="fixed inset-0 z-[9000] flex items-end justify-center"
       style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.72)',zIndex:9000}}

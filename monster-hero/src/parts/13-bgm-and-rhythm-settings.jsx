@@ -87,20 +87,35 @@ const RHYTHM_SORT_ORDERS = Object.freeze([
   Object.freeze({ id:'length', label:'長さ順',  note:'曲が短い順。軽く1曲遊びたいときに' }),
 ]);
 const RHYTHM_SORT_IDS = Object.freeze(RHYTHM_SORT_ORDERS.map(item => item.id));
-// eventOnly … イベントの対象曲だけに絞るか(2026-09-11・ユーザー指示
-//   「ソートにイベント曲だけ出てくるのほしいね」)。並び替えではなく絞り込みなので、
-//   並び替えの一覧には混ぜず、別のボタンにしてある。
-//   ★開催していないときは、この値が true でも絞らない(画面側で見る)。
+// ジャンル(曲の絞り込み)。2026-09-11・ユーザー指示
+// 「対象曲のところをジャンルに変えて、その中から選べるようにしよう。イベント曲、オリジナル、MF とか。
+//   ジャンルを決めないとだから、とりあえずイベント曲だけ選べるようにすればおけ」。
+//
+// ★ジャンルを増やすときは、ここへ1件足して、曲の側に見分けるための印を付ける。
+//   画面(29-rhythm-screens.jsx)は書き換えない。
+// ★whileEvent:true を付けたものは、イベントを開催しているあいだだけ選べる。
+//   開催していないときに選ぶと一覧が空になるため。
+const RHYTHM_GENRES = Object.freeze([
+  Object.freeze({ id:'all',   label:'すべて',       note:'遊べる曲を全部' }),
+  Object.freeze({ id:'event', label:'🏆 イベント曲', note:'いま開催しているイベントの対象曲', whileEvent:true }),
+]);
+const RHYTHM_GENRE_IDS = Object.freeze(RHYTHM_GENRES.map(item => item.id));
+// genre … 曲の絞り込み(2026-09-11)。並び替えではないので、並び替えの一覧には混ぜない。
+//   ★開催していないときは、保存値が 'event' のままでも絞らない(画面側で見る)。
 //     そうしないと、イベントが終わったあとに一覧が空の人が出てしまう。
-//   ★新しい項目なので、持っていない既存ユーザーは既定値(false)で補われる(CLAUDE.md ⑦)。
-const DEFAULT_RHYTHM_SELECT_VIEW = Object.freeze({ sort:'added', desc:false, noticeOpen:true, eventOnly:false });
+//   ★新しい項目なので、持っていない既存ユーザーは既定値('all')で補われる(CLAUDE.md ⑦)。
+//   ★短いあいだ eventOnly(真偽値)で持っていたので、その値も読める形にしてある。
+//     消さずに読み替えるだけ。true だった人は 'event' を選んでいた扱いになる。
+const DEFAULT_RHYTHM_SELECT_VIEW = Object.freeze({ sort:'added', desc:false, noticeOpen:true, genre:'all' });
 const normalizeRhythmSelectView = value => {
   const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  const genre = RHYTHM_GENRE_IDS.includes(source.genre) ? source.genre
+    : (source.eventOnly === true ? 'event' : DEFAULT_RHYTHM_SELECT_VIEW.genre);
   return {
     sort: RHYTHM_SORT_IDS.includes(source.sort) ? source.sort : DEFAULT_RHYTHM_SELECT_VIEW.sort,
     desc: typeof source.desc === 'boolean' ? source.desc : DEFAULT_RHYTHM_SELECT_VIEW.desc,
     noticeOpen: typeof source.noticeOpen === 'boolean' ? source.noticeOpen : DEFAULT_RHYTHM_SELECT_VIEW.noticeOpen,
-    eventOnly: typeof source.eventOnly === 'boolean' ? source.eventOnly : DEFAULT_RHYTHM_SELECT_VIEW.eventOnly,
+    genre,
   };
 };
 // ノーツ速度は見た目のtravelだけを変える。1.0〜12.0を0.1刻みで選べ、6.0は従来の見た目(2150ms)を維持する。

@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8ce725e68c9b81c9
+// source-sha256: b5a5fa4e658e1869
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 691d9604e8d7fe0f
+// generated-sha256: fc6e5c370dca0b76
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 18:56"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 19:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4635,25 +4635,45 @@ const RHYTHM_SORT_ORDERS = Object.freeze([Object.freeze({
   note: '曲が短い順。軽く1曲遊びたいときに'
 })]);
 const RHYTHM_SORT_IDS = Object.freeze(RHYTHM_SORT_ORDERS.map(item => item.id));
-// eventOnly … イベントの対象曲だけに絞るか(2026-09-11・ユーザー指示
-//   「ソートにイベント曲だけ出てくるのほしいね」)。並び替えではなく絞り込みなので、
-//   並び替えの一覧には混ぜず、別のボタンにしてある。
-//   ★開催していないときは、この値が true でも絞らない(画面側で見る)。
+// ジャンル(曲の絞り込み)。2026-09-11・ユーザー指示
+// 「対象曲のところをジャンルに変えて、その中から選べるようにしよう。イベント曲、オリジナル、MF とか。
+//   ジャンルを決めないとだから、とりあえずイベント曲だけ選べるようにすればおけ」。
+//
+// ★ジャンルを増やすときは、ここへ1件足して、曲の側に見分けるための印を付ける。
+//   画面(29-rhythm-screens.jsx)は書き換えない。
+// ★whileEvent:true を付けたものは、イベントを開催しているあいだだけ選べる。
+//   開催していないときに選ぶと一覧が空になるため。
+const RHYTHM_GENRES = Object.freeze([Object.freeze({
+  id: 'all',
+  label: 'すべて',
+  note: '遊べる曲を全部'
+}), Object.freeze({
+  id: 'event',
+  label: '🏆 イベント曲',
+  note: 'いま開催しているイベントの対象曲',
+  whileEvent: true
+})]);
+const RHYTHM_GENRE_IDS = Object.freeze(RHYTHM_GENRES.map(item => item.id));
+// genre … 曲の絞り込み(2026-09-11)。並び替えではないので、並び替えの一覧には混ぜない。
+//   ★開催していないときは、保存値が 'event' のままでも絞らない(画面側で見る)。
 //     そうしないと、イベントが終わったあとに一覧が空の人が出てしまう。
-//   ★新しい項目なので、持っていない既存ユーザーは既定値(false)で補われる(CLAUDE.md ⑦)。
+//   ★新しい項目なので、持っていない既存ユーザーは既定値('all')で補われる(CLAUDE.md ⑦)。
+//   ★短いあいだ eventOnly(真偽値)で持っていたので、その値も読める形にしてある。
+//     消さずに読み替えるだけ。true だった人は 'event' を選んでいた扱いになる。
 const DEFAULT_RHYTHM_SELECT_VIEW = Object.freeze({
   sort: 'added',
   desc: false,
   noticeOpen: true,
-  eventOnly: false
+  genre: 'all'
 });
 const normalizeRhythmSelectView = value => {
   const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  const genre = RHYTHM_GENRE_IDS.includes(source.genre) ? source.genre : source.eventOnly === true ? 'event' : DEFAULT_RHYTHM_SELECT_VIEW.genre;
   return {
     sort: RHYTHM_SORT_IDS.includes(source.sort) ? source.sort : DEFAULT_RHYTHM_SELECT_VIEW.sort,
     desc: typeof source.desc === 'boolean' ? source.desc : DEFAULT_RHYTHM_SELECT_VIEW.desc,
     noticeOpen: typeof source.noticeOpen === 'boolean' ? source.noticeOpen : DEFAULT_RHYTHM_SELECT_VIEW.noticeOpen,
-    eventOnly: typeof source.eventOnly === 'boolean' ? source.eventOnly : DEFAULT_RHYTHM_SELECT_VIEW.eventOnly
+    genre
   };
 };
 // ノーツ速度は見た目のtravelだけを変える。1.0〜12.0を0.1刻みで選べ、6.0は従来の見た目(2150ms)を維持する。
@@ -19814,6 +19834,7 @@ const RhythmSongSelect = ({
   };
   const state = normalizeRhythmSelectView(view);
   const [sortOpen, setSortOpen] = React.useState(false);
+  const [genreOpen, setGenreOpen] = React.useState(false);
   // ジャケットを大きく見ているか(2026-09-08・ユーザー指示「モンビー中のジャケットをタップすると拡大画像が見れるように」)。
   // 画面(gameState)は増やさない。曲えらびの上に重ねるだけなので、閉じれば元の場所に戻る。
   const [artZoom, setArtZoom] = React.useState(false);
@@ -19854,11 +19875,20 @@ const RhythmSongSelect = ({
     const event = released && typeof rhythmLimitedEventAt === 'function' ? rhythmLimitedEventAt(Date.now()) : null;
     return new Set(event && Array.isArray(event.songIds) ? event.songIds : []);
   })();
-  // 対象曲だけに絞るか。★開催していないときは絞らない(保存値が true のままでも)。
+  // いま選べるジャンル。★イベント中だけのもの(whileEvent)は、開催していなければ出さない。
+  //   ジャンルが1つ(すべて)だけなら、えらぶ意味が無いのでボタンごと出さない
+  const genres = RHYTHM_GENRES.filter(item => !item.whileEvent || eventSongIds.size > 0);
+  //   保存値が「いま選べないジャンル」を指しているときは「すべて」に倒す。
   //   そうしないと、イベントが終わったあとに一覧が空になる人が出る
-  const eventFilterOn = eventSongIds.size > 0 && state.eventOnly === true;
+  const genre = genres.find(item => item.id === state.genre) || genres[0];
+  const genreMatches = entry => {
+    if (!genre || genre.id === 'all') return true;
+    if (genre.id === 'event') return eventSongIds.has(entry.songId);
+    // ★ジャンルを増やしたらここへ1行。曲の側の印を見て決める
+    return true;
+  };
   // 画面に並べる順。並び替えも絞り込みも**見え方だけ**で、遊べる曲も選んでいる曲も変えない。
-  const list = rhythmSortSongs(eventFilterOn ? playable.filter(entry => eventSongIds.has(entry.songId)) : playable, {
+  const list = rhythmSortSongs(playable.filter(genreMatches), {
     sort: state.sort,
     desc: state.desc,
     levelOf: rowLevel,
@@ -20011,19 +20041,17 @@ const RhythmSongSelect = ({
   }, "\u4E26\u3073\u66FF\u3048\uFF1A", sortLabel, state.desc ? '（逆）' : ''), /*#__PURE__*/React.createElement("span", {
     "aria-hidden": "true",
     className: "shrink-0 text-slate-400"
-  }, "\u25BE")), eventSongIds.size > 0 && /*#__PURE__*/React.createElement("button", {
+  }, "\u25BE")), genres.length > 1 && /*#__PURE__*/React.createElement("button", {
     type: "button",
-    "data-rhythm-song-event-filter": true,
-    "aria-pressed": state.eventOnly === true,
-    onClick: () => setView({
-      ...state,
-      eventOnly: !(state.eventOnly === true)
-    }),
-    title: state.eventOnly === true ? 'すべての曲を出す' : 'イベントの対象曲だけにする',
-    className: `flex h-[44px] shrink-0 items-center gap-1 rounded-xl border px-2 text-[11px] font-black ${state.eventOnly === true ? 'border-amber-300 bg-amber-500/25 text-amber-100' : 'border-amber-300/40 bg-slate-900/80 text-amber-200'}`
+    "data-rhythm-song-genre": genre ? genre.id : 'all',
+    onClick: () => setGenreOpen(true),
+    className: `flex h-[44px] min-w-0 flex-1 items-center justify-between gap-1 rounded-xl border px-3 text-[11px] font-black ${genre && genre.id !== 'all' ? 'border-amber-300 bg-amber-500/20 text-amber-100' : 'border-white/15 bg-slate-900/80 text-slate-200'}`
   }, /*#__PURE__*/React.createElement("span", {
-    "aria-hidden": "true"
-  }, "\uD83C\uDFC6"), /*#__PURE__*/React.createElement("span", null, "\u5BFE\u8C61\u66F2")), notice && /*#__PURE__*/React.createElement("button", {
+    className: "truncate"
+  }, genre && genre.id !== 'all' ? genre.label : 'ジャンル：すべて'), /*#__PURE__*/React.createElement("span", {
+    "aria-hidden": "true",
+    className: "shrink-0 text-slate-400"
+  }, "\u25BE")), notice && /*#__PURE__*/React.createElement("button", {
     type: "button",
     "data-rhythm-song-notice-toggle": true,
     "aria-pressed": state.noticeOpen,
@@ -20235,7 +20263,54 @@ const RhythmSongSelect = ({
     style: {
       minHeight: '52px'
     }
-  }, "\u3068\u3058\u308B")), sortOpen && /*#__PURE__*/React.createElement("div", {
+  }, "\u3068\u3058\u308B")), genreOpen && /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-genre-sheet": true,
+    className: "fixed inset-0 z-[9000] flex items-end justify-center",
+    style: {
+      position: 'fixed',
+      inset: 0,
+      backgroundColor: 'rgba(0,0,0,0.72)',
+      zIndex: 9000
+    },
+    onClick: () => setGenreOpen(false)
+  }, /*#__PURE__*/React.createElement("section", {
+    onClick: e => e.stopPropagation(),
+    className: "max-h-[80%] w-full max-w-md overflow-y-auto rounded-t-3xl border-t border-amber-300/60 bg-slate-900 p-4",
+    style: {
+      paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+    }
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-sm font-black text-white"
+  }, "\u30B8\u30E3\u30F3\u30EB"), /*#__PURE__*/React.createElement("p", {
+    className: "mt-1 text-[10px] font-bold text-slate-400"
+  }, "\u51FA\u3059\u66F2\u3092\u7D5E\u308B\u3060\u3051\u3067\u3059\u3002\u904A\u3079\u308B\u66F2\u30FB\u81EA\u5DF1\u30D9\u30B9\u30C8\u30FB\u5168\u56FD\u30E9\u30F3\u30AD\u30F3\u30B0\u306F\u5909\u308F\u308A\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("div", {
+    className: "mt-3 space-y-1.5"
+  }, genres.map(item => {
+    const on = !!genre && item.id === genre.id;
+    return /*#__PURE__*/React.createElement("button", {
+      key: item.id,
+      type: "button",
+      "data-rhythm-genre-option": item.id,
+      "aria-pressed": on,
+      onClick: () => {
+        setView({
+          ...state,
+          genre: item.id
+        });
+        setGenreOpen(false);
+      },
+      className: `flex min-h-[52px] w-full flex-col justify-center rounded-xl border-2 px-3 text-left ${on ? 'border-amber-300 bg-amber-500/20' : 'border-white/15 bg-slate-950/60'}`
+    }, /*#__PURE__*/React.createElement("b", {
+      className: "text-xs font-black text-white"
+    }, on ? '● ' : '', item.label), /*#__PURE__*/React.createElement("small", {
+      className: "text-[10px] font-bold text-slate-400"
+    }, item.note));
+  })), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "data-rhythm-genre-close": true,
+    onClick: () => setGenreOpen(false),
+    className: "mt-3 min-h-[52px] w-full rounded-xl bg-slate-700 text-sm font-black text-white"
+  }, "\u3068\u3058\u308B"))), sortOpen && /*#__PURE__*/React.createElement("div", {
     "data-rhythm-sort-sheet": true,
     className: "fixed inset-0 z-[9000] flex items-end justify-center",
     style: {
