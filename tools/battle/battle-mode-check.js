@@ -450,8 +450,11 @@ check('遊んだモードに応じて親密度の行動を切り替える',
 check('新しい3画面がある',
   has("gameState==='BATTLE_MODE_SELECT'") && has("gameState==='BATTLE_DIFFICULTY_SELECT'") && has("gameState==='BATTLE_SCORE_RANKING'"));
 // HOMEの「バトル」は新しいモード選択へ入る(本番の入口)
+// HOME は 69-screen-home.jsx へ切り出した。行き先の指定は本体に残り、画面へは
+// onOpenBattle だけを渡している。本体の中身と画面の結線を2段で見る
 check('ふだんの「バトル」はモード選択へ入る',
-  has("onClick={()=>{setModeSelectTab('mode');setGameState('BATTLE_MODE_SELECT');}} aria-label=\"バトル\""));
+  has("onOpenBattle={()=>{setModeSelectTab('mode');setGameState('BATTLE_MODE_SELECT');}}")
+    && has("onClick={onOpenBattle} aria-label=\"バトル\""));
 check('旧バトル画面はデバッグからだけ開ける',
   has('旧バトル画面を開く（見比べ用）')
     && (source.match(/setGameState\('BATTLE_MENU'\)/g) || []).length === 2,

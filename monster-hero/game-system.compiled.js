@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1986ad596ae94ecf
+// source-sha256: 88239e54547b338f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1f64efb5640a2c47
+// generated-sha256: 2b6cf000c5f7f715
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 10:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 10:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -30611,6 +30611,391 @@ function MasuRegisterModal({
   }, "\u767B\u9332\u3059\u308B"))));
 }
 
+// ---- part: 69-screen-home.jsx ----
+// ==== 画面: HOME(村の広場)とそこに重なる案内 ====
+//
+// MonsterHeroGame から切り出した19本目(docs/refactor/REFACTOR_MASTER_PLAN.md STEP 6-12)。
+// 村の広場そのものと、HOME にだけ出るかぶせもの3つ(ききの加入・ももすけの登場・
+// アップデートの案内)。
+//
+// 【この画面ならではの注意】
+// ・HOME は**配置の検査がある唯一の画面**。触ったら必ず `node tools/home-layout-check.js` を通す。
+//   助手(みゅあ)の吹き出し・施設のボタン・はじめての案内が同じ場所に重なるため、
+//   ここだけは実際のブラウザで位置を測って確かめている
+// ・施設へ入る7つの行き先は props(onOpen*)で受け取る。画面は行き先の名前を持たない
+// ・かぶせもの3つは「HOME にいて、チュートリアルが終わっていて、前の会話が片付いていたら」
+//   という順番で出る。その条件は MonsterHeroGame 側に残し、ここは中身だけを持つ
+function HomeScreen({
+  assistantBondUp,
+  breederIcon,
+  breederLevel,
+  breederName,
+  breederPoints,
+  gifts,
+  gold,
+  hasUnreadChangelog,
+  homeBackgroundReady,
+  homePastureMasumons,
+  masuMons,
+  missions,
+  onOpenBattle,
+  onOpenManagement,
+  onOpenMarket,
+  onOpenProfile,
+  onOpenRhythm,
+  onOpenSettings,
+  onOpenTemple,
+  openChangelog,
+  openGiftBox,
+  openMissions,
+  resolveIconUrl,
+  spotClass
+}) {
+  return /*#__PURE__*/React.createElement("main", {
+    className: "mh-home-scene",
+    "aria-label": "\u6751\u306E\u5E83\u5834"
+  }, /*#__PURE__*/React.createElement("picture", {
+    className: `mh-home-background ${homeBackgroundReady ? 'is-ready' : ''}`,
+    "aria-hidden": "true"
+  }, /*#__PURE__*/React.createElement("img", {
+    src: "data/images/home-background.jpg",
+    alt: ""
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "mh-home-masumon-layer",
+    "aria-hidden": "true"
+  }, homePastureMasumons.map((masu, index) => /*#__PURE__*/React.createElement(HomeWalkingMasumon, {
+    key: masu.id,
+    masu: masu,
+    base: ALL_PLAYER_MONSTERS[masu.baseId],
+    masuColors: getMasuColors(masu),
+    index: index,
+    count: homePastureMasumons.length
+  }))), /*#__PURE__*/React.createElement("header", {
+    className: `mh-home-status${spotClass('settings')}`
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    className: "mh-home-player",
+    onClick: onOpenProfile,
+    "aria-label": "\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u3092\u958B\u304F"
+  }, /*#__PURE__*/React.createElement(HomeProfileIcon, {
+    src: resolveIconUrl(breederIcon),
+    id: breederIcon
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "mh-home-player-copy"
+  }, /*#__PURE__*/React.createElement("strong", null, breederName), /*#__PURE__*/React.createElement("span", null, "\u30D6\u30EA\u30FC\u30C0\u30FC Lv.", breederLevel.level), /*#__PURE__*/React.createElement("div", {
+    className: "mh-home-xp"
+  }, /*#__PURE__*/React.createElement("i", {
+    style: {
+      width: `${Math.min(100, breederLevel.xpIntoLevel / breederLevel.xpForNext * 100)}%`
+    }
+  })), /*#__PURE__*/React.createElement("small", null, breederLevel.xpIntoLevel.toLocaleString(), " / ", breederLevel.xpForNext.toLocaleString(), " XP")), /*#__PURE__*/React.createElement(ChevronRight, {
+    className: "mh-home-profile-arrow",
+    size: 15
+  })), /*#__PURE__*/React.createElement("section", {
+    className: "mh-home-wallet"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(Gem, {
+    size: 14
+  }), /*#__PURE__*/React.createElement("b", null, gold.toLocaleString()), /*#__PURE__*/React.createElement("small", null, "\u30C0\u30A4\u30E4")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(Coins, {
+    size: 14
+  }), /*#__PURE__*/React.createElement("b", null, breederPoints), /*#__PURE__*/React.createElement("small", null, "pt")), /*#__PURE__*/React.createElement("button", {
+    onClick: onOpenSettings,
+    className: `mh-home-settings${spotClass('settings')}`,
+    "aria-label": "\u8A2D\u5B9A"
+  }, /*#__PURE__*/React.createElement(Settings, {
+    size: 20
+  }), /*#__PURE__*/React.createElement("span", null, "\u8A2D\u5B9A")))), /*#__PURE__*/React.createElement("nav", {
+    className: "mh-home-facilities",
+    "aria-label": "\u62E0\u70B9\u65BD\u8A2D"
+  }, /*#__PURE__*/React.createElement("button", {
+    className: `mh-home-facility management${spotClass('management')}`,
+    onClick: onOpenManagement,
+    "aria-label": "M/B\u7BA1\u7406"
+  }, /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement(Layers, {
+    size: 18
+  }), "M/B\u7BA1\u7406")), /*#__PURE__*/React.createElement("button", {
+    className: `mh-home-facility temple${spotClass('temple')}`,
+    onClick: onOpenTemple,
+    "aria-label": "\u795E\u6BBF"
+  }, /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement(Sparkles, {
+    size: 18
+  }), "\u795E\u6BBF")), /*#__PURE__*/React.createElement("button", {
+    className: `mh-home-facility market${spotClass('market')}`,
+    onClick: onOpenMarket,
+    "aria-label": "\u30DE\u30FC\u30B1\u30C3\u30C8"
+  }, /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement(ShoppingBag, {
+    size: 17
+  }), "\u30DE\u30FC\u30B1\u30C3\u30C8")), /*#__PURE__*/React.createElement("button", {
+    className: "mh-home-facility rhythm",
+    onClick: onOpenRhythm,
+    "aria-label": RHYTHM_MODE_PUBLIC_RELEASE ? "モンヒロビート" : "モンヒロビート（準備中）"
+  }, /*#__PURE__*/React.createElement("span", null, "\uD83C\uDFB5 \u30E2\u30F3\u30D2\u30ED\u30D3\u30FC\u30C8", !RHYTHM_MODE_PUBLIC_RELEASE && /*#__PURE__*/React.createElement("small", null, "\u6E96\u5099\u4E2D"))), /*#__PURE__*/React.createElement("button", {
+    className: `mh-home-facility battle${spotClass('battle')}`,
+    onClick: onOpenBattle,
+    "aria-label": "\u30D0\u30C8\u30EB"
+  }, /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement(Sword, {
+    size: 25
+  }), "\u30D0\u30C8\u30EB"))), /*#__PURE__*/React.createElement("button", {
+    onClick: openMissions,
+    className: `mh-home-mission${spotClass('reward')}`
+  }, /*#__PURE__*/React.createElement(List, {
+    size: 16
+  }), "\u30DF\u30C3\u30B7\u30E7\u30F3", missionClaimableCount(normalizeMissions(missions)) > 0 && /*#__PURE__*/React.createElement("em", null, missionClaimableCount(normalizeMissions(missions)))), /*#__PURE__*/React.createElement("button", {
+    onClick: openGiftBox,
+    className: `mh-home-gift${spotClass('reward')}`
+  }, /*#__PURE__*/React.createElement(Package, {
+    size: 16
+  }), "\u30AE\u30D5\u30C8", giftClaimableCount(gifts) > 0 && /*#__PURE__*/React.createElement("em", null, giftClaimableCount(gifts))), /*#__PURE__*/React.createElement("button", {
+    onClick: openChangelog,
+    className: "mh-home-update"
+  }, /*#__PURE__*/React.createElement(RefreshCcw, {
+    size: 15
+  }), "\u66F4\u65B0\u5C65\u6B74", hasUnreadChangelog && /*#__PURE__*/React.createElement("em", {
+    className: "mh-unread-badge",
+    "aria-label": "\u672A\u8AAD\u3042\u308A"
+  }, "!")), /*#__PURE__*/React.createElement("div", {
+    className: `mh-home-assistant${spotClass('assistant')}`
+  }, /*#__PURE__*/React.createElement(AssistantBubble, {
+    scene: "home",
+    condition: assistantBondUp ? 'bondUp' : masuMons.length === 0 ? 'firstRun' : null,
+    compact: true
+  })));
+}
+function KikiIntroOverlay({
+  kikiIntroStep,
+  markKikiIntroSeen,
+  setKikiIntroStep
+}) {
+  const script = typeof ASSISTANT_KIKI_INTRO !== 'undefined' && ASSISTANT_KIKI_INTRO || [];
+  if (script.length === 0) return null;
+  const step = Math.max(0, Math.min(kikiIntroStep, script.length - 1));
+  const line = script[step];
+  const speaker = assistantById(line.who);
+  const last = step === script.length - 1;
+  const calls = typeof ASSISTANT_KIKI_INTRO_CALLS !== 'undefined' && ASSISTANT_KIKI_INTRO_CALLS || {};
+  // 顔を並べるのは、この台本に出てくる助手だけ。
+  // 全員を並べると、まだ登場していない助手までここに映ってしまう
+  const cast = ASSISTANT_LIST.filter(who => script.some(l => l.who === who.id));
+  const next = () => {
+    if (last) markKikiIntroSeen();else setKikiIntroStep(step + 1);
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    className: "fixed inset-0 flex items-end justify-center",
+    style: {
+      position: 'fixed',
+      inset: 0,
+      zIndex: 77000,
+      backgroundColor: 'rgba(2,6,23,.95)'
+    },
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": "\u304D\u304D\u304C\u52A9\u624B\u306B\u52A0\u308F\u308A\u307E\u3057\u305F"
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: next,
+    "aria-label": "\u6B21\u3078",
+    className: "absolute inset-0 w-full h-full",
+    style: {
+      background: 'transparent'
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "relative w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] overflow-y-auto mh-scroll rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4",
+    style: {
+      paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))',
+      pointerEvents: 'none'
+    }
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "mb-2 text-center text-[10px] font-black tracking-widest text-pink-300"
+  }, "\u3042\u305F\u3089\u3057\u3044\u52A9\u624B"), /*#__PURE__*/React.createElement("div", {
+    className: "mb-3 flex items-end justify-center gap-3"
+  }, cast.map(who => {
+    const talking = who.id === line.who;
+    return /*#__PURE__*/React.createElement("div", {
+      key: who.id,
+      className: `flex flex-col items-center gap-1 ${talking ? '' : 'opacity-35'}`,
+      style: {
+        transform: talking ? 'scale(1)' : 'scale(.86)',
+        transition: 'opacity .18s, transform .18s'
+      }
+    }, /*#__PURE__*/React.createElement(AssistantFace, {
+      who: who,
+      size: talking ? 84 : 64,
+      accent: who.accent,
+      expression: talking ? line.e : 'normal'
+    }), /*#__PURE__*/React.createElement("span", {
+      className: "text-[9px] font-black",
+      style: {
+        color: talking ? who.accent : '#64748b'
+      }
+    }, who.name));
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "rounded-2xl border-2 bg-slate-900 px-3 py-3",
+    style: {
+      borderColor: speaker.accent
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "block text-[9px] font-black tracking-widest",
+    style: {
+      color: speaker.accent
+    }
+  }, speaker.name), /*#__PURE__*/React.createElement("span", {
+    className: "block text-[13px] font-bold leading-relaxed text-white mt-1"
+  }, line.t)), /*#__PURE__*/React.createElement("p", {
+    className: "mt-2 text-center text-[8px] text-slate-500"
+  }, step + 1, " / ", script.length, "\u3000\uFF0F\u3000\u307F\u3085\u3042\u306F\u300C", calls.mua || '', "\u300D\u3001\u304D\u304D\u306F\u300C", calls.kiki || '', "\u300D\u3068\u547C\u3073\u5408\u3044\u307E\u3059"), /*#__PURE__*/React.createElement("button", {
+    onClick: next,
+    className: "mt-3 min-h-[50px] w-full rounded-2xl bg-pink-500 text-sm font-black text-slate-950 active:scale-[.98]",
+    style: {
+      pointerEvents: 'auto'
+    }
+  }, last ? 'とじる' : 'つぎへ')));
+}
+function MomosukeIntroOverlay({
+  markMomosukeIntroSeen,
+  momosukeIntroStep,
+  setMomosukeIntroStep
+}) {
+  const script = typeof ASSISTANT_MOMOSUKE_INTRO !== 'undefined' && ASSISTANT_MOMOSUKE_INTRO || [];
+  if (script.length === 0) return null;
+  const step = Math.max(0, Math.min(momosukeIntroStep, script.length - 1));
+  const line = script[step];
+  const speaker = assistantById(line.who);
+  const last = step === script.length - 1;
+  const cast = ASSISTANT_LIST.filter(who => script.some(l => l.who === who.id));
+  const next = () => {
+    if (last) markMomosukeIntroSeen();else setMomosukeIntroStep(step + 1);
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    className: "fixed inset-0 flex items-end justify-center",
+    style: {
+      position: 'fixed',
+      inset: 0,
+      zIndex: 77000,
+      backgroundColor: 'rgba(2,6,23,.95)'
+    },
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": "\u3082\u3082\u3059\u3051\u304C\u52A9\u624B\u306B\u52A0\u308F\u308A\u307E\u3057\u305F"
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: next,
+    "aria-label": "\u6B21\u3078",
+    className: "absolute inset-0 w-full h-full",
+    style: {
+      background: 'transparent'
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "relative w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] overflow-y-auto mh-scroll rounded-t-3xl border-t-2 border-x-2 border-pink-300 bg-slate-950 p-4",
+    style: {
+      paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))',
+      pointerEvents: 'none'
+    }
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "mb-2 text-center text-[10px] font-black tracking-widest text-pink-200"
+  }, "\u3042\u305F\u3089\u3057\u3044\u52A9\u624B"), /*#__PURE__*/React.createElement("div", {
+    className: "mb-3 flex items-end justify-center gap-3"
+  }, cast.map(who => {
+    const talking = who.id === line.who;
+    return /*#__PURE__*/React.createElement("div", {
+      key: who.id,
+      className: `flex flex-col items-center gap-1 ${talking ? '' : 'opacity-35'}`,
+      style: {
+        transform: talking ? 'scale(1)' : 'scale(.86)',
+        transition: 'opacity .18s, transform .18s'
+      }
+    }, /*#__PURE__*/React.createElement(AssistantFace, {
+      who: who,
+      size: talking ? 76 : 56,
+      accent: who.accent,
+      expression: talking ? line.e : 'normal'
+    }), /*#__PURE__*/React.createElement("span", {
+      className: "text-[9px] font-black",
+      style: {
+        color: talking ? who.accent : '#64748b'
+      }
+    }, who.name));
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "rounded-2xl border-2 bg-slate-900 px-3 py-3",
+    style: {
+      borderColor: speaker.accent
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "block text-[9px] font-black tracking-widest",
+    style: {
+      color: speaker.accent
+    }
+  }, speaker.name), /*#__PURE__*/React.createElement("span", {
+    className: "block text-[13px] font-bold leading-relaxed text-white mt-1"
+  }, line.t)), /*#__PURE__*/React.createElement("p", {
+    className: "mt-2 text-center text-[8px] text-slate-500"
+  }, step + 1, " / ", script.length), /*#__PURE__*/React.createElement("button", {
+    onClick: next,
+    className: "mt-3 min-h-[50px] w-full rounded-2xl bg-pink-400 text-sm font-black text-slate-950 active:scale-[.98]",
+    style: {
+      pointerEvents: 'auto'
+    }
+  }, last ? 'とじる' : 'つぎへ')));
+}
+function HomeUpdateGuideOverlay({
+  activeAssistant,
+  assistantBondLevelNow,
+  assistantCallStyle,
+  breederName,
+  finishUpdateGuide,
+  selectedAssistantId,
+  setUpdateGuidePage,
+  updateGuidePage,
+  updateGuideQueue
+}) {
+  const notice = updateGuideQueue[0];
+  const pages = Array.isArray(notice.pages) && notice.pages.length ? notice.pages : ['新しいアップデートがあるよ♪'];
+  const page = Math.min(updateGuidePage, pages.length - 1);
+  const last = page === pages.length - 1;
+  const who = activeAssistant;
+  return /*#__PURE__*/React.createElement("div", {
+    className: "fixed inset-0 flex items-end justify-center",
+    style: {
+      position: 'fixed',
+      inset: 0,
+      zIndex: 76000,
+      backgroundColor: 'rgba(2,6,23,.94)'
+    },
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": notice.title
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] overflow-y-auto rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4",
+    style: {
+      paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+    }
+  }, notice.debugOnly && /*#__PURE__*/React.createElement("div", {
+    className: "mb-2 rounded-lg bg-fuchsia-700 px-2 py-1 text-center text-[9px] font-black text-white"
+  }, "DEBUG\u30FB\u901A\u5E38\u30ED\u30B0\u30A4\u30F3\u3067\u306F\u8868\u793A\u3055\u308C\u307E\u305B\u3093"), /*#__PURE__*/React.createElement("h2", {
+    className: "mb-1 text-center text-base font-black text-pink-200"
+  }, notice.title), /*#__PURE__*/React.createElement("p", {
+    className: "mb-3 text-center text-[10px] font-bold text-slate-400"
+  }, page + 1, " / ", pages.length), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-end gap-2"
+  }, /*#__PURE__*/React.createElement(AssistantFace, {
+    who: who,
+    size: 76,
+    accent: who.accent,
+    expression: notice.expression || 'happy'
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-3 text-[13px] font-bold leading-relaxed text-white"
+  }, assistantSpeakText(pages[page], breederName, assistantBondLevelNow, assistantCallStyle, selectedAssistantId))), !last ? /*#__PURE__*/React.createElement("button", {
+    onClick: () => setUpdateGuidePage(page + 1),
+    className: "mt-4 min-h-[50px] w-full rounded-2xl bg-pink-500 text-sm font-black text-slate-950"
+  }, "\u6B21\u3078") : /*#__PURE__*/React.createElement("div", {
+    className: `mt-4 grid ${notice.destination ? 'grid-cols-2' : 'grid-cols-1'} gap-2`
+  }, notice.destination && /*#__PURE__*/React.createElement("button", {
+    onClick: () => finishUpdateGuide(notice.destination),
+    className: "min-h-[50px] rounded-2xl bg-pink-500 text-sm font-black text-slate-950"
+  }, notice.buttonLabel || '見に行く'), /*#__PURE__*/React.createElement("button", {
+    onClick: () => finishUpdateGuide(),
+    className: "min-h-[50px] rounded-2xl bg-slate-700 text-sm font-black text-white"
+  }, notice.destination ? 'あとで' : '閉じる'))));
+}
+
 // ---- part: 60-app.jsx ----
 function MonsterHeroGame() {
   const [gameState, setGameState] = useState('HOME');
@@ -45071,127 +45456,45 @@ function MonsterHeroGame() {
       style: screenShake && !ecoBattleView && !rhythmScreenOpen ? {
         animation: bigShake ? 'mooQuake 750ms ease-in-out' : 'screenShake 450ms ease-in-out'
       } : undefined
-    }, gameState === 'HOME' && /*#__PURE__*/React.createElement("main", {
-      className: "mh-home-scene",
-      "aria-label": "\u6751\u306E\u5E83\u5834"
-    }, /*#__PURE__*/React.createElement("picture", {
-      className: `mh-home-background ${homeBackgroundReady ? 'is-ready' : ''}`,
-      "aria-hidden": "true"
-    }, /*#__PURE__*/React.createElement("img", {
-      src: "data/images/home-background.jpg",
-      alt: ""
-    })), /*#__PURE__*/React.createElement("div", {
-      className: "mh-home-masumon-layer",
-      "aria-hidden": "true"
-    }, homePastureMasumons.map((masu, index) => /*#__PURE__*/React.createElement(HomeWalkingMasumon, {
-      key: masu.id,
-      masu: masu,
-      base: ALL_PLAYER_MONSTERS[masu.baseId],
-      masuColors: getMasuColors(masu),
-      index: index,
-      count: homePastureMasumons.length
-    }))), /*#__PURE__*/React.createElement("header", {
-      className: `mh-home-status${spotClass('settings')}`
-    }, /*#__PURE__*/React.createElement("button", {
-      type: "button",
-      className: "mh-home-player",
-      onClick: () => setGameState('PROFILE'),
-      "aria-label": "\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u3092\u958B\u304F"
-    }, /*#__PURE__*/React.createElement(HomeProfileIcon, {
-      src: resolveIconUrl(breederIcon),
-      id: breederIcon
-    }), /*#__PURE__*/React.createElement("div", {
-      className: "mh-home-player-copy"
-    }, /*#__PURE__*/React.createElement("strong", null, breederName), /*#__PURE__*/React.createElement("span", null, "\u30D6\u30EA\u30FC\u30C0\u30FC Lv.", breederLevel.level), /*#__PURE__*/React.createElement("div", {
-      className: "mh-home-xp"
-    }, /*#__PURE__*/React.createElement("i", {
-      style: {
-        width: `${Math.min(100, breederLevel.xpIntoLevel / breederLevel.xpForNext * 100)}%`
-      }
-    })), /*#__PURE__*/React.createElement("small", null, breederLevel.xpIntoLevel.toLocaleString(), " / ", breederLevel.xpForNext.toLocaleString(), " XP")), /*#__PURE__*/React.createElement(ChevronRight, {
-      className: "mh-home-profile-arrow",
-      size: 15
-    })), /*#__PURE__*/React.createElement("section", {
-      className: "mh-home-wallet"
-    }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(Gem, {
-      size: 14
-    }), /*#__PURE__*/React.createElement("b", null, gold.toLocaleString()), /*#__PURE__*/React.createElement("small", null, "\u30C0\u30A4\u30E4")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(Coins, {
-      size: 14
-    }), /*#__PURE__*/React.createElement("b", null, breederPoints), /*#__PURE__*/React.createElement("small", null, "pt")), /*#__PURE__*/React.createElement("button", {
-      onClick: () => setGameState('SETTINGS'),
-      className: `mh-home-settings${spotClass('settings')}`,
-      "aria-label": "\u8A2D\u5B9A"
-    }, /*#__PURE__*/React.createElement(Settings, {
-      size: 20
-    }), /*#__PURE__*/React.createElement("span", null, "\u8A2D\u5B9A")))), /*#__PURE__*/React.createElement("nav", {
-      className: "mh-home-facilities",
-      "aria-label": "\u62E0\u70B9\u65BD\u8A2D"
-    }, /*#__PURE__*/React.createElement("button", {
-      className: `mh-home-facility management${spotClass('management')}`,
-      onClick: () => {
+    }, gameState === 'HOME' && /*#__PURE__*/React.createElement(HomeScreen, {
+      assistantBondUp: assistantBondUp,
+      breederIcon: breederIcon,
+      breederLevel: breederLevel,
+      breederName: breederName,
+      breederPoints: breederPoints,
+      gifts: gifts,
+      gold: gold,
+      hasUnreadChangelog: hasUnreadChangelog,
+      homeBackgroundReady: homeBackgroundReady,
+      homePastureMasumons: homePastureMasumons,
+      masuMons: masuMons,
+      missions: missions,
+      onOpenBattle: () => {
+        setModeSelectTab('mode');
+        setGameState('BATTLE_MODE_SELECT');
+      },
+      onOpenManagement: () => {
         addAssistantBond('management');
         setManagementTab('monster');
         setGameState('MB_MANAGEMENT');
       },
-      "aria-label": "M/B\u7BA1\u7406"
-    }, /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement(Layers, {
-      size: 18
-    }), "M/B\u7BA1\u7406")), /*#__PURE__*/React.createElement("button", {
-      className: `mh-home-facility temple${spotClass('temple')}`,
-      onClick: () => {
-        addAssistantBond('temple');
-        setGameState('TEMPLE');
-      },
-      "aria-label": "\u795E\u6BBF"
-    }, /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement(Sparkles, {
-      size: 18
-    }), "\u795E\u6BBF")), /*#__PURE__*/React.createElement("button", {
-      className: `mh-home-facility market${spotClass('market')}`,
-      onClick: () => {
+      onOpenMarket: () => {
         addAssistantBond('market');
         setGameState('BREEDER_MARKET');
       },
-      "aria-label": "\u30DE\u30FC\u30B1\u30C3\u30C8"
-    }, /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement(ShoppingBag, {
-      size: 17
-    }), "\u30DE\u30FC\u30B1\u30C3\u30C8")), /*#__PURE__*/React.createElement("button", {
-      className: "mh-home-facility rhythm",
-      onClick: RHYTHM_MODE_PUBLIC_RELEASE ? openRhythmDemo : () => setGameState('RHYTHM_INFO'),
-      "aria-label": RHYTHM_MODE_PUBLIC_RELEASE ? "モンヒロビート" : "モンヒロビート（準備中）"
-    }, /*#__PURE__*/React.createElement("span", null, "\uD83C\uDFB5 \u30E2\u30F3\u30D2\u30ED\u30D3\u30FC\u30C8", !RHYTHM_MODE_PUBLIC_RELEASE && /*#__PURE__*/React.createElement("small", null, "\u6E96\u5099\u4E2D"))), /*#__PURE__*/React.createElement("button", {
-      className: `mh-home-facility battle${spotClass('battle')}`,
-      onClick: () => {
-        setModeSelectTab('mode');
-        setGameState('BATTLE_MODE_SELECT');
+      onOpenProfile: () => setGameState('PROFILE'),
+      onOpenRhythm: RHYTHM_MODE_PUBLIC_RELEASE ? openRhythmDemo : () => setGameState('RHYTHM_INFO'),
+      onOpenSettings: () => setGameState('SETTINGS'),
+      onOpenTemple: () => {
+        addAssistantBond('temple');
+        setGameState('TEMPLE');
       },
-      "aria-label": "\u30D0\u30C8\u30EB"
-    }, /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement(Sword, {
-      size: 25
-    }), "\u30D0\u30C8\u30EB"))), /*#__PURE__*/React.createElement("button", {
-      onClick: openMissions,
-      className: `mh-home-mission${spotClass('reward')}`
-    }, /*#__PURE__*/React.createElement(List, {
-      size: 16
-    }), "\u30DF\u30C3\u30B7\u30E7\u30F3", missionClaimableCount(normalizeMissions(missions)) > 0 && /*#__PURE__*/React.createElement("em", null, missionClaimableCount(normalizeMissions(missions)))), /*#__PURE__*/React.createElement("button", {
-      onClick: openGiftBox,
-      className: `mh-home-gift${spotClass('reward')}`
-    }, /*#__PURE__*/React.createElement(Package, {
-      size: 16
-    }), "\u30AE\u30D5\u30C8", giftClaimableCount(gifts) > 0 && /*#__PURE__*/React.createElement("em", null, giftClaimableCount(gifts))), /*#__PURE__*/React.createElement("button", {
-      onClick: openChangelog,
-      className: "mh-home-update"
-    }, /*#__PURE__*/React.createElement(RefreshCcw, {
-      size: 15
-    }), "\u66F4\u65B0\u5C65\u6B74", hasUnreadChangelog && /*#__PURE__*/React.createElement("em", {
-      className: "mh-unread-badge",
-      "aria-label": "\u672A\u8AAD\u3042\u308A"
-    }, "!")), /*#__PURE__*/React.createElement("div", {
-      className: `mh-home-assistant${spotClass('assistant')}`
-    }, /*#__PURE__*/React.createElement(AssistantBubble, {
-      scene: "home",
-      condition: assistantBondUp ? 'bondUp' : masuMons.length === 0 ? 'firstRun' : null,
-      compact: true
-    }))), gameState === 'RHYTHM_INFO' && /*#__PURE__*/React.createElement(RhythmInfoScreen, {
+      openChangelog: openChangelog,
+      openGiftBox: openGiftBox,
+      openMissions: openMissions,
+      resolveIconUrl: resolveIconUrl,
+      spotClass: spotClass
+    }), gameState === 'RHYTHM_INFO' && /*#__PURE__*/React.createElement(RhythmInfoScreen, {
       returnToHome: returnToHome
     }), gameState === 'TRAINING_INFO' && /*#__PURE__*/React.createElement("main", {
       className: "mh-training-screen"
@@ -54537,221 +54840,25 @@ function MonsterHeroGame() {
       className: "text-amber-300"
     }, "Lv.", quickJoin.unique.after))) : /*#__PURE__*/React.createElement("div", {
       className: "mt-3 text-[10px] font-black text-slate-500"
-    }, "\u4E0A\u3052\u3089\u308C\u308B\u56FA\u6709\u6280\u306F\u3082\u3046\u3042\u308A\u307E\u305B\u3093")), bootPhase === 'GAME' && gameState === 'HOME' && onboarded && tutorialStep == null && kikiIntroStep != null && (() => {
-      const script = typeof ASSISTANT_KIKI_INTRO !== 'undefined' && ASSISTANT_KIKI_INTRO || [];
-      if (script.length === 0) return null;
-      const step = Math.max(0, Math.min(kikiIntroStep, script.length - 1));
-      const line = script[step];
-      const speaker = assistantById(line.who);
-      const last = step === script.length - 1;
-      const calls = typeof ASSISTANT_KIKI_INTRO_CALLS !== 'undefined' && ASSISTANT_KIKI_INTRO_CALLS || {};
-      // 顔を並べるのは、この台本に出てくる助手だけ。
-      // 全員を並べると、まだ登場していない助手までここに映ってしまう
-      const cast = ASSISTANT_LIST.filter(who => script.some(l => l.who === who.id));
-      const next = () => {
-        if (last) markKikiIntroSeen();else setKikiIntroStep(step + 1);
-      };
-      return /*#__PURE__*/React.createElement("div", {
-        className: "fixed inset-0 flex items-end justify-center",
-        style: {
-          position: 'fixed',
-          inset: 0,
-          zIndex: 77000,
-          backgroundColor: 'rgba(2,6,23,.95)'
-        },
-        role: "dialog",
-        "aria-modal": "true",
-        "aria-label": "\u304D\u304D\u304C\u52A9\u624B\u306B\u52A0\u308F\u308A\u307E\u3057\u305F"
-      }, /*#__PURE__*/React.createElement("button", {
-        type: "button",
-        onClick: next,
-        "aria-label": "\u6B21\u3078",
-        className: "absolute inset-0 w-full h-full",
-        style: {
-          background: 'transparent'
-        }
-      }), /*#__PURE__*/React.createElement("div", {
-        className: "relative w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] overflow-y-auto mh-scroll rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4",
-        style: {
-          paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))',
-          pointerEvents: 'none'
-        }
-      }, /*#__PURE__*/React.createElement("p", {
-        className: "mb-2 text-center text-[10px] font-black tracking-widest text-pink-300"
-      }, "\u3042\u305F\u3089\u3057\u3044\u52A9\u624B"), /*#__PURE__*/React.createElement("div", {
-        className: "mb-3 flex items-end justify-center gap-3"
-      }, cast.map(who => {
-        const talking = who.id === line.who;
-        return /*#__PURE__*/React.createElement("div", {
-          key: who.id,
-          className: `flex flex-col items-center gap-1 ${talking ? '' : 'opacity-35'}`,
-          style: {
-            transform: talking ? 'scale(1)' : 'scale(.86)',
-            transition: 'opacity .18s, transform .18s'
-          }
-        }, /*#__PURE__*/React.createElement(AssistantFace, {
-          who: who,
-          size: talking ? 84 : 64,
-          accent: who.accent,
-          expression: talking ? line.e : 'normal'
-        }), /*#__PURE__*/React.createElement("span", {
-          className: "text-[9px] font-black",
-          style: {
-            color: talking ? who.accent : '#64748b'
-          }
-        }, who.name));
-      })), /*#__PURE__*/React.createElement("div", {
-        className: "rounded-2xl border-2 bg-slate-900 px-3 py-3",
-        style: {
-          borderColor: speaker.accent
-        }
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "block text-[9px] font-black tracking-widest",
-        style: {
-          color: speaker.accent
-        }
-      }, speaker.name), /*#__PURE__*/React.createElement("span", {
-        className: "block text-[13px] font-bold leading-relaxed text-white mt-1"
-      }, line.t)), /*#__PURE__*/React.createElement("p", {
-        className: "mt-2 text-center text-[8px] text-slate-500"
-      }, step + 1, " / ", script.length, "\u3000\uFF0F\u3000\u307F\u3085\u3042\u306F\u300C", calls.mua || '', "\u300D\u3001\u304D\u304D\u306F\u300C", calls.kiki || '', "\u300D\u3068\u547C\u3073\u5408\u3044\u307E\u3059"), /*#__PURE__*/React.createElement("button", {
-        onClick: next,
-        className: "mt-3 min-h-[50px] w-full rounded-2xl bg-pink-500 text-sm font-black text-slate-950 active:scale-[.98]",
-        style: {
-          pointerEvents: 'auto'
-        }
-      }, last ? 'とじる' : 'つぎへ')));
-    })(), bootPhase === 'GAME' && gameState === 'HOME' && onboarded && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep != null && (() => {
-      const script = typeof ASSISTANT_MOMOSUKE_INTRO !== 'undefined' && ASSISTANT_MOMOSUKE_INTRO || [];
-      if (script.length === 0) return null;
-      const step = Math.max(0, Math.min(momosukeIntroStep, script.length - 1));
-      const line = script[step];
-      const speaker = assistantById(line.who);
-      const last = step === script.length - 1;
-      const cast = ASSISTANT_LIST.filter(who => script.some(l => l.who === who.id));
-      const next = () => {
-        if (last) markMomosukeIntroSeen();else setMomosukeIntroStep(step + 1);
-      };
-      return /*#__PURE__*/React.createElement("div", {
-        className: "fixed inset-0 flex items-end justify-center",
-        style: {
-          position: 'fixed',
-          inset: 0,
-          zIndex: 77000,
-          backgroundColor: 'rgba(2,6,23,.95)'
-        },
-        role: "dialog",
-        "aria-modal": "true",
-        "aria-label": "\u3082\u3082\u3059\u3051\u304C\u52A9\u624B\u306B\u52A0\u308F\u308A\u307E\u3057\u305F"
-      }, /*#__PURE__*/React.createElement("button", {
-        type: "button",
-        onClick: next,
-        "aria-label": "\u6B21\u3078",
-        className: "absolute inset-0 w-full h-full",
-        style: {
-          background: 'transparent'
-        }
-      }), /*#__PURE__*/React.createElement("div", {
-        className: "relative w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] overflow-y-auto mh-scroll rounded-t-3xl border-t-2 border-x-2 border-pink-300 bg-slate-950 p-4",
-        style: {
-          paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))',
-          pointerEvents: 'none'
-        }
-      }, /*#__PURE__*/React.createElement("p", {
-        className: "mb-2 text-center text-[10px] font-black tracking-widest text-pink-200"
-      }, "\u3042\u305F\u3089\u3057\u3044\u52A9\u624B"), /*#__PURE__*/React.createElement("div", {
-        className: "mb-3 flex items-end justify-center gap-3"
-      }, cast.map(who => {
-        const talking = who.id === line.who;
-        return /*#__PURE__*/React.createElement("div", {
-          key: who.id,
-          className: `flex flex-col items-center gap-1 ${talking ? '' : 'opacity-35'}`,
-          style: {
-            transform: talking ? 'scale(1)' : 'scale(.86)',
-            transition: 'opacity .18s, transform .18s'
-          }
-        }, /*#__PURE__*/React.createElement(AssistantFace, {
-          who: who,
-          size: talking ? 76 : 56,
-          accent: who.accent,
-          expression: talking ? line.e : 'normal'
-        }), /*#__PURE__*/React.createElement("span", {
-          className: "text-[9px] font-black",
-          style: {
-            color: talking ? who.accent : '#64748b'
-          }
-        }, who.name));
-      })), /*#__PURE__*/React.createElement("div", {
-        className: "rounded-2xl border-2 bg-slate-900 px-3 py-3",
-        style: {
-          borderColor: speaker.accent
-        }
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "block text-[9px] font-black tracking-widest",
-        style: {
-          color: speaker.accent
-        }
-      }, speaker.name), /*#__PURE__*/React.createElement("span", {
-        className: "block text-[13px] font-bold leading-relaxed text-white mt-1"
-      }, line.t)), /*#__PURE__*/React.createElement("p", {
-        className: "mt-2 text-center text-[8px] text-slate-500"
-      }, step + 1, " / ", script.length), /*#__PURE__*/React.createElement("button", {
-        onClick: next,
-        className: "mt-3 min-h-[50px] w-full rounded-2xl bg-pink-400 text-sm font-black text-slate-950 active:scale-[.98]",
-        style: {
-          pointerEvents: 'auto'
-        }
-      }, last ? 'とじる' : 'つぎへ')));
-    })(), bootPhase === 'GAME' && gameState === 'HOME' && onboarded && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && updateGuideQueue.length > 0 && (() => {
-      const notice = updateGuideQueue[0];
-      const pages = Array.isArray(notice.pages) && notice.pages.length ? notice.pages : ['新しいアップデートがあるよ♪'];
-      const page = Math.min(updateGuidePage, pages.length - 1);
-      const last = page === pages.length - 1;
-      const who = activeAssistant;
-      return /*#__PURE__*/React.createElement("div", {
-        className: "fixed inset-0 flex items-end justify-center",
-        style: {
-          position: 'fixed',
-          inset: 0,
-          zIndex: 76000,
-          backgroundColor: 'rgba(2,6,23,.94)'
-        },
-        role: "dialog",
-        "aria-modal": "true",
-        "aria-label": notice.title
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] overflow-y-auto rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4",
-        style: {
-          paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
-        }
-      }, notice.debugOnly && /*#__PURE__*/React.createElement("div", {
-        className: "mb-2 rounded-lg bg-fuchsia-700 px-2 py-1 text-center text-[9px] font-black text-white"
-      }, "DEBUG\u30FB\u901A\u5E38\u30ED\u30B0\u30A4\u30F3\u3067\u306F\u8868\u793A\u3055\u308C\u307E\u305B\u3093"), /*#__PURE__*/React.createElement("h2", {
-        className: "mb-1 text-center text-base font-black text-pink-200"
-      }, notice.title), /*#__PURE__*/React.createElement("p", {
-        className: "mb-3 text-center text-[10px] font-bold text-slate-400"
-      }, page + 1, " / ", pages.length), /*#__PURE__*/React.createElement("div", {
-        className: "flex items-end gap-2"
-      }, /*#__PURE__*/React.createElement(AssistantFace, {
-        who: who,
-        size: 76,
-        accent: who.accent,
-        expression: notice.expression || 'happy'
-      }), /*#__PURE__*/React.createElement("div", {
-        className: "flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-3 text-[13px] font-bold leading-relaxed text-white"
-      }, assistantSpeakText(pages[page], breederName, assistantBondLevelNow, assistantCallStyle, selectedAssistantId))), !last ? /*#__PURE__*/React.createElement("button", {
-        onClick: () => setUpdateGuidePage(page + 1),
-        className: "mt-4 min-h-[50px] w-full rounded-2xl bg-pink-500 text-sm font-black text-slate-950"
-      }, "\u6B21\u3078") : /*#__PURE__*/React.createElement("div", {
-        className: `mt-4 grid ${notice.destination ? 'grid-cols-2' : 'grid-cols-1'} gap-2`
-      }, notice.destination && /*#__PURE__*/React.createElement("button", {
-        onClick: () => finishUpdateGuide(notice.destination),
-        className: "min-h-[50px] rounded-2xl bg-pink-500 text-sm font-black text-slate-950"
-      }, notice.buttonLabel || '見に行く'), /*#__PURE__*/React.createElement("button", {
-        onClick: () => finishUpdateGuide(),
-        className: "min-h-[50px] rounded-2xl bg-slate-700 text-sm font-black text-white"
-      }, notice.destination ? 'あとで' : '閉じる'))));
-    })(), assistantUnlockNoticeNode(gameState === 'PROFILE' ? 'profile' : gameState === 'HOME' ? 'home' : null), eventReplay != null && (() => {
+    }, "\u4E0A\u3052\u3089\u308C\u308B\u56FA\u6709\u6280\u306F\u3082\u3046\u3042\u308A\u307E\u305B\u3093")), bootPhase === 'GAME' && gameState === 'HOME' && onboarded && tutorialStep == null && kikiIntroStep != null && /*#__PURE__*/React.createElement(KikiIntroOverlay, {
+      kikiIntroStep: kikiIntroStep,
+      markKikiIntroSeen: markKikiIntroSeen,
+      setKikiIntroStep: setKikiIntroStep
+    }), bootPhase === 'GAME' && gameState === 'HOME' && onboarded && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep != null && /*#__PURE__*/React.createElement(MomosukeIntroOverlay, {
+      markMomosukeIntroSeen: markMomosukeIntroSeen,
+      momosukeIntroStep: momosukeIntroStep,
+      setMomosukeIntroStep: setMomosukeIntroStep
+    }), bootPhase === 'GAME' && gameState === 'HOME' && onboarded && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && updateGuideQueue.length > 0 && /*#__PURE__*/React.createElement(HomeUpdateGuideOverlay, {
+      activeAssistant: activeAssistant,
+      assistantBondLevelNow: assistantBondLevelNow,
+      assistantCallStyle: assistantCallStyle,
+      breederName: breederName,
+      finishUpdateGuide: finishUpdateGuide,
+      selectedAssistantId: selectedAssistantId,
+      setUpdateGuidePage: setUpdateGuidePage,
+      updateGuidePage: updateGuidePage,
+      updateGuideQueue: updateGuideQueue
+    }), assistantUnlockNoticeNode(gameState === 'PROFILE' ? 'profile' : gameState === 'HOME' ? 'home' : null), eventReplay != null && (() => {
       const list = typeof EVENT_REPLAYS !== 'undefined' && EVENT_REPLAYS || [];
       const event = list.find(ev => ev.id === eventReplay.id);
       const script = event && event.script || [];
