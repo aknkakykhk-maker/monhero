@@ -268,3 +268,38 @@ const rhythmEventPeriodText = (event, range) => {
 };
 // 対象曲の見出し。週間は「今週の対象曲」、期間限定はイベントの名前で呼ぶ
 const rhythmEventSongsLabel = (event) => (event && event.kind === 'limited') ? '対象曲' : '今週の対象曲';
+
+// ===== 報酬の受け取り(docs/spec/RHYTHM_RANKING.md §9.1) =====
+//
+// このゲームはサーバー処理を持たない(Supabaseは記録の保存と閲覧だけ)ので、
+// イベントが終わったあとに端末が順位を問い合わせ、その場で受け取る形にする。
+// 受け取ったイベントのIDは mh_rhythm_event_reward_v1 へ残して二重受取を防ぐ(CLAUDE.md ⑦)。
+//
+// ★受け取れるのは終了から2週間まで(2026-09-11・ユーザーが決めた)。
+//   順位は終了した時点で固まっているので、遅れても内容は変わらない。
+//   期限を切ってあるのは、古いイベントの問い合わせが溜まり続けないようにするため。
+const RHYTHM_EVENT_REWARD_CLAIM_MS = 14 * 24 * 60 * 60 * 1000;
+// 終わっていて、まだ受け取っておらず、受取期限の中にあるイベント(先に終わったものから順)
+const rhythmEventsAwaitingReward = (nowMs, claimedIds) => {
+  const now = Number.isFinite(Number(nowMs)) ? Number(nowMs) : 0;
+  // 保存値が壊れている(配列でない)ときは「1つも受け取っていない」ではなく
+  // 「分からないので何もしない」に倒す。受け取り済みを取りこぼして二重に配らないため
+  if (!Array.isArray(claimedIds)) return [];
+  const list = Array.isArray(RHYTHM_EVENTS) ? RHYTHM_EVENTS : [];
+  return list
+    .filter(event => event && event.kind === 'limited' && rhythmEventHasRewards(event))
+    .filter(event => !claimedIds.includes(event.id))
+    .filter(event => {
+      const endMs = rhythmEventTimeMs(event.endAt);
+      return endMs !== null && now >= endMs && now < endMs + RHYTHM_EVENT_REWARD_CLAIM_MS;
+    })
+    .sort((a, b) => rhythmEventTimeMs(a.endAt) - rhythmEventTimeMs(b.endAt));
+};
+// 受け取り済みの一覧。保存値が壊れていても落ちないように通す
+const normalizeRhythmEventRewardClaims = (value) =>
+  Array.isArray(value) ? value.filter(id => typeof id === 'string' && id) : [];
+// そのイベントの部門の並び(対象曲ごと→総合)。受け取りの問い合わせにも画面にも同じ順で使う
+const rhythmEventDivisionIds = (event) => [
+  ...((event && Array.isArray(event.songIds)) ? event.songIds.map(rhythmEventSongDivisionId) : []),
+  RHYTHM_EVENT_TOTAL_DIVISION,
+];

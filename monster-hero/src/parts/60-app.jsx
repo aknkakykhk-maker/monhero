@@ -2551,6 +2551,94 @@ function MonsterHeroGame() {
     setRhythmEventNoticeSeen(rhythmSongSelectEvent.id);
     storeSet(RHYTHM_EVENT_NOTICE_KEY, rhythmSongSelectEvent.id, false);
   };
+  // ---- イベント報酬の受け取り(docs/spec/RHYTHM_RANKING.md §9.1) ----
+  // サーバー処理を持たないので、イベントが終わったあとに端末が順位を問い合わせ、
+  // その場で受け取る。受け取ったイベントのIDを新しい保存キーへ残して二重受取を防ぐ(CLAUDE.md ⑦)。
+  //
+  // ★問い合わせるのは各部門の上位5件だけ。報酬は5位までなので、それより下は見なくてよい。
+  //   4部門×5件で済むので、起動のたびに重い通信をしない。
+  // ★入賞していなかったときも「受け取り済み」にする。そうしないと、受取期限のあいだ
+  //   毎回起動のたびに問い合わせ直すことになる。
+  // ★通信に失敗したときは受け取り済みにしない(次の起動でやり直す)。
+  const RHYTHM_EVENT_REWARD_KEY = 'mh_rhythm_event_reward_v1';
+  const [rhythmEventRewardClaims, setRhythmEventRewardClaims] = useState(null);
+  const rhythmEventRewardClaimsRef = useRef(null);
+  const [rhythmEventRewardPrize, setRhythmEventRewardPrize] = useState(null);
+  const [rhythmEventRewardClaiming, setRhythmEventRewardClaiming] = useState(false);
+  const rhythmEventRewardCheckedRef = useRef(false);
+  const markRhythmEventRewardClaimed = async (eventId) => {
+    const claims = normalizeRhythmEventRewardClaims(rhythmEventRewardClaimsRef.current);
+    if (claims.includes(eventId)) return claims;
+    const next = [...claims, eventId];
+    rhythmEventRewardClaimsRef.current = next;
+    setRhythmEventRewardClaims(next);
+    await storeSet(RHYTHM_EVENT_REWARD_KEY, next, false);
+    return next;
+  };
+  const checkRhythmEventRewards = useCallback(async () => {
+    if (RELEASE_FLAGS.rhythmWeeklyRanking !== true) return;
+    const claims = rhythmEventRewardClaimsRef.current;
+    if (!Array.isArray(claims)) return;               // まだ読み込めていない
+    const pending = rhythmEventsAwaitingReward(Date.now(), claims);
+    if (pending.length === 0) return;
+    const event = pending[0];                          // 先に終わったものから1つずつ
+    const range = rhythmEventWindow(event, null);
+    if (!range) return;
+    try {
+      const breederId = await ensureBreederId();
+      const selfKeys = rhythmTotalRankingSelfKeys(breederId, breederName);
+      const prizes = [];
+      for (const divisionId of rhythmEventDivisionIds(event)) {
+        const songId = rhythmEventDivisionSongId(divisionId);
+        const rows = songId
+          ? await sbFetchRhythmEventSongBests({ songId, fromMs:range.startMs, toMs:range.endMs, limit:RHYTHM_EVENT_REWARD_RANKS, requestId:`rhythm-reward-${event.id}-${divisionId}` })
+          : await sbFetchRhythmEventTotals({ songIds:[...event.songIds], fromMs:range.startMs, toMs:range.endMs, limit:RHYTHM_EVENT_REWARD_RANKS, requestId:`rhythm-reward-${event.id}-total` });
+        const fromRow = songId ? rhythmEventSongEntryFromRow : rhythmEventTotalEntryFromRow;
+        const entries = (Array.isArray(rows) ? rows : []).map(fromRow);
+        const index = entries.findIndex(entry => selfKeys.includes(entry.identityKey));
+        if (index < 0) continue;
+        const reward = rhythmEventRewardForRank(event, divisionId, index + 1);
+        if (reward) prizes.push({ divisionId, songId, rank:index + 1, reward });
+      }
+      // 入賞していなければ、知らせずに受け取り済みへ入れて終わる
+      if (prizes.length === 0) { await markRhythmEventRewardClaimed(event.id); return; }
+      setRhythmEventRewardPrize({ event, prizes });
+    } catch (e) {
+      // 通信の失敗で受け取り済みにはしない。次の起動でやり直す
+      console.error('[rhythm-event-reward] fetch failed:', e && e.message ? e.message : e);
+    }
+  }, [breederName]);
+  // 起動して保存値を読み終えたら1回だけ確かめる
+  useEffect(() => {
+    if (!Array.isArray(rhythmEventRewardClaims) || rhythmEventRewardCheckedRef.current) return;
+    rhythmEventRewardCheckedRef.current = true;
+    void checkRhythmEventRewards();
+  }, [rhythmEventRewardClaims, checkRhythmEventRewards]);
+  // 受け取る。★先に「受け取った」を保存してからアイテムを足す。
+  //   途中で終了しても二重には増えない(逆順にすると二重に配りうる・CLAUDE.md ⑦)
+  const claimRhythmEventReward = async () => {
+    const prize = rhythmEventRewardPrize;
+    if (!prize || rhythmEventRewardClaiming) return;
+    setRhythmEventRewardClaiming(true);
+    try {
+      await markRhythmEventRewardClaimed(prize.event.id);
+      const next = { ...ownedItemsRef.current };
+      for (const entry of prize.prizes) {
+        const item = rhythmEventRewardItem(entry.reward);
+        if (item && entry.reward.count > 0) next[item.id] = ownedItemCount(next, item.id) + entry.reward.count;
+        if (entry.reward.psyche > 0) next[BREAKTHROUGH_ITEM_ID] = ownedItemCount(next, BREAKTHROUGH_ITEM_ID) + entry.reward.psyche;
+      }
+      ownedItemsRef.current = next;
+      setOwnedItems(next);
+      await storeSet('mh_owned_items', next, false);
+      setRhythmEventRewardPrize(null);
+      // 同じ起動でもう1件あるかもしれない(2週間のあいだに2回開催した場合)
+      rhythmEventRewardCheckedRef.current = false;
+      setRhythmEventRewardClaims(claims => Array.isArray(claims) ? [...claims] : claims);
+    } finally {
+      setRhythmEventRewardClaiming(false);
+    }
+  };
   // ---- 演奏で止まっていたぶんの追いつき(PR7) ----
   // 追いつける上限は「1曲ぶん」。長い曲でも5分までにして、
   // タブを閉じていた時間まで遡ることは決してしない(∞周回の既存方針と同じ)
@@ -3225,6 +3313,12 @@ function MonsterHeroGame() {
       // 見た扱い(=出さない)にする。案内が二度出るより、出ないほうが害が小さい
       setQuickRhythmIntroSeen(await storeGet(QUICK_RHYTHM_INTRO_KEY, true, false) !== false);
       setQuickRhythmBackgroundSeen(await storeGet(QUICK_RHYTHM_BACKGROUND_KEY, true, false) !== false);
+      // イベント報酬の受け取り済みの一覧。壊れていても落ちないよう正規化を通す
+      {
+        const claims = normalizeRhythmEventRewardClaims(await storeGet(RHYTHM_EVENT_REWARD_KEY, [], false));
+        rhythmEventRewardClaimsRef.current = claims;
+        setRhythmEventRewardClaims(claims);
+      }
       // 週間ランキングの「今週の対象曲」案内。見たイベントのIDを覚えておく(週が変わればまた1度だけ出る)
       {
         const seenEventId = await storeGet(RHYTHM_EVENT_NOTICE_KEY, '', false);
@@ -10099,6 +10193,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           />
         )}
 
+        {/* モンヒロビートのイベント報酬。入賞していた人にだけ、終了後の最初の起動で出す */}
+        {rhythmEventRewardPrize&&(
+          <RhythmEventRewardModal
+            claiming={rhythmEventRewardClaiming}
+            onClaim={claimRhythmEventReward}
+            prize={rhythmEventRewardPrize}
+          />
+        )}
         {levelCapCompensation&&(
           <MasuLevelCapCompensation
             levelCapCompensation={levelCapCompensation}

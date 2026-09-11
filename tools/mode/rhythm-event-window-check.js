@@ -42,7 +42,8 @@ vm.runInContext(`${demoIds}\n${eventData}\n`
   +'rhythmWeekStartMs,rhythmWeekWindow,rhythmWeekIndex,rhythmWeekId,rhythmWeeklyEvent,rhythmActiveEvent,'
   +'rhythmEventWindow,rhythmEventRemainingText,rhythmEventDivisions,rhythmEventDivisionSongId,rhythmEventSong,'
   +'rhythmEventPeriodText,rhythmEventSongsLabel,rhythmEventDivisionReward,rhythmEventRewardForRank,rhythmEventHasRewards,'
-  +'rhythmEventSongDivisionId,RHYTHM_EVENT_REWARD_RANKS,'
+  +'rhythmEventSongDivisionId,RHYTHM_EVENT_REWARD_RANKS,rhythmEventsAwaitingReward,'
+  +'normalizeRhythmEventRewardClaims,rhythmEventDivisionIds,'
   +'rhythmEventSongDivisionId,rhythmEventMaxScore,rhythmEventEntryScore,RHYTHM_EVENT_TOTAL_DIVISION};',context);
 const O=context.out;
 
@@ -117,6 +118,58 @@ check('基準より前の週でも対象曲が決まる(負の週番号)',(()=>{
 })());
 check('いまも必ず開催中(週間かイベントのどちらかが必ず立つ)',!!O.rhythmActiveEvent(Date.now()),
   (O.rhythmActiveEvent(Date.now())||{}).id);
+
+// --- 報酬の受け取り(§9.1) ---
+{
+  const claimMs=14*24*3600*1000;
+  const ended=(O.RHYTHM_EVENTS||[]).filter(e=>e.kind==='limited'&&O.rhythmEventHasRewards(e));
+  check('受け取れるのは終了から2週間まで',ended.every(e=>{
+    const end=Date.parse(e.endAt);
+    const awaiting=(ms,claims)=>O.rhythmEventsAwaitingReward(ms,claims).some(x=>x.id===e.id);
+    return !awaiting(end-1,[])            // 終わる前は出さない
+      &&awaiting(end,[])                  // 終わった瞬間から
+      &&awaiting(end+claimMs-1,[])        // 期限ぎりぎりまで
+      &&!awaiting(end+claimMs,[])         // 期限を過ぎたら出さない
+      &&!awaiting(end+1000,[e.id]);       // 受け取り済みなら出さない
+  }));
+  check('保存値が壊れているときは何も配らない',
+    O.rhythmEventsAwaitingReward(Date.now()+99*24*3600*1000,null).length===0
+    &&O.rhythmEventsAwaitingReward(Date.now(),'x').length===0);
+  check('受け取り済みの一覧は文字列だけにそろえる',
+    JSON.stringify(O.normalizeRhythmEventRewardClaims(['a',1,null,'b',{}]))===JSON.stringify(['a','b'])
+    &&JSON.stringify(O.normalizeRhythmEventRewardClaims(null))==='[]');
+  check('部門の並びは 対象曲→総合',ended.every(e=>{
+    const ids=O.rhythmEventDivisionIds(e);
+    return ids.length===e.songIds.length+1&&ids[ids.length-1]===O.RHYTHM_EVENT_TOTAL_DIVISION;
+  }));
+  // 報酬を持たない週間は、受け取りの対象にならない
+  check('週間は受け取りの対象にならない',
+    O.rhythmEventsAwaitingReward(Date.now(),[]).every(e=>e.kind==='limited'));
+}
+check('受け取りは上位5件だけ問い合わせる(報酬は5位まで)',
+  app.includes('limit:RHYTHM_EVENT_REWARD_RANKS'));
+check('通信に失敗したら受け取り済みにしない(次の起動でやり直す)',
+  app.includes("console.error('[rhythm-event-reward] fetch failed:'")
+  &&app.includes('// 通信の失敗で受け取り済みにはしない。次の起動でやり直す'));
+check('入賞していなくても受け取り済みにする(毎回問い合わせ直さない)',
+  app.includes('if (prizes.length === 0) { await markRhythmEventRewardClaimed(event.id); return; }'));
+check('先にフラグを保存してからアイテムを足す(二重付与を防ぐ)',(()=>{
+  const at=app.indexOf('const claimRhythmEventReward');
+  if(at<0)return false;
+  const body=app.slice(at,at+1600);
+  return body.indexOf('markRhythmEventRewardClaimed')<body.indexOf("storeSet('mh_owned_items'");
+})());
+check('報酬は所持品とプシュケーへ足す(既存の入れ物を使う)',
+  app.includes('ownedItemCount(next, item.id) + entry.reward.count')
+  &&app.includes('ownedItemCount(next, BREAKTHROUGH_ITEM_ID) + entry.reward.psyche'));
+check('受け取り画面を出す(新しいgameStateは増やさない)',
+  screen.includes('function RhythmEventRewardModal')&&screen.includes('data-rhythm-event-reward-claim')
+  &&app.includes('<RhythmEventRewardModal')&&!/'RHYTHM_EVENT_REWARD'/.test(app));
+check('受け取り済みの保存キーを新しく足している',
+  app.includes("const RHYTHM_EVENT_REWARD_KEY = 'mh_rhythm_event_reward_v1';")
+  &&saveSpec.includes('mh_rhythm_event_reward_v1'));
+check('ヘルプに受け取り方が書いてある',
+  help.includes('報酬の受け取り方')&&help.includes('終了から2週間'));
 
 // --- 期間限定イベント(kind:'limited') ---
 const limited=(Array.isArray(O.RHYTHM_EVENTS)?O.RHYTHM_EVENTS:[]).filter(e=>e&&e.kind==='limited');

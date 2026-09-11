@@ -360,6 +360,42 @@ function RhythmMonstersScreen({
   );
 }
 
+// モンヒロビートのイベント報酬の受け取り(docs/spec/RHYTHM_RANKING.md §9.1)。
+// イベントが終わったあと、入賞していた人にだけ最初の起動で1度だけ出す。
+// ★新しい画面(gameState)は増やさない。重ねて出すだけなので、ヘルプの対応表・戻り先・
+//   BGMの引き継ぎに手を入れずに済む(CLAUDE.md ⑤)。
+function RhythmEventRewardModal({ prize, onClaim, claiming }) {
+  if (!prize) return null;
+  const { event, prizes } = prize;
+  return (
+    <div data-rhythm-event-reward className="fixed inset-0 z-[90000] flex items-center justify-center bg-black/80 p-4">
+      <div className="w-full max-w-sm rounded-3xl border-2 border-amber-300/70 bg-slate-950 p-4 shadow-2xl">
+        <p className="text-center text-[10px] font-black tracking-widest text-amber-300">RESULT</p>
+        <h3 className="mt-1 text-center text-base font-black text-amber-100">入賞おめでとうございます！</h3>
+        <p className="mt-1 text-center text-[10px] font-bold text-slate-300">{event.name}</p>
+        <ul className="mt-3 space-y-2">
+          {prizes.map(entry => (
+            <li key={entry.divisionId} data-rhythm-event-reward-row className="rounded-2xl border border-amber-300/40 bg-amber-500/5 p-2">
+              <p className="flex items-baseline gap-2 text-[10px] font-black text-amber-200">
+                <span className="min-w-0 flex-1 truncate text-slate-200">
+                  {entry.songId ? (rhythmSongFullName(rhythmEventSong(entry.songId, RHYTHM_SONGS)) || entry.songId) : '総合'}
+                </span>
+                <b className="shrink-0 text-sm text-amber-100">{entry.rank}位</b>
+              </p>
+              <p className="mt-1 text-[10px] leading-tight text-white">{rhythmEventRewardText(entry.reward)}</p>
+            </li>
+          ))}
+        </ul>
+        <button type="button" data-rhythm-event-reward-claim disabled={claiming} onClick={onClaim}
+          className="mt-4 min-h-[52px] w-full rounded-2xl border-2 border-amber-300 bg-amber-500/20 text-sm font-black text-amber-50 active:scale-[.98] disabled:opacity-50">
+          {claiming ? '受け取っています…' : '🎁 受け取る'}
+        </button>
+        <p className="mt-2 text-center text-[9px] leading-relaxed text-slate-400">受け取ったものは「アイテム」から確認できます。</p>
+      </div>
+    </div>
+  );
+}
+
 function RhythmRankingScreen({
   loadRhythmEventRanking, loadRhythmRanking, loadRhythmTotalRanking, onBackToSongSelect, onGoToSongSelect,
   rankingBreederIcon, rhythmEventDivision, rhythmEventRanking, rhythmRanking, rhythmRankingDetail,
