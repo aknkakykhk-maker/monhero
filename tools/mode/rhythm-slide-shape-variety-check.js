@@ -76,6 +76,46 @@ ok('太さは1以上5以下に収まっている',slides.every(s=>s.widths.every
 ok('移動量は難易度の歩幅(最大4レーン)を超えない',
   slides.every(s=>{for(let i=1;i<s.lanes.length;i++)if(Math.abs(s.lanes[i]-s.lanes[i-1])>4)return false;return true;}));
 
+console.log('\n--- ジグザグ（カクカク）が出ているか ---');
+// 経路が何回向きを変えるか。音が行き来している曲でだけ出るので、割合そのものは
+// 曲に依存する（SLIDEになる伸びのうち、実際に音程が行き来するのは実測で23%）。
+// ここで見るのは「折り返しが出る仕組みが生きているか」と「出たときに読める形か」。
+const pathTurns=s=>{let t=0,prev=0;
+  for(let i=1;i<s.lanes.length;i++){const d=s.lanes[i]-s.lanes[i-1];if(!d)continue;
+    const sign=d>0?1:-1;if(prev&&sign!==prev)t++;prev=sign;}
+  return t;};
+const withTurns=slides.filter(s=>pathTurns(s)>=1);
+const totalTurns=slides.reduce((a,s)=>a+pathTurns(s),0);
+ok('折り返す経路が出ている',withTurns.length>=slides.length*.3,
+  `${withTurns.length}/${slides.length}本 / 折り返し計${totalTurns}回`);
+ok('はっきりしたジグザグ(2回以上折り返す)が出ている',slides.filter(s=>pathTurns(s)>=2).length>=3,
+  `${slides.filter(s=>pathTurns(s)>=2).length}本`);
+// 折り返しが細かすぎると帯が読めない。1回の折り返しで0.5レーン未満しか振らない形は避ける
+const shallow=slides.filter(s=>{
+  for(let i=1;i<s.lanes.length-1;i++){
+    const a=s.lanes[i]-s.lanes[i-1],b=s.lanes[i+1]-s.lanes[i];
+    if(a&&b&&(a>0)!==(b>0)&&Math.abs(b)<.5)return true;
+  }
+  return false;
+});
+ok('0.5レーン未満しか振らない折り返しは無い（読めない形にしない）',shallow.length===0,
+  shallow.length?`${shallow.length}本 例: ${shallow[0].file} ${shallow[0].lanes.join('→')}`:'');
+
+console.log('\n--- 中継点の間隔に緩急があるか（加速・減速）---');
+// 音が片道で動いている伸びには、中継点の間隔をだんだん詰める／広げる形を当てる
+// (ドラムフィル・ライザー・着地して伸びる音)。行き来している音には当てない
+// (折り返し点そのものが形なので、間隔をいじると読めなくなる)。
+const gapsOf=s=>{const g=s.note.slidePoints.map(p=>Number(p.grid));
+  const out=[];for(let i=1;i<g.length;i++)out.push(g[i]-g[i-1]);return out;};
+const longEnough=slides.filter(s=>gapsOf(s).length>=3);
+const varyingGaps=longEnough.filter(s=>new Set(gapsOf(s)).size>1);
+ok('中継点の間隔が一定でないSLIDEがある',varyingGaps.length>=longEnough.length*.3,
+  `${varyingGaps.length}/${longEnough.length}本`);
+// 詰めすぎ・広げすぎで読めなくならないこと
+const extreme=longEnough.filter(s=>{const g=gapsOf(s);return Math.max(...g)>=Math.min(...g)*8;});
+ok('間隔の差が8倍以上に開くSLIDEは無い',extreme.length===0,
+  extreme.length?`${extreme.length}本 例: ${extreme[0].file} ${gapsOf(extreme[0]).join(',')}`:'');
+
 console.log('\n--- 止めたままでも通るSLIDEを増やしていないか ---');
 // 【2026-09-12・生成結果の検証で見つけた問題】
 // 経路の振れ幅の半分が追従の許容以下だと、指を止めたままでも許容の内側に居続けられる。
@@ -113,7 +153,12 @@ const generator=fs.readFileSync(path.join(ROOT,'tools/mode/rhythm-chart-v3-gener
 ok('太さの形の語彙がある',/const SLIDE_WIDTH_SHAPES=Object\.freeze\(\{/.test(generator));
 ok('刻みを音の揺れで決めている',/const waviness=heightWaviness\(heights\);/.test(generator));
 ok('移動量を音の動きへ比例させている',/reachMax\*Math\.min\(1,range\//.test(generator));
-ok('刻みのしきい値がジッタを拾わない値になっている',/const HEIGHT_TURN_MIN=\.04;/.test(generator));
+// 0.028 ≒ 0.5半音(1半音 ≒ height 0.055)。0.04(≒0.73半音)にしたら本物のビブラートまで削れた。
+ok('刻みのしきい値が0.5半音相当になっている',/const HEIGHT_TURN_MIN=\.028;/.test(generator));
+ok('音が向きを変えた位置を中継点として置く',/const turningPoints=\[\];/.test(generator)
+  &&/for\(const index of turningPoints\)/.test(generator));
+ok('中継点には上限がある',/const SLIDE_MAX_POINTS=\d+;/.test(generator));
+ok('片道の音には加速・減速を当てる',/const paceName=!oneWay\?'even':rising\?'accel':'decel';/.test(generator));
 ok('山と谷は必ず中継点として通す',/sampled\.add\(peakIndex\);sampled\.add\(valleyIndex\);/.test(generator));
 ok('太さの下限があり、幅1まで細くしない',/const floorWidth=Math\.min\(width,2\);/.test(generator));
 ok('全中継点へ同じ太さを入れる書き方へ戻っていない',

@@ -1672,8 +1672,12 @@ const slideWidthShapeFor=(onset,heights,allowed)=>{
 // 拾っていた。数えた折れ165回のうち72%が0.5半音未満（中央値0.29半音）で、
 // 結果として「中継点の数」と「音の動きの大きさ」が**逆相関(r=-0.30)**になった
 // (8.2半音動くメロディが5点・折れ0回 / 0.5半音の伸ばし音が17点・折れ7回)。
-// この生成器の別の場所（山谷の判定）が使っている 0.04 と同じしきい値へそろえる。
-const HEIGHT_TURN_MIN=.04;
+// はじめ 0.04 にしたが、これは**約0.73半音**に相当し(1半音 ≒ height 0.055)、
+// 本物のビブラート・こぶし・往復するメロディまで削っていた。
+// 解析データを測ると、確度(clarity)0.7以上の区間では0.5半音以上の折れが平均1.20回、
+// 0.7未満では0.47回。**0.5半音で切ると、本物の揺れとジッタが2.5倍差で分かれる**。
+// SLIDEになる伸び40件のうち9件(23%)が「0.5半音で2回以上折れる」＝はっきり揺れている。
+const HEIGHT_TURN_MIN=.028;   // ≒0.5半音
 const heightWaviness=heights=>{
   if(!Array.isArray(heights)||heights.length<3)return 0;
   let turns=0,moves=0,previous=0;
@@ -1770,9 +1774,57 @@ function slidePathFor(reserved,startLane,width,P,onset){
   // 振れ幅が追従の許容より小さいと「指を止めたままでも通るSLIDE」になるので、
   // **山と谷の位置は必ず点として通す**(2026-09-12・生成結果の検証で判明)。
   const peakIndex=heights.indexOf(hi),valleyIndex=heights.indexOf(lo);
+  // 【加速・減速】(2026-09-12)
+  // 中継点の間隔を等間隔ではなく、だんだん詰める／広げる。
+  // ドラムフィル・スネアロール・加速するライザー、rit./accel. のテンポ表現に当てる。
+  // 音の高さが**片道で**動いている(行き来していない)ときだけ使う。
+  // 行き来している音は折り返し点そのものが形なので、間隔をいじると読めなくなる。
+  //   accel … 後半ほど詰まる（せり上がって最後に畳みかける音）
+  //   decel … 後半ほど広がる（着地して伸びる音）
+  // どちらも合計の長さは変えないので、譜面のタイミングはずれない。
+  const oneWay=waviness<.2;
+  const rising=heights[heights.length-1]>heights[0];
+  const paceName=!oneWay?'even':rising?'accel':'decel';
+  // 0..1 を、詰まる/広がる向きへ曲げる。even はそのまま
+  const pace=t=>paceName==='accel'?1-Math.pow(1-t,1.7)
+    :paceName==='decel'?Math.pow(t,1.7)
+    :t;
   const sampled=new Set();
-  for(let i=0;i<heights.length;i+=step)sampled.add(i);
+  {
+    // 等間隔で何点取るかは今までどおり step から決め、置く位置だけを pace で曲げる
+    const count=Math.max(2,Math.ceil((heights.length-1)/step)+1);
+    for(let k=0;k<count;k++){
+      const t=count>1?k/(count-1):0;
+      sampled.add(Math.max(0,Math.min(heights.length-1,Math.round(pace(t)*(heights.length-1)))));
+    }
+  }
   sampled.add(peakIndex);sampled.add(valleyIndex);
+  // 【ジグザグ(カクカク)を出すのはここ】(2026-09-12)
+  // 等間隔で刻むだけだと、音が行って戻る「折り返し点」をまたいでしまい、
+  // 往復が1本の直線に均される。実測で、刻みを細かくしても経路の折り返しは
+  // 15%のまま増えなかった(太さと点の数だけが増えていた)。
+  // **音が向きを変えた位置そのものを点として置く**と、はじめてジグザグになる。
+  // 経路は音の高さに従ったままなので、音と無関係な形にはならない。
+  // 点が増えすぎると帯が読めなくなるので上限を置く(スイープの SWEEP_MAX_POINTS と同じ考え)。
+  const turningPoints=[];
+  {
+    let previousSign=0,lastTurnIndex=-Infinity;
+    for(let i=1;i<heights.length;i++){
+      const delta=heights[i]-heights[i-1];
+      if(Math.abs(delta)<HEIGHT_TURN_MIN)continue;
+      const sign=delta>0?1:-1;
+      // 向きが変わったのは「ひとつ前の点」。そこが山または谷になる
+      if(previousSign&&sign!==previousSign&&i-1-lastTurnIndex>=2){
+        turningPoints.push(i-1);lastTurnIndex=i-1;
+      }
+      previousSign=sign;
+    }
+  }
+  const SLIDE_MAX_POINTS=20;
+  for(const index of turningPoints){
+    if(sampled.size>=SLIDE_MAX_POINTS)break;
+    sampled.add(index);
+  }
   for(const i of [...sampled].sort((a,b)=>a-b)){
     points.push({grid:startGrid+i,lane:laneAt(heights[i]),subLaneWidth:widthAt(lastIndex?i/lastIndex:0)});
   }
