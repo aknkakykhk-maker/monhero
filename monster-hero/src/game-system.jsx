@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3a6a8efaec989652
+// generated-sha256: 9d35cfda8dd8416a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-12 07:56"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-12 08:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -18572,6 +18572,11 @@ function MonsterHeroGame() {
     setEcoMode(next);
     return next;
   };
+  // 「アプリが裏に回った」で止めたときの省エネ段階の控え。戻って周回を続けるときに同じ段階へ戻す
+  // (2026-09-12・ユーザー指摘「省エネも設定してた状態に戻らないの？」)。
+  // ★控えるのは reason==='hidden' のときだけ。負けた・諦めた・自分で切ったときは
+  //   周回そのものが再開しないので、省エネも戻さない(控えも捨てる)。
+  const ecoModeBeforeHiddenRef = useRef(null);
   const cycleEcoMode = () => {
     const currentIndex=ECO_MODES.indexOf(ecoModeRef.current);
     return setEcoModeSafe(ECO_MODES[(currentIndex+1)%ECO_MODES.length]);
@@ -18598,6 +18603,10 @@ function MonsterHeroGame() {
   // 2026-09-07・ユーザー報告「クイック中に1曲やったら周回が止まってた」。
   // 帯が「終わりました」としか言わないため、負けたのか裏に回ったのかが分からなかった。
   const stopAllAuto = (reason = '') => {
+    // 裏に回ったせいで止めるときだけ、いまの省エネ段階を控える(戻ってきたら同じ段階へ戻す)。
+    // ★ほかの理由では控えを捨てる。負けたあとに裏へ回っても、戻ってきて省エネだけが
+    //   よみがえることのないようにする
+    ecoModeBeforeHiddenRef.current = reason === 'hidden' ? ecoModeRef.current : null;
     stopAutoBattle();
     // モンビーにいても「周回が終わった」と分かるよう、進捗の帯へ印だけ付ける(消さない)
     finishQuickRunProgress(reason);
@@ -26298,7 +26307,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const progress = quickRunProgressRef.current;
     if (!progress || !progress.finished) return false;   // 止まっていない(続ける必要がない)
     if (progress.reason !== 'hidden') return false;      // 裏に回った以外の理由で止まっている
-    return resumeQuickRunFromRhythm();
+    const resumed = resumeQuickRunFromRhythm();
+    if (!resumed) return false;
+    // 省エネも裏に回る前の段階へ戻す(2026-09-12・ユーザー指摘)。
+    // ★順番が大事。setEcoModeSafe は autoRepeatRef.current===true でないと 'off' へ落ちるので、
+    //   ∞を立て直す resumeQuickRunFromRhythm のあとに呼ぶ。
+    //   'ultra' へ戻ると、暗幕と自動ミュートも今までどおり ultraEcoSession の effect が付け直す
+    const eco = ecoModeBeforeHiddenRef.current;
+    ecoModeBeforeHiddenRef.current = null;
+    if (eco && eco !== 'off') setEcoModeSafe(eco);
+    return true;
   };
   // 上の visibilitychange の effect から呼べるように、毎レンダー最新の関数を入れ直す
   resumeAutoAfterVisibleRef.current = resumeQuickRunAfterVisible;

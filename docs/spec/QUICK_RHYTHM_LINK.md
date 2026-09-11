@@ -741,8 +741,17 @@ ONで開くと何も押さずに帯が出る／OFFでは出ず「始める」ボ
 バトル画面・曲えらび・演奏中のどこにいても呼べる。演奏中は `runProgressAllowed` が
 false のままなので進行は止まっており、曲が終われば今までどおり進みはじめる。
 
-**戻らないもの**: 省エネ（`stopAllAuto` が off にする）と、∞でないふつうのAUTO。
-自動で戻すのは「∞周回の続き」だけ。
+**省エネも戻す**（2026-09-12・ユーザー指摘「省エネも設定してた状態に戻らないの？」）。
+`stopAllAuto` は省エネを off にするので、`reason === 'hidden'` のときだけ
+`ecoModeBeforeHiddenRef` へ段階を控えておき、続けられたときに `setEcoModeSafe` で戻す。
+**順番が大事**で、`setEcoModeSafe` は `autoRepeatRef.current === true` でないと `'off'` へ
+落ちるため、∞を立て直す `resumeQuickRunFromRhythm()` の**あと**に呼ぶ。
+`'ultra'` へ戻ったときの暗幕と自動ミュートは、今までどおり `ultraEcoSession` の effect が
+付け直す（`ecoMode` が変わるだけで通る道なので、ここでは何もしない）。
+控えは hidden 以外の理由で止めたときに捨てるので、**負けたあとに裏へ回して戻っても、
+省エネだけがよみがえることはない**。
+
+**戻さないもの**: ∞でないふつうのAUTO。自動で戻すのは「∞周回の続き」と、その省エネだけ。
 
 **中身を ref に入れ直している理由**: `visibilitychange` を張る effect は
 `useEffect(..., [])` で1度しか作られない。そこへ判定を直接書くと、起動直後の古い state を
