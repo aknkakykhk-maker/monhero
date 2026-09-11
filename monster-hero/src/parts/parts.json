@@ -165,6 +165,10 @@
       "role": "画面: ラン開始まわりのえらぶ画面(SKIP_PICK / SKIP_RESULT / PICK_HERO・PICK_ALLY / PICK_PRO_ALLIES / PICK_SLOT / PICK_TEACHING)"
     },
     {
+      "file": "68-screen-run-result.jsx",
+      "role": "画面: バトルの結果まわり(UPGRADE_SKILL / WAVE_RESULT / REWARD_PICK / CHAMPION・敗北・リタイア・マスモン登録)"
+    },
+    {
       "file": "60-app.jsx",
       "role": "MonsterHeroGame 本体(全 state・ロジック・各 gameState の JSX)"
     },

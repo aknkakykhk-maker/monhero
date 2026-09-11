@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d275ce8a4197bf01
+// source-sha256: 62f31cec6d21293e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9e8418669adb329a
+// generated-sha256: db0fcf2876012d15
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 09:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 09:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -29670,6 +29670,758 @@ function PickTeachingScreen({
   }, ownedTeachings.find(ot => ot.id === selectedTeachingCard.id) ? "強化する" : "習得する")))));
 }
 
+// ---- part: 68-screen-run-result.jsx ----
+// ==== 画面: バトルの結果まわり(WAVE結果・報酬えらび・ラン終了) ====
+//
+// MonsterHeroGame から切り出した18本目(docs/refactor/REFACTOR_MASTER_PLAN.md STEP 6-11b)。
+// WAVEごとの結果と技の強化、報酬えらび、そしてランの終わり方3つ(勝ち・敗北・リタイア)と
+// そこから開くマスモン登録。
+//
+// 【この一群ならではの注意】
+// ・ラン終了の処理(報酬の付与・記録の送信・保存)は MonsterHeroGame 側に残す。
+//   画面は「もう決まった結果」を見せるだけで、計算も保存もしない(CLAUDE.md ⑦)
+// ・演出の進み具合(championPresentationComplete など)を動かすタイマーはハンドラの中にあり
+//   本体へ残る。画面の中に setTimeout は1つも無い
+// ・ラン終了画面は勝ち(CHAMPION)だけが gameState を持ち、敗北とリタイアは
+//   hp<=0 / gaveUp という別の条件で出る。3つとも同じマスモン登録へつながるので、
+//   置き去りにせずまとめて持ってくる
+function UpgradeSkillScreen({
+  canRecoverGutsWithPoint,
+  continueAfterUniqueUpgrade,
+  effectiveMaxGuts,
+  guts,
+  recoverGutsWithPoint,
+  uniqueUpgradeEntries,
+  uniqueUpgradeRow,
+  upgradePoints
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "absolute",
+      inset: 0,
+      backgroundColor: "#020617",
+      zIndex: 30000
+    },
+    className: "absolute inset-0 z-[3000] flex flex-col items-center justify-start p-4 pt-8 text-center overflow-hidden"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mb-2 shrink-0"
+  }, /*#__PURE__*/React.createElement("h2", {
+    className: "text-xl font-black text-amber-400 italic uppercase"
+  }, "\u56FA\u6709\u6280\u306E\u5F37\u5316"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] text-slate-400 mt-1 uppercase tracking-widest flex items-center justify-center gap-2"
+  }, "Remaining Points: ", /*#__PURE__*/React.createElement("span", {
+    className: "text-white bg-amber-600 px-2 rounded-full font-mono"
+  }, upgradePoints))), (() => {
+    const gutsFull = guts >= effectiveMaxGuts;
+    const noPoint = upgradePoints < GUTS_RECOVERY_POINT_COST;
+    return /*#__PURE__*/React.createElement("div", {
+      "data-guts-recovery": true,
+      className: "w-full max-w-sm shrink-0 mb-2 rounded-2xl border border-amber-500/40 bg-amber-950/25 px-3 py-2 flex items-center gap-2"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex-1 min-w-0 text-left"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "block text-[8px] font-black tracking-widest text-amber-300/80 leading-none"
+    }, "\u73FE\u5728\u30AC\u30C3\u30C4"), /*#__PURE__*/React.createElement("span", {
+      className: "block font-mono font-black leading-tight"
+    }, /*#__PURE__*/React.createElement("b", {
+      className: gutsFull ? 'text-amber-300' : 'text-white',
+      style: {
+        fontSize: '17px'
+      }
+    }, guts), /*#__PURE__*/React.createElement("span", {
+      className: "text-slate-500",
+      style: {
+        fontSize: '12px'
+      }
+    }, " / ", effectiveMaxGuts))), /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      "data-guts-recovery-button": true,
+      disabled: !canRecoverGutsWithPoint,
+      onClick: recoverGutsWithPoint,
+      "aria-label": `強化ポイント${GUTS_RECOVERY_POINT_COST}つでガッツを${GUTS_RECOVERY_AMOUNT}回復する`,
+      className: "shrink-0 min-h-[44px] px-3 rounded-xl bg-amber-600 text-white font-black leading-tight active:scale-95 disabled:opacity-30"
+    }, gutsFull ? /*#__PURE__*/React.createElement("span", {
+      className: "block",
+      style: {
+        fontSize: '13px'
+      }
+    }, "MAX") : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
+      className: "block",
+      style: {
+        fontSize: '12px'
+      }
+    }, GUTS_RECOVERY_POINT_COST, "P \u3067 +", GUTS_RECOVERY_AMOUNT), /*#__PURE__*/React.createElement("span", {
+      className: "block text-amber-100/90",
+      style: {
+        fontSize: '8px'
+      }
+    }, noPoint ? 'ポイント不足' : 'ガッツ回復'))));
+  })(), /*#__PURE__*/React.createElement("div", {
+    className: "w-full max-w-sm space-y-3 mb-2 min-h-0 overflow-y-auto mh-scroll flex-1 p-1 flex flex-col justify-start pt-2"
+  }, uniqueUpgradeEntries().map(e => uniqueUpgradeRow(e))), /*#__PURE__*/React.createElement("button", {
+    onClick: continueAfterUniqueUpgrade,
+    className: "w-full max-w-xs bg-white text-black py-3 rounded-2xl font-black uppercase shadow-lg active:scale-95 transition-transform mt-auto shrink-0"
+  }, "\u30D6\u30EA\u30FC\u30C0\u30FC\u7D99\u627F\u3078"));
+}
+function WaveResultScreen({
+  battleTutorialSpotClass,
+  difficulty,
+  distAptPct,
+  extremeDifficulty,
+  extremeRun,
+  handleNextWave,
+  runFinalizing,
+  runMode,
+  scoreMultiplier,
+  slots,
+  waveResult
+}) {
+  return (
+    /*#__PURE__*/
+    /* 内訳が長くなると背の低い端末で「次のWAVEへ」が画面外に出る。justify-center は
+       あふれたぶんを上下へ均等にはみ出させるので、overflow-hidden と合わさると
+       スクロールもできず進行不能になっていた(320x568で実測)。
+       見出しと内訳を min-h-0 の入れ物にまとめ、あふれたときだけそこが縮んで
+       内側をスクロールさせる。ボタンは shrink-0 なので必ず画面内に残り、
+       収まっているときは今までどおり全体が中央に寄る */
+    React.createElement("div", {
+      style: {
+        position: "absolute",
+        inset: 0,
+        backgroundColor: "#020617",
+        zIndex: 30000
+      },
+      className: "absolute inset-0 z-[3000] flex flex-col items-center justify-center p-3 text-center overflow-hidden"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "w-full min-h-0 flex flex-col items-center overflow-y-auto mh-scroll"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "mb-2 shrink-0"
+    }, /*#__PURE__*/React.createElement(Trophy, {
+      className: "text-yellow-400 mx-auto mb-1",
+      size: 32
+    }), /*#__PURE__*/React.createElement("h2", {
+      className: "text-xl font-black italic uppercase tracking-tighter text-white"
+    }, "WAVE ", waveResult.wave, " \u30EA\u30B6\u30EB\u30C8")), /*#__PURE__*/React.createElement("div", {
+      className: "w-full max-w-sm bg-slate-900 border border-slate-800 rounded-2xl p-3 space-y-1.5 mb-3 shadow-2xl shrink-0"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-2 gap-1 rounded-xl bg-indigo-950/60 border border-indigo-400/20 px-2 py-1"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-[10px] font-black text-indigo-200"
+    }, "\u4ECA\u56DE\uFF1A", /*#__PURE__*/React.createElement("b", {
+      className: "font-mono text-sm text-white"
+    }, waveResult.turn), "\u30BF\u30FC\u30F3"), /*#__PURE__*/React.createElement("span", {
+      className: "text-[10px] font-black text-amber-200"
+    }, "\u7D2F\u8A08\uFF1A", /*#__PURE__*/React.createElement("b", {
+      className: "font-mono text-sm text-white"
+    }, waveResult.totalTurnCount), "\u30BF\u30FC\u30F3")), isQuickMode(runMode) && specialRuleDifficultyForRun(runMode, difficulty, extremeRun, extremeDifficulty) === ULTIMATE_SETTING.id && (() => {
+      const normalRate = quickGrowthRateForRun(runMode, 'Normal', waveResult.turn);
+      const effectiveRate = quickGrowthRateForRun(runMode, difficulty, waveResult.turn);
+      return /*#__PURE__*/React.createElement("div", {
+        "data-quick-ultimate-growth": true,
+        className: "rounded-lg border border-fuchsia-400/40 bg-purple-950/70 px-2 py-1 text-[9px] font-black text-purple-100"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-amber-300"
+      }, "\u81EA\u52D5\u6210\u9577"), "\u3000\u901A\u5E38 +", compactPercent(normalRate), " ", /*#__PURE__*/React.createElement("span", {
+        className: "text-slate-500"
+      }, "\u2192"), " \u4ECA\u56DE +", compactPercent(effectiveRate), /*#__PURE__*/React.createElement("span", {
+        className: "block text-[8px] text-purple-300"
+      }, "WAVE ", waveResult.turn, "T / ULTIMATE\u88DC\u6B63 -", compactPercent(normalRate - effectiveRate)));
+    })(), waveResult.pendingUltimateDistanceBreak && /*#__PURE__*/React.createElement("div", {
+      "data-ultimate-distance-break-warning": true,
+      className: "rounded-lg border border-red-400/60 bg-purple-950/80 px-2 py-1 text-[10px] font-black text-red-200"
+    }, "\u26A0 \u6B21WAVE\u3067\u8DDD\u96E2\u5F31\u4F53\u5316\u304C\u767A\u52D5"), /*#__PURE__*/React.createElement("div", {
+      className: "flex justify-between items-center border-b border-white/10 pb-0.5"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-slate-400 text-[11px] font-bold uppercase"
+    }, "WAVE \u4E0E\u30C0\u30E1\u30FC\u30B8"), /*#__PURE__*/React.createElement("span", {
+      className: "text-red-400 font-mono font-black text-base"
+    }, waveResult.totalDamage.toLocaleString())), waveResult.totalAllDamage != null && /*#__PURE__*/React.createElement("div", {
+      className: "flex justify-between items-center border-b border-white/10 pb-0.5"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-slate-400 text-[11px] font-bold uppercase"
+    }, "\u5168WAVE\u7D2F\u8A08\u30C0\u30E1\u30FC\u30B8"), /*#__PURE__*/React.createElement("span", {
+      className: "text-orange-400 font-mono font-black text-base"
+    }, waveResult.totalAllDamage.toLocaleString())), waveResult.distDamage && /*#__PURE__*/React.createElement("div", {
+      className: "border-b border-white/10 pb-1.5"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-cyan-400 font-black uppercase tracking-widest mb-1 text-left",
+      style: {
+        fontSize: '9px'
+      }
+    }, "\u8DDD\u96E2\u5225\u30C0\u30E1\u30FC\u30B8\uFF08\u5473\u65B9\u4F4D\u7F6E\uFF09& \u88DC\u6B63\u5024(\u6C38\u7D9A)"), /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-4 gap-1"
+    }, ['零', '近', '中', '遠'].map((lbl, i) => {
+      const dmg = waveResult.distDamage[i] || 0;
+      const cumDmg = waveResult.totalDistDamage?.[i] || 0;
+      const normalGained = (waveResult.normalGainedDistBonus?.[i] || 0) * 100;
+      const gained = (waveResult.gainedDistBonus?.[i] || 0) * 100;
+      const total = (waveResult.newDistBonus?.[i] || 0) * 100;
+      const mon = slots[i];
+      const aptPct = (distAptPct[i] || 0) * 100;
+      const combinedTotal = total + aptPct;
+      return /*#__PURE__*/React.createElement("div", {
+        key: i,
+        className: "bg-black/40 rounded-lg border border-white/5 flex flex-col items-center justify-center",
+        style: {
+          padding: '4px 2px',
+          gap: '2px'
+        }
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex items-center",
+        style: {
+          gap: '3px'
+        }
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "rounded-full bg-indigo-600/40 border border-indigo-400/50 flex items-center justify-center overflow-hidden shrink-0",
+        style: {
+          width: '26px',
+          height: '26px'
+        }
+      }, mon ? mon.imgUrl ? /*#__PURE__*/React.createElement("img", {
+        src: mon.imgUrl,
+        alt: "",
+        className: "w-full h-full object-contain"
+      }) : /*#__PURE__*/React.createElement("span", {
+        style: {
+          fontSize: '13px'
+        }
+      }, mon.emoji) : /*#__PURE__*/React.createElement("span", {
+        className: "text-slate-600",
+        style: {
+          fontSize: '9px'
+        }
+      }, "-")), /*#__PURE__*/React.createElement("div", {
+        className: "font-black text-slate-300",
+        style: {
+          fontSize: '10px'
+        }
+      }, lbl)), /*#__PURE__*/React.createElement("div", {
+        className: "font-mono font-black text-red-400 leading-none",
+        style: {
+          fontSize: '11px'
+        }
+      }, dmg.toLocaleString()), /*#__PURE__*/React.createElement("div", {
+        className: "text-orange-300/80 font-mono leading-none",
+        style: {
+          fontSize: '7px'
+        }
+      }, "\u7D2F\u8A08", cumDmg.toLocaleString()), /*#__PURE__*/React.createElement("div", {
+        className: "font-mono font-black text-cyan-300 leading-none",
+        style: {
+          fontSize: '9px'
+        }
+      }, "+", total.toFixed(1), "%"), gained > 0 && /*#__PURE__*/React.createElement("div", {
+        className: "text-emerald-400 font-mono leading-none",
+        style: {
+          fontSize: '7px'
+        }
+      }, normalGained !== gained ? `通常 +${normalGained.toFixed(1)} → 実際 +${gained.toFixed(1)}` : `(+${gained.toFixed(1)})`), mon && /*#__PURE__*/React.createElement("div", {
+        className: "text-indigo-300 font-mono font-black leading-none",
+        style: {
+          fontSize: '8px'
+        }
+      }, "\u9069\u6027\u8FBC\u5408\u8A08+", combinedTotal.toFixed(1), "%"));
+    }))), waveResult.recoveryDelta != null && /*#__PURE__*/React.createElement("div", {
+      className: "flex justify-between items-center border-b border-white/10 pb-0.5"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-slate-400 text-[11px] font-bold uppercase"
+    }, "\u81EA\u52D5\u56DE\u5FA9\u7387 \u88DC\u6B63"), /*#__PURE__*/React.createElement("span", {
+      className: "flex items-baseline gap-2"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: `font-mono font-black text-base ${waveResult.recoveryDelta >= 0 ? 'text-emerald-400' : 'text-red-400'}`
+    }, waveResult.baseRecoveryDelta !== waveResult.recoveryDelta && /*#__PURE__*/React.createElement(React.Fragment, null, "\u901A\u5E38 ", waveResult.baseRecoveryDelta >= 0 ? '+' : '', (waveResult.baseRecoveryDelta * 100).toFixed(1), "% \u2192 \u5B9F\u969B "), waveResult.recoveryDelta >= 0 ? '+' : '', (waveResult.recoveryDelta * 100).toFixed(1), "%"), /*#__PURE__*/React.createElement("span", {
+      className: "text-[8px] text-slate-500 font-mono"
+    }, "\u7D2F\u8A08 ", /*#__PURE__*/React.createElement("span", {
+      className: `${waveResult.totalRecoveryDelta >= 0 ? 'text-emerald-300' : 'text-red-300'}`
+    }, waveResult.totalRecoveryDelta >= 0 ? '+' : '', (waveResult.totalRecoveryDelta * 100).toFixed(1), "%")))), !isQuickMode(runMode) && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+      className: "flex justify-between items-center border-b border-white/10 pb-0.5"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-slate-400 text-[11px] font-bold uppercase"
+    }, "WAVE \u30DC\u30FC\u30CA\u30B9 (", waveResult.wave, " WAVE)"), /*#__PURE__*/React.createElement("span", {
+      className: "text-yellow-400 font-mono font-black text-base"
+    }, "x", waveResult.waveMult.toFixed(2))), /*#__PURE__*/React.createElement("div", {
+      className: "flex justify-between items-center border-b border-white/10 pb-0.5"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-slate-400 text-[11px] font-bold uppercase"
+    }, "\u6B8B\u308A\u30BF\u30FC\u30F3\u6570\u30DC\u30FC\u30CA\u30B9 (", waveResult.remainingTurns, ")"), /*#__PURE__*/React.createElement("span", {
+      className: "text-blue-400 font-mono font-black text-base"
+    }, "x", waveResult.turnMult.toFixed(2))), /*#__PURE__*/React.createElement("div", {
+      className: "pt-1 flex flex-col gap-0.5 text-right"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-[9px] text-slate-500 font-bold uppercase italic"
+    }, "\u96E3\u6613\u5EA6\u30DC\u30FC\u30CA\u30B9 (", extremeRun ? extremeDifficulty : difficulty, "): x", scoreMultiplier), /*#__PURE__*/React.createElement("div", {
+      className: "flex justify-between items-end"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-indigo-400 text-xs font-black uppercase"
+    }, "\u7372\u5F97\u30B9\u30B3\u30A2"), /*#__PURE__*/React.createElement("span", {
+      className: "text-white font-mono font-black text-xl"
+    }, waveResult.roundScore.toLocaleString()))), /*#__PURE__*/React.createElement("div", {
+      className: "pt-1 flex justify-between items-end border-t border-white/20"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-amber-500 text-[11px] font-black uppercase"
+    }, "\u7D2F\u8A08\u30B9\u30B3\u30A2"), /*#__PURE__*/React.createElement("span", {
+      className: "text-amber-400 font-mono font-black text-lg"
+    }, waveResult.totalScore.toLocaleString()))))), /*#__PURE__*/React.createElement("button", {
+      onClick: handleNextWave,
+      disabled: runFinalizing,
+      "aria-busy": runFinalizing,
+      className: `w-full max-w-xs py-3 rounded-2xl font-black text-lg uppercase shadow-[0_0_20px_rgba(255,255,255,0.3)] shrink-0${battleTutorialSpotClass('waveNext')} ${runFinalizing ? 'bg-slate-500 text-slate-300 cursor-not-allowed' : 'bg-white text-indigo-900 active:scale-95'}`
+    }, runFinalizing ? '処理中…' : /*#__PURE__*/React.createElement(React.Fragment, null, "\u6B21\u3078\u9032\u3080 ", /*#__PURE__*/React.createElement(ChevronRight, {
+      className: "inline",
+      size: 20
+    }))))
+  );
+}
+function RewardPickScreen({
+  atk,
+  battleTutorialSpotClass,
+  def,
+  difficulty,
+  effect,
+  extremeDifficulty,
+  extremeRun,
+  guts,
+  handleTraining,
+  maxGuts,
+  maxHp,
+  runMode,
+  setTrainingPicks,
+  trainingPicks,
+  waveResult
+}) {
+  const specialRule = specialRuleDifficultyForRun(runMode, difficulty, extremeRun, extremeDifficulty);
+  const baseStats = {
+    atk,
+    def,
+    hp: maxHp,
+    guts: maxGuts
+  };
+  // いま選んでいるぶんまでを適用した値。次の1回はこの値からさらに伸びる
+  const current = resolveTrainingStats(baseStats, trainingPicks, waveResult?.turn, specialRule);
+  const remaining = TRAINING_PICK_COUNT - trainingPicks.length;
+  const ready = trainingPicks.length === TRAINING_PICK_COUNT;
+  const STYLES = {
+    hp: {
+      icon: /*#__PURE__*/React.createElement(Heart, {
+        size: 16
+      }),
+      ring: 'border-pink-400',
+      bg: 'bg-pink-900/40',
+      tint: 'text-pink-300',
+      chip: 'bg-pink-500'
+    },
+    atk: {
+      icon: /*#__PURE__*/React.createElement(Sword, {
+        size: 16
+      }),
+      ring: 'border-red-400',
+      bg: 'bg-red-900/40',
+      tint: 'text-red-300',
+      chip: 'bg-red-500'
+    },
+    def: {
+      icon: /*#__PURE__*/React.createElement(ShieldCheck, {
+        size: 16
+      }),
+      ring: 'border-emerald-400',
+      bg: 'bg-emerald-900/40',
+      tint: 'text-emerald-300',
+      chip: 'bg-emerald-500'
+    },
+    guts: {
+      icon: /*#__PURE__*/React.createElement(Sparkles, {
+        size: 16
+      }),
+      ring: 'border-amber-400',
+      bg: 'bg-amber-900/40',
+      tint: 'text-amber-300',
+      chip: 'bg-amber-500'
+    }
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "absolute",
+      inset: 0,
+      backgroundColor: "#020617",
+      zIndex: 30000
+    },
+    className: "absolute inset-0 z-[3000] flex flex-col items-center p-3 overflow-hidden",
+    "data-screen": "training"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 w-full max-w-sm",
+    style: {
+      paddingTop: 'calc(.25rem + env(safe-area-inset-top))'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-center gap-2"
+  }, /*#__PURE__*/React.createElement(Trophy, {
+    className: "text-amber-400",
+    size: 22
+  }), /*#__PURE__*/React.createElement("h2", {
+    className: "text-xl font-black italic uppercase tracking-tighter text-white leading-none"
+  }, "\u30C8\u30EC\u30FC\u30CB\u30F3\u30B0")), /*#__PURE__*/React.createElement("div", {
+    className: "mt-1.5 flex items-center justify-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] font-black text-slate-300"
+  }, "4\u7A2E\u985E\u304B\u30892\u3064\u9078\u3076"), /*#__PURE__*/React.createElement("span", {
+    className: "flex items-center gap-1"
+  }, Array.from({
+    length: TRAINING_PICK_COUNT
+  }).map((_, i) => /*#__PURE__*/React.createElement("i", {
+    key: i,
+    className: `block rounded-full ${i < trainingPicks.length ? 'bg-amber-400' : 'bg-slate-700'}`,
+    style: {
+      width: '9px',
+      height: '9px'
+    }
+  }))), /*#__PURE__*/React.createElement("span", {
+    className: "text-[11px] font-black font-mono text-amber-300"
+  }, trainingPicks.length, " / ", TRAINING_PICK_COUNT)), extremeRuleNumber(specialRule, 'awakeningZeroTurns') != null && (() => {
+    const turns = waveResult?.turn || 0;
+    // 低下は増加量へ掛かるので、率から引いた「-○pt」ではなく倍率で出す
+    const gainRate = trainingGainRate(turns, specialRule);
+    return /*#__PURE__*/React.createElement("div", {
+      "data-ultimate-training-status": specialRule,
+      className: "mt-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-center text-[9px] font-black text-purple-100"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-amber-300"
+    }, specialRule, "\u88DC\u6B63"), "\u3000\u4ECA\u56DE", turns, "T \u2192 \u5F37\u5316\u91CF ", compactPercent(gainRate), "\uFF08-", compactPercent(1 - gainRate), "\uFF09");
+  })(), specialRule === 'NIGHTMARE' && /*#__PURE__*/React.createElement("div", {
+    "data-nightmare-training-status": true,
+    className: "mt-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-center text-[9px] font-black text-purple-100"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-amber-300"
+  }, "NIGHTMARE\u88DC\u6B63"), "\u3000\u5F37\u5316\u91CF ", specialRulePercent(extremeSpecialRule(specialRule, 'waveEnhancement')))), /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 w-full max-w-sm my-2 text-left"
+  }, /*#__PURE__*/React.createElement(AssistantBubble, {
+    scene: "rewardPick",
+    compact: true
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 w-full max-w-sm rounded-2xl border border-white/10 bg-slate-900/60 px-2 py-1.5 mb-2",
+    "data-training-status": true
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[8px] font-black tracking-widest text-slate-500 text-left mb-1"
+  }, "\u73FE\u5728\u306E\u30B9\u30C6\u30FC\u30BF\u30B9", trainingPicks.length > 0 && /*#__PURE__*/React.createElement("span", {
+    className: "text-amber-300"
+  }, "\uFF08\u9078\u629E\u4E2D\u306E\u5909\u5316\uFF09")), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-4 gap-1"
+  }, TRAINING_OPTIONS.map(option => {
+    const st = STYLES[option.id] || STYLES.hp;
+    const beforeAll = baseStats[option.stat];
+    const afterAll = current[option.stat];
+    const diff = afterAll - beforeAll;
+    return /*#__PURE__*/React.createElement("div", {
+      key: option.id,
+      className: "rounded-lg bg-black/40 px-1 py-1 text-center"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "block text-[8px] font-black text-slate-500 leading-none"
+    }, option.statLabel), /*#__PURE__*/React.createElement("span", {
+      className: `block text-[13px] font-black font-mono leading-tight ${diff > 0 ? st.tint : 'text-slate-300'}`
+    }, afterAll), /*#__PURE__*/React.createElement("span", {
+      className: `block text-[8px] font-black font-mono leading-none ${diff > 0 ? 'text-emerald-400' : 'text-slate-700'}`
+    }, diff > 0 ? `+${diff}` : '±0'));
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: `w-full max-w-sm grid grid-cols-2 grid-rows-2 gap-2 flex-1 min-h-0 overflow-y-auto mh-scroll${battleTutorialSpotClass('rewards')}`
+  }, TRAINING_OPTIONS.map(option => {
+    const count = trainingPicks.filter(id => id === option.id).length;
+    const st = STYLES[option.id] || STYLES.hp;
+    const before = current[option.stat];
+    const after = resolveTrainingStep(current, option.id, waveResult?.turn, specialRule)[option.stat];
+    const full = remaining <= 0;
+    return /*#__PURE__*/React.createElement("button", {
+      key: option.id,
+      type: "button",
+      disabled: full || !!effect,
+      onClick: () => setTrainingPicks(prev => prev.length >= TRAINING_PICK_COUNT ? prev : [...prev, option.id]),
+      "aria-label": `${option.name} ${option.effect}${count > 0 ? ` 選択中${count}回` : ''}`,
+      className: `relative min-h-[112px] rounded-2xl border-2 p-2.5 flex flex-col items-start justify-center gap-2 text-left transition-all active:scale-95 disabled:opacity-40 ${count > 0 ? `${st.bg} ${st.ring}` : 'bg-slate-900/60 border-slate-800'}`
+    }, count > 0 && /*#__PURE__*/React.createElement("span", {
+      className: `absolute top-1.5 right-1.5 ${st.chip} text-white text-[11px] font-black rounded-full px-2 py-0.5 shadow-lg`
+    }, "\xD7", count), /*#__PURE__*/React.createElement("span", {
+      className: `flex items-center gap-1.5 ${st.tint}`
+    }, cardIconNode(st.icon), /*#__PURE__*/React.createElement("b", {
+      className: "text-[13px] font-black text-white leading-none"
+    }, option.name)), /*#__PURE__*/React.createElement("span", {
+      className: `text-[10px] font-black ${st.tint} leading-tight`
+    }, option.effect, (extremeRuleNumber(specialRule, 'awakeningZeroTurns') != null || extremeRuleNumber(specialRule, 'waveEnhancement') != null) && (() => {
+      const normalAfter = resolveTrainingStep(current, option.id, waveResult?.turn, null)[option.stat];
+      const effectiveAfter = resolveTrainingStep(current, option.id, waveResult?.turn, specialRule)[option.stat];
+      const normalGain = normalAfter - current[option.stat],
+        effectiveGain = effectiveAfter - current[option.stat];
+      return /*#__PURE__*/React.createElement("span", {
+        className: "block text-purple-200"
+      }, "\u901A\u5E38 +", normalGain, " \u2192 \u5B9F\u969B +", effectiveGain);
+    })()), /*#__PURE__*/React.createElement("span", {
+      className: "w-full rounded-lg bg-black/40 px-1.5 py-1 font-mono leading-tight"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "block text-[8px] text-slate-500 font-black"
+    }, option.statLabel), /*#__PURE__*/React.createElement("span", {
+      className: "block text-[11px] font-black text-slate-300"
+    }, before, " ", /*#__PURE__*/React.createElement("span", {
+      className: "text-slate-600"
+    }, "\u2192"), " ", /*#__PURE__*/React.createElement("b", {
+      className: st.tint
+    }, after))));
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 w-full max-w-sm mt-2 grid grid-cols-[auto_minmax(0,1fr)] gap-2",
+    style: {
+      paddingBottom: 'calc(.25rem + env(safe-area-inset-bottom))'
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    disabled: trainingPicks.length === 0 || !!effect,
+    onClick: () => setTrainingPicks([]),
+    className: "min-h-[52px] px-4 rounded-2xl font-black text-[11px] bg-slate-800 text-slate-300 active:scale-95 disabled:opacity-30"
+  }, "\u9078\u3073\u76F4\u3059"), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    disabled: !ready || !!effect,
+    onClick: () => {
+      const picks = trainingPicks;
+      setTrainingPicks([]);
+      handleTraining(picks);
+    },
+    className: `min-h-[52px] rounded-2xl font-black text-base uppercase shadow-lg active:scale-95 transition-all ${ready && !effect ? 'bg-white text-black shadow-[0_0_20px_rgba(255,255,255,0.3)]' : 'bg-slate-800 text-slate-600'}`
+  }, ready ? '決定する' : `あと${remaining}つ選ぶ`)));
+}
+function ChampionScreen({
+  autoRepeat,
+  finalRewardSummary,
+  masuRegisterButtonNode,
+  openSpeciesChallengeSelection,
+  resultActionPending,
+  resultProcessing,
+  returnToHome,
+  runHighlights,
+  runMode,
+  runResultActionOnce,
+  score,
+  setAutoBattleEnabled,
+  setAutoRepeatEnabled,
+  setChampionPresentationComplete,
+  speciesChallengeBattleRun,
+  speciesChallengeClearCardNode,
+  speciesChallengeFromDebugRef,
+  speciesChallengeSaveRunRef
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    className: "fixed inset-0 flex flex-col items-center p-6 text-center",
+    style: {
+      position: 'fixed',
+      inset: 0,
+      zIndex: 80000,
+      background: 'linear-gradient(to bottom right,#fbbf24,#78350f)'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 flex flex-col items-center"
+  }, /*#__PURE__*/React.createElement(Crown, {
+    size: 64,
+    className: "text-white animate-bounce mb-3"
+  }), /*#__PURE__*/React.createElement("h1", {
+    className: "text-3xl font-black italic text-white uppercase"
+  }, "CHAMPION"), !isQuickMode(runMode) && /*#__PURE__*/React.createElement("div", {
+    className: "w-full max-w-xs bg-black/40 border border-white/20 rounded-3xl p-6 mb-3 mt-3 shadow-2xl"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-5xl font-mono font-black text-white"
+  }, score.toLocaleString()))), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "m-auto w-full flex flex-col items-center"
+  }, masuRegisterButtonNode(), speciesChallengeClearCardNode(), finalRewardSummary && /*#__PURE__*/React.createElement(RewardSummaryCard, {
+    key: resultProcessing ? 'locked' : 'ready',
+    summary: finalRewardSummary,
+    onPresentationComplete: resultProcessing ? undefined : () => setChampionPresentationComplete(true)
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "w-full max-w-xs mx-auto mt-3 text-left"
+  }, /*#__PURE__*/React.createElement(AssistantBubble, {
+    scene: "resultWin",
+    condition: runHighlights.firstWin ? 'firstWin' : runHighlights.newRecord ? 'newRecord' : runHighlights.firstClear ? 'firstClear' : null,
+    compact: true
+  })))), isQuickMode(runMode) && autoRepeat && /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-2 w-full max-w-xs mt-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setAutoRepeatEnabled(false),
+    className: "min-h-[40px] rounded-xl bg-fuchsia-950/70 border border-fuchsia-300 text-fuchsia-100 text-xs font-black"
+  }, "\u221E\u5468\u56DE OFF"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setAutoBattleEnabled(false),
+    className: "min-h-[40px] rounded-xl bg-slate-900/70 border border-white/30 text-white text-xs font-black"
+  }, "AUTO OFF")), speciesChallengeBattleRun && /*#__PURE__*/React.createElement("button", {
+    "data-species-champion-back": true,
+    onClick: () => {
+      const keepSaving = speciesChallengeSaveRunRef.current;
+      const keepDebug = speciesChallengeFromDebugRef.current;
+      runResultActionOnce(() => {
+        returnToHome();
+        openSpeciesChallengeSelection({
+          saveProgress: keepSaving,
+          fromDebug: keepDebug
+        });
+      });
+    },
+    disabled: resultActionPending,
+    className: "w-full max-w-xs bg-cyan-700 text-white py-3.5 rounded-2xl font-black shrink-0 mt-2 disabled:opacity-50"
+  }, "\u7A2E\u65CF\u30C1\u30E3\u30EC\u30F3\u30B8\u9078\u629E\u3078\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => runResultActionOnce(returnToHome),
+    disabled: resultActionPending,
+    "aria-busy": resultActionPending,
+    className: "w-full max-w-xs bg-white text-amber-900 py-4 rounded-3xl font-black text-xl uppercase shadow-2xl active:scale-95 transition-transform shrink-0 mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
+  }, resultActionPending ? '処理中…' : 'HOMEへ'));
+}
+function GameOverScreen({
+  finalRewardSummary,
+  handleRetry,
+  masuRegisterButtonNode,
+  resultActionPending,
+  returnToHome,
+  runHighlights,
+  runMode,
+  runResultActionOnce,
+  score
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    className: "mh-game-over-screen fixed inset-0 flex flex-col items-center text-center",
+    style: {
+      position: 'fixed',
+      inset: 0,
+      zIndex: 80000,
+      backgroundColor: 'rgba(0,0,0,0.97)'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mh-game-over-head shrink-0 flex flex-col items-center"
+  }, /*#__PURE__*/React.createElement(Skull, {
+    size: 48,
+    className: "text-red-700 mb-3 animate-pulse"
+  }), /*#__PURE__*/React.createElement("h2", {
+    className: "text-2xl font-black italic text-white uppercase"
+  }, "\u6557 \u5317"), !isQuickMode(runMode) && /*#__PURE__*/React.createElement("div", {
+    className: "bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 mt-3 w-full max-w-xs"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-3xl font-mono font-black text-white"
+  }, score.toLocaleString()))), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "m-auto w-full flex flex-col items-center"
+  }, masuRegisterButtonNode(), finalRewardSummary && /*#__PURE__*/React.createElement(RewardSummaryCard, {
+    summary: finalRewardSummary
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "w-full max-w-xs mx-auto mt-3 text-left"
+  }, /*#__PURE__*/React.createElement(AssistantBubble, {
+    scene: "resultLose",
+    condition: runHighlights.firstLose ? 'firstLose' : null,
+    compact: true
+  })))), /*#__PURE__*/React.createElement("div", {
+    className: "mh-game-over-actions flex flex-col gap-3 w-full max-w-xs shrink-0 mt-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => runResultActionOnce(handleRetry),
+    disabled: resultActionPending,
+    className: "w-full bg-red-600 text-white py-4 rounded-2xl font-black text-lg uppercase shadow-2xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+  }, /*#__PURE__*/React.createElement(RotateCcw, {
+    size: 20
+  }), " ", resultActionPending ? '処理中…' : '再挑戦'), /*#__PURE__*/React.createElement("button", {
+    onClick: () => runResultActionOnce(returnToHome),
+    disabled: resultActionPending,
+    className: "w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase disabled:opacity-50 disabled:cursor-not-allowed"
+  }, "\u30C8\u30C3\u30D7\u3078")));
+}
+function GaveUpScreen({
+  finalRewardSummary,
+  handleRetry,
+  masuRegisterButtonNode,
+  resultActionPending,
+  returnToHome,
+  runMode,
+  runResultActionOnce,
+  score
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    className: "mh-game-over-screen fixed inset-0 flex flex-col items-center text-center",
+    style: {
+      position: 'fixed',
+      inset: 0,
+      zIndex: 80000,
+      backgroundColor: 'rgba(0,0,0,0.97)'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mh-game-over-head shrink-0 flex flex-col items-center"
+  }, /*#__PURE__*/React.createElement(Flag, {
+    size: 48,
+    className: "text-slate-400 mb-3"
+  }), /*#__PURE__*/React.createElement("h2", {
+    className: "text-2xl font-black italic text-white uppercase"
+  }, "\u30EA\u30BF\u30A4\u30A2"), !isQuickMode(runMode) && /*#__PURE__*/React.createElement("div", {
+    className: "bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 mt-3 w-full max-w-xs"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-3xl font-mono font-black text-white"
+  }, score.toLocaleString()))), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "m-auto w-full flex flex-col items-center"
+  }, masuRegisterButtonNode(), finalRewardSummary && /*#__PURE__*/React.createElement(RewardSummaryCard, {
+    summary: finalRewardSummary
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "w-full max-w-xs mx-auto mt-3 text-left"
+  }, /*#__PURE__*/React.createElement(AssistantBubble, {
+    scene: "resultRetire",
+    compact: true
+  })))), /*#__PURE__*/React.createElement("div", {
+    className: "mh-game-over-actions flex flex-col gap-3 w-full max-w-xs shrink-0 mt-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => runResultActionOnce(handleRetry),
+    disabled: resultActionPending,
+    className: "w-full bg-red-600 text-white py-4 rounded-2xl font-black text-lg uppercase shadow-2xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+  }, /*#__PURE__*/React.createElement(RotateCcw, {
+    size: 20
+  }), " ", resultActionPending ? '処理中…' : '再挑戦'), /*#__PURE__*/React.createElement("button", {
+    onClick: () => runResultActionOnce(returnToHome),
+    disabled: resultActionPending,
+    className: "w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase disabled:opacity-50 disabled:cursor-not-allowed"
+  }, "\u30C8\u30C3\u30D7\u3078")));
+}
+function MasuRegisterModal({
+  mainHero,
+  masuNameInput,
+  registerMasuMon,
+  setMasuNameInput,
+  setShowMasuRegisterModal
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    className: "fixed inset-0 flex items-center justify-center p-6",
+    style: {
+      position: 'fixed',
+      inset: 0,
+      backgroundColor: 'rgba(0,0,0,0.92)',
+      zIndex: 90000
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-slate-900 border-2 border-pink-500 rounded-3xl p-6 w-full max-w-sm flex flex-col gap-4 shadow-2xl"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-center"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-4xl mb-2"
+  }, "\uD83D\uDC3E"), /*#__PURE__*/React.createElement("h3", {
+    className: "text-lg font-black text-white"
+  }, "\u30DE\u30B9\u30E2\u30F3\u3068\u3057\u3066\u767B\u9332"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] text-slate-400 mt-1"
+  }, "\u540D\u524D\u3092\u4ED8\u3051\u3066\u4FDD\u5B58\u3059\u308B\u3068\u3001\u4ECA\u56DE\u5F97\u305F\u7D46\u30EC\u30D9\u30EB\u30FB\u5F37\u5316\u30DD\u30A4\u30F3\u30C8\u304C\u5F15\u304D\u7D99\u304C\u308C\u307E\u3059\u3002\u540C\u3058\u7A2E\u3067\u3082\u9055\u3046\u540D\u524D\u3067\u8907\u6570\u767B\u9332\u3067\u304D\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    value: masuNameInput,
+    onChange: e => setMasuNameInput(e.target.value.slice(0, 12)),
+    placeholder: mainHero?.name || '名前',
+    maxLength: 12,
+    className: "w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white text-center font-black focus:outline-none focus:border-pink-400"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setShowMasuRegisterModal(false),
+    className: "w-2/5 bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-xs uppercase active:scale-95"
+  }, "\u30AD\u30E3\u30F3\u30BB\u30EB"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      registerMasuMon(masuNameInput);
+      setShowMasuRegisterModal(false);
+    },
+    className: "w-3/5 bg-pink-600 text-white py-3 rounded-2xl font-black text-xs uppercase shadow-lg active:scale-95"
+  }, "\u767B\u9332\u3059\u308B"))));
+}
+
 // ---- part: 60-app.jsx ----
 function MonsterHeroGame() {
   const [gameState, setGameState] = useState('HOME');
@@ -54534,460 +55286,44 @@ function MonsterHeroGame() {
           backgroundColor: mode.color
         }
       }, "\u9589\u3058\u308B"))));
-    })(), gameState === 'UPGRADE_SKILL' && /*#__PURE__*/React.createElement("div", {
-      style: {
-        position: "absolute",
-        inset: 0,
-        backgroundColor: "#020617",
-        zIndex: 30000
-      },
-      className: "absolute inset-0 z-[3000] flex flex-col items-center justify-start p-4 pt-8 text-center overflow-hidden"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "mb-2 shrink-0"
-    }, /*#__PURE__*/React.createElement("h2", {
-      className: "text-xl font-black text-amber-400 italic uppercase"
-    }, "\u56FA\u6709\u6280\u306E\u5F37\u5316"), /*#__PURE__*/React.createElement("div", {
-      className: "text-[9px] text-slate-400 mt-1 uppercase tracking-widest flex items-center justify-center gap-2"
-    }, "Remaining Points: ", /*#__PURE__*/React.createElement("span", {
-      className: "text-white bg-amber-600 px-2 rounded-full font-mono"
-    }, upgradePoints))), (() => {
-      const gutsFull = guts >= effectiveMaxGuts;
-      const noPoint = upgradePoints < GUTS_RECOVERY_POINT_COST;
-      return /*#__PURE__*/React.createElement("div", {
-        "data-guts-recovery": true,
-        className: "w-full max-w-sm shrink-0 mb-2 rounded-2xl border border-amber-500/40 bg-amber-950/25 px-3 py-2 flex items-center gap-2"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex-1 min-w-0 text-left"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "block text-[8px] font-black tracking-widest text-amber-300/80 leading-none"
-      }, "\u73FE\u5728\u30AC\u30C3\u30C4"), /*#__PURE__*/React.createElement("span", {
-        className: "block font-mono font-black leading-tight"
-      }, /*#__PURE__*/React.createElement("b", {
-        className: gutsFull ? 'text-amber-300' : 'text-white',
-        style: {
-          fontSize: '17px'
-        }
-      }, guts), /*#__PURE__*/React.createElement("span", {
-        className: "text-slate-500",
-        style: {
-          fontSize: '12px'
-        }
-      }, " / ", effectiveMaxGuts))), /*#__PURE__*/React.createElement("button", {
-        type: "button",
-        "data-guts-recovery-button": true,
-        disabled: !canRecoverGutsWithPoint,
-        onClick: recoverGutsWithPoint,
-        "aria-label": `強化ポイント${GUTS_RECOVERY_POINT_COST}つでガッツを${GUTS_RECOVERY_AMOUNT}回復する`,
-        className: "shrink-0 min-h-[44px] px-3 rounded-xl bg-amber-600 text-white font-black leading-tight active:scale-95 disabled:opacity-30"
-      }, gutsFull ? /*#__PURE__*/React.createElement("span", {
-        className: "block",
-        style: {
-          fontSize: '13px'
-        }
-      }, "MAX") : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
-        className: "block",
-        style: {
-          fontSize: '12px'
-        }
-      }, GUTS_RECOVERY_POINT_COST, "P \u3067 +", GUTS_RECOVERY_AMOUNT), /*#__PURE__*/React.createElement("span", {
-        className: "block text-amber-100/90",
-        style: {
-          fontSize: '8px'
-        }
-      }, noPoint ? 'ポイント不足' : 'ガッツ回復'))));
-    })(), /*#__PURE__*/React.createElement("div", {
-      className: "w-full max-w-sm space-y-3 mb-2 min-h-0 overflow-y-auto mh-scroll flex-1 p-1 flex flex-col justify-start pt-2"
-    }, uniqueUpgradeEntries().map(e => uniqueUpgradeRow(e))), /*#__PURE__*/React.createElement("button", {
-      onClick: continueAfterUniqueUpgrade,
-      className: "w-full max-w-xs bg-white text-black py-3 rounded-2xl font-black uppercase shadow-lg active:scale-95 transition-transform mt-auto shrink-0"
-    }, "\u30D6\u30EA\u30FC\u30C0\u30FC\u7D99\u627F\u3078")), gameState === 'WAVE_RESULT' && waveResult &&
-    /*#__PURE__*/
-    /* 内訳が長くなると背の低い端末で「次のWAVEへ」が画面外に出る。justify-center は
-       あふれたぶんを上下へ均等にはみ出させるので、overflow-hidden と合わさると
-       スクロールもできず進行不能になっていた(320x568で実測)。
-       見出しと内訳を min-h-0 の入れ物にまとめ、あふれたときだけそこが縮んで
-       内側をスクロールさせる。ボタンは shrink-0 なので必ず画面内に残り、
-       収まっているときは今までどおり全体が中央に寄る */
-    React.createElement("div", {
-      style: {
-        position: "absolute",
-        inset: 0,
-        backgroundColor: "#020617",
-        zIndex: 30000
-      },
-      className: "absolute inset-0 z-[3000] flex flex-col items-center justify-center p-3 text-center overflow-hidden"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "w-full min-h-0 flex flex-col items-center overflow-y-auto mh-scroll"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "mb-2 shrink-0"
-    }, /*#__PURE__*/React.createElement(Trophy, {
-      className: "text-yellow-400 mx-auto mb-1",
-      size: 32
-    }), /*#__PURE__*/React.createElement("h2", {
-      className: "text-xl font-black italic uppercase tracking-tighter text-white"
-    }, "WAVE ", waveResult.wave, " \u30EA\u30B6\u30EB\u30C8")), /*#__PURE__*/React.createElement("div", {
-      className: "w-full max-w-sm bg-slate-900 border border-slate-800 rounded-2xl p-3 space-y-1.5 mb-3 shadow-2xl shrink-0"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "grid grid-cols-2 gap-1 rounded-xl bg-indigo-950/60 border border-indigo-400/20 px-2 py-1"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "text-[10px] font-black text-indigo-200"
-    }, "\u4ECA\u56DE\uFF1A", /*#__PURE__*/React.createElement("b", {
-      className: "font-mono text-sm text-white"
-    }, waveResult.turn), "\u30BF\u30FC\u30F3"), /*#__PURE__*/React.createElement("span", {
-      className: "text-[10px] font-black text-amber-200"
-    }, "\u7D2F\u8A08\uFF1A", /*#__PURE__*/React.createElement("b", {
-      className: "font-mono text-sm text-white"
-    }, waveResult.totalTurnCount), "\u30BF\u30FC\u30F3")), isQuickMode(runMode) && specialRuleDifficultyForRun(runMode, difficulty, extremeRun, extremeDifficulty) === ULTIMATE_SETTING.id && (() => {
-      const normalRate = quickGrowthRateForRun(runMode, 'Normal', waveResult.turn);
-      const effectiveRate = quickGrowthRateForRun(runMode, difficulty, waveResult.turn);
-      return /*#__PURE__*/React.createElement("div", {
-        "data-quick-ultimate-growth": true,
-        className: "rounded-lg border border-fuchsia-400/40 bg-purple-950/70 px-2 py-1 text-[9px] font-black text-purple-100"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-amber-300"
-      }, "\u81EA\u52D5\u6210\u9577"), "\u3000\u901A\u5E38 +", compactPercent(normalRate), " ", /*#__PURE__*/React.createElement("span", {
-        className: "text-slate-500"
-      }, "\u2192"), " \u4ECA\u56DE +", compactPercent(effectiveRate), /*#__PURE__*/React.createElement("span", {
-        className: "block text-[8px] text-purple-300"
-      }, "WAVE ", waveResult.turn, "T / ULTIMATE\u88DC\u6B63 -", compactPercent(normalRate - effectiveRate)));
-    })(), waveResult.pendingUltimateDistanceBreak && /*#__PURE__*/React.createElement("div", {
-      "data-ultimate-distance-break-warning": true,
-      className: "rounded-lg border border-red-400/60 bg-purple-950/80 px-2 py-1 text-[10px] font-black text-red-200"
-    }, "\u26A0 \u6B21WAVE\u3067\u8DDD\u96E2\u5F31\u4F53\u5316\u304C\u767A\u52D5"), /*#__PURE__*/React.createElement("div", {
-      className: "flex justify-between items-center border-b border-white/10 pb-0.5"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "text-slate-400 text-[11px] font-bold uppercase"
-    }, "WAVE \u4E0E\u30C0\u30E1\u30FC\u30B8"), /*#__PURE__*/React.createElement("span", {
-      className: "text-red-400 font-mono font-black text-base"
-    }, waveResult.totalDamage.toLocaleString())), waveResult.totalAllDamage != null && /*#__PURE__*/React.createElement("div", {
-      className: "flex justify-between items-center border-b border-white/10 pb-0.5"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "text-slate-400 text-[11px] font-bold uppercase"
-    }, "\u5168WAVE\u7D2F\u8A08\u30C0\u30E1\u30FC\u30B8"), /*#__PURE__*/React.createElement("span", {
-      className: "text-orange-400 font-mono font-black text-base"
-    }, waveResult.totalAllDamage.toLocaleString())), waveResult.distDamage && /*#__PURE__*/React.createElement("div", {
-      className: "border-b border-white/10 pb-1.5"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "text-cyan-400 font-black uppercase tracking-widest mb-1 text-left",
-      style: {
-        fontSize: '9px'
-      }
-    }, "\u8DDD\u96E2\u5225\u30C0\u30E1\u30FC\u30B8\uFF08\u5473\u65B9\u4F4D\u7F6E\uFF09& \u88DC\u6B63\u5024(\u6C38\u7D9A)"), /*#__PURE__*/React.createElement("div", {
-      className: "grid grid-cols-4 gap-1"
-    }, ['零', '近', '中', '遠'].map((lbl, i) => {
-      const dmg = waveResult.distDamage[i] || 0;
-      const cumDmg = waveResult.totalDistDamage?.[i] || 0;
-      const normalGained = (waveResult.normalGainedDistBonus?.[i] || 0) * 100;
-      const gained = (waveResult.gainedDistBonus?.[i] || 0) * 100;
-      const total = (waveResult.newDistBonus?.[i] || 0) * 100;
-      const mon = slots[i];
-      const aptPct = (distAptPct[i] || 0) * 100;
-      const combinedTotal = total + aptPct;
-      return /*#__PURE__*/React.createElement("div", {
-        key: i,
-        className: "bg-black/40 rounded-lg border border-white/5 flex flex-col items-center justify-center",
-        style: {
-          padding: '4px 2px',
-          gap: '2px'
-        }
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex items-center",
-        style: {
-          gap: '3px'
-        }
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "rounded-full bg-indigo-600/40 border border-indigo-400/50 flex items-center justify-center overflow-hidden shrink-0",
-        style: {
-          width: '26px',
-          height: '26px'
-        }
-      }, mon ? mon.imgUrl ? /*#__PURE__*/React.createElement("img", {
-        src: mon.imgUrl,
-        alt: "",
-        className: "w-full h-full object-contain"
-      }) : /*#__PURE__*/React.createElement("span", {
-        style: {
-          fontSize: '13px'
-        }
-      }, mon.emoji) : /*#__PURE__*/React.createElement("span", {
-        className: "text-slate-600",
-        style: {
-          fontSize: '9px'
-        }
-      }, "-")), /*#__PURE__*/React.createElement("div", {
-        className: "font-black text-slate-300",
-        style: {
-          fontSize: '10px'
-        }
-      }, lbl)), /*#__PURE__*/React.createElement("div", {
-        className: "font-mono font-black text-red-400 leading-none",
-        style: {
-          fontSize: '11px'
-        }
-      }, dmg.toLocaleString()), /*#__PURE__*/React.createElement("div", {
-        className: "text-orange-300/80 font-mono leading-none",
-        style: {
-          fontSize: '7px'
-        }
-      }, "\u7D2F\u8A08", cumDmg.toLocaleString()), /*#__PURE__*/React.createElement("div", {
-        className: "font-mono font-black text-cyan-300 leading-none",
-        style: {
-          fontSize: '9px'
-        }
-      }, "+", total.toFixed(1), "%"), gained > 0 && /*#__PURE__*/React.createElement("div", {
-        className: "text-emerald-400 font-mono leading-none",
-        style: {
-          fontSize: '7px'
-        }
-      }, normalGained !== gained ? `通常 +${normalGained.toFixed(1)} → 実際 +${gained.toFixed(1)}` : `(+${gained.toFixed(1)})`), mon && /*#__PURE__*/React.createElement("div", {
-        className: "text-indigo-300 font-mono font-black leading-none",
-        style: {
-          fontSize: '8px'
-        }
-      }, "\u9069\u6027\u8FBC\u5408\u8A08+", combinedTotal.toFixed(1), "%"));
-    }))), waveResult.recoveryDelta != null && /*#__PURE__*/React.createElement("div", {
-      className: "flex justify-between items-center border-b border-white/10 pb-0.5"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "text-slate-400 text-[11px] font-bold uppercase"
-    }, "\u81EA\u52D5\u56DE\u5FA9\u7387 \u88DC\u6B63"), /*#__PURE__*/React.createElement("span", {
-      className: "flex items-baseline gap-2"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: `font-mono font-black text-base ${waveResult.recoveryDelta >= 0 ? 'text-emerald-400' : 'text-red-400'}`
-    }, waveResult.baseRecoveryDelta !== waveResult.recoveryDelta && /*#__PURE__*/React.createElement(React.Fragment, null, "\u901A\u5E38 ", waveResult.baseRecoveryDelta >= 0 ? '+' : '', (waveResult.baseRecoveryDelta * 100).toFixed(1), "% \u2192 \u5B9F\u969B "), waveResult.recoveryDelta >= 0 ? '+' : '', (waveResult.recoveryDelta * 100).toFixed(1), "%"), /*#__PURE__*/React.createElement("span", {
-      className: "text-[8px] text-slate-500 font-mono"
-    }, "\u7D2F\u8A08 ", /*#__PURE__*/React.createElement("span", {
-      className: `${waveResult.totalRecoveryDelta >= 0 ? 'text-emerald-300' : 'text-red-300'}`
-    }, waveResult.totalRecoveryDelta >= 0 ? '+' : '', (waveResult.totalRecoveryDelta * 100).toFixed(1), "%")))), !isQuickMode(runMode) && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-      className: "flex justify-between items-center border-b border-white/10 pb-0.5"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "text-slate-400 text-[11px] font-bold uppercase"
-    }, "WAVE \u30DC\u30FC\u30CA\u30B9 (", waveResult.wave, " WAVE)"), /*#__PURE__*/React.createElement("span", {
-      className: "text-yellow-400 font-mono font-black text-base"
-    }, "x", waveResult.waveMult.toFixed(2))), /*#__PURE__*/React.createElement("div", {
-      className: "flex justify-between items-center border-b border-white/10 pb-0.5"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "text-slate-400 text-[11px] font-bold uppercase"
-    }, "\u6B8B\u308A\u30BF\u30FC\u30F3\u6570\u30DC\u30FC\u30CA\u30B9 (", waveResult.remainingTurns, ")"), /*#__PURE__*/React.createElement("span", {
-      className: "text-blue-400 font-mono font-black text-base"
-    }, "x", waveResult.turnMult.toFixed(2))), /*#__PURE__*/React.createElement("div", {
-      className: "pt-1 flex flex-col gap-0.5 text-right"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "text-[9px] text-slate-500 font-bold uppercase italic"
-    }, "\u96E3\u6613\u5EA6\u30DC\u30FC\u30CA\u30B9 (", extremeRun ? extremeDifficulty : difficulty, "): x", scoreMultiplier), /*#__PURE__*/React.createElement("div", {
-      className: "flex justify-between items-end"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "text-indigo-400 text-xs font-black uppercase"
-    }, "\u7372\u5F97\u30B9\u30B3\u30A2"), /*#__PURE__*/React.createElement("span", {
-      className: "text-white font-mono font-black text-xl"
-    }, waveResult.roundScore.toLocaleString()))), /*#__PURE__*/React.createElement("div", {
-      className: "pt-1 flex justify-between items-end border-t border-white/20"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "text-amber-500 text-[11px] font-black uppercase"
-    }, "\u7D2F\u8A08\u30B9\u30B3\u30A2"), /*#__PURE__*/React.createElement("span", {
-      className: "text-amber-400 font-mono font-black text-lg"
-    }, waveResult.totalScore.toLocaleString()))))), /*#__PURE__*/React.createElement("button", {
-      onClick: handleNextWave,
-      disabled: runFinalizing,
-      "aria-busy": runFinalizing,
-      className: `w-full max-w-xs py-3 rounded-2xl font-black text-lg uppercase shadow-[0_0_20px_rgba(255,255,255,0.3)] shrink-0${battleTutorialSpotClass('waveNext')} ${runFinalizing ? 'bg-slate-500 text-slate-300 cursor-not-allowed' : 'bg-white text-indigo-900 active:scale-95'}`
-    }, runFinalizing ? '処理中…' : /*#__PURE__*/React.createElement(React.Fragment, null, "\u6B21\u3078\u9032\u3080 ", /*#__PURE__*/React.createElement(ChevronRight, {
-      className: "inline",
-      size: 20
-    })))), gameState === 'REWARD_PICK' && (() => {
-      const specialRule = specialRuleDifficultyForRun(runMode, difficulty, extremeRun, extremeDifficulty);
-      const baseStats = {
-        atk,
-        def,
-        hp: maxHp,
-        guts: maxGuts
-      };
-      // いま選んでいるぶんまでを適用した値。次の1回はこの値からさらに伸びる
-      const current = resolveTrainingStats(baseStats, trainingPicks, waveResult?.turn, specialRule);
-      const remaining = TRAINING_PICK_COUNT - trainingPicks.length;
-      const ready = trainingPicks.length === TRAINING_PICK_COUNT;
-      const STYLES = {
-        hp: {
-          icon: /*#__PURE__*/React.createElement(Heart, {
-            size: 16
-          }),
-          ring: 'border-pink-400',
-          bg: 'bg-pink-900/40',
-          tint: 'text-pink-300',
-          chip: 'bg-pink-500'
-        },
-        atk: {
-          icon: /*#__PURE__*/React.createElement(Sword, {
-            size: 16
-          }),
-          ring: 'border-red-400',
-          bg: 'bg-red-900/40',
-          tint: 'text-red-300',
-          chip: 'bg-red-500'
-        },
-        def: {
-          icon: /*#__PURE__*/React.createElement(ShieldCheck, {
-            size: 16
-          }),
-          ring: 'border-emerald-400',
-          bg: 'bg-emerald-900/40',
-          tint: 'text-emerald-300',
-          chip: 'bg-emerald-500'
-        },
-        guts: {
-          icon: /*#__PURE__*/React.createElement(Sparkles, {
-            size: 16
-          }),
-          ring: 'border-amber-400',
-          bg: 'bg-amber-900/40',
-          tint: 'text-amber-300',
-          chip: 'bg-amber-500'
-        }
-      };
-      return /*#__PURE__*/React.createElement("div", {
-        style: {
-          position: "absolute",
-          inset: 0,
-          backgroundColor: "#020617",
-          zIndex: 30000
-        },
-        className: "absolute inset-0 z-[3000] flex flex-col items-center p-3 overflow-hidden",
-        "data-screen": "training"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 w-full max-w-sm",
-        style: {
-          paddingTop: 'calc(.25rem + env(safe-area-inset-top))'
-        }
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex items-center justify-center gap-2"
-      }, /*#__PURE__*/React.createElement(Trophy, {
-        className: "text-amber-400",
-        size: 22
-      }), /*#__PURE__*/React.createElement("h2", {
-        className: "text-xl font-black italic uppercase tracking-tighter text-white leading-none"
-      }, "\u30C8\u30EC\u30FC\u30CB\u30F3\u30B0")), /*#__PURE__*/React.createElement("div", {
-        className: "mt-1.5 flex items-center justify-center gap-2"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-[10px] font-black text-slate-300"
-      }, "4\u7A2E\u985E\u304B\u30892\u3064\u9078\u3076"), /*#__PURE__*/React.createElement("span", {
-        className: "flex items-center gap-1"
-      }, Array.from({
-        length: TRAINING_PICK_COUNT
-      }).map((_, i) => /*#__PURE__*/React.createElement("i", {
-        key: i,
-        className: `block rounded-full ${i < trainingPicks.length ? 'bg-amber-400' : 'bg-slate-700'}`,
-        style: {
-          width: '9px',
-          height: '9px'
-        }
-      }))), /*#__PURE__*/React.createElement("span", {
-        className: "text-[11px] font-black font-mono text-amber-300"
-      }, trainingPicks.length, " / ", TRAINING_PICK_COUNT)), extremeRuleNumber(specialRule, 'awakeningZeroTurns') != null && (() => {
-        const turns = waveResult?.turn || 0;
-        // 低下は増加量へ掛かるので、率から引いた「-○pt」ではなく倍率で出す
-        const gainRate = trainingGainRate(turns, specialRule);
-        return /*#__PURE__*/React.createElement("div", {
-          "data-ultimate-training-status": specialRule,
-          className: "mt-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-center text-[9px] font-black text-purple-100"
-        }, /*#__PURE__*/React.createElement("span", {
-          className: "text-amber-300"
-        }, specialRule, "\u88DC\u6B63"), "\u3000\u4ECA\u56DE", turns, "T \u2192 \u5F37\u5316\u91CF ", compactPercent(gainRate), "\uFF08-", compactPercent(1 - gainRate), "\uFF09");
-      })(), specialRule === 'NIGHTMARE' && /*#__PURE__*/React.createElement("div", {
-        "data-nightmare-training-status": true,
-        className: "mt-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-center text-[9px] font-black text-purple-100"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-amber-300"
-      }, "NIGHTMARE\u88DC\u6B63"), "\u3000\u5F37\u5316\u91CF ", specialRulePercent(extremeSpecialRule(specialRule, 'waveEnhancement')))), /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 w-full max-w-sm my-2 text-left"
-      }, /*#__PURE__*/React.createElement(AssistantBubble, {
-        scene: "rewardPick",
-        compact: true
-      })), /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 w-full max-w-sm rounded-2xl border border-white/10 bg-slate-900/60 px-2 py-1.5 mb-2",
-        "data-training-status": true
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "text-[8px] font-black tracking-widest text-slate-500 text-left mb-1"
-      }, "\u73FE\u5728\u306E\u30B9\u30C6\u30FC\u30BF\u30B9", trainingPicks.length > 0 && /*#__PURE__*/React.createElement("span", {
-        className: "text-amber-300"
-      }, "\uFF08\u9078\u629E\u4E2D\u306E\u5909\u5316\uFF09")), /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-4 gap-1"
-      }, TRAINING_OPTIONS.map(option => {
-        const st = STYLES[option.id] || STYLES.hp;
-        const beforeAll = baseStats[option.stat];
-        const afterAll = current[option.stat];
-        const diff = afterAll - beforeAll;
-        return /*#__PURE__*/React.createElement("div", {
-          key: option.id,
-          className: "rounded-lg bg-black/40 px-1 py-1 text-center"
-        }, /*#__PURE__*/React.createElement("span", {
-          className: "block text-[8px] font-black text-slate-500 leading-none"
-        }, option.statLabel), /*#__PURE__*/React.createElement("span", {
-          className: `block text-[13px] font-black font-mono leading-tight ${diff > 0 ? st.tint : 'text-slate-300'}`
-        }, afterAll), /*#__PURE__*/React.createElement("span", {
-          className: `block text-[8px] font-black font-mono leading-none ${diff > 0 ? 'text-emerald-400' : 'text-slate-700'}`
-        }, diff > 0 ? `+${diff}` : '±0'));
-      }))), /*#__PURE__*/React.createElement("div", {
-        className: `w-full max-w-sm grid grid-cols-2 grid-rows-2 gap-2 flex-1 min-h-0 overflow-y-auto mh-scroll${battleTutorialSpotClass('rewards')}`
-      }, TRAINING_OPTIONS.map(option => {
-        const count = trainingPicks.filter(id => id === option.id).length;
-        const st = STYLES[option.id] || STYLES.hp;
-        const before = current[option.stat];
-        const after = resolveTrainingStep(current, option.id, waveResult?.turn, specialRule)[option.stat];
-        const full = remaining <= 0;
-        return /*#__PURE__*/React.createElement("button", {
-          key: option.id,
-          type: "button",
-          disabled: full || !!effect,
-          onClick: () => setTrainingPicks(prev => prev.length >= TRAINING_PICK_COUNT ? prev : [...prev, option.id]),
-          "aria-label": `${option.name} ${option.effect}${count > 0 ? ` 選択中${count}回` : ''}`,
-          className: `relative min-h-[112px] rounded-2xl border-2 p-2.5 flex flex-col items-start justify-center gap-2 text-left transition-all active:scale-95 disabled:opacity-40 ${count > 0 ? `${st.bg} ${st.ring}` : 'bg-slate-900/60 border-slate-800'}`
-        }, count > 0 && /*#__PURE__*/React.createElement("span", {
-          className: `absolute top-1.5 right-1.5 ${st.chip} text-white text-[11px] font-black rounded-full px-2 py-0.5 shadow-lg`
-        }, "\xD7", count), /*#__PURE__*/React.createElement("span", {
-          className: `flex items-center gap-1.5 ${st.tint}`
-        }, cardIconNode(st.icon), /*#__PURE__*/React.createElement("b", {
-          className: "text-[13px] font-black text-white leading-none"
-        }, option.name)), /*#__PURE__*/React.createElement("span", {
-          className: `text-[10px] font-black ${st.tint} leading-tight`
-        }, option.effect, (extremeRuleNumber(specialRule, 'awakeningZeroTurns') != null || extremeRuleNumber(specialRule, 'waveEnhancement') != null) && (() => {
-          const normalAfter = resolveTrainingStep(current, option.id, waveResult?.turn, null)[option.stat];
-          const effectiveAfter = resolveTrainingStep(current, option.id, waveResult?.turn, specialRule)[option.stat];
-          const normalGain = normalAfter - current[option.stat],
-            effectiveGain = effectiveAfter - current[option.stat];
-          return /*#__PURE__*/React.createElement("span", {
-            className: "block text-purple-200"
-          }, "\u901A\u5E38 +", normalGain, " \u2192 \u5B9F\u969B +", effectiveGain);
-        })()), /*#__PURE__*/React.createElement("span", {
-          className: "w-full rounded-lg bg-black/40 px-1.5 py-1 font-mono leading-tight"
-        }, /*#__PURE__*/React.createElement("span", {
-          className: "block text-[8px] text-slate-500 font-black"
-        }, option.statLabel), /*#__PURE__*/React.createElement("span", {
-          className: "block text-[11px] font-black text-slate-300"
-        }, before, " ", /*#__PURE__*/React.createElement("span", {
-          className: "text-slate-600"
-        }, "\u2192"), " ", /*#__PURE__*/React.createElement("b", {
-          className: st.tint
-        }, after))));
-      })), /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 w-full max-w-sm mt-2 grid grid-cols-[auto_minmax(0,1fr)] gap-2",
-        style: {
-          paddingBottom: 'calc(.25rem + env(safe-area-inset-bottom))'
-        }
-      }, /*#__PURE__*/React.createElement("button", {
-        type: "button",
-        disabled: trainingPicks.length === 0 || !!effect,
-        onClick: () => setTrainingPicks([]),
-        className: "min-h-[52px] px-4 rounded-2xl font-black text-[11px] bg-slate-800 text-slate-300 active:scale-95 disabled:opacity-30"
-      }, "\u9078\u3073\u76F4\u3059"), /*#__PURE__*/React.createElement("button", {
-        type: "button",
-        disabled: !ready || !!effect,
-        onClick: () => {
-          const picks = trainingPicks;
-          setTrainingPicks([]);
-          handleTraining(picks);
-        },
-        className: `min-h-[52px] rounded-2xl font-black text-base uppercase shadow-lg active:scale-95 transition-all ${ready && !effect ? 'bg-white text-black shadow-[0_0_20px_rgba(255,255,255,0.3)]' : 'bg-slate-800 text-slate-600'}`
-      }, ready ? '決定する' : `あと${remaining}つ選ぶ`)));
-    })(), showHelp && (() => {
+    })(), gameState === 'UPGRADE_SKILL' && /*#__PURE__*/React.createElement(UpgradeSkillScreen, {
+      canRecoverGutsWithPoint: canRecoverGutsWithPoint,
+      continueAfterUniqueUpgrade: continueAfterUniqueUpgrade,
+      effectiveMaxGuts: effectiveMaxGuts,
+      guts: guts,
+      recoverGutsWithPoint: recoverGutsWithPoint,
+      uniqueUpgradeEntries: uniqueUpgradeEntries,
+      uniqueUpgradeRow: uniqueUpgradeRow,
+      upgradePoints: upgradePoints
+    }), gameState === 'WAVE_RESULT' && waveResult && /*#__PURE__*/React.createElement(WaveResultScreen, {
+      battleTutorialSpotClass: battleTutorialSpotClass,
+      difficulty: difficulty,
+      distAptPct: distAptPct,
+      extremeDifficulty: extremeDifficulty,
+      extremeRun: extremeRun,
+      handleNextWave: handleNextWave,
+      runFinalizing: runFinalizing,
+      runMode: runMode,
+      scoreMultiplier: scoreMultiplier,
+      slots: slots,
+      waveResult: waveResult
+    }), gameState === 'REWARD_PICK' && /*#__PURE__*/React.createElement(RewardPickScreen, {
+      atk: atk,
+      battleTutorialSpotClass: battleTutorialSpotClass,
+      def: def,
+      difficulty: difficulty,
+      effect: effect,
+      extremeDifficulty: extremeDifficulty,
+      extremeRun: extremeRun,
+      guts: guts,
+      handleTraining: handleTraining,
+      maxGuts: maxGuts,
+      maxHp: maxHp,
+      runMode: runMode,
+      setTrainingPicks: setTrainingPicks,
+      trainingPicks: trainingPicks,
+      waveResult: waveResult
+    }), showHelp && (() => {
       const cat = helpCatId ? helpCategoryById(helpCatId) : null;
       const topic = cat && helpTopicId ? helpTopicById(cat.id, helpTopicId) : null;
       const accent = cat ? cat.color : '#34d399';
@@ -56214,189 +56550,51 @@ function MonsterHeroGame() {
       }),
       disabled: resultActionPending,
       className: "w-full bg-slate-900 border border-white/10 text-slate-400 py-3.5 rounded-2xl font-black disabled:opacity-50"
-    }, "\u30D8\u30EB\u30D7\u3078\u623B\u308B")))), gameState === 'CHAMPION' && /*#__PURE__*/React.createElement("div", {
-      className: "fixed inset-0 flex flex-col items-center p-6 text-center",
-      style: {
-        position: 'fixed',
-        inset: 0,
-        zIndex: 80000,
-        background: 'linear-gradient(to bottom right,#fbbf24,#78350f)'
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "shrink-0 flex flex-col items-center"
-    }, /*#__PURE__*/React.createElement(Crown, {
-      size: 64,
-      className: "text-white animate-bounce mb-3"
-    }), /*#__PURE__*/React.createElement("h1", {
-      className: "text-3xl font-black italic text-white uppercase"
-    }, "CHAMPION"), !isQuickMode(runMode) && /*#__PURE__*/React.createElement("div", {
-      className: "w-full max-w-xs bg-black/40 border border-white/20 rounded-3xl p-6 mb-3 mt-3 shadow-2xl"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "text-5xl font-mono font-black text-white"
-    }, score.toLocaleString()))), /*#__PURE__*/React.createElement("div", {
-      className: "flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "m-auto w-full flex flex-col items-center"
-    }, masuRegisterButtonNode(), speciesChallengeClearCardNode(), finalRewardSummary && /*#__PURE__*/React.createElement(RewardSummaryCard, {
-      key: resultProcessing ? 'locked' : 'ready',
-      summary: finalRewardSummary,
-      onPresentationComplete: resultProcessing ? undefined : () => setChampionPresentationComplete(true)
-    }), /*#__PURE__*/React.createElement("div", {
-      className: "w-full max-w-xs mx-auto mt-3 text-left"
-    }, /*#__PURE__*/React.createElement(AssistantBubble, {
-      scene: "resultWin",
-      condition: runHighlights.firstWin ? 'firstWin' : runHighlights.newRecord ? 'newRecord' : runHighlights.firstClear ? 'firstClear' : null,
-      compact: true
-    })))), isQuickMode(runMode) && autoRepeat && /*#__PURE__*/React.createElement("div", {
-      className: "grid grid-cols-2 gap-2 w-full max-w-xs mt-2"
-    }, /*#__PURE__*/React.createElement("button", {
-      onClick: () => setAutoRepeatEnabled(false),
-      className: "min-h-[40px] rounded-xl bg-fuchsia-950/70 border border-fuchsia-300 text-fuchsia-100 text-xs font-black"
-    }, "\u221E\u5468\u56DE OFF"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => setAutoBattleEnabled(false),
-      className: "min-h-[40px] rounded-xl bg-slate-900/70 border border-white/30 text-white text-xs font-black"
-    }, "AUTO OFF")), speciesChallengeBattleRun && /*#__PURE__*/React.createElement("button", {
-      "data-species-champion-back": true,
-      onClick: () => {
-        const keepSaving = speciesChallengeSaveRunRef.current;
-        const keepDebug = speciesChallengeFromDebugRef.current;
-        runResultActionOnce(() => {
-          returnToHome();
-          openSpeciesChallengeSelection({
-            saveProgress: keepSaving,
-            fromDebug: keepDebug
-          });
-        });
-      },
-      disabled: resultActionPending,
-      className: "w-full max-w-xs bg-cyan-700 text-white py-3.5 rounded-2xl font-black shrink-0 mt-2 disabled:opacity-50"
-    }, "\u7A2E\u65CF\u30C1\u30E3\u30EC\u30F3\u30B8\u9078\u629E\u3078\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => runResultActionOnce(returnToHome),
-      disabled: resultActionPending,
-      "aria-busy": resultActionPending,
-      className: "w-full max-w-xs bg-white text-amber-900 py-4 rounded-3xl font-black text-xl uppercase shadow-2xl active:scale-95 transition-transform shrink-0 mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
-    }, resultActionPending ? '処理中…' : 'HOMEへ')), hp <= 0 && !debugBattle && !rhythmScreenOpen && /*#__PURE__*/React.createElement("div", {
-      className: "mh-game-over-screen fixed inset-0 flex flex-col items-center text-center",
-      style: {
-        position: 'fixed',
-        inset: 0,
-        zIndex: 80000,
-        backgroundColor: 'rgba(0,0,0,0.97)'
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "mh-game-over-head shrink-0 flex flex-col items-center"
-    }, /*#__PURE__*/React.createElement(Skull, {
-      size: 48,
-      className: "text-red-700 mb-3 animate-pulse"
-    }), /*#__PURE__*/React.createElement("h2", {
-      className: "text-2xl font-black italic text-white uppercase"
-    }, "\u6557 \u5317"), !isQuickMode(runMode) && /*#__PURE__*/React.createElement("div", {
-      className: "bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 mt-3 w-full max-w-xs"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "text-3xl font-mono font-black text-white"
-    }, score.toLocaleString()))), /*#__PURE__*/React.createElement("div", {
-      className: "flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "m-auto w-full flex flex-col items-center"
-    }, masuRegisterButtonNode(), finalRewardSummary && /*#__PURE__*/React.createElement(RewardSummaryCard, {
-      summary: finalRewardSummary
-    }), /*#__PURE__*/React.createElement("div", {
-      className: "w-full max-w-xs mx-auto mt-3 text-left"
-    }, /*#__PURE__*/React.createElement(AssistantBubble, {
-      scene: "resultLose",
-      condition: runHighlights.firstLose ? 'firstLose' : null,
-      compact: true
-    })))), /*#__PURE__*/React.createElement("div", {
-      className: "mh-game-over-actions flex flex-col gap-3 w-full max-w-xs shrink-0 mt-2"
-    }, /*#__PURE__*/React.createElement("button", {
-      onClick: () => runResultActionOnce(handleRetry),
-      disabled: resultActionPending,
-      className: "w-full bg-red-600 text-white py-4 rounded-2xl font-black text-lg uppercase shadow-2xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-    }, /*#__PURE__*/React.createElement(RotateCcw, {
-      size: 20
-    }), " ", resultActionPending ? '処理中…' : '再挑戦'), /*#__PURE__*/React.createElement("button", {
-      onClick: () => runResultActionOnce(returnToHome),
-      disabled: resultActionPending,
-      className: "w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase disabled:opacity-50 disabled:cursor-not-allowed"
-    }, "\u30C8\u30C3\u30D7\u3078"))), gaveUp && !debugBattle && !rhythmScreenOpen && /*#__PURE__*/React.createElement("div", {
-      className: "mh-game-over-screen fixed inset-0 flex flex-col items-center text-center",
-      style: {
-        position: 'fixed',
-        inset: 0,
-        zIndex: 80000,
-        backgroundColor: 'rgba(0,0,0,0.97)'
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "mh-game-over-head shrink-0 flex flex-col items-center"
-    }, /*#__PURE__*/React.createElement(Flag, {
-      size: 48,
-      className: "text-slate-400 mb-3"
-    }), /*#__PURE__*/React.createElement("h2", {
-      className: "text-2xl font-black italic text-white uppercase"
-    }, "\u30EA\u30BF\u30A4\u30A2"), !isQuickMode(runMode) && /*#__PURE__*/React.createElement("div", {
-      className: "bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 mt-3 w-full max-w-xs"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "text-3xl font-mono font-black text-white"
-    }, score.toLocaleString()))), /*#__PURE__*/React.createElement("div", {
-      className: "flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "m-auto w-full flex flex-col items-center"
-    }, masuRegisterButtonNode(), finalRewardSummary && /*#__PURE__*/React.createElement(RewardSummaryCard, {
-      summary: finalRewardSummary
-    }), /*#__PURE__*/React.createElement("div", {
-      className: "w-full max-w-xs mx-auto mt-3 text-left"
-    }, /*#__PURE__*/React.createElement(AssistantBubble, {
-      scene: "resultRetire",
-      compact: true
-    })))), /*#__PURE__*/React.createElement("div", {
-      className: "mh-game-over-actions flex flex-col gap-3 w-full max-w-xs shrink-0 mt-2"
-    }, /*#__PURE__*/React.createElement("button", {
-      onClick: () => runResultActionOnce(handleRetry),
-      disabled: resultActionPending,
-      className: "w-full bg-red-600 text-white py-4 rounded-2xl font-black text-lg uppercase shadow-2xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-    }, /*#__PURE__*/React.createElement(RotateCcw, {
-      size: 20
-    }), " ", resultActionPending ? '処理中…' : '再挑戦'), /*#__PURE__*/React.createElement("button", {
-      onClick: () => runResultActionOnce(returnToHome),
-      disabled: resultActionPending,
-      className: "w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase disabled:opacity-50 disabled:cursor-not-allowed"
-    }, "\u30C8\u30C3\u30D7\u3078"))), showMasuRegisterModal && /*#__PURE__*/React.createElement("div", {
-      className: "fixed inset-0 flex items-center justify-center p-6",
-      style: {
-        position: 'fixed',
-        inset: 0,
-        backgroundColor: 'rgba(0,0,0,0.92)',
-        zIndex: 90000
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "bg-slate-900 border-2 border-pink-500 rounded-3xl p-6 w-full max-w-sm flex flex-col gap-4 shadow-2xl"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "text-center"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "text-4xl mb-2"
-    }, "\uD83D\uDC3E"), /*#__PURE__*/React.createElement("h3", {
-      className: "text-lg font-black text-white"
-    }, "\u30DE\u30B9\u30E2\u30F3\u3068\u3057\u3066\u767B\u9332"), /*#__PURE__*/React.createElement("div", {
-      className: "text-[10px] text-slate-400 mt-1"
-    }, "\u540D\u524D\u3092\u4ED8\u3051\u3066\u4FDD\u5B58\u3059\u308B\u3068\u3001\u4ECA\u56DE\u5F97\u305F\u7D46\u30EC\u30D9\u30EB\u30FB\u5F37\u5316\u30DD\u30A4\u30F3\u30C8\u304C\u5F15\u304D\u7D99\u304C\u308C\u307E\u3059\u3002\u540C\u3058\u7A2E\u3067\u3082\u9055\u3046\u540D\u524D\u3067\u8907\u6570\u767B\u9332\u3067\u304D\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("input", {
-      type: "text",
-      value: masuNameInput,
-      onChange: e => setMasuNameInput(e.target.value.slice(0, 12)),
-      placeholder: mainHero?.name || '名前',
-      maxLength: 12,
-      className: "w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white text-center font-black focus:outline-none focus:border-pink-400"
-    }), /*#__PURE__*/React.createElement("div", {
-      className: "flex gap-2"
-    }, /*#__PURE__*/React.createElement("button", {
-      onClick: () => setShowMasuRegisterModal(false),
-      className: "w-2/5 bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-xs uppercase active:scale-95"
-    }, "\u30AD\u30E3\u30F3\u30BB\u30EB"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => {
-        registerMasuMon(masuNameInput);
-        setShowMasuRegisterModal(false);
-      },
-      className: "w-3/5 bg-pink-600 text-white py-3 rounded-2xl font-black text-xs uppercase shadow-lg active:scale-95"
-    }, "\u767B\u9332\u3059\u308B")))), effect && !rhythmScreenOpen && /*#__PURE__*/React.createElement("div", {
+    }, "\u30D8\u30EB\u30D7\u3078\u623B\u308B")))), gameState === 'CHAMPION' && /*#__PURE__*/React.createElement(ChampionScreen, {
+      autoRepeat: autoRepeat,
+      finalRewardSummary: finalRewardSummary,
+      masuRegisterButtonNode: masuRegisterButtonNode,
+      openSpeciesChallengeSelection: openSpeciesChallengeSelection,
+      resultActionPending: resultActionPending,
+      resultProcessing: resultProcessing,
+      returnToHome: returnToHome,
+      runHighlights: runHighlights,
+      runMode: runMode,
+      runResultActionOnce: runResultActionOnce,
+      score: score,
+      setAutoBattleEnabled: setAutoBattleEnabled,
+      setAutoRepeatEnabled: setAutoRepeatEnabled,
+      setChampionPresentationComplete: setChampionPresentationComplete,
+      speciesChallengeBattleRun: speciesChallengeBattleRun,
+      speciesChallengeClearCardNode: speciesChallengeClearCardNode,
+      speciesChallengeFromDebugRef: speciesChallengeFromDebugRef,
+      speciesChallengeSaveRunRef: speciesChallengeSaveRunRef
+    }), hp <= 0 && !debugBattle && !rhythmScreenOpen && /*#__PURE__*/React.createElement(GameOverScreen, {
+      finalRewardSummary: finalRewardSummary,
+      handleRetry: handleRetry,
+      masuRegisterButtonNode: masuRegisterButtonNode,
+      resultActionPending: resultActionPending,
+      returnToHome: returnToHome,
+      runHighlights: runHighlights,
+      runMode: runMode,
+      runResultActionOnce: runResultActionOnce,
+      score: score
+    }), gaveUp && !debugBattle && !rhythmScreenOpen && /*#__PURE__*/React.createElement(GaveUpScreen, {
+      finalRewardSummary: finalRewardSummary,
+      handleRetry: handleRetry,
+      masuRegisterButtonNode: masuRegisterButtonNode,
+      resultActionPending: resultActionPending,
+      returnToHome: returnToHome,
+      runMode: runMode,
+      runResultActionOnce: runResultActionOnce,
+      score: score
+    }), showMasuRegisterModal && /*#__PURE__*/React.createElement(MasuRegisterModal, {
+      mainHero: mainHero,
+      masuNameInput: masuNameInput,
+      registerMasuMon: registerMasuMon,
+      setMasuNameInput: setMasuNameInput,
+      setShowMasuRegisterModal: setShowMasuRegisterModal
+    }), effect && !rhythmScreenOpen && /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 z-[70000] flex flex-col items-center justify-center pointer-events-none text-center p-8 overflow-hidden",
       style: {
         position: 'fixed',
