@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6f1028f92b6fbd4e
+// source-sha256: 406295364a40d1ac
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 78ad6864516a42c5
+// generated-sha256: 3a6a8efaec989652
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-12 07:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-12 07:56"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -37851,7 +37851,7 @@ function MonsterHeroGame() {
   const quickRunFinishReasonText = reason => ({
     defeat: '負けたので周回が終わりました（ここまでのぶんは入ります）',
     retire: '途中でやめたので周回が終わりました（ここまでのぶんは入ります）',
-    hidden: 'アプリが裏に回ったので周回が止まりました',
+    hidden: 'アプリが裏に回ったので周回が止まりました（ふだんは戻ると自動で続きます）',
     manual: 'AUTO∞を切ったので周回が終わりました',
     error: '続けられなくなったので周回が止まりました'
   })[String(reason || '')] || '周回が終わりました';
@@ -38845,6 +38845,9 @@ function MonsterHeroGame() {
     setBootPhase('GAME');
   };
 
+  // アプリに戻ったときの「止まっていた∞周回の続き」。中身は下で組み立てて毎レンダー入れ直す
+  // (下の effect は1度しか作られないため、そこへ直接書くと古い state を掴んだままになる)
+  const resumeAutoAfterVisibleRef = useRef(null);
   // タブ切り替え/バックグラウンド化から復帰した際、OSにより自動停止されたAudioContextと
   // BGMのTransportを復帰させる(そのままだとBGM/SEが鳴らなくなったままになる不具合の対策)。
   // visibilitychangeだけだと、PWAをホーム画面から開き直した場合やアプリ切り替えで
@@ -38856,9 +38859,15 @@ function MonsterHeroGame() {
       Audio_.setPageHidden(true);
       stopAllAuto('hidden');
     };
+    // ★戻ってきたら、裏に回ったせいで止まっていた∞周回を自動で続ける
+    //   (2026-09-11・ユーザー指示「アプリに戻ったら自動で開始するようにしてほしい /
+    //    ただし負けたときは自動では開始しない / モンビー中もおなじ」)。
+    //   この effect は1度しか作られないので、判定の中身は毎レンダー入れ直した ref から呼ぶ
+    //   (ここで state を直接読むと、起動直後の古い値をずっと見ることになる)。
     const onVisible = () => {
       Audio_.setPageHidden(false);
       Audio_.resumeIfNeeded();
+      if (resumeAutoAfterVisibleRef.current) resumeAutoAfterVisibleRef.current();
     };
     const onVisibilityChange = () => document.visibilityState === 'hidden' ? onHidden() : onVisible();
     // ★blur / pagehide は「本当に裏へ回った」以外でも飛ぶ。
@@ -46213,6 +46222,28 @@ function MonsterHeroGame() {
     });else beginQuickRunProgress();
     return true;
   };
+  // ===== アプリに戻ったら、裏に回って止まっていた∞周回を自動で続ける =====
+  // (2026-09-11・ユーザー指示「オート周回中、アプリが裏に回ると止まるようにしてるけど
+  //  アプリに戻ったら自動で開始するようにしてほしい / ただし負けたときは自動では開始しない /
+  //  モンビー中もおなじ」)。
+  //
+  // ★続けるのは「アプリが裏に回ったから止まった」ぶんだけ(reason==='hidden')。
+  //   負けた('defeat')・諦めた('retire')・自分でAUTOを切った('manual')・
+  //   続けられなくなった('error')は、戻ってきても自動では始めない。
+  //   「負けたときは自動で始めない」は resumeQuickRunFromRhythm の中でも
+  //   runResultFinishedRef で二重に守っている(理由の取り違えで動きださないように)。
+  // ★モンビーを開いていても同じように続く。resumeQuickRunFromRhythm は画面を動かさないので、
+  //   バトル画面・曲えらび・演奏中のどこにいても呼べる(演奏中は進行そのものが止まったままで、
+  //   曲が終われば今までどおり進みはじめる)。
+  const resumeQuickRunAfterVisible = () => {
+    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return false;
+    const progress = quickRunProgressRef.current;
+    if (!progress || !progress.finished) return false; // 止まっていない(続ける必要がない)
+    if (progress.reason !== 'hidden') return false; // 裏に回った以外の理由で止まっている
+    return resumeQuickRunFromRhythm();
+  };
+  // 上の visibilitychange の effect から呼べるように、毎レンダー最新の関数を入れ直す
+  resumeAutoAfterVisibleRef.current = resumeQuickRunAfterVisible;
   // ===== モンヒロビートを開いたら自動で∞周回を始める =====
   // (2026-09-11・ユーザー指示「オート設定にモンビー中のオート周回を設定している場合に
   //  モンビーを開いたら自動でクイックに入る機能を追加したい /
