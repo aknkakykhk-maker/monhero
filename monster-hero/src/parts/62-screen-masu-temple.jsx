@@ -282,7 +282,25 @@ function MasuReincarnateAnimation({
   reincarnateAnimation,
 }) {
   return (
-<div className="mh-reincarnation-animation" role="status" aria-live="polite"><div className="mh-reincarnation-light"></div><div className="mh-reincarnation-mon mh-reincarnate-stack"><DyedMonsterImage baseId={reincarnateAnimation.masu.baseId} src={reincarnateAnimation.base?.iconUrl||reincarnateAnimation.base?.imgUrl} alt={reincarnateAnimation.masu.name} masuColors={getMasuColors(reincarnateAnimation.masu)} className="w-full h-full object-contain"/><SoulRankAura soulRankStage={normalizeMasuProgression(reincarnateAnimation.masu).soulRankStage} className="is-ceremony"/><RebirthStars count={reincarnateAnimation.masu.rebirthCount} className="mh-rebirth-stars-overlay"/></div><div className="mh-reincarnation-copy"><b>転生完了！</b><span>Lv.{reincarnateAnimation.fromLevel} → Lv.{reincarnateAnimation.nextLevel}</span><span>{reincarnateAnimation.raisesSkill===false?`固有技ポイント +1（所持 ${reincarnateAnimation.keptSkillPoints}）`:`${reincarnateAnimation.skillName} Lv.${reincarnateAnimation.skillLevel}へ進化`}</span><span>強化ポイント {reincarnateAnimation.nextPoints} を振り直せます</span></div></div>
+<div className="mh-reincarnation-animation" role="status" aria-live="polite">
+      {/* 層の順番はCSSのz-indexで決めている(放射光0 → 本体1 → 粒2 → 輪3 → 閃光5 → 文字6)。
+          魂格オーラは魂格を持つ個体にしか出ないので、ここに並ぶ層だけで演出が成立するようにしてある */}
+      <div className="mh-reincarnation-light"></div>
+      <div className="mh-reincarnation-rays" aria-hidden="true"></div>
+      <div className="mh-reincarnation-mon mh-reincarnate-stack"><DyedMonsterImage baseId={reincarnateAnimation.masu.baseId} src={reincarnateAnimation.base?.iconUrl||reincarnateAnimation.base?.imgUrl} alt={reincarnateAnimation.masu.name} masuColors={getMasuColors(reincarnateAnimation.masu)} className="w-full h-full object-contain"/><SoulRankAura soulRankStage={normalizeMasuProgression(reincarnateAnimation.masu).soulRankStage} className="is-ceremony"/><RebirthStars count={reincarnateAnimation.masu.rebirthCount} className="mh-rebirth-stars-overlay"/></div>
+      {/* ① ほどけた魂が上へ昇る。--x は左右のばらけ方 */}
+      <div className="mh-reincarnation-souls" aria-hidden="true">{[-30,16,-8,34,-38,6,24,-18,40,-12,28,-24].map((x,i)=><i key={i} style={{'--i':i,'--x':x}}/>)}</div>
+      {/* ② 外周から中央へ集まる光 */}
+      <div className="mh-reincarnation-converge" aria-hidden="true">{Array.from({length:8},(_,i)=><i key={i} style={{'--i':i}}/>)}</div>
+      <div className="mh-reincarnation-halo" aria-hidden="true"></div>
+      <div className="mh-reincarnation-halo is-second" aria-hidden="true"></div>
+      <div className="mh-reincarnation-flash" aria-hidden="true"></div>
+      <div className="mh-reincarnation-title" aria-hidden="true">転　生</div>
+      {/* 何回目の転生かをその場で出す。一覧・詳細と同じバッジを大きくしただけなので、
+          あとから見返したときに同じ印で結び付く */}
+      <div className="mh-reincarnation-mark"><ReincarnateBadge count={normalizeMasuProgression(reincarnateAnimation.masu).reincarnateCount}/></div>
+      <div className="mh-reincarnation-copy"><b>転生完了！</b><span>Lv.{reincarnateAnimation.fromLevel} → Lv.{reincarnateAnimation.nextLevel}</span><span>{reincarnateAnimation.raisesSkill===false?`固有技ポイント +1（所持 ${reincarnateAnimation.keptSkillPoints}）`:`${reincarnateAnimation.skillName} Lv.${reincarnateAnimation.skillLevel}へ進化`}</span><span>強化ポイント {reincarnateAnimation.nextPoints} を振り直せます</span></div>
+    </div>
   );
 }
 
