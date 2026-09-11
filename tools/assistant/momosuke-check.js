@@ -53,7 +53,9 @@ for (const kind of [['立ち絵', A.assistantFullImage], ['顔アイコン', A.a
   check(`${kind[0]}が8表情ぶんそろっている`, missing.length === 0, missing.length ? `無い: ${missing.join(',')}` : '8枚');
 }
 check('表情ごとに別の画像を使っている（使い回しでごまかしていない）', (() => {
-  const seen = new Set(A.ASSISTANT_EXPRESSIONS.map(e => fs.readFileSync(path.join(web, A.assistantFaceImage(momo, e))).toString('base64').slice(0, 64)));
+  // 先頭64文字だけだとPNGのヘッダ+IHDR+パレットの頭しか見えず、同じ大きさの絵どうしが
+  // ぶつかる(wink/surprise/troubledが同じ扱いになっていた)。中身ぜんぶで見比べる。
+  const seen = new Set(A.ASSISTANT_EXPRESSIONS.map(e => fs.readFileSync(path.join(web, A.assistantFaceImage(momo, e))).toString('base64')));
   return seen.size === 8;
 })());
 
@@ -161,8 +163,12 @@ check('既存プレイヤーには1回だけ流す（新規には流さない）
 check('ききの会話と同時に出さない（きき→ももの順）',
   gameSrc.includes('kikiIntroStep==null&&momosukeIntroStep!=null'));
 check('チュートリアル中にも出さない', gameSrc.includes('tutorialStep==null&&kikiIntroStep==null&&momosukeIntroStep!=null'));
+// ★行を丸ごと突き合わせると、あいだに条件が1つ足されただけで空振りする
+// (2026-09-11 に !eventReplay / !rhythmEventStoryPending が足されて実際にそうなった)。
+// 見たいのは「チュートリアル・きき・ももすけの3つが片付いてから出す」ことだけなので、
+// あいだに条件が挟まっても拾える形にする(ききの検査と同じ)
 check('アップデート通知と重ならない',
-  gameSrc.includes("tutorialStep==null&&kikiIntroStep==null&&momosukeIntroStep==null&&updateGuideQueue.length>0"));
+  /tutorialStep==null&&kikiIntroStep==null&&momosukeIntroStep==null&&[A-Za-z=&!]*updateGuideQueue\.length>0/.test(gameSrc));
 check('見終わったときの処理が1か所にまとまっている',
   (gameSrc.match(/const markMomosukeIntroSeen = useCallback/g) || []).length === 1);
 check('回想を先に見ても解放される', gameSrc.includes("if(event&&event.id==='momosuke_intro') markMomosukeIntroSeen();"));
