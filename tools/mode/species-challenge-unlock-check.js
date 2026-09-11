@@ -70,8 +70,10 @@ check('解放前はランキングの導線も押せない',
 
 // ===== ② 公開フラグ1つで、ヘルプ・更新履歴・告知がそろって出る =====
 check('公開フラグはtrue(公開済み)', /const SPECIES_CHALLENGE_PUBLIC_RELEASE = true;/.test(source));
+// RELEASE_FLAGS には他の機能(モンヒロビートなど)の公開フラグも並ぶので、行を丸ごと写さず
+// 「speciesChallenge がこの入れ物にある」ことだけを見る
 check('出す・出さないの判断を1か所へまとめてある',
-  source.includes('const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE };')
+  /const RELEASE_FLAGS = \{[^}]*\bspeciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE\s*[,}]/.test(source)
     && source.includes('const releasedForPlayers = (item) =>'));
 check('ヘルプの項目は公開まで一覧に出さない',
   helpSrc.includes("id: 'species-challenge'") && helpSrc.includes("releaseFlag: 'speciesChallenge'")
@@ -86,7 +88,8 @@ check('一覧やもらえる数はヘルプへ手で書き写さない',
     && source.includes("case 'speciesChallengeRewards':") && source.includes("case 'speciesChallengeLineages':"));
 check('更新履歴も公開まで出さない',
   changelogSrc.includes("title: '種族チャレンジを追加しました'") && changelogSrc.includes("releaseFlag: 'speciesChallenge'")
-    && source.includes('(typeof CHANGELOG !== \'undefined\' ? CHANGELOG : []).filter(releasedForPlayers)'));
+    && source.includes('const CHANGELOG_ENTRIES = (typeof CHANGELOG !== \'undefined\' ? CHANGELOG : []).filter(entry => changelogForPlayers(entry, CHANGELOG_READ_AT_MS))')
+    && source.includes('const changelogForPlayers = (entry, nowMs) => !!entry && entry.dev !== true && releasedForPlayers(entry)'));
 check('更新履歴から作る助手の告知も公開まで出さない',
   changelogSrc.includes("assistantNotice: { id: 'update_notice_species_challenge_v1', type: 'mode' }")
     && source.includes('const HIDDEN_UPDATE_NOTICE_IDS = new Set(')
@@ -100,10 +103,14 @@ check('解放の案内は既存の既読キーへ記録する(新しい保存キ
 
 // 実際に絞り込みを動かして、falseなら消え・trueなら出ることを確かめる
 const releaseSrc = source.slice(source.indexOf('const RELEASE_FLAGS = {'), source.indexOf('const CHANGELOG_TYPES = ['));
+// RELEASE_FLAGS は他の機能の公開フラグも見るので、実装側の宣言をまとめて持ち込む
+// (種族チャレンジのぶんだけ、このあとで false / true へ上書きする)
+const releaseFlagDecls = (source.match(/^const \w+_PUBLIC_RELEASE = (?:true|false);$/gm) || [])
+  .map(line => line.replace(/^const /, 'var ')).join('\n');
 const filterCtx = { console };
 vm.createContext(filterCtx);
 vm.runInContext(
-  `${helpSrc}\n${changelogSrc}\nvar SPECIES_CHALLENGE_PUBLIC_RELEASE=false;\n${releaseSrc}\n`
+  `${helpSrc}\n${changelogSrc}\n${releaseFlagDecls}\nvar SPECIES_CHALLENGE_PUBLIC_RELEASE=false;\n${releaseSrc}\n`
   + 'globalThis.api={releasedForPlayers,HELP_CATEGORIES,CHANGELOG};', filterCtx);
 const { releasedForPlayers, HELP_CATEGORIES, CHANGELOG } = filterCtx.api;
 const speciesTopics = HELP_CATEGORIES.flatMap(c => (c.topics || []).filter(t => t.releaseFlag === 'speciesChallenge'));
@@ -119,7 +126,7 @@ check('名札の無い項目はいままでどおり出る',
 const openCtx = { console };
 vm.createContext(openCtx);
 vm.runInContext(
-  `${helpSrc}\n${changelogSrc}\nvar SPECIES_CHALLENGE_PUBLIC_RELEASE=true;\n${releaseSrc}\n`
+  `${helpSrc}\n${changelogSrc}\n${releaseFlagDecls}\nvar SPECIES_CHALLENGE_PUBLIC_RELEASE=true;\n${releaseSrc}\n`
   + 'globalThis.api={releasedForPlayers};', openCtx);
 check('公開フラグをtrueにすると同時に出る',
   speciesTopics.every(t => openCtx.api.releasedForPlayers(t) === true)

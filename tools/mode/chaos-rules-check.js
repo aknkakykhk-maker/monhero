@@ -26,7 +26,8 @@ for (const difficulty of ['EXTREME', 'NIGHTMARE', null]) {
 }
 assert.strictEqual(extremeSpecialRule('CHAOS', 'damageDealt'), 0.5);
 assert.strictEqual((source.match(/applyExtremeIntegerRule\(distanceBrokenDmg,specialRuleDifficulty,'damageDealt'\)/g)||[]).length, 1, '与ダメージの共通経路へ1回だけ適用');
-assert.strictEqual((source.match(/applyExtremeIntegerRule\(cost,specialRuleDifficulty,'gutsCost'\)/g)||[]).length, 1, '表示・選択・実消費が共有するgetCardGutsへ1回だけ適用');
+// 魂格の「省気」で cost*soulGutsMultiplier を渡す形になった(適用は今も最後の1回だけ)
+assert.strictEqual((source.match(/applyExtremeIntegerRule\(cost\*soulGutsMultiplier,specialRuleDifficulty,'gutsCost'\)/g)||[]).length, 1, '表示・選択・実消費が共有するgetCardGutsへ1回だけ適用');
 assert(!source.includes("if (['buff','debuff','heal','draw'].includes(card.type)) return"), '教え・回復・補助カードも共通のガッツ倍率経路を通る');
 assert.strictEqual((source.match(/applyAllyJoinBonus\(bonus\[key\]\|\|0,specialRuleDifficulty,waveResult\?\.totalTurnCount\)/g)||[]).length, 1, '加入時ステータス増加へ共通helperを1回だけ適用');
 assert(source.includes("const aptDelta=getMonsterAptPct(m,specialRuleDifficulty)"), '間合い適性の加入処理を維持');

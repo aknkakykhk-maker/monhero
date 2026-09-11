@@ -16,25 +16,28 @@ assert(breederSource.includes(`images/breeder-icons/kiki.PNG?v=35362d7b6e3e`));
 //  ききの+1は「違うモンスターにしか使えない」状態になっていた)
 // 条件は勇者特性を持つ種が増えるたびに伸びるので、行を丸ごと写さない
 // (実際に剣士モッチーの二刀流を足したとき、値が何も変わっていないのに落ちた)。
-// 見たいのは「kikiCardBonus>0 のときも cardLimit まで許すか」だけ
+// 見たいのは「kikiCardBonus>0 のときも1枚ではなく上限まで許すか」だけ
 {
-  const slotMaxUsesLine = (gameSource.match(/^.*const slotMaxUses = .*$/m) || [''])[0];
-  assert(slotMaxUsesLine.includes('kikiCardBonus>0') && slotMaxUsesLine.includes('? cardLimit : 1;'),
-    `ききのカード上限+1が同じモンスターへ重ねて使えない(slotMaxUsesが古いまま): ${slotMaxUsesLine.trim() || '見つからない'}`);
+  // 魂格「連携」で複数行になったので、1行ではなく関数の本体ごと見る
+  const slotMaxUsesAt = gameSource.indexOf('const slotMaxUses = ');
+  const slotMaxUsesBody = slotMaxUsesAt < 0 ? '' : gameSource.slice(slotMaxUsesAt, gameSource.indexOf('\n  };', slotMaxUsesAt));
+  assert(slotMaxUsesBody.includes('kikiCardBonus>0') && slotMaxUsesBody.includes('? baseCardLimit : 1;')
+    && slotMaxUsesBody.includes('Math.min(cardLimit,'),
+    `ききのカード上限+1が同じモンスターへ重ねて使えない(slotMaxUsesが古いまま): ${slotMaxUsesBody.trim() || '見つからない'}`);
 }
-assert((gameSource.match(/=slotMaxUses\((?:targetMon|s)\);/g)||[]).length===3,
-  'カード割当のチェック箇所(ドラッグ・予測・スロット表示)がslotMaxUsesに揃っていない');
+assert((gameSource.match(/slotMaxUses\((?:targetMon|s|monster)\s*,\s*(?:slotIdx|i)\)/g)||[]).length===4,
+  'カード割当のチェック箇所(ドラッグ・予測・スロット表示・AUTO)がslotMaxUsesに揃っていない');
 // カードをタップしたときの説明文(getDynamicDesc)も、バランス調整後の継続ターン数と一致していること
 assert(gameSource.includes("if(t.id==='kiki') return `次の${level+2}ターン 使用可能カード枚数 +1・全体連撃 ${3+level*2}%アップ（バトル中永続・使用ごとに加算）`;"),
   'ききのカード説明(getDynamicDesc)が継続ターン数の変更に追随していない');
 [
   "getPermaBuff('globalComboDmgPct')",
   "addPermaBuff('globalComboDmgPct',comboAdd)",
-  "skillName:'全体連撃'",
+  "combo(globalComboRate, '全体連撃', true)",
   "全体連撃 +{Math.round(getPermaBuff('globalComboDmgPct')*100)}%",
   "kikiCardBonusTurns",
   'heroCardBonus + kikiCardBonus',
-  "prev.length >= STARTER_TEACHING_IDS.length",
+  "prev.length >= TEACHING_ROSTER_SIZE",
   "getAttackPredictedDmg(card,slots[slotIdx],baseDmg,b.combo)",
 ].forEach(text=>assert(gameSource.includes(text),`実装結線が不足: ${text}`));
 assert(gameSource.includes("globalComboRate:getPermaBuff('globalComboDmgPct')+additionalGlobalCombo") && gameSource.includes("if (globalComboRate > 0) combo(globalComboRate, '全体連撃', true);"),'共通予測に全体連撃を含める');
@@ -45,7 +48,9 @@ assert(gameSource.includes("item.type==='assist'&&ASSIST_CARD_ICON_STYLES[item.i
 assert((gameSource.match(/item\.type==='assist'&&ASSIST_CARD_ICON_STYLES\[item\.id\]\?<AssistCardIcon/g)||[]).length===2,'マーケット一覧と拡大表示の両方へ適用する');
 assert(gameSource.includes('cardIconNode(t.icon,40,t.id)'),'編成画面のカード一覧へ専用表示を適用する');
 assert(gameSource.includes('cardIconNode(c.icon,32,c.id)'),'バトル中のカードへ専用表示を適用する');
-assert(gameSource.includes("0.3+comboDmgBonus")&&gameSource.includes("0.2+comboDmgBonus"),'ザン既存補正を維持する');
+assert(gameSource.includes('zanHero: 0.3,')&&gameSource.includes('zanUnique: 0.2,')
+  &&gameSource.includes('combo(ATTACK_COMBO_RULES.zanHero + comboDmgBonus)')
+  &&gameSource.includes('combo(ATTACK_COMBO_RULES.zanUnique + comboDmgBonus)'),'ザン既存補正を維持する');
 assert(!/globalComboDmgPct[^\n]*comboDmgPct|comboDmgPct[^\n]*globalComboDmgPct/.test(gameSource),'ザン補正と全体連撃を混ぜない');
 const actionHeaderStart=gameSource.indexOf('flex-1 min-w-0 flex flex-wrap');
 const actionHeader=gameSource.slice(actionHeaderStart,gameSource.indexOf('使うカードが決まっている番は',actionHeaderStart));

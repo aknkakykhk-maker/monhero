@@ -20,5 +20,5 @@ const mons=[{id:'2',baseId:'B'}];
 const repaired=repairRosterAfterDonation(['masu:1','B'],{id:'1',baseId:'A'},mons,['A','B'],['A','B'],2);
 assert.strictEqual(repaired.ok,true);assert.deepStrictEqual(Array.from(repaired.roster),['A','B']);
 for(const text of ['mh_monster_roster_sets_v1','mh_monster_roster_sets_migrated_v1','switchMonsterPartySet','copyMonsterPartySet','removeMasuFromAllPartySets']) assert(source.includes(text),`${text} が実装されていません`);
-assert(source.includes("setMonsterRosterIds(normalizedPartySets.rosters[normalizedPartySets.activeIndex])"),'使用中セットをバトル編成へ反映していません');
+assert(source.includes("const activeMonsterRoster = normalizedPartySets.rosters[normalizedPartySets.activeIndex];")&&source.includes("setMonsterRosterIds(activeMonsterRoster)"),'使用中セットをバトル編成へ反映していません');
 console.log('編成セット: 旧セーブ移行・5セット正規化・使用中復元・コピー/全セット除去の結線 OK');

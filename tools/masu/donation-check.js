@@ -42,7 +42,13 @@ check('一括処理の途中で失敗したときは完成データを返さな�
 check('不正bondXpを0以上の整数へ正規化', [-1, NaN, Infinity, 'abc'].every(v=>donationDiamondValue(v)===0) && donationDiamondValue('12.9')===12);
 check('保存キーと同期ロックが実装されている', /donationProcessingRef\.current/.test(source) && /storeSet\('mh_gold', result\.nextGold, false\)/.test(source) && /storeSet\('mh_monster_roster', result\.nextRoster, false\)/.test(source) && /storeSet\('mh_masu_mons', result\.nextMasuMons, false\)/.test(source));
 check('複数選択・選択解除・最終確認を備える', /setDonationSelectedIds\(ids=>selected\?ids\.filter/.test(source) && /選択数：/.test(source) && /donationConfirmOpen/.test(source));
-check('寄付一覧の総合力は共通関数を使う', /formatMonsterPower\(masuPowerOf\(masu\)\)/.test(source));
+// 2026-09-10に寄付一覧も共通カード(renderMonsterCardBody)へ寄せたので、総合力は画面ではなく
+// 共通カードが masuPowerOf → formatMonsterPower で組み立てる。
+// 「寄付一覧が共通カードに乗っているか」と「共通カードが共通関数で出すか」を両方見る
+check('寄付一覧の総合力は共通関数を使う',
+  source.includes('style={MONSTER_CARD_STYLE} className={`${MONSTER_CARD_CLASS} bg-slate-900 disabled:opacity-35')
+  && /masu \? masuPowerOf\(masu\) : monsterPowerOf\(base\)/.test(source)
+  && /const monsterCardPower = \(power\) =>[\s\S]{0,400}?formatMonsterPower\(power\)/.test(source));
 const powerSortedHigh = sortDonationMasuMons(masuMons, 'power', 'desc').map(m=>m.id);
 const powerSortedLow = sortDonationMasuMons(masuMons, 'power', 'asc').map(m=>m.id);
 check('総合力の高い順・低い順は表示と同じ共通計算値で並ぶ',
@@ -60,7 +66,12 @@ check('寄付の3表示は通常の全身画像と共通染色を使う', (sourc
 // 使い回してしまう)。光沢保持の設定など、これ以外の条件が足されるのは構わない
 check('染色キャッシュは種類・元画像・色をキーにする',
   /const cacheKey = baseId \+ .*\bimgUrl\b.*\bcolorId\b/.test(source));
-check('寄付一覧と演出の画像サイズを抑えて全身を収める', /relative w-16 h-16 rounded-lg/.test(source) && /\.mh-donation-monster\{position:absolute;width:96px;height:96px/.test(source));
+// 一覧の絵の大きさは共通カード(MONSTER_CARD_ICON_CLASS)が1か所で決めるようになったので、
+// 「寄付一覧が自前の寸法を持たず共通カードに乗っている」ことで見る。演出は寄付専用なので従来どおり96px
+check('寄付一覧と演出の画像サイズを抑えて全身を収める',
+  source.includes('style={MONSTER_CARD_STYLE} className={`${MONSTER_CARD_CLASS} bg-slate-900 disabled:opacity-35')
+    && source.includes("const MONSTER_CARD_ICON_CLASS = 'w-12 h-12 rounded-full overflow-hidden shrink-0';")
+    && /\.mh-donation-monster\{position:absolute;width:96px;height:96px/.test(source));
 check('MASU_DONATIONは神殿BGM', /MASU_DONATION:\s*'temple'/.test(source));
 check('寄付の戻り先は神殿', /resetDonationFlow\(\);setGameState\('TEMPLE'\)/.test(source));
 check('一覧タイトルが統一されている', source.includes('>ベースモン一覧</h2>') && source.includes('>マスモン一覧</h2>'));

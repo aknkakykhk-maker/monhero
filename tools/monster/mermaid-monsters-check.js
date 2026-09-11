@@ -108,7 +108,7 @@ for (const id of ['undine_icon', 'undine_disc_icon', 'yaobikuni_icon', 'yaobikun
 }
 // 立ち絵が縦長なので、丸枠(正方形)では object-cover のままだと頭と尾びれが切れる
 check('縦長の立ち絵は丸枠で object-contain にして全身を収める',
-  /const MONSTER_ART_CONTAIN_IDS = Object\.freeze\(\['Undine', 'Yaobikuni'\]\)/.test(source)
+  /const MONSTER_ART_CONTAIN_IDS = Object\.freeze\(\[(?=[^\]]*'Undine')(?=[^\]]*'Yaobikuni')[^\]]*\]\)/.test(source)
     && source.includes("objectFit: 'contain'") && source.includes('monsterArtFitStyle(baseId, rawStyle)'));
 // object-contain にすると絵の左右に余白ができる。マスクだけ枠いっぱい(100% 100%)に伸ばすと
 // 部位が横へずれて別の場所が染まるので、マスクの収め方も絵と同じ・中央・繰り返しなしにそろえる。

@@ -138,13 +138,25 @@ const VIEW={width:390,height:844};
       const r=area.getBoundingClientRect();
       if(!(r.width>50&&r.height>50))return false;
       if(document.querySelectorAll('[data-rhythm-sublane-feedback]').length===0)return false;
+      // ノーツは公開フラグ rhythmCanvasNotes が true になってから(2026-09-07)
+      // [data-rhythm-note-canvas] 1枚へ毎フレーム描いている。要素を数える書き方のままだと
+      // 永遠に見つからず、ここで40秒のTimeoutになって検査ぜんぶが止まる。
+      // canvas 版は「透明でない画素が描かれているか」で、流れていることを見る
+      const canvas=document.querySelector('[data-rhythm-note-canvas]');
+      if(canvas){
+        if(!(canvas.width>0&&canvas.height>0))return false;
+        try{const d=canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data;
+          for(let i=3;i<d.length;i+=4)if(d[i]>8)return true;
+        }catch{return false;}
+        return false;
+      }
       return [...document.querySelectorAll('[data-rhythm-note]')].some(n=>{
         const st=getComputedStyle(n);
         if(st.display==='none'||st.opacity==='0')return false;
         const b=n.getBoundingClientRect();
         return b.height>0&&b.bottom>0&&b.top<window.innerHeight;
       });
-    },undefined,{timeout:40000});
+    },undefined,{timeout:40000,polling:200});
 
     ok('変換のしくみがページから見えている',
       await page.evaluate(()=>typeof RHYTHM_VIEW_ROTATION==='object'&&typeof RHYTHM_VIEW_ROTATION.set==='function'));

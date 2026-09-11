@@ -18,6 +18,8 @@ const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分�
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
+// 画面を切り出した(51〜71-screen-*.jsx)ので、画面の中身は harness 経由で取り出す
+const { screenSource } = require(path.join(TOOLS_DIR, 'harness'));
 
 const root = path.resolve(TOOLS_DIR, '..');
 const source = fs.readFileSync(path.join(root, 'monster-hero/src/game-system.jsx'), 'utf8');
@@ -520,10 +522,11 @@ check('超越強化のタブを超越済み限定にしていない',
   && !source.includes("if (!base || !normalized.transcended) { setGameState('MASU_ENHANCE')"));
 // 超越強化しただけの個体に超越マークを出さない(マークは神殿で正式に超越した証)
 check('超越強化の画面では超越済みのときだけマークを出す', (() => {
-  // 見張るのは超越強化の画面だけ(デバッグの見本は「超越済みの見た目」をわざと出している)
-  const from = source.indexOf("gameState==='MASU_TRANSCEND_ENHANCE'");
-  const screen = source.slice(from, source.indexOf("gameState==='MASU_ENHANCE'&&masuMonDetail", from));
-  return screen.includes('<TranscendenceBadge transcended={normalized.transcended} small/>')
+  // 見張るのは超越強化の画面だけ(デバッグの見本は「超越済みの見た目」をわざと出している)。
+  // 画面は 64-screen-masu-transcend-enhance.jsx へ切り出したので、呼び出しではなくコンポーネント本体を範囲にする
+  const screen = screenSource('MASU_TRANSCEND_ENHANCE', 'MasuTranscendEnhanceScreen');
+  // 魂格STEP6Aで soulRankStage も渡すようになった。見たいのは「マークが normalized.transcended で決まる」こと
+  return /<TranscendenceBadge transcended=\{normalized\.transcended\}[^>]*small\/>/.test(screen)
     && !/<TranscendenceBadge transcended\s*\/>/.test(screen)
     && !screen.includes('<TranscendenceBadge transcended small/>');
 })());
@@ -532,7 +535,8 @@ check('まだ超越していない個体には、超越そのものとの違い�
 // 詳細モーダル(z=31000)は強化画面(z=30000)より手前に出る。除外し忘れると超越強化が
 // まるごと隠れて、閉じたときに暗い画面だけが残る。実際にその不具合を出している
 check('強化画面を開いているあいだは詳細モーダルを重ねない',
-  source.includes("const MASU_ENHANCE_STATES = ['MASU_ENHANCE','MASU_TRANSCEND_ENHANCE']")
+  // 魂格で 'MASU_SOUL_TRAITS' が増えたので配列を丸写しにしない。強化画面2つが入っていることを見る
+  /const MASU_ENHANCE_STATES = \[(?=[^\]]*'MASU_ENHANCE')(?=[^\]]*'MASU_TRANSCEND_ENHANCE')[^\]]*\]/.test(source)
   && source.includes('{masuMonDetail&&!MASU_ENHANCE_STATES.includes(gameState)&&')
   && !source.includes("{masuMonDetail&&gameState!=='MASU_ENHANCE'&&"));
 check('超越強化はまとめて振れる（1Pずつ何十回も押させない）',
@@ -570,7 +574,7 @@ check('ヘルプに超越の項目がある',
 check('ヘルプに解放条件・コスト・仕様が書いてある',
   ['限界突破35回（虹★5）と絆Lv.400', '虹のプシュケー 5,000個 と ダイヤ 1,000,000',
     'レベル上限が400から500', '虹のプシュケー1,000個を超越ポイント1', 'ライフ基礎+10',
-    '通常の強化を白紙に戻しても', '転生しても超越した状態とLv上限500は維持']
+    '通常の強化を白紙に戻しても', '転生しても超越した状態・魂格段階・現在のLv上限は維持']
     .every(text => help.includes(text)));
 // 「超越しないと超越強化できない」という古い説明を残さない
 check('ヘルプに超越強化がいつでも使えると書いてある',

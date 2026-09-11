@@ -11,9 +11,13 @@ const check = (name, ok) => { console.log(`${ok ? '✓' : '✗'} ${name}`); if (
 for (const file of files) {
   const source = fs.readFileSync(path.join(ROOT, file), 'utf8');
   const audioEngine = source.slice(source.indexOf('const Audio_ ='), source.indexOf('const MOO_IMG'));
+  // 説明のコメントに <audio> の字が出てくる(キャッシュキーの目印 <audio-cache-keys> と、
+  // 「BGMは <audio> ではなく Web Audio」という但し書き)。コメントは実行されないので、
+  // ここだけはコメントを外したコードを見る。実コードに対する厳しさは変えない。
+  const audioCode = audioEngine.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
   check(`${file}: HTMLAudioElement/new Audioを使用しない`,
-    !/\bnew\s+Audio\s*\(|createElement\s*\(\s*['"]audio['"]|<audio\b/i.test(audioEngine));
-  check(`${file}: HTML Audioのplay()を直接呼ばない`, !/\.play\s*\(/.test(audioEngine));
+    !/\bnew\s+Audio\s*\(|createElement\s*\(\s*['"]audio['"]|<audio\b/i.test(audioCode));
+  check(`${file}: HTML Audioのplay()を直接呼ばない`, !/\.play\s*\(/.test(audioCode));
   check(`${file}: MediaElementSourceを使用しない`, !/createMediaElementSource/.test(audioEngine));
   check(`${file}: navigator.audioSessionをplaybackへ変更しない`, !/audioSession[\s\S]{0,80}playback/.test(source));
   check(`${file}: 音源をfetchしてdecodeAudioDataする`, /fetch\s*\(url/.test(audioEngine) && /decodeAudioData/.test(audioEngine));

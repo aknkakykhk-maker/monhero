@@ -61,8 +61,11 @@ check('モンビー側は「裏で周回している」ときだけに出す',
 check('画面に置いてある', app.includes('data-quick-rhythm-intro') && app.includes('data-quick-rhythm-background'));
 check('AUTO設定の節にも助手のひとことがある',
   app.includes('<AssistantBubble scene="autoQuickRunSettings" compact/>'));
+// ★同じ aria-label の閉じるボタンは他の案内(モンヒロビートのイベントのお知らせ)にもあるので、
+//   件数ではなく「クイック連携の2つがそれぞれ44px以上か」をハンドラ名で名指しして見る
 check('閉じるボタンは指で押せる大きさ',
-  (app.match(/aria-label="この案内を閉じる" className="min-h-\[44px\] min-w-\[44px\]/g) || []).length === 2);
+  ['dismissQuickRhythmIntro', 'dismissQuickRhythmBackground'].every(fn =>
+    new RegExp(`onClick=\\{${fn}\\} aria-label="この案内を閉じる" className="min-h-\\[44px\\] min-w-\\[44px\\]`).test(app)));
 
 // ---- ③ セリフの足しかた ----
 check('セリフは addAssistantLinePack で足している',

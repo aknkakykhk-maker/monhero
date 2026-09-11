@@ -71,6 +71,8 @@ vm.runInContext([
   // mergeMasuIntoMon が超越ぶんの正規化を呼ぶので、その定義も本体から取る
   slice('const TRANSCEND_STAT_KEYS =', 'const isTranscended'),
   slice('const normalizeTranscendStatPoints =', '// --- マスモンの絆レベル'),
+  // 魂格(soulRankStage / soulPointMaxReachedLevel / soulTraitLevels)も mergeMasuIntoMon が正規化するので、その定義も本体から取る
+  slice('const SOUL_RANK_BASE_LEVEL =', 'const soulPointEarned ='),
   slice('const inheritedUniqueLevelKey = (unique) =>', 'const isValidInheritedUnique'),
   slice('const OWN_UNIQUE_KEY =', '// 構造ベースの冪等移行'),
   slice('const resolveInheritedUniqueDefinition = (unique) =>', '// 継承固有技は、ラン内stateがまだ無い間も'),

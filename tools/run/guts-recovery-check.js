@@ -118,10 +118,14 @@ check('WAVEクリア時のポイント付与を変えていない',
 check('固有技のLv上限は8のまま', has('const MAX_UNIQUE_SKILL_LEVEL = 8;') && has('Math.max(0,Math.min(8,u.evoLevel+diff))'));
 check('クイックモードの自動強化に触れていない', has('const rolled=rollQuickUniqueUpgrade(nextUniques,nextSlots);'));
 // ガッツ回復のボタンは強化画面の中だけに置く
+// 画面は 68-screen-run-result.jsx の UpgradeSkillScreen へ切り出した。連結順では画面ファイルが
+// 60-app.jsx より前に来るので、前後関係ではなく「その画面のコンポーネントの中にあるか」で見る
+const upgradeScreen = slice('function UpgradeSkillScreen(', '\nfunction ');
 check('ガッツ回復は固有技の強化画面の中だけ',
   (source.match(/data-guts-recovery /g) || []).length === 1
     && (source.match(/data-guts-recovery-button/g) || []).length === 1
-    && source.indexOf('data-guts-recovery ') > source.indexOf("gameState==='UPGRADE_SKILL'"));
+    && upgradeScreen.includes('data-guts-recovery ')
+    && /gameState==='UPGRADE_SKILL'&&\(\s*<UpgradeSkillScreen/.test(source));
 
 // ---- ⑥ 表示 ----
 const ui = slice('data-guts-recovery className', '{uniqueUpgradeEntries()');

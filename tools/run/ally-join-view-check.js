@@ -31,7 +31,7 @@ const slice = (from, to) => {
 
 // ---- ① 現在のステータスのパネル ----
 check('供モン合流に「現在のステータス」パネルがある', has('data-join-status'));
-const panel = slice('data-join-status', '{gameState===\'PICK_HERO\'&&(');
+const panel = slice('data-join-status', '{pickMode===\'hero\'&&(');
 for (const label of ['ライフ', 'ちから', '丈夫さ', 'ガッツ']) {
   check(`パネルに${label}がある`, panel.includes(`'${label}'`), '');
 }
@@ -79,7 +79,7 @@ const listArea = slice('flex-1 overflow-y-auto mh-scroll w-full max-w-md mx-auto
 check('候補一覧のスクロール領域で justify-center を使っていない',
   listArea.length > 0 && !listArea.includes('justify-center'), listArea.slice(0, 100));
 check('内側の入れ物を m-auto で寄せている(あふれても先頭からたどれる)',
-  has("<div className={`w-full${gameState==='PICK_ALLY'?' m-auto':''}`}>"));
+  has("<div className={`w-full${pickMode==='ally'?' m-auto':''}`}>"));
 
 // ---- ③ 本体の計算をそのまま動かす ----
 const calcSrc = `
