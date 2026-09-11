@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 194f1a49fa14c265
+// generated-sha256: 43825e638bc4d31f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 13:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 13:44"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5627,7 +5627,22 @@ const changelogEntryId = entry => {
 // まとめて更新情報へ並んでしまい、プレイヤーには「見たこともない画面の不具合が直った話」が
 // 延々と続いて見えていた(2026-09-05・ユーザー指摘でモンヒロビートの80件を dev:true にした)。
 // 記録自体は data/changelog.js に残し、出す・出さないだけをここで決める。
-const changelogForPlayers = (entry) => !!entry && entry.dev !== true && releasedForPlayers(entry);
+// ★時刻になってから出しはじめる項目(visibleFrom)。
+// releaseFlag は真偽値なので「9/11の15時になったら出す」が書けない。そのため、
+// 週末ゲリラ杯を先に公開へ乗せた時点(13:40)で、お知らせ一覧に
+// 「週末ゲリラ杯を開催します」が並んでしまった(2026-09-11・ユーザー指摘「お知らせに出ちゃってる」)。
+// 助手の告知だけは assistantNotice の notifyFrom で止めていたが、一覧そのものは素通しだった。
+// 判定は読み込んだときに1回だけ行う。開いたままの端末では次に開き直したときに出る
+// (助手の告知もイベント会話も起動時に決まるので、そこにそろえてある)。
+// 書き間違いで項目が永久に消えることがないよう、読めない値のときは出す側へ倒す(CLAUDE.md ⑦)。
+const changelogVisibleNow = (entry, nowMs) => {
+  if (!entry || typeof entry.visibleFrom !== 'string') return true;
+  const from = Date.parse(entry.visibleFrom);
+  if (!Number.isFinite(from)) return true;
+  const now = Number.isFinite(nowMs) ? nowMs : Date.now();
+  return now >= from;
+};
+const changelogForPlayers = (entry, nowMs) => !!entry && entry.dev !== true && releasedForPlayers(entry) && changelogVisibleNow(entry, nowMs);
 // ★並び順は「日付の新しい順」をここで決める。data/changelog.js の書いてある順には頼らない。
 //   別のファイル(data/rhythm-step3-release.js)が起動時に CHANGELOG.unshift で古い項目を
 //   先頭へ差し込むため、書いてある順のままだと 2026-09-04 の項目が最新として並んでいた
@@ -5635,14 +5650,17 @@ const changelogForPlayers = (entry) => !!entry && entry.dev !== true && released
 //   日付は "YYYY-MM-DD HH:MM" の固定書式なので、文字列のまま比べれば時刻まで正しく並ぶ。
 //   日付が無い・壊れている項目は最後へ回す(消さない・CLAUDE.md ⑦)。
 const changelogSortKey = (entry) => (typeof entry?.date === 'string' ? entry.date : '');
-const CHANGELOG_ENTRIES = (typeof CHANGELOG !== 'undefined' ? CHANGELOG : []).filter(changelogForPlayers)
+// ★filter へ changelogForPlayers を関数のまま渡さないこと。filter は第2引数へ添字を渡すので、
+//   nowMs が 0,1,2… に化けて visibleFrom の項目が永久に出なくなる。必ず下の形で呼ぶ。
+const CHANGELOG_READ_AT_MS = Date.now();
+const CHANGELOG_ENTRIES = (typeof CHANGELOG !== 'undefined' ? CHANGELOG : []).filter(entry => changelogForPlayers(entry, CHANGELOG_READ_AT_MS))
   .map(entry => Object.freeze({...entry,id:changelogEntryId(entry)}))
   .slice()
   .sort((a, b) => (changelogSortKey(b) > changelogSortKey(a) ? 1 : changelogSortKey(b) < changelogSortKey(a) ? -1 : 0));
 // 更新履歴から作る助手の告知も、隠している項目のぶんは出さない
 // (data/assistants.js は公開フラグも dev も見られないため、ここで落とす)
 const HIDDEN_UPDATE_NOTICE_IDS = new Set((typeof CHANGELOG !== 'undefined' ? CHANGELOG : [])
-  .filter(entry => !changelogForPlayers(entry) && typeof entry?.assistantNotice?.id === 'string')
+  .filter(entry => !changelogForPlayers(entry, CHANGELOG_READ_AT_MS) && typeof entry?.assistantNotice?.id === 'string')
   .map(entry => entry.assistantNotice.id.trim()));
 // どのタブへ出すかを決める。
 // 「不具合情報」は不具合の話をまとめる場所なので、調査中(issue)だけでなく
