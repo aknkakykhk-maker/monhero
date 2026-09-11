@@ -184,8 +184,10 @@ check('まとめ表示から説明を開ける', ticketRow.includes('onClick={()
 // --- 勇者モン選択のタブ ---
 check('勇者モン選択にタブがある', has("setHeroPickTab(key); setCurrentPickingMon(null);") && has("[['roster','編成'],['base','ベースモン']]"));
 // プロモードはタブを出さず、つねにベースモンの一覧になる
-check('ベースモンタブは解放済みの種を全部出す', has("gameState==='PICK_HERO'&&(heroPickTab==='base'||isProMode(runMode))?getUnlockedBaseMonsterList():monSelection"));
-check('タブは勇者モン選択だけに出す', has("{gameState==='PICK_HERO'&&(\n            <div className=\"shrink-0 w-full max-w-md mx-auto mb-2\">"));
+// 勇者モンえらびは 67-screen-pick.jsx へ切り出した。画面は gameState を知らない約束なので、
+// 出し分けは pickMode('hero' / 'ally')という props になっている(綴りだけの違い)
+check('ベースモンタブは解放済みの種を全部出す', has("pickMode==='hero'&&(heroPickTab==='base'||isProMode(runMode))?getUnlockedBaseMonsterList():monSelection"));
+check('タブは勇者モン選択だけに出す', has("{pickMode==='hero'&&(\n        <div className=\"shrink-0 w-full max-w-md mx-auto mb-2\">"));
 // ラン段階の遷移は advanceRunStage を通す(docs/spec/QUICK_RHYTHM_LINK.md PR3)
 check('挑戦するたびに編成タブから始まる', has("setHeroPickTab('roster');advanceRunStage('PICK_HERO');"));
 

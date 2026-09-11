@@ -66,26 +66,29 @@ S/A 等級は `REGRESSION_RISK_MAP.md` に基づく。
 | 8 | `MONSTER_DEX(_DETAIL)` | — | — | **完了**(2026-09-10)。`src/parts/57-screen-monster-dex.jsx`(3画面で1ファイル) |
 | 9 | `MASU_*`(育成系) | — | — | **完了**(2026-09-10)。`59` / `61`〜`66` の7ファイルに22画面。`MASU_PATTERN_DEBUG` はデバッグ専用なので残した |
 | 10 | `RHYTHM_*`(演奏画面以外) | — | — | **完了**(2026-09-10)。`src/parts/58-screen-rhythm.jsx`(5画面で1ファイル) |
-| 11 | `PICK_*` / `WAVE_RESULT` / `REWARD_PICK` / `UPGRADE_SKILL` / `CHAMPION` | **Opus 5** | high | 進行フラグを戻すタイマーが多い。止めると操作不能になる |
+| 11 | `PICK_*`(スキップ含む7画面) | — | — | **完了**(2026-09-11)。`67-screen-pick.jsx`。タイマーはすべてハンドラの中にあり本体へ残った |
+| 11b | `UPGRADE_SKILL` / `WAVE_RESULT` / `REWARD_PICK` / `CHAMPION` | **Opus 5** | high | バトルの結果まわり。ラン終了の処理と演出が絡む |
 | 12 | `HOME` | **Opus 5** | high | 配置検査あり(`home-layout-check`)。助手の吹き出し・施設・初回案内が重なる |
 | 13 | `BATTLE` | **Opus 5** | **max** | 最後。`processTurn` に `token.alive` を通す。A等級 |
 
 ## 次の一手
 
-**STEP 6 の次(`PICK_*` / `WAVE_RESULT` / `REWARD_PICK` / `UPGRADE_SKILL` / `CHAMPION` の切り出し)** — **Opus 5 / effort high**
+**STEP 6 の次(`UPGRADE_SKILL` / `WAVE_RESULT` / `REWARD_PICK` / `CHAMPION` の切り出し)** — **Opus 5 / effort high**
 
-先に [`STEP6_HANDOVER.md`](STEP6_HANDOVER.md) を読むこと。終わった48画面と、
-この日に分かった型(props の洗い出し方・移してはいけないもの3つ・検査が静かに壊れること)が1枚にまとまっている。
+先に [`STEP6_HANDOVER.md`](STEP6_HANDOVER.md) を読むこと。終わった55画面と、
+この日に分かった型(props の洗い出し方・移してはいけないもの3つ・1ブロックで2画面を出し分けているもの・
+検査が静かに壊れること)が1枚にまとまっている。
 
-`MASU_*`(6-9)は `MASU_PATTERN_DEBUG`(デバッグ専用)を除いて完了した。次はバトルの前後にある選択画面。
-**この一群は「進行フラグを戻すタイマー」が多い**(`SCREEN_EFFECTS_MAP.md` の「進行」31箇所の大半がここ)。
-画面のライフサイクルで止めると**操作不能になる**ので、タイマーは本体に残し、画面からは呼ぶだけにする。
+`PICK_*`(6-11)は終わった。次は**バトルの結果まわり4画面**(場所は `60-app.jsx` の
+`UPGRADE_SKILL` / `WAVE_RESULT` / `REWARD_PICK` と、少し離れた `CHAMPION`)。
+ラン終了の処理と演出が絡むので、**保存と演出の再生は本体に残す**。
+`CHAMPION` は種族チャレンジの戻りボタンを含む兄弟ブロックが同じ行にあるので、置き去りにしない。
 
-1〜15本目(`use-screen-effects` / `SETTINGS` / `MISSIONS` / `GIFT_BOX` / `ITEM_INVENTORY` /
-`BREEDER_MARKET` / `PROFILE` / 図鑑3画面 / モンヒロビート5画面 / `MASU_*` 22画面)は 2026-09-10 に完了。
-切り出しの型は 51〜66 の16ファイルにそろっている
+1〜17本目(`use-screen-effects` / `SETTINGS` / `MISSIONS` / `GIFT_BOX` / `ITEM_INVENTORY` /
+`BREEDER_MARKET` / `PROFILE` / 図鑑3画面 / モンヒロビート5画面 / `MASU_*` 22画面 / えらぶ系7画面)は
+2026-09-10〜11 に完了。切り出しの型は 51〜67 の17ファイルにそろっている
 (保存を伴う操作は本体に残して props で受け、共有層の純関数は画面から直接呼ぶ。
-ref で持つ値は真偽値にして渡す)。
+画面は `gameState` を知らず、遷移は props で受け取る)。
 
 **props の洗い出しは手でやらない。** props を空にした仮のコンポーネントへ JSX を移し、
 `node tools/undefined-reference-check.js` を通すと、足りない参照が全部一覧で出る。
