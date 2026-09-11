@@ -353,6 +353,8 @@ node tools/build.js --check
 | `node ranking/ranking-run-stats-check.js` | スコアランキングの「◯◯ターンでクリア」「WAVE ◯ で終了」を、Supabaseをスタブした実ブラウザで確認する。列がある場合の表示(クリアはターン数・途中終了はWAVE・古い記録は何も出さない)に加えて、**列がまだ無い環境でスコアの保存が落ちないこと**を見る。ここが崩れるとSQLを適用するまで新しい記録が1件も残らなくなる(`python3 -m http.server 8899` でルートを配信した状態で実行する)。 |
 | `node ranking/bond-ranking-check.js` | 絆ランキングの全party集計、新旧個体識別、最高Lv重複排除、空・失敗表示を確認する。 |
 | `node ranking/bond-ranking-dedupe-check.js` | 同じ人・同じ種類のマスモンが、個体ID付きの記録と古い記録に分かれて二重に並ばないことを確認する。 |
+| `node ranking/power-ranking-check.js` | 総合力ランキング（バトルモード選択画面の「総合力」タブ）を確認する。並べ替えの本体 `collectPowerRankingEntries` を実際に動かして、総合力の高い順になること・総合力が残っていない古い記録を参考値で補わないこと・同点のときの並びが安定することを見る。あわせて、種族タブが絆Lvと同じ血統idで絞れているか、タブを押したときの取得が `levelKind='bond'`（絆Lvと同じ1回）になっているかも見る。ここをタブ名の `'power'` のまま渡すと、存在しない取得になって一覧が永久に空になる。 |
+| `node ranking/power-ranking-browser-check.js` | 総合力ランキングのタブを、Supabaseをスタブした実ブラウザで開いて確かめる。文字列の検査では拾えない「タブを開いた瞬間だけ真っ白」を防ぐためのもので、バトル → 「総合力」タブまで実際に進み、一覧が出ること・絆Lvではなく総合力の高い順に並ぶこと・総合力が残っていない古い記録が載らないこと・行の「詳細 ›」から1体ぶんの詳細が開くことを見る（`python3 -m http.server 8899` でルートを配信した状態で実行する）。 |
 | `node ranking/bond-ranking-species-check.js` | 絆Lvランキングのタブが主血統（種族）ごとにまとまっていることを確認する。タブの並びを画面側へ書き写していないか、全モンスターに主血統があるか（タブから漏れないか）、モンスターidを持たない古い記録も名前から種族を引けるかを見る。 |
 | `node ranking/bond-ranking-submit-check.js` | 絆Lvランキングへ、そのプレイの絆Lv(`party[].bondLevel`)がちゃんと載るかを確認する。 |
 | `node ranking/bond-levels-table-check.js` | 絆Lvの正本テーブル(`bond_levels`)まわりを、Supabaseをスタブした実ブラウザで確認する。テーブルがある場合は正本の全員が並び、正本にまだ載っていない人は記録側の集計で補われること、テーブルが無い場合(適用前)は404を受けても壊れず従来どおり表示されることを見る(`python3 -m http.server 8899` でルートを配信した状態で実行する)。 |
