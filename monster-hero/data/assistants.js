@@ -126,7 +126,13 @@ const assistantUpdateNoticeFromChangelog = entry => {
   if (!entry.title || !items.length) return null;
   const destination = meta.type === 'market' ? 'market' : meta.type === 'mode' ? 'battle' : meta.destination;
   return {
+    // ★enabled は読み込んだときの1回きりの答え。期間で出し入れする告知は、
+    //   開きっぱなしの端末だと開始時刻をまたいでも false のままになる
+    //   (2026-09-11・ユーザー指摘「やってる最中の人が見れてないらしい」)。
+    //   そのため notifyFrom / notifyUntil も持たせ、出すかどうかは見るたびに数え直す
+    //   (availableUpdateNotices)。enabled は今までどおり残す(既存の検査と読む側のため)
     id: meta.id.trim(), enabled: assistantNoticeWithinPeriod(meta), title: entry.title,
+    notifyFrom: meta.notifyFrom || null, notifyUntil: meta.notifyUntil || null,
     expression: meta.expression || 'excited',
     // 告知画像。更新履歴の項目に書いた image をそのまま持ってくる(2か所に書かない)
     image: typeof entry.image === 'string' && entry.image ? entry.image : null,

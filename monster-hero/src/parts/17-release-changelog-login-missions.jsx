@@ -99,8 +99,15 @@ const CHANGELOG_ENTRIES = (typeof CHANGELOG !== 'undefined' ? CHANGELOG : []).fi
   .sort((a, b) => (changelogSortKey(b) > changelogSortKey(a) ? 1 : changelogSortKey(b) < changelogSortKey(a) ? -1 : 0));
 // 更新履歴から作る助手の告知も、隠している項目のぶんは出さない
 // (data/assistants.js は公開フラグも dev も見られないため、ここで落とす)
+// ★時刻待ちの項目(visibleFrom)は、ここでは隠さない。
+//   この集合は読み込んだときに1回だけ作るので、開始より前に起動した端末では
+//   その時刻になっても告知を永久に出せなくなる
+//   (2026-09-11・ユーザー指摘「やってる最中の人が見れてないらしい」の正体)。
+//   告知を出す期間は assistantNotice の notifyFrom / notifyUntil が見るたびに数える。
+//   ここで隠すのは「作業メモ(dev)」と「まだ公開していない機能(releaseFlag)」だけ。
 const HIDDEN_UPDATE_NOTICE_IDS = new Set((typeof CHANGELOG !== 'undefined' ? CHANGELOG : [])
-  .filter(entry => !changelogForPlayers(entry, CHANGELOG_READ_AT_MS) && typeof entry?.assistantNotice?.id === 'string')
+  .filter(entry => !(entry && entry.dev !== true && releasedForPlayers(entry))
+    && typeof entry?.assistantNotice?.id === 'string')
   .map(entry => entry.assistantNotice.id.trim()));
 // どのタブへ出すかを決める。
 // 「不具合情報」は不具合の話をまとめる場所なので、調査中(issue)だけでなく
