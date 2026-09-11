@@ -6,7 +6,6 @@ on:
     branches: [main]
 
 permissions:
-  actions: write
   contents: read
   pages: write
   id-token: write
@@ -25,23 +24,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      # この一時フックは、チャット側に workflow_dispatch の直接操作が無い場合だけ、
-      # 既存の「ビルドと検査（手動実行）」を起動するために使う。
-      # `on:` やpushトリガーは変えず、生成物がコミットされたらこのフック自体を元へ戻す。
-      - name: Trigger existing mobile build helper for this PR branch
-        if: github.event_name == 'pull_request'
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          head_sha="${{ github.event.pull_request.head.sha }}"
-          msg="$(gh api "repos/$GITHUB_REPOSITORY/commits/$head_sha" --jq '.commit.message' | head -n 1)"
-          if [[ "$msg" != "chore: trigger existing branch build helper" ]]; then
-            echo "一時ビルド起動コミットではないため何もしません: $msg"
-            exit 0
-          fi
-          gh workflow run build-and-check.yml --ref "$GITHUB_HEAD_REF" -f commit=true
-          echo "既存の手動ビルドを起動しました: $GITHUB_HEAD_REF"
       - name: Require update banner stamp for shipped changes
         shell: bash
         run: |
