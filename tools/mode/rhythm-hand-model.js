@@ -129,12 +129,41 @@ const fingerPairStrain=(noteA,noteB,deltaMs)=>{
 
 // 押さえ続けているノーツ(HOLD/SLIDE)の「指が実際にいられる範囲」。
 // usableTouchSpan と違って端まで寄せられるとは考えない(HAND_MODEL.holdShiftLanes を参照)。
-const heldTouchSpan=note=>{
+// SLIDEの、その時刻に指がいる**経路上の位置**。slidePoints を時刻(grid)で線形補間する。
+// ランタイム側の rhythmSlideExpectedLane と同じ考え方。
+// 指定が無い(grid を渡さない)ときは経路の先頭を返す＝従来どおり。
+const slideLaneAtGrid=(note,grid)=>{
+  const points=Array.isArray(note?.slidePoints)?note.slidePoints:null;
+  if(!points||points.length<2||!Number.isFinite(Number(grid)))return null;
+  const g=Number(grid);
+  if(g<=Number(points[0].grid))return Number(points[0].lane);
+  for(let i=1;i<points.length;i++){
+    const a=points[i-1],b=points[i];
+    if(g<=Number(b.grid)){
+      const span=Math.max(1e-9,Number(b.grid)-Number(a.grid));
+      const t=Math.max(0,Math.min(1,(g-Number(a.grid))/span));
+      return Number(a.lane)+(Number(b.lane)-Number(a.lane))*t;
+    }
+  }
+  return Number(points[points.length-1].lane);
+};
+// 押さえ続けているノーツ(HOLD/SLIDE)の「指が実際にいられる範囲」。
+//
+// 【2026-09-12・SLIDEを経路の先頭1点としてしか見ていなかった】
+// SLIDEは指が経路に沿って動くのに、この関数は note.lane（＝経路の**先頭**）だけを見ていた。
+// そのため「伸びている間ずっと指が先頭レーンに居る」前提で押せるかを測っていて、
+// 実際には離れている配置を「近すぎる」と誤判定していた。
+// 品質レポートの押せる(heldFreeOk)がこれで最大10点ぶれる例があった
+// (4u_hitasura EXPERT: 先頭 lane1 に対し、そのTAPが鳴る瞬間の実位置は lane2.5)。
+// grid を渡せばその時刻の実位置で測る。渡さなければ従来どおり先頭で測る。
+const heldTouchSpan=(note,grid)=>{
   const [lo,hi]=noteTouchSpan(note);
   const center=(lo+hi)/2,width=hi-lo;
+  const onPath=note&&note.type==='SLIDE'?slideLaneAtGrid(note,grid):null;
+  const at=onPath==null?center:onPath;
   // SLIDEは経路に沿って動くので、中心から寄せる余地が無い
   const shift=note&&note.type==='SLIDE'?0:Math.min(width/4,HAND_MODEL.holdShiftLanes);
-  return [center-shift,center+shift];
+  return [at-shift,at+shift];
 };
 
 // ノーツの「触る点」の目安(中心)。レーンの偏りを数えるときなど、1点で表したいときに使う。
@@ -144,4 +173,4 @@ const noteTouchLane=note=>{
 };
 
 module.exports={HAND_MODEL,fingerPairFeasible,fingerPairStrain,
-  noteTouchLane,noteTouchSpan,usableTouchSpan,heldTouchSpan,fingerSpan,separationRange};
+  noteTouchLane,noteTouchSpan,usableTouchSpan,heldTouchSpan,slideLaneAtGrid,fingerSpan,separationRange};
