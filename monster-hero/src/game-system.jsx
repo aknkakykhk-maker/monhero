@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 691d9604e8d7fe0f
+// generated-sha256: 4d5f37edfaf16419
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 18:56"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 19:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -10378,7 +10378,11 @@ function PressRepeatButton({ onPress, disabled, className, children, ...props })
   const startPress = event => {
     if (disabled || (event.pointerType === 'mouse' && event.button !== 0)) return;
     clearPress(); longPressedRef.current = false;
-    event.currentTarget.setPointerCapture?.(event.pointerId);
+    // ★指の捕捉は「できたら嬉しい」程度のもの。?. はメソッドが無い場合しか守らず、
+    //   メソッドはあるのに捕捉できない状況(その指がもう離れている等)では例外を投げる。
+    //   ここで投げると下の長押しタイマーが登録されず、押しっぱなしが効かなくなる。
+    //   音ゲー側(30-rhythm-play.jsx)と同じく try で囲って、失敗しても先へ進む
+    try { event.currentTarget.setPointerCapture?.(event.pointerId); } catch {}
     delayRef.current = setTimeout(() => {
       longPressedRef.current = true; onPress();
       repeatRef.current = setInterval(onPress, 110);

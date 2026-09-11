@@ -113,8 +113,13 @@ if (from >= 0 && to > from) {
     'data-face': who && who.id, 'data-size': size, 'data-expression': expression,
     alt: who && who.name, src: assistantFaceImage(who, expression),
   });
+  // ★回想の画面は、あとから「呼び方・仲良し度に合わせた言い回し」と
+  // 「本編で流したぶんを見たことにする」処理を使うようになった(2026-09-11)。
+  // 名前を渡していないと ReferenceError で描画そのものが落ち、下の確認が1件も走らない
   const transformed = babel.transformSync(
-    'const Screen = ({ eventReplay, setEventReplay, EVENT_REPLAYS, ASSISTANT_LIST, assistantById, AssistantFace }) => (<>\n'
+    'const Screen = ({ eventReplay, setEventReplay, EVENT_REPLAYS, ASSISTANT_LIST, assistantById, AssistantFace,\n'
+    + '  normalizeAssistantBond, assistantBonds, assistantCallStyles, assistantSpeakText, assistantBondLevelOf,\n'
+    + '  breederName, markRhythmEventStorySeen, MONBEAT_CUP_STORY_ID }) => (<>\n'
     + replayBlock + '\n</>);\nmodule.exports = { Screen };',
     { presets: [[PRESET_REACT, { runtime: 'classic' }]], filename: 'event-replay-check.jsx' });
   const moduleScope = { exports: {} };
@@ -126,6 +131,16 @@ if (from >= 0 && to > from) {
     ASSISTANT_LIST: ASSISTANTS,
     assistantById: (id) => ASSISTANTS.find(x => x.id === id) || ASSISTANTS[0],
     AssistantFace,
+    // 言い回しの部品。ここでは「本文がそのまま出る」いちばん素直な形にしておく
+    // (呼び方や仲良し度そのものは tools/assistant-check.js の担当)
+    normalizeAssistantBond: (v) => ({ points: 0, ...(v && typeof v === 'object' ? v : {}) }),
+    assistantBonds: {},
+    assistantCallStyles: {},
+    assistantSpeakText: (t) => t,
+    assistantBondLevelOf: () => 1,
+    breederName: 'テストブリーダー',
+    markRhythmEventStorySeen: () => {},
+    MONBEAT_CUP_STORY_ID: 'monbeat_cup_2026_09',
   }));
   const text = (html) => html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
   const first = render(0);
@@ -176,10 +191,17 @@ check('回想を閉じれば元の画面のBGMへ戻す(依存に入っている
 // 長い会話を途中でやめられるようにした(2026-09-05・ユーザー要望
 // 「プロフィールからイベント回想中でスキップで飛ばせるようにしてほしい」)。
 // 最後まで見ていないので「見たことがある」は立てない。回想は何度でも開けるので失うものはない
-check('回想を途中でやめるスキップがある',
-  /const skip=\(\)=>\{ setEventReplay\(null\); \};/.test(source)
-  && /onClick=\{skip\}/.test(source)
-  && /スキップ/.test(source));
+// ★1行まるごと突き合わせていたため、中身が増えた時点で空振りしていた
+// (2026-09-11: 本編で流しているときだけ「見た」にする分岐が足された)。
+// 見たいのは「スキップがあって、押すと回想が閉じる」ことなので、形ではなく中身で見る
+check('回想を途中でやめるスキップがある', (() => {
+  const at = source.indexOf('const skip=()=>{');
+  if (at < 0) return false;
+  const body = source.slice(at, source.indexOf('};', at));
+  return body.includes('setEventReplay(null)')
+    && /onClick=\{skip\}/.test(source)
+    && /スキップ/.test(source);
+})());
 check('スキップは既読フラグを立てない(最後まで見ていないため)',
   (() => {
     const i = source.indexOf('const skip=()=>{');
