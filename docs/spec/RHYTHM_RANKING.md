@@ -845,7 +845,7 @@ grant execute on function public.rhythm_event_song_bests(text[], timestamptz, ti
 3. ✅ 取得関数（`sbFetchRhythmWeekWindow` / `sbFetchRhythmEventSongBests` /
    `sbFetchRhythmEventTotals`）を `26-supabase.jsx` へ足した。既存の口は触らない
 4. ✅ イベントタブ（対象曲ごと＋総合の部門）と残り時間表示
-5. ✅ 曲えらびでの「今週の対象曲」案内（`mh_rhythm_event_notice_v1`）
+5. ✅ 曲えらびでのイベントの入口。2026-09-11に「週の初回に1度だけ出す案内」から**開催中ずっと出るタブ**へ変えた（ユーザー指摘「ここに置くと画面が見づらすぎる／イベント開催のタブみたいの作って押すと飛ぶとかにして」）。吹き出し・告知画像・対象曲・ボタンを縦に積んでいたため、曲えらびが1画面に収まっていなかった。告知画像と報酬の表はイベントランキング側にある。`mh_rhythm_event_notice_v1` は読まなくなったが消していない
 6. ✅ ヘルプ・更新履歴・助手の告知（§10.2）
 7. ⬜ 公開フラグ `RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE` を `true` にして公開する
    （SQLの適用が済んでから）

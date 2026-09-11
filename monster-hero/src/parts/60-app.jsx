@@ -2551,21 +2551,14 @@ function MonsterHeroGame() {
   // ★公開フラグが false のあいだは、ヘルプ・更新履歴・告知と同じくこれも出さない。
   // ★ここで使う週はサーバーではなく端末の時計。案内(どの曲が対象か)を出すだけで、
   //   順位の期間はランキング画面がサーバーから受け取ったものを使う(§6.1)。
-  const RHYTHM_EVENT_NOTICE_KEY = 'mh_rhythm_event_notice_v1';
-  const [rhythmEventNoticeSeen, setRhythmEventNoticeSeen] = useState(null);
+  // ★「週に1度だけ出す案内」は、開催中ずっと出る入口(タブ)へ変えたのでもう使わない
+  //   (2026-09-11・ユーザー指示「イベント開催のタブみたいの作って押すと飛ぶとかにして」)。
+  //   保存キー mh_rhythm_event_notice_v1 に入っている値は消さない・書き換えない。
+  //   読まなくなるだけで、端末に残ったまま害が無い(CLAUDE.md ⑦)。
   const rhythmEventReleased = RELEASE_FLAGS.rhythmWeeklyRanking === true;
   // ★知らせるのは期間限定イベントだけ(2026-09-11・ユーザー指示で、週間は対象曲を持たなくなった)。
   //   週間は公開曲すべてが対象で毎週同じなので、曲えらびで知らせることが無い
   const rhythmSongSelectEvent = rhythmEventReleased ? rhythmLimitedEventAt(Date.now()) : null;
-  // 読めなかったとき(seen が null のまま)は「見た扱い」にして出さない。
-  // 案内が二度出るより、出ないほうが害が小さい(クイック連携の案内と同じ考え方)
-  const rhythmEventNoticeVisible = !!rhythmSongSelectEvent && typeof rhythmEventNoticeSeen === 'string'
-    && rhythmEventNoticeSeen !== rhythmSongSelectEvent.id;
-  const dismissRhythmEventNotice = () => {
-    if (!rhythmSongSelectEvent) return;
-    setRhythmEventNoticeSeen(rhythmSongSelectEvent.id);
-    storeSet(RHYTHM_EVENT_NOTICE_KEY, rhythmSongSelectEvent.id, false);
-  };
   // ---- イベントの会話ストーリー(2026-09-11・ユーザー指示) ----
   // 「みゅあの前にイベント発生で、助手たちの会話ストーリーも入れてほしい。
   //   そのあとに助手からの説明みたいな」。
@@ -3400,11 +3393,6 @@ function MonsterHeroGame() {
         const claims = normalizeRhythmEventRewardClaims(await storeGet(RHYTHM_EVENT_REWARD_KEY, [], false));
         rhythmEventRewardClaimsRef.current = claims;
         setRhythmEventRewardClaims(claims);
-      }
-      // 週間ランキングの「今週の対象曲」案内。見たイベントのIDを覚えておく(週が変わればまた1度だけ出る)
-      {
-        const seenEventId = await storeGet(RHYTHM_EVENT_NOTICE_KEY, '', false);
-        setRhythmEventNoticeSeen(typeof seenEventId === 'string' ? seenEventId : '');
       }
       const compensationNoticeSeen = await storeGet('mh_masu_level_cap_compensation_notice_seen_v1', false, false);
       if (compensationNotice?.diamonds > 0 && !compensationNoticeSeen) setLevelCapCompensation(compensationNotice);
@@ -11316,14 +11304,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             catchingUp={catchingUp}
             difficulty={difficulty}
             dismissQuickRhythmBackground={dismissQuickRhythmBackground}
-            dismissRhythmEventNotice={dismissRhythmEventNotice}
             handleGiveUp={handleGiveUp}
             mainHero={mainHero}
             onExit={()=>{if(rhythmBackgroundRun){returnToBackgroundRun();return;}setGameState(RHYTHM_MODE_PUBLIC_RELEASE?'HOME':'DEBUG_SETTINGS');}}
             onOpenEventRanking={()=>{
               // 曲えらびの案内から開く。期間限定を開催中ならそちらのタブ、なければ週間のタブ
               const kind=rhythmSongSelectEvent&&rhythmSongSelectEvent.kind==='limited'?'limited':'weekly';
-              dismissRhythmEventNotice();
               setRhythmRankingTab(kind==='limited'?'event':'weekly');
               loadRhythmEventRanking(kind,rhythmEventDivision[kind]);
               setGameState('RHYTHM_RANKING');
@@ -11349,7 +11335,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             returnToHome={returnToHome}
             rhythmBackgroundRun={rhythmBackgroundRun}
             rhythmBestRecords={rhythmBestRecords}
-            rhythmEventNotice={rhythmEventNoticeVisible?rhythmSongSelectEvent:null}
+            rhythmEventNotice={rhythmSongSelectEvent}
             rhythmSelectView={rhythmSelectView}
             rhythmSelectedDifficultyId={rhythmSelectedDifficultyId}
             rhythmSelectedSongId={rhythmSelectedSongId}

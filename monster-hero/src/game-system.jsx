@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: fc84d9ceabf643f5
+// generated-sha256: 1dd8dbf5752b05af
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 15:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 15:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -13459,7 +13459,7 @@ function RhythmInfoScreen({
 }
 
 function RhythmSongSelectScreen({
-  catchingUp, difficulty, dismissQuickRhythmBackground, dismissRhythmEventNotice, handleGiveUp, mainHero,
+  catchingUp, difficulty, dismissQuickRhythmBackground, handleGiveUp, mainHero,
   onExit, onOpenEventRanking, onOpenHelp, onOpenMonsterSlots, onOpenOptions, onOpenRanking,
   onPlaySong, quickClearCounts, quickRhythmBackgroundVisible, quickRunDetailOpen, quickRunFinishReasonText,
   quickRunPendingRewards, quickRunProgress, quickRunResumable, quickRunStartError, quickRunStopConfirm,
@@ -13618,24 +13618,23 @@ function RhythmSongSelectScreen({
                   className="mt-1.5 min-h-[44px] w-full rounded-xl border border-white/15 text-[10px] font-black text-slate-400 active:scale-[.98]">⏹ ここで周回をやめる</button>)}
           </div>}
         </div>}
-        {/* 週間ランキングの「今週の対象曲」案内(docs/spec/RHYTHM_RANKING.md §10.2)。
-            その週の初回に1度だけ出す。閉じるか、その週にもう一度見たら出ない。
-            ★ヘルプと更新履歴は探しに行った人しか読まないので、画面のなかでも伝える(CLAUDE.md ⑤) */}
-        {rhythmEventNotice&&<div data-rhythm-event-notice className="shrink-0 border-b border-fuchsia-400/20 bg-slate-950/90 px-2 py-1">
-          <div className="flex items-start gap-1">
-            <div className="min-w-0 flex-1">
-              <AssistantBubble scene="rhythmWeeklyEvent" condition={rhythmEventNotice.kind==='limited'?'limited':null} compact/>
-              {/* 期間限定のときはイベントの名前を出す。「今週の対象曲」のままだと、
-                  週間ランキングが動いていると誤解される */}
-              <RhythmEventBanner event={rhythmEventNotice} className="mt-1"/>
-              {rhythmEventNotice.kind==='limited'&&<p className="mt-1 truncate text-[10px] font-black text-amber-200">🏆 {rhythmEventNotice.name} 開催中！</p>}
-              <p className="mt-1 text-[10px] font-black leading-tight text-fuchsia-100">{rhythmEventSongsLabel(rhythmEventNotice)}：{eventSongTitles.join(' ／ ')}</p>
-              <button type="button" data-rhythm-event-notice-open onClick={onOpenEventRanking}
-                className="mt-1 min-h-[44px] w-full rounded-xl border border-fuchsia-400/40 px-2 text-[10px] font-black text-fuchsia-200 active:scale-[.98]">🏆 {rhythmEventNotice.kind==='limited'?'イベントランキングを見る':'週間ランキングを見る'}</button>
-            </div>
-            <button type="button" data-rhythm-event-notice-close onClick={dismissRhythmEventNotice} aria-label="この案内を閉じる" className="min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black">×</button>
-          </div>
-        </div>}
+        {/* ★イベント開催中の「タブ」。押すとイベントランキングへ飛ぶだけ
+            (2026-09-11・ユーザー指摘「ここに置くと画面が見づらすぎる /
+             イベント開催のタブみたいの作って押すと飛ぶとかにして」)。
+            前は 助手の吹き出し → 告知画像 → 開催中の文 → 対象曲 → ボタン を縦に積んでいて、
+            曲えらびが1画面に収まらず、肝心の曲が見えなかった。
+            告知画像も報酬の表もイベントランキング側にあるので、ここは入口だけにする。
+            ★閉じる×は付けない。開催中ずっと出ている入口なので、消せると戻す道が無くなる */}
+        {rhythmEventNotice&&<button type="button" data-rhythm-event-tab onClick={onOpenEventRanking}
+          className="shrink-0 flex w-full items-center gap-2 border-b border-amber-300/30 bg-amber-500/10 px-3 py-2 text-left active:scale-[.99]"
+          style={{minHeight:'44px'}}>
+          <span className="shrink-0 text-sm">🏆</span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-[11px] font-black text-amber-200">{rhythmEventNotice.name} 開催中</span>
+            <span className="block truncate text-[9px] font-bold text-fuchsia-100">{rhythmEventSongsLabel(rhythmEventNotice)}：{eventSongTitles.join(' ／ ')}</span>
+          </span>
+          <span className="shrink-0 text-[9px] font-black text-amber-200">ランキング ›</span>
+        </button>}
         {/* 裏で周回したままモンビーを開いた最初の1回だけ(PR8) */}
         {quickRhythmBackgroundVisible&&<div data-quick-rhythm-background className="shrink-0 border-b border-fuchsia-400/20 bg-slate-950/90 px-2 py-1">
           <div className="flex items-start gap-1">
@@ -14009,14 +14008,16 @@ function RhythmRankingScreen({
             </>)}
           </>)}
           {boardTab&&(<>
+            {/* ★告知画像は読み込みの前に出す。曲えらびから外したので、絵を見られるのはここだけ。
+                順位が読めなくても「何が開催中か」は伝わるようにしておく
+                (2026-09-11・ユーザー指示でタブ化したときに合わせた) */}
+            <RhythmEventBanner event={eventDefinition||(boardKind==='limited'?limitedEvent:null)} className="mb-3"/>
             {event.status==='loading'&&<p data-rhythm-event-loading className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">読み込み中…</p>}
             {/* 集計のしたくがまだのとき。エラーではないので、赤い表示にはしない */}
             {event.status==='notReady'&&<p data-rhythm-event-not-ready className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">週間ランキングはただいま準備中です。もうしばらくお待ちください。</p>}
             {event.status==='closed'&&<p data-rhythm-event-closed className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">いま開催しているイベントはありません。次の開催をお待ちください。</p>}
             {event.status==='error'&&<p data-rhythm-event-error className="rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200">読み込めませんでした。電波の良い場所で「更新」をお試しください。</p>}
             {event.status==='ready'&&eventDefinition&&(<>
-              {/* 告知画像。あるときだけ、期間の帯の上に出す */}
-              <RhythmEventBanner event={eventDefinition} className="mb-3"/>
               {/* 期間はサーバーが決める。残り時間の見た目だけ端末の時計で数える */}
               <div data-rhythm-event-window className="mb-3 flex items-center gap-2 rounded-2xl border border-fuchsia-300/40 bg-slate-900/70 p-2">
                 <div className="min-w-0 flex-1">
@@ -19887,21 +19888,14 @@ function MonsterHeroGame() {
   // ★公開フラグが false のあいだは、ヘルプ・更新履歴・告知と同じくこれも出さない。
   // ★ここで使う週はサーバーではなく端末の時計。案内(どの曲が対象か)を出すだけで、
   //   順位の期間はランキング画面がサーバーから受け取ったものを使う(§6.1)。
-  const RHYTHM_EVENT_NOTICE_KEY = 'mh_rhythm_event_notice_v1';
-  const [rhythmEventNoticeSeen, setRhythmEventNoticeSeen] = useState(null);
+  // ★「週に1度だけ出す案内」は、開催中ずっと出る入口(タブ)へ変えたのでもう使わない
+  //   (2026-09-11・ユーザー指示「イベント開催のタブみたいの作って押すと飛ぶとかにして」)。
+  //   保存キー mh_rhythm_event_notice_v1 に入っている値は消さない・書き換えない。
+  //   読まなくなるだけで、端末に残ったまま害が無い(CLAUDE.md ⑦)。
   const rhythmEventReleased = RELEASE_FLAGS.rhythmWeeklyRanking === true;
   // ★知らせるのは期間限定イベントだけ(2026-09-11・ユーザー指示で、週間は対象曲を持たなくなった)。
   //   週間は公開曲すべてが対象で毎週同じなので、曲えらびで知らせることが無い
   const rhythmSongSelectEvent = rhythmEventReleased ? rhythmLimitedEventAt(Date.now()) : null;
-  // 読めなかったとき(seen が null のまま)は「見た扱い」にして出さない。
-  // 案内が二度出るより、出ないほうが害が小さい(クイック連携の案内と同じ考え方)
-  const rhythmEventNoticeVisible = !!rhythmSongSelectEvent && typeof rhythmEventNoticeSeen === 'string'
-    && rhythmEventNoticeSeen !== rhythmSongSelectEvent.id;
-  const dismissRhythmEventNotice = () => {
-    if (!rhythmSongSelectEvent) return;
-    setRhythmEventNoticeSeen(rhythmSongSelectEvent.id);
-    storeSet(RHYTHM_EVENT_NOTICE_KEY, rhythmSongSelectEvent.id, false);
-  };
   // ---- イベントの会話ストーリー(2026-09-11・ユーザー指示) ----
   // 「みゅあの前にイベント発生で、助手たちの会話ストーリーも入れてほしい。
   //   そのあとに助手からの説明みたいな」。
@@ -20736,11 +20730,6 @@ function MonsterHeroGame() {
         const claims = normalizeRhythmEventRewardClaims(await storeGet(RHYTHM_EVENT_REWARD_KEY, [], false));
         rhythmEventRewardClaimsRef.current = claims;
         setRhythmEventRewardClaims(claims);
-      }
-      // 週間ランキングの「今週の対象曲」案内。見たイベントのIDを覚えておく(週が変わればまた1度だけ出る)
-      {
-        const seenEventId = await storeGet(RHYTHM_EVENT_NOTICE_KEY, '', false);
-        setRhythmEventNoticeSeen(typeof seenEventId === 'string' ? seenEventId : '');
       }
       const compensationNoticeSeen = await storeGet('mh_masu_level_cap_compensation_notice_seen_v1', false, false);
       if (compensationNotice?.diamonds > 0 && !compensationNoticeSeen) setLevelCapCompensation(compensationNotice);
@@ -28652,14 +28641,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             catchingUp={catchingUp}
             difficulty={difficulty}
             dismissQuickRhythmBackground={dismissQuickRhythmBackground}
-            dismissRhythmEventNotice={dismissRhythmEventNotice}
             handleGiveUp={handleGiveUp}
             mainHero={mainHero}
             onExit={()=>{if(rhythmBackgroundRun){returnToBackgroundRun();return;}setGameState(RHYTHM_MODE_PUBLIC_RELEASE?'HOME':'DEBUG_SETTINGS');}}
             onOpenEventRanking={()=>{
               // 曲えらびの案内から開く。期間限定を開催中ならそちらのタブ、なければ週間のタブ
               const kind=rhythmSongSelectEvent&&rhythmSongSelectEvent.kind==='limited'?'limited':'weekly';
-              dismissRhythmEventNotice();
               setRhythmRankingTab(kind==='limited'?'event':'weekly');
               loadRhythmEventRanking(kind,rhythmEventDivision[kind]);
               setGameState('RHYTHM_RANKING');
@@ -28685,7 +28672,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             returnToHome={returnToHome}
             rhythmBackgroundRun={rhythmBackgroundRun}
             rhythmBestRecords={rhythmBestRecords}
-            rhythmEventNotice={rhythmEventNoticeVisible?rhythmSongSelectEvent:null}
+            rhythmEventNotice={rhythmSongSelectEvent}
             rhythmSelectView={rhythmSelectView}
             rhythmSelectedDifficultyId={rhythmSelectedDifficultyId}
             rhythmSelectedSongId={rhythmSelectedSongId}

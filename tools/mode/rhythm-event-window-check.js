@@ -148,8 +148,11 @@ check('週のIDは weekly_YYYY_MM_DD の形',/^weekly_\d{4}_\d{2}_\d{2}$/.test(O
     &&game.includes('if(!src||failed)return null;'));
   check('読めなかったら黙って消す(壊れたアイコンを残さない)',
     game.includes('onError={()=>setFailed(true)}'));
-  check('イベントタブと曲えらびの両方に出す',
-    (screen.match(/<RhythmEventBanner /g)||[]).length>=2);
+  // ★曲えらびからは外した(2026-09-11・ユーザー指摘「ここに置くと画面が見づらすぎる」)。
+  //   告知画像はイベントランキングのタブと、お知らせの項目を開いたときに出る
+  check('告知画像はイベントランキング側に出す',
+    (screen.match(/<RhythmEventBanner /g)||[]).length>=1
+    &&screen.slice(screen.indexOf('function RhythmRankingScreen')).includes('<RhythmEventBanner '));
   // キャッシュキーを打つ側と、使われていない画像を探す側の両方へ登録が要る
   check('画像を参照するファイルとして登録してある',
     read('tools/stamp-version.js').includes("'data/rhythm-event.js',")
@@ -448,9 +451,17 @@ check('曲別の一覧は週間・イベントのタブでは出さない',
   &&screen.includes("{songTab&&rhythmRanking.status==='ready'&&rhythmRanking.entries.length>0&&"));
 check('週間の結果を端末へ書き戻していない(自己ベストは触らない)',
   !app.includes('saveRhythmBestRecord(rhythmEventRanking')&&!app.includes('mh_rhythm_best_v1')||true);
+// ★曲えらびの案内は「押すと飛ぶタブ」へ変えたので mh_rhythm_event_notice_v1 は読まなくなった。
+//   キーの名前も中身も変えていない(端末に残ったまま。消さない・書き換えない・CLAUDE.md ⑦)。
+//   いま読み書きするのは会話と報酬の2つ。どちらも新しく足したキー
 check('新しい保存キーを足している(既存キーは触らない)',
-  app.includes("const RHYTHM_EVENT_NOTICE_KEY = 'mh_rhythm_event_notice_v1';")
-  &&saveSpec.includes('mh_rhythm_event_notice_v1'));
+  app.includes("const RHYTHM_EVENT_STORY_KEY = 'mh_rhythm_event_story_v1';")
+  &&app.includes("const RHYTHM_EVENT_REWARD_KEY = 'mh_rhythm_event_reward_v1';")
+  &&saveSpec.includes('mh_rhythm_event_story_v1')
+  &&saveSpec.includes('mh_rhythm_event_reward_v1'));
+check('使わなくなったキーを消したり書き換えたりしていない',
+  !app.includes("storeSet('mh_rhythm_event_notice_v1'")
+  &&!app.includes("storeSet(RHYTHM_EVENT_NOTICE_KEY"));
 
 // ⑤ 公開フラグ(機能と案内をまとめて出し入れする)
 const released=/const RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE = true;/.test(flags);
@@ -503,10 +514,18 @@ check('助手の告知を付けている(大きい追加)',
 // ★案内を置くのは曲えらびだけ。ランキング画面には説明も吹き出しも置かない
 //   (2026-09-11・ユーザー指摘「ランキングページに余計な説明が多くて見にくい」)。
 //   順位を見に来る画面なので読み物は場所を取りすぎる。説明はヘルプにある。
-check('曲えらびで助手が案内する',
-  assistants.includes('rhythmWeeklyEvent: {')
-  &&(screen.match(/<AssistantBubble scene="rhythmWeeklyEvent"/g)||[]).length===1
-  &&screen.includes('data-rhythm-event-notice'));
+// ★曲えらびの案内は「押すと飛ぶタブ」1本にした(2026-09-11・ユーザー指示
+//   「イベント開催のタブみたいの作って押すと飛ぶとかにして」)。
+//   吹き出し・告知画像・ボタンを縦に積んでいたころは、曲えらびが1画面に収まらなかった。
+//   使い道が無くなった場面 rhythmWeeklyEvent とそのセリフ(3人ぶん)は消してある。
+//   放っておくと、どこからも出ないセリフを直し続けることになるため(rhythmTotalRanking と同じ)
+check('曲えらびにイベントの入口(タブ)がある',
+  screen.includes('data-rhythm-event-tab')
+  &&screen.includes('onClick={onOpenEventRanking}'));
+check('曲えらびに読み物を積んでいない',
+  !assistants.includes('rhythmWeeklyEvent')
+  &&!screen.includes('<AssistantBubble scene="rhythmWeeklyEvent"')
+  &&!screen.includes('data-rhythm-event-notice'));
 // ★見るのは RhythmRankingScreen の中だけ。遊びかた(ヘルプ)の画面は読み物の場所なので、
 //   あちらの横画面の案内まで消さない
 const rankingScreenBody=screen.slice(screen.indexOf('function RhythmRankingScreen'));
@@ -515,16 +534,15 @@ check('ランキング画面に読み物を置いていない',
   &&!/合計で競うランキングです|対象曲で競うランキングです/.test(rankingScreenBody)
   &&!rankingScreenBody.includes('<RhythmLandscapeHint')
   &&!rankingScreenBody.includes('<AssistantBubble'));
-// 週間の「毎週月曜5:00」の話を期間限定のあいだに出すと、週間が動いていると誤解される
-// 曲えらびの案内は期間限定のときだけ出るので、セリフもイベントの話でそろえる
-check('助手のセリフは期間限定イベントの話',
-  (assistants.match(/rhythmWeeklyEvent: \[/g)||[]).length>=3
-  &&!assistants.includes('今週の対象曲だよ')
-  &&(assistants.match(/期間限定/g)||[]).length>=3);
-check('助手3人ぶんのセリフがある',(assistants.match(/rhythmWeeklyEvent: \[/g)||[]).length>=3);
-check('曲えらびの案内は週ごとに1度だけ',
-  screen.includes('data-rhythm-event-notice')&&screen.includes('data-rhythm-event-notice-close')
-  &&app.includes('rhythmEventNoticeSeen !== rhythmSongSelectEvent.id'));
+// ★タブは開催中ずっと出す。閉じられると戻す道が無くなるので×は付けない
+check('入口は開催中ずっと出る(既読で消さない)',
+  app.includes('rhythmEventNotice={rhythmSongSelectEvent}')
+  &&!screen.includes('data-rhythm-event-notice-close')
+  &&!app.includes('rhythmEventNoticeSeen'));
+// タブは入口だけ。イベント名と対象曲が分かれば、あとはランキング側で見せる
+check('タブにイベント名と対象曲が出る',
+  screen.includes('{rhythmEventNotice.name} 開催中')
+  &&screen.includes('rhythmEventSongsLabel(rhythmEventNotice)'));
 
 // 適用SQLと仕様書
 check('適用SQLを用意している',
