@@ -21,7 +21,7 @@ const fs = require('fs');
 const path = require('path');
 const babel = require('@babel/core');
 const { chromium } = require('playwright');
-const { REPO_ROOT, GAME_SYSTEM } = require('../harness');
+const { REPO_ROOT, GAME_SYSTEM, screenSource } = require('../harness');
 
 let failed = 0;
 const check = (name, ok, detail = '') => {
@@ -32,11 +32,13 @@ const check = (name, ok, detail = '') => {
 const whole = fs.readFileSync(GAME_SYSTEM, 'utf8');
 
 // --- ① 静的な確認: あふれる領域を中央そろえのまま放置していないか ---
-const marker = whole.indexOf("gameState==='WAVE_RESULT'");
-if (marker < 0) { console.error('NG: WAVE_RESULT の画面が見つかりませんでした'); process.exit(1); }
-const from = whole.indexOf('<div style={{position:"absolute"', marker);
-const to = whole.indexOf('\n', whole.indexOf('{handleNextWave', from)) + 1;
-const block = whole.slice(from, to) + '        </div>';
+// WAVE 結果は 68-screen-run-result.jsx へ切り出したので、gameState の位置から数えるのではなく
+// コンポーネント本体を読む(呼び出しの位置から数えると、次の画面の中身を拾ってしまう)
+const screen = screenSource('WAVE_RESULT', 'WaveResultScreen');
+if (!screen) { console.error('NG: WAVE_RESULT の画面が見つかりませんでした'); process.exit(1); }
+const from = screen.indexOf('<div style={{position:"absolute"');
+const to = screen.indexOf('\n', screen.indexOf('{handleNextWave', from)) + 1;
+const block = screen.slice(from, to) + '        </div>';
 check('見出しと内訳をスクロールできる入れ物にまとめている',
   block.includes('min-h-0 flex flex-col items-center overflow-y-auto mh-scroll'));
 check('ボタンは縮まないので必ず画面内に残る', /shrink-0[^"`]*`}[^]{0,200}次へ進む|shrink-0/.test(block.slice(block.indexOf('{handleNextWave'))));

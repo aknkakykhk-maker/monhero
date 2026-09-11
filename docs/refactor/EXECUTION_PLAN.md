@@ -67,26 +67,27 @@ S/A 等級は `REGRESSION_RISK_MAP.md` に基づく。
 | 9 | `MASU_*`(育成系) | — | — | **完了**(2026-09-10)。`59` / `61`〜`66` の7ファイルに22画面。`MASU_PATTERN_DEBUG` はデバッグ専用なので残した |
 | 10 | `RHYTHM_*`(演奏画面以外) | — | — | **完了**(2026-09-10)。`src/parts/58-screen-rhythm.jsx`(5画面で1ファイル) |
 | 11 | `PICK_*`(スキップ含む7画面) | — | — | **完了**(2026-09-11)。`67-screen-pick.jsx`。タイマーはすべてハンドラの中にあり本体へ残った |
-| 11b | `UPGRADE_SKILL` / `WAVE_RESULT` / `REWARD_PICK` / `CHAMPION` | **Opus 5** | high | バトルの結果まわり。ラン終了の処理と演出が絡む |
+| 11b | バトルの結果まわり7画面 | — | — | **完了**(2026-09-11)。`68-screen-run-result.jsx`。ラン終了3つ(勝ち・敗北・リタイア)とマスモン登録も一緒に出した |
 | 12 | `HOME` | **Opus 5** | high | 配置検査あり(`home-layout-check`)。助手の吹き出し・施設・初回案内が重なる |
 | 13 | `BATTLE` | **Opus 5** | **max** | 最後。`processTurn` に `token.alive` を通す。A等級 |
 
 ## 次の一手
 
-**STEP 6 の次(`UPGRADE_SKILL` / `WAVE_RESULT` / `REWARD_PICK` / `CHAMPION` の切り出し)** — **Opus 5 / effort high**
+**STEP 6 の次(`HOME` の切り出し)** — **Opus 5 / effort high**
 
-先に [`STEP6_HANDOVER.md`](STEP6_HANDOVER.md) を読むこと。終わった55画面と、
+先に [`STEP6_HANDOVER.md`](STEP6_HANDOVER.md) を読むこと。終わった62画面と、
 この日に分かった型(props の洗い出し方・移してはいけないもの3つ・1ブロックで2画面を出し分けているもの・
 検査が静かに壊れること)が1枚にまとまっている。
 
-`PICK_*`(6-11)は終わった。次は**バトルの結果まわり4画面**(場所は `60-app.jsx` の
-`UPGRADE_SKILL` / `WAVE_RESULT` / `REWARD_PICK` と、少し離れた `CHAMPION`)。
-ラン終了の処理と演出が絡むので、**保存と演出の再生は本体に残す**。
-`CHAMPION` は種族チャレンジの戻りボタンを含む兄弟ブロックが同じ行にあるので、置き去りにしない。
+`HOME` は**配置の検査がある唯一の画面**(`node tools/home-layout-check.js`)。
+助手(みゅあ)の吹き出し・施設のボタン・はじめての案内が同じ場所に重なるので、
+切り出したあとに必ずこれを通す。ログインボーナスやお知らせのように
+**HOME に出てくるかぶせもの**が兄弟ブロックとして周りに散っているので、置き去りにしない。
 
-1〜17本目(`use-screen-effects` / `SETTINGS` / `MISSIONS` / `GIFT_BOX` / `ITEM_INVENTORY` /
-`BREEDER_MARKET` / `PROFILE` / 図鑑3画面 / モンヒロビート5画面 / `MASU_*` 22画面 / えらぶ系7画面)は
-2026-09-10〜11 に完了。切り出しの型は 51〜67 の17ファイルにそろっている
+1〜18本目(`use-screen-effects` / `SETTINGS` / `MISSIONS` / `GIFT_BOX` / `ITEM_INVENTORY` /
+`BREEDER_MARKET` / `PROFILE` / 図鑑3画面 / モンヒロビート5画面 / `MASU_*` 22画面 /
+えらぶ系7画面 / 結果まわり7画面)は 2026-09-10〜11 に完了。
+切り出しの型は 51〜68 の18ファイルにそろっている
 (保存を伴う操作は本体に残して props で受け、共有層の純関数は画面から直接呼ぶ。
 画面は `gameState` を知らず、遷移は props で受け取る)。
 

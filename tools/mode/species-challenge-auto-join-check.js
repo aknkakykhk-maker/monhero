@@ -9,6 +9,7 @@
 const fs = require('fs');
 const vm = require('vm');
 
+const { screenSource } = require('../harness');
 const source = fs.readFileSync('monster-hero/src/game-system.jsx', 'utf8');
 const assert = (condition, message) => {
   if (!condition) throw new Error(`NG: ${message}`);
@@ -72,7 +73,9 @@ assert(noJoinBranch.includes("advanceRunStage('UPGRADE_SKILL')"), '加入なし�
 assert(noJoinBranch.includes('setUpgradePoints(prev=>prev+(Math.floor(Math.random()*4)+1))'), '加入時と同じ強化ポイントを配る');
 assert(training.indexOf("advanceRunStage('PICK_ALLY')") < noJoinAt, '加入できる子がいるときは今までどおり供モン選択を優先する');
 assert(!/} else if\(joinWaves\.includes\(wave\)\)\{/.test(training), '通常モードの合流WAVEの進み方は変えない');
-const upgradeScreen = source.slice(source.indexOf("{gameState==='UPGRADE_SKILL'&&("), source.indexOf('{/* WAVE RESULT */}'));
+// 固有技強化は 68-screen-run-result.jsx へ切り出した。呼び出しの位置から次の画面までを
+// 切り取ると props しか読めないので、コンポーネント本体を読む
+const upgradeScreen = screenSource('UPGRADE_SKILL', 'UpgradeSkillScreen');
 assert(upgradeScreen.includes('data-guts-recovery-button'), 'その画面にガッツ回復の操作がある');
 
 // --- 弾いた供モンをスロットへ残さない ---
