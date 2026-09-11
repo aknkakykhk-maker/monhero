@@ -13,6 +13,7 @@ const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分�
 const path = require('path');
 const fs = require('fs');
 const http = require('http');
+const net = require('net');
 const { chromium } = require('playwright');
 
 const ROOT = path.resolve(__dirname, '..', '..');
@@ -23,8 +24,23 @@ const PAGE_URL = process.env.SMOKE_URL || `http://localhost:${PORT}/monster-hero
 const MIME = { '.html':'text/html', '.js':'text/javascript', '.json':'application/json',
   '.css':'text/css', '.png':'image/png', '.jpg':'image/jpeg', '.webp':'image/webp',
   '.svg':'image/svg+xml', '.mp3':'audio/mpeg', '.ico':'image/x-icon' };
-const serve = () => new Promise((resolve, reject) => {
-  if (process.env.SMOKE_URL) { resolve(null); return; }
+// ★共有の配信(tools/serve.py)が既に :8899 で動いていることがある。
+//   そのまま listen すると EADDRINUSE で即死するので、開いていればそれを使う。
+//   run-checks.js も「既に開いていたのでそれを使う」と同じ判断をしている
+const portOpen = (port) => new Promise((resolve) => {
+  const socket = net.connect({ port, host: '127.0.0.1' });
+  const done = (open) => { socket.destroy(); resolve(open); };
+  socket.setTimeout(500);
+  socket.on('connect', () => done(true));
+  socket.on('timeout', () => done(false));
+  socket.on('error', () => done(false));
+});
+const serve = async () => {
+  if (process.env.SMOKE_URL) return null;
+  if (await portOpen(PORT)) { console.log(`  (既に :${PORT} が開いていたのでそれを使う)`); return null; }
+  return serveSelf();
+};
+const serveSelf = () => new Promise((resolve, reject) => {
   const server = http.createServer((req, res) => {
     const rel = decodeURIComponent(req.url.split('?')[0]).replace(/^\/+/, '');
     const file = path.join(ROOT, rel);

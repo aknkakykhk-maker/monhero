@@ -28,14 +28,33 @@ const RHYTHM_DIFFICULTIES = Object.freeze([
 // ここを170→200msへ広げたのが今回のいちばん大きい変更で、
 // 「拍は取れているのに切れる」状態をほぼ無くすことを狙っている。
 // ほかの音ゲーの最上位判定はおおむね±0.03〜0.05秒なので、MARVELOUS 0.055秒はやさしめ。
+//
+// 【2026-09-11・外側の2つ(GOOD/BAD)だけ狭める】
+//   GOOD 200→170 / BAD 240→185。MARVELOUS〜GREATは動かさない。
+// ユーザー指示「グッドとバッド判定を狭くするのと同時に進めたい / ぶっちゃけこのふたつは
+// ミスみたいなもん ただし判定が広い必要はないと思ってる」。
+//
+// 狭めるのが「タップ判定の巻き込み」の対策そのものでもある。入力をどのノーツへ結びつけるかの
+// 探索範囲(RHYTHM_INPUT_MATCH_WINDOW_MS)は判定表のいちばん外側から作っているので、
+// BADを240→185へ縮めると、取りこぼしたノーツが次のタップを奪える射程がそのまま55ms短くなる。
+// GOODを200→170にしたぶんコンボは切れやすくなるが、巻き込みが直るぶんと相殺される見込み。
+// よその音ゲーのいちばん外側はおおむね±150〜200msなので、185msはまだ広いほう。
 const RHYTHM_JUDGMENTS = Object.freeze([
   Object.freeze({ id:'MARVELOUS', windowMs:55, scoreRate:1 }),
   Object.freeze({ id:'EXCELLENT', windowMs:100, scoreRate:.98 }),
   Object.freeze({ id:'GREAT', windowMs:150, scoreRate:.9 }),
-  Object.freeze({ id:'GOOD', windowMs:200, scoreRate:.7 }),
-  Object.freeze({ id:'BAD', windowMs:240, scoreRate:.3 }),
+  Object.freeze({ id:'GOOD', windowMs:170, scoreRate:.7 }),
+  Object.freeze({ id:'BAD', windowMs:185, scoreRate:.3 }),
   Object.freeze({ id:'MISS', windowMs:null, scoreRate:0 }),
 ]);
+// コンボがつながる judgment かどうか。BAD と MISS はどちらもコンボが切れるので、
+// 「取れた/取れない」の意味ではこの2つは同じ側にいる。
+const RHYTHM_COMBO_SAFE_JUDGMENT_IDS = Object.freeze(['MARVELOUS','EXCELLENT','GREAT','GOOD']);
+// コンボがつながる範囲(=GOODの窓)。入力をどのノーツへ当てるかを決めるとき、
+// 「まだコンボがつながる相手」を「もうBADにしかならない相手」より必ず先に見るために使う。
+const RHYTHM_COMBO_SAFE_WINDOW_MS = RHYTHM_JUDGMENTS
+  .filter(judgment=>RHYTHM_COMBO_SAFE_JUDGMENT_IDS.includes(judgment.id))
+  .reduce((widest,judgment)=>Math.max(widest,judgment.windowMs),0);
 // 入力をどのノーツに当てるかを探す範囲。**判定窓のいちばん外側と必ず同じにする**。
 // 以前はここに 200 という数字を直接書いていたため、判定窓を広げても
 // 受け付ける範囲が広がらず、いちばん外側の判定(BAD)へ永遠に届かない状態になりかねなかった。
@@ -43,7 +62,7 @@ const RHYTHM_JUDGMENTS = Object.freeze([
 const RHYTHM_INPUT_MATCH_WINDOW_MS = RHYTHM_JUDGMENTS
   .reduce((widest,judgment)=>Number.isFinite(judgment.windowMs)?Math.max(widest,judgment.windowMs):widest,0);
 // タップの「どのノーツを狙ったか」は判定ランクとは別に決める。
-// 判定窓は遊びやすさのため最大±240msを維持するが、その全域を前ノーツの所有時間にはしない。
+// 判定窓は遊びやすさのため最大±185msあるが、その全域を前ノーツの所有時間にはしない。
 // 隣り合う候補の間は前ノーツへ75%寄せ、次ノーツが早取りできる範囲もMARVELOUS窓以内に制限する。
 // これで16分88msなら切替は前から66ms地点: +60msの遅押しは前、次の-22ms以降は次を狙った入力として扱う。
 const RHYTHM_TAP_TARGET_PREVIOUS_SHARE=.75;
@@ -439,6 +458,15 @@ const RHYTHM_PERF=(()=>{
 
 const RHYTHM_PROJECTION_TOP_SCALE=.18;
 const RHYTHM_NOTE_WIDTH_RATIO=.78;
+// HOLD/SLIDEの帯の太さ。ノーツの頭(.78)より細い。
+//
+// 【2026-09-11・一度 .78 へそろえようとして戻した】
+// 見えている帯(幅2で42px)と、追従で実際に許される幅(±0.82レーン=108px)には
+// 2.6倍の食い違いがある。細く見えるぶん細く狙ってしまうので頭と同じ .78 にしたところ、
+// 隣のノーツの帯が「何も無いはず」の場所へはみ出した
+// (tools/mode/rhythm-canvas-render-check.js が検出)。食い違いは 2.56→2.10倍に
+// なるだけで得が小さく、見た目の衝突に見合わないため戻した。
+// 「狙いどころが細く見える」問題は、帯を太くする以外の見せ方で別途考える。
 const RHYTHM_BODY_WIDTH_RATIO=.64;
 // 入力側の余白(サブレーン)。見えている帯のふちギリギリを押したときに
 // 「外れた」ことにしないためのもの。指の当たりは点ではなく面なので、
@@ -808,6 +836,24 @@ const rhythmLaneCoordinateAtPoint=(clientX,clientY,rect)=>{
   // 少しはみ出した値がそのまま使われることはない。
   return (nx-left)/laneWidth-.5;
 };
+// 判定ラインの高さ(プレイエリアの下から12% ＝ y比0.88)。
+const RHYTHM_JUDGMENT_LINE_Y_RATIO=.88;
+// HOLD/SLIDEを押さえ続けているあいだの「指がどのレーンにいるか」。
+//
+// 【2026-09-11・「スライドの判定幅が細か過ぎる」のいちばんの原因】
+// ふつうのレーン座標は**指のその場の高さ**で台形の幅を決める。レーンは奥ほど狭いので、
+// 判定ラインの上の正しい位置に指があっても、指が上へ流れただけでレーン座標が外へ膨らむ。
+// ずれの大きさは |レーン-2| × (scale(0.88)/scale(y) - 1) で、エリア高700px想定だと
+// 判定ラインの140px上・端のレーンで0.556レーン。幅2のSLIDEの許容0.82レーンの68%を、
+// **横に一切ずれていないのに**食いつぶしていた(中央のレーンでは0なので、端だけ理不尽に落ちる)。
+//
+// 追従の的(rhythmSlideExpectedLane)は「いまの時刻＝判定ラインの上」の位置なので、
+// 比べる相手も判定ラインの高さで測るのが筋。指のxはそのまま使い、高さだけを揃える。
+// 許容の数字は1つも変えていない。
+const rhythmTrackingLaneCoordinateAtPoint=(clientX,clientY,rect)=>{
+  if(!rect||!Number.isFinite(rect.height)||rect.height<=0)return rhythmLaneCoordinateAtPoint(clientX,clientY,rect);
+  return rhythmLaneCoordinateAtPoint(clientX,rect.top+rect.height*RHYTHM_JUDGMENT_LINE_Y_RATIO,rect);
+};
 const rhythmSubLaneCoordinateAtPoint=(clientX,clientY,rect)=>{
   const coordinate=rhythmLaneCoordinateAtPoint(clientX,clientY,rect);
   return coordinate===null?null:(coordinate+.5)*2;
@@ -834,6 +880,18 @@ const rhythmInputAgeMs=(eventTimeStamp,nowPerfMs)=>{
   if(!(age>0)||age>RHYTHM_INPUT_AGE_MAX_MS)return 0;
   return age;
 };
+// ノーツを「もう誰も取れない」として見逃しMISSにする時刻。
+//
+// 【2026-09-11・「叩いたのにノーツが消えている」の対策】
+// 回収はフレーム(rAF)の中で、そのフレームの曲の時刻で行う。いっぽう入力の判定は
+// 上の rhythmInputAgeMs で**最大80ms巻き戻した**時刻で行う。この2つが同じ値だったため、
+// 物理的には判定窓の内側で叩いていても、イベントがJSへ届く前に走ったフレームが
+// 窓を越えていればノーツは既に done。届いた入力はそのノーツを候補から外し、
+// ±窓内にある次のノーツを掴む＝狙ったほうはMISS、次も早取りで消える(1入力で2つ崩れる)。
+// 入力が遅れて届きうるぶんだけ回収を待てば、この取りこぼしは起きない。
+// 受け付ける広さそのもの(RHYTHM_INPUT_MATCH_WINDOW_MS)は広げていない。
+// 判定は入力側の時刻で測るので、遅れて届いた入力が窓の外なら今までどおりMISSになる。
+const RHYTHM_MISS_RECLAIM_MS = RHYTHM_INPUT_MATCH_WINDOW_MS + RHYTHM_INPUT_AGE_MAX_MS;
 
 const RHYTHM_FLICK_DISTANCE_PX = 24;
 const RHYTHM_FLICK_MAX_MS = 450;
@@ -852,13 +910,48 @@ const rhythmNoteWantsEndFlick=note=>{
   return type==='HOLD'||type==='SLIDE';
 };
 const RHYTHM_SLIDE_TOLERANCE_LANES = .82;
+// SLIDEの追従を、難易度ごとにやさしくする。
+//
+// 【2026-09-11・ユーザー指示】
+// 「スライドノーツの判定幅が細か過ぎてかなりむずい / 難易度によって細かさを調整してほしい /
+//   もちろん難しい曲なら細かくてもいい」
+//
+// それまで追従の許容も猶予も全難易度で同じ1つの値だった。難易度差は譜面の中身
+// (帯の幅)だけで付いていて、しかも**MASTERがいちばん厳しい**状態になっていた。
+// 配信中の譜面の実測: HARD 191本中163本が幅3(±1.07レーン) / EXPERT 202本中186本が幅3 /
+// MASTER 228本中210本が幅2(±0.82レーン)。つまり上の難易度ほど細い帯を使っている。
+//
+//   toleranceBonusLanes … 追従の許容へ足すレーン数。MASTERは0＝これまでどおり
+//   graceMs             … 的から外れてから失敗にするまでの猶予(ms)。MASTERは120＝これまでどおり
+//
+// 猶予にも差を付けるのは、経路の速い区間では許容だけでは足りないため。
+// 配信譜面の移動速度はp90で7.2レーン/秒あり、そこでは幅2の許容0.82レーンを
+// **114msで使い切る**（＝従来の猶予120msと同じ桁）。許容と猶予は掛け算で効く。
+// 上限は200msに留める(HOLD/SLIDEの持ち替え猶予 RHYTHM_HOLD_HANDOVER_GRACE_MS と同じ)。
+const RHYTHM_SLIDE_TRACKING_BY_DIFFICULTY = Object.freeze({
+  EASY:   Object.freeze({ toleranceBonusLanes:.40, graceMs:200 }),
+  NORMAL: Object.freeze({ toleranceBonusLanes:.32, graceMs:190 }),
+  HARD:   Object.freeze({ toleranceBonusLanes:.24, graceMs:175 }),
+  EXPERT: Object.freeze({ toleranceBonusLanes:.12, graceMs:150 }),
+  MASTER: Object.freeze({ toleranceBonusLanes:0,   graceMs:120 }),
+});
+// 保存値も譜面も持たない「そのときの難易度」を判定へ渡すために、演奏を始めるときへ
+// ノーツ1つ1つへ焼き込む(makeRuntimeNotes)。関数の引数を増やさずに済み、
+// 譜面データそのものは触らないので保存データにもランキングにも影響しない。
+const rhythmSlideTrackingFor = difficultyId =>
+  RHYTHM_SLIDE_TRACKING_BY_DIFFICULTY[String(difficultyId||'').toUpperCase()]
+  || RHYTHM_SLIDE_TRACKING_BY_DIFFICULTY.MASTER;
 // HOLD・SLIDEの終わり(離す・終点フリック)の判定も、単発のタップと同じ表を使う。
 // 数字を別に持つと、タップだけ緩めて終端が置き去りになる。判定表のいちばん外側から作る。
 const RHYTHM_RELEASE_MAX_MS = RHYTHM_INPUT_MATCH_WINDOW_MS;
 const RHYTHM_RELEASE_DEFER_ARM_MS = 100;
 const RHYTHM_RELEASE_AUTO_MISS_ARM_MS = 180;
 const RHYTHM_RELEASE_JUDGMENT_IDS = Object.freeze(['MARVELOUS','EXCELLENT','GREAT','GOOD','BAD','MISS']);
-const rhythmSlideTrackingTolerance=(note,chartTimeMs)=>RHYTHM_SLIDE_TOLERANCE_LANES+(rhythmSlideWidthAt(note,chartTimeMs)-2)/4;
+const rhythmSlideToleranceBonus=note=>{
+  const bonus=Number(note?._rhythmSlideToleranceBonusLanes);
+  return Number.isFinite(bonus)&&bonus>0?bonus:0;
+};
+const rhythmSlideTrackingTolerance=(note,chartTimeMs)=>RHYTHM_SLIDE_TOLERANCE_LANES+(rhythmSlideWidthAt(note,chartTimeMs)-2)/4+rhythmSlideToleranceBonus(note);
 const rhythmJudgeRelease=deltaMs=>{
   const value=Math.abs(Number(deltaMs));
   if(!Number.isFinite(value))return 'MISS';
@@ -1213,10 +1306,12 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
       ['resize','scroll'].forEach(type=>window.visualViewport.addEventListener(type,invalidateAreaRect,{passive:true}));
     }
   }
+  // 追従専用。指の高さではなく判定ラインの高さでレーンを測る
+  // (rhythmTrackingLaneCoordinateAtPoint の説明を参照)
   const laneCoordinate=(clientX,clientY)=>{
     const rect=areaRect();
     if(!rect)return null;
-    return rhythmLaneCoordinateAtPoint(clientX,clientY,rect);
+    return rhythmTrackingLaneCoordinateAtPoint(clientX,clientY,rect);
   };
   const estimatedSongMs=session=>{
     const elapsed=Math.max(0,nowPerf()-session.startPerfMs);
@@ -1282,7 +1377,9 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
     }
     if(!bad){session.trackingBadSincePerf=null;return;}
     if(session.trackingBadSincePerf==null)session.trackingBadSincePerf=pos.perfMs;
-    if(pos.perfMs-session.trackingBadSincePerf<RHYTHM_MID_TRACKING_GRACE_MS)return;
+    const graceMs=Number(session.note?._rhythmTrackingGraceMs)>0
+      ?Number(session.note._rhythmTrackingGraceMs):RHYTHM_MID_TRACKING_GRACE_MS;
+    if(pos.perfMs-session.trackingBadSincePerf<graceMs)return;
     session.note.holdJudgment='MISS';
     session.failed=true;
     // 猶予を超えて外れたままなら、指を離すのを待たずその場でMISS確定する。
@@ -1500,7 +1597,23 @@ const RHYTHM_TOUCH_SPAN_RUNTIME=(()=>{
     subLanes.sort((a,b)=>a-b);
     return {centerCoordinate,centerSubLane,subLanes};
   };
-  const defer=fn=>{if(typeof queueMicrotask==='function')queueMicrotask(fn);else Promise.resolve().then(fn);};
+  // 【2026-09-11・疑似TAPを本体の入力より後に撃つ】
+  // 接触幅の疑似TAPは「中心の指が取ったノーツと同じ時刻のノーツ」だけを取るよう
+  // physicalTargetTimes で鍵を掛けている(syntheticTargetTime)。その鍵を掛けるのは
+  // 本体の入力処理(inputStarts → recordPhysicalTarget)。
+  //
+  // ところが、この接触幅ランタイムは document の capture、ゲーム本体は play area の
+  // bubble に登録されている。capture が先に走り、queueMicrotask は
+  // 「リスナとリスナのあいだのマイクロタスクチェックポイント」で消化されるため、
+  // **疑似TAPのほうが本体より先に**走っていた。そのとき鍵はまだ空なので
+  // `Number.isFinite(syntheticTime)` が false になり、時刻の制限がまるごと外れる。
+  // 制限の無い疑似TAPは判定窓いっぱい先のノーツまで取れてしまい、
+  // 取られたノーツは本来の時刻には既に done ＝ 1本の指で別時刻の2ノーツが落ちる。
+  //
+  // setTimeout(0) はマクロタスクなので、いま配送中のイベントのリスナが全部
+  // 走り終わってから実行される。これで鍵が必ず先に掛かる。
+  // (queueMicrotask のままでは、リスナの途中で割り込むので順序を保証できない)
+  const defer=fn=>{if(typeof setTimeout==='function')setTimeout(fn,0);else if(typeof queueMicrotask==='function')queueMicrotask(fn);else Promise.resolve().then(fn);};
   const pointForSubLane=(subLane,clientY,rect)=>{
     const yRatio=rhythmClamp01((Number(clientY)-rect.top)/rect.height),nx=rhythmProjectBoundary((Number(subLane)+.5)/2,yRatio);
     return {clientX:rect.left+rect.width*nx,clientY:Number(clientY)};
@@ -1653,6 +1766,19 @@ const rhythmInputMatchBounds=(source,now,offset)=>{
 const rhythmChooseTapTarget=(passed,upcoming,now)=>{
   if(!passed)return upcoming;
   if(!upcoming)return passed;
+  // 【2026-09-11・「押したときにBADを拾う」の対策】
+  // 片方がもう BAD にしかならない位置にいて、もう片方はまだコンボがつながるなら、
+  // 時刻の取り分(switchAt)を見るまでもなく**つながるほう**を取る。
+  //
+  // どちらを取っても、取らなかったほうは残って見逃しMISSになる。だからここは
+  // 「2つのうちどちらを捨てるか」の選択でしかない。BADはコンボが切れるので
+  // MISSと同じ側であり、捨てるならBADにしかならないほうを捨てるのが必ず得になる。
+  //   例) A=1000ms(叩けずに残っている) / B=1300ms を狙って1180msに叩く
+  //       直す前 … Aが+180msで取られて BAD。Bは残って MISS。1入力で2つ崩れる
+  //       直した後 … Bが-120msで取られて GREAT。Aだけが MISS
+  const passedComboSafe=Math.abs(now-passed.noteTime)<=RHYTHM_COMBO_SAFE_WINDOW_MS;
+  const upcomingComboSafe=Math.abs(now-upcoming.noteTime)<=RHYTHM_COMBO_SAFE_WINDOW_MS;
+  if(passedComboSafe!==upcomingComboSafe)return passedComboSafe?passed:upcoming;
   const gap=upcoming.noteTime-passed.noteTime;
   if(!(gap>0))return passed;
   // 時刻だけでは「前を遅く叩いた」のか「次を少し早く叩いた」のか判別不能な帯がある。
@@ -1758,6 +1884,17 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
       if(tapOnly&&Number.isFinite(syntheticTime)&&Math.abs(Number(note.timeMs)-syntheticTime)>.001)continue;
       const timeDistance=Math.abs(now-noteTime);
       if(!(timeDistance<=RHYTHM_INPUT_MATCH_WINDOW_MS)||!acceptsPosition(note))continue;
+      // 【2026-09-11・早押しでノーツを「BADで食べる」のをやめる】
+      // まだ来ていないTAPを、もうBADにしかならない早さ(GOODの窓より外)で取ると、
+      // コンボを切ったうえにノーツまで消える。叩き直せばMARVELOUSで取れたはずのものを、
+      // 自分から捨てることになっていた。空打ちには何のペナルティも無い
+      // (30-rhythm-play.jsx、音が鳴るだけ)ので、取らずに残すほうが必ず得。
+      //
+      // 遅れ側は逆で、放っておけば確実に見逃しMISSになるぶん、BADでも拾えたほうがまし。
+      // だからここは**早押し側だけ**を狭める。
+      // HOLD/SLIDE/FLICKは指を置き続ける・弾く一続きの操作で、取らなかったら押し直しが
+      // 効かない(指はもう降りている)。巻き込みが起きるのはTAPなので、TAPだけに限る。
+      if(now<noteTime&&note.type==='TAP'&&timeDistance>RHYTHM_COMBO_SAFE_WINDOW_MS)continue;
       const distance=spatialDistance(note),inside=isInside(note);
       if(now>=noteTime)passedBest=candidate(passedBest,note,index,noteTime,inside,distance,true);
       else upcomingBest=candidate(upcomingBest,note,index,noteTime,inside,distance,false);
@@ -1775,7 +1912,17 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
     // ふつうの候補より**先に**取る。押さえ直しをほかのノーツへ吸われると、
     // 持ち替えが失敗して必ずMISSになるため。
     // 見るのは「いまの帯へ指が乗ったか」だけで、時間の近さは見ない(押さえ直しなので)。
-    if(RHYTHM_FLOATING_NOTES.size){
+    //
+    // 【2026-09-11・ただし「ちょうど今来ているノーツ」だけは譲らない】
+    // 時間を一切見ずに**無条件で**上書きしていたため、浮いているノーツの帯に重なる入力は
+    // すべて吸われていた。とくに画面いっぱいの幅を持つHOLD/SLIDEを離した直後は、
+    // 受付範囲がプレイエリア全域になり、持ち替え猶予(200ms)のあいだに来たTAPが
+    // 「どこを叩いても」落ちる状態だった。叩いたほうは見逃しMISSになるので、
+    // 1入力で2つ崩れる形の巻き込みそのもの。
+    // ふつうの候補がまだコンボのつながる範囲(GOODの窓)にいるなら、そちらが本命の入力。
+    // 持ち替えは「ほかに取るものが無いとき」に効けば足りる。
+    const chosenComboSafe=chosen&&Math.abs(now-chosen.noteTime)<=RHYTHM_COMBO_SAFE_WINDOW_MS;
+    if(RHYTHM_FLOATING_NOTES.size&&!chosenComboSafe){
       for(const note of RHYTHM_FLOATING_NOTES){
         // 判定が確定した・拾われたノーツの控えが残っていることがあるので、ここで捨てる
         if(!note||note.done||note.releasedAtMs==null){RHYTHM_FLOATING_NOTES.delete(note);continue;}

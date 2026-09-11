@@ -11,12 +11,59 @@
 // ・施設へ入る7つの行き先は props(onOpen*)で受け取る。画面は行き先の名前を持たない
 // ・かぶせもの3つは「HOME にいて、チュートリアルが終わっていて、前の会話が片付いていたら」
 //   という順番で出る。その条件は MonsterHeroGame 側に残し、ここは中身だけを持つ
+// イベント開催中の角バッジ(2026-09-11・ユーザー指示
+// 「右上とか左上とか専用バッジを付けるようにして」「そこそこ派手目に / キラキラ強調されてるような」)。
+//
+// ★この機能ぶんのCSSは、ここで <style> を置いて閉じる。70-bootstrap.jsx の大きなCSSへ
+//   書き足したときは、1行に複数の規則が並ぶ場所へ入って @media の内側になり、
+//   文書へ一度も読み込まれなかった(実ブラウザで 0件 / 全1161規則)。
+//   さらに消すときに同じ行の続きまで巻き込んで、横画面の配置を壊した。
+//   ここへ閉じておけば、ほかのCSSを壊しようがない。
+// ★位置は超越バッジ・魂格バッジと同じ「角へ少しはみ出す」置き方にそろえる。
+// ★動きを減らす設定の人には光らせない(prefers-reduced-motion)。
+// ★位置と見た目は style で直に持たせる。配置の検査(home-layout-check.js)は
+//   このCSSを読み込まないので、クラスだけに頼ると検査の中で「ただの文字」になり、
+//   ボタンが横に広がって施設の位置がずれてしまう(実際に落ちた)。
+//   クラスのほうは「光り方・動き」だけを足す係にする。
+const HOME_EVENT_BADGE_STYLE = Object.freeze({
+  position:'absolute', top:'-10px', right:'-9px', zIndex:8,
+  display:'block', overflow:'hidden', padding:'2px 7px',
+  border:'1px solid #fff3c4', borderRadius:'999px',
+  background:'linear-gradient(135deg,#f59e0b,#fde047 45%,#f97316)',
+  color:'#4a1d00', fontSize:'8px', fontWeight:1000, fontStyle:'normal',
+  lineHeight:1.6, whiteSpace:'nowrap', textShadow:'0 1px 0 #fff8', pointerEvents:'none',
+  boxShadow:'0 0 0 1px #0006,0 2px 8px #000a,0 0 10px #fbbf24cc,0 0 18px #f59e0b80',
+});
+const HOME_EVENT_BADGE_CSS = `
+.mh-home-event-badge{animation:mhHomeEventBadgePulse 1.6s ease-in-out infinite}
+.mh-home-event-badge::after{content:'';position:absolute;top:0;bottom:0;left:-60%;width:45%;
+  background:linear-gradient(100deg,#fff0,#ffffffcc,#fff0);
+  animation:mhHomeEventBadgeShine 2.4s ease-in-out infinite}
+@keyframes mhHomeEventBadgePulse{
+  0%,100%{box-shadow:0 0 0 1px #0006,0 2px 8px #000a,0 0 10px #fbbf24cc,0 0 18px #f59e0b80;transform:scale(1)}
+  50%{box-shadow:0 0 0 1px #0006,0 2px 8px #000a,0 0 16px #fde047,0 0 30px #f59e0bcc;transform:scale(1.06)}}
+@keyframes mhHomeEventBadgeShine{0%{left:-60%}55%{left:120%}100%{left:120%}}
+@media(prefers-reduced-motion:reduce){
+  .mh-home-event-badge{animation:none;transform:none}
+  .mh-home-event-badge::after{display:none}}
+`;
 function HomeScreen({
   assistantBondUp, breederIcon, breederLevel, breederName, breederPoints, gifts, gold,
   hasUnreadChangelog, homeBackgroundReady, homePastureMasumons, masuMons, missions,
   onOpenBattle, onOpenManagement, onOpenMarket, onOpenProfile, onOpenRhythm, onOpenSettings,
   onOpenTemple, openChangelog, openGiftBox, openMissions, resolveIconUrl, spotClass,
 }) {
+  // ★バッジのCSSは <head> へ1回だけ入れる。HOMEのDOMへ <style> を混ぜると、
+  //   配置の検査(home-layout-check.js)が施設の位置を測るときに数がずれる。
+  //   head なら画面の中身に影響しない。
+  React.useEffect(()=>{
+    if(typeof document==='undefined')return;
+    if(document.getElementById('mh-home-event-badge-css'))return;
+    const tag=document.createElement('style');
+    tag.id='mh-home-event-badge-css';
+    tag.textContent=HOME_EVENT_BADGE_CSS;
+    document.head.appendChild(tag);
+  },[]);
   // モンヒロビートのイベントを開催しているか。描くたびに数え直す(上の★のとおり)
   const homeRhythmEventOpen=(()=>{
     const released=(typeof RELEASE_FLAGS!=='undefined'&&RELEASE_FLAGS&&RELEASE_FLAGS.rhythmWeeklyRanking===true);
@@ -55,7 +102,7 @@ function HomeScreen({
                 古いままになる・CLAUDE.md ⑥-4)。開催していなければ何も出ない。
               ★いまのイベントはモンヒロビートの曲だけを対象にするので、札もここだけ。
                 ほかの遊びを対象にするイベントを作るときは、そのボタンにも同じ em を足す */}
-          <button className="mh-home-facility rhythm" onClick={onOpenRhythm} aria-label={RHYTHM_MODE_PUBLIC_RELEASE?"モンヒロビート":"モンヒロビート（準備中）"}><span>🎵 モンヒロビート{!RHYTHM_MODE_PUBLIC_RELEASE&&<small>準備中</small>}{homeRhythmEventOpen&&<em data-home-event-badge>🏆 イベント開催中</em>}</span></button>
+          <button className="mh-home-facility rhythm" onClick={onOpenRhythm} aria-label={RHYTHM_MODE_PUBLIC_RELEASE?"モンヒロビート":"モンヒロビート（準備中）"}><span>🎵 モンヒロビート{!RHYTHM_MODE_PUBLIC_RELEASE&&<small>準備中</small>}{homeRhythmEventOpen&&<em data-home-event-badge className="mh-home-event-badge" style={HOME_EVENT_BADGE_STYLE}>✨開催中✨</em>}</span></button>
           <button className={`mh-home-facility battle${spotClass('battle')}`} onClick={onOpenBattle} aria-label="バトル"><span><Sword size={25}/>バトル</span></button>
         </nav>
         <button onClick={openMissions} className={`mh-home-mission${spotClass('reward')}`}><List size={16}/>ミッション

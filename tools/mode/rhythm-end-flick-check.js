@@ -46,13 +46,13 @@ const frame=at=>{now=at;const cb=rafCb;rafCb=null;if(cb)cb();};
 // --- 1. 判定の基準そのものを変えていない ---
 // 終端の窓は、単発のタップの判定表のいちばん外側と同じ。数字を別に持たない
 // (別々に持つと、タップだけ緩めて終端が置き去りになる)。
-check('終端の判定窓はタップのいちばん外側と同じ',RHYTHM_RELEASE_MAX_MS===240);
+check('終端の判定窓はタップのいちばん外側と同じ',RHYTHM_RELEASE_MAX_MS===185);
 // 終端の判定も、単発のタップと同じ表を使う（終点フリックのために別の表を作っていない）。
 // 幅そのものは 2026-09-05 にユーザー指示で2回ゆるくした
 // （25→40→55 / 50→75→100 / 100→130→150 / 150→170→200 / 200→240）。
 check('終端の判定表を変えていない',
   [[0,'MARVELOUS'],[55,'MARVELOUS'],[56,'EXCELLENT'],[100,'EXCELLENT'],[101,'GREAT'],[150,'GREAT'],
-   [151,'GOOD'],[200,'GOOD'],[201,'BAD'],[240,'BAD'],[241,'MISS']].every(([d,e])=>rhythmJudgeRelease(d)===e));
+   [151,'GOOD'],[170,'GOOD'],[171,'BAD'],[185,'BAD'],[186,'MISS']].every(([d,e])=>rhythmJudgeRelease(d)===e));
 check('フリックの距離は単発FLICKと同じ24px',RHYTHM_FLICK_DISTANCE_PX===24);
 check('終点フリックの受付は終端の250ms前から',RHYTHM_END_FLICK_ARM_MS===250);
 
