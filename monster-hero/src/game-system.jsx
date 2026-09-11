@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6c5d8860e62bc092
+// generated-sha256: 87c25acf4f0cd285
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 15:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 15:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5669,6 +5669,12 @@ const HIDDEN_UPDATE_NOTICE_IDS = new Set((typeof CHANGELOG !== 'undefined' ? CHA
 // 以前は type がタブ名と完全一致するものだけを出していたため、fix / feature / market と
 // 書いた項目がどちらのタブにも出ず、更新履歴に載せたつもりで載っていなかった。
 // 種別を新しく足しても消えないよう、下の CHANGELOG_ISSUE_TAB_TYPES 以外は必ず更新情報へ拾う
+// ★一度きりの補正に使う保存キー(新しく足したもの。既存キーは触らない・CLAUDE.md ⑦)。
+// 週末ゲリラ杯を公開へ乗せてから visibleFrom を足すまでの15分間(2026-09-11 13:33〜13:48)、
+// まだ始まっていないイベントの項目が一覧に並んでいた。そのあいだに一覧を開いた端末では
+// 既読になってしまい、15:00に出し直したときNEWが付かない
+// (2026-09-11・ユーザー指摘「イベント来たけどお知らせにNEWがついてない」)。
+const CHANGELOG_TIMED_SEEN_FIX_KEY = 'mh_changelog_timed_seen_fix_v1';
 const CHANGELOG_ISSUE_TAB_TYPES = Object.freeze(['issue', 'fix']);
 const changelogEntriesOfTab = (tab) => CHANGELOG_ENTRIES.filter(entry => CHANGELOG_ISSUE_TAB_TYPES.includes(entry.type) === (tab === 'issue'));
 // 既読の判定に使う「いま存在するすべてのID」。
@@ -14003,14 +14009,15 @@ function RhythmRankingScreen({
             </>)}
           </>)}
           {boardTab&&(<>
+            {/* ★告知画像は読み込みの前に出す。順位が読めなくても「何が開催中か」は伝わるように
+                (2026-09-11)。曲えらびの案内は閉じると出なくなるので、ここが絵を見られる場所になる */}
+            <RhythmEventBanner event={eventDefinition||(boardKind==='limited'?limitedEvent:null)} className="mb-3"/>
             {event.status==='loading'&&<p data-rhythm-event-loading className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">読み込み中…</p>}
             {/* 集計のしたくがまだのとき。エラーではないので、赤い表示にはしない */}
             {event.status==='notReady'&&<p data-rhythm-event-not-ready className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">週間ランキングはただいま準備中です。もうしばらくお待ちください。</p>}
             {event.status==='closed'&&<p data-rhythm-event-closed className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">いま開催しているイベントはありません。次の開催をお待ちください。</p>}
             {event.status==='error'&&<p data-rhythm-event-error className="rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200">読み込めませんでした。電波の良い場所で「更新」をお試しください。</p>}
             {event.status==='ready'&&eventDefinition&&(<>
-              {/* 告知画像。あるときだけ、期間の帯の上に出す */}
-              <RhythmEventBanner event={eventDefinition} className="mb-3"/>
               {/* 期間はサーバーが決める。残り時間の見た目だけ端末の時計で数える */}
               <div data-rhythm-event-window className="mb-3 flex items-center gap-2 rounded-2xl border border-fuchsia-300/40 bg-slate-900/70 p-2">
                 <div className="min-w-0 flex-1">
@@ -20805,6 +20812,27 @@ function MonsterHeroGame() {
         // 振り分けを変えたときに既読が消えて未読へ戻る
         migratedSeen[type] = Array.isArray(savedIds) ? savedIds.filter(id=>CHANGELOG_ALL_IDS.has(id)) : changelogEntriesOfTab(type).filter(entry=>legacyDate && entry.date<=legacyDate).map(entry=>entry.id);
         if (!Array.isArray(savedIds)) await storeSet(`mh_changelog_seen_ids_${type}`, migratedSeen[type], false);
+      }
+      // ★一度きりの補正。時刻で出しはじめる項目(visibleFrom)を、出る前に既読にしてしまった端末がある。
+      // 週末ゲリラ杯を公開へ乗せてから visibleFrom を足すまでの15分間(2026-09-11 13:33〜13:48)、
+      // まだ始まっていないイベントの項目が一覧に並んでいた。そのあいだに一覧を開くと既読になり、
+      // 15:00に出し直したときNEWが付かない(ユーザー指摘「イベント来たけどお知らせにNEWがついてない」)。
+      // 外すのは visibleFrom を持つ項目だけ。ほかの項目の既読には触らない(CLAUDE.md ⑦)。
+      // ★済みの印は「その項目が実際に一覧へ出ている」ときにだけ立てる。出はじめる前に起動した
+      //   端末で立ててしまうと、15:00以降に開いても補正できなくなる。
+      if (await storeGet(CHANGELOG_TIMED_SEEN_FIX_KEY, false, false) !== true) {
+        const timedIds = CHANGELOG_ENTRIES.filter(entry => entry.visibleFrom).map(entry => entry.id);
+        if (timedIds.length > 0) {
+          for (const type of CHANGELOG_TYPES) {
+            const before = migratedSeen[type] || [];
+            const kept = before.filter(id => !timedIds.includes(id));
+            if (kept.length !== before.length) {
+              migratedSeen[type] = kept;
+              await storeSet(`mh_changelog_seen_ids_${type}`, kept, false);
+            }
+          }
+          await storeSet(CHANGELOG_TIMED_SEEN_FIX_KEY, true, false);
+        }
       }
       setChangelogSeen(migratedSeen);
       const listSettings = normalizeMonsterListSettings(await storeGet('mh_monster_list_settings', DEFAULT_MONSTER_LIST_SETTINGS, false));
@@ -30516,7 +30544,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             </div>
             <div className="rounded-2xl border-2 bg-slate-900 px-3 py-3" style={{borderColor:speaker.accent}}>
               <span className="block text-[9px] font-black tracking-widest" style={{color:speaker.accent}}>{speaker.name}</span>
-              <span className="block text-[13px] font-bold leading-relaxed text-white mt-1">{line.t}</span>
+              {/* ★{name} は、そのとき話している助手の呼び方へ置き換える。
+                  ここを素の {line.t} で出していたため、画面に {name} がそのまま出ていた
+                  (2026-09-11・ユーザー指摘「名前呼びのとこが変換されてない」)。
+                  呼び方も絆Lvも助手ごとに違うので、選んでいる助手ではなく「話している助手」から引く */}
+              <span className="block text-[13px] font-bold leading-relaxed text-white mt-1">{(()=>{
+                const bond=normalizeAssistantBond(assistantBonds[speaker.id]);
+                return assistantSpeakText(line.t,breederName,assistantBondLevelOf(bond.points),bond.callStyle,speaker.id);
+              })()}</span>
             </div>
             <p className="mt-2 text-center text-[8px] text-slate-500">
               {step+1} / {script.length}

@@ -3476,6 +3476,27 @@ function MonsterHeroGame() {
         migratedSeen[type] = Array.isArray(savedIds) ? savedIds.filter(id=>CHANGELOG_ALL_IDS.has(id)) : changelogEntriesOfTab(type).filter(entry=>legacyDate && entry.date<=legacyDate).map(entry=>entry.id);
         if (!Array.isArray(savedIds)) await storeSet(`mh_changelog_seen_ids_${type}`, migratedSeen[type], false);
       }
+      // ★一度きりの補正。時刻で出しはじめる項目(visibleFrom)を、出る前に既読にしてしまった端末がある。
+      // 週末ゲリラ杯を公開へ乗せてから visibleFrom を足すまでの15分間(2026-09-11 13:33〜13:48)、
+      // まだ始まっていないイベントの項目が一覧に並んでいた。そのあいだに一覧を開くと既読になり、
+      // 15:00に出し直したときNEWが付かない(ユーザー指摘「イベント来たけどお知らせにNEWがついてない」)。
+      // 外すのは visibleFrom を持つ項目だけ。ほかの項目の既読には触らない(CLAUDE.md ⑦)。
+      // ★済みの印は「その項目が実際に一覧へ出ている」ときにだけ立てる。出はじめる前に起動した
+      //   端末で立ててしまうと、15:00以降に開いても補正できなくなる。
+      if (await storeGet(CHANGELOG_TIMED_SEEN_FIX_KEY, false, false) !== true) {
+        const timedIds = CHANGELOG_ENTRIES.filter(entry => entry.visibleFrom).map(entry => entry.id);
+        if (timedIds.length > 0) {
+          for (const type of CHANGELOG_TYPES) {
+            const before = migratedSeen[type] || [];
+            const kept = before.filter(id => !timedIds.includes(id));
+            if (kept.length !== before.length) {
+              migratedSeen[type] = kept;
+              await storeSet(`mh_changelog_seen_ids_${type}`, kept, false);
+            }
+          }
+          await storeSet(CHANGELOG_TIMED_SEEN_FIX_KEY, true, false);
+        }
+      }
       setChangelogSeen(migratedSeen);
       const listSettings = normalizeMonsterListSettings(await storeGet('mh_monster_list_settings', DEFAULT_MONSTER_LIST_SETTINGS, false));
       setMonsterSortKey(listSettings.sortKey); setMonsterSortDir(listSettings.sortDir); setMonsterDisplayFlags(listSettings.display); setSortFilterModalTab(listSettings.modalTab); setMonsterLineageFilter(listSettings.lineage);
@@ -13186,7 +13207,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             </div>
             <div className="rounded-2xl border-2 bg-slate-900 px-3 py-3" style={{borderColor:speaker.accent}}>
               <span className="block text-[9px] font-black tracking-widest" style={{color:speaker.accent}}>{speaker.name}</span>
-              <span className="block text-[13px] font-bold leading-relaxed text-white mt-1">{line.t}</span>
+              {/* ★{name} は、そのとき話している助手の呼び方へ置き換える。
+                  ここを素の {line.t} で出していたため、画面に {name} がそのまま出ていた
+                  (2026-09-11・ユーザー指摘「名前呼びのとこが変換されてない」)。
+                  呼び方も絆Lvも助手ごとに違うので、選んでいる助手ではなく「話している助手」から引く */}
+              <span className="block text-[13px] font-bold leading-relaxed text-white mt-1">{(()=>{
+                const bond=normalizeAssistantBond(assistantBonds[speaker.id]);
+                return assistantSpeakText(line.t,breederName,assistantBondLevelOf(bond.points),bond.callStyle,speaker.id);
+              })()}</span>
             </div>
             <p className="mt-2 text-center text-[8px] text-slate-500">
               {step+1} / {script.length}
