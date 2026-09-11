@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 78ad6864516a42c5
+// generated-sha256: 07d58d0f8535fa56
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-12 07:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-12 08:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -24960,21 +24960,31 @@ function MonsterHeroGame() {
       for (let i = 0; i < claimedCount; i++) addAssistantBond('gift');
       // ブリーダー経験値が入ったときは、レベルが上がったぶんのポイントも配る。
       // 配った総数も更新しておく(読み込み時の補填が二重に配らないようにするため)
+      // ★以前はここから1件ずつ storeSet していた。途中で失敗すると
+      //   「ダイヤは増えたのにアイテムが入っていない」という片方だけの状態がそのまま残る。
+      //   saveStoredValuesOrRollback は全部書いてから読み戻し、1つでも食い違えば全部を元へ戻す
+      //   (神殿の合体・限界突破・マーケットの購入と同じ正本)。
+      const entries = [];
       if (balances.breederXp !== breederXp) {
         const after = levelInfo(balances.breederXp);
         const gainedLevels = Math.max(0, after.level - levelInfo(breederXp).level);
         if (gainedLevels > 0) {
           balances.breederPoints += gainedLevels;
-          await storeSet('mh_breeder_points_granted', Math.max(0, after.level - 1), false);
+          // 「配った総数」だけは画面の state を持たないので、巻き戻す先を保存から読んでおく
+          const beforeGranted = await storeGet('mh_breeder_points_granted', null, false);
+          entries.push({ key:'mh_breeder_points_granted', before:beforeGranted, next:Math.max(0, after.level - 1) });
         }
-        await storeSet('mh_breeder_xp', balances.breederXp, false);
-        setBreederXp(balances.breederXp);
+        entries.push({ key:'mh_breeder_xp', before:breederXp, next:balances.breederXp });
       }
       // 報酬検証を全件終えた確定値だけを保存し、画面stateも同じ値へ揃える。
-      await storeSet('mh_gold', balances.gold, false);
-      await storeSet('mh_breeder_points', balances.breederPoints, false);
-      await storeSet('mh_owned_items', balances.ownedItems, false);
-      await storeSet('mh_gifts', nextGifts, false);
+      entries.push({ key:'mh_gold', before:gold, next:balances.gold });
+      entries.push({ key:'mh_breeder_points', before:breederPoints, next:balances.breederPoints });
+      entries.push({ key:'mh_owned_items', before:ownedItems, next:balances.ownedItems });
+      entries.push({ key:'mh_gifts', before:gifts, next:nextGifts });
+      const saved = await saveStoredValuesOrRollback(entries, storeGet, storeSet);
+      // 成立しなかったときは巻き戻し済み。画面も動かさず「まだ受け取っていない」ままにする
+      if (!saved) { console.error('[gift] claim persistence failed'); return; }
+      if (balances.breederXp !== breederXp) setBreederXp(balances.breederXp);
       setGold(balances.gold); setBreederPoints(balances.breederPoints); setOwnedItems(balances.ownedItems); setGifts(nextGifts);
     } finally { giftClaimingRef.current = false; }
   };
