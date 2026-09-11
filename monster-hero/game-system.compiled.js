@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e50899b7577b879a
+// source-sha256: a5a2d9127889f79a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9edb0d61fa9b8a9b
+// generated-sha256: 5ddc72231fbeec73
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 22:29"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 23:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -13501,6 +13501,10 @@ const helpDataRows = id => {
         } = monsterLineageOf(mon.id);
         return [mon.name, `${main.name} × ${sub.name}（${monsterCategoryName(monsterCategoryOf(mon.id))}）`];
       });
+    // イベントの回数ボーナス。難易度ごとの割合を実データから出す
+    // (ヘルプへ手で書き写すと、割合を変えたときに古いままになる)
+    case 'rhythmEventPlayBonus':
+      return RHYTHM_DEMO_DIFFICULTY_IDS.map(id => [RHYTHM_DEMO_DIFFICULTY_LABELS[id]?.name || id, rhythmEventPlayBonusPercentText(id)]);
     // 極限チャレンジの難易度。閲覧可能な準備中難易度も倍率は実データから出す
     case 'extremeDifficulties':
       return PUBLIC_EXTREME_DIFFICULTIES.map(s => [s.label, s.available ? `敵×${s.power} ／ スコア×${s.score} ／ 経験値×${s.xp} ／ ダイヤ×${s.gold} ／ 虹のプシュケー ${s.psyche}個` : '？？？（未実装）']);
@@ -13668,6 +13672,7 @@ const helpDataRows = id => {
 const HELP_DATA_TITLES = {
   difficulties: '難易度と倍率',
   extremeDifficulties: '極限チャレンジの難易度',
+  rhythmEventPlayBonus: 'イベントの回数ボーナス（1回あたり）',
   levelUpPointMultipliers: 'レベルアップでもらえる強化ポイント',
   speciesChallengeLineages: '種族チャレンジで選べる種族',
   speciesChallengeRewards: '種族チャレンジの難易度と初回クリア報酬',
@@ -17111,10 +17116,19 @@ const RHYTHM_EVENT_RANKING_DISPLAY_LIMIT = 50;
 const RHYTHM_EVENT_SONG_SELECT_BASE = 'identity_key,user_name,song_id,difficulty_id,score,scored_at,level,icon';
 const RHYTHM_EVENT_SONG_SELECT = `${RHYTHM_EVENT_SONG_SELECT_BASE},party`;
 const RHYTHM_EVENT_TOTAL_SELECT = 'identity_key,user_name,total_score,song_count,last_scored_at,level,icon';
+// 回数ボーナス込みの集計(2026-09-11・ユーザー指示)。
+// score / total_score は**加点込み**の値で返ってくるので、並べ替え(order=score.desc)も
+// 上位50件の切り出しも加点込みで行われる。素点と加点は別の列で受け取り、「内訳」に出す。
+// ★関数がまだ無い環境(SQL未適用)では、加点なしのこれまでの関数へ戻って順位を出す。
+//   加点と内訳が出ないだけで画面は壊れない(docs/sql/rankings/RHYTHM_EVENT_BONUS_IPHONE_STEPS.md)。
+const RHYTHM_EVENT_SONG_BONUS_SELECT = `${RHYTHM_EVENT_SONG_SELECT},base_score,bonus_score,play_count`;
+const RHYTHM_EVENT_TOTAL_BONUS_SELECT = `${RHYTHM_EVENT_TOTAL_SELECT},base_total,bonus_total,play_count`;
 // 「そのビュー・関数はまだ無い」という応答かどうか。通信の失敗や権限の失敗と取り違えない
 //   PGRST202 … Could not find the function public.rhythm_event_totals(...) in the schema cache
 //   PGRST205 … Could not find the table 'public.rhythm_week_window' in the schema cache
 //   42P01 / 42883 … relation / function does not exist
+// ★_bonus 付きの関数名も rhythm_event_song_bests / rhythm_event_totals を含むので、
+//   この判定でそのまま拾える。呼ぶ側は「加点なしへ戻す」ためにこれを捕まえる
 const rhythmEventRankingMissing = (status, body) => {
   if (status !== 404 && status !== 400) return false;
   const text = String(body || '');
@@ -17206,6 +17220,7 @@ const sbFetchRhythmEventSongBests = async ({
   songId,
   fromMs,
   toMs,
+  bonusRates = null,
   limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT,
   identityKeys = null,
   requestId = 'untracked'
@@ -17222,6 +17237,25 @@ const sbFetchRhythmEventSongBests = async ({
     label: 'rhythm-event-song',
     requestId
   });
+  // 回数ボーナスを使うイベントでは、加点込みの関数を先に試す。
+  // 関数がまだ無い環境では加点なしへ戻す(順位は出る。加点と内訳だけ出ない)
+  if (bonusRates) {
+    try {
+      return await sbFetchRhythmEventRows({
+        url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_song_bests_bonus?select=${RHYTHM_EVENT_SONG_BONUS_SELECT}` + `&order=score.desc,scored_at.asc&limit=${limit}${filter}`,
+        body: {
+          ...body,
+          bonus_rates: bonusRates
+        },
+        label: 'rhythm-event-song-bonus',
+        requestId
+      });
+    } catch (error) {
+      rankingLog(requestId, 'rhythm-event-song-bonus-fallback', {
+        message: error?.message || String(error)
+      });
+    }
+  }
   try {
     return await ask(RHYTHM_EVENT_SONG_SELECT);
   } catch (error) {
@@ -17239,21 +17273,58 @@ const sbFetchRhythmEventTotals = async ({
   songIds,
   fromMs,
   toMs,
+  bonusRates = null,
   limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT,
   identityKeys = null,
   requestId = 'untracked'
 }) => {
   const filter = Array.isArray(identityKeys) && identityKeys.length ? `&identity_key=in.(${identityKeys.map(k => encodeURIComponent(`"${k}"`)).join(',')})` : '';
+  const body = {
+    song_ids: songIds,
+    from_at: new Date(fromMs).toISOString(),
+    to_at: new Date(toMs).toISOString()
+  };
+  // 曲の部門と同じく、加点込みの関数を先に試して、無ければ加点なしへ戻す
+  if (bonusRates) {
+    try {
+      return await sbFetchRhythmEventRows({
+        url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals_bonus?select=${RHYTHM_EVENT_TOTAL_BONUS_SELECT}` + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
+        body: {
+          ...body,
+          bonus_rates: bonusRates
+        },
+        label: 'rhythm-event-total-bonus',
+        requestId
+      });
+    } catch (error) {
+      rankingLog(requestId, 'rhythm-event-total-bonus-fallback', {
+        message: error?.message || String(error)
+      });
+    }
+  }
   return sbFetchRhythmEventRows({
     url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals?select=${RHYTHM_EVENT_TOTAL_SELECT}` + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
-    body: {
-      song_ids: songIds,
-      from_at: new Date(fromMs).toISOString(),
-      to_at: new Date(toMs).toISOString()
-    },
+    body,
     label: 'rhythm-event-total',
     requestId
   });
+};
+// 回数ボーナスの内訳(素点・加点・回数)を取り出す。加点なしの関数から取った行には
+// これらの列が無いので、baseScore を null にして「内訳を出さない」と伝える。
+// 曲の部門は base_score/bonus_score、総合は base_total/bonus_total という名前で返る
+const rhythmEventBonusFields = (row, baseKey) => {
+  const bonusKey = baseKey === 'base_total' ? 'bonus_total' : 'bonus_score';
+  const base = Number(row?.[baseKey]);
+  if (!Number.isFinite(base)) return {
+    baseScore: null,
+    bonusScore: 0,
+    playCount: 0
+  };
+  return {
+    baseScore: base,
+    bonusScore: Number.isFinite(Number(row?.[bonusKey])) ? Number(row[bonusKey]) : 0,
+    playCount: Number.isFinite(Number(row?.play_count)) ? Number(row.play_count) : 0
+  };
 };
 // 生の行を画面用の形へ整える。壊れた値でも落ちないよう、数として確かめてから使う
 const rhythmEventSongEntryFromRow = row => ({
@@ -17266,7 +17337,10 @@ const rhythmEventSongEntryFromRow = row => ({
   icon: row?.icon ?? null,
   // 判定の内訳。「この曲」タブと同じく party の先頭要素を読む(rhythmRankingEntryFromRow と同じ形)。
   // SQL未適用の環境・内訳が保存される前の古い記録では null になり、詳細ボタンが出ないだけ
-  detail: Array.isArray(row?.party) && row.party[0] && typeof row.party[0] === 'object' ? row.party[0] : null
+  detail: Array.isArray(row?.party) && row.party[0] && typeof row.party[0] === 'object' ? row.party[0] : null,
+  // 回数ボーナスの内訳。加点なしの関数から取ったときは列そのものが無いので null になり、
+  // 画面は内訳の枠を出さない(加点していないのに「+0」と出さないため)
+  ...rhythmEventBonusFields(row, 'base_score')
 });
 const rhythmEventTotalEntryFromRow = row => ({
   identityKey: typeof row?.identity_key === 'string' ? row.identity_key : '',
@@ -17274,7 +17348,8 @@ const rhythmEventTotalEntryFromRow = row => ({
   totalScore: Number(row?.total_score) || 0,
   songCount: Number(row?.song_count) || 0,
   level: Number(row?.level) || 0,
-  icon: row?.icon ?? null
+  icon: row?.icon ?? null,
+  ...rhythmEventBonusFields(row, 'base_total')
 });
 
 // 検査(tools/ranking/rhythm-breeder-id-check.js)からモンビーの送信だけを直接叩けるようにする。
@@ -25305,6 +25380,9 @@ function RhythmRankingScreen({
   const refresh = () => {
     if (boardTab) loadRhythmEventRanking && loadRhythmEventRanking(boardKind, eventDivisionId);else if (totalTabOpen) loadRhythmTotalRanking && loadRhythmTotalRanking();else loadRhythmRanking(song);
   };
+  // ランク(S/SS/…)を決める点数。回数ボーナス込みの点だと満点を超えてしまうので、
+  // 素点が返っているときはそちらを使う(素点が無い＝加点なしの集計ならそのまま)
+  const eventRankScore = entry => entry && entry.baseScore !== null && entry.baseScore !== undefined ? entry.baseScore : entry?.score || 0;
   const totalRow = (entry, rank, mine) => /*#__PURE__*/React.createElement("div", {
     "data-rhythm-total-row": true,
     className: `flex items-center gap-2 rounded-2xl border p-2 ${mine ? 'border-amber-300/60 bg-amber-500/10' : 'border-white/10 bg-slate-900/80'}`
@@ -25340,8 +25418,10 @@ function RhythmRankingScreen({
   }, /*#__PURE__*/React.createElement("p", {
     className: "font-mono text-sm font-black text-fuchsia-100"
   }, entry.score.toLocaleString()), /*#__PURE__*/React.createElement("p", {
-    className: `text-[10px] font-black ${RHYTHM_RANK_COLORS[rhythmRankForScore(entry.score)]}`
-  }, rhythmRankForScore(entry.score))), entry.detail && /*#__PURE__*/React.createElement("button", {
+    className: `text-[10px] font-black ${RHYTHM_RANK_COLORS[rhythmRankForScore(eventRankScore(entry))]}`
+  }, rhythmRankForScore(eventRankScore(entry))), entry.bonusScore > 0 && /*#__PURE__*/React.createElement("p", {
+    className: "text-[9px] font-black text-amber-300"
+  }, "+", entry.bonusScore.toLocaleString(), "\uFF08", entry.playCount, "\u56DE\uFF09")), (entry.detail || entry.baseScore !== null) && /*#__PURE__*/React.createElement("button", {
     "data-rhythm-event-detail-row": true,
     onClick: () => setRhythmRankingDetail(entry),
     className: "shrink-0 min-h-[44px] rounded-lg border border-white/20 px-2 text-[9px] font-black text-slate-200"
@@ -25362,7 +25442,13 @@ function RhythmRankingScreen({
     className: "shrink-0 text-right"
   }, /*#__PURE__*/React.createElement("p", {
     className: "font-mono text-sm font-black text-fuchsia-100"
-  }, entry.totalScore.toLocaleString())));
+  }, entry.totalScore.toLocaleString()), entry.bonusScore > 0 && /*#__PURE__*/React.createElement("p", {
+    className: "text-[9px] font-black text-amber-300"
+  }, "+", entry.bonusScore.toLocaleString(), "\uFF08", entry.playCount, "\u56DE\uFF09")), entry.baseScore !== null && /*#__PURE__*/React.createElement("button", {
+    "data-rhythm-event-bonus-row": true,
+    onClick: () => setRhythmRankingDetail(entry),
+    className: "shrink-0 min-h-[44px] rounded-lg border border-white/20 px-2 text-[9px] font-black text-slate-200"
+  }, "\u5185\u8A33"));
   const eventRow = (entry, rank, mine) => eventSongId ? eventSongRow(entry, rank, mine) : eventTotalRow(entry, rank, mine);
   return /*#__PURE__*/React.createElement("main", {
     "data-rhythm-ranking": true,
@@ -25522,37 +25608,73 @@ function RhythmRankingScreen({
     "data-rhythm-ranking-detail": true,
     onClick: () => setRhythmRankingDetail(entry),
     className: "shrink-0 min-h-[44px] rounded-lg border border-white/20 px-2 text-[9px] font-black text-slate-200"
-  }, "\u8A73\u7D30"))))), rhythmRankingDetail && /*#__PURE__*/React.createElement("div", {
-    "data-rhythm-ranking-detail-modal": true,
-    className: "fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-3",
-    onClick: () => setRhythmRankingDetail(null)
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "w-full max-w-md rounded-2xl border border-amber-300/40 bg-slate-900 p-4",
-    onClick: e => e.stopPropagation()
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "mb-2 flex items-center justify-between"
-  }, /*#__PURE__*/React.createElement("h3", {
-    className: "text-sm font-black text-amber-200"
-  }, rhythmRankingDetail.userName, " \u306E\u30EA\u30B6\u30EB\u30C8"), /*#__PURE__*/React.createElement("button", {
-    "aria-label": "\u9589\u3058\u308B",
-    "data-rhythm-ranking-detail-close": true,
-    onClick: () => setRhythmRankingDetail(null),
-    className: "min-h-[44px] min-w-[44px] px-2 text-slate-400"
-  }, "\u2715")), /*#__PURE__*/React.createElement("p", {
-    className: "text-[10px] text-slate-400"
-  }, RHYTHM_DEMO_DIFFICULTY_LABELS[rhythmRankingDetail.difficultyId]?.name || rhythmRankingDetail.difficultyId, " / \u30B9\u30B3\u30A2 ", rhythmRankingDetail.score.toLocaleString(), " / \u30E9\u30F3\u30AF ", rhythmRankForScore(rhythmRankingDetail.score)), /*#__PURE__*/React.createElement("p", {
-    className: "mt-1 text-[10px] text-slate-400"
-  }, "\u6700\u5927\u30B3\u30F3\u30DC ", rhythmRankingDetail.detail?.maxCombo ?? '-'), /*#__PURE__*/React.createElement("dl", {
-    className: "mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]"
-  }, RHYTHM_JUDGMENT_IDS.map(id => /*#__PURE__*/React.createElement(React.Fragment, {
-    key: id
-  }, /*#__PURE__*/React.createElement("dt", {
-    className: "text-slate-400"
-  }, id), /*#__PURE__*/React.createElement("dd", {
-    className: "text-right font-mono text-white"
-  }, rhythmRankingDetail.detail?.judgments?.[id] ?? 0)))), /*#__PURE__*/React.createElement("p", {
-    className: "mt-2 text-[9px] font-black text-amber-200"
-  }, rhythmRankingDetail.detail?.allMarvelous ? 'ALL MARVELOUS!!' : rhythmRankingDetail.detail?.allExcellent ? 'ALL EXCELLENT!!' : rhythmRankingDetail.detail?.fullCombo ? 'FULL COMBO!' : ''))), boardTab && eventDetailOpen && /*#__PURE__*/React.createElement("div", {
+  }, "\u8A73\u7D30"))))), rhythmRankingDetail && (() => {
+    const isTotal = rhythmRankingDetail.totalScore !== undefined && rhythmRankingDetail.totalScore !== null;
+    const shownScore = Number(isTotal ? rhythmRankingDetail.totalScore : rhythmRankingDetail.score) || 0;
+    const baseScore = rhythmRankingDetail.baseScore === null || rhythmRankingDetail.baseScore === undefined ? null : Number(rhythmRankingDetail.baseScore);
+    const bonusScore = Number(rhythmRankingDetail.bonusScore) || 0;
+    const playCount = Number(rhythmRankingDetail.playCount) || 0;
+    return /*#__PURE__*/React.createElement("div", {
+      "data-rhythm-ranking-detail-modal": true,
+      className: "fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-3",
+      onClick: () => setRhythmRankingDetail(null)
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "w-full max-w-md rounded-2xl border border-amber-300/40 bg-slate-900 p-4",
+      onClick: e => e.stopPropagation()
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "mb-2 flex items-center justify-between"
+    }, /*#__PURE__*/React.createElement("h3", {
+      className: "text-sm font-black text-amber-200"
+    }, rhythmRankingDetail.userName, " \u306E\u30EA\u30B6\u30EB\u30C8"), /*#__PURE__*/React.createElement("button", {
+      "aria-label": "\u9589\u3058\u308B",
+      "data-rhythm-ranking-detail-close": true,
+      onClick: () => setRhythmRankingDetail(null),
+      className: "min-h-[44px] min-w-[44px] px-2 text-slate-400"
+    }, "\u2715")), isTotal ? /*#__PURE__*/React.createElement("p", {
+      className: "text-[10px] text-slate-400"
+    }, "\u7DCF\u5408 ", rhythmRankingDetail.songCount, "\u66F2 / \u30B9\u30B3\u30A2 ", shownScore.toLocaleString()) : /*#__PURE__*/React.createElement("p", {
+      className: "text-[10px] text-slate-400"
+    }, RHYTHM_DEMO_DIFFICULTY_LABELS[rhythmRankingDetail.difficultyId]?.name || rhythmRankingDetail.difficultyId, " / \u30B9\u30B3\u30A2 ", shownScore.toLocaleString(), " / \u30E9\u30F3\u30AF ", rhythmRankForScore(baseScore === null ? shownScore : baseScore)), baseScore !== null && /*#__PURE__*/React.createElement("dl", {
+      "data-rhythm-bonus-breakdown": true,
+      className: "mt-2 rounded-xl border border-fuchsia-300/30 bg-fuchsia-500/10 p-2 text-[10px]"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center justify-between"
+    }, /*#__PURE__*/React.createElement("dt", {
+      className: "text-slate-300"
+    }, "\u7D20\u70B9\uFF08\u30D9\u30B9\u30C8\uFF09"), /*#__PURE__*/React.createElement("dd", {
+      className: "font-mono text-white"
+    }, baseScore.toLocaleString())), /*#__PURE__*/React.createElement("div", {
+      className: "mt-1 flex items-center justify-between"
+    }, /*#__PURE__*/React.createElement("dt", {
+      className: "text-slate-300"
+    }, "\u904A\u3093\u3060\u56DE\u6570"), /*#__PURE__*/React.createElement("dd", {
+      className: "font-mono text-white"
+    }, playCount, "\u56DE")), /*#__PURE__*/React.createElement("div", {
+      className: "mt-1 flex items-center justify-between"
+    }, /*#__PURE__*/React.createElement("dt", {
+      className: "text-slate-300"
+    }, "\u56DE\u6570\u30DC\u30FC\u30CA\u30B9"), /*#__PURE__*/React.createElement("dd", {
+      className: "font-mono font-black text-amber-300"
+    }, "+", bonusScore.toLocaleString())), /*#__PURE__*/React.createElement("div", {
+      className: "mt-1 flex items-center justify-between border-t border-white/15 pt-1"
+    }, /*#__PURE__*/React.createElement("dt", {
+      className: "font-black text-amber-200"
+    }, "\u5408\u8A08\uFF08\u9806\u4F4D\u306B\u4F7F\u3046\u70B9\uFF09"), /*#__PURE__*/React.createElement("dd", {
+      className: "font-mono font-black text-amber-200"
+    }, shownScore.toLocaleString()))), !isTotal && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
+      className: "mt-1 text-[10px] text-slate-400"
+    }, "\u6700\u5927\u30B3\u30F3\u30DC ", rhythmRankingDetail.detail?.maxCombo ?? '-'), /*#__PURE__*/React.createElement("dl", {
+      className: "mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]"
+    }, RHYTHM_JUDGMENT_IDS.map(id => /*#__PURE__*/React.createElement(React.Fragment, {
+      key: id
+    }, /*#__PURE__*/React.createElement("dt", {
+      className: "text-slate-400"
+    }, id), /*#__PURE__*/React.createElement("dd", {
+      className: "text-right font-mono text-white"
+    }, rhythmRankingDetail.detail?.judgments?.[id] ?? 0)))), /*#__PURE__*/React.createElement("p", {
+      className: "mt-2 text-[9px] font-black text-amber-200"
+    }, rhythmRankingDetail.detail?.allMarvelous ? 'ALL MARVELOUS!!' : rhythmRankingDetail.detail?.allExcellent ? 'ALL EXCELLENT!!' : rhythmRankingDetail.detail?.fullCombo ? 'FULL COMBO!' : ''))));
+  })(), boardTab && eventDetailOpen && /*#__PURE__*/React.createElement("div", {
     "data-rhythm-event-detail": true,
     role: "dialog",
     "aria-modal": "true",
@@ -25618,7 +25740,21 @@ function RhythmRankingScreen({
     className: "rounded-2xl border border-amber-300/40 bg-amber-500/5 p-2 text-[10px] leading-tight text-slate-200"
   }, /*#__PURE__*/React.createElement("b", {
     className: "text-amber-200"
-  }, "\u221E\u5468\u56DE \xD7", RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE), "\u3000\u30AF\u30A4\u30C3\u30AF\u306E\u221E\u5468\u56DE\u3092\u88CF\u3067\u56DE\u3057\u306A\u304C\u3089\u5BFE\u8C61\u66F2\u3092\u6F14\u594F\u3059\u308B\u3068\u3001\u5165\u308B\u5468\u56DE\u6570\u304C\u3075\u3060\u3093\uFF08\xD7", RHYTHM_PLAY_RUN_LOOP_SCALE, "\uFF09\u306E", RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE, "\u500D\u306B\u306A\u308A\u307E\u3059"), /*#__PURE__*/React.createElement("p", {
+  }, "\u221E\u5468\u56DE \xD7", RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE), "\u3000\u30AF\u30A4\u30C3\u30AF\u306E\u221E\u5468\u56DE\u3092\u88CF\u3067\u56DE\u3057\u306A\u304C\u3089\u5BFE\u8C61\u66F2\u3092\u6F14\u594F\u3059\u308B\u3068\u3001\u5165\u308B\u5468\u56DE\u6570\u304C\u3075\u3060\u3093\uFF08\xD7", RHYTHM_PLAY_RUN_LOOP_SCALE, "\uFF09\u306E", RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE, "\u500D\u306B\u306A\u308A\u307E\u3059"), rhythmEventPlayBonusRates(eventDefinition) && /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-event-play-bonus": true,
+    className: "rounded-2xl border border-fuchsia-300/40 bg-fuchsia-500/5 p-2 text-[10px] leading-tight text-slate-200"
+  }, /*#__PURE__*/React.createElement("b", {
+    className: "text-fuchsia-200"
+  }, "\u56DE\u6570\u30DC\u30FC\u30CA\u30B9"), "\u3000\u5BFE\u8C61\u66F2\u3092\u904A\u3093\u3060\u56DE\u6570\u3076\u3093\u3001\u81EA\u5206\u306E\u30D9\u30B9\u30C8\u30B9\u30B3\u30A2\u306B\u52A0\u70B9\u3055\u308C\u307E\u3059\uFF08\u4E0A\u9650\u306A\u3057\uFF09\u3002\u30E9\u30F3\u30AD\u30F3\u30B0\u306B\u51FA\u3066\u3044\u308B\u70B9\u306F\u52A0\u70B9\u8FBC\u307F\u3067\u3001\u300C\u8A73\u7D30\u300D\u300C\u5185\u8A33\u300D\u304B\u3089\u7D20\u70B9\u3068\u306E\u5185\u8A33\u3092\u898B\u3089\u308C\u307E\u3059\u3002", /*#__PURE__*/React.createElement("ul", {
+    className: "mt-1 space-y-0.5"
+  }, RHYTHM_DEMO_DIFFICULTY_IDS.map(id => /*#__PURE__*/React.createElement("li", {
+    key: id,
+    className: "flex items-baseline gap-2"
+  }, /*#__PURE__*/React.createElement("b", {
+    className: "w-14 shrink-0 font-black text-fuchsia-200"
+  }, RHYTHM_DEMO_DIFFICULTY_LABELS[id]?.name || id), /*#__PURE__*/React.createElement("span", {
+    className: "min-w-0 flex-1 text-slate-200"
+  }, rhythmEventPlayBonusPercentText(id)))))), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] leading-relaxed text-slate-400"
   }, "\u5831\u916C\u306F\u30A4\u30D9\u30F3\u30C8\u304C\u7D42\u308F\u3063\u305F\u3042\u3068\u3001\u30B2\u30FC\u30E0\u3092\u958B\u3044\u305F\u3068\u304D\u306B\u53D7\u3051\u53D6\u308C\u307E\u3059\u3002\u53D7\u3051\u53D6\u308C\u308B\u306E\u306F\u7D42\u4E86\u304B\u30892\u9031\u9593\u307E\u3067\u3067\u3059\u3002\u9806\u4F4D\u306F\u7D42\u4E86\u3057\u305F\u6642\u70B9\u3067\u6C7A\u307E\u308B\u306E\u3067\u3001\u9045\u308C\u3066\u53D7\u3051\u53D6\u3063\u3066\u3082\u5185\u5BB9\u306F\u5909\u308F\u308A\u307E\u305B\u3093\u3002")), /*#__PURE__*/React.createElement("button", {
     type: "button",
@@ -36387,15 +36523,20 @@ function MonsterHeroGame() {
       const songId = rhythmEventDivisionSongId(wanted);
       const division = songId && event.songIds.includes(songId) ? wanted : RHYTHM_EVENT_TOTAL_DIVISION;
       const targetSongId = rhythmEventDivisionSongId(division);
+      // 回数ボーナスを使うイベントでは、割合を渡して加点込みで集計してもらう。
+      // 使わないイベント(週間)では null なので、これまでどおりの集計になる
+      const bonusRates = rhythmEventPlayBonusRates(event);
       const fetchRows = options => targetSongId ? sbFetchRhythmEventSongBests({
         songId: targetSongId,
         fromMs: range.startMs,
         toMs: range.endMs,
+        bonusRates,
         ...options
       }) : sbFetchRhythmEventTotals({
         songIds: [...event.songIds],
         fromMs: range.startMs,
         toMs: range.endMs,
+        bonusRates,
         ...options
       });
       const fromRow = targetSongId ? rhythmEventSongEntryFromRow : rhythmEventTotalEntryFromRow;
@@ -37592,18 +37733,23 @@ function MonsterHeroGame() {
       const breederId = await ensureBreederId();
       const selfKeys = rhythmTotalRankingSelfKeys(breederId, breederName);
       const prizes = [];
+      // ★順位の出し方は画面と**同じ**にする。回数ボーナスを使うイベントでここを渡し忘れると、
+      //   「ランキングでは1位だったのに報酬が来ない」が起きる
+      const bonusRates = rhythmEventPlayBonusRates(event);
       for (const divisionId of rhythmEventDivisionIds(event)) {
         const songId = rhythmEventDivisionSongId(divisionId);
         const rows = songId ? await sbFetchRhythmEventSongBests({
           songId,
           fromMs: range.startMs,
           toMs: range.endMs,
+          bonusRates,
           limit: RHYTHM_EVENT_REWARD_RANKS,
           requestId: `rhythm-reward-${event.id}-${divisionId}`
         }) : await sbFetchRhythmEventTotals({
           songIds: [...event.songIds],
           fromMs: range.startMs,
           toMs: range.endMs,
+          bonusRates,
           limit: RHYTHM_EVENT_REWARD_RANKS,
           requestId: `rhythm-reward-${event.id}-total`
         });
@@ -37628,6 +37774,7 @@ function MonsterHeroGame() {
           songIds: [...event.songIds],
           fromMs: range.startMs,
           toMs: range.endMs,
+          bonusRates,
           limit: selfKeys.length,
           identityKeys: selfKeys,
           requestId: `rhythm-reward-${event.id}-join`
