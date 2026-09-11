@@ -591,6 +591,12 @@ const ASSISTANT_SCENES = {
     help: 'rhythm/rhythm-mode',
     lines: [],
   },
+  // 週間ランキング(2026-09-11)。ランキング画面の「イベント」タブと、
+  // 曲えらびでの「今週の対象曲」案内の両方で使う。本文は下の addAssistantLinePack から合流する。
+  rhythmWeeklyEvent: {
+    help: 'rhythm/rhythm-ranking',
+    lines: [],
+  },
   // マスモン設定(モンスターノーツ)。本文は下の addAssistantLinePack から合流する。
   rhythmMonsters: {
     help: 'rhythm/rhythm-monster-note-display',
@@ -1239,6 +1245,13 @@ addAssistantLinePack({
       { e:'normal', t:'EXPERTとMASTERは、1つ下の難易度をクリアすると開くよ。' },
       { e:'happy', t:'横画面にすると、曲の一覧と選んだ曲を並べて見られるよ♪' },
     ],
+    rhythmWeeklyEvent: [
+      { e:'excited', t:'期間限定イベント開催中だよ！ この期間に出したスコアだけで勝負なの♪' },
+      { e:'happy', t:'部門ごとに報酬があるよ。何位で何がもらえるかは、部門を開くと出るからね。' },
+      { e:'normal', t:'報酬はイベントが終わったあとに受け取れるよ。あわてなくて大丈夫♪' },
+      { e:'normal', t:'イベントは「イベント」タブだよ。いつもの週間ランキングも別のタブでそのまま動いてるからね♪' },
+      { e:'wink', t:'{name}、終わるまでに1曲でも置いていこ？ 総合にも載るからね♪' },
+    ],
     rhythmMonsters: [
       { e:'excited', t:'ここで決めた子は、曲の途中で金色のノーツになって出てくるよ♪' },
       { e:'normal', t:'上から順に登場するよ。1体につき1回、多くて4回ね。' },
@@ -1867,6 +1880,13 @@ addAssistantLinePack({
       { e:'normal',  t:'EXPERTとMASTERは、1つ下の難易度をクリアすると開きまつ。' },
       { e:'happy',   t:'横画面にすると、一覧と選んだ曲を並べて見られまつ♪' },
     ],
+    rhythmWeeklyEvent: [
+      { e:'normal',  t:'期間限定イベントを開催中でつ。この期間に出したスコアだけで競いまつ。' },
+      { e:'happy',   t:'部門ごとに報酬がありまつ。何位で何がもらえるかは、部門を開くと出まつよ♪' },
+      { e:'normal',  t:'報酬はイベントが終わったあとに受け取れまつ。あわてなくて大丈夫でつ。' },
+      { e:'normal',  t:'イベントは「イベント」タブでつ。いつもの週間ランキングも別のタブで動いてまつ。' },
+      { e:'happy',   t:'{name}、終わるまでに1曲いかがでつか？ 総合にも載りまつよ♪' },
+    ],
     rhythmMonsters: [
       { e:'normal',  t:'ここで決めた子は、曲の途中で金色のノーツになって出てきまつ。' },
       { e:'normal',  t:'上から順に登場でつ。1体につき1回、多くて4回まで。' },
@@ -2449,6 +2469,13 @@ addAssistantLinePack({
       { e:'wink',     t:'ムズいと思ったら、オプションでノーツ速度を下げていいからね？ ……下げるんだ♡' },
       { e:'normal',   t:'EXPERTとMASTERは、ひとつ下をクリアすれば開くよ。' },
       { e:'happy',    t:'横画面にすると一覧と選んだ曲が並ぶよ。見やすいほうでどうぞ♪' },
+    ],
+    rhythmWeeklyEvent: [
+      { e:'excited',  t:'期間限定だよ、これ。この期間に出した点だけで勝負ね♪' },
+      { e:'normal',   t:'部門ごとに報酬あるよ。何位で何もらえるかは、部門開けば出てる。' },
+      { e:'happy',    t:'報酬は終わったあとね。いま慌てなくていいよ。' },
+      { e:'normal',   t:'イベントは「イベント」タブね。週間はいつもどおり別のタブで動いてるよ。' },
+      { e:'wink',     t:'{name}、終わる前に1曲くらい置いていきなよ♡' },
     ],
     rhythmMonsters: [
       { e:'excited',  t:'ここで決めた子、曲の途中で金色になって飛んでくるよ♪' },

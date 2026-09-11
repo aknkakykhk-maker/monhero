@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 31f4777af41f927b
+// source-sha256: 1b1d3101f94331a3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1dd8dbf5752b05af
+// generated-sha256: c9f299685975ff9b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 15:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 15:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -24354,6 +24354,7 @@ function RhythmSongSelectScreen({
   catchingUp,
   difficulty,
   dismissQuickRhythmBackground,
+  dismissRhythmEventNotice,
   handleGiveUp,
   mainHero,
   onExit,
@@ -24599,25 +24600,36 @@ function RhythmSongSelectScreen({
     "data-quick-run-stop": true,
     onClick: () => setQuickRunStopConfirm(true),
     className: "mt-1.5 min-h-[44px] w-full rounded-xl border border-white/15 text-[10px] font-black text-slate-400 active:scale-[.98]"
-  }, "\u23F9 \u3053\u3053\u3067\u5468\u56DE\u3092\u3084\u3081\u308B")))), rhythmEventNotice && /*#__PURE__*/React.createElement("button", {
-    type: "button",
-    "data-rhythm-event-tab": true,
-    onClick: onOpenEventRanking,
-    className: "shrink-0 flex w-full items-center gap-2 border-b border-amber-300/30 bg-amber-500/10 px-3 py-2 text-left active:scale-[.99]",
-    style: {
-      minHeight: '44px'
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "shrink-0 text-sm"
-  }, "\uD83C\uDFC6"), /*#__PURE__*/React.createElement("span", {
+  }, "\u23F9 \u3053\u3053\u3067\u5468\u56DE\u3092\u3084\u3081\u308B")))), rhythmEventNotice && /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-event-notice": true,
+    className: "shrink-0 border-b border-fuchsia-400/20 bg-slate-950/90 px-2 py-1"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-start gap-1"
+  }, /*#__PURE__*/React.createElement("div", {
     className: "min-w-0 flex-1"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "block truncate text-[11px] font-black text-amber-200"
-  }, rhythmEventNotice.name, " \u958B\u50AC\u4E2D"), /*#__PURE__*/React.createElement("span", {
-    className: "block truncate text-[9px] font-bold text-fuchsia-100"
-  }, rhythmEventSongsLabel(rhythmEventNotice), "\uFF1A", eventSongTitles.join(' ／ '))), /*#__PURE__*/React.createElement("span", {
-    className: "shrink-0 text-[9px] font-black text-amber-200"
-  }, "\u30E9\u30F3\u30AD\u30F3\u30B0 \u203A")), quickRhythmBackgroundVisible && /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement(AssistantBubble, {
+    scene: "rhythmWeeklyEvent",
+    condition: rhythmEventNotice.kind === 'limited' ? 'limited' : null,
+    compact: true
+  }), /*#__PURE__*/React.createElement(RhythmEventBanner, {
+    event: rhythmEventNotice,
+    className: "mt-1"
+  }), rhythmEventNotice.kind === 'limited' && /*#__PURE__*/React.createElement("p", {
+    className: "mt-1 truncate text-[10px] font-black text-amber-200"
+  }, "\uD83C\uDFC6 ", rhythmEventNotice.name, " \u958B\u50AC\u4E2D\uFF01"), /*#__PURE__*/React.createElement("p", {
+    className: "mt-1 text-[10px] font-black leading-tight text-fuchsia-100"
+  }, rhythmEventSongsLabel(rhythmEventNotice), "\uFF1A", eventSongTitles.join(' ／ ')), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "data-rhythm-event-notice-open": true,
+    onClick: onOpenEventRanking,
+    className: "mt-1 min-h-[44px] w-full rounded-xl border border-fuchsia-400/40 px-2 text-[10px] font-black text-fuchsia-200 active:scale-[.98]"
+  }, "\uD83C\uDFC6 ", rhythmEventNotice.kind === 'limited' ? 'イベントランキングを見る' : '週間ランキングを見る')), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "data-rhythm-event-notice-close": true,
+    onClick: dismissRhythmEventNotice,
+    "aria-label": "\u3053\u306E\u6848\u5185\u3092\u9589\u3058\u308B",
+    className: "min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black"
+  }, "\xD7"))), quickRhythmBackgroundVisible && /*#__PURE__*/React.createElement("div", {
     "data-quick-rhythm-background": true,
     className: "shrink-0 border-b border-fuchsia-400/20 bg-slate-950/90 px-2 py-1"
   }, /*#__PURE__*/React.createElement("div", {
@@ -36998,14 +37010,20 @@ function MonsterHeroGame() {
   // ★公開フラグが false のあいだは、ヘルプ・更新履歴・告知と同じくこれも出さない。
   // ★ここで使う週はサーバーではなく端末の時計。案内(どの曲が対象か)を出すだけで、
   //   順位の期間はランキング画面がサーバーから受け取ったものを使う(§6.1)。
-  // ★「週に1度だけ出す案内」は、開催中ずっと出る入口(タブ)へ変えたのでもう使わない
-  //   (2026-09-11・ユーザー指示「イベント開催のタブみたいの作って押すと飛ぶとかにして」)。
-  //   保存キー mh_rhythm_event_notice_v1 に入っている値は消さない・書き換えない。
-  //   読まなくなるだけで、端末に残ったまま害が無い(CLAUDE.md ⑦)。
+  const RHYTHM_EVENT_NOTICE_KEY = 'mh_rhythm_event_notice_v1';
+  const [rhythmEventNoticeSeen, setRhythmEventNoticeSeen] = useState(null);
   const rhythmEventReleased = RELEASE_FLAGS.rhythmWeeklyRanking === true;
   // ★知らせるのは期間限定イベントだけ(2026-09-11・ユーザー指示で、週間は対象曲を持たなくなった)。
   //   週間は公開曲すべてが対象で毎週同じなので、曲えらびで知らせることが無い
   const rhythmSongSelectEvent = rhythmEventReleased ? rhythmLimitedEventAt(Date.now()) : null;
+  // 読めなかったとき(seen が null のまま)は「見た扱い」にして出さない。
+  // 案内が二度出るより、出ないほうが害が小さい(クイック連携の案内と同じ考え方)
+  const rhythmEventNoticeVisible = !!rhythmSongSelectEvent && typeof rhythmEventNoticeSeen === 'string' && rhythmEventNoticeSeen !== rhythmSongSelectEvent.id;
+  const dismissRhythmEventNotice = () => {
+    if (!rhythmSongSelectEvent) return;
+    setRhythmEventNoticeSeen(rhythmSongSelectEvent.id);
+    storeSet(RHYTHM_EVENT_NOTICE_KEY, rhythmSongSelectEvent.id, false);
+  };
   // ---- イベントの会話ストーリー(2026-09-11・ユーザー指示) ----
   // 「みゅあの前にイベント発生で、助手たちの会話ストーリーも入れてほしい。
   //   そのあとに助手からの説明みたいな」。
@@ -38034,6 +38052,11 @@ function MonsterHeroGame() {
         const claims = normalizeRhythmEventRewardClaims(await storeGet(RHYTHM_EVENT_REWARD_KEY, [], false));
         rhythmEventRewardClaimsRef.current = claims;
         setRhythmEventRewardClaims(claims);
+      }
+      // 週間ランキングの「今週の対象曲」案内。見たイベントのIDを覚えておく(週が変わればまた1度だけ出る)
+      {
+        const seenEventId = await storeGet(RHYTHM_EVENT_NOTICE_KEY, '', false);
+        setRhythmEventNoticeSeen(typeof seenEventId === 'string' ? seenEventId : '');
       }
       const compensationNoticeSeen = await storeGet('mh_masu_level_cap_compensation_notice_seen_v1', false, false);
       if (compensationNotice?.diamonds > 0 && !compensationNoticeSeen) setLevelCapCompensation(compensationNotice);
@@ -52369,6 +52392,7 @@ function MonsterHeroGame() {
       catchingUp: catchingUp,
       difficulty: difficulty,
       dismissQuickRhythmBackground: dismissQuickRhythmBackground,
+      dismissRhythmEventNotice: dismissRhythmEventNotice,
       handleGiveUp: handleGiveUp,
       mainHero: mainHero,
       onExit: () => {
@@ -52381,6 +52405,7 @@ function MonsterHeroGame() {
       onOpenEventRanking: () => {
         // 曲えらびの案内から開く。期間限定を開催中ならそちらのタブ、なければ週間のタブ
         const kind = rhythmSongSelectEvent && rhythmSongSelectEvent.kind === 'limited' ? 'limited' : 'weekly';
+        dismissRhythmEventNotice();
         setRhythmRankingTab(kind === 'limited' ? 'event' : 'weekly');
         loadRhythmEventRanking(kind, rhythmEventDivision[kind]);
         setGameState('RHYTHM_RANKING');
@@ -52426,7 +52451,7 @@ function MonsterHeroGame() {
       returnToHome: returnToHome,
       rhythmBackgroundRun: rhythmBackgroundRun,
       rhythmBestRecords: rhythmBestRecords,
-      rhythmEventNotice: rhythmSongSelectEvent,
+      rhythmEventNotice: rhythmEventNoticeVisible ? rhythmSongSelectEvent : null,
       rhythmSelectView: rhythmSelectView,
       rhythmSelectedDifficultyId: rhythmSelectedDifficultyId,
       rhythmSelectedSongId: rhythmSelectedSongId,
