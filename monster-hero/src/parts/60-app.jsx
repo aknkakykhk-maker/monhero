@@ -2613,9 +2613,22 @@ function MonsterHeroGame() {
         const reward = rhythmEventRewardForRank(event, divisionId, index + 1);
         if (reward) prizes.push({ divisionId, songId, rank:index + 1, reward });
       }
-      // 入賞していなければ、知らせずに受け取り済みへ入れて終わる
-      if (prizes.length === 0) { await markRhythmEventRewardClaimed(event.id); return; }
-      setRhythmEventRewardPrize({ event, prizes });
+      // 参加報酬(入賞しなくても、対象曲をすべて遊べばもらえる)。
+      // 総合の上位5件に自分がいなくても成立するので、自分の行だけを別に取りにいって
+      // 「何曲遊んだか」(songCount)を見る
+      let participation = null;
+      if (rhythmEventParticipationReward(event)) {
+        const mine = await sbFetchRhythmEventTotals({
+          songIds:[...event.songIds], fromMs:range.startMs, toMs:range.endMs,
+          limit:selfKeys.length, identityKeys:selfKeys, requestId:`rhythm-reward-${event.id}-join`,
+        });
+        const played = (Array.isArray(mine) ? mine : []).map(rhythmEventTotalEntryFromRow)
+          .reduce((max, entry) => Math.max(max, entry.songCount), 0);
+        if (rhythmEventParticipationCleared(event, played)) participation = rhythmEventParticipationReward(event);
+      }
+      // 入賞も参加報酬も無ければ、知らせずに受け取り済みへ入れて終わる
+      if (prizes.length === 0 && !participation) { await markRhythmEventRewardClaimed(event.id); return; }
+      setRhythmEventRewardPrize({ event, prizes, participation });
     } catch (e) {
       // 通信の失敗で受け取り済みにはしない。次の起動でやり直す
       console.error('[rhythm-event-reward] fetch failed:', e && e.message ? e.message : e);
@@ -2641,9 +2654,19 @@ function MonsterHeroGame() {
         if (item && entry.reward.count > 0) next[item.id] = ownedItemCount(next, item.id) + entry.reward.count;
         if (entry.reward.psyche > 0) next[BREAKTHROUGH_ITEM_ID] = ownedItemCount(next, BREAKTHROUGH_ITEM_ID) + entry.reward.psyche;
       }
+      // 参加報酬。虹のプシュケーは所持品、ダイヤは mh_gold と、入れ物が別なので分けて足す
+      if (prize.participation && prize.participation.psyche > 0) {
+        next[BREAKTHROUGH_ITEM_ID] = ownedItemCount(next, BREAKTHROUGH_ITEM_ID) + prize.participation.psyche;
+      }
       ownedItemsRef.current = next;
       setOwnedItems(next);
       await storeSet('mh_owned_items', next, false);
+      if (prize.participation && prize.participation.gold > 0) {
+        const nextGold = (goldRef.current || 0) + prize.participation.gold;
+        goldRef.current = nextGold;
+        setGold(nextGold);
+        await storeSet('mh_gold', nextGold, false);
+      }
       setRhythmEventRewardPrize(null);
       // 同じ起動でもう1件あるかもしれない(2週間のあいだに2回開催した場合)
       rhythmEventRewardCheckedRef.current = false;

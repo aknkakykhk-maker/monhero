@@ -43,7 +43,7 @@ vm.runInContext(`${demoIds}\n${eventData}\n`
   +'rhythmEventWindow,rhythmEventRemainingText,rhythmEventDivisions,rhythmEventDivisionSongId,rhythmEventSong,'
   +'rhythmEventPeriodText,rhythmEventSongsLabel,rhythmEventDivisionReward,rhythmEventRewardForRank,rhythmEventHasRewards,'
   +'rhythmEventSongDivisionId,RHYTHM_EVENT_REWARD_RANKS,rhythmEventsAwaitingReward,'
-  +'normalizeRhythmEventRewardClaims,rhythmEventDivisionIds,'
+  +'normalizeRhythmEventRewardClaims,rhythmEventDivisionIds,rhythmEventParticipationReward,rhythmEventParticipationCleared,'
   +'rhythmEventSongDivisionId,rhythmEventMaxScore,rhythmEventEntryScore,RHYTHM_EVENT_TOTAL_DIVISION};',context);
 const O=context.out;
 
@@ -146,13 +146,45 @@ check('いまも必ず開催中(週間かイベントのどちらかが必ず立
   check('週間は受け取りの対象にならない',
     O.rhythmEventsAwaitingReward(Date.now(),[]).every(e=>e.kind==='limited'));
 }
+// --- 参加報酬(§9.2) ---
+{
+  const withJoin=(O.RHYTHM_EVENTS||[]).filter(e=>O.rhythmEventParticipationReward(e));
+  console.log(`--  参加報酬つきイベント: ${withJoin.length?withJoin.map(e=>e.id).join(', '):'なし'}`);
+  check('参加報酬は対象曲の数を超えない',withJoin.every(e=>
+    O.rhythmEventParticipationReward(e).songs<=e.songIds.length));
+  check('参加報酬は決めた曲数で成立する',withJoin.every(e=>{
+    const need=O.rhythmEventParticipationReward(e).songs;
+    return !O.rhythmEventParticipationCleared(e,need-1)
+      &&O.rhythmEventParticipationCleared(e,need)
+      &&O.rhythmEventParticipationCleared(e,need+1);
+  }));
+  check('壊れた曲数でも成立しない',withJoin.every(e=>
+    [null,'x',-1,NaN,undefined].every(v=>!O.rhythmEventParticipationCleared(e,v))));
+  check('参加報酬を持たないイベントでは成立しない',
+    !O.rhythmEventParticipationCleared(O.rhythmWeeklyEvent(Date.now()),99)
+    &&O.rhythmEventParticipationReward(O.rhythmWeeklyEvent(Date.now()))===null);
+}
+check('参加報酬は自分の行から遊んだ曲数を見る(上位5件に入っていなくても成立する)',
+  app.includes('if (rhythmEventParticipationReward(event)) {')
+  &&app.includes('identityKeys:selfKeys, requestId:`rhythm-reward-${event.id}-join`')
+  &&app.includes('rhythmEventParticipationCleared(event, played)'));
+check('参加報酬のダイヤとプシュケーは別の入れ物へ足す',
+  app.includes("await storeSet('mh_gold', nextGold, false);")
+  &&app.includes('prize.participation.psyche'));
+check('参加報酬を画面に出す(開催中と受け取りの両方)',
+  screen.includes('data-rhythm-event-participation')
+  &&screen.includes('data-rhythm-event-reward-participation')
+  &&game.includes('const rhythmEventParticipationText='));
+check('入賞していなくても参加報酬だけで受け取り画面を出す',
+  app.includes('if (prizes.length === 0 && !participation) { await markRhythmEventRewardClaimed(event.id); return; }')
+  &&screen.includes("{won ? '入賞おめでとうございます！' : 'ご参加ありがとうございました！'}"));
 check('受け取りは上位5件だけ問い合わせる(報酬は5位まで)',
   app.includes('limit:RHYTHM_EVENT_REWARD_RANKS'));
 check('通信に失敗したら受け取り済みにしない(次の起動でやり直す)',
   app.includes("console.error('[rhythm-event-reward] fetch failed:'")
   &&app.includes('// 通信の失敗で受け取り済みにはしない。次の起動でやり直す'));
-check('入賞していなくても受け取り済みにする(毎回問い合わせ直さない)',
-  app.includes('if (prizes.length === 0) { await markRhythmEventRewardClaimed(event.id); return; }'));
+check('入賞も参加報酬も無ければ受け取り済みにする(毎回問い合わせ直さない)',
+  app.includes('if (prizes.length === 0 && !participation) { await markRhythmEventRewardClaimed(event.id); return; }'));
 check('先にフラグを保存してからアイテムを足す(二重付与を防ぐ)',(()=>{
   const at=app.indexOf('const claimRhythmEventReward');
   if(at<0)return false;

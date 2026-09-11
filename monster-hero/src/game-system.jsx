@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c426c8a9f2d32abd
+// generated-sha256: 5c60664254cf28fa
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 12:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 12:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -10887,6 +10887,14 @@ const rhythmEventRewardItem=(reward)=>{
   if(reward.kind==='rainbowFruit')return {id:RAINBOW_TRANSCEND_FRUIT_ITEM_ID,name:RAINBOW_TRANSCEND_FRUIT_ITEM.name,emoji:'🌈'};
   return null;
 };
+// 参加報酬の1行。ダイヤと虹のプシュケーだけなので、アイテムの実体は要らない
+const rhythmEventParticipationText=(reward)=>{
+  if(!reward)return '';
+  const parts=[];
+  if(reward.gold>0)parts.push(`💎 ダイヤ×${reward.gold.toLocaleString()}`);
+  if(reward.psyche>0)parts.push(`💗 虹のプシュケー×${reward.psyche.toLocaleString()}`);
+  return parts.join(' ／ ');
+};
 // 「🍇 超越の実（スエゾー種）×5 ／ 虹のプシュケー×1,000」のような1行。
 // 順位ごとの表示にも、受け取ったときの知らせにも同じ文を使う
 const rhythmEventRewardText=(reward)=>{
@@ -13733,12 +13741,14 @@ function RhythmMonstersScreen({
 //   BGMの引き継ぎに手を入れずに済む(CLAUDE.md ⑤)。
 function RhythmEventRewardModal({ prize, onClaim, claiming }) {
   if (!prize) return null;
-  const { event, prizes } = prize;
+  const { event, prizes, participation } = prize;
+  // 入賞していなくても参加報酬だけで出ることがあるので、見出しを言い分ける
+  const won = Array.isArray(prizes) && prizes.length > 0;
   return (
     <div data-rhythm-event-reward className="fixed inset-0 z-[90000] flex items-center justify-center bg-black/80 p-4">
       <div className="w-full max-w-sm rounded-3xl border-2 border-amber-300/70 bg-slate-950 p-4 shadow-2xl">
         <p className="text-center text-[10px] font-black tracking-widest text-amber-300">RESULT</p>
-        <h3 className="mt-1 text-center text-base font-black text-amber-100">入賞おめでとうございます！</h3>
+        <h3 className="mt-1 text-center text-base font-black text-amber-100">{won ? '入賞おめでとうございます！' : 'ご参加ありがとうございました！'}</h3>
         <p className="mt-1 text-center text-[10px] font-bold text-slate-300">{event.name}</p>
         <ul className="mt-3 space-y-2">
           {prizes.map(entry => (
@@ -13753,11 +13763,17 @@ function RhythmEventRewardModal({ prize, onClaim, claiming }) {
             </li>
           ))}
         </ul>
+        {participation&&(
+          <div data-rhythm-event-reward-participation className="mt-2 rounded-2xl border border-cyan-300/40 bg-cyan-500/5 p-2">
+            <p className="text-[10px] font-black text-cyan-200">参加報酬（対象曲を{participation.songs}曲すべて）</p>
+            <p className="mt-1 text-[10px] leading-tight text-white">{rhythmEventParticipationText(participation)}</p>
+          </div>
+        )}
         <button type="button" data-rhythm-event-reward-claim disabled={claiming} onClick={onClaim}
           className="mt-4 min-h-[52px] w-full rounded-2xl border-2 border-amber-300 bg-amber-500/20 text-sm font-black text-amber-50 active:scale-[.98] disabled:opacity-50">
           {claiming ? '受け取っています…' : '🎁 受け取る'}
         </button>
-        <p className="mt-2 text-center text-[9px] leading-relaxed text-slate-400">受け取ったものは「アイテム」から確認できます。</p>
+        <p className="mt-2 text-center text-[9px] leading-relaxed text-slate-400">超越の実・勇者の証・虹のプシュケーはHOMEの「アイテム」から、ダイヤは画面上の表示から確認できます。</p>
       </div>
     </div>
   );
@@ -13817,6 +13833,8 @@ function RhythmRankingScreen({
         })).filter(entry=>!!entry.reward)
         :[];
       const eventReward=eventRewardRanks.length>0;
+      // 参加報酬(入賞しなくても、対象曲をすべて遊べばもらえる)
+      const eventParticipation=rhythmEventParticipationReward(eventDefinition);
       const eventLimited=boardKind==='limited';
       // 残り時間だけは端末の時計で数える(1秒ごとにサーバーへ聞きに行かないため・§6.1)。
       // 30秒ごとに数え直せば「残り ◯時間 ◯分」の表示には足りる
@@ -13928,17 +13946,16 @@ function RhythmRankingScreen({
             {total.status==='notReady'&&<p data-rhythm-total-not-ready className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">総合ランキングはただいま準備中です。もうしばらくお待ちください。</p>}
             {total.status==='error'&&<p data-rhythm-total-error className="rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200">読み込めませんでした。電波の良い場所で「更新」をお試しください。</p>}
             {total.status==='ready'&&(<>
-              {/* 自分の位置は上に固定で出す。50位に入っていない人でも、いまどこにいるかが分かるように */}
-              {total.self&&<div className="mb-3">
-                <p className="mb-1 text-[9px] font-black text-amber-200">あなたの記録</p>
-                {totalRow(total.self,total.self.rank,true)}
-                {total.self.songCount<totalSongCount&&(
-                  <button data-rhythm-total-remaining onClick={onGoToSongSelect}
-                    className="mt-2 w-full min-h-[44px] rounded-xl border border-amber-300/40 bg-slate-900/70 px-3 text-[10px] font-black text-amber-100">
-                    まだ記録のない曲が {totalSongCount-total.self.songCount} 曲あります ▶ 曲をえらぶ
-                  </button>
-                )}
-              </div>}
+              {/* ★自分の行を上に固定しない(2026-09-11・ユーザー指示
+                  「自分の名前の固定はなしでおけ。今後人が増えたらまた考える」)。
+                  上位に入っていると、同じ行が「あなたの記録」と一覧の両方に並んで見にくかった。
+                  自分の行は一覧の中で色を変えて示す。まだ遊んでいない曲への入口だけは残す */}
+              {total.self&&total.self.songCount<totalSongCount&&(
+                <button data-rhythm-total-remaining onClick={onGoToSongSelect}
+                  className="mb-3 w-full min-h-[44px] rounded-xl border border-amber-300/40 bg-slate-900/70 px-3 text-[10px] font-black text-amber-100">
+                  まだ記録のない曲が {totalSongCount-total.self.songCount} 曲あります ▶ 曲をえらぶ
+                </button>
+              )}
               {!total.self&&<p data-rhythm-total-self-empty className="mb-3 rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-center text-[10px] text-slate-300">まだあなたの記録がありません。1曲でも遊ぶとここに載ります。</p>}
               {total.entries.length===0&&<p data-rhythm-total-empty className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">まだ記録がありません。最初の1件になってみましょう。</p>}
               {total.entries.length>0&&<ol data-rhythm-total-list className="space-y-2">
@@ -13989,21 +14006,22 @@ function RhythmRankingScreen({
                     </li>
                   ))}
                 </ul>
+                {/* 参加報酬。入賞しなくてももらえるので、順位の表とは分けて出す */}
+                {eventParticipation&&<p data-rhythm-event-participation className="mt-2 border-t border-amber-300/20 pt-2 text-[10px] leading-tight text-slate-200">
+                  <b className="text-amber-200">参加報酬</b>　対象曲を{eventParticipation.songs}曲すべて遊ぶと {rhythmEventParticipationText(eventParticipation)}
+                </p>}
               </div>}
               {eventBoard.status==='loading'&&<p data-rhythm-event-board-loading className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">読み込み中…</p>}
               {eventBoard.status==='error'&&<p data-rhythm-event-board-error className="rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200">この部門を読み込めませんでした。「更新」をお試しください。</p>}
               {eventBoard.status==='ready'&&(<>
-                {/* 自分の位置は上に固定で出す。50位に入っていない人でも、いまどこにいるかが分かるように */}
-                {eventBoard.self&&<div className="mb-3">
-                  <p className="mb-1 text-[9px] font-black text-fuchsia-200">あなたの記録</p>
-                  {eventRow(eventBoard.self,eventBoard.self.rank,true)}
-                </div>}
+                {/* ★自分の行は上に固定しない(2026-09-11・ユーザー指示)。一覧の中で色を変えて示す。
+                    まだ1曲も遊んでいない人にだけ、対象曲への入口を出す */}
                 {!eventBoard.self&&<div className="mb-3">
-                  <p data-rhythm-event-self-empty className="rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-center text-[10px] text-slate-300">今週はまだあなたの記録がありません。対象曲を1曲でも遊ぶとここに載ります。</p>
+                  <p data-rhythm-event-self-empty className="rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-center text-[10px] text-slate-300">{eventLimited?'まだあなたの記録がありません。対象曲を1曲でも遊ぶとここに載ります。':'今週はまだあなたの記録がありません。対象曲を1曲でも遊ぶとここに載ります。'}</p>
                   <button data-rhythm-event-play onClick={onGoToSongSelect}
                     className="mt-2 w-full min-h-[44px] rounded-xl border border-fuchsia-300/40 bg-slate-900/70 px-3 text-[10px] font-black text-fuchsia-100">▶ 対象曲をえらぶ</button>
                 </div>}
-                {eventBoard.entries.length===0&&<p data-rhythm-event-empty className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">今週はまだ記録がありません。最初の1件になってみましょう。</p>}
+                {eventBoard.entries.length===0&&<p data-rhythm-event-empty className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">{eventLimited?'まだ記録がありません。最初の1件になってみましょう。':'今週はまだ記録がありません。最初の1件になってみましょう。'}</p>}
                 {eventBoard.entries.length>0&&<ol data-rhythm-event-list className="space-y-2">
                   {eventBoard.entries.map((entry,index)=>(
                     <li key={`${entry.identityKey}-${index}`}>
@@ -19044,9 +19062,22 @@ function MonsterHeroGame() {
         const reward = rhythmEventRewardForRank(event, divisionId, index + 1);
         if (reward) prizes.push({ divisionId, songId, rank:index + 1, reward });
       }
-      // 入賞していなければ、知らせずに受け取り済みへ入れて終わる
-      if (prizes.length === 0) { await markRhythmEventRewardClaimed(event.id); return; }
-      setRhythmEventRewardPrize({ event, prizes });
+      // 参加報酬(入賞しなくても、対象曲をすべて遊べばもらえる)。
+      // 総合の上位5件に自分がいなくても成立するので、自分の行だけを別に取りにいって
+      // 「何曲遊んだか」(songCount)を見る
+      let participation = null;
+      if (rhythmEventParticipationReward(event)) {
+        const mine = await sbFetchRhythmEventTotals({
+          songIds:[...event.songIds], fromMs:range.startMs, toMs:range.endMs,
+          limit:selfKeys.length, identityKeys:selfKeys, requestId:`rhythm-reward-${event.id}-join`,
+        });
+        const played = (Array.isArray(mine) ? mine : []).map(rhythmEventTotalEntryFromRow)
+          .reduce((max, entry) => Math.max(max, entry.songCount), 0);
+        if (rhythmEventParticipationCleared(event, played)) participation = rhythmEventParticipationReward(event);
+      }
+      // 入賞も参加報酬も無ければ、知らせずに受け取り済みへ入れて終わる
+      if (prizes.length === 0 && !participation) { await markRhythmEventRewardClaimed(event.id); return; }
+      setRhythmEventRewardPrize({ event, prizes, participation });
     } catch (e) {
       // 通信の失敗で受け取り済みにはしない。次の起動でやり直す
       console.error('[rhythm-event-reward] fetch failed:', e && e.message ? e.message : e);
@@ -19072,9 +19103,19 @@ function MonsterHeroGame() {
         if (item && entry.reward.count > 0) next[item.id] = ownedItemCount(next, item.id) + entry.reward.count;
         if (entry.reward.psyche > 0) next[BREAKTHROUGH_ITEM_ID] = ownedItemCount(next, BREAKTHROUGH_ITEM_ID) + entry.reward.psyche;
       }
+      // 参加報酬。虹のプシュケーは所持品、ダイヤは mh_gold と、入れ物が別なので分けて足す
+      if (prize.participation && prize.participation.psyche > 0) {
+        next[BREAKTHROUGH_ITEM_ID] = ownedItemCount(next, BREAKTHROUGH_ITEM_ID) + prize.participation.psyche;
+      }
       ownedItemsRef.current = next;
       setOwnedItems(next);
       await storeSet('mh_owned_items', next, false);
+      if (prize.participation && prize.participation.gold > 0) {
+        const nextGold = (goldRef.current || 0) + prize.participation.gold;
+        goldRef.current = nextGold;
+        setGold(nextGold);
+        await storeSet('mh_gold', nextGold, false);
+      }
       setRhythmEventRewardPrize(null);
       // 同じ起動でもう1件あるかもしれない(2週間のあいだに2回開催した場合)
       rhythmEventRewardCheckedRef.current = false;

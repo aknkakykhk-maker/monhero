@@ -87,6 +87,10 @@ const RHYTHM_EVENTS = Object.freeze([
       close_to_your_heart: 'tiger',
     }),
     totalReward: 'heroProof',
+    // 参加報酬(2026-09-11・ユーザー指示「3曲すべて遊んだらもらえる」)。
+    // 入賞しなくても、対象曲を**すべて**遊べばもらえる。個数は仕様書 §9.2 の候補のまま。
+    // songs は「何曲遊べば成立か」。書かなければ参加報酬は無し
+    participationReward: Object.freeze({ songs: 3, gold: 3000, psyche: 50 }),
   }),
 ]);
 
@@ -122,6 +126,26 @@ const rhythmEventRewardForRank = (event, divisionId, rank) => {
     count: RHYTHM_EVENT_REWARD_COUNTS[place - 1],
     psyche: RHYTHM_EVENT_REWARD_PSYCHE[place - 1],
   };
+};
+// 参加報酬。入賞しなくても、対象曲を決まった数だけ遊べばもらえる(§9.2)。
+// 書かれていないイベント(週間など)では null を返す
+const rhythmEventParticipationReward = (event) => {
+  const reward = event && event.participationReward;
+  if (!reward || typeof reward !== 'object') return null;
+  const songs = Math.max(1, Math.floor(Number(reward.songs) || 0));
+  const gold = Math.max(0, Math.floor(Number(reward.gold) || 0));
+  const psyche = Math.max(0, Math.floor(Number(reward.psyche) || 0));
+  if (!(gold > 0 || psyche > 0)) return null;
+  // 対象曲より多い数を書いてしまうと、誰も成立しない報酬になる。対象曲の数で頭打ちにする
+  const songIds = (event && Array.isArray(event.songIds)) ? event.songIds : [];
+  return { songs: Math.min(songs, songIds.length || songs), gold, psyche };
+};
+// 参加報酬が成立しているか。遊んだ曲数(総合部門の songCount)で見る
+const rhythmEventParticipationCleared = (event, playedSongCount) => {
+  const reward = rhythmEventParticipationReward(event);
+  if (!reward) return false;
+  const played = Math.max(0, Math.floor(Number(playedSongCount) || 0));
+  return played >= reward.songs;
 };
 // そのイベントが報酬を持っているか(画面に報酬の表を出すかどうかの判定)
 const rhythmEventHasRewards = (event) => {
