@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: fc7de21949654f9e
+// source-sha256: 7ae719ba174d1e03
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 106e4c6beff40a73
+// generated-sha256: ec51aecd1555842a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 22:44"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 23:05"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5019,7 +5019,15 @@ const Audio_ = (() => {
   let reverb = null,
     seBus = null;
   let audioCtx = null,
-    bgmGain = null;
+    bgmGain = null,
+    masterOut = null,
+    analyser = null,
+    analyserData = null;
+  // AudioContextが「動いているつもりで止まっていないか」を見るための控え。
+  // Androidでは state が running のままでも音が出なくなることがあり、state だけでは気づけない
+  let ctxTimeMark = null,
+    ctxRebuildCount = 0,
+    toneLoadFailed = false;
   const buffers = new Map();
   const loadingBuffers = new Map();
   // previewRequest は試聴の「この呼び出しが今も最新か」を見るための番号。
@@ -5067,11 +5075,15 @@ const Audio_ = (() => {
         res();
       };
       s.onerror = () => {
+        toneLoadFailed = true;
         res();
       };
       document.head.appendChild(s);
     }).then(async () => {
-      if (!Tone) return;
+      if (!Tone) {
+        toneLoadFailed = true;
+        return;
+      }
       try {
         seBus = new Tone.Gain(_gainFromPct(seVolumePct)).toDestination();
         reverb = new Tone.Reverb({
@@ -5170,6 +5182,27 @@ const Audio_ = (() => {
 
   // HTMLAudioElementはiOSの消音スイッチを無視するため使用しない。mp3を取得・デコードし、
   // BGMもジングルもAudioBufferSourceNodeだけで出力する。
+  //
+  // 出口(destination)の手前に、素通しのgainと音量計(analyser)を1つだけ挟む。
+  // 音は変えない。「コードの上では鳴らしているのに端末から聞こえない」を切り分けるため、
+  // 実際に流れている波形の大きさを設定画面から見られるようにする
+  const buildAudioGraph = ctx => {
+    masterOut = ctx.createGain();
+    masterOut.gain.value = 1;
+    analyser = ctx.createAnalyser();
+    analyser.fftSize = 2048;
+    analyser.smoothingTimeConstant = 0;
+    try {
+      analyserData = new Float32Array(analyser.fftSize);
+    } catch (e) {
+      analyserData = null;
+    }
+    masterOut.connect(analyser);
+    analyser.connect(ctx.destination);
+    bgmGain = ctx.createGain();
+    bgmGain.gain.value = _bgmGain(bgmVolumePct);
+    bgmGain.connect(masterOut);
+  };
   const getAudioCtx = () => {
     if (audioCtx) return audioCtx;
     if (typeof window === 'undefined') return null;
@@ -5177,19 +5210,47 @@ const Audio_ = (() => {
     if (!AC) return null;
     try {
       audioCtx = new AC();
-      bgmGain = audioCtx.createGain();
-      bgmGain.gain.value = _bgmGain(bgmVolumePct);
-      bgmGain.connect(audioCtx.destination);
+      buildAudioGraph(audioCtx);
+      ctxTimeMark = null;
       bindResumeOnGesture();
     } catch (e) {
       audioCtx = null;
       bgmGain = null;
+      masterOut = null;
+      analyser = null;
+      analyserData = null;
     }
     return audioCtx;
   };
   // AudioContextは端末側の自動再生制限・省電力・他アプリの音声フォーカスで止められる。
   // 止まったまま start() しても無音になるだけなので、次のタップで必ず復帰させる。
-  // タップはuser activationが有効な唯一の機会なので、ここでresume()を呼ぶ意味がある
+  // タップはuser activationが有効な唯一の機会なので、ここでresume()を呼ぶ意味がある。
+  //
+  // ここから下は、AudioContext.currentTime が実時間どおりに進んでいるかを見る仕掛け。
+  // Androidでは、出力先の切り替え(Bluetooth・イヤホン)・他アプリとの音の取り合い・省電力のあとに、
+  // state は running のままなのに時計だけ止まり、何を鳴らしても無音になることがある。
+  // この状態は resume() では戻らないので、state を見るだけでは永久に気づけない
+  const ctxClockStalled = () => {
+    const ctx = audioCtx;
+    if (!ctx || ctx.state !== 'running') return false;
+    const now = Date.now(),
+      time = ctx.currentTime;
+    if (!ctxTimeMark) {
+      ctxTimeMark = {
+        at: now,
+        time
+      };
+      return false;
+    }
+    const elapsed = now - ctxTimeMark.at;
+    if (elapsed < 500) return false;
+    const advanced = time - ctxTimeMark.time;
+    ctxTimeMark = {
+      at: now,
+      time
+    };
+    return advanced < elapsed / 1000 * 0.2;
+  };
   let resumeOnGestureBound = false;
   const bindResumeOnGesture = () => {
     if (resumeOnGestureBound || typeof document === 'undefined') return;
@@ -5202,6 +5263,7 @@ const Audio_ = (() => {
         done = ctx.resume();
       } catch (e) {}
       const after = () => {
+        ctxTimeMark = null;
         if (audioCtx && audioCtx.state === 'running' && enabled && !pageHidden && currentKey && !bgmSource && !jingleSource && !previewSource) playBGM(currentKey);
       };
       if (done && done.then) done.then(after, () => {});else setTimeout(after, 0);
@@ -5425,6 +5487,101 @@ const Audio_ = (() => {
     stopJingles();
     stopOthers();
   };
+
+  // BGMの出口を丸ごと作り直す。設定画面の「音を鳴らし直す」から呼ぶ。
+  // 「running なのに時計が止まっている」「resume しても戻らない」状態は、
+  // いまのAudioContextを捨てて新しく作る以外に戻す手がない(Androidで実際に起きる)。
+  // 音ゲーの演奏中だけは作り直さない(鳴っている曲のハンドルが死に、譜面とずれるため)。
+  const rebuildAudioCtx = async () => {
+    if (activeRhythmGains.size) return false;
+    const old = audioCtx,
+      resumeKey = currentKey;
+    ++bgmRequest;
+    ++previewRequest;
+    stopSource(bgmSource);
+    bgmSource = null;
+    bgmSourceKey = null;
+    stopSource(previewSource);
+    previewSource = null;
+    previewKey = null;
+    stopJingles();
+    audioCtx = null;
+    bgmGain = null;
+    masterOut = null;
+    analyser = null;
+    analyserData = null;
+    ctxTimeMark = null;
+    // 音源(AudioBuffer)は作り直したcontextのサンプリングレートが違うと速さが変わってしまう。
+    // 取り直しても通信キャッシュから読めるので、ここは安全側に倒して捨てる
+    buffers.clear();
+    loadingBuffers.clear();
+    try {
+      if (old && old.state !== 'closed') await old.close();
+    } catch (e) {}
+    const ctx = getAudioCtx();
+    if (!ctx) return false;
+    ctxRebuildCount++;
+    // 効果音(Tone)はTone自身のAudioContextで鳴っているので、ここでは触らない。
+    // 止まっていることがあるので、起こすところだけやる
+    if (Tone) {
+      try {
+        await Tone.start();
+        started = true;
+      } catch (e) {}
+    }
+    try {
+      await ctx.resume();
+    } catch (e) {}
+    currentKey = resumeKey;
+    if (enabled && resumeKey && !pageHidden) playBGM(resumeKey);
+    return ctx.state === 'running';
+  };
+  // いま出口へ実際に流れている波形の大きさ(0〜1)。鳴っていなければ0。
+  // 「アプリは鳴らしているのに端末から聞こえない」のか「そもそも鳴っていない」のかを分ける
+  const outputLevel = () => {
+    if (!analyser || !analyserData) return null;
+    try {
+      analyser.getFloatTimeDomainData(analyserData);
+      let peak = 0;
+      for (let i = 0; i < analyserData.length; i++) {
+        const v = Math.abs(analyserData[i]);
+        if (v > peak) peak = v;
+      }
+      return peak;
+    } catch (e) {
+      return null;
+    }
+  };
+  // 効果音エンジン(Tone)を通さず、素のWeb Audioだけで短い音を鳴らす。
+  // 「Toneが読めていないだけ」なのか「出口そのものが死んでいる」のかを分けるため
+  const playTestTone = async () => {
+    const ctx = await ensureAudioCtxRunning();
+    if (!ctx || !masterOut) return false;
+    try {
+      const osc = ctx.createOscillator(),
+        gain = ctx.createGain(),
+        at = ctx.currentTime;
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(880, at);
+      osc.frequency.setValueAtTime(1320, at + 0.16);
+      gain.gain.setValueAtTime(0, at);
+      gain.gain.linearRampToValueAtTime(0.3, at + 0.02);
+      gain.gain.linearRampToValueAtTime(0, at + 0.42);
+      osc.connect(gain);
+      gain.connect(masterOut);
+      osc.start(at);
+      osc.stop(at + 0.45);
+      setTimeout(() => {
+        try {
+          osc.disconnect();
+          gain.disconnect();
+        } catch (e) {}
+      }, 900);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  };
   // 音ゲーの時刻は AudioContext.currentTime と再生offsetだけを正本にする。
   // BufferSourceNodeは一度stopしたら再利用せず、再開のたびにoffsetから作り直す。
   // options.autoStart:false を渡すと「音源の用意だけして、まだ鳴らさない」。
@@ -5476,12 +5633,13 @@ const Audio_ = (() => {
         };
         activeRhythmGains.add(gainEntry);
         rhythmGain.gain.value = enabled ? raw : 0;
-        // 音ゲー専用の音量なので、メインのBGM音量(bgmGain)は経由せず直接destinationへ繋ぐ。
+        // 音ゲー専用の音量なので、メインのBGM音量(bgmGain)は経由しない。
         // 全体ミュート(enabled)だけはactiveRhythmGains経由で共通に反映する。
+        // 出口の手前(masterOut)だけは通す。音は変わらず、音量計で鳴っているか見られるようになる
         nextSource.buffer = buffer;
         nextSource.loop = loop;
         nextSource.connect(rhythmGain);
-        rhythmGain.connect(ctx.destination);
+        rhythmGain.connect(masterOut || ctx.destination);
         source = nextSource;
         offsetSeconds = offset;
         startedAt = ctx.currentTime;
@@ -5605,6 +5763,7 @@ const Audio_ = (() => {
   };
   const setPageHidden = hidden => {
     pageHidden = !!hidden;
+    ctxTimeMark = null;
     if (pageHidden) {
       ++bgmRequest;
       stopPreview(false);
@@ -5670,6 +5829,62 @@ const Audio_ = (() => {
       window.__mhAudioExpectedSrc = debugExpectedSrc;
     } catch (e) {}
   }
+  // 「音が出ない」を端末の上で切り分けるための一式(音量設定の「音が出ないとき」から見る)。
+  // 画面から呼ぶだけの読み取りなので、ゲームの動きは変えない
+  const diagnose = () => {
+    const ctx = audioCtx;
+    let toneState = 'none';
+    if (Tone) {
+      try {
+        toneState = Tone.getContext && Tone.getContext().state || 'none';
+      } catch (e) {
+        toneState = 'none';
+      }
+    }
+    return {
+      enabled,
+      pageHidden,
+      bgmVolumePct,
+      seVolumePct,
+      ctxState: ctx ? ctx.state : 'none',
+      sampleRate: ctx ? Math.round(ctx.sampleRate) : 0,
+      // getAudioCtx()を呼ばない(見ただけで出口を作らない)。作る前は判定しようがないので false。
+      // 画面を隠しているあいだは時計も止まるので、そこは見ない(戻った直後の誤判定を防ぐ)
+      stalled: ctx && !pageHidden ? ctxClockStalled() : false,
+      rebuilds: ctxRebuildCount,
+      toneLoaded: !!Tone,
+      toneReady: ready,
+      toneState,
+      toneFailed: toneLoadFailed,
+      level: outputLevel(),
+      playing: debugPlayingTracks().playing
+    };
+  };
+  // 音が実際に出ているかを外(検査)から確かめるための口。
+  // tools/audio/audio-output-check.js が、鳴らしてから音量計の値を読む。
+  // プレイヤーの画面には何も出ないし、ゲームの動きも変えない
+  if (typeof window !== 'undefined') {
+    try {
+      window.__mhAudioDiagnose = () => diagnose();
+      window.__mhAudioTestTone = () => playTestTone();
+    } catch (e) {}
+  }
+  // 設定画面の「音を鳴らし直す」。出口を作り直して、テスト音まで鳴らす
+  const repair = async () => {
+    if (!enabled) {
+      enabled = true;
+      if (typeof window !== 'undefined') window.__mhAudioEnabled = true;
+      applyRhythmMute();
+    }
+    const rebuilt = await rebuildAudioCtx();
+    const ctx = await ensureAudioCtxRunning();
+    const beeped = await playTestTone();
+    return {
+      rebuilt,
+      beeped,
+      running: !!ctx && ctx.state === 'running'
+    };
+  };
   const setSeVolume = pct => {
     seVolumePct = pct;
     if (seBus && Tone) {
@@ -6568,6 +6783,9 @@ const Audio_ = (() => {
     playJingle,
     ensurePlaying,
     isContextRunning,
+    diagnose,
+    playTestTone,
+    repair,
     se
   };
 })();
@@ -9790,6 +10008,121 @@ const VolumeSlider = ({
   }, "\uFF0B"), /*#__PURE__*/React.createElement("span", {
     className: "w-6 shrink-0 text-right text-[9px] font-mono font-black text-slate-300"
   }, value));
+};
+
+// 音量設定の中に置く「音が出ないとき」。
+// (2026-09-11・ユーザー報告「Google Pixel 9a でゲーム自体の音が出ない」)
+// 音が出ない原因は、アプリ側(出口が止まっている・効果音エンジンが読めていない)と
+// 端末側(メディア音量・マナーモード・別の機器へつながっている)に分かれるが、
+// どちらなのかは画面に何も出ないと切り分けようがない。
+// 出口へ実際に流れている音の大きさをメーターで見せて、そこを分けられるようにする。
+//   メーターが動く → 音は作れている。端末側(音量・出力先)を確かめる
+//   メーターが動かない → アプリ側。「音を鳴らし直す」で出口を作り直す
+const AudioTroubleshootPanel = ({
+  info,
+  peak,
+  muted,
+  onTest,
+  onRepair,
+  repairing
+}) => {
+  const state = !info ? 'unknown' : info.ctxState === 'none' ? 'none' : info.ctxState !== 'running' ? 'suspended' : info.stalled ? 'stalled' : 'running';
+  const stateView = {
+    running: {
+      label: '音を出せています',
+      tone: 'text-emerald-300'
+    },
+    stalled: {
+      label: '止まっています',
+      tone: 'text-red-300'
+    },
+    suspended: {
+      label: 'お休み中（画面をさわると戻ります）',
+      tone: 'text-amber-300'
+    },
+    none: {
+      label: 'まだ開いていません',
+      tone: 'text-slate-400'
+    },
+    unknown: {
+      label: '調べられませんでした',
+      tone: 'text-slate-400'
+    }
+  }[state];
+  // 波形の山(0〜1)は小さい音ほど見えにくいので、平方根で引き伸ばしてから%にする
+  const meterPct = Math.max(0, Math.min(100, Math.round(Math.sqrt(Math.max(0, Number(peak) || 0)) * 100)));
+  const sounding = meterPct >= 3;
+  // 効果音(Tone)はBGMとは別の出口で鳴っている。BGMが出ていても効果音だけ止まることがあるので分けて出す
+  const seView = !info ? {
+    label: '不明',
+    tone: 'text-slate-400'
+  } : info.toneFailed ? {
+    label: '読み込めていません（効果音だけ出ません）',
+    tone: 'text-red-300'
+  } : !info.toneReady ? {
+    label: '読み込み中',
+    tone: 'text-amber-300'
+  } : info.toneState !== 'running' ? {
+    label: 'お休み中（「音を鳴らし直す」で戻ります）',
+    tone: 'text-amber-300'
+  } : {
+    label: '準備できています',
+    tone: 'text-emerald-300'
+  };
+  const playing = info && info.playing && info.playing[0] || null;
+  // はじめて遊ぶ端末は、音量が最小の1から始まる(いきなり大きな音を出さないため)。
+  // 音量1のBGMは音量100の1/500ほどしかなく、「音が出ない」と区別がつかないので、
+  // 音がオンなのに小さすぎるときはここで名指しで知らせる
+  const lowVolume = !!info && !muted && (info.bgmVolumePct <= 10 || info.seVolumePct <= 10);
+  const row = (label, value, tone) => /*#__PURE__*/React.createElement("div", {
+    className: "flex items-start justify-between gap-2 py-1"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "shrink-0 text-[10px] font-black text-slate-400"
+  }, label), /*#__PURE__*/React.createElement("span", {
+    className: `text-right text-[10px] font-black ${tone || 'text-slate-200'}`
+  }, value));
+  return /*#__PURE__*/React.createElement("div", {
+    "data-audio-troubleshoot": true,
+    className: "mt-2 rounded-2xl border border-white/10 bg-slate-950/70 p-3 text-left"
+  }, muted && /*#__PURE__*/React.createElement("p", {
+    className: "mb-2 rounded-xl border border-amber-400/40 bg-amber-950/40 px-2 py-1.5 text-[10px] font-black text-amber-200"
+  }, "\u3044\u307E\u30B2\u30FC\u30E0\u306E\u97F3\u306F\u30AA\u30D5\u3067\u3059\u3002\u4E0A\u306E\u300C\uD83D\uDD07 \u97F3\u304C\u30AA\u30D5\u3067\u3059\u300D\u3092\u62BC\u3057\u3066\u30AA\u30F3\u306B\u3057\u3066\u304F\u3060\u3055\u3044\u3002"), lowVolume && /*#__PURE__*/React.createElement("p", {
+    "data-audio-low-volume": true,
+    className: "mb-2 rounded-xl border border-amber-400/40 bg-amber-950/40 px-2 py-1.5 text-[10px] font-black leading-relaxed text-amber-200"
+  }, "\u97F3\u91CF\u304C\u3068\u3066\u3082\u5C0F\u3055\u3044\u307E\u307E\u3067\u3059\uFF08BGM ", info.bgmVolumePct, " \uFF0F SE ", info.seVolumePct, "\uFF09\u3002\u306F\u3058\u3081\u3066\u904A\u3076\u3068\u304D\u306F\u97F3\u91CF1\u304B\u3089\u59CB\u307E\u308B\u306E\u3067\u3001\u4E0A\u306E\u30B9\u30E9\u30A4\u30C0\u30FC\u3092\u53F3\u3078\u52D5\u304B\u3057\u3066\u304F\u3060\u3055\u3044\u3002"), row('音の出口', stateView.label, stateView.tone), row('効果音エンジン', seView.label, seView.tone), row('いま鳴っている曲', playing ? playing.src : 'なし', playing ? 'text-slate-200' : 'text-slate-400'), /*#__PURE__*/React.createElement("div", {
+    className: "mt-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] font-black text-slate-400"
+  }, "\u5B9F\u969B\u306B\u51FA\u3066\u3044\u308B\u97F3"), /*#__PURE__*/React.createElement("span", {
+    className: `text-[10px] font-black ${sounding ? 'text-emerald-300' : 'text-slate-400'}`
+  }, sounding ? '出ています' : '出ていません')), /*#__PURE__*/React.createElement("div", {
+    className: "mt-1 h-2.5 w-full overflow-hidden rounded-full border border-white/10 bg-slate-800"
+  }, /*#__PURE__*/React.createElement("div", {
+    "data-audio-meter": true,
+    className: "h-full rounded-full bg-gradient-to-r from-emerald-500 to-lime-300 transition-[width] duration-100",
+    style: {
+      width: `${meterPct}%`
+    }
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "mt-3 grid grid-cols-2 gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: onTest,
+    className: "min-h-[44px] rounded-xl border border-indigo-300/40 bg-indigo-700 px-2 text-[11px] font-black text-white active:scale-95"
+  }, "\uD83D\uDD14 \u30C6\u30B9\u30C8\u97F3"), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: onRepair,
+    disabled: repairing,
+    className: "min-h-[44px] rounded-xl border border-fuchsia-300/40 bg-fuchsia-700 px-2 text-[11px] font-black text-white active:scale-95 disabled:opacity-60"
+  }, repairing ? '直しています…' : '🔧 音を鳴らし直す')), /*#__PURE__*/React.createElement("p", {
+    className: "mt-2 text-[10px] leading-relaxed text-slate-400"
+  }, "\u30C6\u30B9\u30C8\u97F3\u3092\u62BC\u3057\u3066\u3082\u30E1\u30FC\u30BF\u30FC\u304C\u52D5\u304B\u306A\u3044\u3068\u304D\u306F\u3001\u30B2\u30FC\u30E0\u5074\u3067\u97F3\u304C\u6B62\u307E\u3063\u3066\u3044\u307E\u3059\u3002\u300C\u97F3\u3092\u9CF4\u3089\u3057\u76F4\u3059\u300D\u3092\u62BC\u3057\u3066\u304F\u3060\u3055\u3044\u3002"), /*#__PURE__*/React.createElement("p", {
+    className: "mt-1 text-[10px] leading-relaxed text-slate-400"
+  }, "\u30E1\u30FC\u30BF\u30FC\u306F\u52D5\u304F\u306E\u306B\u805E\u3053\u3048\u306A\u3044\u3068\u304D\u306F\u3001\u7AEF\u672B\u5074\u3067\u3059\u3002\u6B21\u3092\u78BA\u304B\u3081\u3066\u304F\u3060\u3055\u3044\u3002"), /*#__PURE__*/React.createElement("ul", {
+    className: "mt-1 space-y-0.5 text-[10px] leading-relaxed text-slate-400"
+  }, /*#__PURE__*/React.createElement("li", null, "\u30FB\u97F3\u91CF\u30DC\u30BF\u30F3\u3092\u62BC\u3057\u3066\u3001\u51FA\u3066\u304F\u308B\u300C\u30E1\u30C7\u30A3\u30A2\u300D\u306E\u97F3\u91CF\u3092\u4E0A\u3052\u308B\uFF08\u7740\u4FE1\u97F3\u306E\u97F3\u91CF\u3068\u306F\u5225\u3067\u3059\uFF09"), /*#__PURE__*/React.createElement("li", null, "\u30FB\u30DE\u30CA\u30FC\u30E2\u30FC\u30C9\uFF0F\u30B5\u30A4\u30EC\u30F3\u30C8\u30E2\u30FC\u30C9\uFF0F\u304A\u3084\u3059\u307F\u6642\u9593\u30E2\u30FC\u30C9\u3092\u5207\u308B"), /*#__PURE__*/React.createElement("li", null, "\u30FBBluetooth\u30A4\u30E4\u30DB\u30F3\u3084\u30B9\u30D4\u30FC\u30AB\u30FC\u306B\u3064\u306A\u304C\u3063\u3066\u3044\u306A\u3044\u304B\u78BA\u304B\u3081\u308B"), /*#__PURE__*/React.createElement("li", null, "\u30FB\u97F3\u697D\u3084\u52D5\u753B\u3092\u518D\u751F\u3057\u3066\u3044\u308B\u5225\u306E\u30A2\u30D7\u30EA\u3092\u9589\u3058\u308B")));
 };
 const DIST_APTITUDE_MULT = {
   G: 0.8,
@@ -35363,6 +35696,36 @@ function MonsterHeroGame() {
     Audio_.unlock(true);
   };
   const audioMuted = !audioOn;
+  // 「音が出ないとき」(音量設定の中)。開いているあいだだけ音の出口を見張る
+  const [showAudioDiag, setShowAudioDiag] = useState(false);
+  const [audioDiag, setAudioDiag] = useState(null);
+  const [audioDiagPeak, setAudioDiagPeak] = useState(0);
+  const [audioRepairing, setAudioRepairing] = useState(false);
+  const audioDiagPeakRef = useRef(0);
+  const enableSoundForCheck = () => {
+    if (!audioUnlocked) setAudioUnlocked(true);
+    if (quickMuted) toggleQuickMute();
+  };
+  // テスト音は効果音エンジン(Tone)を通さない素の音。
+  // 「Toneが読めていないだけ」なのか「出口そのものが死んでいる」のかを分けるため
+  const testAudioOutput = async () => {
+    enableSoundForCheck();
+    try {
+      await Audio_.unlock();
+    } catch {}
+    try {
+      await Audio_.playTestTone();
+    } catch {}
+  };
+  const repairAudioOutput = async () => {
+    if (audioRepairing) return;
+    setAudioRepairing(true);
+    enableSoundForCheck();
+    try {
+      await Audio_.repair();
+    } catch {}
+    setAudioRepairing(false);
+  };
   const selectAutoRuntimeBgm = trackId => {
     if (trackId !== '__none__' && !BGM_TRACK_BY_ID[trackId]) return;
     setAutoBgmOverride(trackId);
@@ -38007,6 +38370,29 @@ function MonsterHeroGame() {
   useEffect(() => {
     Audio_.setBgmVolume(bgmVolume);
   }, [bgmVolume]);
+  // 「音が出ないとき」を開いているあいだだけ、出口の状態と実際に出ている音を見張る。
+  // 閉じたら必ず止める(鳴らしているあいだ中ずっと測り続けない)
+  useEffect(() => {
+    if (!showAudioSettings || !showAudioDiag) return;
+    audioDiagPeakRef.current = 0;
+    setAudioDiagPeak(0);
+    const tick = () => {
+      let info = null;
+      try {
+        info = Audio_.diagnose();
+      } catch {
+        info = null;
+      }
+      setAudioDiag(info);
+      const level = Number.isFinite(info?.level) ? info.level : 0;
+      // 一瞬の音でもメーターが見えるように、山は少しずつ下げながら保つ
+      audioDiagPeakRef.current = Math.max(level, audioDiagPeakRef.current * 0.82);
+      setAudioDiagPeak(audioDiagPeakRef.current);
+    };
+    tick();
+    const timer = setInterval(tick, 120);
+    return () => clearInterval(timer);
+  }, [showAudioSettings, showAudioDiag]);
 
   // 新バージョン検知: ホーム画面アプリ/背面タブ復帰時は自動再読み込みされず古いバージョンの
   // ままタップしても反応しないように見える不具合が繰り返し報告されたため、version.jsonを
@@ -48333,7 +48719,11 @@ function MonsterHeroGame() {
   })))) : showAudioSettings ? /*#__PURE__*/React.createElement("div", {
     className: "mh-title-modal"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "mh-title-dialog"
+    className: "mh-title-dialog",
+    style: {
+      maxHeight: 'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',
+      overflowY: 'auto'
+    }
   }, /*#__PURE__*/React.createElement("div", {
     className: "mh-dialog-head"
   }, /*#__PURE__*/React.createElement("h3", null, "\u97F3\u91CF\u8A2D\u5B9A"), /*#__PURE__*/React.createElement("button", {
@@ -48357,6 +48747,17 @@ function MonsterHeroGame() {
     onChange: changeBgmVolume,
     gradient: "from-fuchsia-500 to-pink-500",
     thumbRing: "border-fuchsia-400"
+  }), /*#__PURE__*/React.createElement("button", {
+    className: "mh-dialog-choice mt-3",
+    "aria-expanded": showAudioDiag,
+    onClick: () => setShowAudioDiag(v => !v)
+  }, "\uD83D\uDD27 \u97F3\u304C\u51FA\u306A\u3044\u3068\u304D ", showAudioDiag ? '▲' : '▼'), showAudioDiag && /*#__PURE__*/React.createElement(AudioTroubleshootPanel, {
+    info: audioDiag,
+    peak: audioDiagPeak,
+    muted: audioMuted,
+    onTest: testAudioOutput,
+    onRepair: repairAudioOutput,
+    repairing: audioRepairing
   }))) : showBgmArrangement ? /*#__PURE__*/React.createElement("div", {
     className: "mh-title-modal"
   }, /*#__PURE__*/React.createElement("div", {
