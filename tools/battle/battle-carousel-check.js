@@ -1,6 +1,13 @@
 const fs=require('fs'),assert=require('assert');
+const {readDifficultyIds}=require('../harness');
 const src=fs.readFileSync('monster-hero/src/game-system.jsx','utf8');
+// 難易度カルーセルに出したい並び。ここは検査が持つ「正解」なので実装から読まない。
 const order=['Beginner','Easy','Normal','Hard','Expert','Master','GrandMaster','Hell','Legend'];
+// ★以前はこの下の「order の順に並んでいるか」しか見ていなかった。
+//   それだと難易度を足しても既存9個の順序は保たれるので検査は通ってしまい、
+//   新しい難易度がカルーセルの確認から静かに外れる。実装の一覧と突き合わせておく
+assert.deepStrictEqual(readDifficultyIds(),order,
+  '難易度の一覧が検査の期待と違います(DIFFICULTY_SETTINGS を変えたら、この検査の order も直すこと)');
 let last=-1;for(const key of order){const i=src.indexOf(`${key}:`,src.indexOf('const DIFFICULTY_SETTINGS'));assert(i>last,`${key} の順序`);last=i;}
 for(const token of ['snap-mandatory','touchAction:\'pan-x pinch-zoom\'','flex items-start gap-2.5 overflow-x-auto overflow-y-hidden','relative shrink-0','前の難易度','次の難易度','自己ベストスコア','最高到達 WAVE','全WAVE詳細','この難易度で挑戦','ENEMY_SEQUENCE.map'])assert(src.includes(token),token);
 assert(src.includes('const createBattleEnemy ='));
