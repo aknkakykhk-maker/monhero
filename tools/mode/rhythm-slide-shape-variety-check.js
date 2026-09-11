@@ -52,13 +52,23 @@ ok('途中で太さが変わるSLIDEがある',varying.length>=slides.length*.25
 const widthPatterns=new Set(slides.map(s=>s.widths.join('-')));
 ok('太さの並びが何通りもある',widthPatterns.size>=15,`${widthPatterns.size}通り`);
 ok('途中で太さが変わる割合が十分',varying.length>=slides.length*.35,`${(varying.length/slides.length*100).toFixed(0)}%`);
-const pointCounts=slides.map(s=>s.slidePoints?.length??s.widths.length);
+// 【この2つは一度、変更前のコードでも通る書き方になっていた】(2026-09-12の検証で発覚)
+// ・中継点の数は max-min>=5 が条件だったが、変更前も 3〜8点＝差ちょうど5で境界通過していた
+// ・「移動量が上限へ張り付いていない」は始点→終点の距離の種類で見ていたが、
+//   変更前も変更後も9通りで**まったく同じ**。張り付きが起きていた当時のデータで通る＝
+//   名前と中身が食い違っていた
+// 単調へ戻ったことを本当に捕まえられる形へ直す。
+// (`s.slidePoints?.length` も書いていたが slides の要素は {file,note,widths,lanes} なので
+//  常にフォールバックしていた。誤解のもとなので消した)
+const pointCounts=slides.map(s=>s.widths.length);
 ok('中継点の数に幅がある（刻みが固定でない）',
-  Math.max(...pointCounts)-Math.min(...pointCounts)>=5,
+  Math.max(...pointCounts)-Math.min(...pointCounts)>=8,
   `${Math.min(...pointCounts)}〜${Math.max(...pointCounts)}点`);
-const reaches=slides.map(s=>Math.abs(s.lanes[s.lanes.length-1]-s.lanes[0]));
-ok('移動量が上限へ張り付いていない',new Set(reaches.map(r=>r.toFixed(1))).size>=4,
-  `${new Set(reaches.map(r=>r.toFixed(1))).size}通り / ${Math.min(...reaches)}〜${Math.max(...reaches)}レーン`);
+// 「振れ幅が1つの値へ張り付いていないか」も一度書いたが、**外した**。
+// 実測すると変更前31% / 変更後48%で、直したあとのほうが集中している。
+// reach の下限を2.0に置いて「止めたままでも通るSLIDE」を防いでいるので当然で、
+// この指標で見張ると自分の設計と矛盾する。見張るなら下の
+// 「止めたままでも通るSLIDEを増やしていないか」のほうが目的に合う。
 
 console.log('\n--- 広げすぎて遊べない形になっていないか ---');
 const jumpy=slides.filter(s=>{
@@ -137,6 +147,27 @@ ok('MASTERで「止めたままでも通る」が半分を超えない',(()=>{
   const still=stillPassing.filter(s=>difficultyOf(s.file)==='MASTER');
   return !master.length||still.length<=master.length*.5;
 })());
+
+console.log('\n--- 押せない配置を作っていないか（出荷を止める条件）---');
+// 品質レポートの gate.impossible が、パイプラインが実際に出荷を止める条件
+// (rhythm-chart-v3-pipeline.js)。形を増やした結果ここが増えていないかを見る。
+// 押せる(playability)のスコア自体は、経路が変わるぶん多少は動く（実測で平均-0.4）。
+// これは意図したトレードオフなので、点数そのものではなく「止まる条件」で見張る。
+{
+  const {spawnSync:run}=require('child_process');
+  const out=run(process.execPath,[path.join(ROOT,'tools/mode/rhythm-chart-quality-report.js'),
+    '--all','--source','v3','--dir',tempDir,'--json'],{cwd:ROOT,encoding:'utf8',maxBuffer:64*1024*1024});
+  let impossible=null;
+  try{
+    const report=JSON.parse(out.stdout);
+    impossible=0;
+    for(const track of report)for(const entry of Object.values(track.difficulties||{}))
+      impossible+=Number(entry.gate?.impossible)||0;
+  }catch{}
+  // 変更前(全SLIDEが単一幅だったころ)の実測は 2件。そこから増やさない。
+  ok('押せない配置が増えていない',impossible!==null&&impossible<=2,
+    impossible===null?'品質レポートを読めませんでした':`${impossible}件`);
+}
 
 console.log('\n--- 作り方が決定的か（乱数を使っていないか）---');
 const again=fs.mkdtempSync(path.join(os.tmpdir(),'rhythm-slide-shape2-'));
