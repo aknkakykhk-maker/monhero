@@ -473,8 +473,13 @@ check('モードカードは選択難易度固定でなくモード内最高ス�
     && has('highestModeScore(extremeBestScores,PUBLIC_EXTREME_DIFFICULTIES.map(setting=>setting.id))')
     && has("ranked?'最高スコア'")
     && has("ranked?`${modeBestScore.toLocaleString()} pt`"));
-check('上のタブはモード選択・ブリーダーLv・絆Lvの3つ',
-  has("{[['mode','モード選択'],['breeder','ブリーダーLv'],['bond','絆Lv']].map(([key,label])=>("));
+check('上のタブはモード選択・ブリーダーLv・絆Lv・総合力の4つ',
+  has("{[['mode','モード選択'],['breeder','ブリーダーLv'],['bond','絆Lv'],['power','総合力']].map(([key,label])=>(")
+    && has('grid grid-cols-4 gap-1 mb-2 shrink-0 rounded-xl bg-slate-900/60'));
+// 総合力は絆Lvと同じ一覧を並べ直すだけなので、取得は 'bond' を呼ぶ。
+// タブ名をそのまま levelKind へ渡すと、存在しない 'power' の取得になって一覧が永久に空になる
+check("総合力タブの取得は levelKind='bond' を呼ぶ",
+  has("loadRankings(null,true,false,key==='power'?'bond':key)"));
 // スコアランキングはモードごとに分かれるので、上のタブには置かない
 check('上のタブにスコアランキングを混ぜない',
   !/\[\['mode','モード選択'\],\['score'/.test(source) && !has("['score','スコア'],['breeder'"));
