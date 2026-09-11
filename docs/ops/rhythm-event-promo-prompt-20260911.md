@@ -4,8 +4,10 @@
 
 **使い方**: 下のプロンプトをそのままコピーして貼るだけ。
 
-対象曲は 2026-09-11 時点の実装で確定済み（週ID `weekly_2026_09_07`）。
-1・2曲目はボス戦BGMの**リミックス版**で、同名のオリジナル曲とは別物。取り違えない。
+> ⚠️ この画像に載せる3曲は**ユーザーが指定したもの**で、ゲーム内の「イベント」タブの
+> 対象曲（`weekly_2026_09_07` ＝ 綺季一閃 battle remix / Stay With Me remix / 風がそよぐ場所）
+> **とは違う**。2026-09-11 にそう決めた（ゲーム側は変えない、画像だけその3曲、という判断）。
+> `data/rhythm-event.js` は触っていないので、実際の対象曲は変わっていない。
 
 ---
 
@@ -21,12 +23,12 @@
 画像に入れる文字（この日本語のまま、正確に）:
 ゲリラ開催中
 今週のモンヒロビート
-綺季一閃 ～花雪に舞う詠姫～ battle remix
-Stay With Me ～Locked Fate～ remix
+Monster Hero
 風がそよぐ場所
+Close To Your Heart
 9/14(月)朝5:00まで
 
-曲名の3行は長いので、小さめの字で折り返していい。省略はしないで。
+曲名は3行に分けて、見出しより小さい字で。省略はしないで。
 ```
 
 ## 横長・縦長にしたいとき
@@ -57,8 +59,7 @@ Stay With Me ～Locked Fate～ remix
 
 ```
 【ゲリラ開催】モンヒロビートの今週のイベント、予告なしで始まりました。
-対象は「綺季一閃 ～花雪に舞う詠姫～ battle remix」「Stay With Me ～Locked Fate～ remix」
-「風がそよぐ場所」の3曲。
+対象は「Monster Hero」「風がそよぐ場所」「Close To Your Heart」の3曲。
 難易度不問・1曲だけでもOK。9/14(月)朝5:00まで。
 https://aknkakykhk-maker.github.io/monhero/
 ```
@@ -67,20 +68,19 @@ https://aknkakykhk-maker.github.io/monhero/
 
 ## 告知の中身（画像に足すときの材料）
 
-- 対象3曲（`weekly_2026_09_07`・`data/rhythm-event.js` のローテーション6組目）
-  1. 綺季一閃 ～花雪に舞う詠姫～ battle remix（`eiki_boss_remix`）
-  2. Stay With Me ～Locked Fate～ remix（`pandora_boss_remix`）
-  3. 風がそよぐ場所（`kaze_ga_soyogu`）
+- 画像に載せる3曲（ユーザー指定）
+  1. Monster Hero（`monster_hero`）
+  2. 風がそよぐ場所（`kaze_ga_soyogu`）
+  3. Close To Your Heart（`close_to_your_heart`）
 - 期間: **9/14（月）朝5:00まで**。以後は毎週月曜5:00で対象曲が入れ替わる
 - 部門: 対象曲ごとに3つ ＋「総合」の4つ
 - 総合: 対象3曲それぞれのその週のベストを合算（満点 3,000,000点）
 - 難易度は不問。1曲だけ遊んだ人も総合に載る
 - 参加のしかた: モンヒロビート → 全国ランキング → 「イベント」タブ
 
-> 曲名は正式名称のまま出す。**リミックス版のサブタイトルまで含めて書く**
-> （同名のオリジナル曲が別に並んでいるため、省くと別の曲の告知になる）。
-> 音ゲーの名前も「モンヒロビート」で統一する（「モンビー」はキャラクターが
-> 愛称として呼ぶ会話でだけ使う・CLAUDE.md ⑤）。
+> 曲名は画面の表記をそのまま使う。「Monster Hero」「Close To Your Heart」は英字が正式表記
+> （カタカナにしない）。音ゲーの名前も「モンヒロビート」で統一する（「モンビー」は
+> キャラクターが愛称として呼ぶ会話でだけ使う・CLAUDE.md ⑤）。
 >
-> 次の週（9/14 5:00〜）は Monster Hero ／ トリコ ／ crossing field。
-> 対象曲を確かめ直すときは `data/rhythm-event.js` の `rhythmActiveEvent()` を動かす。
+> ゲーム内の対象曲を確かめ直すときは `data/rhythm-event.js` の `rhythmActiveEvent()` を動かす。
+> ローテーションは6組あり、9/14 5:00 からは組0（Monster Hero ／ トリコ ／ crossing field）。
