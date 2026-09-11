@@ -18,12 +18,32 @@ vm.createContext(context);
 // 切り出し範囲(CHANGELOG_TYPES以降)より前で定義されているため、そのまま評価すると
 // ReferenceError で落ちる。未公開機能を伏せる仕組みを足したときに崩れたので、
 // 必要な宣言だけを実ソースから拾って先頭へ足す(値を検査側で決め打ちしない)。
+// 宣言は1行とは限らない。releasedForPlayers は3行の矢印関数で、1行目だけを取ると
+// `var releasedForPlayers = (item) => !item` になり、実在する項目をすべて「出さない」と
+// 判定してしまう(CHANGELOG_ENTRIES が空になり、下の件数の確認が静かに 0 件で落ちる)。
+// 括弧の深さが 0 に戻った最初の ; までを1つの宣言として取る。
 const pick = (name) => {
-  const line = source.match(new RegExp(`^const ${name}\\s*=.*$`, 'm'));
-  assert(line, `${name} の宣言を取り出せること`);
-  return line[0].replace(/^const /, 'var ');
+  const at = source.search(new RegExp(`^const ${name}\\s*=`, 'm'));
+  assert(at >= 0, `${name} の宣言を取り出せること`);
+  let depth = 0;
+  for (let i = at; i < source.length; i++) {
+    const ch = source[i];
+    if (ch === '(' || ch === '[' || ch === '{') depth++;
+    else if (ch === ')' || ch === ']' || ch === '}') depth--;
+    else if (ch === ';' && depth === 0) return source.slice(at, i + 1).replace(/^const /, 'var ');
+  }
+  assert(false, `${name} の宣言の終わりを見つけられること`);
+  return '';
 };
-const prelude = ['SPECIES_CHALLENGE_PUBLIC_RELEASE', 'RHYTHM_MODE_PUBLIC_RELEASE', 'RELEASE_FLAGS', 'releasedForPlayers']
+// 公開フラグ(*_PUBLIC_RELEASE)は今後も増える。名前を手で並べると、増えたときに
+// ReferenceError で検査そのものが起動できなくなる(2026-09-11 に
+// QUICK_RHYTHM_LINK_PUBLIC_RELEASE が足されて実際にそうなった)。
+// 実ソースから名前を拾って組み立てる。
+const releaseFlagNames = [...new Set(
+  [...source.matchAll(/^const ([A-Z0-9_]+_PUBLIC_RELEASE)\s*=/gm)].map((m) => m[1]),
+)];
+assert(releaseFlagNames.length > 0, '公開フラグ(*_PUBLIC_RELEASE)を1つ以上拾えること');
+const prelude = [...releaseFlagNames, 'RELEASE_FLAGS', 'releasedForPlayers']
   .map(pick).join('\n');
 vm.runInContext(`${prelude}\n${source.slice(start, end).replace(/const /g, 'var ')}`, context);
 // かつての CHANGELOG_LATEST_BY_TYPE(種別ごとの最新日付)は、未読を日付ではなく

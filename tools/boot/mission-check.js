@@ -152,10 +152,17 @@ check('今回のお詫びでスキップチケット3種を配る', (() => {
   const has = (t) => g.rewards.some(r => r.type === t && r.amount >= 1);
   return has('skipTicketJo') && has('skipTicketHa') && has('skipTicketKyu');
 })());
-// レベルアップでもらえるptは「上がったレベルの数」だけ。まとめて何十ptも入らない
-check('レベルアップで増えるptは上がったレベル数ぶんだけ',
-  (source.match(/const next = prev \+ gainedLevels;/g) || []).length === 1
-    && (source.match(/const next = prev \+ gainedBreederLevels;/g) || []).length === 1);
+// レベルアップでもらえるptは「上がったレベルの数」だけ。まとめて何十ptも入らない。
+// ★「1か所であること」で見ていたため、スキップチケットのまとめてクリアという入口が
+//   増えて2か所になった時点で落ちていた(2026-09-11)。二重に配ってはいない。
+//   入口が増えても落ちないよう、件数ではなく「見つかったすべてが正しい形か」を見る。
+//   正しい形＝足すのは「上がったレベル数」の変数だけ / 直後に配った総数を記録している。
+check('レベルアップで増えるptは上がったレベル数ぶんだけ', (() => {
+  const sites = [...source.matchAll(/setBreederPoints\(prev => \{ const next = prev \+ ([A-Za-z0-9_]+);/g)];
+  if (sites.length === 0) return false;
+  return sites.every((m) => /^gained(Breeder)?Levels$/.test(m[1])
+    && source.slice(m.index, m.index + 400).includes("storeSet('mh_breeder_points_granted'"));
+})());
 // 読み込みのたびに配り直さないよう、補填は「本来の数との差額」だけにして、配った総数を保存する
 check('読み込み時の補填は本来の数との差額だけ',
   source.includes('if (expectedPoints > grantedPoints) {')
