@@ -411,13 +411,25 @@ check('更新履歴(今回ぶん)に曲数を書き写していない',(()=>{
 })());
 check('助手の告知を付けている(大きい追加)',
   /update_notice_rhythm_weekly_ranking_v\d+/.test(changelog)&&changelog.includes("type:'content'"));
-check('画面のなかでも助手が案内する(ランキングと曲えらびの両方)',
+// ★案内を置くのは曲えらびだけ。ランキング画面には説明も吹き出しも置かない
+//   (2026-09-11・ユーザー指摘「ランキングページに余計な説明が多くて見にくい」)。
+//   順位を見に来る画面なので読み物は場所を取りすぎる。説明はヘルプにある。
+check('曲えらびで助手が案内する',
   assistants.includes('rhythmWeeklyEvent: {')
-  &&(screen.match(/<AssistantBubble scene="rhythmWeeklyEvent"/g)||[]).length>=2);
+  &&(screen.match(/<AssistantBubble scene="rhythmWeeklyEvent"/g)||[]).length===1
+  &&screen.includes('data-rhythm-event-notice'));
+// ★見るのは RhythmRankingScreen の中だけ。遊びかた(ヘルプ)の画面は読み物の場所なので、
+//   あちらの横画面の案内まで消さない
+const rankingScreenBody=screen.slice(screen.indexOf('function RhythmRankingScreen'));
+check('ランキング画面に読み物を置いていない',
+  rankingScreenBody.length>0
+  &&!/合計で競うランキングです|対象曲で競うランキングです/.test(rankingScreenBody)
+  &&!rankingScreenBody.includes('<RhythmLandscapeHint')
+  &&!rankingScreenBody.includes('<AssistantBubble'));
 // 週間の「毎週月曜5:00」の話を期間限定のあいだに出すと、週間が動いていると誤解される
 check('期間限定のあいだは助手のセリフも切り替える',
   (assistants.match(/rhythmWeeklyEvent: \{\n\s*limited: \[/g)||[]).length>=3
-  &&(screen.match(/scene="rhythmWeeklyEvent" condition=\{/g)||[]).length>=2);
+  &&(screen.match(/scene="rhythmWeeklyEvent" condition=\{/g)||[]).length>=1);
 check('助手3人ぶんのセリフがある',(assistants.match(/rhythmWeeklyEvent: \[/g)||[]).length>=3);
 check('曲えらびの案内は週ごとに1度だけ',
   screen.includes('data-rhythm-event-notice')&&screen.includes('data-rhythm-event-notice-close')

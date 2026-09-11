@@ -171,10 +171,18 @@ check('更新履歴(今回ぶん)に曲数を書き写していない',(()=>{
 // 版の数字には縛らず、告知が付いていることだけを見る
 check('助手の告知を付けている(大きい追加)',
   /update_notice_rhythm_total_ranking_v\d+/.test(changelog)&&changelog.includes("type:'content'"));
-check('画面のなかでも助手が案内する',
-  assistants.includes('rhythmTotalRanking: {')&&screen.includes('<AssistantBubble scene="rhythmTotalRanking"'));
-check('助手3人ぶんのセリフがある',
-  (assistants.match(/rhythmTotalRanking: \[/g)||[]).length>=3);
+// ★ランキング画面には説明も吹き出しも置かない(2026-09-11・ユーザー指摘
+//   「ランキングページに余計な説明が多くて見にくい」)。順位を見に来る画面なので、
+//   読み物は場所を取りすぎる。説明はヘルプ、案内は曲えらびのみゅあの吹き出しにある。
+// ★見るのは RhythmRankingScreen の中だけ。遊びかた(ヘルプ)の画面は読み物の場所なので、
+//   あちらの横画面の案内まで消さない
+const rankingScreenBody=screen.slice(screen.indexOf('function RhythmRankingScreen'));
+check('ランキング画面に読み物を置いていない',
+  rankingScreenBody.length>0
+  &&!rankingScreenBody.includes('<AssistantBubble')
+  &&!assistants.includes('rhythmTotalRanking')
+  &&!rankingScreenBody.includes('<RhythmLandscapeHint')
+  &&!/合計で競うランキングです/.test(rankingScreenBody));
 check('仕様書に集計の決めごとがある',
   spec.includes('rhythm_total_rankings')&&spec.includes('identity_key'));
 

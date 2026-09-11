@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ada1634e3f8c9d09
+// generated-sha256: 0f3e29b88a27a3ab
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 11:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 11:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -13901,26 +13901,15 @@ function RhythmRankingScreen({
           ))}
         </div>}
         <div className="flex-1 overflow-y-auto mh-scroll px-3 pb-6 pt-3" style={{paddingBottom:'calc(1.5rem + env(safe-area-inset-bottom))'}}>
-          <RhythmLandscapeHint className="mb-3"/>
-          {totalTab&&(
-            <p className="mb-3 rounded-2xl border border-amber-300/40 bg-amber-500/10 p-3 text-[10px] font-bold leading-relaxed text-amber-100">
-              曲ごとのいちばん良いスコアを、全{totalSongCount}曲ぶん足し合わせた合計で競うランキングです。難易度は問いません（高い難易度ほど満点も高いので、上を狙うほど有利です）。遊んだ曲が増えるほど合計も伸びます。
-            </p>
-          )}
-          {eventTab&&(
-            <p className="mb-3 rounded-2xl border border-fuchsia-300/40 bg-fuchsia-500/10 p-3 text-[10px] font-bold leading-relaxed text-fuchsia-100">
-              {eventLimited
-                ?<>期間限定イベントの対象曲で競うランキングです。<b className="text-white">開催中に出した記録だけ</b>が載ります（開催前の記録は載りませんが、自己ベストと「総合」にはそのまま残ります）。難易度は問いません。1曲でも遊べば「総合」にも載ります。開催中は週間ランキングをお休みします。</>
-                :<>今週の対象曲で競うランキングです。<b className="text-white">その週のあいだに出した記録だけ</b>が載ります（先週までの記録は載りませんが、自己ベストと「総合」にはそのまま残ります）。難易度は問いません。1曲でも遊べば「総合」にも載ります。</>}
-            </p>
-          )}
-          {songTab&&(
-            <p className="mb-3 rounded-2xl border border-amber-300/40 bg-amber-500/10 p-3 text-[10px] font-bold leading-relaxed text-amber-100">
-              「{song?.displayName||'—'}」のEASY〜MASTERをまとめた合算ランキングです。難易度が高いほど満点も高いため、高い難易度で挑むほど上位に近づきます。自分のスコアはいちばん高い1件だけが載ります。
-            </p>
-          )}
+          {/* ★ここには説明を置かない(2026-09-11・ユーザー指摘
+              「ランキングページに余計な説明が多くて見にくい／横画面対応、ページ説明みたいの、
+              助手のコメント、これはなくしていいとおもう」)。
+              ランキングは順位を見に来る画面なので、読み物は場所を取りすぎる。
+              説明はヘルプ(rhythm-ranking)に、案内は曲えらびのみゅあの吹き出しにある。
+              ・横画面の案内(RhythmLandscapeHint)  … 曲えらび・遊びかたの側にある
+              ・タブごとの説明文                   … ヘルプの「全国ランキング」にある
+              ・みゅあの吹き出し                   … 曲えらび(イベント開催中)にある */}
           {totalTab&&(<>
-            <AssistantBubble scene="rhythmTotalRanking" compact/>
             {total.status==='loading'&&<p data-rhythm-total-loading className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">読み込み中…</p>}
             {/* 集計のしたくがまだのとき。エラーではないので、赤い表示にはしない */}
             {total.status==='notReady'&&<p data-rhythm-total-not-ready className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">総合ランキングはただいま準備中です。もうしばらくお待ちください。</p>}
@@ -13949,7 +13938,6 @@ function RhythmRankingScreen({
             </>)}
           </>)}
           {eventTab&&(<>
-            <AssistantBubble scene="rhythmWeeklyEvent" condition={eventLimited?'limited':null} compact/>
             {event.status==='loading'&&<p data-rhythm-event-loading className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">読み込み中…</p>}
             {/* 集計のしたくがまだのとき。エラーではないので、赤い表示にはしない */}
             {event.status==='notReady'&&<p data-rhythm-event-not-ready className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">週間ランキングはただいま準備中です。もうしばらくお待ちください。</p>}

@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0f0361cbcac463d2
+// source-sha256: 0913f773683b7ac7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ada1634e3f8c9d09
+// generated-sha256: 0f3e29b88a27a3ab
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 11:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 11:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -25015,22 +25015,7 @@ function RhythmRankingScreen({
     style: {
       paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))'
     }
-  }, /*#__PURE__*/React.createElement(RhythmLandscapeHint, {
-    className: "mb-3"
-  }), totalTab && /*#__PURE__*/React.createElement("p", {
-    className: "mb-3 rounded-2xl border border-amber-300/40 bg-amber-500/10 p-3 text-[10px] font-bold leading-relaxed text-amber-100"
-  }, "\u66F2\u3054\u3068\u306E\u3044\u3061\u3070\u3093\u826F\u3044\u30B9\u30B3\u30A2\u3092\u3001\u5168", totalSongCount, "\u66F2\u3076\u3093\u8DB3\u3057\u5408\u308F\u305B\u305F\u5408\u8A08\u3067\u7AF6\u3046\u30E9\u30F3\u30AD\u30F3\u30B0\u3067\u3059\u3002\u96E3\u6613\u5EA6\u306F\u554F\u3044\u307E\u305B\u3093\uFF08\u9AD8\u3044\u96E3\u6613\u5EA6\u307B\u3069\u6E80\u70B9\u3082\u9AD8\u3044\u306E\u3067\u3001\u4E0A\u3092\u72D9\u3046\u307B\u3069\u6709\u5229\u3067\u3059\uFF09\u3002\u904A\u3093\u3060\u66F2\u304C\u5897\u3048\u308B\u307B\u3069\u5408\u8A08\u3082\u4F38\u3073\u307E\u3059\u3002"), eventTab && /*#__PURE__*/React.createElement("p", {
-    className: "mb-3 rounded-2xl border border-fuchsia-300/40 bg-fuchsia-500/10 p-3 text-[10px] font-bold leading-relaxed text-fuchsia-100"
-  }, eventLimited ? /*#__PURE__*/React.createElement(React.Fragment, null, "\u671F\u9593\u9650\u5B9A\u30A4\u30D9\u30F3\u30C8\u306E\u5BFE\u8C61\u66F2\u3067\u7AF6\u3046\u30E9\u30F3\u30AD\u30F3\u30B0\u3067\u3059\u3002", /*#__PURE__*/React.createElement("b", {
-    className: "text-white"
-  }, "\u958B\u50AC\u4E2D\u306B\u51FA\u3057\u305F\u8A18\u9332\u3060\u3051"), "\u304C\u8F09\u308A\u307E\u3059\uFF08\u958B\u50AC\u524D\u306E\u8A18\u9332\u306F\u8F09\u308A\u307E\u305B\u3093\u304C\u3001\u81EA\u5DF1\u30D9\u30B9\u30C8\u3068\u300C\u7DCF\u5408\u300D\u306B\u306F\u305D\u306E\u307E\u307E\u6B8B\u308A\u307E\u3059\uFF09\u3002\u96E3\u6613\u5EA6\u306F\u554F\u3044\u307E\u305B\u3093\u30021\u66F2\u3067\u3082\u904A\u3079\u3070\u300C\u7DCF\u5408\u300D\u306B\u3082\u8F09\u308A\u307E\u3059\u3002\u958B\u50AC\u4E2D\u306F\u9031\u9593\u30E9\u30F3\u30AD\u30F3\u30B0\u3092\u304A\u4F11\u307F\u3057\u307E\u3059\u3002") : /*#__PURE__*/React.createElement(React.Fragment, null, "\u4ECA\u9031\u306E\u5BFE\u8C61\u66F2\u3067\u7AF6\u3046\u30E9\u30F3\u30AD\u30F3\u30B0\u3067\u3059\u3002", /*#__PURE__*/React.createElement("b", {
-    className: "text-white"
-  }, "\u305D\u306E\u9031\u306E\u3042\u3044\u3060\u306B\u51FA\u3057\u305F\u8A18\u9332\u3060\u3051"), "\u304C\u8F09\u308A\u307E\u3059\uFF08\u5148\u9031\u307E\u3067\u306E\u8A18\u9332\u306F\u8F09\u308A\u307E\u305B\u3093\u304C\u3001\u81EA\u5DF1\u30D9\u30B9\u30C8\u3068\u300C\u7DCF\u5408\u300D\u306B\u306F\u305D\u306E\u307E\u307E\u6B8B\u308A\u307E\u3059\uFF09\u3002\u96E3\u6613\u5EA6\u306F\u554F\u3044\u307E\u305B\u3093\u30021\u66F2\u3067\u3082\u904A\u3079\u3070\u300C\u7DCF\u5408\u300D\u306B\u3082\u8F09\u308A\u307E\u3059\u3002")), songTab && /*#__PURE__*/React.createElement("p", {
-    className: "mb-3 rounded-2xl border border-amber-300/40 bg-amber-500/10 p-3 text-[10px] font-bold leading-relaxed text-amber-100"
-  }, "\u300C", song?.displayName || '—', "\u300D\u306EEASY\u301CMASTER\u3092\u307E\u3068\u3081\u305F\u5408\u7B97\u30E9\u30F3\u30AD\u30F3\u30B0\u3067\u3059\u3002\u96E3\u6613\u5EA6\u304C\u9AD8\u3044\u307B\u3069\u6E80\u70B9\u3082\u9AD8\u3044\u305F\u3081\u3001\u9AD8\u3044\u96E3\u6613\u5EA6\u3067\u6311\u3080\u307B\u3069\u4E0A\u4F4D\u306B\u8FD1\u3065\u304D\u307E\u3059\u3002\u81EA\u5206\u306E\u30B9\u30B3\u30A2\u306F\u3044\u3061\u3070\u3093\u9AD8\u30441\u4EF6\u3060\u3051\u304C\u8F09\u308A\u307E\u3059\u3002"), totalTab && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(AssistantBubble, {
-    scene: "rhythmTotalRanking",
-    compact: true
-  }), total.status === 'loading' && /*#__PURE__*/React.createElement("p", {
+  }, totalTab && /*#__PURE__*/React.createElement(React.Fragment, null, total.status === 'loading' && /*#__PURE__*/React.createElement("p", {
     "data-rhythm-total-loading": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
   }, "\u8AAD\u307F\u8FBC\u307F\u4E2D\u2026"), total.status === 'notReady' && /*#__PURE__*/React.createElement("p", {
@@ -25058,11 +25043,7 @@ function RhythmRankingScreen({
     className: "space-y-2"
   }, total.entries.map((entry, index) => /*#__PURE__*/React.createElement("li", {
     key: `${entry.identityKey}-${index}`
-  }, totalRow(entry, index + 1, !!total.self && entry.identityKey === total.self.identityKey)))))), eventTab && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(AssistantBubble, {
-    scene: "rhythmWeeklyEvent",
-    condition: eventLimited ? 'limited' : null,
-    compact: true
-  }), event.status === 'loading' && /*#__PURE__*/React.createElement("p", {
+  }, totalRow(entry, index + 1, !!total.self && entry.identityKey === total.self.identityKey)))))), eventTab && /*#__PURE__*/React.createElement(React.Fragment, null, event.status === 'loading' && /*#__PURE__*/React.createElement("p", {
     "data-rhythm-event-loading": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
   }, "\u8AAD\u307F\u8FBC\u307F\u4E2D\u2026"), event.status === 'notReady' && /*#__PURE__*/React.createElement("p", {
