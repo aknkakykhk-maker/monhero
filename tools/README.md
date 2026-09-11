@@ -89,7 +89,7 @@ node tools/build.js --check
 | `node boot/event-replay-check.js` | イベント回想(プロフィールから、見たことのある会話イベントを何度でも見返す機能)を確認する。 |
 | `node boot/gift-login-check.js` | ギフト受取と、日本時間4時更新のログインボーナスを本番ソースの関数で検証する。 |
 | `node boot/mission-check.js` | デイリー・ウィークリー・マンスリーのJST期間、達成条件、バッジ、ギフト報酬と重複防止を確認する。 |
-| `node boot/parts-purity-check.js` | `src/parts/parts.json` で `pure:true` とした部品(マスモン育成の式・難易度の表・敵の行動など)に、React・JSX・document・window・保存・Audio_・fetch・タイマーが混ざっていないことを確かめる。計算とデータを画面や保存から切り離した状態を保つための見張り。 |
+| `node boot/parts-purity-check.js` | `src/parts/parts.json` で `pure:true` とした部品(マスモン育成の式・難易度の表・敵の行動など)が、React・JSX・document・window・storeGet/storeSet・localStorage・Audio_・fetch・タイマーを**外から降ってくる名前として**使っていないことを確認する。2026-09-11 に正規表現からBabelのスコープ解析へ切り替えた。以前は名前が一致するだけで弾いていたので、`({...,storeSet,storeGet}) => ...` のように**引数で受け取っている**関数まで「保存に依存している」と判定していた(`19-difficulties-and-rules.jsx` がこれで `pure:true` にできなかった)。いまは「その部品の中で宣言されていない参照」だけをNGにするので、依存性注入は通り、グローバルを掴んだ瞬間に落ちる。文字列やコメントの中の綴りも拾わない |
 | `node boot/legacy-save-boot-check.js` | 旧形式のセーブ(マスモン導入前・各種一度きり移行の前)を localStorage に入れて実ブラウザで2回起動し、旧 `mh_bond_xp` からマスモンが作られること、旧キーを消さないこと、ダイヤ・XP・ハイスコアが変わらないこと、既存プレイヤー扱いになること、2回目の起動で何も二重適用されないことを確かめる。保存層・起動時読込を触る前の安全網。 |
 | `node boot/save-keys-check.js` | 本体とデータが使う保存キー(`mh_*`)がすべて `docs/spec/SAVE_DATA.md` に載っているかを確かめる。キーを足したら文書へも 1 行足す。保存キーでない `mh_` 文字列(URL のクエリ)は検査の中に理由つきで除外してある。 |
 | `node boot/soul-rank-backup-check.js` | 既存`.mhsave`バックアップの実関数を使い、魂格段階・最高初到達Lv・魂格特性、勇者の証、魂格再編の書がエンコード→デコード→復元で完全一致することを確認する。 |
