@@ -17,6 +17,7 @@ const vm = require('vm');
 const React = require('react');
 const ReactDOMServer = require('react-dom/server');
 const babel = require('@babel/core');
+const { screenSource } = require(path.join(TOOLS_DIR, 'harness'));
 const PRESET_REACT = require.resolve('@babel/preset-react');
 
 const root = path.resolve(TOOLS_DIR, '..');
@@ -54,11 +55,11 @@ check('みゅあはききを「ひめちん」と呼ぶ',
 check('ききはみゅあを「みゅあちん」と呼ぶ',
   calls && calls.kiki === 'みゅあちん' && script.some(l => l.who === 'kiki' && l.t.includes('みゅあちん')));
 check('プレイヤーへの呼び方({name})は使わない', !script.some(l => l.t.includes('{name}')));
+// 会話画面は 69-screen-home.jsx へ切り出したので、コンポーネント本体だけを見る
+// (「次の画面のコメントまで」で切ると本体を丸ごと飲み込んでしまう)
 check('画面側も呼び方の置き換えを通さない', (() => {
-  const from = source.indexOf('const script=(typeof ASSISTANT_KIKI_INTRO');
-  const to = source.indexOf('{/* 助手(みゅあ)のデバッグ表示', from);
-  const block = source.slice(from, to);
-  return from >= 0 && to > from && !block.includes('assistantSpeakText');
+  const block = screenSource('HOME', 'KikiIntroOverlay');
+  return block.includes('const script=(typeof ASSISTANT_KIKI_INTRO') && !block.includes('assistantSpeakText');
 })());
 check('初対面ではなく再会の空気になっている',
   script.some(l => /久しぶり|なんでここに|また|再会/.test(l.t)));
@@ -87,7 +88,8 @@ check('見終わったら保存して、二度と自動再生しない',
   has('const markKikiIntroSeen = useCallback(() => {')
     && has('try { storeSet(KIKI_INTRO_SEEN_KEY, true, false); } catch {}'));
 check('HOMEでだけ出す(案内やバトルに割り込まない)',
-  has("{bootPhase==='GAME'&&gameState==='HOME'&&onboarded&&tutorialStep==null&&kikiIntroStep!=null&&(()=>{"));
+  has("{bootPhase==='GAME'&&gameState==='HOME'&&onboarded&&tutorialStep==null&&kikiIntroStep!=null&&(")
+    && has('<KikiIntroOverlay'));
 // 助手の登場イベントは今後も増えるので、並び全部ではなく
 // 「チュートリアル中・きき加入中は出さない」ことだけを見る
 check('アップデート通知と重ならない',
@@ -108,27 +110,26 @@ check('会話を見ても仲良し度を動かさない',
   !!markSeenBody && !/addAssistantBond|setAssistantBonds|assistantBondKeyFor/.test(markSeenBody));
 
 // --- 画面 ---
-const START = '      {bootPhase===\'GAME\'&&gameState===\'HOME\'&&onboarded&&tutorialStep==null&&kikiIntroStep!=null&&(()=>{';
-const END = '      {/* 助手(みゅあ)のデバッグ表示';
-const from = source.indexOf(START);
-const to = source.indexOf(END, from);
-check('会話画面のJSXを切り出せる', from >= 0 && to > from);
-if (from >= 0 && to > from) {
-  const jsx = source.slice(from, to);
+// 会話画面は KikiIntroOverlay として 69-screen-home.jsx にある。
+// 関数の中身(props 宣言のうしろ〜閉じ括弧の手前)をそのまま描いて確かめる
+const component = screenSource('HOME', 'KikiIntroOverlay');
+const headEnd = component.indexOf('\n}) {\n');
+const jsx = headEnd >= 0 ? component.slice(headEnd + '\n}) {\n'.length, component.lastIndexOf('\n}')) : '';
+check('会話画面のJSXを切り出せる', jsx.length > 0);
+if (jsx.length > 0) {
   const AssistantFace = ({ who, size, expression }) => React.createElement('img', {
     'data-face': who && who.id, 'data-size': size, 'data-expression': expression,
     alt: who && who.name, src: assistantFaceImage(who, expression),
   });
   const transformed = babel.transformSync(
-    'const Screen = ({ bootPhase, gameState, onboarded, tutorialStep, kikiIntroStep, setKikiIntroStep,\n'
-    + '  ASSISTANT_KIKI_INTRO, ASSISTANT_KIKI_INTRO_CALLS, ASSISTANT_LIST, assistantById, markKikiIntroSeen, AssistantFace }) => (<>\n'
-    + jsx + '\n</>);\nmodule.exports = { Screen };',
+    'const Screen = ({ kikiIntroStep, setKikiIntroStep,\n'
+    + '  ASSISTANT_KIKI_INTRO, ASSISTANT_KIKI_INTRO_CALLS, ASSISTANT_LIST, assistantById, markKikiIntroSeen, AssistantFace }) => {\n'
+    + jsx + '\n};\nmodule.exports = { Screen };',
     { presets: [[PRESET_REACT, { runtime: 'classic' }]], filename: 'kiki-intro-check.jsx' });
   const moduleScope = { exports: {} };
   new Function('module', 'exports', 'React', transformed.code)(moduleScope, moduleScope.exports, React);
   const seen = [];
   const render = (stepAt) => ReactDOMServer.renderToStaticMarkup(React.createElement(moduleScope.exports.Screen, {
-    bootPhase: 'GAME', gameState: 'HOME', onboarded: true, tutorialStep: null,
     kikiIntroStep: stepAt, setKikiIntroStep: (v) => seen.push(v),
     ASSISTANT_KIKI_INTRO: script, ASSISTANT_KIKI_INTRO_CALLS: calls,
     ASSISTANT_LIST: ASSISTANTS, assistantById: (id) => ASSISTANTS.find(x => x.id === id) || ASSISTANTS[0],

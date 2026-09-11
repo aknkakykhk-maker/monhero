@@ -169,6 +169,10 @@
       "role": "画面: バトルの結果まわり(UPGRADE_SKILL / WAVE_RESULT / REWARD_PICK / CHAMPION・敗北・リタイア・マスモン登録)"
     },
     {
+      "file": "69-screen-home.jsx",
+      "role": "画面: HOME(村の広場)と、そこに重なる案内3つ(ききの加入・ももすけの登場・アップデート案内)"
+    },
+    {
       "file": "60-app.jsx",
       "role": "MonsterHeroGame 本体(全 state・ロジック・各 gameState の JSX)"
     },
