@@ -73,26 +73,37 @@ S/A 等級は `REGRESSION_RISK_MAP.md` に基づく。
 
 ## 次の一手
 
-**STEP 3 保存層の整理** — **Opus 5 / effort max**
+**STEP 3 の続き — ギフト受け取りの4キー保存を取引へ寄せる** — **Opus 5 / effort max**
 
-STEP 1(安全網)・STEP 2(連結ビルドと集約)・STEP 4(純関数の切り出し)は**完了**。
-落ちていた検査は **56本 → 0本**。共有層21部品のうち8つが `pure:true` で、
-残りは JSX・DOM・保存を本質的に含む部品なので pure にする意味がない
-(内訳は [`README.md`](README.md) の進捗表)。
+STEP 1・2・4 は**完了**、STEP 3 は4本目まで完了(進捗は [`README.md`](README.md))。
+落ちている検査は0本。主要6キーの「state 更新と保存の対」は
+`boot/save-state-pairing-check.js` が固定した(実測して本当の書き忘れは無かった)。
 
-STEP 3 は **S等級に隣接する高リスク**。キー1つにつきPR1本、影響の小さい順に。
+**5本目で分かったこと。** `mh_gifts` の4箇所を読んだところ、計画にあった
+「キーごとの `updateGifts()` へ寄せる」は**価値が薄い**。対になっているのは1箇所だけで、
+残りは形が違う。
 
-    mh_gifts → mh_breeder_xp → mh_gold → mh_owned_items → mh_missions → mh_masu_mons
+| 場所 | 形 |
+| --- | --- |
+| 起動時のログインボーナス＋お詫び(3690/3694) | state が先・保存は条件付き |
+| 新規キャンペーン(4129/4131) | 保存が先(単独キーの対はここだけ) |
+| ギフト受け取り(6915〜6919) | **4キー(gold / breederPoints / ownedItems / gifts)を順に保存** |
+| ミッション→ギフト箱(7008/7010) | 2キー。順序と固定IDの冪等性で担保済み(コメントあり) |
+
+**効くのは単独キーの update ではなく、複数キーを `saveStoredValuesOrRollback` へ寄せること。**
+とくに**ギフト受け取り**は4キーを順に保存していて、途中で失敗すると部分適用になる
+(ダイヤは増えたのにアイテムが入っていない、など)。`saveStoredValuesOrRollback` は
+すでに13箇所で使われている実績のある正本(書く→読み戻す→食い違えば全部戻す)。
 
 **着手前に必ず読むこと。**
 
-- [`REFACTOR_MASTER_PLAN.md`](REFACTOR_MASTER_PLAN.md) の STEP 3(変更内容6点・変更しないもの)
-- `docs/spec/SAVE_DATA.md`(移行が1回だけ走ること)
-- CLAUDE.md ⑦(既存のデータは絶対に壊さない)
+- `saveStoredValuesOrRollback` の実装(`11-masu-progression.jsx:1011`)と、既存13箇所の呼び方
+- ギフト受け取りの全体(`60-app.jsx` の `claimGiftIds` まわり。報酬検証→確定値の保存→state)
+- `docs/spec/SAVE_DATA.md` / CLAUDE.md ⑦
 
-**機械的な一括置換はしない。** 1箇所ずつ、保存と state のどちらが先かを変えていないことを確認する。
-各PRで `masu/*` 36本・`boot/*` 23本・`run/training-reward-check`・`ranking/*`・
-`browser/feature-check` を全部回す。
+**順序を変えないこと。** いまは「4キーを保存 → まとめて state」。取引へ寄せても
+この順序と、失敗時に state を更新しない性質を保つ。検査は `boot/*` 24本・`masu/*` 36本・
+`run/training-reward-check`・`browser/feature-check` を回す。
 
 > 先に安全なほうを消化したいときは **STEP 7 描画・キャッシュ(Sonnet 5 / high)** でもよい。
 > 一覧行の `React.memo`、`style` の定数化。バトルも音ゲーも触らない。
