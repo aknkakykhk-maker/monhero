@@ -339,28 +339,101 @@ function RhythmMonstersScreen({
 }
 
 function RhythmRankingScreen({
-  loadRhythmRanking, onBackToSongSelect, rankingBreederIcon, rhythmRanking, rhythmRankingDetail,
-  setRhythmRankingDetail,
+  loadRhythmRanking, loadRhythmTotalRanking, onBackToSongSelect, onGoToSongSelect,
+  rankingBreederIcon, rhythmRanking, rhythmRankingDetail, rhythmRankingTab, rhythmTotalRanking,
+  setRhythmRankingDetail, setRhythmRankingTab,
 }) {
       // 曲えらびから開いたときの曲を追いかける。曲が5つになったので、
       // ここを固定にすると「別の曲のランキングを見ているのに曲名が違う」ことになる。
       const song=RHYTHM_SONGS.find(entry=>entry.songId===rhythmRanking.songId)||rhythmDemoSong(RHYTHM_SONGS);
+      // 「この曲」と「総合(全曲合算)」の出し分け(2026-09-11)。
+      // 画面(gameState)は増やさない。増やすとヘルプの対応表・戻り先・BGMの引き継ぎが
+      // それぞれ別の場所にあるため、どこかで必ず抜ける(CLAUDE.md ⑤)。
+      const totalTab=rhythmRankingTab==='total';
+      const total=rhythmTotalRanking||{status:'idle',entries:[],self:null};
+      // 曲数も理論満点もデータから作る。曲が増えても、ここは書き換えない
+      // (docs/spec/RHYTHM_RANKING.md §5.1)
+      const totalSongCount=rhythmTotalRankingSongCount(RHYTHM_SONGS);
+      const openTab=(tab)=>{
+        setRhythmRankingTab(tab);
+        // 初めて開いたときだけ取りにいく。タブを往復するたびに通信しない
+        if(tab==='total'&&total.status==='idle')loadRhythmTotalRanking&&loadRhythmTotalRanking();
+      };
+      const refresh=()=>{ if(totalTab)loadRhythmTotalRanking&&loadRhythmTotalRanking(); else loadRhythmRanking(song); };
+      const totalRow=(entry,rank,mine)=>(
+        <div data-rhythm-total-row className={`flex items-center gap-2 rounded-2xl border p-2 ${mine?'border-amber-300/60 bg-amber-500/10':'border-white/10 bg-slate-900/80'}`}>
+          <b className="w-8 shrink-0 text-center text-xs font-black text-amber-200">{rank?`${rank}`:'—'}</b>
+          {rankingBreederIcon(entry)}
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-xs font-black text-white">{entry.userName}</p>
+            <p className="text-[9px] text-slate-400">{entry.songCount} / {totalSongCount}曲 ・ Lv.{entry.level}</p>
+          </div>
+          <div className="shrink-0 text-right">
+            <p className="font-mono text-sm font-black text-amber-200">{entry.totalScore.toLocaleString()}</p>
+            <p className="text-[9px] text-slate-400">{rhythmTotalRankingProgress(entry.totalScore,RHYTHM_SONGS).toFixed(1)}%</p>
+          </div>
+        </div>
+      );
       return (
       <main data-rhythm-ranking className="flex h-full flex-1 flex-col bg-slate-950 text-white">
         <header className="z-10 flex shrink-0 items-center gap-2 border-b border-amber-400/15 bg-slate-950/95 px-3 py-1" style={{paddingTop:'calc(0.25rem + env(safe-area-inset-top))'}}>
           <button aria-label="戻る" onClick={onBackToSongSelect} className="min-h-[44px] px-2 text-slate-400"><ArrowLeft size={18}/></button>
           <h2 className="text-sm font-black tracking-widest text-amber-200">🏆 全国ランキング</h2>
-          <button aria-label="更新" data-rhythm-ranking-refresh onClick={()=>loadRhythmRanking(song)} className="ml-auto min-h-[44px] px-2 text-[10px] font-black text-amber-200">更新</button>
+          <button aria-label="更新" data-rhythm-ranking-refresh onClick={refresh} className="ml-auto min-h-[44px] px-2 text-[10px] font-black text-amber-200">更新</button>
         </header>
+        {/* タブ。押したときに初めて取りにいく */}
+        <div data-rhythm-ranking-tabs className="flex shrink-0 gap-1 border-b border-white/10 bg-slate-950/95 px-3 pb-2 pt-1">
+          {[{id:'song',label:'この曲'},{id:'total',label:'総合'}].map(tab=>(
+            <button key={tab.id} data-rhythm-ranking-tab={tab.id} onClick={()=>openTab(tab.id)}
+              className={`min-h-[44px] flex-1 rounded-xl border px-2 text-[11px] font-black ${rhythmRankingTab===tab.id?'border-amber-300/60 bg-amber-500/15 text-amber-100':'border-white/10 bg-slate-900/60 text-slate-400'}`}>
+              {tab.label}
+            </button>
+          ))}
+        </div>
         <div className="flex-1 overflow-y-auto mh-scroll px-3 pb-6 pt-3" style={{paddingBottom:'calc(1.5rem + env(safe-area-inset-bottom))'}}>
           <RhythmLandscapeHint className="mb-3"/>
-          <p className="mb-3 rounded-2xl border border-amber-300/40 bg-amber-500/10 p-3 text-[10px] font-bold leading-relaxed text-amber-100">
-            「{song?.displayName||'—'}」のEASY〜MASTERをまとめた合算ランキングです。難易度が高いほど満点も高いため、高い難易度で挑むほど上位に近づきます。自分のスコアはいちばん高い1件だけが載ります。
-          </p>
-          {rhythmRanking.status==='loading'&&<p data-rhythm-ranking-loading className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">読み込み中…</p>}
-          {rhythmRanking.status==='error'&&<p data-rhythm-ranking-error className="rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200">読み込めませんでした。電波の良い場所で「更新」をお試しください。</p>}
-          {rhythmRanking.status==='ready'&&rhythmRanking.entries.length===0&&<p data-rhythm-ranking-empty className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">まだ記録がありません。最初の1件になってみましょう。</p>}
-          {rhythmRanking.status==='ready'&&rhythmRanking.entries.length>0&&<ol data-rhythm-ranking-list className="space-y-2">
+          {totalTab?(
+            <p className="mb-3 rounded-2xl border border-amber-300/40 bg-amber-500/10 p-3 text-[10px] font-bold leading-relaxed text-amber-100">
+              曲ごとのいちばん良いスコアを、全{totalSongCount}曲ぶん足し合わせた合計で競うランキングです。難易度は問いません（高い難易度ほど満点も高いので、上を狙うほど有利です）。遊んだ曲が増えるほど合計も伸びます。
+            </p>
+          ):(
+            <p className="mb-3 rounded-2xl border border-amber-300/40 bg-amber-500/10 p-3 text-[10px] font-bold leading-relaxed text-amber-100">
+              「{song?.displayName||'—'}」のEASY〜MASTERをまとめた合算ランキングです。難易度が高いほど満点も高いため、高い難易度で挑むほど上位に近づきます。自分のスコアはいちばん高い1件だけが載ります。
+            </p>
+          )}
+          {totalTab&&(<>
+            <AssistantBubble scene="rhythmTotalRanking" compact/>
+            {total.status==='loading'&&<p data-rhythm-total-loading className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">読み込み中…</p>}
+            {/* 集計のしたくがまだのとき。エラーではないので、赤い表示にはしない */}
+            {total.status==='notReady'&&<p data-rhythm-total-not-ready className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">総合ランキングはただいま準備中です。もうしばらくお待ちください。</p>}
+            {total.status==='error'&&<p data-rhythm-total-error className="rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200">読み込めませんでした。電波の良い場所で「更新」をお試しください。</p>}
+            {total.status==='ready'&&(<>
+              {/* 自分の位置は上に固定で出す。50位に入っていない人でも、いまどこにいるかが分かるように */}
+              {total.self&&<div className="mb-3">
+                <p className="mb-1 text-[9px] font-black text-amber-200">あなたの記録</p>
+                {totalRow(total.self,total.self.rank,true)}
+                {total.self.songCount<totalSongCount&&(
+                  <button data-rhythm-total-remaining onClick={onGoToSongSelect}
+                    className="mt-2 w-full min-h-[44px] rounded-xl border border-amber-300/40 bg-slate-900/70 px-3 text-[10px] font-black text-amber-100">
+                    まだ記録のない曲が {totalSongCount-total.self.songCount} 曲あります ▶ 曲をえらぶ
+                  </button>
+                )}
+              </div>}
+              {!total.self&&<p data-rhythm-total-self-empty className="mb-3 rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-center text-[10px] text-slate-300">まだあなたの記録がありません。1曲でも遊ぶとここに載ります。</p>}
+              {total.entries.length===0&&<p data-rhythm-total-empty className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">まだ記録がありません。最初の1件になってみましょう。</p>}
+              {total.entries.length>0&&<ol data-rhythm-total-list className="space-y-2">
+                {total.entries.map((entry,index)=>(
+                  <li key={`${entry.identityKey}-${index}`}>
+                    {totalRow(entry,index+1,!!total.self&&entry.identityKey===total.self.identityKey)}
+                  </li>
+                ))}
+              </ol>}
+            </>)}
+          </>)}
+          {!totalTab&&rhythmRanking.status==='loading'&&<p data-rhythm-ranking-loading className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">読み込み中…</p>}
+          {!totalTab&&rhythmRanking.status==='error'&&<p data-rhythm-ranking-error className="rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200">読み込めませんでした。電波の良い場所で「更新」をお試しください。</p>}
+          {!totalTab&&rhythmRanking.status==='ready'&&rhythmRanking.entries.length===0&&<p data-rhythm-ranking-empty className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">まだ記録がありません。最初の1件になってみましょう。</p>}
+          {!totalTab&&rhythmRanking.status==='ready'&&rhythmRanking.entries.length>0&&<ol data-rhythm-ranking-list className="space-y-2">
             {rhythmRanking.entries.map((entry,index)=>(
               <li key={`${entry.userName}-${index}`} data-rhythm-ranking-row className="flex items-center gap-2 rounded-2xl border border-white/10 bg-slate-900/80 p-2">
                 <b className="w-6 shrink-0 text-center text-xs font-black text-amber-200">{index+1}</b>

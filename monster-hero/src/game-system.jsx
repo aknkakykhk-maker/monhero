@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9e8418669adb329a
+// generated-sha256: 89eb4d5817157396
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 09:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 09:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -9811,6 +9811,79 @@ const sbFetchRhythmRankings = async (difficultyKeys, limit=RHYTHM_RANKING_FETCH_
   }
 };
 
+// ===== ブリーダー別 全曲合算ランキング(2026-09-11) =====
+//
+// 「曲ごとのベスト1件(難易度は問わない)を全曲ぶん足した合計」で競う
+// (docs/spec/RHYTHM_RANKING.md §3)。集計は Supabase 側のビュー rhythm_total_rankings が行う。
+//
+// ★端末側で合算しない理由: 合算には全曲・全難易度の記録が要る。1プレイ=1行で増え続ける
+//   うえ曲も増えるので、端末が全部取りにいく作りにすると、記録が貯まるほど確実に
+//   「読み込みが終わらない」状態へ近づく(2026-07に実際に起きている)。集計済みの数十行だけを
+//   受け取る形なら、曲が何曲増えても通信量は変わらない。
+//
+// ★ビューがまだ無い環境(SQL未適用)では404が返る。これはエラーではなく「まだ準備中」として
+//   扱う。そうしておけば、SQLの適用とアプリの公開の順番が前後しても画面が壊れない。
+const RHYTHM_TOTAL_RANKING_SELECT = 'identity_key,user_name,total_score,song_count,level,icon';
+const RHYTHM_TOTAL_RANKING_DISPLAY_LIMIT = 50;
+// 「そのビューはまだ無い」という応答かどうか。通信の失敗や権限の失敗と取り違えない
+//   PGRST205 … Could not find the table 'public.rhythm_total_rankings' in the schema cache
+//   42P01    … relation "public.rhythm_total_rankings" does not exist
+const rhythmTotalRankingMissing = (status, body) => {
+  if (status !== 404 && status !== 400) return false;
+  const text = String(body || '');
+  if (!/rhythm_total_rankings/i.test(text)) return false;
+  return /PGRST205|PGRST200|42P01|does not exist|Could not find the/i.test(text);
+};
+const sbFetchRhythmTotalRankings = async ({ limit=RHYTHM_TOTAL_RANKING_DISPLAY_LIMIT, identityKeys=null, requestId='untracked' } = {}) => {
+  // identityKeys を渡すと、その人の行だけを取りにいく(50位圏外の自分を出すため)
+  const filter = Array.isArray(identityKeys) && identityKeys.length
+    ? `&identity_key=in.(${identityKeys.map(k=>encodeURIComponent(`"${k}"`)).join(',')})`
+    : '';
+  const url = `${SUPABASE_URL}/rest/v1/rhythm_total_rankings?select=${RHYTHM_TOTAL_RANKING_SELECT}`
+    + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`;
+  rankingLog(requestId, 'rhythm-total-request-start', { limit, identityKeys, url, view: 'rhythm_total_rankings' });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  try {
+    const res = await fetch(url, { headers: SB_HEADERS, signal: controller.signal });
+    const body = await res.text();
+    if (!res.ok) {
+      if (rhythmTotalRankingMissing(res.status, body)) {
+        rankingLog(requestId, 'rhythm-total-view-missing', { status: res.status });
+        const error = new Error('rhythm total ranking view is not ready');
+        error.notReady = true;
+        throw error;
+      }
+      throw new Error(`rhythm total ranking fetch ${res.status} ${res.statusText}; url=${url}; response=${body || '(empty)'}`);
+    }
+    try {
+      return JSON.parse(body);
+    } catch (e) {
+      throw new Error(`invalid JSON; url=${url}; response=${body || '(empty)'}; error=${e.message}`);
+    }
+  } catch (error) {
+    if (error?.name === 'AbortError') throw new Error('rhythm total ranking fetch timed out after 15000ms');
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+};
+// Supabaseの生の行を画面用の形へ整える。合計点・曲数は数として確かめてから使う
+const rhythmTotalRankingEntryFromRow = (row) => ({
+  identityKey: typeof row?.identity_key === 'string' ? row.identity_key : '',
+  userName: row?.user_name || '名無しのブリーダー',
+  totalScore: Number(row?.total_score) || 0,
+  songCount: Number(row?.song_count) || 0,
+  level: Number(row?.level) || 0,
+  icon: row?.icon ?? null,
+});
+// 自分がどの行かを見分けるためのキー。IDがある人はそのID、IDが付く前からの人は name:<名前>。
+// どちらの記録も持っている人がいるので、両方を候補として渡す(§4.4)
+const rhythmTotalRankingSelfKeys = (breederId, breederName) => [
+  typeof breederId === 'string' && breederId ? breederId : null,
+  `name:${breederName || '名無しのブリーダー'}`,
+].filter(Boolean);
+
 // 検査(tools/ranking/rhythm-breeder-id-check.js)からモンビーの送信だけを直接叩けるようにする。
 // 「breeder_id の列がまだ無い環境でもスコアが保存できること」は、実際に1曲遊ばないと通らない
 // 経路だと確かめるのに何分もかかるうえ、落ちたときの被害(記録が1件も残らない)が大きい。
@@ -13468,28 +13541,101 @@ function RhythmMonstersScreen({
 }
 
 function RhythmRankingScreen({
-  loadRhythmRanking, onBackToSongSelect, rankingBreederIcon, rhythmRanking, rhythmRankingDetail,
-  setRhythmRankingDetail,
+  loadRhythmRanking, loadRhythmTotalRanking, onBackToSongSelect, onGoToSongSelect,
+  rankingBreederIcon, rhythmRanking, rhythmRankingDetail, rhythmRankingTab, rhythmTotalRanking,
+  setRhythmRankingDetail, setRhythmRankingTab,
 }) {
       // 曲えらびから開いたときの曲を追いかける。曲が5つになったので、
       // ここを固定にすると「別の曲のランキングを見ているのに曲名が違う」ことになる。
       const song=RHYTHM_SONGS.find(entry=>entry.songId===rhythmRanking.songId)||rhythmDemoSong(RHYTHM_SONGS);
+      // 「この曲」と「総合(全曲合算)」の出し分け(2026-09-11)。
+      // 画面(gameState)は増やさない。増やすとヘルプの対応表・戻り先・BGMの引き継ぎが
+      // それぞれ別の場所にあるため、どこかで必ず抜ける(CLAUDE.md ⑤)。
+      const totalTab=rhythmRankingTab==='total';
+      const total=rhythmTotalRanking||{status:'idle',entries:[],self:null};
+      // 曲数も理論満点もデータから作る。曲が増えても、ここは書き換えない
+      // (docs/spec/RHYTHM_RANKING.md §5.1)
+      const totalSongCount=rhythmTotalRankingSongCount(RHYTHM_SONGS);
+      const openTab=(tab)=>{
+        setRhythmRankingTab(tab);
+        // 初めて開いたときだけ取りにいく。タブを往復するたびに通信しない
+        if(tab==='total'&&total.status==='idle')loadRhythmTotalRanking&&loadRhythmTotalRanking();
+      };
+      const refresh=()=>{ if(totalTab)loadRhythmTotalRanking&&loadRhythmTotalRanking(); else loadRhythmRanking(song); };
+      const totalRow=(entry,rank,mine)=>(
+        <div data-rhythm-total-row className={`flex items-center gap-2 rounded-2xl border p-2 ${mine?'border-amber-300/60 bg-amber-500/10':'border-white/10 bg-slate-900/80'}`}>
+          <b className="w-8 shrink-0 text-center text-xs font-black text-amber-200">{rank?`${rank}`:'—'}</b>
+          {rankingBreederIcon(entry)}
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-xs font-black text-white">{entry.userName}</p>
+            <p className="text-[9px] text-slate-400">{entry.songCount} / {totalSongCount}曲 ・ Lv.{entry.level}</p>
+          </div>
+          <div className="shrink-0 text-right">
+            <p className="font-mono text-sm font-black text-amber-200">{entry.totalScore.toLocaleString()}</p>
+            <p className="text-[9px] text-slate-400">{rhythmTotalRankingProgress(entry.totalScore,RHYTHM_SONGS).toFixed(1)}%</p>
+          </div>
+        </div>
+      );
       return (
       <main data-rhythm-ranking className="flex h-full flex-1 flex-col bg-slate-950 text-white">
         <header className="z-10 flex shrink-0 items-center gap-2 border-b border-amber-400/15 bg-slate-950/95 px-3 py-1" style={{paddingTop:'calc(0.25rem + env(safe-area-inset-top))'}}>
           <button aria-label="戻る" onClick={onBackToSongSelect} className="min-h-[44px] px-2 text-slate-400"><ArrowLeft size={18}/></button>
           <h2 className="text-sm font-black tracking-widest text-amber-200">🏆 全国ランキング</h2>
-          <button aria-label="更新" data-rhythm-ranking-refresh onClick={()=>loadRhythmRanking(song)} className="ml-auto min-h-[44px] px-2 text-[10px] font-black text-amber-200">更新</button>
+          <button aria-label="更新" data-rhythm-ranking-refresh onClick={refresh} className="ml-auto min-h-[44px] px-2 text-[10px] font-black text-amber-200">更新</button>
         </header>
+        {/* タブ。押したときに初めて取りにいく */}
+        <div data-rhythm-ranking-tabs className="flex shrink-0 gap-1 border-b border-white/10 bg-slate-950/95 px-3 pb-2 pt-1">
+          {[{id:'song',label:'この曲'},{id:'total',label:'総合'}].map(tab=>(
+            <button key={tab.id} data-rhythm-ranking-tab={tab.id} onClick={()=>openTab(tab.id)}
+              className={`min-h-[44px] flex-1 rounded-xl border px-2 text-[11px] font-black ${rhythmRankingTab===tab.id?'border-amber-300/60 bg-amber-500/15 text-amber-100':'border-white/10 bg-slate-900/60 text-slate-400'}`}>
+              {tab.label}
+            </button>
+          ))}
+        </div>
         <div className="flex-1 overflow-y-auto mh-scroll px-3 pb-6 pt-3" style={{paddingBottom:'calc(1.5rem + env(safe-area-inset-bottom))'}}>
           <RhythmLandscapeHint className="mb-3"/>
-          <p className="mb-3 rounded-2xl border border-amber-300/40 bg-amber-500/10 p-3 text-[10px] font-bold leading-relaxed text-amber-100">
-            「{song?.displayName||'—'}」のEASY〜MASTERをまとめた合算ランキングです。難易度が高いほど満点も高いため、高い難易度で挑むほど上位に近づきます。自分のスコアはいちばん高い1件だけが載ります。
-          </p>
-          {rhythmRanking.status==='loading'&&<p data-rhythm-ranking-loading className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">読み込み中…</p>}
-          {rhythmRanking.status==='error'&&<p data-rhythm-ranking-error className="rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200">読み込めませんでした。電波の良い場所で「更新」をお試しください。</p>}
-          {rhythmRanking.status==='ready'&&rhythmRanking.entries.length===0&&<p data-rhythm-ranking-empty className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">まだ記録がありません。最初の1件になってみましょう。</p>}
-          {rhythmRanking.status==='ready'&&rhythmRanking.entries.length>0&&<ol data-rhythm-ranking-list className="space-y-2">
+          {totalTab?(
+            <p className="mb-3 rounded-2xl border border-amber-300/40 bg-amber-500/10 p-3 text-[10px] font-bold leading-relaxed text-amber-100">
+              曲ごとのいちばん良いスコアを、全{totalSongCount}曲ぶん足し合わせた合計で競うランキングです。難易度は問いません（高い難易度ほど満点も高いので、上を狙うほど有利です）。遊んだ曲が増えるほど合計も伸びます。
+            </p>
+          ):(
+            <p className="mb-3 rounded-2xl border border-amber-300/40 bg-amber-500/10 p-3 text-[10px] font-bold leading-relaxed text-amber-100">
+              「{song?.displayName||'—'}」のEASY〜MASTERをまとめた合算ランキングです。難易度が高いほど満点も高いため、高い難易度で挑むほど上位に近づきます。自分のスコアはいちばん高い1件だけが載ります。
+            </p>
+          )}
+          {totalTab&&(<>
+            <AssistantBubble scene="rhythmTotalRanking" compact/>
+            {total.status==='loading'&&<p data-rhythm-total-loading className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">読み込み中…</p>}
+            {/* 集計のしたくがまだのとき。エラーではないので、赤い表示にはしない */}
+            {total.status==='notReady'&&<p data-rhythm-total-not-ready className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">総合ランキングはただいま準備中です。もうしばらくお待ちください。</p>}
+            {total.status==='error'&&<p data-rhythm-total-error className="rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200">読み込めませんでした。電波の良い場所で「更新」をお試しください。</p>}
+            {total.status==='ready'&&(<>
+              {/* 自分の位置は上に固定で出す。50位に入っていない人でも、いまどこにいるかが分かるように */}
+              {total.self&&<div className="mb-3">
+                <p className="mb-1 text-[9px] font-black text-amber-200">あなたの記録</p>
+                {totalRow(total.self,total.self.rank,true)}
+                {total.self.songCount<totalSongCount&&(
+                  <button data-rhythm-total-remaining onClick={onGoToSongSelect}
+                    className="mt-2 w-full min-h-[44px] rounded-xl border border-amber-300/40 bg-slate-900/70 px-3 text-[10px] font-black text-amber-100">
+                    まだ記録のない曲が {totalSongCount-total.self.songCount} 曲あります ▶ 曲をえらぶ
+                  </button>
+                )}
+              </div>}
+              {!total.self&&<p data-rhythm-total-self-empty className="mb-3 rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-center text-[10px] text-slate-300">まだあなたの記録がありません。1曲でも遊ぶとここに載ります。</p>}
+              {total.entries.length===0&&<p data-rhythm-total-empty className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">まだ記録がありません。最初の1件になってみましょう。</p>}
+              {total.entries.length>0&&<ol data-rhythm-total-list className="space-y-2">
+                {total.entries.map((entry,index)=>(
+                  <li key={`${entry.identityKey}-${index}`}>
+                    {totalRow(entry,index+1,!!total.self&&entry.identityKey===total.self.identityKey)}
+                  </li>
+                ))}
+              </ol>}
+            </>)}
+          </>)}
+          {!totalTab&&rhythmRanking.status==='loading'&&<p data-rhythm-ranking-loading className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">読み込み中…</p>}
+          {!totalTab&&rhythmRanking.status==='error'&&<p data-rhythm-ranking-error className="rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200">読み込めませんでした。電波の良い場所で「更新」をお試しください。</p>}
+          {!totalTab&&rhythmRanking.status==='ready'&&rhythmRanking.entries.length===0&&<p data-rhythm-ranking-empty className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">まだ記録がありません。最初の1件になってみましょう。</p>}
+          {!totalTab&&rhythmRanking.status==='ready'&&rhythmRanking.entries.length>0&&<ol data-rhythm-ranking-list className="space-y-2">
             {rhythmRanking.entries.map((entry,index)=>(
               <li key={`${entry.userName}-${index}`} data-rhythm-ranking-row className="flex items-center gap-2 rounded-2xl border border-white/10 bg-slate-900/80 p-2">
                 <b className="w-6 shrink-0 text-center text-xs font-black text-amber-200">{index+1}</b>
@@ -17139,6 +17285,42 @@ function MonsterHeroGame() {
     return ()=>{cancelled=true;clearTimeout(timer);if(handle)handle.stop();};
   },[rhythmPreviewTrackId,rhythmSettings.bgmVolume]);
   const [rhythmRankingDetail, setRhythmRankingDetail] = useState(null);
+  // ブリーダー別 全曲合算ランキング(2026-09-11)。集計はSupabase側のビューが行い、
+  // ここは受け取って並べるだけ(docs/spec/RHYTHM_RANKING.md §3)。
+  // status:'notReady' は「ビューをまだ作っていない」状態。SQLの適用とアプリの公開の
+  // 順番が前後しても画面が壊れないよう、エラーではなく準備中として扱う。
+  // 'song' = この曲のランキング / 'total' = 全曲合算
+  const [rhythmRankingTab, setRhythmRankingTab] = useState('song');
+  const [rhythmTotalRanking, setRhythmTotalRanking] = useState({ status:'idle', entries:[], self:null, error:null });
+  const rhythmTotalRankingRequestRef = useRef(0);
+  const loadRhythmTotalRanking = useCallback(async () => {
+    const requestId = ++rhythmTotalRankingRequestRef.current;
+    setRhythmTotalRanking(prev => ({ ...prev, status:'loading', error:null }));
+    try {
+      const breederId = await ensureBreederId();
+      const selfKeys = rhythmTotalRankingSelfKeys(breederId, breederName);
+      const rows = await sbFetchRhythmTotalRankings({ requestId:`rhythm-total-${Date.now()}` });
+      if (rhythmTotalRankingRequestRef.current !== requestId) return;
+      const entries = (Array.isArray(rows) ? rows : []).map(rhythmTotalRankingEntryFromRow);
+      // 自分が上位に入っていればその順位を使う。入っていなければ自分の行だけ取りにいく
+      const selfIndex = entries.findIndex(entry => selfKeys.includes(entry.identityKey));
+      let self = selfIndex >= 0 ? { ...entries[selfIndex], rank: selfIndex + 1 } : null;
+      if (!self) {
+        const mine = await sbFetchRhythmTotalRankings({ limit:selfKeys.length, identityKeys:selfKeys, requestId:`rhythm-total-self-${Date.now()}` });
+        if (rhythmTotalRankingRequestRef.current !== requestId) return;
+        const mineEntries = (Array.isArray(mine) ? mine : []).map(rhythmTotalRankingEntryFromRow);
+        // IDのある記録と、IDが付く前の記録の両方を持っている人がいる。合計の高いほうを自分とする
+        const best = mineEntries.sort((a,b)=>b.totalScore-a.totalScore)[0];
+        if (best) self = { ...best, rank: null };
+      }
+      setRhythmTotalRanking({ status:'ready', entries, self, error:null });
+    } catch (e) {
+      if (rhythmTotalRankingRequestRef.current !== requestId) return;
+      if (e?.notReady) { setRhythmTotalRanking({ status:'notReady', entries:[], self:null, error:null }); return; }
+      console.error('[rhythm-total-ranking] fetch failed:', e && e.message ? e.message : e);
+      setRhythmTotalRanking({ status:'error', entries:[], self:null, error:e?.message || String(e) });
+    }
+  }, [breederName]);
   const rhythmRankingRequestRef = useRef(0);
   // 難易度合算(体験版で遊べる難易度をまとめて取得)のランキングを読み込む。
   // 同じユーザーの複数行は読み込み側で最高得点の1件だけへ畳む(rhythmRankingDedupeByUser)。
@@ -26480,11 +26662,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {gameState==='RHYTHM_RANKING'&&(
           <RhythmRankingScreen
             loadRhythmRanking={loadRhythmRanking}
+            loadRhythmTotalRanking={loadRhythmTotalRanking}
             onBackToSongSelect={()=>setGameState('RHYTHM_DEMO_HOME')}
+            onGoToSongSelect={()=>setGameState('RHYTHM_DEMO_HOME')}
             rankingBreederIcon={rankingBreederIcon}
             rhythmRanking={rhythmRanking}
             rhythmRankingDetail={rhythmRankingDetail}
+            rhythmRankingTab={rhythmRankingTab}
+            rhythmTotalRanking={rhythmTotalRanking}
             setRhythmRankingDetail={setRhythmRankingDetail}
+            setRhythmRankingTab={setRhythmRankingTab}
           />
         )}
 
