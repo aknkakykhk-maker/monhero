@@ -31,7 +31,7 @@ plain as (
     lateral public.rhythm_event_song_bests(ev.song_ids, ev.from_at, ev.to_at) a
 ),
 facts as (
-  select 1 as sort, '回数ボーナスの関数がある' as item,
+  select 1::numeric as sort, '回数ボーナスの関数がある' as item,
          (select coalesce(string_agg(p.proname, ', ' order by p.proname), 'なし')
             from pg_proc p join pg_namespace n on n.oid = p.pronamespace
            where n.nspname = 'public'
@@ -59,6 +59,15 @@ facts as (
   select 6, '加点が入っている行',
          (select count(*)::text from songs where bonus_score > 0)
   union all
+  select 6.1, '難易度ごとの回数が返っている',
+         (select coalesce((select play_counts::text from songs order by play_count desc limit 1), 'なし'))
+  union all
+  select 6.2, '難易度ごとの回数の合計が全体の回数と合う',
+         (select case when count(*) = 0 then 'はい' else 'いいえ（' || count(*) || '件ずれ）' end
+            from songs s
+           where s.play_count <> (select coalesce(sum((e.value)::integer), 0)
+                                    from jsonb_each_text(coalesce(s.play_counts, '{}'::jsonb)) e))
+  union all
   select 7, '素点と加点の合計が表のスコアと一致する',
          (select case when count(*) = 0 then 'はい' else 'いいえ（' || count(*) || '件ずれ）' end
             from songs where score <> base_score + bonus_score)
@@ -83,7 +92,8 @@ facts as (
   union all
   select 11, '総合の1位（加点込み）',
          (select coalesce(user_name || ' … ' || total_score || '（素点 ' || base_total
-                          || ' ＋ 加点 ' || bonus_total || ' / ' || play_count || '回）', 'まだありません')
+                          || ' ＋ 加点 ' || bonus_total || ' / ' || play_count || '回 '
+                          || coalesce(play_counts::text, '{}') || '）', 'まだありません')
             from totals order by total_score desc, last_scored_at asc limit 1)
   union all
   select 12, '総合の1位が加点なしのときと入れ替わったか',

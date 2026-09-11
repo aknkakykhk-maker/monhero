@@ -40,7 +40,8 @@ const context={console};
 vm.createContext(context);
 vm.runInContext(`${demoIds}\n${difficultyIds}\n${eventData}\n`
   +'this.out={RHYTHM_EVENTS,RHYTHM_DEMO_DIFFICULTY_IDS,RHYTHM_EVENT_PLAY_BONUS_RATES,'
-  +'rhythmEventPlayBonusRates,rhythmEventPlayBonusPercentText,rhythmLimitedEventAt};',context);
+  +'rhythmEventPlayBonusRates,rhythmEventPlayBonusPercentText,rhythmEventPlayBonusRateText,'
+  +'rhythmEventPlayCountRows,rhythmLimitedEventAt};',context);
 const O=context.out;
 
 // ① 割合の表
@@ -62,22 +63,28 @@ check('画面へ出す文字列が作れる',ids.every(id=>/^1回ごとに \+\d/
 
 // ② 加点の足し算はサーバー側
 check('加点込みの関数を作るSQLがある',
-  /create or replace function public\.rhythm_event_song_bests_bonus/.test(applySql)
-  &&/create or replace function public\.rhythm_event_totals_bonus/.test(applySql));
+  /create function public\.rhythm_event_song_bests_bonus/.test(applySql)
+  &&/create function public\.rhythm_event_totals_bonus/.test(applySql));
 check('加点なしの関数を消していない',
   !/drop function[^\n]*rhythm_event_song_bests\(/.test(applySql)
   &&!/drop function[^\n]*rhythm_event_totals\(/.test(applySql));
 check('rankings を書き換えていない',
   !/\b(delete from|update|alter table|drop table)\b[^\n]*rankings/i.test(applySql));
 check('割合は引数で受ける(数字をSQLへ埋め込んでいない)',
-  /bonus_rates jsonb/.test(applySql)&&/bonus_rates ->> p\.difficulty_id/.test(applySql));
+  /bonus_rates jsonb/.test(applySql)&&/bonus_rates ->> d\.difficulty_id/.test(applySql));
 check('壊れた割合でも落ちない(数として読める値だけ使う)',
   /~ '\^\[0-9\]\+\(\\\.\[0-9\]\+\)\?\$'/.test(applySql));
 check('1回あたりを 0〜0.1 へ丸めている(書き間違いよけ)',
   /least\(greatest\(/.test(applySql)&&/, 0\), 0\.1\)/.test(applySql));
 check('素点・加点・回数も返す(内訳に使う)',
-  /base_score integer, bonus_score integer, play_count integer/.test(applySql)
-  &&/base_total bigint, bonus_total bigint, play_count integer/.test(applySql));
+  /base_score integer, bonus_score integer, play_count integer, play_counts jsonb/.test(applySql)
+  &&/base_total bigint, bonus_total bigint, play_count integer, play_counts jsonb/.test(applySql));
+check('難易度ごとの回数も返す(内訳の難易度の行に使う)',
+  /jsonb_object_agg\(d\.difficulty_id, d\.n\)/.test(applySql)
+  &&/jsonb_object_agg\(d\.difficulty_id, d\.n\) as play_counts/.test(applySql));
+check('何度流しても同じ結果になる(作り直す形)',
+  /drop function if exists public\.rhythm_event_song_bests_bonus/.test(applySql)
+  &&/drop function if exists public\.rhythm_event_totals_bonus/.test(applySql));
 check('予行演習(rollback)と確認(読み取りだけ)と手順書がそろっている',
   /^rollback;$/m.test(testSql)&&!/^commit;$/m.test(testSql)
   &&!/^\s*(create|drop|alter|insert|update|delete)\b/im.test(verifySql)
@@ -93,6 +100,11 @@ check('関数が無ければ加点なしへ戻す',
   /rhythm-event-song-bonus-fallback/.test(supa)&&/rhythm-event-total-bonus-fallback/.test(supa));
 check('加点なしで取ったときは内訳を出さない(素点が null)',
   /if \(!Number\.isFinite\(base\)\) return \{ baseScore: null/.test(supa));
+check('難易度ごとの回数が無い環境では1段落として取り直す',
+  supa.includes('RHYTHM_EVENT_SONG_BONUS_SELECT_BASE')&&supa.includes('RHYTHM_EVENT_TOTAL_BONUS_SELECT_BASE')
+  &&/play_counts/.test(supa)&&/\/party\|play_counts\/i/.test(supa));
+check('壊れた難易度ごとの回数でも落ちない',
+  /const rhythmEventPlayCountsFromRow = \(value\) =>/.test(supa));
 
 // ④ 一覧は加点込み・内訳を開ける
 check('並べ替えは加点込みの点でサーバーがする',
@@ -104,6 +116,17 @@ check('内訳に素点・回数・加点・合計の4つを出す',
   screen.includes('data-rhythm-bonus-breakdown')
   &&screen.includes('素点（ベスト）')&&screen.includes('遊んだ回数')
   &&screen.includes('回数ボーナス')&&screen.includes('合計（順位に使う点）'));
+check('内訳に難易度ごとの回数を並べる',
+  screen.includes('data-rhythm-bonus-difficulties')
+  &&/rhythmEventPlayCountRows\(rhythmRankingDetail\.playCounts,RHYTHM_DEMO_DIFFICULTY_IDS\)/.test(screen));
+check('0回の難易度は内訳に出さない',
+  O.rhythmEventPlayCountRows({MASTER:2,HARD:0},ids).map(r=>r.id).join(',')==='HARD,MASTER'.split(',').filter(x=>x==='MASTER').join(','),
+  JSON.stringify(O.rhythmEventPlayCountRows({MASTER:2,HARD:0},ids)));
+check('難易度ごとの回数はEASY→MASTERの並びになる',
+  O.rhythmEventPlayCountRows({MASTER:1,EASY:3,HARD:2},ids).map(r=>r.id).join(',')==='EASY,HARD,MASTER');
+check('知らない難易度が混ざっても落ちない',
+  O.rhythmEventPlayCountRows({NAZO:2,EASY:1},ids).map(r=>r.id).join(',')==='EASY,NAZO'
+  &&O.rhythmEventPlayCountRows(null,ids).length===0);
 check('加点があった行は一覧にも加点と回数を添える',
   /entry\.bonusScore>0&&<p[^>]*>\+\{entry\.bonusScore\.toLocaleString\(\)\}（\{entry\.playCount\}回）/.test(screen));
 
