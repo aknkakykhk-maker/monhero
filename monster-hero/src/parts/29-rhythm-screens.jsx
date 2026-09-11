@@ -350,8 +350,13 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
     const event=(released&&typeof rhythmLimitedEventAt==='function')?rhythmLimitedEventAt(Date.now()):null;
     return new Set((event&&Array.isArray(event.songIds))?event.songIds:[]);
   })();
-  // 画面に並べる順。並び替えは**見え方だけ**で、遊べる曲も選んでいる曲も変えない。
-  const list=rhythmSortSongs(playable,{sort:state.sort,desc:state.desc,levelOf:rowLevel,difficulties});
+  // 対象曲だけに絞るか。★開催していないときは絞らない(保存値が true のままでも)。
+  //   そうしないと、イベントが終わったあとに一覧が空になる人が出る
+  const eventFilterOn=eventSongIds.size>0&&state.eventOnly===true;
+  // 画面に並べる順。並び替えも絞り込みも**見え方だけ**で、遊べる曲も選んでいる曲も変えない。
+  const list=rhythmSortSongs(
+    eventFilterOn?playable.filter(entry=>eventSongIds.has(entry.songId)):playable,
+    {sort:state.sort,desc:state.desc,levelOf:rowLevel,difficulties});
   const sortLabel=(RHYTHM_SORT_ORDERS.find(item=>item.id===state.sort)||RHYTHM_SORT_ORDERS[0]).label;
   // 選んでいる曲を鳴らすのは App本体(rhythmPreviewTrackId)。ここでは鳴らさない。
   // この画面の中で鳴らしていたころは、ランキングやマスモン設定を開いた瞬間に
@@ -477,6 +482,15 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
           <span className="truncate">並び替え：{sortLabel}{state.desc?'（逆）':''}</span>
           <span aria-hidden="true" className="shrink-0 text-slate-400">▾</span>
         </button>
+        {/* ★イベント開催中だけ出る絞り込み。並び替えと同じ行に置いて、縦を1行も増やさない
+            (2026-09-11・ユーザー指示「ソートにイベント曲だけ出てくるのほしいね」)。
+            並び替えの一覧へ混ぜなかったのは、これが並び順ではなく絞り込みのため */}
+        {eventSongIds.size>0&&<button type="button" data-rhythm-song-event-filter aria-pressed={state.eventOnly===true}
+          onClick={()=>setView({...state,eventOnly:!(state.eventOnly===true)})}
+          title={state.eventOnly===true?'すべての曲を出す':'イベントの対象曲だけにする'}
+          className={`flex h-[44px] shrink-0 items-center gap-1 rounded-xl border px-2 text-[11px] font-black ${state.eventOnly===true?'border-amber-300 bg-amber-500/25 text-amber-100':'border-amber-300/40 bg-slate-900/80 text-amber-200'}`}>
+          <span aria-hidden="true">🏆</span><span>対象曲</span>
+        </button>}
         {notice&&<button type="button" data-rhythm-song-notice-toggle aria-pressed={state.noticeOpen}
           onClick={()=>setView({...state,noticeOpen:!state.noticeOpen})}
           title={state.noticeOpen?'助手のひとことを畳む':'助手のひとことを出す'}
