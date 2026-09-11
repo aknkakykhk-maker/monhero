@@ -2433,10 +2433,18 @@ function MonsterHeroGame() {
   // 今回の演奏が何周ぶんになるか。0 なら何も起きない(いつもどおり)。
   // ★過去にその難易度をクイックでクリアしていないと 0。
   //   勝てないほど高い難易度でも演奏さえすればクリア扱い、を防ぐ(ユーザー指示)
+  // いまその曲にかかる倍率。ふだんは2倍、開催中のイベントの対象曲だけ3倍
+  // (2026-09-11・ユーザー指示「現状の2倍」「イベント時は対象曲は3倍」)。
+  // ★イベントは**呼ばれるたびに**引き直す。読み込み時に1回だけ決めると、開いたままの端末で
+  //   開催・終了をまたいだときに古い倍率が残る(CLAUDE.md ⑥-4)。
+  const rhythmPlayRunLoopEventNow = () =>
+    (RELEASE_FLAGS.rhythmWeeklyRanking === true && typeof rhythmLimitedEventAt === 'function')
+      ? rhythmLimitedEventAt(Date.now()) : null;
+  const rhythmPlayRunLoopScaleFor = (song) => rhythmPlayRunLoopScale(song ? song.songId : null, rhythmPlayRunLoopEventNow());
   const rhythmPlayLoopsFor = (song, rhythmDifficulty) => {
     if (!runStageRef.current || !autoRepeatRef.current || !isQuickMode(runMode)) return 0;
     if (!rhythmPlayRunLoopsAllowed(difficulty, quickClearCounts)) return 0;
-    return rhythmPlayRunLoops(rhythmPlaySongDurationMs(song, rhythmDifficulty));
+    return rhythmPlayRunLoops(rhythmPlaySongDurationMs(song, rhythmDifficulty), rhythmPlayRunLoopScaleFor(song));
   };
   // ★配るものは「実際に1周クリアしたとき」とそろえる。
   //   経験値とダイヤだけにしていたころは、演奏するより裏で回したほうが得になっていた
@@ -2447,9 +2455,12 @@ function MonsterHeroGame() {
   //   「実際に1周勝ったとき」と必ず一致する。
   // ★触らないのは記録(最高スコア・最高WAVE)だけ。演奏にはスコアが無く、
   //   埋める値そのものが存在しないため(CLAUDE.md ⑦「消さない・上書きしない」)。
-  const awardRhythmPlayRunLoops = async (loops) => {
+  // loopScale … その演奏にかかっていた倍率。曲リザルトで「イベント対象曲 ×3」と出すためだけに使う
+  //   (配る量そのものは loops に織り込み済みなので、ここで掛け直さない)
+  const awardRhythmPlayRunLoops = async (loops, loopScale = RHYTHM_PLAY_RUN_LOOP_SCALE) => {
     const count = Math.max(0, Math.trunc(Number(loops) || 0));
     if (count <= 0) return null;
+    const scale = Number.isFinite(Number(loopScale)) && Number(loopScale) > 0 ? Number(loopScale) : RHYTHM_PLAY_RUN_LOOP_SCALE;
     const { goldMult, xpMult } = runRewardMultipliers();
     const policy = quickRewardPolicyRunRef.current;
     // ---- ブリーダー経験値 ----
@@ -2524,7 +2535,8 @@ function MonsterHeroGame() {
     const fromLoop = quickRunProgressRef.current ? quickRunProgressRef.current.loops : 0;
     for (let i = 0; i < count; i++) countQuickRunLoop();
     const toLoop = quickRunProgressRef.current ? quickRunProgressRef.current.loops : fromLoop;
-    return { loops: count, xp: xpGain, gold: goldGain, bond: bondGain, psyche: psycheGain, fromLoop, toLoop };
+    return { loops: count, xp: xpGain, gold: goldGain, bond: bondGain, psyche: psycheGain, fromLoop, toLoop,
+      scale, eventBoosted: scale > RHYTHM_PLAY_RUN_LOOP_SCALE };
   };
   // ---- 画面のなかでの使い方案内(docs/spec/QUICK_RHYTHM_LINK.md PR8) ----
   // ヘルプと更新履歴は探しに行った人しか読まない。この連携は遊んでいるだけでは
@@ -11316,7 +11328,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 練習(tutorial)は記録も報酬も動かさないので、その前に判定しない
           if(rhythmPlay.from!=='tutorial'){
             const loops=rhythmPlayLoopsFor(rhythmPlay.song,rhythmPlay.difficulty);
-            const awarded=loops>0?await awardRhythmPlayRunLoops(loops):null;
+            const loopScale=rhythmPlayRunLoopScaleFor(rhythmPlay.song);
+            const awarded=loops>0?await awardRhythmPlayRunLoops(loops,loopScale):null;
             if(awarded){
               setRhythmPlayRunAward(awarded);
               // 限界突破も、通常の周回が終わったときと同じように走らせる
