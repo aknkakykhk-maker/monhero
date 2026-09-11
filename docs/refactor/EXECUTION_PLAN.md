@@ -44,8 +44,8 @@ S/A 等級は `REGRESSION_RISK_MAP.md` に基づく。
 | 4 純関数の切り出し | **実質完了**(2026-09-11)。共有層21部品のうち8つが pure。残りは JSX・DOM・保存を本質的に含む | — | — | — |
 | 5 バトル計算 | **完了** | — | — | — |
 | 6 画面の切り出し | **完了**(2026-09-11)。残るのは `BATTLE` の `token.alive` と `MASU_PATTERN_DEBUG` | — | — | — |
-| 7 描画・キャッシュ | 一覧行の `React.memo`、`style` の定数化 | 低〜中 | Sonnet 5 | high |
-| 8 音声管理・SRI | 移動とSRI | 低 | Sonnet 5 | medium |
+| 7 描画・キャッシュ | 2本目まで完了(染色の2つのキャッシュに上限)。残りは一覧行の `React.memo`、静的な `style` の定数化、Tailwind 静的化の調査 | 低〜中 | Sonnet 5 | high |
+| 8 音声管理・SRI | 移動は parts 分割で完了(`14-audio.jsx`)。**SRI はこの環境では付けられない**——ハッシュを取るのに `cdnjs.cloudflare.com` へ出る必要があり、ネットワークポリシーで 403。ネットワークのある環境で `tone/14.8.49/Tone.js` の sha384 を取って `integrity` / `crossOrigin` を付ける | 低 | Sonnet 5 | medium |
 | 9 音ゲー基盤 | タイミング基盤の整理 | **高**(実機でしか分からない) | **Opus 5** | **max** |
 | 10 残存負債 | 残り | 低〜中 | Sonnet 5 | high |
 
@@ -73,40 +73,34 @@ S/A 等級は `REGRESSION_RISK_MAP.md` に基づく。
 
 ## 次の一手
 
-**STEP 3 の続き — ギフト受け取りの4キー保存を取引へ寄せる** — **Opus 5 / effort max**
+**STEP 7 の続き — 一覧行の `React.memo` と `key` の安定化** — **Sonnet 5 / effort high**
 
-STEP 1・2・4 は**完了**、STEP 3 は4本目まで完了(進捗は [`README.md`](README.md))。
-落ちている検査は0本。主要6キーの「state 更新と保存の対」は
-`boot/save-state-pairing-check.js` が固定した(実測して本当の書き忘れは無かった)。
+STEP 1・2・4・5・6 は完了、STEP 3 は5本目まで、STEP 7 は2本目まで完了
+(進捗は [`README.md`](README.md))。落ちている検査は0本。
 
-**5本目で分かったこと。** `mh_gifts` の4箇所を読んだところ、計画にあった
-「キーごとの `updateGifts()` へ寄せる」は**価値が薄い**。対になっているのは1箇所だけで、
-残りは形が違う。
+`React.memo` は**0個**、`style={{…}}` は 522 箇所、`key={i}` は 37 箇所(TD-22)。
+まずは行数の多い一覧から。
 
-| 場所 | 形 |
+| 対象 | なぜ先か |
 | --- | --- |
-| 起動時のログインボーナス＋お詫び(3690/3694) | state が先・保存は条件付き |
-| 新規キャンペーン(4129/4131) | 保存が先(単独キーの対はここだけ) |
-| ギフト受け取り(6915〜6919) | **4キー(gold / breederPoints / ownedItems / gifts)を順に保存** |
-| ミッション→ギフト箱(7008/7010) | 2キー。順序と固定IDの冪等性で担保済み(コメントあり) |
+| ランキングの行 | 50件を一度に描く。スクロールのたびに全行が作り直される |
+| マスモン一覧の行 | 所持数ぶん。並べ替えがあるので `key={i}` だと入れ替えで作り直しになる |
+| バトルのカード | 1ターンごとに描き直る |
 
-**効くのは単独キーの update ではなく、複数キーを `saveStoredValuesOrRollback` へ寄せること。**
-とくに**ギフト受け取り**は4キーを順に保存していて、途中で失敗すると部分適用になる
-(ダイヤは増えたのにアイテムが入っていない、など)。`saveStoredValuesOrRollback` は
-すでに13箇所で使われている実績のある正本(書く→読み戻す→食い違えば全部戻す)。
+**`key={i}` を安定IDへ直すのは「並べ替えのある一覧」だけ。** 並ばない一覧で変えると、
+見た目は同じでも差分の当たり方が変わる。
 
-**着手前に必ず読むこと。**
+**`memo` の比較漏れで「更新されない行」が出るのがこのSTEPの事故。**
+props に関数やオブジェクトを毎回作って渡していると memo が効かないので、
+渡し方から見ること。検査は `image/*` 16本・`layout-consistency-check`・
+`browser/perf-check`・`browser/feature-check`。
 
-- `saveStoredValuesOrRollback` の実装(`11-masu-progression.jsx:1011`)と、既存13箇所の呼び方
-- ギフト受け取りの全体(`60-app.jsx` の `claimGiftIds` まわり。報酬検証→確定値の保存→state)
-- `docs/spec/SAVE_DATA.md` / CLAUDE.md ⑦
-
-**順序を変えないこと。** いまは「4キーを保存 → まとめて state」。取引へ寄せても
-この順序と、失敗時に state を更新しない性質を保つ。検査は `boot/*` 24本・`masu/*` 36本・
-`run/training-reward-check`・`browser/feature-check` を回す。
-
-> 先に安全なほうを消化したいときは **STEP 7 描画・キャッシュ(Sonnet 5 / high)** でもよい。
-> 一覧行の `React.memo`、`style` の定数化。バトルも音ゲーも触らない。
+> **STEP 8 の SRI はこの環境ではできない。** `cdnjs.cloudflare.com` へ出られないため
+> (ネットワークポリシーで 403)、Tone.js のハッシュが取れない。
+> ネットワークのある環境で
+> `curl -s https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js | openssl dgst -sha384 -binary | openssl base64 -A`
+> を取り、`14-audio.jsx` の `s.src = ...` の隣へ `s.integrity` / `s.crossOrigin='anonymous'` を足す。
+> ハッシュを間違えるとSEが全部鳴らなくなる(進行不能にはならない。`onerror` で先へ進む作り)。
 
 **props の洗い出しは手でやらない。** props を空にした仮のコンポーネントへ JSX を移し、
 `node tools/undefined-reference-check.js` を通すと、足りない参照が全部一覧で出る。
