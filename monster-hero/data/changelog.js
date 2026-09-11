@@ -44,6 +44,18 @@ const CHANGELOG = [
     ],
   },
   {
+    // claimGiftIds の1件ずつの storeSet を saveStoredValuesOrRollback へ寄せた。
+    // 取引に入るのは mh_gold / mh_breeder_points / mh_owned_items / mh_gifts と、
+    // 経験値が増えたときの mh_breeder_xp / mh_breeder_points_granted。
+    // boot/gift-claim-transaction-check.js が取引を使い続けているかを見張る。
+    date: "2026-09-12 07:58", type:'issue', title:'ギフトを受け取るときの保存を、まとめて1回で行うようにしました', status:'new',
+    items:[
+      'ギフト箱で受け取ったとき、ダイヤ・強化ポイント・アイテム・ブリーダー経験値を1つずつ保存していました。端末の保存が途中で失敗すると「ダイヤは増えたのにアイテムが入っていない」という中途半端な状態が残ることがありました。',
+      'これからは全部をまとめて書いてから読み直し、1つでも食い違ったら全部を元に戻します。受け取りに失敗したときはギフトが未受け取りのまま残るので、もう一度受け取れます。',
+      'ふだんの受け取りでは動きは変わりません。すでに受け取ったギフトや、いま持っているダイヤ・アイテムには影響しません。',
+    ],
+  },
+  {
     // 戻ったときに続けるのは「理由が hidden のときだけ」。負けた・諦めた・自分で切ったは続けない。
     // 負けたあとに裏へ回っても、finishQuickRunProgress は最初の理由を上書きしないので defeat のまま。
     date: "2026-09-12 07:53", type:'update', title:'アプリに戻ったとき、裏に回って止まっていた∞周回が自動で続くようにしました', status:'new',
