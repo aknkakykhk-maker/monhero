@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 745fd89b41a2c2d2
+// generated-sha256: 194f1a49fa14c265
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 13:05"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 13:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -19996,6 +19996,8 @@ function MonsterHeroGame() {
     if (!prize || rhythmEventRewardClaiming) return;
     setRhythmEventRewardClaiming(true);
     try {
+      // デバッグ再生は見た目だけ。保存にも所持品にも触れない
+      if (prize.debugPreview) { setRhythmEventRewardPrize(null); return; }
       await markRhythmEventRewardClaimed(prize.event.id);
       const next = { ...ownedItemsRef.current };
       for (const entry of prize.prizes) {
@@ -23919,8 +23921,12 @@ function MonsterHeroGame() {
   const finishUpdateGuide = async (destination=null) => {
     const current = updateGuideQueue[0];
     if (!current) return;
-    const seen = normalizeSeenUpdateNoticeIds(await storeGet(UPDATE_NOTICE_SEEN_KEY, [], false));
-    await storeSet(UPDATE_NOTICE_SEEN_KEY, normalizeSeenUpdateNoticeIds([...seen, current.id]), false);
+    // ★デバッグ再生(debugPreview)のときは既読にしない。
+    //   確認のために再生しただけで、本番のときに出なくなってしまうのを防ぐ
+    if (!current.debugPreview) {
+      const seen = normalizeSeenUpdateNoticeIds(await storeGet(UPDATE_NOTICE_SEEN_KEY, [], false));
+      await storeSet(UPDATE_NOTICE_SEEN_KEY, normalizeSeenUpdateNoticeIds([...seen, current.id]), false);
+    }
     setUpdateGuidePage(0);
     setUpdateGuideQueue(queue => queue.slice(1));
     // 同じ機能の解放の案内が続けて出ないようにする(いま解放済みの人だけ)
@@ -23935,6 +23941,54 @@ function MonsterHeroGame() {
     const seen = normalizeSeenUpdateNoticeIds(await storeGet(UPDATE_NOTICE_SEEN_KEY, [], false));
     if (seen.includes(notice.id)) return window.alert('テスト通知は既読です。リセット後に再確認できます。');
     setDailyMasuAdvice(null); setUpdateGuidePage(0); setUpdateGuideQueue([notice]); returnToHome();
+  };
+  // ---- モンヒロビートのイベントをデバッグから確かめる(2026-09-11・ユーザー指示) ----
+  // 開催の時刻を待たず、保存にも触れずに、本番と同じ見た目で確かめるためのもの。
+  // ★どれも「見た」にしない(debugPreview / debug)。確認のために再生しただけで、
+  //   本番のときに出なくなってしまうのを防ぐ。
+  // ★デバッグ専用なので更新履歴・ヘルプには載せない(CLAUDE.md ⑤の但し書き)。
+  const debugPlayRhythmEventStory = () => {
+    setDailyMasuAdvice(null); setUpdateGuideQueue([]);
+    returnToHome();
+    setEventReplay({ id: MONBEAT_CUP_STORY_ID, step: 0, live: true, debug: true });
+  };
+  const debugPlayRhythmEventNotice = () => {
+    // 期間の外でも出せるよう、enabled で絞らずIDで直に引く
+    const list = (typeof ASSISTANT_UPDATE_NOTICES !== 'undefined' && ASSISTANT_UPDATE_NOTICES) || [];
+    const notice = list.find(n => n && n.id === 'update_notice_rhythm_weekend_cup_v1');
+    if (!notice) return window.alert('イベント告知が見つかりません。');
+    setDailyMasuAdvice(null); setEventReplay(null); setUpdateGuidePage(0);
+    setUpdateGuideQueue([{ ...notice, debugPreview: true }]);
+    returnToHome();
+  };
+  // 会話 → 告知 の並びをそのまま確かめる。会話を閉じたら告知が続く
+  const debugPlayRhythmEventIntro = () => {
+    const list = (typeof ASSISTANT_UPDATE_NOTICES !== 'undefined' && ASSISTANT_UPDATE_NOTICES) || [];
+    const notice = list.find(n => n && n.id === 'update_notice_rhythm_weekend_cup_v1');
+    setDailyMasuAdvice(null); setUpdateGuidePage(0);
+    setUpdateGuideQueue(notice ? [{ ...notice, debugPreview: true }] : []);
+    returnToHome();
+    setEventReplay({ id: MONBEAT_CUP_STORY_ID, step: 0, live: true, debug: true });
+  };
+  // 報酬の受け取り画面。実際の順位は使わず、見本の中身で見た目だけ確かめる
+  const debugPlayRhythmEventReward = () => {
+    const event = (typeof RHYTHM_EVENTS !== 'undefined' && RHYTHM_EVENTS) ? RHYTHM_EVENTS[0] : null;
+    if (!event) return window.alert('イベントが登録されていません。');
+    const divisions = rhythmEventDivisionIds(event);
+    const prizes = divisions.map((divisionId, index) => ({
+      divisionId, songId: rhythmEventDivisionSongId(divisionId), rank: index + 1,
+      reward: rhythmEventRewardForRank(event, divisionId, index + 1),
+    })).filter(entry => !!entry.reward);
+    setRhythmEventRewardPrize({ event, prizes, participation: rhythmEventParticipationReward(event), debugPreview: true });
+    returnToHome();
+  };
+  const debugResetRhythmEventSeen = async () => {
+    rhythmEventStorySeenRef.current = [];
+    setRhythmEventStorySeen([]);
+    await storeSet(RHYTHM_EVENT_STORY_KEY, [], false);
+    const seen = normalizeSeenUpdateNoticeIds(await storeGet(UPDATE_NOTICE_SEEN_KEY, [], false));
+    await storeSet(UPDATE_NOTICE_SEEN_KEY, seen.filter(id => id !== 'update_notice_rhythm_weekend_cup_v1'), false);
+    window.alert('イベントの会話と告知を未読へ戻しました。開催中に起動すると、もう一度出ます。');
   };
   const debugResetUpdateGuide = async () => {
     const debugIds = new Set(availableUpdateNotices({debug:true}).map(n=>n.id));
@@ -28710,6 +28764,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <button onClick={()=>{returnToHome();startTutorial('intro');}} className="min-h-[46px] rounded-xl bg-pink-900/60 border border-pink-400/50 text-pink-100 text-[10px] font-black active:scale-95">みゅあのあいさつだけ再生</button>
                   <button onClick={()=>{returnToHome();startTutorial('tour');}} className="min-h-[46px] rounded-xl bg-pink-900/60 border border-pink-400/50 text-pink-100 text-[10px] font-black active:scale-95">村の案内だけ再生</button>
                   <button onClick={()=>{returnToHome();setKikiIntroStep(0);}} className="min-h-[46px] rounded-xl bg-pink-900/60 border border-pink-400/50 text-pink-100 text-[10px] font-black active:scale-95">きき加入の会話を再生</button>
+                  {/* モンヒロビートのイベント(週末ゲリラ杯)の確認。開催の時刻を待たずに見られる。
+                      どれも「見た」にしないので、本番のときにちゃんと出る。
+                      デバッグ専用なので更新履歴・ヘルプには載せない(CLAUDE.md ⑤の但し書き) */}
+                  <button data-debug-rhythm-event-intro onClick={debugPlayRhythmEventIntro} className="col-span-2 min-h-[46px] rounded-xl bg-fuchsia-800/70 border border-fuchsia-300/60 text-white text-[10px] font-black active:scale-95">🏆 イベント開催を再生（会話→告知）</button>
+                  <button data-debug-rhythm-event-story onClick={debugPlayRhythmEventStory} className="min-h-[46px] rounded-xl bg-fuchsia-900/60 border border-fuchsia-400/50 text-fuchsia-100 text-[10px] font-black active:scale-95">イベント会話だけ再生</button>
+                  <button data-debug-rhythm-event-notice onClick={debugPlayRhythmEventNotice} className="min-h-[46px] rounded-xl bg-fuchsia-900/60 border border-fuchsia-400/50 text-fuchsia-100 text-[10px] font-black active:scale-95">イベント告知だけ再生</button>
+                  <button data-debug-rhythm-event-reward onClick={debugPlayRhythmEventReward} className="min-h-[46px] rounded-xl bg-amber-900/60 border border-amber-400/50 text-amber-100 text-[10px] font-black active:scale-95">入賞の受け取り画面を見る</button>
+                  <button data-debug-rhythm-event-reset onClick={debugResetRhythmEventSeen} className="min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95">イベントを未読へ戻す</button>
                   <button onClick={()=>setAssistantDebug('lines')} className="min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95">全助手コメント確認</button>
                   <button onClick={()=>setAssistantDebug('expressions')} className="min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95">全表情確認</button>
                   <button onClick={()=>setAssistantDebug('conditions')} className="min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95">条件コメント確認</button>
@@ -30405,7 +30467,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           if(!last){ setEventReplay(r=>r&&({...r,step:r.step+1})); return; }
           if(event&&event.id==='momosuke_intro') markMomosukeIntroSeen();
           // イベントの会話も、最後まで見たら「見た」にする(次の起動で重ねて流さない)
-          if(event&&event.id===MONBEAT_CUP_STORY_ID) void markRhythmEventStorySeen(MONBEAT_CUP_STORY_ID);
+          if(event&&event.id===MONBEAT_CUP_STORY_ID&&!eventReplay.debug) void markRhythmEventStorySeen(MONBEAT_CUP_STORY_ID);
           setEventReplay(null);
         };
         /* 途中でやめる。回想(あとから見返すぶん)は「見たことがある」を立てない
@@ -30415,7 +30477,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
              そうしないと、起動のたびに同じ会話がまた出てしまう。
              飛ばしたぶんはプロフィールの「イベント回想」からいつでも見られる */
         const skip=()=>{
-          if(eventReplay.live&&event&&event.id===MONBEAT_CUP_STORY_ID) void markRhythmEventStorySeen(MONBEAT_CUP_STORY_ID);
+          if(eventReplay.live&&!eventReplay.debug&&event&&event.id===MONBEAT_CUP_STORY_ID) void markRhythmEventStorySeen(MONBEAT_CUP_STORY_ID);
           setEventReplay(null);
         };
         return(
