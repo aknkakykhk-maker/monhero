@@ -725,6 +725,9 @@ function RhythmRankingScreen({
           const baseScore=(rhythmRankingDetail.baseScore===null||rhythmRankingDetail.baseScore===undefined)?null:Number(rhythmRankingDetail.baseScore);
           const bonusScore=Number(rhythmRankingDetail.bonusScore)||0;
           const playCount=Number(rhythmRankingDetail.playCount)||0;
+          // 難易度ごとの回数(2026-09-12・ユーザー指示「難易度別回数の内訳もあったほうがいい」)。
+          // 返ってこない環境(SQL未適用)では空になり、この段は出ない
+          const playCountRows=rhythmEventPlayCountRows(rhythmRankingDetail.playCounts,RHYTHM_DEMO_DIFFICULTY_IDS);
           return (
           <div data-rhythm-ranking-detail-modal className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-3" onClick={()=>setRhythmRankingDetail(null)}>
             <div className="w-full max-w-md rounded-2xl border border-amber-300/40 bg-slate-900 p-4" onClick={e=>e.stopPropagation()}>
@@ -739,6 +742,14 @@ function RhythmRankingScreen({
               <dl data-rhythm-bonus-breakdown className="mt-2 rounded-xl border border-fuchsia-300/30 bg-fuchsia-500/10 p-2 text-[10px]">
                 <div className="flex items-center justify-between"><dt className="text-slate-300">素点（ベスト）</dt><dd className="font-mono text-white">{baseScore.toLocaleString()}</dd></div>
                 <div className="mt-1 flex items-center justify-between"><dt className="text-slate-300">遊んだ回数</dt><dd className="font-mono text-white">{playCount}回</dd></div>
+                {playCountRows.length>0&&<div data-rhythm-bonus-difficulties className="mt-0.5 space-y-0.5 border-l border-white/15 pl-2">
+                  {playCountRows.map(row=>(
+                    <div key={row.id} className="flex items-center justify-between text-[9px]">
+                      <dt className="text-slate-400">{RHYTHM_DEMO_DIFFICULTY_LABELS[row.id]?.name||row.id}<span className="ml-1 text-fuchsia-300/80">{row.rateText}</span></dt>
+                      <dd className="font-mono text-slate-200">{row.count}回</dd>
+                    </div>
+                  ))}
+                </div>}
                 <div className="mt-1 flex items-center justify-between"><dt className="text-slate-300">回数ボーナス</dt><dd className="font-mono font-black text-amber-300">+{bonusScore.toLocaleString()}</dd></div>
                 <div className="mt-1 flex items-center justify-between border-t border-white/15 pt-1"><dt className="font-black text-amber-200">合計（順位に使う点）</dt><dd className="font-mono font-black text-amber-200">{shownScore.toLocaleString()}</dd></div>
               </dl>)}

@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e3e00eea93d6ba25
+// source-sha256: 4995b5fafd29072c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1cb6491c7bba4ca3
+// generated-sha256: b0cc8e95063e23d7
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 23:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-12 00:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -17454,8 +17454,12 @@ const RHYTHM_EVENT_TOTAL_SELECT = 'identity_key,user_name,total_score,song_count
 // 上位50件の切り出しも加点込みで行われる。素点と加点は別の列で受け取り、「内訳」に出す。
 // ★関数がまだ無い環境(SQL未適用)では、加点なしのこれまでの関数へ戻って順位を出す。
 //   加点と内訳が出ないだけで画面は壊れない(docs/sql/rankings/RHYTHM_EVENT_BONUS_IPHONE_STEPS.md)。
-const RHYTHM_EVENT_SONG_BONUS_SELECT = `${RHYTHM_EVENT_SONG_SELECT},base_score,bonus_score,play_count`;
-const RHYTHM_EVENT_TOTAL_BONUS_SELECT = `${RHYTHM_EVENT_TOTAL_SELECT},base_total,bonus_total,play_count`;
+// ★play_counts(難易度ごとの回数)は、そこまで入れたSQLを流した環境でだけ返る。
+//   party と同じく、無ければ1段落として取り直す(内訳の難易度の行が出ないだけ)
+const RHYTHM_EVENT_SONG_BONUS_SELECT_BASE = `${RHYTHM_EVENT_SONG_SELECT},base_score,bonus_score,play_count`;
+const RHYTHM_EVENT_SONG_BONUS_SELECT = `${RHYTHM_EVENT_SONG_BONUS_SELECT_BASE},play_counts`;
+const RHYTHM_EVENT_TOTAL_BONUS_SELECT_BASE = `${RHYTHM_EVENT_TOTAL_SELECT},base_total,bonus_total,play_count`;
+const RHYTHM_EVENT_TOTAL_BONUS_SELECT = `${RHYTHM_EVENT_TOTAL_BONUS_SELECT_BASE},play_counts`;
 // 「そのビュー・関数はまだ無い」という応答かどうか。通信の失敗や権限の失敗と取り違えない
 //   PGRST202 … Could not find the function public.rhythm_event_totals(...) in the schema cache
 //   PGRST205 … Could not find the table 'public.rhythm_week_window' in the schema cache
@@ -17473,7 +17477,7 @@ const rhythmEventRankingMissing = (status, body) => {
 const rhythmEventDetailColumnMissing = (status, body) => {
   if (status !== 400 && status !== 404) return false;
   const text = String(body || '');
-  return /party/i.test(text) && /PGRST100|PGRST202|42703|does not exist|column|Could not find/i.test(text);
+  return /party|play_counts/i.test(text) && /PGRST100|PGRST202|42703|does not exist|column|Could not find/i.test(text);
 };
 const rhythmEventNotReadyError = () => {
   const error = new Error('rhythm event ranking is not ready');
@@ -17573,20 +17577,33 @@ const sbFetchRhythmEventSongBests = async ({
   // 回数ボーナスを使うイベントでは、加点込みの関数を先に試す。
   // 関数がまだ無い環境では加点なしへ戻す(順位は出る。加点と内訳だけ出ない)
   if (bonusRates) {
+    const askBonus = select => sbFetchRhythmEventRows({
+      url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_song_bests_bonus?select=${select}` + `&order=score.desc,scored_at.asc&limit=${limit}${filter}`,
+      body: {
+        ...body,
+        bonus_rates: bonusRates
+      },
+      label: 'rhythm-event-song-bonus',
+      requestId
+    });
     try {
-      return await sbFetchRhythmEventRows({
-        url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_song_bests_bonus?select=${RHYTHM_EVENT_SONG_BONUS_SELECT}` + `&order=score.desc,scored_at.asc&limit=${limit}${filter}`,
-        body: {
-          ...body,
-          bonus_rates: bonusRates
-        },
-        label: 'rhythm-event-song-bonus',
-        requestId
-      });
+      return await askBonus(RHYTHM_EVENT_SONG_BONUS_SELECT);
     } catch (error) {
-      rankingLog(requestId, 'rhythm-event-song-bonus-fallback', {
-        message: error?.message || String(error)
-      });
+      // 「play_counts という列は無い」だけなら、その列を外してもう一度頼む。
+      // 関数そのものが無いときは、下の加点なしの経路へ落ちる
+      if (error && error.detailColumnMissing) {
+        try {
+          return await askBonus(RHYTHM_EVENT_SONG_BONUS_SELECT_BASE);
+        } catch (retryError) {
+          rankingLog(requestId, 'rhythm-event-song-bonus-fallback', {
+            message: retryError?.message || String(retryError)
+          });
+        }
+      } else {
+        rankingLog(requestId, 'rhythm-event-song-bonus-fallback', {
+          message: error?.message || String(error)
+        });
+      }
     }
   }
   try {
@@ -17619,20 +17636,31 @@ const sbFetchRhythmEventTotals = async ({
   };
   // 曲の部門と同じく、加点込みの関数を先に試して、無ければ加点なしへ戻す
   if (bonusRates) {
+    const askBonus = select => sbFetchRhythmEventRows({
+      url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals_bonus?select=${select}` + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
+      body: {
+        ...body,
+        bonus_rates: bonusRates
+      },
+      label: 'rhythm-event-total-bonus',
+      requestId
+    });
     try {
-      return await sbFetchRhythmEventRows({
-        url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals_bonus?select=${RHYTHM_EVENT_TOTAL_BONUS_SELECT}` + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
-        body: {
-          ...body,
-          bonus_rates: bonusRates
-        },
-        label: 'rhythm-event-total-bonus',
-        requestId
-      });
+      return await askBonus(RHYTHM_EVENT_TOTAL_BONUS_SELECT);
     } catch (error) {
-      rankingLog(requestId, 'rhythm-event-total-bonus-fallback', {
-        message: error?.message || String(error)
-      });
+      if (error && error.detailColumnMissing) {
+        try {
+          return await askBonus(RHYTHM_EVENT_TOTAL_BONUS_SELECT_BASE);
+        } catch (retryError) {
+          rankingLog(requestId, 'rhythm-event-total-bonus-fallback', {
+            message: retryError?.message || String(retryError)
+          });
+        }
+      } else {
+        rankingLog(requestId, 'rhythm-event-total-bonus-fallback', {
+          message: error?.message || String(error)
+        });
+      }
     }
   }
   return sbFetchRhythmEventRows({
@@ -17656,8 +17684,21 @@ const rhythmEventBonusFields = (row, baseKey) => {
   return {
     baseScore: base,
     bonusScore: Number.isFinite(Number(row?.[bonusKey])) ? Number(row[bonusKey]) : 0,
-    playCount: Number.isFinite(Number(row?.play_count)) ? Number(row.play_count) : 0
+    playCount: Number.isFinite(Number(row?.play_count)) ? Number(row.play_count) : 0,
+    // 難易度ごとの回数({MASTER:2, HARD:1} の形)。返ってこない環境では空にして、
+    // 内訳の難易度の行を出さない(0回と書かないため)
+    playCounts: rhythmEventPlayCountsFromRow(row?.play_counts)
   };
+};
+// 難易度ごとの回数。壊れた値・知らない難易度が混ざっていても落ちないように通す
+const rhythmEventPlayCountsFromRow = value => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  const out = {};
+  for (const [id, count] of Object.entries(value)) {
+    const n = Math.floor(Number(count));
+    if (typeof id === 'string' && id && Number.isFinite(n) && n > 0) out[id] = n;
+  }
+  return out;
 };
 // 生の行を画面用の形へ整える。壊れた値でも落ちないよう、数として確かめてから使う
 const rhythmEventSongEntryFromRow = row => ({
@@ -25955,6 +25996,9 @@ function RhythmRankingScreen({
     const baseScore = rhythmRankingDetail.baseScore === null || rhythmRankingDetail.baseScore === undefined ? null : Number(rhythmRankingDetail.baseScore);
     const bonusScore = Number(rhythmRankingDetail.bonusScore) || 0;
     const playCount = Number(rhythmRankingDetail.playCount) || 0;
+    // 難易度ごとの回数(2026-09-12・ユーザー指示「難易度別回数の内訳もあったほうがいい」)。
+    // 返ってこない環境(SQL未適用)では空になり、この段は出ない
+    const playCountRows = rhythmEventPlayCountRows(rhythmRankingDetail.playCounts, RHYTHM_DEMO_DIFFICULTY_IDS);
     return /*#__PURE__*/React.createElement("div", {
       "data-rhythm-ranking-detail-modal": true,
       className: "fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-3",
@@ -25990,7 +26034,19 @@ function RhythmRankingScreen({
       className: "text-slate-300"
     }, "\u904A\u3093\u3060\u56DE\u6570"), /*#__PURE__*/React.createElement("dd", {
       className: "font-mono text-white"
-    }, playCount, "\u56DE")), /*#__PURE__*/React.createElement("div", {
+    }, playCount, "\u56DE")), playCountRows.length > 0 && /*#__PURE__*/React.createElement("div", {
+      "data-rhythm-bonus-difficulties": true,
+      className: "mt-0.5 space-y-0.5 border-l border-white/15 pl-2"
+    }, playCountRows.map(row => /*#__PURE__*/React.createElement("div", {
+      key: row.id,
+      className: "flex items-center justify-between text-[9px]"
+    }, /*#__PURE__*/React.createElement("dt", {
+      className: "text-slate-400"
+    }, RHYTHM_DEMO_DIFFICULTY_LABELS[row.id]?.name || row.id, /*#__PURE__*/React.createElement("span", {
+      className: "ml-1 text-fuchsia-300/80"
+    }, row.rateText)), /*#__PURE__*/React.createElement("dd", {
+      className: "font-mono text-slate-200"
+    }, row.count, "\u56DE")))), /*#__PURE__*/React.createElement("div", {
       className: "mt-1 flex items-center justify-between"
     }, /*#__PURE__*/React.createElement("dt", {
       className: "text-slate-300"

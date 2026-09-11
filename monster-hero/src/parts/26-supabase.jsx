@@ -745,8 +745,12 @@ const RHYTHM_EVENT_TOTAL_SELECT = 'identity_key,user_name,total_score,song_count
 // 上位50件の切り出しも加点込みで行われる。素点と加点は別の列で受け取り、「内訳」に出す。
 // ★関数がまだ無い環境(SQL未適用)では、加点なしのこれまでの関数へ戻って順位を出す。
 //   加点と内訳が出ないだけで画面は壊れない(docs/sql/rankings/RHYTHM_EVENT_BONUS_IPHONE_STEPS.md)。
-const RHYTHM_EVENT_SONG_BONUS_SELECT = `${RHYTHM_EVENT_SONG_SELECT},base_score,bonus_score,play_count`;
-const RHYTHM_EVENT_TOTAL_BONUS_SELECT = `${RHYTHM_EVENT_TOTAL_SELECT},base_total,bonus_total,play_count`;
+// ★play_counts(難易度ごとの回数)は、そこまで入れたSQLを流した環境でだけ返る。
+//   party と同じく、無ければ1段落として取り直す(内訳の難易度の行が出ないだけ)
+const RHYTHM_EVENT_SONG_BONUS_SELECT_BASE = `${RHYTHM_EVENT_SONG_SELECT},base_score,bonus_score,play_count`;
+const RHYTHM_EVENT_SONG_BONUS_SELECT = `${RHYTHM_EVENT_SONG_BONUS_SELECT_BASE},play_counts`;
+const RHYTHM_EVENT_TOTAL_BONUS_SELECT_BASE = `${RHYTHM_EVENT_TOTAL_SELECT},base_total,bonus_total,play_count`;
+const RHYTHM_EVENT_TOTAL_BONUS_SELECT = `${RHYTHM_EVENT_TOTAL_BONUS_SELECT_BASE},play_counts`;
 // 「そのビュー・関数はまだ無い」という応答かどうか。通信の失敗や権限の失敗と取り違えない
 //   PGRST202 … Could not find the function public.rhythm_event_totals(...) in the schema cache
 //   PGRST205 … Could not find the table 'public.rhythm_week_window' in the schema cache
@@ -764,7 +768,7 @@ const rhythmEventRankingMissing = (status, body) => {
 const rhythmEventDetailColumnMissing = (status, body) => {
   if (status !== 400 && status !== 404) return false;
   const text = String(body || '');
-  return /party/i.test(text) && /PGRST100|PGRST202|42703|does not exist|column|Could not find/i.test(text);
+  return /party|play_counts/i.test(text) && /PGRST100|PGRST202|42703|does not exist|column|Could not find/i.test(text);
 };
 const rhythmEventNotReadyError = () => {
   const error = new Error('rhythm event ranking is not ready');
@@ -831,14 +835,22 @@ const sbFetchRhythmEventSongBests = async ({ songId, fromMs, toMs, bonusRates = 
   // 回数ボーナスを使うイベントでは、加点込みの関数を先に試す。
   // 関数がまだ無い環境では加点なしへ戻す(順位は出る。加点と内訳だけ出ない)
   if (bonusRates) {
+    const askBonus = (select) => sbFetchRhythmEventRows({
+      url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_song_bests_bonus?select=${select}`
+        + `&order=score.desc,scored_at.asc&limit=${limit}${filter}`,
+      body: { ...body, bonus_rates: bonusRates }, label: 'rhythm-event-song-bonus', requestId,
+    });
     try {
-      return await sbFetchRhythmEventRows({
-        url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_song_bests_bonus?select=${RHYTHM_EVENT_SONG_BONUS_SELECT}`
-          + `&order=score.desc,scored_at.asc&limit=${limit}${filter}`,
-        body: { ...body, bonus_rates: bonusRates }, label: 'rhythm-event-song-bonus', requestId,
-      });
+      return await askBonus(RHYTHM_EVENT_SONG_BONUS_SELECT);
     } catch (error) {
-      rankingLog(requestId, 'rhythm-event-song-bonus-fallback', { message: error?.message || String(error) });
+      // 「play_counts という列は無い」だけなら、その列を外してもう一度頼む。
+      // 関数そのものが無いときは、下の加点なしの経路へ落ちる
+      if (error && error.detailColumnMissing) {
+        try { return await askBonus(RHYTHM_EVENT_SONG_BONUS_SELECT_BASE); }
+        catch (retryError) { rankingLog(requestId, 'rhythm-event-song-bonus-fallback', { message: retryError?.message || String(retryError) }); }
+      } else {
+        rankingLog(requestId, 'rhythm-event-song-bonus-fallback', { message: error?.message || String(error) });
+      }
     }
   }
   try {
@@ -861,14 +873,20 @@ const sbFetchRhythmEventTotals = async ({ songIds, fromMs, toMs, bonusRates = nu
   const body = { song_ids: songIds, from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() };
   // 曲の部門と同じく、加点込みの関数を先に試して、無ければ加点なしへ戻す
   if (bonusRates) {
+    const askBonus = (select) => sbFetchRhythmEventRows({
+      url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals_bonus?select=${select}`
+        + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
+      body: { ...body, bonus_rates: bonusRates }, label: 'rhythm-event-total-bonus', requestId,
+    });
     try {
-      return await sbFetchRhythmEventRows({
-        url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals_bonus?select=${RHYTHM_EVENT_TOTAL_BONUS_SELECT}`
-          + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
-        body: { ...body, bonus_rates: bonusRates }, label: 'rhythm-event-total-bonus', requestId,
-      });
+      return await askBonus(RHYTHM_EVENT_TOTAL_BONUS_SELECT);
     } catch (error) {
-      rankingLog(requestId, 'rhythm-event-total-bonus-fallback', { message: error?.message || String(error) });
+      if (error && error.detailColumnMissing) {
+        try { return await askBonus(RHYTHM_EVENT_TOTAL_BONUS_SELECT_BASE); }
+        catch (retryError) { rankingLog(requestId, 'rhythm-event-total-bonus-fallback', { message: retryError?.message || String(retryError) }); }
+      } else {
+        rankingLog(requestId, 'rhythm-event-total-bonus-fallback', { message: error?.message || String(error) });
+      }
     }
   }
   return sbFetchRhythmEventRows({
@@ -888,7 +906,20 @@ const rhythmEventBonusFields = (row, baseKey) => {
     baseScore: base,
     bonusScore: Number.isFinite(Number(row?.[bonusKey])) ? Number(row[bonusKey]) : 0,
     playCount: Number.isFinite(Number(row?.play_count)) ? Number(row.play_count) : 0,
+    // 難易度ごとの回数({MASTER:2, HARD:1} の形)。返ってこない環境では空にして、
+    // 内訳の難易度の行を出さない(0回と書かないため)
+    playCounts: rhythmEventPlayCountsFromRow(row?.play_counts),
   };
+};
+// 難易度ごとの回数。壊れた値・知らない難易度が混ざっていても落ちないように通す
+const rhythmEventPlayCountsFromRow = (value) => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  const out = {};
+  for (const [id, count] of Object.entries(value)) {
+    const n = Math.floor(Number(count));
+    if (typeof id === 'string' && id && Number.isFinite(n) && n > 0) out[id] = n;
+  }
+  return out;
 };
 // 生の行を画面用の形へ整える。壊れた値でも落ちないよう、数として確かめてから使う
 const rhythmEventSongEntryFromRow = (row) => ({
