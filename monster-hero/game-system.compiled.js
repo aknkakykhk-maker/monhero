@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e5d51b5b1dae1c0e
+// source-sha256: 2893a4fe50781ff9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 52b6bedf808584c4
+// generated-sha256: c4ebef39063fdbfa
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 19:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 19:47"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -31482,31 +31482,54 @@ function MasuRegisterModal({
 // ・施設へ入る7つの行き先は props(onOpen*)で受け取る。画面は行き先の名前を持たない
 // ・かぶせもの3つは「HOME にいて、チュートリアルが終わっていて、前の会話が片付いていたら」
 //   という順番で出る。その条件は MonsterHeroGame 側に残し、ここは中身だけを持つ
-// イベント開催中の角バッジ(2026-09-11・ユーザー指示「右上とか左上とか専用バッジを付けるようにして」)。
-// ★ここは style で直に指定する。70-bootstrap.jsx のCSSへ書いた規則は文書へ入らなかった
-//   (実ブラウザで数えたら 0件 / 全1161規則。position が static のままだった)。
-//   施設のボタンの中身(span)は position:absolute なので、その右上へ重ねられる。
-// ★超越バッジ・魂格バッジと同じ「角へ少しはみ出す」置き方にそろえてある。
+// イベント開催中の角バッジ(2026-09-11・ユーザー指示
+// 「右上とか左上とか専用バッジを付けるようにして」「そこそこ派手目に / キラキラ強調されてるような」)。
+//
+// ★この機能ぶんのCSSは、ここで <style> を置いて閉じる。70-bootstrap.jsx の大きなCSSへ
+//   書き足したときは、1行に複数の規則が並ぶ場所へ入って @media の内側になり、
+//   文書へ一度も読み込まれなかった(実ブラウザで 0件 / 全1161規則)。
+//   さらに消すときに同じ行の続きまで巻き込んで、横画面の配置を壊した。
+//   ここへ閉じておけば、ほかのCSSを壊しようがない。
+// ★位置は超越バッジ・魂格バッジと同じ「角へ少しはみ出す」置き方にそろえる。
+// ★動きを減らす設定の人には光らせない(prefers-reduced-motion)。
+// ★位置と見た目は style で直に持たせる。配置の検査(home-layout-check.js)は
+//   このCSSを読み込まないので、クラスだけに頼ると検査の中で「ただの文字」になり、
+//   ボタンが横に広がって施設の位置がずれてしまう(実際に落ちた)。
+//   クラスのほうは「光り方・動き」だけを足す係にする。
 const HOME_EVENT_BADGE_STYLE = Object.freeze({
   position: 'absolute',
-  top: '-9px',
-  right: '-7px',
-  zIndex: 7,
+  top: '-10px',
+  right: '-9px',
+  zIndex: 8,
   display: 'block',
-  padding: '1px 6px',
-  border: '1px solid #fcd34d',
+  overflow: 'hidden',
+  padding: '2px 7px',
+  border: '1px solid #fff3c4',
   borderRadius: '999px',
-  background: '#b45309',
-  color: '#fff7ed',
+  background: 'linear-gradient(135deg,#f59e0b,#fde047 45%,#f97316)',
+  color: '#4a1d00',
   fontSize: '8px',
   fontWeight: 1000,
   fontStyle: 'normal',
   lineHeight: 1.6,
   whiteSpace: 'nowrap',
-  boxShadow: '0 2px 6px #000a',
-  textShadow: 'none',
-  pointerEvents: 'none'
+  textShadow: '0 1px 0 #fff8',
+  pointerEvents: 'none',
+  boxShadow: '0 0 0 1px #0006,0 2px 8px #000a,0 0 10px #fbbf24cc,0 0 18px #f59e0b80'
 });
+const HOME_EVENT_BADGE_CSS = `
+.mh-home-event-badge{animation:mhHomeEventBadgePulse 1.6s ease-in-out infinite}
+.mh-home-event-badge::after{content:'';position:absolute;top:0;bottom:0;left:-60%;width:45%;
+  background:linear-gradient(100deg,#fff0,#ffffffcc,#fff0);
+  animation:mhHomeEventBadgeShine 2.4s ease-in-out infinite}
+@keyframes mhHomeEventBadgePulse{
+  0%,100%{box-shadow:0 0 0 1px #0006,0 2px 8px #000a,0 0 10px #fbbf24cc,0 0 18px #f59e0b80;transform:scale(1)}
+  50%{box-shadow:0 0 0 1px #0006,0 2px 8px #000a,0 0 16px #fde047,0 0 30px #f59e0bcc;transform:scale(1.06)}}
+@keyframes mhHomeEventBadgeShine{0%{left:-60%}55%{left:120%}100%{left:120%}}
+@media(prefers-reduced-motion:reduce){
+  .mh-home-event-badge{animation:none;transform:none}
+  .mh-home-event-badge::after{display:none}}
+`;
 function HomeScreen({
   assistantBondUp,
   breederIcon,
@@ -31533,6 +31556,17 @@ function HomeScreen({
   resolveIconUrl,
   spotClass
 }) {
+  // ★バッジのCSSは <head> へ1回だけ入れる。HOMEのDOMへ <style> を混ぜると、
+  //   配置の検査(home-layout-check.js)が施設の位置を測るときに数がずれる。
+  //   head なら画面の中身に影響しない。
+  React.useEffect(() => {
+    if (typeof document === 'undefined') return;
+    if (document.getElementById('mh-home-event-badge-css')) return;
+    const tag = document.createElement('style');
+    tag.id = 'mh-home-event-badge-css';
+    tag.textContent = HOME_EVENT_BADGE_CSS;
+    document.head.appendChild(tag);
+  }, []);
   // モンヒロビートのイベントを開催しているか。描くたびに数え直す(上の★のとおり)
   const homeRhythmEventOpen = (() => {
     const released = typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS && RELEASE_FLAGS.rhythmWeeklyRanking === true;
@@ -31618,8 +31652,9 @@ function HomeScreen({
     "aria-label": RHYTHM_MODE_PUBLIC_RELEASE ? "モンヒロビート" : "モンヒロビート（準備中）"
   }, /*#__PURE__*/React.createElement("span", null, "\uD83C\uDFB5 \u30E2\u30F3\u30D2\u30ED\u30D3\u30FC\u30C8", !RHYTHM_MODE_PUBLIC_RELEASE && /*#__PURE__*/React.createElement("small", null, "\u6E96\u5099\u4E2D"), homeRhythmEventOpen && /*#__PURE__*/React.createElement("em", {
     "data-home-event-badge": true,
+    className: "mh-home-event-badge",
     style: HOME_EVENT_BADGE_STYLE
-  }, "\uD83C\uDFC6 \u958B\u50AC\u4E2D"))), /*#__PURE__*/React.createElement("button", {
+  }, "\u2728\u958B\u50AC\u4E2D\u2728"))), /*#__PURE__*/React.createElement("button", {
     className: `mh-home-facility battle${spotClass('battle')}`,
     onClick: onOpenBattle,
     "aria-label": "\u30D0\u30C8\u30EB"
