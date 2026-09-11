@@ -242,7 +242,7 @@ function PickHeroAllyScreen({
               mon: m,
               selected: proHeroPreset?.heroBaseId===m.id,
               disabled: !scenarioPicksHero(m.id),
-              onSelect: ()=>{if(proHeroPreset?.heroBaseId===m.id){setupMon(m,proHeroPreset.heroDistance);return;}setProHeroPreset(null);setCurrentPickingMon(m);advanceRunStage('PICK_SLOT');},
+              onSelect: ()=>{setProHeroPreset(null);setCurrentPickingMon(m);advanceRunStage('PICK_SLOT');},
               onDetail: ()=>setCurrentPickingMon(m),
               selectLabel: `${m.name}を勇者モンに選ぶ`,
               activeClass: 'active:bg-indigo-900/30',

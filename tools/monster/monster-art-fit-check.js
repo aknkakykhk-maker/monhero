@@ -113,8 +113,8 @@ check('プロモードの横長カードが共通部品にまとまっている'
   const rowMarkup = (source.match(/grid grid-cols-\[64px_minmax\(0,1fr\)_74px\]/g) || []).length;
   check('カード本体のJSXが1か所だけ(画面ごとに複製していない)', rowMarkup === 1, `${rowMarkup}か所`);
 }
-check('勇者モンを選択が共通部品を使っている',
-  has("onSelect: ()=>{if(proHeroPreset?.heroBaseId===m.id){setupMon(m,proHeroPreset.heroDistance);return;}setProHeroPreset(null);setCurrentPickingMon(m);advanceRunStage('PICK_SLOT');},"));
+check('勇者モンを選択が共通部品を使い、前回勇者でも配置距離へ進む',
+  has("onSelect: ()=>{setProHeroPreset(null);setCurrentPickingMon(m);advanceRunStage('PICK_SLOT');},"));
 check('供モンの候補が共通部品を使っている',
   has('onSelect:()=>changeAlly(m)') && has('onDetail:()=>setProAllyDetail(m)'));
 
