@@ -3,6 +3,7 @@
 const fs=require('fs');
 const path=require('path');
 const source=fs.readFileSync(path.resolve(__dirname,'../../monster-hero/src/game-system.jsx'),'utf8');
+const { screenSource }=require(path.resolve(__dirname,'..','harness'));
 const fail=message=>{throw new Error(message);};
 const has=token=>source.includes(token);
 const between=(from,to)=>{const start=source.indexOf(from),end=source.indexOf(to,start+from.length);if(start<0||end<0)fail(`${from} の範囲を取得できません`);return source.slice(start,end);};
@@ -24,7 +25,10 @@ for(const token of [
 const stopAll=between("const stopAllAuto = (reason = '') => {",'const [monSelection');
 if(!stopAll.includes("setEcoModeSafe('off')"))fail('stopAllAutoで省エネをOFFにしていません');
 
-const battle=between("{gameState==='BATTLE'&&(",' {/* スキップ: 勇者モンと供モン3体を選ぶ */}'.trimStart());
+// バトル画面は 71-screen-battle.jsx へ切り出した。呼び出しの位置から次の画面までを
+// 切り取ると props しか読めないので、コンポーネント本体を読む
+const battle=screenSource('BATTLE','BattleScreen');
+if(!battle)fail('バトル画面を取得できません');
 for(const token of [
   "data-eco-view={ultraBattleView?'ultra':liteBattleView?'lite':'off'}",
   'data-lite-eco-dimmer','bg-black/20','data-ultra-battle-view',
@@ -66,9 +70,9 @@ for(const token of [
 const turn=between('const processTurn = async','// 今回はUIやeffectから呼ばず');
 if(/(?:lite|ultra|eco)BattleView|ecoMode|ecoModeRef/.test(turn))fail('戦闘計算へ省エネ判定が混入しています');
 for(const token of ['return processTurn(entries)','const battleWait = useCallback((baseMs)','BATTLE_SPEEDS','cycleBattleSpeed'])if(!has(token))fail(`既存wait/速度処理 ${token} がありません`);
-const championStart=source.indexOf("{gameState==='CHAMPION'");
-if(championStart<0)fail('CHAMPION画面を取得できません');
-const champion=source.slice(championStart,championStart+5000);
+// CHAMPION も 68-screen-run-result.jsx へ切り出してある
+const champion=screenSource('CHAMPION','ChampionScreen');
+if(!champion)fail('CHAMPION画面を取得できません');
 if(/(?:lite|ultra|eco)BattleView|ecoMode|data-(?:lite|ultra)/.test(champion))fail('CHAMPION報酬演出へ省エネが接続されています');
 
 const repeatToggle=between('const setAutoRepeatEnabled = (enabled) => {','// 特殊ルール説明を閉じる正規経路');
@@ -76,9 +80,13 @@ if(!repeatToggle.includes('const next=!!enabled&&isQuickMode(runMode)'))fail('�
 if(!repeatToggle.includes("if(!next)setEcoModeSafe('off')"))fail('AUTO∞ OFF時に省エネをOFFにしていません');
 for(const token of ['flex-1 min-w-0 flex flex-wrap','min-h-[44px] min-w-[84px] shrink-0'])if(!battle.includes(token))fail('ACTION見切れ防止レイアウトが維持されていません');
 if(/['"]mh_[^'"]*eco/i.test(source)||/localStorage[\s\S]{0,160}(?:ecoMode|eco_mode)/i.test(source))fail('省エネ状態を永続化しています');
-const controls=between('<span className={`flex-1 min-w-0 flex flex-wrap','{/* 使うカードが決まっている番は');
+const controlsFrom=battle.indexOf('<span className={`flex-1 min-w-0 flex flex-wrap');
+const controlsTo=battle.indexOf('{/* 使うカードが決まっている番は',controlsFrom);
+if(controlsFrom<0||controlsTo<0)fail('省エネ切替UIの範囲を取得できません');
+const controls=battle.slice(controlsFrom,controlsTo);
 for(const token of [
-  "gameState==='BATTLE'&&isQuickMode(runMode)&&autoRepeat===true",
+  // 画面は gameState を知らない約束なので、本体から battleScreenActive として渡している
+  "battleScreenActive&&isQuickMode(runMode)&&autoRepeat===true",
   'onClick={cycleEcoMode}',
   "ecoMode==='lite'?'簡易':ecoMode==='ultra'?'超':'OFF'",
   'w-[44px] shrink-0 flex flex-col',
