@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b96838a289830d63
+// generated-sha256: 6173dfd4f0e887c8
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 15:32"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 15:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -19938,6 +19938,44 @@ function MonsterHeroGame() {
     setRhythmEventStoryPending(null);
     setEventReplay({ id: storyId, step: 0, live: true });
   }, [rhythmEventStoryPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay]);
+  // ★開催の時刻になった瞬間に遊んでいた人にも届ける。
+  //   「開催中か」を見ていたのは起動したときの1回だけだったので、15:00より前から
+  //   ゲームを開いたままだった人には、会話も助手の告知も出なかった
+  //   (2026-09-11・ユーザー指摘「やってる最中の人が見れてないらしい」)。
+  //   1分おきに見に行くだけで、流すのは上の useEffect(HOMEに着いてから)。
+  //   バトルや演奏の最中に割り込むことはない。
+  //   ★お知らせ一覧(更新履歴)の NEW は、読み込んだときに決まるので次に開き直したときに出る。
+  //     ここで作り直すと既読の数え方まで作り直すことになるため、そこまではやらない。
+  const rhythmEventLiveCatchUpRef = useRef(false);
+  useEffect(() => {
+    if (RELEASE_FLAGS.rhythmWeeklyRanking !== true) return;
+    if (bootPhase !== 'GAME' || !onboarded) return;
+    let stopped = false;
+    const look = async () => {
+      if (stopped) return;
+      if (!rhythmLimitedEventAt(Date.now())) return;
+      // ① 会話。まだ見ていなければ、HOMEに着いたところで流す
+      if (!normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(MONBEAT_CUP_STORY_ID)) {
+        setRhythmEventStoryPending(prev => prev || MONBEAT_CUP_STORY_ID);
+      }
+      // ② 助手の告知。起動したときに作った行列には入っていないので、1度だけ組み直す。
+      //    組み直すのは起動時とまったく同じ道すじ(planUpdateNoticesForLogin)なので、
+      //    すでに見たものが未読へ戻ることはない
+      if (rhythmEventLiveCatchUpRef.current) return;
+      rhythmEventLiveCatchUpRef.current = true;
+      try {
+        const seen = normalizeSeenUpdateNoticeIds(await storeGet(UPDATE_NOTICE_SEEN_KEY, [], false));
+        const plan = planUpdateNoticesForLogin(availableUpdateNotices(), seen);
+        if (plan.queue.length === 0) return;
+        if (plan.seen.length !== seen.length) await storeSet(UPDATE_NOTICE_SEEN_KEY, plan.seen, false);
+        // 出している最中の案内を横取りしない
+        setUpdateGuideQueue(queue => (queue.length > 0 ? queue : plan.queue));
+      } catch {}
+    };
+    look();
+    const timer = setInterval(look, 60000);
+    return () => { stopped = true; clearInterval(timer); };
+  }, [bootPhase, onboarded]);
   // ---- イベント報酬の受け取り(docs/spec/RHYTHM_RANKING.md §9.1) ----
   // サーバー処理を持たないので、イベントが終わったあとに端末が順位を問い合わせ、
   // その場で受け取る。受け取ったイベントのIDを新しい保存キーへ残して二重受取を防ぐ(CLAUDE.md ⑦)。
@@ -30549,8 +30587,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   (2026-09-11・ユーザー指摘「名前呼びのとこが変換されてない」)。
                   呼び方も絆Lvも助手ごとに違うので、選んでいる助手ではなく「話している助手」から引く */}
               <span className="block text-[13px] font-bold leading-relaxed text-white mt-1">{(()=>{
+                // ★呼び方は normalizeAssistantBond には入っていない(別の入れ物 assistantCallStyles)。
+                //   bond.callStyle を見ていたので、いつも絆Lvの既定の呼び方になっていた
+                //   (2026-09-11・ユーザー指摘「ここは現在設定されてる呼び方にならない？」)。
+                //   絆Lvも呼び方も助手ごとに違うので、両方とも話している助手のぶんを引く
                 const bond=normalizeAssistantBond(assistantBonds[speaker.id]);
-                return assistantSpeakText(line.t,breederName,assistantBondLevelOf(bond.points),bond.callStyle,speaker.id);
+                return assistantSpeakText(line.t,breederName,assistantBondLevelOf(bond.points),assistantCallStyles[speaker.id]||null,speaker.id);
               })()}</span>
             </div>
             <p className="mt-2 text-center text-[8px] text-slate-500">
