@@ -39,7 +39,7 @@ const context={console};
 vm.createContext(context);
 vm.runInContext(`${demoIds}\n${eventData}\n`
   +'this.out={RHYTHM_WEEK_MS,RHYTHM_WEEK_ANCHOR_MS,RHYTHM_WEEKLY_ROTATION,RHYTHM_EVENTS,RHYTHM_DEMO_SONG_IDS,'
-  +'rhythmWeekStartMs,rhythmWeekWindow,rhythmWeekIndex,rhythmWeekId,rhythmWeeklyEvent,rhythmActiveEvent,'
+  +'rhythmWeekStartMs,rhythmWeekWindow,rhythmWeekIndex,rhythmWeekId,rhythmWeeklyEvent,rhythmActiveEvent,rhythmLimitedEventAt,'
   +'rhythmEventWindow,rhythmEventRemainingText,rhythmEventDivisions,rhythmEventDivisionSongId,rhythmEventSong,'
   +'rhythmEventPeriodText,rhythmEventSongsLabel,rhythmEventDivisionReward,rhythmEventRewardForRank,rhythmEventHasRewards,'
   +'rhythmEventSongDivisionId,RHYTHM_EVENT_REWARD_RANKS,rhythmEventsAwaitingReward,'
@@ -198,10 +198,21 @@ check('開始・終了の境界で入れ替わる',limited.every(e=>{
   return at(start-1).kind==='weekly'&&at(start).id===e.id
     &&at(end-1).id===e.id&&at(end).kind==='weekly';
 }));
-check('期間限定のあいだは週間を休む(その週の週間が出てこない)',limited.every(e=>{
+// ★2026-09-11・ユーザー指示「週間ランキングとイベントランキングは別々に作ったほうがいい」。
+//   もとの仕様(§7)の「期間限定のあいだ週間を休む」は取り消した。両方が同時に動く。
+check('期間限定のあいだも週間は止まらない',limited.every(e=>{
   const mid=(Date.parse(e.startAt)+Date.parse(e.endAt))/2;
-  return O.rhythmActiveEvent(mid).kind==='limited';
+  return !!O.rhythmWeeklyEvent(mid)&&!!O.rhythmLimitedEventAt(mid);
 }));
+check('画面はタブを分けている(週間 / イベント)',
+  screen.includes("{id:'weekly',label:'週間'}")&&screen.includes("{id:'event',label:'イベント'}")
+  &&screen.includes("const boardKind=rhythmRankingTab==='weekly'?'weekly':"));
+check('開催していないあいだはイベントのタブを出さない',
+  screen.includes('...(eventReleased&&limitedEvent?[{id:\'event\',label:\'イベント\'}]:[]),'));
+check('週間とイベントの読み込みは別々に持つ',
+  app.includes("const loadRhythmEventRanking = useCallback(async (kind, divisionId) =>")
+  &&app.includes("useState({ weekly:RHYTHM_BOARD_EMPTY, limited:RHYTHM_BOARD_EMPTY })")
+  &&screen.includes('const event=(boardKind&&boards[boardKind])||'));
 check('期間限定の期間は定義の日時そのまま',limited.every(e=>{
   const range=O.rhythmEventWindow(e,null);
   return !!range&&range.startMs===Date.parse(e.startAt)&&range.endMs===Date.parse(e.endAt);
@@ -270,7 +281,7 @@ check('画面に部門ごとの報酬を出す',
 check('画面は期間の文と対象曲の見出しを出し分ける',
   screen.includes('rhythmEventPeriodText(eventDefinition,eventRange)')
   &&screen.includes('rhythmEventSongsLabel(rhythmEventNotice)')
-  &&screen.includes("const eventLimited=!!eventDefinition&&eventDefinition.kind==='limited';"));
+  &&screen.includes("const eventLimited=boardKind==='limited';"));
 
 // ④ 部門と点数
 {
@@ -315,9 +326,10 @@ check('曲名はデータから引き、副題まで入れる',
 check('週の窓はサーバーから受け取る',
   supa.includes("/rest/v1/rhythm_week_window?select=week_start,week_end")
   &&supa.includes('const sbFetchRhythmWeekWindow ='));
-check('端末の時計で期間を決めていない',
-  app.includes('const weekWindow = await sbFetchRhythmWeekWindow(')
-  &&app.includes('rhythmActiveEvent(Date.now(), weekWindow.startMs)'));
+// 週間の期間の正本はサーバー。期間限定は定義に書いた日時をそのまま使うので聞きに行かない
+check('週間の期間はサーバーから受け取る',
+  app.includes('const weekWindow = kind === \'weekly\' ? await sbFetchRhythmWeekWindow(')
+  &&app.includes("rhythmWeeklyEvent(weekWindow.startMs) : rhythmLimitedEventAt(Date.now())"));
 check('期間×対象曲の集計は関数を呼ぶ',
   supa.includes('/rest/v1/rpc/rhythm_event_song_bests')&&supa.includes('/rest/v1/rpc/rhythm_event_totals'));
 check('対象曲は配列で渡す(3曲でも5曲でも同じ関数)',
@@ -327,7 +339,7 @@ check('並び順は点の降順、同点は先に到達したほうが上',
 check('表示件数は50件',/const RHYTHM_EVENT_RANKING_DISPLAY_LIMIT = 50;/.test(supa));
 check('関数が無いときは「準備中」として扱う(エラーにしない)',
   supa.includes('const rhythmEventRankingMissing =')&&supa.includes('error.notReady = true;')
-  &&app.includes("setRhythmEventRanking({ status:'notReady'")
+  &&app.includes("setRhythmBoard(kind, { status:'notReady'")
   &&screen.includes('data-rhythm-event-not-ready'));
 check('自分の行はIDと名前の両方から探す',app.includes('rhythmTotalRankingSelfKeys(breederId, breederName)'));
 check('壊れた行でも数として扱う',
@@ -336,11 +348,11 @@ check('壊れた行でも数として扱う',
 // 画面の結線
 check('タブにイベントを出している',
   screen.includes("{id:'event',label:'イベント'}")&&screen.includes('data-rhythm-ranking-tabs'));
-check('イベントタブを初めて開いたときだけ取りにいく',
-  screen.includes("if(tab==='event'&&event.status==='idle')loadRhythmEventRanking"));
+check('週間・イベントのタブを初めて開いたときだけ取りにいく',
+  screen.includes("if(kind&&(!boards[kind]||boards[kind].status==='idle'))loadRhythmEventRanking"));
 check('部門も初めて開いたときだけ取りにいく',
   screen.includes('const openDivision=(divisionId)=>{')&&screen.includes("if(!board||board.status==='idle')loadRhythmEventRanking"));
-check('更新ボタンは開いているタブのほうを読み直す',screen.includes('if(eventTab)loadRhythmEventRanking&&loadRhythmEventRanking(eventDivisionId);'));
+check('更新ボタンは開いているタブのほうを読み直す',screen.includes('if(boardTab)loadRhythmEventRanking&&loadRhythmEventRanking(boardKind,eventDivisionId);'));
 check('残り時間を出している',screen.includes('data-rhythm-event-remaining')&&screen.includes('rhythmEventRemainingText('));
 check('自分の記録を上に固定で出す',screen.includes('data-rhythm-event-self-empty')&&screen.includes('eventBoard.self'));
 check('開催していないときは「開催なし」を出す',screen.includes('data-rhythm-event-closed'));
@@ -355,8 +367,8 @@ check('この曲・総合のランキングは変えていない',
   supa.includes('const sbFetchRhythmTotalRankings = async (')
   &&supa.includes('const sbFetchRhythmRankings = async (difficultyKeys,')
   &&screen.includes("{id:'song',label:'この曲'},"));
-check('曲別の一覧はイベントタブでは出さない',
-  screen.includes('const songTab=!totalTab&&!eventTab;')
+check('曲別の一覧は週間・イベントのタブでは出さない',
+  screen.includes('const songTab=!totalTabOpen&&!boardTab;')
   &&screen.includes("{songTab&&rhythmRanking.status==='ready'&&rhythmRanking.entries.length>0&&"));
 check('週間の結果を端末へ書き戻していない(自己ベストは触らない)',
   !app.includes('saveRhythmBestRecord(rhythmEventRanking')&&!app.includes('mh_rhythm_best_v1')||true);
@@ -372,7 +384,7 @@ check('公開フラグを持っている',
   released?'公開中':'未公開');
 check('画面はフラグでタブごと出し分ける',
   screen.includes('const eventReleased=RELEASE_FLAGS.rhythmWeeklyRanking===true;')
-  &&screen.includes('const eventTab=eventReleased&&'));
+  &&screen.includes('const boardTab=eventReleased&&!!boardKind;'));
 check('曲えらびの案内も同じフラグで出す',
   app.includes('const rhythmEventReleased = RELEASE_FLAGS.rhythmWeeklyRanking === true;')
   &&app.includes('const rhythmSongSelectEvent = rhythmEventReleased ?'));
@@ -396,8 +408,9 @@ check('公開したら助手のひとことも週間に触れる',(()=>{
 })(),released?'':'未公開のあいだは対象外');
 
 // 案内(CLAUDE.md ⑤)
-check('ヘルプに週間の説明がある',
-  help.includes('「イベント」タブ（週間ランキング）')&&help.includes('毎週月曜 5:00'));
+check('ヘルプに週間とイベントの説明がある',
+  help.includes("title:'「週間」タブ'")&&help.includes('毎週月曜 5:00')
+  &&help.includes('「イベント」タブ（期間限定イベント）'));
 check('ヘルプに曲数を書き写していない',
   [...(help.split("id:'rhythm-ranking'")[1]||'').matchAll(/(\d+)\s*曲/g)]
     .map(m=>m[0]).filter(t=>Number(t.replace(/[^\d]/g,''))===published).length===0);

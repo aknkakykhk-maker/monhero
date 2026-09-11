@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0913f773683b7ac7
+// source-sha256: ee1b11c0b71207e5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 0f3e29b88a27a3ab
+// generated-sha256: c426c8a9f2d32abd
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 11:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 12:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -24859,14 +24859,22 @@ function RhythmRankingScreen({
   // 曲数も理論満点もデータから作る。曲が増えても、ここは書き換えない
   // (docs/spec/RHYTHM_RANKING.md §5.1)
   const totalSongCount = rhythmTotalRankingSongCount(RHYTHM_SONGS);
-  // 週間ランキング(2026-09-11・docs/spec/RHYTHM_RANKING.md §6)。
+  // 週間ランキングとイベントランキング(2026-09-11・docs/spec/RHYTHM_RANKING.md §6・§7)。
+  // ★2026-09-11・ユーザー指示「週間ランキングとイベントランキングは別々に作ったほうがいい」。
+  //   タブを分け、両方を同時に動かす。週末イベントの裏でもいつもの週間は進む。
   // ★ここも公開フラグが立つまでタブごと出さない。期間の窓と集計はSupabase側の
   //   ビュー・関数が行うので、SQLを適用するまで中身が出せない(総合タブと同じ考え方)。
   // ★部門(対象曲ごと＋総合)の数は対象曲の数から作る。3曲でも5曲でも画面は書き換えない。
   const eventReleased = RELEASE_FLAGS.rhythmWeeklyRanking === true;
-  const eventTab = eventReleased && rhythmRankingTab === 'event';
-  const songTab = !totalTab && !eventTab;
-  const event = rhythmEventRanking || {
+  // 期間限定は開催しているときだけタブを出す。開催の判定は端末の時計でよい
+  // (順位の期間はサーバーから受け取ったもの・定義に書いた日時を使う)
+  const limitedEvent = eventReleased ? rhythmLimitedEventAt(Date.now()) : null;
+  const boardKind = rhythmRankingTab === 'weekly' ? 'weekly' : rhythmRankingTab === 'event' && limitedEvent ? 'limited' : null;
+  const boardTab = eventReleased && !!boardKind;
+  const totalTabOpen = totalTab && !boardTab;
+  const songTab = !totalTabOpen && !boardTab;
+  const boards = rhythmEventRanking || {};
+  const event = boardKind && boards[boardKind] || {
     status: 'idle',
     window: null,
     event: null,
@@ -24874,7 +24882,8 @@ function RhythmRankingScreen({
   };
   const eventDefinition = event.event || null;
   const eventDivisions = eventDefinition ? rhythmEventDivisions(eventDefinition, RHYTHM_SONGS) : [];
-  const eventDivisionId = eventDivisions.some(division => division.id === rhythmEventDivision) ? rhythmEventDivision : RHYTHM_EVENT_TOTAL_DIVISION;
+  const wantedDivision = rhythmEventDivision && boardKind && rhythmEventDivision[boardKind] || RHYTHM_EVENT_TOTAL_DIVISION;
+  const eventDivisionId = eventDivisions.some(division => division.id === wantedDivision) ? wantedDivision : RHYTHM_EVENT_TOTAL_DIVISION;
   const eventBoard = event.boards && event.boards[eventDivisionId] || {
     status: 'idle',
     entries: [],
@@ -24883,7 +24892,7 @@ function RhythmRankingScreen({
   const eventSongId = rhythmEventDivisionSongId(eventDivisionId);
   const eventRange = rhythmEventWindow(eventDefinition, event.window);
   const eventSongCount = eventDefinition ? eventDefinition.songIds.length : 0;
-  // その部門の報酬(1位から順に)。報酬を持たないイベント(週間)では空になる
+  // その部門の報酬(1位から順に)。報酬を持たない週間ランキングでは空になる
   const eventRewardRanks = eventDefinition ? Array.from({
     length: RHYTHM_EVENT_REWARD_RANKS
   }, (_, index) => ({
@@ -24891,16 +24900,16 @@ function RhythmRankingScreen({
     reward: rhythmEventRewardForRank(eventDefinition, eventDivisionId, index + 1)
   })).filter(entry => !!entry.reward) : [];
   const eventReward = eventRewardRanks.length > 0;
-  const eventLimited = !!eventDefinition && eventDefinition.kind === 'limited';
+  const eventLimited = boardKind === 'limited';
   // 残り時間だけは端末の時計で数える(1秒ごとにサーバーへ聞きに行かないため・§6.1)。
   // 30秒ごとに数え直せば「残り ◯時間 ◯分」の表示には足りる
   const [eventNowMs, setEventNowMs] = React.useState(() => Date.now());
   React.useEffect(() => {
-    if (!eventTab) return undefined;
+    if (!boardTab) return undefined;
     setEventNowMs(Date.now());
     const timer = setInterval(() => setEventNowMs(Date.now()), 30000);
     return () => clearInterval(timer);
-  }, [eventTab]);
+  }, [boardTab]);
   const rankingTabs = [{
     id: 'song',
     label: 'この曲'
@@ -24908,6 +24917,11 @@ function RhythmRankingScreen({
     id: 'total',
     label: '総合'
   }] : []), ...(eventReleased ? [{
+    id: 'weekly',
+    label: '週間'
+  }] : []),
+  // 開催していないあいだはイベントのタブそのものを出さない
+  ...(eventReleased && limitedEvent ? [{
     id: 'event',
     label: 'イベント'
   }] : [])];
@@ -24915,16 +24929,21 @@ function RhythmRankingScreen({
     setRhythmRankingTab(tab);
     // 初めて開いたときだけ取りにいく。タブを往復するたびに通信しない
     if (tab === 'total' && total.status === 'idle') loadRhythmTotalRanking && loadRhythmTotalRanking();
-    if (tab === 'event' && event.status === 'idle') loadRhythmEventRanking && loadRhythmEventRanking(eventDivisionId);
+    const kind = tab === 'weekly' ? 'weekly' : tab === 'event' ? 'limited' : null;
+    if (kind && (!boards[kind] || boards[kind].status === 'idle')) loadRhythmEventRanking && loadRhythmEventRanking(kind, RHYTHM_EVENT_TOTAL_DIVISION);
   };
   // 部門も、初めて開いたときだけ取りにいく
   const openDivision = divisionId => {
-    setRhythmEventDivision && setRhythmEventDivision(divisionId);
+    if (!boardKind) return;
+    setRhythmEventDivision && setRhythmEventDivision(prev => ({
+      ...prev,
+      [boardKind]: divisionId
+    }));
     const board = event.boards && event.boards[divisionId];
-    if (!board || board.status === 'idle') loadRhythmEventRanking && loadRhythmEventRanking(divisionId);
+    if (!board || board.status === 'idle') loadRhythmEventRanking && loadRhythmEventRanking(boardKind, divisionId);
   };
   const refresh = () => {
-    if (eventTab) loadRhythmEventRanking && loadRhythmEventRanking(eventDivisionId);else if (totalTab) loadRhythmTotalRanking && loadRhythmTotalRanking();else loadRhythmRanking(song);
+    if (boardTab) loadRhythmEventRanking && loadRhythmEventRanking(boardKind, eventDivisionId);else if (totalTabOpen) loadRhythmTotalRanking && loadRhythmTotalRanking();else loadRhythmRanking(song);
   };
   const totalRow = (entry, rank, mine) => /*#__PURE__*/React.createElement("div", {
     "data-rhythm-total-row": true,
@@ -25015,7 +25034,7 @@ function RhythmRankingScreen({
     style: {
       paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))'
     }
-  }, totalTab && /*#__PURE__*/React.createElement(React.Fragment, null, total.status === 'loading' && /*#__PURE__*/React.createElement("p", {
+  }, totalTabOpen && /*#__PURE__*/React.createElement(React.Fragment, null, total.status === 'loading' && /*#__PURE__*/React.createElement("p", {
     "data-rhythm-total-loading": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
   }, "\u8AAD\u307F\u8FBC\u307F\u4E2D\u2026"), total.status === 'notReady' && /*#__PURE__*/React.createElement("p", {
@@ -25043,7 +25062,7 @@ function RhythmRankingScreen({
     className: "space-y-2"
   }, total.entries.map((entry, index) => /*#__PURE__*/React.createElement("li", {
     key: `${entry.identityKey}-${index}`
-  }, totalRow(entry, index + 1, !!total.self && entry.identityKey === total.self.identityKey)))))), eventTab && /*#__PURE__*/React.createElement(React.Fragment, null, event.status === 'loading' && /*#__PURE__*/React.createElement("p", {
+  }, totalRow(entry, index + 1, !!total.self && entry.identityKey === total.self.identityKey)))))), boardTab && /*#__PURE__*/React.createElement(React.Fragment, null, event.status === 'loading' && /*#__PURE__*/React.createElement("p", {
     "data-rhythm-event-loading": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
   }, "\u8AAD\u307F\u8FBC\u307F\u4E2D\u2026"), event.status === 'notReady' && /*#__PURE__*/React.createElement("p", {
@@ -33725,28 +33744,54 @@ function MonsterHeroGame() {
       });
     }
   }, [breederName]);
-  // 週間ランキング(2026-09-11・docs/spec/RHYTHM_RANKING.md §6)。
-  // その週のあいだに出した記録だけで競う。常設の合算(総合タブ)とは別枠で、互いに影響しない。
+  // 週間ランキングとイベントランキング(2026-09-11・docs/spec/RHYTHM_RANKING.md §6・§7)。
+  // どちらも「決まった期間のあいだに出した記録だけ」で競う。常設の合算(総合タブ)とは別枠。
   //
+  // ★2026-09-11・ユーザー指示「週間ランキングとイベントランキングは別々に作ったほうがいい」。
+  //   もとの仕様(§7)は「期間限定を開くあいだ週間を休む」だったが、**同時に動かす**ことにした。
+  //   タブも別なので、週末イベントの裏でいつもの週間も進む。
+  //   報酬が付くのはイベントだけなので、「どちらの報酬か分からなくなる」ことは起きない。
   // ★期間の正本はサーバー(rhythm_week_window)。端末の時計を進めても週は変わらない。
-  //   対象曲はクライアント側の静的データ(data/rhythm-event.js)で、SQLは対象曲を知らない。
+  //   期間限定のほうは、定義に書いた開始・終了をそのまま使う。
+  // ★対象曲はクライアント側の静的データ(data/rhythm-event.js)で、SQLは対象曲を知らない。
   // ★部門は「対象曲ごと＋総合」。開いた部門だけを取りにいく(往復するたびに通信しない)。
+  //
+  // 状態は kind('weekly' / 'limited')ごとに分けて持つ。片方を読み込んでも、もう片方は消えない。
   // status:'notReady' は「関数をまだ作っていない」状態。合算と同じくエラー扱いにしない。
-  // status:'closed'   は「いま開催しているイベントが無い」状態(期間限定の合間など)。
-  const [rhythmEventDivision, setRhythmEventDivision] = useState(RHYTHM_EVENT_TOTAL_DIVISION);
-  const [rhythmEventRanking, setRhythmEventRanking] = useState({
+  // status:'closed'   は「そのkindのランキングがいま無い」状態。
+  const RHYTHM_BOARD_EMPTY = {
     status: 'idle',
     window: null,
     event: null,
     boards: {},
     error: null
+  };
+  const [rhythmEventDivision, setRhythmEventDivision] = useState({
+    weekly: RHYTHM_EVENT_TOTAL_DIVISION,
+    limited: RHYTHM_EVENT_TOTAL_DIVISION
   });
-  const rhythmEventRankingRequestRef = useRef(0);
-  const loadRhythmEventRanking = useCallback(async divisionId => {
-    const requestId = ++rhythmEventRankingRequestRef.current;
+  const [rhythmEventRanking, setRhythmEventRanking] = useState({
+    weekly: RHYTHM_BOARD_EMPTY,
+    limited: RHYTHM_BOARD_EMPTY
+  });
+  const rhythmEventRankingRequestRef = useRef({
+    weekly: 0,
+    limited: 0
+  });
+  const setRhythmBoard = (kind, update) => setRhythmEventRanking(prev => ({
+    ...prev,
+    [kind]: typeof update === 'function' ? update(prev[kind] || RHYTHM_BOARD_EMPTY) : update
+  }));
+  const loadRhythmEventRanking = useCallback(async (kind, divisionId) => {
+    if (kind !== 'weekly' && kind !== 'limited') return;
+    const requestId = (rhythmEventRankingRequestRef.current[kind] || 0) + 1;
+    rhythmEventRankingRequestRef.current = {
+      ...rhythmEventRankingRequestRef.current,
+      [kind]: requestId
+    };
     const wanted = divisionId || RHYTHM_EVENT_TOTAL_DIVISION;
-    const stale = () => rhythmEventRankingRequestRef.current !== requestId;
-    setRhythmEventRanking(prev => ({
+    const stale = () => rhythmEventRankingRequestRef.current[kind] !== requestId;
+    setRhythmBoard(kind, prev => ({
       ...prev,
       status: prev.status === 'ready' ? 'ready' : 'loading',
       error: null,
@@ -33762,15 +33807,15 @@ function MonsterHeroGame() {
     try {
       const breederId = await ensureBreederId();
       const selfKeys = rhythmTotalRankingSelfKeys(breederId, breederName);
-      const weekWindow = await sbFetchRhythmWeekWindow({
+      // 週間は期間の正本がサーバーにある。期間限定は定義の日時をそのまま使うので聞きに行かない
+      const weekWindow = kind === 'weekly' ? await sbFetchRhythmWeekWindow({
         requestId: `rhythm-week-${Date.now()}`
-      });
+      }) : null;
       if (stale()) return;
-      // 週の始まりはサーバーのものを使う。対象曲はその週に対応する組を静的データから引く
-      const event = rhythmActiveEvent(Date.now(), weekWindow.startMs);
+      const event = kind === 'weekly' ? rhythmWeeklyEvent(weekWindow.startMs) : rhythmLimitedEventAt(Date.now());
       const range = rhythmEventWindow(event, weekWindow);
       if (!event || !range) {
-        setRhythmEventRanking({
+        setRhythmBoard(kind, {
           status: 'closed',
           window: weekWindow,
           event: null,
@@ -33779,9 +33824,9 @@ function MonsterHeroGame() {
         });
         return;
       }
-      // 週が変わっていたら、前の週ぶんの一覧は捨てる(古い順位を見せない)
+      // 週(またはイベント)が変わっていたら、前のぶんの一覧は捨てる(古い順位を見せない)
       const keepBoards = prev => prev.event && prev.event.id === event.id ? prev.boards : {};
-      // 押した部門が今のイベントに無いとき(週をまたいだ直後など)は総合へ倒す
+      // 押した部門がいまの対象曲に無いとき(週をまたいだ直後など)は総合へ倒す
       const songId = rhythmEventDivisionSongId(wanted);
       const division = songId && event.songIds.includes(songId) ? wanted : RHYTHM_EVENT_TOTAL_DIVISION;
       const targetSongId = rhythmEventDivisionSongId(division);
@@ -33798,7 +33843,7 @@ function MonsterHeroGame() {
       });
       const fromRow = targetSongId ? rhythmEventSongEntryFromRow : rhythmEventTotalEntryFromRow;
       const rows = await fetchRows({
-        requestId: `rhythm-event-${division}-${Date.now()}`
+        requestId: `rhythm-${kind}-${division}-${Date.now()}`
       });
       if (stale()) return;
       const entries = (Array.isArray(rows) ? rows : []).map(fromRow);
@@ -33812,7 +33857,7 @@ function MonsterHeroGame() {
         const mine = await fetchRows({
           limit: selfKeys.length,
           identityKeys: selfKeys,
-          requestId: `rhythm-event-${division}-self-${Date.now()}`
+          requestId: `rhythm-${kind}-${division}-self-${Date.now()}`
         });
         if (stale()) return;
         const mineEntries = (Array.isArray(mine) ? mine : []).map(fromRow);
@@ -33823,7 +33868,7 @@ function MonsterHeroGame() {
           rank: null
         };
       }
-      setRhythmEventRanking(prev => ({
+      setRhythmBoard(kind, prev => ({
         status: 'ready',
         window: weekWindow,
         event,
@@ -33837,11 +33882,14 @@ function MonsterHeroGame() {
           }
         }
       }));
-      setRhythmEventDivision(division);
+      setRhythmEventDivision(prev => ({
+        ...prev,
+        [kind]: division
+      }));
     } catch (e) {
       if (stale()) return;
       if (e?.notReady) {
-        setRhythmEventRanking({
+        setRhythmBoard(kind, {
           status: 'notReady',
           window: null,
           event: null,
@@ -33850,8 +33898,8 @@ function MonsterHeroGame() {
         });
         return;
       }
-      console.error('[rhythm-event-ranking] fetch failed:', e && e.message ? e.message : e);
-      setRhythmEventRanking(prev => ({
+      console.error(`[rhythm-${kind}-ranking] fetch failed:`, e && e.message ? e.message : e);
+      setRhythmBoard(kind, prev => ({
         ...prev,
         status: prev.status === 'ready' ? 'ready' : 'error',
         error: e?.message || String(e),
@@ -50028,9 +50076,11 @@ function MonsterHeroGame() {
         setGameState(RHYTHM_MODE_PUBLIC_RELEASE ? 'HOME' : 'DEBUG_SETTINGS');
       },
       onOpenEventRanking: () => {
+        // 曲えらびの案内から開く。期間限定を開催中ならそちらのタブ、なければ週間のタブ
+        const kind = rhythmSongSelectEvent && rhythmSongSelectEvent.kind === 'limited' ? 'limited' : 'weekly';
         dismissRhythmEventNotice();
-        setRhythmRankingTab('event');
-        loadRhythmEventRanking(rhythmEventDivision);
+        setRhythmRankingTab(kind === 'limited' ? 'event' : 'weekly');
+        loadRhythmEventRanking(kind, rhythmEventDivision[kind]);
         setGameState('RHYTHM_RANKING');
       },
       onOpenHelp: () => {

@@ -418,59 +418,72 @@ function RhythmRankingScreen({
       // 曲数も理論満点もデータから作る。曲が増えても、ここは書き換えない
       // (docs/spec/RHYTHM_RANKING.md §5.1)
       const totalSongCount=rhythmTotalRankingSongCount(RHYTHM_SONGS);
-      // 週間ランキング(2026-09-11・docs/spec/RHYTHM_RANKING.md §6)。
+      // 週間ランキングとイベントランキング(2026-09-11・docs/spec/RHYTHM_RANKING.md §6・§7)。
+      // ★2026-09-11・ユーザー指示「週間ランキングとイベントランキングは別々に作ったほうがいい」。
+      //   タブを分け、両方を同時に動かす。週末イベントの裏でもいつもの週間は進む。
       // ★ここも公開フラグが立つまでタブごと出さない。期間の窓と集計はSupabase側の
       //   ビュー・関数が行うので、SQLを適用するまで中身が出せない(総合タブと同じ考え方)。
       // ★部門(対象曲ごと＋総合)の数は対象曲の数から作る。3曲でも5曲でも画面は書き換えない。
       const eventReleased=RELEASE_FLAGS.rhythmWeeklyRanking===true;
-      const eventTab=eventReleased&&rhythmRankingTab==='event';
-      const songTab=!totalTab&&!eventTab;
-      const event=rhythmEventRanking||{status:'idle',window:null,event:null,boards:{}};
+      // 期間限定は開催しているときだけタブを出す。開催の判定は端末の時計でよい
+      // (順位の期間はサーバーから受け取ったもの・定義に書いた日時を使う)
+      const limitedEvent=eventReleased?rhythmLimitedEventAt(Date.now()):null;
+      const boardKind=rhythmRankingTab==='weekly'?'weekly':(rhythmRankingTab==='event'&&limitedEvent?'limited':null);
+      const boardTab=eventReleased&&!!boardKind;
+      const totalTabOpen=totalTab&&!boardTab;
+      const songTab=!totalTabOpen&&!boardTab;
+      const boards=rhythmEventRanking||{};
+      const event=(boardKind&&boards[boardKind])||{status:'idle',window:null,event:null,boards:{}};
       const eventDefinition=event.event||null;
       const eventDivisions=eventDefinition?rhythmEventDivisions(eventDefinition,RHYTHM_SONGS):[];
-      const eventDivisionId=eventDivisions.some(division=>division.id===rhythmEventDivision)
-        ?rhythmEventDivision:RHYTHM_EVENT_TOTAL_DIVISION;
+      const wantedDivision=(rhythmEventDivision&&boardKind&&rhythmEventDivision[boardKind])||RHYTHM_EVENT_TOTAL_DIVISION;
+      const eventDivisionId=eventDivisions.some(division=>division.id===wantedDivision)
+        ?wantedDivision:RHYTHM_EVENT_TOTAL_DIVISION;
       const eventBoard=(event.boards&&event.boards[eventDivisionId])||{status:'idle',entries:[],self:null};
       const eventSongId=rhythmEventDivisionSongId(eventDivisionId);
       const eventRange=rhythmEventWindow(eventDefinition,event.window);
       const eventSongCount=eventDefinition?eventDefinition.songIds.length:0;
-      // その部門の報酬(1位から順に)。報酬を持たないイベント(週間)では空になる
+      // その部門の報酬(1位から順に)。報酬を持たない週間ランキングでは空になる
       const eventRewardRanks=eventDefinition
         ?Array.from({length:RHYTHM_EVENT_REWARD_RANKS},(_,index)=>({
           rank:index+1,reward:rhythmEventRewardForRank(eventDefinition,eventDivisionId,index+1),
         })).filter(entry=>!!entry.reward)
         :[];
       const eventReward=eventRewardRanks.length>0;
-      const eventLimited=!!eventDefinition&&eventDefinition.kind==='limited';
+      const eventLimited=boardKind==='limited';
       // 残り時間だけは端末の時計で数える(1秒ごとにサーバーへ聞きに行かないため・§6.1)。
       // 30秒ごとに数え直せば「残り ◯時間 ◯分」の表示には足りる
       const [eventNowMs,setEventNowMs]=React.useState(()=>Date.now());
       React.useEffect(()=>{
-        if(!eventTab)return undefined;
+        if(!boardTab)return undefined;
         setEventNowMs(Date.now());
         const timer=setInterval(()=>setEventNowMs(Date.now()),30000);
         return ()=>clearInterval(timer);
-      },[eventTab]);
+      },[boardTab]);
       const rankingTabs=[
         {id:'song',label:'この曲'},
         ...(totalReleased?[{id:'total',label:'総合'}]:[]),
-        ...(eventReleased?[{id:'event',label:'イベント'}]:[]),
+        ...(eventReleased?[{id:'weekly',label:'週間'}]:[]),
+        // 開催していないあいだはイベントのタブそのものを出さない
+        ...(eventReleased&&limitedEvent?[{id:'event',label:'イベント'}]:[]),
       ];
       const openTab=(tab)=>{
         setRhythmRankingTab(tab);
         // 初めて開いたときだけ取りにいく。タブを往復するたびに通信しない
         if(tab==='total'&&total.status==='idle')loadRhythmTotalRanking&&loadRhythmTotalRanking();
-        if(tab==='event'&&event.status==='idle')loadRhythmEventRanking&&loadRhythmEventRanking(eventDivisionId);
+        const kind=tab==='weekly'?'weekly':(tab==='event'?'limited':null);
+        if(kind&&(!boards[kind]||boards[kind].status==='idle'))loadRhythmEventRanking&&loadRhythmEventRanking(kind,RHYTHM_EVENT_TOTAL_DIVISION);
       };
       // 部門も、初めて開いたときだけ取りにいく
       const openDivision=(divisionId)=>{
-        setRhythmEventDivision&&setRhythmEventDivision(divisionId);
+        if(!boardKind)return;
+        setRhythmEventDivision&&setRhythmEventDivision(prev=>({...prev,[boardKind]:divisionId}));
         const board=event.boards&&event.boards[divisionId];
-        if(!board||board.status==='idle')loadRhythmEventRanking&&loadRhythmEventRanking(divisionId);
+        if(!board||board.status==='idle')loadRhythmEventRanking&&loadRhythmEventRanking(boardKind,divisionId);
       };
       const refresh=()=>{
-        if(eventTab)loadRhythmEventRanking&&loadRhythmEventRanking(eventDivisionId);
-        else if(totalTab)loadRhythmTotalRanking&&loadRhythmTotalRanking();
+        if(boardTab)loadRhythmEventRanking&&loadRhythmEventRanking(boardKind,eventDivisionId);
+        else if(totalTabOpen)loadRhythmTotalRanking&&loadRhythmTotalRanking();
         else loadRhythmRanking(song);
       };
       const totalRow=(entry,rank,mine)=>(
@@ -542,7 +555,7 @@ function RhythmRankingScreen({
               ・横画面の案内(RhythmLandscapeHint)  … 曲えらび・遊びかたの側にある
               ・タブごとの説明文                   … ヘルプの「全国ランキング」にある
               ・みゅあの吹き出し                   … 曲えらび(イベント開催中)にある */}
-          {totalTab&&(<>
+          {totalTabOpen&&(<>
             {total.status==='loading'&&<p data-rhythm-total-loading className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">読み込み中…</p>}
             {/* 集計のしたくがまだのとき。エラーではないので、赤い表示にはしない */}
             {total.status==='notReady'&&<p data-rhythm-total-not-ready className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">総合ランキングはただいま準備中です。もうしばらくお待ちください。</p>}
@@ -570,7 +583,7 @@ function RhythmRankingScreen({
               </ol>}
             </>)}
           </>)}
-          {eventTab&&(<>
+          {boardTab&&(<>
             {event.status==='loading'&&<p data-rhythm-event-loading className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">読み込み中…</p>}
             {/* 集計のしたくがまだのとき。エラーではないので、赤い表示にはしない */}
             {event.status==='notReady'&&<p data-rhythm-event-not-ready className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">週間ランキングはただいま準備中です。もうしばらくお待ちください。</p>}

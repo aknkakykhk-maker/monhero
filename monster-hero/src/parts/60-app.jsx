@@ -1709,22 +1709,35 @@ function MonsterHeroGame() {
       setRhythmTotalRanking({ status:'error', entries:[], self:null, error:e?.message || String(e) });
     }
   }, [breederName]);
-  // 週間ランキング(2026-09-11・docs/spec/RHYTHM_RANKING.md §6)。
-  // その週のあいだに出した記録だけで競う。常設の合算(総合タブ)とは別枠で、互いに影響しない。
+  // 週間ランキングとイベントランキング(2026-09-11・docs/spec/RHYTHM_RANKING.md §6・§7)。
+  // どちらも「決まった期間のあいだに出した記録だけ」で競う。常設の合算(総合タブ)とは別枠。
   //
+  // ★2026-09-11・ユーザー指示「週間ランキングとイベントランキングは別々に作ったほうがいい」。
+  //   もとの仕様(§7)は「期間限定を開くあいだ週間を休む」だったが、**同時に動かす**ことにした。
+  //   タブも別なので、週末イベントの裏でいつもの週間も進む。
+  //   報酬が付くのはイベントだけなので、「どちらの報酬か分からなくなる」ことは起きない。
   // ★期間の正本はサーバー(rhythm_week_window)。端末の時計を進めても週は変わらない。
-  //   対象曲はクライアント側の静的データ(data/rhythm-event.js)で、SQLは対象曲を知らない。
+  //   期間限定のほうは、定義に書いた開始・終了をそのまま使う。
+  // ★対象曲はクライアント側の静的データ(data/rhythm-event.js)で、SQLは対象曲を知らない。
   // ★部門は「対象曲ごと＋総合」。開いた部門だけを取りにいく(往復するたびに通信しない)。
+  //
+  // 状態は kind('weekly' / 'limited')ごとに分けて持つ。片方を読み込んでも、もう片方は消えない。
   // status:'notReady' は「関数をまだ作っていない」状態。合算と同じくエラー扱いにしない。
-  // status:'closed'   は「いま開催しているイベントが無い」状態(期間限定の合間など)。
-  const [rhythmEventDivision, setRhythmEventDivision] = useState(RHYTHM_EVENT_TOTAL_DIVISION);
-  const [rhythmEventRanking, setRhythmEventRanking] = useState({ status:'idle', window:null, event:null, boards:{}, error:null });
-  const rhythmEventRankingRequestRef = useRef(0);
-  const loadRhythmEventRanking = useCallback(async (divisionId) => {
-    const requestId = ++rhythmEventRankingRequestRef.current;
+  // status:'closed'   は「そのkindのランキングがいま無い」状態。
+  const RHYTHM_BOARD_EMPTY = { status:'idle', window:null, event:null, boards:{}, error:null };
+  const [rhythmEventDivision, setRhythmEventDivision] = useState({ weekly:RHYTHM_EVENT_TOTAL_DIVISION, limited:RHYTHM_EVENT_TOTAL_DIVISION });
+  const [rhythmEventRanking, setRhythmEventRanking] = useState({ weekly:RHYTHM_BOARD_EMPTY, limited:RHYTHM_BOARD_EMPTY });
+  const rhythmEventRankingRequestRef = useRef({ weekly:0, limited:0 });
+  const setRhythmBoard = (kind, update) => setRhythmEventRanking(prev => ({
+    ...prev, [kind]: typeof update === 'function' ? update(prev[kind] || RHYTHM_BOARD_EMPTY) : update,
+  }));
+  const loadRhythmEventRanking = useCallback(async (kind, divisionId) => {
+    if (kind !== 'weekly' && kind !== 'limited') return;
+    const requestId = (rhythmEventRankingRequestRef.current[kind] || 0) + 1;
+    rhythmEventRankingRequestRef.current = { ...rhythmEventRankingRequestRef.current, [kind]: requestId };
     const wanted = divisionId || RHYTHM_EVENT_TOTAL_DIVISION;
-    const stale = () => rhythmEventRankingRequestRef.current !== requestId;
-    setRhythmEventRanking(prev => ({
+    const stale = () => rhythmEventRankingRequestRef.current[kind] !== requestId;
+    setRhythmBoard(kind, prev => ({
       ...prev,
       status: prev.status === 'ready' ? 'ready' : 'loading',
       error: null,
@@ -1733,15 +1746,15 @@ function MonsterHeroGame() {
     try {
       const breederId = await ensureBreederId();
       const selfKeys = rhythmTotalRankingSelfKeys(breederId, breederName);
-      const weekWindow = await sbFetchRhythmWeekWindow({ requestId:`rhythm-week-${Date.now()}` });
+      // 週間は期間の正本がサーバーにある。期間限定は定義の日時をそのまま使うので聞きに行かない
+      const weekWindow = kind === 'weekly' ? await sbFetchRhythmWeekWindow({ requestId:`rhythm-week-${Date.now()}` }) : null;
       if (stale()) return;
-      // 週の始まりはサーバーのものを使う。対象曲はその週に対応する組を静的データから引く
-      const event = rhythmActiveEvent(Date.now(), weekWindow.startMs);
+      const event = kind === 'weekly' ? rhythmWeeklyEvent(weekWindow.startMs) : rhythmLimitedEventAt(Date.now());
       const range = rhythmEventWindow(event, weekWindow);
-      if (!event || !range) { setRhythmEventRanking({ status:'closed', window:weekWindow, event:null, boards:{}, error:null }); return; }
-      // 週が変わっていたら、前の週ぶんの一覧は捨てる(古い順位を見せない)
+      if (!event || !range) { setRhythmBoard(kind, { status:'closed', window:weekWindow, event:null, boards:{}, error:null }); return; }
+      // 週(またはイベント)が変わっていたら、前のぶんの一覧は捨てる(古い順位を見せない)
       const keepBoards = (prev) => (prev.event && prev.event.id === event.id) ? prev.boards : {};
-      // 押した部門が今のイベントに無いとき(週をまたいだ直後など)は総合へ倒す
+      // 押した部門がいまの対象曲に無いとき(週をまたいだ直後など)は総合へ倒す
       const songId = rhythmEventDivisionSongId(wanted);
       const division = (songId && event.songIds.includes(songId)) ? wanted : RHYTHM_EVENT_TOTAL_DIVISION;
       const targetSongId = rhythmEventDivisionSongId(division);
@@ -1749,30 +1762,30 @@ function MonsterHeroGame() {
         ? sbFetchRhythmEventSongBests({ songId:targetSongId, fromMs:range.startMs, toMs:range.endMs, ...options })
         : sbFetchRhythmEventTotals({ songIds:[...event.songIds], fromMs:range.startMs, toMs:range.endMs, ...options });
       const fromRow = targetSongId ? rhythmEventSongEntryFromRow : rhythmEventTotalEntryFromRow;
-      const rows = await fetchRows({ requestId:`rhythm-event-${division}-${Date.now()}` });
+      const rows = await fetchRows({ requestId:`rhythm-${kind}-${division}-${Date.now()}` });
       if (stale()) return;
       const entries = (Array.isArray(rows) ? rows : []).map(fromRow);
       // 自分が上位に入っていればその順位を使う。入っていなければ自分の行だけ取りにいく
       const selfIndex = entries.findIndex(entry => selfKeys.includes(entry.identityKey));
       let self = selfIndex >= 0 ? { ...entries[selfIndex], rank: selfIndex + 1 } : null;
       if (!self) {
-        const mine = await fetchRows({ limit:selfKeys.length, identityKeys:selfKeys, requestId:`rhythm-event-${division}-self-${Date.now()}` });
+        const mine = await fetchRows({ limit:selfKeys.length, identityKeys:selfKeys, requestId:`rhythm-${kind}-${division}-self-${Date.now()}` });
         if (stale()) return;
         const mineEntries = (Array.isArray(mine) ? mine : []).map(fromRow);
         // IDのある記録と、IDが付く前の記録の両方を持っている人がいる。高いほうを自分とする
         const best = mineEntries.sort((a,b)=>rhythmEventEntryScore(b)-rhythmEventEntryScore(a))[0];
         if (best) self = { ...best, rank: null };
       }
-      setRhythmEventRanking(prev => ({
+      setRhythmBoard(kind, prev => ({
         status:'ready', window:weekWindow, event, error:null,
         boards: { ...keepBoards(prev), [division]: { status:'ready', entries, self } },
       }));
-      setRhythmEventDivision(division);
+      setRhythmEventDivision(prev => ({ ...prev, [kind]: division }));
     } catch (e) {
       if (stale()) return;
-      if (e?.notReady) { setRhythmEventRanking({ status:'notReady', window:null, event:null, boards:{}, error:null }); return; }
-      console.error('[rhythm-event-ranking] fetch failed:', e && e.message ? e.message : e);
-      setRhythmEventRanking(prev => ({
+      if (e?.notReady) { setRhythmBoard(kind, { status:'notReady', window:null, event:null, boards:{}, error:null }); return; }
+      console.error(`[rhythm-${kind}-ranking] fetch failed:`, e && e.message ? e.message : e);
+      setRhythmBoard(kind, prev => ({
         ...prev,
         status: prev.status === 'ready' ? 'ready' : 'error',
         error: e?.message || String(e),
@@ -11149,7 +11162,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             handleGiveUp={handleGiveUp}
             mainHero={mainHero}
             onExit={()=>{if(rhythmBackgroundRun){returnToBackgroundRun();return;}setGameState(RHYTHM_MODE_PUBLIC_RELEASE?'HOME':'DEBUG_SETTINGS');}}
-            onOpenEventRanking={()=>{dismissRhythmEventNotice();setRhythmRankingTab('event');loadRhythmEventRanking(rhythmEventDivision);setGameState('RHYTHM_RANKING');}}
+            onOpenEventRanking={()=>{
+              // 曲えらびの案内から開く。期間限定を開催中ならそちらのタブ、なければ週間のタブ
+              const kind=rhythmSongSelectEvent&&rhythmSongSelectEvent.kind==='limited'?'limited':'weekly';
+              dismissRhythmEventNotice();
+              setRhythmRankingTab(kind==='limited'?'event':'weekly');
+              loadRhythmEventRanking(kind,rhythmEventDivision[kind]);
+              setGameState('RHYTHM_RANKING');
+            }}
             onOpenHelp={()=>{setRhythmHelpTopicId(null);setGameState('RHYTHM_DEMO_HELP');}}
             onOpenMonsterSlots={()=>{setRhythmMonsterPickerOpen(true);setGameState('RHYTHM_DEMO_MONSTERS');}}
             onOpenOptions={()=>{setRhythmOptionsBack('RHYTHM_DEMO_HOME');setGameState('RHYTHM_OPTIONS');}}

@@ -101,7 +101,7 @@ check('タブを出している(この曲 / 総合)',
   &&screen.includes("{id:'song',label:'この曲'},")&&screen.includes("{id:'total',label:'総合'}"));
 check('総合タブを初めて開いたときだけ取りにいく',
   screen.includes("if(tab==='total'&&total.status==='idle')loadRhythmTotalRanking"));
-check('更新ボタンは開いているタブのほうを読み直す',screen.includes('else if(totalTab)loadRhythmTotalRanking'));
+check('更新ボタンは開いているタブのほうを読み直す',screen.includes('else if(totalTabOpen)loadRhythmTotalRanking'));
 check('自分の記録を上に固定で出す',screen.includes('あなたの記録')&&screen.includes('total.self'));
 check('まだ記録のない曲から曲えらびへ戻れる',screen.includes('data-rhythm-total-remaining'));
 check('新しい画面(gameState)を増やしていない',!/'RHYTHM_TOTAL_RANKING'/.test(app)&&!/'RHYTHM_TOTAL_RANKING'/.test(screen));
@@ -113,7 +113,7 @@ check('この曲のランキングの取得は変えていない',
   supa.includes('const sbFetchRhythmRankings = async (difficultyKeys, limit=RHYTHM_RANKING_FETCH_LIMIT, offset=0,')
   &&app.includes('const keys = rhythmRankingCombinedMembers(song.songId);'));
 check('この曲の一覧は総合タブでは出さない',
-  screen.includes('const songTab=!totalTab&&!eventTab;')
+  screen.includes('const songTab=!totalTabOpen&&!boardTab;')
   &&screen.includes("{songTab&&rhythmRanking.status==='ready'&&rhythmRanking.entries.length>0&&"));
 
 // --- 公開フラグ(機能と案内をまとめて出し入れする) ---
