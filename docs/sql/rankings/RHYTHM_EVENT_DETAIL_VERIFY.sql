@@ -1,50 +1,64 @@
--- 適用後の確認。読み取り専用: はい。本番変更が残るか: いいえ。
--- RHYTHM_EVENT_DETAIL_APPLY.sql を実行したあとに、上から順に流して結果を見る。
+-- イベントの「詳細」が出せる状態になったかを見るだけのSQL。
+-- 読み取り専用: はい。
+-- 本番変更が残るか: いいえ(select だけ。何度実行してもよい)。
+--
+-- RHYTHM_EVENT_DETAIL_APPLY.sql の後に実行する。
+--
+-- ★Supabase の SQL Editor は「最後のクエリの結果」しか表示しない。
+--   そのため、確かめたいこと全部を1つの表(項目 / 値)へまとめてある
+--   (2026-09-11・ユーザー指摘「今貼ったやつしか出ないよ」)。
+--   RHYTHM_EVENT_VERIFY.sql と同じ作り方。
 
--- ① ビューに party が入ったか(2行とも出れば OK)
-select table_name, column_name, data_type
-  from information_schema.columns
- where table_schema = 'public'
-   and table_name in ('rhythm_scores', 'rhythm_identified_scores')
-   and column_name = 'party'
- order by table_name;
-
--- ② 関数の戻り値に party が入ったか(最後の行が party jsonb なら OK)
-select p.proname, pg_get_function_result(p.oid) as returns
-  from pg_proc p join pg_namespace n on n.oid = p.pronamespace
- where n.nspname = 'public' and p.proname = 'rhythm_event_song_bests';
-
--- ③ 実データで party が返るか。
---    いま開催中のイベントの対象曲と期間を入れて確かめる(週末ゲリラ杯の例)。
---    party が null の行は、判定の内訳が保存される前の古い記録。画面では詳細ボタンが出ない。
-select user_name, song_id, difficulty_id, score,
-       (party is not null) as has_detail,
-       party -> 0 ->> 'maxCombo' as max_combo
-  from public.rhythm_event_song_bests(
-         array['monster_hero','kaze_ga_soyogu','close_to_your_heart'],
-         timestamptz '2026-09-11 15:00+09',
-         timestamptz '2026-09-14 05:00+09')
- order by score desc
- limit 10;
-
--- ④ 内訳が入っている行の割合(古い記録がどれくらいあるかの目安)
-select count(*) as 全体,
-       count(*) filter (where party is not null) as 内訳あり,
-       count(*) filter (where party is null) as 内訳なし
-  from public.rhythm_event_song_bests(
-         array['monster_hero','kaze_ga_soyogu','close_to_your_heart'],
-         timestamptz '2026-09-11 15:00+09',
-         timestamptz '2026-09-14 05:00+09');
-
--- ⑤ 総合のほうが壊れていないか(party を足したのは曲ごとの関数だけ。こちらは変えていない)
-select user_name, total_score, song_count
-  from public.rhythm_event_totals(
-         array['monster_hero','kaze_ga_soyogu','close_to_your_heart'],
-         timestamptz '2026-09-11 15:00+09',
-         timestamptz '2026-09-14 05:00+09')
- order by total_score desc
- limit 5;
-
--- ⑥ 既存の「この曲」タブと「総合」タブが壊れていないか
-select count(*) as rhythm_scores件数 from public.rhythm_scores;
-select count(*) as 総合ランキング件数 from public.rhythm_total_rankings;
+with ev as (
+  -- いま開催中(または直近)のイベントの期間と対象曲。
+  -- ★ここは週末ゲリラ杯の値。別のイベントで確かめるときはこの3つだけ書き換える
+  select array['monster_hero','kaze_ga_soyogu','close_to_your_heart']::text[] as song_ids,
+         timestamptz '2026-09-11 15:00+09' as from_at,
+         timestamptz '2026-09-14 05:00+09' as to_at
+),
+bests as (
+  select b.* from ev, lateral public.rhythm_event_song_bests(ev.song_ids, ev.from_at, ev.to_at) b
+),
+facts as (
+  select 1 as sort, 'ビューに party が入った(2枚あること)' as item,
+         (select coalesce(string_agg(table_name, ', ' order by table_name), 'なし')
+            from information_schema.columns
+           where table_schema='public' and column_name='party'
+             and table_name in ('rhythm_scores','rhythm_identified_scores')) as value
+  union all
+  select 2, '関数の戻り値(最後が party jsonb であること)',
+         (select pg_get_function_result(p.oid)
+            from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+           where n.nspname='public' and p.proname='rhythm_event_song_bests')
+  union all
+  select 3, '実行権限(anon にあること)',
+         (select coalesce(string_agg(distinct grantee, ', '), 'なし')
+            from information_schema.routine_privileges
+           where specific_schema='public' and routine_name='rhythm_event_song_bests')
+  union all
+  select 4, 'イベント期間の記録(件)',
+         (select count(*)::text from bests)
+  union all
+  select 5, 'うち 内訳あり(詳細ボタンが出る)',
+         (select count(*) filter (where party is not null)::text from bests)
+  union all
+  select 6, 'うち 内訳なし(古い記録。0でなくてよい)',
+         (select count(*) filter (where party is null)::text from bests)
+  union all
+  select 7, '内訳の中身の例(最大コンボ)',
+         (select coalesce(string_agg(x, ' / '), 'なし')
+            from (select user_name||'='||coalesce(party->0->>'maxCombo','?') as x
+                    from bests where party is not null
+                   order by score desc limit 3) t)
+  union all
+  select 8, '総合の集計(壊れていないこと・件)',
+         (select count(*)::text from ev,
+            lateral public.rhythm_event_totals(ev.song_ids, ev.from_at, ev.to_at) t)
+  union all
+  select 9, 'この曲タブの土台(rhythm_scores・件)',
+         (select count(*)::text from public.rhythm_scores)
+  union all
+  select 10, '総合タブの土台(rhythm_total_rankings・件)',
+         (select count(*)::text from public.rhythm_total_rankings)
+)
+select item as "項目", value as "値" from facts order by sort;

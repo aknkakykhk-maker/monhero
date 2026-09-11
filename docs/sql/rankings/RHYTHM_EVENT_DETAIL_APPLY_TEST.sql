@@ -40,11 +40,17 @@ end $$;
 
 -- ===== ① Rhythm行を曲・難易度へ割るビューへ party を足す =====
 -- 足すのは列1つだけ。where も select の他の列も RHYTHM_TOTAL_APPLY.sql のまま。
+--
+-- ★party は**いちばん最後**へ足すこと。create or replace view は列の名前も並びも変えられず、
+--   後ろへ足すことしかできない。真ん中へ入れると、既存の列の名前を変えたことになって
+--   「42P16: cannot change name of view column "song_id" to "party"」で止まる
+--   (2026-09-11・予行演習で実際に踏んだ)。
 create or replace view public.rhythm_scores
 with (security_invoker = on) as
-select r.id, r.created_at, r.user_name, r.breeder_id, r.level, r.icon, r.score, r.party,
+select r.id, r.created_at, r.user_name, r.breeder_id, r.level, r.icon, r.score,
        split_part(r.difficulty, '-', 2) as song_id,
-       split_part(r.difficulty, '-', 3) as difficulty_id
+       split_part(r.difficulty, '-', 3) as difficulty_id,
+       r.party
   from public.rankings r
  where r.difficulty like 'Rhythm-%'
    and array_length(string_to_array(r.difficulty, '-'), 1) = 3
@@ -54,11 +60,13 @@ comment on view public.rhythm_scores is
   'モンビーの記録を曲IDと難易度IDへ割ったもの。rankings の読み取り専用ビュー。party に判定の内訳が入る。';
 
 -- ===== ② 人の単位を付けたビューへ party を足す =====
+-- ★こちらも party は**いちばん最後**(identity_key の後ろ)。理由は①と同じ。
 create or replace view public.rhythm_identified_scores
 with (security_invoker = on) as
-select s.id, s.created_at, s.user_name, s.breeder_id, s.level, s.icon, s.score, s.party,
+select s.id, s.created_at, s.user_name, s.breeder_id, s.level, s.icon, s.score,
        s.song_id, s.difficulty_id,
-       coalesce(s.breeder_id, m.merged_breeder_id, 'name:' || s.user_name) as identity_key
+       coalesce(s.breeder_id, m.merged_breeder_id, 'name:' || s.user_name) as identity_key,
+       s.party
   from public.rhythm_scores s
   left join public.rhythm_identity_map m on m.user_name = s.user_name;
 

@@ -87,13 +87,20 @@ const RHYTHM_SORT_ORDERS = Object.freeze([
   Object.freeze({ id:'length', label:'長さ順',  note:'曲が短い順。軽く1曲遊びたいときに' }),
 ]);
 const RHYTHM_SORT_IDS = Object.freeze(RHYTHM_SORT_ORDERS.map(item => item.id));
-const DEFAULT_RHYTHM_SELECT_VIEW = Object.freeze({ sort:'added', desc:false, noticeOpen:true });
+// eventOnly … イベントの対象曲だけに絞るか(2026-09-11・ユーザー指示
+//   「ソートにイベント曲だけ出てくるのほしいね」)。並び替えではなく絞り込みなので、
+//   並び替えの一覧には混ぜず、別のボタンにしてある。
+//   ★開催していないときは、この値が true でも絞らない(画面側で見る)。
+//     そうしないと、イベントが終わったあとに一覧が空の人が出てしまう。
+//   ★新しい項目なので、持っていない既存ユーザーは既定値(false)で補われる(CLAUDE.md ⑦)。
+const DEFAULT_RHYTHM_SELECT_VIEW = Object.freeze({ sort:'added', desc:false, noticeOpen:true, eventOnly:false });
 const normalizeRhythmSelectView = value => {
   const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
   return {
     sort: RHYTHM_SORT_IDS.includes(source.sort) ? source.sort : DEFAULT_RHYTHM_SELECT_VIEW.sort,
     desc: typeof source.desc === 'boolean' ? source.desc : DEFAULT_RHYTHM_SELECT_VIEW.desc,
     noticeOpen: typeof source.noticeOpen === 'boolean' ? source.noticeOpen : DEFAULT_RHYTHM_SELECT_VIEW.noticeOpen,
+    eventOnly: typeof source.eventOnly === 'boolean' ? source.eventOnly : DEFAULT_RHYTHM_SELECT_VIEW.eventOnly,
   };
 };
 // ノーツ速度は見た目のtravelだけを変える。1.0〜12.0を0.1刻みで選べ、6.0は従来の見た目(2150ms)を維持する。

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: df550718d0c039f4
+// generated-sha256: 4d5f37edfaf16419
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 18:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 19:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3106,13 +3106,20 @@ const RHYTHM_SORT_ORDERS = Object.freeze([
   Object.freeze({ id:'length', label:'長さ順',  note:'曲が短い順。軽く1曲遊びたいときに' }),
 ]);
 const RHYTHM_SORT_IDS = Object.freeze(RHYTHM_SORT_ORDERS.map(item => item.id));
-const DEFAULT_RHYTHM_SELECT_VIEW = Object.freeze({ sort:'added', desc:false, noticeOpen:true });
+// eventOnly … イベントの対象曲だけに絞るか(2026-09-11・ユーザー指示
+//   「ソートにイベント曲だけ出てくるのほしいね」)。並び替えではなく絞り込みなので、
+//   並び替えの一覧には混ぜず、別のボタンにしてある。
+//   ★開催していないときは、この値が true でも絞らない(画面側で見る)。
+//     そうしないと、イベントが終わったあとに一覧が空の人が出てしまう。
+//   ★新しい項目なので、持っていない既存ユーザーは既定値(false)で補われる(CLAUDE.md ⑦)。
+const DEFAULT_RHYTHM_SELECT_VIEW = Object.freeze({ sort:'added', desc:false, noticeOpen:true, eventOnly:false });
 const normalizeRhythmSelectView = value => {
   const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
   return {
     sort: RHYTHM_SORT_IDS.includes(source.sort) ? source.sort : DEFAULT_RHYTHM_SELECT_VIEW.sort,
     desc: typeof source.desc === 'boolean' ? source.desc : DEFAULT_RHYTHM_SELECT_VIEW.desc,
     noticeOpen: typeof source.noticeOpen === 'boolean' ? source.noticeOpen : DEFAULT_RHYTHM_SELECT_VIEW.noticeOpen,
+    eventOnly: typeof source.eventOnly === 'boolean' ? source.eventOnly : DEFAULT_RHYTHM_SELECT_VIEW.eventOnly,
   };
 };
 // ノーツ速度は見た目のtravelだけを変える。1.0〜12.0を0.1刻みで選べ、6.0は従来の見た目(2150ms)を維持する。
@@ -11355,8 +11362,23 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
     const id=difficulty&&ids.includes(difficulty.id)?difficulty.id:ids[ids.length-1];
     return Number(entry.difficulties[id].level)||0;
   };
-  // 画面に並べる順。並び替えは**見え方だけ**で、遊べる曲も選んでいる曲も変えない。
-  const list=rhythmSortSongs(playable,{sort:state.sort,desc:state.desc,levelOf:rowLevel,difficulties});
+  // ★イベントの対象曲は、一覧で見てすぐ分かるようにする
+  //   (2026-09-11・ユーザー指示「イベント曲は見てすぐ分かるようにして」)。
+  //   曲えらびの案内は初回に1度だけで、閉じるともう出ない。だから「いまどれを遊べば
+  //   イベントに載るのか」を知る場所が、この一覧のほかに無かった。
+  //   ★曲のidはイベントの定義から引く(ここに書き写さない)。開催していなければ何も出ない。
+  const eventSongIds=(()=>{
+    const released=(typeof RELEASE_FLAGS!=='undefined'&&RELEASE_FLAGS&&RELEASE_FLAGS.rhythmWeeklyRanking===true);
+    const event=(released&&typeof rhythmLimitedEventAt==='function')?rhythmLimitedEventAt(Date.now()):null;
+    return new Set((event&&Array.isArray(event.songIds))?event.songIds:[]);
+  })();
+  // 対象曲だけに絞るか。★開催していないときは絞らない(保存値が true のままでも)。
+  //   そうしないと、イベントが終わったあとに一覧が空になる人が出る
+  const eventFilterOn=eventSongIds.size>0&&state.eventOnly===true;
+  // 画面に並べる順。並び替えも絞り込みも**見え方だけ**で、遊べる曲も選んでいる曲も変えない。
+  const list=rhythmSortSongs(
+    eventFilterOn?playable.filter(entry=>eventSongIds.has(entry.songId)):playable,
+    {sort:state.sort,desc:state.desc,levelOf:rowLevel,difficulties});
   const sortLabel=(RHYTHM_SORT_ORDERS.find(item=>item.id===state.sort)||RHYTHM_SORT_ORDERS[0]).label;
   // 選んでいる曲を鳴らすのは App本体(rhythmPreviewTrackId)。ここでは鳴らさない。
   // この画面の中で鳴らしていたころは、ランキングやマスモン設定を開いた瞬間に
@@ -11482,6 +11504,15 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
           <span className="truncate">並び替え：{sortLabel}{state.desc?'（逆）':''}</span>
           <span aria-hidden="true" className="shrink-0 text-slate-400">▾</span>
         </button>
+        {/* ★イベント開催中だけ出る絞り込み。並び替えと同じ行に置いて、縦を1行も増やさない
+            (2026-09-11・ユーザー指示「ソートにイベント曲だけ出てくるのほしいね」)。
+            並び替えの一覧へ混ぜなかったのは、これが並び順ではなく絞り込みのため */}
+        {eventSongIds.size>0&&<button type="button" data-rhythm-song-event-filter aria-pressed={state.eventOnly===true}
+          onClick={()=>setView({...state,eventOnly:!(state.eventOnly===true)})}
+          title={state.eventOnly===true?'すべての曲を出す':'イベントの対象曲だけにする'}
+          className={`flex h-[44px] shrink-0 items-center gap-1 rounded-xl border px-2 text-[11px] font-black ${state.eventOnly===true?'border-amber-300 bg-amber-500/25 text-amber-100':'border-amber-300/40 bg-slate-900/80 text-amber-200'}`}>
+          <span aria-hidden="true">🏆</span><span>対象曲</span>
+        </button>}
         {notice&&<button type="button" data-rhythm-song-notice-toggle aria-pressed={state.noticeOpen}
           onClick={()=>setView({...state,noticeOpen:!state.noticeOpen})}
           title={state.noticeOpen?'助手のひとことを畳む':'助手のひとことを出す'}
@@ -11497,11 +11528,12 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
         :<ul className="space-y-1.5">{blocks.map(copy=>list.map(entry=>{
           const main=copy===1;
           const selected=!!song&&entry.songId===song.songId;
+          const eventSong=eventSongIds.has(entry.songId);
           return <li key={`${copy}-${entry.songId}`} aria-hidden={main?undefined:'true'}>
             <button type="button" {...(main?{'data-rhythm-song-row':entry.songId}:{'data-rhythm-song-row-loop':entry.songId})}
               tabIndex={main?undefined:-1} aria-pressed={selected}
               onClick={()=>setSongId(entry.songId)}
-              className={`flex w-full min-h-[64px] items-center gap-2 rounded-xl border px-2 py-1.5 text-left ${selected?'border-fuchsia-300 bg-fuchsia-900/50':'border-white/10 bg-slate-900/70'}`}>
+              className={`flex w-full min-h-[64px] items-center gap-2 rounded-xl border px-2 py-1.5 text-left ${selected?'border-fuchsia-300 bg-fuchsia-900/50':eventSong?'border-amber-300/50 bg-amber-500/[0.07]':'border-white/10 bg-slate-900/70'}`}>
               <span className="w-10 shrink-0 text-center">
                 <small className="block text-[7px] font-black leading-none text-slate-400">楽曲Lv.</small>
                 <b {...(main?{'data-rhythm-song-row-level':''}:{})} className={`mt-0.5 block text-xl font-black leading-none tabular-nums text-white${spot('songLevel')}`}>{rowLevel(entry)}</b>
@@ -11525,6 +11557,8 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
                   <small className="ml-1 text-[9px] font-bold text-slate-400">
                     {(difficulties||[]).filter(item=>rhythmChartPlayable(entry,item.id)).length}難易度
                   </small>
+                  {eventSong&&<small {...(main?{'data-rhythm-song-event':entry.songId}:{})}
+                    className="ml-auto shrink-0 rounded-md border border-amber-300/60 bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-black text-amber-200">🏆 イベント対象</small>}
                 </span>
               </span>
             </button>
