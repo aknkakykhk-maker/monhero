@@ -36,8 +36,15 @@ for (const [rel, src] of sources) {
     compact.includes('if(!runStageRef.current||!autoRepeatRef.current||!isQuickMode(runMode))return0;'));
   check(`${rel}: 過去にその難易度をクリアしていることを条件にする`,
     compact.includes('if(!rhythmPlayRunLoopsAllowed(difficulty,quickClearCounts))return0;'));
-  check(`${rel}: 周回数は曲の長さから決める`,
-    compact.includes('returnrhythmPlayRunLoops(rhythmPlaySongDurationMs(song,rhythmDifficulty));'));
+  check(`${rel}: 周回数は曲の長さと倍率から決める`,
+    compact.includes('returnrhythmPlayRunLoops(rhythmPlaySongDurationMs(song,rhythmDifficulty),rhythmPlayRunLoopScaleFor(song));'));
+  // 倍率(ふだん×2・イベント対象曲×3)は、見るたびに引き直す。
+  // 読み込み時に1回だけ決めると、開いたままの端末で開催・終了をまたいだときに古い値が残る
+  // (CLAUDE.md ⑥-4。初開催で実際に踏んだ失敗)
+  check(`${rel}: 倍率は呼ばれるたびにイベントを引き直す`,
+    compact.includes('constrhythmPlayRunLoopEventNow=()=>')
+    && compact.includes('rhythmLimitedEventAt(Date.now()):null;')
+    && /rhythmPlayRunLoopScaleFor=\(?song\)?=>rhythmPlayRunLoopScale\(song\?song\.songId:null,rhythmPlayRunLoopEventNow\(\)\)/.test(compact));
   // 曲の長さは、見た目の「2分25秒」と同じ求め方
   check(`${rel}: 曲の長さは曲の指定→譜面の順に見る`,
     compact.includes('constown=Number(song?.playDurationMs);')
@@ -78,7 +85,7 @@ for (const [rel, src] of sources) {
     /rhythmPlay\.from!=='tutorial'[\s\S]{0,400}?rhythmPlayLoopsFor\(rhythmPlay\.song,rhythmPlay\.difficulty\)/.test(compact.replace(/\s+/g, ''))
     || /rhythmPlay\.from!=='tutorial'\)\{[\s\S]{0,400}?rhythmPlayLoopsFor/.test(src));
   check(`${rel}: その周は締めて次の周から始める`,
-    /awardRhythmPlayRunLoops\(loops\)[\s\S]{0,900}?startRunFromRepeatTemplate\(repeat\)/.test(src));
+    /awardRhythmPlayRunLoops\(loops\s*,\s*loopScale\)[\s\S]{0,900}?startRunFromRepeatTemplate\(repeat\)/.test(src));
   // ★startRunFromRepeatTemplate は中で stopAutoBattle() を通る。
   //   そのあとAUTOを入れ直さないと、報酬だけ入って周回が止まる
   //   (2026-09-07・ユーザー報告「演奏後周回が止まってる」。

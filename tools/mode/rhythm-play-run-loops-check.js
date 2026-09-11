@@ -7,6 +7,12 @@
 //   「あくまでも決められてる曲の時間で決めて、ポーズしたりで掛かってる時間は関係なし」
 //   「過去の実績で1回でもクリアしてたらと言う条件にする」
 //
+// 2026-09-11・ユーザー指示
+//   「モンヒロの無限周回での演奏中の周回数を上げたい / 現状の2倍にしても良さそう」
+//   「イベント時は対象曲は3倍」
+//   → もとの周回数(曲の長さで決まるぶん)へ倍率を掛ける。ふだん×2、開催中のイベントの
+//     対象曲だけ×3(重ねがけはしない)。
+//
 // 数の決め方はゲームの中身そのものなので、実データの式をNode上で動かして確かめる。
 const fs = require('fs');
 const path = require('path');
@@ -45,11 +51,16 @@ const ctx = {};
 vm.createContext(ctx);
 vm.runInContext(`${[
   pickLine('const RHYTHM_PLAY_RUN_LOOP_MIN ='),
+  pickLine('const RHYTHM_PLAY_RUN_LOOP_SCALE ='),
+  pickLine('const RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE ='),
   pickBlock('const rhythmPlayRunLoops ='),
+  pickBlock('const rhythmPlayRunLoopScale ='),
   pickTwoLines('const rhythmPlayRunLoopsAllowed ='),
 ].join('\n')}
-globalThis.__x = { rhythmPlayRunLoops, rhythmPlayRunLoopsAllowed, RHYTHM_PLAY_RUN_LOOP_MIN };`, ctx);
-const { rhythmPlayRunLoops, rhythmPlayRunLoopsAllowed, RHYTHM_PLAY_RUN_LOOP_MIN } = ctx.__x;
+globalThis.__x = { rhythmPlayRunLoops, rhythmPlayRunLoopScale, rhythmPlayRunLoopsAllowed,
+  RHYTHM_PLAY_RUN_LOOP_MIN, RHYTHM_PLAY_RUN_LOOP_SCALE, RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE };`, ctx);
+const { rhythmPlayRunLoops, rhythmPlayRunLoopScale, rhythmPlayRunLoopsAllowed,
+  RHYTHM_PLAY_RUN_LOOP_MIN, RHYTHM_PLAY_RUN_LOOP_SCALE, RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE } = ctx.__x;
 
 let failed = 0;
 const check = (name, ok, detail = '') => {
@@ -58,20 +69,58 @@ const check = (name, ok, detail = '') => {
 };
 const min = (m, s = 0) => (m * 60 + s) * 1000;
 
-// ---- 曲の長さ → 周回数 ----
-check('下限は2周', RHYTHM_PLAY_RUN_LOOP_MIN === 2, `${RHYTHM_PLAY_RUN_LOOP_MIN}周`);
+// ---- 倍率そのもの ----
+check('もとの下限は2周', RHYTHM_PLAY_RUN_LOOP_MIN === 2, `${RHYTHM_PLAY_RUN_LOOP_MIN}周`);
+check('ふだんは2倍', RHYTHM_PLAY_RUN_LOOP_SCALE === 2, `${RHYTHM_PLAY_RUN_LOOP_SCALE}倍`);
+check('イベントの対象曲は3倍', RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE === 3, `${RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE}倍`);
+
+// ---- 曲の長さ → 周回数（ふだん＝2倍） ----
 for (const [ms, want, label] of [
-  [min(0, 30), 2, '30秒'],
-  [min(1, 0), 2, '1分00秒'],
-  [min(2, 0), 2, '2分00秒'],
-  [min(2, 25), 2, '2分25秒（いま入っている曲）'],
-  [min(2, 59), 2, '2分59秒'],
-  [min(3, 0), 3, '3分00秒'],
-  [min(3, 30), 3, '3分30秒'],
-  [min(4, 0), 4, '4分00秒'],
-  [min(5, 45), 5, '5分45秒'],
+  [min(0, 30), 4, '30秒'],
+  [min(1, 0), 4, '1分00秒'],
+  [min(2, 0), 4, '2分00秒'],
+  [min(2, 25), 4, '2分25秒（いま入っている曲）'],
+  [min(2, 59), 4, '2分59秒'],
+  [min(3, 0), 6, '3分00秒'],
+  [min(3, 30), 6, '3分30秒'],
+  [min(4, 0), 8, '4分00秒'],
+  [min(5, 45), 10, '5分45秒'],
 ]) {
   check(`${label} は ${want}周ぶん`, rhythmPlayRunLoops(ms) === want, `${rhythmPlayRunLoops(ms)}周`);
+}
+// 上げる前(倍率1倍)のちょうど2倍になっている。数字を書き換えただけの回帰を防ぐ
+for (const ms of [min(0, 30), min(2, 25), min(3, 0), min(5, 45)]) {
+  check(`${ms / 1000}秒 は上げる前のちょうど2倍`,
+    rhythmPlayRunLoops(ms) === rhythmPlayRunLoops(ms, 1) * 2,
+    `${rhythmPlayRunLoops(ms)}周 / もとは${rhythmPlayRunLoops(ms, 1)}周`);
+}
+
+// ---- イベントの対象曲は3倍 ----
+const event = { songIds: ['monster_hero', 'kaze_ga_soyogu'] };
+check('対象曲は3倍', rhythmPlayRunLoopScale('monster_hero', event) === 3);
+check('対象外の曲は2倍のまま', rhythmPlayRunLoopScale('crossing_field', event) === 2);
+check('イベントが無いときは2倍', rhythmPlayRunLoopScale('monster_hero', null) === 2);
+check('壊れたイベント定義でも2倍へ倒す',
+  rhythmPlayRunLoopScale('monster_hero', {}) === 2
+  && rhythmPlayRunLoopScale('monster_hero', { songIds: 'monster_hero' }) === 2
+  && rhythmPlayRunLoopScale(null, event) === 2
+  && rhythmPlayRunLoopScale(undefined, event) === 2);
+for (const [ms, want, label] of [
+  [min(2, 25), 6, '2分25秒'],
+  [min(3, 0), 9, '3分00秒'],
+]) {
+  check(`対象曲の ${label} は ${want}周ぶん`,
+    rhythmPlayRunLoops(ms, RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE) === want,
+    `${rhythmPlayRunLoops(ms, RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE)}周`);
+}
+// 倍率は重ねがけしない(3倍のかわりに、であって2倍×3倍ではない)
+check('イベントでも2倍×3倍にはしない',
+  rhythmPlayRunLoops(min(3, 0), RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE) === 9);
+// 壊れた倍率はふだんの倍率へ倒す(0や負で報酬が消えない)
+for (const bad of [0, -2, NaN, null, 'たくさん']) {
+  check(`おかしな倍率(${String(bad)})はふだんの倍率へ倒す`,
+    rhythmPlayRunLoops(min(3, 0), bad) === rhythmPlayRunLoops(min(3, 0)),
+    `${rhythmPlayRunLoops(min(3, 0), bad)}周`);
 }
 // 長い曲ほど得。短い曲で連打しても得にならない
 check('長い曲ほど周回数が多い（短い曲の連打が得にならない）',
