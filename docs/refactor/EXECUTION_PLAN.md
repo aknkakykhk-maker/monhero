@@ -41,7 +41,7 @@ S/A 等級は `REGRESSION_RISK_MAP.md` に基づく。
 | 1 安全網 | **完了**(2026-09-11)。NG 56→1本。残り1本はユーザーの手が要る(下の「次の一手」) | — | — | — |
 | 2 連結ビルドと集約 | **完了**(2026-09-11)。定数・ユーティリティの集約は parts 分割で達成済みだった | — | — | — |
 | 3 保存層 | 複数体合体・寄付・報酬受取の寄せ、キーごとの読込関数 | **高**(S等級に隣接) | **Opus 5** | **max** |
-| 4 純関数の切り出し | 難易度から保存処理を出す、jsx側の表の移動 | 中 | Sonnet 5 | high |
+| 4 純関数の切り出し | **実質完了**(2026-09-11)。共有層21部品のうち8つが pure。残りは JSX・DOM・保存を本質的に含む | — | — | — |
 | 5 バトル計算 | **完了** | — | — | — |
 | 6 画面の切り出し | **完了**(2026-09-11)。残るのは `BATTLE` の `token.alive` と `MASU_PATTERN_DEBUG` | — | — | — |
 | 7 描画・キャッシュ | 一覧行の `React.memo`、`style` の定数化 | 低〜中 | Sonnet 5 | high |
@@ -73,32 +73,29 @@ S/A 等級は `REGRESSION_RISK_MAP.md` に基づく。
 
 ## 次の一手
 
-**STEP 4 の残り — `19-difficulties-and-rules.jsx` から保存処理を出す** — **Opus 5 / effort high**
+**STEP 3 保存層の整理** — **Opus 5 / effort max**
 
-STEP 1(安全網)と STEP 2(連結ビルドと集約)は**完了**。
-落ちていた検査は **56本 → 0本**、定数・ユーティリティの集約は parts 分割で達成済みだった
+STEP 1(安全網)・STEP 2(連結ビルドと集約)・STEP 4(純関数の切り出し)は**完了**。
+落ちていた検査は **56本 → 0本**。共有層21部品のうち8つが `pure:true` で、
+残りは JSX・DOM・保存を本質的に含む部品なので pure にする意味がない
 (内訳は [`README.md`](README.md) の進捗表)。
 
-STEP 4 で `pure:true` になっていない共有層の部品のうち、STEP 4 の対象として名前が挙がっているのは
-`19-difficulties-and-rules.jsx` だけ。理由は**たった1つの関数**
-`persistSpeciesChallengeClearRewardTransaction`(11箇所)。
+STEP 3 は **S等級に隣接する高リスク**。キー1つにつきPR1本、影響の小さい順に。
 
-**着手前に決めること。** この関数は `storeGet` / `storeSet` を**引数で受け取っている**(依存性注入)ので、
-vm から自前の保存を渡せば呼べる状態にはなっている。`boot/parts-purity-check.js` の正規表現が
-引数名とグローバル参照を区別せず、名前だけで弾いている。したがって選択肢は2つある。
+    mh_gifts → mh_breeder_xp → mh_gold → mh_owned_items → mh_missions → mh_masu_mons
 
-| 案 | 中身 | 注意 |
-| --- | --- | --- |
-| A. 別の部品へ移す | 保存を扱う部品(`25-storage.jsx` など連結順で後ろ)へ関数ごと移す | 19 の中の定数を参照しているので、**移す先は必ず 19 より後ろ**。保存の順序は1行も変えない |
-| B. 検査が区別する | `parts-purity-check` が「引数で受け取った storeGet」と「グローバルの storeGet」を区別する | 区別の仕方を間違えると**検査が緩む**。混在(一部だけ注入)を見逃さない形にできるか先に確かめる |
+**着手前に必ず読むこと。**
 
-**どちらを選ぶにせよ、まず `persistSpeciesChallengeClearRewardTransaction` を誰がどう呼んでいるかを読むこと。**
-保存に触るので、CLAUDE.md ⑦(既存のデータは絶対に壊さない)の範囲。移動だけに留め、順序は変えない。
+- [`REFACTOR_MASTER_PLAN.md`](REFACTOR_MASTER_PLAN.md) の STEP 3(変更内容6点・変更しないもの)
+- `docs/spec/SAVE_DATA.md`(移行が1回だけ走ること)
+- CLAUDE.md ⑦(既存のデータは絶対に壊さない)
 
-検査は `masu/*` / `mode/species-challenge-*` / `boot/*` を全部回す。
+**機械的な一括置換はしない。** 1箇所ずつ、保存と state のどちらが先かを変えていないことを確認する。
+各PRで `masu/*` 36本・`boot/*` 23本・`run/training-reward-check`・`ranking/*`・
+`browser/feature-check` を全部回す。
 
-以降は割り当て表を上から順に。STEP 3 と 9 は独立して進められるので、
-バトルや音ゲーを触りたくない時期は STEP 4・7 を先に消化してよい。
+> 先に安全なほうを消化したいときは **STEP 7 描画・キャッシュ(Sonnet 5 / high)** でもよい。
+> 一覧行の `React.memo`、`style` の定数化。バトルも音ゲーも触らない。
 
 **props の洗い出しは手でやらない。** props を空にした仮のコンポーネントへ JSX を移し、
 `node tools/undefined-reference-check.js` を通すと、足りない参照が全部一覧で出る。
