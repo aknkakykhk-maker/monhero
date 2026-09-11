@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 532ef7a92464e882
+// generated-sha256: af924e3fb6a66b25
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 19:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 20:33"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -12165,7 +12165,7 @@ const measureTravel=useCallback(()=>{
   return result;
 },[settings.noteStartPosition]);
 // --- 判定ラインの「幅」を描く ---
-// 上下のふちがGOOD(前後0.2秒)の端、内側の明るいところがMARVELOUS(前後0.055秒)。
+// 上下のふちがGOOD(前後0.17秒)の端、内側の明るいところがMARVELOUS(前後0.055秒)。
 // 何ピクセルになるかはノーツ速度(travelMs)と画面の高さで変わるので、実測から毎回出す。
 // 書き込むのは「前と違うときだけ」。位置が変わらないフレームでは何もしないので、
 // 毎フレームの塗り直しは増えない。判定・スコアには一切関与しない見た目だけの処理。
@@ -12384,8 +12384,11 @@ if(!note.done&&note.activePointerId===null&&note.releasedAtMs!=null){
 // 誰も押していない → MISS」にそのまま当たっていた。始点から240ms以上たった HOLD を離すと、
 // 上の猶予(200ms)を見る前に次のフレームで MISS になり、「離してから置き直す」持ち替えが
 // 実際にはできていなかった(rhythm-input-scenario-check.js で見つけた)。
-if(!note.done&&note.activePointerId===null&&note.releasedAtMs==null&&!placeable&&songTimeMs-(note.timeMs+settings.judgmentTimingOffsetMs)>RHYTHM_INPUT_MATCH_WINDOW_MS){note.done=true;note._rhythmUnplaceable=true;return;}
-if(!note.done&&note.activePointerId===null&&note.releasedAtMs==null&&songTimeMs-(note.timeMs+settings.judgmentTimingOffsetMs)>RHYTHM_INPUT_MATCH_WINDOW_MS)applyJudgment(note,'MISS',songTimeMs-note.timeMs);if(canvasNotes){paintCanvasNote(note);return;}
+// 回収は RHYTHM_MISS_RECLAIM_MS(判定窓＋入力が遅れて届きうるぶん)で見る。
+// フレームの時刻と入力の時刻が最大80msずれるため、判定窓ちょうどで回収すると
+// 「窓の内側で叩いたのにノーツがもう無い」が起きる(rhythm-mode.js の該当コメント)。
+if(!note.done&&note.activePointerId===null&&note.releasedAtMs==null&&!placeable&&songTimeMs-(note.timeMs+settings.judgmentTimingOffsetMs)>RHYTHM_MISS_RECLAIM_MS){note.done=true;note._rhythmUnplaceable=true;return;}
+if(!note.done&&note.activePointerId===null&&note.releasedAtMs==null&&songTimeMs-(note.timeMs+settings.judgmentTimingOffsetMs)>RHYTHM_MISS_RECLAIM_MS)applyJudgment(note,'MISS',songTimeMs-note.timeMs);if(canvasNotes){paintCanvasNote(note);return;}
 const el=laneRefs.current[note.index];if(!el)return;
 // 失敗したHOLD/SLIDEはその場で消さず、譜面上の終端まで薄いグレーで流し続ける。
 // 「もう取れない」ことが見えるようにするための表示だけの扱いで、判定・スコアには関与しない。
@@ -12641,7 +12644,7 @@ scheduleTick();};
     「高さ0・背景なし＝見えない線」になる。実機で「演奏を始めたときに
     下部の判定ラインがないときがある」と報告された(2026-09-05)。
     判定ラインは音ゲーでいちばん大事な目印なので、外部CSSに依存させない */}
-{/* 判定ラインの「幅」。上下のふちがGOOD(前後0.2秒)の端、内側の明るいところがMARVELOUS(前後0.055秒)で、
+{/* 判定ラインの「幅」。上下のふちがGOOD(前後0.17秒)の端、内側の明るいところがMARVELOUS(前後0.055秒)で、
     その真ん中に下の判定ラインがちょうど乗る。位置と高さはノーツ速度と画面の高さで変わるので、
     実測から updateJudgmentBand が書き込む。見た目だけの要素で、判定・スコアには関与しない。
     判定ラインと同じ理由でTailwindに頼らず直接書く(CDNのCSSが間に合わなくても必ず出す) */}

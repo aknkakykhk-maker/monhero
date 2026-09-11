@@ -192,7 +192,7 @@ section('HOLD: 始点・保持・少しずれる・HOLD中TAP・終点・遅い�
   perfNow=2300;ends(run,['touch:1'],2300);
   check('終端から300ms遅れて離してもGOOD(遅い側はやさしく)',run.notes[0].holdJudgment==='GOOD',String(run.notes[0].holdJudgment));
   check('早すぎる離し(-241ms)は今までどおりMISS',X.rhythmJudgeRelease(-241)==='MISS'&&X.rhythmJudgeReleaseLenient(-241)==='MISS');
-  check('判定表(RHYTHM_JUDGMENTS)そのものは変えていない',X.RHYTHM_JUDGMENTS.map(j=>`${j.id}:${j.windowMs}`).join(',')==='MARVELOUS:55,EXCELLENT:100,GREAT:150,GOOD:200,BAD:240,MISS:null');
+  check('判定表(RHYTHM_JUDGMENTS)は2026-09-11のGOOD170/BAD185のまま',X.RHYTHM_JUDGMENTS.map(j=>`${j.id}:${j.windowMs}`).join(',')==='MARVELOUS:55,EXCELLENT:100,GREAT:150,GOOD:170,BAD:185,MISS:null');
 }
 {
   reset();
@@ -205,7 +205,7 @@ section('HOLD: 始点・保持・少しずれる・HOLD中TAP・終点・遅い�
   check('猶予を過ぎても戻ってこなければMISS',judgmentOf(run,0)==='MISS');
 
   check('本体の「始点を過ぎたのに誰も押していない→MISS」は、浮いているノーツを除いている',
-    /note\.activePointerId===null&&note\.releasedAtMs==null&&songTimeMs-\(note\.timeMs\+settings\.judgmentTimingOffsetMs\)>RHYTHM_INPUT_MATCH_WINDOW_MS\)applyJudgment\(note,'MISS'/.test(game));
+    /note\.activePointerId===null&&note\.releasedAtMs==null&&songTimeMs-\(note\.timeMs\+settings\.judgmentTimingOffsetMs\)>RHYTHM_MISS_RECLAIM_MS\)applyJudgment\(note,'MISS'/.test(game));
 }
 
 section('HOLD/SLIDE: 指の入れ替え(2通り)');
