@@ -6,9 +6,11 @@
 //   python3 -m http.server 8899 を起動した状態で
 //   node tools/run/auto-resume-on-visible-check.js
 //
-// 見るのは3つ。
+// 見るのは4つ。
 //   ① バトル画面で裏に回す → 止まる → 戻る → 自動で続く
-//   ② モンヒロビートを開いたままでも同じ(帯が「止まりました」から周回の表示へ戻る)
+//   ①-2 そのとき省エネも、裏に回る前に選んでいた段階へ戻る
+//      (2026-09-12・ユーザー指摘「省エネも設定してた状態に戻らないの？」)
+//   ② モンヒロビートの曲えらび画面を開いたままでも同じ(帯が「止まりました」から周回の表示へ戻る)
 //   ③ 自分でAUTO∞を切ったあとは、裏に回して戻っても始まらない
 //      (「負けたときは自動で始めない」と同じ経路＝止まった理由が 'hidden' 以外なら続けない。
 //       負けるまで遊ばせるのは時間がかかるので、同じ分かれ道をこちらで踏む)
@@ -76,6 +78,15 @@ const setHidden = (page, hidden) => page.evaluate((h) => {
     }
   };
   const autoLabel = () => page.evaluate(() => document.querySelector('button[aria-label^="AUTO"]')?.getAttribute('aria-label'));
+  const ecoLabel = () => page.evaluate(() => document.querySelector('button[aria-label^="省エネ"]')?.getAttribute('aria-label'));
+  // 省エネは「OFF → 簡易 → 超 → OFF」の順に回る。欲しい段階まで押す
+  const setEco = async (wanted) => {
+    for (let i = 0; i < 4 && (await ecoLabel()) !== `省エネ ${wanted}`; i++) {
+      await page.evaluate(() => document.querySelector('button[aria-label^="省エネ"]')?.click());
+      await page.waitForTimeout(700);
+    }
+    return ecoLabel();
+  };
   const bandText = () => page.evaluate(() => {
     const el = document.querySelector('[data-quick-run-progress],[data-quick-run-progress-header]');
     return el ? (el.innerText || '').replace(/\s+/g, ' ').trim() : '';
@@ -124,13 +135,18 @@ const setHidden = (page, hidden) => page.evaluate((h) => {
     }
     check('クイックで∞周回を始められる', (await autoLabel()) === 'AUTO ∞', await autoLabel());
 
+    // ---- ①-2 省エネを「簡易」にしておく(戻ったときに同じ段階へ帰るかを見る) ----
+    check('省エネを簡易にできる', (await setEco('簡易')) === '省エネ 簡易', await ecoLabel());
+
     // ---- ① バトル画面で 裏に回す → 戻る ----
     await setHidden(page, true);
     await page.waitForTimeout(1200);
     check('①裏に回すと∞周回が止まる', (await autoLabel()) !== 'AUTO ∞', await autoLabel());
+    check('①裏に回すと省エネもOFFになる', (await ecoLabel()) !== '省エネ 簡易', await ecoLabel());
     await setHidden(page, false);
     await page.waitForTimeout(1500);
     check('①戻ると自動で∞周回が続く', (await autoLabel()) === 'AUTO ∞', await autoLabel());
+    check('①-2 戻ると省エネも簡易へ戻る', (await ecoLabel()) === '省エネ 簡易', await ecoLabel());
 
     // ---- ② モンヒロビートを開いたまま 裏に回す → 戻る ----
     await page.evaluate(() => document.querySelector('[data-quick-to-rhythm]')?.click());
@@ -160,6 +176,9 @@ const setHidden = (page, hidden) => page.evaluate((h) => {
     await setHidden(page, false);
     await page.waitForTimeout(1500);
     check('③自分で切ったあとは、戻っても勝手に始まらない', (await autoLabel()) !== 'AUTO ∞', await autoLabel());
+    // ∞が止まっているあいだは省エネボタンそのものが出ない(出ていてもOFFのはず)
+    const ecoAfterOff = await ecoLabel();
+    check('③そのとき省エネもよみがえらない', !ecoAfterOff || ecoAfterOff === '省エネ OFF', String(ecoAfterOff));
 
     check('操作中に致命的なJSエラーが出ない', fatal.length === 0, fatal.slice(0, 2).join(' / '));
   } finally {

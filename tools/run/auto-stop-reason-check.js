@@ -69,7 +69,8 @@ for (const file of files) {
   const resumeBody = (() => {
     const from = compact.indexOf('constresumeQuickRunAfterVisible=()=>{');
     if (from < 0) return '';
-    return compact.slice(from, from + 600);
+    // コメントも一緒に詰まっているので、判定ぶん全部が入る長さを取る
+    return compact.slice(from, from + 1400);
   })();
   check(`${rel}: 続ける判定がある`, resumeBody.length > 0);
   check(`${rel}: 止まっていないときは何もしない`,
@@ -79,7 +80,17 @@ for (const file of files) {
   check(`${rel}: 見えていないあいだは続けない`,
     resumeBody.includes("document.visibilityState==='hidden')returnfalse;"));
   check(`${rel}: 続けるのは既存の「再開する」と同じ処理を通す`,
-    resumeBody.includes('returnresumeQuickRunFromRhythm();'));
+    resumeBody.includes('constresumed=resumeQuickRunFromRhythm();'));
+  // ---- 省エネも裏に回る前の段階へ戻す(2026-09-12・ユーザー指摘) ----
+  check(`${rel}: 裏に回って止めるときだけ省エネの段階を控える`,
+    compact.includes("ecoModeBeforeHiddenRef.current=reason==='hidden'?ecoModeRef.current:null;"));
+  check(`${rel}: 続けられたときに省エネを戻す`,
+    resumeBody.includes('consteco=ecoModeBeforeHiddenRef.current;'));
+  check(`${rel}: 戻す前に控えを捨てる(二重に戻さない)`,
+    /consteco=ecoModeBeforeHiddenRef\.current;[\s\S]{0,80}?ecoModeBeforeHiddenRef\.current=null;/.test(resumeBody));
+  check(`${rel}: 省エネを戻すのは∞を立て直したあと(先に呼ぶと'off'へ落ちる)`,
+    resumeBody.indexOf('resumeQuickRunFromRhythm()') < resumeBody.indexOf('setEcoModeSafe(eco)')
+    && resumeBody.includes("if(eco&&eco!=='off')setEcoModeSafe(eco);"));
   // ★負けたときに動きださない二重の守り。理由の取り違えがあっても、勝負がついていれば再開しない
   const resumeFromRhythmBody = (() => {
     const from = compact.indexOf('constresumeQuickRunFromRhythm=()=>{');
