@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 91dc0d9b670a47af
+// source-sha256: 6b859f8d5330842e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6a4423cd7346cbda
+// generated-sha256: 05755bb2361a3961
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 11:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 12:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -31345,6 +31345,2045 @@ function HomeUpdateGuideOverlay({
   }, notice.destination ? 'あとで' : '閉じる'))));
 }
 
+// ---- part: 71-screen-battle.jsx ----
+// ==== 画面: バトル ====
+//
+// MonsterHeroGame から切り出した20本目・最後の1本(docs/refactor/REFACTOR_MASTER_PLAN.md STEP 6-13)。
+// バトル画面そのもの(87千字)と、バトル中にだけ重なる演出4つ。
+//
+// 【この画面ならではの注意】
+// ・A等級(docs/refactor/REGRESSION_RISK_MAP.md)。ランキングに影響しうるので、
+//   **計算・保存・ターン進行はひとつも移していない**。ここにあるのは見せ方だけ
+// ・オート進行・演出・ターンのタイマーはすべて MonsterHeroGame 側に残る。
+//   画面へ移すと、画面のライフサイクルで途中の setTimeout が止まって進行不能になる
+//   (この画面の中に残る setTimeout は、カードを置いたあと 0.5 秒で光を消す1つだけ)
+// ・省エネ切替ボタンだけ、バトル画面の中でもういちど gameState==='BATTLE' を見ていた。
+//   画面は gameState を知らない約束(ui/screen-parts-check)なので、
+//   本体から battleScreenActive として渡している(綴りだけの違い)
+function BattleScreen({
+  applyTurnDamageReduction,
+  attackAnim,
+  autoBattle,
+  autoBattleRef,
+  autoRepeat,
+  battleIntimidate,
+  battleScenarioRef,
+  battleScreenActive,
+  battleSoulMasus,
+  battleSpeed,
+  battleTutorial,
+  battleTutorialAllowsEmergency,
+  battleTutorialCardAllowed,
+  battleTutorialCardKind,
+  battleTutorialCardTarget,
+  battleTutorialNeed,
+  battleTutorialNeedCard,
+  battleTutorialSpotClass,
+  battleTutorialStep,
+  cardAssignments,
+  cardDragActiveRef,
+  cardEffectMultiplier,
+  cardLimit,
+  cardNeedsMonster,
+  cycleActiveUniqueForSlot,
+  cycleBattleAuto,
+  cycleBattleSpeed,
+  cycleEcoMode,
+  debugBattle,
+  difficulty,
+  dismissQuickRhythmIntro,
+  distTotalBonus,
+  dragOverSlot,
+  dragState,
+  ecoBattleView,
+  ecoMode,
+  effectiveMaxGuts,
+  effectiveMaxHp,
+  enemy,
+  enemyAttackAnim,
+  enemyAttackFx,
+  enemyDist,
+  enemyIntent,
+  enemyNextIntent,
+  enemyRevivalUsed,
+  enemySkillName,
+  extremeDifficulty,
+  extremeRun,
+  extremeRunRef,
+  focusedCard,
+  getAttackPredictedDmg,
+  getAvailableUniquesForSlot,
+  getCardGuts,
+  getDmg,
+  getIncomingDamageBeforeTurnReduction,
+  getMasuMon,
+  getNextTurnBuff,
+  getPermaBuff,
+  getTurnBuff,
+  getWaveBuff,
+  guardCardWeight,
+  guardFx,
+  guardLevel,
+  guardValueOf,
+  guts,
+  hand,
+  heroCardBonus,
+  heroDist,
+  hp,
+  iceLockActive,
+  iceLockPreparing,
+  iceLockTurns,
+  isAssistCard,
+  isAttackCard,
+  isBusy,
+  isHeroSlotMon,
+  kikiCardBonus,
+  liteBattleView,
+  mainHero,
+  openHelp,
+  ownedUniques,
+  pendingCard,
+  pendingCardGuts,
+  popups,
+  previewLocalBoosts,
+  processTurn,
+  quickRhythmIntroVisible,
+  quickToRhythmButtonNode,
+  renderQuickRunBattleBand,
+  runMode,
+  safeDifficulty,
+  score,
+  selectedCardGuts,
+  selectedCards,
+  setCardAssignments,
+  setDragState,
+  setFocusedCard,
+  setPendingCard,
+  setShowAutoBgmPicker,
+  setShowDeckInfo,
+  setShowEnemyInfo,
+  setShowHeroInfo,
+  setShowQuitConfirm,
+  setShowSoulBattleEffects,
+  setSkillPicker,
+  setSlotSettle,
+  slotMaxUses,
+  slotSettle,
+  slotSkill,
+  slotUniqueChoice,
+  slots,
+  soulBattleParty,
+  soulCoordinationCardBonus,
+  suppressCardClickRef,
+  teachingFx,
+  totalTurnCount,
+  turnCount,
+  ultimateDistanceBreakLevels,
+  ultraBattleView,
+  unifiedSpecialDefense,
+  useEmergency,
+  wave
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 flex flex-col h-full relative",
+    "data-battle-speed": battleSpeed,
+    "data-eco-view": ultraBattleView ? 'ultra' : liteBattleView ? 'lite' : 'off'
+  }, liteBattleView && /*#__PURE__*/React.createElement("div", {
+    "data-lite-eco-dimmer": true,
+    className: "absolute inset-0 bg-black/20 pointer-events-none",
+    style: {
+      zIndex: 89999
+    },
+    "aria-hidden": "true"
+  }), /*#__PURE__*/React.createElement("header", {
+    "data-battle-header": true,
+    className: "h-[5%] min-h-[40px] shrink-0 bg-slate-900 px-1.5 flex items-center border-b border-white/5 z-[6500] overflow-hidden"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: `flex flex-1 min-w-0 items-center gap-0.5 overflow-hidden${battleTutorialSpotClass('waveInfo')}`
+  }, debugBattle && /*#__PURE__*/React.createElement("span", {
+    className: "text-[7px] font-black text-fuchsia-300 border border-fuchsia-500/40 rounded px-1 py-0.5 tracking-widest"
+  }, "DEBUG"), /*#__PURE__*/React.createElement("span", {
+    className: `text-[8px] font-black bg-opacity-10 px-1 py-0.5 rounded border tracking-tight whitespace-nowrap ${difficulty === 'Hard' ? 'text-red-400 bg-red-500 border-red-500' : 'text-indigo-400 bg-indigo-500 border-indigo-500'}`
+  }, "WAVE ", wave, "/10"), /*#__PURE__*/React.createElement("span", {
+    className: "min-w-0 overflow-hidden text-ellipsis text-[7px] font-black px-1 py-0.5 rounded border whitespace-nowrap",
+    style: {
+      color: battleModeInfo(runMode).color,
+      borderColor: `${battleModeInfo(runMode).color}66`,
+      backgroundColor: 'rgba(0,0,0,.35)'
+    }
+  }, extremeRun ? `極限チャレンジ / ${extremeDifficulty}` : /*#__PURE__*/React.createElement(React.Fragment, null, battleModeInfo(runMode).short, " / ", QUICK_DIFFICULTY_SETTINGS[safeDifficulty]?.label || safeDifficulty))), /*#__PURE__*/React.createElement("div", {
+    "data-battle-metrics": true,
+    className: "shrink-0 flex items-center gap-1 px-1 leading-none"
+  }, /*#__PURE__*/React.createElement("div", {
+    "data-battle-turn": true,
+    className: "flex flex-col items-center justify-center whitespace-nowrap font-black text-blue-400"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "flex items-center gap-0.5 text-[7px] tracking-wide"
+  }, /*#__PURE__*/React.createElement(Timer, {
+    size: 7
+  }), "TURN"), /*#__PURE__*/React.createElement("span", {
+    className: "mt-0.5 text-[10px] font-mono"
+  }, turnCount, "/20")), !isQuickMode(runMode) && /*#__PURE__*/React.createElement("div", {
+    "data-battle-score": true,
+    className: "flex min-w-[64px] flex-col items-end justify-center whitespace-nowrap font-mono font-black text-amber-500"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "flex items-center gap-0.5 text-[7px] tracking-wide"
+  }, /*#__PURE__*/React.createElement(Award, {
+    size: 7
+  }), "SCORE"), /*#__PURE__*/React.createElement("span", {
+    "data-battle-score-value": true,
+    className: "mt-0.5 text-[10px] tabular-nums"
+  }, score.toLocaleString()))), /*#__PURE__*/React.createElement("div", {
+    "data-battle-controls": true,
+    className: "flex shrink-0 items-center gap-0.5"
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    disabled: !!battleTutorial || autoRepeat,
+    onClick: cycleBattleSpeed,
+    "aria-label": battleTutorial ? 'バトルのれんしゅう中は1倍固定' : autoRepeat ? '∞周回中は4倍固定' : `バトル速度、現在${battleSpeed}倍。タップで切り替え`,
+    title: autoRepeat ? '∞周回中は×4固定' : undefined,
+    className: "shrink-0 min-w-[42px] h-[28px] px-1.5 rounded-lg border-2 font-black text-[11px] leading-none active:scale-90 disabled:cursor-not-allowed disabled:opacity-60",
+    style: {
+      color: '#fef3c7',
+      borderColor: '#f59e0b',
+      backgroundColor: 'rgba(120,53,15,.72)',
+      boxShadow: '0 0 9px rgba(245,158,11,.35)'
+    }
+  }, "\xD7", battleSpeed, autoRepeat && /*#__PURE__*/React.createElement("span", {
+    className: "ml-0.5 text-[7px]"
+  }, "\u56FA\u5B9A")), /*#__PURE__*/React.createElement("button", {
+    onClick: () => openHelp(),
+    "aria-label": "\u30D8\u30EB\u30D7",
+    className: "shrink-0 w-[28px] h-[28px] flex items-center justify-center bg-slate-800 rounded text-emerald-400 active:scale-90"
+  }, /*#__PURE__*/React.createElement(HelpCircle, {
+    size: 14
+  })), /*#__PURE__*/React.createElement("button", {
+    "data-battle-quit": true,
+    disabled: !!battleTutorial,
+    onClick: () => setShowQuitConfirm(true),
+    "aria-label": "\u8AE6\u3081\u308B",
+    className: "shrink-0 w-[28px] h-[28px] flex items-center justify-center bg-slate-800 rounded text-slate-400 active:scale-90 disabled:opacity-25"
+  }, /*#__PURE__*/React.createElement(Flag, {
+    size: 14
+  })))), ultraBattleView ? /*#__PURE__*/React.createElement("div", {
+    "data-ultra-battle-view": true,
+    className: "flex-1 min-h-0 flex flex-col bg-slate-950 text-slate-100"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 min-h-0 px-2 py-1.5 flex flex-col gap-1.5 overflow-hidden"
+  }, enemy && /*#__PURE__*/React.createElement("section", {
+    className: "rounded-xl border border-red-900/70 bg-slate-900/95 px-2 py-1.5"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between gap-2 text-[10px] font-black"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "min-w-0 truncate text-red-200"
+  }, enemy.name), /*#__PURE__*/React.createElement("span", {
+    className: "shrink-0 font-mono text-red-300"
+  }, Math.max(0, enemy.hp).toLocaleString(), " / ", enemy.maxHp.toLocaleString())), /*#__PURE__*/React.createElement("div", {
+    className: "mt-1 h-2 overflow-hidden rounded-full bg-slate-800"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "h-full bg-red-600",
+    style: {
+      width: `${Math.max(0, enemy.hp) / enemy.maxHp * 100}%`
+    }
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "mt-1 flex items-center justify-center gap-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "h-[clamp(82px,16dvh,132px)] w-[clamp(82px,16dvh,132px)] flex items-center justify-center"
+  }, enemy.imgUrl ? /*#__PURE__*/React.createElement("img", {
+    src: enemy.imgUrl,
+    alt: enemy.name,
+    className: "w-full h-full object-contain"
+  }) : /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 'clamp(58px,11dvh,104px)',
+      lineHeight: 1
+    }
+  }, enemy.emoji)), /*#__PURE__*/React.createElement("div", {
+    className: "text-center"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[8px] font-black text-slate-400"
+  }, "\u73FE\u5728\u8DDD\u96E2"), /*#__PURE__*/React.createElement("div", {
+    className: `mt-1 rounded-full border px-3 py-1 text-[11px] font-black ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border}`
+  }, RANGE_LABELS[enemyDist], "\u8DDD\u96E2"))), /*#__PURE__*/React.createElement("div", {
+    "data-ultra-enemy-log": true,
+    className: "mt-1 h-[42px] overflow-hidden rounded-lg border border-red-800/60 bg-black/50 px-2 py-1 text-center leading-tight"
+  }, enemySkillName && /*#__PURE__*/React.createElement("div", {
+    className: "truncate text-[11px] font-black text-red-200"
+  }, enemySkillName.label), popups.filter(p => p.side === 'enemy').map(p => /*#__PURE__*/React.createElement("div", {
+    key: p.id,
+    className: `${p.color} truncate text-sm font-black`
+  }, p.text)))), /*#__PURE__*/React.createElement("section", {
+    className: "rounded-xl border border-indigo-900/70 bg-slate-900/95 px-2 py-1.5"
+  }, /*#__PURE__*/React.createElement("div", {
+    "data-ultra-ally-slots": true,
+    className: "grid grid-cols-4 gap-1"
+  }, slots.map((s, i) => /*#__PURE__*/React.createElement("div", {
+    key: i,
+    className: `flex h-[42px] min-w-0 flex-col items-center justify-center rounded-lg border px-0.5 py-1 text-center ${RANGE_STYLES[i].bg} ${RANGE_STYLES[i].border}`
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-full truncate text-[9px] font-black text-white"
+  }, s?.name || '---'), /*#__PURE__*/React.createElement("div", {
+    className: "mt-1 text-[8px] font-black"
+  }, RANGE_LABELS[i], "\u8DDD\u96E2")))), /*#__PURE__*/React.createElement("div", {
+    className: "mt-1.5 space-y-1"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between text-[8px] font-black text-pink-300"
+  }, /*#__PURE__*/React.createElement("span", null, "\u5473\u65B9HP"), /*#__PURE__*/React.createElement("span", {
+    className: "font-mono"
+  }, hp.toLocaleString(), " / ", effectiveMaxHp.toLocaleString())), /*#__PURE__*/React.createElement("div", {
+    className: "h-1.5 overflow-hidden rounded-full bg-slate-800"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "h-full bg-pink-500",
+    style: {
+      width: `${hp / effectiveMaxHp * 100}%`
+    }
+  }))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between text-[8px] font-black text-amber-300"
+  }, /*#__PURE__*/React.createElement("span", null, "\u30AC\u30C3\u30C4"), /*#__PURE__*/React.createElement("span", {
+    className: "font-mono"
+  }, Math.floor(guts).toLocaleString(), " / ", effectiveMaxGuts.toLocaleString())), /*#__PURE__*/React.createElement("div", {
+    className: "h-1.5 overflow-hidden rounded-full bg-slate-800"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "h-full bg-amber-400",
+    style: {
+      width: `${guts / effectiveMaxGuts * 100}%`
+    }
+  })))), /*#__PURE__*/React.createElement("div", {
+    "data-ultra-ally-log": true,
+    className: "mt-1 h-[42px] overflow-hidden rounded-lg border border-indigo-800/60 bg-black/50 px-2 py-1 text-center leading-tight"
+  }, slotSkill && /*#__PURE__*/React.createElement("div", {
+    className: "truncate text-[11px] font-black text-indigo-200"
+  }, slotSkill.name), popups.filter(p => ['hero', 'life', 'guts'].includes(p.side)).map(p => /*#__PURE__*/React.createElement("div", {
+    key: p.id,
+    className: `${p.color} truncate text-sm font-black`
+  }, p.text)))), renderQuickRunBattleBand()), /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 border-t border-white/10 bg-slate-900 p-1"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between gap-1 px-1"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[8px] font-black uppercase tracking-wider text-indigo-300"
+  }, "Action Cards"), /*#__PURE__*/React.createElement("div", {
+    className: "truncate text-[9px] font-bold text-slate-300"
+  }, "AUTO\u221E\u3067\u9032\u884C\u4E2D")), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setShowDeckInfo(true),
+    className: "flex min-h-[32px] items-center gap-0.5 rounded-lg border border-white/10 bg-white/5 px-2 text-[7px] font-black"
+  }, /*#__PURE__*/React.createElement(Layers, {
+    size: 9
+  }), "VIEW"), /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 flex flex-col gap-0.5"
+  }, /*#__PURE__*/React.createElement("button", {
+    "data-auto-bgm-button": true,
+    type: "button",
+    onClick: () => setShowAutoBgmPicker(true),
+    "aria-label": "\u30D0\u30C8\u30EBBGM\u3068\u97F3\u91CF\u3092\u8ABF\u6574",
+    title: "BGM / \u97F3\u91CF",
+    className: "shrink-0 min-h-[32px] min-w-[42px] rounded-lg border border-indigo-400/50 bg-indigo-800 px-1.5 text-indigo-100 active:scale-90"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "block text-[13px] leading-none"
+  }, "\uD83C\uDFB5"), /*#__PURE__*/React.createElement("span", {
+    className: "mt-0.5 block text-[7px] font-black leading-none"
+  }, "BGM")), quickToRhythmButtonNode), /*#__PURE__*/React.createElement("div", {
+    className: "w-[44px] shrink-0 flex flex-col gap-0.5"
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    disabled: !!battleScenarioRef.current || battleTutorialStep != null,
+    onClick: cycleBattleAuto,
+    "aria-pressed": autoBattle,
+    "aria-label": `AUTO ${autoRepeat ? '∞' : autoBattle ? 'ON' : 'OFF'}`,
+    className: "h-8 w-full rounded-lg border-2 border-fuchsia-300 bg-fuchsia-500 text-[8px] font-black leading-tight text-slate-950"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "block"
+  }, "AUTO"), /*#__PURE__*/React.createElement("span", {
+    className: "block text-[7px]"
+  }, autoRepeat ? '∞' : autoBattle ? 'ON' : 'OFF')), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: cycleEcoMode,
+    "aria-label": "\u7701\u30A8\u30CD \u8D85",
+    className: "min-h-[24px] w-full rounded-md border border-lime-200 bg-lime-500 text-[7px] font-black leading-[9px] text-slate-950"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "block"
+  }, "\u7701\u30A8\u30CD"), /*#__PURE__*/React.createElement("span", {
+    className: "block"
+  }, "\u8D85"))), /*#__PURE__*/React.createElement("button", {
+    disabled: true,
+    className: "min-h-[44px] min-w-[84px] shrink-0 rounded-full border-2 border-black bg-slate-700 px-2 text-[11px] font-black uppercase text-slate-400 opacity-50"
+  }, /*#__PURE__*/React.createElement(Play, {
+    fill: "currentColor",
+    size: 12,
+    className: "inline mr-1"
+  }), "Action")))) : /*#__PURE__*/React.createElement(React.Fragment, null, (() => {
+    const statusRule = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
+    const hasEnemyRate = extremeRuleNumber(statusRule, 'enemyTurnRate') != null;
+    const hasDamageRate = extremeRuleNumber(statusRule, 'damageTurnRate') != null;
+    if (!hasEnemyRate && !hasDamageRate) return null;
+    const elapsedTotalTurns = totalTurnCount + Math.max(0, turnCount - 1);
+    const enemyMultiplier = ultimateEnemyTurnMultiplier(totalTurnCount, statusRule);
+    const damageMultiplier = extremeDamageTurnMultiplier(elapsedTotalTurns, statusRule, wave);
+    const hasJoinRate = extremeRuleNumber(statusRule, 'allyJoinPenaltyRate') != null;
+    // 段階(神威・黄昏)と不死の残り回数は難易度名で分岐せず、持っている難易度だけに出す
+    const stageLabel = extremeWaveStageLabel(statusRule);
+    const stagedEnemyMultiplier = extremeWaveEnemyMultiplier(statusRule, wave);
+    const revivalTotal = extremeRevivalCount(statusRule, wave);
+    return /*#__PURE__*/React.createElement("div", {
+      "data-ultimate-battle-status": statusRule,
+      className: "shrink-0 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 border-b border-fuchsia-500/30 bg-purple-950/80 px-2 py-1 text-[8px] font-black leading-none text-purple-100"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-amber-300"
+    }, statusRule, stageLabel ? ` ${stageLabel} Lv.${extremeWaveStageLevel(wave)}` : ''), revivalTotal > 0 && /*#__PURE__*/React.createElement("span", {
+      className: "text-slate-200"
+    }, "\u4E0D\u6B7B \u6B8B\u308A", Math.max(0, revivalTotal - enemyRevivalUsed), "\u56DE"), hasEnemyRate && /*#__PURE__*/React.createElement("span", null, "\u6575\u5F37\u5316 +", compactPercent(enemyMultiplier * stagedEnemyMultiplier - 1), "\uFF08WAVE\u958B\u59CB\u6642 \u7D2F\u8A08", totalTurnCount, "T\uFF09"), hasDamageRate && /*#__PURE__*/React.createElement("span", null, "\u4E0E\u30C0\u30E1 ", compactPercent(damageMultiplier), "\uFF08\u73FE\u5728 \u7D2F\u8A08", elapsedTotalTurns, "T\uFF09"), hasJoinRate && /*#__PURE__*/React.createElement("span", null, "\u52A0\u5165B ", compactPercent(ultimateAllyJoinMultiplier(elapsedTotalTurns, statusRule)), "\uFF08\u73FE\u5728\uFF09"), extremeDistanceBreakRule(statusRule) && /*#__PURE__*/React.createElement("span", null, "BREAK ", ultimateDistanceBreakLevels.map((level, index) => level > 0 ? `${RANGE_LABELS[index]}Lv${level}` : null).filter(Boolean).join(' / ') || '未発生'));
+  })(), (() => {
+    const rule = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
+    return [NIGHTMARE_SETTING.id, CHAOS_SETTING.id].includes(rule) && /*#__PURE__*/React.createElement("div", {
+      "data-extreme-battle-status": rule,
+      className: "shrink-0 grid grid-cols-4 items-center gap-1 border-b border-fuchsia-500/30 bg-purple-950/80 px-2 py-1 text-[9px] font-black leading-none text-purple-100"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-amber-300"
+    }, rule), extremeSpecialRuleLines(rule).map(([label, value]) => /*#__PURE__*/React.createElement("span", {
+      key: label,
+      className: "text-center whitespace-nowrap"
+    }, label, " ", value)));
+  })(), enemy && /*#__PURE__*/React.createElement("div", {
+    className: `shrink-0 bg-slate-950/95 border-b border-red-900/40 px-4 py-1.5 z-[6400] shadow-[0_4px_12px_rgba(0,0,0,0.6)]${battleTutorialSpotClass('enemyBar')}`
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between items-center text-[10px] font-black italic uppercase tracking-tighter mb-1"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: `flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5 leading-none ${wave === 10 ? 'text-red-500 animate-pulse' : 'text-slate-200'}`
+  }, /*#__PURE__*/React.createElement(Skull, {
+    size: 11,
+    className: "shrink-0"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "max-w-[34vw] truncate"
+  }, enemy.name), /*#__PURE__*/React.createElement("span", {
+    className: `shrink-0 px-1.5 py-0.5 rounded-full text-[8px] text-white font-bold border ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border}`
+  }, RANGE_LABELS[enemyDist]), iceLockTurns > 0 && /*#__PURE__*/React.createElement("span", {
+    "data-ice-lock-status": true,
+    className: "shrink-0 px-1 py-0.5 rounded-full border border-cyan-400/60 bg-cyan-950/80 text-[7px] not-italic tracking-tighter whitespace-nowrap text-cyan-100"
+  }, "\u2744\uFE0F\u7D76\u6C37 ", iceLockPreparing ? '準備' : /*#__PURE__*/React.createElement(React.Fragment, null, iceLockTurns, "T\u3000\u2B0730%"))), /*#__PURE__*/React.createElement("span", {
+    className: "text-red-500 flex items-center gap-1 font-mono drop-shadow-[0_1px_3px_rgba(0,0,0,1)]"
+  }, Math.max(0, enemy.hp).toLocaleString(), " / ", enemy.maxHp.toLocaleString())), /*#__PURE__*/React.createElement("div", {
+    className: "h-2.5 bg-slate-900 rounded-full overflow-hidden border border-white/20 relative shadow-inner"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "h-full bg-gradient-to-r from-red-700 via-red-500 to-orange-400 transition-all duration-1000",
+    style: {
+      width: `${Math.max(0, enemy.hp) / enemy.maxHp * 100}%`,
+      backgroundImage: 'linear-gradient(to right, #b91c1c, #ef4444, #fb923c)'
+    }
+  }))), /*#__PURE__*/React.createElement("main", {
+    className: "flex-1 relative flex flex-col items-center justify-between pt-3 pb-1 px-2 overflow-x-visible overflow-y-auto min-h-0"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setShowEnemyInfo(true),
+    className: "absolute right-2 top-24 flex flex-col items-center justify-center p-2 rounded-2xl border border-red-500 bg-red-950/30 active:scale-90 z-20 shadow-lg"
+  }, /*#__PURE__*/React.createElement(Search, {
+    className: "text-red-400 mb-0.5",
+    size: 14
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "text-[7px] font-black text-white"
+  }, "\u89E3\u6790")), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setShowHeroInfo(true),
+    className: `absolute left-2 top-10 flex flex-col items-center justify-center p-2 rounded-2xl border border-indigo-500 bg-indigo-950/30 active:scale-90 z-20 shadow-lg${battleTutorialSpotClass('heroStatus')}`
+  }, /*#__PURE__*/React.createElement(Crown, {
+    className: "text-indigo-400 mb-0.5",
+    size: 14
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "text-[7px] font-black text-white"
+  }, "\u30B9\u30C6\u30FC\u30BF\u30B9")), battleSoulMasus.some(m => normalizeSoulRankStage(m.soulRankStage) > 0) && /*#__PURE__*/React.createElement("button", {
+    "data-soul-battle-effects-button": true,
+    type: "button",
+    onClick: () => setShowSoulBattleEffects(true),
+    className: "absolute right-2 top-10 min-h-[44px] min-w-[52px] flex flex-col items-center justify-center px-2 py-1 rounded-2xl border border-sky-400 bg-sky-950/60 active:scale-90 z-20 shadow-lg"
+  }, /*#__PURE__*/React.createElement(Sparkles, {
+    className: "text-sky-300 mb-0.5",
+    size: 14
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "text-[7px] font-black text-white"
+  }, "\u9B42\u683C\u52B9\u679C")), turnCount === 1 && battleSoulMasus.some(m => normalizeSoulRankStage(m.soulRankStage) > 0) && !isBusy && /*#__PURE__*/React.createElement("div", {
+    "data-soul-battle-start-summary": true,
+    className: "absolute left-1/2 top-2 -translate-x-1/2 z-10 max-w-[62%] truncate rounded-full border border-sky-400/30 bg-sky-950/75 px-2 py-1 text-[7px] font-black text-sky-100 pointer-events-none"
+  }, "\u9B42\u683C\u52B9\u679C \u767A\u52D5\u4E2D", Math.round(soulBattleParty.damageReduction * 10) / 10 > 0 ? ` ・鉄壁${Math.round(soulBattleParty.damageReduction * 10) / 10}%` : '', unifiedSpecialDefense.rate > 0 ? ` ・特殊防御${Math.round(unifiedSpecialDefense.rate * 10) / 10}%` : '', battleIntimidate > 0 ? ` ・威圧${Math.round(battleIntimidate * 10) / 10}%` : '', soulCoordinationCardBonus > 0 ? ' ・カード+1' : ''), /*#__PURE__*/React.createElement("button", {
+    onClick: useEmergency,
+    disabled: isBusy || autoBattle || !battleTutorialAllowsEmergency,
+    className: `absolute left-2 top-24 flex flex-col items-center justify-center p-2 rounded-2xl border border-blue-500 bg-blue-900/30 active:scale-90 disabled:opacity-20 z-20 shadow-lg${battleTutorialSpotClass('emergency')}`
+  }, /*#__PURE__*/React.createElement(Activity, {
+    className: "text-blue-400 mb-0.5",
+    size: 16
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "text-[7px] font-black text-white"
+  }, "\u7DCA\u6025")), /*#__PURE__*/React.createElement("div", {
+    className: "mt-1 relative flex flex-col items-center"
+  }, enemySkillName && /*#__PURE__*/React.createElement("div", {
+    className: "fixed left-1/2 -translate-x-1/2 pointer-events-none whitespace-nowrap",
+    style: {
+      top: '14%',
+      zIndex: 65000,
+      animation: liteBattleView ? undefined : 'skillNamePop 350ms ease-out forwards'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "px-4 py-1.5 rounded-xl font-black text-[13px] bg-red-700 border-2 border-red-200 text-white shadow-[0_2px_16px_rgba(0,0,0,0.9)] flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", null, cardIconNode(enemySkillName.icon, 16)), enemySkillName.label)), enemy && enemyIntent && !isBusy && !enemyAttackFx && enemyIntent.type === 'SPECIAL' && /*#__PURE__*/React.createElement("div", {
+    className: "fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1",
+    style: {
+      top: '11%',
+      zIndex: 65000,
+      animation: 'specialWarnFlash 500ms ease-in-out infinite'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-5xl drop-shadow-[0_0_20px_rgba(217,70,239,1)]"
+  }, "\u2620\uFE0F"), /*#__PURE__*/React.createElement("div", {
+    className: "px-3 py-1 rounded-lg bg-gradient-to-r from-purple-900 via-fuchsia-700 to-purple-900 border-2 border-fuchsia-300 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(217,70,239,0.9)]"
+  }, "\u5FC5 \u6BBA \u6280")), enemy && enemyIntent && !isBusy && !enemyAttackFx && enemyIntent.type === 'CHARGE' && /*#__PURE__*/React.createElement("div", {
+    className: "fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1",
+    style: {
+      top: '11%',
+      zIndex: 65000,
+      animation: 'specialWarnFlash 700ms ease-in-out infinite'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-5xl drop-shadow-[0_0_20px_rgba(251,191,36,1)]"
+  }, "\u2728"), /*#__PURE__*/React.createElement("div", {
+    className: "px-3 py-1 rounded-lg bg-gradient-to-r from-amber-900 via-amber-600 to-amber-900 border-2 border-amber-200 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(251,191,36,0.9)]"
+  }, "\u305F \u3081 \u308B")), enemy && enemyNextIntent && !isBusy && !enemyAttackFx && enemyNextIntent.type === 'MOVE' &&
+  /*#__PURE__*/
+  // 画面ではなく遊ぶ列(最大600px)の右端に寄せる。left:50%から
+  // 「列の半分ぶん右へ、自分の幅だけ左へ」動かすと、広い画面でも列の中に収まる
+  React.createElement("div", {
+    className: "fixed left-1/2 pointer-events-none",
+    style: {
+      top: '22%',
+      transform: 'translateX(calc(min(50vw, 300px) - 100% - 8px))',
+      zIndex: 65000
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mh-enemy-move-hint"
+  }, /*#__PURE__*/React.createElement("span", {
+    "aria-hidden": "true"
+  }, "\uD83C\uDFC3"), /*#__PURE__*/React.createElement("span", null, RANGE_LABELS[enemyNextIntent.targetDist], "\u8DDD\u96E2\u306B\u79FB\u52D5\u3057\u3088\u3046\u3068\u3057\u3066\u3044\u308B\u2026\uFF1F"))), slotSkill && /*#__PURE__*/React.createElement("div", {
+    className: "fixed -translate-x-1/2 pointer-events-none whitespace-nowrap",
+    style: {
+      left: `${12.5 + slotSkill.slotIndex * 25}%`,
+      bottom: '30%',
+      zIndex: 65000,
+      animation: liteBattleView ? undefined : 'skillNamePop 350ms ease-out forwards'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: `px-3 py-1 rounded-xl font-black text-[12px] border-2 shadow-[0_2px_16px_rgba(0,0,0,0.9)] ${slotSkill.type === 'unique' ? 'bg-purple-700 border-purple-200 text-white drop-shadow-[0_0_10px_rgba(217,70,239,0.9)]' : slotSkill.type === 'special' ? 'bg-amber-600 border-amber-200 text-white' : 'bg-red-700 border-red-200 text-white'}`
+  }, slotSkill.name)), !ecoBattleView && guardFx && /*#__PURE__*/React.createElement("div", {
+    className: "fixed inset-0 pointer-events-none flex items-center justify-center",
+    style: {
+      zIndex: 64000
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "absolute",
+    style: {
+      animation: 'guardShine 550ms ease-out forwards'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[120px] drop-shadow-[0_0_30px_rgba(56,189,248,1)]"
+  }, "\uD83D\uDEE1\uFE0F")), [0, 1, 2, 3, 4, 5].map(k => /*#__PURE__*/React.createElement("div", {
+    key: k,
+    className: "absolute",
+    style: {
+      transform: `rotate(${k * 60}deg)`
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "rounded-full border-4 border-cyan-200",
+    style: {
+      width: '36px',
+      height: '36px',
+      animation: `guardSpark 500ms ease-out ${k * 25}ms forwards`
+    }
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "absolute font-black text-cyan-100 text-4xl tracking-widest drop-shadow-[0_0_16px_rgba(56,189,248,1)]",
+    style: {
+      top: '34%',
+      animation: 'guardShine 550ms ease-out forwards'
+    }
+  }, "\u30AD\u30FC\u30F3!"), /*#__PURE__*/React.createElement("div", {
+    className: "absolute inset-0",
+    style: {
+      background: 'radial-gradient(circle at 50% 45%, rgba(255,255,255,0.5) 0%, rgba(56,189,248,0.3) 20%, rgba(0,0,0,0) 45%)',
+      animation: 'guardFlash 350ms ease-out forwards'
+    }
+  })), !ecoBattleView && teachingFx && TEACHING_FX_STYLE[teachingFx.id] && (() => {
+    const fx = TEACHING_FX_STYLE[teachingFx.id];
+    return /*#__PURE__*/React.createElement("div", {
+      key: teachingFx.fxId,
+      className: "fixed inset-0 pointer-events-none flex items-center justify-center",
+      style: {
+        zIndex: 63000
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "absolute",
+      style: {
+        animation: 'guardShine 550ms ease-out forwards'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-[110px] drop-shadow-[0_0_30px_rgba(255,255,255,0.9)]"
+    }, cardIconNode(fx.icon, 110))), [0, 1, 2, 3, 4, 5, 6, 7].map(k => /*#__PURE__*/React.createElement("div", {
+      key: k,
+      className: "absolute",
+      style: {
+        transform: `rotate(${k * 45}deg)`
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      className: `rounded-full border-4 ${fx.ring}`,
+      style: {
+        width: '30px',
+        height: '30px',
+        animation: `guardSpark 550ms ease-out ${k * 20}ms forwards`
+      }
+    }))), /*#__PURE__*/React.createElement("div", {
+      className: `absolute font-black text-3xl tracking-widest drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] ${fx.text}`,
+      style: {
+        top: '32%',
+        animation: 'guardShine 550ms ease-out forwards'
+      }
+    }, fx.label), /*#__PURE__*/React.createElement("div", {
+      className: "absolute inset-0",
+      style: {
+        background: `radial-gradient(circle at 50% 45%, rgba(${fx.rgb},0.5) 0%, rgba(${fx.rgb},0.25) 22%, rgba(0,0,0,0) 48%)`,
+        animation: 'guardFlash 400ms ease-out forwards'
+      }
+    }));
+  })(), enemy?.id === 'Moo' && enemy?.imgUrl && /*#__PURE__*/React.createElement("div", {
+    className: "fixed left-1/2 pointer-events-none flex items-center justify-center",
+    style: {
+      top: '30%',
+      transform: 'translate(-50%,-50%)',
+      zIndex: focusedCard ? 5 : 30,
+      width: 'min(108vw,560px)',
+      height: 'min(108vw,560px)'
+    }
+  }, /*#__PURE__*/React.createElement("img", {
+    src: enemy.imgUrl,
+    alt: "\u30E0\u30FC",
+    style: {
+      width: '100%',
+      height: '100%',
+      animation: liteBattleView ? undefined : enemyAttackAnim ? enemyAttackFx?.kind === 'move' ? 'mooMoveSlide 1000ms ease-in-out forwards' : enemyAttackFx?.kind === 'charge' ? 'mooChargeGather 1100ms ease-in-out forwards' : 'mooAttackLunge 900ms ease-in-out forwards' : 'mooFloat 3000ms ease-in-out infinite',
+      imageRendering: 'auto',
+      WebkitMaskImage: 'radial-gradient(circle at 50% 42%, #000 60%, transparent 92%)',
+      maskImage: 'radial-gradient(circle at 50% 42%, #000 60%, transparent 92%)'
+    },
+    className: `relative z-[1] object-contain drop-shadow-[0_0_55px_rgba(168,85,247,0.95)]${extremeRun ? extremeDifficulty === NIGHTMARE_SETTING.id ? ' mh-nightmare-enemy-image' : ' mh-extreme-enemy-image' : ''}`
+  })), !ecoBattleView && enemy?.id === 'Moo' && enemyAttackFx?.kind === 'moo' && /*#__PURE__*/React.createElement("div", {
+    className: "fixed inset-0 pointer-events-none flex items-center justify-center overflow-hidden",
+    style: {
+      zIndex: 25
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "absolute inset-0",
+    style: {
+      background: 'radial-gradient(circle at 50% 34%, rgba(168,85,247,0.55) 0%, rgba(239,68,68,0.4) 30%, rgba(251,191,36,0.25) 48%, rgba(0,0,0,0) 70%)',
+      animation: 'auraPulse 450ms ease-out infinite'
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "absolute inset-0",
+    style: {
+      animation: 'specialFlash 400ms ease-out infinite',
+      background: 'radial-gradient(circle at 50% 34%, rgba(255,255,255,0.45) 0%, rgba(168,85,247,0.15) 35%, rgba(255,255,255,0) 60%)'
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "absolute",
+    style: {
+      top: '34%',
+      left: '50%',
+      transform: 'translate(-50%,-50%)',
+      width: 'min(120vw,640px)',
+      height: 'min(120vw,640px)'
+    }
+  }, [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map(deg => /*#__PURE__*/React.createElement("div", {
+    key: deg,
+    className: "absolute left-1/2 top-1/2 text-5xl",
+    style: {
+      transform: `translate(-50%,-50%) rotate(${deg}deg) translateY(-42vw)`,
+      animation: 'sparkFlicker 240ms ease-in-out infinite',
+      animationDelay: `${deg}ms`
+    }
+  }, "\u26A1")), /*#__PURE__*/React.createElement("div", {
+    className: "absolute inset-0 rounded-full border-4 border-purple-300/80",
+    style: {
+      animation: 'auraRing 500ms ease-out infinite'
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "absolute inset-0 rounded-full border-4 border-red-500/60",
+    style: {
+      animation: 'auraRing 650ms ease-out 120ms infinite'
+    }
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: `rounded-full transition-all duration-500 border-4 relative ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border} ${RANGE_STYLES[enemyDist].shadow} ${RANGE_STYLES[enemyDist].glow} shadow-[0_0_50px]`,
+    style: enemyAttackAnim && !ecoBattleView ? {
+      padding: 'clamp(8px,2.2dvh,28px)',
+      animation: enemyAttackFx?.kind === 'move' ? enemy?.id === 'Moo' ? 'enemyMoveSlideMoo 1000ms ease-in-out forwards' : 'enemyMoveSlide 1000ms ease-in-out forwards' : enemyAttackFx?.kind === 'charge' ? 'enemyChargeShake 1100ms ease-in-out forwards' : 'enemyAttackFly 450ms ease-in forwards',
+      ...(enemy?.id === 'Moo' && enemyAttackFx?.kind !== 'move' ? {
+        transform: 'translateY(3dvh)'
+      } : {}),
+      ...(enemy?.id !== 'Moo' && enemyAttackFx?.kind !== 'move' ? {
+        zIndex: 9999
+      } : {})
+    } : {
+      padding: 'clamp(8px,2.2dvh,28px)',
+      ...(enemy?.id === 'Moo' ? {
+        transform: 'translateY(3dvh)'
+      } : {})
+    }
+  }, enemy?.imgUrl ? enemy?.id === 'Moo' ? /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: 'clamp(70px,12dvh,120px)',
+      height: 'clamp(80px,16dvh,150px)'
+    }
+  }) : /*#__PURE__*/React.createElement("span", {
+    className: extremeRun ? extremeDifficulty === NIGHTMARE_SETTING.id ? 'mh-nightmare-enemy-aura-shell' : 'mh-extreme-enemy-aura-shell' : '',
+    style: {
+      width: 'clamp(70px,12dvh,120px)',
+      height: 'clamp(80px,16dvh,150px)'
+    }
+  }, /*#__PURE__*/React.createElement("img", {
+    src: enemy.imgUrl,
+    alt: enemy?.name,
+    className: `relative z-[1] w-full h-full object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]${extremeRun ? extremeDifficulty === NIGHTMARE_SETTING.id ? ' mh-nightmare-enemy-image' : ' mh-extreme-enemy-image' : ''}`
+  })) : /*#__PURE__*/React.createElement("span", {
+    className: extremeRun ? extremeDifficulty === NIGHTMARE_SETTING.id ? 'mh-nightmare-enemy-aura-shell' : 'mh-extreme-enemy-aura-shell' : ''
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 'clamp(58px,11dvh,104px)',
+      lineHeight: 1
+    },
+    className: `relative z-[1] drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]${extremeRun ? extremeDifficulty === NIGHTMARE_SETTING.id ? ' mh-nightmare-enemy-image' : ' mh-extreme-enemy-image' : ''}`
+  }, enemy?.emoji)), !ecoBattleView && enemy?.id === 'Moo' && /*#__PURE__*/React.createElement("div", {
+    className: "absolute inset-0 pointer-events-none flex items-center justify-center overflow-visible",
+    style: {
+      zIndex: 1
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "absolute -inset-8 rounded-full",
+    style: {
+      background: 'radial-gradient(circle, rgba(168,85,247,0.45) 0%, rgba(139,0,139,0.32) 45%, rgba(0,0,0,0) 72%)',
+      animation: 'auraPulse 1500ms ease-in-out infinite'
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "absolute -inset-3 rounded-full border-2 border-purple-500/60",
+    style: {
+      animation: 'idleAuraPulse 1700ms ease-in-out infinite'
+    }
+  })), !ecoBattleView && enemyAttackFx?.kind === 'move' && /*#__PURE__*/React.createElement("div", {
+    className: "absolute inset-0 pointer-events-none z-[10000] flex items-center justify-center overflow-visible"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "absolute -inset-2 rounded-full border-4 border-cyan-300/80",
+    style: {
+      animation: 'shockRing 600ms ease-out forwards'
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "absolute -inset-5 rounded-full border-2 border-sky-400/50",
+    style: {
+      animation: 'shockRing 600ms ease-out 100ms forwards'
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "absolute text-5xl drop-shadow-[0_0_14px_rgba(34,211,238,1)]",
+    style: {
+      animation: 'moveDash 700ms ease-in-out forwards'
+    }
+  }, "\uD83D\uDCA8"), /*#__PURE__*/React.createElement("div", {
+    className: "absolute -top-3 text-4xl font-black text-cyan-200 drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]",
+    style: {
+      animation: 'exclaimPop 600ms cubic-bezier(.2,1.4,.4,1) forwards'
+    }
+  }, "\uD83C\uDFC3")), !ecoBattleView && enemyAttackFx?.kind === 'normal' && /*#__PURE__*/React.createElement("div", {
+    className: "absolute inset-0 pointer-events-none z-[10000] flex items-center justify-center",
+    style: {
+      animation: 'enemyExclaim 500ms ease-out forwards'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "absolute -top-3 -right-2 text-5xl font-black text-yellow-300 drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]",
+    style: {
+      animation: 'exclaimPop 500ms cubic-bezier(.2,1.4,.4,1) forwards'
+    }
+  }, "\u2757"), /*#__PURE__*/React.createElement("div", {
+    className: "absolute inset-0 rounded-full border-4 border-yellow-300/80",
+    style: {
+      animation: 'shockRing 500ms ease-out forwards'
+    }
+  })), !ecoBattleView && enemyAttackFx?.kind === 'special' && /*#__PURE__*/React.createElement("div", {
+    className: "absolute inset-0 pointer-events-none z-[10000] flex items-center justify-center overflow-visible"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "absolute -inset-10 rounded-full",
+    style: {
+      background: 'radial-gradient(circle, rgba(251,191,36,0.55) 0%, rgba(239,68,68,0.45) 40%, rgba(168,85,247,0.25) 60%, rgba(0,0,0,0) 75%)',
+      animation: 'auraPulse 600ms ease-out infinite'
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "absolute -inset-3 rounded-full border-4 border-amber-300",
+    style: {
+      animation: 'auraRing 600ms ease-out infinite'
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "absolute -inset-8 rounded-full border-2 border-red-500/70",
+    style: {
+      animation: 'auraRing 700ms ease-out 120ms infinite'
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "absolute -inset-12 rounded-full border-2 border-purple-500/50",
+    style: {
+      animation: 'auraRing 800ms ease-out 240ms infinite'
+    }
+  }), [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map(deg => /*#__PURE__*/React.createElement("div", {
+    key: deg,
+    className: "absolute text-3xl",
+    style: {
+      transform: `rotate(${deg}deg) translateY(clamp(-100px, -13dvh, -64px))`,
+      animation: 'sparkFlicker 300ms ease-in-out infinite',
+      animationDelay: `${deg}ms`
+    }
+  }, "\u26A1")), /*#__PURE__*/React.createElement("div", {
+    className: "absolute text-7xl drop-shadow-[0_0_24px_rgba(251,191,36,1)]",
+    style: {
+      animation: 'specialThrob 500ms ease-in-out infinite'
+    }
+  }, "\uD83D\uDD25"), /*#__PURE__*/React.createElement("div", {
+    className: "absolute inset-0 rounded-full",
+    style: {
+      animation: 'specialFlash 600ms ease-out infinite',
+      background: 'radial-gradient(circle, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 60%)'
+    }
+  })), !ecoBattleView && enemy && enemyIntent && !isBusy && !enemyAttackFx && enemyIntent.type === 'ATTACK' && /*#__PURE__*/React.createElement("div", {
+    className: "absolute inset-0 pointer-events-none z-[9000] flex items-center justify-center"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "absolute -top-2 -right-1 text-4xl font-black text-yellow-300 drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]",
+    style: {
+      animation: 'idleExclaim 1100ms ease-in-out infinite'
+    }
+  }, "\u2757")), !ecoBattleView && enemy && enemyAttackFx?.kind === 'charge' && /*#__PURE__*/React.createElement("div", {
+    className: "absolute inset-0 pointer-events-none z-[9000] flex items-center justify-center overflow-visible"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "absolute -inset-6 rounded-full",
+    style: {
+      background: 'radial-gradient(circle, rgba(251,191,36,0.45) 0%, rgba(251,191,36,0.2) 45%, rgba(0,0,0,0) 70%)',
+      animation: 'auraPulse 700ms ease-out infinite'
+    }
+  }), [0, 1, 2, 3, 4, 5, 6, 7].map(k => /*#__PURE__*/React.createElement("div", {
+    key: k,
+    className: "absolute text-2xl",
+    style: {
+      '--deg': `${k * 45}deg`,
+      animation: `chargeGather 900ms ease-in ${k * 70}ms infinite`
+    }
+  }, "\u2728")), /*#__PURE__*/React.createElement("div", {
+    className: "absolute inset-0 rounded-full border-4 border-amber-300/80",
+    style: {
+      animation: 'auraRing 700ms ease-out infinite'
+    }
+  })), !ecoBattleView && enemy && enemyIntent && !isBusy && !enemyAttackFx && (enemyIntent.type === 'SPECIAL' || enemy?.id === 'Moo' && enemyIntent.type === 'ATTACK') && (() => {
+    // ためる(CHARGE)の予告にはこのオーラを出さない。必殺技の予告と同じ見た目になり、
+    // 「準備なのか、いま撃たれるのか」が見分けられなくなるため
+    const isSpecial = enemyIntent.type === 'SPECIAL';
+    // 通常技 = 赤系 / 必殺技(チャージ) = 紫＋金系 で明確に色分け
+    return /*#__PURE__*/React.createElement("div", {
+      className: "absolute inset-0 pointer-events-none z-[9000] flex items-center justify-center overflow-visible"
+    }, isSpecial ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+      className: "fixed inset-0 pointer-events-none",
+      style: {
+        position: 'fixed',
+        inset: 0,
+        zIndex: 85000,
+        background: 'radial-gradient(ellipse at center, rgba(0,0,0,0) 45%, rgba(168,85,247,0.25) 72%, rgba(127,29,29,0.55) 100%)',
+        animation: 'specialDangerPulse 700ms ease-in-out infinite'
+      }
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "absolute -inset-8 rounded-full border-4 border-fuchsia-400/80",
+      style: {
+        animation: 'specialShockwave 1400ms ease-out infinite'
+      }
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "absolute -inset-8 rounded-full border-4 border-purple-300/70",
+      style: {
+        animation: 'specialShockwave 1400ms ease-out 466ms infinite'
+      }
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "absolute -inset-8 rounded-full border-4 border-amber-300/60",
+      style: {
+        animation: 'specialShockwave 1400ms ease-out 933ms infinite'
+      }
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "absolute -inset-10 rounded-full",
+      style: {
+        background: 'radial-gradient(circle, rgba(217,70,239,0.6) 0%, rgba(168,85,247,0.45) 38%, rgba(251,191,36,0.3) 62%, rgba(0,0,0,0) 82%)',
+        animation: 'specialWarnFlash 600ms ease-in-out infinite'
+      }
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "absolute -inset-3 rounded-full border-[3px] border-fuchsia-300",
+      style: {
+        animation: 'specialWarnFlash 600ms ease-in-out infinite',
+        boxShadow: '0 0 30px rgba(217,70,239,0.9), inset 0 0 30px rgba(217,70,239,0.7)'
+      }
+    }), [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map(deg => /*#__PURE__*/React.createElement("div", {
+      key: deg,
+      className: "absolute text-2xl drop-shadow-[0_0_12px_rgba(217,70,239,1)]",
+      style: {
+        transform: `rotate(${deg}deg) translateY(clamp(-100px, -13dvh, -64px))`,
+        animation: 'idleSpark 600ms ease-in-out infinite',
+        animationDelay: `${deg * 1.5}ms`
+      }
+    }, "\u26A1"))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+      className: "absolute -inset-10 rounded-full",
+      style: {
+        background: 'radial-gradient(circle, rgba(239,68,68,0.45) 0%, rgba(220,38,38,0.32) 42%, rgba(0,0,0,0) 75%)',
+        animation: 'idleAuraPulse 1100ms ease-in-out infinite'
+      }
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "absolute -inset-4 rounded-full border-2 border-red-500/90",
+      style: {
+        animation: 'idleAuraPulse 1100ms ease-in-out infinite'
+      }
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "absolute -inset-7 rounded-full border-2 border-orange-500/60",
+      style: {
+        animation: 'idleAuraPulse 1300ms ease-in-out 120ms infinite'
+      }
+    }), [0, 45, 90, 135, 180, 225, 270, 315].map(deg => /*#__PURE__*/React.createElement("div", {
+      key: deg,
+      className: "absolute text-2xl drop-shadow-[0_0_8px_rgba(239,68,68,1)]",
+      style: {
+        transform: `rotate(${deg}deg) translateY(clamp(-96px, -12dvh, -60px))`,
+        animation: 'idleSpark 900ms ease-in-out infinite',
+        animationDelay: `${deg * 2}ms`
+      }
+    }, "\u26A1")), /*#__PURE__*/React.createElement("div", {
+      className: "absolute -top-3 text-3xl drop-shadow-[0_0_12px_rgba(239,68,68,1)]",
+      style: {
+        animation: 'idleExclaim 900ms ease-in-out infinite'
+      }
+    }, "\u2757")));
+  })()), getTurnBuff('stunEnemy', false) && /*#__PURE__*/React.createElement("div", {
+    className: "absolute inset-0 flex items-center justify-center text-3xl bg-indigo-500/20 rounded-full border-4 border-indigo-500 animate-pulse"
+  }, "\uD83D\uDCAB"), (() => {
+    const enemyPopups = popups.filter(p => p.side === 'enemy');
+    const wrapEnemyPopups = !liteBattleView && enemyPopups.length > 4;
+    const popupColumns = wrapEnemyPopups ? Math.ceil(enemyPopups.length / 4) : 1;
+    const popupGridStyle = wrapEnemyPopups ? {
+      display: 'grid',
+      gridAutoFlow: 'column',
+      gridTemplateRows: 'repeat(4, auto)',
+      gridAutoColumns: 'max-content',
+      justifyContent: 'center',
+      alignContent: 'start',
+      columnGap: popupColumns >= 3 ? '0px' : '4px',
+      rowGap: '2px',
+      paddingTop: '4px'
+    } : undefined;
+    const compactPopupStyle = wrapEnemyPopups ? {
+      fontSize: popupColumns >= 3 ? 'clamp(1.4rem, 5.8vw, 1.85rem)' : 'clamp(1.75rem, 7.5vw, 2.25rem)',
+      lineHeight: 1.05,
+      paddingLeft: '2px',
+      paddingRight: '2px'
+    } : undefined;
+    return /*#__PURE__*/React.createElement("div", {
+      className: `absolute inset-0 z-50 pointer-events-none ${wrapEnemyPopups ? '' : 'flex flex-col items-center justify-start pt-1 gap-0.5'}`,
+      style: popupGridStyle
+    }, enemyPopups.map(p => /*#__PURE__*/React.createElement("div", {
+      key: p.id,
+      "data-lite-damage": liteBattleView ? 'true' : undefined,
+      style: compactPopupStyle,
+      className: `text-center ${p.color} font-black whitespace-nowrap px-4 ${liteBattleView ? 'rounded-lg border border-white/20 bg-slate-950/95 py-1 text-base' : 'drop-shadow-[0_0_15px_rgba(0,0,0,1)]'}`
+    }, p.text)));
+  })()), /*#__PURE__*/React.createElement("div", {
+    className: "w-full max-w-[180px] mt-2 mb-1 shrink-0 relative z-[40]"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "h-2"
+  })), enemy && enemyIntent && !isBusy && (() => {
+    // ためる・待機・移動はダメージが無いので「予測」を出さない。
+    // 出すと必ず0になり、ガードを構える判断の邪魔になる
+    const rawDmg = getIncomingDamageBeforeTurnReduction(enemyIntent);
+    let previewGuardFlat = 0,
+      previewGuardMult = 0,
+      previewPenaltyCnt = 0;
+    selectedCards.forEach(idx => {
+      const card = hand[idx];
+      const isPenalty = !isAssistCard(card);
+      const halved = isPenalty && previewPenaltyCnt > 0;
+      const weight = guardCardWeight(card);
+      if (weight > 0) {
+        const effect = cardEffectMultiplier(card, halved);
+        previewGuardFlat += GUARD_EVOLUTION[guardLevel].flat * weight * effect;
+        previewGuardMult += GUARD_EVOLUTION[guardLevel].mult * weight * effect;
+      }
+      if (isPenalty) previewPenaltyCnt++;
+    });
+    const plannedDmg = applyTurnDamageReduction(Math.max(0, rawDmg - guardValueOf(previewGuardFlat, previewGuardMult)));
+    const tone = enemyIntent.type === 'SPECIAL' ? 'bg-fuchsia-950 border-fuchsia-500 text-fuchsia-300' : enemyIntent.type === 'CHARGE' ? 'bg-amber-950 border-amber-500 text-amber-400' : enemyIntent.type === 'MOVE' ? 'bg-cyan-950 border-cyan-500/60 text-cyan-300' : 'bg-red-950 border-red-600/50 text-red-400';
+    return /*#__PURE__*/React.createElement("div", {
+      className: `mt-auto mb-1 border p-1 px-4 rounded-full flex items-center gap-1.5 animate-pulse z-[45] shadow-lg shrink-0${battleTutorialSpotClass('enemyIntent')} ${focusedCard ? 'invisible' : 'visible'} ${tone}`
+    }, /*#__PURE__*/React.createElement(Target, {
+      size: 12
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "text-[9px] font-black uppercase tracking-tight"
+    }, enemyIntent.label, rawDmg > 0 ? ` (予定: ${plannedDmg})` : ''));
+  })(), /*#__PURE__*/React.createElement("div", {
+    className: `flex flex-wrap justify-center gap-1 max-w-[340px] mt-auto mb-1 shrink-0 relative z-[40] ${focusedCard ? 'invisible' : 'visible'}`
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[7px] font-black text-red-500 bg-black/60 px-2 py-0.5 rounded border border-red-500/50 flex items-center gap-1 shadow-lg uppercase"
+  }, /*#__PURE__*/React.createElement(Sword, {
+    size: 7
+  }), " ATK +", Math.floor((getPermaBuff('atkPct') + getPermaBuff('muaAtkPct')) * 100), "%"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[7px] font-black text-emerald-500 bg-black/60 px-2 py-0.5 rounded border border-emerald-500/50 flex items-center gap-1 shadow-lg uppercase"
+  }, /*#__PURE__*/React.createElement(Shield, {
+    size: 7
+  }), " \u88AB\u30C0\u30E1 -", Math.floor(getPermaBuff('dmgCutPct') * 100), "%"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[7px] font-black text-emerald-500 bg-black/60 px-2 py-0.5 rounded border border-emerald-500/50 flex items-center gap-1 shadow-lg uppercase"
+  }, /*#__PURE__*/React.createElement(Shield, {
+    size: 7
+  }), " DEF +", Math.floor(getPermaBuff('defPct') * 100), "%"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[7px] font-black text-pink-500 bg-black/60 px-2 py-0.5 rounded border border-pink-500/50 flex items-center gap-1 shadow-lg uppercase"
+  }, /*#__PURE__*/React.createElement(Heart, {
+    size: 7
+  }), " \u30E9\u30A4\u30D5 +", Math.floor(getPermaBuff('muaHpPct') * 100), "%"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[7px] font-black text-amber-500 bg-black/60 px-2 py-0.5 rounded border border-amber-500/50 flex items-center gap-1 shadow-lg uppercase"
+  }, /*#__PURE__*/React.createElement(Zap, {
+    size: 7
+  }), " \u30AC\u30C3\u30C4 +", Math.floor(getPermaBuff('muaGutsPct') * 100), "%"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[7px] font-black text-yellow-400 bg-black/60 px-2 py-0.5 rounded border border-yellow-400/50 flex items-center gap-1 shadow-lg uppercase"
+  }, /*#__PURE__*/React.createElement(Sparkles, {
+    size: 7
+  }), " \u30AF\u30EA\u7387 +", Math.round(getPermaBuff('critRatePct') * 100), "%"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[7px] font-black text-yellow-400 bg-black/60 px-2 py-0.5 rounded border border-yellow-400/50 flex items-center gap-1 shadow-lg uppercase"
+  }, /*#__PURE__*/React.createElement(Sparkles, {
+    size: 7
+  }), " \u30AF\u30EA\u30C0\u30E1 +", Math.round(getPermaBuff('critDmgPct') * 100), "%"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[7px] font-black text-cyan-400 bg-black/60 px-2 py-0.5 rounded border border-cyan-400/50 flex items-center gap-1 shadow-lg uppercase"
+  }, /*#__PURE__*/React.createElement(Sword, {
+    size: 7
+  }), " \u9023\u6483 +", Math.round(getPermaBuff('comboDmgPct') * 100), "%"), getPermaBuff('globalComboDmgPct') > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "text-[7px] font-black text-sky-300 bg-black/60 px-2 py-0.5 rounded border border-sky-300/50 flex items-center gap-1 shadow-lg"
+  }, /*#__PURE__*/React.createElement(Sword, {
+    size: 7
+  }), " \u5168\u4F53\u9023\u6483 +", Math.round(getPermaBuff('globalComboDmgPct') * 100), "%"), kikiCardBonus > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "text-[7px] font-black text-violet-300 bg-black/60 px-2 py-0.5 rounded border border-violet-300/50 flex items-center gap-1 shadow-lg"
+  }, /*#__PURE__*/React.createElement(PlusCircle, {
+    size: 7
+  }), " \u30AB\u30FC\u30C9\u4E0A\u9650 +1\uFF08\u6B8B\u308A", Math.ceil(getPermaBuff('kikiCardBonusTurns')), "T\uFF09"), (getPermaBuff('kenshiComboPower') > 0 || getPermaBuff('kenshiExtraCombo') > 0) && /*#__PURE__*/React.createElement("div", {
+    className: "text-[7px] font-black text-violet-300 bg-black/60 px-2 py-0.5 rounded border border-violet-300/50 flex items-center gap-1 shadow-lg"
+  }, /*#__PURE__*/React.createElement(Sword, {
+    size: 7
+  }), " \u9023\u6483\u30D1\u30EF\u30FC ", getPermaBuff('kenshiComboPower'), "/", KENSHI_COMBO_POWER_MAX, getPermaBuff('kenshiExtraCombo') > 0 ? `・追加連撃 +${getPermaBuff('kenshiExtraCombo')}` : ''), /*#__PURE__*/React.createElement("div", {
+    className: `text-[7px] font-black bg-black/60 px-2 py-0.5 rounded border flex items-center gap-1 shadow-lg uppercase ${getPermaBuff('autoHpRecovery', 0.1) >= 0.1 ? 'text-rose-400 border-rose-400/50' : 'text-red-400 border-red-400/50'}`
+  }, /*#__PURE__*/React.createElement(Heart, {
+    size: 7
+  }), " \u30E9\u30A4\u30D5\u56DE\u5FA9 ", Math.round(getPermaBuff('autoHpRecovery', 0.1) * 100), "%"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[7px] font-black text-amber-400 bg-black/60 px-2 py-0.5 rounded border border-amber-400/50 flex items-center gap-1 shadow-lg uppercase"
+  }, /*#__PURE__*/React.createElement(Zap, {
+    size: 7
+  }), " \u30AC\u30C3\u30C4\u56DE\u5FA9 ", Math.round(applyIceRulerAutoGutsRecovery(Math.max(0, 0.05 + (getPermaBuff('autoHpRecovery', 0.1) - 0.1)) + getPermaBuff('gutsRecoverPct'), mainHero?.id, iceLockActive, heroDist, enemyDist) * 100), "%"), getPermaBuff('poltzCharges') > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "text-[7px] font-black text-lime-300 bg-lime-950/60 px-2 py-1 rounded-full border border-lime-400/50 animate-pulse flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement(Zap, {
+    size: 8
+  }), " ", BREEDER_EVO_NAMES.poltz[Math.max(0, Math.min(getPermaBuff('poltzTier'), 2))], " \xD7", Math.floor(getPermaBuff('poltzCharges'))), getNextTurnBuff('melosoFullRecoveryMult', 0) > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "text-[7px] font-black text-rose-300 bg-rose-950/60 px-2 py-1 rounded-full border border-rose-400/50 animate-pulse flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement(Heart, {
+    size: 8
+  }), " \u6B21\u30BF\u30FC\u30F3\u5168\u56DE\u5FA9"), getTurnBuff('atkMult', 1.0) > 1 && /*#__PURE__*/React.createElement("div", {
+    className: "text-[7px] font-black text-red-500 bg-red-950/60 px-2 py-1 rounded-full border border-red-500/50 animate-pulse uppercase flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement(Sparkles, {
+    size: 8
+  }), " Boost x", getTurnBuff('atkMult', 1.0).toFixed(1)), getTurnBuff('stunEnemy', false) && /*#__PURE__*/React.createElement("div", {
+    className: "text-[7px] font-black text-yellow-400 bg-yellow-950/60 px-2 py-1 rounded-full border border-yellow-500/50 animate-pulse uppercase flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement(Zap, {
+    size: 8
+  }), " \u30B9\u30BF\u30F3\u4E88\u7D04"), getTurnBuff('guaranteedCrit', false) && /*#__PURE__*/React.createElement("div", {
+    className: "text-[7px] font-black text-orange-400 bg-orange-950/60 px-2 py-1 rounded-full border border-orange-500/50 animate-pulse uppercase flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement(Target, {
+    size: 8
+  }), " \u4F1A\u5FC3\u4E88\u7D04"), (getTurnBuff('zeroGuts', false) || getNextTurnBuff('zeroGuts', false)) && /*#__PURE__*/React.createElement("div", {
+    className: "text-[7px] font-black text-blue-400 bg-blue-950/60 px-2 py-1 rounded-full border border-blue-500/50 animate-pulse uppercase flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement(Star, {
+    size: 8
+  }), " 0\u6D88\u8CBB\u4E2D"), getNextTurnBuff('reflect', false) && /*#__PURE__*/React.createElement("div", {
+    className: "text-[7px] font-black text-purple-400 bg-purple-950/60 px-2 py-1 rounded-full border border-purple-500/50 animate-pulse uppercase flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement(RefreshCcw, {
+    size: 8
+  }), " \u6B21\u53CD\u5C04"), getTurnBuff('reflect', false) && /*#__PURE__*/React.createElement("div", {
+    className: "text-[7px] font-black text-purple-300 bg-purple-900/80 px-2 py-1 rounded-full border border-purple-400 animate-bounce uppercase flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement(RefreshCcw, {
+    size: 8
+  }), " \u53CD\u5C04\u5F85\u6A5F"), getWaveBuff('enemyAtkDebuffPct') > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "text-[7px] font-black text-indigo-400 bg-indigo-950/60 px-2 py-1 rounded-full border border-indigo-500/50 animate-pulse uppercase flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement(ArrowDownCircle, {
+    size: 8
+  }), " \u6575\u653B-", Math.round(getWaveBuff('enemyAtkDebuffPct') * 100), "%"), getWaveBuff('enemyTakenDmgBonus') > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "text-[7px] font-black text-orange-400 bg-orange-950/60 px-2 py-1 rounded-full border border-orange-500/50 animate-pulse uppercase flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement(PlusCircle, {
+    size: 8
+  }), " \u6575\u88AB\u30C0\u30E1+", Math.round(getWaveBuff('enemyTakenDmgBonus') * 100), "%"), getNextTurnBuff('takenDamageMult', 1.0) < 1 && /*#__PURE__*/React.createElement("div", {
+    className: "text-[7px] font-black text-pink-400 bg-pink-950/60 px-2 py-1 rounded-full border border-pink-500/50 animate-pulse uppercase flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement(Shield, {
+    size: 8
+  }), " \u6B21T\u88AB\u30C0\u30E1-", Math.round((1 - getNextTurnBuff('takenDamageMult', 1.0)) * 100), "%"), getTurnBuff('takenDamageMult', 1.0) < 1 && /*#__PURE__*/React.createElement("div", {
+    className: "text-[7px] font-black text-pink-300 bg-pink-900/80 px-2 py-1 rounded-full border border-pink-400 animate-bounce uppercase flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement(Shield, {
+    size: 8
+  }), " \u88AB\u30C0\u30E1-", Math.round((1 - getTurnBuff('takenDamageMult', 1.0)) * 100), "%"), getNextTurnBuff('gutsCostMult', 1.0) > 1 && /*#__PURE__*/React.createElement("div", {
+    className: "text-[7px] font-black text-amber-400 bg-amber-950/60 px-2 py-1 rounded-full border border-amber-500/50 animate-pulse uppercase flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement(Zap, {
+    size: 8
+  }), " \u6B21T\u6D88\u8CBBG+", Math.round((getNextTurnBuff('gutsCostMult', 1.0) - 1) * 100), "%"), getTurnBuff('gutsCostMult', 1.0) > 1 && /*#__PURE__*/React.createElement("div", {
+    className: "text-[7px] font-black text-amber-300 bg-amber-900/80 px-2 py-1 rounded-full border border-amber-400 animate-bounce uppercase flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement(Zap, {
+    size: 8
+  }), " \u6D88\u8CBBG+", Math.round((getTurnBuff('gutsCostMult', 1.0) - 1) * 100), "%"))), /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 py-2 px-2 bg-slate-950 border-y border-white/5 flex flex-col items-center justify-center gap-1 z-10 relative"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "absolute inset-0 flex flex-col items-center justify-center pointer-events-none gap-1",
+    style: {
+      zIndex: 200
+    }
+  }, popups.filter(p => p.side === 'hero').map(p => /*#__PURE__*/React.createElement("div", {
+    key: p.id,
+    "data-lite-damage": liteBattleView ? 'true' : undefined,
+    className: `${p.color} font-black leading-tight px-2 py-0.5 rounded-lg ${liteBattleView ? 'border border-white/20 text-base' : 'drop-shadow-[0_2px_8px_rgba(0,0,0,1)]'}`,
+    style: {
+      backgroundColor: liteBattleView ? 'rgba(2,6,23,0.95)' : 'rgba(2,6,23,0.55)'
+    }
+  }, p.text))), /*#__PURE__*/React.createElement("div", {
+    className: "w-full space-y-1 px-2 py-1 bg-black/40 rounded-xl border border-white/5"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 relative"
+  }, /*#__PURE__*/React.createElement(Heart, {
+    className: "text-pink-500 shrink-0",
+    size: 12
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between text-[7px] font-bold text-pink-400 mb-0.5 uppercase tracking-widest"
+  }, /*#__PURE__*/React.createElement("span", null, "Ally Life"), /*#__PURE__*/React.createElement("span", {
+    className: "font-mono"
+  }, hp.toLocaleString(), " / ", effectiveMaxHp.toLocaleString())), /*#__PURE__*/React.createElement("div", {
+    className: "h-1.5 bg-slate-900 rounded-full overflow-hidden border border-white/5 shadow-inner"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "h-full bg-gradient-to-r from-pink-700 to-rose-400 transition-all duration-1000",
+    style: {
+      width: `${hp / effectiveMaxHp * 100}%`,
+      backgroundImage: 'linear-gradient(to right, #be185d, #fb7185)'
+    }
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "absolute left-1/2 -translate-x-1/2 -top-2 flex flex-col items-center gap-0.5 pointer-events-none",
+    style: {
+      zIndex: 210
+    }
+  }, popups.filter(p => p.side === 'life').map(p => /*#__PURE__*/React.createElement("div", {
+    key: p.id,
+    className: `${p.color} text-base font-black drop-shadow-[0_2px_8px_rgba(0,0,0,1)] whitespace-nowrap px-2 py-0.5 rounded-lg animate-bounce`,
+    style: {
+      backgroundColor: 'rgba(2,6,23,0.8)'
+    }
+  }, p.text)))), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 relative"
+  }, /*#__PURE__*/React.createElement(Zap, {
+    className: "text-amber-500 shrink-0",
+    size: 10
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between text-[7px] font-bold text-amber-400 mb-0.5 uppercase tracking-widest"
+  }, /*#__PURE__*/React.createElement("span", null, "Ally Guts"), /*#__PURE__*/React.createElement("span", {
+    className: "font-mono"
+  }, Math.floor(guts).toLocaleString(), " / ", effectiveMaxGuts.toLocaleString())), /*#__PURE__*/React.createElement("div", {
+    className: "h-1.5 bg-slate-900 rounded-full overflow-hidden border border-white/5 shadow-inner"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "h-full bg-gradient-to-r from-amber-600 to-yellow-300 transition-all duration-500",
+    style: {
+      width: `${guts / effectiveMaxGuts * 100}%`,
+      backgroundImage: 'linear-gradient(to right, #d97706, #fde047)'
+    }
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "absolute left-1/2 -translate-x-1/2 -top-2 flex flex-col items-center gap-0.5 pointer-events-none",
+    style: {
+      zIndex: 210
+    }
+  }, popups.filter(p => p.side === 'guts').map(p => /*#__PURE__*/React.createElement("div", {
+    key: p.id,
+    className: `${p.color} text-base font-black drop-shadow-[0_2px_8px_rgba(0,0,0,1)] whitespace-nowrap px-2 py-0.5 rounded-lg animate-bounce`,
+    style: {
+      backgroundColor: 'rgba(2,6,23,0.8)'
+    }
+  }, p.text))))), (() => {
+    // Overall total damage across ALL monster slots, matching processTurn's global attack order.
+    // Existing total = sum of already-assigned attack cards.
+    // If a card is pending and validly assignable somewhere, also compute the projected new total.
+    // committed (already assigned) attack cards in selection order
+    // 2枚目以降のカードは効果半減。processTurnと同じく「アシストカード以外の枚数」で数える。
+    // 保留中(タップしただけでまだ置いていない)カードは、まだ使っていないので枚数に数えない。
+    // ここを数えてしまうと、1枚目なのに自分自身を2枚目とみなして半減表示になる。
+    const pendingCardObj = pendingCard != null ? hand[pendingCard] : dragState && dragState.active ? dragState.card : null;
+    const pendingIdx = pendingCard != null ? pendingCard : dragState && dragState.active ? dragState.cardIndex : null;
+    // おりょう・ゴーレム・モッチー/ミタラシ・ききは使ったターンからすぐ効くため、
+    // 先に選んだカードぶんの補正を、あとに続くカードの予測へも反映する
+    // (processTurnの実行順序と同じ数え方。localBoostFromCard/previewLocalBoosts参照)。
+    const boosts = previewLocalBoosts(pendingIdx);
+    let committedTotal = 0;
+    let committedPenaltyCnt = 0;
+    let guardFlat = 0;
+    let guardMult = 0;
+    selectedCards.forEach(idx => {
+      if (idx === pendingIdx) return;
+      const card = hand[idx];
+      const slotIdx = cardAssignments[idx];
+      const isPenalty = !isAssistCard(card);
+      const halved = isPenalty && committedPenaltyCnt > 0;
+      const b = boosts.perCard[idx] || {
+        oryo: 0,
+        dmgMod: 0,
+        combo: 0
+      };
+      if (slotIdx != null && isAttackCard(card)) {
+        const baseDmg = getDmg(card, slotIdx, slots[slotIdx], b.oryo, b.dmgMod, halved);
+        committedTotal += getAttackPredictedDmg(card, slots[slotIdx], baseDmg, b.combo);
+      }
+      const gw = guardCardWeight(card);
+      if (gw > 0) {
+        const e = cardEffectMultiplier(card, halved);
+        guardFlat += GUARD_EVOLUTION[guardLevel].flat * gw * e;
+        guardMult += GUARD_EVOLUTION[guardLevel].mult * gw * e;
+      }
+      if (isPenalty) committedPenaltyCnt++;
+    });
+    const committedGuard = guardValueOf(guardFlat, guardMult);
+    // 保留カードがガードなら、置いたあとの合計軽減も出す
+    const pendingGuardWeight = guardCardWeight(pendingCardObj);
+    const pendingGuardHalved = pendingGuardWeight > 0 && !isAssistCard(pendingCardObj) && committedPenaltyCnt > 0;
+    const pendingGuardEffect = cardEffectMultiplier(pendingCardObj, pendingGuardHalved);
+    const projectedGuard = pendingGuardWeight > 0 ? guardValueOf(guardFlat + GUARD_EVOLUTION[guardLevel].flat * pendingGuardWeight * pendingGuardEffect, guardMult + GUARD_EVOLUTION[guardLevel].mult * pendingGuardWeight * pendingGuardEffect) : committedGuard;
+    const pendingIsAtk = isAttackCard(pendingCardObj);
+    // projected damage the pending card would add (as the next attack in order)
+    let pendingAdd = 0;
+    let pendingValidSlot = null;
+    if (pendingIsAtk) {
+      // find a slot it could legally hit (for unique: its own monster; else any occupied slot)
+      for (let i = 0; i < slots.length; i++) {
+        const s = slots[i];
+        if (!s) continue;
+        const assignedCount = Object.values(cardAssignments).filter(v => v === i).length;
+        const maxUses = slotMaxUses(s, i);
+        if (assignedCount >= maxUses) continue;
+        if (pendingCardObj.type === 'unique' && pendingCardObj.ownerSlotIdx !== i) continue;
+        pendingValidSlot = i;
+        const baseDmg = getDmg(pendingCardObj, i, s, boosts.forPending.oryo, boosts.forPending.dmgMod, !isAssistCard(pendingCardObj) && committedPenaltyCnt > 0);
+        pendingAdd = getAttackPredictedDmg(pendingCardObj, s, baseDmg, boosts.forPending.combo);
+        break;
+      }
+    }
+    const projectedTotal = committedTotal + pendingAdd;
+    const showProjected = pendingIsAtk && pendingValidSlot != null && pendingAdd > 0;
+    // 合計軽減は、ガードを置いたぶんの合計。2枚目以降のガードは半分で計算される。
+    const showGuardProjected = pendingGuardWeight > 0 && projectedGuard > committedGuard;
+    const showDmg = committedTotal > 0 || showProjected;
+    const showGuard = committedGuard > 0 || showGuardProjected;
+    if (!showDmg && !showGuard) return null;
+    return /*#__PURE__*/React.createElement("div", {
+      className: "absolute left-1/2 -translate-x-1/2 z-[50] flex flex-col items-center justify-center gap-1 pointer-events-none",
+      style: {
+        bottom: 'calc(78% + 2px)'
+      }
+    }, showDmg && /*#__PURE__*/React.createElement("div", {
+      className: `flex items-center gap-2 px-3 py-0.5 rounded-full border shadow-lg ${showProjected ? 'bg-yellow-950/90 border-yellow-500/70' : 'bg-red-950/90 border-red-500/50'} backdrop-blur-sm`
+    }, /*#__PURE__*/React.createElement(Sword, {
+      size: 11,
+      className: showProjected ? 'text-yellow-400' : 'text-red-400'
+    }), /*#__PURE__*/React.createElement("span", {
+      className: "text-[8px] font-black uppercase tracking-widest text-slate-300"
+    }, "\u5408\u8A08DMG"), showProjected ? /*#__PURE__*/React.createElement("span", {
+      className: "text-[11px] font-black font-mono flex items-center gap-1"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-slate-400"
+    }, committedTotal), /*#__PURE__*/React.createElement("span", {
+      className: "text-yellow-400"
+    }, "+", pendingAdd), /*#__PURE__*/React.createElement(ChevronRight, {
+      size: 10,
+      className: "text-slate-500"
+    }), /*#__PURE__*/React.createElement("span", {
+      className: "text-yellow-300 drop-shadow-[0_0_6px_rgba(250,204,21,0.6)]"
+    }, projectedTotal)) : /*#__PURE__*/React.createElement("span", {
+      className: "text-[11px] font-black font-mono text-red-300 drop-shadow-[0_0_6px_rgba(248,113,113,0.5)]"
+    }, committedTotal)), showGuard && /*#__PURE__*/React.createElement("div", {
+      className: `flex items-center gap-2 px-3 py-0.5 rounded-full border shadow-lg ${showGuardProjected ? 'bg-yellow-950/90 border-yellow-500/70' : 'bg-emerald-950/90 border-emerald-500/50'} backdrop-blur-sm`
+    }, /*#__PURE__*/React.createElement(Shield, {
+      size: 11,
+      className: showGuardProjected ? 'text-yellow-400' : 'text-emerald-400'
+    }), /*#__PURE__*/React.createElement("span", {
+      className: "text-[8px] font-black uppercase tracking-widest text-slate-300"
+    }, "\u5408\u8A08\u8EFD\u6E1B"), showGuardProjected ? /*#__PURE__*/React.createElement("span", {
+      className: "text-[11px] font-black font-mono flex items-center gap-1"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-slate-400"
+    }, committedGuard), /*#__PURE__*/React.createElement("span", {
+      className: "text-yellow-400"
+    }, "+", projectedGuard - committedGuard), /*#__PURE__*/React.createElement(ChevronRight, {
+      size: 10,
+      className: "text-slate-500"
+    }), /*#__PURE__*/React.createElement("span", {
+      className: "text-yellow-300 drop-shadow-[0_0_6px_rgba(250,204,21,0.6)]"
+    }, projectedGuard)) : /*#__PURE__*/React.createElement("span", {
+      className: "text-[11px] font-black font-mono text-emerald-300 drop-shadow-[0_0_6px_rgba(52,211,153,0.5)]"
+    }, committedGuard)));
+  })(), /*#__PURE__*/React.createElement("div", {
+    className: `grid grid-cols-4 gap-2 w-full relative shrink-0${battleTutorialSpotClass('battleSlots')}`,
+    style: {
+      height: '100px'
+    }
+  }, slots.map((s, i) => {
+    // Count how many cards already assigned to this slot
+    const assignedCount = Object.values(cardAssignments).filter(v => v === i).length;
+    // 通常は1枠1枚。枚数+1の勇者特性(ハムの連続攻撃・剣士モッチーの二刀流)を持つ
+    // 勇者モンが居ると、その本人のスロットだけ複数枚OK。
+    // ききのカード上限+1が効いているときも、その+1ぶんはどのスロットへ重ねてよい
+    const maxUses = slotMaxUses(s, i);
+    const pendingCardObj = pendingCard != null ? hand[pendingCard] : dragState && dragState.active ? dragState.card : null;
+    // 保留中のカードはまだ使っていないので、「何枚目か」の枚数には数えない
+    const pendingIdx = pendingCard != null ? pendingCard : dragState && dragState.active ? dragState.cardIndex : null;
+    // Can this slot accept the pending card?
+    let canAssign = false;
+    if (s && pendingCardObj) {
+      canAssign = assignedCount < maxUses;
+      if (pendingCardObj.type === 'unique') canAssign = canAssign && pendingCardObj.ownerSlotIdx === i;
+    }
+    // 選択順に「アシストカード以外」を数え、どのカードが2枚目以降(効果半減)かを出す。
+    // 保留中のカードはまだ使っていないので数えない。
+    // 保留中のカードは自分を数えず、「次に使う1枚」として半減かどうかを決める。
+    // (数えてしまうと1枚目でも半減、除外しっぱなしだと2枚目でも全開の表示になる)
+    const halvedByIdx = {};
+    {
+      let n = 0;
+      selectedCards.forEach(idx => {
+        if (idx === pendingIdx) return;
+        const c = hand[idx];
+        const p = !isAssistCard(c);
+        halvedByIdx[idx] = p && n > 0;
+        if (p) n++;
+      });
+      if (pendingIdx != null && selectedCards.includes(pendingIdx)) halvedByIdx[pendingIdx] = !isAssistCard(hand[pendingIdx]) && n > 0;
+    }
+    // Preview damage:
+    // - if a card is pending assignment, show what THIS card would do on this monster
+    // - otherwise show the sum of damage from cards already assigned to this slot,
+    //   using the GLOBAL attack order (2nd+ attack = half damage), matching processTurn
+    // おりょう・ゴーレム・モッチー/ミタラシ・ききの同ターン即時効果を、
+    // このスロットの予測にも反映する(合計DMG欄と同じpreviewLocalBoosts)。
+    const slotBoosts = previewLocalBoosts(pendingIdx);
+    let previewDmg = 0;
+    let isPendingPreview = false;
+    let isPendingHalved = false;
+    let previewSoulPct = 0;
+    if (s && pendingCardObj && canAssign && isAttackCard(pendingCardObj)) {
+      // 既に選んだ「アシストカード以外」の枚数を数え、保留カードはその次の1枚として扱う
+      let committedPenalty = 0;
+      selectedCards.forEach(idx => {
+        if (idx !== pendingIdx && !isAssistCard(hand[idx])) committedPenalty++;
+      });
+      const isSecondOrLater = committedPenalty >= 1 && !isAssistCard(pendingCardObj);
+      const baseDmg = getDmg(pendingCardObj, i, s, slotBoosts.forPending.oryo, slotBoosts.forPending.dmgMod, isSecondOrLater);
+      previewDmg = getAttackPredictedDmg(pendingCardObj, s, baseDmg, slotBoosts.forPending.combo);
+      previewSoulPct = soulTraitAttackProfile(s?.masuId ? getMasuMon(s.masuId) : null, pendingCardObj, i).damagePct;
+      isPendingPreview = true;
+      isPendingHalved = isSecondOrLater;
+    } else if (s) {
+      // 選択順で「アシストカード以外」を数え、2枚目以降は半減として予測する
+      let globalPenaltyCnt = 0;
+      selectedCards.forEach(idx => {
+        if (idx === pendingIdx) return;
+        const card = hand[idx];
+        const isPenalty = !isAssistCard(card);
+        const halved = isPenalty && globalPenaltyCnt > 0;
+        if (cardAssignments[idx] === i) {
+          const b = slotBoosts.perCard[idx] || {
+            oryo: 0,
+            dmgMod: 0,
+            combo: 0
+          };
+          const baseDmg = getDmg(card, i, s, b.oryo, b.dmgMod, halved);
+          previewDmg += getAttackPredictedDmg(card, s, baseDmg, b.combo);
+        }
+        if (isPenalty) globalPenaltyCnt++;
+      });
+    }
+    const isAnimating = !ecoBattleView && attackAnim && attackAnim.slotIndex === i;
+    // このスロットに固有技カードが割り当てられているか（セット中は常時エフェクト）
+    const hasUniqueSet = selectedCards.some(idx => cardAssignments[idx] === i && hand[idx]?.type === 'unique');
+    // このスロットに表示する選択中カード: 攻撃系は割当先スロット、全体系(ガード/バフ/回復等)は全スロット
+    const slotAssignedCards = selectedCards.filter(idx => {
+      const card = hand[idx];
+      if (!card) return false;
+      if (cardNeedsMonster(card)) return cardAssignments[idx] === i;
+      return true; // 全体系は全スロット
+    }).map(idx => ({
+      idx,
+      card: hand[idx]
+    }));
+    const distanceBreakLevel = ultimateDistanceBreakLevels[i] || 0;
+    const distanceBroken = distanceBreakLevel > 0;
+    const distanceBreakPercent = 100 * 0.5 ** distanceBreakLevel;
+    const distanceBreakRoman = ['', 'I', 'II', 'III', 'IV'][distanceBreakLevel] || String(distanceBreakLevel);
+    return /*#__PURE__*/React.createElement("button", {
+      key: i,
+      "data-slot-index": i,
+      "data-distance-broken": distanceBroken ? 'true' : undefined,
+      "data-distance-break-level": distanceBroken ? distanceBreakLevel : undefined,
+      "aria-label": `${RANGE_LABELS[i]}距離${distanceBroken ? `（BREAK Lv${distanceBreakLevel}・与ダメージ${distanceBreakPercent}%）` : ''}`,
+      onClick: () => {
+        if (isBusy || autoBattleRef.current) return;
+        if (pendingCard != null && canAssign) {
+          setCardAssignments(p => ({
+            ...p,
+            [pendingCard]: i
+          }));
+          setPendingCard(null);
+          setFocusedCard(null);
+          Audio_.se.card();
+          setSlotSettle(i);
+          setTimeout(() => {
+            setSlotSettle(null);
+          }, 500);
+        }
+      },
+      disabled: isBusy || autoBattle,
+      className: `relative rounded-xl border-2 flex flex-col items-stretch overflow-visible transition-all ${RANGE_STYLES[i].bg} ${distanceBroken ? 'border-red-400' : ' ' + RANGE_STYLES[i].border} ${canAssign || dragState?.active && dragOverSlot === i ? 'ring-2 ring-yellow-400 scale-105 z-10 shadow-lg animate-pulse' : 'opacity-100'} ${assignedCount > 0 ? 'ring-2 ring-indigo-500' : ''} ${dragState?.active && dragOverSlot === i ? 'ring-4 ring-green-400 scale-110' : ''} ${slotSettle === i ? 'ring-4 ring-white' : ''}`,
+      style: isAnimating ? {
+        zIndex: 9999,
+        animation: attackMotionAnimation(attackAnim)
+      } : distanceBroken ? {
+        backgroundColor: distanceBreakLevel >= 2 ? 'rgb(12,2,5)' : 'rgb(24,5,25)',
+        boxShadow: `inset 0 0 0 ${Math.min(4, distanceBreakLevel + 1)}px rgba(248,113,113,.95), inset 0 0 ${28 + distanceBreakLevel * 8}px rgba(76,5,25,.98), 0 0 ${9 + distanceBreakLevel * 4}px rgba(220,38,38,.65)`
+      } : slotSettle === i ? {
+        animation: 'slotSettle 400ms ease-out'
+      } : undefined
+    }, distanceBroken && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+      className: "absolute inset-0 rounded-lg pointer-events-none z-[15]",
+      style: {
+        background: `repeating-linear-gradient(${135 + distanceBreakLevel * 12}deg,rgba(0,0,0,.12) 0 ${Math.max(3, 8 - distanceBreakLevel)}px,rgba(127,29,29,${Math.min(.8, .28 + distanceBreakLevel * .14)}) ${Math.max(4, 9 - distanceBreakLevel)}px ${Math.max(5, 10 - distanceBreakLevel)}px),radial-gradient(circle at 50% 40%,rgba(${distanceBreakLevel >= 2 ? '69,10,10' : '88,28,135'},.55),rgba(5,0,2,.9))`
+      }
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "absolute inset-[2px] rounded-lg border border-red-300/80 pointer-events-none z-[45]",
+      style: {
+        boxShadow: 'inset 0 0 12px rgba(239,68,68,.7)'
+      }
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "absolute -top-2 left-1/2 -translate-x-1/2 z-[65] whitespace-nowrap rounded-full border-2 border-red-200 bg-red-950 px-1.5 py-0.5 text-[7px] font-black text-white shadow-[0_0_10px_rgba(239,68,68,.9)]"
+    }, distanceBreakLevel === 1 ? '⚠' : '☠', " BREAK ", distanceBreakRoman, "\uFF5C\u4E0E\u30C0\u30E1 ", distanceBreakPercent, "%"), !s && /*#__PURE__*/React.createElement("div", {
+      className: "absolute inset-0 z-[25] flex items-center justify-center pointer-events-none text-red-200/80"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-2xl font-black"
+    }, "\u26A0"))), /*#__PURE__*/React.createElement("div", {
+      className: `h-[25%] flex items-center justify-center px-1 border-b z-20 ${isHeroSlotMon(s) ? 'bg-amber-500/25 border-amber-300/50' : 'bg-black/60 border-white/10'}`
+    }, isHeroSlotMon(s) && /*#__PURE__*/React.createElement(Crown, {
+      size: 8,
+      className: "shrink-0 mr-0.5 text-amber-300"
+    }), /*#__PURE__*/React.createElement("span", {
+      className: `text-[7px] font-black truncate uppercase leading-none ${isHeroSlotMon(s) ? 'text-amber-100' : 'text-white'}`
+    }, s?.name || '---'), assignedCount > 0 && /*#__PURE__*/React.createElement("span", {
+      className: "ml-1 text-[7px] font-black text-indigo-300"
+    }, "\xD7", assignedCount)), (() => {
+      const uOptions = getAvailableUniquesForSlot(s, ownedUniques, i);
+      if (uOptions.length < 2) return null;
+      const curKey = activeSlotUniqueKey(slotUniqueChoice, i, s);
+      const curIdx = Math.max(0, uOptions.findIndex(o => o.key === curKey));
+      return /*#__PURE__*/React.createElement("div", {
+        onPointerDown: e => e.stopPropagation(),
+        onClick: e => {
+          e.stopPropagation();
+          if (isBusy || autoBattleRef.current) return;
+          cycleActiveUniqueForSlot(i);
+        },
+        className: `shrink-0 z-20 flex items-center justify-center gap-0.5 bg-purple-700/90 border-b border-purple-300/50 py-0.5 active:scale-95${autoBattle ? ' opacity-40' : ''}`
+      }, /*#__PURE__*/React.createElement(RefreshCcw, {
+        size: 7,
+        className: "text-white"
+      }), /*#__PURE__*/React.createElement("span", {
+        className: "text-[6px] font-black text-white leading-none"
+      }, "\u56FA\u6709\u6280 ", curIdx + 1, "/", uOptions.length));
+    })(), /*#__PURE__*/React.createElement("div", {
+      className: "flex-1 flex flex-col items-center justify-center relative"
+    }, slotSettle === i && /*#__PURE__*/React.createElement("div", {
+      className: "absolute inset-0 z-[60] pointer-events-none flex items-center justify-center overflow-visible"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "absolute rounded-full border-4 border-cyan-300",
+      style: {
+        width: '40px',
+        height: '40px',
+        animation: 'setRing 500ms ease-out forwards'
+      }
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "absolute rounded-full border-2 border-white",
+      style: {
+        width: '40px',
+        height: '40px',
+        animation: 'setRing 500ms ease-out 80ms forwards'
+      }
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "absolute w-8 h-8 rounded-full bg-cyan-400 border-2 border-white flex items-center justify-center shadow-[0_0_16px_rgba(103,232,249,0.9)]",
+      style: {
+        animation: 'setPop 500ms cubic-bezier(.2,1.5,.4,1) forwards'
+      }
+    }, /*#__PURE__*/React.createElement(Check, {
+      size: 18,
+      className: "text-white",
+      strokeWidth: 4
+    }))), /*#__PURE__*/React.createElement("div", {
+      className: `absolute inset-0 rounded-xl ${RANGE_STYLES[i].slotBg} opacity-20 pointer-events-none`
+    }), slotAssignedCards.length > 0 && /*#__PURE__*/React.createElement("div", {
+      className: "absolute top-0 left-0 right-0 flex flex-col gap-px items-center z-[55] pointer-events-none px-0.5"
+    }, slotAssignedCards.map(({
+      idx,
+      card
+    }) => {
+      // ガードは軽減量をその場で出す。2枚目以降なら半分になった値をそのまま表示する
+      const gw = guardCardWeight(card),
+        ge = cardEffectMultiplier(card, halvedByIdx[idx]);
+      const gv = gw > 0 ? guardValueOf(GUARD_EVOLUTION[guardLevel].flat * gw * ge, GUARD_EVOLUTION[guardLevel].mult * gw * ge) : 0;
+      return /*#__PURE__*/React.createElement("div", {
+        key: idx,
+        className: `flex items-center gap-0.5 px-1 rounded w-full justify-center min-w-0 ${cardNeedsMonster(card) ? 'bg-red-600/85' : 'bg-emerald-600/85'}`
+      }, /*#__PURE__*/React.createElement("span", {
+        style: {
+          fontSize: '7px'
+        },
+        className: "leading-none shrink-0"
+      }, cardIconNode(card.icon, 9, card.id)), /*#__PURE__*/React.createElement("span", {
+        style: {
+          fontSize: '7px'
+        },
+        className: "font-black text-white leading-none truncate min-w-0"
+      }, halvedByIdx[idx] ? '½' : '', card.name), gv > 0 && /*#__PURE__*/React.createElement("span", {
+        style: {
+          fontSize: '7px'
+        },
+        className: "font-black text-emerald-100 leading-none shrink-0"
+      }, "-", gv));
+    })), !ecoBattleView && hasUniqueSet && /*#__PURE__*/React.createElement("div", {
+      className: "absolute inset-0 pointer-events-none z-40 flex items-center justify-center overflow-visible"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "absolute inset-0 rounded-xl",
+      style: {
+        background: 'radial-gradient(circle, rgba(168,85,247,0.45) 0%, rgba(99,102,241,0.28) 50%, rgba(0,0,0,0) 75%)',
+        animation: 'idleAuraPulse 1200ms ease-in-out infinite'
+      }
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "absolute -inset-0.5 rounded-xl border-2 border-purple-400/80",
+      style: {
+        animation: 'idleAuraPulse 1200ms ease-in-out infinite'
+      }
+    }), [0, 90, 180, 270].map(deg => /*#__PURE__*/React.createElement("div", {
+      key: deg,
+      className: "absolute text-base",
+      style: {
+        transform: `rotate(${deg}deg) translateY(-26px)`,
+        animation: 'idleSpark 900ms ease-in-out infinite',
+        animationDelay: `${deg * 2}ms`
+      }
+    }, "\u26A1"))), (() => {
+      const totalBonus = distTotalBonus(i);
+      return /*#__PURE__*/React.createElement("div", {
+        className: `absolute bottom-0.5 right-0.5 text-[6px] font-black leading-none flex items-center gap-0.5 bg-black/50 px-1 py-0.5 rounded border z-30 ${totalBonus > 0 ? 'text-cyan-300 border-cyan-400/30' : totalBonus < 0 ? 'text-red-300 border-red-400/30' : 'text-slate-300 border-white/20'}`
+      }, /*#__PURE__*/React.createElement(Sword, {
+        size: 5
+      }), totalBonus > 0 ? '+' : '', (totalBonus * 100).toFixed(1), "%");
+    })(), previewDmg > 0 && /*#__PURE__*/React.createElement("div", {
+      className: `absolute ${slotAssignedCards.length > 0 ? 'top-[18px]' : 'top-0'} ${isPendingPreview ? 'bg-yellow-500 text-black ring-yellow-200' : 'bg-red-600 text-white ring-white/50'} text-[8px] font-black px-1.5 py-0.5 rounded shadow-lg z-50 animate-bounce ring-1`
+    }, isPendingPreview && isPendingHalved ? '½ ' : '', "DMG:", previewDmg, isPendingPreview && previewSoulPct > 0 && /*#__PURE__*/React.createElement("span", {
+      "data-soul-damage-preview": true,
+      className: "ml-1 rounded bg-sky-950/80 px-1 py-0.5 text-[6px] text-sky-100"
+    }, "\u9B42\u683C +", previewSoulPct, "%")), s?.imgUrl ? isAnimating && s.id === 'Pandora' && attackAnim.motion === 'pandoraDualThunder' ? /*#__PURE__*/React.createElement(PandoraDualThunder, {
+      image: /*#__PURE__*/React.createElement(DyedMonsterImage, {
+        baseId: s.id,
+        src: s.imgUrl,
+        alt: s.name,
+        masuColors: s.colors,
+        style: {
+          width: '64px',
+          height: '64px'
+        },
+        className: "object-contain drop-shadow-md"
+      })
+    }) : isAnimating && attackAnim.motion === 'arkHolyRain' ? /*#__PURE__*/React.createElement(ArkHolyRainMotion, {
+      image: /*#__PURE__*/React.createElement(DyedMonsterImage, {
+        baseId: s.id,
+        src: s.imgUrl,
+        alt: s.name,
+        masuColors: s.colors,
+        style: {
+          width: '64px',
+          height: '64px'
+        },
+        className: "z-10 object-contain drop-shadow-md"
+      }),
+      charging: attackAnim.charge === true,
+      empowered: attackAnim.charge === false
+    }) : isAnimating && attackAnim.motion === 'waterBurst' ? /*#__PURE__*/React.createElement(WaterBurstMotion, {
+      image: /*#__PURE__*/React.createElement(DyedMonsterImage, {
+        baseId: s.id,
+        src: s.imgUrl,
+        alt: s.name,
+        masuColors: s.colors,
+        style: {
+          width: '64px',
+          height: '64px'
+        },
+        className: "z-10 object-contain drop-shadow-md"
+      }),
+      lunge: attackAnim.charge === false,
+      charging: attackAnim.charge === true
+    }) : isAnimating && attackAnim.motion === 'miaSongNotes' ? /*#__PURE__*/React.createElement(MiaSongNotesMotion, {
+      image: /*#__PURE__*/React.createElement(DyedMonsterImage, {
+        baseId: s.id,
+        src: s.imgUrl,
+        alt: s.name,
+        masuColors: s.colors,
+        style: {
+          width: '64px',
+          height: '64px'
+        },
+        className: "z-10 object-contain drop-shadow-md"
+      }),
+      lunge: attackAnim.charge === false,
+      charging: attackAnim.charge === true
+    }) : /*#__PURE__*/React.createElement(DyedMonsterImage, {
+      baseId: s.id,
+      src: s.imgUrl,
+      alt: s.name,
+      masuColors: s.colors,
+      style: {
+        width: '64px',
+        height: '64px'
+      },
+      className: "z-10 object-contain drop-shadow-md"
+    }) : /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: '40px'
+      },
+      className: "z-10 drop-shadow-md"
+    }, s?.emoji || ''), isAnimating && attackAnim.twinBlade && /*#__PURE__*/React.createElement(KenshiTwinSlash, null), isAnimating && attackAnim.sakura && /*#__PURE__*/React.createElement(EikiSakuraPetals, null)), /*#__PURE__*/React.createElement("div", {
+      className: `h-[28%] ${RANGE_STYLES[i].labelBg} flex items-center justify-center border-t border-white/20 z-20`
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-[9px] font-black uppercase tracking-tighter leading-none"
+    }, RANGE_LABELS[i], "\u8DDD\u96E2")));
+  }))), quickRhythmIntroVisible && /*#__PURE__*/React.createElement("div", {
+    "data-quick-rhythm-intro": true,
+    className: "shrink-0 border-t border-fuchsia-400/30 bg-slate-950/95 px-2 py-1"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-start gap-1"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, /*#__PURE__*/React.createElement(AssistantBubble, {
+    scene: "quickRhythmIntro",
+    compact: true
+  })), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: dismissQuickRhythmIntro,
+    "aria-label": "\u3053\u306E\u6848\u5185\u3092\u9589\u3058\u308B",
+    className: "min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black"
+  }, "\xD7"))), /*#__PURE__*/React.createElement("div", {
+    className: "h-[24%] shrink-0 bg-slate-900/95 p-1 flex flex-col relative border-t border-white/10"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[7px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-1 flex justify-between px-2 items-center gap-1"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: `flex-1 min-w-0 flex flex-wrap items-center gap-x-1 gap-y-0.5${battleTutorialSpotClass('cardCount')}`
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "Action Cards"), " ", /*#__PURE__*/React.createElement("span", {
+    className: "shrink-0 bg-white/10 text-white px-2 py-0.5 rounded-full font-mono"
+  }, selectedCards.length, "/", cardLimit), heroCardBonus > 0 && /*#__PURE__*/React.createElement("span", {
+    className: "shrink-0 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-300/40 text-amber-200 whitespace-nowrap"
+  }, /*#__PURE__*/React.createElement(Crown, {
+    size: 8
+  }), "+", heroCardBonus), kikiCardBonus > 0 && /*#__PURE__*/React.createElement("span", {
+    className: "shrink-0 px-1.5 py-0.5 rounded-full bg-violet-500/20 border border-violet-300/40 text-violet-200 whitespace-nowrap"
+  }, "\u5FDC\u63F4+1"), soulCoordinationCardBonus > 0 && /*#__PURE__*/React.createElement("span", {
+    "data-soul-coordination-bonus": true,
+    className: "shrink-0 px-1.5 py-0.5 rounded-full bg-sky-500/20 border border-sky-300/40 text-sky-200 whitespace-nowrap"
+  }, "\u9B42\u683C+1")), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-0.5 shrink-0"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setShowDeckInfo(true),
+    className: `flex items-center gap-0.5 px-1.5 py-1 bg-white/5 rounded-lg border border-white/10 active:scale-95${battleTutorialSpotClass('deckView')}`
+  }, /*#__PURE__*/React.createElement(Layers, {
+    size: 9
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "text-[7px]"
+  }, "VIEW")), /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 flex flex-col gap-0.5"
+  }, /*#__PURE__*/React.createElement("button", {
+    "data-auto-bgm-button": true,
+    type: "button",
+    onClick: () => setShowAutoBgmPicker(true),
+    "aria-label": "\u30D0\u30C8\u30EBBGM\u3068\u97F3\u91CF\u3092\u8ABF\u6574",
+    title: "BGM / \u97F3\u91CF",
+    className: "shrink-0 min-h-[32px] min-w-[42px] rounded-lg border border-indigo-400/50 bg-indigo-800 px-1.5 text-indigo-100 active:scale-90"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "block text-[13px] leading-none"
+  }, "\uD83C\uDFB5"), /*#__PURE__*/React.createElement("span", {
+    className: "mt-0.5 block text-[7px] font-black leading-none"
+  }, "BGM")), quickToRhythmButtonNode), /*#__PURE__*/React.createElement("div", {
+    className: "w-[44px] shrink-0 flex flex-col gap-0.5"
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    disabled: !!battleScenarioRef.current || battleTutorialStep != null,
+    onClick: cycleBattleAuto,
+    "aria-pressed": autoBattle,
+    "aria-label": `AUTO ${autoRepeat ? '∞' : autoBattle ? 'ON' : 'OFF'}`,
+    className: `h-8 w-full px-1 rounded-lg border-2 font-black text-[8px] leading-tight active:scale-90 disabled:opacity-25 ${autoRepeat ? 'border-fuchsia-300 bg-fuchsia-500 text-slate-950 shadow-[0_0_12px_rgba(217,70,239,.65)]' : autoBattle ? 'border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_12px_rgba(34,211,238,.65)]' : 'border-slate-500 bg-slate-800 text-slate-300'}`
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "block"
+  }, "AUTO"), /*#__PURE__*/React.createElement("span", {
+    className: "block text-[7px]"
+  }, autoRepeat ? '∞' : autoBattle ? 'ON' : 'OFF')), battleScreenActive && isQuickMode(runMode) && autoRepeat === true && /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: cycleEcoMode,
+    "aria-label": `省エネ ${ecoMode === 'lite' ? '簡易' : ecoMode === 'ultra' ? '超' : 'OFF'}`,
+    className: `min-h-[24px] w-full rounded-md border font-black text-[7px] leading-[9px] active:scale-90 ${ecoMode === 'lite' ? 'border-emerald-300 bg-emerald-700 text-emerald-50' : ecoMode === 'ultra' ? 'border-lime-200 bg-lime-500 text-slate-950' : 'border-slate-500 bg-slate-700 text-slate-200'}`
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "block"
+  }, "\u7701\u30A8\u30CD"), /*#__PURE__*/React.createElement("span", {
+    className: "block"
+  }, ecoMode === 'lite' ? '簡易' : ecoMode === 'ultra' ? '超' : 'OFF'))), (() => {
+    const allAttackAssigned = selectedCards.filter(idx => cardNeedsMonster(hand[idx])).every(idx => cardAssignments[idx] != null);
+    const canAct = !autoBattle && !isBusy && selectedCards.length > 0 && pendingCard === null && allAttackAssigned && battleTutorialNeed !== 'skillPicker';
+    return /*#__PURE__*/React.createElement("button", {
+      onClick: () => processTurn(),
+      disabled: !canAct,
+      className: `min-h-[44px] min-w-[84px] shrink-0 px-2 sm:px-5 rounded-full font-black text-[11px] sm:text-[13px] whitespace-nowrap active:scale-90 flex items-center justify-center gap-1 border-2 border-black uppercase tracking-wide transition-all${battleTutorialSpotClass('action')} ${canAct ? 'bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.4)]' : 'bg-slate-700 text-slate-500 opacity-50'}`
+    }, /*#__PURE__*/React.createElement(Play, {
+      fill: "currentColor",
+      size: 12
+    }), " Action");
+  })())), /*#__PURE__*/React.createElement("div", {
+    className: `flex-1 flex gap-1.5 overflow-x-auto items-stretch scrollbar-hide px-1 pb-1 justify-center${battleTutorialCardTarget ? '' : battleTutorialSpotClass('cards')}`
+  }, hand.map((c, i) => {
+    const isSel = selectedCards.includes(i);
+    const assignedSlot = cardAssignments[i];
+    const curGuts = assignedSlot != null ? getCardGuts(c, assignedSlot) : getCardGuts(c, null);
+    const requiredGuts = assignedSlot != null ? curGuts : pendingCardGuts(c);
+    const remainingGuts = guts - selectedCards.reduce((acc, idx) => acc + (idx === i ? 0 : selectedCardGuts(idx)), 0);
+    const isSelectable = isSel || remainingGuts >= requiredGuts && selectedCards.length < cardLimit;
+    const isPending = pendingCard === i;
+    const assignedMon = assignedSlot != null ? slots[assignedSlot] : null;
+    const isDragging = dragState?.active && dragState?.cardIndex === i;
+    // 練習で使わせたい種類以外は、つかむこと自体をさせない(選択も割り当ても起きない)
+    const tutorialAllowed = battleTutorialCardAllowed(c);
+    // 光らせるのは「いま触ってほしい種類」だけ。技変更の番は名前のところも光らせる
+    const tutorialTargeted = !!battleTutorialCardTarget && battleTutorialCardKind(c) === battleTutorialCardTarget;
+    return /*#__PURE__*/React.createElement("div", {
+      key: c.uid,
+      className: "flex-1 min-w-0 max-w-[20%] flex"
+    }, /*#__PURE__*/React.createElement("button", {
+      onPointerDown: e => {
+        if (isBusy || autoBattleRef.current || !tutorialAllowed) return;
+        const pt = e.touches ? e.touches[0] : e;
+        cardDragActiveRef.current = false;
+        setDragState({
+          cardIndex: i,
+          x: pt.clientX,
+          y: pt.clientY,
+          active: false,
+          card: c
+        });
+      },
+      style: {
+        ...(isDragging ? {
+          touchAction: 'none',
+          position: 'fixed',
+          left: dragState.x,
+          top: dragState.y,
+          transform: 'translate(-50%,-50%) rotate(-3deg) scale(1.15)',
+          zIndex: 70000,
+          width: '72px',
+          pointerEvents: 'none',
+          transition: 'none',
+          filter: 'drop-shadow(0 12px 18px rgba(0,0,0,0.65))'
+        } : {
+          touchAction: 'none'
+        }),
+        ...(TYPE_INLINE_STYLE[c.type] || {})
+      },
+      className: `relative w-full rounded-xl border-2 p-1 flex flex-col items-center justify-between bg-gradient-to-b ${TYPE_COLORS[c.type]} ${isDragging ? 'ring-4 ring-white shadow-[0_0_24px_rgba(255,255,255,0.6)]' : isSel ? 'transition-all -translate-y-1.5 ring-4 ring-cyan-300 z-20 scale-105 opacity-60 saturate-[0.7] shadow-[0_0_18px_rgba(103,232,249,0.6)]' : 'transition-all opacity-90'} ${isPending ? 'ring-4 ring-yellow-400 animate-pulse shadow-[0_0_20px_rgba(250,204,21,0.7)]' : ''} ${!isSelectable && !isSel && !isDragging ? 'grayscale opacity-50' : ''}${tutorialTargeted ? ' is-battle-tutorial-spot' : ''}${battleTutorialCardTarget && !tutorialTargeted ? ' grayscale opacity-25' : ''}`
+    }, isSel && !assignedMon && /*#__PURE__*/React.createElement("div", {
+      className: "absolute top-0.5 left-0.5 z-30 w-5 h-5 rounded-full bg-cyan-400 border-2 border-white flex items-center justify-center shadow-lg"
+    }, /*#__PURE__*/React.createElement(Check, {
+      size: 10,
+      className: "text-white",
+      strokeWidth: 4
+    })), assignedMon && /*#__PURE__*/React.createElement("div", {
+      className: "absolute top-0.5 right-0.5 z-30 w-5 h-5 rounded-full bg-indigo-600 border-2 border-white flex items-center justify-center overflow-hidden shadow-lg"
+    }, assignedMon.imgUrl ? /*#__PURE__*/React.createElement("img", {
+      src: assignedMon.imgUrl,
+      alt: "",
+      className: "w-full h-full object-contain"
+    }) : /*#__PURE__*/React.createElement("span", {
+      className: "text-[9px]"
+    }, assignedMon.emoji)), /*#__PURE__*/React.createElement("div", {
+      className: "text-3xl mt-1.5"
+    }, cardIconNode(c.icon, 32, c.id)), /*#__PURE__*/React.createElement("div", {
+      className: "w-full text-center flex flex-col justify-end gap-0.5"
+    }, ['atk', 'range_atk', 'unique'].includes(c.type) ? /*#__PURE__*/React.createElement("div", {
+      onClick: ev => {
+        ev.stopPropagation();
+        if (isBusy || autoBattleRef.current || Date.now() <= suppressCardClickRef.current) return;
+        setSkillPicker({
+          handIndex: i
+        });
+      },
+      className: `text-[9px] font-black leading-tight w-full whitespace-normal h-7 flex items-center justify-center overflow-hidden uppercase italic px-0.5 underline decoration-dotted decoration-white/60 underline-offset-2 active:opacity-60${battleTutorialNeedCard && tutorialTargeted ? ' is-battle-tutorial-spot' : ''}`
+    }, c.name) : /*#__PURE__*/React.createElement("div", {
+      className: "text-[9px] font-black leading-tight w-full whitespace-normal h-7 flex items-center justify-center overflow-hidden uppercase italic px-0.5"
+    }, c.name), /*#__PURE__*/React.createElement("div", {
+      className: "text-[9px] font-black bg-black/40 text-white rounded py-1 flex items-center justify-center gap-0.5"
+    }, /*#__PURE__*/React.createElement(Zap, {
+      size: 9
+    }), curGuts))));
+  })))));
+}
+function UltimateDistanceBreakReveal({
+  difficulty,
+  extremeDifficulty,
+  extremeRunRef,
+  runMode,
+  ultimateDistanceBreakLevels,
+  ultimateDistanceBreakReveal
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    "data-ultimate-distance-break-reveal": true,
+    "data-distance-break-overwrite": ultimateDistanceBreakReveal.level >= 2 ? 'true' : undefined,
+    className: "fixed inset-0 flex items-center justify-center p-5 text-center",
+    style: {
+      zIndex: 91000,
+      background: ultimateDistanceBreakReveal.level >= 2 ? 'radial-gradient(circle,rgba(69,10,10,.9),rgba(0,0,0,.99))' : 'radial-gradient(circle,rgba(127,29,29,.72),rgba(2,6,23,.97))'
+    },
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": "\u8DDD\u96E2\u5F31\u4F53\u5316\u767A\u52D5"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: `w-full max-w-xs rounded-3xl border-2 border-red-300 px-5 py-7 ${ultimateDistanceBreakReveal.level >= 2 ? 'bg-black/95 shadow-[0_0_64px_rgba(220,38,38,.9)]' : 'bg-purple-950/95 shadow-[0_0_48px_rgba(239,68,68,.65)]'}`,
+    style: {
+      animation: 'mhExtremeRuleIn .38s ease-out'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-xs font-black tracking-[.24em] text-amber-300"
+  }, specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty) || ULTIMATE_SETTING.id), /*#__PURE__*/React.createElement("div", {
+    className: "mt-2 text-2xl font-black italic tracking-wider text-red-100"
+  }, ultimateDistanceBreakReveal.level >= 2 ? 'DISTANCE BREAK OVERWRITE' : 'DISTANCE BREAK'), /*#__PURE__*/React.createElement("div", {
+    className: "mt-5 text-xl font-black text-white"
+  }, RANGE_LABELS[ultimateDistanceBreakReveal.distance], "\u8DDD\u96E2 BREAK Lv", ultimateDistanceBreakReveal.level), /*#__PURE__*/React.createElement("div", {
+    className: "mt-2 rounded-xl border border-red-300/50 bg-black/40 py-2 text-sm font-black text-red-200"
+  }, "\u4E0E\u30C0\u30E1\u30FC\u30B8 ", 100 * 0.5 ** ultimateDistanceBreakReveal.level, "%"), /*#__PURE__*/React.createElement("div", {
+    className: "mt-4 border-t border-red-300/20 pt-3 text-[10px] text-purple-100"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "font-black text-slate-400"
+  }, "\u73FE\u5728\u306EBREAK\uFF1A"), /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("span", {
+    className: "font-black"
+  }, ultimateDistanceBreakLevels.map((level, index) => level > 0 ? `${RANGE_LABELS[index]} Lv${level}` : null).filter(Boolean).join(' / ') || 'なし'))));
+}
+function EnemyRevivalReveal({
+  difficulty,
+  enemyRevivalReveal,
+  extremeDifficulty,
+  extremeRunRef,
+  runMode
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    "data-extreme-revival-reveal": true,
+    className: "fixed inset-0 flex items-center justify-center p-5 text-center",
+    style: {
+      zIndex: 91000,
+      background: 'radial-gradient(circle,rgba(51,65,85,.82),rgba(2,6,23,.98))'
+    },
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": "\u6B7B\u8005\u306E\u518D\u8D77"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-full max-w-xs rounded-3xl border-2 border-slate-200 bg-slate-950/95 px-5 py-7 shadow-[0_0_56px_rgba(203,213,225,.7)]",
+    style: {
+      animation: 'mhExtremeRuleIn .38s ease-out'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-xs font-black tracking-[.24em] text-slate-300"
+  }, specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty) || RAGNAROK_SETTING.id), /*#__PURE__*/React.createElement("div", {
+    className: "mt-2 text-2xl font-black italic tracking-wider text-slate-100"
+  }, "DEAD RISING"), /*#__PURE__*/React.createElement("div", {
+    className: "mt-5 text-xl font-black text-white"
+  }, "\u6B7B\u8005\u306E\u518D\u8D77 ", enemyRevivalReveal.revivalNumber, "\u56DE\u76EE"), /*#__PURE__*/React.createElement("div", {
+    className: "mt-2 rounded-xl border border-slate-300/50 bg-black/40 py-2 text-sm font-black text-slate-200"
+  }, "\u30E9\u30A4\u30D5\u534A\u5206\u3067\u8D77\u304D\u4E0A\u304C\u308A\u3001\u653B\u6483\u529B+50%"), /*#__PURE__*/React.createElement("div", {
+    className: "mt-4 border-t border-slate-300/20 pt-3 text-[10px] text-slate-300"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "font-black text-slate-400"
+  }, "\u6B8B\u308A\u306E\u518D\u8D77\uFF1A"), /*#__PURE__*/React.createElement("span", {
+    className: "font-black"
+  }, enemyRevivalReveal.remaining, "\u56DE"))));
+}
+function ExtremeRuleOverlay({
+  closeExtremeRule,
+  difficulty,
+  extremeDifficulty,
+  extremeRunRef,
+  runMode,
+  totalTurnCount,
+  ultimateDistanceBreakLevels
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    className: "fixed inset-0 flex items-center justify-center p-5",
+    style: {
+      zIndex: 90500,
+      background: 'radial-gradient(circle,rgba(112,26,117,.58),rgba(2,6,23,.9))',
+      paddingTop: 'calc(1.25rem + env(safe-area-inset-top))',
+      paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom))'
+    },
+    onClick: closeExtremeRule,
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": "\u6975\u9650\u30EB\u30FC\u30EB\u767A\u52D5"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-full max-w-xs max-h-full flex flex-col rounded-3xl border-2 border-fuchsia-300 bg-slate-950/95 px-5 py-6 text-center shadow-[0_0_42px_rgba(217,70,239,.65)]",
+    style: {
+      animation: 'mhExtremeRuleIn .38s ease-out'
+    }
+  }, (() => {
+    const specialDifficulty = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
+    const groups = extremeRuleDetailGroups(specialDifficulty, isQuickMode(runMode));
+    const breakRule = extremeDistanceBreakRule(specialDifficulty);
+    return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+      className: "shrink-0 text-[11px] font-black tracking-[.12em] text-amber-300"
+    }, "\u26A0 ", specialDifficulty, " \u7279\u6B8A\u30EB\u30FC\u30EB"), /*#__PURE__*/React.createElement("div", {
+      "data-extreme-rule-intro": specialDifficulty,
+      className: "mt-3 min-h-0 flex-1 overflow-y-auto mh-scroll grid content-start gap-1.5 text-left"
+    }, groups.map(group => /*#__PURE__*/React.createElement("div", {
+      key: group.title,
+      className: "rounded-xl border border-fuchsia-400/25 bg-purple-950/55 px-2.5 py-1.5"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-[9px] font-black text-fuchsia-300"
+    }, "\u3010", group.title, "\u3011"), group.lines.map(([label, value]) => /*#__PURE__*/React.createElement("div", {
+      key: label,
+      className: "mt-0.5 grid grid-cols-[auto_1fr] items-start gap-2 text-[10px] font-bold leading-snug text-white"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "shrink-0 text-slate-300"
+    }, label), /*#__PURE__*/React.createElement("b", {
+      className: "min-w-0 text-right"
+    }, value)))))), breakRule && /*#__PURE__*/React.createElement("div", {
+      className: "mt-2 shrink-0 rounded-xl border border-amber-300/40 bg-black/45 px-3 py-2 text-left text-[10px] leading-relaxed text-slate-200"
+    }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
+      className: "text-slate-400"
+    }, "\u73FE\u5728\u306E\u7D2F\u8A08\u30BF\u30FC\u30F3\uFF1A"), /*#__PURE__*/React.createElement("b", {
+      className: "text-white"
+    }, totalTurnCount)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
+      className: "text-slate-400"
+    }, "\u73FE\u5728\u306EBREAK\uFF1A"), /*#__PURE__*/React.createElement("b", {
+      className: ultimateDistanceBreakLevels.some(level => level > 0) ? 'text-red-200' : 'text-white'
+    }, ultimateDistanceBreakLevels.map((level, index) => level > 0 ? `${RANGE_LABELS[index]} Lv${level}` : null).filter(Boolean).join(' / ') || 'なし'))));
+  })(), /*#__PURE__*/React.createElement("div", {
+    className: "mt-4 shrink-0 text-[9px] font-black tracking-widest text-fuchsia-200"
+  }, "\u30BF\u30C3\u30D7\u3057\u3066\u30D0\u30C8\u30EB\u958B\u59CB")));
+}
+function SoulBattleEffects({
+  battleIntimidate,
+  battleSoulMasus,
+  setShowSoulBattleEffects,
+  soulBattleParty,
+  soulCoordinationCardBonus,
+  unifiedSpecialDefense
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    "data-soul-battle-effects": true,
+    className: "fixed inset-0 flex flex-col bg-slate-950 text-white",
+    style: {
+      position: 'fixed',
+      inset: 0,
+      zIndex: 41000,
+      paddingTop: 'calc(.75rem + env(safe-area-inset-top))',
+      paddingBottom: 'calc(.75rem + env(safe-area-inset-bottom))'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 flex items-center justify-between gap-3 border-b border-sky-400/20 px-4 pb-3"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] font-black tracking-[.25em] text-sky-400"
+  }, "SOUL RANK"), /*#__PURE__*/React.createElement("h3", {
+    className: "text-lg font-black text-sky-100"
+  }, "\u9B42\u683C\u52B9\u679C")), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => setShowSoulBattleEffects(false),
+    className: "min-h-[44px] min-w-[64px] rounded-full bg-white/10 px-4 text-[11px] font-black active:scale-95"
+  }, "\u623B\u308B")), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 min-h-0 overflow-y-auto mh-scroll px-4 py-3 space-y-3"
+  }, /*#__PURE__*/React.createElement("section", {
+    className: "rounded-2xl border border-sky-400/30 bg-sky-950/25 p-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mb-2 text-[10px] font-black text-sky-200"
+  }, "\u30D1\u30FC\u30C6\u30A3\u52B9\u679C"), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-2 text-[10px]"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "rounded-xl bg-black/30 p-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "block text-slate-400"
+  }, "\u88AB\u30C0\u30E1\u30FC\u30B8"), /*#__PURE__*/React.createElement("b", {
+    className: "text-emerald-300"
+  }, "-", Math.round(soulBattleParty.damageReduction * 10) / 10, "%")), /*#__PURE__*/React.createElement("div", {
+    className: "rounded-xl bg-black/30 p-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "block text-slate-400"
+  }, "\u7279\u6B8A\u9632\u5FA1\u7387"), /*#__PURE__*/React.createElement("b", {
+    className: "text-cyan-300"
+  }, Math.round(unifiedSpecialDefense.rate * 10) / 10, "%")), /*#__PURE__*/React.createElement("div", {
+    className: "rounded-xl bg-black/30 p-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "block text-slate-400"
+  }, "\u56DE\u907F / \u53CD\u5C04 / \u5438\u53CE"), /*#__PURE__*/React.createElement("b", {
+    className: "text-slate-100"
+  }, Math.round(unifiedSpecialDefense.evasion * 10) / 10, " / ", Math.round(unifiedSpecialDefense.reflect * 10) / 10, " / ", Math.round(unifiedSpecialDefense.absorb * 10) / 10, "%")), /*#__PURE__*/React.createElement("div", {
+    className: "rounded-xl bg-black/30 p-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "block text-slate-400"
+  }, "\u5A01\u5727"), /*#__PURE__*/React.createElement("b", {
+    className: "text-violet-300"
+  }, Math.round(battleIntimidate * 10) / 10, "%")), /*#__PURE__*/React.createElement("div", {
+    className: "rounded-xl bg-black/30 p-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "block text-slate-400"
+  }, "\u81EA\u52D5\u30AC\u30C3\u30C4\u56DE\u5FA9"), /*#__PURE__*/React.createElement("b", {
+    className: "text-amber-300"
+  }, "\xD7", soulBattleParty.autoGutsMultiplier.toFixed(2))), /*#__PURE__*/React.createElement("div", {
+    className: "rounded-xl bg-black/30 p-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "block text-slate-400"
+  }, "\u4F7F\u7528\u53EF\u80FD\u30AB\u30FC\u30C9"), /*#__PURE__*/React.createElement("b", {
+    className: "text-sky-300"
+  }, soulCoordinationCardBonus > 0 ? '+1' : '変化なし'))), unifiedSpecialDefense.rate > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "mt-2 text-[9px] leading-relaxed text-slate-400"
+  }, "\u7279\u6B8A\u9632\u5FA1\u304C\u767A\u52D5\u3057\u305F\u5834\u5408\u3001\u56DE\u907F\u30FB\u53CD\u5C04\u30FB\u5438\u53CE\u306E\u6BD4\u7387\u304B\u30891\u3064\u3060\u3051\u767A\u52D5\u3057\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("section", {
+    className: "space-y-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] font-black text-sky-200"
+  }, "\u53C2\u52A0\u4E2D\u30DE\u30B9\u30E2\u30F3"), battleSoulMasus.filter(m => normalizeSoulRankStage(m.soulRankStage) > 0).map(masu => {
+    const stage = normalizeSoulRankStage(masu.soulRankStage);
+    const active = SOUL_TRAIT_DEFINITIONS.filter(t => soulTraitLevel(masu, t.id) > 0);
+    const base = ALL_PLAYER_MONSTERS[masu.baseId];
+    return /*#__PURE__*/React.createElement("div", {
+      key: masu.id,
+      className: "rounded-2xl border border-white/10 bg-slate-900/70 p-3"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center justify-between gap-2"
+    }, /*#__PURE__*/React.createElement("b", {
+      className: "truncate text-[11px]"
+    }, masu.name || base?.name || 'マスモン'), /*#__PURE__*/React.createElement("span", {
+      className: "shrink-0 rounded-full border border-sky-400/30 bg-sky-950/50 px-2 py-1 text-[8px] font-black text-sky-200"
+    }, "\u9B42\u683C", ['', 'Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ', 'Ⅴ'][stage])), active.length > 0 ? /*#__PURE__*/React.createElement("div", {
+      className: "mt-2 flex flex-wrap gap-1"
+    }, active.map(t => /*#__PURE__*/React.createElement("span", {
+      key: t.id,
+      className: "rounded-lg border border-white/10 bg-black/30 px-2 py-1 text-[8px]"
+    }, /*#__PURE__*/React.createElement("b", {
+      className: "text-slate-200"
+    }, t.name), " ", /*#__PURE__*/React.createElement("span", {
+      className: "text-sky-300"
+    }, formatSoulTraitEffect(t, soulTraitEffectValue(masu, t.id)))))) : /*#__PURE__*/React.createElement("div", {
+      className: "mt-2 text-[9px] text-slate-500"
+    }, "\u632F\u308A\u5206\u3051\u6E08\u307F\u306E\u9B42\u683C\u7279\u6027\u306F\u3042\u308A\u307E\u305B\u3093\u3002"));
+  }))));
+}
+
 // ---- part: 60-app.jsx ----
 function MonsterHeroGame() {
   const [gameState, setGameState] = useState('HOME');
@@ -53269,1659 +55308,130 @@ function MonsterHeroGame() {
     }, "\u3053\u306E\u30B3\u30FC\u30C9\u3067\u5FA9\u5143\u3059\u308B")), /*#__PURE__*/React.createElement("button", {
       onClick: () => setShowBackup(false),
       className: "w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs mt-3"
-    }, "\u9589\u3058\u308B"))), gameState === 'BATTLE' && /*#__PURE__*/React.createElement("div", {
-      className: "flex-1 flex flex-col h-full relative",
-      "data-battle-speed": battleSpeed,
-      "data-eco-view": ultraBattleView ? 'ultra' : liteBattleView ? 'lite' : 'off'
-    }, liteBattleView && /*#__PURE__*/React.createElement("div", {
-      "data-lite-eco-dimmer": true,
-      className: "absolute inset-0 bg-black/20 pointer-events-none",
-      style: {
-        zIndex: 89999
-      },
-      "aria-hidden": "true"
-    }), /*#__PURE__*/React.createElement("header", {
-      "data-battle-header": true,
-      className: "h-[5%] min-h-[40px] shrink-0 bg-slate-900 px-1.5 flex items-center border-b border-white/5 z-[6500] overflow-hidden"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: `flex flex-1 min-w-0 items-center gap-0.5 overflow-hidden${battleTutorialSpotClass('waveInfo')}`
-    }, debugBattle && /*#__PURE__*/React.createElement("span", {
-      className: "text-[7px] font-black text-fuchsia-300 border border-fuchsia-500/40 rounded px-1 py-0.5 tracking-widest"
-    }, "DEBUG"), /*#__PURE__*/React.createElement("span", {
-      className: `text-[8px] font-black bg-opacity-10 px-1 py-0.5 rounded border tracking-tight whitespace-nowrap ${difficulty === 'Hard' ? 'text-red-400 bg-red-500 border-red-500' : 'text-indigo-400 bg-indigo-500 border-indigo-500'}`
-    }, "WAVE ", wave, "/10"), /*#__PURE__*/React.createElement("span", {
-      className: "min-w-0 overflow-hidden text-ellipsis text-[7px] font-black px-1 py-0.5 rounded border whitespace-nowrap",
-      style: {
-        color: battleModeInfo(runMode).color,
-        borderColor: `${battleModeInfo(runMode).color}66`,
-        backgroundColor: 'rgba(0,0,0,.35)'
-      }
-    }, extremeRun ? `極限チャレンジ / ${extremeDifficulty}` : /*#__PURE__*/React.createElement(React.Fragment, null, battleModeInfo(runMode).short, " / ", QUICK_DIFFICULTY_SETTINGS[safeDifficulty]?.label || safeDifficulty))), /*#__PURE__*/React.createElement("div", {
-      "data-battle-metrics": true,
-      className: "shrink-0 flex items-center gap-1 px-1 leading-none"
-    }, /*#__PURE__*/React.createElement("div", {
-      "data-battle-turn": true,
-      className: "flex flex-col items-center justify-center whitespace-nowrap font-black text-blue-400"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "flex items-center gap-0.5 text-[7px] tracking-wide"
-    }, /*#__PURE__*/React.createElement(Timer, {
-      size: 7
-    }), "TURN"), /*#__PURE__*/React.createElement("span", {
-      className: "mt-0.5 text-[10px] font-mono"
-    }, turnCount, "/20")), !isQuickMode(runMode) && /*#__PURE__*/React.createElement("div", {
-      "data-battle-score": true,
-      className: "flex min-w-[64px] flex-col items-end justify-center whitespace-nowrap font-mono font-black text-amber-500"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "flex items-center gap-0.5 text-[7px] tracking-wide"
-    }, /*#__PURE__*/React.createElement(Award, {
-      size: 7
-    }), "SCORE"), /*#__PURE__*/React.createElement("span", {
-      "data-battle-score-value": true,
-      className: "mt-0.5 text-[10px] tabular-nums"
-    }, score.toLocaleString()))), /*#__PURE__*/React.createElement("div", {
-      "data-battle-controls": true,
-      className: "flex shrink-0 items-center gap-0.5"
-    }, /*#__PURE__*/React.createElement("button", {
-      type: "button",
-      disabled: !!battleTutorial || autoRepeat,
-      onClick: cycleBattleSpeed,
-      "aria-label": battleTutorial ? 'バトルのれんしゅう中は1倍固定' : autoRepeat ? '∞周回中は4倍固定' : `バトル速度、現在${battleSpeed}倍。タップで切り替え`,
-      title: autoRepeat ? '∞周回中は×4固定' : undefined,
-      className: "shrink-0 min-w-[42px] h-[28px] px-1.5 rounded-lg border-2 font-black text-[11px] leading-none active:scale-90 disabled:cursor-not-allowed disabled:opacity-60",
-      style: {
-        color: '#fef3c7',
-        borderColor: '#f59e0b',
-        backgroundColor: 'rgba(120,53,15,.72)',
-        boxShadow: '0 0 9px rgba(245,158,11,.35)'
-      }
-    }, "\xD7", battleSpeed, autoRepeat && /*#__PURE__*/React.createElement("span", {
-      className: "ml-0.5 text-[7px]"
-    }, "\u56FA\u5B9A")), /*#__PURE__*/React.createElement("button", {
-      onClick: () => openHelp(),
-      "aria-label": "\u30D8\u30EB\u30D7",
-      className: "shrink-0 w-[28px] h-[28px] flex items-center justify-center bg-slate-800 rounded text-emerald-400 active:scale-90"
-    }, /*#__PURE__*/React.createElement(HelpCircle, {
-      size: 14
-    })), /*#__PURE__*/React.createElement("button", {
-      "data-battle-quit": true,
-      disabled: !!battleTutorial,
-      onClick: () => setShowQuitConfirm(true),
-      "aria-label": "\u8AE6\u3081\u308B",
-      className: "shrink-0 w-[28px] h-[28px] flex items-center justify-center bg-slate-800 rounded text-slate-400 active:scale-90 disabled:opacity-25"
-    }, /*#__PURE__*/React.createElement(Flag, {
-      size: 14
-    })))), ultraBattleView ? /*#__PURE__*/React.createElement("div", {
-      "data-ultra-battle-view": true,
-      className: "flex-1 min-h-0 flex flex-col bg-slate-950 text-slate-100"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "flex-1 min-h-0 px-2 py-1.5 flex flex-col gap-1.5 overflow-hidden"
-    }, enemy && /*#__PURE__*/React.createElement("section", {
-      className: "rounded-xl border border-red-900/70 bg-slate-900/95 px-2 py-1.5"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center justify-between gap-2 text-[10px] font-black"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "min-w-0 truncate text-red-200"
-    }, enemy.name), /*#__PURE__*/React.createElement("span", {
-      className: "shrink-0 font-mono text-red-300"
-    }, Math.max(0, enemy.hp).toLocaleString(), " / ", enemy.maxHp.toLocaleString())), /*#__PURE__*/React.createElement("div", {
-      className: "mt-1 h-2 overflow-hidden rounded-full bg-slate-800"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "h-full bg-red-600",
-      style: {
-        width: `${Math.max(0, enemy.hp) / enemy.maxHp * 100}%`
-      }
-    })), /*#__PURE__*/React.createElement("div", {
-      className: "mt-1 flex items-center justify-center gap-3"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "h-[clamp(82px,16dvh,132px)] w-[clamp(82px,16dvh,132px)] flex items-center justify-center"
-    }, enemy.imgUrl ? /*#__PURE__*/React.createElement("img", {
-      src: enemy.imgUrl,
-      alt: enemy.name,
-      className: "w-full h-full object-contain"
-    }) : /*#__PURE__*/React.createElement("span", {
-      style: {
-        fontSize: 'clamp(58px,11dvh,104px)',
-        lineHeight: 1
-      }
-    }, enemy.emoji)), /*#__PURE__*/React.createElement("div", {
-      className: "text-center"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "text-[8px] font-black text-slate-400"
-    }, "\u73FE\u5728\u8DDD\u96E2"), /*#__PURE__*/React.createElement("div", {
-      className: `mt-1 rounded-full border px-3 py-1 text-[11px] font-black ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border}`
-    }, RANGE_LABELS[enemyDist], "\u8DDD\u96E2"))), /*#__PURE__*/React.createElement("div", {
-      "data-ultra-enemy-log": true,
-      className: "mt-1 h-[42px] overflow-hidden rounded-lg border border-red-800/60 bg-black/50 px-2 py-1 text-center leading-tight"
-    }, enemySkillName && /*#__PURE__*/React.createElement("div", {
-      className: "truncate text-[11px] font-black text-red-200"
-    }, enemySkillName.label), popups.filter(p => p.side === 'enemy').map(p => /*#__PURE__*/React.createElement("div", {
-      key: p.id,
-      className: `${p.color} truncate text-sm font-black`
-    }, p.text)))), /*#__PURE__*/React.createElement("section", {
-      className: "rounded-xl border border-indigo-900/70 bg-slate-900/95 px-2 py-1.5"
-    }, /*#__PURE__*/React.createElement("div", {
-      "data-ultra-ally-slots": true,
-      className: "grid grid-cols-4 gap-1"
-    }, slots.map((s, i) => /*#__PURE__*/React.createElement("div", {
-      key: i,
-      className: `flex h-[42px] min-w-0 flex-col items-center justify-center rounded-lg border px-0.5 py-1 text-center ${RANGE_STYLES[i].bg} ${RANGE_STYLES[i].border}`
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "w-full truncate text-[9px] font-black text-white"
-    }, s?.name || '---'), /*#__PURE__*/React.createElement("div", {
-      className: "mt-1 text-[8px] font-black"
-    }, RANGE_LABELS[i], "\u8DDD\u96E2")))), /*#__PURE__*/React.createElement("div", {
-      className: "mt-1.5 space-y-1"
-    }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-      className: "flex justify-between text-[8px] font-black text-pink-300"
-    }, /*#__PURE__*/React.createElement("span", null, "\u5473\u65B9HP"), /*#__PURE__*/React.createElement("span", {
-      className: "font-mono"
-    }, hp.toLocaleString(), " / ", effectiveMaxHp.toLocaleString())), /*#__PURE__*/React.createElement("div", {
-      className: "h-1.5 overflow-hidden rounded-full bg-slate-800"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "h-full bg-pink-500",
-      style: {
-        width: `${hp / effectiveMaxHp * 100}%`
-      }
-    }))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-      className: "flex justify-between text-[8px] font-black text-amber-300"
-    }, /*#__PURE__*/React.createElement("span", null, "\u30AC\u30C3\u30C4"), /*#__PURE__*/React.createElement("span", {
-      className: "font-mono"
-    }, Math.floor(guts).toLocaleString(), " / ", effectiveMaxGuts.toLocaleString())), /*#__PURE__*/React.createElement("div", {
-      className: "h-1.5 overflow-hidden rounded-full bg-slate-800"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "h-full bg-amber-400",
-      style: {
-        width: `${guts / effectiveMaxGuts * 100}%`
-      }
-    })))), /*#__PURE__*/React.createElement("div", {
-      "data-ultra-ally-log": true,
-      className: "mt-1 h-[42px] overflow-hidden rounded-lg border border-indigo-800/60 bg-black/50 px-2 py-1 text-center leading-tight"
-    }, slotSkill && /*#__PURE__*/React.createElement("div", {
-      className: "truncate text-[11px] font-black text-indigo-200"
-    }, slotSkill.name), popups.filter(p => ['hero', 'life', 'guts'].includes(p.side)).map(p => /*#__PURE__*/React.createElement("div", {
-      key: p.id,
-      className: `${p.color} truncate text-sm font-black`
-    }, p.text)))), renderQuickRunBattleBand()), /*#__PURE__*/React.createElement("div", {
-      className: "shrink-0 border-t border-white/10 bg-slate-900 p-1"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center justify-between gap-1 px-1"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "min-w-0 flex-1"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "text-[8px] font-black uppercase tracking-wider text-indigo-300"
-    }, "Action Cards"), /*#__PURE__*/React.createElement("div", {
-      className: "truncate text-[9px] font-bold text-slate-300"
-    }, "AUTO\u221E\u3067\u9032\u884C\u4E2D")), /*#__PURE__*/React.createElement("button", {
-      onClick: () => setShowDeckInfo(true),
-      className: "flex min-h-[32px] items-center gap-0.5 rounded-lg border border-white/10 bg-white/5 px-2 text-[7px] font-black"
-    }, /*#__PURE__*/React.createElement(Layers, {
-      size: 9
-    }), "VIEW"), /*#__PURE__*/React.createElement("div", {
-      className: "shrink-0 flex flex-col gap-0.5"
-    }, /*#__PURE__*/React.createElement("button", {
-      "data-auto-bgm-button": true,
-      type: "button",
-      onClick: () => setShowAutoBgmPicker(true),
-      "aria-label": "\u30D0\u30C8\u30EBBGM\u3068\u97F3\u91CF\u3092\u8ABF\u6574",
-      title: "BGM / \u97F3\u91CF",
-      className: "shrink-0 min-h-[32px] min-w-[42px] rounded-lg border border-indigo-400/50 bg-indigo-800 px-1.5 text-indigo-100 active:scale-90"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "block text-[13px] leading-none"
-    }, "\uD83C\uDFB5"), /*#__PURE__*/React.createElement("span", {
-      className: "mt-0.5 block text-[7px] font-black leading-none"
-    }, "BGM")), quickToRhythmButtonNode), /*#__PURE__*/React.createElement("div", {
-      className: "w-[44px] shrink-0 flex flex-col gap-0.5"
-    }, /*#__PURE__*/React.createElement("button", {
-      type: "button",
-      disabled: !!battleScenarioRef.current || battleTutorialStep != null,
-      onClick: cycleBattleAuto,
-      "aria-pressed": autoBattle,
-      "aria-label": `AUTO ${autoRepeat ? '∞' : autoBattle ? 'ON' : 'OFF'}`,
-      className: "h-8 w-full rounded-lg border-2 border-fuchsia-300 bg-fuchsia-500 text-[8px] font-black leading-tight text-slate-950"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "block"
-    }, "AUTO"), /*#__PURE__*/React.createElement("span", {
-      className: "block text-[7px]"
-    }, autoRepeat ? '∞' : autoBattle ? 'ON' : 'OFF')), /*#__PURE__*/React.createElement("button", {
-      type: "button",
-      onClick: cycleEcoMode,
-      "aria-label": "\u7701\u30A8\u30CD \u8D85",
-      className: "min-h-[24px] w-full rounded-md border border-lime-200 bg-lime-500 text-[7px] font-black leading-[9px] text-slate-950"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "block"
-    }, "\u7701\u30A8\u30CD"), /*#__PURE__*/React.createElement("span", {
-      className: "block"
-    }, "\u8D85"))), /*#__PURE__*/React.createElement("button", {
-      disabled: true,
-      className: "min-h-[44px] min-w-[84px] shrink-0 rounded-full border-2 border-black bg-slate-700 px-2 text-[11px] font-black uppercase text-slate-400 opacity-50"
-    }, /*#__PURE__*/React.createElement(Play, {
-      fill: "currentColor",
-      size: 12,
-      className: "inline mr-1"
-    }), "Action")))) : /*#__PURE__*/React.createElement(React.Fragment, null, (() => {
-      const statusRule = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
-      const hasEnemyRate = extremeRuleNumber(statusRule, 'enemyTurnRate') != null;
-      const hasDamageRate = extremeRuleNumber(statusRule, 'damageTurnRate') != null;
-      if (!hasEnemyRate && !hasDamageRate) return null;
-      const elapsedTotalTurns = totalTurnCount + Math.max(0, turnCount - 1);
-      const enemyMultiplier = ultimateEnemyTurnMultiplier(totalTurnCount, statusRule);
-      const damageMultiplier = extremeDamageTurnMultiplier(elapsedTotalTurns, statusRule, wave);
-      const hasJoinRate = extremeRuleNumber(statusRule, 'allyJoinPenaltyRate') != null;
-      // 段階(神威・黄昏)と不死の残り回数は難易度名で分岐せず、持っている難易度だけに出す
-      const stageLabel = extremeWaveStageLabel(statusRule);
-      const stagedEnemyMultiplier = extremeWaveEnemyMultiplier(statusRule, wave);
-      const revivalTotal = extremeRevivalCount(statusRule, wave);
-      return /*#__PURE__*/React.createElement("div", {
-        "data-ultimate-battle-status": statusRule,
-        className: "shrink-0 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 border-b border-fuchsia-500/30 bg-purple-950/80 px-2 py-1 text-[8px] font-black leading-none text-purple-100"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-amber-300"
-      }, statusRule, stageLabel ? ` ${stageLabel} Lv.${extremeWaveStageLevel(wave)}` : ''), revivalTotal > 0 && /*#__PURE__*/React.createElement("span", {
-        className: "text-slate-200"
-      }, "\u4E0D\u6B7B \u6B8B\u308A", Math.max(0, revivalTotal - enemyRevivalUsed), "\u56DE"), hasEnemyRate && /*#__PURE__*/React.createElement("span", null, "\u6575\u5F37\u5316 +", compactPercent(enemyMultiplier * stagedEnemyMultiplier - 1), "\uFF08WAVE\u958B\u59CB\u6642 \u7D2F\u8A08", totalTurnCount, "T\uFF09"), hasDamageRate && /*#__PURE__*/React.createElement("span", null, "\u4E0E\u30C0\u30E1 ", compactPercent(damageMultiplier), "\uFF08\u73FE\u5728 \u7D2F\u8A08", elapsedTotalTurns, "T\uFF09"), hasJoinRate && /*#__PURE__*/React.createElement("span", null, "\u52A0\u5165B ", compactPercent(ultimateAllyJoinMultiplier(elapsedTotalTurns, statusRule)), "\uFF08\u73FE\u5728\uFF09"), extremeDistanceBreakRule(statusRule) && /*#__PURE__*/React.createElement("span", null, "BREAK ", ultimateDistanceBreakLevels.map((level, index) => level > 0 ? `${RANGE_LABELS[index]}Lv${level}` : null).filter(Boolean).join(' / ') || '未発生'));
-    })(), (() => {
-      const rule = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
-      return [NIGHTMARE_SETTING.id, CHAOS_SETTING.id].includes(rule) && /*#__PURE__*/React.createElement("div", {
-        "data-extreme-battle-status": rule,
-        className: "shrink-0 grid grid-cols-4 items-center gap-1 border-b border-fuchsia-500/30 bg-purple-950/80 px-2 py-1 text-[9px] font-black leading-none text-purple-100"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-amber-300"
-      }, rule), extremeSpecialRuleLines(rule).map(([label, value]) => /*#__PURE__*/React.createElement("span", {
-        key: label,
-        className: "text-center whitespace-nowrap"
-      }, label, " ", value)));
-    })(), enemy && /*#__PURE__*/React.createElement("div", {
-      className: `shrink-0 bg-slate-950/95 border-b border-red-900/40 px-4 py-1.5 z-[6400] shadow-[0_4px_12px_rgba(0,0,0,0.6)]${battleTutorialSpotClass('enemyBar')}`
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "flex justify-between items-center text-[10px] font-black italic uppercase tracking-tighter mb-1"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: `flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5 leading-none ${wave === 10 ? 'text-red-500 animate-pulse' : 'text-slate-200'}`
-    }, /*#__PURE__*/React.createElement(Skull, {
-      size: 11,
-      className: "shrink-0"
-    }), /*#__PURE__*/React.createElement("span", {
-      className: "max-w-[34vw] truncate"
-    }, enemy.name), /*#__PURE__*/React.createElement("span", {
-      className: `shrink-0 px-1.5 py-0.5 rounded-full text-[8px] text-white font-bold border ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border}`
-    }, RANGE_LABELS[enemyDist]), iceLockTurns > 0 && /*#__PURE__*/React.createElement("span", {
-      "data-ice-lock-status": true,
-      className: "shrink-0 px-1 py-0.5 rounded-full border border-cyan-400/60 bg-cyan-950/80 text-[7px] not-italic tracking-tighter whitespace-nowrap text-cyan-100"
-    }, "\u2744\uFE0F\u7D76\u6C37 ", iceLockPreparing ? '準備' : /*#__PURE__*/React.createElement(React.Fragment, null, iceLockTurns, "T\u3000\u2B0730%"))), /*#__PURE__*/React.createElement("span", {
-      className: "text-red-500 flex items-center gap-1 font-mono drop-shadow-[0_1px_3px_rgba(0,0,0,1)]"
-    }, Math.max(0, enemy.hp).toLocaleString(), " / ", enemy.maxHp.toLocaleString())), /*#__PURE__*/React.createElement("div", {
-      className: "h-2.5 bg-slate-900 rounded-full overflow-hidden border border-white/20 relative shadow-inner"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "h-full bg-gradient-to-r from-red-700 via-red-500 to-orange-400 transition-all duration-1000",
-      style: {
-        width: `${Math.max(0, enemy.hp) / enemy.maxHp * 100}%`,
-        backgroundImage: 'linear-gradient(to right, #b91c1c, #ef4444, #fb923c)'
-      }
-    }))), /*#__PURE__*/React.createElement("main", {
-      className: "flex-1 relative flex flex-col items-center justify-between pt-3 pb-1 px-2 overflow-x-visible overflow-y-auto min-h-0"
-    }, /*#__PURE__*/React.createElement("button", {
-      onClick: () => setShowEnemyInfo(true),
-      className: "absolute right-2 top-24 flex flex-col items-center justify-center p-2 rounded-2xl border border-red-500 bg-red-950/30 active:scale-90 z-20 shadow-lg"
-    }, /*#__PURE__*/React.createElement(Search, {
-      className: "text-red-400 mb-0.5",
-      size: 14
-    }), /*#__PURE__*/React.createElement("span", {
-      className: "text-[7px] font-black text-white"
-    }, "\u89E3\u6790")), /*#__PURE__*/React.createElement("button", {
-      onClick: () => setShowHeroInfo(true),
-      className: `absolute left-2 top-10 flex flex-col items-center justify-center p-2 rounded-2xl border border-indigo-500 bg-indigo-950/30 active:scale-90 z-20 shadow-lg${battleTutorialSpotClass('heroStatus')}`
-    }, /*#__PURE__*/React.createElement(Crown, {
-      className: "text-indigo-400 mb-0.5",
-      size: 14
-    }), /*#__PURE__*/React.createElement("span", {
-      className: "text-[7px] font-black text-white"
-    }, "\u30B9\u30C6\u30FC\u30BF\u30B9")), battleSoulMasus.some(m => normalizeSoulRankStage(m.soulRankStage) > 0) && /*#__PURE__*/React.createElement("button", {
-      "data-soul-battle-effects-button": true,
-      type: "button",
-      onClick: () => setShowSoulBattleEffects(true),
-      className: "absolute right-2 top-10 min-h-[44px] min-w-[52px] flex flex-col items-center justify-center px-2 py-1 rounded-2xl border border-sky-400 bg-sky-950/60 active:scale-90 z-20 shadow-lg"
-    }, /*#__PURE__*/React.createElement(Sparkles, {
-      className: "text-sky-300 mb-0.5",
-      size: 14
-    }), /*#__PURE__*/React.createElement("span", {
-      className: "text-[7px] font-black text-white"
-    }, "\u9B42\u683C\u52B9\u679C")), turnCount === 1 && battleSoulMasus.some(m => normalizeSoulRankStage(m.soulRankStage) > 0) && !isBusy && /*#__PURE__*/React.createElement("div", {
-      "data-soul-battle-start-summary": true,
-      className: "absolute left-1/2 top-2 -translate-x-1/2 z-10 max-w-[62%] truncate rounded-full border border-sky-400/30 bg-sky-950/75 px-2 py-1 text-[7px] font-black text-sky-100 pointer-events-none"
-    }, "\u9B42\u683C\u52B9\u679C \u767A\u52D5\u4E2D", Math.round(soulBattleParty.damageReduction * 10) / 10 > 0 ? ` ・鉄壁${Math.round(soulBattleParty.damageReduction * 10) / 10}%` : '', unifiedSpecialDefense.rate > 0 ? ` ・特殊防御${Math.round(unifiedSpecialDefense.rate * 10) / 10}%` : '', battleIntimidate > 0 ? ` ・威圧${Math.round(battleIntimidate * 10) / 10}%` : '', soulCoordinationCardBonus > 0 ? ' ・カード+1' : ''), /*#__PURE__*/React.createElement("button", {
-      onClick: useEmergency,
-      disabled: isBusy || autoBattle || !battleTutorialAllowsEmergency,
-      className: `absolute left-2 top-24 flex flex-col items-center justify-center p-2 rounded-2xl border border-blue-500 bg-blue-900/30 active:scale-90 disabled:opacity-20 z-20 shadow-lg${battleTutorialSpotClass('emergency')}`
-    }, /*#__PURE__*/React.createElement(Activity, {
-      className: "text-blue-400 mb-0.5",
-      size: 16
-    }), /*#__PURE__*/React.createElement("span", {
-      className: "text-[7px] font-black text-white"
-    }, "\u7DCA\u6025")), /*#__PURE__*/React.createElement("div", {
-      className: "mt-1 relative flex flex-col items-center"
-    }, enemySkillName && /*#__PURE__*/React.createElement("div", {
-      className: "fixed left-1/2 -translate-x-1/2 pointer-events-none whitespace-nowrap",
-      style: {
-        top: '14%',
-        zIndex: 65000,
-        animation: liteBattleView ? undefined : 'skillNamePop 350ms ease-out forwards'
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "px-4 py-1.5 rounded-xl font-black text-[13px] bg-red-700 border-2 border-red-200 text-white shadow-[0_2px_16px_rgba(0,0,0,0.9)] flex items-center gap-2"
-    }, /*#__PURE__*/React.createElement("span", null, cardIconNode(enemySkillName.icon, 16)), enemySkillName.label)), enemy && enemyIntent && !isBusy && !enemyAttackFx && enemyIntent.type === 'SPECIAL' && /*#__PURE__*/React.createElement("div", {
-      className: "fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1",
-      style: {
-        top: '11%',
-        zIndex: 65000,
-        animation: 'specialWarnFlash 500ms ease-in-out infinite'
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "text-5xl drop-shadow-[0_0_20px_rgba(217,70,239,1)]"
-    }, "\u2620\uFE0F"), /*#__PURE__*/React.createElement("div", {
-      className: "px-3 py-1 rounded-lg bg-gradient-to-r from-purple-900 via-fuchsia-700 to-purple-900 border-2 border-fuchsia-300 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(217,70,239,0.9)]"
-    }, "\u5FC5 \u6BBA \u6280")), enemy && enemyIntent && !isBusy && !enemyAttackFx && enemyIntent.type === 'CHARGE' && /*#__PURE__*/React.createElement("div", {
-      className: "fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1",
-      style: {
-        top: '11%',
-        zIndex: 65000,
-        animation: 'specialWarnFlash 700ms ease-in-out infinite'
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "text-5xl drop-shadow-[0_0_20px_rgba(251,191,36,1)]"
-    }, "\u2728"), /*#__PURE__*/React.createElement("div", {
-      className: "px-3 py-1 rounded-lg bg-gradient-to-r from-amber-900 via-amber-600 to-amber-900 border-2 border-amber-200 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(251,191,36,0.9)]"
-    }, "\u305F \u3081 \u308B")), enemy && enemyNextIntent && !isBusy && !enemyAttackFx && enemyNextIntent.type === 'MOVE' &&
-    /*#__PURE__*/
-    // 画面ではなく遊ぶ列(最大600px)の右端に寄せる。left:50%から
-    // 「列の半分ぶん右へ、自分の幅だけ左へ」動かすと、広い画面でも列の中に収まる
-    React.createElement("div", {
-      className: "fixed left-1/2 pointer-events-none",
-      style: {
-        top: '22%',
-        transform: 'translateX(calc(min(50vw, 300px) - 100% - 8px))',
-        zIndex: 65000
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "mh-enemy-move-hint"
-    }, /*#__PURE__*/React.createElement("span", {
-      "aria-hidden": "true"
-    }, "\uD83C\uDFC3"), /*#__PURE__*/React.createElement("span", null, RANGE_LABELS[enemyNextIntent.targetDist], "\u8DDD\u96E2\u306B\u79FB\u52D5\u3057\u3088\u3046\u3068\u3057\u3066\u3044\u308B\u2026\uFF1F"))), slotSkill && /*#__PURE__*/React.createElement("div", {
-      className: "fixed -translate-x-1/2 pointer-events-none whitespace-nowrap",
-      style: {
-        left: `${12.5 + slotSkill.slotIndex * 25}%`,
-        bottom: '30%',
-        zIndex: 65000,
-        animation: liteBattleView ? undefined : 'skillNamePop 350ms ease-out forwards'
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      className: `px-3 py-1 rounded-xl font-black text-[12px] border-2 shadow-[0_2px_16px_rgba(0,0,0,0.9)] ${slotSkill.type === 'unique' ? 'bg-purple-700 border-purple-200 text-white drop-shadow-[0_0_10px_rgba(217,70,239,0.9)]' : slotSkill.type === 'special' ? 'bg-amber-600 border-amber-200 text-white' : 'bg-red-700 border-red-200 text-white'}`
-    }, slotSkill.name)), !ecoBattleView && guardFx && /*#__PURE__*/React.createElement("div", {
-      className: "fixed inset-0 pointer-events-none flex items-center justify-center",
-      style: {
-        zIndex: 64000
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "absolute",
-      style: {
-        animation: 'guardShine 550ms ease-out forwards'
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "text-[120px] drop-shadow-[0_0_30px_rgba(56,189,248,1)]"
-    }, "\uD83D\uDEE1\uFE0F")), [0, 1, 2, 3, 4, 5].map(k => /*#__PURE__*/React.createElement("div", {
-      key: k,
-      className: "absolute",
-      style: {
-        transform: `rotate(${k * 60}deg)`
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "rounded-full border-4 border-cyan-200",
-      style: {
-        width: '36px',
-        height: '36px',
-        animation: `guardSpark 500ms ease-out ${k * 25}ms forwards`
-      }
-    }))), /*#__PURE__*/React.createElement("div", {
-      className: "absolute font-black text-cyan-100 text-4xl tracking-widest drop-shadow-[0_0_16px_rgba(56,189,248,1)]",
-      style: {
-        top: '34%',
-        animation: 'guardShine 550ms ease-out forwards'
-      }
-    }, "\u30AD\u30FC\u30F3!"), /*#__PURE__*/React.createElement("div", {
-      className: "absolute inset-0",
-      style: {
-        background: 'radial-gradient(circle at 50% 45%, rgba(255,255,255,0.5) 0%, rgba(56,189,248,0.3) 20%, rgba(0,0,0,0) 45%)',
-        animation: 'guardFlash 350ms ease-out forwards'
-      }
-    })), !ecoBattleView && teachingFx && TEACHING_FX_STYLE[teachingFx.id] && (() => {
-      const fx = TEACHING_FX_STYLE[teachingFx.id];
-      return /*#__PURE__*/React.createElement("div", {
-        key: teachingFx.fxId,
-        className: "fixed inset-0 pointer-events-none flex items-center justify-center",
-        style: {
-          zIndex: 63000
-        }
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "absolute",
-        style: {
-          animation: 'guardShine 550ms ease-out forwards'
-        }
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "text-[110px] drop-shadow-[0_0_30px_rgba(255,255,255,0.9)]"
-      }, cardIconNode(fx.icon, 110))), [0, 1, 2, 3, 4, 5, 6, 7].map(k => /*#__PURE__*/React.createElement("div", {
-        key: k,
-        className: "absolute",
-        style: {
-          transform: `rotate(${k * 45}deg)`
-        }
-      }, /*#__PURE__*/React.createElement("div", {
-        className: `rounded-full border-4 ${fx.ring}`,
-        style: {
-          width: '30px',
-          height: '30px',
-          animation: `guardSpark 550ms ease-out ${k * 20}ms forwards`
-        }
-      }))), /*#__PURE__*/React.createElement("div", {
-        className: `absolute font-black text-3xl tracking-widest drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] ${fx.text}`,
-        style: {
-          top: '32%',
-          animation: 'guardShine 550ms ease-out forwards'
-        }
-      }, fx.label), /*#__PURE__*/React.createElement("div", {
-        className: "absolute inset-0",
-        style: {
-          background: `radial-gradient(circle at 50% 45%, rgba(${fx.rgb},0.5) 0%, rgba(${fx.rgb},0.25) 22%, rgba(0,0,0,0) 48%)`,
-          animation: 'guardFlash 400ms ease-out forwards'
-        }
-      }));
-    })(), enemy?.id === 'Moo' && enemy?.imgUrl && /*#__PURE__*/React.createElement("div", {
-      className: "fixed left-1/2 pointer-events-none flex items-center justify-center",
-      style: {
-        top: '30%',
-        transform: 'translate(-50%,-50%)',
-        zIndex: focusedCard ? 5 : 30,
-        width: 'min(108vw,560px)',
-        height: 'min(108vw,560px)'
-      }
-    }, /*#__PURE__*/React.createElement("img", {
-      src: enemy.imgUrl,
-      alt: "\u30E0\u30FC",
-      style: {
-        width: '100%',
-        height: '100%',
-        animation: liteBattleView ? undefined : enemyAttackAnim ? enemyAttackFx?.kind === 'move' ? 'mooMoveSlide 1000ms ease-in-out forwards' : enemyAttackFx?.kind === 'charge' ? 'mooChargeGather 1100ms ease-in-out forwards' : 'mooAttackLunge 900ms ease-in-out forwards' : 'mooFloat 3000ms ease-in-out infinite',
-        imageRendering: 'auto',
-        WebkitMaskImage: 'radial-gradient(circle at 50% 42%, #000 60%, transparent 92%)',
-        maskImage: 'radial-gradient(circle at 50% 42%, #000 60%, transparent 92%)'
-      },
-      className: `relative z-[1] object-contain drop-shadow-[0_0_55px_rgba(168,85,247,0.95)]${extremeRun ? extremeDifficulty === NIGHTMARE_SETTING.id ? ' mh-nightmare-enemy-image' : ' mh-extreme-enemy-image' : ''}`
-    })), !ecoBattleView && enemy?.id === 'Moo' && enemyAttackFx?.kind === 'moo' && /*#__PURE__*/React.createElement("div", {
-      className: "fixed inset-0 pointer-events-none flex items-center justify-center overflow-hidden",
-      style: {
-        zIndex: 25
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "absolute inset-0",
-      style: {
-        background: 'radial-gradient(circle at 50% 34%, rgba(168,85,247,0.55) 0%, rgba(239,68,68,0.4) 30%, rgba(251,191,36,0.25) 48%, rgba(0,0,0,0) 70%)',
-        animation: 'auraPulse 450ms ease-out infinite'
-      }
-    }), /*#__PURE__*/React.createElement("div", {
-      className: "absolute inset-0",
-      style: {
-        animation: 'specialFlash 400ms ease-out infinite',
-        background: 'radial-gradient(circle at 50% 34%, rgba(255,255,255,0.45) 0%, rgba(168,85,247,0.15) 35%, rgba(255,255,255,0) 60%)'
-      }
-    }), /*#__PURE__*/React.createElement("div", {
-      className: "absolute",
-      style: {
-        top: '34%',
-        left: '50%',
-        transform: 'translate(-50%,-50%)',
-        width: 'min(120vw,640px)',
-        height: 'min(120vw,640px)'
-      }
-    }, [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map(deg => /*#__PURE__*/React.createElement("div", {
-      key: deg,
-      className: "absolute left-1/2 top-1/2 text-5xl",
-      style: {
-        transform: `translate(-50%,-50%) rotate(${deg}deg) translateY(-42vw)`,
-        animation: 'sparkFlicker 240ms ease-in-out infinite',
-        animationDelay: `${deg}ms`
-      }
-    }, "\u26A1")), /*#__PURE__*/React.createElement("div", {
-      className: "absolute inset-0 rounded-full border-4 border-purple-300/80",
-      style: {
-        animation: 'auraRing 500ms ease-out infinite'
-      }
-    }), /*#__PURE__*/React.createElement("div", {
-      className: "absolute inset-0 rounded-full border-4 border-red-500/60",
-      style: {
-        animation: 'auraRing 650ms ease-out 120ms infinite'
-      }
-    }))), /*#__PURE__*/React.createElement("div", {
-      className: `rounded-full transition-all duration-500 border-4 relative ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border} ${RANGE_STYLES[enemyDist].shadow} ${RANGE_STYLES[enemyDist].glow} shadow-[0_0_50px]`,
-      style: enemyAttackAnim && !ecoBattleView ? {
-        padding: 'clamp(8px,2.2dvh,28px)',
-        animation: enemyAttackFx?.kind === 'move' ? enemy?.id === 'Moo' ? 'enemyMoveSlideMoo 1000ms ease-in-out forwards' : 'enemyMoveSlide 1000ms ease-in-out forwards' : enemyAttackFx?.kind === 'charge' ? 'enemyChargeShake 1100ms ease-in-out forwards' : 'enemyAttackFly 450ms ease-in forwards',
-        ...(enemy?.id === 'Moo' && enemyAttackFx?.kind !== 'move' ? {
-          transform: 'translateY(3dvh)'
-        } : {}),
-        ...(enemy?.id !== 'Moo' && enemyAttackFx?.kind !== 'move' ? {
-          zIndex: 9999
-        } : {})
-      } : {
-        padding: 'clamp(8px,2.2dvh,28px)',
-        ...(enemy?.id === 'Moo' ? {
-          transform: 'translateY(3dvh)'
-        } : {})
-      }
-    }, enemy?.imgUrl ? enemy?.id === 'Moo' ? /*#__PURE__*/React.createElement("div", {
-      style: {
-        width: 'clamp(70px,12dvh,120px)',
-        height: 'clamp(80px,16dvh,150px)'
-      }
-    }) : /*#__PURE__*/React.createElement("span", {
-      className: extremeRun ? extremeDifficulty === NIGHTMARE_SETTING.id ? 'mh-nightmare-enemy-aura-shell' : 'mh-extreme-enemy-aura-shell' : '',
-      style: {
-        width: 'clamp(70px,12dvh,120px)',
-        height: 'clamp(80px,16dvh,150px)'
-      }
-    }, /*#__PURE__*/React.createElement("img", {
-      src: enemy.imgUrl,
-      alt: enemy?.name,
-      className: `relative z-[1] w-full h-full object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]${extremeRun ? extremeDifficulty === NIGHTMARE_SETTING.id ? ' mh-nightmare-enemy-image' : ' mh-extreme-enemy-image' : ''}`
-    })) : /*#__PURE__*/React.createElement("span", {
-      className: extremeRun ? extremeDifficulty === NIGHTMARE_SETTING.id ? 'mh-nightmare-enemy-aura-shell' : 'mh-extreme-enemy-aura-shell' : ''
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 'clamp(58px,11dvh,104px)',
-        lineHeight: 1
-      },
-      className: `relative z-[1] drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]${extremeRun ? extremeDifficulty === NIGHTMARE_SETTING.id ? ' mh-nightmare-enemy-image' : ' mh-extreme-enemy-image' : ''}`
-    }, enemy?.emoji)), !ecoBattleView && enemy?.id === 'Moo' && /*#__PURE__*/React.createElement("div", {
-      className: "absolute inset-0 pointer-events-none flex items-center justify-center overflow-visible",
-      style: {
-        zIndex: 1
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "absolute -inset-8 rounded-full",
-      style: {
-        background: 'radial-gradient(circle, rgba(168,85,247,0.45) 0%, rgba(139,0,139,0.32) 45%, rgba(0,0,0,0) 72%)',
-        animation: 'auraPulse 1500ms ease-in-out infinite'
-      }
-    }), /*#__PURE__*/React.createElement("div", {
-      className: "absolute -inset-3 rounded-full border-2 border-purple-500/60",
-      style: {
-        animation: 'idleAuraPulse 1700ms ease-in-out infinite'
-      }
-    })), !ecoBattleView && enemyAttackFx?.kind === 'move' && /*#__PURE__*/React.createElement("div", {
-      className: "absolute inset-0 pointer-events-none z-[10000] flex items-center justify-center overflow-visible"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "absolute -inset-2 rounded-full border-4 border-cyan-300/80",
-      style: {
-        animation: 'shockRing 600ms ease-out forwards'
-      }
-    }), /*#__PURE__*/React.createElement("div", {
-      className: "absolute -inset-5 rounded-full border-2 border-sky-400/50",
-      style: {
-        animation: 'shockRing 600ms ease-out 100ms forwards'
-      }
-    }), /*#__PURE__*/React.createElement("div", {
-      className: "absolute text-5xl drop-shadow-[0_0_14px_rgba(34,211,238,1)]",
-      style: {
-        animation: 'moveDash 700ms ease-in-out forwards'
-      }
-    }, "\uD83D\uDCA8"), /*#__PURE__*/React.createElement("div", {
-      className: "absolute -top-3 text-4xl font-black text-cyan-200 drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]",
-      style: {
-        animation: 'exclaimPop 600ms cubic-bezier(.2,1.4,.4,1) forwards'
-      }
-    }, "\uD83C\uDFC3")), !ecoBattleView && enemyAttackFx?.kind === 'normal' && /*#__PURE__*/React.createElement("div", {
-      className: "absolute inset-0 pointer-events-none z-[10000] flex items-center justify-center",
-      style: {
-        animation: 'enemyExclaim 500ms ease-out forwards'
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "absolute -top-3 -right-2 text-5xl font-black text-yellow-300 drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]",
-      style: {
-        animation: 'exclaimPop 500ms cubic-bezier(.2,1.4,.4,1) forwards'
-      }
-    }, "\u2757"), /*#__PURE__*/React.createElement("div", {
-      className: "absolute inset-0 rounded-full border-4 border-yellow-300/80",
-      style: {
-        animation: 'shockRing 500ms ease-out forwards'
-      }
-    })), !ecoBattleView && enemyAttackFx?.kind === 'special' && /*#__PURE__*/React.createElement("div", {
-      className: "absolute inset-0 pointer-events-none z-[10000] flex items-center justify-center overflow-visible"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "absolute -inset-10 rounded-full",
-      style: {
-        background: 'radial-gradient(circle, rgba(251,191,36,0.55) 0%, rgba(239,68,68,0.45) 40%, rgba(168,85,247,0.25) 60%, rgba(0,0,0,0) 75%)',
-        animation: 'auraPulse 600ms ease-out infinite'
-      }
-    }), /*#__PURE__*/React.createElement("div", {
-      className: "absolute -inset-3 rounded-full border-4 border-amber-300",
-      style: {
-        animation: 'auraRing 600ms ease-out infinite'
-      }
-    }), /*#__PURE__*/React.createElement("div", {
-      className: "absolute -inset-8 rounded-full border-2 border-red-500/70",
-      style: {
-        animation: 'auraRing 700ms ease-out 120ms infinite'
-      }
-    }), /*#__PURE__*/React.createElement("div", {
-      className: "absolute -inset-12 rounded-full border-2 border-purple-500/50",
-      style: {
-        animation: 'auraRing 800ms ease-out 240ms infinite'
-      }
-    }), [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map(deg => /*#__PURE__*/React.createElement("div", {
-      key: deg,
-      className: "absolute text-3xl",
-      style: {
-        transform: `rotate(${deg}deg) translateY(clamp(-100px, -13dvh, -64px))`,
-        animation: 'sparkFlicker 300ms ease-in-out infinite',
-        animationDelay: `${deg}ms`
-      }
-    }, "\u26A1")), /*#__PURE__*/React.createElement("div", {
-      className: "absolute text-7xl drop-shadow-[0_0_24px_rgba(251,191,36,1)]",
-      style: {
-        animation: 'specialThrob 500ms ease-in-out infinite'
-      }
-    }, "\uD83D\uDD25"), /*#__PURE__*/React.createElement("div", {
-      className: "absolute inset-0 rounded-full",
-      style: {
-        animation: 'specialFlash 600ms ease-out infinite',
-        background: 'radial-gradient(circle, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 60%)'
-      }
-    })), !ecoBattleView && enemy && enemyIntent && !isBusy && !enemyAttackFx && enemyIntent.type === 'ATTACK' && /*#__PURE__*/React.createElement("div", {
-      className: "absolute inset-0 pointer-events-none z-[9000] flex items-center justify-center"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "absolute -top-2 -right-1 text-4xl font-black text-yellow-300 drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]",
-      style: {
-        animation: 'idleExclaim 1100ms ease-in-out infinite'
-      }
-    }, "\u2757")), !ecoBattleView && enemy && enemyAttackFx?.kind === 'charge' && /*#__PURE__*/React.createElement("div", {
-      className: "absolute inset-0 pointer-events-none z-[9000] flex items-center justify-center overflow-visible"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "absolute -inset-6 rounded-full",
-      style: {
-        background: 'radial-gradient(circle, rgba(251,191,36,0.45) 0%, rgba(251,191,36,0.2) 45%, rgba(0,0,0,0) 70%)',
-        animation: 'auraPulse 700ms ease-out infinite'
-      }
-    }), [0, 1, 2, 3, 4, 5, 6, 7].map(k => /*#__PURE__*/React.createElement("div", {
-      key: k,
-      className: "absolute text-2xl",
-      style: {
-        '--deg': `${k * 45}deg`,
-        animation: `chargeGather 900ms ease-in ${k * 70}ms infinite`
-      }
-    }, "\u2728")), /*#__PURE__*/React.createElement("div", {
-      className: "absolute inset-0 rounded-full border-4 border-amber-300/80",
-      style: {
-        animation: 'auraRing 700ms ease-out infinite'
-      }
-    })), !ecoBattleView && enemy && enemyIntent && !isBusy && !enemyAttackFx && (enemyIntent.type === 'SPECIAL' || enemy?.id === 'Moo' && enemyIntent.type === 'ATTACK') && (() => {
-      // ためる(CHARGE)の予告にはこのオーラを出さない。必殺技の予告と同じ見た目になり、
-      // 「準備なのか、いま撃たれるのか」が見分けられなくなるため
-      const isSpecial = enemyIntent.type === 'SPECIAL';
-      // 通常技 = 赤系 / 必殺技(チャージ) = 紫＋金系 で明確に色分け
-      return /*#__PURE__*/React.createElement("div", {
-        className: "absolute inset-0 pointer-events-none z-[9000] flex items-center justify-center overflow-visible"
-      }, isSpecial ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-        className: "fixed inset-0 pointer-events-none",
-        style: {
-          position: 'fixed',
-          inset: 0,
-          zIndex: 85000,
-          background: 'radial-gradient(ellipse at center, rgba(0,0,0,0) 45%, rgba(168,85,247,0.25) 72%, rgba(127,29,29,0.55) 100%)',
-          animation: 'specialDangerPulse 700ms ease-in-out infinite'
-        }
-      }), /*#__PURE__*/React.createElement("div", {
-        className: "absolute -inset-8 rounded-full border-4 border-fuchsia-400/80",
-        style: {
-          animation: 'specialShockwave 1400ms ease-out infinite'
-        }
-      }), /*#__PURE__*/React.createElement("div", {
-        className: "absolute -inset-8 rounded-full border-4 border-purple-300/70",
-        style: {
-          animation: 'specialShockwave 1400ms ease-out 466ms infinite'
-        }
-      }), /*#__PURE__*/React.createElement("div", {
-        className: "absolute -inset-8 rounded-full border-4 border-amber-300/60",
-        style: {
-          animation: 'specialShockwave 1400ms ease-out 933ms infinite'
-        }
-      }), /*#__PURE__*/React.createElement("div", {
-        className: "absolute -inset-10 rounded-full",
-        style: {
-          background: 'radial-gradient(circle, rgba(217,70,239,0.6) 0%, rgba(168,85,247,0.45) 38%, rgba(251,191,36,0.3) 62%, rgba(0,0,0,0) 82%)',
-          animation: 'specialWarnFlash 600ms ease-in-out infinite'
-        }
-      }), /*#__PURE__*/React.createElement("div", {
-        className: "absolute -inset-3 rounded-full border-[3px] border-fuchsia-300",
-        style: {
-          animation: 'specialWarnFlash 600ms ease-in-out infinite',
-          boxShadow: '0 0 30px rgba(217,70,239,0.9), inset 0 0 30px rgba(217,70,239,0.7)'
-        }
-      }), [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map(deg => /*#__PURE__*/React.createElement("div", {
-        key: deg,
-        className: "absolute text-2xl drop-shadow-[0_0_12px_rgba(217,70,239,1)]",
-        style: {
-          transform: `rotate(${deg}deg) translateY(clamp(-100px, -13dvh, -64px))`,
-          animation: 'idleSpark 600ms ease-in-out infinite',
-          animationDelay: `${deg * 1.5}ms`
-        }
-      }, "\u26A1"))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-        className: "absolute -inset-10 rounded-full",
-        style: {
-          background: 'radial-gradient(circle, rgba(239,68,68,0.45) 0%, rgba(220,38,38,0.32) 42%, rgba(0,0,0,0) 75%)',
-          animation: 'idleAuraPulse 1100ms ease-in-out infinite'
-        }
-      }), /*#__PURE__*/React.createElement("div", {
-        className: "absolute -inset-4 rounded-full border-2 border-red-500/90",
-        style: {
-          animation: 'idleAuraPulse 1100ms ease-in-out infinite'
-        }
-      }), /*#__PURE__*/React.createElement("div", {
-        className: "absolute -inset-7 rounded-full border-2 border-orange-500/60",
-        style: {
-          animation: 'idleAuraPulse 1300ms ease-in-out 120ms infinite'
-        }
-      }), [0, 45, 90, 135, 180, 225, 270, 315].map(deg => /*#__PURE__*/React.createElement("div", {
-        key: deg,
-        className: "absolute text-2xl drop-shadow-[0_0_8px_rgba(239,68,68,1)]",
-        style: {
-          transform: `rotate(${deg}deg) translateY(clamp(-96px, -12dvh, -60px))`,
-          animation: 'idleSpark 900ms ease-in-out infinite',
-          animationDelay: `${deg * 2}ms`
-        }
-      }, "\u26A1")), /*#__PURE__*/React.createElement("div", {
-        className: "absolute -top-3 text-3xl drop-shadow-[0_0_12px_rgba(239,68,68,1)]",
-        style: {
-          animation: 'idleExclaim 900ms ease-in-out infinite'
-        }
-      }, "\u2757")));
-    })()), getTurnBuff('stunEnemy', false) && /*#__PURE__*/React.createElement("div", {
-      className: "absolute inset-0 flex items-center justify-center text-3xl bg-indigo-500/20 rounded-full border-4 border-indigo-500 animate-pulse"
-    }, "\uD83D\uDCAB"), (() => {
-      const enemyPopups = popups.filter(p => p.side === 'enemy');
-      const wrapEnemyPopups = !liteBattleView && enemyPopups.length > 4;
-      const popupColumns = wrapEnemyPopups ? Math.ceil(enemyPopups.length / 4) : 1;
-      const popupGridStyle = wrapEnemyPopups ? {
-        display: 'grid',
-        gridAutoFlow: 'column',
-        gridTemplateRows: 'repeat(4, auto)',
-        gridAutoColumns: 'max-content',
-        justifyContent: 'center',
-        alignContent: 'start',
-        columnGap: popupColumns >= 3 ? '0px' : '4px',
-        rowGap: '2px',
-        paddingTop: '4px'
-      } : undefined;
-      const compactPopupStyle = wrapEnemyPopups ? {
-        fontSize: popupColumns >= 3 ? 'clamp(1.4rem, 5.8vw, 1.85rem)' : 'clamp(1.75rem, 7.5vw, 2.25rem)',
-        lineHeight: 1.05,
-        paddingLeft: '2px',
-        paddingRight: '2px'
-      } : undefined;
-      return /*#__PURE__*/React.createElement("div", {
-        className: `absolute inset-0 z-50 pointer-events-none ${wrapEnemyPopups ? '' : 'flex flex-col items-center justify-start pt-1 gap-0.5'}`,
-        style: popupGridStyle
-      }, enemyPopups.map(p => /*#__PURE__*/React.createElement("div", {
-        key: p.id,
-        "data-lite-damage": liteBattleView ? 'true' : undefined,
-        style: compactPopupStyle,
-        className: `text-center ${p.color} font-black whitespace-nowrap px-4 ${liteBattleView ? 'rounded-lg border border-white/20 bg-slate-950/95 py-1 text-base' : 'drop-shadow-[0_0_15px_rgba(0,0,0,1)]'}`
-      }, p.text)));
-    })()), /*#__PURE__*/React.createElement("div", {
-      className: "w-full max-w-[180px] mt-2 mb-1 shrink-0 relative z-[40]"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "h-2"
-    })), enemy && enemyIntent && !isBusy && (() => {
-      // ためる・待機・移動はダメージが無いので「予測」を出さない。
-      // 出すと必ず0になり、ガードを構える判断の邪魔になる
-      const rawDmg = getIncomingDamageBeforeTurnReduction(enemyIntent);
-      let previewGuardFlat = 0,
-        previewGuardMult = 0,
-        previewPenaltyCnt = 0;
-      selectedCards.forEach(idx => {
-        const card = hand[idx];
-        const isPenalty = !isAssistCard(card);
-        const halved = isPenalty && previewPenaltyCnt > 0;
-        const weight = guardCardWeight(card);
-        if (weight > 0) {
-          const effect = cardEffectMultiplier(card, halved);
-          previewGuardFlat += GUARD_EVOLUTION[guardLevel].flat * weight * effect;
-          previewGuardMult += GUARD_EVOLUTION[guardLevel].mult * weight * effect;
-        }
-        if (isPenalty) previewPenaltyCnt++;
-      });
-      const plannedDmg = applyTurnDamageReduction(Math.max(0, rawDmg - guardValueOf(previewGuardFlat, previewGuardMult)));
-      const tone = enemyIntent.type === 'SPECIAL' ? 'bg-fuchsia-950 border-fuchsia-500 text-fuchsia-300' : enemyIntent.type === 'CHARGE' ? 'bg-amber-950 border-amber-500 text-amber-400' : enemyIntent.type === 'MOVE' ? 'bg-cyan-950 border-cyan-500/60 text-cyan-300' : 'bg-red-950 border-red-600/50 text-red-400';
-      return /*#__PURE__*/React.createElement("div", {
-        className: `mt-auto mb-1 border p-1 px-4 rounded-full flex items-center gap-1.5 animate-pulse z-[45] shadow-lg shrink-0${battleTutorialSpotClass('enemyIntent')} ${focusedCard ? 'invisible' : 'visible'} ${tone}`
-      }, /*#__PURE__*/React.createElement(Target, {
-        size: 12
-      }), /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] font-black uppercase tracking-tight"
-      }, enemyIntent.label, rawDmg > 0 ? ` (予定: ${plannedDmg})` : ''));
-    })(), /*#__PURE__*/React.createElement("div", {
-      className: `flex flex-wrap justify-center gap-1 max-w-[340px] mt-auto mb-1 shrink-0 relative z-[40] ${focusedCard ? 'invisible' : 'visible'}`
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "text-[7px] font-black text-red-500 bg-black/60 px-2 py-0.5 rounded border border-red-500/50 flex items-center gap-1 shadow-lg uppercase"
-    }, /*#__PURE__*/React.createElement(Sword, {
-      size: 7
-    }), " ATK +", Math.floor((getPermaBuff('atkPct') + getPermaBuff('muaAtkPct')) * 100), "%"), /*#__PURE__*/React.createElement("div", {
-      className: "text-[7px] font-black text-emerald-500 bg-black/60 px-2 py-0.5 rounded border border-emerald-500/50 flex items-center gap-1 shadow-lg uppercase"
-    }, /*#__PURE__*/React.createElement(Shield, {
-      size: 7
-    }), " \u88AB\u30C0\u30E1 -", Math.floor(getPermaBuff('dmgCutPct') * 100), "%"), /*#__PURE__*/React.createElement("div", {
-      className: "text-[7px] font-black text-emerald-500 bg-black/60 px-2 py-0.5 rounded border border-emerald-500/50 flex items-center gap-1 shadow-lg uppercase"
-    }, /*#__PURE__*/React.createElement(Shield, {
-      size: 7
-    }), " DEF +", Math.floor(getPermaBuff('defPct') * 100), "%"), /*#__PURE__*/React.createElement("div", {
-      className: "text-[7px] font-black text-pink-500 bg-black/60 px-2 py-0.5 rounded border border-pink-500/50 flex items-center gap-1 shadow-lg uppercase"
-    }, /*#__PURE__*/React.createElement(Heart, {
-      size: 7
-    }), " \u30E9\u30A4\u30D5 +", Math.floor(getPermaBuff('muaHpPct') * 100), "%"), /*#__PURE__*/React.createElement("div", {
-      className: "text-[7px] font-black text-amber-500 bg-black/60 px-2 py-0.5 rounded border border-amber-500/50 flex items-center gap-1 shadow-lg uppercase"
-    }, /*#__PURE__*/React.createElement(Zap, {
-      size: 7
-    }), " \u30AC\u30C3\u30C4 +", Math.floor(getPermaBuff('muaGutsPct') * 100), "%"), /*#__PURE__*/React.createElement("div", {
-      className: "text-[7px] font-black text-yellow-400 bg-black/60 px-2 py-0.5 rounded border border-yellow-400/50 flex items-center gap-1 shadow-lg uppercase"
-    }, /*#__PURE__*/React.createElement(Sparkles, {
-      size: 7
-    }), " \u30AF\u30EA\u7387 +", Math.round(getPermaBuff('critRatePct') * 100), "%"), /*#__PURE__*/React.createElement("div", {
-      className: "text-[7px] font-black text-yellow-400 bg-black/60 px-2 py-0.5 rounded border border-yellow-400/50 flex items-center gap-1 shadow-lg uppercase"
-    }, /*#__PURE__*/React.createElement(Sparkles, {
-      size: 7
-    }), " \u30AF\u30EA\u30C0\u30E1 +", Math.round(getPermaBuff('critDmgPct') * 100), "%"), /*#__PURE__*/React.createElement("div", {
-      className: "text-[7px] font-black text-cyan-400 bg-black/60 px-2 py-0.5 rounded border border-cyan-400/50 flex items-center gap-1 shadow-lg uppercase"
-    }, /*#__PURE__*/React.createElement(Sword, {
-      size: 7
-    }), " \u9023\u6483 +", Math.round(getPermaBuff('comboDmgPct') * 100), "%"), getPermaBuff('globalComboDmgPct') > 0 && /*#__PURE__*/React.createElement("div", {
-      className: "text-[7px] font-black text-sky-300 bg-black/60 px-2 py-0.5 rounded border border-sky-300/50 flex items-center gap-1 shadow-lg"
-    }, /*#__PURE__*/React.createElement(Sword, {
-      size: 7
-    }), " \u5168\u4F53\u9023\u6483 +", Math.round(getPermaBuff('globalComboDmgPct') * 100), "%"), kikiCardBonus > 0 && /*#__PURE__*/React.createElement("div", {
-      className: "text-[7px] font-black text-violet-300 bg-black/60 px-2 py-0.5 rounded border border-violet-300/50 flex items-center gap-1 shadow-lg"
-    }, /*#__PURE__*/React.createElement(PlusCircle, {
-      size: 7
-    }), " \u30AB\u30FC\u30C9\u4E0A\u9650 +1\uFF08\u6B8B\u308A", Math.ceil(getPermaBuff('kikiCardBonusTurns')), "T\uFF09"), (getPermaBuff('kenshiComboPower') > 0 || getPermaBuff('kenshiExtraCombo') > 0) && /*#__PURE__*/React.createElement("div", {
-      className: "text-[7px] font-black text-violet-300 bg-black/60 px-2 py-0.5 rounded border border-violet-300/50 flex items-center gap-1 shadow-lg"
-    }, /*#__PURE__*/React.createElement(Sword, {
-      size: 7
-    }), " \u9023\u6483\u30D1\u30EF\u30FC ", getPermaBuff('kenshiComboPower'), "/", KENSHI_COMBO_POWER_MAX, getPermaBuff('kenshiExtraCombo') > 0 ? `・追加連撃 +${getPermaBuff('kenshiExtraCombo')}` : ''), /*#__PURE__*/React.createElement("div", {
-      className: `text-[7px] font-black bg-black/60 px-2 py-0.5 rounded border flex items-center gap-1 shadow-lg uppercase ${getPermaBuff('autoHpRecovery', 0.1) >= 0.1 ? 'text-rose-400 border-rose-400/50' : 'text-red-400 border-red-400/50'}`
-    }, /*#__PURE__*/React.createElement(Heart, {
-      size: 7
-    }), " \u30E9\u30A4\u30D5\u56DE\u5FA9 ", Math.round(getPermaBuff('autoHpRecovery', 0.1) * 100), "%"), /*#__PURE__*/React.createElement("div", {
-      className: "text-[7px] font-black text-amber-400 bg-black/60 px-2 py-0.5 rounded border border-amber-400/50 flex items-center gap-1 shadow-lg uppercase"
-    }, /*#__PURE__*/React.createElement(Zap, {
-      size: 7
-    }), " \u30AC\u30C3\u30C4\u56DE\u5FA9 ", Math.round(applyIceRulerAutoGutsRecovery(Math.max(0, 0.05 + (getPermaBuff('autoHpRecovery', 0.1) - 0.1)) + getPermaBuff('gutsRecoverPct'), mainHero?.id, iceLockActive, heroDist, enemyDist) * 100), "%"), getPermaBuff('poltzCharges') > 0 && /*#__PURE__*/React.createElement("div", {
-      className: "text-[7px] font-black text-lime-300 bg-lime-950/60 px-2 py-1 rounded-full border border-lime-400/50 animate-pulse flex items-center gap-1"
-    }, /*#__PURE__*/React.createElement(Zap, {
-      size: 8
-    }), " ", BREEDER_EVO_NAMES.poltz[Math.max(0, Math.min(getPermaBuff('poltzTier'), 2))], " \xD7", Math.floor(getPermaBuff('poltzCharges'))), getNextTurnBuff('melosoFullRecoveryMult', 0) > 0 && /*#__PURE__*/React.createElement("div", {
-      className: "text-[7px] font-black text-rose-300 bg-rose-950/60 px-2 py-1 rounded-full border border-rose-400/50 animate-pulse flex items-center gap-1"
-    }, /*#__PURE__*/React.createElement(Heart, {
-      size: 8
-    }), " \u6B21\u30BF\u30FC\u30F3\u5168\u56DE\u5FA9"), getTurnBuff('atkMult', 1.0) > 1 && /*#__PURE__*/React.createElement("div", {
-      className: "text-[7px] font-black text-red-500 bg-red-950/60 px-2 py-1 rounded-full border border-red-500/50 animate-pulse uppercase flex items-center gap-1"
-    }, /*#__PURE__*/React.createElement(Sparkles, {
-      size: 8
-    }), " Boost x", getTurnBuff('atkMult', 1.0).toFixed(1)), getTurnBuff('stunEnemy', false) && /*#__PURE__*/React.createElement("div", {
-      className: "text-[7px] font-black text-yellow-400 bg-yellow-950/60 px-2 py-1 rounded-full border border-yellow-500/50 animate-pulse uppercase flex items-center gap-1"
-    }, /*#__PURE__*/React.createElement(Zap, {
-      size: 8
-    }), " \u30B9\u30BF\u30F3\u4E88\u7D04"), getTurnBuff('guaranteedCrit', false) && /*#__PURE__*/React.createElement("div", {
-      className: "text-[7px] font-black text-orange-400 bg-orange-950/60 px-2 py-1 rounded-full border border-orange-500/50 animate-pulse uppercase flex items-center gap-1"
-    }, /*#__PURE__*/React.createElement(Target, {
-      size: 8
-    }), " \u4F1A\u5FC3\u4E88\u7D04"), (getTurnBuff('zeroGuts', false) || getNextTurnBuff('zeroGuts', false)) && /*#__PURE__*/React.createElement("div", {
-      className: "text-[7px] font-black text-blue-400 bg-blue-950/60 px-2 py-1 rounded-full border border-blue-500/50 animate-pulse uppercase flex items-center gap-1"
-    }, /*#__PURE__*/React.createElement(Star, {
-      size: 8
-    }), " 0\u6D88\u8CBB\u4E2D"), getNextTurnBuff('reflect', false) && /*#__PURE__*/React.createElement("div", {
-      className: "text-[7px] font-black text-purple-400 bg-purple-950/60 px-2 py-1 rounded-full border border-purple-500/50 animate-pulse uppercase flex items-center gap-1"
-    }, /*#__PURE__*/React.createElement(RefreshCcw, {
-      size: 8
-    }), " \u6B21\u53CD\u5C04"), getTurnBuff('reflect', false) && /*#__PURE__*/React.createElement("div", {
-      className: "text-[7px] font-black text-purple-300 bg-purple-900/80 px-2 py-1 rounded-full border border-purple-400 animate-bounce uppercase flex items-center gap-1"
-    }, /*#__PURE__*/React.createElement(RefreshCcw, {
-      size: 8
-    }), " \u53CD\u5C04\u5F85\u6A5F"), getWaveBuff('enemyAtkDebuffPct') > 0 && /*#__PURE__*/React.createElement("div", {
-      className: "text-[7px] font-black text-indigo-400 bg-indigo-950/60 px-2 py-1 rounded-full border border-indigo-500/50 animate-pulse uppercase flex items-center gap-1"
-    }, /*#__PURE__*/React.createElement(ArrowDownCircle, {
-      size: 8
-    }), " \u6575\u653B-", Math.round(getWaveBuff('enemyAtkDebuffPct') * 100), "%"), getWaveBuff('enemyTakenDmgBonus') > 0 && /*#__PURE__*/React.createElement("div", {
-      className: "text-[7px] font-black text-orange-400 bg-orange-950/60 px-2 py-1 rounded-full border border-orange-500/50 animate-pulse uppercase flex items-center gap-1"
-    }, /*#__PURE__*/React.createElement(PlusCircle, {
-      size: 8
-    }), " \u6575\u88AB\u30C0\u30E1+", Math.round(getWaveBuff('enemyTakenDmgBonus') * 100), "%"), getNextTurnBuff('takenDamageMult', 1.0) < 1 && /*#__PURE__*/React.createElement("div", {
-      className: "text-[7px] font-black text-pink-400 bg-pink-950/60 px-2 py-1 rounded-full border border-pink-500/50 animate-pulse uppercase flex items-center gap-1"
-    }, /*#__PURE__*/React.createElement(Shield, {
-      size: 8
-    }), " \u6B21T\u88AB\u30C0\u30E1-", Math.round((1 - getNextTurnBuff('takenDamageMult', 1.0)) * 100), "%"), getTurnBuff('takenDamageMult', 1.0) < 1 && /*#__PURE__*/React.createElement("div", {
-      className: "text-[7px] font-black text-pink-300 bg-pink-900/80 px-2 py-1 rounded-full border border-pink-400 animate-bounce uppercase flex items-center gap-1"
-    }, /*#__PURE__*/React.createElement(Shield, {
-      size: 8
-    }), " \u88AB\u30C0\u30E1-", Math.round((1 - getTurnBuff('takenDamageMult', 1.0)) * 100), "%"), getNextTurnBuff('gutsCostMult', 1.0) > 1 && /*#__PURE__*/React.createElement("div", {
-      className: "text-[7px] font-black text-amber-400 bg-amber-950/60 px-2 py-1 rounded-full border border-amber-500/50 animate-pulse uppercase flex items-center gap-1"
-    }, /*#__PURE__*/React.createElement(Zap, {
-      size: 8
-    }), " \u6B21T\u6D88\u8CBBG+", Math.round((getNextTurnBuff('gutsCostMult', 1.0) - 1) * 100), "%"), getTurnBuff('gutsCostMult', 1.0) > 1 && /*#__PURE__*/React.createElement("div", {
-      className: "text-[7px] font-black text-amber-300 bg-amber-900/80 px-2 py-1 rounded-full border border-amber-400 animate-bounce uppercase flex items-center gap-1"
-    }, /*#__PURE__*/React.createElement(Zap, {
-      size: 8
-    }), " \u6D88\u8CBBG+", Math.round((getTurnBuff('gutsCostMult', 1.0) - 1) * 100), "%"))), /*#__PURE__*/React.createElement("div", {
-      className: "shrink-0 py-2 px-2 bg-slate-950 border-y border-white/5 flex flex-col items-center justify-center gap-1 z-10 relative"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "absolute inset-0 flex flex-col items-center justify-center pointer-events-none gap-1",
-      style: {
-        zIndex: 200
-      }
-    }, popups.filter(p => p.side === 'hero').map(p => /*#__PURE__*/React.createElement("div", {
-      key: p.id,
-      "data-lite-damage": liteBattleView ? 'true' : undefined,
-      className: `${p.color} font-black leading-tight px-2 py-0.5 rounded-lg ${liteBattleView ? 'border border-white/20 text-base' : 'drop-shadow-[0_2px_8px_rgba(0,0,0,1)]'}`,
-      style: {
-        backgroundColor: liteBattleView ? 'rgba(2,6,23,0.95)' : 'rgba(2,6,23,0.55)'
-      }
-    }, p.text))), /*#__PURE__*/React.createElement("div", {
-      className: "w-full space-y-1 px-2 py-1 bg-black/40 rounded-xl border border-white/5"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center gap-2 relative"
-    }, /*#__PURE__*/React.createElement(Heart, {
-      className: "text-pink-500 shrink-0",
-      size: 12
-    }), /*#__PURE__*/React.createElement("div", {
-      className: "flex-1"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "flex justify-between text-[7px] font-bold text-pink-400 mb-0.5 uppercase tracking-widest"
-    }, /*#__PURE__*/React.createElement("span", null, "Ally Life"), /*#__PURE__*/React.createElement("span", {
-      className: "font-mono"
-    }, hp.toLocaleString(), " / ", effectiveMaxHp.toLocaleString())), /*#__PURE__*/React.createElement("div", {
-      className: "h-1.5 bg-slate-900 rounded-full overflow-hidden border border-white/5 shadow-inner"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "h-full bg-gradient-to-r from-pink-700 to-rose-400 transition-all duration-1000",
-      style: {
-        width: `${hp / effectiveMaxHp * 100}%`,
-        backgroundImage: 'linear-gradient(to right, #be185d, #fb7185)'
-      }
-    }))), /*#__PURE__*/React.createElement("div", {
-      className: "absolute left-1/2 -translate-x-1/2 -top-2 flex flex-col items-center gap-0.5 pointer-events-none",
-      style: {
-        zIndex: 210
-      }
-    }, popups.filter(p => p.side === 'life').map(p => /*#__PURE__*/React.createElement("div", {
-      key: p.id,
-      className: `${p.color} text-base font-black drop-shadow-[0_2px_8px_rgba(0,0,0,1)] whitespace-nowrap px-2 py-0.5 rounded-lg animate-bounce`,
-      style: {
-        backgroundColor: 'rgba(2,6,23,0.8)'
-      }
-    }, p.text)))), /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center gap-2 relative"
-    }, /*#__PURE__*/React.createElement(Zap, {
-      className: "text-amber-500 shrink-0",
-      size: 10
-    }), /*#__PURE__*/React.createElement("div", {
-      className: "flex-1"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "flex justify-between text-[7px] font-bold text-amber-400 mb-0.5 uppercase tracking-widest"
-    }, /*#__PURE__*/React.createElement("span", null, "Ally Guts"), /*#__PURE__*/React.createElement("span", {
-      className: "font-mono"
-    }, Math.floor(guts).toLocaleString(), " / ", effectiveMaxGuts.toLocaleString())), /*#__PURE__*/React.createElement("div", {
-      className: "h-1.5 bg-slate-900 rounded-full overflow-hidden border border-white/5 shadow-inner"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "h-full bg-gradient-to-r from-amber-600 to-yellow-300 transition-all duration-500",
-      style: {
-        width: `${guts / effectiveMaxGuts * 100}%`,
-        backgroundImage: 'linear-gradient(to right, #d97706, #fde047)'
-      }
-    }))), /*#__PURE__*/React.createElement("div", {
-      className: "absolute left-1/2 -translate-x-1/2 -top-2 flex flex-col items-center gap-0.5 pointer-events-none",
-      style: {
-        zIndex: 210
-      }
-    }, popups.filter(p => p.side === 'guts').map(p => /*#__PURE__*/React.createElement("div", {
-      key: p.id,
-      className: `${p.color} text-base font-black drop-shadow-[0_2px_8px_rgba(0,0,0,1)] whitespace-nowrap px-2 py-0.5 rounded-lg animate-bounce`,
-      style: {
-        backgroundColor: 'rgba(2,6,23,0.8)'
-      }
-    }, p.text))))), (() => {
-      // Overall total damage across ALL monster slots, matching processTurn's global attack order.
-      // Existing total = sum of already-assigned attack cards.
-      // If a card is pending and validly assignable somewhere, also compute the projected new total.
-      // committed (already assigned) attack cards in selection order
-      // 2枚目以降のカードは効果半減。processTurnと同じく「アシストカード以外の枚数」で数える。
-      // 保留中(タップしただけでまだ置いていない)カードは、まだ使っていないので枚数に数えない。
-      // ここを数えてしまうと、1枚目なのに自分自身を2枚目とみなして半減表示になる。
-      const pendingCardObj = pendingCard != null ? hand[pendingCard] : dragState && dragState.active ? dragState.card : null;
-      const pendingIdx = pendingCard != null ? pendingCard : dragState && dragState.active ? dragState.cardIndex : null;
-      // おりょう・ゴーレム・モッチー/ミタラシ・ききは使ったターンからすぐ効くため、
-      // 先に選んだカードぶんの補正を、あとに続くカードの予測へも反映する
-      // (processTurnの実行順序と同じ数え方。localBoostFromCard/previewLocalBoosts参照)。
-      const boosts = previewLocalBoosts(pendingIdx);
-      let committedTotal = 0;
-      let committedPenaltyCnt = 0;
-      let guardFlat = 0;
-      let guardMult = 0;
-      selectedCards.forEach(idx => {
-        if (idx === pendingIdx) return;
-        const card = hand[idx];
-        const slotIdx = cardAssignments[idx];
-        const isPenalty = !isAssistCard(card);
-        const halved = isPenalty && committedPenaltyCnt > 0;
-        const b = boosts.perCard[idx] || {
-          oryo: 0,
-          dmgMod: 0,
-          combo: 0
-        };
-        if (slotIdx != null && isAttackCard(card)) {
-          const baseDmg = getDmg(card, slotIdx, slots[slotIdx], b.oryo, b.dmgMod, halved);
-          committedTotal += getAttackPredictedDmg(card, slots[slotIdx], baseDmg, b.combo);
-        }
-        const gw = guardCardWeight(card);
-        if (gw > 0) {
-          const e = cardEffectMultiplier(card, halved);
-          guardFlat += GUARD_EVOLUTION[guardLevel].flat * gw * e;
-          guardMult += GUARD_EVOLUTION[guardLevel].mult * gw * e;
-        }
-        if (isPenalty) committedPenaltyCnt++;
-      });
-      const committedGuard = guardValueOf(guardFlat, guardMult);
-      // 保留カードがガードなら、置いたあとの合計軽減も出す
-      const pendingGuardWeight = guardCardWeight(pendingCardObj);
-      const pendingGuardHalved = pendingGuardWeight > 0 && !isAssistCard(pendingCardObj) && committedPenaltyCnt > 0;
-      const pendingGuardEffect = cardEffectMultiplier(pendingCardObj, pendingGuardHalved);
-      const projectedGuard = pendingGuardWeight > 0 ? guardValueOf(guardFlat + GUARD_EVOLUTION[guardLevel].flat * pendingGuardWeight * pendingGuardEffect, guardMult + GUARD_EVOLUTION[guardLevel].mult * pendingGuardWeight * pendingGuardEffect) : committedGuard;
-      const pendingIsAtk = isAttackCard(pendingCardObj);
-      // projected damage the pending card would add (as the next attack in order)
-      let pendingAdd = 0;
-      let pendingValidSlot = null;
-      if (pendingIsAtk) {
-        // find a slot it could legally hit (for unique: its own monster; else any occupied slot)
-        for (let i = 0; i < slots.length; i++) {
-          const s = slots[i];
-          if (!s) continue;
-          const assignedCount = Object.values(cardAssignments).filter(v => v === i).length;
-          const maxUses = slotMaxUses(s, i);
-          if (assignedCount >= maxUses) continue;
-          if (pendingCardObj.type === 'unique' && pendingCardObj.ownerSlotIdx !== i) continue;
-          pendingValidSlot = i;
-          const baseDmg = getDmg(pendingCardObj, i, s, boosts.forPending.oryo, boosts.forPending.dmgMod, !isAssistCard(pendingCardObj) && committedPenaltyCnt > 0);
-          pendingAdd = getAttackPredictedDmg(pendingCardObj, s, baseDmg, boosts.forPending.combo);
-          break;
-        }
-      }
-      const projectedTotal = committedTotal + pendingAdd;
-      const showProjected = pendingIsAtk && pendingValidSlot != null && pendingAdd > 0;
-      // 合計軽減は、ガードを置いたぶんの合計。2枚目以降のガードは半分で計算される。
-      const showGuardProjected = pendingGuardWeight > 0 && projectedGuard > committedGuard;
-      const showDmg = committedTotal > 0 || showProjected;
-      const showGuard = committedGuard > 0 || showGuardProjected;
-      if (!showDmg && !showGuard) return null;
-      return /*#__PURE__*/React.createElement("div", {
-        className: "absolute left-1/2 -translate-x-1/2 z-[50] flex flex-col items-center justify-center gap-1 pointer-events-none",
-        style: {
-          bottom: 'calc(78% + 2px)'
-        }
-      }, showDmg && /*#__PURE__*/React.createElement("div", {
-        className: `flex items-center gap-2 px-3 py-0.5 rounded-full border shadow-lg ${showProjected ? 'bg-yellow-950/90 border-yellow-500/70' : 'bg-red-950/90 border-red-500/50'} backdrop-blur-sm`
-      }, /*#__PURE__*/React.createElement(Sword, {
-        size: 11,
-        className: showProjected ? 'text-yellow-400' : 'text-red-400'
-      }), /*#__PURE__*/React.createElement("span", {
-        className: "text-[8px] font-black uppercase tracking-widest text-slate-300"
-      }, "\u5408\u8A08DMG"), showProjected ? /*#__PURE__*/React.createElement("span", {
-        className: "text-[11px] font-black font-mono flex items-center gap-1"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-slate-400"
-      }, committedTotal), /*#__PURE__*/React.createElement("span", {
-        className: "text-yellow-400"
-      }, "+", pendingAdd), /*#__PURE__*/React.createElement(ChevronRight, {
-        size: 10,
-        className: "text-slate-500"
-      }), /*#__PURE__*/React.createElement("span", {
-        className: "text-yellow-300 drop-shadow-[0_0_6px_rgba(250,204,21,0.6)]"
-      }, projectedTotal)) : /*#__PURE__*/React.createElement("span", {
-        className: "text-[11px] font-black font-mono text-red-300 drop-shadow-[0_0_6px_rgba(248,113,113,0.5)]"
-      }, committedTotal)), showGuard && /*#__PURE__*/React.createElement("div", {
-        className: `flex items-center gap-2 px-3 py-0.5 rounded-full border shadow-lg ${showGuardProjected ? 'bg-yellow-950/90 border-yellow-500/70' : 'bg-emerald-950/90 border-emerald-500/50'} backdrop-blur-sm`
-      }, /*#__PURE__*/React.createElement(Shield, {
-        size: 11,
-        className: showGuardProjected ? 'text-yellow-400' : 'text-emerald-400'
-      }), /*#__PURE__*/React.createElement("span", {
-        className: "text-[8px] font-black uppercase tracking-widest text-slate-300"
-      }, "\u5408\u8A08\u8EFD\u6E1B"), showGuardProjected ? /*#__PURE__*/React.createElement("span", {
-        className: "text-[11px] font-black font-mono flex items-center gap-1"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-slate-400"
-      }, committedGuard), /*#__PURE__*/React.createElement("span", {
-        className: "text-yellow-400"
-      }, "+", projectedGuard - committedGuard), /*#__PURE__*/React.createElement(ChevronRight, {
-        size: 10,
-        className: "text-slate-500"
-      }), /*#__PURE__*/React.createElement("span", {
-        className: "text-yellow-300 drop-shadow-[0_0_6px_rgba(250,204,21,0.6)]"
-      }, projectedGuard)) : /*#__PURE__*/React.createElement("span", {
-        className: "text-[11px] font-black font-mono text-emerald-300 drop-shadow-[0_0_6px_rgba(52,211,153,0.5)]"
-      }, committedGuard)));
-    })(), /*#__PURE__*/React.createElement("div", {
-      className: `grid grid-cols-4 gap-2 w-full relative shrink-0${battleTutorialSpotClass('battleSlots')}`,
-      style: {
-        height: '100px'
-      }
-    }, slots.map((s, i) => {
-      // Count how many cards already assigned to this slot
-      const assignedCount = Object.values(cardAssignments).filter(v => v === i).length;
-      // 通常は1枠1枚。枚数+1の勇者特性(ハムの連続攻撃・剣士モッチーの二刀流)を持つ
-      // 勇者モンが居ると、その本人のスロットだけ複数枚OK。
-      // ききのカード上限+1が効いているときも、その+1ぶんはどのスロットへ重ねてよい
-      const maxUses = slotMaxUses(s, i);
-      const pendingCardObj = pendingCard != null ? hand[pendingCard] : dragState && dragState.active ? dragState.card : null;
-      // 保留中のカードはまだ使っていないので、「何枚目か」の枚数には数えない
-      const pendingIdx = pendingCard != null ? pendingCard : dragState && dragState.active ? dragState.cardIndex : null;
-      // Can this slot accept the pending card?
-      let canAssign = false;
-      if (s && pendingCardObj) {
-        canAssign = assignedCount < maxUses;
-        if (pendingCardObj.type === 'unique') canAssign = canAssign && pendingCardObj.ownerSlotIdx === i;
-      }
-      // 選択順に「アシストカード以外」を数え、どのカードが2枚目以降(効果半減)かを出す。
-      // 保留中のカードはまだ使っていないので数えない。
-      // 保留中のカードは自分を数えず、「次に使う1枚」として半減かどうかを決める。
-      // (数えてしまうと1枚目でも半減、除外しっぱなしだと2枚目でも全開の表示になる)
-      const halvedByIdx = {};
-      {
-        let n = 0;
-        selectedCards.forEach(idx => {
-          if (idx === pendingIdx) return;
-          const c = hand[idx];
-          const p = !isAssistCard(c);
-          halvedByIdx[idx] = p && n > 0;
-          if (p) n++;
-        });
-        if (pendingIdx != null && selectedCards.includes(pendingIdx)) halvedByIdx[pendingIdx] = !isAssistCard(hand[pendingIdx]) && n > 0;
-      }
-      // Preview damage:
-      // - if a card is pending assignment, show what THIS card would do on this monster
-      // - otherwise show the sum of damage from cards already assigned to this slot,
-      //   using the GLOBAL attack order (2nd+ attack = half damage), matching processTurn
-      // おりょう・ゴーレム・モッチー/ミタラシ・ききの同ターン即時効果を、
-      // このスロットの予測にも反映する(合計DMG欄と同じpreviewLocalBoosts)。
-      const slotBoosts = previewLocalBoosts(pendingIdx);
-      let previewDmg = 0;
-      let isPendingPreview = false;
-      let isPendingHalved = false;
-      let previewSoulPct = 0;
-      if (s && pendingCardObj && canAssign && isAttackCard(pendingCardObj)) {
-        // 既に選んだ「アシストカード以外」の枚数を数え、保留カードはその次の1枚として扱う
-        let committedPenalty = 0;
-        selectedCards.forEach(idx => {
-          if (idx !== pendingIdx && !isAssistCard(hand[idx])) committedPenalty++;
-        });
-        const isSecondOrLater = committedPenalty >= 1 && !isAssistCard(pendingCardObj);
-        const baseDmg = getDmg(pendingCardObj, i, s, slotBoosts.forPending.oryo, slotBoosts.forPending.dmgMod, isSecondOrLater);
-        previewDmg = getAttackPredictedDmg(pendingCardObj, s, baseDmg, slotBoosts.forPending.combo);
-        previewSoulPct = soulTraitAttackProfile(s?.masuId ? getMasuMon(s.masuId) : null, pendingCardObj, i).damagePct;
-        isPendingPreview = true;
-        isPendingHalved = isSecondOrLater;
-      } else if (s) {
-        // 選択順で「アシストカード以外」を数え、2枚目以降は半減として予測する
-        let globalPenaltyCnt = 0;
-        selectedCards.forEach(idx => {
-          if (idx === pendingIdx) return;
-          const card = hand[idx];
-          const isPenalty = !isAssistCard(card);
-          const halved = isPenalty && globalPenaltyCnt > 0;
-          if (cardAssignments[idx] === i) {
-            const b = slotBoosts.perCard[idx] || {
-              oryo: 0,
-              dmgMod: 0,
-              combo: 0
-            };
-            const baseDmg = getDmg(card, i, s, b.oryo, b.dmgMod, halved);
-            previewDmg += getAttackPredictedDmg(card, s, baseDmg, b.combo);
-          }
-          if (isPenalty) globalPenaltyCnt++;
-        });
-      }
-      const isAnimating = !ecoBattleView && attackAnim && attackAnim.slotIndex === i;
-      // このスロットに固有技カードが割り当てられているか（セット中は常時エフェクト）
-      const hasUniqueSet = selectedCards.some(idx => cardAssignments[idx] === i && hand[idx]?.type === 'unique');
-      // このスロットに表示する選択中カード: 攻撃系は割当先スロット、全体系(ガード/バフ/回復等)は全スロット
-      const slotAssignedCards = selectedCards.filter(idx => {
-        const card = hand[idx];
-        if (!card) return false;
-        if (cardNeedsMonster(card)) return cardAssignments[idx] === i;
-        return true; // 全体系は全スロット
-      }).map(idx => ({
-        idx,
-        card: hand[idx]
-      }));
-      const distanceBreakLevel = ultimateDistanceBreakLevels[i] || 0;
-      const distanceBroken = distanceBreakLevel > 0;
-      const distanceBreakPercent = 100 * 0.5 ** distanceBreakLevel;
-      const distanceBreakRoman = ['', 'I', 'II', 'III', 'IV'][distanceBreakLevel] || String(distanceBreakLevel);
-      return /*#__PURE__*/React.createElement("button", {
-        key: i,
-        "data-slot-index": i,
-        "data-distance-broken": distanceBroken ? 'true' : undefined,
-        "data-distance-break-level": distanceBroken ? distanceBreakLevel : undefined,
-        "aria-label": `${RANGE_LABELS[i]}距離${distanceBroken ? `（BREAK Lv${distanceBreakLevel}・与ダメージ${distanceBreakPercent}%）` : ''}`,
-        onClick: () => {
-          if (isBusy || autoBattleRef.current) return;
-          if (pendingCard != null && canAssign) {
-            setCardAssignments(p => ({
-              ...p,
-              [pendingCard]: i
-            }));
-            setPendingCard(null);
-            setFocusedCard(null);
-            Audio_.se.card();
-            setSlotSettle(i);
-            setTimeout(() => {
-              setSlotSettle(null);
-            }, 500);
-          }
-        },
-        disabled: isBusy || autoBattle,
-        className: `relative rounded-xl border-2 flex flex-col items-stretch overflow-visible transition-all ${RANGE_STYLES[i].bg} ${distanceBroken ? 'border-red-400' : ' ' + RANGE_STYLES[i].border} ${canAssign || dragState?.active && dragOverSlot === i ? 'ring-2 ring-yellow-400 scale-105 z-10 shadow-lg animate-pulse' : 'opacity-100'} ${assignedCount > 0 ? 'ring-2 ring-indigo-500' : ''} ${dragState?.active && dragOverSlot === i ? 'ring-4 ring-green-400 scale-110' : ''} ${slotSettle === i ? 'ring-4 ring-white' : ''}`,
-        style: isAnimating ? {
-          zIndex: 9999,
-          animation: attackMotionAnimation(attackAnim)
-        } : distanceBroken ? {
-          backgroundColor: distanceBreakLevel >= 2 ? 'rgb(12,2,5)' : 'rgb(24,5,25)',
-          boxShadow: `inset 0 0 0 ${Math.min(4, distanceBreakLevel + 1)}px rgba(248,113,113,.95), inset 0 0 ${28 + distanceBreakLevel * 8}px rgba(76,5,25,.98), 0 0 ${9 + distanceBreakLevel * 4}px rgba(220,38,38,.65)`
-        } : slotSettle === i ? {
-          animation: 'slotSettle 400ms ease-out'
-        } : undefined
-      }, distanceBroken && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-        className: "absolute inset-0 rounded-lg pointer-events-none z-[15]",
-        style: {
-          background: `repeating-linear-gradient(${135 + distanceBreakLevel * 12}deg,rgba(0,0,0,.12) 0 ${Math.max(3, 8 - distanceBreakLevel)}px,rgba(127,29,29,${Math.min(.8, .28 + distanceBreakLevel * .14)}) ${Math.max(4, 9 - distanceBreakLevel)}px ${Math.max(5, 10 - distanceBreakLevel)}px),radial-gradient(circle at 50% 40%,rgba(${distanceBreakLevel >= 2 ? '69,10,10' : '88,28,135'},.55),rgba(5,0,2,.9))`
-        }
-      }), /*#__PURE__*/React.createElement("div", {
-        className: "absolute inset-[2px] rounded-lg border border-red-300/80 pointer-events-none z-[45]",
-        style: {
-          boxShadow: 'inset 0 0 12px rgba(239,68,68,.7)'
-        }
-      }), /*#__PURE__*/React.createElement("div", {
-        className: "absolute -top-2 left-1/2 -translate-x-1/2 z-[65] whitespace-nowrap rounded-full border-2 border-red-200 bg-red-950 px-1.5 py-0.5 text-[7px] font-black text-white shadow-[0_0_10px_rgba(239,68,68,.9)]"
-      }, distanceBreakLevel === 1 ? '⚠' : '☠', " BREAK ", distanceBreakRoman, "\uFF5C\u4E0E\u30C0\u30E1 ", distanceBreakPercent, "%"), !s && /*#__PURE__*/React.createElement("div", {
-        className: "absolute inset-0 z-[25] flex items-center justify-center pointer-events-none text-red-200/80"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-2xl font-black"
-      }, "\u26A0"))), /*#__PURE__*/React.createElement("div", {
-        className: `h-[25%] flex items-center justify-center px-1 border-b z-20 ${isHeroSlotMon(s) ? 'bg-amber-500/25 border-amber-300/50' : 'bg-black/60 border-white/10'}`
-      }, isHeroSlotMon(s) && /*#__PURE__*/React.createElement(Crown, {
-        size: 8,
-        className: "shrink-0 mr-0.5 text-amber-300"
-      }), /*#__PURE__*/React.createElement("span", {
-        className: `text-[7px] font-black truncate uppercase leading-none ${isHeroSlotMon(s) ? 'text-amber-100' : 'text-white'}`
-      }, s?.name || '---'), assignedCount > 0 && /*#__PURE__*/React.createElement("span", {
-        className: "ml-1 text-[7px] font-black text-indigo-300"
-      }, "\xD7", assignedCount)), (() => {
-        const uOptions = getAvailableUniquesForSlot(s, ownedUniques, i);
-        if (uOptions.length < 2) return null;
-        const curKey = activeSlotUniqueKey(slotUniqueChoice, i, s);
-        const curIdx = Math.max(0, uOptions.findIndex(o => o.key === curKey));
-        return /*#__PURE__*/React.createElement("div", {
-          onPointerDown: e => e.stopPropagation(),
-          onClick: e => {
-            e.stopPropagation();
-            if (isBusy || autoBattleRef.current) return;
-            cycleActiveUniqueForSlot(i);
-          },
-          className: `shrink-0 z-20 flex items-center justify-center gap-0.5 bg-purple-700/90 border-b border-purple-300/50 py-0.5 active:scale-95${autoBattle ? ' opacity-40' : ''}`
-        }, /*#__PURE__*/React.createElement(RefreshCcw, {
-          size: 7,
-          className: "text-white"
-        }), /*#__PURE__*/React.createElement("span", {
-          className: "text-[6px] font-black text-white leading-none"
-        }, "\u56FA\u6709\u6280 ", curIdx + 1, "/", uOptions.length));
-      })(), /*#__PURE__*/React.createElement("div", {
-        className: "flex-1 flex flex-col items-center justify-center relative"
-      }, slotSettle === i && /*#__PURE__*/React.createElement("div", {
-        className: "absolute inset-0 z-[60] pointer-events-none flex items-center justify-center overflow-visible"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "absolute rounded-full border-4 border-cyan-300",
-        style: {
-          width: '40px',
-          height: '40px',
-          animation: 'setRing 500ms ease-out forwards'
-        }
-      }), /*#__PURE__*/React.createElement("div", {
-        className: "absolute rounded-full border-2 border-white",
-        style: {
-          width: '40px',
-          height: '40px',
-          animation: 'setRing 500ms ease-out 80ms forwards'
-        }
-      }), /*#__PURE__*/React.createElement("div", {
-        className: "absolute w-8 h-8 rounded-full bg-cyan-400 border-2 border-white flex items-center justify-center shadow-[0_0_16px_rgba(103,232,249,0.9)]",
-        style: {
-          animation: 'setPop 500ms cubic-bezier(.2,1.5,.4,1) forwards'
-        }
-      }, /*#__PURE__*/React.createElement(Check, {
-        size: 18,
-        className: "text-white",
-        strokeWidth: 4
-      }))), /*#__PURE__*/React.createElement("div", {
-        className: `absolute inset-0 rounded-xl ${RANGE_STYLES[i].slotBg} opacity-20 pointer-events-none`
-      }), slotAssignedCards.length > 0 && /*#__PURE__*/React.createElement("div", {
-        className: "absolute top-0 left-0 right-0 flex flex-col gap-px items-center z-[55] pointer-events-none px-0.5"
-      }, slotAssignedCards.map(({
-        idx,
-        card
-      }) => {
-        // ガードは軽減量をその場で出す。2枚目以降なら半分になった値をそのまま表示する
-        const gw = guardCardWeight(card),
-          ge = cardEffectMultiplier(card, halvedByIdx[idx]);
-        const gv = gw > 0 ? guardValueOf(GUARD_EVOLUTION[guardLevel].flat * gw * ge, GUARD_EVOLUTION[guardLevel].mult * gw * ge) : 0;
-        return /*#__PURE__*/React.createElement("div", {
-          key: idx,
-          className: `flex items-center gap-0.5 px-1 rounded w-full justify-center min-w-0 ${cardNeedsMonster(card) ? 'bg-red-600/85' : 'bg-emerald-600/85'}`
-        }, /*#__PURE__*/React.createElement("span", {
-          style: {
-            fontSize: '7px'
-          },
-          className: "leading-none shrink-0"
-        }, cardIconNode(card.icon, 9, card.id)), /*#__PURE__*/React.createElement("span", {
-          style: {
-            fontSize: '7px'
-          },
-          className: "font-black text-white leading-none truncate min-w-0"
-        }, halvedByIdx[idx] ? '½' : '', card.name), gv > 0 && /*#__PURE__*/React.createElement("span", {
-          style: {
-            fontSize: '7px'
-          },
-          className: "font-black text-emerald-100 leading-none shrink-0"
-        }, "-", gv));
-      })), !ecoBattleView && hasUniqueSet && /*#__PURE__*/React.createElement("div", {
-        className: "absolute inset-0 pointer-events-none z-40 flex items-center justify-center overflow-visible"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "absolute inset-0 rounded-xl",
-        style: {
-          background: 'radial-gradient(circle, rgba(168,85,247,0.45) 0%, rgba(99,102,241,0.28) 50%, rgba(0,0,0,0) 75%)',
-          animation: 'idleAuraPulse 1200ms ease-in-out infinite'
-        }
-      }), /*#__PURE__*/React.createElement("div", {
-        className: "absolute -inset-0.5 rounded-xl border-2 border-purple-400/80",
-        style: {
-          animation: 'idleAuraPulse 1200ms ease-in-out infinite'
-        }
-      }), [0, 90, 180, 270].map(deg => /*#__PURE__*/React.createElement("div", {
-        key: deg,
-        className: "absolute text-base",
-        style: {
-          transform: `rotate(${deg}deg) translateY(-26px)`,
-          animation: 'idleSpark 900ms ease-in-out infinite',
-          animationDelay: `${deg * 2}ms`
-        }
-      }, "\u26A1"))), (() => {
-        const totalBonus = distTotalBonus(i);
-        return /*#__PURE__*/React.createElement("div", {
-          className: `absolute bottom-0.5 right-0.5 text-[6px] font-black leading-none flex items-center gap-0.5 bg-black/50 px-1 py-0.5 rounded border z-30 ${totalBonus > 0 ? 'text-cyan-300 border-cyan-400/30' : totalBonus < 0 ? 'text-red-300 border-red-400/30' : 'text-slate-300 border-white/20'}`
-        }, /*#__PURE__*/React.createElement(Sword, {
-          size: 5
-        }), totalBonus > 0 ? '+' : '', (totalBonus * 100).toFixed(1), "%");
-      })(), previewDmg > 0 && /*#__PURE__*/React.createElement("div", {
-        className: `absolute ${slotAssignedCards.length > 0 ? 'top-[18px]' : 'top-0'} ${isPendingPreview ? 'bg-yellow-500 text-black ring-yellow-200' : 'bg-red-600 text-white ring-white/50'} text-[8px] font-black px-1.5 py-0.5 rounded shadow-lg z-50 animate-bounce ring-1`
-      }, isPendingPreview && isPendingHalved ? '½ ' : '', "DMG:", previewDmg, isPendingPreview && previewSoulPct > 0 && /*#__PURE__*/React.createElement("span", {
-        "data-soul-damage-preview": true,
-        className: "ml-1 rounded bg-sky-950/80 px-1 py-0.5 text-[6px] text-sky-100"
-      }, "\u9B42\u683C +", previewSoulPct, "%")), s?.imgUrl ? isAnimating && s.id === 'Pandora' && attackAnim.motion === 'pandoraDualThunder' ? /*#__PURE__*/React.createElement(PandoraDualThunder, {
-        image: /*#__PURE__*/React.createElement(DyedMonsterImage, {
-          baseId: s.id,
-          src: s.imgUrl,
-          alt: s.name,
-          masuColors: s.colors,
-          style: {
-            width: '64px',
-            height: '64px'
-          },
-          className: "object-contain drop-shadow-md"
-        })
-      }) : isAnimating && attackAnim.motion === 'arkHolyRain' ? /*#__PURE__*/React.createElement(ArkHolyRainMotion, {
-        image: /*#__PURE__*/React.createElement(DyedMonsterImage, {
-          baseId: s.id,
-          src: s.imgUrl,
-          alt: s.name,
-          masuColors: s.colors,
-          style: {
-            width: '64px',
-            height: '64px'
-          },
-          className: "z-10 object-contain drop-shadow-md"
-        }),
-        charging: attackAnim.charge === true,
-        empowered: attackAnim.charge === false
-      }) : isAnimating && attackAnim.motion === 'waterBurst' ? /*#__PURE__*/React.createElement(WaterBurstMotion, {
-        image: /*#__PURE__*/React.createElement(DyedMonsterImage, {
-          baseId: s.id,
-          src: s.imgUrl,
-          alt: s.name,
-          masuColors: s.colors,
-          style: {
-            width: '64px',
-            height: '64px'
-          },
-          className: "z-10 object-contain drop-shadow-md"
-        }),
-        lunge: attackAnim.charge === false,
-        charging: attackAnim.charge === true
-      }) : isAnimating && attackAnim.motion === 'miaSongNotes' ? /*#__PURE__*/React.createElement(MiaSongNotesMotion, {
-        image: /*#__PURE__*/React.createElement(DyedMonsterImage, {
-          baseId: s.id,
-          src: s.imgUrl,
-          alt: s.name,
-          masuColors: s.colors,
-          style: {
-            width: '64px',
-            height: '64px'
-          },
-          className: "z-10 object-contain drop-shadow-md"
-        }),
-        lunge: attackAnim.charge === false,
-        charging: attackAnim.charge === true
-      }) : /*#__PURE__*/React.createElement(DyedMonsterImage, {
-        baseId: s.id,
-        src: s.imgUrl,
-        alt: s.name,
-        masuColors: s.colors,
-        style: {
-          width: '64px',
-          height: '64px'
-        },
-        className: "z-10 object-contain drop-shadow-md"
-      }) : /*#__PURE__*/React.createElement("span", {
-        style: {
-          fontSize: '40px'
-        },
-        className: "z-10 drop-shadow-md"
-      }, s?.emoji || ''), isAnimating && attackAnim.twinBlade && /*#__PURE__*/React.createElement(KenshiTwinSlash, null), isAnimating && attackAnim.sakura && /*#__PURE__*/React.createElement(EikiSakuraPetals, null)), /*#__PURE__*/React.createElement("div", {
-        className: `h-[28%] ${RANGE_STYLES[i].labelBg} flex items-center justify-center border-t border-white/20 z-20`
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-[9px] font-black uppercase tracking-tighter leading-none"
-      }, RANGE_LABELS[i], "\u8DDD\u96E2")));
-    }))), quickRhythmIntroVisible && /*#__PURE__*/React.createElement("div", {
-      "data-quick-rhythm-intro": true,
-      className: "shrink-0 border-t border-fuchsia-400/30 bg-slate-950/95 px-2 py-1"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "flex items-start gap-1"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "min-w-0 flex-1"
-    }, /*#__PURE__*/React.createElement(AssistantBubble, {
-      scene: "quickRhythmIntro",
-      compact: true
-    })), /*#__PURE__*/React.createElement("button", {
-      type: "button",
-      onClick: dismissQuickRhythmIntro,
-      "aria-label": "\u3053\u306E\u6848\u5185\u3092\u9589\u3058\u308B",
-      className: "min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black"
-    }, "\xD7"))), /*#__PURE__*/React.createElement("div", {
-      className: "h-[24%] shrink-0 bg-slate-900/95 p-1 flex flex-col relative border-t border-white/10"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "text-[7px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-1 flex justify-between px-2 items-center gap-1"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: `flex-1 min-w-0 flex flex-wrap items-center gap-x-1 gap-y-0.5${battleTutorialSpotClass('cardCount')}`
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "whitespace-nowrap"
-    }, "Action Cards"), " ", /*#__PURE__*/React.createElement("span", {
-      className: "shrink-0 bg-white/10 text-white px-2 py-0.5 rounded-full font-mono"
-    }, selectedCards.length, "/", cardLimit), heroCardBonus > 0 && /*#__PURE__*/React.createElement("span", {
-      className: "shrink-0 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-300/40 text-amber-200 whitespace-nowrap"
-    }, /*#__PURE__*/React.createElement(Crown, {
-      size: 8
-    }), "+", heroCardBonus), kikiCardBonus > 0 && /*#__PURE__*/React.createElement("span", {
-      className: "shrink-0 px-1.5 py-0.5 rounded-full bg-violet-500/20 border border-violet-300/40 text-violet-200 whitespace-nowrap"
-    }, "\u5FDC\u63F4+1"), soulCoordinationCardBonus > 0 && /*#__PURE__*/React.createElement("span", {
-      "data-soul-coordination-bonus": true,
-      className: "shrink-0 px-1.5 py-0.5 rounded-full bg-sky-500/20 border border-sky-300/40 text-sky-200 whitespace-nowrap"
-    }, "\u9B42\u683C+1")), /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center gap-0.5 shrink-0"
-    }, /*#__PURE__*/React.createElement("button", {
-      onClick: () => setShowDeckInfo(true),
-      className: `flex items-center gap-0.5 px-1.5 py-1 bg-white/5 rounded-lg border border-white/10 active:scale-95${battleTutorialSpotClass('deckView')}`
-    }, /*#__PURE__*/React.createElement(Layers, {
-      size: 9
-    }), /*#__PURE__*/React.createElement("span", {
-      className: "text-[7px]"
-    }, "VIEW")), /*#__PURE__*/React.createElement("div", {
-      className: "shrink-0 flex flex-col gap-0.5"
-    }, /*#__PURE__*/React.createElement("button", {
-      "data-auto-bgm-button": true,
-      type: "button",
-      onClick: () => setShowAutoBgmPicker(true),
-      "aria-label": "\u30D0\u30C8\u30EBBGM\u3068\u97F3\u91CF\u3092\u8ABF\u6574",
-      title: "BGM / \u97F3\u91CF",
-      className: "shrink-0 min-h-[32px] min-w-[42px] rounded-lg border border-indigo-400/50 bg-indigo-800 px-1.5 text-indigo-100 active:scale-90"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "block text-[13px] leading-none"
-    }, "\uD83C\uDFB5"), /*#__PURE__*/React.createElement("span", {
-      className: "mt-0.5 block text-[7px] font-black leading-none"
-    }, "BGM")), quickToRhythmButtonNode), /*#__PURE__*/React.createElement("div", {
-      className: "w-[44px] shrink-0 flex flex-col gap-0.5"
-    }, /*#__PURE__*/React.createElement("button", {
-      type: "button",
-      disabled: !!battleScenarioRef.current || battleTutorialStep != null,
-      onClick: cycleBattleAuto,
-      "aria-pressed": autoBattle,
-      "aria-label": `AUTO ${autoRepeat ? '∞' : autoBattle ? 'ON' : 'OFF'}`,
-      className: `h-8 w-full px-1 rounded-lg border-2 font-black text-[8px] leading-tight active:scale-90 disabled:opacity-25 ${autoRepeat ? 'border-fuchsia-300 bg-fuchsia-500 text-slate-950 shadow-[0_0_12px_rgba(217,70,239,.65)]' : autoBattle ? 'border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_12px_rgba(34,211,238,.65)]' : 'border-slate-500 bg-slate-800 text-slate-300'}`
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "block"
-    }, "AUTO"), /*#__PURE__*/React.createElement("span", {
-      className: "block text-[7px]"
-    }, autoRepeat ? '∞' : autoBattle ? 'ON' : 'OFF')), gameState === 'BATTLE' && isQuickMode(runMode) && autoRepeat === true && /*#__PURE__*/React.createElement("button", {
-      type: "button",
-      onClick: cycleEcoMode,
-      "aria-label": `省エネ ${ecoMode === 'lite' ? '簡易' : ecoMode === 'ultra' ? '超' : 'OFF'}`,
-      className: `min-h-[24px] w-full rounded-md border font-black text-[7px] leading-[9px] active:scale-90 ${ecoMode === 'lite' ? 'border-emerald-300 bg-emerald-700 text-emerald-50' : ecoMode === 'ultra' ? 'border-lime-200 bg-lime-500 text-slate-950' : 'border-slate-500 bg-slate-700 text-slate-200'}`
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "block"
-    }, "\u7701\u30A8\u30CD"), /*#__PURE__*/React.createElement("span", {
-      className: "block"
-    }, ecoMode === 'lite' ? '簡易' : ecoMode === 'ultra' ? '超' : 'OFF'))), (() => {
-      const allAttackAssigned = selectedCards.filter(idx => cardNeedsMonster(hand[idx])).every(idx => cardAssignments[idx] != null);
-      const canAct = !autoBattle && !isBusy && selectedCards.length > 0 && pendingCard === null && allAttackAssigned && battleTutorialNeed !== 'skillPicker';
-      return /*#__PURE__*/React.createElement("button", {
-        onClick: () => processTurn(),
-        disabled: !canAct,
-        className: `min-h-[44px] min-w-[84px] shrink-0 px-2 sm:px-5 rounded-full font-black text-[11px] sm:text-[13px] whitespace-nowrap active:scale-90 flex items-center justify-center gap-1 border-2 border-black uppercase tracking-wide transition-all${battleTutorialSpotClass('action')} ${canAct ? 'bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.4)]' : 'bg-slate-700 text-slate-500 opacity-50'}`
-      }, /*#__PURE__*/React.createElement(Play, {
-        fill: "currentColor",
-        size: 12
-      }), " Action");
-    })())), /*#__PURE__*/React.createElement("div", {
-      className: `flex-1 flex gap-1.5 overflow-x-auto items-stretch scrollbar-hide px-1 pb-1 justify-center${battleTutorialCardTarget ? '' : battleTutorialSpotClass('cards')}`
-    }, hand.map((c, i) => {
-      const isSel = selectedCards.includes(i);
-      const assignedSlot = cardAssignments[i];
-      const curGuts = assignedSlot != null ? getCardGuts(c, assignedSlot) : getCardGuts(c, null);
-      const requiredGuts = assignedSlot != null ? curGuts : pendingCardGuts(c);
-      const remainingGuts = guts - selectedCards.reduce((acc, idx) => acc + (idx === i ? 0 : selectedCardGuts(idx)), 0);
-      const isSelectable = isSel || remainingGuts >= requiredGuts && selectedCards.length < cardLimit;
-      const isPending = pendingCard === i;
-      const assignedMon = assignedSlot != null ? slots[assignedSlot] : null;
-      const isDragging = dragState?.active && dragState?.cardIndex === i;
-      // 練習で使わせたい種類以外は、つかむこと自体をさせない(選択も割り当ても起きない)
-      const tutorialAllowed = battleTutorialCardAllowed(c);
-      // 光らせるのは「いま触ってほしい種類」だけ。技変更の番は名前のところも光らせる
-      const tutorialTargeted = !!battleTutorialCardTarget && battleTutorialCardKind(c) === battleTutorialCardTarget;
-      return /*#__PURE__*/React.createElement("div", {
-        key: c.uid,
-        className: "flex-1 min-w-0 max-w-[20%] flex"
-      }, /*#__PURE__*/React.createElement("button", {
-        onPointerDown: e => {
-          if (isBusy || autoBattleRef.current || !tutorialAllowed) return;
-          const pt = e.touches ? e.touches[0] : e;
-          cardDragActiveRef.current = false;
-          setDragState({
-            cardIndex: i,
-            x: pt.clientX,
-            y: pt.clientY,
-            active: false,
-            card: c
-          });
-        },
-        style: {
-          ...(isDragging ? {
-            touchAction: 'none',
-            position: 'fixed',
-            left: dragState.x,
-            top: dragState.y,
-            transform: 'translate(-50%,-50%) rotate(-3deg) scale(1.15)',
-            zIndex: 70000,
-            width: '72px',
-            pointerEvents: 'none',
-            transition: 'none',
-            filter: 'drop-shadow(0 12px 18px rgba(0,0,0,0.65))'
-          } : {
-            touchAction: 'none'
-          }),
-          ...(TYPE_INLINE_STYLE[c.type] || {})
-        },
-        className: `relative w-full rounded-xl border-2 p-1 flex flex-col items-center justify-between bg-gradient-to-b ${TYPE_COLORS[c.type]} ${isDragging ? 'ring-4 ring-white shadow-[0_0_24px_rgba(255,255,255,0.6)]' : isSel ? 'transition-all -translate-y-1.5 ring-4 ring-cyan-300 z-20 scale-105 opacity-60 saturate-[0.7] shadow-[0_0_18px_rgba(103,232,249,0.6)]' : 'transition-all opacity-90'} ${isPending ? 'ring-4 ring-yellow-400 animate-pulse shadow-[0_0_20px_rgba(250,204,21,0.7)]' : ''} ${!isSelectable && !isSel && !isDragging ? 'grayscale opacity-50' : ''}${tutorialTargeted ? ' is-battle-tutorial-spot' : ''}${battleTutorialCardTarget && !tutorialTargeted ? ' grayscale opacity-25' : ''}`
-      }, isSel && !assignedMon && /*#__PURE__*/React.createElement("div", {
-        className: "absolute top-0.5 left-0.5 z-30 w-5 h-5 rounded-full bg-cyan-400 border-2 border-white flex items-center justify-center shadow-lg"
-      }, /*#__PURE__*/React.createElement(Check, {
-        size: 10,
-        className: "text-white",
-        strokeWidth: 4
-      })), assignedMon && /*#__PURE__*/React.createElement("div", {
-        className: "absolute top-0.5 right-0.5 z-30 w-5 h-5 rounded-full bg-indigo-600 border-2 border-white flex items-center justify-center overflow-hidden shadow-lg"
-      }, assignedMon.imgUrl ? /*#__PURE__*/React.createElement("img", {
-        src: assignedMon.imgUrl,
-        alt: "",
-        className: "w-full h-full object-contain"
-      }) : /*#__PURE__*/React.createElement("span", {
-        className: "text-[9px]"
-      }, assignedMon.emoji)), /*#__PURE__*/React.createElement("div", {
-        className: "text-3xl mt-1.5"
-      }, cardIconNode(c.icon, 32, c.id)), /*#__PURE__*/React.createElement("div", {
-        className: "w-full text-center flex flex-col justify-end gap-0.5"
-      }, ['atk', 'range_atk', 'unique'].includes(c.type) ? /*#__PURE__*/React.createElement("div", {
-        onClick: ev => {
-          ev.stopPropagation();
-          if (isBusy || autoBattleRef.current || Date.now() <= suppressCardClickRef.current) return;
-          setSkillPicker({
-            handIndex: i
-          });
-        },
-        className: `text-[9px] font-black leading-tight w-full whitespace-normal h-7 flex items-center justify-center overflow-hidden uppercase italic px-0.5 underline decoration-dotted decoration-white/60 underline-offset-2 active:opacity-60${battleTutorialNeedCard && tutorialTargeted ? ' is-battle-tutorial-spot' : ''}`
-      }, c.name) : /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] font-black leading-tight w-full whitespace-normal h-7 flex items-center justify-center overflow-hidden uppercase italic px-0.5"
-      }, c.name), /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] font-black bg-black/40 text-white rounded py-1 flex items-center justify-center gap-0.5"
-      }, /*#__PURE__*/React.createElement(Zap, {
-        size: 9
-      }), curGuts))));
-    })))))), marketIconZoom && (() => {
+    }, "\u9589\u3058\u308B"))), gameState === 'BATTLE' && /*#__PURE__*/React.createElement(BattleScreen, {
+      applyTurnDamageReduction: applyTurnDamageReduction,
+      attackAnim: attackAnim,
+      autoBattle: autoBattle,
+      autoBattleRef: autoBattleRef,
+      autoRepeat: autoRepeat,
+      battleIntimidate: battleIntimidate,
+      battleScenarioRef: battleScenarioRef,
+      battleScreenActive: gameState === 'BATTLE',
+      battleSoulMasus: battleSoulMasus,
+      battleSpeed: battleSpeed,
+      battleTutorial: battleTutorial,
+      battleTutorialAllowsEmergency: battleTutorialAllowsEmergency,
+      battleTutorialCardAllowed: battleTutorialCardAllowed,
+      battleTutorialCardKind: battleTutorialCardKind,
+      battleTutorialCardTarget: battleTutorialCardTarget,
+      battleTutorialNeed: battleTutorialNeed,
+      battleTutorialNeedCard: battleTutorialNeedCard,
+      battleTutorialSpotClass: battleTutorialSpotClass,
+      battleTutorialStep: battleTutorialStep,
+      cardAssignments: cardAssignments,
+      cardDragActiveRef: cardDragActiveRef,
+      cardEffectMultiplier: cardEffectMultiplier,
+      cardLimit: cardLimit,
+      cardNeedsMonster: cardNeedsMonster,
+      cycleActiveUniqueForSlot: cycleActiveUniqueForSlot,
+      cycleBattleAuto: cycleBattleAuto,
+      cycleBattleSpeed: cycleBattleSpeed,
+      cycleEcoMode: cycleEcoMode,
+      debugBattle: debugBattle,
+      difficulty: difficulty,
+      dismissQuickRhythmIntro: dismissQuickRhythmIntro,
+      distTotalBonus: distTotalBonus,
+      dragOverSlot: dragOverSlot,
+      dragState: dragState,
+      ecoBattleView: ecoBattleView,
+      ecoMode: ecoMode,
+      effectiveMaxGuts: effectiveMaxGuts,
+      effectiveMaxHp: effectiveMaxHp,
+      enemy: enemy,
+      enemyAttackAnim: enemyAttackAnim,
+      enemyAttackFx: enemyAttackFx,
+      enemyDist: enemyDist,
+      enemyIntent: enemyIntent,
+      enemyNextIntent: enemyNextIntent,
+      enemyRevivalUsed: enemyRevivalUsed,
+      enemySkillName: enemySkillName,
+      extremeDifficulty: extremeDifficulty,
+      extremeRun: extremeRun,
+      extremeRunRef: extremeRunRef,
+      focusedCard: focusedCard,
+      getAttackPredictedDmg: getAttackPredictedDmg,
+      getAvailableUniquesForSlot: getAvailableUniquesForSlot,
+      getCardGuts: getCardGuts,
+      getDmg: getDmg,
+      getIncomingDamageBeforeTurnReduction: getIncomingDamageBeforeTurnReduction,
+      getMasuMon: getMasuMon,
+      getNextTurnBuff: getNextTurnBuff,
+      getPermaBuff: getPermaBuff,
+      getTurnBuff: getTurnBuff,
+      getWaveBuff: getWaveBuff,
+      guardCardWeight: guardCardWeight,
+      guardFx: guardFx,
+      guardLevel: guardLevel,
+      guardValueOf: guardValueOf,
+      guts: guts,
+      hand: hand,
+      heroCardBonus: heroCardBonus,
+      heroDist: heroDist,
+      hp: hp,
+      iceLockActive: iceLockActive,
+      iceLockPreparing: iceLockPreparing,
+      iceLockTurns: iceLockTurns,
+      isAssistCard: isAssistCard,
+      isAttackCard: isAttackCard,
+      isBusy: isBusy,
+      isHeroSlotMon: isHeroSlotMon,
+      kikiCardBonus: kikiCardBonus,
+      liteBattleView: liteBattleView,
+      mainHero: mainHero,
+      openHelp: openHelp,
+      ownedUniques: ownedUniques,
+      pendingCard: pendingCard,
+      pendingCardGuts: pendingCardGuts,
+      popups: popups,
+      previewLocalBoosts: previewLocalBoosts,
+      processTurn: processTurn,
+      quickRhythmIntroVisible: quickRhythmIntroVisible,
+      quickToRhythmButtonNode: quickToRhythmButtonNode,
+      renderQuickRunBattleBand: renderQuickRunBattleBand,
+      runMode: runMode,
+      safeDifficulty: safeDifficulty,
+      score: score,
+      selectedCardGuts: selectedCardGuts,
+      selectedCards: selectedCards,
+      setCardAssignments: setCardAssignments,
+      setDragState: setDragState,
+      setFocusedCard: setFocusedCard,
+      setPendingCard: setPendingCard,
+      setShowAutoBgmPicker: setShowAutoBgmPicker,
+      setShowDeckInfo: setShowDeckInfo,
+      setShowEnemyInfo: setShowEnemyInfo,
+      setShowHeroInfo: setShowHeroInfo,
+      setShowQuitConfirm: setShowQuitConfirm,
+      setShowSoulBattleEffects: setShowSoulBattleEffects,
+      setSkillPicker: setSkillPicker,
+      setSlotSettle: setSlotSettle,
+      slotMaxUses: slotMaxUses,
+      slotSettle: slotSettle,
+      slotSkill: slotSkill,
+      slotUniqueChoice: slotUniqueChoice,
+      slots: slots,
+      soulBattleParty: soulBattleParty,
+      soulCoordinationCardBonus: soulCoordinationCardBonus,
+      suppressCardClickRef: suppressCardClickRef,
+      teachingFx: teachingFx,
+      totalTurnCount: totalTurnCount,
+      turnCount: turnCount,
+      ultimateDistanceBreakLevels: ultimateDistanceBreakLevels,
+      ultraBattleView: ultraBattleView,
+      unifiedSpecialDefense: unifiedSpecialDefense,
+      useEmergency: useEmergency,
+      wave: wave
+    })), marketIconZoom && (() => {
       const item = marketIconZoom;
       const round = item.type === 'icon' || item.type === 'assist';
       return /*#__PURE__*/React.createElement("div", {
@@ -55874,117 +56384,28 @@ function MonsterHeroGame() {
           backgroundColor: who.accent
         }
       }, last ? 'おわる' : 'つぎへ'))));
-    })(), gameState === 'BATTLE' && ultimateDistanceBreakReveal != null && /*#__PURE__*/React.createElement("div", {
-      "data-ultimate-distance-break-reveal": true,
-      "data-distance-break-overwrite": ultimateDistanceBreakReveal.level >= 2 ? 'true' : undefined,
-      className: "fixed inset-0 flex items-center justify-center p-5 text-center",
-      style: {
-        zIndex: 91000,
-        background: ultimateDistanceBreakReveal.level >= 2 ? 'radial-gradient(circle,rgba(69,10,10,.9),rgba(0,0,0,.99))' : 'radial-gradient(circle,rgba(127,29,29,.72),rgba(2,6,23,.97))'
-      },
-      role: "dialog",
-      "aria-modal": "true",
-      "aria-label": "\u8DDD\u96E2\u5F31\u4F53\u5316\u767A\u52D5"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: `w-full max-w-xs rounded-3xl border-2 border-red-300 px-5 py-7 ${ultimateDistanceBreakReveal.level >= 2 ? 'bg-black/95 shadow-[0_0_64px_rgba(220,38,38,.9)]' : 'bg-purple-950/95 shadow-[0_0_48px_rgba(239,68,68,.65)]'}`,
-      style: {
-        animation: 'mhExtremeRuleIn .38s ease-out'
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "text-xs font-black tracking-[.24em] text-amber-300"
-    }, specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty) || ULTIMATE_SETTING.id), /*#__PURE__*/React.createElement("div", {
-      className: "mt-2 text-2xl font-black italic tracking-wider text-red-100"
-    }, ultimateDistanceBreakReveal.level >= 2 ? 'DISTANCE BREAK OVERWRITE' : 'DISTANCE BREAK'), /*#__PURE__*/React.createElement("div", {
-      className: "mt-5 text-xl font-black text-white"
-    }, RANGE_LABELS[ultimateDistanceBreakReveal.distance], "\u8DDD\u96E2 BREAK Lv", ultimateDistanceBreakReveal.level), /*#__PURE__*/React.createElement("div", {
-      className: "mt-2 rounded-xl border border-red-300/50 bg-black/40 py-2 text-sm font-black text-red-200"
-    }, "\u4E0E\u30C0\u30E1\u30FC\u30B8 ", 100 * 0.5 ** ultimateDistanceBreakReveal.level, "%"), /*#__PURE__*/React.createElement("div", {
-      className: "mt-4 border-t border-red-300/20 pt-3 text-[10px] text-purple-100"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "font-black text-slate-400"
-    }, "\u73FE\u5728\u306EBREAK\uFF1A"), /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("span", {
-      className: "font-black"
-    }, ultimateDistanceBreakLevels.map((level, index) => level > 0 ? `${RANGE_LABELS[index]} Lv${level}` : null).filter(Boolean).join(' / ') || 'なし')))), gameState === 'BATTLE' && enemyRevivalReveal != null && /*#__PURE__*/React.createElement("div", {
-      "data-extreme-revival-reveal": true,
-      className: "fixed inset-0 flex items-center justify-center p-5 text-center",
-      style: {
-        zIndex: 91000,
-        background: 'radial-gradient(circle,rgba(51,65,85,.82),rgba(2,6,23,.98))'
-      },
-      role: "dialog",
-      "aria-modal": "true",
-      "aria-label": "\u6B7B\u8005\u306E\u518D\u8D77"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "w-full max-w-xs rounded-3xl border-2 border-slate-200 bg-slate-950/95 px-5 py-7 shadow-[0_0_56px_rgba(203,213,225,.7)]",
-      style: {
-        animation: 'mhExtremeRuleIn .38s ease-out'
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "text-xs font-black tracking-[.24em] text-slate-300"
-    }, specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty) || RAGNAROK_SETTING.id), /*#__PURE__*/React.createElement("div", {
-      className: "mt-2 text-2xl font-black italic tracking-wider text-slate-100"
-    }, "DEAD RISING"), /*#__PURE__*/React.createElement("div", {
-      className: "mt-5 text-xl font-black text-white"
-    }, "\u6B7B\u8005\u306E\u518D\u8D77 ", enemyRevivalReveal.revivalNumber, "\u56DE\u76EE"), /*#__PURE__*/React.createElement("div", {
-      className: "mt-2 rounded-xl border border-slate-300/50 bg-black/40 py-2 text-sm font-black text-slate-200"
-    }, "\u30E9\u30A4\u30D5\u534A\u5206\u3067\u8D77\u304D\u4E0A\u304C\u308A\u3001\u653B\u6483\u529B+50%"), /*#__PURE__*/React.createElement("div", {
-      className: "mt-4 border-t border-slate-300/20 pt-3 text-[10px] text-slate-300"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "font-black text-slate-400"
-    }, "\u6B8B\u308A\u306E\u518D\u8D77\uFF1A"), /*#__PURE__*/React.createElement("span", {
-      className: "font-black"
-    }, enemyRevivalReveal.remaining, "\u56DE")))), gameState === 'BATTLE' && extremeRuleOpen && /*#__PURE__*/React.createElement("div", {
-      className: "fixed inset-0 flex items-center justify-center p-5",
-      style: {
-        zIndex: 90500,
-        background: 'radial-gradient(circle,rgba(112,26,117,.58),rgba(2,6,23,.9))',
-        paddingTop: 'calc(1.25rem + env(safe-area-inset-top))',
-        paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom))'
-      },
-      onClick: closeExtremeRule,
-      role: "dialog",
-      "aria-modal": "true",
-      "aria-label": "\u6975\u9650\u30EB\u30FC\u30EB\u767A\u52D5"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "w-full max-w-xs max-h-full flex flex-col rounded-3xl border-2 border-fuchsia-300 bg-slate-950/95 px-5 py-6 text-center shadow-[0_0_42px_rgba(217,70,239,.65)]",
-      style: {
-        animation: 'mhExtremeRuleIn .38s ease-out'
-      }
-    }, (() => {
-      const specialDifficulty = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
-      const groups = extremeRuleDetailGroups(specialDifficulty, isQuickMode(runMode));
-      const breakRule = extremeDistanceBreakRule(specialDifficulty);
-      return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 text-[11px] font-black tracking-[.12em] text-amber-300"
-      }, "\u26A0 ", specialDifficulty, " \u7279\u6B8A\u30EB\u30FC\u30EB"), /*#__PURE__*/React.createElement("div", {
-        "data-extreme-rule-intro": specialDifficulty,
-        className: "mt-3 min-h-0 flex-1 overflow-y-auto mh-scroll grid content-start gap-1.5 text-left"
-      }, groups.map(group => /*#__PURE__*/React.createElement("div", {
-        key: group.title,
-        className: "rounded-xl border border-fuchsia-400/25 bg-purple-950/55 px-2.5 py-1.5"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] font-black text-fuchsia-300"
-      }, "\u3010", group.title, "\u3011"), group.lines.map(([label, value]) => /*#__PURE__*/React.createElement("div", {
-        key: label,
-        className: "mt-0.5 grid grid-cols-[auto_1fr] items-start gap-2 text-[10px] font-bold leading-snug text-white"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "shrink-0 text-slate-300"
-      }, label), /*#__PURE__*/React.createElement("b", {
-        className: "min-w-0 text-right"
-      }, value)))))), breakRule && /*#__PURE__*/React.createElement("div", {
-        className: "mt-2 shrink-0 rounded-xl border border-amber-300/40 bg-black/45 px-3 py-2 text-left text-[10px] leading-relaxed text-slate-200"
-      }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
-        className: "text-slate-400"
-      }, "\u73FE\u5728\u306E\u7D2F\u8A08\u30BF\u30FC\u30F3\uFF1A"), /*#__PURE__*/React.createElement("b", {
-        className: "text-white"
-      }, totalTurnCount)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
-        className: "text-slate-400"
-      }, "\u73FE\u5728\u306EBREAK\uFF1A"), /*#__PURE__*/React.createElement("b", {
-        className: ultimateDistanceBreakLevels.some(level => level > 0) ? 'text-red-200' : 'text-white'
-      }, ultimateDistanceBreakLevels.map((level, index) => level > 0 ? `${RANGE_LABELS[index]} Lv${level}` : null).filter(Boolean).join(' / ') || 'なし'))));
-    })(), /*#__PURE__*/React.createElement("div", {
-      className: "mt-4 shrink-0 text-[9px] font-black tracking-widest text-fuchsia-200"
-    }, "\u30BF\u30C3\u30D7\u3057\u3066\u30D0\u30C8\u30EB\u958B\u59CB"))), tutorialStep != null && (() => {
+    })(), gameState === 'BATTLE' && ultimateDistanceBreakReveal != null && /*#__PURE__*/React.createElement(UltimateDistanceBreakReveal, {
+      difficulty: difficulty,
+      extremeDifficulty: extremeDifficulty,
+      extremeRunRef: extremeRunRef,
+      runMode: runMode,
+      ultimateDistanceBreakLevels: ultimateDistanceBreakLevels,
+      ultimateDistanceBreakReveal: ultimateDistanceBreakReveal
+    }), gameState === 'BATTLE' && enemyRevivalReveal != null && /*#__PURE__*/React.createElement(EnemyRevivalReveal, {
+      difficulty: difficulty,
+      enemyRevivalReveal: enemyRevivalReveal,
+      extremeDifficulty: extremeDifficulty,
+      extremeRunRef: extremeRunRef,
+      runMode: runMode
+    }), gameState === 'BATTLE' && extremeRuleOpen && /*#__PURE__*/React.createElement(ExtremeRuleOverlay, {
+      closeExtremeRule: closeExtremeRule,
+      difficulty: difficulty,
+      extremeDifficulty: extremeDifficulty,
+      extremeRunRef: extremeRunRef,
+      runMode: runMode,
+      totalTurnCount: totalTurnCount,
+      ultimateDistanceBreakLevels: ultimateDistanceBreakLevels
+    }), tutorialStep != null && (() => {
       const intro = tutorialKind === 'intro';
       const battleGuide = tutorialKind === 'battleGuide';
       const rhythm = tutorialKind === 'rhythm';
@@ -57224,102 +57645,14 @@ function MonsterHeroGame() {
     }, /*#__PURE__*/React.createElement(AssistantBubble, {
       scene: "battleHelp",
       compact: true
-    }))))), showSoulBattleEffects && gameState === 'BATTLE' && /*#__PURE__*/React.createElement("div", {
-      "data-soul-battle-effects": true,
-      className: "fixed inset-0 flex flex-col bg-slate-950 text-white",
-      style: {
-        position: 'fixed',
-        inset: 0,
-        zIndex: 41000,
-        paddingTop: 'calc(.75rem + env(safe-area-inset-top))',
-        paddingBottom: 'calc(.75rem + env(safe-area-inset-bottom))'
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "shrink-0 flex items-center justify-between gap-3 border-b border-sky-400/20 px-4 pb-3"
-    }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-      className: "text-[9px] font-black tracking-[.25em] text-sky-400"
-    }, "SOUL RANK"), /*#__PURE__*/React.createElement("h3", {
-      className: "text-lg font-black text-sky-100"
-    }, "\u9B42\u683C\u52B9\u679C")), /*#__PURE__*/React.createElement("button", {
-      type: "button",
-      onClick: () => setShowSoulBattleEffects(false),
-      className: "min-h-[44px] min-w-[64px] rounded-full bg-white/10 px-4 text-[11px] font-black active:scale-95"
-    }, "\u623B\u308B")), /*#__PURE__*/React.createElement("div", {
-      className: "flex-1 min-h-0 overflow-y-auto mh-scroll px-4 py-3 space-y-3"
-    }, /*#__PURE__*/React.createElement("section", {
-      className: "rounded-2xl border border-sky-400/30 bg-sky-950/25 p-3"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "mb-2 text-[10px] font-black text-sky-200"
-    }, "\u30D1\u30FC\u30C6\u30A3\u52B9\u679C"), /*#__PURE__*/React.createElement("div", {
-      className: "grid grid-cols-2 gap-2 text-[10px]"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "rounded-xl bg-black/30 p-2"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "block text-slate-400"
-    }, "\u88AB\u30C0\u30E1\u30FC\u30B8"), /*#__PURE__*/React.createElement("b", {
-      className: "text-emerald-300"
-    }, "-", Math.round(soulBattleParty.damageReduction * 10) / 10, "%")), /*#__PURE__*/React.createElement("div", {
-      className: "rounded-xl bg-black/30 p-2"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "block text-slate-400"
-    }, "\u7279\u6B8A\u9632\u5FA1\u7387"), /*#__PURE__*/React.createElement("b", {
-      className: "text-cyan-300"
-    }, Math.round(unifiedSpecialDefense.rate * 10) / 10, "%")), /*#__PURE__*/React.createElement("div", {
-      className: "rounded-xl bg-black/30 p-2"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "block text-slate-400"
-    }, "\u56DE\u907F / \u53CD\u5C04 / \u5438\u53CE"), /*#__PURE__*/React.createElement("b", {
-      className: "text-slate-100"
-    }, Math.round(unifiedSpecialDefense.evasion * 10) / 10, " / ", Math.round(unifiedSpecialDefense.reflect * 10) / 10, " / ", Math.round(unifiedSpecialDefense.absorb * 10) / 10, "%")), /*#__PURE__*/React.createElement("div", {
-      className: "rounded-xl bg-black/30 p-2"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "block text-slate-400"
-    }, "\u5A01\u5727"), /*#__PURE__*/React.createElement("b", {
-      className: "text-violet-300"
-    }, Math.round(battleIntimidate * 10) / 10, "%")), /*#__PURE__*/React.createElement("div", {
-      className: "rounded-xl bg-black/30 p-2"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "block text-slate-400"
-    }, "\u81EA\u52D5\u30AC\u30C3\u30C4\u56DE\u5FA9"), /*#__PURE__*/React.createElement("b", {
-      className: "text-amber-300"
-    }, "\xD7", soulBattleParty.autoGutsMultiplier.toFixed(2))), /*#__PURE__*/React.createElement("div", {
-      className: "rounded-xl bg-black/30 p-2"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "block text-slate-400"
-    }, "\u4F7F\u7528\u53EF\u80FD\u30AB\u30FC\u30C9"), /*#__PURE__*/React.createElement("b", {
-      className: "text-sky-300"
-    }, soulCoordinationCardBonus > 0 ? '+1' : '変化なし'))), unifiedSpecialDefense.rate > 0 && /*#__PURE__*/React.createElement("div", {
-      className: "mt-2 text-[9px] leading-relaxed text-slate-400"
-    }, "\u7279\u6B8A\u9632\u5FA1\u304C\u767A\u52D5\u3057\u305F\u5834\u5408\u3001\u56DE\u907F\u30FB\u53CD\u5C04\u30FB\u5438\u53CE\u306E\u6BD4\u7387\u304B\u30891\u3064\u3060\u3051\u767A\u52D5\u3057\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("section", {
-      className: "space-y-2"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "text-[10px] font-black text-sky-200"
-    }, "\u53C2\u52A0\u4E2D\u30DE\u30B9\u30E2\u30F3"), battleSoulMasus.filter(m => normalizeSoulRankStage(m.soulRankStage) > 0).map(masu => {
-      const stage = normalizeSoulRankStage(masu.soulRankStage);
-      const active = SOUL_TRAIT_DEFINITIONS.filter(t => soulTraitLevel(masu, t.id) > 0);
-      const base = ALL_PLAYER_MONSTERS[masu.baseId];
-      return /*#__PURE__*/React.createElement("div", {
-        key: masu.id,
-        className: "rounded-2xl border border-white/10 bg-slate-900/70 p-3"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex items-center justify-between gap-2"
-      }, /*#__PURE__*/React.createElement("b", {
-        className: "truncate text-[11px]"
-      }, masu.name || base?.name || 'マスモン'), /*#__PURE__*/React.createElement("span", {
-        className: "shrink-0 rounded-full border border-sky-400/30 bg-sky-950/50 px-2 py-1 text-[8px] font-black text-sky-200"
-      }, "\u9B42\u683C", ['', 'Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ', 'Ⅴ'][stage])), active.length > 0 ? /*#__PURE__*/React.createElement("div", {
-        className: "mt-2 flex flex-wrap gap-1"
-      }, active.map(t => /*#__PURE__*/React.createElement("span", {
-        key: t.id,
-        className: "rounded-lg border border-white/10 bg-black/30 px-2 py-1 text-[8px]"
-      }, /*#__PURE__*/React.createElement("b", {
-        className: "text-slate-200"
-      }, t.name), " ", /*#__PURE__*/React.createElement("span", {
-        className: "text-sky-300"
-      }, formatSoulTraitEffect(t, soulTraitEffectValue(masu, t.id)))))) : /*#__PURE__*/React.createElement("div", {
-        className: "mt-2 text-[9px] text-slate-500"
-      }, "\u632F\u308A\u5206\u3051\u6E08\u307F\u306E\u9B42\u683C\u7279\u6027\u306F\u3042\u308A\u307E\u305B\u3093\u3002"));
-    })))), resultProcessing && /*#__PURE__*/React.createElement("div", {
+    }))))), showSoulBattleEffects && gameState === 'BATTLE' && /*#__PURE__*/React.createElement(SoulBattleEffects, {
+      battleIntimidate: battleIntimidate,
+      battleSoulMasus: battleSoulMasus,
+      setShowSoulBattleEffects: setShowSoulBattleEffects,
+      soulBattleParty: soulBattleParty,
+      soulCoordinationCardBonus: soulCoordinationCardBonus,
+      unifiedSpecialDefense: unifiedSpecialDefense
+    }), resultProcessing && /*#__PURE__*/React.createElement("div", {
       role: "status",
       "aria-live": "polite",
       "aria-label": "\u30AF\u30EA\u30A2\u7D50\u679C\u3092\u51E6\u7406\u4E2D",

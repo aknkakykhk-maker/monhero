@@ -19,10 +19,14 @@
 const fs = require('fs');
 const path = require('path');
 
+const { readAppSource } = require(path.resolve(__dirname, '..', 'harness'));
+
 const root = path.resolve(__dirname, '..', '..');
+// バトル画面は 71-screen-battle.jsx へ切り出したので、編集元は「本体＋切り出した画面」で見る
+// (60-app.jsx だけを読むと、帯を呼んでいる場所が見えない)
 const files = [
-  path.join(root, 'monster-hero/src/parts/60-app.jsx'),
-  path.join(root, 'monster-hero/game-system.compiled.js'),
+  { rel: 'src/parts(本体＋切り出した画面)', src: readAppSource() },
+  { rel: 'monster-hero/game-system.compiled.js', src: fs.readFileSync(path.join(root, 'monster-hero/game-system.compiled.js'), 'utf8') },
 ];
 
 let failed = 0;
@@ -32,8 +36,7 @@ const check = (name, ok, detail = '') => {
 };
 
 for (const file of files) {
-  const rel = path.relative(root, file);
-  const src = fs.readFileSync(file, 'utf8');
+  const { rel, src } = file;
   // 生成物は空白が入り括弧が外れるので、空白を落としてから見る
   const compact = src.replace(/\s+/g, '');
 

@@ -43,7 +43,7 @@ S/A 等級は `REGRESSION_RISK_MAP.md` に基づく。
 | 3 保存層 | 複数体合体・寄付・報酬受取の寄せ、キーごとの読込関数 | **高**(S等級に隣接) | **Opus 5** | **max** |
 | 4 純関数の切り出し | 難易度から保存処理を出す、jsx側の表の移動 | 中 | Sonnet 5 | high |
 | 5 バトル計算 | **完了** | — | — | — |
-| 6 画面の切り出し | 下の表のとおり13本 | 中〜高 | 画面による | 画面による |
+| 6 画面の切り出し | **完了**(2026-09-11)。残るのは `BATTLE` の `token.alive` と `MASU_PATTERN_DEBUG` | — | — | — |
 | 7 描画・キャッシュ | 一覧行の `React.memo`、`style` の定数化 | 低〜中 | Sonnet 5 | high |
 | 8 音声管理・SRI | 移動とSRI | 低 | Sonnet 5 | medium |
 | 9 音ゲー基盤 | タイミング基盤の整理 | **高**(実機でしか分からない) | **Opus 5** | **max** |
@@ -69,27 +69,37 @@ S/A 等級は `REGRESSION_RISK_MAP.md` に基づく。
 | 11 | `PICK_*`(スキップ含む7画面) | — | — | **完了**(2026-09-11)。`67-screen-pick.jsx`。タイマーはすべてハンドラの中にあり本体へ残った |
 | 11b | バトルの結果まわり7画面 | — | — | **完了**(2026-09-11)。`68-screen-run-result.jsx`。ラン終了3つ(勝ち・敗北・リタイア)とマスモン登録も一緒に出した |
 | 12 | `HOME` と重なる案内3つ | — | — | **完了**(2026-09-11)。`69-screen-home.jsx`。施設への7つの行き先は props(`onOpen*`)へ |
-| 13 | `BATTLE` | **Opus 5** | **max** | 最後。`processTurn` に `token.alive` を通す。A等級 |
+| 13 | `BATTLE` と演出4つ | — | — | **完了**(2026-09-11)。`71-screen-battle.jsx`。**切り出しだけ**で、`processTurn` の `token.alive` は手を付けていない(下の「次の一手」) |
 
 ## 次の一手
 
-**STEP 6 の最後(`BATTLE` の切り出し)** — **Opus 5 / effort max**
+**STEP 1 安全網(NG のトリアージ)** — **Sonnet 5 / effort medium**
 
-先に [`STEP6_HANDOVER.md`](STEP6_HANDOVER.md) を読むこと。終わった66画面と、
-この日に分かった型が1枚にまとまっている。
+STEP 6(画面の切り出し)は 2026-09-11 に**完了**した。66画面・約38万文字を
+`MonsterHeroGame` から出し、`60-app.jsx` は 15,300 行から 13,800 行になった。
+詳しくは [`STEP6_HANDOVER.md`](STEP6_HANDOVER.md)。
 
-`BATTLE` は**A等級**(`docs/refactor/REGRESSION_RISK_MAP.md`)。ランキングに影響しうるので、
-ほかの画面と同じ手順に加えて次を守る。
+次にやるべきは、ずっと後回しにしてきた**既存 NG のトリアージ**。
+`node tools/run-checks.js --area all` を回すと 26 本前後が落ちるが、
+**どれもこの一連の作業より前から落ちている**。中身は3種類に分かれる。
 
-- **`processTurn` に `token.alive` を通す**作業を含む。切り出しと同時にやるか分けるかは判断が要る
-- バトル中の演出・オート進行・タイマーは**すべて本体に残す**。画面へ移すと、
-  画面のライフサイクルで途中の `setTimeout` が止まって進行不能になる
-- `battle` 領域(34本)と `run` 領域(24本)を必ず名指しで回す。
-  文字列で JSX を突き合わせている検査が多く、切り出すとまとめて落ちる
+1. **探している文字列が古い**(実装が変わったのに検査を直していない)。
+   例: `battle/hero-marker-check` の `limit += heroCardBonus + kikiCardBonus;`、
+   `battle/battle-damage-preview-check` の `attackAtonementDmg(card, hits[0].dmg)`(引数が増えた)、
+   `boot/kiki-intro-check` の `if (isGameOver) return 'gameOver';`
+2. **書き漏らし**。`boot/save-keys-check`(`SAVE_DATA.md` に無い保存キー)、
+   `image-asset-check`(使われていない PNG 3件)
+3. **本当の不具合**。上の2つを消してから見極める
 
-1〜19本目は 2026-09-10〜11 に完了。切り出しの型は 51〜69 の19ファイルにそろっている
-(保存を伴う操作は本体に残して props で受け、共有層の純関数は画面から直接呼ぶ。
-画面は `gameState` を知らず、遷移は props で受け取る)。
+1本ずつ「直すのか・検査を今の実装に合わせるのか」を決めて潰す。
+**検査側を緩める方向では直さない**(CLAUDE.md ⑥)。
+
+### STEP 6 のやり残し(2つだけ)
+
+| 事項 | モデル | effort | 内容 |
+| --- | --- | --- | --- |
+| `processTurn` に `token.alive` を通す | **Opus 5** | **max** | 画面の切り出しとは別の**挙動の変更**なので分けた。A等級でランキングに影響しうる。実機での確認が要る |
+| `MASU_PATTERN_DEBUG` の切り出し | Sonnet 5 | medium | デバッグ専用画面。プレイヤーには出ないので後回しでよい |
 
 **props の洗い出しは手でやらない。** props を空にした仮のコンポーネントへ JSX を移し、
 `node tools/undefined-reference-check.js` を通すと、足りない参照が全部一覧で出る。

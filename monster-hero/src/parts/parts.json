@@ -173,6 +173,10 @@
       "role": "画面: HOME(村の広場)と、そこに重なる案内3つ(ききの加入・ももすけの登場・アップデート案内)"
     },
     {
+      "file": "71-screen-battle.jsx",
+      "role": "画面: バトル(BATTLE)と、バトル中にだけ重なる演出4つ。番号が飛んでいるのは 70 が bootstrap のため"
+    },
+    {
       "file": "60-app.jsx",
       "role": "MonsterHeroGame 本体(全 state・ロジック・各 gameState の JSX)"
     },
