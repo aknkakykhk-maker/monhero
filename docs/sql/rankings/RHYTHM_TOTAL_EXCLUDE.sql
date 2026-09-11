@@ -13,9 +13,16 @@
 begin;
 
 -- ★★★ ここに除外したい曲IDを書く(複数行ぶん並べられる) ★★★
+--
+-- 2026-09-11の1件目:
+--   monster_hero_theme_candidate … 体験版のいちばん最初に出していた「Monster Hero 候補」。
+--   いまの monster_hero と同じ音源(monster_hero_theme)の、譜面だけが古いもの。
+--   曲を monster_hero へ入れ替えたあとも記録(3件・1人)だけが残っていて、
+--   合算だけが18曲になっていた。いま曲えらびには無いので、新しく始めた人は
+--   この曲ぶんを取りようがない。記録は消さず、合算からだけ外す。
 create temporary table rhythm_exclude_target on commit drop as
 select unnest(array[
-  'ここに曲IDを書く'
+  'monster_hero_theme_candidate'
 ]::text[]) as song_id;
 
 -- 書き間違いで存在しない曲IDを入れても気づけるよう、記録があるかを確かめる。
