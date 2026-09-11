@@ -179,11 +179,18 @@ const QuickStepScreen = ({ onDone, accent = '#2dd4bf', label = 'タップして�
   const doneRef = useRef(false);
   const finish = () => { if (doneRef.current) return; doneRef.current = true; onDone(); };
   return (
+    // ★背の低い端末で中身がはみ出したときに縦スクロールできるようにしてある。
+    //   外側に overflow-y-auto を置き、中央寄せは内側の min-h-full の箱でやるのが要点。
+    //   justify-center をスクロールする箱に直接付けると、はみ出したときに上側が切れて
+    //   「タップして次へ」の前の文が読めなくなる(2026-09-11・layout-consistency-check)。
+    //   中身が収まるときの見た目は今までとまったく同じ。
     <div onClick={finish} role="button" tabIndex={0} aria-label={label}
-         className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center"
+         className="absolute inset-0 overflow-y-auto mh-scroll"
          style={{ position:'absolute', inset:0, backgroundColor:'#020617', zIndex:30000 }}>
-      <div className="w-full max-w-sm flex flex-col items-center">{children}</div>
-      <div className="mt-5 text-[11px] font-black tracking-widest animate-pulse" style={{ color:accent }}>{label}</div>
+      <div className="min-h-full flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-full max-w-sm flex flex-col items-center">{children}</div>
+        <div className="mt-5 text-[11px] font-black tracking-widest animate-pulse" style={{ color:accent }}>{label}</div>
+      </div>
     </div>
   );
 };
