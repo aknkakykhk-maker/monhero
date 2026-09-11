@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a7d08ad22d8bb903
+// source-sha256: fc7de21949654f9e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a29beea54fadbac7
+// generated-sha256: 106e4c6beff40a73
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 22:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 22:44"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -20946,17 +20946,25 @@ const RhythmTapTest = ({
     abilityRevisionRef = useRef(0),
     abilityBadgeRef = useRef(null);
   const emptyCounts = () => Object.fromEntries(RHYTHM_JUDGMENT_IDS.map(id => [id, 0]));
-  const makeRuntimeNotes = () => chart.notes.map((note, index) => ({
-    ...note,
-    index,
-    done: false,
-    activePointerId: null,
-    holdJudgment: null,
-    holdDeltaMs: 0,
-    ...(note.type === 'SLIDE' ? {
-      _rhythmSlideRenderPoints: rhythmSlidePoints(note)
-    } : {})
-  }));
+  // HOLD/SLIDEの追従を難易度ごとにやさしくする値を、演奏を始めるときにノーツへ焼き込む。
+  // 譜面データ(data/rhythm-mode.js)は触らないので、保存データにもランキングにも影響しない。
+  // 判定の関数は note からこの2つを読む(rhythmSlideTrackingTolerance / evaluatePosition)。
+  const makeRuntimeNotes = () => {
+    const tracking = rhythmSlideTrackingFor(difficulty.id);
+    return chart.notes.map((note, index) => ({
+      ...note,
+      index,
+      done: false,
+      activePointerId: null,
+      holdJudgment: null,
+      holdDeltaMs: 0,
+      _rhythmSlideToleranceBonusLanes: tracking.toleranceBonusLanes,
+      _rhythmTrackingGraceMs: tracking.graceMs,
+      ...(note.type === 'SLIDE' ? {
+        _rhythmSlideRenderPoints: rhythmSlidePoints(note)
+      } : {})
+    }));
+  };
   const initialView = () => ({
     status: 'loading',
     score: 0,
@@ -25277,22 +25285,30 @@ function RhythmRankingScreen({
     id: 'event',
     label: 'イベント'
   }] : [])];
+  // ★タブも部門も、押すたびに取り直す(2026-09-11・ユーザー指摘「総合だけ反映が遅い」)。
+  //   「初めて開いたときだけ」にしていたため、一度見た部門は古い順位のまま残っていた。
+  //   総合は"イベントタブを開いた瞬間"に読むので、いちばん最初に取った内容が
+  //   そのまま貼り付き、遊んで戻ってきても更新されなかった。
+  //   曲別はあとから初めて開くことが多く、そのときに取るので新しく見えていた。
+  //   ★読み直しているあいだも前の順位は消さない(loadRhythmEventRanking 側)。
+  //     取れたら差し替わるので、画面が一瞬空になることはない。
   const openTab = tab => {
     setRhythmRankingTab(tab);
-    // 初めて開いたときだけ取りにいく。タブを往復するたびに通信しない
-    if (tab === 'total' && total.status === 'idle') loadRhythmTotalRanking && loadRhythmTotalRanking();
+    if (tab === 'total') loadRhythmTotalRanking && loadRhythmTotalRanking();
     const kind = tab === 'weekly' ? 'weekly' : tab === 'event' ? 'limited' : null;
-    if (kind && (!boards[kind] || boards[kind].status === 'idle')) loadRhythmEventRanking && loadRhythmEventRanking(kind, RHYTHM_EVENT_TOTAL_DIVISION);
+    if (kind) {
+      // その種別でいま見ている部門をそのまま読み直す(初回は総合)
+      const want = rhythmEventDivision && rhythmEventDivision[kind] || RHYTHM_EVENT_TOTAL_DIVISION;
+      loadRhythmEventRanking && loadRhythmEventRanking(kind, want);
+    }
   };
-  // 部門も、初めて開いたときだけ取りにいく
   const openDivision = divisionId => {
     if (!boardKind) return;
     setRhythmEventDivision && setRhythmEventDivision(prev => ({
       ...prev,
       [boardKind]: divisionId
     }));
-    const board = event.boards && event.boards[divisionId];
-    if (!board || board.status === 'idle') loadRhythmEventRanking && loadRhythmEventRanking(boardKind, divisionId);
+    loadRhythmEventRanking && loadRhythmEventRanking(boardKind, divisionId);
   };
   const refresh = () => {
     if (boardTab) loadRhythmEventRanking && loadRhythmEventRanking(boardKind, eventDivisionId);else if (totalTabOpen) loadRhythmTotalRanking && loadRhythmTotalRanking();else loadRhythmRanking(song);
@@ -27189,6 +27205,9 @@ function MasuReincarnateAnimation({
   }, /*#__PURE__*/React.createElement("div", {
     className: "mh-reincarnation-light"
   }), /*#__PURE__*/React.createElement("div", {
+    className: "mh-reincarnation-rays",
+    "aria-hidden": "true"
+  }), /*#__PURE__*/React.createElement("div", {
     className: "mh-reincarnation-mon mh-reincarnate-stack"
   }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
     baseId: reincarnateAnimation.masu.baseId,
@@ -27202,6 +27221,41 @@ function MasuReincarnateAnimation({
   }), /*#__PURE__*/React.createElement(RebirthStars, {
     count: reincarnateAnimation.masu.rebirthCount,
     className: "mh-rebirth-stars-overlay"
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "mh-reincarnation-souls",
+    "aria-hidden": "true"
+  }, [-30, 16, -8, 34, -38, 6, 24, -18, 40, -12, 28, -24].map((x, i) => /*#__PURE__*/React.createElement("i", {
+    key: i,
+    style: {
+      '--i': i,
+      '--x': x
+    }
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "mh-reincarnation-converge",
+    "aria-hidden": "true"
+  }, Array.from({
+    length: 8
+  }, (_, i) => /*#__PURE__*/React.createElement("i", {
+    key: i,
+    style: {
+      '--i': i
+    }
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "mh-reincarnation-halo",
+    "aria-hidden": "true"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "mh-reincarnation-halo is-second",
+    "aria-hidden": "true"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "mh-reincarnation-flash",
+    "aria-hidden": "true"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "mh-reincarnation-title",
+    "aria-hidden": "true"
+  }, "\u8EE2\u3000\u751F"), /*#__PURE__*/React.createElement("div", {
+    className: "mh-reincarnation-mark"
+  }, /*#__PURE__*/React.createElement(ReincarnateBadge, {
+    count: normalizeMasuProgression(reincarnateAnimation.masu).reincarnateCount
   })), /*#__PURE__*/React.createElement("div", {
     className: "mh-reincarnation-copy"
   }, /*#__PURE__*/React.createElement("b", null, "\u8EE2\u751F\u5B8C\u4E86\uFF01"), /*#__PURE__*/React.createElement("span", null, "Lv.", reincarnateAnimation.fromLevel, " \u2192 Lv.", reincarnateAnimation.nextLevel), /*#__PURE__*/React.createElement("span", null, reincarnateAnimation.raisesSkill === false ? `固有技ポイント +1（所持 ${reincarnateAnimation.keptSkillPoints}）` : `${reincarnateAnimation.skillName} Lv.${reincarnateAnimation.skillLevel}へ進化`), /*#__PURE__*/React.createElement("span", null, "\u5F37\u5316\u30DD\u30A4\u30F3\u30C8 ", reincarnateAnimation.nextPoints, " \u3092\u632F\u308A\u76F4\u305B\u307E\u3059")));
@@ -36333,19 +36387,26 @@ function MonsterHeroGame() {
     };
     const wanted = divisionId || RHYTHM_EVENT_TOTAL_DIVISION;
     const stale = () => rhythmEventRankingRequestRef.current[kind] !== requestId;
-    setRhythmBoard(kind, prev => ({
-      ...prev,
-      status: prev.status === 'ready' ? 'ready' : 'loading',
-      error: null,
-      boards: {
-        ...prev.boards,
-        [wanted]: {
-          status: 'loading',
-          entries: [],
-          self: null
+    // ★すでに出ている順位は消さない。読み直しのたびに一覧が空になると、
+    //   タブや部門を押すたびに画面がちらつく(2026-09-11・押すたびに取り直す形へ変えたため)。
+    //   取れたら差し替わる。まだ一度も取れていない部門だけ「読み込み中」にする。
+    setRhythmBoard(kind, prev => {
+      const before = prev.boards && prev.boards[wanted] || null;
+      const keep = before && before.status === 'ready';
+      return {
+        ...prev,
+        status: prev.status === 'ready' ? 'ready' : 'loading',
+        error: null,
+        boards: {
+          ...prev.boards,
+          [wanted]: keep ? before : {
+            status: 'loading',
+            entries: [],
+            self: null
+          }
         }
-      }
-    }));
+      };
+    });
     try {
       const breederId = await ensureBreederId();
       const selfKeys = rhythmTotalRankingSelfKeys(breederId, breederName);
@@ -52429,8 +52490,13 @@ function MonsterHeroGame() {
         reincarnateCount: count,
         colors: []
       });
-      const playPreview = () => {
-        const masu = previewMasu(3);
+      // 魂格オーラは魂格を持つ個体にしか出ない。演出そのものは魂格0でも成立していないといけないので、
+      // 「魂格なし」と「魂格あり」の両方をここから再生できるようにしてある
+      const playPreview = (soulRankStage = 0) => {
+        const masu = {
+          ...previewMasu(3),
+          soulRankStage
+        };
         setReincarnateAnimation({
           masu,
           base,
@@ -52489,10 +52555,21 @@ function MonsterHeroGame() {
         })), /*#__PURE__*/React.createElement("b", {
           className: "mt-3 block text-[11px] text-white"
         }, count === 0 ? '未転生' : count === 1 ? '1回：青画像' : count === 2 ? '2回：黄画像' : '3回：赤画像'));
-      }))), /*#__PURE__*/React.createElement("button", {
-        onClick: playPreview,
-        className: "mt-3 shrink-0 min-h-[52px] rounded-2xl border-2 border-violet-300 bg-gradient-to-r from-violet-700 to-blue-600 text-sm font-black text-white active:scale-95"
-      }, "\u8EE2\u751F\u6F14\u51FA\u3092\u518D\u751F"));
+      }))), /*#__PURE__*/React.createElement("div", {
+        className: "mt-3 shrink-0 grid grid-cols-2 gap-2"
+      }, /*#__PURE__*/React.createElement("button", {
+        "data-reincarnate-preview": "plain",
+        onClick: () => playPreview(0),
+        className: "min-h-[52px] rounded-2xl border-2 border-violet-300 bg-gradient-to-r from-violet-700 to-blue-600 text-[12px] font-black text-white active:scale-95"
+      }, "\u8EE2\u751F\u6F14\u51FA\u3092\u518D\u751F", /*#__PURE__*/React.createElement("small", {
+        className: "block text-[8px] font-black text-violet-200"
+      }, "\u9B42\u683C\u306A\u3057")), /*#__PURE__*/React.createElement("button", {
+        "data-reincarnate-preview": "soul",
+        onClick: () => playPreview(4),
+        className: "min-h-[52px] rounded-2xl border-2 border-rose-300 bg-gradient-to-r from-rose-700 to-amber-600 text-[12px] font-black text-white active:scale-95"
+      }, "\u8EE2\u751F\u6F14\u51FA\u3092\u518D\u751F", /*#__PURE__*/React.createElement("small", {
+        className: "block text-[8px] font-black text-rose-100"
+      }, "\u9B42\u683C\u2163"))));
     })(), gameState === 'RPG_DEBUG_SETUP' && (() => {
       const monsters = rpgMonsterList();
       const renderCount = (value, max, onPick) => /*#__PURE__*/React.createElement("div", {
@@ -60403,7 +60480,56 @@ const createAnimationStyle = () => {
     @media(prefers-reduced-motion:reduce){.mh-transcend-animation *{animation-duration:.01ms!important;animation-iteration-count:1!important}.mh-transcend-copy,.mh-transcend-mark,.mh-transcend-title{opacity:1;transform:none}.mh-transcend-flash,.mh-transcend-shock,.mh-transcend-rays,.mh-transcend-converge{display:none}}
     .mh-rebirth-stars-overlay,.mh-home-masumon-stars{z-index:4}.mh-home-masumon-bob>div:first-child,.mh-reincarnation-mon>div:first-child{position:relative;z-index:1}
 
-    .mh-reincarnation-animation{position:fixed;inset:0;z-index:51000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at 50% 48%,#172554 0,#0f172a 34%,#020617 70%);pointer-events:auto;touch-action:none}.mh-reincarnation-light{position:absolute;inset:0;z-index:0;background:radial-gradient(circle at 50% 48%,#fff 0,#fff8 24%,transparent 62%);opacity:0;pointer-events:none;animation:mhReincarnationLight 4s ease-out forwards}.mh-reincarnation-mon{position:relative;z-index:1;width:140px;height:140px;animation:mhReincarnationMon 4s ease-out forwards}.mh-reincarnate-aura.is-ceremony{inset:-48%;opacity:0;animation:mhReincarnationAura 4s cubic-bezier(.2,.75,.25,1) forwards}.mh-reincarnate-aura.is-ceremony .is-main{animation-duration:1.45s}.mh-reincarnate-aura.is-ceremony .is-back{animation-duration:1.8s}.mh-reincarnate-aura.is-ceremony .is-foot{animation-duration:1.1s}.mh-reincarnate-aura.is-ceremony img{filter:brightness(1.1) drop-shadow(0 0 8px #fff8)}.mh-reincarnation-copy{position:absolute;bottom:calc(8% + env(safe-area-inset-bottom));z-index:4;display:flex;flex-direction:column;align-items:center;color:#e0f2fe;font-size:11px;font-weight:900;animation:mhReincarnationCopy 4s ease-out forwards}.mh-reincarnation-copy b{font-size:25px;color:#fff;text-shadow:0 0 12px #818cf8}.mh-reincarnation-copy span{margin-top:2px}@keyframes mhReincarnationLight{0%,43%{opacity:0}48%{opacity:.36}56%,100%{opacity:0}}@keyframes mhReincarnationMon{0%{opacity:1;transform:translateY(8px) scale(.96)}18%{transform:none}42%{transform:scale(1.02)}55%,100%{opacity:1;transform:none}}@keyframes mhReincarnationAura{0%,16%{opacity:0;transform:scale(.88)}30%{opacity:.86;transform:scale(1)}47%{opacity:1;transform:scale(1.13);filter:brightness(1.45)}64%{opacity:.9;transform:scale(1);filter:brightness(1)}100%{opacity:1;transform:scale(1);filter:brightness(1)}}@keyframes mhReincarnationCopy{0%,55%{opacity:0;transform:translateY(12px)}68%,88%{opacity:1;transform:none}100%{opacity:0}}@media(max-height:620px){.mh-reincarnation-copy{bottom:calc(4% + env(safe-area-inset-bottom))}}@media(prefers-reduced-motion:reduce){.mh-reincarnate-flame,.mh-reincarnate-sparks,.mh-reincarnate-sparks::before,.mh-reincarnate-sparks::after{animation:none}.mh-reincarnation-animation *{animation-duration:.01ms!important}}
+    /* 転生の演出。「一度ほどけて、生まれ直す」を4秒で見せる。
+       魂格オーラ(SoulRankAura)は魂格を持つ個体にしか出ないため、以前はオーラの無い個体だと
+       全面光と文字だけになり、限界突破・超越の演出と比べて明らかに地味だった
+       (2026-09-11・ユーザー指摘「転生のオーラをなくしたから転生したときの演出が地味になった」)。
+       そこで、オーラの有無に関係なく必ず出る層をCSSだけで足してある(画像は増やさない)。
+         ① 魂がほどける  … 本体から光の粒が上へ昇る
+         ② 収束          … 外から中央へ光が集まり、繭の輪が閉じる
+         ③ 閃光          … 白フラッシュ。本体がいったん白へ飛ぶ
+         ④ 生まれ直し    … 衝撃波の輪2枚・回転する放射光・本体が弾んで戻る
+         ⑤ 名乗り        … 「転　生」の大文字 →「転生 ×N」のバッジ → 結果のコピー
+       色は 藍→紫→シアン。金/桃の超越、琥珀の限界突破と取り違えないため。 */
+    .mh-reincarnation-animation{position:fixed;inset:0;z-index:51000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at 50% 48%,#172554 0,#0f172a 34%,#020617 70%);pointer-events:auto;touch-action:none}
+    /* 全面光。既存の穏やかな広がり(本体より背面)はそのまま残す */
+    .mh-reincarnation-light{position:absolute;inset:0;z-index:0;background:radial-gradient(circle at 50% 48%,#fff 0,#fff8 24%,transparent 62%);opacity:0;pointer-events:none;animation:mhReincarnationLight 4s ease-out forwards}
+    /* ④ 回転する放射光。生まれ直した瞬間に開いて、ゆっくり閉じる */
+    /* 中心は transform では決めない(回転と拭き合うため)。left/top と負のマージンで据える */
+    .mh-reincarnation-rays{position:absolute;z-index:0;left:50%;top:48%;width:180vmax;height:180vmax;margin:-90vmax 0 0 -90vmax;opacity:0;pointer-events:none;background:repeating-conic-gradient(from 0deg,#a5b4fc55 0 4deg,transparent 4deg 16deg);animation:mhReincarnationRays 4s ease-out forwards}
+    .mh-reincarnation-mon{position:relative;z-index:1;width:140px;height:140px;animation:mhReincarnationMon 4s cubic-bezier(.2,.8,.3,1) forwards}
+    /* ① ほどけた魂。本体の足元から8粒が上へ昇り続ける */
+    /* 本体より縦に長い枠にして、足元から出た光が頭の上まで抜けていくようにする */
+    .mh-reincarnation-souls{position:absolute;z-index:2;width:190px;height:300px;pointer-events:none}
+    .mh-reincarnation-souls i{position:absolute;left:50%;bottom:8%;width:7px;height:7px;margin-left:-3.5px;border-radius:50%;background:radial-gradient(circle,#fff,#bae6fd 42%,#818cf8);box-shadow:0 0 12px #a5b4fc,0 0 22px #38bdf877;opacity:0;animation:mhReincarnationSoul 2.3s ease-out infinite;animation-delay:calc(var(--i)*.13s)}
+    /* ② 収束。外周8方向から中央へ吸い込まれ、繭が閉じる */
+    .mh-reincarnation-converge{position:absolute;inset:0;z-index:2;pointer-events:none}
+    .mh-reincarnation-converge i{position:absolute;left:50%;top:48%;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;background:radial-gradient(circle,#fff,#c7d2fe 45%,#6366f1);box-shadow:0 0 14px #a5b4fc,0 0 30px #6366f199;opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-62vmin);animation:mhReincarnationConverge 1.15s cubic-bezier(.35,0,.2,1) .18s forwards}
+    /* ④ 衝撃波の輪。繭が割れて広がる */
+    .mh-reincarnation-halo{position:absolute;z-index:3;width:170px;height:170px;border-radius:50%;border:3px solid #c7d2fe;box-shadow:0 0 24px #818cf8aa,inset 0 0 22px #38bdf866;opacity:0;pointer-events:none;animation:mhReincarnationHalo 4s cubic-bezier(.15,.75,.3,1) forwards}
+    .mh-reincarnation-halo.is-second{width:230px;height:230px;border-color:#67e8f9;border-width:2px;box-shadow:0 0 22px #22d3eeaa,inset 0 0 20px #818cf866;animation-delay:.16s}
+    /* ③ 閃光 */
+    .mh-reincarnation-flash{position:absolute;inset:0;z-index:5;background:#fff;opacity:0;pointer-events:none;animation:mhReincarnationFlash 4s ease-out forwards}
+    /* ⑤ 名乗り */
+    .mh-reincarnation-title{position:absolute;z-index:6;top:calc(env(safe-area-inset-top) + 21%);font-size:clamp(36px,14vw,62px);font-weight:1000;letter-spacing:.14em;color:#f5f3ff;opacity:0;pointer-events:none;text-shadow:0 0 18px #818cf8,0 0 44px #38bdf8;animation:mhReincarnationTitle 4s ease-out forwards}
+    .mh-reincarnation-mark{position:absolute;z-index:6;top:62%;opacity:0;transform:scale(.4);pointer-events:none;animation:mhReincarnationMark 4s ease-out forwards}
+    .mh-reincarnation-mark .mh-reincarnate-badge{position:relative;left:auto;bottom:auto;transform:none;padding:7px 16px;border-width:2px;font-size:17px;box-shadow:0 2px 12px #020617,0 0 20px #818cf8}
+    .mh-reincarnate-aura.is-ceremony{inset:-48%;opacity:0;animation:mhReincarnationAura 4s cubic-bezier(.2,.75,.25,1) forwards}.mh-reincarnate-aura.is-ceremony .is-main{animation-duration:1.45s}.mh-reincarnate-aura.is-ceremony .is-back{animation-duration:1.8s}.mh-reincarnate-aura.is-ceremony .is-foot{animation-duration:1.1s}.mh-reincarnate-aura.is-ceremony img{filter:brightness(1.1) drop-shadow(0 0 8px #fff8)}
+    .mh-reincarnation-copy{position:absolute;bottom:calc(8% + env(safe-area-inset-bottom));z-index:6;display:flex;flex-direction:column;align-items:center;padding:0 14px;text-align:center;color:#e0f2fe;font-size:11px;font-weight:900;animation:mhReincarnationCopy 4s ease-out forwards}.mh-reincarnation-copy b{font-size:25px;color:#fff;text-shadow:0 0 12px #818cf8}.mh-reincarnation-copy span{margin-top:2px}
+    @keyframes mhReincarnationLight{0%,43%{opacity:0}48%{opacity:.36}56%,100%{opacity:0}}
+    /* 本体: 沈む → 白へ飛ぶ(閃光) → 小さく生まれ直して弾む → 等倍 */
+    @keyframes mhReincarnationMon{0%{opacity:1;transform:translateY(10px) scale(.96);filter:none}20%{transform:translateY(2px) scale(.99);filter:brightness(1.15)}28%{transform:translateY(0) scale(.9);filter:brightness(2.6) saturate(.25)}32%{opacity:.9;transform:scale(.62);filter:brightness(4) saturate(0)}35%{opacity:.25;transform:scale(.34);filter:brightness(5) saturate(0)}40%{opacity:1;transform:scale(.5);filter:brightness(2.2) saturate(.5)}48%{transform:scale(1.14);filter:none}54%{transform:scale(.97)}60%,100%{opacity:1;transform:none;filter:none}}
+    @keyframes mhReincarnationSoul{0%{opacity:0;transform:translate(calc(var(--x)*1px),0) scale(.45)}14%{opacity:1;transform:translate(calc(var(--x)*1.3px),-30px) scale(1)}100%{opacity:0;transform:translate(calc(var(--x)*2.4px),-215px) scale(.25)}}
+    @keyframes mhReincarnationConverge{0%{opacity:0}22%{opacity:1}88%{opacity:1;transform:rotate(calc(var(--i)*45deg)) translateY(-7vmin) scale(.7)}100%{opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(0) scale(.2)}}
+    @keyframes mhReincarnationFlash{0%,30%{opacity:0}34%{opacity:.92}46%,100%{opacity:0}}
+    @keyframes mhReincarnationHalo{0%,31%{opacity:0;transform:scale(.18)}37%{opacity:1;transform:scale(.55)}62%{opacity:.35;transform:scale(1.75)}80%,100%{opacity:0;transform:scale(2.3)}}
+    @keyframes mhReincarnationRays{0%,31%{opacity:0;transform:rotate(0) scale(.7)}40%{opacity:.8;transform:rotate(12deg) scale(1)}66%{opacity:.28;transform:rotate(30deg) scale(1.06)}100%{opacity:0;transform:rotate(44deg) scale(1.1)}}
+    @keyframes mhReincarnationTitle{0%,31%{opacity:0;transform:scale(1.85);letter-spacing:.5em}39%{opacity:1;transform:scale(1);letter-spacing:.14em}50%{opacity:1}60%,100%{opacity:0;transform:scale(.94)}}
+    @keyframes mhReincarnationMark{0%,50%{opacity:0;transform:scale(.4)}57%{opacity:1;transform:scale(1.18)}62%{transform:scale(1)}100%{opacity:1;transform:scale(1)}}
+    @keyframes mhReincarnationAura{0%,16%{opacity:0;transform:scale(.88)}30%{opacity:.86;transform:scale(1)}47%{opacity:1;transform:scale(1.13);filter:brightness(1.45)}64%{opacity:.9;transform:scale(1);filter:brightness(1)}100%{opacity:1;transform:scale(1);filter:brightness(1)}}
+    @keyframes mhReincarnationCopy{0%,55%{opacity:0;transform:translateY(12px)}64%,97%{opacity:1;transform:none}100%{opacity:0}}
+    @media(max-height:620px){.mh-reincarnation-copy{bottom:calc(4% + env(safe-area-inset-bottom))}.mh-reincarnation-mon{width:118px;height:118px}.mh-reincarnation-souls{width:160px;height:250px}.mh-reincarnation-title{top:calc(env(safe-area-inset-top) + 13%);font-size:clamp(30px,11vw,50px)}.mh-reincarnation-mark{top:64%}.mh-reincarnation-mark .mh-reincarnate-badge{padding:5px 12px;font-size:14px}}
+    @media(prefers-reduced-motion:reduce){.mh-reincarnate-flame,.mh-reincarnate-sparks,.mh-reincarnate-sparks::before,.mh-reincarnate-sparks::after{animation:none}.mh-reincarnation-animation *{animation-duration:.01ms!important}.mh-reincarnation-souls,.mh-reincarnation-converge,.mh-reincarnation-rays,.mh-reincarnation-halo,.mh-reincarnation-flash,.mh-reincarnation-title{display:none}.mh-reincarnation-copy,.mh-reincarnation-mark{opacity:1;transform:none}}
     /* 限界突破の演出。転生とは別物として、上へ突き抜ける光と、最後に増える星で見せる */
     .mh-breakthrough-animation{position:fixed;inset:0;z-index:51000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle,#f59e0b55,#020617 64%);pointer-events:auto;touch-action:none}
     .mh-breakthrough-ring{position:absolute;width:210px;height:210px;border:4px solid #fcd34d;border-radius:50%;animation:mhBreakRing 3.6s cubic-bezier(.2,.7,.3,1) forwards}

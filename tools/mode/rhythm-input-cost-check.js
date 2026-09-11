@@ -25,7 +25,9 @@ const projection=source.match(/const RHYTHM_PROJECTION_TOP_SCALE=[\s\S]*?const r
 // 2026-09-05、終端の窓(RHYTHM_RELEASE_MAX_MS)を判定表のいちばん外側から作るようにしたので、
 // 切り出す依存に判定表そのものを足す(数字を2か所に持たないための変更に合わせたもの)。
 const judgments=source.match(/const RHYTHM_JUDGMENTS = Object\.freeze\(\[[\s\S]*?const RHYTHM_INPUT_MATCH_WINDOW_MS[\s\S]*?;/)?.[0];
-const flickConsts=source.match(/const RHYTHM_FLICK_DISTANCE_PX = 24;[\s\S]*?const rhythmSlideTrackingTolerance=[\s\S]*?4;/)?.[0];
+// 2026-09-11、許容の式に難易度ぶんのボーナスが乗ったので末尾が `4;` ではなくなった。
+// 式そのものを追いかけると同じことを繰り返すので、その1行の終わり(改行)までで切る。
+const flickConsts=source.match(/const RHYTHM_FLICK_DISTANCE_PX = 24;[\s\S]*?const rhythmSlideTrackingTolerance=[^\n]*\n/)?.[0];
 const slideHelpers=source.match(/const rhythmSlidePoints=[\s\S]*?const rhythmSlideExpectedLane=[\s\S]*?\n\};/)?.[0];
 const midTracking=source.match(/const RHYTHM_MID_TRACKING_GRACE_MS=[\s\S]*?const rhythmHoldTrackedLane=[\s\S]*?\n\};/)?.[0];
 const runtime=source.match(/const RHYTHM_GESTURE_RUNTIME=\(\(\)=>\{[\s\S]*?\n\}\)\(\);/)?.[0];
