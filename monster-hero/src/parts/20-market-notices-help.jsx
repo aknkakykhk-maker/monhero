@@ -209,9 +209,21 @@ const noticeDestinationState = (destination) => NOTICE_DESTINATIONS[destination]
 const UPDATE_NOTICE_LOGIN_LIMIT = 3;
 const normalizeSeenUpdateNoticeIds = value => [...new Set((Array.isArray(value) ? value : [])
   .filter(id => typeof id === 'string' && id.trim()).map(id => id.trim()))];
-const availableUpdateNotices = ({ debug=false }={}) =>
+// ★期間で出し入れする告知(notifyFrom / notifyUntil)は、見るたびに数え直す。
+//   notice.enabled は読み込んだときの1回きりの答えなので、開きっぱなしの端末では
+//   開始時刻をまたいでも false のままになり、イベントの告知が永久に出なかった
+//   (2026-09-11・ユーザー指摘「やってる最中の人が見れてないらしい」)。
+//   期間を書いていない告知は今までどおり enabled をそのまま見る。
+const updateNoticeOpenNow = (notice, nowMs) => {
+  if (!notice) return false;
+  if (notice.notifyFrom == null && notice.notifyUntil == null) return notice.enabled === true;
+  return (typeof assistantNoticeWithinPeriod === 'function')
+    ? assistantNoticeWithinPeriod(notice, Number.isFinite(nowMs) ? nowMs : Date.now())
+    : notice.enabled === true;
+};
+const availableUpdateNotices = ({ debug=false, nowMs=null }={}) =>
   (((typeof ASSISTANT_UPDATE_NOTICES !== 'undefined' && ASSISTANT_UPDATE_NOTICES) || [])
-    .filter(notice => notice && notice.enabled === true && typeof notice.id === 'string'
+    .filter(notice => notice && updateNoticeOpenNow(notice, nowMs) && typeof notice.id === 'string'
       && !HIDDEN_UPDATE_NOTICE_IDS.has(notice.id)
       && (debug ? notice.debugOnly === true : notice.debugOnly !== true)));
 const planUpdateNoticesForLogin = (notices, seenIds) => {

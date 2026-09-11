@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 62a71a013ede5720
+// source-sha256: 7bb897b9e96b3b0e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: fc4802c7f44efcb4
+// generated-sha256: eeb3b67cba26116a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 15:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 15:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -13348,9 +13348,20 @@ const NOTICE_DESTINATIONS = {
 const noticeDestinationState = destination => NOTICE_DESTINATIONS[destination] || (typeof destination === 'string' && /^[A-Z][A-Z0-9_]*$/.test(destination) ? destination : null);
 const UPDATE_NOTICE_LOGIN_LIMIT = 3;
 const normalizeSeenUpdateNoticeIds = value => [...new Set((Array.isArray(value) ? value : []).filter(id => typeof id === 'string' && id.trim()).map(id => id.trim()))];
+// ★期間で出し入れする告知(notifyFrom / notifyUntil)は、見るたびに数え直す。
+//   notice.enabled は読み込んだときの1回きりの答えなので、開きっぱなしの端末では
+//   開始時刻をまたいでも false のままになり、イベントの告知が永久に出なかった
+//   (2026-09-11・ユーザー指摘「やってる最中の人が見れてないらしい」)。
+//   期間を書いていない告知は今までどおり enabled をそのまま見る。
+const updateNoticeOpenNow = (notice, nowMs) => {
+  if (!notice) return false;
+  if (notice.notifyFrom == null && notice.notifyUntil == null) return notice.enabled === true;
+  return typeof assistantNoticeWithinPeriod === 'function' ? assistantNoticeWithinPeriod(notice, Number.isFinite(nowMs) ? nowMs : Date.now()) : notice.enabled === true;
+};
 const availableUpdateNotices = ({
-  debug = false
-} = {}) => (typeof ASSISTANT_UPDATE_NOTICES !== 'undefined' && ASSISTANT_UPDATE_NOTICES || []).filter(notice => notice && notice.enabled === true && typeof notice.id === 'string' && !HIDDEN_UPDATE_NOTICE_IDS.has(notice.id) && (debug ? notice.debugOnly === true : notice.debugOnly !== true));
+  debug = false,
+  nowMs = null
+} = {}) => (typeof ASSISTANT_UPDATE_NOTICES !== 'undefined' && ASSISTANT_UPDATE_NOTICES || []).filter(notice => notice && updateNoticeOpenNow(notice, nowMs) && typeof notice.id === 'string' && !HIDDEN_UPDATE_NOTICE_IDS.has(notice.id) && (debug ? notice.debugOnly === true : notice.debugOnly !== true));
 const planUpdateNoticesForLogin = (notices, seenIds) => {
   const seen = normalizeSeenUpdateNoticeIds(seenIds);
   const unseen = (Array.isArray(notices) ? notices : []).filter(notice => !seen.includes(notice.id));
