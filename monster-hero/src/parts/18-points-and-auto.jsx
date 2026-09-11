@@ -151,7 +151,10 @@ const DEFAULT_AUTO_SETTINGS = Object.freeze({
   // 「1周目に自分で組んだ編成」= 周回テンプレートだけを使う。
   // ★新しい保存キーは作らず、既存の mh_auto_settings_v1 へ項目を足す形にしてある。
   //   項目の無い既存ユーザーは normalizeAutoSettings が未設定で補う
-  quickRun:{ heroRosterEntry:null, distance:null, difficulty:null },
+  // autoStart … モンヒロビートを開いたときに、この編成で∞周回を自動で始めるか
+  //   (2026-09-11・ユーザー指示「モンビーを開いたら自動でクイックに入る機能」)。
+  //   既定はOFF。既存ユーザーの端末で、ある日いきなり裏でバトルが始まらないようにする
+  quickRun:{ heroRosterEntry:null, distance:null, difficulty:null, autoStart:false },
 });
 const normalizeAutoReserveAmount = (value) => {
   const amount = Number(value);
@@ -188,6 +191,8 @@ const normalizeAutoSettings = (value, validRosterEntries = null, validDifficulty
     heroRosterEntry:quickHero && (!valid || valid.has(quickHero)) ? quickHero : null,
     distance:Number.isInteger(quickDistanceRaw) && quickDistanceRaw >= 0 && quickDistanceRaw <= 3 ? quickDistanceRaw : null,
     difficulty:quickDifficulty && (!quickDifficultyIds || quickDifficultyIds.has(quickDifficulty)) ? quickDifficulty : null,
+    // true と書いてあるときだけON。項目の無い既存ユーザー・壊れた値はOFFへ倒す
+    autoStart:rawQuick.autoStart === true,
   };
   return { strategy:AUTO_STRATEGIES.includes(source.strategy) ? source.strategy : 'random', allies, breakthroughReserve, quickRun };
 };
@@ -199,6 +204,13 @@ const autoQuickRunConfigured = (settings) => {
     && typeof quick.heroRosterEntry === 'string' && quick.heroRosterEntry.length > 0
     && Number.isInteger(quick.distance) && quick.distance >= 0 && quick.distance <= 3
     && typeof quick.difficulty === 'string' && quick.difficulty.length > 0);
+};
+// モンヒロビートを開いたときに、自動で∞周回を始めてよいか。
+// ★3つとも決まっていることが前提。決まっていなければ、スイッチがONでも始めない
+//   (始めようがないため。設定画面のスイッチも、そろうまでは押せないようにしてある)
+const autoQuickRunAutoStartEnabled = (settings) => {
+  if (!autoQuickRunConfigured(settings)) return false;
+  return settings.quickRun.autoStart === true;
 };
 
 // AUTOの1ターンぶんの選択だけを組み立てる。実際の選択stateや戦闘進行には触れず、

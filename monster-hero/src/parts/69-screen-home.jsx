@@ -17,6 +17,12 @@ function HomeScreen({
   onOpenBattle, onOpenManagement, onOpenMarket, onOpenProfile, onOpenRhythm, onOpenSettings,
   onOpenTemple, openChangelog, openGiftBox, openMissions, resolveIconUrl, spotClass,
 }) {
+  // モンヒロビートのイベントを開催しているか。描くたびに数え直す(上の★のとおり)
+  const homeRhythmEventOpen=(()=>{
+    const released=(typeof RELEASE_FLAGS!=='undefined'&&RELEASE_FLAGS&&RELEASE_FLAGS.rhythmWeeklyRanking===true);
+    if(!released||typeof rhythmLimitedEventAt!=='function')return false;
+    return !!rhythmLimitedEventAt(Date.now());
+  })();
   return (
 
       <main className="mh-home-scene" aria-label="村の広場">
@@ -42,7 +48,14 @@ function HomeScreen({
               2026-09-04に正式名称を「モンスタービート」から「モンヒロビート」へ変更)。
               公開フラグが立つまでは修行と同じように「準備中」の案内だけを出し、本編からは遊べない。
               中身はデバッグ画面の「音ゲー体験版」から確認できる */}
-          <button className="mh-home-facility rhythm" onClick={onOpenRhythm} aria-label={RHYTHM_MODE_PUBLIC_RELEASE?"モンヒロビート":"モンヒロビート（準備中）"}><span>🎵 モンヒロビート{!RHYTHM_MODE_PUBLIC_RELEASE&&<small>準備中</small>}</span></button>
+          {/* ★イベント開催中は、その遊びのボタンに札を出す(2026-09-11・ユーザー指示
+              「イベント開催中は対応してるコンテンツボタンのとこにイベント開催中みたいなのがほしい」)。
+              HOMEを開いた時点で「いま何かやっている」と分かるようにする。
+              ★期間の判定は描くたびに行う(読み込み時に1回だけ決めると、開きっぱなしの端末で
+                古いままになる・CLAUDE.md ⑥-4)。開催していなければ何も出ない。
+              ★いまのイベントはモンヒロビートの曲だけを対象にするので、札もここだけ。
+                ほかの遊びを対象にするイベントを作るときは、そのボタンにも同じ em を足す */}
+          <button className="mh-home-facility rhythm" onClick={onOpenRhythm} aria-label={RHYTHM_MODE_PUBLIC_RELEASE?"モンヒロビート":"モンヒロビート（準備中）"}><span>🎵 モンヒロビート{!RHYTHM_MODE_PUBLIC_RELEASE&&<small>準備中</small>}{homeRhythmEventOpen&&<em data-home-event-badge>🏆 イベント開催中</em>}</span></button>
           <button className={`mh-home-facility battle${spotClass('battle')}`} onClick={onOpenBattle} aria-label="バトル"><span><Sword size={25}/>バトル</span></button>
         </nav>
         <button onClick={openMissions} className={`mh-home-mission${spotClass('reward')}`}><List size={16}/>ミッション
