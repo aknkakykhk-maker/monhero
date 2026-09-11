@@ -105,6 +105,20 @@ const assistantIdOrDefault = (id) => (ASSISTANTS.some(a => a.id === id) ? id : D
 // 以前あった 'feature' は「それ以外ぜんぶ」の受け皿になって告知が増えすぎたので廃止した。
 // ここに無い種別は無視される(告知にならない)ので、書き間違えても勝手には出ない。
 const ASSISTANT_UPDATE_NOTICE_TYPES = new Set(['market', 'mode', 'content']);
+// 期間を決めて出す告知(イベントなど)のための時刻。書かれていなければ「いつでも」
+const assistantNoticeTimeMs = value => {
+  const t = Date.parse(String(value || ''));
+  return Number.isFinite(t) ? t : null;
+};
+// いま出してよい告知かどうか。notifyFrom / notifyUntil を書いたものだけ期間で絞る。
+// ★これが無いと、公開した瞬間にみゅあが「開催します」と言ってしまう(開始より前なのに)。
+const assistantNoticeWithinPeriod = (meta, nowMs = Date.now()) => {
+  const from = assistantNoticeTimeMs(meta && meta.notifyFrom);
+  const until = assistantNoticeTimeMs(meta && meta.notifyUntil);
+  if (from !== null && nowMs < from) return false;
+  if (until !== null && nowMs >= until) return false;
+  return true;
+};
 const assistantUpdateNoticeFromChangelog = entry => {
   const meta = entry && entry.assistantNotice;
   if (!meta || !ASSISTANT_UPDATE_NOTICE_TYPES.has(meta.type) || typeof meta.id !== 'string' || !meta.id.trim()) return null;
@@ -112,10 +126,65 @@ const assistantUpdateNoticeFromChangelog = entry => {
   if (!entry.title || !items.length) return null;
   const destination = meta.type === 'market' ? 'market' : meta.type === 'mode' ? 'battle' : meta.destination;
   return {
-    id: meta.id.trim(), enabled: true, title: entry.title, expression: meta.expression || 'excited',
+    id: meta.id.trim(), enabled: assistantNoticeWithinPeriod(meta), title: entry.title,
+    expression: meta.expression || 'excited',
+    // 告知画像。更新履歴の項目に書いた image をそのまま持ってくる(2か所に書かない)
+    image: typeof entry.image === 'string' && entry.image ? entry.image : null,
     pages: items.slice(), destination,
+    // 助手ごとのセリフ(あれば)。無ければ items をそのまま読む
+    scripts: ASSISTANT_UPDATE_NOTICE_SCRIPTS[meta.id.trim()] || null,
     buttonLabel: meta.buttonLabel || (meta.type === 'market' ? 'マーケットを見る' : meta.type === 'mode' ? 'バトルへ行く' : undefined),
   };
+};
+// ---------- 告知を助手の言葉で話す ----------
+// 2026-09-11・ユーザー指示「説明をみゅあの…そのほうがいい。ただ助手を変えてる場合も
+// あるからみゅあじゃなくて助手にして」。
+//
+// 更新履歴(data/changelog.js)の items は「あとから読み返す記録」なので事務的な文のまま。
+// 起動したときに出る告知は、**選んでいる助手が自分の口調で話す**。
+// ここへ書かなかった告知は、今までどおり items をそのまま読む(既存の告知は何も変わらない)。
+//
+//   ASSISTANT_UPDATE_NOTICE_SCRIPTS[告知id][助手id] = [{ e:表情, t:セリフ }, …]
+//
+// ★呼び方の決めごと: みゅあ・ももすけは「モンビー」、ききは「モンヒロビート」
+//   (2026-09-11・ユーザー指示)。
+const ASSISTANT_UPDATE_NOTICE_SCRIPTS = {
+  update_notice_rhythm_weekend_cup_v1: {
+    mua: [
+      { e:'excited',  t:'{name}、モンビーで大会が始まったよ！ その名も「週末ゲリラ杯」♪' },
+      { e:'happy',    t:'対象は3曲。「Monster Hero」「風がそよぐ場所」「Close To Your Heart」だよ。' },
+      { e:'normal',   t:'この期間に出したスコアだけで競うの。今までの記録は持ち込めないから、いま始めても間に合うよ♪' },
+      { e:'normal',   t:'順位は曲ごとと、3曲ぜんぶの合計の2種類。1曲だけでも合計に載るから気楽にね。' },
+      { e:'wink',     t:'ごほうびは順位のぶんと、3曲ぜんぶ遊んだらもらえるぶん。どっちもあるよ♡' },
+      { e:'excited',  t:'終わるのは9月14日(月)の朝5時！ 全国ランキングの「イベント」から行けるからね♪' },
+    ],
+    kiki: [
+      { e:'happy',    t:'{name}、モンヒロビートで大会が始まりまつ。「週末ゲリラ杯」でつ。' },
+      { e:'normal',   t:'対象は3曲。「Monster Hero」「風がそよぐ場所」「Close To Your Heart」でつ。' },
+      { e:'normal',   t:'この期間に出したスコアだけで競いまつ。これまでの記録は持ち込めませんので、今から始めても間に合いまつ。' },
+      { e:'normal',   t:'順位は曲ごとと、3曲の合計の2種類でつ。1曲だけでも合計に載りまつよ。' },
+      { e:'happy',    t:'ごほうびは順位のぶんと、3曲すべて遊んだ方へのぶんがありまつ♪' },
+      { e:'wink',     t:'9月14日(月)の5時まででつ。全国ランキングの「イベント」からどうぞ。' },
+    ],
+    momosuke: [
+      { e:'excited',  t:'{name}、モンビーで大会だよ！ 「週末ゲリラ杯」、ももが持ってきたの♡' },
+      { e:'wink',     t:'対象は3曲ね。「Monster Hero」「風がそよぐ場所」「Close To Your Heart」。' },
+      { e:'happy',    t:'この期間に出した点だけで勝負だから。過去の記録？ 関係ないない♪' },
+      { e:'normal',   t:'順位は曲ごとと、3曲の合計。1曲でも合計に載るよ。' },
+      { e:'wink',     t:'ごほうびは順位のぶんと、3曲ぜんぶ遊んだぶん。欲張っていいからね♡' },
+      { e:'excited',  t:'締め切りは9月14日(月)の5時！ 「イベント」から来てよ、待ってるから♪' },
+    ],
+  },
+};
+// 告知の1ページ。文字列でも { e, t } でも書けるようにして、既存の告知(文字列)をそのまま通す
+const assistantNoticePageText = page => (page && typeof page === 'object') ? String(page.t || '') : String(page || '');
+const assistantNoticePageExpression = (page, fallback) => (page && typeof page === 'object' && page.e) ? page.e : fallback;
+// その助手のセリフがあればそれを、無ければ更新履歴の本文(items)をそのまま使う
+const assistantNoticePagesFor = (notice, assistantId) => {
+  const scripts = notice && notice.scripts;
+  const lines = scripts && scripts[assistantId];
+  if (Array.isArray(lines) && lines.length) return lines;
+  return (notice && Array.isArray(notice.pages) && notice.pages.length) ? notice.pages : ['新しいアップデートがあるよ♪'];
 };
 const ASSISTANT_CHANGELOG_UPDATE_NOTICES =
   ((typeof CHANGELOG !== 'undefined' && Array.isArray(CHANGELOG)) ? CHANGELOG : [])
@@ -520,13 +589,6 @@ const ASSISTANT_SCENES = {
   },
   rhythmHelp: {
     help: 'rhythm/rhythm-mode',
-    lines: [],
-  },
-  // 全国ランキングの「総合」タブ(全曲合算・2026-09-11)。
-  // ヘルプと更新履歴は探しに行った人しか読まないので、画面のなかでも伝える(CLAUDE.md ⑤)。
-  // 本文は下の addAssistantLinePack から合流する。
-  rhythmTotalRanking: {
-    help: 'rhythm/rhythm-ranking',
     lines: [],
   },
   // 週間ランキング(2026-09-11)。ランキング画面の「イベント」タブと、
@@ -1183,19 +1245,12 @@ addAssistantLinePack({
       { e:'normal', t:'EXPERTとMASTERは、1つ下の難易度をクリアすると開くよ。' },
       { e:'happy', t:'横画面にすると、曲の一覧と選んだ曲を並べて見られるよ♪' },
     ],
-    rhythmTotalRanking: [
-      { e:'excited', t:'「総合」は、曲ごとのいちばん良いスコアを全曲ぶん足した合計で競うよ♪' },
-      { e:'happy', t:'難易度は問わないの。得意な難易度で1曲ずつ埋めていけば、それだけで伸びるよ。' },
-      { e:'normal', t:'まだ遊んでいない曲があると、下にボタンが出るよ。そこから曲えらびへ戻れるの。' },
-      { e:'normal', t:'新しい曲が増えたら、その曲ぶんがまるごと伸びしろになるよ。' },
-      { e:'wink', t:'1曲でも遊べば載るからね。{name}、まずは1曲だけでもどうかな？' },
-    ],
     rhythmWeeklyEvent: [
-      { e:'excited', t:'今週の対象曲だよ♪ この3曲は、今週のあいだに出したスコアだけで勝負なの。' },
-      { e:'normal', t:'区切りは毎週月曜の5時。切り替わると対象曲も新しくなるよ。' },
-      { e:'happy', t:'「総合」は対象曲のベストを足した合計だよ。1曲だけでも載るから大丈夫♪' },
-      { e:'normal', t:'先週の記録は今週には載らないけど、自己ベストと全曲の「総合」には残るからね。' },
-      { e:'wink', t:'{name}、今週の3曲、いっしょに埋めちゃおう？' },
+      { e:'excited', t:'期間限定イベント開催中だよ！ この期間に出したスコアだけで勝負なの♪' },
+      { e:'happy', t:'部門ごとに報酬があるよ。何位で何がもらえるかは、部門を開くと出るからね。' },
+      { e:'normal', t:'報酬はイベントが終わったあとに受け取れるよ。あわてなくて大丈夫♪' },
+      { e:'normal', t:'イベントは「イベント」タブだよ。いつもの週間ランキングも別のタブでそのまま動いてるからね♪' },
+      { e:'wink', t:'{name}、終わるまでに1曲でも置いていこ？ 総合にも載るからね♪' },
     ],
     rhythmMonsters: [
       { e:'excited', t:'ここで決めた子は、曲の途中で金色のノーツになって出てくるよ♪' },
@@ -1310,6 +1365,8 @@ addAssistantLinePack({
     ],
   },
   conditions: {
+    // 期間限定イベントのあいだ。週間の「毎週月曜5:00」の話をそのまま出すと、
+    // 週間が動いていると誤解される(画面側から condition='limited' で切り替える)
     speciesChallenge: {
       species: [
         { e:'excited', t:'まずはどの種族で挑むか決めよ！ 育てている子がいる種族がおすすめ♪' },
@@ -1823,19 +1880,12 @@ addAssistantLinePack({
       { e:'normal',  t:'EXPERTとMASTERは、1つ下の難易度をクリアすると開きまつ。' },
       { e:'happy',   t:'横画面にすると、一覧と選んだ曲を並べて見られまつ♪' },
     ],
-    rhythmTotalRanking: [
-      { e:'normal',  t:'「総合」は、曲ごとのいちばん良いスコアを全曲ぶん足した合計で競いまつ。' },
-      { e:'happy',   t:'難易度は問いません。得意な難易度で1曲ずつ埋めるだけでも伸びまつ♪' },
-      { e:'normal',  t:'まだ遊んでいない曲があると、下にボタンが出まつ。そこから曲えらびへ戻れまつ。' },
-      { e:'normal',  t:'新しい曲が増えたら、その曲ぶんがまるごと伸びしろになりまつ。' },
-      { e:'happy',   t:'1曲でも遊べば載りまつよ。{name}、まずは1曲いかがでつか？' },
-    ],
     rhythmWeeklyEvent: [
-      { e:'normal',  t:'今週の対象曲でつ。今週のあいだに出したスコアだけで競いまつ。' },
-      { e:'normal',  t:'区切りは毎週月曜の5時。切り替わると対象曲も変わりまつ。' },
-      { e:'happy',   t:'「総合」は対象曲のベストの合計でつ。1曲だけでも載りまつよ♪' },
-      { e:'normal',  t:'先週の記録は今週には載りませんが、自己ベストと全曲の「総合」には残りまつ。' },
-      { e:'happy',   t:'{name}、今週の3曲、ごいっしょしまつか？' },
+      { e:'normal',  t:'期間限定イベントを開催中でつ。この期間に出したスコアだけで競いまつ。' },
+      { e:'happy',   t:'部門ごとに報酬がありまつ。何位で何がもらえるかは、部門を開くと出まつよ♪' },
+      { e:'normal',  t:'報酬はイベントが終わったあとに受け取れまつ。あわてなくて大丈夫でつ。' },
+      { e:'normal',  t:'イベントは「イベント」タブでつ。いつもの週間ランキングも別のタブで動いてまつ。' },
+      { e:'happy',   t:'{name}、終わるまでに1曲いかがでつか？ 総合にも載りまつよ♪' },
     ],
     rhythmMonsters: [
       { e:'normal',  t:'ここで決めた子は、曲の途中で金色のノーツになって出てきまつ。' },
@@ -2292,6 +2342,7 @@ addAssistantLinePack({
   },
   // 条件つきのセリフ(初回・記録更新・受け取り可能など)
   conditions: {
+    // 期間限定イベントのあいだ(画面側から condition='limited' で切り替える)
     // ---- 種族チャレンジの選択画面(種族→勇者→供モン→確認) ----
     speciesChallenge: {
       species: [
@@ -2419,19 +2470,12 @@ addAssistantLinePack({
       { e:'normal',   t:'EXPERTとMASTERは、ひとつ下をクリアすれば開くよ。' },
       { e:'happy',    t:'横画面にすると一覧と選んだ曲が並ぶよ。見やすいほうでどうぞ♪' },
     ],
-    rhythmTotalRanking: [
-      { e:'excited',  t:'「総合」は全曲の合計勝負だよ。1曲ずつ埋めれば、それだけで上がってく♪' },
-      { e:'normal',   t:'難易度は関係ないの。得意なとこで点を取ればいいんだから。' },
-      { e:'happy',    t:'まだの曲があると下にボタン出るよ。押せばそのまま曲えらびへ戻れる。' },
-      { e:'normal',   t:'新しい曲が来たら、そのぶんまるごと伸びしろね。' },
-      { e:'wink',     t:'1曲でも載るからさ。{name}、とりあえず1曲やってきなよ♡' },
-    ],
     rhythmWeeklyEvent: [
-      { e:'excited',  t:'今週の曲、これね。今週出した点だけで勝負だから、急がないと♪' },
-      { e:'normal',   t:'月曜の5時で切り替わるよ。そこで曲も総取っ替え。' },
-      { e:'happy',    t:'「総合」は対象曲のベストの合計。1曲でも載るから、まあ気楽にね。' },
-      { e:'normal',   t:'先週の点は今週には乗らないよ。自己ベストと全曲の「総合」には残るけど。' },
-      { e:'wink',     t:'{name}、3曲そろえてきなよ。……待っててあげる♡' },
+      { e:'excited',  t:'期間限定だよ、これ。この期間に出した点だけで勝負ね♪' },
+      { e:'normal',   t:'部門ごとに報酬あるよ。何位で何もらえるかは、部門開けば出てる。' },
+      { e:'happy',    t:'報酬は終わったあとね。いま慌てなくていいよ。' },
+      { e:'normal',   t:'イベントは「イベント」タブね。週間はいつもどおり別のタブで動いてるよ。' },
+      { e:'wink',     t:'{name}、終わる前に1曲くらい置いていきなよ♡' },
     ],
     rhythmMonsters: [
       { e:'excited',  t:'ここで決めた子、曲の途中で金色になって飛んでくるよ♪' },
@@ -2848,6 +2892,7 @@ addAssistantLinePack({
     ],
   },
   conditions: {
+    // 期間限定イベントのあいだ(画面側から condition='limited' で切り替える)
     speciesChallenge: {
       species: [
         { e:'excited',  t:'種族をえらんで！ この子たちだけで戦うんだからね♪' },
@@ -3276,6 +3321,69 @@ const ASSISTANT_MOMOSUKE_INTRO = [
 // この会話の中だけで使う、3人がお互いを呼ぶ名前。画面の見出しにも使う
 const ASSISTANT_MOMOSUKE_INTRO_CALLS = { mua: 'もも', kiki: 'ももさん', momosuke: 'みゅあねぇ／ききちゃん' };
 
+// ---------- モンヒロビート 週末ゲリラ杯(2026-09-11) ----------
+// 2026-09-11・ユーザー指示「みゅあの前にイベント発生で、助手たちの会話ストーリーも入れてほしい。
+// そのあとに助手からの説明みたいな」。
+//
+// 流れ: この会話 → みゅあ(設定している助手)の告知でルールを説明 → 遊びに行く。
+// 会話では「何が始まったか」の空気だけを作り、細かいルール(報酬の個数・順位)は
+// 告知とヘルプに任せる。ここへ数字を書くと、次のイベントで必ず古くなる。
+//
+// ★曲は「風がそよぐ場所」(ユーザー指示)。EVENT_BGM_SCENES 経由で鳴らす。
+// ★正式名称は「モンヒロビート」。略称「モンビー」を使うのは、ももすけが愛称として
+//   呼ぶところだけ(CLAUDE.md の名前の決めごと)。
+const ASSISTANT_MONBEAT_CUP_EVENT = [
+  // 導入: ももすけが騒いでいる
+  { who:'momosuke', e:'excited',  t:'ねぇねぇ、聞いて聞いて〜！ 大ニュース♪' },
+  { who:'mua',      e:'surprise', t:'わ、びっくりした。どうしたの、もも？' },
+  { who:'kiki',     e:'normal',   t:'そんなに慌てて、何かありまつか？' },
+  { who:'momosuke', e:'wink',     t:'モンビーでね、はじめての大会やることになったの♡' },
+  // ★ききだけは正式名称で言い直す。これが「モンビー＝モンヒロビート」の説明にもなっている
+  { who:'kiki',     e:'normal',   t:'モンビー……モンヒロビートのことでつね。' },
+  { who:'momosuke', e:'happy',    t:'そーそー。ききちゃん、いちいち言い直すよね〜♪' },
+  { who:'kiki',     e:'wink',     t:'正しい名前で呼んであげたいだけでつ。' },
+  // 大会の名前
+  { who:'momosuke', e:'excited',  t:'その名も「週末ゲリラ杯」！ ……ふふ、ゲリラだから急なのは許してね♪' },
+  { who:'kiki',     e:'surprise', t:'ゲリラ……。準備の時間はどこへ行ったんでつか。' },
+  { who:'mua',      e:'happy',    t:'まあまあ。急だからこそ、みんな横一線ってことでしょ？' },
+  { who:'momosuke', e:'wink',     t:'みゅあねぇはいつも前向きだね〜。そういうとこ好き♡' },
+  // ルール: 対象曲と期間
+  { who:'momosuke', e:'happy',    t:'対象は3曲だけ。しかも、その期間に出したスコアだけで競うの。' },
+  { who:'mua',      e:'surprise', t:'えっ、今までの記録は持ち込めないってこと？' },
+  { who:'momosuke', e:'excited',  t:'そういうこと！ だから今からでも間に合うんだよ〜♪' },
+  { who:'mua',      e:'excited',  t:'それいいね！ モンビー始めたばっかりの子でも、ちゃんと戦えるってことでしょ？' },
+  // ★2回目の言い直し。ききだけが正式名称で受け直す
+  { who:'kiki',     e:'normal',   t:'……モンヒロビート、でつね。はい、始めたばかりの方にも出番がありまつ。' },
+  { who:'mua',      e:'troubled', t:'あっ、ごめん。あたしもつい短いほうで呼んじゃう。' },
+  { who:'momosuke', e:'happy',    t:'ききちゃん、そこ絶対ゆずらないよね〜♪' },
+  // 部門
+  { who:'mua',      e:'normal',   t:'3曲って、1曲ずつ順位が出るの？' },
+  { who:'momosuke', e:'wink',     t:'曲ごとの順位と、3曲ぜんぶの合計の順位。どっちもあるよ♡' },
+  { who:'kiki',     e:'happy',    t:'1曲だけでも合計に載るのでつね。それなら気楽でつ。' },
+  // 報酬
+  { who:'mua',      e:'normal',   t:'……で、ごほうびは？' },
+  { who:'momosuke', e:'excited',  t:'みゅあねぇ、そこ食いつくの早くない？' },
+  { who:'mua',      e:'troubled', t:'だ、だって大事じゃない！' },
+  { who:'momosuke', e:'happy',    t:'順位のごほうびと、遊んだだけでもらえるぶん。どっちもあるよ。' },
+  { who:'kiki',     e:'surprise', t:'入賞しなくてももらえるんでつか。' },
+  { who:'momosuke', e:'wink',     t:'3曲ぜんぶ遊べばね♪ 中身は……あとで出るから見てて♡' },
+  { who:'mua',      e:'excited',  t:'えっ、じゃあ遊ばないと損じゃない！' },
+  // ももの自慢 → 3人のやりとり
+  { who:'momosuke', e:'happy',    t:'ちなみに、ももはもう3曲ぜんぶ叩いてきたけど？' },
+  { who:'kiki',     e:'surprise', t:'……告知より先に遊んでたんでつか。' },
+  { who:'mua',      e:'troubled', t:'もも、それはさすがにズルくない？' },
+  { who:'momosuke', e:'wink',     t:'えー？ 早い者勝ちでしょ〜♪' },
+  { who:'mua',      e:'angry',    t:'むー。じゃああたし、もものスコア抜くから。' },
+  { who:'momosuke', e:'excited',  t:'言ったね？ ……ふふ、やってみてよ♡' },
+  { who:'kiki',     e:'troubled', t:'あの、助手が本気になってどうするんでつか……。' },
+  // 締め。このあと助手の告知でルールの説明へ続く
+  { who:'mua',      e:'excited',  t:'よーし、{name}！ あたしたちも行こ？' },
+  { who:'kiki',     e:'happy',    t:'{name}、モンヒロビートでお待ちしてまつ。記録、楽しみにしてまつね♪' },
+  { who:'momosuke', e:'excited',  t:'それじゃ、週末ゲリラ杯……スタート！♡' },
+];
+// 会話の中だけの呼び名(回想の一覧にも使う)
+const ASSISTANT_MONBEAT_CUP_EVENT_CALLS = { mua: 'もも', kiki: 'ももさん', momosuke: 'みゅあねぇ／ききちゃん' };
+
 // ---------- イベント回想 ----------
 // 一度見た会話イベントを、プロフィール画面から何度でも見返せるようにするための一覧。
 // 台本(script)は既存のシーン定義をそのまま参照し、ここで二重に持たない。
@@ -3297,6 +3405,9 @@ const EVENT_REPLAYS = [
   // 新しく始めた人は最初の助手選択でももすけを選べるので、そもそも本編では流れない。
   // その人たちも、あとから「どういう経緯で来たのか」を見られるようにするため。
   { id: 'momosuke_intro', title: 'ももすけ登場 ～モンヒロビート～', script: ASSISTANT_MOMOSUKE_INTRO, calls: ASSISTANT_MOMOSUKE_INTRO_CALLS, unlockedKey: 'momosukeIntroSeen', alwaysUnlocked: true },
+  // イベント開催の会話(2026-09-11)。開催中に1度だけ本編で流れ、そのあとは回想からいつでも見られる。
+  // 期間が終わっても回想には残る(そのときどういう会話だったかを見返せるように)
+  { id: 'monbeat_cup_2026_09', title: '週末ゲリラ杯 ～はじめての大会～', script: ASSISTANT_MONBEAT_CUP_EVENT, calls: ASSISTANT_MONBEAT_CUP_EVENT_CALLS, unlockedKey: 'monbeatCupEventSeen' },
 ];
 
 // ---------- 助手ごとのあいさつ・村の案内 ----------

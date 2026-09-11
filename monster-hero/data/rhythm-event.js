@@ -30,8 +30,6 @@ const rhythmWeekWindow = (nowMs) => {
   const startMs = rhythmWeekStartMs(nowMs);
   return { startMs, endMs: startMs + RHYTHM_WEEK_MS };
 };
-// 基準週を0とした通し番号。ローテーションのどこを使うかを決めるのに使う
-const rhythmWeekIndex = (nowMs) => Math.round((rhythmWeekStartMs(nowMs) - RHYTHM_WEEK_ANCHOR_MS) / RHYTHM_WEEK_MS);
 // 週のID。フェーズ4で報酬の受取フラグの一部になるので、**あとから形を変えない**(§7)。
 // 月曜5:00 JSTの日付そのままで weekly_YYYY_MM_DD になる
 const rhythmWeekId = (nowMs) => {
@@ -40,54 +38,138 @@ const rhythmWeekId = (nowMs) => {
   return `weekly_${jst.getUTCFullYear()}_${pad(jst.getUTCMonth() + 1)}_${pad(jst.getUTCDate())}`;
 };
 
-// ===== 今週の対象曲 =====
+// ===== 週間ランキング =====
 //
-// 3曲の組を手で選んで並べ、週ごとに順に回す(§5.7「いまは手で選ぶ」)。
-// ★ローテーションにしたのは、毎週デプロイしないと週間ランキングが消える作りにしないため。
-//   一覧が一巡したら先頭へ戻るので、放っておいても必ずその週の3曲が決まる。
-// ★組み方の決めごと
-//   ・となりあう週で同じ曲を選ばない(最後の組と先頭の組のあいだも見る)
-//   ・一巡すると公開曲がひととおり対象になる
-//   ・正式譜面が完成している曲(=曲えらびに並んでいる曲)からだけ選ぶ(§6.4)
-//   曲を足したらここへも組を足す。tools/mode/rhythm-event-window-check.js が上の3つを見張る。
-const RHYTHM_WEEKLY_ROTATION = Object.freeze([
-  Object.freeze({ songIds: Object.freeze(['monster_hero', 'toriko', 'crossing_field']) }),
-  Object.freeze({ songIds: Object.freeze(['kiki_issen', 'kaze_ga_soyogu', 'nothing_without_you']) }),
-  Object.freeze({ songIds: Object.freeze(['stay_with_me', 'dullahan', '4u_hitasura']) }),
-  Object.freeze({ songIds: Object.freeze(['mf_ichika_mix', 'close_to_your_heart', 'kindan_no_resistance']) }),
-  Object.freeze({ songIds: Object.freeze(['six_eternel_remix', 'dullahan_clockwork', 'monster_hero_another']) }),
-  Object.freeze({ songIds: Object.freeze(['eiki_boss_remix', 'pandora_boss_remix', 'kaze_ga_soyogu']) }),
+// ★2026-09-11・ユーザー指示「週間ランキングはそれのみにして、対応曲があるのは
+//   イベントのほうにして」。**週間に対象曲は無い**。公開曲すべてが対象で、
+//   部門も分けない1本のランキングにする。
+//   (それまでは3曲の組を週ごとに回していたが、対象曲の仕組みはイベント専用にした)
+//
+// 中身は「総合」ランキングの今週ぶん。曲ごとのベストを全曲ぶん合計して競う。
+// 「総合」と違うのは数える期間だけ。
+//   総合   … ずっと(はじめてからの全期間)
+//   週間   … 今週だけ(月曜5:00 JST 区切り)
+//
+// ★曲の一覧をここに書かない。公開曲が増えれば、そのまま週間の対象も増える(§5.1)。
+
+// 期間限定イベント(kind:'limited')。
+// 週間とは別のタブで、同時に動く(§7・2026-09-11にユーザーが決めた)。
+// **対象曲を持つのはこちらだけ**。id は受取フラグの一部になるので、**あとから変えない**。
+//
+// banner … 告知用の画像(images/events/…)。イベントタブの上と曲えらびの案内に出す。
+//   書かなければ画像は出ない(仕組みだけあって画像が無い状態でも画面は壊れない)。
+//   ★入れる前に軽くすること(CLAUDE.md ⑥-2)。横1080px・JPEG・quality 80・mozjpeg で
+//     150KB以内が目安。起動時には読まない(開いたときに初めて読む)ので、
+//     index.html の SIZES には入らない。
+// rewardLineageBySongId … その曲の部門の1〜5位へ配る超越の実の種族(主血統id)。
+//   書かなければ、その部門の報酬はプシュケーだけになる。
+// totalReward … 総合部門の1〜5位へ配るもの。'heroProof'(勇者の証) か 'rainbowFruit'(虹の超越の実)。
+//   書かなければ総合もプシュケーだけ。
+// ★週間(kind:'weekly')には報酬を付けていない(フェーズ3は報酬なし)。
+//   報酬が要るのは、いまのところ期間限定イベントだけ。
+const RHYTHM_EVENTS = Object.freeze([
+  // 2026-09-11・ユーザー指示「試験イベントとしてゲリラで週末イベントみたいな形でやる」。
+  // 金曜15:00から月曜5:00まで。終わりを週の区切りに合わせてあるので、
+  // イベントが終わった瞬間に週間ランキングへ戻り、空白の時間ができない。
+  Object.freeze({
+    id: 'weekend_2026_09_11',
+    kind: 'limited',
+    name: 'モンヒロビート 週末ゲリラ杯',
+    startAt: '2026-09-11T15:00:00+09:00',
+    endAt: '2026-09-14T05:00:00+09:00',
+    // 告知画像(横長)。イベントタブの上に出す。起動時の告知は正方形のほうを使う
+    // (更新履歴の image。縦に余裕がある場所なので、大きい絵のほうが映える)
+    banner: 'images/events/monbeat-event-2026-09-11-wide.jpg?v=628fda574507',
+    songIds: Object.freeze(['monster_hero', 'kaze_ga_soyogu', 'close_to_your_heart']),
+    rewardLineageBySongId: Object.freeze({
+      monster_hero: 'suezo',
+      kaze_ga_soyogu: 'mocchi',
+      close_to_your_heart: 'tiger',
+    }),
+    totalReward: 'heroProof',
+    // 参加報酬(2026-09-11・ユーザー指示「3曲すべて遊んだらもらえる」)。
+    // 入賞しなくても、対象曲を**すべて**遊べばもらえる。個数は仕様書 §9.2 の候補のまま。
+    // songs は「何曲遊べば成立か」。書かなければ参加報酬は無し
+    participationReward: Object.freeze({ songs: 3, gold: 3000, psyche: 50 }),
+  }),
 ]);
 
-// 期間限定イベント(kind:'limited')。フェーズ4で使う。いまは空。
-// 開催中は週間を休む(§7「同時に成立するイベントは1つまで」)ので、
-// ここへ1件書くと、その期間だけ週間ランキングの代わりにイベントが出る。
-//   { id:'…', kind:'limited', name:'…', songIds:[…], startAt:'…', endAt:'…' }
-// id は受取フラグの一部になるので、あとから変えない。
-const RHYTHM_EVENTS = Object.freeze([]);
+// ===== 報酬(docs/spec/RHYTHM_RANKING.md §9) =====
+//
+// 1位から5位まで。個数は 5 / 4 / 3 / 2 / 1、プシュケーは 1,000 / 800 / 600 / 400 / 200。
+// 6位以下は無し。ここは「何位に何個」だけを持ち、**アイテムの実体(id)はゲーム本体側で解決する**
+// (アイテムの定義は 11-masu-progression.jsx にあり、このファイルより後で読み込まれるため)。
+const RHYTHM_EVENT_REWARD_COUNTS = Object.freeze([5, 4, 3, 2, 1]);
+const RHYTHM_EVENT_REWARD_PSYCHE = Object.freeze([1000, 800, 600, 400, 200]);
+const RHYTHM_EVENT_REWARD_RANKS = RHYTHM_EVENT_REWARD_COUNTS.length;
+
+// その部門で配るものの種類。報酬を持たないイベント(週間)では null を返す
+const rhythmEventDivisionReward = (event, divisionId) => {
+  if (!event) return null;
+  const songId = rhythmEventDivisionSongId(divisionId);
+  if (songId) {
+    const lineageId = event.rewardLineageBySongId ? event.rewardLineageBySongId[songId] : null;
+    return lineageId ? { kind: 'speciesFruit', lineageId } : null;
+  }
+  return event.totalReward === 'heroProof' ? { kind: 'heroProof' }
+    : event.totalReward === 'rainbowFruit' ? { kind: 'rainbowFruit' }
+    : null;
+};
+// 何位に何個か。順位が範囲外・壊れた値なら null(=報酬なし)
+const rhythmEventRewardForRank = (event, divisionId, rank) => {
+  const place = Number(rank);
+  if (!Number.isInteger(place) || place < 1 || place > RHYTHM_EVENT_REWARD_RANKS) return null;
+  const reward = rhythmEventDivisionReward(event, divisionId);
+  if (!reward) return null;
+  return {
+    ...reward,
+    count: RHYTHM_EVENT_REWARD_COUNTS[place - 1],
+    psyche: RHYTHM_EVENT_REWARD_PSYCHE[place - 1],
+  };
+};
+// 参加報酬。入賞しなくても、対象曲を決まった数だけ遊べばもらえる(§9.2)。
+// 書かれていないイベント(週間など)では null を返す
+const rhythmEventParticipationReward = (event) => {
+  const reward = event && event.participationReward;
+  if (!reward || typeof reward !== 'object') return null;
+  const songs = Math.max(1, Math.floor(Number(reward.songs) || 0));
+  const gold = Math.max(0, Math.floor(Number(reward.gold) || 0));
+  const psyche = Math.max(0, Math.floor(Number(reward.psyche) || 0));
+  if (!(gold > 0 || psyche > 0)) return null;
+  // 対象曲より多い数を書いてしまうと、誰も成立しない報酬になる。対象曲の数で頭打ちにする
+  const songIds = (event && Array.isArray(event.songIds)) ? event.songIds : [];
+  return { songs: Math.min(songs, songIds.length || songs), gold, psyche };
+};
+// 参加報酬が成立しているか。遊んだ曲数(総合部門の songCount)で見る
+const rhythmEventParticipationCleared = (event, playedSongCount) => {
+  const reward = rhythmEventParticipationReward(event);
+  if (!reward) return false;
+  const played = Math.max(0, Math.floor(Number(playedSongCount) || 0));
+  return played >= reward.songs;
+};
+// そのイベントが報酬を持っているか(画面に報酬の表を出すかどうかの判定)
+const rhythmEventHasRewards = (event) => {
+  if (!event) return false;
+  const divisions = [...(Array.isArray(event.songIds) ? event.songIds.map(rhythmEventSongDivisionId) : []),
+    RHYTHM_EVENT_TOTAL_DIVISION];
+  return divisions.some(divisionId => !!rhythmEventDivisionReward(event, divisionId));
+};
 
 // 公開曲の一覧(data/rhythm-mode.js)。読み込みの順番が前後しても落ちないよう、
 // 見つからないときは絞り込みをせず、書いてある組をそのまま使う
 const rhythmEventPublishedSongIds = () =>
   (typeof RHYTHM_DEMO_SONG_IDS !== 'undefined' && Array.isArray(RHYTHM_DEMO_SONG_IDS)) ? RHYTHM_DEMO_SONG_IDS : null;
 
-// その週の週間イベント。対象曲のうち、いま公開されている曲だけを残す
-// (曲を下げたときに「押せるのに無い曲」が部門として並ばないようにするため)
+// その週の週間ランキング。対象は**公開曲すべて**で、部門は分けない(§6.3)。
+// 公開曲の一覧が読めないときだけ null を返す(データの読み込み順が前後したとき)
 const rhythmWeeklyEvent = (nowMs) => {
-  if (!Array.isArray(RHYTHM_WEEKLY_ROTATION) || RHYTHM_WEEKLY_ROTATION.length === 0) return null;
-  const size = RHYTHM_WEEKLY_ROTATION.length;
-  const index = ((rhythmWeekIndex(nowMs) % size) + size) % size;
-  const entry = RHYTHM_WEEKLY_ROTATION[index];
   const published = rhythmEventPublishedSongIds();
-  const songIds = (entry && Array.isArray(entry.songIds) ? entry.songIds : [])
-    .filter(songId => typeof songId === 'string' && songId
-      && (!published || published.includes(songId)));
-  if (songIds.length === 0) return null;
+  if (!published || published.length === 0) return null;
   return Object.freeze({
     id: rhythmWeekId(nowMs),
     kind: 'weekly',
     name: '今週のモンヒロビート',
-    songIds: Object.freeze(songIds),
+    songIds: Object.freeze([...published]),
   });
 };
 
@@ -107,14 +189,9 @@ const rhythmLimitedEventAt = (nowMs) => {
   }) || null;
 };
 
-// いま成立しているイベント。期間限定があればそちらを優先し、その週の週間は休む(§7)。
-// weekStartMs にはサーバーから受け取った週の始まりを渡す(渡さなければ端末の時計で見当をつける)
-const rhythmActiveEvent = (nowMs, weekStartMs) => {
-  const now = Number.isFinite(Number(nowMs)) ? Number(nowMs) : 0;
-  const limited = rhythmLimitedEventAt(now);
-  if (limited) return limited;
-  return rhythmWeeklyEvent(Number.isFinite(Number(weekStartMs)) ? Number(weekStartMs) : now);
-};
+// ★rhythmActiveEvent は廃止した(2026-09-11)。週間と期間限定は別のタブで同時に動くので、
+//   「いま成立しているのはどちらか」を1つに決める必要がなくなった。
+//   曲えらびの案内は期間限定のときだけ出す(週間は対象曲を持たないので、知らせることが無い)。
 
 // そのイベントの期間。週間はサーバーの週の窓、期間限定は定義に書いた日時
 const rhythmEventWindow = (event, weekWindow) => {
@@ -159,8 +236,10 @@ const rhythmEventDivisionSongId = (divisionId) => {
 // displayName だけだと見分けがつかない)。2か所に名前の作り方を書かない。
 const rhythmEventSong = (songId, songs) =>
   (Array.isArray(songs) ? songs : []).find(entry => entry && entry.songId === songId) || null;
+// 部門の一覧。**対象曲を持つのはイベントだけ**なので、週間は総合1つだけになる
+// (2026-09-11・ユーザー指示)。数は対象曲の数から作るので、3曲でも5曲でも画面は変えない
 const rhythmEventDivisions = (event, songs) => {
-  const songIds = event && Array.isArray(event.songIds) ? event.songIds : [];
+  const songIds = (event && event.kind === 'limited' && Array.isArray(event.songIds)) ? event.songIds : [];
   return [
     ...songIds.map(songId => ({
       id: rhythmEventSongDivisionId(songId),
@@ -183,3 +262,65 @@ const rhythmEventEntryScore = (entry) => {
   const value = entry.totalScore !== undefined && entry.totalScore !== null ? entry.totalScore : entry.score;
   return Number(value) || 0;
 };
+
+// 画面へ出す期間の文。週間は「毎週 月曜 5:00 に切り替わります」で足りるが、
+// 期間限定は終わりの日時そのものを出さないと、いつまでか分からない。
+// 端末の時間帯に左右されないよう、JST(+9時間)へ寄せてから組み立てる。
+const RHYTHM_EVENT_WEEKDAY_LABELS = Object.freeze(['日', '月', '火', '水', '木', '金', '土']);
+const rhythmEventJstText = (ms) => {
+  const t = Number(ms);
+  if (!Number.isFinite(t)) return '—';
+  const d = new Date(t + RHYTHM_JST_OFFSET_MS);
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getUTCMonth() + 1}/${d.getUTCDate()}(${RHYTHM_EVENT_WEEKDAY_LABELS[d.getUTCDay()]}) ${d.getUTCHours()}:${pad(d.getUTCMinutes())}`;
+};
+const rhythmEventPeriodText = (event, range) => {
+  if (event && event.kind === 'limited' && range) {
+    return `${rhythmEventJstText(range.startMs)} 〜 ${rhythmEventJstText(range.endMs)}`;
+  }
+  return '毎週 月曜 5:00 に切り替わります';
+};
+// 対象曲の見出し。対象曲を持つのは期間限定だけなので、いつも「対象曲」でよい
+const rhythmEventSongsLabel = (event) => '対象曲';
+
+// 告知用の画像。書かれていない・形がおかしいときは null(画像を出さない)
+const rhythmEventBanner = (event) => {
+  const banner = event && event.banner;
+  return (typeof banner === 'string' && /^images\/[^\s]+\.(png|jpe?g|webp)(\?v=[0-9a-f]+)?$/i.test(banner))
+    ? banner : null;
+};
+
+// ===== 報酬の受け取り(docs/spec/RHYTHM_RANKING.md §9.1) =====
+//
+// このゲームはサーバー処理を持たない(Supabaseは記録の保存と閲覧だけ)ので、
+// イベントが終わったあとに端末が順位を問い合わせ、その場で受け取る形にする。
+// 受け取ったイベントのIDは mh_rhythm_event_reward_v1 へ残して二重受取を防ぐ(CLAUDE.md ⑦)。
+//
+// ★受け取れるのは終了から2週間まで(2026-09-11・ユーザーが決めた)。
+//   順位は終了した時点で固まっているので、遅れても内容は変わらない。
+//   期限を切ってあるのは、古いイベントの問い合わせが溜まり続けないようにするため。
+const RHYTHM_EVENT_REWARD_CLAIM_MS = 14 * 24 * 60 * 60 * 1000;
+// 終わっていて、まだ受け取っておらず、受取期限の中にあるイベント(先に終わったものから順)
+const rhythmEventsAwaitingReward = (nowMs, claimedIds) => {
+  const now = Number.isFinite(Number(nowMs)) ? Number(nowMs) : 0;
+  // 保存値が壊れている(配列でない)ときは「1つも受け取っていない」ではなく
+  // 「分からないので何もしない」に倒す。受け取り済みを取りこぼして二重に配らないため
+  if (!Array.isArray(claimedIds)) return [];
+  const list = Array.isArray(RHYTHM_EVENTS) ? RHYTHM_EVENTS : [];
+  return list
+    .filter(event => event && event.kind === 'limited' && rhythmEventHasRewards(event))
+    .filter(event => !claimedIds.includes(event.id))
+    .filter(event => {
+      const endMs = rhythmEventTimeMs(event.endAt);
+      return endMs !== null && now >= endMs && now < endMs + RHYTHM_EVENT_REWARD_CLAIM_MS;
+    })
+    .sort((a, b) => rhythmEventTimeMs(a.endAt) - rhythmEventTimeMs(b.endAt));
+};
+// 受け取り済みの一覧。保存値が壊れていても落ちないように通す
+const normalizeRhythmEventRewardClaims = (value) =>
+  Array.isArray(value) ? value.filter(id => typeof id === 'string' && id) : [];
+// そのイベントの部門の並び(対象曲ごと→総合)。受け取りの問い合わせにも画面にも同じ順で使う
+const rhythmEventDivisionIds = (event) => [
+  ...((event && Array.isArray(event.songIds)) ? event.songIds.map(rhythmEventSongDivisionId) : []),
+  RHYTHM_EVENT_TOTAL_DIVISION,
+];

@@ -7,10 +7,14 @@ const changelogSource = fs.readFileSync('monster-hero/data/changelog.js', 'utf8'
 const assistantsSource = fs.readFileSync('monster-hero/data/assistants.js', 'utf8');
 const game = fs.readFileSync('monster-hero/src/game-system.jsx', 'utf8');
 const context = {};
-vm.runInNewContext(`${changelogSource}\n${assistantsSource}\nthis.changelog=CHANGELOG;this.notices=ASSISTANT_UPDATE_NOTICES;`, context);
+vm.runInNewContext(`${changelogSource}\n${assistantsSource}\nthis.changelog=CHANGELOG;this.notices=ASSISTANT_UPDATE_NOTICES;this.scripts=ASSISTANT_UPDATE_NOTICE_SCRIPTS;this.assistantNoticeWithinPeriod=assistantNoticeWithinPeriod;`, context);
 const changelog = context.changelog;
 const notices = context.notices;
-const officialNotices = notices.filter(n => n.enabled === true && n.debugOnly !== true);
+// ★enabled では絞らない(2026-09-11)。期間を決めて出す告知(イベントなど)は、
+//   開催していないあいだ enabled が false になる。ここで落とすと
+//   「changelog の件数と合わない」と誤って止まる。見たいのは「デバッグ用でない告知が
+//   すべて changelog から生まれているか」なので、debugOnly だけで絞る
+const officialNotices = notices.filter(n => n.debugOnly !== true);
 const annotatedEntries = changelog.filter(entry => entry.assistantNotice);
 
 // 更新履歴の種別。画面のタブは「更新情報」「不具合情報」の2つで、
@@ -22,6 +26,48 @@ assert(unknownTypes.length === 0, `更新履歴に知らない種別がありま
 assert(annotatedEntries.length, 'assistantNotice 付きの更新履歴が必要です');
 assert.strictEqual(officialNotices.length, annotatedEntries.length, '通常通知は changelog のメタデータからだけ生成する必要があります');
 assert.strictEqual(new Set(notices.map(n => n.id)).size, notices.length, '通知IDは一意である必要があります');
+// 期間を決めて出す告知(notifyFrom / notifyUntil)。開始前・終了後は出さないこと。
+// これが効いていないと、公開した瞬間に「開催します」と言ってしまう
+{
+  const periodEntries = annotatedEntries.filter(entry => entry.assistantNotice.notifyFrom || entry.assistantNotice.notifyUntil);
+  for (const entry of periodEntries) {
+    const meta = entry.assistantNotice;
+    const from = Date.parse(meta.notifyFrom || '');
+    const until = Date.parse(meta.notifyUntil || '');
+    assert(!meta.notifyFrom || Number.isFinite(from), `${meta.id}: notifyFrom が日時として読めません`);
+    assert(!meta.notifyUntil || Number.isFinite(until), `${meta.id}: notifyUntil が日時として読めません`);
+    if (Number.isFinite(from) && Number.isFinite(until)) assert(from < until, `${meta.id}: notifyFrom は notifyUntil より前にしてください`);
+    const within = context.assistantNoticeWithinPeriod;
+    assert(typeof within === 'function', 'assistantNoticeWithinPeriod が必要です');
+    if (Number.isFinite(from)) {
+      assert(!within(meta, from - 1), `${meta.id}: 開始の1ミリ秒前に出てはいけません`);
+      assert(within(meta, from), `${meta.id}: 開始ちょうどから出す必要があります`);
+    }
+    if (Number.isFinite(until)) {
+      assert(within(meta, until - 1), `${meta.id}: 終了の直前までは出す必要があります`);
+      assert(!within(meta, until), `${meta.id}: 終了ちょうどで止める必要があります`);
+    }
+  }
+}
+// 助手ごとのセリフ。用意した告知は、助手3人ぶんそろっていること
+// (助手は変えられるので、片方だけ用意すると別の助手のときに事務的な文へ落ちる)
+{
+  const scripts = context.scripts || {};
+  for (const [noticeId, byAssistant] of Object.entries(scripts)) {
+    const entry = annotatedEntries.find(e => e.assistantNotice.id === noticeId);
+    assert(entry, `${noticeId}: 対応する更新履歴がありません`);
+    for (const who of ['mua', 'kiki', 'momosuke']) {
+      const lines = byAssistant[who];
+      assert(Array.isArray(lines) && lines.length > 0, `${noticeId}: ${who} のセリフがありません`);
+      assert(lines.every(line => line && typeof line.t === 'string' && line.t.trim()), `${noticeId}: ${who} に中身の無いセリフがあります`);
+    }
+    // 呼び方の決めごと(2026-09-11): みゅあ・ももすけは「モンビー」、ききは「モンヒロビート」
+    const text = who => (byAssistant[who] || []).map(l => l.t).join('');
+    if (/モンビー|モンヒロビート/.test(text('kiki'))) {
+      assert(!text('kiki').includes('モンビー'), `${noticeId}: ききは正式名称「モンヒロビート」で呼びます`);
+    }
+  }
+}
 // 告知は大きい追加のときだけ(2026-09-05・ユーザー指示)。種別は market / mode / content の3つだけで、
 // 「それ以外ぜんぶ」の受け皿だった feature は廃止した(あれば告知が増えすぎた頃へ戻っている)
 assert(annotatedEntries.every(entry => ['market', 'mode', 'content'].includes(entry.assistantNotice.type)), '通知種別は market / mode / content だけです');

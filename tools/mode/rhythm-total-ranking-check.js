@@ -101,7 +101,7 @@ check('タブを出している(この曲 / 総合)',
   &&screen.includes("{id:'song',label:'この曲'},")&&screen.includes("{id:'total',label:'総合'}"));
 check('総合タブを初めて開いたときだけ取りにいく',
   screen.includes("if(tab==='total'&&total.status==='idle')loadRhythmTotalRanking"));
-check('更新ボタンは開いているタブのほうを読み直す',screen.includes('else if(totalTab)loadRhythmTotalRanking'));
+check('更新ボタンは開いているタブのほうを読み直す',screen.includes('else if(totalTabOpen)loadRhythmTotalRanking'));
 check('自分の記録を上に固定で出す',screen.includes('あなたの記録')&&screen.includes('total.self'));
 check('まだ記録のない曲から曲えらびへ戻れる',screen.includes('data-rhythm-total-remaining'));
 check('新しい画面(gameState)を増やしていない',!/'RHYTHM_TOTAL_RANKING'/.test(app)&&!/'RHYTHM_TOTAL_RANKING'/.test(screen));
@@ -113,7 +113,7 @@ check('この曲のランキングの取得は変えていない',
   supa.includes('const sbFetchRhythmRankings = async (difficultyKeys, limit=RHYTHM_RANKING_FETCH_LIMIT, offset=0,')
   &&app.includes('const keys = rhythmRankingCombinedMembers(song.songId);'));
 check('この曲の一覧は総合タブでは出さない',
-  screen.includes('const songTab=!totalTab&&!eventTab;')
+  screen.includes('const songTab=!totalTabOpen&&!boardTab;')
   &&screen.includes("{songTab&&rhythmRanking.status==='ready'&&rhythmRanking.entries.length>0&&"));
 
 // --- 公開フラグ(機能と案内をまとめて出し入れする) ---
@@ -171,10 +171,18 @@ check('更新履歴(今回ぶん)に曲数を書き写していない',(()=>{
 // 版の数字には縛らず、告知が付いていることだけを見る
 check('助手の告知を付けている(大きい追加)',
   /update_notice_rhythm_total_ranking_v\d+/.test(changelog)&&changelog.includes("type:'content'"));
-check('画面のなかでも助手が案内する',
-  assistants.includes('rhythmTotalRanking: {')&&screen.includes('<AssistantBubble scene="rhythmTotalRanking"'));
-check('助手3人ぶんのセリフがある',
-  (assistants.match(/rhythmTotalRanking: \[/g)||[]).length>=3);
+// ★ランキング画面には説明も吹き出しも置かない(2026-09-11・ユーザー指摘
+//   「ランキングページに余計な説明が多くて見にくい」)。順位を見に来る画面なので、
+//   読み物は場所を取りすぎる。説明はヘルプ、案内は曲えらびのみゅあの吹き出しにある。
+// ★見るのは RhythmRankingScreen の中だけ。遊びかた(ヘルプ)の画面は読み物の場所なので、
+//   あちらの横画面の案内まで消さない
+const rankingScreenBody=screen.slice(screen.indexOf('function RhythmRankingScreen'));
+check('ランキング画面に読み物を置いていない',
+  rankingScreenBody.length>0
+  &&!rankingScreenBody.includes('<AssistantBubble')
+  &&!assistants.includes('rhythmTotalRanking')
+  &&!rankingScreenBody.includes('<RhythmLandscapeHint')
+  &&!/合計で競うランキングです/.test(rankingScreenBody));
 check('仕様書に集計の決めごとがある',
   spec.includes('rhythm_total_rankings')&&spec.includes('identity_key'));
 

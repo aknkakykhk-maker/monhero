@@ -573,3 +573,50 @@ const RhythmTimingCalibrator=({onApply,onClose,currentOffsetMs=0})=>{
     </footer>
   </main>;
 };
+
+// ===== モンヒロビートのイベント報酬(2026-09-11) =====
+// data/rhythm-event.js は「何位に何個」だけを持ち、アイテムの実体(id・名前・絵文字)は
+// ゲーム本体側にある(アイテムの定義は 11-masu-progression.jsx で、data より後に読み込まれるため)。
+// ここで結びつける。名前を2か所に書かないよう、必ず実データから引く。
+const rhythmEventRewardItem=(reward)=>{
+  if(!reward||typeof reward!=='object')return null;
+  if(reward.kind==='speciesFruit'){
+    const item=speciesTranscendFruitItems()[reward.lineageId];
+    return item?{id:item.id,name:item.name,emoji:item.emoji||'🍇'}:null;
+  }
+  if(reward.kind==='heroProof')return {id:HERO_PROOF_ITEM_ID,name:HERO_PROOF_ITEM.name,emoji:HERO_PROOF_ITEM.emoji};
+  if(reward.kind==='rainbowFruit')return {id:RAINBOW_TRANSCEND_FRUIT_ITEM_ID,name:RAINBOW_TRANSCEND_FRUIT_ITEM.name,emoji:'🌈'};
+  return null;
+};
+// イベントの告知画像。画像が無いイベントでは何も出さない。
+// ★読めなかったときは黙って消す。壊れた画像のアイコンが残ると、
+//   「絵が出ない」より見た目が悪い(綴り間違いは image-asset-check.js が先に捕まえる)
+const RhythmEventBanner=({event,className=''})=>{
+  const src=rhythmEventBanner(event);
+  const [failed,setFailed]=React.useState(false);
+  React.useEffect(()=>{setFailed(false);},[src]);
+  if(!src||failed)return null;
+  return (
+    <img data-rhythm-event-banner src={src} alt={`${event&&event.name?event.name:'イベント'}の告知`}
+      onError={()=>setFailed(true)} loading="lazy" decoding="async"
+      className={`w-full rounded-2xl border border-fuchsia-300/30 ${className}`}/>
+  );
+};
+// 参加報酬の1行。ダイヤと虹のプシュケーだけなので、アイテムの実体は要らない
+const rhythmEventParticipationText=(reward)=>{
+  if(!reward)return '';
+  const parts=[];
+  if(reward.gold>0)parts.push(`💎 ダイヤ×${reward.gold.toLocaleString()}`);
+  if(reward.psyche>0)parts.push(`💗 虹のプシュケー×${reward.psyche.toLocaleString()}`);
+  return parts.join(' ／ ');
+};
+// 「🍇 超越の実（スエゾー種）×5 ／ 虹のプシュケー×1,000」のような1行。
+// 順位ごとの表示にも、受け取ったときの知らせにも同じ文を使う
+const rhythmEventRewardText=(reward)=>{
+  if(!reward)return '';
+  const item=rhythmEventRewardItem(reward);
+  const parts=[];
+  if(item&&reward.count>0)parts.push(`${item.emoji} ${item.name}×${reward.count}`);
+  if(reward.psyche>0)parts.push(`💗 虹のプシュケー×${reward.psyche.toLocaleString()}`);
+  return parts.join(' ／ ');
+};

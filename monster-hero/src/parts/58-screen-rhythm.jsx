@@ -209,10 +209,14 @@ function RhythmSongSelectScreen({
         {rhythmEventNotice&&<div data-rhythm-event-notice className="shrink-0 border-b border-fuchsia-400/20 bg-slate-950/90 px-2 py-1">
           <div className="flex items-start gap-1">
             <div className="min-w-0 flex-1">
-              <AssistantBubble scene="rhythmWeeklyEvent" compact/>
-              <p className="mt-1 truncate text-[10px] font-black text-fuchsia-100">今週の対象曲：{eventSongTitles.join(' ／ ')}</p>
+              <AssistantBubble scene="rhythmWeeklyEvent" condition={rhythmEventNotice.kind==='limited'?'limited':null} compact/>
+              {/* 期間限定のときはイベントの名前を出す。「今週の対象曲」のままだと、
+                  週間ランキングが動いていると誤解される */}
+              <RhythmEventBanner event={rhythmEventNotice} className="mt-1"/>
+              {rhythmEventNotice.kind==='limited'&&<p className="mt-1 truncate text-[10px] font-black text-amber-200">🏆 {rhythmEventNotice.name} 開催中！</p>}
+              <p className="mt-1 text-[10px] font-black leading-tight text-fuchsia-100">{rhythmEventSongsLabel(rhythmEventNotice)}：{eventSongTitles.join(' ／ ')}</p>
               <button type="button" data-rhythm-event-notice-open onClick={onOpenEventRanking}
-                className="mt-1 min-h-[44px] w-full rounded-xl border border-fuchsia-400/40 px-2 text-[10px] font-black text-fuchsia-200 active:scale-[.98]">🏆 週間ランキングを見る</button>
+                className="mt-1 min-h-[44px] w-full rounded-xl border border-fuchsia-400/40 px-2 text-[10px] font-black text-fuchsia-200 active:scale-[.98]">🏆 {rhythmEventNotice.kind==='limited'?'イベントランキングを見る':'週間ランキングを見る'}</button>
             </div>
             <button type="button" data-rhythm-event-notice-close onClick={dismissRhythmEventNotice} aria-label="この案内を閉じる" className="min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black">×</button>
           </div>
@@ -357,6 +361,50 @@ function RhythmMonstersScreen({
   );
 }
 
+// モンヒロビートのイベント報酬の受け取り(docs/spec/RHYTHM_RANKING.md §9.1)。
+// イベントが終わったあと、入賞していた人にだけ最初の起動で1度だけ出す。
+// ★新しい画面(gameState)は増やさない。重ねて出すだけなので、ヘルプの対応表・戻り先・
+//   BGMの引き継ぎに手を入れずに済む(CLAUDE.md ⑤)。
+function RhythmEventRewardModal({ prize, onClaim, claiming }) {
+  if (!prize) return null;
+  const { event, prizes, participation } = prize;
+  // 入賞していなくても参加報酬だけで出ることがあるので、見出しを言い分ける
+  const won = Array.isArray(prizes) && prizes.length > 0;
+  return (
+    <div data-rhythm-event-reward className="fixed inset-0 z-[90000] flex items-center justify-center bg-black/80 p-4">
+      <div className="w-full max-w-sm rounded-3xl border-2 border-amber-300/70 bg-slate-950 p-4 shadow-2xl">
+        <p className="text-center text-[10px] font-black tracking-widest text-amber-300">RESULT</p>
+        <h3 className="mt-1 text-center text-base font-black text-amber-100">{won ? '入賞おめでとうございます！' : 'ご参加ありがとうございました！'}</h3>
+        <p className="mt-1 text-center text-[10px] font-bold text-slate-300">{event.name}</p>
+        <ul className="mt-3 space-y-2">
+          {prizes.map(entry => (
+            <li key={entry.divisionId} data-rhythm-event-reward-row className="rounded-2xl border border-amber-300/40 bg-amber-500/5 p-2">
+              <p className="flex items-baseline gap-2 text-[10px] font-black text-amber-200">
+                <span className="min-w-0 flex-1 truncate text-slate-200">
+                  {entry.songId ? (rhythmSongFullName(rhythmEventSong(entry.songId, RHYTHM_SONGS)) || entry.songId) : '総合'}
+                </span>
+                <b className="shrink-0 text-sm text-amber-100">{entry.rank}位</b>
+              </p>
+              <p className="mt-1 text-[10px] leading-tight text-white">{rhythmEventRewardText(entry.reward)}</p>
+            </li>
+          ))}
+        </ul>
+        {participation&&(
+          <div data-rhythm-event-reward-participation className="mt-2 rounded-2xl border border-cyan-300/40 bg-cyan-500/5 p-2">
+            <p className="text-[10px] font-black text-cyan-200">参加報酬（対象曲を{participation.songs}曲すべて）</p>
+            <p className="mt-1 text-[10px] leading-tight text-white">{rhythmEventParticipationText(participation)}</p>
+          </div>
+        )}
+        <button type="button" data-rhythm-event-reward-claim disabled={claiming} onClick={onClaim}
+          className="mt-4 min-h-[52px] w-full rounded-2xl border-2 border-amber-300 bg-amber-500/20 text-sm font-black text-amber-50 active:scale-[.98] disabled:opacity-50">
+          {claiming ? '受け取っています…' : '🎁 受け取る'}
+        </button>
+        <p className="mt-2 text-center text-[9px] leading-relaxed text-slate-400">超越の実・勇者の証・虹のプシュケーはHOMEの「アイテム」から、ダイヤは画面上の表示から確認できます。</p>
+      </div>
+    </div>
+  );
+}
+
 function RhythmRankingScreen({
   loadRhythmEventRanking, loadRhythmRanking, loadRhythmTotalRanking, onBackToSongSelect, onGoToSongSelect,
   rankingBreederIcon, rhythmEventDivision, rhythmEventRanking, rhythmRanking, rhythmRankingDetail,
@@ -379,51 +427,74 @@ function RhythmRankingScreen({
       // 曲数も理論満点もデータから作る。曲が増えても、ここは書き換えない
       // (docs/spec/RHYTHM_RANKING.md §5.1)
       const totalSongCount=rhythmTotalRankingSongCount(RHYTHM_SONGS);
-      // 週間ランキング(2026-09-11・docs/spec/RHYTHM_RANKING.md §6)。
+      // 週間ランキングとイベントランキング(2026-09-11・docs/spec/RHYTHM_RANKING.md §6・§7)。
+      // ★2026-09-11・ユーザー指示「週間ランキングとイベントランキングは別々に作ったほうがいい」。
+      //   タブを分け、両方を同時に動かす。週末イベントの裏でもいつもの週間は進む。
       // ★ここも公開フラグが立つまでタブごと出さない。期間の窓と集計はSupabase側の
       //   ビュー・関数が行うので、SQLを適用するまで中身が出せない(総合タブと同じ考え方)。
       // ★部門(対象曲ごと＋総合)の数は対象曲の数から作る。3曲でも5曲でも画面は書き換えない。
       const eventReleased=RELEASE_FLAGS.rhythmWeeklyRanking===true;
-      const eventTab=eventReleased&&rhythmRankingTab==='event';
-      const songTab=!totalTab&&!eventTab;
-      const event=rhythmEventRanking||{status:'idle',window:null,event:null,boards:{}};
+      // 期間限定は開催しているときだけタブを出す。開催の判定は端末の時計でよい
+      // (順位の期間はサーバーから受け取ったもの・定義に書いた日時を使う)
+      const limitedEvent=eventReleased?rhythmLimitedEventAt(Date.now()):null;
+      const boardKind=rhythmRankingTab==='weekly'?'weekly':(rhythmRankingTab==='event'&&limitedEvent?'limited':null);
+      const boardTab=eventReleased&&!!boardKind;
+      const totalTabOpen=totalTab&&!boardTab;
+      const songTab=!totalTabOpen&&!boardTab;
+      const boards=rhythmEventRanking||{};
+      const event=(boardKind&&boards[boardKind])||{status:'idle',window:null,event:null,boards:{}};
       const eventDefinition=event.event||null;
       const eventDivisions=eventDefinition?rhythmEventDivisions(eventDefinition,RHYTHM_SONGS):[];
-      const eventDivisionId=eventDivisions.some(division=>division.id===rhythmEventDivision)
-        ?rhythmEventDivision:RHYTHM_EVENT_TOTAL_DIVISION;
+      const wantedDivision=(rhythmEventDivision&&boardKind&&rhythmEventDivision[boardKind])||RHYTHM_EVENT_TOTAL_DIVISION;
+      const eventDivisionId=eventDivisions.some(division=>division.id===wantedDivision)
+        ?wantedDivision:RHYTHM_EVENT_TOTAL_DIVISION;
       const eventBoard=(event.boards&&event.boards[eventDivisionId])||{status:'idle',entries:[],self:null};
       const eventSongId=rhythmEventDivisionSongId(eventDivisionId);
       const eventRange=rhythmEventWindow(eventDefinition,event.window);
       const eventSongCount=eventDefinition?eventDefinition.songIds.length:0;
+      // その部門の報酬(1位から順に)。報酬を持たない週間ランキングでは空になる
+      const eventRewardRanks=eventDefinition
+        ?Array.from({length:RHYTHM_EVENT_REWARD_RANKS},(_,index)=>({
+          rank:index+1,reward:rhythmEventRewardForRank(eventDefinition,eventDivisionId,index+1),
+        })).filter(entry=>!!entry.reward)
+        :[];
+      const eventReward=eventRewardRanks.length>0;
+      // 参加報酬(入賞しなくても、対象曲をすべて遊べばもらえる)
+      const eventParticipation=rhythmEventParticipationReward(eventDefinition);
+      const eventLimited=boardKind==='limited';
       // 残り時間だけは端末の時計で数える(1秒ごとにサーバーへ聞きに行かないため・§6.1)。
       // 30秒ごとに数え直せば「残り ◯時間 ◯分」の表示には足りる
       const [eventNowMs,setEventNowMs]=React.useState(()=>Date.now());
       React.useEffect(()=>{
-        if(!eventTab)return undefined;
+        if(!boardTab)return undefined;
         setEventNowMs(Date.now());
         const timer=setInterval(()=>setEventNowMs(Date.now()),30000);
         return ()=>clearInterval(timer);
-      },[eventTab]);
+      },[boardTab]);
       const rankingTabs=[
         {id:'song',label:'この曲'},
         ...(totalReleased?[{id:'total',label:'総合'}]:[]),
-        ...(eventReleased?[{id:'event',label:'イベント'}]:[]),
+        ...(eventReleased?[{id:'weekly',label:'週間'}]:[]),
+        // 開催していないあいだはイベントのタブそのものを出さない
+        ...(eventReleased&&limitedEvent?[{id:'event',label:'イベント'}]:[]),
       ];
       const openTab=(tab)=>{
         setRhythmRankingTab(tab);
         // 初めて開いたときだけ取りにいく。タブを往復するたびに通信しない
         if(tab==='total'&&total.status==='idle')loadRhythmTotalRanking&&loadRhythmTotalRanking();
-        if(tab==='event'&&event.status==='idle')loadRhythmEventRanking&&loadRhythmEventRanking(eventDivisionId);
+        const kind=tab==='weekly'?'weekly':(tab==='event'?'limited':null);
+        if(kind&&(!boards[kind]||boards[kind].status==='idle'))loadRhythmEventRanking&&loadRhythmEventRanking(kind,RHYTHM_EVENT_TOTAL_DIVISION);
       };
       // 部門も、初めて開いたときだけ取りにいく
       const openDivision=(divisionId)=>{
-        setRhythmEventDivision&&setRhythmEventDivision(divisionId);
+        if(!boardKind)return;
+        setRhythmEventDivision&&setRhythmEventDivision(prev=>({...prev,[boardKind]:divisionId}));
         const board=event.boards&&event.boards[divisionId];
-        if(!board||board.status==='idle')loadRhythmEventRanking&&loadRhythmEventRanking(divisionId);
+        if(!board||board.status==='idle')loadRhythmEventRanking&&loadRhythmEventRanking(boardKind,divisionId);
       };
       const refresh=()=>{
-        if(eventTab)loadRhythmEventRanking&&loadRhythmEventRanking(eventDivisionId);
-        else if(totalTab)loadRhythmTotalRanking&&loadRhythmTotalRanking();
+        if(boardTab)loadRhythmEventRanking&&loadRhythmEventRanking(boardKind,eventDivisionId);
+        else if(totalTabOpen)loadRhythmTotalRanking&&loadRhythmTotalRanking();
         else loadRhythmRanking(song);
       };
       const totalRow=(entry,rank,mine)=>(
@@ -487,40 +558,30 @@ function RhythmRankingScreen({
           ))}
         </div>}
         <div className="flex-1 overflow-y-auto mh-scroll px-3 pb-6 pt-3" style={{paddingBottom:'calc(1.5rem + env(safe-area-inset-bottom))'}}>
-          <RhythmLandscapeHint className="mb-3"/>
-          {totalTab&&(
-            <p className="mb-3 rounded-2xl border border-amber-300/40 bg-amber-500/10 p-3 text-[10px] font-bold leading-relaxed text-amber-100">
-              曲ごとのいちばん良いスコアを、全{totalSongCount}曲ぶん足し合わせた合計で競うランキングです。難易度は問いません（高い難易度ほど満点も高いので、上を狙うほど有利です）。遊んだ曲が増えるほど合計も伸びます。
-            </p>
-          )}
-          {eventTab&&(
-            <p className="mb-3 rounded-2xl border border-fuchsia-300/40 bg-fuchsia-500/10 p-3 text-[10px] font-bold leading-relaxed text-fuchsia-100">
-              今週の対象曲で競うランキングです。<b className="text-white">その週のあいだに出した記録だけ</b>が載ります（先週までの記録は載りませんが、自己ベストと「総合」にはそのまま残ります）。難易度は問いません。1曲でも遊べば「総合」にも載ります。
-            </p>
-          )}
-          {songTab&&(
-            <p className="mb-3 rounded-2xl border border-amber-300/40 bg-amber-500/10 p-3 text-[10px] font-bold leading-relaxed text-amber-100">
-              「{song?.displayName||'—'}」のEASY〜MASTERをまとめた合算ランキングです。難易度が高いほど満点も高いため、高い難易度で挑むほど上位に近づきます。自分のスコアはいちばん高い1件だけが載ります。
-            </p>
-          )}
-          {totalTab&&(<>
-            <AssistantBubble scene="rhythmTotalRanking" compact/>
+          {/* ★ここには説明を置かない(2026-09-11・ユーザー指摘
+              「ランキングページに余計な説明が多くて見にくい／横画面対応、ページ説明みたいの、
+              助手のコメント、これはなくしていいとおもう」)。
+              ランキングは順位を見に来る画面なので、読み物は場所を取りすぎる。
+              説明はヘルプ(rhythm-ranking)に、案内は曲えらびのみゅあの吹き出しにある。
+              ・横画面の案内(RhythmLandscapeHint)  … 曲えらび・遊びかたの側にある
+              ・タブごとの説明文                   … ヘルプの「全国ランキング」にある
+              ・みゅあの吹き出し                   … 曲えらび(イベント開催中)にある */}
+          {totalTabOpen&&(<>
             {total.status==='loading'&&<p data-rhythm-total-loading className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">読み込み中…</p>}
             {/* 集計のしたくがまだのとき。エラーではないので、赤い表示にはしない */}
             {total.status==='notReady'&&<p data-rhythm-total-not-ready className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">総合ランキングはただいま準備中です。もうしばらくお待ちください。</p>}
             {total.status==='error'&&<p data-rhythm-total-error className="rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200">読み込めませんでした。電波の良い場所で「更新」をお試しください。</p>}
             {total.status==='ready'&&(<>
-              {/* 自分の位置は上に固定で出す。50位に入っていない人でも、いまどこにいるかが分かるように */}
-              {total.self&&<div className="mb-3">
-                <p className="mb-1 text-[9px] font-black text-amber-200">あなたの記録</p>
-                {totalRow(total.self,total.self.rank,true)}
-                {total.self.songCount<totalSongCount&&(
-                  <button data-rhythm-total-remaining onClick={onGoToSongSelect}
-                    className="mt-2 w-full min-h-[44px] rounded-xl border border-amber-300/40 bg-slate-900/70 px-3 text-[10px] font-black text-amber-100">
-                    まだ記録のない曲が {totalSongCount-total.self.songCount} 曲あります ▶ 曲をえらぶ
-                  </button>
-                )}
-              </div>}
+              {/* ★自分の行を上に固定しない(2026-09-11・ユーザー指示
+                  「自分の名前の固定はなしでおけ。今後人が増えたらまた考える」)。
+                  上位に入っていると、同じ行が「あなたの記録」と一覧の両方に並んで見にくかった。
+                  自分の行は一覧の中で色を変えて示す。まだ遊んでいない曲への入口だけは残す */}
+              {total.self&&total.self.songCount<totalSongCount&&(
+                <button data-rhythm-total-remaining onClick={onGoToSongSelect}
+                  className="mb-3 w-full min-h-[44px] rounded-xl border border-amber-300/40 bg-slate-900/70 px-3 text-[10px] font-black text-amber-100">
+                  まだ記録のない曲が {totalSongCount-total.self.songCount} 曲あります ▶ 曲をえらぶ
+                </button>
+              )}
               {!total.self&&<p data-rhythm-total-self-empty className="mb-3 rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-center text-[10px] text-slate-300">まだあなたの記録がありません。1曲でも遊ぶとここに載ります。</p>}
               {total.entries.length===0&&<p data-rhythm-total-empty className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">まだ記録がありません。最初の1件になってみましょう。</p>}
               {total.entries.length>0&&<ol data-rhythm-total-list className="space-y-2">
@@ -532,47 +593,65 @@ function RhythmRankingScreen({
               </ol>}
             </>)}
           </>)}
-          {eventTab&&(<>
-            <AssistantBubble scene="rhythmWeeklyEvent" compact/>
+          {boardTab&&(<>
             {event.status==='loading'&&<p data-rhythm-event-loading className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">読み込み中…</p>}
             {/* 集計のしたくがまだのとき。エラーではないので、赤い表示にはしない */}
             {event.status==='notReady'&&<p data-rhythm-event-not-ready className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">週間ランキングはただいま準備中です。もうしばらくお待ちください。</p>}
             {event.status==='closed'&&<p data-rhythm-event-closed className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">いま開催しているイベントはありません。次の開催をお待ちください。</p>}
             {event.status==='error'&&<p data-rhythm-event-error className="rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200">読み込めませんでした。電波の良い場所で「更新」をお試しください。</p>}
             {event.status==='ready'&&eventDefinition&&(<>
+              {/* 告知画像。あるときだけ、期間の帯の上に出す */}
+              <RhythmEventBanner event={eventDefinition} className="mb-3"/>
               {/* 期間はサーバーが決める。残り時間の見た目だけ端末の時計で数える */}
               <div data-rhythm-event-window className="mb-3 flex items-center gap-2 rounded-2xl border border-fuchsia-300/40 bg-slate-900/70 p-2">
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[11px] font-black text-fuchsia-100">{eventDefinition.name}</p>
-                  <p className="text-[9px] text-slate-400">毎週 月曜 5:00 に切り替わります</p>
+                  {/* 週間は「毎週月曜5:00に切り替わります」、期間限定は開始と終了そのものを出す */}
+                  <p data-rhythm-event-period className="text-[9px] text-slate-400">{rhythmEventPeriodText(eventDefinition,eventRange)}</p>
                 </div>
                 <p data-rhythm-event-remaining className="shrink-0 text-[10px] font-black text-fuchsia-200">
                   {eventRange?rhythmEventRemainingText(eventRange.endMs-eventNowMs):'—'}
                 </p>
               </div>
-              {/* 部門。対象曲ごと＋総合で、数は対象曲の数から作る */}
-              <div data-rhythm-event-divisions className="mb-3 flex flex-wrap gap-1">
+              {/* 部門。対象曲ごと＋総合で、数は対象曲の数から作る。
+                  ★対象曲を持つのはイベントだけなので、週間では部門が総合1つになり、
+                    ボタンそのものを出さない(2026-09-11・ユーザー指示) */}
+              {eventDivisions.length>1&&<div data-rhythm-event-divisions className="mb-3 flex flex-wrap gap-1">
                 {eventDivisions.map(division=>(
                   <button key={division.id} data-rhythm-event-division={division.id} onClick={()=>openDivision(division.id)}
                     className={`min-h-[44px] flex-1 basis-[45%] rounded-xl border px-2 py-1 text-[10px] font-black leading-tight ${division.id===eventDivisionId?'border-fuchsia-300/60 bg-fuchsia-500/15 text-fuchsia-100':'border-white/10 bg-slate-900/60 text-slate-400'}`}>
                     {division.songId?(rhythmSongFullName(division.song)||division.songId):'総合'}
                   </button>
                 ))}
-              </div>
+              </div>}
+              {/* その部門の報酬。何を狙って遊ぶのかが分からないと、そもそも参加してもらえない。
+                  順位も個数もデータから作るので、ここに数字を書き写さない */}
+              {eventReward&&<div data-rhythm-event-rewards className="mb-3 rounded-2xl border border-amber-300/40 bg-amber-500/5 p-2">
+                <p className="mb-1 text-[9px] font-black text-amber-200">この部門の報酬（終了後に受け取れます）</p>
+                <ul className="space-y-0.5">
+                  {eventRewardRanks.map(({rank,reward})=>(
+                    <li key={rank} className="flex items-baseline gap-2 text-[10px] leading-tight">
+                      <b className="w-7 shrink-0 text-right font-black text-amber-200">{rank}位</b>
+                      <span className="min-w-0 flex-1 text-slate-200">{rhythmEventRewardText(reward)}</span>
+                    </li>
+                  ))}
+                </ul>
+                {/* 参加報酬。入賞しなくてももらえるので、順位の表とは分けて出す */}
+                {eventParticipation&&<p data-rhythm-event-participation className="mt-2 border-t border-amber-300/20 pt-2 text-[10px] leading-tight text-slate-200">
+                  <b className="text-amber-200">参加報酬</b>　対象曲を{eventParticipation.songs}曲すべて遊ぶと {rhythmEventParticipationText(eventParticipation)}
+                </p>}
+              </div>}
               {eventBoard.status==='loading'&&<p data-rhythm-event-board-loading className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">読み込み中…</p>}
               {eventBoard.status==='error'&&<p data-rhythm-event-board-error className="rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200">この部門を読み込めませんでした。「更新」をお試しください。</p>}
               {eventBoard.status==='ready'&&(<>
-                {/* 自分の位置は上に固定で出す。50位に入っていない人でも、いまどこにいるかが分かるように */}
-                {eventBoard.self&&<div className="mb-3">
-                  <p className="mb-1 text-[9px] font-black text-fuchsia-200">あなたの記録</p>
-                  {eventRow(eventBoard.self,eventBoard.self.rank,true)}
-                </div>}
+                {/* ★自分の行は上に固定しない(2026-09-11・ユーザー指示)。一覧の中で色を変えて示す。
+                    まだ1曲も遊んでいない人にだけ、対象曲への入口を出す */}
                 {!eventBoard.self&&<div className="mb-3">
-                  <p data-rhythm-event-self-empty className="rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-center text-[10px] text-slate-300">今週はまだあなたの記録がありません。対象曲を1曲でも遊ぶとここに載ります。</p>
+                  <p data-rhythm-event-self-empty className="rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-center text-[10px] text-slate-300">{eventLimited?'まだあなたの記録がありません。対象曲を1曲でも遊ぶとここに載ります。':'今週はまだあなたの記録がありません。どの曲でも1曲遊ぶとここに載ります。'}</p>
                   <button data-rhythm-event-play onClick={onGoToSongSelect}
-                    className="mt-2 w-full min-h-[44px] rounded-xl border border-fuchsia-300/40 bg-slate-900/70 px-3 text-[10px] font-black text-fuchsia-100">▶ 対象曲をえらぶ</button>
+                    className="mt-2 w-full min-h-[44px] rounded-xl border border-fuchsia-300/40 bg-slate-900/70 px-3 text-[10px] font-black text-fuchsia-100">▶ {eventLimited?'対象曲をえらぶ':'曲をえらぶ'}</button>
                 </div>}
-                {eventBoard.entries.length===0&&<p data-rhythm-event-empty className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">今週はまだ記録がありません。最初の1件になってみましょう。</p>}
+                {eventBoard.entries.length===0&&<p data-rhythm-event-empty className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">{eventLimited?'まだ記録がありません。最初の1件になってみましょう。':'今週はまだ記録がありません。最初の1件になってみましょう。'}</p>}
                 {eventBoard.entries.length>0&&<ol data-rhythm-event-list className="space-y-2">
                   {eventBoard.entries.map((entry,index)=>(
                     <li key={`${entry.identityKey}-${index}`}>

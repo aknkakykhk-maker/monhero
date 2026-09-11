@@ -1709,22 +1709,35 @@ function MonsterHeroGame() {
       setRhythmTotalRanking({ status:'error', entries:[], self:null, error:e?.message || String(e) });
     }
   }, [breederName]);
-  // 週間ランキング(2026-09-11・docs/spec/RHYTHM_RANKING.md §6)。
-  // その週のあいだに出した記録だけで競う。常設の合算(総合タブ)とは別枠で、互いに影響しない。
+  // 週間ランキングとイベントランキング(2026-09-11・docs/spec/RHYTHM_RANKING.md §6・§7)。
+  // どちらも「決まった期間のあいだに出した記録だけ」で競う。常設の合算(総合タブ)とは別枠。
   //
+  // ★2026-09-11・ユーザー指示「週間ランキングとイベントランキングは別々に作ったほうがいい」。
+  //   もとの仕様(§7)は「期間限定を開くあいだ週間を休む」だったが、**同時に動かす**ことにした。
+  //   タブも別なので、週末イベントの裏でいつもの週間も進む。
+  //   報酬が付くのはイベントだけなので、「どちらの報酬か分からなくなる」ことは起きない。
   // ★期間の正本はサーバー(rhythm_week_window)。端末の時計を進めても週は変わらない。
-  //   対象曲はクライアント側の静的データ(data/rhythm-event.js)で、SQLは対象曲を知らない。
+  //   期間限定のほうは、定義に書いた開始・終了をそのまま使う。
+  // ★対象曲はクライアント側の静的データ(data/rhythm-event.js)で、SQLは対象曲を知らない。
   // ★部門は「対象曲ごと＋総合」。開いた部門だけを取りにいく(往復するたびに通信しない)。
+  //
+  // 状態は kind('weekly' / 'limited')ごとに分けて持つ。片方を読み込んでも、もう片方は消えない。
   // status:'notReady' は「関数をまだ作っていない」状態。合算と同じくエラー扱いにしない。
-  // status:'closed'   は「いま開催しているイベントが無い」状態(期間限定の合間など)。
-  const [rhythmEventDivision, setRhythmEventDivision] = useState(RHYTHM_EVENT_TOTAL_DIVISION);
-  const [rhythmEventRanking, setRhythmEventRanking] = useState({ status:'idle', window:null, event:null, boards:{}, error:null });
-  const rhythmEventRankingRequestRef = useRef(0);
-  const loadRhythmEventRanking = useCallback(async (divisionId) => {
-    const requestId = ++rhythmEventRankingRequestRef.current;
+  // status:'closed'   は「そのkindのランキングがいま無い」状態。
+  const RHYTHM_BOARD_EMPTY = { status:'idle', window:null, event:null, boards:{}, error:null };
+  const [rhythmEventDivision, setRhythmEventDivision] = useState({ weekly:RHYTHM_EVENT_TOTAL_DIVISION, limited:RHYTHM_EVENT_TOTAL_DIVISION });
+  const [rhythmEventRanking, setRhythmEventRanking] = useState({ weekly:RHYTHM_BOARD_EMPTY, limited:RHYTHM_BOARD_EMPTY });
+  const rhythmEventRankingRequestRef = useRef({ weekly:0, limited:0 });
+  const setRhythmBoard = (kind, update) => setRhythmEventRanking(prev => ({
+    ...prev, [kind]: typeof update === 'function' ? update(prev[kind] || RHYTHM_BOARD_EMPTY) : update,
+  }));
+  const loadRhythmEventRanking = useCallback(async (kind, divisionId) => {
+    if (kind !== 'weekly' && kind !== 'limited') return;
+    const requestId = (rhythmEventRankingRequestRef.current[kind] || 0) + 1;
+    rhythmEventRankingRequestRef.current = { ...rhythmEventRankingRequestRef.current, [kind]: requestId };
     const wanted = divisionId || RHYTHM_EVENT_TOTAL_DIVISION;
-    const stale = () => rhythmEventRankingRequestRef.current !== requestId;
-    setRhythmEventRanking(prev => ({
+    const stale = () => rhythmEventRankingRequestRef.current[kind] !== requestId;
+    setRhythmBoard(kind, prev => ({
       ...prev,
       status: prev.status === 'ready' ? 'ready' : 'loading',
       error: null,
@@ -1733,15 +1746,15 @@ function MonsterHeroGame() {
     try {
       const breederId = await ensureBreederId();
       const selfKeys = rhythmTotalRankingSelfKeys(breederId, breederName);
-      const weekWindow = await sbFetchRhythmWeekWindow({ requestId:`rhythm-week-${Date.now()}` });
+      // 週間は期間の正本がサーバーにある。期間限定は定義の日時をそのまま使うので聞きに行かない
+      const weekWindow = kind === 'weekly' ? await sbFetchRhythmWeekWindow({ requestId:`rhythm-week-${Date.now()}` }) : null;
       if (stale()) return;
-      // 週の始まりはサーバーのものを使う。対象曲はその週に対応する組を静的データから引く
-      const event = rhythmActiveEvent(Date.now(), weekWindow.startMs);
+      const event = kind === 'weekly' ? rhythmWeeklyEvent(weekWindow.startMs) : rhythmLimitedEventAt(Date.now());
       const range = rhythmEventWindow(event, weekWindow);
-      if (!event || !range) { setRhythmEventRanking({ status:'closed', window:weekWindow, event:null, boards:{}, error:null }); return; }
-      // 週が変わっていたら、前の週ぶんの一覧は捨てる(古い順位を見せない)
+      if (!event || !range) { setRhythmBoard(kind, { status:'closed', window:weekWindow, event:null, boards:{}, error:null }); return; }
+      // 週(またはイベント)が変わっていたら、前のぶんの一覧は捨てる(古い順位を見せない)
       const keepBoards = (prev) => (prev.event && prev.event.id === event.id) ? prev.boards : {};
-      // 押した部門が今のイベントに無いとき(週をまたいだ直後など)は総合へ倒す
+      // 押した部門がいまの対象曲に無いとき(週をまたいだ直後など)は総合へ倒す
       const songId = rhythmEventDivisionSongId(wanted);
       const division = (songId && event.songIds.includes(songId)) ? wanted : RHYTHM_EVENT_TOTAL_DIVISION;
       const targetSongId = rhythmEventDivisionSongId(division);
@@ -1749,30 +1762,30 @@ function MonsterHeroGame() {
         ? sbFetchRhythmEventSongBests({ songId:targetSongId, fromMs:range.startMs, toMs:range.endMs, ...options })
         : sbFetchRhythmEventTotals({ songIds:[...event.songIds], fromMs:range.startMs, toMs:range.endMs, ...options });
       const fromRow = targetSongId ? rhythmEventSongEntryFromRow : rhythmEventTotalEntryFromRow;
-      const rows = await fetchRows({ requestId:`rhythm-event-${division}-${Date.now()}` });
+      const rows = await fetchRows({ requestId:`rhythm-${kind}-${division}-${Date.now()}` });
       if (stale()) return;
       const entries = (Array.isArray(rows) ? rows : []).map(fromRow);
       // 自分が上位に入っていればその順位を使う。入っていなければ自分の行だけ取りにいく
       const selfIndex = entries.findIndex(entry => selfKeys.includes(entry.identityKey));
       let self = selfIndex >= 0 ? { ...entries[selfIndex], rank: selfIndex + 1 } : null;
       if (!self) {
-        const mine = await fetchRows({ limit:selfKeys.length, identityKeys:selfKeys, requestId:`rhythm-event-${division}-self-${Date.now()}` });
+        const mine = await fetchRows({ limit:selfKeys.length, identityKeys:selfKeys, requestId:`rhythm-${kind}-${division}-self-${Date.now()}` });
         if (stale()) return;
         const mineEntries = (Array.isArray(mine) ? mine : []).map(fromRow);
         // IDのある記録と、IDが付く前の記録の両方を持っている人がいる。高いほうを自分とする
         const best = mineEntries.sort((a,b)=>rhythmEventEntryScore(b)-rhythmEventEntryScore(a))[0];
         if (best) self = { ...best, rank: null };
       }
-      setRhythmEventRanking(prev => ({
+      setRhythmBoard(kind, prev => ({
         status:'ready', window:weekWindow, event, error:null,
         boards: { ...keepBoards(prev), [division]: { status:'ready', entries, self } },
       }));
-      setRhythmEventDivision(division);
+      setRhythmEventDivision(prev => ({ ...prev, [kind]: division }));
     } catch (e) {
       if (stale()) return;
-      if (e?.notReady) { setRhythmEventRanking({ status:'notReady', window:null, event:null, boards:{}, error:null }); return; }
-      console.error('[rhythm-event-ranking] fetch failed:', e && e.message ? e.message : e);
-      setRhythmEventRanking(prev => ({
+      if (e?.notReady) { setRhythmBoard(kind, { status:'notReady', window:null, event:null, boards:{}, error:null }); return; }
+      console.error(`[rhythm-${kind}-ranking] fetch failed:`, e && e.message ? e.message : e);
+      setRhythmBoard(kind, prev => ({
         ...prev,
         status: prev.status === 'ready' ? 'ready' : 'error',
         error: e?.message || String(e),
@@ -2541,7 +2554,9 @@ function MonsterHeroGame() {
   const RHYTHM_EVENT_NOTICE_KEY = 'mh_rhythm_event_notice_v1';
   const [rhythmEventNoticeSeen, setRhythmEventNoticeSeen] = useState(null);
   const rhythmEventReleased = RELEASE_FLAGS.rhythmWeeklyRanking === true;
-  const rhythmSongSelectEvent = rhythmEventReleased ? rhythmActiveEvent(Date.now()) : null;
+  // ★知らせるのは期間限定イベントだけ(2026-09-11・ユーザー指示で、週間は対象曲を持たなくなった)。
+  //   週間は公開曲すべてが対象で毎週同じなので、曲えらびで知らせることが無い
+  const rhythmSongSelectEvent = rhythmEventReleased ? rhythmLimitedEventAt(Date.now()) : null;
   // 読めなかったとき(seen が null のまま)は「見た扱い」にして出さない。
   // 案内が二度出るより、出ないほうが害が小さい(クイック連携の案内と同じ考え方)
   const rhythmEventNoticeVisible = !!rhythmSongSelectEvent && typeof rhythmEventNoticeSeen === 'string'
@@ -2550,6 +2565,154 @@ function MonsterHeroGame() {
     if (!rhythmSongSelectEvent) return;
     setRhythmEventNoticeSeen(rhythmSongSelectEvent.id);
     storeSet(RHYTHM_EVENT_NOTICE_KEY, rhythmSongSelectEvent.id, false);
+  };
+  // ---- イベントの会話ストーリー(2026-09-11・ユーザー指示) ----
+  // 「みゅあの前にイベント発生で、助手たちの会話ストーリーも入れてほしい。
+  //   そのあとに助手からの説明みたいな」。
+  //
+  // 流れ: 会話(3人) → 助手の告知(ルール説明) → 遊びに行く。
+  // 会話の再生はイベント回想と同じ仕組みを使う(台本・立ち絵・BGMの切り替えが全部そろっている)。
+  // 違いは live:true を渡すことだけで、そのときは見出しを「回想・」にしない。
+  //
+  // ★見たかどうかは新しい保存キーへイベントIDの配列で残す(既存キーは触らない・CLAUDE.md ⑦)。
+  //   配列にしてあるので、次のイベントで会話を足しても保存の形を変えずに済む。
+  // ★開催中だけ流す。終わったあとに初めて起動した人へ「開催します」とは言わない
+  //   (回想からはいつでも見られる)。
+  const RHYTHM_EVENT_STORY_KEY = 'mh_rhythm_event_story_v1';
+  const MONBEAT_CUP_STORY_ID = 'monbeat_cup_2026_09';
+  const [rhythmEventStorySeen, setRhythmEventStorySeen] = useState(null);
+  const rhythmEventStorySeenRef = useRef(null);
+  const [rhythmEventStoryPending, setRhythmEventStoryPending] = useState(null);
+  const markRhythmEventStorySeen = async (storyId) => {
+    const seen = normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current);
+    if (seen.includes(storyId)) return;
+    const next = [...seen, storyId];
+    rhythmEventStorySeenRef.current = next;
+    setRhythmEventStorySeen(next);
+    await storeSet(RHYTHM_EVENT_STORY_KEY, next, false);
+  };
+  // HOMEへ着いて、ほかの会話(きき・ももすけ)が終わってから流す。
+  // 起動の途中やタイトルの上に重ねない
+  useEffect(() => {
+    if (!rhythmEventStoryPending) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME' && onboarded && !onboardingPreview
+      && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && !eventReplay)) return;
+    const storyId = rhythmEventStoryPending;
+    setRhythmEventStoryPending(null);
+    setEventReplay({ id: storyId, step: 0, live: true });
+  }, [rhythmEventStoryPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay]);
+  // ---- イベント報酬の受け取り(docs/spec/RHYTHM_RANKING.md §9.1) ----
+  // サーバー処理を持たないので、イベントが終わったあとに端末が順位を問い合わせ、
+  // その場で受け取る。受け取ったイベントのIDを新しい保存キーへ残して二重受取を防ぐ(CLAUDE.md ⑦)。
+  //
+  // ★問い合わせるのは各部門の上位5件だけ。報酬は5位までなので、それより下は見なくてよい。
+  //   4部門×5件で済むので、起動のたびに重い通信をしない。
+  // ★入賞していなかったときも「受け取り済み」にする。そうしないと、受取期限のあいだ
+  //   毎回起動のたびに問い合わせ直すことになる。
+  // ★通信に失敗したときは受け取り済みにしない(次の起動でやり直す)。
+  const RHYTHM_EVENT_REWARD_KEY = 'mh_rhythm_event_reward_v1';
+  const [rhythmEventRewardClaims, setRhythmEventRewardClaims] = useState(null);
+  const rhythmEventRewardClaimsRef = useRef(null);
+  const [rhythmEventRewardPrize, setRhythmEventRewardPrize] = useState(null);
+  const [rhythmEventRewardClaiming, setRhythmEventRewardClaiming] = useState(false);
+  const rhythmEventRewardCheckedRef = useRef(false);
+  const markRhythmEventRewardClaimed = async (eventId) => {
+    const claims = normalizeRhythmEventRewardClaims(rhythmEventRewardClaimsRef.current);
+    if (claims.includes(eventId)) return claims;
+    const next = [...claims, eventId];
+    rhythmEventRewardClaimsRef.current = next;
+    setRhythmEventRewardClaims(next);
+    await storeSet(RHYTHM_EVENT_REWARD_KEY, next, false);
+    return next;
+  };
+  const checkRhythmEventRewards = useCallback(async () => {
+    if (RELEASE_FLAGS.rhythmWeeklyRanking !== true) return;
+    const claims = rhythmEventRewardClaimsRef.current;
+    if (!Array.isArray(claims)) return;               // まだ読み込めていない
+    const pending = rhythmEventsAwaitingReward(Date.now(), claims);
+    if (pending.length === 0) return;
+    const event = pending[0];                          // 先に終わったものから1つずつ
+    const range = rhythmEventWindow(event, null);
+    if (!range) return;
+    try {
+      const breederId = await ensureBreederId();
+      const selfKeys = rhythmTotalRankingSelfKeys(breederId, breederName);
+      const prizes = [];
+      for (const divisionId of rhythmEventDivisionIds(event)) {
+        const songId = rhythmEventDivisionSongId(divisionId);
+        const rows = songId
+          ? await sbFetchRhythmEventSongBests({ songId, fromMs:range.startMs, toMs:range.endMs, limit:RHYTHM_EVENT_REWARD_RANKS, requestId:`rhythm-reward-${event.id}-${divisionId}` })
+          : await sbFetchRhythmEventTotals({ songIds:[...event.songIds], fromMs:range.startMs, toMs:range.endMs, limit:RHYTHM_EVENT_REWARD_RANKS, requestId:`rhythm-reward-${event.id}-total` });
+        const fromRow = songId ? rhythmEventSongEntryFromRow : rhythmEventTotalEntryFromRow;
+        const entries = (Array.isArray(rows) ? rows : []).map(fromRow);
+        const index = entries.findIndex(entry => selfKeys.includes(entry.identityKey));
+        if (index < 0) continue;
+        const reward = rhythmEventRewardForRank(event, divisionId, index + 1);
+        if (reward) prizes.push({ divisionId, songId, rank:index + 1, reward });
+      }
+      // 参加報酬(入賞しなくても、対象曲をすべて遊べばもらえる)。
+      // 総合の上位5件に自分がいなくても成立するので、自分の行だけを別に取りにいって
+      // 「何曲遊んだか」(songCount)を見る
+      let participation = null;
+      if (rhythmEventParticipationReward(event)) {
+        const mine = await sbFetchRhythmEventTotals({
+          songIds:[...event.songIds], fromMs:range.startMs, toMs:range.endMs,
+          limit:selfKeys.length, identityKeys:selfKeys, requestId:`rhythm-reward-${event.id}-join`,
+        });
+        const played = (Array.isArray(mine) ? mine : []).map(rhythmEventTotalEntryFromRow)
+          .reduce((max, entry) => Math.max(max, entry.songCount), 0);
+        if (rhythmEventParticipationCleared(event, played)) participation = rhythmEventParticipationReward(event);
+      }
+      // 入賞も参加報酬も無ければ、知らせずに受け取り済みへ入れて終わる
+      if (prizes.length === 0 && !participation) { await markRhythmEventRewardClaimed(event.id); return; }
+      setRhythmEventRewardPrize({ event, prizes, participation });
+    } catch (e) {
+      // 通信の失敗で受け取り済みにはしない。次の起動でやり直す
+      console.error('[rhythm-event-reward] fetch failed:', e && e.message ? e.message : e);
+    }
+  }, [breederName]);
+  // 起動して保存値を読み終えたら1回だけ確かめる
+  useEffect(() => {
+    if (!Array.isArray(rhythmEventRewardClaims) || rhythmEventRewardCheckedRef.current) return;
+    rhythmEventRewardCheckedRef.current = true;
+    void checkRhythmEventRewards();
+  }, [rhythmEventRewardClaims, checkRhythmEventRewards]);
+  // 受け取る。★先に「受け取った」を保存してからアイテムを足す。
+  //   途中で終了しても二重には増えない(逆順にすると二重に配りうる・CLAUDE.md ⑦)
+  const claimRhythmEventReward = async () => {
+    const prize = rhythmEventRewardPrize;
+    if (!prize || rhythmEventRewardClaiming) return;
+    setRhythmEventRewardClaiming(true);
+    try {
+      // デバッグ再生は見た目だけ。保存にも所持品にも触れない
+      if (prize.debugPreview) { setRhythmEventRewardPrize(null); return; }
+      await markRhythmEventRewardClaimed(prize.event.id);
+      const next = { ...ownedItemsRef.current };
+      for (const entry of prize.prizes) {
+        const item = rhythmEventRewardItem(entry.reward);
+        if (item && entry.reward.count > 0) next[item.id] = ownedItemCount(next, item.id) + entry.reward.count;
+        if (entry.reward.psyche > 0) next[BREAKTHROUGH_ITEM_ID] = ownedItemCount(next, BREAKTHROUGH_ITEM_ID) + entry.reward.psyche;
+      }
+      // 参加報酬。虹のプシュケーは所持品、ダイヤは mh_gold と、入れ物が別なので分けて足す
+      if (prize.participation && prize.participation.psyche > 0) {
+        next[BREAKTHROUGH_ITEM_ID] = ownedItemCount(next, BREAKTHROUGH_ITEM_ID) + prize.participation.psyche;
+      }
+      ownedItemsRef.current = next;
+      setOwnedItems(next);
+      await storeSet('mh_owned_items', next, false);
+      if (prize.participation && prize.participation.gold > 0) {
+        const nextGold = (goldRef.current || 0) + prize.participation.gold;
+        goldRef.current = nextGold;
+        setGold(nextGold);
+        await storeSet('mh_gold', nextGold, false);
+      }
+      setRhythmEventRewardPrize(null);
+      // 同じ起動でもう1件あるかもしれない(2週間のあいだに2回開催した場合)
+      rhythmEventRewardCheckedRef.current = false;
+      setRhythmEventRewardClaims(claims => Array.isArray(claims) ? [...claims] : claims);
+    } finally {
+      setRhythmEventRewardClaiming(false);
+    }
   };
   // ---- 演奏で止まっていたぶんの追いつき(PR7) ----
   // 追いつける上限は「1曲ぶん」。長い曲でも5分までにして、
@@ -3225,6 +3388,19 @@ function MonsterHeroGame() {
       // 見た扱い(=出さない)にする。案内が二度出るより、出ないほうが害が小さい
       setQuickRhythmIntroSeen(await storeGet(QUICK_RHYTHM_INTRO_KEY, true, false) !== false);
       setQuickRhythmBackgroundSeen(await storeGet(QUICK_RHYTHM_BACKGROUND_KEY, true, false) !== false);
+      // イベントの会話ストーリーを見たかどうか。流すかどうかの判定は、
+      // wasOnboarded が決まったあと(きき・ももすけの会話と同じところ)で行う
+      {
+        const seenStories = normalizeRhythmEventRewardClaims(await storeGet(RHYTHM_EVENT_STORY_KEY, [], false));
+        rhythmEventStorySeenRef.current = seenStories;
+        setRhythmEventStorySeen(seenStories);
+      }
+      // イベント報酬の受け取り済みの一覧。壊れていても落ちないよう正規化を通す
+      {
+        const claims = normalizeRhythmEventRewardClaims(await storeGet(RHYTHM_EVENT_REWARD_KEY, [], false));
+        rhythmEventRewardClaimsRef.current = claims;
+        setRhythmEventRewardClaims(claims);
+      }
       // 週間ランキングの「今週の対象曲」案内。見たイベントのIDを覚えておく(週が変わればまた1度だけ出る)
       {
         const seenEventId = await storeGet(RHYTHM_EVENT_NOTICE_KEY, '', false);
@@ -3496,6 +3672,14 @@ function MonsterHeroGame() {
       setMomosukeIntroSeenFlag(momosukeIntroSeen === true);
       if (wasOnboarded && momosukeIntroSeen !== true && kikiIntroSeen === true) setMomosukeIntroStep(0);
       else if (!wasOnboarded && momosukeIntroSeen !== true) { try { await storeSet(MOMOSUKE_INTRO_SEEN_KEY, true, false); setMomosukeIntroSeenFlag(true); } catch {} }
+      // モンヒロビートのイベント会話。開催中で、まだ見ていなければHOMEで1度だけ流す。
+      // ★ここに置くのは wasOnboarded が決まったあとだから。前に置くと
+      //   「Cannot access 'wasOnboarded' before initialization」で画面が真っ白になる
+      if (RELEASE_FLAGS.rhythmWeeklyRanking === true && wasOnboarded
+        && rhythmLimitedEventAt(Date.now())
+        && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(MONBEAT_CUP_STORY_ID)) {
+        setRhythmEventStoryPending(MONBEAT_CUP_STORY_ID);
+      }
       const seenUpdateIds = normalizeSeenUpdateNoticeIds(await storeGet(UPDATE_NOTICE_SEEN_KEY, [], false));
       // 新規プレイヤーには、その時点ですでに公開済みの案内を見せない。既存プレイヤーだけ未読を並べる。
       // プロフィール確定時にも再度seedするため、初回設定の途中で閉じても通知ラッシュにならない。
@@ -4396,7 +4580,8 @@ function MonsterHeroGame() {
   // イベント回想の解放判定。EVENT_REPLAYS側はunlockedKeyという「呼び名」しか持たないので、
   // その名前→実際のstateの対応をここで持つ(データファイルはgame-system.jsxの状態を見られないため)。
   // 今後イベントを増やすときは、そのイベントの既読フラグをここへ1行足すだけでよい
-  const EVENT_REPLAY_UNLOCK_FLAGS = { kikiIntroSeen: kikiIntroSeenFlag, momosukeIntroSeen: momosukeIntroSeenFlag };
+  const EVENT_REPLAY_UNLOCK_FLAGS = { kikiIntroSeen: kikiIntroSeenFlag, momosukeIntroSeen: momosukeIntroSeenFlag,
+    monbeatCupEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONBEAT_CUP_STORY_ID) };
   // alwaysUnlocked のイベントは、本編でまだ見ていなくても回想から見られる
   const isEventReplayUnlocked = (event) => !!(event && event.alwaysUnlocked) || !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];
   // 助手を切り替える。仲良し度も呼び方も助手ごとに分けてあるので、切り替えても何も失われない
@@ -6424,8 +6609,12 @@ function MonsterHeroGame() {
   const finishUpdateGuide = async (destination=null) => {
     const current = updateGuideQueue[0];
     if (!current) return;
-    const seen = normalizeSeenUpdateNoticeIds(await storeGet(UPDATE_NOTICE_SEEN_KEY, [], false));
-    await storeSet(UPDATE_NOTICE_SEEN_KEY, normalizeSeenUpdateNoticeIds([...seen, current.id]), false);
+    // ★デバッグ再生(debugPreview)のときは既読にしない。
+    //   確認のために再生しただけで、本番のときに出なくなってしまうのを防ぐ
+    if (!current.debugPreview) {
+      const seen = normalizeSeenUpdateNoticeIds(await storeGet(UPDATE_NOTICE_SEEN_KEY, [], false));
+      await storeSet(UPDATE_NOTICE_SEEN_KEY, normalizeSeenUpdateNoticeIds([...seen, current.id]), false);
+    }
     setUpdateGuidePage(0);
     setUpdateGuideQueue(queue => queue.slice(1));
     // 同じ機能の解放の案内が続けて出ないようにする(いま解放済みの人だけ)
@@ -6440,6 +6629,54 @@ function MonsterHeroGame() {
     const seen = normalizeSeenUpdateNoticeIds(await storeGet(UPDATE_NOTICE_SEEN_KEY, [], false));
     if (seen.includes(notice.id)) return window.alert('テスト通知は既読です。リセット後に再確認できます。');
     setDailyMasuAdvice(null); setUpdateGuidePage(0); setUpdateGuideQueue([notice]); returnToHome();
+  };
+  // ---- モンヒロビートのイベントをデバッグから確かめる(2026-09-11・ユーザー指示) ----
+  // 開催の時刻を待たず、保存にも触れずに、本番と同じ見た目で確かめるためのもの。
+  // ★どれも「見た」にしない(debugPreview / debug)。確認のために再生しただけで、
+  //   本番のときに出なくなってしまうのを防ぐ。
+  // ★デバッグ専用なので更新履歴・ヘルプには載せない(CLAUDE.md ⑤の但し書き)。
+  const debugPlayRhythmEventStory = () => {
+    setDailyMasuAdvice(null); setUpdateGuideQueue([]);
+    returnToHome();
+    setEventReplay({ id: MONBEAT_CUP_STORY_ID, step: 0, live: true, debug: true });
+  };
+  const debugPlayRhythmEventNotice = () => {
+    // 期間の外でも出せるよう、enabled で絞らずIDで直に引く
+    const list = (typeof ASSISTANT_UPDATE_NOTICES !== 'undefined' && ASSISTANT_UPDATE_NOTICES) || [];
+    const notice = list.find(n => n && n.id === 'update_notice_rhythm_weekend_cup_v1');
+    if (!notice) return window.alert('イベント告知が見つかりません。');
+    setDailyMasuAdvice(null); setEventReplay(null); setUpdateGuidePage(0);
+    setUpdateGuideQueue([{ ...notice, debugPreview: true }]);
+    returnToHome();
+  };
+  // 会話 → 告知 の並びをそのまま確かめる。会話を閉じたら告知が続く
+  const debugPlayRhythmEventIntro = () => {
+    const list = (typeof ASSISTANT_UPDATE_NOTICES !== 'undefined' && ASSISTANT_UPDATE_NOTICES) || [];
+    const notice = list.find(n => n && n.id === 'update_notice_rhythm_weekend_cup_v1');
+    setDailyMasuAdvice(null); setUpdateGuidePage(0);
+    setUpdateGuideQueue(notice ? [{ ...notice, debugPreview: true }] : []);
+    returnToHome();
+    setEventReplay({ id: MONBEAT_CUP_STORY_ID, step: 0, live: true, debug: true });
+  };
+  // 報酬の受け取り画面。実際の順位は使わず、見本の中身で見た目だけ確かめる
+  const debugPlayRhythmEventReward = () => {
+    const event = (typeof RHYTHM_EVENTS !== 'undefined' && RHYTHM_EVENTS) ? RHYTHM_EVENTS[0] : null;
+    if (!event) return window.alert('イベントが登録されていません。');
+    const divisions = rhythmEventDivisionIds(event);
+    const prizes = divisions.map((divisionId, index) => ({
+      divisionId, songId: rhythmEventDivisionSongId(divisionId), rank: index + 1,
+      reward: rhythmEventRewardForRank(event, divisionId, index + 1),
+    })).filter(entry => !!entry.reward);
+    setRhythmEventRewardPrize({ event, prizes, participation: rhythmEventParticipationReward(event), debugPreview: true });
+    returnToHome();
+  };
+  const debugResetRhythmEventSeen = async () => {
+    rhythmEventStorySeenRef.current = [];
+    setRhythmEventStorySeen([]);
+    await storeSet(RHYTHM_EVENT_STORY_KEY, [], false);
+    const seen = normalizeSeenUpdateNoticeIds(await storeGet(UPDATE_NOTICE_SEEN_KEY, [], false));
+    await storeSet(UPDATE_NOTICE_SEEN_KEY, seen.filter(id => id !== 'update_notice_rhythm_weekend_cup_v1'), false);
+    window.alert('イベントの会話と告知を未読へ戻しました。開催中に起動すると、もう一度出ます。');
   };
   const debugResetUpdateGuide = async () => {
     const debugIds = new Set(availableUpdateNotices({debug:true}).map(n=>n.id));
@@ -9459,7 +9696,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             {/* 一覧は日付・札・見出しだけ。本文(items)は押した項目だけ出す(1つ開くと他は閉じる) */}
             return <article key={c.id} data-changelog-type={c.type||'update'} data-changelog-open={open?'1':'0'} className={changelogUnreadIds[changelogTab].includes(c.id)?'unread':''}><time>{c.date}{changelogUnreadIds[changelogTab].includes(c.id)&&<em>NEW</em>}</time><span className="mh-changelog-kind" data-kind={changelogTypeOf(c).tone}>{changelogTypeOf(c).label}</span>
               <button type="button" className="mh-changelog-head" data-changelog-toggle aria-expanded={open} onClick={()=>setChangelogOpenId(open?null:c.id)}><b>{c.title}</b><small>{open?'閉じる ▲':'詳細 ▼'}</small></button>
-              {open&&<div className="mh-changelog-detail" data-changelog-detail>{(c.items||[]).map((x,j)=><p key={j}>・{x}</p>)}</div>}
+              {/* 開いたときだけ本文を出す。告知画像があれば本文の上に出す
+                  (期間中いつでもここから見返せるように・2026-09-11・ユーザー指示) */}
+              {open&&<div className="mh-changelog-detail" data-changelog-detail>
+                {c.image&&<img data-changelog-image src={c.image} alt={`${c.title}のお知らせ`}
+                  onError={e=>{e.currentTarget.style.display='none';}} loading="lazy" decoding="async"
+                  style={{width:'100%',borderRadius:'12px',marginBottom:'8px'}}/>}
+                {(c.items||[]).map((x,j)=><p key={j}>・{x}</p>)}
+              </div>}
             </article>;})}</div>
       </div>
     </div>
@@ -9475,7 +9719,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // 既定値は今まで鳴っていた曲そのものなので、これまでの音は変わらない
         ['enhance','準備・強化フェーズ BGM'],['result','WAVE後リザルト BGM'],['gameOver','敗北 BGM']]},
       {id:'battle',label:'バトル'},
-      {id:'event',label:'イベント',items:[['kikiIntro','きき加入イベント BGM']]},
+      {id:'event',label:'イベント',items:[['kikiIntro','きき加入イベント BGM'],['momosukeIntro','ももすけ登場イベント BGM'],['monbeatCupEvent','モンヒロビート大会イベント BGM']]},
       {id:'other',label:'その他',items:[['market','マーケット BGM'],['temple','神殿 BGM'],['trainingMenu','修行メニュー BGM'],['trainingBoard','修行中 BGM']]},
     ];const battleModes=BGM_BATTLE_MODE_TABS;const selected=categories.find(category=>category.id===bgmArrangementCategory)||categories[0];const selectedMode=battleModes.find(mode=>mode.id===bgmArrangementBattleMode)||battleModes[0];const items=selected.id==='battle'?selectedMode.items:selected.items;return <><div role="tablist" aria-label="BGMカテゴリ" className="grid grid-cols-4 gap-1 mb-3">{categories.map(category=><button key={category.id} type="button" role="tab" aria-selected={selected.id===category.id} onClick={()=>setBgmArrangementCategory(category.id)} className={`min-h-[44px] rounded-xl border px-1 text-[10px] font-black ${selected.id===category.id?'bg-indigo-600 border-indigo-300 text-white':'bg-slate-900 border-white/15 text-slate-300'}`}>{category.label}</button>)}</div>{selected.id==='battle'&&<div role="tablist" aria-label="バトルモード" className={`grid ${battleModes.length>=5?'grid-cols-5':'grid-cols-4'} gap-1 mb-4`}>{battleModes.map(mode=><button key={mode.id} type="button" role="tab" aria-selected={selectedMode.id===mode.id} onClick={()=>setBgmArrangementBattleMode(mode.id)} className={`min-h-[44px] rounded-xl border px-1 text-[10px] font-black ${selectedMode.id===mode.id?'bg-fuchsia-700 border-fuchsia-300 text-white':'bg-slate-900 border-white/15 text-slate-300'}`}>{mode.label}</button>)}</div>}<div className="space-y-4">{selected.id==='other'&&[
       ['autoVictoryJingle','AUTO時 敵撃破ファンファーレ'],
@@ -10099,6 +10343,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           />
         )}
 
+        {/* モンヒロビートのイベント報酬。入賞していた人にだけ、終了後の最初の起動で出す */}
+        {rhythmEventRewardPrize&&(
+          <RhythmEventRewardModal
+            claiming={rhythmEventRewardClaiming}
+            onClaim={claimRhythmEventReward}
+            prize={rhythmEventRewardPrize}
+          />
+        )}
         {levelCapCompensation&&(
           <MasuLevelCapCompensation
             levelCapCompensation={levelCapCompensation}
@@ -11047,7 +11299,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             handleGiveUp={handleGiveUp}
             mainHero={mainHero}
             onExit={()=>{if(rhythmBackgroundRun){returnToBackgroundRun();return;}setGameState(RHYTHM_MODE_PUBLIC_RELEASE?'HOME':'DEBUG_SETTINGS');}}
-            onOpenEventRanking={()=>{dismissRhythmEventNotice();setRhythmRankingTab('event');loadRhythmEventRanking(rhythmEventDivision);setGameState('RHYTHM_RANKING');}}
+            onOpenEventRanking={()=>{
+              // 曲えらびの案内から開く。期間限定を開催中ならそちらのタブ、なければ週間のタブ
+              const kind=rhythmSongSelectEvent&&rhythmSongSelectEvent.kind==='limited'?'limited':'weekly';
+              dismissRhythmEventNotice();
+              setRhythmRankingTab(kind==='limited'?'event':'weekly');
+              loadRhythmEventRanking(kind,rhythmEventDivision[kind]);
+              setGameState('RHYTHM_RANKING');
+            }}
             onOpenHelp={()=>{setRhythmHelpTopicId(null);setGameState('RHYTHM_DEMO_HELP');}}
             onOpenMonsterSlots={()=>{setRhythmMonsterPickerOpen(true);setGameState('RHYTHM_DEMO_MONSTERS');}}
             onOpenOptions={()=>{setRhythmOptionsBack('RHYTHM_DEMO_HOME');setGameState('RHYTHM_OPTIONS');}}
@@ -11193,6 +11452,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <button onClick={()=>{returnToHome();startTutorial('intro');}} className="min-h-[46px] rounded-xl bg-pink-900/60 border border-pink-400/50 text-pink-100 text-[10px] font-black active:scale-95">みゅあのあいさつだけ再生</button>
                   <button onClick={()=>{returnToHome();startTutorial('tour');}} className="min-h-[46px] rounded-xl bg-pink-900/60 border border-pink-400/50 text-pink-100 text-[10px] font-black active:scale-95">村の案内だけ再生</button>
                   <button onClick={()=>{returnToHome();setKikiIntroStep(0);}} className="min-h-[46px] rounded-xl bg-pink-900/60 border border-pink-400/50 text-pink-100 text-[10px] font-black active:scale-95">きき加入の会話を再生</button>
+                  {/* モンヒロビートのイベント(週末ゲリラ杯)の確認。開催の時刻を待たずに見られる。
+                      どれも「見た」にしないので、本番のときにちゃんと出る。
+                      デバッグ専用なので更新履歴・ヘルプには載せない(CLAUDE.md ⑤の但し書き) */}
+                  <button data-debug-rhythm-event-intro onClick={debugPlayRhythmEventIntro} className="col-span-2 min-h-[46px] rounded-xl bg-fuchsia-800/70 border border-fuchsia-300/60 text-white text-[10px] font-black active:scale-95">🏆 イベント開催を再生（会話→告知）</button>
+                  <button data-debug-rhythm-event-story onClick={debugPlayRhythmEventStory} className="min-h-[46px] rounded-xl bg-fuchsia-900/60 border border-fuchsia-400/50 text-fuchsia-100 text-[10px] font-black active:scale-95">イベント会話だけ再生</button>
+                  <button data-debug-rhythm-event-notice onClick={debugPlayRhythmEventNotice} className="min-h-[46px] rounded-xl bg-fuchsia-900/60 border border-fuchsia-400/50 text-fuchsia-100 text-[10px] font-black active:scale-95">イベント告知だけ再生</button>
+                  <button data-debug-rhythm-event-reward onClick={debugPlayRhythmEventReward} className="min-h-[46px] rounded-xl bg-amber-900/60 border border-amber-400/50 text-amber-100 text-[10px] font-black active:scale-95">入賞の受け取り画面を見る</button>
+                  <button data-debug-rhythm-event-reset onClick={debugResetRhythmEventSeen} className="min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95">イベントを未読へ戻す</button>
                   <button onClick={()=>setAssistantDebug('lines')} className="min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95">全助手コメント確認</button>
                   <button onClick={()=>setAssistantDebug('expressions')} className="min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95">全表情確認</button>
                   <button onClick={()=>setAssistantDebug('conditions')} className="min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95">条件コメント確認</button>
@@ -12848,7 +13115,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       )}
 
       {/* 助手(みゅあ)のデバッグ表示。デバッグ設定からだけ開ける。通常のプレイでは出ない */}
-      {bootPhase==='GAME'&&gameState==='HOME'&&onboarded&&tutorialStep==null&&kikiIntroStep==null&&momosukeIntroStep==null&&updateGuideQueue.length>0&&(
+      {/* ★会話ストーリーが先。流している途中・流す予約があるあいだは、助手の告知を出さない
+          (2026-09-11・ユーザー指示「みゅあの前にイベント発生で会話、そのあとに助手からの説明」) */}
+      {bootPhase==='GAME'&&gameState==='HOME'&&onboarded&&tutorialStep==null&&kikiIntroStep==null&&momosukeIntroStep==null&&!eventReplay&&!rhythmEventStoryPending&&updateGuideQueue.length>0&&(
         <HomeUpdateGuideOverlay
           activeAssistant={activeAssistant} assistantBondLevelNow={assistantBondLevelNow}
           assistantCallStyle={assistantCallStyle} breederName={breederName}
@@ -12885,17 +13154,25 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const next=()=>{
           if(!last){ setEventReplay(r=>r&&({...r,step:r.step+1})); return; }
           if(event&&event.id==='momosuke_intro') markMomosukeIntroSeen();
+          // イベントの会話も、最後まで見たら「見た」にする(次の起動で重ねて流さない)
+          if(event&&event.id===MONBEAT_CUP_STORY_ID&&!eventReplay.debug) void markRhythmEventStorySeen(MONBEAT_CUP_STORY_ID);
           setEventReplay(null);
         };
-        /* 途中でやめる。最後まで見ていないので「見たことがある」は立てない
+        /* 途中でやめる。回想(あとから見返すぶん)は「見たことがある」を立てない
            (2026-09-05・ユーザー要望「イベント回想中でスキップで飛ばせるようにしてほしい」)。
-           回想は何度でも開けるので、飛ばしても失うものはない */
-        const skip=()=>{ setEventReplay(null); };
+           回想は何度でも開けるので、飛ばしても失うものはない。
+           ★本編で流しているとき(live)だけは、飛ばしても「見た」にする。
+             そうしないと、起動のたびに同じ会話がまた出てしまう。
+             飛ばしたぶんはプロフィールの「イベント回想」からいつでも見られる */
+        const skip=()=>{
+          if(eventReplay.live&&!eventReplay.debug&&event&&event.id===MONBEAT_CUP_STORY_ID) void markRhythmEventStorySeen(MONBEAT_CUP_STORY_ID);
+          setEventReplay(null);
+        };
         return(
         <div className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:77000,backgroundColor:'rgba(2,6,23,.95)'}} role="dialog" aria-modal="true" aria-label={`イベント回想: ${event?.title||''}`}>
           <button type="button" onClick={next} aria-label="次へ" className="absolute inset-0 w-full h-full" style={{background:'transparent'}}/>
           <div className="relative w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] overflow-y-auto mh-scroll rounded-t-3xl border-t-2 border-x-2 border-fuchsia-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))',pointerEvents:'none'}}>
-            <p className="mb-2 text-center text-[10px] font-black tracking-widest text-fuchsia-300">回想・{event?.title||''}</p>
+            <p className="mb-2 text-center text-[10px] font-black tracking-widest text-fuchsia-300">{eventReplay.live?'':'回想・'}{event?.title||''}</p>
             <div className="mb-3 flex items-end justify-center gap-3">
               {cast.map(who=>{
                 const talking=who.id===line.who;
