@@ -1790,10 +1790,52 @@ const rhythmChooseTapTarget=(passed,upcoming,now)=>{
   );
   return now>=switchAt?upcoming:passed;
 };
+// 1フレームに複数の指が来たとき、どの入力から先に相手を決めるか。
+//
+// 【2026-09-11・指を置いた順で結果が変わっていた】
+// 入力は先に処理したものが claimed で勝つ「早い者勝ち」で、並び順は
+// Array.from(e.touches) の順＝**指が画面に触れた順**。位置とは何の関係もない。
+// そのため同じ配置でも、置いた順で片方が空打ちになりノーツが1つ見逃しになった。
+//
+//   実測: X=sub0〜2(中心1) / Y=sub3〜5(中心4) が同時刻。
+//         f1=sub2.6(どちらの内側でもない・Yの中心に近い) / f2=sub4.0(Yの内側だけ)
+//     順[f1,f2] … f1がYを取り、f2は行き先が無く空打ち → **Xが見逃しMISS**
+//     順[f2,f1] … f2がY、f1がX。両方取れる
+//
+// f2は「Yしか選べない」のに、f1は「XでもYでもよい」。選べる先が狭いほうを先に通せば、
+// 広いほうは残りへ回れる。ここでは「どれかのノーツの帯の内側にいるか」を狭さの目安にする
+// (内側にいる指は、その帯を狙っているのがはっきりしている)。
+// 並べ替えは安定ソートなので、同じ区分どうしの順番は触れた順のまま変わらない。
+const rhythmOrderInputsForMatch=(inputs,isInsideSomeNote)=>{
+  const list=Array.isArray(inputs)?inputs:[];
+  if(list.length<2)return list;
+  return list
+    .map((input,order)=>({input,order,inside:isInsideSomeNote(input)?0:1}))
+    .sort((a,b)=>a.inside-b.inside||a.order-b.order)
+    .map(entry=>entry.input);
+};
 const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
   const source=Array.isArray(notes)?notes:[],claimed=new Set(),seenInputs=new Set(),now=Number(nowMs),offset=Number(offsetMs)||0;
   const [matchStart,matchEnd]=rhythmInputMatchBounds(source,now,offset);
-  return (Array.isArray(inputs)?inputs:[]).map(input=>{
+  // 相手を決める前に、選べる先が狭い入力から順に並べ替える(上の説明)。
+  // 見るのは位置だけで、時刻の取り合い(switchAt)には一切触れない。
+  const insideSomeNote=input=>{
+    const coordinate=Number(input?.subLaneCoordinate);
+    if(!Number.isFinite(coordinate))return false;
+    for(let index=matchStart;index<matchEnd;index++){
+      const note=source[index];
+      if(!note||note.done||note.activePointerId!==null||!RHYTHM_NOTE_TYPES.includes(note.type))continue;
+      if(Math.abs(now-(Number(note.timeMs)+offset))>RHYTHM_INPUT_MATCH_WINDOW_MS)continue;
+      const span=rhythmNoteHasVariableSpan(note)
+        ?(()=>{const projected=rhythmProjectSubLaneSpan(note.subLane,note.subLaneWidth,1);
+               return {start:projected.subLane,end:projected.subLane+projected.subLaneWidth};})()
+        :rhythmSlideInputSpan(note);
+      if(!span)continue;
+      if(coordinate>=span.start&&coordinate<=span.end)return true;
+    }
+    return false;
+  };
+  return rhythmOrderInputsForMatch(inputs,insideSomeNote).map(input=>{
     const key=String(input?.inputKey??'');
     if(!key||seenInputs.has(key))return {input,target:null,deltaMs:null};
     seenInputs.add(key);
@@ -1867,14 +1909,24 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
     // という状態だった(2026-09-05・実機の指摘「タップ判定の巻き込みもまだある」)。
     // 近いほうを選べばBが取れる。ほかの叩き方(16分・8分・3連符・連打の取りこぼし)は
     // 結果が変わらないことを tools/mode/rhythm-tap-target-check.js で確かめている。
-    const candidate=(current,note,index,noteTime,inside,distance,preferLater)=>{
-      if(!current)return {note,index,noteTime,inside,distance};
+    const candidate=(current,note,index,noteTime,inside,distance,preferLater,span)=>{
+      const made={note,index,noteTime,inside,distance,span};
+      if(!current)return made;
       // 時刻がいちばん端のものを選ぶ。過ぎている側は後ろ、まだ来ていない側は前
       if(noteTime!==current.noteTime)
-        return (preferLater?noteTime>current.noteTime:noteTime<current.noteTime)?{note,index,noteTime,inside,distance}:current;
-      // 同じ時刻なら、内側にあるほう → それも同じなら押した位置に近いほう
-      if(inside!==current.inside)return inside?{note,index,noteTime,inside,distance}:current;
-      return distance<current.distance?{note,index,noteTime,inside,distance}:current;
+        return (preferLater?noteTime>current.noteTime:noteTime<current.noteTime)?made:current;
+      // 同じ時刻なら、内側にあるほう
+      if(inside!==current.inside)return inside?made:current;
+      // 【2026-09-11】どちらの内側にもいるときは、**細いほう**を先に見る。
+      // 幅の広いノーツと細いノーツが同じ時刻で重なっていると、細いほうの内側を
+      // 押しているのに「中心がたまたま近い」広いほうが取られていた
+      // (実測: 全幅TAP(中心5)と幅1TAP(sub5〜6,中心5.5)が重なるとき、sub5.2を押すと全幅が取れる)。
+      // 細い帯をわざわざ押しているのだから、狙いはそちら。取られた広いほうは
+      // もう片方の指が来るまで残るので、1入力で2つ崩れる形にもなっていた。
+      if(inside&&current.inside&&Number.isFinite(span)&&Number.isFinite(current.span)&&span!==current.span)
+        return span<current.span?made:current;
+      // それも同じなら押した位置に近いほう
+      return distance<current.distance?made:current;
     };
     let passedBest=null,upcomingBest=null;
     for(let index=matchStart;index<matchEnd;index++){
@@ -1896,8 +1948,9 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
       // 効かない(指はもう降りている)。巻き込みが起きるのはTAPなので、TAPだけに限る。
       if(now<noteTime&&note.type==='TAP'&&timeDistance>RHYTHM_COMBO_SAFE_WINDOW_MS)continue;
       const distance=spatialDistance(note),inside=isInside(note);
-      if(now>=noteTime)passedBest=candidate(passedBest,note,index,noteTime,inside,distance,true);
-      else upcomingBest=candidate(upcomingBest,note,index,noteTime,inside,distance,false);
+      const noteSpan=inputSpan(note),spanWidth=noteSpan?Number(noteSpan.width):NaN;
+      if(now>=noteTime)passedBest=candidate(passedBest,note,index,noteTime,inside,distance,true,spanWidth);
+      else upcomingBest=candidate(upcomingBest,note,index,noteTime,inside,distance,false,spanWidth);
     }
     // 過ぎている側とまだ来ていない側の両方がある場合は、判定ランクの良し悪しではなく
     // 「ノーツ間のどこまでを前ノーツの所有時間にするか」で決める。
