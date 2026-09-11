@@ -160,6 +160,20 @@ const collectBondRankingEntries = (rankingPool) => {
   return deduped.sort((a,b)=>b.bondLevel-a.bondLevel||a.userName.localeCompare(b.userName,'ja'));
 };
 
+// 絆Lvランキングの一覧(1人 × 1個体)を、総合力の高い順へ並べ直す。
+// 取り出す一覧・重複のまとめ方は絆Lvとまったく同じで、並べる数字だけが替わる。
+//
+// 総合力は育成スナップショット(detail.power)にだけ入っている「その記録を出したときの値」。
+//   ・いまのデータで計算し直さない … 種のバランスを変えると過去の順位まで動いてしまう
+//   ・残っていない古い記録は載せない … 参考値を本物の順位へ混ぜない(「情報なし」の行も作らない)
+const collectPowerRankingEntries = (bondEntries) => (Array.isArray(bondEntries) ? bondEntries : [])
+  .map(entry => {
+    const power = Number(entry?.detail?.power);
+    return (entry && Number.isFinite(power) && power > 0) ? { ...entry, power: Math.round(power) } : null;
+  })
+  .filter(Boolean)
+  .sort((a, b) => b.power - a.power || String(a.userName||'').localeCompare(String(b.userName||''), 'ja'));
+
 // ランキングに出すモンスターの絵。記録にはIDだけが入っているので、同梱の絵を引いて使う。
 // 画像を埋め込んでいた頃の古い記録は、そのimgUrlをそのまま使って表示できるようにしておく。
 const rankingMonsterIdOf = (member) => {

@@ -430,6 +430,10 @@ function MonsterHeroGame() {
     Object.prototype.hasOwnProperty.call(DIFFICULTY_SETTINGS, rankingViewDiff) ? rankingViewDiff : BATTLE_DEFAULT_DIFFICULTY);
   const [rankingKind, setRankingKind] = useState('score'); // 'score' | 'breeder' | 'bond'
   const [bondRankMonFilter, setBondRankMonFilter] = useState('all'); // 絆レベルランキングのモンスター種別フィルタ
+  // 総合力ランキングのモンスター種別フィルタ。絆Lvランキングと同じ「すべて＋種族別」の並び。
+  // 元になる一覧(bond_levels の正本 ＋ rankings の編成)は絆Lvとまったく同じものを使うので、
+  // タブを1つ増やしても通信は増えない
+  const [powerRankMonFilter, setPowerRankMonFilter] = useState('all');
   // 種族チャレンジランキングのタブ。
   // 'allSpecies' なら種族を問わないその難易度の全国ランキング、
   // 血統idならその種族×難易度の全国ランキング、'selfBest' なら自分の種族別ベストの比較
@@ -437,7 +441,7 @@ function MonsterHeroGame() {
   // 新しいバトルの入口(バトルモード再編・第2段階)。
   // 「バトル → バトルモード選択 → 難易度選択」の3画面と、そこから開くランキング。
   // まだデバッグ設定からだけ開ける。ふだんの「バトル」はこれまでどおり BATTLE_MENU のまま
-  const [modeSelectTab, setModeSelectTab] = useState('mode'); // 'mode' | 'breeder' | 'bond'
+  const [modeSelectTab, setModeSelectTab] = useState('mode'); // 'mode' | 'breeder' | 'bond' | 'power'
   // スコアランキングを「どのモードのぶんとして」見ているか。チャレンジとプロの2つだけ
   const [scoreRankingMode, setScoreRankingMode] = useState(BATTLE_MODE_CHALLENGE);
   // ランキングから戻る先。モード選択カードから開いたか、難易度カードから開いたかで変わる
@@ -1598,6 +1602,16 @@ function MonsterHeroGame() {
       ? bondRankingAll.slice(0, 50)
       : bondRankingAll.filter(x => bondEntryLineageId(x) === bondRankMonFilter).slice(0, 50)
   ), [bondRankingAll, bondRankMonFilter, bondEntryLineageId]);
+  // 総合力ランキング。絆Lvランキングとまったく同じ一覧(1人 × 1個体)を、
+  // 記録に残っている「その周回の時点の総合力」で並べ直したもの。
+  // 並べ替えの中身は collectPowerRankingEntries が正本(画面側に式を書き写さない)
+  const powerRankingAll = useMemo(() => collectPowerRankingEntries(bondRankingAll), [bondRankingAll]);
+  // 種族タブの絞り込みは絆Lvと同じ血統idで行う(bondEntryLineageId をそのまま使う)
+  const powerRanking = useMemo(() => (
+    powerRankMonFilter === 'all'
+      ? powerRankingAll.slice(0, 50)
+      : powerRankingAll.filter(x => bondEntryLineageId(x) === powerRankMonFilter).slice(0, 50)
+  ), [powerRankingAll, powerRankMonFilter, bondEntryLineageId]);
   const emptyRankingStatus = { loading:false, refreshing:false, error:null, fetched:false };
   const rankingStatus = (key) => rankingStatusByKey[key] || emptyRankingStatus;
   const saveRankingCache = (patch) => {
@@ -2301,6 +2315,11 @@ function MonsterHeroGame() {
   // モンビーを開いているか(演奏中も含む)。開いている間はランが進んでも画面を切り替えない。
   // 演奏中に画面がバトルへ飛ぶのを防ぐため、RHYTHM_PLAY もここへ入れる
   const rhythmScreenOpen = [...RHYTHM_BACKGROUND_RUN_SCREENS,'RHYTHM_PLAY'].includes(gameState);
+  // 「モンヒロビートへ入った瞬間」を見分けるための一覧(自動で∞周回を始める判定に使う)。
+  // ★裏で回してよい画面より広く取る。オプション・遊びかたもモンビーの中なので、
+  //   そこから曲えらびへ戻っただけで「入り直した」と数えると、周回が何度も立ち上がる。
+  //   デバッグ画面(RHYTHM_DEBUG)と、未公開のときに出る案内(RHYTHM_INFO)は入口ではないので入れない
+  const RHYTHM_AUTO_START_SCREENS = [...RHYTHM_BACKGROUND_RUN_SCREENS,'RHYTHM_PLAY','RHYTHM_OPTIONS'];
   // 裏で周回してよい状態か。
   //  ・クイックの∞周回だけ(チャレンジ・プロ・極限・種族は全国ランキング対象なので裏で回さない)
   //  ・演奏中は止める(曲が終われば自動で再開する)
@@ -2433,10 +2452,18 @@ function MonsterHeroGame() {
   // 今回の演奏が何周ぶんになるか。0 なら何も起きない(いつもどおり)。
   // ★過去にその難易度をクイックでクリアしていないと 0。
   //   勝てないほど高い難易度でも演奏さえすればクリア扱い、を防ぐ(ユーザー指示)
+  // いまその曲にかかる倍率。ふだんは2倍、開催中のイベントの対象曲だけ3倍
+  // (2026-09-11・ユーザー指示「現状の2倍」「イベント時は対象曲は3倍」)。
+  // ★イベントは**呼ばれるたびに**引き直す。読み込み時に1回だけ決めると、開いたままの端末で
+  //   開催・終了をまたいだときに古い倍率が残る(CLAUDE.md ⑥-4)。
+  const rhythmPlayRunLoopEventNow = () =>
+    (RELEASE_FLAGS.rhythmWeeklyRanking === true && typeof rhythmLimitedEventAt === 'function')
+      ? rhythmLimitedEventAt(Date.now()) : null;
+  const rhythmPlayRunLoopScaleFor = (song) => rhythmPlayRunLoopScale(song ? song.songId : null, rhythmPlayRunLoopEventNow());
   const rhythmPlayLoopsFor = (song, rhythmDifficulty) => {
     if (!runStageRef.current || !autoRepeatRef.current || !isQuickMode(runMode)) return 0;
     if (!rhythmPlayRunLoopsAllowed(difficulty, quickClearCounts)) return 0;
-    return rhythmPlayRunLoops(rhythmPlaySongDurationMs(song, rhythmDifficulty));
+    return rhythmPlayRunLoops(rhythmPlaySongDurationMs(song, rhythmDifficulty), rhythmPlayRunLoopScaleFor(song));
   };
   // ★配るものは「実際に1周クリアしたとき」とそろえる。
   //   経験値とダイヤだけにしていたころは、演奏するより裏で回したほうが得になっていた
@@ -2447,9 +2474,12 @@ function MonsterHeroGame() {
   //   「実際に1周勝ったとき」と必ず一致する。
   // ★触らないのは記録(最高スコア・最高WAVE)だけ。演奏にはスコアが無く、
   //   埋める値そのものが存在しないため(CLAUDE.md ⑦「消さない・上書きしない」)。
-  const awardRhythmPlayRunLoops = async (loops) => {
+  // loopScale … その演奏にかかっていた倍率。曲リザルトで「イベント対象曲 ×3」と出すためだけに使う
+  //   (配る量そのものは loops に織り込み済みなので、ここで掛け直さない)
+  const awardRhythmPlayRunLoops = async (loops, loopScale = RHYTHM_PLAY_RUN_LOOP_SCALE) => {
     const count = Math.max(0, Math.trunc(Number(loops) || 0));
     if (count <= 0) return null;
+    const scale = Number.isFinite(Number(loopScale)) && Number(loopScale) > 0 ? Number(loopScale) : RHYTHM_PLAY_RUN_LOOP_SCALE;
     const { goldMult, xpMult } = runRewardMultipliers();
     const policy = quickRewardPolicyRunRef.current;
     // ---- ブリーダー経験値 ----
@@ -2524,7 +2554,8 @@ function MonsterHeroGame() {
     const fromLoop = quickRunProgressRef.current ? quickRunProgressRef.current.loops : 0;
     for (let i = 0; i < count; i++) countQuickRunLoop();
     const toLoop = quickRunProgressRef.current ? quickRunProgressRef.current.loops : fromLoop;
-    return { loops: count, xp: xpGain, gold: goldGain, bond: bondGain, psyche: psycheGain, fromLoop, toLoop };
+    return { loops: count, xp: xpGain, gold: goldGain, bond: bondGain, psyche: psycheGain, fromLoop, toLoop,
+      scale, eventBoosted: scale > RHYTHM_PLAY_RUN_LOOP_SCALE };
   };
   // ---- 画面のなかでの使い方案内(docs/spec/QUICK_RHYTHM_LINK.md PR8) ----
   // ヘルプと更新履歴は探しに行った人しか読まない。この連携は遊んでいるだけでは
@@ -8123,6 +8154,35 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     else beginQuickRunProgress();
     return true;
   };
+  // ===== モンヒロビートを開いたら自動で∞周回を始める =====
+  // (2026-09-11・ユーザー指示「オート設定にモンビー中のオート周回を設定している場合に
+  //  モンビーを開いたら自動でクイックに入る機能を追加したい /
+  //  その機能をオート周回設定のとこでオンオフ切り替えられるように」)。
+  //
+  // ★始めるのは「モンヒロビートへ入った瞬間」だけ。曲えらびにいるあいだ何度も試さない。
+  //   演奏・オプション・ランキングもモンビーの中なので、そこから曲えらびへ戻っただけでは
+  //   「入った瞬間」にならない(戻るたびに新しい周回が始まってしまうため)。
+  // ★次のときは何もしない(黙って見送る)。
+  //   ・スイッチがOFF／事前設定が3つそろっていない
+  //   ・すでに周回が回っている
+  //   ・ほかのモードのバトルが続いている(クイック以外を裏で回さない・CLAUDE.md ⑦)
+  //   ・公開フラグが下りている
+  const rhythmAutoStartInsideRef = useRef(false);
+  useEffect(() => {
+    const inside = RHYTHM_AUTO_START_SCREENS.includes(gameState);
+    const wasInside = rhythmAutoStartInsideRef.current;
+    rhythmAutoStartInsideRef.current = inside;
+    if (!inside || wasInside) return;                                  // 入った瞬間だけ
+    if (!quickRhythmGuideReleased) return;
+    if (!autoQuickRunAutoStartEnabled(autoSettings)) return;
+    // すでに回っている(止まっていない)なら、そのまま続ける
+    if (quickRunProgressRef.current && !quickRunProgressRef.current.finished) return;
+    // まだ勝負のついていない挑戦の上へ、新しいランを重ねない(startQuickRunFromRhythm と同じ条件)
+    if (runStageRef.current && !runResultFinishedRef.current) return;
+    // 事前設定から編成を作れないとき(勇者モンがいない・難易度が未解放)は黙って見送る
+    if (!repeatTemplateFromAutoSettings()) return;
+    startQuickRunFromRhythm();
+  }, [gameState]);
   // バトル内ではAUTO系を1ボタンで循環する。表示用stateは持たず、既存の同期refから次の状態だけを決める。
   const cycleBattleAuto = () => {
     if(autoRepeatRef.current){setAutoBattleEnabled(false);return;}
@@ -9858,6 +9918,19 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       : null;
     return <article key={`bond-${entry?.userName||'unknown'}-${entry?.masuId||entry?.monsterId||entry?.monName}-${index}`} data-ranking-kind="bond" className={`${rankingCardClass(index)} p-2`}><div className="grid grid-cols-[28px_32px_minmax(0,1fr)_auto] items-center gap-2 min-w-0">{rankingPlace(index)}{rankingBreederIcon(entry)}<b className="truncate text-[10px]">{entry?.userName||'名無しのブリーダー'}</b><strong className="text-xs text-pink-300 whitespace-nowrap">絆Lv.{level}</strong></div><div className="ml-[76px] mt-1 flex items-center gap-2 min-w-0 rounded-lg bg-black/35 px-2 py-1"><span data-ranking-soul-badge className="relative w-7 h-7 shrink-0 overflow-visible">{entry?.imgUrl?<img src={entry.imgUrl} alt="" className="w-7 h-7 object-contain"/>:<span className="block w-7 text-center">{entry?.emoji||'❓'}</span>}{entry?.detail&&<TranscendenceBadge transcended={entry.detail?.transcended===true} soulRankStage={entry.detail?.soulRankStage} small/>}</span><b className="truncate flex-1 text-[10px]">{entry.monName}</b>{/* 育て方が記録に残っている個体だけ開ける。古い記録は押せない状態にして理由をその場に出す */}<button onClick={()=>{ if (detailMember) setRankingMonsterDetail(detailMember); }} disabled={!detailMember} data-bond-detail={detailMember?'open':'none'} className={`shrink-0 px-2 py-1 rounded-lg border text-[9px] font-black leading-none ${detailMember?'border-indigo-400/60 bg-indigo-500/20 text-indigo-100 active:scale-95':'border-white/10 bg-black/20 text-slate-600'}`}>{detailMember?'詳細 ›':'情報なし'}</button></div></article>;
   };
+  // 総合力専用カード。絆Lvのカードと同じ並び(順位・アイコン・名前・数字／下に個体)で、
+  // いちばん大きく出す数字だけが絆Lvから総合力へ替わる。絆Lvは個体の行へ小さく添える。
+  const renderPowerRankingEntry = (entry, index) => {
+    const level = Number(entry?.bondLevel);
+    // 「詳細 ›」で開くのは絆Lvランキングとまったく同じ1体ぶんの画面。
+    // 総合力の一覧は detail がある記録だけを載せているので、ここは必ず開ける
+    const detailMember = entry?.detail
+      ? { baseId: entry.monsterId, monsterId: entry.monsterId, name: entry.monName,
+          masuId: entry.masuId, bondLevel: level, detail: entry.detail,
+          colors: Array.isArray(entry.colors) ? entry.colors : [] }
+      : null;
+    return <article key={`power-${entry?.userName||'unknown'}-${entry?.masuId||entry?.monsterId||entry?.monName}-${index}`} data-ranking-kind="power" className={`${rankingCardClass(index)} p-2`}><div className="grid grid-cols-[28px_32px_minmax(0,1fr)_auto] items-center gap-2 min-w-0">{rankingPlace(index)}{rankingBreederIcon(entry)}<b className="truncate text-[10px]">{entry?.userName||'名無しのブリーダー'}</b><strong className="flex items-baseline gap-1 whitespace-nowrap"><span className="text-[7px] font-black uppercase tracking-widest text-amber-400/80">総合力</span><span className="font-mono text-xs tabular-nums text-amber-200">{formatMonsterPower(entry?.power)}</span></strong></div><div className="ml-[76px] mt-1 flex items-center gap-2 min-w-0 rounded-lg bg-black/35 px-2 py-1"><span data-ranking-soul-badge className="relative w-7 h-7 shrink-0 overflow-visible">{entry?.imgUrl?<img src={entry.imgUrl} alt="" className="w-7 h-7 object-contain"/>:<span className="block w-7 text-center">{entry?.emoji||'❓'}</span>}{entry?.detail&&<TranscendenceBadge transcended={entry.detail?.transcended===true} soulRankStage={entry.detail?.soulRankStage} small/>}</span><b className="truncate flex-1 text-[10px]">{entry.monName}</b>{Number.isFinite(level)&&level>0&&<span className="shrink-0 text-[9px] font-black text-pink-300 whitespace-nowrap">絆Lv.{level}</span>}<button onClick={()=>{ if (detailMember) setRankingMonsterDetail(detailMember); }} disabled={!detailMember} data-power-detail={detailMember?'open':'none'} className={`shrink-0 px-2 py-1 rounded-lg border text-[9px] font-black leading-none ${detailMember?'border-indigo-400/60 bg-indigo-500/20 text-indigo-100 active:scale-95':'border-white/10 bg-black/20 text-slate-600'}`}>{detailMember?'詳細 ›':'情報なし'}</button></div></article>;
+  };
   // そのモード・難易度の端末記録。画面のあちこちで if を並べないための小さな入口。
   // 保存先はモードごとに分かれている(mh_ / mh_quick_ / mh_pro_)
   const modeRecordFor = (mode, diff) => isQuickMode(mode)
@@ -10010,6 +10083,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 絆Lvランキング。こちらもモードでは分かれず、モンスターの種類で絞る
   const renderBondRankingBody = () => (
     <><div className="flex gap-1 overflow-x-auto pb-1.5 shrink-0">{[{id:'all',label:'すべて'},...bondRankingLineages.map(l=>({id:l.id,label:`${l.name}種`}))].map(t=><button key={t.id} onClick={()=>setBondRankMonFilter(t.id)} className={`px-2.5 py-1 rounded-full text-[8px] font-black shrink-0 border ${bondRankMonFilter===t.id?'bg-pink-600 border-pink-400':'bg-slate-900 border-white/10 text-slate-400'}`}>{t.label}</button>)}</div><div className="flex-1 overflow-y-auto mh-scroll space-y-1.5">{bondRankingLoading&&bondRankingData&&<div className="text-center text-[9px] text-indigo-300">更新中…</div>}{bondRankingError&&bondRankingData&&<div className="text-center text-[9px] text-amber-300">{bondRankingError}</div>}{bondRanking.map(renderBondRankingEntry)}{bondRanking.length===0&&(bondRankingLoading&&!bondRankingData?<div className="text-center text-slate-400 py-8">Loading...</div>:bondRankingError&&!bondRankingData?rankingRetryButton(()=>loadRankings(null,true,true,'bond')):rankingEmptyText)}</div></>
+  );
+  // 総合力ランキング。絆Lvランキングと同じデータ・同じ取得(levelKind='bond')を使う。
+  // タブを開いたときに呼ぶ loadRankings も 'bond' のままなので、通信はこれまでと同じ回数のまま
+  const renderPowerRankingBody = () => (
+    <><div className="flex gap-1 overflow-x-auto pb-1.5 shrink-0">{[{id:'all',label:'すべて'},...bondRankingLineages.map(l=>({id:l.id,label:`${l.name}種`}))].map(t=><button key={t.id} onClick={()=>setPowerRankMonFilter(t.id)} className={`px-2.5 py-1 rounded-full text-[8px] font-black shrink-0 border ${powerRankMonFilter===t.id?'bg-amber-600 border-amber-400':'bg-slate-900 border-white/10 text-slate-400'}`}>{t.label}</button>)}</div><div className="flex-1 overflow-y-auto mh-scroll space-y-1.5">{bondRankingLoading&&bondRankingData&&<div className="text-center text-[9px] text-indigo-300">更新中…</div>}{bondRankingError&&bondRankingData&&<div className="text-center text-[9px] text-amber-300">{bondRankingError}</div>}{powerRanking.map(renderPowerRankingEntry)}{powerRanking.length===0&&(bondRankingLoading&&!bondRankingData?<div className="text-center text-slate-400 py-8">Loading...</div>:bondRankingError&&!bondRankingData?rankingRetryButton(()=>loadRankings(null,true,true,'bond')):rankingEmptyText)}{powerRanking.length>0&&<p className="rounded-xl border border-white/10 bg-slate-900/60 p-3 text-center text-[9px] leading-relaxed text-slate-400">総合力は、その記録を出したときの値をそのまま並べています。育て方が記録に残る前の古い記録は載りません。</p>}</div></>
   );
   if (bootPhase === 'TITLE') return (
     <><main className="mh-title-gate" aria-label="Monster Hero タイトル画面">
@@ -10197,7 +10275,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {/* モンヒロビートから∞周回を始めるための事前設定(docs/spec/QUICK_RHYTHM_LINK.md PR5)。
                   3つとも決めたときだけ使う。決めていないあいだは、これまでどおり
                   「1周目に自分で組んだ編成」をそのまま繰り返す */}
-              <section className="space-y-3"><div><h3 className="text-sm font-black text-indigo-200">3. モンヒロビート中に回すクイック周回</h3><p className="text-[9px] leading-relaxed text-slate-400 mt-1">モンヒロビートから∞周回を始めるときの編成です。勇者モン・配置距離・難易度の3つを決めると使えます。決めていないあいだは、いつもどおりバトル画面で1周目を組んでから∞にしてください。</p></div><div className="rounded-2xl border border-fuchsia-500/30 bg-slate-900 p-3 space-y-2"><label className="block text-xs font-black text-white" htmlFor="auto-quick-hero">勇者モン</label><select id="auto-quick-hero" value={draftAutoSettings.quickRun?.heroRosterEntry||''} onChange={event=>updateDraftAutoQuickRun({heroRosterEntry:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-slate-600 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">未設定（この機能を使わない）</option>{monsterRosterIds.filter(entry=>!!resolveRosterEntryToMon(entry)).map(entry=><option key={entry} value={entry}>{autoRosterLabel(entry)}</option>)}</select>{renderAutoAllySummary(draftAutoSettings.quickRun?.heroRosterEntry)}<div><div className="text-[10px] font-black text-slate-300 mb-1.5">配置距離</div><div className="grid grid-cols-4 gap-1">{ranges.filter(([slot])=>slot!==null).map(([slot,label])=><button key={label} onClick={()=>updateDraftAutoQuickRun({distance:slot})} aria-pressed={draftAutoSettings.quickRun?.distance===slot} className={`min-h-[44px] min-w-0 rounded-lg border text-[10px] font-black active:scale-95 ${draftAutoSettings.quickRun?.distance===slot?'ring-2 ring-white border-white':''} ${RANGE_STYLES[slot].labelBg} ${RANGE_STYLES[slot].border}`}>{label}</button>)}</div></div><div><label className="block text-[10px] font-black text-slate-300 mb-1.5" htmlFor="auto-quick-difficulty">難易度</label><select id="auto-quick-difficulty" value={draftAutoSettings.quickRun?.difficulty||''} onChange={event=>updateDraftAutoQuickRun({difficulty:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-slate-600 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">未設定</option>{Object.entries(QUICK_DIFFICULTY_SETTINGS).map(([key,setting])=>{const unlocked=isQuickDifficultyUnlocked(key,clearCounts,proClearCounts,extremeDifficultyClearCounts);return <option key={key} value={key} disabled={!unlocked}>{setting.label}{unlocked?'':'（未解放）'}</option>;})}</select></div><div className="pt-1"><AssistantBubble scene="autoQuickRunSettings" compact/></div><p className="text-[9px] leading-relaxed text-slate-400">{autoQuickRunConfigured(draftAutoSettings)?'✅ 3つとも決まっています。モンヒロビートから周回を始められます。':'まだ使えません（3つとも決めると使えます）。'}</p></div></section>
+              <section className="space-y-3"><div><h3 className="text-sm font-black text-indigo-200">3. モンヒロビート中に回すクイック周回</h3><p className="text-[9px] leading-relaxed text-slate-400 mt-1">モンヒロビートから∞周回を始めるときの編成です。勇者モン・配置距離・難易度の3つを決めると使えます。決めていないあいだは、いつもどおりバトル画面で1周目を組んでから∞にしてください。</p></div><div className="rounded-2xl border border-fuchsia-500/30 bg-slate-900 p-3 space-y-2"><label className="block text-xs font-black text-white" htmlFor="auto-quick-hero">勇者モン</label><select id="auto-quick-hero" value={draftAutoSettings.quickRun?.heroRosterEntry||''} onChange={event=>updateDraftAutoQuickRun({heroRosterEntry:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-slate-600 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">未設定（この機能を使わない）</option>{monsterRosterIds.filter(entry=>!!resolveRosterEntryToMon(entry)).map(entry=><option key={entry} value={entry}>{autoRosterLabel(entry)}</option>)}</select>{renderAutoAllySummary(draftAutoSettings.quickRun?.heroRosterEntry)}<div><div className="text-[10px] font-black text-slate-300 mb-1.5">配置距離</div><div className="grid grid-cols-4 gap-1">{ranges.filter(([slot])=>slot!==null).map(([slot,label])=><button key={label} onClick={()=>updateDraftAutoQuickRun({distance:slot})} aria-pressed={draftAutoSettings.quickRun?.distance===slot} className={`min-h-[44px] min-w-0 rounded-lg border text-[10px] font-black active:scale-95 ${draftAutoSettings.quickRun?.distance===slot?'ring-2 ring-white border-white':''} ${RANGE_STYLES[slot].labelBg} ${RANGE_STYLES[slot].border}`}>{label}</button>)}</div></div><div><label className="block text-[10px] font-black text-slate-300 mb-1.5" htmlFor="auto-quick-difficulty">難易度</label><select id="auto-quick-difficulty" value={draftAutoSettings.quickRun?.difficulty||''} onChange={event=>updateDraftAutoQuickRun({difficulty:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-slate-600 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">未設定</option>{Object.entries(QUICK_DIFFICULTY_SETTINGS).map(([key,setting])=>{const unlocked=isQuickDifficultyUnlocked(key,clearCounts,proClearCounts,extremeDifficultyClearCounts);return <option key={key} value={key} disabled={!unlocked}>{setting.label}{unlocked?'':'（未解放）'}</option>;})}</select></div><div><div className="text-[10px] font-black text-slate-300 mb-1.5">モンヒロビートを開いたら自動で始める</div><button type="button" data-auto-quick-run-autostart aria-pressed={draftAutoSettings.quickRun?.autoStart===true} disabled={!autoQuickRunConfigured(draftAutoSettings)} onClick={()=>updateDraftAutoQuickRun({autoStart:!(draftAutoSettings.quickRun?.autoStart===true)})} className={`flex min-h-[48px] w-full items-center justify-between gap-2 rounded-xl border px-3 text-left active:scale-[.99] disabled:opacity-50 ${draftAutoSettings.quickRun?.autoStart===true?'border-fuchsia-300 bg-fuchsia-900/50':'border-slate-600 bg-slate-950'}`}><span className="min-w-0 flex-1 text-[11px] font-black text-white">{draftAutoSettings.quickRun?.autoStart===true?'ON（開いたらすぐ回しはじめる）':'OFF（自分で「始める」を押す）'}</span><span className={`shrink-0 rounded-md px-2 py-0.5 text-[10px] font-black ${draftAutoSettings.quickRun?.autoStart===true?'bg-fuchsia-500 text-white':'bg-slate-700 text-slate-300'}`}>{draftAutoSettings.quickRun?.autoStart===true?'ON':'OFF'}</span></button><p className="mt-1 text-[9px] leading-relaxed text-slate-400">ONにすると、HOMEなどからモンヒロビートを開いたときに、この編成でクイックの∞周回が裏で始まります。すでに周回しているとき・ほかのモードのバトルが続いているときは何もしません。曲えらびの上の帯から、いつでも止められます。</p></div><div className="pt-1"><AssistantBubble scene="autoQuickRunSettings" compact/></div><p className="text-[9px] leading-relaxed text-slate-400">{autoQuickRunConfigured(draftAutoSettings)?'✅ 3つとも決まっています。モンヒロビートから周回を始められます。':'まだ使えません（3つとも決めると使えます）。'}</p></div></section>
               <section data-auto-breakthrough-bulk-settings className="rounded-2xl border border-cyan-500/40 bg-cyan-950/20 p-3 space-y-3">
                 <div><h3 className="text-sm font-black text-cyan-200">4. AUTO∞ 自動限界突破</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-slate-300">現在所有しているマスモンをまとめて設定し、限界突破で使い切らないようダイヤと虹のプシュケーを残せます。</p></div>
                 <div className="rounded-xl border border-cyan-500/30 bg-slate-950/70 p-3 space-y-2">
@@ -10612,9 +10690,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {/* 上のタブ。スコアランキングはモードごとに分かれるのでここには置かず、
                   モードのカードと難易度のカードから開く。ここに並ぶのはモードで分かれない2つだけ */}
               {/* 練習中はランキングへ移らせない(台本がモード選択のまま進むため) */}
-              <div className={`grid grid-cols-3 gap-1 mb-2 shrink-0 rounded-xl bg-slate-900/60 p-0.5 border border-white/5${battleTutorialSpotClass('modeRankTabs')}`}>
-                {[['mode','モード選択'],['breeder','ブリーダーLv'],['bond','絆Lv']].map(([key,label])=>(
-                  <button key={key} disabled={!!battleTutorial} onClick={()=>{setModeSelectTab(key);if(key==='mode')return;addAssistantBond('ranking');if(key==='bond')setBondRankMonFilter('all');loadRankings(null,true,false,key);}} aria-label={key==='mode'?'モード選択':`${label}ランキング`} className={`min-h-[38px] rounded-lg text-[10px] font-black active:scale-95 disabled:opacity-40 ${modeSelectTab===key?'bg-indigo-600 text-white':'text-slate-400'}`}>{label}</button>
+              {/* 4つ並ぶので字だけ小さくする。「ブリーダーLv」を略さず正式な見出しのまま入れるため */}
+              <div className={`grid grid-cols-4 gap-1 mb-2 shrink-0 rounded-xl bg-slate-900/60 p-0.5 border border-white/5${battleTutorialSpotClass('modeRankTabs')}`}>
+                {/* 総合力は絆Lvとまったく同じ一覧を並べ直したものなので、取得も絆Lvと同じ 'bond' を呼ぶ
+                    (タブ名をそのまま levelKind へ渡すと、存在しない 'power' の取得になってしまう) */}
+                {[['mode','モード選択'],['breeder','ブリーダーLv'],['bond','絆Lv'],['power','総合力']].map(([key,label])=>(
+                  <button key={key} disabled={!!battleTutorial} onClick={()=>{setModeSelectTab(key);if(key==='mode')return;addAssistantBond('ranking');if(key==='bond')setBondRankMonFilter('all');if(key==='power')setPowerRankMonFilter('all');loadRankings(null,true,false,key==='power'?'bond':key);}} aria-label={key==='mode'?'モード選択':`${label}ランキング`} className={`min-h-[38px] rounded-lg text-[9px] leading-tight font-black active:scale-95 disabled:opacity-40 ${modeSelectTab===key?'bg-indigo-600 text-white':'text-slate-400'}`}>{label}</button>
                 ))}
               </div>
               {modeSelectTab==='mode'&&<div className="flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll">
@@ -10662,6 +10743,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               </div>}
               {modeSelectTab==='breeder'&&<div className="flex-1 min-h-0 flex flex-col"><div className="shrink-0 w-full mb-2.5"><AssistantBubble scene="ranking" compact/></div>{renderBreederRankingBody()}</div>}
               {modeSelectTab==='bond'&&<div className="flex-1 min-h-0 flex flex-col"><div className="shrink-0 w-full mb-2.5"><AssistantBubble scene="ranking" compact/></div>{renderBondRankingBody()}</div>}
+              {modeSelectTab==='power'&&<div className="flex-1 min-h-0 flex flex-col"><div className="shrink-0 w-full mb-2.5"><AssistantBubble scene="ranking" compact/></div>{renderPowerRankingBody()}</div>}
             </div>
           </div>);
         })()}
@@ -11316,7 +11398,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 練習(tutorial)は記録も報酬も動かさないので、その前に判定しない
           if(rhythmPlay.from!=='tutorial'){
             const loops=rhythmPlayLoopsFor(rhythmPlay.song,rhythmPlay.difficulty);
-            const awarded=loops>0?await awardRhythmPlayRunLoops(loops):null;
+            const loopScale=rhythmPlayRunLoopScaleFor(rhythmPlay.song);
+            const awarded=loops>0?await awardRhythmPlayRunLoops(loops,loopScale):null;
             if(awarded){
               setRhythmPlayRunAward(awarded);
               // 限界突破も、通常の周回が終わったときと同じように走らせる

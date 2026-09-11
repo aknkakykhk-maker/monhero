@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4d5f37edfaf16419
+// generated-sha256: 532ef7a92464e882
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 19:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 19:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -249,15 +249,35 @@ const isQuickDifficultyUnlocked = (difficulty, challengeClears, proClears, extre
 // ★見るのは「曲の決められた長さ」だけ。実際にかかった時間・ポーズ・やり直しは一切見ない。
 //   そうしないと、止めている時間だけ稼げてしまう。
 //   2分25秒 → 2周 / 3分00秒 → 3周 / 3分30秒 → 3周（分の切り捨て、下限2周）。
+//
+// ★ここで出るのは「もとの周回数」で、実際に入るのはこれへ倍率を掛けたぶん
+//   (2026-09-11・ユーザー指示「モンヒロの無限周回での演奏中の周回数を上げたい /
+//    現状の2倍にしても良さそう / イベント時は対象曲は3倍」)。
+//   ふだんは2倍、開催中のイベントの対象曲だけ3倍(2倍の代わりに3倍。重ねがけはしない)。
+//   2分25秒 → 4周(イベント対象曲なら6周) / 3分00秒 → 6周(同9周)。
 const RHYTHM_PLAY_RUN_LOOP_MIN = 2;
+const RHYTHM_PLAY_RUN_LOOP_SCALE = 2;
+const RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE = 3;
 // ※「演奏で ◯周ぶん入りました」を曲えらびの帯へ出していたころは、時間で消すための
 //   RHYTHM_PLAY_RUN_AWARD_SHOW_MS を置いていた。いまは曲リザルトで出すので不要
 //   (2026-09-07・ユーザー提案「曲リザルトの画面で出すほうがいい。
 //    そうしたら帯にわざわざ何周分追加とか表示する必要もない」)。
-const rhythmPlayRunLoops = (durationMs) => {
+const rhythmPlayRunLoops = (durationMs, scale = RHYTHM_PLAY_RUN_LOOP_SCALE) => {
   const ms = Number(durationMs);
   if (!Number.isFinite(ms) || ms <= 0) return 0;
-  return Math.max(RHYTHM_PLAY_RUN_LOOP_MIN, Math.floor(ms / 60000));
+  const mult = Number(scale);
+  const safeMult = Number.isFinite(mult) && mult > 0 ? mult : RHYTHM_PLAY_RUN_LOOP_SCALE;
+  const base = Math.max(RHYTHM_PLAY_RUN_LOOP_MIN, Math.floor(ms / 60000));
+  return Math.floor(base * safeMult);
+};
+// その曲にかける倍率。開催中のイベント(rhythmLimitedEventAt で引いたもの)の
+// 対象曲なら3倍、それ以外は2倍。
+// ★イベントは引数で受け取る。ここで時刻を1回だけ見て決め打ちにすると、開きっぱなしの
+//   端末で「開催したのに倍率が上がらない／終わったのに上がったまま」になる(CLAUDE.md ⑥-4)。
+const rhythmPlayRunLoopScale = (songId, event) => {
+  const ids = (event && Array.isArray(event.songIds)) ? event.songIds : null;
+  const id = songId === null || songId === undefined ? '' : String(songId);
+  return (id && ids && ids.includes(id)) ? RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE : RHYTHM_PLAY_RUN_LOOP_SCALE;
 };
 // 演奏を「周回クリア扱い」にしてよいか。
 // ★過去にその難易度をクイックで1回でもクリアしていること(2026-09-07・ユーザー指示)。
@@ -3106,20 +3126,35 @@ const RHYTHM_SORT_ORDERS = Object.freeze([
   Object.freeze({ id:'length', label:'長さ順',  note:'曲が短い順。軽く1曲遊びたいときに' }),
 ]);
 const RHYTHM_SORT_IDS = Object.freeze(RHYTHM_SORT_ORDERS.map(item => item.id));
-// eventOnly … イベントの対象曲だけに絞るか(2026-09-11・ユーザー指示
-//   「ソートにイベント曲だけ出てくるのほしいね」)。並び替えではなく絞り込みなので、
-//   並び替えの一覧には混ぜず、別のボタンにしてある。
-//   ★開催していないときは、この値が true でも絞らない(画面側で見る)。
+// ジャンル(曲の絞り込み)。2026-09-11・ユーザー指示
+// 「対象曲のところをジャンルに変えて、その中から選べるようにしよう。イベント曲、オリジナル、MF とか。
+//   ジャンルを決めないとだから、とりあえずイベント曲だけ選べるようにすればおけ」。
+//
+// ★ジャンルを増やすときは、ここへ1件足して、曲の側に見分けるための印を付ける。
+//   画面(29-rhythm-screens.jsx)は書き換えない。
+// ★whileEvent:true を付けたものは、イベントを開催しているあいだだけ選べる。
+//   開催していないときに選ぶと一覧が空になるため。
+const RHYTHM_GENRES = Object.freeze([
+  Object.freeze({ id:'all',   label:'すべて',       note:'遊べる曲を全部' }),
+  Object.freeze({ id:'event', label:'🏆 イベント曲', note:'いま開催しているイベントの対象曲', whileEvent:true }),
+]);
+const RHYTHM_GENRE_IDS = Object.freeze(RHYTHM_GENRES.map(item => item.id));
+// genre … 曲の絞り込み(2026-09-11)。並び替えではないので、並び替えの一覧には混ぜない。
+//   ★開催していないときは、保存値が 'event' のままでも絞らない(画面側で見る)。
 //     そうしないと、イベントが終わったあとに一覧が空の人が出てしまう。
-//   ★新しい項目なので、持っていない既存ユーザーは既定値(false)で補われる(CLAUDE.md ⑦)。
-const DEFAULT_RHYTHM_SELECT_VIEW = Object.freeze({ sort:'added', desc:false, noticeOpen:true, eventOnly:false });
+//   ★新しい項目なので、持っていない既存ユーザーは既定値('all')で補われる(CLAUDE.md ⑦)。
+//   ★短いあいだ eventOnly(真偽値)で持っていたので、その値も読める形にしてある。
+//     消さずに読み替えるだけ。true だった人は 'event' を選んでいた扱いになる。
+const DEFAULT_RHYTHM_SELECT_VIEW = Object.freeze({ sort:'added', desc:false, noticeOpen:true, genre:'all' });
 const normalizeRhythmSelectView = value => {
   const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  const genre = RHYTHM_GENRE_IDS.includes(source.genre) ? source.genre
+    : (source.eventOnly === true ? 'event' : DEFAULT_RHYTHM_SELECT_VIEW.genre);
   return {
     sort: RHYTHM_SORT_IDS.includes(source.sort) ? source.sort : DEFAULT_RHYTHM_SELECT_VIEW.sort,
     desc: typeof source.desc === 'boolean' ? source.desc : DEFAULT_RHYTHM_SELECT_VIEW.desc,
     noticeOpen: typeof source.noticeOpen === 'boolean' ? source.noticeOpen : DEFAULT_RHYTHM_SELECT_VIEW.noticeOpen,
-    eventOnly: typeof source.eventOnly === 'boolean' ? source.eventOnly : DEFAULT_RHYTHM_SELECT_VIEW.eventOnly,
+    genre,
   };
 };
 // ノーツ速度は見た目のtravelだけを変える。1.0〜12.0を0.1刻みで選べ、6.0は従来の見た目(2150ms)を維持する。
@@ -6375,7 +6410,10 @@ const DEFAULT_AUTO_SETTINGS = Object.freeze({
   // 「1周目に自分で組んだ編成」= 周回テンプレートだけを使う。
   // ★新しい保存キーは作らず、既存の mh_auto_settings_v1 へ項目を足す形にしてある。
   //   項目の無い既存ユーザーは normalizeAutoSettings が未設定で補う
-  quickRun:{ heroRosterEntry:null, distance:null, difficulty:null },
+  // autoStart … モンヒロビートを開いたときに、この編成で∞周回を自動で始めるか
+  //   (2026-09-11・ユーザー指示「モンビーを開いたら自動でクイックに入る機能」)。
+  //   既定はOFF。既存ユーザーの端末で、ある日いきなり裏でバトルが始まらないようにする
+  quickRun:{ heroRosterEntry:null, distance:null, difficulty:null, autoStart:false },
 });
 const normalizeAutoReserveAmount = (value) => {
   const amount = Number(value);
@@ -6412,6 +6450,8 @@ const normalizeAutoSettings = (value, validRosterEntries = null, validDifficulty
     heroRosterEntry:quickHero && (!valid || valid.has(quickHero)) ? quickHero : null,
     distance:Number.isInteger(quickDistanceRaw) && quickDistanceRaw >= 0 && quickDistanceRaw <= 3 ? quickDistanceRaw : null,
     difficulty:quickDifficulty && (!quickDifficultyIds || quickDifficultyIds.has(quickDifficulty)) ? quickDifficulty : null,
+    // true と書いてあるときだけON。項目の無い既存ユーザー・壊れた値はOFFへ倒す
+    autoStart:rawQuick.autoStart === true,
   };
   return { strategy:AUTO_STRATEGIES.includes(source.strategy) ? source.strategy : 'random', allies, breakthroughReserve, quickRun };
 };
@@ -6423,6 +6463,13 @@ const autoQuickRunConfigured = (settings) => {
     && typeof quick.heroRosterEntry === 'string' && quick.heroRosterEntry.length > 0
     && Number.isInteger(quick.distance) && quick.distance >= 0 && quick.distance <= 3
     && typeof quick.difficulty === 'string' && quick.difficulty.length > 0);
+};
+// モンヒロビートを開いたときに、自動で∞周回を始めてよいか。
+// ★3つとも決まっていることが前提。決まっていなければ、スイッチがONでも始めない
+//   (始めようがないため。設定画面のスイッチも、そろうまでは押せないようにしてある)
+const autoQuickRunAutoStartEnabled = (settings) => {
+  if (!autoQuickRunConfigured(settings)) return false;
+  return settings.quickRun.autoStart === true;
 };
 
 // AUTOの1ターンぶんの選択だけを組み立てる。実際の選択stateや戦闘進行には触れず、
@@ -8220,6 +8267,20 @@ const collectBondRankingEntries = (rankingPool) => {
   });
   return deduped.sort((a,b)=>b.bondLevel-a.bondLevel||a.userName.localeCompare(b.userName,'ja'));
 };
+
+// 絆Lvランキングの一覧(1人 × 1個体)を、総合力の高い順へ並べ直す。
+// 取り出す一覧・重複のまとめ方は絆Lvとまったく同じで、並べる数字だけが替わる。
+//
+// 総合力は育成スナップショット(detail.power)にだけ入っている「その記録を出したときの値」。
+//   ・いまのデータで計算し直さない … 種のバランスを変えると過去の順位まで動いてしまう
+//   ・残っていない古い記録は載せない … 参考値を本物の順位へ混ぜない(「情報なし」の行も作らない)
+const collectPowerRankingEntries = (bondEntries) => (Array.isArray(bondEntries) ? bondEntries : [])
+  .map(entry => {
+    const power = Number(entry?.detail?.power);
+    return (entry && Number.isFinite(power) && power > 0) ? { ...entry, power: Math.round(power) } : null;
+  })
+  .filter(Boolean)
+  .sort((a, b) => b.power - a.power || String(a.userName||'').localeCompare(String(b.userName||''), 'ja'));
 
 // ランキングに出すモンスターの絵。記録にはIDだけが入っているので、同梱の絵を引いて使う。
 // 画像を埋め込んでいた頃の古い記録は、そのimgUrlをそのまま使って表示できるようにしておく。
@@ -11336,6 +11397,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
   const setView=next=>{if(typeof onView==='function')onView(next);};
   const state=normalizeRhythmSelectView(view);
   const [sortOpen,setSortOpen]=React.useState(false);
+  const [genreOpen,setGenreOpen]=React.useState(false);
   // ジャケットを大きく見ているか(2026-09-08・ユーザー指示「モンビー中のジャケットをタップすると拡大画像が見れるように」)。
   // 画面(gameState)は増やさない。曲えらびの上に重ねるだけなので、閉じれば元の場所に戻る。
   const [artZoom,setArtZoom]=React.useState(false);
@@ -11372,12 +11434,20 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
     const event=(released&&typeof rhythmLimitedEventAt==='function')?rhythmLimitedEventAt(Date.now()):null;
     return new Set((event&&Array.isArray(event.songIds))?event.songIds:[]);
   })();
-  // 対象曲だけに絞るか。★開催していないときは絞らない(保存値が true のままでも)。
+  // いま選べるジャンル。★イベント中だけのもの(whileEvent)は、開催していなければ出さない。
+  //   ジャンルが1つ(すべて)だけなら、えらぶ意味が無いのでボタンごと出さない
+  const genres=RHYTHM_GENRES.filter(item=>!item.whileEvent||eventSongIds.size>0);
+  //   保存値が「いま選べないジャンル」を指しているときは「すべて」に倒す。
   //   そうしないと、イベントが終わったあとに一覧が空になる人が出る
-  const eventFilterOn=eventSongIds.size>0&&state.eventOnly===true;
+  const genre=genres.find(item=>item.id===state.genre)||genres[0];
+  const genreMatches=entry=>{
+    if(!genre||genre.id==='all')return true;
+    if(genre.id==='event')return eventSongIds.has(entry.songId);
+    // ★ジャンルを増やしたらここへ1行。曲の側の印を見て決める
+    return true;
+  };
   // 画面に並べる順。並び替えも絞り込みも**見え方だけ**で、遊べる曲も選んでいる曲も変えない。
-  const list=rhythmSortSongs(
-    eventFilterOn?playable.filter(entry=>eventSongIds.has(entry.songId)):playable,
+  const list=rhythmSortSongs(playable.filter(genreMatches),
     {sort:state.sort,desc:state.desc,levelOf:rowLevel,difficulties});
   const sortLabel=(RHYTHM_SORT_ORDERS.find(item=>item.id===state.sort)||RHYTHM_SORT_ORDERS[0]).label;
   // 選んでいる曲を鳴らすのは App本体(rhythmPreviewTrackId)。ここでは鳴らさない。
@@ -11504,14 +11574,14 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
           <span className="truncate">並び替え：{sortLabel}{state.desc?'（逆）':''}</span>
           <span aria-hidden="true" className="shrink-0 text-slate-400">▾</span>
         </button>
-        {/* ★イベント開催中だけ出る絞り込み。並び替えと同じ行に置いて、縦を1行も増やさない
-            (2026-09-11・ユーザー指示「ソートにイベント曲だけ出てくるのほしいね」)。
-            並び替えの一覧へ混ぜなかったのは、これが並び順ではなく絞り込みのため */}
-        {eventSongIds.size>0&&<button type="button" data-rhythm-song-event-filter aria-pressed={state.eventOnly===true}
-          onClick={()=>setView({...state,eventOnly:!(state.eventOnly===true)})}
-          title={state.eventOnly===true?'すべての曲を出す':'イベントの対象曲だけにする'}
-          className={`flex h-[44px] shrink-0 items-center gap-1 rounded-xl border px-2 text-[11px] font-black ${state.eventOnly===true?'border-amber-300 bg-amber-500/25 text-amber-100':'border-amber-300/40 bg-slate-900/80 text-amber-200'}`}>
-          <span aria-hidden="true">🏆</span><span>対象曲</span>
+        {/* ★ジャンルの絞り込み。並び替えと同じ行に置いて、縦を1行も増やさない
+            (2026-09-11・ユーザー指示「対象曲のところをジャンルに変えて、その中から選べるようにしよう」)。
+            並び替えの一覧へ混ぜないのは、これが並び順ではなく絞り込みのため。
+            えらべるジャンルが1つ(すべて)だけのときは、ボタンごと出さない */}
+        {genres.length>1&&<button type="button" data-rhythm-song-genre={genre?genre.id:'all'} onClick={()=>setGenreOpen(true)}
+          className={`flex h-[44px] min-w-0 flex-1 items-center justify-between gap-1 rounded-xl border px-3 text-[11px] font-black ${genre&&genre.id!=='all'?'border-amber-300 bg-amber-500/20 text-amber-100':'border-white/15 bg-slate-900/80 text-slate-200'}`}>
+          <span className="truncate">{genre&&genre.id!=='all'?genre.label:'ジャンル：すべて'}</span>
+          <span aria-hidden="true" className="shrink-0 text-slate-400">▾</span>
         </button>}
         {notice&&<button type="button" data-rhythm-song-notice-toggle aria-pressed={state.noticeOpen}
           onClick={()=>setView({...state,noticeOpen:!state.noticeOpen})}
@@ -11652,6 +11722,29 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
       <button type="button" data-rhythm-song-art-close onClick={()=>setArtZoom(false)}
         className="mt-3 min-h-[52px] w-full max-w-xs rounded-xl bg-slate-700 text-sm font-black text-white"
         style={{minHeight:'52px'}}>とじる</button>
+    </div>}
+    {genreOpen&&<div data-rhythm-genre-sheet className="fixed inset-0 z-[9000] flex items-end justify-center"
+      style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.72)',zIndex:9000}}
+      onClick={()=>setGenreOpen(false)}>
+      <section onClick={e=>e.stopPropagation()}
+        className="max-h-[80%] w-full max-w-md overflow-y-auto rounded-t-3xl border-t border-amber-300/60 bg-slate-900 p-4"
+        style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
+        <h3 className="text-sm font-black text-white">ジャンル</h3>
+        <p className="mt-1 text-[10px] font-bold text-slate-400">出す曲を絞るだけです。遊べる曲・自己ベスト・全国ランキングは変わりません。</p>
+        <div className="mt-3 space-y-1.5">
+          {genres.map(item=>{
+            const on=!!genre&&item.id===genre.id;
+            return <button key={item.id} type="button" data-rhythm-genre-option={item.id} aria-pressed={on}
+              onClick={()=>{setView({...state,genre:item.id});setGenreOpen(false);}}
+              className={`flex min-h-[52px] w-full flex-col justify-center rounded-xl border-2 px-3 text-left ${on?'border-amber-300 bg-amber-500/20':'border-white/15 bg-slate-950/60'}`}>
+              <b className="text-xs font-black text-white">{on?'● ':''}{item.label}</b>
+              <small className="text-[10px] font-bold text-slate-400">{item.note}</small>
+            </button>;
+          })}
+        </div>
+        <button type="button" data-rhythm-genre-close onClick={()=>setGenreOpen(false)}
+          className="mt-3 min-h-[52px] w-full rounded-xl bg-slate-700 text-sm font-black text-white">とじる</button>
+      </section>
     </div>}
     {sortOpen&&<div data-rhythm-sort-sheet className="fixed inset-0 z-[9000] flex items-end justify-center"
       style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.72)',zIndex:9000}}
@@ -12527,6 +12620,9 @@ scheduleTick();};
     <span className="text-[10px] font-black tracking-wider text-fuchsia-200">クイック∞周回</span>
     <b className="text-lg font-black leading-none text-white">+{quickRunAward.loops}周</b>
   </div>
+  {/* イベントの対象曲だけ、ふだんの2倍ではなく3倍で入る(2026-09-11・ユーザー指示)。
+      入った周回数だけでは「この曲だから多かった」と気づけないので、その場で言う */}
+  {quickRunAward.eventBoosted&&<div data-rhythm-result-quick-run-event className="mt-1.5 rounded-xl border border-amber-300/50 bg-amber-950/40 px-2 py-1 text-[10px] font-black text-amber-200">🏆 イベント対象曲 ×{quickRunAward.scale}（ふだんの曲は ×{RHYTHM_PLAY_RUN_LOOP_SCALE}）</div>}
   <div className="mt-1 text-[11px] font-black text-slate-200">{quickRunAward.fromLoop}周目 <span className="text-slate-500">→</span> {quickRunAward.toLoop}周目</div>
   <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] font-bold text-slate-300">
     <span>経験値 <b className="text-cyan-300">+{Number(quickRunAward.xp||0).toLocaleString()}</b></span>
@@ -13685,7 +13781,7 @@ function RhythmSongSelectScreen({
                 //    追いつき方式のころの説明が残っていた)。
                 //   まだその難易度をクリアしていない人には入らないので、そこも言い分ける
                 :rhythmPlayRunLoopsAllowed(difficulty,quickClearCounts)
-                  ?'ここにいるあいだも周回は進みます。演奏中は止まりますが、曲を最後まで演奏すると、その曲の長さぶんの周回がクリア扱いで入ります（2分台までは2周・3分台は3周…）。'
+                  ?'ここにいるあいだも周回は進みます。演奏中は止まりますが、曲を最後まで演奏すると、その曲の長さぶんの周回がクリア扱いで入ります（2分台までは4周・3分台は6周…）。イベント開催中は、その対象曲だけ3倍（2分台6周・3分台9周）になります。'
                   :'ここにいるあいだも周回は進みます。演奏中は止まり、そのぶんは曲のあとに速く進んで取り戻します。この難易度をクイックで一度クリアすると、演奏したぶんがそのまま周回クリアとして入るようになります。'}</p>
             {/* ===== ここから操作。状態は3つだけ(2026-09-07に整理) =====
                   ① 回っている                … バトルへ戻る ／ ここで周回をやめる
@@ -14280,6 +14376,12 @@ function RhythmRankingScreen({
                 className="rounded-2xl border border-fuchsia-300/40 bg-fuchsia-500/5 p-2 text-[10px] leading-tight text-slate-200">
                 <b className="text-fuchsia-200">参加報酬</b>　対象曲を{eventParticipation.songs}曲すべて遊ぶと {rhythmEventParticipationText(eventParticipation)}
               </p>}
+              {/* ∞周回の倍率(2026-09-11・ユーザー指示「イベント時は対象曲は3倍」)。
+                  報酬の表と同じ場所に置く。対象曲を遊ぶ理由が順位だけではなくなるため */}
+              <p data-rhythm-event-loop-bonus
+                className="rounded-2xl border border-amber-300/40 bg-amber-500/5 p-2 text-[10px] leading-tight text-slate-200">
+                <b className="text-amber-200">∞周回 ×{RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE}</b>　クイックの∞周回を裏で回しながら対象曲を演奏すると、入る周回数がふだん（×{RHYTHM_PLAY_RUN_LOOP_SCALE}）の{RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE}倍になります
+              </p>
               {/* 受け取り方。いつ・どこで受け取るのかが分からないと、終わったあとに迷う */}
               <p className="text-[9px] leading-relaxed text-slate-400">
                 報酬はイベントが終わったあと、ゲームを開いたときに受け取れます。受け取れるのは終了から2週間までです。順位は終了した時点で決まるので、遅れて受け取っても内容は変わりません。
@@ -16518,12 +16620,65 @@ function MasuRegisterModal({
 // ・施設へ入る7つの行き先は props(onOpen*)で受け取る。画面は行き先の名前を持たない
 // ・かぶせもの3つは「HOME にいて、チュートリアルが終わっていて、前の会話が片付いていたら」
 //   という順番で出る。その条件は MonsterHeroGame 側に残し、ここは中身だけを持つ
+// イベント開催中の角バッジ(2026-09-11・ユーザー指示
+// 「右上とか左上とか専用バッジを付けるようにして」「そこそこ派手目に / キラキラ強調されてるような」)。
+//
+// ★この機能ぶんのCSSは、ここで <style> を置いて閉じる。70-bootstrap.jsx の大きなCSSへ
+//   書き足したときは、1行に複数の規則が並ぶ場所へ入って @media の内側になり、
+//   文書へ一度も読み込まれなかった(実ブラウザで 0件 / 全1161規則)。
+//   さらに消すときに同じ行の続きまで巻き込んで、横画面の配置を壊した。
+//   ここへ閉じておけば、ほかのCSSを壊しようがない。
+// ★位置は超越バッジ・魂格バッジと同じ「角へ少しはみ出す」置き方にそろえる。
+// ★動きを減らす設定の人には光らせない(prefers-reduced-motion)。
+// ★位置と見た目は style で直に持たせる。配置の検査(home-layout-check.js)は
+//   このCSSを読み込まないので、クラスだけに頼ると検査の中で「ただの文字」になり、
+//   ボタンが横に広がって施設の位置がずれてしまう(実際に落ちた)。
+//   クラスのほうは「光り方・動き」だけを足す係にする。
+const HOME_EVENT_BADGE_STYLE = Object.freeze({
+  position:'absolute', top:'-10px', right:'-9px', zIndex:8,
+  display:'block', overflow:'hidden', padding:'2px 7px',
+  border:'1px solid #fff3c4', borderRadius:'999px',
+  background:'linear-gradient(135deg,#f59e0b,#fde047 45%,#f97316)',
+  color:'#4a1d00', fontSize:'8px', fontWeight:1000, fontStyle:'normal',
+  lineHeight:1.6, whiteSpace:'nowrap', textShadow:'0 1px 0 #fff8', pointerEvents:'none',
+  boxShadow:'0 0 0 1px #0006,0 2px 8px #000a,0 0 10px #fbbf24cc,0 0 18px #f59e0b80',
+});
+const HOME_EVENT_BADGE_CSS = `
+.mh-home-event-badge{animation:mhHomeEventBadgePulse 1.6s ease-in-out infinite}
+.mh-home-event-badge::after{content:'';position:absolute;top:0;bottom:0;left:-60%;width:45%;
+  background:linear-gradient(100deg,#fff0,#ffffffcc,#fff0);
+  animation:mhHomeEventBadgeShine 2.4s ease-in-out infinite}
+@keyframes mhHomeEventBadgePulse{
+  0%,100%{box-shadow:0 0 0 1px #0006,0 2px 8px #000a,0 0 10px #fbbf24cc,0 0 18px #f59e0b80;transform:scale(1)}
+  50%{box-shadow:0 0 0 1px #0006,0 2px 8px #000a,0 0 16px #fde047,0 0 30px #f59e0bcc;transform:scale(1.06)}}
+@keyframes mhHomeEventBadgeShine{0%{left:-60%}55%{left:120%}100%{left:120%}}
+@media(prefers-reduced-motion:reduce){
+  .mh-home-event-badge{animation:none;transform:none}
+  .mh-home-event-badge::after{display:none}}
+`;
 function HomeScreen({
   assistantBondUp, breederIcon, breederLevel, breederName, breederPoints, gifts, gold,
   hasUnreadChangelog, homeBackgroundReady, homePastureMasumons, masuMons, missions,
   onOpenBattle, onOpenManagement, onOpenMarket, onOpenProfile, onOpenRhythm, onOpenSettings,
   onOpenTemple, openChangelog, openGiftBox, openMissions, resolveIconUrl, spotClass,
 }) {
+  // ★バッジのCSSは <head> へ1回だけ入れる。HOMEのDOMへ <style> を混ぜると、
+  //   配置の検査(home-layout-check.js)が施設の位置を測るときに数がずれる。
+  //   head なら画面の中身に影響しない。
+  React.useEffect(()=>{
+    if(typeof document==='undefined')return;
+    if(document.getElementById('mh-home-event-badge-css'))return;
+    const tag=document.createElement('style');
+    tag.id='mh-home-event-badge-css';
+    tag.textContent=HOME_EVENT_BADGE_CSS;
+    document.head.appendChild(tag);
+  },[]);
+  // モンヒロビートのイベントを開催しているか。描くたびに数え直す(上の★のとおり)
+  const homeRhythmEventOpen=(()=>{
+    const released=(typeof RELEASE_FLAGS!=='undefined'&&RELEASE_FLAGS&&RELEASE_FLAGS.rhythmWeeklyRanking===true);
+    if(!released||typeof rhythmLimitedEventAt!=='function')return false;
+    return !!rhythmLimitedEventAt(Date.now());
+  })();
   return (
 
       <main className="mh-home-scene" aria-label="村の広場">
@@ -16549,7 +16704,14 @@ function HomeScreen({
               2026-09-04に正式名称を「モンスタービート」から「モンヒロビート」へ変更)。
               公開フラグが立つまでは修行と同じように「準備中」の案内だけを出し、本編からは遊べない。
               中身はデバッグ画面の「音ゲー体験版」から確認できる */}
-          <button className="mh-home-facility rhythm" onClick={onOpenRhythm} aria-label={RHYTHM_MODE_PUBLIC_RELEASE?"モンヒロビート":"モンヒロビート（準備中）"}><span>🎵 モンヒロビート{!RHYTHM_MODE_PUBLIC_RELEASE&&<small>準備中</small>}</span></button>
+          {/* ★イベント開催中は、その遊びのボタンに札を出す(2026-09-11・ユーザー指示
+              「イベント開催中は対応してるコンテンツボタンのとこにイベント開催中みたいなのがほしい」)。
+              HOMEを開いた時点で「いま何かやっている」と分かるようにする。
+              ★期間の判定は描くたびに行う(読み込み時に1回だけ決めると、開きっぱなしの端末で
+                古いままになる・CLAUDE.md ⑥-4)。開催していなければ何も出ない。
+              ★いまのイベントはモンヒロビートの曲だけを対象にするので、札もここだけ。
+                ほかの遊びを対象にするイベントを作るときは、そのボタンにも同じ em を足す */}
+          <button className="mh-home-facility rhythm" onClick={onOpenRhythm} aria-label={RHYTHM_MODE_PUBLIC_RELEASE?"モンヒロビート":"モンヒロビート（準備中）"}><span>🎵 モンヒロビート{!RHYTHM_MODE_PUBLIC_RELEASE&&<small>準備中</small>}{homeRhythmEventOpen&&<em data-home-event-badge className="mh-home-event-badge" style={HOME_EVENT_BADGE_STYLE}>✨開催中✨</em>}</span></button>
           <button className={`mh-home-facility battle${spotClass('battle')}`} onClick={onOpenBattle} aria-label="バトル"><span><Sword size={25}/>バトル</span></button>
         </nav>
         <button onClick={openMissions} className={`mh-home-mission${spotClass('reward')}`}><List size={16}/>ミッション
@@ -17942,6 +18104,10 @@ function MonsterHeroGame() {
     Object.prototype.hasOwnProperty.call(DIFFICULTY_SETTINGS, rankingViewDiff) ? rankingViewDiff : BATTLE_DEFAULT_DIFFICULTY);
   const [rankingKind, setRankingKind] = useState('score'); // 'score' | 'breeder' | 'bond'
   const [bondRankMonFilter, setBondRankMonFilter] = useState('all'); // 絆レベルランキングのモンスター種別フィルタ
+  // 総合力ランキングのモンスター種別フィルタ。絆Lvランキングと同じ「すべて＋種族別」の並び。
+  // 元になる一覧(bond_levels の正本 ＋ rankings の編成)は絆Lvとまったく同じものを使うので、
+  // タブを1つ増やしても通信は増えない
+  const [powerRankMonFilter, setPowerRankMonFilter] = useState('all');
   // 種族チャレンジランキングのタブ。
   // 'allSpecies' なら種族を問わないその難易度の全国ランキング、
   // 血統idならその種族×難易度の全国ランキング、'selfBest' なら自分の種族別ベストの比較
@@ -17949,7 +18115,7 @@ function MonsterHeroGame() {
   // 新しいバトルの入口(バトルモード再編・第2段階)。
   // 「バトル → バトルモード選択 → 難易度選択」の3画面と、そこから開くランキング。
   // まだデバッグ設定からだけ開ける。ふだんの「バトル」はこれまでどおり BATTLE_MENU のまま
-  const [modeSelectTab, setModeSelectTab] = useState('mode'); // 'mode' | 'breeder' | 'bond'
+  const [modeSelectTab, setModeSelectTab] = useState('mode'); // 'mode' | 'breeder' | 'bond' | 'power'
   // スコアランキングを「どのモードのぶんとして」見ているか。チャレンジとプロの2つだけ
   const [scoreRankingMode, setScoreRankingMode] = useState(BATTLE_MODE_CHALLENGE);
   // ランキングから戻る先。モード選択カードから開いたか、難易度カードから開いたかで変わる
@@ -19110,6 +19276,16 @@ function MonsterHeroGame() {
       ? bondRankingAll.slice(0, 50)
       : bondRankingAll.filter(x => bondEntryLineageId(x) === bondRankMonFilter).slice(0, 50)
   ), [bondRankingAll, bondRankMonFilter, bondEntryLineageId]);
+  // 総合力ランキング。絆Lvランキングとまったく同じ一覧(1人 × 1個体)を、
+  // 記録に残っている「その周回の時点の総合力」で並べ直したもの。
+  // 並べ替えの中身は collectPowerRankingEntries が正本(画面側に式を書き写さない)
+  const powerRankingAll = useMemo(() => collectPowerRankingEntries(bondRankingAll), [bondRankingAll]);
+  // 種族タブの絞り込みは絆Lvと同じ血統idで行う(bondEntryLineageId をそのまま使う)
+  const powerRanking = useMemo(() => (
+    powerRankMonFilter === 'all'
+      ? powerRankingAll.slice(0, 50)
+      : powerRankingAll.filter(x => bondEntryLineageId(x) === powerRankMonFilter).slice(0, 50)
+  ), [powerRankingAll, powerRankMonFilter, bondEntryLineageId]);
   const emptyRankingStatus = { loading:false, refreshing:false, error:null, fetched:false };
   const rankingStatus = (key) => rankingStatusByKey[key] || emptyRankingStatus;
   const saveRankingCache = (patch) => {
@@ -19813,6 +19989,11 @@ function MonsterHeroGame() {
   // モンビーを開いているか(演奏中も含む)。開いている間はランが進んでも画面を切り替えない。
   // 演奏中に画面がバトルへ飛ぶのを防ぐため、RHYTHM_PLAY もここへ入れる
   const rhythmScreenOpen = [...RHYTHM_BACKGROUND_RUN_SCREENS,'RHYTHM_PLAY'].includes(gameState);
+  // 「モンヒロビートへ入った瞬間」を見分けるための一覧(自動で∞周回を始める判定に使う)。
+  // ★裏で回してよい画面より広く取る。オプション・遊びかたもモンビーの中なので、
+  //   そこから曲えらびへ戻っただけで「入り直した」と数えると、周回が何度も立ち上がる。
+  //   デバッグ画面(RHYTHM_DEBUG)と、未公開のときに出る案内(RHYTHM_INFO)は入口ではないので入れない
+  const RHYTHM_AUTO_START_SCREENS = [...RHYTHM_BACKGROUND_RUN_SCREENS,'RHYTHM_PLAY','RHYTHM_OPTIONS'];
   // 裏で周回してよい状態か。
   //  ・クイックの∞周回だけ(チャレンジ・プロ・極限・種族は全国ランキング対象なので裏で回さない)
   //  ・演奏中は止める(曲が終われば自動で再開する)
@@ -19945,10 +20126,18 @@ function MonsterHeroGame() {
   // 今回の演奏が何周ぶんになるか。0 なら何も起きない(いつもどおり)。
   // ★過去にその難易度をクイックでクリアしていないと 0。
   //   勝てないほど高い難易度でも演奏さえすればクリア扱い、を防ぐ(ユーザー指示)
+  // いまその曲にかかる倍率。ふだんは2倍、開催中のイベントの対象曲だけ3倍
+  // (2026-09-11・ユーザー指示「現状の2倍」「イベント時は対象曲は3倍」)。
+  // ★イベントは**呼ばれるたびに**引き直す。読み込み時に1回だけ決めると、開いたままの端末で
+  //   開催・終了をまたいだときに古い倍率が残る(CLAUDE.md ⑥-4)。
+  const rhythmPlayRunLoopEventNow = () =>
+    (RELEASE_FLAGS.rhythmWeeklyRanking === true && typeof rhythmLimitedEventAt === 'function')
+      ? rhythmLimitedEventAt(Date.now()) : null;
+  const rhythmPlayRunLoopScaleFor = (song) => rhythmPlayRunLoopScale(song ? song.songId : null, rhythmPlayRunLoopEventNow());
   const rhythmPlayLoopsFor = (song, rhythmDifficulty) => {
     if (!runStageRef.current || !autoRepeatRef.current || !isQuickMode(runMode)) return 0;
     if (!rhythmPlayRunLoopsAllowed(difficulty, quickClearCounts)) return 0;
-    return rhythmPlayRunLoops(rhythmPlaySongDurationMs(song, rhythmDifficulty));
+    return rhythmPlayRunLoops(rhythmPlaySongDurationMs(song, rhythmDifficulty), rhythmPlayRunLoopScaleFor(song));
   };
   // ★配るものは「実際に1周クリアしたとき」とそろえる。
   //   経験値とダイヤだけにしていたころは、演奏するより裏で回したほうが得になっていた
@@ -19959,9 +20148,12 @@ function MonsterHeroGame() {
   //   「実際に1周勝ったとき」と必ず一致する。
   // ★触らないのは記録(最高スコア・最高WAVE)だけ。演奏にはスコアが無く、
   //   埋める値そのものが存在しないため(CLAUDE.md ⑦「消さない・上書きしない」)。
-  const awardRhythmPlayRunLoops = async (loops) => {
+  // loopScale … その演奏にかかっていた倍率。曲リザルトで「イベント対象曲 ×3」と出すためだけに使う
+  //   (配る量そのものは loops に織り込み済みなので、ここで掛け直さない)
+  const awardRhythmPlayRunLoops = async (loops, loopScale = RHYTHM_PLAY_RUN_LOOP_SCALE) => {
     const count = Math.max(0, Math.trunc(Number(loops) || 0));
     if (count <= 0) return null;
+    const scale = Number.isFinite(Number(loopScale)) && Number(loopScale) > 0 ? Number(loopScale) : RHYTHM_PLAY_RUN_LOOP_SCALE;
     const { goldMult, xpMult } = runRewardMultipliers();
     const policy = quickRewardPolicyRunRef.current;
     // ---- ブリーダー経験値 ----
@@ -20036,7 +20228,8 @@ function MonsterHeroGame() {
     const fromLoop = quickRunProgressRef.current ? quickRunProgressRef.current.loops : 0;
     for (let i = 0; i < count; i++) countQuickRunLoop();
     const toLoop = quickRunProgressRef.current ? quickRunProgressRef.current.loops : fromLoop;
-    return { loops: count, xp: xpGain, gold: goldGain, bond: bondGain, psyche: psycheGain, fromLoop, toLoop };
+    return { loops: count, xp: xpGain, gold: goldGain, bond: bondGain, psyche: psycheGain, fromLoop, toLoop,
+      scale, eventBoosted: scale > RHYTHM_PLAY_RUN_LOOP_SCALE };
   };
   // ---- 画面のなかでの使い方案内(docs/spec/QUICK_RHYTHM_LINK.md PR8) ----
   // ヘルプと更新履歴は探しに行った人しか読まない。この連携は遊んでいるだけでは
@@ -25635,6 +25828,35 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     else beginQuickRunProgress();
     return true;
   };
+  // ===== モンヒロビートを開いたら自動で∞周回を始める =====
+  // (2026-09-11・ユーザー指示「オート設定にモンビー中のオート周回を設定している場合に
+  //  モンビーを開いたら自動でクイックに入る機能を追加したい /
+  //  その機能をオート周回設定のとこでオンオフ切り替えられるように」)。
+  //
+  // ★始めるのは「モンヒロビートへ入った瞬間」だけ。曲えらびにいるあいだ何度も試さない。
+  //   演奏・オプション・ランキングもモンビーの中なので、そこから曲えらびへ戻っただけでは
+  //   「入った瞬間」にならない(戻るたびに新しい周回が始まってしまうため)。
+  // ★次のときは何もしない(黙って見送る)。
+  //   ・スイッチがOFF／事前設定が3つそろっていない
+  //   ・すでに周回が回っている
+  //   ・ほかのモードのバトルが続いている(クイック以外を裏で回さない・CLAUDE.md ⑦)
+  //   ・公開フラグが下りている
+  const rhythmAutoStartInsideRef = useRef(false);
+  useEffect(() => {
+    const inside = RHYTHM_AUTO_START_SCREENS.includes(gameState);
+    const wasInside = rhythmAutoStartInsideRef.current;
+    rhythmAutoStartInsideRef.current = inside;
+    if (!inside || wasInside) return;                                  // 入った瞬間だけ
+    if (!quickRhythmGuideReleased) return;
+    if (!autoQuickRunAutoStartEnabled(autoSettings)) return;
+    // すでに回っている(止まっていない)なら、そのまま続ける
+    if (quickRunProgressRef.current && !quickRunProgressRef.current.finished) return;
+    // まだ勝負のついていない挑戦の上へ、新しいランを重ねない(startQuickRunFromRhythm と同じ条件)
+    if (runStageRef.current && !runResultFinishedRef.current) return;
+    // 事前設定から編成を作れないとき(勇者モンがいない・難易度が未解放)は黙って見送る
+    if (!repeatTemplateFromAutoSettings()) return;
+    startQuickRunFromRhythm();
+  }, [gameState]);
   // バトル内ではAUTO系を1ボタンで循環する。表示用stateは持たず、既存の同期refから次の状態だけを決める。
   const cycleBattleAuto = () => {
     if(autoRepeatRef.current){setAutoBattleEnabled(false);return;}
@@ -27370,6 +27592,19 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       : null;
     return <article key={`bond-${entry?.userName||'unknown'}-${entry?.masuId||entry?.monsterId||entry?.monName}-${index}`} data-ranking-kind="bond" className={`${rankingCardClass(index)} p-2`}><div className="grid grid-cols-[28px_32px_minmax(0,1fr)_auto] items-center gap-2 min-w-0">{rankingPlace(index)}{rankingBreederIcon(entry)}<b className="truncate text-[10px]">{entry?.userName||'名無しのブリーダー'}</b><strong className="text-xs text-pink-300 whitespace-nowrap">絆Lv.{level}</strong></div><div className="ml-[76px] mt-1 flex items-center gap-2 min-w-0 rounded-lg bg-black/35 px-2 py-1"><span data-ranking-soul-badge className="relative w-7 h-7 shrink-0 overflow-visible">{entry?.imgUrl?<img src={entry.imgUrl} alt="" className="w-7 h-7 object-contain"/>:<span className="block w-7 text-center">{entry?.emoji||'❓'}</span>}{entry?.detail&&<TranscendenceBadge transcended={entry.detail?.transcended===true} soulRankStage={entry.detail?.soulRankStage} small/>}</span><b className="truncate flex-1 text-[10px]">{entry.monName}</b>{/* 育て方が記録に残っている個体だけ開ける。古い記録は押せない状態にして理由をその場に出す */}<button onClick={()=>{ if (detailMember) setRankingMonsterDetail(detailMember); }} disabled={!detailMember} data-bond-detail={detailMember?'open':'none'} className={`shrink-0 px-2 py-1 rounded-lg border text-[9px] font-black leading-none ${detailMember?'border-indigo-400/60 bg-indigo-500/20 text-indigo-100 active:scale-95':'border-white/10 bg-black/20 text-slate-600'}`}>{detailMember?'詳細 ›':'情報なし'}</button></div></article>;
   };
+  // 総合力専用カード。絆Lvのカードと同じ並び(順位・アイコン・名前・数字／下に個体)で、
+  // いちばん大きく出す数字だけが絆Lvから総合力へ替わる。絆Lvは個体の行へ小さく添える。
+  const renderPowerRankingEntry = (entry, index) => {
+    const level = Number(entry?.bondLevel);
+    // 「詳細 ›」で開くのは絆Lvランキングとまったく同じ1体ぶんの画面。
+    // 総合力の一覧は detail がある記録だけを載せているので、ここは必ず開ける
+    const detailMember = entry?.detail
+      ? { baseId: entry.monsterId, monsterId: entry.monsterId, name: entry.monName,
+          masuId: entry.masuId, bondLevel: level, detail: entry.detail,
+          colors: Array.isArray(entry.colors) ? entry.colors : [] }
+      : null;
+    return <article key={`power-${entry?.userName||'unknown'}-${entry?.masuId||entry?.monsterId||entry?.monName}-${index}`} data-ranking-kind="power" className={`${rankingCardClass(index)} p-2`}><div className="grid grid-cols-[28px_32px_minmax(0,1fr)_auto] items-center gap-2 min-w-0">{rankingPlace(index)}{rankingBreederIcon(entry)}<b className="truncate text-[10px]">{entry?.userName||'名無しのブリーダー'}</b><strong className="flex items-baseline gap-1 whitespace-nowrap"><span className="text-[7px] font-black uppercase tracking-widest text-amber-400/80">総合力</span><span className="font-mono text-xs tabular-nums text-amber-200">{formatMonsterPower(entry?.power)}</span></strong></div><div className="ml-[76px] mt-1 flex items-center gap-2 min-w-0 rounded-lg bg-black/35 px-2 py-1"><span data-ranking-soul-badge className="relative w-7 h-7 shrink-0 overflow-visible">{entry?.imgUrl?<img src={entry.imgUrl} alt="" className="w-7 h-7 object-contain"/>:<span className="block w-7 text-center">{entry?.emoji||'❓'}</span>}{entry?.detail&&<TranscendenceBadge transcended={entry.detail?.transcended===true} soulRankStage={entry.detail?.soulRankStage} small/>}</span><b className="truncate flex-1 text-[10px]">{entry.monName}</b>{Number.isFinite(level)&&level>0&&<span className="shrink-0 text-[9px] font-black text-pink-300 whitespace-nowrap">絆Lv.{level}</span>}<button onClick={()=>{ if (detailMember) setRankingMonsterDetail(detailMember); }} disabled={!detailMember} data-power-detail={detailMember?'open':'none'} className={`shrink-0 px-2 py-1 rounded-lg border text-[9px] font-black leading-none ${detailMember?'border-indigo-400/60 bg-indigo-500/20 text-indigo-100 active:scale-95':'border-white/10 bg-black/20 text-slate-600'}`}>{detailMember?'詳細 ›':'情報なし'}</button></div></article>;
+  };
   // そのモード・難易度の端末記録。画面のあちこちで if を並べないための小さな入口。
   // 保存先はモードごとに分かれている(mh_ / mh_quick_ / mh_pro_)
   const modeRecordFor = (mode, diff) => isQuickMode(mode)
@@ -27522,6 +27757,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 絆Lvランキング。こちらもモードでは分かれず、モンスターの種類で絞る
   const renderBondRankingBody = () => (
     <><div className="flex gap-1 overflow-x-auto pb-1.5 shrink-0">{[{id:'all',label:'すべて'},...bondRankingLineages.map(l=>({id:l.id,label:`${l.name}種`}))].map(t=><button key={t.id} onClick={()=>setBondRankMonFilter(t.id)} className={`px-2.5 py-1 rounded-full text-[8px] font-black shrink-0 border ${bondRankMonFilter===t.id?'bg-pink-600 border-pink-400':'bg-slate-900 border-white/10 text-slate-400'}`}>{t.label}</button>)}</div><div className="flex-1 overflow-y-auto mh-scroll space-y-1.5">{bondRankingLoading&&bondRankingData&&<div className="text-center text-[9px] text-indigo-300">更新中…</div>}{bondRankingError&&bondRankingData&&<div className="text-center text-[9px] text-amber-300">{bondRankingError}</div>}{bondRanking.map(renderBondRankingEntry)}{bondRanking.length===0&&(bondRankingLoading&&!bondRankingData?<div className="text-center text-slate-400 py-8">Loading...</div>:bondRankingError&&!bondRankingData?rankingRetryButton(()=>loadRankings(null,true,true,'bond')):rankingEmptyText)}</div></>
+  );
+  // 総合力ランキング。絆Lvランキングと同じデータ・同じ取得(levelKind='bond')を使う。
+  // タブを開いたときに呼ぶ loadRankings も 'bond' のままなので、通信はこれまでと同じ回数のまま
+  const renderPowerRankingBody = () => (
+    <><div className="flex gap-1 overflow-x-auto pb-1.5 shrink-0">{[{id:'all',label:'すべて'},...bondRankingLineages.map(l=>({id:l.id,label:`${l.name}種`}))].map(t=><button key={t.id} onClick={()=>setPowerRankMonFilter(t.id)} className={`px-2.5 py-1 rounded-full text-[8px] font-black shrink-0 border ${powerRankMonFilter===t.id?'bg-amber-600 border-amber-400':'bg-slate-900 border-white/10 text-slate-400'}`}>{t.label}</button>)}</div><div className="flex-1 overflow-y-auto mh-scroll space-y-1.5">{bondRankingLoading&&bondRankingData&&<div className="text-center text-[9px] text-indigo-300">更新中…</div>}{bondRankingError&&bondRankingData&&<div className="text-center text-[9px] text-amber-300">{bondRankingError}</div>}{powerRanking.map(renderPowerRankingEntry)}{powerRanking.length===0&&(bondRankingLoading&&!bondRankingData?<div className="text-center text-slate-400 py-8">Loading...</div>:bondRankingError&&!bondRankingData?rankingRetryButton(()=>loadRankings(null,true,true,'bond')):rankingEmptyText)}{powerRanking.length>0&&<p className="rounded-xl border border-white/10 bg-slate-900/60 p-3 text-center text-[9px] leading-relaxed text-slate-400">総合力は、その記録を出したときの値をそのまま並べています。育て方が記録に残る前の古い記録は載りません。</p>}</div></>
   );
   if (bootPhase === 'TITLE') return (
     <><main className="mh-title-gate" aria-label="Monster Hero タイトル画面">
@@ -27709,7 +27949,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {/* モンヒロビートから∞周回を始めるための事前設定(docs/spec/QUICK_RHYTHM_LINK.md PR5)。
                   3つとも決めたときだけ使う。決めていないあいだは、これまでどおり
                   「1周目に自分で組んだ編成」をそのまま繰り返す */}
-              <section className="space-y-3"><div><h3 className="text-sm font-black text-indigo-200">3. モンヒロビート中に回すクイック周回</h3><p className="text-[9px] leading-relaxed text-slate-400 mt-1">モンヒロビートから∞周回を始めるときの編成です。勇者モン・配置距離・難易度の3つを決めると使えます。決めていないあいだは、いつもどおりバトル画面で1周目を組んでから∞にしてください。</p></div><div className="rounded-2xl border border-fuchsia-500/30 bg-slate-900 p-3 space-y-2"><label className="block text-xs font-black text-white" htmlFor="auto-quick-hero">勇者モン</label><select id="auto-quick-hero" value={draftAutoSettings.quickRun?.heroRosterEntry||''} onChange={event=>updateDraftAutoQuickRun({heroRosterEntry:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-slate-600 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">未設定（この機能を使わない）</option>{monsterRosterIds.filter(entry=>!!resolveRosterEntryToMon(entry)).map(entry=><option key={entry} value={entry}>{autoRosterLabel(entry)}</option>)}</select>{renderAutoAllySummary(draftAutoSettings.quickRun?.heroRosterEntry)}<div><div className="text-[10px] font-black text-slate-300 mb-1.5">配置距離</div><div className="grid grid-cols-4 gap-1">{ranges.filter(([slot])=>slot!==null).map(([slot,label])=><button key={label} onClick={()=>updateDraftAutoQuickRun({distance:slot})} aria-pressed={draftAutoSettings.quickRun?.distance===slot} className={`min-h-[44px] min-w-0 rounded-lg border text-[10px] font-black active:scale-95 ${draftAutoSettings.quickRun?.distance===slot?'ring-2 ring-white border-white':''} ${RANGE_STYLES[slot].labelBg} ${RANGE_STYLES[slot].border}`}>{label}</button>)}</div></div><div><label className="block text-[10px] font-black text-slate-300 mb-1.5" htmlFor="auto-quick-difficulty">難易度</label><select id="auto-quick-difficulty" value={draftAutoSettings.quickRun?.difficulty||''} onChange={event=>updateDraftAutoQuickRun({difficulty:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-slate-600 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">未設定</option>{Object.entries(QUICK_DIFFICULTY_SETTINGS).map(([key,setting])=>{const unlocked=isQuickDifficultyUnlocked(key,clearCounts,proClearCounts,extremeDifficultyClearCounts);return <option key={key} value={key} disabled={!unlocked}>{setting.label}{unlocked?'':'（未解放）'}</option>;})}</select></div><div className="pt-1"><AssistantBubble scene="autoQuickRunSettings" compact/></div><p className="text-[9px] leading-relaxed text-slate-400">{autoQuickRunConfigured(draftAutoSettings)?'✅ 3つとも決まっています。モンヒロビートから周回を始められます。':'まだ使えません（3つとも決めると使えます）。'}</p></div></section>
+              <section className="space-y-3"><div><h3 className="text-sm font-black text-indigo-200">3. モンヒロビート中に回すクイック周回</h3><p className="text-[9px] leading-relaxed text-slate-400 mt-1">モンヒロビートから∞周回を始めるときの編成です。勇者モン・配置距離・難易度の3つを決めると使えます。決めていないあいだは、いつもどおりバトル画面で1周目を組んでから∞にしてください。</p></div><div className="rounded-2xl border border-fuchsia-500/30 bg-slate-900 p-3 space-y-2"><label className="block text-xs font-black text-white" htmlFor="auto-quick-hero">勇者モン</label><select id="auto-quick-hero" value={draftAutoSettings.quickRun?.heroRosterEntry||''} onChange={event=>updateDraftAutoQuickRun({heroRosterEntry:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-slate-600 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">未設定（この機能を使わない）</option>{monsterRosterIds.filter(entry=>!!resolveRosterEntryToMon(entry)).map(entry=><option key={entry} value={entry}>{autoRosterLabel(entry)}</option>)}</select>{renderAutoAllySummary(draftAutoSettings.quickRun?.heroRosterEntry)}<div><div className="text-[10px] font-black text-slate-300 mb-1.5">配置距離</div><div className="grid grid-cols-4 gap-1">{ranges.filter(([slot])=>slot!==null).map(([slot,label])=><button key={label} onClick={()=>updateDraftAutoQuickRun({distance:slot})} aria-pressed={draftAutoSettings.quickRun?.distance===slot} className={`min-h-[44px] min-w-0 rounded-lg border text-[10px] font-black active:scale-95 ${draftAutoSettings.quickRun?.distance===slot?'ring-2 ring-white border-white':''} ${RANGE_STYLES[slot].labelBg} ${RANGE_STYLES[slot].border}`}>{label}</button>)}</div></div><div><label className="block text-[10px] font-black text-slate-300 mb-1.5" htmlFor="auto-quick-difficulty">難易度</label><select id="auto-quick-difficulty" value={draftAutoSettings.quickRun?.difficulty||''} onChange={event=>updateDraftAutoQuickRun({difficulty:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-slate-600 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">未設定</option>{Object.entries(QUICK_DIFFICULTY_SETTINGS).map(([key,setting])=>{const unlocked=isQuickDifficultyUnlocked(key,clearCounts,proClearCounts,extremeDifficultyClearCounts);return <option key={key} value={key} disabled={!unlocked}>{setting.label}{unlocked?'':'（未解放）'}</option>;})}</select></div><div><div className="text-[10px] font-black text-slate-300 mb-1.5">モンヒロビートを開いたら自動で始める</div><button type="button" data-auto-quick-run-autostart aria-pressed={draftAutoSettings.quickRun?.autoStart===true} disabled={!autoQuickRunConfigured(draftAutoSettings)} onClick={()=>updateDraftAutoQuickRun({autoStart:!(draftAutoSettings.quickRun?.autoStart===true)})} className={`flex min-h-[48px] w-full items-center justify-between gap-2 rounded-xl border px-3 text-left active:scale-[.99] disabled:opacity-50 ${draftAutoSettings.quickRun?.autoStart===true?'border-fuchsia-300 bg-fuchsia-900/50':'border-slate-600 bg-slate-950'}`}><span className="min-w-0 flex-1 text-[11px] font-black text-white">{draftAutoSettings.quickRun?.autoStart===true?'ON（開いたらすぐ回しはじめる）':'OFF（自分で「始める」を押す）'}</span><span className={`shrink-0 rounded-md px-2 py-0.5 text-[10px] font-black ${draftAutoSettings.quickRun?.autoStart===true?'bg-fuchsia-500 text-white':'bg-slate-700 text-slate-300'}`}>{draftAutoSettings.quickRun?.autoStart===true?'ON':'OFF'}</span></button><p className="mt-1 text-[9px] leading-relaxed text-slate-400">ONにすると、HOMEなどからモンヒロビートを開いたときに、この編成でクイックの∞周回が裏で始まります。すでに周回しているとき・ほかのモードのバトルが続いているときは何もしません。曲えらびの上の帯から、いつでも止められます。</p></div><div className="pt-1"><AssistantBubble scene="autoQuickRunSettings" compact/></div><p className="text-[9px] leading-relaxed text-slate-400">{autoQuickRunConfigured(draftAutoSettings)?'✅ 3つとも決まっています。モンヒロビートから周回を始められます。':'まだ使えません（3つとも決めると使えます）。'}</p></div></section>
               <section data-auto-breakthrough-bulk-settings className="rounded-2xl border border-cyan-500/40 bg-cyan-950/20 p-3 space-y-3">
                 <div><h3 className="text-sm font-black text-cyan-200">4. AUTO∞ 自動限界突破</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-slate-300">現在所有しているマスモンをまとめて設定し、限界突破で使い切らないようダイヤと虹のプシュケーを残せます。</p></div>
                 <div className="rounded-xl border border-cyan-500/30 bg-slate-950/70 p-3 space-y-2">
@@ -28124,9 +28364,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {/* 上のタブ。スコアランキングはモードごとに分かれるのでここには置かず、
                   モードのカードと難易度のカードから開く。ここに並ぶのはモードで分かれない2つだけ */}
               {/* 練習中はランキングへ移らせない(台本がモード選択のまま進むため) */}
-              <div className={`grid grid-cols-3 gap-1 mb-2 shrink-0 rounded-xl bg-slate-900/60 p-0.5 border border-white/5${battleTutorialSpotClass('modeRankTabs')}`}>
-                {[['mode','モード選択'],['breeder','ブリーダーLv'],['bond','絆Lv']].map(([key,label])=>(
-                  <button key={key} disabled={!!battleTutorial} onClick={()=>{setModeSelectTab(key);if(key==='mode')return;addAssistantBond('ranking');if(key==='bond')setBondRankMonFilter('all');loadRankings(null,true,false,key);}} aria-label={key==='mode'?'モード選択':`${label}ランキング`} className={`min-h-[38px] rounded-lg text-[10px] font-black active:scale-95 disabled:opacity-40 ${modeSelectTab===key?'bg-indigo-600 text-white':'text-slate-400'}`}>{label}</button>
+              {/* 4つ並ぶので字だけ小さくする。「ブリーダーLv」を略さず正式な見出しのまま入れるため */}
+              <div className={`grid grid-cols-4 gap-1 mb-2 shrink-0 rounded-xl bg-slate-900/60 p-0.5 border border-white/5${battleTutorialSpotClass('modeRankTabs')}`}>
+                {/* 総合力は絆Lvとまったく同じ一覧を並べ直したものなので、取得も絆Lvと同じ 'bond' を呼ぶ
+                    (タブ名をそのまま levelKind へ渡すと、存在しない 'power' の取得になってしまう) */}
+                {[['mode','モード選択'],['breeder','ブリーダーLv'],['bond','絆Lv'],['power','総合力']].map(([key,label])=>(
+                  <button key={key} disabled={!!battleTutorial} onClick={()=>{setModeSelectTab(key);if(key==='mode')return;addAssistantBond('ranking');if(key==='bond')setBondRankMonFilter('all');if(key==='power')setPowerRankMonFilter('all');loadRankings(null,true,false,key==='power'?'bond':key);}} aria-label={key==='mode'?'モード選択':`${label}ランキング`} className={`min-h-[38px] rounded-lg text-[9px] leading-tight font-black active:scale-95 disabled:opacity-40 ${modeSelectTab===key?'bg-indigo-600 text-white':'text-slate-400'}`}>{label}</button>
                 ))}
               </div>
               {modeSelectTab==='mode'&&<div className="flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll">
@@ -28174,6 +28417,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               </div>}
               {modeSelectTab==='breeder'&&<div className="flex-1 min-h-0 flex flex-col"><div className="shrink-0 w-full mb-2.5"><AssistantBubble scene="ranking" compact/></div>{renderBreederRankingBody()}</div>}
               {modeSelectTab==='bond'&&<div className="flex-1 min-h-0 flex flex-col"><div className="shrink-0 w-full mb-2.5"><AssistantBubble scene="ranking" compact/></div>{renderBondRankingBody()}</div>}
+              {modeSelectTab==='power'&&<div className="flex-1 min-h-0 flex flex-col"><div className="shrink-0 w-full mb-2.5"><AssistantBubble scene="ranking" compact/></div>{renderPowerRankingBody()}</div>}
             </div>
           </div>);
         })()}
@@ -28828,7 +29072,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 練習(tutorial)は記録も報酬も動かさないので、その前に判定しない
           if(rhythmPlay.from!=='tutorial'){
             const loops=rhythmPlayLoopsFor(rhythmPlay.song,rhythmPlay.difficulty);
-            const awarded=loops>0?await awardRhythmPlayRunLoops(loops):null;
+            const loopScale=rhythmPlayRunLoopScaleFor(rhythmPlay.song);
+            const awarded=loops>0?await awardRhythmPlayRunLoops(loops,loopScale):null;
             if(awarded){
               setRhythmPlayRunAward(awarded);
               // 限界突破も、通常の周回が終わったときと同じように走らせる
@@ -32960,7 +33205,8 @@ const createAnimationStyle = () => {
     @keyframes mhBreakStar{0%,55%{opacity:0;transform:scale(0) rotate(-90deg)}70%{opacity:1;transform:scale(2.1) rotate(20deg)}85%{transform:scale(.9) rotate(0)}100%{opacity:1;transform:scale(1.25)}}
     @keyframes mhBreakOldStar{0%,55%{opacity:.35}100%{opacity:1}}
     @media(prefers-reduced-motion:reduce){.mh-breakthrough-ring,.mh-breakthrough-ring::after,.mh-breakthrough-beam,.mh-breakthrough-mon,.mh-breakthrough-cap,.mh-breakthrough-stars>*,.mh-breakthrough-copy{animation:none}.mh-breakthrough-stars>*{opacity:1}}
-    .mh-rebirth-animation{position:fixed;inset:0;z-index:51000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle,#7c3aed88,#020617 62%);pointer-events:auto;touch-action:none}.mh-rebirth-circle{position:absolute;width:240px;height:240px;border:3px solid #c4b5fd;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fde68a;font-size:150px;animation:mhRebirthCircle 4s ease-in-out forwards}.mh-rebirth-glow{position:absolute;width:100%;height:42%;background:linear-gradient(90deg,transparent,#fff8,transparent);filter:blur(14px);animation:mhRebirthGlow 4s ease-in-out forwards}.mh-rebirth-mon{position:relative;width:145px;height:145px;animation:mhRebirthFloat 4s ease-in-out forwards}.mh-rebirth-copy{position:absolute;bottom:calc(8% + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;color:#fff;font-size:11px;font-weight:900;animation:mhRebirthCopy 4s ease-out forwards}.mh-rebirth-copy b{font-size:20px;color:#fde68a}.mh-rebirth-copy span{margin-top:2px}@keyframes mhRebirthCircle{0%{opacity:0;transform:scale(.3) rotate(0)}25%{opacity:1}100%{opacity:.25;transform:scale(1.5) rotate(180deg)}}@keyframes mhRebirthGlow{0%,20%{opacity:0}40%,70%{opacity:1}100%{opacity:0}}@keyframes mhRebirthFloat{0%{transform:translateY(30px);filter:brightness(1)}45%{transform:translateY(-25px);filter:brightness(2)}60%{filter:brightness(0)}78%{filter:brightness(3)}100%{transform:translateY(0);filter:brightness(1)}}@keyframes mhRebirthCopy{0%,55%{opacity:0;transform:translateY(20px)}68%,100%{opacity:1;transform:none}}.mh-donation-animation{position:fixed;inset:0;z-index:33000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at center,#7c3aed55 0,#020617 58%);pointer-events:auto;touch-action:none}.mh-donation-beam{position:absolute;width:150px;height:110%;background:linear-gradient(90deg,transparent,#fff9c477,transparent);filter:blur(8px);animation:mhDonationBeam 1.5s ease-in-out forwards}.mh-donation-monster{position:absolute;width:96px;height:96px;filter:drop-shadow(0 0 22px #fff);animation:mhDonationRise 1.25s ease-in forwards}.mh-donation-gem{position:absolute;color:#fde68a;opacity:0;filter:drop-shadow(0 0 18px #fbbf24);animation:mhDonationGem .55s 1s ease-out forwards}.mh-donation-particles i{position:absolute;left:50%;top:50%;width:6px;height:6px;border-radius:50%;background:#fde68a;box-shadow:0 0 8px #fff;opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-20px);animation:mhDonationParticle .55s 1s ease-out forwards}.mh-donation-copy{position:absolute;bottom:calc(15% + env(safe-area-inset-bottom));font-size:14px;font-weight:1000;color:#f5d0fe;text-shadow:0 0 12px #a855f7}@keyframes mhDonationRise{0%{transform:translateY(25px) scale(1);opacity:1}55%{transform:translateY(-28px) scale(1.08);opacity:1}100%{transform:translateY(-55px) scale(.05);opacity:0;filter:drop-shadow(0 0 50px #fff)}}@keyframes mhDonationBeam{0%{opacity:0;transform:scaleX(.2)}35%{opacity:1;transform:scaleX(1)}100%{opacity:0;transform:scaleX(.1)}}@keyframes mhDonationGem{to{opacity:1;transform:scale(1.2)}}@keyframes mhDonationParticle{0%{opacity:1}100%{opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-95px) scale(.2)}}@keyframes mhHomeMasumonWalk{0%,100%{translate:0 0}50%{translate:0 -5px}}@keyframes mhHomeBattlePulse{50%{filter:brightness(1.16);box-shadow:0 0 34px #d8b4fddd,inset 0 0 26px #ffdc8366}}@media(max-width:350px){.mh-home-player-copy strong{max-width:80px}.mh-home-wallet{width:124px}.mh-home-facility>span{font-size:9px;padding:6px 8px}.mh-home-facility.battle>span{min-width:140px;font-size:18px}}@media(max-height:620px){.mh-home-facility.management,.mh-home-facility.temple{top:13%;height:32%}/* 背の低い端末では、みゅあの吹き出しがM/B管理の看板にかからないよう少し下げる */.mh-home-facility.management>span,.mh-home-facility.temple>span{top:45%}.mh-home-facility.market{top:43%}.mh-home-facility.battle{height:30%}}@media(prefers-reduced-motion:reduce){.mh-home-background,.mh-home-player,.mh-home-facility>span{transition:none}.mh-home-facility.battle>span{animation:none}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:none}}
+    .mh-rebirth-animation{position:fixed;inset:0;z-index:51000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle,#7c3aed88,#020617 62%);pointer-events:auto;touch-action:none}.mh-rebirth-circle{position:absolute;width:240px;height:240px;border:3px solid #c4b5fd;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fde68a;font-size:150px;animation:mhRebirthCircle 4s ease-in-out forwards}.mh-rebirth-glow{position:absolute;width:100%;height:42%;background:linear-gradient(90deg,transparent,#fff8,transparent);filter:blur(14px);animation:mhRebirthGlow 4s ease-in-out forwards}.mh-rebirth-mon{position:relative;width:145px;height:145px;animation:mhRebirthFloat 4s ease-in-out forwards}.mh-rebirth-copy{position:absolute;bottom:calc(8% + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;color:#fff;font-size:11px;font-weight:900;animation:mhRebirthCopy 4s ease-out forwards}.mh-rebirth-copy b{font-size:20px;color:#fde68a}.mh-rebirth-copy span{margin-top:2px}@keyframes mhRebirthCircle{0%{opacity:0;transform:scale(.3) rotate(0)}25%{opacity:1}100%{opacity:.25;transform:scale(1.5) rotate(180deg)}}@keyframes mhRebirthGlow{0%,20%{opacity:0}40%,70%{opacity:1}100%{opacity:0}}@keyframes mhRebirthFloat{0%{transform:translateY(30px);filter:brightness(1)}45%{transform:translateY(-25px);filter:brightness(2)}60%{filter:brightness(0)}78%{filter:brightness(3)}100%{transform:translateY(0);filter:brightness(1)}}@keyframes mhRebirthCopy{0%,55%{opacity:0;transform:translateY(20px)}68%,100%{opacity:1;transform:none}}.mh-donation-animation{position:fixed;inset:0;z-index:33000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at center,#7c3aed55 0,#020617 58%);pointer-events:auto;touch-action:none}.mh-donation-beam{position:absolute;width:150px;height:110%;background:linear-gradient(90deg,transparent,#fff9c477,transparent);filter:blur(8px);animation:mhDonationBeam 1.5s ease-in-out forwards}.mh-donation-monster{position:absolute;width:96px;height:96px;filter:drop-shadow(0 0 22px #fff);animation:mhDonationRise 1.25s ease-in forwards}.mh-donation-gem{position:absolute;color:#fde68a;opacity:0;filter:drop-shadow(0 0 18px #fbbf24);animation:mhDonationGem .55s 1s ease-out forwards}.mh-donation-particles i{position:absolute;left:50%;top:50%;width:6px;height:6px;border-radius:50%;background:#fde68a;box-shadow:0 0 8px #fff;opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-20px);animation:mhDonationParticle .55s 1s ease-out forwards}.mh-donation-copy{position:absolute;bottom:calc(15% + env(safe-area-inset-bottom));font-size:14px;font-weight:1000;color:#f5d0fe;text-shadow:0 0 12px #a855f7}@keyframes mhDonationRise{0%{transform:translateY(25px) scale(1);opacity:1}55%{transform:translateY(-28px) scale(1.08);opacity:1}100%{transform:translateY(-55px) scale(.05);opacity:0;filter:drop-shadow(0 0 50px #fff)}}@keyframes mhDonationBeam{0%{opacity:0;transform:scaleX(.2)}35%{opacity:1;transform:scaleX(1)}100%{opacity:0;transform:scaleX(.1)}}@keyframes mhDonationGem{to{opacity:1;transform:scale(1.2)}}@keyframes mhDonationParticle{0%{opacity:1}100%{opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-95px) scale(.2)}}@keyframes mhHomeMasumonWalk{0%,100%{translate:0 0}50%{translate:0 -5px}}@keyframes mhHomeBattlePulse{50%{filter:brightness(1.16);box-shadow:0 0 34px #d8b4fddd,inset 0 0 26px #ffdc8366}}@media(max-width:350px){.mh-home-player-copy strong{max-width:80px}.mh-home-wallet{width:124px}.mh-home-facility>span{font-size:9px;padding:6px 8px}.mh-home-facility.battle>span{min-width:140px;font-size:18px}
+    }@media(max-height:620px){.mh-home-facility.management,.mh-home-facility.temple{top:13%;height:32%}/* 背の低い端末では、みゅあの吹き出しがM/B管理の看板にかからないよう少し下げる */.mh-home-facility.management>span,.mh-home-facility.temple>span{top:45%}.mh-home-facility.market{top:43%}.mh-home-facility.battle{height:30%}}@media(prefers-reduced-motion:reduce){.mh-home-background,.mh-home-player,.mh-home-facility>span{transition:none}.mh-home-facility.battle>span{animation:none}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:none}}
     .mh-home-mission{position:absolute;z-index:5;right:5%;top:65%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #fbbf24aa;border-radius:13px;background:#422006e8;color:#fef3c7;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-mission em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-mission:active{transform:scale(.94);filter:brightness(1.25)}/* はじめての案内で説明中の場所だけを明るく浮かび上がらせる。暗幕(z-index:90000)より前に出す。
    施設だけでなく、ミッション/ギフトの本体・みゅあの吹き出しも対象にする(そこも案内するため) */.is-tutorial-spot{z-index:90001}.mh-home-facility.is-tutorial-spot>span,.mh-home-mission.is-tutorial-spot,.mh-home-gift.is-tutorial-spot,.mh-home-assistant.is-tutorial-spot,.mh-home-settings.is-tutorial-spot{border-color:#fce7f3;filter:brightness(1.5) saturate(1.15);box-shadow:0 0 0 4px #f472b6,0 0 0 10px #f472b655,0 0 46px 12px #f472b6cc;animation:mhTutorialSpot 1.35s ease-in-out infinite}.mh-home-assistant.is-tutorial-spot{border-radius:18px}.mh-home-settings.is-tutorial-spot{position:relative;border-radius:11px}/* どこを指しているかが一目で分かるように、光る枠の上に矢印を出す */.mh-home-facility.is-tutorial-spot>span::before,.mh-home-mission.is-tutorial-spot::before,.mh-home-gift.is-tutorial-spot::before,.mh-home-assistant.is-tutorial-spot::before,.mh-home-settings.is-tutorial-spot::before{content:'▼';position:absolute;left:50%;bottom:100%;margin-bottom:5px;transform:translateX(-50%);color:#fbcfe8;font-size:19px;line-height:1;text-shadow:0 0 12px #f472b6,0 2px 4px #000;animation:mhTutorialArrow .9s ease-in-out infinite;pointer-events:none}/* 設定は画面のいちばん上にあるので、矢印は下側から上を指す */.mh-home-settings.is-tutorial-spot::before{content:'▲';top:100%;bottom:auto;margin:5px 0 0}@keyframes mhTutorialSpot{50%{box-shadow:0 0 0 6px #fbcfe8,0 0 0 15px #f472b644,0 0 62px 18px #f472b6}}@keyframes mhTutorialArrow{50%{transform:translateX(-50%) translateY(-7px)}}/* バトルチュートリアルで「ここを操作して」と示す枠。ふだんの画面の上に重ねるので、   暗幕は張らず、光る枠だけで示す(押せる場所はそのまま押せる) */.is-battle-tutorial-spot{border-radius:18px;outline:3px solid #f472b6;outline-offset:3px;box-shadow:0 0 0 7px #f472b644,0 0 34px 6px #f472b6aa;animation:mhBattleSpot 1.3s ease-in-out infinite}@keyframes mhBattleSpot{50%{outline-color:#fbcfe8;box-shadow:0 0 0 10px #f472b633,0 0 46px 10px #f472b6}}@media(prefers-reduced-motion:reduce){.is-battle-tutorial-spot{animation:none}}@media(prefers-reduced-motion:reduce){.is-tutorial-spot,.is-tutorial-spot>span,.is-tutorial-spot::before,.is-tutorial-spot>span::before{animation:none}}.mh-home-assistant{position:absolute;z-index:5;left:3%;width:70%;top:calc(72px + env(safe-area-inset-top));pointer-events:auto}@media(max-width:350px){.mh-home-assistant{width:62%}}
     .mh-gift-list{display:flex;flex-direction:column;gap:5px}.mh-gift-card{display:flex;flex-direction:column;min-height:80px;padding:5px 8px}.mh-gift-heading{display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0;height:18px}.mh-gift-heading h3{display:flex;align-items:center;gap:4px;min-width:0;font-size:12px;line-height:18px;color:#fff}.mh-gift-heading h3 span{flex:none;padding:1px 4px;border-radius:5px;background:#78350f;color:#fde68a;font-size:8px;line-height:14px}.mh-gift-heading h3 b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mh-gift-heading>em{flex:none;padding:1px 6px;border-radius:999px;font-size:8px;line-height:15px;font-style:normal;font-weight:900}.mh-gift-main{display:flex;align-items:center;justify-content:space-between;gap:6px;min-height:37px}.mh-gift-rewards{display:flex;flex:1;flex-wrap:wrap;align-items:center;gap:2px 7px;min-width:0;color:#fde68a;font-size:11px;line-height:15px;font-weight:900}.mh-gift-rewards span{overflow-wrap:anywhere}.mh-gift-main>button{flex:none;min-width:76px;height:36px;padding:0 10px;border-radius:10px;background:#0891b2;color:#fff;font-size:12px;font-weight:900;white-space:nowrap}.mh-gift-main>button:disabled{background:#334155;color:#64748b}.mh-gift-deadline{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#64748b;font-size:8px;line-height:12px}

@@ -29,7 +29,7 @@
 | `mh_missions` | object / 期間ごとの既定値 | デイリー・ウィークリー・マンスリーの進捗、期間ID、ギフト送付済みID。旧データの欠損項目は読み込み時に補う |
 | `mh_unlocked_monsters` | string[] / 初期8種 | 解放済み種ID |
 | `mh_monster_roster` | string[] / 解放済み一覧 | 候補編成。種IDまたは `masu:<id>` |
-| `mh_auto_settings_v1` | object / `{strategy:'random', allies:[{rosterEntry:null,slot:null} × 3], breakthroughReserve:{gold:0,psyche:0}, quickRun:{heroRosterEntry:null,distance:null,difficulty:null}}` | AUTO用の事前設定。方針・供モン・クイック周回設定に加え、AUTO∞自動限界突破で最低限残すダイヤ/虹のプシュケーを `breakthroughReserve` に保存する。欠損・不正値は0へ正規化し、0は保護なし |
+| `mh_auto_settings_v1` | object / `{strategy:'random', allies:[{rosterEntry:null,slot:null} × 3], breakthroughReserve:{gold:0,psyche:0}, quickRun:{heroRosterEntry:null,distance:null,difficulty:null,autoStart:false}}` | AUTO用の事前設定。方針・供モン・クイック周回設定に加え、AUTO∞自動限界突破で最低限残すダイヤ/虹のプシュケーを `breakthroughReserve` に保存する。`quickRun.autoStart` は「モンヒロビートを開いたら自動で∞周回を始めるか」（既定 `false`。項目の無い既存データ・壊れた値は `false` へ倒す）。欠損・不正値は0へ正規化し、0は保護なし |
 | `mh_unlocked_teachings` | string[] / 初期6枚 | 解放済み教えID |
 | `mh_teaching_roster` | string[] / 解放済み一覧 | 教え候補編成 |
 | `mh_masu_mons` | object[] / `[]` | マスモン個体一覧。AUTO∞自動限界突破は個体ごとに `autoRepeatBreakthroughMode`（`off` / `fixed` / `follow`）と既存の `autoRepeatBreakthroughLevel` を持つ。旧データで数値Lvがあれば `fixed` として保持する。旧仕様で保存できたLv405以上の5刻み値は、通常限界突破の実上限と同じLv400へ丸めて意味を保つ。旧boolean・欠損・不正値はOFFへ落とす。`uniqueSkillPoints`（未使用の固有技ポイント）など後から足した項目も既定値へ正規化する |
@@ -111,6 +111,7 @@
 | `mh_rhythm_rank_pending_v1` | object[] | 全国ランキングへ送れなかったモンビーの記録(次回に再送) |
 | `mh_rhythm_perf_v1` | boolean / `false` | 性能計測(デバッグ限定)の ON/OFF |
 | `mh_rhythm_event_notice_v1` | string / `''` | 曲えらびで「今週の対象曲」の案内を見たイベントのID(週が変わると新しいIDになり、その週の初回にもう一度だけ出る。`docs/spec/RHYTHM_RANKING.md` §10.2) |
+| `mh_changelog_timed_seen_fix_v1` | boolean / `false` | `visibleFrom` 付きの更新履歴（時刻が来てから出る項目）を、一度きりで未読へ戻したか。開始前に一覧を開いた端末で既読になり、公開時刻にNEWが付かなかったための補正フラグ（二重適用を防ぐ） |
 | `mh_rhythm_event_story_v1` | string[] / `[]` | イベントの会話ストーリーを最後まで見たイベントのID(開催中に1度だけ流すためのフラグ。回想からはいつでも見られる) |
 | `mh_rhythm_event_reward_v1` | string[] / `[]` | イベント報酬を受け取り済みのイベントID。二重受取を防ぐためのフラグ(入賞しなかった場合もここへ入れて、問い合わせ直さないようにする。`docs/spec/RHYTHM_RANKING.md` §9.1) |
 | `mh_rhythm_canvas_v1` | `'canvas'` / `'dom'` / 未設定 | デバッグ画面の「ノーツの描き方」の上書き(未設定なら公開フラグに従う) |
