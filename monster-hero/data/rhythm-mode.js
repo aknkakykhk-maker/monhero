@@ -458,6 +458,15 @@ const RHYTHM_PERF=(()=>{
 
 const RHYTHM_PROJECTION_TOP_SCALE=.18;
 const RHYTHM_NOTE_WIDTH_RATIO=.78;
+// HOLD/SLIDEの帯の太さ。ノーツの頭(.78)より細い。
+//
+// 【2026-09-11・一度 .78 へそろえようとして戻した】
+// 見えている帯(幅2で42px)と、追従で実際に許される幅(±0.82レーン=108px)には
+// 2.6倍の食い違いがある。細く見えるぶん細く狙ってしまうので頭と同じ .78 にしたところ、
+// 隣のノーツの帯が「何も無いはず」の場所へはみ出した
+// (tools/mode/rhythm-canvas-render-check.js が検出)。食い違いは 2.56→2.10倍に
+// なるだけで得が小さく、見た目の衝突に見合わないため戻した。
+// 「狙いどころが細く見える」問題は、帯を太くする以外の見せ方で別途考える。
 const RHYTHM_BODY_WIDTH_RATIO=.64;
 // 入力側の余白(サブレーン)。見えている帯のふちギリギリを押したときに
 // 「外れた」ことにしないためのもの。指の当たりは点ではなく面なので、
@@ -827,6 +836,24 @@ const rhythmLaneCoordinateAtPoint=(clientX,clientY,rect)=>{
   // 少しはみ出した値がそのまま使われることはない。
   return (nx-left)/laneWidth-.5;
 };
+// 判定ラインの高さ(プレイエリアの下から12% ＝ y比0.88)。
+const RHYTHM_JUDGMENT_LINE_Y_RATIO=.88;
+// HOLD/SLIDEを押さえ続けているあいだの「指がどのレーンにいるか」。
+//
+// 【2026-09-11・「スライドの判定幅が細か過ぎる」のいちばんの原因】
+// ふつうのレーン座標は**指のその場の高さ**で台形の幅を決める。レーンは奥ほど狭いので、
+// 判定ラインの上の正しい位置に指があっても、指が上へ流れただけでレーン座標が外へ膨らむ。
+// ずれの大きさは |レーン-2| × (scale(0.88)/scale(y) - 1) で、エリア高700px想定だと
+// 判定ラインの140px上・端のレーンで0.556レーン。幅2のSLIDEの許容0.82レーンの68%を、
+// **横に一切ずれていないのに**食いつぶしていた(中央のレーンでは0なので、端だけ理不尽に落ちる)。
+//
+// 追従の的(rhythmSlideExpectedLane)は「いまの時刻＝判定ラインの上」の位置なので、
+// 比べる相手も判定ラインの高さで測るのが筋。指のxはそのまま使い、高さだけを揃える。
+// 許容の数字は1つも変えていない。
+const rhythmTrackingLaneCoordinateAtPoint=(clientX,clientY,rect)=>{
+  if(!rect||!Number.isFinite(rect.height)||rect.height<=0)return rhythmLaneCoordinateAtPoint(clientX,clientY,rect);
+  return rhythmLaneCoordinateAtPoint(clientX,rect.top+rect.height*RHYTHM_JUDGMENT_LINE_Y_RATIO,rect);
+};
 const rhythmSubLaneCoordinateAtPoint=(clientX,clientY,rect)=>{
   const coordinate=rhythmLaneCoordinateAtPoint(clientX,clientY,rect);
   return coordinate===null?null:(coordinate+.5)*2;
@@ -883,13 +910,48 @@ const rhythmNoteWantsEndFlick=note=>{
   return type==='HOLD'||type==='SLIDE';
 };
 const RHYTHM_SLIDE_TOLERANCE_LANES = .82;
+// SLIDEの追従を、難易度ごとにやさしくする。
+//
+// 【2026-09-11・ユーザー指示】
+// 「スライドノーツの判定幅が細か過ぎてかなりむずい / 難易度によって細かさを調整してほしい /
+//   もちろん難しい曲なら細かくてもいい」
+//
+// それまで追従の許容も猶予も全難易度で同じ1つの値だった。難易度差は譜面の中身
+// (帯の幅)だけで付いていて、しかも**MASTERがいちばん厳しい**状態になっていた。
+// 配信中の譜面の実測: HARD 191本中163本が幅3(±1.07レーン) / EXPERT 202本中186本が幅3 /
+// MASTER 228本中210本が幅2(±0.82レーン)。つまり上の難易度ほど細い帯を使っている。
+//
+//   toleranceBonusLanes … 追従の許容へ足すレーン数。MASTERは0＝これまでどおり
+//   graceMs             … 的から外れてから失敗にするまでの猶予(ms)。MASTERは120＝これまでどおり
+//
+// 猶予にも差を付けるのは、経路の速い区間では許容だけでは足りないため。
+// 配信譜面の移動速度はp90で7.2レーン/秒あり、そこでは幅2の許容0.82レーンを
+// **114msで使い切る**（＝従来の猶予120msと同じ桁）。許容と猶予は掛け算で効く。
+// 上限は200msに留める(HOLD/SLIDEの持ち替え猶予 RHYTHM_HOLD_HANDOVER_GRACE_MS と同じ)。
+const RHYTHM_SLIDE_TRACKING_BY_DIFFICULTY = Object.freeze({
+  EASY:   Object.freeze({ toleranceBonusLanes:.40, graceMs:200 }),
+  NORMAL: Object.freeze({ toleranceBonusLanes:.32, graceMs:190 }),
+  HARD:   Object.freeze({ toleranceBonusLanes:.24, graceMs:175 }),
+  EXPERT: Object.freeze({ toleranceBonusLanes:.12, graceMs:150 }),
+  MASTER: Object.freeze({ toleranceBonusLanes:0,   graceMs:120 }),
+});
+// 保存値も譜面も持たない「そのときの難易度」を判定へ渡すために、演奏を始めるときへ
+// ノーツ1つ1つへ焼き込む(makeRuntimeNotes)。関数の引数を増やさずに済み、
+// 譜面データそのものは触らないので保存データにもランキングにも影響しない。
+const rhythmSlideTrackingFor = difficultyId =>
+  RHYTHM_SLIDE_TRACKING_BY_DIFFICULTY[String(difficultyId||'').toUpperCase()]
+  || RHYTHM_SLIDE_TRACKING_BY_DIFFICULTY.MASTER;
 // HOLD・SLIDEの終わり(離す・終点フリック)の判定も、単発のタップと同じ表を使う。
 // 数字を別に持つと、タップだけ緩めて終端が置き去りになる。判定表のいちばん外側から作る。
 const RHYTHM_RELEASE_MAX_MS = RHYTHM_INPUT_MATCH_WINDOW_MS;
 const RHYTHM_RELEASE_DEFER_ARM_MS = 100;
 const RHYTHM_RELEASE_AUTO_MISS_ARM_MS = 180;
 const RHYTHM_RELEASE_JUDGMENT_IDS = Object.freeze(['MARVELOUS','EXCELLENT','GREAT','GOOD','BAD','MISS']);
-const rhythmSlideTrackingTolerance=(note,chartTimeMs)=>RHYTHM_SLIDE_TOLERANCE_LANES+(rhythmSlideWidthAt(note,chartTimeMs)-2)/4;
+const rhythmSlideToleranceBonus=note=>{
+  const bonus=Number(note?._rhythmSlideToleranceBonusLanes);
+  return Number.isFinite(bonus)&&bonus>0?bonus:0;
+};
+const rhythmSlideTrackingTolerance=(note,chartTimeMs)=>RHYTHM_SLIDE_TOLERANCE_LANES+(rhythmSlideWidthAt(note,chartTimeMs)-2)/4+rhythmSlideToleranceBonus(note);
 const rhythmJudgeRelease=deltaMs=>{
   const value=Math.abs(Number(deltaMs));
   if(!Number.isFinite(value))return 'MISS';
@@ -1244,10 +1306,12 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
       ['resize','scroll'].forEach(type=>window.visualViewport.addEventListener(type,invalidateAreaRect,{passive:true}));
     }
   }
+  // 追従専用。指の高さではなく判定ラインの高さでレーンを測る
+  // (rhythmTrackingLaneCoordinateAtPoint の説明を参照)
   const laneCoordinate=(clientX,clientY)=>{
     const rect=areaRect();
     if(!rect)return null;
-    return rhythmLaneCoordinateAtPoint(clientX,clientY,rect);
+    return rhythmTrackingLaneCoordinateAtPoint(clientX,clientY,rect);
   };
   const estimatedSongMs=session=>{
     const elapsed=Math.max(0,nowPerf()-session.startPerfMs);
@@ -1313,7 +1377,9 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
     }
     if(!bad){session.trackingBadSincePerf=null;return;}
     if(session.trackingBadSincePerf==null)session.trackingBadSincePerf=pos.perfMs;
-    if(pos.perfMs-session.trackingBadSincePerf<RHYTHM_MID_TRACKING_GRACE_MS)return;
+    const graceMs=Number(session.note?._rhythmTrackingGraceMs)>0
+      ?Number(session.note._rhythmTrackingGraceMs):RHYTHM_MID_TRACKING_GRACE_MS;
+    if(pos.perfMs-session.trackingBadSincePerf<graceMs)return;
     session.note.holdJudgment='MISS';
     session.failed=true;
     // 猶予を超えて外れたままなら、指を離すのを待たずその場でMISS確定する。

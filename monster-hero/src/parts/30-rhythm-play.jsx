@@ -259,7 +259,10 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
   },[monsterSignature,settings.sideMonsterOpacity,settings.sideMonsterMotion,settings.lightweightMode,settings.effectAmount]);
   const abilityTimerRef=useRef(null),abilityRevisionRef=useRef(0),abilityBadgeRef=useRef(null);
   const emptyCounts=()=>Object.fromEntries(RHYTHM_JUDGMENT_IDS.map(id=>[id,0]));
-  const makeRuntimeNotes=()=>chart.notes.map((note,index)=>({...note,index,done:false,activePointerId:null,holdJudgment:null,holdDeltaMs:0,...(note.type==='SLIDE'?{_rhythmSlideRenderPoints:rhythmSlidePoints(note)}:{})}));
+  // HOLD/SLIDEの追従を難易度ごとにやさしくする値を、演奏を始めるときにノーツへ焼き込む。
+  // 譜面データ(data/rhythm-mode.js)は触らないので、保存データにもランキングにも影響しない。
+  // 判定の関数は note からこの2つを読む(rhythmSlideTrackingTolerance / evaluatePosition)。
+  const makeRuntimeNotes=()=>{const tracking=rhythmSlideTrackingFor(difficulty.id);return chart.notes.map((note,index)=>({...note,index,done:false,activePointerId:null,holdJudgment:null,holdDeltaMs:0,_rhythmSlideToleranceBonusLanes:tracking.toleranceBonusLanes,_rhythmTrackingGraceMs:tracking.graceMs,...(note.type==='SLIDE'?{_rhythmSlideRenderPoints:rhythmSlidePoints(note)}:{})}));};
   const initialView=()=>({status:'loading',score:0,combo:0,maxCombo:0,last:'',fastSlow:'',counts:emptyCounts(),fast:0,slow:0,life:RHYTHM_LIFE_MAX,ability:null,result:null});
   const [view,setView]=useState(initialView);
   /* 演奏を始める前のカウントダウン(READY→3→2→1)。
