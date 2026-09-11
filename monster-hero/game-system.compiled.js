@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 639874de1a0d8685
+// source-sha256: 0ed2ddc5eecaa584
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6002f520b995d201
+// generated-sha256: 07c8e8a3dbd45510
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-12 08:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-12 08:31"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8074,7 +8074,28 @@ const _exactDyeMaskRegion = (pixels, offset) => {
   if (r > 200 && g < 80 && b > 200) return 4;
   return -1;
 };
-const _dyeRegionMaskCache = {};
+// 部位マスクは1体ぶんで3枚のdataURLを持つので、際限なく溜めるとメモリを圧迫する
+// (docs/refactor/TECH_DEBT_AUDIT.md TD-10)。染め上がりの側(_dyeRecolorCache)と同じく、
+// 使った順に並べ替えて上限までで古いものから捨てる。
+//
+// 上限は「部位マスクを持つモンスター20体」に余裕を足した数。通常のプレイでは
+// ここへ届かないので、これまでと同じく一度作ったマスクを使い回す(作り直しは起きない)。
+// 効くのは、デバッグの染色マスクエディタで位置や倍率を動かしたときのように
+// キーが操作のたびに増える場合で、そこだけが青天井にならなくなる。
+const DYE_REGION_MASK_CACHE_MAX = 32;
+const _dyeRegionMaskCache = new Map();
+const _dyeRegionMaskCacheGet = key => {
+  const hit = _dyeRegionMaskCache.get(key);
+  if (hit) {
+    _dyeRegionMaskCache.delete(key);
+    _dyeRegionMaskCache.set(key, hit);
+  } // 使ったものを末尾へ(=新しい側へ)
+  return hit || null; // 無いときの返し方を _dyeRecolorCacheGet とそろえる
+};
+const _dyeRegionMaskCacheSet = (key, promise) => {
+  _dyeRegionMaskCache.set(key, promise);
+  while (_dyeRegionMaskCache.size > DYE_REGION_MASK_CACHE_MAX) _dyeRegionMaskCache.delete(_dyeRegionMaskCache.keys().next().value);
+};
 // タッチ式エディタから試す間だけ使うBlob URL。保存領域や正式な画像参照は変更しない。
 const _temporaryDyeMasks = Object.create(null);
 const getDyeRegionMasks = (baseId, imgUrl, debugPlacement = null) => {
@@ -8084,7 +8105,8 @@ const getDyeRegionMasks = (baseId, imgUrl, debugPlacement = null) => {
   const hues = MASU_COLOR_REGION_HUES[baseId];
   if (!hues || hues.length === 0) return null;
   const cacheKey = baseId + '::' + imgUrl + (debugPlacement ? `::debug:${debugPlacement.maskUrl || ''}:${debugPlacement.xPx}:${debugPlacement.yPx}:${debugPlacement.scaleX}:${debugPlacement.scaleY}` : '');
-  if (_dyeRegionMaskCache[cacheKey]) return _dyeRegionMaskCache[cacheKey];
+  const cachedMasks = _dyeRegionMaskCacheGet(cacheKey);
+  if (cachedMasks) return cachedMasks;
   const promise = new Promise(resolve => {
     try {
       const img = new window.Image();
@@ -8277,7 +8299,7 @@ const getDyeRegionMasks = (baseId, imgUrl, debugPlacement = null) => {
       resolve(null);
     }
   });
-  _dyeRegionMaskCache[cacheKey] = promise;
+  _dyeRegionMaskCacheSet(cacheKey, promise);
   return promise;
 };
 // 部位ごとの染まり方の調整。書かなければ「選んだ色の彩度でそのまま塗る」(既定)。

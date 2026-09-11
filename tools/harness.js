@@ -159,6 +159,13 @@ const EXPORTED_NAMES = [
   'EXACT_DYE_MASKS',
   'dyeRegionCount',
   'getDyeRegionMasks',
+  // 染色キャッシュの上限まわり。image/dye-cache-limit-check.js が実際に入れて確かめる
+  'DYE_REGION_MASK_CACHE_MAX',
+  '_dyeRegionMaskCacheGet',
+  '_dyeRegionMaskCacheSet',
+  'DYE_RECOLOR_CACHE_MAX',
+  '_dyeRecolorCacheGet',
+  '_dyeRecolorCacheSet',
   'getRecoloredImage',
   '_classifyDyePixel',
   '_isExcludedDyePixel',
