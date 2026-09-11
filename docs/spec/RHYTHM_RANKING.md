@@ -17,7 +17,7 @@
 > | --- | --- |
 > | 1. `breeder_id` を送り始める | **完了**（アプリ公開済み・SQL適用済み 2026-09-11。§4・§12） |
 > | 2. ブリーダー別 全曲合算ランキング | **完了**（SQL適用・公開とも 2026-09-11。§3・§12） |
-> | 3. 週間ランキング（報酬なし） | 未着手 |
+> | 3. 週間ランキング（報酬なし） | **実装済み・公開待ち**（2026-09-11。SQLの適用後に公開フラグを立てる。§6・§12） |
 > | 4. 報酬と期間限定イベント | 未着手 |
 >
 > フェーズ1はアプリ側を先に出してある。`breeder_id`の列がまだ無いあいだは自動でIDを外して
@@ -342,10 +342,31 @@ select identity_key, sum(score)::bigint as total_score
 その週の対象3曲は、**正式譜面が完成している曲**から選ぶ。
 曲として並んでいるだけでは対象にしない（`RHYTHM_MODE.md` §19 の条件をそのまま引き継ぐ）。
 
-対象曲の一覧は**クライアント側の静的データ**（`data/rhythm-event.js` 予定）に置き、
-デプロイで切り替える。Supabase 側は「期間×曲ごとの集計」までを汎用に返し、
+対象曲の一覧は**クライアント側の静的データ**（`monster-hero/data/rhythm-event.js`）に置く。
+Supabase 側は「期間×曲ごとの集計」までを汎用に返し、
 どの3曲を対象にするかは知らない（§8.4）。こうしておくと、
 **イベントを差し替えるのに SQL を触らなくて済む**。
+
+### 6.5 対象曲はローテーションで決める（2026-09-11・実装時に決めた）
+
+手で選んだ3曲の組を `RHYTHM_WEEKLY_ROTATION` へ並べ、**週ごとに順に回す**。
+一巡したら先頭へ戻る。どの組を使うかは、週の始まり（サーバーが決めた `week_start`）から
+数えた通し番号で決まる。
+
+- **毎週デプロイしないと週間ランキングが消える、という作りにしないため**。
+  「その週の3曲を毎週書き足す」形だと、書き忘れた週にランキングそのものが無くなる
+- 曲は手で選ぶ（§5.7 の「いまは手で選ぶ」はそのまま）。自動で選ぶのは
+  「並べた組のうちどれを今週にするか」だけ
+- 組み方の決めごとは3つ。`tools/mode/rhythm-event-window-check.js` が見張る
+  1. となりあう週で同じ曲を選ばない（最後の組と先頭の組のあいだも見る）
+  2. 一巡すると公開曲がひととおり対象になる
+  3. 正式譜面が完成している曲（＝曲えらびに並んでいる公開曲）からだけ選ぶ
+- 曲を足したら、この一覧へも組を足す（足さないと、その曲はいつまでも対象にならない）
+- 週のIDは `weekly_YYYY_MM_DD`（その週の月曜5:00 JSTの日付）。フェーズ4の受取フラグの
+  一部になるので、**あとから形を変えない**
+
+期間限定イベント（`kind:'limited'`）は `RHYTHM_EVENTS` へ直接書く。
+期間が重なっているあいだは、そちらが優先されて週間は休む（§7）。
 
 ---
 
@@ -678,7 +699,7 @@ grant execute on function public.rhythm_event_song_bests(text[], timestamptz, ti
 | --- | --- |
 | `tools/mode/rhythm-total-ranking-check.js` | 合算の集計（曲ごとベスト→合計）・同点処理・表示件数・達成率 |
 | `tools/mode/rhythm-identity-check.js` | `identity_key` の決め方（§4.4 の3ケース）と、IDが無い行の引き継ぎ |
-| `tools/mode/rhythm-event-window-check.js` | 月曜5:00 JST の週境界、期間限定の開始・終了 |
+| `tools/mode/rhythm-event-window-check.js`（**実装済み**） | 月曜5:00 JST の週境界、期間限定の開始・終了、対象曲の組み方（§6.5）、部門の数、公開フラグ |
 | `tools/mode/rhythm-song-count-check.js` | 曲数を数字で書き写した場所が無いこと（分母・理論満点・ヘルプ・SQL）（§5.1） |
 | `tools/mode/rhythm-song-id-hyphen-check.js` | songId にハイフンが入っていないこと |
 | 既存 `tools/mode/rhythm-ranking-check.js` | 既存の曲別ランキングが変わっていないこと |
@@ -735,13 +756,41 @@ grant execute on function public.rhythm_event_song_bests(text[], timestamptz, ti
    （`tools/mode/rhythm-total-ranking-check.js` が、フラグが true のときだけこれを見張る）
 4. `node tools/build.js` と検査を通してからコミットする
 
-### フェーズ3 — 週間ランキング（報酬なし）
+### フェーズ3 — 週間ランキング（報酬なし）（**実装済み・公開待ち・2026-09-11**）
 
-1. 週境界ビューと期間×対象曲の関数を適用する（§8.4）
-2. `data/rhythm-event.js` を作り、対象3曲を書く
-3. イベントタブ（曲ごと＋総合）と残り時間表示
-4. 曲えらびでの「今週の対象曲」案内
-5. ヘルプ・更新履歴・助手の告知
+1. ✅ 週境界ビューと期間×対象曲の関数の適用SQLを用意した（§8.4）。
+   `docs/sql/rankings/RHYTHM_EVENT_APPLY.sql` / `_APPLY_TEST.sql` / `_VERIFY.sql` /
+   `RHYTHM_EVENT_IPHONE_STEPS.md`。**ユーザーの適用待ち**
+2. ✅ `data/rhythm-event.js` を作り、対象曲をローテーションで書いた（§6.5）
+3. ✅ 取得関数（`sbFetchRhythmWeekWindow` / `sbFetchRhythmEventSongBests` /
+   `sbFetchRhythmEventTotals`）を `26-supabase.jsx` へ足した。既存の口は触らない
+4. ✅ イベントタブ（対象曲ごと＋総合の部門）と残り時間表示
+5. ✅ 曲えらびでの「今週の対象曲」案内（`mh_rhythm_event_notice_v1`）
+6. ✅ ヘルプ・更新履歴・助手の告知（§10.2）
+7. ⬜ 公開フラグ `RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE` を `true` にして公開する
+   （SQLの適用が済んでから）
+
+#### 公開フラグでまとめて出し入れする
+
+総合ランキングと同じく、`RELEASE_FLAGS.rhythmWeeklyRanking` 1つで次の5つを同時に出し入れする。
+
+| 出るもの | 隠し方 |
+| --- | --- |
+| ランキング画面の「イベント」タブ | `eventReleased` が false ならタブごと出さない |
+| 曲えらびの「今週の対象曲」案内 | `rhythmEventReleased` が false なら出さない |
+| ヘルプの「イベント」タブの説明 | ブロックごとの `releaseFlag:'rhythmWeeklyRanking'` |
+| 更新履歴の1件 | 項目の `releaseFlag:'rhythmWeeklyRanking'` |
+| 助手の告知 | 更新履歴が出ないので自動的に止まる |
+
+**公開の手順**（SQLの適用が済んでから）
+
+1. `RHYTHM_EVENT_VERIFY.sql` で「今週の始まり」が月曜 5:00 になっていること、
+   `上位3人(今週の総合)` が出ることを確かめる
+2. `17-release-changelog-login-missions.jsx` の
+   `RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE` を `true` にする
+3. ヘルプの `rhythm-ranking` 項目の**助手のひとこと**を週間に触れた文へ書き直す
+   （`tools/mode/rhythm-event-window-check.js` が、フラグが true のときだけこれを見張る）
+4. `node tools/build.js` と検査を通してからコミットする
 
 ### フェーズ4 — 報酬と期間限定イベント
 
