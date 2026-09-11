@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6173dfd4f0e887c8
+// generated-sha256: fc4802c7f44efcb4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 15:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 15:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -13826,6 +13826,10 @@ function RhythmRankingScreen({
   rhythmRankingTab, rhythmTotalRanking,
   setRhythmEventDivision, setRhythmRankingDetail, setRhythmRankingTab,
 }) {
+      // イベント詳細(告知画像と報酬の表)を開いているか。
+      // 一覧の上へ積むとランキングが画面の外へ押し出されるので、別に開く形にした
+      // (2026-09-11・ユーザー指摘「下までいかないとランキング見れないのが不便」)
+      const [eventDetailOpen, setEventDetailOpen] = useState(false);
       // 曲えらびから開いたときの曲を追いかける。曲が5つになったので、
       // ここを固定にすると「別の曲のランキングを見ているのに曲名が違う」ことになる。
       const song=RHYTHM_SONGS.find(entry=>entry.songId===rhythmRanking.songId)||rhythmDemoSong(RHYTHM_SONGS);
@@ -14009,9 +14013,6 @@ function RhythmRankingScreen({
             </>)}
           </>)}
           {boardTab&&(<>
-            {/* ★告知画像は読み込みの前に出す。順位が読めなくても「何が開催中か」は伝わるように
-                (2026-09-11)。曲えらびの案内は閉じると出なくなるので、ここが絵を見られる場所になる */}
-            <RhythmEventBanner event={eventDefinition||(boardKind==='limited'?limitedEvent:null)} className="mb-3"/>
             {event.status==='loading'&&<p data-rhythm-event-loading className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">読み込み中…</p>}
             {/* 集計のしたくがまだのとき。エラーではないので、赤い表示にはしない */}
             {event.status==='notReady'&&<p data-rhythm-event-not-ready className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">週間ランキングはただいま準備中です。もうしばらくお待ちください。</p>}
@@ -14029,6 +14030,17 @@ function RhythmRankingScreen({
                   {eventRange?rhythmEventRemainingText(eventRange.endMs-eventNowMs):'—'}
                 </p>
               </div>
+              {/* ★告知画像と報酬の表は詳細へ移した(2026-09-11・ユーザー指摘
+                  「下までいかないとランキング見れないのが不便 /
+                   イベント詳細ページみたいなのに飛べるようにして、そこで報酬やバナーが見れるように」)。
+                  順位を見に来る画面なので、開いてすぐ順位が見えるほうがよい */}
+              <button type="button" data-rhythm-event-detail-open onClick={()=>setEventDetailOpen(true)}
+                className="mb-3 flex w-full items-center gap-2 rounded-2xl border border-amber-300/40 bg-amber-500/10 px-3 text-left"
+                style={{minHeight:'44px'}}>
+                <span className="shrink-0 text-sm">🎁</span>
+                <span className="min-w-0 flex-1 truncate text-[10px] font-black text-amber-200">イベント詳細（報酬・対象曲）</span>
+                <span className="shrink-0 text-[10px] font-black text-amber-200">›</span>
+              </button>
               {/* 部門。対象曲ごと＋総合で、数は対象曲の数から作る。
                   ★対象曲を持つのはイベントだけなので、週間では部門が総合1つになり、
                     ボタンそのものを出さない(2026-09-11・ユーザー指示) */}
@@ -14039,23 +14051,6 @@ function RhythmRankingScreen({
                     {division.songId?(rhythmSongFullName(division.song)||division.songId):'総合'}
                   </button>
                 ))}
-              </div>}
-              {/* その部門の報酬。何を狙って遊ぶのかが分からないと、そもそも参加してもらえない。
-                  順位も個数もデータから作るので、ここに数字を書き写さない */}
-              {eventReward&&<div data-rhythm-event-rewards className="mb-3 rounded-2xl border border-amber-300/40 bg-amber-500/5 p-2">
-                <p className="mb-1 text-[9px] font-black text-amber-200">この部門の報酬（終了後に受け取れます）</p>
-                <ul className="space-y-0.5">
-                  {eventRewardRanks.map(({rank,reward})=>(
-                    <li key={rank} className="flex items-baseline gap-2 text-[10px] leading-tight">
-                      <b className="w-7 shrink-0 text-right font-black text-amber-200">{rank}位</b>
-                      <span className="min-w-0 flex-1 text-slate-200">{rhythmEventRewardText(reward)}</span>
-                    </li>
-                  ))}
-                </ul>
-                {/* 参加報酬。入賞しなくてももらえるので、順位の表とは分けて出す */}
-                {eventParticipation&&<p data-rhythm-event-participation className="mt-2 border-t border-amber-300/20 pt-2 text-[10px] leading-tight text-slate-200">
-                  <b className="text-amber-200">参加報酬</b>　対象曲を{eventParticipation.songs}曲すべて遊ぶと {rhythmEventParticipationText(eventParticipation)}
-                </p>}
               </div>}
               {eventBoard.status==='loading'&&<p data-rhythm-event-board-loading className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">読み込み中…</p>}
               {eventBoard.status==='error'&&<p data-rhythm-event-board-error className="rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200">この部門を読み込めませんでした。「更新」をお試しください。</p>}
@@ -14117,7 +14112,46 @@ function RhythmRankingScreen({
             </div>
           </div>
         )}
-      </main>
+        {boardTab&&eventDetailOpen&&(
+        <div data-rhythm-event-detail role="dialog" aria-modal="true" aria-label="イベント詳細"
+          className="fixed inset-0 z-[80000] flex items-end justify-center bg-slate-950/95">
+          <div className="w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] overflow-y-auto mh-scroll rounded-t-3xl border-t-2 border-x-2 border-amber-300/60 bg-slate-950 p-4"
+            style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
+            <p className="mb-2 text-center text-[10px] font-black tracking-widest text-amber-300">EVENT</p>
+            {/* 告知画像。開いたときだけ読むので、ここへ置いても起動は重くならない */}
+            <RhythmEventBanner event={eventDefinition||(boardKind==='limited'?limitedEvent:null)} className="mb-3"/>
+            {eventDefinition&&<div className="mb-3">
+              <p className="text-[12px] font-black text-fuchsia-100">{eventDefinition.name}</p>
+              <p className="text-[9px] text-slate-400">{rhythmEventPeriodText(eventDefinition,eventRange)}</p>
+            </div>}
+            {/* 対象曲。曲の名前はデータから引くので、ここに書き写さない */}
+            {eventDefinition&&eventDivisions.length>1&&<p className="mb-3 text-[10px] leading-tight text-fuchsia-100">
+              <b className="text-fuchsia-200">{rhythmEventSongsLabel(eventDefinition)}</b>　
+              {eventDivisions.filter(division=>division.songId).map(division=>rhythmSongFullName(division.song)||division.songId).join(' ／ ')}
+            </p>}
+        {/* その部門の報酬。何を狙って遊ぶのかが分からないと、そもそも参加してもらえない。
+        順位も個数もデータから作るので、ここに数字を書き写さない */}
+        {eventReward&&<div data-rhythm-event-rewards className="mb-3 rounded-2xl border border-amber-300/40 bg-amber-500/5 p-2">
+        <p className="mb-1 text-[9px] font-black text-amber-200">この部門の報酬（終了後に受け取れます）</p>
+        <ul className="space-y-0.5">
+        {eventRewardRanks.map(({rank,reward})=>(
+        <li key={rank} className="flex items-baseline gap-2 text-[10px] leading-tight">
+        <b className="w-7 shrink-0 text-right font-black text-amber-200">{rank}位</b>
+        <span className="min-w-0 flex-1 text-slate-200">{rhythmEventRewardText(reward)}</span>
+        </li>
+        ))}
+        </ul>
+        {/* 参加報酬。入賞しなくてももらえるので、順位の表とは分けて出す */}
+        {eventParticipation&&<p data-rhythm-event-participation className="mt-2 border-t border-amber-300/20 pt-2 text-[10px] leading-tight text-slate-200">
+        <b className="text-amber-200">参加報酬</b>　対象曲を{eventParticipation.songs}曲すべて遊ぶと {rhythmEventParticipationText(eventParticipation)}
+        </p>}
+        </div>}
+            <button type="button" data-rhythm-event-detail-close onClick={()=>setEventDetailOpen(false)}
+              className="mt-3 w-full min-h-[50px] rounded-2xl bg-white text-sm font-black text-black active:scale-95">とじる</button>
+          </div>
+        </div>
+      )}
+    </main>
       );
 }
 
@@ -19968,8 +20002,14 @@ function MonsterHeroGame() {
         const plan = planUpdateNoticesForLogin(availableUpdateNotices(), seen);
         if (plan.queue.length === 0) return;
         if (plan.seen.length !== seen.length) await storeSet(UPDATE_NOTICE_SEEN_KEY, plan.seen, false);
-        // 出している最中の案内を横取りしない
-        setUpdateGuideQueue(queue => (queue.length > 0 ? queue : plan.queue));
+        // ★出している最中の案内を横取りせず、うしろへ足す。
+        //   「行列が空のときだけ入れる」にしていたら、起動時の案内をまだ読んでいる人に
+        //   イベントの告知が届かなかった(実ブラウザで踏んだ)。同じIDは重ねない
+        setUpdateGuideQueue(queue => {
+          const already = new Set((queue || []).map(notice => notice && notice.id));
+          const added = plan.queue.filter(notice => notice && !already.has(notice.id));
+          return added.length > 0 ? [...(queue || []), ...added] : queue;
+        });
       } catch {}
     };
     look();

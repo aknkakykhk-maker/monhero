@@ -2631,8 +2631,14 @@ function MonsterHeroGame() {
         const plan = planUpdateNoticesForLogin(availableUpdateNotices(), seen);
         if (plan.queue.length === 0) return;
         if (plan.seen.length !== seen.length) await storeSet(UPDATE_NOTICE_SEEN_KEY, plan.seen, false);
-        // 出している最中の案内を横取りしない
-        setUpdateGuideQueue(queue => (queue.length > 0 ? queue : plan.queue));
+        // ★出している最中の案内を横取りせず、うしろへ足す。
+        //   「行列が空のときだけ入れる」にしていたら、起動時の案内をまだ読んでいる人に
+        //   イベントの告知が届かなかった(実ブラウザで踏んだ)。同じIDは重ねない
+        setUpdateGuideQueue(queue => {
+          const already = new Set((queue || []).map(notice => notice && notice.id));
+          const added = plan.queue.filter(notice => notice && !already.has(notice.id));
+          return added.length > 0 ? [...(queue || []), ...added] : queue;
+        });
       } catch {}
     };
     look();
