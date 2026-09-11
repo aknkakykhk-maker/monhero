@@ -169,9 +169,15 @@ if (jsx.length > 0) {
 // 「画面には出ていないのに曲だけ変わる」「イベントが終わっても曲が残る」を防ぐため、
 // 表示条件と同じ判定を使っていること、依存へ入っていることまで見る。
 check('会話中はイベントBGMを鳴らす', has('if (eventBgmScene) return bgmArrangement[eventBgmScene];'));
-check('イベントBGMは画面のBGMより先に決まる',
-  source.indexOf('if (eventBgmScene) return bgmArrangement[eventBgmScene];') > 0
-  && source.indexOf('if (eventBgmScene) return bgmArrangement[eventBgmScene];') < source.indexOf("if (isGameOver) return 'gameOver';"));
+// 行の文字列そのものを見ていたため、戻り値が BGM アレンジ設定から引く形へ変わったときに
+// 探し物(`if (isGameOver) return 'gameOver';`)が見つからず、indexOf が -1 を返して
+// 「イベントのほうが後ろ」と誤判定していた(2026-09-11)。
+// 見たいのは戻り値の書き方ではなく「どちらの分岐が先にあるか」だけ。
+check('イベントBGMは画面のBGMより先に決まる', (() => {
+  const eventAt = source.search(/if \(eventBgmScene\) return\b/);
+  const gameOverAt = source.search(/if \(isGameOver\) return\b/);
+  return eventAt >= 0 && gameOverAt >= 0 && eventAt < gameOverAt;
+})());
 check('鳴らす条件は会話の表示条件と同じ',
   has("const kikiIntroPlaying = gameState === 'HOME' && onboarded && tutorialStep == null && kikiIntroStep != null;"));
 check('イベントが終われば元の画面のBGMへ戻す(依存に入っている)',

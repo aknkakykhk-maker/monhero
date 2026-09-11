@@ -88,11 +88,25 @@ check('助手の告知の材料そのものは残っている(基盤を壊して
   Array.isArray(ASSISTANT_UPDATE_NOTICES) && ASSISTANT_UPDATE_NOTICES.length > 0);
 
 // ---- ③ 付け忘れ ----
-// モンヒロビートは公開前に書いたものが作業メモ。releaseFlag が付いている＝公開前に書いた印
+// モンヒロビートのプレオープンより前に書いたものが作業メモ。
+// ★「releaseFlag:'rhythmMode' が付いている＝公開前に書いた印」で見ていたが、
+//   公開後の改善にも「フラグを下ろしたら一緒に隠れる」ように同じ releaseFlag を付けている。
+//   そのため、プレイヤーが実際に体験した 2026-09-07 の改善7件まで
+//   「作業メモにし忘れ」と誤判定していた(2026-09-11)。dev:true を足すのは逆で、
+//   出ているべきお知らせが消える。判定はフラグではなく日付で行う。
+const RHYTHM_PREOPEN_AT = '2026-09-05 12:36'; // 「モンヒロビートをプレオープンしました」の日時
 const rhythmFlagged = CHANGELOG.filter(e => e.releaseFlag === 'rhythmMode');
+const rhythmDated = (entry) => (typeof entry.date === 'string' ? entry.date : '');
+const rhythmBeforeOpen = rhythmFlagged.filter(e => rhythmDated(e) && rhythmDated(e) < RHYTHM_PREOPEN_AT);
 check('モンヒロビート公開前に書いた項目は、すべて作業メモ扱いになっている',
-  rhythmFlagged.length > 0 && rhythmFlagged.every(e => e.dev === true),
-  `${rhythmFlagged.filter(e => e.dev === true).length}/${rhythmFlagged.length}件`);
+  rhythmBeforeOpen.length > 0 && rhythmBeforeOpen.every(e => e.dev === true),
+  `${rhythmBeforeOpen.filter(e => e.dev === true).length}/${rhythmBeforeOpen.length}件(プレオープン ${RHYTHM_PREOPEN_AT} より前)`);
+// 逆side: 公開後の項目はお知らせに出ているのが正しい。うっかり dev:true を足すと、
+// プレイヤーが見たはずの改善が一覧から消えるので、そちらも見張る
+const rhythmAfterOpen = rhythmFlagged.filter(e => rhythmDated(e) >= RHYTHM_PREOPEN_AT);
+check('モンヒロビート公開後の項目は作業メモにしていない',
+  rhythmAfterOpen.every(e => e.dev !== true),
+  `${rhythmAfterOpen.filter(e => e.dev !== true).length}/${rhythmAfterOpen.length}件`);
 check('作業メモに新着バッジ(status:new)を付けていない',
   devEntries.every(e => e.status !== 'new'),
   devEntries.filter(e => e.status === 'new').map(e => e.title).join(' / '));

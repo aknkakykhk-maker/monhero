@@ -114,7 +114,7 @@ const CHANGELOG = [
   {
     // プレイヤーの画面には何も出ない準備(全曲合算ランキングの土台)なので dev:true。
     // 助手の告知も付けない(遊びが増えたわけではないため)。
-    date: "2026-09-11 07:53", type:'update', title:'モンヒロビート: 同じ名前のブリーダーを見分ける準備をしました', status:'new', dev:true,
+    date: "2026-09-11 07:53", type:'update', title:'モンヒロビート: 同じ名前のブリーダーを見分ける準備をしました', dev:true,
     items:[
       '全国ランキングは、これまでブリーダー名だけで人を見分けていました。曲ごとのランキング(その名前でいちばん高い1件を見せるだけ)では困りませんが、これから作る「全曲を足し合わせたランキング」では、同じ名前の人がいると別人の点まで足されてしまいます。',
       'そこで、端末ごとのIDを記録に添えて送るようにしました。名前を変えてもIDは変わりません。画面に出る内容・スコア・自己ベスト・いまのランキングは何も変わりません。',
@@ -461,7 +461,7 @@ const CHANGELOG = [
   },
   {
     // 公開前の機能の不具合修正なので dev:true
-    date: "2026-09-07 12:05", type:'fix', title:'裏の周回で負けたあとに「再開する」が出ていたのを直しました', status:'new',
+    date: "2026-09-07 12:05", type:'fix', title:'裏の周回で負けたあとに「再開する」が出ていたのを直しました',
     releaseFlag:'quickRhythmLink', dev:true,
     items:[
       'モンヒロビートの帯で、裏の周回が負けて終わったあとにも「▶ 周回を再開する」が出ていました。押すと負けたところの続きから動きだしてしまい、そのまま進めなくなることがありました。',
@@ -471,7 +471,7 @@ const CHANGELOG = [
   },
   {
     // まだ作りかけの連携ぶん。QUICK_RHYTHM_LINK_PUBLIC_RELEASE を true にするまで出さない
-    date: "2026-09-07 11:42", type:'update', title:'演奏で入った周回を、曲のリザルトで見られるようにしました', status:'new',
+    date: "2026-09-07 11:42", type:'update', title:'演奏で入った周回を、曲のリザルトで見られるようにしました',
     releaseFlag:'quickRhythmLink', dev:true,
     items:[
       '曲のリザルト画面に「クイック∞周回 +◯周」が出るようにしました。何周目から何周目になったかと、入った経験値・ダイヤ・絆・虹のプシュケーもそこで確かめられます。',
@@ -480,7 +480,7 @@ const CHANGELOG = [
   },
   {
     // 公開前の機能の不具合修正なので dev:true
-    date: "2026-09-07 11:00", type:'fix', title:'演奏後の帯の表示が元に戻らなかったのを直しました', status:'new',
+    date: "2026-09-07 11:00", type:'fix', title:'演奏後の帯の表示が元に戻らなかったのを直しました',
     releaseFlag:'quickRhythmLink', dev:true,
     items:[
       '「演奏で ◯周ぶん入りました」が次の演奏に入るまで消えず、そのあと裏で周回が進んでも同じ文が残っていました。',
@@ -501,7 +501,7 @@ const CHANGELOG = [
   },
   {
     // 公開前の機能の不具合修正なので dev:true(公開初日に遊ぶ人はこの不具合に出会わない)
-    date: "2026-09-07 10:36", type:'fix', title:'∞周回を入れ直しても裏の周回が動かないことがあったのを直しました', status:'new',
+    date: "2026-09-07 10:36", type:'fix', title:'∞周回を入れ直しても裏の周回が動かないことがあったのを直しました',
     releaseFlag:'quickRhythmLink', dev:true,
     items:[
       '演奏などで周回が途中で止まったあと、バトルへ戻って∞をもう一度入れても、モンヒロビートの裏で周回が進まないことがありました。',
@@ -511,7 +511,7 @@ const CHANGELOG = [
   },
   {
     // まだ作りかけの連携ぶん。QUICK_RHYTHM_LINK_PUBLIC_RELEASE を true にするまで出さない
-    date: "2026-09-07 10:29", type:'update', title:'モンヒロビートから周回を再開できるようにし、帯の操作を整理しました', status:'new',
+    date: "2026-09-07 10:29", type:'update', title:'モンヒロビートから周回を再開できるようにし、帯の操作を整理しました',
     releaseFlag:'quickRhythmLink', dev:true,
     items:[
       'アプリが裏に回るなどで止まったとき、まだ挑戦の途中が残っていれば「▶ 周回を再開する」で続きから回せます。数えていた周回数と報酬もそのまま続きます。',
@@ -521,7 +521,7 @@ const CHANGELOG = [
   },
   {
     // まだ作りかけの連携ぶん。QUICK_RHYTHM_LINK_PUBLIC_RELEASE を true にするまで出さない
-    date: "2026-09-07 10:23", type:'fix', title:'演奏中の説明が古い仕組みのままだったのを直しました', status:'new',
+    date: "2026-09-07 10:23", type:'fix', title:'演奏中の説明が古い仕組みのままだったのを直しました',
     releaseFlag:'quickRhythmLink', dev:true,
     items:[
       '「そのぶんは曲のあとに速く進んで取り戻す」という、前の仕組みのころの説明が帯と助手のセリフに残っていました。',
@@ -539,7 +539,7 @@ const CHANGELOG = [
   },
   {
     // まだ作りかけの連携ぶん。QUICK_RHYTHM_LINK_PUBLIC_RELEASE を true にするまで出さない
-    date: "2026-09-07 10:13", type:'update', title:'モンヒロビートにいるまま、クイックの周回をやめられるようにしました', status:'new',
+    date: "2026-09-07 10:13", type:'update', title:'モンヒロビートにいるまま、クイックの周回をやめられるようにしました',
     releaseFlag:'quickRhythmLink', dev:true,
     items:[
       '進捗の帯を開くと「⏹ ここで周回をやめる」が出ます。バトルへ戻らなくてもその場で終われます。',
@@ -548,7 +548,7 @@ const CHANGELOG = [
   },
   {
     // まだ作りかけの連携ぶん。QUICK_RHYTHM_LINK_PUBLIC_RELEASE を true にするまで出さない
-    date: "2026-09-07 10:08", type:'fix', title:'横向きの曲えらびで「周回を始める」が大きく出すぎていたのを直しました', status:'new',
+    date: "2026-09-07 10:08", type:'fix', title:'横向きの曲えらびで「周回を始める」が大きく出すぎていたのを直しました',
     releaseFlag:'quickRhythmLink', dev:true,
     items:[
       '周回中の帯は上のタブへ収まっていましたが、まだ周回していないときの「始める」だけが下に残り、横向きでは画面の幅いっぱいの大きな帯になっていました。帯と同じ場所へ入れました。',
@@ -565,7 +565,7 @@ const CHANGELOG = [
   },
   {
     // まだ作りかけの連携ぶん。QUICK_RHYTHM_LINK_PUBLIC_RELEASE を true にするまで出さない
-    date: "2026-09-07 09:10", type:'update', title:'1曲演奏すると、曲の長さぶんの周回をクリアした扱いになります', status:'new',
+    date: "2026-09-07 09:10", type:'update', title:'1曲演奏すると、曲の長さぶんの周回をクリアした扱いになります',
     releaseFlag:'quickRhythmLink', dev:true,
     items:[
       '曲を最後まで演奏すると、その長さに応じた周回数がクリア扱いになります。2分台までは2周、3分台は3周、4分台は4周…と1分ごとに1周ずつ増えます。',
@@ -617,7 +617,7 @@ const CHANGELOG = [
   },
   {
     // まだ作りかけの連携ぶん。QUICK_RHYTHM_LINK_PUBLIC_RELEASE を true にするまで出さない
-    date: "2026-09-07 08:35", type:'fix', title:'モンヒロビートから戻るとバトルのBGMが鳴らなくなるのを直しました', status:'new',
+    date: "2026-09-07 08:35", type:'fix', title:'モンヒロビートから戻るとバトルのBGMが鳴らなくなるのを直しました',
     releaseFlag:'quickRhythmLink', dev:true,
     items:[
       '∞周回中にモンヒロビートを開いてからバトルへ戻ると、その画面の曲が鳴らないままになることがありました。勇者モンを選んでいるときなどに「いつもと違う曲（または無音）」になっていた原因です。',
@@ -640,7 +640,7 @@ const CHANGELOG = [
   },
   {
     // まだ作りかけの連携ぶん。QUICK_RHYTHM_LINK_PUBLIC_RELEASE を true にするまで出さない
-    date: "2026-09-07 06:59", type:'fix', title:'モンヒロビートを開いたまま周回が次の周へ入らないのを直しました', status:'new',
+    date: "2026-09-07 06:59", type:'fix', title:'モンヒロビートを開いたまま周回が次の周へ入らないのを直しました',
     releaseFlag:'quickRhythmLink', dev:true,
     items:[
       'モンヒロビートを開いたまま∞周回を回していると、1周目のWAVE10をクリアしたところで止まり、次の周へ入りませんでした。バトルへ戻るとAUTOも切れていました。',
