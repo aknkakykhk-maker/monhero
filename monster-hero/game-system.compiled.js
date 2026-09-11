@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 01509cc539c01cee
+// source-sha256: 0219584a006f4499
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1995434e5baf6758
+// generated-sha256: 4577c63feb72b98f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 16:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 17:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -9155,15 +9155,31 @@ const rankingMasuDetail = masu => {
     inheritedReincarnateCount: inheritedReincarnateCountOf(masu),
     levelCap: num(masu.levelCap) || null,
     // 超越(v5)。levelCap だけでは足りない。超越済みかどうかでレベル上限そのものが
-    // 400/500 と変わるため、印が無いと Lv.400 へ丸められてしまう
-    transcended: isTranscended(masu),
-    transcendPoints: num(masu.transcendPoints),
-    transcendStatPoints: normalizeTranscendStatPoints(masu.transcendStatPoints),
-    transcendAptBoosts: normalizeTranscendAptBoosts(masu.transcendAptBoosts),
+    // 400/500 と変わるため、印が無いと Lv.400 へ丸められてしまう。
+    // 既定値(未超越・0・空)のときは項目ごと入れない。読む側(rankingDetailToMasu)は
+    // 項目が無い記録を既定値で読むので、見え方は変わらないまま記録だけ小さくなる
+    ...(isTranscended(masu) ? {
+      transcended: true
+    } : {}),
+    ...(num(masu.transcendPoints) > 0 ? {
+      transcendPoints: num(masu.transcendPoints)
+    } : {}),
+    ...(Object.values(normalizeTranscendStatPoints(masu.transcendStatPoints)).some(v => v > 0) ? {
+      transcendStatPoints: normalizeTranscendStatPoints(masu.transcendStatPoints)
+    } : {}),
+    ...(normalizeTranscendAptBoosts(masu.transcendAptBoosts).some(v => v > 0) ? {
+      transcendAptBoosts: normalizeTranscendAptBoosts(masu.transcendAptBoosts)
+    } : {}),
     // 魂格(v6)。未使用Pは保存せず、記録時の段階・全振り分け・使用済みPだけ固定する。
-    soulRankStage: normalizeSoulRankStage(masu.soulRankStage),
-    soulTraitLevels: normalizeSoulTraitLevels(masu.soulTraitLevels),
-    soulSpentPoints: soulTraitSpentPoints(masu),
+    ...(normalizeSoulRankStage(masu.soulRankStage) > 0 ? {
+      soulRankStage: normalizeSoulRankStage(masu.soulRankStage)
+    } : {}),
+    ...(Object.keys(normalizeSoulTraitLevels(masu.soulTraitLevels)).length > 0 ? {
+      soulTraitLevels: normalizeSoulTraitLevels(masu.soulTraitLevels)
+    } : {}),
+    ...(soulTraitSpentPoints(masu) > 0 ? {
+      soulSpentPoints: soulTraitSpentPoints(masu)
+    } : {}),
     statPoints: {
       hp: num(sp.hp),
       atk: num(sp.atk),
@@ -13986,26 +14002,36 @@ const QuickStepScreen = ({
     doneRef.current = true;
     onDone();
   };
-  return /*#__PURE__*/React.createElement("div", {
-    onClick: finish,
-    role: "button",
-    tabIndex: 0,
-    "aria-label": label,
-    className: "absolute inset-0 flex flex-col items-center justify-center p-6 text-center",
-    style: {
-      position: 'absolute',
-      inset: 0,
-      backgroundColor: '#020617',
-      zIndex: 30000
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "w-full max-w-sm flex flex-col items-center"
-  }, children), /*#__PURE__*/React.createElement("div", {
-    className: "mt-5 text-[11px] font-black tracking-widest animate-pulse",
-    style: {
-      color: accent
-    }
-  }, label));
+  return (
+    /*#__PURE__*/
+    // ★背の低い端末で中身がはみ出したときに縦スクロールできるようにしてある。
+    //   外側に overflow-y-auto を置き、中央寄せは内側の min-h-full の箱でやるのが要点。
+    //   justify-center をスクロールする箱に直接付けると、はみ出したときに上側が切れて
+    //   「タップして次へ」の前の文が読めなくなる(2026-09-11・layout-consistency-check)。
+    //   中身が収まるときの見た目は今までとまったく同じ。
+    React.createElement("div", {
+      onClick: finish,
+      role: "button",
+      tabIndex: 0,
+      "aria-label": label,
+      className: "absolute inset-0 overflow-y-auto mh-scroll",
+      style: {
+        position: 'absolute',
+        inset: 0,
+        backgroundColor: '#020617',
+        zIndex: 30000
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "min-h-full flex flex-col items-center justify-center p-6 text-center"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "w-full max-w-sm flex flex-col items-center"
+    }, children), /*#__PURE__*/React.createElement("div", {
+      className: "mt-5 text-[11px] font-black tracking-widest animate-pulse",
+      style: {
+        color: accent
+      }
+    }, label)))
+  );
 };
 // ===== 助手(ナビゲーター) ここまで =====
 
@@ -30316,20 +30342,20 @@ function PickSlotScreen({
     src: currentPickingMon.imgUrl,
     alt: "mon",
     masuColors: currentPickingMon.colors,
-    className: "w-28 h-28 mb-4 object-contain animate-bounce drop-shadow-[0_0_40px_rgba(99,102,241,0.4)] scale-110"
+    className: "shrink-0 w-28 h-28 mb-4 object-contain animate-bounce drop-shadow-[0_0_40px_rgba(99,102,241,0.4)] scale-110"
   }) : /*#__PURE__*/React.createElement("div", {
     className: "text-7xl mb-4 animate-bounce drop-shadow-[0_0_40px_rgba(99,102,241,0.4)]"
   }, currentPickingMon?.emoji), /*#__PURE__*/React.createElement("h2", {
-    className: "text-lg font-black mb-1 italic uppercase tracking-widest text-indigo-400"
+    className: "shrink-0 text-lg font-black mb-1 italic uppercase tracking-widest text-indigo-400"
   }, "\u914D\u7F6E\u5834\u6240\u3092\u6C7A\u5B9A\u305B\u3088"), /*#__PURE__*/React.createElement("div", {
-    className: "w-full max-w-xs mb-2"
+    className: "shrink-0 w-full max-w-xs mb-2"
   }, /*#__PURE__*/React.createElement(AssistantBubble, {
     scene: "pickSlot",
     compact: true
   })), /*#__PURE__*/React.createElement("div", {
-    className: "text-[9px] text-slate-400 font-bold mb-5 leading-relaxed px-2"
+    className: "shrink-0 text-[9px] text-slate-400 font-bold mb-5 leading-relaxed px-2"
   }, "\u9593\u5408\u3044\u9069\u6027\u306F\u3069\u3053\u306B\u7F6E\u3044\u3066\u30824\u8DDD\u96E2\u3059\u3079\u3066\u306B\u52A0\u7B97\u3055\u308C\u307E\u3059\u3002", /*#__PURE__*/React.createElement("br", null), "\u914D\u7F6E\u306F\u300C\u6575\u3068\u540C\u3058\u8DDD\u96E2\u3067\u653B\u6483\u3059\u308B\u300D\u3053\u3068\u3068\u3001\u899A\u3048\u308B\u8DDD\u96E2\u6483\u306B\u5F71\u97FF\u3057\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-2 gap-4 w-full max-w-xs"
+    className: "grid grid-cols-2 gap-4 w-full max-w-xs overflow-y-auto min-h-0 p-1 flex-1 content-center mh-scroll"
   }, slots.map((s, i) => {
     const grade = getDistAptitude(currentPickingMon, i);
     const after = distTotalBonus(i) + aptGradeToPct(grade);
@@ -30357,7 +30383,7 @@ function PickSlotScreen({
   })), /*#__PURE__*/React.createElement("button", {
     disabled: !!battleTutorial,
     onClick: onRepick,
-    className: "mt-8 text-slate-400 flex items-center gap-2 font-black uppercase text-[10px] active:scale-90 disabled:opacity-25"
+    className: "shrink-0 mt-8 text-slate-400 flex items-center gap-2 font-black uppercase text-[10px] active:scale-90 disabled:opacity-25"
   }, /*#__PURE__*/React.createElement(ArrowLeft, {
     size: 14
   }), " \u30E2\u30F3\u30B9\u30BF\u30FC\u3092\u9078\u3073\u76F4\u3059"));

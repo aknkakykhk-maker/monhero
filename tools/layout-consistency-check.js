@@ -10,7 +10,7 @@ const fs = require('fs');
 const path = require('path');
 
 const root = path.resolve(__dirname, '..');
-const { screenSource } = require(path.join(__dirname, 'harness'));
+const { screenSource, REPO_ROOT } = require(path.join(__dirname, 'harness'));
 const source = fs.readFileSync(path.join(root, 'monster-hero/src/game-system.jsx'), 'utf8');
 
 let failed = 0;
@@ -31,8 +31,16 @@ check('行の高さは共通部品の中で決めている',
   has("style={{height:'14px'}}") && has("style={{height:'16px'}}") && has("style={{height:'18px'}}"));
 // カードを描く画面は増えていくので件数は決め打ちにせず、「外枠のクラスを使う行は
 // 必ず共通サイズも指定する」で見る。片方だけ書いた画面があるとそこだけ高さがずれる
-const cardLines = source.split('\n').filter(line => line.includes('MONSTER_CARD_CLASS') && !line.includes('const MONSTER_CARD_CLASS'));
-const cardLinesWithoutStyle = cardLines.filter(line => !line.includes('MONSTER_CARD_STYLE'));
+// 2026-09-10に画面を別部品へ切り出したので、呼び出し側はクラスとサイズを「1行ずつ並べて」渡す
+// (MONSTER_CARD_CLASS={…} の次の行に MONSTER_CARD_STYLE={…})。この受け渡しの並びだけは
+// 同じ行でなくてもセットとみなし、それ以外は従来どおり「同じ行に両方」で見る
+const sourceLines = source.split('\n');
+const cardLineEntries = sourceLines.map((line, i) => [line, i])
+  .filter(([line]) => line.includes('MONSTER_CARD_CLASS') && !line.includes('const MONSTER_CARD_CLASS'));
+const cardLines = cardLineEntries.map(([line]) => line);
+const cardLinesWithoutStyle = cardLineEntries.filter(([line, i]) => !line.includes('MONSTER_CARD_STYLE')
+  && !(/^\s*MONSTER_CARD_CLASS=\{MONSTER_CARD_CLASS\}\s*$/.test(line)
+    && /^\s*MONSTER_CARD_STYLE=\{MONSTER_CARD_STYLE\}\s*$/.test(sourceLines[i + 1] || '')));
 check('カードを描く画面はすべて共通クラスと共通サイズをセットで使う',
   cardLines.length >= 4 && cardLinesWithoutStyle.length === 0,
   `${cardLines.length}画面 / サイズ指定もれ ${cardLinesWithoutStyle.length}件`);
@@ -55,7 +63,9 @@ check('マスモンの個体名は転生オーラより前面に固定する',
 check('マスモン一覧の個体名は画像とオーラの下に独立した名前帯で表示する',
   has("band?'min-h-[26px] px-1 py-0.5 rounded-md border border-pink-300/50 bg-slate-950/80 whitespace-normal break-words")
     && has("style={band?{textShadow:'0 1px 2px rgba(0,0,0,.95)'}:undefined}")
-    && /gameState==='MASU_MONS'[\s\S]*?renderMonsterCardBody\(\{[\s\S]*?masu, base, nameBand:true,/.test(source));
+    // 2026-09-10に画面を MasuMonsScreen へ切り出した。切り出し先は 60-app.jsx より前に連結されるので、
+    // ファイル内の並び順ではなく、その画面の本体そのものを見る
+    && /renderMonsterCardBody\(\{[\s\S]*?masu, base, nameBand:true,/.test(screenSource('MASU_MONS', 'MasuMonsScreen') || ''));
 check('種別ごとにバラバラだった旧サイズが残っていない',
   !has('className="w-14 h-14 rounded-full overflow-hidden border border-white/10 shrink-0"')
     && !has('<div className="relative w-10 h-10 shrink-0">'));
@@ -134,7 +144,9 @@ check('詳細と購入ボタンを押し間違えない間隔がある',
 // 見たいのは「カード幅を超えない・途中で折り返さない」ことなので、そちらを見る(2026-09-05)。
 check('購入ボタンの通貨表示がカード内に収まる',
   has('max-w-full rounded-xl flex items-center justify-center gap-1 whitespace-nowrap')
-    && has('{usesPsyche?<><span aria-hidden="true">🌈</span><span>{item.cost.toLocaleString()}</span></>'));
+    && has('usesPsyche?<><span aria-hidden="true">🌈</span><span>{item.cost.toLocaleString()}</span></>')
+    // 勇者の証は名前が長いので、字を小さくして1行(whitespace-nowrap)に収めている
+    && has('usesHeroProof?<><span aria-hidden="true">🏅</span><span className="text-[8px]">勇者の証 ×{item.cost.toLocaleString()}</span></>'));
 check('状態の表示も折り返さない', has('rounded-full whitespace-nowrap">近日追加</div>') && has('rounded-full whitespace-nowrap">所持済み</div>'));
 // 拡大量は表示コードへ直接書かず、アイコンIDごとの表を1か所に持つ。
 // ききはマーケット商品とアシストカードの両方で同じ値を使うので、定数を共有する
@@ -180,16 +192,41 @@ const COMPONENT_OWNED_SCREENS = {
   // (それまでは 9000 文字の窓が隣の画面へはみ出し、隣の overflow-y-auto を拾って通っていた)
   MONSTER_ATTACK_PREVIEW: 'MonsterAttackPreviewScreen（演出を見せる専用画面。元からスクロールしない）',
 };
+// 共有層(10〜30番台の部品)に置いてある画面部品の中身を取り出す。
+// 定義の先頭から、次のトップレベル定義の手前までを1つの部品とみなす。
+const sharedComponentSource = (component) => {
+  const dir = path.join(REPO_ROOT, 'monster-hero', 'src', 'parts');
+  for (const file of fs.readdirSync(dir).filter(f => /^\d+-.+\.jsx$/.test(f)).sort()) {
+    const text = fs.readFileSync(path.join(dir, file), 'utf8');
+    const at = text.search(new RegExp(`^(?:const|function) ${component}\\b`, 'm'));
+    if (at < 0) continue;
+    let end = text.slice(at + 1).search(/^(?:const|function) [A-Za-z_$]/m);
+    end = end < 0 ? text.length : at + 1 + end;
+    return text.slice(at, end);
+  }
+  return '';
+};
+
 const noScroll = screens.filter(name => {
   if (ABSOLUTE_LAYOUT_SCREENS.includes(name) || OUT_OF_SCOPE_SCREENS(name)) return false;
   if (COMPONENT_OWNED_SCREENS[name]) return false;
   // 画面を切り出すと「gameState の位置から 9000 文字」には呼び出ししか入らないので、
   // 切り出し済みならコンポーネント本体を見る(2026-09-10・STEP 6)。
   // どの画面がどのコンポーネントになったかは、呼び出し側 <XxxScreen から読み取る
-  const called = (source.match(new RegExp(`gameState==='${name}'&&\\(\\s*<([A-Z][A-Za-z0-9]*)`)) || [])[1];
+  // 画面によっては gameState のあとに条件が足してある({gameState==='SKIP_PICK'&&skipFlow&&( など)。
+  // その条件を挟んでもコンポーネント名を取り出せるようにする(2026-09-11)
+  const called = (source.match(new RegExp(`gameState==='${name}'&&(?:[A-Za-z0-9_$.?]+&&)*\\(\\s*<([A-Z][A-Za-z0-9]*)`)) || [])[1];
   if (called) {
+    // screenSource は部品が見つからないとき gameState の窓へ落ちる。落ちた結果は
+    // 呼び出しの数行でしかないので、「部品そのものが返ってきたとき」だけ信用する
     const moved = screenSource(name, called);
-    if (moved) return !moved.includes('overflow-y-auto');
+    if (moved.startsWith(`function ${called}`)) return !moved.includes('overflow-y-auto');
+    // 共有の部品(QuickStepScreen など)は 51〜71-screen-*.jsx ではなく共有層にいるので
+    // screenSource では拾えない。部品の定義そのものを探して、その中身を見る
+    // (2026-09-11。ここが空振りすると、呼び出しの数行だけを見て「スクロールが無い」と
+    //  誤って言う。実際 QUICK_GROWTH / QUICK_JOIN がそうなっていた)
+    const shared = sharedComponentSource(called);
+    if (shared) return !shared.includes('overflow-y-auto');
   }
   const at = screenStart(name);
   if (at < 0) return false;
