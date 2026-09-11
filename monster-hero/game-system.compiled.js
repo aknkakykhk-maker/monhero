@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0219584a006f4499
+// source-sha256: a932348522486fbb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4577c63feb72b98f
+// generated-sha256: 25263a81d602dc38
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 17:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 17:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -25019,6 +25019,19 @@ function RhythmRankingScreen({
     reward: rhythmEventRewardForRank(eventDefinition, eventDivisionId, index + 1)
   })).filter(entry => !!entry.reward) : [];
   const eventReward = eventRewardRanks.length > 0;
+  // ★詳細では「いま見ている部門」ではなく、全部門ぶんの報酬を出す
+  //   (2026-09-11・ユーザー指示「詳細ページは部門別とか全報酬とか細かいことまとめていれても
+  //    いいんじゃない？」)。部門を切り替えないと何がもらえるか分からない状態だった。
+  //   部門の数も順位の数も個数もデータから作るので、ここに数字を書き写さない
+  const eventRewardsByDivision = eventDefinition ? eventDivisions.map(division => ({
+    division,
+    ranks: Array.from({
+      length: RHYTHM_EVENT_REWARD_RANKS
+    }, (_, index) => ({
+      rank: index + 1,
+      reward: rhythmEventRewardForRank(eventDefinition, division.id, index + 1)
+    })).filter(entry => !!entry.reward)
+  })).filter(entry => entry.ranks.length > 0) : [];
   // 参加報酬(入賞しなくても、対象曲をすべて遊べばもらえる)
   const eventParticipation = rhythmEventParticipationReward(eventDefinition);
   const eventLimited = boardKind === 'limited';
@@ -25339,14 +25352,23 @@ function RhythmRankingScreen({
     className: "mb-3 text-[10px] leading-tight text-fuchsia-100"
   }, /*#__PURE__*/React.createElement("b", {
     className: "text-fuchsia-200"
-  }, rhythmEventSongsLabel(eventDefinition)), "\u3000", eventDivisions.filter(division => division.songId).map(division => rhythmSongFullName(division.song) || division.songId).join(' ／ ')), eventReward && /*#__PURE__*/React.createElement("div", {
+  }, rhythmEventSongsLabel(eventDefinition)), "\u3000", eventDivisions.filter(division => division.songId).map(division => rhythmSongFullName(division.song) || division.songId).join(' ／ ')), eventRewardsByDivision.length > 0 && /*#__PURE__*/React.createElement("div", {
     "data-rhythm-event-rewards": true,
-    className: "mb-3 rounded-2xl border border-amber-300/40 bg-amber-500/5 p-2"
+    className: "space-y-2"
   }, /*#__PURE__*/React.createElement("p", {
-    className: "mb-1 text-[9px] font-black text-amber-200"
-  }, "\u3053\u306E\u90E8\u9580\u306E\u5831\u916C\uFF08\u7D42\u4E86\u5F8C\u306B\u53D7\u3051\u53D6\u308C\u307E\u3059\uFF09"), /*#__PURE__*/React.createElement("ul", {
+    className: "text-[10px] font-black text-amber-200"
+  }, "\u90E8\u9580\u3054\u3068\u306E\u5831\u916C\uFF08\u7D42\u4E86\u5F8C\u306B\u53D7\u3051\u53D6\u308C\u307E\u3059\uFF09"), eventRewardsByDivision.map(({
+    division,
+    ranks
+  }) => /*#__PURE__*/React.createElement("div", {
+    key: division.id,
+    "data-rhythm-event-reward-division": division.id,
+    className: "rounded-2xl border border-amber-300/40 bg-amber-500/5 p-2"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "mb-1 truncate text-[10px] font-black text-fuchsia-100"
+  }, division.songId ? rhythmSongFullName(division.song) || division.songId : '総合（対象曲の合計）'), /*#__PURE__*/React.createElement("ul", {
     className: "space-y-0.5"
-  }, eventRewardRanks.map(({
+  }, ranks.map(({
     rank,
     reward
   }) => /*#__PURE__*/React.createElement("li", {
@@ -25356,12 +25378,14 @@ function RhythmRankingScreen({
     className: "w-7 shrink-0 text-right font-black text-amber-200"
   }, rank, "\u4F4D"), /*#__PURE__*/React.createElement("span", {
     className: "min-w-0 flex-1 text-slate-200"
-  }, rhythmEventRewardText(reward))))), eventParticipation && /*#__PURE__*/React.createElement("p", {
+  }, rhythmEventRewardText(reward))))))), eventParticipation && /*#__PURE__*/React.createElement("p", {
     "data-rhythm-event-participation": true,
-    className: "mt-2 border-t border-amber-300/20 pt-2 text-[10px] leading-tight text-slate-200"
+    className: "rounded-2xl border border-fuchsia-300/40 bg-fuchsia-500/5 p-2 text-[10px] leading-tight text-slate-200"
   }, /*#__PURE__*/React.createElement("b", {
-    className: "text-amber-200"
-  }, "\u53C2\u52A0\u5831\u916C"), "\u3000\u5BFE\u8C61\u66F2\u3092", eventParticipation.songs, "\u66F2\u3059\u3079\u3066\u904A\u3076\u3068 ", rhythmEventParticipationText(eventParticipation))), /*#__PURE__*/React.createElement("button", {
+    className: "text-fuchsia-200"
+  }, "\u53C2\u52A0\u5831\u916C"), "\u3000\u5BFE\u8C61\u66F2\u3092", eventParticipation.songs, "\u66F2\u3059\u3079\u3066\u904A\u3076\u3068 ", rhythmEventParticipationText(eventParticipation)), /*#__PURE__*/React.createElement("p", {
+    className: "text-[9px] leading-relaxed text-slate-400"
+  }, "\u5831\u916C\u306F\u30A4\u30D9\u30F3\u30C8\u304C\u7D42\u308F\u3063\u305F\u3042\u3068\u3001\u30B2\u30FC\u30E0\u3092\u958B\u3044\u305F\u3068\u304D\u306B\u53D7\u3051\u53D6\u308C\u307E\u3059\u3002\u53D7\u3051\u53D6\u308C\u308B\u306E\u306F\u7D42\u4E86\u304B\u30892\u9031\u9593\u307E\u3067\u3067\u3059\u3002\u9806\u4F4D\u306F\u7D42\u4E86\u3057\u305F\u6642\u70B9\u3067\u6C7A\u307E\u308B\u306E\u3067\u3001\u9045\u308C\u3066\u53D7\u3051\u53D6\u3063\u3066\u3082\u5185\u5BB9\u306F\u5909\u308F\u308A\u307E\u305B\u3093\u3002")), /*#__PURE__*/React.createElement("button", {
     type: "button",
     "data-rhythm-event-detail-close": true,
     onClick: () => setEventDetailOpen(false),
