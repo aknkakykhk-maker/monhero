@@ -926,6 +926,11 @@ const buildChart=(difficulty,options={})=>{
         note.slidePoints=slidePathFor(event.reserved,best.lanes?best.lanes[i]:lane,item.subLaneWidth,P,event.onset);
         note.lane=note.slidePoints[0].lane;
         note.endLane=note.slidePoints[note.slidePoints.length-1].lane;
+        note.__motif=motifKey;
+        note.__mem=memoryKey;
+        note.__src=motifSource===null||motifSource===undefined?null:motifSource;note.__idx=i;note.__len=length;note.__chunk0=grids[0];
+        note.__sh=(globalThis.__lastSlideHeights||[]).map(h=>Math.round(h*1000)/1000);
+        note.__heights=heights.map(h=>h==null?null:Math.round(h*1000)/1000);
         delete note.subLane;
       }
       notes.push(note);
@@ -1708,6 +1713,7 @@ function slidePathFor(reserved,startLane,width,P,onset){
   }
   const lo=Math.min(...heights),hi=Math.max(...heights);
   const range=Math.max(1e-6,hi-lo);
+  globalThis.__lastSlideHeights=heights.slice();
   // 音の動きの幅を、その難易度で許す歩幅ぶんのレーンへ写す。
   //
   // 【2026-09-12】以前は reach=min(2.5,maxLaneStep) の固定で、音がどれだけ動いても
