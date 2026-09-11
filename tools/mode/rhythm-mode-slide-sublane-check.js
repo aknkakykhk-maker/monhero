@@ -109,8 +109,30 @@ result=rhythmMatchInputBatch([legacy],[{inputKey:'legacy',lane:2,subLaneCoordina
 check('旧整数レーンSLIDEの開始入力互換を維持する',!!result[0].target);
 RHYTHM_GESTURE_RUNTIME.clear();
 
-check('幅2の途中追従許容は従来0.82レーンのまま',close(rhythmSlideTrackingTolerance(makeSlide({subLaneWidth:2})),RHYTHM_SLIDE_TOLERANCE_LANES));
-check('細SLIDEは狭く、太SLIDEは広く追従できる',rhythmSlideTrackingTolerance(makeSlide({subLaneWidth:1}))<RHYTHM_SLIDE_TOLERANCE_LANES&&rhythmSlideTrackingTolerance(makeSlide({subLaneWidth:4}))>RHYTHM_SLIDE_TOLERANCE_LANES);
+// 【2026-09-11】追従許容に「その区間の速さ」ぶんが乗るようになった
+// (速いスライドはタイミングのぶれがそのまま位置のぶれに化けるため)。
+// ここで見たいのは**幅の効き方**なので、動かないスライドで測って速さの項を0にする。
+// 速さの項そのものは、このすぐ下で別に見る。
+const stillSlide=(overrides={})=>{
+  const note=makeSlide(overrides);
+  return {...note,lane:.5,endLane:.5,
+    slidePoints:(note.slidePoints||[]).map(point=>({...point,lane:.5}))};
+};
+check('幅2の途中追従許容は従来0.82レーンのまま',close(rhythmSlideTrackingTolerance(stillSlide({subLaneWidth:2})),RHYTHM_SLIDE_TOLERANCE_LANES));
+check('細SLIDEは狭く、太SLIDEは広く追従できる',rhythmSlideTrackingTolerance(stillSlide({subLaneWidth:1}))<RHYTHM_SLIDE_TOLERANCE_LANES&&rhythmSlideTrackingTolerance(stillSlide({subLaneWidth:4}))>RHYTHM_SLIDE_TOLERANCE_LANES);
+// 速さの項: 同じ幅・同じ形で、動く区間だけ許容が広がる
+{
+  const still=stillSlide({subLaneWidth:2});
+  // 0.5レーンを600msで動く = 0.833レーン/秒 → 0.833×0.045 ≒ 0.0375レーン
+  const moving=makeSlide({subLaneWidth:2});
+  const fast=makeSlide({subLaneWidth:2,lane:0,endLane:4,
+    slidePoints:[{timeMs:1000,lane:0},{timeMs:1600,lane:4},{timeMs:2200,lane:4}]});
+  check('動く区間は許容が広がる',rhythmSlideTrackingTolerance(moving,1300)>rhythmSlideTrackingTolerance(still,1300));
+  check('速い区間ほど広がる',rhythmSlideTrackingTolerance(fast,1300)>rhythmSlideTrackingTolerance(moving,1300));
+  check('止まっている区間は広がらない',close(rhythmSlideTrackingTolerance(fast,1900),rhythmSlideTrackingTolerance(still,1900)));
+  check('上限で頭打ちになる(どこを触っても通る状態にしない)',
+    rhythmSlideTrackingTolerance(fast,1300)-rhythmSlideTrackingTolerance(still,1300)<=.35+1e-9);
+}
 
 const rect={width:500,height:800},travel={visualTime:1000,travelMs:2000,spawnY:0,travelPx:700};
 const narrowPolygon=rhythmSlideSegmentPolygons(makeSlide({lane:1.5,endLane:1.5,subLaneWidth:1,slidePoints:[{timeMs:1000,lane:1.5},{timeMs:2200,lane:1.5}]}),1000,travel,rect)[0];
@@ -135,8 +157,11 @@ check('point幅を位置と同じ時間軸で連続補間する',close(rhythmSli
 check('point→note→2の順で幅をfallbackする',rhythmSlideWidthAt(changing,2200)===3&&rhythmSlideWidthAt(makeSlide({slidePoints:[{timeMs:1000,lane:.5},{timeMs:2200,lane:1.5}]}),1600)===2&&rhythmSlideWidthAt(makeSlide({subLaneWidth:4,slidePoints:[{timeMs:1000,lane:.5,subLaneWidth:0},{timeMs:2200,lane:1.5,subLaneWidth:11}]}),1600)===4);
 check('開始ノーツ幅は先頭pointの実効幅を使う',rhythmSlideInputSpan(changing).width===1);
 check('END幅は最終pointの実効幅を使う',close(rhythmProjectSlideSpan(1.5,changing,.7,2200).subLaneWidth,3));
-check('途中追従許容は現在時刻の補間幅に連動する',close(rhythmSlideTrackingTolerance(changing,1300),RHYTHM_SLIDE_TOLERANCE_LANES+.125));
-check('途中の実効幅2でも追従許容±0.82を厳守する',close(rhythmSlideTrackingTolerance(changing,1200),RHYTHM_SLIDE_TOLERANCE_LANES));
+// 幅の連動を見たいので、ここも動かない形にして速さの項を0にする
+const changingStill={...changing,lane:.5,endLane:.5,
+  slidePoints:changing.slidePoints.map(point=>({...point,lane:.5}))};
+check('途中追従許容は現在時刻の補間幅に連動する',close(rhythmSlideTrackingTolerance(changingStill,1300),RHYTHM_SLIDE_TOLERANCE_LANES+.125));
+check('途中の実効幅2でも追従許容±0.82を厳守する',close(rhythmSlideTrackingTolerance(changingStill,1200),RHYTHM_SLIDE_TOLERANCE_LANES));
 
 // 譜面そのものが入っているかは**ノーツの配列**で見る。
 // RHYTHM_SONGS は難易度レベル（Lv.）だけを差し替えた新しい入れ物を返すことがあるので、

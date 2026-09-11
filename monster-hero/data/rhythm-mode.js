@@ -947,11 +947,68 @@ const RHYTHM_RELEASE_MAX_MS = RHYTHM_INPUT_MATCH_WINDOW_MS;
 const RHYTHM_RELEASE_DEFER_ARM_MS = 100;
 const RHYTHM_RELEASE_AUTO_MISS_ARM_MS = 180;
 const RHYTHM_RELEASE_JUDGMENT_IDS = Object.freeze(['MARVELOUS','EXCELLENT','GREAT','GOOD','BAD','MISS']);
-const rhythmSlideToleranceBonus=note=>{
-  const bonus=Number(note?._rhythmSlideToleranceBonusLanes);
-  return Number.isFinite(bonus)&&bonus>0?bonus:0;
+// ── そのスライド1本ごとの「なぞりにくさ」を許容へ足す ──────────────────────────
+//
+// 【2026-09-11・ユーザー指示】
+// 「難易度固定より曲にあわせて変えてほしい / 難易度準拠はもちろんそうなんだけど」
+//
+// 難易度だけで決めると粗すぎる。同じ難易度の中でも、譜面のスライドの速さは実測で
+// **14倍ちがう**(MASTER: 中央1.80 / p90 8.33 / 最大25.77 レーン/秒)。
+//
+// 速いスライドが落ちやすいのは腕前の問題ではなく、**タイミングのぶれがそのまま
+// 位置のぶれに化ける**ため。8.3レーン/秒なら50msの遅れが0.42レーンのズレになり、
+// 幅2の許容0.82レーンの半分を、狙いが合っていても食いつぶす。
+// そこで「人がこれくらいはぶれる」ぶんの時間を決め、その時間に進む距離を許容へ足す。
+// こうすると、遅いスライドも速いスライドも**要求される腕前が揃う**。
+//
+//   足す量 = そのスライドのいちばん速い区間の速さ(レーン/秒) × 0.045秒
+//
+// 45msは判定表のいちばん内側(MARVELOUS ±55ms)より小さく取った。これより大きくすると
+// 「MARVELOUSで叩ける腕前なら絶対に落ちない」を超えて、狙いが外れていても通ってしまう。
+// 上限はレーン半分(0.5)。25.77レーン/秒のような極端な区間で許容が広がりすぎると、
+// 隣のレーンまで届いて「どこを触っても通る」状態になるため。
+const RHYTHM_SLIDE_SPEED_COMPENSATION_MS = 45;
+// 上乗せの上限(レーン)。0.35レーンは判定ラインで約23px。
+// ここを大きくすると、太いSLIDE((幅-2)/4 ぶんが既に乗っている)で許容が画面の半分近くまで
+// 広がり「どこを触っても通る」状態になる。実際に上限0.5で試したらEXPERTの太い帯が
+// ±193px(プレイエリア374pxの半分)まで開いたので、そこから絞った。
+const RHYTHM_SLIDE_SPEED_BONUS_MAX_LANES = .35;
+// **その時刻の**区間の速さ(レーン/秒)。1本まるごとのいちばん速い区間ではなく、
+// いま指が乗っている区間だけを見る。
+//
+// はじめは「1本のいちばん速い区間」で作ったが、配信譜面に当てると
+// HARD以上の9割超が上限へ張り付いた(1か所でも速い区間があれば1本ぜんぶが最大になるため)。
+// それでは「曲ごとに変える」ことにならないので、区間ごとに見る形へ変えた。
+// ゆっくり流れるところは上乗せがほぼ0、振り回すところだけ広がる。
+// 形は rhythmSlideWidthAt と同じ(同じ points を同じ順で辿る)。
+const rhythmSlideLaneSpeedAt=(note,chartTimeMs)=>{
+  const points=rhythmSlidePoints(note),t=Number(chartTimeMs);
+  if(!Array.isArray(points)||points.length<2)return 0;
+  const speedOf=(a,b)=>{
+    const seconds=(Number(b?.timeMs)-Number(a?.timeMs))/1000,lanes=Math.abs(Number(b?.lane)-Number(a?.lane));
+    return seconds>0&&Number.isFinite(lanes)?lanes/seconds:0;
+  };
+  if(!Number.isFinite(t)||t<=Number(points[0]?.timeMs))return speedOf(points[0],points[1]);
+  for(let i=1;i<points.length;i++){
+    if(t<=Number(points[i].timeMs))return speedOf(points[i-1],points[i]);
+  }
+  return speedOf(points[points.length-2],points[points.length-1]);
 };
-const rhythmSlideTrackingTolerance=(note,chartTimeMs)=>RHYTHM_SLIDE_TOLERANCE_LANES+(rhythmSlideWidthAt(note,chartTimeMs)-2)/4+rhythmSlideToleranceBonus(note);
+// その時刻の速さから、許容へ足すレーン数を作る。
+const rhythmSlideSpeedBonusLanes=(note,chartTimeMs)=>{
+  if(note?.type!=='SLIDE')return 0;
+  const speed=rhythmSlideLaneSpeedAt(note,chartTimeMs);
+  if(!(speed>0))return 0;
+  return Math.min(RHYTHM_SLIDE_SPEED_BONUS_MAX_LANES,speed*RHYTHM_SLIDE_SPEED_COMPENSATION_MS/1000);
+};
+const rhythmSlideToleranceBonus=(note,chartTimeMs)=>{
+  // 難易度の土台(演奏開始時に焼き込む)＋ いま乗っている区間の速さぶん。
+  // どちらも無い・壊れている場合は0＝従来どおりの許容になる。
+  const byDifficulty=Number(note?._rhythmSlideToleranceBonusLanes);
+  return (Number.isFinite(byDifficulty)&&byDifficulty>0?byDifficulty:0)
+    +rhythmSlideSpeedBonusLanes(note,chartTimeMs);
+};
+const rhythmSlideTrackingTolerance=(note,chartTimeMs)=>RHYTHM_SLIDE_TOLERANCE_LANES+(rhythmSlideWidthAt(note,chartTimeMs)-2)/4+rhythmSlideToleranceBonus(note,chartTimeMs);
 const rhythmJudgeRelease=deltaMs=>{
   const value=Math.abs(Number(deltaMs));
   if(!Number.isFinite(value))return 'MISS';
