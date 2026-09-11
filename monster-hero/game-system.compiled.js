@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 91dc0d9b670a47af
+// source-sha256: a7ec4d39d387f6dd
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6a4423cd7346cbda
+// generated-sha256: 894c3021287ce964
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 11:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 11:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -19083,6 +19083,43 @@ const RhythmTimingCalibrator = ({
   }, "\u3053\u306E\u5024\u306B\u3059\u308B"))));
 };
 
+// ===== モンヒロビートのイベント報酬(2026-09-11) =====
+// data/rhythm-event.js は「何位に何個」だけを持ち、アイテムの実体(id・名前・絵文字)は
+// ゲーム本体側にある(アイテムの定義は 11-masu-progression.jsx で、data より後に読み込まれるため)。
+// ここで結びつける。名前を2か所に書かないよう、必ず実データから引く。
+const rhythmEventRewardItem = reward => {
+  if (!reward || typeof reward !== 'object') return null;
+  if (reward.kind === 'speciesFruit') {
+    const item = speciesTranscendFruitItems()[reward.lineageId];
+    return item ? {
+      id: item.id,
+      name: item.name,
+      emoji: item.emoji || '🍇'
+    } : null;
+  }
+  if (reward.kind === 'heroProof') return {
+    id: HERO_PROOF_ITEM_ID,
+    name: HERO_PROOF_ITEM.name,
+    emoji: HERO_PROOF_ITEM.emoji
+  };
+  if (reward.kind === 'rainbowFruit') return {
+    id: RAINBOW_TRANSCEND_FRUIT_ITEM_ID,
+    name: RAINBOW_TRANSCEND_FRUIT_ITEM.name,
+    emoji: '🌈'
+  };
+  return null;
+};
+// 「🍇 超越の実（スエゾー種）×5 ／ 虹のプシュケー×1,000」のような1行。
+// 順位ごとの表示にも、受け取ったときの知らせにも同じ文を使う
+const rhythmEventRewardText = reward => {
+  if (!reward) return '';
+  const item = rhythmEventRewardItem(reward);
+  const parts = [];
+  if (item && reward.count > 0) parts.push(`${item.emoji} ${item.name}×${reward.count}`);
+  if (reward.psyche > 0) parts.push(`💗 虹のプシュケー×${reward.psyche.toLocaleString()}`);
+  return parts.join(' ／ ');
+};
+
 // ---- part: 29-rhythm-screens.jsx ----
 const RhythmOptions = ({
   value,
@@ -24513,15 +24550,18 @@ function RhythmSongSelectScreen({
     className: "min-w-0 flex-1"
   }, /*#__PURE__*/React.createElement(AssistantBubble, {
     scene: "rhythmWeeklyEvent",
+    condition: rhythmEventNotice.kind === 'limited' ? 'limited' : null,
     compact: true
-  }), /*#__PURE__*/React.createElement("p", {
-    className: "mt-1 truncate text-[10px] font-black text-fuchsia-100"
-  }, "\u4ECA\u9031\u306E\u5BFE\u8C61\u66F2\uFF1A", eventSongTitles.join(' ／ ')), /*#__PURE__*/React.createElement("button", {
+  }), rhythmEventNotice.kind === 'limited' && /*#__PURE__*/React.createElement("p", {
+    className: "mt-1 truncate text-[10px] font-black text-amber-200"
+  }, "\uD83C\uDFC6 ", rhythmEventNotice.name, " \u958B\u50AC\u4E2D\uFF01"), /*#__PURE__*/React.createElement("p", {
+    className: "mt-1 text-[10px] font-black leading-tight text-fuchsia-100"
+  }, rhythmEventSongsLabel(rhythmEventNotice), "\uFF1A", eventSongTitles.join(' ／ ')), /*#__PURE__*/React.createElement("button", {
     type: "button",
     "data-rhythm-event-notice-open": true,
     onClick: onOpenEventRanking,
     className: "mt-1 min-h-[44px] w-full rounded-xl border border-fuchsia-400/40 px-2 text-[10px] font-black text-fuchsia-200 active:scale-[.98]"
-  }, "\uD83C\uDFC6 \u9031\u9593\u30E9\u30F3\u30AD\u30F3\u30B0\u3092\u898B\u308B")), /*#__PURE__*/React.createElement("button", {
+  }, "\uD83C\uDFC6 ", rhythmEventNotice.kind === 'limited' ? 'イベントランキングを見る' : '週間ランキングを見る')), /*#__PURE__*/React.createElement("button", {
     type: "button",
     "data-rhythm-event-notice-close": true,
     onClick: dismissRhythmEventNotice,
@@ -24793,6 +24833,15 @@ function RhythmRankingScreen({
   const eventSongId = rhythmEventDivisionSongId(eventDivisionId);
   const eventRange = rhythmEventWindow(eventDefinition, event.window);
   const eventSongCount = eventDefinition ? eventDefinition.songIds.length : 0;
+  // その部門の報酬(1位から順に)。報酬を持たないイベント(週間)では空になる
+  const eventRewardRanks = eventDefinition ? Array.from({
+    length: RHYTHM_EVENT_REWARD_RANKS
+  }, (_, index) => ({
+    rank: index + 1,
+    reward: rhythmEventRewardForRank(eventDefinition, eventDivisionId, index + 1)
+  })).filter(entry => !!entry.reward) : [];
+  const eventReward = eventRewardRanks.length > 0;
+  const eventLimited = !!eventDefinition && eventDefinition.kind === 'limited';
   // 残り時間だけは端末の時計で数える(1秒ごとにサーバーへ聞きに行かないため・§6.1)。
   // 30秒ごとに数え直せば「残り ◯時間 ◯分」の表示には足りる
   const [eventNowMs, setEventNowMs] = React.useState(() => Date.now());
@@ -24922,9 +24971,11 @@ function RhythmRankingScreen({
     className: "mb-3 rounded-2xl border border-amber-300/40 bg-amber-500/10 p-3 text-[10px] font-bold leading-relaxed text-amber-100"
   }, "\u66F2\u3054\u3068\u306E\u3044\u3061\u3070\u3093\u826F\u3044\u30B9\u30B3\u30A2\u3092\u3001\u5168", totalSongCount, "\u66F2\u3076\u3093\u8DB3\u3057\u5408\u308F\u305B\u305F\u5408\u8A08\u3067\u7AF6\u3046\u30E9\u30F3\u30AD\u30F3\u30B0\u3067\u3059\u3002\u96E3\u6613\u5EA6\u306F\u554F\u3044\u307E\u305B\u3093\uFF08\u9AD8\u3044\u96E3\u6613\u5EA6\u307B\u3069\u6E80\u70B9\u3082\u9AD8\u3044\u306E\u3067\u3001\u4E0A\u3092\u72D9\u3046\u307B\u3069\u6709\u5229\u3067\u3059\uFF09\u3002\u904A\u3093\u3060\u66F2\u304C\u5897\u3048\u308B\u307B\u3069\u5408\u8A08\u3082\u4F38\u3073\u307E\u3059\u3002"), eventTab && /*#__PURE__*/React.createElement("p", {
     className: "mb-3 rounded-2xl border border-fuchsia-300/40 bg-fuchsia-500/10 p-3 text-[10px] font-bold leading-relaxed text-fuchsia-100"
-  }, "\u4ECA\u9031\u306E\u5BFE\u8C61\u66F2\u3067\u7AF6\u3046\u30E9\u30F3\u30AD\u30F3\u30B0\u3067\u3059\u3002", /*#__PURE__*/React.createElement("b", {
+  }, eventLimited ? /*#__PURE__*/React.createElement(React.Fragment, null, "\u671F\u9593\u9650\u5B9A\u30A4\u30D9\u30F3\u30C8\u306E\u5BFE\u8C61\u66F2\u3067\u7AF6\u3046\u30E9\u30F3\u30AD\u30F3\u30B0\u3067\u3059\u3002", /*#__PURE__*/React.createElement("b", {
     className: "text-white"
-  }, "\u305D\u306E\u9031\u306E\u3042\u3044\u3060\u306B\u51FA\u3057\u305F\u8A18\u9332\u3060\u3051"), "\u304C\u8F09\u308A\u307E\u3059\uFF08\u5148\u9031\u307E\u3067\u306E\u8A18\u9332\u306F\u8F09\u308A\u307E\u305B\u3093\u304C\u3001\u81EA\u5DF1\u30D9\u30B9\u30C8\u3068\u300C\u7DCF\u5408\u300D\u306B\u306F\u305D\u306E\u307E\u307E\u6B8B\u308A\u307E\u3059\uFF09\u3002\u96E3\u6613\u5EA6\u306F\u554F\u3044\u307E\u305B\u3093\u30021\u66F2\u3067\u3082\u904A\u3079\u3070\u300C\u7DCF\u5408\u300D\u306B\u3082\u8F09\u308A\u307E\u3059\u3002"), songTab && /*#__PURE__*/React.createElement("p", {
+  }, "\u958B\u50AC\u4E2D\u306B\u51FA\u3057\u305F\u8A18\u9332\u3060\u3051"), "\u304C\u8F09\u308A\u307E\u3059\uFF08\u958B\u50AC\u524D\u306E\u8A18\u9332\u306F\u8F09\u308A\u307E\u305B\u3093\u304C\u3001\u81EA\u5DF1\u30D9\u30B9\u30C8\u3068\u300C\u7DCF\u5408\u300D\u306B\u306F\u305D\u306E\u307E\u307E\u6B8B\u308A\u307E\u3059\uFF09\u3002\u96E3\u6613\u5EA6\u306F\u554F\u3044\u307E\u305B\u3093\u30021\u66F2\u3067\u3082\u904A\u3079\u3070\u300C\u7DCF\u5408\u300D\u306B\u3082\u8F09\u308A\u307E\u3059\u3002\u958B\u50AC\u4E2D\u306F\u9031\u9593\u30E9\u30F3\u30AD\u30F3\u30B0\u3092\u304A\u4F11\u307F\u3057\u307E\u3059\u3002") : /*#__PURE__*/React.createElement(React.Fragment, null, "\u4ECA\u9031\u306E\u5BFE\u8C61\u66F2\u3067\u7AF6\u3046\u30E9\u30F3\u30AD\u30F3\u30B0\u3067\u3059\u3002", /*#__PURE__*/React.createElement("b", {
+    className: "text-white"
+  }, "\u305D\u306E\u9031\u306E\u3042\u3044\u3060\u306B\u51FA\u3057\u305F\u8A18\u9332\u3060\u3051"), "\u304C\u8F09\u308A\u307E\u3059\uFF08\u5148\u9031\u307E\u3067\u306E\u8A18\u9332\u306F\u8F09\u308A\u307E\u305B\u3093\u304C\u3001\u81EA\u5DF1\u30D9\u30B9\u30C8\u3068\u300C\u7DCF\u5408\u300D\u306B\u306F\u305D\u306E\u307E\u307E\u6B8B\u308A\u307E\u3059\uFF09\u3002\u96E3\u6613\u5EA6\u306F\u554F\u3044\u307E\u305B\u3093\u30021\u66F2\u3067\u3082\u904A\u3079\u3070\u300C\u7DCF\u5408\u300D\u306B\u3082\u8F09\u308A\u307E\u3059\u3002")), songTab && /*#__PURE__*/React.createElement("p", {
     className: "mb-3 rounded-2xl border border-amber-300/40 bg-amber-500/10 p-3 text-[10px] font-bold leading-relaxed text-amber-100"
   }, "\u300C", song?.displayName || '—', "\u300D\u306EEASY\u301CMASTER\u3092\u307E\u3068\u3081\u305F\u5408\u7B97\u30E9\u30F3\u30AD\u30F3\u30B0\u3067\u3059\u3002\u96E3\u6613\u5EA6\u304C\u9AD8\u3044\u307B\u3069\u6E80\u70B9\u3082\u9AD8\u3044\u305F\u3081\u3001\u9AD8\u3044\u96E3\u6613\u5EA6\u3067\u6311\u3080\u307B\u3069\u4E0A\u4F4D\u306B\u8FD1\u3065\u304D\u307E\u3059\u3002\u81EA\u5206\u306E\u30B9\u30B3\u30A2\u306F\u3044\u3061\u3070\u3093\u9AD8\u30441\u4EF6\u3060\u3051\u304C\u8F09\u308A\u307E\u3059\u3002"), totalTab && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(AssistantBubble, {
     scene: "rhythmTotalRanking",
@@ -24959,6 +25010,7 @@ function RhythmRankingScreen({
     key: `${entry.identityKey}-${index}`
   }, totalRow(entry, index + 1, !!total.self && entry.identityKey === total.self.identityKey)))))), eventTab && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(AssistantBubble, {
     scene: "rhythmWeeklyEvent",
+    condition: eventLimited ? 'limited' : null,
     compact: true
   }), event.status === 'loading' && /*#__PURE__*/React.createElement("p", {
     "data-rhythm-event-loading": true,
@@ -24980,8 +25032,9 @@ function RhythmRankingScreen({
   }, /*#__PURE__*/React.createElement("p", {
     className: "truncate text-[11px] font-black text-fuchsia-100"
   }, eventDefinition.name), /*#__PURE__*/React.createElement("p", {
+    "data-rhythm-event-period": true,
     className: "text-[9px] text-slate-400"
-  }, "\u6BCE\u9031 \u6708\u66DC 5:00 \u306B\u5207\u308A\u66FF\u308F\u308A\u307E\u3059")), /*#__PURE__*/React.createElement("p", {
+  }, rhythmEventPeriodText(eventDefinition, eventRange))), /*#__PURE__*/React.createElement("p", {
     "data-rhythm-event-remaining": true,
     className: "shrink-0 text-[10px] font-black text-fuchsia-200"
   }, eventRange ? rhythmEventRemainingText(eventRange.endMs - eventNowMs) : '—')), /*#__PURE__*/React.createElement("div", {
@@ -24992,7 +25045,24 @@ function RhythmRankingScreen({
     "data-rhythm-event-division": division.id,
     onClick: () => openDivision(division.id),
     className: `min-h-[44px] flex-1 basis-[45%] rounded-xl border px-2 py-1 text-[10px] font-black leading-tight ${division.id === eventDivisionId ? 'border-fuchsia-300/60 bg-fuchsia-500/15 text-fuchsia-100' : 'border-white/10 bg-slate-900/60 text-slate-400'}`
-  }, division.songId ? rhythmSongFullName(division.song) || division.songId : '総合'))), eventBoard.status === 'loading' && /*#__PURE__*/React.createElement("p", {
+  }, division.songId ? rhythmSongFullName(division.song) || division.songId : '総合'))), eventReward && /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-event-rewards": true,
+    className: "mb-3 rounded-2xl border border-amber-300/40 bg-amber-500/5 p-2"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "mb-1 text-[9px] font-black text-amber-200"
+  }, "\u3053\u306E\u90E8\u9580\u306E\u5831\u916C\uFF08\u7D42\u4E86\u5F8C\u306B\u53D7\u3051\u53D6\u308C\u307E\u3059\uFF09"), /*#__PURE__*/React.createElement("ul", {
+    className: "space-y-0.5"
+  }, eventRewardRanks.map(({
+    rank,
+    reward
+  }) => /*#__PURE__*/React.createElement("li", {
+    key: rank,
+    className: "flex items-baseline gap-2 text-[10px] leading-tight"
+  }, /*#__PURE__*/React.createElement("b", {
+    className: "w-7 shrink-0 text-right font-black text-amber-200"
+  }, rank, "\u4F4D"), /*#__PURE__*/React.createElement("span", {
+    className: "min-w-0 flex-1 text-slate-200"
+  }, rhythmEventRewardText(reward)))))), eventBoard.status === 'loading' && /*#__PURE__*/React.createElement("p", {
     "data-rhythm-event-board-loading": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
   }, "\u8AAD\u307F\u8FBC\u307F\u4E2D\u2026"), eventBoard.status === 'error' && /*#__PURE__*/React.createElement("p", {

@@ -59,12 +59,77 @@ const RHYTHM_WEEKLY_ROTATION = Object.freeze([
   Object.freeze({ songIds: Object.freeze(['eiki_boss_remix', 'pandora_boss_remix', 'kaze_ga_soyogu']) }),
 ]);
 
-// 期間限定イベント(kind:'limited')。フェーズ4で使う。いまは空。
+// 期間限定イベント(kind:'limited')。
 // 開催中は週間を休む(§7「同時に成立するイベントは1つまで」)ので、
 // ここへ1件書くと、その期間だけ週間ランキングの代わりにイベントが出る。
-//   { id:'…', kind:'limited', name:'…', songIds:[…], startAt:'…', endAt:'…' }
-// id は受取フラグの一部になるので、あとから変えない。
-const RHYTHM_EVENTS = Object.freeze([]);
+// id は受取フラグの一部になるので、**あとから変えない**。
+//
+// rewardLineageBySongId … その曲の部門の1〜5位へ配る超越の実の種族(主血統id)。
+//   書かなければ、その部門の報酬はプシュケーだけになる。
+// totalReward … 総合部門の1〜5位へ配るもの。'heroProof'(勇者の証) か 'rainbowFruit'(虹の超越の実)。
+//   書かなければ総合もプシュケーだけ。
+// ★週間(kind:'weekly')には報酬を付けていない(フェーズ3は報酬なし)。
+//   報酬が要るのは、いまのところ期間限定イベントだけ。
+const RHYTHM_EVENTS = Object.freeze([
+  // 2026-09-11・ユーザー指示「試験イベントとしてゲリラで週末イベントみたいな形でやる」。
+  // 金曜15:00から月曜5:00まで。終わりを週の区切りに合わせてあるので、
+  // イベントが終わった瞬間に週間ランキングへ戻り、空白の時間ができない。
+  Object.freeze({
+    id: 'weekend_2026_09_11',
+    kind: 'limited',
+    name: 'モンヒロビート 週末ゲリラ杯',
+    startAt: '2026-09-11T15:00:00+09:00',
+    endAt: '2026-09-14T05:00:00+09:00',
+    songIds: Object.freeze(['monster_hero', 'kaze_ga_soyogu', 'close_to_your_heart']),
+    rewardLineageBySongId: Object.freeze({
+      monster_hero: 'suezo',
+      kaze_ga_soyogu: 'mocchi',
+      close_to_your_heart: 'tiger',
+    }),
+    totalReward: 'heroProof',
+  }),
+]);
+
+// ===== 報酬(docs/spec/RHYTHM_RANKING.md §9) =====
+//
+// 1位から5位まで。個数は 5 / 4 / 3 / 2 / 1、プシュケーは 1,000 / 800 / 600 / 400 / 200。
+// 6位以下は無し。ここは「何位に何個」だけを持ち、**アイテムの実体(id)はゲーム本体側で解決する**
+// (アイテムの定義は 11-masu-progression.jsx にあり、このファイルより後で読み込まれるため)。
+const RHYTHM_EVENT_REWARD_COUNTS = Object.freeze([5, 4, 3, 2, 1]);
+const RHYTHM_EVENT_REWARD_PSYCHE = Object.freeze([1000, 800, 600, 400, 200]);
+const RHYTHM_EVENT_REWARD_RANKS = RHYTHM_EVENT_REWARD_COUNTS.length;
+
+// その部門で配るものの種類。報酬を持たないイベント(週間)では null を返す
+const rhythmEventDivisionReward = (event, divisionId) => {
+  if (!event) return null;
+  const songId = rhythmEventDivisionSongId(divisionId);
+  if (songId) {
+    const lineageId = event.rewardLineageBySongId ? event.rewardLineageBySongId[songId] : null;
+    return lineageId ? { kind: 'speciesFruit', lineageId } : null;
+  }
+  return event.totalReward === 'heroProof' ? { kind: 'heroProof' }
+    : event.totalReward === 'rainbowFruit' ? { kind: 'rainbowFruit' }
+    : null;
+};
+// 何位に何個か。順位が範囲外・壊れた値なら null(=報酬なし)
+const rhythmEventRewardForRank = (event, divisionId, rank) => {
+  const place = Number(rank);
+  if (!Number.isInteger(place) || place < 1 || place > RHYTHM_EVENT_REWARD_RANKS) return null;
+  const reward = rhythmEventDivisionReward(event, divisionId);
+  if (!reward) return null;
+  return {
+    ...reward,
+    count: RHYTHM_EVENT_REWARD_COUNTS[place - 1],
+    psyche: RHYTHM_EVENT_REWARD_PSYCHE[place - 1],
+  };
+};
+// そのイベントが報酬を持っているか(画面に報酬の表を出すかどうかの判定)
+const rhythmEventHasRewards = (event) => {
+  if (!event) return false;
+  const divisions = [...(Array.isArray(event.songIds) ? event.songIds.map(rhythmEventSongDivisionId) : []),
+    RHYTHM_EVENT_TOTAL_DIVISION];
+  return divisions.some(divisionId => !!rhythmEventDivisionReward(event, divisionId));
+};
 
 // 公開曲の一覧(data/rhythm-mode.js)。読み込みの順番が前後しても落ちないよう、
 // 見つからないときは絞り込みをせず、書いてある組をそのまま使う
@@ -183,3 +248,23 @@ const rhythmEventEntryScore = (entry) => {
   const value = entry.totalScore !== undefined && entry.totalScore !== null ? entry.totalScore : entry.score;
   return Number(value) || 0;
 };
+
+// 画面へ出す期間の文。週間は「毎週 月曜 5:00 に切り替わります」で足りるが、
+// 期間限定は終わりの日時そのものを出さないと、いつまでか分からない。
+// 端末の時間帯に左右されないよう、JST(+9時間)へ寄せてから組み立てる。
+const RHYTHM_EVENT_WEEKDAY_LABELS = Object.freeze(['日', '月', '火', '水', '木', '金', '土']);
+const rhythmEventJstText = (ms) => {
+  const t = Number(ms);
+  if (!Number.isFinite(t)) return '—';
+  const d = new Date(t + RHYTHM_JST_OFFSET_MS);
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getUTCMonth() + 1}/${d.getUTCDate()}(${RHYTHM_EVENT_WEEKDAY_LABELS[d.getUTCDay()]}) ${d.getUTCHours()}:${pad(d.getUTCMinutes())}`;
+};
+const rhythmEventPeriodText = (event, range) => {
+  if (event && event.kind === 'limited' && range) {
+    return `${rhythmEventJstText(range.startMs)} 〜 ${rhythmEventJstText(range.endMs)}`;
+  }
+  return '毎週 月曜 5:00 に切り替わります';
+};
+// 対象曲の見出し。週間は「今週の対象曲」、期間限定はイベントの名前で呼ぶ
+const rhythmEventSongsLabel = (event) => (event && event.kind === 'limited') ? '対象曲' : '今週の対象曲';

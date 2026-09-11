@@ -41,6 +41,8 @@ vm.runInContext(`${demoIds}\n${eventData}\n`
   +'this.out={RHYTHM_WEEK_MS,RHYTHM_WEEK_ANCHOR_MS,RHYTHM_WEEKLY_ROTATION,RHYTHM_EVENTS,RHYTHM_DEMO_SONG_IDS,'
   +'rhythmWeekStartMs,rhythmWeekWindow,rhythmWeekIndex,rhythmWeekId,rhythmWeeklyEvent,rhythmActiveEvent,'
   +'rhythmEventWindow,rhythmEventRemainingText,rhythmEventDivisions,rhythmEventDivisionSongId,rhythmEventSong,'
+  +'rhythmEventPeriodText,rhythmEventSongsLabel,rhythmEventDivisionReward,rhythmEventRewardForRank,rhythmEventHasRewards,'
+  +'rhythmEventSongDivisionId,RHYTHM_EVENT_REWARD_RANKS,'
   +'rhythmEventSongDivisionId,rhythmEventMaxScore,rhythmEventEntryScore,RHYTHM_EVENT_TOTAL_DIVISION};',context);
 const O=context.out;
 
@@ -113,23 +115,109 @@ check('基準より前の週でも対象曲が決まる(負の週番号)',(()=>{
   const event=O.rhythmWeeklyEvent(O.RHYTHM_WEEK_ANCHOR_MS-5*O.RHYTHM_WEEK_MS);
   return !!event&&event.songIds.length>=3;
 })());
-check('いまも必ず開催中(週間が途切れない)',!!O.rhythmActiveEvent(Date.now()),
+check('いまも必ず開催中(週間かイベントのどちらかが必ず立つ)',!!O.rhythmActiveEvent(Date.now()),
   (O.rhythmActiveEvent(Date.now())||{}).id);
-// 期間限定(フェーズ4)の受け皿。いまは空でよいが、書いたときの動きは確かめておく
-check('期間限定イベントは期間の中だけ成立する',(()=>{
-  const now=Date.parse('2026-10-01T12:00:00+09:00');
-  const list=[{id:'limited_test',kind:'limited',name:'x',songIds:['monster_hero'],
-    startAt:'2026-10-01T00:00:00+09:00',endAt:'2026-10-08T00:00:00+09:00'}];
-  const ctx={console};vm.createContext(ctx);
-  vm.runInContext(`${demoIds}\n${eventData.replace('const RHYTHM_EVENTS = Object.freeze([]);',`const RHYTHM_EVENTS = Object.freeze(${JSON.stringify(list)});`)}\n`
-    +'this.out={rhythmActiveEvent,rhythmEventWindow};',ctx);
-  const inside=ctx.out.rhythmActiveEvent(now);
-  const before=ctx.out.rhythmActiveEvent(Date.parse('2026-09-30T12:00:00+09:00'));
-  const range=ctx.out.rhythmEventWindow(inside,null);
-  // 期間中は期間限定が優先され、その週の週間は休む(§7)
-  return inside&&inside.kind==='limited'&&before&&before.kind==='weekly'
-    &&!!range&&range.endMs-range.startMs===7*24*3600*1000;
+
+// --- 期間限定イベント(kind:'limited') ---
+const limited=(Array.isArray(O.RHYTHM_EVENTS)?O.RHYTHM_EVENTS:[]).filter(e=>e&&e.kind==='limited');
+console.log(`--  期間限定イベント: ${limited.length?limited.map(e=>e.id).join(', '):'なし'}`);
+check('期間限定イベントの中身がそろっている',limited.every(e=>
+  typeof e.id==='string'&&e.id&&typeof e.name==='string'&&e.name
+  &&Array.isArray(e.songIds)&&e.songIds.length>=1
+  &&Number.isFinite(Date.parse(e.startAt))&&Number.isFinite(Date.parse(e.endAt))
+  &&Date.parse(e.startAt)<Date.parse(e.endAt)));
+check('期間限定イベントの対象曲も公開曲だけ',limited.every(e=>
+  e.songIds.every(id=>O.RHYTHM_DEMO_SONG_IDS.includes(id))),
+  limited.flatMap(e=>e.songIds.filter(id=>!O.RHYTHM_DEMO_SONG_IDS.includes(id))).join(', '));
+check('期間限定イベントどうしが重なっていない(同時に成立するのは1つまで)',(()=>{
+  for(let a=0;a<limited.length;a++)for(let b=a+1;b<limited.length;b++){
+    const x=limited[a],y=limited[b];
+    if(Date.parse(x.startAt)<Date.parse(y.endAt)&&Date.parse(y.startAt)<Date.parse(x.endAt)){
+      console.log(`   重なり: ${x.id} と ${y.id}`);return false;
+    }
+  }
+  return true;
 })());
+// 境界そのもの。開始ちょうどで始まり、終了ちょうどで週間へ戻る
+check('開始・終了の境界で入れ替わる',limited.every(e=>{
+  const start=Date.parse(e.startAt),end=Date.parse(e.endAt);
+  const at=(ms)=>O.rhythmActiveEvent(ms);
+  return at(start-1).kind==='weekly'&&at(start).id===e.id
+    &&at(end-1).id===e.id&&at(end).kind==='weekly';
+}));
+check('期間限定のあいだは週間を休む(その週の週間が出てこない)',limited.every(e=>{
+  const mid=(Date.parse(e.startAt)+Date.parse(e.endAt))/2;
+  return O.rhythmActiveEvent(mid).kind==='limited';
+}));
+check('期間限定の期間は定義の日時そのまま',limited.every(e=>{
+  const range=O.rhythmEventWindow(e,null);
+  return !!range&&range.startMs===Date.parse(e.startAt)&&range.endMs===Date.parse(e.endAt);
+}));
+// 画面に出す期間の文。週間と期間限定で出し分けること
+check('期間の文を出し分ける',(()=>{
+  const week=O.rhythmWeeklyEvent(Date.now());
+  const weekText=O.rhythmEventPeriodText(week,O.rhythmEventWindow(week,O.rhythmWeekWindow(Date.now())));
+  if(!/毎週 月曜 5:00/.test(weekText))return false;
+  return limited.every(e=>{
+    const text=O.rhythmEventPeriodText(e,O.rhythmEventWindow(e,null));
+    return /\d+\/\d+\([日月火水木金土]\) \d+:\d\d 〜 \d+\/\d+\([日月火水木金土]\) \d+:\d\d/.test(text);
+  });
+})(),limited.length?O.rhythmEventPeriodText(limited[0],O.rhythmEventWindow(limited[0],null)):'');
+check('対象曲の見出しも出し分ける',
+  O.rhythmEventSongsLabel(O.rhythmWeeklyEvent(Date.now()))==='今週の対象曲'
+  &&limited.every(e=>O.rhythmEventSongsLabel(e)==='対象曲'));
+
+// --- 報酬(docs/spec/RHYTHM_RANKING.md §9) ---
+// 1位から5位まで、個数は5/4/3/2/1・プシュケーは1,000/800/600/400/200。6位以下は無し。
+check('週間には報酬を付けていない(フェーズ3は報酬なし)',(()=>{
+  const week=O.rhythmWeeklyEvent(Date.now());
+  return !O.rhythmEventHasRewards(week)&&O.rhythmEventRewardForRank(week,O.RHYTHM_EVENT_TOTAL_DIVISION,1)===null;
+})());
+check('報酬つきイベントは1〜5位に配る',limited.every(e=>{
+  if(!O.rhythmEventHasRewards(e))return true;
+  const divisions=[...e.songIds.map(O.rhythmEventSongDivisionId),O.RHYTHM_EVENT_TOTAL_DIVISION];
+  return divisions.every(divisionId=>{
+    const reward=O.rhythmEventDivisionReward(e,divisionId);
+    if(!reward)return true;
+    const counts=[1,2,3,4,5].map(rank=>O.rhythmEventRewardForRank(e,divisionId,rank));
+    return counts.every(Boolean)
+      &&counts.map(r=>r.count).join(',')==='5,4,3,2,1'
+      &&counts.map(r=>r.psyche).join(',')==='1000,800,600,400,200';
+  });
+}));
+check('6位以下と壊れた順位には報酬を出さない',limited.every(e=>
+  [0,6,99,-1,1.5,null,'x',NaN].every(rank=>
+    O.rhythmEventRewardForRank(e,O.RHYTHM_EVENT_TOTAL_DIVISION,rank)===null)));
+check('対象曲の部門は種族の超越の実、総合は勇者の証',limited.every(e=>{
+  if(!O.rhythmEventHasRewards(e))return true;
+  const songOk=e.songIds.every(songId=>{
+    const reward=O.rhythmEventDivisionReward(e,O.rhythmEventSongDivisionId(songId));
+    return !reward||(reward.kind==='speciesFruit'&&typeof reward.lineageId==='string'&&reward.lineageId);
+  });
+  const total=O.rhythmEventDivisionReward(e,O.RHYTHM_EVENT_TOTAL_DIVISION);
+  return songOk&&(!total||total.kind==='heroProof'||total.kind==='rainbowFruit');
+}));
+// 血統idを書き間違えると、報酬の名前が出ないまま公開されてしまう
+check('報酬の種族(血統id)が実在する',(()=>{
+  const lineages=read('monster-hero/data/lineages.js');
+  return limited.every(e=>Object.values(e.rewardLineageBySongId||{}).every(id=>
+    new RegExp(`id:'${id}'`).test(lineages)));
+})());
+check('報酬の対象曲がイベントの対象曲と一致する',limited.every(e=>
+  Object.keys(e.rewardLineageBySongId||{}).every(songId=>e.songIds.includes(songId))));
+// アイテムの実体はゲーム本体側で結びつける。名前を2か所に書かない
+check('アイテムの名前は実データから引く',
+  game.includes('const rhythmEventRewardItem=')&&game.includes('HERO_PROOF_ITEM.name')
+  &&game.includes('speciesTranscendFruitItems()[reward.lineageId]')
+  // データ側は名前を「文字列として」持たないこと(コメントでの言及は説明なので見ない)
+  &&!/['"`](勇者の証|超越の実|虹のプシュケー)/.test(eventData));
+check('画面に部門ごとの報酬を出す',
+  screen.includes('data-rhythm-event-rewards')&&screen.includes('rhythmEventRewardText(reward)')
+  &&screen.includes('rhythmEventRewardForRank(eventDefinition,eventDivisionId,index+1)'));
+check('画面は期間の文と対象曲の見出しを出し分ける',
+  screen.includes('rhythmEventPeriodText(eventDefinition,eventRange)')
+  &&screen.includes('rhythmEventSongsLabel(rhythmEventNotice)')
+  &&screen.includes("const eventLimited=!!eventDefinition&&eventDefinition.kind==='limited';"));
 
 // ④ 部門と点数
 {
@@ -273,6 +361,10 @@ check('助手の告知を付けている(大きい追加)',
 check('画面のなかでも助手が案内する(ランキングと曲えらびの両方)',
   assistants.includes('rhythmWeeklyEvent: {')
   &&(screen.match(/<AssistantBubble scene="rhythmWeeklyEvent"/g)||[]).length>=2);
+// 週間の「毎週月曜5:00」の話を期間限定のあいだに出すと、週間が動いていると誤解される
+check('期間限定のあいだは助手のセリフも切り替える',
+  (assistants.match(/rhythmWeeklyEvent: \{\n\s*limited: \[/g)||[]).length>=3
+  &&(screen.match(/scene="rhythmWeeklyEvent" condition=\{/g)||[]).length>=2);
 check('助手3人ぶんのセリフがある',(assistants.match(/rhythmWeeklyEvent: \[/g)||[]).length>=3);
 check('曲えらびの案内は週ごとに1度だけ',
   screen.includes('data-rhythm-event-notice')&&screen.includes('data-rhythm-event-notice-close')

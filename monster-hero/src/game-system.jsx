@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6a4423cd7346cbda
+// generated-sha256: 894c3021287ce964
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 11:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 11:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -10873,6 +10873,31 @@ const RhythmTimingCalibrator=({onApply,onClose,currentOffsetMs=0})=>{
   </main>;
 };
 
+// ===== モンヒロビートのイベント報酬(2026-09-11) =====
+// data/rhythm-event.js は「何位に何個」だけを持ち、アイテムの実体(id・名前・絵文字)は
+// ゲーム本体側にある(アイテムの定義は 11-masu-progression.jsx で、data より後に読み込まれるため)。
+// ここで結びつける。名前を2か所に書かないよう、必ず実データから引く。
+const rhythmEventRewardItem=(reward)=>{
+  if(!reward||typeof reward!=='object')return null;
+  if(reward.kind==='speciesFruit'){
+    const item=speciesTranscendFruitItems()[reward.lineageId];
+    return item?{id:item.id,name:item.name,emoji:item.emoji||'🍇'}:null;
+  }
+  if(reward.kind==='heroProof')return {id:HERO_PROOF_ITEM_ID,name:HERO_PROOF_ITEM.name,emoji:HERO_PROOF_ITEM.emoji};
+  if(reward.kind==='rainbowFruit')return {id:RAINBOW_TRANSCEND_FRUIT_ITEM_ID,name:RAINBOW_TRANSCEND_FRUIT_ITEM.name,emoji:'🌈'};
+  return null;
+};
+// 「🍇 超越の実（スエゾー種）×5 ／ 虹のプシュケー×1,000」のような1行。
+// 順位ごとの表示にも、受け取ったときの知らせにも同じ文を使う
+const rhythmEventRewardText=(reward)=>{
+  if(!reward)return '';
+  const item=rhythmEventRewardItem(reward);
+  const parts=[];
+  if(item&&reward.count>0)parts.push(`${item.emoji} ${item.name}×${reward.count}`);
+  if(reward.psyche>0)parts.push(`💗 虹のプシュケー×${reward.psyche.toLocaleString()}`);
+  return parts.join(' ／ ');
+};
+
 // ---- part: 29-rhythm-screens.jsx ----
 const RhythmOptions=({value,onSave,onBack})=>{
   const [draft,setDraft]=useState(()=>normalizeRhythmSettings(value));
@@ -13551,10 +13576,13 @@ function RhythmSongSelectScreen({
         {rhythmEventNotice&&<div data-rhythm-event-notice className="shrink-0 border-b border-fuchsia-400/20 bg-slate-950/90 px-2 py-1">
           <div className="flex items-start gap-1">
             <div className="min-w-0 flex-1">
-              <AssistantBubble scene="rhythmWeeklyEvent" compact/>
-              <p className="mt-1 truncate text-[10px] font-black text-fuchsia-100">今週の対象曲：{eventSongTitles.join(' ／ ')}</p>
+              <AssistantBubble scene="rhythmWeeklyEvent" condition={rhythmEventNotice.kind==='limited'?'limited':null} compact/>
+              {/* 期間限定のときはイベントの名前を出す。「今週の対象曲」のままだと、
+                  週間ランキングが動いていると誤解される */}
+              {rhythmEventNotice.kind==='limited'&&<p className="mt-1 truncate text-[10px] font-black text-amber-200">🏆 {rhythmEventNotice.name} 開催中！</p>}
+              <p className="mt-1 text-[10px] font-black leading-tight text-fuchsia-100">{rhythmEventSongsLabel(rhythmEventNotice)}：{eventSongTitles.join(' ／ ')}</p>
               <button type="button" data-rhythm-event-notice-open onClick={onOpenEventRanking}
-                className="mt-1 min-h-[44px] w-full rounded-xl border border-fuchsia-400/40 px-2 text-[10px] font-black text-fuchsia-200 active:scale-[.98]">🏆 週間ランキングを見る</button>
+                className="mt-1 min-h-[44px] w-full rounded-xl border border-fuchsia-400/40 px-2 text-[10px] font-black text-fuchsia-200 active:scale-[.98]">🏆 {rhythmEventNotice.kind==='limited'?'イベントランキングを見る':'週間ランキングを見る'}</button>
             </div>
             <button type="button" data-rhythm-event-notice-close onClick={dismissRhythmEventNotice} aria-label="この案内を閉じる" className="min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black">×</button>
           </div>
@@ -13737,6 +13765,14 @@ function RhythmRankingScreen({
       const eventSongId=rhythmEventDivisionSongId(eventDivisionId);
       const eventRange=rhythmEventWindow(eventDefinition,event.window);
       const eventSongCount=eventDefinition?eventDefinition.songIds.length:0;
+      // その部門の報酬(1位から順に)。報酬を持たないイベント(週間)では空になる
+      const eventRewardRanks=eventDefinition
+        ?Array.from({length:RHYTHM_EVENT_REWARD_RANKS},(_,index)=>({
+          rank:index+1,reward:rhythmEventRewardForRank(eventDefinition,eventDivisionId,index+1),
+        })).filter(entry=>!!entry.reward)
+        :[];
+      const eventReward=eventRewardRanks.length>0;
+      const eventLimited=!!eventDefinition&&eventDefinition.kind==='limited';
       // 残り時間だけは端末の時計で数える(1秒ごとにサーバーへ聞きに行かないため・§6.1)。
       // 30秒ごとに数え直せば「残り ◯時間 ◯分」の表示には足りる
       const [eventNowMs,setEventNowMs]=React.useState(()=>Date.now());
@@ -13837,7 +13873,9 @@ function RhythmRankingScreen({
           )}
           {eventTab&&(
             <p className="mb-3 rounded-2xl border border-fuchsia-300/40 bg-fuchsia-500/10 p-3 text-[10px] font-bold leading-relaxed text-fuchsia-100">
-              今週の対象曲で競うランキングです。<b className="text-white">その週のあいだに出した記録だけ</b>が載ります（先週までの記録は載りませんが、自己ベストと「総合」にはそのまま残ります）。難易度は問いません。1曲でも遊べば「総合」にも載ります。
+              {eventLimited
+                ?<>期間限定イベントの対象曲で競うランキングです。<b className="text-white">開催中に出した記録だけ</b>が載ります（開催前の記録は載りませんが、自己ベストと「総合」にはそのまま残ります）。難易度は問いません。1曲でも遊べば「総合」にも載ります。開催中は週間ランキングをお休みします。</>
+                :<>今週の対象曲で競うランキングです。<b className="text-white">その週のあいだに出した記録だけ</b>が載ります（先週までの記録は載りませんが、自己ベストと「総合」にはそのまま残ります）。難易度は問いません。1曲でも遊べば「総合」にも載ります。</>}
             </p>
           )}
           {songTab&&(
@@ -13875,7 +13913,7 @@ function RhythmRankingScreen({
             </>)}
           </>)}
           {eventTab&&(<>
-            <AssistantBubble scene="rhythmWeeklyEvent" compact/>
+            <AssistantBubble scene="rhythmWeeklyEvent" condition={eventLimited?'limited':null} compact/>
             {event.status==='loading'&&<p data-rhythm-event-loading className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">読み込み中…</p>}
             {/* 集計のしたくがまだのとき。エラーではないので、赤い表示にはしない */}
             {event.status==='notReady'&&<p data-rhythm-event-not-ready className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">週間ランキングはただいま準備中です。もうしばらくお待ちください。</p>}
@@ -13886,7 +13924,8 @@ function RhythmRankingScreen({
               <div data-rhythm-event-window className="mb-3 flex items-center gap-2 rounded-2xl border border-fuchsia-300/40 bg-slate-900/70 p-2">
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[11px] font-black text-fuchsia-100">{eventDefinition.name}</p>
-                  <p className="text-[9px] text-slate-400">毎週 月曜 5:00 に切り替わります</p>
+                  {/* 週間は「毎週月曜5:00に切り替わります」、期間限定は開始と終了そのものを出す */}
+                  <p data-rhythm-event-period className="text-[9px] text-slate-400">{rhythmEventPeriodText(eventDefinition,eventRange)}</p>
                 </div>
                 <p data-rhythm-event-remaining className="shrink-0 text-[10px] font-black text-fuchsia-200">
                   {eventRange?rhythmEventRemainingText(eventRange.endMs-eventNowMs):'—'}
@@ -13901,6 +13940,19 @@ function RhythmRankingScreen({
                   </button>
                 ))}
               </div>
+              {/* その部門の報酬。何を狙って遊ぶのかが分からないと、そもそも参加してもらえない。
+                  順位も個数もデータから作るので、ここに数字を書き写さない */}
+              {eventReward&&<div data-rhythm-event-rewards className="mb-3 rounded-2xl border border-amber-300/40 bg-amber-500/5 p-2">
+                <p className="mb-1 text-[9px] font-black text-amber-200">この部門の報酬（終了後に受け取れます）</p>
+                <ul className="space-y-0.5">
+                  {eventRewardRanks.map(({rank,reward})=>(
+                    <li key={rank} className="flex items-baseline gap-2 text-[10px] leading-tight">
+                      <b className="w-7 shrink-0 text-right font-black text-amber-200">{rank}位</b>
+                      <span className="min-w-0 flex-1 text-slate-200">{rhythmEventRewardText(reward)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>}
               {eventBoard.status==='loading'&&<p data-rhythm-event-board-loading className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">読み込み中…</p>}
               {eventBoard.status==='error'&&<p data-rhythm-event-board-error className="rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200">この部門を読み込めませんでした。「更新」をお試しください。</p>}
               {eventBoard.status==='ready'&&(<>
