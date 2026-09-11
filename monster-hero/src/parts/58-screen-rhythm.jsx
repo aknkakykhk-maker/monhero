@@ -349,7 +349,12 @@ function RhythmRankingScreen({
       // 「この曲」と「総合(全曲合算)」の出し分け(2026-09-11)。
       // 画面(gameState)は増やさない。増やすとヘルプの対応表・戻り先・BGMの引き継ぎが
       // それぞれ別の場所にあるため、どこかで必ず抜ける(CLAUDE.md ⑤)。
-      const totalTab=rhythmRankingTab==='total';
+      //
+      // ★公開フラグが立つまでタブごと出さない。集計はSupabase側のビューが行うので、
+      //   SQLを適用するまで中身が無い。機能と案内(ヘルプ・更新履歴・助手の告知)を
+      //   同じフラグでまとめて出し入れし、「説明だけ先に出る」を起こさない。
+      const totalReleased=RELEASE_FLAGS.rhythmTotalRanking===true;
+      const totalTab=totalReleased&&rhythmRankingTab==='total';
       const total=rhythmTotalRanking||{status:'idle',entries:[],self:null};
       // 曲数も理論満点もデータから作る。曲が増えても、ここは書き換えない
       // (docs/spec/RHYTHM_RANKING.md §5.1)
@@ -381,15 +386,15 @@ function RhythmRankingScreen({
           <h2 className="text-sm font-black tracking-widest text-amber-200">🏆 全国ランキング</h2>
           <button aria-label="更新" data-rhythm-ranking-refresh onClick={refresh} className="ml-auto min-h-[44px] px-2 text-[10px] font-black text-amber-200">更新</button>
         </header>
-        {/* タブ。押したときに初めて取りにいく */}
-        <div data-rhythm-ranking-tabs className="flex shrink-0 gap-1 border-b border-white/10 bg-slate-950/95 px-3 pb-2 pt-1">
+        {/* タブ。押したときに初めて取りにいく。公開前はタブごと出さない */}
+        {totalReleased&&<div data-rhythm-ranking-tabs className="flex shrink-0 gap-1 border-b border-white/10 bg-slate-950/95 px-3 pb-2 pt-1">
           {[{id:'song',label:'この曲'},{id:'total',label:'総合'}].map(tab=>(
             <button key={tab.id} data-rhythm-ranking-tab={tab.id} onClick={()=>openTab(tab.id)}
               className={`min-h-[44px] flex-1 rounded-xl border px-2 text-[11px] font-black ${rhythmRankingTab===tab.id?'border-amber-300/60 bg-amber-500/15 text-amber-100':'border-white/10 bg-slate-900/60 text-slate-400'}`}>
               {tab.label}
             </button>
           ))}
-        </div>
+        </div>}
         <div className="flex-1 overflow-y-auto mh-scroll px-3 pb-6 pt-3" style={{paddingBottom:'calc(1.5rem + env(safe-area-inset-bottom))'}}>
           <RhythmLandscapeHint className="mb-3"/>
           {totalTab?(

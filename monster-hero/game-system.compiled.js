@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1d20ba3cd92eca0f
+// source-sha256: 29afcd7891bef2e4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 89eb4d5817157396
+// generated-sha256: 982f35babacee0e6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 09:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 09:58"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -9783,11 +9783,22 @@ const QUICK_RHYTHM_LINK_PUBLIC_RELEASE = true;
 // 2026-09-08・実機で比べてもらい、マスモンの絵が残る・失敗した HOLD/SLIDE が消える・触った FLICK の帯が残る、を直したうえで
 // ユーザー「問題なし」→ 公開。デバッグ画面の「ノーツの描き方」で「要素」を選べば従来の描き方へ戻せる。
 const RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE = true;
+// モンヒロビートの「総合」ランキング(全曲合算・docs/spec/RHYTHM_RANKING.md §3)。
+// ★集計はSupabase側のビュー(rhythm_total_rankings)が行うので、
+//   docs/sql/rankings/RHYTHM_TOTAL_APPLY.sql を適用するまで中身が出せない。
+//   false のあいだはタブそのものを出さず、ヘルプ・更新履歴・助手の告知もまとめて隠す。
+//   こうしておかないと「説明だけ先に出る」ことになる(CLAUDE.md ⑤)。実際に一度そうしてしまった
+//   (2026-09-11・ユーザー指摘「総合ランキングがまだできてないのにお知らせでできたみたいに書かれてる」)。
+//   SQLを適用して RHYTHM_TOTAL_VERIFY.sql で上位が並ぶことを確かめたら true にする。
+//   true にするときは、ヘルプの助手のひとことも「総合」に触れた文へ変える
+//   (tools/mode/rhythm-total-ranking-check.js が見張る)。
+const RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE = false;
 const RELEASE_FLAGS = {
   speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE,
   rhythmMode: RHYTHM_MODE_PUBLIC_RELEASE,
   quickRhythmLink: QUICK_RHYTHM_LINK_PUBLIC_RELEASE,
-  rhythmCanvasNotes: RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE
+  rhythmCanvasNotes: RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE,
+  rhythmTotalRanking: RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE
 };
 // releaseFlag = そのフラグが立つまで出さない。unreleasedFlag = そのフラグが立ったら出さない。
 // 逆向きの名札が要るのは「準備中です」の案内で、公開したあとも残っていると
@@ -24540,7 +24551,12 @@ function RhythmRankingScreen({
   // 「この曲」と「総合(全曲合算)」の出し分け(2026-09-11)。
   // 画面(gameState)は増やさない。増やすとヘルプの対応表・戻り先・BGMの引き継ぎが
   // それぞれ別の場所にあるため、どこかで必ず抜ける(CLAUDE.md ⑤)。
-  const totalTab = rhythmRankingTab === 'total';
+  //
+  // ★公開フラグが立つまでタブごと出さない。集計はSupabase側のビューが行うので、
+  //   SQLを適用するまで中身が無い。機能と案内(ヘルプ・更新履歴・助手の告知)を
+  //   同じフラグでまとめて出し入れし、「説明だけ先に出る」を起こさない。
+  const totalReleased = RELEASE_FLAGS.rhythmTotalRanking === true;
+  const totalTab = totalReleased && rhythmRankingTab === 'total';
   const total = rhythmTotalRanking || {
     status: 'idle',
     entries: [],
@@ -24596,7 +24612,7 @@ function RhythmRankingScreen({
     "data-rhythm-ranking-refresh": true,
     onClick: refresh,
     className: "ml-auto min-h-[44px] px-2 text-[10px] font-black text-amber-200"
-  }, "\u66F4\u65B0")), /*#__PURE__*/React.createElement("div", {
+  }, "\u66F4\u65B0")), totalReleased && /*#__PURE__*/React.createElement("div", {
     "data-rhythm-ranking-tabs": true,
     className: "flex shrink-0 gap-1 border-b border-white/10 bg-slate-950/95 px-3 pb-2 pt-1"
   }, [{

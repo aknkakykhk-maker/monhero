@@ -691,11 +691,37 @@ grant execute on function public.rhythm_event_song_bests(text[], timestamptz, ti
 
 ### フェーズ2 — ブリーダー別 全曲合算ランキング（常設）
 
-1. 集計ビュー・除外テーブル・索引・権限の適用SQLを用意し、ユーザーが適用する（§8.2・§8.3・§8.5〜§8.8）
-2. 取得関数（`sbFetchRhythmTotalRankings`）を `26-supabase.jsx` へ足す。既存の口は触らない
-3. ランキング画面へ「この曲 / 総合」タブを足す。自分の順位・達成率・未プレイ曲も出す
-4. ヘルプ・更新履歴・助手の告知（§10.2）
-5. 検査（§11）と `node tools/build.js`
+1. ✅ 集計ビュー・除外テーブル・索引・権限の適用SQLを用意した（§8.2・§8.3・§8.5〜§8.8）
+2. ⬜ **ユーザーが Supabase の画面から適用する**（`RHYTHM_TOTAL_IPHONE_STEPS.md`）
+3. ✅ 取得関数（`sbFetchRhythmTotalRankings`）を `26-supabase.jsx` へ足した。既存の口は触らない
+4. ✅ ランキング画面へ「この曲 / 総合」タブを足した。自分の順位・達成率・未プレイ曲も出す
+5. ✅ ヘルプ・更新履歴・助手の告知（§10.2）
+6. ⬜ **公開フラグ `RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE` を `true` にして公開する**（下記）
+
+#### 公開フラグでまとめて出し入れする
+
+集計はSupabase側のビューが行うので、**SQLを適用するまで中身が出せない**。
+そのため `RELEASE_FLAGS.rhythmTotalRanking` 1つで、次の4つを同時に出し入れする。
+
+| 出るもの | 隠し方 |
+| --- | --- |
+| ランキング画面の「この曲 / 総合」タブ | `totalReleased` が false ならタブごと出さない |
+| ヘルプの「総合」の説明 | ブロックごとの `releaseFlag:'rhythmTotalRanking'` |
+| 更新履歴の1件 | 項目の `releaseFlag:'rhythmTotalRanking'` |
+| 助手の告知 | 更新履歴が出ないので自動的に止まる |
+
+> ⚠️ **一度これを怠って「まだ遊べないのにお知らせだけ出た」**（2026-09-11・ユーザー指摘
+> 「総合ランキングがまだできてないのにお知らせでできたみたいに書かれてる」）。
+> `CLAUDE.md` ⑤の「公開フラグを持つ機能なら、案内も同じフラグで出し入れする」はこのためにある。
+
+**公開の手順**（SQLの適用が済んでから）
+
+1. `RHYTHM_TOTAL_VERIFY.sql` で `上位3人` に実際の名前と合計点が並ぶことを確かめる
+2. `17-release-changelog-login-missions.jsx` の
+   `RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE` を `true` にする
+3. ヘルプの `rhythm-ranking` 項目の**助手のひとこと**を「総合」に触れた文へ書き直す
+   （`tools/mode/rhythm-total-ranking-check.js` が、フラグが true のときだけこれを見張る）
+4. `node tools/build.js` と検査を通してからコミットする
 
 ### フェーズ3 — 週間ランキング（報酬なし）
 
