@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5ddc72231fbeec73
+// generated-sha256: 1cb6491c7bba4ca3
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 23:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 23:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3357,7 +3357,10 @@ const normalizeBgmArrangement = value => Object.fromEntries(Object.entries(DEFAU
 const Audio_ = (() => {
   let Tone = null, ready = false, loading = null, started = false;
   let reverb = null, seBus = null;
-  let audioCtx = null, bgmGain = null;
+  let audioCtx = null, bgmGain = null, masterOut = null, analyser = null, analyserData = null;
+  // AudioContextが「動いているつもりで止まっていないか」を見るための控え。
+  // Androidでは state が running のままでも音が出なくなることがあり、state だけでは気づけない
+  let ctxTimeMark = null, ctxRebuildCount = 0, toneLoadFailed = false;
   const buffers = new Map();
   const loadingBuffers = new Map();
   // previewRequest は試聴の「この呼び出しが今も最新か」を見るための番号。
@@ -3382,10 +3385,10 @@ const Audio_ = (() => {
       const s = document.createElement('script');
       s.src = 'https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js';
       s.onload = () => { Tone = window.Tone; res(); };
-      s.onerror = () => { res(); };
+      s.onerror = () => { toneLoadFailed = true; res(); };
       document.head.appendChild(s);
     }).then(async () => {
-      if (!Tone) return;
+      if (!Tone) { toneLoadFailed = true; return; }
       try {
         seBus = new Tone.Gain(_gainFromPct(seVolumePct)).toDestination();
         reverb = new Tone.Reverb({ decay: 2.4, wet: 0.22 }).connect(seBus);
@@ -3471,6 +3474,23 @@ const Audio_ = (() => {
 
   // HTMLAudioElementはiOSの消音スイッチを無視するため使用しない。mp3を取得・デコードし、
   // BGMもジングルもAudioBufferSourceNodeだけで出力する。
+  //
+  // 出口(destination)の手前に、素通しのgainと音量計(analyser)を1つだけ挟む。
+  // 音は変えない。「コードの上では鳴らしているのに端末から聞こえない」を切り分けるため、
+  // 実際に流れている波形の大きさを設定画面から見られるようにする
+  const buildAudioGraph = (ctx) => {
+    masterOut = ctx.createGain();
+    masterOut.gain.value = 1;
+    analyser = ctx.createAnalyser();
+    analyser.fftSize = 2048;
+    analyser.smoothingTimeConstant = 0;
+    try { analyserData = new Float32Array(analyser.fftSize); } catch (e) { analyserData = null; }
+    masterOut.connect(analyser);
+    analyser.connect(ctx.destination);
+    bgmGain = ctx.createGain();
+    bgmGain.gain.value = _bgmGain(bgmVolumePct);
+    bgmGain.connect(masterOut);
+  };
   const getAudioCtx = () => {
     if (audioCtx) return audioCtx;
     if (typeof window === 'undefined') return null;
@@ -3478,16 +3498,31 @@ const Audio_ = (() => {
     if (!AC) return null;
     try {
       audioCtx = new AC();
-      bgmGain = audioCtx.createGain();
-      bgmGain.gain.value = _bgmGain(bgmVolumePct);
-      bgmGain.connect(audioCtx.destination);
+      buildAudioGraph(audioCtx);
+      ctxTimeMark = null;
       bindResumeOnGesture();
-    } catch (e) { audioCtx = null; bgmGain = null; }
+    } catch (e) { audioCtx = null; bgmGain = null; masterOut = null; analyser = null; analyserData = null; }
     return audioCtx;
   };
   // AudioContextは端末側の自動再生制限・省電力・他アプリの音声フォーカスで止められる。
   // 止まったまま start() しても無音になるだけなので、次のタップで必ず復帰させる。
-  // タップはuser activationが有効な唯一の機会なので、ここでresume()を呼ぶ意味がある
+  // タップはuser activationが有効な唯一の機会なので、ここでresume()を呼ぶ意味がある。
+  //
+  // ここから下は、AudioContext.currentTime が実時間どおりに進んでいるかを見る仕掛け。
+  // Androidでは、出力先の切り替え(Bluetooth・イヤホン)・他アプリとの音の取り合い・省電力のあとに、
+  // state は running のままなのに時計だけ止まり、何を鳴らしても無音になることがある。
+  // この状態は resume() では戻らないので、state を見るだけでは永久に気づけない
+  const ctxClockStalled = () => {
+    const ctx = audioCtx;
+    if (!ctx || ctx.state !== 'running') return false;
+    const now = Date.now(), time = ctx.currentTime;
+    if (!ctxTimeMark) { ctxTimeMark = { at: now, time }; return false; }
+    const elapsed = now - ctxTimeMark.at;
+    if (elapsed < 500) return false;
+    const advanced = time - ctxTimeMark.time;
+    ctxTimeMark = { at: now, time };
+    return advanced < (elapsed / 1000) * 0.2;
+  };
   let resumeOnGestureBound = false;
   const bindResumeOnGesture = () => {
     if (resumeOnGestureBound || typeof document === 'undefined') return;
@@ -3497,7 +3532,7 @@ const Audio_ = (() => {
       if (!ctx || ctx.state === 'running') return;
       let done = null;
       try { done = ctx.resume(); } catch (e) {}
-      const after = () => { if (audioCtx && audioCtx.state === 'running' && enabled && !pageHidden && currentKey && !bgmSource && !jingleSource && !previewSource) playBGM(currentKey); };
+      const after = () => { ctxTimeMark = null; if (audioCtx && audioCtx.state === 'running' && enabled && !pageHidden && currentKey && !bgmSource && !jingleSource && !previewSource) playBGM(currentKey); };
       if (done && done.then) done.then(after, () => {}); else setTimeout(after, 0);
     };
     ['pointerdown', 'touchstart', 'click', 'keydown'].forEach(type => {
@@ -3604,6 +3639,64 @@ const Audio_ = (() => {
     } catch (e) { if (request === previewRequest && previewKey === track.id) stopPreview(true); return false; }
   };
   const stopBGM = () => { currentKey = null; ++bgmRequest; stopPreview(false); stopJingles(); stopOthers(); };
+
+  // BGMの出口を丸ごと作り直す。設定画面の「音を鳴らし直す」から呼ぶ。
+  // 「running なのに時計が止まっている」「resume しても戻らない」状態は、
+  // いまのAudioContextを捨てて新しく作る以外に戻す手がない(Androidで実際に起きる)。
+  // 音ゲーの演奏中だけは作り直さない(鳴っている曲のハンドルが死に、譜面とずれるため)。
+  const rebuildAudioCtx = async () => {
+    if (activeRhythmGains.size) return false;
+    const old = audioCtx, resumeKey = currentKey;
+    ++bgmRequest; ++previewRequest;
+    stopSource(bgmSource); bgmSource = null; bgmSourceKey = null;
+    stopSource(previewSource); previewSource = null; previewKey = null;
+    stopJingles();
+    audioCtx = null; bgmGain = null; masterOut = null; analyser = null; analyserData = null; ctxTimeMark = null;
+    // 音源(AudioBuffer)は作り直したcontextのサンプリングレートが違うと速さが変わってしまう。
+    // 取り直しても通信キャッシュから読めるので、ここは安全側に倒して捨てる
+    buffers.clear(); loadingBuffers.clear();
+    try { if (old && old.state !== 'closed') await old.close(); } catch (e) {}
+    const ctx = getAudioCtx();
+    if (!ctx) return false;
+    ctxRebuildCount++;
+    // 効果音(Tone)はTone自身のAudioContextで鳴っているので、ここでは触らない。
+    // 止まっていることがあるので、起こすところだけやる
+    if (Tone) { try { await Tone.start(); started = true; } catch (e) {} }
+    try { await ctx.resume(); } catch (e) {}
+    currentKey = resumeKey;
+    if (enabled && resumeKey && !pageHidden) playBGM(resumeKey);
+    return ctx.state === 'running';
+  };
+  // いま出口へ実際に流れている波形の大きさ(0〜1)。鳴っていなければ0。
+  // 「アプリは鳴らしているのに端末から聞こえない」のか「そもそも鳴っていない」のかを分ける
+  const outputLevel = () => {
+    if (!analyser || !analyserData) return null;
+    try {
+      analyser.getFloatTimeDomainData(analyserData);
+      let peak = 0;
+      for (let i = 0; i < analyserData.length; i++) { const v = Math.abs(analyserData[i]); if (v > peak) peak = v; }
+      return peak;
+    } catch (e) { return null; }
+  };
+  // 効果音エンジン(Tone)を通さず、素のWeb Audioだけで短い音を鳴らす。
+  // 「Toneが読めていないだけ」なのか「出口そのものが死んでいる」のかを分けるため
+  const playTestTone = async () => {
+    const ctx = await ensureAudioCtxRunning();
+    if (!ctx || !masterOut) return false;
+    try {
+      const osc = ctx.createOscillator(), gain = ctx.createGain(), at = ctx.currentTime;
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(880, at);
+      osc.frequency.setValueAtTime(1320, at + 0.16);
+      gain.gain.setValueAtTime(0, at);
+      gain.gain.linearRampToValueAtTime(0.3, at + 0.02);
+      gain.gain.linearRampToValueAtTime(0, at + 0.42);
+      osc.connect(gain); gain.connect(masterOut);
+      osc.start(at); osc.stop(at + 0.45);
+      setTimeout(() => { try { osc.disconnect(); gain.disconnect(); } catch (e) {} }, 900);
+      return true;
+    } catch (e) { return false; }
+  };
   // 音ゲーの時刻は AudioContext.currentTime と再生offsetだけを正本にする。
   // BufferSourceNodeは一度stopしたら再利用せず、再開のたびにoffsetから作り直す。
   // options.autoStart:false を渡すと「音源の用意だけして、まだ鳴らさない」。
@@ -3629,9 +3722,10 @@ const Audio_ = (() => {
         const raw=Math.max(0,Math.min(1,Number(rhythmVolumePct)/100))*safeTrackGain(track);
         dropGainEntry(); gainEntry={node:rhythmGain,raw}; activeRhythmGains.add(gainEntry);
         rhythmGain.gain.value=enabled?raw:0;
-        // 音ゲー専用の音量なので、メインのBGM音量(bgmGain)は経由せず直接destinationへ繋ぐ。
+        // 音ゲー専用の音量なので、メインのBGM音量(bgmGain)は経由しない。
         // 全体ミュート(enabled)だけはactiveRhythmGains経由で共通に反映する。
-        nextSource.buffer=buffer; nextSource.loop=loop; nextSource.connect(rhythmGain);rhythmGain.connect(ctx.destination);
+        // 出口の手前(masterOut)だけは通す。音は変わらず、音量計で鳴っているか見られるようになる
+        nextSource.buffer=buffer; nextSource.loop=loop; nextSource.connect(rhythmGain);rhythmGain.connect(masterOut||ctx.destination);
         source=nextSource; offsetSeconds=offset; startedAt=ctx.currentTime; playing=true;
         nextSource.onended=()=>{if(source===nextSource&&playing){playing=false;naturallyEnded=true;source=null;}};
         nextSource.start(0,offset); return true;
@@ -3694,7 +3788,7 @@ const Audio_ = (() => {
       jingleTimer = setTimeout(backToBGM, Math.ceil(buffer.duration * 1000) + 250);
     } catch (e) { if (currentKey) playBGM(currentKey); }
   };
-  const setPageHidden = (hidden) => { pageHidden = !!hidden; if (pageHidden) { ++bgmRequest; stopPreview(false); stopOthers(); stopJingles(); } else if (currentKey) playBGM(currentKey); };
+  const setPageHidden = (hidden) => { pageHidden = !!hidden; ctxTimeMark = null; if (pageHidden) { ++bgmRequest; stopPreview(false); stopOthers(); stopJingles(); } else if (currentKey) playBGM(currentKey); };
   const setEnabled = async (on) => { enabled = !!on; if (typeof window !== 'undefined') window.__mhAudioEnabled = enabled; applyRhythmMute(); if (!enabled) { ++bgmRequest; stopPreview(false); stopOthers(); stopJingles(); } else if (currentKey) playBGM(currentKey); await ensure(); };
   const isEnabled = () => enabled;
   // いま実際に鳴っている曲を、外(検査)から見るための口。
@@ -3727,6 +3821,40 @@ const Audio_ = (() => {
   if (typeof window !== 'undefined') {
     try { window.__mhAudioDebug = debugPlayingTracks; window.__mhAudioExpectedSrc = debugExpectedSrc; } catch (e) {}
   }
+  // 「音が出ない」を端末の上で切り分けるための一式(音量設定の「音が出ないとき」から見る)。
+  // 画面から呼ぶだけの読み取りなので、ゲームの動きは変えない
+  const diagnose = () => {
+    const ctx = audioCtx;
+    let toneState = 'none';
+    if (Tone) { try { toneState = (Tone.getContext && Tone.getContext().state) || 'none'; } catch (e) { toneState = 'none'; } }
+    return {
+      enabled, pageHidden,
+      bgmVolumePct, seVolumePct,
+      ctxState: ctx ? ctx.state : 'none',
+      sampleRate: ctx ? Math.round(ctx.sampleRate) : 0,
+      // getAudioCtx()を呼ばない(見ただけで出口を作らない)。作る前は判定しようがないので false。
+      // 画面を隠しているあいだは時計も止まるので、そこは見ない(戻った直後の誤判定を防ぐ)
+      stalled: ctx && !pageHidden ? ctxClockStalled() : false,
+      rebuilds: ctxRebuildCount,
+      toneLoaded: !!Tone, toneReady: ready, toneState, toneFailed: toneLoadFailed,
+      level: outputLevel(),
+      playing: debugPlayingTracks().playing,
+    };
+  };
+  // 音が実際に出ているかを外(検査)から確かめるための口。
+  // tools/audio/audio-output-check.js が、鳴らしてから音量計の値を読む。
+  // プレイヤーの画面には何も出ないし、ゲームの動きも変えない
+  if (typeof window !== 'undefined') {
+    try { window.__mhAudioDiagnose = () => diagnose(); window.__mhAudioTestTone = () => playTestTone(); } catch (e) {}
+  }
+  // 設定画面の「音を鳴らし直す」。出口を作り直して、テスト音まで鳴らす
+  const repair = async () => {
+    if (!enabled) { enabled = true; if (typeof window !== 'undefined') window.__mhAudioEnabled = true; applyRhythmMute(); }
+    const rebuilt = await rebuildAudioCtx();
+    const ctx = await ensureAudioCtxRunning();
+    const beeped = await playTestTone();
+    return { rebuilt, beeped, running: !!ctx && ctx.state === 'running' };
+  };
   const setSeVolume = (pct) => { seVolumePct = pct; if (seBus && Tone) { try { seBus.gain.rampTo(_gainFromPct(pct), 0.05); } catch (e) {} } };
   const setBgmVolume = (pct) => { bgmVolumePct = pct; applyTrackGain(resolveTrack(previewKey || currentKey)); if (pct <= 0) { stopPreview(false); stopOthers(); } else if (enabled && currentKey && !previewKey) playBGM(currentKey); };
   const resumeIfNeeded = async () => { await ensureAudioCtxRunning(); if (Tone) { try { await Tone.start(); started = true; } catch (e) {} } if (enabled && currentKey && !bgmSource) playBGM(currentKey); };
@@ -3801,7 +3929,7 @@ const Audio_ = (() => {
     fusion: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const v = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'triangle' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.25, release: 0.5 }, volume: -10 }).connect(reverb); const seq = [[0,'C5','8n'],[0.12,'E5','8n'],[0.24,'G5','8n'],[0.36,'C6','8n'],[0.48,'E6','4n']]; seq.forEach(([tt, n, d]) => v.triggerAttackRelease(n, d, t + tt)); const bt = t + 0.6; const bell = new Tone.MetalSynth({ frequency: 800, envelope: { attack: 0.001, decay: 0.6, release: 0.3 }, harmonicity: 8, modulationIndex: 20, resonance: 5000, octaves: 1.5, volume: -14 }).connect(reverb); bell.triggerAttackRelease('16n', bt); const sparkle = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'sine' }, envelope: { attack: 0.005, decay: 0.4, sustain: 0.1, release: 0.5 }, volume: -12 }).connect(reverb); ['C6','E6','G6','C7'].forEach((n, i) => sparkle.triggerAttackRelease(n, '8n', bt + i * 0.03)); setTimeout(() => { try { v.dispose(); bell.dispose(); sparkle.dispose(); } catch (e) {} }, 2200); }
   };
 
-  return { playBGM, stopBGM, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, se };
+  return { playBGM, stopBGM, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se };
 })();
 
 // ---- part: 15-dye-and-art.jsx ----
@@ -5595,6 +5723,79 @@ const VolumeSlider = ({ label, icon, value, onChange, onInteractStart, gradient,
       </div>
       <button onClick={()=>step(1)} className="shrink-0 w-6 h-6 rounded-lg bg-slate-800 border border-white/10 text-slate-300 font-black text-xs active:scale-90 active:bg-slate-700 flex items-center justify-center select-none">＋</button>
       <span className="w-6 shrink-0 text-right text-[9px] font-mono font-black text-slate-300">{value}</span>
+    </div>
+  );
+};
+
+// 音量設定の中に置く「音が出ないとき」。
+// (2026-09-11・ユーザー報告「Google Pixel 9a でゲーム自体の音が出ない」)
+// 音が出ない原因は、アプリ側(出口が止まっている・効果音エンジンが読めていない)と
+// 端末側(メディア音量・マナーモード・別の機器へつながっている)に分かれるが、
+// どちらなのかは画面に何も出ないと切り分けようがない。
+// 出口へ実際に流れている音の大きさをメーターで見せて、そこを分けられるようにする。
+//   メーターが動く → 音は作れている。端末側(音量・出力先)を確かめる
+//   メーターが動かない → アプリ側。「音を鳴らし直す」で出口を作り直す
+const AudioTroubleshootPanel = ({ info, peak, muted, onTest, onRepair, repairing }) => {
+  const state = !info ? 'unknown' : info.ctxState === 'none' ? 'none' : info.ctxState !== 'running' ? 'suspended' : info.stalled ? 'stalled' : 'running';
+  const stateView = {
+    running: { label: '音を出せています', tone: 'text-emerald-300' },
+    stalled: { label: '止まっています', tone: 'text-red-300' },
+    suspended: { label: 'お休み中（画面をさわると戻ります）', tone: 'text-amber-300' },
+    none: { label: 'まだ開いていません', tone: 'text-slate-400' },
+    unknown: { label: '調べられませんでした', tone: 'text-slate-400' },
+  }[state];
+  // 波形の山(0〜1)は小さい音ほど見えにくいので、平方根で引き伸ばしてから%にする
+  const meterPct = Math.max(0, Math.min(100, Math.round(Math.sqrt(Math.max(0, Number(peak) || 0)) * 100)));
+  const sounding = meterPct >= 3;
+  // 効果音(Tone)はBGMとは別の出口で鳴っている。BGMが出ていても効果音だけ止まることがあるので分けて出す
+  const seView = !info ? { label: '不明', tone: 'text-slate-400' }
+    : info.toneFailed ? { label: '読み込めていません（効果音だけ出ません）', tone: 'text-red-300' }
+    : !info.toneReady ? { label: '読み込み中', tone: 'text-amber-300' }
+    : info.toneState !== 'running' ? { label: 'お休み中（「音を鳴らし直す」で戻ります）', tone: 'text-amber-300' }
+    : { label: '準備できています', tone: 'text-emerald-300' };
+  const playing = (info && info.playing && info.playing[0]) || null;
+  // はじめて遊ぶ端末は、音量が最小の1から始まる(いきなり大きな音を出さないため)。
+  // 音量1のBGMは音量100の1/500ほどしかなく、「音が出ない」と区別がつかないので、
+  // 音がオンなのに小さすぎるときはここで名指しで知らせる
+  const lowVolume = !!info && !muted && (info.bgmVolumePct <= 10 || info.seVolumePct <= 10);
+  const row = (label, value, tone) => (
+    <div className="flex items-start justify-between gap-2 py-1">
+      <span className="shrink-0 text-[10px] font-black text-slate-400">{label}</span>
+      <span className={`text-right text-[10px] font-black ${tone || 'text-slate-200'}`}>{value}</span>
+    </div>
+  );
+  return (
+    <div data-audio-troubleshoot className="mt-2 rounded-2xl border border-white/10 bg-slate-950/70 p-3 text-left">
+      {muted && <p className="mb-2 rounded-xl border border-amber-400/40 bg-amber-950/40 px-2 py-1.5 text-[10px] font-black text-amber-200">いまゲームの音はオフです。上の「🔇 音がオフです」を押してオンにしてください。</p>}
+      {lowVolume && <p data-audio-low-volume className="mb-2 rounded-xl border border-amber-400/40 bg-amber-950/40 px-2 py-1.5 text-[10px] font-black leading-relaxed text-amber-200">音量がとても小さいままです（BGM {info.bgmVolumePct} ／ SE {info.seVolumePct}）。はじめて遊ぶときは音量1から始まるので、上のスライダーを右へ動かしてください。</p>}
+      {row('音の出口', stateView.label, stateView.tone)}
+      {row('効果音エンジン', seView.label, seView.tone)}
+      {row('いま鳴っている曲', playing ? playing.src : 'なし', playing ? 'text-slate-200' : 'text-slate-400')}
+      <div className="mt-2">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[10px] font-black text-slate-400">実際に出ている音</span>
+          <span className={`text-[10px] font-black ${sounding ? 'text-emerald-300' : 'text-slate-400'}`}>{sounding ? '出ています' : '出ていません'}</span>
+        </div>
+        <div className="mt-1 h-2.5 w-full overflow-hidden rounded-full border border-white/10 bg-slate-800">
+          <div data-audio-meter className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-lime-300 transition-[width] duration-100" style={{ width: `${meterPct}%` }}></div>
+        </div>
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <button type="button" onClick={onTest} className="min-h-[44px] rounded-xl border border-indigo-300/40 bg-indigo-700 px-2 text-[11px] font-black text-white active:scale-95">🔔 テスト音</button>
+        <button type="button" onClick={onRepair} disabled={repairing} className="min-h-[44px] rounded-xl border border-fuchsia-300/40 bg-fuchsia-700 px-2 text-[11px] font-black text-white active:scale-95 disabled:opacity-60">{repairing ? '直しています…' : '🔧 音を鳴らし直す'}</button>
+      </div>
+      <p className="mt-2 text-[10px] leading-relaxed text-slate-400">
+        テスト音を押してもメーターが動かないときは、ゲーム側で音が止まっています。「音を鳴らし直す」を押してください。
+      </p>
+      <p className="mt-1 text-[10px] leading-relaxed text-slate-400">
+        メーターは動くのに聞こえないときは、端末側です。次を確かめてください。
+      </p>
+      <ul className="mt-1 space-y-0.5 text-[10px] leading-relaxed text-slate-400">
+        <li>・音量ボタンを押して、出てくる「メディア」の音量を上げる（着信音の音量とは別です）</li>
+        <li>・マナーモード／サイレントモード／おやすみ時間モードを切る</li>
+        <li>・Bluetoothイヤホンやスピーカーにつながっていないか確かめる</li>
+        <li>・音楽や動画を再生している別のアプリを閉じる</li>
+      </ul>
     </div>
   );
 };
@@ -12102,7 +12303,10 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
   },[monsterSignature,settings.sideMonsterOpacity,settings.sideMonsterMotion,settings.lightweightMode,settings.effectAmount]);
   const abilityTimerRef=useRef(null),abilityRevisionRef=useRef(0),abilityBadgeRef=useRef(null);
   const emptyCounts=()=>Object.fromEntries(RHYTHM_JUDGMENT_IDS.map(id=>[id,0]));
-  const makeRuntimeNotes=()=>chart.notes.map((note,index)=>({...note,index,done:false,activePointerId:null,holdJudgment:null,holdDeltaMs:0,...(note.type==='SLIDE'?{_rhythmSlideRenderPoints:rhythmSlidePoints(note)}:{})}));
+  // HOLD/SLIDEの追従を難易度ごとにやさしくする値を、演奏を始めるときにノーツへ焼き込む。
+  // 譜面データ(data/rhythm-mode.js)は触らないので、保存データにもランキングにも影響しない。
+  // 判定の関数は note からこの2つを読む(rhythmSlideTrackingTolerance / evaluatePosition)。
+  const makeRuntimeNotes=()=>{const tracking=rhythmSlideTrackingFor(difficulty.id);return chart.notes.map((note,index)=>({...note,index,done:false,activePointerId:null,holdJudgment:null,holdDeltaMs:0,_rhythmSlideToleranceBonusLanes:tracking.toleranceBonusLanes,_rhythmTrackingGraceMs:tracking.graceMs,...(note.type==='SLIDE'?{_rhythmSlideRenderPoints:rhythmSlidePoints(note)}:{})}));};
   const initialView=()=>({status:'loading',score:0,combo:0,maxCombo:0,last:'',fastSlow:'',counts:emptyCounts(),fast:0,slow:0,life:RHYTHM_LIFE_MAX,ability:null,result:null});
   const [view,setView]=useState(initialView);
   /* 演奏を始める前のカウントダウン(READY→3→2→1)。
@@ -14939,7 +15143,25 @@ function MasuReincarnateAnimation({
   reincarnateAnimation,
 }) {
   return (
-<div className="mh-reincarnation-animation" role="status" aria-live="polite"><div className="mh-reincarnation-light"></div><div className="mh-reincarnation-mon mh-reincarnate-stack"><DyedMonsterImage baseId={reincarnateAnimation.masu.baseId} src={reincarnateAnimation.base?.iconUrl||reincarnateAnimation.base?.imgUrl} alt={reincarnateAnimation.masu.name} masuColors={getMasuColors(reincarnateAnimation.masu)} className="w-full h-full object-contain"/><SoulRankAura soulRankStage={normalizeMasuProgression(reincarnateAnimation.masu).soulRankStage} className="is-ceremony"/><RebirthStars count={reincarnateAnimation.masu.rebirthCount} className="mh-rebirth-stars-overlay"/></div><div className="mh-reincarnation-copy"><b>転生完了！</b><span>Lv.{reincarnateAnimation.fromLevel} → Lv.{reincarnateAnimation.nextLevel}</span><span>{reincarnateAnimation.raisesSkill===false?`固有技ポイント +1（所持 ${reincarnateAnimation.keptSkillPoints}）`:`${reincarnateAnimation.skillName} Lv.${reincarnateAnimation.skillLevel}へ進化`}</span><span>強化ポイント {reincarnateAnimation.nextPoints} を振り直せます</span></div></div>
+<div className="mh-reincarnation-animation" role="status" aria-live="polite">
+      {/* 層の順番はCSSのz-indexで決めている(放射光0 → 本体1 → 粒2 → 輪3 → 閃光5 → 文字6)。
+          魂格オーラは魂格を持つ個体にしか出ないので、ここに並ぶ層だけで演出が成立するようにしてある */}
+      <div className="mh-reincarnation-light"></div>
+      <div className="mh-reincarnation-rays" aria-hidden="true"></div>
+      <div className="mh-reincarnation-mon mh-reincarnate-stack"><DyedMonsterImage baseId={reincarnateAnimation.masu.baseId} src={reincarnateAnimation.base?.iconUrl||reincarnateAnimation.base?.imgUrl} alt={reincarnateAnimation.masu.name} masuColors={getMasuColors(reincarnateAnimation.masu)} className="w-full h-full object-contain"/><SoulRankAura soulRankStage={normalizeMasuProgression(reincarnateAnimation.masu).soulRankStage} className="is-ceremony"/><RebirthStars count={reincarnateAnimation.masu.rebirthCount} className="mh-rebirth-stars-overlay"/></div>
+      {/* ① ほどけた魂が上へ昇る。--x は左右のばらけ方 */}
+      <div className="mh-reincarnation-souls" aria-hidden="true">{[-30,16,-8,34,-38,6,24,-18,40,-12,28,-24].map((x,i)=><i key={i} style={{'--i':i,'--x':x}}/>)}</div>
+      {/* ② 外周から中央へ集まる光 */}
+      <div className="mh-reincarnation-converge" aria-hidden="true">{Array.from({length:8},(_,i)=><i key={i} style={{'--i':i}}/>)}</div>
+      <div className="mh-reincarnation-halo" aria-hidden="true"></div>
+      <div className="mh-reincarnation-halo is-second" aria-hidden="true"></div>
+      <div className="mh-reincarnation-flash" aria-hidden="true"></div>
+      <div className="mh-reincarnation-title" aria-hidden="true">転　生</div>
+      {/* 何回目の転生かをその場で出す。一覧・詳細と同じバッジを大きくしただけなので、
+          あとから見返したときに同じ印で結び付く */}
+      <div className="mh-reincarnation-mark"><ReincarnateBadge count={normalizeMasuProgression(reincarnateAnimation.masu).reincarnateCount}/></div>
+      <div className="mh-reincarnation-copy"><b>転生完了！</b><span>Lv.{reincarnateAnimation.fromLevel} → Lv.{reincarnateAnimation.nextLevel}</span><span>{reincarnateAnimation.raisesSkill===false?`固有技ポイント +1（所持 ${reincarnateAnimation.keptSkillPoints}）`:`${reincarnateAnimation.skillName} Lv.${reincarnateAnimation.skillLevel}へ進化`}</span><span>強化ポイント {reincarnateAnimation.nextPoints} を振り直せます</span></div>
+    </div>
   );
 }
 
@@ -18897,6 +19119,30 @@ function MonsterHeroGame() {
   const changeSeVolume = (v) => { const nv = Math.max(0, Math.min(100, v)); setSeVolumeRaw(nv); noteUltraAudioManualChange(); setQuickMuted(false); if (!audioUnlocked) setAudioUnlocked(true); Audio_.unlock(true); };
   const changeBgmVolume = (v) => { const nv = Math.max(0, Math.min(100, v)); setBgmVolumeRaw(nv); noteUltraAudioManualChange(); setQuickMuted(false); if (!audioUnlocked) setAudioUnlocked(true); Audio_.unlock(true); };
   const audioMuted = !audioOn;
+  // 「音が出ないとき」(音量設定の中)。開いているあいだだけ音の出口を見張る
+  const [showAudioDiag, setShowAudioDiag] = useState(false);
+  const [audioDiag, setAudioDiag] = useState(null);
+  const [audioDiagPeak, setAudioDiagPeak] = useState(0);
+  const [audioRepairing, setAudioRepairing] = useState(false);
+  const audioDiagPeakRef = useRef(0);
+  const enableSoundForCheck = () => {
+    if (!audioUnlocked) setAudioUnlocked(true);
+    if (quickMuted) toggleQuickMute();
+  };
+  // テスト音は効果音エンジン(Tone)を通さない素の音。
+  // 「Toneが読めていないだけ」なのか「出口そのものが死んでいる」のかを分けるため
+  const testAudioOutput = async () => {
+    enableSoundForCheck();
+    try { await Audio_.unlock(); } catch {}
+    try { await Audio_.playTestTone(); } catch {}
+  };
+  const repairAudioOutput = async () => {
+    if (audioRepairing) return;
+    setAudioRepairing(true);
+    enableSoundForCheck();
+    try { await Audio_.repair(); } catch {}
+    setAudioRepairing(false);
+  };
   const selectAutoRuntimeBgm = (trackId) => {
     if (trackId !== '__none__' && !BGM_TRACK_BY_ID[trackId]) return;
     setAutoBgmOverride(trackId);
@@ -20797,6 +21043,25 @@ function MonsterHeroGame() {
   // 音量の保存値そのものは変えないので、モンビーを出れば元の音量へ戻る
   useEffect(() => { Audio_.setSeVolume((ultraEcoSession || rhythmScreenOpen) ? 0 : seVolume); }, [seVolume, ultraEcoSession, rhythmScreenOpen]);
   useEffect(() => { Audio_.setBgmVolume(bgmVolume); }, [bgmVolume]);
+  // 「音が出ないとき」を開いているあいだだけ、出口の状態と実際に出ている音を見張る。
+  // 閉じたら必ず止める(鳴らしているあいだ中ずっと測り続けない)
+  useEffect(() => {
+    if (!showAudioSettings || !showAudioDiag) return;
+    audioDiagPeakRef.current = 0;
+    setAudioDiagPeak(0);
+    const tick = () => {
+      let info = null;
+      try { info = Audio_.diagnose(); } catch { info = null; }
+      setAudioDiag(info);
+      const level = Number.isFinite(info?.level) ? info.level : 0;
+      // 一瞬の音でもメーターが見えるように、山は少しずつ下げながら保つ
+      audioDiagPeakRef.current = Math.max(level, audioDiagPeakRef.current * 0.82);
+      setAudioDiagPeak(audioDiagPeakRef.current);
+    };
+    tick();
+    const timer = setInterval(tick, 120);
+    return () => clearInterval(timer);
+  }, [showAudioSettings, showAudioDiag]);
 
   // 新バージョン検知: ホーム画面アプリ/背面タブ復帰時は自動再読み込みされず古いバージョンの
   // ままタップしても反応しないように見える不具合が繰り返し報告されたため、version.jsonを
@@ -27643,7 +27908,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   ) : showTitleSettings ? (
     <div className="mh-title-modal" onPointerDown={e=>e.stopPropagation()}><div className="mh-title-dialog"><div className="mh-dialog-head"><h3>設定</h3><button onClick={()=>setShowTitleSettings(false)}><X size={18}/></button></div><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowAudioSettings(true)}}>🔊 音量設定 <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowBgmArrangement(true)}}>🎼 BGMアレンジ <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowBackup(true)}}>🛡️ データ引き継ぎ <ChevronRight size={18}/></button></div></div>
   ) : showAudioSettings ? (
-    <div className="mh-title-modal"><div className="mh-title-dialog"><div className="mh-dialog-head"><h3>音量設定</h3><button onClick={()=>setShowAudioSettings(false)}><X size={18}/></button></div><button className="mh-dialog-choice" onClick={toggleQuickMute}>{audioMuted?'🔇 音がオフです':'🔊 音はオンです'}</button><VolumeSlider label="SE" icon="🔔" value={seVolume} onChange={changeSeVolume} gradient="from-cyan-500 to-indigo-500" thumbRing="border-indigo-400"/><VolumeSlider label="BGM" icon="🎵" value={bgmVolume} onChange={changeBgmVolume} gradient="from-fuchsia-500 to-pink-500" thumbRing="border-fuchsia-400"/></div></div>
+    <div className="mh-title-modal"><div className="mh-title-dialog" style={{maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',overflowY:'auto'}}><div className="mh-dialog-head"><h3>音量設定</h3><button onClick={()=>setShowAudioSettings(false)}><X size={18}/></button></div><button className="mh-dialog-choice" onClick={toggleQuickMute}>{audioMuted?'🔇 音がオフです':'🔊 音はオンです'}</button><VolumeSlider label="SE" icon="🔔" value={seVolume} onChange={changeSeVolume} gradient="from-cyan-500 to-indigo-500" thumbRing="border-indigo-400"/><VolumeSlider label="BGM" icon="🎵" value={bgmVolume} onChange={changeBgmVolume} gradient="from-fuchsia-500 to-pink-500" thumbRing="border-fuchsia-400"/><button className="mh-dialog-choice mt-3" aria-expanded={showAudioDiag} onClick={()=>setShowAudioDiag(v=>!v)}>🔧 音が出ないとき {showAudioDiag?'▲':'▼'}</button>{showAudioDiag&&<AudioTroubleshootPanel info={audioDiag} peak={audioDiagPeak} muted={audioMuted} onTest={testAudioOutput} onRepair={repairAudioOutput} repairing={audioRepairing}/>}</div></div>
   ) : showBgmArrangement ? (
     <div className="mh-title-modal"><div className="mh-title-dialog" style={{maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',overflowY:'auto'}}><div className="mh-dialog-head"><h3>BGMアレンジ</h3><button onClick={closeBgmArrangement}><X size={18}/></button></div>{(()=>{const categories=[
       {id:'basic',label:'基本',items:[['home','HOME BGM'],['title','タイトル BGM'],['autoBattle','AUTOモード BGM'],['management','M/B管理 BGM'],['clear','ゲームクリア BGM'],
@@ -28883,14 +29148,19 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const base=Object.values(ALL_PLAYER_MONSTERS)[0];
           if(!base)return null;
           const previewMasu=(count)=>({id:`reincarnate-preview-${count}`,baseId:base.id,name:base.name,bondXp:0,rebirthCount:3,reincarnateCount:count,colors:[]});
-          const playPreview=()=>{const masu=previewMasu(3);setReincarnateAnimation({masu,base,fromLevel:100,nextLevel:1,raisesSkill:false,keptSkillPoints:1,nextPoints:13});setTimeout(()=>setReincarnateAnimation(null),4100);};
+          // 魂格オーラは魂格を持つ個体にしか出ない。演出そのものは魂格0でも成立していないといけないので、
+          // 「魂格なし」と「魂格あり」の両方をここから再生できるようにしてある
+          const playPreview=(soulRankStage=0)=>{const masu={...previewMasu(3),soulRankStage};setReincarnateAnimation({masu,base,fromLevel:100,nextLevel:1,raisesSkill:false,keptSkillPoints:1,nextPoints:13});setTimeout(()=>setReincarnateAnimation(null),4100);};
           return <main data-mh-screen className="flex-1 flex flex-col h-full min-h-0 p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
             <header className="flex items-center gap-2 mb-3 shrink-0"><button onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><div><small className="text-[8px] font-black text-cyan-300">DEBUG・本番と同じ ReincarnateAura / RebirthStars</small><h2 className="text-sm font-black">転生表示確認</h2></div></header>
             <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
             <p className="mb-3 text-[9px] leading-relaxed text-slate-400">表示用の一時データだけを使います。所持マスモン・転生回数・ダイヤは変更も保存もしません。</p>
             <section className="grid grid-cols-2 gap-3">{[0,1,2,3].map(count=>{const masu=previewMasu(count);return <article key={count} className="rounded-2xl border border-white/10 bg-slate-900/90 p-3 text-center"><div className="relative mx-auto w-16 h-16 mh-reincarnate-stack"><div className="relative z-[1] w-16 h-16 overflow-hidden rounded-full border border-pink-400/40"><DyedMonsterImage baseId={base.id} src={base.iconUrl||base.imgUrl} alt={base.name} masuColors={[]} className="w-full h-full object-cover"/></div><SoulRankAura soulRankStage={Math.max(0,Math.min(5,count))}/><RebirthStars count={3} className="mh-rebirth-stars-overlay"/></div><b className="mt-3 block text-[11px] text-white">{count===0?'未転生':count===1?'1回：青画像':count===2?'2回：黄画像':'3回：赤画像'}</b></article>})}</section>
             </div>
-            <button onClick={playPreview} className="mt-3 shrink-0 min-h-[52px] rounded-2xl border-2 border-violet-300 bg-gradient-to-r from-violet-700 to-blue-600 text-sm font-black text-white active:scale-95">転生演出を再生</button>
+            <div className="mt-3 shrink-0 grid grid-cols-2 gap-2">
+              <button data-reincarnate-preview="plain" onClick={()=>playPreview(0)} className="min-h-[52px] rounded-2xl border-2 border-violet-300 bg-gradient-to-r from-violet-700 to-blue-600 text-[12px] font-black text-white active:scale-95">転生演出を再生<small className="block text-[8px] font-black text-violet-200">魂格なし</small></button>
+              <button data-reincarnate-preview="soul" onClick={()=>playPreview(4)} className="min-h-[52px] rounded-2xl border-2 border-rose-300 bg-gradient-to-r from-rose-700 to-amber-600 text-[12px] font-black text-white active:scale-95">転生演出を再生<small className="block text-[8px] font-black text-rose-100">魂格Ⅳ</small></button>
+            </div>
           </main>;
         })()}
 
@@ -33307,7 +33577,56 @@ const createAnimationStyle = () => {
     @media(prefers-reduced-motion:reduce){.mh-transcend-animation *{animation-duration:.01ms!important;animation-iteration-count:1!important}.mh-transcend-copy,.mh-transcend-mark,.mh-transcend-title{opacity:1;transform:none}.mh-transcend-flash,.mh-transcend-shock,.mh-transcend-rays,.mh-transcend-converge{display:none}}
     .mh-rebirth-stars-overlay,.mh-home-masumon-stars{z-index:4}.mh-home-masumon-bob>div:first-child,.mh-reincarnation-mon>div:first-child{position:relative;z-index:1}
 
-    .mh-reincarnation-animation{position:fixed;inset:0;z-index:51000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at 50% 48%,#172554 0,#0f172a 34%,#020617 70%);pointer-events:auto;touch-action:none}.mh-reincarnation-light{position:absolute;inset:0;z-index:0;background:radial-gradient(circle at 50% 48%,#fff 0,#fff8 24%,transparent 62%);opacity:0;pointer-events:none;animation:mhReincarnationLight 4s ease-out forwards}.mh-reincarnation-mon{position:relative;z-index:1;width:140px;height:140px;animation:mhReincarnationMon 4s ease-out forwards}.mh-reincarnate-aura.is-ceremony{inset:-48%;opacity:0;animation:mhReincarnationAura 4s cubic-bezier(.2,.75,.25,1) forwards}.mh-reincarnate-aura.is-ceremony .is-main{animation-duration:1.45s}.mh-reincarnate-aura.is-ceremony .is-back{animation-duration:1.8s}.mh-reincarnate-aura.is-ceremony .is-foot{animation-duration:1.1s}.mh-reincarnate-aura.is-ceremony img{filter:brightness(1.1) drop-shadow(0 0 8px #fff8)}.mh-reincarnation-copy{position:absolute;bottom:calc(8% + env(safe-area-inset-bottom));z-index:4;display:flex;flex-direction:column;align-items:center;color:#e0f2fe;font-size:11px;font-weight:900;animation:mhReincarnationCopy 4s ease-out forwards}.mh-reincarnation-copy b{font-size:25px;color:#fff;text-shadow:0 0 12px #818cf8}.mh-reincarnation-copy span{margin-top:2px}@keyframes mhReincarnationLight{0%,43%{opacity:0}48%{opacity:.36}56%,100%{opacity:0}}@keyframes mhReincarnationMon{0%{opacity:1;transform:translateY(8px) scale(.96)}18%{transform:none}42%{transform:scale(1.02)}55%,100%{opacity:1;transform:none}}@keyframes mhReincarnationAura{0%,16%{opacity:0;transform:scale(.88)}30%{opacity:.86;transform:scale(1)}47%{opacity:1;transform:scale(1.13);filter:brightness(1.45)}64%{opacity:.9;transform:scale(1);filter:brightness(1)}100%{opacity:1;transform:scale(1);filter:brightness(1)}}@keyframes mhReincarnationCopy{0%,55%{opacity:0;transform:translateY(12px)}68%,88%{opacity:1;transform:none}100%{opacity:0}}@media(max-height:620px){.mh-reincarnation-copy{bottom:calc(4% + env(safe-area-inset-bottom))}}@media(prefers-reduced-motion:reduce){.mh-reincarnate-flame,.mh-reincarnate-sparks,.mh-reincarnate-sparks::before,.mh-reincarnate-sparks::after{animation:none}.mh-reincarnation-animation *{animation-duration:.01ms!important}}
+    /* 転生の演出。「一度ほどけて、生まれ直す」を4秒で見せる。
+       魂格オーラ(SoulRankAura)は魂格を持つ個体にしか出ないため、以前はオーラの無い個体だと
+       全面光と文字だけになり、限界突破・超越の演出と比べて明らかに地味だった
+       (2026-09-11・ユーザー指摘「転生のオーラをなくしたから転生したときの演出が地味になった」)。
+       そこで、オーラの有無に関係なく必ず出る層をCSSだけで足してある(画像は増やさない)。
+         ① 魂がほどける  … 本体から光の粒が上へ昇る
+         ② 収束          … 外から中央へ光が集まり、繭の輪が閉じる
+         ③ 閃光          … 白フラッシュ。本体がいったん白へ飛ぶ
+         ④ 生まれ直し    … 衝撃波の輪2枚・回転する放射光・本体が弾んで戻る
+         ⑤ 名乗り        … 「転　生」の大文字 →「転生 ×N」のバッジ → 結果のコピー
+       色は 藍→紫→シアン。金/桃の超越、琥珀の限界突破と取り違えないため。 */
+    .mh-reincarnation-animation{position:fixed;inset:0;z-index:51000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at 50% 48%,#172554 0,#0f172a 34%,#020617 70%);pointer-events:auto;touch-action:none}
+    /* 全面光。既存の穏やかな広がり(本体より背面)はそのまま残す */
+    .mh-reincarnation-light{position:absolute;inset:0;z-index:0;background:radial-gradient(circle at 50% 48%,#fff 0,#fff8 24%,transparent 62%);opacity:0;pointer-events:none;animation:mhReincarnationLight 4s ease-out forwards}
+    /* ④ 回転する放射光。生まれ直した瞬間に開いて、ゆっくり閉じる */
+    /* 中心は transform では決めない(回転と拭き合うため)。left/top と負のマージンで据える */
+    .mh-reincarnation-rays{position:absolute;z-index:0;left:50%;top:48%;width:180vmax;height:180vmax;margin:-90vmax 0 0 -90vmax;opacity:0;pointer-events:none;background:repeating-conic-gradient(from 0deg,#a5b4fc55 0 4deg,transparent 4deg 16deg);animation:mhReincarnationRays 4s ease-out forwards}
+    .mh-reincarnation-mon{position:relative;z-index:1;width:140px;height:140px;animation:mhReincarnationMon 4s cubic-bezier(.2,.8,.3,1) forwards}
+    /* ① ほどけた魂。本体の足元から8粒が上へ昇り続ける */
+    /* 本体より縦に長い枠にして、足元から出た光が頭の上まで抜けていくようにする */
+    .mh-reincarnation-souls{position:absolute;z-index:2;width:190px;height:300px;pointer-events:none}
+    .mh-reincarnation-souls i{position:absolute;left:50%;bottom:8%;width:7px;height:7px;margin-left:-3.5px;border-radius:50%;background:radial-gradient(circle,#fff,#bae6fd 42%,#818cf8);box-shadow:0 0 12px #a5b4fc,0 0 22px #38bdf877;opacity:0;animation:mhReincarnationSoul 2.3s ease-out infinite;animation-delay:calc(var(--i)*.13s)}
+    /* ② 収束。外周8方向から中央へ吸い込まれ、繭が閉じる */
+    .mh-reincarnation-converge{position:absolute;inset:0;z-index:2;pointer-events:none}
+    .mh-reincarnation-converge i{position:absolute;left:50%;top:48%;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;background:radial-gradient(circle,#fff,#c7d2fe 45%,#6366f1);box-shadow:0 0 14px #a5b4fc,0 0 30px #6366f199;opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-62vmin);animation:mhReincarnationConverge 1.15s cubic-bezier(.35,0,.2,1) .18s forwards}
+    /* ④ 衝撃波の輪。繭が割れて広がる */
+    .mh-reincarnation-halo{position:absolute;z-index:3;width:170px;height:170px;border-radius:50%;border:3px solid #c7d2fe;box-shadow:0 0 24px #818cf8aa,inset 0 0 22px #38bdf866;opacity:0;pointer-events:none;animation:mhReincarnationHalo 4s cubic-bezier(.15,.75,.3,1) forwards}
+    .mh-reincarnation-halo.is-second{width:230px;height:230px;border-color:#67e8f9;border-width:2px;box-shadow:0 0 22px #22d3eeaa,inset 0 0 20px #818cf866;animation-delay:.16s}
+    /* ③ 閃光 */
+    .mh-reincarnation-flash{position:absolute;inset:0;z-index:5;background:#fff;opacity:0;pointer-events:none;animation:mhReincarnationFlash 4s ease-out forwards}
+    /* ⑤ 名乗り */
+    .mh-reincarnation-title{position:absolute;z-index:6;top:calc(env(safe-area-inset-top) + 21%);font-size:clamp(36px,14vw,62px);font-weight:1000;letter-spacing:.14em;color:#f5f3ff;opacity:0;pointer-events:none;text-shadow:0 0 18px #818cf8,0 0 44px #38bdf8;animation:mhReincarnationTitle 4s ease-out forwards}
+    .mh-reincarnation-mark{position:absolute;z-index:6;top:62%;opacity:0;transform:scale(.4);pointer-events:none;animation:mhReincarnationMark 4s ease-out forwards}
+    .mh-reincarnation-mark .mh-reincarnate-badge{position:relative;left:auto;bottom:auto;transform:none;padding:7px 16px;border-width:2px;font-size:17px;box-shadow:0 2px 12px #020617,0 0 20px #818cf8}
+    .mh-reincarnate-aura.is-ceremony{inset:-48%;opacity:0;animation:mhReincarnationAura 4s cubic-bezier(.2,.75,.25,1) forwards}.mh-reincarnate-aura.is-ceremony .is-main{animation-duration:1.45s}.mh-reincarnate-aura.is-ceremony .is-back{animation-duration:1.8s}.mh-reincarnate-aura.is-ceremony .is-foot{animation-duration:1.1s}.mh-reincarnate-aura.is-ceremony img{filter:brightness(1.1) drop-shadow(0 0 8px #fff8)}
+    .mh-reincarnation-copy{position:absolute;bottom:calc(8% + env(safe-area-inset-bottom));z-index:6;display:flex;flex-direction:column;align-items:center;padding:0 14px;text-align:center;color:#e0f2fe;font-size:11px;font-weight:900;animation:mhReincarnationCopy 4s ease-out forwards}.mh-reincarnation-copy b{font-size:25px;color:#fff;text-shadow:0 0 12px #818cf8}.mh-reincarnation-copy span{margin-top:2px}
+    @keyframes mhReincarnationLight{0%,43%{opacity:0}48%{opacity:.36}56%,100%{opacity:0}}
+    /* 本体: 沈む → 白へ飛ぶ(閃光) → 小さく生まれ直して弾む → 等倍 */
+    @keyframes mhReincarnationMon{0%{opacity:1;transform:translateY(10px) scale(.96);filter:none}20%{transform:translateY(2px) scale(.99);filter:brightness(1.15)}28%{transform:translateY(0) scale(.9);filter:brightness(2.6) saturate(.25)}32%{opacity:.9;transform:scale(.62);filter:brightness(4) saturate(0)}35%{opacity:.25;transform:scale(.34);filter:brightness(5) saturate(0)}40%{opacity:1;transform:scale(.5);filter:brightness(2.2) saturate(.5)}48%{transform:scale(1.14);filter:none}54%{transform:scale(.97)}60%,100%{opacity:1;transform:none;filter:none}}
+    @keyframes mhReincarnationSoul{0%{opacity:0;transform:translate(calc(var(--x)*1px),0) scale(.45)}14%{opacity:1;transform:translate(calc(var(--x)*1.3px),-30px) scale(1)}100%{opacity:0;transform:translate(calc(var(--x)*2.4px),-215px) scale(.25)}}
+    @keyframes mhReincarnationConverge{0%{opacity:0}22%{opacity:1}88%{opacity:1;transform:rotate(calc(var(--i)*45deg)) translateY(-7vmin) scale(.7)}100%{opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(0) scale(.2)}}
+    @keyframes mhReincarnationFlash{0%,30%{opacity:0}34%{opacity:.92}46%,100%{opacity:0}}
+    @keyframes mhReincarnationHalo{0%,31%{opacity:0;transform:scale(.18)}37%{opacity:1;transform:scale(.55)}62%{opacity:.35;transform:scale(1.75)}80%,100%{opacity:0;transform:scale(2.3)}}
+    @keyframes mhReincarnationRays{0%,31%{opacity:0;transform:rotate(0) scale(.7)}40%{opacity:.8;transform:rotate(12deg) scale(1)}66%{opacity:.28;transform:rotate(30deg) scale(1.06)}100%{opacity:0;transform:rotate(44deg) scale(1.1)}}
+    @keyframes mhReincarnationTitle{0%,31%{opacity:0;transform:scale(1.85);letter-spacing:.5em}39%{opacity:1;transform:scale(1);letter-spacing:.14em}50%{opacity:1}60%,100%{opacity:0;transform:scale(.94)}}
+    @keyframes mhReincarnationMark{0%,50%{opacity:0;transform:scale(.4)}57%{opacity:1;transform:scale(1.18)}62%{transform:scale(1)}100%{opacity:1;transform:scale(1)}}
+    @keyframes mhReincarnationAura{0%,16%{opacity:0;transform:scale(.88)}30%{opacity:.86;transform:scale(1)}47%{opacity:1;transform:scale(1.13);filter:brightness(1.45)}64%{opacity:.9;transform:scale(1);filter:brightness(1)}100%{opacity:1;transform:scale(1);filter:brightness(1)}}
+    @keyframes mhReincarnationCopy{0%,55%{opacity:0;transform:translateY(12px)}64%,97%{opacity:1;transform:none}100%{opacity:0}}
+    @media(max-height:620px){.mh-reincarnation-copy{bottom:calc(4% + env(safe-area-inset-bottom))}.mh-reincarnation-mon{width:118px;height:118px}.mh-reincarnation-souls{width:160px;height:250px}.mh-reincarnation-title{top:calc(env(safe-area-inset-top) + 13%);font-size:clamp(30px,11vw,50px)}.mh-reincarnation-mark{top:64%}.mh-reincarnation-mark .mh-reincarnate-badge{padding:5px 12px;font-size:14px}}
+    @media(prefers-reduced-motion:reduce){.mh-reincarnate-flame,.mh-reincarnate-sparks,.mh-reincarnate-sparks::before,.mh-reincarnate-sparks::after{animation:none}.mh-reincarnation-animation *{animation-duration:.01ms!important}.mh-reincarnation-souls,.mh-reincarnation-converge,.mh-reincarnation-rays,.mh-reincarnation-halo,.mh-reincarnation-flash,.mh-reincarnation-title{display:none}.mh-reincarnation-copy,.mh-reincarnation-mark{opacity:1;transform:none}}
     /* 限界突破の演出。転生とは別物として、上へ突き抜ける光と、最後に増える星で見せる */
     .mh-breakthrough-animation{position:fixed;inset:0;z-index:51000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle,#f59e0b55,#020617 64%);pointer-events:auto;touch-action:none}
     .mh-breakthrough-ring{position:absolute;width:210px;height:210px;border:4px solid #fcd34d;border-radius:50%;animation:mhBreakRing 3.6s cubic-bezier(.2,.7,.3,1) forwards}

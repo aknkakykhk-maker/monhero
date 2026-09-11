@@ -108,9 +108,12 @@ for(const offset of [50,-50]){
 }
 
 console.log('\n--- 実装ガード ---');
+// 引数の並びまで丸ごと一致で見ていたので、候補の比べ方に項目が増えるたびに落ちていた
+// (2026-09-11に「同じ時刻なら細いほうを優先」を足して落ちた)。
+// ここで見たいのは「過去側と未来側を別々のbestへ絞っているか」なので、そこだけを見る。
 ok('過去側と未来側を別々に絞る',
-  /passedBest=candidate\(passedBest,note,index,noteTime,inside,distance,true\)/.test(source)
-  &&/upcomingBest=candidate\(upcomingBest,note,index,noteTime,inside,distance,false\)/.test(source));
+  /passedBest=candidate\(passedBest,note,index,noteTime,inside,distance,true/.test(source)
+  &&/upcomingBest=candidate\(upcomingBest,note,index,noteTime,inside,distance,false/.test(source));
 ok('共通の所有境界関数を通す',
   /const rhythmChooseTapTarget=\(passed,upcoming,now\)=>/.test(source)
   &&/const chosen=rhythmChooseTapTarget\(passedBest,upcomingBest,now\);/.test(source));

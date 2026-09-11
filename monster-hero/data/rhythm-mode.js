@@ -458,6 +458,15 @@ const RHYTHM_PERF=(()=>{
 
 const RHYTHM_PROJECTION_TOP_SCALE=.18;
 const RHYTHM_NOTE_WIDTH_RATIO=.78;
+// HOLD/SLIDEの帯の太さ。ノーツの頭(.78)より細い。
+//
+// 【2026-09-11・一度 .78 へそろえようとして戻した】
+// 見えている帯(幅2で42px)と、追従で実際に許される幅(±0.82レーン=108px)には
+// 2.6倍の食い違いがある。細く見えるぶん細く狙ってしまうので頭と同じ .78 にしたところ、
+// 隣のノーツの帯が「何も無いはず」の場所へはみ出した
+// (tools/mode/rhythm-canvas-render-check.js が検出)。食い違いは 2.56→2.10倍に
+// なるだけで得が小さく、見た目の衝突に見合わないため戻した。
+// 「狙いどころが細く見える」問題は、帯を太くする以外の見せ方で別途考える。
 const RHYTHM_BODY_WIDTH_RATIO=.64;
 // 入力側の余白(サブレーン)。見えている帯のふちギリギリを押したときに
 // 「外れた」ことにしないためのもの。指の当たりは点ではなく面なので、
@@ -827,6 +836,24 @@ const rhythmLaneCoordinateAtPoint=(clientX,clientY,rect)=>{
   // 少しはみ出した値がそのまま使われることはない。
   return (nx-left)/laneWidth-.5;
 };
+// 判定ラインの高さ(プレイエリアの下から12% ＝ y比0.88)。
+const RHYTHM_JUDGMENT_LINE_Y_RATIO=.88;
+// HOLD/SLIDEを押さえ続けているあいだの「指がどのレーンにいるか」。
+//
+// 【2026-09-11・「スライドの判定幅が細か過ぎる」のいちばんの原因】
+// ふつうのレーン座標は**指のその場の高さ**で台形の幅を決める。レーンは奥ほど狭いので、
+// 判定ラインの上の正しい位置に指があっても、指が上へ流れただけでレーン座標が外へ膨らむ。
+// ずれの大きさは |レーン-2| × (scale(0.88)/scale(y) - 1) で、エリア高700px想定だと
+// 判定ラインの140px上・端のレーンで0.556レーン。幅2のSLIDEの許容0.82レーンの68%を、
+// **横に一切ずれていないのに**食いつぶしていた(中央のレーンでは0なので、端だけ理不尽に落ちる)。
+//
+// 追従の的(rhythmSlideExpectedLane)は「いまの時刻＝判定ラインの上」の位置なので、
+// 比べる相手も判定ラインの高さで測るのが筋。指のxはそのまま使い、高さだけを揃える。
+// 許容の数字は1つも変えていない。
+const rhythmTrackingLaneCoordinateAtPoint=(clientX,clientY,rect)=>{
+  if(!rect||!Number.isFinite(rect.height)||rect.height<=0)return rhythmLaneCoordinateAtPoint(clientX,clientY,rect);
+  return rhythmLaneCoordinateAtPoint(clientX,rect.top+rect.height*RHYTHM_JUDGMENT_LINE_Y_RATIO,rect);
+};
 const rhythmSubLaneCoordinateAtPoint=(clientX,clientY,rect)=>{
   const coordinate=rhythmLaneCoordinateAtPoint(clientX,clientY,rect);
   return coordinate===null?null:(coordinate+.5)*2;
@@ -883,13 +910,48 @@ const rhythmNoteWantsEndFlick=note=>{
   return type==='HOLD'||type==='SLIDE';
 };
 const RHYTHM_SLIDE_TOLERANCE_LANES = .82;
+// SLIDEの追従を、難易度ごとにやさしくする。
+//
+// 【2026-09-11・ユーザー指示】
+// 「スライドノーツの判定幅が細か過ぎてかなりむずい / 難易度によって細かさを調整してほしい /
+//   もちろん難しい曲なら細かくてもいい」
+//
+// それまで追従の許容も猶予も全難易度で同じ1つの値だった。難易度差は譜面の中身
+// (帯の幅)だけで付いていて、しかも**MASTERがいちばん厳しい**状態になっていた。
+// 配信中の譜面の実測: HARD 191本中163本が幅3(±1.07レーン) / EXPERT 202本中186本が幅3 /
+// MASTER 228本中210本が幅2(±0.82レーン)。つまり上の難易度ほど細い帯を使っている。
+//
+//   toleranceBonusLanes … 追従の許容へ足すレーン数。MASTERは0＝これまでどおり
+//   graceMs             … 的から外れてから失敗にするまでの猶予(ms)。MASTERは120＝これまでどおり
+//
+// 猶予にも差を付けるのは、経路の速い区間では許容だけでは足りないため。
+// 配信譜面の移動速度はp90で7.2レーン/秒あり、そこでは幅2の許容0.82レーンを
+// **114msで使い切る**（＝従来の猶予120msと同じ桁）。許容と猶予は掛け算で効く。
+// 上限は200msに留める(HOLD/SLIDEの持ち替え猶予 RHYTHM_HOLD_HANDOVER_GRACE_MS と同じ)。
+const RHYTHM_SLIDE_TRACKING_BY_DIFFICULTY = Object.freeze({
+  EASY:   Object.freeze({ toleranceBonusLanes:.40, graceMs:200 }),
+  NORMAL: Object.freeze({ toleranceBonusLanes:.32, graceMs:190 }),
+  HARD:   Object.freeze({ toleranceBonusLanes:.24, graceMs:175 }),
+  EXPERT: Object.freeze({ toleranceBonusLanes:.12, graceMs:150 }),
+  MASTER: Object.freeze({ toleranceBonusLanes:0,   graceMs:120 }),
+});
+// 保存値も譜面も持たない「そのときの難易度」を判定へ渡すために、演奏を始めるときへ
+// ノーツ1つ1つへ焼き込む(makeRuntimeNotes)。関数の引数を増やさずに済み、
+// 譜面データそのものは触らないので保存データにもランキングにも影響しない。
+const rhythmSlideTrackingFor = difficultyId =>
+  RHYTHM_SLIDE_TRACKING_BY_DIFFICULTY[String(difficultyId||'').toUpperCase()]
+  || RHYTHM_SLIDE_TRACKING_BY_DIFFICULTY.MASTER;
 // HOLD・SLIDEの終わり(離す・終点フリック)の判定も、単発のタップと同じ表を使う。
 // 数字を別に持つと、タップだけ緩めて終端が置き去りになる。判定表のいちばん外側から作る。
 const RHYTHM_RELEASE_MAX_MS = RHYTHM_INPUT_MATCH_WINDOW_MS;
 const RHYTHM_RELEASE_DEFER_ARM_MS = 100;
 const RHYTHM_RELEASE_AUTO_MISS_ARM_MS = 180;
 const RHYTHM_RELEASE_JUDGMENT_IDS = Object.freeze(['MARVELOUS','EXCELLENT','GREAT','GOOD','BAD','MISS']);
-const rhythmSlideTrackingTolerance=(note,chartTimeMs)=>RHYTHM_SLIDE_TOLERANCE_LANES+(rhythmSlideWidthAt(note,chartTimeMs)-2)/4;
+const rhythmSlideToleranceBonus=note=>{
+  const bonus=Number(note?._rhythmSlideToleranceBonusLanes);
+  return Number.isFinite(bonus)&&bonus>0?bonus:0;
+};
+const rhythmSlideTrackingTolerance=(note,chartTimeMs)=>RHYTHM_SLIDE_TOLERANCE_LANES+(rhythmSlideWidthAt(note,chartTimeMs)-2)/4+rhythmSlideToleranceBonus(note);
 const rhythmJudgeRelease=deltaMs=>{
   const value=Math.abs(Number(deltaMs));
   if(!Number.isFinite(value))return 'MISS';
@@ -1244,10 +1306,12 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
       ['resize','scroll'].forEach(type=>window.visualViewport.addEventListener(type,invalidateAreaRect,{passive:true}));
     }
   }
+  // 追従専用。指の高さではなく判定ラインの高さでレーンを測る
+  // (rhythmTrackingLaneCoordinateAtPoint の説明を参照)
   const laneCoordinate=(clientX,clientY)=>{
     const rect=areaRect();
     if(!rect)return null;
-    return rhythmLaneCoordinateAtPoint(clientX,clientY,rect);
+    return rhythmTrackingLaneCoordinateAtPoint(clientX,clientY,rect);
   };
   const estimatedSongMs=session=>{
     const elapsed=Math.max(0,nowPerf()-session.startPerfMs);
@@ -1313,7 +1377,9 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
     }
     if(!bad){session.trackingBadSincePerf=null;return;}
     if(session.trackingBadSincePerf==null)session.trackingBadSincePerf=pos.perfMs;
-    if(pos.perfMs-session.trackingBadSincePerf<RHYTHM_MID_TRACKING_GRACE_MS)return;
+    const graceMs=Number(session.note?._rhythmTrackingGraceMs)>0
+      ?Number(session.note._rhythmTrackingGraceMs):RHYTHM_MID_TRACKING_GRACE_MS;
+    if(pos.perfMs-session.trackingBadSincePerf<graceMs)return;
     session.note.holdJudgment='MISS';
     session.failed=true;
     // 猶予を超えて外れたままなら、指を離すのを待たずその場でMISS確定する。
@@ -1724,10 +1790,52 @@ const rhythmChooseTapTarget=(passed,upcoming,now)=>{
   );
   return now>=switchAt?upcoming:passed;
 };
+// 1フレームに複数の指が来たとき、どの入力から先に相手を決めるか。
+//
+// 【2026-09-11・指を置いた順で結果が変わっていた】
+// 入力は先に処理したものが claimed で勝つ「早い者勝ち」で、並び順は
+// Array.from(e.touches) の順＝**指が画面に触れた順**。位置とは何の関係もない。
+// そのため同じ配置でも、置いた順で片方が空打ちになりノーツが1つ見逃しになった。
+//
+//   実測: X=sub0〜2(中心1) / Y=sub3〜5(中心4) が同時刻。
+//         f1=sub2.6(どちらの内側でもない・Yの中心に近い) / f2=sub4.0(Yの内側だけ)
+//     順[f1,f2] … f1がYを取り、f2は行き先が無く空打ち → **Xが見逃しMISS**
+//     順[f2,f1] … f2がY、f1がX。両方取れる
+//
+// f2は「Yしか選べない」のに、f1は「XでもYでもよい」。選べる先が狭いほうを先に通せば、
+// 広いほうは残りへ回れる。ここでは「どれかのノーツの帯の内側にいるか」を狭さの目安にする
+// (内側にいる指は、その帯を狙っているのがはっきりしている)。
+// 並べ替えは安定ソートなので、同じ区分どうしの順番は触れた順のまま変わらない。
+const rhythmOrderInputsForMatch=(inputs,isInsideSomeNote)=>{
+  const list=Array.isArray(inputs)?inputs:[];
+  if(list.length<2)return list;
+  return list
+    .map((input,order)=>({input,order,inside:isInsideSomeNote(input)?0:1}))
+    .sort((a,b)=>a.inside-b.inside||a.order-b.order)
+    .map(entry=>entry.input);
+};
 const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
   const source=Array.isArray(notes)?notes:[],claimed=new Set(),seenInputs=new Set(),now=Number(nowMs),offset=Number(offsetMs)||0;
   const [matchStart,matchEnd]=rhythmInputMatchBounds(source,now,offset);
-  return (Array.isArray(inputs)?inputs:[]).map(input=>{
+  // 相手を決める前に、選べる先が狭い入力から順に並べ替える(上の説明)。
+  // 見るのは位置だけで、時刻の取り合い(switchAt)には一切触れない。
+  const insideSomeNote=input=>{
+    const coordinate=Number(input?.subLaneCoordinate);
+    if(!Number.isFinite(coordinate))return false;
+    for(let index=matchStart;index<matchEnd;index++){
+      const note=source[index];
+      if(!note||note.done||note.activePointerId!==null||!RHYTHM_NOTE_TYPES.includes(note.type))continue;
+      if(Math.abs(now-(Number(note.timeMs)+offset))>RHYTHM_INPUT_MATCH_WINDOW_MS)continue;
+      const span=rhythmNoteHasVariableSpan(note)
+        ?(()=>{const projected=rhythmProjectSubLaneSpan(note.subLane,note.subLaneWidth,1);
+               return {start:projected.subLane,end:projected.subLane+projected.subLaneWidth};})()
+        :rhythmSlideInputSpan(note);
+      if(!span)continue;
+      if(coordinate>=span.start&&coordinate<=span.end)return true;
+    }
+    return false;
+  };
+  return rhythmOrderInputsForMatch(inputs,insideSomeNote).map(input=>{
     const key=String(input?.inputKey??'');
     if(!key||seenInputs.has(key))return {input,target:null,deltaMs:null};
     seenInputs.add(key);
@@ -1801,14 +1909,24 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
     // という状態だった(2026-09-05・実機の指摘「タップ判定の巻き込みもまだある」)。
     // 近いほうを選べばBが取れる。ほかの叩き方(16分・8分・3連符・連打の取りこぼし)は
     // 結果が変わらないことを tools/mode/rhythm-tap-target-check.js で確かめている。
-    const candidate=(current,note,index,noteTime,inside,distance,preferLater)=>{
-      if(!current)return {note,index,noteTime,inside,distance};
+    const candidate=(current,note,index,noteTime,inside,distance,preferLater,span)=>{
+      const made={note,index,noteTime,inside,distance,span};
+      if(!current)return made;
       // 時刻がいちばん端のものを選ぶ。過ぎている側は後ろ、まだ来ていない側は前
       if(noteTime!==current.noteTime)
-        return (preferLater?noteTime>current.noteTime:noteTime<current.noteTime)?{note,index,noteTime,inside,distance}:current;
-      // 同じ時刻なら、内側にあるほう → それも同じなら押した位置に近いほう
-      if(inside!==current.inside)return inside?{note,index,noteTime,inside,distance}:current;
-      return distance<current.distance?{note,index,noteTime,inside,distance}:current;
+        return (preferLater?noteTime>current.noteTime:noteTime<current.noteTime)?made:current;
+      // 同じ時刻なら、内側にあるほう
+      if(inside!==current.inside)return inside?made:current;
+      // 【2026-09-11】どちらの内側にもいるときは、**細いほう**を先に見る。
+      // 幅の広いノーツと細いノーツが同じ時刻で重なっていると、細いほうの内側を
+      // 押しているのに「中心がたまたま近い」広いほうが取られていた
+      // (実測: 全幅TAP(中心5)と幅1TAP(sub5〜6,中心5.5)が重なるとき、sub5.2を押すと全幅が取れる)。
+      // 細い帯をわざわざ押しているのだから、狙いはそちら。取られた広いほうは
+      // もう片方の指が来るまで残るので、1入力で2つ崩れる形にもなっていた。
+      if(inside&&current.inside&&Number.isFinite(span)&&Number.isFinite(current.span)&&span!==current.span)
+        return span<current.span?made:current;
+      // それも同じなら押した位置に近いほう
+      return distance<current.distance?made:current;
     };
     let passedBest=null,upcomingBest=null;
     for(let index=matchStart;index<matchEnd;index++){
@@ -1830,8 +1948,9 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
       // 効かない(指はもう降りている)。巻き込みが起きるのはTAPなので、TAPだけに限る。
       if(now<noteTime&&note.type==='TAP'&&timeDistance>RHYTHM_COMBO_SAFE_WINDOW_MS)continue;
       const distance=spatialDistance(note),inside=isInside(note);
-      if(now>=noteTime)passedBest=candidate(passedBest,note,index,noteTime,inside,distance,true);
-      else upcomingBest=candidate(upcomingBest,note,index,noteTime,inside,distance,false);
+      const noteSpan=inputSpan(note),spanWidth=noteSpan?Number(noteSpan.width):NaN;
+      if(now>=noteTime)passedBest=candidate(passedBest,note,index,noteTime,inside,distance,true,spanWidth);
+      else upcomingBest=candidate(upcomingBest,note,index,noteTime,inside,distance,false,spanWidth);
     }
     // 過ぎている側とまだ来ていない側の両方がある場合は、判定ランクの良し悪しではなく
     // 「ノーツ間のどこまでを前ノーツの所有時間にするか」で決める。
