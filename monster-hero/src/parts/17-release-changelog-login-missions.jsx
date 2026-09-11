@@ -109,6 +109,12 @@ const HIDDEN_UPDATE_NOTICE_IDS = new Set((typeof CHANGELOG !== 'undefined' ? CHA
 // 以前は type がタブ名と完全一致するものだけを出していたため、fix / feature / market と
 // 書いた項目がどちらのタブにも出ず、更新履歴に載せたつもりで載っていなかった。
 // 種別を新しく足しても消えないよう、下の CHANGELOG_ISSUE_TAB_TYPES 以外は必ず更新情報へ拾う
+// ★一度きりの補正に使う保存キー(新しく足したもの。既存キーは触らない・CLAUDE.md ⑦)。
+// 週末ゲリラ杯を公開へ乗せてから visibleFrom を足すまでの15分間(2026-09-11 13:33〜13:48)、
+// まだ始まっていないイベントの項目が一覧に並んでいた。そのあいだに一覧を開いた端末では
+// 既読になってしまい、15:00に出し直したときNEWが付かない
+// (2026-09-11・ユーザー指摘「イベント来たけどお知らせにNEWがついてない」)。
+const CHANGELOG_TIMED_SEEN_FIX_KEY = 'mh_changelog_timed_seen_fix_v1';
 const CHANGELOG_ISSUE_TAB_TYPES = Object.freeze(['issue', 'fix']);
 const changelogEntriesOfTab = (tab) => CHANGELOG_ENTRIES.filter(entry => CHANGELOG_ISSUE_TAB_TYPES.includes(entry.type) === (tab === 'issue'));
 // 既読の判定に使う「いま存在するすべてのID」。

@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9e43fd8ed505f6e7
+// source-sha256: 8949c861296f0d06
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: bff8681a38816a0c
+// generated-sha256: b96838a289830d63
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 14:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 15:32"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -9880,6 +9880,12 @@ const HIDDEN_UPDATE_NOTICE_IDS = new Set((typeof CHANGELOG !== 'undefined' ? CHA
 // 以前は type がタブ名と完全一致するものだけを出していたため、fix / feature / market と
 // 書いた項目がどちらのタブにも出ず、更新履歴に載せたつもりで載っていなかった。
 // 種別を新しく足しても消えないよう、下の CHANGELOG_ISSUE_TAB_TYPES 以外は必ず更新情報へ拾う
+// ★一度きりの補正に使う保存キー(新しく足したもの。既存キーは触らない・CLAUDE.md ⑦)。
+// 週末ゲリラ杯を公開へ乗せてから visibleFrom を足すまでの15分間(2026-09-11 13:33〜13:48)、
+// まだ始まっていないイベントの項目が一覧に並んでいた。そのあいだに一覧を開いた端末では
+// 既読になってしまい、15:00に出し直したときNEWが付かない
+// (2026-09-11・ユーザー指摘「イベント来たけどお知らせにNEWがついてない」)。
+const CHANGELOG_TIMED_SEEN_FIX_KEY = 'mh_changelog_timed_seen_fix_v1';
 const CHANGELOG_ISSUE_TAB_TYPES = Object.freeze(['issue', 'fix']);
 const changelogEntriesOfTab = tab => CHANGELOG_ENTRIES.filter(entry => CHANGELOG_ISSUE_TAB_TYPES.includes(entry.type) === (tab === 'issue'));
 // 既読の判定に使う「いま存在するすべてのID」。
@@ -25126,7 +25132,10 @@ function RhythmRankingScreen({
     className: "space-y-2"
   }, total.entries.map((entry, index) => /*#__PURE__*/React.createElement("li", {
     key: `${entry.identityKey}-${index}`
-  }, totalRow(entry, index + 1, !!total.self && entry.identityKey === total.self.identityKey)))))), boardTab && /*#__PURE__*/React.createElement(React.Fragment, null, event.status === 'loading' && /*#__PURE__*/React.createElement("p", {
+  }, totalRow(entry, index + 1, !!total.self && entry.identityKey === total.self.identityKey)))))), boardTab && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(RhythmEventBanner, {
+    event: eventDefinition || (boardKind === 'limited' ? limitedEvent : null),
+    className: "mb-3"
+  }), event.status === 'loading' && /*#__PURE__*/React.createElement("p", {
     "data-rhythm-event-loading": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
   }, "\u8AAD\u307F\u8FBC\u307F\u4E2D\u2026"), event.status === 'notReady' && /*#__PURE__*/React.createElement("p", {
@@ -25138,10 +25147,7 @@ function RhythmRankingScreen({
   }, "\u3044\u307E\u958B\u50AC\u3057\u3066\u3044\u308B\u30A4\u30D9\u30F3\u30C8\u306F\u3042\u308A\u307E\u305B\u3093\u3002\u6B21\u306E\u958B\u50AC\u3092\u304A\u5F85\u3061\u304F\u3060\u3055\u3044\u3002"), event.status === 'error' && /*#__PURE__*/React.createElement("p", {
     "data-rhythm-event-error": true,
     className: "rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200"
-  }, "\u8AAD\u307F\u8FBC\u3081\u307E\u305B\u3093\u3067\u3057\u305F\u3002\u96FB\u6CE2\u306E\u826F\u3044\u5834\u6240\u3067\u300C\u66F4\u65B0\u300D\u3092\u304A\u8A66\u3057\u304F\u3060\u3055\u3044\u3002"), event.status === 'ready' && eventDefinition && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(RhythmEventBanner, {
-    event: eventDefinition,
-    className: "mb-3"
-  }), /*#__PURE__*/React.createElement("div", {
+  }, "\u8AAD\u307F\u8FBC\u3081\u307E\u305B\u3093\u3067\u3057\u305F\u3002\u96FB\u6CE2\u306E\u826F\u3044\u5834\u6240\u3067\u300C\u66F4\u65B0\u300D\u3092\u304A\u8A66\u3057\u304F\u3060\u3055\u3044\u3002"), event.status === 'ready' && eventDefinition && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     "data-rhythm-event-window": true,
     className: "mb-3 flex items-center gap-2 rounded-2xl border border-fuchsia-300/40 bg-slate-900/70 p-2"
   }, /*#__PURE__*/React.createElement("div", {
@@ -38121,6 +38127,27 @@ function MonsterHeroGame() {
         // 振り分けを変えたときに既読が消えて未読へ戻る
         migratedSeen[type] = Array.isArray(savedIds) ? savedIds.filter(id => CHANGELOG_ALL_IDS.has(id)) : changelogEntriesOfTab(type).filter(entry => legacyDate && entry.date <= legacyDate).map(entry => entry.id);
         if (!Array.isArray(savedIds)) await storeSet(`mh_changelog_seen_ids_${type}`, migratedSeen[type], false);
+      }
+      // ★一度きりの補正。時刻で出しはじめる項目(visibleFrom)を、出る前に既読にしてしまった端末がある。
+      // 週末ゲリラ杯を公開へ乗せてから visibleFrom を足すまでの15分間(2026-09-11 13:33〜13:48)、
+      // まだ始まっていないイベントの項目が一覧に並んでいた。そのあいだに一覧を開くと既読になり、
+      // 15:00に出し直したときNEWが付かない(ユーザー指摘「イベント来たけどお知らせにNEWがついてない」)。
+      // 外すのは visibleFrom を持つ項目だけ。ほかの項目の既読には触らない(CLAUDE.md ⑦)。
+      // ★済みの印は「その項目が実際に一覧へ出ている」ときにだけ立てる。出はじめる前に起動した
+      //   端末で立ててしまうと、15:00以降に開いても補正できなくなる。
+      if ((await storeGet(CHANGELOG_TIMED_SEEN_FIX_KEY, false, false)) !== true) {
+        const timedIds = CHANGELOG_ENTRIES.filter(entry => entry.visibleFrom).map(entry => entry.id);
+        if (timedIds.length > 0) {
+          for (const type of CHANGELOG_TYPES) {
+            const before = migratedSeen[type] || [];
+            const kept = before.filter(id => !timedIds.includes(id));
+            if (kept.length !== before.length) {
+              migratedSeen[type] = kept;
+              await storeSet(`mh_changelog_seen_ids_${type}`, kept, false);
+            }
+          }
+          await storeSet(CHANGELOG_TIMED_SEEN_FIX_KEY, true, false);
+        }
       }
       setChangelogSeen(migratedSeen);
       const listSettings = normalizeMonsterListSettings(await storeGet('mh_monster_list_settings', DEFAULT_MONSTER_LIST_SETTINGS, false));
@@ -56546,7 +56573,10 @@ function MonsterHeroGame() {
         }
       }, speaker.name), /*#__PURE__*/React.createElement("span", {
         className: "block text-[13px] font-bold leading-relaxed text-white mt-1"
-      }, line.t)), /*#__PURE__*/React.createElement("p", {
+      }, (() => {
+        const bond = normalizeAssistantBond(assistantBonds[speaker.id]);
+        return assistantSpeakText(line.t, breederName, assistantBondLevelOf(bond.points), bond.callStyle, speaker.id);
+      })())), /*#__PURE__*/React.createElement("p", {
         className: "mt-2 text-center text-[8px] text-slate-500"
       }, step + 1, " / ", script.length, Object.keys(calls).length > 0 && `　／　${cast.filter(who => calls[who.id]).map(who => `${who.name}は「${calls[who.id]}」`).join('、')}と呼び合います`), /*#__PURE__*/React.createElement("div", {
         className: `mt-3 grid ${last ? 'grid-cols-1' : 'grid-cols-[1fr_2fr]'} gap-2`,
