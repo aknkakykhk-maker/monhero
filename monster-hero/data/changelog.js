@@ -35,8 +35,13 @@
 const CHANGELOG = [
   {
     // 新しい遊び(ランキングの新部門)なので助手の告知を付ける。
+    // ★releaseFlag を付けて、集計のしたく(Supabaseのビュー)が済むまで出さない。
+    //   これが無いと「まだ遊べないのにお知らせだけ出る」ことになる。実際に一度そうしてしまった
+    //   (2026-09-11・ユーザー指摘)。告知のidは、先に出てしまったぶんを見た人にも
+    //   公開のときに改めて届くよう v2 にしてある。
     date: "2026-09-11 09:46", type:'update', title:'モンヒロビートに「総合」ランキングを追加しました', status:'new',
-    assistantNotice: { id:'update_notice_rhythm_total_ranking_v1', type:'content' },
+    releaseFlag:'rhythmTotalRanking',
+    assistantNotice: { id:'update_notice_rhythm_total_ranking_v2', type:'content' },
     items:[
       '全国ランキングに「総合」タブを追加しました。曲ごとのいちばん良いスコアを、全曲ぶん足し合わせた合計で競います。',
       '難易度は問いません。得意な難易度で1曲ずつ埋めていくだけでも合計が伸びます。1曲でも遊べば載ります。',

@@ -21,6 +21,7 @@ const help=read('monster-hero/data/help.js');
 const changelog=read('monster-hero/data/changelog.js');
 const assistants=read('monster-hero/data/assistants.js');
 const spec=read('docs/spec/RHYTHM_RANKING.md');
+const flags=read('monster-hero/src/parts/17-release-changelog-login-missions.jsx');
 
 let failed=0;
 const check=(name,ok,detail='')=>{console.log(`${ok?'✓':'✗'} ${name}${detail?` — ${detail}`:''}`);if(!ok)failed++;};
@@ -112,6 +113,37 @@ check('この曲のランキングの取得は変えていない',
 check('この曲の一覧は総合タブでは出さない',
   screen.includes("{!totalTab&&rhythmRanking.status==='ready'&&rhythmRanking.entries.length>0&&"));
 
+// --- 公開フラグ(機能と案内をまとめて出し入れする) ---
+// ★集計はSupabase側のビューが行うので、SQLを適用するまで中身が出せない。
+//   機能だけ先に出すと「まだ遊べないのにお知らせだけ出る」ことになる。実際に一度そうしてしまった
+//   (2026-09-11・ユーザー指摘)。フラグ1つで、タブ・ヘルプ・更新履歴・助手の告知が同時に動くこと。
+const totalReleased=/const RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE = true;/.test(flags);
+check('公開フラグを持っている',
+  /const RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE = (true|false);/.test(flags)
+  &&flags.includes('rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE'),
+  totalReleased?'公開中':'未公開');
+check('画面はフラグでタブごと出し分ける',
+  screen.includes('const totalReleased=RELEASE_FLAGS.rhythmTotalRanking===true;')
+  &&screen.includes('const totalTab=totalReleased&&')
+  &&screen.includes('{totalReleased&&<div data-rhythm-ranking-tabs'));
+check('ヘルプの「総合」の説明も同じフラグで出す',(()=>{
+  const topic=(help.split("id:'rhythm-ranking'")[1]||'').split('id:\'rhythm-')[0];
+  const totalNotes=topic.split('\n').filter(line=>line.includes('「総合」')||line.includes('同じブリーダー名'));
+  return totalNotes.length>0&&totalNotes.every(line=>line.includes("releaseFlag:'rhythmTotalRanking'"));
+})());
+check('更新履歴も同じフラグで出す',(()=>{
+  const at=changelog.indexOf('モンヒロビートに「総合」ランキングを追加しました');
+  if(at<0)return false;
+  const entry=changelog.slice(at,changelog.indexOf('  },',at));
+  return entry.includes("releaseFlag:'rhythmTotalRanking'");
+})());
+// 公開のときに案内が古いままにならないように。フラグを立てたらここが効く
+check('公開したら助手のひとことも「総合」に触れる',(()=>{
+  if(!totalReleased)return true;
+  const topic=(help.split("id:'rhythm-ranking'")[1]||'').slice(0,400);
+  return /assistant:'[^']*総合/.test(topic);
+})(),totalReleased?'':'未公開のあいだは対象外');
+
 // --- 案内(CLAUDE.md ⑤) ---
 check('ヘルプに総合タブの説明がある',
   help.includes("id:'rhythm-ranking'")&&help.includes('「総合」タブ')&&help.includes('全曲ぶん足し合わせた合計'));
@@ -125,8 +157,10 @@ check('更新履歴(今回ぶん)に曲数を書き写していない',(()=>{
   const entry=changelog.slice(at,changelog.indexOf('  },',at));
   return hardCoded(entry,'更新履歴').hits.length===0;
 })());
+// 告知のidは、先に出てしまったぶんを見た人にも公開のときに改めて届くよう上げることがある。
+// 版の数字には縛らず、告知が付いていることだけを見る
 check('助手の告知を付けている(大きい追加)',
-  changelog.includes("update_notice_rhythm_total_ranking_v1")&&changelog.includes("type:'content'"));
+  /update_notice_rhythm_total_ranking_v\d+/.test(changelog)&&changelog.includes("type:'content'"));
 check('画面のなかでも助手が案内する',
   assistants.includes('rhythmTotalRanking: {')&&screen.includes('<AssistantBubble scene="rhythmTotalRanking"'));
 check('助手3人ぶんのセリフがある',

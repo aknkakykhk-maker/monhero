@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 89eb4d5817157396
+// generated-sha256: 982f35babacee0e6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 09:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 09:58"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5580,7 +5580,17 @@ const QUICK_RHYTHM_LINK_PUBLIC_RELEASE = true;
 // 2026-09-08・実機で比べてもらい、マスモンの絵が残る・失敗した HOLD/SLIDE が消える・触った FLICK の帯が残る、を直したうえで
 // ユーザー「問題なし」→ 公開。デバッグ画面の「ノーツの描き方」で「要素」を選べば従来の描き方へ戻せる。
 const RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE = true;
-const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE };
+// モンヒロビートの「総合」ランキング(全曲合算・docs/spec/RHYTHM_RANKING.md §3)。
+// ★集計はSupabase側のビュー(rhythm_total_rankings)が行うので、
+//   docs/sql/rankings/RHYTHM_TOTAL_APPLY.sql を適用するまで中身が出せない。
+//   false のあいだはタブそのものを出さず、ヘルプ・更新履歴・助手の告知もまとめて隠す。
+//   こうしておかないと「説明だけ先に出る」ことになる(CLAUDE.md ⑤)。実際に一度そうしてしまった
+//   (2026-09-11・ユーザー指摘「総合ランキングがまだできてないのにお知らせでできたみたいに書かれてる」)。
+//   SQLを適用して RHYTHM_TOTAL_VERIFY.sql で上位が並ぶことを確かめたら true にする。
+//   true にするときは、ヘルプの助手のひとことも「総合」に触れた文へ変える
+//   (tools/mode/rhythm-total-ranking-check.js が見張る)。
+const RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE = false;
+const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE };
 // releaseFlag = そのフラグが立つまで出さない。unreleasedFlag = そのフラグが立ったら出さない。
 // 逆向きの名札が要るのは「準備中です」の案内で、公開したあとも残っていると
 // 遊べているのに準備中の項目が並ぶ(ヘルプのモンヒロビートで実際にそうなっていた・2026-09-06)。
@@ -13551,7 +13561,12 @@ function RhythmRankingScreen({
       // 「この曲」と「総合(全曲合算)」の出し分け(2026-09-11)。
       // 画面(gameState)は増やさない。増やすとヘルプの対応表・戻り先・BGMの引き継ぎが
       // それぞれ別の場所にあるため、どこかで必ず抜ける(CLAUDE.md ⑤)。
-      const totalTab=rhythmRankingTab==='total';
+      //
+      // ★公開フラグが立つまでタブごと出さない。集計はSupabase側のビューが行うので、
+      //   SQLを適用するまで中身が無い。機能と案内(ヘルプ・更新履歴・助手の告知)を
+      //   同じフラグでまとめて出し入れし、「説明だけ先に出る」を起こさない。
+      const totalReleased=RELEASE_FLAGS.rhythmTotalRanking===true;
+      const totalTab=totalReleased&&rhythmRankingTab==='total';
       const total=rhythmTotalRanking||{status:'idle',entries:[],self:null};
       // 曲数も理論満点もデータから作る。曲が増えても、ここは書き換えない
       // (docs/spec/RHYTHM_RANKING.md §5.1)
@@ -13583,15 +13598,15 @@ function RhythmRankingScreen({
           <h2 className="text-sm font-black tracking-widest text-amber-200">🏆 全国ランキング</h2>
           <button aria-label="更新" data-rhythm-ranking-refresh onClick={refresh} className="ml-auto min-h-[44px] px-2 text-[10px] font-black text-amber-200">更新</button>
         </header>
-        {/* タブ。押したときに初めて取りにいく */}
-        <div data-rhythm-ranking-tabs className="flex shrink-0 gap-1 border-b border-white/10 bg-slate-950/95 px-3 pb-2 pt-1">
+        {/* タブ。押したときに初めて取りにいく。公開前はタブごと出さない */}
+        {totalReleased&&<div data-rhythm-ranking-tabs className="flex shrink-0 gap-1 border-b border-white/10 bg-slate-950/95 px-3 pb-2 pt-1">
           {[{id:'song',label:'この曲'},{id:'total',label:'総合'}].map(tab=>(
             <button key={tab.id} data-rhythm-ranking-tab={tab.id} onClick={()=>openTab(tab.id)}
               className={`min-h-[44px] flex-1 rounded-xl border px-2 text-[11px] font-black ${rhythmRankingTab===tab.id?'border-amber-300/60 bg-amber-500/15 text-amber-100':'border-white/10 bg-slate-900/60 text-slate-400'}`}>
               {tab.label}
             </button>
           ))}
-        </div>
+        </div>}
         <div className="flex-1 overflow-y-auto mh-scroll px-3 pb-6 pt-3" style={{paddingBottom:'calc(1.5rem + env(safe-area-inset-bottom))'}}>
           <RhythmLandscapeHint className="mb-3"/>
           {totalTab?(

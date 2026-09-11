@@ -22,7 +22,17 @@ const QUICK_RHYTHM_LINK_PUBLIC_RELEASE = true;
 // 2026-09-08・実機で比べてもらい、マスモンの絵が残る・失敗した HOLD/SLIDE が消える・触った FLICK の帯が残る、を直したうえで
 // ユーザー「問題なし」→ 公開。デバッグ画面の「ノーツの描き方」で「要素」を選べば従来の描き方へ戻せる。
 const RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE = true;
-const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE };
+// モンヒロビートの「総合」ランキング(全曲合算・docs/spec/RHYTHM_RANKING.md §3)。
+// ★集計はSupabase側のビュー(rhythm_total_rankings)が行うので、
+//   docs/sql/rankings/RHYTHM_TOTAL_APPLY.sql を適用するまで中身が出せない。
+//   false のあいだはタブそのものを出さず、ヘルプ・更新履歴・助手の告知もまとめて隠す。
+//   こうしておかないと「説明だけ先に出る」ことになる(CLAUDE.md ⑤)。実際に一度そうしてしまった
+//   (2026-09-11・ユーザー指摘「総合ランキングがまだできてないのにお知らせでできたみたいに書かれてる」)。
+//   SQLを適用して RHYTHM_TOTAL_VERIFY.sql で上位が並ぶことを確かめたら true にする。
+//   true にするときは、ヘルプの助手のひとことも「総合」に触れた文へ変える
+//   (tools/mode/rhythm-total-ranking-check.js が見張る)。
+const RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE = false;
+const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE };
 // releaseFlag = そのフラグが立つまで出さない。unreleasedFlag = そのフラグが立ったら出さない。
 // 逆向きの名札が要るのは「準備中です」の案内で、公開したあとも残っていると
 // 遊べているのに準備中の項目が並ぶ(ヘルプのモンヒロビートで実際にそうなっていた・2026-09-06)。
