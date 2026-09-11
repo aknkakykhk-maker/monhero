@@ -420,8 +420,12 @@ check('プロフィールから助手を変更できる',
 check('プロフィールで両方の助手のLvとタイトルを確認できる',
   has('const lv=assistantBondLevelOf(normalizeAssistantBond(assistantBonds[who.id]).points);')
     && has('assistantBondStageByLevel(lv,who.id)'));
+// ★行の文字列そのままを見ないこと。告知を助手ごとのセリフにしたとき
+//   (2026-09-11)、中身は正しいのに1行が2行へ割れただけで落ちた。
+//   見るのは「顔も口調も、いま選んでいる助手から引いているか」。
 check('アップデート通知も、いま選んでいる助手が出す',
-  has("const last=page===pages.length-1;const who=activeAssistant;return("));
+  has('const notice=updateGuideQueue[0];const who=activeAssistant;')
+    && has('assistantNoticePagesFor(notice,who&&who.id)'));
 
 
 // ==========================================================================
