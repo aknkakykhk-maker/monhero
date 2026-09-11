@@ -2394,7 +2394,7 @@ function MonsterHeroGame() {
   const quickRunFinishReasonText = (reason) => ({
     defeat:'負けたので周回が終わりました（ここまでのぶんは入ります）',
     retire:'途中でやめたので周回が終わりました（ここまでのぶんは入ります）',
-    hidden:'アプリが裏に回ったので周回が止まりました',
+    hidden:'アプリが裏に回ったので周回が止まりました（ふだんは戻ると自動で続きます）',
     manual:'AUTO∞を切ったので周回が終わりました',
     error:'続けられなくなったので周回が止まりました',
   }[String(reason || '')] || '周回が終わりました');
@@ -3155,6 +3155,9 @@ function MonsterHeroGame() {
   };
 
 
+  // アプリに戻ったときの「止まっていた∞周回の続き」。中身は下で組み立てて毎レンダー入れ直す
+  // (下の effect は1度しか作られないため、そこへ直接書くと古い state を掴んだままになる)
+  const resumeAutoAfterVisibleRef = useRef(null);
   // タブ切り替え/バックグラウンド化から復帰した際、OSにより自動停止されたAudioContextと
   // BGMのTransportを復帰させる(そのままだとBGM/SEが鳴らなくなったままになる不具合の対策)。
   // visibilitychangeだけだと、PWAをホーム画面から開き直した場合やアプリ切り替えで
@@ -3163,7 +3166,15 @@ function MonsterHeroGame() {
     // 画面が見えなくなったらBGMを止める(他のアプリに切り替えたあとも鳴り続けないように)。
     // 戻ってきたら、止まっているAudioContextを復帰させて鳴らし直す
     const onHidden = () => { Audio_.setPageHidden(true); stopAllAuto('hidden'); };
-    const onVisible = () => { Audio_.setPageHidden(false); Audio_.resumeIfNeeded(); };
+    // ★戻ってきたら、裏に回ったせいで止まっていた∞周回を自動で続ける
+    //   (2026-09-11・ユーザー指示「アプリに戻ったら自動で開始するようにしてほしい /
+    //    ただし負けたときは自動では開始しない / モンビー中もおなじ」)。
+    //   この effect は1度しか作られないので、判定の中身は毎レンダー入れ直した ref から呼ぶ
+    //   (ここで state を直接読むと、起動直後の古い値をずっと見ることになる)。
+    const onVisible = () => {
+      Audio_.setPageHidden(false); Audio_.resumeIfNeeded();
+      if (resumeAutoAfterVisibleRef.current) resumeAutoAfterVisibleRef.current();
+    };
     const onVisibilityChange = () => (document.visibilityState === 'hidden' ? onHidden() : onVisible());
     // ★blur / pagehide は「本当に裏へ回った」以外でも飛ぶ。
     //   全画面への出入り、システムの画面(コントロールセンターなど)、音声の割り込みでも来る。
@@ -8140,6 +8151,28 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     else beginQuickRunProgress();
     return true;
   };
+  // ===== アプリに戻ったら、裏に回って止まっていた∞周回を自動で続ける =====
+  // (2026-09-11・ユーザー指示「オート周回中、アプリが裏に回ると止まるようにしてるけど
+  //  アプリに戻ったら自動で開始するようにしてほしい / ただし負けたときは自動では開始しない /
+  //  モンビー中もおなじ」)。
+  //
+  // ★続けるのは「アプリが裏に回ったから止まった」ぶんだけ(reason==='hidden')。
+  //   負けた('defeat')・諦めた('retire')・自分でAUTOを切った('manual')・
+  //   続けられなくなった('error')は、戻ってきても自動では始めない。
+  //   「負けたときは自動で始めない」は resumeQuickRunFromRhythm の中でも
+  //   runResultFinishedRef で二重に守っている(理由の取り違えで動きださないように)。
+  // ★モンビーを開いていても同じように続く。resumeQuickRunFromRhythm は画面を動かさないので、
+  //   バトル画面・曲えらび・演奏中のどこにいても呼べる(演奏中は進行そのものが止まったままで、
+  //   曲が終われば今までどおり進みはじめる)。
+  const resumeQuickRunAfterVisible = () => {
+    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return false;
+    const progress = quickRunProgressRef.current;
+    if (!progress || !progress.finished) return false;   // 止まっていない(続ける必要がない)
+    if (progress.reason !== 'hidden') return false;      // 裏に回った以外の理由で止まっている
+    return resumeQuickRunFromRhythm();
+  };
+  // 上の visibilitychange の effect から呼べるように、毎レンダー最新の関数を入れ直す
+  resumeAutoAfterVisibleRef.current = resumeQuickRunAfterVisible;
   // ===== モンヒロビートを開いたら自動で∞周回を始める =====
   // (2026-09-11・ユーザー指示「オート設定にモンビー中のオート周回を設定している場合に
   //  モンビーを開いたら自動でクイックに入る機能を追加したい /
