@@ -11,6 +11,7 @@ const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分�
 const fs = require('fs');
 const vm = require('vm');
 const path = require('path');
+const { screenSource } = require(path.join(TOOLS_DIR, 'harness'));
 
 const root = path.resolve(TOOLS_DIR, '..');
 const source = fs.readFileSync(path.join(root, 'monster-hero/src/game-system.jsx'), 'utf8');
@@ -388,8 +389,11 @@ check('ランキングの導線は助手コメントより前にある', source.
 check('ランキングからの戻るはバトルの画面へ',
   has("onClick={()=>{if(battleMenuTab!=='difficulty'){setBattleMenuTab('difficulty');return;}returnToHome();}}"));
 // 勇者モン選択はバトルを始める前なので、戻るときは来た場所(難易度の画面)へ返す
+// 戻る先の判断は MonsterHeroGame 側に残し、画面へは onBack だけを渡している
+// (67-screen-pick.jsx への切り出し)。本体の中身と画面の結線を2段で見る
 check('勇者モン選択からの戻るは難易度の画面へ',
-  has("onClick={()=>{if(gameState==='PICK_HERO'){setCurrentPickingMon(null);setBattleMenuTab('difficulty');setGameState(battleEntryStateRef.current);return;}returnToHome();}}"));
+  has("onBack={()=>{if(gameState==='PICK_HERO'){setCurrentPickingMon(null);setBattleMenuTab('difficulty');setGameState(battleEntryStateRef.current);return;}returnToHome();}}")
+    && has('onClick={onBack}'));
 check('助手コメントは既存の共通UIを使う', has("<AssistantBubble key={battleMode} scene={quick?'battleQuick':'battleChallenge'}") && assistantsSrc.includes('battleChallenge:') && assistantsSrc.includes('battleQuick:'));
 check('挑戦を始めるときにモードを固定する', has('setDifficulty(key);setRunMode(battleMode);'));
 check('バトル中にモード名と難易度を出す', has('{battleModeInfo(runMode).short} / {QUICK_DIFFICULTY_SETTINGS[safeDifficulty]?.label||safeDifficulty}'));
@@ -558,7 +562,7 @@ check('実際に開いて押せることを確かめる道具がある',
 // 編成はベースモンだけ。育てたマスモンは勇者モンにも供モンにも出さない
 check('プロの勇者モン選択はベースモンだけ',
   has("setMonSelection(pro?baseMons:getActiveMonsterList());setHeroPickTab(pro?'base':'roster');")
-    && has("const savedRawList=gameState==='PICK_HERO'&&(heroPickTab==='base'||isProMode(runMode))?getUnlockedBaseMonsterList():monSelection;")
+    && has("const savedRawList=pickMode==='hero'&&(heroPickTab==='base'||isProMode(runMode))?getUnlockedBaseMonsterList():monSelection;")
     && has('{!isProMode(runMode)&&<div className="flex gap-1.5">'));
 check('プロの勇者モン選択に編成タブを出さない',
   has("isProMode(runMode)?'プロモードはベースモンだけで挑みます。育てたマスモンは連れていけません'"));
@@ -608,7 +612,7 @@ check('プロで候補が空でもマスモンは混ぜない',
 // 練習の台本の「この子だけ選べる」は勇者モン選択にだけ効かせる。
 // 供モンの合流にも効くと、台本の勇者モン(モッチー)が強制で選ばれたように見える
 check('台本の強制選択は勇者モン選択にだけ効く',
-  has("disabled={gameState==='PICK_HERO'&&!scenarioPicksHero(m.id)}")
+  has("disabled={pickMode==='hero'&&!scenarioPicksHero(m.id)}")
     && !/disabled=\{!scenarioPicksHero\(m\.id\)\}/.test(source));
 // 練習をやめ損ねても、ふだんの周回へ台本を持ち込まない
 check('ふだんの周回を始めるときは台本を必ず捨てる',
@@ -616,10 +620,10 @@ check('ふだんの周回を始めるときは台本を必ず捨てる',
 // 供モンの一覧には、すでに編成にいる子(勇者モンを含む)を出さない
 check('供モンの一覧に編成中の子を出さない',
   has("const inParty=slots.filter(x=>x).map(x=>x.id);")
-    && has("const list=(gameState==='PICK_ALLY'?rawList.filter(m=>m&&!inParty.includes(m.id)):rawList)||[];"));
+    && has("const list=(pickMode==='ally'?rawList.filter(m=>m&&!inParty.includes(m.id)):rawList)||[];"));
 // 供モンの合流はバトルモード選択と同じ横スライドで見せる
 check('プロの供モン合流は横スライドで出す',
-  has("const allyCarousel=gameState==='PICK_ALLY'&&isProMode(runMode);")
+  has("const allyCarousel=pickMode==='ally'&&isProMode(runMode);")
     && has('aria-label="前の供モン"') && has('aria-label="次の供モン"')
     && has("'flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-1 mh-scroll':'grid grid-cols-2 gap-2.5'"));
 check('横スライドは開くたびに先頭から見せる',
@@ -639,7 +643,7 @@ check('チャレンジ・クイックの供モン一覧はこれまでどおり2
 // 勇者モンを決めたあと、プロだけ供モン候補を選ぶ画面へ寄り道する
 check('プロだけ供モン候補の画面をはさむ',
   has("if (isProMode(runMode)) {") && has("advanceRunStage('PICK_PRO_ALLIES');")
-    && has("{gameState==='PICK_PRO_ALLIES'&&(()=>{"));
+    && has("{gameState==='PICK_PRO_ALLIES'&&(") && has('<PickProAlliesScreen'));
 check('プロ開始時に有効な前回編成だけを初期選択へ入れる',
   has('setProHeroPreset(savedHero&&lastProParty.heroDistance!==null?{heroBaseId:savedHero.id,heroDistance:lastProParty.heroDistance}:null);')
     && has('lastProParty.allyBaseIds.map(id=>baseMons.find(mon=>mon.id===id)).filter(mon=>mon&&mon.id!==savedHero?.id)')
@@ -661,10 +665,15 @@ check('勇者モンにした種は候補から外す',
 // ラン中の画面は「全画面のかぶせ方」で出す。これが抜けるとふだんの画面の下敷きになり、
 // 表示はされているのに押しても反応しない(実際に供モン候補で出した不具合)
 const RUN_OVERLAY = 'style={{position:"absolute",inset:0,backgroundColor:"#020617",zIndex:30000}}';
-for (const [label, screen] of [['勇者モン・供モン選択', "(gameState==='PICK_HERO'||gameState==='PICK_ALLY')&&("], ['配置場所', "{gameState==='PICK_SLOT'&&("], ['プロの供モン候補', "{gameState==='PICK_PRO_ALLIES'&&(()=>{"]]) {
-  const at = source.indexOf(screen);
-  const near = at >= 0 ? source.slice(at, at + 1800) : '';
-  check(`${label}の画面は全画面でかぶせる`, near.includes(RUN_OVERLAY), at < 0 ? '画面が見つからない' : '');
+// 3画面とも 67-screen-pick.jsx へ切り出したので、呼び出しの近くではなく
+// コンポーネントの本体を見る(窓で切ると呼び出しの props しか読めない)
+for (const [label, gameState, component] of [
+  ['勇者モン・供モン選択', 'PICK_HERO', 'PickHeroAllyScreen'],
+  ['配置場所', 'PICK_SLOT', 'PickSlotScreen'],
+  ['プロの供モン候補', 'PICK_PRO_ALLIES', 'PickProAlliesScreen'],
+]) {
+  const body = screenSource(gameState, component);
+  check(`${label}の画面は全画面でかぶせる`, body.includes(RUN_OVERLAY), body ? '' : '画面が見つからない');
 }
 check('ベースモンが足りないときはプロを始められない',
   has('const proReady=getUnlockedBaseMonsterList().length>=PRO_ALLY_POOL_SIZE+1;')
@@ -672,7 +681,7 @@ check('ベースモンが足りないときはプロを始められない',
 // マスモン登録・リザルトは既存のしくみをそのまま使う(プロ専用の分岐を作らない)
 check('マスモン登録は既存のしくみを使い回す',
   !has('proMasuRegister') && !has('registerProMasu')
-    && has("gameState==='PICK_HERO'?'勇者モンとして選び、ラン終了時に登録すると「マスモン」として絆レベル・ステータスを強化できます'"));
+    && has("pickMode==='hero'?'勇者モンとして選び、ラン終了時に登録すると「マスモン」として絆レベル・ステータスを強化できます'"));
 check('新しい画面もBGMとヘルプに載っている',
   has("'PICK_TEACHING','PICK_PRO_ALLIES'") && helpSrc.includes("PICK_PRO_ALLIES:  'basics/battle-modes'"));
 check('プロ用の助手コメントが場面として用意されている',

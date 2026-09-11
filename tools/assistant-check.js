@@ -336,7 +336,13 @@ check('話し方の決まりごとが書いてある',
 // 変数や小さな選択関数の同じ行にある候補も拾う（battleModeAssistantScene など）。
 const sceneRefs = new Set();
 const addQuotedSceneRefs = (text) => {
-  for (const match of text.matchAll(/['"]([A-Za-z][A-Za-z0-9]*)['"]/g)) sceneRefs.add(match[1]);
+  // `scene={pickMode==='hero'?'pickHero':'pickAlly'}` の `'hero'` は「くらべる相手」であって
+  // 場面名ではない。場面になるのは三項演算子の“結果”のほうだけなので、
+  // くらべている文字列は先に落とす(2026-09-11・勇者モン選択の出し分けを props へ移したとき誤検知した)
+  const withoutComparisons = text
+    .replace(/[=!]==?\s*(['"])[^'"]*\1/g, '')
+    .replace(/(['"])[^'"]*\1\s*[=!]==?/g, '');
+  for (const match of withoutComparisons.matchAll(/['"]([A-Za-z][A-Za-z0-9]*)['"]/g)) sceneRefs.add(match[1]);
 };
 for (const match of source.matchAll(/\bscene=(?:"([A-Za-z][A-Za-z0-9]*)"|\{([^}\n]+)\})/g)) {
   if (match[1]) sceneRefs.add(match[1]);

@@ -41,7 +41,9 @@ for (const stat of ['baseHp','baseAtk','baseDef','baseGuts']) {
 }
 assert(source.includes("distAptitude:['M','M','M','M']"), 'all debug monster distance aptitudes must be M');
 assert(source.includes('...ALL_PLAYER_MONSTERS.Mocchi') && source.includes('debugOnly:true'), 'debug monster must reuse a formal monster only at runtime');
-assert(source.includes("const rawList=gameState==='PICK_HERO'?debugHeroMonsterList(savedRawList):savedRawList"), 'ULTIMATE debug hero selection must include the debug monster');
+// 勇者モンえらびは 67-screen-pick.jsx へ切り出した。画面は gameState を知らない約束なので、
+// 出し分けは pickMode('hero' / 'ally')という props になっている(綴りだけの違い)
+assert(source.includes("const rawList=pickMode==='hero'?debugHeroMonsterList(savedRawList):savedRawList"), 'ULTIMATE debug hero selection must include the debug monster');
 assert(source.includes('data-debug-strongest-monster'), 'direct debug battle must allow selecting the debug monster');
 // デバッグ設定の ⚔️ バトルモードから入ったときも一覧へ出す(難易度の「この難易度で挑戦」が
 // debugBattleRef を必ず false へ戻すため、専用のしるしを別に持っている)。

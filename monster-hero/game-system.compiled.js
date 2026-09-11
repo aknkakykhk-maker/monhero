@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 63fbaf68cb320171
+// source-sha256: d275ce8a4197bf01
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5a6fe6a056c73318
+// generated-sha256: 9e8418669adb329a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 08:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 09:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -28608,6 +28608,1068 @@ function MasuFusionScreen({
   }, "\u3068\u3058\u308B"));
 }
 
+// ---- part: 67-screen-pick.jsx ----
+// ==== 画面: ラン開始まわりのえらぶ画面(スキップ / 勇者モン・供モンえらび) ====
+//
+// MonsterHeroGame から切り出した17本目(docs/refactor/REFACTOR_MASTER_PLAN.md STEP 6-11)。
+// スキップ券の一連(えらぶ→最終確認→専用リザルト)と、ランの中でモンスターを選ぶ4画面。
+//
+// 【この一群ならではの注意】
+// ・勇者モンえらび(PICK_HERO)と供モンえらび(PICK_ALLY)は元から1つのブロックで、
+//   中で 21 箇所ぶん出し分けている。画面は gameState を知らない約束(ui/screen-parts-check)なので、
+//   出し分けは pickMode('hero' / 'ally')という props に置き換えてある。**条件の綴りだけの違い**で、
+//   要素・文言・並びは1文字も変えていない
+// ・スキップの最終確認(SkipConfirmDialog)は gameState を持たない兄弟ブロック。
+//   置き去りにすると「えらぶ画面だけ移って確認が本体に残る」ことになるので一緒に持ってくる
+// ・進行フラグを戻すタイマー(SCREEN_EFFECTS_MAP.md の「進行」)は、この一群では
+//   すべてハンドラの中にあり本体へ残る。画面の中に setTimeout は1つも無い
+function SkipPickScreen({
+  changeSkipCount,
+  closeBattleSkip,
+  difficulty,
+  getActiveMonsterList,
+  getMasuBondLevel,
+  getUnlockedBaseMonsterList,
+  ownedItems,
+  setSkipConfirmOpen,
+  setSkipPickTab,
+  skipClearSlot,
+  skipFlow,
+  skipFlowCount,
+  skipMaxCount,
+  skipMonKey,
+  skipPickMon,
+  skipPickTab
+}) {
+  const item = BREEDER_MARKET_ITEMS.find(i => i.id === skipFlow.itemId);
+  const label = DIFFICULTY_SETTINGS[skipFlow.difficulty]?.label || skipFlow.difficulty;
+  const list = skipPickTab === 'base' ? getUnlockedBaseMonsterList() : getActiveMonsterList();
+  const chosen = [skipFlow.hero, ...(skipFlow.allies || [])].filter(Boolean);
+  const chosenKeys = new Set(chosen.map(skipMonKey));
+  const slotLabels = ['勇者モン', '供モン1', '供モン2', '供モン3'];
+  const slotMons = [skipFlow.hero, ...(skipFlow.allies || [])];
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: 'absolute',
+      inset: 0,
+      backgroundColor: '#020617',
+      zIndex: 30000
+    },
+    className: "absolute inset-0 p-4 pt-6 flex flex-col overflow-hidden"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mb-2 flex items-center justify-between px-2 shrink-0"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: closeBattleSkip,
+    className: "p-3 text-slate-400 active:scale-90"
+  }, /*#__PURE__*/React.createElement(ArrowLeft, {
+    size: 20
+  })), /*#__PURE__*/React.createElement("h2", {
+    className: "text-lg font-black italic text-teal-400 uppercase tracking-widest"
+  }, "\u30B9\u30AD\u30C3\u30D7\u30FB", label), /*#__PURE__*/React.createElement("div", {
+    className: "w-10"
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 w-full max-w-md mx-auto mb-2"
+  }, /*#__PURE__*/React.createElement(AssistantBubble, {
+    scene: "skipPick",
+    compact: true
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "w-full max-w-md mx-auto shrink-0"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-4 gap-1.5"
+  }, slotLabels.map((sl, idx) => {
+    const mon = slotMons[idx];
+    return /*#__PURE__*/React.createElement("button", {
+      key: sl,
+      disabled: !mon,
+      onClick: () => skipClearSlot(idx),
+      className: `rounded-2xl border-2 p-1.5 flex flex-col items-center gap-1 ${mon ? 'border-teal-400 bg-teal-950/50 active:scale-95' : 'border-dashed border-slate-700 bg-slate-900/50'}`
+    }, /*#__PURE__*/React.createElement("span", {
+      className: `text-[7px] font-black uppercase ${idx === 0 ? 'text-amber-300' : 'text-slate-400'}`
+    }, sl), /*#__PURE__*/React.createElement("div", {
+      className: "w-10 h-10 rounded-full overflow-hidden border border-white/10 flex items-center justify-center bg-black/30"
+    }, mon ? mon.imgUrl ? /*#__PURE__*/React.createElement(DyedMonsterImage, {
+      baseId: mon.id,
+      src: mon.imgUrl,
+      alt: mon.name,
+      masuColors: mon.colors,
+      className: "w-full h-full object-contain"
+    }) : /*#__PURE__*/React.createElement("span", {
+      className: "text-lg"
+    }, mon.emoji) : /*#__PURE__*/React.createElement("span", {
+      className: "text-slate-600 text-lg"
+    }, "\uFF0B")), /*#__PURE__*/React.createElement("span", {
+      className: "text-[8px] font-black text-white truncate w-full text-center"
+    }, mon ? mon.name : '未選択'));
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] text-slate-500 font-bold mt-1 px-1 text-center"
+  }, "\u4E0A\u306E\u308F\u304F\u3092\u30BF\u30C3\u30D7\u3059\u308B\u3068\u5916\u305B\u307E\u3059\u3002\u7D46\u7D4C\u9A13\u5024\u304C\u5165\u308B\u306E\u306F\u30DE\u30B9\u30E2\u30F3\u3060\u3051\u3067\u3059"), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-1.5 mt-2"
+  }, [['roster', '編成'], ['base', 'ベースモン']].map(([key, tabLabel]) => /*#__PURE__*/React.createElement("button", {
+    key: key,
+    onClick: () => setSkipPickTab(key),
+    "aria-pressed": skipPickTab === key,
+    className: `flex-1 min-h-[38px] rounded-2xl font-black text-[12px] border-2 active:scale-95 ${skipPickTab === key ? 'bg-teal-600 border-teal-300 text-white' : 'bg-slate-900 border-slate-700 text-slate-400'}`
+  }, tabLabel)))), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 overflow-y-auto mh-scroll w-full max-w-md mx-auto min-h-0 mt-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-3 gap-2 pb-4"
+  }, list.map(mon => {
+    const used = chosenKeys.has(skipMonKey(mon));
+    const full = chosen.length >= 4;
+    return /*#__PURE__*/React.createElement("button", {
+      key: skipMonKey(mon),
+      disabled: used || full,
+      onClick: () => skipPickMon(mon),
+      className: `rounded-2xl border-2 p-2 flex flex-col items-center gap-1 ${used ? 'border-teal-500 bg-teal-950/40 opacity-50' : 'border-slate-800 bg-slate-900 active:scale-95'} disabled:opacity-40`
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "w-12 h-12 rounded-full overflow-hidden border border-white/10 flex items-center justify-center bg-black/30"
+    }, mon.imgUrl ? /*#__PURE__*/React.createElement(DyedMonsterImage, {
+      baseId: mon.id,
+      src: mon.imgUrl,
+      alt: mon.name,
+      masuColors: mon.colors,
+      className: "w-full h-full object-contain"
+    }) : /*#__PURE__*/React.createElement("span", {
+      className: "text-2xl"
+    }, mon.emoji)), /*#__PURE__*/React.createElement("div", {
+      className: "text-[9px] font-black text-white truncate w-full text-center"
+    }, mon.name), /*#__PURE__*/React.createElement("div", {
+      className: "text-[7px] font-black"
+    }, mon.masuId ? /*#__PURE__*/React.createElement("span", {
+      className: "text-pink-300"
+    }, "\u7D46Lv.", getMasuBondLevel(mon.masuId).level) : /*#__PURE__*/React.createElement("span", {
+      className: "text-slate-500"
+    }, "\u30DE\u30B9\u30E2\u30F3\u672A\u767B\u9332")));
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "w-full max-w-md mx-auto shrink-0 pt-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] text-slate-400 font-bold text-center mb-1"
+  }, item?.name, " \u6240\u6301\u6570 ", ownedItems[skipFlow.itemId] || 0, " \u679A"), (() => {
+    const max = skipMaxCount(skipFlow.itemId);
+    const n = skipFlowCount();
+    return /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-2 mb-2"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-[10px] font-black text-slate-400 shrink-0"
+    }, "\u4F7F\u3046\u679A\u6570"), /*#__PURE__*/React.createElement("button", {
+      disabled: n <= 1,
+      onClick: () => changeSkipCount(n - 1),
+      "aria-label": "\u4F7F\u3046\u679A\u6570\u30921\u679A\u6E1B\u3089\u3059",
+      className: "shrink-0 w-11 h-11 rounded-xl bg-slate-800 text-white font-black text-lg active:scale-95 disabled:opacity-30"
+    }, "\u2212"), /*#__PURE__*/React.createElement("div", {
+      className: "flex-1 text-center"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "font-mono font-black text-white text-lg"
+    }, n), /*#__PURE__*/React.createElement("span", {
+      className: "text-[10px] font-black text-slate-400"
+    }, " / ", max, "\u679A")), /*#__PURE__*/React.createElement("button", {
+      disabled: n >= max,
+      onClick: () => changeSkipCount(n + 1),
+      "aria-label": "\u4F7F\u3046\u679A\u6570\u30921\u679A\u5897\u3084\u3059",
+      className: "shrink-0 w-11 h-11 rounded-xl bg-slate-800 text-white font-black text-lg active:scale-95 disabled:opacity-30"
+    }, "\uFF0B"), /*#__PURE__*/React.createElement("button", {
+      disabled: n >= max,
+      onClick: () => changeSkipCount(max),
+      className: "shrink-0 h-11 px-3 rounded-xl bg-slate-700 text-white font-black text-[11px] active:scale-95 disabled:opacity-30"
+    }, "\u5168\u90E8"));
+  })(), /*#__PURE__*/React.createElement("button", {
+    disabled: !skipFlow.hero,
+    onClick: () => setSkipConfirmOpen(true),
+    className: "w-full min-h-[52px] rounded-2xl bg-teal-600 text-white font-black text-sm uppercase shadow-lg active:scale-[.98] disabled:bg-slate-800 disabled:text-slate-500"
+  }, "\u6C7A\u5B9A")));
+}
+function SkipConfirmDialog({
+  difficulty,
+  executeBattleSkip,
+  ownedItems,
+  setSkipConfirmOpen,
+  skipFlow,
+  skipFlowCount
+}) {
+  const item = BREEDER_MARKET_ITEMS.find(i => i.id === skipFlow.itemId);
+  const useCount = skipFlowCount();
+  return /*#__PURE__*/React.createElement("div", {
+    className: "fixed inset-0 flex items-center justify-center p-4",
+    style: {
+      position: 'fixed',
+      inset: 0,
+      backgroundColor: 'rgba(0,0,0,0.92)',
+      zIndex: 41000
+    },
+    role: "dialog",
+    "aria-modal": "true"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-slate-900 border-2 border-teal-500 rounded-3xl p-5 w-full max-w-sm shadow-2xl text-center"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-4xl mb-2"
+  }, item?.emoji), /*#__PURE__*/React.createElement("h3", {
+    className: "text-base font-black text-white mb-1"
+  }, item?.name, "\u3092", useCount, "\u679A\u4F7F\u3044\u307E\u3059\u304B\uFF1F"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] text-slate-400 font-bold mb-2"
+  }, DIFFICULTY_SETTINGS[skipFlow.difficulty]?.label, " \u3092\u6700\u5F8C\u307E\u3067\u9032\u3081\u305F\u6271\u3044\u3067\u3001\u7D4C\u9A13\u5024\u3068\u30C0\u30A4\u30E4\u3092", useCount, "\u5468\u3076\u3093\u53D7\u3051\u53D6\u308A\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] font-black text-teal-200 bg-black/40 border border-teal-500/30 rounded-xl py-2 mb-4"
+  }, "\u6240\u6301\u6570 ", ownedItems[skipFlow.itemId] || 0, "\u679A \u2192 ", Math.max(0, (ownedItems[skipFlow.itemId] || 0) - useCount), "\u679A"), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setSkipConfirmOpen(false),
+    className: "w-2/5 bg-slate-800 text-slate-300 py-3.5 rounded-2xl font-black text-sm"
+  }, "\u3044\u3044\u3048"), /*#__PURE__*/React.createElement("button", {
+    onClick: executeBattleSkip,
+    className: "w-3/5 bg-teal-600 text-white py-3.5 rounded-2xl font-black text-sm shadow-lg active:scale-95"
+  }, "\u306F\u3044"))));
+}
+function SkipResultScreen({
+  difficulty,
+  onClose,
+  ownedItems,
+  skipAnimPhase,
+  skipResult
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: 'absolute',
+      inset: 0,
+      backgroundColor: '#020617',
+      zIndex: 30000
+    },
+    className: "absolute inset-0 p-4 pt-6 flex flex-col overflow-hidden"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 min-h-0 overflow-y-auto mh-scroll w-full max-w-sm mx-auto"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-center py-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-5xl mb-1",
+    style: {
+      animation: 'idleSpark 900ms ease-in-out infinite'
+    }
+  }, skipResult.itemEmoji), /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] font-black tracking-[.3em] text-teal-400 uppercase"
+  }, "Skip Complete"), /*#__PURE__*/React.createElement("div", {
+    className: "w-full max-w-sm mx-auto mt-3 text-left"
+  }, /*#__PURE__*/React.createElement(AssistantBubble, {
+    scene: "skipResult",
+    compact: true
+  })), /*#__PURE__*/React.createElement("h2", {
+    className: "text-2xl font-black italic text-white mt-1"
+  }, DIFFICULTY_SETTINGS[skipResult.difficulty]?.label, " \u7A81\u7834\uFF01"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] text-slate-400 font-bold mt-1"
+  }, skipResult.itemName, " \u3092", skipResult.count || 1, "\u679A\u4F7F\u3044\u307E\u3057\u305F\uFF08\u6B8B\u308A ", ownedItems[skipResult.itemId] || 0, "\u679A\uFF09"), /*#__PURE__*/React.createElement("div", {
+    className: "mt-3 flex items-center justify-center gap-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-16 h-16 rounded-full overflow-hidden border-2 border-teal-400 flex items-center justify-center bg-black/40"
+  }, skipResult.heroImgUrl ? /*#__PURE__*/React.createElement(DyedMonsterImage, {
+    baseId: skipResult.heroBaseId,
+    src: skipResult.heroImgUrl,
+    alt: skipResult.heroName,
+    masuColors: skipResult.heroColors,
+    className: "w-full h-full object-contain"
+  }) : /*#__PURE__*/React.createElement("span", {
+    className: "text-3xl"
+  }, skipResult.heroEmoji)), /*#__PURE__*/React.createElement("div", {
+    className: "text-left"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] text-slate-500 font-black uppercase"
+  }, "\u52C7\u8005\u30E2\u30F3"), /*#__PURE__*/React.createElement("div", {
+    className: "text-sm font-black text-white"
+  }, skipResult.heroName)))), /*#__PURE__*/React.createElement("div", {
+    className: `space-y-2 transition-all duration-500 ${skipAnimPhase > 0 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'}`
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-black/40 rounded-2xl border border-amber-500/30 p-3 flex items-center justify-between"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[11px] font-black text-amber-300 flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement(Sparkles, {
+    size: 13
+  }), "\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("span", {
+    className: "font-mono font-black text-white text-sm"
+  }, skipResult.goldBefore.toLocaleString(), " \u2192 ", skipResult.goldAfter.toLocaleString(), " ", /*#__PURE__*/React.createElement("span", {
+    className: "text-amber-300"
+  }, "(+", skipResult.goldGain.toLocaleString(), ")"))), /*#__PURE__*/React.createElement("div", {
+    className: "bg-black/40 rounded-2xl border border-indigo-500/30 p-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between mb-1"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[11px] font-black text-indigo-300"
+  }, "\u30D6\u30EA\u30FC\u30C0\u30FC\u7D4C\u9A13\u5024"), /*#__PURE__*/React.createElement("span", {
+    className: "font-mono font-black text-white text-sm"
+  }, "+", skipResult.breederXpGain.toLocaleString())), /*#__PURE__*/React.createElement(LevelGrowthBar, {
+    levelBefore: skipResult.breederLevelBefore,
+    levelAfter: skipResult.breederLevelAfter
+  }), skipResult.breederLevelAfter.level > skipResult.breederLevelBefore.level && /*#__PURE__*/React.createElement("div", {
+    className: "text-[8px] text-amber-300 font-black mt-1 flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement(Sparkles, {
+    size: 9
+  }), "\u30D6\u30EA\u30FC\u30C0\u30FC\u30DD\u30A4\u30F3\u30C8 +", skipResult.breederLevelAfter.level - skipResult.breederLevelBefore.level)), skipResult.heroBondGain ? /*#__PURE__*/React.createElement("div", {
+    className: "bg-black/40 rounded-2xl border border-pink-500/30 p-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between mb-1"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[11px] font-black text-pink-300 flex items-center gap-1 truncate"
+  }, /*#__PURE__*/React.createElement(Heart, {
+    size: 13
+  }), "\u7D46\u30EC\u30D9\u30EB\uFF1A", skipResult.heroBondGain.name), /*#__PURE__*/React.createElement("span", {
+    className: "font-mono font-black text-white text-sm shrink-0"
+  }, "+", skipResult.heroBondGain.xpGain.toLocaleString())), /*#__PURE__*/React.createElement(LevelGrowthBar, {
+    levelBefore: skipResult.heroBondGain.levelBefore,
+    levelAfter: skipResult.heroBondGain.levelAfter
+  }), skipResult.heroBondGain.levelAfter.level > skipResult.heroBondGain.levelBefore.level && /*#__PURE__*/React.createElement("div", {
+    className: "text-[8px] text-amber-300 font-black mt-1 flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement(Sparkles, {
+    size: 9
+  }), "\u5F37\u5316\u30DD\u30A4\u30F3\u30C8 +", skipResult.heroBondGain.levelAfter.level - skipResult.heroBondGain.levelBefore.level)) : /*#__PURE__*/React.createElement("div", {
+    className: "bg-black/30 rounded-2xl border border-white/10 p-3 text-[10px] text-slate-400 font-bold leading-relaxed"
+  }, skipResult.heroIsMasu ? '勇者モンの絆経験値は入りませんでした。スキップではマスモン登録はできません。' : '勇者モンがマスモンではないため、絆経験値は入りませんでした。スキップではマスモン登録はできません。'), skipResult.allyBondGains.map(a => /*#__PURE__*/React.createElement("div", {
+    key: a.masuId,
+    className: "bg-black/40 rounded-2xl border border-pink-500/20 p-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between mb-1"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] font-black text-pink-200 truncate"
+  }, "\u4F9B\u30E2\u30F3\uFF1A", a.name), /*#__PURE__*/React.createElement("span", {
+    className: "font-mono font-black text-white text-xs shrink-0"
+  }, "+", a.xpGain.toLocaleString())), /*#__PURE__*/React.createElement(LevelGrowthBar, {
+    levelBefore: a.levelBefore,
+    levelAfter: a.levelAfter
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] text-slate-500 font-bold text-center px-2 leading-relaxed"
+  }, "\u30B9\u30B3\u30A2\u30FB\u30E9\u30F3\u30AD\u30F3\u30B0\u30FB\u30AF\u30EA\u30A2\u56DE\u6570\u306B\u306F\u8A18\u9332\u3055\u308C\u307E\u305B\u3093"))), /*#__PURE__*/React.createElement("button", {
+    onClick: onClose,
+    className: "w-full max-w-sm mx-auto shrink-0 mt-2 min-h-[52px] rounded-2xl bg-teal-600 text-white font-black text-sm uppercase shadow-lg active:scale-[.98]"
+  }, "\u30D0\u30C8\u30EB\u30E1\u30CB\u30E5\u30FC\u3078\u623B\u308B"));
+}
+function PickHeroAllyScreen({
+  MONSTER_CARD_CLASS,
+  MONSTER_CARD_STYLE,
+  advanceRunStage,
+  allyCardIndex,
+  allyCarouselRef,
+  allyJoinPreview,
+  atk,
+  battleTutorial,
+  battleTutorialSpotClass,
+  currentPickingMon,
+  debugHeroMonsterList,
+  def,
+  difficulty,
+  distTotalBonus,
+  extremeDifficulty,
+  extremeRunRef,
+  getMasuMon,
+  getUnlockedBaseMonsterList,
+  heroPickTab,
+  maxGuts,
+  maxHp,
+  monSelection,
+  onBack,
+  pickMode,
+  proHeroPreset,
+  renderMonsterCardBody,
+  renderMonsterDetailModal,
+  renderProMonsterRow,
+  runMode,
+  scenarioPicksHero,
+  setAllyCardIndex,
+  setCurrentPickingMon,
+  setHeroPickTab,
+  setProHeroPreset,
+  setupMon,
+  slots,
+  spendAptPoint,
+  spendStatPoint,
+  waveResult
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "absolute",
+      inset: 0,
+      backgroundColor: "#020617",
+      zIndex: 30000
+    },
+    className: "absolute inset-0 z-[3000] p-4 pt-6 flex flex-col justify-start overflow-hidden"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mb-2 text-center flex items-center justify-between px-2 shrink-0"
+  }, /*#__PURE__*/React.createElement("button", {
+    disabled: !!battleTutorial,
+    onClick: onBack,
+    className: "p-3 text-slate-400 active:scale-90 disabled:opacity-25"
+  }, /*#__PURE__*/React.createElement(ArrowLeft, {
+    size: 20
+  })), /*#__PURE__*/React.createElement("h2", {
+    className: "text-xl font-black italic text-indigo-400 uppercase tracking-widest"
+  }, pickMode === 'hero' ? '勇者モンを選択' : '供モンを選択'), /*#__PURE__*/React.createElement("div", {
+    className: "w-10"
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 w-full max-w-md mx-auto mb-2"
+  }, /*#__PURE__*/React.createElement(AssistantBubble, {
+    key: pickMode,
+    scene: pickMode === 'hero' ? 'pickHero' : 'pickAlly',
+    compact: true
+  })), pickMode === 'ally' && /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 w-full max-w-md mx-auto mb-2 rounded-2xl border border-white/10 bg-slate-900/60 px-2 py-1.5",
+    "data-join-status": true
+  }, (() => {
+    const joinRule = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
+    if (extremeRuleNumber(joinRule, 'allyJoinPenaltyRate') == null) return null;
+    const totalTurns = waveResult?.totalTurnCount || 0;
+    const multiplier = ultimateAllyJoinMultiplier(totalTurns, joinRule);
+    const floorValue = extremeRuleNumber(joinRule, 'minimumAllyJoinBonus');
+    return /*#__PURE__*/React.createElement("div", {
+      "data-ultimate-join-status": joinRule,
+      className: "mb-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-[9px] font-black text-purple-100 flex flex-wrap justify-between gap-x-2"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-amber-300"
+    }, joinRule, "\u88DC\u6B63"), /*#__PURE__*/React.createElement("span", null, "\u7D2F\u8A08", totalTurns, "T"), /*#__PURE__*/React.createElement("span", null, "\u52A0\u5165\u30DC\u30FC\u30CA\u30B9 ", precisePercent(multiplier), "\uFF08-", precisePercent(1 - multiplier), "\uFF09", floorValue != null ? `／最低${specialRulePercent(floorValue)}` : ''));
+  })(), (() => {
+    const rule = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
+    if (rule === NIGHTMARE_SETTING.id) return /*#__PURE__*/React.createElement("div", {
+      "data-nightmare-join-status": true,
+      className: "mb-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-[9px] font-black text-purple-100"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-amber-300"
+    }, "NIGHTMARE\u88DC\u6B63"), "\u3000\u9593\u5408\u3044\u9069\u6027\uFF1A\uFF0B", specialRulePercent(extremeSpecialRule(rule, 'positiveModifier')), " / \uFF0D", specialRulePercent(extremeSpecialRule(rule, 'negativeModifier')));
+    if (rule === CHAOS_SETTING.id) return /*#__PURE__*/React.createElement("div", {
+      "data-chaos-join-status": true,
+      className: "mb-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-[9px] font-black text-purple-100"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-amber-300"
+    }, "CHAOS\u88DC\u6B63"), "\u3000\u52A0\u5165\u30DC\u30FC\u30CA\u30B9 ", specialRulePercent(extremeSpecialRule(rule, 'allyJoinBonus')));
+    return null;
+  })(), /*#__PURE__*/React.createElement("div", {
+    className: "text-[8px] font-black tracking-widest text-slate-500 text-left mb-1"
+  }, "\u73FE\u5728\u306E\u30B9\u30C6\u30FC\u30BF\u30B9"), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-4 gap-1"
+  }, [['ライフ', maxHp, 'text-pink-300'], ['ちから', atk, 'text-red-300'], ['丈夫さ', def, 'text-emerald-300'], ['ガッツ', maxGuts, 'text-amber-300']].map(([label, value, tint]) => /*#__PURE__*/React.createElement("div", {
+    key: label,
+    className: "rounded-lg bg-black/40 px-1 py-1 text-center"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "block text-[8px] font-black text-slate-500 leading-none"
+  }, label), /*#__PURE__*/React.createElement("span", {
+    className: `block text-[13px] font-black font-mono leading-tight ${tint}`
+  }, value)))), /*#__PURE__*/React.createElement("div", {
+    className: "text-[8px] font-black tracking-widest text-slate-500 text-left mt-1.5 mb-1"
+  }, "\u9593\u5408\u3044\u9069\u6027\uFF08\u8DDD\u96E2\u88DC\u6B63\uFF09"), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-4 gap-1"
+  }, RANGE_LABELS.map((label, idx) => {
+    const cur = distTotalBonus(idx);
+    return /*#__PURE__*/React.createElement("div", {
+      key: label,
+      className: "rounded-lg bg-black/40 px-1 py-1 text-center"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "block text-[8px] font-black text-slate-500 leading-none"
+    }, label), /*#__PURE__*/React.createElement("span", {
+      className: `block text-[12px] font-black font-mono leading-tight ${cur > 0 ? 'text-cyan-300' : cur < 0 ? 'text-red-300' : 'text-slate-400'}`
+    }, formatAptPct(cur)));
+  }))), pickMode === 'hero' && /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 w-full max-w-md mx-auto mb-2"
+  }, !isProMode(runMode) && /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-1.5"
+  }, [['roster', '編成'], ['base', 'ベースモン']].map(([key, label]) => /*#__PURE__*/React.createElement("button", {
+    key: key,
+    onClick: () => {
+      setHeroPickTab(key);
+      setCurrentPickingMon(null);
+    },
+    "aria-pressed": heroPickTab === key,
+    className: `flex-1 min-h-[40px] rounded-2xl font-black text-[12px] border-2 active:scale-95 ${heroPickTab === key ? 'bg-indigo-600 border-indigo-300 text-white shadow-lg' : 'bg-slate-900 border-slate-700 text-slate-400'}`
+  }, label))), /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] text-slate-500 font-bold mt-1 px-1 text-center"
+  }, isProMode(runMode) ? 'プロモードはベースモンだけで挑みます。育てたマスモンは連れていけません' : heroPickTab === 'base' ? '解放済みのベースモンから選べます。編成に入れていなくても、ラン終了時にマスモン登録できます' : 'M/B管理で組んだ編成から選びます')), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 overflow-y-auto mh-scroll w-full max-w-md mx-auto pb-4 min-h-0 flex flex-col"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: `w-full${pickMode === 'ally' ? ' m-auto' : ''}`
+  }, (() => {
+    const allyCarousel = pickMode === 'ally' && isProMode(runMode);
+    // 念のため、すでに編成にいる子は一覧にも出さない(勇者モンがもう一度出ないようにする)
+    const inParty = slots.filter(x => x).map(x => x.id);
+    const savedRawList = pickMode === 'hero' && (heroPickTab === 'base' || isProMode(runMode)) ? getUnlockedBaseMonsterList() : monSelection;
+    const rawList = pickMode === 'hero' ? debugHeroMonsterList(savedRawList) : savedRawList;
+    const list = (pickMode === 'ally' ? rawList.filter(m => m && !inParty.includes(m.id)) : rawList) || [];
+    const stepAlly = delta => {
+      const root = allyCarouselRef.current;
+      if (!root) return;
+      const next = Math.max(0, Math.min(list.length - 1, allyCardIndex + delta));
+      setAllyCardIndex(next);
+      centerCarouselChild(root, next, 'smooth');
+    };
+    return /*#__PURE__*/React.createElement(React.Fragment, null, allyCarousel && /*#__PURE__*/React.createElement("div", {
+      className: "text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0 mb-1"
+    }, "\u5DE6\u53F3\u306B\u30B9\u30EF\u30A4\u30D7\u3057\u3066\u4F9B\u30E2\u30F3\u3092\u9078\u629E"), allyCarousel && /*#__PURE__*/React.createElement("div", {
+      className: "relative h-0"
+    }, /*#__PURE__*/React.createElement("button", {
+      "aria-label": "\u524D\u306E\u4F9B\u30E2\u30F3",
+      disabled: allyCardIndex === 0,
+      onClick: () => stepAlly(-1),
+      className: "absolute left-0 top-[70px] z-20 w-9 h-12 rounded-r-xl bg-black/70 disabled:opacity-20"
+    }, /*#__PURE__*/React.createElement(ChevronLeft, null)), /*#__PURE__*/React.createElement("button", {
+      "aria-label": "\u6B21\u306E\u4F9B\u30E2\u30F3",
+      disabled: allyCardIndex >= list.length - 1,
+      onClick: () => stepAlly(1),
+      className: "absolute right-0 top-[70px] z-20 w-9 h-12 rounded-l-xl bg-black/70 disabled:opacity-20"
+    }, /*#__PURE__*/React.createElement(ChevronRight, null))), /*#__PURE__*/React.createElement("div", {
+      ref: allyCarousel ? allyCarouselRef : null,
+      onScroll: allyCarousel ? e => {
+        const root = e.currentTarget,
+          c = root.scrollLeft + root.clientWidth / 2;
+        let best = 0,
+          d = Infinity;
+        [...root.children].forEach((card, i) => {
+          const n = Math.abs(card.offsetLeft + card.offsetWidth / 2 - c);
+          if (n < d) {
+            d = n;
+            best = i;
+          }
+        });
+        if (best !== allyCardIndex) setAllyCardIndex(best);
+      } : undefined,
+      className: allyCarousel ? 'flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-1 mh-scroll' : 'grid grid-cols-2 gap-2.5',
+      style: allyCarousel ? {
+        paddingLeft: '18%',
+        paddingRight: '18%',
+        touchAction: 'pan-x pinch-zoom'
+      } : pickMode === 'hero' && isProMode(runMode) ? {
+        display: 'flex',
+        flexDirection: 'column'
+      } : undefined
+    }, list.map((m, cardIndex) => {
+      const isSel = currentPickingMon?.id === m.id;
+      const focused = allyCarousel && cardIndex === allyCardIndex;
+      // カードはM/B管理の一覧とまったく同じ共通実装(renderMonsterCardBody)を通す。
+      // 以前はこの画面だけ独自に組んでいたため、絆レベルも総合力も限界突破の★も出ず、
+      // 同じマスモンが画面によって違う見た目になっていた。
+      // この画面だけの情報(固有技名・ステータス・詳細への案内)はextraで足す。
+      const pickMasu = m.masuId ? getMasuMon(m.masuId) : null;
+      const pickBase = m.debugOnly ? m : ALL_PLAYER_MONSTERS[m.id] || m;
+      // カードの見た目は「供モンの候補」と同じ共通部品(renderProMonsterRow)を通す
+      if (pickMode === 'hero' && isProMode(runMode)) return /*#__PURE__*/React.createElement(React.Fragment, {
+        key: m.id
+      }, renderProMonsterRow({
+        mon: m,
+        selected: proHeroPreset?.heroBaseId === m.id,
+        disabled: !scenarioPicksHero(m.id),
+        onSelect: () => {
+          if (proHeroPreset?.heroBaseId === m.id) {
+            setupMon(m, proHeroPreset.heroDistance);
+            return;
+          }
+          setProHeroPreset(null);
+          setCurrentPickingMon(m);
+          advanceRunStage('PICK_SLOT');
+        },
+        onDetail: () => setCurrentPickingMon(m),
+        selectLabel: `${m.name}を勇者モンに選ぶ`,
+        activeClass: 'active:bg-indigo-900/30',
+        extraButtonClass: scenarioPicksHero(m.id) ? battleTutorialSpotClass('monCards') : ''
+      }));
+      return /*#__PURE__*/React.createElement("button", {
+        key: m.id,
+        disabled: pickMode === 'hero' && !scenarioPicksHero(m.id),
+        onClick: () => setCurrentPickingMon(m),
+        style: allyCarousel ? {
+          ...MONSTER_CARD_STYLE,
+          flex: '0 0 64%'
+        } : MONSTER_CARD_STYLE,
+        className: `${MONSTER_CARD_CLASS} bg-slate-900 transition-all disabled:opacity-25${pickMode !== 'hero' || scenarioPicksHero(m.id) ? battleTutorialSpotClass('monCards') : ''}${allyCarousel ? ` snap-center shrink-0 ${focused ? 'scale-100 opacity-100' : 'scale-[.92] opacity-55'}` : ''} ${isSel ? 'border-indigo-400 bg-indigo-900/30 ring-4 ring-indigo-500/50 scale-[1.03] shadow-[0_0_25px_rgba(99,102,241,0.6)]' : 'border-slate-800'}`
+      }, renderMonsterCardBody({
+        masu: pickMasu,
+        base: pickBase,
+        mon: m,
+        badge: m.debugOnly ? /*#__PURE__*/React.createElement("div", {
+          className: "absolute top-0 left-0 z-10 rounded-br-lg bg-fuchsia-700 px-1.5 py-0.5 text-[7px] font-black text-white"
+        }, "DEBUG\u5C02\u7528") : isSel ? /*#__PURE__*/React.createElement("div", {
+          className: "absolute -top-1 -right-1 z-10 bg-indigo-500 rounded-full p-1 shadow-lg"
+        }, /*#__PURE__*/React.createElement(Check, {
+          size: 12,
+          className: "text-white"
+        })) : null,
+        extra: /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+          className: "text-amber-400 font-black flex items-center gap-1 leading-tight",
+          style: {
+            fontSize: '9px'
+          }
+        }, /*#__PURE__*/React.createElement(Zap, {
+          size: 9
+        }), " ", m.unique.name), pickMode === 'hero' ? /*#__PURE__*/React.createElement("div", {
+          className: "grid grid-cols-2 gap-x-2 gap-y-0 w-full px-1 font-mono",
+          style: {
+            fontSize: '9px'
+          }
+        }, /*#__PURE__*/React.createElement("div", {
+          className: "flex justify-between"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "text-slate-500"
+        }, "HP"), /*#__PURE__*/React.createElement("span", {
+          className: "text-pink-400 font-bold"
+        }, m.baseHp)), /*#__PURE__*/React.createElement("div", {
+          className: "flex justify-between"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "text-slate-500"
+        }, "\u529B"), /*#__PURE__*/React.createElement("span", {
+          className: "text-red-400 font-bold"
+        }, m.baseAtk)), /*#__PURE__*/React.createElement("div", {
+          className: "flex justify-between"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "text-slate-500"
+        }, "\u9632"), /*#__PURE__*/React.createElement("span", {
+          className: "text-emerald-400 font-bold"
+        }, m.baseDef)), /*#__PURE__*/React.createElement("div", {
+          className: "flex justify-between"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "text-slate-500"
+        }, "G"), /*#__PURE__*/React.createElement("span", {
+          className: "text-amber-400 font-bold"
+        }, m.baseGuts))) : (() => {
+          const preview = allyJoinPreview(m);
+          return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+            className: "w-full rounded-lg bg-black/40 px-1 py-1 grid grid-cols-4 gap-0.5 text-center font-mono",
+            style: {
+              fontSize: '8px'
+            }
+          }, preview.stats.map(stat => /*#__PURE__*/React.createElement("span", {
+            key: stat.key,
+            className: "min-w-0 block"
+          }, /*#__PURE__*/React.createElement("span", {
+            className: "block text-slate-500 font-black leading-none"
+          }, stat.short), [ULTIMATE_SETTING.id, CHAOS_SETTING.id, INFINITY_SETTING.id].includes(specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty)) && stat.normalDiff !== stat.diff ? /*#__PURE__*/React.createElement("span", {
+            className: "block leading-none text-slate-500"
+          }, "\u672C\u6765 +", stat.normalDiff) : null, /*#__PURE__*/React.createElement("b", {
+            className: `block leading-tight ${stat.diff > 0 ? stat.tint : 'text-slate-400'}`,
+            style: {
+              fontSize: '9px'
+            }
+          }, stat.after), /*#__PURE__*/React.createElement("span", {
+            className: `block leading-none ${stat.diff > 0 ? 'text-emerald-400' : 'text-slate-700'}`
+          }, stat.diff > 0 ? `実際 +${stat.diff}` : '実際 ±0')))), /*#__PURE__*/React.createElement("div", {
+            className: "w-full rounded-lg bg-black/40 px-1 py-1 grid grid-cols-4 gap-0.5 text-center font-mono",
+            style: {
+              fontSize: '8px'
+            }
+          }, preview.apt.map(range => /*#__PURE__*/React.createElement("span", {
+            key: range.idx,
+            className: "min-w-0 block"
+          }, /*#__PURE__*/React.createElement("span", {
+            className: "block text-slate-500 font-black leading-none"
+          }, range.label), specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty) === NIGHTMARE_SETTING.id && range.normalDiff !== range.diff ? /*#__PURE__*/React.createElement("span", {
+            className: "block leading-none text-slate-500"
+          }, "\u901A\u5E38 ", formatAptPct(range.normalDiff), " \u2192") : null, /*#__PURE__*/React.createElement("b", {
+            className: `block leading-tight ${range.diff > 0 ? 'text-cyan-300' : range.diff < 0 ? 'text-red-300' : 'text-slate-400'}`
+          }, formatAptPct(range.after)), /*#__PURE__*/React.createElement("span", {
+            className: `block leading-none ${range.diff > 0 ? 'text-emerald-400' : range.diff < 0 ? 'text-red-400' : 'text-slate-700'}`
+          }, range.diff !== 0 ? `${range.normalDiff !== range.diff ? '実際 ' : ''}${formatAptPct(range.diff)}` : '±0')))));
+        })(), /*#__PURE__*/React.createElement("div", {
+          className: "min-h-[32px] w-full rounded-xl border border-indigo-400/40 bg-indigo-950/50 text-indigo-200 font-black mt-1 flex items-center justify-center gap-1",
+          style: {
+            fontSize: '10px'
+          }
+        }, "\u8A73\u7D30\u3092\u898B\u308B ", /*#__PURE__*/React.createElement(ChevronRight, {
+          size: 11
+        })))
+      }));
+    })), allyCarousel && /*#__PURE__*/React.createElement("div", {
+      className: "flex justify-center gap-1 py-1 shrink-0"
+    }, list.map((m, i) => /*#__PURE__*/React.createElement("button", {
+      key: m.id,
+      "aria-label": `${i + 1}体目`,
+      onClick: () => stepAlly(i - allyCardIndex),
+      className: `w-1.5 h-1.5 rounded-full ${i === allyCardIndex ? 'bg-indigo-300 scale-125' : 'bg-slate-700'}`
+    }))));
+  })())), currentPickingMon && renderMonsterDetailModal({
+    mon: currentPickingMon,
+    masu: currentPickingMon.masuId ? getMasuMon(currentPickingMon.masuId) : null,
+    onClose: () => setCurrentPickingMon(null),
+    zIndex: 31000,
+    // 練習中は上にみゅあの帯が出るので、その高さぶん下げて名前と重ならないようにする
+    paddingTop: battleTutorial ? 'calc(4.25rem + env(safe-area-inset-top))' : undefined,
+    detailOpts: {
+      // 一覧カードと同じ allyJoinPreview を通す。以前はここだけ plusStats をそのまま足していたため、
+      // ULTIMATE(累計ターンで加算が下がる)では詳細の数値と実際に増える量が食い違っていた
+      statValues: pickMode === 'hero' ? null : allyJoinPreview(currentPickingMon).stats.map(stat => [stat.label, `${stat.before} → ${stat.after}${stat.diff > 0 ? `（+${stat.diff}）` : ''}`, stat.diff > 0 ? stat.tint : 'text-slate-400']),
+      statTitle: pickMode === 'hero' ? '基本ステータス' : '基本ステータス(現在 → 合流後)',
+      // 距離補正は「いまの値 → このモンスターを加えた後の値」で見せる
+      aptCurrentPct: [0, 1, 2, 3].map(i => distTotalBonus(i)),
+      // 加算量も実際に足される値(NIGHTMAREの半減込み)で出す
+      aptDeltaPct: pickMode === 'hero' ? null : allyJoinPreview(currentPickingMon).apt.map(range => range.diff),
+      aptPointsLabel: currentPickingMon.masuId ? /*#__PURE__*/React.createElement("div", {
+        className: "text-[8px] text-amber-300 font-black flex items-center gap-1"
+      }, /*#__PURE__*/React.createElement(Sparkles, {
+        size: 9
+      }), "\u5F37\u5316P: ", getMasuMon(currentPickingMon.masuId)?.distAptPoints || 0) : null,
+      aptExtra: (idx, grade) => {
+        const pts = currentPickingMon.masuId ? getMasuMon(currentPickingMon.masuId)?.distAptPoints || 0 : 0;
+        const canUp = pts > 0 && DIST_APTITUDE_GRADES.indexOf(grade) < DIST_APTITUDE_GRADES.length - 1;
+        return canUp ? /*#__PURE__*/React.createElement("button", {
+          onClick: () => {
+            const updated = spendAptPoint(currentPickingMon.masuId, idx);
+            if (updated) setCurrentPickingMon(mergeMasuIntoMon(updated));
+          },
+          className: "w-full text-[8px] font-black bg-amber-600 text-white rounded py-0.5 active:scale-95"
+        }, "+1") : null;
+      },
+      extraAfterApt: /*#__PURE__*/React.createElement(React.Fragment, null, currentPickingMon.masuId && (getMasuMon(currentPickingMon.masuId)?.distAptPoints || 0) > 0 && /*#__PURE__*/React.createElement("div", {
+        className: "bg-black/40 p-2 rounded-xl border border-emerald-500/30"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "text-[7px] text-emerald-400 uppercase font-bold mb-1"
+      }, "\u30B9\u30C6\u30FC\u30BF\u30B9\u5F37\u5316(\u5F37\u5316P 1\u3064\u306B\u3064\u304D\u4F7F\u7528\u30FB\u8ABF\u6574\u4E2D)"), /*#__PURE__*/React.createElement("div", {
+        className: "grid grid-cols-4 gap-1"
+      }, Object.entries(STAT_POINT_KEYS).map(([key, label]) => /*#__PURE__*/React.createElement("button", {
+        key: key,
+        onClick: () => {
+          const updated = spendStatPoint(currentPickingMon.masuId, key);
+          if (updated) setCurrentPickingMon(mergeMasuIntoMon(updated));
+        },
+        className: "flex flex-col items-center gap-0.5 bg-emerald-950/50 border border-emerald-500/30 rounded-lg py-1.5 active:scale-95"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-[7px] text-emerald-300 font-black"
+      }, label), /*#__PURE__*/React.createElement("span", {
+        className: "text-[10px] text-white font-black"
+      }, "+", STAT_POINT_GAIN[key] || 1))))), !currentPickingMon.masuId && !currentPickingMon.debugOnly && /*#__PURE__*/React.createElement("div", {
+        className: "bg-black/30 p-2 rounded-xl border border-white/5 text-[8px] text-slate-500 font-bold text-center"
+      }, pickMode === 'hero' ? '勇者モンとして選び、ラン終了時に登録すると「マスモン」として絆レベル・ステータスを強化できます' : '絆レベルの強化は勇者モン(マスモン)のみ対象です'), currentPickingMon.debugOnly && /*#__PURE__*/React.createElement("div", {
+        className: "rounded-xl border border-fuchsia-400/50 bg-fuchsia-950/50 p-2 text-center text-[9px] font-black text-fuchsia-200"
+      }, "DEBUG\u5C02\u7528\u30FB\u4FDD\u5B58\u3001\u80B2\u6210\u3001\u30DE\u30B9\u30E2\u30F3\u767B\u9332\u306E\u5BFE\u8C61\u5916"))
+    },
+    footer: /*#__PURE__*/React.createElement("div", {
+      className: "flex gap-2 shrink-0"
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: () => setCurrentPickingMon(null),
+      className: "w-2/5 min-h-[48px] bg-slate-800 text-slate-400 rounded-2xl font-black text-sm uppercase active:scale-95"
+    }, "\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => advanceRunStage('PICK_SLOT'),
+      className: `flex-1 min-h-[48px] bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase shadow-lg active:scale-95${battleTutorialSpotClass('monDecide')}`
+    }, pickMode === 'hero' ? '勇者モンに選ぶ' : 'この供モンを選ぶ'))
+  }));
+}
+function PickProAlliesScreen({
+  advanceRunStage,
+  clearSlotUniqueSelection,
+  confirmProParty,
+  getUnlockedBaseMonsterList,
+  initialBattleDistanceRef,
+  mainHero,
+  proAllyDetail,
+  proAllyPool,
+  proEditingAllyIndex,
+  renderMonsterDetailModal,
+  renderProMonsterRow,
+  runMode,
+  setCurrentPickingMon,
+  setMainHero,
+  setProAllyDetail,
+  setProAllyPool,
+  setProEditingAllyIndex,
+  setProHeroPreset,
+  setSlots
+}) {
+  const mode = battleModeInfo(runMode);
+  const candidates = getUnlockedBaseMonsterList().filter(m => m.id !== mainHero?.id);
+  const need = Math.min(PRO_ALLY_POOL_SIZE, candidates.length);
+  const ready = !!mainHero && proAllyPool.length === need;
+  const changeAlly = m => {
+    if (!Number.isInteger(proEditingAllyIndex)) return;
+    setProAllyPool(prev => {
+      const next = [...prev];
+      next[proEditingAllyIndex] = m;
+      return next.filter(Boolean);
+    });
+    setProEditingAllyIndex(null);
+  };
+  const returnToHero = () => {
+    setProAllyDetail(null);
+    setProEditingAllyIndex(null);
+    setProHeroPreset(mainHero ? {
+      heroBaseId: mainHero.id,
+      heroDistance: initialBattleDistanceRef.current
+    } : null);
+    setMainHero(null);
+    setSlots([null, null, null, null]);
+    setCurrentPickingMon(null);
+    clearSlotUniqueSelection();
+    advanceRunStage('PICK_HERO');
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "absolute",
+      inset: 0,
+      backgroundColor: "#020617",
+      zIndex: 30000
+    },
+    className: "absolute inset-0 z-[3000] flex flex-col h-full min-h-0 px-4 overflow-hidden",
+    "data-screen": "pick-pro-allies"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mb-2 text-center flex items-center justify-between px-2 shrink-0",
+    style: {
+      paddingTop: 'calc(.35rem + env(safe-area-inset-top))'
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    "aria-label": "\u623B\u308B",
+    onClick: returnToHero,
+    className: "p-3 text-slate-400 active:scale-90"
+  }, /*#__PURE__*/React.createElement(ArrowLeft, {
+    size: 20
+  })), /*#__PURE__*/React.createElement("h2", {
+    className: "text-xl font-black italic uppercase tracking-widest truncate",
+    style: {
+      color: mode.color
+    }
+  }, proEditingAllyIndex === null ? 'プロモード編成' : `供モン${proEditingAllyIndex + 1}を変更`), /*#__PURE__*/React.createElement("div", {
+    className: "w-10"
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col"
+  }, proEditingAllyIndex === null ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 w-full mb-2"
+  }, /*#__PURE__*/React.createElement(AssistantBubble, {
+    scene: "pickProAllies",
+    accent: mode.color,
+    compact: true
+  })), /*#__PURE__*/React.createElement("p", {
+    className: "shrink-0 text-[9px] text-slate-400 font-bold text-center mb-2"
+  }, "\u5909\u3048\u305F\u3044\u67A0\u3060\u3051\u300C\u5909\u66F4\u300D\u3092\u62BC\u3057\u3066\u304F\u3060\u3055\u3044\u3002\u4ED6\u306E\u67A0\u306F\u305D\u306E\u307E\u307E\u7DAD\u6301\u3055\u308C\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 overflow-y-auto mh-scroll min-h-0 space-y-1.5 pb-2"
+  }, [["勇者モン", mainHero], ...Array.from({
+    length: need
+  }, (_, i) => [`供モン${i + 1}`, proAllyPool[i]])].map(([label, mon], i) => /*#__PURE__*/React.createElement("div", {
+    key: label,
+    className: "min-h-[58px] rounded-2xl border border-white/10 bg-slate-900/80 px-2 py-1.5 flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: `w-14 shrink-0 text-[9px] font-black ${i === 0 ? 'text-amber-300' : 'text-pink-300'}`
+  }, label), /*#__PURE__*/React.createElement("button", {
+    disabled: !mon,
+    onClick: () => setProAllyDetail(mon),
+    className: "flex-1 min-w-0 flex items-center gap-2 text-left disabled:opacity-50",
+    "aria-label": mon ? `${mon.name}の詳細を見る` : `${label}は未選択`
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "w-10 h-10 rounded-full bg-black/40 border border-white/10 flex items-center justify-center overflow-hidden shrink-0"
+  }, mon ? mon.imgUrl ? /*#__PURE__*/React.createElement("img", {
+    src: mon.imgUrl,
+    alt: "",
+    className: "w-full h-full object-contain"
+  }) : /*#__PURE__*/React.createElement("span", {
+    className: "text-xl"
+  }, mon.emoji) : /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-600"
+  }, "\uFF0B")), /*#__PURE__*/React.createElement("span", {
+    className: "min-w-0"
+  }, /*#__PURE__*/React.createElement("b", {
+    className: "block text-[11px] text-white truncate"
+  }, mon?.name || '未選択'), i === 0 && /*#__PURE__*/React.createElement("small", {
+    className: "block text-[8px] text-slate-500"
+  }, RANGE_LABELS[initialBattleDistanceRef.current], "\u8DDD\u96E2\u306B\u914D\u7F6E"))), /*#__PURE__*/React.createElement("button", {
+    onClick: () => i === 0 ? returnToHero() : setProEditingAllyIndex(i - 1),
+    className: "min-w-[58px] min-h-[42px] rounded-xl border border-pink-400/50 bg-pink-950/60 text-pink-200 text-[11px] font-black active:scale-95"
+  }, "\u5909\u66F4")))), /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 pt-1",
+    style: {
+      paddingBottom: 'calc(.25rem + env(safe-area-inset-bottom))'
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    disabled: !ready,
+    onClick: confirmProParty,
+    className: "w-full min-h-[52px] rounded-2xl font-black text-sm active:scale-[.98] disabled:opacity-30",
+    style: {
+      backgroundColor: mode.color,
+      color: '#0f172a'
+    }
+  }, ready ? 'この編成で開始' : `あと${need - proAllyPool.length}体えらんでください`))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
+    className: "shrink-0 text-[9px] text-slate-400 font-bold text-center mb-2"
+  }, "\u3053\u306E\u67A0\u306B\u5165\u308C\u308B\u30D9\u30FC\u30B9\u30E2\u30F3\u30921\u4F53\u9078\u3093\u3067\u304F\u3060\u3055\u3044\u3002"), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 overflow-y-auto mh-scroll pb-2 min-h-0"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-col gap-2.5"
+  }, candidates.filter(m => !proAllyPool.some((chosen, i) => i !== proEditingAllyIndex && chosen.id === m.id)).map(m => /*#__PURE__*/React.createElement(React.Fragment, {
+    key: m.id
+  }, renderProMonsterRow({
+    mon: m,
+    selected: proAllyPool[proEditingAllyIndex]?.id === m.id,
+    onSelect: () => changeAlly(m),
+    onDetail: () => setProAllyDetail(m),
+    selectLabel: `${m.name}を供モン${proEditingAllyIndex + 1}に選ぶ`,
+    activeClass: 'active:bg-pink-900/30'
+  }))))), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setProEditingAllyIndex(null),
+    className: "shrink-0 w-full min-h-[48px] rounded-2xl bg-slate-800 text-slate-300 font-black text-sm mb-1"
+  }, "\u5909\u66F4\u305B\u305A\u623B\u308B")), proAllyDetail && renderMonsterDetailModal({
+    mon: proAllyDetail,
+    onClose: () => setProAllyDetail(null),
+    accent: 'pink',
+    zIndex: 31000,
+    label: `${proAllyDetail.name}のベースモン詳細`,
+    footer: /*#__PURE__*/React.createElement("button", {
+      onClick: () => setProAllyDetail(null),
+      className: "w-full min-h-[48px] bg-slate-800 text-slate-300 rounded-2xl font-black text-sm active:scale-95"
+    }, "\u9589\u3058\u308B")
+  })));
+}
+function PickSlotScreen({
+  battleTutorial,
+  battleTutorialSpotClass,
+  currentPickingMon,
+  distTotalBonus,
+  getDistAptitude,
+  onRepick,
+  scenarioPicksSlot,
+  setupMon,
+  slots
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "absolute",
+      inset: 0,
+      backgroundColor: "#020617",
+      zIndex: 30000
+    },
+    className: "absolute inset-0 z-[3000] flex flex-col items-center justify-center p-6 text-center overflow-hidden"
+  }, currentPickingMon?.imgUrl ? /*#__PURE__*/React.createElement(DyedMonsterImage, {
+    baseId: currentPickingMon.id,
+    src: currentPickingMon.imgUrl,
+    alt: "mon",
+    masuColors: currentPickingMon.colors,
+    className: "w-28 h-28 mb-4 object-contain animate-bounce drop-shadow-[0_0_40px_rgba(99,102,241,0.4)] scale-110"
+  }) : /*#__PURE__*/React.createElement("div", {
+    className: "text-7xl mb-4 animate-bounce drop-shadow-[0_0_40px_rgba(99,102,241,0.4)]"
+  }, currentPickingMon?.emoji), /*#__PURE__*/React.createElement("h2", {
+    className: "text-lg font-black mb-1 italic uppercase tracking-widest text-indigo-400"
+  }, "\u914D\u7F6E\u5834\u6240\u3092\u6C7A\u5B9A\u305B\u3088"), /*#__PURE__*/React.createElement("div", {
+    className: "w-full max-w-xs mb-2"
+  }, /*#__PURE__*/React.createElement(AssistantBubble, {
+    scene: "pickSlot",
+    compact: true
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] text-slate-400 font-bold mb-5 leading-relaxed px-2"
+  }, "\u9593\u5408\u3044\u9069\u6027\u306F\u3069\u3053\u306B\u7F6E\u3044\u3066\u30824\u8DDD\u96E2\u3059\u3079\u3066\u306B\u52A0\u7B97\u3055\u308C\u307E\u3059\u3002", /*#__PURE__*/React.createElement("br", null), "\u914D\u7F6E\u306F\u300C\u6575\u3068\u540C\u3058\u8DDD\u96E2\u3067\u653B\u6483\u3059\u308B\u300D\u3053\u3068\u3068\u3001\u899A\u3048\u308B\u8DDD\u96E2\u6483\u306B\u5F71\u97FF\u3057\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-4 w-full max-w-xs"
+  }, slots.map((s, i) => {
+    const grade = getDistAptitude(currentPickingMon, i);
+    const after = distTotalBonus(i) + aptGradeToPct(grade);
+    return /*#__PURE__*/React.createElement("button", {
+      key: i,
+      disabled: s !== null || !scenarioPicksSlot(i),
+      onClick: () => setupMon(currentPickingMon, i),
+      className: `h-24 rounded-2xl border-2 flex flex-col items-center justify-center transition-all disabled:opacity-20${scenarioPicksSlot(i) ? battleTutorialSpotClass('slots') : ''} ${RANGE_STYLES[i].bg} ${RANGE_STYLES[i].border} ${s ? 'opacity-100 shadow-xl' : 'opacity-90 ring-2 ring-white/20 animate-pulse'} active:scale-90`
+    }, /*#__PURE__*/React.createElement("span", {
+      className: `text-[10px] font-black mb-1 uppercase px-3 py-0.5 rounded-full ${RANGE_STYLES[i].labelBg} ${RANGE_STYLES[i].text} border border-white/10 shadow-md`
+    }, RANGE_LABELS[i], "\u8DDD\u96E2"), s ? s.imgUrl ? /*#__PURE__*/React.createElement(DyedMonsterImage, {
+      baseId: s.id,
+      src: s.imgUrl,
+      alt: s.name,
+      masuColors: s.colors,
+      className: "w-10 h-10 mt-1 object-contain drop-shadow-md scale-125"
+    }) : /*#__PURE__*/React.createElement("span", {
+      className: "text-xl mt-1 drop-shadow-md"
+    }, s.emoji) : /*#__PURE__*/React.createElement(PlusCircle, {
+      className: "text-white/50 mt-1",
+      size: 20
+    }), !s && /*#__PURE__*/React.createElement("span", {
+      className: `text-[9px] font-black mt-1 px-2 py-0.5 rounded-full border ${DIST_APTITUDE_COLOR[grade]}`
+    }, grade, " \u5408\u6D41\u5F8C ", formatAptPct(after)));
+  })), /*#__PURE__*/React.createElement("button", {
+    disabled: !!battleTutorial,
+    onClick: onRepick,
+    className: "mt-8 text-slate-400 flex items-center gap-2 font-black uppercase text-[10px] active:scale-90 disabled:opacity-25"
+  }, /*#__PURE__*/React.createElement(ArrowLeft, {
+    size: 14
+  }), " \u30E2\u30F3\u30B9\u30BF\u30FC\u3092\u9078\u3073\u76F4\u3059"));
+}
+function PickTeachingScreen({
+  battleTutorialSpotClass,
+  confirmPickTeaching,
+  getFullEvolutionDetails,
+  ownedTeachings,
+  scenarioPicksTeaching,
+  selectedTeachingCard,
+  setSelectedTeachingCard,
+  teachingPool
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "absolute",
+      inset: 0,
+      backgroundColor: "#020617",
+      zIndex: 30000
+    },
+    className: "absolute inset-0 z-[3000] p-4 flex flex-col items-center justify-center overflow-hidden"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mb-4 text-center shrink-0"
+  }, /*#__PURE__*/React.createElement("h2", {
+    className: "text-xl font-black text-purple-400 italic"
+  }, "\u30A2\u30B7\u30B9\u30C8\u30AB\u30FC\u30C9\u306E\u7D99\u627F\u30FB\u5F37\u5316"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[9px] text-slate-400 uppercase mt-1 tracking-widest"
+  }, "Select Breeder Card")), /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 w-full max-w-sm mb-2"
+  }, /*#__PURE__*/React.createElement(AssistantBubble, {
+    scene: "pickTeaching",
+    compact: true
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-3 w-full max-w-sm mx-auto overflow-y-auto min-h-0 p-1 flex-1 content-center"
+  }, teachingPool.map(t => {
+    const owned = ownedTeachings.find(ot => ot.id === t.id);
+    const level = owned ? owned.evoLevel : 0;
+    const isMax = level >= 2;
+    return /*#__PURE__*/React.createElement("button", {
+      key: t.id,
+      disabled: !scenarioPicksTeaching(t.id),
+      onClick: () => setSelectedTeachingCard(t),
+      className: `p-4 rounded-2xl border-2 flex flex-col items-center justify-center text-center gap-2 transition-all aspect-square disabled:opacity-20${scenarioPicksTeaching(t.id) ? battleTutorialSpotClass('teachings') : ''} ${owned ? 'bg-purple-900/40 border-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.3)]' : 'bg-slate-900 border-slate-800 active:scale-95'}`
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: '44px'
+      }
+    }, cardIconNode(t.icon, 52, t.id)), /*#__PURE__*/React.createElement("div", {
+      className: "text-[11px] font-black leading-tight flex flex-col items-center justify-center"
+    }, owned && !isMax && /*#__PURE__*/React.createElement("div", {
+      className: "text-[8px] text-amber-400 mb-0.5 line-through"
+    }, BREEDER_EVO_NAMES[t.id][level]), /*#__PURE__*/React.createElement("div", {
+      className: owned ? "text-white" : ""
+    }, owned ? isMax ? BREEDER_EVO_NAMES[t.id][level] : BREEDER_EVO_NAMES[t.id][level + 1] : BREEDER_EVO_NAMES[t.id][0])), /*#__PURE__*/React.createElement("div", {
+      className: "text-[8px] text-slate-200 bg-black/20 px-2 py-1 rounded-full"
+    }, owned ? isMax ? "MAXレベル" : "進化：効果上昇" : "新規習得"));
+  })), selectedTeachingCard && /*#__PURE__*/React.createElement("div", {
+    className: "fixed inset-0 z-[3100] flex items-center justify-center p-6",
+    style: {
+      position: 'fixed',
+      inset: 0,
+      backgroundColor: 'rgba(0,0,0,0.85)',
+      zIndex: 31000
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-slate-900 border-2 border-purple-500 rounded-3xl p-6 w-full max-w-xs flex flex-col items-center gap-4 shadow-2xl h-auto max-h-full"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-6xl mb-2 shrink-0"
+  }, cardIconNode(selectedTeachingCard.icon, 76, selectedTeachingCard.id)), /*#__PURE__*/React.createElement("h3", {
+    className: "text-lg font-black text-white mb-4 shrink-0"
+  }, (() => {
+    const t = selectedTeachingCard;
+    const owned = ownedTeachings.find(ot => ot.id === t.id);
+    return BREEDER_EVO_NAMES[t.id][owned ? owned.evoLevel : 0];
+  })()), /*#__PURE__*/React.createElement("div", {
+    className: "w-full space-y-2 mb-4 overflow-y-auto min-h-0 flex-1"
+  }, getFullEvolutionDetails(selectedTeachingCard).map(info => {
+    const owned = ownedTeachings.find(ot => ot.id === selectedTeachingCard.id);
+    const currentLvl = owned ? owned.evoLevel : -1;
+    const isCurrent = info.lvl === currentLvl;
+    const isNext = info.lvl === currentLvl + 1;
+    return /*#__PURE__*/React.createElement("div", {
+      key: info.lvl,
+      className: `p-2 rounded-xl border ${isCurrent ? 'bg-purple-900/50 border-purple-400' : isNext ? 'bg-amber-900/30 border-amber-500/50' : 'bg-black/30 border-white/5'}`
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex justify-between items-center mb-1"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: `text-[9px] font-black ${isCurrent ? 'text-purple-300' : isNext ? 'text-amber-300' : 'text-slate-500'}`
+    }, "Lv.", info.lvl, " ", info.name), isCurrent && /*#__PURE__*/React.createElement("span", {
+      className: "text-[7px] bg-purple-500 text-white px-1.5 rounded"
+    }, "\u6240\u6301"), isNext && /*#__PURE__*/React.createElement("span", {
+      className: "text-[7px] bg-amber-600 text-white px-1.5 rounded"
+    }, "\u5F37\u5316\u5F8C")), /*#__PURE__*/React.createElement("div", {
+      className: "text-[8px] text-slate-300"
+    }, info.desc));
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2 w-full mt-auto shrink-0"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setSelectedTeachingCard(null),
+    className: "flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs"
+  }, "\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => confirmPickTeaching(),
+    className: "flex-1 bg-purple-600 text-white py-3 rounded-xl font-black shadow-lg text-xs"
+  }, ownedTeachings.find(ot => ot.id === selectedTeachingCard.id) ? "強化する" : "習得する")))));
+}
+
 // ---- part: 60-app.jsx ----
 function MonsterHeroGame() {
   const [gameState, setGameState] = useState('HOME');
@@ -52229,301 +53291,64 @@ function MonsterHeroGame() {
         onClick: () => setSkipInfoItemId(null),
         className: "w-full mt-4 bg-teal-600 text-white py-3 rounded-2xl font-black text-sm uppercase active:scale-95"
       }, "\u9589\u3058\u308B")));
-    })(), gameState === 'SKIP_PICK' && skipFlow && (() => {
-      const item = BREEDER_MARKET_ITEMS.find(i => i.id === skipFlow.itemId);
-      const label = DIFFICULTY_SETTINGS[skipFlow.difficulty]?.label || skipFlow.difficulty;
-      const list = skipPickTab === 'base' ? getUnlockedBaseMonsterList() : getActiveMonsterList();
-      const chosen = [skipFlow.hero, ...(skipFlow.allies || [])].filter(Boolean);
-      const chosenKeys = new Set(chosen.map(skipMonKey));
-      const slotLabels = ['勇者モン', '供モン1', '供モン2', '供モン3'];
-      const slotMons = [skipFlow.hero, ...(skipFlow.allies || [])];
-      return /*#__PURE__*/React.createElement("div", {
-        style: {
-          position: 'absolute',
-          inset: 0,
-          backgroundColor: '#020617',
-          zIndex: 30000
-        },
-        className: "absolute inset-0 p-4 pt-6 flex flex-col overflow-hidden"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "mb-2 flex items-center justify-between px-2 shrink-0"
-      }, /*#__PURE__*/React.createElement("button", {
-        onClick: closeBattleSkip,
-        className: "p-3 text-slate-400 active:scale-90"
-      }, /*#__PURE__*/React.createElement(ArrowLeft, {
-        size: 20
-      })), /*#__PURE__*/React.createElement("h2", {
-        className: "text-lg font-black italic text-teal-400 uppercase tracking-widest"
-      }, "\u30B9\u30AD\u30C3\u30D7\u30FB", label), /*#__PURE__*/React.createElement("div", {
-        className: "w-10"
-      })), /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 w-full max-w-md mx-auto mb-2"
-      }, /*#__PURE__*/React.createElement(AssistantBubble, {
-        scene: "skipPick",
-        compact: true
-      })), /*#__PURE__*/React.createElement("div", {
-        className: "w-full max-w-md mx-auto shrink-0"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-4 gap-1.5"
-      }, slotLabels.map((sl, idx) => {
-        const mon = slotMons[idx];
-        return /*#__PURE__*/React.createElement("button", {
-          key: sl,
-          disabled: !mon,
-          onClick: () => skipClearSlot(idx),
-          className: `rounded-2xl border-2 p-1.5 flex flex-col items-center gap-1 ${mon ? 'border-teal-400 bg-teal-950/50 active:scale-95' : 'border-dashed border-slate-700 bg-slate-900/50'}`
-        }, /*#__PURE__*/React.createElement("span", {
-          className: `text-[7px] font-black uppercase ${idx === 0 ? 'text-amber-300' : 'text-slate-400'}`
-        }, sl), /*#__PURE__*/React.createElement("div", {
-          className: "w-10 h-10 rounded-full overflow-hidden border border-white/10 flex items-center justify-center bg-black/30"
-        }, mon ? mon.imgUrl ? /*#__PURE__*/React.createElement(DyedMonsterImage, {
-          baseId: mon.id,
-          src: mon.imgUrl,
-          alt: mon.name,
-          masuColors: mon.colors,
-          className: "w-full h-full object-contain"
-        }) : /*#__PURE__*/React.createElement("span", {
-          className: "text-lg"
-        }, mon.emoji) : /*#__PURE__*/React.createElement("span", {
-          className: "text-slate-600 text-lg"
-        }, "\uFF0B")), /*#__PURE__*/React.createElement("span", {
-          className: "text-[8px] font-black text-white truncate w-full text-center"
-        }, mon ? mon.name : '未選択'));
-      })), /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] text-slate-500 font-bold mt-1 px-1 text-center"
-      }, "\u4E0A\u306E\u308F\u304F\u3092\u30BF\u30C3\u30D7\u3059\u308B\u3068\u5916\u305B\u307E\u3059\u3002\u7D46\u7D4C\u9A13\u5024\u304C\u5165\u308B\u306E\u306F\u30DE\u30B9\u30E2\u30F3\u3060\u3051\u3067\u3059"), /*#__PURE__*/React.createElement("div", {
-        className: "flex gap-1.5 mt-2"
-      }, [['roster', '編成'], ['base', 'ベースモン']].map(([key, tabLabel]) => /*#__PURE__*/React.createElement("button", {
-        key: key,
-        onClick: () => setSkipPickTab(key),
-        "aria-pressed": skipPickTab === key,
-        className: `flex-1 min-h-[38px] rounded-2xl font-black text-[12px] border-2 active:scale-95 ${skipPickTab === key ? 'bg-teal-600 border-teal-300 text-white' : 'bg-slate-900 border-slate-700 text-slate-400'}`
-      }, tabLabel)))), /*#__PURE__*/React.createElement("div", {
-        className: "flex-1 overflow-y-auto mh-scroll w-full max-w-md mx-auto min-h-0 mt-2"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-3 gap-2 pb-4"
-      }, list.map(mon => {
-        const used = chosenKeys.has(skipMonKey(mon));
-        const full = chosen.length >= 4;
-        return /*#__PURE__*/React.createElement("button", {
-          key: skipMonKey(mon),
-          disabled: used || full,
-          onClick: () => skipPickMon(mon),
-          className: `rounded-2xl border-2 p-2 flex flex-col items-center gap-1 ${used ? 'border-teal-500 bg-teal-950/40 opacity-50' : 'border-slate-800 bg-slate-900 active:scale-95'} disabled:opacity-40`
-        }, /*#__PURE__*/React.createElement("div", {
-          className: "w-12 h-12 rounded-full overflow-hidden border border-white/10 flex items-center justify-center bg-black/30"
-        }, mon.imgUrl ? /*#__PURE__*/React.createElement(DyedMonsterImage, {
-          baseId: mon.id,
-          src: mon.imgUrl,
-          alt: mon.name,
-          masuColors: mon.colors,
-          className: "w-full h-full object-contain"
-        }) : /*#__PURE__*/React.createElement("span", {
-          className: "text-2xl"
-        }, mon.emoji)), /*#__PURE__*/React.createElement("div", {
-          className: "text-[9px] font-black text-white truncate w-full text-center"
-        }, mon.name), /*#__PURE__*/React.createElement("div", {
-          className: "text-[7px] font-black"
-        }, mon.masuId ? /*#__PURE__*/React.createElement("span", {
-          className: "text-pink-300"
-        }, "\u7D46Lv.", getMasuBondLevel(mon.masuId).level) : /*#__PURE__*/React.createElement("span", {
-          className: "text-slate-500"
-        }, "\u30DE\u30B9\u30E2\u30F3\u672A\u767B\u9332")));
-      }))), /*#__PURE__*/React.createElement("div", {
-        className: "w-full max-w-md mx-auto shrink-0 pt-2"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "text-[10px] text-slate-400 font-bold text-center mb-1"
-      }, item?.name, " \u6240\u6301\u6570 ", ownedItems[skipFlow.itemId] || 0, " \u679A"), (() => {
-        const max = skipMaxCount(skipFlow.itemId);
-        const n = skipFlowCount();
-        return /*#__PURE__*/React.createElement("div", {
-          className: "flex items-center gap-2 mb-2"
-        }, /*#__PURE__*/React.createElement("span", {
-          className: "text-[10px] font-black text-slate-400 shrink-0"
-        }, "\u4F7F\u3046\u679A\u6570"), /*#__PURE__*/React.createElement("button", {
-          disabled: n <= 1,
-          onClick: () => changeSkipCount(n - 1),
-          "aria-label": "\u4F7F\u3046\u679A\u6570\u30921\u679A\u6E1B\u3089\u3059",
-          className: "shrink-0 w-11 h-11 rounded-xl bg-slate-800 text-white font-black text-lg active:scale-95 disabled:opacity-30"
-        }, "\u2212"), /*#__PURE__*/React.createElement("div", {
-          className: "flex-1 text-center"
-        }, /*#__PURE__*/React.createElement("span", {
-          className: "font-mono font-black text-white text-lg"
-        }, n), /*#__PURE__*/React.createElement("span", {
-          className: "text-[10px] font-black text-slate-400"
-        }, " / ", max, "\u679A")), /*#__PURE__*/React.createElement("button", {
-          disabled: n >= max,
-          onClick: () => changeSkipCount(n + 1),
-          "aria-label": "\u4F7F\u3046\u679A\u6570\u30921\u679A\u5897\u3084\u3059",
-          className: "shrink-0 w-11 h-11 rounded-xl bg-slate-800 text-white font-black text-lg active:scale-95 disabled:opacity-30"
-        }, "\uFF0B"), /*#__PURE__*/React.createElement("button", {
-          disabled: n >= max,
-          onClick: () => changeSkipCount(max),
-          className: "shrink-0 h-11 px-3 rounded-xl bg-slate-700 text-white font-black text-[11px] active:scale-95 disabled:opacity-30"
-        }, "\u5168\u90E8"));
-      })(), /*#__PURE__*/React.createElement("button", {
-        disabled: !skipFlow.hero,
-        onClick: () => setSkipConfirmOpen(true),
-        className: "w-full min-h-[52px] rounded-2xl bg-teal-600 text-white font-black text-sm uppercase shadow-lg active:scale-[.98] disabled:bg-slate-800 disabled:text-slate-500"
-      }, "\u6C7A\u5B9A")));
-    })(), skipConfirmOpen && skipFlow && (() => {
-      const item = BREEDER_MARKET_ITEMS.find(i => i.id === skipFlow.itemId);
-      const useCount = skipFlowCount();
-      return /*#__PURE__*/React.createElement("div", {
-        className: "fixed inset-0 flex items-center justify-center p-4",
-        style: {
-          position: 'fixed',
-          inset: 0,
-          backgroundColor: 'rgba(0,0,0,0.92)',
-          zIndex: 41000
-        },
-        role: "dialog",
-        "aria-modal": "true"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "bg-slate-900 border-2 border-teal-500 rounded-3xl p-5 w-full max-w-sm shadow-2xl text-center"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "text-4xl mb-2"
-      }, item?.emoji), /*#__PURE__*/React.createElement("h3", {
-        className: "text-base font-black text-white mb-1"
-      }, item?.name, "\u3092", useCount, "\u679A\u4F7F\u3044\u307E\u3059\u304B\uFF1F"), /*#__PURE__*/React.createElement("div", {
-        className: "text-[11px] text-slate-400 font-bold mb-2"
-      }, DIFFICULTY_SETTINGS[skipFlow.difficulty]?.label, " \u3092\u6700\u5F8C\u307E\u3067\u9032\u3081\u305F\u6271\u3044\u3067\u3001\u7D4C\u9A13\u5024\u3068\u30C0\u30A4\u30E4\u3092", useCount, "\u5468\u3076\u3093\u53D7\u3051\u53D6\u308A\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
-        className: "text-[11px] font-black text-teal-200 bg-black/40 border border-teal-500/30 rounded-xl py-2 mb-4"
-      }, "\u6240\u6301\u6570 ", ownedItems[skipFlow.itemId] || 0, "\u679A \u2192 ", Math.max(0, (ownedItems[skipFlow.itemId] || 0) - useCount), "\u679A"), /*#__PURE__*/React.createElement("div", {
-        className: "flex gap-2"
-      }, /*#__PURE__*/React.createElement("button", {
-        onClick: () => setSkipConfirmOpen(false),
-        className: "w-2/5 bg-slate-800 text-slate-300 py-3.5 rounded-2xl font-black text-sm"
-      }, "\u3044\u3044\u3048"), /*#__PURE__*/React.createElement("button", {
-        onClick: executeBattleSkip,
-        className: "w-3/5 bg-teal-600 text-white py-3.5 rounded-2xl font-black text-sm shadow-lg active:scale-95"
-      }, "\u306F\u3044"))));
-    })(), gameState === 'SKIP_RESULT' && skipResult && /*#__PURE__*/React.createElement("div", {
-      style: {
-        position: 'absolute',
-        inset: 0,
-        backgroundColor: '#020617',
-        zIndex: 30000
-      },
-      className: "absolute inset-0 p-4 pt-6 flex flex-col overflow-hidden"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "flex-1 min-h-0 overflow-y-auto mh-scroll w-full max-w-sm mx-auto"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "text-center py-4"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "text-5xl mb-1",
-      style: {
-        animation: 'idleSpark 900ms ease-in-out infinite'
-      }
-    }, skipResult.itemEmoji), /*#__PURE__*/React.createElement("div", {
-      className: "text-[10px] font-black tracking-[.3em] text-teal-400 uppercase"
-    }, "Skip Complete"), /*#__PURE__*/React.createElement("div", {
-      className: "w-full max-w-sm mx-auto mt-3 text-left"
-    }, /*#__PURE__*/React.createElement(AssistantBubble, {
-      scene: "skipResult",
-      compact: true
-    })), /*#__PURE__*/React.createElement("h2", {
-      className: "text-2xl font-black italic text-white mt-1"
-    }, DIFFICULTY_SETTINGS[skipResult.difficulty]?.label, " \u7A81\u7834\uFF01"), /*#__PURE__*/React.createElement("div", {
-      className: "text-[10px] text-slate-400 font-bold mt-1"
-    }, skipResult.itemName, " \u3092", skipResult.count || 1, "\u679A\u4F7F\u3044\u307E\u3057\u305F\uFF08\u6B8B\u308A ", ownedItems[skipResult.itemId] || 0, "\u679A\uFF09"), /*#__PURE__*/React.createElement("div", {
-      className: "mt-3 flex items-center justify-center gap-2"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "w-16 h-16 rounded-full overflow-hidden border-2 border-teal-400 flex items-center justify-center bg-black/40"
-    }, skipResult.heroImgUrl ? /*#__PURE__*/React.createElement(DyedMonsterImage, {
-      baseId: skipResult.heroBaseId,
-      src: skipResult.heroImgUrl,
-      alt: skipResult.heroName,
-      masuColors: skipResult.heroColors,
-      className: "w-full h-full object-contain"
-    }) : /*#__PURE__*/React.createElement("span", {
-      className: "text-3xl"
-    }, skipResult.heroEmoji)), /*#__PURE__*/React.createElement("div", {
-      className: "text-left"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "text-[9px] text-slate-500 font-black uppercase"
-    }, "\u52C7\u8005\u30E2\u30F3"), /*#__PURE__*/React.createElement("div", {
-      className: "text-sm font-black text-white"
-    }, skipResult.heroName)))), /*#__PURE__*/React.createElement("div", {
-      className: `space-y-2 transition-all duration-500 ${skipAnimPhase > 0 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'}`
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "bg-black/40 rounded-2xl border border-amber-500/30 p-3 flex items-center justify-between"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "text-[11px] font-black text-amber-300 flex items-center gap-1"
-    }, /*#__PURE__*/React.createElement(Sparkles, {
-      size: 13
-    }), "\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("span", {
-      className: "font-mono font-black text-white text-sm"
-    }, skipResult.goldBefore.toLocaleString(), " \u2192 ", skipResult.goldAfter.toLocaleString(), " ", /*#__PURE__*/React.createElement("span", {
-      className: "text-amber-300"
-    }, "(+", skipResult.goldGain.toLocaleString(), ")"))), /*#__PURE__*/React.createElement("div", {
-      className: "bg-black/40 rounded-2xl border border-indigo-500/30 p-3"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center justify-between mb-1"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "text-[11px] font-black text-indigo-300"
-    }, "\u30D6\u30EA\u30FC\u30C0\u30FC\u7D4C\u9A13\u5024"), /*#__PURE__*/React.createElement("span", {
-      className: "font-mono font-black text-white text-sm"
-    }, "+", skipResult.breederXpGain.toLocaleString())), /*#__PURE__*/React.createElement(LevelGrowthBar, {
-      levelBefore: skipResult.breederLevelBefore,
-      levelAfter: skipResult.breederLevelAfter
-    }), skipResult.breederLevelAfter.level > skipResult.breederLevelBefore.level && /*#__PURE__*/React.createElement("div", {
-      className: "text-[8px] text-amber-300 font-black mt-1 flex items-center gap-1"
-    }, /*#__PURE__*/React.createElement(Sparkles, {
-      size: 9
-    }), "\u30D6\u30EA\u30FC\u30C0\u30FC\u30DD\u30A4\u30F3\u30C8 +", skipResult.breederLevelAfter.level - skipResult.breederLevelBefore.level)), skipResult.heroBondGain ? /*#__PURE__*/React.createElement("div", {
-      className: "bg-black/40 rounded-2xl border border-pink-500/30 p-3"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center justify-between mb-1"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "text-[11px] font-black text-pink-300 flex items-center gap-1 truncate"
-    }, /*#__PURE__*/React.createElement(Heart, {
-      size: 13
-    }), "\u7D46\u30EC\u30D9\u30EB\uFF1A", skipResult.heroBondGain.name), /*#__PURE__*/React.createElement("span", {
-      className: "font-mono font-black text-white text-sm shrink-0"
-    }, "+", skipResult.heroBondGain.xpGain.toLocaleString())), /*#__PURE__*/React.createElement(LevelGrowthBar, {
-      levelBefore: skipResult.heroBondGain.levelBefore,
-      levelAfter: skipResult.heroBondGain.levelAfter
-    }), skipResult.heroBondGain.levelAfter.level > skipResult.heroBondGain.levelBefore.level && /*#__PURE__*/React.createElement("div", {
-      className: "text-[8px] text-amber-300 font-black mt-1 flex items-center gap-1"
-    }, /*#__PURE__*/React.createElement(Sparkles, {
-      size: 9
-    }), "\u5F37\u5316\u30DD\u30A4\u30F3\u30C8 +", skipResult.heroBondGain.levelAfter.level - skipResult.heroBondGain.levelBefore.level)) : /*#__PURE__*/React.createElement("div", {
-      className: "bg-black/30 rounded-2xl border border-white/10 p-3 text-[10px] text-slate-400 font-bold leading-relaxed"
-    }, skipResult.heroIsMasu ? '勇者モンの絆経験値は入りませんでした。スキップではマスモン登録はできません。' : '勇者モンがマスモンではないため、絆経験値は入りませんでした。スキップではマスモン登録はできません。'), skipResult.allyBondGains.map(a => /*#__PURE__*/React.createElement("div", {
-      key: a.masuId,
-      className: "bg-black/40 rounded-2xl border border-pink-500/20 p-3"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center justify-between mb-1"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "text-[10px] font-black text-pink-200 truncate"
-    }, "\u4F9B\u30E2\u30F3\uFF1A", a.name), /*#__PURE__*/React.createElement("span", {
-      className: "font-mono font-black text-white text-xs shrink-0"
-    }, "+", a.xpGain.toLocaleString())), /*#__PURE__*/React.createElement(LevelGrowthBar, {
-      levelBefore: a.levelBefore,
-      levelAfter: a.levelAfter
-    }))), /*#__PURE__*/React.createElement("div", {
-      className: "text-[9px] text-slate-500 font-bold text-center px-2 leading-relaxed"
-    }, "\u30B9\u30B3\u30A2\u30FB\u30E9\u30F3\u30AD\u30F3\u30B0\u30FB\u30AF\u30EA\u30A2\u56DE\u6570\u306B\u306F\u8A18\u9332\u3055\u308C\u307E\u305B\u3093"))), /*#__PURE__*/React.createElement("button", {
-      onClick: () => {
+    })(), gameState === 'SKIP_PICK' && skipFlow && /*#__PURE__*/React.createElement(SkipPickScreen, {
+      changeSkipCount: changeSkipCount,
+      closeBattleSkip: closeBattleSkip,
+      difficulty: difficulty,
+      getActiveMonsterList: getActiveMonsterList,
+      getMasuBondLevel: getMasuBondLevel,
+      getUnlockedBaseMonsterList: getUnlockedBaseMonsterList,
+      ownedItems: ownedItems,
+      setSkipConfirmOpen: setSkipConfirmOpen,
+      setSkipPickTab: setSkipPickTab,
+      skipClearSlot: skipClearSlot,
+      skipFlow: skipFlow,
+      skipFlowCount: skipFlowCount,
+      skipMaxCount: skipMaxCount,
+      skipMonKey: skipMonKey,
+      skipPickMon: skipPickMon,
+      skipPickTab: skipPickTab
+    }), skipConfirmOpen && skipFlow && /*#__PURE__*/React.createElement(SkipConfirmDialog, {
+      difficulty: difficulty,
+      executeBattleSkip: executeBattleSkip,
+      ownedItems: ownedItems,
+      setSkipConfirmOpen: setSkipConfirmOpen,
+      skipFlow: skipFlow,
+      skipFlowCount: skipFlowCount
+    }), gameState === 'SKIP_RESULT' && skipResult && /*#__PURE__*/React.createElement(SkipResultScreen, {
+      difficulty: difficulty,
+      ownedItems: ownedItems,
+      skipAnimPhase: skipAnimPhase,
+      skipResult: skipResult,
+      onClose: () => {
         setSkipResult(null);
         setSkipFlow(null);
         setGameState(battleEntryStateRef.current);
-      },
-      className: "w-full max-w-sm mx-auto shrink-0 mt-2 min-h-[52px] rounded-2xl bg-teal-600 text-white font-black text-sm uppercase shadow-lg active:scale-[.98]"
-    }, "\u30D0\u30C8\u30EB\u30E1\u30CB\u30E5\u30FC\u3078\u623B\u308B")), (gameState === 'PICK_HERO' || gameState === 'PICK_ALLY') && /*#__PURE__*/React.createElement("div", {
-      style: {
-        position: "absolute",
-        inset: 0,
-        backgroundColor: "#020617",
-        zIndex: 30000
-      },
-      className: "absolute inset-0 z-[3000] p-4 pt-6 flex flex-col justify-start overflow-hidden"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "mb-2 text-center flex items-center justify-between px-2 shrink-0"
-    }, /*#__PURE__*/React.createElement("button", {
-      disabled: !!battleTutorial,
-      onClick: () => {
+      }
+    }), (gameState === 'PICK_HERO' || gameState === 'PICK_ALLY') && /*#__PURE__*/React.createElement(PickHeroAllyScreen, {
+      MONSTER_CARD_CLASS: MONSTER_CARD_CLASS,
+      MONSTER_CARD_STYLE: MONSTER_CARD_STYLE,
+      advanceRunStage: advanceRunStage,
+      allyCardIndex: allyCardIndex,
+      allyCarouselRef: allyCarouselRef,
+      allyJoinPreview: allyJoinPreview,
+      atk: atk,
+      battleTutorial: battleTutorial,
+      battleTutorialSpotClass: battleTutorialSpotClass,
+      currentPickingMon: currentPickingMon,
+      debugHeroMonsterList: debugHeroMonsterList,
+      def: def,
+      difficulty: difficulty,
+      distTotalBonus: distTotalBonus,
+      extremeDifficulty: extremeDifficulty,
+      extremeRunRef: extremeRunRef,
+      getMasuMon: getMasuMon,
+      getUnlockedBaseMonsterList: getUnlockedBaseMonsterList,
+      heroPickTab: heroPickTab,
+      maxGuts: maxGuts,
+      maxHp: maxHp,
+      monSelection: monSelection,
+      onBack: () => {
         if (gameState === 'PICK_HERO') {
           setCurrentPickingMon(null);
           setBattleMenuTab('difficulty');
@@ -52532,544 +53357,52 @@ function MonsterHeroGame() {
         }
         returnToHome();
       },
-      className: "p-3 text-slate-400 active:scale-90 disabled:opacity-25"
-    }, /*#__PURE__*/React.createElement(ArrowLeft, {
-      size: 20
-    })), /*#__PURE__*/React.createElement("h2", {
-      className: "text-xl font-black italic text-indigo-400 uppercase tracking-widest"
-    }, gameState === 'PICK_HERO' ? '勇者モンを選択' : '供モンを選択'), /*#__PURE__*/React.createElement("div", {
-      className: "w-10"
-    })), /*#__PURE__*/React.createElement("div", {
-      className: "shrink-0 w-full max-w-md mx-auto mb-2"
-    }, /*#__PURE__*/React.createElement(AssistantBubble, {
-      key: gameState,
-      scene: gameState === 'PICK_HERO' ? 'pickHero' : 'pickAlly',
-      compact: true
-    })), gameState === 'PICK_ALLY' && /*#__PURE__*/React.createElement("div", {
-      className: "shrink-0 w-full max-w-md mx-auto mb-2 rounded-2xl border border-white/10 bg-slate-900/60 px-2 py-1.5",
-      "data-join-status": true
-    }, (() => {
-      const joinRule = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
-      if (extremeRuleNumber(joinRule, 'allyJoinPenaltyRate') == null) return null;
-      const totalTurns = waveResult?.totalTurnCount || 0;
-      const multiplier = ultimateAllyJoinMultiplier(totalTurns, joinRule);
-      const floorValue = extremeRuleNumber(joinRule, 'minimumAllyJoinBonus');
-      return /*#__PURE__*/React.createElement("div", {
-        "data-ultimate-join-status": joinRule,
-        className: "mb-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-[9px] font-black text-purple-100 flex flex-wrap justify-between gap-x-2"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-amber-300"
-      }, joinRule, "\u88DC\u6B63"), /*#__PURE__*/React.createElement("span", null, "\u7D2F\u8A08", totalTurns, "T"), /*#__PURE__*/React.createElement("span", null, "\u52A0\u5165\u30DC\u30FC\u30CA\u30B9 ", precisePercent(multiplier), "\uFF08-", precisePercent(1 - multiplier), "\uFF09", floorValue != null ? `／最低${specialRulePercent(floorValue)}` : ''));
-    })(), (() => {
-      const rule = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
-      if (rule === NIGHTMARE_SETTING.id) return /*#__PURE__*/React.createElement("div", {
-        "data-nightmare-join-status": true,
-        className: "mb-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-[9px] font-black text-purple-100"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-amber-300"
-      }, "NIGHTMARE\u88DC\u6B63"), "\u3000\u9593\u5408\u3044\u9069\u6027\uFF1A\uFF0B", specialRulePercent(extremeSpecialRule(rule, 'positiveModifier')), " / \uFF0D", specialRulePercent(extremeSpecialRule(rule, 'negativeModifier')));
-      if (rule === CHAOS_SETTING.id) return /*#__PURE__*/React.createElement("div", {
-        "data-chaos-join-status": true,
-        className: "mb-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-[9px] font-black text-purple-100"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-amber-300"
-      }, "CHAOS\u88DC\u6B63"), "\u3000\u52A0\u5165\u30DC\u30FC\u30CA\u30B9 ", specialRulePercent(extremeSpecialRule(rule, 'allyJoinBonus')));
-      return null;
-    })(), /*#__PURE__*/React.createElement("div", {
-      className: "text-[8px] font-black tracking-widest text-slate-500 text-left mb-1"
-    }, "\u73FE\u5728\u306E\u30B9\u30C6\u30FC\u30BF\u30B9"), /*#__PURE__*/React.createElement("div", {
-      className: "grid grid-cols-4 gap-1"
-    }, [['ライフ', maxHp, 'text-pink-300'], ['ちから', atk, 'text-red-300'], ['丈夫さ', def, 'text-emerald-300'], ['ガッツ', maxGuts, 'text-amber-300']].map(([label, value, tint]) => /*#__PURE__*/React.createElement("div", {
-      key: label,
-      className: "rounded-lg bg-black/40 px-1 py-1 text-center"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "block text-[8px] font-black text-slate-500 leading-none"
-    }, label), /*#__PURE__*/React.createElement("span", {
-      className: `block text-[13px] font-black font-mono leading-tight ${tint}`
-    }, value)))), /*#__PURE__*/React.createElement("div", {
-      className: "text-[8px] font-black tracking-widest text-slate-500 text-left mt-1.5 mb-1"
-    }, "\u9593\u5408\u3044\u9069\u6027\uFF08\u8DDD\u96E2\u88DC\u6B63\uFF09"), /*#__PURE__*/React.createElement("div", {
-      className: "grid grid-cols-4 gap-1"
-    }, RANGE_LABELS.map((label, idx) => {
-      const cur = distTotalBonus(idx);
-      return /*#__PURE__*/React.createElement("div", {
-        key: label,
-        className: "rounded-lg bg-black/40 px-1 py-1 text-center"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "block text-[8px] font-black text-slate-500 leading-none"
-      }, label), /*#__PURE__*/React.createElement("span", {
-        className: `block text-[12px] font-black font-mono leading-tight ${cur > 0 ? 'text-cyan-300' : cur < 0 ? 'text-red-300' : 'text-slate-400'}`
-      }, formatAptPct(cur)));
-    }))), gameState === 'PICK_HERO' && /*#__PURE__*/React.createElement("div", {
-      className: "shrink-0 w-full max-w-md mx-auto mb-2"
-    }, !isProMode(runMode) && /*#__PURE__*/React.createElement("div", {
-      className: "flex gap-1.5"
-    }, [['roster', '編成'], ['base', 'ベースモン']].map(([key, label]) => /*#__PURE__*/React.createElement("button", {
-      key: key,
-      onClick: () => {
-        setHeroPickTab(key);
-        setCurrentPickingMon(null);
-      },
-      "aria-pressed": heroPickTab === key,
-      className: `flex-1 min-h-[40px] rounded-2xl font-black text-[12px] border-2 active:scale-95 ${heroPickTab === key ? 'bg-indigo-600 border-indigo-300 text-white shadow-lg' : 'bg-slate-900 border-slate-700 text-slate-400'}`
-    }, label))), /*#__PURE__*/React.createElement("div", {
-      className: "text-[9px] text-slate-500 font-bold mt-1 px-1 text-center"
-    }, isProMode(runMode) ? 'プロモードはベースモンだけで挑みます。育てたマスモンは連れていけません' : heroPickTab === 'base' ? '解放済みのベースモンから選べます。編成に入れていなくても、ラン終了時にマスモン登録できます' : 'M/B管理で組んだ編成から選びます')), /*#__PURE__*/React.createElement("div", {
-      className: "flex-1 overflow-y-auto mh-scroll w-full max-w-md mx-auto pb-4 min-h-0 flex flex-col"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: `w-full${gameState === 'PICK_ALLY' ? ' m-auto' : ''}`
-    }, (() => {
-      const allyCarousel = gameState === 'PICK_ALLY' && isProMode(runMode);
-      // 念のため、すでに編成にいる子は一覧にも出さない(勇者モンがもう一度出ないようにする)
-      const inParty = slots.filter(x => x).map(x => x.id);
-      const savedRawList = gameState === 'PICK_HERO' && (heroPickTab === 'base' || isProMode(runMode)) ? getUnlockedBaseMonsterList() : monSelection;
-      const rawList = gameState === 'PICK_HERO' ? debugHeroMonsterList(savedRawList) : savedRawList;
-      const list = (gameState === 'PICK_ALLY' ? rawList.filter(m => m && !inParty.includes(m.id)) : rawList) || [];
-      const stepAlly = delta => {
-        const root = allyCarouselRef.current;
-        if (!root) return;
-        const next = Math.max(0, Math.min(list.length - 1, allyCardIndex + delta));
-        setAllyCardIndex(next);
-        centerCarouselChild(root, next, 'smooth');
-      };
-      return /*#__PURE__*/React.createElement(React.Fragment, null, allyCarousel && /*#__PURE__*/React.createElement("div", {
-        className: "text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0 mb-1"
-      }, "\u5DE6\u53F3\u306B\u30B9\u30EF\u30A4\u30D7\u3057\u3066\u4F9B\u30E2\u30F3\u3092\u9078\u629E"), allyCarousel && /*#__PURE__*/React.createElement("div", {
-        className: "relative h-0"
-      }, /*#__PURE__*/React.createElement("button", {
-        "aria-label": "\u524D\u306E\u4F9B\u30E2\u30F3",
-        disabled: allyCardIndex === 0,
-        onClick: () => stepAlly(-1),
-        className: "absolute left-0 top-[70px] z-20 w-9 h-12 rounded-r-xl bg-black/70 disabled:opacity-20"
-      }, /*#__PURE__*/React.createElement(ChevronLeft, null)), /*#__PURE__*/React.createElement("button", {
-        "aria-label": "\u6B21\u306E\u4F9B\u30E2\u30F3",
-        disabled: allyCardIndex >= list.length - 1,
-        onClick: () => stepAlly(1),
-        className: "absolute right-0 top-[70px] z-20 w-9 h-12 rounded-l-xl bg-black/70 disabled:opacity-20"
-      }, /*#__PURE__*/React.createElement(ChevronRight, null))), /*#__PURE__*/React.createElement("div", {
-        ref: allyCarousel ? allyCarouselRef : null,
-        onScroll: allyCarousel ? e => {
-          const root = e.currentTarget,
-            c = root.scrollLeft + root.clientWidth / 2;
-          let best = 0,
-            d = Infinity;
-          [...root.children].forEach((card, i) => {
-            const n = Math.abs(card.offsetLeft + card.offsetWidth / 2 - c);
-            if (n < d) {
-              d = n;
-              best = i;
-            }
-          });
-          if (best !== allyCardIndex) setAllyCardIndex(best);
-        } : undefined,
-        className: allyCarousel ? 'flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-1 mh-scroll' : 'grid grid-cols-2 gap-2.5',
-        style: allyCarousel ? {
-          paddingLeft: '18%',
-          paddingRight: '18%',
-          touchAction: 'pan-x pinch-zoom'
-        } : gameState === 'PICK_HERO' && isProMode(runMode) ? {
-          display: 'flex',
-          flexDirection: 'column'
-        } : undefined
-      }, list.map((m, cardIndex) => {
-        const isSel = currentPickingMon?.id === m.id;
-        const focused = allyCarousel && cardIndex === allyCardIndex;
-        // カードはM/B管理の一覧とまったく同じ共通実装(renderMonsterCardBody)を通す。
-        // 以前はこの画面だけ独自に組んでいたため、絆レベルも総合力も限界突破の★も出ず、
-        // 同じマスモンが画面によって違う見た目になっていた。
-        // この画面だけの情報(固有技名・ステータス・詳細への案内)はextraで足す。
-        const pickMasu = m.masuId ? getMasuMon(m.masuId) : null;
-        const pickBase = m.debugOnly ? m : ALL_PLAYER_MONSTERS[m.id] || m;
-        // カードの見た目は「供モンの候補」と同じ共通部品(renderProMonsterRow)を通す
-        if (gameState === 'PICK_HERO' && isProMode(runMode)) return /*#__PURE__*/React.createElement(React.Fragment, {
-          key: m.id
-        }, renderProMonsterRow({
-          mon: m,
-          selected: proHeroPreset?.heroBaseId === m.id,
-          disabled: !scenarioPicksHero(m.id),
-          onSelect: () => {
-            if (proHeroPreset?.heroBaseId === m.id) {
-              setupMon(m, proHeroPreset.heroDistance);
-              return;
-            }
-            setProHeroPreset(null);
-            setCurrentPickingMon(m);
-            advanceRunStage('PICK_SLOT');
-          },
-          onDetail: () => setCurrentPickingMon(m),
-          selectLabel: `${m.name}を勇者モンに選ぶ`,
-          activeClass: 'active:bg-indigo-900/30',
-          extraButtonClass: scenarioPicksHero(m.id) ? battleTutorialSpotClass('monCards') : ''
-        }));
-        return /*#__PURE__*/React.createElement("button", {
-          key: m.id,
-          disabled: gameState === 'PICK_HERO' && !scenarioPicksHero(m.id),
-          onClick: () => setCurrentPickingMon(m),
-          style: allyCarousel ? {
-            ...MONSTER_CARD_STYLE,
-            flex: '0 0 64%'
-          } : MONSTER_CARD_STYLE,
-          className: `${MONSTER_CARD_CLASS} bg-slate-900 transition-all disabled:opacity-25${gameState !== 'PICK_HERO' || scenarioPicksHero(m.id) ? battleTutorialSpotClass('monCards') : ''}${allyCarousel ? ` snap-center shrink-0 ${focused ? 'scale-100 opacity-100' : 'scale-[.92] opacity-55'}` : ''} ${isSel ? 'border-indigo-400 bg-indigo-900/30 ring-4 ring-indigo-500/50 scale-[1.03] shadow-[0_0_25px_rgba(99,102,241,0.6)]' : 'border-slate-800'}`
-        }, renderMonsterCardBody({
-          masu: pickMasu,
-          base: pickBase,
-          mon: m,
-          badge: m.debugOnly ? /*#__PURE__*/React.createElement("div", {
-            className: "absolute top-0 left-0 z-10 rounded-br-lg bg-fuchsia-700 px-1.5 py-0.5 text-[7px] font-black text-white"
-          }, "DEBUG\u5C02\u7528") : isSel ? /*#__PURE__*/React.createElement("div", {
-            className: "absolute -top-1 -right-1 z-10 bg-indigo-500 rounded-full p-1 shadow-lg"
-          }, /*#__PURE__*/React.createElement(Check, {
-            size: 12,
-            className: "text-white"
-          })) : null,
-          extra: /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-            className: "text-amber-400 font-black flex items-center gap-1 leading-tight",
-            style: {
-              fontSize: '9px'
-            }
-          }, /*#__PURE__*/React.createElement(Zap, {
-            size: 9
-          }), " ", m.unique.name), gameState === 'PICK_HERO' ? /*#__PURE__*/React.createElement("div", {
-            className: "grid grid-cols-2 gap-x-2 gap-y-0 w-full px-1 font-mono",
-            style: {
-              fontSize: '9px'
-            }
-          }, /*#__PURE__*/React.createElement("div", {
-            className: "flex justify-between"
-          }, /*#__PURE__*/React.createElement("span", {
-            className: "text-slate-500"
-          }, "HP"), /*#__PURE__*/React.createElement("span", {
-            className: "text-pink-400 font-bold"
-          }, m.baseHp)), /*#__PURE__*/React.createElement("div", {
-            className: "flex justify-between"
-          }, /*#__PURE__*/React.createElement("span", {
-            className: "text-slate-500"
-          }, "\u529B"), /*#__PURE__*/React.createElement("span", {
-            className: "text-red-400 font-bold"
-          }, m.baseAtk)), /*#__PURE__*/React.createElement("div", {
-            className: "flex justify-between"
-          }, /*#__PURE__*/React.createElement("span", {
-            className: "text-slate-500"
-          }, "\u9632"), /*#__PURE__*/React.createElement("span", {
-            className: "text-emerald-400 font-bold"
-          }, m.baseDef)), /*#__PURE__*/React.createElement("div", {
-            className: "flex justify-between"
-          }, /*#__PURE__*/React.createElement("span", {
-            className: "text-slate-500"
-          }, "G"), /*#__PURE__*/React.createElement("span", {
-            className: "text-amber-400 font-bold"
-          }, m.baseGuts))) : (() => {
-            const preview = allyJoinPreview(m);
-            return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-              className: "w-full rounded-lg bg-black/40 px-1 py-1 grid grid-cols-4 gap-0.5 text-center font-mono",
-              style: {
-                fontSize: '8px'
-              }
-            }, preview.stats.map(stat => /*#__PURE__*/React.createElement("span", {
-              key: stat.key,
-              className: "min-w-0 block"
-            }, /*#__PURE__*/React.createElement("span", {
-              className: "block text-slate-500 font-black leading-none"
-            }, stat.short), [ULTIMATE_SETTING.id, CHAOS_SETTING.id, INFINITY_SETTING.id].includes(specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty)) && stat.normalDiff !== stat.diff ? /*#__PURE__*/React.createElement("span", {
-              className: "block leading-none text-slate-500"
-            }, "\u672C\u6765 +", stat.normalDiff) : null, /*#__PURE__*/React.createElement("b", {
-              className: `block leading-tight ${stat.diff > 0 ? stat.tint : 'text-slate-400'}`,
-              style: {
-                fontSize: '9px'
-              }
-            }, stat.after), /*#__PURE__*/React.createElement("span", {
-              className: `block leading-none ${stat.diff > 0 ? 'text-emerald-400' : 'text-slate-700'}`
-            }, stat.diff > 0 ? `実際 +${stat.diff}` : '実際 ±0')))), /*#__PURE__*/React.createElement("div", {
-              className: "w-full rounded-lg bg-black/40 px-1 py-1 grid grid-cols-4 gap-0.5 text-center font-mono",
-              style: {
-                fontSize: '8px'
-              }
-            }, preview.apt.map(range => /*#__PURE__*/React.createElement("span", {
-              key: range.idx,
-              className: "min-w-0 block"
-            }, /*#__PURE__*/React.createElement("span", {
-              className: "block text-slate-500 font-black leading-none"
-            }, range.label), specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty) === NIGHTMARE_SETTING.id && range.normalDiff !== range.diff ? /*#__PURE__*/React.createElement("span", {
-              className: "block leading-none text-slate-500"
-            }, "\u901A\u5E38 ", formatAptPct(range.normalDiff), " \u2192") : null, /*#__PURE__*/React.createElement("b", {
-              className: `block leading-tight ${range.diff > 0 ? 'text-cyan-300' : range.diff < 0 ? 'text-red-300' : 'text-slate-400'}`
-            }, formatAptPct(range.after)), /*#__PURE__*/React.createElement("span", {
-              className: `block leading-none ${range.diff > 0 ? 'text-emerald-400' : range.diff < 0 ? 'text-red-400' : 'text-slate-700'}`
-            }, range.diff !== 0 ? `${range.normalDiff !== range.diff ? '実際 ' : ''}${formatAptPct(range.diff)}` : '±0')))));
-          })(), /*#__PURE__*/React.createElement("div", {
-            className: "min-h-[32px] w-full rounded-xl border border-indigo-400/40 bg-indigo-950/50 text-indigo-200 font-black mt-1 flex items-center justify-center gap-1",
-            style: {
-              fontSize: '10px'
-            }
-          }, "\u8A73\u7D30\u3092\u898B\u308B ", /*#__PURE__*/React.createElement(ChevronRight, {
-            size: 11
-          })))
-        }));
-      })), allyCarousel && /*#__PURE__*/React.createElement("div", {
-        className: "flex justify-center gap-1 py-1 shrink-0"
-      }, list.map((m, i) => /*#__PURE__*/React.createElement("button", {
-        key: m.id,
-        "aria-label": `${i + 1}体目`,
-        onClick: () => stepAlly(i - allyCardIndex),
-        className: `w-1.5 h-1.5 rounded-full ${i === allyCardIndex ? 'bg-indigo-300 scale-125' : 'bg-slate-700'}`
-      }))));
-    })())), currentPickingMon && renderMonsterDetailModal({
-      mon: currentPickingMon,
-      masu: currentPickingMon.masuId ? getMasuMon(currentPickingMon.masuId) : null,
-      onClose: () => setCurrentPickingMon(null),
-      zIndex: 31000,
-      // 練習中は上にみゅあの帯が出るので、その高さぶん下げて名前と重ならないようにする
-      paddingTop: battleTutorial ? 'calc(4.25rem + env(safe-area-inset-top))' : undefined,
-      detailOpts: {
-        // 一覧カードと同じ allyJoinPreview を通す。以前はここだけ plusStats をそのまま足していたため、
-        // ULTIMATE(累計ターンで加算が下がる)では詳細の数値と実際に増える量が食い違っていた
-        statValues: gameState === 'PICK_HERO' ? null : allyJoinPreview(currentPickingMon).stats.map(stat => [stat.label, `${stat.before} → ${stat.after}${stat.diff > 0 ? `（+${stat.diff}）` : ''}`, stat.diff > 0 ? stat.tint : 'text-slate-400']),
-        statTitle: gameState === 'PICK_HERO' ? '基本ステータス' : '基本ステータス(現在 → 合流後)',
-        // 距離補正は「いまの値 → このモンスターを加えた後の値」で見せる
-        aptCurrentPct: [0, 1, 2, 3].map(i => distTotalBonus(i)),
-        // 加算量も実際に足される値(NIGHTMAREの半減込み)で出す
-        aptDeltaPct: gameState === 'PICK_HERO' ? null : allyJoinPreview(currentPickingMon).apt.map(range => range.diff),
-        aptPointsLabel: currentPickingMon.masuId ? /*#__PURE__*/React.createElement("div", {
-          className: "text-[8px] text-amber-300 font-black flex items-center gap-1"
-        }, /*#__PURE__*/React.createElement(Sparkles, {
-          size: 9
-        }), "\u5F37\u5316P: ", getMasuMon(currentPickingMon.masuId)?.distAptPoints || 0) : null,
-        aptExtra: (idx, grade) => {
-          const pts = currentPickingMon.masuId ? getMasuMon(currentPickingMon.masuId)?.distAptPoints || 0 : 0;
-          const canUp = pts > 0 && DIST_APTITUDE_GRADES.indexOf(grade) < DIST_APTITUDE_GRADES.length - 1;
-          return canUp ? /*#__PURE__*/React.createElement("button", {
-            onClick: () => {
-              const updated = spendAptPoint(currentPickingMon.masuId, idx);
-              if (updated) setCurrentPickingMon(mergeMasuIntoMon(updated));
-            },
-            className: "w-full text-[8px] font-black bg-amber-600 text-white rounded py-0.5 active:scale-95"
-          }, "+1") : null;
-        },
-        extraAfterApt: /*#__PURE__*/React.createElement(React.Fragment, null, currentPickingMon.masuId && (getMasuMon(currentPickingMon.masuId)?.distAptPoints || 0) > 0 && /*#__PURE__*/React.createElement("div", {
-          className: "bg-black/40 p-2 rounded-xl border border-emerald-500/30"
-        }, /*#__PURE__*/React.createElement("div", {
-          className: "text-[7px] text-emerald-400 uppercase font-bold mb-1"
-        }, "\u30B9\u30C6\u30FC\u30BF\u30B9\u5F37\u5316(\u5F37\u5316P 1\u3064\u306B\u3064\u304D\u4F7F\u7528\u30FB\u8ABF\u6574\u4E2D)"), /*#__PURE__*/React.createElement("div", {
-          className: "grid grid-cols-4 gap-1"
-        }, Object.entries(STAT_POINT_KEYS).map(([key, label]) => /*#__PURE__*/React.createElement("button", {
-          key: key,
-          onClick: () => {
-            const updated = spendStatPoint(currentPickingMon.masuId, key);
-            if (updated) setCurrentPickingMon(mergeMasuIntoMon(updated));
-          },
-          className: "flex flex-col items-center gap-0.5 bg-emerald-950/50 border border-emerald-500/30 rounded-lg py-1.5 active:scale-95"
-        }, /*#__PURE__*/React.createElement("span", {
-          className: "text-[7px] text-emerald-300 font-black"
-        }, label), /*#__PURE__*/React.createElement("span", {
-          className: "text-[10px] text-white font-black"
-        }, "+", STAT_POINT_GAIN[key] || 1))))), !currentPickingMon.masuId && !currentPickingMon.debugOnly && /*#__PURE__*/React.createElement("div", {
-          className: "bg-black/30 p-2 rounded-xl border border-white/5 text-[8px] text-slate-500 font-bold text-center"
-        }, gameState === 'PICK_HERO' ? '勇者モンとして選び、ラン終了時に登録すると「マスモン」として絆レベル・ステータスを強化できます' : '絆レベルの強化は勇者モン(マスモン)のみ対象です'), currentPickingMon.debugOnly && /*#__PURE__*/React.createElement("div", {
-          className: "rounded-xl border border-fuchsia-400/50 bg-fuchsia-950/50 p-2 text-center text-[9px] font-black text-fuchsia-200"
-        }, "DEBUG\u5C02\u7528\u30FB\u4FDD\u5B58\u3001\u80B2\u6210\u3001\u30DE\u30B9\u30E2\u30F3\u767B\u9332\u306E\u5BFE\u8C61\u5916"))
-      },
-      footer: /*#__PURE__*/React.createElement("div", {
-        className: "flex gap-2 shrink-0"
-      }, /*#__PURE__*/React.createElement("button", {
-        onClick: () => setCurrentPickingMon(null),
-        className: "w-2/5 min-h-[48px] bg-slate-800 text-slate-400 rounded-2xl font-black text-sm uppercase active:scale-95"
-      }, "\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
-        onClick: () => advanceRunStage('PICK_SLOT'),
-        className: `flex-1 min-h-[48px] bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase shadow-lg active:scale-95${battleTutorialSpotClass('monDecide')}`
-      }, gameState === 'PICK_HERO' ? '勇者モンに選ぶ' : 'この供モンを選ぶ'))
-    })), gameState === 'PICK_PRO_ALLIES' && (() => {
-      const mode = battleModeInfo(runMode);
-      const candidates = getUnlockedBaseMonsterList().filter(m => m.id !== mainHero?.id);
-      const need = Math.min(PRO_ALLY_POOL_SIZE, candidates.length);
-      const ready = !!mainHero && proAllyPool.length === need;
-      const changeAlly = m => {
-        if (!Number.isInteger(proEditingAllyIndex)) return;
-        setProAllyPool(prev => {
-          const next = [...prev];
-          next[proEditingAllyIndex] = m;
-          return next.filter(Boolean);
-        });
-        setProEditingAllyIndex(null);
-      };
-      const returnToHero = () => {
-        setProAllyDetail(null);
-        setProEditingAllyIndex(null);
-        setProHeroPreset(mainHero ? {
-          heroBaseId: mainHero.id,
-          heroDistance: initialBattleDistanceRef.current
-        } : null);
-        setMainHero(null);
-        setSlots([null, null, null, null]);
-        setCurrentPickingMon(null);
-        clearSlotUniqueSelection();
-        advanceRunStage('PICK_HERO');
-      };
-      return /*#__PURE__*/React.createElement("div", {
-        style: {
-          position: "absolute",
-          inset: 0,
-          backgroundColor: "#020617",
-          zIndex: 30000
-        },
-        className: "absolute inset-0 z-[3000] flex flex-col h-full min-h-0 px-4 overflow-hidden",
-        "data-screen": "pick-pro-allies"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "mb-2 text-center flex items-center justify-between px-2 shrink-0",
-        style: {
-          paddingTop: 'calc(.35rem + env(safe-area-inset-top))'
-        }
-      }, /*#__PURE__*/React.createElement("button", {
-        "aria-label": "\u623B\u308B",
-        onClick: returnToHero,
-        className: "p-3 text-slate-400 active:scale-90"
-      }, /*#__PURE__*/React.createElement(ArrowLeft, {
-        size: 20
-      })), /*#__PURE__*/React.createElement("h2", {
-        className: "text-xl font-black italic uppercase tracking-widest truncate",
-        style: {
-          color: mode.color
-        }
-      }, proEditingAllyIndex === null ? 'プロモード編成' : `供モン${proEditingAllyIndex + 1}を変更`), /*#__PURE__*/React.createElement("div", {
-        className: "w-10"
-      })), /*#__PURE__*/React.createElement("div", {
-        className: "w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col"
-      }, proEditingAllyIndex === null ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 w-full mb-2"
-      }, /*#__PURE__*/React.createElement(AssistantBubble, {
-        scene: "pickProAllies",
-        accent: mode.color,
-        compact: true
-      })), /*#__PURE__*/React.createElement("p", {
-        className: "shrink-0 text-[9px] text-slate-400 font-bold text-center mb-2"
-      }, "\u5909\u3048\u305F\u3044\u67A0\u3060\u3051\u300C\u5909\u66F4\u300D\u3092\u62BC\u3057\u3066\u304F\u3060\u3055\u3044\u3002\u4ED6\u306E\u67A0\u306F\u305D\u306E\u307E\u307E\u7DAD\u6301\u3055\u308C\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
-        className: "flex-1 overflow-y-auto mh-scroll min-h-0 space-y-1.5 pb-2"
-      }, [["勇者モン", mainHero], ...Array.from({
-        length: need
-      }, (_, i) => [`供モン${i + 1}`, proAllyPool[i]])].map(([label, mon], i) => /*#__PURE__*/React.createElement("div", {
-        key: label,
-        className: "min-h-[58px] rounded-2xl border border-white/10 bg-slate-900/80 px-2 py-1.5 flex items-center gap-2"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: `w-14 shrink-0 text-[9px] font-black ${i === 0 ? 'text-amber-300' : 'text-pink-300'}`
-      }, label), /*#__PURE__*/React.createElement("button", {
-        disabled: !mon,
-        onClick: () => setProAllyDetail(mon),
-        className: "flex-1 min-w-0 flex items-center gap-2 text-left disabled:opacity-50",
-        "aria-label": mon ? `${mon.name}の詳細を見る` : `${label}は未選択`
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "w-10 h-10 rounded-full bg-black/40 border border-white/10 flex items-center justify-center overflow-hidden shrink-0"
-      }, mon ? mon.imgUrl ? /*#__PURE__*/React.createElement("img", {
-        src: mon.imgUrl,
-        alt: "",
-        className: "w-full h-full object-contain"
-      }) : /*#__PURE__*/React.createElement("span", {
-        className: "text-xl"
-      }, mon.emoji) : /*#__PURE__*/React.createElement("span", {
-        className: "text-slate-600"
-      }, "\uFF0B")), /*#__PURE__*/React.createElement("span", {
-        className: "min-w-0"
-      }, /*#__PURE__*/React.createElement("b", {
-        className: "block text-[11px] text-white truncate"
-      }, mon?.name || '未選択'), i === 0 && /*#__PURE__*/React.createElement("small", {
-        className: "block text-[8px] text-slate-500"
-      }, RANGE_LABELS[initialBattleDistanceRef.current], "\u8DDD\u96E2\u306B\u914D\u7F6E"))), /*#__PURE__*/React.createElement("button", {
-        onClick: () => i === 0 ? returnToHero() : setProEditingAllyIndex(i - 1),
-        className: "min-w-[58px] min-h-[42px] rounded-xl border border-pink-400/50 bg-pink-950/60 text-pink-200 text-[11px] font-black active:scale-95"
-      }, "\u5909\u66F4")))), /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 pt-1",
-        style: {
-          paddingBottom: 'calc(.25rem + env(safe-area-inset-bottom))'
-        }
-      }, /*#__PURE__*/React.createElement("button", {
-        disabled: !ready,
-        onClick: confirmProParty,
-        className: "w-full min-h-[52px] rounded-2xl font-black text-sm active:scale-[.98] disabled:opacity-30",
-        style: {
-          backgroundColor: mode.color,
-          color: '#0f172a'
-        }
-      }, ready ? 'この編成で開始' : `あと${need - proAllyPool.length}体えらんでください`))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
-        className: "shrink-0 text-[9px] text-slate-400 font-bold text-center mb-2"
-      }, "\u3053\u306E\u67A0\u306B\u5165\u308C\u308B\u30D9\u30FC\u30B9\u30E2\u30F3\u30921\u4F53\u9078\u3093\u3067\u304F\u3060\u3055\u3044\u3002"), /*#__PURE__*/React.createElement("div", {
-        className: "flex-1 overflow-y-auto mh-scroll pb-2 min-h-0"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex flex-col gap-2.5"
-      }, candidates.filter(m => !proAllyPool.some((chosen, i) => i !== proEditingAllyIndex && chosen.id === m.id)).map(m => /*#__PURE__*/React.createElement(React.Fragment, {
-        key: m.id
-      }, renderProMonsterRow({
-        mon: m,
-        selected: proAllyPool[proEditingAllyIndex]?.id === m.id,
-        onSelect: () => changeAlly(m),
-        onDetail: () => setProAllyDetail(m),
-        selectLabel: `${m.name}を供モン${proEditingAllyIndex + 1}に選ぶ`,
-        activeClass: 'active:bg-pink-900/30'
-      }))))), /*#__PURE__*/React.createElement("button", {
-        onClick: () => setProEditingAllyIndex(null),
-        className: "shrink-0 w-full min-h-[48px] rounded-2xl bg-slate-800 text-slate-300 font-black text-sm mb-1"
-      }, "\u5909\u66F4\u305B\u305A\u623B\u308B")), proAllyDetail && renderMonsterDetailModal({
-        mon: proAllyDetail,
-        onClose: () => setProAllyDetail(null),
-        accent: 'pink',
-        zIndex: 31000,
-        label: `${proAllyDetail.name}のベースモン詳細`,
-        footer: /*#__PURE__*/React.createElement("button", {
-          onClick: () => setProAllyDetail(null),
-          className: "w-full min-h-[48px] bg-slate-800 text-slate-300 rounded-2xl font-black text-sm active:scale-95"
-        }, "\u9589\u3058\u308B")
-      })));
-    })(), gameState === 'PICK_SLOT' && /*#__PURE__*/React.createElement("div", {
-      style: {
-        position: "absolute",
-        inset: 0,
-        backgroundColor: "#020617",
-        zIndex: 30000
-      },
-      className: "absolute inset-0 z-[3000] flex flex-col items-center justify-center p-6 text-center overflow-hidden"
-    }, currentPickingMon?.imgUrl ? /*#__PURE__*/React.createElement(DyedMonsterImage, {
-      baseId: currentPickingMon.id,
-      src: currentPickingMon.imgUrl,
-      alt: "mon",
-      masuColors: currentPickingMon.colors,
-      className: "w-28 h-28 mb-4 object-contain animate-bounce drop-shadow-[0_0_40px_rgba(99,102,241,0.4)] scale-110"
-    }) : /*#__PURE__*/React.createElement("div", {
-      className: "text-7xl mb-4 animate-bounce drop-shadow-[0_0_40px_rgba(99,102,241,0.4)]"
-    }, currentPickingMon?.emoji), /*#__PURE__*/React.createElement("h2", {
-      className: "text-lg font-black mb-1 italic uppercase tracking-widest text-indigo-400"
-    }, "\u914D\u7F6E\u5834\u6240\u3092\u6C7A\u5B9A\u305B\u3088"), /*#__PURE__*/React.createElement("div", {
-      className: "w-full max-w-xs mb-2"
-    }, /*#__PURE__*/React.createElement(AssistantBubble, {
-      scene: "pickSlot",
-      compact: true
-    })), /*#__PURE__*/React.createElement("div", {
-      className: "text-[9px] text-slate-400 font-bold mb-5 leading-relaxed px-2"
-    }, "\u9593\u5408\u3044\u9069\u6027\u306F\u3069\u3053\u306B\u7F6E\u3044\u3066\u30824\u8DDD\u96E2\u3059\u3079\u3066\u306B\u52A0\u7B97\u3055\u308C\u307E\u3059\u3002", /*#__PURE__*/React.createElement("br", null), "\u914D\u7F6E\u306F\u300C\u6575\u3068\u540C\u3058\u8DDD\u96E2\u3067\u653B\u6483\u3059\u308B\u300D\u3053\u3068\u3068\u3001\u899A\u3048\u308B\u8DDD\u96E2\u6483\u306B\u5F71\u97FF\u3057\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
-      className: "grid grid-cols-2 gap-4 w-full max-w-xs"
-    }, slots.map((s, i) => {
-      const grade = getDistAptitude(currentPickingMon, i);
-      const after = distTotalBonus(i) + aptGradeToPct(grade);
-      return /*#__PURE__*/React.createElement("button", {
-        key: i,
-        disabled: s !== null || !scenarioPicksSlot(i),
-        onClick: () => setupMon(currentPickingMon, i),
-        className: `h-24 rounded-2xl border-2 flex flex-col items-center justify-center transition-all disabled:opacity-20${scenarioPicksSlot(i) ? battleTutorialSpotClass('slots') : ''} ${RANGE_STYLES[i].bg} ${RANGE_STYLES[i].border} ${s ? 'opacity-100 shadow-xl' : 'opacity-90 ring-2 ring-white/20 animate-pulse'} active:scale-90`
-      }, /*#__PURE__*/React.createElement("span", {
-        className: `text-[10px] font-black mb-1 uppercase px-3 py-0.5 rounded-full ${RANGE_STYLES[i].labelBg} ${RANGE_STYLES[i].text} border border-white/10 shadow-md`
-      }, RANGE_LABELS[i], "\u8DDD\u96E2"), s ? s.imgUrl ? /*#__PURE__*/React.createElement(DyedMonsterImage, {
-        baseId: s.id,
-        src: s.imgUrl,
-        alt: s.name,
-        masuColors: s.colors,
-        className: "w-10 h-10 mt-1 object-contain drop-shadow-md scale-125"
-      }) : /*#__PURE__*/React.createElement("span", {
-        className: "text-xl mt-1 drop-shadow-md"
-      }, s.emoji) : /*#__PURE__*/React.createElement(PlusCircle, {
-        className: "text-white/50 mt-1",
-        size: 20
-      }), !s && /*#__PURE__*/React.createElement("span", {
-        className: `text-[9px] font-black mt-1 px-2 py-0.5 rounded-full border ${DIST_APTITUDE_COLOR[grade]}`
-      }, grade, " \u5408\u6D41\u5F8C ", formatAptPct(after)));
-    })), /*#__PURE__*/React.createElement("button", {
-      disabled: !!battleTutorial,
-      onClick: () => {
+      pickMode: gameState === 'PICK_HERO' ? 'hero' : 'ally',
+      proHeroPreset: proHeroPreset,
+      renderMonsterCardBody: renderMonsterCardBody,
+      renderMonsterDetailModal: renderMonsterDetailModal,
+      renderProMonsterRow: renderProMonsterRow,
+      runMode: runMode,
+      scenarioPicksHero: scenarioPicksHero,
+      setAllyCardIndex: setAllyCardIndex,
+      setCurrentPickingMon: setCurrentPickingMon,
+      setHeroPickTab: setHeroPickTab,
+      setProHeroPreset: setProHeroPreset,
+      setupMon: setupMon,
+      slots: slots,
+      spendAptPoint: spendAptPoint,
+      spendStatPoint: spendStatPoint,
+      waveResult: waveResult
+    }), gameState === 'PICK_PRO_ALLIES' && /*#__PURE__*/React.createElement(PickProAlliesScreen, {
+      advanceRunStage: advanceRunStage,
+      clearSlotUniqueSelection: clearSlotUniqueSelection,
+      confirmProParty: confirmProParty,
+      getUnlockedBaseMonsterList: getUnlockedBaseMonsterList,
+      initialBattleDistanceRef: initialBattleDistanceRef,
+      mainHero: mainHero,
+      proAllyDetail: proAllyDetail,
+      proAllyPool: proAllyPool,
+      proEditingAllyIndex: proEditingAllyIndex,
+      renderMonsterDetailModal: renderMonsterDetailModal,
+      renderProMonsterRow: renderProMonsterRow,
+      runMode: runMode,
+      setCurrentPickingMon: setCurrentPickingMon,
+      setMainHero: setMainHero,
+      setProAllyDetail: setProAllyDetail,
+      setProAllyPool: setProAllyPool,
+      setProEditingAllyIndex: setProEditingAllyIndex,
+      setProHeroPreset: setProHeroPreset,
+      setSlots: setSlots
+    }), gameState === 'PICK_SLOT' && /*#__PURE__*/React.createElement(PickSlotScreen, {
+      battleTutorial: battleTutorial,
+      battleTutorialSpotClass: battleTutorialSpotClass,
+      currentPickingMon: currentPickingMon,
+      distTotalBonus: distTotalBonus,
+      getDistAptitude: getDistAptitude,
+      scenarioPicksSlot: scenarioPicksSlot,
+      setupMon: setupMon,
+      slots: slots,
+      onRepick: () => {
         if (!mainHero && speciesChallengeBattleRunRef.current) {
           setCurrentPickingMon(null);
           setSpeciesChallengeSelection(current => ({
@@ -53080,101 +53413,17 @@ function MonsterHeroGame() {
           return;
         }
         setGameState(mainHero ? 'PICK_ALLY' : 'PICK_HERO');
-      },
-      className: "mt-8 text-slate-400 flex items-center gap-2 font-black uppercase text-[10px] active:scale-90 disabled:opacity-25"
-    }, /*#__PURE__*/React.createElement(ArrowLeft, {
-      size: 14
-    }), " \u30E2\u30F3\u30B9\u30BF\u30FC\u3092\u9078\u3073\u76F4\u3059")), gameState === 'PICK_TEACHING' && /*#__PURE__*/React.createElement("div", {
-      style: {
-        position: "absolute",
-        inset: 0,
-        backgroundColor: "#020617",
-        zIndex: 30000
-      },
-      className: "absolute inset-0 z-[3000] p-4 flex flex-col items-center justify-center overflow-hidden"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "mb-4 text-center shrink-0"
-    }, /*#__PURE__*/React.createElement("h2", {
-      className: "text-xl font-black text-purple-400 italic"
-    }, "\u30A2\u30B7\u30B9\u30C8\u30AB\u30FC\u30C9\u306E\u7D99\u627F\u30FB\u5F37\u5316"), /*#__PURE__*/React.createElement("p", {
-      className: "text-[9px] text-slate-400 uppercase mt-1 tracking-widest"
-    }, "Select Breeder Card")), /*#__PURE__*/React.createElement("div", {
-      className: "shrink-0 w-full max-w-sm mb-2"
-    }, /*#__PURE__*/React.createElement(AssistantBubble, {
-      scene: "pickTeaching",
-      compact: true
-    })), /*#__PURE__*/React.createElement("div", {
-      className: "grid grid-cols-2 gap-3 w-full max-w-sm mx-auto overflow-y-auto min-h-0 p-1 flex-1 content-center"
-    }, teachingPool.map(t => {
-      const owned = ownedTeachings.find(ot => ot.id === t.id);
-      const level = owned ? owned.evoLevel : 0;
-      const isMax = level >= 2;
-      return /*#__PURE__*/React.createElement("button", {
-        key: t.id,
-        disabled: !scenarioPicksTeaching(t.id),
-        onClick: () => setSelectedTeachingCard(t),
-        className: `p-4 rounded-2xl border-2 flex flex-col items-center justify-center text-center gap-2 transition-all aspect-square disabled:opacity-20${scenarioPicksTeaching(t.id) ? battleTutorialSpotClass('teachings') : ''} ${owned ? 'bg-purple-900/40 border-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.3)]' : 'bg-slate-900 border-slate-800 active:scale-95'}`
-      }, /*#__PURE__*/React.createElement("span", {
-        style: {
-          fontSize: '44px'
-        }
-      }, cardIconNode(t.icon, 52, t.id)), /*#__PURE__*/React.createElement("div", {
-        className: "text-[11px] font-black leading-tight flex flex-col items-center justify-center"
-      }, owned && !isMax && /*#__PURE__*/React.createElement("div", {
-        className: "text-[8px] text-amber-400 mb-0.5 line-through"
-      }, BREEDER_EVO_NAMES[t.id][level]), /*#__PURE__*/React.createElement("div", {
-        className: owned ? "text-white" : ""
-      }, owned ? isMax ? BREEDER_EVO_NAMES[t.id][level] : BREEDER_EVO_NAMES[t.id][level + 1] : BREEDER_EVO_NAMES[t.id][0])), /*#__PURE__*/React.createElement("div", {
-        className: "text-[8px] text-slate-200 bg-black/20 px-2 py-1 rounded-full"
-      }, owned ? isMax ? "MAXレベル" : "進化：効果上昇" : "新規習得"));
-    })), selectedTeachingCard && /*#__PURE__*/React.createElement("div", {
-      className: "fixed inset-0 z-[3100] flex items-center justify-center p-6",
-      style: {
-        position: 'fixed',
-        inset: 0,
-        backgroundColor: 'rgba(0,0,0,0.85)',
-        zIndex: 31000
       }
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "bg-slate-900 border-2 border-purple-500 rounded-3xl p-6 w-full max-w-xs flex flex-col items-center gap-4 shadow-2xl h-auto max-h-full"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "text-6xl mb-2 shrink-0"
-    }, cardIconNode(selectedTeachingCard.icon, 76, selectedTeachingCard.id)), /*#__PURE__*/React.createElement("h3", {
-      className: "text-lg font-black text-white mb-4 shrink-0"
-    }, (() => {
-      const t = selectedTeachingCard;
-      const owned = ownedTeachings.find(ot => ot.id === t.id);
-      return BREEDER_EVO_NAMES[t.id][owned ? owned.evoLevel : 0];
-    })()), /*#__PURE__*/React.createElement("div", {
-      className: "w-full space-y-2 mb-4 overflow-y-auto min-h-0 flex-1"
-    }, getFullEvolutionDetails(selectedTeachingCard).map(info => {
-      const owned = ownedTeachings.find(ot => ot.id === selectedTeachingCard.id);
-      const currentLvl = owned ? owned.evoLevel : -1;
-      const isCurrent = info.lvl === currentLvl;
-      const isNext = info.lvl === currentLvl + 1;
-      return /*#__PURE__*/React.createElement("div", {
-        key: info.lvl,
-        className: `p-2 rounded-xl border ${isCurrent ? 'bg-purple-900/50 border-purple-400' : isNext ? 'bg-amber-900/30 border-amber-500/50' : 'bg-black/30 border-white/5'}`
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex justify-between items-center mb-1"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: `text-[9px] font-black ${isCurrent ? 'text-purple-300' : isNext ? 'text-amber-300' : 'text-slate-500'}`
-      }, "Lv.", info.lvl, " ", info.name), isCurrent && /*#__PURE__*/React.createElement("span", {
-        className: "text-[7px] bg-purple-500 text-white px-1.5 rounded"
-      }, "\u6240\u6301"), isNext && /*#__PURE__*/React.createElement("span", {
-        className: "text-[7px] bg-amber-600 text-white px-1.5 rounded"
-      }, "\u5F37\u5316\u5F8C")), /*#__PURE__*/React.createElement("div", {
-        className: "text-[8px] text-slate-300"
-      }, info.desc));
-    })), /*#__PURE__*/React.createElement("div", {
-      className: "flex gap-2 w-full mt-auto shrink-0"
-    }, /*#__PURE__*/React.createElement("button", {
-      onClick: () => setSelectedTeachingCard(null),
-      className: "flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs"
-    }, "\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => confirmPickTeaching(),
-      className: "flex-1 bg-purple-600 text-white py-3 rounded-xl font-black shadow-lg text-xs"
-    }, ownedTeachings.find(ot => ot.id === selectedTeachingCard.id) ? "強化する" : "習得する"))))), gameState === 'QUICK_GROWTH' && quickGrowth && /*#__PURE__*/React.createElement(QuickStepScreen, {
+    }), gameState === 'PICK_TEACHING' && /*#__PURE__*/React.createElement(PickTeachingScreen, {
+      battleTutorialSpotClass: battleTutorialSpotClass,
+      confirmPickTeaching: confirmPickTeaching,
+      getFullEvolutionDetails: getFullEvolutionDetails,
+      ownedTeachings: ownedTeachings,
+      scenarioPicksTeaching: scenarioPicksTeaching,
+      selectedTeachingCard: selectedTeachingCard,
+      setSelectedTeachingCard: setSelectedTeachingCard,
+      teachingPool: teachingPool
+    }), gameState === 'QUICK_GROWTH' && quickGrowth && /*#__PURE__*/React.createElement(QuickStepScreen, {
       onDone: finishQuickGrowth,
       accent: "#2dd4bf",
       label: "\u30BF\u30C3\u30D7\u3057\u3066\u6B21\u3078"

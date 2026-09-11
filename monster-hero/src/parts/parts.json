@@ -161,6 +161,10 @@
       "role": "画面: マスモン合体(MASU_FUSION)。MASU 系で最大"
     },
     {
+      "file": "67-screen-pick.jsx",
+      "role": "画面: ラン開始まわりのえらぶ画面(SKIP_PICK / SKIP_RESULT / PICK_HERO・PICK_ALLY / PICK_PRO_ALLIES / PICK_SLOT / PICK_TEACHING)"
+    },
+    {
       "file": "60-app.jsx",
       "role": "MonsterHeroGame 本体(全 state・ロジック・各 gameState の JSX)"
     },
