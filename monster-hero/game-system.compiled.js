@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e6923982023f5241
+// source-sha256: 01509cc539c01cee
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ae8cf9ffd3a7f4f5
+// generated-sha256: 1995434e5baf6758
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 16:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 16:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -25211,11 +25211,7 @@ function RhythmRankingScreen({
   }, /*#__PURE__*/React.createElement("p", {
     "data-rhythm-event-self-empty": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-center text-[10px] text-slate-300"
-  }, eventLimited ? 'まだあなたの記録がありません。対象曲を1曲でも遊ぶとここに載ります。' : '今週はまだあなたの記録がありません。どの曲でも1曲遊ぶとここに載ります。'), /*#__PURE__*/React.createElement("button", {
-    "data-rhythm-event-play": true,
-    onClick: onGoToSongSelect,
-    className: "mt-2 w-full min-h-[44px] rounded-xl border border-fuchsia-300/40 bg-slate-900/70 px-3 text-[10px] font-black text-fuchsia-100"
-  }, "\u25B6 ", eventLimited ? '対象曲をえらぶ' : '曲をえらぶ')), eventBoard.entries.length === 0 && /*#__PURE__*/React.createElement("p", {
+  }, eventLimited ? 'まだあなたの記録がありません。対象曲を1曲でも遊ぶとここに載ります。' : '今週はまだあなたの記録がありません。どの曲でも1曲遊ぶとここに載ります。')), eventBoard.entries.length === 0 && /*#__PURE__*/React.createElement("p", {
     "data-rhythm-event-empty": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
   }, eventLimited ? 'まだ記録がありません。最初の1件になってみましょう。' : '今週はまだ記録がありません。最初の1件になってみましょう。'), eventBoard.entries.length > 0 && /*#__PURE__*/React.createElement("ol", {
@@ -25292,11 +25288,15 @@ function RhythmRankingScreen({
     role: "dialog",
     "aria-modal": "true",
     "aria-label": "\u30A4\u30D9\u30F3\u30C8\u8A73\u7D30",
-    className: "fixed inset-0 z-[80000] flex items-end justify-center bg-slate-950/95"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] overflow-y-auto mh-scroll rounded-t-3xl border-t-2 border-x-2 border-amber-300/60 bg-slate-950 p-4",
+    className: "fixed inset-0 z-[80000] flex items-center justify-center bg-slate-950/95 p-4",
     style: {
+      paddingTop: 'calc(1rem + env(safe-area-inset-top))',
       paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-full max-w-md overflow-y-auto mh-scroll rounded-3xl border-2 border-amber-300/60 bg-slate-950 p-4",
+    style: {
+      maxHeight: 'calc(var(--mh-vh) - 2rem - env(safe-area-inset-top) - env(safe-area-inset-bottom))'
     }
   }, /*#__PURE__*/React.createElement("p", {
     className: "mb-2 text-center text-[10px] font-black tracking-widest text-amber-300"
