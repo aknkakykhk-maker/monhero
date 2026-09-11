@@ -13,6 +13,9 @@
 --   ・public.rhythm_event_song_bests_bonus(text[], timestamptz, timestamptz, jsonb)
 --   ・public.rhythm_event_totals_bonus     (text[], timestamptz, timestamptz, jsonb)
 --
+-- ★このファイルは**何度流しても同じ結果**になる(drop してから作り直す)。
+--   列を増やしたときは、もう一度これを流すだけでよい。
+--
 -- 既存の rhythm_event_song_bests / rhythm_event_totals はそのまま残る。
 -- 回数ボーナスを使わないイベント(週間ランキングなど)は、これまでどおり古いほうを呼ぶ。
 --
@@ -21,6 +24,10 @@
 --   1回ごとの割合        = その回を遊んだ難易度の割合(引数 bonus_rates の値)
 --   加点                 = floor(素点 × 期間中の割合の合計)
 --   表に出るスコア       = 素点 + 加点
+--
+-- 内訳に出すため、**難易度ごとの回数**も play_counts(jsonb)で返す。
+-- 例: {"MASTER": 2, "EXPERT": 1, "HARD": 1}
+-- (2026-09-12・ユーザー指示「難易度別回数の内訳もあったほうがいい」)
 --
 -- ★割合は**引数で渡す**。アプリ側(data/rhythm-event.js の RHYTHM_EVENT_PLAY_BONUS_RATES)を
 --   書き換えるだけで割合を変えられる。**このSQLを流し直す必要はない**。
@@ -63,13 +70,20 @@ select policyname, permissive, roles::text, cmd,
 from pg_policies where schemaname = 'public' and tablename = 'rankings';
 
 -- ===== ① 回数ボーナス込みの「曲ごとベスト」 =====
--- 素点(base_score)・加点(bonus_score)・回数(play_count)も一緒に返す。
--- 画面の「内訳」はこの3つをそのまま出すだけで作れる。
-create or replace function public.rhythm_event_song_bests_bonus(
+-- 素点(base_score)・加点(bonus_score)・回数(play_count)・難易度ごとの回数(play_counts)も一緒に返す。
+-- 画面の「内訳」はこれらをそのまま出すだけで作れる。
+--
+-- ★戻り値の並びを変えるので、いったん drop してから作り直す
+--   (create or replace では戻り値の型を変えられない)。
+--   消えている時間はこのトランザクションの中だけで、commit するまで外からは見えない。
+-- ★rhythm_event_totals_bonus もこの関数を呼ぶが、本文が文字列(dollar-quoted)なので
+--   PostgreSQL は依存として追わない。先に①を作り直しても②が壊れることはない。
+drop function if exists public.rhythm_event_song_bests_bonus(text[], timestamptz, timestamptz, jsonb);
+create function public.rhythm_event_song_bests_bonus(
   song_ids text[], from_at timestamptz, to_at timestamptz, bonus_rates jsonb default '{}'::jsonb)
 returns table(identity_key text, user_name text, song_id text, difficulty_id text,
               score integer, scored_at timestamptz, level integer, icon text, party jsonb,
-              base_score integer, bonus_score integer, play_count integer)
+              base_score integer, bonus_score integer, play_count integer, play_counts jsonb)
 language sql stable security invoker as $$
   with plays as (
     select s.id, s.identity_key, s.user_name, s.song_id, s.difficulty_id,
@@ -88,17 +102,24 @@ language sql stable security invoker as $$
       from plays p
      order by p.identity_key, p.song_id, p.score desc, p.created_at asc, p.id asc
   ),
-  -- 期間中の回数と、割合の合計。
+  -- 難易度ごとの回数。内訳にそのまま出すほか、割合の合計もここから作る
+  per_diff as (
+    select p.identity_key, p.song_id, p.difficulty_id, count(*)::integer as n
+      from plays p
+     group by p.identity_key, p.song_id, p.difficulty_id
+  ),
+  -- 期間中の回数と、割合の合計と、難易度ごとの回数の表。
   -- ★数値として読めない値・書かれていない難易度は 0 として扱う(壊れた引数で落とさない)。
   -- ★1回あたりは 0〜0.1 へ丸める(書き間違いよけ。上限ではない)。
   counts as (
-    select p.identity_key, p.song_id,
-           count(*)::integer as play_count,
-           sum(least(greatest(
-             case when (bonus_rates ->> p.difficulty_id) ~ '^[0-9]+(\.[0-9]+)?$'
-                  then (bonus_rates ->> p.difficulty_id)::numeric else 0 end, 0), 0.1)) as rate_sum
-      from plays p
-     group by p.identity_key, p.song_id
+    select d.identity_key, d.song_id,
+           sum(d.n)::integer as play_count,
+           sum(d.n * least(greatest(
+             case when (bonus_rates ->> d.difficulty_id) ~ '^[0-9]+(\.[0-9]+)?$'
+                  then (bonus_rates ->> d.difficulty_id)::numeric else 0 end, 0), 0.1)) as rate_sum,
+           jsonb_object_agg(d.difficulty_id, d.n) as play_counts
+      from per_diff d
+     group by d.identity_key, d.song_id
   )
   select b.identity_key::text,
          b.user_name::text,
@@ -111,22 +132,40 @@ language sql stable security invoker as $$
          b.party::jsonb,
          b.score::integer,
          floor(b.score * coalesce(c.rate_sum, 0))::integer,
-         coalesce(c.play_count, 0)::integer
+         coalesce(c.play_count, 0)::integer,
+         coalesce(c.play_counts, '{}'::jsonb)
     from bests b
     left join counts c on c.identity_key = b.identity_key and c.song_id = b.song_id;
 $$;
 
 comment on function public.rhythm_event_song_bests_bonus(text[], timestamptz, timestamptz, jsonb) is
-  '期間×対象曲の、人×曲ごとの最高スコアへ「遊んだ回数ぶんの加点」を乗せたもの。割合は引数で渡す。';
+  '期間×対象曲の、人×曲ごとの最高スコアへ「遊んだ回数ぶんの加点」を乗せたもの。割合は引数で渡す。play_counts に難易度ごとの回数。';
 
 -- ===== ② 回数ボーナス込みの「総合」 =====
--- 対象曲それぞれの**加点込みのスコア**を足し合わせる。素点の合計と加点の合計も返す。
-create or replace function public.rhythm_event_totals_bonus(
+-- 対象曲それぞれの**加点込みのスコア**を足し合わせる。素点の合計・加点の合計・
+-- 難易度ごとの回数(対象曲ぶんを足し合わせたもの)も返す。
+drop function if exists public.rhythm_event_totals_bonus(text[], timestamptz, timestamptz, jsonb);
+create function public.rhythm_event_totals_bonus(
   song_ids text[], from_at timestamptz, to_at timestamptz, bonus_rates jsonb default '{}'::jsonb)
 returns table(identity_key text, user_name text, total_score bigint, song_count integer,
               last_scored_at timestamptz, level integer, icon text,
-              base_total bigint, bonus_total bigint, play_count integer)
+              base_total bigint, bonus_total bigint, play_count integer, play_counts jsonb)
 language sql stable security invoker as $$
+  with bests as (
+    select * from public.rhythm_event_song_bests_bonus(song_ids, from_at, to_at, bonus_rates)
+  ),
+  -- 曲ごとに分かれている難易度別の回数を、人の単位でひとつにまとめる
+  per_diff as (
+    select b.identity_key, e.key as difficulty_id, sum((e.value)::integer)::integer as n
+      from bests b,
+           lateral jsonb_each_text(coalesce(b.play_counts, '{}'::jsonb)) e
+     group by b.identity_key, e.key
+  ),
+  merged as (
+    select d.identity_key, jsonb_object_agg(d.difficulty_id, d.n) as play_counts
+      from per_diff d
+     group by d.identity_key
+  )
   select b.identity_key,
          (array_agg(b.user_name order by b.scored_at desc))[1],
          sum(b.score)::bigint,
@@ -136,13 +175,14 @@ language sql stable security invoker as $$
          (array_agg(b.icon  order by b.scored_at desc))[1],
          sum(b.base_score)::bigint,
          sum(b.bonus_score)::bigint,
-         sum(b.play_count)::integer
-    from public.rhythm_event_song_bests_bonus(song_ids, from_at, to_at, bonus_rates) b
+         sum(b.play_count)::integer,
+         coalesce((select m.play_counts from merged m where m.identity_key = b.identity_key), '{}'::jsonb)
+    from bests b
    group by b.identity_key;
 $$;
 
 comment on function public.rhythm_event_totals_bonus(text[], timestamptz, timestamptz, jsonb) is
-  '期間×対象曲の総合ランキング(回数ボーナス込み)。対象曲それぞれの加点込みスコアの合計。';
+  '期間×対象曲の総合ランキング(回数ボーナス込み)。対象曲それぞれの加点込みスコアの合計。play_counts に難易度ごとの回数。';
 
 -- ===== 権限 =====
 -- 読むだけ。書き込みは一切与えない。
@@ -211,6 +251,24 @@ begin
     raise exception '加点の計算がおかしい行があります(%件)', neg;
   end if;
 
+  -- 難易度ごとの回数の合計が、全体の回数と合っていること
+  select count(*) into neg
+    from public.rhythm_event_song_bests_bonus(songs, win_start, win_end, '{}'::jsonb) b
+   where b.play_count <> (select coalesce(sum((e.value)::integer), 0)
+                            from jsonb_each_text(coalesce(b.play_counts, '{}'::jsonb)) e);
+  if neg > 0 then
+    raise exception '難易度ごとの回数の合計が全体の回数と合いません(%件)', neg;
+  end if;
+
+  -- 総合でも同じこと(曲ぶんを足し合わせたもの)
+  select count(*) into neg
+    from public.rhythm_event_totals_bonus(songs, win_start, win_end, '{}'::jsonb) t
+   where t.play_count <> (select coalesce(sum((e.value)::integer), 0)
+                            from jsonb_each_text(coalesce(t.play_counts, '{}'::jsonb)) e);
+  if neg > 0 then
+    raise exception '総合の難易度ごとの回数が合いません(%件)', neg;
+  end if;
+
   -- 壊れた引数でも落ちないこと(文字・null・数でない値)
   perform * from public.rhythm_event_totals_bonus(songs, win_start, win_end,
     '{"EASY":"あ","NORMAL":null,"HARD":-5,"MASTER":7}'::jsonb);
@@ -245,7 +303,7 @@ with sample as (select coalesce(array_agg(song_id), '{}') as song_ids
      win as (select week_start, week_end from public.rhythm_week_window),
      rates as (select '{"EASY":0.001,"NORMAL":0.002,"HARD":0.003,"EXPERT":0.005,"MASTER":0.007}'::jsonb as j),
 facts as (
-  select 1 as sort, '足した関数' as item,
+  select 1::numeric as sort, '足した関数' as item,
          (select coalesce(string_agg(p.proname, ', ' order by p.proname), 'なし')
             from pg_proc p join pg_namespace n on n.oid=p.pronamespace
            where n.nspname='public'
@@ -276,6 +334,11 @@ facts as (
          (select count(*)::text from public.rhythm_event_song_bests_bonus(
             (select song_ids from sample), (select week_start from win), (select week_end from win),
             (select j from rates)) b where b.bonus_score > 0)
+  union all
+  select 6.1, '難易度ごとの回数が返っている',
+         (select coalesce((select b.play_counts::text from public.rhythm_event_song_bests_bonus(
+            (select song_ids from sample), (select week_start from win), (select week_end from win),
+            (select j from rates)) b order by b.play_count desc limit 1), 'なし'))
   union all
   select 7, '加点のいちばん大きい人の内訳',
          (select coalesce(b.user_name || ' … 素点 ' || b.base_score || ' ＋ 加点 ' || b.bonus_score

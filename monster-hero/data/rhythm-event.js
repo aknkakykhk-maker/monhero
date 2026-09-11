@@ -137,6 +137,23 @@ const rhythmEventPlayBonusPercentText = (difficultyId) => {
   if (!Number.isFinite(rate) || rate <= 0) return 'なし';
   return `1回ごとに +${(rate * 100).toFixed(1)}%`;
 };
+// 内訳の1行へ添える短いほう(「+0.7%」だけ)。幅の無い場所で使う
+const rhythmEventPlayBonusRateText = (difficultyId) => {
+  const rate = Number(RHYTHM_EVENT_PLAY_BONUS_RATES[difficultyId]);
+  if (!Number.isFinite(rate) || rate <= 0) return '';
+  return `+${(rate * 100).toFixed(1)}%`;
+};
+// 難易度ごとの回数を、画面へ出す並び(EASY→MASTER)へそろえる。
+// 0回の難易度は出さない。知らない難易度が混ざっていたら最後にそのまま並べる
+// (2026-09-12・ユーザー指示「難易度別回数の内訳もあったほうがいい」)
+const rhythmEventPlayCountRows = (playCounts, difficultyIds) => {
+  const counts = (playCounts && typeof playCounts === 'object') ? playCounts : {};
+  const known = Array.isArray(difficultyIds) ? difficultyIds : [];
+  const rest = Object.keys(counts).filter(id => !known.includes(id)).sort();
+  return [...known, ...rest]
+    .map(id => ({ id, count: Math.max(0, Math.floor(Number(counts[id]) || 0)), rateText: rhythmEventPlayBonusRateText(id) }))
+    .filter(row => row.count > 0);
+};
 
 // ===== 報酬(docs/spec/RHYTHM_RANKING.md §9) =====
 //
