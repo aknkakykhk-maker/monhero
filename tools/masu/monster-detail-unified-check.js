@@ -43,7 +43,10 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
   check(`${label}: 本文の共通表示はマスターUIと再生確認だけで呼ぶ`,
     detailInfoCalls === 2
       && /renderMonsterDetailModal\s*=\s*\(\{[\s\S]*?renderMonsterDetailInfo\(mon,\s*detailOpts\)/.test(code)
-      && /gameState\s*===\s*'MASU_REGENERATION_DETAIL'[\s\S]*?renderMonsterDetailInfo\(selectedBase\)/.test(code),
+      // 再生確認は 61-screen-masu-regen-donation.jsx へ切り出した。連結順では画面が 60-app.jsx より前に来るので、
+      // 「gameState → 呼び出し」の前後関係では見ず、画面の結線と関数の中身を別々に見る
+      && /gameState\s*===\s*'MASU_REGENERATION_DETAIL'[\s\S]{0,400}?MasuRegenerationDetailScreen/.test(code)
+      && /function MasuRegenerationDetailScreen\(\{[\s\S]*?renderMonsterDetailInfo\(selectedBase\)/.test(code),
     `${detailInfoCalls}回の呼び出し`);
   check(`${label}: 編成・ベースモン一覧の詳細がマスターUIを使う`, /rosterDetailMon\s*&&\s*renderMonsterDetailModal\(/.test(code));
   check(`${label}: 勇者モン選択・供モン合流の詳細がマスターUIを使う`, /currentPickingMon\s*&&\s*renderMonsterDetailModal\(/.test(code));
@@ -61,9 +64,12 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
     && /renderPowerBadge\(power,/.test(code));
   check(`${label}: サマリーに元のベースモン名がある`, code.includes('元：'));
   check(`${label}: サマリーに絆Lvと上限がある`, /絆 Lv\./.test(code) && code.includes('norm.levelCap'));
-  check(`${label}: 限界突破は rebirthCount、転生は reincarnateCount のまま`,
+  // 転生オーラは魂格オーラへ全面置換した(docs/spec/SOUL_RANK_SYSTEM.md 22.1)。
+  // 限界突破★は rebirthCount、オーラは soulRankStage、転生回数はサマリーに文字で残す
+  check(`${label}: 限界突破は rebirthCount、オーラは soulRankStage、転生回数は文字で残す`,
     /RebirthStars[^A-Za-z][\s\S]{0,80}norm\.rebirthCount/.test(code)
-      && /ReincarnateAura[^A-Za-z][\s\S]{0,80}norm\.reincarnateCount/.test(code));
+      && /SoulRankAura[^A-Za-z][\s\S]{0,80}norm\.soulRankStage/.test(code)
+      && /転生 [^\n]{0,60}norm\.reincarnateCount/.test(code));
   check(`${label}: 個体の強さと選び方で決まる効果を分けている`,
     code.includes('この個体の強さ') && code.includes('選び方で決まる効果'));
   check(`${label}: 第2段階の合体詳細を置ける枠がある`, code.includes('renderFusionSection') && code.includes('合体回数 '));
@@ -90,9 +96,9 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
   check(`${label}: 共通カードは丸くくり抜いたiconUrlを使う`,
     /base\.iconUrl\s*\|\|\s*base\.imgUrl/.test(cardBody) && cardBody.includes('MONSTER_CARD_ICON_CLASS') && cardBody.includes('object-cover'));
   check(`${label}: 共通カードは素の立ち絵をそのまま貼らない`, !cardBody.includes('object-contain'));
-  check(`${label}: 共通カードにマスモンの限界突破★・転生・超越表示がある`,
+  check(`${label}: 共通カードにマスモンの限界突破★・魂格オーラ・超越表示がある`,
     /RebirthStars[^A-Za-z][\s\S]{0,80}masu\.rebirthCount/.test(cardBody)
-      && /ReincarnateAura[^A-Za-z][\s\S]{0,80}masu\.reincarnateCount/.test(cardBody)
+      && /SoulRankAura[^A-Za-z][\s\S]{0,120}normalizeMasuProgression\(masu\)\.soulRankStage/.test(cardBody)
       && /TranscendenceBadge[^A-Za-z][\s\S]{0,100}normalizeMasuProgression\(masu\)\.transcended/.test(cardBody));
   check(`${label}: 共通カードに名前・絆Lv・総合力・強化P・状態がある`,
     cardBody.includes('monsterCardName(') && cardBody.includes('monsterCardBond(') && cardBody.includes('monsterCardPower(')

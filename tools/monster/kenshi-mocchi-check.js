@@ -172,7 +172,7 @@ check('加算する種を一覧で持っている',
   && source.includes("const heroCardBonusOf = (heroId) => (HERO_CARD_BONUS_MONSTER_IDS.includes(heroId) ? 1 : 0);"));
 check('枚数の計算はその一覧だけを見る',
   source.includes("const heroCardBonus = useMemo(() => heroCardBonusOf(mainHero?.id), [mainHero]);")
-  && source.includes('limit += heroCardBonus + kikiCardBonus;'));
+  && source.includes('return Math.min(5,limit + heroCardBonus + kikiCardBonus);'));
 check('剣士モッチー専用の枚数分岐を書き足していない',
   !/if \(mainHero\?\.id === 'KenshiMocchi'\) limit \+= 1;/.test(source));
 {
@@ -201,7 +201,7 @@ check('AUTOへ手動と同じ枚数ルールを渡している',
 // 1つのスロットへ重ねられる枚数も、枚数+1の勇者特性を持つ種の共通ルール(heroCardBonusOf)へ乗せる。
 // 種ごとの分岐(mainHero?.id==='Ham' のような直書き)へ戻っていないことを見る
 check('同じスロットへ重ねる条件も共通ルールで決めている',
-  source.includes("const slotMaxUses = (mon) => ((heroCardBonusOf(mainHero?.id)>0&&mon?.id===mainHero?.id)||kikiCardBonus>0) ? cardLimit : 1;"));
+  source.includes("const base=((heroCardBonusOf(mainHero?.id)>0&&mon?.id===mainHero?.id)||kikiCardBonus>0) ? baseCardLimit : 1;"));
 {
   // 実際に同じ式を動かして、ハム・ききの既存の答えが1つも変わっていないことと、
   // 剣士モッチーだけが新しく重ねられるようになったことを突き合わせる

@@ -11,9 +11,12 @@ for (const file of files) {
   check(`${file}: AUTO音設定の既定値は2つともOFF`, compact.includes("autoVictoryJingle:'off',autoPostWaveBgm:'off'"));
   check(`${file}: AUTO中の敵撃破ファンファーレを既定OFF`, /!autoBattleRef\.current\s*\|\|\s*bgmArrangement\.autoVictoryJingle\s*===\s*['\"]on['\"]/.test(source));
   check(`${file}: AUTO中WAVE後は戦闘BGMを継続`, source.includes("return '__keep_battle_bgm__';") && source.includes("if (key === '__keep_battle_bgm__')"));
-  check(`${file}: AUTO戦闘は専用BGMまたは一時選択へルーティング`, source.includes('if (autoBattleRef.current)') && source.includes('return autoBgmOverride || bgmArrangement.autoBattle;'));
+  // 一時BGMに「BGMなし(__none__)」が増えたとき、1行だった式が3行へ分かれた。
+  // 行き先(無音・一時選択・AUTO専用曲)がそれぞれ残っていることを見る。
+  check(`${file}: AUTO戦闘は専用BGMまたは一時選択へルーティング`, source.includes("if (autoBgmOverride === '__none__') return '__silence_bgm__';") && source.includes('if (autoBgmOverride) return autoBgmOverride;') && source.includes('if (autoBattleRef.current) return bgmArrangement.autoBattle;'));
   check(`${file}: パンドラ専用最終ボスBGMをAUTOより優先`, source.indexOf('if (pandoraBossBgm) return pandoraBossBgm;') < source.indexOf('if (autoBattleRef.current)'));
-  check(`${file}: AUTO切替・一時BGM切替でBGM判定を再実行`, /mainHero\?\.id,\s*autoBattle,\s*autoBgmOverride\]/.test(source));
+  // 依存配列の末尾に rhythmScreenOpen が足された。並びは見たまま要求し、配列の終わりだけ問わない。
+  check(`${file}: AUTO切替・一時BGM切替でBGM判定を再実行`, /mainHero\?\.id,\s*autoBattle,\s*autoBgmOverride[,\]]/.test(source));
   check(`${file}: BGMアレンジにAUTO専用曲の選択欄を表示`, compact.includes("['autoBattle',"));
   check(`${file}: BGMアレンジにAUTO用2項目を表示`, source.includes('AUTO時 敵撃破ファンファーレ') && source.includes('AUTO時 強化フェーズBGM'));
   check(`${file}: AUTO用2項目はON/OFFを保存正規化`, /BGM_TOGGLE_SCENES/.test(source) && /autoVictoryJingle/.test(source) && /autoPostWaveBgm/.test(source) && /saved\s*===\s*['"]on['"]/.test(source) && /saved\s*===\s*['"]off['"]/.test(source));

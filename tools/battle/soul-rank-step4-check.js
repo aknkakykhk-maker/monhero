@@ -88,7 +88,12 @@ check('実ターンの合計と個別消費はslotIdx込みgetCardGutsを使う'
   && app.includes('getCardGuts(card,slotIdx)'));
 check('手動ドラッグのガッツ判定も割当slotを使う',
   app.includes('const curGuts=getCardGuts(c,slotIdx)')
-  && app.includes("getCardGuts(hand[idx],cardAssignments[idx]!=null?cardAssignments[idx]:null)"));
+  // 既に選んだカードのコストは selectedCardGuts が持つ。割当済みならそのslot、
+  // 未割当なら「置けるslotの中で最も軽いコスト」(pendingCardGuts)で数える
+  && app.includes('const assigned=cardAssignments[handIndex];')
+  && app.includes('return assigned!=null?getCardGuts(card,assigned):pendingCardGuts(card);')
+  && app.includes('selectedCards.reduce((acc,idx)=>acc+selectedCardGuts(idx),0)')
+  && app.includes('selectedCards.filter(idx=>idx!==cardIndex).reduce((sum,idx)=>sum+selectedCardGuts(idx),0)'));
 check('AUTOも同じslot-aware getCardGutsを使う',
   auto.includes('getCardGuts(card, slotIdx)')&&auto.includes('slotMaxUses(monster, slotIdx)'));
 

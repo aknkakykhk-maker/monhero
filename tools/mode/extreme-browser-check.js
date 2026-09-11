@@ -252,14 +252,20 @@ const extremeCardInfo = () => {
   {
     const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
     await openBattle(page, { GrandMaster: 1 });
-    await page.evaluate(() => {
-      const cards = [...document.querySelectorAll('article')].filter(a => a.textContent.includes('チャレンジ') && !a.textContent.includes('極限'));
-      const card = cards[Math.floor(cards.length / 2)] || cards[0];
-      [...card.querySelectorAll('button')].find(b => b.textContent.includes('難易度を選ぶ'))?.click();
+    // ★モードのカードは同じ並びを3回繰り返して置いてある(loopModes)ので、
+    //   「チャレンジを含むカードの真ん中」で選ぶと、モードが1つ増えただけで
+    //   別のモード(種族チャレンジ)を掴む。押したい「チャレンジモード」を名指しで選ぶ
+    const opened = await page.evaluate(() => {
+      const cards = [...document.querySelectorAll('article')].filter(a => a.textContent.includes('チャレンジモード') && !a.textContent.includes('極限'));
+      for (const card of cards) {
+        const b = [...card.querySelectorAll('button')].find(x => x.textContent.includes('難易度を選ぶ') && !x.disabled);
+        if (b) { b.click(); return true; }
+      }
+      return false;
     });
     await page.waitForTimeout(1500);
     const normal = await page.evaluate(() => document.body.innerText.replace(/\s+/g, ' '));
-    check('通常の難易度画面が開く(極限の影響なし)', normal.includes('BATTLE DIFFICULTY') && !normal.includes('EXTREME'), normal.slice(0, 90));
+    check('通常の難易度画面が開く(極限の影響なし)', opened && normal.includes('BATTLE DIFFICULTY') && !normal.includes('EXTREME'), normal.slice(0, 90));
     await page.close();
   }
 

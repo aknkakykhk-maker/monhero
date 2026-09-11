@@ -13,11 +13,14 @@
 // - 戦闘接続(STEP4)はまだ始めない
 const fs = require('fs');
 const path = require('path');
-const { REPO_ROOT, loadDyeModule } = require('../harness');
+const { REPO_ROOT, loadDyeModule, readAppSource } = require('../harness');
 const a = loadDyeModule();
 
 const source = fs.readFileSync(path.join(REPO_ROOT,'monster-hero/src/game-system.jsx'),'utf8');
-const app = fs.readFileSync(path.join(REPO_ROOT,'monster-hero/src/parts/60-app.jsx'),'utf8');
+// 魂格特性画面は 63-screen-masu-soul-traits.jsx、マーケットは 55-screen-breeder-market.jsx へ
+// 切り出した(STEP 6)。60-app.jsx だけを読むと画面の中身が静かに対象外になるので、
+// 本体＋切り出した画面をつないだ1本(harness.readAppSource)を見る
+const app = readAppSource();
 const marketUi = fs.readFileSync(path.join(REPO_ROOT,'monster-hero/src/parts/20-market-notices-help.jsx'),'utf8');
 const breeder = fs.readFileSync(path.join(REPO_ROOT,'monster-hero/data/breeder.js'),'utf8');
 
@@ -185,17 +188,17 @@ check('魂格特性強化はmh_masu_monsだけを検証保存',
 check('魂格再編はmh_masu_mons/mh_owned_itemsを取引保存',
   (()=>{const i=app.indexOf('const commitSoulTraitRespec');const j=app.indexOf('// 固有技設定',i);const b=app.slice(i,j);return b.includes("key:'mh_masu_mons'")&&b.includes("key:'mh_owned_items'");})());
 check('100万ダイヤ版の魂格再編の書は詳細ボタンを維持',
-  app.includes("item.desc&&<button onClick={()=>setMarketItemDetail(item)}")
+  app.includes("item.desc&&<button onClick={()=>onOpenItemDetail(item)}")
   && !app.includes("item.id===SOUL_RANK_RESPEC_ITEM_ID?<button"));
 check('100万ダイヤ版の長い価格でもダイヤアイコンを潰さない',
   marketUi.includes('usesGold?<Gem size={9} className="shrink-0"/>:<Coins size={9} className="shrink-0"/>'));
 check('勇者の証交換版の魂格再編の書にも詳細ボタンを表示',
-  app.split("item.desc&&<button onClick={()=>setMarketItemDetail(item)}").length-1>=2);
+  app.split("item.desc&&<button onClick={()=>onOpenItemDetail(item)}").length-1>=2);
 check('勇者の証1→再編の書は同じアイテムの隣に出す別商品カード',
   app.includes("const isSoulRankRespec=item.id===SOUL_RANK_RESPEC_ITEM_ID")
   && app.includes("const exchangeItem=isSoulRankRespec?{...item,currency:'heroProof',cost:1}:null")
   && app.includes('<React.Fragment key={item.id}>')
-  && app.includes('onBuy={exchangeSoulRankRespecByProof}')
+  && app.includes('onBuy={onExchangeSoulRankRespec}')
   && marketUi.includes("const usesHeroProof=item.currency==='heroProof'")
   && marketUi.includes('勇者の証 ×{item.cost.toLocaleString()}'));
 check('魂格特性画面はSafe Areaと44px以上の主要操作を守る',
@@ -204,13 +207,11 @@ check('魂格特性画面はSafe Areaと44px以上の主要操作を守る',
   &&app.includes('min-h-[48px]'));
 
 // ---- 8. STEP境界 ----
-check('STEP4の戦闘接続はまだ実装しない',
-  !source.includes('applySoulRankBattle')&&!source.includes('resolveSoulSpecialDefense')
-  &&!source.includes('soulTraitBattleSummary'));
-check('STEP5の魂格継承/ランキングスナップショットはまだ実装しない',
-  !source.includes('soulRankInheritance')&&!source.includes('soulSpentPoints'));
-check('STEP6のバッジ/オーラ画像接続はまだ実装しない',
-  !source.includes('SOUL_RANK_AURA_IMAGES')&&!source.includes('SoulRankBadge'));
+// STEP4(バトル接続)・STEP5(合体継承／ランキングスナップショット)・STEP6(バッジ／オーラ画像)は
+// すべて公開済みなので、「まだ実装しない」の見張りはここから外した。それぞれの中身は次が見張る:
+//   tools/battle/soul-rank-step4-check.js
+//   tools/masu/soul-rank-step5a-check.js / soul-rank-step5b-check.js / soul-rank-step5c-check.js
+//   tools/masu/soul-rank-step6a-check.js / soul-rank-step6b-check.js
 
 console.log(failed?`\n${failed}件のNGがあります`:'\n魂格STEP3: すべてOK');
 process.exit(failed?1:0);

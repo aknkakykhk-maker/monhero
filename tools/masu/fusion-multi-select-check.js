@@ -25,7 +25,7 @@ const required = [
   ['継承対象</span>', '継承対象の表示'],
   ['固有技継承ダイヤ合計</span>', '継承費用合計の表示'],
   ['合体後ダイヤ残高</span>', '合体後残高の表示'],
-  ['const preparedMain = withBreakthrough ? { ...main, ...breakthroughPlan.nextMasu } : main', '全副処理前の限界突破適用'],
+  ['const preparedMain = withBreakthrough ? breakthroughPlan.nextMasu : fusionMainBase', '全副処理前の限界突破適用'],
   ['fusionXp:totalGainedXp', '全副合計XPによる突破再計算'],
   ['withBreakthrough && (breakthroughPlan.count < 1 || !breakthroughPlan.canAfford)', '素材・合計ダイヤ不足の全体中止'],
 ];

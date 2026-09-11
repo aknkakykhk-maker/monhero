@@ -16,6 +16,7 @@ const React = require('react');
 const ReactDOMServer = require('react-dom/server');
 const babel = require('@babel/core');
 const PRESET_REACT = require.resolve('@babel/preset-react');
+const { screenSource } = require('../harness');
 
 const root = path.resolve(TOOLS_DIR, '..');
 const source = fs.readFileSync(path.join(root, 'monster-hero/src/game-system.jsx'), 'utf8');
@@ -157,20 +158,21 @@ check('AUTO後も供モン等の既存遷移を自動選択しない',
   !slice('// AUTO中にREWARD_PICKへ入ったときだけ', 'const upgradeUnique').includes("advanceRunStage('PICK_ALLY')"));
 
 // ---- ③ 画面 ----
-const START = "      {gameState==='REWARD_PICK'&&(()=>{";
-const END = '      {/* HELP */}';
-const from = source.indexOf(START), to = source.indexOf(END, from);
-check('トレーニング画面のJSXを切り出せる', from >= 0 && to > from);
-if (from >= 0 && to > from) {
-  const jsx = source.slice(from, to);
+// 画面は 68-screen-run-result.jsx の RewardPickScreen へ切り出した。呼び出しの位置から数えても
+// 中身は無いので、コンポーネント本体を読む(関数の宣言部だけ差し替えて描く)
+const REWARD_PICK_HEAD = /^function RewardPickScreen\(\{[\s\S]*?\}\)\s*\{/;
+const component = screenSource('REWARD_PICK', 'RewardPickScreen');
+check('トレーニング画面のJSXを切り出せる', REWARD_PICK_HEAD.test(component));
+if (REWARD_PICK_HEAD.test(component)) {
+  const jsx = component;
   check('決定は2つそろうまで押せない作りになっている', /disabled=\{!ready\|\|!!effect\}/.test(jsx));
   check('確定するまで選び直せる', jsx.includes('setTrainingPicks([])') && jsx.includes('選び直す'));
   const transformed = babel.transformSync(
-    'const Screen = ({ gameState, trainingPicks, setTrainingPicks, atk, def, maxHp, maxGuts, waveResult, effect,\n'
+    jsx.replace(REWARD_PICK_HEAD, 'const Screen = ({ gameState, trainingPicks, setTrainingPicks, atk, def, maxHp, maxGuts, waveResult, effect,\n'
     + '  runMode, difficulty, extremeRun, extremeDifficulty, specialRuleDifficultyForRun, resolveTrainingStats, resolveTrainingStep, ULTIMATE_SETTING, extremeRuleNumber, trainingGainRate, compactPercent, specialRulePercent, extremeSpecialRule, quickGrowthRateForRun, isQuickMode,\n'
     + '  TRAINING_PICK_COUNT, TRAINING_OPTIONS, handleTraining, AssistantBubble, battleTutorialSpotClass, cardIconNode,\n'
-    + '  Trophy, Heart, Sword, ShieldCheck, Sparkles }) => (<>\n'
-    + jsx + '\n</>);\nmodule.exports = { Screen };',
+    + '  Trophy, Heart, Sword, ShieldCheck, Sparkles }) => {')
+    + '\nmodule.exports = { Screen };',
     { presets: [[PRESET_REACT, { runtime: 'classic' }]], filename: 'training-reward-check.jsx' });
   const scope = { exports: {} };
   new Function('module', 'exports', 'React', transformed.code)(scope, scope.exports, React);

@@ -80,8 +80,26 @@ check('図鑑説明が指定文のまま',
 
 console.log('--- ④ 正式実装で表へ出ていること ---');
 check('debugOnly を外している(正式実装済み)', eiki.debugOnly === undefined || eiki.debugOnly === false);
-check('図鑑一覧(dexMonsterList)は debugOnly だけを外す作りのまま(エイキ自身は対象外にならない)',
-  /const dexMonsterList = \(\) => \(typeof ALL_PLAYER_MONSTERS !== 'undefined' \? Object\.values\(ALL_PLAYER_MONSTERS\)\.filter\(mon => mon && !mon\.debugOnly\) : \[\]\);/.test(source));
+// 図鑑の一覧は2026-09-08の改修で種族順に並べ替えるようになり、1行のアロー式ではなくなった。
+// 実装の行を丸ごと写すと検査だけが古くなるので、見たいのは「除いているのは debugOnly だけで、
+// エイキを名指しで外す条件を足していないか」。さらに切り出して動かし、並びに居ることまで確かめる
+{
+  const dexSrc = source.match(/const dexMonsterList = \(\) => \{[\s\S]*?\n\};/);
+  check('図鑑一覧(dexMonsterList)を取り出せる', !!dexSrc);
+  check('図鑑一覧は debugOnly だけを外す作りのまま(エイキを名指しで外していない)',
+    !!dexSrc && /!mon\.debugOnly/.test(dexSrc[0]) && !/Eiki/.test(dexSrc[0]));
+  const region = (from, to) => { const i = source.indexOf(from), j = source.indexOf(to, i); return (i >= 0 && j > i) ? source.slice(i, j) : null; };
+  const lineageRegion = region('const UNKNOWN_LINEAGE =', '// ==================== 総合力');
+  check('血統まわりの実装を取り出せる', !!lineageRegion);
+  if (lineageRegion) {
+    const dexCtx = { console, Object, Array, Set, Map, String, Number };
+    vm.createContext(dexCtx);
+    vm.runInContext([imagesSrc, allySrc, lineageSrc, lineageRegion,
+      'globalThis.__dex = { dexMonsterList };'].join('\n'), dexCtx);
+    const names = dexCtx.__dex.dexMonsterList().map(m => m.id);
+    check('エイキが図鑑の並びに入っている', names.includes('Eiki'), `${names.length}体中 ${names.indexOf('Eiki') + 1}番目`);
+  }
+}
 // 円盤石は3商品(本人アイコン・円盤石アイコン・円盤石本体)がそろって並ぶ決まり(breeder.jsのコメント参照)
 const marketStart = breederSrc.indexOf('const BREEDER_MARKET_ITEMS = [');
 const marketSrc = marketStart >= 0 ? breederSrc.slice(marketStart) : '';

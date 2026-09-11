@@ -140,9 +140,21 @@ const serve=()=>new Promise(r=>{const s=http.createServer((req,res)=>{
     if(restarted){
       let sawAgain=false,played=false;
       for(let i=0;i<80;i++){
-        const st=await page.evaluate(()=>({
-          step:(document.querySelector('[data-rhythm-countdown-step]')||{}).textContent||null,
-          notes:document.querySelectorAll('[data-rhythm-note]').length}));
+        // ノーツは公開フラグ rhythmCanvasNotes が true になってから(2026-09-07)
+        // [data-rhythm-note-canvas] 1枚へ描いている。要素を数える書き方のままだと
+        // 常に0個で、「カウントダウンのあと止まったまま」と誤って言い続けることになる。
+        // canvas 版は「透明でない画素が描かれているか」で、演奏が始まったことを見る
+        const st=await page.evaluate(()=>{
+          const canvas=document.querySelector('[data-rhythm-note-canvas]');
+          let painted=0;
+          if(canvas&&canvas.width>0&&canvas.height>0){
+            try{const d=canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data;
+              for(let i=3;i<d.length;i+=4){if(d[i]>8){painted=1;break;}}
+            }catch{painted=0;}
+          }
+          return {step:(document.querySelector('[data-rhythm-countdown-step]')||{}).textContent||null,
+            notes:canvas?painted:document.querySelectorAll('[data-rhythm-note]').length};
+        });
         if(st.step)sawAgain=true;
         if(sawAgain&&!st.step&&st.notes>0){played=true;break;}
         await page.waitForTimeout(120);

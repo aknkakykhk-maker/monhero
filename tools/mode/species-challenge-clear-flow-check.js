@@ -127,7 +127,9 @@ check('全国ランキングへの切り替えは公開フラグを見てから'
   rankBody.includes('const nationalMode = SPECIES_CHALLENGE_PUBLIC_RELEASE && speciesFilter !== SPECIES_RANK_TAB_SELF_BEST;'));
 check('公開後は既存のスコアランキングの取得・表示をそのまま使う',
   rankBody.includes('rankingDifficultyForMode(BATTLE_MODE_SPECIES_CHALLENGE, difficultyId, tabId)')
-  && rankBody.includes('nationalRows.map(renderScoreRankingEntry)'));
+  // 「全種族」タブは、どの種族の記録かが分からないと読めないので、行に種族名を出す。
+  // そのぶん renderScoreRankingEntry へ第3引数(showSpecies)を渡す形になっている
+  && rankBody.includes('nationalRows.map((row,i)=>renderScoreRankingEntry(row,i,speciesFilter===SPECIES_RANK_TAB_ALL))'));
 // 難易度タブは14段階すべてを出す。1つもクリアしていない種族でも
 // 「その難易度の記録がどこにも無い」状態にならないようにするため
 check('難易度タブに14段階すべてを出す',

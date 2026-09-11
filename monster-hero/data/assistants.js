@@ -151,7 +151,7 @@ const assistantUpdateNoticeFromChangelog = entry => {
 const ASSISTANT_UPDATE_NOTICE_SCRIPTS = {
   update_notice_rhythm_weekend_cup_v1: {
     mua: [
-      { e:'excited',  t:'{name}、モンビーで大会が始まったよ！ その名も「週末ゲリラ杯」♪' },
+      { e:'excited',  t:'{name}、モンヒロビートで大会が始まったよ！ その名も「週末ゲリラ杯」♪' },
       { e:'happy',    t:'対象は3曲。「Monster Hero」「風がそよぐ場所」「Close To Your Heart」だよ。' },
       { e:'normal',   t:'この期間に出したスコアだけで競うの。今までの記録は持ち込めないから、いま始めても間に合うよ♪' },
       { e:'normal',   t:'順位は曲ごとと、3曲ぜんぶの合計の2種類。1曲だけでも合計に載るから気楽にね。' },
@@ -167,7 +167,7 @@ const ASSISTANT_UPDATE_NOTICE_SCRIPTS = {
       { e:'wink',     t:'9月14日(月)の5時まででつ。全国ランキングの「イベント」からどうぞ。' },
     ],
     momosuke: [
-      { e:'excited',  t:'{name}、モンビーで大会だよ！ 「週末ゲリラ杯」、ももが持ってきたの♡' },
+      { e:'excited',  t:'{name}、モンヒロビートで大会だよ！ 「週末ゲリラ杯」、ももが持ってきたの♡' },
       { e:'wink',     t:'対象は3曲ね。「Monster Hero」「風がそよぐ場所」「Close To Your Heart」。' },
       { e:'happy',    t:'この期間に出した点だけで勝負だから。過去の記録？ 関係ないない♪' },
       { e:'normal',   t:'順位は曲ごとと、3曲の合計。1曲でも合計に載るよ。' },
