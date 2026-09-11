@@ -336,7 +336,9 @@ const measure=(chart,audio,options={})=>{
       heldFreeTotal++;
       // 押さえている指は帯の中心からわずかしか寄せられない(heldTouchSpan)。叩く指をいちばん離して
       // 置いたときに指2本ぶん空くか(=空いている手が自由か)を見る
-      if(separationRange(usableTouchSpan(note),heldTouchSpan(span.note)).max>=HAND_MODEL.fingerMinGapLanes-1e-9)heldFreeOk++;
+      // SLIDEは指が経路に沿って動くので、**そのTAPが鳴る瞬間の実位置**で測る
+      // (2026-09-12。以前は経路の先頭でしか測っておらず、最大10点ぶれていた)
+      if(separationRange(usableTouchSpan(note),heldTouchSpan(span.note,note.grid)).max>=HAND_MODEL.fingerMinGapLanes-1e-9)heldFreeOk++;
     }
   }
 

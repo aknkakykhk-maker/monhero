@@ -1645,8 +1645,15 @@ const SLIDE_WIDTH_SHAPES=Object.freeze({
   // しぼんで戻る。抜けたあと戻ってくる音
   pinch:t=>1-.35*Math.sin(Math.PI*t),
 });
-// その音にどの形を当てるか。onset.character（FULL/PUNCH/BODY/LIGHT）と、
-// 音の高さが伸びのあいだで上がっているか下がっているかで決める。
+// その音にどの形を当てるか。**上から順に見て、先に当たったものを使う。**
+//
+//   1. 伸びの途中に山がある → swell ／ 谷がある → pinch   （実測で約4割がここで決まる）
+//   2. onset.character が FULL / PUNCH（強い頭） → taper
+//   3. LIGHT（軽い頭） → widen
+//   4. それ以外は、終わりが始まりより高ければ widen、でなければ steady（約1割）
+//
+// 山/谷を character より先に見るのは、音の形のほうが太さの表現に直結するため。
+// そのぶん「PUNCH なのに swell」のような組み合わせが3割ほど出るが、これは想定どおり。
 // 乱数は使わない（この生成器は再実行で同じ譜面になることを前提にしている）。
 const slideWidthShapeFor=(onset,heights,allowed)=>{
   const pick=name=>allowed.includes(name)?name:'steady';
@@ -1654,8 +1661,14 @@ const slideWidthShapeFor=(onset,heights,allowed)=>{
   const head=heights[0],tail=heights[heights.length-1];
   const lo=Math.min(...heights),hi=Math.max(...heights);
   const span=hi-lo;
-  const peakInside=span>1e-6&&Math.max(...heights.slice(1,-1).concat([-Infinity]))>Math.max(head,tail)+span*.2;
-  const dipInside=span>1e-6&&Math.min(...heights.slice(1,-1).concat([Infinity]))<Math.min(head,tail)-span*.2;
+  // 山/谷と見なすのに要る出っぱりの大きさ。
+  // **相対(span*.2)だけでは足りない。** 全体が0.5半音しか動いていない平らな音でも
+  // 0.31半音の凸があれば「ひと山ある伸ばし」になってしまう(実測: 4u-hitasura grid1088)。
+  // これは HEIGHT_TURN_MIN で直したのと同じ誤りで、ジッタを音の形として読んでいた。
+  // 絶対の下限(≒1半音)を併用する。
+  const bump=Math.max(span*.2,HEIGHT_SHAPE_MIN);
+  const peakInside=span>1e-6&&Math.max(...heights.slice(1,-1).concat([-Infinity]))>Math.max(head,tail)+bump;
+  const dipInside=span>1e-6&&Math.min(...heights.slice(1,-1).concat([Infinity]))<Math.min(head,tail)-bump;
   if(peakInside)return pick('swell');
   if(dipInside)return pick('pinch');
   const character=onset?onset.character:'NONE';
@@ -1678,6 +1691,9 @@ const slideWidthShapeFor=(onset,heights,allowed)=>{
 // 0.7未満では0.47回。**0.5半音で切ると、本物の揺れとジッタが2.5倍差で分かれる**。
 // SLIDEになる伸び40件のうち9件(23%)が「0.5半音で2回以上折れる」＝はっきり揺れている。
 const HEIGHT_TURN_MIN=.028;   // ≒0.5半音
+// 「伸びの途中に山/谷がある」と見なすのに要る出っぱりの大きさ（絶対の下限）。
+// 相対のしきい値(span*.2)だけだと、平らな音の中のジッタを山と読んでしまう。
+const HEIGHT_SHAPE_MIN=.055;  // ≒1半音
 const heightWaviness=heights=>{
   if(!Array.isArray(heights)||heights.length<3)return 0;
   let turns=0,moves=0,previous=0;
@@ -1731,7 +1747,11 @@ function slidePathFor(reserved,startLane,width,P,onset){
   // 「止めたままでも通る本数」は変更前より増えない。
   // 形のバリエーションは太さの変え方と刻みの細かさで出しており、そちらは効いたまま。
   const reach=Math.max(2,Math.min(reachMax,reachMax*Math.min(1,range/.25)));
-  const centerLane=Math.max(reach/2,Math.min(LANES-1-reach/2,startLane));
+  // 中心を画面へ収めるための寄せは、**その難易度の上限(reachMax)**で見る。
+  // reach(実際の移動量)で見ると、音の動きが小さくて reach が縮んだときに中心まで動いてしまい、
+  // 同時に流れてくるTAPとの隙間が変わる(品質レポートの「押せる」が3譜面で下がった)。
+  // 上限で見れば、移動量が変わっても中心は動かない。
+  const centerLane=Math.max(reachMax/2,Math.min(LANES-1-reachMax/2,startLane));
   const laneAt=height=>{
     const ratio=(height-lo)/range;      // 0〜1
     const lane=centerLane+(ratio-(heights[0]-lo)/range)*reach;
@@ -1762,11 +1782,22 @@ function slidePathFor(reserved,startLane,width,P,onset){
   // 「MASTERがいちばん厳しい」状態がそのまま戻る。
   // 基準の太さが1のノーツ(細いSLIDE)だけは1のままにする。
   const floorWidth=Math.min(width,2);
+  // 【太る方向へも1段だけ出す】(2026-09-12・実曲で確かめて判明)
+  // 細くする方向だけだと、基準の太さが下限と同じ難易度では**1本も変化が出ない**。
+  // 実際 six_eternel_beat の MASTER は基準幅2＝下限2で、SLIDE 14本すべて太さ一定だった
+  // (HARD 8/10本・EXPERT 8/12本は変化していた)。
+  // 太くなる向きは追従の許容が広がる側なので、難しくはならない。
+  // 上限はその難易度が持っている太さの範囲(PROFILES.widths)の中で基準+1段まで。
+  const ceilWidth=Math.min(available[available.length-1],width+1);
+  // shape は 0.55〜1.0 を返す。真ん中(0.775)を基準の太さに合わせ、
+  // 上下へ同じだけ振る。こうすると steady 以外は必ず細い側と太い側の両方を使う。
+  const SHAPE_MID=.775;
   const widthAt=t=>{
-    const scaled=width*shape(Math.max(0,Math.min(1,t)));
+    const shaped=shape(Math.max(0,Math.min(1,t)));
+    const scaled=width+(shaped-SHAPE_MID)/(1-SHAPE_MID);
     let best=available[0];
     for(const candidate of available)if(Math.abs(candidate-scaled)<Math.abs(best-scaled))best=candidate;
-    return Math.max(floorWidth,Math.min(width,best));
+    return Math.max(floorWidth,Math.min(ceilWidth,best));
   };
   const lastIndex=heights.length-1;
   // 刻みを粗くすると、音がいちばん高い/低いところを飛び越えてしまい、

@@ -34,6 +34,19 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    // 原曲(six_eternel_beat)をDEBUGから公開へ。譜面は新しい生成器で作り直した。
+    // 歯ごたえ係数は audio.json の challengeFactor へ 0.92 を固定（BPM207が効きすぎてLv.39になったため）。
+    // あわせて、原曲の名前を名乗っていたリミックスの表示名を正した。
+    date: "2026-09-12 02:58", type:'update', title:'モンヒロビートに「SIX ÉTERNEL ―愛はひとつじゃない―」を追加しました', status:'new',
+    assistantNotice: { id:'update_notice_six_eternel_original_v1', type:'content' },
+    items:[
+      '新しい曲「SIX ÉTERNEL ―愛はひとつじゃない―」を追加しました。EASY〜MASTERの5つの難易度で遊べます。',
+      'ノーツ数は EASY 267／NORMAL 306／HARD 413／EXPERT 505／MASTER 584 です。レベルは Lv.8／9／14／21／30 で、MASTERはいまのところいちばん歯ごたえのある曲のひとつです。',
+      'これまで曲えらびに出ていた「SIX ÉTERNEL ―愛はひとつじゃない―」は、実はドパガキリミックスのほうでした。名前が重なってしまうため、そちらの表示を「SIX ÉTERNEL ドパガキリミックス」に直しています。曲そのもの・譜面・記録は変わりません。',
+      'この曲のスライドは、新しい作り方で組んでいます。1本の中で帯が太くなったり細くなったり、音が行き来するところではジグザグに折れたり、中継点の間隔が詰まったり広がったりします。',
+    ],
+  },
+  {
     // 追従の許容へ「その区間の速さ × RHYTHM_SLIDE_SPEED_COMPENSATION_MS(45ms)」を足す。
     // 1本のいちばん速い区間で作ったらHARD以上の9割超が上限へ張り付いたので、
     // rhythmSlideLaneSpeedAt で**その時刻の区間**を見る形にした。上限0.35レーン。
