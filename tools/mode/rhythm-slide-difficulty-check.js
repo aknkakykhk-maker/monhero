@@ -85,7 +85,8 @@ console.log('\n--- 実装ガード ---');
 ok('追従だけが判定ラインの高さで測る関数を通る',
   /const laneCoordinate=\(clientX,clientY\)=>\{[\s\S]*?rhythmTrackingLaneCoordinateAtPoint\(clientX,clientY,rect\)/.test(source));
 ok('猶予はノーツへ焼き込んだ値を読む',/_rhythmTrackingGraceMs/.test(source));
-ok('許容はノーツへ焼き込んだ値を足す',/\+rhythmSlideToleranceBonus\(note\)/.test(source));
+ok('許容は難易度の土台と速さの上乗せを足す',/\+rhythmSlideToleranceBonus\(note,chartTimeMs\)/.test(source));
+ok('速さの上乗せはその時刻の区間から作る',/const rhythmSlideLaneSpeedAt=\(note,chartTimeMs\)=>/.test(source));
 ok('譜面データそのものは触っていない(焼き込みは演奏開始時)',
   fs.readFileSync(path.join(ROOT,'monster-hero/src/parts/30-rhythm-play.jsx'),'utf8')
     .includes('rhythmSlideTrackingFor(difficulty.id)'));
