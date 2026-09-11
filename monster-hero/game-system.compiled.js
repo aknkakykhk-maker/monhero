@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f5bdb2d7fdb93a2f
+// source-sha256: fe6d64e87c11789d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1dde7b33ffeeb72f
+// generated-sha256: 63e9d4e46d040190
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 18:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 19:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4655,17 +4655,25 @@ const RHYTHM_SORT_ORDERS = Object.freeze([Object.freeze({
   note: '曲が短い順。軽く1曲遊びたいときに'
 })]);
 const RHYTHM_SORT_IDS = Object.freeze(RHYTHM_SORT_ORDERS.map(item => item.id));
+// eventOnly … イベントの対象曲だけに絞るか(2026-09-11・ユーザー指示
+//   「ソートにイベント曲だけ出てくるのほしいね」)。並び替えではなく絞り込みなので、
+//   並び替えの一覧には混ぜず、別のボタンにしてある。
+//   ★開催していないときは、この値が true でも絞らない(画面側で見る)。
+//     そうしないと、イベントが終わったあとに一覧が空の人が出てしまう。
+//   ★新しい項目なので、持っていない既存ユーザーは既定値(false)で補われる(CLAUDE.md ⑦)。
 const DEFAULT_RHYTHM_SELECT_VIEW = Object.freeze({
   sort: 'added',
   desc: false,
-  noticeOpen: true
+  noticeOpen: true,
+  eventOnly: false
 });
 const normalizeRhythmSelectView = value => {
   const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
   return {
     sort: RHYTHM_SORT_IDS.includes(source.sort) ? source.sort : DEFAULT_RHYTHM_SELECT_VIEW.sort,
     desc: typeof source.desc === 'boolean' ? source.desc : DEFAULT_RHYTHM_SELECT_VIEW.desc,
-    noticeOpen: typeof source.noticeOpen === 'boolean' ? source.noticeOpen : DEFAULT_RHYTHM_SELECT_VIEW.noticeOpen
+    noticeOpen: typeof source.noticeOpen === 'boolean' ? source.noticeOpen : DEFAULT_RHYTHM_SELECT_VIEW.noticeOpen,
+    eventOnly: typeof source.eventOnly === 'boolean' ? source.eventOnly : DEFAULT_RHYTHM_SELECT_VIEW.eventOnly
   };
 };
 // ノーツ速度は見た目のtravelだけを変える。1.0〜12.0を0.1刻みで選べ、6.0は従来の見た目(2150ms)を維持する。
@@ -18467,7 +18475,13 @@ function PressRepeatButton({
     if (disabled || event.pointerType === 'mouse' && event.button !== 0) return;
     clearPress();
     longPressedRef.current = false;
-    event.currentTarget.setPointerCapture?.(event.pointerId);
+    // ★指の捕捉は「できたら嬉しい」程度のもの。?. はメソッドが無い場合しか守らず、
+    //   メソッドはあるのに捕捉できない状況(その指がもう離れている等)では例外を投げる。
+    //   ここで投げると下の長押しタイマーが登録されず、押しっぱなしが効かなくなる。
+    //   音ゲー側(30-rhythm-play.jsx)と同じく try で囲って、失敗しても先へ進む
+    try {
+      event.currentTarget.setPointerCapture?.(event.pointerId);
+    } catch {}
     delayRef.current = setTimeout(() => {
       longPressedRef.current = true;
       onPress();
@@ -19866,8 +19880,11 @@ const RhythmSongSelect = ({
     const event = released && typeof rhythmLimitedEventAt === 'function' ? rhythmLimitedEventAt(Date.now()) : null;
     return new Set(event && Array.isArray(event.songIds) ? event.songIds : []);
   })();
-  // 画面に並べる順。並び替えは**見え方だけ**で、遊べる曲も選んでいる曲も変えない。
-  const list = rhythmSortSongs(playable, {
+  // 対象曲だけに絞るか。★開催していないときは絞らない(保存値が true のままでも)。
+  //   そうしないと、イベントが終わったあとに一覧が空になる人が出る
+  const eventFilterOn = eventSongIds.size > 0 && state.eventOnly === true;
+  // 画面に並べる順。並び替えも絞り込みも**見え方だけ**で、遊べる曲も選んでいる曲も変えない。
+  const list = rhythmSortSongs(eventFilterOn ? playable.filter(entry => eventSongIds.has(entry.songId)) : playable, {
     sort: state.sort,
     desc: state.desc,
     levelOf: rowLevel,
@@ -20020,7 +20037,19 @@ const RhythmSongSelect = ({
   }, "\u4E26\u3073\u66FF\u3048\uFF1A", sortLabel, state.desc ? '（逆）' : ''), /*#__PURE__*/React.createElement("span", {
     "aria-hidden": "true",
     className: "shrink-0 text-slate-400"
-  }, "\u25BE")), notice && /*#__PURE__*/React.createElement("button", {
+  }, "\u25BE")), eventSongIds.size > 0 && /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "data-rhythm-song-event-filter": true,
+    "aria-pressed": state.eventOnly === true,
+    onClick: () => setView({
+      ...state,
+      eventOnly: !(state.eventOnly === true)
+    }),
+    title: state.eventOnly === true ? 'すべての曲を出す' : 'イベントの対象曲だけにする',
+    className: `flex h-[44px] shrink-0 items-center gap-1 rounded-xl border px-2 text-[11px] font-black ${state.eventOnly === true ? 'border-amber-300 bg-amber-500/25 text-amber-100' : 'border-amber-300/40 bg-slate-900/80 text-amber-200'}`
+  }, /*#__PURE__*/React.createElement("span", {
+    "aria-hidden": "true"
+  }, "\uD83C\uDFC6"), /*#__PURE__*/React.createElement("span", null, "\u5BFE\u8C61\u66F2")), notice && /*#__PURE__*/React.createElement("button", {
     type: "button",
     "data-rhythm-song-notice-toggle": true,
     "aria-pressed": state.noticeOpen,

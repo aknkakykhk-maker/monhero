@@ -128,6 +128,7 @@
 | `mh_masu_level_cap_compensation_notice_v1` / `mh_masu_level_cap_compensation_notice_seen_v1` | 上記移行で配ったダイヤの補償の案内と、その既読 |
 | `mh_inherited_unique_level_compensation_v1` / `mh_inherited_unique_level_compensation_pending_v1` | 継承固有技Lvの補償を一度だけ行うフラグと、その途中経過 |
 | `mh_unique_lineage_dedupe_migrated_v1` | 継承固有技の系統IDの重複を一度だけ整理した記録 |
+| `mh_changelog_timed_seen_fix_v1` | 時刻で出しはじめるお知らせ(`visibleFrom`)を、始まる前に既読にしてしまった端末で一度だけ未読へ戻した記録。外すのは `visibleFrom` を持つ項目だけで、ほかの既読には触らない |
 | `mh_monster_roster_sets_migrated_v1` | 編成セット形式への一度きり移行 |
 | `mh_login_pt_to_xp_v1` | 誤って配ったログインポイントを XP へ一度だけ振り替えた記録 |
 | `mh_bgm_dullahan_default_migrated_v1` / `mh_bgm_quick_extreme_default_migrated_v1` | BGM の既定曲を変えたときの一度きりの入れ替え(自分で選んだ曲には触らない) |

@@ -33,6 +33,11 @@ const check = (name, ok, detail = '') => { results.push(ok); console.log(`  ${ok
     localStorage.setItem('mh_battle_tutorial_seen_v1', JSON.stringify(true));
     localStorage.setItem('mh_battle_tutorial_guide_shown_v1', JSON.stringify(true));
     localStorage.setItem('mh_masu_migrated', JSON.stringify(true));
+    // 一度きりのお詫び配布(継承固有技Lv・レベル上限)は fixed inset-0 の重なりで画面全体を覆い、
+    // 実クリック(locator.click)を吸ってしまう。ほかの実ブラウザ検査と同じく配布済みにしてから始める
+    localStorage.setItem('mh_inherited_unique_level_compensation_v1', JSON.stringify(true));
+    localStorage.setItem('mh_inherited_unique_level_compensation_pending_v1', JSON.stringify(false));
+    localStorage.setItem('mh_masu_level_cap_compensation_notice_seen_v1', JSON.stringify(true));
     localStorage.setItem('mh_masu_mons', JSON.stringify([{
       id: 'masu_test', baseId: 'Suezo', name: 'テストスエゾー',
       bondXp: 3000, distAptPoints: 100,
