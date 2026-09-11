@@ -128,7 +128,11 @@ check('画面はフラグでタブごと出し分ける',
   &&screen.includes('{totalReleased&&<div data-rhythm-ranking-tabs'));
 check('ヘルプの「総合」の説明も同じフラグで出す',(()=>{
   const topic=(help.split("id:'rhythm-ranking'")[1]||'').split('id:\'rhythm-')[0];
-  const totalNotes=topic.split('\n').filter(line=>line.includes('「総合」')||line.includes('同じブリーダー名'));
+  // 助手のひとこと(assistant)はトピック単位なのでフラグを持てない。そちらは
+  // 「公開したら助手のひとことも『総合』に触れる」で別に見るため、本文のブロックだけを対象にする
+  const totalNotes=topic.split('\n')
+    .filter(line=>line.includes("{t:'"))
+    .filter(line=>line.includes('「総合」')||line.includes('同じブリーダー名'));
   return totalNotes.length>0&&totalNotes.every(line=>line.includes("releaseFlag:'rhythmTotalRanking'"));
 })());
 check('更新履歴も同じフラグで出す',(()=>{

@@ -584,7 +584,7 @@ const HELP_CATEGORIES = [
       },
       {
         id:'rhythm-ranking', emoji:'🏆', title:'全国ランキング', releaseFlag:'rhythmMode', group:'マスモンとランキング',
-        assistant:'難易度をまたいだ、みんなのハイスコアが見られるよ♪', expression:'excited',
+        assistant:'「この曲」と「総合」の2つがあるよ。総合は全曲の合計だから、1曲ずつ埋めるだけでも順位が上がるの♪', expression:'excited',
         blocks:[
           {t:'p', unreleasedFlag:'rhythmTotalRanking', text:'曲えらびで曲を選び、「🏆 この曲の全国ランキング」から、その曲のEASY〜MASTERをまとめた1つのランキングを確認できます。難易度ごとに満点が違うため、高い難易度で挑むほど上位に近づきやすくなります。ランキングは曲ごとに分かれているので、曲を選び替えるとその曲のランキングになります。'},
           {t:'p', releaseFlag:'rhythmTotalRanking', text:'曲えらびで曲を選び、「🏆 この曲の全国ランキング」から開きます。画面の上にあるタブで、2つのランキングを切り替えられます。'},
