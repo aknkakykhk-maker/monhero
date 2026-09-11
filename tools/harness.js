@@ -38,6 +38,23 @@ function assembleParts() {
   }).join('\n');
 }
 
+// 難易度のID列(Beginner … Legend)を、実装(DIFFICULTY_SETTINGS)から並び順のまま読む。
+//
+// 【なぜ要るか】
+// 検査へ9個を書き写すと、難易度を足した・並べ替えたときに検査だけが古いまま残り、
+// 「新しい難易度が対象外なのに気づけない」状態になる。実装から読めば自動で追いつく。
+// 極限チャレンジ(EXTREME_DIFFICULTIES)は別の表なので、ここには含まれない。
+function readDifficultyIds() {
+  const source = assembleParts();
+  const from = source.indexOf('const DIFFICULTY_SETTINGS = {');
+  if (from < 0) throw new Error('DIFFICULTY_SETTINGS が見つかりません');
+  const to = source.indexOf('\n};', from);
+  if (to < 0) throw new Error('DIFFICULTY_SETTINGS の終わりが見つかりません');
+  const ids = [...source.slice(from, to).matchAll(/^ {2}([A-Za-z]\w*):\s*\{/gm)].map((m) => m[1]);
+  if (ids.length < 2) throw new Error(`DIFFICULTY_SETTINGS から難易度を取り出せません: ${ids.join(',')}`);
+  return ids;
+}
+
 function sha16(text) {
   return require('crypto').createHash('sha256').update(text).digest('hex').slice(0, 16);
 }
@@ -542,4 +559,4 @@ function artSourcePath(...parts) {
   return path.join(REPO_ROOT, 'tools', 'art-sources', ...parts);
 }
 
-module.exports = { REPO_ROOT, GAME_SYSTEM, PARTS_DIR, PARTS_MANIFEST, readPartsManifest, assembleParts, readAppSource, screenSource, syncPartsAndGameSystem, splitGeneratedFile, generatedHeader, transformGameSystem, loadDyeModule, loadEmbeddedImages, imageForBaseId, decodeDataUrl, imageFilePath, artSourcePath, createCanvas };
+module.exports = { REPO_ROOT, GAME_SYSTEM, PARTS_DIR, PARTS_MANIFEST, readPartsManifest, assembleParts, readDifficultyIds, readAppSource, screenSource, syncPartsAndGameSystem, splitGeneratedFile, generatedHeader, transformGameSystem, loadDyeModule, loadEmbeddedImages, imageForBaseId, decodeDataUrl, imageFilePath, artSourcePath, createCanvas };
