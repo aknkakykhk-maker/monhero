@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 62a7741a6572bb73
+// generated-sha256: 9266ee6bfb80bb6a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 18:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 18:49"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11351,6 +11351,16 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
     const id=difficulty&&ids.includes(difficulty.id)?difficulty.id:ids[ids.length-1];
     return Number(entry.difficulties[id].level)||0;
   };
+  // ★イベントの対象曲は、一覧で見てすぐ分かるようにする
+  //   (2026-09-11・ユーザー指示「イベント曲は見てすぐ分かるようにして」)。
+  //   曲えらびの案内は初回に1度だけで、閉じるともう出ない。だから「いまどれを遊べば
+  //   イベントに載るのか」を知る場所が、この一覧のほかに無かった。
+  //   ★曲のidはイベントの定義から引く(ここに書き写さない)。開催していなければ何も出ない。
+  const eventSongIds=(()=>{
+    const released=(typeof RELEASE_FLAGS!=='undefined'&&RELEASE_FLAGS&&RELEASE_FLAGS.rhythmWeeklyRanking===true);
+    const event=(released&&typeof rhythmLimitedEventAt==='function')?rhythmLimitedEventAt(Date.now()):null;
+    return new Set((event&&Array.isArray(event.songIds))?event.songIds:[]);
+  })();
   // 画面に並べる順。並び替えは**見え方だけ**で、遊べる曲も選んでいる曲も変えない。
   const list=rhythmSortSongs(playable,{sort:state.sort,desc:state.desc,levelOf:rowLevel,difficulties});
   const sortLabel=(RHYTHM_SORT_ORDERS.find(item=>item.id===state.sort)||RHYTHM_SORT_ORDERS[0]).label;
@@ -11493,11 +11503,12 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
         :<ul className="space-y-1.5">{blocks.map(copy=>list.map(entry=>{
           const main=copy===1;
           const selected=!!song&&entry.songId===song.songId;
+          const eventSong=eventSongIds.has(entry.songId);
           return <li key={`${copy}-${entry.songId}`} aria-hidden={main?undefined:'true'}>
             <button type="button" {...(main?{'data-rhythm-song-row':entry.songId}:{'data-rhythm-song-row-loop':entry.songId})}
               tabIndex={main?undefined:-1} aria-pressed={selected}
               onClick={()=>setSongId(entry.songId)}
-              className={`flex w-full min-h-[64px] items-center gap-2 rounded-xl border px-2 py-1.5 text-left ${selected?'border-fuchsia-300 bg-fuchsia-900/50':'border-white/10 bg-slate-900/70'}`}>
+              className={`flex w-full min-h-[64px] items-center gap-2 rounded-xl border px-2 py-1.5 text-left ${selected?'border-fuchsia-300 bg-fuchsia-900/50':eventSong?'border-amber-300/50 bg-amber-500/[0.07]':'border-white/10 bg-slate-900/70'}`}>
               <span className="w-10 shrink-0 text-center">
                 <small className="block text-[7px] font-black leading-none text-slate-400">楽曲Lv.</small>
                 <b {...(main?{'data-rhythm-song-row-level':''}:{})} className={`mt-0.5 block text-xl font-black leading-none tabular-nums text-white${spot('songLevel')}`}>{rowLevel(entry)}</b>
@@ -11521,6 +11532,8 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
                   <small className="ml-1 text-[9px] font-bold text-slate-400">
                     {(difficulties||[]).filter(item=>rhythmChartPlayable(entry,item.id)).length}難易度
                   </small>
+                  {eventSong&&<small {...(main?{'data-rhythm-song-event':entry.songId}:{})}
+                    className="ml-auto shrink-0 rounded-md border border-amber-300/60 bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-black text-amber-200">🏆 イベント対象</small>}
                 </span>
               </span>
             </button>
