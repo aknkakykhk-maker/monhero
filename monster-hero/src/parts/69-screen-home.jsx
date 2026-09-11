@@ -11,6 +11,19 @@
 // ・施設へ入る7つの行き先は props(onOpen*)で受け取る。画面は行き先の名前を持たない
 // ・かぶせもの3つは「HOME にいて、チュートリアルが終わっていて、前の会話が片付いていたら」
 //   という順番で出る。その条件は MonsterHeroGame 側に残し、ここは中身だけを持つ
+// イベント開催中の角バッジ(2026-09-11・ユーザー指示「右上とか左上とか専用バッジを付けるようにして」)。
+// ★ここは style で直に指定する。70-bootstrap.jsx のCSSへ書いた規則は文書へ入らなかった
+//   (実ブラウザで数えたら 0件 / 全1161規則。position が static のままだった)。
+//   施設のボタンの中身(span)は position:absolute なので、その右上へ重ねられる。
+// ★超越バッジ・魂格バッジと同じ「角へ少しはみ出す」置き方にそろえてある。
+const HOME_EVENT_BADGE_STYLE = Object.freeze({
+  position:'absolute', top:'-9px', right:'-7px', zIndex:7,
+  display:'block', padding:'1px 6px',
+  border:'1px solid #fcd34d', borderRadius:'999px',
+  background:'#b45309', color:'#fff7ed',
+  fontSize:'8px', fontWeight:1000, fontStyle:'normal', lineHeight:1.6,
+  whiteSpace:'nowrap', boxShadow:'0 2px 6px #000a', textShadow:'none', pointerEvents:'none',
+});
 function HomeScreen({
   assistantBondUp, breederIcon, breederLevel, breederName, breederPoints, gifts, gold,
   hasUnreadChangelog, homeBackgroundReady, homePastureMasumons, masuMons, missions,
@@ -55,7 +68,7 @@ function HomeScreen({
                 古いままになる・CLAUDE.md ⑥-4)。開催していなければ何も出ない。
               ★いまのイベントはモンヒロビートの曲だけを対象にするので、札もここだけ。
                 ほかの遊びを対象にするイベントを作るときは、そのボタンにも同じ em を足す */}
-          <button className="mh-home-facility rhythm" onClick={onOpenRhythm} aria-label={RHYTHM_MODE_PUBLIC_RELEASE?"モンヒロビート":"モンヒロビート（準備中）"}><span>🎵 モンヒロビート{!RHYTHM_MODE_PUBLIC_RELEASE&&<small>準備中</small>}{homeRhythmEventOpen&&<em data-home-event-badge>🏆 イベント開催中</em>}</span></button>
+          <button className="mh-home-facility rhythm" onClick={onOpenRhythm} aria-label={RHYTHM_MODE_PUBLIC_RELEASE?"モンヒロビート":"モンヒロビート（準備中）"}><span>🎵 モンヒロビート{!RHYTHM_MODE_PUBLIC_RELEASE&&<small>準備中</small>}{homeRhythmEventOpen&&<em data-home-event-badge style={HOME_EVENT_BADGE_STYLE}>🏆 開催中</em>}</span></button>
           <button className={`mh-home-facility battle${spotClass('battle')}`} onClick={onOpenBattle} aria-label="バトル"><span><Sword size={25}/>バトル</span></button>
         </nav>
         <button onClick={openMissions} className={`mh-home-mission${spotClass('reward')}`}><List size={16}/>ミッション
