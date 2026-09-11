@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1ad11e3cc765b30c
+// generated-sha256: fc84d9ceabf643f5
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 15:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 15:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -30543,7 +30543,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             </div>
             <div className="rounded-2xl border-2 bg-slate-900 px-3 py-3" style={{borderColor:speaker.accent}}>
               <span className="block text-[9px] font-black tracking-widest" style={{color:speaker.accent}}>{speaker.name}</span>
-              <span className="block text-[13px] font-bold leading-relaxed text-white mt-1">{line.t}</span>
+              {/* ★{name} は、そのとき話している助手の呼び方へ置き換える。
+                  ここを素の {line.t} で出していたため、画面に {name} がそのまま出ていた
+                  (2026-09-11・ユーザー指摘「名前呼びのとこが変換されてない」)。
+                  呼び方も絆Lvも助手ごとに違うので、選んでいる助手ではなく「話している助手」から引く */}
+              <span className="block text-[13px] font-bold leading-relaxed text-white mt-1">{(()=>{
+                const bond=normalizeAssistantBond(assistantBonds[speaker.id]);
+                return assistantSpeakText(line.t,breederName,assistantBondLevelOf(bond.points),bond.callStyle,speaker.id);
+              })()}</span>
             </div>
             <p className="mt-2 text-center text-[8px] text-slate-500">
               {step+1} / {script.length}

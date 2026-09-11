@@ -13207,7 +13207,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             </div>
             <div className="rounded-2xl border-2 bg-slate-900 px-3 py-3" style={{borderColor:speaker.accent}}>
               <span className="block text-[9px] font-black tracking-widest" style={{color:speaker.accent}}>{speaker.name}</span>
-              <span className="block text-[13px] font-bold leading-relaxed text-white mt-1">{line.t}</span>
+              {/* ★{name} は、そのとき話している助手の呼び方へ置き換える。
+                  ここを素の {line.t} で出していたため、画面に {name} がそのまま出ていた
+                  (2026-09-11・ユーザー指摘「名前呼びのとこが変換されてない」)。
+                  呼び方も絆Lvも助手ごとに違うので、選んでいる助手ではなく「話している助手」から引く */}
+              <span className="block text-[13px] font-bold leading-relaxed text-white mt-1">{(()=>{
+                const bond=normalizeAssistantBond(assistantBonds[speaker.id]);
+                return assistantSpeakText(line.t,breederName,assistantBondLevelOf(bond.points),bond.callStyle,speaker.id);
+              })()}</span>
             </div>
             <p className="mt-2 text-center text-[8px] text-slate-500">
               {step+1} / {script.length}
