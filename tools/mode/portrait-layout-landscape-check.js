@@ -157,7 +157,13 @@ const seed = () => {
       check('バトルが真ん中に置かれる',
         !!battle && Math.abs(battle.left - (battle.viewport - battle.width) / 2) <= 2,
         battle ? `左端 ${battle.left}px` : 'なし');
-      // 中身が器からはみ出していないこと(横スクロールが出ていない)
+      // 中身が器からはみ出していないこと(横スクロールが出ていない)。
+      // ★測る前に演出のアニメーションを止める。Tailwind の CDN が届かないこのサンドボックスでは
+      //   absolute が効かず、敵の予告の「❗」(idleExclaim)のような飾りが幅いっぱいの箱のまま
+      //   scale(1.18)/rotate されるため、器から10〜15pxはみ出して見える
+      //   (実機では absolute なので字の大きさぶんしかない)。ここで見たいのは「並びの幅」。
+      await page.addStyleTag({ content: '*,*::before,*::after{animation:none !important;transition:none !important}' });
+      await page.waitForTimeout(200);
       const overflow = await page.evaluate(() => {
         const el = document.querySelector('#root > div');
         return el ? Math.round(el.scrollWidth - el.clientWidth) : null;

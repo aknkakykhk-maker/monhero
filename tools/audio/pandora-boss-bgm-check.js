@@ -56,8 +56,10 @@ for (const file of files) {
   check(`${file}: 他の勇者は既存のモード別ムー戦BGMへ戻る`,
     compact.includes("if(enemyId==='Moo'||currentWave===10)returnbgmArrangement[modeBgm.moo];") &&
     ['boss', 'quickMoo', 'proMoo', 'extremeMoo', 'speciesMoo'].every(key => compact.includes(`moo:'${key}'`)));
+  // 依存配列の末尾へ autoBgmOverride / rhythmScreenOpen が足された。
+  // 並び(mainHero?.id の直後に autoBattle)はそのまま要求し、配列の終わりだけ問わない。
   check(`${file}: 勇者変更もBGM切替の依存に含める`,
-    compact.includes('bgmArrangement,runMode,eventBgmScene,mainHero?.id,autoBattle]);'));
+    compact.includes('bgmArrangement,runMode,eventBgmScene,mainHero?.id,autoBattle,'));
 }
 
 const audioPath = path.join(ROOT, 'monster-hero/audio/bgm-pandora-boss.mp3');

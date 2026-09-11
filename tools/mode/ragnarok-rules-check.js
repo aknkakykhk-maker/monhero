@@ -85,7 +85,7 @@ check('複合特殊ルールありと出す',G('extremeRuleSummaryText')('RAGNAR
 // 本体側の接続。難易度名ではなく「段階/不死を持っているか」で分岐していること
 check('敵生成は段階倍率を掛けて1つの経路で作る',source.includes('const stagedEnemyMultiplier=extremeWaveEnemyMultiplier(specialRuleDifficulty,w);')
   &&source.includes('createBattleEnemy(w,difficulty,forcedEnemyKey,battleSetting?.power??null,enemyTurnMultiplier*stagedEnemyMultiplier)'));
-check('消費ガッツ・与ダメ・適性は段階の有無で分岐する',source.includes("if(extremeWaveStage(specialRuleDifficulty))return Math.floor(cost*effectiveExtremeSpecialRule(specialRuleDifficulty,'gutsCost',wave));")
+check('消費ガッツ・与ダメ・適性は段階の有無で分岐する',source.includes("if(extremeWaveStage(specialRuleDifficulty))return Math.floor(cost*effectiveExtremeSpecialRule(specialRuleDifficulty,'gutsCost',wave)*soulGutsMultiplier);")
   &&source.includes('distanceBrokenDmg=applyExtremeStagedDamage(finalDmg,elapsedTotalTurns,slotIdx,ultimateDistanceBreakLevels,specialRuleDifficulty,wave,card.type);')
   &&source.includes('if(extremeWaveStage(specialRuleDifficulty)){const effectiveApt=getMonsterAptPct(m,specialRuleDifficulty,wave);'));
 check('撃破処理の前に不死を判定し撃破ロックを立てない',(()=>{const at=source.indexOf('const revived=extremeRevivedEnemyStats(enemy,revivalDifficulty,wave,enemyRevivalUsedRef.current);');

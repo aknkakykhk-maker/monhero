@@ -38,7 +38,7 @@ S/A 等級は `REGRESSION_RISK_MAP.md` に基づく。
 
 | STEP | 残っていること | リスク | モデル | effort |
 | --- | --- | --- | --- | --- |
-| 1 安全網 | NG 51本のトリアージ | 低 | Sonnet 5 | medium |
+| 1 安全網 | **ほぼ完了**(2026-09-11)。NG 56→12本。残りは下の「次の一手」 | 低 | — | — |
 | 2 連結ビルドと集約 | 定数・ユーティリティの集約 | 中 | Sonnet 5 | high |
 | 3 保存層 | 複数体合体・寄付・報酬受取の寄せ、キーごとの読込関数 | **高**(S等級に隣接) | **Opus 5** | **max** |
 | 4 純関数の切り出し | 難易度から保存処理を出す、jsx側の表の移動 | 中 | Sonnet 5 | high |
@@ -73,33 +73,22 @@ S/A 等級は `REGRESSION_RISK_MAP.md` に基づく。
 
 ## 次の一手
 
-**STEP 1 安全網(NG のトリアージ)** — **Sonnet 5 / effort medium**
+**STEP 1 の残り12本(本当の不具合4本から)** — **Opus 5 / effort high**
 
-STEP 6(画面の切り出し)は 2026-09-11 に**完了**した。66画面・約38万文字を
-`MonsterHeroGame` から出し、`60-app.jsx` は 15,300 行から 13,800 行になった。
-詳しくは [`STEP6_HANDOVER.md`](STEP6_HANDOVER.md)。
+2026-09-11 に STEP 1 のトリアージが終わり、落ちていた検査は **56本 → 12本**になった
+(PR #1273 / #1275)。内訳と直し方は [`BASELINE_2026-09.md`](BASELINE_2026-09.md) の
+「2026-09-11 のトリアージ結果」に1枚でまとまっている。**まずそこを読むこと。**
 
-次にやるべきは、ずっと後回しにしてきた**既存 NG のトリアージ**。
-`node tools/run-checks.js --area all` を回すと 26 本前後が落ちるが、
-**どれもこの一連の作業より前から落ちている**。中身は3種類に分かれる。
+残り12本のうち、**本当の不具合は4本**。次はここから。
 
-1. **探している文字列が古い**(実装が変わったのに検査を直していない)。
-   例: `battle/hero-marker-check` の `limit += heroCardBonus + kikiCardBonus;`、
-   `battle/battle-damage-preview-check` の `attackAtonementDmg(card, hits[0].dmg)`(引数が増えた)、
-   `boot/kiki-intro-check` の `if (isGameOver) return 'gameOver';`
-2. **書き漏らし**。`boot/save-keys-check`(`SAVE_DATA.md` に無い保存キー)、
-   `image-asset-check`(使われていない PNG 3件)
-3. **本当の不具合**。上の2つを消してから見極める
-
-1本ずつ「直すのか・検査を今の実装に合わせるのか」を決めて潰す。
-**検査側を緩める方向では直さない**(CLAUDE.md ⑥)。
-
-### STEP 6 のやり残し(2つだけ)
-
-| 事項 | モデル | effort | 内容 |
+| 検査 | 中身 | モデル | effort |
 | --- | --- | --- | --- |
-| `processTurn` に `token.alive` を通す | **Opus 5** | **max** | 画面の切り出しとは別の**挙動の変更**なので分けた。A等級でランキングに影響しうる。実機での確認が要る |
-| `MASU_PATTERN_DEBUG` の切り出し | Sonnet 5 | medium | デバッグ専用画面。プレイヤーには出ないので後回しでよい |
+| `masu/fusion-detail-check` | ランキングへ送る1体ぶんの記録が 700バイトの枠を超えた。既定値の項目を書かない形にする | **Opus 5** | **max**(ランキングに触る) |
+| `layout-consistency-check` | `PICK_SLOT` / `QUICK_GROWTH` に縦スクロールが無く、背の低い端末で戻るボタンが切れる | **Opus 5** | high |
+| `mode/rhythm-first-run-layout-check` | プレイエリアが潰れたままでも「遊べる形」と判定して、見えないノーツをMISSにしてライフを削る | **Opus 5** | **max**(STEP 9 の領域) |
+| `image/dye-edge-check` | ウンディーネの染色マスクが今の立ち絵を覆えていない | — | **絵の描き直しが要る。ユーザーの手が要る** |
+
+残り8本(環境で確かめられないもの4本・その他4本)は `BASELINE_2026-09.md` のとおり。
 
 **props の洗い出しは手でやらない。** props を空にした仮のコンポーネントへ JSX を移し、
 `node tools/undefined-reference-check.js` を通すと、足りない参照が全部一覧で出る。

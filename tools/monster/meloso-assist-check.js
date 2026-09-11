@@ -65,14 +65,14 @@ assert(game.includes(`'ライフ・ガッツ30%回復・現在ガード・1枚�
   'メロソLv3の説明文(getDynamicDesc)が1枚使用時の恩恵に追随していない');
 assert(game.includes(`card?.subType === 'heal_guard_meloso'`) && game.includes(`cardEffectMultiplier(card,halved)`));
 assert(game.includes(`getTurnBuff('takenDamageMult',1.0)`) && game.includes(`getNextTurnBuff('melosoFullRecoveryMult',0)`));
-assert(game.includes(`prev.length >= STARTER_TEACHING_IDS.length`));
+assert(game.includes(`prev.length >= TEACHING_ROSTER_SIZE`));
 // ガッツは消費を先に反映してから回復する(ゲージが上がってから下がる見え方にしない)
-const gutsCostAt = game.indexOf(`setGuts(p=>Math.max(0,p-getCardGuts(card)));`);
+const gutsCostAt = game.indexOf(`setGuts(p=>Math.max(0,p-getCardGuts(card,slotIdx)));`);
 const melosoAt = game.indexOf(`if (card.id==='meloso')`);
 assert(gutsCostAt > 0 && melosoAt > gutsCostAt, 'ガッツの消費より先にメロソの回復が走っている');
 // 回復後のライフはローカル値で持ち回り、敵ターンへ引数で渡す(古いstateを読ませない)
 assert(game.includes(`hpBeforeEnemyAttack=Math.min(liveEffectiveMaxHp(),hpBeforeEnemyAttack+cardHeal)`));
-assert(/await handleEnemyTurn\([^)]*hpBeforeEnemyAttack\)/.test(game));
+assert(/await handleEnemyTurn\([^)]*hpBeforeEnemyAttack[,)]/.test(game));
 
 // ---- 次ターン予約の消費は「更新関数の外」で1回だけ行う ----
 // Reactの更新関数はレンダーが中断・再実行されるともう一度呼ばれることがある。
@@ -105,7 +105,7 @@ assert(game.includes(`const defenseRate = Math.min(0.5,effectiveDef*0.00015);`),
   '丈夫さの割合軽減の式が変わっている。モデル側も新しい式へ直すこと');
 assert(game.includes(`Math.max(30,(atkVal-effectiveDef*0.5)*(1-defenseRate))`),
   '丈夫さの固定軽減と下限の式が変わっている。モデル側も新しい式へ直すこと');
-assert(game.includes(`Math.max(1,Math.floor(dmgBase*Math.max(0.01,(1.0-getPermaBuff('dmgCutPct')))*iceLockEnemyDamageMult))`),
+assert(game.includes(`Math.max(1,Math.floor(dmgBase*Math.max(0.01,(1.0-getPermaBuff('dmgCutPct')))*iceLockEnemyDamageMult*soulDamageRemaining))`),
   '永続軽減の適用が変わっている。モデル側も新しい式へ直すこと');
 assert(game.includes(`? Math.max(1,Math.floor(damage*getTurnBuff('takenDamageMult',1.0)))`),
   '次ターン被ダメージ軽減の適用が変わっている。モデル側も新しい式へ直すこと');

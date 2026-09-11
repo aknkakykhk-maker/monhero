@@ -6,18 +6,18 @@ const unlock = source.slice(source.indexOf('const unlock = async'), source.index
 const boot = source.slice(source.indexOf('const unlockBootSound'), source.indexOf("useEffect(() => {\n    if (bootPhase !== 'TITLE')"));
 const ranking = source.slice(source.indexOf('const loadRankings = useCallback'), source.indexOf('// 寄付・合体・削除'));
 
-assert(unlock.includes('if (!enabled) enabled = true'));
+assert(unlock.includes('if (!enabled) { enabled = true;'));
 assert(boot.indexOf('Audio_.setEnabled(true)') < boot.indexOf('await Promise.all'));
 assert(boot.indexOf('Audio_.unlock(true)') < boot.indexOf('await Promise.all'));
 assert(boot.indexOf("Audio_.playBGM('title')") < boot.indexOf('await Promise.all'));
 assert(boot.includes('audioMuted ? Promise.resolve(false)'));
 assert(source.includes("storeGet('mh_audio_muted', false, false)"));
-assert(source.includes("storeSet('mh_audio_muted', !quickMuted, false)"));
+assert(source.includes('const nextMuted=!quickMuted;') && source.includes("storeSet('mh_audio_muted', nextMuted, false)"));
 assert(ranking.includes("includeLevels ? levelKind : 'score'"));
 assert(ranking.includes('const latestKey = includeLevels ? requestKey : d'));
 assert(source.includes("loadRankings(null,true,false,t.k)"));
 assert(source.includes("loadRankings(null,true,true,'breeder')"));
 assert(source.includes("rankingStatus('breeder:all')") && source.includes("`${levelKind}:all`"));
-assert(source.includes('breederRankingPool') && source.includes("levelKind === 'breeder') setBreederRankingPool"));
+assert(source.includes('breederRankingPool') && /levelKind === 'breeder'\)\s*\{?\s*setBreederRankingPool/.test(source));
 
 console.log('OK: 起動タップの音声有効化・保存ミュート保護・ブリーダーLv独立取得/UI状態');

@@ -34,7 +34,9 @@ assert(source.includes("if (isUniqueOf('KenshiMocchi')) for (const rate of ATTAC
 // 「予測より実際が多い」になるので、buildAttackHits を呼ぶ3か所すべてで渡していることを見る
 assert((source.match(/kenshiExtraCombos:getPermaBuff\('kenshiExtraCombo'\)/g) || []).length === 3,
   '剣士モッチーの永久追加連撃の本数を、予測と実処理の両方へ渡す');
-assert(source.includes("(card.monId === 'Ark' || card.monId === 'Iblis')) ? Math.floor(mainDmg * ATTACK_COMBO_RULES.atonement)") && source.includes('attackAtonementDmg(card, hits[0].dmg)'), '贖罪の追撃を予測する');
+assert(source.includes("if (!(card.type === 'unique' && (card.monId === 'Ark' || card.monId === 'Iblis'))) return 0;")
+  && source.includes('const base = Math.floor(mainDmg * ATTACK_COMBO_RULES.atonement);')
+  && source.includes('attackAtonementDmg(card, hits[0].dmg, soulAttack.comboFinalMultiplier)'), '贖罪の追撃を予測する');
 assert((source.match(/getAttackPredictedDmg\(/g)||[]).length >= 4, '合計と個別表示が共通予測関数を使う');
 assert(source.includes('const plannedDmg=applyTurnDamageReduction(Math.max(0,rawDmg-guardValueOf'), '敵の予定ダメージへガードとターン軽減を実処理と同じ順で反映する');
 assert(source.includes('(予定: ${plannedDmg})'), '敵予告は軽減後の予定値を表示する');

@@ -14,6 +14,7 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 
+const { screenSource } = require('../harness');
 const root = path.resolve(__dirname, '../..');
 const source = fs.readFileSync(path.join(root, 'monster-hero/src/game-system.jsx'), 'utf8');
 const help = fs.readFileSync(path.join(root, 'monster-hero/data/help.js'), 'utf8');
@@ -172,10 +173,10 @@ check('主血統プラントの対象はPlantとOboro',
     === JSON.stringify(['Oboro', 'Plant']));
 
 // ---------- ⑥ 図鑑の画面 ----------
-const list = slice("{gameState==='MONSTER_DEX'&&(()=>{", "{gameState==='MONSTER_DEX_DETAIL'&&(()=>{");
-const detail = slice("{gameState==='MONSTER_DEX_DETAIL'&&(()=>{", "{gameState==='AUTO_SETTINGS'&&(()=>{");
-// 攻撃アクションの確認は専用画面。図鑑一覧のブロックより前に置いてあるので、list/detail とは混ざらない
-const attackPreview = slice("{gameState==='MONSTER_ATTACK_PREVIEW'&&(()=>{", "{gameState==='MONSTER_DEX'&&(()=>{");
+const list = screenSource('MONSTER_DEX', 'MonsterDexScreen');
+const detail = screenSource('MONSTER_DEX_DETAIL', 'MonsterDexDetailScreen');
+// 攻撃アクションの確認は専用画面。画面ごと切り出してあるので、list/detail とは混ざらない
+const attackPreview = screenSource('MONSTER_ATTACK_PREVIEW', 'MonsterAttackPreviewScreen');
 const sharedDex = slice('const DexMonsterIcon =', 'const MarketProductIcon =');
 check('M/B管理のモンスターから図鑑へ入れる',
   source.includes("setGameState('MONSTER_DEX');") && source.includes('モンスター図鑑</button>'));
@@ -185,7 +186,8 @@ check('解放判定は既存の mh_unlocked_monsters を使う',
   list.includes('unlockedMonsterIds.includes(mon.id)') && detail.includes('unlockedMonsterIds.includes(mon.id)'));
 check('図鑑のための保存キーを増やしていない', !/['"]mh_[^'"]*(?:dex|zukan)/i.test(source));
 check('未解放はシルエットと ？？？ で出す',
-  list.includes("'？？？'") && sharedDex.includes('brightness(0)') && detail.includes('hidden={!unlocked}'));
+  list.includes("'？？？'") && sharedDex.includes('brightness(0)') && list.includes('hidden={!unlocked}')
+  && detail.includes('<DexMonsterArt mon={mon} alt="まだ出会っていないモンスター" hidden/>'));
 check('主血統でしぼりこめる', list.includes('dexLineageFilter') && list.includes('主血統でしぼりこむ'));
 check('詳細に前後移動のボタンとスワイプがある',
   detail.includes('data-dex-prev') && detail.includes('data-dex-next')
@@ -234,16 +236,18 @@ check('立ち絵の枠の高さを決めている', /data-dex-art[\s\S]{0,300}he
 // 立ち絵の上にボタンを重ねると絵が隠れるので、入口は枠の外に置き、再生は専用画面で行う
 check('攻撃アクションのボタンは立ち絵の枠の外にあり、専用画面へ移る',
   detail.includes('data-dex-attack-preview')
-  && detail.includes("setGameState('MONSTER_ATTACK_PREVIEW')")
+  && detail.includes('onOpenAttackPreview();')
+  && source.includes("onOpenAttackPreview={()=>setGameState('MONSTER_ATTACK_PREVIEW')}")
   && !detail.slice(detail.indexOf('data-dex-art'), detail.indexOf('攻撃アクションの入口')).includes('data-dex-attack-preview')
   && !detail.includes('attackMotionPreviewSequence('));
 check('未解放モンスターには攻撃アクションの入口を出さない',
   detail.includes('{unlocked&&<div className="shrink-0 px-3 pt-1 flex justify-center">')
-  && attackPreview.includes('if(!mon||!unlockedMonsterIds.includes(mon.id)){ setGameState(\'MONSTER_DEX\'); return null; }'));
+  && attackPreview.includes('if(!mon||!unlockedMonsterIds.includes(mon.id)){ onMissing(); return null; }')
+  && source.includes("onMissing={()=>setGameState('MONSTER_DEX')}"));
 // 専用画面。上へ飛ぶ演出が枠外へ出ないよう縦を大きく取り、通常攻撃と固有技を選んで見比べられる
 check('攻撃アクションの専用画面で通常攻撃と固有技を再生できる',
-  attackPreview.includes("attackMotionPreviewSequence(atkMotion)")
-  && attackPreview.includes("attackMotionUniquePreviewSequence(atkMotion)")
+  attackPreview.includes('await onPlayPreview(mon,kind,atkMotion);')
+  && source.includes("const steps=kind==='unique'?attackMotionUniquePreviewSequence(atkMotion):attackMotionPreviewSequence(atkMotion);")
   && attackPreview.includes('data-attack-preview-play={kind}')
   && attackPreview.includes("kindButton('normal','通常攻撃'")
   && attackPreview.includes("kindButton('unique','固有技'"));
@@ -252,7 +256,10 @@ check('専用画面は本番と同じ描画部品を使い、立ち絵を下寄�
   && /data-attack-preview-art[\s\S]{0,200}bottom:'1[0-9]%'/.test(attackPreview)
   && attackPreview.includes('data-attack-preview-stage'));
 check('専用画面から図鑑の詳細へ戻れ、戻るときに再生を止める',
-  /backToDetail=\(\)=>\{dexAttackPreviewRunRef\.current\+=1;setDexAttackPreview\(null\);setGameState\('MONSTER_DEX_DETAIL'\);\}/.test(attackPreview));
+  attackPreview.includes('const backToDetail=()=>{onStopPreview();onBackToDetail();};')
+  && source.includes('const stopDexAttackPreview = () => { dexAttackPreviewRunRef.current+=1; setDexAttackPreview(null); };')
+  && source.includes("onStopPreview={stopDexAttackPreview}")
+  && source.includes("onBackToDetail={()=>setGameState('MONSTER_DEX_DETAIL')}"));
 // どのモーションでもタメから始まること・本番の動きと1コマずつ一致することは
 // tools/battle/attack-preview-parity-check.js が実際に関数を動かして見ている
 check('固有技のプレビューは共通のタメから始まる手順を使う',
@@ -261,7 +268,8 @@ check('固有技のプレビューは共通のタメから始まる手順を使�
 check('左右移動と一覧へ戻る操作で途中の再生を止める',
   detail.includes('const stopDexAttackPreview=')
   && detail.includes('const go=(delta)=>{ stopDexAttackPreview();')
-  && detail.includes("stopDexAttackPreview();setGameState('MONSTER_DEX')"));
+  && detail.includes('stopDexAttackPreview();onBackToList();')
+  && source.includes("onBackToList={()=>setGameState('MONSTER_DEX')}"));
 check('図鑑プレビューは本番と同じモーション描画を使う',
   source.includes('const BattleAttackMotionPreview =')
   && source.includes("animation:attackMotionAnimation(anim)")

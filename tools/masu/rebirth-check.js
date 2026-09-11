@@ -70,8 +70,8 @@ check('専用移行フラグとマスモン・ダイヤ保存がある',source.i
 const fusionSource=source.slice(source.indexOf('const executeMasuFusion'),source.indexOf('const resetFusionFlow'));
 // 上がったレベルぶんの強化ポイントは applyBondXpGain がまとめて配る。
 // 合体もそこを通しているので、経路と付与の両方を見る
-check('レベルが上がったぶんの強化ポイントを配る',source.includes('distAptPoints: (masu.distAptPoints || 0) + gainedPoints'));
-check('合体もその経路を通る',fusionSource.includes('applyBondXpGain(prepared, gainedXp)'));
+check('レベルが上がったぶんの強化ポイントを配る',source.includes('distAptPoints: (normalized.distAptPoints || 0) + gainedPoints'));
+check('合体もその経路を通る',fusionSource.includes('applyBondXpGain(nextMain, gainedXp)'));
 // 「転生したらLv1へ戻す」時代の移行を今さら走らせると、育てたレベルを消してしまう
 check('旧仕様のLv1リセット移行はもう走らせない',!/savedMasuMons = migrateRebornMasuToFullReset/.test(source));
 const golemUnique={name:'合掌',names:['合掌','フライングプレス','竜巻アタック'],baseMult:3.2,baseGuts:68,effectDesc:'闘志'};
@@ -79,7 +79,8 @@ const evolved=uniqueSkillAtLevel(golemUnique,2);
 check('固有技Lv2で技名・威力・会心率・消費Gを現在技へ切替',evolved.name==='竜巻アタック'&&evolved.mult===4.2&&evolved.crit===0.2&&evolved.guts===89&&evolved.effectDesc==='闘志');
 check('限界突破の固有技候補名は強化後Lvのレベル別名称を使う',source.includes('name:uniqueSkillAtLevel(choice.unique,Math.min(MAX_UNIQUE_SKILL_LEVEL,level+1))?.name||choice.name'));
 check('限界突破済みソート・表示設定と旧設定の補完を追加',source.includes("key: 'reborn', label: '限界突破済み'")&&source.includes("monsterSortKey === 'reborn'")&&source.includes('DEFAULT_MONSTER_LIST_SETTINGS.display[key]'));
-check('同一固有技の継承を禁止',source.includes('duplicateUnique')&&source.includes('同じ固有技はすでに所持しているため引き継げません'));
+// 複数副の個別選択に作り直したとき、系統ID(lineageId)で重複を弾く形になった
+check('同一固有技の継承を禁止',source.includes('const duplicate = !!lineageId && ownedLineageIds.has(lineageId);')&&source.includes('const inherited = requested && eligible && !!lineageId && !duplicate;')&&source.includes('同じ系統の固有技が主または先の副から継承されます'));
 check('現在技・解放済み・未解放を固有技詳細に表示',source.includes("current?'現在の技':locked?'未解放':'解放済み'"));
 // ★は 青→黄色→ピンク→紫→赤→金 の6段階。5凸で1段階が完成し、次の段階は1個ずつ置き換わる。
 // 31～35凸で金★が虹★へ1個ずつ置き換わる。細かい凸数ごとの並びは breakthrough-star-check.js で見る
@@ -95,13 +96,15 @@ check('35凸でLv.400・虹★5になる',
   &&source.includes('const nextLevelCap = breakthroughLevelCap(nextCount);'));
 // 増えた★は先頭に来るので、光らせるのは先頭(最終突破では5個とも虹なので全部)
 check('限界突破は専用の演出を使い、増えた星が光る',source.includes('mh-breakthrough-animation')&&source.includes('mh-breakthrough-stars')&&source.includes("(finalBreak||i===0)?'is-new':'is-old'")&&source.includes('@keyframes mhBreakStar'));
-check('転生演出は通常表示と同じ霊炎オーラを使う',source.includes('reincarnateAnimation&&<div className="mh-reincarnation-animation"')&&source.includes('<ReincarnateAura count={reincarnateAnimation.masu.reincarnateCount} className="is-ceremony"/>'));
-check('転生霊炎は1回青・2回黄・3回以上赤を共通表示から選ぶ',source.includes("value >= 3 ? 'red' : value === 2 ? 'yellow' : 'blue'")&&source.includes("yellow: 'images/effects/reincarnate-aura-yellow.PNG'")&&source.includes("red: 'images/effects/reincarnate-aura-red.PNG'")&&source.includes("blue: 'images/effects/reincarnate-aura-blue.PNG'"));
+// 演出は 62-screen-masu-temple.jsx の MasuReincarnateAnimation へ切り出し、オーラは魂格オーラを共用する
+check('転生演出は通常表示と同じ魂格オーラを使う',source.includes('{reincarnateAnimation&&(')&&source.includes('<MasuReincarnateAnimation')&&source.includes('<div className="mh-reincarnation-animation"')&&source.includes('<SoulRankAura soulRankStage={normalizeMasuProgression(reincarnateAnimation.masu).soulRankStage} className="is-ceremony"/>'));
+// 転生回数で色を変える旧オーラは廃止(docs/spec/SOUL_RANK_SYSTEM.md 22.1)。魂格段階Ⅰ〜Ⅴの色画像を共通表示から選ぶ
+check('霊炎は魂格Ⅰ〜Ⅴの色画像を共通表示から選ぶ',source.includes("const SOUL_RANK_AURA_TONES = { 1:'blue', 2:'yellow', 3:'green', 4:'red', 5:'rainbow' };")&&["1: 'images/effects/soul_rank_I_blue.png'","2: 'images/effects/soul_rank_II_yellow.png'","3: 'images/effects/soul_rank_III_green.png'","4: 'images/effects/soul_rank_IV_red.png'","5: 'images/effects/soul_rank_V_rainbow.png'"].every(x=>source.includes(x)));
 check('転生霊炎は独立スタックの本体背面に置き、限界突破★を前面に保つ',source.includes('.mh-reincarnate-stack{isolation:isolate}.mh-reincarnate-aura{position:absolute;z-index:-1;')&&source.includes('mh-reincarnation-mon mh-reincarnate-stack')&&source.includes('.mh-rebirth-stars-overlay,.mh-home-masumon-stars{z-index:4}'));
 check('転生霊炎は主炎・残光・足元炎を別周期で重ね、少量の火花を添える',source.includes('mh-reincarnate-flame is-main')&&source.includes('mh-reincarnate-flame is-back')&&source.includes('mh-reincarnate-flame is-foot')&&source.includes('mh-reincarnate-sparks')&&source.includes('@keyframes mhReincarnateMain')&&source.includes('@keyframes mhReincarnateBack')&&source.includes('@keyframes mhReincarnateFoot')&&source.includes('@keyframes mhReincarnateSpark'));
 check('転生完了時は共通の多層オーラを速め、一度燃え上がって通常状態へ戻す',source.includes('.mh-reincarnate-aura.is-ceremony .is-main{animation-duration:1.45s}')&&source.includes('@keyframes mhReincarnationAura')&&source.includes('47%{opacity:1;transform:scale(1.13);filter:brightness(1.45)}')&&source.includes('100%{opacity:1;transform:scale(1);filter:brightness(1)}'));
 check('転生完了の全面光は本体より背面で、発光フィルターはオーラだけに掛ける',source.includes('.mh-reincarnation-light{position:absolute;inset:0;z-index:0;')&&source.includes('.mh-reincarnation-mon{position:relative;z-index:1;')&&!source.includes('.mh-reincarnation-mon{position:relative;width'));
-check('HOMEの転生表示は文字なしの霊炎で、限界突破★を変えない',source.includes('object-fit:contain')&&source.includes('<ReincarnateAura count={masu.reincarnateCount} className="is-home"/>')&&source.includes('<RebirthStars count={masu.rebirthCount} className="mh-home-masumon-stars"/>')&&!/mh-reincarnate-aura[^}]*ReincarnateBadge/.test(source));
+check('HOMEの霊炎は文字なしで、限界突破★を変えない',source.includes('object-fit:contain')&&source.includes('<SoulRankAura soulRankStage={masu.soulRankStage} className="is-home"/>')&&source.includes('<RebirthStars count={masu.rebirthCount} className="mh-home-masumon-stars"/>')&&!/mh-reincarnate-aura[^}]*ReincarnateBadge/.test(source));
 check('神殿BGMを限界突破・転生の画面でも継続',/MASU_REBIRTH:\s*'temple'/.test(source)&&/MASU_REINCARNATE:\s*'temple'/.test(source));
 check('神殿から限界突破と転生の両方へ入れる',source.includes(">限界突破</button>")&&source.includes("setGameState('MASU_REINCARNATE')"));
 

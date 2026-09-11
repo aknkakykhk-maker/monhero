@@ -68,11 +68,11 @@ check('振り済みのぶんは重複して配らない',
 
 // --- 画面・実処理の結線 ---
 // 上がったレベルぶんの強化ポイントは applyBondXpGain がまとめて配る。合体もそこを通す
-check('合体の実処理で強化ポイントを配る', has('distAptPoints: (masu.distAptPoints || 0) + gainedPoints') && has('applyBondXpGain(nextMain, gainedXp)'));
+check('合体の実処理で強化ポイントを配る', has('distAptPoints: (normalized.distAptPoints || 0) + gainedPoints') && has('applyBondXpGain(nextMain, gainedXp)'));
 check('確認画面と実処理が同じ費用計算を使う', (source.match(/buildFusionDiamondSummary\(\{/g) || []).length === 2
   && has('const buildFusionDiamondSummary ='));
 check('合体結果へ通常・限界突破それぞれの実消費額を渡す',
-  has('cost:withBreakthrough?diamondSummary.totalDiamondCost:diamondSummary.normalDiamondCost,')
+  has('cost:(withBreakthrough?diamondSummary.totalDiamondCost:diamondSummary.normalDiamondCost)+soulInheritancePlan.diamondCost,')
     && !/inherited:\s*!!inheritedUnique,\s*cost,/.test(source));
 check('古い×100の計算が残っていない', !has('(mainLvl.level + subLvl.level) * 100') && !has('const cost = level * 100;'));
 check('確認画面はレベル上昇と転生継承を合わせた強化ポイント増分を表示', has('{mainPointsNow} → {mainPointsNow + gainedLevelPoints + reincarnateTransfer.points}'));
@@ -123,11 +123,11 @@ check('合体の費用も上限つきのレベルで計算する',
   has('const mainLvl = masuBondLevelInfo(main);') && has('const subLvl = masuBondLevelInfo(sub);')
     && (source.match(/const mainLvl = masuBondLevelInfo\(main\);/g) || []).length === 2);
 check('確認画面と実処理が同じ「合体後」を出す',
-  has('const advanced = applyBondXpGain(nextMain, gainedXp);') && has('const afterXp = cappedBondXp(main, subXp);'));
+  has('const advanced = applyBondXpGain(nextMain, gainedXp);') && has('const afterXp = cappedBondXp(previewMain, subXp);'));
 check('上限で入らない絆経験値を事前に知らせる',
   has('const wastedXp = Math.max(0, (beforeXp + subXp) - afterXp);')
     && has('超過する {wastedXp.toLocaleString()} XP は失われます'));
-check('確認画面に上限を出す', has('上限 Lv.{mainCap}</div>'));
+check('確認画面に上限を出す', has('上限 Lv.{mainCap}'));
 
 // --- 転生の消費ダイヤ ---
 // 画面だけが「レベル×100」で計算していて、実際に引かれる額の倍が表示され、

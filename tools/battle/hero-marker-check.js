@@ -49,7 +49,7 @@ check('加算する種を一覧で持っている(種ごとの分岐にしてい
   && has("const heroCardBonusOf = (heroId) => (HERO_CARD_BONUS_MONSTER_IDS.includes(heroId) ? 1 : 0);"));
 check('枚数の計算がその値を使う',
   // きき加入後は、ききの枚数ボーナスも同じ場所で足す
-  has('limit += heroCardBonus + kikiCardBonus;') && has('}, [effectiveMaxGuts, slots, heroCardBonus, kikiCardBonus]);'));
+  has('return Math.min(5,limit + heroCardBonus + kikiCardBonus);') && has('}, [effectiveMaxGuts, slots, heroCardBonus, kikiCardBonus]);'));
 check('計算と別に条件を書き足していない',
   !has("if (mainHero?.id === 'Ham') limit += 1;") && !has("if (mainHero?.id === 'KenshiMocchi') limit += 1;"));
 check('増えていることを画面にも出す',
