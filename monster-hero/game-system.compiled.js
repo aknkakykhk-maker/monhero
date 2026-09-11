@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d59871be4cf54792
+// source-sha256: 0219584a006f4499
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c96efb8af6b684f7
+// generated-sha256: 4577c63feb72b98f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 17:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 17:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -9888,7 +9888,13 @@ const CHANGELOG_ENTRIES = (typeof CHANGELOG !== 'undefined' ? CHANGELOG : []).fi
 })).slice().sort((a, b) => changelogSortKey(b) > changelogSortKey(a) ? 1 : changelogSortKey(b) < changelogSortKey(a) ? -1 : 0);
 // 更新履歴から作る助手の告知も、隠している項目のぶんは出さない
 // (data/assistants.js は公開フラグも dev も見られないため、ここで落とす)
-const HIDDEN_UPDATE_NOTICE_IDS = new Set((typeof CHANGELOG !== 'undefined' ? CHANGELOG : []).filter(entry => !changelogForPlayers(entry, CHANGELOG_READ_AT_MS) && typeof entry?.assistantNotice?.id === 'string').map(entry => entry.assistantNotice.id.trim()));
+// ★時刻待ちの項目(visibleFrom)は、ここでは隠さない。
+//   この集合は読み込んだときに1回だけ作るので、開始より前に起動した端末では
+//   その時刻になっても告知を永久に出せなくなる
+//   (2026-09-11・ユーザー指摘「やってる最中の人が見れてないらしい」の正体)。
+//   告知を出す期間は assistantNotice の notifyFrom / notifyUntil が見るたびに数える。
+//   ここで隠すのは「作業メモ(dev)」と「まだ公開していない機能(releaseFlag)」だけ。
+const HIDDEN_UPDATE_NOTICE_IDS = new Set((typeof CHANGELOG !== 'undefined' ? CHANGELOG : []).filter(entry => !(entry && entry.dev !== true && releasedForPlayers(entry)) && typeof entry?.assistantNotice?.id === 'string').map(entry => entry.assistantNotice.id.trim()));
 // どのタブへ出すかを決める。
 // 「不具合情報」は不具合の話をまとめる場所なので、調査中(issue)だけでなく
 // 直したもの(fix)もここへ出す。「更新情報」は新機能・改善・マーケットだけになる
@@ -13364,9 +13370,20 @@ const NOTICE_DESTINATIONS = {
 const noticeDestinationState = destination => NOTICE_DESTINATIONS[destination] || (typeof destination === 'string' && /^[A-Z][A-Z0-9_]*$/.test(destination) ? destination : null);
 const UPDATE_NOTICE_LOGIN_LIMIT = 3;
 const normalizeSeenUpdateNoticeIds = value => [...new Set((Array.isArray(value) ? value : []).filter(id => typeof id === 'string' && id.trim()).map(id => id.trim()))];
+// ★期間で出し入れする告知(notifyFrom / notifyUntil)は、見るたびに数え直す。
+//   notice.enabled は読み込んだときの1回きりの答えなので、開きっぱなしの端末では
+//   開始時刻をまたいでも false のままになり、イベントの告知が永久に出なかった
+//   (2026-09-11・ユーザー指摘「やってる最中の人が見れてないらしい」)。
+//   期間を書いていない告知は今までどおり enabled をそのまま見る。
+const updateNoticeOpenNow = (notice, nowMs) => {
+  if (!notice) return false;
+  if (notice.notifyFrom == null && notice.notifyUntil == null) return notice.enabled === true;
+  return typeof assistantNoticeWithinPeriod === 'function' ? assistantNoticeWithinPeriod(notice, Number.isFinite(nowMs) ? nowMs : Date.now()) : notice.enabled === true;
+};
 const availableUpdateNotices = ({
-  debug = false
-} = {}) => (typeof ASSISTANT_UPDATE_NOTICES !== 'undefined' && ASSISTANT_UPDATE_NOTICES || []).filter(notice => notice && notice.enabled === true && typeof notice.id === 'string' && !HIDDEN_UPDATE_NOTICE_IDS.has(notice.id) && (debug ? notice.debugOnly === true : notice.debugOnly !== true));
+  debug = false,
+  nowMs = null
+} = {}) => (typeof ASSISTANT_UPDATE_NOTICES !== 'undefined' && ASSISTANT_UPDATE_NOTICES || []).filter(notice => notice && updateNoticeOpenNow(notice, nowMs) && typeof notice.id === 'string' && !HIDDEN_UPDATE_NOTICE_IDS.has(notice.id) && (debug ? notice.debugOnly === true : notice.debugOnly !== true));
 const planUpdateNoticesForLogin = (notices, seenIds) => {
   const seen = normalizeSeenUpdateNoticeIds(seenIds);
   const unseen = (Array.isArray(notices) ? notices : []).filter(notice => !seen.includes(notice.id));
@@ -24937,6 +24954,10 @@ function RhythmRankingScreen({
   setRhythmRankingDetail,
   setRhythmRankingTab
 }) {
+  // イベント詳細(告知画像と報酬の表)を開いているか。
+  // 一覧の上へ積むとランキングが画面の外へ押し出されるので、別に開く形にした
+  // (2026-09-11・ユーザー指摘「下までいかないとランキング見れないのが不便」)
+  const [eventDetailOpen, setEventDetailOpen] = useState(false);
   // 曲えらびから開いたときの曲を追いかける。曲が5つになったので、
   // ここを固定にすると「別の曲のランキングを見ているのに曲名が違う」ことになる。
   const song = RHYTHM_SONGS.find(entry => entry.songId === rhythmRanking.songId) || rhythmDemoSong(RHYTHM_SONGS);
@@ -25158,10 +25179,7 @@ function RhythmRankingScreen({
     className: "space-y-2"
   }, total.entries.map((entry, index) => /*#__PURE__*/React.createElement("li", {
     key: `${entry.identityKey}-${index}`
-  }, totalRow(entry, index + 1, !!total.self && entry.identityKey === total.self.identityKey)))))), boardTab && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(RhythmEventBanner, {
-    event: eventDefinition || (boardKind === 'limited' ? limitedEvent : null),
-    className: "mb-3"
-  }), event.status === 'loading' && /*#__PURE__*/React.createElement("p", {
+  }, totalRow(entry, index + 1, !!total.self && entry.identityKey === total.self.identityKey)))))), boardTab && /*#__PURE__*/React.createElement(React.Fragment, null, event.status === 'loading' && /*#__PURE__*/React.createElement("p", {
     "data-rhythm-event-loading": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
   }, "\u8AAD\u307F\u8FBC\u307F\u4E2D\u2026"), event.status === 'notReady' && /*#__PURE__*/React.createElement("p", {
@@ -25186,7 +25204,21 @@ function RhythmRankingScreen({
   }, rhythmEventPeriodText(eventDefinition, eventRange))), /*#__PURE__*/React.createElement("p", {
     "data-rhythm-event-remaining": true,
     className: "shrink-0 text-[10px] font-black text-fuchsia-200"
-  }, eventRange ? rhythmEventRemainingText(eventRange.endMs - eventNowMs) : '—')), eventDivisions.length > 1 && /*#__PURE__*/React.createElement("div", {
+  }, eventRange ? rhythmEventRemainingText(eventRange.endMs - eventNowMs) : '—')), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "data-rhythm-event-detail-open": true,
+    onClick: () => setEventDetailOpen(true),
+    className: "mb-3 flex w-full items-center gap-2 rounded-2xl border border-amber-300/40 bg-amber-500/10 px-3 text-left",
+    style: {
+      minHeight: '44px'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "shrink-0 text-sm"
+  }, "\uD83C\uDF81"), /*#__PURE__*/React.createElement("span", {
+    className: "min-w-0 flex-1 truncate text-[10px] font-black text-amber-200"
+  }, "\u30A4\u30D9\u30F3\u30C8\u8A73\u7D30\uFF08\u5831\u916C\u30FB\u5BFE\u8C61\u66F2\uFF09"), /*#__PURE__*/React.createElement("span", {
+    className: "shrink-0 text-[10px] font-black text-amber-200"
+  }, "\u203A")), eventDivisions.length > 1 && /*#__PURE__*/React.createElement("div", {
     "data-rhythm-event-divisions": true,
     className: "mb-3 flex flex-wrap gap-1"
   }, eventDivisions.map(division => /*#__PURE__*/React.createElement("button", {
@@ -25194,29 +25226,7 @@ function RhythmRankingScreen({
     "data-rhythm-event-division": division.id,
     onClick: () => openDivision(division.id),
     className: `min-h-[44px] flex-1 basis-[45%] rounded-xl border px-2 py-1 text-[10px] font-black leading-tight ${division.id === eventDivisionId ? 'border-fuchsia-300/60 bg-fuchsia-500/15 text-fuchsia-100' : 'border-white/10 bg-slate-900/60 text-slate-400'}`
-  }, division.songId ? rhythmSongFullName(division.song) || division.songId : '総合'))), eventReward && /*#__PURE__*/React.createElement("div", {
-    "data-rhythm-event-rewards": true,
-    className: "mb-3 rounded-2xl border border-amber-300/40 bg-amber-500/5 p-2"
-  }, /*#__PURE__*/React.createElement("p", {
-    className: "mb-1 text-[9px] font-black text-amber-200"
-  }, "\u3053\u306E\u90E8\u9580\u306E\u5831\u916C\uFF08\u7D42\u4E86\u5F8C\u306B\u53D7\u3051\u53D6\u308C\u307E\u3059\uFF09"), /*#__PURE__*/React.createElement("ul", {
-    className: "space-y-0.5"
-  }, eventRewardRanks.map(({
-    rank,
-    reward
-  }) => /*#__PURE__*/React.createElement("li", {
-    key: rank,
-    className: "flex items-baseline gap-2 text-[10px] leading-tight"
-  }, /*#__PURE__*/React.createElement("b", {
-    className: "w-7 shrink-0 text-right font-black text-amber-200"
-  }, rank, "\u4F4D"), /*#__PURE__*/React.createElement("span", {
-    className: "min-w-0 flex-1 text-slate-200"
-  }, rhythmEventRewardText(reward))))), eventParticipation && /*#__PURE__*/React.createElement("p", {
-    "data-rhythm-event-participation": true,
-    className: "mt-2 border-t border-amber-300/20 pt-2 text-[10px] leading-tight text-slate-200"
-  }, /*#__PURE__*/React.createElement("b", {
-    className: "text-amber-200"
-  }, "\u53C2\u52A0\u5831\u916C"), "\u3000\u5BFE\u8C61\u66F2\u3092", eventParticipation.songs, "\u66F2\u3059\u3079\u3066\u904A\u3076\u3068 ", rhythmEventParticipationText(eventParticipation))), eventBoard.status === 'loading' && /*#__PURE__*/React.createElement("p", {
+  }, division.songId ? rhythmSongFullName(division.song) || division.songId : '総合'))), eventBoard.status === 'loading' && /*#__PURE__*/React.createElement("p", {
     "data-rhythm-event-board-loading": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
   }, "\u8AAD\u307F\u8FBC\u307F\u4E2D\u2026"), eventBoard.status === 'error' && /*#__PURE__*/React.createElement("p", {
@@ -25227,11 +25237,7 @@ function RhythmRankingScreen({
   }, /*#__PURE__*/React.createElement("p", {
     "data-rhythm-event-self-empty": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-center text-[10px] text-slate-300"
-  }, eventLimited ? 'まだあなたの記録がありません。対象曲を1曲でも遊ぶとここに載ります。' : '今週はまだあなたの記録がありません。どの曲でも1曲遊ぶとここに載ります。'), /*#__PURE__*/React.createElement("button", {
-    "data-rhythm-event-play": true,
-    onClick: onGoToSongSelect,
-    className: "mt-2 w-full min-h-[44px] rounded-xl border border-fuchsia-300/40 bg-slate-900/70 px-3 text-[10px] font-black text-fuchsia-100"
-  }, "\u25B6 ", eventLimited ? '対象曲をえらぶ' : '曲をえらぶ')), eventBoard.entries.length === 0 && /*#__PURE__*/React.createElement("p", {
+  }, eventLimited ? 'まだあなたの記録がありません。対象曲を1曲でも遊ぶとここに載ります。' : '今週はまだあなたの記録がありません。どの曲でも1曲遊ぶとここに載ります。')), eventBoard.entries.length === 0 && /*#__PURE__*/React.createElement("p", {
     "data-rhythm-event-empty": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
   }, eventLimited ? 'まだ記録がありません。最初の1件になってみましょう。' : '今週はまだ記録がありません。最初の1件になってみましょう。'), eventBoard.entries.length > 0 && /*#__PURE__*/React.createElement("ol", {
@@ -25303,7 +25309,64 @@ function RhythmRankingScreen({
     className: "text-right font-mono text-white"
   }, rhythmRankingDetail.detail?.judgments?.[id] ?? 0)))), /*#__PURE__*/React.createElement("p", {
     className: "mt-2 text-[9px] font-black text-amber-200"
-  }, rhythmRankingDetail.detail?.allMarvelous ? 'ALL MARVELOUS!!' : rhythmRankingDetail.detail?.allExcellent ? 'ALL EXCELLENT!!' : rhythmRankingDetail.detail?.fullCombo ? 'FULL COMBO!' : ''))));
+  }, rhythmRankingDetail.detail?.allMarvelous ? 'ALL MARVELOUS!!' : rhythmRankingDetail.detail?.allExcellent ? 'ALL EXCELLENT!!' : rhythmRankingDetail.detail?.fullCombo ? 'FULL COMBO!' : ''))), boardTab && eventDetailOpen && /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-event-detail": true,
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": "\u30A4\u30D9\u30F3\u30C8\u8A73\u7D30",
+    className: "fixed inset-0 z-[80000] flex items-center justify-center bg-slate-950/95 p-4",
+    style: {
+      paddingTop: 'calc(1rem + env(safe-area-inset-top))',
+      paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-full max-w-md overflow-y-auto mh-scroll rounded-3xl border-2 border-amber-300/60 bg-slate-950 p-4",
+    style: {
+      maxHeight: 'calc(var(--mh-vh) - 2rem - env(safe-area-inset-top) - env(safe-area-inset-bottom))'
+    }
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "mb-2 text-center text-[10px] font-black tracking-widest text-amber-300"
+  }, "EVENT"), /*#__PURE__*/React.createElement(RhythmEventBanner, {
+    event: eventDefinition || (boardKind === 'limited' ? limitedEvent : null),
+    className: "mb-3"
+  }), eventDefinition && /*#__PURE__*/React.createElement("div", {
+    className: "mb-3"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-[12px] font-black text-fuchsia-100"
+  }, eventDefinition.name), /*#__PURE__*/React.createElement("p", {
+    className: "text-[9px] text-slate-400"
+  }, rhythmEventPeriodText(eventDefinition, eventRange))), eventDefinition && eventDivisions.length > 1 && /*#__PURE__*/React.createElement("p", {
+    className: "mb-3 text-[10px] leading-tight text-fuchsia-100"
+  }, /*#__PURE__*/React.createElement("b", {
+    className: "text-fuchsia-200"
+  }, rhythmEventSongsLabel(eventDefinition)), "\u3000", eventDivisions.filter(division => division.songId).map(division => rhythmSongFullName(division.song) || division.songId).join(' ／ ')), eventReward && /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-event-rewards": true,
+    className: "mb-3 rounded-2xl border border-amber-300/40 bg-amber-500/5 p-2"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "mb-1 text-[9px] font-black text-amber-200"
+  }, "\u3053\u306E\u90E8\u9580\u306E\u5831\u916C\uFF08\u7D42\u4E86\u5F8C\u306B\u53D7\u3051\u53D6\u308C\u307E\u3059\uFF09"), /*#__PURE__*/React.createElement("ul", {
+    className: "space-y-0.5"
+  }, eventRewardRanks.map(({
+    rank,
+    reward
+  }) => /*#__PURE__*/React.createElement("li", {
+    key: rank,
+    className: "flex items-baseline gap-2 text-[10px] leading-tight"
+  }, /*#__PURE__*/React.createElement("b", {
+    className: "w-7 shrink-0 text-right font-black text-amber-200"
+  }, rank, "\u4F4D"), /*#__PURE__*/React.createElement("span", {
+    className: "min-w-0 flex-1 text-slate-200"
+  }, rhythmEventRewardText(reward))))), eventParticipation && /*#__PURE__*/React.createElement("p", {
+    "data-rhythm-event-participation": true,
+    className: "mt-2 border-t border-amber-300/20 pt-2 text-[10px] leading-tight text-slate-200"
+  }, /*#__PURE__*/React.createElement("b", {
+    className: "text-amber-200"
+  }, "\u53C2\u52A0\u5831\u916C"), "\u3000\u5BFE\u8C61\u66F2\u3092", eventParticipation.songs, "\u66F2\u3059\u3079\u3066\u904A\u3076\u3068 ", rhythmEventParticipationText(eventParticipation))), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "data-rhythm-event-detail-close": true,
+    onClick: () => setEventDetailOpen(false),
+    className: "mt-3 w-full min-h-[50px] rounded-2xl bg-white text-sm font-black text-black active:scale-95"
+  }, "\u3068\u3058\u308B"))));
 }
 
 // ---- part: 59-screen-masu-mons.jsx ----
@@ -37088,6 +37151,53 @@ function MonsterHeroGame() {
       live: true
     });
   }, [rhythmEventStoryPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay]);
+  // ★開催の時刻になった瞬間に遊んでいた人にも届ける。
+  //   「開催中か」を見ていたのは起動したときの1回だけだったので、15:00より前から
+  //   ゲームを開いたままだった人には、会話も助手の告知も出なかった
+  //   (2026-09-11・ユーザー指摘「やってる最中の人が見れてないらしい」)。
+  //   1分おきに見に行くだけで、流すのは上の useEffect(HOMEに着いてから)。
+  //   バトルや演奏の最中に割り込むことはない。
+  //   ★お知らせ一覧(更新履歴)の NEW は、読み込んだときに決まるので次に開き直したときに出る。
+  //     ここで作り直すと既読の数え方まで作り直すことになるため、そこまではやらない。
+  const rhythmEventLiveCatchUpRef = useRef(false);
+  useEffect(() => {
+    if (RELEASE_FLAGS.rhythmWeeklyRanking !== true) return;
+    if (bootPhase !== 'GAME' || !onboarded) return;
+    let stopped = false;
+    const look = async () => {
+      if (stopped) return;
+      if (!rhythmLimitedEventAt(Date.now())) return;
+      // ① 会話。まだ見ていなければ、HOMEに着いたところで流す
+      if (!normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(MONBEAT_CUP_STORY_ID)) {
+        setRhythmEventStoryPending(prev => prev || MONBEAT_CUP_STORY_ID);
+      }
+      // ② 助手の告知。起動したときに作った行列には入っていないので、1度だけ組み直す。
+      //    組み直すのは起動時とまったく同じ道すじ(planUpdateNoticesForLogin)なので、
+      //    すでに見たものが未読へ戻ることはない
+      if (rhythmEventLiveCatchUpRef.current) return;
+      rhythmEventLiveCatchUpRef.current = true;
+      try {
+        const seen = normalizeSeenUpdateNoticeIds(await storeGet(UPDATE_NOTICE_SEEN_KEY, [], false));
+        const plan = planUpdateNoticesForLogin(availableUpdateNotices(), seen);
+        if (plan.queue.length === 0) return;
+        if (plan.seen.length !== seen.length) await storeSet(UPDATE_NOTICE_SEEN_KEY, plan.seen, false);
+        // ★出している最中の案内を横取りせず、うしろへ足す。
+        //   「行列が空のときだけ入れる」にしていたら、起動時の案内をまだ読んでいる人に
+        //   イベントの告知が届かなかった(実ブラウザで踏んだ)。同じIDは重ねない
+        setUpdateGuideQueue(queue => {
+          const already = new Set((queue || []).map(notice => notice && notice.id));
+          const added = plan.queue.filter(notice => notice && !already.has(notice.id));
+          return added.length > 0 ? [...(queue || []), ...added] : queue;
+        });
+      } catch {}
+    };
+    look();
+    const timer = setInterval(look, 60000);
+    return () => {
+      stopped = true;
+      clearInterval(timer);
+    };
+  }, [bootPhase, onboarded]);
   // ---- イベント報酬の受け取り(docs/spec/RHYTHM_RANKING.md §9.1) ----
   // サーバー処理を持たないので、イベントが終わったあとに端末が順位を問い合わせ、
   // その場で受け取る。受け取ったイベントのIDを新しい保存キーへ残して二重受取を防ぐ(CLAUDE.md ⑦)。
@@ -56600,8 +56710,12 @@ function MonsterHeroGame() {
       }, speaker.name), /*#__PURE__*/React.createElement("span", {
         className: "block text-[13px] font-bold leading-relaxed text-white mt-1"
       }, (() => {
+        // ★呼び方は normalizeAssistantBond には入っていない(別の入れ物 assistantCallStyles)。
+        //   bond.callStyle を見ていたので、いつも絆Lvの既定の呼び方になっていた
+        //   (2026-09-11・ユーザー指摘「ここは現在設定されてる呼び方にならない？」)。
+        //   絆Lvも呼び方も助手ごとに違うので、両方とも話している助手のぶんを引く
         const bond = normalizeAssistantBond(assistantBonds[speaker.id]);
-        return assistantSpeakText(line.t, breederName, assistantBondLevelOf(bond.points), bond.callStyle, speaker.id);
+        return assistantSpeakText(line.t, breederName, assistantBondLevelOf(bond.points), assistantCallStyles[speaker.id] || null, speaker.id);
       })())), /*#__PURE__*/React.createElement("p", {
         className: "mt-2 text-center text-[8px] text-slate-500"
       }, step + 1, " / ", script.length, Object.keys(calls).length > 0 && `　／　${cast.filter(who => calls[who.id]).map(who => `${who.name}は「${calls[who.id]}」`).join('、')}と呼び合います`), /*#__PURE__*/React.createElement("div", {
