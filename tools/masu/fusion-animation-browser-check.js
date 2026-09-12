@@ -45,8 +45,6 @@ const run = async (browser, scenario) => {
       makeMasu('fusion-next-sub', 'Golem', '次の副・ゴーレム', 50, ['green', 'yellow', 'blue']),
     ]);
   }, scenario);
-  // 外部CDN(Tailwind)へ出られない環境では読み込み待ちで先へ進めなくなるので、先に落とす
-  await page.route('**cdn.tailwindcss.com**', route => route.abort()).catch(() => {});
   await page.goto(URL, { waitUntil: 'load', timeout: 60000 });
   const pointerDown = selector => page.evaluate(sel => {
     const node = document.querySelector(sel);

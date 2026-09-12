@@ -29,7 +29,6 @@ const serve=()=>new Promise(r=>{const s=http.createServer((req,res)=>{
   try{
     browser=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
     const page=await browser.newPage({viewport:{width:390,height:844}});
-    await page.route('**cdn.tailwindcss.com**',r=>r.abort());
     await page.goto(`http://localhost:${PORT}/monster-hero/index.html`,{waitUntil:'load',timeout:60000});
     await page.waitForFunction(()=>document.body?.innerText.includes('TAP TO START'),{timeout:40000});
     await page.getByRole('button',{name:'TAP TO START'}).click({force:true});

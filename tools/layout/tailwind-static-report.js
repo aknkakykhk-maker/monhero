@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分類フォルダから見た1つ上
-// Tailwind を CDN から静的CSSへ切り替えられるかの判断材料を作る(切替はしない)。
+// 静的CSSにしたときに「Tailwind が見つけられないクラス」が無いかを数える。
 //
 //   node tools/layout/tailwind-static-report.js
 //
 // 【なぜ要るか】
-// いまは cdn.tailwindcss.com からスクリプトを読み、ブラウザの中でCSSを作っている
-// (docs/refactor/TECH_DEBT_AUDIT.md TD-13)。起動のたびにその時間がかかるうえ、
-// 外部CDNが落ちれば見た目が全部崩れる。静的CSSにすれば両方とも無くなるが、
-// **Tailwind が見つけられないクラス**があると、そこだけ崩れる。
+// 2026-09-12 に cdn.tailwindcss.com をやめ、作っておいた monster-hero/tailwind.css を
+// 1枚読む形に切り替えた(docs/refactor/TECH_DEBT_AUDIT.md TD-13)。
+// 静的CSSは「ソースに文字として書いてあるクラス」しか持てないので、
+// **クラス名を組み立てている**箇所があると、そこだけ崩れる。切り替えた後も増えていないかを見る。
 //
 // Tailwind はソースを「文字列として」見る。だから
 //   `flex ${open ? 'opacity-100' : 'opacity-0'}`   … 拾える(どちらも文字列で書いてある)
@@ -19,7 +19,7 @@ const path = require('path');
 const { PARTS_DIR, readPartsManifest } = require(path.join(TOOLS_DIR, 'harness'));
 
 const REPO_ROOT = path.resolve(TOOLS_DIR, '..');
-const CSS = path.join(__dirname, '.tailwind-for-checks.css');
+const CSS = path.join(REPO_ROOT, 'monster-hero', 'tailwind.css');
 
 // className={`...`} のテンプレートリテラルを取り出す
 const TEMPLATE = /className=\{`([^`]*)`\}/g;
@@ -109,10 +109,10 @@ for (const { name, src } of files) {
 
 console.log('=== Tailwind 静的化の判断材料 ===');
 if (fs.existsSync(CSS)) {
-  console.log(`静的CSSの大きさ: ${Math.round(fs.statSync(CSS).size / 1024)} KB`);
-  console.log('  (node tools/layout/build-tailwind-for-checks.js で作ったもの。配信物には入っていない)');
+  console.log(`配信しているCSSの大きさ: ${Math.round(fs.statSync(CSS).size / 1024)} KB`);
+  console.log('  (monster-hero/tailwind.css。node tools/build.js が作り直す)');
 } else {
-  console.log('静的CSS: 未生成。先に node tools/layout/build-tailwind-for-checks.js を実行すること');
+  console.log('配信しているCSS: ありません。node tools/build.js を実行すること');
 }
 console.log(`className の テンプレートリテラル: ${total} 箇所`);
 console.log(`  うち クラス名を組み立てているもの: ${built} 箇所`);
@@ -132,4 +132,4 @@ if (riskSamples.length) {
 } else if (built) {
   console.log('  → 本当に欠ける候補は0件。組み立てているのは、すべて自前CSSのクラスか、クラス名を文字として書いた条件式だった');
 }
-console.log('\n※ これは報告だけの道具。CDNから静的CSSへの切替はしない(REFACTOR_MASTER_PLAN.md STEP 7-4)。');
+console.log('\n※ これは報告だけの道具。切替は済んでいる(docs/refactor/TAILWIND_STATIC_REPORT.md)。');

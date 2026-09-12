@@ -35,7 +35,6 @@ const seed = () => {
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
   const fatal = []; page.on('pageerror', e => fatal.push(e.message));
-  await page.route('**cdn.tailwindcss.com**', r => r.abort()).catch(() => {});
   await page.addInitScript(seed);
   const pointerDown = (f) => page.evaluate((f) => {
     const b = f.aria ? document.querySelector(`button[aria-label="${f.aria}"]`)

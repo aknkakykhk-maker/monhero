@@ -150,7 +150,6 @@ async function trySubmit(page) {
     const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
     const fatal = [];
     page.on('pageerror', e => fatal.push(e.message));
-    await page.route('**cdn.tailwindcss.com**', r => r.abort()).catch(() => {});
     await page.addInitScript(seed);
     const { cards, calls } = await openScoreRanking(page, { columnsExist });
     const cardOf = (n) => cards.find(c => c.text.includes(n)) || {};

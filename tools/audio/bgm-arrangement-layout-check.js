@@ -6,12 +6,10 @@
 // バトルモードのタブは、モードを足すたびに1列ずつ増える(チャレンジ・クイック・プロ・極限・種族)。
 // 列を増やしたときに「チャレンジ」のような長いラベルが枠からはみ出したり、
 // 折り返して2行になったりしても、コードを読むだけでは分からない。
-// このサンドボックスは外部CDN(Tailwind)へ出られないので、同梱の tailwindcss で
-// game-system.jsx から実際のCSSを作り、ブラウザで位置と大きさを測る。
+// 配信している monster-hero/tailwind.css(プレイヤーへ届くものと同じCSS)を読み込み、
+// ブラウザで位置と大きさを測る。
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
-const { execFileSync } = require('child_process');
 
 const root = path.resolve(__dirname, '..', '..');
 const source = fs.readFileSync(path.join(root, 'monster-hero/src/game-system.jsx'), 'utf8');
@@ -48,17 +46,12 @@ check('バトルモードの列数はタブの数で切り替える',
   dialog.includes("battleModes.length>=5?'grid-cols-5':'grid-cols-4'"));
 const modeColsFor = (labels) => (labels.length >= 5 ? 5 : 4);
 
-const buildTailwindCss = () => {
-  const bin = path.join(root, 'tools', 'node_modules', '.bin', 'tailwindcss');
-  if (!fs.existsSync(bin)) return null;
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mh-tw-'));
-  const configPath = path.join(dir, 'tailwind.config.js');
-  const inputPath = path.join(dir, 'in.css');
-  const outputPath = path.join(dir, 'out.css');
-  fs.writeFileSync(configPath, `module.exports={content:[${JSON.stringify(path.join(root, 'monster-hero/src/game-system.jsx'))}],theme:{extend:{}},plugins:[]};\n`);
-  fs.writeFileSync(inputPath, '@tailwind base;@tailwind components;@tailwind utilities;\n');
-  execFileSync(bin, ['-c', configPath, '-i', inputPath, '-o', outputPath, '--minify'], { stdio: 'ignore', timeout: 300000 });
-  return fs.readFileSync(outputPath, 'utf8');
+// 配信しているCSSをそのまま使う(2026-09-12にTailwindを静的CSSへ切り替えた)。
+// 以前はここで毎回 tailwindcss を走らせて作り直していたが、
+// 「検査だけが本物と違うCSSで測っている」状態になりうるうえ、1回7秒かかっていた
+const shippedTailwindCss = () => {
+  const file = path.join(root, 'monster-hero', 'tailwind.css');
+  return fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : null;
 };
 
 // 画面と同じダイアログ幅・同じクラスでタブだけを組み立てて測る。
@@ -69,8 +62,8 @@ const tabsHtml = (labels, active) => labels.map((label, i) => `<button type="but
   let browser;
   try {
     const playwright = require(path.join(root, 'tools', 'node_modules', 'playwright'));
-    const css = buildTailwindCss();
-    check('本物と同じCSSを用意できる', !!css && css.length > 10000, `${css ? Math.round(css.length / 1024) : 0}KB`);
+    const css = shippedTailwindCss();
+    check('配信しているCSSを読める(本物と同じもので測る)', !!css && css.length > 10000, `${css ? Math.round(css.length / 1024) : 0}KB`);
     browser = await playwright.chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
     // iPhone SE(375)を下限に、よくある幅で見る
     for (const width of [390, 375, 320]) {

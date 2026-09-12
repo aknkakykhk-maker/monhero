@@ -42,7 +42,6 @@ const serve=()=>new Promise(resolve=>{
     browser=await playwright.chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
     const page=await browser.newPage({viewport:{width:390,height:844}});
     const errors=[];page.on('pageerror',error=>errors.push(String(error)));
-    await page.route('**cdn.tailwindcss.com**',route=>route.abort());
     await page.goto(`http://localhost:${PORT}/monster-hero/index.html`,{waitUntil:'domcontentloaded'});
     await page.waitForTimeout(6000);
 

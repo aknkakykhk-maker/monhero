@@ -54,7 +54,6 @@ const probe = () => new Promise((done) => {
     const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
     const pageErrors = [];
     page.on('pageerror', (e) => pageErrors.push(String(e)));
-    await page.route('**cdn.tailwindcss.com**', (r) => r.abort()).catch(() => {});
     await page.goto(PAGE_URL, { waitUntil: 'load', timeout: 60000 });
     await page.waitForFunction(() => typeof useScreenEffects === 'function', { timeout: 60000 });
 

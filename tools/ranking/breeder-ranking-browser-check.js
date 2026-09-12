@@ -7,8 +7,6 @@ const URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/index.h
   //   ほかの実ブラウザ検査30本以上と同じく、実体を直に指す
   const browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH||'/opt/pw-browsers/chromium'});
   const page=await browser.newPage({viewport:{width:390,height:844}});
-  // 外部CDN(Tailwind)へ出られない環境では読み込み待ちで先へ進めなくなるので、先に落とす
-  await page.route('**cdn.tailwindcss.com**',r=>r.abort()).catch(()=>{});
   await page.addInitScript(()=>{
     const put=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
     // 名前だけでは「はじめての設定」からやり直しになる(wasOnboarded は名前とアイコンの両方を見る)

@@ -26,17 +26,6 @@ const serve=()=>new Promise(r=>{const s=http.createServer((req,res)=>{
   res.writeHead(200,{'Content-Type':MIME[path.extname(f).toLowerCase()]||'application/octet-stream'});
   fs.createReadStream(f).pipe(res);});s.listen(PORT,()=>r(s));});
 
-// 演奏画面が組み上がるための最低限のスタイル（外部CDNのCSSはこのサンドボックスから取りに行けない）
-const LAYOUT_CSS=`
-html,body{height:100%;margin:0}
-#root>div,#root>div>div{height:100%}
-[data-rhythm-tap-test]{position:relative;display:flex;flex:1 1 0%;min-height:0;flex-direction:column;overflow:hidden;height:100%}
-[data-rhythm-hud]{position:absolute;left:0;right:0;top:0;z-index:30;display:flex;pointer-events:none}
-[data-rhythm-play-area]{position:relative;flex:1 1 0%;min-height:0;overflow:hidden;margin:0 8px 8px}
-[data-rhythm-note]{position:absolute;top:0;height:20px}
-[data-rhythm-judgment-line]{position:absolute;bottom:12%;left:0;right:0;height:3px}
-[data-rhythm-lane]{position:absolute;inset:0}
-`;
 
 // --- 期待値をこの検査の中で作る（実装の関数は呼ばない） ---
 // ノーツの縦位置は progress(0=出た瞬間 / 1=判定ライン) に対してこの曲がり方で進む。
@@ -68,8 +57,6 @@ const GOOD_MS=judgmentWindow('GOOD'),MARVELOUS_MS=judgmentWindow('MARVELOUS');
     browser=await playwright.chromium.launch({executablePath:'/opt/pw-browsers/chromium',
       args:['--autoplay-policy=no-user-gesture-required']});
     const page=await browser.newPage({viewport:{width:390,height:844}});
-    await page.route('**cdn.tailwindcss.com**',route=>route.fulfill({status:200,
-      contentType:'application/javascript',body:`(()=>{const s=document.createElement('style');s.textContent=${JSON.stringify(LAYOUT_CSS)};document.head.appendChild(s);})();`}));
     await page.addInitScript(()=>{const put=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
       put('mh_breeder_name','テスト');put('mh_breeder_icon','🐣');put('mh_intro_done',true);put('mh_onboarded',true);
       put('mh_tutorial_seen_v1',true);put('mh_battle_tutorial_seen_v1',true);put('mh_battle_tutorial_guide_shown_v1',true);

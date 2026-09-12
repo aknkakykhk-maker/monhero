@@ -43,7 +43,6 @@ const serve=()=>new Promise(resolve=>{
     browser=await playwright.chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
     const page=await browser.newPage({viewport:{width:390,height:844}});
     const errors=[];page.on('pageerror',e=>errors.push(String(e)));
-    await page.route('**cdn.tailwindcss.com**',route=>route.abort());
     // モンビーの案内**だけ**をまだ見ていない状態にする。
     // ほかの重なる案内(初回の助手えらび・村の案内など)は先に済ませておかないと、
     // HOMEのボタンへ届かず、そもそもモンビーへ入れない

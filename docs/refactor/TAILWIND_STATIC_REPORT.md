@@ -1,11 +1,25 @@
-# Tailwind を CDN から静的CSSへ切り替えられるか(2026-09-12)
+# Tailwind を CDN から静的CSSへ切り替えた(2026-09-12)
 
-`REFACTOR_MASTER_PLAN.md` STEP 7-4 の調査。**切替はしていない。** 判断材料だけを作った。
+`EXECUTION_PLAN.md` STEP 10 / `TECH_DEBT_AUDIT.md` TD-13。
+**調査 → 切替 → 検証まで完了している。**
 
-再現は `node tools/layout/build-tailwind-for-checks.js` →
-`node tools/layout/tailwind-static-report.js`。
+## 何が変わったか
 
-## 結論: 切り替えられる
+| | 前 | 後 |
+| --- | --- | --- |
+| `index.html` | `<script src="https://cdn.tailwindcss.com">` | `<link rel="stylesheet" href="tailwind.css?v=…">` |
+| CSSを作る場所 | **起動のたびにブラウザの中** | ビルド時に1回(`tools/build-tailwind.js`) |
+| 外部CDNへの往復 | 1回(落ちると見た目が全部崩れる) | **0回** |
+| `landscape:` の差し替え | `index.html` の `tailwind.config` | 生成側の設定(`tools/build-tailwind.js`) |
+| 大きさ | (実行時に生成) | **111 KB**(`monster-hero/tailwind.css`) |
+
+起動のたびに走っていた次の3つのうち、2と3が消えた。
+
+1. スクリプトを取りに行く(CDNが落ちれば見た目が全部崩れる)
+2. ソースを走査してクラスを集める
+3. CSSを組み立てて流し込む
+
+## 切り替える前に数えたこと
 
 | 見たこと | 結果 |
 | --- | --- |
@@ -22,37 +36,63 @@
 - **クラス名を文字として書いた条件式**(`w-full${cond ? ' m-auto' : ''}`)。
   Tailwind はソースを文字列として見るので、`' m-auto'` はそのまま拾える
 
-## いま何にお金を払っているか
+再現は `node tools/layout/tailwind-static-report.js`。
 
-`index.html` は `https://cdn.tailwindcss.com` を読み、**ブラウザの中でCSSを作っている**
-(`TECH_DEBT_AUDIT.md` TD-13)。つまり起動のたびに
+## 仕組み
 
-1. スクリプトを取りに行く(CDNが落ちれば見た目が全部崩れる)
-2. ソースを走査してクラスを集める
-3. CSSを組み立てて流し込む
+```
+node tools/build.js
+  └ tools/build-tailwind.js … 中身が変わっていれば monster-hero/tailwind.css を作り直す(7秒)
+  └ tools/stamp-version.js  … tailwind.css?v=<中身のハッシュ> を index.html へ打つ
+  └ tools/stamp-boot-sizes.js … ローディングのゲージの分母へ tailwind.css を入れる
+```
 
-の3つが走る。静的CSSにすれば1つのファイルを読むだけで済み、2と3が消える。
+**古いまま公開しないための見張り**が2段ある。
 
-## 切り替えるときに要ること
+- `node tools/build.js --check`(CIが実行) … CSSの1行目に書いてある
+  **元の中身の指紋**が、いまのソースと一致するかを見る。クラスを1つ足して
+  `build.js` を忘れると、ここで止まる
+- `node tools/boot/data-cache-key-check.js`(CIが実行) … キャッシュキーが中身と一致するか、
+  `BOOT_SIZES` が実サイズと一致するか、**外部CDNへ戻っていないか**を見る
 
-**この調査は「クラスが欠けないか」だけを見た。** 実際に切り替えるなら次が要る。
+`tailwindcss` は `optionalDependencies` なのでCI(`npm ci --omit=optional`)には入らない。
+だからCIでは**作り直さず**、コミットした `tailwind.css` をそのまま配る。上の指紋はそのための仕掛け。
 
-1. `tools/layout/build-tailwind-for-checks.js` と同じ生成を、配信用の出力先で行う
-   (いまは検査専用で、`monster-hero/` には入れていない)
-2. 生成物をどこに置き、キャッシュキーをどう打つか決める
-   (`tools/build.js` が `data/*.js` へ打っているのと同じ仕組みに乗せる)
-3. `index.html` の `<script src="https://cdn.tailwindcss.com">` を `<link rel="stylesheet">` へ
-4. **全画面を開いて見た目を確かめる。** `node tools/layout-consistency-check.js`、
-   `node tools/home-layout-check.js`、`node tools/run-checks.js --area ui` を通す
-5. `tailwind.config`(`index.html` 125行目)で `landscape:` を差し替えているので、
-   生成側の設定へ移す
+> ⚠️ **指紋には絶対パスを混ぜない。** 最初は Tailwind の設定の本文へ
+> `/home/user/monhero/...` をそのまま書いていたため、CI(`/home/runner/work/...`)でだけ
+> 指紋が食い違い、`build.js --check` が「古い」と言って落ちた。
+> 設定は `path.resolve(__dirname, '..', '..')` で置き場所を数えるようにしてある。
+> `boot/data-cache-key-check.js` が「設定に絶対パスが入っていない」ことを見張る。
 
-> ⚠️ **この調査だけを根拠に切り替えない。** 数え方は近似で、
-> 「`${…}` の中がクォート付き文字列を返しているか」で安全と判断している。
-> 関数の返り値までは追っていないので、切り替えたら必ず目で見て確かめること。
+指紋からは「毎回必ず変わるもの」を外してある(外さないと、中身が1文字も変わっていなくても
+ビルドのたびに7秒かかる)。外しているのは `BUILD_DATE` の値、`?v=<ハッシュ>` のキャッシュキー、
+`game-system.jsx` 先頭の `generated-sha256` の3つ。どれも Tailwind のクラス名ではない。
+
+> なお、`data/changelog.js` のようにTailwindの走査対象へ**文章を足しただけ**でも指紋は変わるので、
+> CSSは作り直され `?v=` も変わる(端末は111KBを取り直す)。
+> **本体JS 3.4MB は `GAME_BUILD` でどのみち毎回取り直される**ので、そこへ3%足す話でしかない。
+> 指紋をCSSの本文だけから作れば避けられるが、仕掛けが増えるわりに得るものが小さいので入れていない。
+
+## 副次効果: このサンドボックスでも本物の見た目で測れるようになった
+
+これまでは外部CDNへ出られないため、**Tailwindのクラスがまったく効かない状態でしか画面を開けなかった**。
+そのぶん検査ごとに手元でCSSを作って差し込んでいた(`tools/layout/build-tailwind-for-checks.js`)。
+配信物そのものがCSSを持つようになったので、その細工は要らなくなり、削除した。
+
+- `index.html` を配って開く検査(`landscape-screens-check.js`、`masu/masu-growth-breakdown-check.js`)
+  → **何もしなくてよい**。ページが自分で読む
+- `setContent` で部品だけ組み立てる検査(`audio/bgm-arrangement-layout-check.js`)
+  → `monster-hero/tailwind.css` を読んで `addStyleTag` する
+
+どちらにも「**Tailwind が効いているか**」の確認を1行足した。効いていないと
+`flex` も `w-full` も無い状態で数字だけ出てしまい、測定がまるごと意味を失うため
+(実測すると、スタイルが効かないプレイエリアは 844px の画面で 3352px になる)。
 
 ## 付け足すとき
 
 クラス名を**組み立てる**書き方(`bg-${color}-500` のように、Tailwind のクラス名の一部を
-変数にする)を足すと、静的化したときにそこだけ崩れる。
-`node tools/layout/tailwind-static-report.js` の「本当に欠ける候補」が 0 のままかを見ること。
+変数にする)を足すと、そこだけ崩れる。`node tools/layout/tailwind-static-report.js` の
+「本当に欠ける候補」が 0 のままかを見ること。
+
+数え方は近似(「`${…}` の中がクォート付き文字列を返しているか」で安全と判断しており、
+関数の返り値までは追っていない)。**0件を鵜呑みにせず、実機でも1周すること。**
