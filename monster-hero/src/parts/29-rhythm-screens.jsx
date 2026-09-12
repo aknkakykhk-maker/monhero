@@ -3,6 +3,22 @@ const RhythmOptions=({value,onSave,onBack})=>{
   const [message,setMessage]=useState('');
   // 「叩いて合わせる」を開いているか。設定そのものではないので保存には入れない
   const [calibrating,setCalibrating]=useState(false);
+  // 【2026-09-13・ユーザー指示】「下にどんどん伸びていって使いづらい / 1画面に収まるように
+  //   して、いじりたいやつはタップしたら詳細変えれるとかにしたほうがいい /
+  //   ただし設定状態は見れる作りで」
+  // 開くのは1つだけ。閉じているときも**いまの値は見出しの下に出す**ので、
+  // 開かずに設定の全体を見渡せる。開閉は設定ではないので保存には入れない。
+  const [openSection,setOpenSection]=useState('');
+  const sectionRefs=useRef({});
+  const toggleSection=id=>{
+    setOpenSection(current=>{
+      const next=current===id?'':id;
+      // 開いたほうが画面の外にはみ出さないよう、そのセクションの頭まで送る。
+      // 閉じたときは動かさない(いま見ている場所が飛ぶと戻る場所を見失う)
+      if(next)setTimeout(()=>{try{sectionRefs.current[next]?.scrollIntoView({block:'start',behavior:'smooth'});}catch(_){}},0);
+      return next;
+    });
+  };
   const previewRef=useRef(null);
   useEffect(()=>()=>{previewRef.current?.stop();previewRef.current=null;},[]);
   const savedValue=normalizeRhythmSettings(value),dirty=JSON.stringify(draft)!==JSON.stringify(savedValue);
@@ -42,6 +58,40 @@ const RhythmOptions=({value,onSave,onBack})=>{
     {control}
     {description&&<p className={`mt-2 ${note}`}>{description}</p>}
   </div>;
+  // 閉じているときに見出しの下へ並べる「いまの値」。
+  // ★ここは**実データから作る**。項目を足したときに書き忘れると、
+  //   開かないと分からない設定ができてしまう(検査が件数を突き合わせる)。
+  const onOff=flag=>flag?'ON':'OFF';
+  const pickLabel=(items,id)=>{const hit=items.find(([key])=>key===id);return hit?hit[1]:String(id);};
+  const RHYTHM_OPTION_SECTIONS=[
+    {id:'volume', title:'🔊 音量', summary:d=>[['BGM',d.bgmVolume],['タップ',d.noteSeVolume],['タップ音',onOff(d.noteSeEnabled)]]},
+    {id:'play', title:'🎯 プレイ', summary:d=>[['速度',d.noteSpeed.toFixed(1)],['サイズ',`${d.noteSize}%`],['出る位置',d.noteStartPosition],['判定',`${d.judgmentTimingOffsetMs>0?'+':''}${d.judgmentTimingOffsetMs}ms`]]},
+    {id:'display', title:'👁 表示', summary:d=>[['FAST/SLOW',onOff(d.fastSlowDisplay)],['判定文字',onOff(d.judgmentTextDisplay)],
+      ['コンボ',d.comboDisplay?pickLabel(RHYTHM_COMBO_POSITION_LABELS,d.comboPosition):'OFF'],
+      ['発光',pickLabel(RHYTHM_LANE_GLOW_LABELS,d.laneGlow)]]},
+    {id:'side', title:'🐾 両サイドのマスモン', summary:d=>[['濃さ',pickLabel(RHYTHM_SIDE_MONSTER_OPACITY_LABELS,d.sideMonsterOpacity)],
+      ['動き',pickLabel(RHYTHM_SIDE_MONSTER_MOTION_LABELS,d.sideMonsterMotion)],['光る',onOff(d.sideMonsterAbilityHighlight)]]},
+    {id:'system', title:'✨ 演出・端末', summary:d=>[['演出量',pickLabel(RHYTHM_EFFECT_LABELS,d.effectAmount)],['振動',onOff(d.vibrationEnabled)],
+      ['軽量',onOff(d.lightweightMode)],['試聴',onOff(d.songPreviewEnabled)],['通知',d.quietDuringPlay?'出さない':'出す']]},
+  ];
+  // 見出し(タップで開く)＋いまの値。開いているときだけ中身を描く
+  const section=(id,children)=>{
+    const spec=RHYTHM_OPTION_SECTIONS.find(item=>item.id===id),open=openSection===id;
+    return <section ref={element=>{sectionRefs.current[id]=element;}} data-rhythm-option-section={id} data-open={open?'true':'false'} className={card}>
+      <button type="button" data-rhythm-option-section-head={id} aria-expanded={open} onClick={()=>toggleSection(id)}
+        className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 text-left">
+        <span className="min-w-0">
+          <span className={`block ${head}`}>{spec.title}</span>
+          <span data-rhythm-option-summary={id} className="mt-1.5 flex flex-wrap gap-1">
+            {spec.summary(draft).map(([name,value])=><span key={name} className="rounded-md border border-white/15 bg-slate-950/80 px-1.5 py-0.5 text-[10px] font-bold leading-none text-slate-400">
+              {name} <b className="text-cyan-200">{value}</b></span>)}
+          </span>
+        </span>
+        <span aria-hidden="true" className="min-h-[44px] min-w-[44px] rounded-xl border border-white/15 bg-slate-950/70 text-center text-[13px] font-black leading-[44px] text-cyan-200">{open?'▲':'▼'}</span>
+      </button>
+      {open&&<div data-rhythm-option-section-body={id} className="mt-1">{children}</div>}
+    </section>;
+  };
   const previewBgm=async()=>{previewRef.current?.stop();previewRef.current=null;const audio=await Audio_.startRhythmTrack('atsu_cup_theme',draft.bgmVolume);previewRef.current=audio;if(!audio)setMessage('BGMを再生できませんでした');};
   const resetDraft=()=>{setDraft(normalizeRhythmSettings(DEFAULT_RHYTHM_SETTINGS));setMessage('画面上の値を戻しました（未保存）');};
   const saveDraft=async()=>{const saved=await onSave(draft);setDraft(saved);setMessage('保存しました');};
@@ -58,8 +108,7 @@ const RhythmOptions=({value,onSave,onBack})=>{
     <div data-rhythm-options-scroll className="flex-1 min-h-0 overflow-y-auto px-3 pb-5 pt-3 mh-scroll">
       <div className="space-y-4">
         <RhythmLandscapeHint/>
-        <section className={card}>
-          <h3 className={head}>🔊 音量</h3>
+        {section('volume',<>
           {field('BGM音量',stepper('bgmVolume',0,RHYTHM_VOLUME_MAX,1))}
           {field('タップ音量',stepper('noteSeVolume',0,RHYTHM_VOLUME_MAX,1))}
           <div className={row}><span className={label}>タップ音</span>{toggle('noteSeEnabled','')}</div>
@@ -72,9 +121,8 @@ const RhythmOptions=({value,onSave,onBack})=>{
           {/* 上限を200まで開けた(2026-09-12・ユーザー指示)。100の意味は今までと同じ。
               100より上は音源の波形をそのまま持ち上げるので割れることがある、とその場で言う */}
           <p className={`mt-2 ${note}`}>音量は0〜{RHYTHM_VOLUME_MAX}まで上げられます。100はこれまでと同じ大きさです。100より上は端末の音量を上げても足りないときの逃げ道で、とくにBGM音量は上げすぎると曲の大きいところが割れて聞こえることがあります。</p>
-        </section>
-        <section className={card}>
-          <h3 className={head}>🎯 プレイ</h3>
+        </>)}
+        {section('play',<>
           {field('ノーツ速度',stepper('noteSpeed',RHYTHM_NOTE_SPEED_MIN,RHYTHM_NOTE_SPEED_MAX,RHYTHM_NOTE_SPEED_STEP,'',1),
             `1.0〜12.0を0.1刻みで調整できます。変わるのはノーツが流れてくる見た目の速さだけで、譜面のタイミング・判定窓・スコアは変わりません（現在 約${rhythmTravelMsForSpeed(draft.noteSpeed).toLocaleString()}ms）。`)}
           {field('ノーツサイズ',stepper('noteSize',80,120,5,'%'),
@@ -87,9 +135,8 @@ const RhythmOptions=({value,onSave,onBack})=>{
             '判定窓の幅は変えず、表示と入力の基準を同じ量だけ補正します。数字で決めにくいときは、下の「叩いて合わせる」で実際に叩いて測れます。')}
           <button type="button" data-rhythm-calibrator-open onClick={()=>setCalibrating(true)} className="mt-3 min-h-[52px] w-full rounded-xl border border-cyan-300/60 bg-cyan-950/50 text-[13px] font-black text-cyan-100">🎯 叩いて合わせる</button>
           <p className={`mt-2 ${note}`}>画面いっぱいで開きます。合わせ終わってから戻ると、ここの数字に入ります（保存はまだされません）。</p>
-        </section>
-        <section className={card}>
-          <h3 className={head}>👁 表示</h3>
+        </>)}
+        {section('display',<>
           <div className={row}><span className={label}>FAST / SLOW表示</span>{toggle('fastSlowDisplay','')}</div>
           <div className={row}><span className={label}>判定文字表示</span>{toggle('judgmentTextDisplay','')}</div>
           {/* コンボ数は2026-09-12にプレイエリアの真ん中へ移した。場に重なるので、
@@ -98,23 +145,21 @@ const RhythmOptions=({value,onSave,onBack})=>{
           <div className={row}><span className={label}>コンボ数表示</span>{toggle('comboDisplay','')}</div>
           {/* 置き場所も選べる(2026-09-12・ユーザー指示「元位置（元位置より少し右より）とか
               選べるほうがいい」)。「右上」が真ん中へ移す前の位置 */}
-          {draft.comboDisplay!==false&&field('コンボ数の位置',segments('comboPosition',[['LEFT','左'],['CENTER','中央'],['RIGHT','右'],['HUD','右上']]),
+          {draft.comboDisplay!==false&&field('コンボ数の位置',segments('comboPosition',RHYTHM_COMBO_POSITION_LABELS),
             'コンボ数を出す場所を選べます。「中央」は場の真ん中（既定）、「右上」は2026-09-12より前と同じ、ライフの下の位置です。どこに置いても判定・スコア・コンボの数え方は変わりません。')}
-          {field('レーン発光',segments('laneGlow',[['NORMAL','標準'],['LOW','控えめ'],['NONE','なし']]))}
-        </section>
-        <section className={card}>
-          <h3 className={head}>🐾 両サイドのマスモン</h3>
+          {field('レーン発光',segments('laneGlow',RHYTHM_LANE_GLOW_LABELS))}
+        </>)}
+        {section('side',<>
           <p className={`mt-2 ${note}`}>レーンの外側の空いたところへ、設定したマスモンが出て拍に合わせて跳ねます。ノーツが見づらいときや、端末が熱くなりやすいときは薄くするか止めてください。</p>
-          {field('濃さ',segments('sideMonsterOpacity',[['NORMAL','はっきり'],['SOFT','ふつう'],['FAINT','うっすら'],['OFF','出さない']]))}
-          {field('動き',segments('sideMonsterMotion',[['NORMAL','跳ねる'],['SMALL','小さく跳ねる'],['NONE','動かない']]))}
+          {field('濃さ',segments('sideMonsterOpacity',RHYTHM_SIDE_MONSTER_OPACITY_LABELS))}
+          {field('動き',segments('sideMonsterMotion',RHYTHM_SIDE_MONSTER_MOTION_LABELS))}
           <div className={row}><span className={label}>能力中に光らせる</span>{toggle('sideMonsterAbilityHighlight','')}</div>
-        </section>
-        <section className={card}>
-          <h3 className={head}>✨ 演出・端末</h3>
+        </>)}
+        {section('system',<>
           {/* 「少なめ」が何を止めるのかを、ここで言い切る(2026-09-13・Android勢から
               「重い」との声)。判定文字の金の帯・虹の流れは毎フレーム字を塗り直すので、
               動きがカクつく端末ではここがいちばん効く */}
-          {field('演出量',segments('effectAmount',[['NORMAL','標準'],['LOW','少なめ'],['MINIMAL','最小']]),
+          {field('演出量',segments('effectAmount',RHYTHM_EFFECT_LABELS),
             '動きがカクついたり、端末が熱くなったりするときは「少なめ」にしてください。判定文字の金色の帯や虹が流れるのを止め、光のにじみを減らします（色・グラデーション・字の大きさは標準と同じままです）。「最小」にすると、それに加えて100コンボごとの演出や光そのものもほぼ出なくなります。')}
           <div className={row}><span className={label}>振動</span><div className="flex items-center gap-2">
             {/* この端末で振動できるかを出す。iPhoneのSafariには振動のしくみが無い時期が長く、
@@ -132,7 +177,7 @@ const RhythmOptions=({value,onSave,onBack})=>{
               何が起きるかを必ず添える(黙って効かないのがいちばん困る)。 */}
           <div className={row}><span className={label}>演奏中は通知を出さない</span>{toggle('quietDuringPlay','')}</div>
           <p className={`pb-1 ${note}`}>{rhythmQuietModeSupportText()}</p>
-        </section>
+        </>)}
         <section className="rounded-2xl border border-cyan-400/30 bg-cyan-950/25 p-4 text-[11px] leading-relaxed text-cyan-100">判定を甘くする設定ではありません。端末ごとの見え方・音量・タイミングを調整する項目です。</section>
       </div>
     </div>
