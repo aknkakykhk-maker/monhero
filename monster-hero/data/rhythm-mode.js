@@ -736,9 +736,35 @@ const RHYTHM_VIEW_ROTATION=(()=>{
     listeners.add(fn);
     return()=>{listeners.delete(fn);};
   };
-  // 器に掛けるCSS。幅と高さは画面の縦横を入れ替えたもの
+  // Safe Area(ノッチ・ダイナミックアイランド・ホームインジケータ)の取り置き。
+  //
+  // 【なぜ器の側で持つか】(2026-09-12・ユーザー報告
+  //   「縦横ボタンを押して横画面にしたときにiPhoneの場合、左上の戻るボタンが押せない」)
+  // ふだんの Safe Area は index.html の body(padding-top/bottom)が確保している。
+  // ところがこの器は position:fixed なので body の外側に置かれ、**画面のいちばん端から**
+  // 始まる。しかも90度回っているので、器の「左端」は端末の**上端**にあたる。
+  // その結果、横画面の左上に置いたボタン(曲えらびの「戻る」)が、ちょうど端末の
+  // ステータスバー(時計・電池)の下へ入り込み、iPhoneではそこのタップがOSに取られて
+  // **押しても反応しない**状態になっていた。
+  //
+  // 器そのものは画面を端まで覆ったまま(座標の変換 point / rect / unpoint は
+  // 「器は画面いっぱい」を前提にしているので、大きさも位置も動かさない)、
+  // **内側の余白だけ**で中身を安全な範囲へ寄せる。
+  //
+  // 90度回すと軸が入れ替わるので、当てる向きも入れ替える。
+  //   角度90 : 器の左=端末の上 / 右=下 / 上=右 / 下=左
+  //   角度270: 器の左=端末の下 / 右=上 / 上=左 / 下=右
+  //
+  // env(...) を var(...) でくるんでいるのは、実ブラウザの検査から値を差し替えて
+  // 測れるようにするため(env() はテストから作れない)。ふだんは var が空なので
+  // そのまま env() の値が入る。
+  const safeInset=side=>`var(--mh-safe-${side}, env(safe-area-inset-${side}))`;
   const frameStyle=()=>{
     if(!active())return null;
+    const forLeft=angle===90?'top':'bottom';     // 器の左 ← 端末の(上 / 下)
+    const forRight=angle===90?'bottom':'top';   // 器の右 ← 端末の(下 / 上)
+    const forTop=angle===90?'right':'left';     // 器の上 ← 端末の(右 / 左)
+    const forBottom=angle===90?'left':'right';  // 器の下 ← 端末の(左 / 右)
     return{
       position:'fixed',left:0,top:0,
       width:`${vh()}px`,height:`${vw()}px`,
@@ -747,6 +773,10 @@ const RHYTHM_VIEW_ROTATION=(()=>{
       // 600pxへ切り詰めてしまい、器が画面を覆えなくなる。今どきのスマホは
       // 高さが600pxを超えるので**必ず**踏む。実ブラウザの検査で見つけた(2026-09-06)。
       maxWidth:'none',maxHeight:'none',margin:0,
+      // 大きさは画面ぴったりのまま、内側だけ削る(box-sizing:border-box)
+      boxSizing:'border-box',
+      paddingLeft:safeInset(forLeft),paddingRight:safeInset(forRight),
+      paddingTop:safeInset(forTop),paddingBottom:safeInset(forBottom),
       transform:angle===90?'rotate(90deg) translateY(-100%)':'rotate(-90deg) translateX(-100%)',
       transformOrigin:'0 0',
     };
