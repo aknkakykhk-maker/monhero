@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d35a1e0fc0be21b9
+// source-sha256: 880abfa62f432e6d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f3b10bb1b839d5b9
+// generated-sha256: 443cb1ef848b4c50
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-13 00:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-13 01:42"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4995,6 +4995,13 @@ const rhythmLifeState = life => {
 //   名前を2か所に書くと必ずずれる(一方だけ直して、もう一方が古い名前のまま残る)。
 // ★並びはそのまま画面のボタンの並びになる。IDの集合は値の正本
 //   (RHYTHM_EFFECT_LEVELS など)と一致していること。tools/mode/rhythm-options-summary-check.js が見る。
+// 判定タイミング調整の範囲と刻み(2026-09-13)。
+// ★刻みを5ms→**1ms**へ細かくした(ユーザー指示「タップ調整ももっと精度良くつくって」)。
+//   いちばん良い判定(MARVELOUS)は±55msなので、5ms刻みだとその1/11ずつしか動かせなかった。
+// ★**広げたのではなく細かくしただけ**なので、これまでの保存値(5の倍数)はすべてそのまま
+//   有効で、意味も変わらない(-100〜+100の範囲は同じ)。
+const RHYTHM_TIMING_OFFSET_MAX_MS = 100;
+const RHYTHM_TIMING_OFFSET_STEP_MS = 1;
 const RHYTHM_LANE_GLOW_LABELS = Object.freeze([['NORMAL', '標準'], ['LOW', '控えめ'], ['NONE', 'なし']]);
 const RHYTHM_EFFECT_LABELS = Object.freeze([['NORMAL', '標準'], ['LOW', '少なめ'], ['MINIMAL', '最小']]);
 const RHYTHM_SIDE_MONSTER_OPACITY_LABELS = Object.freeze([['NORMAL', 'はっきり'], ['SOFT', 'ふつう'], ['FAINT', 'うっすら'], ['OFF', '出さない']]);
@@ -5067,7 +5074,7 @@ const normalizeRhythmSettings = value => {
     noteSize: rhythmFiniteStep(source.noteSize, 80, 120, 5, DEFAULT_RHYTHM_SETTINGS.noteSize),
     noteStartPosition: rhythmFiniteInRange(source.noteStartPosition, -100, 100, DEFAULT_RHYTHM_SETTINGS.noteStartPosition),
     displayTimingOffsetMs: 0,
-    judgmentTimingOffsetMs: rhythmFiniteStep(source.judgmentTimingOffsetMs, -100, 100, 5, DEFAULT_RHYTHM_SETTINGS.judgmentTimingOffsetMs),
+    judgmentTimingOffsetMs: rhythmFiniteStep(source.judgmentTimingOffsetMs, -RHYTHM_TIMING_OFFSET_MAX_MS, RHYTHM_TIMING_OFFSET_MAX_MS, RHYTHM_TIMING_OFFSET_STEP_MS, DEFAULT_RHYTHM_SETTINGS.judgmentTimingOffsetMs),
     fastSlowDisplay: bool('fastSlowDisplay'),
     judgmentTextDisplay: bool('judgmentTextDisplay'),
     judgmentTextPosition: rhythmFiniteInRange(source.judgmentTextPosition, 0, 100, DEFAULT_RHYTHM_SETTINGS.judgmentTextPosition),
@@ -19432,7 +19439,6 @@ const rhythmTravelMsForSpeed = value => {
     to = RHYTHM_NOTE_TRAVEL_MS_POINTS[index + 1];
   return Math.round(from + (to - from) * (offset - index));
 };
-const rhythmStepOptionValue = (value, min, max, step, direction) => Math.max(min, Math.min(max, Number((Number(value) + direction * step).toFixed(6))));
 // スライダーでつまんだ値を、その項目の目盛り(step)に合わせて丸める。
 // 範囲外・数値でない値は必ず範囲の中へ収める(壊れた値を設定へ入れない)。
 const rhythmSnapOptionValue = (value, min, max, step) => {
@@ -19441,6 +19447,11 @@ const rhythmSnapOptionValue = (value, min, max, step) => {
   const snapped = min + Math.round((raw - min) / step) * step;
   return Math.max(min, Math.min(max, Number(snapped.toFixed(6))));
 };
+// 数値の項目を、いま決まっている量だけ動かす。
+// ★2026-09-13に「粗く動かす／細かく動かす」の4つのボタンへ変えたので、
+//   ±1目盛りではなく**動かす量(amount)**をそのまま受け取る。
+//   丸めは必ず保存する刻み(step)へ合わせる(rhythmSnapOptionValue)。
+const rhythmNudgeOptionValue = (value, min, max, step, amount) => rhythmSnapOptionValue(Number(value) + Number(amount), min, max, step);
 // 縦画面のときだけ出す「横画面にも対応している」案内(2026-09-05・ユーザー指示)。
 // 音ゲー中(RHYTHM_PLAY)には置かない。プレイ中に文字が増えると譜面が読みにくくなるため。
 // 出し分けはCSS(portrait:)だけで行う。JSで向きを見張ると、回すたびに再描画が走って重くなる。
@@ -19925,25 +19936,55 @@ const RhythmOrientationButton = ({
 //
 // 時刻は音と同じ AudioContext ではなく performance.now() を使う。
 // ここでは音を鳴らさず、目印の動きだけに合わせてもらうため。
-const RHYTHM_CALIBRATION_BEAT_MS = 1000; // 目印が来る間隔。1秒ちょうどで数えやすくする
-const RHYTHM_CALIBRATION_TAPS = 8; // 何回叩いてもらうか
-const RHYTHM_CALIBRATION_DROP_EACH_END = 1; // 外れ値として上下いくつずつ落とすか
-const RHYTHM_CALIBRATION_MAX_MS = 100; // 設定の範囲と同じ
-const RHYTHM_CALIBRATION_STEP_MS = 5; // 設定の刻みと同じ
+// 【2026-09-13・ユーザー指示】「タップ調整ももっと精度良くつくって」。
+// それまでの測り方は、次の5つで粗かった。
+//   ① 8回しか取らない            → **16回**取る。平均のばらつきは回数の平方根で減る
+//   ② 叩きはじめの回も混ぜていた  → 最初の**4回は助走**として数えない(リズムに乗るまでが混ざる)
+//   ③ 外れ値を上下1つずつ機械的に落としていた
+//                                 → **中央値からの離れ具合(MAD)**で落とす。きれいに叩けた回を捨てない
+//   ④ 5ms刻みへ丸めていた        → 設定を1ms刻みにしたので**1ms**のまま出す
+//   ⑤ ばらつきを見せていなかった  → **ばらつき(標準偏差)**を出し、大きいときはやり直しを勧める
+// あわせて、目印の位置を performance.now() ではなく **requestAnimationFrame の時刻**で決め、
+// 叩いた時刻は **イベントの timeStamp**(ブラウザがその入力を受け取った時刻)を使う。
+// どちらも「JSが動きはじめるまでの待ち」をずれに混ぜないためのもの。
+const RHYTHM_CALIBRATION_BEAT_MS = 500; // 目印が来る間隔。速すぎず、16回でも8秒で終わる
+const RHYTHM_CALIBRATION_TAPS = 16; // 数に入れる回数
+const RHYTHM_CALIBRATION_WARMUP_TAPS = 4; // 数えはじめる前に叩いてもらう回数(助走)
+const RHYTHM_CALIBRATION_MAX_MS = RHYTHM_TIMING_OFFSET_MAX_MS; // 設定の範囲と同じ
+const RHYTHM_CALIBRATION_STEP_MS = RHYTHM_TIMING_OFFSET_STEP_MS; // 設定の刻みと同じ(1ms)
+const RHYTHM_CALIBRATION_OUTLIER_FLOOR_MS = 12; // 外れ値と見なす幅の下限
+const RHYTHM_CALIBRATION_MIN_USED = 4; // これを下回るほど落ちるなら、落とさずに全部使う
+const RHYTHM_CALIBRATION_STABLE_SPREAD_MS = 25; // ばらつきがこれ以下なら「安定して叩けている」
+const rhythmCalibrationMedian = sorted => {
+  const count = sorted.length;
+  if (!count) return 0;
+  const middle = count >> 1;
+  return count % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+};
 // 集めたずれから、設定へ入れる値を出す。ここだけ切り出してあるので検査から直接動かせる。
 const rhythmCalibrationOffsetFromTaps = deltas => {
-  const list = (Array.isArray(deltas) ? deltas : []).filter(value => Number.isFinite(Number(value))).map(Number).sort((a, b) => a - b);
+  const list = (Array.isArray(deltas) ? deltas : []).filter(value => typeof value === 'number' && Number.isFinite(value)).sort((a, b) => a - b);
   if (!list.length) return null;
-  // 上下を落とす。落としたあとに何も残らないなら落とさない
-  const drop = list.length > RHYTHM_CALIBRATION_DROP_EACH_END * 2 ? RHYTHM_CALIBRATION_DROP_EACH_END : 0;
-  const used = drop ? list.slice(drop, list.length - drop) : list;
+  const center = rhythmCalibrationMedian(list);
+  // 中央値からどれだけ離れているかの中央値(MAD)。1回の押し間違いに引っぱられない。
+  // ★きれいに叩けているとMADが2〜3msまで小さくなるので、そのまま使うと**正常な回まで**
+  //   外れ値にしてしまう。下限(12ms)を置いて、それより狭くは切らない。
+  const mad = rhythmCalibrationMedian(list.map(value => Math.abs(value - center)).sort((a, b) => a - b));
+  const limit = Math.max(mad * 3, RHYTHM_CALIBRATION_OUTLIER_FLOOR_MS);
+  const inside = list.filter(value => Math.abs(value - center) <= limit);
+  const used = inside.length >= Math.min(RHYTHM_CALIBRATION_MIN_USED, list.length) ? inside : list;
   const mean = used.reduce((sum, value) => sum + value, 0) / used.length;
+  const variance = used.reduce((sum, value) => sum + (value - mean) * (value - mean), 0) / used.length;
+  const spread = Math.sqrt(variance);
   const stepped = Math.round(mean / RHYTHM_CALIBRATION_STEP_MS) * RHYTHM_CALIBRATION_STEP_MS;
   return {
     offsetMs: Math.max(-RHYTHM_CALIBRATION_MAX_MS, Math.min(RHYTHM_CALIBRATION_MAX_MS, stepped)),
     usedCount: used.length,
     droppedCount: list.length - used.length,
-    rawMeanMs: Math.round(mean)
+    rawMeanMs: Math.round(mean),
+    medianMs: Math.round(center),
+    spreadMs: Math.round(spread),
+    stable: spread <= RHYTHM_CALIBRATION_STABLE_SPREAD_MS
   };
 };
 
@@ -19957,6 +19998,10 @@ const RhythmTimingCalibrator = ({
 }) => {
   const [taps, setTaps] = useState([]);
   const [running, setRunning] = useState(false);
+  // 助走の回数と、直前の1打のずれ。どちらも測った値そのものではないので保存しない
+  const [warmup, setWarmup] = useState(0);
+  const [lastDelta, setLastDelta] = useState(null);
+  const warmupRef = useRef(0);
   const startRef = useRef(0);
   const frameRef = useRef(null);
   const noteRef = useRef(null);
@@ -19974,16 +20019,23 @@ const RhythmTimingCalibrator = ({
   const start = () => {
     setTaps([]);
     tapsRef.current = [];
-    startRef.current = performance.now();
+    setWarmup(0);
+    warmupRef.current = 0;
+    setLastDelta(null);
+    startRef.current = 0;
     setRunning(true);
-    const tick = () => {
+    const tick = now => {
       const area = areaRef.current,
         note = noteRef.current;
+      // ★時刻は requestAnimationFrame が渡してくる「そのコマの時刻」を使う。
+      //   ここで performance.now() を呼ぶと、コマが始まってからJSが動くまでの待ちが
+      //   そのまま目印の位置へ乗り、コマごとに数msぶれる。
+      if (!startRef.current) startRef.current = now;
       if (!area || !note) {
         frameRef.current = requestAnimationFrame(tick);
         return;
       }
-      const elapsed = performance.now() - startRef.current;
+      const elapsed = now - startRef.current;
       // 1拍ぶんを上から判定ラインまで動かし、着いたら次の拍へ回す
       const phase = elapsed % RHYTHM_CALIBRATION_BEAT_MS / RHYTHM_CALIBRATION_BEAT_MS;
       const height = area.clientHeight || 120;
@@ -19996,18 +20048,32 @@ const RhythmTimingCalibrator = ({
     };
     frameRef.current = requestAnimationFrame(tick);
   };
-  const tap = () => {
-    if (!running) return;
-    const elapsed = performance.now() - startRef.current;
+  const tap = eventTimeMs => {
+    if (!running || !startRef.current) return;
+    // ★叩いた時刻は、できるだけ**ブラウザがその入力を受け取った時刻**(event.timeStamp)を使う。
+    //   performance.now() だと、指が触れてからこの関数が動きはじめるまでの待ちがずれに混ざる。
+    //   時間軸が違う環境(古いブラウザ)では値が飛ぶので、そのときは performance.now() に戻す。
+    const fallback = performance.now();
+    const stamp = Number(eventTimeMs);
+    const measured = Number.isFinite(stamp) && Math.abs(stamp - fallback) < 2000 ? stamp : fallback;
+    const elapsed = measured - startRef.current;
     // いちばん近い拍からのずれ。早ければマイナス、遅ければプラス
     const nearest = Math.round(elapsed / RHYTHM_CALIBRATION_BEAT_MS) * RHYTHM_CALIBRATION_BEAT_MS;
     const delta = elapsed - nearest;
     // 最初の1拍は目印がまだ降りきっていないので数えない
     if (elapsed < RHYTHM_CALIBRATION_BEAT_MS) return;
+    RHYTHM_NOTE_SE_RUNTIME.playEmpty();
+    setLastDelta(Math.round(delta));
+    // ★叩きはじめの数回は数えない。リズムに乗るまでの回が混ざると、
+    //   そのぶんだけ平均が引っぱられる(助走ぶんは画面でも「かまえて」と出す)。
+    if (warmupRef.current < RHYTHM_CALIBRATION_WARMUP_TAPS) {
+      warmupRef.current += 1;
+      setWarmup(warmupRef.current);
+      return;
+    }
     const next = [...tapsRef.current, delta];
     tapsRef.current = next;
     setTaps(next);
-    RHYTHM_NOTE_SE_RUNTIME.playEmpty();
   };
 
   // 【2026-09-05・ユーザー指示】「タップ調整が窮屈で見にくい／専用画面に飛ばしたほうがいい」
@@ -20041,12 +20107,12 @@ const RhythmTimingCalibrator = ({
     className: "flex min-h-0 flex-1 flex-col px-4 pb-4 pt-3"
   }, /*#__PURE__*/React.createElement("p", {
     className: "text-[12px] leading-relaxed text-slate-300"
-  }, "\u4E0B\u306E\u7DDA\u3078\u30CE\u30FC\u30C4\u304C\u91CD\u306A\u3063\u305F\u77AC\u9593\u306B\u3001\u30EA\u30BA\u30E0\u3088\u304F", RHYTHM_CALIBRATION_TAPS, "\u56DE\u53E9\u3044\u3066\u304F\u3060\u3055\u3044\u3002 \u753B\u9762\u306B\u898B\u3048\u3066\u304B\u3089\u6307\u304C\u89E6\u308C\u308B\u307E\u3067\u306E\u9045\u308C\u306F\u7AEF\u672B\u3054\u3068\u306B\u9055\u3046\u306E\u3067\u3001\u5B9F\u969B\u306B\u53E9\u3044\u3066\u6E2C\u308A\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
+  }, "\u4E0B\u306E\u7DDA\u3078\u30CE\u30FC\u30C4\u304C\u91CD\u306A\u3063\u305F\u77AC\u9593\u306B\u3001\u30EA\u30BA\u30E0\u3088\u304F\u53E9\u3044\u3066\u304F\u3060\u3055\u3044\u3002\u306F\u3058\u3081\u306E", RHYTHM_CALIBRATION_WARMUP_TAPS, "\u56DE\u306F \u30EA\u30BA\u30E0\u306B\u4E57\u308B\u305F\u3081\u306E\u52A9\u8D70\u3067\u3001\u305D\u306E\u3042\u3068\u306E", RHYTHM_CALIBRATION_TAPS, "\u56DE\u3092\u6E2C\u308A\u307E\u3059\u3002 \u753B\u9762\u306B\u898B\u3048\u3066\u304B\u3089\u6307\u304C\u89E6\u308C\u308B\u307E\u3067\u306E\u9045\u308C\u306F\u7AEF\u672B\u3054\u3068\u306B\u9055\u3046\u306E\u3067\u3001\u5B9F\u969B\u306B\u53E9\u3044\u3066\u6E2C\u308A\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
     ref: areaRef,
     "data-rhythm-calibrator-area": true,
     onPointerDown: e => {
       e.preventDefault();
-      tap();
+      tap(e.timeStamp);
     },
     className: "relative mt-3 min-h-0 flex-1 w-full overflow-hidden rounded-2xl border border-cyan-400/30 bg-slate-900",
     style: {
@@ -20064,7 +20130,13 @@ const RhythmTimingCalibrator = ({
     className: "absolute inset-x-0 bottom-8 h-[4px] bg-gradient-to-r from-fuchsia-300 via-cyan-100 to-fuchsia-300"
   }), !running && /*#__PURE__*/React.createElement("span", {
     className: "absolute inset-0 flex items-center justify-center px-6 text-center text-[13px] font-black leading-relaxed text-slate-300"
-  }, taps.length ? 'もう一度やるなら「はじめる」' : '「はじめる」を押して、線に重なったら叩いてね'), running && /*#__PURE__*/React.createElement("span", {
+  }, taps.length ? 'もう一度やるなら「はじめる」' : '「はじめる」を押して、線に重なったら叩いてね'), running && warmup < RHYTHM_CALIBRATION_WARMUP_TAPS && /*#__PURE__*/React.createElement("span", {
+    "data-rhythm-calibrator-warmup": true,
+    className: "absolute inset-x-0 top-2 text-center text-[12px] font-black text-amber-200"
+  }, "\u304B\u307E\u3048\u3066\uFF08\u3042\u3068", RHYTHM_CALIBRATION_WARMUP_TAPS - warmup, "\u56DE\u306F\u6570\u3048\u307E\u305B\u3093\uFF09"), running && lastDelta !== null && /*#__PURE__*/React.createElement("span", {
+    "data-rhythm-calibrator-last": true,
+    className: `absolute inset-x-0 top-8 text-center text-[13px] font-black tabular-nums ${Math.abs(lastDelta) <= 25 ? 'text-lime-300' : lastDelta < 0 ? 'text-cyan-300' : 'text-fuchsia-300'}`
+  }, lastDelta > 0 ? `+${lastDelta}ms 遅い` : lastDelta < 0 ? `${lastDelta}ms 早い` : 'ぴったり'), running && /*#__PURE__*/React.createElement("span", {
     className: "absolute inset-x-0 bottom-2 text-center text-[11px] font-black text-cyan-200"
   }, "\u3053\u3053\u3092\u53E9\u304F")), /*#__PURE__*/React.createElement("p", {
     "data-rhythm-calibrator-count": true,
@@ -20072,7 +20144,10 @@ const RhythmTimingCalibrator = ({
   }, taps.length, " / ", RHYTHM_CALIBRATION_TAPS, " \u56DE"), result && taps.length >= RHYTHM_CALIBRATION_TAPS && /*#__PURE__*/React.createElement("p", {
     "data-rhythm-calibrator-result": true,
     className: "mt-2 text-center text-[12px] font-bold leading-relaxed text-amber-200"
-  }, "\u5E73\u5747", result.rawMeanMs > 0 ? '+' : '', result.rawMeanMs, "ms\uFF08", result.droppedCount, "\u56DE\u306F\u5916\u308C\u5024\u3068\u3057\u3066\u9664\u5916\uFF09", /*#__PURE__*/React.createElement("br", null), "\u2192 \u5224\u5B9A\u30BF\u30A4\u30DF\u30F3\u30B0\u8ABF\u6574 ", result.offsetMs > 0 ? '+' : '', result.offsetMs, "ms"), /*#__PURE__*/React.createElement("p", {
+  }, "\u5E73\u5747", result.rawMeanMs > 0 ? '+' : '', result.rawMeanMs, "ms\uFF0F\u3070\u3089\u3064\u304D\xB1", result.spreadMs, "ms", result.droppedCount > 0 && `（${result.droppedCount}回は外れ値として除外）`, /*#__PURE__*/React.createElement("br", null), "\u2192 \u5224\u5B9A\u30BF\u30A4\u30DF\u30F3\u30B0\u8ABF\u6574 ", result.offsetMs > 0 ? '+' : '', result.offsetMs, "ms", !result.stable && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("b", {
+    "data-rhythm-calibrator-unstable": true,
+    className: "text-rose-300"
+  }, "\u53E9\u304F\u305F\u3073\u306E\u3070\u3089\u3064\u304D\u304C\u5927\u304D\u3081\u3067\u3059\u3002\u3082\u3046\u4E00\u5EA6\u6E2C\u308B\u3068\u3001\u3088\u308A\u5408\u3063\u305F\u5024\u306B\u306A\u308A\u307E\u3059\u3002"))), /*#__PURE__*/React.createElement("p", {
     className: "mt-2 text-center text-[11px] text-slate-500"
   }, "\u3044\u307E\u306E\u5024: ", currentOffsetMs > 0 ? '+' : '', currentOffsetMs, "ms\uFF08\u300C\u3053\u306E\u5024\u306B\u3059\u308B\u300D\u3092\u62BC\u3057\u3066\u3082\u3001\u4FDD\u5B58\u3059\u308B\u307E\u3067\u306F\u5909\u308F\u308A\u307E\u305B\u3093\uFF09")), /*#__PURE__*/React.createElement("footer", {
     className: "z-20 shrink-0 border-t border-cyan-400/25 bg-slate-950/98 px-4 pt-2",
@@ -20171,6 +20246,20 @@ const rhythmEventRewardText = reward => {
 };
 
 // ---- part: 29-rhythm-screens.jsx ----
+// ============================================================================
+// 音ゲー設定(オプション)
+// ============================================================================
+// 【2026-09-13・ユーザー指示】「下にどんどん伸びていって使いづらい / 1画面に収まるように
+//   して、いじりたいやつはタップしたら詳細変えれるとかにしたほうがいい」
+//   → そのあと実際の音ゲーの画面を示して「オプションはこういうのを参考にしたい」。
+//
+// 参考の形に合わせて、次の3つで組み立てる。
+//   ① 上のタブで大きく3つに分ける(ライブ / 音量 / システム)。1つのタブに入る量を減らす
+//   ② 1項目=1枠。枠の頭に帯のラベルを置き、ON/OFFのような小さい項目は**2列**に並べる
+//   ③ 数値は「粗く動かす」「細かく動かす」を左右に分けた4つのボタン(-10 -1 値 +1 +10)。
+//      ±1つずつしか無いと、音量(0〜200)のような広い項目で何十回も押すことになる
+// つまむスライダーも残す。指で大きく動かすときはこちらのほうが速い。
+const RHYTHM_OPTION_TABS = Object.freeze([['live', 'ライブ'], ['volume', '音量'], ['system', 'システム']]);
 const RhythmOptions = ({
   value,
   onSave,
@@ -20180,30 +20269,10 @@ const RhythmOptions = ({
   const [message, setMessage] = useState('');
   // 「叩いて合わせる」を開いているか。設定そのものではないので保存には入れない
   const [calibrating, setCalibrating] = useState(false);
-  // 【2026-09-13・ユーザー指示】「下にどんどん伸びていって使いづらい / 1画面に収まるように
-  //   して、いじりたいやつはタップしたら詳細変えれるとかにしたほうがいい /
-  //   ただし設定状態は見れる作りで」
-  // 開くのは1つだけ。閉じているときも**いまの値は見出しの下に出す**ので、
-  // 開かずに設定の全体を見渡せる。開閉は設定ではないので保存には入れない。
-  const [openSection, setOpenSection] = useState('');
-  const sectionRefs = useRef({});
-  const toggleSection = id => {
-    setOpenSection(current => {
-      const next = current === id ? '' : id;
-      // 開いたほうが画面の外にはみ出さないよう、そのセクションの頭まで送る。
-      // 閉じたときは動かさない(いま見ている場所が飛ぶと戻る場所を見失う)
-      if (next) setTimeout(() => {
-        try {
-          sectionRefs.current[next]?.scrollIntoView({
-            block: 'start',
-            behavior: 'smooth'
-          });
-        } catch (_) {}
-      }, 0);
-      return next;
-    });
-  };
+  // どのタブを見ているか。これも設定ではないので保存しない
+  const [tab, setTab] = useState('live');
   const previewRef = useRef(null);
+  const scrollRef = useRef(null);
   useEffect(() => () => {
     previewRef.current?.stop();
     previewRef.current = null;
@@ -20217,21 +20286,50 @@ const RhythmOptions = ({
     }));
     setMessage('');
   };
-  const stepper = (key, min, max, step, suffix = '', decimals = 0) => {
+  // タブを変えたら先頭から見せる(前のタブの位置に残ると、開いた先が途中から見える)
+  const changeTab = id => {
+    setTab(id);
+    try {
+      scrollRef.current?.scrollTo({
+        top: 0
+      });
+    } catch (_) {}
+  };
+  const label = 'text-[13px] font-bold';
+  const note = 'text-[10px] leading-relaxed text-slate-400';
+  const head = 'text-[15px] font-black text-cyan-200';
+  const card = 'rounded-2xl border border-cyan-400/35 bg-slate-900/85 p-4 shadow-[0_0_18px_rgba(34,211,238,.08)]';
+  const row = 'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-white/10 py-3 last:border-b-0';
+  // 数値の項目。粗く動かす外側(coarse)と、細かく動かす内側(fine)を分ける。
+  // 刻み(step)は保存する値の刻みそのもので、fine は必ずその倍数にする。
+  const stepper = (key, min, max, step, {
+    fine = step,
+    coarse = step * 10,
+    suffix = '',
+    decimals = 0
+  } = {}) => {
     const value = Number(draft[key]),
       percent = Math.max(0, Math.min(100, (value - min) / (max - min) * 100));
-    const change = direction => set(key, rhythmStepOptionValue(value, min, max, step, direction));
+    const nudge = amount => set(key, rhythmNudgeOptionValue(value, min, max, step, amount));
     const display = `${decimals > 0 ? value.toFixed(decimals) : value}${suffix}`;
+    const sign = amount => `${amount > 0 ? '+' : ''}${decimals > 0 ? Number(amount).toFixed(decimals) : amount}`;
+    const button = (amount, dim) => /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      "aria-label": `${key}を${sign(amount)}`,
+      "data-rhythm-option-nudge": `${key}${sign(amount)}`,
+      disabled: amount < 0 ? value <= min : value >= max,
+      onClick: () => nudge(amount),
+      className: `min-h-[46px] rounded-xl border border-white/15 ${dim ? 'bg-slate-800' : 'bg-slate-700'} px-0.5 text-[11px] font-black tabular-nums text-slate-100 active:scale-95 disabled:opacity-35`
+    }, sign(amount));
     return /*#__PURE__*/React.createElement("div", {
       "data-rhythm-option-stepper": key,
-      className: "grid grid-cols-[48px_minmax(54px,1fr)_48px_minmax(54px,auto)] items-center gap-2"
-    }, /*#__PURE__*/React.createElement("button", {
-      type: "button",
-      "aria-label": `${key}を下げる`,
-      disabled: value <= min,
-      onClick: () => change(-1),
-      className: "min-h-[48px] min-w-[48px] rounded-xl border border-white/15 bg-slate-800 text-xl font-black text-slate-100 active:scale-95 disabled:opacity-35"
-    }, "\u2212"), /*#__PURE__*/React.createElement("input", {
+      className: "space-y-1.5"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-[1fr_1fr_minmax(56px,1.3fr)_1fr_1fr] items-center gap-1"
+    }, button(-coarse), button(-fine, true), /*#__PURE__*/React.createElement("output", {
+      "aria-live": "polite",
+      className: "min-h-[46px] rounded-lg border border-cyan-400/40 bg-slate-950 px-1 text-center text-[13px] font-black leading-[46px] tabular-nums whitespace-nowrap"
+    }, display), button(fine, true), button(coarse)), /*#__PURE__*/React.createElement("input", {
       type: "range",
       "data-rhythm-option-slider": key,
       "aria-label": `${key}を変える`,
@@ -20240,119 +20338,50 @@ const RhythmOptions = ({
       step: step,
       value: value,
       onChange: e => set(key, rhythmSnapOptionValue(e.target.value, min, max, step)),
-      className: "mh-rhythm-range h-3 min-w-0 w-full cursor-pointer appearance-none rounded-full border border-white/15 bg-slate-950",
+      className: "mh-rhythm-range h-3 w-full cursor-pointer appearance-none rounded-full border border-white/15 bg-slate-950",
       style: {
         background: `linear-gradient(90deg,#d946ef 0%,#22d3ee ${percent}%,#020617 ${percent}%,#020617 100%)`
       }
-    }), /*#__PURE__*/React.createElement("button", {
-      type: "button",
-      "aria-label": `${key}を上げる`,
-      disabled: value >= max,
-      onClick: () => change(1),
-      className: "min-h-[48px] min-w-[48px] rounded-xl border border-white/15 bg-slate-800 text-xl font-black text-slate-100 active:scale-95 disabled:opacity-35"
-    }, "\uFF0B"), /*#__PURE__*/React.createElement("output", {
-      "aria-live": "polite",
-      className: "min-w-[54px] rounded-lg border border-cyan-400/30 bg-slate-950 px-1 py-2 text-center text-xs font-black tabular-nums whitespace-nowrap"
-    }, display));
+    }));
   };
-  const toggle = (key, label) => /*#__PURE__*/React.createElement("button", {
+  // ON/OFFは押すたびに入れ替わるボタンではなく、**どちらが今の状態か**が一目で分かる2択にする
+  const toggle = key => /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-option-onoff": key,
+    className: "grid grid-cols-2 gap-1"
+  }, [[true, 'ON'], [false, 'OFF']].map(([flag, text]) => /*#__PURE__*/React.createElement("button", {
     type: "button",
-    "aria-pressed": draft[key],
-    onClick: () => set(key, !draft[key]),
-    className: `min-h-[44px] min-w-[88px] rounded-xl border px-4 text-xs font-black ${draft[key] ? 'border-cyan-200 bg-cyan-600 text-white' : 'border-white/20 bg-slate-900 text-slate-300'}`
-  }, label, " ", draft[key] ? 'ON' : 'OFF');
+    key: text,
+    "aria-pressed": draft[key] === flag,
+    onClick: () => set(key, flag),
+    className: `min-h-[44px] rounded-xl border text-[12px] font-black ${draft[key] === flag ? 'border-cyan-200 bg-cyan-600 text-white' : 'border-white/20 bg-slate-900 text-slate-400'}`
+  }, text)));
   const segments = (key, items) => /*#__PURE__*/React.createElement("div", {
     className: `grid ${items.length >= 4 ? 'grid-cols-4' : 'grid-cols-3'} overflow-hidden rounded-xl border border-white/20`
-  }, items.map(([id, label]) => /*#__PURE__*/React.createElement("button", {
+  }, items.map(([id, text]) => /*#__PURE__*/React.createElement("button", {
     type: "button",
     key: id,
     "aria-pressed": draft[key] === id,
     onClick: () => set(key, id),
     className: `min-h-[44px] border-r border-white/10 px-1 text-[10px] font-black last:border-r-0 ${draft[key] === id ? 'bg-cyan-600 text-white' : 'bg-slate-900 text-slate-300'}`
-  }, label)));
-  // 【2026-09-05・ユーザー指示】「オプション画面が窮屈すぎる／サイズ感に余裕を持たして」
-  // 余白(p-4)・項目の間(py-3)・説明文(10px)をひとまわり広げてある。
-  // 数値だけを小さくしていくと、指で押す場所と読む場所がどちらも減っていくので、
-  // 「入る量」ではなく「押せる・読める」ほうを優先する。
-  const card = 'rounded-2xl border border-cyan-400/35 bg-slate-900/85 p-4 shadow-[0_0_18px_rgba(34,211,238,.08)]';
-  const row = 'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-white/10 py-3 last:border-b-0';
-  const head = 'text-[15px] font-black text-cyan-200';
-  const label = 'text-[13px] font-bold';
-  const note = 'text-[10px] leading-relaxed text-slate-400';
-  // 数値の項目。見出し → スライダー → 説明、の順で必ず間を空ける
-  const field = (title, control, description = null) => /*#__PURE__*/React.createElement("div", {
-    className: "border-b border-white/10 py-3 last:border-b-0"
+  }, text)));
+  // 1項目=1枠。頭に帯のラベルを置く(参考にした画面と同じ形)。
+  // ★ここは項目の「入れ物」なので、余白・字の大きさは2026-09-05に広げたまま触らない。
+  const field = (title, control, description = null, {
+    wide = false
+  } = {}) => /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-option-field": true,
+    className: `${wide ? 'col-span-2' : ''} rounded-xl border border-cyan-400/20 bg-slate-950/55 p-2.5`
   }, /*#__PURE__*/React.createElement("p", {
-    className: `mb-2 ${label}`
-  }, title), control, description && /*#__PURE__*/React.createElement("p", {
-    className: `mt-2 ${note}`
-  }, description));
-  // 閉じているときに見出しの下へ並べる「いまの値」。
-  // ★ここは**実データから作る**。項目を足したときに書き忘れると、
-  //   開かないと分からない設定ができてしまう(検査が件数を突き合わせる)。
-  const onOff = flag => flag ? 'ON' : 'OFF';
-  const pickLabel = (items, id) => {
-    const hit = items.find(([key]) => key === id);
-    return hit ? hit[1] : String(id);
-  };
-  const RHYTHM_OPTION_SECTIONS = [{
-    id: 'volume',
-    title: '🔊 音量',
-    summary: d => [['BGM', d.bgmVolume], ['タップ', d.noteSeVolume], ['タップ音', onOff(d.noteSeEnabled)]]
-  }, {
-    id: 'play',
-    title: '🎯 プレイ',
-    summary: d => [['速度', d.noteSpeed.toFixed(1)], ['サイズ', `${d.noteSize}%`], ['出る位置', d.noteStartPosition], ['判定', `${d.judgmentTimingOffsetMs > 0 ? '+' : ''}${d.judgmentTimingOffsetMs}ms`]]
-  }, {
-    id: 'display',
-    title: '👁 表示',
-    summary: d => [['FAST/SLOW', onOff(d.fastSlowDisplay)], ['判定文字', onOff(d.judgmentTextDisplay)], ['コンボ', d.comboDisplay ? pickLabel(RHYTHM_COMBO_POSITION_LABELS, d.comboPosition) : 'OFF'], ['発光', pickLabel(RHYTHM_LANE_GLOW_LABELS, d.laneGlow)]]
-  }, {
-    id: 'side',
-    title: '🐾 両サイドのマスモン',
-    summary: d => [['濃さ', pickLabel(RHYTHM_SIDE_MONSTER_OPACITY_LABELS, d.sideMonsterOpacity)], ['動き', pickLabel(RHYTHM_SIDE_MONSTER_MOTION_LABELS, d.sideMonsterMotion)], ['光る', onOff(d.sideMonsterAbilityHighlight)]]
-  }, {
-    id: 'system',
-    title: '✨ 演出・端末',
-    summary: d => [['演出量', pickLabel(RHYTHM_EFFECT_LABELS, d.effectAmount)], ['振動', onOff(d.vibrationEnabled)], ['軽量', onOff(d.lightweightMode)], ['試聴', onOff(d.songPreviewEnabled)], ['通知', d.quietDuringPlay ? '出さない' : '出す']]
-  }];
-  // 見出し(タップで開く)＋いまの値。開いているときだけ中身を描く
-  const section = (id, children) => {
-    const spec = RHYTHM_OPTION_SECTIONS.find(item => item.id === id),
-      open = openSection === id;
-    return /*#__PURE__*/React.createElement("section", {
-      ref: element => {
-        sectionRefs.current[id] = element;
-      },
-      "data-rhythm-option-section": id,
-      "data-open": open ? 'true' : 'false',
-      className: card
-    }, /*#__PURE__*/React.createElement("button", {
-      type: "button",
-      "data-rhythm-option-section-head": id,
-      "aria-expanded": open,
-      onClick: () => toggleSection(id),
-      className: "grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 text-left"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "min-w-0"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: `block ${head}`
-    }, spec.title), /*#__PURE__*/React.createElement("span", {
-      "data-rhythm-option-summary": id,
-      className: "mt-1.5 flex flex-wrap gap-1"
-    }, spec.summary(draft).map(([name, value]) => /*#__PURE__*/React.createElement("span", {
-      key: name,
-      className: "rounded-md border border-white/15 bg-slate-950/80 px-1.5 py-0.5 text-[10px] font-bold leading-none text-slate-400"
-    }, name, " ", /*#__PURE__*/React.createElement("b", {
-      className: "text-cyan-200"
-    }, value))))), /*#__PURE__*/React.createElement("span", {
-      "aria-hidden": "true",
-      className: "min-h-[44px] min-w-[44px] rounded-xl border border-white/15 bg-slate-950/70 text-center text-[13px] font-black leading-[44px] text-cyan-200"
-    }, open ? '▲' : '▼')), open && /*#__PURE__*/React.createElement("div", {
-      "data-rhythm-option-section-body": id,
-      className: "mt-1"
-    }, children));
-  };
+    className: `mb-2 rounded-lg bg-cyan-700/70 px-2 py-1 text-center ${label}`
+  }, title), control, description && /*#__PURE__*/React.createElement("details", {
+    "data-rhythm-option-help": true,
+    className: "mt-2"
+  }, /*#__PURE__*/React.createElement("summary", {
+    className: "min-h-[24px] cursor-pointer list-none text-[10px] font-black leading-[24px] text-cyan-300/90"
+  }, "\u25B8 \u304F\u308F\u3057\u304F"), /*#__PURE__*/React.createElement("p", {
+    className: `mt-1 ${note}`
+  }, description)));
+  const grid = 'grid grid-cols-2 gap-2.5';
   const previewBgm = async () => {
     previewRef.current?.stop();
     previewRef.current = null;
@@ -20399,87 +20428,133 @@ const RhythmOptions = ({
     className: "block text-[8px] font-black tracking-[0.2em] text-cyan-300"
   }, "MONBEAT"), /*#__PURE__*/React.createElement("h2", {
     className: "text-base font-black"
-  }, "\u2699\uFE0F \u30AA\u30D7\u30B7\u30E7\u30F3"))), /*#__PURE__*/React.createElement("div", {
+  }, "\u2699\uFE0F \u30AA\u30D7\u30B7\u30E7\u30F3"))), /*#__PURE__*/React.createElement("nav", {
+    "data-rhythm-options-tabs": true,
+    className: "z-10 grid shrink-0 grid-cols-3 gap-2 border-b border-cyan-400/15 bg-slate-950/95 px-3 pb-2 pt-2"
+  }, RHYTHM_OPTION_TABS.map(([id, text]) => /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    key: id,
+    "data-rhythm-options-tab": id,
+    "aria-pressed": tab === id,
+    onClick: () => changeTab(id),
+    className: `relative min-h-[44px] rounded-xl border text-[13px] font-black ${tab === id ? 'border-amber-200 bg-amber-400 text-slate-950' : 'border-white/15 bg-slate-800 text-slate-300'}`
+  }, text, tab === id && /*#__PURE__*/React.createElement("span", {
+    "aria-hidden": "true",
+    className: "absolute -bottom-[7px] left-1/2 -translate-x-1/2 border-x-[6px] border-t-[7px] border-x-transparent border-t-amber-300"
+  })))), /*#__PURE__*/React.createElement("div", {
+    ref: scrollRef,
     "data-rhythm-options-scroll": true,
     className: "flex-1 min-h-0 overflow-y-auto px-3 pb-5 pt-3 mh-scroll"
   }, /*#__PURE__*/React.createElement("div", {
     className: "space-y-4"
-  }, /*#__PURE__*/React.createElement(RhythmLandscapeHint, null), section('volume', /*#__PURE__*/React.createElement(React.Fragment, null, field('BGM音量', stepper('bgmVolume', 0, RHYTHM_VOLUME_MAX, 1)), field('タップ音量', stepper('noteSeVolume', 0, RHYTHM_VOLUME_MAX, 1)), /*#__PURE__*/React.createElement("div", {
-    className: row
-  }, /*#__PURE__*/React.createElement("span", {
-    className: label
-  }, "\u30BF\u30C3\u30D7\u97F3"), toggle('noteSeEnabled', '')), /*#__PURE__*/React.createElement("div", {
-    className: "mt-3 grid grid-cols-2 gap-3"
+  }, tab === 'live' && /*#__PURE__*/React.createElement("section", {
+    "data-rhythm-options-panel": "live",
+    className: card
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: head
+  }, "\uD83C\uDFAF \u30E9\u30A4\u30D6\u8A2D\u5B9A"), /*#__PURE__*/React.createElement("div", {
+    className: `mt-3 ${grid}`
+  }, field('ノーツの速さ', stepper('noteSpeed', RHYTHM_NOTE_SPEED_MIN, RHYTHM_NOTE_SPEED_MAX, RHYTHM_NOTE_SPEED_STEP, {
+    fine: RHYTHM_NOTE_SPEED_STEP,
+    coarse: 1,
+    decimals: 1
+  }), `1.0〜12.0を0.1刻みで調整できます。変わるのはノーツが流れてくる見た目の速さだけで、譜面のタイミング・判定窓・スコアは変わりません（現在 約${rhythmTravelMsForSpeed(draft.noteSpeed).toLocaleString()}ms）。`, {
+    wide: true
+  }), field('タイミング調整', /*#__PURE__*/React.createElement(React.Fragment, null, stepper('judgmentTimingOffsetMs', -RHYTHM_TIMING_OFFSET_MAX_MS, RHYTHM_TIMING_OFFSET_MAX_MS, RHYTHM_TIMING_OFFSET_STEP_MS, {
+    fine: 1,
+    coarse: 10,
+    suffix: 'ms'
+  }), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "data-rhythm-calibrator-open": true,
+    onClick: () => setCalibrating(true),
+    className: "mt-2 min-h-[46px] w-full rounded-xl border border-cyan-300/60 bg-cyan-950/50 text-[12px] font-black text-cyan-100"
+  }, "\uD83C\uDFAF \u30BF\u30C3\u30D7\u3067\u8ABF\u6574")), '判定窓の幅は変えず、表示と入力の基準を同じ量だけ補正します。1ms刻みで動かせます。数字で決めにくいときは「タップで調整」で実際に叩いて測れます。', {
+    wide: true
+  }), field('ノーツサイズ', stepper('noteSize', 80, 120, 5, {
+    fine: 5,
+    coarse: 10,
+    suffix: '%'
+  }), 'ノーツの見た目の大きさだけを変えます。入力判定の範囲・HOLD/SLIDE帯・ENDバーの位置は変わりません。', {
+    wide: true
+  }), field('ノーツの出る位置', stepper('noteStartPosition', -100, 100, 5, {
+    fine: 5,
+    coarse: 25
+  }), 'ノーツが画面のどのあたりから出てくるかを変えます。マイナスにすると奥（画面の上の外側）から、プラスにすると手前寄りから出てきます。判定ラインの位置・判定のタイミング・判定窓・スコアは変わりません。ノーツが流れてくる時間も変わらないので、手前から出すほど見えているあいだの動きは速く見えます。', {
+    wide: true
+  }), field('FAST / SLOW表示', toggle('fastSlowDisplay')), field('判定文字表示', toggle('judgmentTextDisplay')), field('コンボ数表示', toggle('comboDisplay')), field('能力中に光らせる', toggle('sideMonsterAbilityHighlight')), draft.comboDisplay !== false && field('コンボ数の位置', segments('comboPosition', RHYTHM_COMBO_POSITION_LABELS), '「中央」は場の真ん中（既定）、「右上」は2026-09-12より前と同じ、ライフの下の位置です。どこに置いても判定・スコア・コンボの数え方は変わりません。', {
+    wide: true
+  }), field('レーン発光', segments('laneGlow', RHYTHM_LANE_GLOW_LABELS), null, {
+    wide: true
+  }), field('両サイドのマスモン｜濃さ', segments('sideMonsterOpacity', RHYTHM_SIDE_MONSTER_OPACITY_LABELS), 'レーンの外側の空いたところへ、設定したマスモンが出て拍に合わせて跳ねます。ノーツが見づらいときや、端末が熱くなりやすいときは薄くするか止めてください。', {
+    wide: true
+  }), field('両サイドのマスモン｜動き', segments('sideMonsterMotion', RHYTHM_SIDE_MONSTER_MOTION_LABELS), null, {
+    wide: true
+  }))), tab === 'volume' && /*#__PURE__*/React.createElement("section", {
+    "data-rhythm-options-panel": "volume",
+    className: card
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: head
+  }, "\uD83D\uDD0A \u97F3\u91CF"), /*#__PURE__*/React.createElement("div", {
+    className: `mt-3 ${grid}`
+  }, field('BGM音量', stepper('bgmVolume', 0, RHYTHM_VOLUME_MAX, 1, {
+    fine: 1,
+    coarse: 10
+  }), null, {
+    wide: true
+  }), field('タップ音量', stepper('noteSeVolume', 0, RHYTHM_VOLUME_MAX, 1, {
+    fine: 1,
+    coarse: 10
+  }), null, {
+    wide: true
+  }), field('タップ音', toggle('noteSeEnabled')), /*#__PURE__*/React.createElement("div", {
+    className: "grid gap-2"
   }, /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: previewBgm,
-    className: "min-h-[48px] rounded-xl bg-indigo-700 text-[12px] font-black"
+    className: "min-h-[44px] rounded-xl bg-indigo-700 text-[12px] font-black"
   }, "\u266A BGM\u8A66\u8074"), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => RHYTHM_NOTE_SE_RUNTIME.preview(draft),
-    className: "min-h-[48px] rounded-xl bg-fuchsia-700 text-[12px] font-black"
-  }, "\u30BF\u30C3\u30D7\u97F3\u8A66\u8074")), /*#__PURE__*/React.createElement("p", {
-    className: `mt-3 ${note}`
+    className: "min-h-[44px] rounded-xl bg-fuchsia-700 text-[12px] font-black"
+  }, "\u30BF\u30C3\u30D7\u97F3\u8A66\u8074"))), /*#__PURE__*/React.createElement("details", {
+    "data-rhythm-option-help": true,
+    className: "mt-3"
+  }, /*#__PURE__*/React.createElement("summary", {
+    className: "min-h-[24px] cursor-pointer list-none text-[10px] font-black leading-[24px] text-cyan-300/90"
+  }, "\u25B8 \u97F3\u91CF\u306B\u3064\u3044\u3066\u304F\u308F\u3057\u304F"), /*#__PURE__*/React.createElement("p", {
+    className: `mt-1 ${note}`
   }, "\u3053\u306E\u97F3\u91CF\u306F\u30E1\u30A4\u30F3\u30B2\u30FC\u30E0\u306E\u97F3\u91CF\u8A2D\u5B9A\u3068\u5225\u306B\u3001\u97F3\u30B2\u30FC\u3060\u3051\u3067\u4F7F\u3044\u307E\u3059\u3002\u30BF\u30A4\u30C8\u30EB\u753B\u9762\u306E\u5168\u4F53\u30DF\u30E5\u30FC\u30C8\u306E\u307F\u5171\u901A\u3067\u3059\u3002"), /*#__PURE__*/React.createElement("p", {
     className: `mt-2 ${note}`
   }, "2026-09-12\u306B\u30BF\u30C3\u30D7\u97F3\u3092\u5927\u304D\u304F\u3057\u307E\u3057\u305F\uFF08\u305D\u308C\u307E\u3067\u306E10\u500D\uFF09\u3002\u4EE5\u524D\u306B\u97F3\u91CF\u3092\u5408\u308F\u305B\u3066\u3044\u305F\u5834\u5408\u306F\u3001\u30BF\u30C3\u30D7\u97F3\u91CF\u3092\u4E0B\u3052\u308B\u304BBGM\u97F3\u91CF\u3092\u4E0A\u3052\u3066\u5408\u308F\u305B\u76F4\u3057\u3066\u304F\u3060\u3055\u3044\u3002"), /*#__PURE__*/React.createElement("p", {
     className: `mt-2 ${note}`
-  }, "\u97F3\u91CF\u306F0\u301C", RHYTHM_VOLUME_MAX, "\u307E\u3067\u4E0A\u3052\u3089\u308C\u307E\u3059\u3002100\u306F\u3053\u308C\u307E\u3067\u3068\u540C\u3058\u5927\u304D\u3055\u3067\u3059\u3002100\u3088\u308A\u4E0A\u306F\u7AEF\u672B\u306E\u97F3\u91CF\u3092\u4E0A\u3052\u3066\u3082\u8DB3\u308A\u306A\u3044\u3068\u304D\u306E\u9003\u3052\u9053\u3067\u3001\u3068\u304F\u306BBGM\u97F3\u91CF\u306F\u4E0A\u3052\u3059\u304E\u308B\u3068\u66F2\u306E\u5927\u304D\u3044\u3068\u3053\u308D\u304C\u5272\u308C\u3066\u805E\u3053\u3048\u308B\u3053\u3068\u304C\u3042\u308A\u307E\u3059\u3002"))), section('play', /*#__PURE__*/React.createElement(React.Fragment, null, field('ノーツ速度', stepper('noteSpeed', RHYTHM_NOTE_SPEED_MIN, RHYTHM_NOTE_SPEED_MAX, RHYTHM_NOTE_SPEED_STEP, '', 1), `1.0〜12.0を0.1刻みで調整できます。変わるのはノーツが流れてくる見た目の速さだけで、譜面のタイミング・判定窓・スコアは変わりません（現在 約${rhythmTravelMsForSpeed(draft.noteSpeed).toLocaleString()}ms）。`), field('ノーツサイズ', stepper('noteSize', 80, 120, 5, '%'), 'ノーツの見た目の大きさだけを変えます。入力判定の範囲・HOLD/SLIDE帯・ENDバーの位置は変わりません。'), field('ノーツの出る位置（奥行き）', stepper('noteStartPosition', -100, 100, 5), 'ノーツが画面のどのあたりから出てくるかを変えます。マイナスにすると奥（画面の上の外側）から、プラスにすると手前寄りから出てきます。判定ラインの位置・判定のタイミング・判定窓・スコアは変わりません。ノーツが流れてくる時間も変わらないので、手前から出すほど見えているあいだの動きは速く見えます。'), field('判定タイミング調整', stepper('judgmentTimingOffsetMs', -100, 100, 5, 'ms'), '判定窓の幅は変えず、表示と入力の基準を同じ量だけ補正します。数字で決めにくいときは、下の「叩いて合わせる」で実際に叩いて測れます。'), /*#__PURE__*/React.createElement("button", {
-    type: "button",
-    "data-rhythm-calibrator-open": true,
-    onClick: () => setCalibrating(true),
-    className: "mt-3 min-h-[52px] w-full rounded-xl border border-cyan-300/60 bg-cyan-950/50 text-[13px] font-black text-cyan-100"
-  }, "\uD83C\uDFAF \u53E9\u3044\u3066\u5408\u308F\u305B\u308B"), /*#__PURE__*/React.createElement("p", {
-    className: `mt-2 ${note}`
-  }, "\u753B\u9762\u3044\u3063\u3071\u3044\u3067\u958B\u304D\u307E\u3059\u3002\u5408\u308F\u305B\u7D42\u308F\u3063\u3066\u304B\u3089\u623B\u308B\u3068\u3001\u3053\u3053\u306E\u6570\u5B57\u306B\u5165\u308A\u307E\u3059\uFF08\u4FDD\u5B58\u306F\u307E\u3060\u3055\u308C\u307E\u305B\u3093\uFF09\u3002"))), section('display', /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-    className: row
-  }, /*#__PURE__*/React.createElement("span", {
-    className: label
-  }, "FAST / SLOW\u8868\u793A"), toggle('fastSlowDisplay', '')), /*#__PURE__*/React.createElement("div", {
-    className: row
-  }, /*#__PURE__*/React.createElement("span", {
-    className: label
-  }, "\u5224\u5B9A\u6587\u5B57\u8868\u793A"), toggle('judgmentTextDisplay', '')), /*#__PURE__*/React.createElement("div", {
-    className: row
-  }, /*#__PURE__*/React.createElement("span", {
-    className: label
-  }, "\u30B3\u30F3\u30DC\u6570\u8868\u793A"), toggle('comboDisplay', '')), draft.comboDisplay !== false && field('コンボ数の位置', segments('comboPosition', RHYTHM_COMBO_POSITION_LABELS), 'コンボ数を出す場所を選べます。「中央」は場の真ん中（既定）、「右上」は2026-09-12より前と同じ、ライフの下の位置です。どこに置いても判定・スコア・コンボの数え方は変わりません。'), field('レーン発光', segments('laneGlow', RHYTHM_LANE_GLOW_LABELS)))), section('side', /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
-    className: `mt-2 ${note}`
-  }, "\u30EC\u30FC\u30F3\u306E\u5916\u5074\u306E\u7A7A\u3044\u305F\u3068\u3053\u308D\u3078\u3001\u8A2D\u5B9A\u3057\u305F\u30DE\u30B9\u30E2\u30F3\u304C\u51FA\u3066\u62CD\u306B\u5408\u308F\u305B\u3066\u8DF3\u306D\u307E\u3059\u3002\u30CE\u30FC\u30C4\u304C\u898B\u3065\u3089\u3044\u3068\u304D\u3084\u3001\u7AEF\u672B\u304C\u71B1\u304F\u306A\u308A\u3084\u3059\u3044\u3068\u304D\u306F\u8584\u304F\u3059\u308B\u304B\u6B62\u3081\u3066\u304F\u3060\u3055\u3044\u3002"), field('濃さ', segments('sideMonsterOpacity', RHYTHM_SIDE_MONSTER_OPACITY_LABELS)), field('動き', segments('sideMonsterMotion', RHYTHM_SIDE_MONSTER_MOTION_LABELS)), /*#__PURE__*/React.createElement("div", {
-    className: row
-  }, /*#__PURE__*/React.createElement("span", {
-    className: label
-  }, "\u80FD\u529B\u4E2D\u306B\u5149\u3089\u305B\u308B"), toggle('sideMonsterAbilityHighlight', '')))), section('system', /*#__PURE__*/React.createElement(React.Fragment, null, field('演出量', segments('effectAmount', RHYTHM_EFFECT_LABELS), '動きがカクついたり、端末が熱くなったりするときは「少なめ」にしてください。判定文字の金色の帯や虹が流れるのを止め、光のにじみを減らします（色・グラデーション・字の大きさは標準と同じままです）。「最小」にすると、それに加えて100コンボごとの演出や光そのものもほぼ出なくなります。'), /*#__PURE__*/React.createElement("div", {
-    className: row
-  }, /*#__PURE__*/React.createElement("span", {
-    className: label
-  }, "\u632F\u52D5"), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement("button", {
+  }, "\u97F3\u91CF\u306F0\u301C", RHYTHM_VOLUME_MAX, "\u307E\u3067\u4E0A\u3052\u3089\u308C\u307E\u3059\u3002100\u306F\u3053\u308C\u307E\u3067\u3068\u540C\u3058\u5927\u304D\u3055\u3067\u3059\u3002100\u3088\u308A\u4E0A\u306F\u7AEF\u672B\u306E\u97F3\u91CF\u3092\u4E0A\u3052\u3066\u3082\u8DB3\u308A\u306A\u3044\u3068\u304D\u306E\u9003\u3052\u9053\u3067\u3001\u3068\u304F\u306BBGM\u97F3\u91CF\u306F\u4E0A\u3052\u3059\u304E\u308B\u3068\u66F2\u306E\u5927\u304D\u3044\u3068\u3053\u308D\u304C\u5272\u308C\u3066\u805E\u3053\u3048\u308B\u3053\u3068\u304C\u3042\u308A\u307E\u3059\u3002"))), tab === 'system' && /*#__PURE__*/React.createElement("section", {
+    "data-rhythm-options-panel": "system",
+    className: card
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: head
+  }, "\u2728 \u30B7\u30B9\u30C6\u30E0"), /*#__PURE__*/React.createElement("div", {
+    className: `mt-3 ${grid}`
+  }, field('演出量', segments('effectAmount', RHYTHM_EFFECT_LABELS), '動きがカクついたり、端末が熱くなったりするときは「少なめ」にしてください。判定文字の金色の帯や虹が流れるのを止め、光のにじみを減らします（色・グラデーション・字の大きさは標準と同じままです）。「最小」にすると、それに加えて100コンボごとの演出や光そのものもほぼ出なくなります。', {
+    wide: true
+  }), field('軽量モード', toggle('lightweightMode')), field('曲えらびで試聴する', toggle('songPreviewEnabled')), field('タップ時の振動', /*#__PURE__*/React.createElement(React.Fragment, null, toggle('vibrationEnabled'), /*#__PURE__*/React.createElement("button", {
     type: "button",
     "data-rhythm-vibration-test": true,
     disabled: !RHYTHM_HAPTICS.supported(),
     onClick: () => RHYTHM_HAPTICS.tap(26),
-    className: "min-h-[44px] rounded-xl border border-white/20 bg-slate-900 px-3 text-[11px] font-black text-slate-200 disabled:opacity-40"
-  }, "\u8A66\u3059"), toggle('vibrationEnabled', ''))), !RHYTHM_HAPTICS.supported() && /*#__PURE__*/React.createElement("p", {
+    className: "mt-1.5 min-h-[44px] w-full rounded-xl border border-white/20 bg-slate-900 px-3 text-[11px] font-black text-slate-200 disabled:opacity-40"
+  }, "\u8A66\u3059")), !RHYTHM_HAPTICS.supported() ? 'この端末は振動に対応していないため、ONにしても振動しません（音とエフェクトはそのまま出ます）。' : null), field('演奏中は通知を出さない', toggle('quietDuringPlay'))), /*#__PURE__*/React.createElement("details", {
+    "data-rhythm-option-help": true,
+    className: "mt-3"
+  }, /*#__PURE__*/React.createElement("summary", {
+    className: "min-h-[24px] cursor-pointer list-none text-[10px] font-black leading-[24px] text-cyan-300/90"
+  }, "\u25B8 \u3053\u306E\u7AEF\u672B\u3067\u901A\u77E5\u3092\u3069\u3053\u307E\u3067\u6B62\u3081\u3089\u308C\u308B\u304B"), /*#__PURE__*/React.createElement("p", {
+    className: `mt-1 ${note}`
+  }, rhythmQuietModeSupportText())), !RHYTHM_HAPTICS.supported() && /*#__PURE__*/React.createElement("p", {
     "data-rhythm-vibration-unsupported": true,
-    className: "pb-2 text-[10px] font-bold leading-relaxed text-amber-200"
-  }, "\u3053\u306E\u7AEF\u672B\u306F\u632F\u52D5\u306B\u5BFE\u5FDC\u3057\u3066\u3044\u306A\u3044\u305F\u3081\u3001ON\u306B\u3057\u3066\u3082\u632F\u52D5\u3057\u307E\u305B\u3093\uFF08\u97F3\u3068\u30A8\u30D5\u30A7\u30AF\u30C8\u306F\u305D\u306E\u307E\u307E\u51FA\u307E\u3059\uFF09\u3002"), /*#__PURE__*/React.createElement("div", {
-    className: row
-  }, /*#__PURE__*/React.createElement("span", {
-    className: label
-  }, "\u8EFD\u91CF\u30E2\u30FC\u30C9"), toggle('lightweightMode', '')), /*#__PURE__*/React.createElement("div", {
-    className: row
-  }, /*#__PURE__*/React.createElement("span", {
-    className: label
-  }, "\u66F2\u3048\u3089\u3073\u3067\u8A66\u8074\u3059\u308B"), toggle('songPreviewEnabled', '')), /*#__PURE__*/React.createElement("div", {
-    className: row
-  }, /*#__PURE__*/React.createElement("span", {
-    className: label
-  }, "\u6F14\u594F\u4E2D\u306F\u901A\u77E5\u3092\u51FA\u3055\u306A\u3044"), toggle('quietDuringPlay', '')), /*#__PURE__*/React.createElement("p", {
-    className: `pb-1 ${note}`
-  }, rhythmQuietModeSupportText()))), /*#__PURE__*/React.createElement("section", {
-    className: "rounded-2xl border border-cyan-400/30 bg-cyan-950/25 p-4 text-[11px] leading-relaxed text-cyan-100"
+    className: "mt-2 text-[10px] font-bold leading-relaxed text-amber-200"
+  }, "\u3053\u306E\u7AEF\u672B\u306F\u632F\u52D5\u306B\u5BFE\u5FDC\u3057\u3066\u3044\u306A\u3044\u305F\u3081\u3001ON\u306B\u3057\u3066\u3082\u632F\u52D5\u3057\u307E\u305B\u3093\uFF08\u97F3\u3068\u30A8\u30D5\u30A7\u30AF\u30C8\u306F\u305D\u306E\u307E\u307E\u51FA\u307E\u3059\uFF09\u3002")), /*#__PURE__*/React.createElement("p", {
+    className: "rounded-xl border border-cyan-400/25 bg-cyan-950/25 px-3 py-2 text-[10px] leading-relaxed text-cyan-100"
   }, "\u5224\u5B9A\u3092\u7518\u304F\u3059\u308B\u8A2D\u5B9A\u3067\u306F\u3042\u308A\u307E\u305B\u3093\u3002\u7AEF\u672B\u3054\u3068\u306E\u898B\u3048\u65B9\u30FB\u97F3\u91CF\u30FB\u30BF\u30A4\u30DF\u30F3\u30B0\u3092\u8ABF\u6574\u3059\u308B\u9805\u76EE\u3067\u3059\u3002"))), /*#__PURE__*/React.createElement("footer", {
     "data-rhythm-options-actions": true,
     className: "z-20 shrink-0 border-t border-cyan-400/25 bg-slate-950/98 px-3 pt-2 shadow-[0_-8px_24px_rgba(2,6,23,.72)]",
@@ -20503,7 +20578,6 @@ const RhythmOptions = ({
     className: `min-h-[52px] rounded-xl px-3 font-black ${dirty ? 'bg-amber-400 text-slate-950 shadow-[0_0_18px_rgba(251,191,36,.35)]' : 'bg-amber-600 text-slate-950'}`
   }, dirty ? '変更を保存' : '保存'))));
 };
-
 // モンスターノーツ用のマスモン設定。音ゲーデバッグ画面と体験版ホームの両方から使うため、
 // 画面の中へ直接書かずにここで1つにまとめてある。中身と操作はどちらから開いても同じ。
 // ============================================================================
