@@ -13150,6 +13150,41 @@ const RHYTHM_TUTORIAL_SONG=Object.freeze({
 // ランクのゲージや「→次のランク」の表示が満点を分母に使うので、0や1にすると壊れる
 const RHYTHM_TUTORIAL_DIFFICULTY=Object.freeze({id:'TUTORIAL',maxScore:600000,label:'れんしゅう'});
 
+// ===== タップのタイミング合わせ(2026-09-13・ユーザー指示) =====
+// 「今の仕様はみにくすぎるし実用性がない / 特に横画面は終わってる /
+//   普通に実際の画面を使ってやればいい / そこで判定も合わせて出して調整するのが1番合うとおもう」。
+// ★それまでは**専用の小さな画面**(1本のレーンに目印が降りるだけ)で測っていた。
+//   本番と見た目も指の置き方も違ううえ、横持ちでは器の回転を考えていなかった。
+// ★なので「れんしゅう」と同じく**演奏画面をそのまま使う**。曲と譜面だけを差し替える。
+//   判定もFAST/SLOWもいつもどおり出るので、合っているかを見ながら叩ける。
+// 譜面は2拍ごとの単押しを、レーンを順ぐりに動かしながら並べる。
+// 片方の手だけで追えるよう、端から端へ飛ばさず隣のレーンへ動かす。
+const RHYTHM_CALIBRATION_TAP_COUNT=16;     // 数に入れる回数
+const RHYTHM_CALIBRATION_WARMUP_COUNT=4;   // 数えはじめる前の助走
+const RHYTHM_CALIBRATION_LANE_ORDER=Object.freeze([2,1,2,3,2,1,2,3]);
+const rhythmCalibrationNotes=(()=>{
+  const notes=[];
+  // 最初の4拍は数に入れない助走。画面にも「かまえて」を出す
+  for(let index=0;index<RHYTHM_CALIBRATION_TAP_COUNT+RHYTHM_CALIBRATION_WARMUP_COUNT;index++){
+    notes.push({type:'TAP',lane:RHYTHM_CALIBRATION_LANE_ORDER[index%RHYTHM_CALIBRATION_LANE_ORDER.length],
+      timeMs:rhythmTutorialMs(4+index*2)});
+  }
+  return Object.freeze(notes);
+})();
+const RHYTHM_CALIBRATION_END_MS=rhythmTutorialMs(4+(RHYTHM_CALIBRATION_TAP_COUNT+RHYTHM_CALIBRATION_WARMUP_COUNT)*2+4);
+const RHYTHM_CALIBRATION_CHART=Object.freeze({
+  level:1,notes:rhythmCalibrationNotes,
+  totalNotes:rhythmCalibrationNotes.length,durationMs:RHYTHM_CALIBRATION_END_MS,
+});
+const RHYTHM_CALIBRATION_SONG=Object.freeze({
+  songId:'rhythm_calibration',
+  displayName:'タイミング合わせ',
+  bgmTrackId:RHYTHM_TUTORIAL_TRACK_ID,
+  playDurationMs:RHYTHM_CALIBRATION_END_MS,
+  difficulties:Object.freeze({TUTORIAL:RHYTHM_CALIBRATION_CHART}),
+});
+const RHYTHM_CALIBRATION_DIFFICULTY=Object.freeze({id:'TUTORIAL',maxScore:600000,label:'タイミング合わせ'});
+
 const RHYTHM_SONGS = Object.freeze(RHYTHM_SONG_ENTRIES.map(song=>Object.freeze({...song,
   difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>
     [id,rhythmChartWithLevel(song.songId,id,song.difficulties[id])])))})));

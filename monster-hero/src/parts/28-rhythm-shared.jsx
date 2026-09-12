@@ -451,15 +451,14 @@ const RhythmOrientationButton=({className=''})=>{
 // 20〜40msほどあり、いちばん良い判定(±55ms)の半分を食う。
 // 目分量で合わせるのは難しいので、実際に叩いた結果から決める。
 //
-// 【測り方】
-//   ・一定の間隔(RHYTHM_CALIBRATION_BEAT_MS)で目印が判定ラインへ来る
-//   ・そのときのタップの時刻とのずれを集める
-//   ・外れ値(いちばん大きいものといちばん小さいもの)を落として平均を取る
-//     …1回の押し間違いで全部が狂わないようにするため
-//   ・平均を5ms刻みへ丸めて、-100〜+100の範囲に収める(設定と同じ刻み・範囲)
+// 【測り方】(2026-09-13に、専用の小さな画面から**演奏画面そのもの**へ変えた)
+//   ・data の RHYTHM_CALIBRATION_SONG(2拍ごとの単押し)を、いつもの演奏画面で流す
+//   ・叩くたびのずれ(deltaMs)を run.deltas へ貯める。判定もFAST/SLOWもいつもどおり出る
+//   ・助走(はじめの数回)を捨て、外れ値を落として平均を取る(下の関数)
+//   ・1ms刻みで -100〜+100 の範囲に収める(設定と同じ刻み・範囲)
 //
-// 時刻は音と同じ AudioContext ではなく performance.now() を使う。
-// ここでは音を鳴らさず、目印の動きだけに合わせてもらうため。
+// ずれは演奏側が判定に使っている値そのもの(judgmentTimingOffsetMs を通したあとの差)なので、
+// 本番とまったく同じ条件で測れる。専用画面だったころは見た目も指の置き方も違っていた。
 // 【2026-09-13・ユーザー指示】「タップ調整ももっと精度良くつくって」。
 // それまでの測り方は、次の5つで粗かった。
 //   ① 8回しか取らない            → **16回**取る。平均のばらつきは回数の平方根で減る
@@ -471,9 +470,6 @@ const RhythmOrientationButton=({className=''})=>{
 // あわせて、目印の位置を performance.now() ではなく **requestAnimationFrame の時刻**で決め、
 // 叩いた時刻は **イベントの timeStamp**(ブラウザがその入力を受け取った時刻)を使う。
 // どちらも「JSが動きはじめるまでの待ち」をずれに混ぜないためのもの。
-const RHYTHM_CALIBRATION_BEAT_MS=500;       // 目印が来る間隔。速すぎず、16回でも8秒で終わる
-const RHYTHM_CALIBRATION_TAPS=16;           // 数に入れる回数
-const RHYTHM_CALIBRATION_WARMUP_TAPS=4;     // 数えはじめる前に叩いてもらう回数(助走)
 const RHYTHM_CALIBRATION_MAX_MS=RHYTHM_TIMING_OFFSET_MAX_MS;   // 設定の範囲と同じ
 const RHYTHM_CALIBRATION_STEP_MS=RHYTHM_TIMING_OFFSET_STEP_MS; // 設定の刻みと同じ(1ms)
 const RHYTHM_CALIBRATION_OUTLIER_FLOOR_MS=12; // 外れ値と見なす幅の下限
@@ -507,136 +503,11 @@ const rhythmCalibrationOffsetFromTaps=(deltas)=>{
     spreadMs:Math.round(spread),stable:spread<=RHYTHM_CALIBRATION_STABLE_SPREAD_MS};
 };
 
-// 実際に叩いてもらう部品。オプションの中へ置く。
-// レーンを1本だけ出し、ノーツが上から降りてきて判定ラインへ来る。それに合わせて叩く。
-// 判定・スコア・譜面には一切関わらない(ここで測るのは「ずれ」だけ)。
-const RhythmTimingCalibrator=({onApply,onClose,currentOffsetMs=0})=>{
-  const [taps,setTaps]=useState([]);
-  const [running,setRunning]=useState(false);
-  // 助走の回数と、直前の1打のずれ。どちらも測った値そのものではないので保存しない
-  const [warmup,setWarmup]=useState(0);
-  const [lastDelta,setLastDelta]=useState(null);
-  const warmupRef=useRef(0);
-  const startRef=useRef(0);
-  const frameRef=useRef(null);
-  const noteRef=useRef(null);
-  const areaRef=useRef(null);
-  const tapsRef=useRef([]);
-  const result=rhythmCalibrationOffsetFromTaps(taps);
-
-  const stop=useCallback(()=>{
-    if(frameRef.current!==null)cancelAnimationFrame(frameRef.current);
-    frameRef.current=null;setRunning(false);
-  },[]);
-  useEffect(()=>()=>{if(frameRef.current!==null)cancelAnimationFrame(frameRef.current);},[]);
-
-  const start=()=>{
-    setTaps([]);tapsRef.current=[];setWarmup(0);warmupRef.current=0;setLastDelta(null);
-    startRef.current=0;
-    setRunning(true);
-    const tick=now=>{
-      const area=areaRef.current,note=noteRef.current;
-      // ★時刻は requestAnimationFrame が渡してくる「そのコマの時刻」を使う。
-      //   ここで performance.now() を呼ぶと、コマが始まってからJSが動くまでの待ちが
-      //   そのまま目印の位置へ乗り、コマごとに数msぶれる。
-      if(!startRef.current)startRef.current=now;
-      if(!area||!note){frameRef.current=requestAnimationFrame(tick);return;}
-      const elapsed=now-startRef.current;
-      // 1拍ぶんを上から判定ラインまで動かし、着いたら次の拍へ回す
-      const phase=(elapsed%RHYTHM_CALIBRATION_BEAT_MS)/RHYTHM_CALIBRATION_BEAT_MS;
-      const height=area.clientHeight||120;
-      note.style.transform=`translate3d(0,${Math.round(phase*(height-18))}px,0)`;
-      if(tapsRef.current.length>=RHYTHM_CALIBRATION_TAPS){stop();return;}
-      frameRef.current=requestAnimationFrame(tick);
-    };
-    frameRef.current=requestAnimationFrame(tick);
-  };
-
-  const tap=eventTimeMs=>{
-    if(!running||!startRef.current)return;
-    // ★叩いた時刻は、できるだけ**ブラウザがその入力を受け取った時刻**(event.timeStamp)を使う。
-    //   performance.now() だと、指が触れてからこの関数が動きはじめるまでの待ちがずれに混ざる。
-    //   時間軸が違う環境(古いブラウザ)では値が飛ぶので、そのときは performance.now() に戻す。
-    const fallback=performance.now();
-    const stamp=Number(eventTimeMs);
-    const measured=Number.isFinite(stamp)&&Math.abs(stamp-fallback)<2000?stamp:fallback;
-    const elapsed=measured-startRef.current;
-    // いちばん近い拍からのずれ。早ければマイナス、遅ければプラス
-    const nearest=Math.round(elapsed/RHYTHM_CALIBRATION_BEAT_MS)*RHYTHM_CALIBRATION_BEAT_MS;
-    const delta=elapsed-nearest;
-    // 最初の1拍は目印がまだ降りきっていないので数えない
-    if(elapsed<RHYTHM_CALIBRATION_BEAT_MS)return;
-    RHYTHM_NOTE_SE_RUNTIME.playEmpty();
-    setLastDelta(Math.round(delta));
-    // ★叩きはじめの数回は数えない。リズムに乗るまでの回が混ざると、
-    //   そのぶんだけ平均が引っぱられる(助走ぶんは画面でも「かまえて」と出す)。
-    if(warmupRef.current<RHYTHM_CALIBRATION_WARMUP_TAPS){
-      warmupRef.current+=1;setWarmup(warmupRef.current);return;
-    }
-    const next=[...tapsRef.current,delta];
-    tapsRef.current=next;setTaps(next);
-  };
-
-  // 【2026-09-05・ユーザー指示】「タップ調整が窮屈で見にくい／専用画面に飛ばしたほうがいい」
-  // オプションの中の小さな枠(高さ112px)ではなく、画面いっぱいで開く。
-  // 叩く場所が広いほど、実際のプレイに近い姿勢で測れる。
-  return <main data-rhythm-calibrator className="flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white" style={{paddingTop:'env(safe-area-inset-top)'}}>
-    <header className="z-10 flex shrink-0 items-center gap-2 border-b border-cyan-400/15 bg-slate-950/95 px-3 py-2">
-      <button aria-label="オプションへ戻る" data-rhythm-calibrator-close onClick={()=>{stop();onClose();}} className="min-h-[44px] min-w-[44px] text-slate-300"><ArrowLeft size={20}/></button>
-      <div className="min-w-0 flex-1">
-        <small className="block text-[8px] font-black tracking-[0.2em] text-cyan-300">MONBEAT</small>
-        <h2 className="text-base font-black">🎯 タップのタイミングを合わせる</h2>
-      </div>
-    </header>
-    <div className="flex min-h-0 flex-1 flex-col px-4 pb-4 pt-3">
-      <p className="text-[12px] leading-relaxed text-slate-300">
-        下の線へノーツが重なった瞬間に、リズムよく叩いてください。はじめの{RHYTHM_CALIBRATION_WARMUP_TAPS}回は
-        リズムに乗るための助走で、そのあとの{RHYTHM_CALIBRATION_TAPS}回を測ります。
-        画面に見えてから指が触れるまでの遅れは端末ごとに違うので、実際に叩いて測ります。
-      </p>
-      {/* 叩く場所は画面の残りいっぱい。実際のプレイと同じように、指を置く姿勢で測れるようにする */}
-      <div ref={areaRef} data-rhythm-calibrator-area onPointerDown={e=>{e.preventDefault();tap(e.timeStamp);}}
-        className="relative mt-3 min-h-0 flex-1 w-full overflow-hidden rounded-2xl border border-cyan-400/30 bg-slate-900"
-        style={{touchAction:'none',WebkitUserSelect:'none',userSelect:'none'}}>
-        <i ref={noteRef} data-rhythm-calibrator-note aria-hidden="true"
-          className="absolute left-1/2 top-0 h-6 w-40 -translate-x-1/2 rounded-full bg-gradient-to-b from-amber-200 to-fuchsia-500"/>
-        <i aria-hidden="true" className="absolute inset-x-0 bottom-8 h-[4px] bg-gradient-to-r from-fuchsia-300 via-cyan-100 to-fuchsia-300"/>
-        {!running&&<span className="absolute inset-0 flex items-center justify-center px-6 text-center text-[13px] font-black leading-relaxed text-slate-300">
-          {taps.length?'もう一度やるなら「はじめる」':'「はじめる」を押して、線に重なったら叩いてね'}</span>}
-        {running&&warmup<RHYTHM_CALIBRATION_WARMUP_TAPS&&<span data-rhythm-calibrator-warmup className="absolute inset-x-0 top-2 text-center text-[12px] font-black text-amber-200">かまえて（あと{RHYTHM_CALIBRATION_WARMUP_TAPS-warmup}回は数えません）</span>}
-        {/* 1打ごとに、早いか遅いかをその場で返す。合わせられているかが叩きながら分かる */}
-        {running&&lastDelta!==null&&<span data-rhythm-calibrator-last className={`absolute inset-x-0 top-8 text-center text-[13px] font-black tabular-nums ${Math.abs(lastDelta)<=25?'text-lime-300':lastDelta<0?'text-cyan-300':'text-fuchsia-300'}`}>
-          {lastDelta>0?`+${lastDelta}ms 遅い`:lastDelta<0?`${lastDelta}ms 早い`:'ぴったり'}</span>}
-        {running&&<span className="absolute inset-x-0 bottom-2 text-center text-[11px] font-black text-cyan-200">ここを叩く</span>}
-      </div>
-      <p data-rhythm-calibrator-count className="mt-3 text-center text-[14px] font-black tabular-nums text-cyan-200">
-        {taps.length} / {RHYTHM_CALIBRATION_TAPS} 回
-      </p>
-      {result&&taps.length>=RHYTHM_CALIBRATION_TAPS&&(
-        <p data-rhythm-calibrator-result className="mt-2 text-center text-[12px] font-bold leading-relaxed text-amber-200">
-          平均{result.rawMeanMs>0?'+':''}{result.rawMeanMs}ms／ばらつき±{result.spreadMs}ms
-          {result.droppedCount>0&&`（${result.droppedCount}回は外れ値として除外）`}
-          <br/>→ 判定タイミング調整 {result.offsetMs>0?'+':''}{result.offsetMs}ms
-          {/* ばらつきが大きいまま決めると、次に叩いたときには合わない。
-              止めはしないが、もう一度やったほうがいいことはその場で言う */}
-          {!result.stable&&<><br/><b data-rhythm-calibrator-unstable className="text-rose-300">叩くたびのばらつきが大きめです。もう一度測ると、より合った値になります。</b></>}
-        </p>
-      )}
-      <p className="mt-2 text-center text-[11px] text-slate-500">いまの値: {currentOffsetMs>0?'+':''}{currentOffsetMs}ms（「この値にする」を押しても、保存するまでは変わりません）</p>
-    </div>
-    <footer className="z-20 shrink-0 border-t border-cyan-400/25 bg-slate-950/98 px-4 pt-2" style={{paddingBottom:'calc(.5rem + env(safe-area-inset-bottom))'}}>
-      <div className="grid grid-cols-2 gap-3">
-        <button type="button" data-rhythm-calibrator-start onClick={start} disabled={running}
-          className="min-h-[54px] rounded-xl bg-cyan-700 text-[13px] font-black text-white disabled:opacity-40">はじめる</button>
-        <button type="button" data-rhythm-calibrator-apply
-          disabled={!result||taps.length<RHYTHM_CALIBRATION_TAPS}
-          onClick={()=>{if(result){onApply(result.offsetMs);stop();onClose();}}}
-          className="min-h-[54px] rounded-xl bg-amber-400 text-[13px] font-black text-slate-950 disabled:opacity-40">この値にする</button>
-      </div>
-    </footer>
-  </main>;
-};
-
+// ★2026-09-13に、専用の小さな画面(1本のレーンに目印が降りるだけ)はやめた。
+//   ユーザー指示「今の仕様はみにくすぎるし実用性がない / 特に横画面は終わってる /
+//   普通に実際の画面を使ってやればいい / そこで判定も合わせて出して調整するのが1番合うとおもう」。
+//   いまは演奏画面をそのまま使い(data の RHYTHM_CALIBRATION_SONG を流す)、
+//   叩いたずれを run.deltas へ貯めて、上の rhythmCalibrationOffsetFromTaps で値を出す。
 // ===== モンヒロビートのイベント報酬(2026-09-11) =====
 // data/rhythm-event.js は「何位に何個」だけを持ち、アイテムの実体(id・名前・絵文字)は
 // ゲーム本体側にある(アイテムの定義は 11-masu-progression.jsx で、data より後に読み込まれるため)。

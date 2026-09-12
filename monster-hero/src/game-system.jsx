@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ad3d608ee464b353
+// generated-sha256: de756a880da41406
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -89,7 +89,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-13 04:01"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-13 04:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3500,6 +3500,11 @@ const RHYTHM_MONSTER_EFFECT_LABELS = Object.freeze([['NORMAL','標準'],['LIGHT'
 const RHYTHM_MONSTER_EFFECT_LEVELS = Object.freeze(RHYTHM_MONSTER_EFFECT_LABELS.map(([id])=>id));
 // コンボ数の大きさ(2026-09-13・ユーザー依頼「コンボ数のサイズ設定もほしい」)。
 // 置き場所ごとの基準の大きさ(真ん中52px / 端34px)へ、この割合を掛ける。
+// コンボ数の濃さ(2026-09-13・ユーザー依頼「オプションにコンボ数表記の透過度の設定」)。
+// 段ごとの濃さ(.62〜1)へこの割合を掛ける。0にはできない(消したいなら「コンボ数表示」を切る)。
+const RHYTHM_COMBO_OPACITY_MIN = 30;
+const RHYTHM_COMBO_OPACITY_MAX = 100;
+const RHYTHM_COMBO_OPACITY_STEP = 10;
 const RHYTHM_COMBO_SIZE_MIN = 70;
 const RHYTHM_COMBO_SIZE_MAX = 150;
 const RHYTHM_COMBO_SIZE_STEP = 10;
@@ -3525,7 +3530,7 @@ const RHYTHM_RANK_COLORS = Object.freeze({
 });
 const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   bgmVolume:100, noteSpeed:6, noteSize:100, noteStartPosition:0, displayTimingOffsetMs:0, judgmentTimingOffsetMs:0,
-  fastSlowDisplay:true, judgmentTextDisplay:true, judgmentTextPosition:50, comboDisplay:true, comboPosition:'AUTO', comboSize:100, holdSlideOpacity:80, laneGlow:'NORMAL',
+  fastSlowDisplay:true, judgmentTextDisplay:true, judgmentTextPosition:50, comboDisplay:true, comboPosition:'AUTO', comboSize:100, comboOpacity:100, holdSlideOpacity:80, laneGlow:'NORMAL',
   monsterNoteEffect:'NORMAL',
   noteSeVolume:70, noteSeEnabled:true, vibrationEnabled:false, effectAmount:'NORMAL', lightweightMode:false,
   livePartnerVisible:true,
@@ -3565,6 +3570,7 @@ const normalizeRhythmSettings = value => {
     comboDisplay:bool('comboDisplay'),
     comboPosition:RHYTHM_COMBO_POSITIONS.includes(source.comboPosition)?source.comboPosition:DEFAULT_RHYTHM_SETTINGS.comboPosition,
     comboSize:rhythmFiniteStep(source.comboSize,RHYTHM_COMBO_SIZE_MIN,RHYTHM_COMBO_SIZE_MAX,RHYTHM_COMBO_SIZE_STEP,DEFAULT_RHYTHM_SETTINGS.comboSize),
+    comboOpacity:rhythmFiniteStep(source.comboOpacity,RHYTHM_COMBO_OPACITY_MIN,RHYTHM_COMBO_OPACITY_MAX,RHYTHM_COMBO_OPACITY_STEP,DEFAULT_RHYTHM_SETTINGS.comboOpacity),
     monsterNoteEffect:RHYTHM_MONSTER_EFFECT_LEVELS.includes(source.monsterNoteEffect)?source.monsterNoteEffect:DEFAULT_RHYTHM_SETTINGS.monsterNoteEffect,
     holdSlideOpacity:rhythmFiniteInRange(source.holdSlideOpacity,10,100,DEFAULT_RHYTHM_SETTINGS.holdSlideOpacity),
     laneGlow:RHYTHM_LANE_GLOW_LEVELS.includes(source.laneGlow)?source.laneGlow:DEFAULT_RHYTHM_SETTINGS.laneGlow,
@@ -11689,15 +11695,14 @@ const RhythmOrientationButton=({className=''})=>{
 // 20〜40msほどあり、いちばん良い判定(±55ms)の半分を食う。
 // 目分量で合わせるのは難しいので、実際に叩いた結果から決める。
 //
-// 【測り方】
-//   ・一定の間隔(RHYTHM_CALIBRATION_BEAT_MS)で目印が判定ラインへ来る
-//   ・そのときのタップの時刻とのずれを集める
-//   ・外れ値(いちばん大きいものといちばん小さいもの)を落として平均を取る
-//     …1回の押し間違いで全部が狂わないようにするため
-//   ・平均を5ms刻みへ丸めて、-100〜+100の範囲に収める(設定と同じ刻み・範囲)
+// 【測り方】(2026-09-13に、専用の小さな画面から**演奏画面そのもの**へ変えた)
+//   ・data の RHYTHM_CALIBRATION_SONG(2拍ごとの単押し)を、いつもの演奏画面で流す
+//   ・叩くたびのずれ(deltaMs)を run.deltas へ貯める。判定もFAST/SLOWもいつもどおり出る
+//   ・助走(はじめの数回)を捨て、外れ値を落として平均を取る(下の関数)
+//   ・1ms刻みで -100〜+100 の範囲に収める(設定と同じ刻み・範囲)
 //
-// 時刻は音と同じ AudioContext ではなく performance.now() を使う。
-// ここでは音を鳴らさず、目印の動きだけに合わせてもらうため。
+// ずれは演奏側が判定に使っている値そのもの(judgmentTimingOffsetMs を通したあとの差)なので、
+// 本番とまったく同じ条件で測れる。専用画面だったころは見た目も指の置き方も違っていた。
 // 【2026-09-13・ユーザー指示】「タップ調整ももっと精度良くつくって」。
 // それまでの測り方は、次の5つで粗かった。
 //   ① 8回しか取らない            → **16回**取る。平均のばらつきは回数の平方根で減る
@@ -11709,9 +11714,6 @@ const RhythmOrientationButton=({className=''})=>{
 // あわせて、目印の位置を performance.now() ではなく **requestAnimationFrame の時刻**で決め、
 // 叩いた時刻は **イベントの timeStamp**(ブラウザがその入力を受け取った時刻)を使う。
 // どちらも「JSが動きはじめるまでの待ち」をずれに混ぜないためのもの。
-const RHYTHM_CALIBRATION_BEAT_MS=500;       // 目印が来る間隔。速すぎず、16回でも8秒で終わる
-const RHYTHM_CALIBRATION_TAPS=16;           // 数に入れる回数
-const RHYTHM_CALIBRATION_WARMUP_TAPS=4;     // 数えはじめる前に叩いてもらう回数(助走)
 const RHYTHM_CALIBRATION_MAX_MS=RHYTHM_TIMING_OFFSET_MAX_MS;   // 設定の範囲と同じ
 const RHYTHM_CALIBRATION_STEP_MS=RHYTHM_TIMING_OFFSET_STEP_MS; // 設定の刻みと同じ(1ms)
 const RHYTHM_CALIBRATION_OUTLIER_FLOOR_MS=12; // 外れ値と見なす幅の下限
@@ -11745,136 +11747,11 @@ const rhythmCalibrationOffsetFromTaps=(deltas)=>{
     spreadMs:Math.round(spread),stable:spread<=RHYTHM_CALIBRATION_STABLE_SPREAD_MS};
 };
 
-// 実際に叩いてもらう部品。オプションの中へ置く。
-// レーンを1本だけ出し、ノーツが上から降りてきて判定ラインへ来る。それに合わせて叩く。
-// 判定・スコア・譜面には一切関わらない(ここで測るのは「ずれ」だけ)。
-const RhythmTimingCalibrator=({onApply,onClose,currentOffsetMs=0})=>{
-  const [taps,setTaps]=useState([]);
-  const [running,setRunning]=useState(false);
-  // 助走の回数と、直前の1打のずれ。どちらも測った値そのものではないので保存しない
-  const [warmup,setWarmup]=useState(0);
-  const [lastDelta,setLastDelta]=useState(null);
-  const warmupRef=useRef(0);
-  const startRef=useRef(0);
-  const frameRef=useRef(null);
-  const noteRef=useRef(null);
-  const areaRef=useRef(null);
-  const tapsRef=useRef([]);
-  const result=rhythmCalibrationOffsetFromTaps(taps);
-
-  const stop=useCallback(()=>{
-    if(frameRef.current!==null)cancelAnimationFrame(frameRef.current);
-    frameRef.current=null;setRunning(false);
-  },[]);
-  useEffect(()=>()=>{if(frameRef.current!==null)cancelAnimationFrame(frameRef.current);},[]);
-
-  const start=()=>{
-    setTaps([]);tapsRef.current=[];setWarmup(0);warmupRef.current=0;setLastDelta(null);
-    startRef.current=0;
-    setRunning(true);
-    const tick=now=>{
-      const area=areaRef.current,note=noteRef.current;
-      // ★時刻は requestAnimationFrame が渡してくる「そのコマの時刻」を使う。
-      //   ここで performance.now() を呼ぶと、コマが始まってからJSが動くまでの待ちが
-      //   そのまま目印の位置へ乗り、コマごとに数msぶれる。
-      if(!startRef.current)startRef.current=now;
-      if(!area||!note){frameRef.current=requestAnimationFrame(tick);return;}
-      const elapsed=now-startRef.current;
-      // 1拍ぶんを上から判定ラインまで動かし、着いたら次の拍へ回す
-      const phase=(elapsed%RHYTHM_CALIBRATION_BEAT_MS)/RHYTHM_CALIBRATION_BEAT_MS;
-      const height=area.clientHeight||120;
-      note.style.transform=`translate3d(0,${Math.round(phase*(height-18))}px,0)`;
-      if(tapsRef.current.length>=RHYTHM_CALIBRATION_TAPS){stop();return;}
-      frameRef.current=requestAnimationFrame(tick);
-    };
-    frameRef.current=requestAnimationFrame(tick);
-  };
-
-  const tap=eventTimeMs=>{
-    if(!running||!startRef.current)return;
-    // ★叩いた時刻は、できるだけ**ブラウザがその入力を受け取った時刻**(event.timeStamp)を使う。
-    //   performance.now() だと、指が触れてからこの関数が動きはじめるまでの待ちがずれに混ざる。
-    //   時間軸が違う環境(古いブラウザ)では値が飛ぶので、そのときは performance.now() に戻す。
-    const fallback=performance.now();
-    const stamp=Number(eventTimeMs);
-    const measured=Number.isFinite(stamp)&&Math.abs(stamp-fallback)<2000?stamp:fallback;
-    const elapsed=measured-startRef.current;
-    // いちばん近い拍からのずれ。早ければマイナス、遅ければプラス
-    const nearest=Math.round(elapsed/RHYTHM_CALIBRATION_BEAT_MS)*RHYTHM_CALIBRATION_BEAT_MS;
-    const delta=elapsed-nearest;
-    // 最初の1拍は目印がまだ降りきっていないので数えない
-    if(elapsed<RHYTHM_CALIBRATION_BEAT_MS)return;
-    RHYTHM_NOTE_SE_RUNTIME.playEmpty();
-    setLastDelta(Math.round(delta));
-    // ★叩きはじめの数回は数えない。リズムに乗るまでの回が混ざると、
-    //   そのぶんだけ平均が引っぱられる(助走ぶんは画面でも「かまえて」と出す)。
-    if(warmupRef.current<RHYTHM_CALIBRATION_WARMUP_TAPS){
-      warmupRef.current+=1;setWarmup(warmupRef.current);return;
-    }
-    const next=[...tapsRef.current,delta];
-    tapsRef.current=next;setTaps(next);
-  };
-
-  // 【2026-09-05・ユーザー指示】「タップ調整が窮屈で見にくい／専用画面に飛ばしたほうがいい」
-  // オプションの中の小さな枠(高さ112px)ではなく、画面いっぱいで開く。
-  // 叩く場所が広いほど、実際のプレイに近い姿勢で測れる。
-  return <main data-rhythm-calibrator className="flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white" style={{paddingTop:'env(safe-area-inset-top)'}}>
-    <header className="z-10 flex shrink-0 items-center gap-2 border-b border-cyan-400/15 bg-slate-950/95 px-3 py-2">
-      <button aria-label="オプションへ戻る" data-rhythm-calibrator-close onClick={()=>{stop();onClose();}} className="min-h-[44px] min-w-[44px] text-slate-300"><ArrowLeft size={20}/></button>
-      <div className="min-w-0 flex-1">
-        <small className="block text-[8px] font-black tracking-[0.2em] text-cyan-300">MONBEAT</small>
-        <h2 className="text-base font-black">🎯 タップのタイミングを合わせる</h2>
-      </div>
-    </header>
-    <div className="flex min-h-0 flex-1 flex-col px-4 pb-4 pt-3">
-      <p className="text-[12px] leading-relaxed text-slate-300">
-        下の線へノーツが重なった瞬間に、リズムよく叩いてください。はじめの{RHYTHM_CALIBRATION_WARMUP_TAPS}回は
-        リズムに乗るための助走で、そのあとの{RHYTHM_CALIBRATION_TAPS}回を測ります。
-        画面に見えてから指が触れるまでの遅れは端末ごとに違うので、実際に叩いて測ります。
-      </p>
-      {/* 叩く場所は画面の残りいっぱい。実際のプレイと同じように、指を置く姿勢で測れるようにする */}
-      <div ref={areaRef} data-rhythm-calibrator-area onPointerDown={e=>{e.preventDefault();tap(e.timeStamp);}}
-        className="relative mt-3 min-h-0 flex-1 w-full overflow-hidden rounded-2xl border border-cyan-400/30 bg-slate-900"
-        style={{touchAction:'none',WebkitUserSelect:'none',userSelect:'none'}}>
-        <i ref={noteRef} data-rhythm-calibrator-note aria-hidden="true"
-          className="absolute left-1/2 top-0 h-6 w-40 -translate-x-1/2 rounded-full bg-gradient-to-b from-amber-200 to-fuchsia-500"/>
-        <i aria-hidden="true" className="absolute inset-x-0 bottom-8 h-[4px] bg-gradient-to-r from-fuchsia-300 via-cyan-100 to-fuchsia-300"/>
-        {!running&&<span className="absolute inset-0 flex items-center justify-center px-6 text-center text-[13px] font-black leading-relaxed text-slate-300">
-          {taps.length?'もう一度やるなら「はじめる」':'「はじめる」を押して、線に重なったら叩いてね'}</span>}
-        {running&&warmup<RHYTHM_CALIBRATION_WARMUP_TAPS&&<span data-rhythm-calibrator-warmup className="absolute inset-x-0 top-2 text-center text-[12px] font-black text-amber-200">かまえて（あと{RHYTHM_CALIBRATION_WARMUP_TAPS-warmup}回は数えません）</span>}
-        {/* 1打ごとに、早いか遅いかをその場で返す。合わせられているかが叩きながら分かる */}
-        {running&&lastDelta!==null&&<span data-rhythm-calibrator-last className={`absolute inset-x-0 top-8 text-center text-[13px] font-black tabular-nums ${Math.abs(lastDelta)<=25?'text-lime-300':lastDelta<0?'text-cyan-300':'text-fuchsia-300'}`}>
-          {lastDelta>0?`+${lastDelta}ms 遅い`:lastDelta<0?`${lastDelta}ms 早い`:'ぴったり'}</span>}
-        {running&&<span className="absolute inset-x-0 bottom-2 text-center text-[11px] font-black text-cyan-200">ここを叩く</span>}
-      </div>
-      <p data-rhythm-calibrator-count className="mt-3 text-center text-[14px] font-black tabular-nums text-cyan-200">
-        {taps.length} / {RHYTHM_CALIBRATION_TAPS} 回
-      </p>
-      {result&&taps.length>=RHYTHM_CALIBRATION_TAPS&&(
-        <p data-rhythm-calibrator-result className="mt-2 text-center text-[12px] font-bold leading-relaxed text-amber-200">
-          平均{result.rawMeanMs>0?'+':''}{result.rawMeanMs}ms／ばらつき±{result.spreadMs}ms
-          {result.droppedCount>0&&`（${result.droppedCount}回は外れ値として除外）`}
-          <br/>→ 判定タイミング調整 {result.offsetMs>0?'+':''}{result.offsetMs}ms
-          {/* ばらつきが大きいまま決めると、次に叩いたときには合わない。
-              止めはしないが、もう一度やったほうがいいことはその場で言う */}
-          {!result.stable&&<><br/><b data-rhythm-calibrator-unstable className="text-rose-300">叩くたびのばらつきが大きめです。もう一度測ると、より合った値になります。</b></>}
-        </p>
-      )}
-      <p className="mt-2 text-center text-[11px] text-slate-500">いまの値: {currentOffsetMs>0?'+':''}{currentOffsetMs}ms（「この値にする」を押しても、保存するまでは変わりません）</p>
-    </div>
-    <footer className="z-20 shrink-0 border-t border-cyan-400/25 bg-slate-950/98 px-4 pt-2" style={{paddingBottom:'calc(.5rem + env(safe-area-inset-bottom))'}}>
-      <div className="grid grid-cols-2 gap-3">
-        <button type="button" data-rhythm-calibrator-start onClick={start} disabled={running}
-          className="min-h-[54px] rounded-xl bg-cyan-700 text-[13px] font-black text-white disabled:opacity-40">はじめる</button>
-        <button type="button" data-rhythm-calibrator-apply
-          disabled={!result||taps.length<RHYTHM_CALIBRATION_TAPS}
-          onClick={()=>{if(result){onApply(result.offsetMs);stop();onClose();}}}
-          className="min-h-[54px] rounded-xl bg-amber-400 text-[13px] font-black text-slate-950 disabled:opacity-40">この値にする</button>
-      </div>
-    </footer>
-  </main>;
-};
-
+// ★2026-09-13に、専用の小さな画面(1本のレーンに目印が降りるだけ)はやめた。
+//   ユーザー指示「今の仕様はみにくすぎるし実用性がない / 特に横画面は終わってる /
+//   普通に実際の画面を使ってやればいい / そこで判定も合わせて出して調整するのが1番合うとおもう」。
+//   いまは演奏画面をそのまま使い(data の RHYTHM_CALIBRATION_SONG を流す)、
+//   叩いたずれを run.deltas へ貯めて、上の rhythmCalibrationOffsetFromTaps で値を出す。
 // ===== モンヒロビートのイベント報酬(2026-09-11) =====
 // data/rhythm-event.js は「何位に何個」だけを持ち、アイテムの実体(id・名前・絵文字)は
 // ゲーム本体側にある(アイテムの定義は 11-masu-progression.jsx で、data より後に読み込まれるため)。
@@ -11937,11 +11814,9 @@ const rhythmEventRewardText=(reward)=>{
 //      ±1つずつしか無いと、音量(0〜200)のような広い項目で何十回も押すことになる
 // つまむスライダーも残す。指で大きく動かすときはこちらのほうが速い。
 const RHYTHM_OPTION_TABS=Object.freeze([['live','ライブ'],['volume','音量'],['system','システム']]);
-const RhythmOptions=({value,onSave,onBack})=>{
+const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=null,onClearCalibration=null})=>{
   const [draft,setDraft]=useState(()=>normalizeRhythmSettings(value));
   const [message,setMessage]=useState('');
-  // 「叩いて合わせる」を開いているか。設定そのものではないので保存には入れない
-  const [calibrating,setCalibrating]=useState(false);
   // どのタブを見ているか。これも設定ではないので保存しない
   const [tab,setTab]=useState('live');
   const previewRef=useRef(null);
@@ -12037,14 +11912,17 @@ const RhythmOptions=({value,onSave,onBack})=>{
   const previewBgm=async()=>{previewRef.current?.stop();previewRef.current=null;const audio=await Audio_.startRhythmTrack('atsu_cup_theme',draft.bgmVolume);previewRef.current=audio;if(!audio)setMessage('BGMを再生できませんでした');};
   const resetDraft=()=>{setDraft(normalizeRhythmSettings(DEFAULT_RHYTHM_SETTINGS));setMessage('画面上の値を戻しました（未保存）');};
   const saveDraft=async()=>{const saved=await onSave(draft);setDraft(saved);setMessage('保存しました');};
-  // 「叩いて合わせる」は画面いっぱいで開く(2026-09-05・ユーザー指示
-  // 「タップ調整が窮屈で見にくい／専用画面に飛ばしたほうがいい」)。
-  // gameStateを増やさずここへ重ねるのは、編集中の値(draft)を持ったままにするため。
-  // 別の画面へ飛ばすと、この画面がいったん消えて未保存の変更が全部消える。
-  if(calibrating)return <RhythmTimingCalibrator
-    currentOffsetMs={draft.judgmentTimingOffsetMs}
-    onApply={ms=>{set('judgmentTimingOffsetMs',ms);setMessage(`判定タイミング調整を ${ms>0?'+':''}${ms}ms にしました（未保存）`);}}
-    onClose={()=>setCalibrating(false)}/>;
+  // 【2026-09-13・ユーザー指示】「今の仕様はみにくすぎるし実用性がない / 特に横画面は終わってる /
+  //   普通に実際の画面を使ってやればいい / そこで判定も合わせて出して調整するのが1番合うとおもう」。
+  // ★それまでは専用の小さな画面(1本のレーンに目印が降りるだけ)だった。本番と見た目も
+  //   指の置き方も違ううえ、横持ちでは器の回転を考えていなかった。
+  // ★いまは**演奏画面をそのまま使う**(れんしゅうと同じ作り)。判定もFAST/SLOWもいつもどおり出る。
+  // ★画面を移るので、未保存の変更は先に保存してから送る(戻ってきたときに消えていないように)。
+  const goCalibrate=async()=>{
+    if(!onCalibrate)return;
+    if(dirty){const saved=await onSave(draft);setDraft(saved);}
+    onCalibrate();
+  };
   return <main data-rhythm-options className="flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white" style={{paddingTop:'env(safe-area-inset-top)'}}>
     {/* ★横持ちは**高さ**が足りない(390pxしかない)。縦持ちで2段だった「見出し」と「タブ」を、
         横持ちでは**1行へ並べる**。これだけで中身へ回せる高さが50pxほど増える。
@@ -12068,8 +11946,18 @@ const RhythmOptions=({value,onSave,onBack})=>{
               `1.0〜12.0を0.1刻みで調整できます。変わるのはノーツが流れてくる見た目の速さだけで、譜面のタイミング・判定窓・スコアは変わりません（現在 約${rhythmTravelMsForSpeed(draft.noteSpeed).toLocaleString()}ms）。`,{full:true})}
             {field('タイミング調整',<>
               {stepper('judgmentTimingOffsetMs',-RHYTHM_TIMING_OFFSET_MAX_MS,RHYTHM_TIMING_OFFSET_MAX_MS,RHYTHM_TIMING_OFFSET_STEP_MS,{fine:1,coarse:10,suffix:'ms'})}
-              <button type="button" data-rhythm-calibrator-open onClick={()=>setCalibrating(true)} className="mt-2 min-h-[46px] w-full rounded-xl border border-cyan-300/60 bg-cyan-950/50 text-[12px] font-black text-cyan-100">🎯 タップで調整</button>
-            </>,'判定窓の幅は変えず、表示と入力の基準を同じ量だけ補正します。1ms刻みで動かせます。数字で決めにくいときは「タップで調整」で実際に叩いて測れます。',{full:true})}
+              <button type="button" data-rhythm-calibrator-open onClick={goCalibrate} className="mt-2 min-h-[46px] w-full rounded-xl border border-cyan-300/60 bg-cyan-950/50 text-[12px] font-black text-cyan-100">🎯 実際の画面で合わせる</button>
+              {/* 合わせ終わって戻ってきたら、測った値をここへ出す。入れるかどうかは本人が選ぶ */}
+              {calibrationResult&&<div data-rhythm-calibrator-result className="mt-2 rounded-xl border border-amber-300/50 bg-amber-950/30 p-2 text-[11px] leading-relaxed text-amber-100">
+                <p>叩いた{calibrationResult.usedCount}回の平均は <b className="tabular-nums">{calibrationResult.rawMeanMs>0?'+':''}{calibrationResult.rawMeanMs}ms</b>（ばらつき±{calibrationResult.spreadMs}ms{calibrationResult.droppedCount>0?`／${calibrationResult.droppedCount}回は外れ値として除外`:''}）でした。</p>
+                {!calibrationResult.stable&&<p className="mt-1 font-black text-rose-300">ばらつきが大きめです。もう一度合わせると、より合った値になります。</p>}
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  <button type="button" data-rhythm-calibrator-apply onClick={()=>{set('judgmentTimingOffsetMs',calibrationResult.offsetMs);onClearCalibration&&onClearCalibration();setMessage(`判定タイミング調整を ${calibrationResult.offsetMs>0?'+':''}${calibrationResult.offsetMs}ms にしました（未保存）`);}}
+                    className="min-h-[44px] rounded-xl bg-amber-400 text-[12px] font-black text-slate-950">{calibrationResult.offsetMs>0?'+':''}{calibrationResult.offsetMs}ms にする</button>
+                  <button type="button" onClick={()=>onClearCalibration&&onClearCalibration()} className="min-h-[44px] rounded-xl border border-white/20 bg-slate-800 text-[12px] font-black">今回は使わない</button>
+                </div>
+              </div>}
+            </>,'判定窓の幅は変えず、表示と入力の基準を同じ量だけ補正します。1ms刻みで動かせます。数字で決めにくいときは「実際の画面で合わせる」を押してください。いつもの演奏画面が開き、判定とFAST/SLOWを見ながら20回叩くと、そのずれから合う値が出ます。',{full:true})}
             {field('ノーツサイズ',stepper('noteSize',80,120,5,{fine:5,coarse:10,suffix:'%'}),
               'ノーツの見た目の大きさだけを変えます。入力判定の範囲・HOLD/SLIDE帯・ENDバーの位置は変わりません。',{full:true})}
             {/* 【2026-09-05・ユーザー指示】「ノーツの開始位置（奥行き）もオプションで調整できるようにしたい」 */}
@@ -12087,8 +11975,10 @@ const RhythmOptions=({value,onSave,onBack})=>{
                 <div className={wide?'mt-1.5':'mt-2'}>{segments('comboPosition',RHYTHM_COMBO_POSITION_LABELS)}</div>
                 {/* 大きさも選べる(2026-09-13・ユーザー依頼「コンボ数のサイズ設定もほしい」) */}
                 <div className={wide?'mt-1.5':'mt-2'}>{stepper('comboSize',RHYTHM_COMBO_SIZE_MIN,RHYTHM_COMBO_SIZE_MAX,RHYTHM_COMBO_SIZE_STEP,{fine:RHYTHM_COMBO_SIZE_STEP,coarse:RHYTHM_COMBO_SIZE_STEP*2,suffix:'%'})}</div>
+                {/* 濃さ(2026-09-13・ユーザー依頼「コンボ数表記の透過度の設定」) */}
+                <div className={wide?'mt-1.5':'mt-2'}>{stepper('comboOpacity',RHYTHM_COMBO_OPACITY_MIN,RHYTHM_COMBO_OPACITY_MAX,RHYTHM_COMBO_OPACITY_STEP,{fine:RHYTHM_COMBO_OPACITY_STEP,coarse:RHYTHM_COMBO_OPACITY_STEP*3,suffix:'%'})}</div>
               </>}
-            </>,'出す/出さないと、出す場所（左・中央・右・右上）、大きさ（70〜150%）を選べます。端へ寄せる3つは、両サイドのマスモンに重ならないところへ出ます。大きさを上げると、端に寄せたときはレーンにかかることがあります。どこに置いても判定・スコア・コンボの数え方は変わりません。',{full:true})}
+            </>,'出す/出さないと、出す場所（おすすめ・左・中央・右・右上）、大きさ（70〜150%）、濃さ（30〜100%）を選べます。上から順に「出す/出さない」「場所」「大きさ」「濃さ」です。端へ寄せる3つは、両サイドのマスモンに重ならないところへ出ます。大きさを上げると、端に寄せたときはレーンにかかることがあります。どこに置いても判定・スコア・コンボの数え方は変わりません。',{full:true})}
             {field('両サイドのマスモン｜濃さ',segments('sideMonsterOpacity',RHYTHM_SIDE_MONSTER_OPACITY_LABELS),
               'レーンの外側の空いたところへ、設定したマスモンが出て拍に合わせて跳ねます。ノーツが見づらいときや、端末が熱くなりやすいときは薄くするか止めてください。',{full:true})}
             {field('両サイドのマスモン｜動き',segments('sideMonsterMotion',RHYTHM_SIDE_MONSTER_MOTION_LABELS),null,{full:true})}
@@ -12920,7 +12810,7 @@ const RhythmMonsterSlotsPanel=({rhythmMonsterSlots,rhythmMonsterSlotIdsInUse,rhy
 //   そこへ知らせを重ねると肝心の進捗が読めなくなっていた
 //   (2026-09-07・ユーザー提案「曲リザルトの画面で出すほうがいい。
 //    そうしたら帯にわざわざ何周分追加とか表示する必要もない」)。
-const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onComplete,onExit,quickRunAward=null,debugPlay=false,tutorial=false})=>{
+const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onComplete,onExit,quickRunAward=null,debugPlay=false,tutorial=false,calibrating=false})=>{
   const chart=song.difficulties[difficulty.id],laneRefs=useRef([]),runRef=useRef(null),frameRef=useRef(null),playAreaRef=useRef(null),judgmentLineRef=useRef(null),judgmentBandRef=useRef(null),judgmentTimerRef=useRef(null),judgmentRevisionRef=useRef(0),startLockRef=useRef(false),generationRef=useRef(0),mountedRef=useRef(false),glowNodesRef=useRef(null);
   const tutorialBannerRef=useRef(null),tutorialStepRef=useRef(null);
   const hasHold=chart.notes.some(note=>note.type==='HOLD');
@@ -13006,7 +12896,7 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
   // 譜面データそのものは触らず、演奏を始めるときにノーツ1つ1つへ焼き込む
   // (追従の許容・猶予と同じやり方。保存データにもランキングにも影響しない)。
   const makeRuntimeNotes=()=>{const tracking=rhythmSlideTrackingFor(difficulty.id);const checkpointIntervalMs=rhythmSlideCheckpointIntervalMs(difficulty.id,chart?.level);return chart.notes.map((note,index)=>({...note,index,done:false,activePointerId:null,holdJudgment:null,holdDeltaMs:0,_rhythmSlideToleranceBonusLanes:tracking.toleranceBonusLanes,_rhythmTrackingGraceMs:tracking.graceMs,...(note.type==='SLIDE'?{_rhythmSlideRenderPoints:rhythmSlidePoints(note),_rhythmSlideCheckpoints:rhythmSlideCheckpointTimes(note,checkpointIntervalMs)}:{})}));};
-  const initialView=()=>({status:'loading',score:0,combo:0,maxCombo:0,last:'',lastPrecise:false,fastSlow:'',counts:emptyCounts(),fast:0,slow:0,life:RHYTHM_LIFE_MAX,ability:null,result:null});
+  const initialView=()=>({status:'loading',score:0,combo:0,maxCombo:0,last:'',lastPrecise:false,fastSlow:'',counts:emptyCounts(),fast:0,slow:0,deltas:[],life:RHYTHM_LIFE_MAX,ability:null,result:null});
   const [view,setView]=useState(initialView);
   /* 演奏を始める前のカウントダウン(READY→3→2→1)。
      null のあいだは出さない。曲と毎フレームの処理はこれが終わってから動かす */
@@ -13209,6 +13099,11 @@ useEffect(()=>{
 // 判定の名前・スコア・コンボ・ライフ・判定数・FAST/SLOWの数え方には一切入れないので、
 // run にも result にも残さない。judgmentTimingOffsetMs を通したあとのズレを見ている
 const preciseHit=rhythmJudgmentIsPrecise(judgment,deltaMs);
+// タイミング合わせのときだけ、叩いたずれをそのまま貯める(2026-09-13・ユーザー指示
+// 「普通に実際の画面を使ってやればいい / そこで判定も合わせて出して調整するのが1番合う」)。
+// ★判定・スコア・コンボ・ライフ・判定数・FAST/SLOWの数え方には一切入れない。貯めるだけ。
+// ★MISSは入れない(叩けていないので、そのずれは意味を持たない)。
+if(calibrating&&judgment!=='MISS'&&typeof deltaMs==='number'&&Number.isFinite(deltaMs))run.deltas.push(deltaMs);
 // HOLD / SLIDE を最後まで取れた・FLICKが成立したときは、そこで音と光を返す。
 // TAPは指を置いた時点で音が鳴っているので対象にしない。
 // (実機で「フリックが成功したのか分かりづらい」「取れた手ごたえがほしい」という報告があった)
@@ -13320,14 +13215,19 @@ if(lifeDelta<0){
 }
 // 0になった瞬間だけ、大きく1度だけ知らせる(蘇生して戻った場合はここを通らない)
 if(run.life===0&&lifeBefore>0)setLifeDownCount(count=>count+1);
-const score=run.lifeDepleted?run.lockedScore:run.score;setView(v=>({...v,score,combo:run.combo,maxCombo:run.maxCombo,last:judgment,lastPrecise:preciseHit,fastSlow:side||'',counts:{...run.counts},fast:run.fast,slow:run.slow,life:run.life,...(abilityFlash?{ability:abilityFlash}:{})}));scheduleJudgmentClear();if(abilityFlash)scheduleAbilityClear();if(_judgeT0)RHYTHM_PERF.judge(performance.now()-_judgeT0,!!monster);},[chart.totalNotes,difficulty.maxScore,scheduleAbilityClear,scheduleJudgmentClear,settings.vibrationEnabled,settings.monsterNoteEffect,tutorial]);
+const score=run.lifeDepleted?run.lockedScore:run.score;setView(v=>({...v,score,combo:run.combo,maxCombo:run.maxCombo,last:judgment,lastPrecise:preciseHit,fastSlow:side||'',counts:{...run.counts},fast:run.fast,slow:run.slow,life:run.life,...(abilityFlash?{ability:abilityFlash}:{})}));scheduleJudgmentClear();if(abilityFlash)scheduleAbilityClear();if(_judgeT0)RHYTHM_PERF.judge(performance.now()-_judgeT0,!!monster);},[chart.totalNotes,difficulty.maxScore,scheduleAbilityClear,scheduleJudgmentClear,settings.vibrationEnabled,settings.monsterNoteEffect,tutorial,calibrating]);
   const finish=useCallback(()=>{const run=runRef.current;if(!run||run.finished||run.paused)return;run.finished=true;stopFrame();RHYTHM_GESTURE_RUNTIME.clear();run.activePointers.clear();run.activeTouchInputs?.clear();run.audio?.stop();const score=run.lifeDepleted?run.lockedScore:run.score;const achievements=rhythmResultAchievements(run.counts,chart.totalNotes);
     // ===== クリアか失敗か(2026-09-12・ユーザー指示「終了後にクリアか失敗かもわかるようにして」) =====
     // 失敗＝ライフが0になったまま曲を終えた(不可逆のDOWN)こと。根性で蘇生して0を脱していれば
     // run.lifeDepleted は false に戻っているので、そのときはクリア扱いになる。
     // 練習(tutorial)はライフを減らさないので必ずクリア。
     const failed=!tutorial&&run.lifeDepleted===true;
-    const result={score,judgments:{...run.counts},maxCombo:run.maxCombo,fast:run.fast,slow:run.slow,cleared:!failed,...achievements};const isNewRecord=score>run.startBestScore;const merged=mergeRhythmBestRecord(run.startBest,result);
+    // タイミング合わせのときは、貯めたずれから「判定タイミング調整」に入れる値を出す。
+    // 助走(はじめの数回)は数に入れない。外れ値の落とし方・刻みは rhythmCalibrationOffsetFromTaps が持つ
+    const calibration=calibrating
+      ? rhythmCalibrationOffsetFromTaps(run.deltas.slice(RHYTHM_CALIBRATION_WARMUP_COUNT))
+      : null;
+    const result={score,judgments:{...run.counts},maxCombo:run.maxCombo,fast:run.fast,slow:run.slow,cleared:!failed,...(calibration?{calibration}:{}),...achievements};const isNewRecord=score>run.startBestScore;const merged=mergeRhythmBestRecord(run.startBest,result);
     // フルコンボ等を達成していれば、リザルトの数字を出す前に一度「FULL COMBO!」等を
     // 大きく見せる(2026-09-04、ユーザーからの要望)。演出量MINIMAL・軽量モードでは
     // 従来どおりそのままリザルトへ進む(演出だけの分岐で、判定・保存には関わらない)。
@@ -13335,7 +13235,7 @@ const score=run.lifeDepleted?run.lockedScore:run.score;setView(v=>({...v,score,c
     const showCelebrate=!!celebrateTitle&&!failed&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL';
     setView(v=>({...v,status:showCelebrate?'celebrate':'result',score,combo:run.combo,maxCombo:run.maxCombo,counts:{...run.counts},fast:run.fast,slow:run.slow,result:{...result,isNewRecord,bestScore:merged.bestScore}}));
     onComplete(result,merged);
-  },[chart.totalNotes,difficulty.maxScore,onComplete,settings.effectAmount,settings.lightweightMode,stopFrame,tutorial]);
+  },[chart.totalNotes,difficulty.maxScore,onComplete,settings.effectAmount,settings.lightweightMode,stopFrame,tutorial,calibrating]);
   // celebrate画面: 出た瞬間に合成SEを1回鳴らし、既定の時間で自動的にresultへ進む。
   // 依存はview.statusだけにしてある。もしview.comboなど毎ノーツ変わる値を依存に入れると、
   // (かつてコンボ演出で実際に踏んだ通り)途中でeffectが再実行されるたびcleanupが走り、
@@ -13708,7 +13608,7 @@ scheduleTick();};
       少し透かす。コンボが0のあいだは出さない。
     ★大きさの上限が無くなったので、段(comboTier)でしっかり大きくできる
       (HUDに居たころは台形にかかるので1.13倍までしか上げられなかった)。 */}
-{settings.comboDisplay!==false&&view.combo>0&&<div data-rhythm-combo-box data-combo-tier={String(comboTier)} data-combo-pos={comboPosition} data-combo-wide={isLandscape?'1':''} aria-hidden="true" className="pointer-events-none absolute z-[2] text-center"><b ref={comboRef} data-rhythm-combo data-combo-tier={String(comboTier)} className="block font-black leading-none tabular-nums text-white" style={{'--mh-combo-scale':rhythmComboTierScale(comboTier),'--mh-combo-size':rhythmFiniteInRange(settings.comboSize,RHYTHM_COMBO_SIZE_MIN,RHYTHM_COMBO_SIZE_MAX,100)/100}}>{view.combo}</b><span data-rhythm-combo-label className="mt-1 block font-black leading-none tracking-[0.36em]">COMBO</span></div>}{/* 判定ラインはTailwindのクラスを使わず、位置・高さ・色をすべてここへ直接書く。
+{settings.comboDisplay!==false&&view.combo>0&&<div data-rhythm-combo-box data-combo-tier={String(comboTier)} data-combo-pos={comboPosition} data-combo-wide={isLandscape?'1':''} aria-hidden="true" style={{'--mh-combo-opacity':rhythmFiniteInRange(settings.comboOpacity,RHYTHM_COMBO_OPACITY_MIN,RHYTHM_COMBO_OPACITY_MAX,100)/100}} className="pointer-events-none absolute z-[2] text-center"><b ref={comboRef} data-rhythm-combo data-combo-tier={String(comboTier)} className="block font-black leading-none tabular-nums text-white" style={{'--mh-combo-scale':rhythmComboTierScale(comboTier),'--mh-combo-size':rhythmFiniteInRange(settings.comboSize,RHYTHM_COMBO_SIZE_MIN,RHYTHM_COMBO_SIZE_MAX,100)/100}}>{view.combo}</b><span data-rhythm-combo-label className="mt-1 block font-black leading-none tracking-[0.36em]">COMBO</span></div>}{/* 判定ラインはTailwindのクラスを使わず、位置・高さ・色をすべてここへ直接書く。
     Tailwindは外部CDNのJITが後からCSSを作るため、間に合わないあいだ
     bottom-[12%] も h-[3px] も bg-gradient-to-r も効かず、
     「高さ0・背景なし＝見えない線」になる。実機で「演奏を始めたときに
@@ -25990,6 +25890,17 @@ function MonsterHeroGame() {
   // 【2026-09-05・ユーザー指示】「実際の音ゲー画面でやり方や各ノーツの操作方法などまで作って」
   // 説明を読むだけでなく、演奏画面をそのまま使って1種類ずつ叩いて覚える。
   // 記録は残さない(from:'tutorial' を見て onComplete が保存を飛ばす)。
+  // タイミング合わせ(2026-09-13・ユーザー指示「普通に実際の画面を使ってやればいい /
+  //   そこで判定も合わせて出して調整するのが1番合うとおもう」)。
+  // 演奏画面をそのまま使い、測り終わったらオプションへ戻して結果を出す。
+  // ★設定はここでは変えない。オプションの画面で「この値にする」を押してもらう。
+  const [rhythmCalibrationResult, setRhythmCalibrationResult] = useState(null);
+  const startRhythmCalibration = () => {
+    if (rhythmSettings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();
+    setRhythmCalibrationResult(null);
+    setRhythmPlay({ song:RHYTHM_CALIBRATION_SONG, difficulty:RHYTHM_CALIBRATION_DIFFICULTY, from:'calibration' });
+    setGameState('RHYTHM_PLAY');
+  };
   const startRhythmPractice = () => {
     if (rhythmSettings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();
     setRhythmPlay({ song:RHYTHM_TUTORIAL_SONG, difficulty:RHYTHM_TUTORIAL_DIFFICULTY, from:'tutorial' });
@@ -30926,10 +30837,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           }
           // あそびかた練習は記録を残さない。自己ベストにも全国ランキングにも触れない
           // (CLAUDE.md ⑦「消さない・上書きしない」。練習で自己ベストが上書きされてはいけない)
+          // タイミング合わせも同じ(記録に残さない)。測った値は下の onExit で設定へ入れる
+          // 測った値はここで覚えるだけ。設定へ入れるかどうかはオプションの画面で選ぶ
+          if(rhythmPlay.from==='calibration'){setRhythmCalibrationResult(result?.calibration||null);return;}
           if(rhythmPlay.from==='tutorial')return;
-          const records=await saveRhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id,merged);setRhythmBestRecords(records);if(rhythmPlay.from==='demo')submitRhythmRankingScore(rhythmPlay.song,rhythmPlay.difficulty,result);}} onExit={()=>{const back=rhythmPlay.from==='debug'?'RHYTHM_DEBUG':'RHYTHM_DEMO_HOME';setRhythmPlay(null);setGameState(back);}} debugPlay={rhythmPlay.from==='debug'} tutorial={rhythmPlay.from==='tutorial'}/>}
+          const records=await saveRhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id,merged);setRhythmBestRecords(records);if(rhythmPlay.from==='demo')submitRhythmRankingScore(rhythmPlay.song,rhythmPlay.difficulty,result);}} onExit={()=>{const back=rhythmPlay.from==='calibration'?'RHYTHM_OPTIONS':rhythmPlay.from==='debug'?'RHYTHM_DEBUG':'RHYTHM_DEMO_HOME';setRhythmPlay(null);setGameState(back);}} debugPlay={rhythmPlay.from==='debug'} tutorial={rhythmPlay.from==='tutorial'||rhythmPlay.from==='calibration'} calibrating={rhythmPlay.from==='calibration'}/>}
 
-        {gameState==='RHYTHM_OPTIONS'&&<RhythmOptions value={rhythmSettings} onBack={()=>setGameState(rhythmOptionsBack)} onSave={async draft=>{const saved=await saveRhythmSettings(draft);setRhythmSettings(saved);return saved;}}/>}
+        {gameState==='RHYTHM_OPTIONS'&&<RhythmOptions value={rhythmSettings} onBack={()=>setGameState(rhythmOptionsBack)} onCalibrate={startRhythmCalibration} calibrationResult={rhythmCalibrationResult} onClearCalibration={()=>setRhythmCalibrationResult(null)} onSave={async draft=>{const saved=await saveRhythmSettings(draft);setRhythmSettings(saved);return saved;}}/>}
 
         {/* 音ゲー体験版のホーム。デバッグ画面をそのまま公開しないために作った、正式導線の最小構成。
             出すのは Monster Hero 1曲 と EASY/NORMAL/HARD だけで、デバッグ用の曲・譜面制作UIは出さない。

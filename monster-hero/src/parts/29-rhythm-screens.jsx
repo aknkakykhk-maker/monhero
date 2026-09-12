@@ -12,11 +12,9 @@
 //      ±1つずつしか無いと、音量(0〜200)のような広い項目で何十回も押すことになる
 // つまむスライダーも残す。指で大きく動かすときはこちらのほうが速い。
 const RHYTHM_OPTION_TABS=Object.freeze([['live','ライブ'],['volume','音量'],['system','システム']]);
-const RhythmOptions=({value,onSave,onBack})=>{
+const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=null,onClearCalibration=null})=>{
   const [draft,setDraft]=useState(()=>normalizeRhythmSettings(value));
   const [message,setMessage]=useState('');
-  // 「叩いて合わせる」を開いているか。設定そのものではないので保存には入れない
-  const [calibrating,setCalibrating]=useState(false);
   // どのタブを見ているか。これも設定ではないので保存しない
   const [tab,setTab]=useState('live');
   const previewRef=useRef(null);
@@ -112,14 +110,17 @@ const RhythmOptions=({value,onSave,onBack})=>{
   const previewBgm=async()=>{previewRef.current?.stop();previewRef.current=null;const audio=await Audio_.startRhythmTrack('atsu_cup_theme',draft.bgmVolume);previewRef.current=audio;if(!audio)setMessage('BGMを再生できませんでした');};
   const resetDraft=()=>{setDraft(normalizeRhythmSettings(DEFAULT_RHYTHM_SETTINGS));setMessage('画面上の値を戻しました（未保存）');};
   const saveDraft=async()=>{const saved=await onSave(draft);setDraft(saved);setMessage('保存しました');};
-  // 「叩いて合わせる」は画面いっぱいで開く(2026-09-05・ユーザー指示
-  // 「タップ調整が窮屈で見にくい／専用画面に飛ばしたほうがいい」)。
-  // gameStateを増やさずここへ重ねるのは、編集中の値(draft)を持ったままにするため。
-  // 別の画面へ飛ばすと、この画面がいったん消えて未保存の変更が全部消える。
-  if(calibrating)return <RhythmTimingCalibrator
-    currentOffsetMs={draft.judgmentTimingOffsetMs}
-    onApply={ms=>{set('judgmentTimingOffsetMs',ms);setMessage(`判定タイミング調整を ${ms>0?'+':''}${ms}ms にしました（未保存）`);}}
-    onClose={()=>setCalibrating(false)}/>;
+  // 【2026-09-13・ユーザー指示】「今の仕様はみにくすぎるし実用性がない / 特に横画面は終わってる /
+  //   普通に実際の画面を使ってやればいい / そこで判定も合わせて出して調整するのが1番合うとおもう」。
+  // ★それまでは専用の小さな画面(1本のレーンに目印が降りるだけ)だった。本番と見た目も
+  //   指の置き方も違ううえ、横持ちでは器の回転を考えていなかった。
+  // ★いまは**演奏画面をそのまま使う**(れんしゅうと同じ作り)。判定もFAST/SLOWもいつもどおり出る。
+  // ★画面を移るので、未保存の変更は先に保存してから送る(戻ってきたときに消えていないように)。
+  const goCalibrate=async()=>{
+    if(!onCalibrate)return;
+    if(dirty){const saved=await onSave(draft);setDraft(saved);}
+    onCalibrate();
+  };
   return <main data-rhythm-options className="flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white" style={{paddingTop:'env(safe-area-inset-top)'}}>
     {/* ★横持ちは**高さ**が足りない(390pxしかない)。縦持ちで2段だった「見出し」と「タブ」を、
         横持ちでは**1行へ並べる**。これだけで中身へ回せる高さが50pxほど増える。
@@ -143,8 +144,18 @@ const RhythmOptions=({value,onSave,onBack})=>{
               `1.0〜12.0を0.1刻みで調整できます。変わるのはノーツが流れてくる見た目の速さだけで、譜面のタイミング・判定窓・スコアは変わりません（現在 約${rhythmTravelMsForSpeed(draft.noteSpeed).toLocaleString()}ms）。`,{full:true})}
             {field('タイミング調整',<>
               {stepper('judgmentTimingOffsetMs',-RHYTHM_TIMING_OFFSET_MAX_MS,RHYTHM_TIMING_OFFSET_MAX_MS,RHYTHM_TIMING_OFFSET_STEP_MS,{fine:1,coarse:10,suffix:'ms'})}
-              <button type="button" data-rhythm-calibrator-open onClick={()=>setCalibrating(true)} className="mt-2 min-h-[46px] w-full rounded-xl border border-cyan-300/60 bg-cyan-950/50 text-[12px] font-black text-cyan-100">🎯 タップで調整</button>
-            </>,'判定窓の幅は変えず、表示と入力の基準を同じ量だけ補正します。1ms刻みで動かせます。数字で決めにくいときは「タップで調整」で実際に叩いて測れます。',{full:true})}
+              <button type="button" data-rhythm-calibrator-open onClick={goCalibrate} className="mt-2 min-h-[46px] w-full rounded-xl border border-cyan-300/60 bg-cyan-950/50 text-[12px] font-black text-cyan-100">🎯 実際の画面で合わせる</button>
+              {/* 合わせ終わって戻ってきたら、測った値をここへ出す。入れるかどうかは本人が選ぶ */}
+              {calibrationResult&&<div data-rhythm-calibrator-result className="mt-2 rounded-xl border border-amber-300/50 bg-amber-950/30 p-2 text-[11px] leading-relaxed text-amber-100">
+                <p>叩いた{calibrationResult.usedCount}回の平均は <b className="tabular-nums">{calibrationResult.rawMeanMs>0?'+':''}{calibrationResult.rawMeanMs}ms</b>（ばらつき±{calibrationResult.spreadMs}ms{calibrationResult.droppedCount>0?`／${calibrationResult.droppedCount}回は外れ値として除外`:''}）でした。</p>
+                {!calibrationResult.stable&&<p className="mt-1 font-black text-rose-300">ばらつきが大きめです。もう一度合わせると、より合った値になります。</p>}
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  <button type="button" data-rhythm-calibrator-apply onClick={()=>{set('judgmentTimingOffsetMs',calibrationResult.offsetMs);onClearCalibration&&onClearCalibration();setMessage(`判定タイミング調整を ${calibrationResult.offsetMs>0?'+':''}${calibrationResult.offsetMs}ms にしました（未保存）`);}}
+                    className="min-h-[44px] rounded-xl bg-amber-400 text-[12px] font-black text-slate-950">{calibrationResult.offsetMs>0?'+':''}{calibrationResult.offsetMs}ms にする</button>
+                  <button type="button" onClick={()=>onClearCalibration&&onClearCalibration()} className="min-h-[44px] rounded-xl border border-white/20 bg-slate-800 text-[12px] font-black">今回は使わない</button>
+                </div>
+              </div>}
+            </>,'判定窓の幅は変えず、表示と入力の基準を同じ量だけ補正します。1ms刻みで動かせます。数字で決めにくいときは「実際の画面で合わせる」を押してください。いつもの演奏画面が開き、判定とFAST/SLOWを見ながら20回叩くと、そのずれから合う値が出ます。',{full:true})}
             {field('ノーツサイズ',stepper('noteSize',80,120,5,{fine:5,coarse:10,suffix:'%'}),
               'ノーツの見た目の大きさだけを変えます。入力判定の範囲・HOLD/SLIDE帯・ENDバーの位置は変わりません。',{full:true})}
             {/* 【2026-09-05・ユーザー指示】「ノーツの開始位置（奥行き）もオプションで調整できるようにしたい」 */}
@@ -162,8 +173,10 @@ const RhythmOptions=({value,onSave,onBack})=>{
                 <div className={wide?'mt-1.5':'mt-2'}>{segments('comboPosition',RHYTHM_COMBO_POSITION_LABELS)}</div>
                 {/* 大きさも選べる(2026-09-13・ユーザー依頼「コンボ数のサイズ設定もほしい」) */}
                 <div className={wide?'mt-1.5':'mt-2'}>{stepper('comboSize',RHYTHM_COMBO_SIZE_MIN,RHYTHM_COMBO_SIZE_MAX,RHYTHM_COMBO_SIZE_STEP,{fine:RHYTHM_COMBO_SIZE_STEP,coarse:RHYTHM_COMBO_SIZE_STEP*2,suffix:'%'})}</div>
+                {/* 濃さ(2026-09-13・ユーザー依頼「コンボ数表記の透過度の設定」) */}
+                <div className={wide?'mt-1.5':'mt-2'}>{stepper('comboOpacity',RHYTHM_COMBO_OPACITY_MIN,RHYTHM_COMBO_OPACITY_MAX,RHYTHM_COMBO_OPACITY_STEP,{fine:RHYTHM_COMBO_OPACITY_STEP,coarse:RHYTHM_COMBO_OPACITY_STEP*3,suffix:'%'})}</div>
               </>}
-            </>,'出す/出さないと、出す場所（左・中央・右・右上）、大きさ（70〜150%）を選べます。端へ寄せる3つは、両サイドのマスモンに重ならないところへ出ます。大きさを上げると、端に寄せたときはレーンにかかることがあります。どこに置いても判定・スコア・コンボの数え方は変わりません。',{full:true})}
+            </>,'出す/出さないと、出す場所（おすすめ・左・中央・右・右上）、大きさ（70〜150%）、濃さ（30〜100%）を選べます。上から順に「出す/出さない」「場所」「大きさ」「濃さ」です。端へ寄せる3つは、両サイドのマスモンに重ならないところへ出ます。大きさを上げると、端に寄せたときはレーンにかかることがあります。どこに置いても判定・スコア・コンボの数え方は変わりません。',{full:true})}
             {field('両サイドのマスモン｜濃さ',segments('sideMonsterOpacity',RHYTHM_SIDE_MONSTER_OPACITY_LABELS),
               'レーンの外側の空いたところへ、設定したマスモンが出て拍に合わせて跳ねます。ノーツが見づらいときや、端末が熱くなりやすいときは薄くするか止めてください。',{full:true})}
             {field('両サイドのマスモン｜動き',segments('sideMonsterMotion',RHYTHM_SIDE_MONSTER_MOTION_LABELS),null,{full:true})}
