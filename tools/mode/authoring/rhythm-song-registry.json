@@ -213,7 +213,7 @@
    "durationMs": 163440,
    "analyzedTiming": {
     "bpm": 179.997,
-    "beatZeroMs": 75.9,
+    "beatZeroMs": 76.1,
     "beatsPerBar": 4,
     "subdivisionsPerBeat": 4,
     "source": "detected"

@@ -61,13 +61,33 @@ check('離れていれば速くても見つけない',
     {type:'TAP',timeMs:60,lane:4,subLane:8,subLaneWidth:2}], spanAt).length === 0);
 
 // ---- 配信データ ----
-let overlapTotal = 0, fastTotal = 0;
+// まず座標そのものが揃っているかを見る。
+// TAP/HOLD/FLICK は subLane（サブレーン0〜9）、SLIDE は中継点ごとの lane と subLaneWidth で
+// 位置が決まる。生成側がレーン単位の値を lane へ入れただけだと、譜面の行へ
+// `undefined` がそのまま書かれ、lane が NaN のノーツができる。
+// 実際にそうなったノーツは全部レーン0へ寄り、重なりの検査でだけ姿を見せた
+// （2026-09-13・作り直した15曲でHOLD20件・SLIDEの中継点46点）。
+// 押せるかどうかより前の話なので、ここで別に数える。
+const missingCoordinate = note => {
+  if (note.type === 'SLIDE') {
+    const points = Array.isArray(note.slidePoints) ? note.slidePoints : [];
+    if (points.length < 2) return true;
+    return points.some(point => !Number.isFinite(Number(point.lane))
+      || !Number.isFinite(Number(point.subLaneWidth)));
+  }
+  return !Number.isFinite(Number(note.subLane)) || !Number.isFinite(Number(note.subLaneWidth));
+};
+let overlapTotal = 0, fastTotal = 0, missingTotal = 0;
 const worst = [];
 for (const songId of Object.keys(rt0.RELEASED_MARKERS)) {
   const song = runtime.RHYTHM_SONGS.find(entry => entry.songId === songId);
   for (const difficulty of ['EASY', 'NORMAL', 'HARD', 'EXPERT', 'MASTER']) {
     const chart = song && song.difficulties[difficulty];
     if (!chart || !chart.notes.length) continue;
+    const missing = chart.notes.filter(missingCoordinate);
+    missingTotal += missing.length;
+    if (missing.length) worst.push(`${songId} ${difficulty}: 座標の欠け${missing.length}件`
+      + ` 例: ${Math.round(missing[0].timeMs)}ms ${missing[0].type}`);
     const overlap = rt0.overlapConflicts(chart.notes, spanAt);
     const fast = rt0.fastPairConflicts(chart.notes, spanAt);
     overlapTotal += overlap.length;
@@ -79,6 +99,7 @@ for (const songId of Object.keys(rt0.RELEASED_MARKERS)) {
     }
   }
 }
+check('ノーツの座標が欠けていない', missingTotal === 0, `${missingTotal}件`);
 check('押さえている帯に重なって指が入らない配置が無い', overlapTotal === 0, `${overlapTotal}件`);
 check('指が2本入らない近さなのに速すぎる2音が無い', fastTotal === 0, `${fastTotal}件`);
 if (worst.length) worst.forEach(line => console.log(`   ${line}`));

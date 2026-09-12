@@ -170,6 +170,19 @@ const runtimeRow=note=>{
   if(note.type==='FLICK')return `f(${timeMs},${note.subLane},${note.subLaneWidth})`;
   return `t(${timeMs},${note.subLane},${note.subLaneWidth},${note.monsterSlot||0})`;
 };
+// ★書いた行に座標の欠けが残っていないか、ここで必ず見る。
+//   HOLD/TAP/FLICKは subLane、SLIDEは中継点ごとの lane と subLaneWidth を読むので、
+//   生成側がレーン単位の値を lane へ入れただけだと `undefined` がそのまま文字列になる。
+//   実際に h(…,undefined,…) と [時刻,レーン,undefined] を公開してしまった
+//   （2026-09-13・作り直した15曲でHOLD20件・SLIDEの中継点46点）。
+//   譜面を書き出す道は --write も --release もここを通るので、1か所で止められる。
+const assertRow=(row,note)=>{
+  if(!/undefined|NaN|null/.test(row))return row;
+  console.error(`✗ 譜面の行に座標の欠けがあります: ${row}`);
+  console.error(`  もとのノーツ: ${JSON.stringify(note)}`);
+  console.error('  HOLD/TAP/FLICKは subLane（サブレーン0〜9）、SLIDEは中継点の lane と subLaneWidth が要ります。');
+  process.exit(1);
+};
 
 let runtimeSource=fs.readFileSync(RUNTIME,'utf8');
 // V1・V2のマーカーの中身を覚えておき、書き込む前に「巻き添えで変えていないか」を確かめる
@@ -205,7 +218,8 @@ for(const difficulty of DIFFICULTIES){
     console.error('  （--markers <名前> で使うマーカー名を変えられます）');
     process.exit(1);
   }
-  const rows=[...chart.notes].sort((a,b2)=>a.grid-b2.grid).map(runtimeRow);
+  const rows=[...chart.notes].sort((a,b2)=>a.grid-b2.grid)
+    .map(note=>assertRow(runtimeRow(note),note));
   const lines=[];
   for(let i=0;i<rows.length;i+=4)lines.push('  '+rows.slice(i,i+4).join(',')+',');
   runtimeSource=`${runtimeSource.slice(0,b+begin.length)}\n${lines.join('\n')}\n${runtimeSource.slice(e)}`;
