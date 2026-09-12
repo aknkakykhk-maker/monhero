@@ -301,6 +301,20 @@ const spotNames = steps.flatMap(s => (Array.isArray(s.spot) ? s.spot : s.spot ? 
 check('台本のspotは画面側に用意されているものだけ',
   spotNames.every(name => SPOTS.includes(name)),
   spotNames.filter(name => !SPOTS.includes(name)).join(', '));
+// 逆向きの取りこぼし。画面側へ光らせる場所を用意したのに台本がどこからも使っていないと、
+// 「用意したのに一度も光らない」まま気づけない。実際にACTIONボタンがその状態だった
+// (セリフでは「ACTIONを押して」と言うのに、押す先は光っていなかった。2026-09-12・ユーザー指摘)
+const usedSpots = new Set([...steps, ...stepsV2]
+  .flatMap(s => (Array.isArray(s.spot) ? s.spot : s.spot ? [s.spot] : [])));
+const unusedSpots = SPOTS.filter(name => !usedSpots.has(name));
+check('画面側に用意した光らせる場所は、台本でも使っている', unusedSpots.length === 0, unusedSpots.join(', '));
+// カードを使う操作は「カードを選ぶ → ACTION」の2手。押す先が光っていないと、
+// 選んだところで止まってしまう(緊急回復と技変更はACTIONを押さないので対象外)
+const cardActionSteps = steps.filter(s => s.wait !== 'next' && s.need
+  && s.need !== 'emergency' && s.need !== 'skillPicker');
+check('カードを使う操作の番はACTIONも光らせる',
+  cardActionSteps.length > 0 && cardActionSteps.every(s => Array.isArray(s.spot) && s.spot.includes('action')),
+  cardActionSteps.filter(s => !(Array.isArray(s.spot) && s.spot.includes('action'))).map(s => s.id).join(', '));
 // 一覧の外枠だけを光らせると画面からはみ出して「どこを押すのか」が分からない。
 // 勇者モン選択はカード1枚ずつを光らせる
 // カードが共通実装になり、光らせるクラスは extraButtonClass で1枚ずつ渡す形になった
