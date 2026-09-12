@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 02fd08d0b0649dbd
+// source-sha256: d71366be6eab4b07
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6b83458c83c6814c
+// generated-sha256: f055a5d65839047b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-12 17:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-12 17:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -54310,7 +54310,18 @@ function MonsterHeroGame() {
       className: "text-slate-400"
     }, label), /*#__PURE__*/React.createElement("dd", {
       className: "text-right font-black text-amber-100"
-    }, value))))), /*#__PURE__*/React.createElement("section", {
+    }, value)))), rhythmPerfStats && Array.isArray(rhythmPerfStats.spikes) && rhythmPerfStats.spikes.length > 0 && /*#__PURE__*/React.createElement("div", {
+      "data-rhythm-perf-spikes": true,
+      className: "mt-2 rounded-xl border border-amber-400/30 bg-slate-950/60 p-2"
+    }, /*#__PURE__*/React.createElement("h4", {
+      className: "text-[10px] font-black text-amber-200"
+    }, "\u98DB\u3093\u3060\u30D5\u30EC\u30FC\u30E0\uFF0833ms\u8D85\uFF09\u3092\u8D77\u304D\u305F\u9806\u306B", rhythmPerfStats.spikes.length, "\u4EF6"), /*#__PURE__*/React.createElement("p", {
+      className: "mt-1 text-[9px] font-bold leading-relaxed text-amber-100/70"
+    }, "\u300C\u30E2\u30F3\u30B9\u30BF\u30FC\u5F8C\u300D\u304C\u5C0F\u3055\u3044\u884C\u304C\u4E26\u3076\u306A\u3089\u3001\u8E0F\u3093\u3060\u3042\u3068\u306E\u6F14\u51FA\u304C\u539F\u56E0\u3067\u3059\u3002\u300Ctick\u300D\u304C0ms\u306A\u3089\u3001\u305D\u306E\u98DB\u3073\u306FJS\u3067\u306F\u306A\u304F\u63CF\u753B\u5074\u3067\u3059\u3002"), /*#__PURE__*/React.createElement("ol", {
+      className: "mt-1 space-y-0.5 text-[9px] font-mono text-slate-300"
+    }, rhythmPerfStats.spikes.map((sp, i) => /*#__PURE__*/React.createElement("li", {
+      key: i
+    }, `${(sp.at / 1000).toFixed(1)}s  ${sp.dt}ms  tick ${sp.tick}ms  遅れ ${sp.delay}ms  走査${sp.scan}/描画${sp.draw}  モンスター後 ${sp.mon < 0 ? '—' : `${sp.mon}ms`}`))))), /*#__PURE__*/React.createElement("section", {
       "data-rhythm-canvas-panel": true,
       className: "mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"
     }, /*#__PURE__*/React.createElement("h3", {
