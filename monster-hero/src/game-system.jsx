@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8414356f72d1cb97
+// generated-sha256: ad3d608ee464b353
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -89,7 +89,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-13 03:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-13 04:01"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3466,7 +3466,6 @@ const rhythmComboTierScale = tier => {
 // ★既定は CENTER(いまの真ん中)。既存の保存値にはこのキー自体が無いので、
 //   読み込み時に CENTER で補われる(既存のキーは1つも触らない)。
 // ★実際の座標は index.html の [data-combo-pos="…"] が持つ。ここは名前だけ。
-const RHYTHM_COMBO_POSITIONS = Object.freeze(['CENTER','RIGHT','HUD','LEFT']);
 // ライフの見せ方の段(2026-09-12・ユーザー指示
 //   「ライフ変動や0になったときとか気付きにくいからもっと強調して / 0だとライフが赤くなるとか
 //     バーが割れるとか」)。
@@ -3508,7 +3507,14 @@ const RHYTHM_LANE_GLOW_LABELS = Object.freeze([['NORMAL','標準'],['LOW','控�
 const RHYTHM_EFFECT_LABELS = Object.freeze([['NORMAL','標準'],['LOW','少なめ'],['MINIMAL','最小']]);
 const RHYTHM_SIDE_MONSTER_OPACITY_LABELS = Object.freeze([['NORMAL','はっきり'],['SOFT','ふつう'],['FAINT','うっすら'],['OFF','出さない']]);
 const RHYTHM_SIDE_MONSTER_MOTION_LABELS = Object.freeze([['NORMAL','跳ねる'],['SMALL','小さく跳ねる'],['NONE','動かない']]);
-const RHYTHM_COMBO_POSITION_LABELS = Object.freeze([['LEFT','左'],['CENTER','中央'],['RIGHT','右'],['HUD','右上']]);
+// ★AUTO(おすすめ)は「台形の外でいちばん広く空いているところ」(2026-09-13・ユーザー提案
+//   「コンボ数横画面の場合はこの位置が1番良いと思うんだけどどう？ / もう1枠増やして
+//    デフォルトもここにしたらどう？」)。実際の画面のスクリーンショットで示された場所。
+//   縦は台形の右外・マスモン上段の上、横は台形の右外でマスモンより内側。
+//   どちらもノーツの上に重ならないので、既定をここにした。
+//   HUD(右上)は「ライフのすぐ下・画面の端」として残す(横ではAUTOより外側になる)。
+const RHYTHM_COMBO_POSITION_LABELS = Object.freeze([['AUTO','おすすめ'],['LEFT','左'],['CENTER','中央'],['RIGHT','右'],['HUD','右上']]);
+const RHYTHM_COMBO_POSITIONS = Object.freeze(RHYTHM_COMBO_POSITION_LABELS.map(([id])=>id));
 const RHYTHM_LANE_GLOW_LEVELS = Object.freeze(['NORMAL','LOW','NONE']);
 const RHYTHM_JUDGMENT_IDS = Object.freeze(['MARVELOUS','EXCELLENT','GREAT','GOOD','BAD','MISS']);
 // ランク(G〜M)の表示色(暫定値)。下位ほど地味な色、上位ほど鮮やかにして一目で分かるようにする。
@@ -3519,7 +3525,7 @@ const RHYTHM_RANK_COLORS = Object.freeze({
 });
 const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   bgmVolume:100, noteSpeed:6, noteSize:100, noteStartPosition:0, displayTimingOffsetMs:0, judgmentTimingOffsetMs:0,
-  fastSlowDisplay:true, judgmentTextDisplay:true, judgmentTextPosition:50, comboDisplay:true, comboPosition:'CENTER', comboSize:100, holdSlideOpacity:80, laneGlow:'NORMAL',
+  fastSlowDisplay:true, judgmentTextDisplay:true, judgmentTextPosition:50, comboDisplay:true, comboPosition:'AUTO', comboSize:100, holdSlideOpacity:80, laneGlow:'NORMAL',
   monsterNoteEffect:'NORMAL',
   noteSeVolume:70, noteSeEnabled:true, vibrationEnabled:false, effectAmount:'NORMAL', lightweightMode:false,
   livePartnerVisible:true,
@@ -12009,7 +12015,7 @@ const RhythmOptions=({value,onSave,onBack})=>{
       <span className={draft[key]===flag?'text-white':'text-slate-400'}>{text}</span>
     </button>)}
   </div>;
-  const segments=(key,items)=><div className={`grid ${items.length>=4?'grid-cols-4':'grid-cols-3'} overflow-hidden rounded-xl border border-white/20`}>{items.map(([id,text])=><button type="button" key={id} aria-pressed={draft[key]===id} onClick={()=>set(key,id)} className={`border-r border-white/10 px-1 text-[10px] font-black last:border-r-0 ${wide?'min-h-[38px]':'min-h-[44px]'} ${draft[key]===id?'bg-cyan-600 text-white':'bg-slate-900 text-slate-300'}`}>{text}</button>)}</div>;
+  const segments=(key,items)=><div className={`grid ${items.length>=5?'grid-cols-5':items.length>=4?'grid-cols-4':'grid-cols-3'} overflow-hidden rounded-xl border border-white/20`}>{items.map(([id,text])=><button type="button" key={id} aria-pressed={draft[key]===id} onClick={()=>set(key,id)} className={`border-r border-white/10 px-1 text-[10px] font-black last:border-r-0 ${wide?'min-h-[38px]':'min-h-[44px]'} ${draft[key]===id?'bg-cyan-600 text-white':'bg-slate-900 text-slate-300'}`}>{text}</button>)}</div>;
   // 1項目=1枠。頭に帯のラベルを置く(参考にした画面と同じ形)。
   // ★ここは項目の「入れ物」なので、余白・字の大きさは2026-09-05に広げたまま触らない。
   // ★数値のように横幅の要る項目は wide。縦持ち(2列)ではぶち抜き、
