@@ -12,8 +12,14 @@
 //    正規化を通し、保存が無い既存ユーザーはこれまでどおりの見え方になること
 //  ・「出さない」を選んだ人が更新できなくなってはいけない。設定の「ゲームを更新」が
 //    別にあるので、そこが残っていること
-//  ・演奏中に画面の上へ出すと、レーンのいちばん奥(ノーツが現れるところ)に重なる。
-//    演奏中だけは位置を変えること。ここが戻ると「邪魔だ」という指摘が再発する
+//  ・演奏中(RHYTHM_PLAY)はどこにも出さないこと。
+//    はじめは「上はレーンの奥に重なるから右下へ」としたが、ユーザー指摘
+//    「画面の右下ってモンビー演奏中のレーン上に来ない？」でそのとおりだった。
+//    プレイエリアは画面の下端まで占め、レーンは inset:0 の全面。台形は下がいちばん広い
+//    (上は 27〜73%、下は 0〜100%)ので、右下はいちばん右のレーンの真上になる。
+//    判定ラインの下は指で叩く場所で、誤って押すと曲が中断されて記録が消える。
+//    台形の外で空いているのは上部の左右の三角形だけだが、そこは HUD が使っている。
+//    ここが戻ると「レーンに重なって邪魔」が再発する
 const fs=require('fs'),path=require('path'),vm=require('vm');
 const ROOT=path.resolve(__dirname,'../..');
 const read=f=>fs.readFileSync(path.join(ROOT,f),'utf8');
@@ -57,14 +63,18 @@ check('書くときも正規化を通している',
 // --- 出し方 -----------------------------------------------------------------
 check('「出さない」のときは出さない',
   /updateNoticeVisible && updateNoticeMode !== 'OFF'/.test(app));
-check('「小さく」と演奏中は小さい形で出す',
-  /updateNoticeMode === 'MINI' \|\| updateNoticeOnPlay/.test(app));
-// ここが戻ると「モンビー中にレーン上部に出て邪魔」が再発する
-check('演奏中(RHYTHM_PLAY)だけ位置を下へ変える',
+check('「小さく」のときだけ小さい形で出す',
+  /const updateNoticeSmall = updateNoticeMode === 'MINI';/.test(app));
+// ここが戻ると「モンビー演奏中のレーンに重なって邪魔」が再発する
+check('演奏中(RHYTHM_PLAY)はどこにも出さない',
   /updateNoticeOnPlay = gameState === 'RHYTHM_PLAY'/.test(app)
-  &&/updateNoticeOnPlay[\s\S]{0,120}bottom:'calc\(8px \+ env\(safe-area-inset-bottom\)\)'/.test(app));
-check('演奏中の目印を出している(検査が場所を確かめられるように)',
-  /data-update-notice-place=\{updateNoticeOnPlay\?'play':'top'\}/.test(app));
+  &&/updateNoticeVisible && updateNoticeMode !== 'OFF' && !updateNoticeOnPlay/.test(app));
+// レーンの上へ置く逃げ道(下端・右下)を塞ぐ。プレイエリアは画面の下端まであるので、
+// 「下へ出す」は必ずレーンの上になる
+check('演奏中の逃げ場として画面の下端を使っていない',
+  !/safe-area-inset-bottom/.test(app.slice(app.indexOf('const updateNoticeMode'), app.indexOf('const titleModal'))));
+check('出す場所はどちらの形でも画面の上',
+  (app.match(/data-update-notice-place="top"/g)||[]).length===2);
 check('どちらの形でも「閉じる」ボタンがある',
   (app.match(/aria-label="あとで更新する（この通知を閉じる）"/g)||[]).length===2);
 
@@ -83,8 +93,10 @@ check('設定画面へ値と操作を props で渡している',
 // --- ヘルプ -----------------------------------------------------------------
 check('ヘルプに載っている',
   /新しいバージョンのお知らせ/.test(help)&&/ふつう／小さく／出さない|ふつう」「小さく」「出さない/.test(help));
-check('ヘルプに演奏中の場所も書いてある',
-  /モンヒロビートの演奏中は[\s\S]{0,60}右下/.test(help));
+check('ヘルプに「演奏中は出ない」ことが書いてある',
+  /モンヒロビートの演奏中は出ません/.test(help));
+check('設定画面にも「演奏中は出ない」ことが書いてある',
+  /モンヒロビートの演奏中は、どの設定でも出ません/.test(settings));
 
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
 process.exit(failed?1:0);

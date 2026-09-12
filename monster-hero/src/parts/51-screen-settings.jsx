@@ -44,7 +44,7 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
               </button>
             ))}
           </div>
-          <p className="mt-2 text-[9px] font-bold leading-relaxed text-slate-500">モンヒロビートの演奏中は、ノーツが現れるレーンの奥に重ならないよう、どの設定でも右下に小さく出ます。</p>
+          <p className="mt-2 text-[9px] font-bold leading-relaxed text-slate-500">モンヒロビートの演奏中は、どの設定でも出ません（レーンの上に重なってしまうため）。曲が終わってから出ます。</p>
         </div>
         <div className="text-center text-[9px] font-mono text-slate-600">BUILD {BUILD_DATE}</div>
         <button onClick={onReturnToTitle} className="w-full bg-red-950/50 border border-red-500/40 text-red-200 py-4 rounded-2xl font-black">タイトルへ戻る</button>
