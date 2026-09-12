@@ -375,7 +375,9 @@ const RHYTHM_PERF=(()=>{
     tickMs:0,pendingTickMs:0,worstTickMs:0,maxTickMs:0,headSkipped:0,pendingHeadSkipped:0,narrowed:null,
     tickDelayMs:0,pendingDelayMs:0,worstDelayMs:0,maxDelayMs:0,
     // 曲の再生位置が1フレームでどれだけ進んだか。ノーツの位置はこれで決まる
-    songSteps:0,songStepSum:0,songStepMax:0,songStalls:0,lastSongMs:null});
+    songSteps:0,songStepSum:0,songStepMax:0,songStalls:0,lastSongMs:null,
+    // ノーツを取ったときの処理にかかった時間。モンスターノーツだけ別に数える
+    judgeCount:0,judgeSum:0,judgeMax:0,monsterCount:0,monsterSum:0,monsterMax:0});
   let on=false,last=null,acc=zero();
   const api={
     get enabled(){return on;},
@@ -437,6 +439,16 @@ const RHYTHM_PERF=(()=>{
       }
       acc.lastSongMs=v;
     },
+    // ノーツを取ったときの処理(applyJudgment)にかかった時間。
+    // 実機で「モンスターノーツを踏むと固まる」と報告されたので、ふつうのノーツと分けて数える。
+    // ここで測るのは判定・スコア・ライフの更新と setView(Reactの再描画の要求)まで。
+    // 光と画面フラッシュの発動は別に測ってあり、そちらは1フレームぶんの遅れも出ていない。
+    judge(ms,monster){
+      if(!on)return;
+      const v=Number(ms);if(!Number.isFinite(v)||v<0)return;
+      acc.judgeCount++;acc.judgeSum+=v;if(v>acc.judgeMax)acc.judgeMax=v;
+      if(monster){acc.monsterCount++;acc.monsterSum+=v;if(v>acc.monsterMax)acc.monsterMax=v;}
+    },
     gestureFrame(){if(on)acc.gestureFrames++;},
     noteRescan(){if(on)acc.noteRescans++;},
     layoutRead(){if(on)acc.layoutReads++;},
@@ -472,6 +484,12 @@ const RHYTHM_PERF=(()=>{
         songStepMaxMs:acc.songStepMax,
         songStallRate:acc.songSteps?acc.songStalls/acc.songSteps:0,
         songSteps:acc.songSteps,
+        judgeMsAvg:acc.judgeCount?acc.judgeSum/acc.judgeCount:0,
+        judgeMsMax:acc.judgeMax,
+        judgeCount:acc.judgeCount,
+        monsterJudgeMsAvg:acc.monsterCount?acc.monsterSum/acc.monsterCount:0,
+        monsterJudgeMsMax:acc.monsterMax,
+        monsterJudgeCount:acc.monsterCount,
         narrowed:acc.narrowed,
       };
     },
