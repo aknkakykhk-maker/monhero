@@ -40,7 +40,7 @@ window.addEventListener('unhandledrejection', function(ev){ window.__mhErr('[pro
 // ここでは各ファイルの実サイズを重みにして、実際に受け取ったバイト数で動かす。
 window.__mhBoot = (function () {
   // 起動時に読み込むファイルの実サイズ(バイト)。tools/build.js が実ファイルから書き込む
-  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":7761,"data/images/images-enemy.js":1347,"data/ally-monsters.js":24360,"data/lineages.js":8832,"data/breeder.js":26823,"data/enemy-monsters.js":1785,"data/skills.js":4375,"data/rhythm-mode.js":1002763,"data/rhythm-lane-svg.js":7147,"data/rhythm-geometry-calibration.js":15405,"data/rhythm-result-replay-remount.js":5401,"data/rhythm-event.js":23888,"data/changelog.js":563083,"data/help.js":314285,"data/rhythm-step3-release.js":7722,"data/assistants.js":293075,"game-system.compiled.js":3500894,"data/images/title-screen-clean.jpg":699051,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
+  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":7761,"data/images/images-enemy.js":1347,"data/ally-monsters.js":24360,"data/lineages.js":8832,"data/breeder.js":26823,"data/enemy-monsters.js":1785,"data/skills.js":4375,"data/rhythm-mode.js":1002763,"data/rhythm-lane-svg.js":7147,"data/rhythm-geometry-calibration.js":15405,"data/rhythm-result-replay-remount.js":5401,"data/rhythm-event.js":23888,"data/changelog.js":563083,"data/help.js":314285,"data/rhythm-step3-release.js":7722,"data/assistants.js":293075,"tailwind.css":113467,"game-system.compiled.js":3500894,"data/images/title-screen-clean.jpg":699051,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
   var total = 0, k;
   for (k in SIZES) total += SIZES[k];
   var got = {};   // ファイルごとに「いま何バイト受け取ったか」
@@ -98,7 +98,7 @@ window.__mhBoot = (function () {
 })();
 // 本体JSのキャッシュキー。ここで一度だけ宣言し、下の読み込み処理でも同じ値を使う。
 // 先読みと <script> のURLがずれると、同じ2.7MBを2回取りに行くことになる
-var GAME_BUILD = '202609120831';
+var GAME_BUILD = '202609120922';
 window.__mhGameBuild = GAME_BUILD;
 // 起動でいちばん大きいのは本体JS(約2.7MB)。いちばん後ろで読むため、そこへ来ると
 // ゲージが止まって見えていた。先に取りはじめて、受け取ったバイト数をそのまま出す。
@@ -112,28 +112,14 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.jpg', 'data/images/titl
      (差し替えは tools/ で npm install react@18 react-dom@18 して umd/ からコピーする) -->
 <script src="vendor/react.production.min.js?v=18" onload="__mhBoot.done('vendor/react.production.min.js','画面の土台を読み込み中')" onerror="__mhBoot.fail('vendor/react.production.min.js')"></script>
 <script src="vendor/react-dom.production.min.js?v=18" onload="__mhBoot.done('vendor/react-dom.production.min.js','画面の土台を読み込み中')" onerror="__mhBoot.fail('vendor/react-dom.production.min.js')"></script>
-<script src="https://cdn.tailwindcss.com"></script>
-<script>
-  /* Tailwind の landscape: は「@media (orientation: landscape)」に展開される。
-     自前で画面を回しているとき(端末が向きの指定を受け付けない端末のための逃げ道)は、
-     端末そのものは縦のままなのでこのメディアクエリが成立せず、53個ある landscape: が
-     ひとつも効かない。横長の器に縦持ち用の並びが入って、一覧がほぼ消える。
-     そこで landscape: を「メディアクエリ **または** 自前回転の目印の中」の両方で
-     効くように差し替える。既存の書き方(landscape:mt-0 など)はそのまま使える。
-     ※ このサンドボックスはTailwindのCDNを取りに行けないため、ここだけは実機での確認が要る */
-  if (typeof tailwind !== 'undefined') {
-    tailwind.config = {
-      plugins: [
-        tailwind.plugin(function ({ addVariant }) {
-          addVariant('landscape', [
-            '@media (orientation: landscape)',
-            '&:is([data-mh-view-rotation="true"] *)',
-          ]);
-        }),
-      ],
-    };
-  }
-</script>
+<!-- Tailwind は「CDNのスクリプトをブラウザで走らせて、その場でCSSを組み立てる」のをやめ、
+     作っておいたCSSを1枚読むだけにした(docs/refactor/TECH_DEBT_AUDIT.md TD-13)。
+     以前は起動のたびに ①スクリプトを取りに行く ②ソースを走査する ③CSSを組み立てる が走り、
+     CDNが落ちれば見た目が全部崩れていた。
+     作るのは tools/build-tailwind.js(node tools/build.js が中身の変化を見て必要なときだけ呼ぶ)。
+     landscape: の差し替え(自前で画面を回したときにも効かせる)もそちらの設定へ移してある。
+     ?v= は中身のハッシュ。tools/stamp-version.js が data/*.js と同じ仕組みで打つ。 -->
+<link rel="stylesheet" href="tailwind.css?v=4c5e3356e1ef" onload="__mhBoot.done('tailwind.css','見た目を読み込み中')" onerror="__mhBoot.fail('tailwind.css')">
 <style>
   html, body { margin:0; padding:0; background:#000; overscroll-behavior:none; -webkit-tap-highlight-color:transparent; height:100%; }
   /* 画面の高さは、ここで決めた --mh-vh ひとつだけを使う。
@@ -196,8 +182,8 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.jpg', 'data/images/titl
   [data-mh-view-rotation="true"] [data-mh-screen]:has(> .mh-scroll) > * { min-width: 0; }
   [data-mh-view-rotation="true"] [data-mh-screen]:has(> .mh-scroll) > .mh-scroll { grid-column: 2; grid-row: 1 / -1; min-height: 0; }
   /* 曲えらびは上の骨組み(data-mh-screen)を使わず、Tailwind の landscape:flex-row だけで
-     左右2列にしている。上の tailwind.config で landscape: 自体を差し替えてあるが、
-     CDNの設定が効かなかったときでも一覧が潰れないよう、同じ組み替えをここにも書いておく
+     左右2列にしている。landscape: 自体は tools/build-tailwind.js の設定で差し替えてあるが、
+     CSSが読めなかったときでも一覧が潰れないよう、同じ組み替えをここにも書いておく
      (縦持ちのまま高さ393pxへ縦積みされると、曲の並びがほぼ見えなくなるため)。 */
   [data-mh-view-rotation="true"] [data-rhythm-song-select] { flex-direction: row; }
   [data-mh-view-rotation="true"] [data-rhythm-song-notice] { display: none; }

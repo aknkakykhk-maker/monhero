@@ -6,3 +6,7 @@ monster-hero/game-system.compiled.js  -diff -merge linguist-generated
 
 # 譜面・お知らせ・画像の元データも巨大なので差分は畳む(中身の編集は通常どおり可能)。
 tools/mode/authoring/*.json           -diff linguist-generated
+
+# 見た目のCSS(monster-hero/tailwind.css)。tools/build-tailwind.js が game-system.jsx から
+# 機械的に作る生成物なので、差分は畳む(111KBの1行minified CSSで、人が読む意味がない)。
+monster-hero/tailwind.css              -diff linguist-generated

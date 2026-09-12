@@ -6,11 +6,12 @@
 // ① 判定ラインが外部CSS(Tailwind)なしでも見える
 //    実機で「演奏を始めたときに下部の判定ラインがないときがある」と報告された
 //    (2026-09-05)。位置(bottom-[12%])・厚み(h-[3px])・色(bg-gradient-to-r)を
-//    すべてTailwindのクラスで書いていたのが原因。TailwindはCDNのJITが
-//    後からCSSを作るため、間に合わないあいだは「高さ0・背景なしの線」になる。
-//    このサンドボックスはそもそもCDNへ出られないので、
-//    ここは「Tailwindが最後まで来なかったいちばん悪い場合」そのものになる。
-//    判定ラインは音ゲーでいちばん大事な目印なので、外部CSSに依存させない。
+//    すべてTailwindのクラスで書いていたのが原因。当時のTailwindはCDNのJITが
+//    後からCSSを作るため、間に合わないあいだは「高さ0・背景なしの線」になった。
+//    2026-09-12に静的CSS(monster-hero/tailwind.css)へ切り替えたので、
+//    「あとから届く」状況そのものは無くなったが、**CSSが読めなかったいちばん悪い場合**の
+//    備えとしてこの検査は残す。判定ラインは音ゲーでいちばん大事な目印なので、
+//    外部のCSSに依存させない。そのため下で tailwind.css をわざと落として測る。
 //
 // ② 曲がいきなり鳴らず、カウントダウンを挟む
 //    「入ってすぐ音楽なるのも良くない？ 3秒から5秒ぐらいしてから演奏がいい」
@@ -52,7 +53,9 @@ const serve=()=>new Promise(r=>{const s=http.createServer((req,res)=>{
   try{
     browser=await playwright.chromium.launch({executablePath:'/opt/pw-browsers/chromium',args:['--autoplay-policy=no-user-gesture-required']});
     const page=await browser.newPage({viewport:{width:390,height:844}});
-    await page.route('**cdn.tailwindcss.com**',r=>r.abort());
+    // 配信しているCSSをわざと落とす。ここを落とさないと「Tailwindが無くても」の検査にならない
+    // (2026-09-12の静的化まではCDNを落としていた。落とす相手が変わっただけで意図は同じ)
+    await page.route('**/tailwind.css*',r=>r.abort());
     await page.addInitScript(()=>{const put=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
       put('mh_breeder_name','テスト');put('mh_breeder_icon','🐣');put('mh_intro_done',true);put('mh_onboarded',true);
       put('mh_tutorial_seen_v1',true);put('mh_battle_tutorial_seen_v1',true);put('mh_battle_tutorial_guide_shown_v1',true);

@@ -6,8 +6,9 @@
 // 「100%になったのにまだ読み込んでいる」「途中で100%を超える」といった状態になる。
 // ここでビルドのたびに実ファイルから測り直すことで、そのずれが起きないようにする。
 //
-// 対象は index.html が読み込む同一オリジンのスクリプトと、起動時に必ず取りにいく
-// タイトル画像・タイトルBGM。外部CDN(Tailwind)は大きさが分からないので数に入れない。
+// 対象は index.html が読み込む同一オリジンのスクリプトとCSS、起動時に必ず取りにいく
+// タイトル画像・タイトルBGM。外部から取るものは大きさが分からないので数に入れない
+// (Tailwind は 2026-09-12 に静的CSSへ切り替えたので、いまは同一オリジン側に入っている)。
 const fs = require('fs');
 const path = require('path');
 const { REPO_ROOT } = require('./harness');
@@ -27,6 +28,9 @@ const stampBootSizes = () => {
   let html = fs.readFileSync(INDEX, 'utf8');
   const files = [];
   for (const m of html.matchAll(/<script src="((?!https?:)[^"?]+)(?:\?[^"]*)?"/g)) files.push(m[1]);
+  // 見た目のCSS(tailwind.css)も起動が終わるまでに必ず要る。
+  // <link> は描画をせき止めるので、スクリプトと同じようにゲージの分母へ入れる
+  for (const m of html.matchAll(/<link rel="stylesheet" href="((?!https?:)[^"?]+)(?:\?[^"]*)?"/g)) files.push(m[1]);
   for (const f of EXTRA_FILES) if (!files.includes(f)) files.push(f);
 
   const sizes = {};
