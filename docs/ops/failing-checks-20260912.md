@@ -15,6 +15,7 @@ node tools/battle/battle-menu-browser-check.js
 node tools/masu/masu-enhance-layer-check.js
 node tools/mode/extreme-browser-check.js
 node tools/mode/rhythm-audio-independence-check.js
+node tools/mode/rhythm-mode-foundation-check.js   ← 2026-09-12 夕方に追加(#1332 由来)
 ```
 
 どれも `.github/workflows/compiled-check.yml` には入っていない(CIは通る)。
@@ -83,6 +84,23 @@ NG: 仕込みで実際に音源が始まる(検査が空振りしていない) �
 
 ほかの5項目はOKだが、**その5項目は音が鳴っていない状態でも通ってしまう**ので、
 いまは実質なにも確かめられていない。`previewBGM` が false を返す理由から。切り替え前も同じ。
+
+---
+
+## ⑦ `mode/rhythm-mode-foundation-check.js` — 検査が新しい定数を渡していない
+
+```
+ReferenceError: RHYTHM_VOLUME_MAX is not defined
+    at Object.normalizeRhythmSettings
+```
+
+#1332「モンヒロビート: 音量の上限を200まで開ける」で `RHYTHM_VOLUME_MAX` が増えたが、
+検査は `normalizeRhythmSettings` の中身を vm へ切り出して動かす作りで、
+その vm のコンテキストへ新しい定数を渡していない。**実装ではなく検査側の取り残し。**
+
+直し方は、検査が定数を抜き出す範囲へ `RHYTHM_VOLUME_MAX` を足すだけ。
+定数を足すたびに同じことが起きるので、**1つずつ列挙するのをやめて、
+`normalizeRhythmSettings` が参照している定数をまとめて渡す**形にするほうがよい。
 
 ---
 

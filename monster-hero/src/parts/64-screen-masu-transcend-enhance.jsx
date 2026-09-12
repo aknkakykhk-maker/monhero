@@ -9,7 +9,7 @@
 
 function MasuTranscendEnhanceScreen({
   commitTranscendExchange, commitTranscendFruit, commitTranscendPlan, getMasuMon, masuMonDetail,
-  onBack, onMissing, ownedItems, renderPowerBadge, saveMissionProgress,
+  onBack, onMissing, onOpenAutoEnhance, ownedItems, renderPowerBadge, saveMissionProgress,
   setTranscendBulkUnit, setTranscendExchangeError, setTranscendExchangeOpen, setTranscendExchangeWant, setTranscendFruitConfirmAmount,
   setTranscendFruitError, setTranscendFruitItemId, setTranscendFruitOpen, setTranscendPlan, setTranscendResetError,
   setTranscendResetOpen, transcendBulkUnit, transcendExchangeError, transcendExchangeOpen, transcendExchangeWant,
@@ -120,9 +120,10 @@ function MasuTranscendEnhanceScreen({
               <TranscendenceBadge transcended={normalized.transcended} soulRankStage={normalized.soulRankStage} small/>
             </span>
           </div>
-          <div data-transcend-enhance-tabs className="shrink-0 w-full max-w-md mx-auto px-4 pt-3 grid grid-cols-2 gap-1.5">
+          <div data-transcend-enhance-tabs className="shrink-0 w-full max-w-md mx-auto px-4 pt-3 grid grid-cols-3 gap-1.5">
             <button onClick={onBack} className="min-h-[40px] rounded-xl border border-amber-400/50 bg-slate-900 text-amber-200 text-[11px] font-black active:scale-95">通常強化</button>
             <button className="min-h-[40px] rounded-xl bg-sky-500 text-slate-950 text-[11px] font-black">超越強化</button>
+            <button onClick={onOpenAutoEnhance} className="min-h-[40px] rounded-xl border border-lime-400/50 bg-slate-900 text-lime-300/80 text-[11px] font-black active:scale-95">オート強化</button>
           </div>
           {/* 超越の話をするセリフは、正式に超越した個体のときだけにする */}
           <div className="shrink-0 w-full max-w-md mx-auto px-4 pt-3"><AssistantBubble scene={normalized.transcended?'transcendence':'masuEnhance'} compact/></div>

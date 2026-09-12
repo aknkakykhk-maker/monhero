@@ -111,7 +111,7 @@ check('はじける粒を仕込んである(プロセカの着弾の粒)',
 check('粒の飛ぶ向きはCSSに固定で書いてある(毎回の計算を増やさない)',
   /\[data-rhythm-hit-effect\]>u:nth-of-type\(1\)\{--rhythm-spark-x:/.test(source));
 check('コンボ数も1つごとに弾む',
-  game.includes("comboText.dataset.rhythmComboPop='1';")
+  game.includes("restarts.push({el:comboText,attr:'rhythmComboPop'})")
   &&source.includes('[data-rhythm-combo][data-rhythm-combo-pop="1"]{animation:mhRhythmComboPop'));
 check('発生のたびに要素を作らず、古いものから順に使い回す',
   source.includes('layer._rhythmNext=(layer._rhythmNext+1)%layer._rhythmPool.length;')
@@ -153,17 +153,41 @@ check('入力を邪魔しない',
   &&hitCss.includes('[data-rhythm-screen-flash]{position:absolute;inset:0;pointer-events:none;'));
 
 // --- モンスターノーツの特別扱い ---
-check('モンスターノーツだけ画面を一瞬染める',game.includes("flash.dataset.rhythmFlash='1';"));
+check('モンスターノーツだけ画面を一瞬染める',game.includes("restarts.push({el:screenFlashRef.current,attr:'rhythmFlash'})"));
 check('モンスターノーツを取ると、そのマスモンが大きく跳ねる',
-  game.includes("el.dataset.rhythmSideHit='1';")
+  game.includes("restarts.push({el,attr:'rhythmSideHit'})")
   &&source.includes('[data-rhythm-side-monster][data-rhythm-side-hit="1"]{animation:mhRhythmSideCheer'));
 check('跳ね方は transform だけ',(()=>{
   const cheer=keyframeBodies(source).find(entry=>entry.name==='mhRhythmSideCheer')?.body||'';
   return cheer.length>0&&!/filter|box-shadow|background/.test(cheer)&&/transform:/.test(cheer);
 })());
 check('判定文字も一度だけ弾む',
-  game.includes("judgmentText.dataset.rhythmJudgmentPop='1';")
+  game.includes("restarts.push({el:judgmentText,attr:'rhythmJudgmentPop'})")
   &&source.includes('[data-rhythm-judgment-text][data-rhythm-judgment-pop="1"]{animation:mhRhythmJudgmentPop'));
+
+// --- 2026-09-12 強制レイアウト(void offsetWidth)の回数 ---
+// 【ユーザー指摘】「モンスターノーツでかくつきがまた出てきた」
+//
+// 印を付け直してCSSアニメーションを流し直すために void el.offsetWidth を読むと、
+// その場でページ全体のレイアウトが計算し直される(強制同期レイアウト)。
+// 直す前は箇所ごとに書いていたので、モンスターノーツを取った1フレームで**5回**走っていた
+// (ヒット演出 / 画面フラッシュ / マスモンの歓声 / 判定文字 / コンボ数)。
+// いまは rhythmRestartAnimations がまとめて1回にする。箇所ごとに書き足すと元へ戻るので見張る。
+check('印の付け直しは1か所へまとめる(rhythmRestartAnimations を呼ぶ)',
+  game.includes('rhythmRestartAnimations(restarts)')
+  &&source.includes('const rhythmRestartAnimations=entries=>{'));
+check('まとめ処理はレイアウトを1回だけ読む',(()=>{
+  const start=source.indexOf('const rhythmRestartAnimations=entries=>{');
+  if(start<0)return false;
+  const body=source.slice(start,source.indexOf('\n};',start));
+  return (body.match(/offsetWidth/g)||[]).length===1;
+})());
+check('演奏中の判定処理に offsetWidth の読み取りを残さない',
+  !/void\s+[A-Za-z_$][\w$.]*\.offsetWidth/.test(game.slice(game.indexOf('const applyJudgment'),game.indexOf('const applyJudgment')+9000)),
+  'applyJudgment の中');
+check('ヒット演出は呼び出し側のまとめへ譲れる(defer)',
+  source.includes("if(defer)return {el:item,attr:'rhythmHitKind',value:kind};")
+  &&game.includes('monster:monsterHit,defer:true'));
 
 // --- 判定まわりを変えていない ---
 check('判定窓・スコア・コンボの計算に触っていない',

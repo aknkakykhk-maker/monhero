@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 077ef618e893c99a
+// generated-sha256: 1667ce093e1f95fc
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-12 22:36"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-12 22:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -857,6 +857,174 @@ const normalizeAutoRepeatBreakthroughMode = (value, levelValue) => {
   if (value === 'fixed') return level > 0 ? 'fixed' : 'off';
   return level > 0 ? 'fixed' : 'off';
 };
+// ===== オート強化(個体ごとの自動強化設定) =====
+// 転生・限界突破のあとは強化が白紙に戻るため、周回で貯まった強化ポイントを
+// 毎回手で振り直すのが大変だった(2026-09-12・ユーザー要望)。
+// そこで個体ごとに「オン/オフ」「どこまで上げてよいか(上限)」「その中での優先順位」を持たせ、
+// 強化ポイントが入るたびに設定どおりへ自動で振る。
+//
+// ★保存は既存の mh_masu_mons の中の1項目として足す(新しいトップレベルキーは作らない)。
+//   autoRepeatBreakthroughMode と同じ置き方で、持っていない既存データは normalize が既定値で補う。
+// ★転生しても設定だけは残す(resetMasuForRebirth の維持対象に入れてある)。
+//   設定が消えると「転生のたびに設定し直し」になり、この機能の意味が無くなるため。
+const AUTO_ENHANCE_STAT_KEYS = ['hp','atk','def','guts'];
+const AUTO_ENHANCE_APT_TARGETS = ['apt0','apt1','apt2','apt3'];
+// 優先順位に並べる8項目。ステータス4つ＋間合い適性4つ
+const AUTO_ENHANCE_TARGETS = [...AUTO_ENHANCE_STAT_KEYS, ...AUTO_ENHANCE_APT_TARGETS];
+const DEFAULT_AUTO_ENHANCE_ORDER = Object.freeze([...AUTO_ENHANCE_TARGETS]);
+const autoEnhanceAptIndexOf = (target) => {
+  const index = AUTO_ENHANCE_APT_TARGETS.indexOf(target);
+  return index >= 0 ? index : null;
+};
+// 上限の入力欄で受け付ける最大値。1個体が持てる強化Pをはるかに超える値なので実質的な制限にはならないが、
+// 壊れた保存値や指がすべった長い数字で描画が崩れないように頭を止めておく
+const AUTO_ENHANCE_STAT_LIMIT_MAX = 999999;
+// 上限の読み方。
+// ・ステータス … 「その能力へ振ってよい強化Pの数」。null は上限なし(残りを全部使う)、0 は振らない
+// ・間合い適性 … 「目標の段階(グレード)」。null は振らない。Mを指定すれば上限なしと同じ
+const normalizeAutoEnhanceStatLimit = (value) => {
+  if (value === null || value === undefined || value === '') return null; // 上限なし
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return 0;
+  return Math.max(0, Math.min(AUTO_ENHANCE_STAT_LIMIT_MAX, Math.floor(amount)));
+};
+const normalizeAutoEnhanceAptLimit = (value) => (typeof value === 'string' && DIST_APTITUDE_GRADES.includes(value) ? value : null);
+const normalizeMasuAutoEnhance = (value) => {
+  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  // 並び順は「8項目がちょうど1回ずつ」でなければならない。壊れていたら既定の並びへ落とす
+  const rawOrder = Array.isArray(source.order) ? source.order.filter(key => AUTO_ENHANCE_TARGETS.includes(key)) : [];
+  const order = [...new Set(rawOrder)];
+  AUTO_ENHANCE_TARGETS.forEach(key => { if (!order.includes(key)) order.push(key); });
+  const rawStat = source.statLimits && typeof source.statLimits === 'object' && !Array.isArray(source.statLimits) ? source.statLimits : {};
+  const statLimits = Object.fromEntries(AUTO_ENHANCE_STAT_KEYS.map(key => [key,
+    Object.prototype.hasOwnProperty.call(rawStat, key) ? normalizeAutoEnhanceStatLimit(rawStat[key]) : 0]));
+  const rawApt = Array.isArray(source.aptLimits) ? source.aptLimits : [];
+  const aptLimits = [0,1,2,3].map(index => normalizeAutoEnhanceAptLimit(rawApt[index]));
+  return {
+    // 項目を持っていない既存ユーザーは必ずOFF。ある日いきなり勝手に振られることがないようにする
+    enabled: source.enabled === true,
+    order,
+    statLimits,
+    aptLimits,
+  };
+};
+// 1つでも「振ってよい先」が決まっているか。ONでもここが空なら何も起きない
+const autoEnhanceHasTarget = (settings) => {
+  const normalized = normalizeMasuAutoEnhance(settings);
+  return AUTO_ENHANCE_STAT_KEYS.some(key => normalized.statLimits[key] === null || normalized.statLimits[key] > 0)
+    || normalized.aptLimits.some(grade => grade !== null);
+};
+// いま振ってある内容を、そのまま上限として写し取る。
+// 「この形のまま転生して戻したい」がいちばん多い使い方なので、1タップで作れるようにする
+const buildAutoEnhanceLimitsFromCurrent = (masu, base) => {
+  if (!masu || !base) return null;
+  const resolvedApt = resolveMasuDistAptitude(masu, base);
+  return {
+    statLimits: Object.fromEntries(AUTO_ENHANCE_STAT_KEYS.map(key => [key,
+      Math.max(0, Math.ceil((Number(masu.statPoints?.[key]) || 0) / (STAT_POINT_GAIN[key] || 1)))])),
+    aptLimits: [0,1,2,3].map(index => {
+      const baseGrade = masuTranscendBaseAptitude(masu, base)[index];
+      const current = resolvedApt[index];
+      // ベースから1段も上げていない距離は「振らない」。上げてある距離だけ、いまの段階を目標にする
+      return DIST_APTITUDE_GRADES.indexOf(current) > DIST_APTITUDE_GRADES.indexOf(baseGrade) ? current : null;
+    }),
+  };
+};
+// 設定どおりに振る下書き(plan)を作る。実際の適用は applyEnhancePlanToMasu が行うので、
+// 手で振ったときとまったく同じ計算・同じ上限(間合い適性はMで止まる)を通る。
+// 振る先が無い・強化Pが無いときは null を返し、呼び出し側は何もしない。
+const buildMasuAutoEnhancePlan = (masu, base) => {
+  if (!masu || !base) return null;
+  const settings = normalizeMasuAutoEnhance(masu.autoEnhance);
+  if (!settings.enabled) return null;
+  let remaining = Math.max(0, Math.floor(Number(masu.distAptPoints) || 0));
+  if (remaining <= 0) return null;
+  const resolvedApt = resolveMasuDistAptitude(masu, base);
+  const plan = { apt:[0,0,0,0], stat:{ hp:0, atk:0, def:0, guts:0 } };
+  for (const target of settings.order) {
+    if (remaining <= 0) break;
+    const aptIndex = autoEnhanceAptIndexOf(target);
+    if (aptIndex != null) {
+      const limitGrade = settings.aptLimits[aptIndex];
+      if (limitGrade === null) continue;
+      const currentIndex = Math.max(0, DIST_APTITUDE_GRADES.indexOf(resolvedApt[aptIndex] || 'C'));
+      const limitIndex = Math.min(DIST_APTITUDE_GRADES.length - 1, DIST_APTITUDE_GRADES.indexOf(limitGrade));
+      const take = Math.min(Math.max(0, limitIndex - currentIndex), remaining);
+      plan.apt[aptIndex] = take;
+      remaining -= take;
+      continue;
+    }
+    if (!AUTO_ENHANCE_STAT_KEYS.includes(target)) continue;
+    const limit = settings.statLimits[target];
+    if (limit === 0) continue;
+    const gain = STAT_POINT_GAIN[target] || 1;
+    const alreadySpent = Math.max(0, Math.ceil((Number(masu.statPoints?.[target]) || 0) / gain));
+    const capacity = limit === null ? remaining : Math.max(0, limit - alreadySpent);
+    const take = Math.min(capacity, remaining);
+    plan.stat[target] = take;
+    remaining -= take;
+  }
+  const used = plan.apt.reduce((sum, value) => sum + value, 0)
+    + Object.values(plan.stat).reduce((sum, value) => sum + value, 0);
+  return used > 0 ? { plan, used } : null;
+};
+// 自動で振ったときの「何がどれだけ増えたか」。画面のお知らせとログに使う
+const describeAutoEnhancePlan = (plan) => {
+  const lines = [];
+  (plan?.apt || []).forEach((count, index) => { if (count > 0) lines.push(`${RANGE_LABELS[index]}距離適性 +${count}段階`); });
+  Object.entries(plan?.stat || {}).forEach(([key, count]) => {
+    if (count > 0) lines.push(`${STAT_POINT_KEYS[key]} +${count * (STAT_POINT_GAIN[key] || 1)}`);
+  });
+  return lines;
+};
+// 絆ポイントリセットの直後かどうか(振り直しの下書きが残っているか)。
+// 「絆ポイントリセットの書」は500ダイヤの、振り直すための道具。使った直後に自動で振ってしまうと、
+// 振り直す機会ごと道具代を失わせることになるので、ここが残っているあいだは自動では振らない。
+// 自分で振り直すか(spendPointsBulk が下書きを消す)、オート強化の「いますぐ振る」を押した時点で再開する。
+const masuAwaitsBondResetReallocation = (masu) => !!(masu && masu.bondResetAllocationSnapshot);
+// 1体ぶんの自動強化。振るものが無ければ null(呼び出し側は保存もしない)。
+// manual は「プレイヤーが自分で『いますぐ振る』を押した」とき。
+// このときだけリセット直後でも振り、手で振ったときと同じく復元の下書きの役目も終わらせる
+// (残したままだと「リセット前の配分を復元」が、いま振ったぶんの上へ重ねて出てしまう)。
+const applyMasuAutoEnhance = (masu, { manual = false } = {}) => {
+  const base = (typeof ALL_PLAYER_MONSTERS !== 'undefined') ? ALL_PLAYER_MONSTERS[masu?.baseId] : null;
+  if (!base) return null;
+  if (!manual && masuAwaitsBondResetReallocation(masu)) return null;
+  const planned = buildMasuAutoEnhancePlan(masu, base);
+  if (!planned) return null;
+  const applied = applyEnhancePlanToMasu(masu, planned.plan);
+  if (!applied) return null;
+  const { bondResetAllocationSnapshot: _usedResetSnapshot, ...withoutSnapshot } = applied.masu;
+  return { masu:manual ? withoutSnapshot : applied.masu, used:applied.used, lines:describeAutoEnhancePlan(planned.plan) };
+};
+// 所持マスモン全体へ一度に通す。1体も変わらなければ null を返すので、
+// 呼び出し側は「変わったときだけ保存する」を素直に書ける(保存のたびに書き込むのを防ぐ)。
+const applyAutoEnhanceToMasuMons = (masuMons) => {
+  const list = Array.isArray(masuMons) ? masuMons : [];
+  const results = [];
+  const next = list.map(masu => {
+    const applied = applyMasuAutoEnhance(masu);
+    if (!applied) return masu;
+    results.push({ masuId:masu.id, name:masu.name, used:applied.used, lines:applied.lines });
+    return applied.masu;
+  });
+  return results.length > 0 ? { next, results } : null;
+};
+// 設定の書き換え。normalize を必ず通すので、画面側は部分的な patch を渡すだけでよい
+const buildMasuAutoEnhanceUpdate = (masu, patch) => ({
+  ...masu,
+  autoEnhance: normalizeMasuAutoEnhance({ ...normalizeMasuAutoEnhance(masu?.autoEnhance), ...(patch || {}) }),
+});
+// 優先順位を1つ上げ下げする。端では動かさない(押しても何も起きない)
+const buildMasuAutoEnhanceOrderMove = (masu, target, direction) => {
+  const settings = normalizeMasuAutoEnhance(masu?.autoEnhance);
+  const from = settings.order.indexOf(target);
+  const to = from + (direction < 0 ? -1 : 1);
+  if (from < 0 || to < 0 || to >= settings.order.length) return masu;
+  const order = [...settings.order];
+  [order[from], order[to]] = [order[to], order[from]];
+  return buildMasuAutoEnhanceUpdate(masu, { order });
+};
 const MAX_UNIQUE_SKILL_LEVEL = 8;
 // 固有技の強化ポイントは、技を上げるほかに「いまのガッツを戻す」ことにも使える。
 // 育てきって技がすべてMAXになったあともポイントが余らないようにするための使い道。
@@ -1509,6 +1677,8 @@ const normalizeMasuProgression = (masu) => ({
   // 旧booleanは曖昧な上限へ移行せずOFF。既存の数値設定は fixed として互換維持する。
   autoRepeatBreakthroughMode: normalizeAutoRepeatBreakthroughMode(masu?.autoRepeatBreakthroughMode, masu?.autoRepeatBreakthroughLevel),
   autoRepeatBreakthroughLevel: normalizeAutoRepeatBreakthroughLevel(masu?.autoRepeatBreakthroughLevel),
+  // オート強化の個体設定。項目を持っていない既存データはOFF・振り先なしとして読む(移行処理はいらない)
+  autoEnhance: normalizeMasuAutoEnhance(masu?.autoEnhance),
   rebirthCount: Math.max(0, Math.floor(Number(masu?.rebirthCount) || 0)),
   // 転生回数は後から足した項目なので、持っていない既存データは0として扱う
   reincarnateCount: Math.max(0, Math.floor(Number(masu?.reincarnateCount) || 0)),
@@ -1605,6 +1775,12 @@ const resetMasuForRebirth = (masu, { rebirthCount, reincarnateCount, reincarnate
     inheritedReincarnateBonusPoints: inheritedReincarnateBonusPointsOf(masu),
     inheritedReincarnateCount: inheritedReincarnateCountOf(masu),
     levelCap: Math.min(masuLevelCapLimit(masu), Math.max(INITIAL_MASU_LEVEL_CAP, Math.floor(Number(levelCap ?? masu?.levelCap) || INITIAL_MASU_LEVEL_CAP))),
+    // 自動まわりの設定(オート強化・AUTO∞自動限界突破)は「育てた中身」ではなく個体ごとの設定なので、
+    // 転生では失わせない。ここへ入れておかないと、転生のたびに設定し直すことになり、
+    // 「転生後の周回を楽にする」というオート強化の目的そのものが果たせなくなる。
+    autoEnhance: normalizeMasuAutoEnhance(masu?.autoEnhance),
+    autoRepeatBreakthroughMode: normalizeAutoRepeatBreakthroughMode(masu?.autoRepeatBreakthroughMode, masu?.autoRepeatBreakthroughLevel),
+    autoRepeatBreakthroughLevel: normalizeAutoRepeatBreakthroughLevel(masu?.autoRepeatBreakthroughLevel),
     // 魂格は転生で失われない。初到達Lvを持ち越すことで魂格Pの二重取得も防ぐ。
     soulRankStage: normalizeSoulRankStage(masu?.soulRankStage),
     soulPointMaxReachedLevel: normalizeSoulPointMaxReachedLevel(masu?.soulPointMaxReachedLevel),
@@ -12452,7 +12628,7 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
   const canvasFaceElements=useMemo(()=>canvasNotes?chart.notes.map((note,index)=>{const monsterSlot=rhythmNoteMonsterSlot(note),monster=monsterSlot?monsters[monsterSlot-1]||null:null;if(!monster)return null;return <span key={index} ref={el=>faceRefs.current[index]=el} data-rhythm-canvas-face aria-hidden="true" style={{display:'none'}}><span data-rhythm-canvas-face-art>{monster.imageUrl&&<DyedMonsterImage baseId={monster.baseId} src={monster.imageUrl} alt="" masuColors={monster.colors} draggable={false} className="h-full w-full object-contain"/>}</span></span>;}).filter(Boolean):null,[canvasNotes,chart.notes,monsterSignature]);
   // レーン枠・サブレーン境界・サブレーン発光も、遊んでいるあいだは中身が変わらない。
   // 発光の ON/OFF は setPressedLanes が直接DOMへ書くので、Reactが作り直す必要はない。
-  const laneElements=useMemo(()=><><div className="pointer-events-none absolute inset-0 grid grid-cols-5">{Array.from({length:5},(_,lane)=><div key={lane} data-rhythm-lane={lane} data-pressed="false" aria-hidden="true" className="relative border-r border-white/20 bg-slate-900/40" style={{transition:settings.lightweightMode?'none':'background-color 60ms linear, box-shadow 60ms linear, filter 60ms linear, border-color 60ms linear',borderBottom:'3px solid transparent',boxSizing:'border-box'}}></div>)}</div><div className="pointer-events-none absolute inset-0" aria-hidden="true">{Array.from({length:5},(_,index)=><i key={index} data-rhythm-sublane-boundary="" />)}</div><div className="pointer-events-none absolute inset-0" aria-hidden="true">{Array.from({length:10},(_,subLane)=><i key={subLane} data-rhythm-sublane-feedback={subLane} data-pressed="false" className="absolute inset-0 opacity-0" style={{clipPath:rhythmSubLanePolygon(subLane),background:'linear-gradient(to bottom,rgba(34,211,238,.12) 0%,rgba(34,211,238,.2) 48%,rgba(103,232,249,.5) 76%,rgba(236,254,255,.94) 88%,rgba(103,232,249,.58) 94%,rgba(34,211,238,.28) 100%)',boxShadow:settings.lightweightMode||settings.effectAmount==='MINIMAL'?'none':settings.effectAmount==='LOW'?'inset 0 -18px 18px rgba(207,250,254,.38),0 0 8px rgba(103,232,249,.38)':'inset 0 -52px 42px rgba(207,250,254,.72),inset 0 -10px 16px rgba(255,255,255,.82),0 0 20px rgba(103,232,249,.72)',filter:settings.effectAmount==='MINIMAL'?'none':settings.effectAmount==='LOW'?'brightness(1.08)':'brightness(1.22)',transition:settings.lightweightMode?'none':'opacity 45ms linear',willChange:settings.lightweightMode?'auto':'opacity'}}/>)}</div></>,[settings.lightweightMode,settings.effectAmount]);
+  const laneElements=useMemo(()=><><div className="pointer-events-none absolute inset-0 grid grid-cols-5">{Array.from({length:5},(_,lane)=><div key={lane} data-rhythm-lane={lane} data-pressed="false" aria-hidden="true" className="relative border-r border-white/20 bg-slate-900/40" style={{/* ★filter をここへ入れない。押したレーンの filter を変えると、変化の60msのあいだ そのレーンが毎フレーム作り直しになる(2026-09-12・実機のカクつき調査) */transition:settings.lightweightMode?'none':'background-color 60ms linear, box-shadow 60ms linear, border-color 60ms linear',borderBottom:'3px solid transparent',boxSizing:'border-box'}}></div>)}</div><div className="pointer-events-none absolute inset-0" aria-hidden="true">{Array.from({length:5},(_,index)=><i key={index} data-rhythm-sublane-boundary="" />)}</div><div className="pointer-events-none absolute inset-0" aria-hidden="true">{/* ★will-change は置かない。以前は10枚すべてに willChange:"opacity" を常時付けていたが、 will-change は「これから変わる」と前もって伝えるものなので、付けっぱなしにすると 押していないあいだも10枚が合成レイヤーとして居座り続ける。opacity の45msの変化は will-change 無しでも十分間に合う(2026-09-12・実機のカクつき調査)。 */}{Array.from({length:10},(_,subLane)=><i key={subLane} data-rhythm-sublane-feedback={subLane} data-pressed="false" className="absolute inset-0 opacity-0" style={{clipPath:rhythmSubLanePolygon(subLane),background:'linear-gradient(to bottom,rgba(34,211,238,.12) 0%,rgba(34,211,238,.2) 48%,rgba(103,232,249,.5) 76%,rgba(236,254,255,.94) 88%,rgba(103,232,249,.58) 94%,rgba(34,211,238,.28) 100%)',boxShadow:settings.lightweightMode||settings.effectAmount==='MINIMAL'?'none':settings.effectAmount==='LOW'?'inset 0 -18px 18px rgba(207,250,254,.38),0 0 8px rgba(103,232,249,.38)':'inset 0 -52px 42px rgba(207,250,254,.72),inset 0 -10px 16px rgba(255,255,255,.82),0 0 20px rgba(103,232,249,.72)',filter:settings.effectAmount==='MINIMAL'?'none':settings.effectAmount==='LOW'?'brightness(1.08)':'brightness(1.22)',transition:settings.lightweightMode?'none':'opacity 45ms linear'}}/>)}</div></>,[settings.lightweightMode,settings.effectAmount]);
   const monsterForNote=note=>{const slot=rhythmNoteMonsterSlot(note);return slot?monstersRef.current[slot-1]||null:null;};
   // --- 両サイドのマスモン ---
   // レーンの外側に空いている三角形へ、設定したマスモンを置いて拍に合わせて跳ねさせる。
@@ -12712,20 +12888,19 @@ if(judgment!=='MISS'){
     const span=rhythmNoteIsSlide(note)
       ?rhythmProjectSlideSpan(rhythmReleaseLane(note),note,1,run.audio?.songTimeMs?.()??note.timeMs)
       :rhythmNoteVisualSpan(note,note.lane,1,run.audio?.songTimeMs?.()??note.timeMs);
-    rhythmSpawnHitEffect(area,{centerRatio:span.center,widthRatio:span.width,judgment,monster:monsterHit});
-    if(monsterHit&&screenFlashRef.current){
-      const flash=screenFlashRef.current;
-      flash.dataset.rhythmFlash='';
-      void flash.offsetWidth;
-      flash.dataset.rhythmFlash='1';
-    }
+    // 流し直す印はここで集めて、最後にまとめて1回のレイアウトで付け直す
+    // (箇所ごとに void offsetWidth を書くと、その回数ぶんページ全体のレイアウトが走る)。
+    const restarts=[];
+    const hitEffect=rhythmSpawnHitEffect(area,{centerRatio:span.center,widthRatio:span.width,judgment,monster:monsterHit,defer:true});
+    if(hitEffect)restarts.push(hitEffect);
+    if(monsterHit&&screenFlashRef.current)restarts.push({el:screenFlashRef.current,attr:'rhythmFlash'});
     // そのマスモンが両サイドで大きく跳ねる(どのマスモンの番だったかが分かるように)
     if(monsterHit){
       // モンスターノーツだけは振動も強くする(ふつうのノーツとの違いを指でも分かるように)
       if(settings.vibrationEnabled)RHYTHM_HAPTICS.tap(26);
       const slot=rhythmNoteMonsterSlot(note),el=slot?sideMonsterRefs.current[slot-1]:null;
       if(el){
-        el.dataset.rhythmSideHit='';void el.offsetWidth;el.dataset.rhythmSideHit='1';
+        restarts.push({el,attr:'rhythmSideHit'});
         // 出番が済んだので、このあとの待機は最初のぴょんぴょんとは別の動き(ゆらゆら)にする
         el.dataset.rhythmSidePhase='done';
         // 歓声(700ms)が終わったら印を外す。外さないと !important の指定が残り続けて
@@ -12735,10 +12910,12 @@ if(judgment!=='MISS'){
     }
     // 判定文字を一度だけ弾ませる
     const judgmentText=judgmentTextRef.current;
-    if(judgmentText){judgmentText.dataset.rhythmJudgmentPop='';void judgmentText.offsetWidth;judgmentText.dataset.rhythmJudgmentPop='1';}
+    if(judgmentText)restarts.push({el:judgmentText,attr:'rhythmJudgmentPop'});
     // コンボ数も1つ増えるたびに弾ませる(プロセカのように数字が跳ねる)
     const comboText=comboRef.current;
-    if(comboText){comboText.dataset.rhythmComboPop='';void comboText.offsetWidth;comboText.dataset.rhythmComboPop='1';}
+    if(comboText)restarts.push({el:comboText,attr:'rhythmComboPop'});
+    // ここで1回だけレイアウトを読む。集めた印をまとめて付け直す
+    rhythmRestartAnimations(restarts);
   }
 }
 if(settings.vibrationEnabled&&judgment!=='MISS')RHYTHM_HAPTICS.tap();const nextCombo=rhythmComboAfter(run.combo,judgment);run.combo=nextCombo;run.maxCombo=Math.max(run.maxCombo,nextCombo);run.counts[judgment]++;const side=judgment==='MISS'?null:rhythmFastSlow(deltaMs);if(side)run[side.toLowerCase()]++;const songTimeMs=run.audio?.songTimeMs?.()??0;
@@ -12782,10 +12959,14 @@ if(revived&&run.lifeDepleted&&run.life>0){run.scoreOffset=rhythmScoreOffsetAfter
 // ★根性で蘇生した直後は「増えた」側になるので、減ったときだけ出す(lifeDelta<0)。
 const lifeDelta=run.life-lifeBefore;
 if(lifeDelta<0){
+  // ここも印の付け直しなので、レイアウトの読み取りは1回にまとめる(rhythmRestartAnimations)。
+  // 箇所ごとに void offsetWidth を書くと、その回数ぶんページ全体のレイアウトが走る。
+  const lifeRestarts=[];
   const lifeBox=lifeBoxRef.current;
-  if(lifeBox){lifeBox.dataset.rhythmLifeHit='';void lifeBox.offsetWidth;lifeBox.dataset.rhythmLifeHit='1';}
+  if(lifeBox)lifeRestarts.push({el:lifeBox,attr:'rhythmLifeHit'});
   const lifeDamage=lifeDamageRef.current;
-  if(lifeDamage){lifeDamage.textContent=String(lifeDelta);lifeDamage.dataset.rhythmLifeDamageShow='';void lifeDamage.offsetWidth;lifeDamage.dataset.rhythmLifeDamageShow='1';}
+  if(lifeDamage){lifeDamage.textContent=String(lifeDelta);lifeRestarts.push({el:lifeDamage,attr:'rhythmLifeDamageShow'});}
+  rhythmRestartAnimations(lifeRestarts);
 }
 // 0になった瞬間だけ、大きく1度だけ知らせる(蘇生して戻った場合はここを通らない)
 if(run.life===0&&lifeBefore>0)setLifeDownCount(count=>count+1);
@@ -13009,6 +13190,12 @@ if(RHYTHM_PERF.enabled)RHYTHM_PERF.tick(performance.now()-perfTickStart,perfTick
   const beginRun=async startBestValue=>{if(startLockRef.current)return;startLockRef.current=true;const generation=++generationRef.current;disposeRun();setLifeDownCount(0);setView({...initialView(),status:'loading'});const audio=await Audio_.startRhythmTrack(song.bgmTrackId,settings.bgmVolume,{autoStart:false});if(!mountedRef.current||generation!==generationRef.current){audio?.stop();return;}if(!audio){startLockRef.current=false;setView(v=>({...v,status:'error'}));return;}const startBest=normalizeRhythmBestRecord(startBestValue);rhythmFloatingNotesClear();runRef.current={audio,notes:makeRuntimeNotes(),activePointers:new Map(),standbyPointers:new Map(),activeTouchInputs:new Set(),combo:0,maxCombo:0,counts:emptyCounts(),fast:0,slow:0,life:RHYTHM_LIFE_MAX,lifeDepleted:false,score:0,lockedScore:0,scoreOffset:0,abilities:createRhythmMonsterAbilityState(),konjoOwnerName:'',finished:false,paused:false,generation,startBest,startBestScore:startBest.bestScore};laneRefs.current.forEach(el=>{if(el){el.style.display='block';el.style.opacity='0';el.style.filter='';/* styleを直接書き戻したら、「前に何を書いたか」の控えも一緒に捨てる。   控えだけ古いまま残ると、値が同じだと判断して書き込みを飛ばし、   実際の見た目とズレたまま固まる(例: 透明のまま出てこない)ため */el._rhythmHidden=false;el._rhythmOpacity=undefined;el._rhythmWillChange=undefined;el._rhythmFailedFlag=undefined;el._rhythmClearFlag=undefined;delete el.dataset.rhythmClear;el._rhythmHoldBody=undefined;el._rhythmHoldFilter=undefined;el._rhythmDepthScale=undefined;el._rhythmDepthBrightness=undefined;el._rhythmTransform=undefined;el._rhythmSlideBody=undefined;}});faceRefs.current.forEach(el=>{if(el){el.style.display='none';delete el.dataset.rhythmClear;el._rhythmFaceShown=false;el._rhythmFaceClear=undefined;el._rhythmFaceTransform=undefined;el._rhythmFaceScale=undefined;}});if(canvasNotes)RHYTHM_CANVAS_RENDERER.clear();rhythmLayoutPlayArea(playAreaRef.current);updateJudgmentBand(measureTravel(),rhythmTravelMsForSpeed(settings.noteSpeed));
 /* 使い回すヒットエフェクトを先に作っておく。曲の途中で10個まとめて作ると、そこで一瞬引っかかる */
 rhythmEnsureHitEffects(playAreaRef.current);
+/* 光のスプライトも先に焼いておく。曲の中で「その種類のノーツが初めて出た瞬間」に作ると
+   そこで数ms引っかかる(モンスターノーツは3枚まとめて作るのでいちばん重い)。
+   カウントダウン(READY→3→2→1 の3.2秒)のあいだに済ませるので、プレイヤーには見えない。
+   ★描くときと同じ設定を渡す。キャッシュのキーは種類と画素密度だけなので、
+     違う設定で焼くとそのまま曲の終わりまで使われてしまう(2026-09-12) */
+if(canvasNotes)RHYTHM_CANVAS_RENDERER.warmSprites({effect:settings.effectAmount,lightweight:settings.lightweightMode});
 /* 両サイドのマスモンが跳ねる速さを曲の1拍へ合わせる。   プレイ開始時に一度書くだけで、あとはCSSアニメーションが回すので毎フレームのJSは走らない */
 const sideBeatMs=rhythmSideMonsterBeatMs(song.bgmTrackId);
 sideMonsterRefs.current.forEach(el=>{if(el){el.style.setProperty('--rhythm-side-beat',`${sideBeatMs}ms`);el.dataset.rhythmSideActive='0';el.dataset.rhythmSideHit='0';el.dataset.rhythmSidePhase='intro';}});
@@ -13146,7 +13333,10 @@ scheduleTick();};
   </div>
 </div>}
 <dl className="grid grid-cols-2 gap-2 rounded-2xl bg-slate-900 p-4">{RHYTHM_JUDGMENT_IDS.map(id=><React.Fragment key={id}><dt>{id}</dt><dd className="text-right font-mono">{view.counts[id]}</dd></React.Fragment>)}<dt>MAX COMBO</dt><dd className="text-right">{view.maxCombo}</dd><dt>FAST</dt><dd className="text-right">{view.fast}</dd><dt>SLOW</dt><dd className="text-right">{view.slow}</dd></dl><div className="mt-5 grid grid-cols-1 gap-2"><button className="min-h-[48px] rounded-xl bg-fuchsia-700 font-black" disabled={startLockRef.current} onClick={()=>beginRun(mergeRhythmBestRecord(runRef.current?.startBest,result))}>もう一度プレイ</button><button className="min-h-[48px] rounded-xl bg-indigo-700 font-black" onClick={abort}>{debugPlay?'音ゲーデバッグへ戻る':'曲えらびへ戻る'}</button></div></main>}
-  return <main data-rhythm-tap-test className="relative flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white landscape:pl-[env(safe-area-inset-left)] landscape:pr-[env(safe-area-inset-right)]" style={{touchAction:'none'}}><header data-rhythm-hud className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-2 px-3 pt-1.5"><div data-rhythm-hud-left className="min-w-0 max-w-[35vw] text-left landscape:max-w-[28vw]"><div className="landscape:flex landscape:items-center landscape:gap-2"><div className="flex items-center gap-1.5"><div className={`relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-current bg-slate-950/85 landscape:h-7 landscape:w-7 ${RHYTHM_RANK_COLORS[rhythmRankForScore(view.score)]}`} style={{boxShadow:'0 0 8px rgba(103,232,249,.35)'}}><b data-rhythm-rank className="text-sm font-black leading-none" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{rhythmRankForScore(view.score)}</b></div><div className="min-w-0 landscape:min-w-0"><div className="flex items-center gap-0.5 landscape:hidden"><div data-rhythm-rank-gauge className="relative h-1.5 w-14 overflow-hidden rounded-full border border-white/25 bg-slate-950/80"><i aria-hidden="true" className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-cyan-300 to-fuchsia-300" style={{width:`${rhythmRankProgress(view.score)}%`}}/></div><b data-rhythm-rank-next className="shrink-0 text-[9px] font-black leading-none text-slate-300">{rankNextLabel}</b></div><b data-rhythm-score className="mt-0.5 block font-black leading-none tabular-nums landscape:mt-0" style={{fontSize:'min(18px,4.6vw)',textShadow:'0 1px 6px rgba(2,6,23,.96)'}}>{view.score.toLocaleString()}</b><small className="mt-0.5 block text-[9px] font-bold leading-none text-slate-300 landscape:hidden" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>BEST {Number(bestRecord?.bestScore||0).toLocaleString()}</small></div></div><div className="mt-1.5 flex max-w-[34vw] flex-wrap items-center gap-1 landscape:mt-0 landscape:min-w-0 landscape:shrink"><span className="shrink-0 rounded bg-fuchsia-700/85 px-1.5 py-0.5 text-[9px] font-black leading-none">{difficulty.id}</span><small data-rhythm-mode-label className="text-[9px] font-bold leading-none tracking-[0.14em] text-cyan-300 landscape:hidden" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{tutorial?'れんしゅう':debugPlay?debugChartLabel:`Lv.${chart.level}`}</small></div></div><div data-rhythm-hud-song className="mt-1 max-w-[31vw] text-[10px] font-black text-slate-100 landscape:mt-0.5 landscape:max-w-none landscape:min-w-0" style={{display:'-webkit-box',WebkitLineClamp:isLandscape?'1':'3',WebkitBoxOrient:'vertical',overflow:'hidden',lineHeight:'1.25',textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>♪ {rhythmSongFullName(song)}</div></div><div data-rhythm-hud-right className="flex w-[33vw] max-w-[33vw] flex-col items-end gap-1.5"><div className="landscape:flex landscape:items-center landscape:gap-2"><div ref={lifeBoxRef} data-rhythm-life data-life-state={lifeState} className="relative flex items-center justify-end gap-1"><span aria-hidden="true" data-rhythm-life-heart className="text-sm leading-none text-rose-400" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{lifeState==='down'?'💔':'♥'}</span>{/* ★太さ・幅は「小さい端末(320px)でも台形の外の空きへ収まる」ところで止めてある。
+  /* ★ここへ属性を足すときは className の「後ろ」へ置く。
+     rhythm-screen-layout-check.js が <main data-rhythm-tap-test className="…overflow-hidden という
+     文字列の並びをそのまま見ているので、あいだに挟むと「1画面になっていない」と落ちる。 */
+  return <main data-rhythm-tap-test className="relative flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white landscape:pl-[env(safe-area-inset-left)] landscape:pr-[env(safe-area-inset-right)]" data-rhythm-lightweight={settings.lightweightMode?'true':'false'} data-rhythm-effect={settings.effectAmount} style={{touchAction:'none'}}><header data-rhythm-hud className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-2 px-3 pt-1.5"><div data-rhythm-hud-left className="min-w-0 max-w-[35vw] text-left landscape:max-w-[28vw]"><div className="landscape:flex landscape:items-center landscape:gap-2"><div className="flex items-center gap-1.5"><div className={`relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-current bg-slate-950/85 landscape:h-7 landscape:w-7 ${RHYTHM_RANK_COLORS[rhythmRankForScore(view.score)]}`} style={{boxShadow:'0 0 8px rgba(103,232,249,.35)'}}><b data-rhythm-rank className="text-sm font-black leading-none" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{rhythmRankForScore(view.score)}</b></div><div className="min-w-0 landscape:min-w-0"><div className="flex items-center gap-0.5 landscape:hidden"><div data-rhythm-rank-gauge className="relative h-1.5 w-14 overflow-hidden rounded-full border border-white/25 bg-slate-950/80"><i aria-hidden="true" className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-cyan-300 to-fuchsia-300" style={{width:`${rhythmRankProgress(view.score)}%`}}/></div><b data-rhythm-rank-next className="shrink-0 text-[9px] font-black leading-none text-slate-300">{rankNextLabel}</b></div><b data-rhythm-score className="mt-0.5 block font-black leading-none tabular-nums landscape:mt-0" style={{fontSize:'min(18px,4.6vw)',textShadow:'0 1px 6px rgba(2,6,23,.96)'}}>{view.score.toLocaleString()}</b><small className="mt-0.5 block text-[9px] font-bold leading-none text-slate-300 landscape:hidden" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>BEST {Number(bestRecord?.bestScore||0).toLocaleString()}</small></div></div><div className="mt-1.5 flex max-w-[34vw] flex-wrap items-center gap-1 landscape:mt-0 landscape:min-w-0 landscape:shrink"><span className="shrink-0 rounded bg-fuchsia-700/85 px-1.5 py-0.5 text-[9px] font-black leading-none">{difficulty.id}</span><small data-rhythm-mode-label className="text-[9px] font-bold leading-none tracking-[0.14em] text-cyan-300 landscape:hidden" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{tutorial?'れんしゅう':debugPlay?debugChartLabel:`Lv.${chart.level}`}</small></div></div><div data-rhythm-hud-song className="mt-1 max-w-[31vw] text-[10px] font-black text-slate-100 landscape:mt-0.5 landscape:max-w-none landscape:min-w-0" style={{display:'-webkit-box',WebkitLineClamp:isLandscape?'1':'3',WebkitBoxOrient:'vertical',overflow:'hidden',lineHeight:'1.25',textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>♪ {rhythmSongFullName(song)}</div></div><div data-rhythm-hud-right className="flex w-[33vw] max-w-[33vw] flex-col items-end gap-1.5"><div className="landscape:flex landscape:items-center landscape:gap-2"><div ref={lifeBoxRef} data-rhythm-life data-life-state={lifeState} className="relative flex items-center justify-end gap-1"><span aria-hidden="true" data-rhythm-life-heart className="text-sm leading-none text-rose-400" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{lifeState==='down'?'💔':'♥'}</span>{/* ★太さ・幅は「小さい端末(320px)でも台形の外の空きへ収まる」ところで止めてある。
         これ以上太く・広くすると tools/mode/rhythm-hud-wedge-check.js が落ちる。
         気づきやすさは大きさではなく、色・点滅・ひび割れ・減った量の数字で出す */}<div data-rhythm-life-track className="relative h-2.5 w-12 rounded-full border bg-slate-950/80 landscape:h-2 landscape:w-14"><i data-rhythm-life-bar aria-hidden="true" className="absolute inset-y-0 left-0 rounded-full" style={{width:`${(lifeRatio*100).toFixed(1)}%`,background:lifeRatio>.5?'linear-gradient(90deg,#34d399,#22d3ee)':lifeRatio>.25?'linear-gradient(90deg,#fbbf24,#fb923c)':'linear-gradient(90deg,#fb7185,#ef4444)',transition:settings.lightweightMode?'none':'width 140ms linear'}}/></div><b data-rhythm-life-value className="text-[10px] font-black leading-none tabular-nums text-slate-200" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{lifeState==='down'?'DOWN':view.life}</b>{/* 減った量(「-50」)を、減ったその場に一瞬だけ出す。中身はapplyJudgmentが直接書く */}<b ref={lifeDamageRef} data-rhythm-life-damage aria-hidden="true" className="pointer-events-none absolute right-0 top-full mt-0.5 text-[11px] font-black leading-none tabular-nums"/></div><button data-rhythm-pause aria-label="ポーズ" className="pointer-events-auto mt-1 flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-full border border-white/20 bg-slate-900/90 text-2xl font-black text-white shadow-[0_0_12px_rgba(103,232,249,0.18)] landscape:mt-0" onClick={pause}>Ⅱ</button></div><b ref={abilityBadgeRef} data-rhythm-ability-badge hidden className="mt-1 block text-right text-[9px] font-black leading-none tracking-[0.06em] text-amber-200 landscape:inline-block landscape:mt-0.5" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}/><div data-rhythm-combo-box data-combo-tier={String(comboTier)} className="mt-1 text-right landscape:flex landscape:items-baseline landscape:gap-1.5 landscape:mt-0.5"><span data-rhythm-combo-label className="block text-[9px] font-black leading-none tracking-[0.18em] text-fuchsia-300" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>COMBO</span>{/* 段(comboTier)が上がるほど数字が大きく・熱くなる。大きさは倍率(--mh-combo-scale)で効かせる。
       font-sizeを段ごとに上書きすると横持ちの詰めたサイズまで巻き添えで壊れるため */}<b ref={comboRef} data-rhythm-combo data-combo-tier={String(comboTier)} className="mt-0.5 block text-3xl font-black leading-none tabular-nums text-white landscape:mt-0 landscape:text-base" style={{'--mh-combo-scale':rhythmComboTierScale(comboTier)}}>{view.combo}</b></div></div></header>{/* ===== ライフ0(DOWN)の強調(2026-09-12・ユーザー指示) ===== */}
@@ -13155,7 +13345,7 @@ scheduleTick();};
 {lifeState==='down'&&<div data-rhythm-down-vignette aria-hidden="true" className="pointer-events-none absolute inset-0 z-20"/>}
 {/* 0になったその瞬間だけ、大きく1度だけ出す(1.4秒で消える) */}
 {lifeDownSlam&&<div data-rhythm-life-down-slam aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-[32%] z-40 text-center"><b className="block text-5xl font-black leading-none">LIFE 0</b><small className="mt-1 block text-xs font-black tracking-[0.34em]">DOWN</small></div>}
-<div ref={playAreaRef} data-rhythm-play-area data-rhythm-lightweight={settings.lightweightMode?'true':'false'} data-rhythm-effect={settings.effectAmount} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerEnd} onPointerCancel={pointerEnd} className="relative mx-2 mb-2 flex-1 min-h-0 overflow-hidden border-x border-cyan-400/50" style={{/* position と overflow はここにも直接書く。ノーツも判定ラインもこの箱を基準に
+<div ref={playAreaRef} data-rhythm-play-area data-rhythm-strip={RHYTHM_STRIP.value||undefined} data-rhythm-lightweight={settings.lightweightMode?'true':'false'} data-rhythm-effect={settings.effectAmount} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerEnd} onPointerCancel={pointerEnd} className="relative mx-2 mb-2 flex-1 min-h-0 overflow-hidden border-x border-cyan-400/50" style={{/* position と overflow はここにも直接書く。ノーツも判定ラインもこの箱を基準に
     置いているので、Tailwindの relative が効く前だと基準が別の要素へ移り、
     判定ラインが画面の変なところへ出る(2026-09-05)。中身の置き場所に関わるものは
     外部CSSに任せない */position:'relative',overflow:'hidden',touchAction:'none',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none','--rhythm-note-size-scale':settings.noteSize/100,filter:settings.effectAmount==='MINIMAL'?'saturate(.78)':settings.effectAmount==='LOW'?'saturate(.92)':'none'}}>{laneElements}{sideMonsterElements}<div ref={screenFlashRef} data-rhythm-screen-flash aria-hidden="true"/>{/* 判定ラインはTailwindのクラスを使わず、位置・高さ・色をすべてここへ直接書く。
@@ -15599,7 +15789,7 @@ function MasuSoulTraitsScreen({
 
 function MasuTranscendEnhanceScreen({
   commitTranscendExchange, commitTranscendFruit, commitTranscendPlan, getMasuMon, masuMonDetail,
-  onBack, onMissing, ownedItems, renderPowerBadge, saveMissionProgress,
+  onBack, onMissing, onOpenAutoEnhance, ownedItems, renderPowerBadge, saveMissionProgress,
   setTranscendBulkUnit, setTranscendExchangeError, setTranscendExchangeOpen, setTranscendExchangeWant, setTranscendFruitConfirmAmount,
   setTranscendFruitError, setTranscendFruitItemId, setTranscendFruitOpen, setTranscendPlan, setTranscendResetError,
   setTranscendResetOpen, transcendBulkUnit, transcendExchangeError, transcendExchangeOpen, transcendExchangeWant,
@@ -15710,9 +15900,10 @@ function MasuTranscendEnhanceScreen({
               <TranscendenceBadge transcended={normalized.transcended} soulRankStage={normalized.soulRankStage} small/>
             </span>
           </div>
-          <div data-transcend-enhance-tabs className="shrink-0 w-full max-w-md mx-auto px-4 pt-3 grid grid-cols-2 gap-1.5">
+          <div data-transcend-enhance-tabs className="shrink-0 w-full max-w-md mx-auto px-4 pt-3 grid grid-cols-3 gap-1.5">
             <button onClick={onBack} className="min-h-[40px] rounded-xl border border-amber-400/50 bg-slate-900 text-amber-200 text-[11px] font-black active:scale-95">通常強化</button>
             <button className="min-h-[40px] rounded-xl bg-sky-500 text-slate-950 text-[11px] font-black">超越強化</button>
+            <button onClick={onOpenAutoEnhance} className="min-h-[40px] rounded-xl border border-lime-400/50 bg-slate-900 text-lime-300/80 text-[11px] font-black active:scale-95">オート強化</button>
           </div>
           {/* 超越の話をするセリフは、正式に超越した個体のときだけにする */}
           <div className="shrink-0 w-full max-w-md mx-auto px-4 pt-3"><AssistantBubble scene={normalized.transcended?'transcendence':'masuEnhance'} compact/></div>
@@ -15878,8 +16069,9 @@ function MasuTranscendEnhanceScreen({
 // ・戻り先は masuEnhanceFrom(どこから来たか)で決まる。行き先の判断は本体に残す
 
 function MasuEnhanceScreen({
-  addAssistantBond, bulkEnhanceUnit, bulkPlan, getMasuMon, masuMonDetail,
-  onBack, onMissing, onOpenTranscendEnhance, renderPowerBadge, saveMissionProgress,
+  addAssistantBond, autoEnhanceIntroVisible, bulkEnhanceUnit, bulkPlan, getMasuMon, masuMonDetail,
+  onBack, onDismissAutoEnhanceIntro, onMissing, onOpenAutoEnhance, onOpenTranscendEnhance,
+  renderPowerBadge, saveMissionProgress,
   setBulkEnhanceUnit, setBulkPlan, setEffect, setMasuMonDetail, spendPointsBulk,
 })  {
 
@@ -15896,6 +16088,7 @@ function MasuEnhanceScreen({
       // 同じ計算に通した差分を出すので、画面に「+10」を直接書かない
       const currentPower = masuPowerOf(masu);
       const ps = mergeMasuIntoMon(masu)?.plusStats||{};
+      const autoEnhance = normalizeMasuAutoEnhance(masu.autoEnhance);
       // 強化はマスモン詳細の「育成・カスタム」から入るので、戻り先も詳細にする。
       // ここで masuMonDetail を消すと一覧まで戻され、続けて染色やトレーニングをしたいときに
       // また同じ個体を探し直すことになる(詳細の中身は getMasuMon で引き直すので最新の値が出る)
@@ -15960,14 +16153,33 @@ function MasuEnhanceScreen({
             <button onClick={backToDetail} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
             <h2 className="text-xl font-black italic text-amber-400 uppercase tracking-widest flex-1">マスモン強化</h2>
           </div>
-          {/* どのマスモンでも通常強化と超越強化を切り替えられる。
+          {/* どのマスモンでも通常強化・超越強化・オート強化を切り替えられる。
               超越強化が使えるかどうかと、神殿で正式に超越したかどうかは別の話 */}
-          {<div data-transcend-enhance-tabs className="shrink-0 w-full max-w-md mx-auto px-4 pt-3 grid grid-cols-2 gap-1.5">
+          {<div data-transcend-enhance-tabs className="shrink-0 w-full max-w-md mx-auto px-4 pt-3 grid grid-cols-3 gap-1.5">
             <button className="min-h-[40px] rounded-xl bg-amber-600 text-slate-950 text-[11px] font-black">通常強化</button>
             <button onClick={onOpenTranscendEnhance} className="min-h-[40px] rounded-xl border border-sky-400/50 bg-slate-900 text-sky-200 text-[11px] font-black active:scale-95">超越強化</button>
+            <button onClick={onOpenAutoEnhance} className={`min-h-[40px] rounded-xl border bg-slate-900 text-[11px] font-black active:scale-95 ${autoEnhance.enabled?'border-lime-400 text-lime-200':'border-lime-400/50 text-lime-300/80'}`}>オート強化{autoEnhance.enabled&&<small className="block text-[7px] leading-none">ON</small>}</button>
           </div>}
           <div className="shrink-0 w-full max-w-md mx-auto px-4 pt-3"><AssistantBubble scene="masuEnhance" compact/></div>
           <div className="flex-1 overflow-y-auto mh-scroll p-4 space-y-3 max-w-md mx-auto w-full">
+            {/* 画面のなかでの使い方案内(CLAUDE.md ⑤)。オート強化は裏で働く仕組みで、
+                ここを開いた人が上のタブに気づかないと一生出会えないため、最初の1回だけ知らせる */}
+            {autoEnhanceIntroVisible&&(
+              <div className="rounded-2xl border border-lime-400/50 bg-lime-950/30 p-3">
+                <div className="text-[11px] font-black text-lime-200">💡 強化を毎回手で振るのが大変なら</div>
+                <div className="mt-1 text-[9px] font-bold text-slate-200 leading-relaxed">上の「オート強化」で、この子ごとに「どこまで上げてよいか」と「その中での優先順位」を決めておけます。強化ポイントが入るたび自動で振られるので、転生したあとの周回でも放っておくだけで元の形まで戻ります。</div>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  <button type="button" onClick={()=>{onDismissAutoEnhanceIntro();onOpenAutoEnhance();}} className="min-h-[40px] rounded-xl bg-lime-500 text-slate-950 text-[10px] font-black active:scale-95">設定を開く</button>
+                  <button type="button" onClick={onDismissAutoEnhanceIntro} className="min-h-[40px] rounded-xl bg-slate-800 text-slate-300 text-[10px] font-black active:scale-95">あとで</button>
+                </div>
+              </div>
+            )}
+            {autoEnhance.enabled&&(
+              <button type="button" onClick={onOpenAutoEnhance} className="w-full rounded-2xl border border-lime-400/40 bg-lime-950/20 px-3 py-2 text-left active:scale-[.99]">
+                <div className="text-[10px] font-black text-lime-200 flex items-center gap-1.5"><Sparkles size={11}/>オート強化 ON</div>
+                <div className="text-[8px] font-bold text-slate-300 mt-0.5">強化ポイントが入ると、決めた上限と優先順位で自動的に振られます。タップで設定へ。</div>
+              </button>
+            )}
 
             {/* まとめて強化: 1ポイントずつタップするのが手間なので、
                 振り分けを下書きしてから一度に確定できるようにしている */}
@@ -18281,6 +18493,239 @@ function SoulBattleEffects({
   );
 }
 
+// ---- part: 72-screen-masu-auto-enhance.jsx ----
+// ==== 画面: マスモン オート強化設定(gameState === 'MASU_AUTO_ENHANCE') ====
+//
+// 転生や限界突破のあとは強化が白紙へ戻るので、周回で貯まる強化ポイントを毎回手で振り直すのが
+// 大変だった(2026-09-12・ユーザー要望)。この画面では個体ごとに
+//   ・オン / オフ
+//   ・どこまで上げてよいか(上限)
+//   ・その中での優先順位
+// の3つだけを決める。実際に振る計算は 11-masu-progression.jsx の
+// buildMasuAutoEnhancePlan / applyMasuAutoEnhance が持っていて、
+// 手で振るとき(applyEnhancePlanToMasu)とまったく同じ道を通る。
+//
+// 【この画面ならではの注意】
+// ・保存を伴う操作は MonsterHeroGame 側に残し、props で受ける(ほかのマスモン画面と同じ)
+// ・上限の数値入力だけは1文字ごとに保存すると書き込みが増えるので、入力中は下書き(draft)を持ち、
+//   指を離した(blur)ときとEnterのときにだけ保存する。＋−や目標グレードのselectはその場で保存する
+
+function MasuAutoEnhanceScreen({
+  applyAutoEnhanceNow, autoEnhanceLog, getMasuMon, masuMonDetail, moveAutoEnhanceOrder,
+  onBack, onMissing, onOpenNormalEnhance, onOpenTranscendEnhance, renderPowerBadge, updateAutoEnhance,
+}) {
+      // ★フックは必ずいちばん上で呼ぶ。下の「ベースが見つからない」で早期に返す行より後ろへ置くと、
+      //   ある回だけフックの数が変わってReactが壊れる。上限の数値は入力中だけ下書きで持つ
+      const [limitDraft, setLimitDraft] = useState(null);
+      const masu = getMasuMon(masuMonDetail.id) || masuMonDetail;
+      const base = ALL_PLAYER_MONSTERS[masu.baseId];
+      if (!base) { onMissing(); return null; }
+      const settings = normalizeMasuAutoEnhance(masu.autoEnhance);
+      const points = Math.max(0, Math.floor(Number(masu.distAptPoints) || 0));
+      const resolvedApt = resolveMasuDistAptitude(masu, base);
+      const baseApt = masuTranscendBaseAptitude(masu, base);
+      const hasTarget = autoEnhanceHasTarget(settings);
+      // 絆ポイントリセットの直後は自動で振らない(道具代を無駄にしないため)。
+      // 止まっていることを黙っていると「ONなのに働かない」に見えるので、画面で必ず伝える
+      const awaitsReset = masuAwaitsBondResetReallocation(masu);
+      // いま持っているポイントを設定どおりに振ったらどうなるか。設定を変えるたびに作り直すので、
+      // 「この順番でいいのか」を保存前と同じ計算で確かめられる
+      const planned = buildMasuAutoEnhancePlan({ ...masu, autoEnhance:{ ...settings, enabled:true } }, base);
+      const plannedLines = planned ? describeAutoEnhancePlan(planned.plan) : [];
+      const log = (autoEnhanceLog || []).filter(entry => String(entry.masuId) === String(masu.id));
+
+      // null のあいだは保存値をそのまま出す
+      const statLimitText = (key) => {
+        if (limitDraft && limitDraft.key === key) return limitDraft.text;
+        const limit = settings.statLimits[key];
+        return limit === null ? '' : String(limit);
+      };
+      const commitStatLimit = (key) => {
+        if (!limitDraft || limitDraft.key !== key) return;
+        const text = limitDraft.text.trim();
+        setLimitDraft(null);
+        // 空欄は「上限なし」。数字以外が混ざっていたら数字だけを拾う(スマホのキーボード対策)
+        const digits = text.replace(/[^0-9]/g, '');
+        updateAutoEnhance(masu.id, { statLimits:{ ...settings.statLimits, [key]: digits === '' ? null : Number(digits) } });
+      };
+      const setStatLimit = (key, value) => {
+        setLimitDraft(null);
+        updateAutoEnhance(masu.id, { statLimits:{ ...settings.statLimits, [key]: value } });
+      };
+      const setAptLimit = (index, grade) => {
+        const aptLimits = [...settings.aptLimits];
+        aptLimits[index] = grade;
+        updateAutoEnhance(masu.id, { aptLimits });
+      };
+      const captureCurrent = () => {
+        const captured = buildAutoEnhanceLimitsFromCurrent(masu, base);
+        if (captured) { setLimitDraft(null); updateAutoEnhance(masu.id, captured); }
+      };
+      const clearAll = () => {
+        setLimitDraft(null);
+        updateAutoEnhance(masu.id, { statLimits:{ hp:0, atk:0, def:0, guts:0 }, aptLimits:[null,null,null,null] });
+      };
+      const rowLabel = (target) => {
+        const aptIndex = autoEnhanceAptIndexOf(target);
+        return aptIndex != null ? `${RANGE_LABELS[aptIndex]}距離適性` : STAT_POINT_KEYS[target];
+      };
+      // 目標に選べるグレード。いまより下は選べない(下げる強化は存在しないため)
+      const aptChoices = (index) => {
+        const from = Math.max(0, DIST_APTITUDE_GRADES.indexOf(resolvedApt[index] || 'C'));
+        return DIST_APTITUDE_GRADES.slice(from + 1);
+      };
+
+      return (
+        <div style={{position:"absolute",inset:0,backgroundColor:"#020617",zIndex:30000}} className="absolute inset-0 flex flex-col overflow-hidden" data-auto-enhance={masu.id}>
+          <div className="flex items-center gap-2 p-4 shrink-0 border-b border-white/10" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))'}}>
+            <button onClick={onBack} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+            <h2 className="text-xl font-black italic text-lime-300 uppercase tracking-widest flex-1">オート強化</h2>
+          </div>
+          <div data-transcend-enhance-tabs className="shrink-0 w-full max-w-md mx-auto px-4 pt-3 grid grid-cols-3 gap-1.5">
+            <button onClick={onOpenNormalEnhance} className="min-h-[40px] rounded-xl border border-amber-400/50 bg-slate-900 text-amber-200 text-[11px] font-black active:scale-95">通常強化</button>
+            <button onClick={onOpenTranscendEnhance} className="min-h-[40px] rounded-xl border border-sky-400/50 bg-slate-900 text-sky-200 text-[11px] font-black active:scale-95">超越強化</button>
+            <button className="min-h-[40px] rounded-xl bg-lime-500 text-slate-950 text-[11px] font-black">オート強化</button>
+          </div>
+          <div className="shrink-0 w-full max-w-md mx-auto px-4 pt-3"><AssistantBubble scene="masuAutoEnhance" compact/></div>
+          <div className="flex-1 overflow-y-auto mh-scroll p-4 space-y-3 max-w-md mx-auto w-full">
+
+            <div className="flex items-center gap-3 bg-slate-900 border border-lime-500/30 rounded-3xl p-3 shadow-xl">
+              <div className="w-14 h-14 shrink-0 rounded-full overflow-hidden border border-lime-400/40"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/></div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-black text-white truncate">{masu.name}</h3>
+                <div className="text-[9px] text-lime-300 font-black flex items-center gap-1"><Sparkles size={9}/>未使用の強化P {points}</div>
+                <div className="mt-1">{renderPowerBadge(masuPowerOf(masu), {dense:true, size:'sm'})}</div>
+              </div>
+            </div>
+
+            {/* オン / オフ */}
+            <div className={`rounded-3xl border p-3 shadow-xl ${settings.enabled?'border-lime-400/50 bg-lime-950/25':'border-white/10 bg-slate-900'}`}>
+              <button type="button" aria-pressed={settings.enabled} onClick={()=>updateAutoEnhance(masu.id, { enabled: !settings.enabled })}
+                className={`w-full min-h-[52px] rounded-2xl font-black text-[13px] active:scale-95 flex items-center justify-center gap-2 ${settings.enabled?'bg-gradient-to-r from-lime-500 to-emerald-500 text-slate-950':'bg-slate-800 text-slate-300'}`}>
+                <Sparkles size={16}/>{settings.enabled?'オート強化 ON':'オート強化 OFF'}
+              </button>
+              <div className="mt-2 text-[9px] font-bold leading-relaxed text-slate-300">
+                {settings.enabled
+                  ? '強化ポイントが入るたびに、下の順番で上限まで自動で振ります。バトル・スキップ・合体・限界突破・転生のあと、AUTO∞の周回中も同じように働きます。'
+                  : 'OFFのあいだ、この子の強化ポイントは自動では振られません。'}
+              </div>
+              {settings.enabled&&awaitsReset&&(
+                <div className="mt-2 rounded-xl border border-cyan-400/50 bg-cyan-950/30 px-2.5 py-2 text-[9px] font-black text-cyan-200 leading-relaxed">
+                  絆ポイントリセットの直後なので、いまは自動で振りません。振り直すための道具を使ったばかりなので、勝手に振ってしまわないようにしています。通常強化で振り直すか、下の「この内容でいますぐ振る」を押すと、そこから再開します。
+                </div>
+              )}
+              {settings.enabled&&!hasTarget&&(
+                <div className="mt-2 rounded-xl border border-amber-500/50 bg-amber-950/30 px-2.5 py-2 text-[9px] font-black text-amber-200 leading-relaxed">
+                  振ってよい先がまだ1つもないので、ONでも何も振られません。下の上限を決めるか、「いまの配分を上限として取り込む」を押してください。
+                </div>
+              )}
+              <div className="mt-2 text-[8px] font-bold text-slate-500 leading-relaxed">設定は転生しても残ります。上限まで振り終わると、残った強化ポイントはそのまま手元に残るので、手で振ることもできます。</div>
+            </div>
+
+            {/* 上限の一括操作 */}
+            <div className="grid grid-cols-2 gap-2">
+              <button type="button" onClick={captureCurrent} className="min-h-[46px] rounded-xl bg-slate-800 border border-lime-400/40 text-lime-200 text-[10px] font-black active:scale-95 px-2 leading-tight">いまの配分を<br/>上限として取り込む</button>
+              <button type="button" onClick={clearAll} className="min-h-[46px] rounded-xl bg-slate-800 border border-white/10 text-slate-300 text-[10px] font-black active:scale-95 px-2 leading-tight">すべて<br/>「振らない」に戻す</button>
+            </div>
+            <div className="text-[8px] text-slate-500 font-bold leading-relaxed px-1">「いまの配分を上限として取り込む」は、この子にいま振ってある内容をそのまま上限に写します。転生する前に押しておくと、転生後の周回で同じ形まで自動で戻ります。</div>
+
+            {/* いま持っているポイントの行き先 */}
+            <div className="rounded-2xl border border-lime-500/30 bg-black/40 p-3">
+              <div className="text-[10px] font-black text-lime-300 uppercase tracking-wider mb-1.5">いまの {points}P の行き先</div>
+              {points<=0
+                ? <div className="text-[9px] text-slate-400 font-bold">未使用の強化ポイントがありません。</div>
+                : plannedLines.length>0
+                  ? (<>
+                      <div className="space-y-0.5">{plannedLines.map((line,idx)=><div key={idx} className="text-[10px] font-black text-white">・{line}</div>)}</div>
+                      <div className="mt-1 text-[8px] font-bold text-slate-400">{planned.used}P を使い、{points-planned.used}P が残ります。{awaitsReset&&'（絆ポイントリセットの直後なので、自動では振りません）'}</div>
+                      <button type="button" onClick={()=>applyAutoEnhanceNow(masu.id)} className="mt-2 w-full min-h-[44px] rounded-xl bg-gradient-to-r from-lime-600 to-emerald-600 text-white font-black text-[11px] active:scale-95">この内容でいますぐ振る</button>
+                    </>)
+                  : <div className="text-[9px] text-amber-300 font-bold">上限まで振り終わっているので、いまの設定では振る先がありません。</div>}
+            </div>
+
+            {/* 優先順位と上限 */}
+            <div className="bg-slate-900 border border-lime-500/40 rounded-3xl p-3 shadow-xl">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <div className="text-[11px] font-black text-lime-300 uppercase tracking-wider flex items-center gap-1.5"><Sparkles size={14}/>優先順位と上限</div>
+                <div className="text-[9px] text-slate-400 font-bold">上から順に埋めます</div>
+              </div>
+              <div className="space-y-1.5">
+                {settings.order.map((target,rank)=>{
+                  const aptIndex = autoEnhanceAptIndexOf(target);
+                  const isApt = aptIndex != null;
+                  const limit = isApt ? settings.aptLimits[aptIndex] : settings.statLimits[target];
+                  const active = isApt ? limit !== null : (limit === null || limit > 0);
+                  const gain = isApt ? 0 : (STAT_POINT_GAIN[target] || 1);
+                  const spentValue = isApt ? 0 : Math.max(0, Number(masu.statPoints?.[target]) || 0);
+                  const spentPoints = isApt ? 0 : Math.ceil(spentValue / gain);
+                  const choices = isApt ? aptChoices(aptIndex) : [];
+                  return (
+                    <div key={target} className={`rounded-2xl p-2 border ${active?'border-lime-500/30 bg-black/40':'border-white/5 bg-black/20'}`}>
+                      <div className="flex items-center gap-1.5">
+                        <span className={`w-5 h-5 shrink-0 rounded-full text-[9px] font-black flex items-center justify-center ${active?'bg-lime-500 text-slate-950':'bg-slate-700 text-slate-400'}`}>{rank+1}</span>
+                        <span className={`flex-1 min-w-0 truncate text-[11px] font-black ${active?'text-white':'text-slate-500'}`}>{rowLabel(target)}</span>
+                        <button type="button" aria-label={`${rowLabel(target)}の優先順位を上げる`} disabled={rank<=0} onClick={()=>moveAutoEnhanceOrder(masu.id,target,-1)} className="w-9 h-9 shrink-0 rounded-lg bg-slate-700 text-sm font-black active:scale-95 disabled:opacity-20">↑</button>
+                        <button type="button" aria-label={`${rowLabel(target)}の優先順位を下げる`} disabled={rank>=settings.order.length-1} onClick={()=>moveAutoEnhanceOrder(masu.id,target,1)} className="w-9 h-9 shrink-0 rounded-lg bg-slate-700 text-sm font-black active:scale-95 disabled:opacity-20">↓</button>
+                      </div>
+                      {isApt
+                        ? (<div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                            <span className="text-[9px] font-bold text-slate-400 shrink-0">いま</span>
+                            <span className={`text-[12px] font-mono font-black shrink-0 ${DIST_APTITUDE_COLOR[resolvedApt[aptIndex]]}`}>{resolvedApt[aptIndex]}</span>
+                            <span className="text-[8px] text-slate-600 shrink-0">(元{baseApt[aptIndex]})</span>
+                            <span className="text-[9px] font-bold text-slate-400 shrink-0">→ 目標</span>
+                            <select aria-label={`${rowLabel(target)}の目標`} value={limit===null?'':limit} onChange={event=>setAptLimit(aptIndex, event.target.value===''?null:event.target.value)}
+                              className="flex-1 basis-24 min-w-0 min-h-[40px] rounded-lg border border-lime-400/40 bg-slate-950 px-1 text-center text-[11px] font-black text-white">
+                              <option value="">振らない</option>
+                              {limit!==null&&!choices.includes(limit)&&<option value={limit}>{limit}（到達済み）</option>}
+                              {choices.map(grade=><option key={grade} value={grade}>{grade} まで</option>)}
+                            </select>
+                          </div>)
+                        : (<div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                            <span className="text-[9px] font-bold text-slate-400 shrink-0">いま</span>
+                            <span className="text-[11px] font-mono font-black text-emerald-300 shrink-0">+{spentValue}</span>
+                            <span className="text-[8px] text-slate-600 shrink-0">({spentPoints}P)</span>
+                            <span className="text-[9px] font-bold text-slate-400 shrink-0">→ 上限</span>
+                            <label className="flex flex-1 basis-16 min-w-0 items-center gap-0.5">
+                              <input data-auto-enhance-limit={target} aria-label={`${rowLabel(target)}へ振ってよい強化ポイントの上限`} type="text" inputMode="numeric" pattern="[0-9]*" enterKeyHint="done" autoComplete="off"
+                                placeholder="上限なし" value={statLimitText(target)} onFocus={event=>event.currentTarget.select()}
+                                onChange={event=>setLimitDraft({ key:target, text:event.currentTarget.value })}
+                                onBlur={()=>commitStatLimit(target)}
+                                onKeyDown={event=>{ if(event.key==='Enter') event.currentTarget.blur(); }}
+                                className="w-full min-w-0 h-10 rounded-lg border border-lime-400/40 bg-slate-950 px-1 text-center text-[11px] font-mono font-black text-white outline-none focus:border-lime-300 placeholder:text-slate-600 placeholder:font-bold"/>
+                              <span className="text-[9px] font-black text-lime-300 shrink-0">P</span>
+                            </label>
+                            <button type="button" aria-label={`${rowLabel(target)}を上限なしにする`} aria-pressed={limit===null} onClick={()=>setStatLimit(target, null)} className={`w-9 h-10 shrink-0 rounded-lg text-[11px] font-black active:scale-95 ${limit===null?'bg-lime-500 text-slate-950':'bg-slate-700 text-slate-300'}`}>∞</button>
+                            <button type="button" aria-label={`${rowLabel(target)}を振らないにする`} aria-pressed={limit===0} onClick={()=>setStatLimit(target, 0)} className={`w-9 h-10 shrink-0 rounded-lg text-[11px] font-black active:scale-95 ${limit===0?'bg-slate-500 text-slate-950':'bg-slate-700 text-slate-300'}`}>✕</button>
+                          </div>)}
+                      {!isApt&&limit!==null&&limit>0&&(
+                        <div className="mt-1 text-[8px] font-bold text-slate-500">上限まで振ると {STAT_POINT_KEYS[target]} +{limit*gain}（いま +{spentValue}）</div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="mt-2 text-[8px] text-slate-500 font-bold leading-relaxed">ステータスの上限は「その能力へ振ってよい強化ポイントの数」です。空欄か∞で上限なし、✕で振りません。間合い適性はいまより上の段階だけを目標に選べます。</div>
+            </div>
+
+            {/* 直近の自動強化 */}
+            <div className="rounded-2xl border border-white/10 bg-black/30 p-3">
+              <div className="text-[10px] font-black text-slate-300 uppercase tracking-wider mb-1.5">直近の自動強化</div>
+              {log.length<=0
+                ? <div className="text-[9px] text-slate-500 font-bold">このアプリを開いてからは、まだ自動で振られていません。</div>
+                : <div className="space-y-1">{log.slice(0,5).map((entry,idx)=>(
+                    <div key={idx} className="rounded-xl bg-black/40 px-2 py-1.5">
+                      <div className="text-[9px] font-black text-lime-300">{entry.used}P を使いました</div>
+                      <div className="text-[9px] font-bold text-slate-300 leading-relaxed">{entry.lines.join(' ／ ')}</div>
+                    </div>
+                  ))}</div>}
+            </div>
+
+            <button onClick={onBack} className="w-full bg-white text-black py-3.5 rounded-2xl font-black text-sm uppercase active:scale-95 shadow-lg mt-2">完了</button>
+          </div>
+        </div>
+      );
+}
+
 // ---- part: 60-app.jsx ----
 function MonsterHeroGame() {
   const [gameState, setGameState] = useState('HOME');
@@ -18343,6 +18788,8 @@ function MonsterHeroGame() {
   // 性能計測(デバッグ限定)。既定OFF。ONの記憶は専用キー mh_rhythm_perf_v1 に分ける
   const [rhythmPerfOn,setRhythmPerfOn]=useState(()=>RHYTHM_PERF.enabled);
   const [rhythmPerfStats,setRhythmPerfStats]=useState(null);
+  // 演奏画面の装飾を個別に切って、実機で何が重いかを切り分ける(デバッグ限定・新しい保存キー)
+  const [rhythmStrip,setRhythmStrip]=useState(()=>RHYTHM_STRIP.value);
   // ノーツの描き方の上書き(検証用・デバッグ限定)。'' = 公開設定に従う / 'dom' / 'canvas'
   const [rhythmCanvasPref,setRhythmCanvasPref]=useState(()=>rhythmCanvasNotesPreference());
   const [rhythmChartToolsOpened,setRhythmChartToolsOpened]=useState(false);
@@ -19264,6 +19711,15 @@ function MonsterHeroGame() {
   const [inheritedUniqueCompensation, setInheritedUniqueCompensation] = useState(false);
   const masuMonsRef = useRef(masuMons);
   masuMonsRef.current = masuMons;
+  // オート強化が実際に振った記録(このアプリを開いているあいだだけ・保存はしない)。
+  // 「裏で本当に働いているのか」を画面で確かめられるようにするためのもので、
+  // ゲームの進行には一切使わないので、セーブデータを増やさない
+  const [autoEnhanceLog, setAutoEnhanceLog] = useState([]);
+  const pushAutoEnhanceLog = (entries) => {
+    if (!Array.isArray(entries) || entries.length <= 0) return;
+    const stamped = entries.map(entry => ({ ...entry, at:Date.now() }));
+    setAutoEnhanceLog(prev => [...stamped, ...prev].slice(0, 30));
+  };
   // ランの報酬を配ったあとのマスモン。setMasuMons の反映は非同期なので、同じ処理の続きで走る
   // ランキング送信からは「そのランで増えた絆経験値が入る前」の値しか見えなかった。
   // そのため、ランキングへ送る絆Lvと育て方が1ラン遅れていた
@@ -20505,6 +20961,27 @@ function MonsterHeroGame() {
       storeSet('mh_home_pasture_ids', normalized, false);
     }
   }, [masuMons, homePastureIds, pastureLoaded]);
+
+  // ---- オート強化: 強化ポイントが増えたら、設定どおりに自動で振る ----
+  // マスモンが変わるたびにここを通す。強化ポイントが入る道は
+  // バトル・クイック・演奏の周回・スキップチケット・トレーニングチケット・合体・限界突破・転生と多く、
+  // 1か所ずつ呼び出しを足すと必ずどこかを取りこぼすため、「増えたら振る」を1本にまとめてある。
+  // ★何も振らないときは applyAutoEnhanceToMasuMons が null を返すので保存もstate更新もしない。
+  //   振ったあとは強化ポイントが減るので、次に通ったときは自然に止まる(繰り返しにならない)。
+  // ★読み込みが終わるまでは走らせない。読み込み途中の中途半端な値で振ってしまわないようにする。
+  useEffect(() => {
+    if (!dataLoaded) return;
+    const result = applyAutoEnhanceToMasuMons(masuMonsRef.current || masuMons);
+    if (!result) return;
+    masuMonsRef.current = result.next;
+    // ランキング送信が「振る前」の育て方を見ないよう、ランの控えも同じ内容へそろえる
+    if (postRunMasuMonsRef.current) postRunMasuMonsRef.current = result.next;
+    setMasuMons(result.next);
+    storeSet('mh_masu_mons', result.next, false);
+    setMasuMonDetail(prev => prev ? (result.next.find(m => String(m.id) === String(prev.id)) || prev) : prev);
+    pushAutoEnhanceLog(result.results);
+  }, [masuMons, dataLoaded]);
+
   const homePastureMasumons = homePastureIds.map(id=>masuMons.find(m=>String(m.id)===String(id))).filter(m=>m&&ALL_PLAYER_MONSTERS[m.baseId]);
   // セーブ読込後のタイトル中に、最初のHOMEで必ず使う画像だけを最優先で先読みする。
   // 完了をタイトル操作やHOME遷移の条件にはせず、失敗時も通常のimg読込へそのまま任せる。
@@ -20597,9 +21074,9 @@ function MonsterHeroGame() {
     TRAINING_BOARD: 'trainingBoard',
   };
   // プロフィール本体とアイテムはHOMEの曲を続ける。その他の詳細ページ群は従来のプロフィール曲を維持する。
-  const PROFILE_BGM_STATES = ['ROSTER','OWNED_MONSTERS','MASU_MONS','MASU_ENHANCE','MASU_TRANSCEND_ENHANCE','MASU_SOUL_TRAITS'];
+  const PROFILE_BGM_STATES = ['ROSTER','OWNED_MONSTERS','MASU_MONS','MASU_ENHANCE','MASU_TRANSCEND_ENHANCE','MASU_AUTO_ENHANCE','MASU_SOUL_TRAITS'];
   // マスモンの専用育成画面。ここを開いているあいだは詳細モーダルを重ねない(詳細のほうが手前に出てしまうため)
-  const MASU_ENHANCE_STATES = ['MASU_ENHANCE','MASU_TRANSCEND_ENHANCE','MASU_SOUL_TRAITS'];
+  const MASU_ENHANCE_STATES = ['MASU_ENHANCE','MASU_TRANSCEND_ENHANCE','MASU_AUTO_ENHANCE','MASU_SOUL_TRAITS'];
   // 1回のプレイの中で流れる画面。「まだ1度も戦っていない準備中」か「WAVEを終えたあと」かで曲を分ける。
   //  ・準備中(最初の勇者モン選択〜最初のバトルの直前) … 強化フェーズの曲
   //  ・WAVEを終えたあと(リザルト〜次のバトルの直前)   … リザルトの曲をそのまま続ける
@@ -20906,6 +21383,8 @@ function MonsterHeroGame() {
   // 気づけない仕組みなので、出るべき場面で1度だけ、みゅあが伝える。
   // ★保存キーは新しく足す(既存の mh_* は触らない・CLAUDE.md ⑦)。
   // ★公開フラグが false のあいだは、ヘルプ・更新履歴・告知と同じくこれも出さない。
+  // ★useState(true) は「読み込みが終わるまで出さない」ためのもの。実際に出すかどうかは
+  //   読み込みのときに保存値から決め直す(保存が無いうちは「まだ見ていない」)。
   const QUICK_RHYTHM_INTRO_KEY = 'mh_quick_rhythm_intro_seen_v1';
   const QUICK_RHYTHM_BACKGROUND_KEY = 'mh_quick_rhythm_bg_seen_v1';
   const [quickRhythmIntroSeen, setQuickRhythmIntroSeen] = useState(true);
@@ -20918,6 +21397,18 @@ function MonsterHeroGame() {
   // 裏で周回したままモンビーを開いた最初の1回だけ
   const quickRhythmBackgroundVisible = quickRhythmGuideReleased && !quickRhythmBackgroundSeen && rhythmBackgroundRun;
   const dismissQuickRhythmBackground = () => { setQuickRhythmBackgroundSeen(true); storeSet(QUICK_RHYTHM_BACKGROUND_KEY, true, false); };
+  // ---- オート強化の使い方案内(CLAUDE.md ⑤) ----
+  // 「強化ポイントが入るたび裏で自動的に振られる」は、遊んでいるだけでは気づけない仕組み。
+  // ヘルプと更新履歴は探しに行った人しか読まないので、強化画面を開いた最初の1回だけ、
+  // 画面のなかでも知らせる。
+  // ★保存キーは新しく足す(既存の mh_* は触らない・CLAUDE.md ⑦)。
+  // ★「見た」と保存されているときだけ出さない。保存が無いうちは出す。
+  //   storeGet は「キーが無い」ときも既定値を返すので、既定値を true にすると
+  //   保存が無い＝見た扱いになり、案内が誰にも一度も出ない
+  const AUTO_ENHANCE_INTRO_KEY = 'mh_masu_auto_enhance_intro_seen_v1';
+  const [autoEnhanceIntroSeen, setAutoEnhanceIntroSeen] = useState(true);
+  const autoEnhanceIntroVisible = !autoEnhanceIntroSeen;
+  const dismissAutoEnhanceIntro = () => { setAutoEnhanceIntroSeen(true); storeSet(AUTO_ENHANCE_INTRO_KEY, true, false); };
   // ---- 曲えらびでの「今週の対象曲」案内(docs/spec/RHYTHM_RANKING.md §10.2) ----
   // ヘルプと更新履歴は探しに行った人しか読まない。週間ランキングは
   // 「開いて初めて気づく」仕組みなので、曲えらびでも1度だけみゅあが伝える(CLAUDE.md ⑤)。
@@ -21839,10 +22330,17 @@ function MonsterHeroGame() {
         await storeSet('mh_unique_lineage_dedupe_migrated_v1', true, false);
       }
       const compensationNotice = await storeGet('mh_masu_level_cap_compensation_notice_v1', null, false);
-      // 画面のなかの使い方案内(PR8)。読めなかったときは「まだ見ていない」側へ倒さず、
-      // 見た扱い(=出さない)にする。案内が二度出るより、出ないほうが害が小さい
-      setQuickRhythmIntroSeen(await storeGet(QUICK_RHYTHM_INTRO_KEY, true, false) !== false);
-      setQuickRhythmBackgroundSeen(await storeGet(QUICK_RHYTHM_BACKGROUND_KEY, true, false) !== false);
+      // 画面のなかの使い方案内(PR8)。「見た」と保存されているときだけ出さない。
+      // ★以前は既定値を true にして「読めなかったら出さない」つもりだったが、storeGet は
+      //   キーが無いときも既定値を返すので、保存が無い＝見た扱いになり、
+      //   案内が誰にも一度も出ない状態だった(2026-09-12に判明)。
+      //   保存が読めない端末では出てしまうが、閉じるボタン付きの小さな帯なので害は小さい。
+      //   「一度も出ない」ほうがはるかに困る
+      setQuickRhythmIntroSeen(await storeGet(QUICK_RHYTHM_INTRO_KEY, false, false) === true);
+      setQuickRhythmBackgroundSeen(await storeGet(QUICK_RHYTHM_BACKGROUND_KEY, false, false) === true);
+      // オート強化の使い方案内。★保存が無いとき(既存ユーザー・新規ともに)は「まだ見ていない」。
+      //   既定値を true にすると、保存が無い＝見た扱いになり、案内が一度も出ない
+      setAutoEnhanceIntroSeen(await storeGet(AUTO_ENHANCE_INTRO_KEY, false, false) === true);
       // イベントの会話ストーリーを見たかどうか。流すかどうかの判定は、
       // wasOnboarded が決まったあと(きき・ももすけの会話と同じところ)で行う
       {
@@ -22901,6 +23399,14 @@ function MonsterHeroGame() {
   const runHasDebugOnlyMonster = () => [mainHero, ...slots].some(mon =>
     mon && (mon.debugOnly === true || ALL_PLAYER_MONSTERS[mon.id]?.debugOnly === true));
   const debugHeroMonsterList = (list) => {
+    // バトルのれんしゅう(台本つき)の間は混ぜない。練習は記録を残さないために
+    // debugBattleRef を立てているだけで、デバッグ戦がしたいわけではないため。
+    // デバッグ最強モンは Mocchi のコピー(idも 'Mocchi' のまま)なので、混ぜると
+    // 台本の heroId:'Mocchi' の絞り込みに引っかかって本物のモッチーが一覧から消え、
+    // 「選べる勇者モンがデバッグ最強モン1体だけ」になる。そのまま進むと攻撃力99990で
+    // 台本の敵(HP500)を距離技の一撃で倒してしまい、通常攻撃・技変更・固有技の説明が
+    // まるごと飛ぶ(2026-09-12・ユーザー指摘)
+    if (battleScenarioRef.current) return list;
     if (!debugBattleRef.current && !debugMonsterPreviewRef.current) return list;
     const debugMon=makeDebugStrongestMonster();
     const preview=debugOnlyMonsterList();
@@ -23298,6 +23804,47 @@ function MonsterHeroGame() {
     });
     Audio_.se.levelUp();
     return updatedMasu;
+  };
+
+  // ---- オート強化(個体ごとの自動強化) ----
+  // 設定そのものはマスモンの中の1項目(autoEnhance)。書き換えはここに集め、画面は props で受ける。
+  // 実際にどこへ何P振るかは 11-masu-progression.jsx の buildMasuAutoEnhancePlan が正本で、
+  // 適用も手で振るときと同じ applyEnhancePlanToMasu を通る(画面に出した内容と結果がずれない)。
+  const saveMasuMonsList = (next) => {
+    masuMonsRef.current = next;
+    setMasuMons(next);
+    storeSet('mh_masu_mons', next, false);
+    // 詳細モーダルを開いたまま設定を変えても、その場の表示が古い個体のままにならないようにする
+    setMasuMonDetail(prev => prev ? (next.find(m => String(m.id) === String(prev.id)) || prev) : prev);
+  };
+  const updateAutoEnhance = (masuId, patch) => {
+    const current = masuMonsRef.current || [];
+    const masu = current.find(m => String(m.id) === String(masuId));
+    if (!masu) return;
+    saveMasuMonsList(current.map(m => String(m.id) === String(masuId) ? buildMasuAutoEnhanceUpdate(m, patch) : m));
+    Audio_.se.tap();
+  };
+  const moveAutoEnhanceOrder = (masuId, target, direction) => {
+    const current = masuMonsRef.current || [];
+    const masu = current.find(m => String(m.id) === String(masuId));
+    if (!masu) return;
+    const moved = buildMasuAutoEnhanceOrderMove(masu, target, direction);
+    if (moved === masu) return;
+    saveMasuMonsList(current.map(m => String(m.id) === String(masuId) ? moved : m));
+    Audio_.se.tap();
+  };
+  // 「いますぐ振る」。OFFのままでも押した本人の操作なので、設定の中身だけを使って一度だけ振る
+  const applyAutoEnhanceNow = (masuId) => {
+    const current = masuMonsRef.current || [];
+    const masu = current.find(m => String(m.id) === String(masuId));
+    if (!masu) return;
+    const applied = applyMasuAutoEnhance({ ...masu, autoEnhance:{ ...normalizeMasuAutoEnhance(masu.autoEnhance), enabled:true } }, { manual:true });
+    if (!applied) return;
+    saveMasuMonsList(current.map(m => String(m.id) === String(masuId) ? applied.masu : m));
+    pushAutoEnhanceLog([{ masuId:masu.id, name:masu.name, used:applied.used, lines:applied.lines }]);
+    saveMissionProgress('enhance');
+    addAssistantBond('enhance');
+    Audio_.se.levelUp();
   };
 
   // マスモンの強化ポイントを1消費し、対象のステータスを1上げる(バランス調整前の暫定仕様: 1pt=+1)
@@ -30015,7 +30562,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div data-rhythm-debug-calibration className="mb-3"/>
             {/* 性能計測(デバッグ限定)。既定OFF・OFFのあいだは計測処理が一切動かない。
                 プレイヤーの通常プレイには出ないので、更新履歴・ヘルプには載せない */}
-            <section data-rhythm-perf-panel className="mb-3 rounded-2xl border border-amber-400/40 bg-amber-950/20 p-3"><div className="flex items-center justify-between gap-2"><h3 className="text-xs font-black text-amber-200">性能計測（デバッグ）</h3><button type="button" data-rhythm-perf-toggle aria-pressed={rhythmPerfOn} onClick={()=>{setRhythmPerfOn(RHYTHM_PERF.setEnabled(!rhythmPerfOn));setRhythmPerfStats(null);}} className={`min-h-[44px] rounded-xl px-3 text-[11px] font-black ${rhythmPerfOn?'bg-amber-500 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{rhythmPerfOn?'計測ON':'計測OFF'}</button></div><p className="mt-1 text-[9px] font-bold leading-relaxed text-amber-100/80">ONにしてからプレイすると、フレーム時間と1フレームあたりの負荷（レイアウト測定・DOM検索・SLIDE帯の更新数）を記録します。OFFのあいだは記録処理そのものが動きません。「モンスターノーツ」の行が「ノーツを取る処理」よりはっきり大きければ、踏んだときに固まる原因はそこです。ノーツの動きが滑らかかどうかは「曲の時刻」の3つを見ます。ノーツの位置は曲の再生位置だけで決まるので、これが進まないフレームが多いと、フレームレートが60のままでもノーツは止まって飛ぶ動きになります。</p><div className="mt-2 flex gap-2"><button type="button" className="min-h-[40px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[11px] font-black text-slate-200" onClick={()=>setRhythmPerfStats(RHYTHM_PERF.snapshot())}>いまの記録を見る</button><button type="button" className="min-h-[40px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[11px] font-black text-slate-200" onClick={()=>{RHYTHM_PERF.reset();setRhythmPerfStats(null);}}>記録をクリア</button></div>{rhythmPerfStats&&<dl data-rhythm-perf-stats className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]">{[['フレーム数',rhythmPerfStats.frames],['平均fps',rhythmPerfStats.fps.toFixed(1)],['平均フレーム',`${rhythmPerfStats.avgMs.toFixed(1)}ms`],['最悪フレーム',`${rhythmPerfStats.maxMs.toFixed(1)}ms`],['16.7ms超',rhythmPerfStats.over16],['25ms超',rhythmPerfStats.over25],['33ms超',rhythmPerfStats.over33],['レイアウト測定/frame',rhythmPerfStats.layoutReadsPerFrame.toFixed(2)],['DOM検索/frame',rhythmPerfStats.domQueriesPerFrame.toFixed(2)],['SLIDE帯更新/frame',rhythmPerfStats.slidePolygonsPerFrame.toFixed(2)],['ジェスチャーrAF',rhythmPerfStats.gestureFrames],['ノーツ再検索',rhythmPerfStats.noteRescans],['走査ノーツ/frame',rhythmPerfStats.notesScannedPerFrame.toFixed(1)],['実描画ノーツ/frame',rhythmPerfStats.notesDrawnPerFrame.toFixed(1)],['最悪frameの走査/実描画',`${rhythmPerfStats.worstFrameScanned} / ${rhythmPerfStats.worstFrameDrawn}`],['先頭スキップ/frame',rhythmPerfStats.headSkippedPerFrame.toFixed(1)],['走査の絞り込み',rhythmPerfStats.narrowed===null?'未計測':(rhythmPerfStats.narrowed?'有効':'無効(昇順でない譜面)')],['tick処理/frame',`${rhythmPerfStats.tickMsPerFrame.toFixed(2)}ms`],['最悪frameのtick処理',`${rhythmPerfStats.worstFrameTickMs.toFixed(1)}ms`],['tick処理の最大',`${rhythmPerfStats.maxTickMs.toFixed(1)}ms`],['frame開始→tick開始の遅れ',`${rhythmPerfStats.tickDelayMsPerFrame.toFixed(2)}ms`],['最悪frameの遅れ',`${rhythmPerfStats.worstFrameDelayMs.toFixed(1)}ms`],['遅れの最大',`${rhythmPerfStats.maxDelayMs.toFixed(1)}ms`],['曲の時刻の進み/frame',`${(rhythmPerfStats.songStepMsPerFrame??0).toFixed(2)}ms`],['曲の時刻が進まないframe',`${((rhythmPerfStats.songStallRate??0)*100).toFixed(1)}%`],['曲の時刻の最大の飛び',`${(rhythmPerfStats.songStepMaxMs??0).toFixed(1)}ms`],['ノーツを取る処理/回',`${(rhythmPerfStats.judgeMsAvg??0).toFixed(2)}ms（${rhythmPerfStats.judgeCount??0}回）`],['取る処理の最大',`${(rhythmPerfStats.judgeMsMax??0).toFixed(1)}ms`],['モンスターノーツ/回',`${(rhythmPerfStats.monsterJudgeMsAvg??0).toFixed(2)}ms（${rhythmPerfStats.monsterJudgeCount??0}回）`],['モンスターノーツの最大',`${(rhythmPerfStats.monsterJudgeMsMax??0).toFixed(1)}ms`]].map(([label,value])=><React.Fragment key={label}><dt className="text-slate-400">{label}</dt><dd className="text-right font-black text-amber-100">{value}</dd></React.Fragment>)}</dl>}{rhythmPerfStats&&Array.isArray(rhythmPerfStats.spikes)&&rhythmPerfStats.spikes.length>0&&<div data-rhythm-perf-spikes className="mt-2 rounded-xl border border-amber-400/30 bg-slate-950/60 p-2"><h4 className="text-[10px] font-black text-amber-200">飛んだフレーム（33ms超）を起きた順に{rhythmPerfStats.spikes.length}件</h4><p className="mt-1 text-[9px] font-bold leading-relaxed text-amber-100/70">「モンスター後」が小さい行が並ぶなら、踏んだあとの演出が原因です。「tick」が0msなら、その飛びはJSではなく描画側です。</p><ol className="mt-1 space-y-0.5 text-[9px] font-mono text-slate-300">{rhythmPerfStats.spikes.map((sp,i)=><li key={i}>{`${(sp.at/1000).toFixed(1)}s  ${sp.dt}ms  tick ${sp.tick}ms  遅れ ${sp.delay}ms  走査${sp.scan}/描画${sp.draw}  モンスター後 ${sp.mon<0?'—':`${sp.mon}ms`}`}</li>)}</ol></div>}</section>{/* ノーツの描き方(検証用・デバッグ限定)。canvas 1枚に描く方式(発熱対策)と要素で描く方式を、次の演奏から切り替える。
+            <section data-rhythm-perf-panel className="mb-3 rounded-2xl border border-amber-400/40 bg-amber-950/20 p-3"><div className="flex items-center justify-between gap-2"><h3 className="text-xs font-black text-amber-200">性能計測（デバッグ）</h3><button type="button" data-rhythm-perf-toggle aria-pressed={rhythmPerfOn} onClick={()=>{setRhythmPerfOn(RHYTHM_PERF.setEnabled(!rhythmPerfOn));setRhythmPerfStats(null);}} className={`min-h-[44px] rounded-xl px-3 text-[11px] font-black ${rhythmPerfOn?'bg-amber-500 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{rhythmPerfOn?'計測ON':'計測OFF'}</button></div><p className="mt-1 text-[9px] font-bold leading-relaxed text-amber-100/80">ONにしてからプレイすると、フレーム時間と1フレームあたりの負荷（レイアウト測定・DOM検索・SLIDE帯の更新数）を記録します。OFFのあいだは記録処理そのものが動きません。「モンスターノーツ」の行が「ノーツを取る処理」よりはっきり大きければ、踏んだときに固まる原因はそこです。ノーツの動きが滑らかかどうかは「曲の時刻」の3つを見ます。ノーツの位置は曲の再生位置だけで決まるので、これが進まないフレームが多いと、フレームレートが60のままでもノーツは止まって飛ぶ動きになります。</p><div className="mt-2 flex gap-2"><button type="button" className="min-h-[40px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[11px] font-black text-slate-200" onClick={()=>setRhythmPerfStats(RHYTHM_PERF.snapshot())}>いまの記録を見る</button><button type="button" className="min-h-[40px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[11px] font-black text-slate-200" onClick={()=>{RHYTHM_PERF.reset();setRhythmPerfStats(null);}}>記録をクリア</button></div>{rhythmPerfStats&&<dl data-rhythm-perf-stats className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]">{[['フレーム数',rhythmPerfStats.frames],['平均fps',rhythmPerfStats.fps.toFixed(1)],['平均フレーム',`${rhythmPerfStats.avgMs.toFixed(1)}ms`],['最悪フレーム',`${rhythmPerfStats.maxMs.toFixed(1)}ms`],['16.7ms超',rhythmPerfStats.over16],['25ms超',rhythmPerfStats.over25],['33ms超',rhythmPerfStats.over33],['レイアウト測定/frame',rhythmPerfStats.layoutReadsPerFrame.toFixed(2)],['DOM検索/frame',rhythmPerfStats.domQueriesPerFrame.toFixed(2)],['SLIDE帯更新/frame',rhythmPerfStats.slidePolygonsPerFrame.toFixed(2)],['ジェスチャーrAF',rhythmPerfStats.gestureFrames],['ノーツ再検索',rhythmPerfStats.noteRescans],['走査ノーツ/frame',rhythmPerfStats.notesScannedPerFrame.toFixed(1)],['実描画ノーツ/frame',rhythmPerfStats.notesDrawnPerFrame.toFixed(1)],['最悪frameの走査/実描画',`${rhythmPerfStats.worstFrameScanned} / ${rhythmPerfStats.worstFrameDrawn}`],['先頭スキップ/frame',rhythmPerfStats.headSkippedPerFrame.toFixed(1)],['走査の絞り込み',rhythmPerfStats.narrowed===null?'未計測':(rhythmPerfStats.narrowed?'有効':'無効(昇順でない譜面)')],['tick処理/frame',`${rhythmPerfStats.tickMsPerFrame.toFixed(2)}ms`],['最悪frameのtick処理',`${rhythmPerfStats.worstFrameTickMs.toFixed(1)}ms`],['tick処理の最大',`${rhythmPerfStats.maxTickMs.toFixed(1)}ms`],['frame開始→tick開始の遅れ',`${rhythmPerfStats.tickDelayMsPerFrame.toFixed(2)}ms`],['最悪frameの遅れ',`${rhythmPerfStats.worstFrameDelayMs.toFixed(1)}ms`],['遅れの最大',`${rhythmPerfStats.maxDelayMs.toFixed(1)}ms`],['曲の時刻の進み/frame',`${(rhythmPerfStats.songStepMsPerFrame??0).toFixed(2)}ms`],['曲の時刻が進まないframe',`${((rhythmPerfStats.songStallRate??0)*100).toFixed(1)}%`],['曲の時刻の最大の飛び',`${(rhythmPerfStats.songStepMaxMs??0).toFixed(1)}ms`],['ノーツを取る処理/回',`${(rhythmPerfStats.judgeMsAvg??0).toFixed(2)}ms（${rhythmPerfStats.judgeCount??0}回）`],['取る処理の最大',`${(rhythmPerfStats.judgeMsMax??0).toFixed(1)}ms`],['モンスターノーツ/回',`${(rhythmPerfStats.monsterJudgeMsAvg??0).toFixed(2)}ms（${rhythmPerfStats.monsterJudgeCount??0}回）`],['モンスターノーツの最大',`${(rhythmPerfStats.monsterJudgeMsMax??0).toFixed(1)}ms`]].map(([label,value])=><React.Fragment key={label}><dt className="text-slate-400">{label}</dt><dd className="text-right font-black text-amber-100">{value}</dd></React.Fragment>)}</dl>}{rhythmPerfStats&&Array.isArray(rhythmPerfStats.spikes)&&rhythmPerfStats.spikes.length>0&&<div data-rhythm-perf-spikes className="mt-2 rounded-xl border border-amber-400/30 bg-slate-950/60 p-2"><h4 className="text-[10px] font-black text-amber-200">飛んだフレーム（33ms超）を起きた順に{rhythmPerfStats.spikes.length}件</h4><p className="mt-1 text-[9px] font-bold leading-relaxed text-amber-100/70">「モンスター後」が小さい行が並ぶなら、踏んだあとの演出が原因です。「tick」が0msなら、その飛びはJSではなく描画側です。</p><ol className="mt-1 space-y-0.5 text-[9px] font-mono text-slate-300">{rhythmPerfStats.spikes.map((sp,i)=><li key={i}>{`${(sp.at/1000).toFixed(1)}s  ${sp.dt}ms  tick ${sp.tick}ms  遅れ ${sp.delay}ms  走査${sp.scan}/描画${sp.draw}  モンスター後 ${sp.mon<0?'—':`${sp.mon}ms`}`}</li>)}</ol></div>}</section><section data-rhythm-strip-panel className="mb-3 rounded-2xl border border-rose-400/40 bg-rose-950/20 p-3"><h3 className="text-xs font-black text-rose-200">装飾を切って切り分ける（デバッグ）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-rose-100/80">演奏画面の重そうな装飾を個別に消します。<b>次の演奏から効きます。</b>ONにして1曲プレイし、性能計測の「33ms超」が減るかを見てください。減ったものが原因です。判定・スコア・譜面には一切関わりません。</p><div className="mt-2 grid grid-cols-2 gap-2">{RHYTHM_STRIP_ITEMS.map(item=><button key={item.id} type="button" data-rhythm-strip-toggle={item.id} aria-pressed={rhythmStrip.split(/\s+/).includes(item.id)} onClick={()=>setRhythmStrip(RHYTHM_STRIP.toggle(item.id))} className={`min-h-[44px] rounded-xl px-2 text-[10px] font-black ${rhythmStrip.split(/\s+/).includes(item.id)?'bg-rose-500 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{item.label}</button>)}</div><button type="button" className="mt-2 min-h-[40px] w-full rounded-xl border border-white/20 bg-slate-900 text-[11px] font-black text-slate-200" onClick={()=>setRhythmStrip(RHYTHM_STRIP.set(''))}>ぜんぶ元に戻す</button></section>{/* ノーツの描き方(検証用・デバッグ限定)。canvas 1枚に描く方式(発熱対策)と要素で描く方式を、次の演奏から切り替える。
                 プレイヤーの通常プレイには出ないので更新履歴・ヘルプには載せない */}
             <section data-rhythm-canvas-panel className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"><h3 className="text-xs font-black text-cyan-200">ノーツの描き方（検証用）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80">canvas 1枚に描く方式（発熱対策）と、これまでの要素ごとに描く方式を切り替えます。次の演奏から効きます。「自動」は公開設定（いまは{RELEASE_FLAGS.rhythmCanvasNotes?'canvas':'要素'}）に従います。</p><div className="mt-2 flex gap-2">{[['','自動'],['dom','要素'],['canvas','canvas']].map(([value,label])=><button key={value||'auto'} type="button" data-rhythm-canvas-pref={value||'auto'} aria-pressed={rhythmCanvasPref===value} onClick={()=>setRhythmCanvasPref(rhythmCanvasNotesSetPreference(value))} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmCanvasPref===value?'bg-cyan-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
             {/* モンスターノーツ用のマスモン設定(RHYTHM_MODE §3.2)。最大4体・同じモンスターの重複禁止・
@@ -31108,6 +31655,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             masuMonDetail={masuMonDetail}
             onBack={()=>{setTranscendPlan(null);setTranscendExchangeOpen(false);setGameState('MASU_ENHANCE');}}
             onMissing={()=>setGameState('MASU_ENHANCE')}
+            onOpenAutoEnhance={()=>setGameState('MASU_AUTO_ENHANCE')}
             ownedItems={ownedItems}
             renderPowerBadge={renderPowerBadge}
             saveMissionProgress={saveMissionProgress}
@@ -31140,12 +31688,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {gameState==='MASU_ENHANCE'&&masuMonDetail&&(
           <MasuEnhanceScreen
             addAssistantBond={addAssistantBond}
+            autoEnhanceIntroVisible={autoEnhanceIntroVisible}
             bulkEnhanceUnit={bulkEnhanceUnit}
             bulkPlan={bulkPlan}
             getMasuMon={getMasuMon}
             masuMonDetail={masuMonDetail}
             onBack={backToDetail}
+            onDismissAutoEnhanceIntro={dismissAutoEnhanceIntro}
             onMissing={()=>{ setGameState(masuEnhanceFrom||'MASU_MONS'); setMasuMonDetail(null); setMasuEnhanceFrom(null); }}
+            onOpenAutoEnhance={()=>setGameState('MASU_AUTO_ENHANCE')}
             onOpenTranscendEnhance={()=>{setTranscendPlan(null);setTranscendExchangeError('');setGameState('MASU_TRANSCEND_ENHANCE');}}
             renderPowerBadge={renderPowerBadge}
             saveMissionProgress={saveMissionProgress}
@@ -31154,6 +31705,22 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             setEffect={setEffect}
             setMasuMonDetail={setMasuMonDetail}
             spendPointsBulk={spendPointsBulk}
+          />
+        )}
+
+        {gameState==='MASU_AUTO_ENHANCE'&&masuMonDetail&&(
+          <MasuAutoEnhanceScreen
+            applyAutoEnhanceNow={applyAutoEnhanceNow}
+            autoEnhanceLog={autoEnhanceLog}
+            getMasuMon={getMasuMon}
+            masuMonDetail={masuMonDetail}
+            moveAutoEnhanceOrder={moveAutoEnhanceOrder}
+            onBack={backToDetail}
+            onMissing={()=>{ setGameState(masuEnhanceFrom||'MASU_MONS'); setMasuMonDetail(null); setMasuEnhanceFrom(null); }}
+            onOpenNormalEnhance={()=>setGameState('MASU_ENHANCE')}
+            onOpenTranscendEnhance={()=>{setTranscendPlan(null);setTranscendExchangeError('');setGameState('MASU_TRANSCEND_ENHANCE');}}
+            renderPowerBadge={renderPowerBadge}
+            updateAutoEnhance={updateAutoEnhance}
           />
         )}
 
