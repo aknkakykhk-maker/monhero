@@ -1039,6 +1039,16 @@ const createAnimationStyle = () => {
       40% { opacity: 1; }
       100% { transform: translateX(40px) scale(1.1); opacity: 0; }
     }
+    /* 全画面演出(effect)の火花。明滅だけを受け持ち、置き場所は呼び出し側の transform に任せる。
+       共通の sparkFlicker はキーフレーム側が transform を丸ごと持っているため、
+       呼び出し側で書いた角度と半径が効かず、火花が全部1か所へ重なってしまう */
+    @keyframes mhEffectSpark { 0%,100% { opacity: .15; } 50% { opacity: 1; } }
+    @keyframes mhTranscendFxRays { 0% { transform: rotate(0); } 100% { transform: rotate(360deg); } }
+    @keyframes mhTranscendFxFlash { 0% { opacity: 0; } 10% { opacity: .75; } 34%,100% { opacity: 0; } }
+    @keyframes mhTranscendFxThrob {
+      0%,100% { transform: scale(1); filter: drop-shadow(0 0 16px rgba(253,230,138,.95)); }
+      50% { transform: scale(1.22); filter: drop-shadow(0 0 30px rgba(244,114,182,1)) drop-shadow(0 0 46px rgba(56,189,248,.8)); }
+    }
     @keyframes specialFlash {
       0%,100% { opacity: 0; }
       50% { opacity: 1; }

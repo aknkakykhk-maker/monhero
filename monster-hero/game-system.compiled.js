@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c59ecf95553cf1e8
+// source-sha256: 1a8cbe466a033745
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 0b870087cbefad29
+// generated-sha256: 630915cb4a6f7bab
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-12 18:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-12 18:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -296,9 +296,23 @@ const modeKeyPrefix = mode => isQuickMode(mode) ? 'mh_quick_' : isProMode(mode) 
 const bestScoreKey = (mode, diff) => `${modeKeyPrefix(mode)}hs_${diff}`;
 const bestWaveKey = (mode, diff) => `${modeKeyPrefix(mode)}highest_wave_${diff}`;
 const clearCountKey = (mode, diff) => `${modeKeyPrefix(mode)}clears_${diff}`;
-// クイックの各難易度は、同じ難易度をチャレンジ・プロ・極限のどれかでクリア済みなら解放する。
+// その難易度を、チャレンジ・プロ・極限のどれかでクリア済みか。
 // 新しい解放フラグは作らず、各モードの既存クリア回数だけを参照するため、既存セーブにも即時反映される。
-const isQuickDifficultyUnlocked = (difficulty, challengeClears, proClears, extremeClears) => [challengeClears, proClears, extremeClears].some(clears => (Number(clears?.[difficulty]) || 0) > 0);
+const isQuickDifficultyCleared = (difficulty, challengeClears, proClears, extremeClears) => [challengeClears, proClears, extremeClears].some(clears => (Number(clears?.[difficulty]) || 0) > 0);
+// 「その難易度と、それより上のすべて」を弱い順の並びから取り出す。
+// 並びの正本は QUICK_DIFFICULTY_SETTINGS のキー順(Beginner→…→Legend→EXTREME→…→ULTIMATE)なので、
+// 難易度が増えてもここは触らずに済む。表に無い難易度は自分自身だけを見る(従来どおりの判定)。
+const quickDifficultiesAtOrAbove = difficulty => {
+  const order = Object.keys(QUICK_DIFFICULTY_SETTINGS);
+  const index = order.indexOf(difficulty);
+  return index < 0 ? [difficulty] : order.slice(index);
+};
+// 上の難易度をクリアしていれば、その下の難易度もすべて選べる
+// (2026-09-12・ユーザー指摘「マスターをクリアしててもイージーをクリアしなきゃイージーを選べない /
+//  裏クイック条件を満たした下の難易度は選べるようにして」)。
+// 下の難易度は上の難易度より必ずやさしいので、上を通せた人にわざわざ下を踏ませる意味がないため。
+// 逆向き(下をクリアしても上は開かない)は従来のまま。
+const isQuickDifficultyUnlocked = (difficulty, challengeClears, proClears, extremeClears) => quickDifficultiesAtOrAbove(difficulty).some(id => isQuickDifficultyCleared(id, challengeClears, proClears, extremeClears));
 // ===== モンヒロビートで1曲遊んだぶんを、クイック∞周回の何周ぶんにするか =====
 // (2026-09-07・ユーザー提案)
 //   「演奏に入った段階でのバトルの周分をクリア時のみ少量扱いにする」
@@ -9397,6 +9411,56 @@ const AssistCardIcon = ({
   },
   className: "absolute inset-0 w-full h-full object-contain"
 }));
+// 全画面演出(effect)の見た目。種類ごとの大きさ・光り方・色をここ1か所にまとめる。
+// 以前は表示側のJSXへ `effect.type==='unique'?…:(effect.type==='enhance'?…:…)` を
+// 4か所へ書き並べていたため、種類を1つ足すだけで同じ三項演算子を全部直す必要があった。
+//
+// transcendEnhance(超越強化)は通常強化(enhance)を土台に、一段強い光と大きさにしてある。
+// 超越強化は確定しても何も起きず、通常強化だけが全画面演出を持っていた
+// (2026-09-12・ユーザー指摘「超越強化が音もなく地味。普通の強化と同じかそれより派手めにして」)。
+// 超越強化の演出を出しておく長さ。通常強化(1200ms)より少し長く取って、
+// 上がった項目を読み終えられるようにする
+const TRANSCEND_ENHANCE_FX_MS = 1600;
+const EFFECT_VISUALS = {
+  unique: {
+    size: '180px',
+    emoji: '128px',
+    icon: 60,
+    throb: 'specialThrob 500ms ease-in-out infinite',
+    glow: 'drop-shadow-[0_0_45px_rgba(168,85,247,0.95)]',
+    label: 'text-purple-100 bg-purple-600/30 border-purple-400/60 drop-shadow-[0_0_20px_rgba(168,85,247,0.8)]',
+    sub: 'text-indigo-400'
+  },
+  enhance: {
+    size: '160px',
+    emoji: '120px',
+    icon: 48,
+    throb: 'specialThrob 500ms ease-in-out infinite',
+    glow: 'drop-shadow-[0_0_45px_rgba(251,191,36,0.9)]',
+    label: 'text-amber-100 bg-amber-600/30 border-amber-400/60 drop-shadow-[0_0_20px_rgba(251,191,36,0.8)]',
+    sub: 'text-amber-300'
+  },
+  transcendEnhance: {
+    size: '184px',
+    emoji: '134px',
+    icon: 58,
+    throb: 'mhTranscendFxThrob 620ms ease-in-out infinite',
+    glow: 'drop-shadow-[0_0_55px_rgba(253,230,138,0.95)]',
+    label: 'text-amber-50 bg-gradient-to-r from-amber-500/40 via-pink-500/35 to-sky-500/35 border-amber-200/70 drop-shadow-[0_0_24px_rgba(253,230,138,0.9)]',
+    sub: 'text-amber-200'
+  }
+};
+const EFFECT_VISUAL_DEFAULT = Object.freeze({
+  size: '150px',
+  emoji: '112px',
+  icon: 48,
+  throb: undefined,
+  glow: 'drop-shadow-[0_0_50px_rgba(255,255,255,0.4)]',
+  label: 'text-white bg-white/10 border-white/20',
+  sub: 'text-indigo-400'
+});
+const effectVisual = type => EFFECT_VISUALS[type] || EFFECT_VISUAL_DEFAULT;
+
 // icon欄が画像なら<img>、絵文字ならそのまま返す。sizePxは画像のときの表示サイズ
 const cardIconNode = (icon, sizePx, cardId) => isImageIconValue(icon) ? ASSIST_CARD_ICON_STYLES[cardId] ? /*#__PURE__*/React.createElement(AssistCardIcon, {
   icon: icon,
@@ -21797,6 +21861,7 @@ const RhythmTapTest = ({
     };
   }, [settings.noteStartPosition, settings.noteSize, view.status]);
   const applyJudgment = useCallback((note, judgment, deltaMs) => {
+    const _judgeT0 = RHYTHM_PERF.enabled && typeof performance !== 'undefined' ? performance.now() : 0;
     const run = runRef.current;
     if (!run || run.finished || run.paused || note.done) return;
     if (note.activePointerId !== null) {
@@ -21989,6 +22054,7 @@ const RhythmTapTest = ({
     }));
     scheduleJudgmentClear();
     if (abilityFlash) scheduleAbilityClear();
+    if (_judgeT0) RHYTHM_PERF.judge(performance.now() - _judgeT0, !!monster);
   }, [chart.totalNotes, difficulty.maxScore, scheduleAbilityClear, scheduleJudgmentClear, settings.vibrationEnabled, tutorial]);
   const finish = useCallback(() => {
     const run = runRef.current;
@@ -22082,8 +22148,9 @@ const RhythmTapTest = ({
       const run = runRef.current;
       if (!run || run.finished || run.paused) return;
       const perfTickStart = RHYTHM_PERF.enabled ? performance.now() : 0;
-      const songTimeMs = run.audio.songTimeMs(),
-        travel = measureTravel(),
+      const songTimeMs = run.audio.songTimeMs();
+      RHYTHM_PERF.songTime(songTimeMs);
+      const travel = measureTravel(),
         visualTime = songTimeMs - settings.judgmentTimingOffsetMs,
         travelMs = rhythmTravelMsForSpeed(settings.noteSpeed);
       let perfScanned = 0,
@@ -42473,6 +42540,31 @@ function MonsterHeroGame() {
     setMasuMons(next);
     setMasuMonDetail(prev => prev && String(prev.id) === String(masu.id) ? applied.masu : prev);
     setTranscendPlan(null);
+    // 通常強化と同じように、確定したことが分かる全画面演出を出す。
+    // 何がいくつ上がったかは「下書きの数」ではなく実際の前後の差から出す
+    // (間合い適性はMで頭打ちになるので、下書きどおりに上がるとは限らない)
+    const before = normalizeMasuProgression(masu);
+    const lines = [];
+    normalizeTranscendAptBoosts(applied.masu.transcendAptBoosts).forEach((boost, i) => {
+      const gained = boost - before.transcendAptBoosts[i];
+      if (gained > 0) lines.push(`${RANGE_LABELS[i]}距離適性 +${gained}`);
+    });
+    Object.entries(normalizeTranscendStatPoints(applied.masu.transcendStatPoints)).forEach(([key, value]) => {
+      const gained = value - (before.transcendStatPoints[key] || 0);
+      if (gained > 0 && STAT_POINT_KEYS[key]) lines.push(`基礎${STAT_POINT_KEYS[key]} +${gained}`);
+    });
+    const base = ALL_PLAYER_MONSTERS[applied.masu.baseId];
+    setEffect({
+      type: 'transcendEnhance',
+      label: '超越強化！',
+      icon: '🌟',
+      monEmoji: base?.emoji,
+      imgUrl: base?.iconUrl,
+      baseId: applied.masu.baseId,
+      colors: getMasuColors(applied.masu),
+      subLabel: lines.join('\n')
+    });
+    setTimeout(() => setEffect(null), TRANSCEND_ENHANCE_FX_MS);
     return applied;
   };
   // 虹のプシュケーを超越ポイントへ替える。プシュケーは共通の所持品、超越Pは個体ごとの育成値
@@ -54208,7 +54300,7 @@ function MonsterHeroGame() {
       className: `min-h-[44px] rounded-xl px-3 text-[11px] font-black ${rhythmPerfOn ? 'bg-amber-500 text-slate-900' : 'border border-white/20 bg-slate-900 text-slate-200'}`
     }, rhythmPerfOn ? '計測ON' : '計測OFF')), /*#__PURE__*/React.createElement("p", {
       className: "mt-1 text-[9px] font-bold leading-relaxed text-amber-100/80"
-    }, "ON\u306B\u3057\u3066\u304B\u3089\u30D7\u30EC\u30A4\u3059\u308B\u3068\u3001\u30D5\u30EC\u30FC\u30E0\u6642\u9593\u30681\u30D5\u30EC\u30FC\u30E0\u3042\u305F\u308A\u306E\u8CA0\u8377\uFF08\u30EC\u30A4\u30A2\u30A6\u30C8\u6E2C\u5B9A\u30FBDOM\u691C\u7D22\u30FBSLIDE\u5E2F\u306E\u66F4\u65B0\u6570\uFF09\u3092\u8A18\u9332\u3057\u307E\u3059\u3002OFF\u306E\u3042\u3044\u3060\u306F\u8A18\u9332\u51E6\u7406\u305D\u306E\u3082\u306E\u304C\u52D5\u304D\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("div", {
+    }, "ON\u306B\u3057\u3066\u304B\u3089\u30D7\u30EC\u30A4\u3059\u308B\u3068\u3001\u30D5\u30EC\u30FC\u30E0\u6642\u9593\u30681\u30D5\u30EC\u30FC\u30E0\u3042\u305F\u308A\u306E\u8CA0\u8377\uFF08\u30EC\u30A4\u30A2\u30A6\u30C8\u6E2C\u5B9A\u30FBDOM\u691C\u7D22\u30FBSLIDE\u5E2F\u306E\u66F4\u65B0\u6570\uFF09\u3092\u8A18\u9332\u3057\u307E\u3059\u3002OFF\u306E\u3042\u3044\u3060\u306F\u8A18\u9332\u51E6\u7406\u305D\u306E\u3082\u306E\u304C\u52D5\u304D\u307E\u305B\u3093\u3002\u300C\u30E2\u30F3\u30B9\u30BF\u30FC\u30CE\u30FC\u30C4\u300D\u306E\u884C\u304C\u300C\u30CE\u30FC\u30C4\u3092\u53D6\u308B\u51E6\u7406\u300D\u3088\u308A\u306F\u3063\u304D\u308A\u5927\u304D\u3051\u308C\u3070\u3001\u8E0F\u3093\u3060\u3068\u304D\u306B\u56FA\u307E\u308B\u539F\u56E0\u306F\u305D\u3053\u3067\u3059\u3002\u30CE\u30FC\u30C4\u306E\u52D5\u304D\u304C\u6ED1\u3089\u304B\u304B\u3069\u3046\u304B\u306F\u300C\u66F2\u306E\u6642\u523B\u300D\u306E3\u3064\u3092\u898B\u307E\u3059\u3002\u30CE\u30FC\u30C4\u306E\u4F4D\u7F6E\u306F\u66F2\u306E\u518D\u751F\u4F4D\u7F6E\u3060\u3051\u3067\u6C7A\u307E\u308B\u306E\u3067\u3001\u3053\u308C\u304C\u9032\u307E\u306A\u3044\u30D5\u30EC\u30FC\u30E0\u304C\u591A\u3044\u3068\u3001\u30D5\u30EC\u30FC\u30E0\u30EC\u30FC\u30C8\u304C60\u306E\u307E\u307E\u3067\u3082\u30CE\u30FC\u30C4\u306F\u6B62\u307E\u3063\u3066\u98DB\u3076\u52D5\u304D\u306B\u306A\u308A\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
       className: "mt-2 flex gap-2"
     }, /*#__PURE__*/React.createElement("button", {
       type: "button",
@@ -54224,13 +54316,24 @@ function MonsterHeroGame() {
     }, "\u8A18\u9332\u3092\u30AF\u30EA\u30A2")), rhythmPerfStats && /*#__PURE__*/React.createElement("dl", {
       "data-rhythm-perf-stats": true,
       className: "mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]"
-    }, [['フレーム数', rhythmPerfStats.frames], ['平均fps', rhythmPerfStats.fps.toFixed(1)], ['平均フレーム', `${rhythmPerfStats.avgMs.toFixed(1)}ms`], ['最悪フレーム', `${rhythmPerfStats.maxMs.toFixed(1)}ms`], ['16.7ms超', rhythmPerfStats.over16], ['25ms超', rhythmPerfStats.over25], ['33ms超', rhythmPerfStats.over33], ['レイアウト測定/frame', rhythmPerfStats.layoutReadsPerFrame.toFixed(2)], ['DOM検索/frame', rhythmPerfStats.domQueriesPerFrame.toFixed(2)], ['SLIDE帯更新/frame', rhythmPerfStats.slidePolygonsPerFrame.toFixed(2)], ['ジェスチャーrAF', rhythmPerfStats.gestureFrames], ['ノーツ再検索', rhythmPerfStats.noteRescans], ['走査ノーツ/frame', rhythmPerfStats.notesScannedPerFrame.toFixed(1)], ['実描画ノーツ/frame', rhythmPerfStats.notesDrawnPerFrame.toFixed(1)], ['最悪frameの走査/実描画', `${rhythmPerfStats.worstFrameScanned} / ${rhythmPerfStats.worstFrameDrawn}`], ['先頭スキップ/frame', rhythmPerfStats.headSkippedPerFrame.toFixed(1)], ['走査の絞り込み', rhythmPerfStats.narrowed === null ? '未計測' : rhythmPerfStats.narrowed ? '有効' : '無効(昇順でない譜面)'], ['tick処理/frame', `${rhythmPerfStats.tickMsPerFrame.toFixed(2)}ms`], ['最悪frameのtick処理', `${rhythmPerfStats.worstFrameTickMs.toFixed(1)}ms`], ['tick処理の最大', `${rhythmPerfStats.maxTickMs.toFixed(1)}ms`], ['frame開始→tick開始の遅れ', `${rhythmPerfStats.tickDelayMsPerFrame.toFixed(2)}ms`], ['最悪frameの遅れ', `${rhythmPerfStats.worstFrameDelayMs.toFixed(1)}ms`], ['遅れの最大', `${rhythmPerfStats.maxDelayMs.toFixed(1)}ms`]].map(([label, value]) => /*#__PURE__*/React.createElement(React.Fragment, {
+    }, [['フレーム数', rhythmPerfStats.frames], ['平均fps', rhythmPerfStats.fps.toFixed(1)], ['平均フレーム', `${rhythmPerfStats.avgMs.toFixed(1)}ms`], ['最悪フレーム', `${rhythmPerfStats.maxMs.toFixed(1)}ms`], ['16.7ms超', rhythmPerfStats.over16], ['25ms超', rhythmPerfStats.over25], ['33ms超', rhythmPerfStats.over33], ['レイアウト測定/frame', rhythmPerfStats.layoutReadsPerFrame.toFixed(2)], ['DOM検索/frame', rhythmPerfStats.domQueriesPerFrame.toFixed(2)], ['SLIDE帯更新/frame', rhythmPerfStats.slidePolygonsPerFrame.toFixed(2)], ['ジェスチャーrAF', rhythmPerfStats.gestureFrames], ['ノーツ再検索', rhythmPerfStats.noteRescans], ['走査ノーツ/frame', rhythmPerfStats.notesScannedPerFrame.toFixed(1)], ['実描画ノーツ/frame', rhythmPerfStats.notesDrawnPerFrame.toFixed(1)], ['最悪frameの走査/実描画', `${rhythmPerfStats.worstFrameScanned} / ${rhythmPerfStats.worstFrameDrawn}`], ['先頭スキップ/frame', rhythmPerfStats.headSkippedPerFrame.toFixed(1)], ['走査の絞り込み', rhythmPerfStats.narrowed === null ? '未計測' : rhythmPerfStats.narrowed ? '有効' : '無効(昇順でない譜面)'], ['tick処理/frame', `${rhythmPerfStats.tickMsPerFrame.toFixed(2)}ms`], ['最悪frameのtick処理', `${rhythmPerfStats.worstFrameTickMs.toFixed(1)}ms`], ['tick処理の最大', `${rhythmPerfStats.maxTickMs.toFixed(1)}ms`], ['frame開始→tick開始の遅れ', `${rhythmPerfStats.tickDelayMsPerFrame.toFixed(2)}ms`], ['最悪frameの遅れ', `${rhythmPerfStats.worstFrameDelayMs.toFixed(1)}ms`], ['遅れの最大', `${rhythmPerfStats.maxDelayMs.toFixed(1)}ms`], ['曲の時刻の進み/frame', `${(rhythmPerfStats.songStepMsPerFrame ?? 0).toFixed(2)}ms`], ['曲の時刻が進まないframe', `${((rhythmPerfStats.songStallRate ?? 0) * 100).toFixed(1)}%`], ['曲の時刻の最大の飛び', `${(rhythmPerfStats.songStepMaxMs ?? 0).toFixed(1)}ms`], ['ノーツを取る処理/回', `${(rhythmPerfStats.judgeMsAvg ?? 0).toFixed(2)}ms（${rhythmPerfStats.judgeCount ?? 0}回）`], ['取る処理の最大', `${(rhythmPerfStats.judgeMsMax ?? 0).toFixed(1)}ms`], ['モンスターノーツ/回', `${(rhythmPerfStats.monsterJudgeMsAvg ?? 0).toFixed(2)}ms（${rhythmPerfStats.monsterJudgeCount ?? 0}回）`], ['モンスターノーツの最大', `${(rhythmPerfStats.monsterJudgeMsMax ?? 0).toFixed(1)}ms`]].map(([label, value]) => /*#__PURE__*/React.createElement(React.Fragment, {
       key: label
     }, /*#__PURE__*/React.createElement("dt", {
       className: "text-slate-400"
     }, label), /*#__PURE__*/React.createElement("dd", {
       className: "text-right font-black text-amber-100"
-    }, value))))), /*#__PURE__*/React.createElement("section", {
+    }, value)))), rhythmPerfStats && Array.isArray(rhythmPerfStats.spikes) && rhythmPerfStats.spikes.length > 0 && /*#__PURE__*/React.createElement("div", {
+      "data-rhythm-perf-spikes": true,
+      className: "mt-2 rounded-xl border border-amber-400/30 bg-slate-950/60 p-2"
+    }, /*#__PURE__*/React.createElement("h4", {
+      className: "text-[10px] font-black text-amber-200"
+    }, "\u98DB\u3093\u3060\u30D5\u30EC\u30FC\u30E0\uFF0833ms\u8D85\uFF09\u3092\u8D77\u304D\u305F\u9806\u306B", rhythmPerfStats.spikes.length, "\u4EF6"), /*#__PURE__*/React.createElement("p", {
+      className: "mt-1 text-[9px] font-bold leading-relaxed text-amber-100/70"
+    }, "\u300C\u30E2\u30F3\u30B9\u30BF\u30FC\u5F8C\u300D\u304C\u5C0F\u3055\u3044\u884C\u304C\u4E26\u3076\u306A\u3089\u3001\u8E0F\u3093\u3060\u3042\u3068\u306E\u6F14\u51FA\u304C\u539F\u56E0\u3067\u3059\u3002\u300Ctick\u300D\u304C0ms\u306A\u3089\u3001\u305D\u306E\u98DB\u3073\u306FJS\u3067\u306F\u306A\u304F\u63CF\u753B\u5074\u3067\u3059\u3002"), /*#__PURE__*/React.createElement("ol", {
+      className: "mt-1 space-y-0.5 text-[9px] font-mono text-slate-300"
+    }, rhythmPerfStats.spikes.map((sp, i) => /*#__PURE__*/React.createElement("li", {
+      key: i
+    }, `${(sp.at / 1000).toFixed(1)}s  ${sp.dt}ms  tick ${sp.tick}ms  遅れ ${sp.delay}ms  走査${sp.scan}/描画${sp.draw}  モンスター後 ${sp.mon < 0 ? '—' : `${sp.mon}ms`}`))))), /*#__PURE__*/React.createElement("section", {
       "data-rhythm-canvas-panel": true,
       className: "mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"
     }, /*#__PURE__*/React.createElement("h3", {
@@ -60144,42 +60247,106 @@ function MonsterHeroGame() {
         animation: 'sparkFlicker 350ms ease-in-out infinite',
         animationDelay: `${deg}ms`
       }
-    }, "\u2728")))), effect.imgUrl ? effect.baseId ? /*#__PURE__*/React.createElement(DyedMonsterImage, {
+    }, "\u2728")))), effect.type === 'transcendEnhance' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+      className: "absolute inset-0",
+      style: {
+        background: 'radial-gradient(circle at 50% 42%, rgba(253,230,138,0.55) 0%, rgba(244,114,182,0.35) 32%, rgba(56,189,248,0.22) 52%, rgba(0,0,0,0) 72%)',
+        animation: 'auraPulse 620ms ease-out infinite'
+      }
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "absolute",
+      style: {
+        top: '42%',
+        left: '50%',
+        width: 'min(170vmax,1400px)',
+        height: 'min(170vmax,1400px)',
+        marginTop: '-85vmax',
+        marginLeft: '-85vmax',
+        background: 'repeating-conic-gradient(from 0deg, rgba(253,230,138,0.18) 0 4deg, transparent 4deg 18deg)',
+        animation: 'mhTranscendFxRays 5200ms linear infinite'
+      }
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "absolute",
+      style: {
+        top: '42%',
+        left: '50%',
+        width: 'min(70vw,300px)',
+        height: 'min(70vw,300px)',
+        transform: 'translate(-50%,-50%)'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "absolute inset-0 rounded-full border-4 border-amber-300/80",
+      style: {
+        animation: 'auraRing 700ms ease-out infinite'
+      }
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "absolute inset-0 rounded-full border-[3px] border-pink-300/70",
+      style: {
+        animation: 'auraRing 900ms ease-out 150ms infinite'
+      }
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "absolute inset-0 rounded-full border-2 border-sky-300/60",
+      style: {
+        animation: 'auraRing 1100ms ease-out 300ms infinite'
+      }
+    }), [0, 45, 90, 135, 180, 225, 270, 315].map(deg => /*#__PURE__*/React.createElement("div", {
+      key: `tx-out-${deg}`,
+      className: "absolute left-1/2 top-1/2 text-3xl",
+      style: {
+        transform: `translate(-50%,-50%) rotate(${deg}deg) translateY(-148px)`,
+        animation: 'mhEffectSpark 420ms ease-in-out infinite',
+        animationDelay: `${deg}ms`
+      }
+    }, "\uD83C\uDF1F")), [22, 67, 112, 157, 202, 247, 292, 337].map(deg => /*#__PURE__*/React.createElement("div", {
+      key: `tx-in-${deg}`,
+      className: "absolute left-1/2 top-1/2 text-xl",
+      style: {
+        transform: `translate(-50%,-50%) rotate(${deg}deg) translateY(-98px)`,
+        animation: 'mhEffectSpark 540ms ease-in-out infinite',
+        animationDelay: `${deg}ms`
+      }
+    }, "\u2728"))), /*#__PURE__*/React.createElement("div", {
+      className: "absolute inset-0",
+      style: {
+        background: 'radial-gradient(circle at 50% 42%, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0) 58%)',
+        animation: 'mhTranscendFxFlash 1600ms ease-out forwards'
+      }
+    })), effect.imgUrl ? effect.baseId ? /*#__PURE__*/React.createElement(DyedMonsterImage, {
       baseId: effect.baseId,
       src: effect.imgUrl,
       alt: "effect",
       masuColors: effect.colors,
       style: {
-        width: effect.type === 'unique' ? '180px' : effect.type === 'enhance' ? '160px' : '150px',
-        height: effect.type === 'unique' ? '180px' : effect.type === 'enhance' ? '160px' : '150px',
-        animation: effect.type === 'unique' || effect.type === 'enhance' ? 'specialThrob 500ms ease-in-out infinite' : undefined
+        width: effectVisual(effect.type).size,
+        height: effectVisual(effect.type).size,
+        animation: effectVisual(effect.type).throb
       },
-      className: `mb-6 object-contain relative ${effect.type === 'unique' ? 'drop-shadow-[0_0_45px_rgba(168,85,247,0.95)]' : effect.type === 'enhance' ? 'drop-shadow-[0_0_45px_rgba(251,191,36,0.9)]' : 'drop-shadow-[0_0_50px_rgba(255,255,255,0.4)]'}`
+      className: `mb-6 object-contain relative ${effectVisual(effect.type).glow}`
     }) : /*#__PURE__*/React.createElement("img", {
       src: effect.imgUrl,
       alt: "effect",
       style: {
-        width: effect.type === 'unique' ? '180px' : effect.type === 'enhance' ? '160px' : '150px',
-        height: effect.type === 'unique' ? '180px' : effect.type === 'enhance' ? '160px' : '150px',
-        animation: effect.type === 'unique' || effect.type === 'enhance' ? 'specialThrob 500ms ease-in-out infinite' : undefined
+        width: effectVisual(effect.type).size,
+        height: effectVisual(effect.type).size,
+        animation: effectVisual(effect.type).throb
       },
-      className: `mb-6 object-contain relative ${effect.type === 'unique' ? 'drop-shadow-[0_0_45px_rgba(168,85,247,0.95)]' : effect.type === 'enhance' ? 'drop-shadow-[0_0_45px_rgba(251,191,36,0.9)]' : 'drop-shadow-[0_0_50px_rgba(255,255,255,0.4)]'}`
+      className: `mb-6 object-contain relative ${effectVisual(effect.type).glow}`
     }) : /*#__PURE__*/React.createElement("div", {
       style: {
-        fontSize: effect.type === 'unique' ? '128px' : effect.type === 'enhance' ? '120px' : '112px',
-        animation: effect.type === 'unique' || effect.type === 'enhance' ? 'specialThrob 500ms ease-in-out infinite' : undefined
+        fontSize: effectVisual(effect.type).emoji,
+        animation: effectVisual(effect.type).throb
       },
       className: "mb-6 relative"
     }, effect.monEmoji), /*#__PURE__*/React.createElement("h2", {
-      className: `text-2xl font-black italic uppercase px-8 py-3 rounded-2xl border relative ${effect.type === 'unique' ? 'text-purple-100 bg-purple-600/30 border-purple-400/60 drop-shadow-[0_0_20px_rgba(168,85,247,0.8)]' : effect.type === 'enhance' ? 'text-amber-100 bg-amber-600/30 border-amber-400/60 drop-shadow-[0_0_20px_rgba(251,191,36,0.8)]' : 'text-white bg-white/10 border-white/20'}`
+      className: `text-2xl font-black italic uppercase px-8 py-3 rounded-2xl border relative ${effectVisual(effect.type).label}`
     }, effect.label), effect.subLabel && /*#__PURE__*/React.createElement("p", {
-      className: `font-mono text-[10px] mt-4 font-black whitespace-pre-line relative ${effect.type === 'enhance' ? 'text-amber-300' : 'text-indigo-400'}`
+      className: `font-mono text-[10px] mt-4 font-black whitespace-pre-line relative ${effectVisual(effect.type).sub}`
     }, effect.subLabel), /*#__PURE__*/React.createElement("div", {
       style: {
-        fontSize: effect.type === 'unique' ? '60px' : '48px'
+        fontSize: `${effectVisual(effect.type).icon}px`
       },
       className: "mt-8 animate-bounce relative"
-    }, cardIconNode(effect.icon, effect.type === 'unique' ? 60 : 48, effect.id))), rosterSkillDetail && (() => {
+    }, cardIconNode(effect.icon, effectVisual(effect.type).icon, effect.id))), rosterSkillDetail && (() => {
       const mon = rosterSkillDetail.mon;
       const isUnique = rosterSkillDetail.kind === 'unique';
       const levels = isUnique ? getUniqueSkillLevels(mon) : getAtkSkillLevels(mon);
@@ -61278,6 +61445,16 @@ const createAnimationStyle = () => {
       0% { transform: translateX(-40px) scale(0.7); opacity: 0; }
       40% { opacity: 1; }
       100% { transform: translateX(40px) scale(1.1); opacity: 0; }
+    }
+    /* 全画面演出(effect)の火花。明滅だけを受け持ち、置き場所は呼び出し側の transform に任せる。
+       共通の sparkFlicker はキーフレーム側が transform を丸ごと持っているため、
+       呼び出し側で書いた角度と半径が効かず、火花が全部1か所へ重なってしまう */
+    @keyframes mhEffectSpark { 0%,100% { opacity: .15; } 50% { opacity: 1; } }
+    @keyframes mhTranscendFxRays { 0% { transform: rotate(0); } 100% { transform: rotate(360deg); } }
+    @keyframes mhTranscendFxFlash { 0% { opacity: 0; } 10% { opacity: .75; } 34%,100% { opacity: 0; } }
+    @keyframes mhTranscendFxThrob {
+      0%,100% { transform: scale(1); filter: drop-shadow(0 0 16px rgba(253,230,138,.95)); }
+      50% { transform: scale(1.22); filter: drop-shadow(0 0 30px rgba(244,114,182,1)) drop-shadow(0 0 46px rgba(56,189,248,.8)); }
     }
     @keyframes specialFlash {
       0%,100% { opacity: 0; }
