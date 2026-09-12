@@ -53,7 +53,6 @@ const seed = () => {
     const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
     page.on('pageerror', (e) => errors.push(String(e)));
     await page.addInitScript(seed);
-    await page.route('**cdn.tailwindcss.com**', r => r.abort()).catch(() => {});
     await page.goto(PAGE_URL, { waitUntil: 'load', timeout: 60000 });
     await page.waitForFunction(() => document.getElementById('root')?.children.length > 0, { timeout: 60000 });
     const pointerDown = (sel) => page.evaluate((s) => {

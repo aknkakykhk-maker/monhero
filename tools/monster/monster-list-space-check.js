@@ -38,7 +38,6 @@ const seed = () => {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
   const fatal = [];
   page.on('pageerror', (e) => fatal.push(e.message));
-  await page.route('**cdn.tailwindcss.com**', (r) => r.abort()).catch(() => {});
   await page.addInitScript(seed);
 
   const pointerDown = (find) => page.evaluate((f) => {

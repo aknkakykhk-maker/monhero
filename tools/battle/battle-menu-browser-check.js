@@ -23,7 +23,6 @@ const URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/index.h
     put('mh_onboarded', true);
     put('mh_tutorial_seen_v1', true);
   });
-  await page.route('**cdn.tailwindcss.com**', r => r.abort()).catch(() => {});
   await page.goto(URL, { waitUntil:'load', timeout:60000 });
   const pointerDown = (find) => page.evaluate((f) => {
     const b = f.aria ? document.querySelector(`button[aria-label="${f.aria}"]`)

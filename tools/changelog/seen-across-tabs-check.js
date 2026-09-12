@@ -45,7 +45,6 @@ const newCount=(page)=>page.evaluate(()=>[...document.querySelectorAll('[data-ch
   const browser=await pw.chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
   const ctx=await browser.newContext({viewport:{width:390,height:844}});
   const page=await ctx.newPage();
-  await page.route('**cdn.tailwindcss.com**',r=>r.abort());
   const URL=`http://localhost:${PORT}/monster-hero/index.html`;
   try{
     // 1回目: 両方のタブを開いて全部を既読にする

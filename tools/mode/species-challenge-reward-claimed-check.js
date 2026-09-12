@@ -62,7 +62,6 @@ const UNCLAIMED_DIFFICULTY = 'Easy';
     browser = await playwright.chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
     const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
     page.on('pageerror', (e) => errors.push(String(e)));
-    await page.route('**cdn.tailwindcss.com**', (r) => r.abort());
     await page.addInitScript(([speciesId, claimed]) => {
       localStorage.setItem('mh_breeder_name', JSON.stringify('検査ブリーダー'));
       localStorage.setItem('mh_breeder_icon', JSON.stringify('🐣'));

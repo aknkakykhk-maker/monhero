@@ -59,7 +59,6 @@ const WATCH_KEYS = ['mh_masu_mons', 'mh_gifts', 'mh_gold', 'mh_breeder_xp', 'mh_
     const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
     page.on('pageerror', (e) => errors.push(String(e)));
     await page.addInitScript(seedLegacy);
-    await page.route('**cdn.tailwindcss.com**', r => r.abort()).catch(() => {});
 
     const bootAndSnapshot = async () => {
       await page.goto(PAGE_URL, { waitUntil: 'load', timeout: 60000 });

@@ -504,6 +504,15 @@ const twOn = await page.evaluate(()=>{const d=document.createElement('div');d.cl
 check('Tailwind のCSSが効いている(測った数字に意味がある)', twOn);
 ```
 
+**わざとCSSを落として測る検査**もある。`mode/rhythm-start-sequence-check.js` と
+`mode/rhythm-first-run-layout-check.js` は「CSSが最後まで来なかったいちばん悪い場合」を
+作るのが目的なので、`page.route('**/tailwind.css*', r => r.abort())` で自分から落とす。
+以前はCDNを落としていた場所で、**落とす相手が変わっただけ**。
+
+それ以外の検査に入っていた `page.route('**cdn.tailwindcss.com**', …)` は、
+もう誰も取りに行かないURLなので全部消した(49ファイル)。残しておくと
+「ここではTailwindが効かない」と読めてしまい、位置を測る検査の前提を取り違える。
+
 CSSを作り直すのは `node tools/build.js`(中身が変わったときだけ `tools/build-tailwind.js` を呼ぶ)。
 古いまま公開していないかは `node tools/build.js --check` と
 `node tools/boot/data-cache-key-check.js` が見張る。

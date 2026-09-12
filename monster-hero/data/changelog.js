@@ -34,6 +34,18 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    // index.html が cdn.tailwindcss.com を読み、起動のたびにブラウザの中でCSSを組み立てていた。
+    // 作っておいた monster-hero/tailwind.css(111KB)を <link> で1枚読むだけにした(TD-13)。
+    // 作るのは tools/build-tailwind.js で、中身が変わったときだけ作り直す。
+    // 古いまま出していないかは build.js --check と boot/data-cache-key-check.js が見る。
+    date: "2026-09-12 11:02", type:'update', title:'見た目のデータを先に用意して、起動を軽くしました', status:'new',
+    items:[
+      'これまでは起動のたびに、画面の見た目を決めるデータを外部のサーバーから取りに行き、その場で組み立てていました。あらかじめ用意したものを1つ読むだけに変えたので、起動までの待ち時間が短くなります。',
+      '外部のサーバーが不調なときに見た目が崩れることも無くなりました。電波の弱い場所でも、配置が崩れたまま表示されることがありません。',
+      '見た目そのものは変えていません。これまでと同じ画面です。',
+    ],
+  },
+  {
     // stopAllAuto('hidden') のときだけ段階を控え(ecoModeBeforeHiddenRef)、
     // ∞を立て直したあとに setEcoModeSafe で戻す(先に呼ぶと 'off' へ落ちる)。
     date: "2026-09-12 08:09", type:'update', title:'アプリに戻って∞周回が続くとき、省エネも元の段階へ戻るようにしました', status:'new',
