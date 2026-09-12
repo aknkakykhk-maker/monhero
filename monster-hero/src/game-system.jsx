@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 60f450e4f083c205
+// generated-sha256: b61d19f24cc3e9f2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-12 22:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-12 22:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -25544,8 +25544,12 @@ function MonsterHeroGame() {
     }
     if (remember) { try { await storeSet(TUTORIAL_SEEN_KEY, true, false); } catch {} }
   };
+  // 村の案内は、はじめての設定(名前とアイコン)が終わった人にだけ出す。
+  // このあとのガード(はじめての設定が終わるまでHOMEへ入れない)で連れ戻される人にも、
+  // 保存を読み終えたころに吹き出しだけ出てしまっていたため、onboarded も条件に入れる。
+  // ここを通らなくても、設定を終えた流れの中で finishOnboarding が村の案内を出す
   useEffect(() => {
-    if (bootPhase !== 'GAME' || gameState !== 'HOME' || tutorialShownRef.current || !dataLoaded) return;
+    if (bootPhase !== 'GAME' || gameState !== 'HOME' || tutorialShownRef.current || !dataLoaded || !onboarded) return;
     tutorialShownRef.current = true;
     let cancelled = false;
     (async () => {
@@ -25553,7 +25557,7 @@ function MonsterHeroGame() {
       if (!cancelled && seen !== true) { setTutorialKind('tour'); setTutorialStep(0); }
     })();
     return () => { cancelled = true; };
-  }, [bootPhase, gameState, dataLoaded]);
+  }, [bootPhase, gameState, dataLoaded, onboarded]);
 
   // モンビー(モンヒロビート)の曲えらびを初めて開いたときに、助手の案内を一度だけ出す。
   // 村の案内・バトルの案内とは別の保存キーなので、互いに邪魔をしない。
@@ -25581,6 +25585,21 @@ function MonsterHeroGame() {
     setRhythmPlay({ song:RHYTHM_TUTORIAL_SONG, difficulty:RHYTHM_TUTORIAL_DIFFICULTY, from:'tutorial' });
     setGameState('RHYTHM_PLAY');
   };
+
+  // はじめての設定(名前とアイコン)が終わっていない人を、HOMEへ入れない。
+  // 実際に「ログインボーナスの『ギフトを確認』→ ギフトボックス → 戻る」でHOMEへ着いてしまい、
+  // 名無しのブリーダーのまま遊べる状態になっていた(2026-09-12・ユーザー指摘)。
+  // ギフトボックスに限らず、戻り先がHOME固定の画面はほかにもあるので、
+  // 個別の戻り先を直すのではなく、HOMEへ着いた時点でまとめて連れ戻す。
+  // 助手をまだ選んでいなければ助手えらびから、選んであればプロフィールの続きから。
+  useEffect(() => {
+    if (bootPhase !== 'GAME' || onboarded || onboardingPreview) return;
+    if (gameState !== 'HOME') return;
+    // HOMEに一瞬でも着くと村の案内が始まってしまうので、ここで止めておく
+    // (名前とアイコンが決まったら finishOnboarding が改めて出す)
+    setTutorialStep(null);
+    setGameState(assistantChosen ? 'PROFILE' : 'ASSISTANT_SELECT');
+  }, [bootPhase, gameState, onboarded, onboardingPreview, assistantChosen]);
 
   // 既存の村案内とは別に、バトルチュートリアルをまだ完了していない人へ一度だけ案内する。
   // 初回プロフィール設定や村案内と重ならないよう、それらが閉じたHOMEで判定する。
@@ -29173,7 +29192,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         )}
         {/* ギフトボックスから開く、7日ぶんのログインボーナス一覧 */}
         {showLoginBonusList&&<div className="fixed inset-0 flex items-center justify-center p-5" style={{zIndex:60000,backgroundColor:'rgba(2,6,23,.9)'}} role="dialog" aria-modal="true" aria-label="ログインボーナス一覧"><div className="w-full max-w-sm rounded-3xl border-2 border-amber-300/70 bg-gradient-to-b from-indigo-950 to-slate-950 p-5 shadow-2xl"><div className="flex items-center gap-2 mb-3"><Sparkles size={20} className="text-amber-300"/><h2 className="text-base font-black text-amber-200">ログインボーナス</h2></div>{renderLoginBonusList(loginBonusTodayDay)}<button onClick={()=>setShowLoginBonusList(false)} className="w-full mt-4 min-h-[48px] rounded-xl bg-slate-700 text-white font-black text-sm active:scale-[.98]">閉じる</button></div></div>}
-        {loginBonusPopup&&<div className="fixed inset-0 flex items-center justify-center p-5" style={{zIndex:60000,backgroundColor:'rgba(2,6,23,.88)'}} role="dialog" aria-modal="true" aria-label="ログインボーナス"><div className="w-full max-w-sm rounded-3xl border-2 border-amber-300 bg-gradient-to-b from-indigo-950 to-slate-950 p-6 text-center shadow-2xl"><Sparkles size={46} className="mx-auto mb-3 text-amber-300"/><h2 className="text-2xl font-black text-amber-200">ログインボーナス</h2><p className="mt-3 text-sm font-black text-white">{loginBonusPopup.day}日目のログインボーナスを獲得しました！</p><div className="my-3 space-y-1.5">{loginBonusPopup.rewards.map((reward,i)=><div key={i} className="rounded-xl bg-black/35 px-3 py-2 font-black text-cyan-200 break-words">{giftRewardText(reward)}</div>)}</div>{renderLoginBonusList(loginBonusPopup.day)}<p className="text-xs text-slate-300 mt-3">報酬はギフトボックスへ送られました。</p><div className="mt-5 grid grid-cols-2 gap-2"><button onClick={()=>{setLoginBonusPopup(null);openGiftBox();}} className="min-h-[48px] rounded-xl bg-cyan-600 px-2 text-sm font-black text-white">ギフトを確認</button><button onClick={()=>setLoginBonusPopup(null)} className="min-h-[48px] rounded-xl bg-slate-700 px-2 text-sm font-black text-white">閉じる</button></div></div></div>}
+        {/* はじめての設定(名前とアイコン)が終わるまでは出さない。「ギフトを確認」が
+            ギフトボックスへ移動するボタンなので、設定の途中で押せるとそこから抜けられてしまう。
+            報酬はすでにギフトボックスへ配ってあるので、出すのを遅らせても何も失われない
+            (設定を終えてHOMEへ着いた時点でそのまま出る。2026-09-12・ユーザー指摘) */}
+        {loginBonusPopup&&onboarded&&!onboardingPreview&&<div className="fixed inset-0 flex items-center justify-center p-5" style={{zIndex:60000,backgroundColor:'rgba(2,6,23,.88)'}} role="dialog" aria-modal="true" aria-label="ログインボーナス"><div className="w-full max-w-sm rounded-3xl border-2 border-amber-300 bg-gradient-to-b from-indigo-950 to-slate-950 p-6 text-center shadow-2xl"><Sparkles size={46} className="mx-auto mb-3 text-amber-300"/><h2 className="text-2xl font-black text-amber-200">ログインボーナス</h2><p className="mt-3 text-sm font-black text-white">{loginBonusPopup.day}日目のログインボーナスを獲得しました！</p><div className="my-3 space-y-1.5">{loginBonusPopup.rewards.map((reward,i)=><div key={i} className="rounded-xl bg-black/35 px-3 py-2 font-black text-cyan-200 break-words">{giftRewardText(reward)}</div>)}</div>{renderLoginBonusList(loginBonusPopup.day)}<p className="text-xs text-slate-300 mt-3">報酬はギフトボックスへ送られました。</p><div className="mt-5 grid grid-cols-2 gap-2"><button onClick={()=>{setLoginBonusPopup(null);openGiftBox();}} className="min-h-[48px] rounded-xl bg-cyan-600 px-2 text-sm font-black text-white">ギフトを確認</button><button onClick={()=>setLoginBonusPopup(null)} className="min-h-[48px] rounded-xl bg-slate-700 px-2 text-sm font-black text-white">閉じる</button></div></div></div>}
 
         {gameState==='MB_MANAGEMENT'&&(
           <div data-mh-screen className="flex-1 flex flex-col h-full min-h-0 p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>

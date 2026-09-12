@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 29960dbde2e12069
+// source-sha256: 3ccc81b543233d82
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 60f450e4f083c205
+// generated-sha256: b61d19f24cc3e9f2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-12 22:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-12 22:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -44957,8 +44957,12 @@ function MonsterHeroGame() {
       } catch {}
     }
   };
+  // 村の案内は、はじめての設定(名前とアイコン)が終わった人にだけ出す。
+  // このあとのガード(はじめての設定が終わるまでHOMEへ入れない)で連れ戻される人にも、
+  // 保存を読み終えたころに吹き出しだけ出てしまっていたため、onboarded も条件に入れる。
+  // ここを通らなくても、設定を終えた流れの中で finishOnboarding が村の案内を出す
   useEffect(() => {
-    if (bootPhase !== 'GAME' || gameState !== 'HOME' || tutorialShownRef.current || !dataLoaded) return;
+    if (bootPhase !== 'GAME' || gameState !== 'HOME' || tutorialShownRef.current || !dataLoaded || !onboarded) return;
     tutorialShownRef.current = true;
     let cancelled = false;
     (async () => {
@@ -44971,7 +44975,7 @@ function MonsterHeroGame() {
     return () => {
       cancelled = true;
     };
-  }, [bootPhase, gameState, dataLoaded]);
+  }, [bootPhase, gameState, dataLoaded, onboarded]);
 
   // モンビー(モンヒロビート)の曲えらびを初めて開いたときに、助手の案内を一度だけ出す。
   // 村の案内・バトルの案内とは別の保存キーなので、互いに邪魔をしない。
@@ -45013,6 +45017,21 @@ function MonsterHeroGame() {
     });
     setGameState('RHYTHM_PLAY');
   };
+
+  // はじめての設定(名前とアイコン)が終わっていない人を、HOMEへ入れない。
+  // 実際に「ログインボーナスの『ギフトを確認』→ ギフトボックス → 戻る」でHOMEへ着いてしまい、
+  // 名無しのブリーダーのまま遊べる状態になっていた(2026-09-12・ユーザー指摘)。
+  // ギフトボックスに限らず、戻り先がHOME固定の画面はほかにもあるので、
+  // 個別の戻り先を直すのではなく、HOMEへ着いた時点でまとめて連れ戻す。
+  // 助手をまだ選んでいなければ助手えらびから、選んであればプロフィールの続きから。
+  useEffect(() => {
+    if (bootPhase !== 'GAME' || onboarded || onboardingPreview) return;
+    if (gameState !== 'HOME') return;
+    // HOMEに一瞬でも着くと村の案内が始まってしまうので、ここで止めておく
+    // (名前とアイコンが決まったら finishOnboarding が改めて出す)
+    setTutorialStep(null);
+    setGameState(assistantChosen ? 'PROFILE' : 'ASSISTANT_SELECT');
+  }, [bootPhase, gameState, onboarded, onboardingPreview, assistantChosen]);
 
   // 既存の村案内とは別に、バトルチュートリアルをまだ完了していない人へ一度だけ案内する。
   // 初回プロフィール設定や村案内と重ならないよう、それらが閉じたHOMEで判定する。
@@ -51378,7 +51397,7 @@ function MonsterHeroGame() {
     }, "\u30ED\u30B0\u30A4\u30F3\u30DC\u30FC\u30CA\u30B9")), renderLoginBonusList(loginBonusTodayDay), /*#__PURE__*/React.createElement("button", {
       onClick: () => setShowLoginBonusList(false),
       className: "w-full mt-4 min-h-[48px] rounded-xl bg-slate-700 text-white font-black text-sm active:scale-[.98]"
-    }, "\u9589\u3058\u308B"))), loginBonusPopup && /*#__PURE__*/React.createElement("div", {
+    }, "\u9589\u3058\u308B"))), loginBonusPopup && onboarded && !onboardingPreview && /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 flex items-center justify-center p-5",
       style: {
         zIndex: 60000,
