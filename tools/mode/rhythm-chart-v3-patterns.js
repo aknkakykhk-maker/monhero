@@ -308,55 +308,92 @@ const rankShapes=(candidates,{usage=null,previousOffsets=null,prefer=null,seed='
 //   room                    … 使えるレーンの幅（0〜room）
 // 返すのは {from,to}。from===to なら HOLD、違えば SLIDE になる。
 //
-// wantsBassMove / wantsMelodyMove は「その形が似合う動き量」(0〜1)。
-// 実データ（sustains[].moves / bassSustains[].moves）との近さが点数になる。
+// wantsBassMove / wantsMelodyMove は「その形が似合う動き量」。
+// ★目安は **SLIDEになる下限(slideMinMove=0.10)を1.0とした倍率**で書く。
+//   はじめ0〜1の生の moves で書いていたら実データと桁が合わなかった。
+//   伸びる音の moves は中央0.023・p90 0.125・最大0.36で、1.0近くには**絶対に来ない**。
+//   そのため wantsBassMove:.8 のような形は一度も1位になれなかった(2026-09-12)。
+//   呼ぶ側は heldPairMoveScale() を通してから渡す。
+//     0.0 … 動かない / 1.0 … ちょうどSLIDEになる / 2.0以上 … よく動く
 // minLevel は難易度の段（PROFILES.level）。上の形は上の難易度だけに出る。
+// ★端で潰れないように「ずらして収める」。端ごとに丸めると、行き先と出発点が同じに
+//   なって**動くはずの形が動かないHOLDになる**（2026-09-12に実際そうなった。
+//   cross を選んだのに2本目がHOLDで、形の名前と中身が食い違っていた）。
+const fitPair=(from,to,room)=>{
+  const lo=Math.min(from,to),hi=Math.max(from,to);
+  let shift=0;
+  if(lo<0)shift=-lo;
+  else if(hi>room)shift=room-hi;
+  const a=from+shift,b=to+shift;
+  // 幅そのものがレーンより広いときだけは、やむなく端で丸める
+  return {from:Math.max(0,Math.min(room,Math.round(a))),to:Math.max(0,Math.min(room,Math.round(b)))};
+};
+// 相方の平均から見て、空いている側（レーンが広く残っている側）を選ぶ
+const sideAwayFrom=(partnerFrom,partnerTo,room)=>{
+  const center=(partnerFrom+partnerTo)/2;
+  return center<=room/2?1:-1;
+};
+// follows は「2本目が動くかどうかの決まり方」。
+//   'none'    … いつも動かない（支える形）
+//   'partner' … 相方が動けば動く（並んで動く形）
+//   'own'     … 相方が動かなくても自分で動く（開く・閉じる・入れ替わる形）
+// 'own' の形が端で潰れて動かなくなったら、その形は**採らずに次の形へ回す**
+// （名前と中身が食い違ったままにしない）。
 const HELD_PAIR_SHAPES=Object.freeze([
   // 支える形: 2本目を動かさない。旋律が動くぶんを受け止める。いちばん読みやすい
-  Object.freeze({id:'anchor_out', minLevel:1, wantsBassMove:0,  wantsMelodyMove:.55,
+  Object.freeze({id:'anchor_out', minLevel:1, follows:'none', wantsBassMove:0,   wantsMelodyMove:1.2,
     place:({partnerFrom,partnerTo,room})=>{
-      // 相方の平均から遠い側の端へ寄せる
-      const center=(partnerFrom+partnerTo)/2;
-      const lane=center<=room/2?room:0;
+      const lane=sideAwayFrom(partnerFrom,partnerTo,room)>0?room:0;
       return {from:lane,to:lane};
     }}),
-  Object.freeze({id:'anchor_in',  minLevel:5, wantsBassMove:0,  wantsMelodyMove:.7,
+  Object.freeze({id:'anchor_in',  minLevel:5, follows:'none', wantsBassMove:0,   wantsMelodyMove:2.0,
     place:({partnerFrom,partnerTo,room})=>{
       // 内側（中央寄り）で支え、旋律を外で動かす。外で支えるより忙しく見える
-      const center=(partnerFrom+partnerTo)/2;
-      const lane=center<=room/2?Math.min(room,Math.round(room/2)+1):Math.max(0,Math.round(room/2)-1);
+      const side=sideAwayFrom(partnerFrom,partnerTo,room);
+      const lane=side>0?Math.min(room,Math.round(room/2)+1):Math.max(0,Math.round(room/2)-1);
       return {from:lane,to:lane};
     }}),
   // 並んで動く形: ベースと旋律が同じ向きへ動く曲に似合う。間隔は保つ
-  Object.freeze({id:'parallel',   minLevel:7, wantsBassMove:.5, wantsMelodyMove:.5,
+  Object.freeze({id:'parallel',   minLevel:7, follows:'partner', wantsBassMove:1.2, wantsMelodyMove:1.2,
     place:({partnerFrom,partnerTo,room,gap})=>{
-      const side=(partnerFrom+partnerTo)/2<=room/2?1:-1;
-      return {from:clampLane(partnerFrom+side*gap,room),to:clampLane(partnerTo+side*gap,room)};
+      const side=sideAwayFrom(partnerFrom,partnerTo,room);
+      return fitPair(partnerFrom+side*gap,partnerTo+side*gap,room);
     }}),
   // 逆向きに動く形（開く・閉じる）: 対旋律のある曲に似合う
-  Object.freeze({id:'contrary',   minLevel:7, wantsBassMove:.6, wantsMelodyMove:.6,
+  Object.freeze({id:'contrary',   minLevel:7, follows:'own', wantsBassMove:1.6, wantsMelodyMove:1.0,
     place:({partnerFrom,partnerTo,room,gap})=>{
-      const side=(partnerFrom+partnerTo)/2<=room/2?1:-1;
-      return {from:clampLane(partnerFrom+side*gap,room),to:clampLane(partnerFrom-side*gap,room)};
+      const side=sideAwayFrom(partnerFrom,partnerTo,room);
+      // 相方が動かない曲でも自分は動く。行き先は相方の反対側へ回り込む
+      const span=Math.max(1,Math.abs(partnerTo-partnerFrom)||gap);
+      return fitPair(partnerFrom+side*gap,partnerFrom+side*(gap+span),room);
     }}),
-  Object.freeze({id:'diverge',    minLevel:7, wantsBassMove:.4, wantsMelodyMove:.4,
+  // ★「相方の from と to にそれぞれ足す」書き方はしない。相方が少し動くと
+  //   足し引きが打ち消し合って**動かなくなる**（converge が実際そうなった）。
+  //   自分の出発点を決めてから、必ず動く量(extra)を足し引きする。
+  Object.freeze({id:'diverge',    minLevel:7, follows:'own', wantsBassMove:1.0, wantsMelodyMove:0.6,
     place:({partnerFrom,partnerTo,room,gap})=>{
-      const side=(partnerFrom+partnerTo)/2<=room/2?1:-1;
-      return {from:clampLane(partnerFrom+side*gap,room),to:clampLane(partnerTo+side*(gap+1),room)};
+      const side=sideAwayFrom(partnerFrom,partnerTo,room);
+      const extra=Math.max(1,Math.round(Math.abs(partnerTo-partnerFrom))||1);
+      const start=partnerFrom+side*gap;
+      return fitPair(start,start+side*extra,room);   // 必ず extra ぶん離れる
     }}),
-  Object.freeze({id:'converge',   minLevel:9, wantsBassMove:.4, wantsMelodyMove:.3,
+  Object.freeze({id:'converge',   minLevel:9, follows:'own', wantsBassMove:0.8, wantsMelodyMove:0.4,
     place:({partnerFrom,partnerTo,room,gap})=>{
-      const side=(partnerFrom+partnerTo)/2<=room/2?1:-1;
-      return {from:clampLane(partnerFrom+side*(gap+1),room),to:clampLane(partnerTo+side*gap,room)};
+      const side=sideAwayFrom(partnerFrom,partnerTo,room);
+      const extra=Math.max(1,Math.round(Math.abs(partnerTo-partnerFrom))||1);
+      const start=partnerFrom+side*(gap+extra);
+      return fitPair(start,start-side*extra,room);   // 必ず extra ぶん相方へ寄る
     }}),
   // 内外が入れ替わる形: いちばん忙しい。上の難易度だけ
-  Object.freeze({id:'cross',      minLevel:9, wantsBassMove:.8, wantsMelodyMove:.5,
+  Object.freeze({id:'cross',      minLevel:9, follows:'own', wantsBassMove:2.2, wantsMelodyMove:1.0,
     place:({partnerFrom,partnerTo,room,gap})=>{
-      const side=(partnerFrom+partnerTo)/2<=room/2?1:-1;
-      return {from:clampLane(partnerFrom+side*gap,room),to:clampLane(partnerTo-side*gap,room)};
+      const side=sideAwayFrom(partnerFrom,partnerTo,room);
+      // 相方の外側から入って、相方をまたいで反対の外側へ抜ける
+      const span=Math.max(2,Math.abs(partnerTo-partnerFrom)+gap);
+      return fitPair(partnerFrom+side*gap,partnerFrom-side*(span-gap),room);
     }}),
 ]);
-const clampLane=(lane,room)=>Math.max(0,Math.min(room,Math.round(lane)));
+
 // 語彙から、その場に似合う順で候補を返す。
 //   level        … PROFILES.level（難易度の段）
 //   bassMove     … 2本目の素（ベース）の動き量 0〜1
@@ -364,11 +401,20 @@ const clampLane=(lane,room)=>Math.max(0,Math.min(room,Math.round(lane)));
 //   usage        … 形ごとの使用回数（Map）。使ったものは後ろへ回す
 //   previousId   … 直前に使った形。続けて同じ形は出さない
 //   seed         … 同点を崩す種
+// 生の moves を「SLIDEになる下限を1.0とした倍率」へ直す。
+// 上限は3.0（最大0.36 ÷ 0.10 = 3.6 なので、実データの上のほうまで届く）。
+const HELD_PAIR_MOVE_UNIT=.10;   // = COMMON.slideMinMove
+const heldPairMoveScale=moves=>{
+  const value=Number(moves);
+  if(!Number.isFinite(value)||value<=0)return 0;
+  return Math.min(3,value/HELD_PAIR_MOVE_UNIT);
+};
 const heldPairShapeCandidates=({level,bassMove,melodyMove,usage=null,previousId=null,seed=''})=>{
   const usable=HELD_PAIR_SHAPES.filter(shape=>shape.minLevel<=level);
   const scored=usable.map((shape,index)=>{
     // 動き量の近さ（小さいほど似合う）
-    let score=Math.abs(shape.wantsBassMove-bassMove)*2+Math.abs(shape.wantsMelodyMove-melodyMove);
+    // 倍率で比べるので、差も倍率のまま。ベース側を重く見る（2本目の性格を決めるのはベース）
+    let score=Math.abs(shape.wantsBassMove-bassMove)*1.2+Math.abs(shape.wantsMelodyMove-melodyMove)*.6;
     if(usage)score+=(usage.get?usage.get(shape.id)||0:usage[shape.id]||0)*.6;
     if(previousId===shape.id)score+=1.5;            // 続けて同じ形は出さない
     score+=(hash32(`${seed}:${shape.id}`)%10)/10;   // 同点は種で崩す（曲ごとに並びが変わる）
@@ -379,7 +425,7 @@ const heldPairShapeCandidates=({level,bassMove,melodyMove,usage=null,previousId=
 };
 
 module.exports={LANES,PATTERNS,PATTERN_BY_ID,mirror,fitToLanes,baseRange,maxStepOf,shapeCandidatesFor,rankShapes,hash32,FRESH_WINDOW,
-  HELD_PAIR_SHAPES,heldPairShapeCandidates};
+  HELD_PAIR_SHAPES,heldPairShapeCandidates,heldPairMoveScale,HELD_PAIR_MOVE_UNIT};
 
 
 if(require.main===module){
