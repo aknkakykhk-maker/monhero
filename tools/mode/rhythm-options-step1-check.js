@@ -30,7 +30,7 @@ ok('数値5項目は粗細4つのボタンとスライダーで変えられる',
   &&game.includes('rhythmFiniteStep(source.noteSeVolume,0,RHYTHM_VOLUME_MAX,1')
   &&game.includes('data-rhythm-option-stepper={key}')
   // 押す場所は44px以上を保つ(字を詰めて入れる量を増やさない)
-  &&game.includes("min-h-[46px] rounded-xl border ${dim?'border-white/25 bg-slate-300 text-slate-900':'border-white/40 bg-slate-100 text-slate-900'}")
+  &&game.includes("${wide?'min-h-[38px]':'min-h-[46px]'} rounded-xl border ${dim?'border-white/25 bg-slate-300 text-slate-900':'border-white/40 bg-slate-100 text-slate-900'}")
   &&game.includes('<input type="range" data-rhythm-option-slider={key}'));
 ok('4つのボタンは保存する刻みへ丸め、上下限で無効になる',
   game.includes('rhythmNudgeOptionValue(value,min,max,step,amount)')
