@@ -14446,8 +14446,52 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   };
   return {
     attach(next){canvas=next||null;ctx=canvas?canvas.getContext('2d'):null;},
+    // ── 演奏が始まる前に、光のスプライトを焼いておく ──────────────────────────
+    //
+    // 【2026-09-12・ユーザーとのやりとり】
+    // 「演奏前に事前ダウンロードみたいな機能をいれて終わってから演奏開始とか意味ない？」
+    //
+    // ダウンロードするものは残っていない(音源は await 済み・ジャケットは曲えらび・
+    // 譜面は起動時)。残っていたのは**描画の準備**で、光のスプライトを
+    // 「その種類のノーツが曲の中で初めて出た瞬間」に作っていた。
+    // 実測(dpr2・演出FULL)で、いちばん最初の1回が46ms(canvasの初期化込み)、
+    // 種類が増えるごとに約3ms、合計およそ60ms。60fpsのフレーム3.6本ぶんで、
+    // モンスターノーツは3枚まとめて作るのでいちばん重い。
+    //
+    // READY→3→2→1 のカウントダウンが3.2秒あるので、そこへ黙って寄せれば見えない。
+    // 同じ考え方はヒットエフェクトの器で既にやっている(rhythmEnsureHitEffects)。
+    //
+    // ★ここで渡す値は、実際に描くときと**同じ**でなければならない。スプライトの
+    //   キャッシュのキーは「種類と画素密度」だけなので、違う色・太さで焼くと
+    //   そのまま曲の終わりまで使われてしまう。
+    // ★画素密度も begin() と同じやり方で決める。ここで違う値にすると、最初の begin() が
+    //   食い違いを見て sprites.clear() を呼び、焼いたぶんが丸ごと捨てられる。
+    warmSprites(options={}){
+      if(typeof document==='undefined')return 0;
+      const nextDpr=Math.min(Number(options.dpr)||(typeof devicePixelRatio==='number'?devicePixelRatio:1)||1,options.lightweight?2:3);
+      if(nextDpr!==dpr){dpr=nextDpr;sprites.clear();}
+      effect=options.effect||'FULL';
+      const before=sprites.size;
+      // 粒のまわりの光。種類ごとに1枚。FAILED は glow が空なので作らない(描くときも作らない)
+      for(const [type,style] of Object.entries(HEADS)){
+        if(style.glow&&style.glow.length)glowSprite(type,style.radius,style.glow);
+      }
+      // モンスターノーツのアウラ(外は脈打つ・内は固定)
+      auraSprite('outer',6,4,9999,'rgba(216,180,254,.62)',AURA_OUTER_GLOWS,AURA_OUTER_DOTS);
+      auraSprite('inner',1,-2,9999,'rgba(255,250,205,.98)',AURA_INNER_GLOWS);
+      // FLICKの矢印
+      arrowSprite('flick',26,19,FLICK_ARROW_GLOWS,FLICK_ARROW_FILL);
+      // 終端バーの光と、終点フリックの矢印
+      const endGlows=effect==='LOW'?END_BAR_GLOWS_LOW:END_BAR_GLOWS;
+      glowSprite('end',4,endGlows);
+      glowSprite('endFlick',4,endGlows);
+      arrowSprite('endFlick',24,17,END_FLICK_ARROW_GLOWS,END_FLICK_ARROW_FILL);
+      return sprites.size-before;
+    },
     release(){canvas=null;ctx=null;sprites.clear();},
     get drawn(){return drawn;},
+    // 焼いてあるスプライトの枚数(検査で「曲の中で増えないこと」を見るために使う)
+    spriteCount(){return sprites.size;},
     // 毎フレームの最初に呼ぶ。プレイエリアの大きさ・画素密度が変わっていたら canvas を作り直し、全面を消す
     begin(rect,options={}){
       if(!canvas||!ctx||!rect||!(rect.width>0&&rect.height>0))return false;
