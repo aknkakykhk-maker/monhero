@@ -83,20 +83,20 @@ const PROFILES=Object.freeze({
     types:['TAP','HOLD'],widths:[3,4,6],narrowRate:0,tapDuringHold:false,
     holdPerMinute:5.6,slidePerMinute:0,flickPerMinute:0,endFlickPerMinute:0,
     chord:Object.freeze({perMinute:2.4,minGapLanes:2,onBeat:true,clearGrids:3,minWidth:3,spacingGrids:16,edge:true}),
-    sweep:null,chordRun:null,crossPerMinute:0,
+    sweep:null,chordRun:null,crossPerMinute:0,heldPair:null,
     accentWidth:10,accentPerMinute:2.4}),
   NORMAL:Object.freeze({level:3,lattice:2,maxLaneStep:2,maxRun:3,
     types:['TAP','HOLD','FLICK'],widths:[2,3,4,6],narrowRate:0,tapDuringHold:false,
     holdPerMinute:6.4,slidePerMinute:0,flickPerMinute:5.6,endFlickPerMinute:1.2,
     chord:Object.freeze({perMinute:3.2,minGapLanes:2,onBeat:true,clearGrids:2,minWidth:3,spacingGrids:12,edge:true}),
-    sweep:null,chordRun:null,crossPerMinute:0,
+    sweep:null,chordRun:null,crossPerMinute:0,heldPair:null,
     accentWidth:10,accentPerMinute:2.4}),
   HARD:Object.freeze({level:5,lattice:1,maxLaneStep:2,maxRun:2,
     types:['TAP','HOLD','FLICK','SLIDE'],widths:[1,2,3,4,5],narrowRate:.04,tapDuringHold:false,
     holdPerMinute:7.2,slidePerMinute:4,flickPerMinute:7.2,endFlickPerMinute:2,
     chord:Object.freeze({perMinute:4,minGapLanes:1.5,onBeat:false,clearGrids:2,minWidth:3,spacingGrids:8,edge:false}),
     sweep:Object.freeze({perMinute:1.6,minGrids:6,minSpanLanes:2.5,maxLaneSpeed:6,clearBeats:1}),
-    chordRun:null,crossPerMinute:0,
+    chordRun:null,crossPerMinute:0,heldPair:null,
     accentWidth:8,accentPerMinute:2.8}),
   EXPERT:Object.freeze({level:7,lattice:1,maxLaneStep:3,maxRun:5,
     types:['TAP','HOLD','FLICK','SLIDE'],widths:[1,2,3,4,5],narrowRate:.12,tapDuringHold:true,
@@ -106,6 +106,7 @@ const PROFILES=Object.freeze({
     chordRun:Object.freeze({perMinute:1.6,maxLength:3,minStepMs:165,maxLaneSpeed:8,
       width:2,shapes:['parallel','swing'],spacingGrids:24}),
     crossPerMinute:1.2,
+    heldPair:Object.freeze({perMinute:.8,minOverlapGrids:8,minGapLanes:1.5}),
     accentWidth:8,accentPerMinute:2.8}),
   MASTER:Object.freeze({level:9,lattice:1,maxLaneStep:4,maxRun:8,
     types:['TAP','HOLD','FLICK','SLIDE'],widths:[1,2,3,4],narrowRate:.2,tapDuringHold:true,
@@ -115,6 +116,7 @@ const PROFILES=Object.freeze({
     chordRun:Object.freeze({perMinute:2.4,maxLength:4,minStepMs:140,maxLaneSpeed:10,
       width:2,shapes:['swing','parallel','open'],spacingGrids:20}),
     crossPerMinute:2.4,
+    heldPair:Object.freeze({perMinute:1.6,minOverlapGrids:6,minGapLanes:1.25}),
     accentWidth:6,accentPerMinute:3.2}),
 });
 // HOLD・SLIDE・FLICK・同時押し・区切りの一発は、曲の長さに比例させる。
@@ -449,7 +451,8 @@ const buildChart=(difficulty,options={})=>{
   const countOf=perMinute=>perMinute>0?Math.max(1,Math.round(perMinute*playableMinutes)):0;
   const holdMax=countOf(P.holdPerMinute),slideMax=countOf(P.slidePerMinute),
     flickMax=countOf(P.flickPerMinute),endFlickMax=countOf(P.endFlickPerMinute),
-    chordMax=countOf(P.chord?P.chord.perMinute:0),accentMax=countOf(P.accentPerMinute);
+    chordMax=countOf(P.chord?P.chord.perMinute:0),accentMax=countOf(P.accentPerMinute),
+    heldPairMax=countOf(P.heldPair?P.heldPair.perMinute:0);
   const log=[];
   // log は「かたまりごとにどの形を当てたか」だけを入れる。
   // 出来事の説明（同時押しを何組置いたか等）は混ぜず、notice へ分ける
@@ -590,26 +593,58 @@ const buildChart=(difficulty,options={})=>{
       .filter(span=>span.startGrid>=minGrid&&span.endGrid<=maxGrid&&span.grids>=COMMON.holdMinGrids)
       .filter(span=>[0,1,-1,2,-2].some(shift=>spacedGrids.has(span.startGrid+shift)))
       .sort((a,b)=>b.grids-a.grids);
-    let holds=0,slides=0;
+    let holds=0,slides=0,heldPairs=0;
     for(const span of spans){
+      // 相方（同時押さえの相手）。周回ごとに必ず null から始める
+      // ★var で書くと関数スコープへ持ち上がり、重なりの無い周回でも前の値が残る
+      let pairedWith=null;
       // 始点は、採用済みの打点にいちばん近いところへ寄せる
       const startGrid=[0,-1,1,-2,2].map(shift=>span.startGrid+shift).find(g=>spacedGrids.has(g));
       if(startGrid==null)continue;
       const endGrid=Math.min(span.endGrid,startGrid+Math.round(BEAT*4));
       const grids=endGrid-startGrid;
       if(grids<COMMON.holdMinGrids)continue;
-      if(reserved.some(r=>startGrid<=r.endGrid+1&&endGrid>=r.startGrid-1))continue;
+      // ── 押さえノーツどうしの重なり（同時押さえ） ────────────────────────────
+      //
+      // 【2026-09-12・ユーザー指摘「スライドとかホールドの同時系もなかったっけ？」】
+      //
+      // 直す前はこの1行が「前の帯の終わり+1グリッドまで重なったら捨てる」で、
+      // HOLD+HOLD / HOLD+SLIDE / SLIDE+SLIDE の同時押さえが**全難易度で0件**だった。
+      // ランタイムは2本同時を処理できる（デバッグ譜面「幅1 SLIDE同時操作」がある）し、
+      // すぐ下の「2本押さえているときはTAPを置かない」も2本を想定して書いてあるのに、
+      // ここが禁止していたのでそのコードは一度も発火していなかった。
+      //
+      // 許すのは **1組だけ**。指は親指2本（rhythm-hand-model.js の hands:2）なので、
+      // 3本目が要る形は作れない。かすっただけを同時押さえと呼ばないよう、
+      // 重なりの長さにも下限を置く（minOverlapGrids）。
+      // heldPair が無い難易度（EASY/NORMAL/HARD）は従来どおり1件も作らない。
+      const touching=reserved.filter(r=>startGrid<=r.endGrid+1&&endGrid>=r.startGrid-1);
+      if(touching.length){
+        if(!P.heldPair)continue;
+        if(touching.length>1)continue;                       // 3本以上は指が足りない
+        if(heldPairs>=heldPairMax)continue;                   // 1曲あたりの組数
+        const partner=touching[0];
+        if(partner.paired)continue;                           // すでに相方がいる帯へ3本目を足さない
+        const overlapGrids=Math.min(endGrid,partner.endGrid)-Math.max(startGrid,partner.startGrid);
+        if(overlapGrids<P.heldPair.minOverlapGrids)continue;   // かすっただけは同時押さえにしない
+        partner.paired=true;
+        heldPairs++;
+        // レーンは後の段（形を当てるところ）で決まるので、「指2本が入るか」は
+        // 生成のあとの検査（rhythm-runtime-notes.js の overlapConflicts）で見る
+        pairedWith=partner;
+      }
       const moves=span.moves??0;
       const wantSlide=P.types.includes('SLIDE')&&moves>=COMMON.slideMinMove&&grids>=COMMON.slideMinGrids;
       if(wantSlide){
         if(slides>=slideMax)continue;
-        reserved.push({type:'SLIDE',startGrid,endGrid,span});slides++;
+        reserved.push({type:'SLIDE',startGrid,endGrid,span,paired:!!pairedWith,pairedWith});slides++;
       }else{
         if(!P.types.includes('HOLD')||holds>=holdMax)continue;
-        reserved.push({type:'HOLD',startGrid,endGrid,span});holds++;
+        reserved.push({type:'HOLD',startGrid,endGrid,span,paired:!!pairedWith,pairedWith});holds++;
       }
     }
     reserved.sort((a,b)=>a.startGrid-b.startGrid);
+    if(P.heldPair)notice.push(`押さえノーツの同時押さえ ${heldPairs}組（狙い${heldPairMax}組・押さえノーツ${reserved.length}本）`);
     for(const item of reserved)for(let g=item.startGrid+1;g<=item.endGrid;g++)usedGrids.add(g);
   }
   // 押さえている最中の打点は落とす（低い難易度では指が足りない）
