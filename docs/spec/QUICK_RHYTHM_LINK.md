@@ -764,3 +764,64 @@ false のままなので進行は止まっており、曲が終われば今ま�
 ③自分でAUTO∞を切ったあとは戻っても始まらないことを見る）。
 ③は「負けたときは始めない」と同じ分かれ道（理由が `'hidden'` 以外）を、
 負けるまで遊ばずに踏むためのもの。
+
+## モンビーにいるかどうかの判定（2026-09-12）
+
+ユーザー報告「モンビー中にオプションに行くとたまに強制でバトルに飛ばされる」。
+
+画面が勝手に切り替わる経路は `advanceRunStage` の1か所だけ。
+
+```js
+const advanceRunStage = (stage) => {
+  runStageRef.current = stage;
+  setRunStage(stage);
+  if (!runBackgroundAllowedRef.current) setGameState(stage);   // ← ここで飛ぶ
+};
+```
+
+`runBackgroundAllowed` は `rhythmScreenOpen` そのもの。これが
+`[...RHYTHM_BACKGROUND_RUN_SCREENS,'RHYTHM_PLAY'].includes(gameState)` という**一覧**で、
+**`RHYTHM_OPTIONS` だけ漏れていた**。オプションにいるあいだは「モンビーを離れた」と
+判断され、裏の周回がWAVEを越えた瞬間に画面がバトル側へ切り替わっていた。
+
+「たまに」なのは、オプションへ移ると周回の進行そのものは止まる（`runProgressAllowed` が
+false）一方で、**予約済みの `setTimeout`（例: `setTimeout(()=>advanceRunStage('WAVE_RESULT'),
+battleMs(500))`）は必ず着地する**ため。WAVEの切り替わりに重なったときだけ飛ぶ。
+
+**直し方は2段構え。**
+
+1. `RHYTHM_BACKGROUND_RUN_SCREENS` へ `'RHYTHM_OPTIONS'` を足す。
+   遊びかた・ランキングと同じで60fpsも精密入力も要らないので、オプションを見ているあいだも
+   周回は進み続ける（それまでは止まって、あとから追いつきで取り戻していた）
+2. `rhythmScreenOpen` を**一覧ではなく `gameState` の頭文字**で見る
+   （`isRhythmScreen = state => state.startsWith('RHYTHM_')`）。
+   一覧で持つかぎり、モンビーへ画面を足すたびに同じ事故が起きる
+
+`rhythmScreenOpen` はほかにも使われているので、これで次も同時に直る。
+
+- バトルのSEがオプションで鳴っていた（`Audio_.setSeVolume`）
+- 裏でライフが0になると、**敗北の全画面表示がオプションの上に出ていた**
+- 技の全画面演出・画面の揺れもオプションの上に出ていた
+
+検査は `tools/battle/run-stage-check.js`。**期待するモンビーの画面は検査の側に書き下す**。
+実装の一覧から作ると、実装から漏れた画面は検査でも漏れて、漏れそのものを見つけられない。
+
+### 負けたときの音は、モンビー中でも鳴らす（仕様）
+
+ユーザー指示「モンビー中に負けると負けたときの音がなるんだけどこれは負けたって
+分かりやすいから仕様として残しといてほしい」。
+
+モンビーの画面はBGMのキーを持たない（`BGM_STATE_MAP` に無い）ので、ふだんは何も鳴らない。
+それでも負けたときだけ鳴るのは、`bgmKeyForState` が**画面を見るより先に**負けを見ているから。
+
+```js
+if (eventBgmScene) return bgmArrangement[eventBgmScene];
+if (isGameOver) return bgmArrangement.gameOver;   // ← 画面判定より前
+…
+if (state === 'HOME' || …) return bgmArrangement.home;
+```
+
+**この順番が入れ替わると、モンビー中に負けても無音になり、裏で負けたことに気づけなくなる。**
+敗北の全画面表示はモンビー中に出さないので、**気づく手がかりはこの音と進捗の帯だけ**。
+SEではなくBGM側で鳴っているため、モンビー中のSE消音にも巻き込まれない。
+`node tools/audio/rhythm-return-bgm-check.js` が順番を見張る。
