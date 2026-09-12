@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 468ab774c0aad9ab
+// source-sha256: 6b6671d3785c8993
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4f7859e61e441024
+// generated-sha256: 97b64be502527035
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-12 13:29"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-12 14:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -20039,7 +20039,9 @@ const RhythmOptions = ({
     className: "min-h-[48px] rounded-xl bg-fuchsia-700 text-[12px] font-black"
   }, "\u30BF\u30C3\u30D7\u97F3\u8A66\u8074")), /*#__PURE__*/React.createElement("p", {
     className: `mt-3 ${note}`
-  }, "\u3053\u306E\u97F3\u91CF\u306F\u30E1\u30A4\u30F3\u30B2\u30FC\u30E0\u306E\u97F3\u91CF\u8A2D\u5B9A\u3068\u5225\u306B\u3001\u97F3\u30B2\u30FC\u3060\u3051\u3067\u4F7F\u3044\u307E\u3059\u3002\u30BF\u30A4\u30C8\u30EB\u753B\u9762\u306E\u5168\u4F53\u30DF\u30E5\u30FC\u30C8\u306E\u307F\u5171\u901A\u3067\u3059\u3002")), /*#__PURE__*/React.createElement("section", {
+  }, "\u3053\u306E\u97F3\u91CF\u306F\u30E1\u30A4\u30F3\u30B2\u30FC\u30E0\u306E\u97F3\u91CF\u8A2D\u5B9A\u3068\u5225\u306B\u3001\u97F3\u30B2\u30FC\u3060\u3051\u3067\u4F7F\u3044\u307E\u3059\u3002\u30BF\u30A4\u30C8\u30EB\u753B\u9762\u306E\u5168\u4F53\u30DF\u30E5\u30FC\u30C8\u306E\u307F\u5171\u901A\u3067\u3059\u3002"), /*#__PURE__*/React.createElement("p", {
+    className: `mt-2 ${note}`
+  }, "2026-09-12\u306B\u30BF\u30C3\u30D7\u97F3\u3092\u5927\u304D\u304F\u3057\u307E\u3057\u305F\uFF08\u305D\u308C\u307E\u3067\u306E10\u500D\uFF09\u3002\u4EE5\u524D\u306B\u97F3\u91CF\u3092\u5408\u308F\u305B\u3066\u3044\u305F\u5834\u5408\u306F\u3001\u30BF\u30C3\u30D7\u97F3\u91CF\u3092\u4E0B\u3052\u308B\u304BBGM\u97F3\u91CF\u3092\u4E0A\u3052\u3066\u5408\u308F\u305B\u76F4\u3057\u3066\u304F\u3060\u3055\u3044\u3002")), /*#__PURE__*/React.createElement("section", {
     className: card
   }, /*#__PURE__*/React.createElement("h3", {
     className: head

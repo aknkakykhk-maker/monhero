@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4f7859e61e441024
+// generated-sha256: 97b64be502527035
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-12 13:29"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-12 14:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11521,6 +11521,10 @@ const RhythmOptions=({value,onSave,onBack})=>{
           <div className={row}><span className={label}>タップ音</span>{toggle('noteSeEnabled','')}</div>
           <div className="mt-3 grid grid-cols-2 gap-3"><button type="button" onClick={previewBgm} className="min-h-[48px] rounded-xl bg-indigo-700 text-[12px] font-black">♪ BGM試聴</button><button type="button" onClick={()=>RHYTHM_NOTE_SE_RUNTIME.preview(draft)} className="min-h-[48px] rounded-xl bg-fuchsia-700 text-[12px] font-black">タップ音試聴</button></div>
           <p className={`mt-3 ${note}`}>この音量はメインゲームの音量設定と別に、音ゲーだけで使います。タイトル画面の全体ミュートのみ共通です。</p>
+          {/* タップ音を10倍にしたので、前に合わせていた人は必ず設定し直すことになる(2026-09-12)。
+              ヘルプと更新履歴は探しに行った人しか読まないので、スライダーのすぐ横でも伝える。
+              保存キーは増やさない(出しっぱなしの一言で、消す仕掛けを持たない) */}
+          <p className={`mt-2 ${note}`}>2026-09-12にタップ音を大きくしました（それまでの10倍）。以前に音量を合わせていた場合は、タップ音量を下げるかBGM音量を上げて合わせ直してください。</p>
         </section>
         <section className={card}>
           <h3 className={head}>🎯 プレイ</h3>

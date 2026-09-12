@@ -65,6 +65,10 @@ const RhythmOptions=({value,onSave,onBack})=>{
           <div className={row}><span className={label}>タップ音</span>{toggle('noteSeEnabled','')}</div>
           <div className="mt-3 grid grid-cols-2 gap-3"><button type="button" onClick={previewBgm} className="min-h-[48px] rounded-xl bg-indigo-700 text-[12px] font-black">♪ BGM試聴</button><button type="button" onClick={()=>RHYTHM_NOTE_SE_RUNTIME.preview(draft)} className="min-h-[48px] rounded-xl bg-fuchsia-700 text-[12px] font-black">タップ音試聴</button></div>
           <p className={`mt-3 ${note}`}>この音量はメインゲームの音量設定と別に、音ゲーだけで使います。タイトル画面の全体ミュートのみ共通です。</p>
+          {/* タップ音を10倍にしたので、前に合わせていた人は必ず設定し直すことになる(2026-09-12)。
+              ヘルプと更新履歴は探しに行った人しか読まないので、スライダーのすぐ横でも伝える。
+              保存キーは増やさない(出しっぱなしの一言で、消す仕掛けを持たない) */}
+          <p className={`mt-2 ${note}`}>2026-09-12にタップ音を大きくしました（それまでの10倍）。以前に音量を合わせていた場合は、タップ音量を下げるかBGM音量を上げて合わせ直してください。</p>
         </section>
         <section className={card}>
           <h3 className={head}>🎯 プレイ</h3>
