@@ -35,6 +35,35 @@ const explain=arg('--explain');
 const trackId=arg('--track','monster_hero_theme');
 const outputDir=arg('--output-dir',null);
 const inputDir=arg('--input-dir',null);
+// ── 候補ちがい（同じ曲から別の譜面を作る） ──────────────────────────────────
+//
+// 【2026-09-12】V3には「複数候補を作って自動で批評する」段が無かった
+// (V2のSTEP5に相当。docs/spec/RHYTHM_ROADMAP.md に2回「まだ無い」と書かれていた)。
+// いまは1回生成して検査に通れば出荷なので、「検査は通るが面白くない」譜面が出うる。
+//
+// 同点を崩す種へこの番号を混ぜると、形の選ばれ方だけが変わって別の譜面になる。
+// ★variant 0 は**今までと1音も変わらない**(種の文字列に何も足さない)。
+//   既存曲の譜面を変えないため、既定は必ず0(運用ルール ⑩-2)。
+const variant=Math.max(0,Math.floor(Number(arg('--variant',0))||0));
+const variantSeed=variant>0?`:v${variant}`:'';
+// 種を変えるだけだと、形の選ばれ方が入れ替わるだけで**点数がほとんど動かなかった**
+// (候補4本で6軸の合計が572.0〜572.2、差0.2点)。品質の軸をまたぐ差を作るには、
+// 「どんな形を好むか」も候補ごとに変える必要がある。
+//
+// 変えるのは**好み(prefer)の強さだけ**。難易度の設定(PROFILES)には触らない。
+// 触ると候補どうしで難易度が変わってしまい、比べる意味が無くなる。
+//   driftTurnAfter … 同じ向きへ何回続いたら「逆向きを前へ出す」か（小さいほどよく折り返す）
+const VARIANT_STYLES=Object.freeze([
+  Object.freeze({driftTurnAfter:2}),   // v0 = いまと同じ
+  Object.freeze({driftTurnAfter:1}),   // よく折り返す（流れが変わりやすい）
+  Object.freeze({driftTurnAfter:3}),   // 同じ向きへ長く流す
+  Object.freeze({driftTurnAfter:2}),   // v0と同じ好みで、種だけ別
+  Object.freeze({driftTurnAfter:1}),
+  Object.freeze({driftTurnAfter:4}),   // かなり長く流す
+  Object.freeze({driftTurnAfter:3}),
+  Object.freeze({driftTurnAfter:1}),
+]);
+const variantStyle=VARIANT_STYLES[variant%VARIANT_STYLES.length];
 const DIFFICULTIES=['EASY','NORMAL','HARD','EXPERT','MASTER'];
 
 // ============================================================================
@@ -782,8 +811,8 @@ const buildChart=(difficulty,options={})=>{
         rhythmShape,rotate:chunkIndex,recent:recentShapes.slice(-COMMON.shapeAvoidRecent)});
       // 音との合いかたが同じくらいの候補の中で、つなぎ・使用回数・場面・決定的な散らしで選ぶ(譜面文法)
       const ranked=rankShapes(candidates,{usage:shapeUsage,previousOffsets:lastOffsets,
-        prefer:{ids:SECTION_SHAPE_PREFERENCE[role]||{},turn:driftCount>=2},
-        seed:`${trackId}:${difficulty}:${chunkIndex}`,maxStep});
+        prefer:{ids:SECTION_SHAPE_PREFERENCE[role]||{},turn:driftCount>=variantStyle.driftTurnAfter},
+        seed:`${trackId}:${difficulty}:${chunkIndex}${variantSeed}`,maxStep});
       for(const chosen of ranked.slice(0,6))attempts.push({offsets:chosen.offsets.slice(),patternId:chosen.pattern.id,mirrored:false,fromMemory:false});
       if(!attempts.length)attempts.push({offsets:Array.from({length},()=>0),patternId:null,mirrored:false,fromMemory:false});
     }
@@ -1547,7 +1576,7 @@ const buildChart=(difficulty,options={})=>{
       // レーン差1つぶんをSLIDEの下限1.0と見なす
       const melodyMove=Math.min(3,Math.abs(path.to-path.from));
       const shapes=heldPairShapeCandidates({level:P.level,bassMove,melodyMove,
-        usage:heldPairShapeUsage,previousId:previousShapeId,seed:`${trackId}:${span.startGrid}`});
+        usage:heldPairShapeUsage,previousId:previousShapeId,seed:`${trackId}:${span.startGrid}${variantSeed}`});
       let placed=null;
       for(const shape of shapes){
         const lanes=shape.place({partnerFrom:path.from,partnerTo:path.to,room,gap:gapLanes});
