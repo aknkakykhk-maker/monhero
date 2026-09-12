@@ -1168,6 +1168,26 @@ const rhythmSlideTrackingFloor=(passed,total)=>{
 // ただし全体ミュート(タイトル画面の「音がオフです」)だけは、game-system.jsx の Audio_.setEnabled が
 // window.__mhAudioEnabled へ反映するのでそれを見て共通に効かせる。値が無い(main未読込)場合はfalse扱いにしない。
 const rhythmAudioGloballyEnabled=()=>typeof window==='undefined'||window.__mhAudioEnabled!==false;
+// ===== タップ音まわりの大きさをまとめて上げる倍率(2026-09-12・ユーザー指示) =====
+// 「アンドロイドでタップ音量が小さいって声がある」。
+// 原因は合成音の振幅そのもので、タップ音はフルスケールの3.5%(既定の音量70なら2.45%)しかなく、
+// -14 LUFS へそろえた曲のピーク(-1 dBTP = 0.891)より **約28dB** 小さかった。
+// タップ音量を最大の100にしても、曲と釣り合わせるにはBGM音量を7まで下げるしかない状態で、
+// iPhoneは端末側の音量で20dB以上押し上げられるので成立していたが、
+// Androidのスピーカーではそこまで持ち上がらず「聞こえない」になっていた。
+//
+// ★戻すときはこの数字を 1 にするだけ。下の .035 などの元の係数は1つも書き換えていないので、
+//   1 にすれば2026-09-12より前とまったく同じ音量へ戻る。
+// ★効くのは「タップ音量(noteSeVolume)」で鳴るモンビーの合成音だけ。
+//   BGM音量(bgmVolume)にも、メインゲームの音量設定(_bgmGain / seGain)にも一切触れない。
+const RHYTHM_NOTE_SE_GAIN_SCALE = 10;
+// 1つの音が出せる大きさの上限(安全側の蓋)。倍率を上げすぎたときに音が割れないようにする。
+// 倍率10のあいだはどの音もここへ届かない(いちばん大きいモンスターノーツの1音で .42)。
+const RHYTHM_NOTE_SE_LEVEL_MAX = .5;
+// 元の係数 × 倍率 × 音量(0〜1)。
+// 下限(.0001)は exponentialRampToValueAtTime が0を受け取れないためで、これまでと同じ。
+const rhythmNoteSeLevel = (base, volume) =>
+  Math.max(.0001, Math.min(RHYTHM_NOTE_SE_LEVEL_MAX, base * RHYTHM_NOTE_SE_GAIN_SCALE * volume));
 const RHYTHM_NOTE_SE_RUNTIME=(()=>{
   let ctx=null,cachedRaw=null,cachedSettings={enabled:true,volume:70},inputGroupDepth=0,inputGroupHit=false;
   const readSettings=()=>{
@@ -1205,7 +1225,7 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
     const audio=context();
     if(!audio)return false;
     if(audio.state==='suspended'&&typeof audio.resume==='function')audio.resume().catch(()=>{});
-    const oscillator=audio.createOscillator(),gain=audio.createGain(),now=audio.currentTime,level=Math.max(.0001,.035*(settings.volume/100));
+    const oscillator=audio.createOscillator(),gain=audio.createGain(),now=audio.currentTime,level=rhythmNoteSeLevel(.035,settings.volume/100);
     oscillator.type='triangle';
     oscillator.frequency.setValueAtTime(1120,now);
     oscillator.frequency.exponentialRampToValueAtTime(820,now+.035);
@@ -1226,7 +1246,7 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
     if(audio.state==='suspended'&&typeof audio.resume==='function')audio.resume().catch(()=>{});
     const duration=.055,sampleRate=audio.sampleRate||44100,buffer=audio.createBuffer(1,Math.max(1,Math.floor(sampleRate*duration)),sampleRate),samples=buffer.getChannelData(0);
     for(let i=0;i<samples.length;i++)samples[i]=(Math.random()*2-1)*(1-i/samples.length);
-    const source=audio.createBufferSource(),filter=audio.createBiquadFilter(),gain=audio.createGain(),now=audio.currentTime,level=Math.max(.0001,.022*(settings.volume/100));
+    const source=audio.createBufferSource(),filter=audio.createBiquadFilter(),gain=audio.createGain(),now=audio.currentTime,level=rhythmNoteSeLevel(.022,settings.volume/100);
     source.buffer=buffer;
     filter.type='bandpass';
     filter.frequency.setValueAtTime(2800,now);
@@ -1260,7 +1280,7 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
     const audio=context();
     if(!audio)return false;
     if(audio.state==='suspended'&&typeof audio.resume==='function')audio.resume().catch(()=>{});
-    const now=audio.currentTime,level=Math.max(.0001,.028*(settings.volume/100)),duration=.13;
+    const now=audio.currentTime,level=rhythmNoteSeLevel(.028,settings.volume/100),duration=.13;
     const oscillator=audio.createOscillator(),gain=audio.createGain();
     oscillator.type='triangle';
     oscillator.frequency.setValueAtTime(1318.51,now);                    // E6
@@ -1291,7 +1311,7 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
       oscillator.type=type;
       oscillator.frequency.setValueAtTime(freq,start);
       gain.gain.setValueAtTime(.0001,start);
-      gain.gain.exponentialRampToValueAtTime(Math.max(.0001,peak*volume),start+.008);
+      gain.gain.exponentialRampToValueAtTime(rhythmNoteSeLevel(peak,volume),start+.008);
       gain.gain.exponentialRampToValueAtTime(.0001,start+sustain);
       oscillator.connect(gain);gain.connect(audio.destination);
       oscillator.start(start);oscillator.stop(start+sustain+.02);
@@ -1313,7 +1333,7 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
     const audio=context();
     if(!audio)return false;
     if(audio.state==='suspended'&&typeof audio.resume==='function')audio.resume().catch(()=>{});
-    const now=audio.currentTime,level=Math.max(.0001,.05*(settings.volume/100));
+    const now=audio.currentTime,level=rhythmNoteSeLevel(.05,settings.volume/100);
     // E5 → G5 → B5 → E6 の上昇アルペジオ。最後の音だけ長く伸ばして締める。
     [659.25,783.99,987.77,1318.51].forEach((freq,index,notes)=>{
       const start=now+index*.09,sustain=index===notes.length-1?.42:.16;
