@@ -13714,9 +13714,33 @@ const RHYTHM_HIT_EFFECT_MS=Object.freeze({NORMAL:340,MONSTER:900});
 //   MISS      … 灰(光は出さない)
 // ★MARVELOUSだけは単色ではなく虹。ここへ置くのは「虹にできない場所で使う代表の色」で、
 //   虹そのものは data-judgment を見たCSSが描く(文字のグラデーション・粒の色分け)。
+// ★GREATは赤系にした(2026-09-12・ユーザー指示「グレートは赤系のほうが強く見える」)。
+//   そのままだと BAD の橙(27°)と27度しか離れず紛らわしいので、BADは赤から
+//   いちばん遠い青(213°)へ逃がした。冷たい色なので「良くない」の読みにも合う。
+//   色相の並び: GREAT 0° / EXCELLENT 45° / GOOD 85° / BAD 213° / MISS 灰。
+//   いちばん近い組(EXCELLENT-GOOD)でも40度あり、ノーツの色と同じ約束を満たす。
 const RHYTHM_JUDGMENT_COLORS=Object.freeze({
-  MARVELOUS:'#f0abfc',EXCELLENT:'#fcd34d',GREAT:'#22d3ee',GOOD:'#a3e635',BAD:'#fb923c',MISS:'#94a3b8',
+  MARVELOUS:'#f0abfc',EXCELLENT:'#fcd34d',GREAT:'#f87171',GOOD:'#a3e635',BAD:'#60a5fa',MISS:'#94a3b8',
 });
+// ===== ぴったりのMARVELOUS(2026-09-12・ユーザー指示) =====
+// 「マーベラスをさらに完璧なタイミングで踏んだマーベラスを判定の見ためだけさらによくしたい /
+//   scoreはかわらず」。
+//
+// ★**見た目だけ。** 判定の名前・スコア・コンボ・ライフ・判定数・FAST/SLOWの数え方・
+//   自己ベスト・全国ランキングのどれにも一切関わらない。ここで決まるのは
+//   「その1回の表示を強くするか」だけで、run には何も残さない。
+// MARVELOUSの窓は±55ms。その中でも±20msに収まったときを「ぴったり」とする。
+// 判定タイミング調整(judgmentTimingOffsetMs)を通したあとのズレを見るので、
+// 自分で合わせた人の手元でもそのまま効く。
+const RHYTHM_JUDGMENT_PRECISE_MS = 20;
+const rhythmJudgmentIsPrecise=(judgment,deltaMs)=>{
+  if(judgment!=='MARVELOUS')return false;
+  // ★null / undefined / 空文字は Number() では0(=ぴったり)になってしまう。
+  //   ズレが分からないときに「ぴったり」を名乗らせない
+  if(deltaMs===null||deltaMs===undefined||deltaMs==='')return false;
+  const delta=Number(deltaMs);
+  return Number.isFinite(delta)&&Math.abs(delta)<=RHYTHM_JUDGMENT_PRECISE_MS;
+};
 const rhythmJudgmentColor=judgment=>RHYTHM_JUDGMENT_COLORS[String(judgment||'')]||'#e2e8f0';
 // MARVELOUSの虹を作る色。文字のグラデーションと、はじける粒の色分けに使う
 const RHYTHM_JUDGMENT_RAINBOW=Object.freeze(['#f87171','#fbbf24','#a3e635','#22d3ee','#a78bfa','#f472b6']);
@@ -13790,7 +13814,7 @@ const rhythmRestartAnimations=entries=>{
 };
 // defer:true を渡すと、印を付けずに「付けるべき印」だけを返す。
 // 呼び出し側が rhythmRestartAnimations へまとめて渡すことで、レイアウトの読み取りを1回にできる。
-const rhythmSpawnHitEffect=(area,{centerRatio,widthRatio,judgment,monster=false,defer=false})=>{
+const rhythmSpawnHitEffect=(area,{centerRatio,widthRatio,judgment,monster=false,precise=false,defer=false})=>{
   const layer=rhythmEnsureHitEffects(area);
   if(!layer||!layer._rhythmPool.length)return null;
   const item=layer._rhythmPool[layer._rhythmNext%layer._rhythmPool.length];
@@ -13808,8 +13832,11 @@ const rhythmSpawnHitEffect=(area,{centerRatio,widthRatio,judgment,monster=false,
       (!monster&&judgment==='MARVELOUS')?color:'var(--rhythm-hit-color,#fff)');
   });
   item.dataset.hitJudgment=(!monster&&judgment==='MARVELOUS')?'MARVELOUS':'';
+  item.dataset.hitPrecise=(!monster&&precise&&judgment==='MARVELOUS')?'1':'';
   item.style.setProperty('--rhythm-hit-ms',`${RHYTHM_HIT_EFFECT_MS[kind]}ms`);
-  item.style.setProperty('--rhythm-spark-scale',monster?'2.1':'1');
+  // ぴったりのMARVELOUSは粒を遠くまで飛ばす(見た目だけ・2026-09-12)。
+  // モンスターノーツの2.1倍はそのまま優先する(そちらが特別扱いのため)
+  item.style.setProperty('--rhythm-spark-scale',monster?'2.1':(precise&&judgment==='MARVELOUS'?'1.45':'1'));
   // 同じ要素をすぐ使い回すときは、アニメーションを一度切らないと最初から再生されない。
   // defer なら「切って付け直す」を呼び出し側のまとめ処理へ譲る(レイアウトの読み取りを1回にするため)。
   if(defer)return {el:item,attr:'rhythmHitKind',value:kind};

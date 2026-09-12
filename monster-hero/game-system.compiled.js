@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 608a6d1b377ba31d
+// source-sha256: b1b4389e80714443
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1667ce093e1f95fc
+// generated-sha256: 3443d54034745e75
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-12 22:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-12 22:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -21801,6 +21801,7 @@ const RhythmTapTest = ({
     combo: 0,
     maxCombo: 0,
     last: '',
+    lastPrecise: false,
     fastSlow: '',
     counts: emptyCounts(),
     fast: 0,
@@ -21902,6 +21903,7 @@ const RhythmTapTest = ({
       setView(v => ({
         ...v,
         last: '',
+        lastPrecise: false,
         fastSlow: ''
       }));
     }, RHYTHM_JUDGMENT_DISPLAY_MS);
@@ -22080,6 +22082,10 @@ const RhythmTapTest = ({
     rhythmFloatingNoteRemove(note);
     note.done = true;
     note._rhythmFinalJudgment = judgment;
+    // MARVELOUSの中でも、とくにぴったり(±20ms)だったか。**見た目にしか使わない**(2026-09-12)。
+    // 判定の名前・スコア・コンボ・ライフ・判定数・FAST/SLOWの数え方には一切入れないので、
+    // run にも result にも残さない。judgmentTimingOffsetMs を通したあとのズレを見ている
+    const preciseHit = rhythmJudgmentIsPrecise(judgment, deltaMs);
     // HOLD / SLIDE を最後まで取れた・FLICKが成立したときは、そこで音と光を返す。
     // TAPは指を置いた時点で音が鳴っているので対象にしない。
     // (実機で「フリックが成功したのか分かりづらい」「取れた手ごたえがほしい」という報告があった)
@@ -22107,6 +22113,7 @@ const RhythmTapTest = ({
           widthRatio: span.width,
           judgment,
           monster: monsterHit,
+          precise: preciseHit,
           defer: true
         });
         if (hitEffect) restarts.push(hitEffect);
@@ -22257,6 +22264,7 @@ const RhythmTapTest = ({
       combo: run.combo,
       maxCombo: run.maxCombo,
       last: judgment,
+      lastPrecise: preciseHit,
       fastSlow: side || '',
       counts: {
         ...run.counts
@@ -23024,6 +23032,7 @@ const RhythmTapTest = ({
         setView(v => ({
           ...v,
           last: 'HOLD',
+          lastPrecise: false,
           fastSlow: side || ''
         }));
         scheduleJudgmentClear();
@@ -23676,6 +23685,7 @@ const RhythmTapTest = ({
     ref: judgmentTextRef,
     "data-rhythm-judgment-text": true,
     "data-judgment": view.last || '',
+    "data-judgment-precise": view.lastPrecise ? '1' : '',
     className: "block text-[26px] font-black leading-none tracking-wide",
     style: {
       color: view.last === 'MARVELOUS' ? undefined : view.last ? rhythmJudgmentColor(view.last) : '#ffffff',
