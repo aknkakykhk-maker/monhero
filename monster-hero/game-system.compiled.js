@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3fb2429960976b8c
+// source-sha256: 468ab774c0aad9ab
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b4559fa083a82668
+// generated-sha256: 4f7859e61e441024
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-12 13:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-12 13:29"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -346,15 +346,16 @@ const rhythmPlayRunLoopScale = (songId, event) => {
 const rhythmPlayRunLoopsAllowed = (difficulty, quickClears) => (Number(quickClears?.[difficulty]) || 0) > 0;
 // 演奏の結果(クリア／失敗)で入る周回数を変える(2026-09-12・ユーザー指示
 //   「終了後にクリアか失敗かもわかるようにして / それによって経験値も変わるから」)。
-// 失敗＝ライフが0になったまま曲を終えた(不可逆のDOWN)こと。曲を最後まで演奏したこと自体は
-// 同じなので0にはせず、半分にする(端数は切り捨て、ただし1周は残す)。
+// 失敗＝ライフが0になったまま曲を終えた(不可逆のDOWN)こと。
+//
+// ★失敗は0。半分入るようにしていたが、**叩かずに放っておいても半分もらえてしまう**ため
+//   0へ直した(2026-09-12・ユーザー指示「失敗しても入るようにすると放置で稼げるように
+//   なるから失敗は0にして」)。周回クリア扱いにするのは、ちゃんと弾ききったときだけ。
 // ★クリアかどうかを渡さない古い呼び出し(undefined)は、これまでどおり全額入る。
-const RHYTHM_PLAY_RUN_LOOP_FAILED_RATE = 0.5;
 const rhythmPlayRunLoopsForResult = (loops, cleared) => {
   const base = Math.max(0, Math.trunc(Number(loops) || 0));
   if (base <= 0) return 0;
-  if (cleared !== false) return base;
-  return Math.max(1, Math.floor(base * RHYTHM_PLAY_RUN_LOOP_FAILED_RATE));
+  return cleared === false ? 0 : base;
 };
 
 // モード選択カードの最高スコアは、現在の選択難易度ではなく、そのモードで
@@ -23010,7 +23011,20 @@ const RhythmTapTest = ({
       className: "mt-1 block text-[10px] font-black text-amber-200"
     }, result.allMarvelous ? 'すべてMARVELOUS。文句なしの完璧です' : result.allExcellent ? 'すべてEXCELLENT以上。ほぼ完璧です' : '一度もコンボを切らずに完走しました')), /*#__PURE__*/React.createElement("div", {
       className: "my-3 flex flex-wrap justify-center gap-2 text-xs font-black text-slate-300"
-    }, result.fullCombo && /*#__PURE__*/React.createElement("span", null, "FULL COMBO"), result.allExcellent && /*#__PURE__*/React.createElement("span", null, "ALL EXCELLENT"), result.allMarvelous && /*#__PURE__*/React.createElement("span", null, "ALL MARVELOUS")), quickRunAward && quickRunAward.loops > 0 && /*#__PURE__*/React.createElement("div", {
+    }, result.fullCombo && /*#__PURE__*/React.createElement("span", null, "FULL COMBO"), result.allExcellent && /*#__PURE__*/React.createElement("span", null, "ALL EXCELLENT"), result.allMarvelous && /*#__PURE__*/React.createElement("span", null, "ALL MARVELOUS")), quickRunAward && quickRunAward.loops === 0 && quickRunAward.cleared === false && /*#__PURE__*/React.createElement("div", {
+      "data-rhythm-result-quick-run-failed": true,
+      className: "my-3 rounded-2xl border border-rose-400/50 bg-rose-950/30 p-3 text-left"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-baseline justify-between gap-2"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-[10px] font-black tracking-wider text-rose-200"
+    }, "\u30AF\u30A4\u30C3\u30AF\u221E\u5468\u56DE"), /*#__PURE__*/React.createElement("b", {
+      className: "text-lg font-black leading-none text-rose-200"
+    }, "+0\u5468")), /*#__PURE__*/React.createElement("p", {
+      className: "mt-1 text-[10px] font-bold leading-relaxed text-rose-100"
+    }, "\u30E9\u30A4\u30D5\u304C0\u306B\u306A\u3063\u305F\u306E\u3067\u3001\u5468\u56DE\u30AF\u30EA\u30A2\u306B\u306F\u306A\u308A\u307E\u305B\u3093\uFF08\u30AF\u30EA\u30A2\u3057\u3066\u3044\u308C\u3070 +", Number(quickRunAward.baseLoops || 0), "\u5468\u3067\u3057\u305F\uFF09\u3002\u7D4C\u9A13\u5024\u30FB\u30C0\u30A4\u30E4\u30FB\u7D46\u30FB\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\u3082\u5165\u308A\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("p", {
+      className: "mt-1 text-[9px] font-bold leading-relaxed text-slate-400"
+    }, "\u88CF\u306E\u5468\u56DE\u306F\u6B62\u307E\u3063\u3066\u3044\u305F\u3076\u3093\u3092\u53D6\u308A\u623B\u3057\u306A\u304C\u3089\u3001\u305D\u306E\u307E\u307E\u7D9A\u304D\u307E\u3059\u3002")), quickRunAward && quickRunAward.loops > 0 && /*#__PURE__*/React.createElement("div", {
       "data-rhythm-result-quick-run": true,
       className: "my-3 rounded-2xl border border-fuchsia-400/40 bg-fuchsia-950/30 p-3 text-left"
     }, /*#__PURE__*/React.createElement("div", {
@@ -23019,10 +23033,7 @@ const RhythmTapTest = ({
       className: "text-[10px] font-black tracking-wider text-fuchsia-200"
     }, "\u30AF\u30A4\u30C3\u30AF\u221E\u5468\u56DE"), /*#__PURE__*/React.createElement("b", {
       className: "text-lg font-black leading-none text-white"
-    }, "+", quickRunAward.loops, "\u5468")), quickRunAward.cleared === false && /*#__PURE__*/React.createElement("div", {
-      "data-rhythm-result-quick-run-failed": true,
-      className: "mt-1.5 rounded-xl border border-rose-400/50 bg-rose-950/40 px-2 py-1 text-[10px] font-black text-rose-200"
-    }, "\uD83D\uDC94 \u5931\u6557\u306E\u305F\u3081\u534A\u5206\uFF08\u30AF\u30EA\u30A2\u306A\u3089 +", Number(quickRunAward.baseLoops || quickRunAward.loops), "\u5468\uFF09"), quickRunAward.eventBoosted && /*#__PURE__*/React.createElement("div", {
+    }, "+", quickRunAward.loops, "\u5468")), quickRunAward.eventBoosted && /*#__PURE__*/React.createElement("div", {
       "data-rhythm-result-quick-run-event": true,
       className: "mt-1.5 rounded-xl border border-amber-300/50 bg-amber-950/40 px-2 py-1 text-[10px] font-black text-amber-200"
     }, "\uD83C\uDFC6 \u30A4\u30D9\u30F3\u30C8\u5BFE\u8C61\u66F2 \xD7", quickRunAward.scale, "\uFF08\u3075\u3060\u3093\u306E\u66F2\u306F \xD7", RHYTHM_PLAY_RUN_LOOP_SCALE, "\uFF09"), /*#__PURE__*/React.createElement("div", {
@@ -38556,7 +38567,10 @@ function MonsterHeroGame() {
     const startedAt = rhythmPlayStartedAtRef.current;
     rhythmPlayStartedAtRef.current = 0;
     if (!startedAt) return;
-    if (rhythmPlayRunAwardRef.current) {
+    // ★見るのは「実際に周回が入ったか(loops>0)」。失敗したときは0周なので、
+    //   途中でやめたときと同じく、止まっていたぶんを取り戻す側へ進む
+    //   (失敗しても損はしないが、得もしない。2026-09-12・ユーザー指示)。
+    if (Number(rhythmPlayRunAwardRef.current?.loops) > 0) {
       stopCatchUp();
       return;
     }
@@ -53927,6 +53941,21 @@ function MonsterHeroGame() {
           //  それによって経験値も変わるから」)
           const cleared = result?.cleared !== false;
           const loops = rhythmPlayRunLoopsForResult(baseLoops, cleared);
+          // 失敗したときは1周も配らない。ただし「入らなかった」ことは曲リザルトで言う。
+          // ここで何も渡さないと、裏で周回していた人には画面のどこにも理由が出ない
+          if (!cleared && baseLoops > 0) setRhythmPlayRunAward({
+            loops: 0,
+            baseLoops,
+            cleared: false,
+            scale: loopScale,
+            eventBoosted: loopScale > RHYTHM_PLAY_RUN_LOOP_SCALE,
+            xp: 0,
+            gold: 0,
+            bond: 0,
+            psyche: 0,
+            fromLoop: 0,
+            toLoop: 0
+          });
           const awarded = loops > 0 ? await awardRhythmPlayRunLoops(loops, loopScale, {
             cleared,
             baseLoops

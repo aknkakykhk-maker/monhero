@@ -89,11 +89,17 @@ for (const [rel, src] of sources) {
   // ---- クリアか失敗かで入る周回数が変わる(2026-09-12・ユーザー指示
   //      「終了後にクリアか失敗かもわかるようにして / それによって経験値も変わるから」) ----
   // 失敗(ライフ0のまま完走)は半分。判定そのものは演奏側(result.cleared)が決める。
-  check(`${rel}: 失敗したぶんは周回数を減らしてから配る`,
+  check(`${rel}: 失敗したぶんは周回数を決め直してから配る`,
     compact.includes('constcleared=result?.cleared!==false;')
     && compact.includes('constloops=rhythmPlayRunLoopsForResult(baseLoops,cleared);'));
-  check(`${rel}: 曲リザルトで「失敗のため半分」と言えるよう、結果へ持って返す`,
+  check(`${rel}: 曲リザルトで結果を言えるよう、クリアかどうかを持って返す`,
     compact.includes('cleared:cleared!==false,'));
+  // 失敗したときは1周も配らないが、裏で周回していた人には「入らなかった」ことを伝える。
+  // ★受け取る側(演奏画面)は readAppSource に入らないので、そのファイルを直接見る
+  check(`${rel}: 失敗したときは配らず、入らなかったことだけリザルトへ渡す`,
+    compact.includes('if(!cleared&&baseLoops>0)setRhythmPlayRunAward({loops:0,baseLoops,cleared:false,')
+    && fs.readFileSync(path.join(root, 'monster-hero/src/parts/30-rhythm-play.jsx'), 'utf8')
+        .includes('data-rhythm-result-quick-run-failed'));
   // ★startRunFromRepeatTemplate は中で stopAutoBattle() を通る。
   //   そのあとAUTOを入れ直さないと、報酬だけ入って周回が止まる
   //   (2026-09-07・ユーザー報告「演奏後周回が止まってる」。
@@ -108,8 +114,10 @@ for (const [rel, src] of sources) {
 
   // ---- 追いつきとの関係 ----
   // 演奏ぶんが入ったときは追いつかない(二重取りにならない)
-  check(`${rel}: 演奏ぶんが入ったときは追いつきを使わない`,
-    compact.includes('if(rhythmPlayRunAwardRef.current){stopCatchUp();return;}'));
+  // ★見るのは「実際に周回が入ったか(loops>0)」。失敗は0周なので、途中でやめたときと同じく
+  //   止まっていたぶんを取り戻す側へ進む(2026-09-12・ユーザー指示で失敗を0周にしたときの決め)。
+  check(`${rel}: 周回が入ったときだけ追いつきを使わない(失敗は取り戻す側へ回す)`,
+    compact.includes('if(Number(rhythmPlayRunAwardRef.current?.loops)>0){stopCatchUp();return;}'));
   check(`${rel}: 演奏に入るとき前回の表示を消す`,
     compact.includes('setRhythmPlayRunAward(null);'));
   // ★帯へ出していたころは、時間で消す仕掛け(RHYTHM_PLAY_RUN_AWARD_SHOW_MS)が要った。
