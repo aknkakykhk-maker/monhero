@@ -110,14 +110,39 @@ ok('ノーツより後ろに描いて透かす(邪魔にならない)',
 ok('コンボ数表示のON/OFFを設定から切り替えられる',
   game.includes("toggle('comboDisplay')")&&game.includes('settings.comboDisplay!==false'));
 ok('コンボ数を大きく出す',
-  /\[data-rhythm-combo\]\{[\s\S]{0,160}font-size:min\(52px,13\.5vw\)/.test(html)
+  /\[data-rhythm-combo\]\{[\s\S]{0,160}font-size:calc\(min\(52px,13\.5vw\) \* var\(--mh-combo-size,1\)\)/.test(html)
   // 横持ちは data-combo-wide="1" で出し分ける。@media (orientation:landscape) は
   // **縦横ボタンで自分で回したときに効かない**(端末は縦のまま)ので、そちらには頼らない
-  &&html.includes('[data-rhythm-combo-box][data-combo-wide="1"] [data-rhythm-combo]{font-size:min(40px,7vw)}')
+  &&html.includes('[data-rhythm-combo-box][data-combo-wide="1"] [data-rhythm-combo]{font-size:calc(min(40px,7vw) * var(--mh-combo-size,1))}')
   &&html.includes('[data-rhythm-combo-box][data-combo-wide="1"]{top:15%}')
   &&game.includes("data-combo-wide={isLandscape?'1':''}")
   // 端へ寄せるときは小さくする(台形の外の空きは片側100〜145pxしかない)
-  &&/\[data-combo-pos="HUD"\] \[data-rhythm-combo\]\{\s*font-size:min\(34px,9vw\);\s*transform:scale\(min\(var\(--mh-combo-scale,1\),1\.25\)\);/.test(html));
+  &&/\[data-combo-pos="HUD"\] \[data-rhythm-combo\]\{\s*font-size:calc\(min\(34px,9vw\) \* var\(--mh-combo-size,1\)\);\s*transform:scale\(min\(var\(--mh-combo-scale,1\),1\.25\)\);/.test(html));
+// 2026-09-13・ユーザー依頼「設定でモンスターノーツを踏んだときの軽量化バージョンもほしい /
+//   あとコンボ数のサイズ設定もほしい」。
+// ★モンスターノーツで**いちばん重いのは画面全体の金色の光**(全画面の描き直し)。
+//   「軽め」でそこだけ止め、「最小」では粒も跳ねも通常と同じにする。
+//   どの段でも音・能力名・振動は残す(取れたことが分からなくなるのがいちばん困る)。
+ok('モンスターノーツの演出の強さを選べる',
+  /RHYTHM_MONSTER_EFFECT_LABELS *= *Object\.freeze\(\[\['NORMAL','標準'\],\['LIGHT','軽め'\],\['OFF','最小'\]\]\)/.test(game)
+  &&game.includes("monsterNoteEffect:'NORMAL'")
+  &&game.includes('monsterNoteEffect:RHYTHM_MONSTER_EFFECT_LEVELS.includes(source.monsterNoteEffect)?source.monsterNoteEffect:DEFAULT_RHYTHM_SETTINGS.monsterNoteEffect')
+  &&game.includes("segments('monsterNoteEffect',RHYTHM_MONSTER_EFFECT_LABELS)")
+  // 「軽め」「最小」で画面全体の光を出さない
+  &&game.includes("if(monsterHit&&monsterEffect==='NORMAL'&&screenFlashRef.current)")
+  // 「最小」では粒もふつうのノーツと同じにし、跳ねもやめる
+  &&game.includes("const bigMonsterEffect=monsterHit&&monsterEffect!=='OFF';")
+  &&game.includes("if(monsterEffect!=='OFF')restarts.push({el,attr:'rhythmSideHit'});")
+  // 音・能力名・振動はどの段でも残す(条件を付けていない)
+  &&/if\(settings\.vibrationEnabled\)RHYTHM_HAPTICS\.tap\(26\);/.test(game));
+// コンボ数の大きさ。置き場所ごとの基準へ割合を掛ける(段の倍率とは別)
+ok('コンボ数の大きさを設定から変えられる',
+  game.includes('comboSize:100')
+  &&game.includes('comboSize:rhythmFiniteStep(source.comboSize,RHYTHM_COMBO_SIZE_MIN,RHYTHM_COMBO_SIZE_MAX,RHYTHM_COMBO_SIZE_STEP')
+  &&game.includes("stepper('comboSize',RHYTHM_COMBO_SIZE_MIN,RHYTHM_COMBO_SIZE_MAX,RHYTHM_COMBO_SIZE_STEP")
+  &&game.includes("'--mh-combo-size':rhythmFiniteInRange(settings.comboSize,RHYTHM_COMBO_SIZE_MIN,RHYTHM_COMBO_SIZE_MAX,100)/100")
+  &&html.includes('font-size:calc(min(52px,13.5vw) * var(--mh-combo-size,1))')
+  &&html.includes('font-size:calc(min(34px,9vw) * var(--mh-combo-size,1))'));
 // 2026-09-13・Android勢から「重い」との声。見た目は標準のまま残し、
 // 演出量「少なめ」で**毎フレームの塗り直し**だけを止められるようにした。
 // background-position は合成できないプロパティなので、流しているあいだは
@@ -163,7 +188,7 @@ ok('コンボ数は10〜500の7段で見た目が変わる',
 // ★起点は中央。真ん中に置いたので、左右どちらへ伸びても台形の外の余地がある
 //   (HUDの右上に居たころは右下を起点にして、下端が台形へ近づかないようにしていた)。
 ok('段ごとの大きさは倍率(--mh-combo-scale)で効かせる',
-  game.includes("style={{'--mh-combo-scale':rhythmComboTierScale(comboTier)}}")
+  game.includes("'--mh-combo-scale':rhythmComboTierScale(comboTier)")
   &&html.includes('transform:scale(var(--mh-combo-scale,1));')
   &&html.includes('transform-origin:center center;'));
 // 真ん中へ移して上限が外れたので、段でしっかり大きくする(HUDでは1.13倍が限界だった)

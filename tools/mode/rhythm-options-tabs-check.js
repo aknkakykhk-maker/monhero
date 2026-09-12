@@ -96,6 +96,7 @@ check('横向きでも38pxより小さくしていない', anyTargets.length ===
 // ---- 選択肢の名前は1か所だけ ----
 // ボタンの名前が2か所に書かれていると、片方だけ直して必ずずれる。
 const LABEL_SETS = [
+  ['RHYTHM_MONSTER_EFFECT_LABELS', 'RHYTHM_MONSTER_EFFECT_LEVELS'],
   ['RHYTHM_LANE_GLOW_LABELS', 'RHYTHM_LANE_GLOW_LEVELS'],
   ['RHYTHM_EFFECT_LABELS', 'RHYTHM_EFFECT_LEVELS'],
   ['RHYTHM_SIDE_MONSTER_OPACITY_LABELS', 'RHYTHM_SIDE_MONSTER_OPACITIES'],
@@ -103,9 +104,11 @@ const LABEL_SETS = [
   ['RHYTHM_COMBO_POSITION_LABELS', 'RHYTHM_COMBO_POSITIONS'],
 ];
 const idsOf = name => {
-  const re = new RegExp(`const ${name} *= *Object\\.freeze\\(\\[([\\s\\S]*?)\\]\\);`);
+  const re = new RegExp(`const ${name} *= *Object\\.freeze\\(([\\s\\S]*?)\\);`);
   const m = game.match(re) || data.match(re);
   if (!m) return null;
+  const derived = m[1].match(/^([A-Z_]+)\.map\(\(\[id\]\)=>id\)$/);
+  if (derived) return idsOf(derived[1]);
   return [...m[1].matchAll(/'([A-Z_]+)'/g)].map(x => x[1]);
 };
 for (const [labels, levels] of LABEL_SETS) {

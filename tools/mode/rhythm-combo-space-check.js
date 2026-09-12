@@ -121,9 +121,9 @@ check('「右上」は縦でも横でも上の方に出る',
 
 // 端へ寄せるときは、真ん中より小さくする(空きが狭いため)
 check('端へ寄せるときは小さくしている',
-  /\[data-combo-pos="HUD"\] \[data-rhythm-combo\]\{\s*font-size:min\(34px,9vw\);/.test(html)
+  /\[data-combo-pos="HUD"\] \[data-rhythm-combo\]\{\s*font-size:calc\(min\(34px,9vw\) \* var\(--mh-combo-size,1\)\);/.test(html)
   && /transform:scale\(min\(var\(--mh-combo-scale,1\),1\.25\)\)/.test(html)
-  && /\[data-rhythm-combo\]\{\s*font-size:min\(52px,13\.5vw\)/.test(html));
+  && /\[data-rhythm-combo\]\{\s*font-size:calc\(min\(52px,13\.5vw\) \* var\(--mh-combo-size,1\)\)/.test(html));
 // 縦横ボタンで自分で回したときも同じ場所に出す(@media では効かない)
 // @media のブロックを丸ごと取り出して、コンボの指定が残っていないかを見る
 // (中括弧の対応を数える。正規表現だと最初の } で切れて見落とす)
