@@ -106,7 +106,7 @@ ok('ノーツより後ろに描いて透かす(邪魔にならない)',
   &&html.includes('[data-rhythm-note] {'));
 // 場に重なるので、邪魔だと感じた人が消せるようにする(設定は前からあったが使われていなかった)
 ok('コンボ数表示のON/OFFを設定から切り替えられる',
-  game.includes("toggle('comboDisplay','')")&&game.includes('settings.comboDisplay!==false'));
+  game.includes("toggle('comboDisplay')")&&game.includes('settings.comboDisplay!==false'));
 ok('コンボ数を大きく出す',
   /\[data-rhythm-combo\]\{[\s\S]{0,160}font-size:min\(52px,13\.5vw\)/.test(html)
   &&/@media \(orientation: landscape\)\{[\s\S]{0,900}\[data-rhythm-combo\]\{font-size:min\(40px,7vw\)\}/.test(html));

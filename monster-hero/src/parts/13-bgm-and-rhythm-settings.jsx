@@ -181,6 +181,13 @@ const rhythmLifeState = life => {
 //   名前を2か所に書くと必ずずれる(一方だけ直して、もう一方が古い名前のまま残る)。
 // ★並びはそのまま画面のボタンの並びになる。IDの集合は値の正本
 //   (RHYTHM_EFFECT_LEVELS など)と一致していること。tools/mode/rhythm-options-summary-check.js が見る。
+// 判定タイミング調整の範囲と刻み(2026-09-13)。
+// ★刻みを5ms→**1ms**へ細かくした(ユーザー指示「タップ調整ももっと精度良くつくって」)。
+//   いちばん良い判定(MARVELOUS)は±55msなので、5ms刻みだとその1/11ずつしか動かせなかった。
+// ★**広げたのではなく細かくしただけ**なので、これまでの保存値(5の倍数)はすべてそのまま
+//   有効で、意味も変わらない(-100〜+100の範囲は同じ)。
+const RHYTHM_TIMING_OFFSET_MAX_MS = 100;
+const RHYTHM_TIMING_OFFSET_STEP_MS = 1;
 const RHYTHM_LANE_GLOW_LABELS = Object.freeze([['NORMAL','標準'],['LOW','控えめ'],['NONE','なし']]);
 const RHYTHM_EFFECT_LABELS = Object.freeze([['NORMAL','標準'],['LOW','少なめ'],['MINIMAL','最小']]);
 const RHYTHM_SIDE_MONSTER_OPACITY_LABELS = Object.freeze([['NORMAL','はっきり'],['SOFT','ふつう'],['FAINT','うっすら'],['OFF','出さない']]);
@@ -228,7 +235,7 @@ const normalizeRhythmSettings = value => {
     noteSize:rhythmFiniteStep(source.noteSize,80,120,5,DEFAULT_RHYTHM_SETTINGS.noteSize),
     noteStartPosition:rhythmFiniteInRange(source.noteStartPosition,-100,100,DEFAULT_RHYTHM_SETTINGS.noteStartPosition),
     displayTimingOffsetMs:0,
-    judgmentTimingOffsetMs:rhythmFiniteStep(source.judgmentTimingOffsetMs,-100,100,5,DEFAULT_RHYTHM_SETTINGS.judgmentTimingOffsetMs),
+    judgmentTimingOffsetMs:rhythmFiniteStep(source.judgmentTimingOffsetMs,-RHYTHM_TIMING_OFFSET_MAX_MS,RHYTHM_TIMING_OFFSET_MAX_MS,RHYTHM_TIMING_OFFSET_STEP_MS,DEFAULT_RHYTHM_SETTINGS.judgmentTimingOffsetMs),
     fastSlowDisplay:bool('fastSlowDisplay'),
     judgmentTextDisplay:bool('judgmentTextDisplay'),
     judgmentTextPosition:rhythmFiniteInRange(source.judgmentTextPosition,0,100,DEFAULT_RHYTHM_SETTINGS.judgmentTextPosition),
