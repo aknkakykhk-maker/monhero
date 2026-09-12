@@ -373,7 +373,9 @@ const RHYTHM_PERF=(()=>{
   const zero=()=>({frames:0,totalMs:0,maxMs:0,long:[0,0,0],layoutReads:0,domQueries:0,slidePolygons:0,gestureFrames:0,noteRescans:0,
     notesScanned:0,notesDrawn:0,pendingScanned:0,pendingDrawn:0,worstScanned:0,worstDrawn:0,
     tickMs:0,pendingTickMs:0,worstTickMs:0,maxTickMs:0,headSkipped:0,pendingHeadSkipped:0,narrowed:null,
-    tickDelayMs:0,pendingDelayMs:0,worstDelayMs:0,maxDelayMs:0});
+    tickDelayMs:0,pendingDelayMs:0,worstDelayMs:0,maxDelayMs:0,
+    // 曲の再生位置が1フレームでどれだけ進んだか。ノーツの位置はこれで決まる
+    songSteps:0,songStepSum:0,songStepMax:0,songStalls:0,lastSongMs:null});
   let on=false,last=null,acc=zero();
   const api={
     get enabled(){return on;},
@@ -418,6 +420,23 @@ const RHYTHM_PERF=(()=>{
     // 塞がっていたことを意味する。tickの中が0msでもJSが無実とは限らないので、ここを見る。
     tick(ms,delayMs){if(!on)return;const v=Number(ms);if(Number.isFinite(v)&&v>=0)acc.pendingTickMs=v;
       const d=Number(delayMs);if(Number.isFinite(d)&&d>=0)acc.pendingDelayMs=d;},
+    // 曲の再生位置(run.audio.songTimeMs())が1フレームでどれだけ進んだかを数える。
+    // ノーツの位置はこの時刻だけで決まり、演奏ループは rAF のタイムスタンプで補間していない。
+    // 再生位置は AudioContext.currentTime そのもの(14-audio.jsx の songTimeSeconds)なので、
+    // 端末のオーディオのバッファが大きいと数十msごとにしか進まないことがある。
+    // そうなるとノーツは「何フレームか止まって、一気に飛ぶ」動きになる。
+    // **フレームレートは60fpsのままなので、フレーム間隔をいくら測っても見つからない。**
+    // stall(進まなかったフレーム)の割合と、いちばん大きく飛んだ量を見る。
+    songTime(ms){
+      if(!on)return;
+      const v=Number(ms);if(!Number.isFinite(v))return;
+      if(acc.lastSongMs!==null){
+        const d=v-acc.lastSongMs;
+        // 一時停止・やり直しで巻き戻る/飛ぶぶんは数えない
+        if(d>=0&&d<2000){acc.songSteps++;acc.songStepSum+=d;if(d>acc.songStepMax)acc.songStepMax=d;if(d<=0)acc.songStalls++;}
+      }
+      acc.lastSongMs=v;
+    },
     gestureFrame(){if(on)acc.gestureFrames++;},
     noteRescan(){if(on)acc.noteRescans++;},
     layoutRead(){if(on)acc.layoutReads++;},
@@ -448,6 +467,11 @@ const RHYTHM_PERF=(()=>{
         worstFrameDelayMs:acc.worstDelayMs,
         maxDelayMs:acc.maxDelayMs,
         headSkippedPerFrame:per(acc.headSkipped),
+        // 曲の時刻の進み方。songStallRate が高いほど「止まって飛ぶ」動きになる
+        songStepMsPerFrame:acc.songSteps?acc.songStepSum/acc.songSteps:0,
+        songStepMaxMs:acc.songStepMax,
+        songStallRate:acc.songSteps?acc.songStalls/acc.songSteps:0,
+        songSteps:acc.songSteps,
         narrowed:acc.narrowed,
       };
     },
