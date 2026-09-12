@@ -92,6 +92,10 @@ const RhythmOptions=({value,onSave,onBack})=>{
           <h3 className={head}>👁 表示</h3>
           <div className={row}><span className={label}>FAST / SLOW表示</span>{toggle('fastSlowDisplay','')}</div>
           <div className={row}><span className={label}>判定文字表示</span>{toggle('judgmentTextDisplay','')}</div>
+          {/* コンボ数は2026-09-12にプレイエリアの真ん中へ移した。場に重なるので、
+              邪魔だと感じた人が消せるようにする(設定そのものは前からあったが、
+              切り替える場所も、見る側の判定も無いままだった) */}
+          <div className={row}><span className={label}>コンボ数表示</span>{toggle('comboDisplay','')}</div>
           {field('レーン発光',segments('laneGlow',[['NORMAL','標準'],['LOW','控えめ'],['NONE','なし']]))}
         </section>
         <section className={card}>
