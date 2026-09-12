@@ -152,6 +152,22 @@ function transformGameSystem() {
 // ここに並べた名前が game-system.jsx から消えたら、その時点でReferenceErrorになって気付ける。
 const EXPORTED_NAMES = [
   'BUILD_DATE',
+  // オート強化(個体ごとの自動強化設定)。masu/auto-enhance-check.js が実際に振らせて確かめる
+  'normalizeMasuAutoEnhance',
+  'buildMasuAutoEnhancePlan',
+  'applyMasuAutoEnhance',
+  'applyAutoEnhanceToMasuMons',
+  'buildAutoEnhanceLimitsFromCurrent',
+  'buildMasuAutoEnhanceUpdate',
+  'buildMasuAutoEnhanceOrderMove',
+  'autoEnhanceHasTarget',
+  'describeAutoEnhancePlan',
+  'normalizeMasuProgression',
+  'resetMasuForRebirth',
+  'buildMasuReincarnation',
+  'applyBondXpGain',
+  'masuPowerOf',
+  'resolveMasuDistAptitude',
   'MASU_COLOR_REGION_HUES',
   'MASU_COLOR_EXCLUDE',
   'MASU_COLOR_SMOOTH',
