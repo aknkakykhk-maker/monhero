@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5ebdc8f119c32d70
+// generated-sha256: 6b83458c83c6814c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-12 17:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-12 17:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5371,6 +5371,46 @@ const ASSIST_CARD_ICON_STYLES = Object.freeze({
 const AssistCardIcon = ({ icon, cardId, className='', style }) => (
   <span aria-hidden="true" style={style} className={`relative overflow-hidden rounded-full inline-block shrink-0 align-middle ${className}`}><img src={icon} alt="" draggable={false} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none',...iconAdjustmentTransformStyle(ASSIST_CARD_ICON_STYLES[cardId])}} className="absolute inset-0 w-full h-full object-contain"/></span>
 );
+// 全画面演出(effect)の見た目。種類ごとの大きさ・光り方・色をここ1か所にまとめる。
+// 以前は表示側のJSXへ `effect.type==='unique'?…:(effect.type==='enhance'?…:…)` を
+// 4か所へ書き並べていたため、種類を1つ足すだけで同じ三項演算子を全部直す必要があった。
+//
+// transcendEnhance(超越強化)は通常強化(enhance)を土台に、一段強い光と大きさにしてある。
+// 超越強化は確定しても何も起きず、通常強化だけが全画面演出を持っていた
+// (2026-09-12・ユーザー指摘「超越強化が音もなく地味。普通の強化と同じかそれより派手めにして」)。
+// 超越強化の演出を出しておく長さ。通常強化(1200ms)より少し長く取って、
+// 上がった項目を読み終えられるようにする
+const TRANSCEND_ENHANCE_FX_MS = 1600;
+const EFFECT_VISUALS = {
+  unique: {
+    size: '180px', emoji: '128px', icon: 60,
+    throb: 'specialThrob 500ms ease-in-out infinite',
+    glow: 'drop-shadow-[0_0_45px_rgba(168,85,247,0.95)]',
+    label: 'text-purple-100 bg-purple-600/30 border-purple-400/60 drop-shadow-[0_0_20px_rgba(168,85,247,0.8)]',
+    sub: 'text-indigo-400',
+  },
+  enhance: {
+    size: '160px', emoji: '120px', icon: 48,
+    throb: 'specialThrob 500ms ease-in-out infinite',
+    glow: 'drop-shadow-[0_0_45px_rgba(251,191,36,0.9)]',
+    label: 'text-amber-100 bg-amber-600/30 border-amber-400/60 drop-shadow-[0_0_20px_rgba(251,191,36,0.8)]',
+    sub: 'text-amber-300',
+  },
+  transcendEnhance: {
+    size: '184px', emoji: '134px', icon: 58,
+    throb: 'mhTranscendFxThrob 620ms ease-in-out infinite',
+    glow: 'drop-shadow-[0_0_55px_rgba(253,230,138,0.95)]',
+    label: 'text-amber-50 bg-gradient-to-r from-amber-500/40 via-pink-500/35 to-sky-500/35 border-amber-200/70 drop-shadow-[0_0_24px_rgba(253,230,138,0.9)]',
+    sub: 'text-amber-200',
+  },
+};
+const EFFECT_VISUAL_DEFAULT = Object.freeze({
+  size: '150px', emoji: '112px', icon: 48, throb: undefined,
+  glow: 'drop-shadow-[0_0_50px_rgba(255,255,255,0.4)]',
+  label: 'text-white bg-white/10 border-white/20', sub: 'text-indigo-400',
+});
+const effectVisual = (type) => EFFECT_VISUALS[type] || EFFECT_VISUAL_DEFAULT;
+
 // icon欄が画像なら<img>、絵文字ならそのまま返す。sizePxは画像のときの表示サイズ
 const cardIconNode = (icon, sizePx, cardId) => isImageIconValue(icon)
   ? (ASSIST_CARD_ICON_STYLES[cardId]
@@ -23803,6 +23843,24 @@ function MonsterHeroGame() {
     masuMonsRef.current = next; setMasuMons(next);
     setMasuMonDetail(prev=>prev&&String(prev.id)===String(masu.id)?applied.masu:prev);
     setTranscendPlan(null);
+    // 通常強化と同じように、確定したことが分かる全画面演出を出す。
+    // 何がいくつ上がったかは「下書きの数」ではなく実際の前後の差から出す
+    // (間合い適性はMで頭打ちになるので、下書きどおりに上がるとは限らない)
+    const before = normalizeMasuProgression(masu);
+    const lines = [];
+    normalizeTranscendAptBoosts(applied.masu.transcendAptBoosts).forEach((boost, i) => {
+      const gained = boost - before.transcendAptBoosts[i];
+      if (gained > 0) lines.push(`${RANGE_LABELS[i]}距離適性 +${gained}`);
+    });
+    Object.entries(normalizeTranscendStatPoints(applied.masu.transcendStatPoints)).forEach(([key, value]) => {
+      const gained = value - (before.transcendStatPoints[key] || 0);
+      if (gained > 0 && STAT_POINT_KEYS[key]) lines.push(`基礎${STAT_POINT_KEYS[key]} +${gained}`);
+    });
+    const base = ALL_PLAYER_MONSTERS[applied.masu.baseId];
+    setEffect({ type:'transcendEnhance', label:'超越強化！', icon:'🌟', monEmoji:base?.emoji,
+      imgUrl:base?.iconUrl, baseId:applied.masu.baseId, colors:getMasuColors(applied.masu),
+      subLabel:lines.join('\n') });
+    setTimeout(()=>setEffect(null), TRANSCEND_ENHANCE_FX_MS);
     return applied;
   };
   // 虹のプシュケーを超越ポイントへ替える。プシュケーは共通の所持品、超越Pは個体ごとの育成値
@@ -32665,10 +32723,34 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
             </div>
           </>
         )}
-        {effect.imgUrl?(effect.baseId?<DyedMonsterImage baseId={effect.baseId} src={effect.imgUrl} alt="effect" masuColors={effect.colors} style={{width:effect.type==='unique'?'180px':(effect.type==='enhance'?'160px':'150px'),height:effect.type==='unique'?'180px':(effect.type==='enhance'?'160px':'150px'),animation:(effect.type==='unique'||effect.type==='enhance')?'specialThrob 500ms ease-in-out infinite':undefined}} className={`mb-6 object-contain relative ${effect.type==='unique'?'drop-shadow-[0_0_45px_rgba(168,85,247,0.95)]':(effect.type==='enhance'?'drop-shadow-[0_0_45px_rgba(251,191,36,0.9)]':'drop-shadow-[0_0_50px_rgba(255,255,255,0.4)]')}`}/>:<img src={effect.imgUrl} alt="effect" style={{width:effect.type==='unique'?'180px':(effect.type==='enhance'?'160px':'150px'),height:effect.type==='unique'?'180px':(effect.type==='enhance'?'160px':'150px'),animation:(effect.type==='unique'||effect.type==='enhance')?'specialThrob 500ms ease-in-out infinite':undefined}} className={`mb-6 object-contain relative ${effect.type==='unique'?'drop-shadow-[0_0_45px_rgba(168,85,247,0.95)]':(effect.type==='enhance'?'drop-shadow-[0_0_45px_rgba(251,191,36,0.9)]':'drop-shadow-[0_0_50px_rgba(255,255,255,0.4)]')}`}/>):(<div style={{fontSize:effect.type==='unique'?'128px':(effect.type==='enhance'?'120px':'112px'),animation:(effect.type==='unique'||effect.type==='enhance')?'specialThrob 500ms ease-in-out infinite':undefined}} className="mb-6 relative">{effect.monEmoji}</div>)}
-        <h2 className={`text-2xl font-black italic uppercase px-8 py-3 rounded-2xl border relative ${effect.type==='unique'?'text-purple-100 bg-purple-600/30 border-purple-400/60 drop-shadow-[0_0_20px_rgba(168,85,247,0.8)]':(effect.type==='enhance'?'text-amber-100 bg-amber-600/30 border-amber-400/60 drop-shadow-[0_0_20px_rgba(251,191,36,0.8)]':'text-white bg-white/10 border-white/20')}`}>{effect.label}</h2>
-        {effect.subLabel&&<p className={`font-mono text-[10px] mt-4 font-black whitespace-pre-line relative ${effect.type==='enhance'?'text-amber-300':'text-indigo-400'}`}>{effect.subLabel}</p>}
-        <div style={{fontSize:effect.type==='unique'?'60px':'48px'}} className="mt-8 animate-bounce relative">{cardIconNode(effect.icon,effect.type==='unique'?60:48,effect.id)}</div>
+        {/* 超越強化。通常強化(琥珀の輪2枚＋火花6つ)を土台に、金→桃→空の3色へ広げ、
+            回る放射光・輪3枚・二重の火花・開幕の閃光を足して1段派手にしてある。
+            火花は共通の sparkFlicker ではなく mhEffectSpark を使う。あちらはキーフレーム側が
+            transform を丸ごと持っているため、呼び出し側で指定した角度と半径が効かず、
+            すべての火花が同じ場所へ重なってしまう(既存の他の演出も同じ状態) */}
+        {effect.type==='transcendEnhance'&&(
+          <>
+            <div className="absolute inset-0" style={{background:'radial-gradient(circle at 50% 42%, rgba(253,230,138,0.55) 0%, rgba(244,114,182,0.35) 32%, rgba(56,189,248,0.22) 52%, rgba(0,0,0,0) 72%)', animation:'auraPulse 620ms ease-out infinite'}}></div>
+            <div className="absolute" style={{top:'42%',left:'50%',width:'min(170vmax,1400px)',height:'min(170vmax,1400px)',marginTop:'-85vmax',marginLeft:'-85vmax',background:'repeating-conic-gradient(from 0deg, rgba(253,230,138,0.18) 0 4deg, transparent 4deg 18deg)', animation:'mhTranscendFxRays 5200ms linear infinite'}}></div>
+            <div className="absolute" style={{top:'42%',left:'50%',width:'min(70vw,300px)',height:'min(70vw,300px)',transform:'translate(-50%,-50%)'}}>
+              <div className="absolute inset-0 rounded-full border-4 border-amber-300/80" style={{animation:'auraRing 700ms ease-out infinite'}}></div>
+              <div className="absolute inset-0 rounded-full border-[3px] border-pink-300/70" style={{animation:'auraRing 900ms ease-out 150ms infinite'}}></div>
+              <div className="absolute inset-0 rounded-full border-2 border-sky-300/60" style={{animation:'auraRing 1100ms ease-out 300ms infinite'}}></div>
+              {[0,45,90,135,180,225,270,315].map(deg=>(
+                <div key={`tx-out-${deg}`} className="absolute left-1/2 top-1/2 text-3xl" style={{transform:`translate(-50%,-50%) rotate(${deg}deg) translateY(-148px)`, animation:'mhEffectSpark 420ms ease-in-out infinite', animationDelay:`${deg}ms`}}>🌟</div>
+              ))}
+              {[22,67,112,157,202,247,292,337].map(deg=>(
+                <div key={`tx-in-${deg}`} className="absolute left-1/2 top-1/2 text-xl" style={{transform:`translate(-50%,-50%) rotate(${deg}deg) translateY(-98px)`, animation:'mhEffectSpark 540ms ease-in-out infinite', animationDelay:`${deg}ms`}}>✨</div>
+              ))}
+            </div>
+            <div className="absolute inset-0" style={{background:'radial-gradient(circle at 50% 42%, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0) 58%)', animation:'mhTranscendFxFlash 1600ms ease-out forwards'}}></div>
+          </>
+        )}
+        {/* 大きさ・光り方・色は effectVisual(種類) が正本。画面側へ三項演算子を書き並べない */}
+        {effect.imgUrl?(effect.baseId?<DyedMonsterImage baseId={effect.baseId} src={effect.imgUrl} alt="effect" masuColors={effect.colors} style={{width:effectVisual(effect.type).size,height:effectVisual(effect.type).size,animation:effectVisual(effect.type).throb}} className={`mb-6 object-contain relative ${effectVisual(effect.type).glow}`}/>:<img src={effect.imgUrl} alt="effect" style={{width:effectVisual(effect.type).size,height:effectVisual(effect.type).size,animation:effectVisual(effect.type).throb}} className={`mb-6 object-contain relative ${effectVisual(effect.type).glow}`}/>):(<div style={{fontSize:effectVisual(effect.type).emoji,animation:effectVisual(effect.type).throb}} className="mb-6 relative">{effect.monEmoji}</div>)}
+        <h2 className={`text-2xl font-black italic uppercase px-8 py-3 rounded-2xl border relative ${effectVisual(effect.type).label}`}>{effect.label}</h2>
+        {effect.subLabel&&<p className={`font-mono text-[10px] mt-4 font-black whitespace-pre-line relative ${effectVisual(effect.type).sub}`}>{effect.subLabel}</p>}
+        <div style={{fontSize:`${effectVisual(effect.type).icon}px`}} className="mt-8 animate-bounce relative">{cardIconNode(effect.icon,effectVisual(effect.type).icon,effect.id)}</div>
       </div>)}
         {rosterSkillDetail&&(()=>{const mon=rosterSkillDetail.mon; const isUnique=rosterSkillDetail.kind==='unique'; const levels=isUnique?getUniqueSkillLevels(mon):getAtkSkillLevels(mon); const currentLevel=isUnique?Math.max(0,Number(mon.unique?.evoLevel)||0):0; const title=isUnique?`固有技 Lv.${currentLevel}: ${mon.unique.names?.[currentLevel]||mon.unique.name}`:`通常技: ${(HERO_ATK_NAMES[mon.id]||HERO_ATK_NAMES['Mocchi'])[0]}`; return(
           <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:32000}}>
@@ -33728,6 +33810,16 @@ const createAnimationStyle = () => {
       0% { transform: translateX(-40px) scale(0.7); opacity: 0; }
       40% { opacity: 1; }
       100% { transform: translateX(40px) scale(1.1); opacity: 0; }
+    }
+    /* 全画面演出(effect)の火花。明滅だけを受け持ち、置き場所は呼び出し側の transform に任せる。
+       共通の sparkFlicker はキーフレーム側が transform を丸ごと持っているため、
+       呼び出し側で書いた角度と半径が効かず、火花が全部1か所へ重なってしまう */
+    @keyframes mhEffectSpark { 0%,100% { opacity: .15; } 50% { opacity: 1; } }
+    @keyframes mhTranscendFxRays { 0% { transform: rotate(0); } 100% { transform: rotate(360deg); } }
+    @keyframes mhTranscendFxFlash { 0% { opacity: 0; } 10% { opacity: .75; } 34%,100% { opacity: 0; } }
+    @keyframes mhTranscendFxThrob {
+      0%,100% { transform: scale(1); filter: drop-shadow(0 0 16px rgba(253,230,138,.95)); }
+      50% { transform: scale(1.22); filter: drop-shadow(0 0 30px rgba(244,114,182,1)) drop-shadow(0 0 46px rgba(56,189,248,.8)); }
     }
     @keyframes specialFlash {
       0%,100% { opacity: 0; }
