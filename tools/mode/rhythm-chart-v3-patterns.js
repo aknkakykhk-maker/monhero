@@ -292,7 +292,94 @@ const rankShapes=(candidates,{usage=null,previousOffsets=null,prefer=null,seed='
   return scored.map(entry=>entry.candidate).concat(tail);
 };
 
-module.exports={LANES,PATTERNS,PATTERN_BY_ID,mirror,fitToLanes,baseRange,maxStepOf,shapeCandidatesFor,rankShapes,hash32,FRESH_WINDOW};
+// ── 同時押さえ（HOLD/SLIDEを2本いちどに押さえる形）の語彙 ──────────────────────
+//
+// 【2026-09-12・ユーザー指示】
+// 「ノーツの置き方は曲のタイプや難易度でそれに見合った形に置くようにするようにして /
+//   決めごとがあるとつまんなくなる / バリエーションが大事」
+//
+// なので「2本目は必ず遠い端へ」のような**1つの決めごとにはしない**。形に名前を付けて
+// 語彙にし、**その場の曲の性質（2本それぞれの動き量）と難易度**で点数を付けて選ぶ
+// （§3.1.6「形を順位でなく点数で選ぶ」と同じ考え方）。直前に使った形にはペナルティを
+// 掛け、同点は種(seed)で崩すので、同じ曲でも同じ形が並ばない。
+//
+// 各形は「相方（旋律側の押さえノーツ）の経路」を受けて、2本目のレーンの行き先を返す。
+//   partnerFrom / partnerTo … 相方の始点・終点のレーン
+//   room                    … 使えるレーンの幅（0〜room）
+// 返すのは {from,to}。from===to なら HOLD、違えば SLIDE になる。
+//
+// wantsBassMove / wantsMelodyMove は「その形が似合う動き量」(0〜1)。
+// 実データ（sustains[].moves / bassSustains[].moves）との近さが点数になる。
+// minLevel は難易度の段（PROFILES.level）。上の形は上の難易度だけに出る。
+const HELD_PAIR_SHAPES=Object.freeze([
+  // 支える形: 2本目を動かさない。旋律が動くぶんを受け止める。いちばん読みやすい
+  Object.freeze({id:'anchor_out', minLevel:1, wantsBassMove:0,  wantsMelodyMove:.55,
+    place:({partnerFrom,partnerTo,room})=>{
+      // 相方の平均から遠い側の端へ寄せる
+      const center=(partnerFrom+partnerTo)/2;
+      const lane=center<=room/2?room:0;
+      return {from:lane,to:lane};
+    }}),
+  Object.freeze({id:'anchor_in',  minLevel:5, wantsBassMove:0,  wantsMelodyMove:.7,
+    place:({partnerFrom,partnerTo,room})=>{
+      // 内側（中央寄り）で支え、旋律を外で動かす。外で支えるより忙しく見える
+      const center=(partnerFrom+partnerTo)/2;
+      const lane=center<=room/2?Math.min(room,Math.round(room/2)+1):Math.max(0,Math.round(room/2)-1);
+      return {from:lane,to:lane};
+    }}),
+  // 並んで動く形: ベースと旋律が同じ向きへ動く曲に似合う。間隔は保つ
+  Object.freeze({id:'parallel',   minLevel:7, wantsBassMove:.5, wantsMelodyMove:.5,
+    place:({partnerFrom,partnerTo,room,gap})=>{
+      const side=(partnerFrom+partnerTo)/2<=room/2?1:-1;
+      return {from:clampLane(partnerFrom+side*gap,room),to:clampLane(partnerTo+side*gap,room)};
+    }}),
+  // 逆向きに動く形（開く・閉じる）: 対旋律のある曲に似合う
+  Object.freeze({id:'contrary',   minLevel:7, wantsBassMove:.6, wantsMelodyMove:.6,
+    place:({partnerFrom,partnerTo,room,gap})=>{
+      const side=(partnerFrom+partnerTo)/2<=room/2?1:-1;
+      return {from:clampLane(partnerFrom+side*gap,room),to:clampLane(partnerFrom-side*gap,room)};
+    }}),
+  Object.freeze({id:'diverge',    minLevel:7, wantsBassMove:.4, wantsMelodyMove:.4,
+    place:({partnerFrom,partnerTo,room,gap})=>{
+      const side=(partnerFrom+partnerTo)/2<=room/2?1:-1;
+      return {from:clampLane(partnerFrom+side*gap,room),to:clampLane(partnerTo+side*(gap+1),room)};
+    }}),
+  Object.freeze({id:'converge',   minLevel:9, wantsBassMove:.4, wantsMelodyMove:.3,
+    place:({partnerFrom,partnerTo,room,gap})=>{
+      const side=(partnerFrom+partnerTo)/2<=room/2?1:-1;
+      return {from:clampLane(partnerFrom+side*(gap+1),room),to:clampLane(partnerTo+side*gap,room)};
+    }}),
+  // 内外が入れ替わる形: いちばん忙しい。上の難易度だけ
+  Object.freeze({id:'cross',      minLevel:9, wantsBassMove:.8, wantsMelodyMove:.5,
+    place:({partnerFrom,partnerTo,room,gap})=>{
+      const side=(partnerFrom+partnerTo)/2<=room/2?1:-1;
+      return {from:clampLane(partnerFrom+side*gap,room),to:clampLane(partnerTo-side*gap,room)};
+    }}),
+]);
+const clampLane=(lane,room)=>Math.max(0,Math.min(room,Math.round(lane)));
+// 語彙から、その場に似合う順で候補を返す。
+//   level        … PROFILES.level（難易度の段）
+//   bassMove     … 2本目の素（ベース）の動き量 0〜1
+//   melodyMove   … 相方（旋律）の動き量 0〜1
+//   usage        … 形ごとの使用回数（Map）。使ったものは後ろへ回す
+//   previousId   … 直前に使った形。続けて同じ形は出さない
+//   seed         … 同点を崩す種
+const heldPairShapeCandidates=({level,bassMove,melodyMove,usage=null,previousId=null,seed=''})=>{
+  const usable=HELD_PAIR_SHAPES.filter(shape=>shape.minLevel<=level);
+  const scored=usable.map((shape,index)=>{
+    // 動き量の近さ（小さいほど似合う）
+    let score=Math.abs(shape.wantsBassMove-bassMove)*2+Math.abs(shape.wantsMelodyMove-melodyMove);
+    if(usage)score+=(usage.get?usage.get(shape.id)||0:usage[shape.id]||0)*.6;
+    if(previousId===shape.id)score+=1.5;            // 続けて同じ形は出さない
+    score+=(hash32(`${seed}:${shape.id}`)%10)/10;   // 同点は種で崩す（曲ごとに並びが変わる）
+    return {shape,score,index};
+  });
+  scored.sort((a,b)=>a.score-b.score||a.index-b.index);
+  return scored.map(entry=>entry.shape);
+};
+
+module.exports={LANES,PATTERNS,PATTERN_BY_ID,mirror,fitToLanes,baseRange,maxStepOf,shapeCandidatesFor,rankShapes,hash32,FRESH_WINDOW,
+  HELD_PAIR_SHAPES,heldPairShapeCandidates};
 
 
 if(require.main===module){
