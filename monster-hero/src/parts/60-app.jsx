@@ -10091,20 +10091,27 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 出し方は設定で選べる(2026-09-12・ユーザー依頼)。'OFF' のときは出さないが、
   // 設定 →「ゲームを更新」からいつでも更新できるので、更新できなくなるわけではない。
   //
-  // ★モンヒロビートの演奏中(RHYTHM_PLAY)は、画面の上に出すとレーンのいちばん奥
-  //   (台形の狭い側・ノーツが現れるところ)に重なって邪魔になる。演奏中だけは
-  //   右下の隅へ小さく出す。設定が「ふつう」でも演奏中は小さくする
-  //   (判定ラインの下は指で叩く場所なので、横いっぱいのボタンを置けない)。
+  // ★モンヒロビートの演奏中(RHYTHM_PLAY)は、どこにも出さない。
+  //
+  // 2026-09-13・はじめは「画面の上はレーンの奥に重なるから右下へ」としたが、
+  // ユーザー指摘「画面の右下ってモンビー演奏中のレーン上に来ない？」でそのとおりだった。
+  // プレイエリアは flex-1 で画面の下端まで占め(index.html が margin-bottom:0 !important で
+  // 余白も消している)、レーンは inset:0 の全面。台形は下がいちばん広い(上は 27〜73%、
+  // 下は 0〜100%)ので、右下はいちばん右のレーンの真上になる。
+  // しかも判定ラインの下は指で叩く場所なので、誤って押すと曲が中断されて記録が消える。
+  //
+  // 台形の外で空いているのは上部の左右の三角形だけだが、そこはスコアとライフの HUD が
+  // 使っている。つまり演奏中に置ける安全な場所が無い。
+  // 演奏中に更新を押したい場面も無いので、曲が終わって別の画面へ移ってから出す
+  // (updateAvailable は残っているので、戻れば自動的に出る)。
   const updateNoticeMode = normalizeUpdateNoticeStyle(updateNoticeStyle);
   const updateNoticeOnPlay = gameState === 'RHYTHM_PLAY';
-  const updateNoticeSmall = updateNoticeMode === 'MINI' || updateNoticeOnPlay;
-  const updateNotice = (updateNoticeVisible && updateNoticeMode !== 'OFF') ? ReactDOM.createPortal(
+  const updateNoticeSmall = updateNoticeMode === 'MINI';
+  const updateNotice = (updateNoticeVisible && updateNoticeMode !== 'OFF' && !updateNoticeOnPlay) ? ReactDOM.createPortal(
     updateNoticeSmall ? (
-      <div aria-live="assertive" data-update-notice="mini" data-update-notice-place={updateNoticeOnPlay?'play':'top'}
-        className={`fixed z-[100000] flex items-stretch gap-1 ${updateNoticeOnPlay?'right-2':'right-3'}`}
-        style={updateNoticeOnPlay
-          ? {bottom:'calc(8px + env(safe-area-inset-bottom))'}
-          : {top:'calc(8px + env(safe-area-inset-top))'}}>
+      <div aria-live="assertive" data-update-notice="mini" data-update-notice-place="top"
+        className="fixed z-[100000] right-3 flex items-stretch gap-1"
+        style={{top:'calc(8px + env(safe-area-inset-top))'}}>
         <button type="button" onClick={reloadLatestVersion} className="flex items-center justify-center gap-1 min-h-[36px] px-2.5 py-1.5 rounded-full border border-amber-200/80 bg-amber-500 text-slate-950 font-black text-[11px] shadow-[0_6px_20px_rgba(0,0,0,0.5)] active:scale-[.98]"><RefreshCcw size={13}/><span>更新あり</span></button>
         <button type="button" aria-label="あとで更新する（この通知を閉じる）" onClick={()=>setDismissedUpdateBuild(latestBuild||BUILD_DATE)} className="shrink-0 w-8 min-h-[36px] flex items-center justify-center rounded-full border border-amber-200/80 bg-amber-500/90 text-slate-950 shadow-[0_6px_20px_rgba(0,0,0,0.5)] active:scale-[.98]"><X size={13}/></button>
       </div>
