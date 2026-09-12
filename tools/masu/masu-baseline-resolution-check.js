@@ -19,6 +19,7 @@ const context = {
   inheritedReincarnateBonusPointsOf:masu=>masu.inheritedReincarnateBonusPoints||0,
   inheritedReincarnateCountOf:masu=>masu.inheritedReincarnateCount||0,
   INITIAL_MASU_LEVEL_CAP:30, MAX_MASU_LEVEL_CAP:200,
+  RANGE_LABELS:['零','近','中','遠'],
 };
 vm.createContext(context);
 // 超越(Lv上限を伸ばす育成)の定数・正規化。基礎値と間合い適性の解決がこれを使う
@@ -30,7 +31,10 @@ const uniqueSetting = "const INHERITED_UNIQUE_LEVEL_KEY_PREFIX='inhId:';\n"
 const resolution = uniqueSetting + slice('const getMasuColors =', 'const migrateMasuLevelCaps');
 const regeneration = slice('const randomRegenerationStat =', 'const rosterBaseId =');
 const rebirthReset = slice('const resetMasuForRebirth =', 'const migrateRebornMasuToFullReset');
-vm.runInContext(`${transcend}\n${rebirthReset}\n${resolution}\n${regeneration}\nglobalThis.api={resolveMasuIndividualStats,resolveMasuDistAptitude,mergeMasuIntoMon,masuPowerOf,masuBaselineRepresentationsMatch,diagnoseMasuBaselineMigration,diagnoseMasuBaselineMigrationList,applyEnhancePlanToMasu,buildBondResetRestorePlan,buildMasuBondPointReset,buildRegeneratedMasu,resetMasuForRebirth};`, context);
+// 転生リセットは「育てた中身」を白紙にしつつ、個体ごとの自動設定(オート強化・AUTO∞自動限界突破)は残す。
+// その正規化もここへ持ち込み、本番と同じ関数で確かめる(スタブに置き換えると引き継ぎ漏れを見逃す)
+const autoSettings = slice('const BREAKTHROUGH_LEVEL_CAP_GAIN =', 'const MAX_UNIQUE_SKILL_LEVEL = 8;');
+vm.runInContext(`${transcend}\n${autoSettings}\n${rebirthReset}\n${resolution}\n${regeneration}\nglobalThis.api={normalizeMasuAutoEnhance,resolveMasuIndividualStats,resolveMasuDistAptitude,mergeMasuIntoMon,masuPowerOf,masuBaselineRepresentationsMatch,diagnoseMasuBaselineMigration,diagnoseMasuBaselineMigrationList,applyEnhancePlanToMasu,buildBondResetRestorePlan,buildMasuBondPointReset,buildRegeneratedMasu,resetMasuForRebirth};`, context);
 const api = context.api;
 const check = (label, ok) => { if (!ok) throw new Error(`NG: ${label}`); console.log(`OK: ${label}`); };
 const snapshot = value => JSON.stringify(value);
@@ -77,6 +81,15 @@ check('壊れた旧セーブのスナップショットは復元対象にしな�
 const oldReset=api.buildMasuBondPointReset(oldNormal,base);
 check('旧形式リセットは新フィールドを追加しない', oldReset && !Object.hasOwn(oldReset.nextMasu,'distAptBoosts'));
 const reincarnated=api.resetMasuForRebirth({...enhancedMany,individualStats:regenerated.individualStats,individualStatOffsets:regenerated.individualStatOffsets,colors:['red'],fusionHistory:[{id:1}],inheritedUniques:[{name:'技'}]}, {toLevel:2,distAptPoints:9});
+// 個体ごとの自動設定は「育てた中身」ではないので、転生で失わせない(オート強化の目的そのもの)
+const withAutoSettings=api.resetMasuForRebirth({...enhancedMany,
+  autoEnhance:{enabled:true,order:['guts','hp','atk','def','apt0','apt1','apt2','apt3'],statLimits:{hp:5,atk:0,def:0,guts:2},aptLimits:[null,'A',null,null]},
+  autoRepeatBreakthroughMode:'follow'}, {toLevel:2,distAptPoints:9});
+check('転生してもオート強化とAUTO∞自動限界突破の設定は残る',
+  api.normalizeMasuAutoEnhance(withAutoSettings.autoEnhance).enabled===true
+  && snapshot(api.normalizeMasuAutoEnhance(withAutoSettings.autoEnhance).statLimits)===snapshot({hp:5,atk:0,def:0,guts:2})
+  && snapshot(api.normalizeMasuAutoEnhance(withAutoSettings.autoEnhance).order)===snapshot(['guts','hp','atk','def','apt0','apt1','apt2','apt3'])
+  && withAutoSettings.autoRepeatBreakthroughMode==='follow');
 check('転生は育成成果を維持して新旧適性を基礎値へ戻す', snapshot(reincarnated.distAptBoosts)===snapshot([0,0,0,0]) && snapshot(reincarnated.distApt)===snapshot(base.distAptitude) && snapshot(reincarnated.individualStats)===snapshot(regenerated.individualStats) && snapshot(reincarnated.individualStatOffsets)===snapshot(regenerated.individualStatOffsets) && reincarnated.distAptPoints===9 && reincarnated.inheritedUniques.length===1 && reincarnated.fusionHistory.length===1);
 
 const legacyNormalForDiagnosis={...oldNormal,distAptPoints:4,bondXp:300,rebirthCount:1,reincarnateCount:1,reincarnateBonusPoints:5};
