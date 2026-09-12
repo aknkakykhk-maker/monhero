@@ -72,7 +72,42 @@ check('noteSeVolume=0で鳴らさない',startCount===1);
 
 saved=JSON.stringify({noteSeEnabled:true,noteSeVolume:50});
 rhythmMatchInputBatch([note('TAP')],[input('tap-half')],1000,0);
-check('noteSeVolumeをゲインへ反映する',startCount===2&&lastGain>0&&lastGain<.035);
+// ===== タップ音の大きさ(2026-09-12・ユーザー報告「アンドロイドでタップ音量が小さい」) =====
+// 合成音の振幅がフルスケールの3.5%しかなく、-14 LUFS へそろえた曲のピーク(0.891)より
+// 約28dB小さかった。倍率(RHYTHM_NOTE_SE_GAIN_SCALE)でまとめて上げてある。
+// ★元の係数(.035 など)は書き換えず、倍率を1に戻せば元の音量へ戻せる形を保つ。
+const seScale=Number(source.match(/const RHYTHM_NOTE_SE_GAIN_SCALE = ([\d.]+);/)?.[1]);
+check('タップ音の倍率を1か所の定数で持っている(1に戻せば元通り)',Number.isFinite(seScale)&&seScale>0);
+check('元の係数は書き換えず、倍率を掛ける形にしている',
+  source.includes('rhythmNoteSeLevel(.035,settings.volume/100)')
+  &&source.includes('rhythmNoteSeLevel(.022,settings.volume/100)')
+  &&source.includes('rhythmNoteSeLevel(.028,settings.volume/100)')
+  &&source.includes('rhythmNoteSeLevel(.05,settings.volume/100)')
+  &&source.includes('rhythmNoteSeLevel(peak,volume)'));
+// 音量50のときのタップ音は .035 × 倍率 × .5。倍率を変えたらこの検査も一緒に動く
+check('noteSeVolumeをゲインへ反映する',
+  startCount===2&&lastGain>0&&Math.abs(lastGain-.035*seScale*.5)<1e-9);
+// ★1音あたりの蓋。倍率を上げすぎて音が割れるのを防ぐ
+const seMax=Number(source.match(/const RHYTHM_NOTE_SE_LEVEL_MAX = ([\d.]+);/)?.[1]);
+check('1音あたりの上限を持ち、音量100までならどの音もそこへ届かない',
+  Number.isFinite(seMax)&&seMax<=1&&.05*seScale<=seMax&&.042*seScale<=seMax);
+// ===== 音量の上限を200まで開けた(2026-09-12・ユーザー指示「音量調整を今のベースで200まで」) =====
+// ★100の意味は変えない。広げただけなので、保存してある0〜100はそのままの音で鳴る。
+const volumeMax=Number(source.match(/const RHYTHM_VOLUME_MAX = (\d+);/)?.[1]);
+check('音量の上限を1か所の定数で持っている',volumeMax===200);
+check('タップ音の読み取り・試聴の両方で上限まで受け取る',
+  source.includes('Math.min(RHYTHM_VOLUME_MAX,number)')
+  &&source.includes('Math.min(RHYTHM_VOLUME_MAX,Number(previewSettings.noteSeVolume)||0)'));
+// タップ音は上限の音量でもちょうど2倍まで素直に伸びる(蓋に当たらない)
+check('タップ音は音量200でも蓋に当たらない(100のちょうど2倍まで伸びる)',
+  .035*seScale*(volumeMax/100)<=seMax);
+// 重ねて鳴らす音(モンスターノーツ・フルコンボ)は、そこから上は割れるだけなので蓋で止める
+check('重ねて鳴らす音は上限の音量では蓋で止まる(割れさせない)',
+  .05*seScale*(volumeMax/100)>seMax&&.042*seScale*(volumeMax/100)>seMax);
+// ★BGM音量・メインゲームの音量には触れない(タップ音だけを変えたことの担保)
+check('BGM音量とメインゲームの音量には触れていない',
+  !source.includes('RHYTHM_NOTE_SE_GAIN_SCALE*rhythmVolumePct')
+  &&!/RHYTHM_NOTE_SE_GAIN_SCALE[\s\S]{0,200}bgmVolume/.test(source));
 
 for(const type of ['HOLD','FLICK','SLIDE']){
   const before=startCount;

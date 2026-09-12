@@ -34,7 +34,14 @@ check('称号の優先順はリザルト画面の表示と同じ(ALL MARVELOUS >
 check('celebrateTitleが無い(何も達成していない)ときは今までどおりresultへ直行する',
   finishBlock.includes('status:showCelebrate?\'celebrate\':\'result\''));
 check('演出量MINIMAL・軽量モードではcelebrate画面を出さない(重くしないため)',
-  finishBlock.includes("const showCelebrate=!!celebrateTitle&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL';"));
+  finishBlock.includes("const showCelebrate=!!celebrateTitle&&!failed&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL';"));
+// 2026-09-12・ユーザー指示「終了後にクリアか失敗かもわかるようにして」。
+// 失敗(ライフ0のまま完走)でお祝いの画面が出ることはない。
+// ※BAD・MISSが1つも無いとライフは減らないので理屈上は重ならないが、
+//   ライフの増減値を変えたときに静かに矛盾しないよう、条件として書いておく。
+check('失敗(ライフ0のまま完走)ではお祝いの画面を出さない',
+  finishBlock.includes('const failed=!tutorial&&run.lifeDepleted===true;')
+  &&finishBlock.includes('cleared:!failed,'));
 check('保存(onComplete)はcelebrateの有無に関わらず必ず1回呼ぶ(演出で記録が変わらない)',
   finishBlock.includes('onComplete(result,merged);'));
 

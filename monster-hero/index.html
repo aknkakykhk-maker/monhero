@@ -40,7 +40,7 @@ window.addEventListener('unhandledrejection', function(ev){ window.__mhErr('[pro
 // ここでは各ファイルの実サイズを重みにして、実際に受け取ったバイト数で動かす。
 window.__mhBoot = (function () {
   // 起動時に読み込むファイルの実サイズ(バイト)。tools/build.js が実ファイルから書き込む
-  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":7761,"data/images/images-enemy.js":1347,"data/ally-monsters.js":24360,"data/lineages.js":8832,"data/breeder.js":26823,"data/enemy-monsters.js":1785,"data/skills.js":4375,"data/rhythm-mode.js":1019989,"data/rhythm-lane-svg.js":7147,"data/rhythm-geometry-calibration.js":15405,"data/rhythm-result-replay-remount.js":5401,"data/rhythm-event.js":23888,"data/changelog.js":567164,"data/help.js":315452,"data/rhythm-step3-release.js":7722,"data/assistants.js":293075,"tailwind.css":113467,"game-system.compiled.js":3501409,"data/images/title-screen-clean.jpg":699051,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
+  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":7761,"data/images/images-enemy.js":1347,"data/ally-monsters.js":24360,"data/lineages.js":8832,"data/breeder.js":26823,"data/enemy-monsters.js":1785,"data/skills.js":4375,"data/rhythm-mode.js":1025448,"data/rhythm-lane-svg.js":7147,"data/rhythm-geometry-calibration.js":15405,"data/rhythm-result-replay-remount.js":5401,"data/rhythm-event.js":23888,"data/changelog.js":576973,"data/help.js":320105,"data/rhythm-step3-release.js":7722,"data/assistants.js":293075,"tailwind.css":113561,"game-system.compiled.js":3517353,"data/images/title-screen-clean.jpg":699051,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
   var total = 0, k;
   for (k in SIZES) total += SIZES[k];
   var got = {};   // ファイルごとに「いま何バイト受け取ったか」
@@ -98,7 +98,7 @@ window.__mhBoot = (function () {
 })();
 // 本体JSのキャッシュキー。ここで一度だけ宣言し、下の読み込み処理でも同じ値を使う。
 // 先読みと <script> のURLがずれると、同じ2.7MBを2回取りに行くことになる
-var GAME_BUILD = '202609121139';
+var GAME_BUILD = '202609121436';
 window.__mhGameBuild = GAME_BUILD;
 // 起動でいちばん大きいのは本体JS(約2.7MB)。いちばん後ろで読むため、そこへ来ると
 // ゲージが止まって見えていた。先に取りはじめて、受け取ったバイト数をそのまま出す。
@@ -119,7 +119,7 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.jpg', 'data/images/titl
      作るのは tools/build-tailwind.js(node tools/build.js が中身の変化を見て必要なときだけ呼ぶ)。
      landscape: の差し替え(自前で画面を回したときにも効かせる)もそちらの設定へ移してある。
      ?v= は中身のハッシュ。tools/stamp-version.js が data/*.js と同じ仕組みで打つ。 -->
-<link rel="stylesheet" href="tailwind.css?v=1cd38a1d9b4d" onload="__mhBoot.done('tailwind.css','見た目を読み込み中')" onerror="__mhBoot.fail('tailwind.css')">
+<link rel="stylesheet" href="tailwind.css?v=c25bc84e5d5d" onload="__mhBoot.done('tailwind.css','見た目を読み込み中')" onerror="__mhBoot.fail('tailwind.css')">
 <style>
   html, body { margin:0; padding:0; background:#000; overscroll-behavior:none; -webkit-tap-highlight-color:transparent; height:100%; }
   /* 画面の高さは、ここで決めた --mh-vh ひとつだけを使う。
@@ -543,16 +543,160 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.jpg', 'data/images/titl
       transparent 49.5%,rgba(2,6,23,.55) 49.5%,rgba(2,6,23,.55) 50.5%,transparent 50.5%,
       transparent 74.5%,rgba(2,6,23,.55) 74.5%,rgba(2,6,23,.55) 75.5%,transparent 75.5%);
   }
-  /* コンボ数の強調(2026-09-03)。数字が小さくて手応えが伝わらないという指摘があったため、
-     大きくしたうえで100・200・300コンボの段階で色と光り方を変える。
-     色はノーツの色(ピンク/シアン/紫/オレンジ)とぶつからないよう、白→金→虹寄りに寄せる。 */
+  /* コンボ数の強調(2026-09-03 / 2026-09-12に段を増やした)。数字が小さくて手応えが伝わらない
+     という指摘があったため大きくし、さらに「増えれば増えるほど目立つようにして」という指示を受けて
+     10 / 30 / 50 / 100 / 200 / 300 / 500 の7段にした(rhythmComboTier)。
+     段が上がるほど **大きく・熱い色** になる。色はノーツの色(ピンク/シアン/紫/緑/金)と
+     ぶつからないよう、白→水→金→橙→虹の順に寄せる。
+     ★大きさは font-size ではなく transform:scale(--mh-combo-scale) で効かせる。
+       font-size を段ごとに上書きすると、横持ち(landscape:text-base)の詰めたサイズまで壊れる。
+       伸びる向きは右端を軸(transform-origin:right center)にして、画面の外へはみ出さないようにする。 */
   [data-rhythm-combo]{
     text-shadow:0 1px 6px rgba(2,6,23,.96);
-    transition:color .18s ease, text-shadow .18s ease;
+    transform:scale(var(--mh-combo-scale,1));
+    /* ★起点は「右下」。中央を起点にすると、大きくしたぶん下端が下がって
+       レーンの台形(下へ行くほど広い)へ近づき、奥のノーツを隠してしまう。
+       右下を起点にすれば下端も右端も動かず、上と左へだけ伸びる。 */
+    transform-origin:right bottom;
+    transition:color .18s ease, text-shadow .18s ease, transform .18s cubic-bezier(.2,1.2,.4,1);
+    will-change:transform;
   }
-  [data-rhythm-combo][data-combo-tier="1"]{color:#fde68a;text-shadow:0 1px 6px rgba(2,6,23,.96),0 0 12px rgba(251,191,36,.85)}
-  [data-rhythm-combo][data-combo-tier="2"]{color:#fcd34d;text-shadow:0 1px 6px rgba(2,6,23,.96),0 0 14px rgba(245,158,11,.95),0 0 24px rgba(249,115,22,.6)}
-  [data-rhythm-combo][data-combo-tier="3"]{color:#fff;text-shadow:0 1px 6px rgba(2,6,23,.96),0 0 12px #fff,0 0 22px #f0abfc,0 0 34px #38bdf8}
+  [data-rhythm-combo][data-combo-tier="1"]{color:#e0f2fe;text-shadow:0 1px 6px rgba(2,6,23,.96),0 0 9px rgba(125,211,252,.7)}
+  [data-rhythm-combo][data-combo-tier="2"]{color:#a5f3fc;text-shadow:0 1px 6px rgba(2,6,23,.96),0 0 12px rgba(34,211,238,.85)}
+  [data-rhythm-combo][data-combo-tier="3"]{color:#fef3c7;text-shadow:0 1px 6px rgba(2,6,23,.96),0 0 12px rgba(253,224,71,.8)}
+  [data-rhythm-combo][data-combo-tier="4"]{color:#fde68a;text-shadow:0 1px 6px rgba(2,6,23,.96),0 0 14px rgba(251,191,36,.9)}
+  [data-rhythm-combo][data-combo-tier="5"]{color:#fcd34d;text-shadow:0 1px 6px rgba(2,6,23,.96),0 0 16px rgba(245,158,11,.95),0 0 26px rgba(249,115,22,.6)}
+  [data-rhythm-combo][data-combo-tier="6"]{color:#fff;text-shadow:0 1px 6px rgba(2,6,23,.96),0 0 12px #fff,0 0 22px #f0abfc,0 0 34px #38bdf8}
+  /* 500コンボ以上は虹色に流す。ここだけ文字を透明にして背景を透かすので、
+     text-shadow(透明な字の後ろに塊で出てしまう)ではなく filter:drop-shadow を使う。
+     ★background のショートハンドで書くと background-clip が初期値へ戻り、字が消える
+       (100コンボの演出で実際に踏んだ不具合)。必ず background-image で差し替える。 */
+  [data-rhythm-combo][data-combo-tier="7"]{
+    color:transparent;
+    text-shadow:none;
+    background-image:linear-gradient(90deg,#f87171,#fbbf24,#a3e635,#22d3ee,#a78bfa,#f472b6,#f87171);
+    background-size:300% 100%;
+    -webkit-background-clip:text;background-clip:text;
+    filter:drop-shadow(0 2px 6px rgba(2,6,23,.95)) drop-shadow(0 0 18px rgba(255,255,255,.9));
+    animation:mhRhythmComboRainbow 2.4s linear infinite;
+  }
+  /* 「COMBO」の文字も段に合わせて色を変える(数字だけ変わると浮くため) */
+  [data-rhythm-combo-box][data-combo-tier="1"] [data-rhythm-combo-label],
+  [data-rhythm-combo-box][data-combo-tier="2"] [data-rhythm-combo-label]{color:#67e8f9}
+  [data-rhythm-combo-box][data-combo-tier="3"] [data-rhythm-combo-label],
+  [data-rhythm-combo-box][data-combo-tier="4"] [data-rhythm-combo-label]{color:#fcd34d}
+  [data-rhythm-combo-box][data-combo-tier="5"] [data-rhythm-combo-label],
+  [data-rhythm-combo-box][data-combo-tier="6"] [data-rhythm-combo-label]{color:#fdba74}
+  [data-rhythm-combo-box][data-combo-tier="7"] [data-rhythm-combo-label]{color:#fff}
+  /* 上の段では光そのものが脈打つ。**大きさは変えない**(変えるとレーンの台形へかぶる)ので、
+     「どんどん派手になる」ぶんはここで出す。
+     ★脈打ちは数字ではなく外側の箱へ掛ける。数字側は1つ取るたびに弾む演出
+       (mhRhythmComboPop)が animation を使い切っており、重ねると脈打ちが止まったまま戻らない。 */
+  [data-rhythm-combo-box][data-combo-tier="5"]{animation:mhRhythmComboGlow 1.2s ease-in-out infinite}
+  [data-rhythm-combo-box][data-combo-tier="6"]{animation:mhRhythmComboGlowHot 1s ease-in-out infinite}
+  [data-rhythm-combo-box][data-combo-tier="7"]{animation:mhRhythmComboGlowHot .8s ease-in-out infinite}
+  @keyframes mhRhythmComboGlow{
+    0%,100%{filter:drop-shadow(0 0 2px rgba(251,191,36,.35))}
+    50%{filter:drop-shadow(0 0 12px rgba(251,191,36,.95))}}
+  @keyframes mhRhythmComboGlowHot{
+    0%,100%{filter:drop-shadow(0 0 3px rgba(255,255,255,.45))}
+    50%{filter:drop-shadow(0 0 14px rgba(255,255,255,.95)) drop-shadow(0 0 24px rgba(232,121,249,.8))}}
+  @media (prefers-reduced-motion:reduce){
+    [data-rhythm-combo]{transition:none}
+    [data-rhythm-combo][data-combo-tier="7"]{animation:none}
+    [data-rhythm-combo-box][data-combo-tier="5"],
+    [data-rhythm-combo-box][data-combo-tier="6"],
+    [data-rhythm-combo-box][data-combo-tier="7"]{animation:none}
+  }
+
+  /* ===== ライフの強調(2026-09-12・ユーザー指示) =====
+     「ライフ変動や0になったときとか気付きにくいからもっと強調して / 0だとライフが赤くなるとか
+      バーが割れるとか」。ライフの数値・減り方(RHYTHM_LIFE_DELTA)・不可逆のDOWNの扱いは
+     一切変えていない。data-life-state(ok / caution / danger / down)で見た目だけを変える。 */
+  [data-rhythm-life] [data-rhythm-life-track]{
+    border-color:rgba(255,255,255,.25);
+    overflow:hidden;
+    transition:border-color .2s ease, box-shadow .2s ease, background-color .2s ease;
+  }
+  [data-rhythm-life] [data-rhythm-life-heart]{transition:color .2s ease}
+  [data-rhythm-life] [data-rhythm-life-value]{transition:color .2s ease}
+  /* 半分以下: 黄色くしてふちを光らせる */
+  [data-rhythm-life][data-life-state="caution"] [data-rhythm-life-track]{border-color:rgba(251,191,36,.85);box-shadow:0 0 8px rgba(251,191,36,.45)}
+  [data-rhythm-life][data-life-state="caution"] [data-rhythm-life-heart]{color:#fbbf24}
+  [data-rhythm-life][data-life-state="caution"] [data-rhythm-life-value]{color:#fde68a}
+  /* 1/4以下: 赤くして、気づくまで点滅を止めない */
+  [data-rhythm-life][data-life-state="danger"]{animation:mhRhythmLifeWarn .9s ease-in-out infinite}
+  [data-rhythm-life][data-life-state="danger"] [data-rhythm-life-track]{border-color:rgba(248,113,113,.95);box-shadow:0 0 12px rgba(239,68,68,.7)}
+  [data-rhythm-life][data-life-state="danger"] [data-rhythm-life-heart]{color:#f87171;animation:mhRhythmLifeBeat .6s ease-in-out infinite}
+  [data-rhythm-life][data-life-state="danger"] [data-rhythm-life-value]{color:#fecaca}
+  /* 0(DOWN): 赤一色にして、バーを割る。♥は💔へ、数字は「DOWN」へ差し替わる(JSX側) */
+  [data-rhythm-life][data-life-state="down"] [data-rhythm-life-heart]{color:#ef4444}
+  [data-rhythm-life][data-life-state="down"] [data-rhythm-life-value]{color:#fecaca;letter-spacing:.06em}
+  [data-rhythm-life][data-life-state="down"] [data-rhythm-life-track]{
+    overflow:visible;
+    background-color:#450a0a;
+    border-color:rgba(248,113,113,.95);
+    box-shadow:0 0 14px rgba(239,68,68,.85), inset 0 0 8px rgba(127,29,29,.9);
+    animation:mhRhythmLifeBreak .55s cubic-bezier(.2,.9,.25,1) 1 both;
+  }
+  /* 割れ目。2本の筋をハの字に置いて「割れた」と分かる形にする */
+  [data-rhythm-life][data-life-state="down"] [data-rhythm-life-track]::before,
+  [data-rhythm-life][data-life-state="down"] [data-rhythm-life-track]::after{
+    content:"";position:absolute;top:-3px;bottom:-3px;width:2px;
+    background:#fee2e2;box-shadow:0 0 6px rgba(248,113,113,.95);
+  }
+  [data-rhythm-life][data-life-state="down"] [data-rhythm-life-track]::before{left:44%;transform:rotate(17deg)}
+  [data-rhythm-life][data-life-state="down"] [data-rhythm-life-track]::after{left:56%;transform:rotate(-17deg)}
+  /* 減ったその瞬間だけ短く揺らす(変動そのものに気づけるように) */
+  [data-rhythm-life][data-rhythm-life-hit="1"]{animation:mhRhythmLifeHit 260ms ease-out 1}
+  /* 減った量(「-50」)。バーのすぐ下へ出て、上へ抜けて消える */
+  [data-rhythm-life-damage]{opacity:0;color:#fca5a5;text-shadow:0 1px 4px rgba(2,6,23,.95),0 0 10px rgba(239,68,68,.8)}
+  [data-rhythm-life-damage][data-rhythm-life-damage-show="1"]{animation:mhRhythmLifeDamage 620ms ease-out 1}
+  @keyframes mhRhythmLifeWarn{0%,100%{opacity:1}50%{opacity:.58}}
+  @keyframes mhRhythmLifeBeat{0%,100%{transform:scale(1)}45%{transform:scale(1.32)}}
+  @keyframes mhRhythmLifeHit{0%{transform:translateX(0)}25%{transform:translateX(-4px)}55%{transform:translateX(3px)}100%{transform:translateX(0)}}
+  @keyframes mhRhythmLifeDamage{
+    0%{opacity:0;transform:translateY(-2px) scale(.9)}
+    18%{opacity:1;transform:translateY(0) scale(1.14)}
+    58%{opacity:1;transform:translateY(2px) scale(1)}
+    100%{opacity:0;transform:translateY(10px) scale(.94)}}
+  @keyframes mhRhythmLifeBreak{
+    0%{transform:translateX(0) rotate(0)}
+    20%{transform:translateX(-5px) rotate(-3deg)}
+    45%{transform:translateX(5px) rotate(3deg)}
+    70%{transform:translateX(-3px) rotate(-1.5deg)}
+    100%{transform:translateX(0) rotate(0)}}
+  /* 倒れているあいだ、画面のふちをずっと赤く縁取る(HUDの小さなバーだけでは気づけないため) */
+  [data-rhythm-down-vignette]{
+    background:
+      linear-gradient(90deg,rgba(220,38,38,.45),rgba(220,38,38,0) 15%),
+      linear-gradient(270deg,rgba(220,38,38,.45),rgba(220,38,38,0) 15%),
+      linear-gradient(180deg,rgba(220,38,38,.34),rgba(220,38,38,0) 13%),
+      linear-gradient(0deg,rgba(220,38,38,.34),rgba(220,38,38,0) 13%);
+    animation:mhRhythmDownVignette 1.6s ease-in-out infinite;
+  }
+  @keyframes mhRhythmDownVignette{0%,100%{opacity:.72}50%{opacity:1}}
+  /* 0になったその瞬間だけ、大きく1度だけ出す */
+  [data-rhythm-life-down-slam]{animation:mhRhythmLifeDownSlamOut 1.4s ease-out forwards}
+  [data-rhythm-life-down-slam] b{
+    background-image:linear-gradient(180deg,#fff 0%,#fecaca 42%,#dc2626 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 3px 10px rgba(2,6,23,.95)) drop-shadow(0 0 26px rgba(239,68,68,.9));
+    animation:mhRhythmCelebrateSlam .6s cubic-bezier(.2,1.4,.4,1) both;
+  }
+  [data-rhythm-life-down-slam] small{color:#fecaca;text-shadow:0 1px 5px rgba(2,6,23,.95),0 0 14px rgba(239,68,68,.85)}
+  @keyframes mhRhythmLifeDownSlamOut{0%,62%{opacity:1}100%{opacity:0}}
+  /* 端末の設定で動きを減らしている人には、動かさずに「色と表示」だけで伝える */
+  @media (prefers-reduced-motion:reduce){
+    [data-rhythm-life][data-life-state="danger"],
+    [data-rhythm-life][data-life-state="danger"] [data-rhythm-life-heart],
+    [data-rhythm-life][data-life-state="down"] [data-rhythm-life-track],
+    [data-rhythm-life][data-rhythm-life-hit="1"],
+    [data-rhythm-down-vignette],
+    [data-rhythm-life-down-slam],
+    [data-rhythm-life-down-slam] b{animation:none}
+    [data-rhythm-life-damage][data-rhythm-life-damage-show="1"]{animation:mhRhythmLifeDamage 620ms ease-out 1}
+  }
 
   /* 100コンボごとのお祝い。1.1秒で消える一度きりの表示で、DOMもそのあいだだけ置く。
      判定・スコア・ノーツの動きには一切関与しない。
@@ -641,6 +785,24 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.jpg', 'data/images/titl
     [data-rhythm-combo-milestone]{animation:none;opacity:1}
     [data-rhythm-combo-milestone]::before,[data-rhythm-combo-milestone]::after{animation:none;opacity:0}
   }
+
+  /* リザルトのクリア／失敗(2026-09-12・ユーザー指示
+     「終了後にクリアか失敗かもわかるようにして / それによって経験値も変わるから」)。
+     ランクやスコアより先に読めるよう、いちばん大きい字で言い切る。 */
+  [data-rhythm-result-clear][data-cleared="true"]{border-color:rgba(34,211,238,.8);background:rgba(8,51,68,.55)}
+  [data-rhythm-result-clear][data-cleared="true"] b{
+    background-image:linear-gradient(180deg,#fff 0%,#a5f3fc 45%,#22d3ee 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 2px 6px rgba(2,6,23,.9)) drop-shadow(0 0 16px rgba(34,211,238,.7));
+  }
+  [data-rhythm-result-clear][data-cleared="true"] small{color:#a5f3fc}
+  [data-rhythm-result-clear][data-cleared="false"]{border-color:rgba(248,113,113,.85);background:rgba(69,10,10,.6)}
+  [data-rhythm-result-clear][data-cleared="false"] b{
+    background-image:linear-gradient(180deg,#fee2e2 0%,#f87171 45%,#991b1b 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 2px 6px rgba(2,6,23,.9)) drop-shadow(0 0 16px rgba(239,68,68,.75));
+  }
+  [data-rhythm-result-clear][data-cleared="false"] small{color:#fecaca}
 
   /* リザルトの称号。フルコンボしたことが伝わらないという指摘があったため大きく祝う。 */
   [data-rhythm-result-celebrate] b{
@@ -833,13 +995,13 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.jpg', 'data/images/titl
 <script src="data/breeder.js?v=e26c11aa79c8" onload="__mhBoot.done('data/breeder.js','ブリーダーデータを読み込み中')" onerror="__mhBoot.fail('data/breeder.js')"></script>
 <script src="data/enemy-monsters.js?v=756038184df4" onload="__mhBoot.done('data/enemy-monsters.js','敵データを読み込み中')" onerror="__mhBoot.fail('data/enemy-monsters.js')"></script>
 <script src="data/skills.js?v=06be9af9b367" onload="__mhBoot.done('data/skills.js','技データを読み込み中')" onerror="__mhBoot.fail('data/skills.js')"></script>
-<script src="data/rhythm-mode.js?v=9d85b2a1b97c" onload="__mhBoot.done('data/rhythm-mode.js','音ゲーデータを読み込み中')" onerror="__mhBoot.fail('data/rhythm-mode.js')"></script>
+<script src="data/rhythm-mode.js?v=385784187b0b" onload="__mhBoot.done('data/rhythm-mode.js','音ゲーデータを読み込み中')" onerror="__mhBoot.fail('data/rhythm-mode.js')"></script>
 <script src="data/rhythm-lane-svg.js?v=d0b5c2bea35c" onload="__mhBoot.done('data/rhythm-lane-svg.js','音ゲーレーンを読み込み中')" onerror="__mhBoot.fail('data/rhythm-lane-svg.js')"></script>
 <script src="data/rhythm-geometry-calibration.js?v=1e490f73b5e2" onload="__mhBoot.done('data/rhythm-geometry-calibration.js','音ゲー座標校正を読み込み中')" onerror="__mhBoot.fail('data/rhythm-geometry-calibration.js')"></script>
 <script src="data/rhythm-result-replay-remount.js?v=25f459cc2892" onload="__mhBoot.done('data/rhythm-result-replay-remount.js','音ゲー再プレイ処理を読み込み中')" onerror="__mhBoot.fail('data/rhythm-result-replay-remount.js')"></script>
 <script src="data/rhythm-event.js?v=d679ff5d4464" onload="__mhBoot.done('data/rhythm-event.js','週間ランキングを読み込み中')" onerror="__mhBoot.fail('data/rhythm-event.js')"></script>
-<script src="data/changelog.js?v=60a100870816" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
-<script src="data/help.js?v=58d7c867a8aa" onload="__mhBoot.done('data/help.js','ヘルプを読み込み中')" onerror="__mhBoot.fail('data/help.js')"></script>
+<script src="data/changelog.js?v=8dd93470be93" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
+<script src="data/help.js?v=4aeb4aa71f01" onload="__mhBoot.done('data/help.js','ヘルプを読み込み中')" onerror="__mhBoot.fail('data/help.js')"></script>
 <script data-mhsave-backup src="data/mhsave-backup.js?v=7845a4fd261f" onload="__mhBoot.done('data/mhsave-backup.js','バックアップ機能を読み込み中')" onerror="__mhBoot.fail('data/mhsave-backup.js')"></script>
 <script src="data/rhythm-step3-release.js?v=e09b26e107d5" onload="__mhBoot.done('data/rhythm-step3-release.js','音ゲー更新情報を読み込み中')" onerror="__mhBoot.fail('data/rhythm-step3-release.js')"></script>
 <!-- 助手はbreeder.jsの顔アイコンを画像に使うため、必ずその後に読み込む -->

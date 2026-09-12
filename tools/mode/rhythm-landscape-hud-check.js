@@ -79,7 +79,21 @@ const inlineStyle=body=>{
 // 横画面検査では1行折り返しを見たいので、先に固定値へ置き換えてから変換する。
 const headerJsxLandscape=headerJsx.replace(/WebkitLineClamp:isLandscape\?'1':'3'/,"WebkitLineClamp:'1'");
 const SAMPLE={difficulty:'MASTER',song:'テスト楽曲テスト楽曲テスト',score:'1,000,000',best:'BEST 1,000,000',combo:'9999',life:'1000',rank:'SS',rankNext:'★MAX'};
+// コンボ数は段(rhythmComboTier)が上がるほど倍率で大きくなる(2026-09-12)。倍率は transform なので
+// 実際の描画範囲がそのぶん広がる。いちばん大きい段の倍率を実装から取り出し、その形で測る。
+const COMBO_MAX_SCALE=(()=>{
+  const line=game.match(/const RHYTHM_COMBO_TIER_SCALES = Object\.freeze\(\[([^\]]*)\]\)/);
+  if(!line)return null;
+  const values=line[1].split(',').map(Number).filter(Number.isFinite);
+  return values.length?Math.max(...values):null;
+})();
+check('コンボ数の拡大率を実装から取り出せる',COMBO_MAX_SCALE!==null,String(COMBO_MAX_SCALE));
+
 const headerHtml=headerJsxLandscape
+  .replace(/\sstyle=\{\{'--mh-combo-scale':rhythmComboTierScale\(comboTier\)\}\}/g,
+    ` style="transform:scale(${COMBO_MAX_SCALE||1});transform-origin:right bottom"`)
+  // JSXのコメント({/* … */})は画面に出ないので先に落とす
+  .replace(/\{\/\*[\s\S]*?\*\/\}/g,'')
   .replace(/\sstyle=\{\{((?:[^{}]|\{[^{}]*\})*)\}\}/g,(_,body)=>inlineStyle(body))
   .replace(/\sref=\{[^}]*\}/g,'')
   .replace(/\son[A-Z][A-Za-z]*=\{[^}]*\}/g,'')
@@ -94,13 +108,17 @@ const headerHtml=headerJsxLandscape
   .replace(/BEST \{Number\(bestRecord\?\.bestScore\|\|0\)\.toLocaleString\(\)\}/g,SAMPLE.best)
   .replace(/\{view\.combo\}/g,SAMPLE.combo)
   .replace(/\{rankNextLabel\}/g,SAMPLE.rankNext)
+  // ライフは段で見た目が変わる。幅を多く取るほう(DOWN)へ写して、いちばん厳しい形で測る
+  .replace(/\{lifeState==='down'\?'💔':'♥'\}/g,'💔')
+  .replace(/\{lifeState==='down'\?'DOWN':view\.life\}/g,'DOWN')
   .replace(/\{view\.life\}/g,SAMPLE.life)
   .replace(/\{rhythmRankForScore\(view\.score\)\}/g,SAMPLE.rank)
   // プレイヤーの画面は譜面のLv.、デバッグから始めたときだけ HOLD TEST / TAP TEST
   // (2026-09-05・実機の指摘でデバッグ表記を出し分けた)
   .replace(/\{tutorial\?'れんしゅう':debugPlay\?debugChartLabel:`Lv\.\$\{chart\.level\}`\}/g,'Lv.12')
   .replace(/\{hasHold\?'HOLD TEST':'TAP TEST'\}/g,'HOLD TEST')
-  .replace(/<i ([^>]*?)\/>/g,'<i $1></i>')
+  // 自分で閉じるタグ(<i .../>・<b .../>)はHTMLには無い書き方なので、開き+閉じへ直す
+  .replace(/<([a-z]+) ([^>]*?)\/>/g,'<$1 $2></$1>')
   .replace(/<b ([^>]*?)\/>/g,'<b $1></b>')
   .replace(/data-rhythm-([a-z-]+)(?=[\s>])/g,'data-rhythm-$1=""');
 check('HUDに未変換のJSX式が残っていない',!/\{|\}/.test(headerHtml),headerHtml.match(/\{[^"]{0,40}/)?.[0]||'');
@@ -111,7 +129,7 @@ const PALETTE={
   'slate-100':'#f1f5f9','slate-900':'#0f172a','slate-950':'#020617','cyan-200':'#a5f3fc','cyan-300':'#67e8f9','emerald-200':'#a7f3d0',
   'fuchsia-200':'#f5d0fe','fuchsia-300':'#f0abfc','fuchsia-700':'#a21caf','amber-200':'#fde68a','rose-400':'#fb7185',
 };
-const SPACE={'0':'0px','0.5':'2px','1':'4px','1.5':'6px','2':'8px','3':'12px','7':'28px','8':'32px','12':'48px','14':'56px','16':'64px','20':'80px'};
+const SPACE={'0':'0px','0.5':'2px','1':'4px','1.5':'6px','2':'8px','2.5':'10px','3':'12px','7':'28px','8':'32px','12':'48px','14':'56px','16':'64px','20':'80px'};
 const STATIC={
   'absolute':'position:absolute','relative':'position:relative','block':'display:block','flex':'display:flex',
   'inline-block':'display:inline-block',
@@ -126,7 +144,7 @@ const STATIC={
   'rounded':'border-radius:4px','rounded-full':'border-radius:9999px','rounded-xl':'border-radius:12px',
   'border':'border-width:1px;border-style:solid','border-2':'border-width:2px','border-current':'border-color:currentColor',
   'inset-x-0':'left:0;right:0','inset-y-0':'top:0;bottom:0',
-  'top-0':'top:0','left-0':'left:0','overflow-hidden':'overflow:hidden','w-full':'width:100%',
+  'top-0':'top:0','left-0':'left:0','right-0':'right:0','top-full':'top:100%','overflow-hidden':'overflow:hidden','w-full':'width:100%',
   'pointer-events-none':'pointer-events:none','pointer-events-auto':'pointer-events:auto','hidden':'display:none',
 };
 const cssFor=token=>{

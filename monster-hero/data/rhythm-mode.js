@@ -736,9 +736,35 @@ const RHYTHM_VIEW_ROTATION=(()=>{
     listeners.add(fn);
     return()=>{listeners.delete(fn);};
   };
-  // 器に掛けるCSS。幅と高さは画面の縦横を入れ替えたもの
+  // Safe Area(ノッチ・ダイナミックアイランド・ホームインジケータ)の取り置き。
+  //
+  // 【なぜ器の側で持つか】(2026-09-12・ユーザー報告
+  //   「縦横ボタンを押して横画面にしたときにiPhoneの場合、左上の戻るボタンが押せない」)
+  // ふだんの Safe Area は index.html の body(padding-top/bottom)が確保している。
+  // ところがこの器は position:fixed なので body の外側に置かれ、**画面のいちばん端から**
+  // 始まる。しかも90度回っているので、器の「左端」は端末の**上端**にあたる。
+  // その結果、横画面の左上に置いたボタン(曲えらびの「戻る」)が、ちょうど端末の
+  // ステータスバー(時計・電池)の下へ入り込み、iPhoneではそこのタップがOSに取られて
+  // **押しても反応しない**状態になっていた。
+  //
+  // 器そのものは画面を端まで覆ったまま(座標の変換 point / rect / unpoint は
+  // 「器は画面いっぱい」を前提にしているので、大きさも位置も動かさない)、
+  // **内側の余白だけ**で中身を安全な範囲へ寄せる。
+  //
+  // 90度回すと軸が入れ替わるので、当てる向きも入れ替える。
+  //   角度90 : 器の左=端末の上 / 右=下 / 上=右 / 下=左
+  //   角度270: 器の左=端末の下 / 右=上 / 上=左 / 下=右
+  //
+  // env(...) を var(...) でくるんでいるのは、実ブラウザの検査から値を差し替えて
+  // 測れるようにするため(env() はテストから作れない)。ふだんは var が空なので
+  // そのまま env() の値が入る。
+  const safeInset=side=>`var(--mh-safe-${side}, env(safe-area-inset-${side}))`;
   const frameStyle=()=>{
     if(!active())return null;
+    const forLeft=angle===90?'top':'bottom';     // 器の左 ← 端末の(上 / 下)
+    const forRight=angle===90?'bottom':'top';   // 器の右 ← 端末の(下 / 上)
+    const forTop=angle===90?'right':'left';     // 器の上 ← 端末の(右 / 左)
+    const forBottom=angle===90?'left':'right';  // 器の下 ← 端末の(左 / 右)
     return{
       position:'fixed',left:0,top:0,
       width:`${vh()}px`,height:`${vw()}px`,
@@ -747,6 +773,10 @@ const RHYTHM_VIEW_ROTATION=(()=>{
       // 600pxへ切り詰めてしまい、器が画面を覆えなくなる。今どきのスマホは
       // 高さが600pxを超えるので**必ず**踏む。実ブラウザの検査で見つけた(2026-09-06)。
       maxWidth:'none',maxHeight:'none',margin:0,
+      // 大きさは画面ぴったりのまま、内側だけ削る(box-sizing:border-box)
+      boxSizing:'border-box',
+      paddingLeft:safeInset(forLeft),paddingRight:safeInset(forRight),
+      paddingTop:safeInset(forTop),paddingBottom:safeInset(forBottom),
       transform:angle===90?'rotate(90deg) translateY(-100%)':'rotate(-90deg) translateX(-100%)',
       transformOrigin:'0 0',
     };
@@ -1168,6 +1198,36 @@ const rhythmSlideTrackingFloor=(passed,total)=>{
 // ただし全体ミュート(タイトル画面の「音がオフです」)だけは、game-system.jsx の Audio_.setEnabled が
 // window.__mhAudioEnabled へ反映するのでそれを見て共通に効かせる。値が無い(main未読込)場合はfalse扱いにしない。
 const rhythmAudioGloballyEnabled=()=>typeof window==='undefined'||window.__mhAudioEnabled!==false;
+// モンビーのオプションの音量(BGM音量・タップ音量)で使える上限(2026-09-12・ユーザー指示
+//   「音量調整を今のベースで200まで引き上げて」)。
+// **100の意味は今までと同じ**。100より上を使えるようにしただけで、既存の保存値は
+// そのまま同じ音量で鳴る(上限を広げただけなので、保存してある0〜100は1つも動かない)。
+// ★ここはモンビーの音量だけ。メインゲーム(HOME)の音量設定には一切関係しない。
+const RHYTHM_VOLUME_MAX = 200;
+// ===== タップ音まわりの大きさをまとめて上げる倍率(2026-09-12・ユーザー指示) =====
+// 「アンドロイドでタップ音量が小さいって声がある」。
+// 原因は合成音の振幅そのもので、タップ音はフルスケールの3.5%(既定の音量70なら2.45%)しかなく、
+// -14 LUFS へそろえた曲のピーク(-1 dBTP = 0.891)より **約28dB** 小さかった。
+// タップ音量を最大の100にしても、曲と釣り合わせるにはBGM音量を7まで下げるしかない状態で、
+// iPhoneは端末側の音量で20dB以上押し上げられるので成立していたが、
+// Androidのスピーカーではそこまで持ち上がらず「聞こえない」になっていた。
+//
+// ★戻すときはこの数字を 1 にするだけ。下の .035 などの元の係数は1つも書き換えていないので、
+//   1 にすれば2026-09-12より前とまったく同じ音量へ戻る。
+// ★効くのは「タップ音量(noteSeVolume)」で鳴るモンビーの合成音だけ。
+//   BGM音量(bgmVolume)にも、メインゲームの音量設定(_bgmGain / seGain)にも一切触れない。
+const RHYTHM_NOTE_SE_GAIN_SCALE = 10;
+// 1つの音が出せる大きさの上限(安全側の蓋)。倍率や音量を上げすぎたときに音が割れないようにする。
+// 音量100のあいだはどの音もここへ届かない(いちばん大きいフルコンボ音で .50)。
+// 音量を200まで使えるようにしたので(RHYTHM_VOLUME_MAX)、タップ音が音量200でちょうど
+// 2倍(.70)まで素直に伸びるところへ蓋を置く。重ねて鳴らすモンスターノーツ(.84)と
+// フルコンボ音(1.00)は音量140あたりからここで頭打ちになるが、そこから上は
+// 割れるだけなので止めてよい(2026-09-12)。
+const RHYTHM_NOTE_SE_LEVEL_MAX = .8;
+// 元の係数 × 倍率 × 音量(0〜1)。
+// 下限(.0001)は exponentialRampToValueAtTime が0を受け取れないためで、これまでと同じ。
+const rhythmNoteSeLevel = (base, volume) =>
+  Math.max(.0001, Math.min(RHYTHM_NOTE_SE_LEVEL_MAX, base * RHYTHM_NOTE_SE_GAIN_SCALE * volume));
 const RHYTHM_NOTE_SE_RUNTIME=(()=>{
   let ctx=null,cachedRaw=null,cachedSettings={enabled:true,volume:70},inputGroupDepth=0,inputGroupHit=false;
   const readSettings=()=>{
@@ -1181,7 +1241,7 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
       const value=JSON.parse(raw),number=Number(value?.noteSeVolume);
       cachedSettings={
         enabled:typeof value?.noteSeEnabled==='boolean'?value.noteSeEnabled:true,
-        volume:Number.isFinite(number)?Math.max(0,Math.min(100,number)):70,
+        volume:Number.isFinite(number)?Math.max(0,Math.min(RHYTHM_VOLUME_MAX,number)):70,
       };
     }catch{cachedSettings={enabled:true,volume:70};}
     return cachedSettings;
@@ -1200,12 +1260,12 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
   };
   const play=(previewSettings=null)=>{
     if(inputGroupDepth>0)inputGroupHit=true;
-    const settings=previewSettings?{enabled:previewSettings.noteSeEnabled!==false,volume:Math.max(0,Math.min(100,Number(previewSettings.noteSeVolume)||0))}:readSettings();
+    const settings=previewSettings?{enabled:previewSettings.noteSeEnabled!==false,volume:Math.max(0,Math.min(RHYTHM_VOLUME_MAX,Number(previewSettings.noteSeVolume)||0))}:readSettings();
     if(!settings.enabled||settings.volume<=0||!rhythmAudioGloballyEnabled())return false;
     const audio=context();
     if(!audio)return false;
     if(audio.state==='suspended'&&typeof audio.resume==='function')audio.resume().catch(()=>{});
-    const oscillator=audio.createOscillator(),gain=audio.createGain(),now=audio.currentTime,level=Math.max(.0001,.035*(settings.volume/100));
+    const oscillator=audio.createOscillator(),gain=audio.createGain(),now=audio.currentTime,level=rhythmNoteSeLevel(.035,settings.volume/100);
     oscillator.type='triangle';
     oscillator.frequency.setValueAtTime(1120,now);
     oscillator.frequency.exponentialRampToValueAtTime(820,now+.035);
@@ -1226,7 +1286,7 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
     if(audio.state==='suspended'&&typeof audio.resume==='function')audio.resume().catch(()=>{});
     const duration=.055,sampleRate=audio.sampleRate||44100,buffer=audio.createBuffer(1,Math.max(1,Math.floor(sampleRate*duration)),sampleRate),samples=buffer.getChannelData(0);
     for(let i=0;i<samples.length;i++)samples[i]=(Math.random()*2-1)*(1-i/samples.length);
-    const source=audio.createBufferSource(),filter=audio.createBiquadFilter(),gain=audio.createGain(),now=audio.currentTime,level=Math.max(.0001,.022*(settings.volume/100));
+    const source=audio.createBufferSource(),filter=audio.createBiquadFilter(),gain=audio.createGain(),now=audio.currentTime,level=rhythmNoteSeLevel(.022,settings.volume/100);
     source.buffer=buffer;
     filter.type='bandpass';
     filter.frequency.setValueAtTime(2800,now);
@@ -1260,7 +1320,7 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
     const audio=context();
     if(!audio)return false;
     if(audio.state==='suspended'&&typeof audio.resume==='function')audio.resume().catch(()=>{});
-    const now=audio.currentTime,level=Math.max(.0001,.028*(settings.volume/100)),duration=.13;
+    const now=audio.currentTime,level=rhythmNoteSeLevel(.028,settings.volume/100),duration=.13;
     const oscillator=audio.createOscillator(),gain=audio.createGain();
     oscillator.type='triangle';
     oscillator.frequency.setValueAtTime(1318.51,now);                    // E6
@@ -1291,7 +1351,7 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
       oscillator.type=type;
       oscillator.frequency.setValueAtTime(freq,start);
       gain.gain.setValueAtTime(.0001,start);
-      gain.gain.exponentialRampToValueAtTime(Math.max(.0001,peak*volume),start+.008);
+      gain.gain.exponentialRampToValueAtTime(rhythmNoteSeLevel(peak,volume),start+.008);
       gain.gain.exponentialRampToValueAtTime(.0001,start+sustain);
       oscillator.connect(gain);gain.connect(audio.destination);
       oscillator.start(start);oscillator.stop(start+sustain+.02);
@@ -1313,7 +1373,7 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
     const audio=context();
     if(!audio)return false;
     if(audio.state==='suspended'&&typeof audio.resume==='function')audio.resume().catch(()=>{});
-    const now=audio.currentTime,level=Math.max(.0001,.05*(settings.volume/100));
+    const now=audio.currentTime,level=rhythmNoteSeLevel(.05,settings.volume/100);
     // E5 → G5 → B5 → E6 の上昇アルペジオ。最後の音だけ長く伸ばして締める。
     [659.25,783.99,987.77,1318.51].forEach((freq,index,notes)=>{
       const start=now+index*.09,sustain=index===notes.length-1?.42:.16;
@@ -13398,10 +13458,12 @@ const installRhythmGeometryStyles=()=>{
        HUDはプレイエリアの外にあるので、出す・出さないはJS側の演出量の判定で決める。 */
     [data-rhythm-combo][data-rhythm-combo-pop="1"]{animation:mhRhythmComboPop 180ms ease-out 1;
       transform-origin:center}
+    /* ★倍率(--mh-combo-scale)を掛けたうえで弾ませる。素の scale(1) へ戻すと、
+       段が上がって大きくしたコンボ数が跳ねるたびに一瞬だけ元の大きさへ縮む(2026-09-12)。 */
     @keyframes mhRhythmComboPop{
-      0%{transform:scale(1.34)}
-      55%{transform:scale(.97)}
-      100%{transform:scale(1)}}
+      0%{transform:scale(calc(var(--mh-combo-scale,1)*1.34))}
+      55%{transform:scale(calc(var(--mh-combo-scale,1)*.97))}
+      100%{transform:scale(var(--mh-combo-scale,1))}}
     /* --- 両サイドのマスモン --- */
     /* 動かすのは transform だけ。影・ぼかし・色は動かさないので、跳ねても塗り直しは起きない。
        跳ねる速さは1拍の長さ(--rhythm-side-beat)。曲ごとにプレイ開始時へ一度だけ書く。 */
