@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1eede51ad5fa68ee
+// generated-sha256: 75135b0a33201b81
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-13 00:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-13 00:24"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11811,7 +11811,11 @@ const RhythmOptions=({value,onSave,onBack})=>{
         </section>
         <section className={card}>
           <h3 className={head}>✨ 演出・端末</h3>
-          {field('演出量',segments('effectAmount',[['NORMAL','標準'],['LOW','少なめ'],['MINIMAL','最小']]))}
+          {/* 「少なめ」が何を止めるのかを、ここで言い切る(2026-09-13・Android勢から
+              「重い」との声)。判定文字の金の帯・虹の流れは毎フレーム字を塗り直すので、
+              動きがカクつく端末ではここがいちばん効く */}
+          {field('演出量',segments('effectAmount',[['NORMAL','標準'],['LOW','少なめ'],['MINIMAL','最小']]),
+            '動きがカクついたり、端末が熱くなったりするときは「少なめ」にしてください。判定文字の金色の帯や虹が流れるのを止め、光のにじみを減らします（色・グラデーション・字の大きさは標準と同じままです）。「最小」にすると、それに加えて100コンボごとの演出や光そのものもほぼ出なくなります。')}
           <div className={row}><span className={label}>振動</span><div className="flex items-center gap-2">
             {/* この端末で振動できるかを出す。iPhoneのSafariには振動のしくみが無い時期が長く、
                 「設定はあるのに何も起きない」状態になっていたため(2026-09-05の指摘) */}

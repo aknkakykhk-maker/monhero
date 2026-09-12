@@ -107,6 +107,22 @@ ok('コンボ数表示のON/OFFを設定から切り替えられる',
 ok('コンボ数を大きく出す',
   /\[data-rhythm-combo\]\{[\s\S]{0,160}font-size:min\(52px,13\.5vw\)/.test(html)
   &&/@media \(orientation: landscape\)\{[\s\S]{0,900}\[data-rhythm-combo\]\{font-size:min\(40px,7vw\)\}/.test(html));
+// 2026-09-13・Android勢から「重い」との声。見た目は標準のまま残し、
+// 演出量「少なめ」で**毎フレームの塗り直し**だけを止められるようにした。
+// background-position は合成できないプロパティなので、流しているあいだは
+// 毎フレーム字を塗り直し、そのたびに filter のぼかしを通ることになる。
+ok('演出量「少なめ」で、判定文字とコンボの流れを止められる',
+  html.includes('[data-rhythm-play-area][data-rhythm-effect="LOW"] [data-rhythm-judgment-text]{')
+  &&/\[data-rhythm-effect="LOW"\] \[data-rhythm-judgment-text\]\{\s*animation:none;/.test(html)
+  &&/\[data-rhythm-effect="LOW"\] \[data-rhythm-combo\]\[data-combo-tier="7"\]\{\s*animation:none;/.test(html)
+  // 止めるのは流れとぼかしの枚数だけ。色・グラデ・字の大きさは標準と同じに保つ
+  &&!/\[data-rhythm-effect="LOW"\] \[data-rhythm-judgment-text\][^{]*\{[^}]*background-image/.test(html)
+  &&!/\[data-rhythm-effect="LOW"\] \[data-rhythm-judgment-text\][^{]*\{[^}]*font-size/.test(html)
+  // 重い判定(GREAT以上)はぼかしの枚数も落とす
+  &&['GREAT','EXCELLENT','MARVELOUS'].every(j=>html.includes(`[data-rhythm-play-area][data-rhythm-effect="LOW"] [data-rhythm-judgment-text][data-judgment="${j}"]{`))
+  // 選ぶ場所と、何が止まるのかの説明がオプションにある
+  &&game.includes("segments('effectAmount',[['NORMAL','標準'],['LOW','少なめ'],['MINIMAL','最小']])")
+  &&game.includes('動きがカクついたり'));
 // 2026-09-12・ユーザー指示「コンボ数もわかりにくい。増えれば増えるほど目立つようにして」。
 // 100/200/300の3段だったのを 10/30/50/100/200/300/500 の7段にし、段が上がるほど
 // 色だけでなく **大きさ** も変わるようにした(--mh-combo-scale)。
