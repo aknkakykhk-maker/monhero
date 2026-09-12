@@ -69,8 +69,13 @@ assert(autoStartEffect.includes('quickRunProgressRef.current && !quickRunProgres
 assert(autoStartEffect.includes('runStageRef.current && !runResultFinishedRef.current'),
   '勝負のついていない挑戦の上へ新しいランを重ねる可能性があります');
 assert(autoStartEffect.includes('repeatTemplateFromAutoSettings()'), '編成を作れないときに見送る判定がありません');
-assert(source.includes("const RHYTHM_AUTO_START_SCREENS = [...RHYTHM_BACKGROUND_RUN_SCREENS,'RHYTHM_PLAY','RHYTHM_OPTIONS']"),
-  '「モンヒロビートの中」の一覧が、演奏・オプションを含んでいません');
+// ★2026-09-12にオプション(RHYTHM_OPTIONS)が RHYTHM_BACKGROUND_RUN_SCREENS へ入ったので、
+//   ここで重ねて書く必要はなくなった。見たいのは「演奏中とオプションが含まれていること」なので、
+//   一覧の文字列ではなく中身で見る。
+assert(source.includes("const RHYTHM_AUTO_START_SCREENS = [...RHYTHM_BACKGROUND_RUN_SCREENS,'RHYTHM_PLAY']"),
+  '「モンヒロビートの中」の一覧の作り方が変わっています');
+assert(/const RHYTHM_BACKGROUND_RUN_SCREENS = \[[^\]]*'RHYTHM_OPTIONS'[^\]]*\];/.test(source),
+  '「モンヒロビートの中」の一覧が、オプションを含んでいません');
 assert(help.includes('モンヒロビートを開いたときに自動で'), 'ヘルプに自動開始の説明がありません');
 assert(changelog.includes('モンヒロビートを開いたら自動でクイックの∞周回を始められるようにしました'), '更新履歴に自動開始がありません');
 assert(saveSpec.includes('autoStart'), 'SAVE_DATAに自動開始の保存項目がありません');

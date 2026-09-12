@@ -52,6 +52,29 @@ for (const file of files) {
     const map = src.slice(src.indexOf('const BGM_STATE_MAP = {'), src.indexOf('};', src.indexOf('const BGM_STATE_MAP = {')));
     check(`${rel}: モンビーの画面はBGMのキーを持たない（止まるのが前提）`, !/RHYTHM_/.test(map));
   }
+
+  // ===== 負けたときの音は、モンビーを開いていても鳴らす(2026-09-12・ユーザー指示) =====
+  // 「モンビー中に負けると負けたときの音がなるんだけどこれは負けたって分かりやすいから
+  //   仕様として残しといてほしい」。
+  // モンビーの画面はBGMのキーを持たないので、ふつうは何も鳴らない。それでも負けたときだけ
+  // 鳴るのは、bgmKeyForState が **画面を見るより先に** 負けを見ているから。
+  // ★この順番が入れ替わると、モンビー中に負けても無音になり、裏で負けたことに気づけなくなる。
+  //   画面の一覧(BGM_STATE_MAP)へモンビーを足す形で直そうとすると必ず壊れるので、ここで固定する。
+  {
+    const head = src.indexOf('const bgmKeyForState = (state,');
+    const gameOverAt = src.indexOf('if (isGameOver) return bgmArrangement.gameOver;', head);
+    const firstScreenAt = src.indexOf("if (state === 'HOME'", head);
+    check(`${rel}: 負けたときの曲は、画面を見るより先に決まる（モンビー中でも鳴る）`,
+      head >= 0 && gameOverAt > head && firstScreenAt > gameOverAt,
+      `負け判定=${gameOverAt - head} / 画面判定=${firstScreenAt - head}`);
+    // SEではなくBGMで鳴っているので、モンビー中のSE消音(rhythmScreenOpen)には巻き込まれない。
+    // 生成物は書き方が変わるので、編集元だけで見る
+    if (file.includes('/src/')) {
+      check(`${rel}: モンビー中のSE消音に巻き込まれない（負けの音はBGM側）`,
+        src.includes('Audio_.setSeVolume((ultraEcoSession || rhythmScreenOpen) ? 0 : seVolume)')
+        && !/setSeVolume[\s\S]{0,200}isGameOver/.test(src));
+    }
+  }
 }
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
