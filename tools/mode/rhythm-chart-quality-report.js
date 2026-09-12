@@ -85,6 +85,11 @@ const measure=(chart,audio,options={})=>{
   const noteGrids=new Set(main.map(note=>note.grid));
   const importantHit=important.filter(onset=>noteGrids.has(onset.grid)).length;
   const importantCoverage=important.length?importantHit/important.length:1;
+  // ★「拾える上限」も一緒に出す。大事な音の数がノーツの数より多い曲では、
+  //   どれだけ上手に選んでも全部は拾えない（実測: toriko MASTER は大事な音250個に対し
+  //   ノーツ151個なので、上限は0.60。MASTERの目標0.85には**構造的に届かない**）。
+  //   目標と比べるときはこの上限で抑える。上限が目標より高い曲では何も変わらない。
+  const importantReach=important.length?Math.min(1,main.length/important.length):1;
   // 音が抜けている場所(鳴っている音が無い1拍以上の区間)にノーツが無いか
   const silentGrids=new Set();
   {
@@ -382,9 +387,13 @@ const measure=(chart,audio,options={})=>{
     .55*inBand(strainedRate,band.strain,.08)
     +.25*clamp01(1-Math.max(0,maxStrainStreakMs-STRAIN_STREAK_LIMIT_MS[difficulty])/2000)
     +.20*(heldFreeTotal?heldFreeOk/heldFreeTotal:1)));
+  // 「大事な音を拾えたか」は、目標と**拾える上限**の小さいほうと比べる。
+  // ノーツの数より大事な音のほうが多い曲を、届かない目標で減点しないため。
+  const importantNeed=Math.min(
+    {EASY:.35,NORMAL:.45,HARD:.6,EXPERT:.75,MASTER:.85}[difficulty],importantReach);
   scores.musicality=Math.round(100*(
     .40*onsetHitRate
-    +.25*clamp01(importantCoverage/{EASY:.35,NORMAL:.45,HARD:.6,EXPERT:.75,MASTER:.85}[difficulty])
+    +.25*clamp01(importantNeed>0?importantCoverage/importantNeed:1)
     +.20*phraseConsistency
     +.15*clamp01(1-notesInSilence/Math.max(1,main.length)*20)));
   scores.readability=Math.round(100*(
@@ -421,6 +430,7 @@ const measure=(chart,audio,options={})=>{
     pass,gate:{impossible},
     scores,
     musicality:{onsetHitRate:round(onsetHitRate),ghostNotes,importantOnsets:important.length,importantHit,importantCoverage:round(importantCoverage),
+      importantReach:round(importantReach),importantNeed:round(importantNeed),
       beatShare,notesInSilence,phraseTotal,phraseSame,motifGroups,motifTotal,motifSame,phraseConsistency:round(phraseConsistency),phraseVariations,mirrorRate:round(mirrorRate),
       intensityDensityAgreement:round(intensityDensityAgreement),sectionDensitySpread:round(sectionDensitySpread,2),sectionVocabSpread,sections:sectionStats},
     vocabulary:{patternCounts,distinctPatterns,topPattern:topPattern?topPattern[0]:null,topShare:round(topShare),fallbackShare:round(fallbackShare),

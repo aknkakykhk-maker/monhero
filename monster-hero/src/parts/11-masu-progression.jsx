@@ -428,13 +428,19 @@ const autoEnhanceAptIndexOf = (target) => {
   const index = AUTO_ENHANCE_APT_TARGETS.indexOf(target);
   return index >= 0 ? index : null;
 };
-// 上限の入力欄で受け付ける最大値。1個体が持てる強化Pをはるかに超える値なので実質的な制限にはならないが、
+// 目標の入力欄で受け付ける最大値。育ちきった個体の値をはるかに超えるので実質的な制限にはならないが、
 // 壊れた保存値や指がすべった長い数字で描画が崩れないように頭を止めておく
 const AUTO_ENHANCE_STAT_LIMIT_MAX = 999999;
-// 上限の読み方。
-// ・ステータス … 「その能力へ振ってよい強化Pの数」。null は上限なし(残りを全部使う)、0 は振らない
+// 設定の版。2 から「ステータスの上限」を強化Pの数ではなく“目標のステータス値”で持つ
+// (2026-09-12・ユーザー指摘「現在値参照したり今日がポイントで管理したりわかりづらい /
+//  初期ステの数値をもとにどのステまで上げていいかにして」)。
+// 強化Pで持っていたころは「いまいくつなのか」と「あと何P振れるのか」を毎回頭の中で足す必要があった。
+// 素の値からの合計値で持てば、画面に出ている数字とそのまま同じものを指定できる。
+const AUTO_ENHANCE_SETTINGS_VERSION = 2;
+// 目標の読み方。
+// ・ステータス … 「その能力を合計いくつまで上げてよいか」。null は上限なし(残りを全部使う)、0 は振らない
 // ・間合い適性 … 「目標の段階(グレード)」。null は振らない。Mを指定すれば上限なしと同じ
-const normalizeAutoEnhanceStatLimit = (value) => {
+const normalizeAutoEnhanceStatTarget = (value) => {
   if (value === null || value === undefined || value === '') return null; // 上限なし
   const amount = Number(value);
   if (!Number.isFinite(amount)) return 0;
@@ -443,37 +449,66 @@ const normalizeAutoEnhanceStatLimit = (value) => {
 const normalizeAutoEnhanceAptLimit = (value) => (typeof value === 'string' && DIST_APTITUDE_GRADES.includes(value) ? value : null);
 const normalizeMasuAutoEnhance = (value) => {
   const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  const version = Math.max(0, Math.floor(Number(source.version) || 0));
   // 並び順は「8項目がちょうど1回ずつ」でなければならない。壊れていたら既定の並びへ落とす
   const rawOrder = Array.isArray(source.order) ? source.order.filter(key => AUTO_ENHANCE_TARGETS.includes(key)) : [];
   const order = [...new Set(rawOrder)];
   AUTO_ENHANCE_TARGETS.forEach(key => { if (!order.includes(key)) order.push(key); });
-  const rawStat = source.statLimits && typeof source.statLimits === 'object' && !Array.isArray(source.statLimits) ? source.statLimits : {};
-  const statLimits = Object.fromEntries(AUTO_ENHANCE_STAT_KEYS.map(key => [key,
-    Object.prototype.hasOwnProperty.call(rawStat, key) ? normalizeAutoEnhanceStatLimit(rawStat[key]) : 0]));
+  const rawStat = source.statTargets && typeof source.statTargets === 'object' && !Array.isArray(source.statTargets) ? source.statTargets : {};
+  const statTargets = Object.fromEntries(AUTO_ENHANCE_STAT_KEYS.map(key => [key,
+    Object.prototype.hasOwnProperty.call(rawStat, key) ? normalizeAutoEnhanceStatTarget(rawStat[key]) : 0]));
   const rawApt = Array.isArray(source.aptLimits) ? source.aptLimits : [];
   const aptLimits = [0,1,2,3].map(index => normalizeAutoEnhanceAptLimit(rawApt[index]));
+  // ★版1(強化Pの数で持っていたころ)の保存は、ここでは目標値へ直せない。
+  //   合計値にするには、その個体の素の値が要るため(正規化は設定だけしか受け取らない)。
+  //   0(振らない)へ潰すと設定が黙って消えるので、直せるところまで持ち回す。
+  //   実際に直すのは autoEnhanceStatTargetsOf(個体とベースが分かる場所)。
+  const legacy = source.statLimits && typeof source.statLimits === 'object' && !Array.isArray(source.statLimits) ? source.statLimits : null;
   return {
+    version,
     // 項目を持っていない既存ユーザーは必ずOFF。ある日いきなり勝手に振られることがないようにする
     enabled: source.enabled === true,
     order,
-    statLimits,
+    statTargets,
     aptLimits,
+    ...(version < AUTO_ENHANCE_SETTINGS_VERSION && legacy ? { statLimits: Object.fromEntries(AUTO_ENHANCE_STAT_KEYS.map(key => [key,
+      Object.prototype.hasOwnProperty.call(legacy, key) ? normalizeAutoEnhanceStatTarget(legacy[key]) : 0])) } : {}),
   };
 };
-// 1つでも「振ってよい先」が決まっているか。ONでもここが空なら何も起きない
-const autoEnhanceHasTarget = (settings) => {
-  const normalized = normalizeMasuAutoEnhance(settings);
-  return AUTO_ENHANCE_STAT_KEYS.some(key => normalized.statLimits[key] === null || normalized.statLimits[key] > 0)
-    || normalized.aptLimits.some(grade => grade !== null);
+// その個体の「目標のステータス値」を取り出す。
+// 版1(強化Pの数)の保存は、素の値 ＋ P×1Pあたりの上昇量 で合計値へ直してから返す。
+// 読むときに直すだけで保存は書き換えない(書き換えるのは画面で操作したときだけ)。
+const autoEnhanceStatTargetsOf = (masu, base) => {
+  const settings = normalizeMasuAutoEnhance(masu?.autoEnhance);
+  if (settings.version >= AUTO_ENHANCE_SETTINGS_VERSION || !settings.statLimits || !base) return settings.statTargets;
+  const individual = resolveMasuIndividualStats(masu, base);
+  return Object.fromEntries(AUTO_ENHANCE_STAT_KEYS.map(key => {
+    const limit = settings.statLimits[key];
+    if (limit === null) return [key, null];   // 上限なしはそのまま
+    if (limit <= 0) return [key, 0];          // 振らないもそのまま
+    return [key, Math.max(0, Math.floor(Number(individual[key]) || 0)) + limit * (STAT_POINT_GAIN[key] || 1)];
+  }));
 };
-// いま振ってある内容を、そのまま上限として写し取る。
+// 1つでも「振ってよい先」が決まっているか。ONでもここが空なら何も起きない
+const autoEnhanceHasTarget = (masu, base) => {
+  const targets = autoEnhanceStatTargetsOf(masu, base);
+  const settings = normalizeMasuAutoEnhance(masu?.autoEnhance);
+  return AUTO_ENHANCE_STAT_KEYS.some(key => targets[key] === null || targets[key] > 0)
+    || settings.aptLimits.some(grade => grade !== null);
+};
+// いまの値を、そのまま目標として写し取る。
 // 「この形のまま転生して戻したい」がいちばん多い使い方なので、1タップで作れるようにする
 const buildAutoEnhanceLimitsFromCurrent = (masu, base) => {
   if (!masu || !base) return null;
   const resolvedApt = resolveMasuDistAptitude(masu, base);
+  const individual = resolveMasuIndividualStats(masu, base);
   return {
-    statLimits: Object.fromEntries(AUTO_ENHANCE_STAT_KEYS.map(key => [key,
-      Math.max(0, Math.ceil((Number(masu.statPoints?.[key]) || 0) / (STAT_POINT_GAIN[key] || 1)))])),
+    version: AUTO_ENHANCE_SETTINGS_VERSION,
+    statTargets: Object.fromEntries(AUTO_ENHANCE_STAT_KEYS.map(key => {
+      const spent = Math.max(0, Number(masu.statPoints?.[key]) || 0);
+      // 1度も振っていない能力は「振らない」。振ってある能力だけ、いまの合計値を目標にする
+      return [key, spent > 0 ? Math.max(0, Math.floor(Number(individual[key]) || 0)) + spent : 0];
+    })),
     aptLimits: [0,1,2,3].map(index => {
       const baseGrade = masuTranscendBaseAptitude(masu, base)[index];
       const current = resolvedApt[index];
@@ -492,6 +527,8 @@ const buildMasuAutoEnhancePlan = (masu, base) => {
   let remaining = Math.max(0, Math.floor(Number(masu.distAptPoints) || 0));
   if (remaining <= 0) return null;
   const resolvedApt = resolveMasuDistAptitude(masu, base);
+  const individual = resolveMasuIndividualStats(masu, base);
+  const statTargets = autoEnhanceStatTargetsOf(masu, base);
   const plan = { apt:[0,0,0,0], stat:{ hp:0, atk:0, def:0, guts:0 } };
   for (const target of settings.order) {
     if (remaining <= 0) break;
@@ -507,11 +544,13 @@ const buildMasuAutoEnhancePlan = (masu, base) => {
       continue;
     }
     if (!AUTO_ENHANCE_STAT_KEYS.includes(target)) continue;
-    const limit = settings.statLimits[target];
-    if (limit === 0) continue;
+    const goal = statTargets[target];
+    if (goal === 0) continue;
     const gain = STAT_POINT_GAIN[target] || 1;
-    const alreadySpent = Math.max(0, Math.ceil((Number(masu.statPoints?.[target]) || 0) / gain));
-    const capacity = limit === null ? remaining : Math.max(0, limit - alreadySpent);
+    // いまの値は「素の値(超越の基礎UPを含む) ＋ 強化で振ったぶん」。強化画面に出ている数字と同じ
+    const currentValue = Math.max(0, Math.floor(Number(individual[target]) || 0)) + Math.max(0, Number(masu.statPoints?.[target]) || 0);
+    // 1Pあたりの上昇量で割り切れないときは、目標をこえないように切り捨てる
+    const capacity = goal === null ? remaining : Math.max(0, Math.floor((goal - currentValue) / gain));
     const take = Math.min(capacity, remaining);
     plan.stat[target] = take;
     remaining -= take;
@@ -562,11 +601,16 @@ const applyAutoEnhanceToMasuMons = (masuMons) => {
   });
   return results.length > 0 ? { next, results } : null;
 };
-// 設定の書き換え。normalize を必ず通すので、画面側は部分的な patch を渡すだけでよい
-const buildMasuAutoEnhanceUpdate = (masu, patch) => ({
-  ...masu,
-  autoEnhance: normalizeMasuAutoEnhance({ ...normalizeMasuAutoEnhance(masu?.autoEnhance), ...(patch || {}) }),
-});
+// 設定の書き換え。normalize を必ず通すので、画面側は部分的な patch を渡すだけでよい。
+// ★版1(強化Pの数)の保存は、書き換える前に必ず目標値へそろえる。
+//   そろえずに1項目だけ書き換えると、触っていない項目が0(振らない)へ落ちて設定が消える
+const buildMasuAutoEnhanceUpdate = (masu, patch) => {
+  const base = (typeof ALL_PLAYER_MONSTERS !== 'undefined') ? ALL_PLAYER_MONSTERS[masu?.baseId] : null;
+  const current = normalizeMasuAutoEnhance(masu?.autoEnhance);
+  const migrated = { ...current, version:AUTO_ENHANCE_SETTINGS_VERSION, statTargets:autoEnhanceStatTargetsOf(masu, base) };
+  delete migrated.statLimits; // 目標値へそろえたので、版1の持ち回しはここで役目を終える
+  return { ...masu, autoEnhance: normalizeMasuAutoEnhance({ ...migrated, ...(patch || {}) }) };
+};
 // 優先順位を1つ上げ下げする。端では動かさない(押しても何も起きない)
 const buildMasuAutoEnhanceOrderMove = (masu, target, direction) => {
   const settings = normalizeMasuAutoEnhance(masu?.autoEnhance);

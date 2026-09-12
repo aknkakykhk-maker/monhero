@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0ee9c53bf67844f6
+// source-sha256: bc9ccac87ac4f0ef
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 256b155b2e72ff15
+// generated-sha256: 4376ac89c79dd2b3
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-13 02:58"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-13 03:02"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1158,13 +1158,19 @@ const autoEnhanceAptIndexOf = target => {
   const index = AUTO_ENHANCE_APT_TARGETS.indexOf(target);
   return index >= 0 ? index : null;
 };
-// 上限の入力欄で受け付ける最大値。1個体が持てる強化Pをはるかに超える値なので実質的な制限にはならないが、
+// 目標の入力欄で受け付ける最大値。育ちきった個体の値をはるかに超えるので実質的な制限にはならないが、
 // 壊れた保存値や指がすべった長い数字で描画が崩れないように頭を止めておく
 const AUTO_ENHANCE_STAT_LIMIT_MAX = 999999;
-// 上限の読み方。
-// ・ステータス … 「その能力へ振ってよい強化Pの数」。null は上限なし(残りを全部使う)、0 は振らない
+// 設定の版。2 から「ステータスの上限」を強化Pの数ではなく“目標のステータス値”で持つ
+// (2026-09-12・ユーザー指摘「現在値参照したり今日がポイントで管理したりわかりづらい /
+//  初期ステの数値をもとにどのステまで上げていいかにして」)。
+// 強化Pで持っていたころは「いまいくつなのか」と「あと何P振れるのか」を毎回頭の中で足す必要があった。
+// 素の値からの合計値で持てば、画面に出ている数字とそのまま同じものを指定できる。
+const AUTO_ENHANCE_SETTINGS_VERSION = 2;
+// 目標の読み方。
+// ・ステータス … 「その能力を合計いくつまで上げてよいか」。null は上限なし(残りを全部使う)、0 は振らない
 // ・間合い適性 … 「目標の段階(グレード)」。null は振らない。Mを指定すれば上限なしと同じ
-const normalizeAutoEnhanceStatLimit = value => {
+const normalizeAutoEnhanceStatTarget = value => {
   if (value === null || value === undefined || value === '') return null; // 上限なし
   const amount = Number(value);
   if (!Number.isFinite(amount)) return 0;
@@ -1173,36 +1179,67 @@ const normalizeAutoEnhanceStatLimit = value => {
 const normalizeAutoEnhanceAptLimit = value => typeof value === 'string' && DIST_APTITUDE_GRADES.includes(value) ? value : null;
 const normalizeMasuAutoEnhance = value => {
   const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  const version = Math.max(0, Math.floor(Number(source.version) || 0));
   // 並び順は「8項目がちょうど1回ずつ」でなければならない。壊れていたら既定の並びへ落とす
   const rawOrder = Array.isArray(source.order) ? source.order.filter(key => AUTO_ENHANCE_TARGETS.includes(key)) : [];
   const order = [...new Set(rawOrder)];
   AUTO_ENHANCE_TARGETS.forEach(key => {
     if (!order.includes(key)) order.push(key);
   });
-  const rawStat = source.statLimits && typeof source.statLimits === 'object' && !Array.isArray(source.statLimits) ? source.statLimits : {};
-  const statLimits = Object.fromEntries(AUTO_ENHANCE_STAT_KEYS.map(key => [key, Object.prototype.hasOwnProperty.call(rawStat, key) ? normalizeAutoEnhanceStatLimit(rawStat[key]) : 0]));
+  const rawStat = source.statTargets && typeof source.statTargets === 'object' && !Array.isArray(source.statTargets) ? source.statTargets : {};
+  const statTargets = Object.fromEntries(AUTO_ENHANCE_STAT_KEYS.map(key => [key, Object.prototype.hasOwnProperty.call(rawStat, key) ? normalizeAutoEnhanceStatTarget(rawStat[key]) : 0]));
   const rawApt = Array.isArray(source.aptLimits) ? source.aptLimits : [];
   const aptLimits = [0, 1, 2, 3].map(index => normalizeAutoEnhanceAptLimit(rawApt[index]));
+  // ★版1(強化Pの数で持っていたころ)の保存は、ここでは目標値へ直せない。
+  //   合計値にするには、その個体の素の値が要るため(正規化は設定だけしか受け取らない)。
+  //   0(振らない)へ潰すと設定が黙って消えるので、直せるところまで持ち回す。
+  //   実際に直すのは autoEnhanceStatTargetsOf(個体とベースが分かる場所)。
+  const legacy = source.statLimits && typeof source.statLimits === 'object' && !Array.isArray(source.statLimits) ? source.statLimits : null;
   return {
+    version,
     // 項目を持っていない既存ユーザーは必ずOFF。ある日いきなり勝手に振られることがないようにする
     enabled: source.enabled === true,
     order,
-    statLimits,
-    aptLimits
+    statTargets,
+    aptLimits,
+    ...(version < AUTO_ENHANCE_SETTINGS_VERSION && legacy ? {
+      statLimits: Object.fromEntries(AUTO_ENHANCE_STAT_KEYS.map(key => [key, Object.prototype.hasOwnProperty.call(legacy, key) ? normalizeAutoEnhanceStatTarget(legacy[key]) : 0]))
+    } : {})
   };
 };
-// 1つでも「振ってよい先」が決まっているか。ONでもここが空なら何も起きない
-const autoEnhanceHasTarget = settings => {
-  const normalized = normalizeMasuAutoEnhance(settings);
-  return AUTO_ENHANCE_STAT_KEYS.some(key => normalized.statLimits[key] === null || normalized.statLimits[key] > 0) || normalized.aptLimits.some(grade => grade !== null);
+// その個体の「目標のステータス値」を取り出す。
+// 版1(強化Pの数)の保存は、素の値 ＋ P×1Pあたりの上昇量 で合計値へ直してから返す。
+// 読むときに直すだけで保存は書き換えない(書き換えるのは画面で操作したときだけ)。
+const autoEnhanceStatTargetsOf = (masu, base) => {
+  const settings = normalizeMasuAutoEnhance(masu?.autoEnhance);
+  if (settings.version >= AUTO_ENHANCE_SETTINGS_VERSION || !settings.statLimits || !base) return settings.statTargets;
+  const individual = resolveMasuIndividualStats(masu, base);
+  return Object.fromEntries(AUTO_ENHANCE_STAT_KEYS.map(key => {
+    const limit = settings.statLimits[key];
+    if (limit === null) return [key, null]; // 上限なしはそのまま
+    if (limit <= 0) return [key, 0]; // 振らないもそのまま
+    return [key, Math.max(0, Math.floor(Number(individual[key]) || 0)) + limit * (STAT_POINT_GAIN[key] || 1)];
+  }));
 };
-// いま振ってある内容を、そのまま上限として写し取る。
+// 1つでも「振ってよい先」が決まっているか。ONでもここが空なら何も起きない
+const autoEnhanceHasTarget = (masu, base) => {
+  const targets = autoEnhanceStatTargetsOf(masu, base);
+  const settings = normalizeMasuAutoEnhance(masu?.autoEnhance);
+  return AUTO_ENHANCE_STAT_KEYS.some(key => targets[key] === null || targets[key] > 0) || settings.aptLimits.some(grade => grade !== null);
+};
+// いまの値を、そのまま目標として写し取る。
 // 「この形のまま転生して戻したい」がいちばん多い使い方なので、1タップで作れるようにする
 const buildAutoEnhanceLimitsFromCurrent = (masu, base) => {
   if (!masu || !base) return null;
   const resolvedApt = resolveMasuDistAptitude(masu, base);
+  const individual = resolveMasuIndividualStats(masu, base);
   return {
-    statLimits: Object.fromEntries(AUTO_ENHANCE_STAT_KEYS.map(key => [key, Math.max(0, Math.ceil((Number(masu.statPoints?.[key]) || 0) / (STAT_POINT_GAIN[key] || 1)))])),
+    version: AUTO_ENHANCE_SETTINGS_VERSION,
+    statTargets: Object.fromEntries(AUTO_ENHANCE_STAT_KEYS.map(key => {
+      const spent = Math.max(0, Number(masu.statPoints?.[key]) || 0);
+      // 1度も振っていない能力は「振らない」。振ってある能力だけ、いまの合計値を目標にする
+      return [key, spent > 0 ? Math.max(0, Math.floor(Number(individual[key]) || 0)) + spent : 0];
+    })),
     aptLimits: [0, 1, 2, 3].map(index => {
       const baseGrade = masuTranscendBaseAptitude(masu, base)[index];
       const current = resolvedApt[index];
@@ -1221,6 +1258,8 @@ const buildMasuAutoEnhancePlan = (masu, base) => {
   let remaining = Math.max(0, Math.floor(Number(masu.distAptPoints) || 0));
   if (remaining <= 0) return null;
   const resolvedApt = resolveMasuDistAptitude(masu, base);
+  const individual = resolveMasuIndividualStats(masu, base);
+  const statTargets = autoEnhanceStatTargetsOf(masu, base);
   const plan = {
     apt: [0, 0, 0, 0],
     stat: {
@@ -1244,11 +1283,13 @@ const buildMasuAutoEnhancePlan = (masu, base) => {
       continue;
     }
     if (!AUTO_ENHANCE_STAT_KEYS.includes(target)) continue;
-    const limit = settings.statLimits[target];
-    if (limit === 0) continue;
+    const goal = statTargets[target];
+    if (goal === 0) continue;
     const gain = STAT_POINT_GAIN[target] || 1;
-    const alreadySpent = Math.max(0, Math.ceil((Number(masu.statPoints?.[target]) || 0) / gain));
-    const capacity = limit === null ? remaining : Math.max(0, limit - alreadySpent);
+    // いまの値は「素の値(超越の基礎UPを含む) ＋ 強化で振ったぶん」。強化画面に出ている数字と同じ
+    const currentValue = Math.max(0, Math.floor(Number(individual[target]) || 0)) + Math.max(0, Number(masu.statPoints?.[target]) || 0);
+    // 1Pあたりの上昇量で割り切れないときは、目標をこえないように切り捨てる
+    const capacity = goal === null ? remaining : Math.max(0, Math.floor((goal - currentValue) / gain));
     const take = Math.min(capacity, remaining);
     plan.stat[target] = take;
     remaining -= take;
@@ -1320,14 +1361,26 @@ const applyAutoEnhanceToMasuMons = masuMons => {
     results
   } : null;
 };
-// 設定の書き換え。normalize を必ず通すので、画面側は部分的な patch を渡すだけでよい
-const buildMasuAutoEnhanceUpdate = (masu, patch) => ({
-  ...masu,
-  autoEnhance: normalizeMasuAutoEnhance({
-    ...normalizeMasuAutoEnhance(masu?.autoEnhance),
-    ...(patch || {})
-  })
-});
+// 設定の書き換え。normalize を必ず通すので、画面側は部分的な patch を渡すだけでよい。
+// ★版1(強化Pの数)の保存は、書き換える前に必ず目標値へそろえる。
+//   そろえずに1項目だけ書き換えると、触っていない項目が0(振らない)へ落ちて設定が消える
+const buildMasuAutoEnhanceUpdate = (masu, patch) => {
+  const base = typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[masu?.baseId] : null;
+  const current = normalizeMasuAutoEnhance(masu?.autoEnhance);
+  const migrated = {
+    ...current,
+    version: AUTO_ENHANCE_SETTINGS_VERSION,
+    statTargets: autoEnhanceStatTargetsOf(masu, base)
+  };
+  delete migrated.statLimits; // 目標値へそろえたので、版1の持ち回しはここで役目を終える
+  return {
+    ...masu,
+    autoEnhance: normalizeMasuAutoEnhance({
+      ...migrated,
+      ...(patch || {})
+    })
+  };
+};
 // 優先順位を1つ上げ下げする。端では動かさない(押しても何も起きない)
 const buildMasuAutoEnhanceOrderMove = (masu, target, direction) => {
   const settings = normalizeMasuAutoEnhance(masu?.autoEnhance);
@@ -35440,7 +35493,14 @@ function MasuAutoEnhanceScreen({
   const points = Math.max(0, Math.floor(Number(masu.distAptPoints) || 0));
   const resolvedApt = resolveMasuDistAptitude(masu, base);
   const baseApt = masuTranscendBaseAptitude(masu, base);
-  const hasTarget = autoEnhanceHasTarget(settings);
+  // ステータスは「合計いくつまで上げてよいか」で決める。素の値(超越の基礎UPを含む)と
+  // いまの値は、強化画面に出ている数字とまったく同じものを使う
+  const individual = resolveMasuIndividualStats(masu, base);
+  const statTargets = autoEnhanceStatTargetsOf(masu, base);
+  const baseStatOf = key => Math.max(0, Math.floor(Number(individual[key]) || 0));
+  const spentStatOf = key => Math.max(0, Number(masu.statPoints?.[key]) || 0);
+  const currentStatOf = key => baseStatOf(key) + spentStatOf(key);
+  const hasTarget = autoEnhanceHasTarget(masu, base);
   // 絆ポイントリセットの直後は自動で振らない(道具代を無駄にしないため)。
   // 止まっていることを黙っていると「ONなのに働かない」に見えるので、画面で必ず伝える
   const awaitsReset = masuAwaitsBondResetReallocation(masu);
@@ -35457,29 +35517,29 @@ function MasuAutoEnhanceScreen({
   const log = (autoEnhanceLog || []).filter(entry => String(entry.masuId) === String(masu.id));
 
   // null のあいだは保存値をそのまま出す
-  const statLimitText = key => {
+  const statTargetText = key => {
     if (limitDraft && limitDraft.key === key) return limitDraft.text;
-    const limit = settings.statLimits[key];
-    return limit === null ? '' : String(limit);
+    const goal = statTargets[key];
+    return goal === null ? '' : String(goal);
   };
-  const commitStatLimit = key => {
+  const commitStatTarget = key => {
     if (!limitDraft || limitDraft.key !== key) return;
     const text = limitDraft.text.trim();
     setLimitDraft(null);
     // 空欄は「上限なし」。数字以外が混ざっていたら数字だけを拾う(スマホのキーボード対策)
     const digits = text.replace(/[^0-9]/g, '');
     updateAutoEnhance(masu.id, {
-      statLimits: {
-        ...settings.statLimits,
+      statTargets: {
+        ...statTargets,
         [key]: digits === '' ? null : Number(digits)
       }
     });
   };
-  const setStatLimit = (key, value) => {
+  const setStatTarget = (key, value) => {
     setLimitDraft(null);
     updateAutoEnhance(masu.id, {
-      statLimits: {
-        ...settings.statLimits,
+      statTargets: {
+        ...statTargets,
         [key]: value
       }
     });
@@ -35501,7 +35561,7 @@ function MasuAutoEnhanceScreen({
   const clearAll = () => {
     setLimitDraft(null);
     updateAutoEnhance(masu.id, {
-      statLimits: {
+      statTargets: {
         hp: 0,
         atk: 0,
         def: 0,
@@ -35598,21 +35658,21 @@ function MasuAutoEnhanceScreen({
     className: "mt-2 rounded-xl border border-cyan-400/50 bg-cyan-950/30 px-2.5 py-2 text-[9px] font-black text-cyan-200 leading-relaxed"
   }, "\u7D46\u30DD\u30A4\u30F3\u30C8\u30EA\u30BB\u30C3\u30C8\u306E\u76F4\u5F8C\u306A\u306E\u3067\u3001\u3044\u307E\u306F\u81EA\u52D5\u3067\u632F\u308A\u307E\u305B\u3093\u3002\u632F\u308A\u76F4\u3059\u305F\u3081\u306E\u9053\u5177\u3092\u4F7F\u3063\u305F\u3070\u304B\u308A\u306A\u306E\u3067\u3001\u52DD\u624B\u306B\u632F\u3063\u3066\u3057\u307E\u308F\u306A\u3044\u3088\u3046\u306B\u3057\u3066\u3044\u307E\u3059\u3002\u901A\u5E38\u5F37\u5316\u3067\u632F\u308A\u76F4\u3059\u304B\u3001\u4E0B\u306E\u300C\u3053\u306E\u5185\u5BB9\u3067\u3044\u307E\u3059\u3050\u632F\u308B\u300D\u3092\u62BC\u3059\u3068\u3001\u305D\u3053\u304B\u3089\u518D\u958B\u3057\u307E\u3059\u3002"), settings.enabled && !hasTarget && /*#__PURE__*/React.createElement("div", {
     className: "mt-2 rounded-xl border border-amber-500/50 bg-amber-950/30 px-2.5 py-2 text-[9px] font-black text-amber-200 leading-relaxed"
-  }, "\u632F\u3063\u3066\u3088\u3044\u5148\u304C\u307E\u30601\u3064\u3082\u306A\u3044\u306E\u3067\u3001ON\u3067\u3082\u4F55\u3082\u632F\u3089\u308C\u307E\u305B\u3093\u3002\u4E0B\u306E\u4E0A\u9650\u3092\u6C7A\u3081\u308B\u304B\u3001\u300C\u3044\u307E\u306E\u914D\u5206\u3092\u4E0A\u9650\u3068\u3057\u3066\u53D6\u308A\u8FBC\u3080\u300D\u3092\u62BC\u3057\u3066\u304F\u3060\u3055\u3044\u3002"), /*#__PURE__*/React.createElement("div", {
+  }, "\u632F\u3063\u3066\u3088\u3044\u5148\u304C\u307E\u30601\u3064\u3082\u306A\u3044\u306E\u3067\u3001ON\u3067\u3082\u4F55\u3082\u632F\u3089\u308C\u307E\u305B\u3093\u3002\u4E0B\u3067\u76EE\u6A19\u3092\u6C7A\u3081\u308B\u304B\u3001\u300C\u3044\u307E\u306E\u5024\u3092\u76EE\u6A19\u3068\u3057\u3066\u53D6\u308A\u8FBC\u3080\u300D\u3092\u62BC\u3057\u3066\u304F\u3060\u3055\u3044\u3002"), /*#__PURE__*/React.createElement("div", {
     className: "mt-2 text-[8px] font-bold text-slate-500 leading-relaxed"
-  }, "\u8A2D\u5B9A\u306F\u8EE2\u751F\u3057\u3066\u3082\u6B8B\u308A\u307E\u3059\u3002\u4E0A\u9650\u307E\u3067\u632F\u308A\u7D42\u308F\u308B\u3068\u3001\u6B8B\u3063\u305F\u5F37\u5316\u30DD\u30A4\u30F3\u30C8\u306F\u305D\u306E\u307E\u307E\u624B\u5143\u306B\u6B8B\u308B\u306E\u3067\u3001\u624B\u3067\u632F\u308B\u3053\u3068\u3082\u3067\u304D\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("div", {
+  }, "\u8A2D\u5B9A\u306F\u8EE2\u751F\u3057\u3066\u3082\u6B8B\u308A\u307E\u3059\u3002\u76EE\u6A19\u307E\u3067\u5C4A\u304F\u3068\u6B62\u307E\u308A\u3001\u6B8B\u3063\u305F\u5F37\u5316\u30DD\u30A4\u30F3\u30C8\u306F\u305D\u306E\u307E\u307E\u624B\u5143\u306B\u6B8B\u308B\u306E\u3067\u3001\u624B\u3067\u632F\u308B\u3053\u3068\u3082\u3067\u304D\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-2 gap-2"
   }, /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: captureCurrent,
     className: "min-h-[46px] rounded-xl bg-slate-800 border border-lime-400/40 text-lime-200 text-[10px] font-black active:scale-95 px-2 leading-tight"
-  }, "\u3044\u307E\u306E\u914D\u5206\u3092", /*#__PURE__*/React.createElement("br", null), "\u4E0A\u9650\u3068\u3057\u3066\u53D6\u308A\u8FBC\u3080"), /*#__PURE__*/React.createElement("button", {
+  }, "\u3044\u307E\u306E\u5024\u3092", /*#__PURE__*/React.createElement("br", null), "\u76EE\u6A19\u3068\u3057\u3066\u53D6\u308A\u8FBC\u3080"), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: clearAll,
     className: "min-h-[46px] rounded-xl bg-slate-800 border border-white/10 text-slate-300 text-[10px] font-black active:scale-95 px-2 leading-tight"
   }, "\u3059\u3079\u3066", /*#__PURE__*/React.createElement("br", null), "\u300C\u632F\u3089\u306A\u3044\u300D\u306B\u623B\u3059")), /*#__PURE__*/React.createElement("div", {
     className: "text-[8px] text-slate-500 font-bold leading-relaxed px-1"
-  }, "\u300C\u3044\u307E\u306E\u914D\u5206\u3092\u4E0A\u9650\u3068\u3057\u3066\u53D6\u308A\u8FBC\u3080\u300D\u306F\u3001\u3053\u306E\u5B50\u306B\u3044\u307E\u632F\u3063\u3066\u3042\u308B\u5185\u5BB9\u3092\u305D\u306E\u307E\u307E\u4E0A\u9650\u306B\u5199\u3057\u307E\u3059\u3002\u8EE2\u751F\u3059\u308B\u524D\u306B\u62BC\u3057\u3066\u304A\u304F\u3068\u3001\u8EE2\u751F\u5F8C\u306E\u5468\u56DE\u3067\u540C\u3058\u5F62\u307E\u3067\u81EA\u52D5\u3067\u623B\u308A\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
+  }, "\u300C\u3044\u307E\u306E\u5024\u3092\u76EE\u6A19\u3068\u3057\u3066\u53D6\u308A\u8FBC\u3080\u300D\u306F\u3001\u3053\u306E\u5B50\u306E\u3044\u307E\u306E\u6570\u5024\u3092\u305D\u306E\u307E\u307E\u76EE\u6A19\u306B\u5199\u3057\u307E\u3059\u3002\u8EE2\u751F\u3059\u308B\u524D\u306B\u62BC\u3057\u3066\u304A\u304F\u3068\u3001\u8EE2\u751F\u5F8C\u306E\u5468\u56DE\u3067\u540C\u3058\u6570\u5024\u307E\u3067\u81EA\u52D5\u3067\u623B\u308A\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
     className: "rounded-2xl border border-lime-500/30 bg-black/40 p-3"
   }, /*#__PURE__*/React.createElement("div", {
     className: "text-[10px] font-black text-lime-300 uppercase tracking-wider mb-1.5"
@@ -35631,7 +35691,7 @@ function MasuAutoEnhanceScreen({
     className: "mt-2 w-full min-h-[44px] rounded-xl bg-gradient-to-r from-lime-600 to-emerald-600 text-white font-black text-[11px] active:scale-95"
   }, "\u3053\u306E\u5185\u5BB9\u3067\u3044\u307E\u3059\u3050\u632F\u308B")) : /*#__PURE__*/React.createElement("div", {
     className: "text-[9px] text-amber-300 font-bold"
-  }, "\u4E0A\u9650\u307E\u3067\u632F\u308A\u7D42\u308F\u3063\u3066\u3044\u308B\u306E\u3067\u3001\u3044\u307E\u306E\u8A2D\u5B9A\u3067\u306F\u632F\u308B\u5148\u304C\u3042\u308A\u307E\u305B\u3093\u3002")), /*#__PURE__*/React.createElement("div", {
+  }, "\u76EE\u6A19\u307E\u3067\u5C4A\u3044\u3066\u3044\u308B\u306E\u3067\u3001\u3044\u307E\u306E\u8A2D\u5B9A\u3067\u306F\u632F\u308B\u5148\u304C\u3042\u308A\u307E\u305B\u3093\u3002")), /*#__PURE__*/React.createElement("div", {
     className: "bg-slate-900 border border-lime-500/40 rounded-3xl p-3 shadow-xl"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between gap-2 mb-2"
@@ -35646,11 +35706,14 @@ function MasuAutoEnhanceScreen({
   }, settings.order.map((target, rank) => {
     const aptIndex = autoEnhanceAptIndexOf(target);
     const isApt = aptIndex != null;
-    const limit = isApt ? settings.aptLimits[aptIndex] : settings.statLimits[target];
+    const limit = isApt ? settings.aptLimits[aptIndex] : statTargets[target];
     const active = isApt ? limit !== null : limit === null || limit > 0;
     const gain = isApt ? 0 : STAT_POINT_GAIN[target] || 1;
-    const spentValue = isApt ? 0 : Math.max(0, Number(masu.statPoints?.[target]) || 0);
-    const spentPoints = isApt ? 0 : Math.ceil(spentValue / gain);
+    const baseValue = isApt ? 0 : baseStatOf(target);
+    const spentValue = isApt ? 0 : spentStatOf(target);
+    const currentValue = isApt ? 0 : currentStatOf(target);
+    // 目標まであと何ポイント要るか。1Pあたりの上昇量で割り切れないぶんは切り捨て
+    const neededPoints = isApt || limit === null || limit <= 0 ? 0 : Math.max(0, Math.floor((limit - currentValue) / gain));
     const choices = isApt ? aptChoices(aptIndex) : [];
     return /*#__PURE__*/React.createElement("div", {
       key: target,
@@ -35700,53 +35763,57 @@ function MasuAutoEnhanceScreen({
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-[9px] font-bold text-slate-400 shrink-0"
     }, "\u3044\u307E"), /*#__PURE__*/React.createElement("span", {
-      className: "text-[11px] font-mono font-black text-emerald-300 shrink-0"
-    }, "+", spentValue), /*#__PURE__*/React.createElement("span", {
-      className: "text-[8px] text-slate-600 shrink-0"
-    }, "(", spentPoints, "P)"), /*#__PURE__*/React.createElement("span", {
+      className: "text-[13px] font-mono font-black text-white shrink-0"
+    }, currentValue), /*#__PURE__*/React.createElement("span", {
       className: "text-[9px] font-bold text-slate-400 shrink-0"
-    }, "\u2192 \u4E0A\u9650"), /*#__PURE__*/React.createElement("label", {
+    }, "\u2192 \u3053\u3053\u307E\u3067"), /*#__PURE__*/React.createElement("label", {
       className: "flex flex-1 basis-16 min-w-0 items-center gap-0.5"
     }, /*#__PURE__*/React.createElement("input", {
       "data-auto-enhance-limit": target,
-      "aria-label": `${rowLabel(target)}へ振ってよい強化ポイントの上限`,
+      "aria-label": `${rowLabel(target)}をいくつまで上げてよいか`,
       type: "text",
       inputMode: "numeric",
       pattern: "[0-9]*",
       enterKeyHint: "done",
       autoComplete: "off",
       placeholder: "\u4E0A\u9650\u306A\u3057",
-      value: statLimitText(target),
+      value: statTargetText(target),
       onFocus: event => event.currentTarget.select(),
       onChange: event => setLimitDraft({
         key: target,
         text: event.currentTarget.value
       }),
-      onBlur: () => commitStatLimit(target),
+      onBlur: () => commitStatTarget(target),
       onKeyDown: event => {
         if (event.key === 'Enter') event.currentTarget.blur();
       },
-      className: "w-full min-w-0 h-10 rounded-lg border border-lime-400/40 bg-slate-950 px-1 text-center text-[11px] font-mono font-black text-white outline-none focus:border-lime-300 placeholder:text-slate-600 placeholder:font-bold"
-    }), /*#__PURE__*/React.createElement("span", {
-      className: "text-[9px] font-black text-lime-300 shrink-0"
-    }, "P")), /*#__PURE__*/React.createElement("button", {
+      className: "w-full min-w-0 h-10 rounded-lg border border-lime-400/40 bg-slate-950 px-1 text-center text-[13px] font-mono font-black text-white outline-none focus:border-lime-300 placeholder:text-[10px] placeholder:text-slate-600 placeholder:font-bold"
+    })), /*#__PURE__*/React.createElement("button", {
       type: "button",
       "aria-label": `${rowLabel(target)}を上限なしにする`,
       "aria-pressed": limit === null,
-      onClick: () => setStatLimit(target, null),
+      onClick: () => setStatTarget(target, null),
       className: `w-9 h-10 shrink-0 rounded-lg text-[11px] font-black active:scale-95 ${limit === null ? 'bg-lime-500 text-slate-950' : 'bg-slate-700 text-slate-300'}`
     }, "\u221E"), /*#__PURE__*/React.createElement("button", {
       type: "button",
       "aria-label": `${rowLabel(target)}を振らないにする`,
       "aria-pressed": limit === 0,
-      onClick: () => setStatLimit(target, 0),
+      onClick: () => setStatTarget(target, 0),
       className: `w-9 h-10 shrink-0 rounded-lg text-[11px] font-black active:scale-95 ${limit === 0 ? 'bg-slate-500 text-slate-950' : 'bg-slate-700 text-slate-300'}`
-    }, "\u2715")), !isApt && limit !== null && limit > 0 && /*#__PURE__*/React.createElement("div", {
+    }, "\u2715")), !isApt && /*#__PURE__*/React.createElement("div", {
       className: "mt-1 text-[8px] font-bold text-slate-500"
-    }, "\u4E0A\u9650\u307E\u3067\u632F\u308B\u3068 ", STAT_POINT_KEYS[target], " +", limit * gain, "\uFF08\u3044\u307E +", spentValue, "\uFF09"));
+    }, "\u7D20\u306E\u5024 ", baseValue, spentValue > 0 && /*#__PURE__*/React.createElement("span", {
+      className: "text-emerald-400"
+    }, " \uFF0B \u5F37\u5316 ", spentValue), " \uFF0F \u5F37\u5316P1\u3064\u3067 +", gain, limit === null && /*#__PURE__*/React.createElement("span", {
+      className: "text-lime-400"
+    }, " \uFF0F \u4E0A\u9650\u306A\u3057\uFF08\u632F\u308C\u308B\u3060\u3051\u632F\u308A\u307E\u3059\uFF09"), limit !== null && limit > 0 && (neededPoints > 0 ? /*#__PURE__*/React.createElement("span", {
+      className: "text-lime-400"
+    }, " \uFF0F \u76EE\u6A19\u307E\u3067 \u3042\u3068 ", neededPoints, "P") : /*#__PURE__*/React.createElement("span", {
+      className: "text-slate-400"
+    }, " \uFF0F \u76EE\u6A19\u306B\u5C4A\u3044\u3066\u3044\u307E\u3059"))));
   })), /*#__PURE__*/React.createElement("div", {
     className: "mt-2 text-[8px] text-slate-500 font-bold leading-relaxed"
-  }, "\u30B9\u30C6\u30FC\u30BF\u30B9\u306E\u4E0A\u9650\u306F\u300C\u305D\u306E\u80FD\u529B\u3078\u632F\u3063\u3066\u3088\u3044\u5F37\u5316\u30DD\u30A4\u30F3\u30C8\u306E\u6570\u300D\u3067\u3059\u3002\u7A7A\u6B04\u304B\u221E\u3067\u4E0A\u9650\u306A\u3057\u3001\u2715\u3067\u632F\u308A\u307E\u305B\u3093\u3002\u9593\u5408\u3044\u9069\u6027\u306F\u3044\u307E\u3088\u308A\u4E0A\u306E\u6BB5\u968E\u3060\u3051\u3092\u76EE\u6A19\u306B\u9078\u3079\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("div", {
+  }, "\u30B9\u30C6\u30FC\u30BF\u30B9\u306F\u300C\u305D\u306E\u80FD\u529B\u3092\u5408\u8A08\u3044\u304F\u3064\u307E\u3067\u4E0A\u3052\u3066\u3088\u3044\u304B\u300D\u3067\u6C7A\u3081\u307E\u3059\uFF08\u753B\u9762\u306B\u51FA\u3066\u3044\u308B\u6570\u5024\u305D\u306E\u307E\u307E\u3067\u3059\uFF09\u3002\u7A7A\u6B04\u304B\u221E\u3067\u4E0A\u9650\u306A\u3057\u3001\u2715\u3067\u632F\u308A\u307E\u305B\u3093\u3002\u5F37\u5316P1\u3064\u3067\u4E0A\u304C\u308B\u91CF\u306F\u6C7A\u307E\u3063\u3066\u3044\u308B\u306E\u3067\u3001\u5272\u308A\u5207\u308C\u306A\u3044\u3068\u304D\u306F\u76EE\u6A19\u3092\u8D85\u3048\u306A\u3044\u624B\u524D\u3067\u6B62\u307E\u308A\u307E\u3059\u3002\u9593\u5408\u3044\u9069\u6027\u306F\u3044\u307E\u3088\u308A\u4E0A\u306E\u6BB5\u968E\u3060\u3051\u3092\u76EE\u6A19\u306B\u9078\u3079\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("div", {
     className: "rounded-2xl border border-white/10 bg-black/30 p-3"
   }, /*#__PURE__*/React.createElement("div", {
     className: "text-[10px] font-black text-slate-300 uppercase tracking-wider mb-1.5"
