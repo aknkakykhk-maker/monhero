@@ -44,7 +44,7 @@ S/A 等級は `REGRESSION_RISK_MAP.md` に基づく。
 | 4 純関数の切り出し | **実質完了**(2026-09-11)。共有層21部品のうち8つが pure。残りは JSX・DOM・保存を本質的に含む | — | — | — |
 | 5 バトル計算 | **完了** | — | — | — |
 | 6 画面の切り出し | **完了**(2026-09-11)。残るのは `BATTLE` の `token.alive` と `MASU_PATTERN_DEBUG` | — | — | — |
-| 7 描画・キャッシュ | 3本目まで完了(染色の2つのキャッシュに上限、Tailwind 静的化の調査)。残りは一覧行の `React.memo`、静的な `style` の定数化 | 低〜中 | Sonnet 5 | high |
+| 7 描画・キャッシュ | 4本目まで完了。**`React.memo` は測ったうえで「入れない」と決めた**(長いタスク0ms)。残りは静的な `style` の定数化(522箇所) | 低〜中 | Sonnet 5 | high |
 | 8 音声管理・SRI | 移動は parts 分割で完了(`14-audio.jsx`)。**SRI はこの環境では付けられない**——ハッシュを取るのに `cdnjs.cloudflare.com` へ出る必要があり、ネットワークポリシーで 403。ネットワークのある環境で `tone/14.8.49/Tone.js` の sha384 を取って `integrity` / `crossOrigin` を付ける | 低 | Sonnet 5 | medium |
 | 9 音ゲー基盤 | タイミング基盤の整理 | **高**(実機でしか分からない) | **Opus 5** | **max** |
 | 10 残存負債 | 残り | 低〜中 | Sonnet 5 | high |
@@ -73,37 +73,36 @@ S/A 等級は `REGRESSION_RISK_MAP.md` に基づく。
 
 ## 次の一手
 
-**再描画を測る道具を作る(`React.memo` に入る前に)** — **Sonnet 5 / effort high**
+**STEP 10 残存負債 — Tailwind を静的CSSへ** — **Sonnet 5 / effort high**
 
-STEP 1・2・4・5・6 は完了、STEP 3 は5本目まで、STEP 7 は3本目まで完了
+STEP 1・2・4・5・6 は完了、STEP 3 は5本目まで、STEP 7 は4本目まで完了
 (進捗は [`README.md`](README.md))。落ちている検査は0本。
 
-STEP 7 に残っているのは `React.memo` と `style={{…}}` の定数化。
-だが **`memo` には先に計測の手立てが要る。**
+STEP 7 の `React.memo` は**測ったうえで「入れない」と決めた**。
+ランキング50件でも描画は21〜62ms、画面が固まる長いタスクは全画面0ms
+([`RENDER_COST_REPORT.md`](RENDER_COST_REPORT.md))。
+実機で引っかかりを感じたら `node tools/browser/screen-render-cost-check.js` で測ってから考える。
 
-- `browser/perf-check` は**読み込み時間しか測らない**。再描画コストを測る道具が無い
-- `memo` を `MonsterHeroGame` の中で定義すると、再描画のたびに作り直されて**効かない**。
-  効かせるには共有層へ切り出して props を渡す形になり、STEP 6 の画面切り出しと同じ作業量になる
-- しかも props に毎回新しいオブジェクト(`entry`)や関数を渡していると、切り出しても効かない
+次に効くのは **Tailwind の静的化**(TD-13・High)。
+調べたところ**切り替えられる**(欠けるクラス0件・静的CSS 111KB。
+[`TAILWIND_STATIC_REPORT.md`](TAILWIND_STATIC_REPORT.md))。
+いまは起動のたびに「CDNからスクリプトを取る → ソースを走査 → CSSを組み立てる」が走っている。
 
-つまり「入れたが効かない」「行が更新されなくなる」のどちらにも転びうるのに、
-**どちらになったか確かめる手段が無い**。先に作るべきはその手段。
+**決めることが4つある。**
 
-**作るもの**: ランキングを開いた状態で、無関係な再描画を起こしたときに
-行のDOMが書き換わるかを `MutationObserver` で数える実ブラウザ検査。
-実装を汚さずに測れる(`data-ranking-kind` が既に付いている)。
+1. 生成をどこで走らせるか(`tools/build.js` に乗せるか、別のコマンドにするか)
+2. 出力をどこへ置くか、キャッシュキーをどう打つか(`data/*.js` と同じ仕組みに乗せられる)
+3. `index.html` 125行目の `tailwind.config`(`landscape:` を差し替えている)を生成側の設定へ移す
+4. CI(`compiled-check.yml`)で生成物が最新かをどう見るか
 
-これがあれば、`memo` を入れる前後で数値を比べられる。
-**効果が出ないと分かったら、入れないという判断もできる**(TD-22 は「memo 0個」を
-問題として挙げているが、効かないなら複雑さが増えるだけ)。
-
-> **Tailwind の静的化は「切り替えられる」と分かった**(欠けるクラス0件・静的CSS 111KB)。
-> 手順と注意は [`TAILWIND_STATIC_REPORT.md`](TAILWIND_STATIC_REPORT.md)。
-> 起動のたびのCSS生成が消えるので効果は大きいが、配信物の作り方(生成・キャッシュキー・
-> `tailwind.config` の移設)を決める必要があるので、STEP 10 で腰を据えてやるのがよい。
+**切り替えたら必ず目で見て確かめる。** `layout-consistency-check` / `home-layout-check` /
+`--area ui` を通したうえで、実機でも1周すること。数え方は近似なので、
+「0件」を鵜呑みにしない。
 
 > **STEP 8 の SRI はこの環境ではできない。** `cdnjs.cloudflare.com` へ出られないため。
 > ネットワークのある環境での取り方は割り当て表の STEP 8 欄に書いた。
+> **Tailwind を静的化するなら、そのときに Tone.js の SRI も一緒に片付くか検討するとよい**
+> (どちらも「外部CDNに頼らない」方向の作業)。
 
 **props の洗い出しは手でやらない。** props を空にした仮のコンポーネントへ JSX を移し、
 `node tools/undefined-reference-check.js` を通すと、足りない参照が全部一覧で出る。
