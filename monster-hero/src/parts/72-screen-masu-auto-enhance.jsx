@@ -29,6 +29,9 @@ function MasuAutoEnhanceScreen({
       const resolvedApt = resolveMasuDistAptitude(masu, base);
       const baseApt = masuTranscendBaseAptitude(masu, base);
       const hasTarget = autoEnhanceHasTarget(settings);
+      // 絆ポイントリセットの直後は自動で振らない(道具代を無駄にしないため)。
+      // 止まっていることを黙っていると「ONなのに働かない」に見えるので、画面で必ず伝える
+      const awaitsReset = masuAwaitsBondResetReallocation(masu);
       // いま持っているポイントを設定どおりに振ったらどうなるか。設定を変えるたびに作り直すので、
       // 「この順番でいいのか」を保存前と同じ計算で確かめられる
       const planned = buildMasuAutoEnhancePlan({ ...masu, autoEnhance:{ ...settings, enabled:true } }, base);
@@ -110,6 +113,11 @@ function MasuAutoEnhanceScreen({
                   ? '強化ポイントが入るたびに、下の順番で上限まで自動で振ります。バトル・スキップ・合体・限界突破・転生のあと、AUTO∞の周回中も同じように働きます。'
                   : 'OFFのあいだ、この子の強化ポイントは自動では振られません。'}
               </div>
+              {settings.enabled&&awaitsReset&&(
+                <div className="mt-2 rounded-xl border border-cyan-400/50 bg-cyan-950/30 px-2.5 py-2 text-[9px] font-black text-cyan-200 leading-relaxed">
+                  絆ポイントリセットの直後なので、いまは自動で振りません。振り直すための道具を使ったばかりなので、勝手に振ってしまわないようにしています。通常強化で振り直すか、下の「この内容でいますぐ振る」を押すと、そこから再開します。
+                </div>
+              )}
               {settings.enabled&&!hasTarget&&(
                 <div className="mt-2 rounded-xl border border-amber-500/50 bg-amber-950/30 px-2.5 py-2 text-[9px] font-black text-amber-200 leading-relaxed">
                   振ってよい先がまだ1つもないので、ONでも何も振られません。下の上限を決めるか、「いまの配分を上限として取り込む」を押してください。
@@ -133,7 +141,7 @@ function MasuAutoEnhanceScreen({
                 : plannedLines.length>0
                   ? (<>
                       <div className="space-y-0.5">{plannedLines.map((line,idx)=><div key={idx} className="text-[10px] font-black text-white">・{line}</div>)}</div>
-                      <div className="mt-1 text-[8px] font-bold text-slate-400">{planned.used}P を使い、{points-planned.used}P が残ります。</div>
+                      <div className="mt-1 text-[8px] font-bold text-slate-400">{planned.used}P を使い、{points-planned.used}P が残ります。{awaitsReset&&'（絆ポイントリセットの直後なので、自動では振りません）'}</div>
                       <button type="button" onClick={()=>applyAutoEnhanceNow(masu.id)} className="mt-2 w-full min-h-[44px] rounded-xl bg-gradient-to-r from-lime-600 to-emerald-600 text-white font-black text-[11px] active:scale-95">この内容でいますぐ振る</button>
                     </>)
                   : <div className="text-[9px] text-amber-300 font-bold">上限まで振り終わっているので、いまの設定では振る先がありません。</div>}

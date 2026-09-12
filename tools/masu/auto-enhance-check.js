@@ -173,7 +173,32 @@ const makeMasu = (autoEnhance, extra = {}) => m.normalizeMasuProgression({
   assert.ok(result.results[0].lines.some(line => line.includes('ライフ')), '何が増えたかを文にできる');
 }
 
-// ---- 11. 優先順位の入れ替え ----
+// ---- 11. 絆ポイントリセットの直後は自動で振らない ----
+// 「絆ポイントリセットの書」は500ダイヤの、振り直すための道具。
+// 使った直後に自動で振ってしまうと、振り直す機会ごと道具代を失わせることになる
+{
+  const settings = { enabled:true, order:['hp','atk','def','guts','apt0','apt1','apt2','apt3'],
+    statLimits:{ hp:null, atk:0, def:0, guts:0 }, aptLimits:[null,null,null,null] };
+  const grown = m.applyMasuAutoEnhance(makeMasu(settings, { distAptPoints:6 })).masu;
+  assert.strictEqual(grown.statPoints.hp, 60, 'まず上限なしで振っておく');
+  const reset = m.buildMasuBondPointReset(grown, base);
+  assert.ok(reset && reset.nextMasu.distAptPoints === 6, 'リセットで6Pが未使用へ戻る');
+  assert.ok(reset.nextMasu.bondResetAllocationSnapshot, 'リセット前の配分が下書きとして残る');
+  assert.strictEqual(m.masuAwaitsBondResetReallocation(reset.nextMasu), true, 'リセット直後だと分かる');
+  assert.strictEqual(m.applyMasuAutoEnhance(reset.nextMasu), null, 'リセット直後は自動で振らない');
+  assert.strictEqual(m.applyAutoEnhanceToMasuMons([reset.nextMasu]), null, '全体へ通しても振らない');
+  // 自分で「いますぐ振る」を押したときだけ振り、復元の下書きの役目も終わらせる
+  const manual = m.applyMasuAutoEnhance(reset.nextMasu, { manual:true });
+  assert.ok(manual && manual.used === 6, '「いますぐ振る」なら振れる');
+  assert.strictEqual(Object.prototype.hasOwnProperty.call(manual.masu, 'bondResetAllocationSnapshot'), false,
+    '自分で振ったら復元の下書きは残さない（いま振ったぶんの上へ重ねて復元されてしまうため）');
+  assert.strictEqual(m.masuAwaitsBondResetReallocation(manual.masu), false, 'そこから自動強化が再開する');
+  // 振り直しが終われば(下書きが消えれば)、次に貯まったぶんからは自動で振る
+  const later = m.applyMasuAutoEnhance({ ...manual.masu, distAptPoints:2 });
+  assert.ok(later && later.used === 2, '振り直しのあとは自動で振る');
+}
+
+// ---- 12. 優先順位の入れ替え ----
 {
   const masu = makeMasu({ enabled:true, order:['hp','atk','def','guts','apt0','apt1','apt2','apt3'] });
   const moved = m.buildMasuAutoEnhanceOrderMove(masu, 'atk', -1);
@@ -182,7 +207,7 @@ const makeMasu = (autoEnhance, extra = {}) => m.normalizeMasuProgression({
   assert.strictEqual(m.buildMasuAutoEnhanceOrderMove(masu, 'apt3', 1), masu, '末尾より下へは動かない');
 }
 
-// ---- 12. 画面と本体がつながっているか ----
+// ---- 13. 画面と本体がつながっているか ----
 {
   const screen = fs.readFileSync('monster-hero/src/parts/72-screen-masu-auto-enhance.jsx', 'utf8');
   const app = fs.readFileSync('monster-hero/src/parts/60-app.jsx', 'utf8');
@@ -193,6 +218,11 @@ const makeMasu = (autoEnhance, extra = {}) => m.normalizeMasuProgression({
   assert.ok(app.includes("gameState==='MASU_AUTO_ENHANCE'&&masuMonDetail&&"), '画面が本体からマウントされている');
   assert.ok(app.includes('applyAutoEnhanceToMasuMons(masuMonsRef.current'), '強化ポイントが増えたら自動で振る仕掛けがある');
   assert.ok(app.includes("storeSet(AUTO_ENHANCE_INTRO_KEY"), '使い方案内の保存キーが新設されている');
+  // storeGet はキーが無いときも既定値を返す。既定値を true にすると
+  // 「保存が無い＝見た扱い」になり、案内が誰にも一度も出ない
+  assert.ok(app.includes("storeGet(AUTO_ENHANCE_INTRO_KEY, false, false) === true"),
+    '使い方案内は、保存が無いうちは「まだ見ていない」として出す');
+  assert.ok(screen.includes('masuAwaitsBondResetReallocation'), '絆ポイントリセット直後は画面でもそう伝える');
   assert.ok(enhance.includes('onOpenAutoEnhance'), '通常強化の画面からオート強化へ行ける');
 }
 

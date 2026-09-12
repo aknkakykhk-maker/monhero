@@ -161,6 +161,8 @@ const EXPORTED_NAMES = [
   'buildMasuAutoEnhanceUpdate',
   'buildMasuAutoEnhanceOrderMove',
   'autoEnhanceHasTarget',
+  'masuAwaitsBondResetReallocation',
+  'buildMasuBondPointReset',
   'describeAutoEnhancePlan',
   'normalizeMasuProgression',
   'resetMasuForRebirth',

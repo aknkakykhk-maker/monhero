@@ -20,6 +20,10 @@ const check = (name, ok, detail = '') => {
 };
 
 const seed = () => {
+  // addInitScript は再読み込みのたびに走る。あとで書き換えた保存内容を上書きしないよう、
+  // 一度そろえたら二度目からは何もしない(下で「リセット直後」を作って再読み込みするため)
+  if (localStorage.getItem('mh_check_seeded')) return;
+  localStorage.setItem('mh_check_seeded', '1');
   localStorage.setItem('mh_breeder_name', JSON.stringify('テスト'));
   localStorage.setItem('mh_breeder_icon', JSON.stringify('Mocchi'));
   localStorage.setItem('mh_onboarded', JSON.stringify(true));
@@ -138,6 +142,9 @@ const masuOf = (id) => (JSON.parse(localStorage.getItem('mh_masu_mons')) || []).
     await page.waitForTimeout(1500);
     check('強化を開ける', await clickAria('オートONを強化'));
     await page.waitForTimeout(1200);
+    // 使い方案内は、保存が無いうちは必ず出る(既定値の取り違えで一度も出ない、を防ぐ)
+    check('強化画面に、はじめての使い方案内が出る',
+      await page.evaluate(() => /強化を毎回手で振るのが大変なら/.test(document.body.innerText)));
     check('オート強化のタブがある', await clickText('^オート強化'));
     await page.waitForTimeout(1200);
     // ログインボーナスなど、起動のあとから重なってくるお知らせは先に閉じる。
@@ -184,6 +191,25 @@ const masuOf = (id) => (JSON.parse(localStorage.getItem('mh_masu_mons')) || []).
     check('いまの配分を上限として取り込める',
       captured.autoEnhance.statLimits.atk === 3 && captured.autoEnhance.statLimits.hp === 2,
       JSON.stringify(captured.autoEnhance.statLimits));
+
+    // ---- 絆ポイントリセットの書を使ったあと、自動で振り直されてしまわないか ----
+    // 500ダイヤの道具なので、使った直後に自動で振ると道具代ごと無駄になる
+    await page.evaluate(() => {
+      const list = JSON.parse(localStorage.getItem('mh_masu_mons'));
+      const target = list.find(m => m.id === 'auto1');
+      target.distAptPoints = 6;
+      target.statPoints = { hp: 0, atk: 0, def: 0, guts: 0 };
+      target.bondResetAllocationSnapshot = { version: 1, apt: [0, 0, 0, 0], stat: { hp: 2, atk: 3, def: 0, guts: 0 } };
+      localStorage.setItem('mh_masu_mons', JSON.stringify(list));
+    });
+    await page.reload({ waitUntil: 'load', timeout: 60000 });
+    await page.waitForFunction(() => document.getElementById('root')?.children.length > 0, { timeout: 60000 });
+    await page.waitForTimeout(4000);
+    const afterReset = await page.evaluate(masuOf, 'auto1');
+    check('絆ポイントリセットの直後は自動で振らない',
+      afterReset.distAptPoints === 6 && afterReset.statPoints.hp === 0 && afterReset.statPoints.atk === 0,
+      `残り${afterReset.distAptPoints}P / ライフ+${afterReset.statPoints.hp} ちから+${afterReset.statPoints.atk}`);
+    check('復元の下書きも消さずに残す', !!afterReset.bondResetAllocationSnapshot);
 
     check('実行時エラーが出ていない', errors.length === 0, errors.slice(0, 2).join(' / '));
   } catch (e) {

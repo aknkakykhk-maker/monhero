@@ -529,15 +529,25 @@ const describeAutoEnhancePlan = (plan) => {
   });
   return lines;
 };
-// 1体ぶんの自動強化。振るものが無ければ null(呼び出し側は保存もしない)
-const applyMasuAutoEnhance = (masu) => {
+// 絆ポイントリセットの直後かどうか(振り直しの下書きが残っているか)。
+// 「絆ポイントリセットの書」は500ダイヤの、振り直すための道具。使った直後に自動で振ってしまうと、
+// 振り直す機会ごと道具代を失わせることになるので、ここが残っているあいだは自動では振らない。
+// 自分で振り直すか(spendPointsBulk が下書きを消す)、オート強化の「いますぐ振る」を押した時点で再開する。
+const masuAwaitsBondResetReallocation = (masu) => !!(masu && masu.bondResetAllocationSnapshot);
+// 1体ぶんの自動強化。振るものが無ければ null(呼び出し側は保存もしない)。
+// manual は「プレイヤーが自分で『いますぐ振る』を押した」とき。
+// このときだけリセット直後でも振り、手で振ったときと同じく復元の下書きの役目も終わらせる
+// (残したままだと「リセット前の配分を復元」が、いま振ったぶんの上へ重ねて出てしまう)。
+const applyMasuAutoEnhance = (masu, { manual = false } = {}) => {
   const base = (typeof ALL_PLAYER_MONSTERS !== 'undefined') ? ALL_PLAYER_MONSTERS[masu?.baseId] : null;
   if (!base) return null;
+  if (!manual && masuAwaitsBondResetReallocation(masu)) return null;
   const planned = buildMasuAutoEnhancePlan(masu, base);
   if (!planned) return null;
   const applied = applyEnhancePlanToMasu(masu, planned.plan);
   if (!applied) return null;
-  return { masu:applied.masu, used:applied.used, lines:describeAutoEnhancePlan(planned.plan) };
+  const { bondResetAllocationSnapshot: _usedResetSnapshot, ...withoutSnapshot } = applied.masu;
+  return { masu:manual ? withoutSnapshot : applied.masu, used:applied.used, lines:describeAutoEnhancePlan(planned.plan) };
 };
 // 所持マスモン全体へ一度に通す。1体も変わらなければ null を返すので、
 // 呼び出し側は「変わったときだけ保存する」を素直に書ける(保存のたびに書き込むのを防ぐ)。

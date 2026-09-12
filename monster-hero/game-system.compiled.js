@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e99232c00230f24e
+// source-sha256: 5968b6e86eb4d865
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ab077c355ac536bb
+// generated-sha256: 1f1c3be40802bf0d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-12 21:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-12 21:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1248,16 +1248,31 @@ const describeAutoEnhancePlan = plan => {
   });
   return lines;
 };
-// 1体ぶんの自動強化。振るものが無ければ null(呼び出し側は保存もしない)
-const applyMasuAutoEnhance = masu => {
+// 絆ポイントリセットの直後かどうか(振り直しの下書きが残っているか)。
+// 「絆ポイントリセットの書」は500ダイヤの、振り直すための道具。使った直後に自動で振ってしまうと、
+// 振り直す機会ごと道具代を失わせることになるので、ここが残っているあいだは自動では振らない。
+// 自分で振り直すか(spendPointsBulk が下書きを消す)、オート強化の「いますぐ振る」を押した時点で再開する。
+const masuAwaitsBondResetReallocation = masu => !!(masu && masu.bondResetAllocationSnapshot);
+// 1体ぶんの自動強化。振るものが無ければ null(呼び出し側は保存もしない)。
+// manual は「プレイヤーが自分で『いますぐ振る』を押した」とき。
+// このときだけリセット直後でも振り、手で振ったときと同じく復元の下書きの役目も終わらせる
+// (残したままだと「リセット前の配分を復元」が、いま振ったぶんの上へ重ねて出てしまう)。
+const applyMasuAutoEnhance = (masu, {
+  manual = false
+} = {}) => {
   const base = typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[masu?.baseId] : null;
   if (!base) return null;
+  if (!manual && masuAwaitsBondResetReallocation(masu)) return null;
   const planned = buildMasuAutoEnhancePlan(masu, base);
   if (!planned) return null;
   const applied = applyEnhancePlanToMasu(masu, planned.plan);
   if (!applied) return null;
+  const {
+    bondResetAllocationSnapshot: _usedResetSnapshot,
+    ...withoutSnapshot
+  } = applied.masu;
   return {
-    masu: applied.masu,
+    masu: manual ? withoutSnapshot : applied.masu,
     used: applied.used,
     lines: describeAutoEnhancePlan(planned.plan)
   };
@@ -35141,6 +35156,9 @@ function MasuAutoEnhanceScreen({
   const resolvedApt = resolveMasuDistAptitude(masu, base);
   const baseApt = masuTranscendBaseAptitude(masu, base);
   const hasTarget = autoEnhanceHasTarget(settings);
+  // 絆ポイントリセットの直後は自動で振らない(道具代を無駄にしないため)。
+  // 止まっていることを黙っていると「ONなのに働かない」に見えるので、画面で必ず伝える
+  const awaitsReset = masuAwaitsBondResetReallocation(masu);
   // いま持っているポイントを設定どおりに振ったらどうなるか。設定を変えるたびに作り直すので、
   // 「この順番でいいのか」を保存前と同じ計算で確かめられる
   const planned = buildMasuAutoEnhancePlan({
@@ -35291,7 +35309,9 @@ function MasuAutoEnhanceScreen({
     size: 16
   }), settings.enabled ? 'オート強化 ON' : 'オート強化 OFF'), /*#__PURE__*/React.createElement("div", {
     className: "mt-2 text-[9px] font-bold leading-relaxed text-slate-300"
-  }, settings.enabled ? '強化ポイントが入るたびに、下の順番で上限まで自動で振ります。バトル・スキップ・合体・限界突破・転生のあと、AUTO∞の周回中も同じように働きます。' : 'OFFのあいだ、この子の強化ポイントは自動では振られません。'), settings.enabled && !hasTarget && /*#__PURE__*/React.createElement("div", {
+  }, settings.enabled ? '強化ポイントが入るたびに、下の順番で上限まで自動で振ります。バトル・スキップ・合体・限界突破・転生のあと、AUTO∞の周回中も同じように働きます。' : 'OFFのあいだ、この子の強化ポイントは自動では振られません。'), settings.enabled && awaitsReset && /*#__PURE__*/React.createElement("div", {
+    className: "mt-2 rounded-xl border border-cyan-400/50 bg-cyan-950/30 px-2.5 py-2 text-[9px] font-black text-cyan-200 leading-relaxed"
+  }, "\u7D46\u30DD\u30A4\u30F3\u30C8\u30EA\u30BB\u30C3\u30C8\u306E\u76F4\u5F8C\u306A\u306E\u3067\u3001\u3044\u307E\u306F\u81EA\u52D5\u3067\u632F\u308A\u307E\u305B\u3093\u3002\u632F\u308A\u76F4\u3059\u305F\u3081\u306E\u9053\u5177\u3092\u4F7F\u3063\u305F\u3070\u304B\u308A\u306A\u306E\u3067\u3001\u52DD\u624B\u306B\u632F\u3063\u3066\u3057\u307E\u308F\u306A\u3044\u3088\u3046\u306B\u3057\u3066\u3044\u307E\u3059\u3002\u901A\u5E38\u5F37\u5316\u3067\u632F\u308A\u76F4\u3059\u304B\u3001\u4E0B\u306E\u300C\u3053\u306E\u5185\u5BB9\u3067\u3044\u307E\u3059\u3050\u632F\u308B\u300D\u3092\u62BC\u3059\u3068\u3001\u305D\u3053\u304B\u3089\u518D\u958B\u3057\u307E\u3059\u3002"), settings.enabled && !hasTarget && /*#__PURE__*/React.createElement("div", {
     className: "mt-2 rounded-xl border border-amber-500/50 bg-amber-950/30 px-2.5 py-2 text-[9px] font-black text-amber-200 leading-relaxed"
   }, "\u632F\u3063\u3066\u3088\u3044\u5148\u304C\u307E\u30601\u3064\u3082\u306A\u3044\u306E\u3067\u3001ON\u3067\u3082\u4F55\u3082\u632F\u3089\u308C\u307E\u305B\u3093\u3002\u4E0B\u306E\u4E0A\u9650\u3092\u6C7A\u3081\u308B\u304B\u3001\u300C\u3044\u307E\u306E\u914D\u5206\u3092\u4E0A\u9650\u3068\u3057\u3066\u53D6\u308A\u8FBC\u3080\u300D\u3092\u62BC\u3057\u3066\u304F\u3060\u3055\u3044\u3002"), /*#__PURE__*/React.createElement("div", {
     className: "mt-2 text-[8px] font-bold text-slate-500 leading-relaxed"
@@ -35320,7 +35340,7 @@ function MasuAutoEnhanceScreen({
     className: "text-[10px] font-black text-white"
   }, "\u30FB", line))), /*#__PURE__*/React.createElement("div", {
     className: "mt-1 text-[8px] font-bold text-slate-400"
-  }, planned.used, "P \u3092\u4F7F\u3044\u3001", points - planned.used, "P \u304C\u6B8B\u308A\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("button", {
+  }, planned.used, "P \u3092\u4F7F\u3044\u3001", points - planned.used, "P \u304C\u6B8B\u308A\u307E\u3059\u3002", awaitsReset && '（絆ポイントリセットの直後なので、自動では振りません）'), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => applyAutoEnhanceNow(masu.id),
     className: "mt-2 w-full min-h-[44px] rounded-xl bg-gradient-to-r from-lime-600 to-emerald-600 text-white font-black text-[11px] active:scale-95"
@@ -39008,7 +39028,9 @@ function MonsterHeroGame() {
   // ヘルプと更新履歴は探しに行った人しか読まないので、強化画面を開いた最初の1回だけ、
   // 画面のなかでも知らせる。
   // ★保存キーは新しく足す(既存の mh_* は触らない・CLAUDE.md ⑦)。
-  // ★読めなかったとき(null のまま)は「見た扱い」にして出さない。二度出るより出ないほうが害が小さい
+  // ★「見た」と保存されているときだけ出さない。保存が無いうちは出す。
+  //   storeGet は「キーが無い」ときも既定値を返すので、既定値を true にすると
+  //   保存が無い＝見た扱いになり、案内が誰にも一度も出ない
   const AUTO_ENHANCE_INTRO_KEY = 'mh_masu_auto_enhance_intro_seen_v1';
   const [autoEnhanceIntroSeen, setAutoEnhanceIntroSeen] = useState(true);
   const autoEnhanceIntroVisible = !autoEnhanceIntroSeen;
@@ -40142,8 +40164,9 @@ function MonsterHeroGame() {
       // 見た扱い(=出さない)にする。案内が二度出るより、出ないほうが害が小さい
       setQuickRhythmIntroSeen((await storeGet(QUICK_RHYTHM_INTRO_KEY, true, false)) !== false);
       setQuickRhythmBackgroundSeen((await storeGet(QUICK_RHYTHM_BACKGROUND_KEY, true, false)) !== false);
-      // オート強化の使い方案内も同じ考え方(読めなかったら出さない)
-      setAutoEnhanceIntroSeen((await storeGet(AUTO_ENHANCE_INTRO_KEY, true, false)) !== false);
+      // オート強化の使い方案内。★保存が無いとき(既存ユーザー・新規ともに)は「まだ見ていない」。
+      //   既定値を true にすると、保存が無い＝見た扱いになり、案内が一度も出ない
+      setAutoEnhanceIntroSeen((await storeGet(AUTO_ENHANCE_INTRO_KEY, false, false)) === true);
       // イベントの会話ストーリーを見たかどうか。流すかどうかの判定は、
       // wasOnboarded が決まったあと(きき・ももすけの会話と同じところ)で行う
       {
@@ -42030,6 +42053,8 @@ function MonsterHeroGame() {
         ...normalizeMasuAutoEnhance(masu.autoEnhance),
         enabled: true
       }
+    }, {
+      manual: true
     });
     if (!applied) return;
     saveMasuMonsList(current.map(m => String(m.id) === String(masuId) ? applied.masu : m));

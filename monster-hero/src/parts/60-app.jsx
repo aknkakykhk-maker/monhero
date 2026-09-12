@@ -2671,7 +2671,9 @@ function MonsterHeroGame() {
   // ヘルプと更新履歴は探しに行った人しか読まないので、強化画面を開いた最初の1回だけ、
   // 画面のなかでも知らせる。
   // ★保存キーは新しく足す(既存の mh_* は触らない・CLAUDE.md ⑦)。
-  // ★読めなかったとき(null のまま)は「見た扱い」にして出さない。二度出るより出ないほうが害が小さい
+  // ★「見た」と保存されているときだけ出さない。保存が無いうちは出す。
+  //   storeGet は「キーが無い」ときも既定値を返すので、既定値を true にすると
+  //   保存が無い＝見た扱いになり、案内が誰にも一度も出ない
   const AUTO_ENHANCE_INTRO_KEY = 'mh_masu_auto_enhance_intro_seen_v1';
   const [autoEnhanceIntroSeen, setAutoEnhanceIntroSeen] = useState(true);
   const autoEnhanceIntroVisible = !autoEnhanceIntroSeen;
@@ -3601,8 +3603,9 @@ function MonsterHeroGame() {
       // 見た扱い(=出さない)にする。案内が二度出るより、出ないほうが害が小さい
       setQuickRhythmIntroSeen(await storeGet(QUICK_RHYTHM_INTRO_KEY, true, false) !== false);
       setQuickRhythmBackgroundSeen(await storeGet(QUICK_RHYTHM_BACKGROUND_KEY, true, false) !== false);
-      // オート強化の使い方案内も同じ考え方(読めなかったら出さない)
-      setAutoEnhanceIntroSeen(await storeGet(AUTO_ENHANCE_INTRO_KEY, true, false) !== false);
+      // オート強化の使い方案内。★保存が無いとき(既存ユーザー・新規ともに)は「まだ見ていない」。
+      //   既定値を true にすると、保存が無い＝見た扱いになり、案内が一度も出ない
+      setAutoEnhanceIntroSeen(await storeGet(AUTO_ENHANCE_INTRO_KEY, false, false) === true);
       // イベントの会話ストーリーを見たかどうか。流すかどうかの判定は、
       // wasOnboarded が決まったあと(きき・ももすけの会話と同じところ)で行う
       {
@@ -5092,7 +5095,7 @@ function MonsterHeroGame() {
     const current = masuMonsRef.current || [];
     const masu = current.find(m => String(m.id) === String(masuId));
     if (!masu) return;
-    const applied = applyMasuAutoEnhance({ ...masu, autoEnhance:{ ...normalizeMasuAutoEnhance(masu.autoEnhance), enabled:true } });
+    const applied = applyMasuAutoEnhance({ ...masu, autoEnhance:{ ...normalizeMasuAutoEnhance(masu.autoEnhance), enabled:true } }, { manual:true });
     if (!applied) return;
     saveMasuMonsList(current.map(m => String(m.id) === String(masuId) ? applied.masu : m));
     pushAutoEnhanceLog([{ masuId:masu.id, name:masu.name, used:applied.used, lines:applied.lines }]);
