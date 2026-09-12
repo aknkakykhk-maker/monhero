@@ -1072,6 +1072,96 @@ const rhythmSlideExpectedLane=(note,chartTimeMs)=>{
   return fit(last?.lane,last?.timeMs);
 };
 
+// ── SLIDEの途中は「チェックポイント(判定線)」で見る ──────────────────────────
+//
+// 【2026-09-12・ユーザー指示】
+// 「スライドってずれたりしたらミス扱いになるでしょ / あれを判定線を設けてそのときに
+//   押されてなきゃミス扱いになるようにできないの？ / 音ゲーとかってだいたいそうなってない？」
+//
+// 直す前は、追従が猶予を超えて外れた**その場でノーツを打ち切って**いた
+// (holdJudgment='MISS' / failed=true / endTimeMs=chartNow-50)。3秒のSLIDEを
+// 95%なぞれていても、途中で一度滑ったら全部失う作りで、復帰する道が無かった。
+// プロセカ・バンドリ・CHUNITHM などは途中を一定間隔のチェックポイントで見て、
+// 外れたらそのチェックポイントを落とすだけにしている。ここも同じ形にする。
+//
+// ⚠️ ランキングとセーブデータを壊さないため、**SLIDEは今までどおり1ノーツ・1コンボ**の
+// ままにする(totalNotes も最大コンボも変わらない)。チェックポイントは
+// 「そのノーツのグレードを決める」ためだけに使う。1つずつノーツとして数えると
+// 満点も最大コンボも変わり、過去の記録と比べられなくなる(運用ルール⑦)。
+const RHYTHM_SLIDE_CHECKPOINT_BASE_MS=Object.freeze({
+  EASY:240, NORMAL:210, HARD:180, EXPERT:150, MASTER:125,
+});
+// 曲ごとの調整の物差し。BPMは実行時のデータに無いので、曲と難易度の**両方**を表す
+// 譜面のレベルを使う(同じMASTERでも かぜがそよぐ Lv.15 と SIX ÉTERNEL Lv.39 がある)。
+// 基準は配信中の譜面のレベルの中央値(HARD 13 / EXPERT 18 / MASTER 25)。
+// 基準どおりのレベルなら上の基準値そのまま、それより歯ごたえのある譜面ほど細かくなる。
+const RHYTHM_SLIDE_CHECKPOINT_REFERENCE_LEVEL=Object.freeze({
+  EASY:4, NORMAL:8, HARD:13, EXPERT:18, MASTER:25,
+});
+const RHYTHM_SLIDE_CHECKPOINT_MIN_MS=90;
+const RHYTHM_SLIDE_CHECKPOINT_MAX_MS=400;
+const RHYTHM_SLIDE_CHECKPOINT_SCALE_MIN=.75;
+const RHYTHM_SLIDE_CHECKPOINT_SCALE_MAX=1.35;
+// 終端の手前はチェックポイントを置かない。終わりは「離す・終点フリック」の判定が
+// 別にあるので、重ねると同じ1回のしくじりを二重に取ることになる。
+const RHYTHM_SLIDE_CHECKPOINT_TAIL_GUARD_MS=30;
+const rhythmSlideCheckpointIntervalMs=(difficultyId,level)=>{
+  const id=String(difficultyId||'').toUpperCase();
+  const base=RHYTHM_SLIDE_CHECKPOINT_BASE_MS[id]||RHYTHM_SLIDE_CHECKPOINT_BASE_MS.MASTER;
+  const reference=RHYTHM_SLIDE_CHECKPOINT_REFERENCE_LEVEL[id]||RHYTHM_SLIDE_CHECKPOINT_REFERENCE_LEVEL.MASTER;
+  const actual=Number(level);
+  const scale=Number.isFinite(actual)&&actual>0
+    ?Math.max(RHYTHM_SLIDE_CHECKPOINT_SCALE_MIN,Math.min(RHYTHM_SLIDE_CHECKPOINT_SCALE_MAX,Math.sqrt(reference/actual)))
+    :1;
+  return Math.max(RHYTHM_SLIDE_CHECKPOINT_MIN_MS,Math.min(RHYTHM_SLIDE_CHECKPOINT_MAX_MS,base*scale));
+};
+// 中継点には必ず置き、その間を intervalMs で埋める。
+// 中継点＝経路が折れるところ＝判定の的(rhythmSlideExpectedLane)が向きを変えるところなので、
+// ここを外すと「曲がったのに気づかなかった」を拾えない。
+const rhythmSlideCheckpointTimes=(note,intervalMs)=>{
+  const points=rhythmSlidePoints(note);
+  if(!Array.isArray(points)||points.length<2)return Object.freeze([]);
+  const step=Math.max(RHYTHM_SLIDE_CHECKPOINT_MIN_MS,Number(intervalMs)||RHYTHM_SLIDE_CHECKPOINT_MAX_MS);
+  const endMs=Number(points[points.length-1]?.timeMs);
+  const limit=Number.isFinite(endMs)?endMs-RHYTHM_SLIDE_CHECKPOINT_TAIL_GUARD_MS:Infinity;
+  const times=[];
+  const push=value=>{
+    const at=Math.round(Number(value));
+    if(!Number.isFinite(at)||at>limit)return;
+    if(times.length&&at-times[times.length-1]<1)return;
+    times.push(at);
+  };
+  for(let i=1;i<points.length;i++){
+    const from=Number(points[i-1]?.timeMs),to=Number(points[i]?.timeMs);
+    if(!Number.isFinite(from)||!Number.isFinite(to)||to<=from){push(to);continue;}
+    const count=Math.max(1,Math.round((to-from)/step));
+    for(let s=1;s<=count;s++)push(from+(to-from)*(s/count));
+  }
+  return Object.freeze(times);
+};
+// 焼き込み前(古い経路・検査)のノーツでも素通しにしない。いちばん細かい既定で作る。
+const rhythmSlideNoteCheckpoints=note=>{
+  const baked=note?._rhythmSlideCheckpoints;
+  if(Array.isArray(baked))return baked;
+  return rhythmSlideCheckpointTimes(note,rhythmSlideCheckpointIntervalMs('MASTER',null));
+};
+// 通過率から「これより良くはならない」という押さえを決める。始点・終点の判定と
+// 悪いほうで合わせて使う。null は「落としていない＝押さえを掛けない」＝これまでどおり。
+const RHYTHM_SLIDE_CHECKPOINT_GRADES=Object.freeze([
+  Object.freeze({ minRate:1,  judgment:null    }),
+  Object.freeze({ minRate:.9, judgment:'GREAT' }),
+  Object.freeze({ minRate:.7, judgment:'GOOD'  }),
+  Object.freeze({ minRate:.5, judgment:'BAD'   }),
+]);
+const rhythmSlideTrackingFloor=(passed,total)=>{
+  const count=Number(total);
+  if(!Number.isFinite(count)||count<=0)return null;
+  const cleared=Math.max(0,Math.min(count,Number(passed)||0));
+  const rate=cleared/count;
+  for(const grade of RHYTHM_SLIDE_CHECKPOINT_GRADES){if(rate>=grade.minRate)return grade.judgment;}
+  return 'MISS';
+};
+
 // STEP 2A.5: 入力成功と空押しを即座に返すWeb Audio SE。既存の音ゲー設定キーだけを読み、
 // AudioContextは1個だけ遅延生成して再利用する。空押しは新規入力でノーツを取得できなかったときだけ呼ぶ。
 // 音ゲーのタップ音量はメインのSE音量設定と独立している(rhythm-mode.js側で自前のAudioContextを使う)。
@@ -1434,6 +1524,10 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
     }
     if(!bad){session.trackingBadSincePerf=null;return;}
     if(session.trackingBadSincePerf==null)session.trackingBadSincePerf=pos.perfMs;
+    // 【2026-09-12】SLIDEはここで打ち切らない。外れているあいだに来たチェックポイントだけが
+    // 落ちて、指を戻せば続きは拾える(evaluateCheckpoints が数える)。
+    // HOLDはこれまでどおり、猶予を超えたらその場でMISSを確定する。
+    if(session.kind==='SLIDE')return;
     const graceMs=Number(session.note?._rhythmTrackingGraceMs)>0
       ?Number(session.note._rhythmTrackingGraceMs):RHYTHM_MID_TRACKING_GRACE_MS;
     if(pos.perfMs-session.trackingBadSincePerf<graceMs)return;
@@ -1443,6 +1537,24 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
     // endTimeMsを現在より少し前へ寄せ、本体(scheduleTick)の「endTimeMs到達で
     // 既存applyJudgmentを呼ぶ」経路をそのまま使ってグレー表示へ切り替える(新しい判定経路は作らない)。
     session.note.endTimeMs=chartNow-50;
+  };
+  // ── チェックポイント(判定線)を数える ──────────────────────────────────
+  // 時刻が来たチェックポイントを1つずつ見て、そのとき指が的の中にいたかを記録する。
+  // 「ぶれた一瞬では落とさない」は evaluatePosition が維持している trackingBadSincePerf を
+  // そのまま使う(猶予の考え方を追従の判定と共有するため)。
+  const evaluateCheckpoints=(session,perf)=>{
+    if(!session||session.kind!=='SLIDE'||session.finished||session.note.done)return;
+    const times=session.checkpointTimes;
+    if(!Array.isArray(times)||session.checkpointIndex>=times.length)return;
+    const chartNow=estimatedSongMs(session)-session.offsetMs;
+    const graceMs=Number(session.note?._rhythmTrackingGraceMs)>0
+      ?Number(session.note._rhythmTrackingGraceMs):RHYTHM_MID_TRACKING_GRACE_MS;
+    while(session.checkpointIndex<times.length&&Number(times[session.checkpointIndex])<=chartNow){
+      session.checkpointIndex++;
+      // 終点フリックの受付中は追従を見ない(フリックで的から外れるのは当たり前のため)。
+      if(session.endFlickArmed){session.checkpointPassed++;continue;}
+      if(session.trackingBadSincePerf==null||perf-session.trackingBadSincePerf<graceMs)session.checkpointPassed++;
+    }
   };
   const tick=()=>{
     raf=0;
@@ -1471,6 +1583,7 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
         // 指が1本も動いていない(pointermoveが来ない)ままでも受付へ入れるよう、ここでも基準を作る。
         armEndFlick(session,pos);
         evaluatePosition(session,pos);
+        evaluateCheckpoints(session,perf);
       }
       if(session.releaseRequired&&!session.note.done){
         const releaseDelta=estimatedSongMs(session)-(session.releaseTargetMs+session.offsetMs);
@@ -1485,7 +1598,11 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
           // (終点フリックが要るノーツは、弾かずに終わったので MISS のまま)
           session.expiredGuard=true;
           const start=session.startJudgment||session.note.holdJudgment||'MISS';
-          session.note.holdJudgment=session.failed||session.endFlickRequired?'MISS':rhythmWorseJudgment(start,RHYTHM_RELEASE_LATE_FLOOR);
+          const lateJudgment=rhythmWorseJudgment(start,RHYTHM_RELEASE_LATE_FLOOR);
+          const lateFloor=session.kind==='SLIDE'
+            ?rhythmSlideTrackingFloor(session.checkpointPassed,session.checkpointIndex):null;
+          session.note.holdJudgment=session.failed||session.endFlickRequired?'MISS'
+            :lateFloor?rhythmWorseJudgment(lateJudgment,lateFloor):lateJudgment;
           session.note.holdDeltaMs=releaseDelta;
         }
       }
@@ -1534,7 +1651,16 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
         :session.endFlickRequired&&!session.endFlickDone?'MISS'
         :rhythmJudgeReleaseLenient(releaseDelta);
       const startJudgment=session.startJudgment||session.note.holdJudgment||'MISS';
-      const finalJudgment=session.failed?'MISS':rhythmWorseJudgment(startJudgment,endJudgment);
+      // 途中のチェックポイントの通過率を「これより良くはならない」押さえとして掛ける。
+      // 全通過なら null(押さえなし)＝始点と終点の判定だけで決まる(＝これまでと同じ)。
+      const bothEnds=rhythmWorseJudgment(startJudgment,endJudgment);
+      // 分母は「実際に通り過ぎて見たぶん」(checkpointIndex)。全件にすると、
+      // requestAnimationFrame が動いていない環境で1件も見ないまま通過率0になり、
+      // すべてのSLIDEがMISSになってしまう。見ていないぶんを失敗として数えない。
+      // 早く離した場合は終端の判定が既に厳しく出るので、二重に取る必要もない。
+      const trackingFloor=session.kind==='SLIDE'
+        ?rhythmSlideTrackingFloor(session.checkpointPassed,session.checkpointIndex):null;
+      const finalJudgment=session.failed?'MISS':trackingFloor?rhythmWorseJudgment(bothEnds,trackingFloor):bothEnds;
       const startRank=RHYTHM_RELEASE_JUDGMENT_IDS.indexOf(startJudgment),endRank=RHYTHM_RELEASE_JUDGMENT_IDS.indexOf(endJudgment);
       session.note.holdJudgment=finalJudgment;
       session.note.holdDeltaMs=session.failed||endRank>=startRank?releaseDelta:(session.startDeltaMs||0);
@@ -1568,7 +1694,7 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
       // release() が終端判定を作り、押しっぱなしなら+200ms超でMISSになる。
     }else if(kind==='FLICK')note.endTimeMs=(Number(note.timeMs)||0)+60000;
     const perf=nowPerf();
-    sessions.set(key,{key,note,kind,startSongMs:Number(startSongMs)||0,offsetMs:Number(offsetMs)||0,startPerfMs:perf,lastPerfMs:perf,startX:pos.clientX,startY:pos.clientY,finished:false,failed:false,releaseRequired,releaseTargetMs,startJudgment:null,startDeltaMs:0,expiredGuard:false,autoCompletionDeferred:false,trackingBadSincePerf:null,endFlickRequired,endFlickArmed:false,endFlickAnchorX:pos.clientX,endFlickAnchorY:pos.clientY,endFlickDone:false});
+    sessions.set(key,{key,note,kind,startSongMs:Number(startSongMs)||0,offsetMs:Number(offsetMs)||0,startPerfMs:perf,lastPerfMs:perf,startX:pos.clientX,startY:pos.clientY,finished:false,failed:false,releaseRequired,releaseTargetMs,startJudgment:null,startDeltaMs:0,expiredGuard:false,autoCompletionDeferred:false,trackingBadSincePerf:null,checkpointTimes:kind==='SLIDE'?rhythmSlideNoteCheckpoints(note):[],checkpointIndex:0,checkpointPassed:0,endFlickRequired,endFlickArmed:false,endFlickAnchorX:pos.clientX,endFlickAnchorY:pos.clientY,endFlickDone:false});
     ensureTick();
   };
   const slideVisualLaneForIndex=index=>{
@@ -13094,7 +13220,15 @@ const installRhythmGestureVisuals=()=>{
       background:linear-gradient(180deg,#f0fdf4,#4ade80 60%,#16a34a);clip-path:polygon(50% 0,100% 100%,0 100%);
       filter:drop-shadow(0 0 4px rgba(34,197,94,.95)) drop-shadow(0 1px 2px rgba(2,6,23,.85));pointer-events:none}
     svg[data-rhythm-slide-body]{position:absolute;inset:0;height:var(--rhythm-slide-area-height,0px)!important;overflow:visible;pointer-events:none;filter:drop-shadow(0 0 5px rgba(168,85,247,.38))}
-    [data-rhythm-slide-segment]{fill:rgba(168,85,247,.48);stroke:rgba(233,213,255,.56);stroke-width:1}
+    /* ポリゴンの継ぎ目は遠近へ沿わせるための10等分で、判定とは無関係。線としては描かない。
+       2026-09-12・ユーザー指摘「スライドの判定って目の細かさでわかるようになってる？」
+       直す前はこの継ぎ目に縁取りが付いていたため、判定と無関係な横線が帯じゅうに出ていた。 */
+    [data-rhythm-slide-segment]{fill:rgba(168,85,247,.48);stroke:none}
+    /* 帯のふち。継ぎ目を描くのをやめたぶん、外周だけを1本の線でなぞって輪郭を保つ。 */
+    [data-rhythm-slide-edge]{fill:none;stroke:rgba(233,213,255,.56);stroke-width:1;stroke-linejoin:round}
+    /* チェックポイント＝そこで判定が入るところ。ここだけはっきり見せる。
+       目の細かさがそのまま「判定の細かさ」になるので、見た目と判定が一致する。 */
+    [data-rhythm-slide-checkpoint]{stroke:rgba(233,213,255,.85);stroke-width:2;stroke-linecap:round}
   `;
   document.head.appendChild(style);
   const decorate=()=>{
@@ -13564,17 +13698,66 @@ const rhythmSlideSegmentPolygons=(note,chartNowMs,travel,rect,noteHalfHeight=Num
   // 点の間隔が長い(=高速でSLIDEが画面より長く伸びる)ほど差が開くので、時間で細分化して沿わせる。
   const startPoint=now>start?{timeMs:now,lane:rhythmSlideExpectedLane(note,now)}:source[0];
   let fromPoint=startPoint,from=project(startPoint);
+  // 外周(ふち)の点列も同じループで作る。あとからもう一度投影し直すと、
+  // 画面に出ているSLIDEのぶんだけ毎フレームの計算が倍になるため。
+  const head=from,rights=[],lefts=[];
   for(let index=Math.max(1,firstIndex);index<source.length;index++){
     const toPoint=source[index],fromTime=Number(fromPoint.timeMs),toTime=Number(toPoint.timeMs),spanMs=toTime-fromTime;
     for(let step=1;step<=RHYTHM_SLIDE_SEGMENT_STEPS;step++){
       const ratio=step/RHYTHM_SLIDE_SEGMENT_STEPS,timeMs=fromTime+spanMs*ratio;
       const to=step===RHYTHM_SLIDE_SEGMENT_STEPS?project(toPoint):project({timeMs,lane:rhythmSlideExpectedLane(note,timeMs)});
       segments.push(`${from.left.toFixed(2)},${from.y.toFixed(2)} ${from.right.toFixed(2)},${from.y.toFixed(2)} ${to.right.toFixed(2)},${to.y.toFixed(2)} ${to.left.toFixed(2)},${to.y.toFixed(2)}`);
+      rights.push(`${to.right.toFixed(2)},${to.y.toFixed(2)}`);
+      lefts.push(`${to.left.toFixed(2)},${to.y.toFixed(2)}`);
       from=to;
     }
     fromPoint=toPoint;
   }
+  // 右のふちを手前から奥へ、左のふちを奥から手前へ。閉じた輪郭になる。
+  segments.outline=rights.length
+    ?`${head.right.toFixed(2)},${head.y.toFixed(2)} ${rights.join(' ')} ${lefts.reverse().join(' ')} ${head.left.toFixed(2)},${head.y.toFixed(2)}`
+    :'';
   return segments;
+};
+// チェックポイントを横線として置く場所。帯と同じ手順で投影する。
+// まだ来ていない(判定ラインより先の)ぶんだけ描く。通り過ぎたぶんは帯自体が描かれない。
+const rhythmSlideCheckpointLines=(note,chartNowMs,travel,rect,noteHalfHeight=Number(travel.noteHalfHeight)||0)=>{
+  const times=note?._rhythmSlideCheckpoints;
+  if(!Array.isArray(times)||!times.length||!rect||!(rect.height>0))return [];
+  const now=Number(chartNowMs)||0,lines=[];
+  for(let index=0;index<times.length;index++){
+    const at=Number(times[index]);
+    if(!Number.isFinite(at)||at<=now)continue;
+    const progress=1-(at-Number(travel.visualTime))/Number(travel.travelMs);
+    const y=Number(travel.spawnY)+rhythmProjectTravelProgress(progress)*Number(travel.travelPx)+noteHalfHeight;
+    if(!Number.isFinite(y)||y<-rect.height||y>rect.height)continue;
+    const yRatio=rhythmClamp01(y/rect.height);
+    const span=rhythmProjectSlideSpan(rhythmSlideExpectedLane(note,at),note,yRatio,at);
+    const half=rect.width*span.width*RHYTHM_BODY_WIDTH_RATIO/2;
+    lines.push({x1:rect.width*span.center-half,x2:rect.width*span.center+half,y});
+  }
+  return lines;
+};
+// SVGの中を「帯(fill)」と「チェックポイントの線(marks)」の2つのグループへ分ける。
+// 1つの親へ混ぜると、childNodes[index] の使い回しで polygon と line が入れ違う。
+// 見つけた結果は body へ覚えるので、毎フレームの querySelector にはならない。
+const RHYTHM_SLIDE_GROUP_ATTRS=Object.freeze({fill:'data-rhythm-slide-fill',edge:'data-rhythm-slide-edge-layer',marks:'data-rhythm-slide-marks'});
+const RHYTHM_SLIDE_GROUP_CACHE_KEYS=Object.freeze({fill:'_rhythmSlideFill',edge:'_rhythmSlideEdge',marks:'_rhythmSlideMarks'});
+const rhythmSlideGroup=(body,kind)=>{
+  const attr=RHYTHM_SLIDE_GROUP_ATTRS[kind]||RHYTHM_SLIDE_GROUP_ATTRS.fill;
+  const cacheKey=RHYTHM_SLIDE_GROUP_CACHE_KEYS[kind]||RHYTHM_SLIDE_GROUP_CACHE_KEYS.fill;
+  const cached=body[cacheKey];
+  if(cached&&cached.parentNode===body)return cached;
+  // 検査の簡易DOMのように querySelector を持たない相手でも落ちないようにする。
+  // 見つからなければ作るだけなので、無い場合はそのまま作る側へ進んでよい。
+  let group=typeof body.querySelector==='function'?body.querySelector(`[${attr}]`):null;
+  if(!group){
+    group=document.createElementNS('http://www.w3.org/2000/svg','g');
+    group.setAttribute(attr,'');
+    body.appendChild(group);
+  }
+  body[cacheKey]=group;
+  return group;
 };
 // 2026-09-07: 「幅は scaleX・帯は scaleY・明るさは影の層」で描く発熱対策を試したが、iPhone(WebKit)で
 // 以前よりカクつく・モンスターノーツを取ったあとに飛ぶ、という報告が続いたため、描き方はこの版(0c3a016)へ戻した。
@@ -13633,15 +13816,39 @@ const rhythmLayoutNoteVisual=(el,note,yPx,visualLane,area,releaseYpx=null,slideT
       body.setAttribute('viewBox',`0 0 ${rect.width} ${rect.height}`);
       body._rhythmSlideArea=slideArea;
     }
+    // 呼ぶ順がそのまま重なり順になる(帯 → ふち → チェックポイント)。
+    const fill=rhythmSlideGroup(body,'fill'),edge=rhythmSlideGroup(body,'edge'),marks=rhythmSlideGroup(body,'marks');
     const polygons=slideTravel?rhythmSlideSegmentPolygons(note,slideTravel.chartNowMs,slideTravel,rect,noteHeight/2):[];
     RHYTHM_PERF.slidePolygons(polygons.length);
     polygons.forEach((points,index)=>{
-      let segment=body.childNodes[index];
-      if(!segment){segment=document.createElementNS('http://www.w3.org/2000/svg','polygon');segment.dataset.rhythmSlideSegment='';body.appendChild(segment);}
+      let segment=fill.childNodes[index];
+      if(!segment){segment=document.createElementNS('http://www.w3.org/2000/svg','polygon');segment.dataset.rhythmSlideSegment='';fill.appendChild(segment);}
       segment.style.display='';
       if(segment._rhythmPoints!==points){segment.setAttribute('points',points);segment._rhythmPoints=points;}
     });
-    for(let index=polygons.length;index<body.childNodes.length;index++)body.childNodes[index].style.display='none';
+    for(let index=polygons.length;index<fill.childNodes.length;index++)fill.childNodes[index].style.display='none';
+    // 帯のふち。継ぎ目を描かなくなったぶん、外周だけをなぞって輪郭を保つ。
+    const outline=polygons.outline||'';
+    let edgeShape=edge.firstChild;
+    if(outline){
+      if(!edgeShape){edgeShape=document.createElementNS('http://www.w3.org/2000/svg','polygon');edgeShape.dataset.rhythmSlideEdge='';edge.appendChild(edgeShape);}
+      edgeShape.style.display='';
+      if(edgeShape._rhythmPoints!==outline){edgeShape.setAttribute('points',outline);edgeShape._rhythmPoints=outline;}
+    }else if(edgeShape)edgeShape.style.display='none';
+    // チェックポイントの横線。ここで判定が入るので、帯の継ぎ目より濃く出す。
+    const checkpointLines=slideTravel?rhythmSlideCheckpointLines(note,slideTravel.chartNowMs,slideTravel,rect,noteHeight/2):[];
+    checkpointLines.forEach((line,index)=>{
+      let mark=marks.childNodes[index];
+      if(!mark){mark=document.createElementNS('http://www.w3.org/2000/svg','line');mark.dataset.rhythmSlideCheckpoint='';marks.appendChild(mark);}
+      mark.style.display='';
+      const key=`${line.x1.toFixed(1)}/${line.x2.toFixed(1)}/${line.y.toFixed(1)}`;
+      if(mark._rhythmLineKey!==key){
+        mark.setAttribute('x1',line.x1.toFixed(2));mark.setAttribute('y1',line.y.toFixed(2));
+        mark.setAttribute('x2',line.x2.toFixed(2));mark.setAttribute('y2',line.y.toFixed(2));
+        mark._rhythmLineKey=key;
+      }
+    });
+    for(let index=checkpointLines.length;index<marks.childNodes.length;index++)marks.childNodes[index].style.display='none';
   }else{
   const measuredBodyHeight=frameLayout&&Number.isFinite(Number(frameLayout.bodyHeight))?Number(frameLayout.bodyHeight):parseFloat(getComputedStyle(body).height),height=Math.max(0,measuredBodyHeight||0);
   // 帯の上端と下端だけを直線で結ぶと、projectionが曲線であるぶん途中の高さでレーンから外れる。
@@ -13772,10 +13979,13 @@ const rhythmNoteCanvasGeometry=(note,yPx,visualLane,rect,noteHeight,releaseYpx=n
   const chartNowMs=slideTravel?.chartNowMs;
   const projected=rhythmNoteIsSlide(note)?rhythmProjectSlideSpan(lane,note,yRatio,chartNowMs):rhythmNoteVisualSpan(note,lane,yRatio,chartNowMs);
   const projectedWidth=rect.width*projected.width,width=Math.min(projectedWidth,Math.max(4,projectedWidth*RHYTHM_NOTE_WIDTH_RATIO));
-  const out={centerY,yRatio,scale:projected.scale,head:{cx:rect.width*projected.center,cy:centerY,w:width,h:noteHeight},band:null,slide:null,end:null};
+  const out={centerY,yRatio,scale:projected.scale,head:{cx:rect.width*projected.center,cy:centerY,w:width,h:noteHeight},band:null,slide:null,checkpoints:null,end:null};
   const height=Math.max(0,Number(bodyHeight)||0);
   if(rhythmNoteIsSlide(note)){
-    if(slideTravel)out.slide=rhythmSlideSegmentQuads(note,slideTravel.chartNowMs,slideTravel,rect,noteHeight/2);
+    if(slideTravel){
+      out.slide=rhythmSlideSegmentQuads(note,slideTravel.chartNowMs,slideTravel,rect,noteHeight/2);
+      out.checkpoints=rhythmSlideCheckpointLines(note,slideTravel.chartNowMs,slideTravel,rect,noteHeight/2);
+    }
   }else if(rhythmNoteIsHold(note)&&height>0){
     // 帯の上端(画面外でも可)から下端までを一定間隔でサンプルし、投影の曲線へ沿わせる(DOM 版の clipPath と同じ点)
     const bodyTopY=centerY-height;
@@ -13981,8 +14191,22 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       ctx.lineWidth=6;ctx.lineJoin='round';ctx.strokeStyle='rgba(168,85,247,.16)';ctx.stroke();
     }
     ctx.fillStyle=failed?'rgba(120,120,135,.48)':'rgba(168,85,247,.48)';
-    ctx.strokeStyle=failed?'rgba(190,190,200,.5)':'rgba(233,213,255,.56)';ctx.lineWidth=1;
-    quads.forEach(q=>{ctx.beginPath();ctx.moveTo(q.l0,q.y0);ctx.lineTo(q.r0,q.y0);ctx.lineTo(q.r1,q.y1);ctx.lineTo(q.l1,q.y1);ctx.closePath();ctx.fill();ctx.stroke();});
+    // 継ぎ目(10等分の境目)は判定と無関係なので線を引かない。塗りだけ。
+    quads.forEach(q=>{ctx.beginPath();ctx.moveTo(q.l0,q.y0);ctx.lineTo(q.r0,q.y0);ctx.lineTo(q.r1,q.y1);ctx.lineTo(q.l1,q.y1);ctx.closePath();ctx.fill();});
+    // 帯のふち。DOM版の[data-rhythm-slide-edge]と同じ濃さで外周だけをなぞる。
+    ctx.beginPath();
+    ctx.moveTo(quads[0].r0,quads[0].y0);
+    quads.forEach(q=>ctx.lineTo(q.r1,q.y1));
+    for(let index=quads.length-1;index>=0;index--)ctx.lineTo(quads[index].l1,quads[index].y1);
+    ctx.lineTo(quads[0].l0,quads[0].y0);ctx.closePath();
+    ctx.lineWidth=1;ctx.lineJoin='round';ctx.strokeStyle=failed?'rgba(190,190,200,.5)':'rgba(233,213,255,.56)';ctx.stroke();
+    // チェックポイント＝そこで判定が入るところ。DOM版の[data-rhythm-slide-checkpoint]と同じ見た目。
+    const checkpoints=geo.checkpoints;
+    if(checkpoints&&checkpoints.length){
+      ctx.strokeStyle=failed?'rgba(190,190,200,.6)':'rgba(233,213,255,.85)';ctx.lineWidth=2;ctx.lineCap='round';
+      checkpoints.forEach(line=>{ctx.beginPath();ctx.moveTo(line.x1,line.y);ctx.lineTo(line.x2,line.y);ctx.stroke();});
+      ctx.lineCap='butt';
+    }
     ctx.globalAlpha=1;
   };
   const drawEndBar=(note,geo,opts)=>{

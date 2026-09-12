@@ -23,15 +23,30 @@ const fakeEl=(note)=>{
   const visualType=note._rhythmOriginalType||note.type;
   if(visualType==='HOLD'){body={style:fakeStyle(),hasAttribute:()=>false};}
   if(visualType==='SLIDE'){
-    body={style:fakeStyle(),hasAttribute:name=>name==='data-rhythm-slide-body',childNodes:[],setAttribute(){},};
-    body.appendChild=node=>{body.childNodes.push(node);};
+    body=fakeNode();
+    body.style=fakeStyle();
+    body.setAttribute('data-rhythm-slide-body','');
   }
   el._rhythmVisualBody=body;
   el._rhythmEndBar=(visualType==='HOLD'||visualType==='SLIDE')?{style:fakeStyle()}:null;
   el.querySelector=()=>null;
+  el.hasAttribute=()=>false;
   return {el,body};
 };
-ctx.document={createElementNS:()=>({style:{},setAttribute(k,v){this[k]=v;},dataset:{}})};
+// 2026-09-12: SVGの中が「帯(fill) / ふち(edge) / チェックポイント(marks)」の3グループへ
+// 分かれたので、作られる要素も子を持てるようにする(本物のDOMと同じく入れ子になる)。
+const fakeNode=()=>{
+  const node={style:{},dataset:{},childNodes:[],parentNode:null,attrs:{}};
+  node.setAttribute=(k,v)=>{node.attrs[k]=v;node[k]=v;};
+  node.hasAttribute=k=>Object.prototype.hasOwnProperty.call(node.attrs,k);
+  node.appendChild=child=>{child.parentNode=node;node.childNodes.push(child);return child;};
+  node.querySelector=sel=>{
+    const name=String(sel).replace(/^\[|\]$/g,'');
+    return node.childNodes.find(c=>c.hasAttribute&&c.hasAttribute(name))||null;
+  };
+  return node;
+};
+ctx.document={createElementNS:()=>fakeNode()};
 ctx.getComputedStyle=()=>({height:'0px'});
 
 const rect={width:390,height:700,top:0,left:0};
@@ -98,7 +113,9 @@ for(const source of CASES)for(const speed of SPEEDS)for(const progress of PROGRE
   }
   // SLIDE 帯: polygon points(文字列)と canvas の四角形
   if(note.type==='SLIDE'&&geo.slide){
-    const polys=body.childNodes.map(n=>String(n.points||'').split(/[\s,]+/).map(Number));
+    // 2026-09-12: polygon は body 直下ではなく fill グループの中にある。
+    const fillGroup=body.childNodes.find(n=>n.hasAttribute&&n.hasAttribute('data-rhythm-slide-fill'));
+    const polys=(fillGroup?fillGroup.childNodes:[]).map(n=>String(n.points||'').split(/[\s,]+/).map(Number));
     if(polys.length!==geo.slide.length)worstSlide=Math.max(worstSlide,999);
     else geo.slide.forEach((q,i)=>{const p=polys[i];worstSlide=Math.max(worstSlide,Math.abs(p[0]-q.l0),Math.abs(p[1]-q.y0),Math.abs(p[2]-q.r0),Math.abs(p[4]-q.r1),Math.abs(p[5]-q.y1),Math.abs(p[6]-q.l1));});
   }

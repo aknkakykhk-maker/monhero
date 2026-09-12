@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f467fbafd4b3cdab
+// source-sha256: 2efccf073fb006f3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ebef50111410aee4
+// generated-sha256: db09bac5a34e3ced
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-12 11:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-12 11:07"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -21420,8 +21420,12 @@ const RhythmTapTest = ({
   // HOLD/SLIDEの追従を難易度ごとにやさしくする値を、演奏を始めるときにノーツへ焼き込む。
   // 譜面データ(data/rhythm-mode.js)は触らないので、保存データにもランキングにも影響しない。
   // 判定の関数は note からこの2つを読む(rhythmSlideTrackingTolerance / evaluatePosition)。
+  // チェックポイント(判定線)の間隔は「難易度 × その譜面のレベル」で決まる。
+  // 譜面データそのものは触らず、演奏を始めるときにノーツ1つ1つへ焼き込む
+  // (追従の許容・猶予と同じやり方。保存データにもランキングにも影響しない)。
   const makeRuntimeNotes = () => {
     const tracking = rhythmSlideTrackingFor(difficulty.id);
+    const checkpointIntervalMs = rhythmSlideCheckpointIntervalMs(difficulty.id, chart?.level);
     return chart.notes.map((note, index) => ({
       ...note,
       index,
@@ -21432,7 +21436,8 @@ const RhythmTapTest = ({
       _rhythmSlideToleranceBonusLanes: tracking.toleranceBonusLanes,
       _rhythmTrackingGraceMs: tracking.graceMs,
       ...(note.type === 'SLIDE' ? {
-        _rhythmSlideRenderPoints: rhythmSlidePoints(note)
+        _rhythmSlideRenderPoints: rhythmSlidePoints(note),
+        _rhythmSlideCheckpoints: rhythmSlideCheckpointTimes(note, checkpointIntervalMs)
       } : {})
     }));
   };
