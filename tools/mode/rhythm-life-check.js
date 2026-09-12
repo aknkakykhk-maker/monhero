@@ -120,14 +120,25 @@ check('曲えらびのひし形に「失敗」の段がある',
 const forResult=game.match(/const rhythmPlayRunLoopsForResult = \(loops, cleared\) => \{[\s\S]*?\n\};/)?.[0]||'';
 check('失敗したときの周回数の決め方を取り出せる',forResult.length>0);
 if(forResult){
-  const rate=game.match(/const RHYTHM_PLAY_RUN_LOOP_FAILED_RATE = [^\n]*/)?.[0]||'';
-  const fn=new Function(`${rate}\n${forResult}return rhythmPlayRunLoopsForResult;`)();
+  const fn=new Function(`${forResult}return rhythmPlayRunLoopsForResult;`)();
   check('クリアならこれまでどおり全部入る',fn(4,true)===4&&fn(9,true)===9);
-  check('失敗は半分(端数は切り捨て)',fn(4,false)===2&&fn(9,false)===4);
-  check('失敗でも1周は残る(0にはしない)',fn(1,false)===1&&fn(2,false)===1);
+  // ★半分(最低1周)入るようにしていたが、叩かずに放っておいても半分もらえてしまうため0にした
+  //   (2026-09-12・ユーザー指示「失敗しても入るようにすると放置で稼げるようになるから
+  //    失敗は0にして」)。半分へ戻さないよう、0であることを名指しで見る。
+  check('失敗は1周も入らない(0)',fn(1,false)===0&&fn(4,false)===0&&fn(9,false)===0);
   check('もともと0周のときは0のまま',fn(0,false)===0&&fn(0,true)===0);
   check('クリアかどうかを渡さない古い呼び出しは全部入る',fn(4)===4&&fn(4,undefined)===4);
 }
+check('半分にする決めごとは残していない',!game.includes('RHYTHM_PLAY_RUN_LOOP_FAILED_RATE'));
+// ★追いつきは「実際に周回が入ったか」で判断する。失敗(0周)は途中でやめたときと同じ扱いにして、
+//   止まっていたぶんだけは取り戻せるようにする(損はしないが、得もしない)
+check('失敗したときは追いつきを止めない',
+  game.includes('if (Number(rhythmPlayRunAwardRef.current?.loops) > 0) { stopCatchUp(); return; }')
+  ||game.includes('if(Number(rhythmPlayRunAwardRef.current?.loops)>0){stopCatchUp();return;}'));
+check('裏で周回していた人には、入らなかった理由を曲リザルトで伝える',
+  game.includes('if(!cleared&&baseLoops>0)setRhythmPlayRunAward({loops:0,baseLoops,cleared:false,')
+  &&game.includes('data-rhythm-result-quick-run-failed'));
 check('仕様書にクリア／失敗と周回数の扱いを記載',
-  docs.includes('リザルトのクリア／失敗')&&docs.includes('rhythmPlayRunLoopsForResult'));
+  docs.includes('リザルトのクリア／失敗')&&docs.includes('rhythmPlayRunLoopsForResult')
+  &&docs.includes('**失敗は0周。**'));
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');process.exit(failed?1:0);
