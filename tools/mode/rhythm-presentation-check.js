@@ -127,6 +127,21 @@ ok('演出量「少なめ」で、判定文字とコンボの流れを止めら�
   &&game.includes("segments('effectAmount',RHYTHM_EFFECT_LABELS)")
   &&/RHYTHM_EFFECT_LABELS *= *Object\.freeze\(\[\['NORMAL','標準'\],\['LOW','少なめ'\],\['MINIMAL','最小'\]\]\)/.test(game)
   &&game.includes('動きがカクついたり'));
+// 2026-09-13・ユーザー指摘「演出量少なめでジャストマーベラスとマーベラスの色の差が少ない /
+//   演出量は少なめキープで差を出したい / マーベラスが金でジャストマーベラスが虹だから出来そう」。
+// ★流す前提の background-size(金260% / 虹220% / コンボ300%)のまま animation だけ止めると、
+//   **左端の一色ぶんしか字に入らない**。虹は赤〜黄の暖色だけになり、金と見分けが付かなかった。
+//   止めるときは 100% にして、色が全部字の上に並ぶようにする。
+ok('流れを止めるときは、止まった位置に色が全部見える',
+  // 判定文字(演出量ひかえめ・最小・軽量モード)
+  /\[data-rhythm-effect="LOW"\] \[data-rhythm-judgment-text\],\s*\[data-rhythm-play-area\]\[data-rhythm-effect="MINIMAL"\] \[data-rhythm-judgment-text\],\s*\[data-rhythm-play-area\]\[data-rhythm-lightweight="true"\] \[data-rhythm-judgment-text\]\{\s*background-size:100% 100%;/.test(html)
+  // 500コンボ以上の虹も同じ
+  &&/\[data-rhythm-effect="LOW"\] \[data-rhythm-combo\]\[data-combo-tier="7"\],[\s\S]{0,240}background-size:100% 100%;/.test(html)
+  // 動きを減らす設定の端末でも同じ(判定ごとのルールと同じ重さで書かないと上書きできない)
+  &&/@media \(prefers-reduced-motion:reduce\)\{\s*\[data-rhythm-judgment-text\]\[data-judgment\]:not\(\[data-judgment=""\]\)\{[\s\S]{0,120}background-size:100% 100%;/.test(html)
+  // 流しているとき(標準)は、これまでどおり広く取って動かす
+  &&/\[data-judgment="MARVELOUS"\]\{[\s\S]{0,200}background-size:260% 100%/.test(html)
+  &&/\[data-judgment-precise="1"\]\{[\s\S]{0,200}background-size:220% 100%/.test(html));
 // 2026-09-12・ユーザー指示「コンボ数もわかりにくい。増えれば増えるほど目立つようにして」。
 // 100/200/300の3段だったのを 10/30/50/100/200/300/500 の7段にし、段が上がるほど
 // 色だけでなく **大きさ** も変わるようにした(--mh-combo-scale)。
