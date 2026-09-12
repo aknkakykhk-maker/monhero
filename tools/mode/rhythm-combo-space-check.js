@@ -19,6 +19,7 @@ const root = path.resolve(TOOLS_DIR, '..');
 const web = path.join(root, 'monster-hero');
 const html = fs.readFileSync(path.join(web, 'index.html'), 'utf8');
 const data = fs.readFileSync(path.join(web, 'data/rhythm-mode.js'), 'utf8');
+const game = fs.readFileSync(path.join(web, 'src/game-system.jsx'), 'utf8');
 
 let failed = 0;
 const check = (name, ok, detail = '') => {
@@ -61,6 +62,7 @@ const numAfter = (re, fallback = null) => { const m = html.match(re); return m ?
 // 縦向き
 const PORTRAIT = {
   CENTER: { top: numAfter(/\[data-rhythm-combo-box\]\{\s*top:([\d.]+)%/), edge: null, font: 52 },
+  AUTO: { top: numAfter(/\[data-combo-pos="AUTO"\]\{left:auto;right:[\d.]+%;top:([\d.]+)%/), edge: 'right', gap: numAfter(/\[data-combo-pos="AUTO"\]\{left:auto;right:([\d.]+)%/), font: 34 },
   RIGHT: { top: numAfter(/\[data-combo-pos="RIGHT"\]\{left:auto;right:([\d.]+)%;top:[\d.]+%/) === null ? null : numAfter(/\[data-combo-pos="RIGHT"\]\{left:auto;right:[\d.]+%;top:([\d.]+)%/), edge: 'right', gap: numAfter(/\[data-combo-pos="RIGHT"\]\{left:auto;right:([\d.]+)%/), font: 34 },
   LEFT: { top: numAfter(/\[data-combo-pos="LEFT"\]\{left:[\d.]+%;right:auto;top:([\d.]+)%/), edge: 'left', gap: numAfter(/\[data-combo-pos="LEFT"\]\{left:([\d.]+)%/), font: 34 },
   HUD: { top: numAfter(/\[data-combo-pos="HUD"\]\{left:auto;right:[\d.]+%;top:([\d.]+)%/), edge: 'right', gap: numAfter(/\[data-combo-pos="HUD"\]\{left:auto;right:([\d.]+)%/), font: 34 },
@@ -69,6 +71,8 @@ const PORTRAIT = {
 const wideSideTop = numAfter(/\[data-combo-wide="1"\]\[data-combo-pos="RIGHT"\]\{top:([\d.]+)%\}/);
 const LANDSCAPE = {
   CENTER: { top: numAfter(/\[data-rhythm-combo-box\]\[data-combo-wide="1"\]\{top:([\d.]+)%\}/), edge: null, font: 40 },
+  AUTO: { top: numAfter(/\[data-combo-wide="1"\]\[data-combo-pos="AUTO"\]\{top:([\d.]+)%;right:[\d.]+%\}/), edge: 'right',
+    gap: numAfter(/\[data-combo-wide="1"\]\[data-combo-pos="AUTO"\]\{top:[\d.]+%;right:([\d.]+)%\}/), font: 28 },
   RIGHT: { top: wideSideTop, edge: 'right', gap: PORTRAIT.RIGHT.gap, font: 28 },
   LEFT: { top: wideSideTop, edge: 'left', gap: PORTRAIT.LEFT.gap, font: 28 },
   HUD: { top: numAfter(/\[data-combo-wide="1"\]\[data-combo-pos="HUD"\]\{top:([\d.]+)%;right:([\d.]+)%\}/), edge: 'right',
@@ -114,6 +118,12 @@ const inspect = (W, H, spec, label) => {
 inspect(390, 844, PORTRAIT, '縦持ち');
 inspect(844, 390, LANDSCAPE, '横持ち');
 
+// 「おすすめ」が既定。台形の外でいちばん広く空いているところに出る
+// (2026-09-13・ユーザーが実際の画面のスクリーンショットで示した場所)
+check('既定は「おすすめ」',
+  game.includes("comboPosition:'AUTO'")
+  && /RHYTHM_COMBO_POSITION_LABELS *= *Object\.freeze\(\[\['AUTO','おすすめ'\]/.test(game),
+  '既定の comboPosition');
 // 「右上」は縦でも横でも**上の方**に出す(オプションの名前と合わせる)
 check('「右上」は縦でも横でも上の方に出る',
   PORTRAIT.HUD.top <= 25 && LANDSCAPE.HUD.top <= 30,

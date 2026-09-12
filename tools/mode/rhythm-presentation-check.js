@@ -85,20 +85,24 @@ ok('コンボ数はプレイエリアの真ん中に出す(既定)',
 // 2026-09-12・ユーザー指示「元位置（元位置より少し右より）とか選べるほうがいい」。
 // 真ん中へ移したその日の指摘。前に居た右上も選べるようにした。
 ok('コンボ数の置き場所を選べる(右上=もとの位置も選べる)',
-  /RHYTHM_COMBO_POSITIONS *= *Object\.freeze\(\['CENTER','RIGHT','HUD','LEFT'\]\)/.test(game)
-  &&game.includes("comboPosition:'CENTER'")
+  // 値の一覧は名前の一覧から作る(2か所に書くとずれるため)
+  /RHYTHM_COMBO_POSITIONS *= *Object\.freeze\(RHYTHM_COMBO_POSITION_LABELS\.map\(\(\[id\]\)=>id\)\)/.test(game)
+  // 既定は「おすすめ」(2026-09-13。ノーツにもマスモンにも重ならない場所)
+  &&game.includes("comboPosition:'AUTO'")
   &&game.includes('comboPosition:RHYTHM_COMBO_POSITIONS.includes(source.comboPosition)?source.comboPosition:DEFAULT_RHYTHM_SETTINGS.comboPosition')
   // 名前は RHYTHM_COMBO_POSITION_LABELS が正本(オプションのボタンと、
   // 折りたたんだときの「いまの値」の両方がここを見る)
   &&game.includes("segments('comboPosition',RHYTHM_COMBO_POSITION_LABELS)")
-  &&/RHYTHM_COMBO_POSITION_LABELS *= *Object\.freeze\(\[\['LEFT','左'\],\['CENTER','中央'\],\['RIGHT','右'\],\['HUD','右上'\]\]\)/.test(game)
+  &&/RHYTHM_COMBO_POSITION_LABELS *= *Object\.freeze\(\[\['AUTO','おすすめ'\],\['LEFT','左'\],\['CENTER','中央'\],\['RIGHT','右'\],\['HUD','右上'\]\]\)/.test(game)
   // 高さは「両サイドのマスモンが居ない帯」から選ぶ(2026-09-13)。
   // どこがどれだけ空いているかは rhythm-combo-space-check.js が計算で確かめる。
   &&html.includes('[data-rhythm-combo-box][data-combo-pos="RIGHT"]{left:auto;right:4%;top:38%;transform:none}')
   &&html.includes('[data-rhythm-combo-box][data-combo-pos="LEFT"]{left:4%;right:auto;top:38%;transform:none}')
   &&html.includes('[data-rhythm-combo-box][data-combo-pos="HUD"]{left:auto;right:3%;top:13%;transform:none}')
+  &&html.includes('[data-rhythm-combo-box][data-combo-pos="AUTO"]{left:auto;right:4%;top:14%;transform:none}')
+  &&html.includes('[data-rhythm-combo-box][data-combo-wide="1"][data-combo-pos="AUTO"]{top:18%;right:22%}')
   // 端に寄せたときは、数字が伸びても画面の外へ出ないよう内側へ伸ばす
-  &&/\[data-combo-pos="RIGHT"\] \[data-rhythm-combo\],\s*\[data-combo-pos="HUD"\] \[data-rhythm-combo\]\{transform-origin:right center\}/.test(html)
+  &&/\[data-combo-pos="RIGHT"\] \[data-rhythm-combo\],\s*\[data-combo-pos="AUTO"\] \[data-rhythm-combo\],\s*\[data-combo-pos="HUD"\] \[data-rhythm-combo\]\{transform-origin:right center\}/.test(html)
   &&html.includes('[data-combo-pos="LEFT"] [data-rhythm-combo]{transform-origin:left center}'));
 // ★邪魔にならないよう、ノーツ(z-5)より後ろに描いて少し透かす。0コンボでは出さない
 ok('ノーツより後ろに描いて透かす(邪魔にならない)',
