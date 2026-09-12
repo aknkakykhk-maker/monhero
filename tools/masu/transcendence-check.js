@@ -582,6 +582,35 @@ check('ヘルプに超越強化がいつでも使えると書いてある',
   && help.includes('どのマスモンでも「通常強化」と「超越強化」を切り替えられます')
   && !help.includes('超越済みの個体だけが交換でき')
   && !help.includes('超越済みの個体では「通常強化」と「超越強化」'));
+// 超越強化は確定しても何も起きず、通常強化だけが全画面演出を持っていた
+// (2026-09-12・ユーザー指摘「超越強化が音もなく地味。普通の強化と同じかそれより派手めにして」)
+check('超越強化の確定で全画面演出を出す',
+  source.includes("setEffect({ type:'transcendEnhance', label:'超越強化！', icon:'🌟'")
+  && source.includes('setTimeout(()=>setEffect(null), TRANSCEND_ENHANCE_FX_MS);')
+  && /const TRANSCEND_ENHANCE_FX_MS = (\d+);/.test(source)
+  && Number(source.match(/const TRANSCEND_ENHANCE_FX_MS = (\d+);/)[1]) >= 1200);
+check('上がった項目は下書きではなく前後の差から出す',
+  source.includes('const before = normalizeMasuProgression(masu);')
+  && source.includes('const gained = boost - before.transcendAptBoosts[i];')
+  && source.includes('const gained = value - (before.transcendStatPoints[key] || 0);'));
+// 通常強化(琥珀の輪2枚・火花6つ)より1段派手であること。数で機械的に見張る
+check('超越強化の演出は通常強化より層が多い', (() => {
+  const fx = source.slice(source.indexOf("{effect.type==='transcendEnhance'&&("), source.indexOf("{/* 大きさ・光り方・色は effectVisual"));
+  const rings = (fx.match(/animation:'auraRing/g) || []).length;
+  const sparks = (fx.match(/animation:'mhEffectSpark/g) || []).length;
+  return rings === 3 && sparks === 2 && fx.includes('repeating-conic-gradient') && fx.includes('mhTranscendFxFlash');
+})());
+// 火花は共通の sparkFlicker を使わない(あちらはキーフレームが transform を持っていて
+// 呼び出し側の角度・半径が効かず、全部1か所へ重なってしまう)
+check('超越強化の火花は置き場所が効くキーフレームを使う',
+  source.includes('@keyframes mhEffectSpark { 0%,100% { opacity: .15; } 50% { opacity: 1; } }')
+  && !/transcendEnhance[\s\S]{0,2200}?sparkFlicker/.test(source));
+// 種類ごとの大きさ・色は1か所の表から引く(画面側へ三項演算子を書き並べない)
+check('演出の見た目は共通の表から引く',
+  source.includes('const EFFECT_VISUALS = {')
+  && source.includes('const effectVisual = (type) => EFFECT_VISUALS[type] || EFFECT_VISUAL_DEFAULT;')
+  && source.includes('className={`mb-6 object-contain relative ${effectVisual(effect.type).glow}`}')
+  && !source.includes("effect.type==='unique'?'180px'"));
 check('助手に超越の案内がある', assistants.includes('transcendence: {') && assistants.includes("help: 'masu/transcendence'"));
 check('更新履歴に超越の追加が載っている',
   changelog.includes('新育成システム「超越」を追加しました')
