@@ -149,11 +149,10 @@ const rhythmComboTier = combo => {
 // 段ごとの大きさ。font-size ではなく transform:scale() で効かせる。
 // ★font-size を段ごとに上書きすると、横持ち(landscape:text-base)の詰めた文字サイズまで
 //   巻き添えで壊れる。倍率なら縦持ち・横持ちのどちらの基準サイズもそのまま活かせる。
-// ★上限が1.13で止まっているのは、ここが**レーンの台形の外側の空き**に置かれているため。
-//   4桁(9999)まで伸びた状態で台形へかぶると、奥のノーツが読めなくなる
-//   (tools/mode/rhythm-hud-wedge-check.js と rhythm-landscape-hud-check.js が実測で落とす)。
-//   そのぶん「どんどん目立つ」は、大きさよりも色・光・脈打ちの強さで出している。
-const RHYTHM_COMBO_TIER_SCALES = Object.freeze([1,1.02,1.04,1.06,1.08,1.1,1.12,1.13]);
+// ★2026-09-12にコンボをプレイエリアの真ん中へ移したので、台形にかかる心配がなくなった。
+//   HUDの右上に居たころは1.13倍が上限だった(4桁まで伸びると台形へかかり、奥のノーツが
+//   読めなくなるため)。中央なら左右に十分な余地があるので、段でしっかり大きくできる。
+const RHYTHM_COMBO_TIER_SCALES = Object.freeze([1,1.08,1.16,1.26,1.36,1.46,1.56,1.66]);
 const rhythmComboTierScale = tier => {
   const index = Math.trunc(Number(tier)||0);
   return RHYTHM_COMBO_TIER_SCALES[Math.max(0,Math.min(RHYTHM_COMBO_TIER_SCALES.length-1,index))];

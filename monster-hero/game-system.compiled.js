@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: adb0c53268ea6c24
+// source-sha256: 65ef6acfd345d6bc
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 159116d28ed33ff9
+// generated-sha256: 8257d2305e7aeb57
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-12 23:36"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-12 23:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4963,11 +4963,10 @@ const rhythmComboTier = combo => {
 // 段ごとの大きさ。font-size ではなく transform:scale() で効かせる。
 // ★font-size を段ごとに上書きすると、横持ち(landscape:text-base)の詰めた文字サイズまで
 //   巻き添えで壊れる。倍率なら縦持ち・横持ちのどちらの基準サイズもそのまま活かせる。
-// ★上限が1.13で止まっているのは、ここが**レーンの台形の外側の空き**に置かれているため。
-//   4桁(9999)まで伸びた状態で台形へかぶると、奥のノーツが読めなくなる
-//   (tools/mode/rhythm-hud-wedge-check.js と rhythm-landscape-hud-check.js が実測で落とす)。
-//   そのぶん「どんどん目立つ」は、大きさよりも色・光・脈打ちの強さで出している。
-const RHYTHM_COMBO_TIER_SCALES = Object.freeze([1, 1.02, 1.04, 1.06, 1.08, 1.1, 1.12, 1.13]);
+// ★2026-09-12にコンボをプレイエリアの真ん中へ移したので、台形にかかる心配がなくなった。
+//   HUDの右上に居たころは1.13倍が上限だった(4桁まで伸びると台形へかかり、奥のノーツが
+//   読めなくなるため)。中央なら左右に十分な余地があるので、段でしっかり大きくできる。
+const RHYTHM_COMBO_TIER_SCALES = Object.freeze([1, 1.08, 1.16, 1.26, 1.36, 1.46, 1.56, 1.66]);
 const rhythmComboTierScale = tier => {
   const index = Math.trunc(Number(tier) || 0);
   return RHYTHM_COMBO_TIER_SCALES[Math.max(0, Math.min(RHYTHM_COMBO_TIER_SCALES.length - 1, index))];
@@ -20344,7 +20343,11 @@ const RhythmOptions = ({
     className: row
   }, /*#__PURE__*/React.createElement("span", {
     className: label
-  }, "\u5224\u5B9A\u6587\u5B57\u8868\u793A"), toggle('judgmentTextDisplay', '')), field('レーン発光', segments('laneGlow', [['NORMAL', '標準'], ['LOW', '控えめ'], ['NONE', 'なし']]))), /*#__PURE__*/React.createElement("section", {
+  }, "\u5224\u5B9A\u6587\u5B57\u8868\u793A"), toggle('judgmentTextDisplay', '')), /*#__PURE__*/React.createElement("div", {
+    className: row
+  }, /*#__PURE__*/React.createElement("span", {
+    className: label
+  }, "\u30B3\u30F3\u30DC\u6570\u8868\u793A"), toggle('comboDisplay', '')), field('レーン発光', segments('laneGlow', [['NORMAL', '標準'], ['LOW', '控えめ'], ['NONE', 'なし']]))), /*#__PURE__*/React.createElement("section", {
     className: card
   }, /*#__PURE__*/React.createElement("h3", {
     className: head
@@ -23517,25 +23520,7 @@ const RhythmTapTest = ({
     style: {
       textShadow: '0 1px 4px rgba(2,6,23,.92)'
     }
-  }), /*#__PURE__*/React.createElement("div", {
-    "data-rhythm-combo-box": true,
-    "data-combo-tier": String(comboTier),
-    className: "mt-1 text-right landscape:flex landscape:items-baseline landscape:gap-1.5 landscape:mt-0.5"
-  }, /*#__PURE__*/React.createElement("span", {
-    "data-rhythm-combo-label": true,
-    className: "block text-[9px] font-black leading-none tracking-[0.18em] text-fuchsia-300",
-    style: {
-      textShadow: '0 1px 4px rgba(2,6,23,.92)'
-    }
-  }, "COMBO"), /*#__PURE__*/React.createElement("b", {
-    ref: comboRef,
-    "data-rhythm-combo": true,
-    "data-combo-tier": String(comboTier),
-    className: "mt-0.5 block text-3xl font-black leading-none tabular-nums text-white landscape:mt-0 landscape:text-base",
-    style: {
-      '--mh-combo-scale': rhythmComboTierScale(comboTier)
-    }
-  }, view.combo)))), lifeState === 'down' && /*#__PURE__*/React.createElement("div", {
+  }))), lifeState === 'down' && /*#__PURE__*/React.createElement("div", {
     "data-rhythm-down-vignette": true,
     "aria-hidden": "true",
     className: "pointer-events-none absolute inset-0 z-20"
@@ -23576,7 +23561,23 @@ const RhythmTapTest = ({
     ref: screenFlashRef,
     "data-rhythm-screen-flash": true,
     "aria-hidden": "true"
-  }), /*#__PURE__*/React.createElement("div", {
+  }), settings.comboDisplay !== false && view.combo > 0 && /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-combo-box": true,
+    "data-combo-tier": String(comboTier),
+    "aria-hidden": "true",
+    className: "pointer-events-none absolute left-1/2 z-[2] -translate-x-1/2 text-center"
+  }, /*#__PURE__*/React.createElement("b", {
+    ref: comboRef,
+    "data-rhythm-combo": true,
+    "data-combo-tier": String(comboTier),
+    className: "block font-black leading-none tabular-nums text-white",
+    style: {
+      '--mh-combo-scale': rhythmComboTierScale(comboTier)
+    }
+  }, view.combo), /*#__PURE__*/React.createElement("span", {
+    "data-rhythm-combo-label": true,
+    className: "mt-1 block font-black leading-none tracking-[0.36em]"
+  }, "COMBO")), /*#__PURE__*/React.createElement("div", {
     ref: judgmentBandRef,
     "data-rhythm-judgment-band": true,
     "aria-hidden": "true",

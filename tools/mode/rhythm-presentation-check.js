@@ -69,14 +69,27 @@ ok('FLICKは上へ払うことが分かる印を出す',
 
 // --- コンボの強調 ---
 // data-combo-tier の中に「>=300」の「>」が入るので、タグを正規表現で切らずに前後関係で見る。
-ok('コンボ数を大きく出す',(()=>{
-  const at=game.indexOf('data-rhythm-combo ');
-  // 縦画面は text-3xl（従来の text-2xl から1段大きい）。text-4xl まで上げるとHUDが
-  // レーンの台形へかぶるため、rhythm-hud-wedge-check.js の実測で決めた上限。
-  // 横画面はHUDを画面の25%以内に収める約束があるので従来のサイズを保つ。
-  const block=game.slice(at,at+400);
-  return at>=0&&block.includes('text-3xl')&&block.includes('landscape:text-base');
-})());
+// 2026-09-12・ユーザー指示「コンボももう少し目立つように段階的に /
+//   あと右より過ぎるから邪魔にならないように真ん中に寄せて」。
+// 右上のHUDから**プレイエリアの真ん中**へ移した。HUDの左右の列は台形の外側の空きに
+// 置いてあり、その空きは上ほど広いが、上の中央は台形の頂点(ノーツが湧く点・幅18%)なので、
+// HUDの中では「真ん中へ寄せる」余地がそもそも無かった。
+ok('コンボ数はプレイエリアの真ん中に出す',
+  /\{settings\.comboDisplay!==false&&view\.combo>0&&<div data-rhythm-combo-box[^>]*absolute left-1\/2[^>]*-translate-x-1\/2/.test(game)
+  &&html.includes('[data-rhythm-combo-box]{')
+  &&/\[data-rhythm-combo-box\]\{[\s\S]{0,120}top:21%/.test(html));
+// ★邪魔にならないよう、ノーツ(z-5)より後ろに描いて少し透かす。0コンボでは出さない
+ok('ノーツより後ろに描いて透かす(邪魔にならない)',
+  /data-rhythm-combo-box[^>]*z-\[2\]/.test(game)
+  &&/data-rhythm-combo-box[^>]*pointer-events-none/.test(game)
+  &&/\[data-rhythm-combo-box\]\{[\s\S]{0,160}opacity:\.62/.test(html)
+  &&html.includes('[data-rhythm-note] {'));
+// 場に重なるので、邪魔だと感じた人が消せるようにする(設定は前からあったが使われていなかった)
+ok('コンボ数表示のON/OFFを設定から切り替えられる',
+  game.includes("toggle('comboDisplay','')")&&game.includes('settings.comboDisplay!==false'));
+ok('コンボ数を大きく出す',
+  /\[data-rhythm-combo\]\{[\s\S]{0,160}font-size:min\(52px,13\.5vw\)/.test(html)
+  &&/@media \(orientation: landscape\)\{[\s\S]{0,200}\[data-rhythm-combo\]\{font-size:min\(40px,7vw\)\}/.test(html));
 // 2026-09-12・ユーザー指示「コンボ数もわかりにくい。増えれば増えるほど目立つようにして」。
 // 100/200/300の3段だったのを 10/30/50/100/200/300/500 の7段にし、段が上がるほど
 // 色だけでなく **大きさ** も変わるようにした(--mh-combo-scale)。
@@ -85,14 +98,17 @@ ok('コンボ数は10〜500の7段で見た目が変わる',
   &&game.includes('const comboTier=rhythmComboTier(view.combo);')
   &&game.includes("data-combo-tier={String(comboTier)}")
   &&[1,2,3,4,5,6,7].every(tier=>html.includes(`[data-rhythm-combo][data-combo-tier="${tier}"]`)));
-// ★大きさは font-size ではなく倍率で効かせる。font-size を段ごとに上書きすると、
-//   横持ち(landscape:text-base)の詰めた文字サイズまで巻き添えで壊れる。
+// ★大きさは font-size ではなく倍率で効かせる。段ごとに font-size を上書きすると、
+//   横持ち用に詰めたサイズまで巻き添えで壊れる。
+// ★起点は中央。真ん中に置いたので、左右どちらへ伸びても台形の外の余地がある
+//   (HUDの右上に居たころは右下を起点にして、下端が台形へ近づかないようにしていた)。
 ok('段ごとの大きさは倍率(--mh-combo-scale)で効かせる',
   game.includes("style={{'--mh-combo-scale':rhythmComboTierScale(comboTier)}}")
   &&html.includes('transform:scale(var(--mh-combo-scale,1));')
-  // ★起点は「右下」。中央を起点にすると、大きくしたぶん下端が下がってレーンの台形
-  //   (下へ行くほど広い)へ近づき、奥のノーツを隠す(2026-09-12に実測で分かった)。
-  &&html.includes('transform-origin:right bottom;'));
+  &&html.includes('transform-origin:center center;'));
+// 真ん中へ移して上限が外れたので、段でしっかり大きくする(HUDでは1.13倍が限界だった)
+ok('段が上がるほどはっきり大きくなる',
+  game.includes('const RHYTHM_COMBO_TIER_SCALES = Object.freeze([1,1.08,1.16,1.26,1.36,1.46,1.56,1.66]);'));
 // ★弾む演出(mhRhythmComboPop)も倍率を掛けたうえで戻す。scale(1)へ戻すと、
 //   大きくしたコンボ数が跳ねるたびに一瞬だけ元の大きさへ縮む。
 ok('弾む演出も倍率のままで戻る',
