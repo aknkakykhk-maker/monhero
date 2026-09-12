@@ -28,7 +28,14 @@ function MasuAutoEnhanceScreen({
       const points = Math.max(0, Math.floor(Number(masu.distAptPoints) || 0));
       const resolvedApt = resolveMasuDistAptitude(masu, base);
       const baseApt = masuTranscendBaseAptitude(masu, base);
-      const hasTarget = autoEnhanceHasTarget(settings);
+      // ステータスは「合計いくつまで上げてよいか」で決める。素の値(超越の基礎UPを含む)と
+      // いまの値は、強化画面に出ている数字とまったく同じものを使う
+      const individual = resolveMasuIndividualStats(masu, base);
+      const statTargets = autoEnhanceStatTargetsOf(masu, base);
+      const baseStatOf = (key) => Math.max(0, Math.floor(Number(individual[key]) || 0));
+      const spentStatOf = (key) => Math.max(0, Number(masu.statPoints?.[key]) || 0);
+      const currentStatOf = (key) => baseStatOf(key) + spentStatOf(key);
+      const hasTarget = autoEnhanceHasTarget(masu, base);
       // 絆ポイントリセットの直後は自動で振らない(道具代を無駄にしないため)。
       // 止まっていることを黙っていると「ONなのに働かない」に見えるので、画面で必ず伝える
       const awaitsReset = masuAwaitsBondResetReallocation(masu);
@@ -39,22 +46,22 @@ function MasuAutoEnhanceScreen({
       const log = (autoEnhanceLog || []).filter(entry => String(entry.masuId) === String(masu.id));
 
       // null のあいだは保存値をそのまま出す
-      const statLimitText = (key) => {
+      const statTargetText = (key) => {
         if (limitDraft && limitDraft.key === key) return limitDraft.text;
-        const limit = settings.statLimits[key];
-        return limit === null ? '' : String(limit);
+        const goal = statTargets[key];
+        return goal === null ? '' : String(goal);
       };
-      const commitStatLimit = (key) => {
+      const commitStatTarget = (key) => {
         if (!limitDraft || limitDraft.key !== key) return;
         const text = limitDraft.text.trim();
         setLimitDraft(null);
         // 空欄は「上限なし」。数字以外が混ざっていたら数字だけを拾う(スマホのキーボード対策)
         const digits = text.replace(/[^0-9]/g, '');
-        updateAutoEnhance(masu.id, { statLimits:{ ...settings.statLimits, [key]: digits === '' ? null : Number(digits) } });
+        updateAutoEnhance(masu.id, { statTargets:{ ...statTargets, [key]: digits === '' ? null : Number(digits) } });
       };
-      const setStatLimit = (key, value) => {
+      const setStatTarget = (key, value) => {
         setLimitDraft(null);
-        updateAutoEnhance(masu.id, { statLimits:{ ...settings.statLimits, [key]: value } });
+        updateAutoEnhance(masu.id, { statTargets:{ ...statTargets, [key]: value } });
       };
       const setAptLimit = (index, grade) => {
         const aptLimits = [...settings.aptLimits];
@@ -67,7 +74,7 @@ function MasuAutoEnhanceScreen({
       };
       const clearAll = () => {
         setLimitDraft(null);
-        updateAutoEnhance(masu.id, { statLimits:{ hp:0, atk:0, def:0, guts:0 }, aptLimits:[null,null,null,null] });
+        updateAutoEnhance(masu.id, { statTargets:{ hp:0, atk:0, def:0, guts:0 }, aptLimits:[null,null,null,null] });
       };
       const rowLabel = (target) => {
         const aptIndex = autoEnhanceAptIndexOf(target);
@@ -120,18 +127,18 @@ function MasuAutoEnhanceScreen({
               )}
               {settings.enabled&&!hasTarget&&(
                 <div className="mt-2 rounded-xl border border-amber-500/50 bg-amber-950/30 px-2.5 py-2 text-[9px] font-black text-amber-200 leading-relaxed">
-                  振ってよい先がまだ1つもないので、ONでも何も振られません。下の上限を決めるか、「いまの配分を上限として取り込む」を押してください。
+                  振ってよい先がまだ1つもないので、ONでも何も振られません。下で目標を決めるか、「いまの値を目標として取り込む」を押してください。
                 </div>
               )}
-              <div className="mt-2 text-[8px] font-bold text-slate-500 leading-relaxed">設定は転生しても残ります。上限まで振り終わると、残った強化ポイントはそのまま手元に残るので、手で振ることもできます。</div>
+              <div className="mt-2 text-[8px] font-bold text-slate-500 leading-relaxed">設定は転生しても残ります。目標まで届くと止まり、残った強化ポイントはそのまま手元に残るので、手で振ることもできます。</div>
             </div>
 
             {/* 上限の一括操作 */}
             <div className="grid grid-cols-2 gap-2">
-              <button type="button" onClick={captureCurrent} className="min-h-[46px] rounded-xl bg-slate-800 border border-lime-400/40 text-lime-200 text-[10px] font-black active:scale-95 px-2 leading-tight">いまの配分を<br/>上限として取り込む</button>
+              <button type="button" onClick={captureCurrent} className="min-h-[46px] rounded-xl bg-slate-800 border border-lime-400/40 text-lime-200 text-[10px] font-black active:scale-95 px-2 leading-tight">いまの値を<br/>目標として取り込む</button>
               <button type="button" onClick={clearAll} className="min-h-[46px] rounded-xl bg-slate-800 border border-white/10 text-slate-300 text-[10px] font-black active:scale-95 px-2 leading-tight">すべて<br/>「振らない」に戻す</button>
             </div>
-            <div className="text-[8px] text-slate-500 font-bold leading-relaxed px-1">「いまの配分を上限として取り込む」は、この子にいま振ってある内容をそのまま上限に写します。転生する前に押しておくと、転生後の周回で同じ形まで自動で戻ります。</div>
+            <div className="text-[8px] text-slate-500 font-bold leading-relaxed px-1">「いまの値を目標として取り込む」は、この子のいまの数値をそのまま目標に写します。転生する前に押しておくと、転生後の周回で同じ数値まで自動で戻ります。</div>
 
             {/* いま持っているポイントの行き先 */}
             <div className="rounded-2xl border border-lime-500/30 bg-black/40 p-3">
@@ -144,7 +151,7 @@ function MasuAutoEnhanceScreen({
                       <div className="mt-1 text-[8px] font-bold text-slate-400">{planned.used}P を使い、{points-planned.used}P が残ります。{awaitsReset&&'（絆ポイントリセットの直後なので、自動では振りません）'}</div>
                       <button type="button" onClick={()=>applyAutoEnhanceNow(masu.id)} className="mt-2 w-full min-h-[44px] rounded-xl bg-gradient-to-r from-lime-600 to-emerald-600 text-white font-black text-[11px] active:scale-95">この内容でいますぐ振る</button>
                     </>)
-                  : <div className="text-[9px] text-amber-300 font-bold">上限まで振り終わっているので、いまの設定では振る先がありません。</div>}
+                  : <div className="text-[9px] text-amber-300 font-bold">目標まで届いているので、いまの設定では振る先がありません。</div>}
             </div>
 
             {/* 優先順位と上限 */}
@@ -157,11 +164,14 @@ function MasuAutoEnhanceScreen({
                 {settings.order.map((target,rank)=>{
                   const aptIndex = autoEnhanceAptIndexOf(target);
                   const isApt = aptIndex != null;
-                  const limit = isApt ? settings.aptLimits[aptIndex] : settings.statLimits[target];
+                  const limit = isApt ? settings.aptLimits[aptIndex] : statTargets[target];
                   const active = isApt ? limit !== null : (limit === null || limit > 0);
                   const gain = isApt ? 0 : (STAT_POINT_GAIN[target] || 1);
-                  const spentValue = isApt ? 0 : Math.max(0, Number(masu.statPoints?.[target]) || 0);
-                  const spentPoints = isApt ? 0 : Math.ceil(spentValue / gain);
+                  const baseValue = isApt ? 0 : baseStatOf(target);
+                  const spentValue = isApt ? 0 : spentStatOf(target);
+                  const currentValue = isApt ? 0 : currentStatOf(target);
+                  // 目標まであと何ポイント要るか。1Pあたりの上昇量で割り切れないぶんは切り捨て
+                  const neededPoints = (isApt || limit === null || limit <= 0) ? 0 : Math.max(0, Math.floor((limit - currentValue) / gain));
                   const choices = isApt ? aptChoices(aptIndex) : [];
                   return (
                     <div key={target} className={`rounded-2xl p-2 border ${active?'border-lime-500/30 bg-black/40':'border-white/5 bg-black/20'}`}>
@@ -186,29 +196,35 @@ function MasuAutoEnhanceScreen({
                           </div>)
                         : (<div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                             <span className="text-[9px] font-bold text-slate-400 shrink-0">いま</span>
-                            <span className="text-[11px] font-mono font-black text-emerald-300 shrink-0">+{spentValue}</span>
-                            <span className="text-[8px] text-slate-600 shrink-0">({spentPoints}P)</span>
-                            <span className="text-[9px] font-bold text-slate-400 shrink-0">→ 上限</span>
+                            <span className="text-[13px] font-mono font-black text-white shrink-0">{currentValue}</span>
+                            <span className="text-[9px] font-bold text-slate-400 shrink-0">→ ここまで</span>
                             <label className="flex flex-1 basis-16 min-w-0 items-center gap-0.5">
-                              <input data-auto-enhance-limit={target} aria-label={`${rowLabel(target)}へ振ってよい強化ポイントの上限`} type="text" inputMode="numeric" pattern="[0-9]*" enterKeyHint="done" autoComplete="off"
-                                placeholder="上限なし" value={statLimitText(target)} onFocus={event=>event.currentTarget.select()}
+                              <input data-auto-enhance-limit={target} aria-label={`${rowLabel(target)}をいくつまで上げてよいか`} type="text" inputMode="numeric" pattern="[0-9]*" enterKeyHint="done" autoComplete="off"
+                                placeholder="上限なし" value={statTargetText(target)} onFocus={event=>event.currentTarget.select()}
                                 onChange={event=>setLimitDraft({ key:target, text:event.currentTarget.value })}
-                                onBlur={()=>commitStatLimit(target)}
+                                onBlur={()=>commitStatTarget(target)}
                                 onKeyDown={event=>{ if(event.key==='Enter') event.currentTarget.blur(); }}
-                                className="w-full min-w-0 h-10 rounded-lg border border-lime-400/40 bg-slate-950 px-1 text-center text-[11px] font-mono font-black text-white outline-none focus:border-lime-300 placeholder:text-slate-600 placeholder:font-bold"/>
-                              <span className="text-[9px] font-black text-lime-300 shrink-0">P</span>
+                                className="w-full min-w-0 h-10 rounded-lg border border-lime-400/40 bg-slate-950 px-1 text-center text-[13px] font-mono font-black text-white outline-none focus:border-lime-300 placeholder:text-[10px] placeholder:text-slate-600 placeholder:font-bold"/>
                             </label>
-                            <button type="button" aria-label={`${rowLabel(target)}を上限なしにする`} aria-pressed={limit===null} onClick={()=>setStatLimit(target, null)} className={`w-9 h-10 shrink-0 rounded-lg text-[11px] font-black active:scale-95 ${limit===null?'bg-lime-500 text-slate-950':'bg-slate-700 text-slate-300'}`}>∞</button>
-                            <button type="button" aria-label={`${rowLabel(target)}を振らないにする`} aria-pressed={limit===0} onClick={()=>setStatLimit(target, 0)} className={`w-9 h-10 shrink-0 rounded-lg text-[11px] font-black active:scale-95 ${limit===0?'bg-slate-500 text-slate-950':'bg-slate-700 text-slate-300'}`}>✕</button>
+                            <button type="button" aria-label={`${rowLabel(target)}を上限なしにする`} aria-pressed={limit===null} onClick={()=>setStatTarget(target, null)} className={`w-9 h-10 shrink-0 rounded-lg text-[11px] font-black active:scale-95 ${limit===null?'bg-lime-500 text-slate-950':'bg-slate-700 text-slate-300'}`}>∞</button>
+                            <button type="button" aria-label={`${rowLabel(target)}を振らないにする`} aria-pressed={limit===0} onClick={()=>setStatTarget(target, 0)} className={`w-9 h-10 shrink-0 rounded-lg text-[11px] font-black active:scale-95 ${limit===0?'bg-slate-500 text-slate-950':'bg-slate-700 text-slate-300'}`}>✕</button>
                           </div>)}
-                      {!isApt&&limit!==null&&limit>0&&(
-                        <div className="mt-1 text-[8px] font-bold text-slate-500">上限まで振ると {STAT_POINT_KEYS[target]} +{limit*gain}（いま +{spentValue}）</div>
+                      {/* 数字の出どころを1行で見せる。「いま」が素の値と強化ぶんの合計だと分かれば、
+                          目標をいくつにすればいいか考えなくて済む */}
+                      {!isApt&&(
+                        <div className="mt-1 text-[8px] font-bold text-slate-500">
+                          素の値 {baseValue}{spentValue>0&&<span className="text-emerald-400"> ＋ 強化 {spentValue}</span>} ／ 強化P1つで +{gain}
+                          {limit===null&&<span className="text-lime-400"> ／ 上限なし（振れるだけ振ります）</span>}
+                          {limit!==null&&limit>0&&(neededPoints>0
+                            ? <span className="text-lime-400"> ／ 目標まで あと {neededPoints}P</span>
+                            : <span className="text-slate-400"> ／ 目標に届いています</span>)}
+                        </div>
                       )}
                     </div>
                   );
                 })}
               </div>
-              <div className="mt-2 text-[8px] text-slate-500 font-bold leading-relaxed">ステータスの上限は「その能力へ振ってよい強化ポイントの数」です。空欄か∞で上限なし、✕で振りません。間合い適性はいまより上の段階だけを目標に選べます。</div>
+              <div className="mt-2 text-[8px] text-slate-500 font-bold leading-relaxed">ステータスは「その能力を合計いくつまで上げてよいか」で決めます（画面に出ている数値そのままです）。空欄か∞で上限なし、✕で振りません。強化P1つで上がる量は決まっているので、割り切れないときは目標を超えない手前で止まります。間合い適性はいまより上の段階だけを目標に選べます。</div>
             </div>
 
             {/* 直近の自動強化 */}
