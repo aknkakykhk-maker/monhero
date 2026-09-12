@@ -163,7 +163,6 @@ const rhythmComboTierScale = tier => {
 // ★既定は CENTER(いまの真ん中)。既存の保存値にはこのキー自体が無いので、
 //   読み込み時に CENTER で補われる(既存のキーは1つも触らない)。
 // ★実際の座標は index.html の [data-combo-pos="…"] が持つ。ここは名前だけ。
-const RHYTHM_COMBO_POSITIONS = Object.freeze(['CENTER','RIGHT','HUD','LEFT']);
 // ライフの見せ方の段(2026-09-12・ユーザー指示
 //   「ライフ変動や0になったときとか気付きにくいからもっと強調して / 0だとライフが赤くなるとか
 //     バーが割れるとか」)。
@@ -188,11 +187,31 @@ const rhythmLifeState = life => {
 //   有効で、意味も変わらない(-100〜+100の範囲は同じ)。
 const RHYTHM_TIMING_OFFSET_MAX_MS = 100;
 const RHYTHM_TIMING_OFFSET_STEP_MS = 1;
+// モンスターノーツを取ったときの演出の強さ(2026-09-13・ユーザー依頼
+// 「設定でモンスターノーツを踏んだときの軽量化バージョンもほしい」)。
+//   NORMAL … いまのまま(粒が2.1倍・画面全体が金色に光る・そのマスモンが大きく跳ねる)
+//   LIGHT  … **画面全体の光をやめる**。粒と跳ねは残す。いちばん重いのが全画面の描き直し
+//   OFF    … 粒もふつうのノーツと同じにして、跳ねもやめる
+// ★どの段でも**音・能力名・振動は残す**。取れたことが分からなくなるのがいちばん困るため。
+const RHYTHM_MONSTER_EFFECT_LABELS = Object.freeze([['NORMAL','標準'],['LIGHT','軽め'],['OFF','最小']]);
+const RHYTHM_MONSTER_EFFECT_LEVELS = Object.freeze(RHYTHM_MONSTER_EFFECT_LABELS.map(([id])=>id));
+// コンボ数の大きさ(2026-09-13・ユーザー依頼「コンボ数のサイズ設定もほしい」)。
+// 置き場所ごとの基準の大きさ(真ん中52px / 端34px)へ、この割合を掛ける。
+const RHYTHM_COMBO_SIZE_MIN = 70;
+const RHYTHM_COMBO_SIZE_MAX = 150;
+const RHYTHM_COMBO_SIZE_STEP = 10;
 const RHYTHM_LANE_GLOW_LABELS = Object.freeze([['NORMAL','標準'],['LOW','控えめ'],['NONE','なし']]);
 const RHYTHM_EFFECT_LABELS = Object.freeze([['NORMAL','標準'],['LOW','少なめ'],['MINIMAL','最小']]);
 const RHYTHM_SIDE_MONSTER_OPACITY_LABELS = Object.freeze([['NORMAL','はっきり'],['SOFT','ふつう'],['FAINT','うっすら'],['OFF','出さない']]);
 const RHYTHM_SIDE_MONSTER_MOTION_LABELS = Object.freeze([['NORMAL','跳ねる'],['SMALL','小さく跳ねる'],['NONE','動かない']]);
-const RHYTHM_COMBO_POSITION_LABELS = Object.freeze([['LEFT','左'],['CENTER','中央'],['RIGHT','右'],['HUD','右上']]);
+// ★AUTO(おすすめ)は「台形の外でいちばん広く空いているところ」(2026-09-13・ユーザー提案
+//   「コンボ数横画面の場合はこの位置が1番良いと思うんだけどどう？ / もう1枠増やして
+//    デフォルトもここにしたらどう？」)。実際の画面のスクリーンショットで示された場所。
+//   縦は台形の右外・マスモン上段の上、横は台形の右外でマスモンより内側。
+//   どちらもノーツの上に重ならないので、既定をここにした。
+//   HUD(右上)は「ライフのすぐ下・画面の端」として残す(横ではAUTOより外側になる)。
+const RHYTHM_COMBO_POSITION_LABELS = Object.freeze([['AUTO','おすすめ'],['LEFT','左'],['CENTER','中央'],['RIGHT','右'],['HUD','右上']]);
+const RHYTHM_COMBO_POSITIONS = Object.freeze(RHYTHM_COMBO_POSITION_LABELS.map(([id])=>id));
 const RHYTHM_LANE_GLOW_LEVELS = Object.freeze(['NORMAL','LOW','NONE']);
 const RHYTHM_JUDGMENT_IDS = Object.freeze(['MARVELOUS','EXCELLENT','GREAT','GOOD','BAD','MISS']);
 // ランク(G〜M)の表示色(暫定値)。下位ほど地味な色、上位ほど鮮やかにして一目で分かるようにする。
@@ -203,7 +222,8 @@ const RHYTHM_RANK_COLORS = Object.freeze({
 });
 const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   bgmVolume:100, noteSpeed:6, noteSize:100, noteStartPosition:0, displayTimingOffsetMs:0, judgmentTimingOffsetMs:0,
-  fastSlowDisplay:true, judgmentTextDisplay:true, judgmentTextPosition:50, comboDisplay:true, comboPosition:'CENTER', holdSlideOpacity:80, laneGlow:'NORMAL',
+  fastSlowDisplay:true, judgmentTextDisplay:true, judgmentTextPosition:50, comboDisplay:true, comboPosition:'AUTO', comboSize:100, holdSlideOpacity:80, laneGlow:'NORMAL',
+  monsterNoteEffect:'NORMAL',
   noteSeVolume:70, noteSeEnabled:true, vibrationEnabled:false, effectAmount:'NORMAL', lightweightMode:false,
   livePartnerVisible:true,
   // 両サイドのマスモン(2026-09-05)。既存の保存値には無いので、読み込み時は既定で補われる。
@@ -241,6 +261,8 @@ const normalizeRhythmSettings = value => {
     judgmentTextPosition:rhythmFiniteInRange(source.judgmentTextPosition,0,100,DEFAULT_RHYTHM_SETTINGS.judgmentTextPosition),
     comboDisplay:bool('comboDisplay'),
     comboPosition:RHYTHM_COMBO_POSITIONS.includes(source.comboPosition)?source.comboPosition:DEFAULT_RHYTHM_SETTINGS.comboPosition,
+    comboSize:rhythmFiniteStep(source.comboSize,RHYTHM_COMBO_SIZE_MIN,RHYTHM_COMBO_SIZE_MAX,RHYTHM_COMBO_SIZE_STEP,DEFAULT_RHYTHM_SETTINGS.comboSize),
+    monsterNoteEffect:RHYTHM_MONSTER_EFFECT_LEVELS.includes(source.monsterNoteEffect)?source.monsterNoteEffect:DEFAULT_RHYTHM_SETTINGS.monsterNoteEffect,
     holdSlideOpacity:rhythmFiniteInRange(source.holdSlideOpacity,10,100,DEFAULT_RHYTHM_SETTINGS.holdSlideOpacity),
     laneGlow:RHYTHM_LANE_GLOW_LEVELS.includes(source.laneGlow)?source.laneGlow:DEFAULT_RHYTHM_SETTINGS.laneGlow,
     noteSeVolume:rhythmFiniteStep(source.noteSeVolume,0,RHYTHM_VOLUME_MAX,1,DEFAULT_RHYTHM_SETTINGS.noteSeVolume),

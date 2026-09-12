@@ -90,7 +90,7 @@ const RhythmOptions=({value,onSave,onBack})=>{
       <span className={draft[key]===flag?'text-white':'text-slate-400'}>{text}</span>
     </button>)}
   </div>;
-  const segments=(key,items)=><div className={`grid ${items.length>=4?'grid-cols-4':'grid-cols-3'} overflow-hidden rounded-xl border border-white/20`}>{items.map(([id,text])=><button type="button" key={id} aria-pressed={draft[key]===id} onClick={()=>set(key,id)} className={`border-r border-white/10 px-1 text-[10px] font-black last:border-r-0 ${wide?'min-h-[38px]':'min-h-[44px]'} ${draft[key]===id?'bg-cyan-600 text-white':'bg-slate-900 text-slate-300'}`}>{text}</button>)}</div>;
+  const segments=(key,items)=><div className={`grid ${items.length>=5?'grid-cols-5':items.length>=4?'grid-cols-4':'grid-cols-3'} overflow-hidden rounded-xl border border-white/20`}>{items.map(([id,text])=><button type="button" key={id} aria-pressed={draft[key]===id} onClick={()=>set(key,id)} className={`border-r border-white/10 px-1 text-[10px] font-black last:border-r-0 ${wide?'min-h-[38px]':'min-h-[44px]'} ${draft[key]===id?'bg-cyan-600 text-white':'bg-slate-900 text-slate-300'}`}>{text}</button>)}</div>;
   // 1項目=1枠。頭に帯のラベルを置く(参考にした画面と同じ形)。
   // ★ここは項目の「入れ物」なので、余白・字の大きさは2026-09-05に広げたまま触らない。
   // ★数値のように横幅の要る項目は wide。縦持ち(2列)ではぶち抜き、
@@ -152,18 +152,23 @@ const RhythmOptions=({value,onSave,onBack})=>{
               'ノーツが画面のどのあたりから出てくるかを変えます。マイナスにすると奥（画面の上の外側）から、プラスにすると手前寄りから出てきます。判定ラインの位置・判定のタイミング・判定窓・スコアは変わりません。ノーツが流れてくる時間も変わらないので、手前から出すほど見えているあいだの動きは速く見えます。',{full:true})}
             {field('FAST / SLOW表示',toggle('fastSlowDisplay'))}
             {field('判定文字表示',toggle('judgmentTextDisplay'))}
-            {/* コンボ数は2026-09-12にプレイエリアの真ん中へ移した。場に重なるので、
-                邪魔だと感じた人が消せるようにする */}
-            {field('コンボ数表示',toggle('comboDisplay'))}
-            {field('能力中に光らせる',toggle('sideMonsterAbilityHighlight'))}
-            {/* 置き場所も選べる(2026-09-12・ユーザー指示「元位置（元位置より少し右より）とか
-                選べるほうがいい」)。「右上」が真ん中へ移す前の位置 */}
-            {draft.comboDisplay!==false&&field('コンボ数の位置',segments('comboPosition',RHYTHM_COMBO_POSITION_LABELS),
-              '「中央」は場の真ん中（既定）、「右上」は2026-09-12より前と同じ、ライフの下の位置です。どこに置いても判定・スコア・コンボの数え方は変わりません。',{full:true})}
             {field('レーン発光',segments('laneGlow',RHYTHM_LANE_GLOW_LABELS),null,{full:true})}
+            {/* ★出す/出さないと置き場所は**同じ枠にまとめる**(2026-09-13・ユーザー指摘
+                「オプションの配置もコンボを出すとコンボの位置選択から隣り合わせにないのも
+                 意味わからない」)。別々の枠に置くと、あいだに関係ない項目が挟まる。 */}
+            {field('コンボ数',<>
+              {toggle('comboDisplay')}
+              {draft.comboDisplay!==false&&<>
+                <div className={wide?'mt-1.5':'mt-2'}>{segments('comboPosition',RHYTHM_COMBO_POSITION_LABELS)}</div>
+                {/* 大きさも選べる(2026-09-13・ユーザー依頼「コンボ数のサイズ設定もほしい」) */}
+                <div className={wide?'mt-1.5':'mt-2'}>{stepper('comboSize',RHYTHM_COMBO_SIZE_MIN,RHYTHM_COMBO_SIZE_MAX,RHYTHM_COMBO_SIZE_STEP,{fine:RHYTHM_COMBO_SIZE_STEP,coarse:RHYTHM_COMBO_SIZE_STEP*2,suffix:'%'})}</div>
+              </>}
+            </>,'出す/出さないと、出す場所（左・中央・右・右上）、大きさ（70〜150%）を選べます。端へ寄せる3つは、両サイドのマスモンに重ならないところへ出ます。大きさを上げると、端に寄せたときはレーンにかかることがあります。どこに置いても判定・スコア・コンボの数え方は変わりません。',{full:true})}
             {field('両サイドのマスモン｜濃さ',segments('sideMonsterOpacity',RHYTHM_SIDE_MONSTER_OPACITY_LABELS),
               'レーンの外側の空いたところへ、設定したマスモンが出て拍に合わせて跳ねます。ノーツが見づらいときや、端末が熱くなりやすいときは薄くするか止めてください。',{full:true})}
             {field('両サイドのマスモン｜動き',segments('sideMonsterMotion',RHYTHM_SIDE_MONSTER_MOTION_LABELS),null,{full:true})}
+            {/* マスモンの項目なので、マスモンの並びへ置く(コンボ数のあいだに挟まっていた) */}
+            {field('マスモン｜能力中に光らせる',toggle('sideMonsterAbilityHighlight'),null,{full:true})}
           </div>
         </section>}
         {tab==='volume'&&<section data-rhythm-options-panel="volume" className={card}>
@@ -194,6 +199,10 @@ const RhythmOptions=({value,onSave,onBack})=>{
                 動きがカクつく端末ではここがいちばん効く */}
             {field('演出量',segments('effectAmount',RHYTHM_EFFECT_LABELS),
               '動きがカクついたり、端末が熱くなったりするときは「少なめ」にしてください。判定文字の金色の帯や虹が流れるのを止め、光のにじみを減らします（色・グラデーション・字の大きさは標準と同じままです）。「最小」にすると、それに加えて100コンボごとの演出や光そのものもほぼ出なくなります。',{full:true})}
+            {/* モンスターノーツだけを軽くしたい人向け(2026-09-13・ユーザー依頼
+                「設定でモンスターノーツを踏んだときの軽量化バージョンもほしい」) */}
+            {field('モンスターノーツの演出',segments('monsterNoteEffect',RHYTHM_MONSTER_EFFECT_LABELS),
+              'モンスターノーツを取ったときの演出の強さです。「軽め」にすると、画面全体が金色に光るのをやめます（いちばん重いのがこの全画面の描き直しです）。「最小」にすると、光る粒もふつうのノーツと同じになり、両サイドのマスモンも跳ねません。どの段でも、音・能力名・振動はそのまま残るので、取れたことは分かります。',{full:true})}
             {field('軽量モード',toggle('lightweightMode'))}
             {field('曲えらびで試聴する',toggle('songPreviewEnabled'))}
             {field('タップ時の振動',<>

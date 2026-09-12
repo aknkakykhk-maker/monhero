@@ -253,7 +253,8 @@ check('演奏中の判定処理に offsetWidth の読み取りを残さない',
 check('ヒット演出は呼び出し側のまとめへ譲れる(defer)',
   source.includes("if(defer)return {el:item,attr:'rhythmHitKind',value:kind};")
   // 2026-09-12: ぴったりのMARVELOUS(precise)を渡すようになったので、その間へ入る
-  &&game.includes('monster:monsterHit,precise:preciseHit,defer:true'));
+  &&game.includes('monster:bigMonsterEffect,precise:preciseHit,defer:true')
+  &&game.includes("const bigMonsterEffect=monsterHit&&monsterEffect!=='OFF';"));
 
 // --- 判定まわりを変えていない ---
 check('判定窓・スコア・コンボの計算に触っていない',

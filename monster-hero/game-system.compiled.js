@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b9ebb52c52765688
+// source-sha256: 75791ea35fba893a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a9f7ec36241ddf4b
+// generated-sha256: b8f30be558889793
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-13 04:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-13 04:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5052,7 +5052,6 @@ const rhythmComboTierScale = tier => {
 // ★既定は CENTER(いまの真ん中)。既存の保存値にはこのキー自体が無いので、
 //   読み込み時に CENTER で補われる(既存のキーは1つも触らない)。
 // ★実際の座標は index.html の [data-combo-pos="…"] が持つ。ここは名前だけ。
-const RHYTHM_COMBO_POSITIONS = Object.freeze(['CENTER', 'RIGHT', 'HUD', 'LEFT']);
 // ライフの見せ方の段(2026-09-12・ユーザー指示
 //   「ライフ変動や0になったときとか気付きにくいからもっと強調して / 0だとライフが赤くなるとか
 //     バーが割れるとか」)。
@@ -5077,11 +5076,31 @@ const rhythmLifeState = life => {
 //   有効で、意味も変わらない(-100〜+100の範囲は同じ)。
 const RHYTHM_TIMING_OFFSET_MAX_MS = 100;
 const RHYTHM_TIMING_OFFSET_STEP_MS = 1;
+// モンスターノーツを取ったときの演出の強さ(2026-09-13・ユーザー依頼
+// 「設定でモンスターノーツを踏んだときの軽量化バージョンもほしい」)。
+//   NORMAL … いまのまま(粒が2.1倍・画面全体が金色に光る・そのマスモンが大きく跳ねる)
+//   LIGHT  … **画面全体の光をやめる**。粒と跳ねは残す。いちばん重いのが全画面の描き直し
+//   OFF    … 粒もふつうのノーツと同じにして、跳ねもやめる
+// ★どの段でも**音・能力名・振動は残す**。取れたことが分からなくなるのがいちばん困るため。
+const RHYTHM_MONSTER_EFFECT_LABELS = Object.freeze([['NORMAL', '標準'], ['LIGHT', '軽め'], ['OFF', '最小']]);
+const RHYTHM_MONSTER_EFFECT_LEVELS = Object.freeze(RHYTHM_MONSTER_EFFECT_LABELS.map(([id]) => id));
+// コンボ数の大きさ(2026-09-13・ユーザー依頼「コンボ数のサイズ設定もほしい」)。
+// 置き場所ごとの基準の大きさ(真ん中52px / 端34px)へ、この割合を掛ける。
+const RHYTHM_COMBO_SIZE_MIN = 70;
+const RHYTHM_COMBO_SIZE_MAX = 150;
+const RHYTHM_COMBO_SIZE_STEP = 10;
 const RHYTHM_LANE_GLOW_LABELS = Object.freeze([['NORMAL', '標準'], ['LOW', '控えめ'], ['NONE', 'なし']]);
 const RHYTHM_EFFECT_LABELS = Object.freeze([['NORMAL', '標準'], ['LOW', '少なめ'], ['MINIMAL', '最小']]);
 const RHYTHM_SIDE_MONSTER_OPACITY_LABELS = Object.freeze([['NORMAL', 'はっきり'], ['SOFT', 'ふつう'], ['FAINT', 'うっすら'], ['OFF', '出さない']]);
 const RHYTHM_SIDE_MONSTER_MOTION_LABELS = Object.freeze([['NORMAL', '跳ねる'], ['SMALL', '小さく跳ねる'], ['NONE', '動かない']]);
-const RHYTHM_COMBO_POSITION_LABELS = Object.freeze([['LEFT', '左'], ['CENTER', '中央'], ['RIGHT', '右'], ['HUD', '右上']]);
+// ★AUTO(おすすめ)は「台形の外でいちばん広く空いているところ」(2026-09-13・ユーザー提案
+//   「コンボ数横画面の場合はこの位置が1番良いと思うんだけどどう？ / もう1枠増やして
+//    デフォルトもここにしたらどう？」)。実際の画面のスクリーンショットで示された場所。
+//   縦は台形の右外・マスモン上段の上、横は台形の右外でマスモンより内側。
+//   どちらもノーツの上に重ならないので、既定をここにした。
+//   HUD(右上)は「ライフのすぐ下・画面の端」として残す(横ではAUTOより外側になる)。
+const RHYTHM_COMBO_POSITION_LABELS = Object.freeze([['AUTO', 'おすすめ'], ['LEFT', '左'], ['CENTER', '中央'], ['RIGHT', '右'], ['HUD', '右上']]);
+const RHYTHM_COMBO_POSITIONS = Object.freeze(RHYTHM_COMBO_POSITION_LABELS.map(([id]) => id));
 const RHYTHM_LANE_GLOW_LEVELS = Object.freeze(['NORMAL', 'LOW', 'NONE']);
 const RHYTHM_JUDGMENT_IDS = Object.freeze(['MARVELOUS', 'EXCELLENT', 'GREAT', 'GOOD', 'BAD', 'MISS']);
 // ランク(G〜M)の表示色(暫定値)。下位ほど地味な色、上位ほど鮮やかにして一目で分かるようにする。
@@ -5108,9 +5127,11 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   judgmentTextDisplay: true,
   judgmentTextPosition: 50,
   comboDisplay: true,
-  comboPosition: 'CENTER',
+  comboPosition: 'AUTO',
+  comboSize: 100,
   holdSlideOpacity: 80,
   laneGlow: 'NORMAL',
+  monsterNoteEffect: 'NORMAL',
   noteSeVolume: 70,
   noteSeEnabled: true,
   vibrationEnabled: false,
@@ -5155,6 +5176,8 @@ const normalizeRhythmSettings = value => {
     judgmentTextPosition: rhythmFiniteInRange(source.judgmentTextPosition, 0, 100, DEFAULT_RHYTHM_SETTINGS.judgmentTextPosition),
     comboDisplay: bool('comboDisplay'),
     comboPosition: RHYTHM_COMBO_POSITIONS.includes(source.comboPosition) ? source.comboPosition : DEFAULT_RHYTHM_SETTINGS.comboPosition,
+    comboSize: rhythmFiniteStep(source.comboSize, RHYTHM_COMBO_SIZE_MIN, RHYTHM_COMBO_SIZE_MAX, RHYTHM_COMBO_SIZE_STEP, DEFAULT_RHYTHM_SETTINGS.comboSize),
+    monsterNoteEffect: RHYTHM_MONSTER_EFFECT_LEVELS.includes(source.monsterNoteEffect) ? source.monsterNoteEffect : DEFAULT_RHYTHM_SETTINGS.monsterNoteEffect,
     holdSlideOpacity: rhythmFiniteInRange(source.holdSlideOpacity, 10, 100, DEFAULT_RHYTHM_SETTINGS.holdSlideOpacity),
     laneGlow: RHYTHM_LANE_GLOW_LEVELS.includes(source.laneGlow) ? source.laneGlow : DEFAULT_RHYTHM_SETTINGS.laneGlow,
     noteSeVolume: rhythmFiniteStep(source.noteSeVolume, 0, RHYTHM_VOLUME_MAX, 1, DEFAULT_RHYTHM_SETTINGS.noteSeVolume),
@@ -10760,6 +10783,108 @@ const HIDDEN_UPDATE_NOTICE_IDS = new Set((typeof CHANGELOG !== 'undefined' ? CHA
 const CHANGELOG_TIMED_SEEN_FIX_KEY = 'mh_changelog_timed_seen_fix_v1';
 const CHANGELOG_ISSUE_TAB_TYPES = Object.freeze(['issue', 'fix']);
 const changelogEntriesOfTab = tab => CHANGELOG_ENTRIES.filter(entry => CHANGELOG_ISSUE_TAB_TYPES.includes(entry.type) === (tab === 'issue'));
+// ===== 更新情報の「話題」ごとのまとめ =====
+// ちょこちょこした更新が1行ずつ積み上がり、過去の項目がすぐ画面の外へ流れていた
+// (2026-09-13・ユーザー指摘「同じような内容は同じとこにまとめて詳細で詳しく出るようにして /
+//  過去のやつが一瞬で見えなくなる」)。
+// 同じ日の同じ話題を1行にまとめ、開いたときにその中身を全部出す。
+// 682件が130行ほどになり、1画面でさかのぼれる日数が大きく増える。
+//
+// ★話題は entry.group があればそれを使い、無ければタイトルと本文から見当をつける。
+//   すでにある682件へ手で group を書き足すのは現実的でないため。
+//   見当は「どの見出しの下に並べるか」を決めるだけで、記録そのものには一切触らない。
+//   外れても害は「見出しが違う」だけなので、迷ったら その他 へ落とす。
+// ★新しく書く項目は group を書いておけば、見当に頼らず確実にそこへ入る。
+const CHANGELOG_GROUPS = Object.freeze([{
+  id: 'rhythm',
+  label: 'モンヒロビート',
+  emoji: '🎵',
+  match: /モンヒロビート|モンビー|音ゲー|譜面|ノーツ|レーン|コンボ|判定|新曲|曲えらび|演奏|リズム/
+}, {
+  id: 'masu',
+  label: 'マスモンの育成',
+  emoji: '💜',
+  match: /マスモン|強化|転生|限界突破|超越|魂格|合体|絆|トレーニング|育成|再生|染色|ブリーダー|オート強化/
+}, {
+  id: 'battle',
+  label: 'バトル',
+  emoji: '⚔',
+  match: /バトル|WAVE|難易度|勇者モン|供モン|カード|AUTO|クイック|極限|種族チャレンジ|スキップ|敵/
+}, {
+  id: 'items',
+  label: 'アイテム・マーケット',
+  emoji: '🎁',
+  match: /マーケット|アイテム|ギフト|チケット|ダイヤ|ログインボーナス|ミッション|プシュケー/
+}, {
+  id: 'ranking',
+  label: 'ランキング',
+  emoji: '🏆',
+  match: /ランキング/
+}, {
+  id: 'assistant',
+  label: '助手',
+  emoji: '🎀',
+  match: /助手|みゅあ|きき|ももすけ/
+}, {
+  id: 'ui',
+  label: '画面・操作',
+  emoji: '🖥',
+  match: /画面|表示|ボタン|レイアウト|ヘルプ|設定|HOME|更新情報|お知らせ|バナー|図鑑/
+}, {
+  id: 'other',
+  label: 'その他',
+  emoji: '✦',
+  match: null
+}]);
+const CHANGELOG_GROUP_BY_ID = Object.freeze(Object.fromEntries(CHANGELOG_GROUPS.map(group => [group.id, group])));
+const changelogGroupInfo = id => CHANGELOG_GROUP_BY_ID[id] || CHANGELOG_GROUP_BY_ID.other;
+// ★見当をつけるときは、まずタイトルだけで探す。本文まで一度に混ぜると、
+//   ついでに触れただけの言葉へ引っ張られる。実際に
+//   「新しいバージョンのお知らせを…選べるようにしました」が、本文に「演奏中は出さない」と
+//   書いてあるだけでモンヒロビート扱いになっていた。
+//   タイトルで決まらないときだけ、本文の先頭を見る(長い本文ほど関係ない語が増えるので先頭だけ)。
+const changelogGroupMatch = text => {
+  if (!text) return null;
+  const hit = CHANGELOG_GROUPS.find(group => group.match && group.match.test(text));
+  return hit ? hit.id : null;
+};
+const changelogGroupIdOf = entry => {
+  const written = typeof entry?.group === 'string' ? entry.group.trim() : '';
+  if (written && CHANGELOG_GROUP_BY_ID[written]) return written;
+  const byTitle = changelogGroupMatch(String(entry?.title || ''));
+  if (byTitle) return byTitle;
+  const body = (Array.isArray(entry?.items) ? entry.items.join(' ') : '').slice(0, 200);
+  return changelogGroupMatch(body) || 'other';
+};
+// 日付(降順)→話題 の順にまとめる。並び順は渡された配列のまま(呼び出し側で日付降順に並べてある)。
+// 戻り値: [{ key, day, groupId, label, emoji, entries }]
+// ★1つの話題に1件しかない日も、行の形はそろえる(数だけ「1件」になる)。
+//   件数で形を変えると、その日だけ見え方が変わって「まとまっている」ことが伝わらない。
+const groupChangelogEntries = entries => {
+  const rows = [];
+  const index = new Map();
+  (Array.isArray(entries) ? entries : []).forEach(entry => {
+    const day = typeof entry?.date === 'string' ? entry.date.slice(0, 10) : '';
+    const groupId = changelogGroupIdOf(entry);
+    const key = `${day}::${groupId}`;
+    let row = index.get(key);
+    if (!row) {
+      const info = changelogGroupInfo(groupId);
+      row = {
+        key,
+        day,
+        groupId,
+        label: info.label,
+        emoji: info.emoji,
+        entries: []
+      };
+      index.set(key, row);
+      rows.push(row);
+    }
+    row.entries.push(entry);
+  });
+  return rows;
+};
 // 既読の判定に使う「いま存在するすべてのID」。
 // タブの振り分けを変えると、既読にしたIDが別のタブへ移る。タブごとのID一覧で
 // ふるいにかけると移った先で未読へ戻ってしまうため、こちらで残す・捨てるを決める
@@ -20465,7 +20590,7 @@ const RhythmOptions = ({
     className: draft[key] === flag ? 'text-white' : 'text-slate-400'
   }, text))));
   const segments = (key, items) => /*#__PURE__*/React.createElement("div", {
-    className: `grid ${items.length >= 4 ? 'grid-cols-4' : 'grid-cols-3'} overflow-hidden rounded-xl border border-white/20`
+    className: `grid ${items.length >= 5 ? 'grid-cols-5' : items.length >= 4 ? 'grid-cols-4' : 'grid-cols-3'} overflow-hidden rounded-xl border border-white/20`
   }, items.map(([id, text]) => /*#__PURE__*/React.createElement("button", {
     type: "button",
     key: id,
@@ -20603,13 +20728,23 @@ const RhythmOptions = ({
     coarse: 25
   }), 'ノーツが画面のどのあたりから出てくるかを変えます。マイナスにすると奥（画面の上の外側）から、プラスにすると手前寄りから出てきます。判定ラインの位置・判定のタイミング・判定窓・スコアは変わりません。ノーツが流れてくる時間も変わらないので、手前から出すほど見えているあいだの動きは速く見えます。', {
     full: true
-  }), field('FAST / SLOW表示', toggle('fastSlowDisplay')), field('判定文字表示', toggle('judgmentTextDisplay')), field('コンボ数表示', toggle('comboDisplay')), field('能力中に光らせる', toggle('sideMonsterAbilityHighlight')), draft.comboDisplay !== false && field('コンボ数の位置', segments('comboPosition', RHYTHM_COMBO_POSITION_LABELS), '「中央」は場の真ん中（既定）、「右上」は2026-09-12より前と同じ、ライフの下の位置です。どこに置いても判定・スコア・コンボの数え方は変わりません。', {
+  }), field('FAST / SLOW表示', toggle('fastSlowDisplay')), field('判定文字表示', toggle('judgmentTextDisplay')), field('レーン発光', segments('laneGlow', RHYTHM_LANE_GLOW_LABELS), null, {
     full: true
-  }), field('レーン発光', segments('laneGlow', RHYTHM_LANE_GLOW_LABELS), null, {
+  }), field('コンボ数', /*#__PURE__*/React.createElement(React.Fragment, null, toggle('comboDisplay'), draft.comboDisplay !== false && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    className: wide ? 'mt-1.5' : 'mt-2'
+  }, segments('comboPosition', RHYTHM_COMBO_POSITION_LABELS)), /*#__PURE__*/React.createElement("div", {
+    className: wide ? 'mt-1.5' : 'mt-2'
+  }, stepper('comboSize', RHYTHM_COMBO_SIZE_MIN, RHYTHM_COMBO_SIZE_MAX, RHYTHM_COMBO_SIZE_STEP, {
+    fine: RHYTHM_COMBO_SIZE_STEP,
+    coarse: RHYTHM_COMBO_SIZE_STEP * 2,
+    suffix: '%'
+  })))), '出す/出さないと、出す場所（左・中央・右・右上）、大きさ（70〜150%）を選べます。端へ寄せる3つは、両サイドのマスモンに重ならないところへ出ます。大きさを上げると、端に寄せたときはレーンにかかることがあります。どこに置いても判定・スコア・コンボの数え方は変わりません。', {
     full: true
   }), field('両サイドのマスモン｜濃さ', segments('sideMonsterOpacity', RHYTHM_SIDE_MONSTER_OPACITY_LABELS), 'レーンの外側の空いたところへ、設定したマスモンが出て拍に合わせて跳ねます。ノーツが見づらいときや、端末が熱くなりやすいときは薄くするか止めてください。', {
     full: true
   }), field('両サイドのマスモン｜動き', segments('sideMonsterMotion', RHYTHM_SIDE_MONSTER_MOTION_LABELS), null, {
+    full: true
+  }), field('マスモン｜能力中に光らせる', toggle('sideMonsterAbilityHighlight'), null, {
     full: true
   }))), tab === 'volume' && /*#__PURE__*/React.createElement("section", {
     "data-rhythm-options-panel": "volume",
@@ -20657,6 +20792,8 @@ const RhythmOptions = ({
   }, "\u25C6 \u30B7\u30B9\u30C6\u30E0\u8A2D\u5B9A"), /*#__PURE__*/React.createElement("div", {
     className: wide ? grid : `mt-3 ${grid}`
   }, field('演出量', segments('effectAmount', RHYTHM_EFFECT_LABELS), '動きがカクついたり、端末が熱くなったりするときは「少なめ」にしてください。判定文字の金色の帯や虹が流れるのを止め、光のにじみを減らします（色・グラデーション・字の大きさは標準と同じままです）。「最小」にすると、それに加えて100コンボごとの演出や光そのものもほぼ出なくなります。', {
+    full: true
+  }), field('モンスターノーツの演出', segments('monsterNoteEffect', RHYTHM_MONSTER_EFFECT_LABELS), 'モンスターノーツを取ったときの演出の強さです。「軽め」にすると、画面全体が金色に光るのをやめます（いちばん重いのがこの全画面の描き直しです）。「最小」にすると、光る粒もふつうのノーツと同じになり、両サイドのマスモンも跳ねません。どの段でも、音・能力名・振動はそのまま残るので、取れたことは分かります。', {
     full: true
   }), field('軽量モード', toggle('lightweightMode')), field('曲えらびで試聴する', toggle('songPreviewEnabled')), field('タップ時の振動', /*#__PURE__*/React.createElement(React.Fragment, null, toggle('vibrationEnabled'), /*#__PURE__*/React.createElement("button", {
     type: "button",
@@ -22397,16 +22534,23 @@ const RhythmTapTest = ({
         // 流し直す印はここで集めて、最後にまとめて1回のレイアウトで付け直す
         // (箇所ごとに void offsetWidth を書くと、その回数ぶんページ全体のレイアウトが走る)。
         const restarts = [];
+        // モンスターノーツの演出の強さ(2026-09-13・ユーザー依頼「軽量化バージョンもほしい」)。
+        //   NORMAL … 粒2.1倍 ＋ 画面全体の光 ＋ そのマスモンが大きく跳ねる
+        //   LIGHT  … 画面全体の光をやめる(いちばん重いのが全画面の描き直し)。粒と跳ねは残す
+        //   OFF    … 粒もふつうのノーツと同じにし、跳ねもやめる
+        // ★どの段でも音・能力名・振動は残す。取れたことが分からなくなるのがいちばん困る。
+        const monsterEffect = RHYTHM_MONSTER_EFFECT_LEVELS.includes(settings.monsterNoteEffect) ? settings.monsterNoteEffect : 'NORMAL';
+        const bigMonsterEffect = monsterHit && monsterEffect !== 'OFF';
         const hitEffect = rhythmSpawnHitEffect(area, {
           centerRatio: span.center,
           widthRatio: span.width,
           judgment,
-          monster: monsterHit,
+          monster: bigMonsterEffect,
           precise: preciseHit,
           defer: true
         });
         if (hitEffect) restarts.push(hitEffect);
-        if (monsterHit && screenFlashRef.current) restarts.push({
+        if (monsterHit && monsterEffect === 'NORMAL' && screenFlashRef.current) restarts.push({
           el: screenFlashRef.current,
           attr: 'rhythmFlash'
         });
@@ -22417,7 +22561,8 @@ const RhythmTapTest = ({
           const slot = rhythmNoteMonsterSlot(note),
             el = slot ? sideMonsterRefs.current[slot - 1] : null;
           if (el) {
-            restarts.push({
+            // 「最小」では跳ねない(跳ねはそのマスモンの周りを描き直すため)
+            if (monsterEffect !== 'OFF') restarts.push({
               el,
               attr: 'rhythmSideHit'
             });
@@ -22568,7 +22713,7 @@ const RhythmTapTest = ({
     scheduleJudgmentClear();
     if (abilityFlash) scheduleAbilityClear();
     if (_judgeT0) RHYTHM_PERF.judge(performance.now() - _judgeT0, !!monster);
-  }, [chart.totalNotes, difficulty.maxScore, scheduleAbilityClear, scheduleJudgmentClear, settings.vibrationEnabled, tutorial]);
+  }, [chart.totalNotes, difficulty.maxScore, scheduleAbilityClear, scheduleJudgmentClear, settings.vibrationEnabled, settings.monsterNoteEffect, tutorial]);
   const finish = useCallback(() => {
     const run = runRef.current;
     if (!run || run.finished || run.paused) return;
@@ -23851,6 +23996,7 @@ const RhythmTapTest = ({
     "data-rhythm-combo-box": true,
     "data-combo-tier": String(comboTier),
     "data-combo-pos": comboPosition,
+    "data-combo-wide": isLandscape ? '1' : '',
     "aria-hidden": "true",
     className: "pointer-events-none absolute z-[2] text-center"
   }, /*#__PURE__*/React.createElement("b", {
@@ -23859,7 +24005,8 @@ const RhythmTapTest = ({
     "data-combo-tier": String(comboTier),
     className: "block font-black leading-none tabular-nums text-white",
     style: {
-      '--mh-combo-scale': rhythmComboTierScale(comboTier)
+      '--mh-combo-scale': rhythmComboTierScale(comboTier),
+      '--mh-combo-size': rhythmFiniteInRange(settings.comboSize, RHYTHM_COMBO_SIZE_MIN, RHYTHM_COMBO_SIZE_MAX, 100) / 100
     }
   }, view.combo), /*#__PURE__*/React.createElement("span", {
     "data-rhythm-combo-label": true,
@@ -50429,44 +50576,92 @@ function MonsterHeroGame() {
   }, CHANGELOG_ENTRIES.length === 0 ? /*#__PURE__*/React.createElement("p", {
     className: "mh-changelog-empty",
     "data-changelog-empty": true
-  }, "\u66F4\u65B0\u5C65\u6B74\u3092\u8AAD\u307F\u8FBC\u3081\u307E\u305B\u3093\u3067\u3057\u305F\u3002\u901A\u4FE1\u72B6\u6CC1\u3092\u78BA\u304B\u3081\u3066\u304B\u3089\u3001\u8A2D\u5B9A\u306E\u300C\u30B2\u30FC\u30E0\u3092\u66F4\u65B0\u300D\u3067\u8AAD\u307F\u8FBC\u307F\u76F4\u3057\u3066\u304F\u3060\u3055\u3044\u3002") : changelogEntriesOfTab(changelogTab).map(c => {
-    const open = changelogOpenId === c.id;
-    {/* 一覧は日付・札・見出しだけ。本文(items)は押した項目だけ出す(1つ開くと他は閉じる) */}
-    return /*#__PURE__*/React.createElement("article", {
-      key: c.id,
-      "data-changelog-type": c.type || 'update',
-      "data-changelog-open": open ? '1' : '0',
-      className: changelogUnreadIds[changelogTab].includes(c.id) ? 'unread' : ''
-    }, /*#__PURE__*/React.createElement("time", null, c.date, changelogUnreadIds[changelogTab].includes(c.id) && /*#__PURE__*/React.createElement("em", null, "NEW")), /*#__PURE__*/React.createElement("span", {
-      className: "mh-changelog-kind",
-      "data-kind": changelogTypeOf(c).tone
-    }, changelogTypeOf(c).label), /*#__PURE__*/React.createElement("button", {
-      type: "button",
-      className: "mh-changelog-head",
-      "data-changelog-toggle": true,
-      "aria-expanded": open,
-      onClick: () => setChangelogOpenId(open ? null : c.id)
-    }, /*#__PURE__*/React.createElement("b", null, c.title), /*#__PURE__*/React.createElement("small", null, open ? '閉じる ▲' : '詳細 ▼')), open && /*#__PURE__*/React.createElement("div", {
-      className: "mh-changelog-detail",
-      "data-changelog-detail": true
-    }, c.image && /*#__PURE__*/React.createElement("img", {
-      "data-changelog-image": true,
-      src: c.image,
-      alt: `${c.title}のお知らせ`,
-      onError: e => {
-        e.currentTarget.style.display = 'none';
-      },
-      loading: "lazy",
-      decoding: "async",
-      style: {
-        width: '100%',
-        borderRadius: '12px',
-        marginBottom: '8px'
-      }
-    }), (c.items || []).map((x, j) => /*#__PURE__*/React.createElement("p", {
-      key: j
-    }, "\u30FB", x))));
-  })))) : showTitleSettings ? /*#__PURE__*/React.createElement("div", {
+  }, "\u66F4\u65B0\u5C65\u6B74\u3092\u8AAD\u307F\u8FBC\u3081\u307E\u305B\u3093\u3067\u3057\u305F\u3002\u901A\u4FE1\u72B6\u6CC1\u3092\u78BA\u304B\u3081\u3066\u304B\u3089\u3001\u8A2D\u5B9A\u306E\u300C\u30B2\u30FC\u30E0\u3092\u66F4\u65B0\u300D\u3067\u8AAD\u307F\u8FBC\u307F\u76F4\u3057\u3066\u304F\u3060\u3055\u3044\u3002") : (() => {
+    // 同じ日の同じ話題を1行にまとめる(2026-09-13・ユーザー指摘
+    // 「同じような内容は同じとこにまとめて詳細で詳しく出るようにして /
+    //  過去のやつが一瞬で見えなくなる」)。
+    // 1行ずつ積み上げていたころは682行あり、少しさかのぼるだけで指が疲れていた。
+    // 日付は行の上に1度だけ出す(同じ日が続くあいだは繰り返さない)。
+    const rows = groupChangelogEntries(changelogEntriesOfTab(changelogTab));
+    const unreadHere = changelogUnreadIds[changelogTab];
+    let shownDay = null;
+    return rows.map(row => {
+      const open = changelogOpenId === row.key;
+      const unreadCount = row.entries.filter(entry => unreadHere.includes(entry.id)).length;
+      // まとめた行にも種類の札を出す。折りたたんだままでも、新機能なのか不具合修正なのかが
+      // 分かるようにしておく(2026-09-05・ユーザー指摘「直近の更新情報が不具合修正との
+      // 区別がついてない」)。1つのまとまりに種類が混ざることがあるので、
+      // 出てくる種類ぶんだけ並べ、2件以上あるものには数も付ける
+      const kinds = [];
+      row.entries.forEach(entry => {
+        const info = changelogTypeOf(entry);
+        const found = kinds.find(kind => kind.tone === info.tone);
+        if (found) found.count += 1;else kinds.push({
+          tone: info.tone,
+          label: info.label,
+          count: 1
+        });
+      });
+      const dayHead = row.day !== shownDay ? row.day : null;
+      shownDay = row.day;
+      return /*#__PURE__*/React.createElement(React.Fragment, {
+        key: row.key
+      }, dayHead && /*#__PURE__*/React.createElement("h4", {
+        className: "mh-changelog-day",
+        "data-changelog-day": dayHead
+      }, dayHead), /*#__PURE__*/React.createElement("article", {
+        "data-changelog-group": row.groupId,
+        "data-changelog-open": open ? '1' : '0',
+        className: unreadCount > 0 ? 'unread' : ''
+      }, /*#__PURE__*/React.createElement("button", {
+        type: "button",
+        className: "mh-changelog-head",
+        "data-changelog-toggle": true,
+        "aria-expanded": open,
+        onClick: () => setChangelogOpenId(open ? null : row.key)
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "mh-changelog-group-emoji",
+        "aria-hidden": "true"
+      }, row.emoji), /*#__PURE__*/React.createElement("b", null, row.label), /*#__PURE__*/React.createElement("span", {
+        className: "mh-changelog-count"
+      }, row.entries.length, "\u4EF6", unreadCount > 0 && /*#__PURE__*/React.createElement("em", null, "NEW")), /*#__PURE__*/React.createElement("small", null, open ? '閉じる ▲' : '詳細 ▼')), /*#__PURE__*/React.createElement("span", {
+        className: "mh-changelog-kinds"
+      }, kinds.map(kind => /*#__PURE__*/React.createElement("span", {
+        key: kind.tone,
+        className: "mh-changelog-kind",
+        "data-kind": kind.tone
+      }, kind.label, kind.count > 1 && /*#__PURE__*/React.createElement("i", null, kind.count)))), !open && /*#__PURE__*/React.createElement("p", {
+        className: "mh-changelog-peek",
+        "data-changelog-peek": true
+      }, row.entries.map(entry => entry.title).join(' ／ ')), open && /*#__PURE__*/React.createElement("div", {
+        className: "mh-changelog-detail",
+        "data-changelog-detail": true
+      }, row.entries.map(c => /*#__PURE__*/React.createElement("section", {
+        key: c.id,
+        className: "mh-changelog-item",
+        "data-changelog-type": c.type || 'update'
+      }, /*#__PURE__*/React.createElement("time", null, (c.date || '').slice(11) || c.date, unreadHere.includes(c.id) && /*#__PURE__*/React.createElement("em", null, "NEW")), /*#__PURE__*/React.createElement("span", {
+        className: "mh-changelog-kind",
+        "data-kind": changelogTypeOf(c).tone
+      }, changelogTypeOf(c).label), /*#__PURE__*/React.createElement("b", null, c.title), c.image && /*#__PURE__*/React.createElement("img", {
+        "data-changelog-image": true,
+        src: c.image,
+        alt: `${c.title}のお知らせ`,
+        onError: e => {
+          e.currentTarget.style.display = 'none';
+        },
+        loading: "lazy",
+        decoding: "async",
+        style: {
+          width: '100%',
+          borderRadius: '12px',
+          margin: '6px 0'
+        }
+      }), (c.items || []).map((x, j) => /*#__PURE__*/React.createElement("p", {
+        key: j
+      }, "\u30FB", x)))))));
+    });
+  })()))) : showTitleSettings ? /*#__PURE__*/React.createElement("div", {
     className: "mh-title-modal",
     onPointerDown: e => e.stopPropagation()
   }, /*#__PURE__*/React.createElement("div", {
@@ -62917,7 +63112,7 @@ const createAnimationStyle = () => {
     .mh-boot-screen.is-ready .mh-mocchi-wrap img{animation:mhReadyHop .75s ease-out 1,mhMocchiHop 1.8s ease-in-out .75s infinite}.mh-boot-screen.is-ready .mh-boot-copy{animation:titleReveal .55s ease-out both}.mh-boot-screen.is-ready .mh-mocchi-wrap i{display:block;animation:mhSparkle 1.5s infinite}.mh-boot-screen.is-ready .mh-mocchi-wrap i:nth-of-type(1){top:10%;left:4%}.mh-boot-screen.is-ready .mh-mocchi-wrap i:nth-of-type(2){top:24%;right:0;animation-delay:.55s}.mh-boot-screen.is-entering .mh-mocchi-wrap img{animation:mhBigHop .75s ease-in-out both}.mh-entry-flash{position:absolute;z-index:9;inset:0;pointer-events:none;background:radial-gradient(circle,#fff 0,#d8b4fe 18%,transparent 58%);opacity:0}.mh-boot-screen.is-entering .mh-entry-flash{animation:mhEntryFlash .76s ease-in both}
     .mh-title-gate,.mh-entering{position:fixed;inset:0;overflow:hidden;color:#fff;background:#05020e;isolation:isolate}.mh-title-gate{animation:titleReveal .65s ease-out both}.mh-title-visual,.mh-entering>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 50%}
     .mh-title-header{position:absolute;z-index:22;top:0;left:0;right:0;padding:calc(11px + env(safe-area-inset-top)) 12px 0;display:flex;justify-content:space-between;align-items:flex-start;text-shadow:0 2px 5px #000;pointer-events:none}.mh-title-build{display:grid;padding:6px 8px;text-align:left;font-family:monospace;line-height:1.15;border:1px solid #ffffff30;border-radius:10px;background:#160d2588;backdrop-filter:blur(3px)}.mh-title-build b{font-size:7px;letter-spacing:.18em;color:#eadcff}.mh-title-build span{font-size:8px;margin-bottom:5px;color:#fff;max-width:130px;overflow:hidden;text-overflow:ellipsis}.mh-title-actions{display:flex;gap:7px;pointer-events:auto}.mh-title-actions button{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;width:50px;height:50px;border-radius:50%;background:#26152ecc;border:1px solid #ffd87a;color:#fff;font-size:8px;font-weight:800;box-shadow:0 2px 8px #000}.mh-title-actions em{position:absolute;right:-3px;top:-6px;background:#e33;padding:2px 4px;border-radius:8px;font-size:6px;font-style:normal}.mh-title-start{position:absolute;z-index:21;inset:0;width:100%;height:100%;border:0;background:transparent;touch-action:manipulation}.mh-title-start:disabled{pointer-events:none}
-    .mh-title-modal{position:fixed;z-index:100;inset:0;display:flex;align-items:center;justify-content:center;padding:calc(20px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));background:#03020eef}.mh-title-dialog{display:flex;flex-direction:column;gap:12px;width:min(100%,380px);max-height:86vh;padding:18px;border:1px solid #a78bfa77;border-radius:22px;background:#0f172a;color:#fff;overflow:auto}.mh-dialog-head{display:flex;align-items:center;justify-content:space-between}.mh-dialog-head h3{font-weight:900}.mh-dialog-head button{padding:8px}.mh-dialog-choice{display:flex;justify-content:space-between;align-items:center;padding:14px;border:1px solid #ffffff22;border-radius:14px;background:#ffffff0c;font-weight:800}.mh-changelog-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px}.mh-changelog-tabs button{position:relative;padding:9px;border-radius:10px;background:#1e293b;font-size:11px;font-weight:800}.mh-changelog-tabs button.active{background:#b45309}.mh-unread-badge{position:absolute;right:-5px;top:-6px;display:flex;align-items:center;justify-content:center;width:17px;height:17px;border:2px solid #fff;border-radius:50%;background:#dc2626;color:#fff;font:900 11px/1 sans-serif;font-style:normal;box-shadow:0 2px 5px #0008;pointer-events:none}.mh-changelog-list{overflow:auto}.mh-changelog-list article{padding:11px;margin-bottom:8px;border:1px solid #ffffff18;border-radius:13px;background:#0005}.mh-changelog-list time,.mh-changelog-list b{display:block}.mh-changelog-list time{font:9px monospace;color:#94a3b8}.mh-changelog-list b{font-size:12px;margin:4px 0}.mh-changelog-kind{display:inline-block;margin-top:5px;padding:2px 7px;border-radius:999px;border:1px solid currentColor;font:900 9px/1.5 sans-serif}.mh-changelog-kind[data-kind="fix"]{color:#fca5a5;background:#7f1d1d55}.mh-changelog-kind[data-kind="feature"]{color:#86efac;background:#14532d55}.mh-changelog-kind[data-kind="update"]{color:#93c5fd;background:#1e3a8a55}.mh-changelog-kind[data-kind="market"]{color:#fcd34d;background:#78350f55}.mh-changelog-kind[data-kind="issue"]{color:#d8b4fe;background:#4c1d9555}.mh-changelog-list p{font-size:10px;color:#cbd5e1}.mh-changelog-head{display:flex;align-items:center;gap:8px;width:100%;min-height:36px;padding:0;border:0;background:transparent;color:inherit;text-align:left}.mh-changelog-head b{flex:1;min-width:0;margin:4px 0}.mh-changelog-head small{flex:none;font-size:8px;font-weight:900;color:#94a3b8;white-space:nowrap}.mh-changelog-detail{margin-top:2px;padding-top:6px;border-top:1px solid #ffffff14}.mh-changelog-empty{padding:18px 12px;text-align:center;line-height:1.7;color:#fbbf24}.mh-title-dialog textarea{min-height:90px;padding:8px;border-radius:10px;background:#0008;font:9px monospace}
+    .mh-title-modal{position:fixed;z-index:100;inset:0;display:flex;align-items:center;justify-content:center;padding:calc(20px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));background:#03020eef}.mh-title-dialog{display:flex;flex-direction:column;gap:12px;width:min(100%,380px);max-height:86vh;padding:18px;border:1px solid #a78bfa77;border-radius:22px;background:#0f172a;color:#fff;overflow:auto}.mh-dialog-head{display:flex;align-items:center;justify-content:space-between}.mh-dialog-head h3{font-weight:900}.mh-dialog-head button{padding:8px}.mh-dialog-choice{display:flex;justify-content:space-between;align-items:center;padding:14px;border:1px solid #ffffff22;border-radius:14px;background:#ffffff0c;font-weight:800}.mh-changelog-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px}.mh-changelog-tabs button{position:relative;padding:9px;border-radius:10px;background:#1e293b;font-size:11px;font-weight:800}.mh-changelog-tabs button.active{background:#b45309}.mh-unread-badge{position:absolute;right:-5px;top:-6px;display:flex;align-items:center;justify-content:center;width:17px;height:17px;border:2px solid #fff;border-radius:50%;background:#dc2626;color:#fff;font:900 11px/1 sans-serif;font-style:normal;box-shadow:0 2px 5px #0008;pointer-events:none}.mh-changelog-list{overflow:auto}.mh-changelog-list article{padding:11px;margin-bottom:8px;border:1px solid #ffffff18;border-radius:13px;background:#0005}.mh-changelog-list time,.mh-changelog-list b{display:block}.mh-changelog-list time{font:9px monospace;color:#94a3b8}.mh-changelog-list b{font-size:12px;margin:4px 0}.mh-changelog-kind{display:inline-block;margin-top:5px;padding:2px 7px;border-radius:999px;border:1px solid currentColor;font:900 9px/1.5 sans-serif}.mh-changelog-kind[data-kind="fix"]{color:#fca5a5;background:#7f1d1d55}.mh-changelog-kind[data-kind="feature"]{color:#86efac;background:#14532d55}.mh-changelog-kind[data-kind="update"]{color:#93c5fd;background:#1e3a8a55}.mh-changelog-kind[data-kind="market"]{color:#fcd34d;background:#78350f55}.mh-changelog-kind[data-kind="issue"]{color:#d8b4fe;background:#4c1d9555}.mh-changelog-list p{font-size:10px;color:#cbd5e1}.mh-changelog-head{display:flex;align-items:center;gap:8px;width:100%;min-height:36px;padding:0;border:0;background:transparent;color:inherit;text-align:left}.mh-changelog-head b{flex:1;min-width:0;margin:4px 0}.mh-changelog-head small{flex:none;font-size:8px;font-weight:900;color:#94a3b8;white-space:nowrap}.mh-changelog-detail{margin-top:2px;padding-top:6px;border-top:1px solid #ffffff14}.mh-changelog-empty{padding:18px 12px;text-align:center;line-height:1.7;color:#fbbf24}.mh-changelog-day{position:sticky;top:0;z-index:1;margin:10px 0 6px;padding:3px 0;background:#0f172a;color:#a5b4fc;font:900 10px/1.4 monospace;letter-spacing:.04em}.mh-changelog-day:first-child{margin-top:0}.mh-changelog-group-emoji{flex:none;font-size:13px;line-height:1}.mh-changelog-count{flex:none;position:relative;padding:2px 7px;border-radius:999px;background:#ffffff14;color:#cbd5e1;font:900 9px/1.5 sans-serif;white-space:nowrap}.mh-changelog-count em{margin-left:5px;padding:1px 4px;border-radius:5px;background:#dc2626;color:#fff;font:900 7px sans-serif;font-style:normal}.mh-changelog-peek{margin-top:4px;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;font-size:9px;line-height:1.5;color:#94a3b8}.mh-changelog-kinds{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}.mh-changelog-kinds .mh-changelog-kind{margin-top:0}.mh-changelog-kind i{margin-left:3px;font-style:normal;opacity:.85}.mh-changelog-item{padding:9px 0;border-top:1px solid #ffffff14}.mh-changelog-item:first-child{padding-top:2px;border-top:0}.mh-changelog-item time{display:inline-block;margin-right:6px;font:9px monospace;color:#94a3b8}.mh-changelog-item time em{margin-left:4px;padding:1px 4px;border-radius:5px;background:#dc2626;color:#fff;font:900 7px sans-serif;font-style:normal}.mh-changelog-item b{display:block;margin:4px 0;font-size:11px;line-height:1.5}.mh-changelog-item .mh-changelog-kind{margin-top:0}.mh-title-dialog textarea{min-height:90px;padding:8px;border-radius:10px;background:#0008;font:9px monospace}
     .mh-tile-viewport{touch-action:none;overscroll-behavior:contain;cursor:grab}.mh-tile-viewport:active{cursor:grabbing}.mh-tile-viewport.overview{overflow:auto}.mh-tile-viewport.overview .mh-tile-board{transform:none}.mh-training-tile{transform:scale(var(--map-scale,1))}.mh-training-tile.current{transform:scale(calc(var(--map-scale,1)*1.08))}.mh-tile-board>i.route{height:17px;border-color:#fef08a;background:#facc15;box-shadow:0 0 14px #fde047;animation:trainingRoutePulse .7s infinite alternate}.mh-training-tile.route-preview{border-color:#fde047;box-shadow:0 0 16px #fde047,0 5px 0 #713f12}.mh-training-tile.stop-preview{z-index:7;border-color:#fff;box-shadow:0 0 0 5px #f97316,0 0 25px #fb923c}.mh-board-buttons{display:flex;align-items:center;gap:4px}.mh-board-buttons button{min-height:34px;padding:0 8px;border-radius:9px;background:#164e63;font-size:8px;font-weight:900}.mh-board-buttons span{padding:3px 5px;border-radius:7px;background:#020617;color:#bae6fd;font:8px monospace}.mh-changelog-list article.unread{border-color:#f59e0b88}.mh-changelog-list time em{float:right;padding:2px 5px;border-radius:6px;background:#dc2626;color:#fff;font:900 7px sans-serif;font-style:normal}.mh-training-effect{position:fixed;z-index:45000;left:50%;top:43%;width:min(78vw,300px);min-height:150px;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;border:3px solid #fff;border-radius:28px;background:radial-gradient(circle,#0ea5e9dd,#020617ee 72%);box-shadow:0 0 55px #38bdf8;pointer-events:none;animation:trainingEffectPop 1.25s ease-out both}.mh-training-effect>span{font-size:58px;filter:drop-shadow(0 0 15px #fff)}.mh-training-effect>b{z-index:2;max-width:90%;text-align:center;color:#fff;font-size:16px;text-shadow:0 2px 5px #000}.mh-training-effect.xp,.mh-training-effect.effect,.mh-training-effect.turn{background:radial-gradient(circle,#22c55edd,#052e16ee 72%);box-shadow:0 0 55px #4ade80}.mh-training-effect.diamond{background:radial-gradient(circle,#38bdf8ee,#172554ee 72%)}.mh-training-effect.item,.mh-training-effect.tool,.mh-training-effect.goal{background:radial-gradient(circle,#fbbf24ee,#581c87ee 72%);box-shadow:0 0 70px #fde047}.mh-training-effect.move,.mh-training-effect.happening{background:radial-gradient(circle,#ef4444dd,#450a0aee 72%);box-shadow:0 0 55px #fb7185}.mh-training-effect i{position:absolute;width:9px;height:9px;border-radius:50%;background:#fff;box-shadow:0 0 12px #fff;animation:trainingParticle 1s ease-out both}.mh-training-effect i:nth-of-type(1){--a:0deg}.mh-training-effect i:nth-of-type(2){--a:60deg}.mh-training-effect i:nth-of-type(3){--a:120deg}.mh-training-effect i:nth-of-type(4){--a:180deg}.mh-training-effect i:nth-of-type(5){--a:240deg}.mh-training-effect i:nth-of-type(6){--a:300deg}@keyframes trainingEffectPop{0%{opacity:0;transform:translate(-50%,-50%) scale(.4)}18%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}75%{opacity:1}100%{opacity:0;transform:translate(-50%,-58%) scale(.96)}}@keyframes trainingParticle{from{transform:rotate(var(--a)) translateX(18px);opacity:1}to{transform:rotate(var(--a)) translateX(115px) scale(.2);opacity:0}}@keyframes trainingRoutePulse{to{filter:brightness(1.6)}}
     .mh-entering>img{animation:mhGateZoom 1.15s ease-in both}.mh-gate-core{position:absolute;z-index:3;left:50%;top:44%;width:12vmin;height:12vmin;border-radius:50%;background:#fff;box-shadow:0 0 25px 12px #d8b4fe,0 0 90px 40px #7e22ce;transform:translate(-50%,-50%);animation:mhCoreGrow 1.15s ease-in both}.mh-gate-particles{position:absolute;z-index:2;inset:-30%;background:repeating-conic-gradient(from 0deg,transparent 0 8deg,#fbbf2444 9deg,#a855f766 10deg,transparent 11deg 19deg);animation:mhParticles 1.1s ease-in both}.mh-gate-flash{position:absolute;z-index:4;inset:0;background:#f5f0ff;animation:mhGateFlash 1.15s ease-in both}.mh-entering p{position:absolute;z-index:6;left:0;right:0;bottom:calc(9% + env(safe-area-inset-bottom));text-align:center;font-size:11px;font-weight:800;text-shadow:0 2px 6px #000}
     @keyframes mhMocchiHop{0%,100%{transform:translateY(0) scale(1.05,.95)}45%{transform:translateY(-14px) rotate(-2deg) scale(.98,1.02)}70%{transform:translateY(0) scale(1.08,.9)}}@keyframes mhReadyHop{45%{transform:translateY(-25px) scale(1.1)}100%{transform:translateY(0)}}@keyframes mhShadow{0%,100%{transform:scaleX(1);opacity:.6}45%{transform:scaleX(.65);opacity:.3}}@keyframes mhSparkle{50%{transform:scale(1.5) rotate(90deg);opacity:.35}}@keyframes mhBigHop{45%{transform:translateY(-34px) scale(.95,1.08)}100%{transform:translateY(5px) scale(1.12,.88)}}@keyframes mhEntryFlash{45%{opacity:0}80%{opacity:1}100%{opacity:0}}@keyframes titleReveal{from{opacity:0;filter:brightness(2)}to{opacity:1;filter:none}}@keyframes mhGateZoom{to{transform:scale(1.16);filter:blur(2px) brightness(1.5)}}@keyframes mhCoreGrow{0%{transform:translate(-50%,-50%) scale(.15);opacity:0}70%{opacity:1}100%{transform:translate(-50%,-50%) scale(18)}}@keyframes mhParticles{to{transform:rotate(35deg) scale(.2);opacity:0}}@keyframes mhGateFlash{0%,68%{opacity:0}85%{opacity:.95}100%{opacity:1}}
