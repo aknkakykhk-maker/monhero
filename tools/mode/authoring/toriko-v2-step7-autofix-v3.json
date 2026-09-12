@@ -18,6 +18,7 @@
  },
  "weights": {
   "impossible": 10000,
+  "reach": 10000,
   "strained": 100,
   "hardJump": 120,
   "laneSpread": 1,
@@ -32,6 +33,7 @@
    "before": {
     "impossible": 0,
     "strained": 0,
+    "reach": 0,
     "hardJumps": 0,
     "spread": 19,
     "cost": 19
@@ -39,6 +41,7 @@
    "after": {
     "impossible": 0,
     "strained": 0,
+    "reach": 0,
     "hardJumps": 0,
     "spread": 19,
     "cost": 19
@@ -52,76 +55,84 @@
    "before": {
     "impossible": 0,
     "strained": 0,
+    "reach": 0,
     "hardJumps": 0,
-    "spread": 21,
-    "cost": 21
+    "spread": 26,
+    "cost": 26
    },
    "after": {
     "impossible": 0,
     "strained": 0,
+    "reach": 0,
     "hardJumps": 0,
-    "spread": 21,
-    "cost": 21
+    "spread": 26,
+    "cost": 26
    },
    "fixes": []
   },
   "HARD": {
-   "noteCount": 99,
+   "noteCount": 98,
    "fixCount": 0,
    "passes": 0,
    "before": {
     "impossible": 0,
     "strained": 0,
+    "reach": 0,
     "hardJumps": 0,
-    "spread": 36,
-    "cost": 36
+    "spread": 37,
+    "cost": 37
    },
    "after": {
     "impossible": 0,
     "strained": 0,
+    "reach": 0,
     "hardJumps": 0,
-    "spread": 36,
-    "cost": 36
+    "spread": 37,
+    "cost": 37
    },
    "fixes": []
   },
   "EXPERT": {
-   "noteCount": 132,
+   "noteCount": 130,
    "fixCount": 0,
    "passes": 0,
    "before": {
     "impossible": 0,
-    "strained": 0,
+    "strained": 1,
+    "reach": 0,
     "hardJumps": 0,
-    "spread": 43,
-    "cost": 43
+    "spread": 44,
+    "cost": 144
    },
    "after": {
     "impossible": 0,
-    "strained": 0,
+    "strained": 1,
+    "reach": 0,
     "hardJumps": 0,
-    "spread": 43,
-    "cost": 43
+    "spread": 44,
+    "cost": 144
    },
    "fixes": []
   },
   "MASTER": {
-   "noteCount": 149,
+   "noteCount": 150,
    "fixCount": 0,
    "passes": 0,
    "before": {
     "impossible": 0,
-    "strained": 0,
+    "strained": 5,
+    "reach": 0,
     "hardJumps": 0,
-    "spread": 34,
-    "cost": 34
+    "spread": 37,
+    "cost": 537
    },
    "after": {
     "impossible": 0,
-    "strained": 0,
+    "strained": 5,
+    "reach": 0,
     "hardJumps": 0,
-    "spread": 34,
-    "cost": 34
+    "spread": 37,
+    "cost": 537
    },
    "fixes": []
   }
