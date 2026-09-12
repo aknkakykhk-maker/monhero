@@ -79,7 +79,8 @@ check('ポーズ操作はプレイエリアの中のオーバーレイに閉じ�
 // 2. オプション画面: ヘッダー / スクロール / フッターの3層だけ
 check('オプション画面は固定ヘッダー+固定タブ+スクロール+固定フッターの4層',
   game.includes('<main data-rhythm-options className="flex flex-1 min-h-0 flex-col overflow-hidden')
-  &&game.includes('<nav data-rhythm-options-tabs className="z-10 grid shrink-0 grid-cols-3')
+  &&game.includes('<div data-rhythm-options-bar className="z-10 shrink-0')
+  &&game.includes('<nav data-rhythm-options-tabs className="grid shrink-0 grid-cols-3')
   &&game.includes('data-rhythm-options-scroll className="flex-1 min-h-0 overflow-y-auto')
   &&game.includes('<footer data-rhythm-options-actions className="z-20 shrink-0'));
 check('オプションの操作バーはSafe Areaを避けた画面下固定',

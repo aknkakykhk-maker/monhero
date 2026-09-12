@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 917d1158c245ec13
+// generated-sha256: dd09b40fcd297fba
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -89,7 +89,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-13 01:58"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-13 02:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11823,8 +11823,9 @@ const RhythmOptions=({value,onSave,onBack})=>{
   const changeTab=id=>{setTab(id);try{scrollRef.current?.scrollTo({top:0});}catch(_){}};
   const label='text-[13px] font-bold';
   const note='text-[10px] leading-relaxed text-slate-400';
-  const head='text-[15px] font-black text-cyan-200';
-  const card='rounded-2xl border border-cyan-400/35 bg-slate-900/85 p-4 shadow-[0_0_18px_rgba(34,211,238,.08)]';
+  // 横持ちでは出さない。すぐ上のタブに同じ名前が出ているので、高さを取るだけになる
+  const head='border-b border-cyan-400/30 pb-1.5 text-[15px] font-black text-cyan-200 landscape:hidden';
+  const card='rounded-2xl border border-cyan-400/35 bg-slate-900/85 p-4 shadow-[0_0_18px_rgba(34,211,238,.08)] landscape:border-0 landscape:bg-transparent landscape:p-0 landscape:shadow-none';
   const row='grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-white/10 py-3 last:border-b-0';
   // 数値の項目。粗く動かす外側(coarse)と、細かく動かす内側(fine)を分ける。
   // 刻み(step)は保存する値の刻みそのもので、fine は必ずその倍数にする。
@@ -11835,11 +11836,11 @@ const RhythmOptions=({value,onSave,onBack})=>{
     const sign=amount=>`${amount>0?'+':''}${decimals>0?Number(amount).toFixed(decimals):amount}`;
     const button=(amount,dim)=><button type="button" aria-label={`${key}を${sign(amount)}`} data-rhythm-option-nudge={`${key}${sign(amount)}`}
       disabled={amount<0?value<=min:value>=max} onClick={()=>nudge(amount)}
-      className={`min-h-[46px] rounded-xl border border-white/15 ${dim?'bg-slate-800':'bg-slate-700'} px-0.5 text-[11px] font-black tabular-nums text-slate-100 active:scale-95 disabled:opacity-35`}>{sign(amount)}</button>;
+      className={`min-h-[46px] rounded-xl border ${dim?'border-white/25 bg-slate-300 text-slate-900':'border-white/40 bg-slate-100 text-slate-900'} px-0.5 text-[11px] font-black tabular-nums shadow-[0_2px_0_rgba(2,6,23,.55)] active:translate-y-[1px] active:shadow-none disabled:opacity-35`}>{sign(amount)}</button>;
     return <div data-rhythm-option-stepper={key} className="space-y-1.5">
       <div className="grid grid-cols-[1fr_1fr_minmax(56px,1.3fr)_1fr_1fr] items-center gap-1">
         {button(-coarse)}{button(-fine,true)}
-        <output aria-live="polite" className="min-h-[46px] rounded-lg border border-cyan-400/40 bg-slate-950 px-1 text-center text-[13px] font-black leading-[46px] tabular-nums whitespace-nowrap">{display}</output>
+        <output aria-live="polite" className="min-h-[46px] rounded-lg border-2 border-cyan-300/70 bg-white px-1 text-center text-[14px] font-black leading-[42px] tabular-nums text-slate-900 whitespace-nowrap">{display}</output>
         {button(fine,true)}{button(coarse)}
       </div>
       {/* つまんで動かせるスライダーも残す。指で大きく動かすときはこちらのほうが速い */}
@@ -11851,14 +11852,23 @@ const RhythmOptions=({value,onSave,onBack})=>{
     </div>;
   };
   // ON/OFFは押すたびに入れ替わるボタンではなく、**どちらが今の状態か**が一目で分かる2択にする
-  const toggle=key=><div data-rhythm-option-onoff={key} className="grid grid-cols-2 gap-1">
-    {[[true,'ON'],[false,'OFF']].map(([flag,text])=><button type="button" key={text} aria-pressed={draft[key]===flag} onClick={()=>set(key,flag)}
-      className={`min-h-[44px] rounded-xl border text-[12px] font-black ${draft[key]===flag?'border-cyan-200 bg-cyan-600 text-white':'border-white/20 bg-slate-900 text-slate-400'}`}>{text}</button>)}
+  // ON/OFFは**丸いラジオ**にする(参考にした画面と同じ)。押すたびに入れ替わるボタンだと
+  // 「いまどちらか」が読み取りにくく、2つのボタンを並べる形だと枠の中で場所を取る。
+  const toggle=key=><div data-rhythm-option-onoff={key} role="radiogroup" className="flex items-center justify-center gap-2">
+    {[[true,'ON'],[false,'OFF']].map(([flag,text])=><button type="button" key={text} role="radio" aria-checked={draft[key]===flag} aria-label={text} onClick={()=>set(key,flag)}
+      className="flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-xl px-1 text-[12px] font-black">
+      <span aria-hidden="true" className={`grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full border-2 ${draft[key]===flag?'border-cyan-300 bg-cyan-500/20':'border-white/35'}`}>
+        {draft[key]===flag&&<span className="h-[9px] w-[9px] rounded-full bg-cyan-300"/>}
+      </span>
+      <span className={draft[key]===flag?'text-white':'text-slate-400'}>{text}</span>
+    </button>)}
   </div>;
   const segments=(key,items)=><div className={`grid ${items.length>=4?'grid-cols-4':'grid-cols-3'} overflow-hidden rounded-xl border border-white/20`}>{items.map(([id,text])=><button type="button" key={id} aria-pressed={draft[key]===id} onClick={()=>set(key,id)} className={`min-h-[44px] border-r border-white/10 px-1 text-[10px] font-black last:border-r-0 ${draft[key]===id?'bg-cyan-600 text-white':'bg-slate-900 text-slate-300'}`}>{text}</button>)}</div>;
   // 1項目=1枠。頭に帯のラベルを置く(参考にした画面と同じ形)。
   // ★ここは項目の「入れ物」なので、余白・字の大きさは2026-09-05に広げたまま触らない。
-  const field=(title,control,description=null,{wide=false}={})=><div data-rhythm-option-field className={`${wide?'col-span-2':''} rounded-xl border border-cyan-400/20 bg-slate-950/55 p-2.5`}>
+  // ★数値のように横幅の要る項目は wide。縦持ち(2列)ではぶち抜き、
+  //   横持ち(3列)は1列が広いので1つぶんに収める。参考にした画面と同じ並び方。
+  const field=(title,control,description=null,{wide=false}={})=><div data-rhythm-option-field className={`${wide?'col-span-2 landscape:col-span-1':''} rounded-xl border border-cyan-400/20 bg-slate-950/55 p-2.5 landscape:p-2`}>
     <p className={`mb-2 rounded-lg bg-cyan-700/70 px-2 py-1 text-center ${label}`}>{title}</p>
     {control}
     {/* 説明は畳んでおく。参考にした画面のように**まず全体が見渡せる**ことを優先し、
@@ -11868,7 +11878,8 @@ const RhythmOptions=({value,onSave,onBack})=>{
       <p className={`mt-1 ${note}`}>{description}</p>
     </details>}
   </div>;
-  const grid='grid grid-cols-2 gap-2.5';
+  // 横持ちは幅が広いので3列。縦持ちは2列のまま(1列にすると1つずつしか見えない)
+  const grid='grid grid-cols-2 gap-2.5 landscape:grid-cols-3';
   const previewBgm=async()=>{previewRef.current?.stop();previewRef.current=null;const audio=await Audio_.startRhythmTrack('atsu_cup_theme',draft.bgmVolume);previewRef.current=audio;if(!audio)setMessage('BGMを再生できませんでした');};
   const resetDraft=()=>{setDraft(normalizeRhythmSettings(DEFAULT_RHYTHM_SETTINGS));setMessage('画面上の値を戻しました（未保存）');};
   const saveDraft=async()=>{const saved=await onSave(draft);setDraft(saved);setMessage('保存しました');};
@@ -11881,19 +11892,24 @@ const RhythmOptions=({value,onSave,onBack})=>{
     onApply={ms=>{set('judgmentTimingOffsetMs',ms);setMessage(`判定タイミング調整を ${ms>0?'+':''}${ms}ms にしました（未保存）`);}}
     onClose={()=>setCalibrating(false)}/>;
   return <main data-rhythm-options className="flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white" style={{paddingTop:'env(safe-area-inset-top)'}}>
-    <header className="z-10 flex shrink-0 items-center gap-2 border-b border-cyan-400/15 bg-slate-950/95 px-3 py-2"><button aria-label="戻る" onClick={onBack} className="min-h-[44px] min-w-[44px] text-slate-300"><ArrowLeft size={20}/></button><div><small className="block text-[8px] font-black tracking-[0.2em] text-cyan-300">MONBEAT</small><h2 className="text-base font-black">⚙️ オプション</h2></div></header>
-    {/* 上のタブ。いま見ているタブだけ色を変え、下へ小さな三角を出して「ここの中身」と分かるようにする */}
-    <nav data-rhythm-options-tabs className="z-10 grid shrink-0 grid-cols-3 gap-2 border-b border-cyan-400/15 bg-slate-950/95 px-3 pb-2 pt-2">
-      {RHYTHM_OPTION_TABS.map(([id,text])=><button type="button" key={id} data-rhythm-options-tab={id} aria-pressed={tab===id} onClick={()=>changeTab(id)}
-        className={`relative min-h-[44px] rounded-xl border text-[13px] font-black ${tab===id?'border-amber-200 bg-amber-400 text-slate-950':'border-white/15 bg-slate-800 text-slate-300'}`}>
-        {text}{tab===id&&<span aria-hidden="true" className="absolute -bottom-[7px] left-1/2 -translate-x-1/2 border-x-[6px] border-t-[7px] border-x-transparent border-t-amber-300"/>}
-      </button>)}
-    </nav>
-    <div ref={scrollRef} data-rhythm-options-scroll className="flex-1 min-h-0 overflow-y-auto px-3 pb-5 pt-3 mh-scroll">
+    {/* ★横持ちは**高さ**が足りない(390pxしかない)。縦持ちで2段だった「見出し」と「タブ」を、
+        横持ちでは**1行へ並べる**。これだけで中身へ回せる高さが50pxほど増える。
+        押す場所(戻る・タブ)は44pxのまま縮めない。 */}
+    <div data-rhythm-options-bar className="z-10 shrink-0 border-b border-cyan-400/15 bg-slate-950/95 landscape:flex landscape:items-center landscape:gap-3">
+      <header className="flex shrink-0 items-center gap-2 px-3 py-2 landscape:py-1.5"><button aria-label="戻る" onClick={onBack} className="min-h-[44px] min-w-[44px] text-slate-300"><ArrowLeft size={20}/></button><div className="landscape:flex landscape:items-baseline landscape:gap-2"><small className="block text-[8px] font-black tracking-[0.2em] text-cyan-300">MONBEAT</small><h2 className="text-base font-black landscape:text-[13px]">⚙️ オプション</h2></div></header>
+      {/* いま見ているタブだけ色を変え、下へ小さな三角を出して「ここの中身」と分かるようにする */}
+      <nav data-rhythm-options-tabs className="grid shrink-0 grid-cols-3 gap-2 px-3 pb-2 landscape:min-w-0 landscape:flex-1 landscape:gap-1.5 landscape:pb-0 landscape:pl-0 landscape:pr-3">
+        {RHYTHM_OPTION_TABS.map(([id,text])=><button type="button" key={id} data-rhythm-options-tab={id} aria-pressed={tab===id} onClick={()=>changeTab(id)}
+          className={`relative min-h-[44px] rounded-xl border text-[13px] font-black ${tab===id?'border-amber-200 bg-amber-400 text-slate-950':'border-white/15 bg-slate-800 text-slate-300'}`}>
+          {text}{tab===id&&<span aria-hidden="true" className="absolute -bottom-[7px] left-1/2 -translate-x-1/2 border-x-[6px] border-t-[7px] border-x-transparent border-t-amber-300 landscape:hidden"/>}
+        </button>)}
+      </nav>
+    </div>
+    <div ref={scrollRef} data-rhythm-options-scroll className="flex-1 min-h-0 overflow-y-auto px-3 pb-5 pt-3 mh-scroll landscape:px-4 landscape:pb-3 landscape:pt-2">
       <div className="space-y-4">
         {tab==='live'&&<section data-rhythm-options-panel="live" className={card}>
-          <h3 className={head}>🎯 ライブ設定</h3>
-          <div className={`mt-3 ${grid}`}>
+          <h3 className={head}>◆ ライブ設定</h3>
+          <div className={`mt-3 ${grid} landscape:mt-0`}>
             {field('ノーツの速さ',stepper('noteSpeed',RHYTHM_NOTE_SPEED_MIN,RHYTHM_NOTE_SPEED_MAX,RHYTHM_NOTE_SPEED_STEP,{fine:RHYTHM_NOTE_SPEED_STEP,coarse:1,decimals:1}),
               `1.0〜12.0を0.1刻みで調整できます。変わるのはノーツが流れてくる見た目の速さだけで、譜面のタイミング・判定窓・スコアは変わりません（現在 約${rhythmTravelMsForSpeed(draft.noteSpeed).toLocaleString()}ms）。`,{wide:true})}
             {field('タイミング調整',<>
@@ -11922,8 +11938,8 @@ const RhythmOptions=({value,onSave,onBack})=>{
           </div>
         </section>}
         {tab==='volume'&&<section data-rhythm-options-panel="volume" className={card}>
-          <h3 className={head}>🔊 音量</h3>
-          <div className={`mt-3 ${grid}`}>
+          <h3 className={head}>◆ 音量設定</h3>
+          <div className={`mt-3 ${grid} landscape:mt-0`}>
             {field('BGM音量',stepper('bgmVolume',0,RHYTHM_VOLUME_MAX,1,{fine:1,coarse:10}),null,{wide:true})}
             {field('タップ音量',stepper('noteSeVolume',0,RHYTHM_VOLUME_MAX,1,{fine:1,coarse:10}),null,{wide:true})}
             {field('タップ音',toggle('noteSeEnabled'))}
@@ -11942,8 +11958,8 @@ const RhythmOptions=({value,onSave,onBack})=>{
           </details>
         </section>}
         {tab==='system'&&<section data-rhythm-options-panel="system" className={card}>
-          <h3 className={head}>✨ システム</h3>
-          <div className={`mt-3 ${grid}`}>
+          <h3 className={head}>◆ システム設定</h3>
+          <div className={`mt-3 ${grid} landscape:mt-0`}>
             {/* 「少なめ」が何を止めるのかを、ここで言い切る(2026-09-13・Android勢から
                 「重い」との声)。判定文字の金の帯・虹の流れは毎フレーム字を塗り直すので、
                 動きがカクつく端末ではここがいちばん効く */}
@@ -11973,9 +11989,10 @@ const RhythmOptions=({value,onSave,onBack})=>{
         <p className="rounded-xl border border-cyan-400/25 bg-cyan-950/25 px-3 py-2 text-[10px] leading-relaxed text-cyan-100">判定を甘くする設定ではありません。端末ごとの見え方・音量・タイミングを調整する項目です。</p>
       </div>
     </div>
-    <footer data-rhythm-options-actions className="z-20 shrink-0 border-t border-cyan-400/25 bg-slate-950/98 px-3 pt-2 shadow-[0_-8px_24px_rgba(2,6,23,.72)]" style={{paddingBottom:'calc(.5rem + env(safe-area-inset-bottom))'}}>
+    <footer data-rhythm-options-actions className="z-20 shrink-0 border-t border-cyan-400/25 bg-slate-950/98 px-3 pt-2 shadow-[0_-8px_24px_rgba(2,6,23,.72)] landscape:pt-1.5" style={{paddingBottom:'calc(.5rem + env(safe-area-inset-bottom))'}}>
       {message&&<p role="status" className="mb-1 text-center text-[11px] font-black text-amber-300">{message}</p>}
-      <div className="grid grid-cols-[.9fr_1.1fr] gap-3"><button type="button" onClick={resetDraft} className="min-h-[52px] rounded-xl border border-white/20 bg-slate-800 px-2 text-[12px] font-black">デフォルトに戻す</button><button type="button" onClick={saveDraft} data-rhythm-options-save data-dirty={dirty?'true':'false'} className={`min-h-[52px] rounded-xl px-3 font-black ${dirty?'bg-amber-400 text-slate-950 shadow-[0_0_18px_rgba(251,191,36,.35)]':'bg-amber-600 text-slate-950'}`}>{dirty?'変更を保存':'保存'}</button></div>
+      {/* 横持ちでは中央寄せで細くする(横いっぱいのボタンは押しにくいだけで、場所も食う) */}
+      <div className="mx-auto grid grid-cols-[.9fr_1.1fr] gap-3 landscape:max-w-[520px]"><button type="button" onClick={resetDraft} className="min-h-[52px] rounded-xl border border-white/20 bg-slate-800 px-2 text-[12px] font-black landscape:min-h-[46px]">デフォルトに戻す</button><button type="button" onClick={saveDraft} data-rhythm-options-save data-dirty={dirty?'true':'false'} className={`min-h-[52px] rounded-xl px-3 font-black landscape:min-h-[46px] ${dirty?'bg-amber-400 text-slate-950 shadow-[0_0_18px_rgba(251,191,36,.35)]':'bg-amber-600 text-slate-950'}`}>{dirty?'変更を保存':'保存'}</button></div>
     </footer>
   </main>;
 };
