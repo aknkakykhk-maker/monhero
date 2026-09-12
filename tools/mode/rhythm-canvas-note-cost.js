@@ -156,6 +156,61 @@ const CASES=[
       return out;
     },{CASES,WARMUP,FRAMES});
 
+    // ── 先焼き(warmSprites)が本当に効いているか ──────────────────────────────
+    // 時間は機械の調子で揺れるので、**スプライトが1枚も追加されないこと**で見る。
+    // 演奏前に焼いてあれば、曲の中で新しく作られる枚数は0になるはず。
+    const warm=await page.evaluate(({CASES})=>{
+      const area=document.querySelector('[data-rhythm-play-area]');
+      const canvas=area.querySelector('[data-rhythm-note-canvas]');
+      const rect={width:390,height:700,top:0,left:0};
+      const noteHeight=20,spawnY=-noteHeight,travelPx=700*.88-1.5-noteHeight/2-spawnY,travelMs=2150;
+      // 焼いたぶんを捨てて、素の状態から始める
+      RHYTHM_CANVAS_RENDERER.release();
+      RHYTHM_CANVAS_RENDERER.attach(canvas);
+      const count=()=>RHYTHM_CANVAS_RENDERER.spriteCount();
+      const drawAll=()=>{
+        for(const item of CASES){
+          const source=item.note;
+          const note={type:source.type,timeMs:10000,lane:source.lane??Math.floor((source.subLane??0)/2)};
+          if(source.subLane!=null)note.subLane=source.subLane;
+          if(source.subLaneWidth!=null)note.subLaneWidth=source.subLaneWidth;
+          if(source.holdMs){
+            note.endTimeMs=note.timeMs+source.holdMs;
+            if(source.type==='SLIDE'){note.endLane=source.endLane??note.lane;
+              note.slidePoints=[{timeMs:note.timeMs,lane:note.lane},{timeMs:note.endTimeMs,lane:note.endLane}];}
+          }
+          // 終点フリックの矢印も出させる
+          if(source.type==='HOLD')note.endFlick=true;
+          const progress=.5,visualTime=note.timeMs-(1-progress)*travelMs;
+          const yPx=Math.round(spawnY+rhythmProjectTravelProgress(progress)*travelPx);
+          const hasBody=rhythmNoteHasBody(note);
+          const releaseProgress=1-(rhythmReleaseTargetMs(note)-visualTime)/travelMs;
+          const releaseYpx=Math.round(spawnY+rhythmProjectTravelProgress(releaseProgress)*travelPx);
+          const geo=rhythmNoteCanvasGeometry(note,yPx,note.lane,rect,noteHeight,hasBody?releaseYpx:null,
+            {chartNowMs:visualTime,visualTime,travelMs,spawnY,travelPx},hasBody?Math.max(0,yPx-releaseYpx):0);
+          RHYTHM_CANVAS_RENDERER.begin(rect,{nowMs:0,effect:'FULL',lightweight:false,sizeScale:1,dpr:2});
+          RHYTHM_CANVAS_RENDERER.drawNote(note,geo,{failed:false,monster:!!item.monster,
+            wide:rhythmNoteIsWide(note),pressed:false,alpha:1,pop:null,depthScale:1,brightness:1});
+          RHYTHM_CANVAS_RENDERER.end();
+        }
+      };
+      // ① 先焼きせずに描く → 何枚作られるか
+      const coldBefore=count();drawAll();const coldMade=count()-coldBefore;
+      // ② 素へ戻して先焼き → そのあと描いても増えないこと
+      RHYTHM_CANVAS_RENDERER.release();
+      RHYTHM_CANVAS_RENDERER.attach(canvas);
+      const warmed=RHYTHM_CANVAS_RENDERER.warmSprites({effect:'FULL',lightweight:false,dpr:2});
+      const warmBefore=count();drawAll();const warmMade=count()-warmBefore;
+      return {coldMade,warmed,warmMade};
+    },{CASES});
+    console.log(`\n[先焼き] 演奏前に焼く枚数 ${warm.warmed}枚`);
+    console.log(`  先焼きなしで描くと、曲の中で ${warm.coldMade}枚 作られる`);
+    console.log(`  先焼きありで描くと、曲の中で ${warm.warmMade}枚 作られる`);
+    check('先焼きで実際にスプライトができる',warm.warmed>0,`${warm.warmed}枚`);
+    check('先焼きすれば曲の中で新しく作られない',warm.warmMade===0,`${warm.warmMade}枚`);
+    check('先焼きは描くときに必要な枚数をすべて含む',warm.warmed>=warm.coldMade,
+      `先焼き ${warm.warmed}枚 / 描画で必要 ${warm.coldMade}枚`);
+
     console.log(`\n[canvas版] ノーツ1個・1フレームあたり(${FRAMES}フレームの平均・dpr2・演出FULL)`);
     console.log('  種類        |  時間   | drawImage | 塗り | 線 | グラデ');
     for(const row of rows){
