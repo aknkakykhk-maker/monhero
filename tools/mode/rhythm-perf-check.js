@@ -196,8 +196,17 @@ check('プレイ開始でstyleを戻すとき、覚えている値も一緒に�
 // ぼかし影が一度だけ焼かれ、以後はopacityの切り替えだけで済む(塗り直しが起きない)。
 // 実測(Chromium・16e相当の画素数・5回の中央値)で、上位5%のフレーム時間が
 // 5.00ms → 2.00ms(-60%)。装飾を全部外した場合(3.30ms)より速く、しかも見た目は同じ。
-check('サブレーン発光は合成レイヤーへ載せ、タップのたびに影を焼き直さない',
-  gameSrc.includes("willChange:settings.lightweightMode?'auto':'opacity'"));
+// 【2026-09-12に方針が変わった】(#1343 / docs/ops/rhythm-frame-drop-20260912.md)
+// 以前はサブレーンの光10枚すべてへ willChange:'opacity' を常時付けて「合成レイヤーへ載せる」
+// 方針だった。しかし will-change は「これから変わる」と前もって伝えるものなので、
+// 付けっぱなしにすると**押していないあいだも10枚が合成レイヤーとして居座り続ける**。
+// opacity の45msの変化は will-change 無しでも間に合うため外した。
+// この検査は方針の変更に合わせて「付けっぱなしにしていないこと」を見る側へ変える
+// (外したことが静かに元へ戻らないように)。
+check('サブレーン発光に will-change を付けっぱなしにしない',
+  !gameSrc.includes("willChange:settings.lightweightMode?'auto':'opacity'")
+  &&gameSrc.includes('data-rhythm-sublane-feedback={subLane}')
+  &&gameSrc.includes("transition:settings.lightweightMode?'none':'opacity 45ms linear'"));
 // プレイエリア全面サイズのSVGは、幅・高さ・viewBoxが遊んでいるあいだ変わらない。
 // 毎フレーム書き直すと中身の再構築を招くので、変わったときだけ書く。
 check('SLIDE帯SVGの変わらない値(幅・viewBox)を毎フレーム書き直さない',
