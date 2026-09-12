@@ -99,9 +99,6 @@ const server = http.createServer((req, res) => {
   const browser = await playwright.chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
   try {
     const tab = await browser.newPage();
-    // 外部CDN(Tailwind)はこのサンドボックスから取りに行けないので、待たずに落とす
-    await tab.route('https://cdn.tailwindcss.com/**', r => r.abort());
-    await tab.route('https://cdn.tailwindcss.com', r => r.abort());
     const samples = [];
     await tab.exposeFunction('__record', (p, label) => { samples.push({ p, label }); });
     // ゲージが描き直された回数と、そのとき出ていた見出しをページ側にためる。

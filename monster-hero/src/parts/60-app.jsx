@@ -513,6 +513,11 @@ function MonsterHeroGame() {
     setEcoMode(next);
     return next;
   };
+  // 「アプリが裏に回った」で止めたときの省エネ段階の控え。戻って周回を続けるときに同じ段階へ戻す
+  // (2026-09-12・ユーザー指摘「省エネも設定してた状態に戻らないの？」)。
+  // ★控えるのは reason==='hidden' のときだけ。負けた・諦めた・自分で切ったときは
+  //   周回そのものが再開しないので、省エネも戻さない(控えも捨てる)。
+  const ecoModeBeforeHiddenRef = useRef(null);
   const cycleEcoMode = () => {
     const currentIndex=ECO_MODES.indexOf(ecoModeRef.current);
     return setEcoModeSafe(ECO_MODES[(currentIndex+1)%ECO_MODES.length]);
@@ -539,6 +544,10 @@ function MonsterHeroGame() {
   // 2026-09-07・ユーザー報告「クイック中に1曲やったら周回が止まってた」。
   // 帯が「終わりました」としか言わないため、負けたのか裏に回ったのかが分からなかった。
   const stopAllAuto = (reason = '') => {
+    // 裏に回ったせいで止めるときだけ、いまの省エネ段階を控える(戻ってきたら同じ段階へ戻す)。
+    // ★ほかの理由では控えを捨てる。負けたあとに裏へ回っても、戻ってきて省エネだけが
+    //   よみがえることのないようにする
+    ecoModeBeforeHiddenRef.current = reason === 'hidden' ? ecoModeRef.current : null;
     stopAutoBattle();
     // モンビーにいても「周回が終わった」と分かるよう、進捗の帯へ印だけ付ける(消さない)
     finishQuickRunProgress(reason);
@@ -1102,6 +1111,30 @@ function MonsterHeroGame() {
   const changeSeVolume = (v) => { const nv = Math.max(0, Math.min(100, v)); setSeVolumeRaw(nv); noteUltraAudioManualChange(); setQuickMuted(false); if (!audioUnlocked) setAudioUnlocked(true); Audio_.unlock(true); };
   const changeBgmVolume = (v) => { const nv = Math.max(0, Math.min(100, v)); setBgmVolumeRaw(nv); noteUltraAudioManualChange(); setQuickMuted(false); if (!audioUnlocked) setAudioUnlocked(true); Audio_.unlock(true); };
   const audioMuted = !audioOn;
+  // 「音が出ないとき」(音量設定の中)。開いているあいだだけ音の出口を見張る
+  const [showAudioDiag, setShowAudioDiag] = useState(false);
+  const [audioDiag, setAudioDiag] = useState(null);
+  const [audioDiagPeak, setAudioDiagPeak] = useState(0);
+  const [audioRepairing, setAudioRepairing] = useState(false);
+  const audioDiagPeakRef = useRef(0);
+  const enableSoundForCheck = () => {
+    if (!audioUnlocked) setAudioUnlocked(true);
+    if (quickMuted) toggleQuickMute();
+  };
+  // テスト音は効果音エンジン(Tone)を通さない素の音。
+  // 「Toneが読めていないだけ」なのか「出口そのものが死んでいる」のかを分けるため
+  const testAudioOutput = async () => {
+    enableSoundForCheck();
+    try { await Audio_.unlock(); } catch {}
+    try { await Audio_.playTestTone(); } catch {}
+  };
+  const repairAudioOutput = async () => {
+    if (audioRepairing) return;
+    setAudioRepairing(true);
+    enableSoundForCheck();
+    try { await Audio_.repair(); } catch {}
+    setAudioRepairing(false);
+  };
   const selectAutoRuntimeBgm = (trackId) => {
     if (trackId !== '__none__' && !BGM_TRACK_BY_ID[trackId]) return;
     setAutoBgmOverride(trackId);
@@ -1779,9 +1812,12 @@ function MonsterHeroGame() {
       const songId = rhythmEventDivisionSongId(wanted);
       const division = (songId && event.songIds.includes(songId)) ? wanted : RHYTHM_EVENT_TOTAL_DIVISION;
       const targetSongId = rhythmEventDivisionSongId(division);
+      // 回数ボーナスを使うイベントでは、割合を渡して加点込みで集計してもらう。
+      // 使わないイベント(週間)では null なので、これまでどおりの集計になる
+      const bonusRates = rhythmEventPlayBonusRates(event);
       const fetchRows = (options) => targetSongId
-        ? sbFetchRhythmEventSongBests({ songId:targetSongId, fromMs:range.startMs, toMs:range.endMs, ...options })
-        : sbFetchRhythmEventTotals({ songIds:[...event.songIds], fromMs:range.startMs, toMs:range.endMs, ...options });
+        ? sbFetchRhythmEventSongBests({ songId:targetSongId, fromMs:range.startMs, toMs:range.endMs, bonusRates, ...options })
+        : sbFetchRhythmEventTotals({ songIds:[...event.songIds], fromMs:range.startMs, toMs:range.endMs, bonusRates, ...options });
       const fromRow = targetSongId ? rhythmEventSongEntryFromRow : rhythmEventTotalEntryFromRow;
       const rows = await fetchRows({ requestId:`rhythm-${kind}-${division}-${Date.now()}` });
       if (stale()) return;
@@ -2415,7 +2451,7 @@ function MonsterHeroGame() {
   const quickRunFinishReasonText = (reason) => ({
     defeat:'負けたので周回が終わりました（ここまでのぶんは入ります）',
     retire:'途中でやめたので周回が終わりました（ここまでのぶんは入ります）',
-    hidden:'アプリが裏に回ったので周回が止まりました',
+    hidden:'アプリが裏に回ったので周回が止まりました（ふだんは戻ると自動で続きます）',
     manual:'AUTO∞を切ったので周回が終わりました',
     error:'続けられなくなったので周回が止まりました',
   }[String(reason || '')] || '周回が終わりました');
@@ -2483,7 +2519,10 @@ function MonsterHeroGame() {
   //   埋める値そのものが存在しないため(CLAUDE.md ⑦「消さない・上書きしない」)。
   // loopScale … その演奏にかかっていた倍率。曲リザルトで「イベント対象曲 ×3」と出すためだけに使う
   //   (配る量そのものは loops に織り込み済みなので、ここで掛け直さない)
-  const awardRhythmPlayRunLoops = async (loops, loopScale = RHYTHM_PLAY_RUN_LOOP_SCALE) => {
+  // cleared / baseLoops … クリアか失敗か(2026-09-12・ユーザー指示「それによって経験値も変わるから」)と、
+  //   失敗していなければ入っていた周回数。どちらも曲リザルトの表示用で、配る量そのものは
+  //   すでに loops へ織り込まれている(ここで掛け直さない)。
+  const awardRhythmPlayRunLoops = async (loops, loopScale = RHYTHM_PLAY_RUN_LOOP_SCALE, { cleared = true, baseLoops = null } = {}) => {
     const count = Math.max(0, Math.trunc(Number(loops) || 0));
     if (count <= 0) return null;
     const scale = Number.isFinite(Number(loopScale)) && Number(loopScale) > 0 ? Number(loopScale) : RHYTHM_PLAY_RUN_LOOP_SCALE;
@@ -2562,7 +2601,9 @@ function MonsterHeroGame() {
     for (let i = 0; i < count; i++) countQuickRunLoop();
     const toLoop = quickRunProgressRef.current ? quickRunProgressRef.current.loops : fromLoop;
     return { loops: count, xp: xpGain, gold: goldGain, bond: bondGain, psyche: psycheGain, fromLoop, toLoop,
-      scale, eventBoosted: scale > RHYTHM_PLAY_RUN_LOOP_SCALE };
+      scale, eventBoosted: scale > RHYTHM_PLAY_RUN_LOOP_SCALE,
+      cleared: cleared !== false,
+      baseLoops: Math.max(0, Math.trunc(Number(baseLoops) || 0)) || count };
   };
   // ---- 画面のなかでの使い方案内(docs/spec/QUICK_RHYTHM_LINK.md PR8) ----
   // ヘルプと更新履歴は探しに行った人しか読まない。この連携は遊んでいるだけでは
@@ -2720,11 +2761,14 @@ function MonsterHeroGame() {
       const breederId = await ensureBreederId();
       const selfKeys = rhythmTotalRankingSelfKeys(breederId, breederName);
       const prizes = [];
+      // ★順位の出し方は画面と**同じ**にする。回数ボーナスを使うイベントでここを渡し忘れると、
+      //   「ランキングでは1位だったのに報酬が来ない」が起きる
+      const bonusRates = rhythmEventPlayBonusRates(event);
       for (const divisionId of rhythmEventDivisionIds(event)) {
         const songId = rhythmEventDivisionSongId(divisionId);
         const rows = songId
-          ? await sbFetchRhythmEventSongBests({ songId, fromMs:range.startMs, toMs:range.endMs, limit:RHYTHM_EVENT_REWARD_RANKS, requestId:`rhythm-reward-${event.id}-${divisionId}` })
-          : await sbFetchRhythmEventTotals({ songIds:[...event.songIds], fromMs:range.startMs, toMs:range.endMs, limit:RHYTHM_EVENT_REWARD_RANKS, requestId:`rhythm-reward-${event.id}-total` });
+          ? await sbFetchRhythmEventSongBests({ songId, fromMs:range.startMs, toMs:range.endMs, bonusRates, limit:RHYTHM_EVENT_REWARD_RANKS, requestId:`rhythm-reward-${event.id}-${divisionId}` })
+          : await sbFetchRhythmEventTotals({ songIds:[...event.songIds], fromMs:range.startMs, toMs:range.endMs, bonusRates, limit:RHYTHM_EVENT_REWARD_RANKS, requestId:`rhythm-reward-${event.id}-total` });
         const fromRow = songId ? rhythmEventSongEntryFromRow : rhythmEventTotalEntryFromRow;
         const entries = (Array.isArray(rows) ? rows : []).map(fromRow);
         const index = entries.findIndex(entry => selfKeys.includes(entry.identityKey));
@@ -2738,7 +2782,7 @@ function MonsterHeroGame() {
       let participation = null;
       if (rhythmEventParticipationReward(event)) {
         const mine = await sbFetchRhythmEventTotals({
-          songIds:[...event.songIds], fromMs:range.startMs, toMs:range.endMs,
+          songIds:[...event.songIds], fromMs:range.startMs, toMs:range.endMs, bonusRates,
           limit:selfKeys.length, identityKeys:selfKeys, requestId:`rhythm-reward-${event.id}-join`,
         });
         const played = (Array.isArray(mine) ? mine : []).map(rhythmEventTotalEntryFromRow)
@@ -2821,7 +2865,10 @@ function MonsterHeroGame() {
     const startedAt = rhythmPlayStartedAtRef.current;
     rhythmPlayStartedAtRef.current = 0;
     if (!startedAt) return;
-    if (rhythmPlayRunAwardRef.current) { stopCatchUp(); return; }
+    // ★見るのは「実際に周回が入ったか(loops>0)」。失敗したときは0周なので、
+    //   途中でやめたときと同じく、止まっていたぶんを取り戻す側へ進む
+    //   (失敗しても損はしないが、得もしない。2026-09-12・ユーザー指示)。
+    if (Number(rhythmPlayRunAwardRef.current?.loops) > 0) { stopCatchUp(); return; }
     if (!rhythmScreenOpen || runStageRef.current == null || !autoRepeatRef.current) { stopCatchUp(); return; }
     beginCatchUp(Date.now() - startedAt);
   }, [gameState]);
@@ -2996,6 +3043,25 @@ function MonsterHeroGame() {
   // 音量の保存値そのものは変えないので、モンビーを出れば元の音量へ戻る
   useEffect(() => { Audio_.setSeVolume((ultraEcoSession || rhythmScreenOpen) ? 0 : seVolume); }, [seVolume, ultraEcoSession, rhythmScreenOpen]);
   useEffect(() => { Audio_.setBgmVolume(bgmVolume); }, [bgmVolume]);
+  // 「音が出ないとき」を開いているあいだだけ、出口の状態と実際に出ている音を見張る。
+  // 閉じたら必ず止める(鳴らしているあいだ中ずっと測り続けない)
+  useEffect(() => {
+    if (!showAudioSettings || !showAudioDiag) return;
+    audioDiagPeakRef.current = 0;
+    setAudioDiagPeak(0);
+    const tick = () => {
+      let info = null;
+      try { info = Audio_.diagnose(); } catch { info = null; }
+      setAudioDiag(info);
+      const level = Number.isFinite(info?.level) ? info.level : 0;
+      // 一瞬の音でもメーターが見えるように、山は少しずつ下げながら保つ
+      audioDiagPeakRef.current = Math.max(level, audioDiagPeakRef.current * 0.82);
+      setAudioDiagPeak(audioDiagPeakRef.current);
+    };
+    tick();
+    const timer = setInterval(tick, 120);
+    return () => clearInterval(timer);
+  }, [showAudioSettings, showAudioDiag]);
 
   // 新バージョン検知: ホーム画面アプリ/背面タブ復帰時は自動再読み込みされず古いバージョンの
   // ままタップしても反応しないように見える不具合が繰り返し報告されたため、version.jsonを
@@ -3176,6 +3242,9 @@ function MonsterHeroGame() {
   };
 
 
+  // アプリに戻ったときの「止まっていた∞周回の続き」。中身は下で組み立てて毎レンダー入れ直す
+  // (下の effect は1度しか作られないため、そこへ直接書くと古い state を掴んだままになる)
+  const resumeAutoAfterVisibleRef = useRef(null);
   // タブ切り替え/バックグラウンド化から復帰した際、OSにより自動停止されたAudioContextと
   // BGMのTransportを復帰させる(そのままだとBGM/SEが鳴らなくなったままになる不具合の対策)。
   // visibilitychangeだけだと、PWAをホーム画面から開き直した場合やアプリ切り替えで
@@ -3184,7 +3253,15 @@ function MonsterHeroGame() {
     // 画面が見えなくなったらBGMを止める(他のアプリに切り替えたあとも鳴り続けないように)。
     // 戻ってきたら、止まっているAudioContextを復帰させて鳴らし直す
     const onHidden = () => { Audio_.setPageHidden(true); stopAllAuto('hidden'); };
-    const onVisible = () => { Audio_.setPageHidden(false); Audio_.resumeIfNeeded(); };
+    // ★戻ってきたら、裏に回ったせいで止まっていた∞周回を自動で続ける
+    //   (2026-09-11・ユーザー指示「アプリに戻ったら自動で開始するようにしてほしい /
+    //    ただし負けたときは自動では開始しない / モンビー中もおなじ」)。
+    //   この effect は1度しか作られないので、判定の中身は毎レンダー入れ直した ref から呼ぶ
+    //   (ここで state を直接読むと、起動直後の古い値をずっと見ることになる)。
+    const onVisible = () => {
+      Audio_.setPageHidden(false); Audio_.resumeIfNeeded();
+      if (resumeAutoAfterVisibleRef.current) resumeAutoAfterVisibleRef.current();
+    };
     const onVisibilityChange = () => (document.visibilityState === 'hidden' ? onHidden() : onVisible());
     // ★blur / pagehide は「本当に裏へ回った」以外でも飛ぶ。
     //   全画面への出入り、システムの画面(コントロールセンターなど)、音声の割り込みでも来る。
@@ -6870,21 +6947,31 @@ function MonsterHeroGame() {
       for (let i = 0; i < claimedCount; i++) addAssistantBond('gift');
       // ブリーダー経験値が入ったときは、レベルが上がったぶんのポイントも配る。
       // 配った総数も更新しておく(読み込み時の補填が二重に配らないようにするため)
+      // ★以前はここから1件ずつ storeSet していた。途中で失敗すると
+      //   「ダイヤは増えたのにアイテムが入っていない」という片方だけの状態がそのまま残る。
+      //   saveStoredValuesOrRollback は全部書いてから読み戻し、1つでも食い違えば全部を元へ戻す
+      //   (神殿の合体・限界突破・マーケットの購入と同じ正本)。
+      const entries = [];
       if (balances.breederXp !== breederXp) {
         const after = levelInfo(balances.breederXp);
         const gainedLevels = Math.max(0, after.level - levelInfo(breederXp).level);
         if (gainedLevels > 0) {
           balances.breederPoints += gainedLevels;
-          await storeSet('mh_breeder_points_granted', Math.max(0, after.level - 1), false);
+          // 「配った総数」だけは画面の state を持たないので、巻き戻す先を保存から読んでおく
+          const beforeGranted = await storeGet('mh_breeder_points_granted', null, false);
+          entries.push({ key:'mh_breeder_points_granted', before:beforeGranted, next:Math.max(0, after.level - 1) });
         }
-        await storeSet('mh_breeder_xp', balances.breederXp, false);
-        setBreederXp(balances.breederXp);
+        entries.push({ key:'mh_breeder_xp', before:breederXp, next:balances.breederXp });
       }
       // 報酬検証を全件終えた確定値だけを保存し、画面stateも同じ値へ揃える。
-      await storeSet('mh_gold', balances.gold, false);
-      await storeSet('mh_breeder_points', balances.breederPoints, false);
-      await storeSet('mh_owned_items', balances.ownedItems, false);
-      await storeSet('mh_gifts', nextGifts, false);
+      entries.push({ key:'mh_gold', before:gold, next:balances.gold });
+      entries.push({ key:'mh_breeder_points', before:breederPoints, next:balances.breederPoints });
+      entries.push({ key:'mh_owned_items', before:ownedItems, next:balances.ownedItems });
+      entries.push({ key:'mh_gifts', before:gifts, next:nextGifts });
+      const saved = await saveStoredValuesOrRollback(entries, storeGet, storeSet);
+      // 成立しなかったときは巻き戻し済み。画面も動かさず「まだ受け取っていない」ままにする
+      if (!saved) { console.error('[gift] claim persistence failed'); return; }
+      if (balances.breederXp !== breederXp) setBreederXp(balances.breederXp);
       setGold(balances.gold); setBreederPoints(balances.breederPoints); setOwnedItems(balances.ownedItems); setGifts(nextGifts);
     } finally { giftClaimingRef.current = false; }
   };
@@ -8179,6 +8266,37 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     else beginQuickRunProgress();
     return true;
   };
+  // ===== アプリに戻ったら、裏に回って止まっていた∞周回を自動で続ける =====
+  // (2026-09-11・ユーザー指示「オート周回中、アプリが裏に回ると止まるようにしてるけど
+  //  アプリに戻ったら自動で開始するようにしてほしい / ただし負けたときは自動では開始しない /
+  //  モンビー中もおなじ」)。
+  //
+  // ★続けるのは「アプリが裏に回ったから止まった」ぶんだけ(reason==='hidden')。
+  //   負けた('defeat')・諦めた('retire')・自分でAUTOを切った('manual')・
+  //   続けられなくなった('error')は、戻ってきても自動では始めない。
+  //   「負けたときは自動で始めない」は resumeQuickRunFromRhythm の中でも
+  //   runResultFinishedRef で二重に守っている(理由の取り違えで動きださないように)。
+  // ★モンビーを開いていても同じように続く。resumeQuickRunFromRhythm は画面を動かさないので、
+  //   バトル画面・曲えらび・演奏中のどこにいても呼べる(演奏中は進行そのものが止まったままで、
+  //   曲が終われば今までどおり進みはじめる)。
+  const resumeQuickRunAfterVisible = () => {
+    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return false;
+    const progress = quickRunProgressRef.current;
+    if (!progress || !progress.finished) return false;   // 止まっていない(続ける必要がない)
+    if (progress.reason !== 'hidden') return false;      // 裏に回った以外の理由で止まっている
+    const resumed = resumeQuickRunFromRhythm();
+    if (!resumed) return false;
+    // 省エネも裏に回る前の段階へ戻す(2026-09-12・ユーザー指摘)。
+    // ★順番が大事。setEcoModeSafe は autoRepeatRef.current===true でないと 'off' へ落ちるので、
+    //   ∞を立て直す resumeQuickRunFromRhythm のあとに呼ぶ。
+    //   'ultra' へ戻ると、暗幕と自動ミュートも今までどおり ultraEcoSession の effect が付け直す
+    const eco = ecoModeBeforeHiddenRef.current;
+    ecoModeBeforeHiddenRef.current = null;
+    if (eco && eco !== 'off') setEcoModeSafe(eco);
+    return true;
+  };
+  // 上の visibilitychange の effect から呼べるように、毎レンダー最新の関数を入れ直す
+  resumeAutoAfterVisibleRef.current = resumeQuickRunAfterVisible;
   // ===== モンヒロビートを開いたら自動で∞周回を始める =====
   // (2026-09-11・ユーザー指示「オート設定にモンビー中のオート周回を設定している場合に
   //  モンビーを開いたら自動でクイックに入る機能を追加したい /
@@ -9860,7 +9978,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   ) : showTitleSettings ? (
     <div className="mh-title-modal" onPointerDown={e=>e.stopPropagation()}><div className="mh-title-dialog"><div className="mh-dialog-head"><h3>設定</h3><button onClick={()=>setShowTitleSettings(false)}><X size={18}/></button></div><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowAudioSettings(true)}}>🔊 音量設定 <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowBgmArrangement(true)}}>🎼 BGMアレンジ <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowBackup(true)}}>🛡️ データ引き継ぎ <ChevronRight size={18}/></button></div></div>
   ) : showAudioSettings ? (
-    <div className="mh-title-modal"><div className="mh-title-dialog"><div className="mh-dialog-head"><h3>音量設定</h3><button onClick={()=>setShowAudioSettings(false)}><X size={18}/></button></div><button className="mh-dialog-choice" onClick={toggleQuickMute}>{audioMuted?'🔇 音がオフです':'🔊 音はオンです'}</button><VolumeSlider label="SE" icon="🔔" value={seVolume} onChange={changeSeVolume} gradient="from-cyan-500 to-indigo-500" thumbRing="border-indigo-400"/><VolumeSlider label="BGM" icon="🎵" value={bgmVolume} onChange={changeBgmVolume} gradient="from-fuchsia-500 to-pink-500" thumbRing="border-fuchsia-400"/></div></div>
+    <div className="mh-title-modal"><div className="mh-title-dialog" style={{maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',overflowY:'auto'}}><div className="mh-dialog-head"><h3>音量設定</h3><button onClick={()=>setShowAudioSettings(false)}><X size={18}/></button></div><button className="mh-dialog-choice" onClick={toggleQuickMute}>{audioMuted?'🔇 音がオフです':'🔊 音はオンです'}</button><VolumeSlider label="SE" icon="🔔" value={seVolume} onChange={changeSeVolume} gradient="from-cyan-500 to-indigo-500" thumbRing="border-indigo-400"/><VolumeSlider label="BGM" icon="🎵" value={bgmVolume} onChange={changeBgmVolume} gradient="from-fuchsia-500 to-pink-500" thumbRing="border-fuchsia-400"/><button className="mh-dialog-choice mt-3" aria-expanded={showAudioDiag} onClick={()=>setShowAudioDiag(v=>!v)}>🔧 音が出ないとき {showAudioDiag?'▲':'▼'}</button>{showAudioDiag&&<AudioTroubleshootPanel info={audioDiag} peak={audioDiagPeak} muted={audioMuted} onTest={testAudioOutput} onRepair={repairAudioOutput} repairing={audioRepairing}/>}</div></div>
   ) : showBgmArrangement ? (
     <div className="mh-title-modal"><div className="mh-title-dialog" style={{maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',overflowY:'auto'}}><div className="mh-dialog-head"><h3>BGMアレンジ</h3><button onClick={closeBgmArrangement}><X size={18}/></button></div>{(()=>{const categories=[
       {id:'basic',label:'基本',items:[['home','HOME BGM'],['title','タイトル BGM'],['autoBattle','AUTOモード BGM'],['management','M/B管理 BGM'],['clear','ゲームクリア BGM'],
@@ -11427,9 +11545,18 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // (1秒だけ演奏してやめる、で稼げないようにするため)。
           // 練習(tutorial)は記録も報酬も動かさないので、その前に判定しない
           if(rhythmPlay.from!=='tutorial'){
-            const loops=rhythmPlayLoopsFor(rhythmPlay.song,rhythmPlay.difficulty);
+            const baseLoops=rhythmPlayLoopsFor(rhythmPlay.song,rhythmPlay.difficulty);
             const loopScale=rhythmPlayRunLoopScaleFor(rhythmPlay.song);
-            const awarded=loops>0?await awardRhythmPlayRunLoops(loops,loopScale):null;
+            // 失敗(ライフ0のまま完走)は半分。クリアかどうかは演奏側が result.cleared で伝える
+            // (2026-09-12・ユーザー指示「終了後にクリアか失敗かもわかるようにして /
+            //  それによって経験値も変わるから」)
+            const cleared=result?.cleared!==false;
+            const loops=rhythmPlayRunLoopsForResult(baseLoops,cleared);
+            // 失敗したときは1周も配らない。ただし「入らなかった」ことは曲リザルトで言う。
+            // ここで何も渡さないと、裏で周回していた人には画面のどこにも理由が出ない
+            if(!cleared&&baseLoops>0)setRhythmPlayRunAward({loops:0,baseLoops,cleared:false,scale:loopScale,
+              eventBoosted:loopScale>RHYTHM_PLAY_RUN_LOOP_SCALE,xp:0,gold:0,bond:0,psyche:0,fromLoop:0,toLoop:0});
+            const awarded=loops>0?await awardRhythmPlayRunLoops(loops,loopScale,{cleared,baseLoops}):null;
             if(awarded){
               setRhythmPlayRunAward(awarded);
               // 限界突破も、通常の周回が終わったときと同じように走らせる

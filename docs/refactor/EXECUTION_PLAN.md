@@ -38,16 +38,16 @@ S/A 等級は `REGRESSION_RISK_MAP.md` に基づく。
 
 | STEP | 残っていること | リスク | モデル | effort |
 | --- | --- | --- | --- | --- |
-| 1 安全網 | **完了**(2026-09-11)。NG 56→1本。残り1本はユーザーの手が要る(下の「次の一手」) | — | — | — |
-| 2 連結ビルドと集約 | 定数・ユーティリティの集約 | 中 | Sonnet 5 | high |
-| 3 保存層 | 複数体合体・寄付・報酬受取の寄せ、キーごとの読込関数 | **高**(S等級に隣接) | **Opus 5** | **max** |
-| 4 純関数の切り出し | 難易度から保存処理を出す、jsx側の表の移動 | 中 | Sonnet 5 | high |
+| 1 安全網 | **完了**(2026-09-11)。NG 56→**0本** | — | — | — |
+| 2 連結ビルドと集約 | **完了**(2026-09-11)。定数・ユーティリティの集約は parts 分割で達成済みだった | — | — | — |
+| 3 保存層 | 残り2つ。①寄付(`executeMasuDonation`・60-app.jsx:5748)の4キーを取引へ ②起動時ロードの424行(TD-18)。報酬受取(ギフト)は完了(2026-09-12)。「複数体合体」は実装が見当たらず、計画当時の想定と思われる | **高**(S等級に隣接) | **Opus 5** | **max** |
+| 4 純関数の切り出し | **実質完了**(2026-09-11)。共有層21部品のうち8つが pure。残りは JSX・DOM・保存を本質的に含む | — | — | — |
 | 5 バトル計算 | **完了** | — | — | — |
 | 6 画面の切り出し | **完了**(2026-09-11)。残るのは `BATTLE` の `token.alive` と `MASU_PATTERN_DEBUG` | — | — | — |
-| 7 描画・キャッシュ | 一覧行の `React.memo`、`style` の定数化 | 低〜中 | Sonnet 5 | high |
-| 8 音声管理・SRI | 移動とSRI | 低 | Sonnet 5 | medium |
+| 7 描画・キャッシュ | 4本目まで完了。**`React.memo` は測ったうえで「入れない」と決めた**(長いタスク0ms)。残りは静的な `style` の定数化(522箇所) | 低〜中 | Sonnet 5 | high |
+| 8 音声管理・SRI | 移動は parts 分割で完了(`14-audio.jsx`)。**SRI はこの環境では付けられない**——ハッシュを取るのに `cdnjs.cloudflare.com` へ出る必要があり、ネットワークポリシーで 403。ネットワークのある環境で `tone/14.8.49/Tone.js` の sha384 を取って `integrity` / `crossOrigin` を付ける | 低 | Sonnet 5 | medium |
 | 9 音ゲー基盤 | タイミング基盤の整理 | **高**(実機でしか分からない) | **Opus 5** | **max** |
-| 10 残存負債 | 残り | 低〜中 | Sonnet 5 | high |
+| 10 残存負債 | 1本目の **Tailwind 静的化は完了**(2026-09-12。`monster-hero/tailwind.css` 111KB・外部CDNへの往復0回)。残りは `index.html` の `<style>` と `createAnimationStyle` の2系統(どちらも自前CSS。外部通信には関係しない) | 低〜中 | Sonnet 5 | high |
 
 ### STEP 6 の内訳(切り出し順)
 
@@ -73,24 +73,45 @@ S/A 等級は `REGRESSION_RISK_MAP.md` に基づく。
 
 ## 次の一手
 
-**STEP 2 連結ビルドと集約(定数・ユーティリティの寄せ)** — **Sonnet 5 / effort high**
+**main 由来で落ちている検査6件を直す** — **Sonnet 5 / effort high**
 
-STEP 1(安全網)は**完了**。2026-09-11 のトリアージで落ちていた検査は
-**56本 → 12本 → 1本 → 0本**になった(PR #1273 / #1275 / #1282 / #1286 / #1290 / #1295 / #1297 と、このPR)。
-内訳と直し方は [`BASELINE_2026-09.md`](BASELINE_2026-09.md) の
-「2026-09-11 のトリアージ結果」に1枚でまとまっている。
+STEP 1・2・4・5・6 は完了、STEP 3 は5本目まで、STEP 7 は4本目まで、
+**STEP 10 の Tailwind 静的化は完了(2026-09-12)**(進捗は [`README.md`](README.md))。
 
-最後まで残っていたウンディーネの染色マスクも、**手作業なしで直した**
-(見本の塗り残しをいちばん近い部位で埋め、埋め込みマップを作り直す。
-輪郭 22.89%→0.57% / 内側 2.18%→0%、データ量は据え置き)。
-やり直すときは `node tools/image/undine-region-rebuild.js` を使う。
+いま **6本落ちている**。全407本を流して見つけたもので、
+**どれも Tailwind 静的化より前から落ちている**(切り替え前のコミットを別の作業ツリーへ出して
+同じ検査を流し、同じNGが出ることを確かめた)。調べた内容は
+[`../ops/failing-checks-20260912.md`](../ops/failing-checks-20260912.md) にまとめてある。
 
-STEP 6(画面の切り出し)も**完了**。やり残しは2つだけで、どちらも急がない。
+```
+node tools/audio/bgm-preview-stop-check.js
+node tools/battle/battle-check.js
+node tools/battle/battle-menu-browser-check.js
+node tools/masu/masu-enhance-layer-check.js
+node tools/mode/extreme-browser-check.js
+node tools/mode/rhythm-audio-independence-check.js
+```
 
-| やり残し | モデル | effort | なぜ後回しでよいか |
-| --- | --- | --- | --- |
-| `processTurn` へ `token.alive` を通す | **Opus 5** | **max** | A等級。実機でバトルを回して確かめたい |
-| `MASU_PATTERN_DEBUG` の切り出し | Sonnet 5 | medium | デバッグ専用で、プレイヤーの画面に出ない |
+安全網(STEP 1)の値打ちは「落ちたら本当に何かが壊れている」状態を保てることなので、
+**ほかの STEP より先にここを0へ戻す。** とくに battle の2本は、
+バトルの流れを通しで確かめる検査がいま動いていないということでもある。
+
+> ⚠️ **静的CSSにしたことで、検査の中でもTailwindが本当に効くようになった。**
+> `fixed inset-0` のモーダルは以前「効かないので素通りできた」が、いまは本当に画面を覆う。
+> 直すときは「モーダルを閉じてから押す」に変えること。**効かないCSSを前提に戻さない。**
+
+そのあとは表を上から。次に大きいのは **STEP 3 の残り2つ**
+(①寄付 `executeMasuDonation`・60-app.jsx:5748 の4キーを取引へ ②起動時ロードの424行・TD-18)で、
+こちらは **Opus 5 / effort max**。
+
+STEP 7 の `React.memo` は**測ったうえで「入れない」と決めた**。
+ランキング50件でも描画は21〜62ms、画面が固まる長いタスクは全画面0ms
+([`RENDER_COST_REPORT.md`](RENDER_COST_REPORT.md))。
+実機で引っかかりを感じたら `node tools/browser/screen-render-cost-check.js` で測ってから考える。
+
+> **STEP 8 の SRI はこの環境ではできない。** `cdnjs.cloudflare.com` へ出られないため。
+> ネットワークのある環境での取り方は割り当て表の STEP 8 欄に書いた。
+> Tailwind は静的化で外部CDNから切り離せたが、**Tone.js は残っている**。
 
 **props の洗い出しは手でやらない。** props を空にした仮のコンポーネントへ JSX を移し、
 `node tools/undefined-reference-check.js` を通すと、足りない参照が全部一覧で出る。

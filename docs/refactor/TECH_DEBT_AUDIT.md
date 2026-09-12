@@ -29,7 +29,7 @@
 | TD-10 | High | 性能 | 染色キャッシュ(`_dyeRecolorCache` / `_dyeRegionMaskCache`)に上限も破棄も無い | 7(**`_dyeRecolorCache` は 2026-09-06 に 96 件の LRU へ**。`_dyeRegionMaskCache` は種ごとのマスクで件数が種の数に収まるため据え置き) |
 | TD-11 | High | データ分離 | 勇者・モンスター固有の挙動が `mainHero?.id==='X'` の文字列分岐としてロジック中に散在(28 箇所) | 5 |
 | TD-12 | High | 検査 | 検査 326 本のうち CI は 28 本。一括実行の入口が無く、84 本はソース文言への正規表現で壊れやすい | 1 |
-| TD-13 | High | 性能/運用 | Tailwind を CDN から実行時生成(KI-001)。CSS が `index.html` 617 行と `createAnimationStyle` 547 行の2系統 | 7 |
+| TD-13 | High | 性能/運用 | ~~Tailwind を CDN から実行時生成(KI-001)~~ **2026-09-12 に静的CSS化して解消**。CSS が `index.html` 617 行と `createAnimationStyle` 547 行の2系統なのは残る | 7 |
 | TD-14 | High | セーブ | `storeSet` が失敗を握りつぶす。`localStorage` 直接アクセスが 4 系統に残る | 3 |
 | TD-15 | Medium | データ分離 | ゲームデータの半分が jsx 側(難易度・モード・BGM・ミッション・ログインボーナス等)にあり、`data/` と二分されている | 4 |
 | TD-16 | Medium | 定数 | 難易度 ID 列が jsx と tools 3 ファイルに複製。`RHYTHM_SETTINGS_KEY` が jsx と rhythm-mode で二重定義 | 2(保存キーの一覧は `boot/save-keys-check.js` で文書と突き合わせるようにした。集約そのものは STEP 3 で扱う) |
@@ -127,11 +127,16 @@
 - **影響**: リファクタリングの回帰を機械的に拾う手段が無い。CI に無い検査は壊れたまま数 PR 進みうる。
 - **方針**: (1) 領域→検査の対応表を持つ一括実行スクリプトを 1 本足す(既存 workflow のトリガーは変えない)。(2) 検査の実行時間を計り、CI に足せるものを選ぶ。
 
-### TD-13 CSS の三重構造(High)
+### TD-13 CSS の三重構造(High) — **Tailwind の静的化は完了(2026-09-12)**
 
 - **事実**: Tailwind CDN + `index.html` `<style>` 617 行 + `createAnimationStyle` 547 行。`DEVELOPMENT.md` に「遊ぶのに要る形は外部 CDN に任せない」の反省があり、`index.html` 側へ最低限の CSS を足してきた。
 - **影響**: KI-001 のとおり初回表示が外部通信に依存する。どの CSS がどこにあるか探しにくい。
-- **方針**: `tools/layout/` には既に Tailwind の手元ビルド手順があるので、静的 CSS 化の準備(使用クラスの抽出と容量計測)を STEP 7 で行い、切替は別途ユーザー判断。
+- **やったこと**: Tailwind を `monster-hero/tailwind.css`(111KB)へ静的化し、`index.html` は
+  `<link rel="stylesheet">` で1枚読むだけにした。外部CDNへの往復は0になり、
+  「起動のたびにブラウザの中でCSSを組み立てる」も無くなった。
+  記録は [`TAILWIND_STATIC_REPORT.md`](TAILWIND_STATIC_REPORT.md)。
+- **残り**: `index.html` の `<style>` と `createAnimationStyle` の2系統は手つかず。
+  どちらも自前CSSで、外部通信には関係しない(探しにくさだけが残っている)。
 
 ### TD-14 保存失敗の黙殺と直接アクセス(High)
 

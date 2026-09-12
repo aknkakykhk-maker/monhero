@@ -764,7 +764,25 @@ const _exactDyeMaskRegion = (pixels, offset) => {
   if (r > 200 && g < 80 && b > 200) return 4;
   return -1;
 };
-const _dyeRegionMaskCache = {};
+// 部位マスクは1体ぶんで3枚のdataURLを持つので、際限なく溜めるとメモリを圧迫する
+// (docs/refactor/TECH_DEBT_AUDIT.md TD-10)。染め上がりの側(_dyeRecolorCache)と同じく、
+// 使った順に並べ替えて上限までで古いものから捨てる。
+//
+// 上限は「部位マスクを持つモンスター20体」に余裕を足した数。通常のプレイでは
+// ここへ届かないので、これまでと同じく一度作ったマスクを使い回す(作り直しは起きない)。
+// 効くのは、デバッグの染色マスクエディタで位置や倍率を動かしたときのように
+// キーが操作のたびに増える場合で、そこだけが青天井にならなくなる。
+const DYE_REGION_MASK_CACHE_MAX = 32;
+const _dyeRegionMaskCache = new Map();
+const _dyeRegionMaskCacheGet = (key) => {
+  const hit = _dyeRegionMaskCache.get(key);
+  if (hit) { _dyeRegionMaskCache.delete(key); _dyeRegionMaskCache.set(key, hit); } // 使ったものを末尾へ(=新しい側へ)
+  return hit || null; // 無いときの返し方を _dyeRecolorCacheGet とそろえる
+};
+const _dyeRegionMaskCacheSet = (key, promise) => {
+  _dyeRegionMaskCache.set(key, promise);
+  while (_dyeRegionMaskCache.size > DYE_REGION_MASK_CACHE_MAX) _dyeRegionMaskCache.delete(_dyeRegionMaskCache.keys().next().value);
+};
 // タッチ式エディタから試す間だけ使うBlob URL。保存領域や正式な画像参照は変更しない。
 const _temporaryDyeMasks = Object.create(null);
 const getDyeRegionMasks = (baseId, imgUrl, debugPlacement = null) => {
@@ -772,7 +790,8 @@ const getDyeRegionMasks = (baseId, imgUrl, debugPlacement = null) => {
   const hues = MASU_COLOR_REGION_HUES[baseId];
   if (!hues || hues.length === 0) return null;
   const cacheKey = baseId + '::' + imgUrl + (debugPlacement ? `::debug:${debugPlacement.maskUrl||''}:${debugPlacement.xPx}:${debugPlacement.yPx}:${debugPlacement.scaleX}:${debugPlacement.scaleY}` : '');
-  if (_dyeRegionMaskCache[cacheKey]) return _dyeRegionMaskCache[cacheKey];
+  const cachedMasks = _dyeRegionMaskCacheGet(cacheKey);
+  if (cachedMasks) return cachedMasks;
   const promise = new Promise((resolve) => {
     try {
       const img = new window.Image();
@@ -934,7 +953,7 @@ const getDyeRegionMasks = (baseId, imgUrl, debugPlacement = null) => {
       img.src = imgUrl;
     } catch (e) { resolve(null); }
   });
-  _dyeRegionMaskCache[cacheKey] = promise;
+  _dyeRegionMaskCacheSet(cacheKey, promise);
   return promise;
 };
 // 部位ごとの染まり方の調整。書かなければ「選んだ色の彩度でそのまま塗る」(既定)。

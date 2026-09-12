@@ -58,7 +58,8 @@ node tools/build.js --check
 | コマンド | 内容 |
 | --- | --- |
 | `node build.js` | **まず `src/parts/*.jsx` と `game-system.jsx` をそろえ(parts が変われば連結し直し、game-system.jsx が直接編集されていれば parts へ書き戻す。両方が別々に変わっていれば止まる → `--from-parts` で parts を正にできる)、BUILD_DATE・version.json・更新履歴の最新日時を揃え、game-system.jsx を配信用JSへ変換して `monster-hero/game-system.compiled.js` を書き出す。改修したら必ず実行する。** |
-| `node build.js --check` | compiled が jsx と一致しているか確認する(古ければ終了コード1)。出荷前チェック用。 |
+| `node build.js --check` | compiled が jsx と一致しているか、`tailwind.css` が今のソースから作られているかを確認する(古ければ終了コード1)。出荷前チェック用。 |
+| `node build-tailwind.js` | 配信用の見た目のCSS `monster-hero/tailwind.css` を作る。**中身が変わったときだけ**作り直す(`--force` で必ず、`--check` で古くないかだけ見る)。`build.js` から自動で呼ばれるので、ふつうは直接叩かなくてよい。`landscape:` を自前回転(`data-mh-view-rotation`)でも効かせる差し替えはこの設定に入っている。 |
 | `node check-syntax.js` | `monster-hero/game-system.jsx` をBabelで変換して構文エラーが無いか確認する。**改修後は必ず実行する。** |
 | `node undefined-reference-check.js` | `game-system.jsx` が「その場所からは見えない変数」を参照していないか、Babelでスコープをたどって確認する。構文としては正しいので `check-syntax.js` では見つからず、その画面を開いた瞬間だけ真っ白になる類の不具合を防ぐ。**改修後は必ず実行する。** |
 | `node jsx-text-brace-check.js` | JSXの中に、閉じ忘れ・閉じすぎでできた「{」「}」がそのまま文字として混ざっていないかを調べる。`{cond&&<div>…</div>}` の開き `{cond&&` を書き忘れると、余った `}` は画面に出る文字として扱われ構文エラーにならない。**改修後は必ず実行する。** |
@@ -89,7 +90,9 @@ node tools/build.js --check
 | `node boot/event-replay-check.js` | イベント回想(プロフィールから、見たことのある会話イベントを何度でも見返す機能)を確認する。 |
 | `node boot/gift-login-check.js` | ギフト受取と、日本時間4時更新のログインボーナスを本番ソースの関数で検証する。 |
 | `node boot/mission-check.js` | デイリー・ウィークリー・マンスリーのJST期間、達成条件、バッジ、ギフト報酬と重複防止を確認する。 |
-| `node boot/parts-purity-check.js` | `src/parts/parts.json` で `pure:true` とした部品(マスモン育成の式・難易度の表・敵の行動など)に、React・JSX・document・window・保存・Audio_・fetch・タイマーが混ざっていないことを確かめる。計算とデータを画面や保存から切り離した状態を保つための見張り。 |
+| `node boot/gift-claim-transaction-check.js` | ギフト箱の「受け取る」が、ダイヤ・強化ポイント・アイテム・ギフト箱(＋経験値が増えたときは経験値と「配った総数」)を**まとめて1つの取引**(`saveStoredValuesOrRollback`)で保存し、成立しなかったら画面を1つも動かさずに戻ることを見る。1件ずつ storeSet していたころは、途中で失敗すると「ダイヤは増えたのにアイテムが入っていない」という片方だけの状態がそのまま残った。取引関数そのものの挙動は `masu/save-transaction-check.js` が実際に走らせて固定している |
+| `node boot/save-state-pairing-check.js` | プレイヤーの資産を持つ主要キー(`mh_gifts` / `mh_gold` / `mh_owned_items` / `mh_breeder_xp` / `mh_missions` / `mh_breeder_points`)について、「画面の state 更新」と「保存」が必ず対になっているかを見る。setGold だけ書いて storeSet を忘れると『画面では増えたのに再起動で戻る』、storeSet だけ書くと画面と保存が食い違う。どちらもプレイヤーから見れば資産が消える。1か所の更新関数へ寄せる作業(STEP 3)の前に、いまの状態を機械的に固定するために置いた。対とみなすのは ①近くに `storeSet('<キー>')` ②近くに取引関数(`saveStoredValuesOrRollback` / `saveMarketBalances` / `persistSpeciesChallengeClearReward` など。増やしたら `SAVE_HELPERS` へ足す) ③起動時の読込(直前2行以内に `storeGet('<キー>')`)の3つ。マスモン一覧は書く場所が30箇所以上で事情が違うので `masu/masu-save-pairing-check.js` が別に見る |
+| `node boot/parts-purity-check.js` | `src/parts/parts.json` で `pure:true` とした部品(マスモン育成の式・難易度の表・敵の行動など)が、React・JSX・document・window・storeGet/storeSet・localStorage・Audio_・fetch・タイマーを**外から降ってくる名前として**使っていないことを確認する。2026-09-11 に正規表現からBabelのスコープ解析へ切り替えた。以前は名前が一致するだけで弾いていたので、`({...,storeSet,storeGet}) => ...` のように**引数で受け取っている**関数まで「保存に依存している」と判定していた(`19-difficulties-and-rules.jsx` がこれで `pure:true` にできなかった)。いまは「その部品の中で宣言されていない参照」だけをNGにするので、依存性注入は通り、グローバルを掴んだ瞬間に落ちる。文字列やコメントの中の綴りも拾わない |
 | `node boot/legacy-save-boot-check.js` | 旧形式のセーブ(マスモン導入前・各種一度きり移行の前)を localStorage に入れて実ブラウザで2回起動し、旧 `mh_bond_xp` からマスモンが作られること、旧キーを消さないこと、ダイヤ・XP・ハイスコアが変わらないこと、既存プレイヤー扱いになること、2回目の起動で何も二重適用されないことを確かめる。保存層・起動時読込を触る前の安全網。 |
 | `node boot/save-keys-check.js` | 本体とデータが使う保存キー(`mh_*`)がすべて `docs/spec/SAVE_DATA.md` に載っているかを確かめる。キーを足したら文書へも 1 行足す。保存キーでない `mh_` 文字列(URL のクエリ)は検査の中に理由つきで除外してある。 |
 | `node boot/soul-rank-backup-check.js` | 既存`.mhsave`バックアップの実関数を使い、魂格段階・最高初到達Lv・魂格特性、勇者の証、魂格再編の書がエンコード→デコード→復元で完全一致することを確認する。 |
@@ -275,7 +278,7 @@ node tools/build.js --check
 | `node masu/save-transaction-check.js` | 複数キーをまとめて保存する取引関数 `saveStoredValuesOrRollback` を、storeGet/storeSet を差し替えて実際に走らせ、成功・途中の例外・読み戻し不一致・巻き戻しの一部失敗のどれでも「全部 before か全部 next」にしかならないことと、神殿の 6 箇所(合体・限界突破・超越・超越交換・転生・再生)がそれを通していることを確かめる |
 | `node masu/monster-power-check.js` | 総合力(モンスターの育成結果を1つの数値にした派生指標)の計算式を検算する。能力1あたりの点・間合い適性1段階=+10・4距離すべてを合計すること・固有技1個=+100とLv1段階=+200/3、未使用強化ポイント/絆Lv/限界突破/転生/合体/勇者特性/合流ボーナスを加点しないこと、最後だけ四捨五入すること、一括強化のプレビューが実データを書き換えず確定後の値と一致すること、詳細・一覧・並べ替え・強化画面が同じ共通関数を使っていることを確認する。 |
 | `node masu/monster-list-filter-check.js` | ベースモン一覧・マスモン一覧が種別チェックの影響で空にならないか確認する。 |
-| `node masu/masu-growth-breakdown-check.js` | マスモン詳細の育成内訳を実ブラウザ(390px / 375px)で確かめる。ステータスが1項目1行で現在値がいちばん目立つこと、基礎UP(超越)0ならピンクのバッジを・通常強化0なら緑のバッジを出さないこと、行や距離をタップすると「元 ＋ 基礎UP ＋ 強化 ＝ 現在」の内訳が開いて数字が必ず一致すること、ステータスと間合い適性の内訳を同時に開けて内訳自体は1つずつしか開かないこと、桁が大きい個体でも現在値が欠けず要素が画面外へ出ないこと、全画面の不透明なレイヤーが二重にならないこと、下まで送っても中身が枠に収まること、ベースモン詳細には内訳もバッジも出ないことを見る。★見た目を測るため、同梱のtailwindcssで game-system.jsx から実際のCSSを作って流し込む(CDNへ出られないサンドボックス対策)。 |
+| `node masu/masu-growth-breakdown-check.js` | マスモン詳細の育成内訳を実ブラウザ(390px / 375px)で確かめる。ステータスが1項目1行で現在値がいちばん目立つこと、基礎UP(超越)0ならピンクのバッジを・通常強化0なら緑のバッジを出さないこと、行や距離をタップすると「元 ＋ 基礎UP ＋ 強化 ＝ 現在」の内訳が開いて数字が必ず一致すること、ステータスと間合い適性の内訳を同時に開けて内訳自体は1つずつしか開かないこと、桁が大きい個体でも現在値が欠けず要素が画面外へ出ないこと、全画面の不透明なレイヤーが二重にならないこと、下まで送っても中身が枠に収まること、ベースモン詳細には内訳もバッジも出ないことを見る。★見た目を測るため、配信している `monster-hero/tailwind.css` をそのまま使う(効いているかも毎回確かめる)。 |
 | `node masu/monster-detail-unified-check.js` | モンスター詳細(編成・ベースモン一覧・マスモン一覧・勇者モン選択・ランキング)が、外枠・上部サマリー・本文まで1つのマスターUIを通っているか確認する。呼び出し元固有の操作だけを引数で受け取っていること、上部サマリーの並び(総合力・絆Lv/上限・限界突破・転生・超越)、限界突破(rebirthCount)と転生(reincarnateCount)を取り違えていないこと、一覧カードでも超越を含む育成表示が欠落していないことも見る。神殿の再生確認は、購入前の基礎性能表示だけ本文部品を直接再利用する例外として検査する。 |
 | `node masu/monster-detail-actions-check.js` | マスモン詳細の育成導線が対象個体を引き継ぎ、神殿の機能を混ぜていないことを確認する。 |
 | `node masu/auto-repeat-breakthrough-setting-check.js` | AUTO∞の個体別「自動限界突破」設定を確認する。OFF / ブリーダーLv自動追従 / 固定Lvの3モード、既存の数値設定をfixedとして引き継ぐ後方互換、不正値のOFF化、既存`mh_masu_mons`だけへの保存、スマホ向けselect、現在の追従上限表示を見る。 |
@@ -400,7 +403,7 @@ node tools/build.js --check
 | `node audio/pandora-boss-bgm-check.js` | 専用曲「Stay With Me ～Locked Fate～」がBGMアレンジから選択・試聴でき、パンドラを勇者モンにしたムー戦だけではモード別曲より優先されることを確認する。通常戦・デュラハン戦・供モンだけがパンドラ・他の勇者では既存ルーティングを維持し、専用MP3と編集元・配信用コードの登録も検査する。 |
 | `node audio/eiki-boss-bgm-check.js` | エイキを勇者モンにしたムー戦だけで専用曲「綺季一閃 ～花雪に舞う詠姫～」をモード別曲より優先し、通常戦・デュラハン戦・供モンだけがエイキ・他の勇者では既存BGMを維持すること、BGMアレンジから選択・試聴できることを確認する。 |
 | `node audio/title-bgm-default-check.js` | タイトル画面のデフォルトBGMを「Monster Hero -Another-」へ変更したことを確認する。Monster HeroとMonster Hero -Another-は生成元が別の曲(同じ曲の高音質版ではない)であることを踏まえ、2曲ともBGMアレンジの選択・試聴・保存対象に含まれること、既定値がMonster Hero -Another-になっていること、起動時のタイトル再生が決め打ちの`'title'`ではなく`bgmArrangement.title`を参照していること、`normalizeBgmArrangement`を実際に切り出して「titleキーが無い旧保存・空の保存は新しい既定へ自動で解決される」「自分でタイトル曲(Monster Hero含む)を選んでいる人の保存は上書きされない」ことを検査する。 |
-| `node audio/bgm-arrangement-layout-check.js` | BGMアレンジのタブが、いちばん狭い端末でも1行に収まるかを実際に測る。同梱の tailwindcss で game-system.jsx から本物のCSSを作り、320／375／390pxのブラウザでカテゴリのタブとバトルモードのタブを描いて、行数・文字のはみ出し・44px以上の高さ・横スクロールの有無を見る。バトルモードのタブは公開前(4つ)と公開後(種族チャレンジを含む5つ)の両方を測るので、モードを足したのに列数を増やし忘れると2行になって検出できる。 |
+| `node audio/bgm-arrangement-layout-check.js` | BGMアレンジのタブが、いちばん狭い端末でも1行に収まるかを実際に測る。配信している `monster-hero/tailwind.css` を読み込み、320／375／390pxのブラウザでカテゴリのタブとバトルモードのタブを描いて、行数・文字のはみ出し・44px以上の高さ・横スクロールの有無を見る。バトルモードのタブは公開前(4つ)と公開後(種族チャレンジを含む5つ)の両方を測るので、モードを足したのに列数を増やし忘れると2行になって検出できる。 |
 | `node audio/title-bgm-check.js` | iOS相当の自動再生制限を再現し、最初のタップだけでタイトルBGMが鳴るか、起動タップがトップ画面へ届いていないかを確認する。 |
 | `node audio/audio-route-check.js` | BGMのaudio要素が再生前にWeb Audioへ接続され、iOSのメディア再生経路へ漏れないことを確認する。 |
 | `node audio/tap-sound-trace.js` | 起動画面のタップからの出来事(イベント・再生・Web Audioの接続)を時系列で並べる。音まわりの調査用。 |
@@ -427,6 +430,10 @@ node tools/build.js --check
 | `node image/dye-report.js --save-baseline` | 現在の結果を `dye-baseline.json` に保存する。以降は実行のたびに差分が表示される。 |
 | `node image/dye-region-map.js out.png <ID> [y0 y1]` | 染色もどきの部位分けを絵で確かめる。元の絵と、部位ごとに塗り分けた絵（①赤・②緑・③青・④黄・⑤マゼンタ）を左右に並べて書き出す。被覆率だけでは分からない「どこが混ざっているか」を見るために使う。 |
 | `node image/dye-alpha-check.js` | 染色の「濃さ(透過率)」を確かめる。 |
+| `node browser/screen-render-cost-check.js` | 画面を開いたときの描画時間と、その間の「長いタスク」(50ms以上・画面が固まる原因)を実ブラウザで測る。`browser/perf-check.js` は起動までしか測らないので、一覧を開いたときの重さを見る道具として置いた。ランキングは50件返すスタブで測る。上限は1画面500ms・長いタスク200ms(2026-09-12の実測は21〜62ms・長いタスクは全画面0ms)。Tailwind の CDN へ出られないぶん実機より軽く出るので、**改修の前後で比べる**ために使う。結果は [`docs/refactor/RENDER_COST_REPORT.md`](../docs/refactor/RENDER_COST_REPORT.md) |
+| `node mode/rhythm-live-frame-report.js` | **本番の index.html をそのまま開いて実際に演奏させ**、そのあいだのフレーム間隔・詰まったフレーム数・スタイル再計算/レイアウト/JSの時間・長いタスク・canvasへの描き込み回数を測る(報告だけ。しきい値で落とさない)。既存の `rhythm-render-cost-check` と `rhythm-canvas-render-check` は**自前の小さなページ**で測るので配信CSSが当たっておらず、「見た目のCSSが効いた状態での重さ」は分からなかった。`--compare` を付けると、**その画面で実際に使うクラスだけのCSS**(2026-09-12より前のCDNのJIT相当)を作って同じ手順で測り、フレーム間隔と computed style を並べる。`--cpu 4` でCPUを1/4に絞ると実機のスマホに近づく。`--draw` で1フレームあたりの drawImage / fill / stroke / グラデーション作成の回数を出す。ヘッドレスなので**絶対値は実機と違う。同じ条件で2つを比べるための道具**。 |
+| `node layout/tailwind-static-report.js` | 静的CSSで**欠けるクラス**が増えていないかを数える(切替は2026-09-12に済み)。配信しているCSSの大きさと、`className` のテンプレートリテラルのうち**クラス名を組み立てているもの**の数を数える。組み立てていると Tailwind が文字列として見つけられず、静的化したときにそこだけ崩れる。自前CSSのクラス(`index.html` と parts から772種を収集)と、クラス名を文字として書いた条件式(`${cond ? ' m-auto' : ''}`)は除く。結果は [`docs/refactor/TAILWIND_STATIC_REPORT.md`](../docs/refactor/TAILWIND_STATIC_REPORT.md) |
+| `node image/dye-cache-limit-check.js` | 染色の2つのキャッシュ(染め上がり `_dyeRecolorCache` 96件・部位マスク `_dyeRegionMaskCache` 32件)に上限があり、あふれたら**使っていないものから**捨てることを、実際に上限+1件入れて確かめる。どちらも1件がdataURLを持つので重く、とくに部位マスクは1体ぶんで3枚。上限が無いと、デバッグの染色マスクエディタで位置や倍率を動かしたときのようにキーが増え続ける場面で際限なく積み上がる(TD-10)。部位マスクの上限は「部位マスクを持つモンスターの数」より大きいことも見るので、ふつうに遊んでいるだけでマスクを作り直すことにはならない |
 | `node image/dye-edge-check.js` | 染色もどきの「輪郭の塗り残し」を実測して見張る。部位マスクは縮小画像で作るため、等倍へ戻すと境界に隙間が出やすい。 |
 | `node image/dye-quality-report.js` | 染色もどきの部位マスクの品質を実測し、モンスターごとに比べる。輪郭のギザギザや白い縁の原因調査用。 |
 | `node image/dye-mask-editor-check.js` | 汎用染色マスクエディタの縦横比、本体内だけの描画、外部連結領域だけの掃除、Undo、境界警告、PNG正規化と輪郭内の透明穴維持を確認する。あわせて**5部位マスク(パンドラ・剣士モッチー)の黄=④・マゼンタ=⑤が赤へ潰れないこと**と、**3部位のモンスターでは黄・マゼンタへ寄せないこと**(寄せると対応するマスクが無く、そのモンスターの染色が丸ごと消える)も見る。 |
@@ -468,31 +475,48 @@ python3 tools/serve.py     # http://localhost:8899
 `python3 -m http.server` ではなくこれを使うこと。標準のものは1リクエストずつしか処理できず、
 BGMのmp3(合計約20MB)を読み込んでいるあいだ他のファイルが返せずページが止まってしまう。
 
-## 画面の見た目をこのサンドボックスで測る（Tailwindの手元ビルド）
+## 画面の見た目をこのサンドボックスで測る（Tailwindは配信物をそのまま使う）
 
-本体は Tailwind を CDN (`cdn.tailwindcss.com`) から読んでいる。このサンドボックスは
-外部CDNへ出られないので、**Tailwindのクラスがまったく効かない状態でしか画面を開けない**。
-その状態で位置を測っても「崩れている」のか「CSSが無いだけ」なのか区別できない。
-(実測すると、スタイルが効かないプレイエリアは 844px の画面で 3352px になる)
+Tailwind は 2026-09-12 に **CDN(`cdn.tailwindcss.com`)から静的CSSへ切り替えた**。
+配信しているのは `monster-hero/tailwind.css`(111KB)で、`index.html` が
+`<link rel="stylesheet" href="tailwind.css?v=…">` で読む。
 
-同じクラス群のCSSを手元に作れば、検査のときだけ差し込んで本物に近い見た目で測れる。
+このおかげで、**検査でも本物と同じCSSがそのまま効く**。以前はCDNへ出られないぶん
+検査のたびに手元でCSSを作って差し込んでいたが、その細工は要らなくなった
+(`tools/layout/build-tailwind-for-checks.js` は役目を終えたので消した)。
 
-```
-node tools/layout/build-tailwind-for-checks.js
-# → tools/layout/.tailwind-for-checks.css （gitには入れない。いつでも作り直せる）
-```
-
-検査の中では、CDNへのリクエストをこのCSSで置き換える。
+- **`index.html` を配って開く検査**(`landscape-screens-check.js` など)は**何もしなくてよい**。
+  ページが自分でCSSを読む
+- **`setContent` で部品だけを組み立てる検査**(`audio/bgm-arrangement-layout-check.js` など)は、
+  配信しているCSSを読んで差し込む
 
 ```js
-const TW=fs.readFileSync('tools/layout/.tailwind-for-checks.css','utf8');
-await page.route('**cdn.tailwindcss.com**',r=>r.fulfill({status:200,contentType:'text/javascript',
-  body:`(function(){var s=document.createElement('style');s.textContent=${JSON.stringify(TW)};document.head.appendChild(s);})();`}));
+const css = fs.readFileSync(path.join(root,'monster-hero','tailwind.css'),'utf8');
+await page.addStyleTag({ content: css });
 ```
 
-**配信物(`monster-hero/`)には一切入らない。** `index.html` は今までどおり CDN 版のままなので、
-プレイヤーへ届くものは変わらない。Play CDN と手元ビルドで細部が違う可能性はあるため、
-ここで測れるのは「大きく崩れていないか」まで。最終的な見た目は実機で確かめる。
+**効いているかを必ず確かめること。** 効いていないと `flex` も `w-full` も無い状態で
+数字だけは出てしまい、「はみ出していない」の測定がまるごと意味を失う
+(実測すると、スタイルが効かないプレイエリアは 844px の画面で 3352px になる)。
+
+```js
+const twOn = await page.evaluate(()=>{const d=document.createElement('div');d.className='flex';
+  document.body.appendChild(d);const on=getComputedStyle(d).display==='flex';d.remove();return on;});
+check('Tailwind のCSSが効いている(測った数字に意味がある)', twOn);
+```
+
+**わざとCSSを落として測る検査**もある。`mode/rhythm-start-sequence-check.js` と
+`mode/rhythm-first-run-layout-check.js` は「CSSが最後まで来なかったいちばん悪い場合」を
+作るのが目的なので、`page.route('**/tailwind.css*', r => r.abort())` で自分から落とす。
+以前はCDNを落としていた場所で、**落とす相手が変わっただけ**。
+
+それ以外の検査に入っていた `page.route('**cdn.tailwindcss.com**', …)` は、
+もう誰も取りに行かないURLなので全部消した(49ファイル)。残しておくと
+「ここではTailwindが効かない」と読めてしまい、位置を測る検査の前提を取り違える。
+
+CSSを作り直すのは `node tools/build.js`(中身が変わったときだけ `tools/build-tailwind.js` を呼ぶ)。
+古いまま公開していないかは `node tools/build.js --check` と
+`node tools/boot/data-cache-key-check.js` が見張る。
 
 ## 出荷手順
 

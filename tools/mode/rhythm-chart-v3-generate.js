@@ -923,7 +923,7 @@ const buildChart=(difficulty,options={})=>{
         note.durationGrids=event.reserved.endGrid-event.reserved.startGrid;
       }else if(event.kind==='SLIDE'){
         note.durationGrids=event.reserved.endGrid-event.reserved.startGrid;
-        note.slidePoints=slidePathFor(event.reserved,best.lanes?best.lanes[i]:lane,item.subLaneWidth,P);
+        note.slidePoints=slidePathFor(event.reserved,best.lanes?best.lanes[i]:lane,item.subLaneWidth,P,event.onset);
         note.lane=note.slidePoints[0].lane;
         note.endLane=note.slidePoints[note.slidePoints.length-1].lane;
         delete note.subLane;
@@ -1623,7 +1623,93 @@ function sweepPathFor(note,SWEEP,width){
 }
 
 // --- SLIDEの経路を「音の高さの動き」から作る ---
-function slidePathFor(reserved,startLane,width,P){
+// SLIDEの「形」の語彙。太さの変え方だけを持ち、経路は音の高さに従わせたまま。
+//
+// 【2026-09-12・ユーザー指摘「バリエーションが少ない」】
+// それまで slidePathFor が全中継点へ同じ width を入れていたため、配信譜面のSLIDE 552本が
+// **全本単一幅**（HARD/EXPERT=幅3 / MASTER=幅2）だった。データ形式（点ごとの subLaneWidth）も
+// ランタイム（rhythmSlideWidthAt の線形補間）も可変幅に対応済みなので、ここだけで足りる。
+//
+// 当てどころは音ゲー各作の定石に合わせた（プロセカは中継点ごとに幅を持ち、制作者は
+// 「幅が小さいほど落ち着き、大きいほど盛り上がり」として使う。CHUNITHMの「イカすSLIDE」も
+// 始点と終点で幅を変える）。t は 0（始点）〜1（終点）。
+const SLIDE_WIDTH_SHAPES=Object.freeze({
+  // 一定。伸ばした1音・ロングトーン
+  steady:t=>1,
+  // 末広がり。クレッシェンド、ライザー、サビへの助走
+  widen:t=>.55+.45*t,
+  // 先細り。ディミヌエンド、リバーブの減衰、フレーズの終わり
+  taper:t=>1-.45*t,
+  // ふくらむ。ひと山ある伸ばし、ビブラートの深い山
+  swell:t=>.6+.4*Math.sin(Math.PI*t),
+  // しぼんで戻る。抜けたあと戻ってくる音
+  pinch:t=>1-.35*Math.sin(Math.PI*t),
+});
+// その音にどの形を当てるか。**上から順に見て、先に当たったものを使う。**
+//
+//   1. 伸びの途中に山がある → swell ／ 谷がある → pinch   （実測で約4割がここで決まる）
+//   2. onset.character が FULL / PUNCH（強い頭） → taper
+//   3. LIGHT（軽い頭） → widen
+//   4. それ以外は、終わりが始まりより高ければ widen、でなければ steady（約1割）
+//
+// 山/谷を character より先に見るのは、音の形のほうが太さの表現に直結するため。
+// そのぶん「PUNCH なのに swell」のような組み合わせが3割ほど出るが、これは想定どおり。
+// 乱数は使わない（この生成器は再実行で同じ譜面になることを前提にしている）。
+const slideWidthShapeFor=(onset,heights,allowed)=>{
+  const pick=name=>allowed.includes(name)?name:'steady';
+  if(!Array.isArray(heights)||heights.length<2)return 'steady';
+  const head=heights[0],tail=heights[heights.length-1];
+  const lo=Math.min(...heights),hi=Math.max(...heights);
+  const span=hi-lo;
+  // 山/谷と見なすのに要る出っぱりの大きさ。
+  // **相対(span*.2)だけでは足りない。** 全体が0.5半音しか動いていない平らな音でも
+  // 0.31半音の凸があれば「ひと山ある伸ばし」になってしまう(実測: 4u-hitasura grid1088)。
+  // これは HEIGHT_TURN_MIN で直したのと同じ誤りで、ジッタを音の形として読んでいた。
+  // 絶対の下限(≒1半音)を併用する。
+  const bump=Math.max(span*.2,HEIGHT_SHAPE_MIN);
+  const peakInside=span>1e-6&&Math.max(...heights.slice(1,-1).concat([-Infinity]))>Math.max(head,tail)+bump;
+  const dipInside=span>1e-6&&Math.min(...heights.slice(1,-1).concat([Infinity]))<Math.min(head,tail)-bump;
+  if(peakInside)return pick('swell');
+  if(dipInside)return pick('pinch');
+  const character=onset?onset.character:'NONE';
+  // 強い頭でだんだん静まる音は先細り、軽い頭からせり上がる音は末広がり
+  if(character==='FULL'||character==='PUNCH')return pick('taper');
+  if(character==='LIGHT')return pick('widen');
+  return tail>head?pick('widen'):pick('steady');
+};
+// 音の高さの曲線が、どれだけ細かく揺れているか（0〜1）。
+// 隣り合う差の符号が変わる回数を数える。ビブラートのように行き来する音ほど1へ近づく。
+//
+// 【しきい値が要る】(2026-09-12・生成結果の検証で判明)
+// はじめ 1e-6（実質ゼロ）で符号の変化を数えたら、**音の揺れではなくピッチ推定のジッタ**を
+// 拾っていた。数えた折れ165回のうち72%が0.5半音未満（中央値0.29半音）で、
+// 結果として「中継点の数」と「音の動きの大きさ」が**逆相関(r=-0.30)**になった
+// (8.2半音動くメロディが5点・折れ0回 / 0.5半音の伸ばし音が17点・折れ7回)。
+// はじめ 0.04 にしたが、これは**約0.73半音**に相当し(1半音 ≒ height 0.055)、
+// 本物のビブラート・こぶし・往復するメロディまで削っていた。
+// 解析データを測ると、確度(clarity)0.7以上の区間では0.5半音以上の折れが平均1.20回、
+// 0.7未満では0.47回。**0.5半音で切ると、本物の揺れとジッタが2.5倍差で分かれる**。
+// SLIDEになる伸び40件のうち9件(23%)が「0.5半音で2回以上折れる」＝はっきり揺れている。
+const HEIGHT_TURN_MIN=.028;   // ≒0.5半音
+// 「伸びの途中に山/谷がある」と見なすのに要る出っぱりの大きさ（絶対の下限）。
+// 相対のしきい値(span*.2)だけだと、平らな音の中のジッタを山と読んでしまう。
+const HEIGHT_SHAPE_MIN=.055;  // ≒1半音
+const heightWaviness=heights=>{
+  if(!Array.isArray(heights)||heights.length<3)return 0;
+  let turns=0,moves=0,previous=0;
+  for(let i=1;i<heights.length;i++){
+    const delta=heights[i]-heights[i-1];
+    if(Math.abs(delta)<HEIGHT_TURN_MIN)continue;   // ジッタは動きとして数えない
+    moves++;
+    const sign=delta>0?1:-1;
+    if(previous&&sign!==previous)turns++;
+    previous=sign;
+  }
+  // 「動いた回数のうち、何回向きが変わったか」。長さで割ると、まっすぐ長く動く音ほど
+  // 小さくなってしまい「大きく動く音ほど点が減る」という逆転を起こす。
+  return moves<2?0:Math.min(1,turns/(moves-1));
+};
+function slidePathFor(reserved,startLane,width,P,onset){
   const points=[];
   const {startGrid,endGrid}=reserved;
   const heights=[];
@@ -1638,21 +1724,152 @@ function slidePathFor(reserved,startLane,width,P){
   }
   const lo=Math.min(...heights),hi=Math.max(...heights);
   const range=Math.max(1e-6,hi-lo);
-  // 音の動きの幅を、その難易度で許す歩幅ぶんのレーンへ写す
-  const reach=Math.max(1,Math.min(2.5,P.maxLaneStep));
-  const centerLane=Math.max(reach/2,Math.min(LANES-1-reach/2,startLane));
+  // 音の動きの幅を、その難易度で許す歩幅ぶんのレーンへ写す。
+  //
+  // 【2026-09-12】以前は reach=min(2.5,maxLaneStep) の固定で、音がどれだけ動いても
+  // 同じ移動量になっていた（配信譜面の移動量が2.0/2.5に張り付いていた原因）。
+  // 実際の音の動きの大きさ(range)へ比例させ、ちょこっと動く音は小さく、
+  // 大きく動く音は上限まで使う。上限(歩幅)は難易度の約束なので超えない。
+  const reachMax=Math.max(1,Math.min(2.5,P.maxLaneStep));
+  // range は高さの差。0.25 で上限へ届く。
+  //
+  // 【下限は1.8レーン】(2026-09-12・生成結果の検証で判明)
+  // 下限0.5 → 移動量の中央値が1.5→0.5レーンまで縮み、半分がほぼHOLDになった。
+  // 下限1.0 → 今度は「指を止めたままでも通るSLIDE」が35→44/67本へ増えた。
+  //   追従の許容は幅と難易度と速さで ±0.75〜1.4レーンあり、経路の振れ幅の半分が
+  //   それ以下だと、動かなくても許容の内側に居続けられる。カクカクは増えるが
+  //   操作を要求しない「見た目だけの形」になる。
+  // 下限1.8 → まだMASTERで 6→11本 に増えた。原因は**0.5レーン刻みの丸め**
+  //   (laneAt が Math.round(lane*2)/2 するので 1.8 は 1.5 に丸まり、
+  //    振れ幅の半分0.75 が MASTER の許容0.82 を下回る)。
+  // 下限2.0 なら丸めても2.0が残り、半分の1.0が許容0.82を超える。
+  // 変更前の実質値(HARD 2.0 / EXPERT・MASTER 2.5)と同じ下限なので、
+  // 「止めたままでも通る本数」は変更前より増えない。
+  // 形のバリエーションは太さの変え方と刻みの細かさで出しており、そちらは効いたまま。
+  const reach=Math.max(2,Math.min(reachMax,reachMax*Math.min(1,range/.25)));
+  // 中心を画面へ収めるための寄せは、**その難易度の上限(reachMax)**で見る。
+  // reach(実際の移動量)で見ると、音の動きが小さくて reach が縮んだときに中心まで動いてしまい、
+  // 同時に流れてくるTAPとの隙間が変わる(品質レポートの「押せる」が3譜面で下がった)。
+  // 上限で見れば、移動量が変わっても中心は動かない。
+  const centerLane=Math.max(reachMax/2,Math.min(LANES-1-reachMax/2,startLane));
   const laneAt=height=>{
     const ratio=(height-lo)/range;      // 0〜1
     const lane=centerLane+(ratio-(heights[0]-lo)/range)*reach;
     return Math.max(0,Math.min(LANES-1,Math.round(lane*2)/2));
   };
-  // 中継点は2グリッドおき（細かすぎると帯が波打って読めない）
-  const step=Math.max(2,Math.round((endGrid-startGrid)/6));
-  for(let i=0;i<heights.length;i+=step){
-    points.push({grid:startGrid+i,lane:laneAt(heights[i]),subLaneWidth:width});
+  // 中継点の刻み。
+  //
+  // 【2026-09-12・ユーザー指摘「カクカクとか…そういうのもほしい」】
+  // 以前は長さに関わらず常に約6分割で、どのSLIDEも7点前後になっていた。
+  // これが**音の細かい揺れを平らに均していた**のが「形が単調」の正体。
+  // 音の高さが行き来している(ビブラート・トレモロ・うねるベース)ほど細かく刻んで
+  // 折れ線として見せ、まっすぐ伸びている音は粗く刻んで素直な直線にする。
+  // 経路そのものは音の高さに従ったままなので、「音と合っていない幽霊スライド」にはならない
+  // (docs/spec/RHYTHM_CHART_DESIGN.md 2.1 の禁止事項)。
+  const waviness=heightWaviness(heights);
+  const divisions=Math.round(4+waviness*10);            // 揺れていないと4分割、揺れていると14分割
+  const step=Math.max(1,Math.min(6,Math.round((endGrid-startGrid)/Math.max(2,divisions))));
+  // 太さの変え方。1本の中で t(0〜1) に沿って PROFILES.widths の段へ写す。
+  const available=[...P.widths].sort((a,b)=>a-b);
+  const shapeName=slideWidthShapeFor(onset,heights,Object.keys(SLIDE_WIDTH_SHAPES));
+  const shape=SLIDE_WIDTH_SHAPES[shapeName]||SLIDE_WIDTH_SHAPES.steady;
+  // 基準の太さ(width)を最大として、形に応じて細くする。太くする方向へは出さない
+  // (幅は widthFor が難易度ごとの上限つきで決めているので、そこを超えない)。
+  // 【下限は2】(2026-09-12・生成結果の検証で判明)
+  // 下限を available[0](=1) にしたら、幅1の中継点が **MASTERだけ** に出た
+  // (MASTER 24本中18本・押さえている時間の36%が幅1 / HARD・EXPERTは0本)。
+  // 幅1は追従の許容がいちばん狭い(±0.57レーン)ので、2026-09-11に直したばかりの
+  // 「MASTERがいちばん厳しい」状態がそのまま戻る。
+  // 基準の太さが1のノーツ(細いSLIDE)だけは1のままにする。
+  const floorWidth=Math.min(width,2);
+  // 【太る方向へも1段だけ出す】(2026-09-12・実曲で確かめて判明)
+  // 細くする方向だけだと、基準の太さが下限と同じ難易度では**1本も変化が出ない**。
+  // 実際 six_eternel_beat の MASTER は基準幅2＝下限2で、SLIDE 14本すべて太さ一定だった
+  // (HARD 8/10本・EXPERT 8/12本は変化していた)。
+  // 太くなる向きは追従の許容が広がる側なので、難しくはならない。
+  // 上限はその難易度が持っている太さの範囲(PROFILES.widths)の中で基準+1段まで。
+  const ceilWidth=Math.min(available[available.length-1],width+1);
+  // shape は 0.55〜1.0 を返す。真ん中(0.775)を基準の太さに合わせ、
+  // 上下へ同じだけ振る。こうすると steady 以外は必ず細い側と太い側の両方を使う。
+  const SHAPE_MID=.775;
+  const widthAt=t=>{
+    const shaped=shape(Math.max(0,Math.min(1,t)));
+    const scaled=width+(shaped-SHAPE_MID)/(1-SHAPE_MID);
+    let best=available[0];
+    for(const candidate of available)if(Math.abs(candidate-scaled)<Math.abs(best-scaled))best=candidate;
+    return Math.max(floorWidth,Math.min(ceilWidth,best));
+  };
+  const lastIndex=heights.length-1;
+  // 刻みを粗くすると、音がいちばん高い/低いところを飛び越えてしまい、
+  // 書いたつもりの移動量(reach)より実際の振れ幅が小さく出る。
+  // 振れ幅が追従の許容より小さいと「指を止めたままでも通るSLIDE」になるので、
+  // **山と谷の位置は必ず点として通す**(2026-09-12・生成結果の検証で判明)。
+  const peakIndex=heights.indexOf(hi),valleyIndex=heights.indexOf(lo);
+  // 【加速・減速】(2026-09-12)
+  // 中継点の間隔を等間隔ではなく、だんだん詰める／広げる。
+  // ドラムフィル・スネアロール・加速するライザー、rit./accel. のテンポ表現に当てる。
+  // 音の高さが**片道で**動いている(行き来していない)ときだけ使う。
+  // 行き来している音は折り返し点そのものが形なので、間隔をいじると読めなくなる。
+  //   accel … 後半ほど詰まる（せり上がって最後に畳みかける音）
+  //   decel … 後半ほど広がる（着地して伸びる音）
+  // どちらも合計の長さは変えないので、譜面のタイミングはずれない。
+  const oneWay=waviness<.2;
+  const rising=heights[heights.length-1]>heights[0];
+  const paceName=!oneWay?'even':rising?'accel':'decel';
+  // 0..1 を、詰まる/広がる向きへ曲げる。even はそのまま
+  const pace=t=>paceName==='accel'?1-Math.pow(1-t,1.7)
+    :paceName==='decel'?Math.pow(t,1.7)
+    :t;
+  const sampled=new Set();
+  {
+    // 等間隔で何点取るかは今までどおり step から決め、置く位置だけを pace で曲げる
+    const count=Math.max(2,Math.ceil((heights.length-1)/step)+1);
+    for(let k=0;k<count;k++){
+      const t=count>1?k/(count-1):0;
+      sampled.add(Math.max(0,Math.min(heights.length-1,Math.round(pace(t)*(heights.length-1)))));
+    }
   }
+  sampled.add(peakIndex);sampled.add(valleyIndex);
+  // 【ジグザグ(カクカク)を出すのはここ】(2026-09-12)
+  // 等間隔で刻むだけだと、音が行って戻る「折り返し点」をまたいでしまい、
+  // 往復が1本の直線に均される。実測で、刻みを細かくしても経路の折り返しは
+  // 15%のまま増えなかった(太さと点の数だけが増えていた)。
+  // **音が向きを変えた位置そのものを点として置く**と、はじめてジグザグになる。
+  // 経路は音の高さに従ったままなので、音と無関係な形にはならない。
+  // 点が増えすぎると帯が読めなくなるので上限を置く(スイープの SWEEP_MAX_POINTS と同じ考え)。
+  const turningPoints=[];
+  {
+    let previousSign=0,lastTurnIndex=-Infinity;
+    for(let i=1;i<heights.length;i++){
+      const delta=heights[i]-heights[i-1];
+      if(Math.abs(delta)<HEIGHT_TURN_MIN)continue;
+      const sign=delta>0?1:-1;
+      // 向きが変わったのは「ひとつ前の点」。そこが山または谷になる
+      if(previousSign&&sign!==previousSign&&i-1-lastTurnIndex>=2){
+        turningPoints.push(i-1);lastTurnIndex=i-1;
+      }
+      previousSign=sign;
+    }
+  }
+  const SLIDE_MAX_POINTS=20;
+  for(const index of turningPoints){
+    if(sampled.size>=SLIDE_MAX_POINTS)break;
+    sampled.add(index);
+  }
+  for(const i of [...sampled].sort((a,b)=>a-b)){
+    points.push({grid:startGrid+i,lane:laneAt(heights[i]),subLaneWidth:widthAt(lastIndex?i/lastIndex:0)});
+  }
+  // 終点を足す。ただし直前の点が近すぎると、**最後の区間だけ極端に短く**なり
+  // 「いちばん速くていちばん細い区間が、離す瞬間に来る」形が生まれる
+  // (実測: 他の区間が266msなのに最後だけ89msで1.5レーン＝16.9レーン/秒。全区間の最悪値)。
+  // 半歩ぶんより近ければ、足さずに最後の点を終点へ動かす。
   const lastPoint=points[points.length-1];
-  if(!lastPoint||lastPoint.grid!==endGrid)points.push({grid:endGrid,lane:laneAt(heights[heights.length-1]),subLaneWidth:width});
+  const endValue={grid:endGrid,lane:laneAt(heights[lastIndex]),subLaneWidth:widthAt(1)};
+  if(!lastPoint)points.push(endValue);
+  else if(lastPoint.grid!==endGrid){
+    if(endGrid-lastPoint.grid<Math.max(1,Math.floor(step/2))&&points.length>1)points[points.length-1]=endValue;
+    else points.push(endValue);
+  }
   return points;
 }
 

@@ -168,6 +168,8 @@ const RELEASED_MARKERS=Object.freeze({
   monster_hero:'monster-hero-v3',
   monster_hero_another:'monster-hero-theme-alt-v3',
   six_eternel_remix:'six-eternel-remix-beat-v3',
+  // 2026-09-12、原曲を公開した。書き忘れると検査だけが静かに対象外になる(CLAUDE.md ⑥-3)
+  six_eternel_beat:'six-eternel-beat-v3',
   stay_with_me:'pandora-boss-v3',
   kiki_issen:'eiki-boss-v3',
   kaze_ga_soyogu:'kaze-ga-soyogu-v3',
@@ -191,6 +193,7 @@ const RELEASED_TRACKS=Object.freeze({
   monster_hero:'monster_hero_theme',
   monster_hero_another:'monster_hero_theme_alt',
   six_eternel_remix:'six_eternel_remix_beat',
+  six_eternel_beat:'six_eternel_beat',
   stay_with_me:'pandora_boss',
   kiki_issen:'eiki_boss',
   kaze_ga_soyogu:'kaze_ga_soyogu',

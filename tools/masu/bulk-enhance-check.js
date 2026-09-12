@@ -21,7 +21,6 @@ const check = (name, ok, detail = '') => { results.push(ok); console.log(`  ${ok
 
   // このサンドボックスは外部CDN(Tailwind)へ出られず、待ち続けて起動が終わらない。
   // 見た目は測らない検証なので、読み込みを打ち切って先へ進める。
-  await page.route('**cdn.tailwindcss.com**', (r) => r.abort()).catch(() => {});
 
   // 大量配分と上限を確認できる強化ポイントを持つマスモンを1体用意する
   await page.addInitScript(() => {

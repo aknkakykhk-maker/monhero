@@ -1,7 +1,10 @@
 const Audio_ = (() => {
   let Tone = null, ready = false, loading = null, started = false;
   let reverb = null, seBus = null;
-  let audioCtx = null, bgmGain = null;
+  let audioCtx = null, bgmGain = null, masterOut = null, analyser = null, analyserData = null;
+  // AudioContextが「動いているつもりで止まっていないか」を見るための控え。
+  // Androidでは state が running のままでも音が出なくなることがあり、state だけでは気づけない
+  let ctxTimeMark = null, ctxRebuildCount = 0, toneLoadFailed = false;
   const buffers = new Map();
   const loadingBuffers = new Map();
   // previewRequest は試聴の「この呼び出しが今も最新か」を見るための番号。
@@ -26,10 +29,10 @@ const Audio_ = (() => {
       const s = document.createElement('script');
       s.src = 'https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js';
       s.onload = () => { Tone = window.Tone; res(); };
-      s.onerror = () => { res(); };
+      s.onerror = () => { toneLoadFailed = true; res(); };
       document.head.appendChild(s);
     }).then(async () => {
-      if (!Tone) return;
+      if (!Tone) { toneLoadFailed = true; return; }
       try {
         seBus = new Tone.Gain(_gainFromPct(seVolumePct)).toDestination();
         reverb = new Tone.Reverb({ decay: 2.4, wet: 0.22 }).connect(seBus);
@@ -115,6 +118,23 @@ const Audio_ = (() => {
 
   // HTMLAudioElementはiOSの消音スイッチを無視するため使用しない。mp3を取得・デコードし、
   // BGMもジングルもAudioBufferSourceNodeだけで出力する。
+  //
+  // 出口(destination)の手前に、素通しのgainと音量計(analyser)を1つだけ挟む。
+  // 音は変えない。「コードの上では鳴らしているのに端末から聞こえない」を切り分けるため、
+  // 実際に流れている波形の大きさを設定画面から見られるようにする
+  const buildAudioGraph = (ctx) => {
+    masterOut = ctx.createGain();
+    masterOut.gain.value = 1;
+    analyser = ctx.createAnalyser();
+    analyser.fftSize = 2048;
+    analyser.smoothingTimeConstant = 0;
+    try { analyserData = new Float32Array(analyser.fftSize); } catch (e) { analyserData = null; }
+    masterOut.connect(analyser);
+    analyser.connect(ctx.destination);
+    bgmGain = ctx.createGain();
+    bgmGain.gain.value = _bgmGain(bgmVolumePct);
+    bgmGain.connect(masterOut);
+  };
   const getAudioCtx = () => {
     if (audioCtx) return audioCtx;
     if (typeof window === 'undefined') return null;
@@ -122,16 +142,31 @@ const Audio_ = (() => {
     if (!AC) return null;
     try {
       audioCtx = new AC();
-      bgmGain = audioCtx.createGain();
-      bgmGain.gain.value = _bgmGain(bgmVolumePct);
-      bgmGain.connect(audioCtx.destination);
+      buildAudioGraph(audioCtx);
+      ctxTimeMark = null;
       bindResumeOnGesture();
-    } catch (e) { audioCtx = null; bgmGain = null; }
+    } catch (e) { audioCtx = null; bgmGain = null; masterOut = null; analyser = null; analyserData = null; }
     return audioCtx;
   };
   // AudioContextは端末側の自動再生制限・省電力・他アプリの音声フォーカスで止められる。
   // 止まったまま start() しても無音になるだけなので、次のタップで必ず復帰させる。
-  // タップはuser activationが有効な唯一の機会なので、ここでresume()を呼ぶ意味がある
+  // タップはuser activationが有効な唯一の機会なので、ここでresume()を呼ぶ意味がある。
+  //
+  // ここから下は、AudioContext.currentTime が実時間どおりに進んでいるかを見る仕掛け。
+  // Androidでは、出力先の切り替え(Bluetooth・イヤホン)・他アプリとの音の取り合い・省電力のあとに、
+  // state は running のままなのに時計だけ止まり、何を鳴らしても無音になることがある。
+  // この状態は resume() では戻らないので、state を見るだけでは永久に気づけない
+  const ctxClockStalled = () => {
+    const ctx = audioCtx;
+    if (!ctx || ctx.state !== 'running') return false;
+    const now = Date.now(), time = ctx.currentTime;
+    if (!ctxTimeMark) { ctxTimeMark = { at: now, time }; return false; }
+    const elapsed = now - ctxTimeMark.at;
+    if (elapsed < 500) return false;
+    const advanced = time - ctxTimeMark.time;
+    ctxTimeMark = { at: now, time };
+    return advanced < (elapsed / 1000) * 0.2;
+  };
   let resumeOnGestureBound = false;
   const bindResumeOnGesture = () => {
     if (resumeOnGestureBound || typeof document === 'undefined') return;
@@ -141,7 +176,7 @@ const Audio_ = (() => {
       if (!ctx || ctx.state === 'running') return;
       let done = null;
       try { done = ctx.resume(); } catch (e) {}
-      const after = () => { if (audioCtx && audioCtx.state === 'running' && enabled && !pageHidden && currentKey && !bgmSource && !jingleSource && !previewSource) playBGM(currentKey); };
+      const after = () => { ctxTimeMark = null; if (audioCtx && audioCtx.state === 'running' && enabled && !pageHidden && currentKey && !bgmSource && !jingleSource && !previewSource) playBGM(currentKey); };
       if (done && done.then) done.then(after, () => {}); else setTimeout(after, 0);
     };
     ['pointerdown', 'touchstart', 'click', 'keydown'].forEach(type => {
@@ -248,6 +283,64 @@ const Audio_ = (() => {
     } catch (e) { if (request === previewRequest && previewKey === track.id) stopPreview(true); return false; }
   };
   const stopBGM = () => { currentKey = null; ++bgmRequest; stopPreview(false); stopJingles(); stopOthers(); };
+
+  // BGMの出口を丸ごと作り直す。設定画面の「音を鳴らし直す」から呼ぶ。
+  // 「running なのに時計が止まっている」「resume しても戻らない」状態は、
+  // いまのAudioContextを捨てて新しく作る以外に戻す手がない(Androidで実際に起きる)。
+  // 音ゲーの演奏中だけは作り直さない(鳴っている曲のハンドルが死に、譜面とずれるため)。
+  const rebuildAudioCtx = async () => {
+    if (activeRhythmGains.size) return false;
+    const old = audioCtx, resumeKey = currentKey;
+    ++bgmRequest; ++previewRequest;
+    stopSource(bgmSource); bgmSource = null; bgmSourceKey = null;
+    stopSource(previewSource); previewSource = null; previewKey = null;
+    stopJingles();
+    audioCtx = null; bgmGain = null; masterOut = null; analyser = null; analyserData = null; ctxTimeMark = null;
+    // 音源(AudioBuffer)は作り直したcontextのサンプリングレートが違うと速さが変わってしまう。
+    // 取り直しても通信キャッシュから読めるので、ここは安全側に倒して捨てる
+    buffers.clear(); loadingBuffers.clear();
+    try { if (old && old.state !== 'closed') await old.close(); } catch (e) {}
+    const ctx = getAudioCtx();
+    if (!ctx) return false;
+    ctxRebuildCount++;
+    // 効果音(Tone)はTone自身のAudioContextで鳴っているので、ここでは触らない。
+    // 止まっていることがあるので、起こすところだけやる
+    if (Tone) { try { await Tone.start(); started = true; } catch (e) {} }
+    try { await ctx.resume(); } catch (e) {}
+    currentKey = resumeKey;
+    if (enabled && resumeKey && !pageHidden) playBGM(resumeKey);
+    return ctx.state === 'running';
+  };
+  // いま出口へ実際に流れている波形の大きさ(0〜1)。鳴っていなければ0。
+  // 「アプリは鳴らしているのに端末から聞こえない」のか「そもそも鳴っていない」のかを分ける
+  const outputLevel = () => {
+    if (!analyser || !analyserData) return null;
+    try {
+      analyser.getFloatTimeDomainData(analyserData);
+      let peak = 0;
+      for (let i = 0; i < analyserData.length; i++) { const v = Math.abs(analyserData[i]); if (v > peak) peak = v; }
+      return peak;
+    } catch (e) { return null; }
+  };
+  // 効果音エンジン(Tone)を通さず、素のWeb Audioだけで短い音を鳴らす。
+  // 「Toneが読めていないだけ」なのか「出口そのものが死んでいる」のかを分けるため
+  const playTestTone = async () => {
+    const ctx = await ensureAudioCtxRunning();
+    if (!ctx || !masterOut) return false;
+    try {
+      const osc = ctx.createOscillator(), gain = ctx.createGain(), at = ctx.currentTime;
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(880, at);
+      osc.frequency.setValueAtTime(1320, at + 0.16);
+      gain.gain.setValueAtTime(0, at);
+      gain.gain.linearRampToValueAtTime(0.3, at + 0.02);
+      gain.gain.linearRampToValueAtTime(0, at + 0.42);
+      osc.connect(gain); gain.connect(masterOut);
+      osc.start(at); osc.stop(at + 0.45);
+      setTimeout(() => { try { osc.disconnect(); gain.disconnect(); } catch (e) {} }, 900);
+      return true;
+    } catch (e) { return false; }
+  };
   // 音ゲーの時刻は AudioContext.currentTime と再生offsetだけを正本にする。
   // BufferSourceNodeは一度stopしたら再利用せず、再開のたびにoffsetから作り直す。
   // options.autoStart:false を渡すと「音源の用意だけして、まだ鳴らさない」。
@@ -270,12 +363,16 @@ const Audio_ = (() => {
       const startSource=offset=>{
         if(stopped||offset>=buffer.duration){naturallyEnded=true;return false;}
         const nextSource=ctx.createBufferSource(),rhythmGain=ctx.createGain();
-        const raw=Math.max(0,Math.min(1,Number(rhythmVolumePct)/100))*safeTrackGain(track);
+        // 上限は RHYTHM_VOLUME_MAX(=200)ぶん。100までは今までとまったく同じ値。
+        // ★100より上は曲の波形をそのまま持ち上げるので、音源のピーク(-1 dBTP)を
+        //   超えるところから割れる。承知のうえで使う範囲として開けてある(2026-09-12)。
+        const raw=Math.max(0,Math.min(RHYTHM_VOLUME_MAX/100,Number(rhythmVolumePct)/100))*safeTrackGain(track);
         dropGainEntry(); gainEntry={node:rhythmGain,raw}; activeRhythmGains.add(gainEntry);
         rhythmGain.gain.value=enabled?raw:0;
-        // 音ゲー専用の音量なので、メインのBGM音量(bgmGain)は経由せず直接destinationへ繋ぐ。
+        // 音ゲー専用の音量なので、メインのBGM音量(bgmGain)は経由しない。
         // 全体ミュート(enabled)だけはactiveRhythmGains経由で共通に反映する。
-        nextSource.buffer=buffer; nextSource.loop=loop; nextSource.connect(rhythmGain);rhythmGain.connect(ctx.destination);
+        // 出口の手前(masterOut)だけは通す。音は変わらず、音量計で鳴っているか見られるようになる
+        nextSource.buffer=buffer; nextSource.loop=loop; nextSource.connect(rhythmGain);rhythmGain.connect(masterOut||ctx.destination);
         source=nextSource; offsetSeconds=offset; startedAt=ctx.currentTime; playing=true;
         nextSource.onended=()=>{if(source===nextSource&&playing){playing=false;naturallyEnded=true;source=null;}};
         nextSource.start(0,offset); return true;
@@ -338,7 +435,7 @@ const Audio_ = (() => {
       jingleTimer = setTimeout(backToBGM, Math.ceil(buffer.duration * 1000) + 250);
     } catch (e) { if (currentKey) playBGM(currentKey); }
   };
-  const setPageHidden = (hidden) => { pageHidden = !!hidden; if (pageHidden) { ++bgmRequest; stopPreview(false); stopOthers(); stopJingles(); } else if (currentKey) playBGM(currentKey); };
+  const setPageHidden = (hidden) => { pageHidden = !!hidden; ctxTimeMark = null; if (pageHidden) { ++bgmRequest; stopPreview(false); stopOthers(); stopJingles(); } else if (currentKey) playBGM(currentKey); };
   const setEnabled = async (on) => { enabled = !!on; if (typeof window !== 'undefined') window.__mhAudioEnabled = enabled; applyRhythmMute(); if (!enabled) { ++bgmRequest; stopPreview(false); stopOthers(); stopJingles(); } else if (currentKey) playBGM(currentKey); await ensure(); };
   const isEnabled = () => enabled;
   // いま実際に鳴っている曲を、外(検査)から見るための口。
@@ -371,6 +468,40 @@ const Audio_ = (() => {
   if (typeof window !== 'undefined') {
     try { window.__mhAudioDebug = debugPlayingTracks; window.__mhAudioExpectedSrc = debugExpectedSrc; } catch (e) {}
   }
+  // 「音が出ない」を端末の上で切り分けるための一式(音量設定の「音が出ないとき」から見る)。
+  // 画面から呼ぶだけの読み取りなので、ゲームの動きは変えない
+  const diagnose = () => {
+    const ctx = audioCtx;
+    let toneState = 'none';
+    if (Tone) { try { toneState = (Tone.getContext && Tone.getContext().state) || 'none'; } catch (e) { toneState = 'none'; } }
+    return {
+      enabled, pageHidden,
+      bgmVolumePct, seVolumePct,
+      ctxState: ctx ? ctx.state : 'none',
+      sampleRate: ctx ? Math.round(ctx.sampleRate) : 0,
+      // getAudioCtx()を呼ばない(見ただけで出口を作らない)。作る前は判定しようがないので false。
+      // 画面を隠しているあいだは時計も止まるので、そこは見ない(戻った直後の誤判定を防ぐ)
+      stalled: ctx && !pageHidden ? ctxClockStalled() : false,
+      rebuilds: ctxRebuildCount,
+      toneLoaded: !!Tone, toneReady: ready, toneState, toneFailed: toneLoadFailed,
+      level: outputLevel(),
+      playing: debugPlayingTracks().playing,
+    };
+  };
+  // 音が実際に出ているかを外(検査)から確かめるための口。
+  // tools/audio/audio-output-check.js が、鳴らしてから音量計の値を読む。
+  // プレイヤーの画面には何も出ないし、ゲームの動きも変えない
+  if (typeof window !== 'undefined') {
+    try { window.__mhAudioDiagnose = () => diagnose(); window.__mhAudioTestTone = () => playTestTone(); } catch (e) {}
+  }
+  // 設定画面の「音を鳴らし直す」。出口を作り直して、テスト音まで鳴らす
+  const repair = async () => {
+    if (!enabled) { enabled = true; if (typeof window !== 'undefined') window.__mhAudioEnabled = true; applyRhythmMute(); }
+    const rebuilt = await rebuildAudioCtx();
+    const ctx = await ensureAudioCtxRunning();
+    const beeped = await playTestTone();
+    return { rebuilt, beeped, running: !!ctx && ctx.state === 'running' };
+  };
   const setSeVolume = (pct) => { seVolumePct = pct; if (seBus && Tone) { try { seBus.gain.rampTo(_gainFromPct(pct), 0.05); } catch (e) {} } };
   const setBgmVolume = (pct) => { bgmVolumePct = pct; applyTrackGain(resolveTrack(previewKey || currentKey)); if (pct <= 0) { stopPreview(false); stopOthers(); } else if (enabled && currentKey && !previewKey) playBGM(currentKey); };
   const resumeIfNeeded = async () => { await ensureAudioCtxRunning(); if (Tone) { try { await Tone.start(); started = true; } catch (e) {} } if (enabled && currentKey && !bgmSource) playBGM(currentKey); };
@@ -445,5 +576,5 @@ const Audio_ = (() => {
     fusion: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const v = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'triangle' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.25, release: 0.5 }, volume: -10 }).connect(reverb); const seq = [[0,'C5','8n'],[0.12,'E5','8n'],[0.24,'G5','8n'],[0.36,'C6','8n'],[0.48,'E6','4n']]; seq.forEach(([tt, n, d]) => v.triggerAttackRelease(n, d, t + tt)); const bt = t + 0.6; const bell = new Tone.MetalSynth({ frequency: 800, envelope: { attack: 0.001, decay: 0.6, release: 0.3 }, harmonicity: 8, modulationIndex: 20, resonance: 5000, octaves: 1.5, volume: -14 }).connect(reverb); bell.triggerAttackRelease('16n', bt); const sparkle = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'sine' }, envelope: { attack: 0.005, decay: 0.4, sustain: 0.1, release: 0.5 }, volume: -12 }).connect(reverb); ['C6','E6','G6','C7'].forEach((n, i) => sparkle.triggerAttackRelease(n, '8n', bt + i * 0.03)); setTimeout(() => { try { v.dispose(); bell.dispose(); sparkle.dispose(); } catch (e) {} }, 2200); }
   };
 
-  return { playBGM, stopBGM, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, se };
+  return { playBGM, stopBGM, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se };
 })();

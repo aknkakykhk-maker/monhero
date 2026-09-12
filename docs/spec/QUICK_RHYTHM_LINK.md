@@ -712,3 +712,55 @@ AUTO設定の「モンヒロビート中に回すクイック周回」へスイ�
 「入った瞬間だけ」の判定）と `tools/mode/quick-rhythm-autostart-check.js`（実ブラウザ。
 ONで開くと何も押さずに帯が出る／OFFでは出ず「始める」ボタンのまま）。
 自動で始まる仕組みは**押す場所が無い**ので、実際に開いて確かめないと壊れても気づけない。
+
+## 12. アプリに戻ったら、止まっていた∞周回を自動で続ける（2026-09-11 ユーザー指示）
+
+> 「オート周回中、アプリが裏に回ると止まるようにしてるけどアプリに戻ったら
+>  自動で開始するようにしてほしい」
+> 「ただし負けたときは自動では開始しない」
+> 「モンビー中もおなじ」
+
+裏に回ったときの停止（`stopAllAuto('hidden')`）はそのまま。戻ってきたとき
+（`visibilitychange` の visible / `pageshow` / `focus`）に、止まっていたぶんを続ける。
+
+**続ける条件**（1つでも欠けたら黙って見送る）
+
+| 条件 | なぜ |
+| --- | --- |
+| 進捗が「止まった」状態である | 回っているものを二重に始めない |
+| 止まった理由が `'hidden'` | **負けた(`defeat`)・諦めた(`retire`)・自分で切った(`manual`)・続けられなくなった(`error`)では始めない** |
+| いま見えている | hidden のあいだに `focus` が飛んできても動かさない |
+| ランが残っていて、勝負がついていない | `resumeQuickRunFromRhythm` の中で二重に確かめる |
+
+**負けたあとに裏へ回しても始まらない**のは、`finishQuickRunProgress` が
+「すでに終わっている進捗の理由を上書きしない」作りだから。負けた時点で `'defeat'` が入り、
+そのあとの `stopAllAuto('hidden')` では理由が変わらないので、戻ってきても条件に合わない。
+ここは `runResultFinishedRef` でも二重に守っている（理由の取り違えで動きださないように）。
+
+**モンビー中も同じ**。通るのは既存の `resumeQuickRunFromRhythm()`（画面を動かさない）なので、
+バトル画面・曲えらび・演奏中のどこにいても呼べる。演奏中は `runProgressAllowed` が
+false のままなので進行は止まっており、曲が終われば今までどおり進みはじめる。
+
+**省エネも戻す**（2026-09-12・ユーザー指摘「省エネも設定してた状態に戻らないの？」）。
+`stopAllAuto` は省エネを off にするので、`reason === 'hidden'` のときだけ
+`ecoModeBeforeHiddenRef` へ段階を控えておき、続けられたときに `setEcoModeSafe` で戻す。
+**順番が大事**で、`setEcoModeSafe` は `autoRepeatRef.current === true` でないと `'off'` へ
+落ちるため、∞を立て直す `resumeQuickRunFromRhythm()` の**あと**に呼ぶ。
+`'ultra'` へ戻ったときの暗幕と自動ミュートは、今までどおり `ultraEcoSession` の effect が
+付け直す（`ecoMode` が変わるだけで通る道なので、ここでは何もしない）。
+控えは hidden 以外の理由で止めたときに捨てるので、**負けたあとに裏へ回して戻っても、
+省エネだけがよみがえることはない**。
+
+**戻さないもの**: ∞でないふつうのAUTO。自動で戻すのは「∞周回の続き」と、その省エネだけ。
+
+**中身を ref に入れ直している理由**: `visibilitychange` を張る effect は
+`useEffect(..., [])` で1度しか作られない。そこへ判定を直接書くと、起動直後の古い state を
+ずっと見ることになる。判定は毎レンダー組み立てて `resumeAutoAfterVisibleRef.current` へ
+入れ直し、effect からはそれを呼ぶ。
+
+**検査**: `tools/run/auto-stop-reason-check.js`（条件と二重の守り）と
+`tools/run/auto-resume-on-visible-check.js`（実ブラウザ。`visibilityState` の getter を
+差し替えて `visibilitychange` を飛ばし、①バトル画面 ②モンビーを開いたまま で続くこと、
+③自分でAUTO∞を切ったあとは戻っても始まらないことを見る）。
+③は「負けたときは始めない」と同じ分かれ道（理由が `'hidden'` 以外）を、
+負けるまで遊ばずに踏むためのもの。

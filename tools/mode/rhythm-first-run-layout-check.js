@@ -12,8 +12,10 @@
 // リスタートで直っていたのは、そのとき覚えた値を捨てていたからにすぎない。
 //
 // 【この検査のやり方】
-// スタイルが効かない状態のまま演奏を始めさせ、途中でスタイルを流し込む。
-// 実機で言えば「画面が組み上がるのが遅れている」状態そのもの。
+// 配信しているCSS(monster-hero/tailwind.css)をわざと落とし、
+// スタイルが効かない状態のまま演奏を始めさせて、途中でスタイルを流し込む。
+// 実機で言えば「画面が組み上がるのが遅れている」状態そのもの
+// (2026-09-12に静的CSSへ切り替えたので、落とす相手がCDNからこのファイルへ変わった)。
 //   ① 組み上がる前のあいだ、ライフが減らないこと(見えないノーツで減点しない)
 //   ② 組み上がったあとは、ノーツがちゃんと画面に出て遊べること
 const http=require('http'),path=require('path'),fs=require('fs');
@@ -51,7 +53,10 @@ html,body{height:100%;margin:0}
   try{
     browser=await playwright.chromium.launch({executablePath:'/opt/pw-browsers/chromium',args:['--autoplay-policy=no-user-gesture-required']});
     const page=await browser.newPage({viewport:{width:390,height:844}});
-    await page.route('**cdn.tailwindcss.com**',r=>r.abort());
+    // 配信しているCSSをわざと落として「まだ組み上がっていない」状態を作る。
+    // ここを落とさないと、静的CSS(2026-09-12に切り替え)は最初の描画までに間に合うので
+    // 崩れた場面そのものが作れず、この検査は何も確かめていないことになる
+    await page.route('**/tailwind.css*',r=>r.abort());
     await page.addInitScript(()=>{const put=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
       put('mh_breeder_name','テスト');put('mh_breeder_icon','🐣');put('mh_intro_done',true);put('mh_onboarded',true);
       put('mh_tutorial_seen_v1',true);put('mh_battle_tutorial_seen_v1',true);put('mh_battle_tutorial_guide_shown_v1',true);
@@ -76,7 +81,7 @@ html,body{height:100%;margin:0}
     await page.evaluate(()=>document.querySelector('[data-rhythm-demo-start]').click());
     // 「1秒待つ」で測っていたが、機械が混んでいるとまだ演奏画面へ入っていないことがあり、
     // この検査だけが日によって落ちていた(2026-09-06)。ノーツが並ぶまで待つ。
-    // 組み上がっていない状態はTailwindを止めているあいだずっと続くので、
+    // 組み上がっていない状態はCSSを止めているあいだずっと続くので、
     // 待っても「崩れたまま演奏が始まっている」という見たい場面は壊れない。
     await page.waitForSelector('[data-rhythm-play-area]',{timeout:30000}).catch(()=>{});
     // ノーツの描き方は2つある。要素版は [data-rhythm-note] が1個ずつ並ぶが、

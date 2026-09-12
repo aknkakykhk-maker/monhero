@@ -24,8 +24,11 @@ const check = (name, ok, detail = '') => {
 // ---- 保存キーと既定値 ----
 check('保存キーは mh_auto_settings_v1 のまま(新しいキーを作らない)',
   src.includes("const AUTO_SETTINGS_KEY = 'mh_auto_settings_v1';"));
-check('既定値に quickRun がある',
-  /quickRun:\{\s*heroRosterEntry:null,\s*distance:null,\s*difficulty:null\s*\}/.test(src));
+// ★項目が増えても落ちないように、末尾の } までを固定するのをやめた。
+//   autoStart を足したときに、この1行だけが取り残されて落ちていた(2026-09-12)。
+//   見たいのは「事前設定の3項目が既定値として揃っている」ことなので、そこだけを見る
+check('既定値に quickRun がある(事前設定の3項目)',
+  /quickRun:\{[^}]*heroRosterEntry:null[^}]*distance:null[^}]*difficulty:null[^}]*\}/.test(src));
 check('同じ保存キー内に自動限凸の資源保護既定値がある',
   /breakthroughReserve:\{\s*gold:0,\s*psyche:0\s*\}/.test(src));
 

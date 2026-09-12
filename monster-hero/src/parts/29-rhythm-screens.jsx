@@ -60,11 +60,18 @@ const RhythmOptions=({value,onSave,onBack})=>{
         <RhythmLandscapeHint/>
         <section className={card}>
           <h3 className={head}>🔊 音量</h3>
-          {field('BGM音量',stepper('bgmVolume',0,100,1))}
-          {field('タップ音量',stepper('noteSeVolume',0,100,1))}
+          {field('BGM音量',stepper('bgmVolume',0,RHYTHM_VOLUME_MAX,1))}
+          {field('タップ音量',stepper('noteSeVolume',0,RHYTHM_VOLUME_MAX,1))}
           <div className={row}><span className={label}>タップ音</span>{toggle('noteSeEnabled','')}</div>
           <div className="mt-3 grid grid-cols-2 gap-3"><button type="button" onClick={previewBgm} className="min-h-[48px] rounded-xl bg-indigo-700 text-[12px] font-black">♪ BGM試聴</button><button type="button" onClick={()=>RHYTHM_NOTE_SE_RUNTIME.preview(draft)} className="min-h-[48px] rounded-xl bg-fuchsia-700 text-[12px] font-black">タップ音試聴</button></div>
           <p className={`mt-3 ${note}`}>この音量はメインゲームの音量設定と別に、音ゲーだけで使います。タイトル画面の全体ミュートのみ共通です。</p>
+          {/* タップ音を10倍にしたので、前に合わせていた人は必ず設定し直すことになる(2026-09-12)。
+              ヘルプと更新履歴は探しに行った人しか読まないので、スライダーのすぐ横でも伝える。
+              保存キーは増やさない(出しっぱなしの一言で、消す仕掛けを持たない) */}
+          <p className={`mt-2 ${note}`}>2026-09-12にタップ音を大きくしました（それまでの10倍）。以前に音量を合わせていた場合は、タップ音量を下げるかBGM音量を上げて合わせ直してください。</p>
+          {/* 上限を200まで開けた(2026-09-12・ユーザー指示)。100の意味は今までと同じ。
+              100より上は音源の波形をそのまま持ち上げるので割れることがある、とその場で言う */}
+          <p className={`mt-2 ${note}`}>音量は0〜{RHYTHM_VOLUME_MAX}まで上げられます。100はこれまでと同じ大きさです。100より上は端末の音量を上げても足りないときの逃げ道で、とくにBGM音量は上げすぎると曲の大きいところが割れて聞こえることがあります。</p>
         </section>
         <section className={card}>
           <h3 className={head}>🎯 プレイ</h3>
@@ -159,6 +166,10 @@ const RHYTHM_ACHIEVEMENT_MARKS=Object.freeze({
     style:Object.freeze({background:'rgba(255,255,255,.14)'})}),
   UNPLAYED:  Object.freeze({label:'まだ遊んでいない',
     style:Object.freeze({background:'rgba(203,213,225,.55)'})}),
+  // 遊んだけれどライフが0になって終わった(2026-09-12に追加)。「まだ遊んでいない」と
+  // 区別が付かないままにしないためだけの段で、クリアの段より下に置く
+  FAILED:    Object.freeze({label:'失敗（ライフ0）',
+    style:Object.freeze({background:'linear-gradient(135deg,#7f1d1d,#dc2626)'})}),
   CLEAR:     Object.freeze({label:'クリア',
     style:Object.freeze({background:'linear-gradient(135deg,#7dd3fc,#22d3ee)'})}),
   FULL_COMBO:Object.freeze({label:'フルコンボ',
@@ -174,7 +185,8 @@ const RHYTHM_ACHIEVEMENT_MARKS=Object.freeze({
 // 上の段から順に見て、いちばん上の達成を返す。
 const rhythmAchievementMarkId=(playable,record)=>{
   if(!playable)return 'NONE';
-  if(!record||!record.clear)return 'UNPLAYED';
+  if(!record||!record.played)return 'UNPLAYED';
+  if(!record.clear)return 'FAILED';
   if(record.allMarvelous)return 'ALL_MARVELOUS';
   if(record.allExcellent)return 'ALL_EXCELLENT';
   if(record.fullCombo)return 'FULL_COMBO';
@@ -594,7 +606,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
               <span data-rhythm-difficulty-best={item.id} className="mt-0.5 block text-[9px] font-black tabular-nums opacity-80">
                 {open
                   ?(()=>{const record=rhythmBestRecord(bestRecords,song.songId,item.id);
-                    return record&&record.clear?record.bestScore.toLocaleString():'—';})()
+                    return record&&record.played?record.bestScore.toLocaleString():'—';})()
                   :`${need}で解放`}
               </span>
             </button>;
@@ -606,8 +618,8 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
         <p className="mt-1.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-[10px] font-bold">
           <span data-rhythm-demo-level className="text-slate-300">Lv.{chart.level} / {chart.totalNotes}ノーツ</span>
           <span data-rhythm-demo-best className="text-amber-200">
-            {best&&best.clear
-              ?<>{difficulty.id}の自己ベスト {best.bestScore.toLocaleString()}（ランク {rhythmRankForScore(best.bestScore)}） / 最大コンボ {best.maxCombo}</>
+            {best&&best.played
+              ?<>{difficulty.id}の自己ベスト {best.bestScore.toLocaleString()}（ランク {rhythmRankForScore(best.bestScore)}） / 最大コンボ {best.maxCombo}{best.clear?'':' / まだクリアしていません'}</>
               :<>まだ遊んでいません</>}
           </span>
         </p>

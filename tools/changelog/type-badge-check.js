@@ -43,7 +43,6 @@ ok('不具合修正と新機能がどちらも記録されている',(counts.fix
   try{
     browser=await playwright.chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
     const page=await browser.newPage({viewport:{width:390,height:844}});
-    await page.route('**cdn.tailwindcss.com**',r=>r.abort());
     await page.goto(`http://localhost:${PORT}/monster-hero/index.html`,{waitUntil:'load',timeout:60000});
     await page.waitForFunction(()=>document.body?.innerText.includes('TAP TO START'),{timeout:40000});
     // TAP TO START を抜けたところに更新履歴の入口がある
