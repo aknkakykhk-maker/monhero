@@ -321,7 +321,14 @@ const measure=(chart,audio,options={})=>{
     if(lastHitByFinger[finger]!=null)sameFingerMinMs=Math.min(sameFingerMinMs,(note.grid-lastHitByFinger[finger])*gridMs);
     lastHitByFinger[finger]=note.grid;
   }
-  const alternationRate=alternationTotal?alternation/alternationTotal:1;
+  // ★分母が小さいときは「交互になっていない」と決めつけない。
+  //   16分で並ぶ組は曲によって極端に少なく、実測で 4u_hitasura MASTER は**2組**しか無い
+  //   (291ノーツ中)。生の割合で出すと、1組が入れ替わるだけで 1.00→0.50 になり、
+  //   flow が30点動く。それで「流れが落ちた」と読み違えた(2026-09-12)。
+  //   そこで疑似カウント(k組ぶんの「交互だった」を足す)で 1.0 側へ寄せる。
+  //   187組ある曲では 0.81→0.82 しか動かないので、濃い曲の測り方は変わらない。
+  const ALTERNATION_PRIOR=8;
+  const alternationRate=(alternation+ALTERNATION_PRIOR)/(alternationTotal+ALTERNATION_PRIOR);
   // 同時押しの前後の余裕(ms)
   let chordClearMinMs=Infinity;
   for(const grid of chordGrids){
@@ -398,7 +405,7 @@ const measure=(chart,audio,options={})=>{
       expandCount,contractCount,chordShapes,slideShapes,rests,longRests,longestRestMs:Math.round(longestRestMs),
       hardWindows:hardWindows.length,hardSectionMaxMs,restAfterHard,peakWindowNotes},
     hand:{impossible,strained,strainedRate:round(strainedRate),maxStrainStreakMs,strainStreaks:sim.strainStreaks.length,
-      alternationRate:round(alternationRate),sameFingerMinMs:Number.isFinite(sameFingerMinMs)?Math.round(sameFingerMinMs):null,
+      alternationRate:round(alternationRate),alternationTotal,sameFingerMinMs:Number.isFinite(sameFingerMinMs)?Math.round(sameFingerMinMs):null,
       chordClearMinMs:Number.isFinite(chordClearMinMs)?Math.round(chordClearMinMs):null,
       heldFreeOk,heldFreeTotal,
       issues:sim.issues.slice(0,40).map(x=>({severity:x.severity,timeMs:x.timeMs,bar:x.bar,type:x.type,detail:x.detail}))},
