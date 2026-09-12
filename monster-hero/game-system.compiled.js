@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 880abfa62f432e6d
+// source-sha256: 44a977321e982115
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 443cb1ef848b4c50
+// generated-sha256: 96aa56dd51f3263a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-13 01:42"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-13 01:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -20297,8 +20297,9 @@ const RhythmOptions = ({
   };
   const label = 'text-[13px] font-bold';
   const note = 'text-[10px] leading-relaxed text-slate-400';
-  const head = 'text-[15px] font-black text-cyan-200';
-  const card = 'rounded-2xl border border-cyan-400/35 bg-slate-900/85 p-4 shadow-[0_0_18px_rgba(34,211,238,.08)]';
+  // 横持ちでは出さない。すぐ上のタブに同じ名前が出ているので、高さを取るだけになる
+  const head = 'border-b border-cyan-400/30 pb-1.5 text-[15px] font-black text-cyan-200 landscape:hidden';
+  const card = 'rounded-2xl border border-cyan-400/35 bg-slate-900/85 p-4 shadow-[0_0_18px_rgba(34,211,238,.08)] landscape:border-0 landscape:bg-transparent landscape:p-0 landscape:shadow-none';
   const row = 'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-white/10 py-3 last:border-b-0';
   // 数値の項目。粗く動かす外側(coarse)と、細かく動かす内側(fine)を分ける。
   // 刻み(step)は保存する値の刻みそのもので、fine は必ずその倍数にする。
@@ -20319,7 +20320,7 @@ const RhythmOptions = ({
       "data-rhythm-option-nudge": `${key}${sign(amount)}`,
       disabled: amount < 0 ? value <= min : value >= max,
       onClick: () => nudge(amount),
-      className: `min-h-[46px] rounded-xl border border-white/15 ${dim ? 'bg-slate-800' : 'bg-slate-700'} px-0.5 text-[11px] font-black tabular-nums text-slate-100 active:scale-95 disabled:opacity-35`
+      className: `min-h-[46px] rounded-xl border ${dim ? 'border-white/25 bg-slate-300 text-slate-900' : 'border-white/40 bg-slate-100 text-slate-900'} px-0.5 text-[11px] font-black tabular-nums shadow-[0_2px_0_rgba(2,6,23,.55)] active:translate-y-[1px] active:shadow-none disabled:opacity-35`
     }, sign(amount));
     return /*#__PURE__*/React.createElement("div", {
       "data-rhythm-option-stepper": key,
@@ -20328,7 +20329,7 @@ const RhythmOptions = ({
       className: "grid grid-cols-[1fr_1fr_minmax(56px,1.3fr)_1fr_1fr] items-center gap-1"
     }, button(-coarse), button(-fine, true), /*#__PURE__*/React.createElement("output", {
       "aria-live": "polite",
-      className: "min-h-[46px] rounded-lg border border-cyan-400/40 bg-slate-950 px-1 text-center text-[13px] font-black leading-[46px] tabular-nums whitespace-nowrap"
+      className: "min-h-[46px] rounded-lg border-2 border-cyan-300/70 bg-white px-1 text-center text-[14px] font-black leading-[42px] tabular-nums text-slate-900 whitespace-nowrap"
     }, display), button(fine, true), button(coarse)), /*#__PURE__*/React.createElement("input", {
       type: "range",
       "data-rhythm-option-slider": key,
@@ -20345,16 +20346,28 @@ const RhythmOptions = ({
     }));
   };
   // ON/OFFは押すたびに入れ替わるボタンではなく、**どちらが今の状態か**が一目で分かる2択にする
+  // ON/OFFは**丸いラジオ**にする(参考にした画面と同じ)。押すたびに入れ替わるボタンだと
+  // 「いまどちらか」が読み取りにくく、2つのボタンを並べる形だと枠の中で場所を取る。
   const toggle = key => /*#__PURE__*/React.createElement("div", {
     "data-rhythm-option-onoff": key,
-    className: "grid grid-cols-2 gap-1"
+    role: "radiogroup",
+    className: "flex items-center justify-center gap-2"
   }, [[true, 'ON'], [false, 'OFF']].map(([flag, text]) => /*#__PURE__*/React.createElement("button", {
     type: "button",
     key: text,
-    "aria-pressed": draft[key] === flag,
+    role: "radio",
+    "aria-checked": draft[key] === flag,
+    "aria-label": text,
     onClick: () => set(key, flag),
-    className: `min-h-[44px] rounded-xl border text-[12px] font-black ${draft[key] === flag ? 'border-cyan-200 bg-cyan-600 text-white' : 'border-white/20 bg-slate-900 text-slate-400'}`
-  }, text)));
+    className: "flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-xl px-1 text-[12px] font-black"
+  }, /*#__PURE__*/React.createElement("span", {
+    "aria-hidden": "true",
+    className: `grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full border-2 ${draft[key] === flag ? 'border-cyan-300 bg-cyan-500/20' : 'border-white/35'}`
+  }, draft[key] === flag && /*#__PURE__*/React.createElement("span", {
+    className: "h-[9px] w-[9px] rounded-full bg-cyan-300"
+  })), /*#__PURE__*/React.createElement("span", {
+    className: draft[key] === flag ? 'text-white' : 'text-slate-400'
+  }, text))));
   const segments = (key, items) => /*#__PURE__*/React.createElement("div", {
     className: `grid ${items.length >= 4 ? 'grid-cols-4' : 'grid-cols-3'} overflow-hidden rounded-xl border border-white/20`
   }, items.map(([id, text]) => /*#__PURE__*/React.createElement("button", {
@@ -20366,11 +20379,13 @@ const RhythmOptions = ({
   }, text)));
   // 1項目=1枠。頭に帯のラベルを置く(参考にした画面と同じ形)。
   // ★ここは項目の「入れ物」なので、余白・字の大きさは2026-09-05に広げたまま触らない。
+  // ★数値のように横幅の要る項目は wide。縦持ち(2列)ではぶち抜き、
+  //   横持ち(3列)は1列が広いので1つぶんに収める。参考にした画面と同じ並び方。
   const field = (title, control, description = null, {
     wide = false
   } = {}) => /*#__PURE__*/React.createElement("div", {
     "data-rhythm-option-field": true,
-    className: `${wide ? 'col-span-2' : ''} rounded-xl border border-cyan-400/20 bg-slate-950/55 p-2.5`
+    className: `${wide ? 'col-span-2 landscape:col-span-1' : ''} rounded-xl border border-cyan-400/20 bg-slate-950/55 p-2.5 landscape:p-2`
   }, /*#__PURE__*/React.createElement("p", {
     className: `mb-2 rounded-lg bg-cyan-700/70 px-2 py-1 text-center ${label}`
   }, title), control, description && /*#__PURE__*/React.createElement("details", {
@@ -20381,7 +20396,8 @@ const RhythmOptions = ({
   }, "\u25B8 \u304F\u308F\u3057\u304F"), /*#__PURE__*/React.createElement("p", {
     className: `mt-1 ${note}`
   }, description)));
-  const grid = 'grid grid-cols-2 gap-2.5';
+  // 横持ちは幅が広いので3列。縦持ちは2列のまま(1列にすると1つずつしか見えない)
+  const grid = 'grid grid-cols-2 gap-2.5 landscape:grid-cols-3';
   const previewBgm = async () => {
     previewRef.current?.stop();
     previewRef.current = null;
@@ -20416,21 +20432,26 @@ const RhythmOptions = ({
     style: {
       paddingTop: 'env(safe-area-inset-top)'
     }
+  }, /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-options-bar": true,
+    className: "z-10 shrink-0 border-b border-cyan-400/15 bg-slate-950/95 landscape:flex landscape:items-center landscape:gap-3"
   }, /*#__PURE__*/React.createElement("header", {
-    className: "z-10 flex shrink-0 items-center gap-2 border-b border-cyan-400/15 bg-slate-950/95 px-3 py-2"
+    className: "flex shrink-0 items-center gap-2 px-3 py-2 landscape:py-1.5"
   }, /*#__PURE__*/React.createElement("button", {
     "aria-label": "\u623B\u308B",
     onClick: onBack,
     className: "min-h-[44px] min-w-[44px] text-slate-300"
   }, /*#__PURE__*/React.createElement(ArrowLeft, {
     size: 20
-  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "landscape:flex landscape:items-baseline landscape:gap-2"
+  }, /*#__PURE__*/React.createElement("small", {
     className: "block text-[8px] font-black tracking-[0.2em] text-cyan-300"
   }, "MONBEAT"), /*#__PURE__*/React.createElement("h2", {
-    className: "text-base font-black"
+    className: "text-base font-black landscape:text-[13px]"
   }, "\u2699\uFE0F \u30AA\u30D7\u30B7\u30E7\u30F3"))), /*#__PURE__*/React.createElement("nav", {
     "data-rhythm-options-tabs": true,
-    className: "z-10 grid shrink-0 grid-cols-3 gap-2 border-b border-cyan-400/15 bg-slate-950/95 px-3 pb-2 pt-2"
+    className: "grid shrink-0 grid-cols-3 gap-2 px-3 pb-2 landscape:min-w-0 landscape:flex-1 landscape:gap-1.5 landscape:pb-0 landscape:pl-0 landscape:pr-3"
   }, RHYTHM_OPTION_TABS.map(([id, text]) => /*#__PURE__*/React.createElement("button", {
     type: "button",
     key: id,
@@ -20440,11 +20461,11 @@ const RhythmOptions = ({
     className: `relative min-h-[44px] rounded-xl border text-[13px] font-black ${tab === id ? 'border-amber-200 bg-amber-400 text-slate-950' : 'border-white/15 bg-slate-800 text-slate-300'}`
   }, text, tab === id && /*#__PURE__*/React.createElement("span", {
     "aria-hidden": "true",
-    className: "absolute -bottom-[7px] left-1/2 -translate-x-1/2 border-x-[6px] border-t-[7px] border-x-transparent border-t-amber-300"
-  })))), /*#__PURE__*/React.createElement("div", {
+    className: "absolute -bottom-[7px] left-1/2 -translate-x-1/2 border-x-[6px] border-t-[7px] border-x-transparent border-t-amber-300 landscape:hidden"
+  }))))), /*#__PURE__*/React.createElement("div", {
     ref: scrollRef,
     "data-rhythm-options-scroll": true,
-    className: "flex-1 min-h-0 overflow-y-auto px-3 pb-5 pt-3 mh-scroll"
+    className: "flex-1 min-h-0 overflow-y-auto px-3 pb-5 pt-3 mh-scroll landscape:px-4 landscape:pb-3 landscape:pt-2"
   }, /*#__PURE__*/React.createElement("div", {
     className: "space-y-4"
   }, tab === 'live' && /*#__PURE__*/React.createElement("section", {
@@ -20452,8 +20473,8 @@ const RhythmOptions = ({
     className: card
   }, /*#__PURE__*/React.createElement("h3", {
     className: head
-  }, "\uD83C\uDFAF \u30E9\u30A4\u30D6\u8A2D\u5B9A"), /*#__PURE__*/React.createElement("div", {
-    className: `mt-3 ${grid}`
+  }, "\u25C6 \u30E9\u30A4\u30D6\u8A2D\u5B9A"), /*#__PURE__*/React.createElement("div", {
+    className: `mt-3 ${grid} landscape:mt-0`
   }, field('ノーツの速さ', stepper('noteSpeed', RHYTHM_NOTE_SPEED_MIN, RHYTHM_NOTE_SPEED_MAX, RHYTHM_NOTE_SPEED_STEP, {
     fine: RHYTHM_NOTE_SPEED_STEP,
     coarse: 1,
@@ -20495,8 +20516,8 @@ const RhythmOptions = ({
     className: card
   }, /*#__PURE__*/React.createElement("h3", {
     className: head
-  }, "\uD83D\uDD0A \u97F3\u91CF"), /*#__PURE__*/React.createElement("div", {
-    className: `mt-3 ${grid}`
+  }, "\u25C6 \u97F3\u91CF\u8A2D\u5B9A"), /*#__PURE__*/React.createElement("div", {
+    className: `mt-3 ${grid} landscape:mt-0`
   }, field('BGM音量', stepper('bgmVolume', 0, RHYTHM_VOLUME_MAX, 1, {
     fine: 1,
     coarse: 10
@@ -20533,8 +20554,8 @@ const RhythmOptions = ({
     className: card
   }, /*#__PURE__*/React.createElement("h3", {
     className: head
-  }, "\u2728 \u30B7\u30B9\u30C6\u30E0"), /*#__PURE__*/React.createElement("div", {
-    className: `mt-3 ${grid}`
+  }, "\u25C6 \u30B7\u30B9\u30C6\u30E0\u8A2D\u5B9A"), /*#__PURE__*/React.createElement("div", {
+    className: `mt-3 ${grid} landscape:mt-0`
   }, field('演出量', segments('effectAmount', RHYTHM_EFFECT_LABELS), '動きがカクついたり、端末が熱くなったりするときは「少なめ」にしてください。判定文字の金色の帯や虹が流れるのを止め、光のにじみを減らします（色・グラデーション・字の大きさは標準と同じままです）。「最小」にすると、それに加えて100コンボごとの演出や光そのものもほぼ出なくなります。', {
     wide: true
   }), field('軽量モード', toggle('lightweightMode')), field('曲えらびで試聴する', toggle('songPreviewEnabled')), field('タップ時の振動', /*#__PURE__*/React.createElement(React.Fragment, null, toggle('vibrationEnabled'), /*#__PURE__*/React.createElement("button", {
@@ -20557,7 +20578,7 @@ const RhythmOptions = ({
     className: "rounded-xl border border-cyan-400/25 bg-cyan-950/25 px-3 py-2 text-[10px] leading-relaxed text-cyan-100"
   }, "\u5224\u5B9A\u3092\u7518\u304F\u3059\u308B\u8A2D\u5B9A\u3067\u306F\u3042\u308A\u307E\u305B\u3093\u3002\u7AEF\u672B\u3054\u3068\u306E\u898B\u3048\u65B9\u30FB\u97F3\u91CF\u30FB\u30BF\u30A4\u30DF\u30F3\u30B0\u3092\u8ABF\u6574\u3059\u308B\u9805\u76EE\u3067\u3059\u3002"))), /*#__PURE__*/React.createElement("footer", {
     "data-rhythm-options-actions": true,
-    className: "z-20 shrink-0 border-t border-cyan-400/25 bg-slate-950/98 px-3 pt-2 shadow-[0_-8px_24px_rgba(2,6,23,.72)]",
+    className: "z-20 shrink-0 border-t border-cyan-400/25 bg-slate-950/98 px-3 pt-2 shadow-[0_-8px_24px_rgba(2,6,23,.72)] landscape:pt-1.5",
     style: {
       paddingBottom: 'calc(.5rem + env(safe-area-inset-bottom))'
     }
@@ -20565,17 +20586,17 @@ const RhythmOptions = ({
     role: "status",
     className: "mb-1 text-center text-[11px] font-black text-amber-300"
   }, message), /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-[.9fr_1.1fr] gap-3"
+    className: "mx-auto grid grid-cols-[.9fr_1.1fr] gap-3 landscape:max-w-[520px]"
   }, /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: resetDraft,
-    className: "min-h-[52px] rounded-xl border border-white/20 bg-slate-800 px-2 text-[12px] font-black"
+    className: "min-h-[52px] rounded-xl border border-white/20 bg-slate-800 px-2 text-[12px] font-black landscape:min-h-[46px]"
   }, "\u30C7\u30D5\u30A9\u30EB\u30C8\u306B\u623B\u3059"), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: saveDraft,
     "data-rhythm-options-save": true,
     "data-dirty": dirty ? 'true' : 'false',
-    className: `min-h-[52px] rounded-xl px-3 font-black ${dirty ? 'bg-amber-400 text-slate-950 shadow-[0_0_18px_rgba(251,191,36,.35)]' : 'bg-amber-600 text-slate-950'}`
+    className: `min-h-[52px] rounded-xl px-3 font-black landscape:min-h-[46px] ${dirty ? 'bg-amber-400 text-slate-950 shadow-[0_0_18px_rgba(251,191,36,.35)]' : 'bg-amber-600 text-slate-950'}`
   }, dirty ? '変更を保存' : '保存'))));
 };
 // モンスターノーツ用のマスモン設定。音ゲーデバッグ画面と体験版ホームの両方から使うため、

@@ -45,6 +45,11 @@ check('上のタブで3つに分けている',
 check('タブは押せるボタンで、いま見ているものが分かる',
   /data-rhythm-options-tab=\{id\} aria-pressed=\{tab===id\}/.test(options)
   && options.includes('min-h-[44px] rounded-xl border text-[13px] font-black'));
+// 横持ちは高さが390pxしかない。見出しとタブを1行に並べて、中身へ回す高さを稼ぐ
+check('横持ちでは見出しとタブを1行に並べる',
+  options.includes('data-rhythm-options-bar className="z-10 shrink-0 border-b border-cyan-400/15 bg-slate-950/95 landscape:flex landscape:items-center')
+  && /data-rhythm-options-tabs className="grid shrink-0 grid-cols-3[^"]*landscape:flex-1/.test(options));
+check('横持ちでは中身を3列に並べる', /const grid='grid grid-cols-2 gap-2\.5 landscape:grid-cols-3'/.test(options));
 check('見ていないタブの中身は作らない',
   ['live', 'volume', 'system'].every(id => options.includes(`{tab==='${id}'&&<section data-rhythm-options-panel="${id}"`)));
 check('タブを変えたら先頭から見せる', /const changeTab=id=>\{setTab\(id\);[\s\S]{0,80}scrollTo\(\{top:0\}\)/.test(options));
@@ -55,7 +60,7 @@ check('項目は枠に入れ、頭に帯のラベルを置く',
   /const field=\(title,control,description=null,\{wide=false\}=\{\}\)=>/.test(options)
   && options.includes('data-rhythm-option-field')
   && options.includes('mb-2 rounded-lg bg-cyan-700/70 px-2 py-1 text-center'));
-check('小さい項目は2列に並べる', /const grid='grid grid-cols-2 gap-2\.5'/.test(options));
+check('小さい項目は2列に並べる(縦持ち)', /const grid='grid grid-cols-2 gap-2\.5/.test(options));
 check('説明は畳んでおく(消してはいない)',
   options.includes('<details data-rhythm-option-help')
   && options.includes('▸ くわしく')
@@ -111,7 +116,7 @@ const classOf = re => { const m = options.match(re); return m ? m[1] : ''; };
 const cardClass = classOf(/const card='([^']+)'/);
 const headClass = classOf(/const head='([^']+)'/);
 const labelClass = classOf(/const label='([^']+)'/);
-const fieldClass = classOf(/data-rhythm-option-field className=\{`\$\{wide\?'col-span-2':''\} ([^`]+)`\}/);
+const fieldClass = classOf(/data-rhythm-option-field className=\{`\$\{wide\?'col-span-2 landscape:col-span-1':''\} ([^`]+)`\}/);
 const tabClass = 'min-h-[44px] rounded-xl border text-[13px] font-black';
 
 (async () => {

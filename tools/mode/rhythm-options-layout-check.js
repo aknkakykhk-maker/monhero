@@ -41,7 +41,7 @@ check('セクションどうしの間を広げてある', options.includes('<div
 check('項目名が小さすぎない(13px以上)', /const label='text-\[13px\]/.test(options));
 check('説明文が9pxまで小さくなっていない',
   /const note='text-\[10px\]/.test(options) && !/text-\[9px\]/.test(options));
-check('見出しが本文と同じ大きさになっていない', /const head='text-\[15px\]/.test(options));
+check('見出しが本文と同じ大きさになっていない', /const head='[^']*text-\[15px\]/.test(options));
 // 数値の項目は「見出し → 操作 → 説明」を必ず間を空けて並べる。
 // ここが1行に詰まると、どの説明がどの項目のものか分からなくなる
 check('項目の並べ方を1か所にまとめてある', /const field=\(title,control,description=null,\{wide=false\}=\{\}\)=>/.test(options));
