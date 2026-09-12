@@ -58,6 +58,12 @@ node tools/build.js
 `tailwindcss` は `optionalDependencies` なのでCI(`npm ci --omit=optional`)には入らない。
 だからCIでは**作り直さず**、コミットした `tailwind.css` をそのまま配る。上の指紋はそのための仕掛け。
 
+> ⚠️ **指紋には絶対パスを混ぜない。** 最初は Tailwind の設定の本文へ
+> `/home/user/monhero/...` をそのまま書いていたため、CI(`/home/runner/work/...`)でだけ
+> 指紋が食い違い、`build.js --check` が「古い」と言って落ちた。
+> 設定は `path.resolve(__dirname, '..', '..')` で置き場所を数えるようにしてある。
+> `boot/data-cache-key-check.js` が「設定に絶対パスが入っていない」ことを見張る。
+
 指紋からは「毎回必ず変わるもの」を外してある(外さないと、中身が1文字も変わっていなくても
 ビルドのたびに7秒かかる)。外しているのは `BUILD_DATE` の値、`?v=<ハッシュ>` のキャッシュキー、
 `game-system.jsx` 先頭の `generated-sha256` の3つ。どれも Tailwind のクラス名ではない。

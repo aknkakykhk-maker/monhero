@@ -47,10 +47,16 @@ const MARK = 'tailwind-source';
 const GAME_SYSTEM = path.join(ROOT, 'monster-hero', 'src', 'game-system.jsx');
 const DATA_DIR = path.join(ROOT, 'monster-hero', 'data');
 
-const CONFIG_SOURCE = `const plugin = require('tailwindcss/plugin');
+// 設定の本文には**絶対パスを書かない**。書くとリポジトリの置き場所ごとに指紋が変わり、
+// CI(/home/runner/work/…)と手元(/home/user/…)で食い違って「古い」と誤判定する
+// (実際に GitHub Actions でだけ build.js --check が落ちた)。
+// 置き場所は設定ファイル自身の位置(tools/.tailwind-build/)から数える。
+const CONFIG_SOURCE = `const path = require('path');
+const plugin = require('tailwindcss/plugin');
+const ROOT = path.resolve(__dirname, '..', '..');
 module.exports = {
-  content: [${JSON.stringify(GAME_SYSTEM)},
-            ${JSON.stringify(path.join(DATA_DIR, '*.js'))}],
+  content: [path.join(ROOT, 'monster-hero', 'src', 'game-system.jsx'),
+            path.join(ROOT, 'monster-hero', 'data', '*.js')],
   theme: { extend: {} },
   plugins: [
     // index.html の tailwind.config から移した。既存の書き方(landscape:mt-0 など)はそのまま使える
@@ -127,7 +133,7 @@ function checkTailwind() {
   return { ok: true, fingerprint: fp };
 }
 
-module.exports = { buildTailwindIfNeeded, checkTailwind, fingerprint, OUT };
+module.exports = { buildTailwindIfNeeded, checkTailwind, fingerprint, OUT, CONFIG_SOURCE };
 
 if (require.main === module) {
   if (process.argv.includes('--check')) {

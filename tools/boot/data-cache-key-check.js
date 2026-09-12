@@ -62,8 +62,14 @@ for (const [, relPath, key] of tags) {
     }
   }
   check('Tailwind を外部CDNから読み直していない', !index.includes('cdn.tailwindcss.com'));
-  const tw = require(path.join(root, 'tools', 'build-tailwind')).checkTailwind();
+  const buildTailwind = require(path.join(root, 'tools', 'build-tailwind'));
+  const tw = buildTailwind.checkTailwind();
   check('tailwind.css がいまのソースから作られている', tw.ok, tw.ok ? tw.fingerprint : tw.reason);
+  // 指紋は Tailwind の設定の本文も混ぜて作る。そこへ絶対パスが入ると、リポジトリの
+  // 置き場所ごとに指紋が変わり、CI(/home/runner/work/…)と手元(/home/user/…)で
+  // 食い違って「古い」と誤判定する(実際に GitHub Actions でだけ落ちた)
+  check('Tailwind の設定に絶対パスが入っていない(置き場所で指紋が変わらない)',
+    !buildTailwind.CONFIG_SOURCE.includes(root), buildTailwind.CONFIG_SOURCE.includes(root) ? `設定に ${root} が入っている` : '');
 }
 
 check('本体JSはGAME_BUILDでキャッシュを更新する', /game-system\.compiled\.js\?v=' \+ GAME_BUILD/.test(index));
