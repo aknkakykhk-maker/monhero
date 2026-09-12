@@ -28,8 +28,8 @@ let failed=0;
 const check=(name,ok,detail='')=>{console.log(`${ok?'✓':'✗'} ${name}${detail?` (${detail})`:''}`);if(!ok)failed++;};
 
 const ctx={};vm.createContext(ctx);
-vm.runInContext(`${source}\nthis.out={RHYTHM_HIT_EFFECT_POOL,RHYTHM_HIT_SPARK_COUNT,RHYTHM_HIT_EFFECT_MS,rhythmHitEffectColor,RHYTHM_NOTE_SE_RUNTIME};`,ctx);
-const {RHYTHM_HIT_EFFECT_POOL,RHYTHM_HIT_SPARK_COUNT,RHYTHM_HIT_EFFECT_MS,rhythmHitEffectColor,RHYTHM_NOTE_SE_RUNTIME}=ctx.out;
+vm.runInContext(`${source}\nthis.out={RHYTHM_HIT_EFFECT_POOL,RHYTHM_HIT_SPARK_COUNT,RHYTHM_HIT_EFFECT_MS,rhythmHitEffectColor,RHYTHM_NOTE_SE_RUNTIME,RHYTHM_JUDGMENT_COLORS,rhythmJudgmentColor,rhythmJudgmentGlow,RHYTHM_JUDGMENT_RAINBOW};`,ctx);
+const {RHYTHM_HIT_EFFECT_POOL,RHYTHM_HIT_SPARK_COUNT,RHYTHM_HIT_EFFECT_MS,rhythmHitEffectColor,RHYTHM_NOTE_SE_RUNTIME,RHYTHM_JUDGMENT_COLORS,rhythmJudgmentColor,rhythmJudgmentGlow,RHYTHM_JUDGMENT_RAINBOW}=ctx.out;
 
 // --- 音 ---
 check('モンスターノーツ専用の音がある',typeof RHYTHM_NOTE_SE_RUNTIME.playMonster==='function');
@@ -53,6 +53,47 @@ check('モンスターノーツの光はふつうより大きく長い',
   `ふつう${RHYTHM_HIT_EFFECT_MS.NORMAL}ms / モンスター${RHYTHM_HIT_EFFECT_MS.MONSTER}ms`);
 check('判定ごとに色が違う',
   new Set(['MARVELOUS','EXCELLENT','GREAT','GOOD','BAD'].map(rhythmHitEffectColor)).size===5);
+
+// ===== 判定の色分け(2026-09-12・ユーザー指示) =====
+// 「もっと色分けをして良い判定ならそれだけ派手にしたい / マーベラスは虹など」。
+// ★文字と光が別々に色を持っていたのをやめ、1つの表から取るようにした。
+//   2か所に分けると、片方だけ直して色がズレる(実際にズレていた)。
+const html=read('monster-hero/index.html');
+const JUDGMENTS=['MARVELOUS','EXCELLENT','GREAT','GOOD','BAD','MISS'];
+check('判定の色は1つの表(RHYTHM_JUDGMENT_COLORS)にまとまっている',
+  JUDGMENTS.every(id=>/^#[0-9a-f]{6}$/i.test(RHYTHM_JUDGMENT_COLORS[id])));
+check('MISSを入れた6判定がすべて違う色',new Set(JUDGMENTS.map(rhythmJudgmentColor)).size===6);
+check('判定ラインの光も同じ表から取る',
+  JUDGMENTS.every(id=>rhythmHitEffectColor(id)===rhythmJudgmentColor(id)));
+check('判定文字も同じ表から取る(Tailwindのクラスで色を持たない)',
+  game.includes('rhythmJudgmentColor(view.last)')
+  && game.includes('rhythmJudgmentGlow(view.last,settings.effectAmount,settings.lightweightMode)')
+  && !/data-rhythm-judgment-text[\s\S]{0,300}text-fuchsia-100/.test(game));
+// ★良い判定ほど光の層が多い。MARVELOUSは虹(文字を透かす)なのでtext-shadowは使わない
+check('良い判定ほど光が強い(層の数で比べる)',(()=>{
+  // 光の層は「0 0 <ぼかし>」の並び。rgba(...) の中にもカンマが入るので、カンマでは数えない
+  const layers=id=>{const v=rhythmJudgmentGlow(id,'NORMAL',false);return v==='none'?0:(v.match(/0 0 /g)||[]).length;};
+  return rhythmJudgmentGlow('MARVELOUS','NORMAL',false)==='none'
+    && layers('EXCELLENT')>layers('GREAT') && layers('GREAT')>layers('GOOD')
+    && layers('GOOD')>=layers('BAD') && layers('BAD')>0 && layers('MISS')===0;
+})());
+check('演出量MINIMAL・軽量モードでは文字を光らせない',
+  JUDGMENTS.every(id=>rhythmJudgmentGlow(id,'MINIMAL',false)==='none'
+    && rhythmJudgmentGlow(id,'NORMAL',true)==='none'));
+// ★虹は単色では作れないので、そこだけCSSが持つ。文字は透かすため text-shadow ではなく filter
+check('MARVELOUSの文字は虹(CSS側でグラデーションを流す)',
+  html.includes('[data-rhythm-judgment-text][data-judgment="MARVELOUS"]{')
+  && html.includes('@keyframes mhRhythmJudgmentRainbow')
+  && /\[data-judgment="MARVELOUS"\]\{[\s\S]{0,400}filter:drop-shadow/.test(html)
+  && game.includes("data-judgment={view.last||''}"));
+check('MARVELOUSは弾ける粒も1つずつ違う色になる',
+  RHYTHM_JUDGMENT_RAINBOW.length>=5
+  && source.includes("item.dataset.hitJudgment=(!monster&&judgment==='MARVELOUS')?'MARVELOUS':''")
+  && source.includes('--rhythm-spark-color-1'));
+// モンスターノーツは金色が特別扱い。虹で上書きしない
+check('モンスターノーツは金色のまま(虹で上書きしない)',
+  source.includes("monster?'#fde047':rhythmHitEffectColor(judgment)")
+  && source.includes("(!monster&&judgment==='MARVELOUS')?color:'var(--rhythm-hit-color,#fff)'"));
 check('プレイ開始時に先に作る(曲の途中で10個まとめて作らない)',
   game.includes('rhythmEnsureHitEffects(playAreaRef.current);'));
 check('すでにあれば作り直さない',source.includes("if(layer&&layer._rhythmPool)return layer;"));
