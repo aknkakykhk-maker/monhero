@@ -265,6 +265,29 @@ const measure=(chart,audio,options={})=>{
     const key=span<.5?'flat':turns===0?(span>=2.5?'sweep':'line'):turns===1?'fold':'wave';
     slideShapes[key]=(slideShapes[key]||0)+1;
   }
+  // --- SLIDEの中身のバリエーション ---
+  // ★scores.variety は chart.shapes（expand/contract などのパターン記録）だけで出来ていて、
+  //   **SLIDEの太さ・中継点・移動量が1つも入っていなかった**（設計書 §3.1.8 に既知として
+  //   書いてあったもの）。SLIDEの形を増やしても点数が1点も動かないので、
+  //   「飽きないか」を測れていなかった。ここで3つを足す。
+  //     ① 経路の形の種類（flat / line / sweep / fold / wave）
+  //     ② 太さの並びの種類（同じ並びばかりになっていないか）
+  //     ③ 途中で太さが変わるSLIDEの割合
+  //   SLIDEを持たない難易度（EASY/NORMAL）は、無いことで減点しない（1.0扱い）。
+  const slideWidthSequences=new Set();
+  let slideCount=0,slideVarying=0;
+  for(const note of notes){
+    if(note.type!=='SLIDE'||!Array.isArray(note.slidePoints)||!note.slidePoints.length)continue;
+    const widths=note.slidePoints.map(point=>
+      Number(point.subLaneWidth)||Number(note.subLaneWidth)||2);
+    slideWidthSequences.add(widths.join('-'));
+    if(new Set(widths).size>1)slideVarying++;
+    slideCount++;
+  }
+  const slideVariety=slideCount===0?1:clamp01(
+    .40*clamp01(Object.keys(slideShapes).length/3)
+    +.30*clamp01(slideWidthSequences.size/Math.max(1,Math.min(slideCount,6)))
+    +.30*(slideVarying/slideCount));
 
   // --- 休符・難所 ---
   const gaps=[];
@@ -374,12 +397,16 @@ const measure=(chart,audio,options={})=>{
     +.25*clamp01(rests/minutes/band.restsPerMinute)
     +.25*clamp01(1-Math.max(0,hardSectionMaxMs-8000)/8000)
     +.20*(hardWindows.length?restAfterHard/hardWindows.length:1)));
+  // 打点の形（.85）＋ SLIDEの中身（.15）。
+  // SLIDEのぶんを足すぶん、既存の5項目は .85 へそろえて掛け直す（合計は1.0のまま）。
   scores.variety=Math.round(100*(
-    .30*clamp01(distinctPatterns/band.vocab)
-    +.20*clamp01(1-Math.max(0,topShare-.25)/.35)
-    +.20*clamp01(transitionEntropy/4)
-    +.15*clamp01(mirrorRate/.15)
-    +.15*clamp01((sectionDensitySpread-1)/1.2)));
+    .85*(
+      .30*clamp01(distinctPatterns/band.vocab)
+      +.20*clamp01(1-Math.max(0,topShare-.25)/.35)
+      +.20*clamp01(transitionEntropy/4)
+      +.15*clamp01(mirrorRate/.15)
+      +.15*clamp01((sectionDensitySpread-1)/1.2))
+    +.15*slideVariety));
   scores.difficultyFit=Math.round(100*(
     .35*inBand(density,band.density,.6)
     +.25*inBand(strainedRate,band.strain,.06)
@@ -402,7 +429,9 @@ const measure=(chart,audio,options={})=>{
       meanMove:round(meanMove,2),maxMove:round(maxMove,2),moveSpeedPerSecond:round(moveSpeed,2),hardJumps,fastPairs,
       fingerTravel:sim.fingerTravel.map(value=>round(value,1))},
     types:{...typeCounts,chords:chordGrids.size,chordRuns,sweeps,crosses,accents,endFlicks,tapers,tapDuringHold,tapDuringSlide,
-      expandCount,contractCount,chordShapes,slideShapes,rests,longRests,longestRestMs:Math.round(longestRestMs),
+      expandCount,contractCount,chordShapes,slideShapes,
+      slideWidthSequences:slideWidthSequences.size,slideVarying,slideVariety:round(slideVariety),
+      rests,longRests,longestRestMs:Math.round(longestRestMs),
       hardWindows:hardWindows.length,hardSectionMaxMs,restAfterHard,peakWindowNotes},
     hand:{impossible,strained,strainedRate:round(strainedRate),maxStrainStreakMs,strainStreaks:sim.strainStreaks.length,
       alternationRate:round(alternationRate),alternationTotal,sameFingerMinMs:Number.isFinite(sameFingerMinMs)?Math.round(sameFingerMinMs):null,

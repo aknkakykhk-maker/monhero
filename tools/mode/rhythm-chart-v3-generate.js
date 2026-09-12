@@ -1626,11 +1626,11 @@ const buildChart=(difficulty,options={})=>{
       byGrid.get(note.grid).push(note);
     }
     const dropped=new Set();
+    const heldCountAt=grid=>sustains.filter(span=>
+      span.startMs<grid*gridMs&&grid*gridMs<=span.endMs&&!dropped.has(span.note)).length;
     for(const [grid,group] of [...byGrid.entries()].sort((a,b)=>a[0]-b[0])){
-      const timeMs=grid*gridMs;
       // その瞬間より前に始まって、まだ離していない伸びるノーツ
-      const held=sustains.filter(span=>span.startMs<timeMs&&timeMs<=span.endMs&&!dropped.has(span.note)).length;
-      const room=HAND_MODEL.hands-held;
+      const room=HAND_MODEL.hands-heldCountAt(grid);
       const alive=group.filter(note=>!dropped.has(note));
       if(alive.length<=room)continue;
       // 残すのは「同時押しの相方でないもの」を優先し、そこから幅の広い（＝主役の）ノーツを残す
@@ -1638,6 +1638,27 @@ const buildChart=(difficulty,options={})=>{
         (a.chord===true?1:0)-(b.chord===true?1:0)
         ||(Number(b.subLaneWidth)||0)-(Number(a.subLaneWidth)||0));
       for(const note of ordered.slice(Math.max(0,room)))dropped.add(note);
+    }
+    // ② 押さえっぱなしで指が1本ふさがっているあいだの打点は、**残った1本で全部叩く**。
+    //    1本の指は restrikeLimitMs より短い間隔で叩き直せないので、それより詰まっていたら押せない。
+    // ★ここが抜けていた。手のモデルが「少し動くなら速く叩ける」と数えていたので
+    //   （0.5レーンずれた2打を28msで押せる扱い＝毎秒36打）成立しているように見えていた。
+    //   モデルを直したら、生成→自動修正のあとでも40譜面のうち13譜面が押せなくなった
+    //   (2026-09-12)。押さえ中の打点はここで間隔を確かめる。
+    {
+      const pressGrids=[...byGrid.keys()].sort((a,b)=>a-b);
+      let lastPress=-Infinity;
+      for(const grid of pressGrids){
+        const alive=byGrid.get(grid).filter(note=>!dropped.has(note));
+        if(!alive.length)continue;
+        if(heldCountAt(grid)<HAND_MODEL.hands-1){lastPress=grid;continue;}   // 指が2本空いていれば交互で取れる
+        if((grid-lastPress)*gridMs+1e-6<HAND_MODEL.restrikeLimitMs){
+          // 直前の打点から詰まりすぎ。残った1本では叩けないので、こちらを落とす
+          for(const note of alive)dropped.add(note);
+          continue;
+        }
+        lastPress=grid;
+      }
     }
     return {kept:dropped.size?list.filter(note=>!dropped.has(note)):list,dropped:dropped.size};
   };
@@ -2130,6 +2151,36 @@ const buildChart=(difficulty,options={})=>{
       notice.push(`指が足りない瞬間のノーツを${dropped}件外した（押さえっぱなし＋同時押しで3本以上になる形）`);
       notes=kept;
     }
+  }
+
+  // --- 16.5 押せない瞬間を残さない（最後の取りこぼし） ---
+  // 16は「指の本数」と「押さえ中の叩き直し」の2つを見るが、それでも取りこぼしが出る。
+  // 実測で、押さえノーツが無いところでも
+  //   ・2.50レーンを99msで移動できない
+  //   ・同じレーンを83msで叩き直せない
+  // が85譜面のうち5譜面に1件ずつ残った(2026-09-12)。指2本を交互に使っても、
+  // レーンの離れかたによっては届かない瞬間がある。
+  //
+  // 形を変えて直すのは自動修正(rhythm-chart-v2-step7-autofix.js)の仕事だが、
+  // あちらはレーンを動かすだけなので**時間の詰まりは直せない**。ここで取り除く。
+  // 物差しは出荷を止めるのと同じ両手のシミュレート。落ちたら必ずお知らせへ出す。
+  {
+    let removed=0;
+    for(let pass=0;pass<3;pass++){
+      const sim=simulateNotes(notes,timing);
+      if(!sim.impossible)break;
+      const blame=new Set();
+      for(const issue of sim.issues){
+        if(issue.severity!=='impossible')continue;
+        const note=notes[issue.noteIndex];
+        // 押さえノーツは譜面の骨格なので、そちらではなく打点のほうを落とす
+        if(note&&note.type!=='HOLD'&&note.type!=='SLIDE')blame.add(note);
+      }
+      if(!blame.size)break;
+      notes=notes.filter(note=>!blame.has(note));
+      removed+=blame.size;
+    }
+    if(removed)notice.push(`押せない瞬間のノーツを${removed}件外した（指2本を交互に使っても届かない形）`);
   }
 
   // 同時押さえのお知らせは、指の本数の段で落ちたぶんを引いた**実際に残った数**で出す。
