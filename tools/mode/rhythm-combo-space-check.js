@@ -57,50 +57,67 @@ vm.runInNewContext(`${sandboxSource}\nthis.out={rhythmSideMonsterBox,rhythmProje
 const { rhythmSideMonsterBox, rhythmProjectBoundary } = ctx.out;
 
 // --- コンボ数の置き場所は index.html から読む ---
-const percentOf = re => { const m = html.match(re); return m ? Number(m[1]) / 100 : null; };
-const POS = {
-  CENTER: { portrait: percentOf(/\[data-rhythm-combo-box\]\{\s*top:([\d.]+)%/), landscape: percentOf(/\[data-rhythm-combo-box\]\[data-combo-wide="1"\]\{top:([\d.]+)%\}/), edge: false },
-  RIGHT: { portrait: percentOf(/\[data-combo-pos="RIGHT"\]\{left:auto;right:[\d.]+%;top:([\d.]+)%/), edge: true },
-  LEFT: { portrait: percentOf(/\[data-combo-pos="LEFT"\]\{left:[\d.]+%;right:auto;top:([\d.]+)%/), edge: true },
-  HUD: { portrait: percentOf(/\[data-combo-pos="HUD"\]\{left:auto;right:[\d.]+%;top:([\d.]+)%/), edge: true },
+const numAfter = (re, fallback = null) => { const m = html.match(re); return m ? Number(m[1]) : fallback; };
+// 縦向き
+const PORTRAIT = {
+  CENTER: { top: numAfter(/\[data-rhythm-combo-box\]\{\s*top:([\d.]+)%/), edge: null, font: 52 },
+  RIGHT: { top: numAfter(/\[data-combo-pos="RIGHT"\]\{left:auto;right:([\d.]+)%;top:[\d.]+%/) === null ? null : numAfter(/\[data-combo-pos="RIGHT"\]\{left:auto;right:[\d.]+%;top:([\d.]+)%/), edge: 'right', gap: numAfter(/\[data-combo-pos="RIGHT"\]\{left:auto;right:([\d.]+)%/), font: 34 },
+  LEFT: { top: numAfter(/\[data-combo-pos="LEFT"\]\{left:[\d.]+%;right:auto;top:([\d.]+)%/), edge: 'left', gap: numAfter(/\[data-combo-pos="LEFT"\]\{left:([\d.]+)%/), font: 34 },
+  HUD: { top: numAfter(/\[data-combo-pos="HUD"\]\{left:auto;right:[\d.]+%;top:([\d.]+)%/), edge: 'right', gap: numAfter(/\[data-combo-pos="HUD"\]\{left:auto;right:([\d.]+)%/), font: 34 },
 };
-const wideEdgeTop = percentOf(/\[data-combo-pos="HUD"\]\{top:([\d.]+)%\}/);
-for (const key of ['RIGHT', 'LEFT', 'HUD']) POS[key].landscape = wideEdgeTop;
+// 横向き(data-combo-wide="1")
+const wideSideTop = numAfter(/\[data-combo-wide="1"\]\[data-combo-pos="RIGHT"\]\{top:([\d.]+)%\}/);
+const LANDSCAPE = {
+  CENTER: { top: numAfter(/\[data-rhythm-combo-box\]\[data-combo-wide="1"\]\{top:([\d.]+)%\}/), edge: null, font: 40 },
+  RIGHT: { top: wideSideTop, edge: 'right', gap: PORTRAIT.RIGHT.gap, font: 28 },
+  LEFT: { top: wideSideTop, edge: 'left', gap: PORTRAIT.LEFT.gap, font: 28 },
+  HUD: { top: numAfter(/\[data-combo-wide="1"\]\[data-combo-pos="HUD"\]\{top:([\d.]+)%;right:([\d.]+)%\}/), edge: 'right',
+    gap: (html.match(/\[data-combo-wide="1"\]\[data-combo-pos="HUD"\]\{top:[\d.]+%;right:([\d.]+)%\}/) || [])[1], font: 26 },
+};
+LANDSCAPE.HUD.gap = Number(LANDSCAPE.HUD.gap);
+const describe = spec => Object.entries(spec).map(([k, v]) => `${k} ${v.top}%`).join(' / ');
 check('コンボ数の置き場所をCSSから読めている',
-  Object.values(POS).every(p => p.portrait !== null && p.landscape !== null),
-  Object.entries(POS).map(([k, p]) => `${k} 縦${p.portrait !== null ? (p.portrait * 100).toFixed(1) + '%' : '?'} 横${p.landscape !== null ? (p.landscape * 100).toFixed(1) + '%' : '?'}`).join(' / '));
+  Object.values(PORTRAIT).every(p => p.top !== null) && Object.values(LANDSCAPE).every(p => p.top !== null),
+  `縦: ${describe(PORTRAIT)} / 横: ${describe(LANDSCAPE)}`);
 
-// コンボ数の見た目の高さ(数字＋COMBOの行)。CSSの font-size から見積もる。
-// 端寄せは34px(横持ち28px)、真ん中は52px(横持ち40px)。ラベルと余白でおよそ1.5倍。
-const comboHeight = (edge, landscape) => Math.round((edge ? (landscape ? 28 : 34) : (landscape ? 40 : 52)) * 1.5);
+// 数字の見た目の幅。実測(390x844・34px・最大倍率1.25)で4桁118px＝1桁あたり0.70em(倍率を外した値)。
+// ★枠そのものの幅は「COMBO」のラベル(tracking 0.36em)で決まっていて、数字はその中央に出る。
+//   つまりこの見積もりは**実際に字が描かれる幅より広め**で、安全側に振ってある。
+// 基準は3桁(999コンボまで)。4桁は1000コンボ以上のときだけで、そこは台形へ少し入るが
+// 薄く後ろに描いているので許す。
+const digitsWidth = (font, digits = 3) => font * 1.25 * .70 * digits;
+const comboHeight = font => font * 1.5;
 
-const inspect = (W, H, label) => {
+const inspect = (W, H, spec, label) => {
   console.log(`\n--- ${label} (${W}x${H}) ---`);
   const monsters = [1, 2, 3, 4].map(slot => rhythmSideMonsterBox(slot, W, H));
-  monsters.forEach(m => console.log(`  マスモン${m.side === 'left' ? '左' : '右'} y ${Math.round(m.top)}〜${Math.round(m.top + m.size)}px (${(m.top / H * 100).toFixed(0)}〜${((m.top + m.size) / H * 100).toFixed(0)}%)`));
-  const landscape = W > H;
-  for (const [key, spec] of Object.entries(POS)) {
-    const top = (landscape ? spec.landscape : spec.portrait) * H;
-    const bottom = top + comboHeight(spec.edge, landscape);
-    // 端へ寄せる置き方だけを見る。真ん中は台形の上(レーン)へわざと重ねている
-    if (!spec.edge) { console.log(`  ${key}: y ${Math.round(top)}〜${Math.round(bottom)}px (真ん中なのでマスモンとは元から離れている)`); continue; }
-    const hit = monsters.filter(m => bottom > m.top && top < m.top + m.size);
+  monsters.forEach(m => console.log(`  マスモン${m.side === 'left' ? '左' : '右'} x ${Math.round(m.left)}〜${Math.round(m.left + m.size)} / y ${Math.round(m.top)}〜${Math.round(m.top + m.size)}`));
+  for (const [key, pos] of Object.entries(spec)) {
+    const top = pos.top / 100 * H, bottom = top + comboHeight(pos.font);
+    if (!pos.edge) { console.log(`  ${key}: y ${Math.round(top)}〜${Math.round(bottom)}px (真ん中なのでレーンへわざと重ねる)`); continue; }
+    const width = digitsWidth(pos.font);
+    const gapPx = pos.gap / 100 * W;
+    const left = pos.edge === 'left' ? gapPx : W - gapPx - width;
+    const right = left + width;
+    // ★重なりは**縦と横の両方**で見る。高さだけで見ると、横向きの「右上」のように
+    //   マスモンと同じ高さでも左右がずれていて当たらない場所を、当たると誤判定する。
+    const hit = monsters.filter(m => bottom > m.top && top < m.top + m.size && right > m.left && left < m.left + m.size);
     check(`  ${key} がマスモンに重ならない`, hit.length === 0,
-      `y ${Math.round(top)}〜${Math.round(bottom)}px` + (hit.length ? ` / ぶつかる相手 ${hit.map(m => `${m.side} ${Math.round(m.top)}〜${Math.round(m.top + m.size)}`).join(', ')}` : ''));
-    // 台形の外の空き(片側)に、数字が収まるか。
-    // 基準は3桁(999コンボまで)。実測(390x844・34px・最大倍率1.25)で4桁118pxなので、
-    // 1桁あたり0.70em(倍率を外した値)。4桁は1000コンボ以上のときだけで、そこは
-    // 台形へ20〜30px入るが、薄く後ろに描いているので許す。
-    const freeRatio = rhythmProjectBoundary(0, (top + bottom) / 2 / H);
-    const freeWidth = freeRatio * W;
-    const edgeGap = W * (key === 'HUD' ? .03 : .04);
-    const digitWidth = (landscape ? 28 : 34) * 1.25 * .70 * 3;
-    check(`  ${key} の数字(3桁)が台形の外の空きに収まる`, edgeGap + digitWidth <= freeWidth,
-      `端の余白${Math.round(edgeGap)}px + 3桁で約${Math.round(digitWidth)}px / 空き ${Math.round(freeWidth)}px`);
+      `x ${Math.round(left)}〜${Math.round(right)} / y ${Math.round(top)}〜${Math.round(bottom)}`
+      + (hit.length ? ` / ぶつかる相手 ${hit.map(m => `${m.side} x${Math.round(m.left)}〜${Math.round(m.left + m.size)} y${Math.round(m.top)}〜${Math.round(m.top + m.size)}`).join(', ')}` : ''));
+    // 台形の外の空き(片側)に、数字(3桁)が収まるか
+    const freeWidth = rhythmProjectBoundary(0, (top + bottom) / 2 / H) * W;
+    check(`  ${key} の数字(3桁)が台形の外の空きに収まる`, gapPx + width <= freeWidth,
+      `端の余白${Math.round(gapPx)}px + 3桁で約${Math.round(width)}px / 空き ${Math.round(freeWidth)}px`);
   }
 };
-inspect(390, 844, '縦持ち');
-inspect(844, 390, '横持ち');
+inspect(390, 844, PORTRAIT, '縦持ち');
+inspect(844, 390, LANDSCAPE, '横持ち');
+
+// 「右上」は縦でも横でも**上の方**に出す(オプションの名前と合わせる)
+check('「右上」は縦でも横でも上の方に出る',
+  PORTRAIT.HUD.top <= 25 && LANDSCAPE.HUD.top <= 30,
+  `縦 ${PORTRAIT.HUD.top}% / 横 ${LANDSCAPE.HUD.top}%`);
 
 // 端へ寄せるときは、真ん中より小さくする(空きが狭いため)
 check('端へ寄せるときは小さくしている',
