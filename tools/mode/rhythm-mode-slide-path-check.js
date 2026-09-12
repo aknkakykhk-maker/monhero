@@ -23,9 +23,17 @@ check('既存projectionとプレイ本体rAFの時刻を再利用',source.includ
 check('SLIDE区間計算は毎frameのfilter・map・spread配列を作らない',!segments.includes('.filter(')&&!segments.includes('.map(')&&!segments.includes('...source'));
 check('playArea rectとnote高さは1frameの計測結果を全noteで共有',game.includes('rect:areaRect,noteHeight')&&game.includes('{rect:travel.rect,noteHeight:travel.noteHeight,bodyHeight:bodyPx}'));
 check('表示外noteは重いprojectionとpolygon更新をskip',game.includes("if(!visible||!travel)return;")&&game.indexOf("if(!visible||!travel)return;")<game.indexOf('rhythmLayoutNoteVisual(el,note'));
-check('polygon DOMは不足分だけ追加し通過済み区間を非表示で再利用',source.includes("if(!segment){segment=document.createElementNS")&&source.includes("body.childNodes[index].style.display='none'")&&!source.includes('body.lastChild.remove()'));
+// 2026-09-12: 帯(fill)・ふち(edge)・チェックポイント(marks)の3グループへ分けたので、
+// polygon の使い回し先は body 直下ではなく fill グループになった。作りの意図は同じ。
+check('polygon DOMは不足分だけ追加し通過済み区間を非表示で再利用',source.includes("if(!segment){segment=document.createElementNS")&&source.includes("fill.childNodes[index].style.display='none'")&&!source.includes('body.lastChild.remove()'));
 check('同一polygon pointsのsetAttributeを省略',source.includes("if(segment._rhythmPoints!==points){segment.setAttribute('points',points);segment._rhythmPoints=points;}"));
 check('SLIDE幅2の許容値と現在幅を使う追従判定',source.includes('const RHYTHM_SLIDE_TOLERANCE_LANES = .82;')&&source.includes('bad=Math.abs(actual-rhythmSlideExpectedLane(session.note,chartNow))>rhythmSlideTrackingTolerance(session.note,chartNow);'));
-check('SLIDE帯は薄い塗りと控えめな発光でも縁を維持',source.includes('fill:rgba(168,85,247,.48)')&&source.includes('stroke:rgba(233,213,255,.56)')&&source.includes('drop-shadow(0 0 5px rgba(168,85,247,.38)'));
+// 2026-09-12: 継ぎ目(10等分の境目)の縁取りをやめ、外周だけを1本の線でなぞる形にした。
+// 継ぎ目は判定と無関係なのに横線として見えていて、チェックポイントと見分けが付かなかったため。
+// 縁の濃さ(.56)はそのまま。「縁が残っていること」を、新しい作りに対して見る。
+check('SLIDE帯は薄い塗りと控えめな発光でも縁を維持',source.includes('fill:rgba(168,85,247,.48)')&&source.includes('[data-rhythm-slide-edge]{fill:none;stroke:rgba(233,213,255,.56)')&&source.includes('drop-shadow(0 0 5px rgba(168,85,247,.38)'));
+check('継ぎ目そのものには線を引かない(判定と無関係なため)',source.includes('[data-rhythm-slide-segment]{fill:rgba(168,85,247,.48);stroke:none}'));
+check('外周は投影をやり直さず同じループで作る',source.includes('segments.outline=rights.length')&&!source.includes('rhythmSlideSegmentQuads(note,chartNowMs,travel,rect,noteHalfHeight);\n  if(!quads'));
+check('チェックポイント(判定線)を帯の上へ描く',source.includes('[data-rhythm-slide-checkpoint]')&&source.includes('rhythmSlideCheckpointLines(note,slideTravel.chartNowMs,slideTravel,rect,noteHeight/2)'));
 check('TAP・HOLD・FLICK描画分岐を維持',game.includes("note.type==='HOLD'&&<span data-rhythm-hold-body")&&source.includes('[data-note-type="FLICK"]')&&source.includes('rhythmNoteVisualSpan(note,lane,yRatio,slideTravel?.chartNowMs)'));
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');process.exit(failed?1:0);
