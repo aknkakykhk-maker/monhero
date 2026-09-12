@@ -74,10 +74,27 @@ ok('FLICKは上へ払うことが分かる印を出す',
 // 右上のHUDから**プレイエリアの真ん中**へ移した。HUDの左右の列は台形の外側の空きに
 // 置いてあり、その空きは上ほど広いが、上の中央は台形の頂点(ノーツが湧く点・幅18%)なので、
 // HUDの中では「真ん中へ寄せる」余地がそもそも無かった。
-ok('コンボ数はプレイエリアの真ん中に出す',
-  /\{settings\.comboDisplay!==false&&view\.combo>0&&<div data-rhythm-combo-box[^>]*absolute left-1\/2[^>]*-translate-x-1\/2/.test(game)
+ok('コンボ数はプレイエリアの真ん中に出す(既定)',
+  /\{settings\.comboDisplay!==false&&view\.combo>0&&<div data-rhythm-combo-box[^>]*data-combo-pos=/.test(game)
   &&html.includes('[data-rhythm-combo-box]{')
-  &&/\[data-rhythm-combo-box\]\{[\s\S]{0,120}top:21%/.test(html));
+  &&/\[data-rhythm-combo-box\]\{[\s\S]{0,160}top:21%/.test(html)
+  &&/\[data-rhythm-combo-box\]\{[\s\S]{0,160}left:50%;[\s\S]{0,40}transform:translateX\(-50%\)/.test(html)
+  // 座標はCSSだけが持つ。JSX側へ位置のユーティリティを書き戻すと、
+  // [data-combo-pos] での上書きが効かなくなる
+  &&!/data-rhythm-combo-box[^>]*left-1\/2/.test(game));
+// 2026-09-12・ユーザー指示「元位置（元位置より少し右より）とか選べるほうがいい」。
+// 真ん中へ移したその日の指摘。前に居た右上も選べるようにした。
+ok('コンボ数の置き場所を選べる(右上=もとの位置も選べる)',
+  /RHYTHM_COMBO_POSITIONS *= *Object\.freeze\(\['CENTER','RIGHT','HUD','LEFT'\]\)/.test(game)
+  &&game.includes("comboPosition:'CENTER'")
+  &&game.includes('comboPosition:RHYTHM_COMBO_POSITIONS.includes(source.comboPosition)?source.comboPosition:DEFAULT_RHYTHM_SETTINGS.comboPosition')
+  &&game.includes("segments('comboPosition',[['LEFT','左'],['CENTER','中央'],['RIGHT','右'],['HUD','右上']])")
+  &&html.includes('[data-rhythm-combo-box][data-combo-pos="RIGHT"]{left:auto;right:6%;transform:none}')
+  &&html.includes('[data-rhythm-combo-box][data-combo-pos="HUD"]{left:auto;right:3%;top:12.5%;transform:none}')
+  &&html.includes('[data-rhythm-combo-box][data-combo-pos="LEFT"]{left:4%;transform:none}')
+  // 端に寄せたときは、数字が伸びても画面の外へ出ないよう内側へ伸ばす
+  &&/\[data-combo-pos="RIGHT"\] \[data-rhythm-combo\],\s*\[data-combo-pos="HUD"\] \[data-rhythm-combo\]\{transform-origin:right center\}/.test(html)
+  &&html.includes('[data-combo-pos="LEFT"] [data-rhythm-combo]{transform-origin:left center}'));
 // ★邪魔にならないよう、ノーツ(z-5)より後ろに描いて少し透かす。0コンボでは出さない
 ok('ノーツより後ろに描いて透かす(邪魔にならない)',
   /data-rhythm-combo-box[^>]*z-\[2\]/.test(game)
@@ -89,7 +106,7 @@ ok('コンボ数表示のON/OFFを設定から切り替えられる',
   game.includes("toggle('comboDisplay','')")&&game.includes('settings.comboDisplay!==false'));
 ok('コンボ数を大きく出す',
   /\[data-rhythm-combo\]\{[\s\S]{0,160}font-size:min\(52px,13\.5vw\)/.test(html)
-  &&/@media \(orientation: landscape\)\{[\s\S]{0,200}\[data-rhythm-combo\]\{font-size:min\(40px,7vw\)\}/.test(html));
+  &&/@media \(orientation: landscape\)\{[\s\S]{0,900}\[data-rhythm-combo\]\{font-size:min\(40px,7vw\)\}/.test(html));
 // 2026-09-12・ユーザー指示「コンボ数もわかりにくい。増えれば増えるほど目立つようにして」。
 // 100/200/300の3段だったのを 10/30/50/100/200/300/500 の7段にし、段が上がるほど
 // 色だけでなく **大きさ** も変わるようにした(--mh-combo-scale)。

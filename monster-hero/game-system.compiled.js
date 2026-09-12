@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 65ef6acfd345d6bc
+// source-sha256: d82f4f041ecddb49
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8257d2305e7aeb57
+// generated-sha256: 1eede51ad5fa68ee
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-12 23:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-13 00:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4971,6 +4971,13 @@ const rhythmComboTierScale = tier => {
   const index = Math.trunc(Number(tier) || 0);
   return RHYTHM_COMBO_TIER_SCALES[Math.max(0, Math.min(RHYTHM_COMBO_TIER_SCALES.length - 1, index))];
 };
+// コンボ数の置き場所(2026-09-12・ユーザー指示「元位置（元位置より少し右より）とか選べるほうがいい」)。
+// 真ん中へ移したのは同じ日で、それまでは右上のHUDの中に居た。人によってはノーツと重なるのが
+// 気になるし、前の位置に慣れている人もいるので、選べるようにする。
+// ★既定は CENTER(いまの真ん中)。既存の保存値にはこのキー自体が無いので、
+//   読み込み時に CENTER で補われる(既存のキーは1つも触らない)。
+// ★実際の座標は index.html の [data-combo-pos="…"] が持つ。ここは名前だけ。
+const RHYTHM_COMBO_POSITIONS = Object.freeze(['CENTER', 'RIGHT', 'HUD', 'LEFT']);
 // ライフの見せ方の段(2026-09-12・ユーザー指示
 //   「ライフ変動や0になったときとか気付きにくいからもっと強調して / 0だとライフが赤くなるとか
 //     バーが割れるとか」)。
@@ -5009,6 +5016,7 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   judgmentTextDisplay: true,
   judgmentTextPosition: 50,
   comboDisplay: true,
+  comboPosition: 'CENTER',
   holdSlideOpacity: 80,
   laneGlow: 'NORMAL',
   noteSeVolume: 70,
@@ -5054,6 +5062,7 @@ const normalizeRhythmSettings = value => {
     judgmentTextDisplay: bool('judgmentTextDisplay'),
     judgmentTextPosition: rhythmFiniteInRange(source.judgmentTextPosition, 0, 100, DEFAULT_RHYTHM_SETTINGS.judgmentTextPosition),
     comboDisplay: bool('comboDisplay'),
+    comboPosition: RHYTHM_COMBO_POSITIONS.includes(source.comboPosition) ? source.comboPosition : DEFAULT_RHYTHM_SETTINGS.comboPosition,
     holdSlideOpacity: rhythmFiniteInRange(source.holdSlideOpacity, 10, 100, DEFAULT_RHYTHM_SETTINGS.holdSlideOpacity),
     laneGlow: RHYTHM_LANE_GLOW_LEVELS.includes(source.laneGlow) ? source.laneGlow : DEFAULT_RHYTHM_SETTINGS.laneGlow,
     noteSeVolume: rhythmFiniteStep(source.noteSeVolume, 0, RHYTHM_VOLUME_MAX, 1, DEFAULT_RHYTHM_SETTINGS.noteSeVolume),
@@ -20220,7 +20229,7 @@ const RhythmOptions = ({
     className: `min-h-[44px] min-w-[88px] rounded-xl border px-4 text-xs font-black ${draft[key] ? 'border-cyan-200 bg-cyan-600 text-white' : 'border-white/20 bg-slate-900 text-slate-300'}`
   }, label, " ", draft[key] ? 'ON' : 'OFF');
   const segments = (key, items) => /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-3 overflow-hidden rounded-xl border border-white/20"
+    className: `grid ${items.length >= 4 ? 'grid-cols-4' : 'grid-cols-3'} overflow-hidden rounded-xl border border-white/20`
   }, items.map(([id, label]) => /*#__PURE__*/React.createElement("button", {
     type: "button",
     key: id,
@@ -20347,7 +20356,7 @@ const RhythmOptions = ({
     className: row
   }, /*#__PURE__*/React.createElement("span", {
     className: label
-  }, "\u30B3\u30F3\u30DC\u6570\u8868\u793A"), toggle('comboDisplay', '')), field('レーン発光', segments('laneGlow', [['NORMAL', '標準'], ['LOW', '控えめ'], ['NONE', 'なし']]))), /*#__PURE__*/React.createElement("section", {
+  }, "\u30B3\u30F3\u30DC\u6570\u8868\u793A"), toggle('comboDisplay', '')), draft.comboDisplay !== false && field('コンボ数の位置', segments('comboPosition', [['LEFT', '左'], ['CENTER', '中央'], ['RIGHT', '右'], ['HUD', '右上']]), 'コンボ数を出す場所を選べます。「中央」は場の真ん中（既定）、「右上」は2026-09-12より前と同じ、ライフの下の位置です。どこに置いても判定・スコア・コンボの数え方は変わりません。'), field('レーン発光', segments('laneGlow', [['NORMAL', '標準'], ['LOW', '控えめ'], ['NONE', 'なし']]))), /*#__PURE__*/React.createElement("section", {
     className: card
   }, /*#__PURE__*/React.createElement("h3", {
     className: head
@@ -21868,6 +21877,9 @@ const RhythmTapTest = ({
   const lifeRatio = rhythmLifeRatio(view.life);
   const lifeState = rhythmLifeState(view.life);
   const comboTier = rhythmComboTier(view.combo);
+  // コンボ数の置き場所(2026-09-12・ユーザー指示)。座標は index.html の
+  // [data-combo-pos="…"] が持つので、ここは名前をそのまま属性へ渡すだけ。
+  const comboPosition = RHYTHM_COMBO_POSITIONS.includes(settings.comboPosition) ? settings.comboPosition : 'CENTER';
   // 横画面向けHUD配置(§6.2)で使う。曲名の折り返し行数(WebkitLineClamp)はインラインstyleで
   // 決めるためTailwindのlandscape:だけでは切り替えられず、ここだけJSの向き判定を使う。
   // ほかのHUDレイアウトの出し分けはTailwindのlandscape:バリアントで完結させ、判定・スコア・
@@ -23564,8 +23576,9 @@ const RhythmTapTest = ({
   }), settings.comboDisplay !== false && view.combo > 0 && /*#__PURE__*/React.createElement("div", {
     "data-rhythm-combo-box": true,
     "data-combo-tier": String(comboTier),
+    "data-combo-pos": comboPosition,
     "aria-hidden": "true",
-    className: "pointer-events-none absolute left-1/2 z-[2] -translate-x-1/2 text-center"
+    className: "pointer-events-none absolute z-[2] text-center"
   }, /*#__PURE__*/React.createElement("b", {
     ref: comboRef,
     "data-rhythm-combo": true,
