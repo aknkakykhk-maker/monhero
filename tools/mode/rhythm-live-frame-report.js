@@ -6,6 +6,8 @@
 //   node tools/mode/rhythm-live-frame-report.js --compare  # 配信CSS と JIT相当 を続けて測って並べる
 //   node tools/mode/rhythm-live-frame-report.js --seconds 8
 //   node tools/mode/rhythm-live-frame-report.js --compare --cpu 4   # CPUを1/4に絞って測る
+//   node tools/mode/rhythm-live-frame-report.js --cpu 4 --inject-css monster-hero/tailwind.css
+//       … 静的CSSへ切り替える前の古いコミットを、同じCSS条件で測るとき
 //
 // 【なぜ要るか】
 // 既存の2本(rhythm-render-cost-check / rhythm-canvas-render-check)は、本体と同じ形の
@@ -39,6 +41,16 @@ const CPU=Number(process.argv[process.argv.indexOf('--cpu')+1])||1;
 // canvas への描き込みの内訳(1フレームあたり何回 drawImage しているか)も数える。
 // 計測そのものが少し重くなるので、既定はOFF
 const DRAW=process.argv.includes('--draw');
+// 静的CSSへ切り替える前(2026-09-12より古い)のコミットを測るとき用。
+// index.html が読む cdn.tailwindcss.com を、指定したCSSを流し込むスクリプトで置き換える。
+// これを使わないと、古いコミットは「CSSがまったく当たっていない状態」で測ることになり、
+// 新しいコミットと同じ土俵にならない
+const INJECT=(()=>{const i=process.argv.indexOf('--inject-css');return i>=0?process.argv[i+1]:null;})();
+// 【何回測るか】
+// フレーム数(実効fps)は、この環境では同じコミットでも251〜300とばらつく(幅17%)。
+// 2回や3回で比べると、ばらつきを「差」と読み違える(実際にやった)。
+// --runs N で N 回測り、各指標の**中央値**を出す。
+const RUNS=Number(process.argv[process.argv.indexOf('--runs')+1])||1;
 const MIME={'.html':'text/html','.js':'text/javascript','.json':'application/json','.css':'text/css',
   '.png':'image/png','.jpg':'image/jpeg','.webp':'image/webp','.svg':'image/svg+xml','.mp3':'audio/mpeg','.ico':'image/x-icon'};
 const serve=()=>new Promise(r=>{const s=http.createServer((req,res)=>{
@@ -76,6 +88,9 @@ const run=async(chromium,{css,label})=>{
   try{
     const page=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:2,isMobile:true,hasTouch:true});
     if(css!=null)await page.route('**/tailwind.css*',r=>r.fulfill({status:200,contentType:'text/css',body:css}));
+    if(INJECT){const inj=fs.readFileSync(path.resolve(INJECT),'utf8');
+      await page.route('**cdn.tailwindcss.com**',r=>r.fulfill({status:200,contentType:'application/javascript',
+        body:`(function(){var s=document.createElement('style');s.textContent=${JSON.stringify(inj)};document.head.appendChild(s);})();`}));}
     await page.addInitScript(()=>{const put=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
       put('mh_breeder_name','テスト');put('mh_breeder_icon','🐣');put('mh_intro_done',true);put('mh_onboarded',true);
       put('mh_tutorial_seen_v1',true);put('mh_battle_tutorial_seen_v1',true);put('mh_battle_tutorial_guide_shown_v1',true);
@@ -105,6 +120,14 @@ const run=async(chromium,{css,label})=>{
     const pick=(m)=>Object.fromEntries(m.metrics.map(x=>[x.name,x.value]));
     const before=pick(await cdp.send('Performance.getMetrics'));
 
+    // 演奏中に getBoundingClientRect が何回呼ばれているかを数える。
+    // measureTravel は「組み上がったと確かめられたときだけ」結果を覚える作りで、
+    // そうでない間は毎フレーム3回測り直す(＝強制同期レイアウトが毎フレーム走る)。
+    // 1フレームあたり0に近ければキャッシュが効いている。3以上なら測り直し続けている
+    await page.evaluate(()=>{
+      const orig=Element.prototype.getBoundingClientRect;window.__rect=0;
+      Element.prototype.getBoundingClientRect=function(){window.__rect++;return orig.call(this);};
+    });
     if(DRAW)await page.evaluate(()=>{
       const proto=CanvasRenderingContext2D.prototype;window.__draw={};
       for(const k of ['drawImage','fillRect','fill','stroke','arc','ellipse','createLinearGradient','createRadialGradient','save','restore']){
@@ -131,7 +154,7 @@ const run=async(chromium,{css,label})=>{
       // 演奏中のDOMに出ているクラス名を全部集める(JIT相当のCSSを作るため)
       const set=new Set();
       for(const el of document.querySelectorAll('[class]'))for(const c of String(el.className.baseVal??el.className).split(/\s+/))if(c)set.add(c);
-      return {frames:window.__f,long:window.__long,classes:[...set],draw:window.__draw||null,
+      return {frames:window.__f,long:window.__long,classes:[...set],draw:window.__draw||null,rect:window.__rect||0,
         canvas:!!document.querySelector('[data-rhythm-note-canvas]'),
         rules:[...document.styleSheets].reduce((n,s)=>{try{return n+s.cssRules.length;}catch{return n;}},0)};});
     const after=pick(await cdp.send('Performance.getMetrics'));
@@ -139,7 +162,7 @@ const run=async(chromium,{css,label})=>{
     const d=k=>Math.round(((after[k]||0)-(before[k]||0))*1000);
     return {label,...stats(got.frames),long:got.long.length,longMax:Math.round(Math.max(0,...got.long)),
       recalcMs:d('RecalcStyleDuration'),layoutMs:d('LayoutDuration'),scriptMs:d('ScriptDuration'),
-      recalcCount:(after.RecalcStyleCount||0)-(before.RecalcStyleCount||0),cpu:CPU,styles,draw:got.draw,
+      recalcCount:(after.RecalcStyleCount||0)-(before.RecalcStyleCount||0),cpu:CPU,styles,draw:got.draw,rect:got.rect,
       classes:got.classes,canvas:got.canvas,rules:got.rules};
   }finally{await browser.close();}
 };
@@ -159,17 +182,30 @@ const run=async(chromium,{css,label})=>{
       console.log(`  スタイル再計算    : ${r.recalcMs}ms / ${r.recalcCount}回`);
       console.log(`  レイアウト        : ${r.layoutMs}ms`);
       console.log(`  JS                : ${r.scriptMs}ms`);
+      console.log(`  位置の測り直し    : getBoundingClientRect ${r.rect}回 (1フレームあたり ${(r.rect/Math.max(1,r.n)).toFixed(2)}回)`);
+      console.log(`  1フレームあたり   : JS ${(r.scriptMs/Math.max(1,r.n)).toFixed(2)}ms / スタイル再計算 ${(r.recalcMs/Math.max(1,r.n)).toFixed(2)}ms / レイアウト ${(r.layoutMs/Math.max(1,r.n)).toFixed(2)}ms`);
       if(r.draw){const per=k=>(r.draw[k]||0)/Math.max(1,r.n);
         console.log(`  canvasへの描き込み: 1フレームあたり drawImage ${per('drawImage').toFixed(1)}回 / fill ${per('fill').toFixed(1)}回 / stroke ${per('stroke').toFixed(1)}回 / グラデーション作成 ${(per('createLinearGradient')+per('createRadialGradient')).toFixed(1)}回`);}
     };
-    const full=await run(chromium,{css:null,label:`いまの配信CSS(tailwind.css ${Math.round(fs.statSync(path.join(ROOT,'monster-hero/tailwind.css')).size/1024)}KB)`});
+    const med=a=>{const x=[...a].sort((p,q)=>p-q);return x.length%2?x[(x.length-1)/2]:(x[x.length/2-1]+x[x.length/2])/2;};
+    const many=async(opts)=>{
+      const rs=[];for(let i=0;i<RUNS;i++)rs.push(await run(chromium,opts));
+      if(RUNS===1)return rs[0];
+      const pick=k=>med(rs.map(r=>r[k]));
+      const out={...rs[rs.length-1]};
+      for(const k of ['median','p95','max','over16','over33','long','longMax','recalcMs','layoutMs','scriptMs','recalcCount','n','rect'])out[k]=pick(k);
+      out.label=`${opts.label} ／ ${RUNS}回の中央値`;
+      out.spread=`フレーム数 ${Math.min(...rs.map(r=>r.n))}〜${Math.max(...rs.map(r=>r.n))} / 1フレームJS ${Math.min(...rs.map(r=>r.scriptMs/r.n)).toFixed(2)}〜${Math.max(...rs.map(r=>r.scriptMs/r.n)).toFixed(2)}ms`;
+      return out;};
+    const full=await many({css:null,label:`いまの配信CSS(tailwind.css ${Math.round(fs.statSync(path.join(ROOT,'monster-hero/tailwind.css')).size/1024)}KB)`});
     show(full);
+    if(full.spread)console.log(`  ばらつき          : ${full.spread}`);
     if(!COMPARE){console.log('\n※ --compare を付けると「以前のCDN(JIT)相当」と並べて比べます');process.exit(0);}
 
     const jit=buildJitCss(full.classes);
     if(!jit){console.log('\nSKIP: tailwindcss が入っていないので JIT相当を作れません');process.exit(0);}
     console.log(`\n(演奏画面に出ているクラス ${full.classes.length}種から JIT相当のCSSを作りました: ${Math.round(Buffer.byteLength(jit)/1024)}KB)`);
-    const lean=await run(chromium,{css:jit,label:`以前のCDN相当(この画面のクラスだけ ${Math.round(Buffer.byteLength(jit)/1024)}KB)`});
+    const lean=await many({css:jit,label:`以前のCDN相当(この画面のクラスだけ ${Math.round(Buffer.byteLength(jit)/1024)}KB)`});
     show(lean);
 
     console.log('\n── 差(いまの配信CSS − 以前のCDN相当) ──');
