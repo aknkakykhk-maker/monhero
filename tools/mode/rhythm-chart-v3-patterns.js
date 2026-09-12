@@ -384,6 +384,11 @@ const HELD_PAIR_SHAPES=Object.freeze([
       const start=partnerFrom+side*(gap+extra);
       return fitPair(start,start-side*extra,room);   // 必ず extra ぶん相方へ寄る
     }}),
+  // 左右対称の形: 相方の経路を鏡にして返す。同時スライドでいちばん見栄えのする形。
+  // 相方が中央を通る曲では終わりで指がぶつかるので、指の間隔の検査で落ちて別の形へ回る。
+  // follows は 'partner'。鏡なので**相方が動いたぶんだけ**動く（相方が止まっていれば止まる）。
+  Object.freeze({id:'mirror',     minLevel:7, follows:'partner', wantsBassMove:2.6, wantsMelodyMove:1.6,
+    place:({partnerFrom,partnerTo,room})=>fitPair(room-partnerFrom,room-partnerTo,room)}),
   // 内外が入れ替わる形: いちばん忙しい。上の難易度だけ
   Object.freeze({id:'cross',      minLevel:9, follows:'own', wantsBassMove:2.2, wantsMelodyMove:1.0,
     place:({partnerFrom,partnerTo,room,gap})=>{
