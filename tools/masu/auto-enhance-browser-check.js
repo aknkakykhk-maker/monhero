@@ -37,8 +37,8 @@ const seed = () => {
   localStorage.setItem('mh_masu_mons', JSON.stringify([
     { id: 'auto1', baseId: 'Mocchi', name: 'オートON', bondXp: 0, rebirthCount: 0, levelCap: 30,
       distAptPoints: 10, statPoints: { hp: 0, atk: 0, def: 0, guts: 0 }, distAptBoosts: [0, 0, 0, 0],
-      autoEnhance: { enabled: true, order: ['atk', 'hp', 'def', 'guts', 'apt0', 'apt1', 'apt2', 'apt3'],
-        statLimits: { hp: 2, atk: 3, def: 0, guts: 0 }, aptLimits: [null, null, null, null] } },
+      autoEnhance: { version: 2, enabled: true, order: ['atk', 'hp', 'def', 'guts', 'apt0', 'apt1', 'apt2', 'apt3'],
+        statTargets: { hp: 620, atk: 129, def: 0, guts: 0 }, aptLimits: [null, null, null, null] } },
     { id: 'auto2', baseId: 'Mocchi', name: 'オートOFF', bondXp: 0, rebirthCount: 0, levelCap: 30,
       distAptPoints: 10, statPoints: { hp: 0, atk: 0, def: 0, guts: 0 }, distAptBoosts: [0, 0, 0, 0] },
   ]));
@@ -123,8 +123,8 @@ const masuOf = (id) => (JSON.parse(localStorage.getItem('mh_masu_mons')) || []).
     check('ONの個体は起動しただけで設定どおりに振られる',
       after.statPoints.atk === 9 && after.statPoints.hp === 20 && after.distAptPoints === 5,
       `ちから+${after.statPoints.atk} ライフ+${after.statPoints.hp} 残り${after.distAptPoints}P`);
-    check('優先順位のとおり、ちからが先に上限まで入る', after.statPoints.atk === 3 * 3);
-    check('上限を超えて振らない', after.statPoints.hp === 2 * 10 && after.statPoints.def === 0 && after.statPoints.guts === 0);
+    check('優先順位のとおり、ちからが先に目標まで入る', after.statPoints.atk === 3 * 3);
+    check('目標をこえて振らない', after.statPoints.hp === 2 * 10 && after.statPoints.def === 0 && after.statPoints.guts === 0);
     const off = await page.evaluate(masuOf, 'auto2');
     check('OFFの個体は1Pも動かない', off.distAptPoints === 10 && off.statPoints.atk === 0);
 
@@ -185,12 +185,14 @@ const masuOf = (id) => (JSON.parse(localStorage.getItem('mh_masu_mons')) || []).
     check('優先順位を入れ替えると保存される', moved.autoEnhance.order[0] === 'hp', moved.autoEnhance.order.join(','));
 
     // ---- いまの配分を上限として取り込めるか ----
-    await page.evaluate(() => [...document.querySelectorAll('button')].find(b => /いまの配分を/.test(b.textContent)).click());
+    await page.evaluate(() => [...document.querySelectorAll('button')].find(b => /いまの値を/.test(b.textContent)).click());
     await page.waitForTimeout(700);
     const captured = await page.evaluate(masuOf, 'auto1');
-    check('いまの配分を上限として取り込める',
-      captured.autoEnhance.statLimits.atk === 3 && captured.autoEnhance.statLimits.hp === 2,
-      JSON.stringify(captured.autoEnhance.statLimits));
+    check('いまの値を目標として取り込める',
+      captured.autoEnhance.statTargets.atk === 129 && captured.autoEnhance.statTargets.hp === 620,
+      JSON.stringify(captured.autoEnhance.statTargets));
+    check('画面に「いくつまで上げてよいか」で出ている',
+      await page.evaluate(() => /ここまで/.test(document.body.innerText) && /素の値/.test(document.body.innerText)));
 
     // ---- 絆ポイントリセットの書を使ったあと、自動で振り直されてしまわないか ----
     // 500ダイヤの道具なので、使った直後に自動で振ると道具代ごと無駄になる
@@ -210,6 +212,31 @@ const masuOf = (id) => (JSON.parse(localStorage.getItem('mh_masu_mons')) || []).
       afterReset.distAptPoints === 6 && afterReset.statPoints.hp === 0 && afterReset.statPoints.atk === 0,
       `残り${afterReset.distAptPoints}P / ライフ+${afterReset.statPoints.hp} ちから+${afterReset.statPoints.atk}`);
     check('復元の下書きも消さずに残す', !!afterReset.bondResetAllocationSnapshot);
+
+    // ---- 転生しても設定が残るか(この機能の目的そのもの) ----
+    // 保存を「転生できるところまで育った個体」へ置き換えてから、神殿の転生を通す代わりに
+    // 転生後の保存形(resetMasuForRebirth を通った形)を作り、読み直して設定が生きているか見る
+    const beforeRebirth = await page.evaluate(masuOf, 'auto1');
+    check('転生前に設定が入っている', beforeRebirth.autoEnhance && beforeRebirth.autoEnhance.enabled === true);
+    await page.evaluate(() => {
+      const list = JSON.parse(localStorage.getItem('mh_masu_mons'));
+      const target = list.find(m => m.id === 'auto1');
+      // 転生は「振った強化を白紙に戻す」。設定(autoEnhance)だけは残っているはず。
+      // resetMasuForRebirth は項目を並べて新しい保存形を作るので、絆ポイントリセットの
+      // 下書き(bondResetAllocationSnapshot)は持ち越されない。ここも同じ形にそろえる
+      target.statPoints = { hp: 0, atk: 0, def: 0, guts: 0 };
+      target.distAptBoosts = [0, 0, 0, 0];
+      target.distAptPoints = 10;
+      delete target.bondResetAllocationSnapshot;
+      localStorage.setItem('mh_masu_mons', JSON.stringify(list));
+    });
+    await page.reload({ waitUntil: 'load', timeout: 60000 });
+    await page.waitForFunction(() => document.getElementById('root')?.children.length > 0, { timeout: 60000 });
+    await page.waitForTimeout(4000);
+    const afterRebirth = await page.evaluate(masuOf, 'auto1');
+    check('転生で白紙になっても、設定どおりに振り直される',
+      afterRebirth.statPoints.atk === 9 && afterRebirth.statPoints.hp === 20,
+      `ちから+${afterRebirth.statPoints.atk} ライフ+${afterRebirth.statPoints.hp}`);
 
     check('実行時エラーが出ていない', errors.length === 0, errors.slice(0, 2).join(' / '));
   } catch (e) {
