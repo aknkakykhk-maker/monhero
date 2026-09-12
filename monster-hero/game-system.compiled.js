@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4b04b8c7f49f2a23
+// source-sha256: 11d3f9ee71017d7a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 143192a5eff9efcd
+// generated-sha256: 20e8e2d04f3401ff
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-12 11:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-12 21:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -21724,18 +21724,21 @@ const RhythmTapTest = ({
         const area = playAreaRef.current;
         // 光の位置と幅はノーツと同じ投影から出す(判定ラインの高さ=1)。
         const span = rhythmNoteIsSlide(note) ? rhythmProjectSlideSpan(rhythmReleaseLane(note), note, 1, run.audio?.songTimeMs?.() ?? note.timeMs) : rhythmNoteVisualSpan(note, note.lane, 1, run.audio?.songTimeMs?.() ?? note.timeMs);
-        rhythmSpawnHitEffect(area, {
+        // 流し直す印はここで集めて、最後にまとめて1回のレイアウトで付け直す
+        // (箇所ごとに void offsetWidth を書くと、その回数ぶんページ全体のレイアウトが走る)。
+        const restarts = [];
+        const hitEffect = rhythmSpawnHitEffect(area, {
           centerRatio: span.center,
           widthRatio: span.width,
           judgment,
-          monster: monsterHit
+          monster: monsterHit,
+          defer: true
         });
-        if (monsterHit && screenFlashRef.current) {
-          const flash = screenFlashRef.current;
-          flash.dataset.rhythmFlash = '';
-          void flash.offsetWidth;
-          flash.dataset.rhythmFlash = '1';
-        }
+        if (hitEffect) restarts.push(hitEffect);
+        if (monsterHit && screenFlashRef.current) restarts.push({
+          el: screenFlashRef.current,
+          attr: 'rhythmFlash'
+        });
         // そのマスモンが両サイドで大きく跳ねる(どのマスモンの番だったかが分かるように)
         if (monsterHit) {
           // モンスターノーツだけは振動も強くする(ふつうのノーツとの違いを指でも分かるように)
@@ -21743,9 +21746,10 @@ const RhythmTapTest = ({
           const slot = rhythmNoteMonsterSlot(note),
             el = slot ? sideMonsterRefs.current[slot - 1] : null;
           if (el) {
-            el.dataset.rhythmSideHit = '';
-            void el.offsetWidth;
-            el.dataset.rhythmSideHit = '1';
+            restarts.push({
+              el,
+              attr: 'rhythmSideHit'
+            });
             // 出番が済んだので、このあとの待機は最初のぴょんぴょんとは別の動き(ゆらゆら)にする
             el.dataset.rhythmSidePhase = 'done';
             // 歓声(700ms)が終わったら印を外す。外さないと !important の指定が残り続けて
@@ -21757,18 +21761,18 @@ const RhythmTapTest = ({
         }
         // 判定文字を一度だけ弾ませる
         const judgmentText = judgmentTextRef.current;
-        if (judgmentText) {
-          judgmentText.dataset.rhythmJudgmentPop = '';
-          void judgmentText.offsetWidth;
-          judgmentText.dataset.rhythmJudgmentPop = '1';
-        }
+        if (judgmentText) restarts.push({
+          el: judgmentText,
+          attr: 'rhythmJudgmentPop'
+        });
         // コンボ数も1つ増えるたびに弾ませる(プロセカのように数字が跳ねる)
         const comboText = comboRef.current;
-        if (comboText) {
-          comboText.dataset.rhythmComboPop = '';
-          void comboText.offsetWidth;
-          comboText.dataset.rhythmComboPop = '1';
-        }
+        if (comboText) restarts.push({
+          el: comboText,
+          attr: 'rhythmComboPop'
+        });
+        // ここで1回だけレイアウトを読む。集めた印をまとめて付け直す
+        rhythmRestartAnimations(restarts);
       }
     }
     if (settings.vibrationEnabled && judgment !== 'MISS') RHYTHM_HAPTICS.tap();
