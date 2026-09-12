@@ -297,5 +297,22 @@ check('軽量モード・演出量MINIMALでは脈打ちを止める',
   data.includes('[data-rhythm-play-area][data-rhythm-lightweight="true"] [data-rhythm-judgment-line]')
   &&data.includes('[data-rhythm-play-area][data-rhythm-effect="MINIMAL"] [data-rhythm-judgment-line]'));
 
+// --- 2026-09-12 モンスターノーツのかくつき ---
+// 【ユーザー指摘】「モンスターノーツでかくつきがまた出てきた /
+//   曲もあわせて遅くなる(重くなる？)ときもある」
+//
+// glowSprite / auraSprite / arrowSprite は id でキャッシュしてあり、2回目からは即返る。
+// ところが**呼ぶ側**が引数の配列を毎フレーム作り直していた。使われるのは初回だけなのに、
+// モンスターノーツ1個につき毎フレーム12個の配列ができていた(表示中3体・60fpsで毎秒2,160個)。
+// 捨てられるだけのゴミなので、光の「作り方」は定数へ出してある。戻ってこないように見張る。
+check('光のスプライトの引数を毎フレーム作り直さない(定数を渡す)',(()=>{
+  const calls=data.split('\n').filter(line=>/\b(glowSprite|auraSprite|arrowSprite)\(/.test(line)&&/\[\[/.test(line));
+  return calls.length===0;
+})(),'配列リテラルを渡している呼び出しの数');
+check('光の作り方は定数として1度だけ作る',
+  ['AURA_OUTER_GLOWS','AURA_OUTER_DOTS','AURA_INNER_GLOWS','FLICK_ARROW_GLOWS','FLICK_ARROW_FILL',
+   'END_BAR_GLOWS','END_FLICK_ARROW_GLOWS','END_FLICK_ARROW_FILL']
+    .every(name=>data.includes(`const ${name}=Object.freeze(`)));
+
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
 process.exit(failed?1:0);

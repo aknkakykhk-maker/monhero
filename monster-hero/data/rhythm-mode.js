@@ -14117,6 +14117,26 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     (dots||[]).forEach(([px,py,color])=>{c.fillStyle=color;c.beginPath();c.arc(x+bw*px,y+bh*py,1,0,Math.PI*2);c.fill();});
     const sprite={...s,capL:CAP,capR:CAP,mid:MID,glow:GLOW};sprites.set(id,sprite);return sprite;
   };
+  // ── 光の「作り方」は毎フレーム変わらないので、ここで1度だけ作る ──────────────
+  //
+  // 【2026-09-12・ユーザー指摘】
+  // 「モンスターノーツでかくつきがまた出てきた / 曲もあわせて遅くなる(重くなる？)ときもある」
+  //
+  // glowSprite / auraSprite / arrowSprite は id でキャッシュしてあり、2回目からは
+  // `if(sprites.has(id))return sprites.get(id);` で即返る。ところが**呼ぶ側**が、
+  // その引数の配列を毎フレーム作り直していた。使われるのは初回だけなのに、
+  // モンスターノーツ1個につき毎フレーム12個の配列ができていた
+  // (表示中3体・60fpsで毎秒2,160個)。FLICKと終端バーも同じ形。
+  // 捨てられるだけのゴミなので、ここへ出して作り直さないようにする。**見た目は変わらない。**
+  const AURA_OUTER_GLOWS=Object.freeze([[8,'rgba(217,70,239,.45)'],[12,'rgba(34,211,238,.28)']]);
+  const AURA_OUTER_DOTS=Object.freeze([[.08,.45,'rgba(255,255,255,.85)'],[.93,.58,'rgba(103,232,249,.85)'],[.20,.88,'rgba(253,224,71,.8)'],[.78,.08,'rgba(232,121,249,.82)']]);
+  const AURA_INNER_GLOWS=Object.freeze([[5,'rgba(253,224,71,.92)'],[9,'rgba(232,121,249,.58)'],[13,'rgba(34,211,238,.34)']]);
+  const FLICK_ARROW_GLOWS=Object.freeze([[5,'rgba(34,197,94,.95)'],[11,'rgba(21,128,61,.7)'],[2,'rgba(2,6,23,.9)']]);
+  const FLICK_ARROW_FILL=Object.freeze([[0,'#ffffff'],[.38,'#bbf7d0'],[1,'#22c55e']]);
+  const END_BAR_GLOWS_LOW=Object.freeze([[7,'#67e8f9']]);
+  const END_BAR_GLOWS=Object.freeze([[10,'#67e8f9'],[18,'#d946ef']]);
+  const END_FLICK_ARROW_GLOWS=Object.freeze([[4,'rgba(34,197,94,.95)'],[2,'rgba(2,6,23,.85)']]);
+  const END_FLICK_ARROW_FILL=Object.freeze([[0,'#f0fdf4'],[.6,'#4ade80'],[1,'#16a34a']]);
   const headStyle=(note,failed,monster)=>failed?HEADS.FAILED:monster?HEADS.MONSTER:HEADS[rhythmNoteVisualType(note)]||HEADS.TAP;
   const fillGradient=(x,y,h,stops)=>{
     const g=ctx.createLinearGradient(0,y,0,y+h);
@@ -14134,8 +14154,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     if(monster&&!failed){
       // 外側の光(::after)は 1.15 秒で薄く・濃くを繰り返す(opacity だけ)。内側(::before)は固定
       const pulse=.40+(.82-.40)*(0.5-0.5*Math.cos((frameNow/1150)*Math.PI));
-      draw3Slice(auraSprite('outer',6,4,9999,'rgba(216,180,254,.62)',[[8,'rgba(217,70,239,.45)'],[12,'rgba(34,211,238,.28)']],[[.08,.45,'rgba(255,255,255,.85)'],[.93,.58,'rgba(103,232,249,.85)'],[.20,.88,'rgba(253,224,71,.8)'],[.78,.08,'rgba(232,121,249,.82)']]),cx,cy,w,h,alpha*pulse);
-      draw3Slice(auraSprite('inner',1,-2,9999,'rgba(255,250,205,.98)',[[5,'rgba(253,224,71,.92)'],[9,'rgba(232,121,249,.58)'],[13,'rgba(34,211,238,.34)']]),cx,cy,w,h,alpha);
+      draw3Slice(auraSprite('outer',6,4,9999,'rgba(216,180,254,.62)',AURA_OUTER_GLOWS,AURA_OUTER_DOTS),cx,cy,w,h,alpha*pulse);
+      draw3Slice(auraSprite('inner',1,-2,9999,'rgba(255,250,205,.98)',AURA_INNER_GLOWS),cx,cy,w,h,alpha);
     }
     ctx.globalAlpha=alpha;
     if(style.ring){ctx.lineWidth=2*sizeMul;ctx.strokeStyle=style.ring;roundRectPath(ctx,x-1*sizeMul,y-1*sizeMul,w+2*sizeMul,h+2*sizeMul,radius+1);ctx.stroke();}
@@ -14153,7 +14173,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     if(brightness<1){roundRectPath(ctx,x,y,w,h,radius);ctx.fillStyle=`rgba(2,6,23,${(1-brightness).toFixed(3)})`;ctx.fill();}
     if(pressed){roundRectPath(ctx,x,y,w,h,radius);ctx.fillStyle='rgba(255,255,255,.22)';ctx.fill();}
     if(rhythmNoteVisualType(note)==='FLICK'&&!failed){
-      const sprite=arrowSprite('flick',26,19,[[5,'rgba(34,197,94,.95)'],[11,'rgba(21,128,61,.7)'],[2,'rgba(2,6,23,.9)']],[[0,'#ffffff'],[.38,'#bbf7d0'],[1,'#22c55e']]);
+      const sprite=arrowSprite('flick',26,19,FLICK_ARROW_GLOWS,FLICK_ARROW_FILL);
       const aw=(sprite.tw+sprite.margin*2)*sizeMul,ah=(sprite.th+sprite.margin*2)*sizeMul*depthScale;
       ctx.drawImage(sprite.canvas,cx-aw/2,y-3*sizeMul*depthScale-(sprite.th+sprite.margin)*sizeMul*depthScale,aw,ah);
     }
@@ -14216,7 +14236,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     const flick=note.endFlick===true,h=8*(0.52+end.scale*.48),w=end.w,x=end.cx-w/2,top=end.cy-h/2;
     ctx.globalAlpha=alpha;
     if(!failed&&effect!=='MINIMAL'&&!lightweight){
-      const sprite=glowSprite(flick?'endFlick':'end',4,effect==='LOW'?[[7,'#67e8f9']]:[[10,'#67e8f9'],[18,'#d946ef']]);
+      const sprite=glowSprite(flick?'endFlick':'end',4,effect==='LOW'?END_BAR_GLOWS_LOW:END_BAR_GLOWS);
       draw3Slice(sprite,end.cx,end.cy,w,h,alpha);
     }
     roundRectPath(ctx,x,top,w,h,h/2);
@@ -14227,7 +14247,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     ctx.fillStyle=g;ctx.fill();
     ctx.lineWidth=1;ctx.strokeStyle=failed?'rgba(148,163,184,.6)':flick?'rgba(220,252,231,.98)':'rgba(255,255,255,.8)';ctx.stroke();
     if(flick&&!failed){
-      const sprite=arrowSprite('endFlick',24,17,[[4,'rgba(34,197,94,.95)'],[2,'rgba(2,6,23,.85)']],[[0,'#f0fdf4'],[.6,'#4ade80'],[1,'#16a34a']]);
+      const sprite=arrowSprite('endFlick',24,17,END_FLICK_ARROW_GLOWS,END_FLICK_ARROW_FILL);
       const aw=sprite.tw+sprite.margin*2,ah=sprite.th+sprite.margin*2;
       ctx.drawImage(sprite.canvas,end.cx-aw/2,top-2-(sprite.th+sprite.margin),aw,ah);
     }
