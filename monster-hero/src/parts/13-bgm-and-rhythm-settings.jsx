@@ -176,6 +176,16 @@ const rhythmLifeState = life => {
   if (ratio <= .5) return 'caution';
   return 'ok';
 };
+// オプション画面の選択肢の「名前」(2026-09-13)。
+// ★閉じているセクションに出す「いまの値」と、開いたときのボタンの**両方がここを見る**。
+//   名前を2か所に書くと必ずずれる(一方だけ直して、もう一方が古い名前のまま残る)。
+// ★並びはそのまま画面のボタンの並びになる。IDの集合は値の正本
+//   (RHYTHM_EFFECT_LEVELS など)と一致していること。tools/mode/rhythm-options-summary-check.js が見る。
+const RHYTHM_LANE_GLOW_LABELS = Object.freeze([['NORMAL','標準'],['LOW','控えめ'],['NONE','なし']]);
+const RHYTHM_EFFECT_LABELS = Object.freeze([['NORMAL','標準'],['LOW','少なめ'],['MINIMAL','最小']]);
+const RHYTHM_SIDE_MONSTER_OPACITY_LABELS = Object.freeze([['NORMAL','はっきり'],['SOFT','ふつう'],['FAINT','うっすら'],['OFF','出さない']]);
+const RHYTHM_SIDE_MONSTER_MOTION_LABELS = Object.freeze([['NORMAL','跳ねる'],['SMALL','小さく跳ねる'],['NONE','動かない']]);
+const RHYTHM_COMBO_POSITION_LABELS = Object.freeze([['LEFT','左'],['CENTER','中央'],['RIGHT','右'],['HUD','右上']]);
 const RHYTHM_LANE_GLOW_LEVELS = Object.freeze(['NORMAL','LOW','NONE']);
 const RHYTHM_JUDGMENT_IDS = Object.freeze(['MARVELOUS','EXCELLENT','GREAT','GOOD','BAD','MISS']);
 // ランク(G〜M)の表示色(暫定値)。下位ほど地味な色、上位ほど鮮やかにして一目で分かるようにする。

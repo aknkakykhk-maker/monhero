@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 22024e284d81ed1c
+// source-sha256: d35a1e0fc0be21b9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 75135b0a33201b81
+// generated-sha256: f3b10bb1b839d5b9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-13 00:24"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-13 00:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4990,6 +4990,16 @@ const rhythmLifeState = life => {
   if (ratio <= .5) return 'caution';
   return 'ok';
 };
+// オプション画面の選択肢の「名前」(2026-09-13)。
+// ★閉じているセクションに出す「いまの値」と、開いたときのボタンの**両方がここを見る**。
+//   名前を2か所に書くと必ずずれる(一方だけ直して、もう一方が古い名前のまま残る)。
+// ★並びはそのまま画面のボタンの並びになる。IDの集合は値の正本
+//   (RHYTHM_EFFECT_LEVELS など)と一致していること。tools/mode/rhythm-options-summary-check.js が見る。
+const RHYTHM_LANE_GLOW_LABELS = Object.freeze([['NORMAL', '標準'], ['LOW', '控えめ'], ['NONE', 'なし']]);
+const RHYTHM_EFFECT_LABELS = Object.freeze([['NORMAL', '標準'], ['LOW', '少なめ'], ['MINIMAL', '最小']]);
+const RHYTHM_SIDE_MONSTER_OPACITY_LABELS = Object.freeze([['NORMAL', 'はっきり'], ['SOFT', 'ふつう'], ['FAINT', 'うっすら'], ['OFF', '出さない']]);
+const RHYTHM_SIDE_MONSTER_MOTION_LABELS = Object.freeze([['NORMAL', '跳ねる'], ['SMALL', '小さく跳ねる'], ['NONE', '動かない']]);
+const RHYTHM_COMBO_POSITION_LABELS = Object.freeze([['LEFT', '左'], ['CENTER', '中央'], ['RIGHT', '右'], ['HUD', '右上']]);
 const RHYTHM_LANE_GLOW_LEVELS = Object.freeze(['NORMAL', 'LOW', 'NONE']);
 const RHYTHM_JUDGMENT_IDS = Object.freeze(['MARVELOUS', 'EXCELLENT', 'GREAT', 'GOOD', 'BAD', 'MISS']);
 // ランク(G〜M)の表示色(暫定値)。下位ほど地味な色、上位ほど鮮やかにして一目で分かるようにする。
@@ -20170,6 +20180,29 @@ const RhythmOptions = ({
   const [message, setMessage] = useState('');
   // 「叩いて合わせる」を開いているか。設定そのものではないので保存には入れない
   const [calibrating, setCalibrating] = useState(false);
+  // 【2026-09-13・ユーザー指示】「下にどんどん伸びていって使いづらい / 1画面に収まるように
+  //   して、いじりたいやつはタップしたら詳細変えれるとかにしたほうがいい /
+  //   ただし設定状態は見れる作りで」
+  // 開くのは1つだけ。閉じているときも**いまの値は見出しの下に出す**ので、
+  // 開かずに設定の全体を見渡せる。開閉は設定ではないので保存には入れない。
+  const [openSection, setOpenSection] = useState('');
+  const sectionRefs = useRef({});
+  const toggleSection = id => {
+    setOpenSection(current => {
+      const next = current === id ? '' : id;
+      // 開いたほうが画面の外にはみ出さないよう、そのセクションの頭まで送る。
+      // 閉じたときは動かさない(いま見ている場所が飛ぶと戻る場所を見失う)
+      if (next) setTimeout(() => {
+        try {
+          sectionRefs.current[next]?.scrollIntoView({
+            block: 'start',
+            behavior: 'smooth'
+          });
+        } catch (_) {}
+      }, 0);
+      return next;
+    });
+  };
   const previewRef = useRef(null);
   useEffect(() => () => {
     previewRef.current?.stop();
@@ -20254,6 +20287,72 @@ const RhythmOptions = ({
   }, title), control, description && /*#__PURE__*/React.createElement("p", {
     className: `mt-2 ${note}`
   }, description));
+  // 閉じているときに見出しの下へ並べる「いまの値」。
+  // ★ここは**実データから作る**。項目を足したときに書き忘れると、
+  //   開かないと分からない設定ができてしまう(検査が件数を突き合わせる)。
+  const onOff = flag => flag ? 'ON' : 'OFF';
+  const pickLabel = (items, id) => {
+    const hit = items.find(([key]) => key === id);
+    return hit ? hit[1] : String(id);
+  };
+  const RHYTHM_OPTION_SECTIONS = [{
+    id: 'volume',
+    title: '🔊 音量',
+    summary: d => [['BGM', d.bgmVolume], ['タップ', d.noteSeVolume], ['タップ音', onOff(d.noteSeEnabled)]]
+  }, {
+    id: 'play',
+    title: '🎯 プレイ',
+    summary: d => [['速度', d.noteSpeed.toFixed(1)], ['サイズ', `${d.noteSize}%`], ['出る位置', d.noteStartPosition], ['判定', `${d.judgmentTimingOffsetMs > 0 ? '+' : ''}${d.judgmentTimingOffsetMs}ms`]]
+  }, {
+    id: 'display',
+    title: '👁 表示',
+    summary: d => [['FAST/SLOW', onOff(d.fastSlowDisplay)], ['判定文字', onOff(d.judgmentTextDisplay)], ['コンボ', d.comboDisplay ? pickLabel(RHYTHM_COMBO_POSITION_LABELS, d.comboPosition) : 'OFF'], ['発光', pickLabel(RHYTHM_LANE_GLOW_LABELS, d.laneGlow)]]
+  }, {
+    id: 'side',
+    title: '🐾 両サイドのマスモン',
+    summary: d => [['濃さ', pickLabel(RHYTHM_SIDE_MONSTER_OPACITY_LABELS, d.sideMonsterOpacity)], ['動き', pickLabel(RHYTHM_SIDE_MONSTER_MOTION_LABELS, d.sideMonsterMotion)], ['光る', onOff(d.sideMonsterAbilityHighlight)]]
+  }, {
+    id: 'system',
+    title: '✨ 演出・端末',
+    summary: d => [['演出量', pickLabel(RHYTHM_EFFECT_LABELS, d.effectAmount)], ['振動', onOff(d.vibrationEnabled)], ['軽量', onOff(d.lightweightMode)], ['試聴', onOff(d.songPreviewEnabled)], ['通知', d.quietDuringPlay ? '出さない' : '出す']]
+  }];
+  // 見出し(タップで開く)＋いまの値。開いているときだけ中身を描く
+  const section = (id, children) => {
+    const spec = RHYTHM_OPTION_SECTIONS.find(item => item.id === id),
+      open = openSection === id;
+    return /*#__PURE__*/React.createElement("section", {
+      ref: element => {
+        sectionRefs.current[id] = element;
+      },
+      "data-rhythm-option-section": id,
+      "data-open": open ? 'true' : 'false',
+      className: card
+    }, /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      "data-rhythm-option-section-head": id,
+      "aria-expanded": open,
+      onClick: () => toggleSection(id),
+      className: "grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 text-left"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "min-w-0"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: `block ${head}`
+    }, spec.title), /*#__PURE__*/React.createElement("span", {
+      "data-rhythm-option-summary": id,
+      className: "mt-1.5 flex flex-wrap gap-1"
+    }, spec.summary(draft).map(([name, value]) => /*#__PURE__*/React.createElement("span", {
+      key: name,
+      className: "rounded-md border border-white/15 bg-slate-950/80 px-1.5 py-0.5 text-[10px] font-bold leading-none text-slate-400"
+    }, name, " ", /*#__PURE__*/React.createElement("b", {
+      className: "text-cyan-200"
+    }, value))))), /*#__PURE__*/React.createElement("span", {
+      "aria-hidden": "true",
+      className: "min-h-[44px] min-w-[44px] rounded-xl border border-white/15 bg-slate-950/70 text-center text-[13px] font-black leading-[44px] text-cyan-200"
+    }, open ? '▲' : '▼')), open && /*#__PURE__*/React.createElement("div", {
+      "data-rhythm-option-section-body": id,
+      className: "mt-1"
+    }, children));
+  };
   const previewBgm = async () => {
     previewRef.current?.stop();
     previewRef.current = null;
@@ -20305,11 +20404,7 @@ const RhythmOptions = ({
     className: "flex-1 min-h-0 overflow-y-auto px-3 pb-5 pt-3 mh-scroll"
   }, /*#__PURE__*/React.createElement("div", {
     className: "space-y-4"
-  }, /*#__PURE__*/React.createElement(RhythmLandscapeHint, null), /*#__PURE__*/React.createElement("section", {
-    className: card
-  }, /*#__PURE__*/React.createElement("h3", {
-    className: head
-  }, "\uD83D\uDD0A \u97F3\u91CF"), field('BGM音量', stepper('bgmVolume', 0, RHYTHM_VOLUME_MAX, 1)), field('タップ音量', stepper('noteSeVolume', 0, RHYTHM_VOLUME_MAX, 1)), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement(RhythmLandscapeHint, null), section('volume', /*#__PURE__*/React.createElement(React.Fragment, null, field('BGM音量', stepper('bgmVolume', 0, RHYTHM_VOLUME_MAX, 1)), field('タップ音量', stepper('noteSeVolume', 0, RHYTHM_VOLUME_MAX, 1)), /*#__PURE__*/React.createElement("div", {
     className: row
   }, /*#__PURE__*/React.createElement("span", {
     className: label
@@ -20329,22 +20424,14 @@ const RhythmOptions = ({
     className: `mt-2 ${note}`
   }, "2026-09-12\u306B\u30BF\u30C3\u30D7\u97F3\u3092\u5927\u304D\u304F\u3057\u307E\u3057\u305F\uFF08\u305D\u308C\u307E\u3067\u306E10\u500D\uFF09\u3002\u4EE5\u524D\u306B\u97F3\u91CF\u3092\u5408\u308F\u305B\u3066\u3044\u305F\u5834\u5408\u306F\u3001\u30BF\u30C3\u30D7\u97F3\u91CF\u3092\u4E0B\u3052\u308B\u304BBGM\u97F3\u91CF\u3092\u4E0A\u3052\u3066\u5408\u308F\u305B\u76F4\u3057\u3066\u304F\u3060\u3055\u3044\u3002"), /*#__PURE__*/React.createElement("p", {
     className: `mt-2 ${note}`
-  }, "\u97F3\u91CF\u306F0\u301C", RHYTHM_VOLUME_MAX, "\u307E\u3067\u4E0A\u3052\u3089\u308C\u307E\u3059\u3002100\u306F\u3053\u308C\u307E\u3067\u3068\u540C\u3058\u5927\u304D\u3055\u3067\u3059\u3002100\u3088\u308A\u4E0A\u306F\u7AEF\u672B\u306E\u97F3\u91CF\u3092\u4E0A\u3052\u3066\u3082\u8DB3\u308A\u306A\u3044\u3068\u304D\u306E\u9003\u3052\u9053\u3067\u3001\u3068\u304F\u306BBGM\u97F3\u91CF\u306F\u4E0A\u3052\u3059\u304E\u308B\u3068\u66F2\u306E\u5927\u304D\u3044\u3068\u3053\u308D\u304C\u5272\u308C\u3066\u805E\u3053\u3048\u308B\u3053\u3068\u304C\u3042\u308A\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("section", {
-    className: card
-  }, /*#__PURE__*/React.createElement("h3", {
-    className: head
-  }, "\uD83C\uDFAF \u30D7\u30EC\u30A4"), field('ノーツ速度', stepper('noteSpeed', RHYTHM_NOTE_SPEED_MIN, RHYTHM_NOTE_SPEED_MAX, RHYTHM_NOTE_SPEED_STEP, '', 1), `1.0〜12.0を0.1刻みで調整できます。変わるのはノーツが流れてくる見た目の速さだけで、譜面のタイミング・判定窓・スコアは変わりません（現在 約${rhythmTravelMsForSpeed(draft.noteSpeed).toLocaleString()}ms）。`), field('ノーツサイズ', stepper('noteSize', 80, 120, 5, '%'), 'ノーツの見た目の大きさだけを変えます。入力判定の範囲・HOLD/SLIDE帯・ENDバーの位置は変わりません。'), field('ノーツの出る位置（奥行き）', stepper('noteStartPosition', -100, 100, 5), 'ノーツが画面のどのあたりから出てくるかを変えます。マイナスにすると奥（画面の上の外側）から、プラスにすると手前寄りから出てきます。判定ラインの位置・判定のタイミング・判定窓・スコアは変わりません。ノーツが流れてくる時間も変わらないので、手前から出すほど見えているあいだの動きは速く見えます。'), field('判定タイミング調整', stepper('judgmentTimingOffsetMs', -100, 100, 5, 'ms'), '判定窓の幅は変えず、表示と入力の基準を同じ量だけ補正します。数字で決めにくいときは、下の「叩いて合わせる」で実際に叩いて測れます。'), /*#__PURE__*/React.createElement("button", {
+  }, "\u97F3\u91CF\u306F0\u301C", RHYTHM_VOLUME_MAX, "\u307E\u3067\u4E0A\u3052\u3089\u308C\u307E\u3059\u3002100\u306F\u3053\u308C\u307E\u3067\u3068\u540C\u3058\u5927\u304D\u3055\u3067\u3059\u3002100\u3088\u308A\u4E0A\u306F\u7AEF\u672B\u306E\u97F3\u91CF\u3092\u4E0A\u3052\u3066\u3082\u8DB3\u308A\u306A\u3044\u3068\u304D\u306E\u9003\u3052\u9053\u3067\u3001\u3068\u304F\u306BBGM\u97F3\u91CF\u306F\u4E0A\u3052\u3059\u304E\u308B\u3068\u66F2\u306E\u5927\u304D\u3044\u3068\u3053\u308D\u304C\u5272\u308C\u3066\u805E\u3053\u3048\u308B\u3053\u3068\u304C\u3042\u308A\u307E\u3059\u3002"))), section('play', /*#__PURE__*/React.createElement(React.Fragment, null, field('ノーツ速度', stepper('noteSpeed', RHYTHM_NOTE_SPEED_MIN, RHYTHM_NOTE_SPEED_MAX, RHYTHM_NOTE_SPEED_STEP, '', 1), `1.0〜12.0を0.1刻みで調整できます。変わるのはノーツが流れてくる見た目の速さだけで、譜面のタイミング・判定窓・スコアは変わりません（現在 約${rhythmTravelMsForSpeed(draft.noteSpeed).toLocaleString()}ms）。`), field('ノーツサイズ', stepper('noteSize', 80, 120, 5, '%'), 'ノーツの見た目の大きさだけを変えます。入力判定の範囲・HOLD/SLIDE帯・ENDバーの位置は変わりません。'), field('ノーツの出る位置（奥行き）', stepper('noteStartPosition', -100, 100, 5), 'ノーツが画面のどのあたりから出てくるかを変えます。マイナスにすると奥（画面の上の外側）から、プラスにすると手前寄りから出てきます。判定ラインの位置・判定のタイミング・判定窓・スコアは変わりません。ノーツが流れてくる時間も変わらないので、手前から出すほど見えているあいだの動きは速く見えます。'), field('判定タイミング調整', stepper('judgmentTimingOffsetMs', -100, 100, 5, 'ms'), '判定窓の幅は変えず、表示と入力の基準を同じ量だけ補正します。数字で決めにくいときは、下の「叩いて合わせる」で実際に叩いて測れます。'), /*#__PURE__*/React.createElement("button", {
     type: "button",
     "data-rhythm-calibrator-open": true,
     onClick: () => setCalibrating(true),
     className: "mt-3 min-h-[52px] w-full rounded-xl border border-cyan-300/60 bg-cyan-950/50 text-[13px] font-black text-cyan-100"
   }, "\uD83C\uDFAF \u53E9\u3044\u3066\u5408\u308F\u305B\u308B"), /*#__PURE__*/React.createElement("p", {
     className: `mt-2 ${note}`
-  }, "\u753B\u9762\u3044\u3063\u3071\u3044\u3067\u958B\u304D\u307E\u3059\u3002\u5408\u308F\u305B\u7D42\u308F\u3063\u3066\u304B\u3089\u623B\u308B\u3068\u3001\u3053\u3053\u306E\u6570\u5B57\u306B\u5165\u308A\u307E\u3059\uFF08\u4FDD\u5B58\u306F\u307E\u3060\u3055\u308C\u307E\u305B\u3093\uFF09\u3002")), /*#__PURE__*/React.createElement("section", {
-    className: card
-  }, /*#__PURE__*/React.createElement("h3", {
-    className: head
-  }, "\uD83D\uDC41 \u8868\u793A"), /*#__PURE__*/React.createElement("div", {
+  }, "\u753B\u9762\u3044\u3063\u3071\u3044\u3067\u958B\u304D\u307E\u3059\u3002\u5408\u308F\u305B\u7D42\u308F\u3063\u3066\u304B\u3089\u623B\u308B\u3068\u3001\u3053\u3053\u306E\u6570\u5B57\u306B\u5165\u308A\u307E\u3059\uFF08\u4FDD\u5B58\u306F\u307E\u3060\u3055\u308C\u307E\u305B\u3093\uFF09\u3002"))), section('display', /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: row
   }, /*#__PURE__*/React.createElement("span", {
     className: label
@@ -20356,21 +20443,13 @@ const RhythmOptions = ({
     className: row
   }, /*#__PURE__*/React.createElement("span", {
     className: label
-  }, "\u30B3\u30F3\u30DC\u6570\u8868\u793A"), toggle('comboDisplay', '')), draft.comboDisplay !== false && field('コンボ数の位置', segments('comboPosition', [['LEFT', '左'], ['CENTER', '中央'], ['RIGHT', '右'], ['HUD', '右上']]), 'コンボ数を出す場所を選べます。「中央」は場の真ん中（既定）、「右上」は2026-09-12より前と同じ、ライフの下の位置です。どこに置いても判定・スコア・コンボの数え方は変わりません。'), field('レーン発光', segments('laneGlow', [['NORMAL', '標準'], ['LOW', '控えめ'], ['NONE', 'なし']]))), /*#__PURE__*/React.createElement("section", {
-    className: card
-  }, /*#__PURE__*/React.createElement("h3", {
-    className: head
-  }, "\uD83D\uDC3E \u4E21\u30B5\u30A4\u30C9\u306E\u30DE\u30B9\u30E2\u30F3"), /*#__PURE__*/React.createElement("p", {
+  }, "\u30B3\u30F3\u30DC\u6570\u8868\u793A"), toggle('comboDisplay', '')), draft.comboDisplay !== false && field('コンボ数の位置', segments('comboPosition', RHYTHM_COMBO_POSITION_LABELS), 'コンボ数を出す場所を選べます。「中央」は場の真ん中（既定）、「右上」は2026-09-12より前と同じ、ライフの下の位置です。どこに置いても判定・スコア・コンボの数え方は変わりません。'), field('レーン発光', segments('laneGlow', RHYTHM_LANE_GLOW_LABELS)))), section('side', /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
     className: `mt-2 ${note}`
-  }, "\u30EC\u30FC\u30F3\u306E\u5916\u5074\u306E\u7A7A\u3044\u305F\u3068\u3053\u308D\u3078\u3001\u8A2D\u5B9A\u3057\u305F\u30DE\u30B9\u30E2\u30F3\u304C\u51FA\u3066\u62CD\u306B\u5408\u308F\u305B\u3066\u8DF3\u306D\u307E\u3059\u3002\u30CE\u30FC\u30C4\u304C\u898B\u3065\u3089\u3044\u3068\u304D\u3084\u3001\u7AEF\u672B\u304C\u71B1\u304F\u306A\u308A\u3084\u3059\u3044\u3068\u304D\u306F\u8584\u304F\u3059\u308B\u304B\u6B62\u3081\u3066\u304F\u3060\u3055\u3044\u3002"), field('濃さ', segments('sideMonsterOpacity', [['NORMAL', 'はっきり'], ['SOFT', 'ふつう'], ['FAINT', 'うっすら'], ['OFF', '出さない']])), field('動き', segments('sideMonsterMotion', [['NORMAL', '跳ねる'], ['SMALL', '小さく跳ねる'], ['NONE', '動かない']])), /*#__PURE__*/React.createElement("div", {
+  }, "\u30EC\u30FC\u30F3\u306E\u5916\u5074\u306E\u7A7A\u3044\u305F\u3068\u3053\u308D\u3078\u3001\u8A2D\u5B9A\u3057\u305F\u30DE\u30B9\u30E2\u30F3\u304C\u51FA\u3066\u62CD\u306B\u5408\u308F\u305B\u3066\u8DF3\u306D\u307E\u3059\u3002\u30CE\u30FC\u30C4\u304C\u898B\u3065\u3089\u3044\u3068\u304D\u3084\u3001\u7AEF\u672B\u304C\u71B1\u304F\u306A\u308A\u3084\u3059\u3044\u3068\u304D\u306F\u8584\u304F\u3059\u308B\u304B\u6B62\u3081\u3066\u304F\u3060\u3055\u3044\u3002"), field('濃さ', segments('sideMonsterOpacity', RHYTHM_SIDE_MONSTER_OPACITY_LABELS)), field('動き', segments('sideMonsterMotion', RHYTHM_SIDE_MONSTER_MOTION_LABELS)), /*#__PURE__*/React.createElement("div", {
     className: row
   }, /*#__PURE__*/React.createElement("span", {
     className: label
-  }, "\u80FD\u529B\u4E2D\u306B\u5149\u3089\u305B\u308B"), toggle('sideMonsterAbilityHighlight', ''))), /*#__PURE__*/React.createElement("section", {
-    className: card
-  }, /*#__PURE__*/React.createElement("h3", {
-    className: head
-  }, "\u2728 \u6F14\u51FA\u30FB\u7AEF\u672B"), field('演出量', segments('effectAmount', [['NORMAL', '標準'], ['LOW', '少なめ'], ['MINIMAL', '最小']]), '動きがカクついたり、端末が熱くなったりするときは「少なめ」にしてください。判定文字の金色の帯や虹が流れるのを止め、光のにじみを減らします（色・グラデーション・字の大きさは標準と同じままです）。「最小」にすると、それに加えて100コンボごとの演出や光そのものもほぼ出なくなります。'), /*#__PURE__*/React.createElement("div", {
+  }, "\u80FD\u529B\u4E2D\u306B\u5149\u3089\u305B\u308B"), toggle('sideMonsterAbilityHighlight', '')))), section('system', /*#__PURE__*/React.createElement(React.Fragment, null, field('演出量', segments('effectAmount', RHYTHM_EFFECT_LABELS), '動きがカクついたり、端末が熱くなったりするときは「少なめ」にしてください。判定文字の金色の帯や虹が流れるのを止め、光のにじみを減らします（色・グラデーション・字の大きさは標準と同じままです）。「最小」にすると、それに加えて100コンボごとの演出や光そのものもほぼ出なくなります。'), /*#__PURE__*/React.createElement("div", {
     className: row
   }, /*#__PURE__*/React.createElement("span", {
     className: label
@@ -20399,7 +20478,7 @@ const RhythmOptions = ({
     className: label
   }, "\u6F14\u594F\u4E2D\u306F\u901A\u77E5\u3092\u51FA\u3055\u306A\u3044"), toggle('quietDuringPlay', '')), /*#__PURE__*/React.createElement("p", {
     className: `pb-1 ${note}`
-  }, rhythmQuietModeSupportText())), /*#__PURE__*/React.createElement("section", {
+  }, rhythmQuietModeSupportText()))), /*#__PURE__*/React.createElement("section", {
     className: "rounded-2xl border border-cyan-400/30 bg-cyan-950/25 p-4 text-[11px] leading-relaxed text-cyan-100"
   }, "\u5224\u5B9A\u3092\u7518\u304F\u3059\u308B\u8A2D\u5B9A\u3067\u306F\u3042\u308A\u307E\u305B\u3093\u3002\u7AEF\u672B\u3054\u3068\u306E\u898B\u3048\u65B9\u30FB\u97F3\u91CF\u30FB\u30BF\u30A4\u30DF\u30F3\u30B0\u3092\u8ABF\u6574\u3059\u308B\u9805\u76EE\u3067\u3059\u3002"))), /*#__PURE__*/React.createElement("footer", {
     "data-rhythm-options-actions": true,

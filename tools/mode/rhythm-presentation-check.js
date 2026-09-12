@@ -88,7 +88,10 @@ ok('コンボ数の置き場所を選べる(右上=もとの位置も選べる)'
   /RHYTHM_COMBO_POSITIONS *= *Object\.freeze\(\['CENTER','RIGHT','HUD','LEFT'\]\)/.test(game)
   &&game.includes("comboPosition:'CENTER'")
   &&game.includes('comboPosition:RHYTHM_COMBO_POSITIONS.includes(source.comboPosition)?source.comboPosition:DEFAULT_RHYTHM_SETTINGS.comboPosition')
-  &&game.includes("segments('comboPosition',[['LEFT','左'],['CENTER','中央'],['RIGHT','右'],['HUD','右上']])")
+  // 名前は RHYTHM_COMBO_POSITION_LABELS が正本(オプションのボタンと、
+  // 折りたたんだときの「いまの値」の両方がここを見る)
+  &&game.includes("segments('comboPosition',RHYTHM_COMBO_POSITION_LABELS)")
+  &&/RHYTHM_COMBO_POSITION_LABELS *= *Object\.freeze\(\[\['LEFT','左'\],\['CENTER','中央'\],\['RIGHT','右'\],\['HUD','右上'\]\]\)/.test(game)
   &&html.includes('[data-rhythm-combo-box][data-combo-pos="RIGHT"]{left:auto;right:6%;transform:none}')
   &&html.includes('[data-rhythm-combo-box][data-combo-pos="HUD"]{left:auto;right:3%;top:12.5%;transform:none}')
   &&html.includes('[data-rhythm-combo-box][data-combo-pos="LEFT"]{left:4%;transform:none}')
@@ -121,7 +124,8 @@ ok('演出量「少なめ」で、判定文字とコンボの流れを止めら�
   // 重い判定(GREAT以上)はぼかしの枚数も落とす
   &&['GREAT','EXCELLENT','MARVELOUS'].every(j=>html.includes(`[data-rhythm-play-area][data-rhythm-effect="LOW"] [data-rhythm-judgment-text][data-judgment="${j}"]{`))
   // 選ぶ場所と、何が止まるのかの説明がオプションにある
-  &&game.includes("segments('effectAmount',[['NORMAL','標準'],['LOW','少なめ'],['MINIMAL','最小']])")
+  &&game.includes("segments('effectAmount',RHYTHM_EFFECT_LABELS)")
+  &&/RHYTHM_EFFECT_LABELS *= *Object\.freeze\(\[\['NORMAL','標準'\],\['LOW','少なめ'\],\['MINIMAL','最小'\]\]\)/.test(game)
   &&game.includes('動きがカクついたり'));
 // 2026-09-12・ユーザー指示「コンボ数もわかりにくい。増えれば増えるほど目立つようにして」。
 // 100/200/300の3段だったのを 10/30/50/100/200/300/500 の7段にし、段が上がるほど
