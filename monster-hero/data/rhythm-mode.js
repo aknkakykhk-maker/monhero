@@ -521,6 +521,33 @@ const RHYTHM_PERF=(()=>{
   return api;
 })();
 
+// 演奏画面の「重そうな装飾」を個別に切って、実機で何が効くかを切り分けるための逃げ道。
+// デバッグ限定で、ふだんは空。プレイヤーの通常プレイでは何も起きない。
+// 保存は新しいキーへ分ける(既存の音ゲー設定・BESTには触らない)。
+const RHYTHM_STRIP_KEY='mh_rhythm_strip_v1';
+const RHYTHM_STRIP_ITEMS=Object.freeze([
+  {id:'glow',label:'上の光（blur 12px）'},
+  {id:'grid',label:'奥行きの格子（drop-shadow）'},
+  {id:'bg',label:'背景のグラデーション3層'},
+  {id:'lane',label:'レーンの影と縁'},
+]);
+const RHYTHM_STRIP=(()=>{
+  let value='';
+  const api={
+    get value(){return value;},
+    has(id){return value.split(/\s+/).includes(id);},
+    set(next){value=String(next||'').trim();
+      try{if(typeof localStorage!=='undefined')localStorage.setItem(RHYTHM_STRIP_KEY,value);}catch{}
+      return value;},
+    toggle(id){const set=new Set(value.split(/\s+/).filter(Boolean));
+      if(set.has(id))set.delete(id);else set.add(id);
+      return api.set([...set].join(' '));},
+    restore(){try{if(typeof localStorage!=='undefined')value=localStorage.getItem(RHYTHM_STRIP_KEY)||'';}catch{}return value;},
+  };
+  api.restore();
+  return api;
+})();
+
 const RHYTHM_PROJECTION_TOP_SCALE=.18;
 const RHYTHM_NOTE_WIDTH_RATIO=.78;
 // HOLD/SLIDEの帯の太さ。ノーツの頭(.78)より細い。
@@ -13625,7 +13652,16 @@ const installRhythmGeometryStyles=()=>{
     /* 軽量モードと演出量MINIMALでは止める(ほかの演出と同じ扱い) */
     [data-rhythm-play-area][data-rhythm-lightweight="true"] [data-rhythm-judgment-line],
     [data-rhythm-play-area][data-rhythm-effect="MINIMAL"] [data-rhythm-judgment-line]{animation:none!important;will-change:auto}
-  `;
+  
+    /* --- 装飾を個別に切る(デバッグ限定) ---
+       data-rhythm-strip に書いた語だけを切る。ふだんは属性そのものが付かないので何も起きない。
+       実機で「何が重いか」を総当たりするための逃げ道。見た目は変わるが、判定には一切関わらない。 */
+    [data-rhythm-play-area][data-rhythm-strip~="glow"]::after{content:none!important}
+    [data-rhythm-play-area][data-rhythm-strip~="grid"]::before{content:none!important}
+    [data-rhythm-play-area][data-rhythm-strip~="bg"]{background:#050817!important;box-shadow:none!important}
+    [data-rhythm-play-area][data-rhythm-strip~="lane"] [data-rhythm-lane]{filter:none!important;box-shadow:none!important}
+    [data-rhythm-play-area][data-rhythm-strip~="lane"] [data-rhythm-lane]::before{content:none!important}
+`;
   document.head.appendChild(style);
 };
 installRhythmGeometryStyles();
