@@ -120,6 +120,20 @@ const run=async(chromium,{css,label})=>{
     const pick=(m)=>Object.fromEntries(m.metrics.map(x=>[x.name,x.value]));
     const before=pick(await cdp.send('Performance.getMetrics'));
 
+    // 曲の再生位置(AudioContext.currentTime)が、どれくらいの刻みで進んでいるかを測る。
+    // ノーツの位置は run.audio.songTimeMs() から決まり、それは ctx.currentTime そのもの
+    // (14-audio.jsx の songTimeSeconds)。演奏ループは補間していないので、
+    // ctx.currentTime が粗く進む端末では、ノーツが「止まって飛ぶ」動きになる。
+    // フレームレートは60fpsのままなので、フレーム間隔をいくら測っても見つからない。
+    await page.evaluate(()=>{
+      const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;
+      const desc=Object.getOwnPropertyDescriptor(AC.prototype,'currentTime');if(!desc||!desc.get)return;
+      window.__ct=[];window.__ctOn=false;
+      Object.defineProperty(AC.prototype,'currentTime',{configurable:true,get(){
+        const v=desc.get.call(this);
+        if(window.__ctOn&&window.__ct.length<40000)window.__ct.push(v);
+        return v;}});
+    });
     // 演奏中に getBoundingClientRect が何回呼ばれているかを数える。
     // measureTravel は「組み上がったと確かめられたときだけ」結果を覚える作りで、
     // そうでない間は毎フレーム3回測り直す(＝強制同期レイアウトが毎フレーム走る)。
@@ -135,7 +149,7 @@ const run=async(chromium,{css,label})=>{
         proto[k]=function(...a){window.__draw[k]=(window.__draw[k]||0)+1;return orig.apply(this,a);};}
     });
     await page.evaluate(()=>{
-      window.__f=[];window.__long=[];let last=0;
+      window.__f=[];window.__long=[];window.__ctOn=true;let last=0;
       try{new PerformanceObserver(l=>{for(const e of l.getEntries())window.__long.push(e.duration);}).observe({entryTypes:['longtask']});}catch{}
       const tick=t=>{if(last)window.__f.push(t-last);last=t;window.__raf=requestAnimationFrame(tick);};
       window.__raf=requestAnimationFrame(tick);
@@ -154,7 +168,11 @@ const run=async(chromium,{css,label})=>{
       // 演奏中のDOMに出ているクラス名を全部集める(JIT相当のCSSを作るため)
       const set=new Set();
       for(const el of document.querySelectorAll('[class]'))for(const c of String(el.className.baseVal??el.className).split(/\s+/))if(c)set.add(c);
-      return {frames:window.__f,long:window.__long,classes:[...set],draw:window.__draw||null,rect:window.__rect||0,
+      window.__ctOn=false;
+      // 「同じ値が続いたあと、いくつ飛んだか」= 曲の時刻の刻み(ms)
+      const steps=[];let prev=null;
+      for(const v of (window.__ct||[])){if(prev!==null&&v>prev)steps.push((v-prev)*1000);prev=v===prev?prev:v;}
+      return {frames:window.__f,long:window.__long,classes:[...set],draw:window.__draw||null,rect:window.__rect||0,songSteps:steps,
         canvas:!!document.querySelector('[data-rhythm-note-canvas]'),
         rules:[...document.styleSheets].reduce((n,s)=>{try{return n+s.cssRules.length;}catch{return n;}},0)};});
     const after=pick(await cdp.send('Performance.getMetrics'));
@@ -163,6 +181,8 @@ const run=async(chromium,{css,label})=>{
     return {label,...stats(got.frames),long:got.long.length,longMax:Math.round(Math.max(0,...got.long)),
       recalcMs:d('RecalcStyleDuration'),layoutMs:d('LayoutDuration'),scriptMs:d('ScriptDuration'),
       recalcCount:(after.RecalcStyleCount||0)-(before.RecalcStyleCount||0),cpu:CPU,styles,draw:got.draw,rect:got.rect,
+      songStep:(()=>{const a=got.songSteps||[];if(!a.length)return null;const s2=[...a].sort((x,y)=>x-y);
+        return {n:a.length,median:s2[Math.floor(s2.length*.5)],p95:s2[Math.floor(s2.length*.95)],max:s2[s2.length-1]};})(),
       classes:got.classes,canvas:got.canvas,rules:got.rules};
   }finally{await browser.close();}
 };
@@ -182,6 +202,7 @@ const run=async(chromium,{css,label})=>{
       console.log(`  スタイル再計算    : ${r.recalcMs}ms / ${r.recalcCount}回`);
       console.log(`  レイアウト        : ${r.layoutMs}ms`);
       console.log(`  JS                : ${r.scriptMs}ms`);
+      if(r.songStep)console.log(`  曲の時刻の刻み    : 中央 ${r.songStep.median.toFixed(1)}ms / p95 ${r.songStep.p95.toFixed(1)}ms / 最大 ${r.songStep.max.toFixed(1)}ms (${r.songStep.n}回進んだ)`);
       console.log(`  位置の測り直し    : getBoundingClientRect ${r.rect}回 (1フレームあたり ${(r.rect/Math.max(1,r.n)).toFixed(2)}回)`);
       console.log(`  1フレームあたり   : JS ${(r.scriptMs/Math.max(1,r.n)).toFixed(2)}ms / スタイル再計算 ${(r.recalcMs/Math.max(1,r.n)).toFixed(2)}ms / レイアウト ${(r.layoutMs/Math.max(1,r.n)).toFixed(2)}ms`);
       if(r.draw){const per=k=>(r.draw[k]||0)/Math.max(1,r.n);

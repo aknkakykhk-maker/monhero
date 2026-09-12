@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2754eb26c847be7c
+// source-sha256: 02fd08d0b0649dbd
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 519076c59767ab82
+// generated-sha256: 6b83458c83c6814c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-12 16:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-12 17:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -21861,6 +21861,7 @@ const RhythmTapTest = ({
     };
   }, [settings.noteStartPosition, settings.noteSize, view.status]);
   const applyJudgment = useCallback((note, judgment, deltaMs) => {
+    const _judgeT0 = RHYTHM_PERF.enabled && typeof performance !== 'undefined' ? performance.now() : 0;
     const run = runRef.current;
     if (!run || run.finished || run.paused || note.done) return;
     if (note.activePointerId !== null) {
@@ -22053,6 +22054,7 @@ const RhythmTapTest = ({
     }));
     scheduleJudgmentClear();
     if (abilityFlash) scheduleAbilityClear();
+    if (_judgeT0) RHYTHM_PERF.judge(performance.now() - _judgeT0, !!monster);
   }, [chart.totalNotes, difficulty.maxScore, scheduleAbilityClear, scheduleJudgmentClear, settings.vibrationEnabled, tutorial]);
   const finish = useCallback(() => {
     const run = runRef.current;
@@ -22146,8 +22148,9 @@ const RhythmTapTest = ({
       const run = runRef.current;
       if (!run || run.finished || run.paused) return;
       const perfTickStart = RHYTHM_PERF.enabled ? performance.now() : 0;
-      const songTimeMs = run.audio.songTimeMs(),
-        travel = measureTravel(),
+      const songTimeMs = run.audio.songTimeMs();
+      RHYTHM_PERF.songTime(songTimeMs);
+      const travel = measureTravel(),
         visualTime = songTimeMs - settings.judgmentTimingOffsetMs,
         travelMs = rhythmTravelMsForSpeed(settings.noteSpeed);
       let perfScanned = 0,
@@ -54285,7 +54288,7 @@ function MonsterHeroGame() {
       className: `min-h-[44px] rounded-xl px-3 text-[11px] font-black ${rhythmPerfOn ? 'bg-amber-500 text-slate-900' : 'border border-white/20 bg-slate-900 text-slate-200'}`
     }, rhythmPerfOn ? '計測ON' : '計測OFF')), /*#__PURE__*/React.createElement("p", {
       className: "mt-1 text-[9px] font-bold leading-relaxed text-amber-100/80"
-    }, "ON\u306B\u3057\u3066\u304B\u3089\u30D7\u30EC\u30A4\u3059\u308B\u3068\u3001\u30D5\u30EC\u30FC\u30E0\u6642\u9593\u30681\u30D5\u30EC\u30FC\u30E0\u3042\u305F\u308A\u306E\u8CA0\u8377\uFF08\u30EC\u30A4\u30A2\u30A6\u30C8\u6E2C\u5B9A\u30FBDOM\u691C\u7D22\u30FBSLIDE\u5E2F\u306E\u66F4\u65B0\u6570\uFF09\u3092\u8A18\u9332\u3057\u307E\u3059\u3002OFF\u306E\u3042\u3044\u3060\u306F\u8A18\u9332\u51E6\u7406\u305D\u306E\u3082\u306E\u304C\u52D5\u304D\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("div", {
+    }, "ON\u306B\u3057\u3066\u304B\u3089\u30D7\u30EC\u30A4\u3059\u308B\u3068\u3001\u30D5\u30EC\u30FC\u30E0\u6642\u9593\u30681\u30D5\u30EC\u30FC\u30E0\u3042\u305F\u308A\u306E\u8CA0\u8377\uFF08\u30EC\u30A4\u30A2\u30A6\u30C8\u6E2C\u5B9A\u30FBDOM\u691C\u7D22\u30FBSLIDE\u5E2F\u306E\u66F4\u65B0\u6570\uFF09\u3092\u8A18\u9332\u3057\u307E\u3059\u3002OFF\u306E\u3042\u3044\u3060\u306F\u8A18\u9332\u51E6\u7406\u305D\u306E\u3082\u306E\u304C\u52D5\u304D\u307E\u305B\u3093\u3002\u300C\u30E2\u30F3\u30B9\u30BF\u30FC\u30CE\u30FC\u30C4\u300D\u306E\u884C\u304C\u300C\u30CE\u30FC\u30C4\u3092\u53D6\u308B\u51E6\u7406\u300D\u3088\u308A\u306F\u3063\u304D\u308A\u5927\u304D\u3051\u308C\u3070\u3001\u8E0F\u3093\u3060\u3068\u304D\u306B\u56FA\u307E\u308B\u539F\u56E0\u306F\u305D\u3053\u3067\u3059\u3002\u30CE\u30FC\u30C4\u306E\u52D5\u304D\u304C\u6ED1\u3089\u304B\u304B\u3069\u3046\u304B\u306F\u300C\u66F2\u306E\u6642\u523B\u300D\u306E3\u3064\u3092\u898B\u307E\u3059\u3002\u30CE\u30FC\u30C4\u306E\u4F4D\u7F6E\u306F\u66F2\u306E\u518D\u751F\u4F4D\u7F6E\u3060\u3051\u3067\u6C7A\u307E\u308B\u306E\u3067\u3001\u3053\u308C\u304C\u9032\u307E\u306A\u3044\u30D5\u30EC\u30FC\u30E0\u304C\u591A\u3044\u3068\u3001\u30D5\u30EC\u30FC\u30E0\u30EC\u30FC\u30C8\u304C60\u306E\u307E\u307E\u3067\u3082\u30CE\u30FC\u30C4\u306F\u6B62\u307E\u3063\u3066\u98DB\u3076\u52D5\u304D\u306B\u306A\u308A\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
       className: "mt-2 flex gap-2"
     }, /*#__PURE__*/React.createElement("button", {
       type: "button",
@@ -54301,7 +54304,7 @@ function MonsterHeroGame() {
     }, "\u8A18\u9332\u3092\u30AF\u30EA\u30A2")), rhythmPerfStats && /*#__PURE__*/React.createElement("dl", {
       "data-rhythm-perf-stats": true,
       className: "mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]"
-    }, [['フレーム数', rhythmPerfStats.frames], ['平均fps', rhythmPerfStats.fps.toFixed(1)], ['平均フレーム', `${rhythmPerfStats.avgMs.toFixed(1)}ms`], ['最悪フレーム', `${rhythmPerfStats.maxMs.toFixed(1)}ms`], ['16.7ms超', rhythmPerfStats.over16], ['25ms超', rhythmPerfStats.over25], ['33ms超', rhythmPerfStats.over33], ['レイアウト測定/frame', rhythmPerfStats.layoutReadsPerFrame.toFixed(2)], ['DOM検索/frame', rhythmPerfStats.domQueriesPerFrame.toFixed(2)], ['SLIDE帯更新/frame', rhythmPerfStats.slidePolygonsPerFrame.toFixed(2)], ['ジェスチャーrAF', rhythmPerfStats.gestureFrames], ['ノーツ再検索', rhythmPerfStats.noteRescans], ['走査ノーツ/frame', rhythmPerfStats.notesScannedPerFrame.toFixed(1)], ['実描画ノーツ/frame', rhythmPerfStats.notesDrawnPerFrame.toFixed(1)], ['最悪frameの走査/実描画', `${rhythmPerfStats.worstFrameScanned} / ${rhythmPerfStats.worstFrameDrawn}`], ['先頭スキップ/frame', rhythmPerfStats.headSkippedPerFrame.toFixed(1)], ['走査の絞り込み', rhythmPerfStats.narrowed === null ? '未計測' : rhythmPerfStats.narrowed ? '有効' : '無効(昇順でない譜面)'], ['tick処理/frame', `${rhythmPerfStats.tickMsPerFrame.toFixed(2)}ms`], ['最悪frameのtick処理', `${rhythmPerfStats.worstFrameTickMs.toFixed(1)}ms`], ['tick処理の最大', `${rhythmPerfStats.maxTickMs.toFixed(1)}ms`], ['frame開始→tick開始の遅れ', `${rhythmPerfStats.tickDelayMsPerFrame.toFixed(2)}ms`], ['最悪frameの遅れ', `${rhythmPerfStats.worstFrameDelayMs.toFixed(1)}ms`], ['遅れの最大', `${rhythmPerfStats.maxDelayMs.toFixed(1)}ms`]].map(([label, value]) => /*#__PURE__*/React.createElement(React.Fragment, {
+    }, [['フレーム数', rhythmPerfStats.frames], ['平均fps', rhythmPerfStats.fps.toFixed(1)], ['平均フレーム', `${rhythmPerfStats.avgMs.toFixed(1)}ms`], ['最悪フレーム', `${rhythmPerfStats.maxMs.toFixed(1)}ms`], ['16.7ms超', rhythmPerfStats.over16], ['25ms超', rhythmPerfStats.over25], ['33ms超', rhythmPerfStats.over33], ['レイアウト測定/frame', rhythmPerfStats.layoutReadsPerFrame.toFixed(2)], ['DOM検索/frame', rhythmPerfStats.domQueriesPerFrame.toFixed(2)], ['SLIDE帯更新/frame', rhythmPerfStats.slidePolygonsPerFrame.toFixed(2)], ['ジェスチャーrAF', rhythmPerfStats.gestureFrames], ['ノーツ再検索', rhythmPerfStats.noteRescans], ['走査ノーツ/frame', rhythmPerfStats.notesScannedPerFrame.toFixed(1)], ['実描画ノーツ/frame', rhythmPerfStats.notesDrawnPerFrame.toFixed(1)], ['最悪frameの走査/実描画', `${rhythmPerfStats.worstFrameScanned} / ${rhythmPerfStats.worstFrameDrawn}`], ['先頭スキップ/frame', rhythmPerfStats.headSkippedPerFrame.toFixed(1)], ['走査の絞り込み', rhythmPerfStats.narrowed === null ? '未計測' : rhythmPerfStats.narrowed ? '有効' : '無効(昇順でない譜面)'], ['tick処理/frame', `${rhythmPerfStats.tickMsPerFrame.toFixed(2)}ms`], ['最悪frameのtick処理', `${rhythmPerfStats.worstFrameTickMs.toFixed(1)}ms`], ['tick処理の最大', `${rhythmPerfStats.maxTickMs.toFixed(1)}ms`], ['frame開始→tick開始の遅れ', `${rhythmPerfStats.tickDelayMsPerFrame.toFixed(2)}ms`], ['最悪frameの遅れ', `${rhythmPerfStats.worstFrameDelayMs.toFixed(1)}ms`], ['遅れの最大', `${rhythmPerfStats.maxDelayMs.toFixed(1)}ms`], ['曲の時刻の進み/frame', `${(rhythmPerfStats.songStepMsPerFrame ?? 0).toFixed(2)}ms`], ['曲の時刻が進まないframe', `${((rhythmPerfStats.songStallRate ?? 0) * 100).toFixed(1)}%`], ['曲の時刻の最大の飛び', `${(rhythmPerfStats.songStepMaxMs ?? 0).toFixed(1)}ms`], ['ノーツを取る処理/回', `${(rhythmPerfStats.judgeMsAvg ?? 0).toFixed(2)}ms（${rhythmPerfStats.judgeCount ?? 0}回）`], ['取る処理の最大', `${(rhythmPerfStats.judgeMsMax ?? 0).toFixed(1)}ms`], ['モンスターノーツ/回', `${(rhythmPerfStats.monsterJudgeMsAvg ?? 0).toFixed(2)}ms（${rhythmPerfStats.monsterJudgeCount ?? 0}回）`], ['モンスターノーツの最大', `${(rhythmPerfStats.monsterJudgeMsMax ?? 0).toFixed(1)}ms`]].map(([label, value]) => /*#__PURE__*/React.createElement(React.Fragment, {
       key: label
     }, /*#__PURE__*/React.createElement("dt", {
       className: "text-slate-400"
