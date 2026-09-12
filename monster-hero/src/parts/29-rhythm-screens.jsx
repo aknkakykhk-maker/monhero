@@ -26,7 +26,7 @@ const RhythmOptions=({value,onSave,onBack})=>{
     </div>;
   };
   const toggle=(key,label)=><button type="button" aria-pressed={draft[key]} onClick={()=>set(key,!draft[key])} className={`min-h-[44px] min-w-[88px] rounded-xl border px-4 text-xs font-black ${draft[key]?'border-cyan-200 bg-cyan-600 text-white':'border-white/20 bg-slate-900 text-slate-300'}`}>{label} {draft[key]?'ON':'OFF'}</button>;
-  const segments=(key,items)=><div className="grid grid-cols-3 overflow-hidden rounded-xl border border-white/20">{items.map(([id,label])=><button type="button" key={id} aria-pressed={draft[key]===id} onClick={()=>set(key,id)} className={`min-h-[44px] border-r border-white/10 px-1 text-[10px] font-black last:border-r-0 ${draft[key]===id?'bg-cyan-600 text-white':'bg-slate-900 text-slate-300'}`}>{label}</button>)}</div>;
+  const segments=(key,items)=><div className={`grid ${items.length>=4?'grid-cols-4':'grid-cols-3'} overflow-hidden rounded-xl border border-white/20`}>{items.map(([id,label])=><button type="button" key={id} aria-pressed={draft[key]===id} onClick={()=>set(key,id)} className={`min-h-[44px] border-r border-white/10 px-1 text-[10px] font-black last:border-r-0 ${draft[key]===id?'bg-cyan-600 text-white':'bg-slate-900 text-slate-300'}`}>{label}</button>)}</div>;
   // 【2026-09-05・ユーザー指示】「オプション画面が窮屈すぎる／サイズ感に余裕を持たして」
   // 余白(p-4)・項目の間(py-3)・説明文(10px)をひとまわり広げてある。
   // 数値だけを小さくしていくと、指で押す場所と読む場所がどちらも減っていくので、
@@ -96,6 +96,10 @@ const RhythmOptions=({value,onSave,onBack})=>{
               邪魔だと感じた人が消せるようにする(設定そのものは前からあったが、
               切り替える場所も、見る側の判定も無いままだった) */}
           <div className={row}><span className={label}>コンボ数表示</span>{toggle('comboDisplay','')}</div>
+          {/* 置き場所も選べる(2026-09-12・ユーザー指示「元位置（元位置より少し右より）とか
+              選べるほうがいい」)。「右上」が真ん中へ移す前の位置 */}
+          {draft.comboDisplay!==false&&field('コンボ数の位置',segments('comboPosition',[['LEFT','左'],['CENTER','中央'],['RIGHT','右'],['HUD','右上']]),
+            'コンボ数を出す場所を選べます。「中央」は場の真ん中（既定）、「右上」は2026-09-12より前と同じ、ライフの下の位置です。どこに置いても判定・スコア・コンボの数え方は変わりません。')}
           {field('レーン発光',segments('laneGlow',[['NORMAL','標準'],['LOW','控えめ'],['NONE','なし']]))}
         </section>
         <section className={card}>
