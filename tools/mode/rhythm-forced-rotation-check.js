@@ -67,7 +67,6 @@ const VIEW={width:390,height:844};
   try{
     browser=await playwright.chromium.launch({executablePath:'/opt/pw-browsers/chromium',args:['--autoplay-policy=no-user-gesture-required']});
     const page=await browser.newPage({viewport:VIEW});
-    await page.route('**cdn.tailwindcss.com**',r=>r.abort());
     await page.addInitScript(()=>{const put=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
       put('mh_breeder_name','テスト');put('mh_breeder_icon','🐣');put('mh_intro_done',true);put('mh_onboarded',true);
       put('mh_tutorial_seen_v1',true);put('mh_battle_tutorial_seen_v1',true);put('mh_battle_tutorial_guide_shown_v1',true);
@@ -126,6 +125,55 @@ const VIEW={width:390,height:844};
         return el?getComputedStyle(el).flexDirection:null;
       });
       ok('戻すと縦積みに戻る',back==='column',String(back));
+    }
+
+    // ---- ⓪-2 回したときのSafe Area(2026-09-12・ユーザー報告) ----
+    // 「縦横ボタンを押して横画面にしたときにiPhoneの場合、左上の戻るボタンが押せない」。
+    // 器は position:fixed なので body の Safe Area 用の余白の外に置かれ、画面のいちばん端から
+    // 始まる。しかも90度回っているので **器の左端は端末の上端**。横画面の左上に置いた
+    // 「戻る」が、ちょうどステータスバー(時計・電池)の下へ入り込んでいた。
+    // iPhoneはそこのタップをOSが取るので、押しても反応しない。
+    //
+    // env() はテストから作れないので、器のCSSが env() を包んでいる var(--mh-safe-*) を
+    // 差し替えて、実寸を測る。
+    {
+      const INSET={top:59,bottom:34,left:0,right:0};   // ダイナミックアイランド世代のiPhone相当
+      for(const angle of [90,270]){
+        await page.evaluate(([a,inset])=>{
+          const root=document.documentElement.style;
+          Object.entries(inset).forEach(([side,px])=>root.setProperty(`--mh-safe-${side}`,`${px}px`));
+          RHYTHM_VIEW_ROTATION.set(0);
+          RHYTHM_VIEW_ROTATION.set(a);
+        },[angle,INSET]);
+        await page.waitForTimeout(300);
+        const measured=await page.evaluate(()=>{
+          const back=document.querySelector('[data-rhythm-back]');
+          if(!back)return null;
+          const r=back.getBoundingClientRect();          // 回したあと=画面上の実寸
+          const cx=r.left+r.width/2,cy=r.top+r.height/2;
+          const hit=document.elementFromPoint(cx,cy);
+          return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,
+            reachable:!!(hit&&(hit===back||back.contains(hit))),
+            vw:window.innerWidth,vh:window.innerHeight};
+        });
+        ok(`  ${angle}度: 「戻る」を画面上で見つけられる`,!!measured);
+        if(measured){
+          // ★ここが本体。ステータスバー(上59px)・ホームインジケータ(下34px)へ
+          //   1pxでも入っていたら、その端末では押せない
+          ok(`  ${angle}度: 「戻る」がSafe Areaの内側にある(端末の端に埋まらない)`,
+            measured.top>=INSET.top&&measured.bottom<=measured.vh-INSET.bottom
+            &&measured.left>=INSET.left&&measured.right<=measured.vw-INSET.right,
+            `上端=${measured.top.toFixed(1)}px(>=${INSET.top}) / 下端=${measured.bottom.toFixed(1)}px(<=${measured.vh-INSET.bottom})`);
+          // 回転のぶん当たり判定がずれていないか(押した場所にその要素が居るか)
+          ok(`  ${angle}度: 「戻る」の真ん中を押すとその要素に当たる`,measured.reachable);
+        }
+      }
+      await page.evaluate(()=>{
+        const root=document.documentElement.style;
+        ['top','bottom','left','right'].forEach(side=>root.removeProperty(`--mh-safe-${side}`));
+        RHYTHM_VIEW_ROTATION.set(0);
+      });
+      await page.waitForTimeout(300);
     }
     await page.evaluate(()=>document.querySelector('[data-rhythm-demo-start]').click());
     await page.waitForSelector('[data-rhythm-play-area]',{timeout:30000});

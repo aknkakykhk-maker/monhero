@@ -16,8 +16,6 @@
 const http = require('http');
 const path = require('path');
 const fs = require('fs');
-const os = require('os');
-const { execFileSync } = require('child_process');
 
 const root = path.resolve(__dirname, '..', '..');
 const PORT = 8983;
@@ -38,21 +36,6 @@ const serve = () => new Promise((resolve) => {
   server.listen(PORT, () => resolve(server));
 });
 
-// 本物と同じ見た目で測るためのCSS。このサンドボックスは外部CDN(Tailwind)へ出られないので、
-// 同梱のtailwindcssで game-system.jsx から実際に使っているクラスだけを組み立てて流し込む。
-// これをやらないと flex も w-full も効かず、「はみ出していない」の測定が意味を持たない
-const buildTailwindCss = () => {
-  const bin = path.join(root, 'tools', 'node_modules', '.bin', 'tailwindcss');
-  if (!fs.existsSync(bin)) return null;
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mh-tw-'));
-  const configPath = path.join(dir, 'tailwind.config.js');
-  const inputPath = path.join(dir, 'in.css');
-  const outputPath = path.join(dir, 'out.css');
-  fs.writeFileSync(configPath, `module.exports={content:[${JSON.stringify(path.join(root, 'monster-hero/src/game-system.jsx'))}],theme:{extend:{}},plugins:[]};\n`);
-  fs.writeFileSync(inputPath, '@tailwind base;@tailwind components;@tailwind utilities;\n');
-  execFileSync(bin, ['-c', configPath, '-i', inputPath, '-o', outputPath, '--minify'], { stdio:'ignore', timeout: 300000 });
-  return fs.readFileSync(outputPath, 'utf8');
-};
 
 let failed = 0;
 const check = (name, ok, detail = '') => {
@@ -87,14 +70,11 @@ const MASU_FIXTURES = [
   const errors = [];
   let browser;
   try {
-    const tailwindCss = buildTailwindCss();
-    check('本物と同じCSSを用意できる', !!tailwindCss && tailwindCss.length > 10000, `${tailwindCss ? Math.round(tailwindCss.length / 1024) : 0}KB`);
     browser = await playwright.chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
     // いちばん狭い想定として iPhone SE 相当(375)でも見る
     for (const width of [390, 375]) {
       const page = await browser.newPage({ viewport: { width, height: 844 } });
       page.on('pageerror', (e) => errors.push(String(e)));
-      await page.route('**cdn.tailwindcss.com**', (r) => r.abort());
       await page.addInitScript((fixtures) => {
         const put = (k, v) => localStorage.setItem(k, JSON.stringify(v));
         put('mh_breeder_name', '検査ブリーダー');
@@ -110,7 +90,12 @@ const MASU_FIXTURES = [
         put('mh_masu_mons', fixtures.map((m, i) => ({ ...m, bondXp: 500000, createdAt: i + 1 })));
       }, MASU_FIXTURES);
       await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
-      if (tailwindCss) await page.addStyleTag({ content: tailwindCss });
+      // Tailwind は 2026-09-12 に静的CSS(monster-hero/tailwind.css)へ切り替えたので、
+      // ここで配っている index.html がそのまま本物のCSSを読む。効いていないと flex も w-full も無く、
+      // 「はみ出していない」の測定が意味を持たなくなるので、最初に効きを確かめる
+      const twOn = await page.evaluate(() => { const d = document.createElement('div'); d.className = 'flex';
+        document.body.appendChild(d); const on = getComputedStyle(d).display === 'flex'; d.remove(); return on; });
+      check(`${width}px: Tailwind のCSSが効いている(測った数字に意味がある)`, twOn);
 
       await page.getByRole('button', { name: 'TAP TO START' }).click({ timeout: 60000 });
       await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });

@@ -35,7 +35,6 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
 (async () => {
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
-  await page.route('**cdn.tailwindcss.com**', (r) => r.abort()).catch(() => {});
 
   await page.addInitScript(() => {
     const put = (k, v) => localStorage.setItem(k, JSON.stringify(v));

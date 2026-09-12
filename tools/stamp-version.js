@@ -79,6 +79,24 @@ if (dataKeys.length === 0) {
   process.exit(1);
 }
 
+// 見た目のCSS(tailwind.css)のキャッシュキーも、data/*.js とまったく同じ仕組みで打つ。
+// これは tools/build-tailwind.js が作る生成物で、クラスを1つ足すと中身が変わる。
+// キーが同じままだと、端末に残った古いCSSが使われて「足したクラスだけ効かない」になる。
+let tailwindKey = null;
+replacedIndex = replacedIndex.replace(/(<link rel="stylesheet" href="(tailwind\.css)\?v=)[^"]*(")/, (match, head, relPath, tail) => {
+  const filePath = path.join(REPO_ROOT, 'monster-hero', relPath);
+  if (!fs.existsSync(filePath)) {
+    console.error(`NG: index.html が参照している ${relPath} が見つかりませんでした（node tools/build-tailwind.js で作れます）`);
+    process.exit(1);
+  }
+  tailwindKey = crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex').slice(0, 12);
+  return `${head}${tailwindKey}${tail}`;
+});
+if (!tailwindKey) {
+  console.error('NG: index.html に tailwind.css の読み込みが見つかりませんでした');
+  process.exit(1);
+}
+
 fs.writeFileSync(indexPath, replacedIndex);
 
 // 画像(images/*.png)のキャッシュキー(?v=)も中身のハッシュに合わせる。
@@ -129,4 +147,5 @@ if (imageChanged) {
 
 console.log(`BUILD_DATE、version.json、GAME_BUILD を ${stamp} に更新しました（CHANGELOGは変更しません）`);
 console.log(`data/*.js のキャッシュキー: ${dataKeys.join(' / ')}`);
+console.log(`tailwind.css のキャッシュキー: ${tailwindKey}`);
 console.log(`画像のキャッシュキー: ${imageCount}枚`);

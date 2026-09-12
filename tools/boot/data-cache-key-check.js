@@ -41,6 +41,37 @@ for (const [, relPath, key] of tags) {
     bootSizes[relPath] === bytes.length ? `${bytes.length} bytes` : `index=${bootSizes[relPath]} / 実際=${bytes.length}`);
 }
 
+// 見た目のCSS(tailwind.css)も data/*.js とまったく同じ扱いにする。
+// これは tools/build-tailwind.js の生成物で、クラスを1つ足すと中身が変わる。
+// キーが同じままだと端末に残った古いCSSが使われ、「足したクラスだけ効かない」画面になる。
+// あわせて、外部CDN(cdn.tailwindcss.com)へ戻っていないことも見る。戻ると
+// 起動のたびにブラウザの中でCSSを組み立てることになり、CDNが落ちれば見た目が全部崩れる
+{
+  const m = index.match(/<link rel="stylesheet" href="(tailwind\.css)\?v=([^"]*)"/);
+  check('index.htmlが tailwind.css を読み込んでいる', !!m);
+  if (m) {
+    const cssPath = path.join(root, 'monster-hero', m[1]);
+    const exists = fs.existsSync(cssPath);
+    check(`${m[1]} が存在する`, exists);
+    if (exists) {
+      const bytes = fs.readFileSync(cssPath);
+      const hash = crypto.createHash('sha256').update(bytes).digest('hex').slice(0, 12);
+      check(`${m[1]} のキャッシュキーが中身と一致`, m[2] === hash, m[2] === hash ? hash : `index=${m[2]} / 実際=${hash}`);
+      check(`${m[1]} のBOOT_SIZESが実サイズと一致`, bootSizes[m[1]] === bytes.length,
+        bootSizes[m[1]] === bytes.length ? `${bytes.length} bytes` : `index=${bootSizes[m[1]]} / 実際=${bytes.length}`);
+    }
+  }
+  check('Tailwind を外部CDNから読み直していない', !index.includes('cdn.tailwindcss.com'));
+  const buildTailwind = require(path.join(root, 'tools', 'build-tailwind'));
+  const tw = buildTailwind.checkTailwind();
+  check('tailwind.css がいまのソースから作られている', tw.ok, tw.ok ? tw.fingerprint : tw.reason);
+  // 指紋は Tailwind の設定の本文も混ぜて作る。そこへ絶対パスが入ると、リポジトリの
+  // 置き場所ごとに指紋が変わり、CI(/home/runner/work/…)と手元(/home/user/…)で
+  // 食い違って「古い」と誤判定する(実際に GitHub Actions でだけ落ちた)
+  check('Tailwind の設定に絶対パスが入っていない(置き場所で指紋が変わらない)',
+    !buildTailwind.CONFIG_SOURCE.includes(root), buildTailwind.CONFIG_SOURCE.includes(root) ? `設定に ${root} が入っている` : '');
+}
+
 check('本体JSはGAME_BUILDでキャッシュを更新する', /game-system\.compiled\.js\?v=' \+ GAME_BUILD/.test(index));
 check('stamp-version.jsが中身のハッシュでキーを打つ', fs.readFileSync(path.join(root, 'tools/stamp-version.js'), 'utf8').includes("createHash('sha256')"));
 

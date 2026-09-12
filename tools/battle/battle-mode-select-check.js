@@ -56,7 +56,6 @@ const check = (name, ok, detail = '') => {
     browser = await playwright.chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
     const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
     page.on('pageerror', (e) => errors.push(String(e)));
-    await page.route('**cdn.tailwindcss.com**', (r) => r.abort());
     // 既存ユーザーとして起動し、はじめての案内・バトル練習の案内は出さない
     await page.addInitScript(() => {
       localStorage.setItem('mh_breeder_name', JSON.stringify('検査ブリーダー'));

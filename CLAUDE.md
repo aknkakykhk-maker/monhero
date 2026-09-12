@@ -176,8 +176,8 @@ node tools/render-error-check.js         # 実際に開いて真っ白になら�
 実際に「`const A = B && ...` を `const B = ...` より前に書いてしまい、
 `Cannot access 'B' before initialization` で画面が真っ白になる」という不具合を出した。
 `check-syntax.js` も `undefined-reference-check.js` もこれは検出できない。
-実際にブラウザで開いてJSの実行時エラーを拾うので、Tailwindが読めないこの
-サンドボックスでも「真っ白になるかどうか」だけは確実に分かる。
+実際にブラウザで開いてJSの実行時エラーを拾うので、このサンドボックスでも
+「真っ白になるかどうか」は確実に分かる。
 
 モンスターの絵やアイコンを差し替え・追加したら、`node tools/build.js` でキャッシュキーを更新したうえで
 `node tools/image-asset-check.js` を通す。絵の実体は `monster-hero/images/` 以下のPNGで、
@@ -243,8 +243,12 @@ HOMEの配置(みゅあの吹き出し・施設・はじめての案内)を触�
 `node tools/home-layout-check.js` を通す。HOMEのCSSだけを取り出して実際のブラウザで
 位置を測るので、このサンドボックスでも「重なっているかどうか」を数値で確かめられる。
 
-このサンドボックスは外部CDN(Tailwind)やBGMの事前ロードを完了できず、実ブラウザでの
-起動確認が最後まで通らない。そのぶん、こうした静的な検査を通すことが唯一の防波堤になる。
+**見た目のCSS(Tailwind)は 2026-09-12 に静的化した**(`monster-hero/tailwind.css`)ので、
+このサンドボックスでも本物と同じ見た目で位置を測れる。作り直すのは `node tools/build.js`
+(中身が変わったときだけ7秒かけて作る)。古いまま公開していないかは `node tools/build.js --check` と
+`node tools/boot/data-cache-key-check.js` が見張る。
+ただしBGMの事前ロードは相変わらず完了できないため、実ブラウザでの起動確認は最後まで通らない。
+そのぶん、こうした静的な検査を通すことが防波堤になる。
 
 ### ⑥-3 モンヒロビートの新曲は「動画1本＋ジャケット画像1枚」で受け取る
 

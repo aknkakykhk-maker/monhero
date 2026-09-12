@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 // 横画面(スマホを横に持ったとき)で本編の画面が使える形になっているかを、実ブラウザで測る。
 //
-//   node tools/layout/build-tailwind-for-checks.js   ← 先に1回(検査用のTailwind CSSを作る)
 //   node tools/landscape-screens-check.js
 //
 // 【何を見るか】(2026-09-05・#146 モンヒロ全体の横画面対応)
@@ -18,12 +17,10 @@
 //   ④ 横にはみ出さない
 //   ⑤ 縦画面では何も変わらない(コラムは画面幅、一覧は左端から＝縦積みのまま)
 //
-// 本物のTailwindはCDNのスクリプトなのでこのサンドボックスでは読めない。
-// tools/layout/build-tailwind-for-checks.js が作ったCSSを、同じURLへ「styleを差し込むJS」として
-// 返して代わりにする(実物と同じ順番で効く)。無ければ SKIP。
+// Tailwind は 2026-09-12 に静的CSS(monster-hero/tailwind.css)へ切り替えたので、
+// ここで配っている index.html がそのまま本物のCSSを読む。差し込む細工は要らなくなった。
 const http=require('http'),path=require('path'),fs=require('fs');
 const ROOT=path.resolve(__dirname,'..'),PORT=8957;
-const CSS_PATH=path.join(ROOT,'tools/layout/.tailwind-for-checks.css');
 let failed=0;
 const ok=(name,cond,detail='')=>{console.log(`${cond?'OK':'NG'}: ${name}${detail?` — ${detail}`:''}`);if(!cond)failed++;};
 const MIME={'.html':'text/html','.js':'text/javascript','.json':'application/json','.css':'text/css','.png':'image/png','.jpg':'image/jpeg','.webp':'image/webp','.svg':'image/svg+xml','.mp3':'audio/mpeg','.ico':'image/x-icon'};
@@ -34,25 +31,29 @@ const serve=()=>new Promise(r=>{const s=http.createServer((req,res)=>{
   fs.createReadStream(f).pipe(res);});s.listen(PORT,()=>r(s));});
 // 一覧を持つ画面と、その画面へ入るHOMEのボタン
 const LIST_SCREENS=['M/B管理','神殿','マーケット','ミッション','ギフト'];
+// 神殿のボタンの数は実装から数える。ここを直に書くと、ボタンを足したときに
+// 「届かない」ではなく「数が違う」で落ち、何が壊れたのか分からなくなる(魂格進化を足して実際に落ちた)
+const TEMPLE_LINKS=(fs.readFileSync(path.join(ROOT,'monster-hero/src/parts/60-app.jsx'),'utf8').match(/mh-temple-link/g)||[]).length;
 
 (async()=>{
-  if(!fs.existsSync(CSS_PATH)){console.log('SKIP: 検査用のTailwind CSSがありません。node tools/layout/build-tailwind-for-checks.js を先に流してください');process.exit(0);}
   let chromium;
   try{({chromium}=require(path.join(ROOT,'tools/node_modules/playwright')));}
   catch{console.log('SKIP: playwright が入っていないので確認できません');process.exit(0);}
-  const CSS=fs.readFileSync(CSS_PATH,'utf8');
   const server=await serve();
   const browser=await chromium.launch({executablePath:'/opt/pw-browsers/chromium',args:['--autoplay-policy=no-user-gesture-required']});
   const open=async(width,height)=>{
     const page=await browser.newPage({viewport:{width,height},deviceScaleFactor:2,isMobile:true,hasTouch:true});
-    await page.route('**cdn.tailwindcss.com**',r=>r.fulfill({status:200,contentType:'application/javascript',
-      body:`(function(){var s=document.createElement('style');s.textContent=${JSON.stringify(CSS)};document.head.appendChild(s);})();`}));
     await page.addInitScript(()=>{const put=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
       put('mh_breeder_name','テスト');put('mh_breeder_icon','🐣');put('mh_intro_done',true);put('mh_onboarded',true);
       put('mh_tutorial_seen_v1',true);put('mh_battle_tutorial_seen_v1',true);put('mh_battle_tutorial_guide_shown_v1',true);
       put('mh_assistant_selected_v1','mua');put('mh_assistant_unlock_seen_v1',true);put('mh_update_notice_seen_v1',true);
       put('mh_rhythm_tutorial_seen_v1',true);put('mh_inherited_unique_level_compensation_v1',true);put('mh_masu_level_cap_compensation_notice_seen_v1',true);});
     await page.goto(`http://localhost:${PORT}/monster-hero/index.html`,{waitUntil:'load',timeout:60000});
+    // Tailwind が本当に効いているかを最初に見る。効いていないと flex も w-full も無く、
+    // 「はみ出していない」「一覧が8割ある」の測定がまるごと意味を失う(それでも数字は出てしまう)
+    const twOn=await page.evaluate(()=>{const d=document.createElement('div');d.className='flex';document.body.appendChild(d);
+      const on=getComputedStyle(d).display==='flex';d.remove();return on;});
+    ok('Tailwind のCSSが効いている(測った数字に意味がある)',twOn);
     await page.waitForFunction(()=>document.body?.innerText.includes('TAP TO START'),{timeout:40000});
     await page.getByRole('button',{name:'TAP TO START'}).click({force:true});
     await page.getByRole('button',{name:'トップ画面へ進む'}).click({timeout:30000});
@@ -102,7 +103,7 @@ const LIST_SCREENS=['M/B管理','神殿','マーケット','ミッション','�
         const reach=await page.evaluate(()=>{const s=[...document.querySelector('[data-mh-screen]').children].find(e=>e.classList.contains('mh-scroll'));
           if(!s)return null;s.scrollTop=s.scrollHeight;const links=[...s.querySelectorAll('.mh-temple-link')];const last=links[links.length-1];
           const b=last.getBoundingClientRect(),sb=s.getBoundingClientRect();return {count:links.length,lastBottom:Math.round(b.bottom),listBottom:Math.round(sb.bottom)};});
-        ok('神殿: 6つのボタンがすべて届く(最後までスクロールできる)',!!reach&&reach.count===6&&reach.lastBottom<=reach.listBottom+1,reach?`${reach.count}個 / 最後の下端 ${reach.lastBottom} / 一覧の下端 ${reach.listBottom}`:'一覧なし');
+        ok(`神殿: ${TEMPLE_LINKS}つのボタンがすべて届く(最後までスクロールできる)`,!!reach&&reach.count===TEMPLE_LINKS&&reach.lastBottom<=reach.listBottom+1,reach?`${reach.count}個 / 最後の下端 ${reach.lastBottom} / 一覧の下端 ${reach.listBottom}`:'一覧なし');
       }
       ok(`${name}: HOMEへ戻れる`,await backHome(page));
     }

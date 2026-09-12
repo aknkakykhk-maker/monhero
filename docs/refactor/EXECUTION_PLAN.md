@@ -47,7 +47,7 @@ S/A 等級は `REGRESSION_RISK_MAP.md` に基づく。
 | 7 描画・キャッシュ | 4本目まで完了。**`React.memo` は測ったうえで「入れない」と決めた**(長いタスク0ms)。残りは静的な `style` の定数化(522箇所) | 低〜中 | Sonnet 5 | high |
 | 8 音声管理・SRI | 移動は parts 分割で完了(`14-audio.jsx`)。**SRI はこの環境では付けられない**——ハッシュを取るのに `cdnjs.cloudflare.com` へ出る必要があり、ネットワークポリシーで 403。ネットワークのある環境で `tone/14.8.49/Tone.js` の sha384 を取って `integrity` / `crossOrigin` を付ける | 低 | Sonnet 5 | medium |
 | 9 音ゲー基盤 | タイミング基盤の整理 | **高**(実機でしか分からない) | **Opus 5** | **max** |
-| 10 残存負債 | 残り | 低〜中 | Sonnet 5 | high |
+| 10 残存負債 | 1本目の **Tailwind 静的化は完了**(2026-09-12。`monster-hero/tailwind.css` 111KB・外部CDNへの往復0回)。残りは `index.html` の `<style>` と `createAnimationStyle` の2系統(どちらも自前CSS。外部通信には関係しない) | 低〜中 | Sonnet 5 | high |
 
 ### STEP 6 の内訳(切り出し順)
 
@@ -73,36 +73,46 @@ S/A 等級は `REGRESSION_RISK_MAP.md` に基づく。
 
 ## 次の一手
 
-**STEP 10 残存負債 — Tailwind を静的CSSへ** — **Sonnet 5 / effort high**
+**main 由来で落ちている検査6件を直す** — **Sonnet 5 / effort high**
 
-STEP 1・2・4・5・6 は完了、STEP 3 は5本目まで、STEP 7 は4本目まで完了
-(進捗は [`README.md`](README.md))。落ちている検査は0本。
+STEP 1・2・4・5・6 は完了、STEP 3 は5本目まで、STEP 7 は4本目まで、
+**STEP 10 の Tailwind 静的化は完了(2026-09-12)**(進捗は [`README.md`](README.md))。
+
+いま **7本落ちている**。全407本を流して見つけたもので、
+**どれも Tailwind 静的化より前から落ちている**(切り替え前のコミットを別の作業ツリーへ出して
+同じ検査を流し、同じNGが出ることを確かめた)。調べた内容は
+[`../ops/failing-checks-20260912.md`](../ops/failing-checks-20260912.md) にまとめてある。
+
+```
+node tools/audio/bgm-preview-stop-check.js
+node tools/battle/battle-check.js
+node tools/battle/battle-menu-browser-check.js
+node tools/masu/masu-enhance-layer-check.js
+node tools/mode/extreme-browser-check.js
+node tools/mode/rhythm-audio-independence-check.js
+node tools/mode/rhythm-mode-foundation-check.js
+```
+
+安全網(STEP 1)の値打ちは「落ちたら本当に何かが壊れている」状態を保てることなので、
+**ほかの STEP より先にここを0へ戻す。** とくに battle の2本は、
+バトルの流れを通しで確かめる検査がいま動いていないということでもある。
+
+> ⚠️ **静的CSSにしたことで、検査の中でもTailwindが本当に効くようになった。**
+> `fixed inset-0` のモーダルは以前「効かないので素通りできた」が、いまは本当に画面を覆う。
+> 直すときは「モーダルを閉じてから押す」に変えること。**効かないCSSを前提に戻さない。**
+
+そのあとは表を上から。次に大きいのは **STEP 3 の残り2つ**
+(①寄付 `executeMasuDonation`・60-app.jsx:5748 の4キーを取引へ ②起動時ロードの424行・TD-18)で、
+こちらは **Opus 5 / effort max**。
 
 STEP 7 の `React.memo` は**測ったうえで「入れない」と決めた**。
 ランキング50件でも描画は21〜62ms、画面が固まる長いタスクは全画面0ms
 ([`RENDER_COST_REPORT.md`](RENDER_COST_REPORT.md))。
 実機で引っかかりを感じたら `node tools/browser/screen-render-cost-check.js` で測ってから考える。
 
-次に効くのは **Tailwind の静的化**(TD-13・High)。
-調べたところ**切り替えられる**(欠けるクラス0件・静的CSS 111KB。
-[`TAILWIND_STATIC_REPORT.md`](TAILWIND_STATIC_REPORT.md))。
-いまは起動のたびに「CDNからスクリプトを取る → ソースを走査 → CSSを組み立てる」が走っている。
-
-**決めることが4つある。**
-
-1. 生成をどこで走らせるか(`tools/build.js` に乗せるか、別のコマンドにするか)
-2. 出力をどこへ置くか、キャッシュキーをどう打つか(`data/*.js` と同じ仕組みに乗せられる)
-3. `index.html` 125行目の `tailwind.config`(`landscape:` を差し替えている)を生成側の設定へ移す
-4. CI(`compiled-check.yml`)で生成物が最新かをどう見るか
-
-**切り替えたら必ず目で見て確かめる。** `layout-consistency-check` / `home-layout-check` /
-`--area ui` を通したうえで、実機でも1周すること。数え方は近似なので、
-「0件」を鵜呑みにしない。
-
 > **STEP 8 の SRI はこの環境ではできない。** `cdnjs.cloudflare.com` へ出られないため。
 > ネットワークのある環境での取り方は割り当て表の STEP 8 欄に書いた。
-> **Tailwind を静的化するなら、そのときに Tone.js の SRI も一緒に片付くか検討するとよい**
-> (どちらも「外部CDNに頼らない」方向の作業)。
+> Tailwind は静的化で外部CDNから切り離せたが、**Tone.js は残っている**。
 
 **props の洗い出しは手でやらない。** props を空にした仮のコンポーネントへ JSX を移し、
 `node tools/undefined-reference-check.js` を通すと、足りない参照が全部一覧で出る。

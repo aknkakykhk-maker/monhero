@@ -90,6 +90,17 @@ if (process.argv.includes('--check')) {
     const r=spawnSync(process.execPath,[path.join(__dirname,'stamp-audio-keys.js'),'--check'],{encoding:'utf8'});
     if(r.status!==0){process.stderr.write(r.stderr||r.stdout||'');process.exit(1);}
   }
+  // 見た目のCSS(tailwind.css)が今のソースから作られたものかを見る。
+  // tailwindcss は optionalDependencies なので CI では作り直せない。かわりに
+  // CSSの1行目へ書いてある「元の中身の指紋」と今のソースを突き合わせる。
+  // クラスを1つ足して build.js を忘れると、そのクラスだけ効かない画面が公開されてしまう
+  {
+    const r = require('./build-tailwind').checkTailwind();
+    if (!r.ok) {
+      console.error(`NG: ${r.reason}。node tools/build.js を実行してください`);
+      process.exit(1);
+    }
+  }
   console.log('OK: game-system.compiled.js は game-system.jsx の正規ビルドと一致しています');
   process.exit(0);
 }
@@ -111,6 +122,21 @@ if (process.argv.includes('--check')) {
     syncPartsAndGameSystem({ fromParts: true });
     console.log(`音源のキャッシュキーを書き直しました(${stampAudio.count}件)`);
   }
+}
+
+// 見た目のCSS(tailwind.css)を、いまのソースから作り直す。
+// 中身が変わっていなければ何もしない(作るのに7秒かかるため)。
+// stamp-version はこのファイルのキャッシュキーを打つので、必ずその前に行う。
+{
+  const { buildTailwindIfNeeded } = require('./build-tailwind');
+  const r = buildTailwindIfNeeded();
+  if (r.missingTool) {
+    console.error('NG: tailwind.css を作り直せません。tailwindcss が入っていません(cd tools && npm install)');
+    process.exit(1);
+  }
+  console.log(r.changed
+    ? `tailwind.css を作り直しました(${Math.round(r.size / 1024)} KB / ${r.fingerprint})`
+    : `tailwind.css は最新でした(${r.fingerprint})`);
 }
 
 // 公開用ビルドではバージョン3箇所を先に同一時刻へ揃える。機能変更後に古い日時の

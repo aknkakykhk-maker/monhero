@@ -57,7 +57,6 @@ const check = (name, ok, detail = '') => {
     // iPhone相当の縦画面で見る
     const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
     page.on('pageerror', (e) => errors.push(String(e)));
-    await page.route('**cdn.tailwindcss.com**', (r) => r.abort());
     await page.addInitScript(() => {
       localStorage.setItem('mh_breeder_name', JSON.stringify('検査ブリーダー'));
       localStorage.setItem('mh_breeder_icon', JSON.stringify('🐣'));

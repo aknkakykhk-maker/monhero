@@ -106,13 +106,27 @@ check('モンビー以外の画面(HOME・プロフィール等)では止まる'
     .every(screen => withRunOn(screen).read().allowed === false));
 
 // ---- ⑤ モンビーを開いている間は画面が勝手に切り替わらない ----
+// ★期待する画面は**この検査の側に書き下す**。実装の一覧(rhythmScreens)から作ると、
+//   実装から漏れた画面はここでも漏れるので、漏れそのものを見つけられない。
+//   実際に 2026-09-12 まで RHYTHM_OPTIONS が漏れていて、
+//   「モンビー中にオプションに行くとたまに強制でバトルに飛ばされる」が起きていた。
+const EXPECTED_RHYTHM_SCREENS = ['RHYTHM_DEMO_HOME','RHYTHM_DEMO_HELP','RHYTHM_DEMO_MONSTERS',
+  'RHYTHM_RANKING','RHYTHM_OPTIONS','RHYTHM_PLAY','RHYTHM_INFO','RHYTHM_DEBUG'];
 check('モンビーを開いている間は、ランが進んでも画面が切り替わらない',
-  [...rhythmScreens, 'RHYTHM_PLAY'].every(screen => {
+  EXPECTED_RHYTHM_SCREENS.every(screen => {
     const e = withRunOn(screen);
     e.advanceRunStage('WAVE_RESULT');
     const r = e.read();
     return r.runStage === 'WAVE_RESULT' && r.gameState === screen;
-  }));
+  }),
+  EXPECTED_RHYTHM_SCREENS.join(','));
+// ★一覧ではなく頭文字で見る作りにしてある。これならモンビーへ画面を足しても漏れない
+check('モンビーにいるかどうかは一覧ではなく gameState の頭で見る（画面を足しても漏れない）',
+  definition.includes("const isRhythmScreen = state => typeof state === 'string' && state.startsWith('RHYTHM_');")
+  && definition.includes('const rhythmScreenOpen = isRhythmScreen(gameState);'));
+check('オプション(RHYTHM_OPTIONS)でも裏の周回が続く',
+  rhythmScreens.includes('RHYTHM_OPTIONS')
+  && withRunOn('RHYTHM_OPTIONS').read().allowed === true);
 
 // ---- ③ 進行を回す3つのループが runStage を見ている ----
 const hasBareGameState = (text) => /[^a-zA-Z]gameState[^a-zA-Z]/.test(text);

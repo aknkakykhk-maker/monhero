@@ -38,7 +38,6 @@ const seed = (clears) => {
 
 async function openBattle(page, clears) {
   await page.addInitScript(seed, clears);
-  await page.route('**cdn.tailwindcss.com**', r => r.abort()).catch(() => {});
   await page.goto(PAGE_URL, { waitUntil: 'load', timeout: 60000 });
   await page.waitForFunction(() => document.getElementById('root')?.children.length > 0, { timeout: 60000 });
   const pointerDown = (sel) => page.evaluate((s) => {
@@ -273,7 +272,6 @@ const extremeCardInfo = () => {
   {
     const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
     await page.addInitScript(seed, { GrandMaster: 1 });
-    await page.route('**cdn.tailwindcss.com**', r => r.abort()).catch(() => {});
     const bootToHome = async () => {
       await page.goto(PAGE_URL, { waitUntil: 'load', timeout: 60000 });
       await page.waitForFunction(() => document.getElementById('root')?.children.length > 0, { timeout: 60000 });

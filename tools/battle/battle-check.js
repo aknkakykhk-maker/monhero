@@ -110,8 +110,6 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
     }
   };
 
-  // このサンドボックスへは Tailwind の CDN が届かない。待たされるだけなので先に切る
-  await page.route('**cdn.tailwindcss.com**', (r) => r.abort()).catch(() => {});
   await page.goto(URL, { waitUntil: 'load', timeout: 60000 });
   await page.waitForFunction(() => !!document.body && document.body.innerText.includes('TAP TO START'), { timeout: 40000 }).catch(() => {});
   await pointerDown({ text: 'TAP TO START' }); await page.waitForTimeout(2200);

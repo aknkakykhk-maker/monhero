@@ -82,7 +82,6 @@ const startButtonExists = (page) => page.evaluate(() => !!document.querySelector
     {
       const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
       page.on('pageerror', (e) => fatal.push(e.message));
-      await page.route('**cdn.tailwindcss.com**', (r) => r.abort()).catch(() => {});
       await page.addInitScript(seedFor(true));
       await openRhythmFromHome(page);
       check('ONのとき、モンヒロビートを開けている', await page.evaluate(() => !!document.querySelector('[data-rhythm-demo-home]')));
@@ -102,7 +101,6 @@ const startButtonExists = (page) => page.evaluate(() => !!document.querySelector
     {
       const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
       page.on('pageerror', (e) => fatal.push(e.message));
-      await page.route('**cdn.tailwindcss.com**', (r) => r.abort()).catch(() => {});
       await page.addInitScript(seedFor(false));
       await openRhythmFromHome(page);
       check('OFFのとき、モンヒロビートを開けている', await page.evaluate(() => !!document.querySelector('[data-rhythm-demo-home]')));

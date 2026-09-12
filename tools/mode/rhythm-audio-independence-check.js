@@ -15,14 +15,20 @@ const game=read('monster-hero/src/game-system.jsx'),data=read('monster-hero/data
 let failed=0;
 const check=(name,ok,detail='')=>{console.log(`${ok?'✓':'✗'} ${name}${detail?` — ${detail}`:''}`);if(!ok)failed++;};
 
-check('音ゲーBGMのgainノードはメインのbgmGainではなくctx.destinationへ直結',
-  game.includes('nextSource.connect(rhythmGain);rhythmGain.connect(ctx.destination);')
+// ★2026-09-11に「音が出ないとき」の音量メーターを足したとき、出口が masterOut
+//   (素通しのgain＋analyser)経由になった。メーターが無い環境では ctx.destination へ落ちる。
+//   見たいのは「メインのBGM音量(bgmGain)を通っていないこと」なので、そこを見る。
+//   ctx.destination 直結だけを見ていたため、この検査はそれ以来落ちたままだった(2026-09-12に修正)。
+check('音ゲーBGMのgainノードはメインのbgmGainを経由しない(出口は素通しのmasterOutかctx.destination)',
+  game.includes('nextSource.connect(rhythmGain);rhythmGain.connect(masterOut||ctx.destination);')
   &&!game.includes('nextSource.connect(rhythmGain);rhythmGain.connect(bgmGain);'));
 check('音ゲーBGMの音量はメインのBGM音量(bgmVolumePct)を掛けない',
   !/rhythmGain\.gain\.value[^;]*bgmVolumePct/.test(game)
   &&!/startRhythmTrack[\s\S]{0,400}applyTrackGain\(track\)/.test(game));
+// 2026-09-12: 音量の上限を200まで開けた(ユーザー指示)。100までの値は今までとまったく同じで、
+// クランプの上限だけが 1 → RHYTHM_VOLUME_MAX/100 へ広がっている。
 check('曲ごとの音量差はsafeTrackGainで正規化する',
-  /const raw=Math\.max\(0,Math\.min\(1,Number\(rhythmVolumePct\)\/100\)\)\*safeTrackGain\(track\);/.test(game));
+  /const raw=Math\.max\(0,Math\.min\(RHYTHM_VOLUME_MAX\/100,Number\(rhythmVolumePct\)\/100\)\)\*safeTrackGain\(track\);/.test(game));
 
 check('全体ミュート(enabled)はグローバル変数として公開する',
   game.includes("if (typeof window !== 'undefined') window.__mhAudioEnabled = enabled;"));

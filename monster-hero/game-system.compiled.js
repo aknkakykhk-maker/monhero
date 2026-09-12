@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 11d3f9ee71017d7a
+// source-sha256: 7eeeb981ef055c15
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 20e8e2d04f3401ff
+// generated-sha256: f1766a38794c1216
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-12 21:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-12 21:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -296,9 +296,23 @@ const modeKeyPrefix = mode => isQuickMode(mode) ? 'mh_quick_' : isProMode(mode) 
 const bestScoreKey = (mode, diff) => `${modeKeyPrefix(mode)}hs_${diff}`;
 const bestWaveKey = (mode, diff) => `${modeKeyPrefix(mode)}highest_wave_${diff}`;
 const clearCountKey = (mode, diff) => `${modeKeyPrefix(mode)}clears_${diff}`;
-// クイックの各難易度は、同じ難易度をチャレンジ・プロ・極限のどれかでクリア済みなら解放する。
+// その難易度を、チャレンジ・プロ・極限のどれかでクリア済みか。
 // 新しい解放フラグは作らず、各モードの既存クリア回数だけを参照するため、既存セーブにも即時反映される。
-const isQuickDifficultyUnlocked = (difficulty, challengeClears, proClears, extremeClears) => [challengeClears, proClears, extremeClears].some(clears => (Number(clears?.[difficulty]) || 0) > 0);
+const isQuickDifficultyCleared = (difficulty, challengeClears, proClears, extremeClears) => [challengeClears, proClears, extremeClears].some(clears => (Number(clears?.[difficulty]) || 0) > 0);
+// 「その難易度と、それより上のすべて」を弱い順の並びから取り出す。
+// 並びの正本は QUICK_DIFFICULTY_SETTINGS のキー順(Beginner→…→Legend→EXTREME→…→ULTIMATE)なので、
+// 難易度が増えてもここは触らずに済む。表に無い難易度は自分自身だけを見る(従来どおりの判定)。
+const quickDifficultiesAtOrAbove = difficulty => {
+  const order = Object.keys(QUICK_DIFFICULTY_SETTINGS);
+  const index = order.indexOf(difficulty);
+  return index < 0 ? [difficulty] : order.slice(index);
+};
+// 上の難易度をクリアしていれば、その下の難易度もすべて選べる
+// (2026-09-12・ユーザー指摘「マスターをクリアしててもイージーをクリアしなきゃイージーを選べない /
+//  裏クイック条件を満たした下の難易度は選べるようにして」)。
+// 下の難易度は上の難易度より必ずやさしいので、上を通せた人にわざわざ下を踏ませる意味がないため。
+// 逆向き(下をクリアしても上は開かない)は従来のまま。
+const isQuickDifficultyUnlocked = (difficulty, challengeClears, proClears, extremeClears) => quickDifficultiesAtOrAbove(difficulty).some(id => isQuickDifficultyCleared(id, challengeClears, proClears, extremeClears));
 // ===== モンヒロビートで1曲遊んだぶんを、クイック∞周回の何周ぶんにするか =====
 // (2026-09-07・ユーザー提案)
 //   「演奏に入った段階でのバトルの周分をクリア時のみ少量扱いにする」
@@ -344,6 +358,19 @@ const rhythmPlayRunLoopScale = (songId, event) => {
 //   これが無いと、勝てないほど高い難易度でも演奏さえすればクリア扱いになってしまう。
 //   判定には既存の mh_quick_clears_<難易度> をそのまま読む(新しい保存キーは作らない)。
 const rhythmPlayRunLoopsAllowed = (difficulty, quickClears) => (Number(quickClears?.[difficulty]) || 0) > 0;
+// 演奏の結果(クリア／失敗)で入る周回数を変える(2026-09-12・ユーザー指示
+//   「終了後にクリアか失敗かもわかるようにして / それによって経験値も変わるから」)。
+// 失敗＝ライフが0になったまま曲を終えた(不可逆のDOWN)こと。
+//
+// ★失敗は0。半分入るようにしていたが、**叩かずに放っておいても半分もらえてしまう**ため
+//   0へ直した(2026-09-12・ユーザー指示「失敗しても入るようにすると放置で稼げるように
+//   なるから失敗は0にして」)。周回クリア扱いにするのは、ちゃんと弾ききったときだけ。
+// ★クリアかどうかを渡さない古い呼び出し(undefined)は、これまでどおり全額入る。
+const rhythmPlayRunLoopsForResult = (loops, cleared) => {
+  const base = Math.max(0, Math.trunc(Number(loops) || 0));
+  if (base <= 0) return 0;
+  return cleared === false ? 0 : base;
+};
 
 // モード選択カードの最高スコアは、現在の選択難易度ではなく、そのモードで
 // 記録対象になっている全難易度の自己ベストから求める。未プレイ・壊れた値は0として扱う。
@@ -4711,6 +4738,43 @@ const RHYTHM_RANKING_PENDING_MAX = 20;
 const RHYTHM_EFFECT_LEVELS = Object.freeze(['NORMAL', 'LOW', 'MINIMAL']);
 // コンボの節目でお祝いを出す刻み。100コンボごと。
 const RHYTHM_COMBO_MILESTONE_STEP = 100;
+// コンボ数の見せ方の段(2026-09-12・ユーザー指示
+//   「コンボ数もわかりにくい。増えれば増えるほど目立つようにして」)。
+// 100コンボごとのお祝い(RHYTHM_COMBO_MILESTONE_STEP)とは別で、こちらはHUDの数字そのものが
+// 段を上がるたびに大きく・熱い色になるための分類。**見た目だけの値で、判定・スコア・
+// コンボの数え方(rhythmComboAfter)には一切関わらない。**
+// 節目は 10 / 30 / 50 / 100 / 200 / 300 / 500 の7つ。最初の段を10に置いているのは、
+// 「増えている」という手応えが序盤から出るようにするため(100まで何も変わらないと気づけない)。
+const RHYTHM_COMBO_TIER_STEPS = Object.freeze([10, 30, 50, 100, 200, 300, 500]);
+const rhythmComboTier = combo => {
+  const value = Number(combo);
+  if (!Number.isFinite(value) || value <= 0) return 0;
+  return RHYTHM_COMBO_TIER_STEPS.reduce((tier, step) => value >= step ? tier + 1 : tier, 0);
+};
+// 段ごとの大きさ。font-size ではなく transform:scale() で効かせる。
+// ★font-size を段ごとに上書きすると、横持ち(landscape:text-base)の詰めた文字サイズまで
+//   巻き添えで壊れる。倍率なら縦持ち・横持ちのどちらの基準サイズもそのまま活かせる。
+// ★上限が1.13で止まっているのは、ここが**レーンの台形の外側の空き**に置かれているため。
+//   4桁(9999)まで伸びた状態で台形へかぶると、奥のノーツが読めなくなる
+//   (tools/mode/rhythm-hud-wedge-check.js と rhythm-landscape-hud-check.js が実測で落とす)。
+//   そのぶん「どんどん目立つ」は、大きさよりも色・光・脈打ちの強さで出している。
+const RHYTHM_COMBO_TIER_SCALES = Object.freeze([1, 1.02, 1.04, 1.06, 1.08, 1.1, 1.12, 1.13]);
+const rhythmComboTierScale = tier => {
+  const index = Math.trunc(Number(tier) || 0);
+  return RHYTHM_COMBO_TIER_SCALES[Math.max(0, Math.min(RHYTHM_COMBO_TIER_SCALES.length - 1, index))];
+};
+// ライフの見せ方の段(2026-09-12・ユーザー指示
+//   「ライフ変動や0になったときとか気付きにくいからもっと強調して / 0だとライフが赤くなるとか
+//     バーが割れるとか」)。
+// ライフの数値・減り方(RHYTHM_LIFE_DELTA)・DOWNの扱いは一切変えない。色と点滅とひび割れを
+// CSSへ伝えるためだけの分類で、rhythmLifeRatio の値をそのまま段に読み替える。
+const rhythmLifeState = life => {
+  const ratio = rhythmLifeRatio(life);
+  if (ratio <= 0) return 'down';
+  if (ratio <= .25) return 'danger';
+  if (ratio <= .5) return 'caution';
+  return 'ok';
+};
 const RHYTHM_LANE_GLOW_LEVELS = Object.freeze(['NORMAL', 'LOW', 'NONE']);
 const RHYTHM_JUDGMENT_IDS = Object.freeze(['MARVELOUS', 'EXCELLENT', 'GREAT', 'GOOD', 'BAD', 'MISS']);
 // ランク(G〜M)の表示色(暫定値)。下位ほど地味な色、上位ほど鮮やかにして一目で分かるようにする。
@@ -4770,7 +4834,9 @@ const normalizeRhythmSettings = value => {
   const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
   const bool = key => typeof source[key] === 'boolean' ? source[key] : DEFAULT_RHYTHM_SETTINGS[key];
   return {
-    bgmVolume: rhythmFiniteStep(source.bgmVolume, 0, 100, 1, DEFAULT_RHYTHM_SETTINGS.bgmVolume),
+    // 上限は RHYTHM_VOLUME_MAX(=200)。**広げただけ**なので、保存してある0〜100は
+    // 1つも動かないし、100の意味も今までと同じ(2026-09-12・ユーザー指示)
+    bgmVolume: rhythmFiniteStep(source.bgmVolume, 0, RHYTHM_VOLUME_MAX, 1, DEFAULT_RHYTHM_SETTINGS.bgmVolume),
     noteSpeed: rhythmFiniteStep(source.noteSpeed, RHYTHM_NOTE_SPEED_MIN, RHYTHM_NOTE_SPEED_MAX, RHYTHM_NOTE_SPEED_STEP, DEFAULT_RHYTHM_SETTINGS.noteSpeed),
     noteSize: rhythmFiniteStep(source.noteSize, 80, 120, 5, DEFAULT_RHYTHM_SETTINGS.noteSize),
     noteStartPosition: rhythmFiniteInRange(source.noteStartPosition, -100, 100, DEFAULT_RHYTHM_SETTINGS.noteStartPosition),
@@ -4782,7 +4848,7 @@ const normalizeRhythmSettings = value => {
     comboDisplay: bool('comboDisplay'),
     holdSlideOpacity: rhythmFiniteInRange(source.holdSlideOpacity, 10, 100, DEFAULT_RHYTHM_SETTINGS.holdSlideOpacity),
     laneGlow: RHYTHM_LANE_GLOW_LEVELS.includes(source.laneGlow) ? source.laneGlow : DEFAULT_RHYTHM_SETTINGS.laneGlow,
-    noteSeVolume: rhythmFiniteStep(source.noteSeVolume, 0, 100, 1, DEFAULT_RHYTHM_SETTINGS.noteSeVolume),
+    noteSeVolume: rhythmFiniteStep(source.noteSeVolume, 0, RHYTHM_VOLUME_MAX, 1, DEFAULT_RHYTHM_SETTINGS.noteSeVolume),
     noteSeEnabled: bool('noteSeEnabled'),
     vibrationEnabled: bool('vibrationEnabled'),
     effectAmount: RHYTHM_EFFECT_LEVELS.includes(source.effectAmount) ? source.effectAmount : DEFAULT_RHYTHM_SETTINGS.effectAmount,
@@ -4798,6 +4864,7 @@ const normalizeRhythmSettings = value => {
 const emptyRhythmBestRecord = () => ({
   bestScore: 0,
   maxCombo: 0,
+  played: false,
   clear: false,
   fullCombo: false,
   allExcellent: false,
@@ -4810,6 +4877,11 @@ const normalizeRhythmBestRecord = value => {
   return {
     bestScore: count(source.bestScore),
     maxCombo: count(source.maxCombo),
+    // played … 一度でも最後まで演奏したか(2026-09-12に追加)。clear は「ライフを残して終えた」に
+    //   意味を絞ったので、失敗した記録を「まだ遊んでいない」と取り違えないための項目。
+    //   ★この項目が無かったころの保存値は、clear が立っていれば played も立っていたものとして読む
+    //     (CLAUDE.md ⑦「既存の値に項目を追加する」「保存値が無いときの既定値を通す」)。
+    played: source.played === true || source.clear === true,
     clear: source.clear === true,
     fullCombo: source.fullCombo === true,
     allExcellent: source.allExcellent === true,
@@ -4857,7 +4929,11 @@ const mergeRhythmBestRecord = (current, result) => {
     bestScore: isNewRecord ? score : previous.bestScore,
     judgments: isNewRecord ? result?.judgments : previous.judgments,
     maxCombo: Math.max(previous.maxCombo, Math.max(0, Math.floor(Number(result?.maxCombo) || 0))),
-    clear: true,
+    // 最後まで演奏したこと自体は played、ライフを残して終えたことが clear。
+    // ★cleared を渡さない古い呼び出し(undefined)は、これまでどおりクリア扱いにする。
+    //   一度でもクリアしていれば、あとで失敗しても clear は下がらない(記録を消さない)。
+    played: true,
+    clear: previous.clear || result?.cleared !== false,
     fullCombo: previous.fullCombo || result?.fullCombo === true,
     allExcellent: previous.allExcellent || result?.allExcellent === true,
     allMarvelous: previous.allMarvelous || result?.allMarvelous === true
@@ -5625,7 +5701,10 @@ const Audio_ = (() => {
         }
         const nextSource = ctx.createBufferSource(),
           rhythmGain = ctx.createGain();
-        const raw = Math.max(0, Math.min(1, Number(rhythmVolumePct) / 100)) * safeTrackGain(track);
+        // 上限は RHYTHM_VOLUME_MAX(=200)ぶん。100までは今までとまったく同じ値。
+        // ★100より上は曲の波形をそのまま持ち上げるので、音源のピーク(-1 dBTP)を
+        //   超えるところから割れる。承知のうえで使う範囲として開けてある(2026-09-12)。
+        const raw = Math.max(0, Math.min(RHYTHM_VOLUME_MAX / 100, Number(rhythmVolumePct) / 100)) * safeTrackGain(track);
         dropGainEntry();
         gainEntry = {
           node: rhythmGain,
@@ -9332,6 +9411,56 @@ const AssistCardIcon = ({
   },
   className: "absolute inset-0 w-full h-full object-contain"
 }));
+// 全画面演出(effect)の見た目。種類ごとの大きさ・光り方・色をここ1か所にまとめる。
+// 以前は表示側のJSXへ `effect.type==='unique'?…:(effect.type==='enhance'?…:…)` を
+// 4か所へ書き並べていたため、種類を1つ足すだけで同じ三項演算子を全部直す必要があった。
+//
+// transcendEnhance(超越強化)は通常強化(enhance)を土台に、一段強い光と大きさにしてある。
+// 超越強化は確定しても何も起きず、通常強化だけが全画面演出を持っていた
+// (2026-09-12・ユーザー指摘「超越強化が音もなく地味。普通の強化と同じかそれより派手めにして」)。
+// 超越強化の演出を出しておく長さ。通常強化(1200ms)より少し長く取って、
+// 上がった項目を読み終えられるようにする
+const TRANSCEND_ENHANCE_FX_MS = 1600;
+const EFFECT_VISUALS = {
+  unique: {
+    size: '180px',
+    emoji: '128px',
+    icon: 60,
+    throb: 'specialThrob 500ms ease-in-out infinite',
+    glow: 'drop-shadow-[0_0_45px_rgba(168,85,247,0.95)]',
+    label: 'text-purple-100 bg-purple-600/30 border-purple-400/60 drop-shadow-[0_0_20px_rgba(168,85,247,0.8)]',
+    sub: 'text-indigo-400'
+  },
+  enhance: {
+    size: '160px',
+    emoji: '120px',
+    icon: 48,
+    throb: 'specialThrob 500ms ease-in-out infinite',
+    glow: 'drop-shadow-[0_0_45px_rgba(251,191,36,0.9)]',
+    label: 'text-amber-100 bg-amber-600/30 border-amber-400/60 drop-shadow-[0_0_20px_rgba(251,191,36,0.8)]',
+    sub: 'text-amber-300'
+  },
+  transcendEnhance: {
+    size: '184px',
+    emoji: '134px',
+    icon: 58,
+    throb: 'mhTranscendFxThrob 620ms ease-in-out infinite',
+    glow: 'drop-shadow-[0_0_55px_rgba(253,230,138,0.95)]',
+    label: 'text-amber-50 bg-gradient-to-r from-amber-500/40 via-pink-500/35 to-sky-500/35 border-amber-200/70 drop-shadow-[0_0_24px_rgba(253,230,138,0.9)]',
+    sub: 'text-amber-200'
+  }
+};
+const EFFECT_VISUAL_DEFAULT = Object.freeze({
+  size: '150px',
+  emoji: '112px',
+  icon: 48,
+  throb: undefined,
+  glow: 'drop-shadow-[0_0_50px_rgba(255,255,255,0.4)]',
+  label: 'text-white bg-white/10 border-white/20',
+  sub: 'text-indigo-400'
+});
+const effectVisual = type => EFFECT_VISUALS[type] || EFFECT_VISUAL_DEFAULT;
+
 // icon欄が画像なら<img>、絵文字ならそのまま返す。sizePxは画像のときの表示サイズ
 const cardIconNode = (icon, sizePx, cardId) => isImageIconValue(icon) ? ASSIST_CARD_ICON_STYLES[cardId] ? /*#__PURE__*/React.createElement(AssistCardIcon, {
   icon: icon,
@@ -19963,7 +20092,7 @@ const RhythmOptions = ({
     className: card
   }, /*#__PURE__*/React.createElement("h3", {
     className: head
-  }, "\uD83D\uDD0A \u97F3\u91CF"), field('BGM音量', stepper('bgmVolume', 0, 100, 1)), field('タップ音量', stepper('noteSeVolume', 0, 100, 1)), /*#__PURE__*/React.createElement("div", {
+  }, "\uD83D\uDD0A \u97F3\u91CF"), field('BGM音量', stepper('bgmVolume', 0, RHYTHM_VOLUME_MAX, 1)), field('タップ音量', stepper('noteSeVolume', 0, RHYTHM_VOLUME_MAX, 1)), /*#__PURE__*/React.createElement("div", {
     className: row
   }, /*#__PURE__*/React.createElement("span", {
     className: label
@@ -19979,7 +20108,11 @@ const RhythmOptions = ({
     className: "min-h-[48px] rounded-xl bg-fuchsia-700 text-[12px] font-black"
   }, "\u30BF\u30C3\u30D7\u97F3\u8A66\u8074")), /*#__PURE__*/React.createElement("p", {
     className: `mt-3 ${note}`
-  }, "\u3053\u306E\u97F3\u91CF\u306F\u30E1\u30A4\u30F3\u30B2\u30FC\u30E0\u306E\u97F3\u91CF\u8A2D\u5B9A\u3068\u5225\u306B\u3001\u97F3\u30B2\u30FC\u3060\u3051\u3067\u4F7F\u3044\u307E\u3059\u3002\u30BF\u30A4\u30C8\u30EB\u753B\u9762\u306E\u5168\u4F53\u30DF\u30E5\u30FC\u30C8\u306E\u307F\u5171\u901A\u3067\u3059\u3002")), /*#__PURE__*/React.createElement("section", {
+  }, "\u3053\u306E\u97F3\u91CF\u306F\u30E1\u30A4\u30F3\u30B2\u30FC\u30E0\u306E\u97F3\u91CF\u8A2D\u5B9A\u3068\u5225\u306B\u3001\u97F3\u30B2\u30FC\u3060\u3051\u3067\u4F7F\u3044\u307E\u3059\u3002\u30BF\u30A4\u30C8\u30EB\u753B\u9762\u306E\u5168\u4F53\u30DF\u30E5\u30FC\u30C8\u306E\u307F\u5171\u901A\u3067\u3059\u3002"), /*#__PURE__*/React.createElement("p", {
+    className: `mt-2 ${note}`
+  }, "2026-09-12\u306B\u30BF\u30C3\u30D7\u97F3\u3092\u5927\u304D\u304F\u3057\u307E\u3057\u305F\uFF08\u305D\u308C\u307E\u3067\u306E10\u500D\uFF09\u3002\u4EE5\u524D\u306B\u97F3\u91CF\u3092\u5408\u308F\u305B\u3066\u3044\u305F\u5834\u5408\u306F\u3001\u30BF\u30C3\u30D7\u97F3\u91CF\u3092\u4E0B\u3052\u308B\u304BBGM\u97F3\u91CF\u3092\u4E0A\u3052\u3066\u5408\u308F\u305B\u76F4\u3057\u3066\u304F\u3060\u3055\u3044\u3002"), /*#__PURE__*/React.createElement("p", {
+    className: `mt-2 ${note}`
+  }, "\u97F3\u91CF\u306F0\u301C", RHYTHM_VOLUME_MAX, "\u307E\u3067\u4E0A\u3052\u3089\u308C\u307E\u3059\u3002100\u306F\u3053\u308C\u307E\u3067\u3068\u540C\u3058\u5927\u304D\u3055\u3067\u3059\u3002100\u3088\u308A\u4E0A\u306F\u7AEF\u672B\u306E\u97F3\u91CF\u3092\u4E0A\u3052\u3066\u3082\u8DB3\u308A\u306A\u3044\u3068\u304D\u306E\u9003\u3052\u9053\u3067\u3001\u3068\u304F\u306BBGM\u97F3\u91CF\u306F\u4E0A\u3052\u3059\u304E\u308B\u3068\u66F2\u306E\u5927\u304D\u3044\u3068\u3053\u308D\u304C\u5272\u308C\u3066\u805E\u3053\u3048\u308B\u3053\u3068\u304C\u3042\u308A\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("section", {
     className: card
   }, /*#__PURE__*/React.createElement("h3", {
     className: head
@@ -20134,6 +20267,14 @@ const RHYTHM_ACHIEVEMENT_MARKS = Object.freeze({
       background: 'rgba(203,213,225,.55)'
     })
   }),
+  // 遊んだけれどライフが0になって終わった(2026-09-12に追加)。「まだ遊んでいない」と
+  // 区別が付かないままにしないためだけの段で、クリアの段より下に置く
+  FAILED: Object.freeze({
+    label: '失敗（ライフ0）',
+    style: Object.freeze({
+      background: 'linear-gradient(135deg,#7f1d1d,#dc2626)'
+    })
+  }),
   CLEAR: Object.freeze({
     label: 'クリア',
     style: Object.freeze({
@@ -20165,7 +20306,8 @@ const RHYTHM_ACHIEVEMENT_MARKS = Object.freeze({
 // 上の段から順に見て、いちばん上の達成を返す。
 const rhythmAchievementMarkId = (playable, record) => {
   if (!playable) return 'NONE';
-  if (!record || !record.clear) return 'UNPLAYED';
+  if (!record || !record.played) return 'UNPLAYED';
+  if (!record.clear) return 'FAILED';
   if (record.allMarvelous) return 'ALL_MARVELOUS';
   if (record.allExcellent) return 'ALL_EXCELLENT';
   if (record.fullCombo) return 'FULL_COMBO';
@@ -20738,7 +20880,7 @@ const RhythmSongSelect = ({
       className: "mt-0.5 block text-[9px] font-black tabular-nums opacity-80"
     }, open ? (() => {
       const record = rhythmBestRecord(bestRecords, song.songId, item.id);
-      return record && record.clear ? record.bestScore.toLocaleString() : '—';
+      return record && record.played ? record.bestScore.toLocaleString() : '—';
     })() : `${need}で解放`));
   })), /*#__PURE__*/React.createElement("p", {
     className: "mt-1.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-[10px] font-bold"
@@ -20748,7 +20890,7 @@ const RhythmSongSelect = ({
   }, "Lv.", chart.level, " / ", chart.totalNotes, "\u30CE\u30FC\u30C4"), /*#__PURE__*/React.createElement("span", {
     "data-rhythm-demo-best": true,
     className: "text-amber-200"
-  }, best && best.clear ? /*#__PURE__*/React.createElement(React.Fragment, null, difficulty.id, "\u306E\u81EA\u5DF1\u30D9\u30B9\u30C8 ", best.bestScore.toLocaleString(), "\uFF08\u30E9\u30F3\u30AF ", rhythmRankForScore(best.bestScore), "\uFF09 / \u6700\u5927\u30B3\u30F3\u30DC ", best.maxCombo) : /*#__PURE__*/React.createElement(React.Fragment, null, "\u307E\u3060\u904A\u3093\u3067\u3044\u307E\u305B\u3093"))), /*#__PURE__*/React.createElement("div", {
+  }, best && best.played ? /*#__PURE__*/React.createElement(React.Fragment, null, difficulty.id, "\u306E\u81EA\u5DF1\u30D9\u30B9\u30C8 ", best.bestScore.toLocaleString(), "\uFF08\u30E9\u30F3\u30AF ", rhythmRankForScore(best.bestScore), "\uFF09 / \u6700\u5927\u30B3\u30F3\u30DC ", best.maxCombo, best.clear ? '' : ' / まだクリアしていません') : /*#__PURE__*/React.createElement(React.Fragment, null, "\u307E\u3060\u904A\u3093\u3067\u3044\u307E\u305B\u3093"))), /*#__PURE__*/React.createElement("div", {
     className: "mt-1.5 flex gap-2"
   }, /*#__PURE__*/React.createElement("button", {
     type: "button",
@@ -21335,7 +21477,7 @@ const RhythmTapTest = ({
     "aria-hidden": "true",
     className: "relative border-r border-white/20 bg-slate-900/40",
     style: {
-      transition: settings.lightweightMode ? 'none' : 'background-color 60ms linear, box-shadow 60ms linear, filter 60ms linear, border-color 60ms linear',
+      /* ★filter をここへ入れない。押したレーンの filter を変えると、変化の60msのあいだ そのレーンが毎フレーム作り直しになる(2026-09-12・実機のカクつき調査) */transition: settings.lightweightMode ? 'none' : 'background-color 60ms linear, box-shadow 60ms linear, border-color 60ms linear',
       borderBottom: '3px solid transparent',
       boxSizing: 'border-box'
     }
@@ -21362,8 +21504,7 @@ const RhythmTapTest = ({
       background: 'linear-gradient(to bottom,rgba(34,211,238,.12) 0%,rgba(34,211,238,.2) 48%,rgba(103,232,249,.5) 76%,rgba(236,254,255,.94) 88%,rgba(103,232,249,.58) 94%,rgba(34,211,238,.28) 100%)',
       boxShadow: settings.lightweightMode || settings.effectAmount === 'MINIMAL' ? 'none' : settings.effectAmount === 'LOW' ? 'inset 0 -18px 18px rgba(207,250,254,.38),0 0 8px rgba(103,232,249,.38)' : 'inset 0 -52px 42px rgba(207,250,254,.72),inset 0 -10px 16px rgba(255,255,255,.82),0 0 20px rgba(103,232,249,.72)',
       filter: settings.effectAmount === 'MINIMAL' ? 'none' : settings.effectAmount === 'LOW' ? 'brightness(1.08)' : 'brightness(1.22)',
-      transition: settings.lightweightMode ? 'none' : 'opacity 45ms linear',
-      willChange: settings.lightweightMode ? 'auto' : 'opacity'
+      transition: settings.lightweightMode ? 'none' : 'opacity 45ms linear'
     }
   })))), [settings.lightweightMode, settings.effectAmount]);
   const monsterForNote = note => {
@@ -21378,6 +21519,10 @@ const RhythmTapTest = ({
     screenFlashRef = useRef(null),
     judgmentTextRef = useRef(null),
     comboRef = useRef(null);
+  // ライフの強調(2026-09-12)。DOM へ data 属性を書くだけで、判定・スコア・ライフの数値には触らない。
+  // lifeBoxRef … 減った瞬間にHUDのライフ表示を揺らす／lifeDamageRef … 減った量(「-50」)を一瞬出す
+  const lifeBoxRef = useRef(null),
+    lifeDamageRef = useRef(null);
   const sideMonsterElements = useMemo(() => {
     if (settings.sideMonsterOpacity === 'OFF') return null;
     const opacity = rhythmSideMonsterOpacityValue(settings.sideMonsterOpacity);
@@ -21469,6 +21614,21 @@ const RhythmTapTest = ({
   // 二度と動かず、200・300では何も起きないように見えるバグになっていた。
   // tierを先に計算してそれをeffectの依存にすることで、実際に100の位が変わったときだけ動く。
   // 演出量MINIMAL・軽量モードでは出さない(端末を重くしないため)。
+  // ライフが0になった瞬間だけ、画面の真ん中へ大きく「LIFE 0 / DOWN」を出す(2026-09-12)。
+  // 数字を数えるのではなく「いま倒れた」と気づけるようにするためのもの。
+  // ★comboMilestone と同じく、段(=0になった回数)が変わったときだけ effect を動かす。
+  //   view.life を依存にすると、ライフが動くたびに後片付けが走って消すタイマーを解除してしまう。
+  const [lifeDownCount, setLifeDownCount] = useState(0);
+  const [lifeDownSlam, setLifeDownSlam] = useState(false);
+  useEffect(() => {
+    if (lifeDownCount <= 0) {
+      setLifeDownSlam(false);
+      return;
+    }
+    setLifeDownSlam(true);
+    const timer = setTimeout(() => setLifeDownSlam(false), 1400);
+    return () => clearTimeout(timer);
+  }, [lifeDownCount]);
   const [comboMilestone, setComboMilestone] = useState(0);
   const comboMilestoneTier = Math.floor((Number(view.combo) || 0) / RHYTHM_COMBO_MILESTONE_STEP);
   useEffect(() => {
@@ -21490,6 +21650,11 @@ const RhythmTapTest = ({
   // 次ランクを出さないようにする(2026-09-04、Codexレビューで指摘された不具合の修正)。
   const rankNextId = rhythmNextRankId(view.score, difficulty.maxScore);
   const rankNextLabel = rankNextId ? `→${rankNextId}` : '★MAX';
+  // ライフとコンボの「見せ方の段」(2026-09-12)。どちらも数値そのものは変えず、
+  // CSSへ渡す data 属性と拡大率を決めるだけ。
+  const lifeRatio = rhythmLifeRatio(view.life);
+  const lifeState = rhythmLifeState(view.life);
+  const comboTier = rhythmComboTier(view.combo);
   // 横画面向けHUD配置(§6.2)で使う。曲名の折り返し行数(WebkitLineClamp)はインラインstyleで
   // 決めるためTailwindのlandscape:だけでは切り替えられず、ここだけJSの向き判定を使う。
   // ほかのHUDレイアウトの出し分けはTailwindのlandscape:バリアントで完結させ、判定・スコア・
@@ -21695,6 +21860,7 @@ const RhythmTapTest = ({
     };
   }, [settings.noteStartPosition, settings.noteSize, view.status]);
   const applyJudgment = useCallback((note, judgment, deltaMs) => {
+    const _judgeT0 = RHYTHM_PERF.enabled && typeof performance !== 'undefined' ? performance.now() : 0;
     const run = runRef.current;
     if (!run || run.finished || run.paused || note.done) return;
     if (note.activePointerId !== null) {
@@ -21785,6 +21951,8 @@ const RhythmTapTest = ({
     const songTimeMs = run.audio?.songTimeMs?.() ?? 0;
     // ライフ変化は能力(無敵・我慢)を通してから反映する。判定・コンボ・スコアそのものは変えない(§4.2)
     // 練習ではライフを減らさない。途中で倒れると、まだ習っていないノーツまで届かなくなる
+    // lifeBefore … 減ったことを知らせる演出のためだけに控える(2026-09-12)。計算には使わない
+    const lifeBefore = run.life;
     run.life = tutorial ? RHYTHM_LIFE_MAX : rhythmLifeAfterWithMonsterAbilities(run.life, judgment, run.abilities, songTimeMs);
     let revived = false,
       abilityFlash = null;
@@ -21846,6 +22014,33 @@ const RhythmTapTest = ({
       run.score = run.lockedScore;
       run.lifeDepleted = false;
     }
+    // ===== ライフの変化を目で分かるようにする(2026-09-12・ユーザー指示) =====
+    // 「ライフ変動や0になったときとか気付きにくい」。バーの数字が小さく動くだけでは気づけないので、
+    // 減ったその場でHUDを揺らし、減った量を数字で一瞬出す。書くのは data 属性と文字だけで、
+    // 判定・スコア・ライフの計算には一切関わらない。
+    // ★根性で蘇生した直後は「増えた」側になるので、減ったときだけ出す(lifeDelta<0)。
+    const lifeDelta = run.life - lifeBefore;
+    if (lifeDelta < 0) {
+      // ここも印の付け直しなので、レイアウトの読み取りは1回にまとめる(rhythmRestartAnimations)。
+      // 箇所ごとに void offsetWidth を書くと、その回数ぶんページ全体のレイアウトが走る。
+      const lifeRestarts = [];
+      const lifeBox = lifeBoxRef.current;
+      if (lifeBox) lifeRestarts.push({
+        el: lifeBox,
+        attr: 'rhythmLifeHit'
+      });
+      const lifeDamage = lifeDamageRef.current;
+      if (lifeDamage) {
+        lifeDamage.textContent = String(lifeDelta);
+        lifeRestarts.push({
+          el: lifeDamage,
+          attr: 'rhythmLifeDamageShow'
+        });
+      }
+      rhythmRestartAnimations(lifeRestarts);
+    }
+    // 0になった瞬間だけ、大きく1度だけ知らせる(蘇生して戻った場合はここを通らない)
+    if (run.life === 0 && lifeBefore > 0) setLifeDownCount(count => count + 1);
     const score = run.lifeDepleted ? run.lockedScore : run.score;
     setView(v => ({
       ...v,
@@ -21866,6 +22061,7 @@ const RhythmTapTest = ({
     }));
     scheduleJudgmentClear();
     if (abilityFlash) scheduleAbilityClear();
+    if (_judgeT0) RHYTHM_PERF.judge(performance.now() - _judgeT0, !!monster);
   }, [chart.totalNotes, difficulty.maxScore, scheduleAbilityClear, scheduleJudgmentClear, settings.vibrationEnabled, tutorial]);
   const finish = useCallback(() => {
     const run = runRef.current;
@@ -21878,6 +22074,11 @@ const RhythmTapTest = ({
     run.audio?.stop();
     const score = run.lifeDepleted ? run.lockedScore : run.score;
     const achievements = rhythmResultAchievements(run.counts, chart.totalNotes);
+    // ===== クリアか失敗か(2026-09-12・ユーザー指示「終了後にクリアか失敗かもわかるようにして」) =====
+    // 失敗＝ライフが0になったまま曲を終えた(不可逆のDOWN)こと。根性で蘇生して0を脱していれば
+    // run.lifeDepleted は false に戻っているので、そのときはクリア扱いになる。
+    // 練習(tutorial)はライフを減らさないので必ずクリア。
+    const failed = !tutorial && run.lifeDepleted === true;
     const result = {
       score,
       judgments: {
@@ -21886,6 +22087,7 @@ const RhythmTapTest = ({
       maxCombo: run.maxCombo,
       fast: run.fast,
       slow: run.slow,
+      cleared: !failed,
       ...achievements
     };
     const isNewRecord = score > run.startBestScore;
@@ -21894,7 +22096,7 @@ const RhythmTapTest = ({
     // 大きく見せる(2026-09-04、ユーザーからの要望)。演出量MINIMAL・軽量モードでは
     // 従来どおりそのままリザルトへ進む(演出だけの分岐で、判定・保存には関わらない)。
     const celebrateTitle = achievements.allMarvelous ? 'ALL MARVELOUS!!' : achievements.allExcellent ? 'ALL EXCELLENT!!' : achievements.fullCombo ? 'FULL COMBO!' : null;
-    const showCelebrate = !!celebrateTitle && !settings.lightweightMode && settings.effectAmount !== 'MINIMAL';
+    const showCelebrate = !!celebrateTitle && !failed && !settings.lightweightMode && settings.effectAmount !== 'MINIMAL';
     setView(v => ({
       ...v,
       status: showCelebrate ? 'celebrate' : 'result',
@@ -21913,7 +22115,7 @@ const RhythmTapTest = ({
       }
     }));
     onComplete(result, merged);
-  }, [chart.totalNotes, difficulty.maxScore, onComplete, settings.effectAmount, settings.lightweightMode, stopFrame]);
+  }, [chart.totalNotes, difficulty.maxScore, onComplete, settings.effectAmount, settings.lightweightMode, stopFrame, tutorial]);
   // celebrate画面: 出た瞬間に合成SEを1回鳴らし、既定の時間で自動的にresultへ進む。
   // 依存はview.statusだけにしてある。もしview.comboなど毎ノーツ変わる値を依存に入れると、
   // (かつてコンボ演出で実際に踏んだ通り)途中でeffectが再実行されるたびcleanupが走り、
@@ -21953,8 +22155,9 @@ const RhythmTapTest = ({
       const run = runRef.current;
       if (!run || run.finished || run.paused) return;
       const perfTickStart = RHYTHM_PERF.enabled ? performance.now() : 0;
-      const songTimeMs = run.audio.songTimeMs(),
-        travel = measureTravel(),
+      const songTimeMs = run.audio.songTimeMs();
+      RHYTHM_PERF.songTime(songTimeMs);
+      const travel = measureTravel(),
         visualTime = songTimeMs - settings.judgmentTimingOffsetMs,
         travelMs = rhythmTravelMsForSpeed(settings.noteSpeed);
       let perfScanned = 0,
@@ -22362,6 +22565,7 @@ const RhythmTapTest = ({
     startLockRef.current = true;
     const generation = ++generationRef.current;
     disposeRun();
+    setLifeDownCount(0);
     setView({
       ...initialView(),
       status: 'loading'
@@ -22860,7 +23064,18 @@ const RhythmTapTest = ({
       className: "text-center text-xs text-cyan-300"
     }, rhythmSongFullName(song), "\u30FB", difficulty.id), /*#__PURE__*/React.createElement("h2", {
       className: "text-center font-black"
-    }, "RHYTHM RESULT"), /*#__PURE__*/React.createElement("div", {
+    }, "RHYTHM RESULT"), (() => {
+      const failed = result.cleared === false;
+      return /*#__PURE__*/React.createElement("div", {
+        "data-rhythm-result-clear": true,
+        "data-cleared": failed ? 'false' : 'true',
+        className: "mx-auto mt-3 w-full max-w-xs rounded-2xl border-2 px-3 py-2 text-center"
+      }, /*#__PURE__*/React.createElement("b", {
+        className: "block text-4xl font-black leading-none"
+      }, failed ? 'FAILED' : 'CLEAR'), /*#__PURE__*/React.createElement("small", {
+        className: "mt-1.5 block text-[10px] font-black leading-relaxed"
+      }, failed ? 'ライフが0になったまま曲が終わりました（DOWN）' : 'ライフを残して最後まで演奏しました'));
+    })(), /*#__PURE__*/React.createElement("div", {
       "data-rhythm-result-rank": true,
       className: `mx-auto mt-2 flex h-20 w-20 items-center justify-center rounded-full border-4 border-current text-4xl font-black ${RHYTHM_RANK_COLORS[rank]}`
     }, rank), /*#__PURE__*/React.createElement("div", {
@@ -22879,7 +23094,20 @@ const RhythmTapTest = ({
       className: "mt-1 block text-[10px] font-black text-amber-200"
     }, result.allMarvelous ? 'すべてMARVELOUS。文句なしの完璧です' : result.allExcellent ? 'すべてEXCELLENT以上。ほぼ完璧です' : '一度もコンボを切らずに完走しました')), /*#__PURE__*/React.createElement("div", {
       className: "my-3 flex flex-wrap justify-center gap-2 text-xs font-black text-slate-300"
-    }, result.fullCombo && /*#__PURE__*/React.createElement("span", null, "FULL COMBO"), result.allExcellent && /*#__PURE__*/React.createElement("span", null, "ALL EXCELLENT"), result.allMarvelous && /*#__PURE__*/React.createElement("span", null, "ALL MARVELOUS")), quickRunAward && quickRunAward.loops > 0 && /*#__PURE__*/React.createElement("div", {
+    }, result.fullCombo && /*#__PURE__*/React.createElement("span", null, "FULL COMBO"), result.allExcellent && /*#__PURE__*/React.createElement("span", null, "ALL EXCELLENT"), result.allMarvelous && /*#__PURE__*/React.createElement("span", null, "ALL MARVELOUS")), quickRunAward && quickRunAward.loops === 0 && quickRunAward.cleared === false && /*#__PURE__*/React.createElement("div", {
+      "data-rhythm-result-quick-run-failed": true,
+      className: "my-3 rounded-2xl border border-rose-400/50 bg-rose-950/30 p-3 text-left"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-baseline justify-between gap-2"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-[10px] font-black tracking-wider text-rose-200"
+    }, "\u30AF\u30A4\u30C3\u30AF\u221E\u5468\u56DE"), /*#__PURE__*/React.createElement("b", {
+      className: "text-lg font-black leading-none text-rose-200"
+    }, "+0\u5468")), /*#__PURE__*/React.createElement("p", {
+      className: "mt-1 text-[10px] font-bold leading-relaxed text-rose-100"
+    }, "\u30E9\u30A4\u30D5\u304C0\u306B\u306A\u3063\u305F\u306E\u3067\u3001\u5468\u56DE\u30AF\u30EA\u30A2\u306B\u306F\u306A\u308A\u307E\u305B\u3093\uFF08\u30AF\u30EA\u30A2\u3057\u3066\u3044\u308C\u3070 +", Number(quickRunAward.baseLoops || 0), "\u5468\u3067\u3057\u305F\uFF09\u3002\u7D4C\u9A13\u5024\u30FB\u30C0\u30A4\u30E4\u30FB\u7D46\u30FB\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\u3082\u5165\u308A\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("p", {
+      className: "mt-1 text-[9px] font-bold leading-relaxed text-slate-400"
+    }, "\u88CF\u306E\u5468\u56DE\u306F\u6B62\u307E\u3063\u3066\u3044\u305F\u3076\u3093\u3092\u53D6\u308A\u623B\u3057\u306A\u304C\u3089\u3001\u305D\u306E\u307E\u307E\u7D9A\u304D\u307E\u3059\u3002")), quickRunAward && quickRunAward.loops > 0 && /*#__PURE__*/React.createElement("div", {
       "data-rhythm-result-quick-run": true,
       className: "my-3 rounded-2xl border border-fuchsia-400/40 bg-fuchsia-950/30 p-3 text-left"
     }, /*#__PURE__*/React.createElement("div", {
@@ -22928,9 +23156,14 @@ const RhythmTapTest = ({
       onClick: abort
     }, debugPlay ? '音ゲーデバッグへ戻る' : '曲えらびへ戻る')));
   }
+  /* ★ここへ属性を足すときは className の「後ろ」へ置く。
+     rhythm-screen-layout-check.js が <main data-rhythm-tap-test className="…overflow-hidden という
+     文字列の並びをそのまま見ているので、あいだに挟むと「1画面になっていない」と落ちる。 */
   return /*#__PURE__*/React.createElement("main", {
     "data-rhythm-tap-test": true,
     className: "relative flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white landscape:pl-[env(safe-area-inset-left)] landscape:pr-[env(safe-area-inset-right)]",
+    "data-rhythm-lightweight": settings.lightweightMode ? 'true' : 'false',
+    "data-rhythm-effect": settings.effectAmount,
     style: {
       touchAction: 'none'
     }
@@ -23010,31 +23243,41 @@ const RhythmTapTest = ({
   }, /*#__PURE__*/React.createElement("div", {
     className: "landscape:flex landscape:items-center landscape:gap-2"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center justify-end gap-1"
+    ref: lifeBoxRef,
+    "data-rhythm-life": true,
+    "data-life-state": lifeState,
+    className: "relative flex items-center justify-end gap-1"
   }, /*#__PURE__*/React.createElement("span", {
     "aria-hidden": "true",
+    "data-rhythm-life-heart": true,
     className: "text-sm leading-none text-rose-400",
     style: {
       textShadow: '0 1px 4px rgba(2,6,23,.92)'
     }
-  }, "\u2665"), /*#__PURE__*/React.createElement("div", {
-    className: "relative h-1.5 w-12 overflow-hidden rounded-full border border-white/25 bg-slate-950/80 landscape:w-14"
+  }, lifeState === 'down' ? '💔' : '♥'), /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-life-track": true,
+    className: "relative h-2.5 w-12 rounded-full border bg-slate-950/80 landscape:h-2 landscape:w-14"
   }, /*#__PURE__*/React.createElement("i", {
     "data-rhythm-life-bar": true,
     "aria-hidden": "true",
     className: "absolute inset-y-0 left-0 rounded-full",
     style: {
-      width: `${(rhythmLifeRatio(view.life) * 100).toFixed(1)}%`,
-      background: rhythmLifeRatio(view.life) > .5 ? 'linear-gradient(90deg,#34d399,#22d3ee)' : rhythmLifeRatio(view.life) > .25 ? 'linear-gradient(90deg,#fbbf24,#fb923c)' : 'linear-gradient(90deg,#fb7185,#ef4444)',
+      width: `${(lifeRatio * 100).toFixed(1)}%`,
+      background: lifeRatio > .5 ? 'linear-gradient(90deg,#34d399,#22d3ee)' : lifeRatio > .25 ? 'linear-gradient(90deg,#fbbf24,#fb923c)' : 'linear-gradient(90deg,#fb7185,#ef4444)',
       transition: settings.lightweightMode ? 'none' : 'width 140ms linear'
     }
   })), /*#__PURE__*/React.createElement("b", {
     "data-rhythm-life-value": true,
-    className: "text-[9px] font-black leading-none tabular-nums text-slate-200",
+    className: "text-[10px] font-black leading-none tabular-nums text-slate-200",
     style: {
       textShadow: '0 1px 4px rgba(2,6,23,.92)'
     }
-  }, view.life)), /*#__PURE__*/React.createElement("button", {
+  }, lifeState === 'down' ? 'DOWN' : view.life), /*#__PURE__*/React.createElement("b", {
+    ref: lifeDamageRef,
+    "data-rhythm-life-damage": true,
+    "aria-hidden": "true",
+    className: "pointer-events-none absolute right-0 top-full mt-0.5 text-[11px] font-black leading-none tabular-nums"
+  })), /*#__PURE__*/React.createElement("button", {
     "data-rhythm-pause": true,
     "aria-label": "\u30DD\u30FC\u30BA",
     className: "pointer-events-auto mt-1 flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-full border border-white/20 bg-slate-900/90 text-2xl font-black text-white shadow-[0_0_12px_rgba(103,232,249,0.18)] landscape:mt-0",
@@ -23048,8 +23291,11 @@ const RhythmTapTest = ({
       textShadow: '0 1px 4px rgba(2,6,23,.92)'
     }
   }), /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-combo-box": true,
+    "data-combo-tier": String(comboTier),
     className: "mt-1 text-right landscape:flex landscape:items-baseline landscape:gap-1.5 landscape:mt-0.5"
   }, /*#__PURE__*/React.createElement("span", {
+    "data-rhythm-combo-label": true,
     className: "block text-[9px] font-black leading-none tracking-[0.18em] text-fuchsia-300",
     style: {
       textShadow: '0 1px 4px rgba(2,6,23,.92)'
@@ -23057,11 +23303,27 @@ const RhythmTapTest = ({
   }, "COMBO"), /*#__PURE__*/React.createElement("b", {
     ref: comboRef,
     "data-rhythm-combo": true,
-    "data-combo-tier": view.combo >= 300 ? '3' : view.combo >= 200 ? '2' : view.combo >= 100 ? '1' : '0',
-    className: "mt-0.5 block text-3xl font-black leading-none tabular-nums text-white landscape:mt-0 landscape:text-base"
-  }, view.combo)))), /*#__PURE__*/React.createElement("div", {
+    "data-combo-tier": String(comboTier),
+    className: "mt-0.5 block text-3xl font-black leading-none tabular-nums text-white landscape:mt-0 landscape:text-base",
+    style: {
+      '--mh-combo-scale': rhythmComboTierScale(comboTier)
+    }
+  }, view.combo)))), lifeState === 'down' && /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-down-vignette": true,
+    "aria-hidden": "true",
+    className: "pointer-events-none absolute inset-0 z-20"
+  }), lifeDownSlam && /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-life-down-slam": true,
+    "aria-hidden": "true",
+    className: "pointer-events-none absolute inset-x-0 top-[32%] z-40 text-center"
+  }, /*#__PURE__*/React.createElement("b", {
+    className: "block text-5xl font-black leading-none"
+  }, "LIFE 0"), /*#__PURE__*/React.createElement("small", {
+    className: "mt-1 block text-xs font-black tracking-[0.34em]"
+  }, "DOWN")), /*#__PURE__*/React.createElement("div", {
     ref: playAreaRef,
     "data-rhythm-play-area": true,
+    "data-rhythm-strip": RHYTHM_STRIP.value || undefined,
     "data-rhythm-lightweight": settings.lightweightMode ? 'true' : 'false',
     "data-rhythm-effect": settings.effectAmount,
     onPointerDown: pointerDown,
@@ -34674,6 +34936,8 @@ function MonsterHeroGame() {
   // 性能計測(デバッグ限定)。既定OFF。ONの記憶は専用キー mh_rhythm_perf_v1 に分ける
   const [rhythmPerfOn, setRhythmPerfOn] = useState(() => RHYTHM_PERF.enabled);
   const [rhythmPerfStats, setRhythmPerfStats] = useState(null);
+  // 演奏画面の装飾を個別に切って、実機で何が重いかを切り分ける(デバッグ限定・新しい保存キー)
+  const [rhythmStrip, setRhythmStrip] = useState(() => RHYTHM_STRIP.value);
   // ノーツの描き方の上書き(検証用・デバッグ限定)。'' = 公開設定に従う / 'dom' / 'canvas'
   const [rhythmCanvasPref, setRhythmCanvasPref] = useState(() => rhythmCanvasNotesPreference());
   const [rhythmChartToolsOpened, setRhythmChartToolsOpened] = useState(false);
@@ -37772,15 +38036,27 @@ function MonsterHeroGame() {
   // モンビーのうち、裏で周回を続けてよい画面。60fpsも精密入力も要らないところだけを並べる。
   // 演奏中(RHYTHM_PLAY)はここに**入れない**。16.6msごとに全ノーツを走査して判定しているので、
   // バトルのstate更新が割り込むと入力の取りこぼしとカクつきになる(REGRESSION_RISK_MAP.md §4-1)。
-  const RHYTHM_BACKGROUND_RUN_SCREENS = ['RHYTHM_DEMO_HOME', 'RHYTHM_DEMO_HELP', 'RHYTHM_DEMO_MONSTERS', 'RHYTHM_RANKING'];
+  // ★オプション(RHYTHM_OPTIONS)もここへ入れる。遊びかた・ランキングと同じで、
+  //   60fpsも精密入力も要らない。2026-09-12までここだけ抜けていて、オプションを見ている
+  //   あいだは周回が止まっていた(そのぶんは追いつきで取り戻していた)。
+  const RHYTHM_BACKGROUND_RUN_SCREENS = ['RHYTHM_DEMO_HOME', 'RHYTHM_DEMO_HELP', 'RHYTHM_DEMO_MONSTERS', 'RHYTHM_RANKING', 'RHYTHM_OPTIONS'];
   // モンビーを開いているか(演奏中も含む)。開いている間はランが進んでも画面を切り替えない。
-  // 演奏中に画面がバトルへ飛ぶのを防ぐため、RHYTHM_PLAY もここへ入れる
-  const rhythmScreenOpen = [...RHYTHM_BACKGROUND_RUN_SCREENS, 'RHYTHM_PLAY'].includes(gameState);
+  //
+  // ★**一覧で持たず、gameStateの頭で見る。**
+  //   2026-09-12・ユーザー報告「モンビー中にオプションに行くとたまに強制でバトルに飛ばされる」。
+  //   ここが `[...RHYTHM_BACKGROUND_RUN_SCREENS,'RHYTHM_PLAY']` という一覧だったため、
+  //   その一覧から漏れていた RHYTHM_OPTIONS にいるあいだだけ「モンビーを離れた」と判断され、
+  //   裏の周回がWAVEを越えた瞬間に advanceRunStage が画面をバトルへ切り替えていた。
+  //   (WAVEの切り替わりに重なったときだけなので「たまに」になる。
+  //    予約済みの setTimeout は、オプションへ移ったあとも必ず着地するため)
+  //   一覧で持つかぎり、モンビーへ画面を足すたびに同じ事故が起きる。頭文字で見れば漏れない。
+  const isRhythmScreen = state => typeof state === 'string' && state.startsWith('RHYTHM_');
+  const rhythmScreenOpen = isRhythmScreen(gameState);
   // 「モンヒロビートへ入った瞬間」を見分けるための一覧(自動で∞周回を始める判定に使う)。
-  // ★裏で回してよい画面より広く取る。オプション・遊びかたもモンビーの中なので、
-  //   そこから曲えらびへ戻っただけで「入り直した」と数えると、周回が何度も立ち上がる。
+  // ★裏で回してよい画面より広く取る。演奏中もモンビーの中なので、そこから曲えらびへ
+  //   戻っただけで「入り直した」と数えると、周回が何度も立ち上がる。
   //   デバッグ画面(RHYTHM_DEBUG)と、未公開のときに出る案内(RHYTHM_INFO)は入口ではないので入れない
-  const RHYTHM_AUTO_START_SCREENS = [...RHYTHM_BACKGROUND_RUN_SCREENS, 'RHYTHM_PLAY', 'RHYTHM_OPTIONS'];
+  const RHYTHM_AUTO_START_SCREENS = [...RHYTHM_BACKGROUND_RUN_SCREENS, 'RHYTHM_PLAY'];
   // 裏で周回してよい状態か。
   //  ・クイックの∞周回だけ(チャレンジ・プロ・極限・種族は全国ランキング対象なので裏で回さない)
   //  ・演奏中は止める(曲が終われば自動で再開する)
@@ -37966,7 +38242,13 @@ function MonsterHeroGame() {
   //   埋める値そのものが存在しないため(CLAUDE.md ⑦「消さない・上書きしない」)。
   // loopScale … その演奏にかかっていた倍率。曲リザルトで「イベント対象曲 ×3」と出すためだけに使う
   //   (配る量そのものは loops に織り込み済みなので、ここで掛け直さない)
-  const awardRhythmPlayRunLoops = async (loops, loopScale = RHYTHM_PLAY_RUN_LOOP_SCALE) => {
+  // cleared / baseLoops … クリアか失敗か(2026-09-12・ユーザー指示「それによって経験値も変わるから」)と、
+  //   失敗していなければ入っていた周回数。どちらも曲リザルトの表示用で、配る量そのものは
+  //   すでに loops へ織り込まれている(ここで掛け直さない)。
+  const awardRhythmPlayRunLoops = async (loops, loopScale = RHYTHM_PLAY_RUN_LOOP_SCALE, {
+    cleared = true,
+    baseLoops = null
+  } = {}) => {
     const count = Math.max(0, Math.trunc(Number(loops) || 0));
     if (count <= 0) return null;
     const scale = Number.isFinite(Number(loopScale)) && Number(loopScale) > 0 ? Number(loopScale) : RHYTHM_PLAY_RUN_LOOP_SCALE;
@@ -38069,7 +38351,9 @@ function MonsterHeroGame() {
       fromLoop,
       toLoop,
       scale,
-      eventBoosted: scale > RHYTHM_PLAY_RUN_LOOP_SCALE
+      eventBoosted: scale > RHYTHM_PLAY_RUN_LOOP_SCALE,
+      cleared: cleared !== false,
+      baseLoops: Math.max(0, Math.trunc(Number(baseLoops) || 0)) || count
     };
   };
   // ---- 画面のなかでの使い方案内(docs/spec/QUICK_RHYTHM_LINK.md PR8) ----
@@ -38386,7 +38670,10 @@ function MonsterHeroGame() {
     const startedAt = rhythmPlayStartedAtRef.current;
     rhythmPlayStartedAtRef.current = 0;
     if (!startedAt) return;
-    if (rhythmPlayRunAwardRef.current) {
+    // ★見るのは「実際に周回が入ったか(loops>0)」。失敗したときは0周なので、
+    //   途中でやめたときと同じく、止まっていたぶんを取り戻す側へ進む
+    //   (失敗しても損はしないが、得もしない。2026-09-12・ユーザー指示)。
+    if (Number(rhythmPlayRunAwardRef.current?.loops) > 0) {
       stopCatchUp();
       return;
     }
@@ -42268,6 +42555,31 @@ function MonsterHeroGame() {
     setMasuMons(next);
     setMasuMonDetail(prev => prev && String(prev.id) === String(masu.id) ? applied.masu : prev);
     setTranscendPlan(null);
+    // 通常強化と同じように、確定したことが分かる全画面演出を出す。
+    // 何がいくつ上がったかは「下書きの数」ではなく実際の前後の差から出す
+    // (間合い適性はMで頭打ちになるので、下書きどおりに上がるとは限らない)
+    const before = normalizeMasuProgression(masu);
+    const lines = [];
+    normalizeTranscendAptBoosts(applied.masu.transcendAptBoosts).forEach((boost, i) => {
+      const gained = boost - before.transcendAptBoosts[i];
+      if (gained > 0) lines.push(`${RANGE_LABELS[i]}距離適性 +${gained}`);
+    });
+    Object.entries(normalizeTranscendStatPoints(applied.masu.transcendStatPoints)).forEach(([key, value]) => {
+      const gained = value - (before.transcendStatPoints[key] || 0);
+      if (gained > 0 && STAT_POINT_KEYS[key]) lines.push(`基礎${STAT_POINT_KEYS[key]} +${gained}`);
+    });
+    const base = ALL_PLAYER_MONSTERS[applied.masu.baseId];
+    setEffect({
+      type: 'transcendEnhance',
+      label: '超越強化！',
+      icon: '🌟',
+      monEmoji: base?.emoji,
+      imgUrl: base?.iconUrl,
+      baseId: applied.masu.baseId,
+      colors: getMasuColors(applied.masu),
+      subLabel: lines.join('\n')
+    });
+    setTimeout(() => setEffect(null), TRANSCEND_ENHANCE_FX_MS);
     return applied;
   };
   // 虹のプシュケーを超越ポイントへ替える。プシュケーは共通の所持品、超越Pは個体ごとの育成値
@@ -53750,9 +54062,32 @@ function MonsterHeroGame() {
         // (1秒だけ演奏してやめる、で稼げないようにするため)。
         // 練習(tutorial)は記録も報酬も動かさないので、その前に判定しない
         if (rhythmPlay.from !== 'tutorial') {
-          const loops = rhythmPlayLoopsFor(rhythmPlay.song, rhythmPlay.difficulty);
+          const baseLoops = rhythmPlayLoopsFor(rhythmPlay.song, rhythmPlay.difficulty);
           const loopScale = rhythmPlayRunLoopScaleFor(rhythmPlay.song);
-          const awarded = loops > 0 ? await awardRhythmPlayRunLoops(loops, loopScale) : null;
+          // 失敗(ライフ0のまま完走)は半分。クリアかどうかは演奏側が result.cleared で伝える
+          // (2026-09-12・ユーザー指示「終了後にクリアか失敗かもわかるようにして /
+          //  それによって経験値も変わるから」)
+          const cleared = result?.cleared !== false;
+          const loops = rhythmPlayRunLoopsForResult(baseLoops, cleared);
+          // 失敗したときは1周も配らない。ただし「入らなかった」ことは曲リザルトで言う。
+          // ここで何も渡さないと、裏で周回していた人には画面のどこにも理由が出ない
+          if (!cleared && baseLoops > 0) setRhythmPlayRunAward({
+            loops: 0,
+            baseLoops,
+            cleared: false,
+            scale: loopScale,
+            eventBoosted: loopScale > RHYTHM_PLAY_RUN_LOOP_SCALE,
+            xp: 0,
+            gold: 0,
+            bond: 0,
+            psyche: 0,
+            fromLoop: 0,
+            toLoop: 0
+          });
+          const awarded = loops > 0 ? await awardRhythmPlayRunLoops(loops, loopScale, {
+            cleared,
+            baseLoops
+          }) : null;
           if (awarded) {
             setRhythmPlayRunAward(awarded);
             // 限界突破も、通常の周回が終わったときと同じように走らせる
@@ -53980,7 +54315,7 @@ function MonsterHeroGame() {
       className: `min-h-[44px] rounded-xl px-3 text-[11px] font-black ${rhythmPerfOn ? 'bg-amber-500 text-slate-900' : 'border border-white/20 bg-slate-900 text-slate-200'}`
     }, rhythmPerfOn ? '計測ON' : '計測OFF')), /*#__PURE__*/React.createElement("p", {
       className: "mt-1 text-[9px] font-bold leading-relaxed text-amber-100/80"
-    }, "ON\u306B\u3057\u3066\u304B\u3089\u30D7\u30EC\u30A4\u3059\u308B\u3068\u3001\u30D5\u30EC\u30FC\u30E0\u6642\u9593\u30681\u30D5\u30EC\u30FC\u30E0\u3042\u305F\u308A\u306E\u8CA0\u8377\uFF08\u30EC\u30A4\u30A2\u30A6\u30C8\u6E2C\u5B9A\u30FBDOM\u691C\u7D22\u30FBSLIDE\u5E2F\u306E\u66F4\u65B0\u6570\uFF09\u3092\u8A18\u9332\u3057\u307E\u3059\u3002OFF\u306E\u3042\u3044\u3060\u306F\u8A18\u9332\u51E6\u7406\u305D\u306E\u3082\u306E\u304C\u52D5\u304D\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("div", {
+    }, "ON\u306B\u3057\u3066\u304B\u3089\u30D7\u30EC\u30A4\u3059\u308B\u3068\u3001\u30D5\u30EC\u30FC\u30E0\u6642\u9593\u30681\u30D5\u30EC\u30FC\u30E0\u3042\u305F\u308A\u306E\u8CA0\u8377\uFF08\u30EC\u30A4\u30A2\u30A6\u30C8\u6E2C\u5B9A\u30FBDOM\u691C\u7D22\u30FBSLIDE\u5E2F\u306E\u66F4\u65B0\u6570\uFF09\u3092\u8A18\u9332\u3057\u307E\u3059\u3002OFF\u306E\u3042\u3044\u3060\u306F\u8A18\u9332\u51E6\u7406\u305D\u306E\u3082\u306E\u304C\u52D5\u304D\u307E\u305B\u3093\u3002\u300C\u30E2\u30F3\u30B9\u30BF\u30FC\u30CE\u30FC\u30C4\u300D\u306E\u884C\u304C\u300C\u30CE\u30FC\u30C4\u3092\u53D6\u308B\u51E6\u7406\u300D\u3088\u308A\u306F\u3063\u304D\u308A\u5927\u304D\u3051\u308C\u3070\u3001\u8E0F\u3093\u3060\u3068\u304D\u306B\u56FA\u307E\u308B\u539F\u56E0\u306F\u305D\u3053\u3067\u3059\u3002\u30CE\u30FC\u30C4\u306E\u52D5\u304D\u304C\u6ED1\u3089\u304B\u304B\u3069\u3046\u304B\u306F\u300C\u66F2\u306E\u6642\u523B\u300D\u306E3\u3064\u3092\u898B\u307E\u3059\u3002\u30CE\u30FC\u30C4\u306E\u4F4D\u7F6E\u306F\u66F2\u306E\u518D\u751F\u4F4D\u7F6E\u3060\u3051\u3067\u6C7A\u307E\u308B\u306E\u3067\u3001\u3053\u308C\u304C\u9032\u307E\u306A\u3044\u30D5\u30EC\u30FC\u30E0\u304C\u591A\u3044\u3068\u3001\u30D5\u30EC\u30FC\u30E0\u30EC\u30FC\u30C8\u304C60\u306E\u307E\u307E\u3067\u3082\u30CE\u30FC\u30C4\u306F\u6B62\u307E\u3063\u3066\u98DB\u3076\u52D5\u304D\u306B\u306A\u308A\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
       className: "mt-2 flex gap-2"
     }, /*#__PURE__*/React.createElement("button", {
       type: "button",
@@ -53996,13 +54331,44 @@ function MonsterHeroGame() {
     }, "\u8A18\u9332\u3092\u30AF\u30EA\u30A2")), rhythmPerfStats && /*#__PURE__*/React.createElement("dl", {
       "data-rhythm-perf-stats": true,
       className: "mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]"
-    }, [['フレーム数', rhythmPerfStats.frames], ['平均fps', rhythmPerfStats.fps.toFixed(1)], ['平均フレーム', `${rhythmPerfStats.avgMs.toFixed(1)}ms`], ['最悪フレーム', `${rhythmPerfStats.maxMs.toFixed(1)}ms`], ['16.7ms超', rhythmPerfStats.over16], ['25ms超', rhythmPerfStats.over25], ['33ms超', rhythmPerfStats.over33], ['レイアウト測定/frame', rhythmPerfStats.layoutReadsPerFrame.toFixed(2)], ['DOM検索/frame', rhythmPerfStats.domQueriesPerFrame.toFixed(2)], ['SLIDE帯更新/frame', rhythmPerfStats.slidePolygonsPerFrame.toFixed(2)], ['ジェスチャーrAF', rhythmPerfStats.gestureFrames], ['ノーツ再検索', rhythmPerfStats.noteRescans], ['走査ノーツ/frame', rhythmPerfStats.notesScannedPerFrame.toFixed(1)], ['実描画ノーツ/frame', rhythmPerfStats.notesDrawnPerFrame.toFixed(1)], ['最悪frameの走査/実描画', `${rhythmPerfStats.worstFrameScanned} / ${rhythmPerfStats.worstFrameDrawn}`], ['先頭スキップ/frame', rhythmPerfStats.headSkippedPerFrame.toFixed(1)], ['走査の絞り込み', rhythmPerfStats.narrowed === null ? '未計測' : rhythmPerfStats.narrowed ? '有効' : '無効(昇順でない譜面)'], ['tick処理/frame', `${rhythmPerfStats.tickMsPerFrame.toFixed(2)}ms`], ['最悪frameのtick処理', `${rhythmPerfStats.worstFrameTickMs.toFixed(1)}ms`], ['tick処理の最大', `${rhythmPerfStats.maxTickMs.toFixed(1)}ms`], ['frame開始→tick開始の遅れ', `${rhythmPerfStats.tickDelayMsPerFrame.toFixed(2)}ms`], ['最悪frameの遅れ', `${rhythmPerfStats.worstFrameDelayMs.toFixed(1)}ms`], ['遅れの最大', `${rhythmPerfStats.maxDelayMs.toFixed(1)}ms`]].map(([label, value]) => /*#__PURE__*/React.createElement(React.Fragment, {
+    }, [['フレーム数', rhythmPerfStats.frames], ['平均fps', rhythmPerfStats.fps.toFixed(1)], ['平均フレーム', `${rhythmPerfStats.avgMs.toFixed(1)}ms`], ['最悪フレーム', `${rhythmPerfStats.maxMs.toFixed(1)}ms`], ['16.7ms超', rhythmPerfStats.over16], ['25ms超', rhythmPerfStats.over25], ['33ms超', rhythmPerfStats.over33], ['レイアウト測定/frame', rhythmPerfStats.layoutReadsPerFrame.toFixed(2)], ['DOM検索/frame', rhythmPerfStats.domQueriesPerFrame.toFixed(2)], ['SLIDE帯更新/frame', rhythmPerfStats.slidePolygonsPerFrame.toFixed(2)], ['ジェスチャーrAF', rhythmPerfStats.gestureFrames], ['ノーツ再検索', rhythmPerfStats.noteRescans], ['走査ノーツ/frame', rhythmPerfStats.notesScannedPerFrame.toFixed(1)], ['実描画ノーツ/frame', rhythmPerfStats.notesDrawnPerFrame.toFixed(1)], ['最悪frameの走査/実描画', `${rhythmPerfStats.worstFrameScanned} / ${rhythmPerfStats.worstFrameDrawn}`], ['先頭スキップ/frame', rhythmPerfStats.headSkippedPerFrame.toFixed(1)], ['走査の絞り込み', rhythmPerfStats.narrowed === null ? '未計測' : rhythmPerfStats.narrowed ? '有効' : '無効(昇順でない譜面)'], ['tick処理/frame', `${rhythmPerfStats.tickMsPerFrame.toFixed(2)}ms`], ['最悪frameのtick処理', `${rhythmPerfStats.worstFrameTickMs.toFixed(1)}ms`], ['tick処理の最大', `${rhythmPerfStats.maxTickMs.toFixed(1)}ms`], ['frame開始→tick開始の遅れ', `${rhythmPerfStats.tickDelayMsPerFrame.toFixed(2)}ms`], ['最悪frameの遅れ', `${rhythmPerfStats.worstFrameDelayMs.toFixed(1)}ms`], ['遅れの最大', `${rhythmPerfStats.maxDelayMs.toFixed(1)}ms`], ['曲の時刻の進み/frame', `${(rhythmPerfStats.songStepMsPerFrame ?? 0).toFixed(2)}ms`], ['曲の時刻が進まないframe', `${((rhythmPerfStats.songStallRate ?? 0) * 100).toFixed(1)}%`], ['曲の時刻の最大の飛び', `${(rhythmPerfStats.songStepMaxMs ?? 0).toFixed(1)}ms`], ['ノーツを取る処理/回', `${(rhythmPerfStats.judgeMsAvg ?? 0).toFixed(2)}ms（${rhythmPerfStats.judgeCount ?? 0}回）`], ['取る処理の最大', `${(rhythmPerfStats.judgeMsMax ?? 0).toFixed(1)}ms`], ['モンスターノーツ/回', `${(rhythmPerfStats.monsterJudgeMsAvg ?? 0).toFixed(2)}ms（${rhythmPerfStats.monsterJudgeCount ?? 0}回）`], ['モンスターノーツの最大', `${(rhythmPerfStats.monsterJudgeMsMax ?? 0).toFixed(1)}ms`]].map(([label, value]) => /*#__PURE__*/React.createElement(React.Fragment, {
       key: label
     }, /*#__PURE__*/React.createElement("dt", {
       className: "text-slate-400"
     }, label), /*#__PURE__*/React.createElement("dd", {
       className: "text-right font-black text-amber-100"
-    }, value))))), /*#__PURE__*/React.createElement("section", {
+    }, value)))), rhythmPerfStats && Array.isArray(rhythmPerfStats.spikes) && rhythmPerfStats.spikes.length > 0 && /*#__PURE__*/React.createElement("div", {
+      "data-rhythm-perf-spikes": true,
+      className: "mt-2 rounded-xl border border-amber-400/30 bg-slate-950/60 p-2"
+    }, /*#__PURE__*/React.createElement("h4", {
+      className: "text-[10px] font-black text-amber-200"
+    }, "\u98DB\u3093\u3060\u30D5\u30EC\u30FC\u30E0\uFF0833ms\u8D85\uFF09\u3092\u8D77\u304D\u305F\u9806\u306B", rhythmPerfStats.spikes.length, "\u4EF6"), /*#__PURE__*/React.createElement("p", {
+      className: "mt-1 text-[9px] font-bold leading-relaxed text-amber-100/70"
+    }, "\u300C\u30E2\u30F3\u30B9\u30BF\u30FC\u5F8C\u300D\u304C\u5C0F\u3055\u3044\u884C\u304C\u4E26\u3076\u306A\u3089\u3001\u8E0F\u3093\u3060\u3042\u3068\u306E\u6F14\u51FA\u304C\u539F\u56E0\u3067\u3059\u3002\u300Ctick\u300D\u304C0ms\u306A\u3089\u3001\u305D\u306E\u98DB\u3073\u306FJS\u3067\u306F\u306A\u304F\u63CF\u753B\u5074\u3067\u3059\u3002"), /*#__PURE__*/React.createElement("ol", {
+      className: "mt-1 space-y-0.5 text-[9px] font-mono text-slate-300"
+    }, rhythmPerfStats.spikes.map((sp, i) => /*#__PURE__*/React.createElement("li", {
+      key: i
+    }, `${(sp.at / 1000).toFixed(1)}s  ${sp.dt}ms  tick ${sp.tick}ms  遅れ ${sp.delay}ms  走査${sp.scan}/描画${sp.draw}  モンスター後 ${sp.mon < 0 ? '—' : `${sp.mon}ms`}`))))), /*#__PURE__*/React.createElement("section", {
+      "data-rhythm-strip-panel": true,
+      className: "mb-3 rounded-2xl border border-rose-400/40 bg-rose-950/20 p-3"
+    }, /*#__PURE__*/React.createElement("h3", {
+      className: "text-xs font-black text-rose-200"
+    }, "\u88C5\u98FE\u3092\u5207\u3063\u3066\u5207\u308A\u5206\u3051\u308B\uFF08\u30C7\u30D0\u30C3\u30B0\uFF09"), /*#__PURE__*/React.createElement("p", {
+      className: "mt-1 text-[9px] font-bold leading-relaxed text-rose-100/80"
+    }, "\u6F14\u594F\u753B\u9762\u306E\u91CD\u305D\u3046\u306A\u88C5\u98FE\u3092\u500B\u5225\u306B\u6D88\u3057\u307E\u3059\u3002", /*#__PURE__*/React.createElement("b", null, "\u6B21\u306E\u6F14\u594F\u304B\u3089\u52B9\u304D\u307E\u3059\u3002"), "ON\u306B\u3057\u30661\u66F2\u30D7\u30EC\u30A4\u3057\u3001\u6027\u80FD\u8A08\u6E2C\u306E\u300C33ms\u8D85\u300D\u304C\u6E1B\u308B\u304B\u3092\u898B\u3066\u304F\u3060\u3055\u3044\u3002\u6E1B\u3063\u305F\u3082\u306E\u304C\u539F\u56E0\u3067\u3059\u3002\u5224\u5B9A\u30FB\u30B9\u30B3\u30A2\u30FB\u8B5C\u9762\u306B\u306F\u4E00\u5207\u95A2\u308F\u308A\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("div", {
+      className: "mt-2 grid grid-cols-2 gap-2"
+    }, RHYTHM_STRIP_ITEMS.map(item => /*#__PURE__*/React.createElement("button", {
+      key: item.id,
+      type: "button",
+      "data-rhythm-strip-toggle": item.id,
+      "aria-pressed": rhythmStrip.split(/\s+/).includes(item.id),
+      onClick: () => setRhythmStrip(RHYTHM_STRIP.toggle(item.id)),
+      className: `min-h-[44px] rounded-xl px-2 text-[10px] font-black ${rhythmStrip.split(/\s+/).includes(item.id) ? 'bg-rose-500 text-slate-900' : 'border border-white/20 bg-slate-900 text-slate-200'}`
+    }, item.label))), /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      className: "mt-2 min-h-[40px] w-full rounded-xl border border-white/20 bg-slate-900 text-[11px] font-black text-slate-200",
+      onClick: () => setRhythmStrip(RHYTHM_STRIP.set(''))
+    }, "\u305C\u3093\u3076\u5143\u306B\u623B\u3059")), /*#__PURE__*/React.createElement("section", {
       "data-rhythm-canvas-panel": true,
       className: "mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"
     }, /*#__PURE__*/React.createElement("h3", {
@@ -59916,42 +60282,106 @@ function MonsterHeroGame() {
         animation: 'sparkFlicker 350ms ease-in-out infinite',
         animationDelay: `${deg}ms`
       }
-    }, "\u2728")))), effect.imgUrl ? effect.baseId ? /*#__PURE__*/React.createElement(DyedMonsterImage, {
+    }, "\u2728")))), effect.type === 'transcendEnhance' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+      className: "absolute inset-0",
+      style: {
+        background: 'radial-gradient(circle at 50% 42%, rgba(253,230,138,0.55) 0%, rgba(244,114,182,0.35) 32%, rgba(56,189,248,0.22) 52%, rgba(0,0,0,0) 72%)',
+        animation: 'auraPulse 620ms ease-out infinite'
+      }
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "absolute",
+      style: {
+        top: '42%',
+        left: '50%',
+        width: 'min(170vmax,1400px)',
+        height: 'min(170vmax,1400px)',
+        marginTop: '-85vmax',
+        marginLeft: '-85vmax',
+        background: 'repeating-conic-gradient(from 0deg, rgba(253,230,138,0.18) 0 4deg, transparent 4deg 18deg)',
+        animation: 'mhTranscendFxRays 5200ms linear infinite'
+      }
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "absolute",
+      style: {
+        top: '42%',
+        left: '50%',
+        width: 'min(70vw,300px)',
+        height: 'min(70vw,300px)',
+        transform: 'translate(-50%,-50%)'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "absolute inset-0 rounded-full border-4 border-amber-300/80",
+      style: {
+        animation: 'auraRing 700ms ease-out infinite'
+      }
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "absolute inset-0 rounded-full border-[3px] border-pink-300/70",
+      style: {
+        animation: 'auraRing 900ms ease-out 150ms infinite'
+      }
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "absolute inset-0 rounded-full border-2 border-sky-300/60",
+      style: {
+        animation: 'auraRing 1100ms ease-out 300ms infinite'
+      }
+    }), [0, 45, 90, 135, 180, 225, 270, 315].map(deg => /*#__PURE__*/React.createElement("div", {
+      key: `tx-out-${deg}`,
+      className: "absolute left-1/2 top-1/2 text-3xl",
+      style: {
+        transform: `translate(-50%,-50%) rotate(${deg}deg) translateY(-148px)`,
+        animation: 'mhEffectSpark 420ms ease-in-out infinite',
+        animationDelay: `${deg}ms`
+      }
+    }, "\uD83C\uDF1F")), [22, 67, 112, 157, 202, 247, 292, 337].map(deg => /*#__PURE__*/React.createElement("div", {
+      key: `tx-in-${deg}`,
+      className: "absolute left-1/2 top-1/2 text-xl",
+      style: {
+        transform: `translate(-50%,-50%) rotate(${deg}deg) translateY(-98px)`,
+        animation: 'mhEffectSpark 540ms ease-in-out infinite',
+        animationDelay: `${deg}ms`
+      }
+    }, "\u2728"))), /*#__PURE__*/React.createElement("div", {
+      className: "absolute inset-0",
+      style: {
+        background: 'radial-gradient(circle at 50% 42%, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0) 58%)',
+        animation: 'mhTranscendFxFlash 1600ms ease-out forwards'
+      }
+    })), effect.imgUrl ? effect.baseId ? /*#__PURE__*/React.createElement(DyedMonsterImage, {
       baseId: effect.baseId,
       src: effect.imgUrl,
       alt: "effect",
       masuColors: effect.colors,
       style: {
-        width: effect.type === 'unique' ? '180px' : effect.type === 'enhance' ? '160px' : '150px',
-        height: effect.type === 'unique' ? '180px' : effect.type === 'enhance' ? '160px' : '150px',
-        animation: effect.type === 'unique' || effect.type === 'enhance' ? 'specialThrob 500ms ease-in-out infinite' : undefined
+        width: effectVisual(effect.type).size,
+        height: effectVisual(effect.type).size,
+        animation: effectVisual(effect.type).throb
       },
-      className: `mb-6 object-contain relative ${effect.type === 'unique' ? 'drop-shadow-[0_0_45px_rgba(168,85,247,0.95)]' : effect.type === 'enhance' ? 'drop-shadow-[0_0_45px_rgba(251,191,36,0.9)]' : 'drop-shadow-[0_0_50px_rgba(255,255,255,0.4)]'}`
+      className: `mb-6 object-contain relative ${effectVisual(effect.type).glow}`
     }) : /*#__PURE__*/React.createElement("img", {
       src: effect.imgUrl,
       alt: "effect",
       style: {
-        width: effect.type === 'unique' ? '180px' : effect.type === 'enhance' ? '160px' : '150px',
-        height: effect.type === 'unique' ? '180px' : effect.type === 'enhance' ? '160px' : '150px',
-        animation: effect.type === 'unique' || effect.type === 'enhance' ? 'specialThrob 500ms ease-in-out infinite' : undefined
+        width: effectVisual(effect.type).size,
+        height: effectVisual(effect.type).size,
+        animation: effectVisual(effect.type).throb
       },
-      className: `mb-6 object-contain relative ${effect.type === 'unique' ? 'drop-shadow-[0_0_45px_rgba(168,85,247,0.95)]' : effect.type === 'enhance' ? 'drop-shadow-[0_0_45px_rgba(251,191,36,0.9)]' : 'drop-shadow-[0_0_50px_rgba(255,255,255,0.4)]'}`
+      className: `mb-6 object-contain relative ${effectVisual(effect.type).glow}`
     }) : /*#__PURE__*/React.createElement("div", {
       style: {
-        fontSize: effect.type === 'unique' ? '128px' : effect.type === 'enhance' ? '120px' : '112px',
-        animation: effect.type === 'unique' || effect.type === 'enhance' ? 'specialThrob 500ms ease-in-out infinite' : undefined
+        fontSize: effectVisual(effect.type).emoji,
+        animation: effectVisual(effect.type).throb
       },
       className: "mb-6 relative"
     }, effect.monEmoji), /*#__PURE__*/React.createElement("h2", {
-      className: `text-2xl font-black italic uppercase px-8 py-3 rounded-2xl border relative ${effect.type === 'unique' ? 'text-purple-100 bg-purple-600/30 border-purple-400/60 drop-shadow-[0_0_20px_rgba(168,85,247,0.8)]' : effect.type === 'enhance' ? 'text-amber-100 bg-amber-600/30 border-amber-400/60 drop-shadow-[0_0_20px_rgba(251,191,36,0.8)]' : 'text-white bg-white/10 border-white/20'}`
+      className: `text-2xl font-black italic uppercase px-8 py-3 rounded-2xl border relative ${effectVisual(effect.type).label}`
     }, effect.label), effect.subLabel && /*#__PURE__*/React.createElement("p", {
-      className: `font-mono text-[10px] mt-4 font-black whitespace-pre-line relative ${effect.type === 'enhance' ? 'text-amber-300' : 'text-indigo-400'}`
+      className: `font-mono text-[10px] mt-4 font-black whitespace-pre-line relative ${effectVisual(effect.type).sub}`
     }, effect.subLabel), /*#__PURE__*/React.createElement("div", {
       style: {
-        fontSize: effect.type === 'unique' ? '60px' : '48px'
+        fontSize: `${effectVisual(effect.type).icon}px`
       },
       className: "mt-8 animate-bounce relative"
-    }, cardIconNode(effect.icon, effect.type === 'unique' ? 60 : 48, effect.id))), rosterSkillDetail && (() => {
+    }, cardIconNode(effect.icon, effectVisual(effect.type).icon, effect.id))), rosterSkillDetail && (() => {
       const mon = rosterSkillDetail.mon;
       const isUnique = rosterSkillDetail.kind === 'unique';
       const levels = isUnique ? getUniqueSkillLevels(mon) : getAtkSkillLevels(mon);
@@ -61050,6 +61480,16 @@ const createAnimationStyle = () => {
       0% { transform: translateX(-40px) scale(0.7); opacity: 0; }
       40% { opacity: 1; }
       100% { transform: translateX(40px) scale(1.1); opacity: 0; }
+    }
+    /* 全画面演出(effect)の火花。明滅だけを受け持ち、置き場所は呼び出し側の transform に任せる。
+       共通の sparkFlicker はキーフレーム側が transform を丸ごと持っているため、
+       呼び出し側で書いた角度と半径が効かず、火花が全部1か所へ重なってしまう */
+    @keyframes mhEffectSpark { 0%,100% { opacity: .15; } 50% { opacity: 1; } }
+    @keyframes mhTranscendFxRays { 0% { transform: rotate(0); } 100% { transform: rotate(360deg); } }
+    @keyframes mhTranscendFxFlash { 0% { opacity: 0; } 10% { opacity: .75; } 34%,100% { opacity: 0; } }
+    @keyframes mhTranscendFxThrob {
+      0%,100% { transform: scale(1); filter: drop-shadow(0 0 16px rgba(253,230,138,.95)); }
+      50% { transform: scale(1.22); filter: drop-shadow(0 0 30px rgba(244,114,182,1)) drop-shadow(0 0 46px rgba(56,189,248,.8)); }
     }
     @keyframes specialFlash {
       0%,100% { opacity: 0; }

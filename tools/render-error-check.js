@@ -50,8 +50,6 @@ const serve = () => new Promise((resolve) => {
     browser = await playwright.chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
     const page = await browser.newPage();
     page.on('pageerror', (e) => errors.push(String(e)));
-    // 外へ出られないので、TailwindのCDNだけ打ち切る(見た目は崩れるがJSは動く)
-    await page.route('**cdn.tailwindcss.com**', (r) => r.abort());
     await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(6000);
     const mounted = await page.evaluate(() => typeof MonsterHeroGame);

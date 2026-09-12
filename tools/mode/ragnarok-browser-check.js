@@ -25,7 +25,6 @@ const seed = (extremeClears) => {
 
 const openDifficultySelect = async (page, extremeClears) => {
   await page.addInitScript(seed, extremeClears);
-  await page.route('**cdn.tailwindcss.com**', r => r.abort()).catch(() => {});
   await page.goto(PAGE_URL, { waitUntil: 'load', timeout: 60000 });
   await page.waitForFunction(() => document.getElementById('root')?.children.length > 0, { timeout: 60000 });
   const tap = (sel) => page.evaluate((s) => {
