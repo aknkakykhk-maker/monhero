@@ -1198,6 +1198,12 @@ const rhythmSlideTrackingFloor=(passed,total)=>{
 // ただし全体ミュート(タイトル画面の「音がオフです」)だけは、game-system.jsx の Audio_.setEnabled が
 // window.__mhAudioEnabled へ反映するのでそれを見て共通に効かせる。値が無い(main未読込)場合はfalse扱いにしない。
 const rhythmAudioGloballyEnabled=()=>typeof window==='undefined'||window.__mhAudioEnabled!==false;
+// モンビーのオプションの音量(BGM音量・タップ音量)で使える上限(2026-09-12・ユーザー指示
+//   「音量調整を今のベースで200まで引き上げて」)。
+// **100の意味は今までと同じ**。100より上を使えるようにしただけで、既存の保存値は
+// そのまま同じ音量で鳴る(上限を広げただけなので、保存してある0〜100は1つも動かない)。
+// ★ここはモンビーの音量だけ。メインゲーム(HOME)の音量設定には一切関係しない。
+const RHYTHM_VOLUME_MAX = 200;
 // ===== タップ音まわりの大きさをまとめて上げる倍率(2026-09-12・ユーザー指示) =====
 // 「アンドロイドでタップ音量が小さいって声がある」。
 // 原因は合成音の振幅そのもので、タップ音はフルスケールの3.5%(既定の音量70なら2.45%)しかなく、
@@ -1211,9 +1217,13 @@ const rhythmAudioGloballyEnabled=()=>typeof window==='undefined'||window.__mhAud
 // ★効くのは「タップ音量(noteSeVolume)」で鳴るモンビーの合成音だけ。
 //   BGM音量(bgmVolume)にも、メインゲームの音量設定(_bgmGain / seGain)にも一切触れない。
 const RHYTHM_NOTE_SE_GAIN_SCALE = 10;
-// 1つの音が出せる大きさの上限(安全側の蓋)。倍率を上げすぎたときに音が割れないようにする。
-// 倍率10のあいだはどの音もここへ届かない(いちばん大きいモンスターノーツの1音で .42)。
-const RHYTHM_NOTE_SE_LEVEL_MAX = .5;
+// 1つの音が出せる大きさの上限(安全側の蓋)。倍率や音量を上げすぎたときに音が割れないようにする。
+// 音量100のあいだはどの音もここへ届かない(いちばん大きいフルコンボ音で .50)。
+// 音量を200まで使えるようにしたので(RHYTHM_VOLUME_MAX)、タップ音が音量200でちょうど
+// 2倍(.70)まで素直に伸びるところへ蓋を置く。重ねて鳴らすモンスターノーツ(.84)と
+// フルコンボ音(1.00)は音量140あたりからここで頭打ちになるが、そこから上は
+// 割れるだけなので止めてよい(2026-09-12)。
+const RHYTHM_NOTE_SE_LEVEL_MAX = .8;
 // 元の係数 × 倍率 × 音量(0〜1)。
 // 下限(.0001)は exponentialRampToValueAtTime が0を受け取れないためで、これまでと同じ。
 const rhythmNoteSeLevel = (base, volume) =>
@@ -1231,7 +1241,7 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
       const value=JSON.parse(raw),number=Number(value?.noteSeVolume);
       cachedSettings={
         enabled:typeof value?.noteSeEnabled==='boolean'?value.noteSeEnabled:true,
-        volume:Number.isFinite(number)?Math.max(0,Math.min(100,number)):70,
+        volume:Number.isFinite(number)?Math.max(0,Math.min(RHYTHM_VOLUME_MAX,number)):70,
       };
     }catch{cachedSettings={enabled:true,volume:70};}
     return cachedSettings;
@@ -1250,7 +1260,7 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
   };
   const play=(previewSettings=null)=>{
     if(inputGroupDepth>0)inputGroupHit=true;
-    const settings=previewSettings?{enabled:previewSettings.noteSeEnabled!==false,volume:Math.max(0,Math.min(100,Number(previewSettings.noteSeVolume)||0))}:readSettings();
+    const settings=previewSettings?{enabled:previewSettings.noteSeEnabled!==false,volume:Math.max(0,Math.min(RHYTHM_VOLUME_MAX,Number(previewSettings.noteSeVolume)||0))}:readSettings();
     if(!settings.enabled||settings.volume<=0||!rhythmAudioGloballyEnabled())return false;
     const audio=context();
     if(!audio)return false;

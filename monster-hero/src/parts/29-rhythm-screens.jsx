@@ -60,8 +60,8 @@ const RhythmOptions=({value,onSave,onBack})=>{
         <RhythmLandscapeHint/>
         <section className={card}>
           <h3 className={head}>🔊 音量</h3>
-          {field('BGM音量',stepper('bgmVolume',0,100,1))}
-          {field('タップ音量',stepper('noteSeVolume',0,100,1))}
+          {field('BGM音量',stepper('bgmVolume',0,RHYTHM_VOLUME_MAX,1))}
+          {field('タップ音量',stepper('noteSeVolume',0,RHYTHM_VOLUME_MAX,1))}
           <div className={row}><span className={label}>タップ音</span>{toggle('noteSeEnabled','')}</div>
           <div className="mt-3 grid grid-cols-2 gap-3"><button type="button" onClick={previewBgm} className="min-h-[48px] rounded-xl bg-indigo-700 text-[12px] font-black">♪ BGM試聴</button><button type="button" onClick={()=>RHYTHM_NOTE_SE_RUNTIME.preview(draft)} className="min-h-[48px] rounded-xl bg-fuchsia-700 text-[12px] font-black">タップ音試聴</button></div>
           <p className={`mt-3 ${note}`}>この音量はメインゲームの音量設定と別に、音ゲーだけで使います。タイトル画面の全体ミュートのみ共通です。</p>
@@ -69,6 +69,9 @@ const RhythmOptions=({value,onSave,onBack})=>{
               ヘルプと更新履歴は探しに行った人しか読まないので、スライダーのすぐ横でも伝える。
               保存キーは増やさない(出しっぱなしの一言で、消す仕掛けを持たない) */}
           <p className={`mt-2 ${note}`}>2026-09-12にタップ音を大きくしました（それまでの10倍）。以前に音量を合わせていた場合は、タップ音量を下げるかBGM音量を上げて合わせ直してください。</p>
+          {/* 上限を200まで開けた(2026-09-12・ユーザー指示)。100の意味は今までと同じ。
+              100より上は音源の波形をそのまま持ち上げるので割れることがある、とその場で言う */}
+          <p className={`mt-2 ${note}`}>音量は0〜{RHYTHM_VOLUME_MAX}まで上げられます。100はこれまでと同じ大きさです。100より上は端末の音量を上げても足りないときの逃げ道で、とくにBGM音量は上げすぎると曲の大きいところが割れて聞こえることがあります。</p>
         </section>
         <section className={card}>
           <h3 className={head}>🎯 プレイ</h3>
