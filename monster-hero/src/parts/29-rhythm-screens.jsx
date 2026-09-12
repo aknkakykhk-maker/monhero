@@ -111,7 +111,11 @@ const RhythmOptions=({value,onSave,onBack})=>{
         </section>
         <section className={card}>
           <h3 className={head}>✨ 演出・端末</h3>
-          {field('演出量',segments('effectAmount',[['NORMAL','標準'],['LOW','少なめ'],['MINIMAL','最小']]))}
+          {/* 「少なめ」が何を止めるのかを、ここで言い切る(2026-09-13・Android勢から
+              「重い」との声)。判定文字の金の帯・虹の流れは毎フレーム字を塗り直すので、
+              動きがカクつく端末ではここがいちばん効く */}
+          {field('演出量',segments('effectAmount',[['NORMAL','標準'],['LOW','少なめ'],['MINIMAL','最小']]),
+            '動きがカクついたり、端末が熱くなったりするときは「少なめ」にしてください。判定文字の金色の帯や虹が流れるのを止め、光のにじみを減らします（色・グラデーション・字の大きさは標準と同じままです）。「最小」にすると、それに加えて100コンボごとの演出や光そのものもほぼ出なくなります。')}
           <div className={row}><span className={label}>振動</span><div className="flex items-center gap-2">
             {/* この端末で振動できるかを出す。iPhoneのSafariには振動のしくみが無い時期が長く、
                 「設定はあるのに何も起きない」状態になっていたため(2026-09-05の指摘) */}
