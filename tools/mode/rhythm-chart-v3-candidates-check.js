@@ -51,7 +51,14 @@ try{
   const differing=a.filter((value,index)=>value!==b[index]).length;
   ok('候補ちがいで譜面が実際に変わる',differing>=a.length*.1,
     `${differing}/${a.length}ノーツが違う`);
-  ok('ノーツの数は変わらない(音源で決まるので)',a.length===b.length,`${a.length} と ${b.length}`);
+  // ノーツの数は音源で決まる(候補ちがいで譜面を作り直しても、拾う音は同じ)。
+  // ただし**同時押さえ・同時スライドは譜面の形に乗って決まる**ので、置ける場所の数が
+  // 候補ごとに1〜数組ちがう。候補0と1で620と622になった(2026-09-12)。
+  // 「候補ちがいで密度そのものが変わる」のは行きすぎなので、1%までに抑える。
+  const countGap=Math.abs(a.length-b.length);
+  ok('ノーツの数はほぼ変わらない(音源で決まるので。同時押さえ・同時スライドのぶんだけ動く)',
+    countGap<=Math.max(4,Math.round(a.length*.01)),
+    `${a.length} と ${b.length}（差 ${countGap} / 許容 ${Math.max(4,Math.round(a.length*.01))}）`);
 
   // ── ③ 採点して順位が付く ──────────────────────────────────────────────────
   const judged=spawnSync('node',[path.join(ROOT,'tools/mode/rhythm-chart-v3-candidates.js'),

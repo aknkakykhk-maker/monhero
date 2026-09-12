@@ -44,7 +44,7 @@ ok('いちばん下の難易度でも使える形がある',HELD_PAIR_SHAPES.som
       if(lanes.from<0||lanes.from>room||lanes.to<0||lanes.to>room)broken.push(`${shape.id}(${label}): レーンの外`);
     }
   }
-  ok('形が名前どおりに動く(端で潰れない)',broken.length===0,broken.slice(0,3).join(' / ')||'全7種×4通りを確認');
+  ok('形が名前どおりに動く(端で潰れない)',broken.length===0,broken.slice(0,3).join(' / ')||'全8種×4通りを確認');
 }
 // 動き量の目安が、実データの届く範囲にあること
 {
@@ -52,7 +52,7 @@ ok('いちばん下の難易度でも使える形がある',HELD_PAIR_SHAPES.som
   // 目安が3.0を超えていると、その形は一度も1位になれない(2026-09-12に実際そうなった)
   const tooHigh=HELD_PAIR_SHAPES.filter(s=>s.wantsBassMove>3||s.wantsMelodyMove>3);
   ok('動き量の目安が実データの届く範囲にある(倍率3.0以内)',tooHigh.length===0,
-    tooHigh.map(s=>s.id).join(' / ')||'全7種');
+    tooHigh.map(s=>s.id).join(' / ')||'全8種');
   ok('生の moves を倍率へ直せる',
     heldPairMoveScale(.10)===1&&heldPairMoveScale(0)===0&&heldPairMoveScale(1)===3,
     `0.10→${heldPairMoveScale(.10)} / 0→${heldPairMoveScale(0)} / 1→${heldPairMoveScale(1)}`);
@@ -158,11 +158,16 @@ if(!fs.existsSync(audio)){
       const chart=JSON.parse(fs.readFileSync(file,'utf8'));
       const notes=chart.notes||[];
       const helds=notes.filter(note=>note.type==='HOLD'||note.type==='SLIDE');
-      const pairs=notes.filter(note=>note.heldPair===true);
+      // 同時スライド(15.6)も heldPair:true を持つ。組数と形はこの段のぶんだけ数え、
+      // 指の間隔は**同時スライドも含めて**総当たりで見る（押せるかは両方の問題なので）。
+      const pairs=notes.filter(note=>note.heldPair===true&&note.doubleSlide!==true);
+      const everyPair=notes.filter(note=>note.heldPair===true);
       placedTotal+=pairs.length;
       for(const pair of pairs){
         shapeIds.add(pair.heldPairShape);
         if(pair.type==='SLIDE')movingTotal++;
+      }
+      for(const pair of everyPair){
         const pairEnd=pair.grid+(Number(pair.durationGrids)||0);
         for(const other of helds){
           if(other===pair)continue;
