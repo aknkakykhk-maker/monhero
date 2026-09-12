@@ -486,20 +486,19 @@ if(judgment!=='MISS'){
     const span=rhythmNoteIsSlide(note)
       ?rhythmProjectSlideSpan(rhythmReleaseLane(note),note,1,run.audio?.songTimeMs?.()??note.timeMs)
       :rhythmNoteVisualSpan(note,note.lane,1,run.audio?.songTimeMs?.()??note.timeMs);
-    rhythmSpawnHitEffect(area,{centerRatio:span.center,widthRatio:span.width,judgment,monster:monsterHit});
-    if(monsterHit&&screenFlashRef.current){
-      const flash=screenFlashRef.current;
-      flash.dataset.rhythmFlash='';
-      void flash.offsetWidth;
-      flash.dataset.rhythmFlash='1';
-    }
+    // 流し直す印はここで集めて、最後にまとめて1回のレイアウトで付け直す
+    // (箇所ごとに void offsetWidth を書くと、その回数ぶんページ全体のレイアウトが走る)。
+    const restarts=[];
+    const hitEffect=rhythmSpawnHitEffect(area,{centerRatio:span.center,widthRatio:span.width,judgment,monster:monsterHit,defer:true});
+    if(hitEffect)restarts.push(hitEffect);
+    if(monsterHit&&screenFlashRef.current)restarts.push({el:screenFlashRef.current,attr:'rhythmFlash'});
     // そのマスモンが両サイドで大きく跳ねる(どのマスモンの番だったかが分かるように)
     if(monsterHit){
       // モンスターノーツだけは振動も強くする(ふつうのノーツとの違いを指でも分かるように)
       if(settings.vibrationEnabled)RHYTHM_HAPTICS.tap(26);
       const slot=rhythmNoteMonsterSlot(note),el=slot?sideMonsterRefs.current[slot-1]:null;
       if(el){
-        el.dataset.rhythmSideHit='';void el.offsetWidth;el.dataset.rhythmSideHit='1';
+        restarts.push({el,attr:'rhythmSideHit'});
         // 出番が済んだので、このあとの待機は最初のぴょんぴょんとは別の動き(ゆらゆら)にする
         el.dataset.rhythmSidePhase='done';
         // 歓声(700ms)が終わったら印を外す。外さないと !important の指定が残り続けて
@@ -509,10 +508,12 @@ if(judgment!=='MISS'){
     }
     // 判定文字を一度だけ弾ませる
     const judgmentText=judgmentTextRef.current;
-    if(judgmentText){judgmentText.dataset.rhythmJudgmentPop='';void judgmentText.offsetWidth;judgmentText.dataset.rhythmJudgmentPop='1';}
+    if(judgmentText)restarts.push({el:judgmentText,attr:'rhythmJudgmentPop'});
     // コンボ数も1つ増えるたびに弾ませる(プロセカのように数字が跳ねる)
     const comboText=comboRef.current;
-    if(comboText){comboText.dataset.rhythmComboPop='';void comboText.offsetWidth;comboText.dataset.rhythmComboPop='1';}
+    if(comboText)restarts.push({el:comboText,attr:'rhythmComboPop'});
+    // ここで1回だけレイアウトを読む。集めた印をまとめて付け直す
+    rhythmRestartAnimations(restarts);
   }
 }
 if(settings.vibrationEnabled&&judgment!=='MISS')RHYTHM_HAPTICS.tap();const nextCombo=rhythmComboAfter(run.combo,judgment);run.combo=nextCombo;run.maxCombo=Math.max(run.maxCombo,nextCombo);run.counts[judgment]++;const side=judgment==='MISS'?null:rhythmFastSlow(deltaMs);if(side)run[side.toLowerCase()]++;const songTimeMs=run.audio?.songTimeMs?.()??0;
@@ -556,10 +557,14 @@ if(revived&&run.lifeDepleted&&run.life>0){run.scoreOffset=rhythmScoreOffsetAfter
 // ★根性で蘇生した直後は「増えた」側になるので、減ったときだけ出す(lifeDelta<0)。
 const lifeDelta=run.life-lifeBefore;
 if(lifeDelta<0){
+  // ここも印の付け直しなので、レイアウトの読み取りは1回にまとめる(rhythmRestartAnimations)。
+  // 箇所ごとに void offsetWidth を書くと、その回数ぶんページ全体のレイアウトが走る。
+  const lifeRestarts=[];
   const lifeBox=lifeBoxRef.current;
-  if(lifeBox){lifeBox.dataset.rhythmLifeHit='';void lifeBox.offsetWidth;lifeBox.dataset.rhythmLifeHit='1';}
+  if(lifeBox)lifeRestarts.push({el:lifeBox,attr:'rhythmLifeHit'});
   const lifeDamage=lifeDamageRef.current;
-  if(lifeDamage){lifeDamage.textContent=String(lifeDelta);lifeDamage.dataset.rhythmLifeDamageShow='';void lifeDamage.offsetWidth;lifeDamage.dataset.rhythmLifeDamageShow='1';}
+  if(lifeDamage){lifeDamage.textContent=String(lifeDelta);lifeRestarts.push({el:lifeDamage,attr:'rhythmLifeDamageShow'});}
+  rhythmRestartAnimations(lifeRestarts);
 }
 // 0になった瞬間だけ、大きく1度だけ知らせる(蘇生して戻った場合はここを通らない)
 if(run.life===0&&lifeBefore>0)setLifeDownCount(count=>count+1);

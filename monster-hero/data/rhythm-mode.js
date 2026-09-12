@@ -13715,7 +13715,33 @@ const rhythmEnsureHitEffects=area=>{
   return layer;
 };
 // 判定ラインの高さでノーツの幅に合わせて光らせる。span は 0〜1 のプレイエリア比で受け取る。
-const rhythmSpawnHitEffect=(area,{centerRatio,widthRatio,judgment,monster=false})=>{
+// ── CSSアニメーションの「流し直し」を、1フレームに1回のレイアウトで済ませる ──────────
+//
+// 【2026-09-12・ユーザー指摘】
+// 「モンスターノーツでかくつきがまた出てきた / 曲もあわせて遅くなる(重くなる？)ときもある」
+//
+// 同じ要素へ同じ印を付け直しても、CSSアニメーションは頭から流れ直さない。そこで
+// 「印を外す → void el.offsetWidth → 印を付ける」という書き方をしていた。
+// この offsetWidth の読み取りが**ページ全体のレイアウトをその場で計算し直させる**
+// (強制同期レイアウト)。箇所ごとに書いていたので、モンスターノーツを取った1フレームで
+// 5回も計算し直していた(ふつうのノーツは3回)。
+//
+//   ヒット演出 / 画面フラッシュ / サイドのマスモンの歓声 / 判定文字 / コンボ数
+//
+// 外す→読む→付ける の「読む」は1回で足りる。まとめて外し、1回だけ読み、まとめて付ける。
+// **見た目も再生の始まる時刻も変わらない**(同じ処理の中で終わるため)。
+const rhythmRestartAnimations=entries=>{
+  const list=(Array.isArray(entries)?entries:[]).filter(entry=>entry&&entry.el&&entry.attr);
+  if(!list.length)return 0;
+  for(const entry of list)entry.el.dataset[entry.attr]='';
+  // ここ1回だけ。印を外したことを確定させるためにレイアウトを読む
+  void list[0].el.offsetWidth;
+  for(const entry of list)entry.el.dataset[entry.attr]=entry.value===undefined?'1':entry.value;
+  return list.length;
+};
+// defer:true を渡すと、印を付けずに「付けるべき印」だけを返す。
+// 呼び出し側が rhythmRestartAnimations へまとめて渡すことで、レイアウトの読み取りを1回にできる。
+const rhythmSpawnHitEffect=(area,{centerRatio,widthRatio,judgment,monster=false,defer=false})=>{
   const layer=rhythmEnsureHitEffects(area);
   if(!layer||!layer._rhythmPool.length)return null;
   const item=layer._rhythmPool[layer._rhythmNext%layer._rhythmPool.length];
@@ -13727,7 +13753,9 @@ const rhythmSpawnHitEffect=(area,{centerRatio,widthRatio,judgment,monster=false}
   item.style.setProperty('--rhythm-hit-color',monster?'#fde047':rhythmHitEffectColor(judgment));
   item.style.setProperty('--rhythm-hit-ms',`${RHYTHM_HIT_EFFECT_MS[kind]}ms`);
   item.style.setProperty('--rhythm-spark-scale',monster?'2.1':'1');
-  // 同じ要素をすぐ使い回すときは、アニメーションを一度切らないと最初から再生されない
+  // 同じ要素をすぐ使い回すときは、アニメーションを一度切らないと最初から再生されない。
+  // defer なら「切って付け直す」を呼び出し側のまとめ処理へ譲る(レイアウトの読み取りを1回にするため)。
+  if(defer)return {el:item,attr:'rhythmHitKind',value:kind};
   item.dataset.rhythmHitKind='';
   void item.offsetWidth;
   item.dataset.rhythmHitKind=kind;

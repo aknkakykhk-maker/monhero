@@ -191,6 +191,8 @@ node tools/build.js --check
 
 `node mode/rhythm-render-cost-check.js` は、音ゲーのノーツ描画が1フレームあたりどれだけ「レイアウト」と「塗り直し」を起こしているかを、本番の `rhythm-mode.js` を読み込んだ実ブラウザ(Playwright Chromium)のトレースで数える(発熱対策の物差し・2026-09-07)。本体と同じ構造のノーツ(TAP×6・FLICK×1・HOLD×2・SLIDE×1)を本体の tick と同じ順で毎フレーム動かし、TAP/FLICK はレイアウトも塗り直しも 0、HOLD はレイアウト 0、全種類でレイアウト≦1(SLIDE の SVG の形の更新だけ)・塗り直し≦6 を要求する。`--report` で数値だけ、`--types=TAP,HOLD` で種類を絞って切り分け、`--write` で `mode/authoring/rhythm-render-cost.json` へ書き出す。Playwright が無い環境では SKIP。
 
+`node mode/rhythm-canvas-note-cost.js` は、**本番で使われている canvas 描画**が、ノーツの種類ごとに1個あたりどれだけ重いかを実ブラウザで測る(2026-09-12)。上の `rhythm-render-cost-check.js` は DOM 版(`rhythmLayoutNoteVisual`)しか測っておらず、本番の canvas 版(`RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE = true`)の数字が誰も無かったため足した。`RHYTHM_CANVAS_RENDERER` を canvas へ繋ぎ、種類ごとに同じノーツを1個だけ毎フレーム描いて、`drawNote` の時間と 2D コンテキストの `drawImage` / 塗り / 線 / グラデーションの回数を数える。スプライトのキャッシュが効いたあとの定常状態を見たいので、ウォームアップぶんは捨てる。`--strict` を付けるとしきい値で落とす。Playwright が無い環境では SKIP。
+
 `node mode/rhythm-perf-check.js` は、音ゲーの性能計測(デバッグ限定)が「計測のために本体を重くしていない」ことを確かめる。記録器を実際にNode上で動かし、既定OFF・OFFのあいだは一切記録しないこと・フレーム時間と16.7/25/33ms超の数え方・一時停止で空いた数秒を平均へ混ぜないことを検証する。あわせて、計測用のrequestAnimationFrameを増やしていないこと、各計測箇所(measureTravel / areaRect / ジェスチャー側rAF / SLIDE polygon / サブレーン発光)へ結線されていること、判定窓・スコア式・既存の保存キーを変えていないこと、デバッグ専用なので更新履歴・ヘルプへ載せていないことも固定する。
 
 `node mode/rhythm-monster-slots-check.js` は、モンスターノーツ用のマスモン設定(最大4体)を実際にNode上で動かして確かめる。最大4体・1〜3体でも成立すること・1〜4枠の並び順がそのまま登場順になること・同じベースモンスターは別個体でも重ねられないこと(ミーア＋ミーアは不可／ミーア＋パンドラは可／ハム＋ザンは可)を固定する。とくに重視するのは**保存を壊さないこと**で、保存値の正規化は形だけを整え所持確認をしない(マスモン一覧を読む前でも設定が消えない)こと、手放した個体や重複は使うときにだけ落として保存値を書き換えないことを検証する。あわせて新しい保存キー `mh_rhythm_monsters_v1` へ分けていること、マスモン本体(`mh_masu_mons`)へ書き込まないこと、判定窓・スコア式・ライフを変えていないことも確認する。
