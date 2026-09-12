@@ -366,6 +366,8 @@ const rhythmScoreOffsetAfterRevive=(calculatedScore,lockedScore)=>
 // 判定窓・BPM・noteTime・スコア式・譜面データには一切関与しない。
 const RHYTHM_PERF_KEY='mh_rhythm_perf_v1';
 const RHYTHM_PERF_LONG_MS=Object.freeze([16.7,25,33]);
+// 飛んだフレームを控える上限。多すぎると記録そのものが負担になるので頭打ちにする
+const RHYTHM_PERF_SPIKE_MAX=40;
 const RHYTHM_PERF=(()=>{
   // notesScanned / notesDrawn は「毎フレーム何ノーツを見て、実際に何ノーツ描き替えたか」。
   // worst* は、いちばん長かったフレームの直前に数えたぶんを保存したもの。
@@ -377,7 +379,10 @@ const RHYTHM_PERF=(()=>{
     // 曲の再生位置が1フレームでどれだけ進んだか。ノーツの位置はこれで決まる
     songSteps:0,songStepSum:0,songStepMax:0,songStalls:0,lastSongMs:null,
     // ノーツを取ったときの処理にかかった時間。モンスターノーツだけ別に数える
-    judgeCount:0,judgeSum:0,judgeMax:0,monsterCount:0,monsterSum:0,monsterMax:0});
+    judgeCount:0,judgeSum:0,judgeMax:0,monsterCount:0,monsterSum:0,monsterMax:0,
+    // 大きく飛んだフレームを「起きたときに1件ずつ」控える。
+    // 平均や最大だけだと「たまに起きる」ものは埋もれる(実機で4回とも2.0msだった)。
+    spikes:[],lastMonsterAtMs:0});
   let on=false,last=null,acc=zero();
   const api={
     get enabled(){return on;},
@@ -403,6 +408,20 @@ const RHYTHM_PERF=(()=>{
           if(acc.pendingDelayMs>acc.maxDelayMs)acc.maxDelayMs=acc.pendingDelayMs;
           if(dt>acc.maxMs){acc.maxMs=dt;acc.worstScanned=acc.pendingScanned;acc.worstDrawn=acc.pendingDrawn;acc.worstTickMs=acc.pendingTickMs;acc.worstDelayMs=acc.pendingDelayMs;}
           for(let i=0;i<RHYTHM_PERF_LONG_MS.length;i++)if(dt>RHYTHM_PERF_LONG_MS[i])acc.long[i]++;
+          // 2フレーム以上飛んだら、そのときの状況をそのまま控える。
+          // 「いつ・どれだけ飛んで・そのときJSは何をしていて・直前にモンスターノーツを
+          // 踏んでいたか」が1件ずつ残るので、たまにしか起きないものでも捕まえられる。
+          // pendingTickMs はこの下でリセットされるので、必ずその前に読むこと。
+          if(dt>RHYTHM_PERF_LONG_MS[2]&&acc.spikes.length<RHYTHM_PERF_SPIKE_MAX){
+            acc.spikes.push({
+              at:Math.round(Number(acc.lastSongMs)||0),
+              dt:Math.round(dt),
+              tick:Math.round(acc.pendingTickMs*10)/10,
+              delay:Math.round(acc.pendingDelayMs*10)/10,
+              scan:acc.pendingScanned,draw:acc.pendingDrawn,
+              mon:acc.lastMonsterAtMs?Math.round(t-acc.lastMonsterAtMs):-1,
+            });
+          }
         }
       }
       acc.pendingScanned=0;acc.pendingDrawn=0;acc.pendingTickMs=0;acc.pendingHeadSkipped=0;acc.pendingDelayMs=0;
@@ -447,7 +466,10 @@ const RHYTHM_PERF=(()=>{
       if(!on)return;
       const v=Number(ms);if(!Number.isFinite(v)||v<0)return;
       acc.judgeCount++;acc.judgeSum+=v;if(v>acc.judgeMax)acc.judgeMax=v;
-      if(monster){acc.monsterCount++;acc.monsterSum+=v;if(v>acc.monsterMax)acc.monsterMax=v;}
+      if(monster){acc.monsterCount++;acc.monsterSum+=v;if(v>acc.monsterMax)acc.monsterMax=v;
+        // 踏んだ時刻を控える。光と画面フラッシュは**次のフレームから**900ms続くので、
+        // 「踏んだあとに飛んだか」はこの時刻からの経過で見る
+        if(typeof performance!=='undefined')acc.lastMonsterAtMs=performance.now();}
     },
     gestureFrame(){if(on)acc.gestureFrames++;},
     noteRescan(){if(on)acc.noteRescans++;},
@@ -490,6 +512,7 @@ const RHYTHM_PERF=(()=>{
         monsterJudgeMsAvg:acc.monsterCount?acc.monsterSum/acc.monsterCount:0,
         monsterJudgeMsMax:acc.monsterMax,
         monsterJudgeCount:acc.monsterCount,
+        spikes:acc.spikes.slice(),
         narrowed:acc.narrowed,
       };
     },
