@@ -1238,6 +1238,39 @@ FLICKはシアン → オレンジ → 緑と変えてきた。
 
 上へ払うことが分かる「⇧」の印はそのまま残す。
 
+#### 判定の色分け（2026-09-12）
+
+ユーザー指示「もっと色分けをして良い判定ならそれだけ派手にしたい / マーベラスは虹など」。
+
+**判定文字も、判定ラインで弾ける光も、`RHYTHM_JUDGMENT_COLORS`（`data/rhythm-mode.js`）
+1か所から取る。** それまでは文字がTailwindのクラス（`30-rhythm-play.jsx`）、光がここ、と
+2か所に分かれていて、同じ判定でも色がズレていた（MARVELOUSが文字 `#fae8ff` / 光 `#f5d0fe`）。
+しかも上位2つが白に近く、**下位のほうがはっきり見えていた**。
+
+| 判定 | 色 | 文字の光 | 備考 |
+| --- | --- | --- | --- |
+| MARVELOUS | **虹**（代表色 `#f0abfc`） | CSSの `filter:drop-shadow` | 文字のグラデーションが流れる／弾ける粒も1つずつ違う色 |
+| EXCELLENT | 金 `#fcd34d` | 3層 | |
+| GREAT | 水色 `#22d3ee` | 2層 | |
+| GOOD | 黄緑 `#a3e635` | 1層 | |
+| BAD | 橙 `#fb923c` | 1層（弱い） | |
+| MISS | 灰 `#94a3b8` | なし | 判定ラインの光そのものを出さない |
+
+- 光の強さは `rhythmJudgmentGlow(judgment, effectAmount, lightweight)` が決める。
+  演出量MINIMAL・軽量モードでは全部 `none`
+- **MARVELOUSだけは単色にできない。** 表には「虹にできない場所で使う代表の色」を置き、
+  虹そのものは `data-judgment="MARVELOUS"` を見たCSSが描く
+- **透かした文字に `text-shadow` を掛けない。** 字の形の影が塊で出る。
+  `rhythmJudgmentGlow` はMARVELOUSで `none` を返し、光はCSSの `filter:drop-shadow` が付ける
+- 弾ける粒は `--rhythm-spark-color-1`〜`5` で1つずつ色を配る。
+  ふだんは全部 `--rhythm-hit-color` と同じ値が入るので見た目は変わらない
+- **モンスターノーツは金（`#fde047`）のまま。** そちらが特別扱いなので虹で上書きしない
+- 演出量を下げても**色の違いは残す**。判定を色で見分けるためのものなので、
+  止めるのは光り方と虹の流れだけ
+
+`node tools/mode/rhythm-hit-effect-check.js` が、1つの表から取っていること・6判定が
+すべて違う色であること・良い判定ほど層が多いこと・MARVELOUSが虹であることを見張る。
+
 #### コンボの強調
 
 - 数字を `text-2xl` → `text-3xl` へ拡大（`text-4xl` はHUDがレーンの台形へかぶるため不可。
