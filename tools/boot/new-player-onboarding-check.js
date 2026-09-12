@@ -111,5 +111,20 @@ check('台本を固定の助手のものへ書き戻していない',
   !/\(\(typeof ASSISTANT_INTRO!=='undefined'/.test(source)
     && !/\(\(typeof ASSISTANT_TUTORIAL!=='undefined'/.test(source));
 
+// --- 設定を終える前にHOMEへ出られないこと ---
+// 実際に「ログインボーナスの『ギフトを確認』→ ギフトボックス → 戻る」でHOMEへ着いてしまい、
+// 名無しのブリーダーのまま遊べる状態になっていた(2026-09-12・ユーザー指摘)。
+// 戻り先がHOME固定の画面はほかにもあるので、個別の戻り先ではなくHOMEの入口で連れ戻す。
+// 入り口そのものは、はじめての設定が終わるまでログインボーナスを出さないことで塞いである
+// (報酬はすでにギフトボックスへ配ってあるので、出すのを遅らせても何も失われない)。
+// 実際の画面で確かめるほうは tools/boot/onboarding-required-check.js が見る
+check('はじめての設定が終わるまでHOMEへ入れない',
+  has("if (bootPhase !== 'GAME' || onboarded || onboardingPreview) return;")
+    && has("setGameState(assistantChosen ? 'PROFILE' : 'ASSISTANT_SELECT');"));
+check('ログインボーナスの告知は、はじめての設定が終わってから出す',
+  has('{loginBonusPopup&&onboarded&&!onboardingPreview&&'));
+check('村の案内も、はじめての設定が終わった人にだけ出す',
+  has("if (bootPhase !== 'GAME' || gameState !== 'HOME' || tutorialShownRef.current || !dataLoaded || !onboarded) return;"));
+
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
