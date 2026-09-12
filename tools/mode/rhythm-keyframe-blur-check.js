@@ -23,6 +23,23 @@ const TOOLS_DIR=require('path').join(__dirname,'..');
 //   ② それ以外(HUDなど)にあるものは、軽量モード・演出量MINIMALで止まること。
 //      HUD はプレイエリアの外の兄弟なので、[data-rhythm-play-area] 配下へ書いた
 //      打ち消しがひとつも届かない(実際に届いていなかった)
+//   ③ transition に filter を入れない
+//   ④ will-change を条件なしで付けない
+//
+// 【③④を足した理由(2026-09-12)】
+// ①②だけ見ていたので @keyframes しか拾えず、**同じことを transition でやっている
+// 箇所を丸ごと見逃していた**。実際に見逃していたのはレーンの押下フィードバックで、
+//
+//   [data-rhythm-lane]::after { filter:blur(4px); transition:opacity 60ms, filter 60ms }
+//   [data-rhythm-lane][data-pressed="true"]::after { filter:blur(1px) }
+//
+// と書いてあり、**ノーツを1回叩くたびに 60ms かけて 4px→1px を補間**していた。
+// 叩き続けるあいだ、ずっとどこかのレーンでぼかしを作り直していることになる。
+// キーフレームと違って「一度きり」に見えるが、曲中は絶え間なく叩くので実質は同じ。
+//
+// will-change は「これから変わる」と前もって伝えるもので、付けっぱなしにすると
+// 変わっていないあいだも合成レイヤーが居座る。サブレーンの光10枚が
+// willChange:'opacity' を常時持っていて、押していないあいだも10枚が常駐していた。
 const fs=require('fs'),path=require('path');
 const ROOT=path.resolve(TOOLS_DIR,'..');
 const read=f=>fs.readFileSync(path.join(ROOT,f),'utf8');
@@ -133,6 +150,51 @@ for(const o of offenders){
     }
   }
 }
+
+
+// ③ transition に filter を入れていないか ------------------------------------
+// ぼかしを含むかどうかまでは見ない。brightness だけの filter でも、補間のあいだ
+// その要素は毎フレーム作り直しになるため。演奏画面では入れない。
+const PLAY_SELECTOR=/data-rhythm-(play-area|note|lane|judgment|sublane|hit|side-monster)/;
+const transitionsWithFilter=[];
+// コメントは長さと改行を保ったまま空白へ潰す。潰さないと、コメントの中の記号で
+// セレクタの拾い方が崩れて「演奏画面の外」と誤って通してしまう(実際に一度そうなった)。
+const blankComments=text=>text.replace(/\/\*[\s\S]*?\*\//g,m=>m.replace(/[^\n]/g,' '));
+for(const [file,raw] of sources){
+  const text=blankComments(raw);
+  const re=/transition\s*:\s*([^;'"`}]{0,300})/g;
+  let m;
+  while((m=re.exec(text))){
+    if(!/\bfilter\b/.test(m[1]))continue;
+    // そのルールのセレクタを拾う。直前の「{」まで戻り、その手前の「}」「{」「;」までを名前とみなす。
+    const open=text.lastIndexOf('{',m.index);
+    let selector='';
+    if(open>0){
+      const from=Math.max(text.lastIndexOf('}',open),text.lastIndexOf('{',open-1),text.lastIndexOf(';',open));
+      selector=text.slice(from+1,open);
+    }
+    transitionsWithFilter.push({file,line:lineAt(raw,m.index),selector:selector.trim().replace(/\s+/g,' ').slice(-90),value:m[1].trim().slice(0,80)});
+  }
+}
+for(const t of transitionsWithFilter){
+  const inPlay=PLAY_SELECTOR.test(t.selector);
+  check(`transition に filter を入れていない — ${t.file}:${t.line}`,!inPlay,
+    inPlay?`${t.selector} { transition:${t.value} }`:`${t.selector}(演奏画面の外)`);
+}
+if(!transitionsWithFilter.length)check('transition に filter を入れていない',true,'0件');
+
+// JSX の style からも同じものを拾う(こちらは文字列なのでセレクタが無い)
+const play=read('monster-hero/src/parts/30-rhythm-play.jsx');
+const jsxTransitions=[...play.matchAll(/transition\s*:\s*(?:[^,}]*\?)?\s*'([^']{0,200})'/g)]
+  .filter(m=>/\bfilter\b/.test(m[1]));
+check('演奏画面のJSXでも transition に filter を入れていない',jsxTransitions.length===0,
+  jsxTransitions.length?jsxTransitions.map(m=>m[1].slice(0,70)).join(' / '):'0件');
+
+// ④ will-change を条件なしで付けていないか -----------------------------------
+// 「変わるときだけ付ける」書き方(三項演算子や変数)は許す。文字列を直に書いているものだけ拾う。
+const willChangeLiterals=[...play.matchAll(/willChange\s*:\s*'([^']*)'/g)].filter(m=>m[1].trim());
+check('演奏画面で will-change を付けっぱなしにしない',willChangeLiterals.length===0,
+  willChangeLiterals.length?willChangeLiterals.map(m=>`willChange:'${m[1]}'`).join(' / '):'0件(条件付きはOK)');
 
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
 process.exit(failed?1:0);
