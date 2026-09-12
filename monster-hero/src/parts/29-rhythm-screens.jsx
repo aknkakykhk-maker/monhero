@@ -21,6 +21,27 @@ const RhythmOptions=({value,onSave,onBack})=>{
   const [tab,setTab]=useState('live');
   const previewRef=useRef(null);
   const scrollRef=useRef(null);
+  // 【2026-09-13・ユーザー指摘】縦横ボタンで横にしたオプション画面のスクリーンショット。
+  //   文字が横倒しのまま、1項目しか見えていなかった。
+  // ★原因: モンビーの横画面は**端末を回していない**。器を transform:rotate(90deg) で
+  //   回しているだけなので、CSSの landscape: (＝@media (orientation:landscape)) は
+  //   縦のままと答える。つまり横向け指定が1つも当たっていなかった。
+  // ★なので向きは**JSで決める**。orientationIsLandscape() が端末の向きと自前回転の
+  //   両方を見ているので、実際に横にしたときも縦横ボタンで回したときも同じ形になる。
+  const [wide,setWide]=useState(()=>orientationIsLandscape());
+  useEffect(()=>{
+    if(typeof window==='undefined'||typeof window.matchMedia!=='function')return;
+    const mql=window.matchMedia('(orientation: landscape)');
+    const onChange=()=>setWide(orientationIsLandscape());
+    onChange();
+    // 自前で回したときは端末の向きが変わらないので matchMedia は鳴らない
+    const unsubscribeRotation=RHYTHM_VIEW_ROTATION.subscribe(onChange);
+    if(mql.addEventListener)mql.addEventListener('change',onChange);else mql.addListener?.(onChange);
+    return()=>{
+      unsubscribeRotation();
+      if(mql.removeEventListener)mql.removeEventListener('change',onChange);else mql.removeListener?.(onChange);
+    };
+  },[]);
   useEffect(()=>()=>{previewRef.current?.stop();previewRef.current=null;},[]);
   const savedValue=normalizeRhythmSettings(value),dirty=JSON.stringify(draft)!==JSON.stringify(savedValue);
   const set=(key,next)=>{setDraft(current=>normalizeRhythmSettings({...current,[key]:next}));setMessage('');};
@@ -28,9 +49,9 @@ const RhythmOptions=({value,onSave,onBack})=>{
   const changeTab=id=>{setTab(id);try{scrollRef.current?.scrollTo({top:0});}catch(_){}};
   const label='text-[13px] font-bold';
   const note='text-[10px] leading-relaxed text-slate-400';
-  // 横持ちでは出さない。すぐ上のタブに同じ名前が出ているので、高さを取るだけになる
-  const head='border-b border-cyan-400/30 pb-1.5 text-[15px] font-black text-cyan-200 landscape:hidden';
-  const card='rounded-2xl border border-cyan-400/35 bg-slate-900/85 p-4 shadow-[0_0_18px_rgba(34,211,238,.08)] landscape:border-0 landscape:bg-transparent landscape:p-0 landscape:shadow-none';
+  const head='border-b border-cyan-400/30 pb-1.5 text-[15px] font-black text-cyan-200';
+  // 横向きのときは外枠と見出しを省く(すぐ上のタブに同じ名前が出ている)。高さをそのぶん中身へ回す
+  const card=wide?'':'rounded-2xl border border-cyan-400/35 bg-slate-900/85 p-4 shadow-[0_0_18px_rgba(34,211,238,.08)]';
   const row='grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-white/10 py-3 last:border-b-0';
   // 数値の項目。粗く動かす外側(coarse)と、細かく動かす内側(fine)を分ける。
   // 刻み(step)は保存する値の刻みそのもので、fine は必ずその倍数にする。
@@ -41,19 +62,20 @@ const RhythmOptions=({value,onSave,onBack})=>{
     const sign=amount=>`${amount>0?'+':''}${decimals>0?Number(amount).toFixed(decimals):amount}`;
     const button=(amount,dim)=><button type="button" aria-label={`${key}を${sign(amount)}`} data-rhythm-option-nudge={`${key}${sign(amount)}`}
       disabled={amount<0?value<=min:value>=max} onClick={()=>nudge(amount)}
-      className={`min-h-[46px] rounded-xl border ${dim?'border-white/25 bg-slate-300 text-slate-900':'border-white/40 bg-slate-100 text-slate-900'} px-0.5 text-[11px] font-black tabular-nums shadow-[0_2px_0_rgba(2,6,23,.55)] active:translate-y-[1px] active:shadow-none disabled:opacity-35`}>{sign(amount)}</button>;
-    return <div data-rhythm-option-stepper={key} className="space-y-1.5">
-      <div className="grid grid-cols-[1fr_1fr_minmax(56px,1.3fr)_1fr_1fr] items-center gap-1">
+      className={`${wide?'min-h-[38px]':'min-h-[46px]'} rounded-xl border ${dim?'border-white/25 bg-slate-300 text-slate-900':'border-white/40 bg-slate-100 text-slate-900'} px-0.5 text-[11px] font-black tabular-nums shadow-[0_2px_0_rgba(2,6,23,.55)] active:translate-y-[1px] active:shadow-none disabled:opacity-35`}>{sign(amount)}</button>;
+    return <div data-rhythm-option-stepper={key} className={wide?'':'space-y-1.5'}>
+      <div className="grid grid-cols-[1fr_1fr_minmax(52px,1.3fr)_1fr_1fr] items-center gap-1">
         {button(-coarse)}{button(-fine,true)}
-        <output aria-live="polite" className="min-h-[46px] rounded-lg border-2 border-cyan-300/70 bg-white px-1 text-center text-[14px] font-black leading-[42px] tabular-nums text-slate-900 whitespace-nowrap">{display}</output>
+        <output aria-live="polite" className={`rounded-lg border-2 border-cyan-300/70 bg-white px-1 text-center font-black tabular-nums text-slate-900 whitespace-nowrap ${wide?'min-h-[38px] text-[13px] leading-[34px]':'min-h-[46px] text-[14px] leading-[42px]'}`}>{display}</output>
         {button(fine,true)}{button(coarse)}
       </div>
-      {/* つまんで動かせるスライダーも残す。指で大きく動かすときはこちらのほうが速い */}
-      <input type="range" data-rhythm-option-slider={key} aria-label={`${key}を変える`}
+      {/* つまんで動かせるスライダーも残す。指で大きく動かすときはこちらのほうが速い。
+          ★横向きだけは出さない。高さが足りず、4つのボタンで同じことができる */}
+      {!wide&&<input type="range" data-rhythm-option-slider={key} aria-label={`${key}を変える`}
         min={min} max={max} step={step} value={value}
         onChange={e=>set(key,rhythmSnapOptionValue(e.target.value,min,max,step))}
         className="mh-rhythm-range h-3 w-full cursor-pointer appearance-none rounded-full border border-white/15 bg-slate-950"
-        style={{background:`linear-gradient(90deg,#d946ef 0%,#22d3ee ${percent}%,#020617 ${percent}%,#020617 100%)`}}/>
+        style={{background:`linear-gradient(90deg,#d946ef 0%,#22d3ee ${percent}%,#020617 ${percent}%,#020617 100%)`}}/>}
     </div>;
   };
   // ON/OFFは押すたびに入れ替わるボタンではなく、**どちらが今の状態か**が一目で分かる2択にする
@@ -61,30 +83,32 @@ const RhythmOptions=({value,onSave,onBack})=>{
   // 「いまどちらか」が読み取りにくく、2つのボタンを並べる形だと枠の中で場所を取る。
   const toggle=key=><div data-rhythm-option-onoff={key} role="radiogroup" className="flex items-center justify-center gap-2">
     {[[true,'ON'],[false,'OFF']].map(([flag,text])=><button type="button" key={text} role="radio" aria-checked={draft[key]===flag} aria-label={text} onClick={()=>set(key,flag)}
-      className="flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-xl px-1 text-[12px] font-black">
+      className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl px-1 text-[12px] font-black ${wide?'min-h-[38px]':'min-h-[44px]'}`}>
       <span aria-hidden="true" className={`grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full border-2 ${draft[key]===flag?'border-cyan-300 bg-cyan-500/20':'border-white/35'}`}>
         {draft[key]===flag&&<span className="h-[9px] w-[9px] rounded-full bg-cyan-300"/>}
       </span>
       <span className={draft[key]===flag?'text-white':'text-slate-400'}>{text}</span>
     </button>)}
   </div>;
-  const segments=(key,items)=><div className={`grid ${items.length>=4?'grid-cols-4':'grid-cols-3'} overflow-hidden rounded-xl border border-white/20`}>{items.map(([id,text])=><button type="button" key={id} aria-pressed={draft[key]===id} onClick={()=>set(key,id)} className={`min-h-[44px] border-r border-white/10 px-1 text-[10px] font-black last:border-r-0 ${draft[key]===id?'bg-cyan-600 text-white':'bg-slate-900 text-slate-300'}`}>{text}</button>)}</div>;
+  const segments=(key,items)=><div className={`grid ${items.length>=4?'grid-cols-4':'grid-cols-3'} overflow-hidden rounded-xl border border-white/20`}>{items.map(([id,text])=><button type="button" key={id} aria-pressed={draft[key]===id} onClick={()=>set(key,id)} className={`border-r border-white/10 px-1 text-[10px] font-black last:border-r-0 ${wide?'min-h-[38px]':'min-h-[44px]'} ${draft[key]===id?'bg-cyan-600 text-white':'bg-slate-900 text-slate-300'}`}>{text}</button>)}</div>;
   // 1項目=1枠。頭に帯のラベルを置く(参考にした画面と同じ形)。
   // ★ここは項目の「入れ物」なので、余白・字の大きさは2026-09-05に広げたまま触らない。
   // ★数値のように横幅の要る項目は wide。縦持ち(2列)ではぶち抜き、
   //   横持ち(3列)は1列が広いので1つぶんに収める。参考にした画面と同じ並び方。
-  const field=(title,control,description=null,{wide=false}={})=><div data-rhythm-option-field className={`${wide?'col-span-2 landscape:col-span-1':''} rounded-xl border border-cyan-400/20 bg-slate-950/55 p-2.5 landscape:p-2`}>
-    <p className={`mb-2 rounded-lg bg-cyan-700/70 px-2 py-1 text-center ${label}`}>{title}</p>
+  // ★数値のように横幅の要る項目は full。縦向き(2列)ではぶち抜き、
+  //   横向き(3列)は1列が広いので1つぶんに収める。
+  // ★横向きは高さが足りないので、帯と余白を詰め、説明(▸ くわしく)は出さない。
+  //   説明は縦向きで読めるので、消したわけではない。
+  const field=(title,control,description=null,{full=false}={})=><div data-rhythm-option-field className={`${full&&!wide?'col-span-2':''} rounded-xl border border-cyan-400/20 bg-slate-950/55 ${wide?'p-1.5':'p-2.5'}`}>
+    <p className={`rounded-lg bg-cyan-700/70 px-2 text-center ${label} ${wide?'mb-1 py-0.5 text-[11px]':'mb-2 py-1'}`}>{title}</p>
     {control}
-    {/* 説明は畳んでおく。参考にした画面のように**まず全体が見渡せる**ことを優先し、
-        読みたい人だけが開く。中身はそのまま残してあるので、消したわけではない */}
-    {description&&<details data-rhythm-option-help className="mt-2">
+    {description&&!wide&&<details data-rhythm-option-help className="mt-2">
       <summary className="min-h-[24px] cursor-pointer list-none text-[10px] font-black leading-[24px] text-cyan-300/90">▸ くわしく</summary>
       <p className={`mt-1 ${note}`}>{description}</p>
     </details>}
   </div>;
-  // 横持ちは幅が広いので3列。縦持ちは2列のまま(1列にすると1つずつしか見えない)
-  const grid='grid grid-cols-2 gap-2.5 landscape:grid-cols-3';
+  // 横向きは幅が広いので3列。縦向きは2列のまま(1列にすると1つずつしか見えない)
+  const grid=`grid gap-2.5 ${wide?'grid-cols-3 gap-2':'grid-cols-2'}`;
   const previewBgm=async()=>{previewRef.current?.stop();previewRef.current=null;const audio=await Audio_.startRhythmTrack('atsu_cup_theme',draft.bgmVolume);previewRef.current=audio;if(!audio)setMessage('BGMを再生できませんでした');};
   const resetDraft=()=>{setDraft(normalizeRhythmSettings(DEFAULT_RHYTHM_SETTINGS));setMessage('画面上の値を戻しました（未保存）');};
   const saveDraft=async()=>{const saved=await onSave(draft);setDraft(saved);setMessage('保存しました');};
@@ -100,32 +124,32 @@ const RhythmOptions=({value,onSave,onBack})=>{
     {/* ★横持ちは**高さ**が足りない(390pxしかない)。縦持ちで2段だった「見出し」と「タブ」を、
         横持ちでは**1行へ並べる**。これだけで中身へ回せる高さが50pxほど増える。
         押す場所(戻る・タブ)は44pxのまま縮めない。 */}
-    <div data-rhythm-options-bar className="z-10 shrink-0 border-b border-cyan-400/15 bg-slate-950/95 landscape:flex landscape:items-center landscape:gap-3">
-      <header className="flex shrink-0 items-center gap-2 px-3 py-2 landscape:py-1.5"><button aria-label="戻る" onClick={onBack} className="min-h-[44px] min-w-[44px] text-slate-300"><ArrowLeft size={20}/></button><div className="landscape:flex landscape:items-baseline landscape:gap-2"><small className="block text-[8px] font-black tracking-[0.2em] text-cyan-300">MONBEAT</small><h2 className="text-base font-black landscape:text-[13px]">⚙️ オプション</h2></div></header>
+    <div data-rhythm-options-bar className={`z-10 shrink-0 border-b border-cyan-400/15 bg-slate-950/95 ${wide?'flex items-center gap-3':''}`}>
+      <header className={`flex shrink-0 items-center gap-2 px-3 ${wide?'py-1':'py-2'}`}><button aria-label="戻る" onClick={onBack} className="min-h-[44px] min-w-[44px] text-slate-300"><ArrowLeft size={20}/></button><div className={wide?'flex items-baseline gap-2':''}><small className="block text-[8px] font-black tracking-[0.2em] text-cyan-300">MONBEAT</small><h2 className={`font-black ${wide?'text-[13px]':'text-base'}`}>⚙️ オプション</h2></div></header>
       {/* いま見ているタブだけ色を変え、下へ小さな三角を出して「ここの中身」と分かるようにする */}
-      <nav data-rhythm-options-tabs className="grid shrink-0 grid-cols-3 gap-2 px-3 pb-2 landscape:min-w-0 landscape:flex-1 landscape:gap-1.5 landscape:pb-0 landscape:pl-0 landscape:pr-3">
+      <nav data-rhythm-options-tabs className={`grid shrink-0 grid-cols-3 px-3 ${wide?'min-w-0 flex-1 gap-1.5 pb-0 pl-0 pr-3':'gap-2 pb-2'}`}>
         {RHYTHM_OPTION_TABS.map(([id,text])=><button type="button" key={id} data-rhythm-options-tab={id} aria-pressed={tab===id} onClick={()=>changeTab(id)}
-          className={`relative min-h-[44px] rounded-xl border text-[13px] font-black ${tab===id?'border-amber-200 bg-amber-400 text-slate-950':'border-white/15 bg-slate-800 text-slate-300'}`}>
-          {text}{tab===id&&<span aria-hidden="true" className="absolute -bottom-[7px] left-1/2 -translate-x-1/2 border-x-[6px] border-t-[7px] border-x-transparent border-t-amber-300 landscape:hidden"/>}
+            className={`relative rounded-xl border text-[13px] font-black ${wide?'min-h-[38px]':'min-h-[44px]'} ${tab===id?'border-amber-200 bg-amber-400 text-slate-950':'border-white/15 bg-slate-800 text-slate-300'}`}>
+          {text}{tab===id&&!wide&&<span aria-hidden="true" className="absolute -bottom-[7px] left-1/2 -translate-x-1/2 border-x-[6px] border-t-[7px] border-x-transparent border-t-amber-300"/>}
         </button>)}
       </nav>
     </div>
-    <div ref={scrollRef} data-rhythm-options-scroll className="flex-1 min-h-0 overflow-y-auto px-3 pb-5 pt-3 mh-scroll landscape:px-4 landscape:pb-3 landscape:pt-2">
-      <div className="space-y-4">
+    <div ref={scrollRef} data-rhythm-options-scroll className={`flex-1 min-h-0 overflow-y-auto mh-scroll ${wide?'px-3 pb-2 pt-1.5':'px-3 pb-5 pt-3'}`}>
+      <div className={wide?'space-y-2':'space-y-4'}>
         {tab==='live'&&<section data-rhythm-options-panel="live" className={card}>
-          <h3 className={head}>◆ ライブ設定</h3>
-          <div className={`mt-3 ${grid} landscape:mt-0`}>
+          {!wide&&<h3 className={head}>◆ ライブ設定</h3>}
+          <div className={wide?grid:`mt-3 ${grid}`}>
             {field('ノーツの速さ',stepper('noteSpeed',RHYTHM_NOTE_SPEED_MIN,RHYTHM_NOTE_SPEED_MAX,RHYTHM_NOTE_SPEED_STEP,{fine:RHYTHM_NOTE_SPEED_STEP,coarse:1,decimals:1}),
-              `1.0〜12.0を0.1刻みで調整できます。変わるのはノーツが流れてくる見た目の速さだけで、譜面のタイミング・判定窓・スコアは変わりません（現在 約${rhythmTravelMsForSpeed(draft.noteSpeed).toLocaleString()}ms）。`,{wide:true})}
+              `1.0〜12.0を0.1刻みで調整できます。変わるのはノーツが流れてくる見た目の速さだけで、譜面のタイミング・判定窓・スコアは変わりません（現在 約${rhythmTravelMsForSpeed(draft.noteSpeed).toLocaleString()}ms）。`,{full:true})}
             {field('タイミング調整',<>
               {stepper('judgmentTimingOffsetMs',-RHYTHM_TIMING_OFFSET_MAX_MS,RHYTHM_TIMING_OFFSET_MAX_MS,RHYTHM_TIMING_OFFSET_STEP_MS,{fine:1,coarse:10,suffix:'ms'})}
               <button type="button" data-rhythm-calibrator-open onClick={()=>setCalibrating(true)} className="mt-2 min-h-[46px] w-full rounded-xl border border-cyan-300/60 bg-cyan-950/50 text-[12px] font-black text-cyan-100">🎯 タップで調整</button>
-            </>,'判定窓の幅は変えず、表示と入力の基準を同じ量だけ補正します。1ms刻みで動かせます。数字で決めにくいときは「タップで調整」で実際に叩いて測れます。',{wide:true})}
+            </>,'判定窓の幅は変えず、表示と入力の基準を同じ量だけ補正します。1ms刻みで動かせます。数字で決めにくいときは「タップで調整」で実際に叩いて測れます。',{full:true})}
             {field('ノーツサイズ',stepper('noteSize',80,120,5,{fine:5,coarse:10,suffix:'%'}),
-              'ノーツの見た目の大きさだけを変えます。入力判定の範囲・HOLD/SLIDE帯・ENDバーの位置は変わりません。',{wide:true})}
+              'ノーツの見た目の大きさだけを変えます。入力判定の範囲・HOLD/SLIDE帯・ENDバーの位置は変わりません。',{full:true})}
             {/* 【2026-09-05・ユーザー指示】「ノーツの開始位置（奥行き）もオプションで調整できるようにしたい」 */}
             {field('ノーツの出る位置',stepper('noteStartPosition',-100,100,5,{fine:5,coarse:25}),
-              'ノーツが画面のどのあたりから出てくるかを変えます。マイナスにすると奥（画面の上の外側）から、プラスにすると手前寄りから出てきます。判定ラインの位置・判定のタイミング・判定窓・スコアは変わりません。ノーツが流れてくる時間も変わらないので、手前から出すほど見えているあいだの動きは速く見えます。',{wide:true})}
+              'ノーツが画面のどのあたりから出てくるかを変えます。マイナスにすると奥（画面の上の外側）から、プラスにすると手前寄りから出てきます。判定ラインの位置・判定のタイミング・判定窓・スコアは変わりません。ノーツが流れてくる時間も変わらないので、手前から出すほど見えているあいだの動きは速く見えます。',{full:true})}
             {field('FAST / SLOW表示',toggle('fastSlowDisplay'))}
             {field('判定文字表示',toggle('judgmentTextDisplay'))}
             {/* コンボ数は2026-09-12にプレイエリアの真ん中へ移した。場に重なるので、
@@ -135,18 +159,18 @@ const RhythmOptions=({value,onSave,onBack})=>{
             {/* 置き場所も選べる(2026-09-12・ユーザー指示「元位置（元位置より少し右より）とか
                 選べるほうがいい」)。「右上」が真ん中へ移す前の位置 */}
             {draft.comboDisplay!==false&&field('コンボ数の位置',segments('comboPosition',RHYTHM_COMBO_POSITION_LABELS),
-              '「中央」は場の真ん中（既定）、「右上」は2026-09-12より前と同じ、ライフの下の位置です。どこに置いても判定・スコア・コンボの数え方は変わりません。',{wide:true})}
-            {field('レーン発光',segments('laneGlow',RHYTHM_LANE_GLOW_LABELS),null,{wide:true})}
+              '「中央」は場の真ん中（既定）、「右上」は2026-09-12より前と同じ、ライフの下の位置です。どこに置いても判定・スコア・コンボの数え方は変わりません。',{full:true})}
+            {field('レーン発光',segments('laneGlow',RHYTHM_LANE_GLOW_LABELS),null,{full:true})}
             {field('両サイドのマスモン｜濃さ',segments('sideMonsterOpacity',RHYTHM_SIDE_MONSTER_OPACITY_LABELS),
-              'レーンの外側の空いたところへ、設定したマスモンが出て拍に合わせて跳ねます。ノーツが見づらいときや、端末が熱くなりやすいときは薄くするか止めてください。',{wide:true})}
-            {field('両サイドのマスモン｜動き',segments('sideMonsterMotion',RHYTHM_SIDE_MONSTER_MOTION_LABELS),null,{wide:true})}
+              'レーンの外側の空いたところへ、設定したマスモンが出て拍に合わせて跳ねます。ノーツが見づらいときや、端末が熱くなりやすいときは薄くするか止めてください。',{full:true})}
+            {field('両サイドのマスモン｜動き',segments('sideMonsterMotion',RHYTHM_SIDE_MONSTER_MOTION_LABELS),null,{full:true})}
           </div>
         </section>}
         {tab==='volume'&&<section data-rhythm-options-panel="volume" className={card}>
-          <h3 className={head}>◆ 音量設定</h3>
-          <div className={`mt-3 ${grid} landscape:mt-0`}>
-            {field('BGM音量',stepper('bgmVolume',0,RHYTHM_VOLUME_MAX,1,{fine:1,coarse:10}),null,{wide:true})}
-            {field('タップ音量',stepper('noteSeVolume',0,RHYTHM_VOLUME_MAX,1,{fine:1,coarse:10}),null,{wide:true})}
+          {!wide&&<h3 className={head}>◆ 音量設定</h3>}
+          <div className={wide?grid:`mt-3 ${grid}`}>
+            {field('BGM音量',stepper('bgmVolume',0,RHYTHM_VOLUME_MAX,1,{fine:1,coarse:10}),null,{full:true})}
+            {field('タップ音量',stepper('noteSeVolume',0,RHYTHM_VOLUME_MAX,1,{fine:1,coarse:10}),null,{full:true})}
             {field('タップ音',toggle('noteSeEnabled'))}
             <div className="grid gap-2">
               <button type="button" onClick={previewBgm} className="min-h-[44px] rounded-xl bg-indigo-700 text-[12px] font-black">♪ BGM試聴</button>
@@ -163,13 +187,13 @@ const RhythmOptions=({value,onSave,onBack})=>{
           </details>
         </section>}
         {tab==='system'&&<section data-rhythm-options-panel="system" className={card}>
-          <h3 className={head}>◆ システム設定</h3>
-          <div className={`mt-3 ${grid} landscape:mt-0`}>
+          {!wide&&<h3 className={head}>◆ システム設定</h3>}
+          <div className={wide?grid:`mt-3 ${grid}`}>
             {/* 「少なめ」が何を止めるのかを、ここで言い切る(2026-09-13・Android勢から
                 「重い」との声)。判定文字の金の帯・虹の流れは毎フレーム字を塗り直すので、
                 動きがカクつく端末ではここがいちばん効く */}
             {field('演出量',segments('effectAmount',RHYTHM_EFFECT_LABELS),
-              '動きがカクついたり、端末が熱くなったりするときは「少なめ」にしてください。判定文字の金色の帯や虹が流れるのを止め、光のにじみを減らします（色・グラデーション・字の大きさは標準と同じままです）。「最小」にすると、それに加えて100コンボごとの演出や光そのものもほぼ出なくなります。',{wide:true})}
+              '動きがカクついたり、端末が熱くなったりするときは「少なめ」にしてください。判定文字の金色の帯や虹が流れるのを止め、光のにじみを減らします（色・グラデーション・字の大きさは標準と同じままです）。「最小」にすると、それに加えて100コンボごとの演出や光そのものもほぼ出なくなります。',{full:true})}
             {field('軽量モード',toggle('lightweightMode'))}
             {field('曲えらびで試聴する',toggle('songPreviewEnabled'))}
             {field('タップ時の振動',<>
@@ -191,13 +215,13 @@ const RhythmOptions=({value,onSave,onBack})=>{
           </details>
           {!RHYTHM_HAPTICS.supported()&&<p data-rhythm-vibration-unsupported className="mt-2 text-[10px] font-bold leading-relaxed text-amber-200">この端末は振動に対応していないため、ONにしても振動しません（音とエフェクトはそのまま出ます）。</p>}
         </section>}
-        <p className="rounded-xl border border-cyan-400/25 bg-cyan-950/25 px-3 py-2 text-[10px] leading-relaxed text-cyan-100">判定を甘くする設定ではありません。端末ごとの見え方・音量・タイミングを調整する項目です。</p>
+        {!wide&&<p className="rounded-xl border border-cyan-400/25 bg-cyan-950/25 px-3 py-2 text-[10px] leading-relaxed text-cyan-100">判定を甘くする設定ではありません。端末ごとの見え方・音量・タイミングを調整する項目です。</p>}
       </div>
     </div>
-    <footer data-rhythm-options-actions className="z-20 shrink-0 border-t border-cyan-400/25 bg-slate-950/98 px-3 pt-2 shadow-[0_-8px_24px_rgba(2,6,23,.72)] landscape:pt-1.5" style={{paddingBottom:'calc(.5rem + env(safe-area-inset-bottom))'}}>
+    <footer data-rhythm-options-actions className={`z-20 shrink-0 border-t border-cyan-400/25 bg-slate-950/98 px-3 shadow-[0_-8px_24px_rgba(2,6,23,.72)] ${wide?'pt-1.5':'pt-2'}`} style={{paddingBottom:'calc(.5rem + env(safe-area-inset-bottom))'}}>
       {message&&<p role="status" className="mb-1 text-center text-[11px] font-black text-amber-300">{message}</p>}
       {/* 横持ちでは中央寄せで細くする(横いっぱいのボタンは押しにくいだけで、場所も食う) */}
-      <div className="mx-auto grid grid-cols-[.9fr_1.1fr] gap-3 landscape:max-w-[520px]"><button type="button" onClick={resetDraft} className="min-h-[52px] rounded-xl border border-white/20 bg-slate-800 px-2 text-[12px] font-black landscape:min-h-[46px]">デフォルトに戻す</button><button type="button" onClick={saveDraft} data-rhythm-options-save data-dirty={dirty?'true':'false'} className={`min-h-[52px] rounded-xl px-3 font-black landscape:min-h-[46px] ${dirty?'bg-amber-400 text-slate-950 shadow-[0_0_18px_rgba(251,191,36,.35)]':'bg-amber-600 text-slate-950'}`}>{dirty?'変更を保存':'保存'}</button></div>
+      <div className={`mx-auto grid grid-cols-[.9fr_1.1fr] gap-3 ${wide?'max-w-[520px]':''}`}><button type="button" onClick={resetDraft} className={`rounded-xl border border-white/20 bg-slate-800 px-2 text-[12px] font-black ${wide?'min-h-[42px]':'min-h-[52px]'}`}>デフォルトに戻す</button><button type="button" onClick={saveDraft} data-rhythm-options-save data-dirty={dirty?'true':'false'} className={`rounded-xl px-3 font-black ${wide?'min-h-[42px]':'min-h-[52px]'} ${dirty?'bg-amber-400 text-slate-950 shadow-[0_0_18px_rgba(251,191,36,.35)]':'bg-amber-600 text-slate-950'}`}>{dirty?'変更を保存':'保存'}</button></div>
     </footer>
   </main>;
 };

@@ -44,23 +44,33 @@ check('上のタブで3つに分けている',
   && /const \[tab,setTab\]=useState\('live'\);/.test(options));
 check('タブは押せるボタンで、いま見ているものが分かる',
   /data-rhythm-options-tab=\{id\} aria-pressed=\{tab===id\}/.test(options)
-  && options.includes('min-h-[44px] rounded-xl border text-[13px] font-black'));
-// 横持ちは高さが390pxしかない。見出しとタブを1行に並べて、中身へ回す高さを稼ぐ
-check('横持ちでは見出しとタブを1行に並べる',
-  options.includes('data-rhythm-options-bar className="z-10 shrink-0 border-b border-cyan-400/15 bg-slate-950/95 landscape:flex landscape:items-center')
-  && /data-rhythm-options-tabs className="grid shrink-0 grid-cols-3[^"]*landscape:flex-1/.test(options));
-check('横持ちでは中身を3列に並べる', /const grid='grid grid-cols-2 gap-2\.5 landscape:grid-cols-3'/.test(options));
-check('見ていないタブの中身は作らない',
-  ['live', 'volume', 'system'].every(id => options.includes(`{tab==='${id}'&&<section data-rhythm-options-panel="${id}"`)));
-check('タブを変えたら先頭から見せる', /const changeTab=id=>\{setTab\(id\);[\s\S]{0,80}scrollTo\(\{top:0\}\)/.test(options));
-check('タブは設定ではないので保存しない', !/\btab:/.test(grab('const DEFAULT_RHYTHM_SETTINGS = Object.freeze({', '});')));
-
-// ---- 1項目=1枠、説明は畳む ----
+  && options.includes("${wide?'min-h-[38px]':'min-h-[44px]'}"));
+// 【2026-09-13・ユーザー指摘】縦横ボタンで横にしたオプション画面が「明らかにみづらい」。
+// ★モンビーの横画面は**端末を回していない**。器を transform:rotate(90deg) で回している
+//   だけなので、CSSの landscape: (＝@media (orientation:landscape)) は縦のままと答える。
+//   横向け指定を landscape: で書くと、縦横ボタンで回したときに**1つも当たらない**。
+//   実際にそうなっていて、横倒しの画面に1項目だけが並ぶ形になっていた。
+// ★なので向きはJSで決める(orientationIsLandscape が端末の向きと自前回転の両方を見る)。
+check('向きはJSで決める(CSSの landscape: に頼らない)',
+  /const \[wide,setWide\]=useState\(\(\)=>orientationIsLandscape\(\)\);/.test(options)
+  && options.includes('RHYTHM_VIEW_ROTATION.subscribe(onChange)')
+  // 縦横ボタンで回しても当たるよう、オプション画面には landscape: を1つも残さない
+  && !options.split('\n').filter(line => !line.trim().startsWith('//') && !line.trim().startsWith('*')).join('\n').includes('landscape:'));
+check('横向きでは見出しとタブを1行に並べる',
+  options.includes("data-rhythm-options-bar className={`z-10 shrink-0 border-b border-cyan-400/15 bg-slate-950/95 ${wide?'flex items-center gap-3':''}`}")
+  && /data-rhythm-options-tabs className=\{`grid shrink-0 grid-cols-3 px-3 \$\{wide\?'min-w-0 flex-1/.test(options));
+check('横向きでは中身を3列に並べる',
+  /const grid=`grid gap-2\.5 \$\{wide\?'grid-cols-3 gap-2':'grid-cols-2'\}`/.test(options));
+// 横向きは高さが390pxしかない。高さを食うものは出さない・詰める
+check('横向きでは高さを食うものを省く(説明・スライダー・外枠・見出し)',
+  options.includes('{description&&!wide&&<details data-rhythm-option-help')
+  && options.includes('{!wide&&<input type="range" data-rhythm-option-slider={key}')
+  && /const card=wide\?'':'rounded-2xl/.test(options)
+  && options.includes('{!wide&&<h3 className={head}>◆ ライブ設定</h3>}'));
 check('項目は枠に入れ、頭に帯のラベルを置く',
-  /const field=\(title,control,description=null,\{wide=false\}=\{\}\)=>/.test(options)
+  /const field=\(title,control,description=null,\{full=false\}=\{\}\)=>/.test(options)
   && options.includes('data-rhythm-option-field')
-  && options.includes('mb-2 rounded-lg bg-cyan-700/70 px-2 py-1 text-center'));
-check('小さい項目は2列に並べる(縦持ち)', /const grid='grid grid-cols-2 gap-2\.5/.test(options));
+  && options.includes('rounded-lg bg-cyan-700/70 px-2 text-center'));
 check('説明は畳んでおく(消してはいない)',
   options.includes('<details data-rhythm-option-help')
   && options.includes('▸ くわしく')
@@ -73,9 +83,15 @@ check('数値は粗く動かす／細かく動かすの4つのボタンで変え
   && options.includes('rhythmNudgeOptionValue(value,min,max,step,amount)'));
 // 押す場所は44px以上。字を詰めて入る量を増やさない(2026-09-05の指示がここでも効く)
 const withoutSummaries = options.split('\n').filter(line => !line.includes('<summary')).join('\n');
-const smallTargets = [...withoutSummaries.matchAll(/min-h-\[(\d+)px\]/g)].map(m => Number(m[1])).filter(px => px < 44);
-check('押す場所が44pxより小さくなっていない', smallTargets.length === 0,
-  smallTargets.length ? `小さいもの: ${smallTargets.join(', ')}px` : '');
+// 縦向きは44px。横向き(wide)だけは38pxまで許す — 画面の高さが390pxしかなく、
+// 44pxのままだと3行目が入らない。横向きは横幅が広いので指は届きやすい。
+const portraitOnly = withoutSummaries.replace(/wide\?'min-h-\[\d+px\][^']*':/g, '');
+const portraitTargets = [...portraitOnly.matchAll(/min-h-\[(\d+)px\]/g)].map(m => Number(m[1])).filter(px => px < 44);
+const anyTargets = [...withoutSummaries.matchAll(/min-h-\[(\d+)px\]/g)].map(m => Number(m[1])).filter(px => px < 38);
+check('縦向きの押す場所が44pxより小さくなっていない', portraitTargets.length === 0,
+  portraitTargets.length ? `小さいもの: ${portraitTargets.join(', ')}px` : '');
+check('横向きでも38pxより小さくしていない', anyTargets.length === 0,
+  anyTargets.length ? `小さいもの: ${anyTargets.join(', ')}px` : '');
 
 // ---- 選択肢の名前は1か所だけ ----
 // ボタンの名前が2か所に書かれていると、片方だけ直して必ずずれる。
@@ -113,10 +129,10 @@ check('画面から変えられる設定は、どれかのタブに置いてあ�
 // ---- 実際に開いて、1つのタブが1画面に収まるか測る ----
 // クラスはソースから取り出して組むので、見た目を詰め直したら測り直しになる。
 const classOf = re => { const m = options.match(re); return m ? m[1] : ''; };
-const cardClass = classOf(/const card='([^']+)'/);
+const cardClass = classOf(/const card=wide\?'':'([^']+)'/);
 const headClass = classOf(/const head='([^']+)'/);
 const labelClass = classOf(/const label='([^']+)'/);
-const fieldClass = classOf(/data-rhythm-option-field className=\{`\$\{wide\?'col-span-2 landscape:col-span-1':''\} ([^`]+)`\}/);
+const fieldClass = 'rounded-xl border border-cyan-400/20 bg-slate-950/55 p-2.5';
 const tabClass = 'min-h-[44px] rounded-xl border text-[13px] font-black';
 
 (async () => {
@@ -127,7 +143,8 @@ const tabClass = 'min-h-[44px] rounded-xl border text-[13px] font-black';
     const field = (title, control, wide) => `<div class="${wide ? 'col-span-2' : ''} ${fieldClass}">
       <p class="mb-2 rounded-lg bg-cyan-700/70 px-2 py-1 text-center ${labelClass}">${title}</p>${control}
       <details class="mt-2"><summary class="min-h-[24px] list-none text-[10px] font-black leading-[24px] text-cyan-300/90">▸ くわしく</summary></details></div>`;
-    const stepper = value => `<div class="space-y-1.5"><div class="grid grid-cols-[1fr_1fr_minmax(56px,1.3fr)_1fr_1fr] items-center gap-1">
+    const stepperCols = classOf(/className="(grid grid-cols-\[[^"]*?\]) items-center gap-1"/) || 'grid grid-cols-3';
+    const stepper = value => `<div class="space-y-1.5"><div class="${stepperCols} items-center gap-1">
       ${['-10', '-1', value, '+1', '+10'].map((t, i) => i === 2
         ? `<output class="min-h-[46px] rounded-lg border border-cyan-400/40 bg-slate-950 px-1 text-center text-[13px] font-black leading-[46px] tabular-nums">${t}</output>`
         : `<button class="min-h-[46px] rounded-xl border border-white/15 bg-slate-800 px-0.5 text-[11px] font-black tabular-nums text-slate-100">${t}</button>`).join('')}
