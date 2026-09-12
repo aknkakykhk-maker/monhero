@@ -172,6 +172,41 @@ const check = (name, ok, detail = '') => {
     check('台本どおりモッチーを選べる',
       await mocchiCard.count() === 1 && await mocchiCard.isEnabled());
 
+    // --- ⑥-2 バトル画面まで通し、押す先(ACTION)がちゃんと光るか ---
+    // セリフでは「ACTIONを押して」と言うのに、押す先のボタンは一度も光っていなかった
+    // (2026-09-12・ユーザー指摘)。台本と画面の結びつきは静的な検査でも見ているが、
+    // 実際に光るのは実物を動かさないと分からないので、ここで確かめる
+    const spots = () => page.evaluate(() => [...document.querySelectorAll('.is-battle-tutorial-spot')]
+      .map(el => (el.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 20)));
+    await page.locator('button').filter({ hasText: 'モッチー' }).first().dispatchEvent('click');
+    await page.waitForTimeout(400);
+    await page.locator('button').filter({ hasText: /^勇者モンに選ぶ$/ }).first().dispatchEvent('click');
+    await page.waitForTimeout(500);
+    await page.locator('button').filter({ hasText: /^近距離/ }).first().dispatchEvent('click');
+    await page.waitForTimeout(500);
+    await page.locator('button').filter({ hasText: /^おりょうの力/ }).first().dispatchEvent('click');
+    await page.waitForTimeout(400);
+    await page.locator('button').filter({ hasText: /^習得する$/ }).first().dispatchEvent('click');
+    await page.waitForTimeout(1200);
+    check('練習のままバトル画面まで進む',
+      await page.getByRole('button', { name: /Action/i }).count() >= 1);
+    // 画面の見かたの説明を順に進め、ACTIONボタンの説明まで来たら光っているものを見る
+    let actionSpots = null;
+    for (let i = 0; i < 30; i++) {
+      const t = await bubbleText();
+      if (t && t.includes('ACTIONで実行')) { actionSpots = await spots(); break; }
+      if (!(await tapNext())) break;
+    }
+    check('ACTIONの説明でACTIONボタンが光る',
+      Array.isArray(actionSpots) && actionSpots.length === 1 && /Action/i.test(actionSpots[0]),
+      JSON.stringify(actionSpots));
+    // ガードを使う番(操作待ち)まで進める。吹き出しが消えて「つぎへ」も無くなる
+    for (let i = 0; i < 12; i++) if (!(await tapNext())) break;
+    const doSpots = await spots();
+    check('カードを使う番はACTIONも光る',
+      doSpots.some(t => /Action/i.test(t)) && doSpots.some(t => /ガード/.test(t)),
+      JSON.stringify(doSpots));
+
     // --- ⑦ やめると始めた場所へ帰り、既読は書き換わらない ---
     await page.locator('button').filter({ hasText: /^やめる$/ }).first().dispatchEvent('click');
     await page.getByRole('button', { name: 'バトルチュートリアル開始（記録は残りません）' }).waitFor({ timeout: 15000 });

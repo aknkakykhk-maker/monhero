@@ -72,6 +72,7 @@ jobs:
       - name: Check shipped data metadata and rhythm geometry
         run: |
           node tools/boot/data-cache-key-check.js
+          node tools/boot/update-notice-style-check.js
           node tools/mode/rhythm-mode-note-perspective-check.js
           node tools/mode/rhythm-mode-tap-width-input-check.js
           node tools/mode/rhythm-mode-restart-remount-check.js

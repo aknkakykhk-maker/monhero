@@ -13482,8 +13482,28 @@ const installRhythmGeometryStyles=()=>{
       transform-origin:bottom center;
       background:linear-gradient(to top,var(--rhythm-hit-color,#fff) 0%,rgba(255,255,255,.32) 42%,rgba(255,255,255,0) 100%)}
     /* はじける粒: 判定ラインから外へ飛ぶ。飛ぶ向きはCSSで固定なので毎回の計算は要らない */
+    /* 粒の色は1つずつ変えられるようにしておく(MARVELOUSの虹)。
+       ふだんは全部 --rhythm-hit-color と同じ値が入るので、見た目は変わらない */
     [data-rhythm-hit-effect]>u{left:50%;top:0;width:7px;height:7px;margin:-3.5px 0 0 -3.5px;
       background:var(--rhythm-hit-color,#fff)}
+    [data-rhythm-hit-effect]>u:nth-of-type(1){background:var(--rhythm-spark-color-1,var(--rhythm-hit-color,#fff))}
+    [data-rhythm-hit-effect]>u:nth-of-type(2){background:var(--rhythm-spark-color-2,var(--rhythm-hit-color,#fff))}
+    [data-rhythm-hit-effect]>u:nth-of-type(3){background:var(--rhythm-spark-color-3,var(--rhythm-hit-color,#fff))}
+    [data-rhythm-hit-effect]>u:nth-of-type(4){background:var(--rhythm-spark-color-4,var(--rhythm-hit-color,#fff))}
+    [data-rhythm-hit-effect]>u:nth-of-type(5){background:var(--rhythm-spark-color-5,var(--rhythm-hit-color,#fff))}
+    /* ぴったりのMARVELOUSだけ、横へ広がるフラッシュと上へ抜ける光の柱も虹にする。
+       ふつうのMARVELOUSは金(--rhythm-hit-color)のまま(2026-09-12・ユーザー指示で
+       虹はジャストマーベラス専用にした) */
+    [data-rhythm-hit-effect][data-hit-precise="1"]>i{
+      background:linear-gradient(90deg,#f87171,#fbbf24,#a3e635,#22d3ee,#a78bfa,#f472b6)}
+    [data-rhythm-hit-effect][data-hit-precise="1"]>b{
+      background:linear-gradient(to top,#f472b6 0%,#a78bfa 24%,#22d3ee 46%,#a3e635 64%,rgba(251,191,36,.35) 82%,rgba(255,255,255,0) 100%)}
+    /* 上の判定ほど光を明るくする(2026-09-12・ユーザー指示
+       「色合い発光を判定が上がるたびにもっときれいにめだつように」) */
+    [data-rhythm-hit-effect][data-hit-judgment="MARVELOUS"]>i,
+    [data-rhythm-hit-effect][data-hit-judgment="MARVELOUS"]>b{filter:brightness(1.22) saturate(1.15)}
+    [data-rhythm-hit-effect][data-hit-judgment="EXCELLENT"]>i,
+    [data-rhythm-hit-effect][data-hit-judgment="EXCELLENT"]>b{filter:brightness(1.12) saturate(1.1)}
     [data-rhythm-hit-effect]>u:nth-of-type(1){--rhythm-spark-x:-54px;--rhythm-spark-y:-56px}
     [data-rhythm-hit-effect]>u:nth-of-type(2){--rhythm-spark-x:-24px;--rhythm-spark-y:-86px}
     [data-rhythm-hit-effect]>u:nth-of-type(3){--rhythm-spark-x:0px;--rhythm-spark-y:-104px}
@@ -13685,10 +13705,64 @@ const RHYTHM_HIT_EFFECT_POOL=10;
 const RHYTHM_HIT_SPARK_COUNT=5;
 // ふつうのノーツと、モンスターノーツ(1曲に最大4回)で光の大きさ・長さを変える。
 const RHYTHM_HIT_EFFECT_MS=Object.freeze({NORMAL:340,MONSTER:900});
-const RHYTHM_HIT_EFFECT_JUDGMENT_COLORS=Object.freeze({
-  MARVELOUS:'#f5d0fe',EXCELLENT:'#a5f3fc',GREAT:'#fde68a',GOOD:'#bef264',BAD:'#fda4af',
+// ===== 判定ごとの色(2026-09-12・ユーザー指示) =====
+// 「もっと色分けをして良い判定ならそれだけ派手にしたい / マーベラスは虹など」。
+//
+// ★**判定文字も、判定ラインで弾ける光も、ここ1か所から取る。**
+//   前は文字がTailwindのクラス(30-rhythm-play.jsx)、光がここ、と2か所に分かれていて、
+//   同じ判定でも微妙に色が違っていた(MARVELOUSが文字 #fae8ff / 光 #f5d0fe など)。
+//   しかも上位2つ(MARVELOUS・EXCELLENT)が白に近く、下位のほうがはっきり見えていた。
+//
+// 上へ行くほど派手にする。
+//   MARVELOUS … 虹(流れる)      ← いちばん派手
+//   EXCELLENT … 金
+//   GREAT     … 水色
+//   GOOD      … 黄緑
+//   BAD       … 橙
+//   MISS      … 灰(光は出さない)
+// ★MARVELOUSだけは単色ではなく虹。ここへ置くのは「虹にできない場所で使う代表の色」で、
+//   虹そのものは data-judgment を見たCSSが描く(文字のグラデーション・粒の色分け)。
+// ★色の入れ替え(2026-09-12・ユーザー指示)
+//   「普通のマーベラスとエクセレントの色の違いがあまりわからない」
+//   「マーベラスを金 / エクセレントをピンク紫系にかえよう」
+//   虹は**ジャストマーベラス(ぴったり)だけのもの**にした。ふつうのMARVELOUSが虹だと、
+//   流れる途中で金の瞬間があり、金のEXCELLENTと見分けが付かなかった。
+// ★GREATが赤なのはユーザー指示「グレートは赤系のほうが強く見える」。
+//   BADはその赤からいちばん遠い青へ逃がしてある(冷たい色＝良くないの読みにも合う)。
+//
+// 色相: MARVELOUS 43° / EXCELLENT 292° / GREAT 0° / GOOD 85° / BAD 213°。
+// いちばん近い組(MARVELOUS-GOOD)でも42度あり、ノーツの色分けと同じ約束(40度以上)を満たす。
+//
+// ここが持つのは**判定ラインで弾ける光に使う単色**で、判定文字のグラデーションは
+// index.html が data-judgment ごとに持つ。**文字のグラデーションには必ずこの色を含める**
+// (rhythm-hit-effect-check.js が、表の色が文字のCSSに入っているかを突き合わせる)。
+const RHYTHM_JUDGMENT_COLORS=Object.freeze({
+  MARVELOUS:'#fbbf24',EXCELLENT:'#e879f9',GREAT:'#f87171',GOOD:'#a3e635',BAD:'#60a5fa',MISS:'#94a3b8',
 });
-const rhythmHitEffectColor=judgment=>RHYTHM_HIT_EFFECT_JUDGMENT_COLORS[String(judgment||'')]||'#e2e8f0';
+const rhythmJudgmentColor=judgment=>RHYTHM_JUDGMENT_COLORS[String(judgment||'')]||'#e2e8f0';
+// ジャストマーベラスの虹を作る色。文字のグラデーションと、はじける粒の色分けに使う
+const RHYTHM_JUDGMENT_RAINBOW=Object.freeze(['#f87171','#fbbf24','#a3e635','#22d3ee','#a78bfa','#f472b6']);
+// ===== ぴったりのMARVELOUS(2026-09-12・ユーザー指示) =====
+// 「マーベラスをさらに完璧なタイミングで踏んだマーベラスを判定の見ためだけさらによくしたい /
+//   scoreはかわらず」。
+//
+// ★**見た目だけ。** 判定の名前・スコア・コンボ・ライフ・判定数・FAST/SLOWの数え方・
+//   自己ベスト・全国ランキングのどれにも一切関わらない。ここで決まるのは
+//   「その1回の表示を強くするか」だけで、run には何も残さない。
+// MARVELOUSの窓は±55ms。その中でも±20msに収まったときを「ぴったり」とする。
+// 判定タイミング調整(judgmentTimingOffsetMs)を通したあとのズレを見るので、
+// 自分で合わせた人の手元でもそのまま効く。
+const RHYTHM_JUDGMENT_PRECISE_MS = 20;
+const rhythmJudgmentIsPrecise=(judgment,deltaMs)=>{
+  if(judgment!=='MARVELOUS')return false;
+  // ★null / undefined / 空文字は Number() では0(=ぴったり)になってしまう。
+  //   ズレが分からないときに「ぴったり」を名乗らせない
+  if(deltaMs===null||deltaMs===undefined||deltaMs==='')return false;
+  const delta=Number(deltaMs);
+  return Number.isFinite(delta)&&Math.abs(delta)<=RHYTHM_JUDGMENT_PRECISE_MS;
+};
+// 判定ラインで弾ける光の色。MISSでは光を出さないので、そこは使われない
+const rhythmHitEffectColor=judgment=>rhythmJudgmentColor(judgment);
 // プレイエリアの中に、使い回すエフェクトの入れ物を用意する。すでにあれば作り直さない。
 const rhythmEnsureHitEffects=area=>{
   if(!area||typeof document==='undefined')return null;
@@ -13741,7 +13815,7 @@ const rhythmRestartAnimations=entries=>{
 };
 // defer:true を渡すと、印を付けずに「付けるべき印」だけを返す。
 // 呼び出し側が rhythmRestartAnimations へまとめて渡すことで、レイアウトの読み取りを1回にできる。
-const rhythmSpawnHitEffect=(area,{centerRatio,widthRatio,judgment,monster=false,defer=false})=>{
+const rhythmSpawnHitEffect=(area,{centerRatio,widthRatio,judgment,monster=false,precise=false,defer=false})=>{
   const layer=rhythmEnsureHitEffects(area);
   if(!layer||!layer._rhythmPool.length)return null;
   const item=layer._rhythmPool[layer._rhythmNext%layer._rhythmPool.length];
@@ -13751,8 +13825,21 @@ const rhythmSpawnHitEffect=(area,{centerRatio,widthRatio,judgment,monster=false,
   item.style.setProperty('--rhythm-hit-center',`${(Math.max(0,Math.min(1,Number(centerRatio)||.5))*100).toFixed(2)}%`);
   item.style.setProperty('--rhythm-hit-width',`${(width*100).toFixed(2)}%`);
   item.style.setProperty('--rhythm-hit-color',monster?'#fde047':rhythmHitEffectColor(judgment));
+  // MARVELOUSだけ、はじける粒を1つずつ違う色にして虹にする(2026-09-12)。
+  // 単色のまま虹に見せる手が無いので、粒そのものの色をCSS変数で配る。
+  // ★モンスターノーツは金色を優先する(そちらが特別扱いなので、虹で上書きしない)
+  const rainbowHit=!monster&&precise&&judgment==='MARVELOUS';
+  RHYTHM_JUDGMENT_RAINBOW.forEach((color,index)=>{
+    item.style.setProperty(`--rhythm-spark-color-${index+1}`,
+      rainbowHit?color:'var(--rhythm-hit-color,#fff)');
+  });
+  // 判定ごとに光の強さを変えられるようにする(上の判定ほど明るく)。モンスターノーツは別扱い
+  item.dataset.hitJudgment=monster?'':String(judgment||'');
+  item.dataset.hitPrecise=rainbowHit?'1':'';
   item.style.setProperty('--rhythm-hit-ms',`${RHYTHM_HIT_EFFECT_MS[kind]}ms`);
-  item.style.setProperty('--rhythm-spark-scale',monster?'2.1':'1');
+  // ぴったりのMARVELOUSは粒を遠くまで飛ばす(見た目だけ・2026-09-12)。
+  // モンスターノーツの2.1倍はそのまま優先する(そちらが特別扱いのため)
+  item.style.setProperty('--rhythm-spark-scale',monster?'2.1':(rainbowHit?'1.45':'1'));
   // 同じ要素をすぐ使い回すときは、アニメーションを一度切らないと最初から再生されない。
   // defer なら「切って付け直す」を呼び出し側のまとめ処理へ譲る(レイアウトの読み取りを1回にするため)。
   if(defer)return {el:item,attr:'rhythmHitKind',value:kind};

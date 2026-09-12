@@ -35,16 +35,16 @@ const calibrator = grab('const RhythmTimingCalibrator=({onApply,onClose,currentO
 // ---- ゆとり ----
 check('オプションの本体が取り出せている', options.length > 0);
 check('カードの余白を広げてある(p-3のままにしていない)',
-  /const card='rounded-2xl border border-cyan-400\/35 bg-slate-900\/85 p-4/.test(options));
+  /const card=wide\?'':'rounded-2xl border border-cyan-400\/35 bg-slate-900\/85 p-4/.test(options));
 check('項目どうしの間を広げてある', /const row='[^']*py-3/.test(options) && /const row='[^']*gap-4/.test(options));
-check('セクションどうしの間を広げてある', options.includes('<div className="space-y-4">'));
+check('セクションどうしの間を広げてある', options.includes("wide?'space-y-2':'space-y-4'"));
 check('項目名が小さすぎない(13px以上)', /const label='text-\[13px\]/.test(options));
 check('説明文が9pxまで小さくなっていない',
   /const note='text-\[10px\]/.test(options) && !/text-\[9px\]/.test(options));
-check('見出しが本文と同じ大きさになっていない', /const head='text-\[15px\]/.test(options));
+check('見出しが本文と同じ大きさになっていない', /const head='[^']*text-\[15px\]/.test(options));
 // 数値の項目は「見出し → 操作 → 説明」を必ず間を空けて並べる。
 // ここが1行に詰まると、どの説明がどの項目のものか分からなくなる
-check('数値の項目の並べ方を1か所にまとめてある', /const field=\(title,control,description=null\)=>/.test(options));
+check('項目の並べ方を1か所にまとめてある', /const field=\(title,control,description=null,\{full=false\}=\{\}\)=>/.test(options));
 
 // ---- タップ調整は専用の画面 ----
 check('叩いて合わせるは画面いっぱいで開く',
@@ -64,14 +64,14 @@ check('戻るボタンがある', calibrator.includes('aria-label="オプショ�
 
 // ---- ノーツの出る位置 ----
 check('ノーツの出る位置を画面から変えられる',
-  options.includes("stepper('noteStartPosition',-100,100,5)"));
+  options.includes("stepper('noteStartPosition',-100,100,5,{fine:5,coarse:25})"));
 check('その値が実際にノーツの出る場所へ効いている',
   game.includes('const spawnY=-noteHeight+(settings.noteStartPosition/100)*areaRect.height*.2;'));
 check('判定は変わらないと書いてある',
   /判定ラインの位置・判定のタイミング・判定窓・スコアは変わりません/.test(options));
 
 // ---- 演奏中は通知を出さない ----
-check('オプションに切り替えがある', options.includes("toggle('quietDuringPlay','')"));
+check('オプションに切り替えがある', options.includes("toggle('quietDuringPlay')"));
 check('この端末で何ができるかを添えている', options.includes('rhythmQuietModeSupportText()'));
 // できないのに「止まる」と見せない。ここがいちばん大事
 check('通知そのものは止められないと書いてある',

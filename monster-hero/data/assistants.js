@@ -3725,35 +3725,36 @@ const ASSISTANT_BATTLE_TUTORIAL_BODY = [
   { id:'slotTalk2',    at:'BATTLE',        e:'wink',    title:'4つの距離枠', t:'仲間が並んでる枠が距離。敵と同じ距離の子ほど大ダメージを出せるよ！', spot:'battleSlots', wait:'next' },
   { id:'cards',        at:'BATTLE',        e:'normal',  title:'手札のカード', t:'下にあるのが今つかえるカード。ガッツが足りる子だけ光ってるよ。', spot:'cards', wait:'next' },
   { id:'cardKinds',    at:'BATTLE',        e:'normal',  title:'カードの種類', t:'攻めの攻撃カード、ダメージを減らすガードカード、力を底上げするアシストカードがあるよ。', spot:'cards', wait:'next' },
+  { id:'actionTalk',   at:'BATTLE',        e:'happy',   title:'ACTIONで実行', t:'カードを選んだら、右下の「ACTION」を押すとその1ターンぶんが実行されるよ♪', spot:'action', wait:'next' },
   { id:'limitTalk',    at:'BATTLE',        e:'normal',  title:'使える枚数', t:'1ターンに出せる枚数はここ。勇者モンの特性で増えることもあるんだ♪', spot:'cardCount', wait:'next' },
   { id:'cardOrder',    at:'BATTLE',        e:'surprise',title:'2枚目からは半減', t:'同じターンに攻撃やガードを重ねると2枚目から効果が半分。アシストカードは半減しないよ。', spot:'cards', wait:'next' },
   { id:'deckTalk',     at:'BATTLE',        e:'happy',   title:'山札のこと', t:'「VIEW」で山札と使い終わったカードを確認できるよ。無くなったら混ぜ直すの。', spot:'deckView', wait:'next' },
   // ① 敵の攻撃予告 → ガードで受ける
   { id:'intentTalk',   at:'BATTLE',        e:'surprise',title:'敵の攻撃予告！', t:'敵の下に次の行動と予測ダメージが出てるよ。今ターンは殴ってくる！', spot:'enemyIntent', wait:'next' },
-  { id:'guardTalk',    at:'BATTLE',        e:'normal',  title:'ガードで受けよう', t:'ガードカードを選んで、ACTIONを押してみて。ダメージがぐっと減るよ！', spot:'cards', wait:'next' },
-  { id:'guardDo',      at:'BATTLE',        e:'wink',    title:'ガードを使ってみて', t:'ガードカード → ACTION の順だよ♪', spot:'cards', wait:'do', need:'guard' },
+  { id:'guardTalk',    at:'BATTLE',        e:'normal',  title:'ガードで受けよう', t:'ガードカードを選んで、ACTIONを押してみて。ダメージがぐっと減るよ！', spot:['cards','action'], wait:'next' },
+  { id:'guardDo',      at:'BATTLE',        e:'wink',    title:'ガードを使ってみて', t:'ガードカード → ACTION の順だよ♪', spot:['cards','action'], wait:'do', need:'guard' },
   { id:'guardSeen',    at:'BATTLE',        e:'happy',   title:'ほぼ無傷！', t:'見て、ライフがほとんど減ってないでしょ？ これがガードの力だよ♪', wait:'next' },
   // ② 必殺技を魅せる
   { id:'chargeTalk',   at:'BATTLE',        e:'surprise',title:'必殺技が来る！', t:'敵の下の予告を見て！ 必殺技はふつうの攻撃よりずっと痛いよ。', spot:'enemyIntent', wait:'next' },
-  { id:'chargeReady',  at:'BATTLE',        e:'normal',  title:'もう一度ガード', t:'必殺技もガードで受け止められるよ。手札のガードを見て！', spot:'cards', wait:'next' },
-  { id:'chargeDo',     at:'BATTLE',        e:'excited', title:'受け止めよう！', t:'ガードカードを選んでACTIONだよ♪', spot:'cards', wait:'do', need:'guard' },
+  { id:'chargeReady',  at:'BATTLE',        e:'normal',  title:'もう一度ガード', t:'必殺技もガードで受け止められるよ。手札のガードを見て！', spot:['cards','action'], wait:'next' },
+  { id:'chargeDo',     at:'BATTLE',        e:'excited', title:'受け止めよう！', t:'ガードカードを選んでACTIONだよ♪', spot:['cards','action'], wait:'do', need:'guard' },
   { id:'chargeSeen',   at:'BATTLE',        e:'surprise',title:'さすがに痛い！', t:'ガードしてもこれだけ減るんだ。必殺技の予告が出たら気をつけてね。', wait:'next' },
   // ③ アシストカードでバフ
-  { id:'breederTalk',  at:'BATTLE',        e:'happy',   title:'アシストカード', t:'次はアシストカード。おりょうの力で、こっちの攻撃力が上がるよ！', spot:'cards', wait:'next' },
-  { id:'breederDo',    at:'BATTLE',        e:'wink',    title:'使ってみよう', t:'アシストカードを選んでACTION！ 攻撃UPの表示が出るよ♪', spot:'cards', wait:'do', need:'teaching' },
+  { id:'breederTalk',  at:'BATTLE',        e:'happy',   title:'アシストカード', t:'次はアシストカード。おりょうの力で、こっちの攻撃力が上がるよ！', spot:['cards','action'], wait:'next' },
+  { id:'breederDo',    at:'BATTLE',        e:'wink',    title:'使ってみよう', t:'アシストカードを選んでACTION！ 攻撃UPの表示が出るよ♪', spot:['cards','action'], wait:'do', need:'teaching' },
   { id:'breederSeen',  at:'BATTLE',        e:'happy',   title:'攻撃アップ！', t:'「攻撃UP!」って出たでしょ？ この効果はバトルの最後まで続くよ♪', wait:'next' },
   // ④ 緊急回復と敵の移動
   { id:'emergTalk',    at:'BATTLE',        e:'normal',  title:'緊急回復', t:'左の「緊急」はライフとガッツが3割もどるよ。そのターンは攻撃できないの。', spot:'emergency', wait:'next' },
   { id:'emergDo',      at:'BATTLE',        e:'wink',    title:'押してみて', t:'「緊急」を押してみて！ 敵も動くから、そこも見ててね♪', spot:'emergency', wait:'do', need:'emergency' },
   { id:'moveTalk',     at:'BATTLE',        e:'surprise',title:'敵が動いた！', t:'敵は距離を変えてくるよ。離れられると攻撃が当たりにくくなるの。', spot:'enemyBar', wait:'next' },
   // ⑤ 距離技で引き戻す
-  { id:'rangeTalk',    at:'BATTLE',        e:'excited', title:'距離技で引き戻す', t:'距離技は、当てたあと敵をその距離まで引っぱってこられるんだ！', spot:'cards', wait:'next' },
-  { id:'rangeDo',      at:'BATTLE',        e:'wink',    title:'使ってみよう', t:'距離技を選んで、モッチーの枠をタップ → ACTION だよ♪', spot:'cards', wait:'do', need:'range_atk' },
+  { id:'rangeTalk',    at:'BATTLE',        e:'excited', title:'距離技で引き戻す', t:'距離技は、当てたあと敵をその距離まで引っぱってこられるんだ！', spot:['cards','action'], wait:'next' },
+  { id:'rangeDo',      at:'BATTLE',        e:'wink',    title:'使ってみよう', t:'距離技を選んで、モッチーの枠をタップ → ACTION だよ♪', spot:['cards','action'], wait:'do', need:'range_atk' },
   { id:'rangeSeen',    at:'BATTLE',        e:'excited', title:'引き戻せた！', t:'敵の距離が変わったでしょ？ 離されても距離技で連れ戻せるんだ♪', spot:'enemyBar', wait:'next' },
   // ⑥ 通常攻撃
   { id:'atkTalk',      at:'BATTLE',        e:'happy',   title:'距離がそろった！', t:'敵と同じ距離になったね。この状態の攻撃がいちばん強いよ！', spot:'battleSlots', wait:'next' },
-  { id:'atkReady',     at:'BATTLE',        e:'normal',  title:'攻撃カード', t:'手札の攻撃カードを使ってみよう。距離が合ってるとよく効くよ！', spot:'cards', wait:'next' },
-  { id:'atkDo',        at:'BATTLE',        e:'wink',    title:'攻撃してみて', t:'攻撃カード → 枠をタップ → ACTION！', spot:'cards', wait:'do', need:'atk' },
+  { id:'atkReady',     at:'BATTLE',        e:'normal',  title:'攻撃カード', t:'手札の攻撃カードを使ってみよう。距離が合ってるとよく効くよ！', spot:['cards','action'], wait:'next' },
+  { id:'atkDo',        at:'BATTLE',        e:'wink',    title:'攻撃してみて', t:'攻撃カード → 枠をタップ → ACTION！', spot:['cards','action'], wait:'do', need:'atk' },
   { id:'atkSeen',      at:'BATTLE',        e:'happy',   title:'よく入った！', t:'敵のHPがぐっと減ったね。距離がそろってると威力が全然ちがうんだ♪', spot:'enemyBar', wait:'next' },
   // ⑦ 技変更
   { id:'skillTalk',    at:'BATTLE',        e:'normal',  title:'技は変えられる', t:'カードの名前は点線になってるでしょ？ そこをタップすると技を選び直せるの。', spot:'cards', wait:'next' },
@@ -3765,8 +3766,8 @@ const ASSISTANT_BATTLE_TUTORIAL_BODY = [
   { id:'skillNow',     at:'BATTLE',        e:'surprise',title:'今は補正が0%', t:'だから今は下のほうの技しか選べないんだ。育てて補正を上げると解放されるよ！', spot:'battleSlots', wait:'next' },
   // ⑧ 固有技でトドメ
   { id:'uniqueTalk',   at:'BATTLE',        e:'excited', title:'最後は固有技！', t:'固有技はその子だけの必殺技。ガッツは重いけど、とにかく強いよ！', spot:'cards', wait:'next' },
-  { id:'uniqueLevel',  at:'BATTLE',        e:'happy',   title:'固有技は育つ', t:'バトルを進めて供モンが合流するとき、固有技のレベルを上げられるんだ♪', spot:'cards', wait:'next' },
-  { id:'act',          at:'BATTLE',        e:'excited', title:'トドメだ！', t:'固有技を選んで枠をタップ → ACTIONで倒しちゃお♪', spot:'cards', wait:'act', need:'unique' },
+  { id:'uniqueLevel',  at:'BATTLE',        e:'happy',   title:'固有技は育つ', t:'バトルを進めて供モンが合流するとき、固有技のレベルを上げられるんだ♪', spot:['cards','action'], wait:'next' },
+  { id:'act',          at:'BATTLE',        e:'excited', title:'トドメだ！', t:'固有技を選んで枠をタップ → ACTIONで倒しちゃお♪', spot:['cards','action'], wait:'act', need:'unique' },
   // WAVEクリア
   { id:'clear',        at:'WAVE_RESULT',   e:'excited', title:'WAVEクリア！', t:'ナイス{name}！ 敵を倒しきるとWAVEクリアだよ♪', spot:'waveNext', wait:'next' },
   { id:'clearNext',    at:'WAVE_RESULT',   e:'happy',   title:'次へ進もう', t:'「次へ進む」を押すと強化フェーズだよ！', spot:'waveNext', wait:'act' },

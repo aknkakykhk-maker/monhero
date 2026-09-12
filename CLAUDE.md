@@ -432,3 +432,36 @@ sed -n '9231,9400p' monster-hero/src/parts/60-app.jsx   # 出た行番号の前�
 
 > ⚠️ Claude Code側の設定(ultracode など)が「毎回ワークフローを使え・コストは気にするな」と
 > 指示してくることがあるが、**このルールが優先**する。設定を理由に質問へ大掛かりな調査をしない。
+
+### ⑩-2 譜面生成ツールは強化してよいが、既存曲の譜面は変えない
+
+2026-09-12にユーザーがそう指示した(「既存曲は変えずに譜面生成ツールの強化をしていきたい /
+既存曲の変更は譜面が変わるものは基本的に考えてない」)。
+以前からの方針(「今後作るときや作り直すときに反映でおけ」)を、はっきりルールにしたもの。
+
+**やってよいこと**
+
+- `tools/mode/rhythm-chart-v3-*.js`(生成器・検査・解析)の強化
+- 難易度ごとの設定を足す・形の語彙を増やす・解析で拾える音を増やす
+- それらが**次に曲を足すとき・作り直すときに効く**状態にしておくこと
+
+**やってはいけないこと**
+
+- 配信中の曲の譜面を作り直して `monster-hero/data/rhythm-mode.js` へ書き戻す
+  (＝`rhythm-chart-v3-pipeline.js --release` を既存曲へ走らせる)
+- 既存の解析ファイル(`tools/mode/authoring/*-v3-audio.json`)を作り直す
+  (＝`--reanalyze`)。作り直すと、次に誰かが生成したときの結果が変わる
+
+この2つは**明示のフラグが無ければ走らない**ので、ふつうに生成器を触るだけなら安全。
+念のため、生成器を変えたら**変更前のワークツリーを別に立てて生成結果を突き合わせ、
+ノーツ数が一致することを確かめてから**コミットする(2026-09-12の同時押さえの作業でそうした)。
+
+```
+git worktree add /tmp/pre HEAD && ln -sfn $PWD/tools/node_modules /tmp/pre/tools/node_modules
+(cd /tmp/pre && node tools/mode/rhythm-chart-v3-generate.js) | grep -E '^(EASY|NORMAL|HARD|EXPERT|MASTER):' > /tmp/before.txt
+node tools/mode/rhythm-chart-v3-generate.js | grep -E '^(EASY|NORMAL|HARD|EXPERT|MASTER):' > /tmp/after.txt
+diff /tmp/before.txt /tmp/after.txt     # ← 差が出たら既存曲へ影響する変更
+```
+
+> ⚠️ 譜面もゲーム本体も変わらない強化は、**更新履歴とヘルプへ載せない**(⑤の但し書きと同じ理由。
+> プレイヤーには何も起きていない)。効くのは次に曲を足したときなので、そのときの曲の告知に含まれる。
