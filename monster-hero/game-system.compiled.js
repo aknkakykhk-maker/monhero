@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1a8cbe466a033745
+// source-sha256: aaaea6c0813fdef8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 630915cb4a6f7bab
+// generated-sha256: 6a4a2c08f7b1c364
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-12 18:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-12 18:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -23311,6 +23311,7 @@ const RhythmTapTest = ({
   }, "DOWN")), /*#__PURE__*/React.createElement("div", {
     ref: playAreaRef,
     "data-rhythm-play-area": true,
+    "data-rhythm-strip": RHYTHM_STRIP.value || undefined,
     "data-rhythm-lightweight": settings.lightweightMode ? 'true' : 'false',
     "data-rhythm-effect": settings.effectAmount,
     onPointerDown: pointerDown,
@@ -34923,6 +34924,8 @@ function MonsterHeroGame() {
   // 性能計測(デバッグ限定)。既定OFF。ONの記憶は専用キー mh_rhythm_perf_v1 に分ける
   const [rhythmPerfOn, setRhythmPerfOn] = useState(() => RHYTHM_PERF.enabled);
   const [rhythmPerfStats, setRhythmPerfStats] = useState(null);
+  // 演奏画面の装飾を個別に切って、実機で何が重いかを切り分ける(デバッグ限定・新しい保存キー)
+  const [rhythmStrip, setRhythmStrip] = useState(() => RHYTHM_STRIP.value);
   // ノーツの描き方の上書き(検証用・デバッグ限定)。'' = 公開設定に従う / 'dom' / 'canvas'
   const [rhythmCanvasPref, setRhythmCanvasPref] = useState(() => rhythmCanvasNotesPreference());
   const [rhythmChartToolsOpened, setRhythmChartToolsOpened] = useState(false);
@@ -54334,6 +54337,26 @@ function MonsterHeroGame() {
     }, rhythmPerfStats.spikes.map((sp, i) => /*#__PURE__*/React.createElement("li", {
       key: i
     }, `${(sp.at / 1000).toFixed(1)}s  ${sp.dt}ms  tick ${sp.tick}ms  遅れ ${sp.delay}ms  走査${sp.scan}/描画${sp.draw}  モンスター後 ${sp.mon < 0 ? '—' : `${sp.mon}ms`}`))))), /*#__PURE__*/React.createElement("section", {
+      "data-rhythm-strip-panel": true,
+      className: "mb-3 rounded-2xl border border-rose-400/40 bg-rose-950/20 p-3"
+    }, /*#__PURE__*/React.createElement("h3", {
+      className: "text-xs font-black text-rose-200"
+    }, "\u88C5\u98FE\u3092\u5207\u3063\u3066\u5207\u308A\u5206\u3051\u308B\uFF08\u30C7\u30D0\u30C3\u30B0\uFF09"), /*#__PURE__*/React.createElement("p", {
+      className: "mt-1 text-[9px] font-bold leading-relaxed text-rose-100/80"
+    }, "\u6F14\u594F\u753B\u9762\u306E\u91CD\u305D\u3046\u306A\u88C5\u98FE\u3092\u500B\u5225\u306B\u6D88\u3057\u307E\u3059\u3002", /*#__PURE__*/React.createElement("b", null, "\u6B21\u306E\u6F14\u594F\u304B\u3089\u52B9\u304D\u307E\u3059\u3002"), "ON\u306B\u3057\u30661\u66F2\u30D7\u30EC\u30A4\u3057\u3001\u6027\u80FD\u8A08\u6E2C\u306E\u300C33ms\u8D85\u300D\u304C\u6E1B\u308B\u304B\u3092\u898B\u3066\u304F\u3060\u3055\u3044\u3002\u6E1B\u3063\u305F\u3082\u306E\u304C\u539F\u56E0\u3067\u3059\u3002\u5224\u5B9A\u30FB\u30B9\u30B3\u30A2\u30FB\u8B5C\u9762\u306B\u306F\u4E00\u5207\u95A2\u308F\u308A\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("div", {
+      className: "mt-2 grid grid-cols-2 gap-2"
+    }, RHYTHM_STRIP_ITEMS.map(item => /*#__PURE__*/React.createElement("button", {
+      key: item.id,
+      type: "button",
+      "data-rhythm-strip-toggle": item.id,
+      "aria-pressed": rhythmStrip.split(/\s+/).includes(item.id),
+      onClick: () => setRhythmStrip(RHYTHM_STRIP.toggle(item.id)),
+      className: `min-h-[44px] rounded-xl px-2 text-[10px] font-black ${rhythmStrip.split(/\s+/).includes(item.id) ? 'bg-rose-500 text-slate-900' : 'border border-white/20 bg-slate-900 text-slate-200'}`
+    }, item.label))), /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      className: "mt-2 min-h-[40px] w-full rounded-xl border border-white/20 bg-slate-900 text-[11px] font-black text-slate-200",
+      onClick: () => setRhythmStrip(RHYTHM_STRIP.set(''))
+    }, "\u305C\u3093\u3076\u5143\u306B\u623B\u3059")), /*#__PURE__*/React.createElement("section", {
       "data-rhythm-canvas-panel": true,
       className: "mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"
     }, /*#__PURE__*/React.createElement("h3", {
