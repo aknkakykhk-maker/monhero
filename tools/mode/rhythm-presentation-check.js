@@ -92,9 +92,11 @@ ok('コンボ数の置き場所を選べる(右上=もとの位置も選べる)'
   // 折りたたんだときの「いまの値」の両方がここを見る)
   &&game.includes("segments('comboPosition',RHYTHM_COMBO_POSITION_LABELS)")
   &&/RHYTHM_COMBO_POSITION_LABELS *= *Object\.freeze\(\[\['LEFT','左'\],\['CENTER','中央'\],\['RIGHT','右'\],\['HUD','右上'\]\]\)/.test(game)
-  &&html.includes('[data-rhythm-combo-box][data-combo-pos="RIGHT"]{left:auto;right:6%;transform:none}')
-  &&html.includes('[data-rhythm-combo-box][data-combo-pos="HUD"]{left:auto;right:3%;top:12.5%;transform:none}')
-  &&html.includes('[data-rhythm-combo-box][data-combo-pos="LEFT"]{left:4%;transform:none}')
+  // 高さは「両サイドのマスモンが居ない帯」から選ぶ(2026-09-13)。
+  // どこがどれだけ空いているかは rhythm-combo-space-check.js が計算で確かめる。
+  &&html.includes('[data-rhythm-combo-box][data-combo-pos="RIGHT"]{left:auto;right:4%;top:38%;transform:none}')
+  &&html.includes('[data-rhythm-combo-box][data-combo-pos="LEFT"]{left:4%;right:auto;top:38%;transform:none}')
+  &&html.includes('[data-rhythm-combo-box][data-combo-pos="HUD"]{left:auto;right:3%;top:13%;transform:none}')
   // 端に寄せたときは、数字が伸びても画面の外へ出ないよう内側へ伸ばす
   &&/\[data-combo-pos="RIGHT"\] \[data-rhythm-combo\],\s*\[data-combo-pos="HUD"\] \[data-rhythm-combo\]\{transform-origin:right center\}/.test(html)
   &&html.includes('[data-combo-pos="LEFT"] [data-rhythm-combo]{transform-origin:left center}'));
@@ -109,7 +111,13 @@ ok('コンボ数表示のON/OFFを設定から切り替えられる',
   game.includes("toggle('comboDisplay')")&&game.includes('settings.comboDisplay!==false'));
 ok('コンボ数を大きく出す',
   /\[data-rhythm-combo\]\{[\s\S]{0,160}font-size:min\(52px,13\.5vw\)/.test(html)
-  &&/@media \(orientation: landscape\)\{[\s\S]{0,900}\[data-rhythm-combo\]\{font-size:min\(40px,7vw\)\}/.test(html));
+  // 横持ちは data-combo-wide="1" で出し分ける。@media (orientation:landscape) は
+  // **縦横ボタンで自分で回したときに効かない**(端末は縦のまま)ので、そちらには頼らない
+  &&html.includes('[data-rhythm-combo-box][data-combo-wide="1"] [data-rhythm-combo]{font-size:min(40px,7vw)}')
+  &&html.includes('[data-rhythm-combo-box][data-combo-wide="1"]{top:15%}')
+  &&game.includes("data-combo-wide={isLandscape?'1':''}")
+  // 端へ寄せるときは小さくする(台形の外の空きは片側100〜145pxしかない)
+  &&/\[data-combo-pos="HUD"\] \[data-rhythm-combo\]\{\s*font-size:min\(34px,9vw\);\s*transform:scale\(min\(var\(--mh-combo-scale,1\),1\.25\)\);/.test(html));
 // 2026-09-13・Android勢から「重い」との声。見た目は標準のまま残し、
 // 演出量「少なめ」で**毎フレームの塗り直し**だけを止められるようにした。
 // background-position は合成できないプロパティなので、流しているあいだは
