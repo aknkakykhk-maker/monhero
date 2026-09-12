@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 341c882cdd3adf6c
+// source-sha256: efd1cac19e7d333d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7a89c4362fea4fb6
+// generated-sha256: 91a9fdd3bb870798
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-12 20:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-12 20:31"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -22149,7 +22149,24 @@ const RhythmTapTest = ({
       if (!run || run.finished || run.paused) return;
       const perfTickStart = RHYTHM_PERF.enabled ? performance.now() : 0;
       const songTimeMs = run.audio.songTimeMs();
-      RHYTHM_PERF.songTime(songTimeMs);
+      RHYTHM_PERF.songTime(songTimeMs); /* ★装飾の巡回(デバッグ限定)。曲の位置で段を決め、段が変わったらプレイエリアの目印を書き替える。 切り替えた直後はスタイルの計算が入るので、落ち着くまでは段へ数えない(lane(-1))。 時計ではなく曲の位置で決めているので、ポーズしても同じところで同じ条件になる。 */
+      if (RHYTHM_STRIP.sweep && RHYTHM_PERF.enabled) {
+        const stripStep = RHYTHM_STRIP.stepAt(songTimeMs);
+        if (run.stripStep !== stripStep) {
+          run.stripStep = stripStep;
+          run.stripSettled = false;
+          RHYTHM_PERF.lane(-1);
+          const stripEl = playAreaRef.current;
+          if (stripEl) {
+            const next = RHYTHM_STRIP_SWEEP_STEPS[stripStep].strip;
+            if (next) stripEl.dataset.rhythmStrip = next;else delete stripEl.dataset.rhythmStrip;
+          }
+        }
+        if (!run.stripSettled && RHYTHM_STRIP.stepElapsedMs(songTimeMs) >= RHYTHM_STRIP_SWEEP_SETTLE_MS) {
+          run.stripSettled = true;
+          RHYTHM_PERF.lane(stripStep);
+        }
+      }
       const travel = measureTravel(),
         visualTime = songTimeMs - settings.judgmentTimingOffsetMs,
         travelMs = rhythmTravelMsForSpeed(settings.noteSpeed);
@@ -23316,7 +23333,7 @@ const RhythmTapTest = ({
   }, "DOWN")), /*#__PURE__*/React.createElement("div", {
     ref: playAreaRef,
     "data-rhythm-play-area": true,
-    "data-rhythm-strip": RHYTHM_STRIP.value || undefined,
+    "data-rhythm-strip": RHYTHM_STRIP.sweep ? undefined : RHYTHM_STRIP.value || undefined,
     "data-rhythm-lightweight": settings.lightweightMode ? 'true' : 'false',
     "data-rhythm-effect": settings.effectAmount,
     onPointerDown: pointerDown,
@@ -34931,6 +34948,8 @@ function MonsterHeroGame() {
   const [rhythmPerfStats, setRhythmPerfStats] = useState(null);
   // 演奏画面の装飾を個別に切って、実機で何が重いかを切り分ける(デバッグ限定・新しい保存キー)
   const [rhythmStrip, setRhythmStrip] = useState(() => RHYTHM_STRIP.value);
+  // 装飾の巡回(デバッグ限定)。1回の演奏の中で条件を順に切り替え、条件ごとに数える
+  const [rhythmStripSweep, setRhythmStripSweep] = useState(() => RHYTHM_STRIP.sweep);
   // ノーツの描き方の上書き(検証用・デバッグ限定)。'' = 公開設定に従う / 'dom' / 'canvas'
   const [rhythmCanvasPref, setRhythmCanvasPref] = useState(() => rhythmCanvasNotesPreference());
   const [rhythmChartToolsOpened, setRhythmChartToolsOpened] = useState(false);
@@ -54361,7 +54380,53 @@ function MonsterHeroGame() {
       type: "button",
       className: "mt-2 min-h-[40px] w-full rounded-xl border border-white/20 bg-slate-900 text-[11px] font-black text-slate-200",
       onClick: () => setRhythmStrip(RHYTHM_STRIP.set(''))
-    }, "\u305C\u3093\u3076\u5143\u306B\u623B\u3059")), /*#__PURE__*/React.createElement("section", {
+    }, "\u305C\u3093\u3076\u5143\u306B\u623B\u3059"), /*#__PURE__*/React.createElement("div", {
+      className: "mt-3 rounded-xl border border-rose-400/30 bg-slate-950/60 p-2"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center justify-between gap-2"
+    }, /*#__PURE__*/React.createElement("h4", {
+      className: "text-[10px] font-black text-rose-200"
+    }, "1\u56DE\u306E\u6F14\u594F\u3067\u5168\u90E8\u304F\u3089\u3079\u308B"), /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      "data-rhythm-strip-sweep": true,
+      "aria-pressed": rhythmStripSweep,
+      onClick: () => setRhythmStripSweep(RHYTHM_STRIP.setSweep(!rhythmStripSweep)),
+      className: `min-h-[40px] rounded-xl px-3 text-[10px] font-black ${rhythmStripSweep ? 'bg-rose-500 text-slate-900' : 'border border-white/20 bg-slate-900 text-slate-200'}`
+    }, rhythmStripSweep ? '巡回ON' : '巡回OFF')), /*#__PURE__*/React.createElement("p", {
+      className: "mt-1 text-[9px] font-bold leading-relaxed text-rose-100/80"
+    }, "\u6F14\u594F\u4E2D\u306B4\u79D2\u3054\u3068\u306B\u6761\u4EF6\u3092\u5207\u308A\u66FF\u3048\u3066\u3001\u6761\u4EF6\u3054\u3068\u306B\u6570\u3048\u307E\u3059\u3002", /*#__PURE__*/React.createElement("b", null, "\u4E0A\u306E\u30C8\u30B0\u30EB\u306F\u4F7F\u3044\u307E\u305B\u3093\u3002"), "\u6027\u80FD\u8A08\u6E2C\u3082ON\u306B\u3057\u3066\u304B\u30891\u66F2\u30D7\u30EC\u30A4\u3057\u3066\u304F\u3060\u3055\u3044\u300224\u79D2\u30671\u5DE1\u3059\u308B\u306E\u3067\u3001110\u79D2\u306E\u66F2\u306A\u3089\u5404\u6761\u4EF6\u304C4\u56DE\u4EE5\u4E0A\u307E\u308F\u308A\u307E\u3059\u3002\u540C\u3058\u66F2\u30FB\u540C\u3058\u7AEF\u672B\u306E\u6E29\u5EA6\u3067\u6BD4\u3079\u3089\u308C\u308B\u306E\u3067\u3001\u56DE\u3092\u307E\u305F\u3050\u3070\u3089\u3064\u304D\uFF08\u540C\u3058\u6761\u4EF6\u3067\u308217%\u3076\u308C\u308B\uFF09\u304C\u6D88\u3048\u307E\u3059\u3002\u5207\u308A\u66FF\u3048\u305F\u76F4\u5F8C\u306E0.4\u79D2\u306F\u6570\u3048\u307E\u305B\u3093\u3002"), rhythmStripSweep && rhythmPerfStats && Array.isArray(rhythmPerfStats.lanes) && rhythmPerfStats.lanes.some(Boolean) && /*#__PURE__*/React.createElement("table", {
+      "data-rhythm-strip-sweep-result": true,
+      className: "mt-2 w-full table-fixed text-[9px]"
+    }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", {
+      className: "text-slate-400"
+    }, /*#__PURE__*/React.createElement("th", {
+      className: "w-[38%] text-left font-bold"
+    }, "\u6761\u4EF6"), /*#__PURE__*/React.createElement("th", {
+      className: "text-right font-bold"
+    }, "frame"), /*#__PURE__*/React.createElement("th", {
+      className: "text-right font-bold"
+    }, "\u5E73\u5747"), /*#__PURE__*/React.createElement("th", {
+      className: "text-right font-bold"
+    }, "25\u8D85"), /*#__PURE__*/React.createElement("th", {
+      className: "text-right font-bold"
+    }, "33\u8D85"))), /*#__PURE__*/React.createElement("tbody", null, RHYTHM_STRIP_SWEEP_STEPS.map((step, i) => {
+      const lane = rhythmPerfStats.lanes[i];
+      return /*#__PURE__*/React.createElement("tr", {
+        key: step.label
+      }, /*#__PURE__*/React.createElement("td", {
+        className: "text-left text-slate-300"
+      }, step.label), /*#__PURE__*/React.createElement("td", {
+        className: "text-right font-black text-rose-100"
+      }, lane ? lane.frames : '—'), /*#__PURE__*/React.createElement("td", {
+        className: "text-right font-black text-rose-100"
+      }, lane ? `${lane.avgMs.toFixed(1)}` : '—'), /*#__PURE__*/React.createElement("td", {
+        className: "text-right font-black text-rose-100"
+      }, lane ? lane.over25 : '—'), /*#__PURE__*/React.createElement("td", {
+        className: "text-right font-black text-rose-100"
+      }, lane ? lane.over33 : '—'));
+    }))), /*#__PURE__*/React.createElement("p", {
+      className: "mt-1 text-[9px] font-bold leading-relaxed text-rose-100/60"
+    }, "frame \u306E\u6570\u304C\u305D\u308D\u3063\u3066\u3044\u308C\u3070\u300125\u8D85\u30FB33\u8D85\u3092\u305D\u306E\u307E\u307E\u6BD4\u3079\u3089\u308C\u307E\u3059\u3002\u300C\u305D\u306E\u307E\u307E\u300D\u3088\u308A\u5927\u304D\u304F\u6E1B\u3063\u3066\u3044\u308B\u884C\u304C\u3042\u308C\u3070\u3001\u305D\u308C\u304C\u539F\u56E0\u3067\u3059\u3002"))), /*#__PURE__*/React.createElement("section", {
       "data-rhythm-canvas-panel": true,
       className: "mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"
     }, /*#__PURE__*/React.createElement("h3", {

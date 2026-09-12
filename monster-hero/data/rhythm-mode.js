@@ -382,7 +382,10 @@ const RHYTHM_PERF=(()=>{
     judgeCount:0,judgeSum:0,judgeMax:0,monsterCount:0,monsterSum:0,monsterMax:0,
     // 大きく飛んだフレームを「起きたときに1件ずつ」控える。
     // 平均や最大だけだと「たまに起きる」ものは埋もれる(実機で4回とも2.0msだった)。
-    spikes:[],lastMonsterAtMs:0});
+    spikes:[],lastMonsterAtMs:0,
+    // 段(lane)ごとの集計。装飾を一定周期で切り替えながら1回の演奏で条件を比べるために持つ
+    // (RHYTHM_STRIP の巡回)。curLane が -1 のあいだは段へ足さない(切り替え直後の落ち着き待ち)。
+    lanes:[],curLane:-1});
   let on=false,last=null,acc=zero();
   const api={
     get enabled(){return on;},
@@ -408,6 +411,11 @@ const RHYTHM_PERF=(()=>{
           if(acc.pendingDelayMs>acc.maxDelayMs)acc.maxDelayMs=acc.pendingDelayMs;
           if(dt>acc.maxMs){acc.maxMs=dt;acc.worstScanned=acc.pendingScanned;acc.worstDrawn=acc.pendingDrawn;acc.worstTickMs=acc.pendingTickMs;acc.worstDelayMs=acc.pendingDelayMs;}
           for(let i=0;i<RHYTHM_PERF_LONG_MS.length;i++)if(dt>RHYTHM_PERF_LONG_MS[i])acc.long[i]++;
+          if(acc.curLane>=0){
+            const lane=acc.lanes[acc.curLane]||(acc.lanes[acc.curLane]={frames:0,totalMs:0,maxMs:0,long:[0,0,0]});
+            lane.frames++;lane.totalMs+=dt;if(dt>lane.maxMs)lane.maxMs=dt;
+            for(let i=0;i<RHYTHM_PERF_LONG_MS.length;i++)if(dt>RHYTHM_PERF_LONG_MS[i])lane.long[i]++;
+          }
           // 2フレーム以上飛んだら、そのときの状況をそのまま控える。
           // 「いつ・どれだけ飛んで・そのときJSは何をしていて・直前にモンスターノーツを
           // 踏んでいたか」が1件ずつ残るので、たまにしか起きないものでも捕まえられる。
@@ -427,6 +435,9 @@ const RHYTHM_PERF=(()=>{
       acc.pendingScanned=0;acc.pendingDrawn=0;acc.pendingTickMs=0;acc.pendingHeadSkipped=0;acc.pendingDelayMs=0;
       last=Number.isFinite(t)?t:null;
     },
+    // いまどの段(条件)を測っているかを切り替える。-1 は「どの段にも入れない」。
+    // 装飾を切り替えた直後はスタイルの計算が入るので、その数フレームは -1 にして外す。
+    lane(index){if(!on)return;const i=Number(index);acc.curLane=Number.isFinite(i)&&i>=0?Math.floor(i):-1;},
     // tickのノーツ走査から呼ぶ。ONのときだけ足し込む(OFFなら即return)
     notes(scanned,drawn,headSkipped,narrowed){if(!on)return;acc.pendingScanned=Number(scanned)||0;acc.pendingDrawn=Number(drawn)||0;
       acc.pendingHeadSkipped=Number(headSkipped)||0;if(narrowed!==undefined)acc.narrowed=!!narrowed;},
@@ -513,6 +524,10 @@ const RHYTHM_PERF=(()=>{
         monsterJudgeMsMax:acc.monsterMax,
         monsterJudgeCount:acc.monsterCount,
         spikes:acc.spikes.slice(),
+        // 段ごとの集計。並びは切り替えた順(RHYTHM_STRIP_SWEEP_STEPS と同じ)。
+        // 一度も測っていない段は穴が空くので、読む側で埋めること。
+        lanes:acc.lanes.map(lane=>lane?{frames:lane.frames,avgMs:lane.frames?lane.totalMs/lane.frames:0,
+          maxMs:lane.maxMs,over16:lane.long[0],over25:lane.long[1],over33:lane.long[2]}:null),
         narrowed:acc.narrowed,
       };
     },
@@ -531,8 +546,29 @@ const RHYTHM_STRIP_ITEMS=Object.freeze([
   {id:'bg',label:'背景のグラデーション3層'},
   {id:'lane',label:'レーンの影と縁'},
 ]);
+// 【装飾の巡回(デバッグ限定)】
+// 2026-09-12の実機計測で、上の4つをまとめて切ると 25ms超 448→214 / 33ms超 124→62 と
+// 半分になった。ただし「4つのうちどれが効いたか」は分からないまま。1つずつ確かめると
+// 演奏が4回要るうえ、端末の温度が回ごとに違うので比べにくい(この環境のフレーム数は
+// 同じ条件でも幅17%ばらつく)。
+// そこで、1回の演奏の中で決まった周期ごとに条件を切り替え、条件ごとに数える。
+// 同じ曲・同じ温度・同じ指で比べられるので、回をまたぐばらつきが消える。
+//
+// 周期を短くするほど曲の色々な場所が各条件へ均等に入る。4秒だと110秒の曲で4巡以上する。
+// 切り替えた直後はスタイルの計算が入るので、そのぶんは数えない(RHYTHM_STRIP_SWEEP_SETTLE_MS)。
+const RHYTHM_STRIP_SWEEP_KEY='mh_rhythm_strip_sweep_v1';
+const RHYTHM_STRIP_SWEEP_MS=4000;
+const RHYTHM_STRIP_SWEEP_SETTLE_MS=400;
+const RHYTHM_STRIP_SWEEP_STEPS=Object.freeze([
+  {strip:'',label:'そのまま'},
+  {strip:'glow',label:'上の光だけ切る'},
+  {strip:'grid',label:'格子だけ切る'},
+  {strip:'bg',label:'背景だけ切る'},
+  {strip:'lane',label:'レーンだけ切る'},
+  {strip:'glow grid bg lane',label:'ぜんぶ切る'},
+]);
 const RHYTHM_STRIP=(()=>{
-  let value='';
+  let value='',sweep=false;
   const api={
     get value(){return value;},
     has(id){return value.split(/\s+/).includes(id);},
@@ -542,7 +578,26 @@ const RHYTHM_STRIP=(()=>{
     toggle(id){const set=new Set(value.split(/\s+/).filter(Boolean));
       if(set.has(id))set.delete(id);else set.add(id);
       return api.set([...set].join(' '));},
-    restore(){try{if(typeof localStorage!=='undefined')value=localStorage.getItem(RHYTHM_STRIP_KEY)||'';}catch{}return value;},
+    restore(){try{if(typeof localStorage!=='undefined')value=localStorage.getItem(RHYTHM_STRIP_KEY)||'';}catch{}
+      try{if(typeof localStorage!=='undefined')sweep=localStorage.getItem(RHYTHM_STRIP_SWEEP_KEY)==='1';}catch{}
+      return value;},
+    get sweep(){return sweep;},
+    setSweep(next){sweep=!!next;
+      try{if(typeof localStorage!=='undefined')localStorage.setItem(RHYTHM_STRIP_SWEEP_KEY,sweep?'1':'0');}catch{}
+      return sweep;},
+    // 曲の再生位置から段を決める。時計ではなく曲の位置で決めるので、
+    // ポーズしても、もう一度遊んでも、同じところで同じ条件になる。
+    stepAt(songTimeMs){
+      const t=Number(songTimeMs);
+      if(!Number.isFinite(t)||t<0)return 0;
+      return Math.floor(t/RHYTHM_STRIP_SWEEP_MS)%RHYTHM_STRIP_SWEEP_STEPS.length;
+    },
+    // その段へ入ってからの経過。切り替え直後の落ち着き待ちに使う
+    stepElapsedMs(songTimeMs){
+      const t=Number(songTimeMs);
+      if(!Number.isFinite(t)||t<0)return 0;
+      return t%RHYTHM_STRIP_SWEEP_MS;
+    },
   };
   api.restore();
   return api;
