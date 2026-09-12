@@ -118,19 +118,21 @@ const PROFILES=Object.freeze({
     holdPerMinute:5.6,slidePerMinute:0,flickPerMinute:0,endFlickPerMinute:0,
     chord:Object.freeze({perMinute:2.4,minGapLanes:2,onBeat:true,clearGrids:3,minWidth:3,spacingGrids:16,edge:true}),
     sweep:null,chordRun:null,crossPerMinute:0,heldPair:null,doubleSlide:null,slideFan:null,
-    accentWidth:10,accentPerMinute:2.4}),
+    glideSlide:null,accentWidth:10,accentPerMinute:2.4}),
   NORMAL:Object.freeze({level:3,lattice:2,maxLaneStep:2,maxRun:3,
     types:['TAP','HOLD','FLICK'],widths:[2,3,4,6],narrowRate:0,tapDuringHold:false,
     holdPerMinute:6.4,slidePerMinute:0,flickPerMinute:5.6,endFlickPerMinute:1.2,
     chord:Object.freeze({perMinute:3.2,minGapLanes:2,onBeat:true,clearGrids:2,minWidth:3,spacingGrids:12,edge:true}),
     sweep:null,chordRun:null,crossPerMinute:0,heldPair:null,doubleSlide:null,slideFan:null,
-    accentWidth:10,accentPerMinute:2.4}),
+    glideSlide:null,accentWidth:10,accentPerMinute:2.4}),
   HARD:Object.freeze({level:5,lattice:1,maxLaneStep:2,maxRun:2,
     types:['TAP','HOLD','FLICK','SLIDE'],widths:[1,2,3,4,5],narrowRate:.04,tapDuringHold:false,
     holdPerMinute:7.2,slidePerMinute:4,flickPerMinute:7.2,endFlickPerMinute:2,
     chord:Object.freeze({perMinute:4,minGapLanes:1.5,onBeat:false,clearGrids:2,minWidth:3,spacingGrids:8,edge:false}),
     sweep:Object.freeze({perMinute:1.6,minGrids:6,minSpanLanes:2.5,maxLaneSpeed:6,clearBeats:1}),
     chordRun:null,crossPerMinute:0,heldPair:null,doubleSlide:null,slideFan:null,
+    glideSlide:Object.freeze({perMinute:.6,minOnsets:4,maxGapGrids:2,maxGrids:12,
+      minHeightRange:.11,minMoves:3,spacingGrids:48}),
     accentWidth:8,accentPerMinute:2.8}),
   EXPERT:Object.freeze({level:7,lattice:1,maxLaneStep:3,maxRun:5,
     types:['TAP','HOLD','FLICK','SLIDE'],widths:[1,2,3,4,5],narrowRate:.12,tapDuringHold:true,
@@ -142,9 +144,11 @@ const PROFILES=Object.freeze({
     crossPerMinute:1.2,
     heldPair:Object.freeze({perMinute:.8,minOverlapGrids:8,minGapLanes:1.5}),
     doubleSlide:Object.freeze({perMinute:.5,minGrids:6,minPartnerSpanLanes:.5,minOwnSpanLanes:1,
-      minGapLanes:1.5,maxLaneSpeed:8,minStrength:.6,minIntensity:.6,maxCoveredNotes:2,spacingGrids:48}),
+      minGapLanes:1.5,maxLaneSpeed:8,minStrength:.6,minIntensity:.6,maxCoveredNotes:4,spacingGrids:48}),
     slideFan:Object.freeze({perMinute:.5,minParentGrids:9,minOwnGrids:5,minGapLanes:1.5,
       minOwnSpanLanes:1,minOpenLanes:.5,maxLaneSpeed:8,maxCoveredNotes:2,spacingGrids:48}),
+    glideSlide:Object.freeze({perMinute:.4,minOnsets:4,maxGapGrids:2,maxGrids:14,
+      minHeightRange:.11,minMoves:3,spacingGrids:40}),
     accentWidth:8,accentPerMinute:2.8}),
   MASTER:Object.freeze({level:9,lattice:1,maxLaneStep:4,maxRun:8,
     types:['TAP','HOLD','FLICK','SLIDE'],widths:[1,2,3,4],narrowRate:.2,tapDuringHold:true,
@@ -156,9 +160,11 @@ const PROFILES=Object.freeze({
     crossPerMinute:2.4,
     heldPair:Object.freeze({perMinute:1.6,minOverlapGrids:6,minGapLanes:1.25}),
     doubleSlide:Object.freeze({perMinute:1.2,minGrids:5,minPartnerSpanLanes:.5,minOwnSpanLanes:1,
-      minGapLanes:1.25,maxLaneSpeed:10,minStrength:.5,minIntensity:.5,maxCoveredNotes:2,spacingGrids:32}),
+      minGapLanes:1.25,maxLaneSpeed:10,minStrength:.5,minIntensity:.5,maxCoveredNotes:4,spacingGrids:32}),
     slideFan:Object.freeze({perMinute:1,minParentGrids:8,minOwnGrids:4,minGapLanes:1.25,
       minOwnSpanLanes:1,minOpenLanes:.5,maxLaneSpeed:10,maxCoveredNotes:2,spacingGrids:32}),
+    glideSlide:Object.freeze({perMinute:.6,minOnsets:4,maxGapGrids:2,maxGrids:16,
+      minHeightRange:.11,minMoves:3,spacingGrids:32}),
     accentWidth:6,accentPerMinute:3.2}),
 });
 // HOLD・SLIDE・FLICK・同時押し・区切りの一発は、曲の長さに比例させる。
@@ -541,8 +547,17 @@ const buildChart=(difficulty,options={})=>{
     if(!strengths.length)return 0;
     return strengths[Math.floor(strengths.length*(1-OFF_BEAT_KEEP))]??0;
   })();
+  // ★大きい一発(FULL)だけは、格子からのずれをもう少し許す。
+  //   30msで切っていたため、格子と噛み合わせが悪い曲では**大きい一発の半分が落ちていた**
+  //   （実測: MF × ICHIKA MIX は大事な音320個のずれが中央25ms・p90 39msで、157個が25msを超える。
+  //     Monster Hero は中央9msなのでほとんど落ちない）。
+  //   落としてしまうと「曲の山なのにノーツが来ない」になる。いちばん良い判定(MARVELOUS)の窓は
+  //   ±55msなので、43msずれた音を格子へ寄せて置いても**まだ最良の判定の中**に入る。
+  //   43msという線は、耳で確かめるときの許容(earReviewMaxOffsetMs)と同じものを使う。
+  const peakOffsetAllowance=onset=>onset.character==='FULL'
+    ?COMMON.earReviewMaxOffsetMs:COMMON.maxAbsPeakOffsetMs;
   const pool=allOnsets.filter(onset=>
-    onset.grid%P.lattice===0&&Math.abs(onset.gridOffsetMs)<=COMMON.maxAbsPeakOffsetMs
+    onset.grid%P.lattice===0&&Math.abs(onset.gridOffsetMs)<=peakOffsetAllowance(onset)
     &&(offBeatFloor<=0||onBeatOrEighth(onset)||onset.strength>=offBeatFloor));
   // 全体で何個置くかを先に決める（1拍あたりの目標を、毎秒の下限・上限で挟む）。
   // これで曲が変わっても、遊んだ感じの忙しさがそろう。
@@ -672,6 +687,95 @@ const buildChart=(difficulty,options={})=>{
         if(!P.types.includes('HOLD')||holds>=holdMax)continue;
         reserved.push({type:'HOLD',startGrid,endGrid,span});holds++;
       }
+    }
+    // --- 3b. 走る音（アルペジオ・トレモロ）もSLIDEの材料にする ---
+    //
+    // 【2026-09-12・ユーザー指示】「スライドにする材料を広げる」
+    //
+    // ここまでのSLIDEの材料は**伸びている音**(audio.sustains)だけだった。
+    // 音階を駆け上がる／行き来するアルペジオ・トレモロは、1音ずつ短いので sustains にならず、
+    // **全部単押しになっていた**。設計書 §3.1.8 に「ジグザグをもっと増やしたいなら
+    // SLIDEにする材料そのものを広げるしかない」と残っていた項目。
+    //
+    // 素は「速く並んでいて、音の高さが実際に動いている打点の連なり」。
+    // 1音ずつ鳴っているところをなぞらせるので、**幽霊ノーツ(§2.1)にはならない**
+    // （経路の中継点はその打点の音の高さそのもの）。本物の音ゲーでも、
+    // グリッサンドや駆け上がりはスライドで書く。
+    //
+    // ⚠️ 単押しの連なりが1本のSLIDEになるので、**ノーツの数が減り、難しさの質が変わる**。
+    //    そのため1分あたりの本数で絞る（glideSlide.perMinute）。減ったぶんは
+    //    量の目標のやり直し（buildChart の外の densityAdjust）が別の音で埋める。
+    if(P.glideSlide&&P.glideSlide.perMinute>0&&P.types.includes('SLIDE')){
+      const G=P.glideSlide;
+      const glideMax=countOf(G.perMinute);
+      // ★探すのは **pool（鳴っている音）** のほう。spaced（打点として採用したぶん）から
+      //   探していたら、格子・連なりの上限で間引かれて連なりが切れており、
+      //   4個以上つながる速い連なりがほとんど残っていなかった
+      //   （実測: Stay With Me MASTER は速い連なり428本のうち422本が「短い」で落ちた）。
+      //   「音が走っている」のは曲の性質で、打点として何個採ったかとは別。
+      //   連なりの中の打点は、このSLIDEが押さえるので usedGrids で自然に落ちる。
+      const runs=[];
+      let current=[];
+      for(const onset of pool){
+        if(!(onset.grid>=minBar*BAR&&onset.grid<(maxBar+1)*BAR))continue;
+        const last=current[current.length-1];
+        if(last&&onset.grid-last.grid<=G.maxGapGrids)current.push(onset);
+        else{if(current.length)runs.push(current);current=[onset];}
+      }
+      if(current.length)runs.push(current);
+      const candidates=[];
+      for(const run of runs){
+        if(run.length<G.minOnsets)continue;
+        // ★長すぎる連なりは**捨てずに頭から切って使う**（サビをまるごと1本にしない）。
+        //   長さで弾いていたら、速い連なりが長い曲でかえって0本になった
+        //   （禁断のレジスタンスが2本→0本になった・2026-09-12）。
+        const list=[];
+        for(const onset of run){
+          if(list.length&&onset.grid-run[0].grid>G.maxGrids)break;
+          list.push(onset);
+        }
+        if(list.length<G.minOnsets)continue;
+        const startGrid=list[0].grid,endGrid=list[list.length-1].grid;
+        if(endGrid-startGrid<COMMON.slideMinGrids)continue;
+        // 音の高さが取れていて、実際に動いていること
+        const heights=list.map(onset=>heightByGrid.has(onset.grid)?heightByGrid.get(onset.grid):null);
+        if(heights.filter(height=>height!=null).length<Math.ceil(list.length*.75))continue;
+        const known=heights.filter(height=>height!=null);
+        const range=Math.max(...known)-Math.min(...known);
+        if(range<G.minHeightRange)continue;
+        // ジッタではなく本当に動いていること（HEIGHT_TURN_MIN を超える動きが何回あるか）
+        let moves=0;
+        for(let i=1;i<heights.length;i++){
+          if(heights[i]==null||heights[i-1]==null)continue;
+          if(Math.abs(heights[i]-heights[i-1])>=HEIGHT_TURN_MIN)moves++;
+        }
+        if(moves<G.minMoves)continue;
+        // すでに押さえノーツが入っているところへは重ねない
+        if(reserved.some(item=>startGrid<=item.endGrid+1&&endGrid>=item.startGrid-1))continue;
+        // ★ベースの2声が取れている場所は避ける。そこは同時押さえ(15.5)の材料で、
+        //   「本当に2声鳴っている」いちばん筋の良い形だから、こちらが先に取ってはいけない。
+        //   避けずに置いたら、同時押さえが4組→1組へ減った(2026-09-12)。
+        //   指は2本しかないので、長く押さえる形どうしは必ず取り合いになる。
+        if(Array.isArray(audio.bassSustains)&&audio.bassSustains.some(span=>
+          startGrid<=span.endGrid&&endGrid>=span.startGrid))continue;
+        candidates.push({startGrid,endGrid,list,range,moves});
+      }
+      // 良いもの（よく動くもの）から、曲全体へ散らして採る
+      const byGrid=new Map();
+      for(const candidate of candidates.slice().sort((a,b)=>b.range-a.range||b.moves-a.moves)){
+        if(!byGrid.has(candidate.startGrid))byGrid.set(candidate.startGrid,candidate);
+      }
+      let glides=0;
+      for(const grid of spreadPick([...byGrid.keys()],glideMax,G.spacingGrids)){
+        const candidate=byGrid.get(grid);
+        if(reserved.some(item=>candidate.startGrid<=item.endGrid+1&&candidate.endGrid>=item.startGrid-1))continue;
+        reserved.push({type:'SLIDE',startGrid:candidate.startGrid,endGrid:candidate.endGrid,
+          glide:true,span:{startGrid:candidate.startGrid,endGrid:candidate.endGrid,
+            grids:candidate.endGrid-candidate.startGrid,moves:candidate.range,clarity:1}});
+        glides++;
+      }
+      if(glides)notice.push(`走る音をなぞるSLIDE ${glides}本`
+        +`（狙い${glideMax}本・置ける場所${byGrid.size}箇所）`);
     }
     reserved.sort((a,b)=>a.startGrid-b.startGrid);
     for(const item of reserved)for(let g=item.startGrid+1;g<=item.endGrid;g++)usedGrids.add(g);
@@ -805,8 +909,16 @@ const buildChart=(difficulty,options={})=>{
     const bar=Math.floor(grids[0]/BAR);
     const section=sectionForBar(bar);
     const sourceBar=repeatSourceBar(bar);
+    // 形を覚える鍵は「**どの小節の**どの位置の、いくつ分のかたまりか」。
+    // ★ここは `bar-(bar-section.startBar)` と書いてあり、式が `section.startBar` へ潰れていた
+    //   （意図は `section.startBar+(bar-section.startBar)` ＝ `bar`）。
+    //   そのため元の区切りは**どの小節のかたまりも区切りの先頭の番号で保存**され、
+    //   繰り返しの区切りは `repeatOf+(bar-startBar)` で引くので、
+    //   **区切りの先頭の小節しか一致しない**。実測で「区切りの繰り返しの一致」は
+    //   monster_hero EXPERT 0/8・MASTER 0/6 のようにほぼ全曲で0だった(2026-09-12)。
+    //   指紋(motifKey)のほうは効いていた(11/14)ので、片方だけ死んでいたことに気づけなかった。
     const memoryKey=section
-      ?`${sourceBar!=null?sourceBar:bar-(bar-section.startBar)}:${grids[0]-bar*BAR}:${length}`
+      ?`${sourceBar!=null?sourceBar:bar}:${grids[0]-bar*BAR}:${length}`
       :null;
     const motifKey=motifKeyOf(grids,heights);
     const remembered=(memoryKey?shapeMemory.get(memoryKey):null)||(length>=3?motifMemory.get(motifKey):null)||null;
@@ -990,6 +1102,9 @@ const buildChart=(difficulty,options={})=>{
         note.slidePoints=slidePathFor(event.reserved,best.lanes?best.lanes[i]:lane,item.subLaneWidth,P,event.onset);
         note.lane=note.slidePoints[0].lane;
         note.endLane=note.slidePoints[note.slidePoints.length-1].lane;
+        // 走る音をなぞるSLIDE（3b）は印を残す。譜面だけを見ても区別できるようにしておくと、
+        // 検査がスイープ（端から端まで動くSLIDE）と取り違えない
+        if(event.reserved.glide===true)note.glideSlide=true;
         delete note.subLane;
       }
       notes.push(note);
