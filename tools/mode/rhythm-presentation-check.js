@@ -108,7 +108,7 @@ ok('コンボ数の置き場所を選べる(右上=もとの位置も選べる)'
 ok('ノーツより後ろに描いて透かす(邪魔にならない)',
   /data-rhythm-combo-box[^>]*z-\[2\]/.test(game)
   &&/data-rhythm-combo-box[^>]*pointer-events-none/.test(game)
-  &&/\[data-rhythm-combo-box\]\{[\s\S]{0,160}opacity:\.62/.test(html)
+  &&/\[data-rhythm-combo-box\]\{[\s\S]{0,260}opacity:calc\(\.62 \* var\(--mh-combo-opacity,1\)\)/.test(html)
   &&html.includes('[data-rhythm-note] {'));
 // 場に重なるので、邪魔だと感じた人が消せるようにする(設定は前からあったが使われていなかった)
 ok('コンボ数表示のON/OFFを設定から切り替えられる',
@@ -139,6 +139,15 @@ ok('モンスターノーツの演出の強さを選べる',
   &&game.includes("if(monsterEffect!=='OFF')restarts.push({el,attr:'rhythmSideHit'});")
   // 音・能力名・振動はどの段でも残す(条件を付けていない)
   &&/if\(settings\.vibrationEnabled\)RHYTHM_HAPTICS\.tap\(26\);/.test(game));
+// 濃さも設定から変えられる(2026-09-13・ユーザー依頼「コンボ数表記の透過度の設定」)
+ok('コンボ数の濃さを設定から変えられる',
+  game.includes('comboOpacity:100')
+  &&game.includes('comboOpacity:rhythmFiniteStep(source.comboOpacity,RHYTHM_COMBO_OPACITY_MIN,RHYTHM_COMBO_OPACITY_MAX,RHYTHM_COMBO_OPACITY_STEP')
+  &&game.includes("stepper('comboOpacity',RHYTHM_COMBO_OPACITY_MIN,RHYTHM_COMBO_OPACITY_MAX,RHYTHM_COMBO_OPACITY_STEP")
+  &&game.includes("'--mh-combo-opacity':rhythmFiniteInRange(settings.comboOpacity,RHYTHM_COMBO_OPACITY_MIN,RHYTHM_COMBO_OPACITY_MAX,100)/100")
+  // 段ごとの濃さへ掛ける(段の差はそのまま残る)
+  &&html.includes('[data-rhythm-combo-box][data-combo-tier="3"]{opacity:calc(.8 * var(--mh-combo-opacity,1))}')
+  &&html.includes('[data-rhythm-combo-box][data-combo-tier="7"]{opacity:var(--mh-combo-opacity,1)}'));
 // コンボ数の大きさ。置き場所ごとの基準へ割合を掛ける(段の倍率とは別)
 ok('コンボ数の大きさを設定から変えられる',
   game.includes('comboSize:100')
