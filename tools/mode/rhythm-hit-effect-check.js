@@ -28,8 +28,8 @@ let failed=0;
 const check=(name,ok,detail='')=>{console.log(`${ok?'✓':'✗'} ${name}${detail?` (${detail})`:''}`);if(!ok)failed++;};
 
 const ctx={};vm.createContext(ctx);
-vm.runInContext(`${source}\nthis.out={RHYTHM_HIT_EFFECT_POOL,RHYTHM_HIT_SPARK_COUNT,RHYTHM_HIT_EFFECT_MS,rhythmHitEffectColor,RHYTHM_NOTE_SE_RUNTIME,RHYTHM_JUDGMENT_COLORS,rhythmJudgmentColor,rhythmJudgmentGlow,RHYTHM_JUDGMENT_RAINBOW};`,ctx);
-const {RHYTHM_HIT_EFFECT_POOL,RHYTHM_HIT_SPARK_COUNT,RHYTHM_HIT_EFFECT_MS,rhythmHitEffectColor,RHYTHM_NOTE_SE_RUNTIME,RHYTHM_JUDGMENT_COLORS,rhythmJudgmentColor,rhythmJudgmentGlow,RHYTHM_JUDGMENT_RAINBOW}=ctx.out;
+vm.runInContext(`${source}\nthis.out={RHYTHM_HIT_EFFECT_POOL,RHYTHM_HIT_SPARK_COUNT,RHYTHM_HIT_EFFECT_MS,rhythmHitEffectColor,RHYTHM_NOTE_SE_RUNTIME,RHYTHM_JUDGMENT_COLORS,rhythmJudgmentColor,rhythmJudgmentGlow,RHYTHM_JUDGMENT_RAINBOW,RHYTHM_JUDGMENT_PRECISE_MS,rhythmJudgmentIsPrecise,RHYTHM_JUDGMENTS};`,ctx);
+const {RHYTHM_HIT_EFFECT_POOL,RHYTHM_HIT_SPARK_COUNT,RHYTHM_HIT_EFFECT_MS,rhythmHitEffectColor,RHYTHM_NOTE_SE_RUNTIME,RHYTHM_JUDGMENT_COLORS,rhythmJudgmentColor,rhythmJudgmentGlow,RHYTHM_JUDGMENT_RAINBOW,RHYTHM_JUDGMENT_PRECISE_MS,rhythmJudgmentIsPrecise,RHYTHM_JUDGMENTS}=ctx.out;
 
 // --- 音 ---
 check('モンスターノーツ専用の音がある',typeof RHYTHM_NOTE_SE_RUNTIME.playMonster==='function');
@@ -90,6 +90,44 @@ check('MARVELOUSは弾ける粒も1つずつ違う色になる',
   RHYTHM_JUDGMENT_RAINBOW.length>=5
   && source.includes("item.dataset.hitJudgment=(!monster&&judgment==='MARVELOUS')?'MARVELOUS':''")
   && source.includes('--rhythm-spark-color-1'));
+// ===== ぴったりのMARVELOUS(2026-09-12・ユーザー指示) =====
+// 「マーベラスをさらに完璧なタイミングで踏んだマーベラスを判定の見ためだけさらによくしたい /
+//   scoreはかわらず」。
+// ★ここがいちばん大事: **見た目だけで、数えるもの・記録には一切入らない。**
+const marvelousWindow=RHYTHM_JUDGMENTS.find(item=>item.id==='MARVELOUS').windowMs;
+check('ぴったりの幅はMARVELOUSの窓の内側',
+  RHYTHM_JUDGMENT_PRECISE_MS>0&&RHYTHM_JUDGMENT_PRECISE_MS<marvelousWindow,
+  `±${RHYTHM_JUDGMENT_PRECISE_MS}ms / MARVELOUSは±${marvelousWindow}ms`);
+check('ぴったりになるのはMARVELOUSだけ',
+  rhythmJudgmentIsPrecise('MARVELOUS',0)===true
+  &&rhythmJudgmentIsPrecise('MARVELOUS',RHYTHM_JUDGMENT_PRECISE_MS)===true
+  &&rhythmJudgmentIsPrecise('MARVELOUS',-RHYTHM_JUDGMENT_PRECISE_MS)===true
+  &&rhythmJudgmentIsPrecise('MARVELOUS',RHYTHM_JUDGMENT_PRECISE_MS+1)===false
+  &&['EXCELLENT','GREAT','GOOD','BAD','MISS'].every(id=>rhythmJudgmentIsPrecise(id,0)===false));
+check('壊れたズレ・値なしはぴったりにしない',
+  rhythmJudgmentIsPrecise('MARVELOUS',NaN)===false&&rhythmJudgmentIsPrecise('MARVELOUS',null)===false
+  &&rhythmJudgmentIsPrecise('MARVELOUS',undefined)===false);
+// ★スコア・コンボ・ライフ・判定数・FAST/SLOWの数え方へ入れていないこと。
+//   run と result に持たせていないことを、変数名で直接見る
+check('ぴったりはスコア・記録に一切入れない(runにもresultにも持たせない)',
+  game.includes('const preciseHit=rhythmJudgmentIsPrecise(judgment,deltaMs);')
+  &&!/run\.[A-Za-z]*[Pp]recise/.test(game)
+  &&!/result=\{[^}]*precise/i.test(game)
+  &&!/counts\[[^\]]*precise/i.test(game));
+check('ぴったりは表示だけへ渡す(viewと演出)',
+  game.includes('lastPrecise:preciseHit')
+  &&game.includes("data-judgment-precise={view.lastPrecise?'1':''}")
+  &&game.includes('precise:preciseHit'));
+// 印は次の判定へ持ち越さない(消すときも一緒に落とす)
+check('判定表示を消すときに、ぴったりの印も落とす',
+  game.includes("setView(v=>({...v,last:'',lastPrecise:false,fastSlow:''}))")
+  &&game.includes("const initialView=()=>({status:'loading',score:0,combo:0,maxCombo:0,last:'',lastPrecise:false,"));
+check('ぴったりのときだけ見た目が強くなる(文字と光)',
+  html.includes('[data-rhythm-judgment-text][data-judgment="MARVELOUS"][data-judgment-precise="1"]{')
+  &&html.includes('[data-rhythm-hit-effect][data-hit-precise="1"]>i{')
+  &&source.includes("item.dataset.hitPrecise=(!monster&&precise&&judgment==='MARVELOUS')?'1':''")
+  &&source.includes("(precise&&judgment==='MARVELOUS'?'1.45':'1')"));
+
 // モンスターノーツは金色が特別扱い。虹で上書きしない
 check('モンスターノーツは金色のまま(虹で上書きしない)',
   source.includes("monster?'#fde047':rhythmHitEffectColor(judgment)")
@@ -187,7 +225,8 @@ check('演奏中の判定処理に offsetWidth の読み取りを残さない',
   'applyJudgment の中');
 check('ヒット演出は呼び出し側のまとめへ譲れる(defer)',
   source.includes("if(defer)return {el:item,attr:'rhythmHitKind',value:kind};")
-  &&game.includes('monster:monsterHit,defer:true'));
+  // 2026-09-12: ぴったりのMARVELOUS(precise)を渡すようになったので、その間へ入る
+  &&game.includes('monster:monsterHit,precise:preciseHit,defer:true'));
 
 // --- 判定まわりを変えていない ---
 check('判定窓・スコア・コンボの計算に触っていない',
