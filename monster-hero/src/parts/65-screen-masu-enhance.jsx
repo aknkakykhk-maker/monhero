@@ -7,8 +7,9 @@
 // ・戻り先は masuEnhanceFrom(どこから来たか)で決まる。行き先の判断は本体に残す
 
 function MasuEnhanceScreen({
-  addAssistantBond, bulkEnhanceUnit, bulkPlan, getMasuMon, masuMonDetail,
-  onBack, onMissing, onOpenTranscendEnhance, renderPowerBadge, saveMissionProgress,
+  addAssistantBond, autoEnhanceIntroVisible, bulkEnhanceUnit, bulkPlan, getMasuMon, masuMonDetail,
+  onBack, onDismissAutoEnhanceIntro, onMissing, onOpenAutoEnhance, onOpenTranscendEnhance,
+  renderPowerBadge, saveMissionProgress,
   setBulkEnhanceUnit, setBulkPlan, setEffect, setMasuMonDetail, spendPointsBulk,
 })  {
 
@@ -25,6 +26,7 @@ function MasuEnhanceScreen({
       // 同じ計算に通した差分を出すので、画面に「+10」を直接書かない
       const currentPower = masuPowerOf(masu);
       const ps = mergeMasuIntoMon(masu)?.plusStats||{};
+      const autoEnhance = normalizeMasuAutoEnhance(masu.autoEnhance);
       // 強化はマスモン詳細の「育成・カスタム」から入るので、戻り先も詳細にする。
       // ここで masuMonDetail を消すと一覧まで戻され、続けて染色やトレーニングをしたいときに
       // また同じ個体を探し直すことになる(詳細の中身は getMasuMon で引き直すので最新の値が出る)
@@ -89,14 +91,33 @@ function MasuEnhanceScreen({
             <button onClick={backToDetail} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
             <h2 className="text-xl font-black italic text-amber-400 uppercase tracking-widest flex-1">マスモン強化</h2>
           </div>
-          {/* どのマスモンでも通常強化と超越強化を切り替えられる。
+          {/* どのマスモンでも通常強化・超越強化・オート強化を切り替えられる。
               超越強化が使えるかどうかと、神殿で正式に超越したかどうかは別の話 */}
-          {<div data-transcend-enhance-tabs className="shrink-0 w-full max-w-md mx-auto px-4 pt-3 grid grid-cols-2 gap-1.5">
+          {<div data-transcend-enhance-tabs className="shrink-0 w-full max-w-md mx-auto px-4 pt-3 grid grid-cols-3 gap-1.5">
             <button className="min-h-[40px] rounded-xl bg-amber-600 text-slate-950 text-[11px] font-black">通常強化</button>
             <button onClick={onOpenTranscendEnhance} className="min-h-[40px] rounded-xl border border-sky-400/50 bg-slate-900 text-sky-200 text-[11px] font-black active:scale-95">超越強化</button>
+            <button onClick={onOpenAutoEnhance} className={`min-h-[40px] rounded-xl border bg-slate-900 text-[11px] font-black active:scale-95 ${autoEnhance.enabled?'border-lime-400 text-lime-200':'border-lime-400/50 text-lime-300/80'}`}>オート強化{autoEnhance.enabled&&<small className="block text-[7px] leading-none">ON</small>}</button>
           </div>}
           <div className="shrink-0 w-full max-w-md mx-auto px-4 pt-3"><AssistantBubble scene="masuEnhance" compact/></div>
           <div className="flex-1 overflow-y-auto mh-scroll p-4 space-y-3 max-w-md mx-auto w-full">
+            {/* 画面のなかでの使い方案内(CLAUDE.md ⑤)。オート強化は裏で働く仕組みで、
+                ここを開いた人が上のタブに気づかないと一生出会えないため、最初の1回だけ知らせる */}
+            {autoEnhanceIntroVisible&&(
+              <div className="rounded-2xl border border-lime-400/50 bg-lime-950/30 p-3">
+                <div className="text-[11px] font-black text-lime-200">💡 強化を毎回手で振るのが大変なら</div>
+                <div className="mt-1 text-[9px] font-bold text-slate-200 leading-relaxed">上の「オート強化」で、この子ごとに「どこまで上げてよいか」と「その中での優先順位」を決めておけます。強化ポイントが入るたび自動で振られるので、転生したあとの周回でも放っておくだけで元の形まで戻ります。</div>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  <button type="button" onClick={()=>{onDismissAutoEnhanceIntro();onOpenAutoEnhance();}} className="min-h-[40px] rounded-xl bg-lime-500 text-slate-950 text-[10px] font-black active:scale-95">設定を開く</button>
+                  <button type="button" onClick={onDismissAutoEnhanceIntro} className="min-h-[40px] rounded-xl bg-slate-800 text-slate-300 text-[10px] font-black active:scale-95">あとで</button>
+                </div>
+              </div>
+            )}
+            {autoEnhance.enabled&&(
+              <button type="button" onClick={onOpenAutoEnhance} className="w-full rounded-2xl border border-lime-400/40 bg-lime-950/20 px-3 py-2 text-left active:scale-[.99]">
+                <div className="text-[10px] font-black text-lime-200 flex items-center gap-1.5"><Sparkles size={11}/>オート強化 ON</div>
+                <div className="text-[8px] font-bold text-slate-300 mt-0.5">強化ポイントが入ると、決めた上限と優先順位で自動的に振られます。タップで設定へ。</div>
+              </button>
+            )}
 
             {/* まとめて強化: 1ポイントずつタップするのが手間なので、
                 振り分けを下書きしてから一度に確定できるようにしている */}

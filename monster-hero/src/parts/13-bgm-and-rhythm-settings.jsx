@@ -149,15 +149,21 @@ const rhythmComboTier = combo => {
 // 段ごとの大きさ。font-size ではなく transform:scale() で効かせる。
 // ★font-size を段ごとに上書きすると、横持ち(landscape:text-base)の詰めた文字サイズまで
 //   巻き添えで壊れる。倍率なら縦持ち・横持ちのどちらの基準サイズもそのまま活かせる。
-// ★上限が1.13で止まっているのは、ここが**レーンの台形の外側の空き**に置かれているため。
-//   4桁(9999)まで伸びた状態で台形へかぶると、奥のノーツが読めなくなる
-//   (tools/mode/rhythm-hud-wedge-check.js と rhythm-landscape-hud-check.js が実測で落とす)。
-//   そのぶん「どんどん目立つ」は、大きさよりも色・光・脈打ちの強さで出している。
-const RHYTHM_COMBO_TIER_SCALES = Object.freeze([1,1.02,1.04,1.06,1.08,1.1,1.12,1.13]);
+// ★2026-09-12にコンボをプレイエリアの真ん中へ移したので、台形にかかる心配がなくなった。
+//   HUDの右上に居たころは1.13倍が上限だった(4桁まで伸びると台形へかかり、奥のノーツが
+//   読めなくなるため)。中央なら左右に十分な余地があるので、段でしっかり大きくできる。
+const RHYTHM_COMBO_TIER_SCALES = Object.freeze([1,1.08,1.16,1.26,1.36,1.46,1.56,1.66]);
 const rhythmComboTierScale = tier => {
   const index = Math.trunc(Number(tier)||0);
   return RHYTHM_COMBO_TIER_SCALES[Math.max(0,Math.min(RHYTHM_COMBO_TIER_SCALES.length-1,index))];
 };
+// コンボ数の置き場所(2026-09-12・ユーザー指示「元位置（元位置より少し右より）とか選べるほうがいい」)。
+// 真ん中へ移したのは同じ日で、それまでは右上のHUDの中に居た。人によってはノーツと重なるのが
+// 気になるし、前の位置に慣れている人もいるので、選べるようにする。
+// ★既定は CENTER(いまの真ん中)。既存の保存値にはこのキー自体が無いので、
+//   読み込み時に CENTER で補われる(既存のキーは1つも触らない)。
+// ★実際の座標は index.html の [data-combo-pos="…"] が持つ。ここは名前だけ。
+const RHYTHM_COMBO_POSITIONS = Object.freeze(['CENTER','RIGHT','HUD','LEFT']);
 // ライフの見せ方の段(2026-09-12・ユーザー指示
 //   「ライフ変動や0になったときとか気付きにくいからもっと強調して / 0だとライフが赤くなるとか
 //     バーが割れるとか」)。
@@ -170,6 +176,23 @@ const rhythmLifeState = life => {
   if (ratio <= .5) return 'caution';
   return 'ok';
 };
+// オプション画面の選択肢の「名前」(2026-09-13)。
+// ★閉じているセクションに出す「いまの値」と、開いたときのボタンの**両方がここを見る**。
+//   名前を2か所に書くと必ずずれる(一方だけ直して、もう一方が古い名前のまま残る)。
+// ★並びはそのまま画面のボタンの並びになる。IDの集合は値の正本
+//   (RHYTHM_EFFECT_LEVELS など)と一致していること。tools/mode/rhythm-options-summary-check.js が見る。
+// 判定タイミング調整の範囲と刻み(2026-09-13)。
+// ★刻みを5ms→**1ms**へ細かくした(ユーザー指示「タップ調整ももっと精度良くつくって」)。
+//   いちばん良い判定(MARVELOUS)は±55msなので、5ms刻みだとその1/11ずつしか動かせなかった。
+// ★**広げたのではなく細かくしただけ**なので、これまでの保存値(5の倍数)はすべてそのまま
+//   有効で、意味も変わらない(-100〜+100の範囲は同じ)。
+const RHYTHM_TIMING_OFFSET_MAX_MS = 100;
+const RHYTHM_TIMING_OFFSET_STEP_MS = 1;
+const RHYTHM_LANE_GLOW_LABELS = Object.freeze([['NORMAL','標準'],['LOW','控えめ'],['NONE','なし']]);
+const RHYTHM_EFFECT_LABELS = Object.freeze([['NORMAL','標準'],['LOW','少なめ'],['MINIMAL','最小']]);
+const RHYTHM_SIDE_MONSTER_OPACITY_LABELS = Object.freeze([['NORMAL','はっきり'],['SOFT','ふつう'],['FAINT','うっすら'],['OFF','出さない']]);
+const RHYTHM_SIDE_MONSTER_MOTION_LABELS = Object.freeze([['NORMAL','跳ねる'],['SMALL','小さく跳ねる'],['NONE','動かない']]);
+const RHYTHM_COMBO_POSITION_LABELS = Object.freeze([['LEFT','左'],['CENTER','中央'],['RIGHT','右'],['HUD','右上']]);
 const RHYTHM_LANE_GLOW_LEVELS = Object.freeze(['NORMAL','LOW','NONE']);
 const RHYTHM_JUDGMENT_IDS = Object.freeze(['MARVELOUS','EXCELLENT','GREAT','GOOD','BAD','MISS']);
 // ランク(G〜M)の表示色(暫定値)。下位ほど地味な色、上位ほど鮮やかにして一目で分かるようにする。
@@ -180,7 +203,7 @@ const RHYTHM_RANK_COLORS = Object.freeze({
 });
 const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   bgmVolume:100, noteSpeed:6, noteSize:100, noteStartPosition:0, displayTimingOffsetMs:0, judgmentTimingOffsetMs:0,
-  fastSlowDisplay:true, judgmentTextDisplay:true, judgmentTextPosition:50, comboDisplay:true, holdSlideOpacity:80, laneGlow:'NORMAL',
+  fastSlowDisplay:true, judgmentTextDisplay:true, judgmentTextPosition:50, comboDisplay:true, comboPosition:'CENTER', holdSlideOpacity:80, laneGlow:'NORMAL',
   noteSeVolume:70, noteSeEnabled:true, vibrationEnabled:false, effectAmount:'NORMAL', lightweightMode:false,
   livePartnerVisible:true,
   // 両サイドのマスモン(2026-09-05)。既存の保存値には無いので、読み込み時は既定で補われる。
@@ -212,11 +235,12 @@ const normalizeRhythmSettings = value => {
     noteSize:rhythmFiniteStep(source.noteSize,80,120,5,DEFAULT_RHYTHM_SETTINGS.noteSize),
     noteStartPosition:rhythmFiniteInRange(source.noteStartPosition,-100,100,DEFAULT_RHYTHM_SETTINGS.noteStartPosition),
     displayTimingOffsetMs:0,
-    judgmentTimingOffsetMs:rhythmFiniteStep(source.judgmentTimingOffsetMs,-100,100,5,DEFAULT_RHYTHM_SETTINGS.judgmentTimingOffsetMs),
+    judgmentTimingOffsetMs:rhythmFiniteStep(source.judgmentTimingOffsetMs,-RHYTHM_TIMING_OFFSET_MAX_MS,RHYTHM_TIMING_OFFSET_MAX_MS,RHYTHM_TIMING_OFFSET_STEP_MS,DEFAULT_RHYTHM_SETTINGS.judgmentTimingOffsetMs),
     fastSlowDisplay:bool('fastSlowDisplay'),
     judgmentTextDisplay:bool('judgmentTextDisplay'),
     judgmentTextPosition:rhythmFiniteInRange(source.judgmentTextPosition,0,100,DEFAULT_RHYTHM_SETTINGS.judgmentTextPosition),
     comboDisplay:bool('comboDisplay'),
+    comboPosition:RHYTHM_COMBO_POSITIONS.includes(source.comboPosition)?source.comboPosition:DEFAULT_RHYTHM_SETTINGS.comboPosition,
     holdSlideOpacity:rhythmFiniteInRange(source.holdSlideOpacity,10,100,DEFAULT_RHYTHM_SETTINGS.holdSlideOpacity),
     laneGlow:RHYTHM_LANE_GLOW_LEVELS.includes(source.laneGlow)?source.laneGlow:DEFAULT_RHYTHM_SETTINGS.laneGlow,
     noteSeVolume:rhythmFiniteStep(source.noteSeVolume,0,RHYTHM_VOLUME_MAX,1,DEFAULT_RHYTHM_SETTINGS.noteSeVolume),
