@@ -10131,19 +10131,58 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             「更新履歴が壊れた」としか分からないので、読み込み直せることをここで伝える */}
         <div className="mh-changelog-list" data-changelog-list>{CHANGELOG_ENTRIES.length===0
           ? <p className="mh-changelog-empty" data-changelog-empty>更新履歴を読み込めませんでした。通信状況を確かめてから、設定の「ゲームを更新」で読み込み直してください。</p>
-          : changelogEntriesOfTab(changelogTab).map(c=>{const open=changelogOpenId===c.id;
-            {/* 一覧は日付・札・見出しだけ。本文(items)は押した項目だけ出す(1つ開くと他は閉じる) */}
-            return <article key={c.id} data-changelog-type={c.type||'update'} data-changelog-open={open?'1':'0'} className={changelogUnreadIds[changelogTab].includes(c.id)?'unread':''}><time>{c.date}{changelogUnreadIds[changelogTab].includes(c.id)&&<em>NEW</em>}</time><span className="mh-changelog-kind" data-kind={changelogTypeOf(c).tone}>{changelogTypeOf(c).label}</span>
-              <button type="button" className="mh-changelog-head" data-changelog-toggle aria-expanded={open} onClick={()=>setChangelogOpenId(open?null:c.id)}><b>{c.title}</b><small>{open?'閉じる ▲':'詳細 ▼'}</small></button>
-              {/* 開いたときだけ本文を出す。告知画像があれば本文の上に出す
-                  (期間中いつでもここから見返せるように・2026-09-11・ユーザー指示) */}
-              {open&&<div className="mh-changelog-detail" data-changelog-detail>
-                {c.image&&<img data-changelog-image src={c.image} alt={`${c.title}のお知らせ`}
-                  onError={e=>{e.currentTarget.style.display='none';}} loading="lazy" decoding="async"
-                  style={{width:'100%',borderRadius:'12px',marginBottom:'8px'}}/>}
-                {(c.items||[]).map((x,j)=><p key={j}>・{x}</p>)}
-              </div>}
-            </article>;})}</div>
+          : (()=>{
+            // 同じ日の同じ話題を1行にまとめる(2026-09-13・ユーザー指摘
+            // 「同じような内容は同じとこにまとめて詳細で詳しく出るようにして /
+            //  過去のやつが一瞬で見えなくなる」)。
+            // 1行ずつ積み上げていたころは682行あり、少しさかのぼるだけで指が疲れていた。
+            // 日付は行の上に1度だけ出す(同じ日が続くあいだは繰り返さない)。
+            const rows = groupChangelogEntries(changelogEntriesOfTab(changelogTab));
+            const unreadHere = changelogUnreadIds[changelogTab];
+            let shownDay = null;
+            return rows.map(row=>{
+              const open=changelogOpenId===row.key;
+              const unreadCount=row.entries.filter(entry=>unreadHere.includes(entry.id)).length;
+              // まとめた行にも種類の札を出す。折りたたんだままでも、新機能なのか不具合修正なのかが
+              // 分かるようにしておく(2026-09-05・ユーザー指摘「直近の更新情報が不具合修正との
+              // 区別がついてない」)。1つのまとまりに種類が混ざることがあるので、
+              // 出てくる種類ぶんだけ並べ、2件以上あるものには数も付ける
+              const kinds=[];
+              row.entries.forEach(entry=>{const info=changelogTypeOf(entry);
+                const found=kinds.find(kind=>kind.tone===info.tone);
+                if(found)found.count+=1;else kinds.push({tone:info.tone,label:info.label,count:1});});
+              const dayHead=row.day!==shownDay?row.day:null;
+              shownDay=row.day;
+              return (<React.Fragment key={row.key}>
+                {dayHead&&<h4 className="mh-changelog-day" data-changelog-day={dayHead}>{dayHead}</h4>}
+                <article data-changelog-group={row.groupId} data-changelog-open={open?'1':'0'} className={unreadCount>0?'unread':''}>
+                  <button type="button" className="mh-changelog-head" data-changelog-toggle aria-expanded={open} onClick={()=>setChangelogOpenId(open?null:row.key)}>
+                    <span className="mh-changelog-group-emoji" aria-hidden="true">{row.emoji}</span>
+                    <b>{row.label}</b>
+                    <span className="mh-changelog-count">{row.entries.length}件{unreadCount>0&&<em>NEW</em>}</span>
+                    <small>{open?'閉じる ▲':'詳細 ▼'}</small>
+                  </button>
+                  <span className="mh-changelog-kinds">{kinds.map(kind=><span key={kind.tone} className="mh-changelog-kind" data-kind={kind.tone}>{kind.label}{kind.count>1&&<i>{kind.count}</i>}</span>)}</span>
+                  {/* 閉じているあいだも、何があった日なのかが分かるように見出しだけ並べる */}
+                  {!open&&<p className="mh-changelog-peek" data-changelog-peek>{row.entries.map(entry=>entry.title).join(' ／ ')}</p>}
+                  {/* 開いたら、その話題のその日の項目を時刻・種別・本文までぜんぶ出す */}
+                  {open&&<div className="mh-changelog-detail" data-changelog-detail>
+                    {row.entries.map(c=>(<section key={c.id} className="mh-changelog-item" data-changelog-type={c.type||'update'}>
+                      <time>{(c.date||'').slice(11)||c.date}{unreadHere.includes(c.id)&&<em>NEW</em>}</time>
+                      <span className="mh-changelog-kind" data-kind={changelogTypeOf(c).tone}>{changelogTypeOf(c).label}</span>
+                      <b>{c.title}</b>
+                      {/* 告知画像があれば本文の上に出す
+                          (期間中いつでもここから見返せるように・2026-09-11・ユーザー指示) */}
+                      {c.image&&<img data-changelog-image src={c.image} alt={`${c.title}のお知らせ`}
+                        onError={e=>{e.currentTarget.style.display='none';}} loading="lazy" decoding="async"
+                        style={{width:'100%',borderRadius:'12px',margin:'6px 0'}}/>}
+                      {(c.items||[]).map((x,j)=><p key={j}>・{x}</p>)}
+                    </section>))}
+                  </div>}
+                </article>
+              </React.Fragment>);
+            });
+          })()}</div>
       </div>
     </div>
   ) : showTitleSettings ? (

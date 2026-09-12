@@ -164,6 +164,12 @@ const EXPORTED_NAMES = [
   'buildMasuAutoEnhanceUpdate',
   'buildMasuAutoEnhanceOrderMove',
   'autoEnhanceHasTarget',
+  // 更新情報のまとめ方。tools/changelog/changelog-group-check.js が実データで確かめる
+  'CHANGELOG_ENTRIES',
+  'CHANGELOG_GROUPS',
+  'changelogGroupIdOf',
+  'groupChangelogEntries',
+  'changelogEntriesOfTab',
   'masuAwaitsBondResetReallocation',
   'buildMasuBondPointReset',
   'describeAutoEnhancePlan',
