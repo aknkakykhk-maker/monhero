@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b6d291a8a6748b74
+// generated-sha256: 7e7373c28cb2a4cb
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-12 21:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-12 22:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -857,6 +857,174 @@ const normalizeAutoRepeatBreakthroughMode = (value, levelValue) => {
   if (value === 'fixed') return level > 0 ? 'fixed' : 'off';
   return level > 0 ? 'fixed' : 'off';
 };
+// ===== オート強化(個体ごとの自動強化設定) =====
+// 転生・限界突破のあとは強化が白紙に戻るため、周回で貯まった強化ポイントを
+// 毎回手で振り直すのが大変だった(2026-09-12・ユーザー要望)。
+// そこで個体ごとに「オン/オフ」「どこまで上げてよいか(上限)」「その中での優先順位」を持たせ、
+// 強化ポイントが入るたびに設定どおりへ自動で振る。
+//
+// ★保存は既存の mh_masu_mons の中の1項目として足す(新しいトップレベルキーは作らない)。
+//   autoRepeatBreakthroughMode と同じ置き方で、持っていない既存データは normalize が既定値で補う。
+// ★転生しても設定だけは残す(resetMasuForRebirth の維持対象に入れてある)。
+//   設定が消えると「転生のたびに設定し直し」になり、この機能の意味が無くなるため。
+const AUTO_ENHANCE_STAT_KEYS = ['hp','atk','def','guts'];
+const AUTO_ENHANCE_APT_TARGETS = ['apt0','apt1','apt2','apt3'];
+// 優先順位に並べる8項目。ステータス4つ＋間合い適性4つ
+const AUTO_ENHANCE_TARGETS = [...AUTO_ENHANCE_STAT_KEYS, ...AUTO_ENHANCE_APT_TARGETS];
+const DEFAULT_AUTO_ENHANCE_ORDER = Object.freeze([...AUTO_ENHANCE_TARGETS]);
+const autoEnhanceAptIndexOf = (target) => {
+  const index = AUTO_ENHANCE_APT_TARGETS.indexOf(target);
+  return index >= 0 ? index : null;
+};
+// 上限の入力欄で受け付ける最大値。1個体が持てる強化Pをはるかに超える値なので実質的な制限にはならないが、
+// 壊れた保存値や指がすべった長い数字で描画が崩れないように頭を止めておく
+const AUTO_ENHANCE_STAT_LIMIT_MAX = 999999;
+// 上限の読み方。
+// ・ステータス … 「その能力へ振ってよい強化Pの数」。null は上限なし(残りを全部使う)、0 は振らない
+// ・間合い適性 … 「目標の段階(グレード)」。null は振らない。Mを指定すれば上限なしと同じ
+const normalizeAutoEnhanceStatLimit = (value) => {
+  if (value === null || value === undefined || value === '') return null; // 上限なし
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return 0;
+  return Math.max(0, Math.min(AUTO_ENHANCE_STAT_LIMIT_MAX, Math.floor(amount)));
+};
+const normalizeAutoEnhanceAptLimit = (value) => (typeof value === 'string' && DIST_APTITUDE_GRADES.includes(value) ? value : null);
+const normalizeMasuAutoEnhance = (value) => {
+  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  // 並び順は「8項目がちょうど1回ずつ」でなければならない。壊れていたら既定の並びへ落とす
+  const rawOrder = Array.isArray(source.order) ? source.order.filter(key => AUTO_ENHANCE_TARGETS.includes(key)) : [];
+  const order = [...new Set(rawOrder)];
+  AUTO_ENHANCE_TARGETS.forEach(key => { if (!order.includes(key)) order.push(key); });
+  const rawStat = source.statLimits && typeof source.statLimits === 'object' && !Array.isArray(source.statLimits) ? source.statLimits : {};
+  const statLimits = Object.fromEntries(AUTO_ENHANCE_STAT_KEYS.map(key => [key,
+    Object.prototype.hasOwnProperty.call(rawStat, key) ? normalizeAutoEnhanceStatLimit(rawStat[key]) : 0]));
+  const rawApt = Array.isArray(source.aptLimits) ? source.aptLimits : [];
+  const aptLimits = [0,1,2,3].map(index => normalizeAutoEnhanceAptLimit(rawApt[index]));
+  return {
+    // 項目を持っていない既存ユーザーは必ずOFF。ある日いきなり勝手に振られることがないようにする
+    enabled: source.enabled === true,
+    order,
+    statLimits,
+    aptLimits,
+  };
+};
+// 1つでも「振ってよい先」が決まっているか。ONでもここが空なら何も起きない
+const autoEnhanceHasTarget = (settings) => {
+  const normalized = normalizeMasuAutoEnhance(settings);
+  return AUTO_ENHANCE_STAT_KEYS.some(key => normalized.statLimits[key] === null || normalized.statLimits[key] > 0)
+    || normalized.aptLimits.some(grade => grade !== null);
+};
+// いま振ってある内容を、そのまま上限として写し取る。
+// 「この形のまま転生して戻したい」がいちばん多い使い方なので、1タップで作れるようにする
+const buildAutoEnhanceLimitsFromCurrent = (masu, base) => {
+  if (!masu || !base) return null;
+  const resolvedApt = resolveMasuDistAptitude(masu, base);
+  return {
+    statLimits: Object.fromEntries(AUTO_ENHANCE_STAT_KEYS.map(key => [key,
+      Math.max(0, Math.ceil((Number(masu.statPoints?.[key]) || 0) / (STAT_POINT_GAIN[key] || 1)))])),
+    aptLimits: [0,1,2,3].map(index => {
+      const baseGrade = masuTranscendBaseAptitude(masu, base)[index];
+      const current = resolvedApt[index];
+      // ベースから1段も上げていない距離は「振らない」。上げてある距離だけ、いまの段階を目標にする
+      return DIST_APTITUDE_GRADES.indexOf(current) > DIST_APTITUDE_GRADES.indexOf(baseGrade) ? current : null;
+    }),
+  };
+};
+// 設定どおりに振る下書き(plan)を作る。実際の適用は applyEnhancePlanToMasu が行うので、
+// 手で振ったときとまったく同じ計算・同じ上限(間合い適性はMで止まる)を通る。
+// 振る先が無い・強化Pが無いときは null を返し、呼び出し側は何もしない。
+const buildMasuAutoEnhancePlan = (masu, base) => {
+  if (!masu || !base) return null;
+  const settings = normalizeMasuAutoEnhance(masu.autoEnhance);
+  if (!settings.enabled) return null;
+  let remaining = Math.max(0, Math.floor(Number(masu.distAptPoints) || 0));
+  if (remaining <= 0) return null;
+  const resolvedApt = resolveMasuDistAptitude(masu, base);
+  const plan = { apt:[0,0,0,0], stat:{ hp:0, atk:0, def:0, guts:0 } };
+  for (const target of settings.order) {
+    if (remaining <= 0) break;
+    const aptIndex = autoEnhanceAptIndexOf(target);
+    if (aptIndex != null) {
+      const limitGrade = settings.aptLimits[aptIndex];
+      if (limitGrade === null) continue;
+      const currentIndex = Math.max(0, DIST_APTITUDE_GRADES.indexOf(resolvedApt[aptIndex] || 'C'));
+      const limitIndex = Math.min(DIST_APTITUDE_GRADES.length - 1, DIST_APTITUDE_GRADES.indexOf(limitGrade));
+      const take = Math.min(Math.max(0, limitIndex - currentIndex), remaining);
+      plan.apt[aptIndex] = take;
+      remaining -= take;
+      continue;
+    }
+    if (!AUTO_ENHANCE_STAT_KEYS.includes(target)) continue;
+    const limit = settings.statLimits[target];
+    if (limit === 0) continue;
+    const gain = STAT_POINT_GAIN[target] || 1;
+    const alreadySpent = Math.max(0, Math.ceil((Number(masu.statPoints?.[target]) || 0) / gain));
+    const capacity = limit === null ? remaining : Math.max(0, limit - alreadySpent);
+    const take = Math.min(capacity, remaining);
+    plan.stat[target] = take;
+    remaining -= take;
+  }
+  const used = plan.apt.reduce((sum, value) => sum + value, 0)
+    + Object.values(plan.stat).reduce((sum, value) => sum + value, 0);
+  return used > 0 ? { plan, used } : null;
+};
+// 自動で振ったときの「何がどれだけ増えたか」。画面のお知らせとログに使う
+const describeAutoEnhancePlan = (plan) => {
+  const lines = [];
+  (plan?.apt || []).forEach((count, index) => { if (count > 0) lines.push(`${RANGE_LABELS[index]}距離適性 +${count}段階`); });
+  Object.entries(plan?.stat || {}).forEach(([key, count]) => {
+    if (count > 0) lines.push(`${STAT_POINT_KEYS[key]} +${count * (STAT_POINT_GAIN[key] || 1)}`);
+  });
+  return lines;
+};
+// 絆ポイントリセットの直後かどうか(振り直しの下書きが残っているか)。
+// 「絆ポイントリセットの書」は500ダイヤの、振り直すための道具。使った直後に自動で振ってしまうと、
+// 振り直す機会ごと道具代を失わせることになるので、ここが残っているあいだは自動では振らない。
+// 自分で振り直すか(spendPointsBulk が下書きを消す)、オート強化の「いますぐ振る」を押した時点で再開する。
+const masuAwaitsBondResetReallocation = (masu) => !!(masu && masu.bondResetAllocationSnapshot);
+// 1体ぶんの自動強化。振るものが無ければ null(呼び出し側は保存もしない)。
+// manual は「プレイヤーが自分で『いますぐ振る』を押した」とき。
+// このときだけリセット直後でも振り、手で振ったときと同じく復元の下書きの役目も終わらせる
+// (残したままだと「リセット前の配分を復元」が、いま振ったぶんの上へ重ねて出てしまう)。
+const applyMasuAutoEnhance = (masu, { manual = false } = {}) => {
+  const base = (typeof ALL_PLAYER_MONSTERS !== 'undefined') ? ALL_PLAYER_MONSTERS[masu?.baseId] : null;
+  if (!base) return null;
+  if (!manual && masuAwaitsBondResetReallocation(masu)) return null;
+  const planned = buildMasuAutoEnhancePlan(masu, base);
+  if (!planned) return null;
+  const applied = applyEnhancePlanToMasu(masu, planned.plan);
+  if (!applied) return null;
+  const { bondResetAllocationSnapshot: _usedResetSnapshot, ...withoutSnapshot } = applied.masu;
+  return { masu:manual ? withoutSnapshot : applied.masu, used:applied.used, lines:describeAutoEnhancePlan(planned.plan) };
+};
+// 所持マスモン全体へ一度に通す。1体も変わらなければ null を返すので、
+// 呼び出し側は「変わったときだけ保存する」を素直に書ける(保存のたびに書き込むのを防ぐ)。
+const applyAutoEnhanceToMasuMons = (masuMons) => {
+  const list = Array.isArray(masuMons) ? masuMons : [];
+  const results = [];
+  const next = list.map(masu => {
+    const applied = applyMasuAutoEnhance(masu);
+    if (!applied) return masu;
+    results.push({ masuId:masu.id, name:masu.name, used:applied.used, lines:applied.lines });
+    return applied.masu;
+  });
+  return results.length > 0 ? { next, results } : null;
+};
+// 設定の書き換え。normalize を必ず通すので、画面側は部分的な patch を渡すだけでよい
+const buildMasuAutoEnhanceUpdate = (masu, patch) => ({
+  ...masu,
+  autoEnhance: normalizeMasuAutoEnhance({ ...normalizeMasuAutoEnhance(masu?.autoEnhance), ...(patch || {}) }),
+});
+// 優先順位を1つ上げ下げする。端では動かさない(押しても何も起きない)
+const buildMasuAutoEnhanceOrderMove = (masu, target, direction) => {
+  const settings = normalizeMasuAutoEnhance(masu?.autoEnhance);
+  const from = settings.order.indexOf(target);
+  const to = from + (direction < 0 ? -1 : 1);
+  if (from < 0 || to < 0 || to >= settings.order.length) return masu;
+  const order = [...settings.order];
+  [order[from], order[to]] = [order[to], order[from]];
+  return buildMasuAutoEnhanceUpdate(masu, { order });
+};
 const MAX_UNIQUE_SKILL_LEVEL = 8;
 // 固有技の強化ポイントは、技を上げるほかに「いまのガッツを戻す」ことにも使える。
 // 育てきって技がすべてMAXになったあともポイントが余らないようにするための使い道。
@@ -1509,6 +1677,8 @@ const normalizeMasuProgression = (masu) => ({
   // 旧booleanは曖昧な上限へ移行せずOFF。既存の数値設定は fixed として互換維持する。
   autoRepeatBreakthroughMode: normalizeAutoRepeatBreakthroughMode(masu?.autoRepeatBreakthroughMode, masu?.autoRepeatBreakthroughLevel),
   autoRepeatBreakthroughLevel: normalizeAutoRepeatBreakthroughLevel(masu?.autoRepeatBreakthroughLevel),
+  // オート強化の個体設定。項目を持っていない既存データはOFF・振り先なしとして読む(移行処理はいらない)
+  autoEnhance: normalizeMasuAutoEnhance(masu?.autoEnhance),
   rebirthCount: Math.max(0, Math.floor(Number(masu?.rebirthCount) || 0)),
   // 転生回数は後から足した項目なので、持っていない既存データは0として扱う
   reincarnateCount: Math.max(0, Math.floor(Number(masu?.reincarnateCount) || 0)),
@@ -1605,6 +1775,12 @@ const resetMasuForRebirth = (masu, { rebirthCount, reincarnateCount, reincarnate
     inheritedReincarnateBonusPoints: inheritedReincarnateBonusPointsOf(masu),
     inheritedReincarnateCount: inheritedReincarnateCountOf(masu),
     levelCap: Math.min(masuLevelCapLimit(masu), Math.max(INITIAL_MASU_LEVEL_CAP, Math.floor(Number(levelCap ?? masu?.levelCap) || INITIAL_MASU_LEVEL_CAP))),
+    // 自動まわりの設定(オート強化・AUTO∞自動限界突破)は「育てた中身」ではなく個体ごとの設定なので、
+    // 転生では失わせない。ここへ入れておかないと、転生のたびに設定し直すことになり、
+    // 「転生後の周回を楽にする」というオート強化の目的そのものが果たせなくなる。
+    autoEnhance: normalizeMasuAutoEnhance(masu?.autoEnhance),
+    autoRepeatBreakthroughMode: normalizeAutoRepeatBreakthroughMode(masu?.autoRepeatBreakthroughMode, masu?.autoRepeatBreakthroughLevel),
+    autoRepeatBreakthroughLevel: normalizeAutoRepeatBreakthroughLevel(masu?.autoRepeatBreakthroughLevel),
     // 魂格は転生で失われない。初到達Lvを持ち越すことで魂格Pの二重取得も防ぐ。
     soulRankStage: normalizeSoulRankStage(masu?.soulRankStage),
     soulPointMaxReachedLevel: normalizeSoulPointMaxReachedLevel(masu?.soulPointMaxReachedLevel),
@@ -15610,7 +15786,7 @@ function MasuSoulTraitsScreen({
 
 function MasuTranscendEnhanceScreen({
   commitTranscendExchange, commitTranscendFruit, commitTranscendPlan, getMasuMon, masuMonDetail,
-  onBack, onMissing, ownedItems, renderPowerBadge, saveMissionProgress,
+  onBack, onMissing, onOpenAutoEnhance, ownedItems, renderPowerBadge, saveMissionProgress,
   setTranscendBulkUnit, setTranscendExchangeError, setTranscendExchangeOpen, setTranscendExchangeWant, setTranscendFruitConfirmAmount,
   setTranscendFruitError, setTranscendFruitItemId, setTranscendFruitOpen, setTranscendPlan, setTranscendResetError,
   setTranscendResetOpen, transcendBulkUnit, transcendExchangeError, transcendExchangeOpen, transcendExchangeWant,
@@ -15721,9 +15897,10 @@ function MasuTranscendEnhanceScreen({
               <TranscendenceBadge transcended={normalized.transcended} soulRankStage={normalized.soulRankStage} small/>
             </span>
           </div>
-          <div data-transcend-enhance-tabs className="shrink-0 w-full max-w-md mx-auto px-4 pt-3 grid grid-cols-2 gap-1.5">
+          <div data-transcend-enhance-tabs className="shrink-0 w-full max-w-md mx-auto px-4 pt-3 grid grid-cols-3 gap-1.5">
             <button onClick={onBack} className="min-h-[40px] rounded-xl border border-amber-400/50 bg-slate-900 text-amber-200 text-[11px] font-black active:scale-95">通常強化</button>
             <button className="min-h-[40px] rounded-xl bg-sky-500 text-slate-950 text-[11px] font-black">超越強化</button>
+            <button onClick={onOpenAutoEnhance} className="min-h-[40px] rounded-xl border border-lime-400/50 bg-slate-900 text-lime-300/80 text-[11px] font-black active:scale-95">オート強化</button>
           </div>
           {/* 超越の話をするセリフは、正式に超越した個体のときだけにする */}
           <div className="shrink-0 w-full max-w-md mx-auto px-4 pt-3"><AssistantBubble scene={normalized.transcended?'transcendence':'masuEnhance'} compact/></div>
@@ -15889,8 +16066,9 @@ function MasuTranscendEnhanceScreen({
 // ・戻り先は masuEnhanceFrom(どこから来たか)で決まる。行き先の判断は本体に残す
 
 function MasuEnhanceScreen({
-  addAssistantBond, bulkEnhanceUnit, bulkPlan, getMasuMon, masuMonDetail,
-  onBack, onMissing, onOpenTranscendEnhance, renderPowerBadge, saveMissionProgress,
+  addAssistantBond, autoEnhanceIntroVisible, bulkEnhanceUnit, bulkPlan, getMasuMon, masuMonDetail,
+  onBack, onDismissAutoEnhanceIntro, onMissing, onOpenAutoEnhance, onOpenTranscendEnhance,
+  renderPowerBadge, saveMissionProgress,
   setBulkEnhanceUnit, setBulkPlan, setEffect, setMasuMonDetail, spendPointsBulk,
 })  {
 
@@ -15907,6 +16085,7 @@ function MasuEnhanceScreen({
       // 同じ計算に通した差分を出すので、画面に「+10」を直接書かない
       const currentPower = masuPowerOf(masu);
       const ps = mergeMasuIntoMon(masu)?.plusStats||{};
+      const autoEnhance = normalizeMasuAutoEnhance(masu.autoEnhance);
       // 強化はマスモン詳細の「育成・カスタム」から入るので、戻り先も詳細にする。
       // ここで masuMonDetail を消すと一覧まで戻され、続けて染色やトレーニングをしたいときに
       // また同じ個体を探し直すことになる(詳細の中身は getMasuMon で引き直すので最新の値が出る)
@@ -15971,14 +16150,33 @@ function MasuEnhanceScreen({
             <button onClick={backToDetail} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
             <h2 className="text-xl font-black italic text-amber-400 uppercase tracking-widest flex-1">マスモン強化</h2>
           </div>
-          {/* どのマスモンでも通常強化と超越強化を切り替えられる。
+          {/* どのマスモンでも通常強化・超越強化・オート強化を切り替えられる。
               超越強化が使えるかどうかと、神殿で正式に超越したかどうかは別の話 */}
-          {<div data-transcend-enhance-tabs className="shrink-0 w-full max-w-md mx-auto px-4 pt-3 grid grid-cols-2 gap-1.5">
+          {<div data-transcend-enhance-tabs className="shrink-0 w-full max-w-md mx-auto px-4 pt-3 grid grid-cols-3 gap-1.5">
             <button className="min-h-[40px] rounded-xl bg-amber-600 text-slate-950 text-[11px] font-black">通常強化</button>
             <button onClick={onOpenTranscendEnhance} className="min-h-[40px] rounded-xl border border-sky-400/50 bg-slate-900 text-sky-200 text-[11px] font-black active:scale-95">超越強化</button>
+            <button onClick={onOpenAutoEnhance} className={`min-h-[40px] rounded-xl border bg-slate-900 text-[11px] font-black active:scale-95 ${autoEnhance.enabled?'border-lime-400 text-lime-200':'border-lime-400/50 text-lime-300/80'}`}>オート強化{autoEnhance.enabled&&<small className="block text-[7px] leading-none">ON</small>}</button>
           </div>}
           <div className="shrink-0 w-full max-w-md mx-auto px-4 pt-3"><AssistantBubble scene="masuEnhance" compact/></div>
           <div className="flex-1 overflow-y-auto mh-scroll p-4 space-y-3 max-w-md mx-auto w-full">
+            {/* 画面のなかでの使い方案内(CLAUDE.md ⑤)。オート強化は裏で働く仕組みで、
+                ここを開いた人が上のタブに気づかないと一生出会えないため、最初の1回だけ知らせる */}
+            {autoEnhanceIntroVisible&&(
+              <div className="rounded-2xl border border-lime-400/50 bg-lime-950/30 p-3">
+                <div className="text-[11px] font-black text-lime-200">💡 強化を毎回手で振るのが大変なら</div>
+                <div className="mt-1 text-[9px] font-bold text-slate-200 leading-relaxed">上の「オート強化」で、この子ごとに「どこまで上げてよいか」と「その中での優先順位」を決めておけます。強化ポイントが入るたび自動で振られるので、転生したあとの周回でも放っておくだけで元の形まで戻ります。</div>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  <button type="button" onClick={()=>{onDismissAutoEnhanceIntro();onOpenAutoEnhance();}} className="min-h-[40px] rounded-xl bg-lime-500 text-slate-950 text-[10px] font-black active:scale-95">設定を開く</button>
+                  <button type="button" onClick={onDismissAutoEnhanceIntro} className="min-h-[40px] rounded-xl bg-slate-800 text-slate-300 text-[10px] font-black active:scale-95">あとで</button>
+                </div>
+              </div>
+            )}
+            {autoEnhance.enabled&&(
+              <button type="button" onClick={onOpenAutoEnhance} className="w-full rounded-2xl border border-lime-400/40 bg-lime-950/20 px-3 py-2 text-left active:scale-[.99]">
+                <div className="text-[10px] font-black text-lime-200 flex items-center gap-1.5"><Sparkles size={11}/>オート強化 ON</div>
+                <div className="text-[8px] font-bold text-slate-300 mt-0.5">強化ポイントが入ると、決めた上限と優先順位で自動的に振られます。タップで設定へ。</div>
+              </button>
+            )}
 
             {/* まとめて強化: 1ポイントずつタップするのが手間なので、
                 振り分けを下書きしてから一度に確定できるようにしている */}
@@ -18292,6 +18490,239 @@ function SoulBattleEffects({
   );
 }
 
+// ---- part: 72-screen-masu-auto-enhance.jsx ----
+// ==== 画面: マスモン オート強化設定(gameState === 'MASU_AUTO_ENHANCE') ====
+//
+// 転生や限界突破のあとは強化が白紙へ戻るので、周回で貯まる強化ポイントを毎回手で振り直すのが
+// 大変だった(2026-09-12・ユーザー要望)。この画面では個体ごとに
+//   ・オン / オフ
+//   ・どこまで上げてよいか(上限)
+//   ・その中での優先順位
+// の3つだけを決める。実際に振る計算は 11-masu-progression.jsx の
+// buildMasuAutoEnhancePlan / applyMasuAutoEnhance が持っていて、
+// 手で振るとき(applyEnhancePlanToMasu)とまったく同じ道を通る。
+//
+// 【この画面ならではの注意】
+// ・保存を伴う操作は MonsterHeroGame 側に残し、props で受ける(ほかのマスモン画面と同じ)
+// ・上限の数値入力だけは1文字ごとに保存すると書き込みが増えるので、入力中は下書き(draft)を持ち、
+//   指を離した(blur)ときとEnterのときにだけ保存する。＋−や目標グレードのselectはその場で保存する
+
+function MasuAutoEnhanceScreen({
+  applyAutoEnhanceNow, autoEnhanceLog, getMasuMon, masuMonDetail, moveAutoEnhanceOrder,
+  onBack, onMissing, onOpenNormalEnhance, onOpenTranscendEnhance, renderPowerBadge, updateAutoEnhance,
+}) {
+      // ★フックは必ずいちばん上で呼ぶ。下の「ベースが見つからない」で早期に返す行より後ろへ置くと、
+      //   ある回だけフックの数が変わってReactが壊れる。上限の数値は入力中だけ下書きで持つ
+      const [limitDraft, setLimitDraft] = useState(null);
+      const masu = getMasuMon(masuMonDetail.id) || masuMonDetail;
+      const base = ALL_PLAYER_MONSTERS[masu.baseId];
+      if (!base) { onMissing(); return null; }
+      const settings = normalizeMasuAutoEnhance(masu.autoEnhance);
+      const points = Math.max(0, Math.floor(Number(masu.distAptPoints) || 0));
+      const resolvedApt = resolveMasuDistAptitude(masu, base);
+      const baseApt = masuTranscendBaseAptitude(masu, base);
+      const hasTarget = autoEnhanceHasTarget(settings);
+      // 絆ポイントリセットの直後は自動で振らない(道具代を無駄にしないため)。
+      // 止まっていることを黙っていると「ONなのに働かない」に見えるので、画面で必ず伝える
+      const awaitsReset = masuAwaitsBondResetReallocation(masu);
+      // いま持っているポイントを設定どおりに振ったらどうなるか。設定を変えるたびに作り直すので、
+      // 「この順番でいいのか」を保存前と同じ計算で確かめられる
+      const planned = buildMasuAutoEnhancePlan({ ...masu, autoEnhance:{ ...settings, enabled:true } }, base);
+      const plannedLines = planned ? describeAutoEnhancePlan(planned.plan) : [];
+      const log = (autoEnhanceLog || []).filter(entry => String(entry.masuId) === String(masu.id));
+
+      // null のあいだは保存値をそのまま出す
+      const statLimitText = (key) => {
+        if (limitDraft && limitDraft.key === key) return limitDraft.text;
+        const limit = settings.statLimits[key];
+        return limit === null ? '' : String(limit);
+      };
+      const commitStatLimit = (key) => {
+        if (!limitDraft || limitDraft.key !== key) return;
+        const text = limitDraft.text.trim();
+        setLimitDraft(null);
+        // 空欄は「上限なし」。数字以外が混ざっていたら数字だけを拾う(スマホのキーボード対策)
+        const digits = text.replace(/[^0-9]/g, '');
+        updateAutoEnhance(masu.id, { statLimits:{ ...settings.statLimits, [key]: digits === '' ? null : Number(digits) } });
+      };
+      const setStatLimit = (key, value) => {
+        setLimitDraft(null);
+        updateAutoEnhance(masu.id, { statLimits:{ ...settings.statLimits, [key]: value } });
+      };
+      const setAptLimit = (index, grade) => {
+        const aptLimits = [...settings.aptLimits];
+        aptLimits[index] = grade;
+        updateAutoEnhance(masu.id, { aptLimits });
+      };
+      const captureCurrent = () => {
+        const captured = buildAutoEnhanceLimitsFromCurrent(masu, base);
+        if (captured) { setLimitDraft(null); updateAutoEnhance(masu.id, captured); }
+      };
+      const clearAll = () => {
+        setLimitDraft(null);
+        updateAutoEnhance(masu.id, { statLimits:{ hp:0, atk:0, def:0, guts:0 }, aptLimits:[null,null,null,null] });
+      };
+      const rowLabel = (target) => {
+        const aptIndex = autoEnhanceAptIndexOf(target);
+        return aptIndex != null ? `${RANGE_LABELS[aptIndex]}距離適性` : STAT_POINT_KEYS[target];
+      };
+      // 目標に選べるグレード。いまより下は選べない(下げる強化は存在しないため)
+      const aptChoices = (index) => {
+        const from = Math.max(0, DIST_APTITUDE_GRADES.indexOf(resolvedApt[index] || 'C'));
+        return DIST_APTITUDE_GRADES.slice(from + 1);
+      };
+
+      return (
+        <div style={{position:"absolute",inset:0,backgroundColor:"#020617",zIndex:30000}} className="absolute inset-0 flex flex-col overflow-hidden" data-auto-enhance={masu.id}>
+          <div className="flex items-center gap-2 p-4 shrink-0 border-b border-white/10" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))'}}>
+            <button onClick={onBack} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+            <h2 className="text-xl font-black italic text-lime-300 uppercase tracking-widest flex-1">オート強化</h2>
+          </div>
+          <div data-transcend-enhance-tabs className="shrink-0 w-full max-w-md mx-auto px-4 pt-3 grid grid-cols-3 gap-1.5">
+            <button onClick={onOpenNormalEnhance} className="min-h-[40px] rounded-xl border border-amber-400/50 bg-slate-900 text-amber-200 text-[11px] font-black active:scale-95">通常強化</button>
+            <button onClick={onOpenTranscendEnhance} className="min-h-[40px] rounded-xl border border-sky-400/50 bg-slate-900 text-sky-200 text-[11px] font-black active:scale-95">超越強化</button>
+            <button className="min-h-[40px] rounded-xl bg-lime-500 text-slate-950 text-[11px] font-black">オート強化</button>
+          </div>
+          <div className="shrink-0 w-full max-w-md mx-auto px-4 pt-3"><AssistantBubble scene="masuAutoEnhance" compact/></div>
+          <div className="flex-1 overflow-y-auto mh-scroll p-4 space-y-3 max-w-md mx-auto w-full">
+
+            <div className="flex items-center gap-3 bg-slate-900 border border-lime-500/30 rounded-3xl p-3 shadow-xl">
+              <div className="w-14 h-14 shrink-0 rounded-full overflow-hidden border border-lime-400/40"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/></div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-black text-white truncate">{masu.name}</h3>
+                <div className="text-[9px] text-lime-300 font-black flex items-center gap-1"><Sparkles size={9}/>未使用の強化P {points}</div>
+                <div className="mt-1">{renderPowerBadge(masuPowerOf(masu), {dense:true, size:'sm'})}</div>
+              </div>
+            </div>
+
+            {/* オン / オフ */}
+            <div className={`rounded-3xl border p-3 shadow-xl ${settings.enabled?'border-lime-400/50 bg-lime-950/25':'border-white/10 bg-slate-900'}`}>
+              <button type="button" aria-pressed={settings.enabled} onClick={()=>updateAutoEnhance(masu.id, { enabled: !settings.enabled })}
+                className={`w-full min-h-[52px] rounded-2xl font-black text-[13px] active:scale-95 flex items-center justify-center gap-2 ${settings.enabled?'bg-gradient-to-r from-lime-500 to-emerald-500 text-slate-950':'bg-slate-800 text-slate-300'}`}>
+                <Sparkles size={16}/>{settings.enabled?'オート強化 ON':'オート強化 OFF'}
+              </button>
+              <div className="mt-2 text-[9px] font-bold leading-relaxed text-slate-300">
+                {settings.enabled
+                  ? '強化ポイントが入るたびに、下の順番で上限まで自動で振ります。バトル・スキップ・合体・限界突破・転生のあと、AUTO∞の周回中も同じように働きます。'
+                  : 'OFFのあいだ、この子の強化ポイントは自動では振られません。'}
+              </div>
+              {settings.enabled&&awaitsReset&&(
+                <div className="mt-2 rounded-xl border border-cyan-400/50 bg-cyan-950/30 px-2.5 py-2 text-[9px] font-black text-cyan-200 leading-relaxed">
+                  絆ポイントリセットの直後なので、いまは自動で振りません。振り直すための道具を使ったばかりなので、勝手に振ってしまわないようにしています。通常強化で振り直すか、下の「この内容でいますぐ振る」を押すと、そこから再開します。
+                </div>
+              )}
+              {settings.enabled&&!hasTarget&&(
+                <div className="mt-2 rounded-xl border border-amber-500/50 bg-amber-950/30 px-2.5 py-2 text-[9px] font-black text-amber-200 leading-relaxed">
+                  振ってよい先がまだ1つもないので、ONでも何も振られません。下の上限を決めるか、「いまの配分を上限として取り込む」を押してください。
+                </div>
+              )}
+              <div className="mt-2 text-[8px] font-bold text-slate-500 leading-relaxed">設定は転生しても残ります。上限まで振り終わると、残った強化ポイントはそのまま手元に残るので、手で振ることもできます。</div>
+            </div>
+
+            {/* 上限の一括操作 */}
+            <div className="grid grid-cols-2 gap-2">
+              <button type="button" onClick={captureCurrent} className="min-h-[46px] rounded-xl bg-slate-800 border border-lime-400/40 text-lime-200 text-[10px] font-black active:scale-95 px-2 leading-tight">いまの配分を<br/>上限として取り込む</button>
+              <button type="button" onClick={clearAll} className="min-h-[46px] rounded-xl bg-slate-800 border border-white/10 text-slate-300 text-[10px] font-black active:scale-95 px-2 leading-tight">すべて<br/>「振らない」に戻す</button>
+            </div>
+            <div className="text-[8px] text-slate-500 font-bold leading-relaxed px-1">「いまの配分を上限として取り込む」は、この子にいま振ってある内容をそのまま上限に写します。転生する前に押しておくと、転生後の周回で同じ形まで自動で戻ります。</div>
+
+            {/* いま持っているポイントの行き先 */}
+            <div className="rounded-2xl border border-lime-500/30 bg-black/40 p-3">
+              <div className="text-[10px] font-black text-lime-300 uppercase tracking-wider mb-1.5">いまの {points}P の行き先</div>
+              {points<=0
+                ? <div className="text-[9px] text-slate-400 font-bold">未使用の強化ポイントがありません。</div>
+                : plannedLines.length>0
+                  ? (<>
+                      <div className="space-y-0.5">{plannedLines.map((line,idx)=><div key={idx} className="text-[10px] font-black text-white">・{line}</div>)}</div>
+                      <div className="mt-1 text-[8px] font-bold text-slate-400">{planned.used}P を使い、{points-planned.used}P が残ります。{awaitsReset&&'（絆ポイントリセットの直後なので、自動では振りません）'}</div>
+                      <button type="button" onClick={()=>applyAutoEnhanceNow(masu.id)} className="mt-2 w-full min-h-[44px] rounded-xl bg-gradient-to-r from-lime-600 to-emerald-600 text-white font-black text-[11px] active:scale-95">この内容でいますぐ振る</button>
+                    </>)
+                  : <div className="text-[9px] text-amber-300 font-bold">上限まで振り終わっているので、いまの設定では振る先がありません。</div>}
+            </div>
+
+            {/* 優先順位と上限 */}
+            <div className="bg-slate-900 border border-lime-500/40 rounded-3xl p-3 shadow-xl">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <div className="text-[11px] font-black text-lime-300 uppercase tracking-wider flex items-center gap-1.5"><Sparkles size={14}/>優先順位と上限</div>
+                <div className="text-[9px] text-slate-400 font-bold">上から順に埋めます</div>
+              </div>
+              <div className="space-y-1.5">
+                {settings.order.map((target,rank)=>{
+                  const aptIndex = autoEnhanceAptIndexOf(target);
+                  const isApt = aptIndex != null;
+                  const limit = isApt ? settings.aptLimits[aptIndex] : settings.statLimits[target];
+                  const active = isApt ? limit !== null : (limit === null || limit > 0);
+                  const gain = isApt ? 0 : (STAT_POINT_GAIN[target] || 1);
+                  const spentValue = isApt ? 0 : Math.max(0, Number(masu.statPoints?.[target]) || 0);
+                  const spentPoints = isApt ? 0 : Math.ceil(spentValue / gain);
+                  const choices = isApt ? aptChoices(aptIndex) : [];
+                  return (
+                    <div key={target} className={`rounded-2xl p-2 border ${active?'border-lime-500/30 bg-black/40':'border-white/5 bg-black/20'}`}>
+                      <div className="flex items-center gap-1.5">
+                        <span className={`w-5 h-5 shrink-0 rounded-full text-[9px] font-black flex items-center justify-center ${active?'bg-lime-500 text-slate-950':'bg-slate-700 text-slate-400'}`}>{rank+1}</span>
+                        <span className={`flex-1 min-w-0 truncate text-[11px] font-black ${active?'text-white':'text-slate-500'}`}>{rowLabel(target)}</span>
+                        <button type="button" aria-label={`${rowLabel(target)}の優先順位を上げる`} disabled={rank<=0} onClick={()=>moveAutoEnhanceOrder(masu.id,target,-1)} className="w-9 h-9 shrink-0 rounded-lg bg-slate-700 text-sm font-black active:scale-95 disabled:opacity-20">↑</button>
+                        <button type="button" aria-label={`${rowLabel(target)}の優先順位を下げる`} disabled={rank>=settings.order.length-1} onClick={()=>moveAutoEnhanceOrder(masu.id,target,1)} className="w-9 h-9 shrink-0 rounded-lg bg-slate-700 text-sm font-black active:scale-95 disabled:opacity-20">↓</button>
+                      </div>
+                      {isApt
+                        ? (<div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                            <span className="text-[9px] font-bold text-slate-400 shrink-0">いま</span>
+                            <span className={`text-[12px] font-mono font-black shrink-0 ${DIST_APTITUDE_COLOR[resolvedApt[aptIndex]]}`}>{resolvedApt[aptIndex]}</span>
+                            <span className="text-[8px] text-slate-600 shrink-0">(元{baseApt[aptIndex]})</span>
+                            <span className="text-[9px] font-bold text-slate-400 shrink-0">→ 目標</span>
+                            <select aria-label={`${rowLabel(target)}の目標`} value={limit===null?'':limit} onChange={event=>setAptLimit(aptIndex, event.target.value===''?null:event.target.value)}
+                              className="flex-1 basis-24 min-w-0 min-h-[40px] rounded-lg border border-lime-400/40 bg-slate-950 px-1 text-center text-[11px] font-black text-white">
+                              <option value="">振らない</option>
+                              {limit!==null&&!choices.includes(limit)&&<option value={limit}>{limit}（到達済み）</option>}
+                              {choices.map(grade=><option key={grade} value={grade}>{grade} まで</option>)}
+                            </select>
+                          </div>)
+                        : (<div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                            <span className="text-[9px] font-bold text-slate-400 shrink-0">いま</span>
+                            <span className="text-[11px] font-mono font-black text-emerald-300 shrink-0">+{spentValue}</span>
+                            <span className="text-[8px] text-slate-600 shrink-0">({spentPoints}P)</span>
+                            <span className="text-[9px] font-bold text-slate-400 shrink-0">→ 上限</span>
+                            <label className="flex flex-1 basis-16 min-w-0 items-center gap-0.5">
+                              <input data-auto-enhance-limit={target} aria-label={`${rowLabel(target)}へ振ってよい強化ポイントの上限`} type="text" inputMode="numeric" pattern="[0-9]*" enterKeyHint="done" autoComplete="off"
+                                placeholder="上限なし" value={statLimitText(target)} onFocus={event=>event.currentTarget.select()}
+                                onChange={event=>setLimitDraft({ key:target, text:event.currentTarget.value })}
+                                onBlur={()=>commitStatLimit(target)}
+                                onKeyDown={event=>{ if(event.key==='Enter') event.currentTarget.blur(); }}
+                                className="w-full min-w-0 h-10 rounded-lg border border-lime-400/40 bg-slate-950 px-1 text-center text-[11px] font-mono font-black text-white outline-none focus:border-lime-300 placeholder:text-slate-600 placeholder:font-bold"/>
+                              <span className="text-[9px] font-black text-lime-300 shrink-0">P</span>
+                            </label>
+                            <button type="button" aria-label={`${rowLabel(target)}を上限なしにする`} aria-pressed={limit===null} onClick={()=>setStatLimit(target, null)} className={`w-9 h-10 shrink-0 rounded-lg text-[11px] font-black active:scale-95 ${limit===null?'bg-lime-500 text-slate-950':'bg-slate-700 text-slate-300'}`}>∞</button>
+                            <button type="button" aria-label={`${rowLabel(target)}を振らないにする`} aria-pressed={limit===0} onClick={()=>setStatLimit(target, 0)} className={`w-9 h-10 shrink-0 rounded-lg text-[11px] font-black active:scale-95 ${limit===0?'bg-slate-500 text-slate-950':'bg-slate-700 text-slate-300'}`}>✕</button>
+                          </div>)}
+                      {!isApt&&limit!==null&&limit>0&&(
+                        <div className="mt-1 text-[8px] font-bold text-slate-500">上限まで振ると {STAT_POINT_KEYS[target]} +{limit*gain}（いま +{spentValue}）</div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="mt-2 text-[8px] text-slate-500 font-bold leading-relaxed">ステータスの上限は「その能力へ振ってよい強化ポイントの数」です。空欄か∞で上限なし、✕で振りません。間合い適性はいまより上の段階だけを目標に選べます。</div>
+            </div>
+
+            {/* 直近の自動強化 */}
+            <div className="rounded-2xl border border-white/10 bg-black/30 p-3">
+              <div className="text-[10px] font-black text-slate-300 uppercase tracking-wider mb-1.5">直近の自動強化</div>
+              {log.length<=0
+                ? <div className="text-[9px] text-slate-500 font-bold">このアプリを開いてからは、まだ自動で振られていません。</div>
+                : <div className="space-y-1">{log.slice(0,5).map((entry,idx)=>(
+                    <div key={idx} className="rounded-xl bg-black/40 px-2 py-1.5">
+                      <div className="text-[9px] font-black text-lime-300">{entry.used}P を使いました</div>
+                      <div className="text-[9px] font-bold text-slate-300 leading-relaxed">{entry.lines.join(' ／ ')}</div>
+                    </div>
+                  ))}</div>}
+            </div>
+
+            <button onClick={onBack} className="w-full bg-white text-black py-3.5 rounded-2xl font-black text-sm uppercase active:scale-95 shadow-lg mt-2">完了</button>
+          </div>
+        </div>
+      );
+}
+
 // ---- part: 60-app.jsx ----
 function MonsterHeroGame() {
   const [gameState, setGameState] = useState('HOME');
@@ -19277,6 +19708,15 @@ function MonsterHeroGame() {
   const [inheritedUniqueCompensation, setInheritedUniqueCompensation] = useState(false);
   const masuMonsRef = useRef(masuMons);
   masuMonsRef.current = masuMons;
+  // オート強化が実際に振った記録(このアプリを開いているあいだだけ・保存はしない)。
+  // 「裏で本当に働いているのか」を画面で確かめられるようにするためのもので、
+  // ゲームの進行には一切使わないので、セーブデータを増やさない
+  const [autoEnhanceLog, setAutoEnhanceLog] = useState([]);
+  const pushAutoEnhanceLog = (entries) => {
+    if (!Array.isArray(entries) || entries.length <= 0) return;
+    const stamped = entries.map(entry => ({ ...entry, at:Date.now() }));
+    setAutoEnhanceLog(prev => [...stamped, ...prev].slice(0, 30));
+  };
   // ランの報酬を配ったあとのマスモン。setMasuMons の反映は非同期なので、同じ処理の続きで走る
   // ランキング送信からは「そのランで増えた絆経験値が入る前」の値しか見えなかった。
   // そのため、ランキングへ送る絆Lvと育て方が1ラン遅れていた
@@ -20518,6 +20958,27 @@ function MonsterHeroGame() {
       storeSet('mh_home_pasture_ids', normalized, false);
     }
   }, [masuMons, homePastureIds, pastureLoaded]);
+
+  // ---- オート強化: 強化ポイントが増えたら、設定どおりに自動で振る ----
+  // マスモンが変わるたびにここを通す。強化ポイントが入る道は
+  // バトル・クイック・演奏の周回・スキップチケット・トレーニングチケット・合体・限界突破・転生と多く、
+  // 1か所ずつ呼び出しを足すと必ずどこかを取りこぼすため、「増えたら振る」を1本にまとめてある。
+  // ★何も振らないときは applyAutoEnhanceToMasuMons が null を返すので保存もstate更新もしない。
+  //   振ったあとは強化ポイントが減るので、次に通ったときは自然に止まる(繰り返しにならない)。
+  // ★読み込みが終わるまでは走らせない。読み込み途中の中途半端な値で振ってしまわないようにする。
+  useEffect(() => {
+    if (!dataLoaded) return;
+    const result = applyAutoEnhanceToMasuMons(masuMonsRef.current || masuMons);
+    if (!result) return;
+    masuMonsRef.current = result.next;
+    // ランキング送信が「振る前」の育て方を見ないよう、ランの控えも同じ内容へそろえる
+    if (postRunMasuMonsRef.current) postRunMasuMonsRef.current = result.next;
+    setMasuMons(result.next);
+    storeSet('mh_masu_mons', result.next, false);
+    setMasuMonDetail(prev => prev ? (result.next.find(m => String(m.id) === String(prev.id)) || prev) : prev);
+    pushAutoEnhanceLog(result.results);
+  }, [masuMons, dataLoaded]);
+
   const homePastureMasumons = homePastureIds.map(id=>masuMons.find(m=>String(m.id)===String(id))).filter(m=>m&&ALL_PLAYER_MONSTERS[m.baseId]);
   // セーブ読込後のタイトル中に、最初のHOMEで必ず使う画像だけを最優先で先読みする。
   // 完了をタイトル操作やHOME遷移の条件にはせず、失敗時も通常のimg読込へそのまま任せる。
@@ -20610,9 +21071,9 @@ function MonsterHeroGame() {
     TRAINING_BOARD: 'trainingBoard',
   };
   // プロフィール本体とアイテムはHOMEの曲を続ける。その他の詳細ページ群は従来のプロフィール曲を維持する。
-  const PROFILE_BGM_STATES = ['ROSTER','OWNED_MONSTERS','MASU_MONS','MASU_ENHANCE','MASU_TRANSCEND_ENHANCE','MASU_SOUL_TRAITS'];
+  const PROFILE_BGM_STATES = ['ROSTER','OWNED_MONSTERS','MASU_MONS','MASU_ENHANCE','MASU_TRANSCEND_ENHANCE','MASU_AUTO_ENHANCE','MASU_SOUL_TRAITS'];
   // マスモンの専用育成画面。ここを開いているあいだは詳細モーダルを重ねない(詳細のほうが手前に出てしまうため)
-  const MASU_ENHANCE_STATES = ['MASU_ENHANCE','MASU_TRANSCEND_ENHANCE','MASU_SOUL_TRAITS'];
+  const MASU_ENHANCE_STATES = ['MASU_ENHANCE','MASU_TRANSCEND_ENHANCE','MASU_AUTO_ENHANCE','MASU_SOUL_TRAITS'];
   // 1回のプレイの中で流れる画面。「まだ1度も戦っていない準備中」か「WAVEを終えたあと」かで曲を分ける。
   //  ・準備中(最初の勇者モン選択〜最初のバトルの直前) … 強化フェーズの曲
   //  ・WAVEを終えたあと(リザルト〜次のバトルの直前)   … リザルトの曲をそのまま続ける
@@ -20931,6 +21392,18 @@ function MonsterHeroGame() {
   // 裏で周回したままモンビーを開いた最初の1回だけ
   const quickRhythmBackgroundVisible = quickRhythmGuideReleased && !quickRhythmBackgroundSeen && rhythmBackgroundRun;
   const dismissQuickRhythmBackground = () => { setQuickRhythmBackgroundSeen(true); storeSet(QUICK_RHYTHM_BACKGROUND_KEY, true, false); };
+  // ---- オート強化の使い方案内(CLAUDE.md ⑤) ----
+  // 「強化ポイントが入るたび裏で自動的に振られる」は、遊んでいるだけでは気づけない仕組み。
+  // ヘルプと更新履歴は探しに行った人しか読まないので、強化画面を開いた最初の1回だけ、
+  // 画面のなかでも知らせる。
+  // ★保存キーは新しく足す(既存の mh_* は触らない・CLAUDE.md ⑦)。
+  // ★「見た」と保存されているときだけ出さない。保存が無いうちは出す。
+  //   storeGet は「キーが無い」ときも既定値を返すので、既定値を true にすると
+  //   保存が無い＝見た扱いになり、案内が誰にも一度も出ない
+  const AUTO_ENHANCE_INTRO_KEY = 'mh_masu_auto_enhance_intro_seen_v1';
+  const [autoEnhanceIntroSeen, setAutoEnhanceIntroSeen] = useState(true);
+  const autoEnhanceIntroVisible = !autoEnhanceIntroSeen;
+  const dismissAutoEnhanceIntro = () => { setAutoEnhanceIntroSeen(true); storeSet(AUTO_ENHANCE_INTRO_KEY, true, false); };
   // ---- 曲えらびでの「今週の対象曲」案内(docs/spec/RHYTHM_RANKING.md §10.2) ----
   // ヘルプと更新履歴は探しに行った人しか読まない。週間ランキングは
   // 「開いて初めて気づく」仕組みなので、曲えらびでも1度だけみゅあが伝える(CLAUDE.md ⑤)。
@@ -21856,6 +22329,9 @@ function MonsterHeroGame() {
       // 見た扱い(=出さない)にする。案内が二度出るより、出ないほうが害が小さい
       setQuickRhythmIntroSeen(await storeGet(QUICK_RHYTHM_INTRO_KEY, true, false) !== false);
       setQuickRhythmBackgroundSeen(await storeGet(QUICK_RHYTHM_BACKGROUND_KEY, true, false) !== false);
+      // オート強化の使い方案内。★保存が無いとき(既存ユーザー・新規ともに)は「まだ見ていない」。
+      //   既定値を true にすると、保存が無い＝見た扱いになり、案内が一度も出ない
+      setAutoEnhanceIntroSeen(await storeGet(AUTO_ENHANCE_INTRO_KEY, false, false) === true);
       // イベントの会話ストーリーを見たかどうか。流すかどうかの判定は、
       // wasOnboarded が決まったあと(きき・ももすけの会話と同じところ)で行う
       {
@@ -23319,6 +23795,47 @@ function MonsterHeroGame() {
     });
     Audio_.se.levelUp();
     return updatedMasu;
+  };
+
+  // ---- オート強化(個体ごとの自動強化) ----
+  // 設定そのものはマスモンの中の1項目(autoEnhance)。書き換えはここに集め、画面は props で受ける。
+  // 実際にどこへ何P振るかは 11-masu-progression.jsx の buildMasuAutoEnhancePlan が正本で、
+  // 適用も手で振るときと同じ applyEnhancePlanToMasu を通る(画面に出した内容と結果がずれない)。
+  const saveMasuMonsList = (next) => {
+    masuMonsRef.current = next;
+    setMasuMons(next);
+    storeSet('mh_masu_mons', next, false);
+    // 詳細モーダルを開いたまま設定を変えても、その場の表示が古い個体のままにならないようにする
+    setMasuMonDetail(prev => prev ? (next.find(m => String(m.id) === String(prev.id)) || prev) : prev);
+  };
+  const updateAutoEnhance = (masuId, patch) => {
+    const current = masuMonsRef.current || [];
+    const masu = current.find(m => String(m.id) === String(masuId));
+    if (!masu) return;
+    saveMasuMonsList(current.map(m => String(m.id) === String(masuId) ? buildMasuAutoEnhanceUpdate(m, patch) : m));
+    Audio_.se.tap();
+  };
+  const moveAutoEnhanceOrder = (masuId, target, direction) => {
+    const current = masuMonsRef.current || [];
+    const masu = current.find(m => String(m.id) === String(masuId));
+    if (!masu) return;
+    const moved = buildMasuAutoEnhanceOrderMove(masu, target, direction);
+    if (moved === masu) return;
+    saveMasuMonsList(current.map(m => String(m.id) === String(masuId) ? moved : m));
+    Audio_.se.tap();
+  };
+  // 「いますぐ振る」。OFFのままでも押した本人の操作なので、設定の中身だけを使って一度だけ振る
+  const applyAutoEnhanceNow = (masuId) => {
+    const current = masuMonsRef.current || [];
+    const masu = current.find(m => String(m.id) === String(masuId));
+    if (!masu) return;
+    const applied = applyMasuAutoEnhance({ ...masu, autoEnhance:{ ...normalizeMasuAutoEnhance(masu.autoEnhance), enabled:true } }, { manual:true });
+    if (!applied) return;
+    saveMasuMonsList(current.map(m => String(m.id) === String(masuId) ? applied.masu : m));
+    pushAutoEnhanceLog([{ masuId:masu.id, name:masu.name, used:applied.used, lines:applied.lines }]);
+    saveMissionProgress('enhance');
+    addAssistantBond('enhance');
+    Audio_.se.levelUp();
   };
 
   // マスモンの強化ポイントを1消費し、対象のステータスを1上げる(バランス調整前の暫定仕様: 1pt=+1)
@@ -31129,6 +31646,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             masuMonDetail={masuMonDetail}
             onBack={()=>{setTranscendPlan(null);setTranscendExchangeOpen(false);setGameState('MASU_ENHANCE');}}
             onMissing={()=>setGameState('MASU_ENHANCE')}
+            onOpenAutoEnhance={()=>setGameState('MASU_AUTO_ENHANCE')}
             ownedItems={ownedItems}
             renderPowerBadge={renderPowerBadge}
             saveMissionProgress={saveMissionProgress}
@@ -31161,12 +31679,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {gameState==='MASU_ENHANCE'&&masuMonDetail&&(
           <MasuEnhanceScreen
             addAssistantBond={addAssistantBond}
+            autoEnhanceIntroVisible={autoEnhanceIntroVisible}
             bulkEnhanceUnit={bulkEnhanceUnit}
             bulkPlan={bulkPlan}
             getMasuMon={getMasuMon}
             masuMonDetail={masuMonDetail}
             onBack={backToDetail}
+            onDismissAutoEnhanceIntro={dismissAutoEnhanceIntro}
             onMissing={()=>{ setGameState(masuEnhanceFrom||'MASU_MONS'); setMasuMonDetail(null); setMasuEnhanceFrom(null); }}
+            onOpenAutoEnhance={()=>setGameState('MASU_AUTO_ENHANCE')}
             onOpenTranscendEnhance={()=>{setTranscendPlan(null);setTranscendExchangeError('');setGameState('MASU_TRANSCEND_ENHANCE');}}
             renderPowerBadge={renderPowerBadge}
             saveMissionProgress={saveMissionProgress}
@@ -31175,6 +31696,22 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             setEffect={setEffect}
             setMasuMonDetail={setMasuMonDetail}
             spendPointsBulk={spendPointsBulk}
+          />
+        )}
+
+        {gameState==='MASU_AUTO_ENHANCE'&&masuMonDetail&&(
+          <MasuAutoEnhanceScreen
+            applyAutoEnhanceNow={applyAutoEnhanceNow}
+            autoEnhanceLog={autoEnhanceLog}
+            getMasuMon={getMasuMon}
+            masuMonDetail={masuMonDetail}
+            moveAutoEnhanceOrder={moveAutoEnhanceOrder}
+            onBack={backToDetail}
+            onMissing={()=>{ setGameState(masuEnhanceFrom||'MASU_MONS'); setMasuMonDetail(null); setMasuEnhanceFrom(null); }}
+            onOpenNormalEnhance={()=>setGameState('MASU_ENHANCE')}
+            onOpenTranscendEnhance={()=>{setTranscendPlan(null);setTranscendExchangeError('');setGameState('MASU_TRANSCEND_ENHANCE');}}
+            renderPowerBadge={renderPowerBadge}
+            updateAutoEnhance={updateAutoEnhance}
           />
         )}
 

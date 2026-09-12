@@ -409,6 +409,174 @@ const normalizeAutoRepeatBreakthroughMode = (value, levelValue) => {
   if (value === 'fixed') return level > 0 ? 'fixed' : 'off';
   return level > 0 ? 'fixed' : 'off';
 };
+// ===== オート強化(個体ごとの自動強化設定) =====
+// 転生・限界突破のあとは強化が白紙に戻るため、周回で貯まった強化ポイントを
+// 毎回手で振り直すのが大変だった(2026-09-12・ユーザー要望)。
+// そこで個体ごとに「オン/オフ」「どこまで上げてよいか(上限)」「その中での優先順位」を持たせ、
+// 強化ポイントが入るたびに設定どおりへ自動で振る。
+//
+// ★保存は既存の mh_masu_mons の中の1項目として足す(新しいトップレベルキーは作らない)。
+//   autoRepeatBreakthroughMode と同じ置き方で、持っていない既存データは normalize が既定値で補う。
+// ★転生しても設定だけは残す(resetMasuForRebirth の維持対象に入れてある)。
+//   設定が消えると「転生のたびに設定し直し」になり、この機能の意味が無くなるため。
+const AUTO_ENHANCE_STAT_KEYS = ['hp','atk','def','guts'];
+const AUTO_ENHANCE_APT_TARGETS = ['apt0','apt1','apt2','apt3'];
+// 優先順位に並べる8項目。ステータス4つ＋間合い適性4つ
+const AUTO_ENHANCE_TARGETS = [...AUTO_ENHANCE_STAT_KEYS, ...AUTO_ENHANCE_APT_TARGETS];
+const DEFAULT_AUTO_ENHANCE_ORDER = Object.freeze([...AUTO_ENHANCE_TARGETS]);
+const autoEnhanceAptIndexOf = (target) => {
+  const index = AUTO_ENHANCE_APT_TARGETS.indexOf(target);
+  return index >= 0 ? index : null;
+};
+// 上限の入力欄で受け付ける最大値。1個体が持てる強化Pをはるかに超える値なので実質的な制限にはならないが、
+// 壊れた保存値や指がすべった長い数字で描画が崩れないように頭を止めておく
+const AUTO_ENHANCE_STAT_LIMIT_MAX = 999999;
+// 上限の読み方。
+// ・ステータス … 「その能力へ振ってよい強化Pの数」。null は上限なし(残りを全部使う)、0 は振らない
+// ・間合い適性 … 「目標の段階(グレード)」。null は振らない。Mを指定すれば上限なしと同じ
+const normalizeAutoEnhanceStatLimit = (value) => {
+  if (value === null || value === undefined || value === '') return null; // 上限なし
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return 0;
+  return Math.max(0, Math.min(AUTO_ENHANCE_STAT_LIMIT_MAX, Math.floor(amount)));
+};
+const normalizeAutoEnhanceAptLimit = (value) => (typeof value === 'string' && DIST_APTITUDE_GRADES.includes(value) ? value : null);
+const normalizeMasuAutoEnhance = (value) => {
+  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  // 並び順は「8項目がちょうど1回ずつ」でなければならない。壊れていたら既定の並びへ落とす
+  const rawOrder = Array.isArray(source.order) ? source.order.filter(key => AUTO_ENHANCE_TARGETS.includes(key)) : [];
+  const order = [...new Set(rawOrder)];
+  AUTO_ENHANCE_TARGETS.forEach(key => { if (!order.includes(key)) order.push(key); });
+  const rawStat = source.statLimits && typeof source.statLimits === 'object' && !Array.isArray(source.statLimits) ? source.statLimits : {};
+  const statLimits = Object.fromEntries(AUTO_ENHANCE_STAT_KEYS.map(key => [key,
+    Object.prototype.hasOwnProperty.call(rawStat, key) ? normalizeAutoEnhanceStatLimit(rawStat[key]) : 0]));
+  const rawApt = Array.isArray(source.aptLimits) ? source.aptLimits : [];
+  const aptLimits = [0,1,2,3].map(index => normalizeAutoEnhanceAptLimit(rawApt[index]));
+  return {
+    // 項目を持っていない既存ユーザーは必ずOFF。ある日いきなり勝手に振られることがないようにする
+    enabled: source.enabled === true,
+    order,
+    statLimits,
+    aptLimits,
+  };
+};
+// 1つでも「振ってよい先」が決まっているか。ONでもここが空なら何も起きない
+const autoEnhanceHasTarget = (settings) => {
+  const normalized = normalizeMasuAutoEnhance(settings);
+  return AUTO_ENHANCE_STAT_KEYS.some(key => normalized.statLimits[key] === null || normalized.statLimits[key] > 0)
+    || normalized.aptLimits.some(grade => grade !== null);
+};
+// いま振ってある内容を、そのまま上限として写し取る。
+// 「この形のまま転生して戻したい」がいちばん多い使い方なので、1タップで作れるようにする
+const buildAutoEnhanceLimitsFromCurrent = (masu, base) => {
+  if (!masu || !base) return null;
+  const resolvedApt = resolveMasuDistAptitude(masu, base);
+  return {
+    statLimits: Object.fromEntries(AUTO_ENHANCE_STAT_KEYS.map(key => [key,
+      Math.max(0, Math.ceil((Number(masu.statPoints?.[key]) || 0) / (STAT_POINT_GAIN[key] || 1)))])),
+    aptLimits: [0,1,2,3].map(index => {
+      const baseGrade = masuTranscendBaseAptitude(masu, base)[index];
+      const current = resolvedApt[index];
+      // ベースから1段も上げていない距離は「振らない」。上げてある距離だけ、いまの段階を目標にする
+      return DIST_APTITUDE_GRADES.indexOf(current) > DIST_APTITUDE_GRADES.indexOf(baseGrade) ? current : null;
+    }),
+  };
+};
+// 設定どおりに振る下書き(plan)を作る。実際の適用は applyEnhancePlanToMasu が行うので、
+// 手で振ったときとまったく同じ計算・同じ上限(間合い適性はMで止まる)を通る。
+// 振る先が無い・強化Pが無いときは null を返し、呼び出し側は何もしない。
+const buildMasuAutoEnhancePlan = (masu, base) => {
+  if (!masu || !base) return null;
+  const settings = normalizeMasuAutoEnhance(masu.autoEnhance);
+  if (!settings.enabled) return null;
+  let remaining = Math.max(0, Math.floor(Number(masu.distAptPoints) || 0));
+  if (remaining <= 0) return null;
+  const resolvedApt = resolveMasuDistAptitude(masu, base);
+  const plan = { apt:[0,0,0,0], stat:{ hp:0, atk:0, def:0, guts:0 } };
+  for (const target of settings.order) {
+    if (remaining <= 0) break;
+    const aptIndex = autoEnhanceAptIndexOf(target);
+    if (aptIndex != null) {
+      const limitGrade = settings.aptLimits[aptIndex];
+      if (limitGrade === null) continue;
+      const currentIndex = Math.max(0, DIST_APTITUDE_GRADES.indexOf(resolvedApt[aptIndex] || 'C'));
+      const limitIndex = Math.min(DIST_APTITUDE_GRADES.length - 1, DIST_APTITUDE_GRADES.indexOf(limitGrade));
+      const take = Math.min(Math.max(0, limitIndex - currentIndex), remaining);
+      plan.apt[aptIndex] = take;
+      remaining -= take;
+      continue;
+    }
+    if (!AUTO_ENHANCE_STAT_KEYS.includes(target)) continue;
+    const limit = settings.statLimits[target];
+    if (limit === 0) continue;
+    const gain = STAT_POINT_GAIN[target] || 1;
+    const alreadySpent = Math.max(0, Math.ceil((Number(masu.statPoints?.[target]) || 0) / gain));
+    const capacity = limit === null ? remaining : Math.max(0, limit - alreadySpent);
+    const take = Math.min(capacity, remaining);
+    plan.stat[target] = take;
+    remaining -= take;
+  }
+  const used = plan.apt.reduce((sum, value) => sum + value, 0)
+    + Object.values(plan.stat).reduce((sum, value) => sum + value, 0);
+  return used > 0 ? { plan, used } : null;
+};
+// 自動で振ったときの「何がどれだけ増えたか」。画面のお知らせとログに使う
+const describeAutoEnhancePlan = (plan) => {
+  const lines = [];
+  (plan?.apt || []).forEach((count, index) => { if (count > 0) lines.push(`${RANGE_LABELS[index]}距離適性 +${count}段階`); });
+  Object.entries(plan?.stat || {}).forEach(([key, count]) => {
+    if (count > 0) lines.push(`${STAT_POINT_KEYS[key]} +${count * (STAT_POINT_GAIN[key] || 1)}`);
+  });
+  return lines;
+};
+// 絆ポイントリセットの直後かどうか(振り直しの下書きが残っているか)。
+// 「絆ポイントリセットの書」は500ダイヤの、振り直すための道具。使った直後に自動で振ってしまうと、
+// 振り直す機会ごと道具代を失わせることになるので、ここが残っているあいだは自動では振らない。
+// 自分で振り直すか(spendPointsBulk が下書きを消す)、オート強化の「いますぐ振る」を押した時点で再開する。
+const masuAwaitsBondResetReallocation = (masu) => !!(masu && masu.bondResetAllocationSnapshot);
+// 1体ぶんの自動強化。振るものが無ければ null(呼び出し側は保存もしない)。
+// manual は「プレイヤーが自分で『いますぐ振る』を押した」とき。
+// このときだけリセット直後でも振り、手で振ったときと同じく復元の下書きの役目も終わらせる
+// (残したままだと「リセット前の配分を復元」が、いま振ったぶんの上へ重ねて出てしまう)。
+const applyMasuAutoEnhance = (masu, { manual = false } = {}) => {
+  const base = (typeof ALL_PLAYER_MONSTERS !== 'undefined') ? ALL_PLAYER_MONSTERS[masu?.baseId] : null;
+  if (!base) return null;
+  if (!manual && masuAwaitsBondResetReallocation(masu)) return null;
+  const planned = buildMasuAutoEnhancePlan(masu, base);
+  if (!planned) return null;
+  const applied = applyEnhancePlanToMasu(masu, planned.plan);
+  if (!applied) return null;
+  const { bondResetAllocationSnapshot: _usedResetSnapshot, ...withoutSnapshot } = applied.masu;
+  return { masu:manual ? withoutSnapshot : applied.masu, used:applied.used, lines:describeAutoEnhancePlan(planned.plan) };
+};
+// 所持マスモン全体へ一度に通す。1体も変わらなければ null を返すので、
+// 呼び出し側は「変わったときだけ保存する」を素直に書ける(保存のたびに書き込むのを防ぐ)。
+const applyAutoEnhanceToMasuMons = (masuMons) => {
+  const list = Array.isArray(masuMons) ? masuMons : [];
+  const results = [];
+  const next = list.map(masu => {
+    const applied = applyMasuAutoEnhance(masu);
+    if (!applied) return masu;
+    results.push({ masuId:masu.id, name:masu.name, used:applied.used, lines:applied.lines });
+    return applied.masu;
+  });
+  return results.length > 0 ? { next, results } : null;
+};
+// 設定の書き換え。normalize を必ず通すので、画面側は部分的な patch を渡すだけでよい
+const buildMasuAutoEnhanceUpdate = (masu, patch) => ({
+  ...masu,
+  autoEnhance: normalizeMasuAutoEnhance({ ...normalizeMasuAutoEnhance(masu?.autoEnhance), ...(patch || {}) }),
+});
+// 優先順位を1つ上げ下げする。端では動かさない(押しても何も起きない)
+const buildMasuAutoEnhanceOrderMove = (masu, target, direction) => {
+  const settings = normalizeMasuAutoEnhance(masu?.autoEnhance);
+  const from = settings.order.indexOf(target);
+  const to = from + (direction < 0 ? -1 : 1);
+  if (from < 0 || to < 0 || to >= settings.order.length) return masu;
+  const order = [...settings.order];
+  [order[from], order[to]] = [order[to], order[from]];
+  return buildMasuAutoEnhanceUpdate(masu, { order });
+};
 const MAX_UNIQUE_SKILL_LEVEL = 8;
 // 固有技の強化ポイントは、技を上げるほかに「いまのガッツを戻す」ことにも使える。
 // 育てきって技がすべてMAXになったあともポイントが余らないようにするための使い道。
@@ -1061,6 +1229,8 @@ const normalizeMasuProgression = (masu) => ({
   // 旧booleanは曖昧な上限へ移行せずOFF。既存の数値設定は fixed として互換維持する。
   autoRepeatBreakthroughMode: normalizeAutoRepeatBreakthroughMode(masu?.autoRepeatBreakthroughMode, masu?.autoRepeatBreakthroughLevel),
   autoRepeatBreakthroughLevel: normalizeAutoRepeatBreakthroughLevel(masu?.autoRepeatBreakthroughLevel),
+  // オート強化の個体設定。項目を持っていない既存データはOFF・振り先なしとして読む(移行処理はいらない)
+  autoEnhance: normalizeMasuAutoEnhance(masu?.autoEnhance),
   rebirthCount: Math.max(0, Math.floor(Number(masu?.rebirthCount) || 0)),
   // 転生回数は後から足した項目なので、持っていない既存データは0として扱う
   reincarnateCount: Math.max(0, Math.floor(Number(masu?.reincarnateCount) || 0)),
@@ -1157,6 +1327,12 @@ const resetMasuForRebirth = (masu, { rebirthCount, reincarnateCount, reincarnate
     inheritedReincarnateBonusPoints: inheritedReincarnateBonusPointsOf(masu),
     inheritedReincarnateCount: inheritedReincarnateCountOf(masu),
     levelCap: Math.min(masuLevelCapLimit(masu), Math.max(INITIAL_MASU_LEVEL_CAP, Math.floor(Number(levelCap ?? masu?.levelCap) || INITIAL_MASU_LEVEL_CAP))),
+    // 自動まわりの設定(オート強化・AUTO∞自動限界突破)は「育てた中身」ではなく個体ごとの設定なので、
+    // 転生では失わせない。ここへ入れておかないと、転生のたびに設定し直すことになり、
+    // 「転生後の周回を楽にする」というオート強化の目的そのものが果たせなくなる。
+    autoEnhance: normalizeMasuAutoEnhance(masu?.autoEnhance),
+    autoRepeatBreakthroughMode: normalizeAutoRepeatBreakthroughMode(masu?.autoRepeatBreakthroughMode, masu?.autoRepeatBreakthroughLevel),
+    autoRepeatBreakthroughLevel: normalizeAutoRepeatBreakthroughLevel(masu?.autoRepeatBreakthroughLevel),
     // 魂格は転生で失われない。初到達Lvを持ち越すことで魂格Pの二重取得も防ぐ。
     soulRankStage: normalizeSoulRankStage(masu?.soulRankStage),
     soulPointMaxReachedLevel: normalizeSoulPointMaxReachedLevel(masu?.soulPointMaxReachedLevel),

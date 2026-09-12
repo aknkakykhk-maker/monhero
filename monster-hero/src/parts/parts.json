@@ -178,6 +178,10 @@
       "role": "画面: バトル(BATTLE)と、バトル中にだけ重なる演出4つ。番号が飛んでいるのは 70 が bootstrap のため"
     },
     {
+      "file": "72-screen-masu-auto-enhance.jsx",
+      "role": "画面: マスモンのオート強化設定(MASU_AUTO_ENHANCE)。オン/オフ・上限・優先順位だけを決める"
+    },
+    {
       "file": "60-app.jsx",
       "role": "MonsterHeroGame 本体(全 state・ロジック・各 gameState の JSX)"
     },

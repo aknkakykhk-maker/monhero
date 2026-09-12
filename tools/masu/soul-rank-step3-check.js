@@ -157,9 +157,12 @@ check('マスモン詳細に魂格I未満でも表示される入口がある',
   app.includes('data-soul-trait-entry')&&app.includes("setGameState('MASU_SOUL_TRAITS')"));
 check('魂格特性は独立した全画面',
   app.includes("gameState==='MASU_SOUL_TRAITS'")&&app.includes('data-soul-trait-screen'));
+// 画面が増えるたびに文字列ごと書き換えずに済むよう、「この2つの一覧に MASU_SOUL_TRAITS が
+// 入っているか」だけを見る(見たいのは並びの字面ではなく、そこに入っていること)
+const listOf=(name)=>{const m=app.match(new RegExp(`const ${name} = \\[([^\\]]*)\\]`));return m?m[1].split(',').map(v=>v.trim().replace(/^'|'$/g,'')):[];};
 check('魂格特性画面では背後のマスモン詳細を重ねず、プロフィールBGMを継続する',
-  app.includes("const MASU_ENHANCE_STATES = ['MASU_ENHANCE','MASU_TRANSCEND_ENHANCE','MASU_SOUL_TRAITS']")
-  &&app.includes("const PROFILE_BGM_STATES = ['ROSTER','OWNED_MONSTERS','MASU_MONS','MASU_ENHANCE','MASU_TRANSCEND_ENHANCE','MASU_SOUL_TRAITS']"));
+  listOf('MASU_ENHANCE_STATES').includes('MASU_SOUL_TRAITS')
+  &&listOf('PROFILE_BGM_STATES').includes('MASU_SOUL_TRAITS'));
 check('未解放でも一覧閲覧可・強化だけロック',
   app.includes('data-soul-trait-locked')&&app.includes('Lv500到達＋魂格進化Ⅰで解放')
   &&app.includes('特性一覧と必要魂格Pは先に確認できます'));
