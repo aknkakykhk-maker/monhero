@@ -13398,10 +13398,12 @@ const installRhythmGeometryStyles=()=>{
        HUDはプレイエリアの外にあるので、出す・出さないはJS側の演出量の判定で決める。 */
     [data-rhythm-combo][data-rhythm-combo-pop="1"]{animation:mhRhythmComboPop 180ms ease-out 1;
       transform-origin:center}
+    /* ★倍率(--mh-combo-scale)を掛けたうえで弾ませる。素の scale(1) へ戻すと、
+       段が上がって大きくしたコンボ数が跳ねるたびに一瞬だけ元の大きさへ縮む(2026-09-12)。 */
     @keyframes mhRhythmComboPop{
-      0%{transform:scale(1.34)}
-      55%{transform:scale(.97)}
-      100%{transform:scale(1)}}
+      0%{transform:scale(calc(var(--mh-combo-scale,1)*1.34))}
+      55%{transform:scale(calc(var(--mh-combo-scale,1)*.97))}
+      100%{transform:scale(var(--mh-combo-scale,1))}}
     /* --- 両サイドのマスモン --- */
     /* 動かすのは transform だけ。影・ぼかし・色は動かさないので、跳ねても塗り直しは起きない。
        跳ねる速さは1拍の長さ(--rhythm-side-beat)。曲ごとにプレイ開始時へ一度だけ書く。 */

@@ -77,11 +77,26 @@ ok('コンボ数を大きく出す',(()=>{
   const block=game.slice(at,at+400);
   return at>=0&&block.includes('text-3xl')&&block.includes('landscape:text-base');
 })());
-ok('コンボ数は100 / 200 / 300で段階を変える',
-  game.includes("data-combo-tier={view.combo>=300?'3':view.combo>=200?'2':view.combo>=100?'1':'0'}")
-  &&html.includes('[data-rhythm-combo][data-combo-tier="1"]')
-  &&html.includes('[data-rhythm-combo][data-combo-tier="2"]')
-  &&html.includes('[data-rhythm-combo][data-combo-tier="3"]'));
+// 2026-09-12・ユーザー指示「コンボ数もわかりにくい。増えれば増えるほど目立つようにして」。
+// 100/200/300の3段だったのを 10/30/50/100/200/300/500 の7段にし、段が上がるほど
+// 色だけでなく **大きさ** も変わるようにした(--mh-combo-scale)。
+ok('コンボ数は10〜500の7段で見た目が変わる',
+  game.includes('const RHYTHM_COMBO_TIER_STEPS = Object.freeze([10,30,50,100,200,300,500]);')
+  &&game.includes('const comboTier=rhythmComboTier(view.combo);')
+  &&game.includes("data-combo-tier={String(comboTier)}")
+  &&[1,2,3,4,5,6,7].every(tier=>html.includes(`[data-rhythm-combo][data-combo-tier="${tier}"]`)));
+// ★大きさは font-size ではなく倍率で効かせる。font-size を段ごとに上書きすると、
+//   横持ち(landscape:text-base)の詰めた文字サイズまで巻き添えで壊れる。
+ok('段ごとの大きさは倍率(--mh-combo-scale)で効かせる',
+  game.includes("style={{'--mh-combo-scale':rhythmComboTierScale(comboTier)}}")
+  &&html.includes('transform:scale(var(--mh-combo-scale,1));')
+  // ★起点は「右下」。中央を起点にすると、大きくしたぶん下端が下がってレーンの台形
+  //   (下へ行くほど広い)へ近づき、奥のノーツを隠す(2026-09-12に実測で分かった)。
+  &&html.includes('transform-origin:right bottom;'));
+// ★弾む演出(mhRhythmComboPop)も倍率を掛けたうえで戻す。scale(1)へ戻すと、
+//   大きくしたコンボ数が跳ねるたびに一瞬だけ元の大きさへ縮む。
+ok('弾む演出も倍率のままで戻る',
+  rhythm.includes('100%{transform:scale(var(--mh-combo-scale,1))}}'));
 
 // --- 100コンボごとの演出 ---
 ok('節目の刻みを定数で持っている',game.includes('const RHYTHM_COMBO_MILESTONE_STEP = 100'));

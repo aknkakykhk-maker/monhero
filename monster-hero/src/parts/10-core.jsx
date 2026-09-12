@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-12 11:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-12 13:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -278,6 +278,18 @@ const rhythmPlayRunLoopScale = (songId, event) => {
 //   判定には既存の mh_quick_clears_<難易度> をそのまま読む(新しい保存キーは作らない)。
 const rhythmPlayRunLoopsAllowed = (difficulty, quickClears) =>
   (Number(quickClears?.[difficulty]) || 0) > 0;
+// 演奏の結果(クリア／失敗)で入る周回数を変える(2026-09-12・ユーザー指示
+//   「終了後にクリアか失敗かもわかるようにして / それによって経験値も変わるから」)。
+// 失敗＝ライフが0になったまま曲を終えた(不可逆のDOWN)こと。曲を最後まで演奏したこと自体は
+// 同じなので0にはせず、半分にする(端数は切り捨て、ただし1周は残す)。
+// ★クリアかどうかを渡さない古い呼び出し(undefined)は、これまでどおり全額入る。
+const RHYTHM_PLAY_RUN_LOOP_FAILED_RATE = 0.5;
+const rhythmPlayRunLoopsForResult = (loops, cleared) => {
+  const base = Math.max(0, Math.trunc(Number(loops) || 0));
+  if (base <= 0) return 0;
+  if (cleared !== false) return base;
+  return Math.max(1, Math.floor(base * RHYTHM_PLAY_RUN_LOOP_FAILED_RATE));
+};
 
 // モード選択カードの最高スコアは、現在の選択難易度ではなく、そのモードで
 // 記録対象になっている全難易度の自己ベストから求める。未プレイ・壊れた値は0として扱う。

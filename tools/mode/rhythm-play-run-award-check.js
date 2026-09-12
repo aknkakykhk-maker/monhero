@@ -85,7 +85,15 @@ for (const [rel, src] of sources) {
     /rhythmPlay\.from!=='tutorial'[\s\S]{0,400}?rhythmPlayLoopsFor\(rhythmPlay\.song,rhythmPlay\.difficulty\)/.test(compact.replace(/\s+/g, ''))
     || /rhythmPlay\.from!=='tutorial'\)\{[\s\S]{0,400}?rhythmPlayLoopsFor/.test(src));
   check(`${rel}: その周は締めて次の周から始める`,
-    /awardRhythmPlayRunLoops\(loops\s*,\s*loopScale\)[\s\S]{0,900}?startRunFromRepeatTemplate\(repeat\)/.test(src));
+    /awardRhythmPlayRunLoops\(loops\s*,\s*loopScale[^)]*\)[\s\S]{0,900}?startRunFromRepeatTemplate\(repeat\)/.test(src));
+  // ---- クリアか失敗かで入る周回数が変わる(2026-09-12・ユーザー指示
+  //      「終了後にクリアか失敗かもわかるようにして / それによって経験値も変わるから」) ----
+  // 失敗(ライフ0のまま完走)は半分。判定そのものは演奏側(result.cleared)が決める。
+  check(`${rel}: 失敗したぶんは周回数を減らしてから配る`,
+    compact.includes('constcleared=result?.cleared!==false;')
+    && compact.includes('constloops=rhythmPlayRunLoopsForResult(baseLoops,cleared);'));
+  check(`${rel}: 曲リザルトで「失敗のため半分」と言えるよう、結果へ持って返す`,
+    compact.includes('cleared:cleared!==false,'));
   // ★startRunFromRepeatTemplate は中で stopAutoBattle() を通る。
   //   そのあとAUTOを入れ直さないと、報酬だけ入って周回が止まる
   //   (2026-09-07・ユーザー報告「演奏後周回が止まってる」。
