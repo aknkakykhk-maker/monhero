@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 44a977321e982115
+// source-sha256: ddc348da75b74464
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 96aa56dd51f3263a
+// generated-sha256: dd09b40fcd297fba
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,29 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-13 01:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+// 新しいバージョンのお知らせ(画面の上へ出るバナー)の出し方。
+// 2026-09-12・ユーザー依頼「更新バナーのオンオフをゲーム上の設定で出来るようにしたい」。
+//   'FULL' … 横いっぱいのボタンで「新しいバージョンがあります　更新する」(これまでの形)
+//   'MINI' … 小さく「更新あり」だけ出す
+//   'OFF'  … 出さない(設定 →「ゲームを更新」からいつでも更新できる)
+// 既定は 'FULL'。保存が無い既存ユーザーはこれまでと同じ見え方になる。
+const UPDATE_NOTICE_STYLES = ['FULL', 'MINI', 'OFF'];
+const normalizeUpdateNoticeStyle = value => UPDATE_NOTICE_STYLES.includes(String(value)) ? String(value) : 'FULL';
+const UPDATE_NOTICE_STYLE_KEY = 'mh_update_notice_style_v1';
+const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
+  id: 'FULL',
+  label: 'ふつう',
+  note: '横いっぱいに出す'
+}, {
+  id: 'MINI',
+  label: '小さく',
+  note: '端に小さく出す'
+}, {
+  id: 'OFF',
+  label: '出さない',
+  note: '設定から更新する'
+}]);
+const BUILD_DATE = "2026-09-13 02:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -24317,7 +24339,9 @@ function SettingsScreen({
   onOpenHelp,
   onOpenGameUpdate,
   gameUpdateDisabled,
-  onReturnToTitle
+  onReturnToTitle,
+  updateNoticeStyle,
+  onChangeUpdateNoticeStyle
 }) {
   return /*#__PURE__*/React.createElement("div", {
     className: "flex-1 flex flex-col h-full p-4 overflow-y-auto mh-scroll"
@@ -24357,6 +24381,28 @@ function SettingsScreen({
   }, "\u30B2\u30FC\u30E0\u3092\u66F4\u65B0"), /*#__PURE__*/React.createElement("span", {
     className: "block mt-1 text-[10px] text-slate-400"
   }, "\u6700\u65B0\u306E\u30B2\u30FC\u30E0\u30C7\u30FC\u30BF\u3092\u8AAD\u307F\u8FBC\u307F\u307E\u3059")), /*#__PURE__*/React.createElement("div", {
+    "data-update-notice-setting": true,
+    className: "w-full bg-slate-900 border border-white/10 px-3 py-3 rounded-2xl text-left"
+  }, /*#__PURE__*/React.createElement("b", {
+    className: "block text-[13px] font-black text-slate-200"
+  }, "\u65B0\u3057\u3044\u30D0\u30FC\u30B8\u30E7\u30F3\u306E\u304A\u77E5\u3089\u305B"), /*#__PURE__*/React.createElement("p", {
+    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
+  }, "\u65B0\u3057\u3044\u30D0\u30FC\u30B8\u30E7\u30F3\u304C\u51FA\u305F\u3068\u304D\u306B\u753B\u9762\u3078\u51FA\u308B\u304A\u77E5\u3089\u305B\u3067\u3059\u3002\u300C\u5C0F\u3055\u304F\u300D\u306B\u3059\u308B\u3068\u7AEF\u306B\u5C0F\u3055\u304F\u51FA\u307E\u3059\u3002\u300C\u51FA\u3055\u306A\u3044\u300D\u3092\u9078\u3093\u3067\u3082\u3001\u4E0A\u306E\u300C\u30B2\u30FC\u30E0\u3092\u66F4\u65B0\u300D\u304B\u3089\u3044\u3064\u3067\u3082\u66F4\u65B0\u3067\u304D\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
+    className: "mt-2 grid grid-cols-3 gap-2"
+  }, UPDATE_NOTICE_STYLE_LABELS.map(option => /*#__PURE__*/React.createElement("button", {
+    key: option.id,
+    type: "button",
+    "data-update-notice-style": option.id,
+    "aria-pressed": updateNoticeStyle === option.id,
+    onClick: () => onChangeUpdateNoticeStyle(option.id),
+    className: `min-h-[52px] rounded-xl px-1 py-1.5 text-[11px] font-black leading-tight ${updateNoticeStyle === option.id ? 'bg-cyan-600 text-white' : 'border border-white/15 bg-slate-950 text-slate-300'}`
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "block"
+  }, option.label), /*#__PURE__*/React.createElement("small", {
+    className: "mt-0.5 block text-[8px] font-bold opacity-80"
+  }, option.note)))), /*#__PURE__*/React.createElement("p", {
+    className: "mt-2 text-[9px] font-bold leading-relaxed text-slate-500"
+  }, "\u30E2\u30F3\u30D2\u30ED\u30D3\u30FC\u30C8\u306E\u6F14\u594F\u4E2D\u306F\u3001\u3069\u306E\u8A2D\u5B9A\u3067\u3082\u51FA\u307E\u305B\u3093\uFF08\u30EC\u30FC\u30F3\u306E\u4E0A\u306B\u91CD\u306A\u3063\u3066\u3057\u307E\u3046\u305F\u3081\uFF09\u3002\u66F2\u304C\u7D42\u308F\u3063\u3066\u304B\u3089\u51FA\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("div", {
     className: "text-center text-[9px] font-mono text-slate-600"
   }, "BUILD ", BUILD_DATE), /*#__PURE__*/React.createElement("button", {
     onClick: onReturnToTitle,
@@ -36972,6 +37018,14 @@ function MonsterHeroGame() {
   // 画面から消せるようにする。閉じても更新は行わず、次に開き直したときや
   // さらに新しいバージョンが出たときはまた表示する
   const [dismissedUpdateBuild, setDismissedUpdateBuild] = useState(null);
+  // 新しいバージョンのお知らせの出し方('FULL' / 'MINI' / 'OFF')。設定画面から選ぶ。
+  // 保存が無い既存ユーザーは 'FULL'(これまでと同じ)になる
+  const [updateNoticeStyle, setUpdateNoticeStyleState] = useState('FULL');
+  const setUpdateNoticeStyle = next => {
+    const value = normalizeUpdateNoticeStyle(next);
+    setUpdateNoticeStyleState(value);
+    storeSet(UPDATE_NOTICE_STYLE_KEY, value, false);
+  };
   const [showGameUpdateConfirm, setShowGameUpdateConfirm] = useState(false);
   const [gameUpdatePending, setGameUpdatePending] = useState(false);
   const gameUpdatePendingRef = useRef(false);
@@ -40242,6 +40296,7 @@ function MonsterHeroGame() {
       const savedBattleSpeed = normalizeBattleSpeed(await storeGet(BATTLE_SPEED_KEY, 1, false));
       battleSpeedRef.current = savedBattleSpeed;
       setBattleSpeed(savedBattleSpeed);
+      setUpdateNoticeStyleState(normalizeUpdateNoticeStyle(await storeGet(UPDATE_NOTICE_STYLE_KEY, 'FULL', false)));
       const savedSeVolume = await storeGet('mh_se_volume', DEFAULT_VOLUME, false);
       setSeVolumeState(savedSeVolume);
       const savedBgmVolume = await storeGet('mh_bgm_volume', DEFAULT_VOLUME, false);
@@ -50187,8 +50242,51 @@ function MonsterHeroGame() {
   // body直下へ描画し、各画面のoverflow・transform・モーダルの積層に隠されないようにする。
   // 新しいバージョンの通知。本体を押すと更新、×を押すと今回は閉じる(更新はしない)。
   // 閉じたバージョンを覚えておき、同じバージョンのあいだは出さない。
-  const updateNotice = updateNoticeVisible ? ReactDOM.createPortal(/*#__PURE__*/React.createElement("div", {
+  //
+  // 出し方は設定で選べる(2026-09-12・ユーザー依頼)。'OFF' のときは出さないが、
+  // 設定 →「ゲームを更新」からいつでも更新できるので、更新できなくなるわけではない。
+  //
+  // ★モンヒロビートの演奏中(RHYTHM_PLAY)は、どこにも出さない。
+  //
+  // 2026-09-13・はじめは「画面の上はレーンの奥に重なるから右下へ」としたが、
+  // ユーザー指摘「画面の右下ってモンビー演奏中のレーン上に来ない？」でそのとおりだった。
+  // プレイエリアは flex-1 で画面の下端まで占め(index.html が margin-bottom:0 !important で
+  // 余白も消している)、レーンは inset:0 の全面。台形は下がいちばん広い(上は 27〜73%、
+  // 下は 0〜100%)ので、右下はいちばん右のレーンの真上になる。
+  // しかも判定ラインの下は指で叩く場所なので、誤って押すと曲が中断されて記録が消える。
+  //
+  // 台形の外で空いているのは上部の左右の三角形だけだが、そこはスコアとライフの HUD が
+  // 使っている。つまり演奏中に置ける安全な場所が無い。
+  // 演奏中に更新を押したい場面も無いので、曲が終わって別の画面へ移ってから出す
+  // (updateAvailable は残っているので、戻れば自動的に出る)。
+  const updateNoticeMode = normalizeUpdateNoticeStyle(updateNoticeStyle);
+  const updateNoticeOnPlay = gameState === 'RHYTHM_PLAY';
+  const updateNoticeSmall = updateNoticeMode === 'MINI';
+  const updateNotice = updateNoticeVisible && updateNoticeMode !== 'OFF' && !updateNoticeOnPlay ? ReactDOM.createPortal(updateNoticeSmall ? /*#__PURE__*/React.createElement("div", {
     "aria-live": "assertive",
+    "data-update-notice": "mini",
+    "data-update-notice-place": "top",
+    className: "fixed z-[100000] right-3 flex items-stretch gap-1",
+    style: {
+      top: 'calc(8px + env(safe-area-inset-top))'
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: reloadLatestVersion,
+    className: "flex items-center justify-center gap-1 min-h-[36px] px-2.5 py-1.5 rounded-full border border-amber-200/80 bg-amber-500 text-slate-950 font-black text-[11px] shadow-[0_6px_20px_rgba(0,0,0,0.5)] active:scale-[.98]"
+  }, /*#__PURE__*/React.createElement(RefreshCcw, {
+    size: 13
+  }), /*#__PURE__*/React.createElement("span", null, "\u66F4\u65B0\u3042\u308A")), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "aria-label": "\u3042\u3068\u3067\u66F4\u65B0\u3059\u308B\uFF08\u3053\u306E\u901A\u77E5\u3092\u9589\u3058\u308B\uFF09",
+    onClick: () => setDismissedUpdateBuild(latestBuild || BUILD_DATE),
+    className: "shrink-0 w-8 min-h-[36px] flex items-center justify-center rounded-full border border-amber-200/80 bg-amber-500/90 text-slate-950 shadow-[0_6px_20px_rgba(0,0,0,0.5)] active:scale-[.98]"
+  }, /*#__PURE__*/React.createElement(X, {
+    size: 13
+  }))) : /*#__PURE__*/React.createElement("div", {
+    "aria-live": "assertive",
+    "data-update-notice": "full",
+    "data-update-notice-place": "top",
     className: "fixed z-[100000] left-3 right-3 flex items-stretch gap-1.5",
     style: {
       top: 'calc(8px + env(safe-area-inset-top))'
@@ -53615,7 +53713,9 @@ function MonsterHeroGame() {
       onOpenHelp: () => openHelp(),
       onOpenGameUpdate: () => setShowGameUpdateConfirm(true),
       gameUpdateDisabled: showGameUpdateConfirm || gameUpdatePending,
-      onReturnToTitle: () => setShowOfficialTitleConfirm(true)
+      onReturnToTitle: () => setShowOfficialTitleConfirm(true),
+      updateNoticeStyle: updateNoticeStyle,
+      onChangeUpdateNoticeStyle: setUpdateNoticeStyle
     }), gameState === 'MASU_PATTERN_DEBUG' && (() => {
       const eligible = masuMons.filter(m => ALL_PLAYER_MONSTERS[m.baseId]);
       const selected = eligible.find(m => String(m.id) === String(patternMasuId));

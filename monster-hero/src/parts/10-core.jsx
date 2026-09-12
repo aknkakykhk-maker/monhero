@@ -67,7 +67,22 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-13 01:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+// 新しいバージョンのお知らせ(画面の上へ出るバナー)の出し方。
+// 2026-09-12・ユーザー依頼「更新バナーのオンオフをゲーム上の設定で出来るようにしたい」。
+//   'FULL' … 横いっぱいのボタンで「新しいバージョンがあります　更新する」(これまでの形)
+//   'MINI' … 小さく「更新あり」だけ出す
+//   'OFF'  … 出さない(設定 →「ゲームを更新」からいつでも更新できる)
+// 既定は 'FULL'。保存が無い既存ユーザーはこれまでと同じ見え方になる。
+const UPDATE_NOTICE_STYLES = ['FULL', 'MINI', 'OFF'];
+const normalizeUpdateNoticeStyle = (value) =>
+  UPDATE_NOTICE_STYLES.includes(String(value)) ? String(value) : 'FULL';
+const UPDATE_NOTICE_STYLE_KEY = 'mh_update_notice_style_v1';
+const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
+  { id: 'FULL', label: 'ふつう', note: '横いっぱいに出す' },
+  { id: 'MINI', label: '小さく', note: '端に小さく出す' },
+  { id: 'OFF', label: '出さない', note: '設定から更新する' },
+]);
+const BUILD_DATE = "2026-09-13 02:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
