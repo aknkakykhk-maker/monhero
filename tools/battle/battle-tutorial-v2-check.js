@@ -162,6 +162,15 @@ const check = (name, ok, detail = '') => {
     await startOfDiff('Beginner').dispatchEvent('click');
     await page.getByRole('heading', { name: '勇者モンを選択' }).waitFor({ timeout: 15000 });
     check('練習のまま勇者モン選択まで進む', true);
+    // ★練習は記録を残さないために debugBattleRef を立てるので、その副作用で
+    //   勇者モン選択へ「🛠 デバッグ最強モン」(Mocchiのコピーでidも同じ)が割り込み、
+    //   台本の heroId による絞り込みで本物のモッチーが一覧から消えていた。
+    //   そのまま進むと台本の敵を一撃で倒してしまい、固有技までの説明が飛ぶ
+    check('練習の勇者モン選択にデバッグ個体が並ばない',
+      await page.getByText('デバッグ最強モン').count() === 0);
+    const mocchiCard = page.locator('button').filter({ hasText: 'モッチー' }).first();
+    check('台本どおりモッチーを選べる',
+      await mocchiCard.count() === 1 && await mocchiCard.isEnabled());
 
     // --- ⑦ やめると始めた場所へ帰り、既読は書き換わらない ---
     await page.locator('button').filter({ hasText: /^やめる$/ }).first().dispatchEvent('click');

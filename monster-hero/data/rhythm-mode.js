@@ -13715,7 +13715,33 @@ const rhythmEnsureHitEffects=area=>{
   return layer;
 };
 // 判定ラインの高さでノーツの幅に合わせて光らせる。span は 0〜1 のプレイエリア比で受け取る。
-const rhythmSpawnHitEffect=(area,{centerRatio,widthRatio,judgment,monster=false})=>{
+// ── CSSアニメーションの「流し直し」を、1フレームに1回のレイアウトで済ませる ──────────
+//
+// 【2026-09-12・ユーザー指摘】
+// 「モンスターノーツでかくつきがまた出てきた / 曲もあわせて遅くなる(重くなる？)ときもある」
+//
+// 同じ要素へ同じ印を付け直しても、CSSアニメーションは頭から流れ直さない。そこで
+// 「印を外す → void el.offsetWidth → 印を付ける」という書き方をしていた。
+// この offsetWidth の読み取りが**ページ全体のレイアウトをその場で計算し直させる**
+// (強制同期レイアウト)。箇所ごとに書いていたので、モンスターノーツを取った1フレームで
+// 5回も計算し直していた(ふつうのノーツは3回)。
+//
+//   ヒット演出 / 画面フラッシュ / サイドのマスモンの歓声 / 判定文字 / コンボ数
+//
+// 外す→読む→付ける の「読む」は1回で足りる。まとめて外し、1回だけ読み、まとめて付ける。
+// **見た目も再生の始まる時刻も変わらない**(同じ処理の中で終わるため)。
+const rhythmRestartAnimations=entries=>{
+  const list=(Array.isArray(entries)?entries:[]).filter(entry=>entry&&entry.el&&entry.attr);
+  if(!list.length)return 0;
+  for(const entry of list)entry.el.dataset[entry.attr]='';
+  // ここ1回だけ。印を外したことを確定させるためにレイアウトを読む
+  void list[0].el.offsetWidth;
+  for(const entry of list)entry.el.dataset[entry.attr]=entry.value===undefined?'1':entry.value;
+  return list.length;
+};
+// defer:true を渡すと、印を付けずに「付けるべき印」だけを返す。
+// 呼び出し側が rhythmRestartAnimations へまとめて渡すことで、レイアウトの読み取りを1回にできる。
+const rhythmSpawnHitEffect=(area,{centerRatio,widthRatio,judgment,monster=false,defer=false})=>{
   const layer=rhythmEnsureHitEffects(area);
   if(!layer||!layer._rhythmPool.length)return null;
   const item=layer._rhythmPool[layer._rhythmNext%layer._rhythmPool.length];
@@ -13727,7 +13753,9 @@ const rhythmSpawnHitEffect=(area,{centerRatio,widthRatio,judgment,monster=false}
   item.style.setProperty('--rhythm-hit-color',monster?'#fde047':rhythmHitEffectColor(judgment));
   item.style.setProperty('--rhythm-hit-ms',`${RHYTHM_HIT_EFFECT_MS[kind]}ms`);
   item.style.setProperty('--rhythm-spark-scale',monster?'2.1':'1');
-  // 同じ要素をすぐ使い回すときは、アニメーションを一度切らないと最初から再生されない
+  // 同じ要素をすぐ使い回すときは、アニメーションを一度切らないと最初から再生されない。
+  // defer なら「切って付け直す」を呼び出し側のまとめ処理へ譲る(レイアウトの読み取りを1回にするため)。
+  if(defer)return {el:item,attr:'rhythmHitKind',value:kind};
   item.dataset.rhythmHitKind='';
   void item.offsetWidth;
   item.dataset.rhythmHitKind=kind;
@@ -14418,8 +14446,52 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   };
   return {
     attach(next){canvas=next||null;ctx=canvas?canvas.getContext('2d'):null;},
+    // ── 演奏が始まる前に、光のスプライトを焼いておく ──────────────────────────
+    //
+    // 【2026-09-12・ユーザーとのやりとり】
+    // 「演奏前に事前ダウンロードみたいな機能をいれて終わってから演奏開始とか意味ない？」
+    //
+    // ダウンロードするものは残っていない(音源は await 済み・ジャケットは曲えらび・
+    // 譜面は起動時)。残っていたのは**描画の準備**で、光のスプライトを
+    // 「その種類のノーツが曲の中で初めて出た瞬間」に作っていた。
+    // 実測(dpr2・演出FULL)で、いちばん最初の1回が46ms(canvasの初期化込み)、
+    // 種類が増えるごとに約3ms、合計およそ60ms。60fpsのフレーム3.6本ぶんで、
+    // モンスターノーツは3枚まとめて作るのでいちばん重い。
+    //
+    // READY→3→2→1 のカウントダウンが3.2秒あるので、そこへ黙って寄せれば見えない。
+    // 同じ考え方はヒットエフェクトの器で既にやっている(rhythmEnsureHitEffects)。
+    //
+    // ★ここで渡す値は、実際に描くときと**同じ**でなければならない。スプライトの
+    //   キャッシュのキーは「種類と画素密度」だけなので、違う色・太さで焼くと
+    //   そのまま曲の終わりまで使われてしまう。
+    // ★画素密度も begin() と同じやり方で決める。ここで違う値にすると、最初の begin() が
+    //   食い違いを見て sprites.clear() を呼び、焼いたぶんが丸ごと捨てられる。
+    warmSprites(options={}){
+      if(typeof document==='undefined')return 0;
+      const nextDpr=Math.min(Number(options.dpr)||(typeof devicePixelRatio==='number'?devicePixelRatio:1)||1,options.lightweight?2:3);
+      if(nextDpr!==dpr){dpr=nextDpr;sprites.clear();}
+      effect=options.effect||'FULL';
+      const before=sprites.size;
+      // 粒のまわりの光。種類ごとに1枚。FAILED は glow が空なので作らない(描くときも作らない)
+      for(const [type,style] of Object.entries(HEADS)){
+        if(style.glow&&style.glow.length)glowSprite(type,style.radius,style.glow);
+      }
+      // モンスターノーツのアウラ(外は脈打つ・内は固定)
+      auraSprite('outer',6,4,9999,'rgba(216,180,254,.62)',AURA_OUTER_GLOWS,AURA_OUTER_DOTS);
+      auraSprite('inner',1,-2,9999,'rgba(255,250,205,.98)',AURA_INNER_GLOWS);
+      // FLICKの矢印
+      arrowSprite('flick',26,19,FLICK_ARROW_GLOWS,FLICK_ARROW_FILL);
+      // 終端バーの光と、終点フリックの矢印
+      const endGlows=effect==='LOW'?END_BAR_GLOWS_LOW:END_BAR_GLOWS;
+      glowSprite('end',4,endGlows);
+      glowSprite('endFlick',4,endGlows);
+      arrowSprite('endFlick',24,17,END_FLICK_ARROW_GLOWS,END_FLICK_ARROW_FILL);
+      return sprites.size-before;
+    },
     release(){canvas=null;ctx=null;sprites.clear();},
     get drawn(){return drawn;},
+    // 焼いてあるスプライトの枚数(検査で「曲の中で増えないこと」を見るために使う)
+    spriteCount(){return sprites.size;},
     // 毎フレームの最初に呼ぶ。プレイエリアの大きさ・画素密度が変わっていたら canvas を作り直し、全面を消す
     begin(rect,options={}){
       if(!canvas||!ctx||!rect||!(rect.width>0&&rect.height>0))return false;

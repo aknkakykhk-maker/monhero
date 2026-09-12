@@ -77,10 +77,14 @@ check('0だとハート・数字・バーの見た目が変わる(赤くなる�
   // ひび割れは、要素を増やさずバーの ::before / ::after をハの字に置いて描く
   &&html.includes('[data-rhythm-life][data-life-state="down"] [data-rhythm-life-track]::before')
   &&html.includes('[data-rhythm-life][data-life-state="down"] [data-rhythm-life-track]::after'));
+// 2026-09-12: 印の付け直し(CSSアニメーションの流し直し)を rhythmRestartAnimations へ
+// まとめたので、「その場で印を付ける」文字列は無くなった。強制同期レイアウトを
+// 演出の数だけ走らせないための変更で、揺らす・数字を出すという作りは同じ。
 check('減った瞬間に揺らし、減った量を一瞬だけ出す',
   game.includes('const lifeDelta=run.life-lifeBefore;')
-  &&game.includes("lifeBox.dataset.rhythmLifeHit='1';")
+  &&game.includes("lifeRestarts.push({el:lifeBox,attr:'rhythmLifeHit'})")
   &&game.includes('lifeDamage.textContent=String(lifeDelta);')
+  &&game.includes('rhythmRestartAnimations(lifeRestarts)')
   &&html.includes('[data-rhythm-life][data-rhythm-life-hit="1"]'));
 // ★根性で蘇生したときは「増えた」側なので出さない。増減どちらでも出すと、回復のたびに揺れる
 check('増えたときには出さない(減ったときだけ)',game.includes('if(lifeDelta<0){'));

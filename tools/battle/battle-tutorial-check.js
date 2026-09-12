@@ -175,6 +175,18 @@ check('記録を残さない戦いではミッションも進めない',
 //   条件そのものは変わっていないが、種族チャレンジと極限の距離ルールが同じ行へ足された
 check('練習は強化フェーズまで進める',
   has('if (debugBattleRef.current && !speciesChallengeBattleRunRef.current && !battleScenarioRef.current'));
+// 練習は記録を残さないために debugBattleRef を立てるが、その副作用で勇者モン選択へ
+// デバッグ最強モン(Mocchiのコピーで id も 'Mocchi' のまま)が割り込んでいた。
+// 台本は heroId:'Mocchi' で候補を1体に絞るので、本物のモッチーが一覧から消えて
+// 「選べるのはデバッグ最強モンだけ」になり、攻撃力99990で台本の敵(HP500)を
+// 距離技の一撃で倒してしまう。通常攻撃・技変更・固有技の説明がまるごと飛ぶため、
+// 台本が動いている間は混ぜない(2026-09-12・ユーザー指摘)
+const debugHeroListBlock = source.slice(source.indexOf('const debugHeroMonsterList = (list) => {'),
+  source.indexOf('const getUnlockedBaseMonsterList'));
+check('練習中の勇者モン選択にデバッグ個体を混ぜない',
+  debugHeroListBlock.includes('if (battleScenarioRef.current) return list;')
+    && debugHeroListBlock.indexOf('if (battleScenarioRef.current) return list;')
+       < debugHeroListBlock.indexOf('makeDebugStrongestMonster()'));
 
 // --- ④ 入口は3つ・戻り先を覚える ---
 check('デバッグ設定から開始できる', has('<button onClick={()=>startBattleTutorial()}') && has('バトルチュートリアル開始'));
