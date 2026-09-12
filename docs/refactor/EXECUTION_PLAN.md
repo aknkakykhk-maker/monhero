@@ -78,7 +78,7 @@ S/A 等級は `REGRESSION_RISK_MAP.md` に基づく。
 STEP 1・2・4・5・6 は完了、STEP 3 は5本目まで、STEP 7 は4本目まで、
 **STEP 10 の Tailwind 静的化は完了(2026-09-12)**(進捗は [`README.md`](README.md))。
 
-いま **6本落ちている**。全407本を流して見つけたもので、
+いま **7本落ちている**。全407本を流して見つけたもので、
 **どれも Tailwind 静的化より前から落ちている**(切り替え前のコミットを別の作業ツリーへ出して
 同じ検査を流し、同じNGが出ることを確かめた)。調べた内容は
 [`../ops/failing-checks-20260912.md`](../ops/failing-checks-20260912.md) にまとめてある。
@@ -90,6 +90,7 @@ node tools/battle/battle-menu-browser-check.js
 node tools/masu/masu-enhance-layer-check.js
 node tools/mode/extreme-browser-check.js
 node tools/mode/rhythm-audio-independence-check.js
+node tools/mode/rhythm-mode-foundation-check.js
 ```
 
 安全網(STEP 1)の値打ちは「落ちたら本当に何かが壊れている」状態を保てることなので、
