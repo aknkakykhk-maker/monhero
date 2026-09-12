@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ac120272faacbc3f
+// source-sha256: 33cc3fb5f204e7dd
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 39f796e31d765a54
+// generated-sha256: 8414356f72d1cb97
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-13 03:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-13 03:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5077,6 +5077,19 @@ const rhythmLifeState = life => {
 //   有効で、意味も変わらない(-100〜+100の範囲は同じ)。
 const RHYTHM_TIMING_OFFSET_MAX_MS = 100;
 const RHYTHM_TIMING_OFFSET_STEP_MS = 1;
+// モンスターノーツを取ったときの演出の強さ(2026-09-13・ユーザー依頼
+// 「設定でモンスターノーツを踏んだときの軽量化バージョンもほしい」)。
+//   NORMAL … いまのまま(粒が2.1倍・画面全体が金色に光る・そのマスモンが大きく跳ねる)
+//   LIGHT  … **画面全体の光をやめる**。粒と跳ねは残す。いちばん重いのが全画面の描き直し
+//   OFF    … 粒もふつうのノーツと同じにして、跳ねもやめる
+// ★どの段でも**音・能力名・振動は残す**。取れたことが分からなくなるのがいちばん困るため。
+const RHYTHM_MONSTER_EFFECT_LABELS = Object.freeze([['NORMAL', '標準'], ['LIGHT', '軽め'], ['OFF', '最小']]);
+const RHYTHM_MONSTER_EFFECT_LEVELS = Object.freeze(RHYTHM_MONSTER_EFFECT_LABELS.map(([id]) => id));
+// コンボ数の大きさ(2026-09-13・ユーザー依頼「コンボ数のサイズ設定もほしい」)。
+// 置き場所ごとの基準の大きさ(真ん中52px / 端34px)へ、この割合を掛ける。
+const RHYTHM_COMBO_SIZE_MIN = 70;
+const RHYTHM_COMBO_SIZE_MAX = 150;
+const RHYTHM_COMBO_SIZE_STEP = 10;
 const RHYTHM_LANE_GLOW_LABELS = Object.freeze([['NORMAL', '標準'], ['LOW', '控えめ'], ['NONE', 'なし']]);
 const RHYTHM_EFFECT_LABELS = Object.freeze([['NORMAL', '標準'], ['LOW', '少なめ'], ['MINIMAL', '最小']]);
 const RHYTHM_SIDE_MONSTER_OPACITY_LABELS = Object.freeze([['NORMAL', 'はっきり'], ['SOFT', 'ふつう'], ['FAINT', 'うっすら'], ['OFF', '出さない']]);
@@ -5109,8 +5122,10 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   judgmentTextPosition: 50,
   comboDisplay: true,
   comboPosition: 'CENTER',
+  comboSize: 100,
   holdSlideOpacity: 80,
   laneGlow: 'NORMAL',
+  monsterNoteEffect: 'NORMAL',
   noteSeVolume: 70,
   noteSeEnabled: true,
   vibrationEnabled: false,
@@ -5155,6 +5170,8 @@ const normalizeRhythmSettings = value => {
     judgmentTextPosition: rhythmFiniteInRange(source.judgmentTextPosition, 0, 100, DEFAULT_RHYTHM_SETTINGS.judgmentTextPosition),
     comboDisplay: bool('comboDisplay'),
     comboPosition: RHYTHM_COMBO_POSITIONS.includes(source.comboPosition) ? source.comboPosition : DEFAULT_RHYTHM_SETTINGS.comboPosition,
+    comboSize: rhythmFiniteStep(source.comboSize, RHYTHM_COMBO_SIZE_MIN, RHYTHM_COMBO_SIZE_MAX, RHYTHM_COMBO_SIZE_STEP, DEFAULT_RHYTHM_SETTINGS.comboSize),
+    monsterNoteEffect: RHYTHM_MONSTER_EFFECT_LEVELS.includes(source.monsterNoteEffect) ? source.monsterNoteEffect : DEFAULT_RHYTHM_SETTINGS.monsterNoteEffect,
     holdSlideOpacity: rhythmFiniteInRange(source.holdSlideOpacity, 10, 100, DEFAULT_RHYTHM_SETTINGS.holdSlideOpacity),
     laneGlow: RHYTHM_LANE_GLOW_LEVELS.includes(source.laneGlow) ? source.laneGlow : DEFAULT_RHYTHM_SETTINGS.laneGlow,
     noteSeVolume: rhythmFiniteStep(source.noteSeVolume, 0, RHYTHM_VOLUME_MAX, 1, DEFAULT_RHYTHM_SETTINGS.noteSeVolume),
@@ -20707,9 +20724,15 @@ const RhythmOptions = ({
     full: true
   }), field('FAST / SLOW表示', toggle('fastSlowDisplay')), field('判定文字表示', toggle('judgmentTextDisplay')), field('レーン発光', segments('laneGlow', RHYTHM_LANE_GLOW_LABELS), null, {
     full: true
-  }), field('コンボ数', /*#__PURE__*/React.createElement(React.Fragment, null, toggle('comboDisplay'), draft.comboDisplay !== false && /*#__PURE__*/React.createElement("div", {
+  }), field('コンボ数', /*#__PURE__*/React.createElement(React.Fragment, null, toggle('comboDisplay'), draft.comboDisplay !== false && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: wide ? 'mt-1.5' : 'mt-2'
-  }, segments('comboPosition', RHYTHM_COMBO_POSITION_LABELS))), '出す/出さないと、出す場所（左・中央・右・右上）を選べます。端へ寄せる3つは、両サイドのマスモンに重ならない高さへ出ます。どこに置いても判定・スコア・コンボの数え方は変わりません。', {
+  }, segments('comboPosition', RHYTHM_COMBO_POSITION_LABELS)), /*#__PURE__*/React.createElement("div", {
+    className: wide ? 'mt-1.5' : 'mt-2'
+  }, stepper('comboSize', RHYTHM_COMBO_SIZE_MIN, RHYTHM_COMBO_SIZE_MAX, RHYTHM_COMBO_SIZE_STEP, {
+    fine: RHYTHM_COMBO_SIZE_STEP,
+    coarse: RHYTHM_COMBO_SIZE_STEP * 2,
+    suffix: '%'
+  })))), '出す/出さないと、出す場所（左・中央・右・右上）、大きさ（70〜150%）を選べます。端へ寄せる3つは、両サイドのマスモンに重ならないところへ出ます。大きさを上げると、端に寄せたときはレーンにかかることがあります。どこに置いても判定・スコア・コンボの数え方は変わりません。', {
     full: true
   }), field('両サイドのマスモン｜濃さ', segments('sideMonsterOpacity', RHYTHM_SIDE_MONSTER_OPACITY_LABELS), 'レーンの外側の空いたところへ、設定したマスモンが出て拍に合わせて跳ねます。ノーツが見づらいときや、端末が熱くなりやすいときは薄くするか止めてください。', {
     full: true
@@ -20763,6 +20786,8 @@ const RhythmOptions = ({
   }, "\u25C6 \u30B7\u30B9\u30C6\u30E0\u8A2D\u5B9A"), /*#__PURE__*/React.createElement("div", {
     className: wide ? grid : `mt-3 ${grid}`
   }, field('演出量', segments('effectAmount', RHYTHM_EFFECT_LABELS), '動きがカクついたり、端末が熱くなったりするときは「少なめ」にしてください。判定文字の金色の帯や虹が流れるのを止め、光のにじみを減らします（色・グラデーション・字の大きさは標準と同じままです）。「最小」にすると、それに加えて100コンボごとの演出や光そのものもほぼ出なくなります。', {
+    full: true
+  }), field('モンスターノーツの演出', segments('monsterNoteEffect', RHYTHM_MONSTER_EFFECT_LABELS), 'モンスターノーツを取ったときの演出の強さです。「軽め」にすると、画面全体が金色に光るのをやめます（いちばん重いのがこの全画面の描き直しです）。「最小」にすると、光る粒もふつうのノーツと同じになり、両サイドのマスモンも跳ねません。どの段でも、音・能力名・振動はそのまま残るので、取れたことは分かります。', {
     full: true
   }), field('軽量モード', toggle('lightweightMode')), field('曲えらびで試聴する', toggle('songPreviewEnabled')), field('タップ時の振動', /*#__PURE__*/React.createElement(React.Fragment, null, toggle('vibrationEnabled'), /*#__PURE__*/React.createElement("button", {
     type: "button",
@@ -22503,16 +22528,23 @@ const RhythmTapTest = ({
         // 流し直す印はここで集めて、最後にまとめて1回のレイアウトで付け直す
         // (箇所ごとに void offsetWidth を書くと、その回数ぶんページ全体のレイアウトが走る)。
         const restarts = [];
+        // モンスターノーツの演出の強さ(2026-09-13・ユーザー依頼「軽量化バージョンもほしい」)。
+        //   NORMAL … 粒2.1倍 ＋ 画面全体の光 ＋ そのマスモンが大きく跳ねる
+        //   LIGHT  … 画面全体の光をやめる(いちばん重いのが全画面の描き直し)。粒と跳ねは残す
+        //   OFF    … 粒もふつうのノーツと同じにし、跳ねもやめる
+        // ★どの段でも音・能力名・振動は残す。取れたことが分からなくなるのがいちばん困る。
+        const monsterEffect = RHYTHM_MONSTER_EFFECT_LEVELS.includes(settings.monsterNoteEffect) ? settings.monsterNoteEffect : 'NORMAL';
+        const bigMonsterEffect = monsterHit && monsterEffect !== 'OFF';
         const hitEffect = rhythmSpawnHitEffect(area, {
           centerRatio: span.center,
           widthRatio: span.width,
           judgment,
-          monster: monsterHit,
+          monster: bigMonsterEffect,
           precise: preciseHit,
           defer: true
         });
         if (hitEffect) restarts.push(hitEffect);
-        if (monsterHit && screenFlashRef.current) restarts.push({
+        if (monsterHit && monsterEffect === 'NORMAL' && screenFlashRef.current) restarts.push({
           el: screenFlashRef.current,
           attr: 'rhythmFlash'
         });
@@ -22523,7 +22555,8 @@ const RhythmTapTest = ({
           const slot = rhythmNoteMonsterSlot(note),
             el = slot ? sideMonsterRefs.current[slot - 1] : null;
           if (el) {
-            restarts.push({
+            // 「最小」では跳ねない(跳ねはそのマスモンの周りを描き直すため)
+            if (monsterEffect !== 'OFF') restarts.push({
               el,
               attr: 'rhythmSideHit'
             });
@@ -22674,7 +22707,7 @@ const RhythmTapTest = ({
     scheduleJudgmentClear();
     if (abilityFlash) scheduleAbilityClear();
     if (_judgeT0) RHYTHM_PERF.judge(performance.now() - _judgeT0, !!monster);
-  }, [chart.totalNotes, difficulty.maxScore, scheduleAbilityClear, scheduleJudgmentClear, settings.vibrationEnabled, tutorial]);
+  }, [chart.totalNotes, difficulty.maxScore, scheduleAbilityClear, scheduleJudgmentClear, settings.vibrationEnabled, settings.monsterNoteEffect, tutorial]);
   const finish = useCallback(() => {
     const run = runRef.current;
     if (!run || run.finished || run.paused) return;
@@ -23966,7 +23999,8 @@ const RhythmTapTest = ({
     "data-combo-tier": String(comboTier),
     className: "block font-black leading-none tabular-nums text-white",
     style: {
-      '--mh-combo-scale': rhythmComboTierScale(comboTier)
+      '--mh-combo-scale': rhythmComboTierScale(comboTier),
+      '--mh-combo-size': rhythmFiniteInRange(settings.comboSize, RHYTHM_COMBO_SIZE_MIN, RHYTHM_COMBO_SIZE_MAX, 100) / 100
     }
   }, view.combo), /*#__PURE__*/React.createElement("span", {
     "data-rhythm-combo-label": true,
