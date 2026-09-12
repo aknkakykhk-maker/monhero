@@ -89,8 +89,21 @@ check('noteSeVolumeをゲインへ反映する',
   startCount===2&&lastGain>0&&Math.abs(lastGain-.035*seScale*.5)<1e-9);
 // ★1音あたりの蓋。倍率を上げすぎて音が割れるのを防ぐ
 const seMax=Number(source.match(/const RHYTHM_NOTE_SE_LEVEL_MAX = ([\d.]+);/)?.[1]);
-check('1音あたりの上限を持ち、いちばん大きい音でもそこへ届かない',
+check('1音あたりの上限を持ち、音量100までならどの音もそこへ届かない',
   Number.isFinite(seMax)&&seMax<=1&&.05*seScale<=seMax&&.042*seScale<=seMax);
+// ===== 音量の上限を200まで開けた(2026-09-12・ユーザー指示「音量調整を今のベースで200まで」) =====
+// ★100の意味は変えない。広げただけなので、保存してある0〜100はそのままの音で鳴る。
+const volumeMax=Number(source.match(/const RHYTHM_VOLUME_MAX = (\d+);/)?.[1]);
+check('音量の上限を1か所の定数で持っている',volumeMax===200);
+check('タップ音の読み取り・試聴の両方で上限まで受け取る',
+  source.includes('Math.min(RHYTHM_VOLUME_MAX,number)')
+  &&source.includes('Math.min(RHYTHM_VOLUME_MAX,Number(previewSettings.noteSeVolume)||0)'));
+// タップ音は上限の音量でもちょうど2倍まで素直に伸びる(蓋に当たらない)
+check('タップ音は音量200でも蓋に当たらない(100のちょうど2倍まで伸びる)',
+  .035*seScale*(volumeMax/100)<=seMax);
+// 重ねて鳴らす音(モンスターノーツ・フルコンボ)は、そこから上は割れるだけなので蓋で止める
+check('重ねて鳴らす音は上限の音量では蓋で止まる(割れさせない)',
+  .05*seScale*(volumeMax/100)>seMax&&.042*seScale*(volumeMax/100)>seMax);
 // ★BGM音量・メインゲームの音量には触れない(タップ音だけを変えたことの担保)
 check('BGM音量とメインゲームの音量には触れていない',
   !source.includes('RHYTHM_NOTE_SE_GAIN_SCALE*rhythmVolumePct')

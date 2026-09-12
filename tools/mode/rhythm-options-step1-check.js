@@ -19,6 +19,11 @@ ok('下部固定操作バーと独立スクロール領域',game.includes('data-
 ok('数値5項目はスライダーと押しやすい−／＋の両方で変えられる',
   game.includes('const stepper=(key,min,max,step')
   &&['bgmVolume','noteSeVolume','noteSpeed','noteSize','judgmentTimingOffsetMs'].every(key=>game.includes(`stepper('${key}'`))
+  // 音量は0〜200(2026-09-12・ユーザー指示)。100の意味は今までと同じで、上へ広げただけ
+  &&game.includes("stepper('bgmVolume',0,RHYTHM_VOLUME_MAX,1)")
+  &&game.includes("stepper('noteSeVolume',0,RHYTHM_VOLUME_MAX,1)")
+  &&game.includes('rhythmFiniteStep(source.bgmVolume,0,RHYTHM_VOLUME_MAX,1')
+  &&game.includes('rhythmFiniteStep(source.noteSeVolume,0,RHYTHM_VOLUME_MAX,1')
   &&game.includes('data-rhythm-option-stepper={key}')
   &&game.includes('min-h-[48px] min-w-[48px]')
   &&game.includes('<input type="range" data-rhythm-option-slider={key}'));
@@ -47,8 +52,10 @@ ok('現在量が溝の色で見えて、現在値も常時表示',
   &&game.includes('<output aria-live="polite"'));
 ok('変更時に保存ボタンを明示',game.includes("data-dirty={dirty?'true':'false'}")&&game.includes("dirty?'変更を保存':'保存'"));
 ok('試聴はボタンの直接イベントから既存音声経路を使う',game.includes('onClick={previewBgm}')&&game.includes("Audio_.startRhythmTrack('atsu_cup_theme',draft.bgmVolume)")&&game.includes('onClick={()=>RHYTHM_NOTE_SE_RUNTIME.preview(draft)}')&&data.includes('preview:settings=>play(settings)'));
+// 2026-09-12: 音量の上限を200まで開けた(ユーザー指示)。100までの値は今までとまったく同じで、
+// クランプの上限だけが 1 → RHYTHM_VOLUME_MAX/100 へ広がっている。
 ok('音ゲーBGM音量だけを専用gainへ反映(メインのbgmGainは経由しない)',
-  game.includes('const raw=Math.max(0,Math.min(1,Number(rhythmVolumePct)/100))*safeTrackGain(track);')
+  game.includes('const raw=Math.max(0,Math.min(RHYTHM_VOLUME_MAX/100,Number(rhythmVolumePct)/100))*safeTrackGain(track);')
   // 2026-09-11: 「音が出ないとき」の音量メーターを足したとき、出口が masterOut(計測用の
   // ノード)経由になった。メーターが無い環境では ctx.destination へ落ちる。
   // どちらでも「メインの bgmGain を経由していない」ことに変わりはないので、両方を通す
