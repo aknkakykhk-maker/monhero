@@ -40,7 +40,7 @@ window.addEventListener('unhandledrejection', function(ev){ window.__mhErr('[pro
 // ここでは各ファイルの実サイズを重みにして、実際に受け取ったバイト数で動かす。
 window.__mhBoot = (function () {
   // 起動時に読み込むファイルの実サイズ(バイト)。tools/build.js が実ファイルから書き込む
-  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":7761,"data/images/images-enemy.js":1347,"data/ally-monsters.js":24360,"data/lineages.js":8832,"data/breeder.js":26823,"data/enemy-monsters.js":1785,"data/skills.js":4375,"data/rhythm-mode.js":1125073,"data/rhythm-lane-svg.js":7147,"data/rhythm-geometry-calibration.js":15405,"data/rhythm-result-replay-remount.js":5401,"data/rhythm-event.js":29490,"data/changelog.js":653956,"data/help.js":342569,"data/rhythm-step3-release.js":7722,"data/assistants.js":296388,"tailwind.css":118603,"game-system.compiled.js":3654340,"data/images/title-screen-clean.jpg":699051,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
+  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":7761,"data/images/images-enemy.js":1347,"data/ally-monsters.js":24360,"data/lineages.js":8832,"data/breeder.js":26823,"data/enemy-monsters.js":1785,"data/skills.js":4375,"data/rhythm-mode.js":1125073,"data/rhythm-lane-svg.js":7147,"data/rhythm-geometry-calibration.js":15405,"data/rhythm-result-replay-remount.js":5401,"data/rhythm-event.js":29490,"data/changelog.js":654121,"data/help.js":342683,"data/rhythm-step3-release.js":7722,"data/assistants.js":296388,"tailwind.css":118603,"game-system.compiled.js":3654908,"data/images/title-screen-clean.jpg":699051,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
   var total = 0, k;
   for (k in SIZES) total += SIZES[k];
   var got = {};   // ファイルごとに「いま何バイト受け取ったか」
@@ -98,7 +98,7 @@ window.__mhBoot = (function () {
 })();
 // 本体JSのキャッシュキー。ここで一度だけ宣言し、下の読み込み処理でも同じ値を使う。
 // 先読みと <script> のURLがずれると、同じ2.7MBを2回取りに行くことになる
-var GAME_BUILD = '202609131416';
+var GAME_BUILD = '202609131417';
 window.__mhGameBuild = GAME_BUILD;
 // 起動でいちばん大きいのは本体JS(約2.7MB)。いちばん後ろで読むため、そこへ来ると
 // ゲージが止まって見えていた。先に取りはじめて、受け取ったバイト数をそのまま出す。
@@ -119,7 +119,7 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.jpg', 'data/images/titl
      作るのは tools/build-tailwind.js(node tools/build.js が中身の変化を見て必要なときだけ呼ぶ)。
      landscape: の差し替え(自前で画面を回したときにも効かせる)もそちらの設定へ移してある。
      ?v= は中身のハッシュ。tools/stamp-version.js が data/*.js と同じ仕組みで打つ。 -->
-<link rel="stylesheet" href="tailwind.css?v=f13fcb40b817" onload="__mhBoot.done('tailwind.css','見た目を読み込み中')" onerror="__mhBoot.fail('tailwind.css')">
+<link rel="stylesheet" href="tailwind.css?v=5b9448d6e331" onload="__mhBoot.done('tailwind.css','見た目を読み込み中')" onerror="__mhBoot.fail('tailwind.css')">
 <style>
   html, body { margin:0; padding:0; background:#000; overscroll-behavior:none; -webkit-tap-highlight-color:transparent; height:100%; }
   /* 画面の高さは、ここで決めた --mh-vh ひとつだけを使う。
@@ -759,9 +759,17 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.jpg', 'data/images/titl
   [data-rhythm-hud] [data-rhythm-life-heart]{
     font-size:calc(14px * (1 + (var(--mh-life-scale,1) - 1) * .5));
   }
+  /* ★伸ばすのは**横**(2026-09-13・ユーザー指摘「むしろ横に伸ばすほうがいいと思った」)。
+     太さも倍率どおりに増やすが、見やすさの主役はゲージの長さ。
+     ★横持ちは器そのものを横長へ回しているので、台形の外の空きが桁違いに広い
+       (器844pxのうち台形の上辺は152px。左右に346pxずつ空く)。基準の長さを倍にしてある。
+       ここは data-life-wide で出し分ける(CSSの landscape: は自前回転では効かないため)。 */
   [data-rhythm-hud] [data-rhythm-life-track]{
     height:calc(10px * var(--mh-life-scale,1));
-    width:calc(48px * (1 + (var(--mh-life-scale,1) - 1) * .15));
+    width:calc(48px * var(--mh-life-scale,1));
+  }
+  [data-rhythm-hud] [data-rhythm-life][data-life-wide="1"] [data-rhythm-life-track]{
+    width:calc(96px * var(--mh-life-scale,1));
   }
   [data-rhythm-hud] [data-rhythm-life-value]{
     font-size:calc(10px * (1 + (var(--mh-life-scale,1) - 1) * .8));
@@ -1303,8 +1311,8 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.jpg', 'data/images/titl
 <script src="data/rhythm-geometry-calibration.js?v=1e490f73b5e2" onload="__mhBoot.done('data/rhythm-geometry-calibration.js','音ゲー座標校正を読み込み中')" onerror="__mhBoot.fail('data/rhythm-geometry-calibration.js')"></script>
 <script src="data/rhythm-result-replay-remount.js?v=25f459cc2892" onload="__mhBoot.done('data/rhythm-result-replay-remount.js','音ゲー再プレイ処理を読み込み中')" onerror="__mhBoot.fail('data/rhythm-result-replay-remount.js')"></script>
 <script src="data/rhythm-event.js?v=075384be82be" onload="__mhBoot.done('data/rhythm-event.js','週間ランキングを読み込み中')" onerror="__mhBoot.fail('data/rhythm-event.js')"></script>
-<script src="data/changelog.js?v=e0c910970d87" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
-<script src="data/help.js?v=27b984c001bd" onload="__mhBoot.done('data/help.js','ヘルプを読み込み中')" onerror="__mhBoot.fail('data/help.js')"></script>
+<script src="data/changelog.js?v=a6836ac6df0a" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
+<script src="data/help.js?v=ba1b2beb0f39" onload="__mhBoot.done('data/help.js','ヘルプを読み込み中')" onerror="__mhBoot.fail('data/help.js')"></script>
 <script data-mhsave-backup src="data/mhsave-backup.js?v=7845a4fd261f" onload="__mhBoot.done('data/mhsave-backup.js','バックアップ機能を読み込み中')" onerror="__mhBoot.fail('data/mhsave-backup.js')"></script>
 <script src="data/rhythm-step3-release.js?v=e09b26e107d5" onload="__mhBoot.done('data/rhythm-step3-release.js','音ゲー更新情報を読み込み中')" onerror="__mhBoot.fail('data/rhythm-step3-release.js')"></script>
 <!-- 助手はbreeder.jsの顔アイコンを画像に使うため、必ずその後に読み込む -->
