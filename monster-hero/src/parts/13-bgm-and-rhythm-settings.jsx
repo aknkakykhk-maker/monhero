@@ -193,7 +193,11 @@ const RHYTHM_TIMING_OFFSET_STEP_MS = 1;
 //   LIGHT  … **画面全体の光をやめる**。粒と跳ねは残す。いちばん重いのが全画面の描き直し
 //   OFF    … 粒もふつうのノーツと同じにして、跳ねもやめる
 // ★どの段でも**音・能力名・振動は残す**。取れたことが分からなくなるのがいちばん困るため。
-const RHYTHM_MONSTER_EFFECT_LABELS = Object.freeze([['NORMAL','標準'],['LIGHT','軽め'],['OFF','最小']]);
+// ★既定は LIGHT(軽め)。2026-09-13にユーザーから「演出量が普通だと重いという声が多い /
+//   少なめをデフォルトにして今の普通を多めとかにしたい / モンスターノーツも同じく」。
+//   IDは変えない(保存済みの値の意味が変わらないようにするため。CLAUDE.md ⑦)。
+//   変えるのは**画面に出す名前と既定値だけ**なので、自分で選んで保存した人はそのまま。
+const RHYTHM_MONSTER_EFFECT_LABELS = Object.freeze([['NORMAL','多め'],['LIGHT','軽め'],['OFF','最小']]);
 const RHYTHM_MONSTER_EFFECT_LEVELS = Object.freeze(RHYTHM_MONSTER_EFFECT_LABELS.map(([id])=>id));
 // コンボ数の大きさ(2026-09-13・ユーザー依頼「コンボ数のサイズ設定もほしい」)。
 // 置き場所ごとの基準の大きさ(真ん中52px / 端34px)へ、この割合を掛ける。
@@ -206,7 +210,9 @@ const RHYTHM_COMBO_SIZE_MIN = 70;
 const RHYTHM_COMBO_SIZE_MAX = 150;
 const RHYTHM_COMBO_SIZE_STEP = 10;
 const RHYTHM_LANE_GLOW_LABELS = Object.freeze([['NORMAL','標準'],['LOW','控えめ'],['NONE','なし']]);
-const RHYTHM_EFFECT_LABELS = Object.freeze([['NORMAL','標準'],['LOW','少なめ'],['MINIMAL','最小']]);
+// ★既定は LOW(少なめ)。2026-09-13・ユーザー指摘「演出量が普通だと重いという声が多い」。
+//   IDはそのまま(NORMAL=いちばん盛る段)。名前を「標準」から「多め」へ変え、既定を LOW にした。
+const RHYTHM_EFFECT_LABELS = Object.freeze([['NORMAL','多め'],['LOW','少なめ'],['MINIMAL','最小']]);
 const RHYTHM_SIDE_MONSTER_OPACITY_LABELS = Object.freeze([['NORMAL','はっきり'],['SOFT','ふつう'],['FAINT','うっすら'],['OFF','出さない']]);
 const RHYTHM_SIDE_MONSTER_MOTION_LABELS = Object.freeze([['NORMAL','跳ねる'],['SMALL','小さく跳ねる'],['NONE','動かない']]);
 // ★AUTO(おすすめ)は「台形の外でいちばん広く空いているところ」(2026-09-13・ユーザー提案
@@ -228,8 +234,8 @@ const RHYTHM_RANK_COLORS = Object.freeze({
 const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   bgmVolume:100, noteSpeed:6, noteSize:100, noteStartPosition:0, displayTimingOffsetMs:0, judgmentTimingOffsetMs:0,
   fastSlowDisplay:true, judgmentTextDisplay:true, judgmentTextPosition:50, comboDisplay:true, comboPosition:'AUTO', comboSize:100, comboOpacity:100, holdSlideOpacity:80, laneGlow:'NORMAL',
-  monsterNoteEffect:'NORMAL',
-  noteSeVolume:70, noteSeEnabled:true, vibrationEnabled:false, effectAmount:'NORMAL', lightweightMode:false,
+  monsterNoteEffect:'LIGHT',
+  noteSeVolume:70, noteSeEnabled:true, vibrationEnabled:false, effectAmount:'LOW', lightweightMode:false,
   livePartnerVisible:true,
   // 両サイドのマスモン(2026-09-05)。既存の保存値には無いので、読み込み時は既定で補われる。
   sideMonsterOpacity:'NORMAL', sideMonsterMotion:'NORMAL', sideMonsterAbilityHighlight:true,

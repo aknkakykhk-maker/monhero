@@ -128,8 +128,11 @@ ok('コンボ数を大きく出す',
 //   「軽め」でそこだけ止め、「最小」では粒も跳ねも通常と同じにする。
 //   どの段でも音・能力名・振動は残す(取れたことが分からなくなるのがいちばん困る)。
 ok('モンスターノーツの演出の強さを選べる',
-  /RHYTHM_MONSTER_EFFECT_LABELS *= *Object\.freeze\(\[\['NORMAL','標準'\],\['LIGHT','軽め'\],\['OFF','最小'\]\]\)/.test(game)
-  &&game.includes("monsterNoteEffect:'NORMAL'")
+  /RHYTHM_MONSTER_EFFECT_LABELS *= *Object\.freeze\(\[\['NORMAL','多め'\],\['LIGHT','軽め'\],\['OFF','最小'\]\]\)/.test(game)
+  // 既定は「軽め」(2026-09-13・ユーザー指摘「演出量が普通だと重いという声が多い /
+  // 少なめをデフォルトにして今の普通を多めとかにしたい / モンスターノーツも同じく」)。
+  // IDは変えていないので、自分で選んで保存した人の設定はそのまま(CLAUDE.md ⑦)
+  &&game.includes("monsterNoteEffect:'LIGHT'")
   &&game.includes('monsterNoteEffect:RHYTHM_MONSTER_EFFECT_LEVELS.includes(source.monsterNoteEffect)?source.monsterNoteEffect:DEFAULT_RHYTHM_SETTINGS.monsterNoteEffect')
   &&game.includes("segments('monsterNoteEffect',RHYTHM_MONSTER_EFFECT_LABELS)")
   // 「軽め」「最小」で画面全体の光を出さない
@@ -199,8 +202,15 @@ ok('演出量「少なめ」で、判定文字とコンボの流れを止めら�
   &&['GREAT','EXCELLENT','MARVELOUS'].every(j=>html.includes(`[data-rhythm-play-area][data-rhythm-effect="LOW"] [data-rhythm-judgment-text][data-judgment="${j}"]{`))
   // 選ぶ場所と、何が止まるのかの説明がオプションにある
   &&game.includes("segments('effectAmount',RHYTHM_EFFECT_LABELS)")
-  &&/RHYTHM_EFFECT_LABELS *= *Object\.freeze\(\[\['NORMAL','標準'\],\['LOW','少なめ'\],\['MINIMAL','最小'\]\]\)/.test(game)
-  &&game.includes('動きがカクついたり'));
+  &&/RHYTHM_EFFECT_LABELS *= *Object\.freeze\(\[\['NORMAL','多め'\],\['LOW','少なめ'\],\['MINIMAL','最小'\]\]\)/.test(game)
+  // 既定は「少なめ」。いちばん重い「判定文字の毎フレームの塗り直し」を既定で避ける
+  &&game.includes("effectAmount:'LOW'")
+  &&game.includes('既定は「少なめ」です'));
+// 軽量モードが何を止めるのかを画面から読める(2026-09-13・ユーザーからの質問
+// 「軽量モードはどういう効果があるの？」。それまで説明が1文字も無かった)
+ok('軽量モードの効果が画面に書いてある',
+  /field\('軽量モード',toggle\('lightweightMode'\),\s*'[^']{80,}'/.test(game)
+  &&game.includes('判定・判定窓・スコア・ライフ・譜面・音は一切変わりません'));
 // 2026-09-13・ユーザー指摘「演出量少なめでジャストマーベラスとマーベラスの色の差が少ない /
 //   演出量は少なめキープで差を出したい / マーベラスが金でジャストマーベラスが虹だから出来そう」。
 // ★流す前提の background-size(金260% / 虹220% / コンボ300%)のまま animation だけ止めると、
