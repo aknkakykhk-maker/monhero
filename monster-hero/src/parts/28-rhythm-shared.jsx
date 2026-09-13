@@ -585,6 +585,8 @@ const rhythmEventRewardItem=(reward)=>{
     return item?{id:item.id,name:item.name,emoji:item.emoji||'🍇'}:null;
   }
   if(reward.kind==='heroProof')return {id:HERO_PROOF_ITEM_ID,name:HERO_PROOF_ITEM.name,emoji:HERO_PROOF_ITEM.emoji};
+  // 週間ランキングの順位報酬・参加報酬(2026-09-13)
+  if(reward.kind==='heroProofShard')return {id:HERO_PROOF_SHARD_ITEM_ID,name:HERO_PROOF_SHARD_ITEM.name,emoji:HERO_PROOF_SHARD_ITEM.emoji};
   if(reward.kind==='rainbowFruit')return {id:RAINBOW_TRANSCEND_FRUIT_ITEM_ID,name:RAINBOW_TRANSCEND_FRUIT_ITEM.name,emoji:'🌈'};
   return null;
 };
@@ -603,9 +605,11 @@ const RhythmEventBanner=({event,className=''})=>{
   );
 };
 // 参加報酬の1行。ダイヤと虹のプシュケーだけなので、アイテムの実体は要らない
+// 参加報酬の1行。週間は勇者の証片も付くので、アイテムぶんも出す
 const rhythmEventParticipationText=(reward)=>{
   if(!reward)return '';
   const parts=[];
+  if(reward.count>0)parts.push(`${HERO_PROOF_SHARD_ITEM.emoji} ${HERO_PROOF_SHARD_ITEM.name}×${reward.count.toLocaleString()}`);
   if(reward.gold>0)parts.push(`💎 ダイヤ×${reward.gold.toLocaleString()}`);
   if(reward.psyche>0)parts.push(`💗 虹のプシュケー×${reward.psyche.toLocaleString()}`);
   return parts.join(' ／ ');
@@ -618,5 +622,7 @@ const rhythmEventRewardText=(reward)=>{
   const parts=[];
   if(item&&reward.count>0)parts.push(`${item.emoji} ${item.name}×${reward.count}`);
   if(reward.psyche>0)parts.push(`💗 虹のプシュケー×${reward.psyche.toLocaleString()}`);
+  // 週間の順位報酬にはダイヤも付く(イベントの順位報酬には無いので、ある時だけ出す)
+  if(reward.gold>0)parts.push(`💎 ダイヤ×${reward.gold.toLocaleString()}`);
   return parts.join(' ／ ');
 };

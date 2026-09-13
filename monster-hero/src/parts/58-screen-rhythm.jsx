@@ -370,6 +370,8 @@ function RhythmEventRewardModal({ prize, onClaim, claiming }) {
   const { event, prizes, participation } = prize;
   // 入賞していなくても参加報酬だけで出ることがあるので、見出しを言い分ける
   const won = Array.isArray(prizes) && prizes.length > 0;
+  // 週間ランキングは「イベント」ではないので、見出しと参加条件の言い方を分ける
+  const weekly = event && event.kind === 'weekly';
   return (
     <div data-rhythm-event-reward className="fixed inset-0 z-[90000] flex items-center justify-center bg-black/80 p-4">
       <div className="w-full max-w-sm rounded-3xl border-2 border-amber-300/70 bg-slate-950 p-4 shadow-2xl">
@@ -381,7 +383,7 @@ function RhythmEventRewardModal({ prize, onClaim, claiming }) {
             <li key={entry.divisionId} data-rhythm-event-reward-row className="rounded-2xl border border-amber-300/40 bg-amber-500/5 p-2">
               <p className="flex items-baseline gap-2 text-[10px] font-black text-amber-200">
                 <span className="min-w-0 flex-1 truncate text-slate-200">
-                  {entry.songId ? (rhythmSongFullName(rhythmEventSong(entry.songId, RHYTHM_SONGS)) || entry.songId) : '総合'}
+                  {entry.songId ? (rhythmSongFullName(rhythmEventSong(entry.songId, RHYTHM_SONGS)) || entry.songId) : (weekly ? 'その週の累計スコア' : '総合')}
                 </span>
                 <b className="shrink-0 text-sm text-amber-100">{entry.rank}位</b>
               </p>
@@ -391,7 +393,7 @@ function RhythmEventRewardModal({ prize, onClaim, claiming }) {
         </ul>
         {participation&&(
           <div data-rhythm-event-reward-participation className="mt-2 rounded-2xl border border-cyan-300/40 bg-cyan-500/5 p-2">
-            <p className="text-[10px] font-black text-cyan-200">参加報酬（対象曲を{participation.songs}曲すべて）</p>
+            <p className="text-[10px] font-black text-cyan-200">参加報酬（{weekly?`その週に${participation.plays}回遊びました`:`対象曲を${participation.songs}曲すべて`}）</p>
             <p className="mt-1 text-[10px] leading-tight text-white">{rhythmEventParticipationText(participation)}</p>
           </div>
         )}
@@ -399,7 +401,7 @@ function RhythmEventRewardModal({ prize, onClaim, claiming }) {
           className="mt-4 min-h-[52px] w-full rounded-2xl border-2 border-amber-300 bg-amber-500/20 text-sm font-black text-amber-50 active:scale-[.98] disabled:opacity-50">
           {claiming ? '受け取っています…' : '🎁 受け取る'}
         </button>
-        <p className="mt-2 text-center text-[9px] leading-relaxed text-slate-400">超越の実・勇者の証・虹のプシュケーはHOMEの「アイテム」から、ダイヤは画面上の表示から確認できます。</p>
+        <p className="mt-2 text-center text-[9px] leading-relaxed text-slate-400">超越の実・勇者の証・勇者の証片・虹のプシュケーはHOMEの「アイテム」から、ダイヤは画面上の表示から確認できます。{weekly&&'勇者の証片はマーケットで20個ごとに「勇者の証」1個と交換できます。'}</p>
       </div>
     </div>
   );
@@ -456,9 +458,14 @@ function RhythmRankingScreen({
       const eventSongId=rhythmEventDivisionSongId(eventDivisionId);
       const eventRange=rhythmEventWindow(eventDefinition,event.window);
       const eventSongCount=eventDefinition?eventDefinition.songIds.length:0;
-      // その部門の報酬(1位から順に)。報酬を持たない週間ランキングでは空になる
+      // ★週間は**累計スコア方式**(2026-09-13)。曲ごとのベストではなく、その週に出した記録を
+      //   ぜんぶ足す。対象曲も無いので、1行に出すのは「遊んだ回数」にする
+      const eventWeekly=boardKind==='weekly';
+      // 何位まで報酬があるか。週間は1〜10位、イベントは1〜5位(数はデータ側が決める)
+      const eventRankCount=rhythmEventRewardRankCount(eventDefinition);
+      // その部門の報酬(1位から順に)
       const eventRewardRanks=eventDefinition
-        ?Array.from({length:RHYTHM_EVENT_REWARD_RANKS},(_,index)=>({
+        ?Array.from({length:eventRankCount},(_,index)=>({
           rank:index+1,reward:rhythmEventRewardForRank(eventDefinition,eventDivisionId,index+1),
         })).filter(entry=>!!entry.reward)
         :[];
@@ -470,7 +477,7 @@ function RhythmRankingScreen({
       const eventRewardsByDivision=eventDefinition
         ?eventDivisions.map(division=>({
           division,
-          ranks:Array.from({length:RHYTHM_EVENT_REWARD_RANKS},(_,index)=>({
+          ranks:Array.from({length:eventRankCount},(_,index)=>({
             rank:index+1,reward:rhythmEventRewardForRank(eventDefinition,division.id,index+1),
           })).filter(entry=>!!entry.reward),
         })).filter(entry=>entry.ranks.length>0)
@@ -569,7 +576,7 @@ function RhythmRankingScreen({
           {rankingBreederIcon(entry)}
           <div className="min-w-0 flex-1">
             <p className="truncate text-xs font-black text-white">{entry.userName}</p>
-            <p className="text-[9px] text-slate-400">{entry.songCount} / {eventSongCount}曲 ・ Lv.{entry.level}</p>
+            <p className="text-[9px] text-slate-400">{eventWeekly?`${entry.playCount}回 ・ ${entry.songCount}曲`:`${entry.songCount} / ${eventSongCount}曲`} ・ Lv.{entry.level}</p>
           </div>
           <div className="shrink-0 text-right">
             <p className="font-mono text-sm font-black text-fuchsia-100">{entry.totalScore.toLocaleString()}</p>
@@ -659,7 +666,7 @@ function RhythmRankingScreen({
                 className="mb-3 flex w-full items-center gap-2 rounded-2xl border border-amber-300/40 bg-amber-500/10 px-3 text-left"
                 style={{minHeight:'44px'}}>
                 <span className="shrink-0 text-sm">🎁</span>
-                <span className="min-w-0 flex-1 truncate text-[10px] font-black text-amber-200">イベント詳細（報酬・対象曲）</span>
+                <span className="min-w-0 flex-1 truncate text-[10px] font-black text-amber-200">{eventWeekly?'週間ランキングの詳細（報酬・数え方）':'イベント詳細（報酬・対象曲）'}</span>
                 <span className="shrink-0 text-[10px] font-black text-amber-200">›</span>
               </button>
               {/* 部門。対象曲ごと＋総合で、数は対象曲の数から作る。
@@ -774,7 +781,7 @@ function RhythmRankingScreen({
               --mh-vh はiPhoneのアドレスバーを除いた実際の高さを入れてあるもの */}
           <div className="w-full max-w-md overflow-y-auto mh-scroll rounded-3xl border-2 border-amber-300/60 bg-slate-950 p-4"
             style={{maxHeight:'calc(var(--mh-vh) - 2rem - env(safe-area-inset-top) - env(safe-area-inset-bottom))'}}>
-            <p className="mb-2 text-center text-[10px] font-black tracking-widest text-amber-300">EVENT</p>
+            <p className="mb-2 text-center text-[10px] font-black tracking-widest text-amber-300">{eventWeekly?'WEEKLY':'EVENT'}</p>
             {/* 告知画像。開いたときだけ読むので、ここへ置いても起動は重くならない */}
             <RhythmEventBanner event={eventDefinition||(boardKind==='limited'?limitedEvent:null)} className="mb-3"/>
             {eventDefinition&&<div className="mb-3">
@@ -793,7 +800,7 @@ function RhythmRankingScreen({
                 <div key={division.id} data-rhythm-event-reward-division={division.id}
                   className="rounded-2xl border border-amber-300/40 bg-amber-500/5 p-2">
                   <p className="mb-1 truncate text-[10px] font-black text-fuchsia-100">
-                    {division.songId?(rhythmSongFullName(division.song)||division.songId):'総合（対象曲の合計）'}
+                    {division.songId?(rhythmSongFullName(division.song)||division.songId):(eventWeekly?'その週の累計スコア':'総合（対象曲の合計）')}
                   </p>
                   <ul className="space-y-0.5">
                     {ranks.map(({rank,reward})=>(
@@ -808,14 +815,20 @@ function RhythmRankingScreen({
               {/* 参加報酬。入賞しなくてももらえるので、順位の表とは分けて出す */}
               {eventParticipation&&<p data-rhythm-event-participation
                 className="rounded-2xl border border-fuchsia-300/40 bg-fuchsia-500/5 p-2 text-[10px] leading-tight text-slate-200">
-                <b className="text-fuchsia-200">参加報酬</b>　対象曲を{eventParticipation.songs}曲すべて遊ぶと {rhythmEventParticipationText(eventParticipation)}
+                <b className="text-fuchsia-200">参加報酬</b>　{eventWeekly?`その週に${eventParticipation.plays}回遊ぶと`:`対象曲を${eventParticipation.songs}曲すべて遊ぶと`} {rhythmEventParticipationText(eventParticipation)}
+              </p>}
+              {/* 週間の数え方(2026-09-13・ユーザーが決めた)。「ベストが載る」と思って遊ぶと
+                  何度も遊ぶ意味が伝わらないので、報酬の表と同じ場所で先に伝える */}
+              {eventWeekly&&<p data-rhythm-week-score-rule
+                className="rounded-2xl border border-fuchsia-300/40 bg-fuchsia-500/5 p-2 text-[10px] leading-tight text-slate-200">
+                <b className="text-fuchsia-200">スコアの数え方</b>　その週に遊んだぶんを<b className="text-white">すべて足します</b>。曲も難易度も問わず、同じ曲を何度遊んでもそのつど積み上がります（上限なし）。満点は難易度ごとに違います（EASY 60万〜MASTER 100万）。「総合」タブが曲ごとのベストを合計するのに対し、こちらは<b className="text-white">遊んだ量</b>で競います。
               </p>}
               {/* ∞周回の倍率(2026-09-11・ユーザー指示「イベント時は対象曲は3倍」)。
                   報酬の表と同じ場所に置く。対象曲を遊ぶ理由が順位だけではなくなるため */}
-              <p data-rhythm-event-loop-bonus
+              {!eventWeekly&&<p data-rhythm-event-loop-bonus
                 className="rounded-2xl border border-amber-300/40 bg-amber-500/5 p-2 text-[10px] leading-tight text-slate-200">
                 <b className="text-amber-200">∞周回 ×{RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE}</b>　クイックの∞周回を裏で回しながら対象曲を演奏すると、入る周回数がふだん（×{RHYTHM_PLAY_RUN_LOOP_SCALE}）の{RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE}倍になります
-              </p>
+              </p>}
               {/* 回数ボーナス(2026-09-11・ユーザー指示)。遊んだ回数が順位に効くことは、
                   ランキングを見ているだけでは分からないので、報酬の表と同じ場所で伝える。
                   割合の表は RHYTHM_EVENT_PLAY_BONUS_RATES から作る(数字を書き写さない) */}
@@ -833,7 +846,7 @@ function RhythmRankingScreen({
               </div>}
               {/* 受け取り方。いつ・どこで受け取るのかが分からないと、終わったあとに迷う */}
               <p className="text-[9px] leading-relaxed text-slate-400">
-                報酬はイベントが終わったあと、ゲームを開いたときに受け取れます。受け取れるのは終了から2週間までです。順位は終了した時点で決まるので、遅れて受け取っても内容は変わりません。
+                報酬は{eventWeekly?'その週が終わったあと':'イベントが終わったあと'}、ゲームを開いたときに受け取れます。受け取れるのは{eventWeekly?'切り替わりから':'終了から'}2週間までです。順位は{eventWeekly?'切り替わった':'終了した'}時点で決まるので、遅れて受け取っても内容は変わりません。
               </p>
             </div>}
             <button type="button" data-rhythm-event-detail-close onClick={()=>setEventDetailOpen(false)}

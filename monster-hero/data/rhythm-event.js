@@ -51,6 +51,17 @@ const rhythmWeekId = (nowMs) => {
 //   週間   … 今週だけ(月曜5:00 JST 区切り)
 //
 // ★曲の一覧をここに書かない。公開曲が増えれば、そのまま週間の対象も増える(§5.1)。
+//
+// ★2026-09-13・ユーザーが決めた: **週間は「累計」方式**へ変えた。
+//   「曲別合算方式じゃなくて、どの曲でもやった分のスコア加算」。
+//   その週に出した記録を**全部そのまま足す**(同じ曲を何回遊んでも、そのつど積み上がる)。
+//     総合(常設) … 曲ごとのベストを全曲ぶん合計 = **うまさ**
+//     週間       … その週に出した記録をぜんぶ足す = **やりこみ量**
+//   難易度ごとに満点が違う(EASY 60万〜MASTER 100万)ので、足すだけで難易度差は自然に付く。
+//   重み付けはしない。上限も付けない。
+//   ★**回数ボーナス(イベントの playBonus)は週間には付けない。**
+//     累計そのものが回数を反映しているので、二重になる。
+//   集計はサーバーの rhythm_week_score_totals(docs/sql/rankings/RHYTHM_WEEK_TOTAL_APPLY.sql)。
 
 // 期間限定イベント(kind:'limited')。
 // 週間とは別のタブで、同時に動く(§7・2026-09-11にユーザーが決めた)。
@@ -164,6 +175,40 @@ const RHYTHM_EVENT_REWARD_COUNTS = Object.freeze([5, 4, 3, 2, 1]);
 const RHYTHM_EVENT_REWARD_PSYCHE = Object.freeze([1000, 800, 600, 400, 200]);
 const RHYTHM_EVENT_REWARD_RANKS = RHYTHM_EVENT_REWARD_COUNTS.length;
 
+// ===== 週間ランキングの報酬(2026-09-13・ユーザーが決めた) =====
+//
+// 1位から10位まで。**勇者の証片**を主軸にして、プシュケーとダイヤを添える。
+// 数字を10行書き写すのではなく、**式で出す**(幅を変えるのがここ1か所で済む)。
+//
+//   勇者の証片 = 11 − 順位   (1位=10片 … 10位=1片)
+//   虹のプシュケー = 片 × 50
+//   ダイヤ         = 片 × 3,000
+//
+// ★勇者の証片は20個で「勇者の証」1個とマーケットで交換できる(新アイテム)。
+//   20個未満でも無駄にならず貯まる。証は魂格進化に合計200個要るので、週間ぶんは補助。
+// ★イベント(1〜5位・超越の実/勇者の証)とは別の体系。混ぜない。
+const RHYTHM_WEEKLY_REWARD_RANKS = 10;
+const RHYTHM_WEEKLY_REWARD_PSYCHE_PER_SHARD = 50;
+const RHYTHM_WEEKLY_REWARD_GOLD_PER_SHARD = 3000;
+const rhythmWeeklyRewardForRank = (rank) => {
+  const place = Number(rank);
+  if (!Number.isInteger(place) || place < 1 || place > RHYTHM_WEEKLY_REWARD_RANKS) return null;
+  const count = RHYTHM_WEEKLY_REWARD_RANKS + 1 - place;
+  return Object.freeze({
+    kind: 'heroProofShard',
+    count,
+    psyche: count * RHYTHM_WEEKLY_REWARD_PSYCHE_PER_SHARD,
+    gold: count * RHYTHM_WEEKLY_REWARD_GOLD_PER_SHARD,
+  });
+};
+// 参加報酬(2026-09-13・ユーザーが決めた「条件は3回遊ぶ」「10位より軽く」)。
+// 週間に対象曲は無いので、イベントの「何曲遊んだか」ではなく**何回遊んだか**で見る。
+const RHYTHM_WEEKLY_PARTICIPATION = Object.freeze({ plays: 3, count: 1, psyche: 30, gold: 2000 });
+
+// 週間の報酬を配りはじめた時刻。**これより前に終わった週は対象にしない**。
+// 入れておかないと、公開した瞬間に「先週・先々週ぶん」がまとめて配られる(CLAUDE.md ⑦)。
+const RHYTHM_WEEKLY_REWARD_FROM_MS = Date.UTC(2026, 8, 13, 20, 0, 0); // 2026-09-14 05:00 JST
+
 // その部門で配るものの種類。報酬を持たないイベント(週間)では null を返す
 const rhythmEventDivisionReward = (event, divisionId) => {
   if (!event) return null;
@@ -176,8 +221,10 @@ const rhythmEventDivisionReward = (event, divisionId) => {
     : event.totalReward === 'rainbowFruit' ? { kind: 'rainbowFruit' }
     : null;
 };
-// 何位に何個か。順位が範囲外・壊れた値なら null(=報酬なし)
+// 何位に何個か。順位が範囲外・壊れた値なら null(=報酬なし)。
+// ★週間は別の体系(1〜10位・勇者の証片)なので、そちらへ回す
 const rhythmEventRewardForRank = (event, divisionId, rank) => {
+  if (event && event.kind === 'weekly') return rhythmWeeklyRewardForRank(rank);
   const place = Number(rank);
   if (!Number.isInteger(place) || place < 1 || place > RHYTHM_EVENT_REWARD_RANKS) return null;
   const reward = rhythmEventDivisionReward(event, divisionId);
@@ -188,9 +235,15 @@ const rhythmEventRewardForRank = (event, divisionId, rank) => {
     psyche: RHYTHM_EVENT_REWARD_PSYCHE[place - 1],
   };
 };
+// 何位まで報酬があるか。週間は1〜10位、イベントは1〜5位。
+// 画面はこの数だけ順位の行を作るので、数字を書き写さずに済む
+const rhythmEventRewardRankCount = (event) =>
+  (event && event.kind === 'weekly') ? RHYTHM_WEEKLY_REWARD_RANKS : RHYTHM_EVENT_REWARD_RANKS;
 // 参加報酬。入賞しなくても、対象曲を決まった数だけ遊べばもらえる(§9.2)。
 // 書かれていないイベント(週間など)では null を返す
 const rhythmEventParticipationReward = (event) => {
+  // 週間は「何曲」ではなく「何回遊んだか」で成立する(対象曲が無いため)
+  if (event && event.kind === 'weekly') return RHYTHM_WEEKLY_PARTICIPATION;
   const reward = event && event.participationReward;
   if (!reward || typeof reward !== 'object') return null;
   const songs = Math.max(1, Math.floor(Number(reward.songs) || 0));
@@ -201,16 +254,19 @@ const rhythmEventParticipationReward = (event) => {
   const songIds = (event && Array.isArray(event.songIds)) ? event.songIds : [];
   return { songs: Math.min(songs, songIds.length || songs), gold, psyche };
 };
-// 参加報酬が成立しているか。遊んだ曲数(総合部門の songCount)で見る
-const rhythmEventParticipationCleared = (event, playedSongCount) => {
+// 参加報酬が成立しているか。
+// イベントは遊んだ曲数(総合部門の songCount)、週間は遊んだ回数(playCount)で見る
+const rhythmEventParticipationCleared = (event, playedCount) => {
   const reward = rhythmEventParticipationReward(event);
   if (!reward) return false;
-  const played = Math.max(0, Math.floor(Number(playedSongCount) || 0));
-  return played >= reward.songs;
+  const played = Math.max(0, Math.floor(Number(playedCount) || 0));
+  const need = (event && event.kind === 'weekly') ? reward.plays : reward.songs;
+  return played >= Math.max(1, Math.floor(Number(need) || 0));
 };
 // そのイベントが報酬を持っているか(画面に報酬の表を出すかどうかの判定)
 const rhythmEventHasRewards = (event) => {
   if (!event) return false;
+  if (event.kind === 'weekly') return true;   // 週間は1〜10位＋参加報酬をいつも持つ
   const divisions = [...(Array.isArray(event.songIds) ? event.songIds.map(rhythmEventSongDivisionId) : []),
     RHYTHM_EVENT_TOTAL_DIVISION];
   return divisions.some(divisionId => !!rhythmEventDivisionReward(event, divisionId));
@@ -376,6 +432,31 @@ const rhythmEventsAwaitingReward = (nowMs, claimedIds) => {
       return endMs !== null && now >= endMs && now < endMs + RHYTHM_EVENT_REWARD_CLAIM_MS;
     })
     .sort((a, b) => rhythmEventTimeMs(a.endAt) - rhythmEventTimeMs(b.endAt));
+};
+// 終わっていて、まだ受け取っておらず、受取期限の中にある**週**(先に終わった週から順)。
+// ★受取フラグはイベントと同じ配列(mh_rhythm_event_reward_v1)へ入れる。
+//   週のidは weekly_YYYY_MM_DD、イベントのidは weekend_… なので取り違えない。
+//   新しい保存キーを作らない(CLAUDE.md ⑦)。
+// ★RHYTHM_WEEKLY_REWARD_FROM_MS より前に終わった週は対象にしない。
+//   入れておかないと、公開した瞬間に過去の週ぶんがまとめて配られる。
+const rhythmWeeksAwaitingReward = (nowMs, claimedIds) => {
+  const now = Number.isFinite(Number(nowMs)) ? Number(nowMs) : 0;
+  // 保存値が壊れている(配列でない)ときは「分からないので何もしない」に倒す(二重に配らないため)
+  if (!Array.isArray(claimedIds)) return [];
+  const thisWeekStart = rhythmWeekStartMs(now);
+  const weeks = [];
+  // 受取期限は2週間なので、遡るのは直前の2週で足りる
+  for (let back = 1; back <= 2; back++) {
+    const startMs = thisWeekStart - back * RHYTHM_WEEK_MS;
+    const endMs = startMs + RHYTHM_WEEK_MS;
+    if (startMs < RHYTHM_WEEKLY_REWARD_FROM_MS) continue;      // 始める前の週
+    if (now < endMs) continue;                                  // まだ終わっていない
+    if (now >= endMs + RHYTHM_EVENT_REWARD_CLAIM_MS) continue;  // 期限切れ
+    const id = rhythmWeekId(startMs);
+    if (claimedIds.includes(id)) continue;
+    weeks.push(Object.freeze({ id, kind: 'weekly', name: '週間ランキング', startMs, endMs }));
+  }
+  return weeks.sort((a, b) => a.startMs - b.startMs);           // 先に終わった週から
 };
 // 受け取り済みの一覧。保存値が壊れていても落ちないように通す
 const normalizeRhythmEventRewardClaims = (value) =>
