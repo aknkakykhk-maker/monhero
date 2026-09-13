@@ -15,6 +15,13 @@
 // 【いつからか】
 // ユーザーの指示は「今後の」なので、指示より前のお知らせ(FROM_DATE より古いもの)は対象外。
 // 遡って足す必要はない。
+//
+// 【ほかの曲の難易度を混ぜない】(2026-09-13・ユーザー指摘
+// 「違う譜面の難易度を出す文面はそもそもおかしくない？」)
+// FREEDOM DiVE↓ のお知らせに「これまでの最高は EASY Lv.10／…／MASTER Lv.38 でした」と
+// **比較のつもりでほかの曲(SIX ÉTERNEL)の数字**を並べて書いてしまい、
+// その曲の難易度と見分けがつかなくなった。新曲のお知らせに出してよい Lv. は
+// **その曲のものだけ**。1行にLv.の5つ組が2回出ていたら、それは比較を書いている。
 'use strict';
 const fs=require('fs');
 const path=require('path');
@@ -74,6 +81,36 @@ ok(`新曲のお知らせにジャケットの絵が付いている（${FROM_DAT
   missing.length?missing.join(' / '):`${checked}件を照合`);
 ok('お知らせの絵が、その曲のジャケットと同じものを指している',wrongPath.length===0,wrongPath.join(' / '));
 ok('お知らせの絵のファイルが実在する',notFound.length===0,notFound.join(' / '));
+
+// ── ほかの曲の難易度を混ぜていないか ────────────────────────────────────────
+// 「Lv.◯ が5つ並ぶ」かたまりが1行に2回以上あれば、片方はこの曲のものではない。
+const mixed=[];
+for(const entry of changelog){
+  const date=String(entry.date||'');
+  if(date.slice(0,10)<FROM_DATE)continue;
+  const notice=entry.assistantNotice;
+  if(!notice||notice.type!=='content')continue;
+  const title=String(entry.title||'');
+  const song=songs.find(item=>title.includes(item.name));
+  if(!song)continue;
+  for(const text of (entry.items||[])){
+    const body=String(text);
+    // 「Lv.11→9」のように変化を書いている行は、作り直しの記録なので対象外
+    if(/Lv\.\s*\d+\s*(?:→|->)/.test(body))continue;
+    // 「Lv.◯」が5つ続くかたまり。区切りの中に 'Lv.' が現れないことを否定先読みで見る
+    // （[^Lv] と書くと NORMAL の L で止まってしまい、いちども拾えなかった）。
+    const groups=body.match(/(?:Lv\.\s*\d+(?:(?!Lv\.).){0,40}){5}/g)||[];
+    if(groups.length>=2)mixed.push(`${date} ${song.name}: ${body.slice(0,60)}…`);
+    // 曲名で名指しして数字を出しているものも拾う
+    for(const other of songs){
+      if(other.id===song.id)continue;
+      if(body.includes(other.name)&&/Lv\.\s*\d+|\d+\s*回/.test(body))
+        mixed.push(`${date} ${song.name}: ほかの曲「${other.name}」の数字が混ざっている`);
+    }
+  }
+}
+ok('新曲のお知らせに、ほかの曲の難易度を混ぜていない',mixed.length===0,
+  mixed.join(' / ')||'その曲の Lv. だけを書いている');
 
 // 絵は更新履歴の image を助手の告知がそのまま使う。2か所に書く形へ戻っていないかを見る。
 const assistants=fs.readFileSync(path.join(ROOT,'monster-hero/data/assistants.js'),'utf8');
