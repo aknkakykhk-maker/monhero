@@ -2876,6 +2876,11 @@ function MonsterHeroGame() {
   //   (回想からはいつでも見られる)。
   const RHYTHM_EVENT_STORY_KEY = 'mh_rhythm_event_story_v1';
   const MONBEAT_CUP_STORY_ID = 'monbeat_cup_2026_09';
+  // 閉幕とお礼の会話(2026-09-13・ユーザー指示)。**イベントが終わった時刻に自動で流れる**。
+  // 参加賞へ勇者の証10個を足したことを、この会話で知らせてから受け取り画面を出す
+  const MONBEAT_CUP_THANKS_STORY_ID = 'monbeat_cup_2026_09_thanks';
+  // 閉幕の会話が受け持つイベント(週末ゲリラ杯)。ほかのイベントの受け取りは待たせない
+  const MONBEAT_CUP_EVENT_ID = 'weekend_2026_09_11';
   const [rhythmEventStorySeen, setRhythmEventStorySeen] = useState(null);
   const rhythmEventStorySeenRef = useRef(null);
   const [rhythmEventStoryPending, setRhythmEventStoryPending] = useState(null);
@@ -2912,6 +2917,13 @@ function MonsterHeroGame() {
     let stopped = false;
     const look = async () => {
       if (stopped) return;
+      // ★終わった瞬間に遊んでいた人にも、閉幕の会話を届ける。
+      //   開催中かどうかと同じく、**見るたびに数え直す**(CLAUDE.md ⑥-4)。
+      //   開きっぱなしの端末でも、終了時刻をまたいだ次の見回りで流れる
+      if (rhythmLimitedEventJustEnded(Date.now())
+        && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(MONBEAT_CUP_THANKS_STORY_ID)) {
+        setRhythmEventStoryPending(prev => prev || MONBEAT_CUP_THANKS_STORY_ID);
+      }
       if (!rhythmLimitedEventAt(Date.now())) return;
       // ① 会話。まだ見ていなければ、HOMEに着いたところで流す
       if (!normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(MONBEAT_CUP_STORY_ID)) {
@@ -2979,6 +2991,11 @@ function MonsterHeroGame() {
     if (pending.length === 0) return;
     const event = pending[0];                          // 先に終わったものから1つずつ
     const weekly = event.kind === 'weekly';
+    // ★閉幕の会話がまだなら、受け取り画面はあとに回す(2026-09-13)。
+    //   会話で「参加賞に勇者の証を10個足した」と言ってから受け取りを出さないと、
+    //   先に画面が出て話の順番が逆になる。会話を見終えたら下の useEffect が呼び直す
+    if (!weekly && event.id === MONBEAT_CUP_EVENT_ID
+      && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(MONBEAT_CUP_THANKS_STORY_ID)) return;
     const range = weekly ? { startMs:event.startMs, endMs:event.endMs } : rhythmEventWindow(event, null);
     if (!range) return;
     try {
@@ -3039,6 +3056,14 @@ function MonsterHeroGame() {
     rhythmEventRewardCheckedRef.current = true;
     void checkRhythmEventRewards();
   }, [rhythmEventRewardClaims, checkRhythmEventRewards]);
+  // 閉幕の会話を見終えたら、後回しにしていた受け取りをもう一度確かめる
+  // (見ていないあいだは上の checkRhythmEventRewards が何もせずに戻っている)
+  useEffect(() => {
+    if (!Array.isArray(rhythmEventStorySeen)) return;
+    if (!rhythmEventStorySeen.includes(MONBEAT_CUP_THANKS_STORY_ID)) return;
+    rhythmEventRewardCheckedRef.current = false;
+    void checkRhythmEventRewards();
+  }, [rhythmEventStorySeen, checkRhythmEventRewards]);
   // 受け取る。★先に「受け取った」を保存してからアイテムを足す。
   //   途中で終了しても二重には増えない(逆順にすると二重に配りうる・CLAUDE.md ⑦)
   const claimRhythmEventReward = async () => {
@@ -3063,6 +3088,10 @@ function MonsterHeroGame() {
       if (prize.participation) {
         if (prize.participation.count > 0) {
           next[HERO_PROOF_SHARD_ITEM_ID] = ownedItemCount(next, HERO_PROOF_SHARD_ITEM_ID) + prize.participation.count;
+        }
+        // 勇者の証(2026-09-13・週末ゲリラ杯のお礼)。書いていないイベントでは0なので何もしない
+        if (prize.participation.heroProof > 0) {
+          next[HERO_PROOF_ITEM_ID] = ownedItemCount(next, HERO_PROOF_ITEM_ID) + prize.participation.heroProof;
         }
         if (prize.participation.psyche > 0) {
           next[BREAKTHROUGH_ITEM_ID] = ownedItemCount(next, BREAKTHROUGH_ITEM_ID) + prize.participation.psyche;
@@ -4114,6 +4143,12 @@ function MonsterHeroGame() {
         && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(MONBEAT_CUP_STORY_ID)) {
         setRhythmEventStoryPending(MONBEAT_CUP_STORY_ID);
       }
+      // 終わったあとに初めて開いた人へは、閉幕とお礼の会話を流す(受け取り画面より先)
+      if (RELEASE_FLAGS.rhythmWeeklyRanking === true && wasOnboarded
+        && rhythmLimitedEventJustEnded(Date.now())
+        && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(MONBEAT_CUP_THANKS_STORY_ID)) {
+        setRhythmEventStoryPending(MONBEAT_CUP_THANKS_STORY_ID);
+      }
       const seenUpdateIds = normalizeSeenUpdateNoticeIds(await storeGet(UPDATE_NOTICE_SEEN_KEY, [], false));
       // 新規プレイヤーには、その時点ですでに公開済みの案内を見せない。既存プレイヤーだけ未読を並べる。
       // プロフィール確定時にも再度seedするため、初回設定の途中で閉じても通知ラッシュにならない。
@@ -5027,7 +5062,8 @@ function MonsterHeroGame() {
   // その名前→実際のstateの対応をここで持つ(データファイルはgame-system.jsxの状態を見られないため)。
   // 今後イベントを増やすときは、そのイベントの既読フラグをここへ1行足すだけでよい
   const EVENT_REPLAY_UNLOCK_FLAGS = { kikiIntroSeen: kikiIntroSeenFlag, momosukeIntroSeen: momosukeIntroSeenFlag,
-    monbeatCupEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONBEAT_CUP_STORY_ID) };
+    monbeatCupEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONBEAT_CUP_STORY_ID),
+    monbeatCupThanksSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONBEAT_CUP_THANKS_STORY_ID) };
   // alwaysUnlocked のイベントは、本編でまだ見ていなくても回想から見られる
   const isEventReplayUnlocked = (event) => !!(event && event.alwaysUnlocked) || !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];
   // 助手を切り替える。仲良し度も呼び方も助手ごとに分けてあるので、切り替えても何も失われない

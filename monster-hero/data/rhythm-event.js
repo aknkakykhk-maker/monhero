@@ -111,9 +111,14 @@ const RHYTHM_EVENTS = Object.freeze([
     // ここに書いたときだけ効く(週間ランキングには付かない)
     playBonus: true,
     // 参加報酬(2026-09-11・ユーザー指示「3曲すべて遊んだらもらえる」)。
-    // 入賞しなくても、対象曲を**すべて**遊べばもらえる。個数は仕様書 §9.2 の候補のまま。
+    // 入賞しなくても、対象曲を**すべて**遊べばもらえる。
     // songs は「何曲遊べば成立か」。書かなければ参加報酬は無し
-    participationReward: Object.freeze({ songs: 3, gold: 3000, psyche: 50 }),
+    //
+    // ★heroProof は 2026-09-13 にユーザーが足したお礼(「初のイベントで結構な数が
+    //   参加してくれて感謝の気持ちとして参加賞に勇者の証を10個追加でプレゼント」)。
+    //   閉幕の会話(monbeat_cup_2026_09_thanks)で同じ数を話しているので、
+    //   ここを変えたら台本も直すこと(rhythm-event-thanks-check.js が突き合わせる)。
+    participationReward: Object.freeze({ songs: 3, gold: 3000, psyche: 50, heroProof: 10 }),
   }),
 ]);
 
@@ -249,10 +254,12 @@ const rhythmEventParticipationReward = (event) => {
   const songs = Math.max(1, Math.floor(Number(reward.songs) || 0));
   const gold = Math.max(0, Math.floor(Number(reward.gold) || 0));
   const psyche = Math.max(0, Math.floor(Number(reward.psyche) || 0));
-  if (!(gold > 0 || psyche > 0)) return null;
+  // 勇者の証。書いていないイベントでは0(これまでのイベントの形をそのまま読める)
+  const heroProof = Math.max(0, Math.floor(Number(reward.heroProof) || 0));
+  if (!(gold > 0 || psyche > 0 || heroProof > 0)) return null;
   // 対象曲より多い数を書いてしまうと、誰も成立しない報酬になる。対象曲の数で頭打ちにする
   const songIds = (event && Array.isArray(event.songIds)) ? event.songIds : [];
-  return { songs: Math.min(songs, songIds.length || songs), gold, psyche };
+  return { songs: Math.min(songs, songIds.length || songs), gold, psyche, heroProof };
 };
 // 参加報酬が成立しているか。
 // イベントは遊んだ曲数(総合部門の songCount)、週間は遊んだ回数(playCount)で見る
@@ -294,6 +301,20 @@ const rhythmWeeklyEvent = (nowMs) => {
 const rhythmEventTimeMs = (value) => {
   const t = Date.parse(String(value || ''));
   return Number.isFinite(t) ? t : null;
+};
+// 「終わった直後の期間限定イベント」。閉幕の会話を流すのに使う。
+// ★見るたびに数え直す(読み込みのときに1回だけ決まる値を使わない・CLAUDE.md ⑥-4)。
+//   終了時刻をまたいだ瞬間に、開きっぱなしの端末でもここが true に変わる。
+// ★いつまでも流さないよう、報酬の受取期限(2週間)と同じ幅で切る。
+//   それより後に初めて起動した人には、もう「おつかれさま」を言わない(回想からは見られる)。
+const rhythmLimitedEventJustEnded = (nowMs) => {
+  const now = Number.isFinite(Number(nowMs)) ? Number(nowMs) : 0;
+  const list = Array.isArray(RHYTHM_EVENTS) ? RHYTHM_EVENTS : [];
+  return list.find(event => {
+    if (!event || event.kind !== 'limited') return false;
+    const endMs = rhythmEventTimeMs(event.endAt);
+    return endMs !== null && now >= endMs && now < endMs + RHYTHM_EVENT_REWARD_CLAIM_MS;
+  }) || null;
 };
 const rhythmLimitedEventAt = (nowMs) => {
   const now = Number.isFinite(Number(nowMs)) ? Number(nowMs) : 0;

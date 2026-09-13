@@ -237,8 +237,12 @@ check('入賞も参加報酬も無ければ受け取り済みにする(毎回問
 check('先にフラグを保存してからアイテムを足す(二重付与を防ぐ)',(()=>{
   const at=app.indexOf('const claimRhythmEventReward');
   if(at<0)return false;
-  const body=app.slice(at,at+1600);
-  return body.indexOf('markRhythmEventRewardClaimed')<body.indexOf("storeSet('mh_owned_items'");
+  // ★切り出す幅は、受け取りの本体がまるごと入る大きさにする。
+  //   足りないと「所持品の保存が見つからない(-1)」で、順番が正しくても落ちる
+  const body=app.slice(at,at+3000);
+  const flagAt=body.indexOf('markRhythmEventRewardClaimed');
+  const itemAt=body.indexOf("storeSet('mh_owned_items'");
+  return flagAt>=0&&itemAt>=0&&flagAt<itemAt;
 })());
 check('報酬は所持品とプシュケーへ足す(既存の入れ物を使う)',
   app.includes('ownedItemCount(next, item.id) + entry.reward.count')
