@@ -44,7 +44,7 @@ function RhythmInfoScreen({
 }
 
 function RhythmSongSelectScreen({
-  catchingUp, difficulty, dismissQuickRhythmBackground, dismissRhythmEventNotice, handleGiveUp, mainHero,
+  catchingUp, difficulty, dismissQuickRhythmBackground, dismissRhythmEventNotice, exitingQuickRun, handleGiveUp, mainHero,
   onExit, onOpenEventRanking, onOpenHelp, onOpenMonsterSlots, onOpenOptions, onOpenRanking,
   onPlaySong, quickClearCounts, quickRhythmBackgroundVisible, quickRunDetailOpen, quickRunFinishReasonText,
   quickRunPendingRewards, quickRunProgress, quickRunResumable, quickRunStartError, quickRunStopConfirm,
@@ -96,7 +96,16 @@ function RhythmSongSelectScreen({
           : <p data-quick-run-start-hint className="px-1 py-1 text-[9px] leading-relaxed text-slate-500">裏で周回を回すには、クイックで1度∞周回を始めるか、M/B管理の「AUTO設定 → モンヒロビート中に回すクイック周回」で勇者モン・配置距離・難易度を決めてください。</p>)
         : null;
       return (
-      <main data-rhythm-demo-home className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white">
+      <main data-rhythm-demo-home className="relative flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white">
+        {/* 周回を締めているあいだ(報酬の付与・全国ランキングへの送信・バトルの演出の終わり待ち)。
+            数秒かかることがあるので、その間は他を押せなくして待ってもらう。
+            ★番を待たずに片付けると、進んでいるターンの残りが空の状態を触って画面が落ちる
+            (2026-09-13・ユーザー報告「そのまま戻ったときに結構な頻度でエラーが起きる」) */}
+        {exitingQuickRun&&<div data-rhythm-exiting-run role="status" aria-live="polite"
+          className="absolute inset-0 z-[90000] flex flex-col items-center justify-center gap-2 bg-slate-950/85 px-6 text-center">
+          <b className="text-sm font-black text-amber-200">周回を終えています…</b>
+          <small className="text-[10px] font-bold leading-relaxed text-slate-300">ここまでのWAVEぶんの報酬を付けて、記録を送っています。<br/>終わると自動でホームへ戻ります。</small>
+        </div>}
         <header className="z-10 flex shrink-0 items-center gap-1 border-b border-cyan-400/15 bg-slate-950/95 px-2 py-1" style={{paddingTop:'calc(0.25rem + env(safe-area-inset-top))'}}>
           {/* ★裏でクイック∞周回が回っていても、ここからHOMEへ戻れる
               (2026-09-13・ユーザー指摘「止めないでもホームに戻れて自動的に周回も
@@ -106,10 +115,13 @@ function RhythmSongSelectScreen({
               ボタンの見た目でもそれが分かるようにしてある(⏹ と琥珀色)。
               誤って押しても報酬は捨てないが、「終わる」ことは先に伝える。
               ★バトルを見に行きたいときは、周回の帯の詳細にある「⚔ バトルへ戻って…」から。 */}
+          {/* ★押したあとはHOMEへ抜けるまで数秒かかる(報酬の付与・送信・バトルの演出の終わり待ち)。
+              そのあいだは押せなくし、何を待っているのかを畫面で言う(2026-09-13) */}
           <button data-rhythm-back data-quick-run-finishing={rhythmBackgroundRun?'1':undefined}
-            aria-label={rhythmBackgroundRun?'周回を終えてホームへ戻る':'戻る'} title={rhythmBackgroundRun?'周回を終えてホームへ戻る':'戻る'}
+            data-quick-run-exiting={exitingQuickRun?'1':undefined} disabled={!!exitingQuickRun}
+            aria-label={exitingQuickRun?'周回を終えています':rhythmBackgroundRun?'周回を終えてホームへ戻る':'戻る'} title={exitingQuickRun?'周回を終えています':rhythmBackgroundRun?'周回を終えてホームへ戻る':'戻る'}
             onClick={onExit}
-            className={`min-h-[44px] min-w-[44px] shrink-0 ${rhythmBackgroundRun?'text-amber-200':'text-slate-300'}`}>{rhythmBackgroundRun?<span className="text-[10px] font-black leading-tight">⏹<br/>終了</span>:<ArrowLeft size={20}/>}</button>
+            className={`min-h-[44px] min-w-[44px] shrink-0 ${exitingQuickRun?'text-amber-300/60':rhythmBackgroundRun?'text-amber-200':'text-slate-300'}`}>{rhythmBackgroundRun?<span className="text-[10px] font-black leading-tight">⏹<br/>終了</span>:<ArrowLeft size={20}/>}</button>
           {/* ボタンが4つ並ぶので、題名は縮んでも1行のまま(truncate)にする。
               折り返すとヘッダーが2行になり、そのぶん曲の一覧が減るため */}
           <div className="min-w-0 flex-1">
