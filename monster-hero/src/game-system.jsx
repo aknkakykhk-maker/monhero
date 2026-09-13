@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3a5421fc8160d4f6
+// generated-sha256: a7754292fd740acb
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -89,7 +89,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-14 06:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-14 07:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11252,6 +11252,9 @@ const rhythmWeekTotalEntryFromRow = (row) => ({
   userName: row?.user_name || '名無しのブリーダー',
   totalScore: Number(row?.total_score) || 0,
   playCount: Number(row?.play_count) || 0,
+  // 最後に記録した日時。画面に出して「その週のものかどうか」を目で確かめられるようにする
+  // (2026-09-14・ユーザー指摘「普通に朝起きたらスコア残ってたからそこが気になる」)
+  lastScoredAtMs: Number.isFinite(Date.parse(String(row?.last_scored_at || ''))) ? Date.parse(row.last_scored_at) : null,
   songCount: Number(row?.song_count) || 0,
   level: Number(row?.level) || 0,
   icon: row?.icon ?? null,
@@ -15782,6 +15785,10 @@ function RhythmRankingScreen({
           <div className="min-w-0 flex-1">
             <p className="truncate text-xs font-black text-white">{entry.userName}</p>
             <p className="text-[9px] text-slate-400">{eventWeekly?`${entry.playCount}回 ・ ${entry.songCount}曲`:`${entry.songCount} / ${eventSongCount}曲`} ・ Lv.{entry.level}</p>
+            {/* ★週間は「いつの記録か」を出す(2026-09-14・ユーザー指摘
+                「普通に朝起きたらスコア残ってたからそこが気になる」)。
+                その週のものかどうかを、画面を見ただけで確かめられるようにするため */}
+            {eventWeekly&&entry.lastScoredAtMs&&<p data-rhythm-week-last className="text-[9px] text-slate-500">最後の記録 {rhythmEventJstText(entry.lastScoredAtMs)}</p>}
           </div>
           <div className="shrink-0 text-right">
             <p className="font-mono text-sm font-black text-fuchsia-100">{entry.totalScore.toLocaleString()}</p>
@@ -19696,8 +19703,12 @@ function RhythmHistoryScreen({
   const activeDivision = divisions.some(division => division.id === wanted) ? wanted : RHYTHM_EVENT_TOTAL_DIVISION;
   const divisionBoard = (view.boards && view.boards[activeDivision]) || { status:'idle', entries:[], self:null };
   const songId = rhythmEventDivisionSongId(activeDivision);
-  // 週は累計スコア方式なので、1行に出す補助の数字が「遊んだ回数」になる
+  // 週は累計スコア方式なので、1行に出す補助の数字が「遊んだ回数」になる。
+  // ★ただし累計方式より前の週(scoring:'best')は、当時の数え方=曲ごとのベストの合計。
+  //   遊んだ回数は数えていないので出さない(2026-09-14)
   const weekly = !!selected && selected.kind === 'weekly';
+  const weeklyBest = weekly && selected.scoring === 'best';
+  const weeklyTotals = weekly && !weeklyBest;
   const rows = Array.isArray(divisionBoard.entries) ? divisionBoard.entries : [];
   const self = divisionBoard.self || null;
   // ランクは素点で決める(回数ボーナス込みの点だと満点を超えてしまうため。ランキング画面と同じ)
@@ -19712,7 +19723,7 @@ function RhythmHistoryScreen({
         <p className="text-[9px] text-slate-400">
           {songId
             ? `${RHYTHM_DEMO_DIFFICULTY_LABELS[entry.difficultyId]?.name||entry.difficultyId||'-'} ・ Lv.${entry.level}`
-            : `${weekly?`${entry.playCount}回 ・ `:''}${entry.songCount}曲 ・ Lv.${entry.level}`}
+            : `${weeklyTotals?`${entry.playCount}回 ・ `:''}${entry.songCount}曲 ・ Lv.${entry.level}`}
         </p>
       </div>
       <div className="shrink-0 text-right">
@@ -19766,6 +19777,14 @@ function RhythmHistoryScreen({
               <p className="mt-2 text-[9px] leading-relaxed text-slate-500">
                 当時の記録から数え直して出しています。ここから報酬を受け取ることはできません。
               </p>
+              {/* ★数え方が途中で変わっているので、どちらで出しているかを書く(2026-09-14)。
+                  書かないと「同じ週間ランキングなのに見かたが違う」と伝わらない */}
+              {weeklyBest&&<p data-rhythm-history-best-note className="mt-1 text-[9px] leading-relaxed text-amber-200/80">
+                この週は「曲ごとのいちばん良いスコアを全曲ぶん合計」で競っていたころのものです（当時と同じ数え方で出しています）。いまの週間ランキングは「遊んだぶんをすべて足す」方式です。
+              </p>}
+              {weeklyTotals&&<p data-rhythm-history-total-note className="mt-1 text-[9px] leading-relaxed text-slate-500">
+                この週は「その週に遊んだぶんをすべて足す」方式です。
+              </p>}
             </div>
             {/* 部門(対象曲ごと＋総合)。対象曲を持つのはイベントだけなので、週では出ない */}
             {divisions.length>1&&(
@@ -21686,8 +21705,13 @@ function MonsterHeroGame() {
       const bonusRates = rhythmEventPlayBonusRates(event);
       // ★週間は**累計スコア方式**(2026-09-13)。曲ごとのベストではなく、その週に出した記録を
       //   ぜんぶ足す。対象曲も部門も無いので、期間だけ渡す専用の関数を呼ぶ
-      // 週間(履歴の週をふくむ)は累計スコア方式。対象曲も部門も無いので期間だけ渡す
-      const weeklyTotals = (kind === 'weekly' || (kind === 'history' && historyEntry.kind === 'weekly')) && !targetSongId;
+      // 週間(履歴の週をふくむ)は累計スコア方式。対象曲も部門も無いので期間だけ渡す。
+      // ★ただし履歴の古い週は**当時の数え方(曲ごとのベストの合計)**で集計する
+      //   (2026-09-14・ユーザー依頼で、累計方式より前の週も載せるようにした)。
+      //   累計で出し直すと、当時プレイヤーが見ていた順位と数字が変わってしまう
+      const historyWeekScoring = (kind === 'history' && historyEntry.kind === 'weekly')
+        ? (historyEntry.scoring || 'total') : null;
+      const weeklyTotals = ((kind === 'weekly') || historyWeekScoring === 'total') && !targetSongId;
       const fetchRows = (options) => weeklyTotals
         ? sbFetchRhythmWeekTotals({ fromMs:range.startMs, toMs:range.endMs, ...options })
         : targetSongId

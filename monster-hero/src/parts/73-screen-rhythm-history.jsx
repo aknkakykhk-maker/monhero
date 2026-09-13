@@ -30,8 +30,12 @@ function RhythmHistoryScreen({
   const activeDivision = divisions.some(division => division.id === wanted) ? wanted : RHYTHM_EVENT_TOTAL_DIVISION;
   const divisionBoard = (view.boards && view.boards[activeDivision]) || { status:'idle', entries:[], self:null };
   const songId = rhythmEventDivisionSongId(activeDivision);
-  // 週は累計スコア方式なので、1行に出す補助の数字が「遊んだ回数」になる
+  // 週は累計スコア方式なので、1行に出す補助の数字が「遊んだ回数」になる。
+  // ★ただし累計方式より前の週(scoring:'best')は、当時の数え方=曲ごとのベストの合計。
+  //   遊んだ回数は数えていないので出さない(2026-09-14)
   const weekly = !!selected && selected.kind === 'weekly';
+  const weeklyBest = weekly && selected.scoring === 'best';
+  const weeklyTotals = weekly && !weeklyBest;
   const rows = Array.isArray(divisionBoard.entries) ? divisionBoard.entries : [];
   const self = divisionBoard.self || null;
   // ランクは素点で決める(回数ボーナス込みの点だと満点を超えてしまうため。ランキング画面と同じ)
@@ -46,7 +50,7 @@ function RhythmHistoryScreen({
         <p className="text-[9px] text-slate-400">
           {songId
             ? `${RHYTHM_DEMO_DIFFICULTY_LABELS[entry.difficultyId]?.name||entry.difficultyId||'-'} ・ Lv.${entry.level}`
-            : `${weekly?`${entry.playCount}回 ・ `:''}${entry.songCount}曲 ・ Lv.${entry.level}`}
+            : `${weeklyTotals?`${entry.playCount}回 ・ `:''}${entry.songCount}曲 ・ Lv.${entry.level}`}
         </p>
       </div>
       <div className="shrink-0 text-right">
@@ -100,6 +104,14 @@ function RhythmHistoryScreen({
               <p className="mt-2 text-[9px] leading-relaxed text-slate-500">
                 当時の記録から数え直して出しています。ここから報酬を受け取ることはできません。
               </p>
+              {/* ★数え方が途中で変わっているので、どちらで出しているかを書く(2026-09-14)。
+                  書かないと「同じ週間ランキングなのに見かたが違う」と伝わらない */}
+              {weeklyBest&&<p data-rhythm-history-best-note className="mt-1 text-[9px] leading-relaxed text-amber-200/80">
+                この週は「曲ごとのいちばん良いスコアを全曲ぶん合計」で競っていたころのものです（当時と同じ数え方で出しています）。いまの週間ランキングは「遊んだぶんをすべて足す」方式です。
+              </p>}
+              {weeklyTotals&&<p data-rhythm-history-total-note className="mt-1 text-[9px] leading-relaxed text-slate-500">
+                この週は「その週に遊んだぶんをすべて足す」方式です。
+              </p>}
             </div>
             {/* 部門(対象曲ごと＋総合)。対象曲を持つのはイベントだけなので、週では出ない */}
             {divisions.length>1&&(

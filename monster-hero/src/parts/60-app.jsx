@@ -1880,8 +1880,13 @@ function MonsterHeroGame() {
       const bonusRates = rhythmEventPlayBonusRates(event);
       // ★週間は**累計スコア方式**(2026-09-13)。曲ごとのベストではなく、その週に出した記録を
       //   ぜんぶ足す。対象曲も部門も無いので、期間だけ渡す専用の関数を呼ぶ
-      // 週間(履歴の週をふくむ)は累計スコア方式。対象曲も部門も無いので期間だけ渡す
-      const weeklyTotals = (kind === 'weekly' || (kind === 'history' && historyEntry.kind === 'weekly')) && !targetSongId;
+      // 週間(履歴の週をふくむ)は累計スコア方式。対象曲も部門も無いので期間だけ渡す。
+      // ★ただし履歴の古い週は**当時の数え方(曲ごとのベストの合計)**で集計する
+      //   (2026-09-14・ユーザー依頼で、累計方式より前の週も載せるようにした)。
+      //   累計で出し直すと、当時プレイヤーが見ていた順位と数字が変わってしまう
+      const historyWeekScoring = (kind === 'history' && historyEntry.kind === 'weekly')
+        ? (historyEntry.scoring || 'total') : null;
+      const weeklyTotals = ((kind === 'weekly') || historyWeekScoring === 'total') && !targetSongId;
       const fetchRows = (options) => weeklyTotals
         ? sbFetchRhythmWeekTotals({ fromMs:range.startMs, toMs:range.endMs, ...options })
         : targetSongId
