@@ -101,6 +101,7 @@ jobs:
           node tools/mode/rhythm-total-ranking-check.js
           node tools/mode/rhythm-event-window-check.js
           node tools/mode/rhythm-play-bonus-check.js
+          node tools/mode/rhythm-weekly-reward-check.js
           node tools/mode/rhythm-keyframe-blur-check.js
       # 譜面の道具（手のモデル・押せるかの判定・自動修正）を触ったときだけ重い検査を回す。
       # 毎回だと35秒×毎コミット。実際にこの6ファイルが変わるのは3か月で数回しかない。

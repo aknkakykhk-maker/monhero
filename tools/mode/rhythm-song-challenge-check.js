@@ -99,9 +99,14 @@ ok('測れた差を強めて使っている（CHALLENGE_GAIN が1より大きい
   GAIN?`CHALLENGE_GAIN=${GAIN[1]}`:'生成器に CHALLENGE_GAIN がありません');
 ok('1項目だけが暴れても全部が決まらないようにしてある（項目ごとの挟み）',!!RATIO_RANGE,
   RATIO_RANGE?`CHALLENGE_RATIO_RANGE ${RATIO_RANGE[1]}〜${RATIO_RANGE[2]}`:'生成器に CHALLENGE_RATIO_RANGE がありません');
+// 細いノーツの率に vocab（1以下）が掛かっていること。
+// 2026-09-13 に曲ごとの「激しさ」(INTENSITY_STYLES)を足したので、この行は
+// Math.min(.75, base.narrowRate*vocab*I.narrow) の形になった。
+// 見たいのは「vocab が掛かっていること（薄い曲は軽くなる）」なので、
+// そのままの並びを要求しつつ、後ろに倍率が続く形も通す。
 ok('歯ごたえを譜面の中身（種類・細さ）にも効かせている（薄い曲を軽くする方向へ）',
   /CHALLENGE_VOCABULARY_EXPONENT/.test(generator)
-  &&/narrowRate:base\.narrowRate\*vocab/.test(generator)
+  &&/narrowRate:(?:Math\.min\([\d.]+,)?base\.narrowRate\*vocab/.test(generator)
   &&/const vocab=Math\.min\(1,Math\.pow\(challengeForProfile,CHALLENGE_VOCABULARY_EXPONENT\)\)/.test(generator));
 if(REFERENCE&&EXPONENT&&RANGE&&RATIO_RANGE&&GAIN){
   const ref={bpm:+REFERENCE[1],ops:+REFERENCE[2],clarity:+REFERENCE[3]};

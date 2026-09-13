@@ -212,6 +212,76 @@ const DENSITY_TARGET=Object.freeze({
   MASTER:Object.freeze({perBeat:1.19,minPerSecond:1.92,maxPerSecond:4.6,hardMaxPerSecond:5.4}),
 });
 
+// --- 曲ごとの「激しさ」（上位難易度の歯ごたえだけを強める） ---
+// 【なぜ要るか】(2026-09-13・ユーザー「今の最大を見てダントツぐらいなやつにしてほしい」)
+// 量（ノーツ数）は「実際に鳴っている音」で頭打ちになる。FREEDOM DiVE↓ は打点934件のうち
+// MASTERで使えるのが564件（62%）で、challengeFactor をいくら上げても 569 で止まり、
+// レベルはむしろ下がった（量が増える代わりに配置が素直になるため）。
+// そこで**量ではなく1ノーツの重さ**（細いノーツ・近い同時押し・指の交差・押さえながらの別ノーツ）を
+// 強める道を別に用意する。ボス曲だけに使う。
+//
+// 【既存曲を変えないための作り】
+// 曲の一覧（rhythm-song-registry.json）に chartIntensity を**書いた曲だけ**に効く。
+// 書いていない曲は倍率が全部1で、Object.freeze の中身も素通りするので譜面は1音も変わらない
+// （運用ルール⑩-2。変更前後の生成結果をノーツ数で突き合わせて確かめること）。
+//
+// 【全部の難易度に効かせる】(2026-09-13・ユーザー指示
+// 「基本的に曲の難しさはマスターだけとかじゃなくて全ての難易度に当てはまるから
+//   全体的にむずかしくしてほしい」)
+// はじめはEXPERT/MASTERだけに効かせていたが、それだとEXPERT→MASTERの段差が +20 になり
+// (ほかの曲は最大でも +10)、MASTERだけが遠くにある形になった。曲そのものが速くて音数が多いなら、
+// EASYで遊んでもその曲は難しいはずなので、**全部の難易度を上げて曲ごと持ち上げる**。
+// ただし難易度の「できること」(PROFILESのtypes・widths・maxRun)は動かさないので、
+// EASYがFLICKやSLIDEを持ち出すことはない。増えるのは量と、細さ・同時押しの厚み。
+const INTENSITY_STYLES=Object.freeze({
+  // ボス曲向け。細いノーツと同時押し・交差を厚くして、1ノーツあたりの仕事量を上げる。
+  extreme:Object.freeze({
+    // 16分裏を捨てない（OFF_BEAT_KEEP の上書き）。
+    // 【なぜ要るか】FREEDOM DiVE↓ は「拍の頭 ÷ 16分裏」が 1.054 で BEAT_CLARITY_MIN(1.10)を
+    // わずかに下回り、16分裏の65%が捨てられていた。Stay With Me のように
+    // 「持続音の立ち上がりを16分裏として拾ってしまう曲」を救うための仕掛けだが、
+    // この曲は 222BPM の連打そのものが16分裏にあるので、捨てると発狂が消える。
+    // 拍が立っていないのではなく、**裏も表と同じだけ鳴っている**ための1.05。
+    offBeatKeep:1,
+    // HOLD / SLIDE の素に、ベースの伸び(bassSustains)も混ぜる。
+    // 【なぜ要るか】FREEDOM DiVE↓ は歪んだ高速シンセで音高がほとんど取れず、
+    // 旋律の伸び(sustains)が **8件**しかない（SIX ÉTERNEL は179件）。そのため素の生成では
+    // HOLDもSLIDEも1本も置けず、MASTERまで全部が単押しとフリックだけの譜面になっていた。
+    // ベースの伸びは169件あり、これも実際に鳴っている音なので幽霊ノーツ(§2.1)にはならない。
+    useBassSustains:true,
+    // 倍率は既定のプロファイル(PROFILES)に掛ける。数字は FREEDOM DiVE↓ で
+    // 実際に生成して測った値(2026-09-13)。
+    //   narrow … 幅1のノーツの率（掛けたあと .75 で頭打ち）
+    //   chord / chordRun … 同時押しと、その連なり
+    //   cross … 押さえっぱなしの外側を叩く（指を交差させる）
+    //   minGapLanes … 同時押しの2つの間隔（小さいほど狙いが要る）
+    //   density … 毎秒のノーツ数の目標
+    //   ceiling … 毎秒の天井。既定の安全弁(hardMaxPerSecond)より上を許すときだけ書く。
+    //             どれだけ上げても「実際に鳴っている音」より多くは置けない
+    //             (この曲の打点は 934件 / 145.4秒 = 6.42毎秒)
+    EASY:Object.freeze({narrow:1,chord:2,chordRun:1,cross:1,hold:1.3,flick:1,
+      tapDuringHold:null,minGapLanes:1,maxLaneStep:0,density:1.35,ceiling:3.4,lattice:1}),
+    NORMAL:Object.freeze({narrow:1.8,chord:2.2,chordRun:1,cross:1,hold:1.25,flick:1.3,
+      tapDuringHold:null,minGapLanes:.95,maxLaneStep:0,density:1.5,ceiling:3.9,lattice:1}),
+    HARD:Object.freeze({narrow:2.2,chord:2,chordRun:1.4,cross:1.3,hold:1.2,flick:1.2,
+      tapDuringHold:null,minGapLanes:.9,maxLaneStep:1,density:1.5}),
+    EXPERT:Object.freeze({narrow:3.2,chord:3.4,chordRun:2.6,cross:2.4,hold:1.25,flick:1.3,
+      tapDuringHold:true,minGapLanes:.85,maxLaneStep:1,density:2.6,ceiling:5.6}),
+    MASTER:Object.freeze({narrow:4.5,chord:5,chordRun:4,cross:3.5,hold:1.3,flick:1.35,
+      tapDuringHold:true,minGapLanes:.8,maxLaneStep:1,density:3,ceiling:6.4}),
+  }),
+});
+// 書いていない曲・知らない名前のときは「何も変えない」を返す。
+const NO_INTENSITY=Object.freeze({narrow:1,chord:1,chordRun:1,cross:1,hold:1,flick:1,
+  tapDuringHold:null,minGapLanes:1,maxLaneStep:0,density:1,ceiling:0,lattice:0});
+const songIntensity=(audio,difficulty)=>{
+  const style=INTENSITY_STYLES[String(audio&&audio.chartIntensity||'')];
+  return (style&&style[difficulty])||NO_INTENSITY;
+};
+// 難易度によらない、曲まるごとの設定（拾う音の選び方は難易度で変えない。
+// 変えると「下の難易度は上の難易度の部分集合」という決めごとが崩れるため）。
+const songIntensityCommon=audio=>INTENSITY_STYLES[String(audio&&audio.chartIntensity||'')]||null;
+
 // --- 曲ごとの歯ごたえ（曲の性格を譜面の量に出す） ---
 // 【なぜ要るか】
 // 上の DENSITY_TARGET だけだと、量を決めるのは実質「1拍あたり何個 × テンポ」だけになる。
@@ -334,6 +404,9 @@ const audio=readJson(authoring(`${dashed}-v3-audio.json`));
     const entry=(JSON.parse(fs.readFileSync(registryFile,'utf8')).songs||{})[trackId];
     const pinned=Number(entry&&entry.challengeFactor);
     if(Number.isFinite(pinned)&&pinned>0)audio.challengeFactor=pinned;
+    // 曲ごとの「激しさ」。書いた曲だけに効く（書いていない曲は今までと1音も変わらない）。
+    const style=entry&&entry.chartIntensity;
+    if(typeof style==='string'&&style)audio.chartIntensity=style;
   }
 }
 if(audio.analysisType!=='rhythm-audio-v3')throw new Error('V3音源解析のJSONではありません');
@@ -491,20 +564,33 @@ const buildChart=(difficulty,options={})=>{
   // 濃い曲はその難易度の既定どおりにし、薄い曲だけ中身もやさしくする。
   const vocab=Math.min(1,Math.pow(challengeForProfile,CHALLENGE_VOCABULARY_EXPONENT));
   const scaleRate=value=>Number.isFinite(value)&&value>0?value*vocab:value;
+  // 曲ごとの「激しさ」。書いていない曲では倍率が全部1なので、下の式は今までと同じ値を返す。
+  const I=songIntensity(audio,difficulty);
+  const boost=(value,factor)=>Number.isFinite(value)&&value>0&&factor!==1?value*factor:value;
   const P=(()=>{
     const base=PROFILES[difficulty];
     return Object.freeze({...base,
-      holdPerMinute:scaleRate(base.holdPerMinute),
+      holdPerMinute:boost(scaleRate(base.holdPerMinute),I.hold),
       slidePerMinute:scaleRate(base.slidePerMinute),
-      flickPerMinute:scaleRate(base.flickPerMinute),
+      flickPerMinute:boost(scaleRate(base.flickPerMinute),I.flick),
       endFlickPerMinute:scaleRate(base.endFlickPerMinute),
       accentPerMinute:scaleRate(base.accentPerMinute),
-      crossPerMinute:scaleRate(base.crossPerMinute),
-      // 細いノーツの率（vocab は1以下なので、減る方向にしか動かない）
-      narrowRate:base.narrowRate*vocab,
-      chord:base.chord?Object.freeze({...base.chord,perMinute:scaleRate(base.chord.perMinute)}):base.chord,
+      crossPerMinute:boost(scaleRate(base.crossPerMinute),I.cross),
+      // 細いノーツの率（vocab は1以下なので、減る方向にしか動かない）。
+      // 激しさを書いた曲だけ、そのあとで増やす（上限.75。全部が幅1になると狙う場所が消えるため）。
+      narrowRate:Math.min(.75,base.narrowRate*vocab*I.narrow),
+      // 押さえっぱなしの最中に押す形。激しさを書いた曲では上位難易度で必ず開ける。
+      tapDuringHold:I.tapDuringHold===null?base.tapDuringHold:(base.tapDuringHold||I.tapDuringHold),
+      // 横の跳びの上限。激しさぶんだけ広げる（届くかどうかは両手のシミュレートが見張る）。
+      maxLaneStep:base.maxLaneStep+(I.maxLaneStep||0),
+      // 置ける格子の細かさ。EASY/NORMALは既定が2（8分まで）。
+      // 激しさに lattice を書いた難易度だけ、その細かさまで許す（1＝16分）。
+      lattice:Number(I.lattice)>0?Number(I.lattice):base.lattice,
+      chord:base.chord?Object.freeze({...base.chord,perMinute:boost(scaleRate(base.chord.perMinute),I.chord),
+        // 同時押しの2つの間隔。狭いほど狙いが要る（レベルの物差しでも chordTight が重い）。
+        minGapLanes:base.chord.minGapLanes*I.minGapLanes}):base.chord,
       sweep:base.sweep?Object.freeze({...base.sweep,perMinute:scaleRate(base.sweep.perMinute)}):base.sweep,
-      chordRun:base.chordRun?Object.freeze({...base.chordRun,perMinute:scaleRate(base.chordRun.perMinute)}):base.chordRun,
+      chordRun:base.chordRun?Object.freeze({...base.chordRun,perMinute:boost(scaleRate(base.chordRun.perMinute),I.chordRun)}):base.chordRun,
     });
   })();
   let notes=[];
@@ -542,10 +628,14 @@ const buildChart=(difficulty,options={})=>{
   const offBeatFloor=(()=>{
     const clarity=audio.summary?.beatClarity;
     if(!clarity||!(clarity.ratio>0)||clarity.ratio>=BEAT_CLARITY_MIN)return 0;
+    // 曲ごとの「激しさ」で残す割合を上書きできる（書いていない曲は OFF_BEAT_KEEP のまま）。
+    const keep=Number(songIntensityCommon(audio)?.offBeatKeep);
+    const keepRate=Number.isFinite(keep)&&keep>0?Math.min(1,keep):OFF_BEAT_KEEP;
+    if(keepRate>=1)return 0;
     const strengths=allOnsets.filter(onset=>!onBeatOrEighth(onset))
       .map(onset=>onset.strength).sort((a,b)=>a-b);
     if(!strengths.length)return 0;
-    return strengths[Math.floor(strengths.length*(1-OFF_BEAT_KEEP))]??0;
+    return strengths[Math.floor(strengths.length*(1-keepRate))]??0;
   })();
   // ★大きい一発(FULL)だけは、格子からのずれをもう少し許す。
   //   30msで切っていたため、格子と噛み合わせが悪い曲では**大きい一発の半分が落ちていた**
@@ -570,10 +660,23 @@ const buildChart=(difficulty,options={})=>{
   // **下限は動かさない**。下限は「これ以下だと間延びして拍が取れない」ための線なので、
   // 薄い曲だからといって下げてよいものではない。
   const challenge=songChallengeFactor(audio);
-  // hardMaxPerSecond は factor を掛けない（掛けたら上限にならない。上の但し書きを参照）
+  // 曲ごとの「激しさ」。書いていない曲では density が1・ceiling が0なので、
+  // 下の式は今までとまったく同じ値を返す。
+  const densityBoost=Number(I.density)>0?Number(I.density):1;
+  // 激しさを書いた曲では、上限を1段上げる（既定の maxPerSecond ではなく hardMaxPerSecond を使う）。
+  const softMax=densityBoost>1?target.hardMaxPerSecond:target.maxPerSecond;
+  // いちばん外側の天井。既定は hardMaxPerSecond（ここは全曲共通の安全弁）。
+  // 曲ごとの「激しさ」に ceiling を書いた難易度だけ、その値まで許す。
+  // それでも「実際に鳴っている音」より多くは置けない（幽霊ノーツ §2.1 を作らないため、
+  // 拾う音の数が本当の天井になる）。押せるかどうかは両手のシミュレートが見張る。
+  const ceiling=Number(I.ceiling)>0
+    ?Math.max(target.hardMaxPerSecond,Number(I.ceiling))
+    :target.hardMaxPerSecond;
+  // 天井には factor を掛けない（掛けたら上限にならない。上の但し書きを参照）
   const notesPerSecond=Math.max(target.minPerSecond,
-    Math.min(target.hardMaxPerSecond,
-      target.maxPerSecond*challenge.factor,target.perBeat*beatsPerSecond*challenge.factor));
+    Math.min(ceiling,
+      softMax*challenge.factor*densityBoost,
+      target.perBeat*beatsPerSecond*challenge.factor*densityBoost));
   const targetCount=Math.round(notesPerSecond*playableMs/1000);
   // 小節ごとの取り分は「その小節にある音の数 × 盛り上がりの持ち上げ」の比で配る。
   // どれだけ盛り上がっても、その小節に無い音は叩かせない。
@@ -661,7 +764,17 @@ const buildChart=(difficulty,options={})=>{
   const usedGrids=new Set();
   const spacedGrids=new Set(spaced.map(o=>o.grid));
   if(P.types.includes('HOLD')||P.types.includes('SLIDE')){
-    const spans=audio.sustains
+    // 素は旋律の伸び。曲ごとの「激しさ」で useBassSustains を書いた曲だけ、
+    // ベースの伸びも足す（書いていない曲では audio.sustains そのままなので譜面は変わらない）。
+    const sustainSource=(()=>{
+      const base=Array.isArray(audio.sustains)?audio.sustains:[];
+      if(!songIntensityCommon(audio)?.useBassSustains)return base;
+      const bass=Array.isArray(audio.bassSustains)?audio.bassSustains:[];
+      if(!bass.length)return base;
+      // 旋律の伸びを先に見るため、同じ長さなら旋律が勝つ並びにしておく（下で長い順に並べ直す）。
+      return base.concat(bass.map(span=>({...span,fromBass:true})));
+    })();
+    const spans=sustainSource
       .filter(span=>span.startGrid>=minGrid&&span.endGrid<=maxGrid&&span.grids>=COMMON.holdMinGrids)
       .filter(span=>[0,1,-1,2,-2].some(shift=>spacedGrids.has(span.startGrid+shift)))
       .sort((a,b)=>b.grids-a.grids);

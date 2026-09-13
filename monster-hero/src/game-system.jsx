@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b9b812ac8f6815b9
+// generated-sha256: 334f84cc10d7f6f6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -89,7 +89,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-13 13:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-13 13:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -650,6 +650,27 @@ const buildSoulRankRespecProofExchange = (ownedItems, quantity = 1) => {
       ...before,
       [HERO_PROOF_ITEM_ID]:proofHave - count,
       [SOUL_RANK_RESPEC_ITEM_ID]:ownedItemCount(before, SOUL_RANK_RESPEC_ITEM_ID) + count,
+    },
+  };
+};
+// 勇者の証片 → 勇者の証 の交換(2026-09-13)。
+// 20個ごとに1個。足りなければ ok:false を返し、所持品には一切触れない。
+// ★増える側も減る側も同じ mh_owned_items の中なので、書き戻しは1回で済む。
+const buildHeroProofShardExchange = (ownedItems, quantity = 1) => {
+  const before = ownedItems && typeof ownedItems === 'object' && !Array.isArray(ownedItems) ? ownedItems : {};
+  const count = Math.max(1, Math.floor(Number(quantity) || 1));
+  const shardCost = count * HERO_PROOF_SHARD_PER_PROOF;
+  const shardHave = ownedItemCount(before, HERO_PROOF_SHARD_ITEM_ID);
+  if (shardHave < shardCost) return { ok:false, quantity:count, shardCost, shardHave, ownedItems:before };
+  return {
+    ok:true,
+    quantity:count,
+    shardCost,
+    shardHave,
+    ownedItems:{
+      ...before,
+      [HERO_PROOF_SHARD_ITEM_ID]:shardHave - shardCost,
+      [HERO_PROOF_ITEM_ID]:ownedItemCount(before, HERO_PROOF_ITEM_ID) + count,
     },
   };
 };
@@ -1480,6 +1501,20 @@ const HERO_PROOF_ITEM = Object.freeze({
   emoji:'🏅',
   usage:'soulRank',
   desc:'魂格進化Ⅰ〜Ⅴに使う高難度クリア報酬。神殿の「魂格進化」で消費する。',
+});
+
+// 勇者の証片(2026-09-13・ユーザーが決めた)。モンヒロビートの週間ランキングの報酬で増え、
+// マーケットで HERO_PROOF_SHARD_PER_PROOF 個ごとに「勇者の証」1個と交換できる。
+// ★所持数は他アイテムと同じ mh_owned_items の中へ入れ、新しい保存キーは作らない(CLAUDE.md ⑦)。
+// ★20個未満でも無駄にならず貯まる。証そのものではないので、魂格進化には直接使えない。
+const HERO_PROOF_SHARD_ITEM_ID = 'hero_proof_shard';
+const HERO_PROOF_SHARD_PER_PROOF = 20;
+const HERO_PROOF_SHARD_ITEM = Object.freeze({
+  id:HERO_PROOF_SHARD_ITEM_ID,
+  name:'勇者の証片',
+  emoji:'🎖️',
+  usage:'heroProofShard',
+  desc:`モンヒロビートの週間ランキングでもらえるかけら。マーケットで${HERO_PROOF_SHARD_PER_PROOF}個ごとに「勇者の証」1個と交換できる。`,
 });
 const HERO_PROOF_CLEAR_REWARDS = Object.freeze({
   extreme:Object.freeze({ GOD:1, RAGNAROK:2 }),
@@ -3344,6 +3379,8 @@ const BGM_TRACKS = [
   // モンビーの新曲(2026-09-08)。同じくmp4で受け取った音源から映像を落として入れたもの
   { id:'melo_crossing_field', name:'crossing field', creator:'オリジナル', src:'audio/bgm-crossing-field.mp3', gain:1, loop:true },
   { id:'melo_nothing_without_you', name:'Nothing Without You', creator:'オリジナル', src:'audio/bgm-nothing-without-you.mp3', gain:1, loop:true },
+  // モンビーの新曲(2026-09-13)。同じくmp4で受け取った音源から映像を落として入れたもの
+  { id:'melo_freedom_dive', name:'FREEDOM DiVE↓', creator:'オリジナル', src:'audio/bgm-freedom-dive.mp3', gain:1, loop:true },
   { id:'melo_dullahan_clockwork_alt', name:'呪われた騎士の時計仕掛け -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-clockwork-alt.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost', name:'鋼鉄の亡霊', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost_alt', name:'鋼鉄の亡霊 -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost-alt.mp3', gain:1, loop:true },
@@ -3822,6 +3859,7 @@ const Audio_ = (() => {
     "audio/bgm-enhance.mp3": "eb0690d02d8a",
     "audio/bgm-event-01.mp3": "c57069b5ad2f",
     "audio/bgm-event-02.mp3": "d572118c203e",
+    "audio/bgm-freedom-dive.mp3": "34616b2fccd3",
     "audio/bgm-fusion.mp3": "6f0d4675789f",
     "audio/bgm-game-over.mp3": "d9fb75a7c827",
     "audio/bgm-home-ichika.mp3": "29295336d1af",
@@ -8257,12 +8295,13 @@ const MarketProductCard = ({ item, owned=false, comingSoon=false, detail=null, m
   const usesGold=item.type==='disc'||item.type==='assist'||item.type==='item';
   const usesPsyche=item.currency==='psyche';
   const usesHeroProof=item.currency==='heroProof';
-  const priceLabel=usesHeroProof?`勇者の証${item.cost}個`:usesPsyche?`${item.cost}プシュケー`:usesGold?`${item.cost}ダイヤ`:`${item.cost}pt`;
+  const usesHeroProofShard=item.currency==='heroProofShard';
+  const priceLabel=usesHeroProofShard?`勇者の証片${item.cost}個`:usesHeroProof?`勇者の証${item.cost}個`:usesPsyche?`${item.cost}プシュケー`:usesGold?`${item.cost}ダイヤ`:`${item.cost}pt`;
   return <div className={`rounded-xl border-2 p-1.5 flex flex-col items-center gap-1 ${owned?'bg-emerald-900/30 border-emerald-500/50':comingSoon?'bg-slate-900/60 border-slate-800/60':'bg-slate-900 border-slate-800'}`}>
     <MarketProductIcon item={item} onZoom={onZoom} disabled={disabled}/>
     <div className={`w-full flex items-center justify-center text-center text-[9px] font-black leading-[1.15] ${comingSoon?'text-slate-500':'text-white'}`} style={{minHeight:'36px'}}>{item.name}</div>
     <div className="w-full flex items-center justify-center gap-1" style={{height:'22px'}}>{middle||detail&&!comingSoon?<>{middle}{!middle&&<button onClick={onDetail} aria-label={`${item.name}の詳細を見る`} className="text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"><BookOpen size={8}/>詳細</button>}</>:null}</div>
-    <div className="w-full flex items-center justify-center mt-auto pt-2">{comingSoon?<div className="text-[8px] font-black text-slate-500 bg-slate-800/60 px-2 py-1 rounded-full whitespace-nowrap">近日追加</div>:owned?<div className="text-[8px] font-black text-emerald-400 bg-emerald-950/50 px-2 py-1 rounded-full whitespace-nowrap">所持済み</div>:<button onClick={onBuy} disabled={disabled||!canBuy} aria-label={`${item.name}${disabled?'（デバッグのため購入不可）':`を${priceLabel}で${usesHeroProof?'交換':'購入'}`}`} className={`text-[10px] font-black px-1.5 min-h-[30px] max-w-full rounded-xl flex items-center justify-center gap-1 whitespace-nowrap ${disabled||!canBuy?'bg-slate-800 text-slate-500':usesPsyche?'bg-fuchsia-600 text-white active:scale-95':'bg-amber-500 text-black active:scale-95'}`}>{usesHeroProof?<><span aria-hidden="true">🏅</span><span className="text-[8px]">勇者の証 ×{item.cost.toLocaleString()}</span></>:usesPsyche?<><span aria-hidden="true">🌈</span><span>{item.cost.toLocaleString()}</span></>:<>{usesGold?<Gem size={9} className="shrink-0"/>:<Coins size={9} className="shrink-0"/>}<span>{item.cost.toLocaleString()}</span></>}</button>}</div>
+    <div className="w-full flex items-center justify-center mt-auto pt-2">{comingSoon?<div className="text-[8px] font-black text-slate-500 bg-slate-800/60 px-2 py-1 rounded-full whitespace-nowrap">近日追加</div>:owned?<div className="text-[8px] font-black text-emerald-400 bg-emerald-950/50 px-2 py-1 rounded-full whitespace-nowrap">所持済み</div>:<button onClick={onBuy} disabled={disabled||!canBuy} aria-label={`${item.name}${disabled?'（デバッグのため購入不可）':`を${priceLabel}で${usesHeroProof||usesHeroProofShard?'交換':'購入'}`}`} className={`text-[10px] font-black px-1.5 min-h-[30px] max-w-full rounded-xl flex items-center justify-center gap-1 whitespace-nowrap ${disabled||!canBuy?'bg-slate-800 text-slate-500':usesPsyche?'bg-fuchsia-600 text-white active:scale-95':'bg-amber-500 text-black active:scale-95'}`}>{usesHeroProofShard?<><span aria-hidden="true">🎖️</span><span className="text-[8px]">証片 ×{item.cost.toLocaleString()}</span></>:usesHeroProof?<><span aria-hidden="true">🏅</span><span className="text-[8px]">勇者の証 ×{item.cost.toLocaleString()}</span></>:usesPsyche?<><span aria-hidden="true">🌈</span><span>{item.cost.toLocaleString()}</span></>:<>{usesGold?<Gem size={9} className="shrink-0"/>:<Coins size={9} className="shrink-0"/>}<span>{item.cost.toLocaleString()}</span></>}</button>}</div>
   </div>;
 };
 
@@ -8410,6 +8449,16 @@ const helpDataRows = (id) => {
       return dexMonsterList().map(mon => {
         const { main, sub } = monsterLineageOf(mon.id);
         return [mon.name, `${main.name} × ${sub.name}（${monsterCategoryName(monsterCategoryOf(mon.id))}）`];
+      });
+    // 週間ランキングの順位報酬。1〜10位を実データ(式)から作る
+    // (ヘルプへ10行書き写すと、幅を変えたときに古いままになる)
+    case 'rhythmWeeklyRewards':
+      return Array.from({ length: RHYTHM_WEEKLY_REWARD_RANKS }, (_, index) => {
+        const reward = rhythmWeeklyRewardForRank(index + 1);
+        return [`${index + 1}位`,
+          `${HERO_PROOF_SHARD_ITEM.emoji} ${HERO_PROOF_SHARD_ITEM.name}×${reward.count}`
+          + ` ／ 💗 虹のプシュケー×${reward.psyche.toLocaleString()}`
+          + ` ／ 💎 ダイヤ×${reward.gold.toLocaleString()}`];
       });
     // イベントの回数ボーナス。難易度ごとの割合を実データから出す
     // (ヘルプへ手で書き写すと、割合を変えたときに古いままになる)
@@ -8606,6 +8655,7 @@ const HELP_DATA_TITLES = {
   difficulties: '難易度と倍率',
   extremeDifficulties: '極限チャレンジの難易度',
   rhythmEventPlayBonus: 'イベントの回数ボーナス（1回あたり）',
+  rhythmWeeklyRewards: '週間ランキングの順位報酬',
   levelUpPointMultipliers: 'レベルアップでもらえる強化ポイント',
   speciesChallengeLineages: '種族チャレンジで選べる種族',
   speciesChallengeRewards: '種族チャレンジの難易度と初回クリア報酬',
@@ -10780,6 +10830,10 @@ const RHYTHM_EVENT_RANKING_DISPLAY_LIMIT = 50;
 const RHYTHM_EVENT_SONG_SELECT_BASE = 'identity_key,user_name,song_id,difficulty_id,score,scored_at,level,icon';
 const RHYTHM_EVENT_SONG_SELECT = `${RHYTHM_EVENT_SONG_SELECT_BASE},party`;
 const RHYTHM_EVENT_TOTAL_SELECT = 'identity_key,user_name,total_score,song_count,last_scored_at,level,icon';
+// 週間ランキングは**累計スコア方式**(2026-09-13・ユーザーが決めた)。
+// 曲ごとのベストではなく、その週に出した記録をぜんぶ足す。対象曲は無いので期間だけ渡す。
+// play_count は参加報酬(その週に3回遊ぶ)の判定にも使う。
+const RHYTHM_WEEK_TOTAL_SELECT = 'identity_key,user_name,total_score,play_count,song_count,last_scored_at,level,icon';
 // 回数ボーナス込みの集計(2026-09-11・ユーザー指示)。
 // score / total_score は**加点込み**の値で返ってくるので、並べ替え(order=score.desc)も
 // 上位50件の切り出しも加点込みで行われる。素点と加点は別の列で受け取り、「内訳」に出す。
@@ -10800,7 +10854,7 @@ const RHYTHM_EVENT_TOTAL_BONUS_SELECT = `${RHYTHM_EVENT_TOTAL_BONUS_SELECT_BASE}
 const rhythmEventRankingMissing = (status, body) => {
   if (status !== 404 && status !== 400) return false;
   const text = String(body || '');
-  if (!/rhythm_week_window|rhythm_event_song_bests|rhythm_event_totals/i.test(text)) return false;
+  if (!/rhythm_week_window|rhythm_week_score_totals|rhythm_event_song_bests|rhythm_event_totals/i.test(text)) return false;
   return /PGRST202|PGRST205|PGRST200|42P01|42883|does not exist|Could not find the/i.test(text);
 };
 // 「party という列は無い」という応答かどうか(SQL未適用の環境)。
@@ -10961,6 +11015,18 @@ const rhythmEventPlayCountsFromRow = (value) => {
   }
   return out;
 };
+// 週間ランキング(累計スコア)。対象曲を持たないので、渡すのは期間だけ
+const sbFetchRhythmWeekTotals = async ({ fromMs, toMs, limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' }) => {
+  const filter = Array.isArray(identityKeys) && identityKeys.length
+    ? `&identity_key=in.(${identityKeys.map(k => encodeURIComponent(`"${k}"`)).join(',')})`
+    : '';
+  return sbFetchRhythmEventRows({
+    url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_week_score_totals?select=${RHYTHM_WEEK_TOTAL_SELECT}`
+      + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
+    body: { from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() },
+    label: 'rhythm-week-total', requestId,
+  });
+};
 // 生の行を画面用の形へ整える。壊れた値でも落ちないよう、数として確かめてから使う
 const rhythmEventSongEntryFromRow = (row) => ({
   identityKey: typeof row?.identity_key === 'string' ? row.identity_key : '',
@@ -10985,6 +11051,19 @@ const rhythmEventTotalEntryFromRow = (row) => ({
   level: Number(row?.level) || 0,
   icon: row?.icon ?? null,
   ...rhythmEventBonusFields(row, 'base_total'),
+});
+// 週間の行。イベントの総合と形をそろえておくと、画面側で分岐が増えない。
+// 違うのは playCount(遊んだ回数)を必ず持つことだけ
+const rhythmWeekTotalEntryFromRow = (row) => ({
+  identityKey: typeof row?.identity_key === 'string' ? row.identity_key : '',
+  userName: row?.user_name || '名無しのブリーダー',
+  totalScore: Number(row?.total_score) || 0,
+  playCount: Number(row?.play_count) || 0,
+  songCount: Number(row?.song_count) || 0,
+  level: Number(row?.level) || 0,
+  icon: row?.icon ?? null,
+  // 週間に回数ボーナスは無いので、内訳の枠は出さない(CLAUDE.md の決めごとどおり)
+  baseScore: null, bonusScore: 0, playCounts: {},
 });
 
 // 検査(tools/ranking/rhythm-breeder-id-check.js)からモンビーの送信だけを直接叩けるようにする。
@@ -11785,6 +11864,8 @@ const rhythmEventRewardItem=(reward)=>{
     return item?{id:item.id,name:item.name,emoji:item.emoji||'🍇'}:null;
   }
   if(reward.kind==='heroProof')return {id:HERO_PROOF_ITEM_ID,name:HERO_PROOF_ITEM.name,emoji:HERO_PROOF_ITEM.emoji};
+  // 週間ランキングの順位報酬・参加報酬(2026-09-13)
+  if(reward.kind==='heroProofShard')return {id:HERO_PROOF_SHARD_ITEM_ID,name:HERO_PROOF_SHARD_ITEM.name,emoji:HERO_PROOF_SHARD_ITEM.emoji};
   if(reward.kind==='rainbowFruit')return {id:RAINBOW_TRANSCEND_FRUIT_ITEM_ID,name:RAINBOW_TRANSCEND_FRUIT_ITEM.name,emoji:'🌈'};
   return null;
 };
@@ -11803,9 +11884,11 @@ const RhythmEventBanner=({event,className=''})=>{
   );
 };
 // 参加報酬の1行。ダイヤと虹のプシュケーだけなので、アイテムの実体は要らない
+// 参加報酬の1行。週間は勇者の証片も付くので、アイテムぶんも出す
 const rhythmEventParticipationText=(reward)=>{
   if(!reward)return '';
   const parts=[];
+  if(reward.count>0)parts.push(`${HERO_PROOF_SHARD_ITEM.emoji} ${HERO_PROOF_SHARD_ITEM.name}×${reward.count.toLocaleString()}`);
   if(reward.gold>0)parts.push(`💎 ダイヤ×${reward.gold.toLocaleString()}`);
   if(reward.psyche>0)parts.push(`💗 虹のプシュケー×${reward.psyche.toLocaleString()}`);
   return parts.join(' ／ ');
@@ -11818,6 +11901,8 @@ const rhythmEventRewardText=(reward)=>{
   const parts=[];
   if(item&&reward.count>0)parts.push(`${item.emoji} ${item.name}×${reward.count}`);
   if(reward.psyche>0)parts.push(`💗 虹のプシュケー×${reward.psyche.toLocaleString()}`);
+  // 週間の順位報酬にはダイヤも付く(イベントの順位報酬には無いので、ある時だけ出す)
+  if(reward.gold>0)parts.push(`💎 ダイヤ×${reward.gold.toLocaleString()}`);
   return parts.join(' ／ ');
 };
 
@@ -14099,6 +14184,9 @@ function ItemInventoryScreen({ ownedItems, onBack, onUseItem }) {
   const inventoryItems = [
     ...BREEDER_MARKET_ITEMS.filter(item=>item.type==='item'&&(ownedItems[item.id]||0)>0),
     ...((ownedItems[HERO_PROOF_ITEM_ID]||0)>0?[HERO_PROOF_ITEM]:[]),
+    // 勇者の証片も売り物ではないので BREEDER_MARKET_ITEMS に無い。ここで並べる
+    // (2026-09-13・ユーザー指示「勇者の証片はアイテム欄に並ぶようにしてね」)
+    ...((ownedItems[HERO_PROOF_SHARD_ITEM_ID]||0)>0?[HERO_PROOF_SHARD_ITEM]:[]),
     ...Object.values(speciesTranscendFruitItems()).filter(item=>(ownedItems[item.id]||0)>0),
   ];
   return (
@@ -14135,6 +14223,8 @@ function ItemInventoryScreen({ ownedItems, onBack, onUseItem }) {
                     ? <div className="shrink-0 text-[9px] font-black text-sky-300 text-center leading-tight px-2">マスモン詳細の<br/>超越強化で<br/>使用</div>
                     : item.usage==='soulRank'
                     ? <div className="shrink-0 text-[9px] font-black text-amber-200 text-center leading-tight px-2">神殿の<br/>魂格進化で<br/>使用</div>
+                    : item.usage==='heroProofShard'
+                    ? <div className="shrink-0 text-[9px] font-black text-amber-100 text-center leading-tight px-2">マーケットで<br/>{HERO_PROOF_SHARD_PER_PROOF}個→<br/>勇者の証1個</div>
                     : item.usage==='soulRankRespec'
                     ? <div className="shrink-0 text-[9px] font-black text-cyan-300 text-center leading-tight px-2">マスモン詳細の<br/>魂格特性で<br/>使用</div>
                     : <button onClick={()=>onUseItem(item.id)} className="shrink-0 bg-teal-600 text-white text-[10px] font-black px-4 py-2 rounded-xl active:scale-95 uppercase">使う</button>}
@@ -14167,7 +14257,13 @@ function ItemInventoryScreen({ ownedItems, onBack, onUseItem }) {
 function BreederMarketScreen({
   gold, breederPoints, ownedItems, marketTab, marketExchangeError, purchaseProcessing,
   isItemOwned, onBack, onSelectTab, onZoomIcon, onBuy, onOpenDetail, onOpenItemDetail, onExchangeSoulRankRespec,
+  onExchangeHeroProof,
 }) {
+  // 上に出す所持数(2026-09-13・ユーザー指示「マーケットにプシュケーとか証片も
+  // いくつあるかダイヤみたいに表示がほしい」)。ダイヤ・ptと同じ帯へ並べる
+  const psycheHave = ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID);
+  const shardHave = ownedItemCount(ownedItems, HERO_PROOF_SHARD_ITEM_ID);
+  const proofHave = ownedItemCount(ownedItems, HERO_PROOF_ITEM_ID);
   return (
       <div data-mh-screen className="flex-1 flex flex-col h-full min-h-0 p-4">
         <div className="flex items-center gap-2 mb-2 shrink-0">
@@ -14175,7 +14271,7 @@ function BreederMarketScreen({
           <h2 className="text-xl font-black italic text-amber-400 uppercase tracking-widest">マーケット</h2>
         </div>
         <div className="shrink-0 w-full max-w-md mx-auto mb-3"><AssistantBubble scene="market" condition={Number.isFinite(CHEAPEST_GOLD_ITEM_COST)&&gold<CHEAPEST_GOLD_ITEM_COST?'lowGold':null}/></div>
-        <div className="flex gap-2 mb-4 shrink-0">
+        <div className="flex gap-2 mb-2 shrink-0">
           <div className="flex-1 flex items-center justify-center gap-2 bg-amber-950/40 border border-amber-500/30 rounded-2xl py-3">
             <Coins size={16} className="text-amber-400"/>
             <span className="text-lg font-black text-amber-300">{breederPoints}</span>
@@ -14186,6 +14282,23 @@ function BreederMarketScreen({
             <span className="text-lg font-black text-amber-300">{gold.toLocaleString()}</span>
             <span className="text-[9px] text-slate-400 font-bold">ダイヤ(WAVEクリアで獲得)</span>
           </div>
+        </div>
+        {/* ダイヤ以外の「持ち高」も同じように見せる。買う前に足りるかどうかが分かるようにするため
+            (2026-09-13・ユーザー指示)。0個でも出す(存在そのものを知らせたいので隠さない) */}
+        <div data-market-balances className="grid grid-cols-3 gap-2 mb-4 shrink-0">
+          {[
+            { key:'psyche', emoji:'🌈', label:'虹のプシュケー', value:psycheHave, tone:'text-fuchsia-200 border-fuchsia-500/30 bg-fuchsia-950/30' },
+            { key:'shard',  emoji:'🎖️', label:'勇者の証片',     value:shardHave,  tone:'text-amber-100 border-amber-400/30 bg-amber-950/30' },
+            { key:'proof',  emoji:'🏅', label:'勇者の証',       value:proofHave,  tone:'text-amber-200 border-amber-400/30 bg-amber-950/30' },
+          ].map(row=>(
+            <div key={row.key} data-market-balance={row.key} className={`flex flex-col items-center justify-center rounded-2xl border py-1.5 ${row.tone}`}>
+              <div className="flex items-baseline gap-1">
+                <span aria-hidden="true" className="text-[11px]">{row.emoji}</span>
+                <span className="font-mono text-sm font-black">{row.value.toLocaleString()}</span>
+              </div>
+              <span className="text-[8px] font-bold leading-tight text-slate-400">{row.label}</span>
+            </div>
+          ))}
         </div>
         <div className="flex gap-1.5 mb-3 shrink-0">
           {[{key:'icon',label:'アイコン'},{key:'disc',label:'円盤石'},{key:'assist',label:'アシスト'},{key:'item',label:'アイテム'}].map(tab=>(
@@ -14227,6 +14340,17 @@ function BreederMarketScreen({
                 </React.Fragment>
               );
             })}
+            {/* 勇者の証は売り物ではないので BREEDER_MARKET_ITEMS に無い。
+                アイテムのタブの最後へ「証片◯個で交換」の1枚だけ足す
+                (2026-09-13・ユーザーが決めた。モンヒロビートの週間ランキングで証片がたまる) */}
+            {marketTab==='item'&&<MarketProductCard
+              item={{...HERO_PROOF_ITEM, type:'item', currency:'heroProofShard', cost:HERO_PROOF_SHARD_PER_PROOF}}
+              owned={false} comingSoon={false}
+              canBuy={shardHave>=HERO_PROOF_SHARD_PER_PROOF&&!purchaseProcessing}
+              disabled={purchaseProcessing}
+              onBuy={onExchangeHeroProof}
+              middle={<><span className={`text-[9px] font-black ${proofHave>0?'text-cyan-300':'text-slate-600'}`}>×{proofHave}</span><button onClick={()=>onOpenItemDetail(HERO_PROOF_ITEM)} aria-label="勇者の証の効果を見る" className="text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"><BookOpen size={8}/>詳細</button></>}
+            />}
           </div>
         )}
         </div>
@@ -15073,6 +15197,8 @@ function RhythmEventRewardModal({ prize, onClaim, claiming }) {
   const { event, prizes, participation } = prize;
   // 入賞していなくても参加報酬だけで出ることがあるので、見出しを言い分ける
   const won = Array.isArray(prizes) && prizes.length > 0;
+  // 週間ランキングは「イベント」ではないので、見出しと参加条件の言い方を分ける
+  const weekly = event && event.kind === 'weekly';
   return (
     <div data-rhythm-event-reward className="fixed inset-0 z-[90000] flex items-center justify-center bg-black/80 p-4">
       <div className="w-full max-w-sm rounded-3xl border-2 border-amber-300/70 bg-slate-950 p-4 shadow-2xl">
@@ -15084,7 +15210,7 @@ function RhythmEventRewardModal({ prize, onClaim, claiming }) {
             <li key={entry.divisionId} data-rhythm-event-reward-row className="rounded-2xl border border-amber-300/40 bg-amber-500/5 p-2">
               <p className="flex items-baseline gap-2 text-[10px] font-black text-amber-200">
                 <span className="min-w-0 flex-1 truncate text-slate-200">
-                  {entry.songId ? (rhythmSongFullName(rhythmEventSong(entry.songId, RHYTHM_SONGS)) || entry.songId) : '総合'}
+                  {entry.songId ? (rhythmSongFullName(rhythmEventSong(entry.songId, RHYTHM_SONGS)) || entry.songId) : (weekly ? 'その週の累計スコア' : '総合')}
                 </span>
                 <b className="shrink-0 text-sm text-amber-100">{entry.rank}位</b>
               </p>
@@ -15094,7 +15220,7 @@ function RhythmEventRewardModal({ prize, onClaim, claiming }) {
         </ul>
         {participation&&(
           <div data-rhythm-event-reward-participation className="mt-2 rounded-2xl border border-cyan-300/40 bg-cyan-500/5 p-2">
-            <p className="text-[10px] font-black text-cyan-200">参加報酬（対象曲を{participation.songs}曲すべて）</p>
+            <p className="text-[10px] font-black text-cyan-200">参加報酬（{weekly?`その週に${participation.plays}回遊びました`:`対象曲を${participation.songs}曲すべて`}）</p>
             <p className="mt-1 text-[10px] leading-tight text-white">{rhythmEventParticipationText(participation)}</p>
           </div>
         )}
@@ -15102,7 +15228,7 @@ function RhythmEventRewardModal({ prize, onClaim, claiming }) {
           className="mt-4 min-h-[52px] w-full rounded-2xl border-2 border-amber-300 bg-amber-500/20 text-sm font-black text-amber-50 active:scale-[.98] disabled:opacity-50">
           {claiming ? '受け取っています…' : '🎁 受け取る'}
         </button>
-        <p className="mt-2 text-center text-[9px] leading-relaxed text-slate-400">超越の実・勇者の証・虹のプシュケーはHOMEの「アイテム」から、ダイヤは画面上の表示から確認できます。</p>
+        <p className="mt-2 text-center text-[9px] leading-relaxed text-slate-400">超越の実・勇者の証・勇者の証片・虹のプシュケーはHOMEの「アイテム」から、ダイヤは画面上の表示から確認できます。{weekly&&'勇者の証片はマーケットで20個ごとに「勇者の証」1個と交換できます。'}</p>
       </div>
     </div>
   );
@@ -15159,9 +15285,14 @@ function RhythmRankingScreen({
       const eventSongId=rhythmEventDivisionSongId(eventDivisionId);
       const eventRange=rhythmEventWindow(eventDefinition,event.window);
       const eventSongCount=eventDefinition?eventDefinition.songIds.length:0;
-      // その部門の報酬(1位から順に)。報酬を持たない週間ランキングでは空になる
+      // ★週間は**累計スコア方式**(2026-09-13)。曲ごとのベストではなく、その週に出した記録を
+      //   ぜんぶ足す。対象曲も無いので、1行に出すのは「遊んだ回数」にする
+      const eventWeekly=boardKind==='weekly';
+      // 何位まで報酬があるか。週間は1〜10位、イベントは1〜5位(数はデータ側が決める)
+      const eventRankCount=rhythmEventRewardRankCount(eventDefinition);
+      // その部門の報酬(1位から順に)
       const eventRewardRanks=eventDefinition
-        ?Array.from({length:RHYTHM_EVENT_REWARD_RANKS},(_,index)=>({
+        ?Array.from({length:eventRankCount},(_,index)=>({
           rank:index+1,reward:rhythmEventRewardForRank(eventDefinition,eventDivisionId,index+1),
         })).filter(entry=>!!entry.reward)
         :[];
@@ -15173,7 +15304,7 @@ function RhythmRankingScreen({
       const eventRewardsByDivision=eventDefinition
         ?eventDivisions.map(division=>({
           division,
-          ranks:Array.from({length:RHYTHM_EVENT_REWARD_RANKS},(_,index)=>({
+          ranks:Array.from({length:eventRankCount},(_,index)=>({
             rank:index+1,reward:rhythmEventRewardForRank(eventDefinition,division.id,index+1),
           })).filter(entry=>!!entry.reward),
         })).filter(entry=>entry.ranks.length>0)
@@ -15272,7 +15403,7 @@ function RhythmRankingScreen({
           {rankingBreederIcon(entry)}
           <div className="min-w-0 flex-1">
             <p className="truncate text-xs font-black text-white">{entry.userName}</p>
-            <p className="text-[9px] text-slate-400">{entry.songCount} / {eventSongCount}曲 ・ Lv.{entry.level}</p>
+            <p className="text-[9px] text-slate-400">{eventWeekly?`${entry.playCount}回 ・ ${entry.songCount}曲`:`${entry.songCount} / ${eventSongCount}曲`} ・ Lv.{entry.level}</p>
           </div>
           <div className="shrink-0 text-right">
             <p className="font-mono text-sm font-black text-fuchsia-100">{entry.totalScore.toLocaleString()}</p>
@@ -15362,7 +15493,7 @@ function RhythmRankingScreen({
                 className="mb-3 flex w-full items-center gap-2 rounded-2xl border border-amber-300/40 bg-amber-500/10 px-3 text-left"
                 style={{minHeight:'44px'}}>
                 <span className="shrink-0 text-sm">🎁</span>
-                <span className="min-w-0 flex-1 truncate text-[10px] font-black text-amber-200">イベント詳細（報酬・対象曲）</span>
+                <span className="min-w-0 flex-1 truncate text-[10px] font-black text-amber-200">{eventWeekly?'週間ランキングの詳細（報酬・数え方）':'イベント詳細（報酬・対象曲）'}</span>
                 <span className="shrink-0 text-[10px] font-black text-amber-200">›</span>
               </button>
               {/* 部門。対象曲ごと＋総合で、数は対象曲の数から作る。
@@ -15477,7 +15608,7 @@ function RhythmRankingScreen({
               --mh-vh はiPhoneのアドレスバーを除いた実際の高さを入れてあるもの */}
           <div className="w-full max-w-md overflow-y-auto mh-scroll rounded-3xl border-2 border-amber-300/60 bg-slate-950 p-4"
             style={{maxHeight:'calc(var(--mh-vh) - 2rem - env(safe-area-inset-top) - env(safe-area-inset-bottom))'}}>
-            <p className="mb-2 text-center text-[10px] font-black tracking-widest text-amber-300">EVENT</p>
+            <p className="mb-2 text-center text-[10px] font-black tracking-widest text-amber-300">{eventWeekly?'WEEKLY':'EVENT'}</p>
             {/* 告知画像。開いたときだけ読むので、ここへ置いても起動は重くならない */}
             <RhythmEventBanner event={eventDefinition||(boardKind==='limited'?limitedEvent:null)} className="mb-3"/>
             {eventDefinition&&<div className="mb-3">
@@ -15496,7 +15627,7 @@ function RhythmRankingScreen({
                 <div key={division.id} data-rhythm-event-reward-division={division.id}
                   className="rounded-2xl border border-amber-300/40 bg-amber-500/5 p-2">
                   <p className="mb-1 truncate text-[10px] font-black text-fuchsia-100">
-                    {division.songId?(rhythmSongFullName(division.song)||division.songId):'総合（対象曲の合計）'}
+                    {division.songId?(rhythmSongFullName(division.song)||division.songId):(eventWeekly?'その週の累計スコア':'総合（対象曲の合計）')}
                   </p>
                   <ul className="space-y-0.5">
                     {ranks.map(({rank,reward})=>(
@@ -15511,14 +15642,20 @@ function RhythmRankingScreen({
               {/* 参加報酬。入賞しなくてももらえるので、順位の表とは分けて出す */}
               {eventParticipation&&<p data-rhythm-event-participation
                 className="rounded-2xl border border-fuchsia-300/40 bg-fuchsia-500/5 p-2 text-[10px] leading-tight text-slate-200">
-                <b className="text-fuchsia-200">参加報酬</b>　対象曲を{eventParticipation.songs}曲すべて遊ぶと {rhythmEventParticipationText(eventParticipation)}
+                <b className="text-fuchsia-200">参加報酬</b>　{eventWeekly?`その週に${eventParticipation.plays}回遊ぶと`:`対象曲を${eventParticipation.songs}曲すべて遊ぶと`} {rhythmEventParticipationText(eventParticipation)}
+              </p>}
+              {/* 週間の数え方(2026-09-13・ユーザーが決めた)。「ベストが載る」と思って遊ぶと
+                  何度も遊ぶ意味が伝わらないので、報酬の表と同じ場所で先に伝える */}
+              {eventWeekly&&<p data-rhythm-week-score-rule
+                className="rounded-2xl border border-fuchsia-300/40 bg-fuchsia-500/5 p-2 text-[10px] leading-tight text-slate-200">
+                <b className="text-fuchsia-200">スコアの数え方</b>　その週に遊んだぶんを<b className="text-white">すべて足します</b>。曲も難易度も問わず、同じ曲を何度遊んでもそのつど積み上がります（上限なし）。満点は難易度ごとに違います（EASY 60万〜MASTER 100万）。「総合」タブが曲ごとのベストを合計するのに対し、こちらは<b className="text-white">遊んだ量</b>で競います。
               </p>}
               {/* ∞周回の倍率(2026-09-11・ユーザー指示「イベント時は対象曲は3倍」)。
                   報酬の表と同じ場所に置く。対象曲を遊ぶ理由が順位だけではなくなるため */}
-              <p data-rhythm-event-loop-bonus
+              {!eventWeekly&&<p data-rhythm-event-loop-bonus
                 className="rounded-2xl border border-amber-300/40 bg-amber-500/5 p-2 text-[10px] leading-tight text-slate-200">
                 <b className="text-amber-200">∞周回 ×{RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE}</b>　クイックの∞周回を裏で回しながら対象曲を演奏すると、入る周回数がふだん（×{RHYTHM_PLAY_RUN_LOOP_SCALE}）の{RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE}倍になります
-              </p>
+              </p>}
               {/* 回数ボーナス(2026-09-11・ユーザー指示)。遊んだ回数が順位に効くことは、
                   ランキングを見ているだけでは分からないので、報酬の表と同じ場所で伝える。
                   割合の表は RHYTHM_EVENT_PLAY_BONUS_RATES から作る(数字を書き写さない) */}
@@ -15536,7 +15673,7 @@ function RhythmRankingScreen({
               </div>}
               {/* 受け取り方。いつ・どこで受け取るのかが分からないと、終わったあとに迷う */}
               <p className="text-[9px] leading-relaxed text-slate-400">
-                報酬はイベントが終わったあと、ゲームを開いたときに受け取れます。受け取れるのは終了から2週間までです。順位は終了した時点で決まるので、遅れて受け取っても内容は変わりません。
+                報酬は{eventWeekly?'その週が終わったあと':'イベントが終わったあと'}、ゲームを開いたときに受け取れます。受け取れるのは{eventWeekly?'切り替わりから':'終了から'}2週間までです。順位は{eventWeekly?'切り替わった':'終了した'}時点で決まるので、遅れて受け取っても内容は変わりません。
               </p>
             </div>}
             <button type="button" data-rhythm-event-detail-close onClick={()=>setEventDetailOpen(false)}
@@ -20949,10 +21086,16 @@ function MonsterHeroGame() {
       // 回数ボーナスを使うイベントでは、割合を渡して加点込みで集計してもらう。
       // 使わないイベント(週間)では null なので、これまでどおりの集計になる
       const bonusRates = rhythmEventPlayBonusRates(event);
-      const fetchRows = (options) => targetSongId
+      // ★週間は**累計スコア方式**(2026-09-13)。曲ごとのベストではなく、その週に出した記録を
+      //   ぜんぶ足す。対象曲も部門も無いので、期間だけ渡す専用の関数を呼ぶ
+      const weeklyTotals = kind === 'weekly' && !targetSongId;
+      const fetchRows = (options) => weeklyTotals
+        ? sbFetchRhythmWeekTotals({ fromMs:range.startMs, toMs:range.endMs, ...options })
+        : targetSongId
         ? sbFetchRhythmEventSongBests({ songId:targetSongId, fromMs:range.startMs, toMs:range.endMs, bonusRates, ...options })
         : sbFetchRhythmEventTotals({ songIds:[...event.songIds], fromMs:range.startMs, toMs:range.endMs, bonusRates, ...options });
-      const fromRow = targetSongId ? rhythmEventSongEntryFromRow : rhythmEventTotalEntryFromRow;
+      const fromRow = weeklyTotals ? rhythmWeekTotalEntryFromRow
+        : targetSongId ? rhythmEventSongEntryFromRow : rhythmEventTotalEntryFromRow;
       const rows = await fetchRows({ requestId:`rhythm-${kind}-${division}-${Date.now()}` });
       if (stale()) return;
       const entries = (Array.isArray(rows) ? rows : []).map(fromRow);
@@ -21933,10 +22076,17 @@ function MonsterHeroGame() {
     if (RELEASE_FLAGS.rhythmWeeklyRanking !== true) return;
     const claims = rhythmEventRewardClaimsRef.current;
     if (!Array.isArray(claims)) return;               // まだ読み込めていない
-    const pending = rhythmEventsAwaitingReward(Date.now(), claims);
+    // 期間限定イベントと、終わった週(週間ランキング)の両方を見る。
+    // 受取フラグは同じ配列(mh_rhythm_event_reward_v1)。idの形が違うので取り違えない
+    const pending = [
+      ...rhythmEventsAwaitingReward(Date.now(), claims),
+      ...rhythmWeeksAwaitingReward(Date.now(), claims),
+    ].sort((a, b) => (a.kind === 'weekly' ? a.endMs : rhythmEventTimeMs(a.endAt) || 0)
+                   - (b.kind === 'weekly' ? b.endMs : rhythmEventTimeMs(b.endAt) || 0));
     if (pending.length === 0) return;
     const event = pending[0];                          // 先に終わったものから1つずつ
-    const range = rhythmEventWindow(event, null);
+    const weekly = event.kind === 'weekly';
+    const range = weekly ? { startMs:event.startMs, endMs:event.endMs } : rhythmEventWindow(event, null);
     if (!range) return;
     try {
       const breederId = await ensureBreederId();
@@ -21945,12 +22095,17 @@ function MonsterHeroGame() {
       // ★順位の出し方は画面と**同じ**にする。回数ボーナスを使うイベントでここを渡し忘れると、
       //   「ランキングでは1位だったのに報酬が来ない」が起きる
       const bonusRates = rhythmEventPlayBonusRates(event);
+      // 何位まで取りにいくか。週間は1〜10位、イベントは1〜5位
+      const rankLimit = weekly ? RHYTHM_WEEKLY_REWARD_RANKS : RHYTHM_EVENT_REWARD_RANKS;
       for (const divisionId of rhythmEventDivisionIds(event)) {
         const songId = rhythmEventDivisionSongId(divisionId);
-        const rows = songId
-          ? await sbFetchRhythmEventSongBests({ songId, fromMs:range.startMs, toMs:range.endMs, bonusRates, limit:RHYTHM_EVENT_REWARD_RANKS, requestId:`rhythm-reward-${event.id}-${divisionId}` })
-          : await sbFetchRhythmEventTotals({ songIds:[...event.songIds], fromMs:range.startMs, toMs:range.endMs, bonusRates, limit:RHYTHM_EVENT_REWARD_RANKS, requestId:`rhythm-reward-${event.id}-total` });
-        const fromRow = songId ? rhythmEventSongEntryFromRow : rhythmEventTotalEntryFromRow;
+        const rows = weekly
+          ? await sbFetchRhythmWeekTotals({ fromMs:range.startMs, toMs:range.endMs, limit:rankLimit, requestId:`rhythm-reward-${event.id}-week` })
+          : songId
+          ? await sbFetchRhythmEventSongBests({ songId, fromMs:range.startMs, toMs:range.endMs, bonusRates, limit:rankLimit, requestId:`rhythm-reward-${event.id}-${divisionId}` })
+          : await sbFetchRhythmEventTotals({ songIds:[...event.songIds], fromMs:range.startMs, toMs:range.endMs, bonusRates, limit:rankLimit, requestId:`rhythm-reward-${event.id}-total` });
+        const fromRow = weekly ? rhythmWeekTotalEntryFromRow
+          : songId ? rhythmEventSongEntryFromRow : rhythmEventTotalEntryFromRow;
         const entries = (Array.isArray(rows) ? rows : []).map(fromRow);
         const index = entries.findIndex(entry => selfKeys.includes(entry.identityKey));
         if (index < 0) continue;
@@ -21960,14 +22115,21 @@ function MonsterHeroGame() {
       // 参加報酬(入賞しなくても、対象曲をすべて遊べばもらえる)。
       // 総合の上位5件に自分がいなくても成立するので、自分の行だけを別に取りにいって
       // 「何曲遊んだか」(songCount)を見る
+      // ★成立の見かたが違う。イベントは「何曲遊んだか」、週間は「何回遊んだか」
       let participation = null;
       if (rhythmEventParticipationReward(event)) {
-        const mine = await sbFetchRhythmEventTotals({
-          songIds:[...event.songIds], fromMs:range.startMs, toMs:range.endMs, bonusRates,
-          limit:selfKeys.length, identityKeys:selfKeys, requestId:`rhythm-reward-${event.id}-join`,
-        });
-        const played = (Array.isArray(mine) ? mine : []).map(rhythmEventTotalEntryFromRow)
-          .reduce((max, entry) => Math.max(max, entry.songCount), 0);
+        const mine = weekly
+          ? await sbFetchRhythmWeekTotals({
+              fromMs:range.startMs, toMs:range.endMs,
+              limit:selfKeys.length, identityKeys:selfKeys, requestId:`rhythm-reward-${event.id}-join`,
+            })
+          : await sbFetchRhythmEventTotals({
+              songIds:[...event.songIds], fromMs:range.startMs, toMs:range.endMs, bonusRates,
+              limit:selfKeys.length, identityKeys:selfKeys, requestId:`rhythm-reward-${event.id}-join`,
+            });
+        const played = (Array.isArray(mine) ? mine : [])
+          .map(weekly ? rhythmWeekTotalEntryFromRow : rhythmEventTotalEntryFromRow)
+          .reduce((max, entry) => Math.max(max, weekly ? entry.playCount : entry.songCount), 0);
         if (rhythmEventParticipationCleared(event, played)) participation = rhythmEventParticipationReward(event);
       }
       // 入賞も参加報酬も無ければ、知らせずに受け取り済みへ入れて終わる
@@ -21995,20 +22157,30 @@ function MonsterHeroGame() {
       if (prize.debugPreview) { setRhythmEventRewardPrize(null); return; }
       await markRhythmEventRewardClaimed(prize.event.id);
       const next = { ...ownedItemsRef.current };
+      // ダイヤは mh_gold と入れ物が別なので、いったん合計だけ数えて後から足す
+      let goldGain = 0;
       for (const entry of prize.prizes) {
         const item = rhythmEventRewardItem(entry.reward);
         if (item && entry.reward.count > 0) next[item.id] = ownedItemCount(next, item.id) + entry.reward.count;
         if (entry.reward.psyche > 0) next[BREAKTHROUGH_ITEM_ID] = ownedItemCount(next, BREAKTHROUGH_ITEM_ID) + entry.reward.psyche;
+        // 週間の順位報酬にはダイヤも付く(イベントの順位報酬には無い)
+        if (entry.reward.gold > 0) goldGain += entry.reward.gold;
       }
-      // 参加報酬。虹のプシュケーは所持品、ダイヤは mh_gold と、入れ物が別なので分けて足す
-      if (prize.participation && prize.participation.psyche > 0) {
-        next[BREAKTHROUGH_ITEM_ID] = ownedItemCount(next, BREAKTHROUGH_ITEM_ID) + prize.participation.psyche;
+      // 参加報酬。週間は勇者の証片も付く
+      if (prize.participation) {
+        if (prize.participation.count > 0) {
+          next[HERO_PROOF_SHARD_ITEM_ID] = ownedItemCount(next, HERO_PROOF_SHARD_ITEM_ID) + prize.participation.count;
+        }
+        if (prize.participation.psyche > 0) {
+          next[BREAKTHROUGH_ITEM_ID] = ownedItemCount(next, BREAKTHROUGH_ITEM_ID) + prize.participation.psyche;
+        }
+        if (prize.participation.gold > 0) goldGain += prize.participation.gold;
       }
       ownedItemsRef.current = next;
       setOwnedItems(next);
       await storeSet('mh_owned_items', next, false);
-      if (prize.participation && prize.participation.gold > 0) {
-        const nextGold = (goldRef.current || 0) + prize.participation.gold;
+      if (goldGain > 0) {
+        const nextGold = (goldRef.current || 0) + goldGain;
         goldRef.current = nextGold;
         setGold(nextGold);
         await storeSet('mh_gold', nextGold, false);
@@ -24117,6 +24289,27 @@ function MonsterHeroGame() {
       saveMissionProgress('market');
     } catch {
       setMarketExchangeError('交換を保存できませんでした。勇者の証は消費していません。');
+    } finally { marketPurchaseProcessingRef.current = false; }
+  };
+  // 勇者の証片20個 → 勇者の証1個。魂格再編の書と同じ作りで、失敗したら元へ戻す
+  // (2026-09-13・週間ランキングの報酬で証片がたまるようにしたのに合わせて追加)
+  const exchangeHeroProofByShard = async () => {
+    if (marketPurchaseProcessingRef.current) return;
+    const before = ownedItemsRef.current;
+    const exchange = buildHeroProofShardExchange(before, 1);
+    if (!exchange.ok) { setMarketExchangeError(`勇者の証片が${HERO_PROOF_SHARD_PER_PROOF}個必要です（いま${exchange.shardHave}個）。`); return; }
+    marketPurchaseProcessingRef.current = true;
+    setMarketExchangeError('');
+    try {
+      const saved = await saveStoredValuesOrRollback([
+        { key:'mh_owned_items', before, next:exchange.ownedItems },
+      ], storeGet, storeSet);
+      if (!saved) throw new Error('hero proof shard exchange save failed');
+      ownedItemsRef.current = exchange.ownedItems;
+      setOwnedItems(exchange.ownedItems);
+      saveMissionProgress('market');
+    } catch {
+      setMarketExchangeError('交換を保存できませんでした。勇者の証片は消費していません。');
     } finally { marketPurchaseProcessingRef.current = false; }
   };
 
@@ -31491,6 +31684,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onOpenDetail={(item,detailMon,detailTeaching)=>{if(detailMon) setRosterDetailMon({...detailMon,marketDiscIcon:item.icon,marketDiscName:item.name}); else setRosterDetailTeaching(detailTeaching);}}
             onOpenItemDetail={setMarketItemDetail}
             onExchangeSoulRankRespec={exchangeSoulRankRespecByProof}
+            onExchangeHeroProof={exchangeHeroProofByShard}
           />
         )}
 
