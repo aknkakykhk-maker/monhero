@@ -517,6 +517,66 @@ const persistRankingScore = async ({ row, insertScore=sbInsertScore, saveLocal }
   }
 };
 
+// ===== 送れなかった記録を、あとで送り直すための道具(2026-09-13) =====
+//
+// 全国ランキングへの送信が失敗すると、これまでは端末へ退避するだけで終わっていた。
+// 画面にも何も出ないので、プレイヤーからは「出したのに載らない」としか見えない。
+// 実際に、rankings.score が int4 だったころの 45,054,226,345(約450億)が
+// 22003 で拒否され、そのまま端末に眠っていた。
+//
+// ここは「退避した記録を読んで、送り直す形へ戻す」ところだけを純粋な関数にしてある。
+// 通信も保存もしないので、tools/ranking/pending-resend-check.js から直接呼んで確かめられる。
+
+// 一度に送る上限と、HOMEへ着いてから送り直しを始めるまでの待ち時間。
+// 起動直後はランキングの取得や絵の読み込みが重なるので、少し待ってから始める。
+const RANKING_RESEND_LIMIT = 10;
+const RANKING_RESEND_DELAY_MS = 4000;
+
+// 退避した一覧から、まだ送れていないものだけを拾う。
+//   ・nationalSaved が false のものだけ(true や、フラグの無い古い記録は触らない)
+//   ・clearId が無いものは送らない。重複を防ぐ鍵が無く、二重登録になってしまうため
+//   ・スコアが数値として読めないものも送らない
+const pendingLocalRankingEntries = (list) => (Array.isArray(list) ? list : []).filter(entry =>
+  entry && typeof entry === 'object'
+  && entry.nationalSaved === false
+  && typeof entry.clearId === 'string' && entry.clearId.length > 0
+  && Number.isFinite(Number(entry.score)));
+
+// 退避した記録から、送信するときの行を組み立て直す。
+// submitLocalScore が作る row と同じ形にそろえること(列が増えたらここも足す)。
+// 値が無い列は付けない(0やnullを入れて「0ターンでクリア」に見せないため)。
+const rankingRowFromLocalEntry = (entry, difficulty) => {
+  if (!entry) return null;
+  const diff = difficulty || entry.diff;
+  if (!diff) return null;
+  const reachedWave = Number(entry.reachedWave);
+  const turns = Number(entry.turns);
+  const level = Number(entry.level);
+  return {
+    difficulty: diff,
+    user_name: entry.userName || '名無しのブリーダー',
+    hero: entry.hero || 'Unknown',
+    party: Array.isArray(entry.party) ? entry.party : [],
+    score: Number(entry.score),
+    ...(Number.isFinite(level) ? { level } : {}),
+    ...(entry.icon ? { icon: entry.icon } : {}),
+    clear_id: entry.clearId,
+    ...(Number.isFinite(reachedWave) && reachedWave > 0 ? { reached_wave: reachedWave } : {}),
+    ...(Number.isFinite(turns) && turns > 0 ? { turns } : {}),
+    ...(entry.breederId ? { breeder_id: entry.breederId } : {}),
+  };
+};
+
+// 送れたものに「送信済み」の印を付ける。行は消さないし、ほかの項目も触らない。
+// (記録そのものはブリーダーLv・絆Lvの集計にも使われているため)
+const markLocalRankingEntriesSent = (list, sentClearIds) => {
+  const sent = new Set(Array.isArray(sentClearIds) ? sentClearIds : []);
+  if (!Array.isArray(list) || sent.size === 0) return Array.isArray(list) ? list : [];
+  return list.map(entry => (entry && sent.has(entry.clearId))
+    ? { ...entry, nationalSaved: true, nationalError: undefined, resentAt: Date.now() }
+    : entry);
+};
+
 const createRunId = () => globalThis.crypto?.randomUUID?.() || `run_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`;
 
 // ===== ブリーダーを見分けるID(2026-09-11) =====
