@@ -12,7 +12,7 @@
 -- このSQLで見るのはつぎの6点。
 --   A-1 列の型(score が integer か bigint か)
 --   A-2 いまの件数・最大スコア・21億超の件数(超えが0件なら「弾かれている」裏付けになる)
---   A-3 score を参照しているビュー/ルール(あると型変更がブロックされる)
+--   A-3 score を参照しているビュー(APPLYが落として同じ姿で作り直す対象)
 --   A-4 RLS・ポリシー・Data API権限(適用前のひかえ)
 --   A-5 score に関わるIndex(型変更で作り直される)
 --   A-6 ほかの整数列とほかのテーブル(同じ上限を踏みそうな場所)
@@ -40,8 +40,14 @@ order by max_score desc nulls last
 limit 30;
 
 -- A-3. score 列に依存しているビュー・ルール。
---   1行でも出たら、そのままでは型を変えられない(先にビューを作り直す必要がある)。
---   定義はここで控えておくこと。
+--   ビューがあると ALTER TYPE は
+--   「cannot alter type of a column used by a view or rule」で失敗するため、
+--   APPLY はここに出るビュー(とその上に乗るビュー)を落としてから型を広げ、
+--   いまの定義・所有者・コメント・権限のまま作り直す。
+--   モンビーの集計(rhythm_scores → … → rhythm_total_rankings)が並ぶはず。
+--   VIEW ではなく MATERIALIZED VIEW が混ざっていたら、中身の作り直しが要るので
+--   APPLY_TEST が止まる。そのときは結果を共有すること。
+--   定義はここで控えておく(万一のときの復元用)。
 select distinct dependent.relname as dependent_name,
        case dependent.relkind when 'v' then 'VIEW' when 'm' then 'MATERIALIZED VIEW'
             else dependent.relkind::text end as dependent_kind,

@@ -7,7 +7,8 @@
 --   V-2 件数がAUDITのときと同じで、21億超の行も入れられる状態になっている
 --   V-3 score に関わるIndexが is_valid = true / is_ready = true
 --   V-4 RLS・ポリシー・Data API権限がAUDITのときと同じ
---   V-5 score に依存するビュー/ルールが増えていない(0行のまま)
+--   V-5 score にぶら下がるビューが、AUDIT(A-3)と同じ顔ぶれで戻っている
+--   V-6 そのビューが実際に引ける(モンビーの集計が動く)
 
 -- V-1. score の型
 select column_name, data_type, udt_name, is_nullable, column_default
@@ -50,7 +51,8 @@ where table_schema = 'public' and table_name = 'rankings'
   and grantee in ('anon', 'authenticated')
 order by grantee, privilege_type;
 
--- V-5. score に依存するビュー/ルール(0行が期待値)
+-- V-5. score にぶら下がるビュー。落として作り直しているので、
+--   AUDIT(A-3)と同じ顔ぶれが並ぶのが期待値(0行ではない)。
 select distinct dependent.relname as dependent_name,
        case dependent.relkind when 'v' then 'VIEW' when 'm' then 'MATERIALIZED VIEW'
             else dependent.relkind::text end as dependent_kind
@@ -63,3 +65,42 @@ join pg_attribute a on a.attrelid = t.oid and a.attnum = d.refobjsubid
 where n.nspname = 'public' and t.relname = 'rankings' and a.attname = 'score'
   and dependent.relname <> 'rankings'
 order by dependent_name;
+
+-- V-6. score にぶら下がるビューを、上に乗っているものまでたどって実際に引いてみる。
+--   定義が戻っていても、権限や参照先で落ちることがある。
+--   モンビーの集計(rhythm_scores → … → rhythm_total_rankings)がここで通れば、
+--   ゲーム側の曲別ランキングと全曲合算ランキングも動く。
+do $$
+declare
+  v record;
+  n bigint;
+begin
+  for v in
+    with recursive deps as (
+      select distinct dependent.oid as view_oid, 1 as depth
+      from pg_depend d
+      join pg_rewrite r on r.oid = d.objid
+      join pg_class dependent on dependent.oid = r.ev_class
+      join pg_class t on t.oid = d.refobjid
+      join pg_namespace n on n.oid = t.relnamespace
+      join pg_attribute a on a.attrelid = t.oid and a.attnum = d.refobjsubid
+      where n.nspname = 'public' and t.relname = 'rankings' and a.attname = 'score'
+        and dependent.relkind in ('v', 'm') and dependent.oid <> t.oid
+      union all
+      select distinct v2.oid, deps.depth + 1
+      from deps
+      join pg_depend d2 on d2.refobjid = deps.view_oid
+      join pg_rewrite r2 on r2.oid = d2.objid
+      join pg_class v2 on v2.oid = r2.ev_class
+      where v2.relkind in ('v', 'm') and v2.oid <> deps.view_oid and deps.depth < 20
+    )
+    select grouped.depth, n.nspname as schema_name, c.relname as view_name
+    from (select view_oid, max(depth) as depth from deps group by view_oid) grouped
+    join pg_class c on c.oid = grouped.view_oid
+    join pg_namespace n on n.oid = c.relnamespace
+    order by grouped.depth, c.relname
+  loop
+    execute format('select count(*) from %I.%I', v.schema_name, v.view_name) into n;
+    raise notice 'ビュー %.% は引けます(%行, depth=%)', v.schema_name, v.view_name, n, v.depth;
+  end loop;
+end $$;

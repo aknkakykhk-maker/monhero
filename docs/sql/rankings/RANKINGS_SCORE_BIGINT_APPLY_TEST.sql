@@ -6,14 +6,22 @@
 --         保存できるようにする。int4 → int8 は値の幅を広げるだけなので、
 --         既存の行は1件も書き換わらない(NULLもそのまま)。
 --
--- ここで止まったら本番へは進まないこと。とくに「score を参照しているビューがある」場合は、
--- ビューを作り直す手順が別に要る(このSQLは勝手にビューを消さない)。
+-- モンビー(モンヒロビート)の集計ビューが rankings.score にぶら下がっている。
+--   rhythm_scores → rhythm_identity_map / rhythm_identified_scores
+--                 → rhythm_song_bests → rhythm_total_rankings
+-- ビューがあると ALTER TYPE は
+--   「cannot alter type of a column used by a view or rule」
+-- で失敗するので、いったん落として型を広げ、元どおり作り直す。
+-- 作り直しは「いま動いているビューの定義(pg_get_viewdef)」をそのまま使うので、
+-- リポジトリのSQLと本番の食い違いがあっても、本番の姿がそのまま戻る。
+-- 所有者・コメント・with(security_invoker)・権限も控えて戻し、
+-- 1つでも違っていたら例外でトランザクションごと巻き戻す。
 begin;
 
 -- 短時間だけ書き込みを止め、検査からDDLまでの間に行が増えないようにする
 lock table public.rankings in share row exclusive mode;
 
--- ---- 適用前のひかえ ----
+-- ---- 適用前のひかえ(データ) ----
 create temporary table rankings_score_before on commit drop as
 select count(*) as row_count, max(score) as max_score, min(score) as min_score,
        sum(score)::numeric as sum_score, count(*) filter (where score is null) as null_score
@@ -42,15 +50,71 @@ join pg_index ix on ix.indrelid = t.oid
 join pg_class i on i.oid = ix.indexrelid
 where n.nspname = 'public' and t.relname = 'rankings';
 
+-- ---- 適用前のひかえ(score にぶら下がるビュー) ----
+-- score を直接見ているビューと、そのビューを見ているビューを、深さつきで集める。
+-- depth が大きいほど「上」にあるので、落とすときは深いほうから、作り直すときは浅いほうから。
+create temporary table rankings_view_backup on commit drop as
+with recursive deps as (
+  select distinct v.oid as view_oid, 1 as depth
+  from pg_depend d
+  join pg_rewrite r on r.oid = d.objid
+  join pg_class v on v.oid = r.ev_class
+  join pg_class t on t.oid = d.refobjid
+  join pg_namespace n on n.oid = t.relnamespace
+  join pg_attribute a on a.attrelid = t.oid and a.attnum = d.refobjsubid
+  where n.nspname = 'public' and t.relname = 'rankings' and a.attname = 'score'
+    and v.relkind in ('v', 'm') and v.oid <> t.oid
+  union all
+  select distinct v2.oid, deps.depth + 1
+  from deps
+  join pg_depend d2 on d2.refobjid = deps.view_oid
+  join pg_rewrite r2 on r2.oid = d2.objid
+  join pg_class v2 on v2.oid = r2.ev_class
+  where v2.relkind in ('v', 'm') and v2.oid <> deps.view_oid and deps.depth < 20
+)
+select grouped.view_oid, grouped.depth,
+       n.nspname as schema_name, c.relname as view_name, c.relkind as view_kind,
+       pg_get_viewdef(c.oid, true) as definition,
+       array_to_string(c.reloptions, ', ') as reloptions,
+       pg_get_userbyid(c.relowner) as view_owner,
+       obj_description(c.oid, 'pg_class') as view_comment
+from (select view_oid, max(depth) as depth from deps group by view_oid) grouped
+join pg_class c on c.oid = grouped.view_oid
+join pg_namespace n on n.oid = c.relnamespace;
+
+create temporary table rankings_view_grants_before on commit drop as
+select b.view_name,
+       case when acl.grantee = 0 then 'public' else pg_get_userbyid(acl.grantee) end as grantee_name,
+       acl.privilege_type, acl.is_grantable
+from rankings_view_backup b
+join pg_class c on c.oid = b.view_oid
+cross join lateral aclexplode(coalesce(c.relacl, acldefault('r', c.relowner))) acl;
+
+-- 控えた内容を目で見えるように出す(落とす前の姿)
+select depth, schema_name, view_name, view_kind, reloptions, view_owner
+from rankings_view_backup order by depth desc, view_name;
+
+-- ---- ビューを落とす(深いほうから) ----
+do $$
+declare
+  v record;
+begin
+  if exists (select 1 from rankings_view_backup where view_kind = 'm') then
+    raise exception 'マテリアライズドビューが混ざっています。作り直しに中身の再作成が要るので、手順を別に決めてください';
+  end if;
+  for v in select * from rankings_view_backup order by depth desc, view_name loop
+    execute format('drop view if exists %I.%I', v.schema_name, v.view_name);
+    raise notice 'ビューを落としました: %.% (depth=%)', v.schema_name, v.view_name, v.depth;
+  end loop;
+end $$;
+
 -- ---- 型を広げる ----
 do $$
 declare
   current_type text;
-  dependent_count integer;
+  blocking_count integer;
 begin
-  -- score を使っているビュー・ルールがあると ALTER TYPE は失敗する。
-  -- 勝手に消すと表示が壊れるので、ここでは止めるだけにする(定義はAUDITで控えてある)
-  select count(*) into dependent_count
+  select count(*) into blocking_count
   from pg_depend d
   join pg_rewrite r on r.oid = d.objid
   join pg_class dependent on dependent.oid = r.ev_class
@@ -59,8 +123,8 @@ begin
   join pg_attribute a on a.attrelid = t.oid and a.attnum = d.refobjsubid
   where n.nspname = 'public' and t.relname = 'rankings' and a.attname = 'score'
     and dependent.relname <> 'rankings';
-  if dependent_count > 0 then
-    raise exception 'score列に依存するビュー/ルールが%件あります。先にその作り直し手順を決めてください', dependent_count;
+  if blocking_count > 0 then
+    raise exception 'score列にまだ%件の依存が残っています。落としきれていません', blocking_count;
   end if;
 
   select data_type into current_type
@@ -82,10 +146,40 @@ end $$;
 comment on column public.rankings.score is
   'ラン1回のスコア。難易度・WAVE・残りターンの倍率が乗って数百億になるため bigint。';
 
+-- ---- ビューを元どおり作り直す(浅いほうから) ----
+do $$
+declare
+  v record;
+  g record;
+begin
+  for v in select * from rankings_view_backup order by depth asc, view_name loop
+    if coalesce(v.reloptions, '') = '' then
+      execute format('create view %I.%I as %s', v.schema_name, v.view_name, v.definition);
+    else
+      execute format('create view %I.%I with (%s) as %s',
+                     v.schema_name, v.view_name, v.reloptions, v.definition);
+    end if;
+    execute format('alter view %I.%I owner to %I', v.schema_name, v.view_name, v.view_owner);
+    if v.view_comment is not null then
+      execute format('comment on view %I.%I is %L', v.schema_name, v.view_name, v.view_comment);
+    end if;
+    raise notice 'ビューを戻しました: %.% (depth=%)', v.schema_name, v.view_name, v.depth;
+  end loop;
+
+  for g in select * from rankings_view_grants_before loop
+    execute format('grant %s on public.%I to %s%s',
+                   g.privilege_type, g.view_name,
+                   case when g.grantee_name = 'public' then 'public' else quote_ident(g.grantee_name) end,
+                   case when g.is_grantable then ' with grant option' else '' end);
+  end loop;
+end $$;
+
 -- ---- 適用後の検査 ----
 do $$
 declare
   after_type text;
+  v record;
+  probe bigint;
 begin
   select data_type into after_type
   from information_schema.columns
@@ -166,23 +260,60 @@ begin
     where n.nspname = 'public' and t.relname = 'rankings'
       and not (ix.indisvalid and ix.indisready)
   ) then raise exception '使えない状態のIndexが残っています'; end if;
-end $$;
 
--- 21億を超えるスコアが実際に入るかを、この中だけで試す(rollbackするので本番には残らない)
-do $$
-declare
-  probe_id text := 'score-bigint-probe-' || clock_timestamp()::text;
-begin
+  -- ビューが全部戻っていて、定義・with・所有者・コメントも同じであること
+  for v in select * from rankings_view_backup loop
+    if not exists (
+      select 1 from pg_class c join pg_namespace n on n.oid = c.relnamespace
+      where n.nspname = v.schema_name and c.relname = v.view_name and c.relkind = v.view_kind
+    ) then raise exception 'ビュー %.% が戻っていません', v.schema_name, v.view_name; end if;
+
+    if exists (
+      select 1 from pg_class c join pg_namespace n on n.oid = c.relnamespace
+      where n.nspname = v.schema_name and c.relname = v.view_name
+        and (pg_get_viewdef(c.oid, true) is distinct from v.definition
+          or coalesce(array_to_string(c.reloptions, ', '), '') is distinct from coalesce(v.reloptions, '')
+          or pg_get_userbyid(c.relowner) is distinct from v.view_owner
+          or obj_description(c.oid, 'pg_class') is distinct from v.view_comment)
+    ) then raise exception 'ビュー %.% の定義・with・所有者・コメントのどれかが元と違います', v.schema_name, v.view_name; end if;
+
+    -- 実際に引けるか(定義が通っても権限や参照先で落ちることがある)
+    execute format('select count(*) from %I.%I', v.schema_name, v.view_name);
+  end loop;
+
+  if exists (
+    (select * from rankings_view_grants_before except
+     select b.view_name,
+            case when acl.grantee = 0 then 'public' else pg_get_userbyid(acl.grantee) end,
+            acl.privilege_type, acl.is_grantable
+     from rankings_view_backup b
+     join pg_class c on c.relname = b.view_name
+     join pg_namespace n on n.oid = c.relnamespace and n.nspname = b.schema_name
+     cross join lateral aclexplode(coalesce(c.relacl, acldefault('r', c.relowner))) acl)
+    union all
+    (select b.view_name,
+            case when acl.grantee = 0 then 'public' else pg_get_userbyid(acl.grantee) end,
+            acl.privilege_type, acl.is_grantable
+     from rankings_view_backup b
+     join pg_class c on c.relname = b.view_name
+     join pg_namespace n on n.oid = c.relnamespace and n.nspname = b.schema_name
+     cross join lateral aclexplode(coalesce(c.relacl, acldefault('r', c.relowner))) acl
+     except select * from rankings_view_grants_before)
+  ) then raise exception 'ビューの権限が元と違います'; end if;
+
+  -- 21億を超えるスコアが本当に入るか、この中だけで試す(rollbackするので残らない)
   insert into public.rankings (difficulty, user_name, hero, score, clear_id)
-  values ('Normal', '__score_bigint_probe__', 'probe', 45054226345, probe_id);
-  if not exists (select 1 from public.rankings where clear_id = probe_id and score = 45054226345) then
+  values ('Normal', '__score_bigint_probe__', 'probe', 45054226345,
+          'score-bigint-probe-' || clock_timestamp()::text)
+  returning score into probe;
+  if probe <> 45054226345 then
     raise exception '450億のスコアを保存できませんでした';
   end if;
-  delete from public.rankings where clear_id = probe_id;
+  delete from public.rankings where user_name = '__score_bigint_probe__';
   raise notice '450億のスコアを保存できることを確認しました(この行は取り消します)';
 end $$;
 
--- 結果表示: 型とIndexの状態
+-- 結果表示: 型・Index・戻したビュー
 select column_name, data_type, udt_name, is_nullable
 from information_schema.columns
 where table_schema = 'public' and table_name = 'rankings' and column_name = 'score';
@@ -194,6 +325,11 @@ join pg_index ix on ix.indrelid = t.oid
 join pg_class i on i.oid = ix.indexrelid
 where n.nspname = 'public' and t.relname = 'rankings'
 order by i.relname;
+
+select b.depth, b.view_name,
+       (select count(*) from pg_class c join pg_namespace n on n.oid = c.relnamespace
+         where n.nspname = b.schema_name and c.relname = b.view_name) as exists_now
+from rankings_view_backup b order by b.depth, b.view_name;
 
 -- 試験結果を本番へ残さない。
 rollback;
