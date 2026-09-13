@@ -43,6 +43,8 @@ const BGM_TRACKS = [
   { id:'melo_nothing_without_you', name:'Nothing Without You', creator:'オリジナル', src:'audio/bgm-nothing-without-you.mp3', gain:1, loop:true },
   // モンビーの新曲(2026-09-13)。同じくmp4で受け取った音源から映像を落として入れたもの
   { id:'melo_freedom_dive', name:'FREEDOM DiVE↓', creator:'オリジナル', src:'audio/bgm-freedom-dive.mp3', gain:1, loop:true },
+  // モンビーの新曲(2026-09-14)。m4aで受け取った音源から映像とタグを落として入れたもの
+  { id:'melo_the_city_beneath_the_comets', name:'The City Beneath the Comets', creator:'オリジナル', src:'audio/bgm-the-city-beneath-the-comets.mp3', gain:1, loop:true },
   { id:'melo_dullahan_clockwork_alt', name:'呪われた騎士の時計仕掛け -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-clockwork-alt.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost', name:'鋼鉄の亡霊', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost_alt', name:'鋼鉄の亡霊 -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost-alt.mp3', gain:1, loop:true },
