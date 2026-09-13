@@ -63,7 +63,8 @@ try {
   // 時間帯で出るので、UTC の環境(CI・サンドボックス)では全項目が9時間ずれて 150件のNGになった(2026-09-07)。
   const jst = sec => { const d = new Date(sec * 1000 + 9 * 3600 * 1000); const p = n => String(n).padStart(2, '0');
     return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`; };
-  const log = execFileSync('git', ['log', '--reverse', '--format=%H %at',
+  // 親の数も取る(%P)。マージコミットで初めて現れた項目は照合しない(下の理由)。
+  const log = execFileSync('git', ['log', '--reverse', '--format=%H %at %P',
     '--', 'monster-hero/data/changelog.js'], { cwd: root, encoding: 'utf8' }).trim().split('\n');
   // 浅い clone(サンドボックス・CI の fetch-depth)では、いちばん古いコミットがファイルの全行を「追加」した
   // 扱いになり、そこにある項目はすべてそのコミットの時刻と比べられて全件NGになる(2026-09-07・149件)。
@@ -73,18 +74,31 @@ try {
   const timeOf = new Map();
   for (const line of log) {
     if (!line.trim()) continue;
-    const [sha, at] = line.split(' ');
-    const when = sha === boundary ? null : jst(Number(at));
+    const [sha, at, ...parents] = line.split(' ');
+    // ★別のブランチで書かれた項目を取り込んだマージは、その項目が「初めて現れた」場所に
+    //   なってしまう。取り込んだ時刻と、実際に書かれた時刻は当然ずれる(2026-09-13に踏んだ。
+    //   別セッションが 14:54 に書いた項目が、こちらのマージ 16:25 と比べられてNGになった)。
+    //   マージで入ってきた項目は「こちらで書いたもの」ではないので照合しない。
+    const merged = parents.length >= 2;
+    const when = (sha === boundary || merged) ? null : jst(Number(at));
     const diff = execFileSync('git', ['show', sha, '--format=', '-U0', '--', 'monster-hero/data/changelog.js'],
       { cwd: root, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
     for (const m2 of diff.matchAll(/^\+.*?title:'((?:[^'\\]|\\.)*)'/gm)) {
       if (!timeOf.has(m2[1])) timeOf.set(m2[1], when);
     }
   }
+  // ★すでに公開済み(origin/main にある)の項目は照合しない。
+  //   他のブランチで書かれた項目は、こちらの履歴では「取り込んだとき」に現れるので、
+  //   実際に書かれた時刻と食い違う。見たいのは**いま自分が書いた項目**の日時が
+  //   実時刻かどうかなので、main に無いものだけを照合すれば足りる(2026-09-13)。
+  let published = '';
+  try { published = execFileSync('git', ['show', 'origin/main:monster-hero/data/changelog.js'],
+    { cwd: root, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }); } catch {}
   const drift = [];
   for (const m2 of changelog.matchAll(/date: "([^"]+)"[^\n]*?title:'((?:[^'\\]|\\.)*)'/g)) {
     const real = timeOf.get(m2[2]);
     if (!real) continue;
+    if (published && published.includes(`title:'${m2[2]}'`)) continue;
     const gap = Math.abs(new Date(`${m2[1]}:00`) - new Date(`${real}:00`)) / 3600000;
     if (gap >= 1) drift.push(`${m2[1]}(実際 ${real}) ${m2[2].slice(0, 20)}`);
   }

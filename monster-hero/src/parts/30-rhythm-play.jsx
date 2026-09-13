@@ -246,9 +246,13 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
       {monsters.map((monster,index)=>{
         if(!monster||!monster.imageUrl)return null;
         const slot=index+1;
+        // ★マスモンの動きは**専用の設定(両サイドのマスモン｜動き)だけ**で決める。
+        //   演出量では止めない(2026-09-13・ユーザー指摘「マスモンの動きが演出量で
+        //   制御されてる / マスモンの動きは別に設定がある」)。
+        //   軽量モードだけは「重いものを一括で止める」スイッチなので、ここでも止める。
         return <span key={slot} ref={el=>{sideMonsterRefs.current[index]=el;}}
           data-rhythm-side-monster={slot}
-          data-rhythm-side-motion={settings.lightweightMode||rhythmEffectAtMost(settings.effectAmount,'LIGHT')?'NONE':settings.sideMonsterMotion}
+          data-rhythm-side-motion={settings.lightweightMode?'NONE':settings.sideMonsterMotion}
           data-rhythm-side-active="0"
           data-rhythm-side-phase="intro"
           style={{'--rhythm-side-opacity':opacity,'--rhythm-side-delay':`${index%2===0?0:-250}ms`}}>
@@ -262,7 +266,7 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
         </span>;
       })}
     </div>;
-  },[monsterSignature,settings.sideMonsterOpacity,settings.sideMonsterMotion,settings.lightweightMode,settings.effectAmount]);
+  },[monsterSignature,settings.sideMonsterOpacity,settings.sideMonsterMotion,settings.lightweightMode]);
   const abilityTimerRef=useRef(null),abilityRevisionRef=useRef(0),abilityBadgeRef=useRef(null);
   const emptyCounts=()=>Object.fromEntries(RHYTHM_JUDGMENT_IDS.map(id=>[id,0]));
   // HOLD/SLIDEの追従を難易度ごとにやさしくする値を、演奏を始めるときにノーツへ焼き込む。

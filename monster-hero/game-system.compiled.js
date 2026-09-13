@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8133a823d8cfc449
+// source-sha256: 6fd3631303ca6eca
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f95029686c8e4c30
+// generated-sha256: d2a69a9da1f14bd6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-13 16:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-13 16:32"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -20753,7 +20753,7 @@ const RhythmOptions = ({
     full: true
   }), field('両サイドのマスモン｜濃さ', segments('sideMonsterOpacity', RHYTHM_SIDE_MONSTER_OPACITY_LABELS), 'レーンの外側の空いたところへ、設定したマスモンが出て拍に合わせて跳ねます。ノーツが見づらいときや、端末が熱くなりやすいときは薄くするか止めてください。', {
     full: true
-  }), field('両サイドのマスモン｜動き', segments('sideMonsterMotion', RHYTHM_SIDE_MONSTER_MOTION_LABELS), null, {
+  }), field('両サイドのマスモン｜動き', segments('sideMonsterMotion', RHYTHM_SIDE_MONSTER_MOTION_LABELS), 'レーンの外側のマスモンが拍に合わせて跳ねる動きです。動く・動かないはここだけで決まり、「演出量」を下げても変わりません。止めたいときは「動かない」を選んでください（「軽量モード」を入れたときは、重いものをまとめて止めるためここも止まります）。', {
     full: true
   }), field('マスモン｜能力中に光らせる', toggle('sideMonsterAbilityHighlight'), null, {
     full: true
@@ -20802,7 +20802,7 @@ const RhythmOptions = ({
     className: head
   }, "\u25C6 \u30B7\u30B9\u30C6\u30E0\u8A2D\u5B9A"), /*#__PURE__*/React.createElement("div", {
     className: wide ? grid : `mt-3 ${grid}`
-  }, field('演出量', segments('effectAmount', RHYTHM_EFFECT_LABELS), '重い順に「最大」「多め」「標準」「最小」の4段で、既定は「標準」です。判定・判定窓・スコアはどの段でも変わりません。\n「最大」＝2026-09-13より前の見た目そのまま。判定文字の金色の帯や虹が流れ、判定ラインが拍に合わせて脈打ち、コンボ数が跳ね、両サイドのマスモンも跳ねます。\n「多め」＝判定文字の流れと光のにじみだけ止めます（色・大きさはそのまま）。\n「標準」＝それに加えて、曲のあいだずっと動き続けるものを止めます。判定ラインの脈打ち、コンボ数の跳ねと枠の脈動、両サイドのマスモンの跳ね、判定文字が出た瞬間に弾む動き、ノーツを取り切ったときの光です。判定ラインで弾ける光・100コンボごとのお祝い・フルコンボの大きな表示は残るので、手ごたえは変わりません。\n「最小」＝光そのものと100コンボごとの演出も出なくなります。', {
+  }, field('演出量', segments('effectAmount', RHYTHM_EFFECT_LABELS), '重い順に「最大」「多め」「標準」「最小」の4段で、既定は「標準」です。判定・判定窓・スコアはどの段でも変わりません。\n「最大」＝2026-09-13より前の見た目そのまま。判定文字の金色の帯や虹が流れ、判定ラインが拍に合わせて脈打ち、コンボ数が跳ね、両サイドのマスモンも跳ねます。\n「多め」＝判定文字の流れと光のにじみだけ止めます（色・大きさはそのまま）。\n「標準」＝それに加えて、曲のあいだずっと動き続けるものを止めます。判定ラインの脈打ち、コンボ数の跳ねと枠の脈動、判定文字が出た瞬間に弾む動き、ノーツを取り切ったときの光です。判定ラインで弾ける光・100コンボごとのお祝い・フルコンボの大きな表示は残るので、手ごたえは変わりません。両サイドのマスモンの動きはここでは変わりません（専用の「両サイドのマスモン｜動き」で決めます）。\n「最小」＝光そのものと100コンボごとの演出も出なくなります。', {
     full: true
   }), field('モンスターノーツの演出', segments('monsterNoteEffect', RHYTHM_MONSTER_EFFECT_LABELS), 'モンスターノーツを取ったときの演出の強さです。既定は「標準」で、画面全体が金色に光るのをやめます（いちばん重いのがこの全画面の描き直しです）。粒と跳ねは残ります。「多め」にすると全画面の光も出ます（2026-09-13より前に「標準」と呼んでいた段です）。「最小」にすると、光る粒もふつうのノーツと同じになり、両サイドのマスモンも跳ねません。どの段でも、音・能力名・振動はそのまま残るので、取れたことは分かります。', {
     full: true
@@ -22185,13 +22185,17 @@ const RhythmTapTest = ({
     }, monsters.map((monster, index) => {
       if (!monster || !monster.imageUrl) return null;
       const slot = index + 1;
+      // ★マスモンの動きは**専用の設定(両サイドのマスモン｜動き)だけ**で決める。
+      //   演出量では止めない(2026-09-13・ユーザー指摘「マスモンの動きが演出量で
+      //   制御されてる / マスモンの動きは別に設定がある」)。
+      //   軽量モードだけは「重いものを一括で止める」スイッチなので、ここでも止める。
       return /*#__PURE__*/React.createElement("span", {
         key: slot,
         ref: el => {
           sideMonsterRefs.current[index] = el;
         },
         "data-rhythm-side-monster": slot,
-        "data-rhythm-side-motion": settings.lightweightMode || rhythmEffectAtMost(settings.effectAmount, 'LIGHT') ? 'NONE' : settings.sideMonsterMotion,
+        "data-rhythm-side-motion": settings.lightweightMode ? 'NONE' : settings.sideMonsterMotion,
         "data-rhythm-side-active": "0",
         "data-rhythm-side-phase": "intro",
         style: {
@@ -22209,7 +22213,7 @@ const RhythmTapTest = ({
         className: "h-full w-full object-contain"
       })));
     }));
-  }, [monsterSignature, settings.sideMonsterOpacity, settings.sideMonsterMotion, settings.lightweightMode, settings.effectAmount]);
+  }, [monsterSignature, settings.sideMonsterOpacity, settings.sideMonsterMotion, settings.lightweightMode]);
   const abilityTimerRef = useRef(null),
     abilityRevisionRef = useRef(0),
     abilityBadgeRef = useRef(null);
