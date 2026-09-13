@@ -128,7 +128,7 @@ ok('コンボ数を大きく出す',
 //   「軽め」でそこだけ止め、「最小」では粒も跳ねも通常と同じにする。
 //   どの段でも音・能力名・振動は残す(取れたことが分からなくなるのがいちばん困る)。
 ok('モンスターノーツの演出の強さを選べる',
-  /RHYTHM_MONSTER_EFFECT_LABELS *= *Object\.freeze\(\[\['NORMAL','多め'\],\['LIGHT','軽め'\],\['OFF','最小'\]\]\)/.test(game)
+  /RHYTHM_MONSTER_EFFECT_LABELS *= *Object\.freeze\(\[\['NORMAL','多め'\],\['LIGHT','標準'\],\['OFF','最小'\]\]\)/.test(game)
   // 既定は「軽め」(2026-09-13・ユーザー指摘「演出量が普通だと重いという声が多い /
   // 少なめをデフォルトにして今の普通を多めとかにしたい / モンスターノーツも同じく」)。
   // IDは変えていないので、自分で選んで保存した人の設定はそのまま(CLAUDE.md ⑦)
@@ -202,10 +202,24 @@ ok('演出量「少なめ」で、判定文字とコンボの流れを止めら�
   &&['GREAT','EXCELLENT','MARVELOUS'].every(j=>html.includes(`[data-rhythm-play-area][data-rhythm-effect="LOW"] [data-rhythm-judgment-text][data-judgment="${j}"]{`))
   // 選ぶ場所と、何が止まるのかの説明がオプションにある
   &&game.includes("segments('effectAmount',RHYTHM_EFFECT_LABELS)")
-  &&/RHYTHM_EFFECT_LABELS *= *Object\.freeze\(\[\['NORMAL','多め'\],\['LOW','少なめ'\],\['MINIMAL','最小'\]\]\)/.test(game)
+  &&/RHYTHM_EFFECT_LABELS *= *Object\.freeze\(\[\['NORMAL','多め'\],\['LOW','標準'\],\['MINIMAL','最小'\]\]\)/.test(game)
   // 既定は「少なめ」。いちばん重い「判定文字の毎フレームの塗り直し」を既定で避ける
   &&game.includes("effectAmount:'LOW'")
-  &&game.includes('既定は「少なめ」です'));
+  &&game.includes('既定は「標準」です'));
+// 既定の段は「標準」と呼ぶ(2026-09-13・ユーザー指示「デフォルトの名称を標準にして」)。
+// 画面に出す名前と既定値がずれると、既定なのに「少なめ」「軽め」と書いてある状態になる
+ok('既定になっている段の名前が「標準」になっている',(()=>{
+  const labelsOf=name=>{
+    const src=(game.match(new RegExp(`${name} *= *Object\\.freeze\\(\\[(.*?)\\]\\);`))||[])[1]||'';
+    return [...src.matchAll(/\['([A-Z]+)','([^']+)'\]/g)].map(m=>[m[1],m[2]]);
+  };
+  const defaultOf=key=>((game.match(new RegExp(`${key}:'([A-Z]+)'`))||[])[1])||'';
+  const pairs=[['RHYTHM_EFFECT_LABELS','effectAmount'],['RHYTHM_MONSTER_EFFECT_LABELS','monsterNoteEffect']];
+  return pairs.every(([labels,key])=>{
+    const found=labelsOf(labels).find(([id])=>id===defaultOf(key));
+    return !!found&&found[1]==='標準';
+  });
+})());
 // 軽量モードが何を止めるのかを画面から読める(2026-09-13・ユーザーからの質問
 // 「軽量モードはどういう効果があるの？」。それまで説明が1文字も無かった)
 ok('軽量モードの効果が画面に書いてある',
