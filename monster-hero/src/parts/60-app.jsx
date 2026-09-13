@@ -2058,7 +2058,9 @@ function MonsterHeroGame() {
           try {
             // モンビーの記録は難易度キーが Rhythm-<曲>-<難易度> なので、送り先の関数も分ける
             const insert = String(diff).startsWith('Rhythm-') ? sbInsertRhythmScore : sbInsertScore;
-            const res = await insert(row);
+            // 送り直しは insertResentRankingRow を通す。行には遊んだ時刻(created_at)が
+            // 入っているので、DBに「いま」を刻ませない=先週の記録が今週の週間へ混ざらない
+            const res = await insertResentRankingRow(insert, row);
             if (res?.saved === true) { done.push(entry.clearId); sent++; } else { failed++; }
           } catch (e) {
             failed++;
@@ -2075,8 +2077,12 @@ function MonsterHeroGame() {
         for (const row of rhythmPending) {
           if (sent + failed >= limit || !row || !row.clear_id) { rest.push(row); continue; }
           try {
-            const { at, error, ...payload } = row;
-            const res = await sbInsertRhythmScore(payload);
+            const { at, error, created_at: storedCreatedAt, ...columns } = row;
+            // 退避したときの時刻(at)をそのまま created_at として送る。
+            // 付けずに送ると、送り直した瞬間が記録の時刻になってしまう
+            const createdAt = storedCreatedAt || rankingCreatedAtFromLocal(at);
+            const payload = { ...columns, ...(createdAt ? { created_at: createdAt } : {}) };
+            const res = await insertResentRankingRow(sbInsertRhythmScore, payload);
             if (res?.saved === true) sent++; else { failed++; rest.push(row); }
           } catch (e) {
             failed++; rest.push(row);
