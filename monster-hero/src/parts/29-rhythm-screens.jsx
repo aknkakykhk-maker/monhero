@@ -145,17 +145,14 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
             {field('タイミング調整',<>
               {stepper('judgmentTimingOffsetMs',-RHYTHM_TIMING_OFFSET_MAX_MS,RHYTHM_TIMING_OFFSET_MAX_MS,RHYTHM_TIMING_OFFSET_STEP_MS,{fine:1,coarse:10,suffix:'ms'})}
               <button type="button" data-rhythm-calibrator-open onClick={goCalibrate} className="mt-2 min-h-[46px] w-full rounded-xl border border-cyan-300/60 bg-cyan-950/50 text-[12px] font-black text-cyan-100">🎯 実際の画面で合わせる</button>
-              {/* 合わせ終わって戻ってきたら、測った値をここへ出す。入れるかどうかは本人が選ぶ */}
+              {/* 合わせ終わって戻ってきたときのお知らせ。値はもう入っているので、ここは報告だけ
+                  (2026-09-13・ユーザー指摘「設定にもなってない」。決めるのは測り終わった画面) */}
               {calibrationResult&&<div data-rhythm-calibrator-result className="mt-2 rounded-xl border border-amber-300/50 bg-amber-950/30 p-2 text-[11px] leading-relaxed text-amber-100">
-                <p>叩いた{calibrationResult.usedCount}回の平均は <b className="tabular-nums">{calibrationResult.rawMeanMs>0?'+':''}{calibrationResult.rawMeanMs}ms</b>（ばらつき±{calibrationResult.spreadMs}ms{calibrationResult.droppedCount>0?`／${calibrationResult.droppedCount}回は外れ値として除外`:''}）でした。</p>
+                <p><b className="tabular-nums">{calibrationResult.offsetMs>0?'+':''}{calibrationResult.offsetMs}ms</b> にしました。叩いた{calibrationResult.usedCount}回の平均は {calibrationResult.rawMeanMs>0?'+':''}{calibrationResult.rawMeanMs}ms（ばらつき±{calibrationResult.spreadMs}ms{calibrationResult.droppedCount>0?`／${calibrationResult.droppedCount}回は外れ値として除外`:''}）でした。</p>
                 {!calibrationResult.stable&&<p className="mt-1 font-black text-rose-300">ばらつきが大きめです。もう一度合わせると、より合った値になります。</p>}
-                <div className="mt-2 grid grid-cols-2 gap-2">
-                  <button type="button" data-rhythm-calibrator-apply onClick={()=>{set('judgmentTimingOffsetMs',calibrationResult.offsetMs);onClearCalibration&&onClearCalibration();setMessage(`判定タイミング調整を ${calibrationResult.offsetMs>0?'+':''}${calibrationResult.offsetMs}ms にしました（未保存）`);}}
-                    className="min-h-[44px] rounded-xl bg-amber-400 text-[12px] font-black text-slate-950">{calibrationResult.offsetMs>0?'+':''}{calibrationResult.offsetMs}ms にする</button>
-                  <button type="button" onClick={()=>onClearCalibration&&onClearCalibration()} className="min-h-[44px] rounded-xl border border-white/20 bg-slate-800 text-[12px] font-black">今回は使わない</button>
-                </div>
+                <button type="button" data-rhythm-calibrator-dismiss onClick={()=>onClearCalibration&&onClearCalibration()} className="mt-2 min-h-[44px] w-full rounded-xl border border-white/20 bg-slate-800 text-[12px] font-black">とじる</button>
               </div>}
-            </>,'判定窓の幅は変えず、表示と入力の基準を同じ量だけ補正します。1ms刻みで動かせます。数字で決めにくいときは「実際の画面で合わせる」を押してください。いつもの演奏画面が開き、判定とFAST/SLOWを見ながら20回叩くと、そのずれから合う値が出ます。',{full:true})}
+            </>,'判定窓の幅は変えず、表示と入力の基準を同じ量だけ補正します。1ms刻みで動かせます。数字で決めにくいときは「実際の画面で合わせる」を押してください。いつもの演奏画面が開き、判定とFAST／SLOWを見ながら2拍ごとのノーツを叩きます。はじめの4回は数えず、そのあとの16回のずれから合う値を出して、その場で「この値にする」を選べます。ライフは減らず、記録にも残りません。',{full:true})}
             {field('ノーツサイズ',stepper('noteSize',80,120,5,{fine:5,coarse:10,suffix:'%'}),
               'ノーツの見た目の大きさだけを変えます。入力判定の範囲・HOLD/SLIDE帯・ENDバーの位置は変わりません。',{full:true})}
             {/* 【2026-09-05・ユーザー指示】「ノーツの開始位置（奥行き）もオプションで調整できるようにしたい」 */}
