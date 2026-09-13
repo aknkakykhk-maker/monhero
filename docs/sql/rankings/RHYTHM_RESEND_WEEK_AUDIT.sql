@@ -44,7 +44,7 @@ select '③ 同じ分に2件以上まとまっている固まり',
                    from bursts), '(なし)')
 union all
 select '④ 今週の記録の一覧(時刻の新しい順・上位20件)',
-       coalesce((select string_agg(line, E'\n') from (
+       coalesce((select string_agg(line, E'\n' order by created_at desc) from (
          select to_char(created_at at time zone 'Asia/Tokyo','MM/DD HH24:MI') || ' / '
              || user_name || ' / ' || difficulty || ' / '
              || to_char(score, 'FM999,999,999') || ' / ' || clear_id as line,
