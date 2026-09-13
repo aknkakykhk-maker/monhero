@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1fb04e00e704c3b3
+// generated-sha256: 63c61f5506484a2d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -89,7 +89,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-14 07:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-14 07:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -10462,7 +10462,7 @@ const sbFetchBondLevels = async (requestId='untracked') => {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8000);
   try {
-    const res = await fetch(url, { headers: SB_HEADERS, signal: controller.signal });
+    const res = await fetch(url, { headers: SB_HEADERS, cache: 'no-store', signal: controller.signal });
     const body = await res.text();
     if (!res.ok) {
       if (_isMissingTableError(res.status, body)) {
@@ -10572,7 +10572,7 @@ const sbFetchRankings = async (diff, limit=RANKING_SCORE_LIMIT, order='score.des
   // 落ちていた。回線が細くても待てる範囲まで伸ばす(それでも返らなければ打ち切る)
   const timer = setTimeout(() => controller.abort(), 15000);
   try {
-    const res = await fetch(url, { headers: SB_HEADERS, signal: controller.signal });
+    const res = await fetch(url, { headers: SB_HEADERS, cache: 'no-store', signal: controller.signal });
     const body = await res.text();
     rankingLog(requestId, 'supabase-response', { difficulty: normalizedDifficulty, endedAt: new Date().toISOString(), elapsedMs: Date.now() - startedAt, status: res.status, statusText: res.statusText, ok: res.ok, dataCount: res.ok ? (() => { try { const parsed = JSON.parse(body); return Array.isArray(parsed) ? parsed.length : null; } catch { return null; } })() : null, error: res.ok ? null : body });
     if (!res.ok) {
@@ -10897,7 +10897,7 @@ const sbFetchRhythmRankings = async (difficultyKeys, limit=RHYTHM_RANKING_FETCH_
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
   try {
-    const res = await fetch(url, { headers: SB_HEADERS, signal: controller.signal });
+    const res = await fetch(url, { headers: SB_HEADERS, cache: 'no-store', signal: controller.signal });
     const body = await res.text();
     if (!res.ok) throw new Error(`rhythm ranking fetch ${res.status} ${res.statusText}; url=${url}; response=${body || '(empty)'}`);
     try {
@@ -10947,7 +10947,7 @@ const sbFetchRhythmTotalRankings = async ({ limit=RHYTHM_TOTAL_RANKING_DISPLAY_L
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
   try {
-    const res = await fetch(url, { headers: SB_HEADERS, signal: controller.signal });
+    const res = await fetch(url, { headers: SB_HEADERS, cache: 'no-store', signal: controller.signal });
     const body = await res.text();
     if (!res.ok) {
       if (rhythmTotalRankingMissing(res.status, body)) {
@@ -11052,9 +11052,16 @@ const sbFetchRhythmEventRows = async ({ url, body = null, label, requestId = 'un
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
   try {
+    // ★GETは必ずサーバーへ聞きに行く(cache:'no-store')。
+    //   2026-09-14・ユーザー指摘「5時過ぎてモンヒロビート見たら週間ランキングにスコアが入ってた /
+    //   確実に5時以降にはやってないから何かしらの不具合だと思うよ」。
+    //   今週の期間(rhythm_week_window)はGETで聞いているが、キャッシュを止めていなかった。
+    //   ブラウザが前に取った答えを使い回すと、5:00をまたいでも**先週の期間**のまま集計され、
+    //   先週のスコアが今週の順位として出る。時刻で変わる答えをキャッシュから読ませない。
+    //   POSTのほう(集計そのもの)はもともとキャッシュされない。
     const res = await fetch(url, body
       ? { method: 'POST', headers: SB_HEADERS, body: JSON.stringify(body), signal: controller.signal }
-      : { headers: SB_HEADERS, signal: controller.signal });
+      : { headers: SB_HEADERS, cache: 'no-store', signal: controller.signal });
     const text = await res.text();
     if (!res.ok) {
       if (rhythmEventRankingMissing(res.status, text)) {
@@ -11090,6 +11097,18 @@ const sbFetchRhythmWeekWindow = async ({ requestId = 'untracked' } = {}) => {
   // 値が読めないときは「準備中」に倒す。端末時計で代用すると、サーバーと違う期間の
   // 順位を「今週」として見せてしまう(期間の正本はサーバー・§6.1)
   if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs <= startMs) throw rhythmEventNotReadyError();
+  // ★受け取った期間が、もう終わっている/まだ始まっていないときは使わない(2026-09-14)。
+  //   上の cache:'no-store' で普通は起きないが、端末やWebViewがそれを無視して
+  //   前に取った答えを返すことがある。古い期間のまま集計すると、
+  //   **先週のスコアが今週の順位として出る**(実際にそう見えた)。
+  //   ここで気づいたら、期間を当てずっぽうで補わずエラーにして「更新」でやり直してもらう
+  //   (端末の時計で代用すると、時計を進めるだけで別の週を見られてしまう・§6.1)。
+  //   端末の時計のほうがずれていることもあるので、1時間の余裕をみる
+  const slackMs = 60 * 60 * 1000;
+  const now = Date.now();
+  if (now >= endMs + slackMs || now < startMs - slackMs) {
+    throw new Error(`rhythm week window looks stale; window=${new Date(startMs).toISOString()}..${new Date(endMs).toISOString()}; now=${new Date(now).toISOString()}`);
+  }
   return { startMs, endMs };
 };
 // 期間×対象曲の「曲ごとベスト」。部門1つぶん(=曲1つぶん)を取りにいく
@@ -11236,6 +11255,9 @@ const rhythmWeekTotalEntryFromRow = (row) => ({
   userName: row?.user_name || '名無しのブリーダー',
   totalScore: Number(row?.total_score) || 0,
   playCount: Number(row?.play_count) || 0,
+  // 最後に記録した日時。画面に出して「その週のものかどうか」を目で確かめられるようにする
+  // (2026-09-14・ユーザー指摘「普通に朝起きたらスコア残ってたからそこが気になる」)
+  lastScoredAtMs: Number.isFinite(Date.parse(String(row?.last_scored_at || ''))) ? Date.parse(row.last_scored_at) : null,
   songCount: Number(row?.song_count) || 0,
   level: Number(row?.level) || 0,
   icon: row?.icon ?? null,
@@ -15766,6 +15788,10 @@ function RhythmRankingScreen({
           <div className="min-w-0 flex-1">
             <p className="truncate text-xs font-black text-white">{entry.userName}</p>
             <p className="text-[9px] text-slate-400">{eventWeekly?`${entry.playCount}回 ・ ${entry.songCount}曲`:`${entry.songCount} / ${eventSongCount}曲`} ・ Lv.{entry.level}</p>
+            {/* ★週間は「いつの記録か」を出す(2026-09-14・ユーザー指摘
+                「普通に朝起きたらスコア残ってたからそこが気になる」)。
+                その週のものかどうかを、画面を見ただけで確かめられるようにするため */}
+            {eventWeekly&&entry.lastScoredAtMs&&<p data-rhythm-week-last className="text-[9px] text-slate-500">最後の記録 {rhythmEventJstText(entry.lastScoredAtMs)}</p>}
           </div>
           <div className="shrink-0 text-right">
             <p className="font-mono text-sm font-black text-fuchsia-100">{entry.totalScore.toLocaleString()}</p>
@@ -19680,8 +19706,12 @@ function RhythmHistoryScreen({
   const activeDivision = divisions.some(division => division.id === wanted) ? wanted : RHYTHM_EVENT_TOTAL_DIVISION;
   const divisionBoard = (view.boards && view.boards[activeDivision]) || { status:'idle', entries:[], self:null };
   const songId = rhythmEventDivisionSongId(activeDivision);
-  // 週は累計スコア方式なので、1行に出す補助の数字が「遊んだ回数」になる
+  // 週は累計スコア方式なので、1行に出す補助の数字が「遊んだ回数」になる。
+  // ★ただし累計方式より前の週(scoring:'best')は、当時の数え方=曲ごとのベストの合計。
+  //   遊んだ回数は数えていないので出さない(2026-09-14)
   const weekly = !!selected && selected.kind === 'weekly';
+  const weeklyBest = weekly && selected.scoring === 'best';
+  const weeklyTotals = weekly && !weeklyBest;
   const rows = Array.isArray(divisionBoard.entries) ? divisionBoard.entries : [];
   const self = divisionBoard.self || null;
   // ランクは素点で決める(回数ボーナス込みの点だと満点を超えてしまうため。ランキング画面と同じ)
@@ -19696,7 +19726,7 @@ function RhythmHistoryScreen({
         <p className="text-[9px] text-slate-400">
           {songId
             ? `${RHYTHM_DEMO_DIFFICULTY_LABELS[entry.difficultyId]?.name||entry.difficultyId||'-'} ・ Lv.${entry.level}`
-            : `${weekly?`${entry.playCount}回 ・ `:''}${entry.songCount}曲 ・ Lv.${entry.level}`}
+            : `${weeklyTotals?`${entry.playCount}回 ・ `:''}${entry.songCount}曲 ・ Lv.${entry.level}`}
         </p>
       </div>
       <div className="shrink-0 text-right">
@@ -19750,6 +19780,14 @@ function RhythmHistoryScreen({
               <p className="mt-2 text-[9px] leading-relaxed text-slate-500">
                 当時の記録から数え直して出しています。ここから報酬を受け取ることはできません。
               </p>
+              {/* ★数え方が途中で変わっているので、どちらで出しているかを書く(2026-09-14)。
+                  書かないと「同じ週間ランキングなのに見かたが違う」と伝わらない */}
+              {weeklyBest&&<p data-rhythm-history-best-note className="mt-1 text-[9px] leading-relaxed text-amber-200/80">
+                この週は「曲ごとのいちばん良いスコアを全曲ぶん合計」で競っていたころのものです（当時と同じ数え方で出しています）。いまの週間ランキングは「遊んだぶんをすべて足す」方式です。
+              </p>}
+              {weeklyTotals&&<p data-rhythm-history-total-note className="mt-1 text-[9px] leading-relaxed text-slate-500">
+                この週は「その週に遊んだぶんをすべて足す」方式です。
+              </p>}
             </div>
             {/* 部門(対象曲ごと＋総合)。対象曲を持つのはイベントだけなので、週では出ない */}
             {divisions.length>1&&(
@@ -21670,8 +21708,13 @@ function MonsterHeroGame() {
       const bonusRates = rhythmEventPlayBonusRates(event);
       // ★週間は**累計スコア方式**(2026-09-13)。曲ごとのベストではなく、その週に出した記録を
       //   ぜんぶ足す。対象曲も部門も無いので、期間だけ渡す専用の関数を呼ぶ
-      // 週間(履歴の週をふくむ)は累計スコア方式。対象曲も部門も無いので期間だけ渡す
-      const weeklyTotals = (kind === 'weekly' || (kind === 'history' && historyEntry.kind === 'weekly')) && !targetSongId;
+      // 週間(履歴の週をふくむ)は累計スコア方式。対象曲も部門も無いので期間だけ渡す。
+      // ★ただし履歴の古い週は**当時の数え方(曲ごとのベストの合計)**で集計する
+      //   (2026-09-14・ユーザー依頼で、累計方式より前の週も載せるようにした)。
+      //   累計で出し直すと、当時プレイヤーが見ていた順位と数字が変わってしまう
+      const historyWeekScoring = (kind === 'history' && historyEntry.kind === 'weekly')
+        ? (historyEntry.scoring || 'total') : null;
+      const weeklyTotals = ((kind === 'weekly') || historyWeekScoring === 'total') && !targetSongId;
       const fetchRows = (options) => weeklyTotals
         ? sbFetchRhythmWeekTotals({ fromMs:range.startMs, toMs:range.endMs, ...options })
         : targetSongId

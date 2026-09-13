@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6f5e1e8b4371a401
+// source-sha256: c1f3d30c2ba630a0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1fb04e00e704c3b3
+// generated-sha256: 63c61f5506484a2d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-14 07:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-14 07:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -17651,6 +17651,7 @@ const sbFetchBondLevels = async (requestId = 'untracked') => {
   try {
     const res = await fetch(url, {
       headers: SB_HEADERS,
+      cache: 'no-store',
       signal: controller.signal
     });
     const body = await res.text();
@@ -17781,6 +17782,7 @@ const sbFetchRankings = async (diff, limit = RANKING_SCORE_LIMIT, order = 'score
   try {
     const res = await fetch(url, {
       headers: SB_HEADERS,
+      cache: 'no-store',
       signal: controller.signal
     });
     const body = await res.text();
@@ -18249,6 +18251,7 @@ const sbFetchRhythmRankings = async (difficultyKeys, limit = RHYTHM_RANKING_FETC
   try {
     const res = await fetch(url, {
       headers: SB_HEADERS,
+      cache: 'no-store',
       signal: controller.signal
     });
     const body = await res.text();
@@ -18308,6 +18311,7 @@ const sbFetchRhythmTotalRankings = async ({
   try {
     const res = await fetch(url, {
       headers: SB_HEADERS,
+      cache: 'no-store',
       signal: controller.signal
     });
     const body = await res.text();
@@ -18421,6 +18425,13 @@ const sbFetchRhythmEventRows = async ({
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
   try {
+    // ★GETは必ずサーバーへ聞きに行く(cache:'no-store')。
+    //   2026-09-14・ユーザー指摘「5時過ぎてモンヒロビート見たら週間ランキングにスコアが入ってた /
+    //   確実に5時以降にはやってないから何かしらの不具合だと思うよ」。
+    //   今週の期間(rhythm_week_window)はGETで聞いているが、キャッシュを止めていなかった。
+    //   ブラウザが前に取った答えを使い回すと、5:00をまたいでも**先週の期間**のまま集計され、
+    //   先週のスコアが今週の順位として出る。時刻で変わる答えをキャッシュから読ませない。
+    //   POSTのほう(集計そのもの)はもともとキャッシュされない。
     const res = await fetch(url, body ? {
       method: 'POST',
       headers: SB_HEADERS,
@@ -18428,6 +18439,7 @@ const sbFetchRhythmEventRows = async ({
       signal: controller.signal
     } : {
       headers: SB_HEADERS,
+      cache: 'no-store',
       signal: controller.signal
     });
     const text = await res.text();
@@ -18470,6 +18482,18 @@ const sbFetchRhythmWeekWindow = async ({
   // 値が読めないときは「準備中」に倒す。端末時計で代用すると、サーバーと違う期間の
   // 順位を「今週」として見せてしまう(期間の正本はサーバー・§6.1)
   if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs <= startMs) throw rhythmEventNotReadyError();
+  // ★受け取った期間が、もう終わっている/まだ始まっていないときは使わない(2026-09-14)。
+  //   上の cache:'no-store' で普通は起きないが、端末やWebViewがそれを無視して
+  //   前に取った答えを返すことがある。古い期間のまま集計すると、
+  //   **先週のスコアが今週の順位として出る**(実際にそう見えた)。
+  //   ここで気づいたら、期間を当てずっぽうで補わずエラーにして「更新」でやり直してもらう
+  //   (端末の時計で代用すると、時計を進めるだけで別の週を見られてしまう・§6.1)。
+  //   端末の時計のほうがずれていることもあるので、1時間の余裕をみる
+  const slackMs = 60 * 60 * 1000;
+  const now = Date.now();
+  if (now >= endMs + slackMs || now < startMs - slackMs) {
+    throw new Error(`rhythm week window looks stale; window=${new Date(startMs).toISOString()}..${new Date(endMs).toISOString()}; now=${new Date(now).toISOString()}`);
+  }
   return {
     startMs,
     endMs
@@ -18674,6 +18698,9 @@ const rhythmWeekTotalEntryFromRow = row => ({
   userName: row?.user_name || '名無しのブリーダー',
   totalScore: Number(row?.total_score) || 0,
   playCount: Number(row?.play_count) || 0,
+  // 最後に記録した日時。画面に出して「その週のものかどうか」を目で確かめられるようにする
+  // (2026-09-14・ユーザー指摘「普通に朝起きたらスコア残ってたからそこが気になる」)
+  lastScoredAtMs: Number.isFinite(Date.parse(String(row?.last_scored_at || ''))) ? Date.parse(row.last_scored_at) : null,
   songCount: Number(row?.song_count) || 0,
   level: Number(row?.level) || 0,
   icon: row?.icon ?? null,
@@ -27457,7 +27484,10 @@ function RhythmRankingScreen({
     className: "truncate text-xs font-black text-white"
   }, entry.userName), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-slate-400"
-  }, eventWeekly ? `${entry.playCount}回 ・ ${entry.songCount}曲` : `${entry.songCount} / ${eventSongCount}曲`, " \u30FB Lv.", entry.level)), /*#__PURE__*/React.createElement("div", {
+  }, eventWeekly ? `${entry.playCount}回 ・ ${entry.songCount}曲` : `${entry.songCount} / ${eventSongCount}曲`, " \u30FB Lv.", entry.level), eventWeekly && entry.lastScoredAtMs && /*#__PURE__*/React.createElement("p", {
+    "data-rhythm-week-last": true,
+    className: "text-[9px] text-slate-500"
+  }, "\u6700\u5F8C\u306E\u8A18\u9332 ", rhythmEventJstText(entry.lastScoredAtMs))), /*#__PURE__*/React.createElement("div", {
     className: "shrink-0 text-right"
   }, /*#__PURE__*/React.createElement("p", {
     className: "font-mono text-sm font-black text-fuchsia-100"
@@ -36737,8 +36767,12 @@ function RhythmHistoryScreen({
     self: null
   };
   const songId = rhythmEventDivisionSongId(activeDivision);
-  // 週は累計スコア方式なので、1行に出す補助の数字が「遊んだ回数」になる
+  // 週は累計スコア方式なので、1行に出す補助の数字が「遊んだ回数」になる。
+  // ★ただし累計方式より前の週(scoring:'best')は、当時の数え方=曲ごとのベストの合計。
+  //   遊んだ回数は数えていないので出さない(2026-09-14)
   const weekly = !!selected && selected.kind === 'weekly';
+  const weeklyBest = weekly && selected.scoring === 'best';
+  const weeklyTotals = weekly && !weeklyBest;
   const rows = Array.isArray(divisionBoard.entries) ? divisionBoard.entries : [];
   const self = divisionBoard.self || null;
   // ランクは素点で決める(回数ボーナス込みの点だと満点を超えてしまうため。ランキング画面と同じ)
@@ -36754,7 +36788,7 @@ function RhythmHistoryScreen({
     className: "truncate text-xs font-black text-white"
   }, entry.userName), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-slate-400"
-  }, songId ? `${RHYTHM_DEMO_DIFFICULTY_LABELS[entry.difficultyId]?.name || entry.difficultyId || '-'} ・ Lv.${entry.level}` : `${weekly ? `${entry.playCount}回 ・ ` : ''}${entry.songCount}曲 ・ Lv.${entry.level}`)), /*#__PURE__*/React.createElement("div", {
+  }, songId ? `${RHYTHM_DEMO_DIFFICULTY_LABELS[entry.difficultyId]?.name || entry.difficultyId || '-'} ・ Lv.${entry.level}` : `${weeklyTotals ? `${entry.playCount}回 ・ ` : ''}${entry.songCount}曲 ・ Lv.${entry.level}`)), /*#__PURE__*/React.createElement("div", {
     className: "shrink-0 text-right"
   }, /*#__PURE__*/React.createElement("p", {
     className: "font-mono text-sm font-black text-amber-100"
@@ -36827,7 +36861,13 @@ function RhythmHistoryScreen({
     className: "text-[10px] font-black text-slate-300"
   }, rhythmHistoryPeriodText(selected))), /*#__PURE__*/React.createElement("p", {
     className: "mt-2 text-[9px] leading-relaxed text-slate-500"
-  }, "\u5F53\u6642\u306E\u8A18\u9332\u304B\u3089\u6570\u3048\u76F4\u3057\u3066\u51FA\u3057\u3066\u3044\u307E\u3059\u3002\u3053\u3053\u304B\u3089\u5831\u916C\u3092\u53D7\u3051\u53D6\u308B\u3053\u3068\u306F\u3067\u304D\u307E\u305B\u3093\u3002")), divisions.length > 1 && /*#__PURE__*/React.createElement("div", {
+  }, "\u5F53\u6642\u306E\u8A18\u9332\u304B\u3089\u6570\u3048\u76F4\u3057\u3066\u51FA\u3057\u3066\u3044\u307E\u3059\u3002\u3053\u3053\u304B\u3089\u5831\u916C\u3092\u53D7\u3051\u53D6\u308B\u3053\u3068\u306F\u3067\u304D\u307E\u305B\u3093\u3002"), weeklyBest && /*#__PURE__*/React.createElement("p", {
+    "data-rhythm-history-best-note": true,
+    className: "mt-1 text-[9px] leading-relaxed text-amber-200/80"
+  }, "\u3053\u306E\u9031\u306F\u300C\u66F2\u3054\u3068\u306E\u3044\u3061\u3070\u3093\u826F\u3044\u30B9\u30B3\u30A2\u3092\u5168\u66F2\u3076\u3093\u5408\u8A08\u300D\u3067\u7AF6\u3063\u3066\u3044\u305F\u3053\u308D\u306E\u3082\u306E\u3067\u3059\uFF08\u5F53\u6642\u3068\u540C\u3058\u6570\u3048\u65B9\u3067\u51FA\u3057\u3066\u3044\u307E\u3059\uFF09\u3002\u3044\u307E\u306E\u9031\u9593\u30E9\u30F3\u30AD\u30F3\u30B0\u306F\u300C\u904A\u3093\u3060\u3076\u3093\u3092\u3059\u3079\u3066\u8DB3\u3059\u300D\u65B9\u5F0F\u3067\u3059\u3002"), weeklyTotals && /*#__PURE__*/React.createElement("p", {
+    "data-rhythm-history-total-note": true,
+    className: "mt-1 text-[9px] leading-relaxed text-slate-500"
+  }, "\u3053\u306E\u9031\u306F\u300C\u305D\u306E\u9031\u306B\u904A\u3093\u3060\u3076\u3093\u3092\u3059\u3079\u3066\u8DB3\u3059\u300D\u65B9\u5F0F\u3067\u3059\u3002")), divisions.length > 1 && /*#__PURE__*/React.createElement("div", {
     "data-rhythm-history-divisions": true,
     className: "mb-3 flex flex-wrap gap-1"
   }, divisions.map(division => /*#__PURE__*/React.createElement("button", {
@@ -39354,8 +39394,12 @@ function MonsterHeroGame() {
       const bonusRates = rhythmEventPlayBonusRates(event);
       // ★週間は**累計スコア方式**(2026-09-13)。曲ごとのベストではなく、その週に出した記録を
       //   ぜんぶ足す。対象曲も部門も無いので、期間だけ渡す専用の関数を呼ぶ
-      // 週間(履歴の週をふくむ)は累計スコア方式。対象曲も部門も無いので期間だけ渡す
-      const weeklyTotals = (kind === 'weekly' || kind === 'history' && historyEntry.kind === 'weekly') && !targetSongId;
+      // 週間(履歴の週をふくむ)は累計スコア方式。対象曲も部門も無いので期間だけ渡す。
+      // ★ただし履歴の古い週は**当時の数え方(曲ごとのベストの合計)**で集計する
+      //   (2026-09-14・ユーザー依頼で、累計方式より前の週も載せるようにした)。
+      //   累計で出し直すと、当時プレイヤーが見ていた順位と数字が変わってしまう
+      const historyWeekScoring = kind === 'history' && historyEntry.kind === 'weekly' ? historyEntry.scoring || 'total' : null;
+      const weeklyTotals = (kind === 'weekly' || historyWeekScoring === 'total') && !targetSongId;
       const fetchRows = options => weeklyTotals ? sbFetchRhythmWeekTotals({
         fromMs: range.startMs,
         toMs: range.endMs,
