@@ -2881,6 +2881,12 @@ function MonsterHeroGame() {
   const MONBEAT_CUP_THANKS_STORY_ID = 'monbeat_cup_2026_09_thanks';
   // 閉幕の会話が受け持つイベント(週末ゲリラ杯)。ほかのイベントの受け取りは待たせない
   const MONBEAT_CUP_EVENT_ID = 'weekend_2026_09_11';
+  // ★本編で流す会話の一覧。最後まで見た(または飛ばした)ら、ここにあるIDだけを
+  //   「見た」として記録する。会話を足したらここへ1行足すこと。
+  //   書き忘れると、その会話は**永久に既読にならず**、起動のたびに流れ続ける
+  //   (しかも受け取り画面が会話待ちのまま出なくなる)。
+  //   tools/mode/rhythm-event-thanks-check.js が見張る
+  const RHYTHM_EVENT_STORY_IDS = [MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID];
   const [rhythmEventStorySeen, setRhythmEventStorySeen] = useState(null);
   const rhythmEventStorySeenRef = useRef(null);
   const [rhythmEventStoryPending, setRhythmEventStoryPending] = useState(null);
@@ -7253,6 +7259,13 @@ function MonsterHeroGame() {
     setDailyMasuAdvice(null); setUpdateGuideQueue([]);
     returnToHome();
     setEventReplay({ id: MONBEAT_CUP_STORY_ID, step: 0, live: true, debug: true });
+  };
+  // 閉幕とお礼の会話(2026-09-13)。本番では終了時刻に自動で流れるので、
+  // それを待たずに中身を確かめるためのボタン。debug:true なので既読にはならない
+  const debugPlayRhythmEventThanks = () => {
+    setDailyMasuAdvice(null); setUpdateGuideQueue([]);
+    returnToHome();
+    setEventReplay({ id: MONBEAT_CUP_THANKS_STORY_ID, step: 0, live: true, debug: true });
   };
   const debugPlayRhythmEventNotice = () => {
     // 期間の外でも出せるよう、enabled で絞らずIDで直に引く
@@ -12303,6 +12316,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       デバッグ専用なので更新履歴・ヘルプには載せない(CLAUDE.md ⑤の但し書き) */}
                   <button data-debug-rhythm-event-intro onClick={debugPlayRhythmEventIntro} className="col-span-2 min-h-[46px] rounded-xl bg-fuchsia-800/70 border border-fuchsia-300/60 text-white text-[10px] font-black active:scale-95">🏆 イベント開催を再生（会話→告知）</button>
                   <button data-debug-rhythm-event-story onClick={debugPlayRhythmEventStory} className="min-h-[46px] rounded-xl bg-fuchsia-900/60 border border-fuchsia-400/50 text-fuchsia-100 text-[10px] font-black active:scale-95">イベント会話だけ再生</button>
+                  <button data-debug-rhythm-event-thanks onClick={debugPlayRhythmEventThanks} className="min-h-[46px] rounded-xl bg-fuchsia-900/60 border border-fuchsia-400/50 text-fuchsia-100 text-[10px] font-black active:scale-95">閉幕とお礼の会話を再生</button>
                   <button data-debug-rhythm-event-notice onClick={debugPlayRhythmEventNotice} className="min-h-[46px] rounded-xl bg-fuchsia-900/60 border border-fuchsia-400/50 text-fuchsia-100 text-[10px] font-black active:scale-95">イベント告知だけ再生</button>
                   <button data-debug-rhythm-event-reward onClick={debugPlayRhythmEventReward} className="min-h-[46px] rounded-xl bg-amber-900/60 border border-amber-400/50 text-amber-100 text-[10px] font-black active:scale-95">入賞の受け取り画面を見る</button>
                   <button data-debug-rhythm-event-reset onClick={debugResetRhythmEventSeen} className="min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95">イベントを未読へ戻す</button>
@@ -14040,7 +14054,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           if(!last){ setEventReplay(r=>r&&({...r,step:r.step+1})); return; }
           if(event&&event.id==='momosuke_intro') markMomosukeIntroSeen();
           // イベントの会話も、最後まで見たら「見た」にする(次の起動で重ねて流さない)
-          if(event&&event.id===MONBEAT_CUP_STORY_ID&&!eventReplay.debug) void markRhythmEventStorySeen(MONBEAT_CUP_STORY_ID);
+          if(event&&RHYTHM_EVENT_STORY_IDS.includes(event.id)&&!eventReplay.debug) void markRhythmEventStorySeen(event.id);
           setEventReplay(null);
         };
         /* 途中でやめる。回想(あとから見返すぶん)は「見たことがある」を立てない
@@ -14050,7 +14064,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
              そうしないと、起動のたびに同じ会話がまた出てしまう。
              飛ばしたぶんはプロフィールの「イベント回想」からいつでも見られる */
         const skip=()=>{
-          if(eventReplay.live&&!eventReplay.debug&&event&&event.id===MONBEAT_CUP_STORY_ID) void markRhythmEventStorySeen(MONBEAT_CUP_STORY_ID);
+          if(eventReplay.live&&!eventReplay.debug&&event&&RHYTHM_EVENT_STORY_IDS.includes(event.id)) void markRhythmEventStorySeen(event.id);
           setEventReplay(null);
         };
         return(
