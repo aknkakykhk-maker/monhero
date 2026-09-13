@@ -249,6 +249,15 @@ const RHYTHM_COMBO_OPACITY_STEP = 10;
 const RHYTHM_LIFE_SIZE_MIN = 100;
 const RHYTHM_LIFE_SIZE_MAX = 200;
 const RHYTHM_LIFE_SIZE_STEP = 10;
+// 判定ラインの高さ(2026-09-13・ユーザー依頼「タップする判定ラインの位置を
+// オプションでいじれるようにしたい / 下過ぎて使いづらいという声があり」)。
+// プレイエリアの**下から何%**か。既定の12はこれまでと同じ位置で、
+// 大きくするほど上へ上がる(指が画面の下へ届かない端末向け)。
+// ★上限は32%で止める。これを越えると判定ラインがエリアの上半分へ入り、
+//   「まだ形が決まっていない」と見なす見張り(rhythmTravelLooksReady)とぶつかる。
+const RHYTHM_JUDGMENT_LINE_HEIGHT_MIN = 8;
+const RHYTHM_JUDGMENT_LINE_HEIGHT_MAX = 32;
+const RHYTHM_JUDGMENT_LINE_HEIGHT_STEP = 2;
 const RHYTHM_COMBO_SIZE_MIN = 70;
 const RHYTHM_COMBO_SIZE_MAX = 150;
 const RHYTHM_COMBO_SIZE_STEP = 10;
@@ -285,6 +294,7 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   bgmVolume:100, noteSpeed:6, noteSize:100, noteStartPosition:0, displayTimingOffsetMs:0, judgmentTimingOffsetMs:0,
   fastSlowDisplay:true, judgmentTextDisplay:true, judgmentTextPosition:50, comboDisplay:true, comboPosition:'AUTO', comboSize:100, comboOpacity:100, lifeDisplaySize:150, holdSlideOpacity:80, laneGlow:'NORMAL',
   monsterNoteEffect:'LIGHT',
+  judgmentLineHeight:12,
   noteSeVolume:70, noteSeEnabled:true, vibrationEnabled:false, effectAmount:'LIGHT', lightweightMode:false,
   livePartnerVisible:true,
   // 両サイドのマスモン(2026-09-05)。既存の保存値には無いので、読み込み時は既定で補われる。
@@ -324,6 +334,9 @@ const normalizeRhythmSettings = value => {
     comboPosition:RHYTHM_COMBO_POSITIONS.includes(source.comboPosition)?source.comboPosition:DEFAULT_RHYTHM_SETTINGS.comboPosition,
     comboSize:rhythmFiniteStep(source.comboSize,RHYTHM_COMBO_SIZE_MIN,RHYTHM_COMBO_SIZE_MAX,RHYTHM_COMBO_SIZE_STEP,DEFAULT_RHYTHM_SETTINGS.comboSize),
     lifeDisplaySize:rhythmFiniteStep(source.lifeDisplaySize,RHYTHM_LIFE_SIZE_MIN,RHYTHM_LIFE_SIZE_MAX,RHYTHM_LIFE_SIZE_STEP,DEFAULT_RHYTHM_SETTINGS.lifeDisplaySize),
+    // ★新しい項目。これまでの保存値には無いので、読むときに既定(12)で補われる
+    //   ＝これまでどおりの位置。既存のキーは触らない(CLAUDE.md ⑦)
+    judgmentLineHeight:rhythmFiniteStep(source.judgmentLineHeight,RHYTHM_JUDGMENT_LINE_HEIGHT_MIN,RHYTHM_JUDGMENT_LINE_HEIGHT_MAX,RHYTHM_JUDGMENT_LINE_HEIGHT_STEP,DEFAULT_RHYTHM_SETTINGS.judgmentLineHeight),
     comboOpacity:rhythmFiniteStep(source.comboOpacity,RHYTHM_COMBO_OPACITY_MIN,RHYTHM_COMBO_OPACITY_MAX,RHYTHM_COMBO_OPACITY_STEP,DEFAULT_RHYTHM_SETTINGS.comboOpacity),
     monsterNoteEffect:RHYTHM_MONSTER_EFFECT_LEVELS.includes(source.monsterNoteEffect)?source.monsterNoteEffect:DEFAULT_RHYTHM_SETTINGS.monsterNoteEffect,
     holdSlideOpacity:rhythmFiniteInRange(source.holdSlideOpacity,10,100,DEFAULT_RHYTHM_SETTINGS.holdSlideOpacity),

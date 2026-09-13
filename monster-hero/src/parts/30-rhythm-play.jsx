@@ -406,7 +406,9 @@ const rhythmTravelLooksReady=(areaRect,lineRect)=>{
   if(!(lineCenter>=areaRect.top&&lineCenter<=areaRect.bottom))return false;
   // 判定ラインは下から12%の位置に置く。エリアの上半分に居るなら、
   // まだ置き場所が決まっていない(高さ0でなくても、位置だけ未確定のことがある)
-  if(!(lineCenter>areaRect.top+areaRect.height*0.5))return false;
+  // ★上限(下から32%)まで上げても、ラインの中心はエリアの68%のあたりに残る。
+  //   余裕を見て上半分を少しだけ入れたところで区切る
+  if(!(lineCenter>areaRect.top+areaRect.height*0.45))return false;
   return true;
 };
 const measureTravel=useCallback(()=>{
@@ -420,12 +422,15 @@ const measureTravel=useCallback(()=>{
   const judgmentY=lineRect.top-areaRect.top+lineRect.height/2-noteHeight/2;
   // ready:false は「まだノーツを正しい場所へ置けない」。判定を進めてよいかの目印にも使う
   const ready=rhythmTravelLooksReady(areaRect,lineRect);
+  // ★HOLD/SLIDEの追従は「判定ラインの高さ」でレーンを測る。
+  //   ラインを動かせるようにしたので、決めうちの .88 ではなく**実測した位置**を渡す
+  if(ready)RHYTHM_JUDGMENT_LINE_Y.set((lineRect.top-areaRect.top+lineRect.height/2)/areaRect.height);
   const result={spawnY,judgmentY,travelPx:judgmentY-spawnY,playAreaHeight:areaRect.height,rect:areaRect,noteHeight,ready};
   // 組み上がっていると確かめられたときだけ覚える。そうでなければ毎フレーム測り直し、
   // 整った瞬間から正しい位置で流れ始める(遊べない状態のまま固定されない)
   if(ready)travelCacheRef.current=result;
   return result;
-},[settings.noteStartPosition]);
+},[settings.noteStartPosition,settings.judgmentLineHeight]);
 // --- 判定ラインの「幅」を描く ---
 // 上下のふちがGOOD(前後0.17秒)の端、内側の明るいところがMARVELOUS(前後0.055秒)。
 // 何ピクセルになるかはノーツ速度(travelMs)と画面の高さで変わるので、実測から毎回出す。
@@ -479,7 +484,7 @@ useEffect(()=>{
   window.addEventListener('resize',invalidate);
   window.addEventListener('orientationchange',invalidate);
   return ()=>{window.removeEventListener('resize',invalidate);window.removeEventListener('orientationchange',invalidate);};
-},[settings.noteStartPosition,settings.noteSize,view.status]);
+},[settings.noteStartPosition,settings.noteSize,settings.judgmentLineHeight,view.status]);
   const applyJudgment=useCallback((note,judgment,deltaMs)=>{const _judgeT0=RHYTHM_PERF.enabled&&typeof performance!=='undefined'?performance.now():0;const run=runRef.current;if(!run||run.finished||run.paused||note.done)return;if(note.activePointerId!==null){if(note.activePointerId!==-1)run.activePointers.delete(note.activePointerId);note.activePointerId=null;}note.releasedAtMs=null;rhythmFloatingNoteRemove(note);note.done=true;note._rhythmFinalJudgment=judgment;
 // MARVELOUSの中でも、とくにぴったり(±20ms)だったか。**見た目にしか使わない**(2026-09-12)。
 // 判定の名前・スコア・コンボ・ライフ・判定数・FAST/SLOWの数え方には一切入れないので、
@@ -1081,7 +1086,12 @@ scheduleTick();};
 <div ref={playAreaRef} data-rhythm-play-area data-rhythm-strip={RHYTHM_STRIP.value||undefined} data-rhythm-lightweight={settings.lightweightMode?'true':'false'} data-rhythm-effect={settings.effectAmount} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerEnd} onPointerCancel={pointerEnd} className="relative mx-2 mb-2 flex-1 min-h-0 overflow-hidden border-x border-cyan-400/50" style={{/* position と overflow はここにも直接書く。ノーツも判定ラインもこの箱を基準に
     置いているので、Tailwindの relative が効く前だと基準が別の要素へ移り、
     判定ラインが画面の変なところへ出る(2026-09-05)。中身の置き場所に関わるものは
-    外部CSSに任せない */position:'relative',overflow:'hidden',touchAction:'none',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none','--rhythm-note-size-scale':settings.noteSize/100,filter:settings.effectAmount==='MINIMAL'?'saturate(.78)':settings.effectAmount==='LOW'?'saturate(.92)':'none'}}>{laneElements}{sideMonsterElements}<div ref={screenFlashRef} data-rhythm-screen-flash aria-hidden="true"/>{/* ===== コンボ数(2026-09-12・ユーザー指示) =====
+    外部CSSに任せない */position:'relative',overflow:'hidden',touchAction:'none',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none','--rhythm-note-size-scale':settings.noteSize/100,
+    /* 判定ラインの高さ(下から何%)。ライン本体・弾ける光・判定文字がこれを見る
+       (2026-09-13・ユーザー依頼「下過ぎて使いづらいという声があり」)。
+       ★ノーツが流れ着く先は measureTravel が**ラインを実測**して決めるので、
+         ここを動かすだけで譜面も判定もそのままついてくる */
+    '--mh-judgment-line-bottom':`${rhythmFiniteStep(settings.judgmentLineHeight,RHYTHM_JUDGMENT_LINE_HEIGHT_MIN,RHYTHM_JUDGMENT_LINE_HEIGHT_MAX,RHYTHM_JUDGMENT_LINE_HEIGHT_STEP,DEFAULT_RHYTHM_SETTINGS.judgmentLineHeight)}%`,filter:settings.effectAmount==='MINIMAL'?'saturate(.78)':settings.effectAmount==='LOW'?'saturate(.92)':'none'}}>{laneElements}{sideMonsterElements}<div ref={screenFlashRef} data-rhythm-screen-flash aria-hidden="true"/>{/* ===== コンボ数(2026-09-12・ユーザー指示) =====
     「コンボももう少し目立つように段階的に / あと右より過ぎるから邪魔にならないように真ん中に寄せて」。
     右上のHUDから**プレイエリアの真ん中**へ移した。
     ★HUDの左右の列は、レーンの台形の外側の空きに置いてある。その空きは上へ行くほど広く、
@@ -1113,10 +1123,10 @@ scheduleTick();};
   <i data-rhythm-judgment-edge data-edge="top" aria-hidden="true" style={{position:'absolute',left:0,right:0,top:0,height:'1px',background:'linear-gradient(90deg,rgba(103,232,249,0),rgba(103,232,249,.55),rgba(103,232,249,0))'}}/>
   <i data-rhythm-judgment-edge data-edge="bottom" aria-hidden="true" style={{position:'absolute',left:0,right:0,bottom:0,height:'1px',background:'linear-gradient(90deg,rgba(103,232,249,0),rgba(103,232,249,.55),rgba(103,232,249,0))'}}/>
 </div>
-<div ref={judgmentLineRef} data-rhythm-judgment-line style={{position:'absolute',left:0,right:0,bottom:'12%',height:'3px',background:'linear-gradient(90deg,#f0abfc,#cffafe,#f0abfc)',boxShadow:settings.lightweightMode||settings.effectAmount==='MINIMAL'?'none':settings.effectAmount==='LOW'?'0 0 8px #67e8f9':'0 0 18px #67e8f9,0 0 30px #c084fc'}}/>{/* 演奏を始める前のカウントダウン。Tailwindに頼らず直接書くのは判定ラインと同じ理由で、
+<div ref={judgmentLineRef} data-rhythm-judgment-line style={{position:'absolute',left:0,right:0,bottom:'var(--mh-judgment-line-bottom,12%)',height:'3px',background:'linear-gradient(90deg,#f0abfc,#cffafe,#f0abfc)',boxShadow:settings.lightweightMode||settings.effectAmount==='MINIMAL'?'none':settings.effectAmount==='LOW'?'0 0 8px #67e8f9':'0 0 18px #67e8f9,0 0 30px #c084fc'}}/>{/* 演奏を始める前のカウントダウン。Tailwindに頼らず直接書くのは判定ラインと同じ理由で、
     CDNのCSSが間に合わなくても必ず読める大きさで出るようにするため */}
 {countdownStep!==null&&<div data-rhythm-countdown aria-live="assertive" style={{position:'absolute',inset:0,zIndex:20,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'8px',pointerEvents:'none',background:'rgba(2,6,23,.35)'}}><b data-rhythm-countdown-step style={{fontSize:countdownStep==='READY'?'44px':'88px',fontWeight:900,lineHeight:1,color:'#fff',letterSpacing:countdownStep==='READY'?'.12em':'0',textShadow:'0 0 18px rgba(103,232,249,.85),0 2px 10px rgba(2,6,23,.95)'}}>{countdownStep}</b><small style={{fontSize:'12px',fontWeight:900,color:'#a5f3fc',textShadow:'0 1px 6px rgba(2,6,23,.95)'}}>まもなく はじまります</small></div>}
-<div data-rhythm-judgment-display className="pointer-events-none absolute left-1/2 z-10 w-[88%] -translate-x-1/2 text-center" style={{bottom:'calc(12% + 38px)'}}>{/* 判定文字の見た目(色のグラデーション・光・大きさ)は index.html が data-judgment ごとに持つ。
+<div data-rhythm-judgment-display className="pointer-events-none absolute left-1/2 z-10 w-[88%] -translate-x-1/2 text-center" style={{bottom:'calc(var(--mh-judgment-line-bottom,12%) + 38px)'}}>{/* 判定文字の見た目(色のグラデーション・光・大きさ)は index.html が data-judgment ごとに持つ。
       どれも文字を透かしてグラデーションを敷くので、色を1つだけ選ぶインラインstyleでは書けない。
       判定ラインで弾ける光の単色は data/rhythm-mode.js の RHYTHM_JUDGMENT_COLORS が正本で、
       文字のグラデーションにも必ずその色を含める(rhythm-hit-effect-check.js が突き合わせる)。
