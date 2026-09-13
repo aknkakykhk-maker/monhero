@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 494654cf75891c7a
+// generated-sha256: 1f60e8f1ca4ca9c7
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -89,7 +89,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-13 19:24"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-13 19:29"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3596,11 +3596,17 @@ const RHYTHM_COMBO_POSITION_LABELS = Object.freeze([['AUTO','おすすめ'],['LE
 const RHYTHM_COMBO_POSITIONS = Object.freeze(RHYTHM_COMBO_POSITION_LABELS.map(([id])=>id));
 const RHYTHM_LANE_GLOW_LEVELS = Object.freeze(['NORMAL','LOW','NONE']);
 const RHYTHM_JUDGMENT_IDS = Object.freeze(['MARVELOUS','EXCELLENT','GREAT','GOOD','BAD','MISS']);
-// ランク(G〜M)の表示色(暫定値)。下位ほど地味な色、上位ほど鮮やかにして一目で分かるようにする。
+// ランク(G〜M)の表示色。
+// このゲームは間合い適性(DIST_APTITUDE_COLOR)でも同じ G〜M の記号を使っていて、
+// そこでは「Mは紫、S系は黄、Aは赤、Bはピンク、Cは緑、Dは青緑…」と決まっている。
+// モンビーだけ別の配色にしていたため、同じ「A」でも画面によって色が違っていた
+// (2026-09-13・ユーザー指示「モンビーのランクもこのゲームの距離適性別色にあわせて」)。
+// 色はそちらに合わせる。SSとSだけは、並んだときに見分けられるよう黄の濃さを変える。
+// 対応がずれていないかは tools/mode/rhythm-rank-color-check.js が見張る。
 const RHYTHM_RANK_COLORS = Object.freeze({
-  G:'text-slate-500', F:'text-slate-300', E:'text-lime-400', D:'text-lime-300',
-  C:'text-amber-300', B:'text-orange-300', A:'text-cyan-300', S:'text-fuchsia-300',
-  SS:'text-fuchsia-200', M:'text-yellow-200',
+  G:'text-slate-400', F:'text-purple-300', E:'text-cyan-300', D:'text-teal-300',
+  C:'text-green-300', B:'text-pink-300', A:'text-red-400', S:'text-yellow-400',
+  SS:'text-yellow-200', M:'text-fuchsia-300',
 });
 const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   bgmVolume:100, noteSpeed:6, noteSize:100, noteStartPosition:0, displayTimingOffsetMs:0, judgmentTimingOffsetMs:0,
@@ -14930,14 +14936,21 @@ function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, getA
                   {row('ちから', mon.baseAtk)}
                   {row('丈夫さ', mon.baseDef)}
                   {row('ガッツ', mon.baseGuts)}
+                  {/* 間合い適性の色は、マスモンの詳細やバトル画面と同じ決まりで塗る。
+                      ここだけ琥珀色1色だったため、A・C・Dの違いが図鑑では見分けられなかった
+                      (2026-09-13・ユーザー指摘「図鑑の距離適性の色がみんな同じになってる」)。
+                      距離のラベルは RANGE_STYLES、ランクは DIST_APTITUDE_COLOR を使う。 */}
                   <div className="text-[9px] font-black text-amber-300/90 mt-2 mb-1">間合い適性</div>
                   <div className="grid grid-cols-4 gap-1.5">
-                    {RANGE_LABELS.map((label,i)=>(
-                      <div key={label} className="rounded-xl border border-amber-500/25 bg-black/30 py-1.5 text-center">
-                        <div className="text-[9px] font-black text-slate-400">{label}</div>
-                        <div className="text-[13px] font-mono font-black text-amber-200">{(mon.distAptitude&&mon.distAptitude[i])||'C'}</div>
+                    {RANGE_LABELS.map((label,i)=>{
+                      const grade=(mon.distAptitude&&mon.distAptitude[i])||'C';
+                      return (
+                      <div key={label} className="flex flex-col items-center gap-1 rounded-xl border border-amber-500/25 bg-black/30 py-1.5 text-center">
+                        <span className={`rounded-full px-1.5 py-0.5 text-[8px] font-black leading-none ${RANGE_STYLES[i].labelBg}`}>{label}</span>
+                        <span className={`w-[86%] rounded-lg border py-0.5 text-[13px] font-mono font-black leading-none ${DIST_APTITUDE_COLOR[grade]||DIST_APTITUDE_COLOR.C}`}>{grade}</span>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>)}
                 {tab==='skills'&&(<div data-dex-tab-skills className="space-y-2">
