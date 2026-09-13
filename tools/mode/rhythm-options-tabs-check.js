@@ -35,7 +35,7 @@ const grab = (from, to) => {
   const j = game.indexOf(to, i);
   return i >= 0 && j > i ? game.slice(i, j) : '';
 };
-const options = grab('const RhythmOptions=({value,onSave,onBack})=>{', '\n// モンスターノーツ用のマスモン設定');
+const options = grab('const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=null,onClearCalibration=null})=>{', '\n// モンスターノーツ用のマスモン設定');
 
 // ---- タブ ----
 check('オプションの本体が取り出せている', options.length > 0);
