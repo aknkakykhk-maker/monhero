@@ -98,12 +98,18 @@ function RhythmSongSelectScreen({
       return (
       <main data-rhythm-demo-home className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white">
         <header className="z-10 flex shrink-0 items-center gap-1 border-b border-cyan-400/15 bg-slate-950/95 px-2 py-1" style={{paddingTop:'calc(0.25rem + env(safe-area-inset-top))'}}>
-          {/* 裏でクイック∞周回が回っているあいだは、HOMEではなくバトルへ戻す。
-              HOMEへ抜けると returnToHome を通らないぶん周回が宙ぶらりんになるので、
-              やめるときはバトル画面で∞を切ってから戻ってもらう */}
-          <button data-rhythm-back aria-label={rhythmBackgroundRun?'クイックのバトルへ戻る':'戻る'} title={rhythmBackgroundRun?'クイックのバトルへ戻る':'戻る'}
+          {/* ★裏でクイック∞周回が回っていても、ここからHOMEへ戻れる
+              (2026-09-13・ユーザー指摘「止めないでもホームに戻れて自動的に周回も
+               終わるようにしたい」)。それまでは「⚔ バトルへ戻る」しかできず、
+              バトルで∞を切ってからHOMEへ、という2工程になっていた。
+              ★押すと周回を締めてから戻る(そこまでのWAVEぶんの報酬は入る)ので、
+              ボタンの見た目でもそれが分かるようにしてある(⏹ と琥珀色)。
+              誤って押しても報酬は捨てないが、「終わる」ことは先に伝える。
+              ★バトルを見に行きたいときは、周回の帯の詳細にある「⚔ バトルへ戻って…」から。 */}
+          <button data-rhythm-back data-quick-run-finishing={rhythmBackgroundRun?'1':undefined}
+            aria-label={rhythmBackgroundRun?'周回を終えてホームへ戻る':'戻る'} title={rhythmBackgroundRun?'周回を終えてホームへ戻る':'戻る'}
             onClick={onExit}
-            className="min-h-[44px] min-w-[44px] shrink-0 text-slate-300">{rhythmBackgroundRun?<span className="text-[10px] font-black leading-tight text-fuchsia-200">⚔<br/>戻る</span>:<ArrowLeft size={20}/>}</button>
+            className={`min-h-[44px] min-w-[44px] shrink-0 ${rhythmBackgroundRun?'text-amber-200':'text-slate-300'}`}>{rhythmBackgroundRun?<span className="text-[10px] font-black leading-tight">⏹<br/>終了</span>:<ArrowLeft size={20}/>}</button>
           {/* ボタンが4つ並ぶので、題名は縮んでも1行のまま(truncate)にする。
               折り返すとヘッダーが2行になり、そのぶん曲の一覧が減るため */}
           <div className="min-w-0 flex-1">
