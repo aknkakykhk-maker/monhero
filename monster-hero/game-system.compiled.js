@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c16a35f6a38ee236
+// source-sha256: 6bec52ee0c290e9d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 11cee6631e943e67
+// generated-sha256: e606c38f729d5183
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-13 20:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-13 21:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -24067,17 +24067,22 @@ const RhythmTapTest = ({
       className: "grid grid-cols-2 gap-2 rounded-2xl bg-slate-900 p-4"
     }, RHYTHM_JUDGMENT_IDS.map(id => /*#__PURE__*/React.createElement(React.Fragment, {
       key: id
-    }, /*#__PURE__*/React.createElement("dt", null, id), /*#__PURE__*/React.createElement("dd", {
-      className: "text-right font-mono"
-    }, view.counts[id]), id === 'MARVELOUS' && /*#__PURE__*/React.createElement(React.Fragment, {
+    }, id === 'MARVELOUS' && /*#__PURE__*/React.createElement(React.Fragment, {
       key: "precise"
     }, /*#__PURE__*/React.createElement("dt", {
       "data-rhythm-result-precise-label": true,
-      className: "pl-3 text-[11px] font-black text-cyan-200"
-    }, "\u2514 JUST MARVELOUS"), /*#__PURE__*/React.createElement("dd", {
+      "data-rhythm-judgment-row": "JUST",
+      className: "text-[11px]"
+    }, "JUST MARVELOUS"), /*#__PURE__*/React.createElement("dd", {
       "data-rhythm-result-precise": true,
-      className: "text-right font-mono text-[11px] text-cyan-200"
-    }, Number(view.precise) || 0)))), /*#__PURE__*/React.createElement("dt", null, "MAX COMBO"), /*#__PURE__*/React.createElement("dd", {
+      "data-rhythm-judgment-row": "JUST",
+      className: "text-right font-mono text-[11px]"
+    }, Number(view.precise) || 0)), /*#__PURE__*/React.createElement("dt", {
+      "data-rhythm-judgment-row": id
+    }, id), /*#__PURE__*/React.createElement("dd", {
+      "data-rhythm-judgment-row": id,
+      className: "text-right font-mono"
+    }, view.counts[id]))), /*#__PURE__*/React.createElement("dt", null, "MAX COMBO"), /*#__PURE__*/React.createElement("dd", {
       className: "text-right"
     }, view.maxCombo), /*#__PURE__*/React.createElement("dt", null, "FAST"), /*#__PURE__*/React.createElement("dd", {
       className: "text-right"
@@ -26442,6 +26447,7 @@ function RhythmSongSelectScreen({
   difficulty,
   dismissQuickRhythmBackground,
   dismissRhythmEventNotice,
+  exitingQuickRun,
   handleGiveUp,
   mainHero,
   onExit,
@@ -26533,8 +26539,17 @@ function RhythmSongSelectScreen({
   }, "\u88CF\u3067\u5468\u56DE\u3092\u56DE\u3059\u306B\u306F\u3001\u30AF\u30A4\u30C3\u30AF\u30671\u5EA6\u221E\u5468\u56DE\u3092\u59CB\u3081\u308B\u304B\u3001M/B\u7BA1\u7406\u306E\u300CAUTO\u8A2D\u5B9A \u2192 \u30E2\u30F3\u30D2\u30ED\u30D3\u30FC\u30C8\u4E2D\u306B\u56DE\u3059\u30AF\u30A4\u30C3\u30AF\u5468\u56DE\u300D\u3067\u52C7\u8005\u30E2\u30F3\u30FB\u914D\u7F6E\u8DDD\u96E2\u30FB\u96E3\u6613\u5EA6\u3092\u6C7A\u3081\u3066\u304F\u3060\u3055\u3044\u3002") : null;
   return /*#__PURE__*/React.createElement("main", {
     "data-rhythm-demo-home": true,
-    className: "flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white"
-  }, /*#__PURE__*/React.createElement("header", {
+    className: "relative flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white"
+  }, exitingQuickRun && /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-exiting-run": true,
+    role: "status",
+    "aria-live": "polite",
+    className: "absolute inset-0 z-[90000] flex flex-col items-center justify-center gap-2 bg-slate-950/85 px-6 text-center"
+  }, /*#__PURE__*/React.createElement("b", {
+    className: "text-sm font-black text-amber-200"
+  }, "\u5468\u56DE\u3092\u7D42\u3048\u3066\u3044\u307E\u3059\u2026"), /*#__PURE__*/React.createElement("small", {
+    className: "text-[10px] font-bold leading-relaxed text-slate-300"
+  }, "\u3053\u3053\u307E\u3067\u306EWAVE\u3076\u3093\u306E\u5831\u916C\u3092\u4ED8\u3051\u3066\u3001\u8A18\u9332\u3092\u9001\u3063\u3066\u3044\u307E\u3059\u3002", /*#__PURE__*/React.createElement("br", null), "\u7D42\u308F\u308B\u3068\u81EA\u52D5\u3067\u30DB\u30FC\u30E0\u3078\u623B\u308A\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("header", {
     className: "z-10 flex shrink-0 items-center gap-1 border-b border-cyan-400/15 bg-slate-950/95 px-2 py-1",
     style: {
       paddingTop: 'calc(0.25rem + env(safe-area-inset-top))'
@@ -26542,10 +26557,12 @@ function RhythmSongSelectScreen({
   }, /*#__PURE__*/React.createElement("button", {
     "data-rhythm-back": true,
     "data-quick-run-finishing": rhythmBackgroundRun ? '1' : undefined,
-    "aria-label": rhythmBackgroundRun ? '周回を終えてホームへ戻る' : '戻る',
-    title: rhythmBackgroundRun ? '周回を終えてホームへ戻る' : '戻る',
+    "data-quick-run-exiting": exitingQuickRun ? '1' : undefined,
+    disabled: !!exitingQuickRun,
+    "aria-label": exitingQuickRun ? '周回を終えています' : rhythmBackgroundRun ? '周回を終えてホームへ戻る' : '戻る',
+    title: exitingQuickRun ? '周回を終えています' : rhythmBackgroundRun ? '周回を終えてホームへ戻る' : '戻る',
     onClick: onExit,
-    className: `min-h-[44px] min-w-[44px] shrink-0 ${rhythmBackgroundRun ? 'text-amber-200' : 'text-slate-300'}`
+    className: `min-h-[44px] min-w-[44px] shrink-0 ${exitingQuickRun ? 'text-amber-300/60' : rhythmBackgroundRun ? 'text-amber-200' : 'text-slate-300'}`
   }, rhythmBackgroundRun ? /*#__PURE__*/React.createElement("span", {
     className: "text-[10px] font-black leading-tight"
   }, "\u23F9", /*#__PURE__*/React.createElement("br", null), "\u7D42\u4E86") : /*#__PURE__*/React.createElement(ArrowLeft, {
@@ -27441,11 +27458,24 @@ function RhythmRankingScreen({
       className: "mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]"
     }, RHYTHM_JUDGMENT_IDS.map(id => /*#__PURE__*/React.createElement(React.Fragment, {
       key: id
+    }, id === 'MARVELOUS' && /*#__PURE__*/React.createElement(React.Fragment, {
+      key: "precise"
     }, /*#__PURE__*/React.createElement("dt", {
-      className: "text-slate-400"
+      "data-rhythm-ranking-precise-label": true,
+      "data-rhythm-judgment-row": "JUST"
+    }, "JUST MARVELOUS"), /*#__PURE__*/React.createElement("dd", {
+      "data-rhythm-ranking-precise": true,
+      "data-rhythm-judgment-row": "JUST",
+      className: "text-right font-mono"
+    }, Number.isFinite(Number(rhythmRankingDetail.detail?.precise)) ? Math.max(0, Math.floor(Number(rhythmRankingDetail.detail.precise))) : '—')), /*#__PURE__*/React.createElement("dt", {
+      "data-rhythm-judgment-row": id
     }, id), /*#__PURE__*/React.createElement("dd", {
-      className: "text-right font-mono text-white"
-    }, rhythmRankingDetail.detail?.judgments?.[id] ?? 0)))), /*#__PURE__*/React.createElement("p", {
+      "data-rhythm-judgment-row": id,
+      className: "text-right font-mono"
+    }, rhythmRankingDetail.detail?.judgments?.[id] ?? 0)))), !Number.isFinite(Number(rhythmRankingDetail.detail?.precise)) && /*#__PURE__*/React.createElement("p", {
+      "data-rhythm-ranking-precise-missing": true,
+      className: "mt-1 text-[8px] text-slate-500"
+    }, "JUST MARVELOUS\u306E\u300C\u2014\u300D\u306F\u3001\u3053\u306E\u8A18\u9332\u3092\u51FA\u3057\u305F\u3068\u304D\u306F\u307E\u3060\u6570\u3048\u3066\u3044\u306A\u304B\u3063\u305F\u3053\u3068\u3092\u793A\u3057\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("p", {
       className: "mt-2 text-[9px] font-black text-amber-200"
     }, rhythmRankingDetail.detail?.allMarvelous ? 'ALL MARVELOUS!!' : rhythmRankingDetail.detail?.allExcellent ? 'ALL EXCELLENT!!' : rhythmRankingDetail.detail?.fullCombo ? 'FULL COMBO!' : ''))));
   })(), boardTab && eventDetailOpen && /*#__PURE__*/React.createElement("div", {
@@ -37009,6 +37039,27 @@ function MonsterHeroGame() {
   const repeatRunTemplateRef = useRef(null);
   const [selectedCards, setSelectedCards] = useState([]);
   const [isBusy, setIsBusy] = useState(false);
+  // ★ターンの演出(executeTurn→敵の行動)は await で繋いだ長い一本道で、途中で止める手立てが無い。
+  //   その最中にランを片付ける(returnToHome)と、残りの setEnemy(prev=>...) が
+  //   null を掘って画面が落ちる。「いま演出の途中か」を ref でも読めるようにして、
+  //   片付ける前に終わるのを待てるようにしてある(2026-09-13・ユーザー報告
+  //   「モンビーからそのまま戻ったときに結構な頻度でエラーが起きる」)。
+  const isBusyRef = useRef(false);
+  // 曲えらびで「⼹ 終了」を押してからHOMEへ抜けるまでのあいだ(報酬の付与・送信・演出の終わり待ち)。
+  // 数秒かかることがあるので、そのあいだは畫面でそう言っておき、二度押しも止める
+  const [rhythmExitingRun, setRhythmExitingRun] = useState(false);
+  const rhythmExitingRunRef = useRef(false);
+  useEffect(() => {
+    isBusyRef.current = isBusy;
+  }, [isBusy]);
+  // 演出が終わるのを待つ(最大 timeoutMs)。待ちちょうで止まらないよう上限を必ず置く
+  const waitForBattleIdle = async (timeoutMs = 6000) => {
+    const until = Date.now() + Math.max(0, timeoutMs);
+    while (isBusyRef.current && Date.now() < until) {
+      await new Promise(resolve => setTimeout(resolve, 120));
+    }
+    return !isBusyRef.current;
+  };
   // AUTOのON/OFFはラン中だけの一時状態。state反映前の操作やeffect再実行にも同じ値を見せるためrefも同期する。
   const [autoBattle, setAutoBattle] = useState(false);
   const autoBattleRef = useRef(false);
@@ -39006,6 +39057,11 @@ function MonsterHeroGame() {
       maxCombo: result.maxCombo,
       fast: result.fast,
       slow: result.slow,
+      // ぴったりのMARVELOUSの回数(2026-09-13・ユーザー依頼「ランキングからのスコア詳細では
+      // JUST Marvelousも見れるようにして」)。party はJSONの列なので**項目を足すだけ**で済み、
+      // テーブルの形は変えない。これより前の記録にはこの項目が無いので、
+      // 読む側(ランキングの詳細)は「無い」と「0回」を分けて出す。
+      precise: Math.max(0, Math.floor(Number(result.precise) || 0)),
       fullCombo: !!result.fullCombo,
       allExcellent: !!result.allExcellent,
       allMarvelous: !!result.allMarvelous
@@ -46789,11 +46845,22 @@ function MonsterHeroGame() {
   // ★バトルを見に行く導線は、周回の帯の詳細にある「⚔ バトルへ戻って…」が残る。
   const exitRhythmSongSelect = async () => {
     if (rhythmBackgroundRun) {
+      if (rhythmExitingRunRef.current) return;
+      rhythmExitingRunRef.current = true;
+      setRhythmExitingRun(true);
       // ★リザルトは見せない(silent)。立ててしまうと、締めている途中でバトルの
       //   リザルトが描かれ、そのあと returnToHome() が中身を片付けるので落ちる
       await handleGiveUp({
         silent: true
       });
+      // ★そのとき進んでいるターンの演出を待ってから片付ける。
+      //   stopAllAuto は「次のターンを始めない」だけで、いま進んでいる一本道は止められない。
+      //   待たずに returnToHome すると、残りの処理が片付いたあとの状態を触り、
+      //   画面が「表示でエラーが起きました」へ落ちる
+      //   (2026-09-13・ユーザー報告「結構な頻度でエラーが起きる」。実測で再現した)。
+      await waitForBattleIdle();
+      rhythmExitingRunRef.current = false;
+      setRhythmExitingRun(false);
       returnToHome();
       return;
     }
@@ -47520,10 +47587,10 @@ function MonsterHeroGame() {
           addPopup(`反射 ${incomingDmg}!!`, 'enemy', 'text-purple-400 font-black text-4xl drop-shadow-lg');
           const reflectedHp = Math.max(0, enemyHpAtAttackStart - incomingDmg);
           setCurrentWaveDamage(p => p + incomingDmg);
-          setEnemy(prev => ({
+          setEnemy(prev => prev ? {
             ...prev,
             hp: reflectedHp
-          }));
+          } : prev);
           await battleWait(1000);
           // 反射演出が終わってから撃破を確定し、回復・次ターン処理へは進ませない。
           if (await resolveEnemyDefeat({
@@ -48196,10 +48263,10 @@ function MonsterHeroGame() {
               const hitColor = h.isCrit ? 'text-yellow-400 drop-shadow-[0_0_25px_rgba(250,204,21,0.9)] scale-110' : 'text-red-600 drop-shadow-[0_0_20px_rgba(220,38,38,0.8)]';
               if (h.isCrit) triggerShake();
               addPopup(h.isCrit ? `${h.dmg}!!` : `${h.dmg}`, 'enemy', `${hitColor} text-5xl font-black animate-bounce`);
-              setEnemy(prev => ({
+              setEnemy(prev => prev ? {
                 ...prev,
                 hp: Math.max(0, prev.hp - h.dmg)
-              }));
+              } : prev);
               await battleWait(comboStepMs);
             }
             if (hit.rangeMoveTarget != null) {
@@ -48275,10 +48342,10 @@ function MonsterHeroGame() {
           const hitColor = hit.isCrit ? 'text-yellow-400 drop-shadow-[0_0_25px_rgba(250,204,21,0.9)] scale-110' : 'text-red-600 drop-shadow-[0_0_20px_rgba(220,38,38,0.8)]';
           if (hit.isCrit) triggerShake();
           addPopup(hit.isCrit ? `${hit.dmg}!!` : `${hit.dmg}`, 'enemy', `${hitColor} text-5xl font-black animate-bounce`);
-          setEnemy(prev => ({
+          setEnemy(prev => prev ? {
             ...prev,
             hp: Math.max(0, prev.hp - hit.dmg)
-          }));
+          } : prev);
           await battleWait(hit.noAnim ? 150 : 550);
           if (hit.rangeMoveTarget != null) {
             setEnemyDist(hit.rangeMoveTarget);
@@ -56176,6 +56243,7 @@ function MonsterHeroGame() {
       dismissRhythmEventNotice: dismissRhythmEventNotice,
       handleGiveUp: handleGiveUp,
       mainHero: mainHero,
+      exitingQuickRun: rhythmExitingRun,
       onExit: exitRhythmSongSelect,
       onOpenEventRanking: () => {
         // 曲えらびの案内から開く。期間限定を開催中ならそちらのタブ、なければ週間のタブ

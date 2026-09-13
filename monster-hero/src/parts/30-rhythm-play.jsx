@@ -1050,14 +1050,17 @@ scheduleTick();};
   </div>
 </div>}
 <dl className="grid grid-cols-2 gap-2 rounded-2xl bg-slate-900 p-4">{RHYTHM_JUDGMENT_IDS.map(id=><React.Fragment key={id}>
-  <dt>{id}</dt><dd className="text-right font-mono">{view.counts[id]}</dd>
-  {/* ★ぴったりのMARVELOUS(前後0.02秒以内)の回数。MARVELOUSの**内数**なので、そのすぐ下へ
-      字下げして出す(2026-09-13・ユーザー依頼「スコアには関係ないけど、JUST Marvelousも
-      リザルト結果に出したい」)。スコア・ランク・自己ベストには一切関わらない。 */}
+  {/* ★ぴったりのMARVELOUS(前後0.02秒以内)の回数。MARVELOUSの**内数**だが、並びは
+      MARVELOUSの**上**へ置く(2026-09-13・ユーザー指示「普通に表示はMarvelousの上に
+      JUST Marvelousがくるようにして」)。スコア・ランク・自己ベストには一切関わらない。 */}
   {id==='MARVELOUS'&&<React.Fragment key="precise">
-    <dt data-rhythm-result-precise-label className="pl-3 text-[11px] font-black text-cyan-200">└ JUST MARVELOUS</dt>
-    <dd data-rhythm-result-precise className="text-right font-mono text-[11px] text-cyan-200">{Number(view.precise)||0}</dd>
+    <dt data-rhythm-result-precise-label data-rhythm-judgment-row="JUST" className="text-[11px]">JUST MARVELOUS</dt>
+    <dd data-rhythm-result-precise data-rhythm-judgment-row="JUST" className="text-right font-mono text-[11px]">{Number(view.precise)||0}</dd>
   </React.Fragment>}
+  {/* 判定の内訳は、遊んでいるときに出る判定の色と同じ色で出す
+      (2026-09-13・ユーザー指示「JUST Marvelous（虹）/ Marvelous（金）みたいな」)。
+      色は index.html の [data-rhythm-judgment-row] で決まる */}
+  <dt data-rhythm-judgment-row={id}>{id}</dt><dd data-rhythm-judgment-row={id} className="text-right font-mono">{view.counts[id]}</dd>
 </React.Fragment>)}<dt>MAX COMBO</dt><dd className="text-right">{view.maxCombo}</dd><dt>FAST</dt><dd className="text-right">{view.fast}</dd><dt>SLOW</dt><dd className="text-right">{view.slow}</dd></dl><div className="mt-5 grid grid-cols-1 gap-2"><button className="min-h-[48px] rounded-xl bg-fuchsia-700 font-black" disabled={startLockRef.current} onClick={()=>beginRun(mergeRhythmBestRecord(runRef.current?.startBest,result))}>もう一度プレイ</button><button className="min-h-[48px] rounded-xl bg-indigo-700 font-black" onClick={abort}>{debugPlay?'音ゲーデバッグへ戻る':'曲えらびへ戻る'}</button></div></main>}
   /* ★ここへ属性を足すときは className の「後ろ」へ置く。
      rhythm-screen-layout-check.js が <main data-rhythm-tap-test className="…overflow-hidden という

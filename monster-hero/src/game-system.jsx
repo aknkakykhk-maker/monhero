@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 11cee6631e943e67
+// generated-sha256: e606c38f729d5183
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -89,7 +89,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-13 20:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-13 21:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -13898,14 +13898,17 @@ scheduleTick();};
   </div>
 </div>}
 <dl className="grid grid-cols-2 gap-2 rounded-2xl bg-slate-900 p-4">{RHYTHM_JUDGMENT_IDS.map(id=><React.Fragment key={id}>
-  <dt>{id}</dt><dd className="text-right font-mono">{view.counts[id]}</dd>
-  {/* ★ぴったりのMARVELOUS(前後0.02秒以内)の回数。MARVELOUSの**内数**なので、そのすぐ下へ
-      字下げして出す(2026-09-13・ユーザー依頼「スコアには関係ないけど、JUST Marvelousも
-      リザルト結果に出したい」)。スコア・ランク・自己ベストには一切関わらない。 */}
+  {/* ★ぴったりのMARVELOUS(前後0.02秒以内)の回数。MARVELOUSの**内数**だが、並びは
+      MARVELOUSの**上**へ置く(2026-09-13・ユーザー指示「普通に表示はMarvelousの上に
+      JUST Marvelousがくるようにして」)。スコア・ランク・自己ベストには一切関わらない。 */}
   {id==='MARVELOUS'&&<React.Fragment key="precise">
-    <dt data-rhythm-result-precise-label className="pl-3 text-[11px] font-black text-cyan-200">└ JUST MARVELOUS</dt>
-    <dd data-rhythm-result-precise className="text-right font-mono text-[11px] text-cyan-200">{Number(view.precise)||0}</dd>
+    <dt data-rhythm-result-precise-label data-rhythm-judgment-row="JUST" className="text-[11px]">JUST MARVELOUS</dt>
+    <dd data-rhythm-result-precise data-rhythm-judgment-row="JUST" className="text-right font-mono text-[11px]">{Number(view.precise)||0}</dd>
   </React.Fragment>}
+  {/* 判定の内訳は、遊んでいるときに出る判定の色と同じ色で出す
+      (2026-09-13・ユーザー指示「JUST Marvelous（虹）/ Marvelous（金）みたいな」)。
+      色は index.html の [data-rhythm-judgment-row] で決まる */}
+  <dt data-rhythm-judgment-row={id}>{id}</dt><dd data-rhythm-judgment-row={id} className="text-right font-mono">{view.counts[id]}</dd>
 </React.Fragment>)}<dt>MAX COMBO</dt><dd className="text-right">{view.maxCombo}</dd><dt>FAST</dt><dd className="text-right">{view.fast}</dd><dt>SLOW</dt><dd className="text-right">{view.slow}</dd></dl><div className="mt-5 grid grid-cols-1 gap-2"><button className="min-h-[48px] rounded-xl bg-fuchsia-700 font-black" disabled={startLockRef.current} onClick={()=>beginRun(mergeRhythmBestRecord(runRef.current?.startBest,result))}>もう一度プレイ</button><button className="min-h-[48px] rounded-xl bg-indigo-700 font-black" onClick={abort}>{debugPlay?'音ゲーデバッグへ戻る':'曲えらびへ戻る'}</button></div></main>}
   /* ★ここへ属性を足すときは className の「後ろ」へ置く。
      rhythm-screen-layout-check.js が <main data-rhythm-tap-test className="…overflow-hidden という
@@ -15038,7 +15041,7 @@ function RhythmInfoScreen({
 }
 
 function RhythmSongSelectScreen({
-  catchingUp, difficulty, dismissQuickRhythmBackground, dismissRhythmEventNotice, handleGiveUp, mainHero,
+  catchingUp, difficulty, dismissQuickRhythmBackground, dismissRhythmEventNotice, exitingQuickRun, handleGiveUp, mainHero,
   onExit, onOpenEventRanking, onOpenHelp, onOpenMonsterSlots, onOpenOptions, onOpenRanking,
   onPlaySong, quickClearCounts, quickRhythmBackgroundVisible, quickRunDetailOpen, quickRunFinishReasonText,
   quickRunPendingRewards, quickRunProgress, quickRunResumable, quickRunStartError, quickRunStopConfirm,
@@ -15090,7 +15093,16 @@ function RhythmSongSelectScreen({
           : <p data-quick-run-start-hint className="px-1 py-1 text-[9px] leading-relaxed text-slate-500">裏で周回を回すには、クイックで1度∞周回を始めるか、M/B管理の「AUTO設定 → モンヒロビート中に回すクイック周回」で勇者モン・配置距離・難易度を決めてください。</p>)
         : null;
       return (
-      <main data-rhythm-demo-home className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white">
+      <main data-rhythm-demo-home className="relative flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white">
+        {/* 周回を締めているあいだ(報酬の付与・全国ランキングへの送信・バトルの演出の終わり待ち)。
+            数秒かかることがあるので、その間は他を押せなくして待ってもらう。
+            ★番を待たずに片付けると、進んでいるターンの残りが空の状態を触って画面が落ちる
+            (2026-09-13・ユーザー報告「そのまま戻ったときに結構な頻度でエラーが起きる」) */}
+        {exitingQuickRun&&<div data-rhythm-exiting-run role="status" aria-live="polite"
+          className="absolute inset-0 z-[90000] flex flex-col items-center justify-center gap-2 bg-slate-950/85 px-6 text-center">
+          <b className="text-sm font-black text-amber-200">周回を終えています…</b>
+          <small className="text-[10px] font-bold leading-relaxed text-slate-300">ここまでのWAVEぶんの報酬を付けて、記録を送っています。<br/>終わると自動でホームへ戻ります。</small>
+        </div>}
         <header className="z-10 flex shrink-0 items-center gap-1 border-b border-cyan-400/15 bg-slate-950/95 px-2 py-1" style={{paddingTop:'calc(0.25rem + env(safe-area-inset-top))'}}>
           {/* ★裏でクイック∞周回が回っていても、ここからHOMEへ戻れる
               (2026-09-13・ユーザー指摘「止めないでもホームに戻れて自動的に周回も
@@ -15100,10 +15112,13 @@ function RhythmSongSelectScreen({
               ボタンの見た目でもそれが分かるようにしてある(⏹ と琥珀色)。
               誤って押しても報酬は捨てないが、「終わる」ことは先に伝える。
               ★バトルを見に行きたいときは、周回の帯の詳細にある「⚔ バトルへ戻って…」から。 */}
+          {/* ★押したあとはHOMEへ抜けるまで数秒かかる(報酬の付与・送信・バトルの演出の終わり待ち)。
+              そのあいだは押せなくし、何を待っているのかを畫面で言う(2026-09-13) */}
           <button data-rhythm-back data-quick-run-finishing={rhythmBackgroundRun?'1':undefined}
-            aria-label={rhythmBackgroundRun?'周回を終えてホームへ戻る':'戻る'} title={rhythmBackgroundRun?'周回を終えてホームへ戻る':'戻る'}
+            data-quick-run-exiting={exitingQuickRun?'1':undefined} disabled={!!exitingQuickRun}
+            aria-label={exitingQuickRun?'周回を終えています':rhythmBackgroundRun?'周回を終えてホームへ戻る':'戻る'} title={exitingQuickRun?'周回を終えています':rhythmBackgroundRun?'周回を終えてホームへ戻る':'戻る'}
             onClick={onExit}
-            className={`min-h-[44px] min-w-[44px] shrink-0 ${rhythmBackgroundRun?'text-amber-200':'text-slate-300'}`}>{rhythmBackgroundRun?<span className="text-[10px] font-black leading-tight">⏹<br/>終了</span>:<ArrowLeft size={20}/>}</button>
+            className={`min-h-[44px] min-w-[44px] shrink-0 ${exitingQuickRun?'text-amber-300/60':rhythmBackgroundRun?'text-amber-200':'text-slate-300'}`}>{rhythmBackgroundRun?<span className="text-[10px] font-black leading-tight">⏹<br/>終了</span>:<ArrowLeft size={20}/>}</button>
           {/* ボタンが4つ並ぶので、題名は縮んでも1行のまま(truncate)にする。
               折り返すとヘッダーが2行になり、そのぶん曲の一覧が減るため */}
           <div className="min-w-0 flex-1">
@@ -15763,8 +15778,22 @@ function RhythmRankingScreen({
               {!isTotal&&(<React.Fragment>
                 <p className="mt-1 text-[10px] text-slate-400">最大コンボ {rhythmRankingDetail.detail?.maxCombo??'-'}</p>
                 <dl className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]">
-                  {RHYTHM_JUDGMENT_IDS.map(id=><React.Fragment key={id}><dt className="text-slate-400">{id}</dt><dd className="text-right font-mono text-white">{rhythmRankingDetail.detail?.judgments?.[id]??0}</dd></React.Fragment>)}
+                  {RHYTHM_JUDGMENT_IDS.map(id=><React.Fragment key={id}>
+                    {/* ぴったりのMARVELOUSの回数。MARVELOUSの**内数**だが、並びはリザルトとそろえて
+                        MARVELOUSの**上**へ置く(2026-09-13・ユーザー指示)。
+                        ★これより前に送られた記録には precise が無い。
+                          0と出すと「一度も取れていない」に見えるので「—」で分ける。 */}
+                    {id==='MARVELOUS'&&<React.Fragment key="precise">
+                      <dt data-rhythm-ranking-precise-label data-rhythm-judgment-row="JUST">JUST MARVELOUS</dt>
+                      <dd data-rhythm-ranking-precise data-rhythm-judgment-row="JUST" className="text-right font-mono">{Number.isFinite(Number(rhythmRankingDetail.detail?.precise))?Math.max(0,Math.floor(Number(rhythmRankingDetail.detail.precise))):'—'}</dd>
+                    </React.Fragment>}
+                    {/* 判定の内訳はリザルトと同じ判定の色で出す(2026-09-13・ユーザー指示)。
+                        ★この画面は音ゲの設定を知らないので、流れる動きは付けず色だけにする
+                        (「演出量」や軽量モードを守れない動きを出さないため) */}
+                    <dt data-rhythm-judgment-row={id}>{id}</dt><dd data-rhythm-judgment-row={id} className="text-right font-mono">{rhythmRankingDetail.detail?.judgments?.[id]??0}</dd>
+                  </React.Fragment>)}
                 </dl>
+                {!Number.isFinite(Number(rhythmRankingDetail.detail?.precise))&&<p data-rhythm-ranking-precise-missing className="mt-1 text-[8px] text-slate-500">JUST MARVELOUSの「—」は、この記録を出したときはまだ数えていなかったことを示します。</p>}
                 <p className="mt-2 text-[9px] font-black text-amber-200">
                   {rhythmRankingDetail.detail?.allMarvelous?'ALL MARVELOUS!!':rhythmRankingDetail.detail?.allExcellent?'ALL EXCELLENT!!':rhythmRankingDetail.detail?.fullCombo?'FULL COMBO!':''}
                 </p>
@@ -19931,6 +19960,25 @@ function MonsterHeroGame() {
   const repeatRunTemplateRef = useRef(null);
   const [selectedCards, setSelectedCards] = useState([]);
   const [isBusy, setIsBusy] = useState(false);
+  // ★ターンの演出(executeTurn→敵の行動)は await で繋いだ長い一本道で、途中で止める手立てが無い。
+  //   その最中にランを片付ける(returnToHome)と、残りの setEnemy(prev=>...) が
+  //   null を掘って画面が落ちる。「いま演出の途中か」を ref でも読めるようにして、
+  //   片付ける前に終わるのを待てるようにしてある(2026-09-13・ユーザー報告
+  //   「モンビーからそのまま戻ったときに結構な頻度でエラーが起きる」)。
+  const isBusyRef = useRef(false);
+  // 曲えらびで「⼹ 終了」を押してからHOMEへ抜けるまでのあいだ(報酬の付与・送信・演出の終わり待ち)。
+  // 数秒かかることがあるので、そのあいだは畫面でそう言っておき、二度押しも止める
+  const [rhythmExitingRun, setRhythmExitingRun] = useState(false);
+  const rhythmExitingRunRef = useRef(false);
+  useEffect(()=>{isBusyRef.current=isBusy;},[isBusy]);
+  // 演出が終わるのを待つ(最大 timeoutMs)。待ちちょうで止まらないよう上限を必ず置く
+  const waitForBattleIdle = async (timeoutMs = 6000) => {
+    const until = Date.now() + Math.max(0, timeoutMs);
+    while (isBusyRef.current && Date.now() < until) {
+      await new Promise(resolve => setTimeout(resolve, 120));
+    }
+    return !isBusyRef.current;
+  };
   // AUTOのON/OFFはラン中だけの一時状態。state反映前の操作やeffect再実行にも同じ値を見せるためrefも同期する。
   const [autoBattle, setAutoBattle] = useState(false);
   const autoBattleRef = useRef(false);
@@ -21361,6 +21409,11 @@ function MonsterHeroGame() {
     const detail = {
       songId: song.songId, difficultyId: difficulty.id,
       judgments: result.judgments, maxCombo: result.maxCombo, fast: result.fast, slow: result.slow,
+      // ぴったりのMARVELOUSの回数(2026-09-13・ユーザー依頼「ランキングからのスコア詳細では
+      // JUST Marvelousも見れるようにして」)。party はJSONの列なので**項目を足すだけ**で済み、
+      // テーブルの形は変えない。これより前の記録にはこの項目が無いので、
+      // 読む側(ランキングの詳細)は「無い」と「0回」を分けて出す。
+      precise: Math.max(0, Math.floor(Number(result.precise) || 0)),
       fullCombo: !!result.fullCombo, allExcellent: !!result.allExcellent, allMarvelous: !!result.allMarvelous,
     };
     // partyは既存モードと同じ「配列」の形で送る(種族チャレンジ等が常に配列で送っているため、
@@ -26866,9 +26919,20 @@ function MonsterHeroGame() {
   // ★バトルを見に行く導線は、周回の帯の詳細にある「⚔ バトルへ戻って…」が残る。
   const exitRhythmSongSelect = async () => {
     if (rhythmBackgroundRun) {
+      if (rhythmExitingRunRef.current) return;
+      rhythmExitingRunRef.current = true;
+      setRhythmExitingRun(true);
       // ★リザルトは見せない(silent)。立ててしまうと、締めている途中でバトルの
       //   リザルトが描かれ、そのあと returnToHome() が中身を片付けるので落ちる
       await handleGiveUp({ silent: true });
+      // ★そのとき進んでいるターンの演出を待ってから片付ける。
+      //   stopAllAuto は「次のターンを始めない」だけで、いま進んでいる一本道は止められない。
+      //   待たずに returnToHome すると、残りの処理が片付いたあとの状態を触り、
+      //   画面が「表示でエラーが起きました」へ落ちる
+      //   (2026-09-13・ユーザー報告「結構な頻度でエラーが起きる」。実測で再現した)。
+      await waitForBattleIdle();
+      rhythmExitingRunRef.current = false;
+      setRhythmExitingRun(false);
       returnToHome();
       return;
     }
@@ -27428,7 +27492,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           addPopup(`反射 ${incomingDmg}!!`,'enemy','text-purple-400 font-black text-4xl drop-shadow-lg');
           const reflectedHp=Math.max(0,enemyHpAtAttackStart-incomingDmg);
           setCurrentWaveDamage(p=>p+incomingDmg);
-          setEnemy(prev=>({...prev,hp:reflectedHp})); await battleWait(1000);
+          setEnemy(prev=>prev?{...prev,hp:reflectedHp}:prev); await battleWait(1000);
           // 反射演出が終わってから撃破を確定し、回復・次ターン処理へは進ませない。
           if (await resolveEnemyDefeat({remainingHp:reflectedHp,damage:incomingDmg})) return;
         } else if (isAbsorb) {
@@ -27795,7 +27859,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               const hitColor=h.isCrit?'text-yellow-400 drop-shadow-[0_0_25px_rgba(250,204,21,0.9)] scale-110':'text-red-600 drop-shadow-[0_0_20px_rgba(220,38,38,0.8)]';
               if(h.isCrit) triggerShake();
               addPopup(h.isCrit?`${h.dmg}!!`:`${h.dmg}`,'enemy',`${hitColor} text-5xl font-black animate-bounce`);
-              setEnemy(prev=>({...prev,hp:Math.max(0,prev.hp-h.dmg)}));
+              setEnemy(prev=>prev?{...prev,hp:Math.max(0,prev.hp-h.dmg)}:prev);
               await battleWait(comboStepMs);
             }
             if (hit.rangeMoveTarget!=null) {
@@ -27847,7 +27911,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const hitColor=hit.isCrit?'text-yellow-400 drop-shadow-[0_0_25px_rgba(250,204,21,0.9)] scale-110':'text-red-600 drop-shadow-[0_0_20px_rgba(220,38,38,0.8)]';
           if(hit.isCrit) triggerShake();
           addPopup(hit.isCrit?`${hit.dmg}!!`:`${hit.dmg}`,'enemy',`${hitColor} text-5xl font-black animate-bounce`);
-          setEnemy(prev=>({...prev,hp:Math.max(0,prev.hp-hit.dmg)})); await battleWait(hit.noAnim?150:550);
+          setEnemy(prev=>prev?{...prev,hp:Math.max(0,prev.hp-hit.dmg)}:prev); await battleWait(hit.noAnim?150:550);
           if (hit.rangeMoveTarget!=null) {
             setEnemyDist(hit.rangeMoveTarget);
             syncAtkTierForDist(hit.rangeMoveTarget);
@@ -31448,6 +31512,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             dismissRhythmEventNotice={dismissRhythmEventNotice}
             handleGiveUp={handleGiveUp}
             mainHero={mainHero}
+            exitingQuickRun={rhythmExitingRun}
             onExit={exitRhythmSongSelect}
             onOpenEventRanking={()=>{
               // 曲えらびの案内から開く。期間限定を開催中ならそちらのタブ、なければ週間のタブ

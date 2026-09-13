@@ -198,8 +198,18 @@ const seed = () => {
       }));
     const beforeHome = await readProgress();
     await clickSelector('[data-rhythm-back]');
-    // 周回を締める(報酬の付与とランキング送信)ぶん、少し待つ
-    await page.waitForTimeout(4000);
+    // ★押してすぐにはHOMEへ抜けない。報酬の付与・全国ランキングへの送信・
+    //   進んでいるターンの演出の終わりを待つため(実測で3〜6秒)。
+    //   待っているあいだは、何を待っているのかを畫面で言う
+    //   (2026-09-13・ユーザー報告「そのまま戻ったときに結構な頻度でエラーが起きる」。
+    //    待たずに片付けていたのが原因で、実測で再現してから直した)
+    await page.waitForTimeout(400);
+    check('締めているあいだは待ち画面を出し、戻るボタンを押せなくする',
+      await page.evaluate(() => !!document.querySelector('[data-rhythm-exiting-run]')
+        && document.querySelector('[data-rhythm-back]')?.disabled === true));
+    // 抜けるまで待つ(待ちちょうで止まらないよう上限を置く)
+    await page.waitForFunction(() => !document.querySelector('[data-rhythm-demo-home]'), { timeout: 25000 }).catch(() => {});
+    await page.waitForTimeout(1200);
     check('周回中でもそのままHOMEへ戻れる',
       await page.evaluate(() => !document.querySelector('[data-rhythm-demo-home]')
         && (document.body.innerText || '').includes('モンヒロビート')),

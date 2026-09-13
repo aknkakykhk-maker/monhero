@@ -29,9 +29,25 @@ ok('判定・スコア・コンボの数え方は変えていない',
   &&!/precise[^\n]{0,40}rhythmCalculateScore/.test(game));
 ok('リザルトの結果と画面へ渡している',
   game.includes('precise:run.precise,cleared:!failed,')&&game.includes('slow:run.slow,precise:run.precise,life:run.life,'));
-ok('リザルトの内訳にMARVELOUSの内数として出す',
-  game.includes('data-rhythm-result-precise')&&game.includes('└ JUST MARVELOUS')
-  &&game.includes("{id==='MARVELOUS'&&<React.Fragment key=\"precise\">"));
+// 並びは MARVELOUS の**上**(2026-09-13・ユーザー指示「普通に表示はMarvelousの上に
+// JUST Marvelousがくるようにして」)。内数の行が、その判定の行より前に出ていることを見る。
+ok('リザルトの内訳でMARVELOUSのすぐ上に出す',
+  game.includes('data-rhythm-result-precise')&&game.includes('>JUST MARVELOUS<')
+  &&game.includes("{id==='MARVELOUS'&&<React.Fragment key=\"precise\">")
+  &&/data-rhythm-result-precise[\s\S]{0,700}<dt data-rhythm-judgment-row=\{id\}>\{id\}<\/dt>/.test(game)
+  &&!game.includes('└ JUST MARVELOUS'));
+// ランキングのスコア詳細(2026-09-13・ユーザー依頼「ランキングからのスコア詳細では
+// JUST Marvelousも見れるようにして」)。
+// ★party はJSONの列なので**項目を足すだけ**。テーブルの形は変えない(CLAUDE.md ⑦)。
+ok('全国ランキングへも送っている',
+  /const detail = \{[\s\S]{0,900}precise: Math\.max\(0, Math\.floor\(Number\(result\.precise\) \|\| 0\)\),/.test(game));
+ok('ランキングの詳細でもMARVELOUSのすぐ上に出す',
+  game.includes('data-rhythm-ranking-precise')
+  &&/data-rhythm-ranking-precise[\s\S]{0,600}rhythmRankingDetail\.detail\?\.judgments\?\.\[id\]/.test(game));
+// ★前の記録には precise が無い。0と出すと「一度も取れていない」に見えるので分ける
+ok('古い記録の「無い」と「0回」を分けて出す',
+  /Number\.isFinite\(Number\(rhythmRankingDetail\.detail\?\.precise\)\)\?[\s\S]{0,160}:'—'/.test(game)
+  &&game.includes('data-rhythm-ranking-precise-missing'));
 // 自己ベストの保存形式は触らない(mergeRhythmBestRecord はキーを選んで写す)
 ok('自己ベストの保存形式へは足していない',
   !/normalizeRhythmBestRecord\(\{[\s\S]{0,400}precise/.test(game));
@@ -48,6 +64,13 @@ ok('リザルトでも演出量と軽量モードを効かせる',
 ok('動きだけを止める(光は残す)',
   html.includes('[data-rhythm-result][data-rhythm-effect="MINIMAL"] [data-rhythm-result-rank],')
   &&/\[data-rhythm-result\]\[data-rhythm-lightweight="true"\] \[data-rhythm-result-rank\]\{animation:none\}/.test(html));
+
+// ---- 判定の内訳の色(2026-09-13・ユーザー指示「JUST Marvelous（虹）/ Marvelous（金）みたいな」) ----
+ok('リザルトとランキングの両方で、判定ごとの印を付けている',
+  game.includes('<dt data-rhythm-judgment-row={id}>{id}</dt><dd data-rhythm-judgment-row={id} className="text-right font-mono">{view.counts[id]}</dd>')
+  &&game.includes('<dt data-rhythm-judgment-row={id}>{id}</dt><dd data-rhythm-judgment-row={id} className="text-right font-mono">{rhythmRankingDetail.detail?.judgments?.[id]??0}</dd>')
+  &&/data-rhythm-result-precise[^\n]{0,60}data-rhythm-judgment-row="JUST"/.test(game)
+  &&/data-rhythm-ranking-precise[^\n]{0,60}data-rhythm-judgment-row="JUST"/.test(game));
 
 // ---- 実ブラウザ: 段ごとの計算済みの値を測る ----
 const MIME={'.html':'text/html','.js':'text/javascript','.css':'text/css'};
@@ -76,8 +99,22 @@ main{position:relative;padding:8px}
 ${resultCss}
 ${keyframes}
 </style>${boxes}`;
-  const server=await serve(page);
-  let browser,measured=null;
+  // ★判定色の規則は @media (prefers-reduced-motion) を含む。規則を1つずつ押さえると
+  //   包みが落ちて「いつでも animation:none」に見えるので、ブロックをそのまま切り出す
+  const rowFrom=html.indexOf('[data-rhythm-judgment-row]{font-weight:900}');
+  const rowTo=html.indexOf('</style>',rowFrom);
+  const rowCss=rowFrom>=0?html.slice(rowFrom,rowTo):'';
+  const rowKeyframes=(html.match(/@keyframes mhRhythmJudgmentSweep\{[^@]*?\}\}/)||[''])[0]
+    +(html.match(/@keyframes mhRhythmJudgmentRainbow\{[^@]*?\}\}/)||[''])[0];
+  ok('判定色のCSSを取り出せた',rowCss.length>0&&rowKeyframes.length>0);
+  const JUDGMENT_ROWS=['MISS','BAD','GOOD','GREAT','EXCELLENT','MARVELOUS','JUST'];
+  const rowsHtml=JUDGMENT_ROWS.map(id=>`<dt data-rhythm-judgment-row="${id}">${id}</dt>`).join('');
+  const rowPage=page.replace('</style>',`${rowCss}\n${rowKeyframes}\n</style>`)
+    +`<main data-rhythm-result data-rhythm-effect="LIGHT" data-rhythm-lightweight="false"><dl id="res">${rowsHtml}</dl></main>`
+    +`<div><dl id="rank">${rowsHtml}</dl></div>`
+    +`<main data-rhythm-result data-rhythm-effect="MINIMAL" data-rhythm-lightweight="false"><dl id="min">${rowsHtml}</dl></main>`;
+  const server=await serve(rowPage);
+  let browser,measured=null,rows=null;
   try{
     browser=await playwright.chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
     const tab=await browser.newPage({viewport:{width:390,height:844}});
@@ -89,6 +126,14 @@ ${keyframes}
       return {tier:el.getAttribute('data-rank-tier'),shadow:cs.boxShadow,anim:cs.animationName,
         glow:before.content!=='none'&&before.backgroundImage!=='none'};
     }));
+    rows=await tab.evaluate(()=>{
+      const read=(id)=>[...document.querySelectorAll(`#${id} [data-rhythm-judgment-row]`)].map(el=>{
+        const cs=getComputedStyle(el);
+        return {id:el.getAttribute('data-rhythm-judgment-row'),color:cs.color,
+          grad:cs.backgroundImage!=='none',anim:cs.animationName};
+      });
+      return {res:read('res'),rank:read('rank'),min:read('min')};
+    });
   }finally{
     if(browser)await browser.close();
     server.close();
@@ -104,6 +149,23 @@ ${keyframes}
       &&[0,1,2,3].every(t=>measured[t].anim==='none'));
     ok('上位3段だけ画面の上へ光を敷く',
       [3,4,5].every(t=>measured[t].glow)&&[0,1,2].every(t=>!measured[t].glow));
+  }
+  ok('判定ごとの色を測れた',!!rows&&rows.res.length===7&&rows.rank.length===7&&rows.min.length===7);
+  if(rows){
+    rows.res.forEach(r=>console.log(`      ${r.id}: 色=${r.grad?'グラデーション':r.color} / 動き=${r.anim}`));
+    const by=(list,id)=>list.find(r=>r.id===id);
+    ok('判定ごとに色が違う(同じ色が並ばない)',
+      new Set(rows.res.map(r=>r.grad?`grad:${r.anim}`:r.color)).size===7);
+    ok('MARVELOUSは金、JUST MARVELOUSは虹(どちらもグラデーション)',
+      by(rows.res,'MARVELOUS').grad&&by(rows.res,'JUST').grad
+      &&by(rows.res,'MARVELOUS').anim==='mhRhythmJudgmentSweep'
+      &&by(rows.res,'JUST').anim==='mhRhythmJudgmentRainbow');
+    ok('ランキングの詳細も同じ色(ただし動かさない)',
+      JUDGMENT_ROWS.every(id=>by(rows.rank,id).color===by(rows.res,id).color)
+      &&rows.rank.every(r=>r.anim==='none'));
+    ok('「演出量」が最小のときは、色は残して動きだけ止まる',
+      JUDGMENT_ROWS.every(id=>by(rows.min,id).color===by(rows.res,id).color)
+      &&rows.min.every(r=>r.anim==='none'));
   }
   console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
   process.exit(failed?1:0);
