@@ -13627,7 +13627,10 @@ const installRhythmGeometryStyles=()=>{
       0%{transform:scale(.72)}
       45%{transform:scale(1.16)}
       100%{transform:scale(1)}}
+    /* ★「標準」でも止める(2026-09-13・ユーザー指摘「通常が今までの多めの演出量に
+       なってる気がする」)。判定のたびに走るので、ノーツが詰まるほど効いてくる */
     [data-rhythm-play-area][data-rhythm-lightweight="true"] [data-rhythm-judgment-text],
+    [data-rhythm-play-area][data-rhythm-effect="LIGHT"] [data-rhythm-judgment-text],
     [data-rhythm-play-area][data-rhythm-effect="MINIMAL"] [data-rhythm-judgment-text]{animation:none!important}
     /* コンボ数も1つ増えるたびに弾ませる(プロセカのように数字が跳ねる)。
        HUDはプレイエリアの外にあるので、出す・出さないはJS側の演出量の判定で決める。 */
@@ -13716,8 +13719,10 @@ const installRhythmGeometryStyles=()=>{
       70%{transform:translate3d(0,-14%,0) scale(1.08)}
       100%{transform:translate3d(0,0,0) scale(1)}}
     [data-rhythm-play-area][data-rhythm-lightweight="true"] [data-rhythm-side-monster],
+    [data-rhythm-play-area][data-rhythm-effect="LIGHT"] [data-rhythm-side-monster],
     [data-rhythm-play-area][data-rhythm-effect="MINIMAL"] [data-rhythm-side-monster]{animation:none!important}
     [data-rhythm-play-area][data-rhythm-lightweight="true"] [data-rhythm-side-monster]::after,
+    [data-rhythm-play-area][data-rhythm-effect="LIGHT"] [data-rhythm-side-monster]::after,
     [data-rhythm-play-area][data-rhythm-effect="MINIMAL"] [data-rhythm-side-monster]::after{animation:none!important}
     [data-rhythm-judgment-line]{height:4px!important;background:linear-gradient(90deg,#d8b4fe 0%,#ecfeff 50%,#d8b4fe 100%)!important;border-radius:999px;box-shadow:0 0 14px #67e8f9,0 0 28px #c084fc,0 8px 24px rgba(34,211,238,.34)!important}
     /* 判定ラインを曲の拍に合わせて静かに脈打たせる(2026-09-05・演出強化)。
@@ -13732,8 +13737,10 @@ const installRhythmGeometryStyles=()=>{
       100%{opacity:1;transform:scaleY(1)}}
     [data-rhythm-judgment-line]{transform-origin:50% 50%;will-change:transform,opacity;
       animation:mhRhythmLinePulse var(--rhythm-beat,500ms) ease-out infinite}
-    /* 軽量モードと演出量MINIMALでは止める(ほかの演出と同じ扱い) */
+    /* 軽量モードと演出量「標準」以下では止める(ほかの演出と同じ扱い)。
+       ★これは曲のあいだ一度も止まらないので、「標準」を軽くするときの効きが大きい */
     [data-rhythm-play-area][data-rhythm-lightweight="true"] [data-rhythm-judgment-line],
+    [data-rhythm-play-area][data-rhythm-effect="LIGHT"] [data-rhythm-judgment-line],
     [data-rhythm-play-area][data-rhythm-effect="MINIMAL"] [data-rhythm-judgment-line]{animation:none!important;will-change:auto}
   
     /* --- 装飾を個別に切る(デバッグ限定) ---
@@ -14577,7 +14584,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     const flick=note.endFlick===true,h=8*(0.52+end.scale*.48),w=end.w,x=end.cx-w/2,top=end.cy-h/2;
     ctx.globalAlpha=alpha;
     if(!failed&&effect!=='MINIMAL'&&!lightweight){
-      const sprite=glowSprite(flick?'endFlick':'end',4,effect==='LOW'?END_BAR_GLOWS_LOW:END_BAR_GLOWS);
+      const sprite=glowSprite(flick?'endFlick':'end',4,(effect==='LOW'||effect==='LIGHT')?END_BAR_GLOWS_LOW:END_BAR_GLOWS);
       draw3Slice(sprite,end.cx,end.cy,w,h,alpha);
     }
     roundRectPath(ctx,x,top,w,h,h/2);
@@ -14632,7 +14639,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       // FLICKの矢印
       arrowSprite('flick',26,19,FLICK_ARROW_GLOWS,FLICK_ARROW_FILL);
       // 終端バーの光と、終点フリックの矢印
-      const endGlows=effect==='LOW'?END_BAR_GLOWS_LOW:END_BAR_GLOWS;
+      const endGlows=(effect==='LOW'||effect==='LIGHT')?END_BAR_GLOWS_LOW:END_BAR_GLOWS;
       glowSprite('end',4,endGlows);
       glowSprite('endFlick',4,endGlows);
       arrowSprite('endFlick',24,17,END_FLICK_ARROW_GLOWS,END_FLICK_ARROW_FILL);

@@ -248,7 +248,7 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
         const slot=index+1;
         return <span key={slot} ref={el=>{sideMonsterRefs.current[index]=el;}}
           data-rhythm-side-monster={slot}
-          data-rhythm-side-motion={settings.lightweightMode||settings.effectAmount==='MINIMAL'?'NONE':settings.sideMonsterMotion}
+          data-rhythm-side-motion={settings.lightweightMode||rhythmEffectAtMost(settings.effectAmount,'LIGHT')?'NONE':settings.sideMonsterMotion}
           data-rhythm-side-active="0"
           data-rhythm-side-phase="intro"
           style={{'--rhythm-side-opacity':opacity,'--rhythm-side-delay':`${index%2===0?0:-250}ms`}}>
@@ -487,7 +487,7 @@ const clearedGesture=judgment!=='MISS'&&(note.type==='HOLD'||rhythmNoteIsSlide(n
 if(clearedGesture){
   RHYTHM_NOTE_SE_RUNTIME.playClear();
   // 光は演出量の設定に従う(MINIMAL・軽量モードでは出さない)。音は設定に関わらず鳴らす
-  if(!settings.lightweightMode&&settings.effectAmount!=='MINIMAL')note._rhythmClearAt=run.audio?.songTimeMs?.()??0;
+  if(!settings.lightweightMode&&!rhythmEffectAtMost(settings.effectAmount,'LIGHT'))note._rhythmClearAt=run.audio?.songTimeMs?.()??0;
 }
 // --- 取れたノーツを判定ラインで弾けさせる(2026-09-05「画面演出はあまりかわってない」への対応) ---
 // 要素は使い回すので、押すたびにDOMは増えない。動くのは transform と opacity だけ。
