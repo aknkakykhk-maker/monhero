@@ -36,7 +36,9 @@ function MonsterHeroGame() {
   const [proClearCounts, setProClearCounts] = useState({});
   // このランで「自己ベストを更新したか」「その難易度を初めてクリアしたか」。
   // リザルトで助手に特別なセリフを言わせるためだけに使う(保存はしない)
-  const [runHighlights, setRunHighlights] = useState({ newRecord: false, firstClear: false, firstWin: false, firstLose: false });
+  // rankingFailed … 全国ランキングへ送れなかった周回。リザルトでその旨を知らせる
+  // (これまでは console にだけ出ていて、プレイヤーには成功と区別がつかなかった)
+  const [runHighlights, setRunHighlights] = useState({ newRecord: false, firstClear: false, firstWin: false, firstLose: false, rankingFailed: false });
   // 初回チュートリアル。null=出さない、0以上=そのページを表示中。
   // 見たかどうかは新しい保存キーへ分けて持つ(既存のキーには一切触らない)
   const [tutorialStep, setTutorialStep] = useState(null);
@@ -488,6 +490,25 @@ function MonsterHeroGame() {
   const repeatRunTemplateRef = useRef(null);
   const [selectedCards, setSelectedCards] = useState([]);
   const [isBusy, setIsBusy] = useState(false);
+  // ★ターンの演出(executeTurn→敵の行動)は await で繋いだ長い一本道で、途中で止める手立てが無い。
+  //   その最中にランを片付ける(returnToHome)と、残りの setEnemy(prev=>...) が
+  //   null を掘って画面が落ちる。「いま演出の途中か」を ref でも読めるようにして、
+  //   片付ける前に終わるのを待てるようにしてある(2026-09-13・ユーザー報告
+  //   「モンビーからそのまま戻ったときに結構な頻度でエラーが起きる」)。
+  const isBusyRef = useRef(false);
+  // 曲えらびで「⼹ 終了」を押してからHOMEへ抜けるまでのあいだ(報酬の付与・送信・演出の終わり待ち)。
+  // 数秒かかることがあるので、そのあいだは畫面でそう言っておき、二度押しも止める
+  const [rhythmExitingRun, setRhythmExitingRun] = useState(false);
+  const rhythmExitingRunRef = useRef(false);
+  useEffect(()=>{isBusyRef.current=isBusy;},[isBusy]);
+  // 演出が終わるのを待つ(最大 timeoutMs)。待ちちょうで止まらないよう上限を必ず置く
+  const waitForBattleIdle = async (timeoutMs = 6000) => {
+    const until = Date.now() + Math.max(0, timeoutMs);
+    while (isBusyRef.current && Date.now() < until) {
+      await new Promise(resolve => setTimeout(resolve, 120));
+    }
+    return !isBusyRef.current;
+  };
   // AUTOのON/OFFはラン中だけの一時状態。state反映前の操作やeffect再実行にも同じ値を見せるためrefも同期する。
   const [autoBattle, setAutoBattle] = useState(false);
   const autoBattleRef = useRef(false);
@@ -1791,14 +1812,19 @@ function MonsterHeroGame() {
   // status:'notReady' は「関数をまだ作っていない」状態。合算と同じくエラー扱いにしない。
   // status:'closed'   は「そのkindのランキングがいま無い」状態。
   const RHYTHM_BOARD_EMPTY = { status:'idle', window:null, event:null, boards:{}, error:null };
-  const [rhythmEventDivision, setRhythmEventDivision] = useState({ weekly:RHYTHM_EVENT_TOTAL_DIVISION, limited:RHYTHM_EVENT_TOTAL_DIVISION });
-  const [rhythmEventRanking, setRhythmEventRanking] = useState({ weekly:RHYTHM_BOARD_EMPTY, limited:RHYTHM_BOARD_EMPTY });
-  const rhythmEventRankingRequestRef = useRef({ weekly:0, limited:0 });
+  // kind は 'weekly'(今週) / 'limited'(開催中のイベント) / 'history'(終わった回をあとから見る)。
+  // 履歴は**表示専用**で、報酬の受け取りには一切関わらない(受取フラグも触らない・CLAUDE.md ⑦)
+  const [rhythmEventDivision, setRhythmEventDivision] = useState({ weekly:RHYTHM_EVENT_TOTAL_DIVISION, limited:RHYTHM_EVENT_TOTAL_DIVISION, history:RHYTHM_EVENT_TOTAL_DIVISION });
+  const [rhythmEventRanking, setRhythmEventRanking] = useState({ weekly:RHYTHM_BOARD_EMPTY, limited:RHYTHM_BOARD_EMPTY, history:RHYTHM_BOARD_EMPTY });
+  const rhythmEventRankingRequestRef = useRef({ weekly:0, limited:0, history:0 });
   const setRhythmBoard = (kind, update) => setRhythmEventRanking(prev => ({
     ...prev, [kind]: typeof update === 'function' ? update(prev[kind] || RHYTHM_BOARD_EMPTY) : update,
   }));
-  const loadRhythmEventRanking = useCallback(async (kind, divisionId) => {
-    if (kind !== 'weekly' && kind !== 'limited') return;
+  // historyEntry を渡すと、その「終わった回」の順位を集計してもらう(kind は 'history')。
+  // 集計そのものは今週・開催中とまったく同じ関数を使う。渡す期間が違うだけ
+  const loadRhythmEventRanking = useCallback(async (kind, divisionId, historyEntry = null) => {
+    if (kind !== 'weekly' && kind !== 'limited' && kind !== 'history') return;
+    if (kind === 'history' && !historyEntry) return;
     const requestId = (rhythmEventRankingRequestRef.current[kind] || 0) + 1;
     rhythmEventRankingRequestRef.current = { ...rhythmEventRankingRequestRef.current, [kind]: requestId };
     const wanted = divisionId || RHYTHM_EVENT_TOTAL_DIVISION;
@@ -1822,8 +1848,11 @@ function MonsterHeroGame() {
       // 週間は期間の正本がサーバーにある。期間限定は定義の日時をそのまま使うので聞きに行かない
       const weekWindow = kind === 'weekly' ? await sbFetchRhythmWeekWindow({ requestId:`rhythm-week-${Date.now()}` }) : null;
       if (stale()) return;
-      const event = kind === 'weekly' ? rhythmWeeklyEvent(weekWindow.startMs) : rhythmLimitedEventAt(Date.now());
-      const range = rhythmEventWindow(event, weekWindow);
+      // 履歴は終わっているので期間が動かない。サーバーへ週の窓を聞きに行く必要もない
+      const event = kind === 'history' ? rhythmHistoryBoardEvent(historyEntry)
+        : kind === 'weekly' ? rhythmWeeklyEvent(weekWindow.startMs)
+        : rhythmLimitedEventAt(Date.now());
+      const range = kind === 'history' ? rhythmHistoryRange(historyEntry) : rhythmEventWindow(event, weekWindow);
       if (!event || !range) { setRhythmBoard(kind, { status:'closed', window:weekWindow, event:null, boards:{}, error:null }); return; }
       // 週(またはイベント)が変わっていたら、前のぶんの一覧は捨てる(古い順位を見せない)
       const keepBoards = (prev) => (prev.event && prev.event.id === event.id) ? prev.boards : {};
@@ -1836,7 +1865,8 @@ function MonsterHeroGame() {
       const bonusRates = rhythmEventPlayBonusRates(event);
       // ★週間は**累計スコア方式**(2026-09-13)。曲ごとのベストではなく、その週に出した記録を
       //   ぜんぶ足す。対象曲も部門も無いので、期間だけ渡す専用の関数を呼ぶ
-      const weeklyTotals = kind === 'weekly' && !targetSongId;
+      // 週間(履歴の週をふくむ)は累計スコア方式。対象曲も部門も無いので期間だけ渡す
+      const weeklyTotals = (kind === 'weekly' || (kind === 'history' && historyEntry.kind === 'weekly')) && !targetSongId;
       const fetchRows = (options) => weeklyTotals
         ? sbFetchRhythmWeekTotals({ fromMs:range.startMs, toMs:range.endMs, ...options })
         : targetSongId
@@ -1875,6 +1905,31 @@ function MonsterHeroGame() {
       }));
     }
   }, [breederName]);
+  // ===== モンヒロビートの履歴(2026-09-13・ユーザー依頼) =====
+  // 終わった週・イベントの順位をあとから見るだけの画面。プロフィールから入る。
+  // ★一覧は data/rhythm-event.js が計算だけで作る(サーバーへは聞きに行かない)。
+  //   順位を取りに行くのは、選んで開いた回だけ。
+  // ★**表示専用**。報酬の受け取り・受取フラグ・保存には一切触らない(CLAUDE.md ⑦)。
+  const [rhythmHistoryList, setRhythmHistoryList] = useState([]);
+  const [rhythmHistorySelected, setRhythmHistorySelected] = useState(null);
+  // 公開前は入口ごと出さない(週間ランキングと同じフラグで出し入れする)
+  const rhythmHistoryReleased = RELEASE_FLAGS.rhythmWeeklyRanking === true;
+  // 入口に出す件数。開くまでは一覧を組み立てない(プロフィールを開くたびに数えるのは無駄)
+  const rhythmHistoryCount = rhythmHistoryReleased ? rhythmHistoryEntries(Date.now()).length : 0;
+  const loadRhythmHistoryBoard = (entry, divisionId) => {
+    if (!entry) return;
+    setRhythmEventDivision(prev => ({ ...prev, history: divisionId }));
+    loadRhythmEventRanking('history', divisionId, entry);
+  };
+  const openRhythmHistory = () => {
+    setRhythmHistorySelected(null);
+    setRhythmHistoryList(rhythmHistoryEntries(Date.now()));
+    setGameState('RHYTHM_HISTORY');
+  };
+  const selectRhythmHistory = (entry) => {
+    setRhythmHistorySelected(entry);
+    loadRhythmHistoryBoard(entry, RHYTHM_EVENT_TOTAL_DIVISION);
+  };
   const rhythmRankingRequestRef = useRef(0);
   // 難易度合算(体験版で遊べる難易度をまとめて取得)のランキングを読み込む。
   // 同じユーザーの複数行は読み込み側で最高得点の1件だけへ畳む(rhythmRankingDedupeByUser)。
@@ -1918,6 +1973,11 @@ function MonsterHeroGame() {
     const detail = {
       songId: song.songId, difficultyId: difficulty.id,
       judgments: result.judgments, maxCombo: result.maxCombo, fast: result.fast, slow: result.slow,
+      // ぴったりのMARVELOUSの回数(2026-09-13・ユーザー依頼「ランキングからのスコア詳細では
+      // JUST Marvelousも見れるようにして」)。party はJSONの列なので**項目を足すだけ**で済み、
+      // テーブルの形は変えない。これより前の記録にはこの項目が無いので、
+      // 読む側(ランキングの詳細)は「無い」と「0回」を分けて出す。
+      precise: Math.max(0, Math.floor(Number(result.precise) || 0)),
       fullCombo: !!result.fullCombo, allExcellent: !!result.allExcellent, allMarvelous: !!result.allMarvelous,
     };
     // partyは既存モードと同じ「配列」の形で送る(種族チャレンジ等が常に配列で送っているため、
@@ -1947,6 +2007,81 @@ function MonsterHeroGame() {
     if (outcome.error && !outcome.localSaved) console.error('[rhythm-ranking] submit outcome error:', outcome.error?.message || outcome.error);
     else if (outcome.nationalSaved) console.info('[rhythm-ranking] submitted', { difficulty: difficultyKey, score: row.score });
   }, [breederName, breederLevel, breederIcon]);
+
+  // 送れなかった記録を、あとで送り直す(2026-09-13)。
+  //
+  // 全国ランキングへの送信が失敗したとき、これまでは端末へ退避するだけで終わっていた。
+  // 実際に rankings.score が int4 だったころ、45,054,226,345(約450億)が 22003 で拒否され、
+  // 画面には何も出ないまま端末に眠っていた(DB側は bigint へ広げて直した)。
+  //
+  // 同じクリアには clearId が付いていて、DB側に clear_id のユニーク索引があるので、
+  // 送り直しても二重登録にはならない。失敗したら何も変えずに次の起動へ回す。
+  const resendPendingRankingRef = useRef(false);
+  const resendPendingRankingScores = async (limit = RANKING_RESEND_LIMIT) => {
+    if (resendPendingRankingRef.current) return { sent: 0, failed: 0 };
+    resendPendingRankingRef.current = true;
+    let sent = 0, failed = 0;
+    try {
+      // ① バトル(チャレンジ・プロ・極限・種族・モンビー)の記録。難易度ごとに分かれている
+      const keys = await storeList('mh_rank_', false);
+      for (const key of (Array.isArray(keys) ? keys : [])) {
+        if (sent + failed >= limit) break;
+        const diff = key.slice('mh_rank_'.length);
+        if (!diff) continue;
+        const list = await storeGet(key, [], false);
+        const pending = pendingLocalRankingEntries(list);
+        if (pending.length === 0) continue;
+        const done = [];
+        for (const entry of pending) {
+          if (sent + failed >= limit) break;
+          const row = rankingRowFromLocalEntry(entry, diff);
+          if (!row) continue;
+          try {
+            // モンビーの記録は難易度キーが Rhythm-<曲>-<難易度> なので、送り先の関数も分ける
+            const insert = String(diff).startsWith('Rhythm-') ? sbInsertRhythmScore : sbInsertScore;
+            const res = await insert(row);
+            if (res?.saved === true) { done.push(entry.clearId); sent++; } else { failed++; }
+          } catch (e) {
+            failed++;
+            console.error('[ranking] resend failed:', e && e.message ? e.message : e);
+          }
+        }
+        // 送れたぶんにだけ印を付けて書き戻す。行は消さないし、ほかの項目も触らない
+        if (done.length > 0) await storeSet(key, markLocalRankingEntriesSent(list, done), false);
+      }
+      // ② モンビーの未送信キュー。こちらは送る行そのものを貯めてある
+      const rhythmPending = await storeGet(RHYTHM_RANKING_PENDING_KEY, [], false);
+      if (Array.isArray(rhythmPending) && rhythmPending.length > 0) {
+        const rest = [];
+        for (const row of rhythmPending) {
+          if (sent + failed >= limit || !row || !row.clear_id) { rest.push(row); continue; }
+          try {
+            const { at, error, ...payload } = row;
+            const res = await sbInsertRhythmScore(payload);
+            if (res?.saved === true) sent++; else { failed++; rest.push(row); }
+          } catch (e) {
+            failed++; rest.push(row);
+            console.error('[rhythm-ranking] resend failed:', e && e.message ? e.message : e);
+          }
+        }
+        if (rest.length !== rhythmPending.length) await storeSet(RHYTHM_RANKING_PENDING_KEY, rest, false);
+      }
+      if (sent > 0) console.info('[ranking] resent pending scores', { sent, failed });
+    } catch (e) {
+      console.error('[ranking] resend sweep failed:', e && e.message ? e.message : e);
+    } finally {
+      resendPendingRankingRef.current = false;
+    }
+    return { sent, failed };
+  };
+  // HOMEに落ち着いてから1回だけ走らせる。起動直後の読み込みと重ならないよう少し待つ
+  const resendCheckedRef = useRef(false);
+  useEffect(() => {
+    if (bootPhase !== 'GAME' || gameState !== 'HOME' || !dataLoaded || !onboarded || resendCheckedRef.current) return;
+    resendCheckedRef.current = true;
+    const id = setTimeout(() => { resendPendingRankingScores(); }, RANKING_RESEND_DELAY_MS);
+    return () => clearTimeout(id);
+  }, [bootPhase, gameState, dataLoaded, onboarded]);
 
   const loadRankings = useCallback(async (targetDiff=null, includeLevels=false, force=false, levelKind='bond') => {
     const normalizedTargetDiff = targetDiff == null ? null : rankingDifficultyKey(targetDiff);
@@ -2645,6 +2780,16 @@ function MonsterHeroGame() {
       setOwnedItems(nextItems);
       await storeSet('mh_owned_items', nextItems, false);
     }
+    // ---- 勇者の証片 ----
+    // 1周につきの個数は heroProofShardClearReward が正本(実バトルのクリアと同じ関数を通す)
+    const oneShard = heroProofShardClearReward({ runMode, difficulty });
+    const shardGain = Math.max(0, Math.floor(oneShard * count));
+    if (shardGain > 0) {
+      const nextItems = { ...ownedItemsRef.current, [HERO_PROOF_SHARD_ITEM_ID]: ownedItemCount(ownedItemsRef.current, HERO_PROOF_SHARD_ITEM_ID) + shardGain };
+      ownedItemsRef.current = nextItems;
+      setOwnedItems(nextItems);
+      await storeSet('mh_owned_items', nextItems, false);
+    }
     // ---- クリア回数・ミッション・助手の絆 ----
     // 記録(最高スコア・最高WAVE)は触らない。演奏にはスコアが無いため
     const nextQuick = (quickClearCounts[difficulty] || 0) + count;
@@ -2658,7 +2803,7 @@ function MonsterHeroGame() {
     const fromLoop = quickRunProgressRef.current ? quickRunProgressRef.current.loops : 0;
     for (let i = 0; i < count; i++) countQuickRunLoop();
     const toLoop = quickRunProgressRef.current ? quickRunProgressRef.current.loops : fromLoop;
-    return { loops: count, xp: xpGain, gold: goldGain, bond: bondGain, psyche: psycheGain, fromLoop, toLoop,
+    return { loops: count, xp: xpGain, gold: goldGain, bond: bondGain, psyche: psycheGain, shard: shardGain, fromLoop, toLoop,
       scale, eventBoosted: scale > RHYTHM_PLAY_RUN_LOOP_SCALE,
       cleared: cleared !== false,
       baseLoops: Math.max(0, Math.trunc(Number(baseLoops) || 0)) || count };
@@ -4191,6 +4336,7 @@ function MonsterHeroGame() {
         const result = await submitLocalScore(rankingDifficultyForMode(EXTREME_MODE.id, extremeDifficulty), score, runIdRef.current);
         if (!result?.nationalSaved) {
           console.error('[result] extreme score save failed:', result?.error?.message || 'unknown ranking error');
+          setRunHighlights(prev => ({ ...prev, rankingFailed: true }));
           return result;
         }
         const currentBest = extremeBestScores[extremeDifficulty] || 0;
@@ -4212,6 +4358,7 @@ function MonsterHeroGame() {
         const result = await submitLocalScore(rankingDifficultyForMode(BATTLE_MODE_PRO, difficulty), score, runIdRef.current);
         if (!result?.nationalSaved) {
           console.error('[result] pro score save failed:', result?.error?.message || 'unknown ranking error');
+          setRunHighlights(prev => ({ ...prev, rankingFailed: true }));
           return result;
         }
         if (score > (proHighScores[difficulty] || 0)) {
@@ -4229,6 +4376,7 @@ function MonsterHeroGame() {
       const result = await submitLocalScore(difficulty, score, runIdRef.current);
       if (!result?.nationalSaved) {
         console.error('[result] national score save failed:', result?.error?.message || 'unknown ranking error');
+        setRunHighlights(prev => ({ ...prev, rankingFailed: true }));
         return result;
       }
       if (score > (highScores[difficulty] || 0)) {
@@ -4261,6 +4409,7 @@ function MonsterHeroGame() {
       const result = await submitLocalScore(diff, score, runIdRef.current);
       if (!result?.nationalSaved) {
         console.error('[result] species challenge score save failed:', result?.error?.message || 'unknown ranking error');
+        setRunHighlights(prev => ({ ...prev, rankingFailed: true }));
       }
       return result;
     } catch (e) {
@@ -6402,6 +6551,26 @@ function MonsterHeroGame() {
     setFinalRewardSummary(prev => ({ ...(prev || {}), heroProofGain:gain }));
     return gain;
   };
+  // クイックGODのクリアでもらえる勇者の証片。個数は heroProofShardClearReward が正本。
+  // 証そのもの(awardHeroProofForClear)とは別のアイテムなので、足す先も別にする。
+  // 所持数は他の消耗アイテムと同じ mh_owned_items へ足すので、新しい保存キーは作らない。
+  const awardHeroProofShardForClear = async () => {
+    const gain = heroProofShardClearReward({
+      runMode,
+      difficulty,
+      debug:debugBattleRef.current || runHasDebugOnlyMonster(),
+    });
+    if (gain <= 0) return 0;
+    const nextItems = {
+      ...ownedItemsRef.current,
+      [HERO_PROOF_SHARD_ITEM_ID]:ownedItemCount(ownedItemsRef.current, HERO_PROOF_SHARD_ITEM_ID) + gain,
+    };
+    ownedItemsRef.current = nextItems;
+    setOwnedItems(nextItems);
+    await storeSet('mh_owned_items', nextItems, false);
+    setFinalRewardSummary(prev => ({ ...(prev || {}), heroProofShardGain:gain }));
+    return gain;
+  };
 
   const recordClearOnce = async () => {
     if (clearRecordedRef.current) return;
@@ -6411,6 +6580,7 @@ function MonsterHeroGame() {
     // 敗北・リタイア・スキップチケットはこの関数を通らないので配られない
     await awardClearPsyche();
     await awardHeroProofForClear();
+    await awardHeroProofShardForClear();
     // 種族チャレンジのクリア回数は「種族×難易度」ごとに
     // mh_species_challenge_progress_v1 へ積む(persistSpeciesChallengeClearRewardが正本)。
     // チャレンジの mh_clears_* と極限の mh_extreme_clears_* はどちらも書き換えない。
@@ -6587,7 +6757,7 @@ function MonsterHeroGame() {
     setCurrentWaveDamage(s.currentWaveDamage); setWaveDistDamage(s.waveDistDamage); setDistDmgBonus(s.distDmgBonus); setDistAptPct(s.distAptPct); setTotalDistDamage(s.totalDistDamage); setTotalAllDamage(s.totalAllDamage); setTotalRecoveryDelta(s.totalRecoveryDelta);
     setWaveResult(s.waveResult); setFocusedCard(s.focusedCard); setSkillPicker(null); setEnemyIntent(s.enemyIntent); setEnemyLastIntent(s.enemyLastIntent); reserveEnemyNextIntent(s.enemyNextIntent); setEffect(s.effect); setTrainingPicks([]); setFinalRewardSummary(s.finalRewardSummary); setWaveHistory(s.waveHistory); setGaveUp(s.gaveUp);
     setMasuRegisteredThisRun(false); setShowMasuRegisterModal(false); setMasuNameInput('');
-    setRunHighlights({ newRecord:false, firstClear:false, firstWin:false, firstLose:false });
+    setRunHighlights({ newRecord:false, firstClear:false, firstWin:false, firstLose:false, rankingFailed:false });
     return s;
   };
 
@@ -7168,7 +7338,7 @@ function MonsterHeroGame() {
     setWaveResult(s.waveResult);
     setTrainingPicks([]); setFocusedCard(s.focusedCard); setSkillPicker(null); setShowQuitConfirm(false); setEnemyIntent(s.enemyIntent); setEnemyLastIntent(s.enemyLastIntent||null); reserveEnemyNextIntent(s.enemyNextIntent||null); setEffect(s.effect); setFinalRewardSummary(s.finalRewardSummary); setWaveHistory(s.waveHistory||[]); setGaveUp(s.gaveUp);
     setMasuRegisteredThisRun(false); setShowMasuRegisterModal(false); setMasuNameInput('');
-    setRunHighlights({ newRecord: false, firstClear: false, firstWin: false, firstLose: false });
+    setRunHighlights({ newRecord: false, firstClear: false, firstWin: false, firstLose: false, rankingFailed: false });
     setSkipFlow(null); setSkipConfirmOpen(false); setSkipResult(null); setSkipInfoItemId(null);
     setGameState('HOME');
   };
@@ -7336,7 +7506,12 @@ function MonsterHeroGame() {
   };
 
   // Give up mid-run: record current score to ranking, award rewards, then show the final result screen (gaveUp)
-  const handleGiveUp = useCallback(async () => {
+  // silent … 周回を締めるだけで、バトルのリザルトは見せない(2026-09-13)。
+  //   モンビーの曲えらびからHOMEへ戻るときに使う。gaveUp を立てるとバトルの
+  //   リザルトが描かれ、そのあと returnToHome() が中身を片付けるので
+  //   「Cannot read properties of null (reading 'hp')」で画面が落ちる。
+  //   ★報酬の付与とランキング送信はそのまま通す(やめ方は「あきらめる」と同じ)。
+  const handleGiveUp = useCallback(async ({ silent = false } = {}) => {
     // 帯に「途中でやめた」と出せるよう、理由を渡す(2026-09-07)
     stopAllAuto('retire');
     if (debugBattleRef.current) {
@@ -7358,10 +7533,42 @@ function MonsterHeroGame() {
     runClearTurnsRef.current = null;
     try { await awardRunRewards(Math.max(0, wave - 1)); } catch {}
     setShowQuitConfirm(false);
-    setGaveUp(true);
+    if (!silent) setGaveUp(true);
     await submitRunScoreOnce();
     setResultProcessing(false);
   }, [score, difficulty, highScores, breederName, mainHero, slots, wave]);
+
+  // ===== 曲えらびの「戻る」(2026-09-13・ユーザー指摘
+  //   「止めないでもホームに戻れて自動的に周回も終わるようにしたい」) =====
+  // それまでは、裏でクイック∞周回が回っているあいだは「⚔ バトルへ戻る」しかできず、
+  // バトルで∞を切ってからHOMEへ、という2工程になっていた。
+  // とくにオートクイック(モンビーへ入ると自動で周回を始める設定)を使っていると、
+  // 入った瞬間に必ずこの状態になるので、毎回その2工程を踏むことになる。
+  // ★戻る前に handleGiveUp() で周回を締める。そこまでにクリアしたWAVEぶんの報酬は
+  //   きちんと入る(「⏹ ここで周回をやめる」と同じ終わり方)。締めずにHOMEへ抜けると、
+  //   returnToHome を通らないぶん周回が宙ぶらりんのまま残る。
+  // ★バトルを見に行く導線は、周回の帯の詳細にある「⚔ バトルへ戻って…」が残る。
+  const exitRhythmSongSelect = async () => {
+    if (rhythmBackgroundRun) {
+      if (rhythmExitingRunRef.current) return;
+      rhythmExitingRunRef.current = true;
+      setRhythmExitingRun(true);
+      // ★リザルトは見せない(silent)。立ててしまうと、締めている途中でバトルの
+      //   リザルトが描かれ、そのあと returnToHome() が中身を片付けるので落ちる
+      await handleGiveUp({ silent: true });
+      // ★そのとき進んでいるターンの演出を待ってから片付ける。
+      //   stopAllAuto は「次のターンを始めない」だけで、いま進んでいる一本道は止められない。
+      //   待たずに returnToHome すると、残りの処理が片付いたあとの状態を触り、
+      //   画面が「表示でエラーが起きました」へ落ちる
+      //   (2026-09-13・ユーザー報告「結構な頻度でエラーが起きる」。実測で再現した)。
+      await waitForBattleIdle();
+      rhythmExitingRunRef.current = false;
+      setRhythmExitingRun(false);
+      returnToHome();
+      return;
+    }
+    setGameState(RHYTHM_MODE_PUBLIC_RELEASE?'HOME':'DEBUG_SETTINGS');
+  };
 
   const handleRetry = () => {
     stopAllAuto();
@@ -7916,7 +8123,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           addPopup(`反射 ${incomingDmg}!!`,'enemy','text-purple-400 font-black text-4xl drop-shadow-lg');
           const reflectedHp=Math.max(0,enemyHpAtAttackStart-incomingDmg);
           setCurrentWaveDamage(p=>p+incomingDmg);
-          setEnemy(prev=>({...prev,hp:reflectedHp})); await battleWait(1000);
+          setEnemy(prev=>prev?{...prev,hp:reflectedHp}:prev); await battleWait(1000);
           // 反射演出が終わってから撃破を確定し、回復・次ターン処理へは進ませない。
           if (await resolveEnemyDefeat({remainingHp:reflectedHp,damage:incomingDmg})) return;
         } else if (isAbsorb) {
@@ -8283,7 +8490,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               const hitColor=h.isCrit?'text-yellow-400 drop-shadow-[0_0_25px_rgba(250,204,21,0.9)] scale-110':'text-red-600 drop-shadow-[0_0_20px_rgba(220,38,38,0.8)]';
               if(h.isCrit) triggerShake();
               addPopup(h.isCrit?`${h.dmg}!!`:`${h.dmg}`,'enemy',`${hitColor} text-5xl font-black animate-bounce`);
-              setEnemy(prev=>({...prev,hp:Math.max(0,prev.hp-h.dmg)}));
+              setEnemy(prev=>prev?{...prev,hp:Math.max(0,prev.hp-h.dmg)}:prev);
               await battleWait(comboStepMs);
             }
             if (hit.rangeMoveTarget!=null) {
@@ -8335,7 +8542,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const hitColor=hit.isCrit?'text-yellow-400 drop-shadow-[0_0_25px_rgba(250,204,21,0.9)] scale-110':'text-red-600 drop-shadow-[0_0_20px_rgba(220,38,38,0.8)]';
           if(hit.isCrit) triggerShake();
           addPopup(hit.isCrit?`${hit.dmg}!!`:`${hit.dmg}`,'enemy',`${hitColor} text-5xl font-black animate-bounce`);
-          setEnemy(prev=>({...prev,hp:Math.max(0,prev.hp-hit.dmg)})); await battleWait(hit.noAnim?150:550);
+          setEnemy(prev=>prev?{...prev,hp:Math.max(0,prev.hp-hit.dmg)}:prev); await battleWait(hit.noAnim?150:550);
           if (hit.rangeMoveTarget!=null) {
             setEnemyDist(hit.rangeMoveTarget);
             syncAtkTierForDist(hit.rangeMoveTarget);
@@ -11305,7 +11512,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <div className={`relative shrink-0${battleTutorialSpotClass('difficulty')}`}>
                   <button aria-label="前の難易度" disabled={selectedIndex===0} onClick={()=>selectDifficultyIndex(selectedIndex-1)} className="absolute left-0 top-[42%] z-20 w-9 h-12 rounded-r-xl bg-black/70 disabled:opacity-20"><ChevronLeft/></button>
                   <div ref={modeDifficultyCarouselRef} onScroll={e=>{const root=e.currentTarget,c=root.scrollLeft+root.clientWidth/2;let best=0,d=Infinity;[...root.children].forEach((card,i)=>{const n=Math.abs(card.offsetLeft+card.offsetWidth/2-c);if(n<d){d=n;best=i;}});if(difficulties[best]?.[0]!==selectedDifficulty)chooseDifficulty(difficulties[best][0]);}} className="flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll" style={{paddingLeft:'11%',paddingRight:'11%',touchAction:'pan-x pinch-zoom'}} data-difficulty-carousel>
-                    {difficulties.map(([key,setting])=>{const active=key===selectedDifficulty,rec=modeRecordFor(battleMode,key);const quickUnlocked=species?isSpeciesChallengeDifficultyUnlocked(key,speciesChallengeClearedDifficultyIds(speciesChallengeProgress,speciesChallengeSelection.speciesId)):(!quick||debugBattle||isQuickDifficultyUnlocked(key,clearCounts,proClearCounts,extremeDifficultyClearCounts));const heroProofReward=heroProofClearReward({runMode:battleMode,difficulty:key,debug:debugBattle});return (
+                    {difficulties.map(([key,setting])=>{const active=key===selectedDifficulty,rec=modeRecordFor(battleMode,key);const quickUnlocked=species?isSpeciesChallengeDifficultyUnlocked(key,speciesChallengeClearedDifficultyIds(speciesChallengeProgress,speciesChallengeSelection.speciesId)):(!quick||debugBattle||isQuickDifficultyUnlocked(key,clearCounts,proClearCounts,extremeDifficultyClearCounts));const heroProofReward=heroProofClearReward({runMode:battleMode,difficulty:key,debug:debugBattle});const heroProofShardReward=heroProofShardClearReward({runMode:battleMode,difficulty:key,debug:debugBattle});return (
                       <article key={key} aria-disabled={!quickUnlocked} data-difficulty-card={key} className={`snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${quick?'h-[366px] flex flex-col':''} ${active?'scale-100 opacity-100':'scale-[.92] opacity-55'} ${quickUnlocked?'':'grayscale'}`} style={{borderColor:active?setting.text:'rgba(255,255,255,.12)',background:'linear-gradient(180deg,#152044,#0d142b)',boxShadow:active?`0 0 30px ${setting.bg}55`:'none'}}>
                         <div className={`text-center text-[7px] tracking-[.2em] font-black ${key==='EXTREME'?'text-fuchsia-300':'text-slate-400'}`}>{key==='EXTREME'?'―― 極限難易度 ――':'BATTLE DIFFICULTY'}</div>
                         {/* 14難易度を横に送るので、どこまでクリアしたかが見出しだけで分かるようにする */}
@@ -11322,7 +11529,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         {/* 実際のクリア付与と同じ関数を使い、表示専用の報酬値を持たない。 */}
                         <div className={`mt-1.5 min-h-[54px] rounded-xl border px-2.5 py-1 flex items-center gap-2 ${species&&speciesRewardClaimed(key)?'border-white/10 bg-slate-900/50':'border-fuchsia-400/35 bg-fuchsia-950/35'}`} data-psyche-reward={key} data-species-reward-claimed={species?String(speciesRewardClaimed(key)):undefined}>
                           <span className={`shrink-0 whitespace-nowrap text-[10px] leading-tight font-black ${species&&speciesRewardClaimed(key)?'text-slate-500':'text-fuchsia-200'}`}>クリア報酬</span>
-                          <div className="flex-1 min-w-0 text-left whitespace-nowrap leading-[1.35]">{species?(()=>{const claimed=speciesRewardClaimed(key);return <><b className={`block text-[11px] ${claimed?'text-slate-500 line-through':'text-amber-200'}`}>超越の実 ×{speciesChallengeFirstClearReward(key)}</b><small className={`block text-[8px] font-black ${claimed?'text-emerald-300':'text-slate-400'}`}>{claimed?'✅ 受取済み（初回のみ）':'初回クリアのみ'}</small></>;})():<><b className="block text-[10px] text-white">経験値：{quick&&quickRewardPolicy!==QUICK_REWARD_POLICY_GROWTH?'0':quick?bonusLabel(setting.xp||setting.score):'通常'}</b><b className="block text-[10px] text-fuchsia-100"><span aria-hidden="true">🌈</span> 虹のプシュケー：{applyQuickPsychePolicy(clearPsycheReward(key),battleMode,quickRewardPolicy)}個{quick?quickRewardPolicy===QUICK_REWARD_POLICY_PSYCHE?'（×2）':'（×1）':''}</b><b className="block text-[10px] text-amber-200">💎 ダイヤ：{quick?bonusLabel(setting.gold*(quickRewardPolicy===QUICK_REWARD_POLICY_DIAMOND?2:1)):`×${setting.gold}`}{quick&&quickRewardPolicy===QUICK_REWARD_POLICY_DIAMOND?'（×2）':''}</b>{pro&&(heroProofReward>0?<b data-hero-proof-reward={key} className="block text-[10px] text-amber-100">🏅勇者の証：{heroProofReward}個</b>:<span aria-hidden="true" className="block text-[10px]">&nbsp;</span>)}</>}</div>
+                          <div className="flex-1 min-w-0 text-left whitespace-nowrap leading-[1.35]">{species?(()=>{const claimed=speciesRewardClaimed(key);return <><b className={`block text-[11px] ${claimed?'text-slate-500 line-through':'text-amber-200'}`}>超越の実 ×{speciesChallengeFirstClearReward(key)}</b><small className={`block text-[8px] font-black ${claimed?'text-emerald-300':'text-slate-400'}`}>{claimed?'✅ 受取済み（初回のみ）':'初回クリアのみ'}</small></>;})():<><b className="block text-[10px] text-white">経験値：{quick&&quickRewardPolicy!==QUICK_REWARD_POLICY_GROWTH?'0':quick?bonusLabel(setting.xp||setting.score):'通常'}</b><b className="block text-[10px] text-fuchsia-100"><span aria-hidden="true">🌈</span> 虹のプシュケー：{applyQuickPsychePolicy(clearPsycheReward(key),battleMode,quickRewardPolicy)}個{quick?quickRewardPolicy===QUICK_REWARD_POLICY_PSYCHE?'（×2）':'（×1）':''}</b><b className="block text-[10px] text-amber-200">💎 ダイヤ：{quick?bonusLabel(setting.gold*(quickRewardPolicy===QUICK_REWARD_POLICY_DIAMOND?2:1)):`×${setting.gold}`}{quick&&quickRewardPolicy===QUICK_REWARD_POLICY_DIAMOND?'（×2）':''}</b>{pro&&(heroProofReward>0?<b data-hero-proof-reward={key} className="block text-[10px] text-amber-100">🏅勇者の証：{heroProofReward}個</b>:<span aria-hidden="true" className="block text-[10px]">&nbsp;</span>)}{quick&&heroProofShardReward>0&&<b data-hero-proof-shard-reward={key} className="block text-[10px] text-amber-100">🎖️ 勇者の証片：{heroProofShardReward}個</b>}</>}</div>
                         </div>
                         <div className={`grid gap-1.5 mt-1.5 ${quick?'mt-auto':''}`}>
                           {!species&&<button disabled={!!battleTutorial} onClick={()=>{setDifficulty(key);setShowWaveDetails(true);}} className="min-h-[38px] rounded-xl bg-slate-700 font-black text-xs disabled:opacity-30">全WAVE詳細</button>}
@@ -11875,7 +12082,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             // 失敗したときは1周も配らない。ただし「入らなかった」ことは曲リザルトで言う。
             // ここで何も渡さないと、裏で周回していた人には画面のどこにも理由が出ない
             if(!cleared&&baseLoops>0)setRhythmPlayRunAward({loops:0,baseLoops,cleared:false,scale:loopScale,
-              eventBoosted:loopScale>RHYTHM_PLAY_RUN_LOOP_SCALE,xp:0,gold:0,bond:0,psyche:0,fromLoop:0,toLoop:0});
+              eventBoosted:loopScale>RHYTHM_PLAY_RUN_LOOP_SCALE,xp:0,gold:0,bond:0,psyche:0,shard:0,fromLoop:0,toLoop:0});
             const awarded=loops>0?await awardRhythmPlayRunLoops(loops,loopScale,{cleared,baseLoops}):null;
             if(awarded){
               setRhythmPlayRunAward(awarded);
@@ -11936,7 +12143,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             dismissRhythmEventNotice={dismissRhythmEventNotice}
             handleGiveUp={handleGiveUp}
             mainHero={mainHero}
-            onExit={()=>{if(rhythmBackgroundRun){returnToBackgroundRun();return;}setGameState(RHYTHM_MODE_PUBLIC_RELEASE?'HOME':'DEBUG_SETTINGS');}}
+            exitingQuickRun={rhythmExitingRun}
+            onExit={exitRhythmSongSelect}
             onOpenEventRanking={()=>{
               // 曲えらびの案内から開く。期間限定を開催中ならそちらのタブ、なければ週間のタブ
               const kind=rhythmSongSelectEvent&&rhythmSongSelectEvent.kind==='limited'?'limited':'weekly';
@@ -12448,6 +12656,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onSelectBattleMode={setProfileBattleMode}
             onOpenEventReplayList={()=>setShowEventReplayList(true)}
             onOpenSpeciesRecords={()=>openSpeciesChallengeRecords('PROFILE')}
+            rhythmHistoryCount={rhythmHistoryCount}
+            onOpenRhythmHistory={openRhythmHistory}
           />
         )}
 
@@ -12742,6 +12952,22 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         )}
 
         {/* アイテム欄: 所持している消耗アイテムを一覧表示し、「使う」から対象のマスモンを選ぶ */}
+        {/* モンヒロビートの履歴: 終わった週・イベントの順位をあとから見る(表示専用) */}
+        {gameState==='RHYTHM_HISTORY'&&(
+          <RhythmHistoryScreen
+            entries={rhythmHistoryList}
+            selected={rhythmHistorySelected}
+            board={rhythmEventRanking.history}
+            divisionId={rhythmEventDivision.history}
+            rankingBreederIcon={rankingBreederIcon}
+            onBack={()=>setGameState('PROFILE')}
+            onSelect={selectRhythmHistory}
+            onClearSelection={()=>setRhythmHistorySelected(null)}
+            onSelectDivision={(id)=>loadRhythmHistoryBoard(rhythmHistorySelected,id)}
+            onRefresh={()=>loadRhythmHistoryBoard(rhythmHistorySelected,rhythmEventDivision.history||RHYTHM_EVENT_TOTAL_DIVISION)}
+          />
+        )}
+
         {gameState==='ITEM_INVENTORY'&&(
           <ItemInventoryScreen
             ownedItems={ownedItems}

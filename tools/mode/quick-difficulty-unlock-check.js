@@ -19,8 +19,8 @@ const difficultyOrder = [
   ...settingKeys(/const DIFFICULTY_SETTINGS = \{[\s\S]*?\n\};\n/, '通常難易度の一覧'),
   ...settingKeys(/const QUICK_EXTREME_SETTINGS = Object\.freeze\(\{[\s\S]*?\n\}\);\n/, 'クイックの極限難易度の一覧'),
 ];
-assert(difficultyOrder[0] === 'Beginner' && difficultyOrder[difficultyOrder.length - 1] === 'ULTIMATE',
-  '難易度の並びが Beginner で始まり ULTIMATE で終わる');
+assert(difficultyOrder[0] === 'Beginner' && difficultyOrder[difficultyOrder.length - 1] === 'GOD',
+  '難易度の並びが Beginner で始まり GOD で終わる');
 assert(difficultyOrder.indexOf('Easy') < difficultyOrder.indexOf('Master')
   && difficultyOrder.indexOf('Master') < difficultyOrder.indexOf('Legend')
   && difficultyOrder.indexOf('Legend') < difficultyOrder.indexOf('EXTREME'),
@@ -60,14 +60,23 @@ assert(unlocked('CHAOS', empty, empty, { CHAOS: 1 }), '極限のCHAOSクリア�
 assert(!unlocked('CHAOS', empty, empty, { NIGHTMARE: 1 }), 'NIGHTMAREクリアではクイックCHAOSが解放されない');
 assert(unlocked('ULTIMATE', empty, empty, { ULTIMATE: 1 }), '極限の同難易度ULTIMATEクリアでクイックULTIMATEが解放される');
 assert(!unlocked('ULTIMATE', empty, empty, { CHAOS: 1 }), 'CHAOSクリアだけではクイックULTIMATEが解放されない');
+assert(unlocked('INFINITY', empty, empty, { INFINITY: 1 }), '極限の同難易度INFINITYクリアでクイックINFINITYが解放される');
+assert(!unlocked('INFINITY', empty, empty, { ULTIMATE: 1 }), 'ULTIMATEクリアだけではクイックINFINITYが解放されない');
+assert(unlocked('GOD', empty, empty, { GOD: 1 }), '極限の同難易度GODクリアでクイックGODが解放される');
+assert(!unlocked('GOD', empty, empty, { INFINITY: 1 }), 'INFINITYクリアだけではクイックGODが解放されない');
+assert(unlocked('ULTIMATE', empty, empty, { GOD: 1 }), '上位のGODクリアで下のクイックULTIMATEも解放される');
 assert(source.includes('extremeDifficultyClears[d] = await storeGet(extremeClearCountKey(d), 0, false);'), '既存の極限クリア保存キーを読む');
 assert(source.includes('Object.keys(QUICK_DIFFICULTY_SETTINGS).map(async d =>'), '極限2難易度を含む既存クリア記録を読む');
 assert(source.includes("EXTREME: { label:'EXTREME', power:EXTREME_SETTING.power, xp:20, gold:4.5, psyche:30"), 'EXTREMEのクイック基準報酬が正しい');
 assert(source.includes("NIGHTMARE: { label:'NIGHTMARE', power:NIGHTMARE_SETTING.power, xp:25, gold:6, psyche:40"), 'NIGHTMAREのクイック基準報酬が正しい');
 assert(source.includes("CHAOS: { label:'CHAOS', power:CHAOS_SETTING.power, xp:30, gold:9, psyche:50"), 'CHAOSのクイック基準報酬が正しい');
-assert(source.includes("label:'ULTIMATE', power:ULTIMATE_SETTING.power, xp:35, gold:12, psyche:60"), 'ULTIMATEの非公開クイック基準報酬が正しい');
-const visibleQuickSettings=source.match(/const QUICK_DIFFICULTY_SETTINGS = Object\.freeze\(\{([\s\S]*?)\n\}\);/)?.[1]||'';
-assert(visibleQuickSettings&&!visibleQuickSettings.includes('ULTIMATE'), '通常クイック難易度一覧へULTIMATEをまだ公開しない');
+assert(source.includes("label:'ULTIMATE', power:ULTIMATE_SETTING.power, xp:35, gold:12, psyche:60"), 'ULTIMATEのクイック基準報酬が正しい');
+// INFINITY・GOD(2026-09-13・ユーザーが決めた案A)。経験値は+5刻み、ダイヤは極限本体の0.6倍、
+// 虹のプシュケーは極限本体と同値。クイックの1.5倍補正は実装側でかかる。
+assert(source.includes("INFINITY: { label:'INFINITY', power:INFINITY_SETTING.power, xp:40, gold:18, psyche:80"), 'INFINITYのクイック基準報酬が正しい');
+assert(source.includes("GOD: { label:'GOD', power:GOD_SETTING.power, xp:45, gold:24, psyche:100"), 'GODのクイック基準報酬が正しい');
+// 極限本体の定義を引くだけにして、敵強度をクイック側へ書き写さない
+assert(!/QUICK_EXTREME_SETTINGS[\s\S]{0,700}power:\s*\d/.test(source), 'クイックの敵強度は極限本体の定義を参照する');
 assert(source.includes("key==='EXTREME'?'―― 極限難易度 ――':'BATTLE DIFFICULTY'"), 'Legendの次のEXTREMEカードに極限難易度の区切りを表示する');
 assert(source.includes('disabled={(pro&&!proReady)||!quickUnlocked'), 'クイックだけに解放条件を適用する');
 

@@ -294,9 +294,11 @@ check('画面はタブを分けている(週間 / イベント)',
   &&screen.includes("const boardKind=rhythmRankingTab==='weekly'?'weekly':"));
 check('開催していないあいだはイベントのタブを出さない',
   screen.includes('...(eventReleased&&limitedEvent?[{id:\'event\',label:\'イベント\'}]:[]),'));
-check('週間とイベントの読み込みは別々に持つ',
-  app.includes("const loadRhythmEventRanking = useCallback(async (kind, divisionId) =>")
-  &&app.includes("useState({ weekly:RHYTHM_BOARD_EMPTY, limited:RHYTHM_BOARD_EMPTY })")
+// 2026-09-13、終わった回をあとから見る履歴(kind:'history')を足した。
+// 3つとも別々に持つ(片方を読み込んでも、もう片方の一覧が消えない)ことを見る
+check('週間とイベントと履歴の読み込みは別々に持つ',
+  app.includes("const loadRhythmEventRanking = useCallback(async (kind, divisionId, historyEntry = null) =>")
+  &&app.includes("useState({ weekly:RHYTHM_BOARD_EMPTY, limited:RHYTHM_BOARD_EMPTY, history:RHYTHM_BOARD_EMPTY })")
   &&screen.includes('const event=(boardKind&&boards[boardKind])||'));
 check('期間限定の期間は定義の日時そのまま',limited.every(e=>{
   const range=O.rhythmEventWindow(e,null);
@@ -421,7 +423,10 @@ check('週の窓はサーバーから受け取る',
 // 週間の期間の正本はサーバー。期間限定は定義に書いた日時をそのまま使うので聞きに行かない
 check('週間の期間はサーバーから受け取る',
   app.includes('const weekWindow = kind === \'weekly\' ? await sbFetchRhythmWeekWindow(')
-  &&app.includes("rhythmWeeklyEvent(weekWindow.startMs) : rhythmLimitedEventAt(Date.now())"));
+  // 2026-09-13、履歴を足したので三項が1つ増えた。今週はサーバーの窓、開催中は定義の日時、
+  // 履歴は終わっているので渡された期間をそのまま使う(聞きに行かない)
+  &&app.includes("kind === 'weekly' ? rhythmWeeklyEvent(weekWindow.startMs)")
+  &&app.includes("rhythmLimitedEventAt(Date.now());"));
 check('期間×対象曲の集計は関数を呼ぶ',
   supa.includes('/rest/v1/rpc/rhythm_event_song_bests')&&supa.includes('/rest/v1/rpc/rhythm_event_totals'));
 // ★行の文字列そのままを見ない。曲ごとのほうは party の取り直しを足したときに

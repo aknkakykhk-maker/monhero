@@ -21,6 +21,7 @@ function ProfileScreen({
   profileBattleMode, quickHighestWaves, resolveIconUrl, selectedAssistantId, speciesChallengeProgress,
   onBack, onOpenNameEdit, onOpenIconPicker, onOpenItems, onOpenCallStylePicker, onOpenAssistantPicker,
   onSelectBattleMode, onOpenEventReplayList, onOpenSpeciesRecords,
+  rhythmHistoryCount, onOpenRhythmHistory,
 }) {
   return (
       <div data-mh-screen className="flex-1 flex flex-col h-full min-h-0 p-4">
@@ -193,6 +194,21 @@ function ProfileScreen({
             )}
           </section>;
         })()}
+        {/* モンヒロビートの履歴: 終わった週間ランキング・イベントの順位をあとから見る。
+            2026-09-13・ユーザー依頼「モンビーのイベントや週間ランキングの終わったものを
+            ヒストリー的に見れる機能」。置き場所もユーザーが決めた(プロフィール)。
+            ★見るだけ。報酬の受け取りには一切関わらない。
+            ★まだ終わった回が1つも無いあいだは出さない(押しても空の一覧しか出ないため) */}
+        {onboarded&&!onboardingPreview&&Number(rhythmHistoryCount)>0&&(
+          <button type="button" data-profile-rhythm-history onClick={onOpenRhythmHistory} className="w-full mb-4 flex items-center gap-2 bg-amber-950/40 border border-amber-400/40 px-4 py-3 rounded-2xl active:scale-[.98]">
+            <Trophy size={14} className="text-amber-300 shrink-0"/>
+            <span className="flex-1 min-w-0 text-left">
+              <b className="block text-[11px] font-black text-amber-100">モンヒロビート これまでの記録</b>
+              <small className="block text-[9px] text-amber-300/70">終わった週間ランキング・イベントの順位を見られます（{rhythmHistoryCount}件）</small>
+            </span>
+            <ChevronRight size={16} className="shrink-0 text-amber-400"/>
+          </button>
+        )}
         {/* イベント回想: 見たことのある会話イベントを、あとから何度でも見返せる。
             見るだけで、初回閲覧フラグ・助手選択・仲良し度・通常のアップデート通知には一切影響しない */}
         {onboarded&&!onboardingPreview&&(()=>{

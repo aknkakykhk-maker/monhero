@@ -359,7 +359,9 @@ const Audio_ = (() => {
     try {
       const buffer=await loadBuffer(track.src),ctx=await ensureAudioCtxRunning();
       if(!ctx) return null;
-      let source=null,startedAt=ctx.currentTime,offsetSeconds=0,playing=false,stopped=false,naturallyEnded=false,gainEntry=null;
+      // outputLatencySeconds … 音が耳へ届くまでの遅れ。曲を鳴らしはじめるたびに1回だけ測って固定する
+      // (data/rhythm-mode.js の rhythmAudioOutputLatencyMs。鳴っている最中に読み直すと曲の時刻が飛ぶ)
+      let source=null,startedAt=ctx.currentTime,offsetSeconds=0,playing=false,stopped=false,naturallyEnded=false,gainEntry=null,outputLatencySeconds=0;
       const dropGainEntry=()=>{if(gainEntry){activeRhythmGains.delete(gainEntry);gainEntry=null;}};
       const startSource=offset=>{
         if(stopped||offset>=buffer.duration){naturallyEnded=true;return false;}
@@ -375,10 +377,15 @@ const Audio_ = (() => {
         // 出口の手前(masterOut)だけは通す。音は変わらず、音量計で鳴っているか見られるようになる
         nextSource.buffer=buffer; nextSource.loop=loop; nextSource.connect(rhythmGain);rhythmGain.connect(masterOut||ctx.destination);
         source=nextSource; offsetSeconds=offset; startedAt=ctx.currentTime; playing=true;
+        outputLatencySeconds=rhythmAudioOutputLatencyMs(ctx)/1000;
         nextSource.onended=()=>{if(source===nextSource&&playing){playing=false;naturallyEnded=true;source=null;}};
         nextSource.start(0,offset); return true;
       };
-      const songTimeSeconds=()=>Math.min(buffer.duration,Math.max(0,offsetSeconds+(playing?ctx.currentTime-startedAt:0)));
+      // 耳に届いている位置を返す。ctx.currentTime は「送り出した」時刻なので、出力遅延ぶん引く。
+      // 引かないと、音に合わせて叩く人が必ずその分だけ遅れて判定される(MARVELOUSは±55ms)。
+      // 見た目も判定も同じこの値から出ているので、ここ1か所でそろう。
+      // 鳴らしはじめの遅延ぶんは Math.max(0,…) が 0 に留める(音が出る前にノーツが動き出さない)
+      const songTimeSeconds=()=>Math.min(buffer.duration,Math.max(0,offsetSeconds+(playing?ctx.currentTime-startedAt-outputLatencySeconds:0)));
       if(autoStart)startSource(0);
       return {
         // autoStart:false で用意したぶんを、頭から鳴らし始める。

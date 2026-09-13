@@ -132,7 +132,20 @@ const RHYTHM_BEST_RECORDS_KEY = 'mh_rhythm_best_v1';
 // 際限なく増やさないよう直近の件数だけ保つ
 const RHYTHM_RANKING_PENDING_KEY = 'mh_rhythm_rank_pending_v1';
 const RHYTHM_RANKING_PENDING_MAX = 20;
-const RHYTHM_EFFECT_LEVELS = Object.freeze(['NORMAL','LOW','MINIMAL']);
+// 演出量の段。**重い順**に並べる(この順そのものが「どちらが軽いか」の正本)。
+// 2026-09-13にユーザー指摘「通常が今までの多めの演出量になってる気がする」。
+// 実際そのとおりで、LOW が止めていたのは判定文字の流れるグラデーションとぼかしの枚数だけ。
+// 判定ラインの脈打ち・マスモンの跳ね・コンボの跳ねなど**ずっと動き続けるもの**は
+// NORMAL と同じままだった。そこで LIGHT を1段足し(「段を増やして更に標準をもっと軽くする」)、
+// 既定をそこへ置いた。既存のIDは足しただけで意味を変えていない(CLAUDE.md ⑦)。
+const RHYTHM_EFFECT_LEVELS = Object.freeze(['NORMAL','LOW','LIGHT','MINIMAL']);
+// 「この段より軽い側か」を1か所で判定する。段を足すたびに条件を書き足さなくて済む。
+// 例: rhythmEffectAtMost(settings.effectAmount,'LIGHT') は LIGHT と MINIMAL で true
+const rhythmEffectRank = (amount)=>{
+  const index=RHYTHM_EFFECT_LEVELS.indexOf(amount);
+  return index<0?RHYTHM_EFFECT_LEVELS.indexOf(DEFAULT_RHYTHM_SETTINGS.effectAmount):index;
+};
+const rhythmEffectAtMost = (amount,level)=>rhythmEffectRank(amount)>=RHYTHM_EFFECT_LEVELS.indexOf(level);
 // コンボの節目でお祝いを出す刻み。100コンボごと。
 const RHYTHM_COMBO_MILESTONE_STEP = 100;
 // コンボ数の見せ方の段(2026-09-12・ユーザー指示
@@ -194,15 +207,35 @@ const RHYTHM_TIMING_OFFSET_STEP_MS = 1;
 //   NORMAL … いまのまま(粒が2.1倍・画面全体が金色に光る・そのマスモンが大きく跳ねる)
 //   LIGHT  … **画面全体の光をやめる**。粒と跳ねは残す。いちばん重いのが全画面の描き直し
 //   OFF    … 粒もふつうのノーツと同じにして、跳ねもやめる
-// ★どの段でも**音・能力名・振動は残す**。取れたことが分からなくなるのがいちばん困るため。
+//   NONE   … **ノーツに乗るマスモンの絵を出さない**。能力名の大きな表示も出さない
+// ★NONE を足した理由(2026-09-13・ユーザー指摘「モンスターノーツの演出もっと軽いの設定で
+//   選べるようにしてほしい / あれは踏んだときまだカクつきがある / ちなみに設定は最小」)。
+//   モンスターノーツだけは、canvasに描くのとは**別に**マスモンの絵をDOMの要素で重ね、
+//   毎フレーム transform と scale を書き換えている(30-rhythm-play.jsx の tick)。
+//   ふつうのノーツには無い処理なので、OFF にしてもここだけは残っていた。
+//   NONE では絵そのものを作らないので、モンスターノーツもふつうのノーツと同じ扱いになる。
+//   金色の粒は canvas 側で描くので、どれがモンスターノーツかは色で分かる。
+// ★どの段でも**音・振動・能力の効果は残す**。取れたことが分からなくなるのがいちばん困るため
+//   (能力名の大きな表示だけは NONE で出さない。効いていることは左上のバッジで分かる)。
 // ★既定は LIGHT。2026-09-13にユーザーから「演出量が普通だと重いという声が多い /
 //   少なめをデフォルトにして今の普通を多めとかにしたい / モンスターノーツも同じく」。
 //   同日さらに「デフォルトの名称を標準にして」と指示があり、**既定の段を「標準」と呼ぶ**
 //   ことにした(多め / 標準 / 最小)。演出量も同じ並びにそろえてある。
 //   IDは変えない(保存済みの値の意味が変わらないようにするため。CLAUDE.md ⑦)。
 //   変えるのは**画面に出す名前と既定値だけ**なので、自分で選んで保存した人はそのまま。
-const RHYTHM_MONSTER_EFFECT_LABELS = Object.freeze([['NORMAL','多め'],['LIGHT','標準'],['OFF','最小']]);
+const RHYTHM_MONSTER_EFFECT_LABELS = Object.freeze([['NORMAL','多め'],['LIGHT','標準'],['OFF','少なめ'],['NONE','最小']]);
 const RHYTHM_MONSTER_EFFECT_LEVELS = Object.freeze(RHYTHM_MONSTER_EFFECT_LABELS.map(([id])=>id));
+// 「この段より軽い側か」を1か所で判定する(演出量の rhythmEffectAtMost と同じ考え方)。
+// ★段の名前を並べて比べない。2026-09-13に「最小(NONE)」を足したとき、踏んだ瞬間の
+//   大きな光を外す条件が `!=='OFF'` のままだったため、**いちばん軽いはずの「最小」で
+//   「少なめ」より重い光(900ms・粒2.1倍)が出ていた**。段を足すたびに条件を書き足す
+//   書き方だと、また同じ取りこぼしが起きる。順位で比べればその心配がない。
+// 例: rhythmMonsterEffectAtMost(level,'OFF') は OFF と NONE で true
+const rhythmMonsterEffectRank = (level)=>{
+  const index=RHYTHM_MONSTER_EFFECT_LEVELS.indexOf(level);
+  return index<0?RHYTHM_MONSTER_EFFECT_LEVELS.indexOf(DEFAULT_RHYTHM_SETTINGS.monsterNoteEffect):index;
+};
+const rhythmMonsterEffectAtMost = (level,limit)=>rhythmMonsterEffectRank(level)>=RHYTHM_MONSTER_EFFECT_LEVELS.indexOf(limit);
 // コンボ数の大きさ(2026-09-13・ユーザー依頼「コンボ数のサイズ設定もほしい」)。
 // 置き場所ごとの基準の大きさ(真ん中52px / 端34px)へ、この割合を掛ける。
 // コンボ数の濃さ(2026-09-13・ユーザー依頼「オプションにコンボ数表記の透過度の設定」)。
@@ -210,14 +243,29 @@ const RHYTHM_MONSTER_EFFECT_LEVELS = Object.freeze(RHYTHM_MONSTER_EFFECT_LABELS.
 const RHYTHM_COMBO_OPACITY_MIN = 30;
 const RHYTHM_COMBO_OPACITY_MAX = 100;
 const RHYTHM_COMBO_OPACITY_STEP = 10;
+// ライフ表示の大きさ(2026-09-13・ユーザー依頼「ライフ表示が目立たないからもっと大きく
+// 見やすくしてほしい（設定調整可能）」)。100%がそれまでの大きさで、既定はひと回り大きい150%。
+// 太さ・ハート・数字にそのまま掛かる。横幅だけは台形の外の空きに収める都合で伸びを抑える。
+const RHYTHM_LIFE_SIZE_MIN = 100;
+const RHYTHM_LIFE_SIZE_MAX = 200;
+const RHYTHM_LIFE_SIZE_STEP = 10;
+// 判定ラインの高さ(2026-09-13・ユーザー依頼「タップする判定ラインの位置を
+// オプションでいじれるようにしたい / 下過ぎて使いづらいという声があり」)。
+// プレイエリアの**下から何%**か。既定の12はこれまでと同じ位置で、
+// 大きくするほど上へ上がる(指が画面の下へ届かない端末向け)。
+// ★上限は32%で止める。これを越えると判定ラインがエリアの上半分へ入り、
+//   「まだ形が決まっていない」と見なす見張り(rhythmTravelLooksReady)とぶつかる。
+const RHYTHM_JUDGMENT_LINE_HEIGHT_MIN = 8;
+const RHYTHM_JUDGMENT_LINE_HEIGHT_MAX = 32;
+const RHYTHM_JUDGMENT_LINE_HEIGHT_STEP = 2;
 const RHYTHM_COMBO_SIZE_MIN = 70;
 const RHYTHM_COMBO_SIZE_MAX = 150;
 const RHYTHM_COMBO_SIZE_STEP = 10;
 const RHYTHM_LANE_GLOW_LABELS = Object.freeze([['NORMAL','標準'],['LOW','控えめ'],['NONE','なし']]);
-// ★既定は LOW。2026-09-13・ユーザー指摘「演出量が普通だと重いという声が多い」。
-//   IDはそのまま(NORMAL=いちばん盛る段)。いちばん盛る段を「多め」へ、既定になった LOW を
-//   「標準」と呼ぶ(2026-09-13・ユーザー指示「デフォルトの名称を標準にして」)。
-const RHYTHM_EFFECT_LABELS = Object.freeze([['NORMAL','多め'],['LOW','標準'],['MINIMAL','最小']]);
+// ★既定は LIGHT(標準)。重い順に 最大 / 多め / 標準 / 最小 の4段。
+//   2026-09-13・ユーザー指示「段を増やして更に標準をもっと軽くする」。
+//   名前は重さの順に読めるようにそろえてある(既定が「標準」なのは前の指示のまま)。
+const RHYTHM_EFFECT_LABELS = Object.freeze([['NORMAL','最大'],['LOW','多め'],['LIGHT','標準'],['MINIMAL','最小']]);
 const RHYTHM_SIDE_MONSTER_OPACITY_LABELS = Object.freeze([['NORMAL','はっきり'],['SOFT','ふつう'],['FAINT','うっすら'],['OFF','出さない']]);
 const RHYTHM_SIDE_MONSTER_MOTION_LABELS = Object.freeze([['NORMAL','跳ねる'],['SMALL','小さく跳ねる'],['NONE','動かない']]);
 // ★AUTO(おすすめ)は「台形の外でいちばん広く空いているところ」(2026-09-13・ユーザー提案
@@ -230,17 +278,24 @@ const RHYTHM_COMBO_POSITION_LABELS = Object.freeze([['AUTO','おすすめ'],['LE
 const RHYTHM_COMBO_POSITIONS = Object.freeze(RHYTHM_COMBO_POSITION_LABELS.map(([id])=>id));
 const RHYTHM_LANE_GLOW_LEVELS = Object.freeze(['NORMAL','LOW','NONE']);
 const RHYTHM_JUDGMENT_IDS = Object.freeze(['MARVELOUS','EXCELLENT','GREAT','GOOD','BAD','MISS']);
-// ランク(G〜M)の表示色(暫定値)。下位ほど地味な色、上位ほど鮮やかにして一目で分かるようにする。
+// ランク(G〜M)の表示色。
+// このゲームは間合い適性(DIST_APTITUDE_COLOR)でも同じ G〜M の記号を使っていて、
+// そこでは「Mは紫、S系は黄、Aは赤、Bはピンク、Cは緑、Dは青緑…」と決まっている。
+// モンビーだけ別の配色にしていたため、同じ「A」でも画面によって色が違っていた
+// (2026-09-13・ユーザー指示「モンビーのランクもこのゲームの距離適性別色にあわせて」)。
+// 色はそちらに合わせる。SSとSだけは、並んだときに見分けられるよう黄の濃さを変える。
+// 対応がずれていないかは tools/mode/rhythm-rank-color-check.js が見張る。
 const RHYTHM_RANK_COLORS = Object.freeze({
-  G:'text-slate-500', F:'text-slate-300', E:'text-lime-400', D:'text-lime-300',
-  C:'text-amber-300', B:'text-orange-300', A:'text-cyan-300', S:'text-fuchsia-300',
-  SS:'text-fuchsia-200', M:'text-yellow-200',
+  G:'text-slate-400', F:'text-purple-300', E:'text-cyan-300', D:'text-teal-300',
+  C:'text-green-300', B:'text-pink-300', A:'text-red-400', S:'text-yellow-400',
+  SS:'text-yellow-200', M:'text-fuchsia-300',
 });
 const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   bgmVolume:100, noteSpeed:6, noteSize:100, noteStartPosition:0, displayTimingOffsetMs:0, judgmentTimingOffsetMs:0,
-  fastSlowDisplay:true, judgmentTextDisplay:true, judgmentTextPosition:50, comboDisplay:true, comboPosition:'AUTO', comboSize:100, comboOpacity:100, holdSlideOpacity:80, laneGlow:'NORMAL',
+  fastSlowDisplay:true, judgmentTextDisplay:true, judgmentTextPosition:50, comboDisplay:true, comboPosition:'AUTO', comboSize:100, comboOpacity:100, lifeDisplaySize:150, holdSlideOpacity:80, laneGlow:'NORMAL',
   monsterNoteEffect:'LIGHT',
-  noteSeVolume:70, noteSeEnabled:true, vibrationEnabled:false, effectAmount:'LOW', lightweightMode:false,
+  judgmentLineHeight:12,
+  noteSeVolume:70, noteSeEnabled:true, vibrationEnabled:false, effectAmount:'LIGHT', lightweightMode:false,
   livePartnerVisible:true,
   // 両サイドのマスモン(2026-09-05)。既存の保存値には無いので、読み込み時は既定で補われる。
   sideMonsterOpacity:'NORMAL', sideMonsterMotion:'NORMAL', sideMonsterAbilityHighlight:true,
@@ -278,6 +333,10 @@ const normalizeRhythmSettings = value => {
     comboDisplay:bool('comboDisplay'),
     comboPosition:RHYTHM_COMBO_POSITIONS.includes(source.comboPosition)?source.comboPosition:DEFAULT_RHYTHM_SETTINGS.comboPosition,
     comboSize:rhythmFiniteStep(source.comboSize,RHYTHM_COMBO_SIZE_MIN,RHYTHM_COMBO_SIZE_MAX,RHYTHM_COMBO_SIZE_STEP,DEFAULT_RHYTHM_SETTINGS.comboSize),
+    lifeDisplaySize:rhythmFiniteStep(source.lifeDisplaySize,RHYTHM_LIFE_SIZE_MIN,RHYTHM_LIFE_SIZE_MAX,RHYTHM_LIFE_SIZE_STEP,DEFAULT_RHYTHM_SETTINGS.lifeDisplaySize),
+    // ★新しい項目。これまでの保存値には無いので、読むときに既定(12)で補われる
+    //   ＝これまでどおりの位置。既存のキーは触らない(CLAUDE.md ⑦)
+    judgmentLineHeight:rhythmFiniteStep(source.judgmentLineHeight,RHYTHM_JUDGMENT_LINE_HEIGHT_MIN,RHYTHM_JUDGMENT_LINE_HEIGHT_MAX,RHYTHM_JUDGMENT_LINE_HEIGHT_STEP,DEFAULT_RHYTHM_SETTINGS.judgmentLineHeight),
     comboOpacity:rhythmFiniteStep(source.comboOpacity,RHYTHM_COMBO_OPACITY_MIN,RHYTHM_COMBO_OPACITY_MAX,RHYTHM_COMBO_OPACITY_STEP,DEFAULT_RHYTHM_SETTINGS.comboOpacity),
     monsterNoteEffect:RHYTHM_MONSTER_EFFECT_LEVELS.includes(source.monsterNoteEffect)?source.monsterNoteEffect:DEFAULT_RHYTHM_SETTINGS.monsterNoteEffect,
     holdSlideOpacity:rhythmFiniteInRange(source.holdSlideOpacity,10,100,DEFAULT_RHYTHM_SETTINGS.holdSlideOpacity),

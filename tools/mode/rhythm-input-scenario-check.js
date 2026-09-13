@@ -33,7 +33,7 @@ vm.runInContext(src+'\nglobalThis.__x={rhythmMatchInputBatch,RHYTHM_GESTURE_RUNT
   +'rhythmFloatingNoteAdd,rhythmFloatingNoteRemove,RHYTHM_HOLD_RELEASE_GRACE_MS,RHYTHM_HOLD_HANDOVER_GRACE_MS,'
   +'rhythmJudgeReleaseLenient,rhythmJudgeRelease,rhythmInputAgeMs,RHYTHM_INPUT_AGE_MAX_MS,RHYTHM_JUDGMENTS,'
   +'RHYTHM_INPUT_MATCH_WINDOW_MS,rhythmLaneCoordinateAtPoint,rhythmSubLaneCoordinateAtPoint,rhythmProjectBoundary,'
-  +'RHYTHM_FLICK_DISTANCE_PX,RHYTHM_FLICK_MAX_MS,RHYTHM_END_FLICK_ARM_MS};',ctx);
+  +'RHYTHM_FLICK_DISTANCE_PX,RHYTHM_FLICK_MAX_MS,RHYTHM_END_FLICK_ARM_MS,rhythmInputAgeResetFloor};',ctx);
 const X=ctx.__x,match=X.rhythmMatchInputBatch,RT=X.RHYTHM_GESTURE_RUNTIME;
 const judgeTap=delta=>X.RHYTHM_JUDGMENTS.find(item=>item.windowMs!==null&&Math.abs(delta)<=item.windowMs)?.id||'MISS';
 
@@ -274,9 +274,24 @@ section('FLICK: 成立・不成立・終点フリック');
 
 section('入力の古さの補正(event.timeStamp)');
 {
+  X.rhythmInputAgeResetFloor();
   check('30ms前に起きたイベントは30msぶん巻き戻す',X.rhythmInputAgeMs(1000,1030)===30);
-  check('上限(80ms)より古い値は使わない(時計の基準が違う可能性)',X.rhythmInputAgeMs(1000,1100)===0&&X.rhythmInputAgeMs(1e12,1000)===0);
   check('未来・欠損は0',X.rhythmInputAgeMs(2000,1000)===0&&X.rhythmInputAgeMs(undefined,1000)===0);
+  // 【2026-09-13】上限より古い値の扱いを、原因で分けた。
+  // 「時計の基準が違う端末」は従来どおり使わない。「その瞬間だけ処理が詰まった」ほうは
+  // 捨てると判定が81msぶん遅れ側へ飛ぶので、上限まで戻す。見分けは差の最小値で行う。
+  X.rhythmInputAgeResetFloor();
+  check('基準がそろったと分かる前は、上限より古い値を使わない',
+    X.rhythmInputAgeMs(1000,1100)===0&&X.rhythmInputAgeMs(1e12,1000)===0);
+  X.rhythmInputAgeResetFloor();
+  X.rhythmInputAgeMs(1000,1005);                 // 差5ms。基準はそろっている
+  check('基準がそろっていれば、一時的に詰まった入力は上限まで巻き戻す',
+    X.rhythmInputAgeMs(1000,1200)===X.RHYTHM_INPUT_AGE_MAX_MS,`→${X.rhythmInputAgeMs(1000,1200)}ms`);
+  X.rhythmInputAgeResetFloor();
+  [0,1,2,3].forEach(i=>X.rhythmInputAgeMs(1000+i,1300+i));   // 差がいつも300ms＝基準が違う
+  check('差がいつも大きい端末(基準が違う)では、これまでどおり使わない',
+    X.rhythmInputAgeMs(1000,1300)===0);
+  X.rhythmInputAgeResetFloor();
   reset();
   const run=makeRun([tap(1000,4,2)]);
   starts(run,[at('touch:1',4.5)],1060,30);   // 処理が1060msでも、指が触れたのは1030ms

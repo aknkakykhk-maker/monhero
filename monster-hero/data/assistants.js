@@ -603,6 +603,12 @@ const ASSISTANT_SCENES = {
     help: 'rhythm/rhythm-ranking',
     lines: [],
   },
+  // これまでの記録(2026-09-13)。プロフィールから入る、終わった週・イベントの一覧。
+  // 本文は下の addAssistantLinePack から合流する。
+  rhythmHistory: {
+    help: 'rhythm/rhythm-history',
+    lines: [],
+  },
   // マスモン設定(モンスターノーツ)。本文は下の addAssistantLinePack から合流する。
   rhythmMonsters: {
     help: 'rhythm/rhythm-monster-note-display',
@@ -3191,6 +3197,22 @@ const stampSceneAuthoredLines = () => {
   }
 };
 stampSceneAuthoredLines();
+
+// これまでの記録(2026-09-13・ユーザー依頼「モンビーのイベントや週間ランキングの
+// 終わったものをヒストリー的に見れる機能」)。プロフィールから入る一覧の案内。
+addAssistantLinePack({
+  id: 'rhythmHistory',
+  label: 'モンヒロビート・これまでの記録',
+  lines: {
+    rhythmHistory: [
+      { e:'normal',  t:'終わった週間ランキングとイベントの順位を、あとから見られるよ。' },
+      { e:'happy',   t:'見たい回をえらぶと、そのときの順位を数え直して出すね♪' },
+      { e:'normal',  t:'ここは見るだけの場所だよ。報酬の受け取りはここではできないの。' },
+      { e:'wink',    t:'先週どれくらいだったっけ？ っていうときに覗いてみて♪' },
+      { e:'excited', t:'自分の記録が残ってると、続けてきたんだなーって思えるよね！' },
+    ],
+  },
+});
 
 // 束を ASSISTANT_SCENES へ合流させる。二重に合流しないよう、済んだ束は覚えておく
 //   lines      … { 場面キー: [ …セリフ… ] } を通常のセリフへ足す

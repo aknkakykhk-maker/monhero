@@ -1051,7 +1051,7 @@ const HERO_PROOF_SHARD_ITEM = Object.freeze({
   name:'勇者の証片',
   emoji:'🎖️',
   usage:'heroProofShard',
-  desc:`モンヒロビートの週間ランキングでもらえるかけら。マーケットで${HERO_PROOF_SHARD_PER_PROOF}個ごとに「勇者の証」1個と交換できる。`,
+  desc:`モンヒロビートの週間ランキングと、クイックモードGODのクリアでもらえるかけら。マーケットで${HERO_PROOF_SHARD_PER_PROOF}個ごとに「勇者の証」1個と交換できる。`,
 });
 const HERO_PROOF_CLEAR_REWARDS = Object.freeze({
   extreme:Object.freeze({ GOD:1, RAGNAROK:2 }),
@@ -1070,6 +1070,15 @@ const heroProofClearReward = ({
   if (extremeDifficulty) return HERO_PROOF_CLEAR_REWARDS.extreme[extremeDifficulty] || 0;
   return 0;
 };
+// クイックの高難易度でもらえる勇者の証片(2026-09-13・ユーザーが決めた)。
+// 配るのは「証」ではなく「証片」なので、上の表とは別に持つ(20個で証1個と交換)。
+// クイックは∞周回とモンヒロビート連動で周回数がまとまって入るため、虹のプシュケーと
+// 同じく「1周につき◯個」を周回数ぶん配る。デバッグ戦では配らない。
+const HERO_PROOF_SHARD_CLEAR_REWARDS = Object.freeze({
+  quick:Object.freeze({ GOD:1 }),
+});
+const heroProofShardClearReward = ({ runMode, difficulty, debug=false } = {}) =>
+  debug || !isQuickMode(runMode) ? 0 : (HERO_PROOF_SHARD_CLEAR_REWARDS.quick[difficulty] || 0);
 // 超越ポイントリセットの書。マーケット(data/breeder.js)の同じIDを指す
 const TRANSCEND_RESET_ITEM_ID = 'transcend_reset_scroll';
 const BREAKTHROUGH_ITEM_BASE = 5;

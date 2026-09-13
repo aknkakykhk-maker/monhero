@@ -165,6 +165,15 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
             {/* 【2026-09-05・ユーザー指示】「ノーツの開始位置（奥行き）もオプションで調整できるようにしたい」 */}
             {field('ノーツの出る位置',stepper('noteStartPosition',-100,100,5,{fine:5,coarse:25}),
               'ノーツが画面のどのあたりから出てくるかを変えます。マイナスにすると奥（画面の上の外側）から、プラスにすると手前寄りから出てきます。判定ラインの位置・判定のタイミング・判定窓・スコアは変わりません。ノーツが流れてくる時間も変わらないので、手前から出すほど見えているあいだの動きは速く見えます。',{full:true})}
+            {/* 判定ラインの高さ(2026-09-13・ユーザー依頼「タップする判定ラインの位置を
+                オプションでいじれるようにしたい / 下過ぎて使いづらいという声があり」)。
+                ★判定の幅(秒数)も譜面も変わらない。ノーツが流れ着く先を一緒に上げるだけ */}
+            {field('判定ラインの高さ',stepper('judgmentLineHeight',RHYTHM_JUDGMENT_LINE_HEIGHT_MIN,RHYTHM_JUDGMENT_LINE_HEIGHT_MAX,RHYTHM_JUDGMENT_LINE_HEIGHT_STEP,{fine:RHYTHM_JUDGMENT_LINE_HEIGHT_STEP,coarse:RHYTHM_JUDGMENT_LINE_HEIGHT_STEP*4,suffix:'%'}),
+              'タップする判定ラインを、画面の下から何％の高さに置くかです。大きくするほど上へ上がり、指が届きやすくなります（12％が2026-09-13より前の位置です）。ノーツも弾ける光も判定文字も一緒に上がります。判定の幅（秒数）・スコア・譜面は変わりません。ただしレーンは奥へ行くほど狭くなるので、上げすぎると横の幅が狭く感じられます。',{full:true})}
+            {/* ライフ表示の大きさ(2026-09-13・ユーザー依頼「ライフ表示が目立たないから
+                もっと大きく見やくしてほしい（設定調整可能）」)。既定は150% */}
+            {field('ライフ表示の大きさ',stepper('lifeDisplaySize',RHYTHM_LIFE_SIZE_MIN,RHYTHM_LIFE_SIZE_MAX,RHYTHM_LIFE_SIZE_STEP,{fine:RHYTHM_LIFE_SIZE_STEP,coarse:RHYTHM_LIFE_SIZE_STEP*5,suffix:'%'}),
+              '画面の右上に出るライフ（♥のゲージと数字）の大きさです。100%が2026-09-13より前の大きさで、既定は150%です。ゲージは長さも太さも倍率どおりに伸び、数字も大きくなります。横画面ではもともとの長さが倍あるので、そのぶん長く伸びます。ハートだけは伸びをゆるめてあります（ここが行の高さを決めていて、大きくするとポーズボタンがレーンの台形へ寄ってしまうため）。ライフの減り方・DOWNの決まりは変わりません。',{full:true})}
             {field('FAST / SLOW表示',toggle('fastSlowDisplay'))}
             {field('判定文字表示',toggle('judgmentTextDisplay'))}
             {field('レーン発光',segments('laneGlow',RHYTHM_LANE_GLOW_LABELS),null,{full:true})}
@@ -183,7 +192,10 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
             </>,'出す/出さないと、出す場所（おすすめ・左・中央・右・右上）、字の大きさ（70〜150%）、濃さ（30〜100%）を選べます。上から順に「出す/出さない」「場所」「字の大きさ」「濃さ」です。%の行は2つあり、上が字そのものの大きさ、下が濃さ（100%がいちばん濃く、下げるほど透けてノーツが見やすくなります）です。端へ寄せる3つは、両サイドのマスモンに重ならないところへ出ます。大きさを上げると、端に寄せたときはレーンにかかることがあります。どこに置いても判定・スコア・コンボの数え方は変わりません。',{full:true})}
             {field('両サイドのマスモン｜濃さ',segments('sideMonsterOpacity',RHYTHM_SIDE_MONSTER_OPACITY_LABELS),
               'レーンの外側の空いたところへ、設定したマスモンが出て拍に合わせて跳ねます。ノーツが見づらいときや、端末が熱くなりやすいときは薄くするか止めてください。',{full:true})}
-            {field('両サイドのマスモン｜動き',segments('sideMonsterMotion',RHYTHM_SIDE_MONSTER_MOTION_LABELS),null,{full:true})}
+            {/* ★ここが動き方の正本。演出量では止めない(2026-09-13・ユーザー指摘
+                「マスモンの動きが演出量で制御されてる / マスモンの動きは別に設定がある」) */}
+            {field('両サイドのマスモン｜動き',segments('sideMonsterMotion',RHYTHM_SIDE_MONSTER_MOTION_LABELS),
+              'レーンの外側のマスモンが拍に合わせて跳ねる動きです。動く・動かないはここだけで決まり、「演出量」を下げても変わりません。止めたいときは「動かない」を選んでください（「軽量モード」を入れたときは、重いものをまとめて止めるためここも止まります）。',{full:true})}
             {/* マスモンの項目なので、マスモンの並びへ置く(コンボ数のあいだに挟まっていた) */}
             {field('マスモン｜能力中に光らせる',toggle('sideMonsterAbilityHighlight'),null,{full:true})}
           </div>
@@ -215,11 +227,11 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
                 「重い」との声)。判定文字の金の帯・虹の流れは毎フレーム字を塗り直すので、
                 動きがカクつく端末ではここがいちばん効く */}
             {field('演出量',segments('effectAmount',RHYTHM_EFFECT_LABELS),
-              '既定は「標準」です（重いという声が多かったため、2026-09-13にひとつ軽い段を標準にしました。以前「標準」と呼んでいた段が「多め」です）。「標準」は判定文字の金色の帯や虹が流れるのを止め、光のにじみを減らします。色・グラデーション・字の大きさは「多め」と同じままなので、見た目はほとんど変わりません。よく動く端末で派手にしたいときは「多め」にしてください。「最小」にすると、それに加えて100コンボごとの演出や光そのものもほぼ出なくなります。',{full:true})}
+              '重い順に「最大」「多め」「標準」「最小」の4段で、既定は「標準」です。判定・判定窓・スコアはどの段でも変わりません。\n「最大」＝2026-09-13より前の見た目そのまま。判定文字の金色の帯や虹が流れ、判定ラインが拍に合わせて脈打ち、コンボ数が跳ね、両サイドのマスモンも跳ねます。\n「多め」＝判定文字の流れと光のにじみだけ止めます（色・大きさはそのまま）。\n「標準」＝それに加えて、曲のあいだずっと動き続けるものを止めます。判定ラインの脈打ち、コンボ数の跳ねと枠の脈動、判定文字が出た瞬間に弾む動き、ノーツを取り切ったときの光です。判定ラインで弾ける光・100コンボごとのお祝い・フルコンボの大きな表示は残るので、手ごたえは変わりません。両サイドのマスモンの動きはここでは変わりません（専用の「両サイドのマスモン｜動き」で決めます）。\n「最小」＝光そのものと100コンボごとの演出も出なくなります。',{full:true})}
             {/* モンスターノーツだけを軽くしたい人向け(2026-09-13・ユーザー依頼
                 「設定でモンスターノーツを踏んだときの軽量化バージョンもほしい」) */}
             {field('モンスターノーツの演出',segments('monsterNoteEffect',RHYTHM_MONSTER_EFFECT_LABELS),
-              'モンスターノーツを取ったときの演出の強さです。既定は「標準」で、画面全体が金色に光るのをやめます（いちばん重いのがこの全画面の描き直しです）。粒と跳ねは残ります。「多め」にすると全画面の光も出ます（2026-09-13より前に「標準」と呼んでいた段です）。「最小」にすると、光る粒もふつうのノーツと同じになり、両サイドのマスモンも跳ねません。どの段でも、音・能力名・振動はそのまま残るので、取れたことは分かります。',{full:true})}
+              'モンスターノーツを取ったときの演出の強さです。重い順に「多め」「標準」「少なめ」「最小」の4段で、既定は「標準」です。\n「多め」＝画面全体が金色に光り、粒も大きく、そのマスモンが大きく跳ねます。\n「標準」＝全画面の光をやめます（いちばん重いのがこの描き直しです）。粒と跳ねは残ります。\n「少なめ」＝光る粒もふつうのノーツと同じになり、跳ねもやめます。\n「最小」＝ノーツに乗るマスモンの絵を出さなくなります。この絵だけはふつうのノーツと違って、流れているあいだずっと位置と大きさを書き換えているので、ここを止めるといちばん効きます。さらに、取ったその瞬間に走っていた両サイドのマスモンへの反応（見た目の切り替えと700msのタイマー）も丸ごとやめます。どれがモンスターノーツかは金色の粒で分かります。能力名の大きな表示も出ません。\nどの段でも、音・振動・能力の効果はそのまま残ります（効いていることは左上のバッジでも分かります）。',{full:true})}
             {/* 何が起きるのか画面に書いていなかったので、2026-09-13に説明を足した
                 (ユーザーからの質問「軽量モードはどういう効果があるの？」) */}
             {field('軽量モード',toggle('lightweightMode'),
@@ -269,14 +281,23 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
 
 // 難易度の色。EASY=緑 / NORMAL=青 / HARD=橙 / EXPERT=赤 / MASTER=紫。
 // 一覧のひし形も難易度ボタンも同じ色を使い、画面のどこでも同じ意味になるようにする。
+// text … 字だけに色を付けたいところ(リザルトの題名・ランキングの行・スコア詳細)用。
+//   2026-09-13・ユーザー指示「マスターとかランクとかコンボ数とかも色が
+//   決められてるやつは色つけたい」。off には枠の色も混ざっているので別に持つ。
 const RHYTHM_DIFFICULTY_TONE=Object.freeze({
-  EASY:  Object.freeze({dot:'bg-emerald-400', on:'border-emerald-300 bg-emerald-600 text-white', off:'border-emerald-400/40 text-emerald-200'}),
-  NORMAL:Object.freeze({dot:'bg-sky-400',     on:'border-sky-300 bg-sky-600 text-white',         off:'border-sky-400/40 text-sky-200'}),
-  HARD:  Object.freeze({dot:'bg-amber-400',   on:'border-amber-300 bg-amber-600 text-white',     off:'border-amber-400/40 text-amber-200'}),
-  EXPERT:Object.freeze({dot:'bg-rose-400',    on:'border-rose-300 bg-rose-600 text-white',       off:'border-rose-400/40 text-rose-200'}),
-  MASTER:Object.freeze({dot:'bg-fuchsia-400', on:'border-fuchsia-300 bg-fuchsia-700 text-white', off:'border-fuchsia-400/40 text-fuchsia-200'}),
+  EASY:  Object.freeze({dot:'bg-emerald-400', on:'border-emerald-300 bg-emerald-600 text-white', off:'border-emerald-400/40 text-emerald-200', text:'text-emerald-300'}),
+  NORMAL:Object.freeze({dot:'bg-sky-400',     on:'border-sky-300 bg-sky-600 text-white',         off:'border-sky-400/40 text-sky-200',         text:'text-sky-300'}),
+  HARD:  Object.freeze({dot:'bg-amber-400',   on:'border-amber-300 bg-amber-600 text-white',     off:'border-amber-400/40 text-amber-200',     text:'text-amber-300'}),
+  EXPERT:Object.freeze({dot:'bg-rose-400',    on:'border-rose-300 bg-rose-600 text-white',       off:'border-rose-400/40 text-rose-200',       text:'text-rose-300'}),
+  MASTER:Object.freeze({dot:'bg-fuchsia-400', on:'border-fuchsia-300 bg-fuchsia-700 text-white', off:'border-fuchsia-400/40 text-fuchsia-200', text:'text-fuchsia-300'}),
 });
 const rhythmDifficultyTone=id=>RHYTHM_DIFFICULTY_TONE[id]||RHYTHM_DIFFICULTY_TONE.EASY;
+// 難易度の字の色だけを欲しいところへ。知らないidは灰に倒す(勝手にEASYの緑にしない)
+const rhythmDifficultyTextColor=id=>RHYTHM_DIFFICULTY_TONE[id]?.text||'text-slate-300';
+// コンボ数の字の色。遊んでいるときの段(rhythmComboTier)と同じ分け方で、
+// 水色→黄→金→白→虹 へ上がる。最上段(7)だけは虹なのでCSSに任せる
+const RHYTHM_COMBO_TIER_TEXT=Object.freeze(['text-slate-200','text-sky-100','text-cyan-200','text-amber-100','text-amber-200','text-amber-300','text-white']);
+const rhythmComboTextColor=combo=>RHYTHM_COMBO_TIER_TEXT[Math.min(RHYTHM_COMBO_TIER_TEXT.length-1,Math.max(0,rhythmComboTier(combo)))];
 
 // 一覧に並ぶひし形の色。
 // 【2026-09-05・ユーザー指示】

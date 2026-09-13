@@ -123,9 +123,10 @@ check('何度流しても同じ結果になる（作り直す形）',
 check('予行演習(rollback)と手順書がそろっている',
   /^rollback;$/m.test(testSql)&&!/^commit;$/m.test(testSql)
   &&steps.includes('RHYTHM_WEEK_TOTAL_APPLY_TEST.sql'));
+// 2026-09-13、履歴(終わった週をあとから見る)も同じ累計方式で数える
 check('アプリは累計の関数を呼ぶ',
   supa.includes('rpc/rhythm_week_score_totals')
-  &&/const weeklyTotals = kind === 'weekly' && !targetSongId;/.test(app));
+  &&/const weeklyTotals = \(kind === 'weekly' \|\| \(kind === 'history' && historyEntry\.kind === 'weekly'\)\) && !targetSongId;/.test(app));
 check('関数が無い環境を「準備中」として扱う',
   /rhythm_week_score_totals\|rhythm_event_song_bests/.test(supa));
 check('端末側で累計を足していない',
@@ -175,7 +176,11 @@ check('ヘルプに順位報酬の表がある（手で書き写していない�
 check('ヘルプに累計方式と証片の説明がある',
   /title:'勇者の証片'/.test(helpSrc)&&/title:'週間ランキングの参加報酬'/.test(helpSrc)
   &&helpSrc.includes('「すべて足し合わせた合計」で競うランキング'));
-check('更新履歴に書いてある',/週間ランキング/.test(changelog.slice(0,4000)));
+// ★先頭4000字だけを見ないこと。更新履歴は新しい項目を先頭へ足していく決まりなので、
+//   あとから別の項目が増えるだけで落ちてしまう(2026-09-13に実際に落ちた)。
+//   見たいのは「この変更が更新履歴に載っているか」なので、告知のidで探す(idは一意で動かない)。
+check('更新履歴に書いてある',
+  changelog.includes('update_notice_rhythm_weekly_reward_v1')&&/週間ランキング/.test(changelog));
 check('仕様書に決めごとが残っている',
   spec.includes('### 6.2 何を競うか — **累計スコア方式**')
   &&spec.includes('### 6.2.1 報酬'));

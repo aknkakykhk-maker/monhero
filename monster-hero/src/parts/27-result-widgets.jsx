@@ -107,6 +107,12 @@ const RewardSummaryCard = ({ summary, onPresentationComplete }) => {
           <span className="text-white font-mono font-bold">×{summary.heroProofGain.toLocaleString()}</span>
         </div>
       )}
+      {summary.heroProofShardGain > 0 && (
+        <div className="pt-2 border-t border-white/10 flex items-center justify-between text-[11px]">
+          <span className="text-amber-200 font-black flex items-center gap-1"><span aria-hidden="true">🎖️</span>勇者の証片</span>
+          <span className="text-white font-mono font-bold">×{summary.heroProofShardGain.toLocaleString()}</span>
+        </div>
+      )}
       {summary.heroBondGain && (
         <div className="pt-2 border-t border-white/10">
           <div className="flex items-center justify-between text-[11px] mb-1">

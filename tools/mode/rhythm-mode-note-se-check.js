@@ -10,7 +10,10 @@ let failed=0;
 const check=(name,ok)=>{console.log(`${ok?'✓':'✗'} ${name}`);if(!ok)failed++;};
 
 check('空押しSEは既存の音ゲーSE runtimeと設定を共用',source.includes('const playEmpty=()=>')&&source.includes('beginInputGroup')&&source.includes('endInputGroup')&&source.includes('_readSettings:readSettings'));
-check('空押しSEはノーツ未取得の新規入力と境界越え再判定の対象なし時に呼ぶ',gameSource.includes('if(!target){RHYTHM_NOTE_SE_RUNTIME.playEmpty()')&&gameSource.includes('if(state.empty)inputStarts([{lane:Math.floor(subLane/2),subLaneCoordinate,inputKey}]'));
+check('空押しSEはノーツ未取得の新規入力と境界越え再判定の対象なし時に呼ぶ',gameSource.includes('if(!target){RHYTHM_NOTE_SE_RUNTIME.playEmpty()')&&// ★引数の並びを丸ごと固定で書かない。あとから項目が増えるだけで落ちてしまう
+//   (2026-09-13、rejudge:true が足されたときに実際に落ちた)。見たいのは
+//   「対象なしのときに、同じ指・同じ場所でもう一度判定へ回している」こと。
+  /if\(state\.empty\)inputStarts\(\[\{lane:Math\.floor\(subLane\/2\),subLaneCoordinate,inputKey[^\]]*\}\]/.test(gameSource));
 check('TAP後は次の境界で再判定し、操作中ノーツの指は横取りしない',gameSource.includes("empty:!target||target.type==='TAP'")&&gameSource.includes("if(state.empty)inputStarts(")&&gameSource.includes("if(subLane===state.subLane)return"));
 check('ノーツ取得時は従来SEだけを鳴らす',source.includes('RHYTHM_NOTE_SE_RUNTIME.play();\n    return {input,target:picked,deltaMs:now-(picked.timeMs+offset)};'));
 check('空押しSEは短いノイズ系Web Audio',source.includes('const duration=.055')&&source.includes("filter.type='bandpass'")&&source.includes('audio.createBufferSource()'));

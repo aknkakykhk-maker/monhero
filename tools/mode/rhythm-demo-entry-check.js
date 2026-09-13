@@ -145,9 +145,11 @@ ok('マスモン設定へ入れる',game.includes('data-rhythm-demo-monsters')&&
 // 戻り先は「デバッグ画面から始めたときだけデバッグ画面」。
 // あそびかた練習(from:'tutorial')が増えたので、demo かどうかで分けると練習の戻り先を間違える
 // (2026-09-05・演奏画面での操作チュートリアルを足した)
+// ★戻り先は from で決める。2026-09-13にタイミング合わせ(calibration)が増えたので、
+//   並びを丸ごと固定で書かず「デバッグならデバッグ画面 / それ以外は曲えらび」を見る
 ok('体験版から始めたプレイは体験版ホームへ戻る',
   game.includes("setRhythmPlay({song,difficulty,from:'demo'})")
-  &&game.includes("const back=rhythmPlay.from==='debug'?'RHYTHM_DEBUG':'RHYTHM_DEMO_HOME'"));
+  &&/const back=[^;]*rhythmPlay\.from==='debug'\?'RHYTHM_DEBUG':'RHYTHM_DEMO_HOME'/.test(game));
 ok('あそびかた練習も曲えらびへ戻る',
   game.includes("from:'tutorial' }")&&!game.includes("from:'tutorial'?'RHYTHM_DEBUG'"));
 ok('設定を閉じたとき、開いた画面へ戻る',

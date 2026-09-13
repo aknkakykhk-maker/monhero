@@ -115,7 +115,11 @@ check('無敵中はライフダメージ0',
   M.rhythmLifeAfterWithMonsterAbilities(500,'MISS',muteki,2000)===500
   &&M.rhythmLifeAfterWithMonsterAbilities(500,'BAD',muteki,2000)===500);
 check('無敵が切れたらまた減る',M.rhythmLifeAfterWithMonsterAbilities(500,'MISS',muteki,7500)===450);
-check('無敵は回復まで消さない',M.rhythmLifeAfterWithMonsterAbilities(500,'MARVELOUS',muteki,2000)===502);
+// 2026-09-13にふつうのノーツでの回復をやめた(回復はモンスターノーツの「元気」だけ)ので、
+// 「無敵がプラスの増減まで打ち消していないか」は元気の+500で確かめる
+check('無敵はプラスの増減を打ち消さない(元気の回復は通る)',
+  M.rhythmApplyMonsterAbilityToLifeDelta(muteki,500,2000)===500
+  &&M.rhythmLifeAfterWithMonsterAbilities(500,'MARVELOUS',muteki,2000)===500);
 
 const gaman=M.rhythmActivateMonsterAbility({ability:A.GAMAN,state:fresh(),life:500,songTimeMs:0}).state;
 check('我慢は15秒',M.rhythmMonsterAbilityRemainingMs(gaman,'GAMAN',0)===15000);
@@ -245,7 +249,7 @@ check('判定窓はモンスターノーツ専用に甘くしていない',
 check('スコアの重み（判定90% / コンボ10%）は変更していない',
   /RHYTHM_SCORE_WEIGHTS\s*=\s*Object\.freeze\(\{\s*judgment:\s*\.9\s*,\s*combo:\s*\.1\s*\}\)/.test(data.replace(/\n/g,'')));
 check('ライフの最大値と判定ごとの増減は変更していない',
-  M.RHYTHM_LIFE_MAX===1000&&JSON.stringify(M.RHYTHM_LIFE_DELTA)===JSON.stringify({MARVELOUS:2,EXCELLENT:2,GREAT:1,GOOD:0,BAD:-20,MISS:-50}));
+  M.RHYTHM_LIFE_MAX===1000&&JSON.stringify(M.RHYTHM_LIFE_DELTA)===JSON.stringify({MARVELOUS:0,EXCELLENT:0,GREAT:0,GOOD:0,BAD:-20,MISS:-50}));
 check('既存の rhythmLifeAfter を書き換えず、別入口として足している',
   data.includes('const rhythmLifeAfter = (life, judgment) => {')&&data.includes('const rhythmLifeAfterWithMonsterAbilities='));
 check('保存キーを増やしていない（設定はマスモンの枠だけ）',

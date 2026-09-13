@@ -128,7 +128,9 @@ ok('コンボ数を大きく出す',
 //   「軽め」でそこだけ止め、「最小」では粒も跳ねも通常と同じにする。
 //   どの段でも音・能力名・振動は残す(取れたことが分からなくなるのがいちばん困る)。
 ok('モンスターノーツの演出の強さを選べる',
-  /RHYTHM_MONSTER_EFFECT_LABELS *= *Object\.freeze\(\[\['NORMAL','多め'\],\['LIGHT','標準'\],\['OFF','最小'\]\]\)/.test(game)
+  // 2026-09-13・ユーザー指摘「もっと軽いの設定で選べるようにしてほしい」で NONE を足して4段。
+  // 何が止まるかは rhythm-monster-effect-check.js が見る
+  /RHYTHM_MONSTER_EFFECT_LABELS *= *Object\.freeze\(\[\['NORMAL','多め'\],\['LIGHT','標準'\],\['OFF','少なめ'\],\['NONE','最小'\]\]\)/.test(game)
   // 既定は「軽め」(2026-09-13・ユーザー指摘「演出量が普通だと重いという声が多い /
   // 少なめをデフォルトにして今の普通を多めとかにしたい / モンスターノーツも同じく」)。
   // IDは変えていないので、自分で選んで保存した人の設定はそのまま(CLAUDE.md ⑦)
@@ -137,11 +139,18 @@ ok('モンスターノーツの演出の強さを選べる',
   &&game.includes("segments('monsterNoteEffect',RHYTHM_MONSTER_EFFECT_LABELS)")
   // 「軽め」「最小」で画面全体の光を出さない
   &&game.includes("if(monsterHit&&monsterEffect==='NORMAL'&&screenFlashRef.current)")
-  // 「最小」では粒もふつうのノーツと同じにし、跳ねもやめる
-  &&game.includes("const bigMonsterEffect=monsterHit&&monsterEffect!=='OFF';")
-  &&game.includes("if(monsterEffect!=='OFF')restarts.push({el,attr:'rhythmSideHit'});")
-  // 音・能力名・振動はどの段でも残す(条件を付けていない)
-  &&/if\(settings\.vibrationEnabled\)RHYTHM_HAPTICS\.tap\(26\);/.test(game));
+  // いちばん軽い段では、踏んだ瞬間のマスモンへの反応も丸ごと飛ばす(2026-09-13)。
+  // ★段は必ず順位(rhythmMonsterEffectAtMost)でくらべる。名前を並べてくらべていたため、
+  //   あとから足した「最小」が大きな光の条件を素通りしていた(同日・ユーザー報告
+  //   「設定を最小にしても固まるときがある」)
+  &&game.includes("if(monsterHit&&!rhythmMonsterEffectAtMost(monsterEffect,'NONE')){")
+  // 「少なめ」から下では粒もふつうのノーツと同じにし、跳ねもやめる
+  &&game.includes("const bigMonsterEffect=monsterHit&&!rhythmMonsterEffectAtMost(monsterEffect,'OFF');")
+  &&game.includes("if(!rhythmMonsterEffectAtMost(monsterEffect,'OFF'))restarts.push({el,attr:'rhythmSideHit'});")
+  // 音と振動はどの段でも残す。★振動は演出量のブロックの外で1回だけ(2026-09-13)。
+  //   それまでは中で26ms・外で12msの**2回**走り、演出量を下げると強さも変わっていた
+  &&game.includes("if(settings.vibrationEnabled&&judgment!=='MISS')RHYTHM_HAPTICS.tap(monsterHit?26:12);")
+  &&!/if\(settings\.vibrationEnabled\)RHYTHM_HAPTICS\.tap\(26\);/.test(game));
 // 濃さも設定から変えられる(2026-09-13・ユーザー依頼「コンボ数表記の透過度の設定」)
 ok('コンボ数の濃さを設定から変えられる',
   game.includes('comboOpacity:100')
@@ -191,21 +200,27 @@ ok('コンボ数の大きさを設定から変えられる',
 // 演出量「少なめ」で**毎フレームの塗り直し**だけを止められるようにした。
 // background-position は合成できないプロパティなので、流しているあいだは
 // 毎フレーム字を塗り直し、そのたびに filter のぼかしを通ることになる。
-ok('演出量「少なめ」で、判定文字とコンボの流れを止められる',
-  html.includes('[data-rhythm-play-area][data-rhythm-effect="LOW"] [data-rhythm-judgment-text]{')
-  &&/\[data-rhythm-effect="LOW"\] \[data-rhythm-judgment-text\]\{\s*animation:none;/.test(html)
-  &&/\[data-rhythm-effect="LOW"\] \[data-rhythm-combo\]\[data-combo-tier="7"\]\{\s*animation:none;/.test(html)
+// 「多め」(LOW)で判定文字とコンボの流れを止める。「標準」(LIGHT)も同じ指定へ相乗りするので、
+// セレクタは「,」で続くこともある(2026-09-13に段を4つへ増やしたため)
+ok('演出量「多め」で、判定文字とコンボの流れを止められる',
+  /\[data-rhythm-effect="LOW"\] \[data-rhythm-judgment-text\][,{][\s\S]{0,200}animation:none;/.test(html)
+  &&/\[data-rhythm-effect="LOW"\] \[data-rhythm-combo\]\[data-combo-tier="7"\][,{][\s\S]{0,200}animation:none;/.test(html)
+  // 「標準」でも同じところが止まっている(軽い段が重い段より派手にならない)
+  &&/\[data-rhythm-effect="LIGHT"\] \[data-rhythm-judgment-text\][,{][\s\S]{0,200}animation:none;/.test(html)
   // 止めるのは流れとぼかしの枚数だけ。色・グラデ・字の大きさは標準と同じに保つ
   &&!/\[data-rhythm-effect="LOW"\] \[data-rhythm-judgment-text\][^{]*\{[^}]*background-image/.test(html)
   &&!/\[data-rhythm-effect="LOW"\] \[data-rhythm-judgment-text\][^{]*\{[^}]*font-size/.test(html)
   // 重い判定(GREAT以上)はぼかしの枚数も落とす
-  &&['GREAT','EXCELLENT','MARVELOUS'].every(j=>html.includes(`[data-rhythm-play-area][data-rhythm-effect="LOW"] [data-rhythm-judgment-text][data-judgment="${j}"]{`))
+  &&['GREAT','EXCELLENT','MARVELOUS'].every(j=>
+      html.includes(`[data-rhythm-play-area][data-rhythm-effect="LOW"] [data-rhythm-judgment-text][data-judgment="${j}"]`)
+      &&html.includes(`[data-rhythm-play-area][data-rhythm-effect="LIGHT"] [data-rhythm-judgment-text][data-judgment="${j}"]`))
   // 選ぶ場所と、何が止まるのかの説明がオプションにある
   &&game.includes("segments('effectAmount',RHYTHM_EFFECT_LABELS)")
-  &&/RHYTHM_EFFECT_LABELS *= *Object\.freeze\(\[\['NORMAL','多め'\],\['LOW','標準'\],\['MINIMAL','最小'\]\]\)/.test(game)
-  // 既定は「少なめ」。いちばん重い「判定文字の毎フレームの塗り直し」を既定で避ける
-  &&game.includes("effectAmount:'LOW'")
-  &&game.includes('既定は「標準」です'));
+  // 重い順に4段(2026-09-13・ユーザー指示「段を増やして更に標準をもっと軽くする」)。
+  // 段ごとに何が止まるかは rhythm-effect-amount-check.js が実ブラウザで測る
+  &&/RHYTHM_EFFECT_LABELS *= *Object\.freeze\(\[\['NORMAL','最大'\],\['LOW','多め'\],\['LIGHT','標準'\],\['MINIMAL','最小'\]\]\)/.test(game)
+  &&game.includes("effectAmount:'LIGHT'")
+  &&game.includes('重い順に「最大」「多め」「標準」「最小」の4段'));
 // 既定の段は「標準」と呼ぶ(2026-09-13・ユーザー指示「デフォルトの名称を標準にして」)。
 // 画面に出す名前と既定値がずれると、既定なのに「少なめ」「軽め」と書いてある状態になる
 ok('既定になっている段の名前が「標準」になっている',(()=>{
@@ -232,9 +247,12 @@ ok('軽量モードの効果が画面に書いてある',
 //   止めるときは 100% にして、色が全部字の上に並ぶようにする。
 ok('流れを止めるときは、止まった位置に色が全部見える',
   // 判定文字(演出量ひかえめ・最小・軽量モード)
-  /\[data-rhythm-effect="LOW"\] \[data-rhythm-judgment-text\],\s*\[data-rhythm-play-area\]\[data-rhythm-effect="MINIMAL"\] \[data-rhythm-judgment-text\],\s*\[data-rhythm-play-area\]\[data-rhythm-lightweight="true"\] \[data-rhythm-judgment-text\]\{\s*background-size:100% 100%;/.test(html)
+  /\[data-rhythm-effect="LOW"\] \[data-rhythm-judgment-text\],[\s\S]{0,140}\[data-rhythm-effect="MINIMAL"\] \[data-rhythm-judgment-text\],\s*\[data-rhythm-play-area\]\[data-rhythm-lightweight="true"\] \[data-rhythm-judgment-text\]\{\s*background-size:100% 100%;/.test(html)
   // 500コンボ以上の虹も同じ
-  &&/\[data-rhythm-effect="LOW"\] \[data-rhythm-combo\]\[data-combo-tier="7"\],[\s\S]{0,240}background-size:100% 100%;/.test(html)
+  &&/\[data-rhythm-effect="LOW"\] \[data-rhythm-combo\]\[data-combo-tier="7"\],[\s\S]{0,400}background-size:100% 100%;/.test(html)
+  // 「標準」も同じ並びに入っている(段を足したときの入れ忘れを拾う)
+  &&/\[data-rhythm-effect="LIGHT"\] \[data-rhythm-combo\]\[data-combo-tier="7"\],[\s\S]{0,400}background-size:100% 100%;/.test(html)
+  &&/\[data-rhythm-effect="LIGHT"\] \[data-rhythm-judgment-text\],[\s\S]{0,200}background-size:100% 100%;/.test(html)
   // 動きを減らす設定の端末でも同じ(判定ごとのルールと同じ重さで書かないと上書きできない)
   &&/@media \(prefers-reduced-motion:reduce\)\{\s*\[data-rhythm-judgment-text\]\[data-judgment\]:not\(\[data-judgment=""\]\)\{[\s\S]{0,120}background-size:100% 100%;/.test(html)
   // 流しているとき(標準)は、これまでどおり広く取って動かす
