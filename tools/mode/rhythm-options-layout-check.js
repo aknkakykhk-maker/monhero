@@ -18,6 +18,8 @@ const path = require('path');
 const root = path.resolve(TOOLS_DIR, '..');
 const web = path.join(root, 'monster-hero');
 const game = fs.readFileSync(path.join(web, 'src/game-system.jsx'), 'utf8');
+// 演奏画面(タイミング合わせのリザルトを含む)は parts 側で見る
+const play = fs.readFileSync(path.join(web, 'src/parts/30-rhythm-play.jsx'), 'utf8');
 
 let failed = 0;
 const check = (name, ok, detail = '') => {
@@ -57,12 +59,19 @@ check('オプションから演奏画面のタイミング合わせへ送る',
 // 画面を移るので、未保存の変更は先に保存してから送る(戻ってきたときに消えていないように)
 check('未保存の変更を持ったまま画面を移らない',
   /const goCalibrate=async\(\)=>\{[\s\S]{0,200}if\(dirty\)\{const saved=await onSave\(draft\);setDraft\(saved\);\}/.test(options));
+// 2026-09-13・ユーザー指摘「設定にもなってない」。測り終わった画面でそのまま決められるようにした。
+// 戻ってからもう一度ボタンを押す、という二度手間にしない(勝手に入りもしない)
 check('測った値は本人が選んでから入る(勝手に設定を書き換えない)',
-  options.includes('data-rhythm-calibrator-result')
-  && options.includes("set('judgmentTimingOffsetMs',calibrationResult.offsetMs)")
-  && game.includes("if(rhythmPlay.from==='calibration'){setRhythmCalibrationResult(result?.calibration||null);return;}"));
+  play.includes('data-rhythm-calibration-apply')
+  && /onClick=\{\(\)=>onApplyCalibration&&onApplyCalibration\(measured\)\}/.test(play)
+  && game.includes('judgmentTimingOffsetMs:offsetMs'));
+check('決めたらその場で保存してオプションへ戻る',
+  /const saved=await saveRhythmSettings\(\{\.\.\.rhythmSettings,judgmentTimingOffsetMs:offsetMs\}\)/.test(game)
+  && game.includes("setRhythmPlay(null);setGameState('RHYTHM_OPTIONS');"));
+check('オプションへ戻ったら入れた値が分かる',
+  options.includes('data-rhythm-calibrator-result') && options.includes('にしました'));
 check('タイミング合わせの記録は残さない(自己ベストにもランキングにも触れない)',
-  game.includes("if(rhythmPlay.from==='calibration'){setRhythmCalibrationResult"));
+  game.includes("if(rhythmPlay.from==='calibration')return;"));
 
 // ---- ノーツの出る位置 ----
 check('ノーツの出る位置を画面から変えられる',

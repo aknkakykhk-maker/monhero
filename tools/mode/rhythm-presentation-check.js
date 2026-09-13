@@ -108,7 +108,7 @@ ok('コンボ数の置き場所を選べる(右上=もとの位置も選べる)'
 ok('ノーツより後ろに描いて透かす(邪魔にならない)',
   /data-rhythm-combo-box[^>]*z-\[2\]/.test(game)
   &&/data-rhythm-combo-box[^>]*pointer-events-none/.test(game)
-  &&/\[data-rhythm-combo-box\]\{[\s\S]{0,260}opacity:calc\(\.62 \* var\(--mh-combo-opacity,1\)\)/.test(html)
+  &&/\[data-rhythm-combo-box\]\{[\s\S]{0,700}opacity:calc\([.\d]+ \* var\(--mh-combo-opacity,1\)\)/.test(html)
   &&html.includes('[data-rhythm-note] {'));
 // 場に重なるので、邪魔だと感じた人が消せるようにする(設定は前からあったが使われていなかった)
 ok('コンボ数表示のON/OFFを設定から切り替えられる',
@@ -146,8 +146,36 @@ ok('コンボ数の濃さを設定から変えられる',
   &&game.includes("stepper('comboOpacity',RHYTHM_COMBO_OPACITY_MIN,RHYTHM_COMBO_OPACITY_MAX,RHYTHM_COMBO_OPACITY_STEP")
   &&game.includes("'--mh-combo-opacity':rhythmFiniteInRange(settings.comboOpacity,RHYTHM_COMBO_OPACITY_MIN,RHYTHM_COMBO_OPACITY_MAX,100)/100")
   // 段ごとの濃さへ掛ける(段の差はそのまま残る)
-  &&html.includes('[data-rhythm-combo-box][data-combo-tier="3"]{opacity:calc(.8 * var(--mh-combo-opacity,1))}')
   &&html.includes('[data-rhythm-combo-box][data-combo-tier="7"]{opacity:var(--mh-combo-opacity,1)}'));
+// 【2026-09-13・ユーザー指摘「もとが薄いから濃くしてそれを調整できるようにして」】
+// いちばん下の段でも読める濃さから始めること。数値を固定で書くと調整のたびに落ちるだけなので、
+// 「下限が十分に濃い」「段が上がるほど濃くなる(下がらない)」「どの段にも設定の倍率が掛かる」を見る。
+const comboTierOpacity=(()=>{
+  const base=(html.match(/\[data-rhythm-combo-box\]\{[\s\S]{0,700}?opacity:calc\(([.\d]+) \* var\(--mh-combo-opacity,1\)\)/)||[])[1];
+  const list=[Number(base)];
+  for(let tier=1;tier<=7;tier++){
+    const exact=new RegExp(`\\[data-rhythm-combo-box\\]\\[data-combo-tier="${tier}"\\][^{]*\\{opacity:calc\\(([.\\d]+) \\* var\\(--mh-combo-opacity,1\\)\\)`);
+    const plain=new RegExp(`\\[data-rhythm-combo-box\\]\\[data-combo-tier="${tier}"\\][^{]*\\{opacity:var\\(--mh-combo-opacity,1\\)`);
+    const hit=html.match(exact);
+    list.push(hit?Number(hit[1]):plain.test(html)?1:NaN);
+  }
+  return list;
+})();
+ok('いちばん薄い段でも読める濃さから始まる',
+  Number.isFinite(comboTierOpacity[0])&&comboTierOpacity[0]>=.8,
+  `いちばん下の段 ${comboTierOpacity[0]}`);
+ok('段が上がるほど濃くなる(途中で薄くならない)',
+  comboTierOpacity.every(value=>Number.isFinite(value))
+  &&comboTierOpacity.every((value,index)=>index===0||value>=comboTierOpacity[index-1]),
+  comboTierOpacity.join(' → '));
+ok('どの段にも設定の濃さが掛かる',
+  comboTierOpacity.length===8&&comboTierOpacity.every(value=>Number.isFinite(value)&&value<=1));
+// 光って息づかいをするいちばん熱い段も、底上げした濃さと同じ高さで揺らす
+// (ここだけ低いままだと、熱い段のほうが薄く見える)
+ok('光る段の息づかいも底上げした濃さの範囲で揺れる',(()=>{
+  const lows=[...html.matchAll(/@keyframes mhRhythmComboGlow(?:Hot)?\{\s*0%,100%\{opacity:calc\(([.\d]+) \* var\(--mh-combo-opacity,1\)\)\}/g)].map(m=>Number(m[1]));
+  return lows.length===2&&lows.every(value=>value>=comboTierOpacity[0]);
+})());
 // コンボ数の大きさ。置き場所ごとの基準へ割合を掛ける(段の倍率とは別)
 ok('コンボ数の大きさを設定から変えられる',
   game.includes('comboSize:100')

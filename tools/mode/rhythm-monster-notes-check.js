@@ -197,10 +197,11 @@ check('DOWN中に止まっていた分を遡って加算しない',
   afterRevive<M.rhythmCalculateScore({judgments:run.counts,maxCombo:run.maxCombo,totalNotes:8,maxScore:1000000}));
 
 // ── 本体への結線 ────────────────────────────────────────────────────────────
-// あそびかた練習のときだけライフを満タンのままにする分岐が前に付く(2026-09-05)。
-// ふつうのプレイでは、これまでどおり能力(無敵・我慢)を通してから反映する
+// あそびかた練習(2026-09-05)とタイミング合わせ(2026-09-13)のときだけ、ライフを満タンの
+// ままにする分岐が前に付く。ふつうのプレイでは、これまでどおり能力(無敵・我慢)を
+// 通してから反映する。分岐が増えても「能力経由であること」は変わらない
 check('ライフ計算を能力経由に通している',
-  /run\.life=tutorial\?RHYTHM_LIFE_MAX:rhythmLifeAfterWithMonsterAbilities\(run\.life,judgment,run\.abilities,songTimeMs\);/.test(game));
+  /run\.life=\(?tutorial(?:\|\|calibrating)?\)?\?RHYTHM_LIFE_MAX:rhythmLifeAfterWithMonsterAbilities\(run\.life,judgment,run\.abilities,songTimeMs\);/.test(game));
 check('根性ストックの自動復活を判定のたびに見ている',
   /const stockRevive=rhythmConsumeKonjoStock\(run\.abilities,run\.life\);/.test(game));
 check('モンスターノーツはGREAT以上のときだけ能力を出す',

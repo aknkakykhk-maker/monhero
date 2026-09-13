@@ -40,7 +40,7 @@ window.addEventListener('unhandledrejection', function(ev){ window.__mhErr('[pro
 // ここでは各ファイルの実サイズを重みにして、実際に受け取ったバイト数で動かす。
 window.__mhBoot = (function () {
   // 起動時に読み込むファイルの実サイズ(バイト)。tools/build.js が実ファイルから書き込む
-  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":7761,"data/images/images-enemy.js":1347,"data/ally-monsters.js":24360,"data/lineages.js":8832,"data/breeder.js":26823,"data/enemy-monsters.js":1785,"data/skills.js":4375,"data/rhythm-mode.js":1064873,"data/rhythm-lane-svg.js":7147,"data/rhythm-geometry-calibration.js":15405,"data/rhythm-result-replay-remount.js":5401,"data/rhythm-event.js":23888,"data/changelog.js":633828,"data/help.js":337430,"data/rhythm-step3-release.js":7722,"data/assistants.js":296388,"tailwind.css":118330,"game-system.compiled.js":3621222,"data/images/title-screen-clean.jpg":699051,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
+  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":7761,"data/images/images-enemy.js":1347,"data/ally-monsters.js":24360,"data/lineages.js":8832,"data/breeder.js":26823,"data/enemy-monsters.js":1785,"data/skills.js":4375,"data/rhythm-mode.js":1064873,"data/rhythm-lane-svg.js":7147,"data/rhythm-geometry-calibration.js":15405,"data/rhythm-result-replay-remount.js":5401,"data/rhythm-event.js":23888,"data/changelog.js":636518,"data/help.js":338156,"data/rhythm-step3-release.js":7722,"data/assistants.js":296388,"tailwind.css":118632,"game-system.compiled.js":3632637,"data/images/title-screen-clean.jpg":699051,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
   var total = 0, k;
   for (k in SIZES) total += SIZES[k];
   var got = {};   // ファイルごとに「いま何バイト受け取ったか」
@@ -98,7 +98,7 @@ window.__mhBoot = (function () {
 })();
 // 本体JSのキャッシュキー。ここで一度だけ宣言し、下の読み込み処理でも同じ値を使う。
 // 先読みと <script> のURLがずれると、同じ2.7MBを2回取りに行くことになる
-var GAME_BUILD = '202609131055';
+var GAME_BUILD = '202609131105';
 window.__mhGameBuild = GAME_BUILD;
 // 起動でいちばん大きいのは本体JS(約2.7MB)。いちばん後ろで読むため、そこへ来ると
 // ゲージが止まって見えていた。先に取りはじめて、受け取ったバイト数をそのまま出す。
@@ -119,7 +119,7 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.jpg', 'data/images/titl
      作るのは tools/build-tailwind.js(node tools/build.js が中身の変化を見て必要なときだけ呼ぶ)。
      landscape: の差し替え(自前で画面を回したときにも効かせる)もそちらの設定へ移してある。
      ?v= は中身のハッシュ。tools/stamp-version.js が data/*.js と同じ仕組みで打つ。 -->
-<link rel="stylesheet" href="tailwind.css?v=1b8afd25aa38" onload="__mhBoot.done('tailwind.css','見た目を読み込み中')" onerror="__mhBoot.fail('tailwind.css')">
+<link rel="stylesheet" href="tailwind.css?v=eb2bc16ecad4" onload="__mhBoot.done('tailwind.css','見た目を読み込み中')" onerror="__mhBoot.fail('tailwind.css')">
 <style>
   html, body { margin:0; padding:0; background:#000; overscroll-behavior:none; -webkit-tap-highlight-color:transparent; height:100%; }
   /* 画面の高さは、ここで決めた --mh-vh ひとつだけを使う。
@@ -568,8 +568,12 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.jpg', 'data/images/titl
     left:50%;
     transform:translateX(-50%);
     /* ★濃さは設定で変えられる(2026-09-13・ユーザー依頼「コンボ数表記の透過度の設定」)。
-       段ごとの濃さ(.62〜1)へ --mh-combo-opacity(30〜100%)を掛ける。 */
-    opacity:calc(.62 * var(--mh-combo-opacity,1));
+       段ごとの濃さへ --mh-combo-opacity(30〜100%)を掛ける。
+       ★もとの段(.62〜1)は「そもそも薄すぎる」と言われたので .88〜1 へ底上げした
+         (2026-09-13・ユーザー指摘「もとが薄いから濃くしてそれを調整できるようにして」)。
+         段が上がるほど濃くなる並びは残すが、いちばん下でも読める濃さから始める。
+         薄くしたい人は設定(30%まで)で下げられる。 */
+    opacity:calc(.88 * var(--mh-combo-opacity,1));
     transition:opacity .2s ease;
     will-change:opacity;
   }
@@ -659,11 +663,11 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.jpg', 'data/images/titl
   [data-combo-wide="1"][data-combo-pos="HUD"] [data-rhythm-combo]{font-size:calc(min(26px,4vw) * var(--mh-combo-size,1))}
   /* 段が上がるほど濃く・熱く。色はノーツ(ピンク/シアン/紫/緑/金)と判定の色から離し、
      白 → 水 → 金 → 橙 → 白熱 → 虹の順に寄せる */
-  [data-rhythm-combo-box][data-combo-tier="1"]{opacity:calc(.68 * var(--mh-combo-opacity,1))}
-  [data-rhythm-combo-box][data-combo-tier="2"]{opacity:calc(.74 * var(--mh-combo-opacity,1))}
-  [data-rhythm-combo-box][data-combo-tier="3"]{opacity:calc(.8 * var(--mh-combo-opacity,1))}
-  [data-rhythm-combo-box][data-combo-tier="4"]{opacity:calc(.86 * var(--mh-combo-opacity,1))}
-  [data-rhythm-combo-box][data-combo-tier="5"]{opacity:calc(.92 * var(--mh-combo-opacity,1))}
+  [data-rhythm-combo-box][data-combo-tier="1"]{opacity:calc(.91 * var(--mh-combo-opacity,1))}
+  [data-rhythm-combo-box][data-combo-tier="2"]{opacity:calc(.94 * var(--mh-combo-opacity,1))}
+  [data-rhythm-combo-box][data-combo-tier="3"]{opacity:calc(.96 * var(--mh-combo-opacity,1))}
+  [data-rhythm-combo-box][data-combo-tier="4"]{opacity:calc(.98 * var(--mh-combo-opacity,1))}
+  [data-rhythm-combo-box][data-combo-tier="5"]{opacity:calc(1 * var(--mh-combo-opacity,1))}
   [data-rhythm-combo-box][data-combo-tier="6"],
   [data-rhythm-combo-box][data-combo-tier="7"]{opacity:var(--mh-combo-opacity,1)}
   [data-rhythm-combo][data-combo-tier="1"]{color:#e0f2fe;text-shadow:0 2px 8px rgba(2,6,23,.95),0 0 12px rgba(125,211,252,.7)}
@@ -696,11 +700,13 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.jpg', 'data/images/titl
   [data-rhythm-combo-box][data-combo-tier="5"]{animation:mhRhythmComboGlow 1.2s ease-in-out infinite}
   [data-rhythm-combo-box][data-combo-tier="6"]{animation:mhRhythmComboGlowHot 1s ease-in-out infinite}
   [data-rhythm-combo-box][data-combo-tier="7"]{animation:mhRhythmComboGlowHot .8s ease-in-out infinite}
+  /* 息づかいの幅は、底上げした段の濃さ(.88〜1)と同じ高さで揺らす。
+     ここだけ低いままだと、いちばん熱い段が逆に薄く見える */
   @keyframes mhRhythmComboGlow{
-    0%,100%{opacity:calc(.86 * var(--mh-combo-opacity,1))}
+    0%,100%{opacity:calc(.94 * var(--mh-combo-opacity,1))}
     50%{opacity:var(--mh-combo-opacity,1)}}
   @keyframes mhRhythmComboGlowHot{
-    0%,100%{opacity:calc(.9 * var(--mh-combo-opacity,1))}
+    0%,100%{opacity:calc(.96 * var(--mh-combo-opacity,1))}
     50%{opacity:var(--mh-combo-opacity,1)}}
   @media (prefers-reduced-motion:reduce){
     [data-rhythm-combo]{transition:none}
@@ -1257,8 +1263,8 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.jpg', 'data/images/titl
 <script src="data/rhythm-geometry-calibration.js?v=1e490f73b5e2" onload="__mhBoot.done('data/rhythm-geometry-calibration.js','音ゲー座標校正を読み込み中')" onerror="__mhBoot.fail('data/rhythm-geometry-calibration.js')"></script>
 <script src="data/rhythm-result-replay-remount.js?v=25f459cc2892" onload="__mhBoot.done('data/rhythm-result-replay-remount.js','音ゲー再プレイ処理を読み込み中')" onerror="__mhBoot.fail('data/rhythm-result-replay-remount.js')"></script>
 <script src="data/rhythm-event.js?v=d679ff5d4464" onload="__mhBoot.done('data/rhythm-event.js','週間ランキングを読み込み中')" onerror="__mhBoot.fail('data/rhythm-event.js')"></script>
-<script src="data/changelog.js?v=dfd00de505c0" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
-<script src="data/help.js?v=b0b0c526f226" onload="__mhBoot.done('data/help.js','ヘルプを読み込み中')" onerror="__mhBoot.fail('data/help.js')"></script>
+<script src="data/changelog.js?v=7bc4f57de4fc" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
+<script src="data/help.js?v=d24df9d58804" onload="__mhBoot.done('data/help.js','ヘルプを読み込み中')" onerror="__mhBoot.fail('data/help.js')"></script>
 <script data-mhsave-backup src="data/mhsave-backup.js?v=7845a4fd261f" onload="__mhBoot.done('data/mhsave-backup.js','バックアップ機能を読み込み中')" onerror="__mhBoot.fail('data/mhsave-backup.js')"></script>
 <script src="data/rhythm-step3-release.js?v=e09b26e107d5" onload="__mhBoot.done('data/rhythm-step3-release.js','音ゲー更新情報を読み込み中')" onerror="__mhBoot.fail('data/rhythm-step3-release.js')"></script>
 <!-- 助手はbreeder.jsの顔アイコンを画像に使うため、必ずその後に読み込む -->

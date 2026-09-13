@@ -153,10 +153,15 @@ ok('仕様書へSTEP1と正式HOME未接続を記録',docs.includes('オプシ�
   }
   // 2026-09-13: 専用の小さな画面をやめ、演奏画面をそのまま使う形にした
   // (ユーザー指示「普通に実際の画面を使ってやればいい / そこで判定も合わせて出して調整する」)。
+  // 貯める先は**演奏の状態(run)**。画面の状態(view)へ足すと、叩いた瞬間に
+  // `Cannot read properties of undefined (reading 'push')` で applyJudgment が止まり、
+  // 判定もコンボも出ず、曲の終わりでも落ちて進行不能になる(2026-09-13に実際に出した)
   ok('ずれは演奏側が判定に使っている値をそのまま貯める',
-    game.includes("if(calibrating&&judgment!=='MISS'&&typeof deltaMs==='number'&&Number.isFinite(deltaMs))run.deltas.push(deltaMs);"));
+    game.includes("if(calibrating&&judgment!=='MISS'&&typeof deltaMs==='number'&&Number.isFinite(deltaMs)){if(!Array.isArray(run.deltas))run.deltas=[];run.deltas.push(deltaMs);}"));
+  ok('貯める先は演奏の状態(run)で、画面の状態(view)ではない',
+    /runRef\.current=\{[^}]*deltas:\[\]/.test(game)&&!/initialView=\(\)=>\(\{[^}]*deltas:/.test(game));
   ok('助走ぶんを捨ててから値を出す',
-    game.includes('rhythmCalibrationOffsetFromTaps(run.deltas.slice(RHYTHM_CALIBRATION_WARMUP_COUNT))'));
+    game.includes('rhythmCalibrationOffsetFromTaps((Array.isArray(run.deltas)?run.deltas:[]).slice(RHYTHM_CALIBRATION_WARMUP_COUNT))'));
   ok('専用の譜面を演奏画面で流す(判定もFAST/SLOWもいつもどおり出る)',
     data.includes('const RHYTHM_CALIBRATION_SONG=Object.freeze({')
     &&data.includes("songId:'rhythm_calibration'")
@@ -165,11 +170,22 @@ ok('仕様書へSTEP1と正式HOME未接続を記録',docs.includes('オプシ�
   ok('オプションから「実際の画面で合わせる」を開ける',
     game.includes('data-rhythm-calibrator-open')&&game.includes('実際の画面で合わせる')
     &&game.includes('onClick={goCalibrate}'));
-  ok('測った値と、入れるかどうかのボタンを出す',
-    ['data-rhythm-calibrator-result','data-rhythm-calibrator-apply'].every(hook=>game.includes(hook)));
+  // 2026-09-13・ユーザー指摘「設定にもなってない」。測り終わった画面でそのまま決める
+  ok('測った値と、入れるかどうかのボタンを測り終わった画面で出す',
+    ['data-rhythm-calibration-result','data-rhythm-calibration-offset','data-rhythm-calibration-apply',
+     'data-rhythm-calibration-retry','data-rhythm-calibration-cancel'].every(hook=>game.includes(hook)));
+  ok('オプションへ戻ったら入れた値が分かる',
+    game.includes('data-rhythm-calibrator-result')&&game.includes('にしました'));
   ok('測った値は判定タイミング調整へ入る(新しい設定を増やさない)',
-    game.includes("set('judgmentTimingOffsetMs',calibrationResult.offsetMs)")
-    &&!/mh_rhythm_calibration/.test(game));
+    game.includes('judgmentTimingOffsetMs:offsetMs')&&!/mh_rhythm_calibration/.test(game));
+  // チュートリアルの流用にしない(2026-09-13・ユーザー指摘「チュートリアルの流用？」)
+  ok('チュートリアルの説明ではなく専用の案内を出す',
+    game.includes('data-rhythm-calibration-banner')&&game.includes('data-rhythm-calibration-title')
+    &&game.includes("tutorial={rhythmPlay.from==='tutorial'}")
+    &&!game.includes("tutorial={rhythmPlay.from==='tutorial'||rhythmPlay.from==='calibration'}"));
+  ok('タイミング合わせでもライフは減らない(途中で落ちて測れなくならない)',
+    game.includes('run.life=(tutorial||calibrating)?RHYTHM_LIFE_MAX:')
+    &&game.includes('const failed=!tutorial&&!calibrating&&run.lifeDepleted===true;'));
 }
 
 console.log(`OK: 音ゲーオプション STEP1 runtime / speed ${slow}ms -> ${normal}ms -> ${fast}ms`);

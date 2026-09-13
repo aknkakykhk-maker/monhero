@@ -3449,6 +3449,51 @@ Stay With Me は**強弱で拍が立っていない**。ドラムではなくス
 - 出した値は既存の `judgmentTimingOffsetMs` へ入れる。**新しい保存キーは足さない。**
 - 計算は `rhythmCalibrationOffsetFromTaps` として切り出してあり、検査から直接動かせる。
 
+### タイミング合わせを演奏画面でやる（2026-09-13）
+
+ユーザー指示「今の仕様はみにくすぎるし実用性がない / 特に横画面は終わってる /
+普通に実際の画面を使ってやればいい / そこで判定も合わせて出して調整するのが1番合うとおもう」。
+
+専用の小さな画面（1本のレーンに目印が降りるだけ）をやめ、**演奏画面をそのまま使う**。
+曲と譜面だけを `RHYTHM_CALIBRATION_SONG` / `RHYTHM_CALIBRATION_CHART` へ差し替え、
+`RhythmTapTest` に `calibrating` を渡す。2拍ごとの単押しを、助走4回＋本番16回。
+
+初日の作りには次の4つの不具合があり、同日にユーザーから
+「チュートリアルの流用？ 設定にもなってないし判定も出ないし終わったら進行不能になるし
+終わってる」と指摘された。**同じ踏み方を繰り返さないよう、原因まで残しておく。**
+
+1. **叩いたずれを貯める `run.deltas` を、演奏の状態（`run`）ではなく画面の状態（`view` の
+   `initialView()`）へ足していた。** 叩いた瞬間に
+   `Cannot read properties of undefined (reading 'push')` が投げられ、`applyJudgment` が
+   そこで止まる。だから**判定もコンボもスコアも出ず**、曲の終わりでも
+   `run.deltas.slice` で落ちて**リザルトへ進めない**（＝進行不能）。
+   構文は正しいので `check-syntax.js` では拾えず、画面を開いた瞬間には落ちないので
+   `render-error-check.js` でも拾えない。**実際に叩いてみる検査でしか分からない。**
+   → `tools/mode/rhythm-calibration-check.js` を作り、実ブラウザで最後まで叩いて通す。
+2. **`tutorial` を流用していた。** ライフを減らさない目的で
+   `tutorial={from==='tutorial'||from==='calibration'}` と渡したため、
+   あそびかた練習の案内（「まずは『タップ』」…）と肩書き「れんしゅう」がそのまま出た。
+   → `tutorial` と `calibrating` を分け、ライフ保護だけ `(tutorial||calibrating)` にする。
+   案内は `data-rhythm-calibration-banner` を別に持ち、残り回数と途中経過のずれを出す。
+3. **測った値が設定へ入らなかった。** オプションへ戻ってからもう一度ボタンを押す形で、
+   ユーザーには「設定にもなってない」と映った。
+   → 測り終わった画面（`data-rhythm-calibration-result`）でその場で決める。
+   「この値にする」で `onApplyCalibration` → 親が保存してオプションへ戻す。
+   オプション側のパネルは**入れた値の報告だけ**にする。
+4. **案内の置き場所。** 縦では上に置くとコンボ数（おすすめ位置＝右上）と重なり、
+   横では HUD のスコア・ライフと重なった。
+   → 縦は**判定ラインの下**（`bottom:1.5%`）、横は**上のまん中**（`left:50% / width:52%`）。
+   横の空きは実測で器の x 12〜145（スコア）と 703〜832（ライフ）のあいだ。
+
+> ⚠️ **自前で画面を回しているあいだ、CSS の `landscape:` は効かない。**
+> `tools/build-tailwind.js` は `@media (orientation: landscape)` と
+> `&:is([data-mh-view-rotation="true"] *)` の2つを登録しているが、
+> 出来上がった `tailwind.css` に入るのは**メディアクエリのほうだけ**で、
+> 端末は縦のままなので成立しない（2026-09-13に実ブラウザで確認。
+> `landscape:left-1/2` を付けても computed の `left` は `12px` のままだった）。
+> 向きで見た目を変えるときは、JSの `isLandscape`（`orientationIsLandscape()` と
+> `RHYTHM_VIEW_ROTATION.subscribe`）で決める。
+
 ### モンスターノーツの置き方（2026-09-05・報告を受けて確認）
 
 「綺季一閃でモンスターノーツが連続で出た」という報告を受けて、

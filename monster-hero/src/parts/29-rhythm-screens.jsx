@@ -53,7 +53,10 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
   const row='grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-white/10 py-3 last:border-b-0';
   // 数値の項目。粗く動かす外側(coarse)と、細かく動かす内側(fine)を分ける。
   // 刻み(step)は保存する値の刻みそのもので、fine は必ずその倍数にする。
-  const stepper=(key,min,max,step,{fine=step,coarse=step*10,suffix='',decimals=0}={})=>{
+  // label … 1つの枠へ数値の行を2つ以上並べるときに、行ごとの名前を出す
+  //   (2026-09-13・ユーザー指摘「コンボ数の設定の%いじりが2種類あるけど
+  //    何を示してるからわからない」。%の行が名前なしで2本並ぶと見分けが付かない)
+  const stepper=(key,min,max,step,{fine=step,coarse=step*10,suffix='',decimals=0,label=''}={})=>{
     const value=Number(draft[key]),percent=Math.max(0,Math.min(100,((value-min)/(max-min))*100));
     const nudge=amount=>set(key,rhythmNudgeOptionValue(value,min,max,step,amount));
     const display=`${decimals>0?value.toFixed(decimals):value}${suffix}`;
@@ -62,6 +65,10 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
       disabled={amount<0?value<=min:value>=max} onClick={()=>nudge(amount)}
       className={`${wide?'min-h-[38px]':'min-h-[46px]'} rounded-xl border ${dim?'border-white/25 bg-slate-300 text-slate-900':'border-white/40 bg-slate-100 text-slate-900'} px-0.5 text-[11px] font-black tabular-nums shadow-[0_2px_0_rgba(2,6,23,.55)] active:translate-y-[1px] active:shadow-none disabled:opacity-35`}>{sign(amount)}</button>;
     return <div data-rhythm-option-stepper={key} className={wide?'':'space-y-1.5'}>
+      {label&&<div data-rhythm-option-stepper-label={key} className="flex items-baseline justify-between gap-2 px-0.5 pb-0.5 leading-none">
+        <small className="text-[10px] font-black text-cyan-200">{label}</small>
+        <small className="text-[10px] font-bold tabular-nums text-slate-400">{decimals>0?min.toFixed(decimals):min}〜{decimals>0?max.toFixed(decimals):max}{suffix}</small>
+      </div>}
       <div className="grid grid-cols-[1fr_1fr_minmax(52px,1.3fr)_1fr_1fr] items-center gap-1">
         {button(-coarse)}{button(-fine,true)}
         <output aria-live="polite" className={`rounded-lg border-2 border-cyan-300/70 bg-white px-1 text-center font-black tabular-nums text-slate-900 whitespace-nowrap ${wide?'min-h-[38px] text-[13px] leading-[34px]':'min-h-[46px] text-[14px] leading-[42px]'}`}>{display}</output>
@@ -145,17 +152,14 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
             {field('タイミング調整',<>
               {stepper('judgmentTimingOffsetMs',-RHYTHM_TIMING_OFFSET_MAX_MS,RHYTHM_TIMING_OFFSET_MAX_MS,RHYTHM_TIMING_OFFSET_STEP_MS,{fine:1,coarse:10,suffix:'ms'})}
               <button type="button" data-rhythm-calibrator-open onClick={goCalibrate} className="mt-2 min-h-[46px] w-full rounded-xl border border-cyan-300/60 bg-cyan-950/50 text-[12px] font-black text-cyan-100">🎯 実際の画面で合わせる</button>
-              {/* 合わせ終わって戻ってきたら、測った値をここへ出す。入れるかどうかは本人が選ぶ */}
+              {/* 合わせ終わって戻ってきたときのお知らせ。値はもう入っているので、ここは報告だけ
+                  (2026-09-13・ユーザー指摘「設定にもなってない」。決めるのは測り終わった画面) */}
               {calibrationResult&&<div data-rhythm-calibrator-result className="mt-2 rounded-xl border border-amber-300/50 bg-amber-950/30 p-2 text-[11px] leading-relaxed text-amber-100">
-                <p>叩いた{calibrationResult.usedCount}回の平均は <b className="tabular-nums">{calibrationResult.rawMeanMs>0?'+':''}{calibrationResult.rawMeanMs}ms</b>（ばらつき±{calibrationResult.spreadMs}ms{calibrationResult.droppedCount>0?`／${calibrationResult.droppedCount}回は外れ値として除外`:''}）でした。</p>
+                <p><b className="tabular-nums">{calibrationResult.offsetMs>0?'+':''}{calibrationResult.offsetMs}ms</b> にしました。叩いた{calibrationResult.usedCount}回の平均は {calibrationResult.rawMeanMs>0?'+':''}{calibrationResult.rawMeanMs}ms（ばらつき±{calibrationResult.spreadMs}ms{calibrationResult.droppedCount>0?`／${calibrationResult.droppedCount}回は外れ値として除外`:''}）でした。</p>
                 {!calibrationResult.stable&&<p className="mt-1 font-black text-rose-300">ばらつきが大きめです。もう一度合わせると、より合った値になります。</p>}
-                <div className="mt-2 grid grid-cols-2 gap-2">
-                  <button type="button" data-rhythm-calibrator-apply onClick={()=>{set('judgmentTimingOffsetMs',calibrationResult.offsetMs);onClearCalibration&&onClearCalibration();setMessage(`判定タイミング調整を ${calibrationResult.offsetMs>0?'+':''}${calibrationResult.offsetMs}ms にしました（未保存）`);}}
-                    className="min-h-[44px] rounded-xl bg-amber-400 text-[12px] font-black text-slate-950">{calibrationResult.offsetMs>0?'+':''}{calibrationResult.offsetMs}ms にする</button>
-                  <button type="button" onClick={()=>onClearCalibration&&onClearCalibration()} className="min-h-[44px] rounded-xl border border-white/20 bg-slate-800 text-[12px] font-black">今回は使わない</button>
-                </div>
+                <button type="button" data-rhythm-calibrator-dismiss onClick={()=>onClearCalibration&&onClearCalibration()} className="mt-2 min-h-[44px] w-full rounded-xl border border-white/20 bg-slate-800 text-[12px] font-black">とじる</button>
               </div>}
-            </>,'判定窓の幅は変えず、表示と入力の基準を同じ量だけ補正します。1ms刻みで動かせます。数字で決めにくいときは「実際の画面で合わせる」を押してください。いつもの演奏画面が開き、判定とFAST/SLOWを見ながら20回叩くと、そのずれから合う値が出ます。',{full:true})}
+            </>,'判定窓の幅は変えず、表示と入力の基準を同じ量だけ補正します。1ms刻みで動かせます。数字で決めにくいときは「実際の画面で合わせる」を押してください。いつもの演奏画面が開き、判定とFAST／SLOWを見ながら2拍ごとのノーツを叩きます。はじめの4回は数えず、そのあとの16回のずれから合う値を出して、その場で「この値にする」を選べます。ライフは減らず、記録にも残りません。',{full:true})}
             {field('ノーツサイズ',stepper('noteSize',80,120,5,{fine:5,coarse:10,suffix:'%'}),
               'ノーツの見た目の大きさだけを変えます。入力判定の範囲・HOLD/SLIDE帯・ENDバーの位置は変わりません。',{full:true})}
             {/* 【2026-09-05・ユーザー指示】「ノーツの開始位置（奥行き）もオプションで調整できるようにしたい」 */}
@@ -172,11 +176,11 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
               {draft.comboDisplay!==false&&<>
                 <div className={wide?'mt-1.5':'mt-2'}>{segments('comboPosition',RHYTHM_COMBO_POSITION_LABELS)}</div>
                 {/* 大きさも選べる(2026-09-13・ユーザー依頼「コンボ数のサイズ設定もほしい」) */}
-                <div className={wide?'mt-1.5':'mt-2'}>{stepper('comboSize',RHYTHM_COMBO_SIZE_MIN,RHYTHM_COMBO_SIZE_MAX,RHYTHM_COMBO_SIZE_STEP,{fine:RHYTHM_COMBO_SIZE_STEP,coarse:RHYTHM_COMBO_SIZE_STEP*2,suffix:'%'})}</div>
+                <div className={wide?'mt-1.5':'mt-2'}>{stepper('comboSize',RHYTHM_COMBO_SIZE_MIN,RHYTHM_COMBO_SIZE_MAX,RHYTHM_COMBO_SIZE_STEP,{fine:RHYTHM_COMBO_SIZE_STEP,coarse:RHYTHM_COMBO_SIZE_STEP*2,suffix:'%',label:'字の大きさ'})}</div>
                 {/* 濃さ(2026-09-13・ユーザー依頼「コンボ数表記の透過度の設定」) */}
-                <div className={wide?'mt-1.5':'mt-2'}>{stepper('comboOpacity',RHYTHM_COMBO_OPACITY_MIN,RHYTHM_COMBO_OPACITY_MAX,RHYTHM_COMBO_OPACITY_STEP,{fine:RHYTHM_COMBO_OPACITY_STEP,coarse:RHYTHM_COMBO_OPACITY_STEP*3,suffix:'%'})}</div>
+                <div className={wide?'mt-1.5':'mt-2'}>{stepper('comboOpacity',RHYTHM_COMBO_OPACITY_MIN,RHYTHM_COMBO_OPACITY_MAX,RHYTHM_COMBO_OPACITY_STEP,{fine:RHYTHM_COMBO_OPACITY_STEP,coarse:RHYTHM_COMBO_OPACITY_STEP*3,suffix:'%',label:'濃さ（薄くすると透ける）'})}</div>
               </>}
-            </>,'出す/出さないと、出す場所（おすすめ・左・中央・右・右上）、大きさ（70〜150%）、濃さ（30〜100%）を選べます。上から順に「出す/出さない」「場所」「大きさ」「濃さ」です。端へ寄せる3つは、両サイドのマスモンに重ならないところへ出ます。大きさを上げると、端に寄せたときはレーンにかかることがあります。どこに置いても判定・スコア・コンボの数え方は変わりません。',{full:true})}
+            </>,'出す/出さないと、出す場所（おすすめ・左・中央・右・右上）、字の大きさ（70〜150%）、濃さ（30〜100%）を選べます。上から順に「出す/出さない」「場所」「字の大きさ」「濃さ」です。%の行は2つあり、上が字そのものの大きさ、下が濃さ（100%がいちばん濃く、下げるほど透けてノーツが見やすくなります）です。端へ寄せる3つは、両サイドのマスモンに重ならないところへ出ます。大きさを上げると、端に寄せたときはレーンにかかることがあります。どこに置いても判定・スコア・コンボの数え方は変わりません。',{full:true})}
             {field('両サイドのマスモン｜濃さ',segments('sideMonsterOpacity',RHYTHM_SIDE_MONSTER_OPACITY_LABELS),
               'レーンの外側の空いたところへ、設定したマスモンが出て拍に合わせて跳ねます。ノーツが見づらいときや、端末が熱くなりやすいときは薄くするか止めてください。',{full:true})}
             {field('両サイドのマスモン｜動き',segments('sideMonsterMotion',RHYTHM_SIDE_MONSTER_MOTION_LABELS),null,{full:true})}
