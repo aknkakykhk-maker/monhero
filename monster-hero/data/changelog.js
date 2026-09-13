@@ -201,7 +201,7 @@ const CHANGELOG = [
     // お知らせにジャケットを出す(image)のも、このときのユーザー指示
     //   「今後の新曲更新はお知らせにジャケット画もつけて」。
     date: "2026-09-13 12:10", type:'update', title:'モンヒロビート：新曲「FREEDOM DiVE↓」を追加しました', status:'new',
-    image: 'images/song-art/freedom-dive.jpg?v=a43edc4eb595',
+    image: 'images/song-art/freedom-dive.jpg?v=8541349e07f8',
     items:[
       'モンヒロビートに「FREEDOM DiVE↓」（2分25秒）を追加しました。曲えらびからすぐ遊べます。',
       'BPM222.22の高速曲です。5つの難易度すべてが、いままででいちばん難しい譜面になりました。',
