@@ -13880,7 +13880,7 @@ const RHYTHM_SONG_ENTRIES = [
     songId:'freedom_dive',
     displayName:'FREEDOM DiVE↓',
     bgmTrackId:'melo_freedom_dive',
-    artwork:'images/song-art/freedom-dive.jpg?v=a43edc4eb595',
+    artwork:'images/song-art/freedom-dive.jpg?v=8541349e07f8',
     difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[
       id,freedomDiveCharts[id]||emptyRhythmChart()
     ])))
