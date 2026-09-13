@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6289bcebe768e0fe
+// source-sha256: a2832dd8edbc4ded
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: bb5a60fc2e6fba7a
+// generated-sha256: f285791c9afa5a51
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-13 18:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-13 19:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -17879,6 +17879,75 @@ const persistRankingScore = async ({
     };
   }
 };
+
+// ===== 送れなかった記録を、あとで送り直すための道具(2026-09-13) =====
+//
+// 全国ランキングへの送信が失敗すると、これまでは端末へ退避するだけで終わっていた。
+// 画面にも何も出ないので、プレイヤーからは「出したのに載らない」としか見えない。
+// 実際に、rankings.score が int4 だったころの 45,054,226,345(約450億)が
+// 22003 で拒否され、そのまま端末に眠っていた。
+//
+// ここは「退避した記録を読んで、送り直す形へ戻す」ところだけを純粋な関数にしてある。
+// 通信も保存もしないので、tools/ranking/pending-resend-check.js から直接呼んで確かめられる。
+
+// 一度に送る上限と、HOMEへ着いてから送り直しを始めるまでの待ち時間。
+// 起動直後はランキングの取得や絵の読み込みが重なるので、少し待ってから始める。
+const RANKING_RESEND_LIMIT = 10;
+const RANKING_RESEND_DELAY_MS = 4000;
+
+// 退避した一覧から、まだ送れていないものだけを拾う。
+//   ・nationalSaved が false のものだけ(true や、フラグの無い古い記録は触らない)
+//   ・clearId が無いものは送らない。重複を防ぐ鍵が無く、二重登録になってしまうため
+//   ・スコアが数値として読めないものも送らない
+const pendingLocalRankingEntries = list => (Array.isArray(list) ? list : []).filter(entry => entry && typeof entry === 'object' && entry.nationalSaved === false && typeof entry.clearId === 'string' && entry.clearId.length > 0 && Number.isFinite(Number(entry.score)));
+
+// 退避した記録から、送信するときの行を組み立て直す。
+// submitLocalScore が作る row と同じ形にそろえること(列が増えたらここも足す)。
+// 値が無い列は付けない(0やnullを入れて「0ターンでクリア」に見せないため)。
+const rankingRowFromLocalEntry = (entry, difficulty) => {
+  if (!entry) return null;
+  const diff = difficulty || entry.diff;
+  if (!diff) return null;
+  const reachedWave = Number(entry.reachedWave);
+  const turns = Number(entry.turns);
+  const level = Number(entry.level);
+  return {
+    difficulty: diff,
+    user_name: entry.userName || '名無しのブリーダー',
+    hero: entry.hero || 'Unknown',
+    party: Array.isArray(entry.party) ? entry.party : [],
+    score: Number(entry.score),
+    ...(Number.isFinite(level) ? {
+      level
+    } : {}),
+    ...(entry.icon ? {
+      icon: entry.icon
+    } : {}),
+    clear_id: entry.clearId,
+    ...(Number.isFinite(reachedWave) && reachedWave > 0 ? {
+      reached_wave: reachedWave
+    } : {}),
+    ...(Number.isFinite(turns) && turns > 0 ? {
+      turns
+    } : {}),
+    ...(entry.breederId ? {
+      breeder_id: entry.breederId
+    } : {})
+  };
+};
+
+// 送れたものに「送信済み」の印を付ける。行は消さないし、ほかの項目も触らない。
+// (記録そのものはブリーダーLv・絆Lvの集計にも使われているため)
+const markLocalRankingEntriesSent = (list, sentClearIds) => {
+  const sent = new Set(Array.isArray(sentClearIds) ? sentClearIds : []);
+  if (!Array.isArray(list) || sent.size === 0) return Array.isArray(list) ? list : [];
+  return list.map(entry => entry && sent.has(entry.clearId) ? {
+    ...entry,
+    nationalSaved: true,
+    nationalError: undefined,
+    resentAt: Date.now()
+  } : entry);
+};
 const createRunId = () => globalThis.crypto?.randomUUID?.() || `run_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`;
 
 // ===== ブリーダーを見分けるID(2026-09-11) =====
@@ -33131,6 +33200,20 @@ function RewardPickScreen({
     className: `min-h-[52px] rounded-2xl font-black text-base uppercase shadow-lg active:scale-95 transition-all ${ready && !effect ? 'bg-white text-black shadow-[0_0_20px_rgba(255,255,255,0.3)]' : 'bg-slate-800 text-slate-600'}`
   }, ready ? '決定する' : `あと${remaining}つ選ぶ`)));
 }
+
+// 全国ランキングへ送れなかったときのお知らせ。
+// これまでは console にだけ出ていて、プレイヤーからは成功と区別がつかなかった
+// (rankings.score が int4 だったころ、約450億のスコアが黙って弾かれていた)。
+// 記録は端末に残していて、次にHOMEへ戻ったとき自動で送り直す。
+function RankingFailedNote() {
+  return /*#__PURE__*/React.createElement("div", {
+    className: "w-full max-w-xs mx-auto mt-3 rounded-2xl border border-amber-300/60 bg-amber-950/40 px-3 py-2 text-left"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] font-black text-amber-200"
+  }, "\u5168\u56FD\u30E9\u30F3\u30AD\u30F3\u30B0\u3078\u9001\u308C\u307E\u305B\u3093\u3067\u3057\u305F"), /*#__PURE__*/React.createElement("div", {
+    className: "mt-0.5 text-[10px] leading-relaxed text-amber-100/80"
+  }, "\u8A18\u9332\u306F\u7AEF\u672B\u306B\u6B8B\u3057\u3066\u3042\u308A\u307E\u3059\u3002\u6B21\u306B\u30C8\u30C3\u30D7\u753B\u9762\u3078\u623B\u3063\u305F\u3068\u304D\u3001\u81EA\u52D5\u3067\u3082\u3046\u4E00\u5EA6\u9001\u308A\u307E\u3059\u3002 \u81EA\u5DF1\u30D9\u30B9\u30C8\u3084\u5831\u916C\u306F\u3044\u3064\u3082\u3069\u304A\u308A\u53CD\u6620\u3055\u308C\u3066\u3044\u307E\u3059\u3002"));
+}
 function ChampionScreen({
   autoRepeat,
   finalRewardSummary,
@@ -33178,7 +33261,7 @@ function ChampionScreen({
     key: resultProcessing ? 'locked' : 'ready',
     summary: finalRewardSummary,
     onPresentationComplete: resultProcessing ? undefined : () => setChampionPresentationComplete(true)
-  }), /*#__PURE__*/React.createElement("div", {
+  }), runHighlights.rankingFailed && /*#__PURE__*/React.createElement(RankingFailedNote, null), /*#__PURE__*/React.createElement("div", {
     className: "w-full max-w-xs mx-auto mt-3 text-left"
   }, /*#__PURE__*/React.createElement(AssistantBubble, {
     scene: "resultWin",
@@ -33250,7 +33333,7 @@ function GameOverScreen({
     className: "m-auto w-full flex flex-col items-center"
   }, masuRegisterButtonNode(), finalRewardSummary && /*#__PURE__*/React.createElement(RewardSummaryCard, {
     summary: finalRewardSummary
-  }), /*#__PURE__*/React.createElement("div", {
+  }), runHighlights.rankingFailed && /*#__PURE__*/React.createElement(RankingFailedNote, null), /*#__PURE__*/React.createElement("div", {
     className: "w-full max-w-xs mx-auto mt-3 text-left"
   }, /*#__PURE__*/React.createElement(AssistantBubble, {
     scene: "resultLose",
@@ -36300,11 +36383,14 @@ function MonsterHeroGame() {
   const [proClearCounts, setProClearCounts] = useState({});
   // このランで「自己ベストを更新したか」「その難易度を初めてクリアしたか」。
   // リザルトで助手に特別なセリフを言わせるためだけに使う(保存はしない)
+  // rankingFailed … 全国ランキングへ送れなかった周回。リザルトでその旨を知らせる
+  // (これまでは console にだけ出ていて、プレイヤーには成功と区別がつかなかった)
   const [runHighlights, setRunHighlights] = useState({
     newRecord: false,
     firstClear: false,
     firstWin: false,
-    firstLose: false
+    firstLose: false,
+    rankingFailed: false
   });
   // 初回チュートリアル。null=出さない、0以上=そのページを表示中。
   // 見たかどうかは新しい保存キーへ分けて持つ(既存のキーには一切触らない)
@@ -38910,6 +38996,109 @@ function MonsterHeroGame() {
       score: row.score
     });
   }, [breederName, breederLevel, breederIcon]);
+
+  // 送れなかった記録を、あとで送り直す(2026-09-13)。
+  //
+  // 全国ランキングへの送信が失敗したとき、これまでは端末へ退避するだけで終わっていた。
+  // 実際に rankings.score が int4 だったころ、45,054,226,345(約450億)が 22003 で拒否され、
+  // 画面には何も出ないまま端末に眠っていた(DB側は bigint へ広げて直した)。
+  //
+  // 同じクリアには clearId が付いていて、DB側に clear_id のユニーク索引があるので、
+  // 送り直しても二重登録にはならない。失敗したら何も変えずに次の起動へ回す。
+  const resendPendingRankingRef = useRef(false);
+  const resendPendingRankingScores = async (limit = RANKING_RESEND_LIMIT) => {
+    if (resendPendingRankingRef.current) return {
+      sent: 0,
+      failed: 0
+    };
+    resendPendingRankingRef.current = true;
+    let sent = 0,
+      failed = 0;
+    try {
+      // ① バトル(チャレンジ・プロ・極限・種族・モンビー)の記録。難易度ごとに分かれている
+      const keys = await storeList('mh_rank_', false);
+      for (const key of Array.isArray(keys) ? keys : []) {
+        if (sent + failed >= limit) break;
+        const diff = key.slice('mh_rank_'.length);
+        if (!diff) continue;
+        const list = await storeGet(key, [], false);
+        const pending = pendingLocalRankingEntries(list);
+        if (pending.length === 0) continue;
+        const done = [];
+        for (const entry of pending) {
+          if (sent + failed >= limit) break;
+          const row = rankingRowFromLocalEntry(entry, diff);
+          if (!row) continue;
+          try {
+            // モンビーの記録は難易度キーが Rhythm-<曲>-<難易度> なので、送り先の関数も分ける
+            const insert = String(diff).startsWith('Rhythm-') ? sbInsertRhythmScore : sbInsertScore;
+            const res = await insert(row);
+            if (res?.saved === true) {
+              done.push(entry.clearId);
+              sent++;
+            } else {
+              failed++;
+            }
+          } catch (e) {
+            failed++;
+            console.error('[ranking] resend failed:', e && e.message ? e.message : e);
+          }
+        }
+        // 送れたぶんにだけ印を付けて書き戻す。行は消さないし、ほかの項目も触らない
+        if (done.length > 0) await storeSet(key, markLocalRankingEntriesSent(list, done), false);
+      }
+      // ② モンビーの未送信キュー。こちらは送る行そのものを貯めてある
+      const rhythmPending = await storeGet(RHYTHM_RANKING_PENDING_KEY, [], false);
+      if (Array.isArray(rhythmPending) && rhythmPending.length > 0) {
+        const rest = [];
+        for (const row of rhythmPending) {
+          if (sent + failed >= limit || !row || !row.clear_id) {
+            rest.push(row);
+            continue;
+          }
+          try {
+            const {
+              at,
+              error,
+              ...payload
+            } = row;
+            const res = await sbInsertRhythmScore(payload);
+            if (res?.saved === true) sent++;else {
+              failed++;
+              rest.push(row);
+            }
+          } catch (e) {
+            failed++;
+            rest.push(row);
+            console.error('[rhythm-ranking] resend failed:', e && e.message ? e.message : e);
+          }
+        }
+        if (rest.length !== rhythmPending.length) await storeSet(RHYTHM_RANKING_PENDING_KEY, rest, false);
+      }
+      if (sent > 0) console.info('[ranking] resent pending scores', {
+        sent,
+        failed
+      });
+    } catch (e) {
+      console.error('[ranking] resend sweep failed:', e && e.message ? e.message : e);
+    } finally {
+      resendPendingRankingRef.current = false;
+    }
+    return {
+      sent,
+      failed
+    };
+  };
+  // HOMEに落ち着いてから1回だけ走らせる。起動直後の読み込みと重ならないよう少し待つ
+  const resendCheckedRef = useRef(false);
+  useEffect(() => {
+    if (bootPhase !== 'GAME' || gameState !== 'HOME' || !dataLoaded || !onboarded || resendCheckedRef.current) return;
+    resendCheckedRef.current = true;
+    const id = setTimeout(() => {
+      resendPendingRankingScores();
+    }, RANKING_RESEND_DELAY_MS);
+    return () => clearTimeout(id);
+  }, [bootPhase, gameState, dataLoaded, onboarded]);
   const loadRankings = useCallback(async (targetDiff = null, includeLevels = false, force = false, levelKind = 'bond') => {
     const normalizedTargetDiff = targetDiff == null ? null : rankingDifficultyKey(targetDiff);
     const byDiff = {};
@@ -41591,6 +41780,10 @@ function MonsterHeroGame() {
         const result = await submitLocalScore(rankingDifficultyForMode(EXTREME_MODE.id, extremeDifficulty), score, runIdRef.current);
         if (!result?.nationalSaved) {
           console.error('[result] extreme score save failed:', result?.error?.message || 'unknown ranking error');
+          setRunHighlights(prev => ({
+            ...prev,
+            rankingFailed: true
+          }));
           return result;
         }
         const currentBest = extremeBestScores[extremeDifficulty] || 0;
@@ -41618,6 +41811,10 @@ function MonsterHeroGame() {
         const result = await submitLocalScore(rankingDifficultyForMode(BATTLE_MODE_PRO, difficulty), score, runIdRef.current);
         if (!result?.nationalSaved) {
           console.error('[result] pro score save failed:', result?.error?.message || 'unknown ranking error');
+          setRunHighlights(prev => ({
+            ...prev,
+            rankingFailed: true
+          }));
           return result;
         }
         if (score > (proHighScores[difficulty] || 0)) {
@@ -41641,6 +41838,10 @@ function MonsterHeroGame() {
       const result = await submitLocalScore(difficulty, score, runIdRef.current);
       if (!result?.nationalSaved) {
         console.error('[result] national score save failed:', result?.error?.message || 'unknown ranking error');
+        setRunHighlights(prev => ({
+          ...prev,
+          rankingFailed: true
+        }));
         return result;
       }
       if (score > (highScores[difficulty] || 0)) {
@@ -41679,6 +41880,10 @@ function MonsterHeroGame() {
       const result = await submitLocalScore(diff, score, runIdRef.current);
       if (!result?.nationalSaved) {
         console.error('[result] species challenge score save failed:', result?.error?.message || 'unknown ranking error');
+        setRunHighlights(prev => ({
+          ...prev,
+          rankingFailed: true
+        }));
       }
       return result;
     } catch (e) {
@@ -45341,7 +45546,8 @@ function MonsterHeroGame() {
       newRecord: false,
       firstClear: false,
       firstWin: false,
-      firstLose: false
+      firstLose: false,
+      rankingFailed: false
     });
     return s;
   };
@@ -46162,7 +46368,8 @@ function MonsterHeroGame() {
       newRecord: false,
       firstClear: false,
       firstWin: false,
-      firstLose: false
+      firstLose: false,
+      rankingFailed: false
     });
     setSkipFlow(null);
     setSkipConfirmOpen(false);
