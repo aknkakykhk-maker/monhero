@@ -173,20 +173,18 @@ check('週間の行に最後の記録の日時を出す',
   const weeks=(t)=>O.rhythmHistoryEntries(t).filter(e=>e.kind==='weekly');
   const now=weeks(from+1000);
   check('累計方式より前の週も並ぶ',now.length>=1,now.map(w=>w.id+'('+w.scoring+')').join(' / '));
-  check('前の週は当時の数え方(ベスト合算)の印が付く',
-    now.every(w=>w.startMs<from?w.scoring==='best':w.scoring==='total'));
-  check('累計方式になってからの週は累計の印が付く',
-    weeks(from+O.RHYTHM_WEEK_MS).filter(w=>w.startMs>=from).every(w=>w.scoring==='total'));
+  // ★どの週も「その週が終わった時点の数え方」＝累計で出す(2026-09-14・ユーザー指摘)。
+  //   累計へ変えたのは2026-09-13の昼で、9/07〜9/14の週の途中。
+  //   いったん「当時はベスト合算」と考えて数え方を分けたが、切り替え時刻の取り違えだった
+  check('週ごとに数え方を分けていない',
+    !/scoring/.test(eventData)&&!/historyWeekScoring/.test(app)&&!/weeklyBest/.test(history));
+  check('履歴の週も累計で集計する',
+    /const weeklyTotals = \(kind === 'weekly' \|\| \(kind === 'history' && historyEntry\.kind === 'weekly'\)\) && !targetSongId;/.test(app));
   check('週間ランキングが遊べるようになる前の週までは遡らない',
     weeks(from+1000).every(w=>w.startMs>=O.RHYTHM_WEEKLY_HISTORY_FROM_MS));
-  check('数え方で集計する関数を選び分ける',
-    /const historyWeekScoring = \(kind === 'history' && historyEntry\.kind === 'weekly'\)/.test(app)
-    &&/const weeklyTotals = \(\(kind === 'weekly'\) \|\| historyWeekScoring === 'total'\) && !targetSongId;/.test(app));
-  check('どちらの数え方かを画面で伝える',
-    history.includes('data-rhythm-history-best-note')&&history.includes('data-rhythm-history-total-note')
-    &&/const weeklyBest = weekly && selected\.scoring === 'best';/.test(history));
-  check('前の週では「遊んだ回数」を出さない(当時は数えていないため)',
-    /weeklyTotals\?`\$\{entry\.playCount\}回 ・ `:''/.test(history));
+  check('履歴の週でも「遊んだ回数」を出す',
+    /weekly\?`\$\{entry\.playCount\}回 ・ `:''/.test(history));
+  check('数え方を画面に書いている',history.includes('data-rhythm-history-total-note'));
 }
 
 // ⑦ 週間に回数ボーナスは付けない
@@ -215,7 +213,7 @@ check('予行演習(rollback)と手順書がそろっている',
 // 2026-09-13、履歴(終わった週をあとから見る)も同じ累計方式で数える
 check('アプリは累計の関数を呼ぶ',
   supa.includes('rpc/rhythm_week_score_totals')
-  &&/const weeklyTotals = \(\(kind === 'weekly'\) \|\| historyWeekScoring === 'total'\) && !targetSongId;/.test(app));
+  &&/const weeklyTotals = \(kind === 'weekly' \|\| \(kind === 'history' && historyEntry\.kind === 'weekly'\)\) && !targetSongId;/.test(app));
 check('関数が無い環境を「準備中」として扱う',
   /rhythm_week_score_totals\|rhythm_event_song_bests/.test(supa));
 check('端末側で累計を足していない',

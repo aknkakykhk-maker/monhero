@@ -510,30 +510,31 @@ const rhythmEventDivisionIds = (event) => [
 // **選んで開いた回だけ1回集計を呼ぶ**(いまのランキングを1回開くのと同じ)。
 //
 // 【どこまでさかのぼれるか】
-// RHYTHM_WEEKLY_REWARD_FROM_MS(2026-09-14 05:00 JST)より前の週は出さない。
-// 2026-09-13に週間の数え方そのものを変えている(曲別のベストを合算 →
-// その週に出した記録をぜんぶ足す累計)ので、それより前の週をいまの関数で集計すると、
-// **当時プレイヤーが見ていた順位と食い違う**。受け取りの開始時刻と同じ日時なので、
-// 値を2か所に持たないよう、その定数をそのまま境界に使う(2026-09-13・ユーザーが決めた)。
-const rhythmHistoryWeekFromMs = () => RHYTHM_WEEKLY_REWARD_FROM_MS;
+// 週間ランキングが遊べるようになった週(2026-09-07 05:00 JST)まで。
+// それより前は誰も週間の順位を見ていないので、出しても意味がない。
+const rhythmHistoryWeekFromMs = () => RHYTHM_WEEKLY_HISTORY_FROM_MS;
 
-// ★それより前の週も載せる(2026-09-14・ユーザー依頼「先週の記録は過去の記録に
-//   今からでも載せたりはできない？」)。ただし**当時の数え方で集計する**。
-//   累計方式より前の週は「曲ごとのベストを全曲ぶん合計」だったので、
-//   そのまま累計で出すと、当時プレイヤーが見ていた順位と数字が変わってしまう。
-//   どちらの数え方かは entry.scoring('total' = 累計 / 'best' = ベスト合算)で持ち、
-//   集計する関数を画面側が選ぶ。
+// どこまで遡るか(2026-09-14・ユーザー依頼「先週の記録は過去の記録に
+// 今からでも載せたりはできない？」)。
+//
 // 週間ランキングが遊べるようになったのは 2026-09-11。その週の始まり(9/07 5:00)より
 // 前の週は、そもそも誰も順位を見ていないので載せない。
+//
+// ★集計は**どの週も累計方式**でよい(2026-09-14・ユーザー指摘
+//   「なんで先週の記録は計算方法違うのを出すの？ 先週の終了段階の方式の
+//     ランキングを出すだけじゃだめなの？」)。
+//   累計方式へ変えたのは 2026-09-13 の昼で、9/07〜9/14 の週の**途中**。
+//   つまりその週が終わった時点で画面に出ていたのは累計のほうなので、
+//   累計で出すのが「そのとき見えていた順位」と一致する。
+//   いったん「当時はベスト合算だった」と考えて数え方を分けたが、
+//   切り替えた時刻を取り違えていた。
 const RHYTHM_WEEKLY_HISTORY_FROM_MS = Date.UTC(2026, 8, 6, 20, 0, 0); // 2026-09-07 05:00 JST
-const rhythmHistoryWeekScoring = (startMs) =>
-  (Number(startMs) >= RHYTHM_WEEKLY_REWARD_FROM_MS) ? 'total' : 'best';
 
 // 終わった週(新しい順)。limit>0 でその件数まで
 const rhythmHistoryWeeks = (nowMs, limit = 0) => {
   const now = Number.isFinite(Number(nowMs)) ? Number(nowMs) : 0;
   const max = Number.isFinite(Number(limit)) ? Math.floor(Number(limit)) : 0;
-  const fromMs = RHYTHM_WEEKLY_HISTORY_FROM_MS;
+  const fromMs = rhythmHistoryWeekFromMs();
   const out = [];
   // 今週の1つ前から、始まりの週まで1週ずつさかのぼる。
   // 境界(fromMs)で必ず止まるので、数え続けることはない
@@ -542,8 +543,7 @@ const rhythmHistoryWeeks = (nowMs, limit = 0) => {
     if (startMs < fromMs) break;
     const endMs = startMs + RHYTHM_WEEK_MS;
     if (now < endMs) continue;                       // まだ終わっていない週は出さない
-    out.push(Object.freeze({ id: rhythmWeekId(startMs), kind: 'weekly', startMs, endMs, event: null,
-      scoring: rhythmHistoryWeekScoring(startMs) }));
+    out.push(Object.freeze({ id: rhythmWeekId(startMs), kind: 'weekly', startMs, endMs, event: null }));
     if (max > 0 && out.length >= max) break;
   }
   return out;
