@@ -14,18 +14,24 @@ if(!dataBlock||!scoreBlock)process.exit(1);
 const context={};vm.createContext(context);
 vm.runInContext(`${dataBlock}\nconst RHYTHM_JUDGMENT_IDS=RHYTHM_JUDGMENTS.map(item=>item.id);\n${scoreBlock}\nthis.out={RHYTHM_JUDGMENTS,RHYTHM_SCORE_WEIGHTS,RHYTHM_RANKS,rhythmRankForScore,RHYTHM_LIFE_MAX,RHYTHM_LIFE_DELTA,rhythmLifeAfter,rhythmLifeRatio,rhythmCalculateScore};`,context);
 const {RHYTHM_JUDGMENTS,RHYTHM_SCORE_WEIGHTS,RHYTHM_RANKS,rhythmRankForScore,RHYTHM_LIFE_MAX,RHYTHM_LIFE_DELTA,rhythmLifeAfter,rhythmLifeRatio,rhythmCalculateScore}=context.out;
-check('最大ライフと判定増減値は不変',RHYTHM_LIFE_MAX===1000&&JSON.stringify(RHYTHM_LIFE_DELTA)===JSON.stringify({MARVELOUS:2,EXCELLENT:2,GREAT:1,GOOD:0,BAD:-20,MISS:-50}));
+// 2026-09-13・ユーザー指示「ライフのノーツ回復があるせいでゲームオーバーの危険性が少ない。
+// 回復はモンスターノーツのみに変更したい」。ふつうのノーツでの回復(+2 / +1)をやめた。
+// **減り方(BAD -20 / MISS -50)と最大値(1000)は変えていない**ので、そこは引き続き固定で見張る。
+check('最大ライフと減り方は不変',RHYTHM_LIFE_MAX===1000&&RHYTHM_LIFE_DELTA.BAD===-20&&RHYTHM_LIFE_DELTA.MISS===-50);
+check('ふつうのノーツでは回復しない(回復はモンスターノーツの「元気」だけ)',
+  JSON.stringify(RHYTHM_LIFE_DELTA)===JSON.stringify({MARVELOUS:0,EXCELLENT:0,GREAT:0,GOOD:0,BAD:-20,MISS:-50}));
 check('判定窓と通常スコア式は不変',JSON.stringify(RHYTHM_JUDGMENTS.map(x=>[x.id,x.windowMs,x.scoreRate]))===JSON.stringify([['MARVELOUS',55,1],['EXCELLENT',100,.98],['GREAT',150,.9],['GOOD',170,.7],['BAD',185,.3],['MISS',null,0]])&&RHYTHM_SCORE_WEIGHTS.judgment===.9&&RHYTHM_SCORE_WEIGHTS.combo===.1);
-check('ライフ1以上では回復できる',rhythmLifeAfter(1,'MARVELOUS')===3&&rhythmLifeAfter(999,'GREAT')===1000);
+check('良い判定でもライフは増えない',
+  rhythmLifeAfter(1,'MARVELOUS')===1&&rhythmLifeAfter(999,'GREAT')===999&&rhythmLifeAfter(500,'EXCELLENT')===500);
 check('ライフ0以降はMARVELOUSでも0固定',rhythmLifeAfter(0,'MARVELOUS')===0&&rhythmLifeAfter(0,'EXCELLENT')===0&&rhythmLifeAfter(0,'GREAT')===0);
 check('減少と表示クランプは従来どおり',rhythmLifeAfter(500,'MISS')===450&&rhythmLifeAfter(500,'BAD')===480&&rhythmLifeRatio(-1)===0&&rhythmLifeRatio(2000)===1);
 
 const ids=RHYTHM_JUDGMENTS.map(x=>x.id),empty=()=>Object.fromEntries(ids.map(id=>[id,0]));
 const run={life:51,lifeDepleted:false,score:0,lockedScore:0,combo:0,maxCombo:0,counts:empty()};
 const apply=judgment=>{run.combo=['MARVELOUS','EXCELLENT','GREAT','GOOD'].includes(judgment)?run.combo+1:0;run.maxCombo=Math.max(run.maxCombo,run.combo);run.counts[judgment]++;run.life=rhythmLifeAfter(run.life,judgment);const calculatedScore=rhythmCalculateScore({judgments:run.counts,maxCombo:run.maxCombo,totalNotes:5,maxScore:1000000});if(!run.lifeDepleted)run.score=calculatedScore;if(!run.lifeDepleted&&run.life===0){run.lifeDepleted=true;run.lockedScore=run.score;}return run.lifeDepleted?run.lockedScore:run.score;};
-const beforeDown=apply('MARVELOUS');apply('MISS'); // 53 -> 3
+const beforeDown=apply('MARVELOUS');apply('MISS'); // 51 -> 51 -> 1
 check('DOWN前の成功判定は通常どおりスコア加算',beforeDown>0&&run.score>=beforeDown);
-const atDown=apply('MISS'); // 3 -> 0。このMISSまでを含むスコアを固定
+const atDown=apply('MISS'); // 1 -> 0。このMISSまでを含むスコアを固定
 const countsAtDown={...run.counts},comboAtDown=run.combo;
 const afterDown=apply('MARVELOUS');
 check('0到達判定の終了時点でスコアを固定',run.lifeDepleted&&run.lockedScore===atDown);
@@ -101,8 +107,9 @@ check('動きを減らす設定の端末では、色と表示だけにする',
   /@media \(prefers-reduced-motion:reduce\)\{[\s\S]{0,600}?\[data-rhythm-down-vignette\]/.test(html));
 
 // --- リザルトのクリア／失敗 ---
-check('失敗はライフ0のまま終えたときだけ(練習は必ずクリア)',
-  game.includes('const failed=!tutorial&&run.lifeDepleted===true;')
+// 練習(tutorial)とタイミング合わせ(calibrating)はライフを減らさないので必ずクリア
+check('失敗はライフ0のまま終えたときだけ(練習・タイミング合わせは必ずクリア)',
+  game.includes('const failed=!tutorial&&!calibrating&&run.lifeDepleted===true;')
   &&game.includes('cleared:!failed,'));
 check('リザルトの最上段にCLEAR / FAILEDを出す',
   game.includes('data-rhythm-result-clear')

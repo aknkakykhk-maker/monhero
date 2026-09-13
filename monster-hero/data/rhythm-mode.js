@@ -136,7 +136,12 @@ const rhythmNextRankId = (score, maxScore) => {
 // 音ゲーのライフ(暫定値)。0へ到達したrunは不可逆のDOWNとなり、曲は止めずに
 // ライフとスコアだけを固定する。将来の回復処理も0からは復帰させない。
 const RHYTHM_LIFE_MAX = 1000;
-const RHYTHM_LIFE_DELTA = Object.freeze({ MARVELOUS:2, EXCELLENT:2, GREAT:1, GOOD:0, BAD:-20, MISS:-50 });
+// ★ふつうのノーツでは回復しない(2026-09-13・ユーザー指示「ライフのノーツ回復があるせいで
+//   ゲームオーバーの危険性が少ない。回復はモンスターノーツのみに変更したい」)。
+//   それまでは MARVELOUS/EXCELLENT で +2、GREAT で +1 入り、上手な人ほど減らなかった。
+//   **回復はモンスターノーツの「元気」(+500)だけ**になる。減り方(BAD -20 / MISS -50)と
+//   最大値(1000)、0からは戻らない決まりは変えていない。
+const RHYTHM_LIFE_DELTA = Object.freeze({ MARVELOUS:0, EXCELLENT:0, GREAT:0, GOOD:0, BAD:-20, MISS:-50 });
 // null / undefined / 空文字は「値なし」として満タン扱いにする(Number()では0になってしまう)。
 const rhythmLifeValue = life => {
   const raw = life == null || life === '' ? NaN : Number(life);

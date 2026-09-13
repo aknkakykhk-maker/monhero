@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a95ddd210312e0ce
+// source-sha256: d9193d5b314954eb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 334f84cc10d7f6f6
+// generated-sha256: 3d9351d2fd0563fe
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-13 13:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-13 13:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5160,6 +5160,12 @@ const RHYTHM_MONSTER_EFFECT_LEVELS = Object.freeze(RHYTHM_MONSTER_EFFECT_LABELS.
 const RHYTHM_COMBO_OPACITY_MIN = 30;
 const RHYTHM_COMBO_OPACITY_MAX = 100;
 const RHYTHM_COMBO_OPACITY_STEP = 10;
+// ライフ表示の大きさ(2026-09-13・ユーザー依頼「ライフ表示が目立たないからもっと大きく
+// 見やすくしてほしい（設定調整可能）」)。100%がそれまでの大きさで、既定はひと回り大きい150%。
+// 太さ・ハート・数字にそのまま掛かる。横幅だけは台形の外の空きに収める都合で伸びを抑える。
+const RHYTHM_LIFE_SIZE_MIN = 100;
+const RHYTHM_LIFE_SIZE_MAX = 200;
+const RHYTHM_LIFE_SIZE_STEP = 10;
 const RHYTHM_COMBO_SIZE_MIN = 70;
 const RHYTHM_COMBO_SIZE_MAX = 150;
 const RHYTHM_COMBO_SIZE_STEP = 10;
@@ -5207,6 +5213,7 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   comboPosition: 'AUTO',
   comboSize: 100,
   comboOpacity: 100,
+  lifeDisplaySize: 150,
   holdSlideOpacity: 80,
   laneGlow: 'NORMAL',
   monsterNoteEffect: 'LIGHT',
@@ -5255,6 +5262,7 @@ const normalizeRhythmSettings = value => {
     comboDisplay: bool('comboDisplay'),
     comboPosition: RHYTHM_COMBO_POSITIONS.includes(source.comboPosition) ? source.comboPosition : DEFAULT_RHYTHM_SETTINGS.comboPosition,
     comboSize: rhythmFiniteStep(source.comboSize, RHYTHM_COMBO_SIZE_MIN, RHYTHM_COMBO_SIZE_MAX, RHYTHM_COMBO_SIZE_STEP, DEFAULT_RHYTHM_SETTINGS.comboSize),
+    lifeDisplaySize: rhythmFiniteStep(source.lifeDisplaySize, RHYTHM_LIFE_SIZE_MIN, RHYTHM_LIFE_SIZE_MAX, RHYTHM_LIFE_SIZE_STEP, DEFAULT_RHYTHM_SETTINGS.lifeDisplaySize),
     comboOpacity: rhythmFiniteStep(source.comboOpacity, RHYTHM_COMBO_OPACITY_MIN, RHYTHM_COMBO_OPACITY_MAX, RHYTHM_COMBO_OPACITY_STEP, DEFAULT_RHYTHM_SETTINGS.comboOpacity),
     monsterNoteEffect: RHYTHM_MONSTER_EFFECT_LEVELS.includes(source.monsterNoteEffect) ? source.monsterNoteEffect : DEFAULT_RHYTHM_SETTINGS.monsterNoteEffect,
     holdSlideOpacity: rhythmFiniteInRange(source.holdSlideOpacity, 10, 100, DEFAULT_RHYTHM_SETTINGS.holdSlideOpacity),
@@ -20709,6 +20717,12 @@ const RhythmOptions = ({
     coarse: 25
   }), 'ノーツが画面のどのあたりから出てくるかを変えます。マイナスにすると奥（画面の上の外側）から、プラスにすると手前寄りから出てきます。判定ラインの位置・判定のタイミング・判定窓・スコアは変わりません。ノーツが流れてくる時間も変わらないので、手前から出すほど見えているあいだの動きは速く見えます。', {
     full: true
+  }), field('ライフ表示の大きさ', stepper('lifeDisplaySize', RHYTHM_LIFE_SIZE_MIN, RHYTHM_LIFE_SIZE_MAX, RHYTHM_LIFE_SIZE_STEP, {
+    fine: RHYTHM_LIFE_SIZE_STEP,
+    coarse: RHYTHM_LIFE_SIZE_STEP * 5,
+    suffix: '%'
+  }), '画面の右上に出るライフ（♥のゲージと数字）の大きさです。100%が2026-09-13より前の大きさで、既定は150%です。ゲージの太さと数字が倍率どおりに大きくなります。横はばとハートの伸びはゆるめてあります（レーンの台形へかぶらないようにするため）。ライフの減り方・DOWNの決まりは変わりません。', {
+    full: true
   }), field('FAST / SLOW表示', toggle('fastSlowDisplay')), field('判定文字表示', toggle('judgmentTextDisplay')), field('レーン発光', segments('laneGlow', RHYTHM_LANE_GLOW_LABELS), null, {
     full: true
   }), field('コンボ数', /*#__PURE__*/React.createElement(React.Fragment, null, toggle('comboDisplay'), draft.comboDisplay !== false && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
@@ -24000,17 +24014,20 @@ const RhythmTapTest = ({
     ref: lifeBoxRef,
     "data-rhythm-life": true,
     "data-life-state": lifeState,
-    className: "relative flex items-center justify-end gap-1"
+    style: {
+      '--mh-life-scale': rhythmFiniteInRange(settings.lifeDisplaySize, RHYTHM_LIFE_SIZE_MIN, RHYTHM_LIFE_SIZE_MAX, 150) / 100
+    },
+    className: "relative flex flex-nowrap items-center justify-end gap-x-1"
   }, /*#__PURE__*/React.createElement("span", {
     "aria-hidden": "true",
     "data-rhythm-life-heart": true,
-    className: "text-sm leading-none text-rose-400",
+    className: "leading-none text-rose-400",
     style: {
       textShadow: '0 1px 4px rgba(2,6,23,.92)'
     }
   }, lifeState === 'down' ? '💔' : '♥'), /*#__PURE__*/React.createElement("div", {
     "data-rhythm-life-track": true,
-    className: "relative h-2.5 w-12 rounded-full border bg-slate-950/80 landscape:h-2 landscape:w-14"
+    className: "relative rounded-full border bg-slate-950/80"
   }, /*#__PURE__*/React.createElement("i", {
     "data-rhythm-life-bar": true,
     "aria-hidden": "true",
@@ -24022,7 +24039,7 @@ const RhythmTapTest = ({
     }
   })), /*#__PURE__*/React.createElement("b", {
     "data-rhythm-life-value": true,
-    className: "text-[10px] font-black leading-none tabular-nums text-slate-200",
+    className: "font-black leading-none tabular-nums text-slate-200",
     style: {
       textShadow: '0 1px 4px rgba(2,6,23,.92)'
     }
