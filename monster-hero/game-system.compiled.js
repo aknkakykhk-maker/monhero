@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6fd3631303ca6eca
+// source-sha256: 772060d563216d70
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d2a69a9da1f14bd6
+// generated-sha256: e920195c141fdf91
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-13 16:32"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-13 17:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5144,14 +5144,23 @@ const RHYTHM_TIMING_OFFSET_STEP_MS = 1;
 //   NORMAL … いまのまま(粒が2.1倍・画面全体が金色に光る・そのマスモンが大きく跳ねる)
 //   LIGHT  … **画面全体の光をやめる**。粒と跳ねは残す。いちばん重いのが全画面の描き直し
 //   OFF    … 粒もふつうのノーツと同じにして、跳ねもやめる
-// ★どの段でも**音・能力名・振動は残す**。取れたことが分からなくなるのがいちばん困るため。
+//   NONE   … **ノーツに乗るマスモンの絵を出さない**。能力名の大きな表示も出さない
+// ★NONE を足した理由(2026-09-13・ユーザー指摘「モンスターノーツの演出もっと軽いの設定で
+//   選べるようにしてほしい / あれは踏んだときまだカクつきがある / ちなみに設定は最小」)。
+//   モンスターノーツだけは、canvasに描くのとは**別に**マスモンの絵をDOMの要素で重ね、
+//   毎フレーム transform と scale を書き換えている(30-rhythm-play.jsx の tick)。
+//   ふつうのノーツには無い処理なので、OFF にしてもここだけは残っていた。
+//   NONE では絵そのものを作らないので、モンスターノーツもふつうのノーツと同じ扱いになる。
+//   金色の粒は canvas 側で描くので、どれがモンスターノーツかは色で分かる。
+// ★どの段でも**音・振動・能力の効果は残す**。取れたことが分からなくなるのがいちばん困るため
+//   (能力名の大きな表示だけは NONE で出さない。効いていることは左上のバッジで分かる)。
 // ★既定は LIGHT。2026-09-13にユーザーから「演出量が普通だと重いという声が多い /
 //   少なめをデフォルトにして今の普通を多めとかにしたい / モンスターノーツも同じく」。
 //   同日さらに「デフォルトの名称を標準にして」と指示があり、**既定の段を「標準」と呼ぶ**
 //   ことにした(多め / 標準 / 最小)。演出量も同じ並びにそろえてある。
 //   IDは変えない(保存済みの値の意味が変わらないようにするため。CLAUDE.md ⑦)。
 //   変えるのは**画面に出す名前と既定値だけ**なので、自分で選んで保存した人はそのまま。
-const RHYTHM_MONSTER_EFFECT_LABELS = Object.freeze([['NORMAL', '多め'], ['LIGHT', '標準'], ['OFF', '最小']]);
+const RHYTHM_MONSTER_EFFECT_LABELS = Object.freeze([['NORMAL', '多め'], ['LIGHT', '標準'], ['OFF', '少なめ'], ['NONE', '最小']]);
 const RHYTHM_MONSTER_EFFECT_LEVELS = Object.freeze(RHYTHM_MONSTER_EFFECT_LABELS.map(([id]) => id));
 // コンボ数の大きさ(2026-09-13・ユーザー依頼「コンボ数のサイズ設定もほしい」)。
 // 置き場所ごとの基準の大きさ(真ん中52px / 端34px)へ、この割合を掛ける。
@@ -20804,7 +20813,7 @@ const RhythmOptions = ({
     className: wide ? grid : `mt-3 ${grid}`
   }, field('演出量', segments('effectAmount', RHYTHM_EFFECT_LABELS), '重い順に「最大」「多め」「標準」「最小」の4段で、既定は「標準」です。判定・判定窓・スコアはどの段でも変わりません。\n「最大」＝2026-09-13より前の見た目そのまま。判定文字の金色の帯や虹が流れ、判定ラインが拍に合わせて脈打ち、コンボ数が跳ね、両サイドのマスモンも跳ねます。\n「多め」＝判定文字の流れと光のにじみだけ止めます（色・大きさはそのまま）。\n「標準」＝それに加えて、曲のあいだずっと動き続けるものを止めます。判定ラインの脈打ち、コンボ数の跳ねと枠の脈動、判定文字が出た瞬間に弾む動き、ノーツを取り切ったときの光です。判定ラインで弾ける光・100コンボごとのお祝い・フルコンボの大きな表示は残るので、手ごたえは変わりません。両サイドのマスモンの動きはここでは変わりません（専用の「両サイドのマスモン｜動き」で決めます）。\n「最小」＝光そのものと100コンボごとの演出も出なくなります。', {
     full: true
-  }), field('モンスターノーツの演出', segments('monsterNoteEffect', RHYTHM_MONSTER_EFFECT_LABELS), 'モンスターノーツを取ったときの演出の強さです。既定は「標準」で、画面全体が金色に光るのをやめます（いちばん重いのがこの全画面の描き直しです）。粒と跳ねは残ります。「多め」にすると全画面の光も出ます（2026-09-13より前に「標準」と呼んでいた段です）。「最小」にすると、光る粒もふつうのノーツと同じになり、両サイドのマスモンも跳ねません。どの段でも、音・能力名・振動はそのまま残るので、取れたことは分かります。', {
+  }), field('モンスターノーツの演出', segments('monsterNoteEffect', RHYTHM_MONSTER_EFFECT_LABELS), 'モンスターノーツを取ったときの演出の強さです。重い順に「多め」「標準」「少なめ」「最小」の4段で、既定は「標準」です。\n「多め」＝画面全体が金色に光り、粒も大きく、そのマスモンが大きく跳ねます。\n「標準」＝全画面の光をやめます（いちばん重いのがこの描き直しです）。粒と跳ねは残ります。\n「少なめ」＝光る粒もふつうのノーツと同じになり、跳ねもやめます。\n「最小」＝ノーツに乗るマスモンの絵を出さなくなります。この絵だけはふつうのノーツと違って、流れているあいだずっと位置と大きさを書き換えているので、ここを止めるといちばん効きます。どれがモンスターノーツかは金色の粒で分かります。能力名の大きな表示も出ません。\nどの段でも、音・振動・能力の効果はそのまま残ります（効いていることは左上のバッジでも分かります）。', {
     full: true
   }), field('軽量モード', toggle('lightweightMode'), '演出量「最小」と同じところまで演出を止めたうえで、さらに細かい動きも切ります。止まるのは、判定ラインで弾ける光と画面のフラッシュ、判定文字が弾む動きと金・虹が流れる動き、コンボ数が跳ねる動きと枠の脈動、100コンボごとのお祝いとフルコンボの大きな表示、モンスターノーツの光と能力名の弾み、判定ラインが拍に合わせて脈打つ動き、両サイドのマスモンの跳ね、明るさがじわっと変わる動きです。判定・判定窓・スコア・ライフ・譜面・音は一切変わりません。端末が熱くなるときや、演出量「標準」でもカクつくときに使ってください。', {
     full: true
@@ -21985,6 +21994,12 @@ const RhythmTapTest = ({
   calibrating = false,
   onApplyCalibration = null
 }) => {
+  // モンスターノーツの演出の段。いちばん軽い段(NONE)では、ノーツへ重ねるマスモンの絵を
+  // 作らない(2026-09-13・ユーザー指摘「あれは踏んだときまだカクつきがある / 設定は最小」)。
+  // ★この絵だけは canvas ではなくDOMの要素で、毎フレーム transform と scale を書き換えている。
+  //   ふつうのノーツには無い処理なので、ここを止めるといちばん効く。
+  const monsterNoteEffect = RHYTHM_MONSTER_EFFECT_LEVELS.includes(settings.monsterNoteEffect) ? settings.monsterNoteEffect : DEFAULT_RHYTHM_SETTINGS.monsterNoteEffect;
+  const monsterFaceHidden = monsterNoteEffect === 'NONE';
   const chart = song.difficulties[difficulty.id],
     laneRefs = useRef([]),
     runRef = useRef(null),
@@ -22075,7 +22090,7 @@ const RhythmTapTest = ({
     }), note.type === 'FLICK' && /*#__PURE__*/React.createElement("i", {
       "data-rhythm-flick-arrow": true,
       "aria-hidden": "true"
-    })), monster && /*#__PURE__*/React.createElement("span", {
+    })), monster && !monsterFaceHidden && /*#__PURE__*/React.createElement("span", {
       "data-rhythm-monster-face": true,
       "aria-hidden": "true",
       className: "absolute left-1/2 top-1/2 flex h-[42px] w-[42px] items-center justify-center",
@@ -22090,10 +22105,10 @@ const RhythmTapTest = ({
       draggable: false,
       className: "h-full w-full object-contain"
     })));
-  }), [chart.notes, monsterSignature, settings.lightweightMode, settings.effectAmount]);
+  }), [chart.notes, monsterSignature, settings.lightweightMode, settings.effectAmount, monsterFaceHidden]);
   // canvas で描くときも、マスモンの絵(染色済み・透明部分あり)だけは要素のまま canvas の上へ重ねる。
   // 位置と大きさは tick が transform で書く。絵が無いノーツには要素を作らない
-  const canvasFaceElements = useMemo(() => canvasNotes ? chart.notes.map((note, index) => {
+  const canvasFaceElements = useMemo(() => canvasNotes && !monsterFaceHidden ? chart.notes.map((note, index) => {
     const monsterSlot = rhythmNoteMonsterSlot(note),
       monster = monsterSlot ? monsters[monsterSlot - 1] || null : null;
     if (!monster) return null;
@@ -22115,7 +22130,7 @@ const RhythmTapTest = ({
       draggable: false,
       className: "h-full w-full object-contain"
     })));
-  }).filter(Boolean) : null, [canvasNotes, chart.notes, monsterSignature]);
+  }).filter(Boolean) : null, [canvasNotes, chart.notes, monsterSignature, monsterFaceHidden]);
   // レーン枠・サブレーン境界・サブレーン発光も、遊んでいるあいだは中身が変わらない。
   // 発光の ON/OFF は setPressedLanes が直接DOMへ書くので、Reactが作り直す必要はない。
   const laneElements = useMemo(() => /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
@@ -22723,6 +22738,9 @@ const RhythmTapTest = ({
     }
     // 0になった瞬間だけ、大きく1度だけ知らせる(蘇生して戻った場合はここを通らない)
     if (run.life === 0 && lifeBefore > 0) setLifeDownCount(count => count + 1);
+    // ★能力名の大きな表示は、いちばん軽い段(NONE)では出さない(2026-09-13)。
+    //   効いていることは左上のバッジと音・振動で分かる。能力そのものは当然かかる
+    const showAbilityFlash = abilityFlash && (RHYTHM_MONSTER_EFFECT_LEVELS.includes(settings.monsterNoteEffect) ? settings.monsterNoteEffect : DEFAULT_RHYTHM_SETTINGS.monsterNoteEffect) !== 'NONE';
     const score = run.lifeDepleted ? run.lockedScore : run.score;
     setView(v => ({
       ...v,
@@ -22738,12 +22756,12 @@ const RhythmTapTest = ({
       fast: run.fast,
       slow: run.slow,
       life: run.life,
-      ...(abilityFlash ? {
+      ...(showAbilityFlash ? {
         ability: abilityFlash
       } : {})
     }));
     scheduleJudgmentClear();
-    if (abilityFlash) scheduleAbilityClear();
+    if (showAbilityFlash) scheduleAbilityClear();
     if (_judgeT0) RHYTHM_PERF.judge(performance.now() - _judgeT0, !!monster);
   }, [chart.totalNotes, difficulty.maxScore, scheduleAbilityClear, scheduleJudgmentClear, settings.vibrationEnabled, settings.monsterNoteEffect, tutorial, calibrating]);
   const finish = useCallback(() => {
