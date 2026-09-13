@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1dac2780617b18b9
+// source-sha256: 3c420b3dc6f35c89
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 38f360d26b89d376
+// generated-sha256: b3243fb56a81b597
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-14 07:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-14 07:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -18048,6 +18048,31 @@ const RANKING_RESEND_DELAY_MS = 4000;
 //   ・スコアが数値として読めないものも送らない
 const pendingLocalRankingEntries = list => (Array.isArray(list) ? list : []).filter(entry => entry && typeof entry === 'object' && entry.nationalSaved === false && typeof entry.clearId === 'string' && entry.clearId.length > 0 && Number.isFinite(Number(entry.score)));
 
+// 送り直すときは、遊んだ時刻を行に入れて送る(2026-09-14)。
+//
+// rankings.created_at の既定値は now() なので、この列を付けずに送ると
+// **送り直した瞬間**が記録の時刻になる。週間ランキング(月曜5:00区切り)は
+// created_at で期間を数えているため、先週以前の未送信記録を送り直すと
+// 遊んでいない今週の合計へ足されてしまう。
+// 実際に 2026-09-14 6:22 にアプリを開いただけで、4曲ぶんが今週の週間ランキングへ載った
+// (ユーザー指摘「この時間は開いた時間なんだけどそれがスコアとして何かしらの方法でカウントされてる？」)。
+//
+// ★既にあるデータの created_at は書き換えない。これから入れる行に、
+//   端末が控えていた本当の時刻(entry.at)を入れるだけ(CLAUDE.md ⑦)。
+// ★端末の時計が狂っていることもあるので、ありえない値のときは付けない
+//   (付けなければ従来どおり now() になる)。
+const RANKING_CREATED_AT_MIN_MS = Date.UTC(2024, 0, 1);
+const rankingCreatedAtFromLocal = atMs => {
+  const ms = Number(atMs);
+  if (!Number.isFinite(ms)) return null;
+  if (ms < RANKING_CREATED_AT_MIN_MS || ms > Date.now() + 60 * 1000) return null;
+  try {
+    return new Date(ms).toISOString();
+  } catch {
+    return null;
+  }
+};
+
 // 退避した記録から、送信するときの行を組み立て直す。
 // submitLocalScore が作る row と同じ形にそろえること(列が増えたらここも足す)。
 // 値が無い列は付けない(0やnullを入れて「0ターンでクリア」に見せないため)。
@@ -18058,6 +18083,7 @@ const rankingRowFromLocalEntry = (entry, difficulty) => {
   const reachedWave = Number(entry.reachedWave);
   const turns = Number(entry.turns);
   const level = Number(entry.level);
+  const createdAt = rankingCreatedAtFromLocal(entry.at);
   return {
     difficulty: diff,
     user_name: entry.userName || '名無しのブリーダー',
@@ -18079,6 +18105,9 @@ const rankingRowFromLocalEntry = (entry, difficulty) => {
     } : {}),
     ...(entry.breederId ? {
       breeder_id: entry.breederId
+    } : {}),
+    ...(createdAt ? {
+      created_at: createdAt
     } : {})
   };
 };
@@ -18094,6 +18123,36 @@ const markLocalRankingEntriesSent = (list, sentClearIds) => {
     nationalError: undefined,
     resentAt: Date.now()
   } : entry);
+};
+
+// 送り直しの1件を実際に送る。
+//
+// created_at を明示して送るのが本筋だが、その列を書けない環境も考えられる。
+// そこで拒まれたときは、**今週ぶんに限って** created_at を外して送り直す
+// (どのみち今週として数えられるので、週間ランキングは歪まない)。
+// 先週以前の記録は、付けずに送ると遊んでいない週の合計へ足されてしまうため、
+// 送らずに端末へ残したままにする(次の起動でまた試す。記録は消えない)。
+const insertResentRankingRow = async (insert, row) => {
+  try {
+    return await insert(row);
+  } catch (error) {
+    if (!row || row.created_at === undefined) throw error;
+    const playedMs = Date.parse(row.created_at);
+    const week = typeof rhythmWeekWindow === 'function' ? rhythmWeekWindow(Date.now()) : null;
+    const inThisWeek = Number.isFinite(playedMs) && week && playedMs >= Number(week.startMs) && playedMs < Number(week.endMs);
+    if (!inThisWeek) {
+      console.error('[ranking] resend kept pending (created_at rejected, old record):', error && error.message ? error.message : error);
+      return {
+        saved: false,
+        keptPending: true
+      };
+    }
+    const {
+      created_at,
+      ...withoutCreatedAt
+    } = row;
+    return await insert(withoutCreatedAt);
+  }
 };
 const createRunId = () => globalThis.crypto?.randomUUID?.() || `run_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`;
 
@@ -39662,7 +39721,9 @@ function MonsterHeroGame() {
           try {
             // モンビーの記録は難易度キーが Rhythm-<曲>-<難易度> なので、送り先の関数も分ける
             const insert = String(diff).startsWith('Rhythm-') ? sbInsertRhythmScore : sbInsertScore;
-            const res = await insert(row);
+            // 送り直しは insertResentRankingRow を通す。行には遊んだ時刻(created_at)が
+            // 入っているので、DBに「いま」を刻ませない=先週の記録が今週の週間へ混ざらない
+            const res = await insertResentRankingRow(insert, row);
             if (res?.saved === true) {
               done.push(entry.clearId);
               sent++;
@@ -39690,9 +39751,19 @@ function MonsterHeroGame() {
             const {
               at,
               error,
-              ...payload
+              created_at: storedCreatedAt,
+              ...columns
             } = row;
-            const res = await sbInsertRhythmScore(payload);
+            // 退避したときの時刻(at)をそのまま created_at として送る。
+            // 付けずに送ると、送り直した瞬間が記録の時刻になってしまう
+            const createdAt = storedCreatedAt || rankingCreatedAtFromLocal(at);
+            const payload = {
+              ...columns,
+              ...(createdAt ? {
+                created_at: createdAt
+              } : {})
+            };
+            const res = await insertResentRankingRow(sbInsertRhythmScore, payload);
             if (res?.saved === true) sent++;else {
               failed++;
               rest.push(row);
