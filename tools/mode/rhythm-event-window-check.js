@@ -204,9 +204,11 @@ check('週のIDは weekly_YYYY_MM_DD の形',/^weekly_\d{4}_\d{2}_\d{2}$/.test(O
   }));
   check('壊れた曲数でも成立しない',withJoin.every(e=>
     [null,'x',-1,NaN,undefined].every(v=>!O.rhythmEventParticipationCleared(e,v))));
-  check('参加報酬を持たないイベントでは成立しない',
-    !O.rhythmEventParticipationCleared(O.rhythmWeeklyEvent(Date.now()),99)
-    &&O.rhythmEventParticipationReward(O.rhythmWeeklyEvent(Date.now()))===null);
+  // ★2026-09-13にユーザーが決めて、週間にも参加報酬を付けた(その週に3回遊ぶ)。
+  //   参加報酬を持たないのは、書いていない期間限定イベントのほう
+  check('参加報酬を書いていないイベントでは成立しない',
+    !O.rhythmEventParticipationCleared({kind:'limited',songIds:['a']},99)
+    &&O.rhythmEventParticipationReward({kind:'limited',songIds:['a']})===null);
 }
 check('参加報酬は自分の行から遊んだ曲数を見る(上位5件に入っていなくても成立する)',
   app.includes('if (rhythmEventParticipationReward(event)) {')
@@ -222,8 +224,11 @@ check('参加報酬を画面に出す(開催中と受け取りの両方)',
 check('入賞していなくても参加報酬だけで受け取り画面を出す',
   app.includes('if (prizes.length === 0 && !participation) { await markRhythmEventRewardClaimed(event.id); return; }')
   &&screen.includes("{won ? '入賞おめでとうございます！' : 'ご参加ありがとうございました！'}"));
-check('受け取りは上位5件だけ問い合わせる(報酬は5位まで)',
-  app.includes('limit:RHYTHM_EVENT_REWARD_RANKS'));
+// ★報酬のある順位までしか問い合わせない。週間は1〜10位、イベントは1〜5位
+//   (2026-09-13に週間へ報酬を付けたので、数は rankLimit で出す)
+check('受け取りは報酬のある順位ぶんだけ問い合わせる',
+  app.includes('const rankLimit = weekly ? RHYTHM_WEEKLY_REWARD_RANKS : RHYTHM_EVENT_REWARD_RANKS;')
+  &&app.includes('limit:rankLimit'));
 check('通信に失敗したら受け取り済みにしない(次の起動でやり直す)',
   app.includes("console.error('[rhythm-event-reward] fetch failed:'")
   &&app.includes('// 通信の失敗で受け取り済みにはしない。次の起動でやり直す'));
@@ -245,7 +250,7 @@ check('受け取り済みの保存キーを新しく足している',
   app.includes("const RHYTHM_EVENT_REWARD_KEY = 'mh_rhythm_event_reward_v1';")
   &&saveSpec.includes('mh_rhythm_event_reward_v1'));
 check('ヘルプに受け取り方が書いてある',
-  help.includes('報酬の受け取り方')&&help.includes('終了から2週間'));
+  help.includes('報酬の受け取り方')&&help.includes('2週間まで'));
 
 // --- 期間限定イベント(kind:'limited') ---
 const limited=(Array.isArray(O.RHYTHM_EVENTS)?O.RHYTHM_EVENTS:[]).filter(e=>e&&e.kind==='limited');
@@ -308,9 +313,16 @@ check('対象曲の見出しは「対象曲」',limited.every(e=>O.rhythmEventSo
 
 // --- 報酬(docs/spec/RHYTHM_RANKING.md §9) ---
 // 1位から5位まで、個数は5/4/3/2/1・プシュケーは1,000/800/600/400/200。6位以下は無し。
-check('週間には報酬を付けていない(フェーズ3は報酬なし)',(()=>{
+// ★2026-09-13にユーザーが決めて、週間にも報酬を付けた(1〜10位・勇者の証片)。
+//   中身の検査は tools/mode/rhythm-weekly-reward-check.js が受け持つ。
+//   ここでは「イベントとは別の体系になっている」ことだけを見る
+check('週間は1〜10位の報酬を持つ(イベントの1〜5位とは別の体系)',(()=>{
   const week=O.rhythmWeeklyEvent(Date.now());
-  return !O.rhythmEventHasRewards(week)&&O.rhythmEventRewardForRank(week,O.RHYTHM_EVENT_TOTAL_DIVISION,1)===null;
+  if(!O.rhythmEventHasRewards(week))return false;
+  const first=O.rhythmEventRewardForRank(week,O.RHYTHM_EVENT_TOTAL_DIVISION,1);
+  const tenth=O.rhythmEventRewardForRank(week,O.RHYTHM_EVENT_TOTAL_DIVISION,10);
+  const over=O.rhythmEventRewardForRank(week,O.RHYTHM_EVENT_TOTAL_DIVISION,11);
+  return !!first&&first.kind==='heroProofShard'&&!!tenth&&over===null;
 })());
 check('報酬つきイベントは1〜5位に配る',limited.every(e=>{
   if(!O.rhythmEventHasRewards(e))return true;

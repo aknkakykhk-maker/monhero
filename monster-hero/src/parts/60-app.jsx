@@ -1834,10 +1834,16 @@ function MonsterHeroGame() {
       // 回数ボーナスを使うイベントでは、割合を渡して加点込みで集計してもらう。
       // 使わないイベント(週間)では null なので、これまでどおりの集計になる
       const bonusRates = rhythmEventPlayBonusRates(event);
-      const fetchRows = (options) => targetSongId
+      // ★週間は**累計スコア方式**(2026-09-13)。曲ごとのベストではなく、その週に出した記録を
+      //   ぜんぶ足す。対象曲も部門も無いので、期間だけ渡す専用の関数を呼ぶ
+      const weeklyTotals = kind === 'weekly' && !targetSongId;
+      const fetchRows = (options) => weeklyTotals
+        ? sbFetchRhythmWeekTotals({ fromMs:range.startMs, toMs:range.endMs, ...options })
+        : targetSongId
         ? sbFetchRhythmEventSongBests({ songId:targetSongId, fromMs:range.startMs, toMs:range.endMs, bonusRates, ...options })
         : sbFetchRhythmEventTotals({ songIds:[...event.songIds], fromMs:range.startMs, toMs:range.endMs, bonusRates, ...options });
-      const fromRow = targetSongId ? rhythmEventSongEntryFromRow : rhythmEventTotalEntryFromRow;
+      const fromRow = weeklyTotals ? rhythmWeekTotalEntryFromRow
+        : targetSongId ? rhythmEventSongEntryFromRow : rhythmEventTotalEntryFromRow;
       const rows = await fetchRows({ requestId:`rhythm-${kind}-${division}-${Date.now()}` });
       if (stale()) return;
       const entries = (Array.isArray(rows) ? rows : []).map(fromRow);
@@ -2818,10 +2824,17 @@ function MonsterHeroGame() {
     if (RELEASE_FLAGS.rhythmWeeklyRanking !== true) return;
     const claims = rhythmEventRewardClaimsRef.current;
     if (!Array.isArray(claims)) return;               // まだ読み込めていない
-    const pending = rhythmEventsAwaitingReward(Date.now(), claims);
+    // 期間限定イベントと、終わった週(週間ランキング)の両方を見る。
+    // 受取フラグは同じ配列(mh_rhythm_event_reward_v1)。idの形が違うので取り違えない
+    const pending = [
+      ...rhythmEventsAwaitingReward(Date.now(), claims),
+      ...rhythmWeeksAwaitingReward(Date.now(), claims),
+    ].sort((a, b) => (a.kind === 'weekly' ? a.endMs : rhythmEventTimeMs(a.endAt) || 0)
+                   - (b.kind === 'weekly' ? b.endMs : rhythmEventTimeMs(b.endAt) || 0));
     if (pending.length === 0) return;
     const event = pending[0];                          // 先に終わったものから1つずつ
-    const range = rhythmEventWindow(event, null);
+    const weekly = event.kind === 'weekly';
+    const range = weekly ? { startMs:event.startMs, endMs:event.endMs } : rhythmEventWindow(event, null);
     if (!range) return;
     try {
       const breederId = await ensureBreederId();
@@ -2830,12 +2843,17 @@ function MonsterHeroGame() {
       // ★順位の出し方は画面と**同じ**にする。回数ボーナスを使うイベントでここを渡し忘れると、
       //   「ランキングでは1位だったのに報酬が来ない」が起きる
       const bonusRates = rhythmEventPlayBonusRates(event);
+      // 何位まで取りにいくか。週間は1〜10位、イベントは1〜5位
+      const rankLimit = weekly ? RHYTHM_WEEKLY_REWARD_RANKS : RHYTHM_EVENT_REWARD_RANKS;
       for (const divisionId of rhythmEventDivisionIds(event)) {
         const songId = rhythmEventDivisionSongId(divisionId);
-        const rows = songId
-          ? await sbFetchRhythmEventSongBests({ songId, fromMs:range.startMs, toMs:range.endMs, bonusRates, limit:RHYTHM_EVENT_REWARD_RANKS, requestId:`rhythm-reward-${event.id}-${divisionId}` })
-          : await sbFetchRhythmEventTotals({ songIds:[...event.songIds], fromMs:range.startMs, toMs:range.endMs, bonusRates, limit:RHYTHM_EVENT_REWARD_RANKS, requestId:`rhythm-reward-${event.id}-total` });
-        const fromRow = songId ? rhythmEventSongEntryFromRow : rhythmEventTotalEntryFromRow;
+        const rows = weekly
+          ? await sbFetchRhythmWeekTotals({ fromMs:range.startMs, toMs:range.endMs, limit:rankLimit, requestId:`rhythm-reward-${event.id}-week` })
+          : songId
+          ? await sbFetchRhythmEventSongBests({ songId, fromMs:range.startMs, toMs:range.endMs, bonusRates, limit:rankLimit, requestId:`rhythm-reward-${event.id}-${divisionId}` })
+          : await sbFetchRhythmEventTotals({ songIds:[...event.songIds], fromMs:range.startMs, toMs:range.endMs, bonusRates, limit:rankLimit, requestId:`rhythm-reward-${event.id}-total` });
+        const fromRow = weekly ? rhythmWeekTotalEntryFromRow
+          : songId ? rhythmEventSongEntryFromRow : rhythmEventTotalEntryFromRow;
         const entries = (Array.isArray(rows) ? rows : []).map(fromRow);
         const index = entries.findIndex(entry => selfKeys.includes(entry.identityKey));
         if (index < 0) continue;
@@ -2845,14 +2863,21 @@ function MonsterHeroGame() {
       // 参加報酬(入賞しなくても、対象曲をすべて遊べばもらえる)。
       // 総合の上位5件に自分がいなくても成立するので、自分の行だけを別に取りにいって
       // 「何曲遊んだか」(songCount)を見る
+      // ★成立の見かたが違う。イベントは「何曲遊んだか」、週間は「何回遊んだか」
       let participation = null;
       if (rhythmEventParticipationReward(event)) {
-        const mine = await sbFetchRhythmEventTotals({
-          songIds:[...event.songIds], fromMs:range.startMs, toMs:range.endMs, bonusRates,
-          limit:selfKeys.length, identityKeys:selfKeys, requestId:`rhythm-reward-${event.id}-join`,
-        });
-        const played = (Array.isArray(mine) ? mine : []).map(rhythmEventTotalEntryFromRow)
-          .reduce((max, entry) => Math.max(max, entry.songCount), 0);
+        const mine = weekly
+          ? await sbFetchRhythmWeekTotals({
+              fromMs:range.startMs, toMs:range.endMs,
+              limit:selfKeys.length, identityKeys:selfKeys, requestId:`rhythm-reward-${event.id}-join`,
+            })
+          : await sbFetchRhythmEventTotals({
+              songIds:[...event.songIds], fromMs:range.startMs, toMs:range.endMs, bonusRates,
+              limit:selfKeys.length, identityKeys:selfKeys, requestId:`rhythm-reward-${event.id}-join`,
+            });
+        const played = (Array.isArray(mine) ? mine : [])
+          .map(weekly ? rhythmWeekTotalEntryFromRow : rhythmEventTotalEntryFromRow)
+          .reduce((max, entry) => Math.max(max, weekly ? entry.playCount : entry.songCount), 0);
         if (rhythmEventParticipationCleared(event, played)) participation = rhythmEventParticipationReward(event);
       }
       // 入賞も参加報酬も無ければ、知らせずに受け取り済みへ入れて終わる
@@ -2880,20 +2905,30 @@ function MonsterHeroGame() {
       if (prize.debugPreview) { setRhythmEventRewardPrize(null); return; }
       await markRhythmEventRewardClaimed(prize.event.id);
       const next = { ...ownedItemsRef.current };
+      // ダイヤは mh_gold と入れ物が別なので、いったん合計だけ数えて後から足す
+      let goldGain = 0;
       for (const entry of prize.prizes) {
         const item = rhythmEventRewardItem(entry.reward);
         if (item && entry.reward.count > 0) next[item.id] = ownedItemCount(next, item.id) + entry.reward.count;
         if (entry.reward.psyche > 0) next[BREAKTHROUGH_ITEM_ID] = ownedItemCount(next, BREAKTHROUGH_ITEM_ID) + entry.reward.psyche;
+        // 週間の順位報酬にはダイヤも付く(イベントの順位報酬には無い)
+        if (entry.reward.gold > 0) goldGain += entry.reward.gold;
       }
-      // 参加報酬。虹のプシュケーは所持品、ダイヤは mh_gold と、入れ物が別なので分けて足す
-      if (prize.participation && prize.participation.psyche > 0) {
-        next[BREAKTHROUGH_ITEM_ID] = ownedItemCount(next, BREAKTHROUGH_ITEM_ID) + prize.participation.psyche;
+      // 参加報酬。週間は勇者の証片も付く
+      if (prize.participation) {
+        if (prize.participation.count > 0) {
+          next[HERO_PROOF_SHARD_ITEM_ID] = ownedItemCount(next, HERO_PROOF_SHARD_ITEM_ID) + prize.participation.count;
+        }
+        if (prize.participation.psyche > 0) {
+          next[BREAKTHROUGH_ITEM_ID] = ownedItemCount(next, BREAKTHROUGH_ITEM_ID) + prize.participation.psyche;
+        }
+        if (prize.participation.gold > 0) goldGain += prize.participation.gold;
       }
       ownedItemsRef.current = next;
       setOwnedItems(next);
       await storeSet('mh_owned_items', next, false);
-      if (prize.participation && prize.participation.gold > 0) {
-        const nextGold = (goldRef.current || 0) + prize.participation.gold;
+      if (goldGain > 0) {
+        const nextGold = (goldRef.current || 0) + goldGain;
         goldRef.current = nextGold;
         setGold(nextGold);
         await storeSet('mh_gold', nextGold, false);
@@ -5002,6 +5037,27 @@ function MonsterHeroGame() {
       saveMissionProgress('market');
     } catch {
       setMarketExchangeError('交換を保存できませんでした。勇者の証は消費していません。');
+    } finally { marketPurchaseProcessingRef.current = false; }
+  };
+  // 勇者の証片20個 → 勇者の証1個。魂格再編の書と同じ作りで、失敗したら元へ戻す
+  // (2026-09-13・週間ランキングの報酬で証片がたまるようにしたのに合わせて追加)
+  const exchangeHeroProofByShard = async () => {
+    if (marketPurchaseProcessingRef.current) return;
+    const before = ownedItemsRef.current;
+    const exchange = buildHeroProofShardExchange(before, 1);
+    if (!exchange.ok) { setMarketExchangeError(`勇者の証片が${HERO_PROOF_SHARD_PER_PROOF}個必要です（いま${exchange.shardHave}個）。`); return; }
+    marketPurchaseProcessingRef.current = true;
+    setMarketExchangeError('');
+    try {
+      const saved = await saveStoredValuesOrRollback([
+        { key:'mh_owned_items', before, next:exchange.ownedItems },
+      ], storeGet, storeSet);
+      if (!saved) throw new Error('hero proof shard exchange save failed');
+      ownedItemsRef.current = exchange.ownedItems;
+      setOwnedItems(exchange.ownedItems);
+      saveMissionProgress('market');
+    } catch {
+      setMarketExchangeError('交換を保存できませんでした。勇者の証片は消費していません。');
     } finally { marketPurchaseProcessingRef.current = false; }
   };
 
@@ -12376,6 +12432,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onOpenDetail={(item,detailMon,detailTeaching)=>{if(detailMon) setRosterDetailMon({...detailMon,marketDiscIcon:item.icon,marketDiscName:item.name}); else setRosterDetailTeaching(detailTeaching);}}
             onOpenItemDetail={setMarketItemDetail}
             onExchangeSoulRankRespec={exchangeSoulRankRespecByProof}
+            onExchangeHeroProof={exchangeHeroProofByShard}
           />
         )}
 
