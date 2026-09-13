@@ -1054,8 +1054,11 @@ scheduleTick();};
       MARVELOUSの**上**へ置く(2026-09-13・ユーザー指示「普通に表示はMarvelousの上に
       JUST Marvelousがくるようにして」)。スコア・ランク・自己ベストには一切関わらない。 */}
   {id==='MARVELOUS'&&<React.Fragment key="precise">
-    <dt data-rhythm-result-precise-label data-rhythm-judgment-row="JUST" className="text-[11px]">JUST MARVELOUS</dt>
-    <dd data-rhythm-result-precise data-rhythm-judgment-row="JUST" className="text-right font-mono text-[11px]">{Number(view.precise)||0}</dd>
+    {/* ★大きさも並びもほかの判定と同じにする(2026-09-13・ユーザー指摘
+        「リザルトの方もJUST Marvelous地味すぎる / スコアには乗らないだけで
+        並びは同じようにして色合いは合わせて」)。小さくしていたのをやめる */}
+    <dt data-rhythm-result-precise-label data-rhythm-judgment-row="JUST">JUST MARVELOUS</dt>
+    <dd data-rhythm-result-precise data-rhythm-judgment-row="JUST" className="text-right font-mono">{Number(view.precise)||0}</dd>
   </React.Fragment>}
   {/* 判定の内訳は、遊んでいるときに出る判定の色と同じ色で出す
       (2026-09-13・ユーザー指示「JUST Marvelous（虹）/ Marvelous（金）みたいな」)。

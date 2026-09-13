@@ -197,6 +197,16 @@ ${keyframes}
   }
 // ---- 色が決まっているもの(難易度・ランク・コンボ数)にも色を付ける ----
 // 2026-09-13・ユーザー指示「マスターとかランクとかコンボ数とかも色が決められてるやつは色つけたい」
+// 2026-09-13・ユーザー指摘「リザルトの方もJUST Marvelous地味すぎる /
+//   スコアには乗らないだけで並びは同じようにして色合いは合わせて」。
+ok('JUST MARVELOUS だけ字を小さくしていない',
+  /<dt data-rhythm-result-precise-label data-rhythm-judgment-row="JUST">JUST MARVELOUS<\/dt>/.test(game)
+  &&/<dd data-rhythm-result-precise data-rhythm-judgment-row="JUST" className="text-right font-mono">/.test(game));
+// ★グラデーションは**箱の幅**に対して描かれる。列の幅いっぱいの箱のなかで
+//   数字を右へ寄せていると、字にかかるのは虹のごく一部だけになる
+ok('グラデーションの行は、箱を字の幅へ縮めている',
+  /dt\[data-rhythm-judgment-row="MARVELOUS"\],dt\[data-rhythm-judgment-row="JUST"\]\{width:max-content/.test(html)
+  &&/dd\[data-rhythm-judgment-row="MARVELOUS"\],dd\[data-rhythm-judgment-row="JUST"\]\{width:max-content[^}]*margin-left:auto\}/.test(html));
 ok('難易度の字の色を、1か所から配っている',
   game.includes('const rhythmDifficultyTextColor=id=>RHYTHM_DIFFICULTY_TONE[id]?.text||')
   &&/RHYTHM_DIFFICULTY_TONE=Object\.freeze\(\{[\s\S]{0,900}MASTER:[^\n]*text:'text-fuchsia-300'/.test(game));
