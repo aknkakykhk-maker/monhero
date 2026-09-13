@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 380818e9516cd2e0
+// source-sha256: abc073d04694822a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: efb3824e0ce8b048
+// generated-sha256: 21ab11db442b54b4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-13 03:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-13 18:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -62931,16 +62931,34 @@ const createAnimationStyle = () => {
     .mh-transcend-badge>b{display:block;color:#3b1d05;font-size:10px;font-weight:1000;line-height:1;text-shadow:0 1px 0 #fff9}
     .mh-transcend-badge.is-small{width:15px;height:15px;right:-8px;top:-8px;border-width:1px}.mh-transcend-badge.is-small>b{font-size:8px}
     /* 魂格バッジ。超越マークと同じ位置・サイズを再利用し、魂格Ⅰ以上では「超」を置換する。
-       魂格Ⅴも常時アニメーションは付けず、静的な虹グラデーションだけにする。 */
-    .mh-soul-rank-badge{position:absolute;right:-7px;top:-7px;z-index:7;display:flex;align-items:center;justify-content:center;width:19px;height:19px;border-radius:50%;border:1.5px solid #fff;box-shadow:0 0 7px #fff5,0 1px 4px #020617;pointer-events:none}
-    .mh-soul-rank-badge>b{display:block;color:#fff;font-size:9px;font-weight:1000;line-height:1;text-shadow:0 1px 2px #020617,0 0 3px #020617}
-    .mh-soul-rank-badge.is-small{width:15px;height:15px;right:-8px;top:-8px;border-width:1px}.mh-soul-rank-badge.is-small>b{font-size:7px}
-    .mh-soul-rank-badge.is-stage-1{background:linear-gradient(135deg,#1d4ed8,#60a5fa)}
-    .mh-soul-rank-badge.is-stage-2{background:linear-gradient(135deg,#ca8a04,#fde047);color:#3f2a00}
-    .mh-soul-rank-badge.is-stage-2>b{color:#3f2a00;text-shadow:0 1px 0 #fff8}
-    .mh-soul-rank-badge.is-stage-3{background:linear-gradient(135deg,#15803d,#4ade80)}
-    .mh-soul-rank-badge.is-stage-4{background:linear-gradient(135deg,#b91c1c,#fb7185)}
-    .mh-soul-rank-badge.is-stage-5{background:conic-gradient(from 210deg,#f87171,#facc15,#4ade80,#60a5fa,#a78bfa,#f472b6,#f87171)}
+       魂格Ⅴも常時アニメーションは付けず、静的な虹グラデーションだけにする。
+       2026-09-13・ユーザー指摘「魂格のマークがしょぼい / 超越より上なのに表示ださい」。
+       単色のべた塗りに白い細枠だけで、お知らせの点のように見えていた。しかも超越マークは
+       虹グラデーションなので、格下のはずの超越のほうが上等に見えていた。
+       色を変えるだけでは超越の虹に勝てないので、形そのものを変えている。
+         ・王冠(::before)を載せる。段位に関係なく「格上」が形で分かる
+         ・宝石の質感(上からの映り込み・下の陰)と、段位ごとの色つきの光
+         ・「魂」の字(::after)と段位の数字を横に並べ、称号として読ませる
+       ★大きさと位置(19/15px・right/top)は変えていない。広げるとモンスターの絵に重なる
+         (68pxの枠では隙間が1pxしかない)。王冠は上へ伸ばすので絵から離れる向き。
+         tools/masu/transcend-badge-position-check.js が魂格バッジと王冠も測って見張る。
+       ★常時アニメーションは付けない(一覧に何個も並ぶため)。soul-rank-step6a-check が見張る。 */
+    .mh-soul-rank-badge{position:absolute;right:-7px;top:-7px;z-index:7;display:flex;align-items:center;justify-content:center;gap:.5px;width:19px;height:19px;border-radius:50%;border:1.5px solid #ffe9a8;pointer-events:none}
+    .mh-soul-rank-badge::before{content:'';position:absolute;left:50%;top:-7px;width:17px;height:9px;transform:translateX(-50%);background:linear-gradient(180deg,#fff6d5,#f5b429 58%,#a86a12);clip-path:polygon(0 100%,0 20%,21% 62%,50% 0,79% 62%,100% 20%,100% 100%);filter:drop-shadow(0 1px 1px #000a)}
+    .mh-soul-rank-badge::after{content:'魂';order:0;font-size:8.5px;font-weight:900;line-height:1;color:#fff;text-shadow:0 1px 1px #000e,0 0 2px #000c}
+    .mh-soul-rank-badge>b{display:block;order:1;align-self:flex-end;margin-bottom:2px;color:#fff;font-size:6.5px;font-weight:1000;line-height:1;text-shadow:0 1px 1px #000d,0 0 2px #000b}
+    .mh-soul-rank-badge.is-small{width:15px;height:15px;right:-8px;top:-8px;border-width:1px;gap:0}
+    .mh-soul-rank-badge.is-small::before{top:-5.5px;width:13px;height:7px}
+    .mh-soul-rank-badge.is-small::after{font-size:7px}
+    .mh-soul-rank-badge.is-small>b{font-size:5px;margin-bottom:1.5px}
+    .mh-soul-rank-badge.is-stage-1{background:radial-gradient(circle at 33% 25%,#ffffffdd,#ffffff33 20%,transparent 46%),linear-gradient(150deg,#7dd3fc,#1d4ed8 58%,#0a2260);box-shadow:inset 0 1px 1px #ffffffb3,inset 0 -2px 3px #00000066,0 0 8px #60a5facc,0 0 15px #3b82f677,0 1px 4px #020617}
+    .mh-soul-rank-badge.is-stage-2{background:radial-gradient(circle at 33% 25%,#ffffffee,#ffffff3d 20%,transparent 46%),linear-gradient(150deg,#fef08a,#ca8a04 58%,#7c4a02);box-shadow:inset 0 1px 1px #ffffffcc,inset 0 -2px 3px #00000066,0 0 8px #fde047cc,0 0 15px #eab30877,0 1px 4px #020617}
+    .mh-soul-rank-badge.is-stage-2::after{color:#2b1c00;text-shadow:0 1px 0 #ffffffb3,0 0 3px #ffffff80}
+    .mh-soul-rank-badge.is-stage-2>b{color:#2b1c00;text-shadow:0 1px 0 #ffffffb3}
+    .mh-soul-rank-badge.is-stage-3{background:radial-gradient(circle at 33% 25%,#ffffffdd,#ffffff33 20%,transparent 46%),linear-gradient(150deg,#86efac,#15803d 58%,#052e16);box-shadow:inset 0 1px 1px #ffffffb3,inset 0 -2px 3px #00000066,0 0 8px #4ade80cc,0 0 16px #fbbf2488,0 1px 4px #020617}
+    .mh-soul-rank-badge.is-stage-4{background:radial-gradient(circle at 33% 25%,#ffffffdd,#ffffff33 20%,transparent 46%),linear-gradient(150deg,#fda4af,#b91c1c 58%,#4c0519);box-shadow:inset 0 1px 1px #ffffffb3,inset 0 -2px 3px #00000066,0 0 9px #fb7185cc,0 0 17px #fcd34d99,0 1px 4px #020617}
+    .mh-soul-rank-badge.is-stage-5{border-color:#fff;background:radial-gradient(circle at 34% 24%,#ffffffa6,#ffffff1a 15%,transparent 36%),conic-gradient(from 205deg,#ff5f6d,#ffc857,#5ef38c,#3ddcf7,#8b7bff,#ff6fd8,#ff5f6d);box-shadow:inset 0 1px 2px #ffffffcc,inset 0 -2px 3px #00000059,0 0 0 1.2px #7c3aed,0 0 11px #ff6fd8dd,0 0 20px #3ddcf7bb,0 1px 4px #020617}
+    .mh-soul-rank-badge.is-stage-5::before{background:linear-gradient(180deg,#ffffff,#ffd7f5 34%,#8b7bff 68%,#3b2a8a);filter:drop-shadow(0 1px 2px #000a) drop-shadow(0 0 3px #ff6fd8)}
     .mh-transcend-link{border-color:#fcd34daa;background:linear-gradient(135deg,#4c1d95aa,#78350faa)}
     /* 超越の演出。3〜5秒で一度だけ流す。終わったら要素ごと消えるので常時アニメは残らない */
     .mh-transcend-animation{position:fixed;inset:0;z-index:51500;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at 50% 46%,#3b0764 0,#0b0518 42%,#020617 76%);pointer-events:auto;touch-action:none;padding:calc(env(safe-area-inset-top) + 12px) 12px calc(env(safe-area-inset-bottom) + 12px)}
