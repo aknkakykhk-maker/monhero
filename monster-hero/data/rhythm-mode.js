@@ -993,14 +993,31 @@ const rhythmLaneAtPoint=(clientX,clientY,rect)=>{
 // ここでは差を測って、判定に使う曲の時刻からその古さを差し引く。
 //   ・timeStamp が高精度(performance.now と同じ基準)のときだけ効く。
 //     基準が違う(1970年からのms など)・未来・古すぎる値は 0 として扱う(安全側)
-//   ・上限を置く(それより古い値は端末の時計の都合と見なして使わない)
+//   ・上限を置く(それより古い値の扱いは下の【2026-09-13】のとおり、原因で分ける)
 const RHYTHM_INPUT_AGE_MAX_MS=80;
+// 【2026-09-13】上限より古い値の扱いを、原因で分けた。
+// それまでは「上限(80ms)より古ければ 0」＝**補正をまるごと捨てて**いた。原因が2つあるのに
+// 区別していなかったため、次の穴が空いていた。
+//   ① 端末の時計の基準が違う   … 差は**いつも**大きい。使ってはいけない(0でよい)
+//   ② その瞬間だけ処理が詰まった … 差は**そのときだけ**大きい。捨てると判定がまるごと遅れる
+// ②で捨てると、79ms→79ms巻き戻す・81ms→0ms巻き戻さない、と2msの違いで
+// **判定に使う時刻が81msぶん遅れ側へ飛ぶ**。16分の連打では前ノーツの持ち時間が66msしかないので、
+// この飛びだけで相手が1つ先のノーツへ移り、あぶれた1つが見逃しMISSになる
+// (「速い連打で1つだけ反応しない」の節を参照)。
+// 見分けかたは「そのセッションで見た差の最小値」。基準がそろっていれば、処理がすぐ回った回に
+// ごく小さい差が必ず出る。一度でもそれを見たら②と判断して上限まで戻す。
+// 基準がずれている端末では最小値も大きいままなので、これまでどおり 0 のまま(安全側)。
+const RHYTHM_INPUT_AGE_BASE_ALIGNED_MS=25;
+let rhythmInputAgeFloorMs=Infinity;
+const rhythmInputAgeResetFloor=()=>{rhythmInputAgeFloorMs=Infinity;};
 const rhythmInputAgeMs=(eventTimeStamp,nowPerfMs)=>{
   const stamp=Number(eventTimeStamp),now=Number(nowPerfMs);
   if(!Number.isFinite(stamp)||!Number.isFinite(now))return 0;
   const age=now-stamp;
-  if(!(age>0)||age>RHYTHM_INPUT_AGE_MAX_MS)return 0;
-  return age;
+  if(!(age>0))return 0;
+  if(age<rhythmInputAgeFloorMs)rhythmInputAgeFloorMs=age;
+  if(age<=RHYTHM_INPUT_AGE_MAX_MS)return age;
+  return rhythmInputAgeFloorMs<=RHYTHM_INPUT_AGE_BASE_ALIGNED_MS?RHYTHM_INPUT_AGE_MAX_MS:0;
 };
 // ノーツを「もう誰も取れない」として見逃しMISSにする時刻。
 //
