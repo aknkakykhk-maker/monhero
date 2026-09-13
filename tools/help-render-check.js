@@ -58,6 +58,10 @@ const dataTablePrelude = [
   // イベントの回数ボーナスの表は data/rhythm-event.js の割合から作るので、そちらも持ち込む
   // (このファイルは単体で読める作りになっている。曲の一覧が要る所は typeof で守ってある)
   rhythmEventData,
+  // 週間ランキングの報酬の表は勇者の証片の名前と絵文字を使うので、その定義だけ持ち込む
+  (source.match(/^const HERO_PROOF_SHARD_ITEM_ID = .*$/m) || [''])[0],
+  (source.match(/^const HERO_PROOF_SHARD_PER_PROOF = .*$/m) || [''])[0],
+  grab(source, 'const HERO_PROOF_SHARD_ITEM = Object.freeze({', 'const HERO_PROOF_CLEAR_REWARDS'),
   // 曲一覧が使う曲名の組み立て。helpDataRows より前にあるので、別に持ち込む
   grab(source, 'const rhythmSongFullName =', 'const helpDataRows = (id)'),
   grab(source, 'const helpDataRows = (id)', '// ===== 助手(ナビゲーター) ここから ====='),

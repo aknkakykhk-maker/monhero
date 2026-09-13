@@ -30,4 +30,22 @@ check('play areaでブラウザ既定ジェスチャを抑止',game.includes("to
 check('Pointer Eventsはマウス/ペン用フォールバックとして維持',game.includes("rhythmInputKey('pointer',e.pointerId)")&&game.includes('input.captureTarget.setPointerCapture(input.pointerId)'));
 check('ポーズ/リスタート/中断でtouch IDもcleanup',game.includes('activeTouchInputs?.clear()')&&game.includes('activeTouchInputs:new Set()'));
 check('プレオープンで公開されている',game.includes('const RHYTHM_MODE_PUBLIC_RELEASE = true'));
+// 【2026-09-13・両手のときレーンが光らなくなる】
+// 押している場所の出どころは指(touch)とポインタ(マウス＋接触幅の疑似入力'pen')の2つ。
+// それぞれが自分のぶんだけで setPressedLanes を呼ぶと、片方がもう片方を消してしまう。
+// 接触幅の疑似入力は指が太いほど何度も出るので、両手だと光が点滅する。
+console.log('\n--- 押しているレーンの表示（指とポインタの合流）---');
+{
+  const play=require('fs').readFileSync(require('path').join(ROOT,'monster-hero','src','parts','30-rhythm-play.jsx'),'utf8');
+  check('押している場所をまとめる関数がある',/const pressedLanesNow=\(\)=>/.test(play));
+  check('その関数は指とポインタの両方を足している',
+    /pressedLanesNow=\(\)=>\[\.\.\.\(liveTouchSubLanesRef\.current[^\n]*activePointerFeedback\?\.values\(\)/.test(play));
+  check('ポインタ側が自分のぶんだけで上書きしていない',
+    !/setPressedLanes\(run\.activePointerFeedback\.values\(\)\)/.test(play));
+  check('タッチ側は指のぶんを覚えてから合流して渡す',
+    /liveTouchSubLanesRef\.current=liveSubLanes;setPressedLanes\(pressedLanesNow\(\)\);/.test(play));
+  check('ポインタが離れても、残っている指の光を消さない',
+    !/else setPressedLanes\(\[\]\);/.test(play)&&/else setPressedLanes\(pressedLanesNow\(\)\);/.test(play));
+}
+
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');process.exit(failed?1:0);

@@ -65,6 +65,9 @@ const RHYTHM_INPUT_MATCH_WINDOW_MS = RHYTHM_JUDGMENTS
 // 判定窓は遊びやすさのため最大±185msあるが、その全域を前ノーツの所有時間にはしない。
 // 隣り合う候補の間は前ノーツへ75%寄せ、次ノーツが早取りできる範囲もMARVELOUS窓以内に制限する。
 // これで16分88msなら切替は前から66ms地点: +60msの遅押しは前、次の-22ms以降は次を狙った入力として扱う。
+// 鍵の無い接触幅の疑似TAPが、これから来るノーツへ手を伸ばしてよい上限。
+// MARVELOUSの窓と同じにする。16分(88ms)はもちろん、240BPMの16分(62ms)でも次へ届かない。
+const RHYTHM_SYNTHETIC_TAP_AHEAD_MAX_MS=RHYTHM_JUDGMENTS.find(judgment=>judgment.id==='MARVELOUS')?.windowMs||55;
 const RHYTHM_TAP_TARGET_PREVIOUS_SHARE=.75;
 const RHYTHM_TAP_TARGET_UPCOMING_MAX_EARLY_MS=RHYTHM_JUDGMENTS.find(judgment=>judgment.id==='MARVELOUS')?.windowMs||55;
 const RHYTHM_SCORE_WEIGHTS = Object.freeze({ judgment:.9, combo:.1 });
@@ -136,7 +139,12 @@ const rhythmNextRankId = (score, maxScore) => {
 // 音ゲーのライフ(暫定値)。0へ到達したrunは不可逆のDOWNとなり、曲は止めずに
 // ライフとスコアだけを固定する。将来の回復処理も0からは復帰させない。
 const RHYTHM_LIFE_MAX = 1000;
-const RHYTHM_LIFE_DELTA = Object.freeze({ MARVELOUS:2, EXCELLENT:2, GREAT:1, GOOD:0, BAD:-20, MISS:-50 });
+// ★ふつうのノーツでは回復しない(2026-09-13・ユーザー指示「ライフのノーツ回復があるせいで
+//   ゲームオーバーの危険性が少ない。回復はモンスターノーツのみに変更したい」)。
+//   それまでは MARVELOUS/EXCELLENT で +2、GREAT で +1 入り、上手な人ほど減らなかった。
+//   **回復はモンスターノーツの「元気」(+500)だけ**になる。減り方(BAD -20 / MISS -50)と
+//   最大値(1000)、0からは戻らない決まりは変えていない。
+const RHYTHM_LIFE_DELTA = Object.freeze({ MARVELOUS:0, EXCELLENT:0, GREAT:0, GOOD:0, BAD:-20, MISS:-50 });
 // null / undefined / 空文字は「値なし」として満タン扱いにする(Number()では0になってしまう)。
 const rhythmLifeValue = life => {
   const raw = life == null || life === '' ? NaN : Number(life);
@@ -986,6 +994,29 @@ const rhythmLaneAtPoint=(clientX,clientY,rect)=>{
   return Math.max(0,Math.min(RHYTHM_LANE_COUNT-1,Math.floor(coordinate+.5)));
 };
 
+// --- 音の出力遅延 ---
+// 【2026-09-13・「マーベラスが出ない」の原因】
+// 曲の再生位置は ctx.currentTime から作っているが、これは音を**送り出した**時刻であって、
+// 耳に届くのはそこから outputLatency ぶん後。補正しないと、ゲームが「1.000秒」と思う瞬間に
+// プレイヤーへ聞こえているのは「1.000秒 − 出力遅延」の音になる。
+// 音に合わせて叩く人は**必ず出力遅延ぶん遅れる**。MARVELOUS は ±55ms しかないので、
+// 出力遅延が55msを超える端末(Android Chrome では40〜120msがふつう、Bluetoothはさらに大きい)
+// では、耳で合わせるかぎりMARVELOUSが原理的に出なかった。
+//   ・outputLatency が使えるならそれを使う(Chrome/Firefox)
+//   ・無いときは baseLatency で代える(Safari。全部ではないが0よりずっと近い)
+//   ・端末の申告ミスに備えて上限を置く。負の値・数でない値は 0(補正しない＝従来どおり)
+// ★曲の開始時に1回だけ読んで固定する。鳴っている最中に読み直すと、
+//   端末が値を更新した瞬間に曲の時刻が飛んでしまう。
+const RHYTHM_OUTPUT_LATENCY_MAX_MS=500;
+const rhythmAudioOutputLatencyMs=ctx=>{
+  if(!ctx)return 0;
+  const out=Number(ctx.outputLatency);
+  if(Number.isFinite(out)&&out>0)return Math.min(out*1000,RHYTHM_OUTPUT_LATENCY_MAX_MS);
+  const base=Number(ctx.baseLatency);
+  if(Number.isFinite(base)&&base>0)return Math.min(base*1000,RHYTHM_OUTPUT_LATENCY_MAX_MS);
+  return 0;
+};
+
 // --- 入力イベントの「古さ」 ---
 // 指が触れた瞬間(event.timeStamp)と、JSがそのイベントを処理する瞬間(performance.now())には
 // 端末によって数ms〜数十msの差がある(iOS Safariは描画の1コマぶん遅れて届くことがある)。
@@ -993,14 +1024,31 @@ const rhythmLaneAtPoint=(clientX,clientY,rect)=>{
 // ここでは差を測って、判定に使う曲の時刻からその古さを差し引く。
 //   ・timeStamp が高精度(performance.now と同じ基準)のときだけ効く。
 //     基準が違う(1970年からのms など)・未来・古すぎる値は 0 として扱う(安全側)
-//   ・上限を置く(それより古い値は端末の時計の都合と見なして使わない)
+//   ・上限を置く(それより古い値の扱いは下の【2026-09-13】のとおり、原因で分ける)
 const RHYTHM_INPUT_AGE_MAX_MS=80;
+// 【2026-09-13】上限より古い値の扱いを、原因で分けた。
+// それまでは「上限(80ms)より古ければ 0」＝**補正をまるごと捨てて**いた。原因が2つあるのに
+// 区別していなかったため、次の穴が空いていた。
+//   ① 端末の時計の基準が違う   … 差は**いつも**大きい。使ってはいけない(0でよい)
+//   ② その瞬間だけ処理が詰まった … 差は**そのときだけ**大きい。捨てると判定がまるごと遅れる
+// ②で捨てると、79ms→79ms巻き戻す・81ms→0ms巻き戻さない、と2msの違いで
+// **判定に使う時刻が81msぶん遅れ側へ飛ぶ**。16分の連打では前ノーツの持ち時間が66msしかないので、
+// この飛びだけで相手が1つ先のノーツへ移り、あぶれた1つが見逃しMISSになる
+// (「速い連打で1つだけ反応しない」の節を参照)。
+// 見分けかたは「そのセッションで見た差の最小値」。基準がそろっていれば、処理がすぐ回った回に
+// ごく小さい差が必ず出る。一度でもそれを見たら②と判断して上限まで戻す。
+// 基準がずれている端末では最小値も大きいままなので、これまでどおり 0 のまま(安全側)。
+const RHYTHM_INPUT_AGE_BASE_ALIGNED_MS=25;
+let rhythmInputAgeFloorMs=Infinity;
+const rhythmInputAgeResetFloor=()=>{rhythmInputAgeFloorMs=Infinity;};
 const rhythmInputAgeMs=(eventTimeStamp,nowPerfMs)=>{
   const stamp=Number(eventTimeStamp),now=Number(nowPerfMs);
   if(!Number.isFinite(stamp)||!Number.isFinite(now))return 0;
   const age=now-stamp;
-  if(!(age>0)||age>RHYTHM_INPUT_AGE_MAX_MS)return 0;
-  return age;
+  if(!(age>0))return 0;
+  if(age<rhythmInputAgeFloorMs)rhythmInputAgeFloorMs=age;
+  if(age<=RHYTHM_INPUT_AGE_MAX_MS)return age;
+  return rhythmInputAgeFloorMs<=RHYTHM_INPUT_AGE_BASE_ALIGNED_MS?RHYTHM_INPUT_AGE_MAX_MS:0;
 };
 // ノーツを「もう誰も取れない」として見逃しMISSにする時刻。
 //
@@ -2174,6 +2222,7 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
     const key=String(input?.inputKey??'');
     if(!key||seenInputs.has(key))return {input,target:null,deltaMs:null};
     seenInputs.add(key);
+    const rejudge=input?.rejudge===true;
     const lane=Number(input?.lane),subCoordinate=Number(input?.subLaneCoordinate),tapOnly=RHYTHM_TOUCH_SPAN_RUNTIME.isSyntheticTapKey(key),syntheticTime=RHYTHM_TOUCH_SPAN_RUNTIME.syntheticTargetTime(key);
     const inputSpan=note=>{
       if(rhythmNoteHasVariableSpan(note)){
@@ -2269,6 +2318,28 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
       if(claimed.has(index)||!note||note.done||note.activePointerId!==null||!RHYTHM_NOTE_TYPES.includes(note.type)||tapOnly&&note.type!=='TAP')continue;
       const noteTime=Number(note.timeMs)+offset;
       if(tapOnly&&Number.isFinite(syntheticTime)&&Math.abs(Number(note.timeMs)-syntheticTime)>.001)continue;
+      // 【2026-09-13・両手の高速タップでミスが出る】
+      // 鍵(syntheticTime)がまだ無いのは「中心の指が何も取れなかった」とき。そのときの疑似TAPは
+      // 時刻の制限がまるごと外れ、**最大170ms先のノーツまで取れていた**(16分なら2つ先)。
+      // 取られたノーツは本来の時刻には既に done なので、そこを叩いても何も起きず見逃しMISSになる。
+      // 両手だと「片方が先に取ったので、もう片方は行き先が無い」が頻繁に起きるため、
+      // 鍵の消えた疑似TAPもそのぶん増える＝両手のときだけ目立つ、という形になっていた。
+      // 接触幅の補完は「指が太くて中心が外れた」を拾うためのもので、**位置**の救済でしかない。
+      // まだ来ていないノーツへ遠くまで手を伸ばす必要はないので、先の側だけ狭める。
+      // 過ぎた側は据え置き(放っておけば見逃しMISSになるものを拾うだけなので、取れて損がない)。
+      if(tapOnly&&!Number.isFinite(syntheticTime)&&noteTime-now>RHYTHM_SYNTHETIC_TAP_AHEAD_MAX_MS)continue;
+      // 【2026-09-13・両手の交互高速タップでだけミスが出る】
+      // TAPに成功した指は inputFeedbackState の empty が true になる(TAPは何も押さえ続けないため)。
+      // その指が画面に残ったまま0.2サブレーン以上ずれて別のサブレーンへ入ると、
+      // inputMoves が **もう一度タップを発火** する(レーンを滑って続けて叩く操作のため)。
+      // ところがその再発火が、まだ来ていないノーツを**最大170ms先まで先に食べて**いた。
+      // 実測: 1000msのノーツを取った指が1010msにずれると、1088msのノーツを78ms早く消す。
+      // 消えたノーツは本来の時刻にはもう無いので、そこを叩いた手は空振りになる。
+      // 片手なら指を上げてから叩くので起きにくい。**両手の交互連打**は、叩いたばかりの指が
+      // 画面に残ったまま転がり、もう片方が叩く先のノーツを食べる——という形になる。
+      // 滑って叩く操作自体は残したいので、**先の側だけ**疑似TAPと同じ幅へそろえる。
+      // 過ぎた側は据え置き(放っておけば見逃しMISSになるものを拾うだけなので、取れて損がない)。
+      if(rejudge&&noteTime-now>RHYTHM_SYNTHETIC_TAP_AHEAD_MAX_MS)continue;
       const timeDistance=Math.abs(now-noteTime);
       if(!(timeDistance<=RHYTHM_INPUT_MATCH_WINDOW_MS)||!acceptsPosition(note))continue;
       // 【2026-09-11・早押しでノーツを「BADで食べる」のをやめる】
@@ -14424,7 +14495,10 @@ const installRhythmGeometryStyles=()=>{
       0%{transform:scale(.72)}
       45%{transform:scale(1.16)}
       100%{transform:scale(1)}}
+    /* ★「標準」でも止める(2026-09-13・ユーザー指摘「通常が今までの多めの演出量に
+       なってる気がする」)。判定のたびに走るので、ノーツが詰まるほど効いてくる */
     [data-rhythm-play-area][data-rhythm-lightweight="true"] [data-rhythm-judgment-text],
+    [data-rhythm-play-area][data-rhythm-effect="LIGHT"] [data-rhythm-judgment-text],
     [data-rhythm-play-area][data-rhythm-effect="MINIMAL"] [data-rhythm-judgment-text]{animation:none!important}
     /* コンボ数も1つ増えるたびに弾ませる(プロセカのように数字が跳ねる)。
        HUDはプレイエリアの外にあるので、出す・出さないはJS側の演出量の判定で決める。 */
@@ -14513,8 +14587,10 @@ const installRhythmGeometryStyles=()=>{
       70%{transform:translate3d(0,-14%,0) scale(1.08)}
       100%{transform:translate3d(0,0,0) scale(1)}}
     [data-rhythm-play-area][data-rhythm-lightweight="true"] [data-rhythm-side-monster],
+    [data-rhythm-play-area][data-rhythm-effect="LIGHT"] [data-rhythm-side-monster],
     [data-rhythm-play-area][data-rhythm-effect="MINIMAL"] [data-rhythm-side-monster]{animation:none!important}
     [data-rhythm-play-area][data-rhythm-lightweight="true"] [data-rhythm-side-monster]::after,
+    [data-rhythm-play-area][data-rhythm-effect="LIGHT"] [data-rhythm-side-monster]::after,
     [data-rhythm-play-area][data-rhythm-effect="MINIMAL"] [data-rhythm-side-monster]::after{animation:none!important}
     [data-rhythm-judgment-line]{height:4px!important;background:linear-gradient(90deg,#d8b4fe 0%,#ecfeff 50%,#d8b4fe 100%)!important;border-radius:999px;box-shadow:0 0 14px #67e8f9,0 0 28px #c084fc,0 8px 24px rgba(34,211,238,.34)!important}
     /* 判定ラインを曲の拍に合わせて静かに脈打たせる(2026-09-05・演出強化)。
@@ -14529,8 +14605,10 @@ const installRhythmGeometryStyles=()=>{
       100%{opacity:1;transform:scaleY(1)}}
     [data-rhythm-judgment-line]{transform-origin:50% 50%;will-change:transform,opacity;
       animation:mhRhythmLinePulse var(--rhythm-beat,500ms) ease-out infinite}
-    /* 軽量モードと演出量MINIMALでは止める(ほかの演出と同じ扱い) */
+    /* 軽量モードと演出量「標準」以下では止める(ほかの演出と同じ扱い)。
+       ★これは曲のあいだ一度も止まらないので、「標準」を軽くするときの効きが大きい */
     [data-rhythm-play-area][data-rhythm-lightweight="true"] [data-rhythm-judgment-line],
+    [data-rhythm-play-area][data-rhythm-effect="LIGHT"] [data-rhythm-judgment-line],
     [data-rhythm-play-area][data-rhythm-effect="MINIMAL"] [data-rhythm-judgment-line]{animation:none!important;will-change:auto}
   
     /* --- 装飾を個別に切る(デバッグ限定) ---
@@ -15374,7 +15452,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     const flick=note.endFlick===true,h=8*(0.52+end.scale*.48),w=end.w,x=end.cx-w/2,top=end.cy-h/2;
     ctx.globalAlpha=alpha;
     if(!failed&&effect!=='MINIMAL'&&!lightweight){
-      const sprite=glowSprite(flick?'endFlick':'end',4,effect==='LOW'?END_BAR_GLOWS_LOW:END_BAR_GLOWS);
+      const sprite=glowSprite(flick?'endFlick':'end',4,(effect==='LOW'||effect==='LIGHT')?END_BAR_GLOWS_LOW:END_BAR_GLOWS);
       draw3Slice(sprite,end.cx,end.cy,w,h,alpha);
     }
     roundRectPath(ctx,x,top,w,h,h/2);
@@ -15429,7 +15507,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       // FLICKの矢印
       arrowSprite('flick',26,19,FLICK_ARROW_GLOWS,FLICK_ARROW_FILL);
       // 終端バーの光と、終点フリックの矢印
-      const endGlows=effect==='LOW'?END_BAR_GLOWS_LOW:END_BAR_GLOWS;
+      const endGlows=(effect==='LOW'||effect==='LIGHT')?END_BAR_GLOWS_LOW:END_BAR_GLOWS;
       glowSprite('end',4,endGlows);
       glowSprite('endFlick',4,endGlows);
       arrowSprite('endFlick',24,17,END_FLICK_ARROW_GLOWS,END_FLICK_ARROW_FILL);

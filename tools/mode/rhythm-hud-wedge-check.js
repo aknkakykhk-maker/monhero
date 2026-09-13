@@ -70,6 +70,15 @@ const COMBO_MAX_SCALE=(()=>{
   return values.length?Math.max(...values):null;
 })();
 check('コンボ数の拡大率を実装から取り出せる',COMBO_MAX_SCALE!==null,String(COMBO_MAX_SCALE));
+// ライフ表示も設定で大きくできる(2026-09-13・ユーザー依頼「ライフ表示が目立たないから
+// もっと大きく見やくしてほしい（設定調整可能）」)。倍率は index.html の
+// --mh-life-scale で効くので、**いちばん大きい倍率**を実装から取り出してその形で測る。
+// ここを写さないと「200%にしたら台形へかぶる」を検査が見逃す。
+const LIFE_MAX_SCALE=(()=>{
+  const line=game.match(/const RHYTHM_LIFE_SIZE_MAX *= *(\d+);/);
+  return line?Number(line[1])/100:null;
+})();
+check('ライフ表示の最大倍率を実装から取り出せる',Number.isFinite(LIFE_MAX_SCALE),String(LIFE_MAX_SCALE));
 
 const headerHtml=headerJsx
   // コンボ数の倍率(--mh-combo-scale)は、いちばん大きい段の transform として写す
@@ -100,7 +109,7 @@ const headerHtml=headerJsx
   .replace(/\{rhythmRankForScore\(view\.score\)\}/g,SAMPLE.rank)
   // プレイヤーの画面は譜面のLv.、デバッグから始めたときだけ HOLD TEST / TAP TEST
   // (2026-09-05・実機の指摘でデバッグ表記を出し分けた)
-  .replace(/\{tutorial\?'れんしゅう':debugPlay\?debugChartLabel:`Lv\.\$\{chart\.level\}`\}/g,'Lv.12')
+  .replace(/\{calibrating\?'タイミング合わせ':tutorial\?'れんしゅう':debugPlay\?debugChartLabel:`Lv\.\$\{chart\.level\}`\}/g,'Lv.12')
   .replace(/\{hasHold\?'HOLD TEST':'TAP TEST'\}/g,'HOLD TEST')
   // 自分で閉じるタグ(<i .../>・<b .../>)はHTMLには無い書き方なので、開き+閉じへ直す。
   // ★<i>だけを直していたころは、<b .../>が「開いたまま」になって後ろの要素(ポーズ・COMBO)を
@@ -213,6 +222,8 @@ main{position:relative;display:flex;flex:1 1 0%;min-height:0;flex-direction:colu
 [data-rhythm-play-area]{position:relative;margin:0 8px 8px;flex:1 1 0%;min-height:0;overflow:hidden;background:${LANE_BG}}
 ${utilityCss}
 ${hudGlobalCss}
+/* ライフ表示はいちばん大きい設定(RHYTHM_LIFE_SIZE_MAX)で測る */
+[data-rhythm-hud] [data-rhythm-life]{--mh-life-scale:${LIFE_MAX_SCALE||1}}
 </style></head><body><main>${headerHtml}<div data-rhythm-play-area=""></div></main></body></html>`;
 
 const SIZES=[
@@ -245,7 +256,10 @@ const HUD_BOTTOM_LIMIT_RATIO=.30;
           const hasVisibleBorder=cs.borderTopWidth!=='0px'&&cs.borderTopStyle!=='none';
           if(!hasText&&!hasVisibleBg&&!hasVisibleBorder)return;
           const r=child.getBoundingClientRect();
-          if(r.width||r.height)samples.push(r);
+          // どの要素がはみ出したのか名前で分かるようにする(2026-09-13)。
+          // 名前が無いと「どこを小さくすればいいのか」が分からず、当てずっぽうになる
+          const name=[...child.attributes].map(a=>a.name).find(n=>n.startsWith('data-rhythm-'))||child.tagName.toLowerCase();
+          if(r.width||r.height)samples.push({top:r.top,right:r.right,bottom:r.bottom,left:r.left,width:r.width,height:r.height,name});
         });
         return samples;
       };
@@ -267,8 +281,8 @@ const HUD_BOTTOM_LIMIT_RATIO=.30;
           boxShadow:headerStyle.boxShadow,
           backdropFilter:headerStyle.backdropFilter||headerStyle.webkitBackdropFilter||'none',
         },
-        leftSamples:inkSamples(left).map(toPlain),
-        rightSamples:inkSamples(right).map(toPlain),
+        leftSamples:inkSamples(left),
+        rightSamples:inkSamples(right),
         apexColor:(()=>{
           // 台形の最上部・中心ピクセルの直前(1px下)を、DOM越しに実際に見える色として調べる。
           const cx=Math.round((play.left+play.right)/2);
@@ -318,7 +332,7 @@ const HUD_BOTTOM_LIMIT_RATIO=.30;
       }
       check(`  ${label}のHUDは、それが描かれる高さの台形へ一切かぶらない(${samples.length}要素をサンプル)`,
         worst===null,
-        worst?`bottom=${worst.box.bottom.toFixed(1)}px, HUD側=${(side==='left'?worst.box.right:worst.box.left).toFixed(1)}px, 台形側=${(side==='left'?worst.edge.left:worst.edge.right).toFixed(1)}px`:'');
+        worst?`${worst.box.name} が ${Math.abs(worst.margin).toFixed(1)}px はみ出している (bottom=${worst.box.bottom.toFixed(1)}px, 幅=${worst.box.width.toFixed(1)}px, HUD側=${(side==='left'?worst.box.right:worst.box.left).toFixed(1)}px, 台形側=${(side==='left'?worst.edge.left:worst.edge.right).toFixed(1)}px)`:'');
     }
     const bottomRatio=(maxBottom-measured.play.top)/(measured.play.bottom-measured.play.top);
     check(`  HUD本文は画面上部${Math.round(HUD_BOTTOM_LIMIT_RATIO*100)}%以内に収まる`,bottomRatio<=HUD_BOTTOM_LIMIT_RATIO,

@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1b32994982dd0052
+// source-sha256: 8133a823d8cfc449
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 19072cdb610e5eca
+// generated-sha256: f95029686c8e4c30
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-13 16:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-13 16:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -885,6 +885,33 @@ const buildSoulRankRespecProofExchange = (ownedItems, quantity = 1) => {
       ...before,
       [HERO_PROOF_ITEM_ID]: proofHave - count,
       [SOUL_RANK_RESPEC_ITEM_ID]: ownedItemCount(before, SOUL_RANK_RESPEC_ITEM_ID) + count
+    }
+  };
+};
+// 勇者の証片 → 勇者の証 の交換(2026-09-13)。
+// 20個ごとに1個。足りなければ ok:false を返し、所持品には一切触れない。
+// ★増える側も減る側も同じ mh_owned_items の中なので、書き戻しは1回で済む。
+const buildHeroProofShardExchange = (ownedItems, quantity = 1) => {
+  const before = ownedItems && typeof ownedItems === 'object' && !Array.isArray(ownedItems) ? ownedItems : {};
+  const count = Math.max(1, Math.floor(Number(quantity) || 1));
+  const shardCost = count * HERO_PROOF_SHARD_PER_PROOF;
+  const shardHave = ownedItemCount(before, HERO_PROOF_SHARD_ITEM_ID);
+  if (shardHave < shardCost) return {
+    ok: false,
+    quantity: count,
+    shardCost,
+    shardHave,
+    ownedItems: before
+  };
+  return {
+    ok: true,
+    quantity: count,
+    shardCost,
+    shardHave,
+    ownedItems: {
+      ...before,
+      [HERO_PROOF_SHARD_ITEM_ID]: shardHave - shardCost,
+      [HERO_PROOF_ITEM_ID]: ownedItemCount(before, HERO_PROOF_ITEM_ID) + count
     }
   };
 };
@@ -1869,6 +1896,20 @@ const HERO_PROOF_ITEM = Object.freeze({
   emoji: '🏅',
   usage: 'soulRank',
   desc: '魂格進化Ⅰ〜Ⅴに使う高難度クリア報酬。神殿の「魂格進化」で消費する。'
+});
+
+// 勇者の証片(2026-09-13・ユーザーが決めた)。モンヒロビートの週間ランキングの報酬で増え、
+// マーケットで HERO_PROOF_SHARD_PER_PROOF 個ごとに「勇者の証」1個と交換できる。
+// ★所持数は他アイテムと同じ mh_owned_items の中へ入れ、新しい保存キーは作らない(CLAUDE.md ⑦)。
+// ★20個未満でも無駄にならず貯まる。証そのものではないので、魂格進化には直接使えない。
+const HERO_PROOF_SHARD_ITEM_ID = 'hero_proof_shard';
+const HERO_PROOF_SHARD_PER_PROOF = 20;
+const HERO_PROOF_SHARD_ITEM = Object.freeze({
+  id: HERO_PROOF_SHARD_ITEM_ID,
+  name: '勇者の証片',
+  emoji: '🎖️',
+  usage: 'heroProofShard',
+  desc: `モンヒロビートの週間ランキングでもらえるかけら。マーケットで${HERO_PROOF_SHARD_PER_PROOF}個ごとに「勇者の証」1個と交換できる。`
 });
 const HERO_PROOF_CLEAR_REWARDS = Object.freeze({
   extreme: Object.freeze({
@@ -5028,7 +5069,20 @@ const RHYTHM_BEST_RECORDS_KEY = 'mh_rhythm_best_v1';
 // 際限なく増やさないよう直近の件数だけ保つ
 const RHYTHM_RANKING_PENDING_KEY = 'mh_rhythm_rank_pending_v1';
 const RHYTHM_RANKING_PENDING_MAX = 20;
-const RHYTHM_EFFECT_LEVELS = Object.freeze(['NORMAL', 'LOW', 'MINIMAL']);
+// 演出量の段。**重い順**に並べる(この順そのものが「どちらが軽いか」の正本)。
+// 2026-09-13にユーザー指摘「通常が今までの多めの演出量になってる気がする」。
+// 実際そのとおりで、LOW が止めていたのは判定文字の流れるグラデーションとぼかしの枚数だけ。
+// 判定ラインの脈打ち・マスモンの跳ね・コンボの跳ねなど**ずっと動き続けるもの**は
+// NORMAL と同じままだった。そこで LIGHT を1段足し(「段を増やして更に標準をもっと軽くする」)、
+// 既定をそこへ置いた。既存のIDは足しただけで意味を変えていない(CLAUDE.md ⑦)。
+const RHYTHM_EFFECT_LEVELS = Object.freeze(['NORMAL', 'LOW', 'LIGHT', 'MINIMAL']);
+// 「この段より軽い側か」を1か所で判定する。段を足すたびに条件を書き足さなくて済む。
+// 例: rhythmEffectAtMost(settings.effectAmount,'LIGHT') は LIGHT と MINIMAL で true
+const rhythmEffectRank = amount => {
+  const index = RHYTHM_EFFECT_LEVELS.indexOf(amount);
+  return index < 0 ? RHYTHM_EFFECT_LEVELS.indexOf(DEFAULT_RHYTHM_SETTINGS.effectAmount) : index;
+};
+const rhythmEffectAtMost = (amount, level) => rhythmEffectRank(amount) >= RHYTHM_EFFECT_LEVELS.indexOf(level);
 // コンボの節目でお祝いを出す刻み。100コンボごと。
 const RHYTHM_COMBO_MILESTONE_STEP = 100;
 // コンボ数の見せ方の段(2026-09-12・ユーザー指示
@@ -5106,14 +5160,20 @@ const RHYTHM_MONSTER_EFFECT_LEVELS = Object.freeze(RHYTHM_MONSTER_EFFECT_LABELS.
 const RHYTHM_COMBO_OPACITY_MIN = 30;
 const RHYTHM_COMBO_OPACITY_MAX = 100;
 const RHYTHM_COMBO_OPACITY_STEP = 10;
+// ライフ表示の大きさ(2026-09-13・ユーザー依頼「ライフ表示が目立たないからもっと大きく
+// 見やすくしてほしい（設定調整可能）」)。100%がそれまでの大きさで、既定はひと回り大きい150%。
+// 太さ・ハート・数字にそのまま掛かる。横幅だけは台形の外の空きに収める都合で伸びを抑える。
+const RHYTHM_LIFE_SIZE_MIN = 100;
+const RHYTHM_LIFE_SIZE_MAX = 200;
+const RHYTHM_LIFE_SIZE_STEP = 10;
 const RHYTHM_COMBO_SIZE_MIN = 70;
 const RHYTHM_COMBO_SIZE_MAX = 150;
 const RHYTHM_COMBO_SIZE_STEP = 10;
 const RHYTHM_LANE_GLOW_LABELS = Object.freeze([['NORMAL', '標準'], ['LOW', '控えめ'], ['NONE', 'なし']]);
-// ★既定は LOW。2026-09-13・ユーザー指摘「演出量が普通だと重いという声が多い」。
-//   IDはそのまま(NORMAL=いちばん盛る段)。いちばん盛る段を「多め」へ、既定になった LOW を
-//   「標準」と呼ぶ(2026-09-13・ユーザー指示「デフォルトの名称を標準にして」)。
-const RHYTHM_EFFECT_LABELS = Object.freeze([['NORMAL', '多め'], ['LOW', '標準'], ['MINIMAL', '最小']]);
+// ★既定は LIGHT(標準)。重い順に 最大 / 多め / 標準 / 最小 の4段。
+//   2026-09-13・ユーザー指示「段を増やして更に標準をもっと軽くする」。
+//   名前は重さの順に読めるようにそろえてある(既定が「標準」なのは前の指示のまま)。
+const RHYTHM_EFFECT_LABELS = Object.freeze([['NORMAL', '最大'], ['LOW', '多め'], ['LIGHT', '標準'], ['MINIMAL', '最小']]);
 const RHYTHM_SIDE_MONSTER_OPACITY_LABELS = Object.freeze([['NORMAL', 'はっきり'], ['SOFT', 'ふつう'], ['FAINT', 'うっすら'], ['OFF', '出さない']]);
 const RHYTHM_SIDE_MONSTER_MOTION_LABELS = Object.freeze([['NORMAL', '跳ねる'], ['SMALL', '小さく跳ねる'], ['NONE', '動かない']]);
 // ★AUTO(おすすめ)は「台形の外でいちばん広く空いているところ」(2026-09-13・ユーザー提案
@@ -5153,13 +5213,14 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   comboPosition: 'AUTO',
   comboSize: 100,
   comboOpacity: 100,
+  lifeDisplaySize: 150,
   holdSlideOpacity: 80,
   laneGlow: 'NORMAL',
   monsterNoteEffect: 'LIGHT',
   noteSeVolume: 70,
   noteSeEnabled: true,
   vibrationEnabled: false,
-  effectAmount: 'LOW',
+  effectAmount: 'LIGHT',
   lightweightMode: false,
   livePartnerVisible: true,
   // 両サイドのマスモン(2026-09-05)。既存の保存値には無いので、読み込み時は既定で補われる。
@@ -5201,6 +5262,7 @@ const normalizeRhythmSettings = value => {
     comboDisplay: bool('comboDisplay'),
     comboPosition: RHYTHM_COMBO_POSITIONS.includes(source.comboPosition) ? source.comboPosition : DEFAULT_RHYTHM_SETTINGS.comboPosition,
     comboSize: rhythmFiniteStep(source.comboSize, RHYTHM_COMBO_SIZE_MIN, RHYTHM_COMBO_SIZE_MAX, RHYTHM_COMBO_SIZE_STEP, DEFAULT_RHYTHM_SETTINGS.comboSize),
+    lifeDisplaySize: rhythmFiniteStep(source.lifeDisplaySize, RHYTHM_LIFE_SIZE_MIN, RHYTHM_LIFE_SIZE_MAX, RHYTHM_LIFE_SIZE_STEP, DEFAULT_RHYTHM_SETTINGS.lifeDisplaySize),
     comboOpacity: rhythmFiniteStep(source.comboOpacity, RHYTHM_COMBO_OPACITY_MIN, RHYTHM_COMBO_OPACITY_MAX, RHYTHM_COMBO_OPACITY_STEP, DEFAULT_RHYTHM_SETTINGS.comboOpacity),
     monsterNoteEffect: RHYTHM_MONSTER_EFFECT_LEVELS.includes(source.monsterNoteEffect) ? source.monsterNoteEffect : DEFAULT_RHYTHM_SETTINGS.monsterNoteEffect,
     holdSlideOpacity: rhythmFiniteInRange(source.holdSlideOpacity, 10, 100, DEFAULT_RHYTHM_SETTINGS.holdSlideOpacity),
@@ -6039,13 +6101,16 @@ const Audio_ = (() => {
       const buffer = await loadBuffer(track.src),
         ctx = await ensureAudioCtxRunning();
       if (!ctx) return null;
+      // outputLatencySeconds … 音が耳へ届くまでの遅れ。曲を鳴らしはじめるたびに1回だけ測って固定する
+      // (data/rhythm-mode.js の rhythmAudioOutputLatencyMs。鳴っている最中に読み直すと曲の時刻が飛ぶ)
       let source = null,
         startedAt = ctx.currentTime,
         offsetSeconds = 0,
         playing = false,
         stopped = false,
         naturallyEnded = false,
-        gainEntry = null;
+        gainEntry = null,
+        outputLatencySeconds = 0;
       const dropGainEntry = () => {
         if (gainEntry) {
           activeRhythmGains.delete(gainEntry);
@@ -6081,6 +6146,7 @@ const Audio_ = (() => {
         offsetSeconds = offset;
         startedAt = ctx.currentTime;
         playing = true;
+        outputLatencySeconds = rhythmAudioOutputLatencyMs(ctx) / 1000;
         nextSource.onended = () => {
           if (source === nextSource && playing) {
             playing = false;
@@ -6091,7 +6157,11 @@ const Audio_ = (() => {
         nextSource.start(0, offset);
         return true;
       };
-      const songTimeSeconds = () => Math.min(buffer.duration, Math.max(0, offsetSeconds + (playing ? ctx.currentTime - startedAt : 0)));
+      // 耳に届いている位置を返す。ctx.currentTime は「送り出した」時刻なので、出力遅延ぶん引く。
+      // 引かないと、音に合わせて叩く人が必ずその分だけ遅れて判定される(MARVELOUSは±55ms)。
+      // 見た目も判定も同じこの値から出ているので、ここ1か所でそろう。
+      // 鳴らしはじめの遅延ぶんは Math.max(0,…) が 0 に留める(音が出る前にノーツが動き出さない)
+      const songTimeSeconds = () => Math.min(buffer.duration, Math.max(0, offsetSeconds + (playing ? ctx.currentTime - startedAt - outputLatencySeconds : 0)));
       if (autoStart) startSource(0);
       return {
         // autoStart:false で用意したぶんを、頭から鳴らし始める。
@@ -14244,7 +14314,8 @@ const MarketProductCard = ({
   const usesGold = item.type === 'disc' || item.type === 'assist' || item.type === 'item';
   const usesPsyche = item.currency === 'psyche';
   const usesHeroProof = item.currency === 'heroProof';
-  const priceLabel = usesHeroProof ? `勇者の証${item.cost}個` : usesPsyche ? `${item.cost}プシュケー` : usesGold ? `${item.cost}ダイヤ` : `${item.cost}pt`;
+  const usesHeroProofShard = item.currency === 'heroProofShard';
+  const priceLabel = usesHeroProofShard ? `勇者の証片${item.cost}個` : usesHeroProof ? `勇者の証${item.cost}個` : usesPsyche ? `${item.cost}プシュケー` : usesGold ? `${item.cost}ダイヤ` : `${item.cost}pt`;
   return /*#__PURE__*/React.createElement("div", {
     className: `rounded-xl border-2 p-1.5 flex flex-col items-center gap-1 ${owned ? 'bg-emerald-900/30 border-emerald-500/50' : comingSoon ? 'bg-slate-900/60 border-slate-800/60' : 'bg-slate-900 border-slate-800'}`
   }, /*#__PURE__*/React.createElement(MarketProductIcon, {
@@ -14276,9 +14347,13 @@ const MarketProductCard = ({
   }, "\u6240\u6301\u6E08\u307F") : /*#__PURE__*/React.createElement("button", {
     onClick: onBuy,
     disabled: disabled || !canBuy,
-    "aria-label": `${item.name}${disabled ? '（デバッグのため購入不可）' : `を${priceLabel}で${usesHeroProof ? '交換' : '購入'}`}`,
+    "aria-label": `${item.name}${disabled ? '（デバッグのため購入不可）' : `を${priceLabel}で${usesHeroProof || usesHeroProofShard ? '交換' : '購入'}`}`,
     className: `text-[10px] font-black px-1.5 min-h-[30px] max-w-full rounded-xl flex items-center justify-center gap-1 whitespace-nowrap ${disabled || !canBuy ? 'bg-slate-800 text-slate-500' : usesPsyche ? 'bg-fuchsia-600 text-white active:scale-95' : 'bg-amber-500 text-black active:scale-95'}`
-  }, usesHeroProof ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
+  }, usesHeroProofShard ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
+    "aria-hidden": "true"
+  }, "\uD83C\uDF96\uFE0F"), /*#__PURE__*/React.createElement("span", {
+    className: "text-[8px]"
+  }, "\u8A3C\u7247 \xD7", item.cost.toLocaleString())) : usesHeroProof ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
     "aria-hidden": "true"
   }, "\uD83C\uDFC5"), /*#__PURE__*/React.createElement("span", {
     className: "text-[8px]"
@@ -14444,6 +14519,15 @@ const helpDataRows = id => {
           sub
         } = monsterLineageOf(mon.id);
         return [mon.name, `${main.name} × ${sub.name}（${monsterCategoryName(monsterCategoryOf(mon.id))}）`];
+      });
+    // 週間ランキングの順位報酬。1〜10位を実データ(式)から作る
+    // (ヘルプへ10行書き写すと、幅を変えたときに古いままになる)
+    case 'rhythmWeeklyRewards':
+      return Array.from({
+        length: RHYTHM_WEEKLY_REWARD_RANKS
+      }, (_, index) => {
+        const reward = rhythmWeeklyRewardForRank(index + 1);
+        return [`${index + 1}位`, `${HERO_PROOF_SHARD_ITEM.emoji} ${HERO_PROOF_SHARD_ITEM.name}×${reward.count}` + ` ／ 💗 虹のプシュケー×${reward.psyche.toLocaleString()}` + ` ／ 💎 ダイヤ×${reward.gold.toLocaleString()}`];
       });
     // イベントの回数ボーナス。難易度ごとの割合を実データから出す
     // (ヘルプへ手で書き写すと、割合を変えたときに古いままになる)
@@ -14617,6 +14701,7 @@ const HELP_DATA_TITLES = {
   difficulties: '難易度と倍率',
   extremeDifficulties: '極限チャレンジの難易度',
   rhythmEventPlayBonus: 'イベントの回数ボーナス（1回あたり）',
+  rhythmWeeklyRewards: '週間ランキングの順位報酬',
   levelUpPointMultipliers: 'レベルアップでもらえる強化ポイント',
   speciesChallengeLineages: '種族チャレンジで選べる種族',
   speciesChallengeRewards: '種族チャレンジの難易度と初回クリア報酬',
@@ -18060,6 +18145,10 @@ const RHYTHM_EVENT_RANKING_DISPLAY_LIMIT = 50;
 const RHYTHM_EVENT_SONG_SELECT_BASE = 'identity_key,user_name,song_id,difficulty_id,score,scored_at,level,icon';
 const RHYTHM_EVENT_SONG_SELECT = `${RHYTHM_EVENT_SONG_SELECT_BASE},party`;
 const RHYTHM_EVENT_TOTAL_SELECT = 'identity_key,user_name,total_score,song_count,last_scored_at,level,icon';
+// 週間ランキングは**累計スコア方式**(2026-09-13・ユーザーが決めた)。
+// 曲ごとのベストではなく、その週に出した記録をぜんぶ足す。対象曲は無いので期間だけ渡す。
+// play_count は参加報酬(その週に3回遊ぶ)の判定にも使う。
+const RHYTHM_WEEK_TOTAL_SELECT = 'identity_key,user_name,total_score,play_count,song_count,last_scored_at,level,icon';
 // 回数ボーナス込みの集計(2026-09-11・ユーザー指示)。
 // score / total_score は**加点込み**の値で返ってくるので、並べ替え(order=score.desc)も
 // 上位50件の切り出しも加点込みで行われる。素点と加点は別の列で受け取り、「内訳」に出す。
@@ -18080,7 +18169,7 @@ const RHYTHM_EVENT_TOTAL_BONUS_SELECT = `${RHYTHM_EVENT_TOTAL_BONUS_SELECT_BASE}
 const rhythmEventRankingMissing = (status, body) => {
   if (status !== 404 && status !== 400) return false;
   const text = String(body || '');
-  if (!/rhythm_week_window|rhythm_event_song_bests|rhythm_event_totals/i.test(text)) return false;
+  if (!/rhythm_week_window|rhythm_week_score_totals|rhythm_event_song_bests|rhythm_event_totals/i.test(text)) return false;
   return /PGRST202|PGRST205|PGRST200|42P01|42883|does not exist|Could not find the/i.test(text);
 };
 // 「party という列は無い」という応答かどうか(SQL未適用の環境)。
@@ -18311,6 +18400,25 @@ const rhythmEventPlayCountsFromRow = value => {
   }
   return out;
 };
+// 週間ランキング(累計スコア)。対象曲を持たないので、渡すのは期間だけ
+const sbFetchRhythmWeekTotals = async ({
+  fromMs,
+  toMs,
+  limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT,
+  identityKeys = null,
+  requestId = 'untracked'
+}) => {
+  const filter = Array.isArray(identityKeys) && identityKeys.length ? `&identity_key=in.(${identityKeys.map(k => encodeURIComponent(`"${k}"`)).join(',')})` : '';
+  return sbFetchRhythmEventRows({
+    url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_week_score_totals?select=${RHYTHM_WEEK_TOTAL_SELECT}` + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
+    body: {
+      from_at: new Date(fromMs).toISOString(),
+      to_at: new Date(toMs).toISOString()
+    },
+    label: 'rhythm-week-total',
+    requestId
+  });
+};
 // 生の行を画面用の形へ整える。壊れた値でも落ちないよう、数として確かめてから使う
 const rhythmEventSongEntryFromRow = row => ({
   identityKey: typeof row?.identity_key === 'string' ? row.identity_key : '',
@@ -18335,6 +18443,21 @@ const rhythmEventTotalEntryFromRow = row => ({
   level: Number(row?.level) || 0,
   icon: row?.icon ?? null,
   ...rhythmEventBonusFields(row, 'base_total')
+});
+// 週間の行。イベントの総合と形をそろえておくと、画面側で分岐が増えない。
+// 違うのは playCount(遊んだ回数)を必ず持つことだけ
+const rhythmWeekTotalEntryFromRow = row => ({
+  identityKey: typeof row?.identity_key === 'string' ? row.identity_key : '',
+  userName: row?.user_name || '名無しのブリーダー',
+  totalScore: Number(row?.total_score) || 0,
+  playCount: Number(row?.play_count) || 0,
+  songCount: Number(row?.song_count) || 0,
+  level: Number(row?.level) || 0,
+  icon: row?.icon ?? null,
+  // 週間に回数ボーナスは無いので、内訳の枠は出さない(CLAUDE.md の決めごとどおり)
+  baseScore: null,
+  bonusScore: 0,
+  playCounts: {}
 });
 
 // 検査(tools/ranking/rhythm-breeder-id-check.js)からモンビーの送信だけを直接叩けるようにする。
@@ -20234,6 +20357,12 @@ const rhythmEventRewardItem = reward => {
     name: HERO_PROOF_ITEM.name,
     emoji: HERO_PROOF_ITEM.emoji
   };
+  // 週間ランキングの順位報酬・参加報酬(2026-09-13)
+  if (reward.kind === 'heroProofShard') return {
+    id: HERO_PROOF_SHARD_ITEM_ID,
+    name: HERO_PROOF_SHARD_ITEM.name,
+    emoji: HERO_PROOF_SHARD_ITEM.emoji
+  };
   if (reward.kind === 'rainbowFruit') return {
     id: RAINBOW_TRANSCEND_FRUIT_ITEM_ID,
     name: RAINBOW_TRANSCEND_FRUIT_ITEM.name,
@@ -20265,9 +20394,11 @@ const RhythmEventBanner = ({
   });
 };
 // 参加報酬の1行。ダイヤと虹のプシュケーだけなので、アイテムの実体は要らない
+// 参加報酬の1行。週間は勇者の証片も付くので、アイテムぶんも出す
 const rhythmEventParticipationText = reward => {
   if (!reward) return '';
   const parts = [];
+  if (reward.count > 0) parts.push(`${HERO_PROOF_SHARD_ITEM.emoji} ${HERO_PROOF_SHARD_ITEM.name}×${reward.count.toLocaleString()}`);
   if (reward.gold > 0) parts.push(`💎 ダイヤ×${reward.gold.toLocaleString()}`);
   if (reward.psyche > 0) parts.push(`💗 虹のプシュケー×${reward.psyche.toLocaleString()}`);
   return parts.join(' ／ ');
@@ -20280,6 +20411,8 @@ const rhythmEventRewardText = reward => {
   const parts = [];
   if (item && reward.count > 0) parts.push(`${item.emoji} ${item.name}×${reward.count}`);
   if (reward.psyche > 0) parts.push(`💗 虹のプシュケー×${reward.psyche.toLocaleString()}`);
+  // 週間の順位報酬にはダイヤも付く(イベントの順位報酬には無いので、ある時だけ出す)
+  if (reward.gold > 0) parts.push(`💎 ダイヤ×${reward.gold.toLocaleString()}`);
   return parts.join(' ／ ');
 };
 
@@ -20592,6 +20725,12 @@ const RhythmOptions = ({
     coarse: 25
   }), 'ノーツが画面のどのあたりから出てくるかを変えます。マイナスにすると奥（画面の上の外側）から、プラスにすると手前寄りから出てきます。判定ラインの位置・判定のタイミング・判定窓・スコアは変わりません。ノーツが流れてくる時間も変わらないので、手前から出すほど見えているあいだの動きは速く見えます。', {
     full: true
+  }), field('ライフ表示の大きさ', stepper('lifeDisplaySize', RHYTHM_LIFE_SIZE_MIN, RHYTHM_LIFE_SIZE_MAX, RHYTHM_LIFE_SIZE_STEP, {
+    fine: RHYTHM_LIFE_SIZE_STEP,
+    coarse: RHYTHM_LIFE_SIZE_STEP * 5,
+    suffix: '%'
+  }), '画面の右上に出るライフ（♥のゲージと数字）の大きさです。100%が2026-09-13より前の大きさで、既定は150%です。ゲージは長さも太さも倍率どおりに伸び、数字も大きくなります。横画面ではもともとの長さが倍あるので、そのぶん長く伸びます。ハートだけは伸びをゆるめてあります（ここが行の高さを決めていて、大きくするとポーズボタンがレーンの台形へ寄ってしまうため）。ライフの減り方・DOWNの決まりは変わりません。', {
+    full: true
   }), field('FAST / SLOW表示', toggle('fastSlowDisplay')), field('判定文字表示', toggle('judgmentTextDisplay')), field('レーン発光', segments('laneGlow', RHYTHM_LANE_GLOW_LABELS), null, {
     full: true
   }), field('コンボ数', /*#__PURE__*/React.createElement(React.Fragment, null, toggle('comboDisplay'), draft.comboDisplay !== false && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
@@ -20663,7 +20802,7 @@ const RhythmOptions = ({
     className: head
   }, "\u25C6 \u30B7\u30B9\u30C6\u30E0\u8A2D\u5B9A"), /*#__PURE__*/React.createElement("div", {
     className: wide ? grid : `mt-3 ${grid}`
-  }, field('演出量', segments('effectAmount', RHYTHM_EFFECT_LABELS), '既定は「標準」です（重いという声が多かったため、2026-09-13にひとつ軽い段を標準にしました。以前「標準」と呼んでいた段が「多め」です）。「標準」は判定文字の金色の帯や虹が流れるのを止め、光のにじみを減らします。色・グラデーション・字の大きさは「多め」と同じままなので、見た目はほとんど変わりません。よく動く端末で派手にしたいときは「多め」にしてください。「最小」にすると、それに加えて100コンボごとの演出や光そのものもほぼ出なくなります。', {
+  }, field('演出量', segments('effectAmount', RHYTHM_EFFECT_LABELS), '重い順に「最大」「多め」「標準」「最小」の4段で、既定は「標準」です。判定・判定窓・スコアはどの段でも変わりません。\n「最大」＝2026-09-13より前の見た目そのまま。判定文字の金色の帯や虹が流れ、判定ラインが拍に合わせて脈打ち、コンボ数が跳ね、両サイドのマスモンも跳ねます。\n「多め」＝判定文字の流れと光のにじみだけ止めます（色・大きさはそのまま）。\n「標準」＝それに加えて、曲のあいだずっと動き続けるものを止めます。判定ラインの脈打ち、コンボ数の跳ねと枠の脈動、両サイドのマスモンの跳ね、判定文字が出た瞬間に弾む動き、ノーツを取り切ったときの光です。判定ラインで弾ける光・100コンボごとのお祝い・フルコンボの大きな表示は残るので、手ごたえは変わりません。\n「最小」＝光そのものと100コンボごとの演出も出なくなります。', {
     full: true
   }), field('モンスターノーツの演出', segments('monsterNoteEffect', RHYTHM_MONSTER_EFFECT_LABELS), 'モンスターノーツを取ったときの演出の強さです。既定は「標準」で、画面全体が金色に光るのをやめます（いちばん重いのがこの全画面の描き直しです）。粒と跳ねは残ります。「多め」にすると全画面の光も出ます（2026-09-13より前に「標準」と呼んでいた段です）。「最小」にすると、光る粒もふつうのノーツと同じになり、両サイドのマスモンも跳ねません。どの段でも、音・能力名・振動はそのまま残るので、取れたことは分かります。', {
     full: true
@@ -21858,7 +21997,8 @@ const RhythmTapTest = ({
     startLockRef = useRef(false),
     generationRef = useRef(0),
     mountedRef = useRef(false),
-    glowNodesRef = useRef(null);
+    glowNodesRef = useRef(null),
+    liveTouchSubLanesRef = useRef([]);
   const tutorialBannerRef = useRef(null),
     tutorialStepRef = useRef(null);
   // タイミング合わせの案内(いま何回ぶん数えたか・途中経過のずれ)を書き換えるための控え。
@@ -22051,7 +22191,7 @@ const RhythmTapTest = ({
           sideMonsterRefs.current[index] = el;
         },
         "data-rhythm-side-monster": slot,
-        "data-rhythm-side-motion": settings.lightweightMode || settings.effectAmount === 'MINIMAL' ? 'NONE' : settings.sideMonsterMotion,
+        "data-rhythm-side-motion": settings.lightweightMode || rhythmEffectAtMost(settings.effectAmount, 'LIGHT') ? 'NONE' : settings.sideMonsterMotion,
         "data-rhythm-side-active": "0",
         "data-rhythm-side-phase": "intro",
         style: {
@@ -22407,7 +22547,7 @@ const RhythmTapTest = ({
     if (clearedGesture) {
       RHYTHM_NOTE_SE_RUNTIME.playClear();
       // 光は演出量の設定に従う(MINIMAL・軽量モードでは出さない)。音は設定に関わらず鳴らす
-      if (!settings.lightweightMode && settings.effectAmount !== 'MINIMAL') note._rhythmClearAt = run.audio?.songTimeMs?.() ?? 0;
+      if (!settings.lightweightMode && !rhythmEffectAtMost(settings.effectAmount, 'LIGHT')) note._rhythmClearAt = run.audio?.songTimeMs?.() ?? 0;
     }
     // --- 取れたノーツを判定ラインで弾けさせる(2026-09-05「画面演出はあまりかわってない」への対応) ---
     // 要素は使い回すので、押すたびにDOMは増えない。動くのは transform と opacity だけ。
@@ -23401,7 +23541,8 @@ const RhythmTapTest = ({
     if (state.empty) inputStarts([{
       lane: Math.floor(subLane / 2),
       subLaneCoordinate,
-      inputKey
+      inputKey,
+      rejudge: true
     }]);
   };
   // 押さえている帯へ先に置いてあった「控えの指」を探す。
@@ -23473,6 +23614,12 @@ const RhythmTapTest = ({
   // 指を置くたびに10要素を querySelectorAll で引き直し、押していないサブレーンまで
   // 毎回書き込んでいた。要素は覚えておき、状態が変わったサブレーンだけ書き換える
   // (dataset/styleへの書き込みはそのたびにstyle再計算を誘発するため)。
+  // 【2026-09-13・両手のときレーンが光らなくなる】
+  // 押している場所には2つの出どころがある。指(touch)と、ポインタ(マウス＋接触幅の疑似入力'pen')。
+  // それぞれが自分のぶんだけで setPressedLanes を呼んでいたため、**片方がもう片方を消して**いた。
+  // 接触幅の疑似入力は指が太いほど何度も出るので、両手だとレーンの光が点いたり消えたりする。
+  // 「押しているのに反応していないように見える」の一因。両方を足した集合を必ず渡す。
+  const pressedLanesNow = () => [...(liveTouchSubLanesRef.current || []), ...(runRef.current?.activePointerFeedback?.values() || [])];
   const setPressedLanes = coordinates => {
     const area = playAreaRef.current;
     if (!area) return;
@@ -23502,7 +23649,7 @@ const RhythmTapTest = ({
     if (run) {
       run.activePointerFeedback = run.activePointerFeedback || new Map();
       run.activePointerFeedback.set(e.pointerId, subLaneCoordinate);
-      setPressedLanes(run.activePointerFeedback.values());
+      setPressedLanes(pressedLanesNow());
     }
     inputStarts([{
       lane,
@@ -23523,7 +23670,7 @@ const RhythmTapTest = ({
       subLaneCoordinate = rhythmSubLaneCoordinateAtPoint(mp.x, mp.y, inputAreaRect(area));
     if (subLaneCoordinate === null) return;
     run.activePointerFeedback.set(e.pointerId, subLaneCoordinate);
-    setPressedLanes(run.activePointerFeedback.values());
+    setPressedLanes(pressedLanesNow());
     inputMoves(rhythmInputKey('pointer', e.pointerId), subLaneCoordinate);
   };
   const pointerEnd = e => {
@@ -23531,8 +23678,8 @@ const RhythmTapTest = ({
     const run = runRef.current;
     if (run?.activePointerFeedback) {
       run.activePointerFeedback.delete(e.pointerId);
-      setPressedLanes(run.activePointerFeedback.values());
-    } else setPressedLanes([]);
+      setPressedLanes(pressedLanesNow());
+    } else setPressedLanes(pressedLanesNow());
     inputEnds([{
       inputKey: rhythmInputKey('pointer', e.pointerId),
       releaseTarget: e.currentTarget,
@@ -23570,7 +23717,8 @@ const RhythmTapTest = ({
           inputKey
         });
       });
-      setPressedLanes(liveSubLanes);
+      liveTouchSubLanesRef.current = liveSubLanes;
+      setPressedLanes(pressedLanesNow());
       const ageMs = rhythmInputAgeMs(e.timeStamp, typeof performance !== 'undefined' ? performance.now() : NaN);
       if (starts.length) inputStarts(starts, ageMs);
       const ended = [];
@@ -23602,6 +23750,7 @@ const RhythmTapTest = ({
       area.removeEventListener('touchmove', syncTouches);
       area.removeEventListener('touchend', syncTouches);
       area.removeEventListener('touchcancel', syncTouches);
+      liveTouchSubLanesRef.current = [];
       setPressedLanes([]);
     };
   }, [view.status]);
@@ -23883,17 +24032,21 @@ const RhythmTapTest = ({
     ref: lifeBoxRef,
     "data-rhythm-life": true,
     "data-life-state": lifeState,
-    className: "relative flex items-center justify-end gap-1"
+    "data-life-wide": isLandscape ? '1' : '',
+    style: {
+      '--mh-life-scale': rhythmFiniteInRange(settings.lifeDisplaySize, RHYTHM_LIFE_SIZE_MIN, RHYTHM_LIFE_SIZE_MAX, 150) / 100
+    },
+    className: "relative flex flex-nowrap items-center justify-end gap-x-1"
   }, /*#__PURE__*/React.createElement("span", {
     "aria-hidden": "true",
     "data-rhythm-life-heart": true,
-    className: "text-sm leading-none text-rose-400",
+    className: "leading-none text-rose-400",
     style: {
       textShadow: '0 1px 4px rgba(2,6,23,.92)'
     }
   }, lifeState === 'down' ? '💔' : '♥'), /*#__PURE__*/React.createElement("div", {
     "data-rhythm-life-track": true,
-    className: "relative h-2.5 w-12 rounded-full border bg-slate-950/80 landscape:h-2 landscape:w-14"
+    className: "relative rounded-full border bg-slate-950/80"
   }, /*#__PURE__*/React.createElement("i", {
     "data-rhythm-life-bar": true,
     "aria-hidden": "true",
@@ -23905,7 +24058,7 @@ const RhythmTapTest = ({
     }
   })), /*#__PURE__*/React.createElement("b", {
     "data-rhythm-life-value": true,
-    className: "text-[10px] font-black leading-none tabular-nums text-slate-200",
+    className: "font-black leading-none tabular-nums text-slate-200",
     style: {
       textShadow: '0 1px 4px rgba(2,6,23,.92)'
     }
@@ -24128,13 +24281,15 @@ const RhythmTapTest = ({
     "data-rhythm-calibration-banner": true,
     className: "pointer-events-none absolute z-20 rounded-2xl border border-amber-300/60 bg-slate-950/92 text-center shadow-[0_0_18px_rgba(251,191,36,.18)]",
     style: isLandscape
-    // 横持ち: HUDの左(スコア)と右(ライフ)にはさまれた上の空きへ。器を自前で回しているので
-    //   CSSの landscape: は効かない(@media が成立しない)。向きはJSで見る
+    // 横持ち: HUDの左(スコア)と右(ライフ・ポーズ)にはさまれた上の空きへ。
+    //   器を自前で回しているのでCSSの landscape: は効かない(@media が成立しない)。向きはJSで見る。
+    //   ★真ん中に置かない。ライフ表示は設定で最大200%まで伸びて左へせり出すので、
+    //     中央そろえだと大きくしたときにポーズボタンと重なる(2026-09-13に実測して分かった)。
+    //     左のスコア(器の 12〜145px)と右のライフ(最大で 563px あたりまで)の**あいだ**へ置く。
     ? {
-      left: '50%',
-      width: '52%',
+      left: '19%',
+      right: '36%',
       top: '2%',
-      transform: 'translateX(-50%)',
       padding: '4px 10px'
     }
     // 縦持ち: 判定ラインの下の空き(bottom 12%より下)。上に置くとコンボ数と重なった
@@ -24896,7 +25051,10 @@ function ItemInventoryScreen({
   // 超越の実(虹・種族別)はマーケットで売る商品ではなく種族チャレンジの初回クリア報酬でしか
   // 増えないため、種族別ぶんはBREEDER_MARKET_ITEMSに登録していない(虹だけは購入もできるので
   // 登録済み)。ここでだけ両方を合わせて、持っているものを一覧に出す
-  const inventoryItems = [...BREEDER_MARKET_ITEMS.filter(item => item.type === 'item' && (ownedItems[item.id] || 0) > 0), ...((ownedItems[HERO_PROOF_ITEM_ID] || 0) > 0 ? [HERO_PROOF_ITEM] : []), ...Object.values(speciesTranscendFruitItems()).filter(item => (ownedItems[item.id] || 0) > 0)];
+  const inventoryItems = [...BREEDER_MARKET_ITEMS.filter(item => item.type === 'item' && (ownedItems[item.id] || 0) > 0), ...((ownedItems[HERO_PROOF_ITEM_ID] || 0) > 0 ? [HERO_PROOF_ITEM] : []),
+  // 勇者の証片も売り物ではないので BREEDER_MARKET_ITEMS に無い。ここで並べる
+  // (2026-09-13・ユーザー指示「勇者の証片はアイテム欄に並ぶようにしてね」)
+  ...((ownedItems[HERO_PROOF_SHARD_ITEM_ID] || 0) > 0 ? [HERO_PROOF_SHARD_ITEM] : []), ...Object.values(speciesTranscendFruitItems()).filter(item => (ownedItems[item.id] || 0) > 0)];
   return /*#__PURE__*/React.createElement("div", {
     "data-mh-screen": true,
     className: "flex-1 flex flex-col h-full min-h-0 p-4"
@@ -24964,7 +25122,9 @@ function ItemInventoryScreen({
     className: "shrink-0 text-[9px] font-black text-sky-300 text-center leading-tight px-2"
   }, "\u30DE\u30B9\u30E2\u30F3\u8A73\u7D30\u306E", /*#__PURE__*/React.createElement("br", null), "\u8D85\u8D8A\u5F37\u5316\u3067", /*#__PURE__*/React.createElement("br", null), "\u4F7F\u7528") : item.usage === 'soulRank' ? /*#__PURE__*/React.createElement("div", {
     className: "shrink-0 text-[9px] font-black text-amber-200 text-center leading-tight px-2"
-  }, "\u795E\u6BBF\u306E", /*#__PURE__*/React.createElement("br", null), "\u9B42\u683C\u9032\u5316\u3067", /*#__PURE__*/React.createElement("br", null), "\u4F7F\u7528") : item.usage === 'soulRankRespec' ? /*#__PURE__*/React.createElement("div", {
+  }, "\u795E\u6BBF\u306E", /*#__PURE__*/React.createElement("br", null), "\u9B42\u683C\u9032\u5316\u3067", /*#__PURE__*/React.createElement("br", null), "\u4F7F\u7528") : item.usage === 'heroProofShard' ? /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 text-[9px] font-black text-amber-100 text-center leading-tight px-2"
+  }, "\u30DE\u30FC\u30B1\u30C3\u30C8\u3067", /*#__PURE__*/React.createElement("br", null), HERO_PROOF_SHARD_PER_PROOF, "\u500B\u2192", /*#__PURE__*/React.createElement("br", null), "\u52C7\u8005\u306E\u8A3C1\u500B") : item.usage === 'soulRankRespec' ? /*#__PURE__*/React.createElement("div", {
     className: "shrink-0 text-[9px] font-black text-cyan-300 text-center leading-tight px-2"
   }, "\u30DE\u30B9\u30E2\u30F3\u8A73\u7D30\u306E", /*#__PURE__*/React.createElement("br", null), "\u9B42\u683C\u7279\u6027\u3067", /*#__PURE__*/React.createElement("br", null), "\u4F7F\u7528") : /*#__PURE__*/React.createElement("button", {
     onClick: () => onUseItem(item.id),
@@ -25004,8 +25164,14 @@ function BreederMarketScreen({
   onBuy,
   onOpenDetail,
   onOpenItemDetail,
-  onExchangeSoulRankRespec
+  onExchangeSoulRankRespec,
+  onExchangeHeroProof
 }) {
+  // 上に出す所持数(2026-09-13・ユーザー指示「マーケットにプシュケーとか証片も
+  // いくつあるかダイヤみたいに表示がほしい」)。ダイヤ・ptと同じ帯へ並べる
+  const psycheHave = ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID);
+  const shardHave = ownedItemCount(ownedItems, HERO_PROOF_SHARD_ITEM_ID);
+  const proofHave = ownedItemCount(ownedItems, HERO_PROOF_ITEM_ID);
   return /*#__PURE__*/React.createElement("div", {
     "data-mh-screen": true,
     className: "flex-1 flex flex-col h-full min-h-0 p-4"
@@ -25024,7 +25190,7 @@ function BreederMarketScreen({
     scene: "market",
     condition: Number.isFinite(CHEAPEST_GOLD_ITEM_COST) && gold < CHEAPEST_GOLD_ITEM_COST ? 'lowGold' : null
   })), /*#__PURE__*/React.createElement("div", {
-    className: "flex gap-2 mb-4 shrink-0"
+    className: "flex gap-2 mb-2 shrink-0"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex-1 flex items-center justify-center gap-2 bg-amber-950/40 border border-amber-500/30 rounded-2xl py-3"
   }, /*#__PURE__*/React.createElement(Coins, {
@@ -25044,6 +25210,40 @@ function BreederMarketScreen({
   }, gold.toLocaleString()), /*#__PURE__*/React.createElement("span", {
     className: "text-[9px] text-slate-400 font-bold"
   }, "\u30C0\u30A4\u30E4(WAVE\u30AF\u30EA\u30A2\u3067\u7372\u5F97)"))), /*#__PURE__*/React.createElement("div", {
+    "data-market-balances": true,
+    className: "grid grid-cols-3 gap-2 mb-4 shrink-0"
+  }, [{
+    key: 'psyche',
+    emoji: '🌈',
+    label: '虹のプシュケー',
+    value: psycheHave,
+    tone: 'text-fuchsia-200 border-fuchsia-500/30 bg-fuchsia-950/30'
+  }, {
+    key: 'shard',
+    emoji: '🎖️',
+    label: '勇者の証片',
+    value: shardHave,
+    tone: 'text-amber-100 border-amber-400/30 bg-amber-950/30'
+  }, {
+    key: 'proof',
+    emoji: '🏅',
+    label: '勇者の証',
+    value: proofHave,
+    tone: 'text-amber-200 border-amber-400/30 bg-amber-950/30'
+  }].map(row => /*#__PURE__*/React.createElement("div", {
+    key: row.key,
+    "data-market-balance": row.key,
+    className: `flex flex-col items-center justify-center rounded-2xl border py-1.5 ${row.tone}`
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-baseline gap-1"
+  }, /*#__PURE__*/React.createElement("span", {
+    "aria-hidden": "true",
+    className: "text-[11px]"
+  }, row.emoji), /*#__PURE__*/React.createElement("span", {
+    className: "font-mono text-sm font-black"
+  }, row.value.toLocaleString())), /*#__PURE__*/React.createElement("span", {
+    className: "text-[8px] font-bold leading-tight text-slate-400"
+  }, row.label)))), /*#__PURE__*/React.createElement("div", {
     className: "flex gap-1.5 mb-3 shrink-0"
   }, [{
     key: 'icon',
@@ -25119,6 +25319,27 @@ function BreederMarketScreen({
         size: 8
       }), "\u8A73\u7D30"))
     }));
+  }), marketTab === 'item' && /*#__PURE__*/React.createElement(MarketProductCard, {
+    item: {
+      ...HERO_PROOF_ITEM,
+      type: 'item',
+      currency: 'heroProofShard',
+      cost: HERO_PROOF_SHARD_PER_PROOF
+    },
+    owned: false,
+    comingSoon: false,
+    canBuy: shardHave >= HERO_PROOF_SHARD_PER_PROOF && !purchaseProcessing,
+    disabled: purchaseProcessing,
+    onBuy: onExchangeHeroProof,
+    middle: /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
+      className: `text-[9px] font-black ${proofHave > 0 ? 'text-cyan-300' : 'text-slate-600'}`
+    }, "\xD7", proofHave), /*#__PURE__*/React.createElement("button", {
+      onClick: () => onOpenItemDetail(HERO_PROOF_ITEM),
+      "aria-label": "\u52C7\u8005\u306E\u8A3C\u306E\u52B9\u679C\u3092\u898B\u308B",
+      className: "text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"
+    }, /*#__PURE__*/React.createElement(BookOpen, {
+      size: 8
+    }), "\u8A73\u7D30"))
   }))));
 }
 
@@ -26563,6 +26784,8 @@ function RhythmEventRewardModal({
   } = prize;
   // 入賞していなくても参加報酬だけで出ることがあるので、見出しを言い分ける
   const won = Array.isArray(prizes) && prizes.length > 0;
+  // 週間ランキングは「イベント」ではないので、見出しと参加条件の言い方を分ける
+  const weekly = event && event.kind === 'weekly';
   return /*#__PURE__*/React.createElement("div", {
     "data-rhythm-event-reward": true,
     className: "fixed inset-0 z-[90000] flex items-center justify-center bg-black/80 p-4"
@@ -26584,7 +26807,7 @@ function RhythmEventRewardModal({
     className: "flex items-baseline gap-2 text-[10px] font-black text-amber-200"
   }, /*#__PURE__*/React.createElement("span", {
     className: "min-w-0 flex-1 truncate text-slate-200"
-  }, entry.songId ? rhythmSongFullName(rhythmEventSong(entry.songId, RHYTHM_SONGS)) || entry.songId : '総合'), /*#__PURE__*/React.createElement("b", {
+  }, entry.songId ? rhythmSongFullName(rhythmEventSong(entry.songId, RHYTHM_SONGS)) || entry.songId : weekly ? 'その週の累計スコア' : '総合'), /*#__PURE__*/React.createElement("b", {
     className: "shrink-0 text-sm text-amber-100"
   }, entry.rank, "\u4F4D")), /*#__PURE__*/React.createElement("p", {
     className: "mt-1 text-[10px] leading-tight text-white"
@@ -26593,7 +26816,7 @@ function RhythmEventRewardModal({
     className: "mt-2 rounded-2xl border border-cyan-300/40 bg-cyan-500/5 p-2"
   }, /*#__PURE__*/React.createElement("p", {
     className: "text-[10px] font-black text-cyan-200"
-  }, "\u53C2\u52A0\u5831\u916C\uFF08\u5BFE\u8C61\u66F2\u3092", participation.songs, "\u66F2\u3059\u3079\u3066\uFF09"), /*#__PURE__*/React.createElement("p", {
+  }, "\u53C2\u52A0\u5831\u916C\uFF08", weekly ? `その週に${participation.plays}回遊びました` : `対象曲を${participation.songs}曲すべて`, "\uFF09"), /*#__PURE__*/React.createElement("p", {
     className: "mt-1 text-[10px] leading-tight text-white"
   }, rhythmEventParticipationText(participation))), /*#__PURE__*/React.createElement("button", {
     type: "button",
@@ -26603,7 +26826,7 @@ function RhythmEventRewardModal({
     className: "mt-4 min-h-[52px] w-full rounded-2xl border-2 border-amber-300 bg-amber-500/20 text-sm font-black text-amber-50 active:scale-[.98] disabled:opacity-50"
   }, claiming ? '受け取っています…' : '🎁 受け取る'), /*#__PURE__*/React.createElement("p", {
     className: "mt-2 text-center text-[9px] leading-relaxed text-slate-400"
-  }, "\u8D85\u8D8A\u306E\u5B9F\u30FB\u52C7\u8005\u306E\u8A3C\u30FB\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\u306FHOME\u306E\u300C\u30A2\u30A4\u30C6\u30E0\u300D\u304B\u3089\u3001\u30C0\u30A4\u30E4\u306F\u753B\u9762\u4E0A\u306E\u8868\u793A\u304B\u3089\u78BA\u8A8D\u3067\u304D\u307E\u3059\u3002")));
+  }, "\u8D85\u8D8A\u306E\u5B9F\u30FB\u52C7\u8005\u306E\u8A3C\u30FB\u52C7\u8005\u306E\u8A3C\u7247\u30FB\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\u306FHOME\u306E\u300C\u30A2\u30A4\u30C6\u30E0\u300D\u304B\u3089\u3001\u30C0\u30A4\u30E4\u306F\u753B\u9762\u4E0A\u306E\u8868\u793A\u304B\u3089\u78BA\u8A8D\u3067\u304D\u307E\u3059\u3002", weekly && '勇者の証片はマーケットで20個ごとに「勇者の証」1個と交換できます。')));
 }
 function RhythmRankingScreen({
   loadRhythmEventRanking,
@@ -26679,9 +26902,14 @@ function RhythmRankingScreen({
   const eventSongId = rhythmEventDivisionSongId(eventDivisionId);
   const eventRange = rhythmEventWindow(eventDefinition, event.window);
   const eventSongCount = eventDefinition ? eventDefinition.songIds.length : 0;
-  // その部門の報酬(1位から順に)。報酬を持たない週間ランキングでは空になる
+  // ★週間は**累計スコア方式**(2026-09-13)。曲ごとのベストではなく、その週に出した記録を
+  //   ぜんぶ足す。対象曲も無いので、1行に出すのは「遊んだ回数」にする
+  const eventWeekly = boardKind === 'weekly';
+  // 何位まで報酬があるか。週間は1〜10位、イベントは1〜5位(数はデータ側が決める)
+  const eventRankCount = rhythmEventRewardRankCount(eventDefinition);
+  // その部門の報酬(1位から順に)
   const eventRewardRanks = eventDefinition ? Array.from({
-    length: RHYTHM_EVENT_REWARD_RANKS
+    length: eventRankCount
   }, (_, index) => ({
     rank: index + 1,
     reward: rhythmEventRewardForRank(eventDefinition, eventDivisionId, index + 1)
@@ -26694,7 +26922,7 @@ function RhythmRankingScreen({
   const eventRewardsByDivision = eventDefinition ? eventDivisions.map(division => ({
     division,
     ranks: Array.from({
-      length: RHYTHM_EVENT_REWARD_RANKS
+      length: eventRankCount
     }, (_, index) => ({
       rank: index + 1,
       reward: rhythmEventRewardForRank(eventDefinition, division.id, index + 1)
@@ -26813,7 +27041,7 @@ function RhythmRankingScreen({
     className: "truncate text-xs font-black text-white"
   }, entry.userName), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-slate-400"
-  }, entry.songCount, " / ", eventSongCount, "\u66F2 \u30FB Lv.", entry.level)), /*#__PURE__*/React.createElement("div", {
+  }, eventWeekly ? `${entry.playCount}回 ・ ${entry.songCount}曲` : `${entry.songCount} / ${eventSongCount}曲`, " \u30FB Lv.", entry.level)), /*#__PURE__*/React.createElement("div", {
     className: "shrink-0 text-right"
   }, /*#__PURE__*/React.createElement("p", {
     className: "font-mono text-sm font-black text-fuchsia-100"
@@ -26920,7 +27148,7 @@ function RhythmRankingScreen({
     className: "shrink-0 text-sm"
   }, "\uD83C\uDF81"), /*#__PURE__*/React.createElement("span", {
     className: "min-w-0 flex-1 truncate text-[10px] font-black text-amber-200"
-  }, "\u30A4\u30D9\u30F3\u30C8\u8A73\u7D30\uFF08\u5831\u916C\u30FB\u5BFE\u8C61\u66F2\uFF09"), /*#__PURE__*/React.createElement("span", {
+  }, eventWeekly ? '週間ランキングの詳細（報酬・数え方）' : 'イベント詳細（報酬・対象曲）'), /*#__PURE__*/React.createElement("span", {
     className: "shrink-0 text-[10px] font-black text-amber-200"
   }, "\u203A")), eventDivisions.length > 1 && /*#__PURE__*/React.createElement("div", {
     "data-rhythm-event-divisions": true,
@@ -27081,7 +27309,7 @@ function RhythmRankingScreen({
     }
   }, /*#__PURE__*/React.createElement("p", {
     className: "mb-2 text-center text-[10px] font-black tracking-widest text-amber-300"
-  }, "EVENT"), /*#__PURE__*/React.createElement(RhythmEventBanner, {
+  }, eventWeekly ? 'WEEKLY' : 'EVENT'), /*#__PURE__*/React.createElement(RhythmEventBanner, {
     event: eventDefinition || (boardKind === 'limited' ? limitedEvent : null),
     className: "mb-3"
   }), eventDefinition && /*#__PURE__*/React.createElement("div", {
@@ -27108,7 +27336,7 @@ function RhythmRankingScreen({
     className: "rounded-2xl border border-amber-300/40 bg-amber-500/5 p-2"
   }, /*#__PURE__*/React.createElement("p", {
     className: "mb-1 truncate text-[10px] font-black text-fuchsia-100"
-  }, division.songId ? rhythmSongFullName(division.song) || division.songId : '総合（対象曲の合計）'), /*#__PURE__*/React.createElement("ul", {
+  }, division.songId ? rhythmSongFullName(division.song) || division.songId : eventWeekly ? 'その週の累計スコア' : '総合（対象曲の合計）'), /*#__PURE__*/React.createElement("ul", {
     className: "space-y-0.5"
   }, ranks.map(({
     rank,
@@ -27125,7 +27353,16 @@ function RhythmRankingScreen({
     className: "rounded-2xl border border-fuchsia-300/40 bg-fuchsia-500/5 p-2 text-[10px] leading-tight text-slate-200"
   }, /*#__PURE__*/React.createElement("b", {
     className: "text-fuchsia-200"
-  }, "\u53C2\u52A0\u5831\u916C"), "\u3000\u5BFE\u8C61\u66F2\u3092", eventParticipation.songs, "\u66F2\u3059\u3079\u3066\u904A\u3076\u3068 ", rhythmEventParticipationText(eventParticipation)), /*#__PURE__*/React.createElement("p", {
+  }, "\u53C2\u52A0\u5831\u916C"), "\u3000", eventWeekly ? `その週に${eventParticipation.plays}回遊ぶと` : `対象曲を${eventParticipation.songs}曲すべて遊ぶと`, " ", rhythmEventParticipationText(eventParticipation)), eventWeekly && /*#__PURE__*/React.createElement("p", {
+    "data-rhythm-week-score-rule": true,
+    className: "rounded-2xl border border-fuchsia-300/40 bg-fuchsia-500/5 p-2 text-[10px] leading-tight text-slate-200"
+  }, /*#__PURE__*/React.createElement("b", {
+    className: "text-fuchsia-200"
+  }, "\u30B9\u30B3\u30A2\u306E\u6570\u3048\u65B9"), "\u3000\u305D\u306E\u9031\u306B\u904A\u3093\u3060\u3076\u3093\u3092", /*#__PURE__*/React.createElement("b", {
+    className: "text-white"
+  }, "\u3059\u3079\u3066\u8DB3\u3057\u307E\u3059"), "\u3002\u66F2\u3082\u96E3\u6613\u5EA6\u3082\u554F\u308F\u305A\u3001\u540C\u3058\u66F2\u3092\u4F55\u5EA6\u904A\u3093\u3067\u3082\u305D\u306E\u3064\u3069\u7A4D\u307F\u4E0A\u304C\u308A\u307E\u3059\uFF08\u4E0A\u9650\u306A\u3057\uFF09\u3002\u6E80\u70B9\u306F\u96E3\u6613\u5EA6\u3054\u3068\u306B\u9055\u3044\u307E\u3059\uFF08EASY 60\u4E07\u301CMASTER 100\u4E07\uFF09\u3002\u300C\u7DCF\u5408\u300D\u30BF\u30D6\u304C\u66F2\u3054\u3068\u306E\u30D9\u30B9\u30C8\u3092\u5408\u8A08\u3059\u308B\u306E\u306B\u5BFE\u3057\u3001\u3053\u3061\u3089\u306F", /*#__PURE__*/React.createElement("b", {
+    className: "text-white"
+  }, "\u904A\u3093\u3060\u91CF"), "\u3067\u7AF6\u3044\u307E\u3059\u3002"), !eventWeekly && /*#__PURE__*/React.createElement("p", {
     "data-rhythm-event-loop-bonus": true,
     className: "rounded-2xl border border-amber-300/40 bg-amber-500/5 p-2 text-[10px] leading-tight text-slate-200"
   }, /*#__PURE__*/React.createElement("b", {
@@ -27146,7 +27383,7 @@ function RhythmRankingScreen({
     className: "min-w-0 flex-1 text-slate-200"
   }, rhythmEventPlayBonusPercentText(id)))))), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] leading-relaxed text-slate-400"
-  }, "\u5831\u916C\u306F\u30A4\u30D9\u30F3\u30C8\u304C\u7D42\u308F\u3063\u305F\u3042\u3068\u3001\u30B2\u30FC\u30E0\u3092\u958B\u3044\u305F\u3068\u304D\u306B\u53D7\u3051\u53D6\u308C\u307E\u3059\u3002\u53D7\u3051\u53D6\u308C\u308B\u306E\u306F\u7D42\u4E86\u304B\u30892\u9031\u9593\u307E\u3067\u3067\u3059\u3002\u9806\u4F4D\u306F\u7D42\u4E86\u3057\u305F\u6642\u70B9\u3067\u6C7A\u307E\u308B\u306E\u3067\u3001\u9045\u308C\u3066\u53D7\u3051\u53D6\u3063\u3066\u3082\u5185\u5BB9\u306F\u5909\u308F\u308A\u307E\u305B\u3093\u3002")), /*#__PURE__*/React.createElement("button", {
+  }, "\u5831\u916C\u306F", eventWeekly ? 'その週が終わったあと' : 'イベントが終わったあと', "\u3001\u30B2\u30FC\u30E0\u3092\u958B\u3044\u305F\u3068\u304D\u306B\u53D7\u3051\u53D6\u308C\u307E\u3059\u3002\u53D7\u3051\u53D6\u308C\u308B\u306E\u306F", eventWeekly ? '切り替わりから' : '終了から', "2\u9031\u9593\u307E\u3067\u3067\u3059\u3002\u9806\u4F4D\u306F", eventWeekly ? '切り替わった' : '終了した', "\u6642\u70B9\u3067\u6C7A\u307E\u308B\u306E\u3067\u3001\u9045\u308C\u3066\u53D7\u3051\u53D6\u3063\u3066\u3082\u5185\u5BB9\u306F\u5909\u308F\u308A\u307E\u305B\u3093\u3002")), /*#__PURE__*/React.createElement("button", {
     type: "button",
     "data-rhythm-event-detail-close": true,
     onClick: () => setEventDetailOpen(false),
@@ -38441,7 +38678,14 @@ function MonsterHeroGame() {
       // 回数ボーナスを使うイベントでは、割合を渡して加点込みで集計してもらう。
       // 使わないイベント(週間)では null なので、これまでどおりの集計になる
       const bonusRates = rhythmEventPlayBonusRates(event);
-      const fetchRows = options => targetSongId ? sbFetchRhythmEventSongBests({
+      // ★週間は**累計スコア方式**(2026-09-13)。曲ごとのベストではなく、その週に出した記録を
+      //   ぜんぶ足す。対象曲も部門も無いので、期間だけ渡す専用の関数を呼ぶ
+      const weeklyTotals = kind === 'weekly' && !targetSongId;
+      const fetchRows = options => weeklyTotals ? sbFetchRhythmWeekTotals({
+        fromMs: range.startMs,
+        toMs: range.endMs,
+        ...options
+      }) : targetSongId ? sbFetchRhythmEventSongBests({
         songId: targetSongId,
         fromMs: range.startMs,
         toMs: range.endMs,
@@ -38454,7 +38698,7 @@ function MonsterHeroGame() {
         bonusRates,
         ...options
       });
-      const fromRow = targetSongId ? rhythmEventSongEntryFromRow : rhythmEventTotalEntryFromRow;
+      const fromRow = weeklyTotals ? rhythmWeekTotalEntryFromRow : targetSongId ? rhythmEventSongEntryFromRow : rhythmEventTotalEntryFromRow;
       const rows = await fetchRows({
         requestId: `rhythm-${kind}-${division}-${Date.now()}`
       });
@@ -39696,10 +39940,16 @@ function MonsterHeroGame() {
     if (RELEASE_FLAGS.rhythmWeeklyRanking !== true) return;
     const claims = rhythmEventRewardClaimsRef.current;
     if (!Array.isArray(claims)) return; // まだ読み込めていない
-    const pending = rhythmEventsAwaitingReward(Date.now(), claims);
+    // 期間限定イベントと、終わった週(週間ランキング)の両方を見る。
+    // 受取フラグは同じ配列(mh_rhythm_event_reward_v1)。idの形が違うので取り違えない
+    const pending = [...rhythmEventsAwaitingReward(Date.now(), claims), ...rhythmWeeksAwaitingReward(Date.now(), claims)].sort((a, b) => (a.kind === 'weekly' ? a.endMs : rhythmEventTimeMs(a.endAt) || 0) - (b.kind === 'weekly' ? b.endMs : rhythmEventTimeMs(b.endAt) || 0));
     if (pending.length === 0) return;
     const event = pending[0]; // 先に終わったものから1つずつ
-    const range = rhythmEventWindow(event, null);
+    const weekly = event.kind === 'weekly';
+    const range = weekly ? {
+      startMs: event.startMs,
+      endMs: event.endMs
+    } : rhythmEventWindow(event, null);
     if (!range) return;
     try {
       const breederId = await ensureBreederId();
@@ -39708,24 +39958,31 @@ function MonsterHeroGame() {
       // ★順位の出し方は画面と**同じ**にする。回数ボーナスを使うイベントでここを渡し忘れると、
       //   「ランキングでは1位だったのに報酬が来ない」が起きる
       const bonusRates = rhythmEventPlayBonusRates(event);
+      // 何位まで取りにいくか。週間は1〜10位、イベントは1〜5位
+      const rankLimit = weekly ? RHYTHM_WEEKLY_REWARD_RANKS : RHYTHM_EVENT_REWARD_RANKS;
       for (const divisionId of rhythmEventDivisionIds(event)) {
         const songId = rhythmEventDivisionSongId(divisionId);
-        const rows = songId ? await sbFetchRhythmEventSongBests({
+        const rows = weekly ? await sbFetchRhythmWeekTotals({
+          fromMs: range.startMs,
+          toMs: range.endMs,
+          limit: rankLimit,
+          requestId: `rhythm-reward-${event.id}-week`
+        }) : songId ? await sbFetchRhythmEventSongBests({
           songId,
           fromMs: range.startMs,
           toMs: range.endMs,
           bonusRates,
-          limit: RHYTHM_EVENT_REWARD_RANKS,
+          limit: rankLimit,
           requestId: `rhythm-reward-${event.id}-${divisionId}`
         }) : await sbFetchRhythmEventTotals({
           songIds: [...event.songIds],
           fromMs: range.startMs,
           toMs: range.endMs,
           bonusRates,
-          limit: RHYTHM_EVENT_REWARD_RANKS,
+          limit: rankLimit,
           requestId: `rhythm-reward-${event.id}-total`
         });
-        const fromRow = songId ? rhythmEventSongEntryFromRow : rhythmEventTotalEntryFromRow;
+        const fromRow = weekly ? rhythmWeekTotalEntryFromRow : songId ? rhythmEventSongEntryFromRow : rhythmEventTotalEntryFromRow;
         const entries = (Array.isArray(rows) ? rows : []).map(fromRow);
         const index = entries.findIndex(entry => selfKeys.includes(entry.identityKey));
         if (index < 0) continue;
@@ -39740,9 +39997,16 @@ function MonsterHeroGame() {
       // 参加報酬(入賞しなくても、対象曲をすべて遊べばもらえる)。
       // 総合の上位5件に自分がいなくても成立するので、自分の行だけを別に取りにいって
       // 「何曲遊んだか」(songCount)を見る
+      // ★成立の見かたが違う。イベントは「何曲遊んだか」、週間は「何回遊んだか」
       let participation = null;
       if (rhythmEventParticipationReward(event)) {
-        const mine = await sbFetchRhythmEventTotals({
+        const mine = weekly ? await sbFetchRhythmWeekTotals({
+          fromMs: range.startMs,
+          toMs: range.endMs,
+          limit: selfKeys.length,
+          identityKeys: selfKeys,
+          requestId: `rhythm-reward-${event.id}-join`
+        }) : await sbFetchRhythmEventTotals({
           songIds: [...event.songIds],
           fromMs: range.startMs,
           toMs: range.endMs,
@@ -39751,7 +40015,7 @@ function MonsterHeroGame() {
           identityKeys: selfKeys,
           requestId: `rhythm-reward-${event.id}-join`
         });
-        const played = (Array.isArray(mine) ? mine : []).map(rhythmEventTotalEntryFromRow).reduce((max, entry) => Math.max(max, entry.songCount), 0);
+        const played = (Array.isArray(mine) ? mine : []).map(weekly ? rhythmWeekTotalEntryFromRow : rhythmEventTotalEntryFromRow).reduce((max, entry) => Math.max(max, weekly ? entry.playCount : entry.songCount), 0);
         if (rhythmEventParticipationCleared(event, played)) participation = rhythmEventParticipationReward(event);
       }
       // 入賞も参加報酬も無ければ、知らせずに受け取り済みへ入れて終わる
@@ -39791,20 +40055,30 @@ function MonsterHeroGame() {
       const next = {
         ...ownedItemsRef.current
       };
+      // ダイヤは mh_gold と入れ物が別なので、いったん合計だけ数えて後から足す
+      let goldGain = 0;
       for (const entry of prize.prizes) {
         const item = rhythmEventRewardItem(entry.reward);
         if (item && entry.reward.count > 0) next[item.id] = ownedItemCount(next, item.id) + entry.reward.count;
         if (entry.reward.psyche > 0) next[BREAKTHROUGH_ITEM_ID] = ownedItemCount(next, BREAKTHROUGH_ITEM_ID) + entry.reward.psyche;
+        // 週間の順位報酬にはダイヤも付く(イベントの順位報酬には無い)
+        if (entry.reward.gold > 0) goldGain += entry.reward.gold;
       }
-      // 参加報酬。虹のプシュケーは所持品、ダイヤは mh_gold と、入れ物が別なので分けて足す
-      if (prize.participation && prize.participation.psyche > 0) {
-        next[BREAKTHROUGH_ITEM_ID] = ownedItemCount(next, BREAKTHROUGH_ITEM_ID) + prize.participation.psyche;
+      // 参加報酬。週間は勇者の証片も付く
+      if (prize.participation) {
+        if (prize.participation.count > 0) {
+          next[HERO_PROOF_SHARD_ITEM_ID] = ownedItemCount(next, HERO_PROOF_SHARD_ITEM_ID) + prize.participation.count;
+        }
+        if (prize.participation.psyche > 0) {
+          next[BREAKTHROUGH_ITEM_ID] = ownedItemCount(next, BREAKTHROUGH_ITEM_ID) + prize.participation.psyche;
+        }
+        if (prize.participation.gold > 0) goldGain += prize.participation.gold;
       }
       ownedItemsRef.current = next;
       setOwnedItems(next);
       await storeSet('mh_owned_items', next, false);
-      if (prize.participation && prize.participation.gold > 0) {
-        const nextGold = (goldRef.current || 0) + prize.participation.gold;
+      if (goldGain > 0) {
+        const nextGold = (goldRef.current || 0) + goldGain;
         goldRef.current = nextGold;
         setGold(nextGold);
         await storeSet('mh_gold', nextGold, false);
@@ -42455,6 +42729,34 @@ function MonsterHeroGame() {
       saveMissionProgress('market');
     } catch {
       setMarketExchangeError('交換を保存できませんでした。勇者の証は消費していません。');
+    } finally {
+      marketPurchaseProcessingRef.current = false;
+    }
+  };
+  // 勇者の証片20個 → 勇者の証1個。魂格再編の書と同じ作りで、失敗したら元へ戻す
+  // (2026-09-13・週間ランキングの報酬で証片がたまるようにしたのに合わせて追加)
+  const exchangeHeroProofByShard = async () => {
+    if (marketPurchaseProcessingRef.current) return;
+    const before = ownedItemsRef.current;
+    const exchange = buildHeroProofShardExchange(before, 1);
+    if (!exchange.ok) {
+      setMarketExchangeError(`勇者の証片が${HERO_PROOF_SHARD_PER_PROOF}個必要です（いま${exchange.shardHave}個）。`);
+      return;
+    }
+    marketPurchaseProcessingRef.current = true;
+    setMarketExchangeError('');
+    try {
+      const saved = await saveStoredValuesOrRollback([{
+        key: 'mh_owned_items',
+        before,
+        next: exchange.ownedItems
+      }], storeGet, storeSet);
+      if (!saved) throw new Error('hero proof shard exchange save failed');
+      ownedItemsRef.current = exchange.ownedItems;
+      setOwnedItems(exchange.ownedItems);
+      saveMissionProgress('market');
+    } catch {
+      setMarketExchangeError('交換を保存できませんでした。勇者の証片は消費していません。');
     } finally {
       marketPurchaseProcessingRef.current = false;
     }
@@ -57252,7 +57554,8 @@ function MonsterHeroGame() {
         });else setRosterDetailTeaching(detailTeaching);
       },
       onOpenItemDetail: setMarketItemDetail,
-      onExchangeSoulRankRespec: exchangeSoulRankRespecByProof
+      onExchangeSoulRankRespec: exchangeSoulRankRespecByProof,
+      onExchangeHeroProof: exchangeHeroProofByShard
     }), gameState === 'ROSTER' && /*#__PURE__*/React.createElement("div", {
       "data-mh-screen": true,
       className: "flex-1 flex flex-col h-full min-h-0 p-4"
