@@ -65,6 +65,9 @@ const RHYTHM_INPUT_MATCH_WINDOW_MS = RHYTHM_JUDGMENTS
 // 判定窓は遊びやすさのため最大±185msあるが、その全域を前ノーツの所有時間にはしない。
 // 隣り合う候補の間は前ノーツへ75%寄せ、次ノーツが早取りできる範囲もMARVELOUS窓以内に制限する。
 // これで16分88msなら切替は前から66ms地点: +60msの遅押しは前、次の-22ms以降は次を狙った入力として扱う。
+// 鍵の無い接触幅の疑似TAPが、これから来るノーツへ手を伸ばしてよい上限。
+// MARVELOUSの窓と同じにする。16分(88ms)はもちろん、240BPMの16分(62ms)でも次へ届かない。
+const RHYTHM_SYNTHETIC_TAP_AHEAD_MAX_MS=RHYTHM_JUDGMENTS.find(judgment=>judgment.id==='MARVELOUS')?.windowMs||55;
 const RHYTHM_TAP_TARGET_PREVIOUS_SHARE=.75;
 const RHYTHM_TAP_TARGET_UPCOMING_MAX_EARLY_MS=RHYTHM_JUDGMENTS.find(judgment=>judgment.id==='MARVELOUS')?.windowMs||55;
 const RHYTHM_SCORE_WEIGHTS = Object.freeze({ judgment:.9, combo:.1 });
@@ -2219,6 +2222,7 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
     const key=String(input?.inputKey??'');
     if(!key||seenInputs.has(key))return {input,target:null,deltaMs:null};
     seenInputs.add(key);
+    const rejudge=input?.rejudge===true;
     const lane=Number(input?.lane),subCoordinate=Number(input?.subLaneCoordinate),tapOnly=RHYTHM_TOUCH_SPAN_RUNTIME.isSyntheticTapKey(key),syntheticTime=RHYTHM_TOUCH_SPAN_RUNTIME.syntheticTargetTime(key);
     const inputSpan=note=>{
       if(rhythmNoteHasVariableSpan(note)){
@@ -2314,6 +2318,28 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
       if(claimed.has(index)||!note||note.done||note.activePointerId!==null||!RHYTHM_NOTE_TYPES.includes(note.type)||tapOnly&&note.type!=='TAP')continue;
       const noteTime=Number(note.timeMs)+offset;
       if(tapOnly&&Number.isFinite(syntheticTime)&&Math.abs(Number(note.timeMs)-syntheticTime)>.001)continue;
+      // 【2026-09-13・両手の高速タップでミスが出る】
+      // 鍵(syntheticTime)がまだ無いのは「中心の指が何も取れなかった」とき。そのときの疑似TAPは
+      // 時刻の制限がまるごと外れ、**最大170ms先のノーツまで取れていた**(16分なら2つ先)。
+      // 取られたノーツは本来の時刻には既に done なので、そこを叩いても何も起きず見逃しMISSになる。
+      // 両手だと「片方が先に取ったので、もう片方は行き先が無い」が頻繁に起きるため、
+      // 鍵の消えた疑似TAPもそのぶん増える＝両手のときだけ目立つ、という形になっていた。
+      // 接触幅の補完は「指が太くて中心が外れた」を拾うためのもので、**位置**の救済でしかない。
+      // まだ来ていないノーツへ遠くまで手を伸ばす必要はないので、先の側だけ狭める。
+      // 過ぎた側は据え置き(放っておけば見逃しMISSになるものを拾うだけなので、取れて損がない)。
+      if(tapOnly&&!Number.isFinite(syntheticTime)&&noteTime-now>RHYTHM_SYNTHETIC_TAP_AHEAD_MAX_MS)continue;
+      // 【2026-09-13・両手の交互高速タップでだけミスが出る】
+      // TAPに成功した指は inputFeedbackState の empty が true になる(TAPは何も押さえ続けないため)。
+      // その指が画面に残ったまま0.2サブレーン以上ずれて別のサブレーンへ入ると、
+      // inputMoves が **もう一度タップを発火** する(レーンを滑って続けて叩く操作のため)。
+      // ところがその再発火が、まだ来ていないノーツを**最大170ms先まで先に食べて**いた。
+      // 実測: 1000msのノーツを取った指が1010msにずれると、1088msのノーツを78ms早く消す。
+      // 消えたノーツは本来の時刻にはもう無いので、そこを叩いた手は空振りになる。
+      // 片手なら指を上げてから叩くので起きにくい。**両手の交互連打**は、叩いたばかりの指が
+      // 画面に残ったまま転がり、もう片方が叩く先のノーツを食べる——という形になる。
+      // 滑って叩く操作自体は残したいので、**先の側だけ**疑似TAPと同じ幅へそろえる。
+      // 過ぎた側は据え置き(放っておけば見逃しMISSになるものを拾うだけなので、取れて損がない)。
+      if(rejudge&&noteTime-now>RHYTHM_SYNTHETIC_TAP_AHEAD_MAX_MS)continue;
       const timeDistance=Math.abs(now-noteTime);
       if(!(timeDistance<=RHYTHM_INPUT_MATCH_WINDOW_MS)||!acceptsPosition(note))continue;
       // 【2026-09-11・早押しでノーツを「BADで食べる」のをやめる】
