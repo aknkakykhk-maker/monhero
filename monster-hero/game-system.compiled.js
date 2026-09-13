@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: fc20330cd79d290c
+// source-sha256: c16a35f6a38ee236
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 14e3fefdbe77213a
+// generated-sha256: 11cee6631e943e67
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-13 19:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-13 20:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -22354,6 +22354,7 @@ const RhythmTapTest = ({
     counts: emptyCounts(),
     fast: 0,
     slow: 0,
+    precise: 0,
     life: RHYTHM_LIFE_MAX,
     ability: null,
     result: null
@@ -22741,6 +22742,7 @@ const RhythmTapTest = ({
     run.combo = nextCombo;
     run.maxCombo = Math.max(run.maxCombo, nextCombo);
     run.counts[judgment]++;
+    if (preciseHit) run.precise++;
     const side = judgment === 'MISS' ? null : rhythmFastSlow(deltaMs);
     if (side) run[side.toLowerCase()]++;
     const songTimeMs = run.audio?.songTimeMs?.() ?? 0;
@@ -22853,6 +22855,7 @@ const RhythmTapTest = ({
       },
       fast: run.fast,
       slow: run.slow,
+      precise: run.precise,
       life: run.life,
       ...(showAbilityFlash ? {
         ability: abilityFlash
@@ -22889,6 +22892,7 @@ const RhythmTapTest = ({
       maxCombo: run.maxCombo,
       fast: run.fast,
       slow: run.slow,
+      precise: run.precise,
       cleared: !failed,
       ...(calibration ? {
         calibration
@@ -23422,6 +23426,7 @@ const RhythmTapTest = ({
       counts: emptyCounts(),
       fast: 0,
       slow: 0,
+      precise: 0,
       deltas: [],
       life: RHYTHM_LIFE_MAX,
       lifeDepleted: false,
@@ -23959,9 +23964,27 @@ const RhythmTapTest = ({
   if (view.status === 'result') {
     const result = view.result,
       rank = rhythmRankForScore(view.score);
+    // ===== リザルトの演出は結果で変える(2026-09-13・ユーザー依頼
+    //   「演奏後のリザルト結果に応じて演出を変えてほしい」) =====
+    // ★段(tier)はランクから作る。CSSの条件を増やさずに済むよう、数字ひとつへまとめる。
+    //   M=5 / SS=4 / S=3 / A=2 / B・C=1 / それ以下=0。
+    // ★失敗(FAILED)は段に関わらず出さない。派手に祝う画面ではないため。
+    // ★演出量と軽量モードはここでも効かせる(器へそのまま渡して、CSS側で止める)。
+    const rankTier = result.cleared === false ? 0 : {
+      M: 5,
+      SS: 4,
+      S: 3,
+      A: 2,
+      B: 1,
+      C: 1
+    }[rank] || 0;
     return /*#__PURE__*/React.createElement("main", {
       "data-rhythm-result": true,
-      className: "flex-1 overflow-y-auto bg-slate-950 p-4 text-white",
+      "data-rank": rank,
+      "data-rank-tier": String(rankTier),
+      "data-rhythm-effect": settings.effectAmount,
+      "data-rhythm-lightweight": settings.lightweightMode ? 'true' : 'false',
+      className: "relative flex-1 overflow-y-auto bg-slate-950 p-4 text-white",
       style: {
         paddingTop: 'calc(1rem + env(safe-area-inset-top))',
         paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
@@ -23983,7 +24006,8 @@ const RhythmTapTest = ({
       }, failed ? 'ライフが0になったまま曲が終わりました（DOWN）' : 'ライフを残して最後まで演奏しました'));
     })(), /*#__PURE__*/React.createElement("div", {
       "data-rhythm-result-rank": true,
-      className: `mx-auto mt-2 flex h-20 w-20 items-center justify-center rounded-full border-4 border-current text-4xl font-black ${RHYTHM_RANK_COLORS[rank]}`
+      "data-rank-tier": String(rankTier),
+      className: `relative mx-auto mt-2 flex h-20 w-20 items-center justify-center rounded-full border-4 border-current text-4xl font-black ${RHYTHM_RANK_COLORS[rank]}`
     }, rank), /*#__PURE__*/React.createElement("div", {
       className: "my-3 text-center text-3xl font-black"
     }, view.score.toLocaleString()), /*#__PURE__*/React.createElement("p", {
@@ -24045,7 +24069,15 @@ const RhythmTapTest = ({
       key: id
     }, /*#__PURE__*/React.createElement("dt", null, id), /*#__PURE__*/React.createElement("dd", {
       className: "text-right font-mono"
-    }, view.counts[id]))), /*#__PURE__*/React.createElement("dt", null, "MAX COMBO"), /*#__PURE__*/React.createElement("dd", {
+    }, view.counts[id]), id === 'MARVELOUS' && /*#__PURE__*/React.createElement(React.Fragment, {
+      key: "precise"
+    }, /*#__PURE__*/React.createElement("dt", {
+      "data-rhythm-result-precise-label": true,
+      className: "pl-3 text-[11px] font-black text-cyan-200"
+    }, "\u2514 JUST MARVELOUS"), /*#__PURE__*/React.createElement("dd", {
+      "data-rhythm-result-precise": true,
+      className: "text-right font-mono text-[11px] text-cyan-200"
+    }, Number(view.precise) || 0)))), /*#__PURE__*/React.createElement("dt", null, "MAX COMBO"), /*#__PURE__*/React.createElement("dd", {
       className: "text-right"
     }, view.maxCombo), /*#__PURE__*/React.createElement("dt", null, "FAST"), /*#__PURE__*/React.createElement("dd", {
       className: "text-right"
@@ -26509,13 +26541,14 @@ function RhythmSongSelectScreen({
     }
   }, /*#__PURE__*/React.createElement("button", {
     "data-rhythm-back": true,
-    "aria-label": rhythmBackgroundRun ? 'クイックのバトルへ戻る' : '戻る',
-    title: rhythmBackgroundRun ? 'クイックのバトルへ戻る' : '戻る',
+    "data-quick-run-finishing": rhythmBackgroundRun ? '1' : undefined,
+    "aria-label": rhythmBackgroundRun ? '周回を終えてホームへ戻る' : '戻る',
+    title: rhythmBackgroundRun ? '周回を終えてホームへ戻る' : '戻る',
     onClick: onExit,
-    className: "min-h-[44px] min-w-[44px] shrink-0 text-slate-300"
+    className: `min-h-[44px] min-w-[44px] shrink-0 ${rhythmBackgroundRun ? 'text-amber-200' : 'text-slate-300'}`
   }, rhythmBackgroundRun ? /*#__PURE__*/React.createElement("span", {
-    className: "text-[10px] font-black leading-tight text-fuchsia-200"
-  }, "\u2694", /*#__PURE__*/React.createElement("br", null), "\u623B\u308B") : /*#__PURE__*/React.createElement(ArrowLeft, {
+    className: "text-[10px] font-black leading-tight"
+  }, "\u23F9", /*#__PURE__*/React.createElement("br", null), "\u7D42\u4E86") : /*#__PURE__*/React.createElement(ArrowLeft, {
     size: 20
   })), /*#__PURE__*/React.createElement("div", {
     className: "min-w-0 flex-1"
@@ -46708,7 +46741,14 @@ function MonsterHeroGame() {
   };
 
   // Give up mid-run: record current score to ranking, award rewards, then show the final result screen (gaveUp)
-  const handleGiveUp = useCallback(async () => {
+  // silent … 周回を締めるだけで、バトルのリザルトは見せない(2026-09-13)。
+  //   モンビーの曲えらびからHOMEへ戻るときに使う。gaveUp を立てるとバトルの
+  //   リザルトが描かれ、そのあと returnToHome() が中身を片付けるので
+  //   「Cannot read properties of null (reading 'hp')」で画面が落ちる。
+  //   ★報酬の付与とランキング送信はそのまま通す(やめ方は「あきらめる」と同じ)。
+  const handleGiveUp = useCallback(async ({
+    silent = false
+  } = {}) => {
     // 帯に「途中でやめた」と出せるよう、理由を渡す(2026-09-07)
     stopAllAuto('retire');
     if (debugBattleRef.current) {
@@ -46732,10 +46772,33 @@ function MonsterHeroGame() {
       await awardRunRewards(Math.max(0, wave - 1));
     } catch {}
     setShowQuitConfirm(false);
-    setGaveUp(true);
+    if (!silent) setGaveUp(true);
     await submitRunScoreOnce();
     setResultProcessing(false);
   }, [score, difficulty, highScores, breederName, mainHero, slots, wave]);
+
+  // ===== 曲えらびの「戻る」(2026-09-13・ユーザー指摘
+  //   「止めないでもホームに戻れて自動的に周回も終わるようにしたい」) =====
+  // それまでは、裏でクイック∞周回が回っているあいだは「⚔ バトルへ戻る」しかできず、
+  // バトルで∞を切ってからHOMEへ、という2工程になっていた。
+  // とくにオートクイック(モンビーへ入ると自動で周回を始める設定)を使っていると、
+  // 入った瞬間に必ずこの状態になるので、毎回その2工程を踏むことになる。
+  // ★戻る前に handleGiveUp() で周回を締める。そこまでにクリアしたWAVEぶんの報酬は
+  //   きちんと入る(「⏹ ここで周回をやめる」と同じ終わり方)。締めずにHOMEへ抜けると、
+  //   returnToHome を通らないぶん周回が宙ぶらりんのまま残る。
+  // ★バトルを見に行く導線は、周回の帯の詳細にある「⚔ バトルへ戻って…」が残る。
+  const exitRhythmSongSelect = async () => {
+    if (rhythmBackgroundRun) {
+      // ★リザルトは見せない(silent)。立ててしまうと、締めている途中でバトルの
+      //   リザルトが描かれ、そのあと returnToHome() が中身を片付けるので落ちる
+      await handleGiveUp({
+        silent: true
+      });
+      returnToHome();
+      return;
+    }
+    setGameState(RHYTHM_MODE_PUBLIC_RELEASE ? 'HOME' : 'DEBUG_SETTINGS');
+  };
   const handleRetry = () => {
     stopAllAuto();
     // 種族チャレンジは通常の勇者選択(PICK_HERO)へは戻さない。
@@ -56113,13 +56176,7 @@ function MonsterHeroGame() {
       dismissRhythmEventNotice: dismissRhythmEventNotice,
       handleGiveUp: handleGiveUp,
       mainHero: mainHero,
-      onExit: () => {
-        if (rhythmBackgroundRun) {
-          returnToBackgroundRun();
-          return;
-        }
-        setGameState(RHYTHM_MODE_PUBLIC_RELEASE ? 'HOME' : 'DEBUG_SETTINGS');
-      },
+      onExit: exitRhythmSongSelect,
       onOpenEventRanking: () => {
         // 曲えらびの案内から開く。期間限定を開催中ならそちらのタブ、なければ週間のタブ
         const kind = rhythmSongSelectEvent && rhythmSongSelectEvent.kind === 'limited' ? 'limited' : 'weekly';
