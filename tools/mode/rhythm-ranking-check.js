@@ -188,7 +188,12 @@ check('詳細ボタンから判定内訳・最大コンボ・達成称号を確�
   game.includes('data-rhythm-ranking-detail')
   &&game.includes('data-rhythm-ranking-detail-modal')
   &&game.includes('rhythmRankingDetail.detail?.maxCombo')
-  &&/RHYTHM_JUDGMENT_IDS\.map\(id=>.*rhythmRankingDetail\.detail\?\.judgments\?\.\[id\]/.test(game));
+  // ★行の並びや間に入る行は変わる(2026-09-13にJUST MARVELOUSの行と判定色を入れた)。
+  //   距離や並びを固定で見ると、正しい変更のたびに落ちるので、
+  //   「判定の内訳を全部回して出している」ことだけを見る
+  //   (judgments を引くのはこの詳細だけなので、これで十分)
+  &&game.includes('RHYTHM_JUDGMENT_IDS.map(id=>')
+  &&game.includes('rhythmRankingDetail.detail?.judgments?.[id]'));
 check('詳細が無い行(送信が古い/失敗した記録等)には詳細ボタンを出さない',
   /\{entry\.detail&&<button data-rhythm-ranking-detail/.test(game));
 check('一覧・詳細のボタンはiPhoneで押せる大きさ(44px以上)',(()=>{

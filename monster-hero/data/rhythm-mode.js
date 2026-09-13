@@ -968,6 +968,18 @@ const rhythmLaneCoordinateAtPoint=(clientX,clientY,rect)=>{
 };
 // 判定ラインの高さ(プレイエリアの下から12% ＝ y比0.88)。
 const RHYTHM_JUDGMENT_LINE_Y_RATIO=.88;
+// ★判定ラインの高さは設定で動かせる(2026-09-13・ユーザー依頼
+//   「タップする判定ラインの位置をオプションでいじれるようにしたい / 下過ぎて使いづらい」)。
+//   追従(HOLD/SLIDE)の計算はここを見る。画面が**実測した比**を入れるので、
+//   CSSだけを動かして計算が取り残されることがない。入れなければこれまでどおり .88。
+const RHYTHM_JUDGMENT_LINE_Y={
+  ratio:RHYTHM_JUDGMENT_LINE_Y_RATIO,
+  set(value){
+    const next=Number(value);
+    this.ratio=Number.isFinite(next)&&next>0&&next<1?next:RHYTHM_JUDGMENT_LINE_Y_RATIO;
+  },
+  reset(){this.ratio=RHYTHM_JUDGMENT_LINE_Y_RATIO;},
+};
 // HOLD/SLIDEを押さえ続けているあいだの「指がどのレーンにいるか」。
 //
 // 【2026-09-11・「スライドの判定幅が細か過ぎる」のいちばんの原因】
@@ -982,7 +994,7 @@ const RHYTHM_JUDGMENT_LINE_Y_RATIO=.88;
 // 許容の数字は1つも変えていない。
 const rhythmTrackingLaneCoordinateAtPoint=(clientX,clientY,rect)=>{
   if(!rect||!Number.isFinite(rect.height)||rect.height<=0)return rhythmLaneCoordinateAtPoint(clientX,clientY,rect);
-  return rhythmLaneCoordinateAtPoint(clientX,rect.top+rect.height*RHYTHM_JUDGMENT_LINE_Y_RATIO,rect);
+  return rhythmLaneCoordinateAtPoint(clientX,rect.top+rect.height*RHYTHM_JUDGMENT_LINE_Y.ratio,rect);
 };
 const rhythmSubLaneCoordinateAtPoint=(clientX,clientY,rect)=>{
   const coordinate=rhythmLaneCoordinateAtPoint(clientX,clientY,rect);
@@ -14400,7 +14412,7 @@ const installRhythmGeometryStyles=()=>{
          元の見た目へ戻ってしまい、判定ラインへ光が10個ぶん residual として残り続ける。
          実機で「タップのとこがわけわかんないことになってる」と言われた原因がこれ(2026-09-05)。 */
     [data-rhythm-hit-layer]{position:absolute;inset:0;pointer-events:none;z-index:3;overflow:hidden}
-    [data-rhythm-hit-effect]{position:absolute;bottom:12%;left:var(--rhythm-hit-center,50%);
+    [data-rhythm-hit-effect]{position:absolute;bottom:var(--mh-judgment-line-bottom,12%);left:var(--rhythm-hit-center,50%);
       width:var(--rhythm-hit-width,12%);height:0;pointer-events:none;
       transform:translateX(-50%)}
     [data-rhythm-hit-effect]>i,[data-rhythm-hit-effect]>b,[data-rhythm-hit-effect]>u{

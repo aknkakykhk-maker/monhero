@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4bfde0a55f68c3d6
+// source-sha256: b73172d9f7136279
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 23e2988203c5a3b6
+// generated-sha256: 9649f4815f251033
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-13 23:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-13 23:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5186,6 +5186,15 @@ const RHYTHM_COMBO_OPACITY_STEP = 10;
 const RHYTHM_LIFE_SIZE_MIN = 100;
 const RHYTHM_LIFE_SIZE_MAX = 200;
 const RHYTHM_LIFE_SIZE_STEP = 10;
+// 判定ラインの高さ(2026-09-13・ユーザー依頼「タップする判定ラインの位置を
+// オプションでいじれるようにしたい / 下過ぎて使いづらいという声があり」)。
+// プレイエリアの**下から何%**か。既定の12はこれまでと同じ位置で、
+// 大きくするほど上へ上がる(指が画面の下へ届かない端末向け)。
+// ★上限は32%で止める。これを越えると判定ラインがエリアの上半分へ入り、
+//   「まだ形が決まっていない」と見なす見張り(rhythmTravelLooksReady)とぶつかる。
+const RHYTHM_JUDGMENT_LINE_HEIGHT_MIN = 8;
+const RHYTHM_JUDGMENT_LINE_HEIGHT_MAX = 32;
+const RHYTHM_JUDGMENT_LINE_HEIGHT_STEP = 2;
 const RHYTHM_COMBO_SIZE_MIN = 70;
 const RHYTHM_COMBO_SIZE_MAX = 150;
 const RHYTHM_COMBO_SIZE_STEP = 10;
@@ -5243,6 +5252,7 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   holdSlideOpacity: 80,
   laneGlow: 'NORMAL',
   monsterNoteEffect: 'LIGHT',
+  judgmentLineHeight: 12,
   noteSeVolume: 70,
   noteSeEnabled: true,
   vibrationEnabled: false,
@@ -5289,6 +5299,9 @@ const normalizeRhythmSettings = value => {
     comboPosition: RHYTHM_COMBO_POSITIONS.includes(source.comboPosition) ? source.comboPosition : DEFAULT_RHYTHM_SETTINGS.comboPosition,
     comboSize: rhythmFiniteStep(source.comboSize, RHYTHM_COMBO_SIZE_MIN, RHYTHM_COMBO_SIZE_MAX, RHYTHM_COMBO_SIZE_STEP, DEFAULT_RHYTHM_SETTINGS.comboSize),
     lifeDisplaySize: rhythmFiniteStep(source.lifeDisplaySize, RHYTHM_LIFE_SIZE_MIN, RHYTHM_LIFE_SIZE_MAX, RHYTHM_LIFE_SIZE_STEP, DEFAULT_RHYTHM_SETTINGS.lifeDisplaySize),
+    // ★新しい項目。これまでの保存値には無いので、読むときに既定(12)で補われる
+    //   ＝これまでどおりの位置。既存のキーは触らない(CLAUDE.md ⑦)
+    judgmentLineHeight: rhythmFiniteStep(source.judgmentLineHeight, RHYTHM_JUDGMENT_LINE_HEIGHT_MIN, RHYTHM_JUDGMENT_LINE_HEIGHT_MAX, RHYTHM_JUDGMENT_LINE_HEIGHT_STEP, DEFAULT_RHYTHM_SETTINGS.judgmentLineHeight),
     comboOpacity: rhythmFiniteStep(source.comboOpacity, RHYTHM_COMBO_OPACITY_MIN, RHYTHM_COMBO_OPACITY_MAX, RHYTHM_COMBO_OPACITY_STEP, DEFAULT_RHYTHM_SETTINGS.comboOpacity),
     monsterNoteEffect: RHYTHM_MONSTER_EFFECT_LEVELS.includes(source.monsterNoteEffect) ? source.monsterNoteEffect : DEFAULT_RHYTHM_SETTINGS.monsterNoteEffect,
     holdSlideOpacity: rhythmFiniteInRange(source.holdSlideOpacity, 10, 100, DEFAULT_RHYTHM_SETTINGS.holdSlideOpacity),
@@ -20820,6 +20833,12 @@ const RhythmOptions = ({
     coarse: 25
   }), 'ノーツが画面のどのあたりから出てくるかを変えます。マイナスにすると奥（画面の上の外側）から、プラスにすると手前寄りから出てきます。判定ラインの位置・判定のタイミング・判定窓・スコアは変わりません。ノーツが流れてくる時間も変わらないので、手前から出すほど見えているあいだの動きは速く見えます。', {
     full: true
+  }), field('判定ラインの高さ', stepper('judgmentLineHeight', RHYTHM_JUDGMENT_LINE_HEIGHT_MIN, RHYTHM_JUDGMENT_LINE_HEIGHT_MAX, RHYTHM_JUDGMENT_LINE_HEIGHT_STEP, {
+    fine: RHYTHM_JUDGMENT_LINE_HEIGHT_STEP,
+    coarse: RHYTHM_JUDGMENT_LINE_HEIGHT_STEP * 4,
+    suffix: '%'
+  }), 'タップする判定ラインを、画面の下から何％の高さに置くかです。大きくするほど上へ上がり、指が届きやすくなります（12％が2026-09-13より前の位置です）。ノーツも弾ける光も判定文字も一緒に上がります。判定の幅（秒数）・スコア・譜面は変わりません。ただしレーンは奥へ行くほど狭くなるので、上げすぎると横の幅が狭く感じられます。', {
+    full: true
   }), field('ライフ表示の大きさ', stepper('lifeDisplaySize', RHYTHM_LIFE_SIZE_MIN, RHYTHM_LIFE_SIZE_MAX, RHYTHM_LIFE_SIZE_STEP, {
     fine: RHYTHM_LIFE_SIZE_STEP,
     coarse: RHYTHM_LIFE_SIZE_STEP * 5,
@@ -20959,34 +20978,48 @@ const RhythmOptions = ({
 
 // 難易度の色。EASY=緑 / NORMAL=青 / HARD=橙 / EXPERT=赤 / MASTER=紫。
 // 一覧のひし形も難易度ボタンも同じ色を使い、画面のどこでも同じ意味になるようにする。
+// text … 字だけに色を付けたいところ(リザルトの題名・ランキングの行・スコア詳細)用。
+//   2026-09-13・ユーザー指示「マスターとかランクとかコンボ数とかも色が
+//   決められてるやつは色つけたい」。off には枠の色も混ざっているので別に持つ。
 const RHYTHM_DIFFICULTY_TONE = Object.freeze({
   EASY: Object.freeze({
     dot: 'bg-emerald-400',
     on: 'border-emerald-300 bg-emerald-600 text-white',
-    off: 'border-emerald-400/40 text-emerald-200'
+    off: 'border-emerald-400/40 text-emerald-200',
+    text: 'text-emerald-300'
   }),
   NORMAL: Object.freeze({
     dot: 'bg-sky-400',
     on: 'border-sky-300 bg-sky-600 text-white',
-    off: 'border-sky-400/40 text-sky-200'
+    off: 'border-sky-400/40 text-sky-200',
+    text: 'text-sky-300'
   }),
   HARD: Object.freeze({
     dot: 'bg-amber-400',
     on: 'border-amber-300 bg-amber-600 text-white',
-    off: 'border-amber-400/40 text-amber-200'
+    off: 'border-amber-400/40 text-amber-200',
+    text: 'text-amber-300'
   }),
   EXPERT: Object.freeze({
     dot: 'bg-rose-400',
     on: 'border-rose-300 bg-rose-600 text-white',
-    off: 'border-rose-400/40 text-rose-200'
+    off: 'border-rose-400/40 text-rose-200',
+    text: 'text-rose-300'
   }),
   MASTER: Object.freeze({
     dot: 'bg-fuchsia-400',
     on: 'border-fuchsia-300 bg-fuchsia-700 text-white',
-    off: 'border-fuchsia-400/40 text-fuchsia-200'
+    off: 'border-fuchsia-400/40 text-fuchsia-200',
+    text: 'text-fuchsia-300'
   })
 });
 const rhythmDifficultyTone = id => RHYTHM_DIFFICULTY_TONE[id] || RHYTHM_DIFFICULTY_TONE.EASY;
+// 難易度の字の色だけを欲しいところへ。知らないidは灰に倒す(勝手にEASYの緑にしない)
+const rhythmDifficultyTextColor = id => RHYTHM_DIFFICULTY_TONE[id]?.text || 'text-slate-300';
+// コンボ数の字の色。遊んでいるときの段(rhythmComboTier)と同じ分け方で、
+// 水色→黄→金→白→虹 へ上がる。最上段(7)だけは虹なのでCSSに任せる
+const RHYTHM_COMBO_TIER_TEXT = Object.freeze(['text-slate-200', 'text-sky-100', 'text-cyan-200', 'text-amber-100', 'text-amber-200', 'text-amber-300', 'text-white']);
+const rhythmComboTextColor = combo => RHYTHM_COMBO_TIER_TEXT[Math.min(RHYTHM_COMBO_TIER_TEXT.length - 1, Math.max(0, rhythmComboTier(combo)))];
 
 // 一覧に並ぶひし形の色。
 // 【2026-09-05・ユーザー指示】
@@ -22354,6 +22387,7 @@ const RhythmTapTest = ({
     counts: emptyCounts(),
     fast: 0,
     slow: 0,
+    precise: 0,
     life: RHYTHM_LIFE_MAX,
     ability: null,
     result: null
@@ -22526,7 +22560,9 @@ const RhythmTapTest = ({
     if (!(lineCenter >= areaRect.top && lineCenter <= areaRect.bottom)) return false;
     // 判定ラインは下から12%の位置に置く。エリアの上半分に居るなら、
     // まだ置き場所が決まっていない(高さ0でなくても、位置だけ未確定のことがある)
-    if (!(lineCenter > areaRect.top + areaRect.height * 0.5)) return false;
+    // ★上限(下から32%)まで上げても、ラインの中心はエリアの68%のあたりに残る。
+    //   余裕を見て上半分を少しだけ入れたところで区切る
+    if (!(lineCenter > areaRect.top + areaRect.height * 0.45)) return false;
     return true;
   };
   const measureTravel = useCallback(() => {
@@ -22545,6 +22581,9 @@ const RhythmTapTest = ({
     const judgmentY = lineRect.top - areaRect.top + lineRect.height / 2 - noteHeight / 2;
     // ready:false は「まだノーツを正しい場所へ置けない」。判定を進めてよいかの目印にも使う
     const ready = rhythmTravelLooksReady(areaRect, lineRect);
+    // ★HOLD/SLIDEの追従は「判定ラインの高さ」でレーンを測る。
+    //   ラインを動かせるようにしたので、決めうちの .88 ではなく**実測した位置**を渡す
+    if (ready) RHYTHM_JUDGMENT_LINE_Y.set((lineRect.top - areaRect.top + lineRect.height / 2) / areaRect.height);
     const result = {
       spawnY,
       judgmentY,
@@ -22558,7 +22597,7 @@ const RhythmTapTest = ({
     // 整った瞬間から正しい位置で流れ始める(遊べない状態のまま固定されない)
     if (ready) travelCacheRef.current = result;
     return result;
-  }, [settings.noteStartPosition]);
+  }, [settings.noteStartPosition, settings.judgmentLineHeight]);
   // --- 判定ラインの「幅」を描く ---
   // 上下のふちがGOOD(前後0.17秒)の端、内側の明るいところがMARVELOUS(前後0.055秒)。
   // 何ピクセルになるかはノーツ速度(travelMs)と画面の高さで変わるので、実測から毎回出す。
@@ -22620,7 +22659,7 @@ const RhythmTapTest = ({
       window.removeEventListener('resize', invalidate);
       window.removeEventListener('orientationchange', invalidate);
     };
-  }, [settings.noteStartPosition, settings.noteSize, view.status]);
+  }, [settings.noteStartPosition, settings.noteSize, settings.judgmentLineHeight, view.status]);
   const applyJudgment = useCallback((note, judgment, deltaMs) => {
     const _judgeT0 = RHYTHM_PERF.enabled && typeof performance !== 'undefined' ? performance.now() : 0;
     const run = runRef.current;
@@ -22741,6 +22780,7 @@ const RhythmTapTest = ({
     run.combo = nextCombo;
     run.maxCombo = Math.max(run.maxCombo, nextCombo);
     run.counts[judgment]++;
+    if (preciseHit) run.precise++;
     const side = judgment === 'MISS' ? null : rhythmFastSlow(deltaMs);
     if (side) run[side.toLowerCase()]++;
     const songTimeMs = run.audio?.songTimeMs?.() ?? 0;
@@ -22853,6 +22893,7 @@ const RhythmTapTest = ({
       },
       fast: run.fast,
       slow: run.slow,
+      precise: run.precise,
       life: run.life,
       ...(showAbilityFlash ? {
         ability: abilityFlash
@@ -22889,6 +22930,7 @@ const RhythmTapTest = ({
       maxCombo: run.maxCombo,
       fast: run.fast,
       slow: run.slow,
+      precise: run.precise,
       cleared: !failed,
       ...(calibration ? {
         calibration
@@ -23422,6 +23464,7 @@ const RhythmTapTest = ({
       counts: emptyCounts(),
       fast: 0,
       slow: 0,
+      precise: 0,
       deltas: [],
       life: RHYTHM_LIFE_MAX,
       lifeDepleted: false,
@@ -23959,16 +24002,37 @@ const RhythmTapTest = ({
   if (view.status === 'result') {
     const result = view.result,
       rank = rhythmRankForScore(view.score);
+    // ===== リザルトの演出は結果で変える(2026-09-13・ユーザー依頼
+    //   「演奏後のリザルト結果に応じて演出を変えてほしい」) =====
+    // ★段(tier)はランクから作る。CSSの条件を増やさずに済むよう、数字ひとつへまとめる。
+    //   M=5 / SS=4 / S=3 / A=2 / B・C=1 / それ以下=0。
+    // ★失敗(FAILED)は段に関わらず出さない。派手に祝う画面ではないため。
+    // ★演出量と軽量モードはここでも効かせる(器へそのまま渡して、CSS側で止める)。
+    const rankTier = result.cleared === false ? 0 : {
+      M: 5,
+      SS: 4,
+      S: 3,
+      A: 2,
+      B: 1,
+      C: 1
+    }[rank] || 0;
     return /*#__PURE__*/React.createElement("main", {
       "data-rhythm-result": true,
-      className: "flex-1 overflow-y-auto bg-slate-950 p-4 text-white",
+      "data-rank": rank,
+      "data-rank-tier": String(rankTier),
+      "data-rhythm-effect": settings.effectAmount,
+      "data-rhythm-lightweight": settings.lightweightMode ? 'true' : 'false',
+      className: "relative flex-1 overflow-y-auto bg-slate-950 p-4 text-white",
       style: {
         paddingTop: 'calc(1rem + env(safe-area-inset-top))',
         paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
       }
     }, /*#__PURE__*/React.createElement("p", {
       className: "text-center text-xs text-cyan-300"
-    }, rhythmSongFullName(song), "\u30FB", difficulty.id), /*#__PURE__*/React.createElement("h2", {
+    }, rhythmSongFullName(song), "\u30FB", /*#__PURE__*/React.createElement("b", {
+      "data-rhythm-difficulty-name": true,
+      className: `font-black ${rhythmDifficultyTextColor(difficulty.id)}`
+    }, difficulty.id)), /*#__PURE__*/React.createElement("h2", {
       className: "text-center font-black"
     }, "RHYTHM RESULT"), (() => {
       const failed = result.cleared === false;
@@ -23983,7 +24047,8 @@ const RhythmTapTest = ({
       }, failed ? 'ライフが0になったまま曲が終わりました（DOWN）' : 'ライフを残して最後まで演奏しました'));
     })(), /*#__PURE__*/React.createElement("div", {
       "data-rhythm-result-rank": true,
-      className: `mx-auto mt-2 flex h-20 w-20 items-center justify-center rounded-full border-4 border-current text-4xl font-black ${RHYTHM_RANK_COLORS[rank]}`
+      "data-rank-tier": String(rankTier),
+      className: `relative mx-auto mt-2 flex h-20 w-20 items-center justify-center rounded-full border-4 border-current text-4xl font-black ${RHYTHM_RANK_COLORS[rank]}`
     }, rank), /*#__PURE__*/React.createElement("div", {
       className: "my-3 text-center text-3xl font-black"
     }, view.score.toLocaleString()), /*#__PURE__*/React.createElement("p", {
@@ -24043,10 +24108,25 @@ const RhythmTapTest = ({
       className: "grid grid-cols-2 gap-2 rounded-2xl bg-slate-900 p-4"
     }, RHYTHM_JUDGMENT_IDS.map(id => /*#__PURE__*/React.createElement(React.Fragment, {
       key: id
-    }, /*#__PURE__*/React.createElement("dt", null, id), /*#__PURE__*/React.createElement("dd", {
+    }, id === 'MARVELOUS' && /*#__PURE__*/React.createElement(React.Fragment, {
+      key: "precise"
+    }, /*#__PURE__*/React.createElement("dt", {
+      "data-rhythm-result-precise-label": true,
+      "data-rhythm-judgment-row": "JUST"
+    }, "JUST MARVELOUS"), /*#__PURE__*/React.createElement("dd", {
+      "data-rhythm-result-precise": true,
+      "data-rhythm-judgment-row": "JUST",
       className: "text-right font-mono"
-    }, view.counts[id]))), /*#__PURE__*/React.createElement("dt", null, "MAX COMBO"), /*#__PURE__*/React.createElement("dd", {
-      className: "text-right"
+    }, Number(view.precise) || 0)), /*#__PURE__*/React.createElement("dt", {
+      "data-rhythm-judgment-row": id
+    }, id), /*#__PURE__*/React.createElement("dd", {
+      "data-rhythm-judgment-row": id,
+      className: "text-right font-mono"
+    }, view.counts[id]))), /*#__PURE__*/React.createElement("dt", {
+      className: rhythmComboTextColor(view.maxCombo)
+    }, "MAX COMBO"), /*#__PURE__*/React.createElement("dd", {
+      "data-rhythm-max-combo": true,
+      className: `text-right tabular-nums ${rhythmComboTextColor(view.maxCombo)}`
     }, view.maxCombo), /*#__PURE__*/React.createElement("dt", null, "FAST"), /*#__PURE__*/React.createElement("dd", {
       className: "text-right"
     }, view.fast), /*#__PURE__*/React.createElement("dt", null, "SLOW"), /*#__PURE__*/React.createElement("dd", {
@@ -24235,6 +24315,11 @@ const RhythmTapTest = ({
       WebkitUserSelect: 'none',
       userSelect: 'none',
       '--rhythm-note-size-scale': settings.noteSize / 100,
+      /* 判定ラインの高さ(下から何%)。ライン本体・弾ける光・判定文字がこれを見る
+         (2026-09-13・ユーザー依頼「下過ぎて使いづらいという声があり」)。
+         ★ノーツが流れ着く先は measureTravel が**ラインを実測**して決めるので、
+           ここを動かすだけで譜面も判定もそのままついてくる */
+      '--mh-judgment-line-bottom': `${rhythmFiniteStep(settings.judgmentLineHeight, RHYTHM_JUDGMENT_LINE_HEIGHT_MIN, RHYTHM_JUDGMENT_LINE_HEIGHT_MAX, RHYTHM_JUDGMENT_LINE_HEIGHT_STEP, DEFAULT_RHYTHM_SETTINGS.judgmentLineHeight)}%`,
       filter: settings.effectAmount === 'MINIMAL' ? 'saturate(.78)' : settings.effectAmount === 'LOW' ? 'saturate(.92)' : 'none'
     }
   }, laneElements, sideMonsterElements, /*#__PURE__*/React.createElement("div", {
@@ -24325,7 +24410,7 @@ const RhythmTapTest = ({
       position: 'absolute',
       left: 0,
       right: 0,
-      bottom: '12%',
+      bottom: 'var(--mh-judgment-line-bottom,12%)',
       height: '3px',
       background: 'linear-gradient(90deg,#f0abfc,#cffafe,#f0abfc)',
       boxShadow: settings.lightweightMode || settings.effectAmount === 'MINIMAL' ? 'none' : settings.effectAmount === 'LOW' ? '0 0 8px #67e8f9' : '0 0 18px #67e8f9,0 0 30px #c084fc'
@@ -24366,7 +24451,7 @@ const RhythmTapTest = ({
     "data-rhythm-judgment-display": true,
     className: "pointer-events-none absolute left-1/2 z-10 w-[88%] -translate-x-1/2 text-center",
     style: {
-      bottom: 'calc(12% + 38px)'
+      bottom: 'calc(var(--mh-judgment-line-bottom,12%) + 38px)'
     }
   }, /*#__PURE__*/React.createElement("b", {
     ref: judgmentTextRef,
@@ -26429,6 +26514,7 @@ function RhythmSongSelectScreen({
   difficulty,
   dismissQuickRhythmBackground,
   dismissRhythmEventNotice,
+  exitingQuickRun,
   handleGiveUp,
   mainHero,
   onExit,
@@ -26520,21 +26606,33 @@ function RhythmSongSelectScreen({
   }, "\u88CF\u3067\u5468\u56DE\u3092\u56DE\u3059\u306B\u306F\u3001\u30AF\u30A4\u30C3\u30AF\u30671\u5EA6\u221E\u5468\u56DE\u3092\u59CB\u3081\u308B\u304B\u3001M/B\u7BA1\u7406\u306E\u300CAUTO\u8A2D\u5B9A \u2192 \u30E2\u30F3\u30D2\u30ED\u30D3\u30FC\u30C8\u4E2D\u306B\u56DE\u3059\u30AF\u30A4\u30C3\u30AF\u5468\u56DE\u300D\u3067\u52C7\u8005\u30E2\u30F3\u30FB\u914D\u7F6E\u8DDD\u96E2\u30FB\u96E3\u6613\u5EA6\u3092\u6C7A\u3081\u3066\u304F\u3060\u3055\u3044\u3002") : null;
   return /*#__PURE__*/React.createElement("main", {
     "data-rhythm-demo-home": true,
-    className: "flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white"
-  }, /*#__PURE__*/React.createElement("header", {
+    className: "relative flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white"
+  }, exitingQuickRun && /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-exiting-run": true,
+    role: "status",
+    "aria-live": "polite",
+    className: "absolute inset-0 z-[90000] flex flex-col items-center justify-center gap-2 bg-slate-950/85 px-6 text-center"
+  }, /*#__PURE__*/React.createElement("b", {
+    className: "text-sm font-black text-amber-200"
+  }, "\u5468\u56DE\u3092\u7D42\u3048\u3066\u3044\u307E\u3059\u2026"), /*#__PURE__*/React.createElement("small", {
+    className: "text-[10px] font-bold leading-relaxed text-slate-300"
+  }, "\u3053\u3053\u307E\u3067\u306EWAVE\u3076\u3093\u306E\u5831\u916C\u3092\u4ED8\u3051\u3066\u3001\u8A18\u9332\u3092\u9001\u3063\u3066\u3044\u307E\u3059\u3002", /*#__PURE__*/React.createElement("br", null), "\u7D42\u308F\u308B\u3068\u81EA\u52D5\u3067\u30DB\u30FC\u30E0\u3078\u623B\u308A\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("header", {
     className: "z-10 flex shrink-0 items-center gap-1 border-b border-cyan-400/15 bg-slate-950/95 px-2 py-1",
     style: {
       paddingTop: 'calc(0.25rem + env(safe-area-inset-top))'
     }
   }, /*#__PURE__*/React.createElement("button", {
     "data-rhythm-back": true,
-    "aria-label": rhythmBackgroundRun ? 'クイックのバトルへ戻る' : '戻る',
-    title: rhythmBackgroundRun ? 'クイックのバトルへ戻る' : '戻る',
+    "data-quick-run-finishing": rhythmBackgroundRun ? '1' : undefined,
+    "data-quick-run-exiting": exitingQuickRun ? '1' : undefined,
+    disabled: !!exitingQuickRun,
+    "aria-label": exitingQuickRun ? '周回を終えています' : rhythmBackgroundRun ? '周回を終えてホームへ戻る' : '戻る',
+    title: exitingQuickRun ? '周回を終えています' : rhythmBackgroundRun ? '周回を終えてホームへ戻る' : '戻る',
     onClick: onExit,
-    className: "min-h-[44px] min-w-[44px] shrink-0 text-slate-300"
+    className: `min-h-[44px] min-w-[44px] shrink-0 ${exitingQuickRun ? 'text-amber-300/60' : rhythmBackgroundRun ? 'text-amber-200' : 'text-slate-300'}`
   }, rhythmBackgroundRun ? /*#__PURE__*/React.createElement("span", {
-    className: "text-[10px] font-black leading-tight text-fuchsia-200"
-  }, "\u2694", /*#__PURE__*/React.createElement("br", null), "\u623B\u308B") : /*#__PURE__*/React.createElement(ArrowLeft, {
+    className: "text-[10px] font-black leading-tight"
+  }, "\u23F9", /*#__PURE__*/React.createElement("br", null), "\u7D42\u4E86") : /*#__PURE__*/React.createElement(ArrowLeft, {
     size: 20
   })), /*#__PURE__*/React.createElement("div", {
     className: "min-w-0 flex-1"
@@ -27158,7 +27256,10 @@ function RhythmRankingScreen({
     className: "truncate text-xs font-black text-white"
   }, entry.userName), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-slate-400"
-  }, RHYTHM_DEMO_DIFFICULTY_LABELS[entry.difficultyId]?.name || entry.difficultyId || '-', " \u30FB Lv.", entry.level)), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("b", {
+    "data-rhythm-difficulty-name": true,
+    className: `font-black ${rhythmDifficultyTextColor(entry.difficultyId)}`
+  }, RHYTHM_DEMO_DIFFICULTY_LABELS[entry.difficultyId]?.name || entry.difficultyId || '-'), " \u30FB Lv.", entry.level)), /*#__PURE__*/React.createElement("div", {
     className: "shrink-0 text-right"
   }, /*#__PURE__*/React.createElement("p", {
     className: "font-mono text-sm font-black text-fuchsia-100"
@@ -27380,9 +27481,18 @@ function RhythmRankingScreen({
       className: "min-h-[44px] min-w-[44px] px-2 text-slate-400"
     }, "\u2715")), isTotal ? /*#__PURE__*/React.createElement("p", {
       className: "text-[10px] text-slate-400"
-    }, "\u7DCF\u5408 ", rhythmRankingDetail.songCount, "\u66F2 / \u30B9\u30B3\u30A2 ", shownScore.toLocaleString()) : /*#__PURE__*/React.createElement("p", {
-      className: "text-[10px] text-slate-400"
-    }, RHYTHM_DEMO_DIFFICULTY_LABELS[rhythmRankingDetail.difficultyId]?.name || rhythmRankingDetail.difficultyId, " / \u30B9\u30B3\u30A2 ", shownScore.toLocaleString(), " / \u30E9\u30F3\u30AF ", rhythmRankForScore(baseScore === null ? shownScore : baseScore)), baseScore !== null && /*#__PURE__*/React.createElement("dl", {
+    }, "\u7DCF\u5408 ", rhythmRankingDetail.songCount, "\u66F2 / \u30B9\u30B3\u30A2 ", shownScore.toLocaleString()) : (() => {
+      const detailRank = rhythmRankForScore(baseScore === null ? shownScore : baseScore);
+      return /*#__PURE__*/React.createElement("p", {
+        className: "text-[10px] text-slate-400"
+      }, /*#__PURE__*/React.createElement("b", {
+        "data-rhythm-difficulty-name": true,
+        className: `font-black ${rhythmDifficultyTextColor(rhythmRankingDetail.difficultyId)}`
+      }, RHYTHM_DEMO_DIFFICULTY_LABELS[rhythmRankingDetail.difficultyId]?.name || rhythmRankingDetail.difficultyId), ' / スコア ', shownScore.toLocaleString(), ' / ランク ', /*#__PURE__*/React.createElement("b", {
+        "data-rhythm-rank-name": true,
+        className: `font-black ${RHYTHM_RANK_COLORS[detailRank]}`
+      }, detailRank));
+    })(), baseScore !== null && /*#__PURE__*/React.createElement("dl", {
       "data-rhythm-bonus-breakdown": true,
       className: "mt-2 rounded-xl border border-fuchsia-300/30 bg-fuchsia-500/10 p-2 text-[10px]"
     }, /*#__PURE__*/React.createElement("div", {
@@ -27423,15 +27533,31 @@ function RhythmRankingScreen({
       className: "font-mono font-black text-amber-200"
     }, shownScore.toLocaleString()))), !isTotal && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
       className: "mt-1 text-[10px] text-slate-400"
-    }, "\u6700\u5927\u30B3\u30F3\u30DC ", rhythmRankingDetail.detail?.maxCombo ?? '-'), /*#__PURE__*/React.createElement("dl", {
+    }, "\u6700\u5927\u30B3\u30F3\u30DC ", /*#__PURE__*/React.createElement("b", {
+      "data-rhythm-max-combo": true,
+      className: `font-black tabular-nums ${rhythmComboTextColor(rhythmRankingDetail.detail?.maxCombo)}`
+    }, rhythmRankingDetail.detail?.maxCombo ?? '-')), /*#__PURE__*/React.createElement("dl", {
       className: "mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]"
     }, RHYTHM_JUDGMENT_IDS.map(id => /*#__PURE__*/React.createElement(React.Fragment, {
       key: id
+    }, id === 'MARVELOUS' && /*#__PURE__*/React.createElement(React.Fragment, {
+      key: "precise"
     }, /*#__PURE__*/React.createElement("dt", {
-      className: "text-slate-400"
+      "data-rhythm-ranking-precise-label": true,
+      "data-rhythm-judgment-row": "JUST"
+    }, "JUST MARVELOUS"), /*#__PURE__*/React.createElement("dd", {
+      "data-rhythm-ranking-precise": true,
+      "data-rhythm-judgment-row": "JUST",
+      className: "text-right font-mono"
+    }, Number.isFinite(Number(rhythmRankingDetail.detail?.precise)) ? Math.max(0, Math.floor(Number(rhythmRankingDetail.detail.precise))) : '—')), /*#__PURE__*/React.createElement("dt", {
+      "data-rhythm-judgment-row": id
     }, id), /*#__PURE__*/React.createElement("dd", {
-      className: "text-right font-mono text-white"
-    }, rhythmRankingDetail.detail?.judgments?.[id] ?? 0)))), /*#__PURE__*/React.createElement("p", {
+      "data-rhythm-judgment-row": id,
+      className: "text-right font-mono"
+    }, rhythmRankingDetail.detail?.judgments?.[id] ?? 0)))), !Number.isFinite(Number(rhythmRankingDetail.detail?.precise)) && /*#__PURE__*/React.createElement("p", {
+      "data-rhythm-ranking-precise-missing": true,
+      className: "mt-1 text-[8px] text-slate-500"
+    }, "JUST MARVELOUS\u306E\u300C\u2014\u300D\u306F\u3001\u3053\u306E\u8A18\u9332\u3092\u51FA\u3057\u305F\u3068\u304D\u306F\u307E\u3060\u6570\u3048\u3066\u3044\u306A\u304B\u3063\u305F\u3053\u3068\u3092\u793A\u3057\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("p", {
       className: "mt-2 text-[9px] font-black text-amber-200"
     }, rhythmRankingDetail.detail?.allMarvelous ? 'ALL MARVELOUS!!' : rhythmRankingDetail.detail?.allExcellent ? 'ALL EXCELLENT!!' : rhythmRankingDetail.detail?.fullCombo ? 'FULL COMBO!' : ''))));
   })(), boardTab && eventDetailOpen && /*#__PURE__*/React.createElement("div", {
@@ -37163,6 +37289,27 @@ function MonsterHeroGame() {
   const repeatRunTemplateRef = useRef(null);
   const [selectedCards, setSelectedCards] = useState([]);
   const [isBusy, setIsBusy] = useState(false);
+  // ★ターンの演出(executeTurn→敵の行動)は await で繋いだ長い一本道で、途中で止める手立てが無い。
+  //   その最中にランを片付ける(returnToHome)と、残りの setEnemy(prev=>...) が
+  //   null を掘って画面が落ちる。「いま演出の途中か」を ref でも読めるようにして、
+  //   片付ける前に終わるのを待てるようにしてある(2026-09-13・ユーザー報告
+  //   「モンビーからそのまま戻ったときに結構な頻度でエラーが起きる」)。
+  const isBusyRef = useRef(false);
+  // 曲えらびで「⼹ 終了」を押してからHOMEへ抜けるまでのあいだ(報酬の付与・送信・演出の終わり待ち)。
+  // 数秒かかることがあるので、そのあいだは畫面でそう言っておき、二度押しも止める
+  const [rhythmExitingRun, setRhythmExitingRun] = useState(false);
+  const rhythmExitingRunRef = useRef(false);
+  useEffect(() => {
+    isBusyRef.current = isBusy;
+  }, [isBusy]);
+  // 演出が終わるのを待つ(最大 timeoutMs)。待ちちょうで止まらないよう上限を必ず置く
+  const waitForBattleIdle = async (timeoutMs = 6000) => {
+    const until = Date.now() + Math.max(0, timeoutMs);
+    while (isBusyRef.current && Date.now() < until) {
+      await new Promise(resolve => setTimeout(resolve, 120));
+    }
+    return !isBusyRef.current;
+  };
   // AUTOのON/OFFはラン中だけの一時状態。state反映前の操作やeffect再実行にも同じ値を見せるためrefも同期する。
   const [autoBattle, setAutoBattle] = useState(false);
   const autoBattleRef = useRef(false);
@@ -39198,6 +39345,11 @@ function MonsterHeroGame() {
       maxCombo: result.maxCombo,
       fast: result.fast,
       slow: result.slow,
+      // ぴったりのMARVELOUSの回数(2026-09-13・ユーザー依頼「ランキングからのスコア詳細では
+      // JUST Marvelousも見れるようにして」)。party はJSONの列なので**項目を足すだけ**で済み、
+      // テーブルの形は変えない。これより前の記録にはこの項目が無いので、
+      // 読む側(ランキングの詳細)は「無い」と「0回」を分けて出す。
+      precise: Math.max(0, Math.floor(Number(result.precise) || 0)),
       fullCombo: !!result.fullCombo,
       allExcellent: !!result.allExcellent,
       allMarvelous: !!result.allMarvelous
@@ -46933,7 +47085,14 @@ function MonsterHeroGame() {
   };
 
   // Give up mid-run: record current score to ranking, award rewards, then show the final result screen (gaveUp)
-  const handleGiveUp = useCallback(async () => {
+  // silent … 周回を締めるだけで、バトルのリザルトは見せない(2026-09-13)。
+  //   モンビーの曲えらびからHOMEへ戻るときに使う。gaveUp を立てるとバトルの
+  //   リザルトが描かれ、そのあと returnToHome() が中身を片付けるので
+  //   「Cannot read properties of null (reading 'hp')」で画面が落ちる。
+  //   ★報酬の付与とランキング送信はそのまま通す(やめ方は「あきらめる」と同じ)。
+  const handleGiveUp = useCallback(async ({
+    silent = false
+  } = {}) => {
     // 帯に「途中でやめた」と出せるよう、理由を渡す(2026-09-07)
     stopAllAuto('retire');
     if (debugBattleRef.current) {
@@ -46957,10 +47116,44 @@ function MonsterHeroGame() {
       await awardRunRewards(Math.max(0, wave - 1));
     } catch {}
     setShowQuitConfirm(false);
-    setGaveUp(true);
+    if (!silent) setGaveUp(true);
     await submitRunScoreOnce();
     setResultProcessing(false);
   }, [score, difficulty, highScores, breederName, mainHero, slots, wave]);
+
+  // ===== 曲えらびの「戻る」(2026-09-13・ユーザー指摘
+  //   「止めないでもホームに戻れて自動的に周回も終わるようにしたい」) =====
+  // それまでは、裏でクイック∞周回が回っているあいだは「⚔ バトルへ戻る」しかできず、
+  // バトルで∞を切ってからHOMEへ、という2工程になっていた。
+  // とくにオートクイック(モンビーへ入ると自動で周回を始める設定)を使っていると、
+  // 入った瞬間に必ずこの状態になるので、毎回その2工程を踏むことになる。
+  // ★戻る前に handleGiveUp() で周回を締める。そこまでにクリアしたWAVEぶんの報酬は
+  //   きちんと入る(「⏹ ここで周回をやめる」と同じ終わり方)。締めずにHOMEへ抜けると、
+  //   returnToHome を通らないぶん周回が宙ぶらりんのまま残る。
+  // ★バトルを見に行く導線は、周回の帯の詳細にある「⚔ バトルへ戻って…」が残る。
+  const exitRhythmSongSelect = async () => {
+    if (rhythmBackgroundRun) {
+      if (rhythmExitingRunRef.current) return;
+      rhythmExitingRunRef.current = true;
+      setRhythmExitingRun(true);
+      // ★リザルトは見せない(silent)。立ててしまうと、締めている途中でバトルの
+      //   リザルトが描かれ、そのあと returnToHome() が中身を片付けるので落ちる
+      await handleGiveUp({
+        silent: true
+      });
+      // ★そのとき進んでいるターンの演出を待ってから片付ける。
+      //   stopAllAuto は「次のターンを始めない」だけで、いま進んでいる一本道は止められない。
+      //   待たずに returnToHome すると、残りの処理が片付いたあとの状態を触り、
+      //   画面が「表示でエラーが起きました」へ落ちる
+      //   (2026-09-13・ユーザー報告「結構な頻度でエラーが起きる」。実測で再現した)。
+      await waitForBattleIdle();
+      rhythmExitingRunRef.current = false;
+      setRhythmExitingRun(false);
+      returnToHome();
+      return;
+    }
+    setGameState(RHYTHM_MODE_PUBLIC_RELEASE ? 'HOME' : 'DEBUG_SETTINGS');
+  };
   const handleRetry = () => {
     stopAllAuto();
     // 種族チャレンジは通常の勇者選択(PICK_HERO)へは戻さない。
@@ -47682,10 +47875,10 @@ function MonsterHeroGame() {
           addPopup(`反射 ${incomingDmg}!!`, 'enemy', 'text-purple-400 font-black text-4xl drop-shadow-lg');
           const reflectedHp = Math.max(0, enemyHpAtAttackStart - incomingDmg);
           setCurrentWaveDamage(p => p + incomingDmg);
-          setEnemy(prev => ({
+          setEnemy(prev => prev ? {
             ...prev,
             hp: reflectedHp
-          }));
+          } : prev);
           await battleWait(1000);
           // 反射演出が終わってから撃破を確定し、回復・次ターン処理へは進ませない。
           if (await resolveEnemyDefeat({
@@ -48358,10 +48551,10 @@ function MonsterHeroGame() {
               const hitColor = h.isCrit ? 'text-yellow-400 drop-shadow-[0_0_25px_rgba(250,204,21,0.9)] scale-110' : 'text-red-600 drop-shadow-[0_0_20px_rgba(220,38,38,0.8)]';
               if (h.isCrit) triggerShake();
               addPopup(h.isCrit ? `${h.dmg}!!` : `${h.dmg}`, 'enemy', `${hitColor} text-5xl font-black animate-bounce`);
-              setEnemy(prev => ({
+              setEnemy(prev => prev ? {
                 ...prev,
                 hp: Math.max(0, prev.hp - h.dmg)
-              }));
+              } : prev);
               await battleWait(comboStepMs);
             }
             if (hit.rangeMoveTarget != null) {
@@ -48437,10 +48630,10 @@ function MonsterHeroGame() {
           const hitColor = hit.isCrit ? 'text-yellow-400 drop-shadow-[0_0_25px_rgba(250,204,21,0.9)] scale-110' : 'text-red-600 drop-shadow-[0_0_20px_rgba(220,38,38,0.8)]';
           if (hit.isCrit) triggerShake();
           addPopup(hit.isCrit ? `${hit.dmg}!!` : `${hit.dmg}`, 'enemy', `${hitColor} text-5xl font-black animate-bounce`);
-          setEnemy(prev => ({
+          setEnemy(prev => prev ? {
             ...prev,
             hp: Math.max(0, prev.hp - hit.dmg)
-          }));
+          } : prev);
           await battleWait(hit.noAnim ? 150 : 550);
           if (hit.rangeMoveTarget != null) {
             setEnemyDist(hit.rangeMoveTarget);
@@ -56338,13 +56531,8 @@ function MonsterHeroGame() {
       dismissRhythmEventNotice: dismissRhythmEventNotice,
       handleGiveUp: handleGiveUp,
       mainHero: mainHero,
-      onExit: () => {
-        if (rhythmBackgroundRun) {
-          returnToBackgroundRun();
-          return;
-        }
-        setGameState(RHYTHM_MODE_PUBLIC_RELEASE ? 'HOME' : 'DEBUG_SETTINGS');
-      },
+      exitingQuickRun: rhythmExitingRun,
+      onExit: exitRhythmSongSelect,
       onOpenEventRanking: () => {
         // 曲えらびの案内から開く。期間限定を開催中ならそちらのタブ、なければ週間のタブ
         const kind = rhythmSongSelectEvent && rhythmSongSelectEvent.kind === 'limited' ? 'limited' : 'weekly';

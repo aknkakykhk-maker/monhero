@@ -138,8 +138,13 @@ const seed = () => {
     check('モンヒロビートにいるあいだ画面が飛ばされない',
       await page.evaluate(() => !!document.querySelector('[data-rhythm-demo-home]')));
 
-    // 2周目に入った状態でバトルへ戻り、∞周回が切れていないことを見る
-    await page.evaluate(() => document.querySelector('[data-rhythm-back]')?.click());
+    // 2周目に入った状態でバトルへ戻り、∞周回が切れていないことを見る。
+    // ★2026-09-13から、曲えらびの「戻る」はHOMEへ抜ける(周回も終える)ようになったので、
+    //   バトルへ戻る導線は周回の帯の詳細にある [data-quick-run-progress-back] を使う
+    //   (ユーザー指摘「止めないでもホームに戻れて自動的に周回も終わるようにしたい」)。
+    await page.evaluate(() => document.querySelector('[data-quick-run-progress-header] button, [data-quick-run-progress] button')?.click());
+    await page.waitForTimeout(400);
+    await page.evaluate(() => document.querySelector('[data-quick-run-progress-back]')?.click());
     await page.waitForTimeout(2500);
     check('バトルへ戻っても∞周回が切れていない', (await autoLabel()) === 'AUTO ∞', await autoLabel());
 
