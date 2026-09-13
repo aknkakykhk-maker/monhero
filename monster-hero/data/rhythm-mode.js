@@ -991,6 +991,29 @@ const rhythmLaneAtPoint=(clientX,clientY,rect)=>{
   return Math.max(0,Math.min(RHYTHM_LANE_COUNT-1,Math.floor(coordinate+.5)));
 };
 
+// --- 音の出力遅延 ---
+// 【2026-09-13・「マーベラスが出ない」の原因】
+// 曲の再生位置は ctx.currentTime から作っているが、これは音を**送り出した**時刻であって、
+// 耳に届くのはそこから outputLatency ぶん後。補正しないと、ゲームが「1.000秒」と思う瞬間に
+// プレイヤーへ聞こえているのは「1.000秒 − 出力遅延」の音になる。
+// 音に合わせて叩く人は**必ず出力遅延ぶん遅れる**。MARVELOUS は ±55ms しかないので、
+// 出力遅延が55msを超える端末(Android Chrome では40〜120msがふつう、Bluetoothはさらに大きい)
+// では、耳で合わせるかぎりMARVELOUSが原理的に出なかった。
+//   ・outputLatency が使えるならそれを使う(Chrome/Firefox)
+//   ・無いときは baseLatency で代える(Safari。全部ではないが0よりずっと近い)
+//   ・端末の申告ミスに備えて上限を置く。負の値・数でない値は 0(補正しない＝従来どおり)
+// ★曲の開始時に1回だけ読んで固定する。鳴っている最中に読み直すと、
+//   端末が値を更新した瞬間に曲の時刻が飛んでしまう。
+const RHYTHM_OUTPUT_LATENCY_MAX_MS=500;
+const rhythmAudioOutputLatencyMs=ctx=>{
+  if(!ctx)return 0;
+  const out=Number(ctx.outputLatency);
+  if(Number.isFinite(out)&&out>0)return Math.min(out*1000,RHYTHM_OUTPUT_LATENCY_MAX_MS);
+  const base=Number(ctx.baseLatency);
+  if(Number.isFinite(base)&&base>0)return Math.min(base*1000,RHYTHM_OUTPUT_LATENCY_MAX_MS);
+  return 0;
+};
+
 // --- 入力イベントの「古さ」 ---
 // 指が触れた瞬間(event.timeStamp)と、JSがそのイベントを処理する瞬間(performance.now())には
 // 端末によって数ms〜数十msの差がある(iOS Safariは描画の1コマぶん遅れて届くことがある)。
