@@ -56,5 +56,23 @@ const grouped=syntheticMatch([tap(1000,3,0),tap(1088,5,1)],[
 ok('中心に対象が無い接触でも複数の疑似TAPを別時刻へ分散させない',
   grouped[0]===0&&grouped[1]===null);
 
+
+// 【2026-09-13・両手の高速タップでミスが出る】
+// 鍵(syntheticTargetTime)が無いのは「中心の指が何も取れなかった」とき。
+// それまでは時刻の制限がまるごと外れ、最大170ms先(16分なら2つ先)のノーツまで取れていた。
+// 取られたノーツは本来の時刻には既に done なので、そこを叩いても何も起きず見逃しMISSになる。
+// 両手だと「片方が先に取ったので、もう片方は行き先が無い」が頻繁に起きるぶん目立っていた。
+console.log('\n--- 鍵が無い疑似TAPの届く範囲 ---');
+const noLock=(noteTimeMs,now)=>{
+  prepareSynthetic();
+  run(`RHYTHM_TOUCH_SPAN_RUNTIME.recordPhysicalTarget('touch:1',null)`);
+  return syntheticMatch([tap(noteTimeMs,5,0)],[{lane:2,subLaneCoordinate:5.5,inputKey:'pointer:910001'}],now)[0]===0;
+};
+ok('中心が位置で外れたノーツは、同時刻なら接触幅で拾える(本来の役目)',noLock(1000,1000));
+ok('遅れて叩いたぶんも拾える(30ms/150ms)',noLock(1000,1030)&&noLock(1000,1150));
+ok('窓の内側の早押しも拾える(40ms前)',noLock(1000,960));
+ok('これから来るノーツへは手を伸ばさない(56ms先・88ms先)',!noLock(1056,1000)&&!noLock(1088,1000));
+ok('170ms先(16分で2つ先)を先食いしない',!noLock(1170,1000));
+
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
 process.exit(failed?1:0);
