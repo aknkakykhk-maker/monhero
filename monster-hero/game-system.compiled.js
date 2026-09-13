@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: fc20330cd79d290c
+// source-sha256: 4bfde0a55f68c3d6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 14e3fefdbe77213a
+// generated-sha256: 23e2988203c5a3b6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-13 19:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-13 23:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -25517,7 +25517,9 @@ function ProfileScreen({
   onOpenAssistantPicker,
   onSelectBattleMode,
   onOpenEventReplayList,
-  onOpenSpeciesRecords
+  onOpenSpeciesRecords,
+  rhythmHistoryCount,
+  onOpenRhythmHistory
 }) {
   return /*#__PURE__*/React.createElement("div", {
     "data-mh-screen": true,
@@ -25899,7 +25901,24 @@ function ProfileScreen({
         className: "mt-2 text-center text-[11px] font-black text-slate-500"
       }, "\u672A\u8A18\u9332"));
     }))));
-  })(), onboarded && !onboardingPreview && (() => {
+  })(), onboarded && !onboardingPreview && Number(rhythmHistoryCount) > 0 && /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "data-profile-rhythm-history": true,
+    onClick: onOpenRhythmHistory,
+    className: "w-full mb-4 flex items-center gap-2 bg-amber-950/40 border border-amber-400/40 px-4 py-3 rounded-2xl active:scale-[.98]"
+  }, /*#__PURE__*/React.createElement(Trophy, {
+    size: 14,
+    className: "text-amber-300 shrink-0"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "flex-1 min-w-0 text-left"
+  }, /*#__PURE__*/React.createElement("b", {
+    className: "block text-[11px] font-black text-amber-100"
+  }, "\u30E2\u30F3\u30D2\u30ED\u30D3\u30FC\u30C8 \u3053\u308C\u307E\u3067\u306E\u8A18\u9332"), /*#__PURE__*/React.createElement("small", {
+    className: "block text-[9px] text-amber-300/70"
+  }, "\u7D42\u308F\u3063\u305F\u9031\u9593\u30E9\u30F3\u30AD\u30F3\u30B0\u30FB\u30A4\u30D9\u30F3\u30C8\u306E\u9806\u4F4D\u3092\u898B\u3089\u308C\u307E\u3059\uFF08", rhythmHistoryCount, "\u4EF6\uFF09")), /*#__PURE__*/React.createElement(ChevronRight, {
+    size: 16,
+    className: "shrink-0 text-amber-400"
+  })), onboarded && !onboardingPreview && (() => {
     const list = typeof EVENT_REPLAYS !== 'undefined' && EVENT_REPLAYS || [];
     if (list.length === 0) return null;
     const unlockedCount = list.filter(isEventReplayUnlocked).length;
@@ -36369,6 +36388,174 @@ function MasuAutoEnhanceScreen({
   }, "\u5B8C\u4E86")));
 }
 
+// ---- part: 73-screen-rhythm-history.jsx ----
+// ==== 画面: モンヒロビートの履歴(gameState === 'RHYTHM_HISTORY') ====
+//
+// 2026-09-13・ユーザー依頼「モンビーのイベントや週間ランキングの終わったものを
+// ヒストリー的に見れる機能」。置き場所はプロフィール(ユーザーが決めた)。
+// ランキング画面は「いま競っている場所」なので、自分の足あとはプロフィールへ置く。
+//
+// 【この画面の決めごと】
+// ・**表示専用**。報酬の受け取りには一切関わらないし、受取フラグ(mh_rhythm_event_reward_v1)も
+//   保存も触らない。新しい保存キーも作らない(CLAUDE.md ⑦)
+// ・一覧は data/rhythm-event.js が計算だけで作る。**サーバーへは一度も聞きに行かない**。
+//   週は年52件ずつ増えるが、行に出すのは日付だけなので件数が増えても重くならない。
+//   順位を取りに行くのは**選んで開いた回だけ**(いまのランキングを1回開くのと同じ)
+// ・順位の集計は今週・開催中とまったく同じ関数を使う(渡す期間が違うだけ)。
+//   集計の仕方をここに持たない
+//
+// 一覧と中身は同じ画面で切り替える(selected が null なら一覧)。
+// 画面(gameState)を2つに分けると、戻るたびに一覧を組み直すことになるため。
+function RhythmHistoryScreen({
+  entries,
+  selected,
+  board,
+  divisionId,
+  rankingBreederIcon,
+  onBack,
+  onSelect,
+  onClearSelection,
+  onSelectDivision,
+  onRefresh
+}) {
+  const list = Array.isArray(entries) ? entries : [];
+  const view = board || {
+    status: 'idle',
+    event: null,
+    boards: {},
+    error: null
+  };
+  // 部門は**えらんだ回から**作る。取ってきた結果(view.event)を待つと、
+  // 読み込み中や通信に失敗したあいだ部門のボタンが消えて、切り替えて試し直せなくなる
+  const eventDefinition = (selected ? rhythmHistoryBoardEvent(selected) : null) || view.event || null;
+  // 部門(対象曲ごと＋総合)。対象曲を持つのはイベントだけなので、週は総合1つになる
+  const divisions = eventDefinition ? rhythmEventDivisions(eventDefinition, RHYTHM_SONGS) : [];
+  const wanted = divisionId || RHYTHM_EVENT_TOTAL_DIVISION;
+  const activeDivision = divisions.some(division => division.id === wanted) ? wanted : RHYTHM_EVENT_TOTAL_DIVISION;
+  const divisionBoard = view.boards && view.boards[activeDivision] || {
+    status: 'idle',
+    entries: [],
+    self: null
+  };
+  const songId = rhythmEventDivisionSongId(activeDivision);
+  // 週は累計スコア方式なので、1行に出す補助の数字が「遊んだ回数」になる
+  const weekly = !!selected && selected.kind === 'weekly';
+  const rows = Array.isArray(divisionBoard.entries) ? divisionBoard.entries : [];
+  const self = divisionBoard.self || null;
+  // ランクは素点で決める(回数ボーナス込みの点だと満点を超えてしまうため。ランキング画面と同じ)
+  const rankScore = entry => entry && entry.baseScore !== null && entry.baseScore !== undefined ? entry.baseScore : entry && entry.score || 0;
+  const row = (entry, rank, mine) => /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-history-row": true,
+    className: `flex items-center gap-2 rounded-2xl border p-2 ${mine ? 'border-amber-300/60 bg-amber-500/10' : 'border-white/10 bg-slate-900/80'}`
+  }, /*#__PURE__*/React.createElement("b", {
+    className: "w-8 shrink-0 text-center text-xs font-black text-amber-200"
+  }, rank ? `${rank}` : '—'), rankingBreederIcon(entry), /*#__PURE__*/React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "truncate text-xs font-black text-white"
+  }, entry.userName), /*#__PURE__*/React.createElement("p", {
+    className: "text-[9px] text-slate-400"
+  }, songId ? `${RHYTHM_DEMO_DIFFICULTY_LABELS[entry.difficultyId]?.name || entry.difficultyId || '-'} ・ Lv.${entry.level}` : `${weekly ? `${entry.playCount}回 ・ ` : ''}${entry.songCount}曲 ・ Lv.${entry.level}`)), /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 text-right"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "font-mono text-sm font-black text-amber-100"
+  }, (songId ? entry.score : entry.totalScore).toLocaleString()), songId && /*#__PURE__*/React.createElement("p", {
+    className: `text-[10px] font-black ${RHYTHM_RANK_COLORS[rhythmRankForScore(rankScore(entry))]}`
+  }, rhythmRankForScore(rankScore(entry))), entry.bonusScore > 0 && /*#__PURE__*/React.createElement("p", {
+    className: "text-[9px] font-black text-amber-300"
+  }, "+", entry.bonusScore.toLocaleString(), "\uFF08", entry.playCount, "\u56DE\uFF09")));
+  return /*#__PURE__*/React.createElement("main", {
+    "data-mh-screen": true,
+    "data-rhythm-history": true,
+    className: "flex h-full flex-1 flex-col bg-slate-950 text-white"
+  }, /*#__PURE__*/React.createElement("header", {
+    className: "z-10 flex shrink-0 items-center gap-2 border-b border-amber-400/15 bg-slate-950/95 px-3 py-1",
+    style: {
+      paddingTop: 'calc(0.25rem + env(safe-area-inset-top))'
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    "aria-label": "\u623B\u308B",
+    "data-rhythm-history-back": true,
+    onClick: () => selected ? onClearSelection() : onBack(),
+    className: "min-h-[44px] px-2 text-slate-400"
+  }, /*#__PURE__*/React.createElement(ArrowLeft, {
+    size: 18
+  })), /*#__PURE__*/React.createElement("h2", {
+    className: "min-w-0 flex-1 truncate text-sm font-black tracking-widest text-amber-200"
+  }, selected ? rhythmHistoryName(selected) : '🕘 これまでの記録'), selected && /*#__PURE__*/React.createElement("button", {
+    "aria-label": "\u66F4\u65B0",
+    "data-rhythm-history-refresh": true,
+    onClick: onRefresh,
+    className: "ml-auto min-h-[44px] px-2 text-[10px] font-black text-amber-200"
+  }, "\u66F4\u65B0")), /*#__PURE__*/React.createElement("div", {
+    className: "min-h-0 flex-1 overflow-y-auto mh-scroll px-3 py-3"
+  }, !selected && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    className: "mb-3"
+  }, /*#__PURE__*/React.createElement(AssistantBubble, {
+    scene: "rhythmHistory",
+    compact: true
+  })), list.length === 0 ? /*#__PURE__*/React.createElement("p", {
+    className: "rounded-2xl border border-white/10 bg-slate-900/70 p-4 text-center text-[11px] font-black text-slate-400"
+  }, "\u7D42\u308F\u3063\u305F\u9031\u3084\u30A4\u30D9\u30F3\u30C8\u304C\u307E\u3060\u3042\u308A\u307E\u305B\u3093\u3002", /*#__PURE__*/React.createElement("br", null), "\u9031\u9593\u30E9\u30F3\u30AD\u30F3\u30B0\u306F\u6BCE\u9031 \u6708\u66DC 5:00 \u306B\u5207\u308A\u66FF\u308F\u308A\u307E\u3059\u3002") : /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-col gap-2"
+  }, list.map(entry => /*#__PURE__*/React.createElement("button", {
+    key: entry.id,
+    type: "button",
+    "data-rhythm-history-entry": entry.id,
+    onClick: () => onSelect(entry),
+    className: `flex min-h-[64px] w-full items-center gap-2 rounded-2xl border px-3 py-2.5 text-left active:scale-[.98] ${entry.kind === 'limited' ? 'border-fuchsia-400/40 bg-fuchsia-950/30' : 'border-amber-400/25 bg-slate-900/70'}`
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-xl",
+    "aria-hidden": "true"
+  }, entry.kind === 'limited' ? '🏆' : '📊'), /*#__PURE__*/React.createElement("span", {
+    className: "min-w-0 flex-1"
+  }, /*#__PURE__*/React.createElement("b", {
+    className: `block truncate text-[12px] font-black ${entry.kind === 'limited' ? 'text-fuchsia-100' : 'text-white'}`
+  }, rhythmHistoryName(entry)), /*#__PURE__*/React.createElement("small", {
+    className: "block text-[9px] text-slate-400"
+  }, rhythmHistoryPeriodText(entry)), entry.kind === 'limited' && /*#__PURE__*/React.createElement("small", {
+    className: "block text-[9px] font-black text-fuchsia-300/80"
+  }, "\u5BFE\u8C61\u66F2 ", entry.event?.songIds?.length || 0, "\u66F2")), /*#__PURE__*/React.createElement(ChevronRight, {
+    size: 16,
+    className: "shrink-0 text-slate-500"
+  }))))), selected && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    className: "mb-3 rounded-2xl border border-white/10 bg-slate-900/70 p-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "rounded-lg bg-slate-800 px-2 py-0.5 text-[9px] font-black tracking-widest text-slate-400"
+  }, "\u7D42\u4E86"), /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] font-black text-slate-300"
+  }, rhythmHistoryPeriodText(selected))), /*#__PURE__*/React.createElement("p", {
+    className: "mt-2 text-[9px] leading-relaxed text-slate-500"
+  }, "\u5F53\u6642\u306E\u8A18\u9332\u304B\u3089\u6570\u3048\u76F4\u3057\u3066\u51FA\u3057\u3066\u3044\u307E\u3059\u3002\u3053\u3053\u304B\u3089\u5831\u916C\u3092\u53D7\u3051\u53D6\u308B\u3053\u3068\u306F\u3067\u304D\u307E\u305B\u3093\u3002")), divisions.length > 1 && /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-history-divisions": true,
+    className: "mb-3 flex flex-wrap gap-1"
+  }, divisions.map(division => /*#__PURE__*/React.createElement("button", {
+    key: division.id,
+    type: "button",
+    "data-rhythm-history-division": division.id,
+    onClick: () => onSelectDivision(division.id),
+    className: `min-h-[44px] flex-1 basis-[45%] rounded-xl border px-2 py-1 text-[10px] font-black leading-tight ${division.id === activeDivision ? 'border-fuchsia-300/60 bg-fuchsia-500/15 text-fuchsia-100' : 'border-white/10 bg-slate-900/60 text-slate-400'}`
+  }, division.songId ? rhythmSongFullName(division.song) || division.songId : '総合'))), view.status === 'notReady' && /*#__PURE__*/React.createElement("p", {
+    className: "rounded-2xl border border-white/10 bg-slate-900/70 p-4 text-center text-[11px] font-black text-slate-400"
+  }, "\u3053\u306E\u7AEF\u672B\u3067\u306F\u307E\u3060\u9806\u4F4D\u3092\u51FA\u305B\u307E\u305B\u3093\u3002"), view.status === 'error' && /*#__PURE__*/React.createElement("p", {
+    className: "rounded-2xl border border-rose-400/30 bg-rose-950/30 p-4 text-center text-[11px] font-black text-rose-200"
+  }, "\u9806\u4F4D\u3092\u8AAD\u307F\u8FBC\u3081\u307E\u305B\u3093\u3067\u3057\u305F\u3002\u300C\u66F4\u65B0\u300D\u3092\u62BC\u3059\u3068\u3082\u3046\u4E00\u5EA6\u8A66\u3057\u307E\u3059\u3002"), divisionBoard.status === 'loading' && rows.length === 0 && /*#__PURE__*/React.createElement("p", {
+    className: "p-6 text-center text-[11px] font-black text-slate-500"
+  }, "\u8AAD\u307F\u8FBC\u307F\u4E2D\u2026"), divisionBoard.status === 'ready' && rows.length === 0 && /*#__PURE__*/React.createElement("p", {
+    className: "rounded-2xl border border-white/10 bg-slate-900/70 p-4 text-center text-[11px] font-black text-slate-400"
+  }, "\u3053\u306E\u56DE\u306E\u8A18\u9332\u306F\u3042\u308A\u307E\u305B\u3093\u3002"), rows.length > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-col gap-1.5"
+  }, rows.map((entry, index) => /*#__PURE__*/React.createElement(React.Fragment, {
+    key: `${entry.identityKey || 'row'}-${index}`
+  }, row(entry, index + 1, !!self && self.identityKey === entry.identityKey)))), self && self.rank === null && /*#__PURE__*/React.createElement("div", {
+    className: "mt-3"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "mb-1 px-1 text-[9px] font-black tracking-widest text-amber-300"
+  }, "\u3042\u306A\u305F\u306E\u8A18\u9332"), row(self, null, true)))));
+}
+
 // ---- part: 60-app.jsx ----
 function MonsterHeroGame() {
   const [gameState, setGameState] = useState('HOME');
@@ -38744,24 +38931,32 @@ function MonsterHeroGame() {
     boards: {},
     error: null
   };
+  // kind は 'weekly'(今週) / 'limited'(開催中のイベント) / 'history'(終わった回をあとから見る)。
+  // 履歴は**表示専用**で、報酬の受け取りには一切関わらない(受取フラグも触らない・CLAUDE.md ⑦)
   const [rhythmEventDivision, setRhythmEventDivision] = useState({
     weekly: RHYTHM_EVENT_TOTAL_DIVISION,
-    limited: RHYTHM_EVENT_TOTAL_DIVISION
+    limited: RHYTHM_EVENT_TOTAL_DIVISION,
+    history: RHYTHM_EVENT_TOTAL_DIVISION
   });
   const [rhythmEventRanking, setRhythmEventRanking] = useState({
     weekly: RHYTHM_BOARD_EMPTY,
-    limited: RHYTHM_BOARD_EMPTY
+    limited: RHYTHM_BOARD_EMPTY,
+    history: RHYTHM_BOARD_EMPTY
   });
   const rhythmEventRankingRequestRef = useRef({
     weekly: 0,
-    limited: 0
+    limited: 0,
+    history: 0
   });
   const setRhythmBoard = (kind, update) => setRhythmEventRanking(prev => ({
     ...prev,
     [kind]: typeof update === 'function' ? update(prev[kind] || RHYTHM_BOARD_EMPTY) : update
   }));
-  const loadRhythmEventRanking = useCallback(async (kind, divisionId) => {
-    if (kind !== 'weekly' && kind !== 'limited') return;
+  // historyEntry を渡すと、その「終わった回」の順位を集計してもらう(kind は 'history')。
+  // 集計そのものは今週・開催中とまったく同じ関数を使う。渡す期間が違うだけ
+  const loadRhythmEventRanking = useCallback(async (kind, divisionId, historyEntry = null) => {
+    if (kind !== 'weekly' && kind !== 'limited' && kind !== 'history') return;
+    if (kind === 'history' && !historyEntry) return;
     const requestId = (rhythmEventRankingRequestRef.current[kind] || 0) + 1;
     rhythmEventRankingRequestRef.current = {
       ...rhythmEventRankingRequestRef.current,
@@ -38797,8 +38992,9 @@ function MonsterHeroGame() {
         requestId: `rhythm-week-${Date.now()}`
       }) : null;
       if (stale()) return;
-      const event = kind === 'weekly' ? rhythmWeeklyEvent(weekWindow.startMs) : rhythmLimitedEventAt(Date.now());
-      const range = rhythmEventWindow(event, weekWindow);
+      // 履歴は終わっているので期間が動かない。サーバーへ週の窓を聞きに行く必要もない
+      const event = kind === 'history' ? rhythmHistoryBoardEvent(historyEntry) : kind === 'weekly' ? rhythmWeeklyEvent(weekWindow.startMs) : rhythmLimitedEventAt(Date.now());
+      const range = kind === 'history' ? rhythmHistoryRange(historyEntry) : rhythmEventWindow(event, weekWindow);
       if (!event || !range) {
         setRhythmBoard(kind, {
           status: 'closed',
@@ -38820,7 +39016,8 @@ function MonsterHeroGame() {
       const bonusRates = rhythmEventPlayBonusRates(event);
       // ★週間は**累計スコア方式**(2026-09-13)。曲ごとのベストではなく、その週に出した記録を
       //   ぜんぶ足す。対象曲も部門も無いので、期間だけ渡す専用の関数を呼ぶ
-      const weeklyTotals = kind === 'weekly' && !targetSongId;
+      // 週間(履歴の週をふくむ)は累計スコア方式。対象曲も部門も無いので期間だけ渡す
+      const weeklyTotals = (kind === 'weekly' || kind === 'history' && historyEntry.kind === 'weekly') && !targetSongId;
       const fetchRows = options => weeklyTotals ? sbFetchRhythmWeekTotals({
         fromMs: range.startMs,
         toMs: range.endMs,
@@ -38911,6 +39108,34 @@ function MonsterHeroGame() {
       }));
     }
   }, [breederName]);
+  // ===== モンヒロビートの履歴(2026-09-13・ユーザー依頼) =====
+  // 終わった週・イベントの順位をあとから見るだけの画面。プロフィールから入る。
+  // ★一覧は data/rhythm-event.js が計算だけで作る(サーバーへは聞きに行かない)。
+  //   順位を取りに行くのは、選んで開いた回だけ。
+  // ★**表示専用**。報酬の受け取り・受取フラグ・保存には一切触らない(CLAUDE.md ⑦)。
+  const [rhythmHistoryList, setRhythmHistoryList] = useState([]);
+  const [rhythmHistorySelected, setRhythmHistorySelected] = useState(null);
+  // 公開前は入口ごと出さない(週間ランキングと同じフラグで出し入れする)
+  const rhythmHistoryReleased = RELEASE_FLAGS.rhythmWeeklyRanking === true;
+  // 入口に出す件数。開くまでは一覧を組み立てない(プロフィールを開くたびに数えるのは無駄)
+  const rhythmHistoryCount = rhythmHistoryReleased ? rhythmHistoryEntries(Date.now()).length : 0;
+  const loadRhythmHistoryBoard = (entry, divisionId) => {
+    if (!entry) return;
+    setRhythmEventDivision(prev => ({
+      ...prev,
+      history: divisionId
+    }));
+    loadRhythmEventRanking('history', divisionId, entry);
+  };
+  const openRhythmHistory = () => {
+    setRhythmHistorySelected(null);
+    setRhythmHistoryList(rhythmHistoryEntries(Date.now()));
+    setGameState('RHYTHM_HISTORY');
+  };
+  const selectRhythmHistory = entry => {
+    setRhythmHistorySelected(entry);
+    loadRhythmHistoryBoard(entry, RHYTHM_EVENT_TOTAL_DIVISION);
+  };
   const rhythmRankingRequestRef = useRef(0);
   // 難易度合算(体験版で遊べる難易度をまとめて取得)のランキングを読み込む。
   // 同じユーザーの複数行は読み込み側で最高得点の1件だけへ畳む(rhythmRankingDedupeByUser)。
@@ -57786,7 +58011,9 @@ function MonsterHeroGame() {
       onOpenAssistantPicker: () => setShowAssistantPicker(true),
       onSelectBattleMode: setProfileBattleMode,
       onOpenEventReplayList: () => setShowEventReplayList(true),
-      onOpenSpeciesRecords: () => openSpeciesChallengeRecords('PROFILE')
+      onOpenSpeciesRecords: () => openSpeciesChallengeRecords('PROFILE'),
+      rhythmHistoryCount: rhythmHistoryCount,
+      onOpenRhythmHistory: openRhythmHistory
     }), gameState === 'BREEDER_MARKET' && /*#__PURE__*/React.createElement(BreederMarketScreen, {
       gold: gold,
       breederPoints: breederPoints,
@@ -58307,6 +58534,17 @@ function MonsterHeroGame() {
       setFusionSubId: setFusionSubId,
       setFusionSubIds: setFusionSubIds,
       setMasuMonDetail: setMasuMonDetail
+    }), gameState === 'RHYTHM_HISTORY' && /*#__PURE__*/React.createElement(RhythmHistoryScreen, {
+      entries: rhythmHistoryList,
+      selected: rhythmHistorySelected,
+      board: rhythmEventRanking.history,
+      divisionId: rhythmEventDivision.history,
+      rankingBreederIcon: rankingBreederIcon,
+      onBack: () => setGameState('PROFILE'),
+      onSelect: selectRhythmHistory,
+      onClearSelection: () => setRhythmHistorySelected(null),
+      onSelectDivision: id => loadRhythmHistoryBoard(rhythmHistorySelected, id),
+      onRefresh: () => loadRhythmHistoryBoard(rhythmHistorySelected, rhythmEventDivision.history || RHYTHM_EVENT_TOTAL_DIVISION)
     }), gameState === 'ITEM_INVENTORY' && /*#__PURE__*/React.createElement(ItemInventoryScreen, {
       ownedItems: ownedItems,
       onBack: () => setGameState('PROFILE'),

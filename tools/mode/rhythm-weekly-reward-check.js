@@ -123,9 +123,10 @@ check('何度流しても同じ結果になる（作り直す形）',
 check('予行演習(rollback)と手順書がそろっている',
   /^rollback;$/m.test(testSql)&&!/^commit;$/m.test(testSql)
   &&steps.includes('RHYTHM_WEEK_TOTAL_APPLY_TEST.sql'));
+// 2026-09-13、履歴(終わった週をあとから見る)も同じ累計方式で数える
 check('アプリは累計の関数を呼ぶ',
   supa.includes('rpc/rhythm_week_score_totals')
-  &&/const weeklyTotals = kind === 'weekly' && !targetSongId;/.test(app));
+  &&/const weeklyTotals = \(kind === 'weekly' \|\| \(kind === 'history' && historyEntry\.kind === 'weekly'\)\) && !targetSongId;/.test(app));
 check('関数が無い環境を「準備中」として扱う',
   /rhythm_week_score_totals\|rhythm_event_song_bests/.test(supa));
 check('端末側で累計を足していない',
