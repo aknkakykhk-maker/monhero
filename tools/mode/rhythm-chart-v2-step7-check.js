@@ -59,9 +59,26 @@ check('直すのはレーンだけだと明示している(悪さの重みが定
 
 // --- 実際に走らせる(既存の成果物は壊さないよう一時ディレクトリへ) ---
 const tempDir=fs.mkdtempSync(path.join(os.tmpdir(),'rhythm-v2-step7-'));
+// ★終了コード1は「押せないが残った」という**報告**であって、道具が落ちたわけではない。
+//   STEP7はレーンしか動かさないので、「押せる指がない」(3本目の指が要る)形は
+//   原理的に直せない。ノーツを消すのはこの道具の仕事ではないので、それでよい。
+//   それを失敗として扱ったうえ**そこで打ち切っていた**ため、手のモデルを厳しくした
+//   (#1369)あと、この下の検査がまるごと動かなくなっていた
+//   (2026-09-13に気づくまで、決定性も「既存の成果物を書き換えない」も見ていなかった)。
+//   「落ちた（道具の不具合）」と「直しきれなかった（入力の性質）」を分けて見る。
+//   直しきれたかどうかは、下の per-difficulty「押せないが増えていない」と、
+//   わざと作った譜面(「同じ場所で16分連打」→押せない0件)で見る。
 const first=run('--write','--output-dir',tempDir);
-check('STEP7が成功する',first.status===0,first.status===0?'':(first.stderr||first.stdout).trim().split('\n').slice(-3).join(' / '));
-if(first.status!==0){console.log(`\n${failed}件のNGがあります`);process.exit(1);}
+const crashed=first.status!==0&&first.status!==1;
+check('STEP7が落ちずに動く',!crashed,
+  crashed?(first.stderr||first.stdout).trim().split('\n').slice(-3).join(' / '):`終了コード${first.status}`);
+if(crashed){console.log(`\n${failed}件のNGがあります`);process.exit(1);}
+if(first.status===1){
+  const left=[...(first.stdout||'').matchAll(/^(EASY|NORMAL|HARD|EXPERT|MASTER):[\s\S]*?押せない (?:\d+→)?(\d+)件/gm)]
+    .filter(m=>Number(m[2])>0).map(m=>`${m[1]}${m[2]}件`);
+  console.log(`   … 「押せない」が残っています${left.length?`（${left.join(' / ')}）`:''}。`
+    +'レーンを動かすだけでは直せない形（押せる指がない）です');
+}
 
 const secondDir=fs.mkdtempSync(path.join(os.tmpdir(),'rhythm-v2-step7-b-'));
 const second=run('--write','--output-dir',secondDir);
@@ -209,9 +226,12 @@ const protectedFiles=[
   'monster-hero/debug/monster-hero-theme-hard-formal-candidate-v1.json',
   'tools/mode/rhythm-monster-hero-chart-build.js',
   ...DIFFICULTIES.map(d=>`tools/mode/authoring/monster-hero-theme-v2-step5-chart-${d.toLowerCase()}.json`),
+  // いまの本番の道（V3）が自動修正へ渡す生成物。こちらも書き換えてはいけない
+  ...DIFFICULTIES.map(d=>`tools/mode/authoring/monster-hero-theme-v3-chart-${d.toLowerCase()}.json`),
 ];
 const before=protectedFiles.map(f=>hash(path.join(ROOT,f)));
 run('--write','--output-dir',tempDir);
+run('--source','v3','--write','--output-dir',tempDir);
 check('ランタイム・V1・既存の正式候補v1・STEP5の採用譜面を書き換えない',
   protectedFiles.every((f,i)=>hash(path.join(ROOT,f))===before[i]));
 

@@ -88,10 +88,15 @@ const before=new Map();
 const authoring=path.join(ROOT,'tools/mode/authoring');
 for(const file of fs.readdirSync(authoring))before.set(file,hash(path.join(authoring,file)));
 
-const written=run('--write');
+// ★書き出し先は一時ディレクトリ。**検査がリポジトリを書き換えてはいけない。**
+//   ここが本物の authoring/ を向いていたため、手のモデルを厳しくした(#1369)あとに
+//   この検査を回した人のコミットへ、関係のない譜面データの作り直しが巻き添えで入った
+//   （2026-09-13に気づいた・#1379で monster-hero-theme-v2-step5-chart-master.json が
+//     504→484ノーツになり、ランタイムのデバッグ譜面とずれた）。
+const written=run('--write','--output-dir',tempDir);
 check('--write が成功する',written.status===0,written.status===0?'':(written.stderr||'').trim());
 
-const reviewFile=path.join(authoring,'monster-hero-theme-v2-step5-review.json');
+const reviewFile=path.join(tempDir,'monster-hero-theme-v2-step5-review.json');
 check('講評JSONが書き出される',fs.existsSync(reviewFile));
 if(fs.existsSync(reviewFile)){
   const review=JSON.parse(fs.readFileSync(reviewFile,'utf8'));
@@ -133,7 +138,10 @@ if(fs.existsSync(reviewFile)){
     check(`${difficulty}: 同じ譜面の案は同じ点になる(採点が譜面だけを見ている)`,
       cands.filter(c=>c.duplicateOf).every(c=>Math.abs(c.score-byVariant.get(c.duplicateOf).score)<1e-9));
 
-    const chartFile=path.join(authoring,`monster-hero-theme-v2-step5-chart-${difficulty.toLowerCase()}.json`);
+    // ★いま走らせた結果（一時ディレクトリ）を見る。リポジトリに置いてある成果物ではない。
+    //   ここが authoring を見ていたのは、検査自身がそこへ書いていたから成り立っていただけ。
+    //   書かなくなった以上、「講評と譜面が食い違わない」は**その1回の出力の中**で見る。
+    const chartFile=path.join(tempDir,`monster-hero-theme-v2-step5-chart-${difficulty.toLowerCase()}.json`);
     check(`${difficulty}: 採用案の譜面が書き出される`,fs.existsSync(chartFile));
     if(fs.existsSync(chartFile)){
       const chart=JSON.parse(fs.readFileSync(chartFile,'utf8'));
@@ -190,19 +198,23 @@ const protectedFiles=[
   'tools/mode/rhythm-monster-hero-chart-build.js',
 ];
 const protectedBefore=protectedFiles.map(f=>hash(path.join(ROOT,f)));
-run('--write');
+run('--write','--output-dir',tempDir);
 check('ランタイム・V1・既存の正式候補v1を書き換えない',
   protectedFiles.every((f,i)=>hash(path.join(ROOT,f))===protectedBefore[i]));
 
-// STEP3の成果物(V2 STEP3出力)にも触っていないこと
-const step3Files=fs.readdirSync(authoring).filter(f=>/-v2-chart-/.test(f));
-check('STEP3の出力を書き換えない',
-  step3Files.every(f=>before.get(f)===hash(path.join(authoring,f))),
-  `${step3Files.length}件`);
+// ★設計資料の置き場(authoring/)そのものを1つも書き換えないこと。
+//   「STEP3の出力だけ」を見ていたので、STEP5自身の成果物
+//   (monster-hero-theme-v2-step5-chart-*.json / -review.json)が
+//   検査を回すたび黙って書き換わっていた。増減も見るのでファイルの追加も見つかる。
+const authoringNow=fs.readdirSync(authoring);
+const rewritten=authoringNow.filter(file=>before.get(file)!==hash(path.join(authoring,file)));
+check('設計資料の置き場(authoring/)を1つも書き換えない',
+  rewritten.length===0&&authoringNow.length===before.size,
+  rewritten.length?rewritten.slice(0,3).join(' / '):`${authoringNow.length}件`);
 
 // --write を2回流しても同じ内容になる(書き出しも決定的)
 const reviewHash=hash(reviewFile);
-run('--write');
+run('--write','--output-dir',tempDir);
 check('--write を繰り返しても同じ内容になる',hash(reviewFile)===reviewHash);
 
 fs.rmSync(tempDir,{recursive:true,force:true});

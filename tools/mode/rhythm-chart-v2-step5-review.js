@@ -5,6 +5,7 @@
 //   node tools/mode/rhythm-chart-v2-step5-review.js --difficulty HARD  # 1難易度だけ
 //   node tools/mode/rhythm-chart-v2-step5-review.js --write            # 勝った案と講評をauthoring/へ書き出す
 //   node tools/mode/rhythm-chart-v2-step5-review.js --verbose          # 全案の内訳を表示
+//   node tools/mode/rhythm-chart-v2-step5-review.js --write --output-dir <dir>  # 書き出し先を変える(検査用)
 //
 // 【何をするか】
 // STEP3/4の生成器は「1つの難易度から1つの譜面」しか作らない。だが実際の譜面作りは
@@ -39,6 +40,15 @@ const GENERATOR=path.join(ROOT,'tools/mode/rhythm-chart-v2-step3-generate.js');
 const PLAYABILITY=path.join(ROOT,'tools/mode/rhythm-chart-v2-step6-playability.js');
 const arg=(name,fallback=null)=>{const i=process.argv.indexOf(name);return i>=0&&i+1<process.argv.length?process.argv[i+1]:fallback;};
 const write=process.argv.includes('--write');
+// ★書き出し先を差し替えられるようにする。検査が既存の成果物を書き換えないため。
+//   これが無かったので rhythm-chart-v2-step5-check.js が本物の authoring/ へ書いており、
+//   手のモデルを厳しくした(#1369)あとに検査を回した人のコミットへ、
+//   関係のない譜面データの作り直しが巻き添えで入った(2026-09-13に気づいた・#1379)。
+const outputDir=arg('--output-dir',null);
+const outPath=name=>{
+  const relative=`${config.outputPrefix}${name}`;
+  return outputDir?path.join(path.resolve(ROOT,outputDir),path.basename(relative)):path.join(ROOT,relative);
+};
 const verbose=process.argv.includes('--verbose');
 const only=arg('--difficulty');
 const trackId=arg('--track','monster_hero_theme');
@@ -379,7 +389,7 @@ for(const difficulty of DIFFICULTIES){
   previousWinner=winner;
 
   if(write){
-    const out=path.join(ROOT,`${config.outputPrefix}chart-${difficulty.toLowerCase()}.json`);
+    const out=outPath(`chart-${difficulty.toLowerCase()}.json`);
     const chosen={...winner.chart,
       analysisType:'rhythm-chart-v2-step5-chart',
       step5:{variant:winner.variant.id,label:winner.variant.label,override:winner.resolved,
@@ -394,7 +404,7 @@ for(const difficulty of DIFFICULTIES){
 fs.rmSync(tempDir,{recursive:true,force:true});
 
 if(write){
-  const out=path.join(ROOT,`${config.outputPrefix}review.json`);
+  const out=outPath('review.json');
   fs.writeFileSync(out,JSON.stringify(report,null,1)+'\n');
   console.log(`\n講評: ${path.relative(ROOT,out)}`);
 }else{
