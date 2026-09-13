@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f280d75b393a1ebd
+// source-sha256: dea2f616ff4a0e63
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 852ea9da98b9b282
+// generated-sha256: 7c8b7b8a2fc67437
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-13 10:31"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-13 10:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -20344,11 +20344,15 @@ const RhythmOptions = ({
   const row = 'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-white/10 py-3 last:border-b-0';
   // 数値の項目。粗く動かす外側(coarse)と、細かく動かす内側(fine)を分ける。
   // 刻み(step)は保存する値の刻みそのもので、fine は必ずその倍数にする。
+  // label … 1つの枠へ数値の行を2つ以上並べるときに、行ごとの名前を出す
+  //   (2026-09-13・ユーザー指摘「コンボ数の設定の%いじりが2種類あるけど
+  //    何を示してるからわからない」。%の行が名前なしで2本並ぶと見分けが付かない)
   const stepper = (key, min, max, step, {
     fine = step,
     coarse = step * 10,
     suffix = '',
-    decimals = 0
+    decimals = 0,
+    label = ''
   } = {}) => {
     const value = Number(draft[key]),
       percent = Math.max(0, Math.min(100, (value - min) / (max - min) * 100));
@@ -20366,7 +20370,14 @@ const RhythmOptions = ({
     return /*#__PURE__*/React.createElement("div", {
       "data-rhythm-option-stepper": key,
       className: wide ? '' : 'space-y-1.5'
-    }, /*#__PURE__*/React.createElement("div", {
+    }, label && /*#__PURE__*/React.createElement("div", {
+      "data-rhythm-option-stepper-label": key,
+      className: "flex items-baseline justify-between gap-2 px-0.5 pb-0.5 leading-none"
+    }, /*#__PURE__*/React.createElement("small", {
+      className: "text-[10px] font-black text-cyan-200"
+    }, label), /*#__PURE__*/React.createElement("small", {
+      className: "text-[10px] font-bold tabular-nums text-slate-400"
+    }, decimals > 0 ? min.toFixed(decimals) : min, "\u301C", decimals > 0 ? max.toFixed(decimals) : max, suffix)), /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-[1fr_1fr_minmax(52px,1.3fr)_1fr_1fr] items-center gap-1"
     }, button(-coarse), button(-fine, true), /*#__PURE__*/React.createElement("output", {
       "aria-live": "polite",
@@ -20571,14 +20582,16 @@ const RhythmOptions = ({
   }, stepper('comboSize', RHYTHM_COMBO_SIZE_MIN, RHYTHM_COMBO_SIZE_MAX, RHYTHM_COMBO_SIZE_STEP, {
     fine: RHYTHM_COMBO_SIZE_STEP,
     coarse: RHYTHM_COMBO_SIZE_STEP * 2,
-    suffix: '%'
+    suffix: '%',
+    label: '字の大きさ'
   })), /*#__PURE__*/React.createElement("div", {
     className: wide ? 'mt-1.5' : 'mt-2'
   }, stepper('comboOpacity', RHYTHM_COMBO_OPACITY_MIN, RHYTHM_COMBO_OPACITY_MAX, RHYTHM_COMBO_OPACITY_STEP, {
     fine: RHYTHM_COMBO_OPACITY_STEP,
     coarse: RHYTHM_COMBO_OPACITY_STEP * 3,
-    suffix: '%'
-  })))), '出す/出さないと、出す場所（おすすめ・左・中央・右・右上）、大きさ（70〜150%）、濃さ（30〜100%）を選べます。上から順に「出す/出さない」「場所」「大きさ」「濃さ」です。端へ寄せる3つは、両サイドのマスモンに重ならないところへ出ます。大きさを上げると、端に寄せたときはレーンにかかることがあります。どこに置いても判定・スコア・コンボの数え方は変わりません。', {
+    suffix: '%',
+    label: '濃さ（薄くすると透ける）'
+  })))), '出す/出さないと、出す場所（おすすめ・左・中央・右・右上）、字の大きさ（70〜150%）、濃さ（30〜100%）を選べます。上から順に「出す/出さない」「場所」「字の大きさ」「濃さ」です。%の行は2つあり、上が字そのものの大きさ、下が濃さ（100%がいちばん濃く、下げるほど透けてノーツが見やすくなります）です。端へ寄せる3つは、両サイドのマスモンに重ならないところへ出ます。大きさを上げると、端に寄せたときはレーンにかかることがあります。どこに置いても判定・スコア・コンボの数え方は変わりません。', {
     full: true
   }), field('両サイドのマスモン｜濃さ', segments('sideMonsterOpacity', RHYTHM_SIDE_MONSTER_OPACITY_LABELS), 'レーンの外側の空いたところへ、設定したマスモンが出て拍に合わせて跳ねます。ノーツが見づらいときや、端末が熱くなりやすいときは薄くするか止めてください。', {
     full: true
