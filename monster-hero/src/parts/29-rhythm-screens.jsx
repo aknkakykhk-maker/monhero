@@ -165,6 +165,11 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
             {/* 【2026-09-05・ユーザー指示】「ノーツの開始位置（奥行き）もオプションで調整できるようにしたい」 */}
             {field('ノーツの出る位置',stepper('noteStartPosition',-100,100,5,{fine:5,coarse:25}),
               'ノーツが画面のどのあたりから出てくるかを変えます。マイナスにすると奥（画面の上の外側）から、プラスにすると手前寄りから出てきます。判定ラインの位置・判定のタイミング・判定窓・スコアは変わりません。ノーツが流れてくる時間も変わらないので、手前から出すほど見えているあいだの動きは速く見えます。',{full:true})}
+            {/* 判定ラインの高さ(2026-09-13・ユーザー依頼「タップする判定ラインの位置を
+                オプションでいじれるようにしたい / 下過ぎて使いづらいという声があり」)。
+                ★判定の幅(秒数)も譜面も変わらない。ノーツが流れ着く先を一緒に上げるだけ */}
+            {field('判定ラインの高さ',stepper('judgmentLineHeight',RHYTHM_JUDGMENT_LINE_HEIGHT_MIN,RHYTHM_JUDGMENT_LINE_HEIGHT_MAX,RHYTHM_JUDGMENT_LINE_HEIGHT_STEP,{fine:RHYTHM_JUDGMENT_LINE_HEIGHT_STEP,coarse:RHYTHM_JUDGMENT_LINE_HEIGHT_STEP*4,suffix:'%'}),
+              'タップする判定ラインを、画面の下から何％の高さに置くかです。大きくするほど上へ上がり、指が届きやすくなります（12％が2026-09-13より前の位置です）。ノーツも弾ける光も判定文字も一緒に上がります。判定の幅（秒数）・スコア・譜面は変わりません。ただしレーンは奥へ行くほど狭くなるので、上げすぎると横の幅が狭く感じられます。',{full:true})}
             {/* ライフ表示の大きさ(2026-09-13・ユーザー依頼「ライフ表示が目立たないから
                 もっと大きく見やくしてほしい（設定調整可能）」)。既定は150% */}
             {field('ライフ表示の大きさ',stepper('lifeDisplaySize',RHYTHM_LIFE_SIZE_MIN,RHYTHM_LIFE_SIZE_MAX,RHYTHM_LIFE_SIZE_STEP,{fine:RHYTHM_LIFE_SIZE_STEP,coarse:RHYTHM_LIFE_SIZE_STEP*5,suffix:'%'}),

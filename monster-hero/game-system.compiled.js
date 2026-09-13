@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 35d3619a8b3f6f73
+// source-sha256: 7b51802a1fa1ea2e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c9f4d2dd5bba1303
+// generated-sha256: 3199f8edaf68243d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-13 22:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-13 23:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5186,6 +5186,15 @@ const RHYTHM_COMBO_OPACITY_STEP = 10;
 const RHYTHM_LIFE_SIZE_MIN = 100;
 const RHYTHM_LIFE_SIZE_MAX = 200;
 const RHYTHM_LIFE_SIZE_STEP = 10;
+// 判定ラインの高さ(2026-09-13・ユーザー依頼「タップする判定ラインの位置を
+// オプションでいじれるようにしたい / 下過ぎて使いづらいという声があり」)。
+// プレイエリアの**下から何%**か。既定の12はこれまでと同じ位置で、
+// 大きくするほど上へ上がる(指が画面の下へ届かない端末向け)。
+// ★上限は32%で止める。これを越えると判定ラインがエリアの上半分へ入り、
+//   「まだ形が決まっていない」と見なす見張り(rhythmTravelLooksReady)とぶつかる。
+const RHYTHM_JUDGMENT_LINE_HEIGHT_MIN = 8;
+const RHYTHM_JUDGMENT_LINE_HEIGHT_MAX = 32;
+const RHYTHM_JUDGMENT_LINE_HEIGHT_STEP = 2;
 const RHYTHM_COMBO_SIZE_MIN = 70;
 const RHYTHM_COMBO_SIZE_MAX = 150;
 const RHYTHM_COMBO_SIZE_STEP = 10;
@@ -5243,6 +5252,7 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   holdSlideOpacity: 80,
   laneGlow: 'NORMAL',
   monsterNoteEffect: 'LIGHT',
+  judgmentLineHeight: 12,
   noteSeVolume: 70,
   noteSeEnabled: true,
   vibrationEnabled: false,
@@ -5289,6 +5299,9 @@ const normalizeRhythmSettings = value => {
     comboPosition: RHYTHM_COMBO_POSITIONS.includes(source.comboPosition) ? source.comboPosition : DEFAULT_RHYTHM_SETTINGS.comboPosition,
     comboSize: rhythmFiniteStep(source.comboSize, RHYTHM_COMBO_SIZE_MIN, RHYTHM_COMBO_SIZE_MAX, RHYTHM_COMBO_SIZE_STEP, DEFAULT_RHYTHM_SETTINGS.comboSize),
     lifeDisplaySize: rhythmFiniteStep(source.lifeDisplaySize, RHYTHM_LIFE_SIZE_MIN, RHYTHM_LIFE_SIZE_MAX, RHYTHM_LIFE_SIZE_STEP, DEFAULT_RHYTHM_SETTINGS.lifeDisplaySize),
+    // ★新しい項目。これまでの保存値には無いので、読むときに既定(12)で補われる
+    //   ＝これまでどおりの位置。既存のキーは触らない(CLAUDE.md ⑦)
+    judgmentLineHeight: rhythmFiniteStep(source.judgmentLineHeight, RHYTHM_JUDGMENT_LINE_HEIGHT_MIN, RHYTHM_JUDGMENT_LINE_HEIGHT_MAX, RHYTHM_JUDGMENT_LINE_HEIGHT_STEP, DEFAULT_RHYTHM_SETTINGS.judgmentLineHeight),
     comboOpacity: rhythmFiniteStep(source.comboOpacity, RHYTHM_COMBO_OPACITY_MIN, RHYTHM_COMBO_OPACITY_MAX, RHYTHM_COMBO_OPACITY_STEP, DEFAULT_RHYTHM_SETTINGS.comboOpacity),
     monsterNoteEffect: RHYTHM_MONSTER_EFFECT_LEVELS.includes(source.monsterNoteEffect) ? source.monsterNoteEffect : DEFAULT_RHYTHM_SETTINGS.monsterNoteEffect,
     holdSlideOpacity: rhythmFiniteInRange(source.holdSlideOpacity, 10, 100, DEFAULT_RHYTHM_SETTINGS.holdSlideOpacity),
@@ -20820,6 +20833,12 @@ const RhythmOptions = ({
     coarse: 25
   }), 'ノーツが画面のどのあたりから出てくるかを変えます。マイナスにすると奥（画面の上の外側）から、プラスにすると手前寄りから出てきます。判定ラインの位置・判定のタイミング・判定窓・スコアは変わりません。ノーツが流れてくる時間も変わらないので、手前から出すほど見えているあいだの動きは速く見えます。', {
     full: true
+  }), field('判定ラインの高さ', stepper('judgmentLineHeight', RHYTHM_JUDGMENT_LINE_HEIGHT_MIN, RHYTHM_JUDGMENT_LINE_HEIGHT_MAX, RHYTHM_JUDGMENT_LINE_HEIGHT_STEP, {
+    fine: RHYTHM_JUDGMENT_LINE_HEIGHT_STEP,
+    coarse: RHYTHM_JUDGMENT_LINE_HEIGHT_STEP * 4,
+    suffix: '%'
+  }), 'タップする判定ラインを、画面の下から何％の高さに置くかです。大きくするほど上へ上がり、指が届きやすくなります（12％が2026-09-13より前の位置です）。ノーツも弾ける光も判定文字も一緒に上がります。判定の幅（秒数）・スコア・譜面は変わりません。ただしレーンは奥へ行くほど狭くなるので、上げすぎると横の幅が狭く感じられます。', {
+    full: true
   }), field('ライフ表示の大きさ', stepper('lifeDisplaySize', RHYTHM_LIFE_SIZE_MIN, RHYTHM_LIFE_SIZE_MAX, RHYTHM_LIFE_SIZE_STEP, {
     fine: RHYTHM_LIFE_SIZE_STEP,
     coarse: RHYTHM_LIFE_SIZE_STEP * 5,
@@ -22541,7 +22560,9 @@ const RhythmTapTest = ({
     if (!(lineCenter >= areaRect.top && lineCenter <= areaRect.bottom)) return false;
     // 判定ラインは下から12%の位置に置く。エリアの上半分に居るなら、
     // まだ置き場所が決まっていない(高さ0でなくても、位置だけ未確定のことがある)
-    if (!(lineCenter > areaRect.top + areaRect.height * 0.5)) return false;
+    // ★上限(下から32%)まで上げても、ラインの中心はエリアの68%のあたりに残る。
+    //   余裕を見て上半分を少しだけ入れたところで区切る
+    if (!(lineCenter > areaRect.top + areaRect.height * 0.45)) return false;
     return true;
   };
   const measureTravel = useCallback(() => {
@@ -22560,6 +22581,9 @@ const RhythmTapTest = ({
     const judgmentY = lineRect.top - areaRect.top + lineRect.height / 2 - noteHeight / 2;
     // ready:false は「まだノーツを正しい場所へ置けない」。判定を進めてよいかの目印にも使う
     const ready = rhythmTravelLooksReady(areaRect, lineRect);
+    // ★HOLD/SLIDEの追従は「判定ラインの高さ」でレーンを測る。
+    //   ラインを動かせるようにしたので、決めうちの .88 ではなく**実測した位置**を渡す
+    if (ready) RHYTHM_JUDGMENT_LINE_Y.set((lineRect.top - areaRect.top + lineRect.height / 2) / areaRect.height);
     const result = {
       spawnY,
       judgmentY,
@@ -22573,7 +22597,7 @@ const RhythmTapTest = ({
     // 整った瞬間から正しい位置で流れ始める(遊べない状態のまま固定されない)
     if (ready) travelCacheRef.current = result;
     return result;
-  }, [settings.noteStartPosition]);
+  }, [settings.noteStartPosition, settings.judgmentLineHeight]);
   // --- 判定ラインの「幅」を描く ---
   // 上下のふちがGOOD(前後0.17秒)の端、内側の明るいところがMARVELOUS(前後0.055秒)。
   // 何ピクセルになるかはノーツ速度(travelMs)と画面の高さで変わるので、実測から毎回出す。
@@ -22635,7 +22659,7 @@ const RhythmTapTest = ({
       window.removeEventListener('resize', invalidate);
       window.removeEventListener('orientationchange', invalidate);
     };
-  }, [settings.noteStartPosition, settings.noteSize, view.status]);
+  }, [settings.noteStartPosition, settings.noteSize, settings.judgmentLineHeight, view.status]);
   const applyJudgment = useCallback((note, judgment, deltaMs) => {
     const _judgeT0 = RHYTHM_PERF.enabled && typeof performance !== 'undefined' ? performance.now() : 0;
     const run = runRef.current;
@@ -24291,6 +24315,11 @@ const RhythmTapTest = ({
       WebkitUserSelect: 'none',
       userSelect: 'none',
       '--rhythm-note-size-scale': settings.noteSize / 100,
+      /* 判定ラインの高さ(下から何%)。ライン本体・弾ける光・判定文字がこれを見る
+         (2026-09-13・ユーザー依頼「下過ぎて使いづらいという声があり」)。
+         ★ノーツが流れ着く先は measureTravel が**ラインを実測**して決めるので、
+           ここを動かすだけで譜面も判定もそのままついてくる */
+      '--mh-judgment-line-bottom': `${rhythmFiniteStep(settings.judgmentLineHeight, RHYTHM_JUDGMENT_LINE_HEIGHT_MIN, RHYTHM_JUDGMENT_LINE_HEIGHT_MAX, RHYTHM_JUDGMENT_LINE_HEIGHT_STEP, DEFAULT_RHYTHM_SETTINGS.judgmentLineHeight)}%`,
       filter: settings.effectAmount === 'MINIMAL' ? 'saturate(.78)' : settings.effectAmount === 'LOW' ? 'saturate(.92)' : 'none'
     }
   }, laneElements, sideMonsterElements, /*#__PURE__*/React.createElement("div", {
@@ -24381,7 +24410,7 @@ const RhythmTapTest = ({
       position: 'absolute',
       left: 0,
       right: 0,
-      bottom: '12%',
+      bottom: 'var(--mh-judgment-line-bottom,12%)',
       height: '3px',
       background: 'linear-gradient(90deg,#f0abfc,#cffafe,#f0abfc)',
       boxShadow: settings.lightweightMode || settings.effectAmount === 'MINIMAL' ? 'none' : settings.effectAmount === 'LOW' ? '0 0 8px #67e8f9' : '0 0 18px #67e8f9,0 0 30px #c084fc'
@@ -24422,7 +24451,7 @@ const RhythmTapTest = ({
     "data-rhythm-judgment-display": true,
     className: "pointer-events-none absolute left-1/2 z-10 w-[88%] -translate-x-1/2 text-center",
     style: {
-      bottom: 'calc(12% + 38px)'
+      bottom: 'calc(var(--mh-judgment-line-bottom,12%) + 38px)'
     }
   }, /*#__PURE__*/React.createElement("b", {
     ref: judgmentTextRef,
