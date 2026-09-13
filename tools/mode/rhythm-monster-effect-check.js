@@ -37,6 +37,21 @@ ok('いちばん軽い段では能力名の大きな表示も出さない',
   game.includes("const showAbilityFlash=abilityFlash&&")&&game.includes("!=='NONE';")
   &&game.includes('...(showAbilityFlash?{ability:abilityFlash}:{})')
   &&game.includes('if(showAbilityFlash)scheduleAbilityClear();'));
+// ---- 踏んだ瞬間の処理(2026-09-13・ユーザー指摘「マスモンの表示より踏んだときの挙動
+//      だと思うんだけどその辺は何もいじらない？」) ----
+// いちばん軽い段では、マスモンへの反応を**丸ごと飛ばす**。跳ねを出さないのに
+// phase を書き換えてアニメを切り替え、700msのタイマーまで張っていた。
+// 踏んだその瞬間にスタイルの計算が走るので、跳ねない段では何もしないのが正しい。
+ok('いちばん軽い段では、踏んだときのマスモンへの反応を丸ごと飛ばす',
+  game.includes("if(monsterHit&&monsterEffect!=='NONE'){")
+  &&!/if\(monsterHit\)\{\s*\/\/ モンスターノーツだけは振動も強くする/.test(game));
+// 振動は「タップ時の振動」の管轄。演出量のブロックの中で呼ぶと、
+// 演出量を下げただけで強さが変わり、しかもモンスターノーツでは2回走っていた。
+ok('振動は1か所だけで、モンスターノーツのときだけ強くする',
+  game.includes("if(settings.vibrationEnabled&&judgment!=='MISS')RHYTHM_HAPTICS.tap(monsterHit?26:12);")
+  &&(game.match(/RHYTHM_HAPTICS\.tap\(/g)||[]).length<=3);
+ok('モンスターノーツかどうかは演出量のブロックの外で1回だけ出す',
+  game.includes("const monsterHit=judgment!=='MISS'&&!!monsterForNote(note);"));
 // どの段でも残すもの。ここが消えると「取れたことが分からない」になる
 ok('どの段でも音は鳴る',game.includes('if(monsterHit)RHYTHM_NOTE_SE_RUNTIME.playMonster();'));
 ok('どの段でも能力そのものは効く(見た目だけの分岐にする)',
