@@ -175,7 +175,11 @@ check('ヘルプに順位報酬の表がある（手で書き写していない�
 check('ヘルプに累計方式と証片の説明がある',
   /title:'勇者の証片'/.test(helpSrc)&&/title:'週間ランキングの参加報酬'/.test(helpSrc)
   &&helpSrc.includes('「すべて足し合わせた合計」で競うランキング'));
-check('更新履歴に書いてある',/週間ランキング/.test(changelog.slice(0,4000)));
+// ★先頭4000字だけを見ないこと。更新履歴は新しい項目を先頭へ足していく決まりなので、
+//   あとから別の項目が増えるだけで落ちてしまう(2026-09-13に実際に落ちた)。
+//   見たいのは「この変更が更新履歴に載っているか」なので、告知のidで探す(idは一意で動かない)。
+check('更新履歴に書いてある',
+  changelog.includes('update_notice_rhythm_weekly_reward_v1')&&/週間ランキング/.test(changelog));
 check('仕様書に決めごとが残っている',
   spec.includes('### 6.2 何を競うか — **累計スコア方式**')
   &&spec.includes('### 6.2.1 報酬'));
