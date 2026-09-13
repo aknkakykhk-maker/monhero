@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9c7b87d94b8b4acf
+// source-sha256: 6fa0a4732a84d339
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b17004c6a5a803ea
+// generated-sha256: 3a704227f50898c7
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-13 14:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-13 14:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -21997,7 +21997,8 @@ const RhythmTapTest = ({
     startLockRef = useRef(false),
     generationRef = useRef(0),
     mountedRef = useRef(false),
-    glowNodesRef = useRef(null);
+    glowNodesRef = useRef(null),
+    liveTouchSubLanesRef = useRef([]);
   const tutorialBannerRef = useRef(null),
     tutorialStepRef = useRef(null);
   // タイミング合わせの案内(いま何回ぶん数えたか・途中経過のずれ)を書き換えるための控え。
@@ -23612,6 +23613,12 @@ const RhythmTapTest = ({
   // 指を置くたびに10要素を querySelectorAll で引き直し、押していないサブレーンまで
   // 毎回書き込んでいた。要素は覚えておき、状態が変わったサブレーンだけ書き換える
   // (dataset/styleへの書き込みはそのたびにstyle再計算を誘発するため)。
+  // 【2026-09-13・両手のときレーンが光らなくなる】
+  // 押している場所には2つの出どころがある。指(touch)と、ポインタ(マウス＋接触幅の疑似入力'pen')。
+  // それぞれが自分のぶんだけで setPressedLanes を呼んでいたため、**片方がもう片方を消して**いた。
+  // 接触幅の疑似入力は指が太いほど何度も出るので、両手だとレーンの光が点いたり消えたりする。
+  // 「押しているのに反応していないように見える」の一因。両方を足した集合を必ず渡す。
+  const pressedLanesNow = () => [...(liveTouchSubLanesRef.current || []), ...(runRef.current?.activePointerFeedback?.values() || [])];
   const setPressedLanes = coordinates => {
     const area = playAreaRef.current;
     if (!area) return;
@@ -23641,7 +23648,7 @@ const RhythmTapTest = ({
     if (run) {
       run.activePointerFeedback = run.activePointerFeedback || new Map();
       run.activePointerFeedback.set(e.pointerId, subLaneCoordinate);
-      setPressedLanes(run.activePointerFeedback.values());
+      setPressedLanes(pressedLanesNow());
     }
     inputStarts([{
       lane,
@@ -23662,7 +23669,7 @@ const RhythmTapTest = ({
       subLaneCoordinate = rhythmSubLaneCoordinateAtPoint(mp.x, mp.y, inputAreaRect(area));
     if (subLaneCoordinate === null) return;
     run.activePointerFeedback.set(e.pointerId, subLaneCoordinate);
-    setPressedLanes(run.activePointerFeedback.values());
+    setPressedLanes(pressedLanesNow());
     inputMoves(rhythmInputKey('pointer', e.pointerId), subLaneCoordinate);
   };
   const pointerEnd = e => {
@@ -23670,8 +23677,8 @@ const RhythmTapTest = ({
     const run = runRef.current;
     if (run?.activePointerFeedback) {
       run.activePointerFeedback.delete(e.pointerId);
-      setPressedLanes(run.activePointerFeedback.values());
-    } else setPressedLanes([]);
+      setPressedLanes(pressedLanesNow());
+    } else setPressedLanes(pressedLanesNow());
     inputEnds([{
       inputKey: rhythmInputKey('pointer', e.pointerId),
       releaseTarget: e.currentTarget,
@@ -23709,7 +23716,8 @@ const RhythmTapTest = ({
           inputKey
         });
       });
-      setPressedLanes(liveSubLanes);
+      liveTouchSubLanesRef.current = liveSubLanes;
+      setPressedLanes(pressedLanesNow());
       const ageMs = rhythmInputAgeMs(e.timeStamp, typeof performance !== 'undefined' ? performance.now() : NaN);
       if (starts.length) inputStarts(starts, ageMs);
       const ended = [];
@@ -23741,6 +23749,7 @@ const RhythmTapTest = ({
       area.removeEventListener('touchmove', syncTouches);
       area.removeEventListener('touchend', syncTouches);
       area.removeEventListener('touchcancel', syncTouches);
+      liveTouchSubLanesRef.current = [];
       setPressedLanes([]);
     };
   }, [view.status]);
