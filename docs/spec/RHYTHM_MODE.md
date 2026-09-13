@@ -7560,3 +7560,84 @@ __MH_RHYTHM_CHART_SWITCH=after node tools/mode/rhythm-chart-level.js
 `RHYTHM_CHART_LEVELS_AFTER_SWITCH` は、切り替わったあとの更新で消してよい。
 そのとき新譜面を `-v3-` のマーカーへ移し、`RELEASED_MARKERS` の対応も戻す
 （いまは旧譜面を指している）。データが約90KB減る。
+
+## 20曲目「The City Beneath the Comets」（2026-09-14）
+
+ユーザーから音源(m4a)1本とジャケット1枚を受け取った。手順は
+「14曲目『禁断のレジスタンス』と、動画1本から曲を足す手順」のとおり。
+
+| 項目 | 値 |
+| --- | --- |
+| songId / bgmTrackId | `the_city_beneath_the_comets` / `melo_the_city_beneath_the_comets` |
+| 表示名 | The City Beneath the Comets |
+| 長さ | 160,020ms（2分40秒）。切り出しなしの全尺 |
+| テンポ | **170.466 BPM / 4拍子** / 拍の頭 1054.3ms / 跳ねなし（自動判定のまま） |
+| 格子への乗り | ±15ms 51% / ±30ms 85% / ±43ms 98% |
+| 打点 | 1355件（PUNCH 812 / FULL 280 / BODY 237 / LIGHT 26）・区切り12個・112小節 |
+| ノーツ数 | 299 / 345 / 476 / 575 / 668 |
+| レベル | **9 / 11 / 18 / 24 / 33** |
+| 毎秒ノーツ | 1.92 / 2.21 / 3.06 / 3.69 / 4.28 |
+| 音源 | 32kHz/96kbps ステレオ・1.83MB・**-14.01 LUFS / -1.40 dBTP** |
+| 絵 | `images/song-art/the-city-beneath-the-comets.jpg`（512×512 / 58KB） |
+| 歯ごたえ | 自動のまま。`challengeFactor` は書いていない |
+
+### 受け取ったものが m4a だった
+
+これまでは mp4 だったが、今回は m4a（中身は **Opus 48kHz ステレオ** ＋ 字幕トラック）。
+Playwright の Chromium は AAC も Opus の入った m4a も読めないので、
+mp4 のときと同じく ffmpeg で WAV にしてからリポジトリのツールへ戻す。
+
+```bash
+$FF -v error -i src.m4a -map_metadata -1 -vn -ac 2 -ar 44100 -c:a pcm_s16le full.wav
+node tools/mode/rhythm-audio-reencode.js --in full.wav --out monster-hero/audio/bgm-<slug>.mp3 --kbps 96 --rate 32000
+```
+
+字幕トラックは `-vn` では落ちないが、`rhythm-audio-reencode.js` が音だけを読むので問題にならない。
+
+### テンポ：170.466 BPM（自動判定のまま）
+
+解析が `tempo-ambiguous`（ほかの候補と拮抗）を出したので、候補を並べて確かめた。
+
+| テンポの取り方 | ±15ms | ±30ms | ±43ms |
+| --- | --- | --- | --- |
+| 85.23 BPM（半分） | 30% | 46% | 54% |
+| 113.64 BPM（3/4） | 22% | 45% | 65% |
+| **170.466 BPM（採用・自動判定）** | **51%** | **85%** | **98%** |
+
+半分も3/4も、打点の3分の1以上が格子から外れる。170.466 なら 98% 乗る。
+
+### 難易度：自動のまま（ユーザーが数字を見て決めた）
+
+⑥-3 のとおり、解析と生成を通したところで止めて数字を出した。
+
+| challengeFactor | EASY | NORMAL | HARD | EXPERT | MASTER | MASTERノーツ | 最密4秒 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 0.80 | 6 | 8 | 11 | 16 | 21 | 423 | 22打 |
+| **自動（採用）** | **9** | **11** | **18** | **24** | **33** | **668** | **33打** |
+| 1.20 | 9 | 11 | 17 | 24 | 30 | 642 | 29打 |
+
+**1.20 へ上げると MASTER が 33→30 と下がる。** 量が打点の上限に近づいて配置が素直になり、
+1ノーツあたりの重さが落ちるため（FREEDOM DiVE↓ と同じ現象）。上へ伸ばしたいときは
+`chartIntensity` を使う。ユーザーの選択は「自動のまま 9/11/18/24/33」。
+
+MASTER Lv.33 は既存曲で上から2番目（FREEDOM DiVE↓ 51 と SIX ÉTERNEL 38 の次）。
+いちばん詰まった4秒で33打は既存トップ級だが、最短の間隔は 88ms と余裕がある
+（SIX ÉTERNEL は72ms、FREEDOM DiVE↓ は67ms）。音数の多さがそのまま出た形。
+
+### 種類の内訳
+
+| 難易度 | 計 | TAP | HOLD | FLICK | SLIDE |
+| --- | --- | --- | --- | --- | --- |
+| EASY | 299 | 284 | 15 | 0 | 0 |
+| NORMAL | 345 | 313 | 17 | 15 | 0 |
+| HARD | 476 | 427 | 19 | 19 | 11 |
+| EXPERT | 575 | 513 | 21 | 23 | 18 |
+| MASTER | 668 | 600 | 23 | 26 | 19 |
+
+音高が取れた打点が 929/1355 と多く、伸びる区間も160件あるので、
+HOLD も SLIDE も素直に置けた（FREEDOM DiVE↓ は8件しか取れずベースの伸びを足す必要があった）。
+
+### 増えたのは譜面ぶんだけ
+
+起動時に読むもの（`index.html` の `SIZES`）で増えたのは `data/rhythm-mode.js` の
+1,214,502 → 1,265,052バイト（**約50KB**）だけ。mp3もジャケットも `SIZES` に入らない。

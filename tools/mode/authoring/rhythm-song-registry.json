@@ -274,6 +274,18 @@
     "source": "command"
    },
    "chartIntensity": "extreme"
+  },
+  "the_city_beneath_the_comets": {
+   "audio": "monster-hero/audio/bgm-the-city-beneath-the-comets.mp3",
+   "audioSha256": "900fda0dc05ef4d85259f3467c3b662934ea25ec4789807d2f31e750272a24eb",
+   "durationMs": 160020,
+   "analyzedTiming": {
+    "bpm": 170.466,
+    "beatZeroMs": 1054.3,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
   }
  }
 }
