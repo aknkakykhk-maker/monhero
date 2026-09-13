@@ -47,6 +47,9 @@ ok('ライフはタイミング合わせでも減らない(途中で落ちて測
   &&play.includes('const failed=!tutorial&&!calibrating&&run.lifeDepleted===true;'));
 ok('チュートリアルとは別の案内を出している',
   play.includes('data-rhythm-calibration-banner')&&play.includes('data-rhythm-calibration-title'));
+// ライフ表示の大きさは設定で変えられる。いちばん大きい形で案内の置き場所を測る
+const LIFE_MAX_SIZE=Number((play.match(/RHYTHM_LIFE_SIZE_MAX/)&&fs.readFileSync(path.join(ROOT,'monster-hero/src/parts/13-bgm-and-rhythm-settings.jsx'),'utf8').match(/const RHYTHM_LIFE_SIZE_MAX *= *(\d+);/)||[])[1])||150;
+ok('ライフ表示の最大の大きさを実装から取り出せる',Number.isFinite(LIFE_MAX_SIZE)&&LIFE_MAX_SIZE>=100,`${LIFE_MAX_SIZE}%`);
 ok('測った値をその場で設定へ入れる口がある',
   play.includes('onApplyCalibration')&&app.includes('judgmentTimingOffsetMs:offsetMs'));
 
@@ -62,11 +65,14 @@ ok('測った値をその場で設定へ入れる口がある',
       const page=await browser.newPage({viewport:{width:390,height:844}});
       const errors=[];
       page.on('pageerror',e=>errors.push(String(e)));
-      await page.addInitScript(()=>{const put=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+      // ★ライフ表示はいちばん大きい設定で測る(2026-09-13)。既定の大きさだけで測っていたため、
+      //   200%にすると横持ちで案内とポーズボタンが重なることを見逃していた
+      await page.addInitScript(([lifeMax])=>{const put=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
         put('mh_breeder_name','テスト');put('mh_breeder_icon','🐣');put('mh_intro_done',true);put('mh_onboarded',true);
         put('mh_tutorial_seen_v1',true);put('mh_battle_tutorial_seen_v1',true);put('mh_battle_tutorial_guide_shown_v1',true);
         put('mh_assistant_selected_v1','mua');put('mh_assistant_unlock_seen_v1',true);put('mh_update_notice_seen_v1',true);
-        put('mh_rhythm_tutorial_seen_v1',true);});
+        put('mh_rhythm_tutorial_seen_v1',true);
+        put('mh_rhythm_settings_v1',{lifeDisplaySize:lifeMax});},[LIFE_MAX_SIZE]);
       const clickText=async(pat,nth=0)=>page.evaluate(([s,i])=>{const rx=new RegExp(s);
         const l=[...document.querySelectorAll('button')].filter(b=>rx.test((b.innerText||'').replace(/\s+/g,' ').trim()));
         if(!l[i])return false;l[i].click();return true;},[pat,nth]);
@@ -101,13 +107,20 @@ ok('測った値をその場で設定へ入れる口がある',
       // 案内がHUD(スコア・ライフ)へ重なっていないこと
       const boxes=await page.evaluate(()=>{
         const r=s=>{const e=document.querySelector(s);if(!e)return null;const b=e.getBoundingClientRect();return {top:b.top,bottom:b.bottom,left:b.left,right:b.right};};
+        // ★箱(hud-right)ではなく**実際に描かれているもの**を measure する。
+        //   ライフ行は箱の幅(33vw)を越えて左へはみ出すので、箱だけ見ていると
+        //   ポーズボタンや行が案内に重なっているのを見逃す(2026-09-13に実際に見逃した)
         return {banner:r('[data-rhythm-calibration-banner]'),hudL:r('[data-rhythm-hud-left]'),hudR:r('[data-rhythm-hud-right]'),
+          life:r('[data-rhythm-life]'),pause:r('[data-rhythm-pause]'),
           combo:r('[data-rhythm-combo-box]'),judgment:r('[data-rhythm-judgment-display]'),line:r('[data-rhythm-judgment-line]')};
       });
       const overlap=(a,b)=>!!a&&!!b&&a.left<b.right&&b.left<a.right&&a.top<b.bottom&&b.top<a.bottom;
       ok(`[${mode}] 案内がスコアの表示に重ならない`,!overlap(boxes.banner,boxes.hudL),
         boxes.banner?`案内 top=${boxes.banner.top.toFixed(0)} / スコア bottom=${boxes.hudL?boxes.hudL.bottom.toFixed(0):'?'}`:'案内なし');
-      ok(`[${mode}] 案内がライフの表示に重ならない`,!overlap(boxes.banner,boxes.hudR));
+      ok(`[${mode}] 案内がライフの表示に重ならない`,!overlap(boxes.banner,boxes.hudR)&&!overlap(boxes.banner,boxes.life),
+        boxes.life&&boxes.banner?`案内 ${boxes.banner.left.toFixed(0)}〜${boxes.banner.right.toFixed(0)} / ライフ ${boxes.life.left.toFixed(0)}〜${boxes.life.right.toFixed(0)}`:'');
+      ok(`[${mode}] 案内がポーズボタンに重ならない`,!overlap(boxes.banner,boxes.pause),
+        boxes.pause&&boxes.banner?`案内 ${boxes.banner.left.toFixed(0)}〜${boxes.banner.right.toFixed(0)} / ポーズ ${boxes.pause.left.toFixed(0)}〜${boxes.pause.right.toFixed(0)}`:'');
       ok(`[${mode}] 案内が判定の文字に重ならない`,!overlap(boxes.banner,boxes.judgment));
       ok(`[${mode}] 案内が判定ラインを隠さない`,!overlap(boxes.banner,boxes.line));
 
