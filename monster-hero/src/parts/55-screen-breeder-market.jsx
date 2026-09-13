@@ -18,7 +18,13 @@
 function BreederMarketScreen({
   gold, breederPoints, ownedItems, marketTab, marketExchangeError, purchaseProcessing,
   isItemOwned, onBack, onSelectTab, onZoomIcon, onBuy, onOpenDetail, onOpenItemDetail, onExchangeSoulRankRespec,
+  onExchangeHeroProof,
 }) {
+  // 上に出す所持数(2026-09-13・ユーザー指示「マーケットにプシュケーとか証片も
+  // いくつあるかダイヤみたいに表示がほしい」)。ダイヤ・ptと同じ帯へ並べる
+  const psycheHave = ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID);
+  const shardHave = ownedItemCount(ownedItems, HERO_PROOF_SHARD_ITEM_ID);
+  const proofHave = ownedItemCount(ownedItems, HERO_PROOF_ITEM_ID);
   return (
       <div data-mh-screen className="flex-1 flex flex-col h-full min-h-0 p-4">
         <div className="flex items-center gap-2 mb-2 shrink-0">
@@ -26,7 +32,7 @@ function BreederMarketScreen({
           <h2 className="text-xl font-black italic text-amber-400 uppercase tracking-widest">マーケット</h2>
         </div>
         <div className="shrink-0 w-full max-w-md mx-auto mb-3"><AssistantBubble scene="market" condition={Number.isFinite(CHEAPEST_GOLD_ITEM_COST)&&gold<CHEAPEST_GOLD_ITEM_COST?'lowGold':null}/></div>
-        <div className="flex gap-2 mb-4 shrink-0">
+        <div className="flex gap-2 mb-2 shrink-0">
           <div className="flex-1 flex items-center justify-center gap-2 bg-amber-950/40 border border-amber-500/30 rounded-2xl py-3">
             <Coins size={16} className="text-amber-400"/>
             <span className="text-lg font-black text-amber-300">{breederPoints}</span>
@@ -37,6 +43,23 @@ function BreederMarketScreen({
             <span className="text-lg font-black text-amber-300">{gold.toLocaleString()}</span>
             <span className="text-[9px] text-slate-400 font-bold">ダイヤ(WAVEクリアで獲得)</span>
           </div>
+        </div>
+        {/* ダイヤ以外の「持ち高」も同じように見せる。買う前に足りるかどうかが分かるようにするため
+            (2026-09-13・ユーザー指示)。0個でも出す(存在そのものを知らせたいので隠さない) */}
+        <div data-market-balances className="grid grid-cols-3 gap-2 mb-4 shrink-0">
+          {[
+            { key:'psyche', emoji:'🌈', label:'虹のプシュケー', value:psycheHave, tone:'text-fuchsia-200 border-fuchsia-500/30 bg-fuchsia-950/30' },
+            { key:'shard',  emoji:'🎖️', label:'勇者の証片',     value:shardHave,  tone:'text-amber-100 border-amber-400/30 bg-amber-950/30' },
+            { key:'proof',  emoji:'🏅', label:'勇者の証',       value:proofHave,  tone:'text-amber-200 border-amber-400/30 bg-amber-950/30' },
+          ].map(row=>(
+            <div key={row.key} data-market-balance={row.key} className={`flex flex-col items-center justify-center rounded-2xl border py-1.5 ${row.tone}`}>
+              <div className="flex items-baseline gap-1">
+                <span aria-hidden="true" className="text-[11px]">{row.emoji}</span>
+                <span className="font-mono text-sm font-black">{row.value.toLocaleString()}</span>
+              </div>
+              <span className="text-[8px] font-bold leading-tight text-slate-400">{row.label}</span>
+            </div>
+          ))}
         </div>
         <div className="flex gap-1.5 mb-3 shrink-0">
           {[{key:'icon',label:'アイコン'},{key:'disc',label:'円盤石'},{key:'assist',label:'アシスト'},{key:'item',label:'アイテム'}].map(tab=>(
@@ -78,6 +101,17 @@ function BreederMarketScreen({
                 </React.Fragment>
               );
             })}
+            {/* 勇者の証は売り物ではないので BREEDER_MARKET_ITEMS に無い。
+                アイテムのタブの最後へ「証片◯個で交換」の1枚だけ足す
+                (2026-09-13・ユーザーが決めた。モンヒロビートの週間ランキングで証片がたまる) */}
+            {marketTab==='item'&&<MarketProductCard
+              item={{...HERO_PROOF_ITEM, type:'item', currency:'heroProofShard', cost:HERO_PROOF_SHARD_PER_PROOF}}
+              owned={false} comingSoon={false}
+              canBuy={shardHave>=HERO_PROOF_SHARD_PER_PROOF&&!purchaseProcessing}
+              disabled={purchaseProcessing}
+              onBuy={onExchangeHeroProof}
+              middle={<><span className={`text-[9px] font-black ${proofHave>0?'text-cyan-300':'text-slate-600'}`}>×{proofHave}</span><button onClick={()=>onOpenItemDetail(HERO_PROOF_ITEM)} aria-label="勇者の証の効果を見る" className="text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"><BookOpen size={8}/>詳細</button></>}
+            />}
           </div>
         )}
         </div>

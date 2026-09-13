@@ -51,17 +51,29 @@ const evaluateFinger=(finger,action)=>{
     return {ok:false,reason:`前のHOLD/SLIDEを${Math.round(finger.freeAtMs-action.startMs)}ms後まで押さえている`};
   const availableMs=action.startMs-Math.max(finger.freeAtMs,finger.lastHitMs);
   const distance=Math.abs(finger.lane-action.startLane);
-  const needLimitMs=distance===0?HAND_MODEL.restrikeLimitMs:distance/HAND_MODEL.laneSpeedLimit*1000;
+  // ★1本の指で押し直すには、**動く距離とは別に**「持ち上げて押す」ぶんの時間が要る。
+  //   以前は同じレーンのときだけ restrikeLimitMs を見て、少しでも動くなら距離だけで
+  //   判定していた。0.5レーンなら28ms＝**1本の指で毎秒36打**が「押せる」扱いになり、
+  //   譜面の交互率が落ちる原因になっていた(2026-09-12)。
+  //   同じファイルの fingerPairFeasible は最初から105msを要求していて、食い違っていた。
+  const travelLimitMs=distance/HAND_MODEL.laneSpeedLimit*1000;
+  const needLimitMs=Math.max(HAND_MODEL.restrikeLimitMs,travelLimitMs);
   if(availableMs+1e-6<needLimitMs){
-    return {ok:false,reason:distance===0
-      ?`同じレーンを${Math.round(availableMs)}msで叩き直せない(最低${HAND_MODEL.restrikeLimitMs}ms)`
-      :`${distance.toFixed(2)}レーンを${Math.round(availableMs)}msで移動できない(最低${Math.round(needLimitMs)}ms)`};
+    // どちらが効いているのかを書き分ける（距離のせいなのか、叩き直しのせいなのか）
+    return {ok:false,reason:travelLimitMs>HAND_MODEL.restrikeLimitMs
+      ?`${distance.toFixed(2)}レーンを${Math.round(availableMs)}msで移動できない(最低${Math.round(needLimitMs)}ms)`
+      :distance===0
+        ?`同じレーンを${Math.round(availableMs)}msで叩き直せない(最低${HAND_MODEL.restrikeLimitMs}ms)`
+        :`${distance.toFixed(2)}レーンずれた場所を${Math.round(availableMs)}msで叩き直せない`
+          +`(1本の指の押し直しに最低${HAND_MODEL.restrikeLimitMs}ms)`};
   }
-  const needComfortMs=distance===0?HAND_MODEL.restrikeComfortMs:distance/HAND_MODEL.laneSpeedComfort*1000;
+  const travelComfortMs=distance/HAND_MODEL.laneSpeedComfort*1000;
+  const needComfortMs=Math.max(HAND_MODEL.restrikeComfortMs,travelComfortMs);
   const strain=availableMs<needComfortMs
-    ?(distance===0
-      ?`同じレーンの叩き直しが${Math.round(availableMs)}ms(快適には${HAND_MODEL.restrikeComfortMs}ms欲しい)`
-      :`${distance.toFixed(2)}レーンの移動が${Math.round(availableMs)}ms(快適には${Math.round(needComfortMs)}ms欲しい)`)
+    ?(travelComfortMs>HAND_MODEL.restrikeComfortMs
+      ?`${distance.toFixed(2)}レーンの移動が${Math.round(availableMs)}ms(快適には${Math.round(needComfortMs)}ms欲しい)`
+      :`${distance===0?'同じレーン':`${distance.toFixed(2)}レーンずれた場所`}の叩き直しが${Math.round(availableMs)}ms`
+        +`(快適には${HAND_MODEL.restrikeComfortMs}ms欲しい)`)
     :null;
   // 左右交互が自然な基本(手の流れ)。直前に叩いたばかりの指をまた使うのは、
   // 移動が明らかに短いときだけにする(距離1レーンぶんの重み以下の小さな後押し)。
@@ -210,7 +222,11 @@ const simulateActions=(actions,options={})=>{
 };
 
 const simulateNotes=(notes,timing,options={})=>{
-  const gridMs=timing.beatMs/timing.subdivisionsPerBeat;
+  // ★グリッドの長さは timing.gridMs を正本にする（ほかの道具はこれを使っている）。
+  //   beatMs から割り出していたので、gridMs だけ持つ timing を渡すと NaN になり、
+  //   **押せない判定が丸ごと効かなくなる**（合成テストを書いたときに実際に踏んだ）。
+  const gridMs=Number.isFinite(Number(timing.gridMs))
+    ?Number(timing.gridMs):timing.beatMs/timing.subdivisionsPerBeat;
   const gridTimeMs=grid=>timing.beatZeroMs+grid*gridMs;
   const BAR=timing.subdivisionsPerBeat*(timing.beatsPerBar||4);
   return simulateActions(toActions(notes,gridTimeMs,BAR),options);
@@ -220,21 +236,27 @@ module.exports={toActions,simulateActions,simulateNotes,evaluateFinger,DEFAULT_B
 
 if(require.main===module){
   // 合成テスト: 「いまだけ見れば左手が楽だが、左手を使うと次が取れない」配置。
-  //   まず C(−200ms・レーン1)と D(−100ms・レーン3)で左右の指を置く
+  //   まず C(−200ms・レーン1)と D(−120ms・レーン3)で左右の指を置く
   //   (まだ一度も使っていない指は「どこにでも構えられる」扱いなので、先に使っておく)。
-  //   A: 0ms   レーン2 (左は200ms余裕・右は100ms余裕なので、その場の物差しでは左が安い)
-  //   B: 60ms  レーン0 (左がレーン2にいると 2レーン/60ms で限界超え。右は3→0を160msで 18.75/s、これも限界超え)
-  //   正解は A を右手(3→2を100ms)で取り、左手をレーン1に残して B を取ること(1レーン/260ms)。
-  const timing={beatMs:20*4,subdivisionsPerBeat:4,beatZeroMs:0,beatsPerBar:4};   // 1グリッド=20ms
+  //   A: 0ms   レーン2 (左は200ms余裕・右は120ms余裕なので、その場の物差しでは左が安い)
+  //   B: 40ms  レーン0 (左がレーン2にいると 2レーン/40ms で限界超え。
+  //                     右も 3→0 を160msで動かせない)
+  //   正解は A を右手(3→2を120ms)で取り、左手をレーン1に残して B を取ること(1レーン/240ms)。
+  // ★時刻は2026-09-12に広げた。それまでは D を−100ms・B を60msに置いていたが、
+  //   「1本の指の叩き直しには距離とは別に restrikeLimitMs(105ms) が要る」と直した結果
+  //   （それまでは1レーンなら56msで叩ける扱いだった）、正解の「右手で3→2を100ms」が
+  //   5ms足りずに成立しなくなった。**配置の狙い（先読みなら解けるが、その場最適では解けない）
+  //   は変えていない**。
+  const timing={beatMs:20*4,gridMs:20,subdivisionsPerBeat:4,beatZeroMs:0,beatsPerBar:4};   // 1グリッド=20ms
   const at=(grid,lane)=>({type:'TAP',grid,lane:Math.max(0,Math.floor(lane)),subLane:lane*2-.5,subLaneWidth:1});   // 触る点=lane
-  const notes=[at(-10,1),at(-5,3),at(0,2),at(3,0)];
+  const notes=[at(-10,1),at(-6,3),at(0,2),at(2,0)];
   const greedy=simulateNotes(notes,timing,{beam:1});
   const beam=simulateNotes(notes,timing,{beam:8});
   const hand=fi=>fi===0?'左':fi===1?'右':'—';
   console.log(`その場最適(beam=1): 押せない ${greedy.impossible}件  ${greedy.issues.map(x=>x.detail).join(' / ')}`);
   console.log(`先読み(beam=8):     押せない ${beam.impossible}件  割り当て A=${hand(beam.assignments.get(2))} B=${hand(beam.assignments.get(3))}`);
   // 本当に押せない配置は、先読みでも押せないままであること
-  const hopeless=[at(-10,1),at(-5,3),at(0,2),at(4,2)];
+  const hopeless=[at(-10,1),at(-6,3),at(0,2),at(4,2)];
   const hopelessResult=simulateNotes(hopeless,timing,{beam:8});
   console.log(`同じ場所を80msで叩き直す配置: 押せない ${hopelessResult.impossible}件(1件のまま残るのが正しい)`);
   const ok=greedy.impossible===1&&beam.impossible===0&&beam.assignments.get(2)===1&&beam.assignments.get(3)===0&&hopelessResult.impossible>=1;

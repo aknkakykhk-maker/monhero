@@ -1089,6 +1089,14 @@ function MonsterHeroGame() {
   // 画面から消せるようにする。閉じても更新は行わず、次に開き直したときや
   // さらに新しいバージョンが出たときはまた表示する
   const [dismissedUpdateBuild, setDismissedUpdateBuild] = useState(null);
+  // 新しいバージョンのお知らせの出し方('FULL' / 'MINI' / 'OFF')。設定画面から選ぶ。
+  // 保存が無い既存ユーザーは 'FULL'(これまでと同じ)になる
+  const [updateNoticeStyle, setUpdateNoticeStyleState] = useState('FULL');
+  const setUpdateNoticeStyle = (next) => {
+    const value = normalizeUpdateNoticeStyle(next);
+    setUpdateNoticeStyleState(value);
+    storeSet(UPDATE_NOTICE_STYLE_KEY, value, false);
+  };
   const [showGameUpdateConfirm, setShowGameUpdateConfirm] = useState(false);
   const [gameUpdatePending, setGameUpdatePending] = useState(false);
   const gameUpdatePendingRef = useRef(false);
@@ -1826,10 +1834,16 @@ function MonsterHeroGame() {
       // 回数ボーナスを使うイベントでは、割合を渡して加点込みで集計してもらう。
       // 使わないイベント(週間)では null なので、これまでどおりの集計になる
       const bonusRates = rhythmEventPlayBonusRates(event);
-      const fetchRows = (options) => targetSongId
+      // ★週間は**累計スコア方式**(2026-09-13)。曲ごとのベストではなく、その週に出した記録を
+      //   ぜんぶ足す。対象曲も部門も無いので、期間だけ渡す専用の関数を呼ぶ
+      const weeklyTotals = kind === 'weekly' && !targetSongId;
+      const fetchRows = (options) => weeklyTotals
+        ? sbFetchRhythmWeekTotals({ fromMs:range.startMs, toMs:range.endMs, ...options })
+        : targetSongId
         ? sbFetchRhythmEventSongBests({ songId:targetSongId, fromMs:range.startMs, toMs:range.endMs, bonusRates, ...options })
         : sbFetchRhythmEventTotals({ songIds:[...event.songIds], fromMs:range.startMs, toMs:range.endMs, bonusRates, ...options });
-      const fromRow = targetSongId ? rhythmEventSongEntryFromRow : rhythmEventTotalEntryFromRow;
+      const fromRow = weeklyTotals ? rhythmWeekTotalEntryFromRow
+        : targetSongId ? rhythmEventSongEntryFromRow : rhythmEventTotalEntryFromRow;
       const rows = await fetchRows({ requestId:`rhythm-${kind}-${division}-${Date.now()}` });
       if (stale()) return;
       const entries = (Array.isArray(rows) ? rows : []).map(fromRow);
@@ -2810,10 +2824,17 @@ function MonsterHeroGame() {
     if (RELEASE_FLAGS.rhythmWeeklyRanking !== true) return;
     const claims = rhythmEventRewardClaimsRef.current;
     if (!Array.isArray(claims)) return;               // まだ読み込めていない
-    const pending = rhythmEventsAwaitingReward(Date.now(), claims);
+    // 期間限定イベントと、終わった週(週間ランキング)の両方を見る。
+    // 受取フラグは同じ配列(mh_rhythm_event_reward_v1)。idの形が違うので取り違えない
+    const pending = [
+      ...rhythmEventsAwaitingReward(Date.now(), claims),
+      ...rhythmWeeksAwaitingReward(Date.now(), claims),
+    ].sort((a, b) => (a.kind === 'weekly' ? a.endMs : rhythmEventTimeMs(a.endAt) || 0)
+                   - (b.kind === 'weekly' ? b.endMs : rhythmEventTimeMs(b.endAt) || 0));
     if (pending.length === 0) return;
     const event = pending[0];                          // 先に終わったものから1つずつ
-    const range = rhythmEventWindow(event, null);
+    const weekly = event.kind === 'weekly';
+    const range = weekly ? { startMs:event.startMs, endMs:event.endMs } : rhythmEventWindow(event, null);
     if (!range) return;
     try {
       const breederId = await ensureBreederId();
@@ -2822,12 +2843,17 @@ function MonsterHeroGame() {
       // ★順位の出し方は画面と**同じ**にする。回数ボーナスを使うイベントでここを渡し忘れると、
       //   「ランキングでは1位だったのに報酬が来ない」が起きる
       const bonusRates = rhythmEventPlayBonusRates(event);
+      // 何位まで取りにいくか。週間は1〜10位、イベントは1〜5位
+      const rankLimit = weekly ? RHYTHM_WEEKLY_REWARD_RANKS : RHYTHM_EVENT_REWARD_RANKS;
       for (const divisionId of rhythmEventDivisionIds(event)) {
         const songId = rhythmEventDivisionSongId(divisionId);
-        const rows = songId
-          ? await sbFetchRhythmEventSongBests({ songId, fromMs:range.startMs, toMs:range.endMs, bonusRates, limit:RHYTHM_EVENT_REWARD_RANKS, requestId:`rhythm-reward-${event.id}-${divisionId}` })
-          : await sbFetchRhythmEventTotals({ songIds:[...event.songIds], fromMs:range.startMs, toMs:range.endMs, bonusRates, limit:RHYTHM_EVENT_REWARD_RANKS, requestId:`rhythm-reward-${event.id}-total` });
-        const fromRow = songId ? rhythmEventSongEntryFromRow : rhythmEventTotalEntryFromRow;
+        const rows = weekly
+          ? await sbFetchRhythmWeekTotals({ fromMs:range.startMs, toMs:range.endMs, limit:rankLimit, requestId:`rhythm-reward-${event.id}-week` })
+          : songId
+          ? await sbFetchRhythmEventSongBests({ songId, fromMs:range.startMs, toMs:range.endMs, bonusRates, limit:rankLimit, requestId:`rhythm-reward-${event.id}-${divisionId}` })
+          : await sbFetchRhythmEventTotals({ songIds:[...event.songIds], fromMs:range.startMs, toMs:range.endMs, bonusRates, limit:rankLimit, requestId:`rhythm-reward-${event.id}-total` });
+        const fromRow = weekly ? rhythmWeekTotalEntryFromRow
+          : songId ? rhythmEventSongEntryFromRow : rhythmEventTotalEntryFromRow;
         const entries = (Array.isArray(rows) ? rows : []).map(fromRow);
         const index = entries.findIndex(entry => selfKeys.includes(entry.identityKey));
         if (index < 0) continue;
@@ -2837,14 +2863,21 @@ function MonsterHeroGame() {
       // 参加報酬(入賞しなくても、対象曲をすべて遊べばもらえる)。
       // 総合の上位5件に自分がいなくても成立するので、自分の行だけを別に取りにいって
       // 「何曲遊んだか」(songCount)を見る
+      // ★成立の見かたが違う。イベントは「何曲遊んだか」、週間は「何回遊んだか」
       let participation = null;
       if (rhythmEventParticipationReward(event)) {
-        const mine = await sbFetchRhythmEventTotals({
-          songIds:[...event.songIds], fromMs:range.startMs, toMs:range.endMs, bonusRates,
-          limit:selfKeys.length, identityKeys:selfKeys, requestId:`rhythm-reward-${event.id}-join`,
-        });
-        const played = (Array.isArray(mine) ? mine : []).map(rhythmEventTotalEntryFromRow)
-          .reduce((max, entry) => Math.max(max, entry.songCount), 0);
+        const mine = weekly
+          ? await sbFetchRhythmWeekTotals({
+              fromMs:range.startMs, toMs:range.endMs,
+              limit:selfKeys.length, identityKeys:selfKeys, requestId:`rhythm-reward-${event.id}-join`,
+            })
+          : await sbFetchRhythmEventTotals({
+              songIds:[...event.songIds], fromMs:range.startMs, toMs:range.endMs, bonusRates,
+              limit:selfKeys.length, identityKeys:selfKeys, requestId:`rhythm-reward-${event.id}-join`,
+            });
+        const played = (Array.isArray(mine) ? mine : [])
+          .map(weekly ? rhythmWeekTotalEntryFromRow : rhythmEventTotalEntryFromRow)
+          .reduce((max, entry) => Math.max(max, weekly ? entry.playCount : entry.songCount), 0);
         if (rhythmEventParticipationCleared(event, played)) participation = rhythmEventParticipationReward(event);
       }
       // 入賞も参加報酬も無ければ、知らせずに受け取り済みへ入れて終わる
@@ -2872,20 +2905,30 @@ function MonsterHeroGame() {
       if (prize.debugPreview) { setRhythmEventRewardPrize(null); return; }
       await markRhythmEventRewardClaimed(prize.event.id);
       const next = { ...ownedItemsRef.current };
+      // ダイヤは mh_gold と入れ物が別なので、いったん合計だけ数えて後から足す
+      let goldGain = 0;
       for (const entry of prize.prizes) {
         const item = rhythmEventRewardItem(entry.reward);
         if (item && entry.reward.count > 0) next[item.id] = ownedItemCount(next, item.id) + entry.reward.count;
         if (entry.reward.psyche > 0) next[BREAKTHROUGH_ITEM_ID] = ownedItemCount(next, BREAKTHROUGH_ITEM_ID) + entry.reward.psyche;
+        // 週間の順位報酬にはダイヤも付く(イベントの順位報酬には無い)
+        if (entry.reward.gold > 0) goldGain += entry.reward.gold;
       }
-      // 参加報酬。虹のプシュケーは所持品、ダイヤは mh_gold と、入れ物が別なので分けて足す
-      if (prize.participation && prize.participation.psyche > 0) {
-        next[BREAKTHROUGH_ITEM_ID] = ownedItemCount(next, BREAKTHROUGH_ITEM_ID) + prize.participation.psyche;
+      // 参加報酬。週間は勇者の証片も付く
+      if (prize.participation) {
+        if (prize.participation.count > 0) {
+          next[HERO_PROOF_SHARD_ITEM_ID] = ownedItemCount(next, HERO_PROOF_SHARD_ITEM_ID) + prize.participation.count;
+        }
+        if (prize.participation.psyche > 0) {
+          next[BREAKTHROUGH_ITEM_ID] = ownedItemCount(next, BREAKTHROUGH_ITEM_ID) + prize.participation.psyche;
+        }
+        if (prize.participation.gold > 0) goldGain += prize.participation.gold;
       }
       ownedItemsRef.current = next;
       setOwnedItems(next);
       await storeSet('mh_owned_items', next, false);
-      if (prize.participation && prize.participation.gold > 0) {
-        const nextGold = (goldRef.current || 0) + prize.participation.gold;
+      if (goldGain > 0) {
+        const nextGold = (goldRef.current || 0) + goldGain;
         goldRef.current = nextGold;
         setGold(nextGold);
         await storeSet('mh_gold', nextGold, false);
@@ -3479,6 +3522,7 @@ function MonsterHeroGame() {
       const savedBattleSpeed = normalizeBattleSpeed(await storeGet(BATTLE_SPEED_KEY, 1, false));
       battleSpeedRef.current = savedBattleSpeed;
       setBattleSpeed(savedBattleSpeed);
+      setUpdateNoticeStyleState(normalizeUpdateNoticeStyle(await storeGet(UPDATE_NOTICE_STYLE_KEY, 'FULL', false)));
       const savedSeVolume = await storeGet('mh_se_volume', DEFAULT_VOLUME, false);
       setSeVolumeState(savedSeVolume);
       const savedBgmVolume = await storeGet('mh_bgm_volume', DEFAULT_VOLUME, false);
@@ -4993,6 +5037,27 @@ function MonsterHeroGame() {
       saveMissionProgress('market');
     } catch {
       setMarketExchangeError('交換を保存できませんでした。勇者の証は消費していません。');
+    } finally { marketPurchaseProcessingRef.current = false; }
+  };
+  // 勇者の証片20個 → 勇者の証1個。魂格再編の書と同じ作りで、失敗したら元へ戻す
+  // (2026-09-13・週間ランキングの報酬で証片がたまるようにしたのに合わせて追加)
+  const exchangeHeroProofByShard = async () => {
+    if (marketPurchaseProcessingRef.current) return;
+    const before = ownedItemsRef.current;
+    const exchange = buildHeroProofShardExchange(before, 1);
+    if (!exchange.ok) { setMarketExchangeError(`勇者の証片が${HERO_PROOF_SHARD_PER_PROOF}個必要です（いま${exchange.shardHave}個）。`); return; }
+    marketPurchaseProcessingRef.current = true;
+    setMarketExchangeError('');
+    try {
+      const saved = await saveStoredValuesOrRollback([
+        { key:'mh_owned_items', before, next:exchange.ownedItems },
+      ], storeGet, storeSet);
+      if (!saved) throw new Error('hero proof shard exchange save failed');
+      ownedItemsRef.current = exchange.ownedItems;
+      setOwnedItems(exchange.ownedItems);
+      saveMissionProgress('market');
+    } catch {
+      setMarketExchangeError('交換を保存できませんでした。勇者の証片は消費していません。');
     } finally { marketPurchaseProcessingRef.current = false; }
   };
 
@@ -6854,6 +6919,18 @@ function MonsterHeroGame() {
   // 【2026-09-05・ユーザー指示】「実際の音ゲー画面でやり方や各ノーツの操作方法などまで作って」
   // 説明を読むだけでなく、演奏画面をそのまま使って1種類ずつ叩いて覚える。
   // 記録は残さない(from:'tutorial' を見て onComplete が保存を飛ばす)。
+  // タイミング合わせ(2026-09-13・ユーザー指示「普通に実際の画面を使ってやればいい /
+  //   そこで判定も合わせて出して調整するのが1番合うとおもう」)。
+  // 演奏画面をそのまま使い、測り終わったらオプションへ戻して結果を出す。
+  // ★測り終わった画面で「この値にする」を押したら、そこで保存してオプションへ戻す
+  //   (2026-09-13・ユーザー指摘「設定にもなってない」。戻ってからもう一度押させない)。
+  const [rhythmCalibrationResult, setRhythmCalibrationResult] = useState(null);
+  const startRhythmCalibration = () => {
+    if (rhythmSettings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();
+    setRhythmCalibrationResult(null);
+    setRhythmPlay({ song:RHYTHM_CALIBRATION_SONG, difficulty:RHYTHM_CALIBRATION_DIFFICULTY, from:'calibration' });
+    setGameState('RHYTHM_PLAY');
+  };
   const startRhythmPractice = () => {
     if (rhythmSettings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();
     setRhythmPlay({ song:RHYTHM_TUTORIAL_SONG, difficulty:RHYTHM_TUTORIAL_DIFFICULTY, from:'tutorial' });
@@ -10078,11 +10155,40 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // body直下へ描画し、各画面のoverflow・transform・モーダルの積層に隠されないようにする。
   // 新しいバージョンの通知。本体を押すと更新、×を押すと今回は閉じる(更新はしない)。
   // 閉じたバージョンを覚えておき、同じバージョンのあいだは出さない。
-  const updateNotice = updateNoticeVisible ? ReactDOM.createPortal(
-    <div aria-live="assertive" className="fixed z-[100000] left-3 right-3 flex items-stretch gap-1.5" style={{top:'calc(8px + env(safe-area-inset-top))'}}>
-      <button type="button" onClick={reloadLatestVersion} className="flex-1 flex items-center justify-center gap-2 min-h-[48px] px-4 py-3 rounded-2xl border border-amber-200/80 bg-amber-500 text-slate-950 font-black text-sm shadow-[0_8px_28px_rgba(0,0,0,0.55)] active:scale-[.98]"><RefreshCcw size={18}/><span>新しいバージョンがあります　更新する</span></button>
-      <button type="button" aria-label="あとで更新する（この通知を閉じる）" onClick={()=>setDismissedUpdateBuild(latestBuild||BUILD_DATE)} className="shrink-0 w-12 min-h-[48px] flex items-center justify-center rounded-2xl border border-amber-200/80 bg-amber-500/90 text-slate-950 shadow-[0_8px_28px_rgba(0,0,0,0.55)] active:scale-[.98]"><X size={18}/></button>
-    </div>,
+  //
+  // 出し方は設定で選べる(2026-09-12・ユーザー依頼)。'OFF' のときは出さないが、
+  // 設定 →「ゲームを更新」からいつでも更新できるので、更新できなくなるわけではない。
+  //
+  // ★モンヒロビートの演奏中(RHYTHM_PLAY)は、どこにも出さない。
+  //
+  // 2026-09-13・はじめは「画面の上はレーンの奥に重なるから右下へ」としたが、
+  // ユーザー指摘「画面の右下ってモンビー演奏中のレーン上に来ない？」でそのとおりだった。
+  // プレイエリアは flex-1 で画面の下端まで占め(index.html が margin-bottom:0 !important で
+  // 余白も消している)、レーンは inset:0 の全面。台形は下がいちばん広い(上は 27〜73%、
+  // 下は 0〜100%)ので、右下はいちばん右のレーンの真上になる。
+  // しかも判定ラインの下は指で叩く場所なので、誤って押すと曲が中断されて記録が消える。
+  //
+  // 台形の外で空いているのは上部の左右の三角形だけだが、そこはスコアとライフの HUD が
+  // 使っている。つまり演奏中に置ける安全な場所が無い。
+  // 演奏中に更新を押したい場面も無いので、曲が終わって別の画面へ移ってから出す
+  // (updateAvailable は残っているので、戻れば自動的に出る)。
+  const updateNoticeMode = normalizeUpdateNoticeStyle(updateNoticeStyle);
+  const updateNoticeOnPlay = gameState === 'RHYTHM_PLAY';
+  const updateNoticeSmall = updateNoticeMode === 'MINI';
+  const updateNotice = (updateNoticeVisible && updateNoticeMode !== 'OFF' && !updateNoticeOnPlay) ? ReactDOM.createPortal(
+    updateNoticeSmall ? (
+      <div aria-live="assertive" data-update-notice="mini" data-update-notice-place="top"
+        className="fixed z-[100000] right-3 flex items-stretch gap-1"
+        style={{top:'calc(8px + env(safe-area-inset-top))'}}>
+        <button type="button" onClick={reloadLatestVersion} className="flex items-center justify-center gap-1 min-h-[36px] px-2.5 py-1.5 rounded-full border border-amber-200/80 bg-amber-500 text-slate-950 font-black text-[11px] shadow-[0_6px_20px_rgba(0,0,0,0.5)] active:scale-[.98]"><RefreshCcw size={13}/><span>更新あり</span></button>
+        <button type="button" aria-label="あとで更新する（この通知を閉じる）" onClick={()=>setDismissedUpdateBuild(latestBuild||BUILD_DATE)} className="shrink-0 w-8 min-h-[36px] flex items-center justify-center rounded-full border border-amber-200/80 bg-amber-500/90 text-slate-950 shadow-[0_6px_20px_rgba(0,0,0,0.5)] active:scale-[.98]"><X size={13}/></button>
+      </div>
+    ) : (
+      <div aria-live="assertive" data-update-notice="full" data-update-notice-place="top" className="fixed z-[100000] left-3 right-3 flex items-stretch gap-1.5" style={{top:'calc(8px + env(safe-area-inset-top))'}}>
+        <button type="button" onClick={reloadLatestVersion} className="flex-1 flex items-center justify-center gap-2 min-h-[48px] px-4 py-3 rounded-2xl border border-amber-200/80 bg-amber-500 text-slate-950 font-black text-sm shadow-[0_8px_28px_rgba(0,0,0,0.55)] active:scale-[.98]"><RefreshCcw size={18}/><span>新しいバージョンがあります　更新する</span></button>
+        <button type="button" aria-label="あとで更新する（この通知を閉じる）" onClick={()=>setDismissedUpdateBuild(latestBuild||BUILD_DATE)} className="shrink-0 w-12 min-h-[48px] flex items-center justify-center rounded-2xl border border-amber-200/80 bg-amber-500/90 text-slate-950 shadow-[0_8px_28px_rgba(0,0,0,0.55)] active:scale-[.98]"><X size={18}/></button>
+      </div>
+    ),
     document.body
   ) : null;
   const titleModal = showChangelog ? (
@@ -10093,19 +10199,58 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             「更新履歴が壊れた」としか分からないので、読み込み直せることをここで伝える */}
         <div className="mh-changelog-list" data-changelog-list>{CHANGELOG_ENTRIES.length===0
           ? <p className="mh-changelog-empty" data-changelog-empty>更新履歴を読み込めませんでした。通信状況を確かめてから、設定の「ゲームを更新」で読み込み直してください。</p>
-          : changelogEntriesOfTab(changelogTab).map(c=>{const open=changelogOpenId===c.id;
-            {/* 一覧は日付・札・見出しだけ。本文(items)は押した項目だけ出す(1つ開くと他は閉じる) */}
-            return <article key={c.id} data-changelog-type={c.type||'update'} data-changelog-open={open?'1':'0'} className={changelogUnreadIds[changelogTab].includes(c.id)?'unread':''}><time>{c.date}{changelogUnreadIds[changelogTab].includes(c.id)&&<em>NEW</em>}</time><span className="mh-changelog-kind" data-kind={changelogTypeOf(c).tone}>{changelogTypeOf(c).label}</span>
-              <button type="button" className="mh-changelog-head" data-changelog-toggle aria-expanded={open} onClick={()=>setChangelogOpenId(open?null:c.id)}><b>{c.title}</b><small>{open?'閉じる ▲':'詳細 ▼'}</small></button>
-              {/* 開いたときだけ本文を出す。告知画像があれば本文の上に出す
-                  (期間中いつでもここから見返せるように・2026-09-11・ユーザー指示) */}
-              {open&&<div className="mh-changelog-detail" data-changelog-detail>
-                {c.image&&<img data-changelog-image src={c.image} alt={`${c.title}のお知らせ`}
-                  onError={e=>{e.currentTarget.style.display='none';}} loading="lazy" decoding="async"
-                  style={{width:'100%',borderRadius:'12px',marginBottom:'8px'}}/>}
-                {(c.items||[]).map((x,j)=><p key={j}>・{x}</p>)}
-              </div>}
-            </article>;})}</div>
+          : (()=>{
+            // 同じ日の同じ話題を1行にまとめる(2026-09-13・ユーザー指摘
+            // 「同じような内容は同じとこにまとめて詳細で詳しく出るようにして /
+            //  過去のやつが一瞬で見えなくなる」)。
+            // 1行ずつ積み上げていたころは682行あり、少しさかのぼるだけで指が疲れていた。
+            // 日付は行の上に1度だけ出す(同じ日が続くあいだは繰り返さない)。
+            const rows = groupChangelogEntries(changelogEntriesOfTab(changelogTab));
+            const unreadHere = changelogUnreadIds[changelogTab];
+            let shownDay = null;
+            return rows.map(row=>{
+              const open=changelogOpenId===row.key;
+              const unreadCount=row.entries.filter(entry=>unreadHere.includes(entry.id)).length;
+              // まとめた行にも種類の札を出す。折りたたんだままでも、新機能なのか不具合修正なのかが
+              // 分かるようにしておく(2026-09-05・ユーザー指摘「直近の更新情報が不具合修正との
+              // 区別がついてない」)。1つのまとまりに種類が混ざることがあるので、
+              // 出てくる種類ぶんだけ並べ、2件以上あるものには数も付ける
+              const kinds=[];
+              row.entries.forEach(entry=>{const info=changelogTypeOf(entry);
+                const found=kinds.find(kind=>kind.tone===info.tone);
+                if(found)found.count+=1;else kinds.push({tone:info.tone,label:info.label,count:1});});
+              const dayHead=row.day!==shownDay?row.day:null;
+              shownDay=row.day;
+              return (<React.Fragment key={row.key}>
+                {dayHead&&<h4 className="mh-changelog-day" data-changelog-day={dayHead}>{dayHead}</h4>}
+                <article data-changelog-group={row.groupId} data-changelog-open={open?'1':'0'} className={unreadCount>0?'unread':''}>
+                  <button type="button" className="mh-changelog-head" data-changelog-toggle aria-expanded={open} onClick={()=>setChangelogOpenId(open?null:row.key)}>
+                    <span className="mh-changelog-group-emoji" aria-hidden="true">{row.emoji}</span>
+                    <b>{row.label}</b>
+                    <span className="mh-changelog-count">{row.entries.length}件{unreadCount>0&&<em>NEW</em>}</span>
+                    <small>{open?'閉じる ▲':'詳細 ▼'}</small>
+                  </button>
+                  <span className="mh-changelog-kinds">{kinds.map(kind=><span key={kind.tone} className="mh-changelog-kind" data-kind={kind.tone}>{kind.label}{kind.count>1&&<i>{kind.count}</i>}</span>)}</span>
+                  {/* 閉じているあいだも、何があった日なのかが分かるように見出しだけ並べる */}
+                  {!open&&<p className="mh-changelog-peek" data-changelog-peek>{row.entries.map(entry=>entry.title).join(' ／ ')}</p>}
+                  {/* 開いたら、その話題のその日の項目を時刻・種別・本文までぜんぶ出す */}
+                  {open&&<div className="mh-changelog-detail" data-changelog-detail>
+                    {row.entries.map(c=>(<section key={c.id} className="mh-changelog-item" data-changelog-type={c.type||'update'}>
+                      <time>{(c.date||'').slice(11)||c.date}{unreadHere.includes(c.id)&&<em>NEW</em>}</time>
+                      <span className="mh-changelog-kind" data-kind={changelogTypeOf(c).tone}>{changelogTypeOf(c).label}</span>
+                      <b>{c.title}</b>
+                      {/* 告知画像があれば本文の上に出す
+                          (期間中いつでもここから見返せるように・2026-09-11・ユーザー指示) */}
+                      {c.image&&<img data-changelog-image src={c.image} alt={`${c.title}のお知らせ`}
+                        onError={e=>{e.currentTarget.style.display='none';}} loading="lazy" decoding="async"
+                        style={{width:'100%',borderRadius:'12px',margin:'6px 0'}}/>}
+                      {(c.items||[]).map((x,j)=><p key={j}>・{x}</p>)}
+                    </section>))}
+                  </div>}
+                </article>
+              </React.Fragment>);
+            });
+          })()}</div>
       </div>
     </div>
   ) : showTitleSettings ? (
@@ -11206,6 +11351,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onOpenGameUpdate={()=>setShowGameUpdateConfirm(true)}
             gameUpdateDisabled={showGameUpdateConfirm||gameUpdatePending}
             onReturnToTitle={()=>setShowOfficialTitleConfirm(true)}
+            updateNoticeStyle={updateNoticeStyle}
+            onChangeUpdateNoticeStyle={setUpdateNoticeStyle}
           />
         )}
 
@@ -11720,10 +11867,23 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           }
           // あそびかた練習は記録を残さない。自己ベストにも全国ランキングにも触れない
           // (CLAUDE.md ⑦「消さない・上書きしない」。練習で自己ベストが上書きされてはいけない)
+          // タイミング合わせも同じ(記録に残さない)。測った値は下の onExit で設定へ入れる
+          // 測った値はここで覚えるだけ。設定へ入れるかどうかはオプションの画面で選ぶ
+          if(rhythmPlay.from==='calibration')return;
           if(rhythmPlay.from==='tutorial')return;
-          const records=await saveRhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id,merged);setRhythmBestRecords(records);if(rhythmPlay.from==='demo')submitRhythmRankingScore(rhythmPlay.song,rhythmPlay.difficulty,result);}} onExit={()=>{const back=rhythmPlay.from==='debug'?'RHYTHM_DEBUG':'RHYTHM_DEMO_HOME';setRhythmPlay(null);setGameState(back);}} debugPlay={rhythmPlay.from==='debug'} tutorial={rhythmPlay.from==='tutorial'}/>}
+          const records=await saveRhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id,merged);setRhythmBestRecords(records);if(rhythmPlay.from==='demo')submitRhythmRankingScore(rhythmPlay.song,rhythmPlay.difficulty,result);}} onExit={()=>{const back=rhythmPlay.from==='calibration'?'RHYTHM_OPTIONS':rhythmPlay.from==='debug'?'RHYTHM_DEBUG':'RHYTHM_DEMO_HOME';setRhythmPlay(null);setGameState(back);}} debugPlay={rhythmPlay.from==='debug'} tutorial={rhythmPlay.from==='tutorial'} calibrating={rhythmPlay.from==='calibration'} onApplyCalibration={async measured=>{
+          // 測った値をその場で設定へ入れて保存し、オプションへ戻す。
+          // 判定窓・スコア・ランキングには触れない(入れるのは judgmentTimingOffsetMs だけ)
+          const offsetMs=Number(measured&&measured.offsetMs);
+          if(Number.isFinite(offsetMs)){
+            const saved=await saveRhythmSettings({...rhythmSettings,judgmentTimingOffsetMs:offsetMs});
+            setRhythmSettings(saved);
+            setRhythmCalibrationResult({...measured,offsetMs,applied:true});
+          }
+          setRhythmPlay(null);setGameState('RHYTHM_OPTIONS');
+        }}/>}
 
-        {gameState==='RHYTHM_OPTIONS'&&<RhythmOptions value={rhythmSettings} onBack={()=>setGameState(rhythmOptionsBack)} onSave={async draft=>{const saved=await saveRhythmSettings(draft);setRhythmSettings(saved);return saved;}}/>}
+        {gameState==='RHYTHM_OPTIONS'&&<RhythmOptions value={rhythmSettings} onBack={()=>setGameState(rhythmOptionsBack)} onCalibrate={startRhythmCalibration} calibrationResult={rhythmCalibrationResult} onClearCalibration={()=>setRhythmCalibrationResult(null)} onSave={async draft=>{const saved=await saveRhythmSettings(draft);setRhythmSettings(saved);return saved;}}/>}
 
         {/* 音ゲー体験版のホーム。デバッグ画面をそのまま公開しないために作った、正式導線の最小構成。
             出すのは Monster Hero 1曲 と EASY/NORMAL/HARD だけで、デバッグ用の曲・譜面制作UIは出さない。
@@ -12272,6 +12432,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onOpenDetail={(item,detailMon,detailTeaching)=>{if(detailMon) setRosterDetailMon({...detailMon,marketDiscIcon:item.icon,marketDiscName:item.name}); else setRosterDetailTeaching(detailTeaching);}}
             onOpenItemDetail={setMarketItemDetail}
             onExchangeSoulRankRespec={exchangeSoulRankRespecByProof}
+            onExchangeHeroProof={exchangeHeroProofByShard}
           />
         )}
 

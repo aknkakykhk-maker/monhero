@@ -160,16 +160,18 @@ check('ノーツ数が難易度順に増える',
   DIFFICULTIES.map((d,i)=>`${d} ${ordered[i]}`).join(' < '));
 
 // --- 生成側にも同じ条件が入っているか(譜面を作り直したときに戻らないように) ---
-const generator=read('tools/mode/rhythm-chart-v2-step3-generate.js');
+// ★見るのは**いま曲を足すのに使っている生成器（V3）**。
+//   V2の生成系統は引退したので（2026-09-13）、そちらを見ていると
+//   「もう使わない道具の中身」を見張り続けることになる。
+const generator=read('tools/mode/rhythm-chart-v3-generate.js');
 check('生成側が手のモデルを見て置き場所を決めている',
   generator.includes("require('./rhythm-hand-model.js')")&&generator.includes('const placeable='));
 check('生成側の小節あたりの上限が「その小節に実際にある音の数」から決まる',
-  generator.includes('const musicalOnsetsInBar=')&&/musicalShare/.test(generator)
-  &&/musicalLift/.test(generator));
-check('難易度ごとの割合(musicalShare)が難易度順に増える',(()=>{
-  const values=[...generator.matchAll(/musicalShare:([0-9.]+)/g)].map(m=>Number(m[1]));
+  generator.includes('const musicalOnsetsInBar=')&&/MUSICAL_LIFT/.test(generator));
+check('難易度ごとの1拍あたりのノーツ数(perBeat)が難易度順に増える',(()=>{
+  const values=[...generator.matchAll(/perBeat:([0-9.]+)/g)].map(m=>Number(m[1]));
   return values.length===5&&values.every((v,i)=>i===0||v>values[i-1]);
-})(),[...generator.matchAll(/musicalShare:([0-9.]+)/g)].map(m=>m[1]).join(' < '));
+})(),[...generator.matchAll(/perBeat:([0-9.]+)/g)].map(m=>m[1]).join(' < '));
 
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
 process.exit(failed?1:0);

@@ -39,8 +39,10 @@ check('鳴らすのはHOLD / SLIDE / FLICKだけで、TAPでは鳴らさない',
 check('MISSでは鳴らさない',game.includes("judgment!=='MISS'&&(note.type==='HOLD'"));
 
 // --- 2. 取れたときの光 ---
-check('光は演出量の設定に従う(MINIMAL・軽量モードでは出さない)',
-  game.includes("if(!settings.lightweightMode&&settings.effectAmount!=='MINIMAL')note._rhythmClearAt="));
+// 2026-09-13に演出量を4段へ増やし、「標準」(LIGHT)以下でもこの光は出さないようにした
+// (ユーザー指摘「通常が今までの多めの演出量になってる気がする」。曲のあいだ何度も走るため)
+check('光は演出量の設定に従う(標準・最小・軽量モードでは出さない)',
+  game.includes("if(!settings.lightweightMode&&!rhythmEffectAtMost(settings.effectAmount,'LIGHT'))note._rhythmClearAt="));
 check('音は演出量の設定に関わらず鳴る(手ごたえは残す)',(()=>{
   const block=game.slice(game.indexOf('if(clearedGesture){'),game.indexOf('if(settings.vibrationEnabled'));
   return block.indexOf('playClear()')<block.indexOf('lightweightMode');
@@ -82,9 +84,10 @@ check('小数の目盛りでも誤差が残らない',
 check('つまんで動かせるスライダーがある',
   game.includes('<input type="range" data-rhythm-option-slider={key}')
   &&game.includes('onChange={e=>set(key,rhythmSnapOptionValue(e.target.value,min,max,step))}'));
-check('微調整用の±ボタンも残っている',
-  game.includes('aria-label={`${key}を下げる`}')&&game.includes('aria-label={`${key}を上げる`}')
-  &&game.includes('rhythmStepOptionValue(value,min,max,step,direction)'));
+check('粗く/細かく動かすボタンも残っている',
+  game.includes('aria-label={`${key}を${sign(amount)}`}')
+  &&game.includes('data-rhythm-option-nudge={`${key}${sign(amount)}`}')
+  &&game.includes('rhythmNudgeOptionValue(value,min,max,step,amount)'));
 check('スライダーは指で掴める大きさのつまみを持つ',(()=>{
   const size=Number((rhythm.match(/\.mh-rhythm-range::-webkit-slider-thumb\{[^}]*width:(\d+)px/)||[])[1]);
   return size>=24;

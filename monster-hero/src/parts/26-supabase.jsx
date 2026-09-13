@@ -740,6 +740,10 @@ const RHYTHM_EVENT_RANKING_DISPLAY_LIMIT = 50;
 const RHYTHM_EVENT_SONG_SELECT_BASE = 'identity_key,user_name,song_id,difficulty_id,score,scored_at,level,icon';
 const RHYTHM_EVENT_SONG_SELECT = `${RHYTHM_EVENT_SONG_SELECT_BASE},party`;
 const RHYTHM_EVENT_TOTAL_SELECT = 'identity_key,user_name,total_score,song_count,last_scored_at,level,icon';
+// 週間ランキングは**累計スコア方式**(2026-09-13・ユーザーが決めた)。
+// 曲ごとのベストではなく、その週に出した記録をぜんぶ足す。対象曲は無いので期間だけ渡す。
+// play_count は参加報酬(その週に3回遊ぶ)の判定にも使う。
+const RHYTHM_WEEK_TOTAL_SELECT = 'identity_key,user_name,total_score,play_count,song_count,last_scored_at,level,icon';
 // 回数ボーナス込みの集計(2026-09-11・ユーザー指示)。
 // score / total_score は**加点込み**の値で返ってくるので、並べ替え(order=score.desc)も
 // 上位50件の切り出しも加点込みで行われる。素点と加点は別の列で受け取り、「内訳」に出す。
@@ -760,7 +764,7 @@ const RHYTHM_EVENT_TOTAL_BONUS_SELECT = `${RHYTHM_EVENT_TOTAL_BONUS_SELECT_BASE}
 const rhythmEventRankingMissing = (status, body) => {
   if (status !== 404 && status !== 400) return false;
   const text = String(body || '');
-  if (!/rhythm_week_window|rhythm_event_song_bests|rhythm_event_totals/i.test(text)) return false;
+  if (!/rhythm_week_window|rhythm_week_score_totals|rhythm_event_song_bests|rhythm_event_totals/i.test(text)) return false;
   return /PGRST202|PGRST205|PGRST200|42P01|42883|does not exist|Could not find the/i.test(text);
 };
 // 「party という列は無い」という応答かどうか(SQL未適用の環境)。
@@ -921,6 +925,18 @@ const rhythmEventPlayCountsFromRow = (value) => {
   }
   return out;
 };
+// 週間ランキング(累計スコア)。対象曲を持たないので、渡すのは期間だけ
+const sbFetchRhythmWeekTotals = async ({ fromMs, toMs, limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' }) => {
+  const filter = Array.isArray(identityKeys) && identityKeys.length
+    ? `&identity_key=in.(${identityKeys.map(k => encodeURIComponent(`"${k}"`)).join(',')})`
+    : '';
+  return sbFetchRhythmEventRows({
+    url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_week_score_totals?select=${RHYTHM_WEEK_TOTAL_SELECT}`
+      + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
+    body: { from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() },
+    label: 'rhythm-week-total', requestId,
+  });
+};
 // 生の行を画面用の形へ整える。壊れた値でも落ちないよう、数として確かめてから使う
 const rhythmEventSongEntryFromRow = (row) => ({
   identityKey: typeof row?.identity_key === 'string' ? row.identity_key : '',
@@ -945,6 +961,19 @@ const rhythmEventTotalEntryFromRow = (row) => ({
   level: Number(row?.level) || 0,
   icon: row?.icon ?? null,
   ...rhythmEventBonusFields(row, 'base_total'),
+});
+// 週間の行。イベントの総合と形をそろえておくと、画面側で分岐が増えない。
+// 違うのは playCount(遊んだ回数)を必ず持つことだけ
+const rhythmWeekTotalEntryFromRow = (row) => ({
+  identityKey: typeof row?.identity_key === 'string' ? row.identity_key : '',
+  userName: row?.user_name || '名無しのブリーダー',
+  totalScore: Number(row?.total_score) || 0,
+  playCount: Number(row?.play_count) || 0,
+  songCount: Number(row?.song_count) || 0,
+  level: Number(row?.level) || 0,
+  icon: row?.icon ?? null,
+  // 週間に回数ボーナスは無いので、内訳の枠は出さない(CLAUDE.md の決めごとどおり)
+  baseScore: null, bonusScore: 0, playCounts: {},
 });
 
 // 検査(tools/ranking/rhythm-breeder-id-check.js)からモンビーの送信だけを直接叩けるようにする。

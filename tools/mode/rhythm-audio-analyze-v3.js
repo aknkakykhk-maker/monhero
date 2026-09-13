@@ -68,6 +68,27 @@ const PITCH_BAND_HZ=600;          // メロディの帯だけ残してから音�
 const PITCH_BAND_Q=.55;
 const PITCH_MIN_HZ=150,PITCH_MAX_HZ=1200;
 const PITCH_MIN_CLARITY=.5;       // これ未満は「音程が取れなかった」とみなす
+// ── ベース帯の音高（同時押さえの2本目に使う・2026-09-12） ─────────────────────
+//
+// 【ユーザー指摘】「スライドとかホールドの同時系もなかったっけ？」
+//
+// これまで sustains は pitchCurve（1グリッドに1つの音高）の「高さが続いている区間」
+// だけで作っていた。**単声の旋律線なので区間は必ず順番に並び、原理的に重ならない**。
+// 全20曲・伸びる音2702件を数えて、重なりは0件だった。
+// そのため生成器がどれだけ許しても、HOLD/SLIDEの同時押さえは1件も作れなかった。
+//
+// 2本目を勝手に作り出すのは §2.1 の「幽霊ノーツ」に当たるのでやらない。
+// かわりに**ベース（低い帯）の音高を別に追う**。ベースも実際に鳴っている音なので
+// 幽霊ノーツにならず、旋律の伸びと**重なりうる**（ベースが伸びている上で旋律が動く、
+// という実際によくある形）。
+//
+// 旋律側と同じ関数（biquadBandpass → estimatePitch）を使う。違うのは帯と音域だけ。
+const BASS_BAND_HZ=110;           // ベースの帯だけ残してから音高を取る
+const BASS_BAND_Q=.7;             // 旋律(.55)より少し狭く。低いほうは倍音が混みやすい
+const BASS_MIN_HZ=40,BASS_MAX_HZ=250;
+// 低いほうは音高が取りにくいので、旋律(.5)より緩める。
+// 厳しくすると、鳴っているのに「取れなかった」で落ちる区間が増える
+const BASS_MIN_CLARITY=.42;
 
 // 音の性格。楽器名を名乗らず、**譜面づくりで実際に使う区別**だけを持つ。
 //   PUNCH … 低い帯だけが跳ねた重い打点        → 太い・中央寄り
@@ -165,6 +186,13 @@ const round=(value,digits=3)=>Math.round(value*10**digits)/10**digits;
     if(start<0||start+PITCH_WINDOW>=melody.length)return {hz:0,clarity:0,level:0};
     return estimatePitch(melody,start,PITCH_WINDOW,SAMPLE_RATE,{minHz:PITCH_MIN_HZ,maxHz:PITCH_MAX_HZ});
   };
+  // ベースの帯。旋律とまったく同じ手順で、帯と音域だけ変える
+  const bass=biquadBandpass(samples,SAMPLE_RATE,BASS_BAND_HZ,BASS_BAND_Q);
+  const bassPitchAt=ms=>{
+    const start=Math.round(ms/1000*SAMPLE_RATE);
+    if(start<0||start+PITCH_WINDOW>=bass.length)return {hz:0,clarity:0,level:0};
+    return estimatePitch(bass,start,PITCH_WINDOW,SAMPLE_RATE,{minHz:BASS_MIN_HZ,maxHz:BASS_MAX_HZ});
+  };
 
   const onsets=[];
   for(const frame of peaks){
@@ -225,56 +253,74 @@ const round=(value,digits=3)=>Math.round(value*10**digits)/10**digits;
     pitchCurve.push({grid,hz:clear?round(pitch.hz,1):0,clarity:round(pitch.clarity),
       semitone:clear?round(semitoneOf(pitch.hz),2):null});
   }
-  // オクターブの取り違えを直す（直前までの高さにいちばん近いオクターブへ寄せる）
-  {
-    const recent=[];
-    for(const point of pitchCurve){
-      if(point.semitone==null)continue;
-      if(recent.length){
-        const sorted=recent.slice().sort((a,b)=>a-b);
-        const center=sorted[sorted.length>>1];
-        let best=point.semitone,bestDistance=Math.abs(point.semitone-center);
-        for(const shift of [-24,-12,12,24]){
-          const moved=point.semitone+shift;
-          const distance=Math.abs(moved-center);
-          if(distance<bestDistance-.5){best=moved;bestDistance=distance;}
+  // 音高の後処理（オクターブの取り違え直し → 中央値でならす → 0〜1の高さへ）。
+  // 2026-09-12: ベース帯にも同じ後処理を通すので関数へ出した。
+  // ★旋律側の結果が1件も変わらないよう、中身はそのまま移しただけ。
+  const finishCurve=curve=>{
+    // オクターブの取り違えを直す（直前までの高さにいちばん近いオクターブへ寄せる）
+    {
+      const recent=[];
+      for(const point of curve){
+        if(point.semitone==null)continue;
+        if(recent.length){
+          const sorted=recent.slice().sort((a,b)=>a-b);
+          const center=sorted[sorted.length>>1];
+          let best=point.semitone,bestDistance=Math.abs(point.semitone-center);
+          for(const shift of [-24,-12,12,24]){
+            const moved=point.semitone+shift;
+            const distance=Math.abs(moved-center);
+            if(distance<bestDistance-.5){best=moved;bestDistance=distance;}
+          }
+          point.semitone=round(best,2);
+          point.hz=round(440*2**((best-69)/12),1);
         }
-        point.semitone=round(best,2);
-        point.hz=round(440*2**((best-69)/12),1);
+        recent.push(point.semitone);
+        if(recent.length>8)recent.shift();
       }
-      recent.push(point.semitone);
-      if(recent.length>8)recent.shift();
+      const values=curve.map(point=>point.semitone);
+      for(let i=0;i<curve.length;i++){
+        if(values[i]==null)continue;
+        const window=[values[i-1],values[i],values[i+1]].filter(value=>value!=null).sort((a,b)=>a-b);
+        curve[i].semitone=round(window[window.length>>1],2);
+      }
     }
-    const values=pitchCurve.map(point=>point.semitone);
-    for(let i=0;i<pitchCurve.length;i++){
-      if(values[i]==null)continue;
-      const window=[values[i-1],values[i],values[i+1]].filter(value=>value!=null).sort((a,b)=>a-b);
-      pitchCurve[i].semitone=round(window[window.length>>1],2);
+    const semitones=curve.map(point=>point.semitone).filter(value=>value!=null).sort((a,b)=>a-b);
+    const lo=semitones.length?semitones[Math.floor(semitones.length*.05)]:0;
+    const hi=semitones.length?semitones[Math.floor(semitones.length*.95)]:1;
+    for(const point of curve){
+      point.height=point.semitone==null?null
+        :round(Math.max(0,Math.min(1,(point.semitone-lo)/Math.max(1e-6,hi-lo))));
     }
+  };
+  finishCurve(pitchCurve);
+  // ベースの音高の線。旋律とまったく同じ手順・同じ後処理を通す
+  const bassCurve=[];
+  for(let grid=firstGrid;grid<=lastGrid;grid++){
+    const ms=timing.beatZeroMs+grid*gridMs;
+    const pitch=bassPitchAt(ms+16);
+    const clear=pitch.clarity>=BASS_MIN_CLARITY;
+    bassCurve.push({grid,hz:clear?round(pitch.hz,1):0,clarity:round(pitch.clarity),
+      semitone:clear?round(semitoneOf(pitch.hz),2):null});
   }
-  const semitones=pitchCurve.map(point=>point.semitone).filter(value=>value!=null).sort((a,b)=>a-b);
-  const lo=semitones.length?semitones[Math.floor(semitones.length*.05)]:0;
-  const hi=semitones.length?semitones[Math.floor(semitones.length*.95)]:1;
-  for(const point of pitchCurve){
-    point.height=point.semitone==null?null
-      :round(Math.max(0,Math.min(1,(point.semitone-lo)/Math.max(1e-6,hi-lo))));
-  }
+  finishCurve(bassCurve);
 
   // --- 6. 高さが続いている区間（HOLDの長さ・SLIDEの範囲に使う） ---
-  const sustains=[];
-  {
+  // 2026-09-12: ベース帯にも同じものを作るので、手順を関数へ出した。
+  // ★旋律側の結果が1件も変わらないよう、条件・丸め・順序は一切いじっていない。
+  const sustainsOf=curve=>{
+    const out=[];
     let run=null;
     const flush=()=>{
       if(run&&run.endGrid-run.startGrid>=2){
         const heights=run.heights;
-        sustains.push({startGrid:run.startGrid,endGrid:run.endGrid,grids:run.endGrid-run.startGrid,
+        out.push({startGrid:run.startGrid,endGrid:run.endGrid,grids:run.endGrid-run.startGrid,
           fromHeight:heights[0],toHeight:heights[heights.length-1],
           minHeight:Math.min(...heights),maxHeight:Math.max(...heights),
           moves:round(Math.max(...heights)-Math.min(...heights)),clarity:round(run.clarity)});
       }
       run=null;
     };
-    for(const point of pitchCurve){
+    for(const point of curve){
       const usable=point.semitone!=null;
       if(usable&&run&&point.grid===run.endGrid+1&&Math.abs(point.semitone-run.lastSemitone)<=4){
         run.endGrid=point.grid;run.lastSemitone=point.semitone;
@@ -286,7 +332,12 @@ const round=(value,digits=3)=>Math.round(value*10**digits)/10**digits;
       }
     }
     flush();
-  }
+    return out;
+  };
+  const sustains=sustainsOf(pitchCurve);
+  // ── ベースの伸びる区間（同時押さえの2本目の素） ────────────────────────────
+  // 旋律の伸びと**重なりうる**のがねらい。使うのは生成器の heldPair がある難易度だけ。
+  const bassSustains=sustainsOf(bassCurve);
 
   const gridFit=(()=>{
     const within=ms=>onsets.filter(onset=>Math.abs(onset.gridOffsetMs)<=ms).length;
@@ -350,10 +401,19 @@ const round=(value,digits=3)=>Math.round(value*10**digits)/10**digits;
       pitchCurvePoints:pitchCurve.length,
       pitchCurveClear:pitchCurve.filter(point=>point.height!=null).length,
       sustainSpans:sustains.length,
+      bassSustainSpans:bassSustains.length,
+      // 旋律の伸びとベースの伸びが重なっている組の数。同時押さえの素になる
+      heldPairCandidates:(()=>{
+        let count=0;
+        for(const a of sustains)for(const b of bassSustains){
+          if(Math.min(a.endGrid,b.endGrid)-Math.max(a.startGrid,b.startGrid)>0)count++;
+        }
+        return count;
+      })(),
       sectionCount:structure.sections.length,
       barCount:structure.bars.length,
       notesPerSecondCeiling:round(onsets.length/(features.durationMs/1000),2)},
-    onsets,pitchCurve,sustains,
+    onsets,pitchCurve,sustains,bassSustains,
   };
 
   console.log(`V3音源解析: ${trackId}  (${features.decodedVia}でデコード / ${SAMPLE_RATE}Hz / ${(features.durationMs/1000).toFixed(1)}秒)`);
@@ -373,6 +433,7 @@ const round=(value,digits=3)=>Math.round(value*10**digits)/10**digits;
     console.log('  あやしい点は見つかりませんでした');
   }
   console.log(`  音高が取れた打点 ${report.summary.pitchedOnsets}/${onsets.length}  16分ごとの音高 ${report.summary.pitchCurveClear}/${pitchCurve.length}  高さが続く区間 ${sustains.length}件`);
+  console.log(`  ベースの伸びる区間 ${bassSustains.length}件  旋律と重なっている組 ${report.summary.heldPairCandidates}組（同時押さえの素）`);
   if(verbose){
     for(const section of structure.sections){
       console.log(`    ${section.label} 第${String(section.startBar+1).padStart(3)}〜${String(section.endBarExclusive).padStart(3)}小節 `

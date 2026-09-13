@@ -122,7 +122,7 @@ ok('曲えらびは1つの部品にまとまっている（画面ごとに書き
 ok('選んでいる曲を鳴らす（設定でON/OFFできる）',
   game.includes('RHYTHM_PREVIEW_DELAY_MS')&&game.includes('Audio_.startRhythmTrack(rhythmPreviewTrackId')
   &&game.includes('songPreviewEnabled:true')&&game.includes("songPreviewEnabled:bool('songPreviewEnabled')")
-  &&game.includes("toggle('songPreviewEnabled','')"));
+  &&game.includes("toggle('songPreviewEnabled')"));
 ok('モンビーを離れる・曲を選び替えると止まる',
   /return\s*\(\)=>\{cancelled=true;clearTimeout\(timer\);if\(handle\)handle\.stop\(\);\}/.test(game));
 ok('自己ベストは難易度ごとに出る（全国ランキングの合算とは別）',

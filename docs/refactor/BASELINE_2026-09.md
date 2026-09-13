@@ -142,7 +142,6 @@ CI 相当(`--area ci` 28 本)と CLAUDE.md の必須検査(`--area required` 14 
 | `mode/extreme-rule-detail-browser-check.js` | 49 |
 | `audio/bgm-check.js` | 48 |
 | `masu/masu-enhance-layer-check.js` | 42 |
-| `mode/rhythm-chart-v2-step5-check.js` | 41 |
 | `ranking/bond-levels-table-check.js` | 32 |
 | `ranking/ranking-run-stats-check.js` | 31 |
 | `masu/masu-growth-breakdown-check.js` | 25 |

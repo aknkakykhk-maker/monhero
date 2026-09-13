@@ -41,6 +41,8 @@ const BGM_TRACKS = [
   // モンビーの新曲(2026-09-08)。同じくmp4で受け取った音源から映像を落として入れたもの
   { id:'melo_crossing_field', name:'crossing field', creator:'オリジナル', src:'audio/bgm-crossing-field.mp3', gain:1, loop:true },
   { id:'melo_nothing_without_you', name:'Nothing Without You', creator:'オリジナル', src:'audio/bgm-nothing-without-you.mp3', gain:1, loop:true },
+  // モンビーの新曲(2026-09-13)。同じくmp4で受け取った音源から映像を落として入れたもの
+  { id:'melo_freedom_dive', name:'FREEDOM DiVE↓', creator:'オリジナル', src:'audio/bgm-freedom-dive.mp3', gain:1, loop:true },
   { id:'melo_dullahan_clockwork_alt', name:'呪われた騎士の時計仕掛け -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-clockwork-alt.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost', name:'鋼鉄の亡霊', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost_alt', name:'鋼鉄の亡霊 -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost-alt.mp3', gain:1, loop:true },
@@ -130,7 +132,20 @@ const RHYTHM_BEST_RECORDS_KEY = 'mh_rhythm_best_v1';
 // 際限なく増やさないよう直近の件数だけ保つ
 const RHYTHM_RANKING_PENDING_KEY = 'mh_rhythm_rank_pending_v1';
 const RHYTHM_RANKING_PENDING_MAX = 20;
-const RHYTHM_EFFECT_LEVELS = Object.freeze(['NORMAL','LOW','MINIMAL']);
+// 演出量の段。**重い順**に並べる(この順そのものが「どちらが軽いか」の正本)。
+// 2026-09-13にユーザー指摘「通常が今までの多めの演出量になってる気がする」。
+// 実際そのとおりで、LOW が止めていたのは判定文字の流れるグラデーションとぼかしの枚数だけ。
+// 判定ラインの脈打ち・マスモンの跳ね・コンボの跳ねなど**ずっと動き続けるもの**は
+// NORMAL と同じままだった。そこで LIGHT を1段足し(「段を増やして更に標準をもっと軽くする」)、
+// 既定をそこへ置いた。既存のIDは足しただけで意味を変えていない(CLAUDE.md ⑦)。
+const RHYTHM_EFFECT_LEVELS = Object.freeze(['NORMAL','LOW','LIGHT','MINIMAL']);
+// 「この段より軽い側か」を1か所で判定する。段を足すたびに条件を書き足さなくて済む。
+// 例: rhythmEffectAtMost(settings.effectAmount,'LIGHT') は LIGHT と MINIMAL で true
+const rhythmEffectRank = (amount)=>{
+  const index=RHYTHM_EFFECT_LEVELS.indexOf(amount);
+  return index<0?RHYTHM_EFFECT_LEVELS.indexOf(DEFAULT_RHYTHM_SETTINGS.effectAmount):index;
+};
+const rhythmEffectAtMost = (amount,level)=>rhythmEffectRank(amount)>=RHYTHM_EFFECT_LEVELS.indexOf(level);
 // コンボの節目でお祝いを出す刻み。100コンボごと。
 const RHYTHM_COMBO_MILESTONE_STEP = 100;
 // コンボ数の見せ方の段(2026-09-12・ユーザー指示
@@ -149,15 +164,20 @@ const rhythmComboTier = combo => {
 // 段ごとの大きさ。font-size ではなく transform:scale() で効かせる。
 // ★font-size を段ごとに上書きすると、横持ち(landscape:text-base)の詰めた文字サイズまで
 //   巻き添えで壊れる。倍率なら縦持ち・横持ちのどちらの基準サイズもそのまま活かせる。
-// ★上限が1.13で止まっているのは、ここが**レーンの台形の外側の空き**に置かれているため。
-//   4桁(9999)まで伸びた状態で台形へかぶると、奥のノーツが読めなくなる
-//   (tools/mode/rhythm-hud-wedge-check.js と rhythm-landscape-hud-check.js が実測で落とす)。
-//   そのぶん「どんどん目立つ」は、大きさよりも色・光・脈打ちの強さで出している。
-const RHYTHM_COMBO_TIER_SCALES = Object.freeze([1,1.02,1.04,1.06,1.08,1.1,1.12,1.13]);
+// ★2026-09-12にコンボをプレイエリアの真ん中へ移したので、台形にかかる心配がなくなった。
+//   HUDの右上に居たころは1.13倍が上限だった(4桁まで伸びると台形へかかり、奥のノーツが
+//   読めなくなるため)。中央なら左右に十分な余地があるので、段でしっかり大きくできる。
+const RHYTHM_COMBO_TIER_SCALES = Object.freeze([1,1.08,1.16,1.26,1.36,1.46,1.56,1.66]);
 const rhythmComboTierScale = tier => {
   const index = Math.trunc(Number(tier)||0);
   return RHYTHM_COMBO_TIER_SCALES[Math.max(0,Math.min(RHYTHM_COMBO_TIER_SCALES.length-1,index))];
 };
+// コンボ数の置き場所(2026-09-12・ユーザー指示「元位置（元位置より少し右より）とか選べるほうがいい」)。
+// 真ん中へ移したのは同じ日で、それまでは右上のHUDの中に居た。人によってはノーツと重なるのが
+// 気になるし、前の位置に慣れている人もいるので、選べるようにする。
+// ★既定は CENTER(いまの真ん中)。既存の保存値にはこのキー自体が無いので、
+//   読み込み時に CENTER で補われる(既存のキーは1つも触らない)。
+// ★実際の座標は index.html の [data-combo-pos="…"] が持つ。ここは名前だけ。
 // ライフの見せ方の段(2026-09-12・ユーザー指示
 //   「ライフ変動や0になったときとか気付きにくいからもっと強調して / 0だとライフが赤くなるとか
 //     バーが割れるとか」)。
@@ -170,6 +190,72 @@ const rhythmLifeState = life => {
   if (ratio <= .5) return 'caution';
   return 'ok';
 };
+// オプション画面の選択肢の「名前」(2026-09-13)。
+// ★閉じているセクションに出す「いまの値」と、開いたときのボタンの**両方がここを見る**。
+//   名前を2か所に書くと必ずずれる(一方だけ直して、もう一方が古い名前のまま残る)。
+// ★並びはそのまま画面のボタンの並びになる。IDの集合は値の正本
+//   (RHYTHM_EFFECT_LEVELS など)と一致していること。tools/mode/rhythm-options-summary-check.js が見る。
+// 判定タイミング調整の範囲と刻み(2026-09-13)。
+// ★刻みを5ms→**1ms**へ細かくした(ユーザー指示「タップ調整ももっと精度良くつくって」)。
+//   いちばん良い判定(MARVELOUS)は±55msなので、5ms刻みだとその1/11ずつしか動かせなかった。
+// ★**広げたのではなく細かくしただけ**なので、これまでの保存値(5の倍数)はすべてそのまま
+//   有効で、意味も変わらない(-100〜+100の範囲は同じ)。
+const RHYTHM_TIMING_OFFSET_MAX_MS = 100;
+const RHYTHM_TIMING_OFFSET_STEP_MS = 1;
+// モンスターノーツを取ったときの演出の強さ(2026-09-13・ユーザー依頼
+// 「設定でモンスターノーツを踏んだときの軽量化バージョンもほしい」)。
+//   NORMAL … いまのまま(粒が2.1倍・画面全体が金色に光る・そのマスモンが大きく跳ねる)
+//   LIGHT  … **画面全体の光をやめる**。粒と跳ねは残す。いちばん重いのが全画面の描き直し
+//   OFF    … 粒もふつうのノーツと同じにして、跳ねもやめる
+//   NONE   … **ノーツに乗るマスモンの絵を出さない**。能力名の大きな表示も出さない
+// ★NONE を足した理由(2026-09-13・ユーザー指摘「モンスターノーツの演出もっと軽いの設定で
+//   選べるようにしてほしい / あれは踏んだときまだカクつきがある / ちなみに設定は最小」)。
+//   モンスターノーツだけは、canvasに描くのとは**別に**マスモンの絵をDOMの要素で重ね、
+//   毎フレーム transform と scale を書き換えている(30-rhythm-play.jsx の tick)。
+//   ふつうのノーツには無い処理なので、OFF にしてもここだけは残っていた。
+//   NONE では絵そのものを作らないので、モンスターノーツもふつうのノーツと同じ扱いになる。
+//   金色の粒は canvas 側で描くので、どれがモンスターノーツかは色で分かる。
+// ★どの段でも**音・振動・能力の効果は残す**。取れたことが分からなくなるのがいちばん困るため
+//   (能力名の大きな表示だけは NONE で出さない。効いていることは左上のバッジで分かる)。
+// ★既定は LIGHT。2026-09-13にユーザーから「演出量が普通だと重いという声が多い /
+//   少なめをデフォルトにして今の普通を多めとかにしたい / モンスターノーツも同じく」。
+//   同日さらに「デフォルトの名称を標準にして」と指示があり、**既定の段を「標準」と呼ぶ**
+//   ことにした(多め / 標準 / 最小)。演出量も同じ並びにそろえてある。
+//   IDは変えない(保存済みの値の意味が変わらないようにするため。CLAUDE.md ⑦)。
+//   変えるのは**画面に出す名前と既定値だけ**なので、自分で選んで保存した人はそのまま。
+const RHYTHM_MONSTER_EFFECT_LABELS = Object.freeze([['NORMAL','多め'],['LIGHT','標準'],['OFF','少なめ'],['NONE','最小']]);
+const RHYTHM_MONSTER_EFFECT_LEVELS = Object.freeze(RHYTHM_MONSTER_EFFECT_LABELS.map(([id])=>id));
+// コンボ数の大きさ(2026-09-13・ユーザー依頼「コンボ数のサイズ設定もほしい」)。
+// 置き場所ごとの基準の大きさ(真ん中52px / 端34px)へ、この割合を掛ける。
+// コンボ数の濃さ(2026-09-13・ユーザー依頼「オプションにコンボ数表記の透過度の設定」)。
+// 段ごとの濃さ(.62〜1)へこの割合を掛ける。0にはできない(消したいなら「コンボ数表示」を切る)。
+const RHYTHM_COMBO_OPACITY_MIN = 30;
+const RHYTHM_COMBO_OPACITY_MAX = 100;
+const RHYTHM_COMBO_OPACITY_STEP = 10;
+// ライフ表示の大きさ(2026-09-13・ユーザー依頼「ライフ表示が目立たないからもっと大きく
+// 見やすくしてほしい（設定調整可能）」)。100%がそれまでの大きさで、既定はひと回り大きい150%。
+// 太さ・ハート・数字にそのまま掛かる。横幅だけは台形の外の空きに収める都合で伸びを抑える。
+const RHYTHM_LIFE_SIZE_MIN = 100;
+const RHYTHM_LIFE_SIZE_MAX = 200;
+const RHYTHM_LIFE_SIZE_STEP = 10;
+const RHYTHM_COMBO_SIZE_MIN = 70;
+const RHYTHM_COMBO_SIZE_MAX = 150;
+const RHYTHM_COMBO_SIZE_STEP = 10;
+const RHYTHM_LANE_GLOW_LABELS = Object.freeze([['NORMAL','標準'],['LOW','控えめ'],['NONE','なし']]);
+// ★既定は LIGHT(標準)。重い順に 最大 / 多め / 標準 / 最小 の4段。
+//   2026-09-13・ユーザー指示「段を増やして更に標準をもっと軽くする」。
+//   名前は重さの順に読めるようにそろえてある(既定が「標準」なのは前の指示のまま)。
+const RHYTHM_EFFECT_LABELS = Object.freeze([['NORMAL','最大'],['LOW','多め'],['LIGHT','標準'],['MINIMAL','最小']]);
+const RHYTHM_SIDE_MONSTER_OPACITY_LABELS = Object.freeze([['NORMAL','はっきり'],['SOFT','ふつう'],['FAINT','うっすら'],['OFF','出さない']]);
+const RHYTHM_SIDE_MONSTER_MOTION_LABELS = Object.freeze([['NORMAL','跳ねる'],['SMALL','小さく跳ねる'],['NONE','動かない']]);
+// ★AUTO(おすすめ)は「台形の外でいちばん広く空いているところ」(2026-09-13・ユーザー提案
+//   「コンボ数横画面の場合はこの位置が1番良いと思うんだけどどう？ / もう1枠増やして
+//    デフォルトもここにしたらどう？」)。実際の画面のスクリーンショットで示された場所。
+//   縦は台形の右外・マスモン上段の上、横は台形の右外でマスモンより内側。
+//   どちらもノーツの上に重ならないので、既定をここにした。
+//   HUD(右上)は「ライフのすぐ下・画面の端」として残す(横ではAUTOより外側になる)。
+const RHYTHM_COMBO_POSITION_LABELS = Object.freeze([['AUTO','おすすめ'],['LEFT','左'],['CENTER','中央'],['RIGHT','右'],['HUD','右上']]);
+const RHYTHM_COMBO_POSITIONS = Object.freeze(RHYTHM_COMBO_POSITION_LABELS.map(([id])=>id));
 const RHYTHM_LANE_GLOW_LEVELS = Object.freeze(['NORMAL','LOW','NONE']);
 const RHYTHM_JUDGMENT_IDS = Object.freeze(['MARVELOUS','EXCELLENT','GREAT','GOOD','BAD','MISS']);
 // ランク(G〜M)の表示色(暫定値)。下位ほど地味な色、上位ほど鮮やかにして一目で分かるようにする。
@@ -180,8 +266,9 @@ const RHYTHM_RANK_COLORS = Object.freeze({
 });
 const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   bgmVolume:100, noteSpeed:6, noteSize:100, noteStartPosition:0, displayTimingOffsetMs:0, judgmentTimingOffsetMs:0,
-  fastSlowDisplay:true, judgmentTextDisplay:true, judgmentTextPosition:50, comboDisplay:true, holdSlideOpacity:80, laneGlow:'NORMAL',
-  noteSeVolume:70, noteSeEnabled:true, vibrationEnabled:false, effectAmount:'NORMAL', lightweightMode:false,
+  fastSlowDisplay:true, judgmentTextDisplay:true, judgmentTextPosition:50, comboDisplay:true, comboPosition:'AUTO', comboSize:100, comboOpacity:100, lifeDisplaySize:150, holdSlideOpacity:80, laneGlow:'NORMAL',
+  monsterNoteEffect:'LIGHT',
+  noteSeVolume:70, noteSeEnabled:true, vibrationEnabled:false, effectAmount:'LIGHT', lightweightMode:false,
   livePartnerVisible:true,
   // 両サイドのマスモン(2026-09-05)。既存の保存値には無いので、読み込み時は既定で補われる。
   sideMonsterOpacity:'NORMAL', sideMonsterMotion:'NORMAL', sideMonsterAbilityHighlight:true,
@@ -212,11 +299,16 @@ const normalizeRhythmSettings = value => {
     noteSize:rhythmFiniteStep(source.noteSize,80,120,5,DEFAULT_RHYTHM_SETTINGS.noteSize),
     noteStartPosition:rhythmFiniteInRange(source.noteStartPosition,-100,100,DEFAULT_RHYTHM_SETTINGS.noteStartPosition),
     displayTimingOffsetMs:0,
-    judgmentTimingOffsetMs:rhythmFiniteStep(source.judgmentTimingOffsetMs,-100,100,5,DEFAULT_RHYTHM_SETTINGS.judgmentTimingOffsetMs),
+    judgmentTimingOffsetMs:rhythmFiniteStep(source.judgmentTimingOffsetMs,-RHYTHM_TIMING_OFFSET_MAX_MS,RHYTHM_TIMING_OFFSET_MAX_MS,RHYTHM_TIMING_OFFSET_STEP_MS,DEFAULT_RHYTHM_SETTINGS.judgmentTimingOffsetMs),
     fastSlowDisplay:bool('fastSlowDisplay'),
     judgmentTextDisplay:bool('judgmentTextDisplay'),
     judgmentTextPosition:rhythmFiniteInRange(source.judgmentTextPosition,0,100,DEFAULT_RHYTHM_SETTINGS.judgmentTextPosition),
     comboDisplay:bool('comboDisplay'),
+    comboPosition:RHYTHM_COMBO_POSITIONS.includes(source.comboPosition)?source.comboPosition:DEFAULT_RHYTHM_SETTINGS.comboPosition,
+    comboSize:rhythmFiniteStep(source.comboSize,RHYTHM_COMBO_SIZE_MIN,RHYTHM_COMBO_SIZE_MAX,RHYTHM_COMBO_SIZE_STEP,DEFAULT_RHYTHM_SETTINGS.comboSize),
+    lifeDisplaySize:rhythmFiniteStep(source.lifeDisplaySize,RHYTHM_LIFE_SIZE_MIN,RHYTHM_LIFE_SIZE_MAX,RHYTHM_LIFE_SIZE_STEP,DEFAULT_RHYTHM_SETTINGS.lifeDisplaySize),
+    comboOpacity:rhythmFiniteStep(source.comboOpacity,RHYTHM_COMBO_OPACITY_MIN,RHYTHM_COMBO_OPACITY_MAX,RHYTHM_COMBO_OPACITY_STEP,DEFAULT_RHYTHM_SETTINGS.comboOpacity),
+    monsterNoteEffect:RHYTHM_MONSTER_EFFECT_LEVELS.includes(source.monsterNoteEffect)?source.monsterNoteEffect:DEFAULT_RHYTHM_SETTINGS.monsterNoteEffect,
     holdSlideOpacity:rhythmFiniteInRange(source.holdSlideOpacity,10,100,DEFAULT_RHYTHM_SETTINGS.holdSlideOpacity),
     laneGlow:RHYTHM_LANE_GLOW_LEVELS.includes(source.laneGlow)?source.laneGlow:DEFAULT_RHYTHM_SETTINGS.laneGlow,
     noteSeVolume:rhythmFiniteStep(source.noteSeVolume,0,RHYTHM_VOLUME_MAX,1,DEFAULT_RHYTHM_SETTINGS.noteSeVolume),

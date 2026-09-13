@@ -124,6 +124,70 @@ const HIDDEN_UPDATE_NOTICE_IDS = new Set((typeof CHANGELOG !== 'undefined' ? CHA
 const CHANGELOG_TIMED_SEEN_FIX_KEY = 'mh_changelog_timed_seen_fix_v1';
 const CHANGELOG_ISSUE_TAB_TYPES = Object.freeze(['issue', 'fix']);
 const changelogEntriesOfTab = (tab) => CHANGELOG_ENTRIES.filter(entry => CHANGELOG_ISSUE_TAB_TYPES.includes(entry.type) === (tab === 'issue'));
+// ===== 更新情報の「話題」ごとのまとめ =====
+// ちょこちょこした更新が1行ずつ積み上がり、過去の項目がすぐ画面の外へ流れていた
+// (2026-09-13・ユーザー指摘「同じような内容は同じとこにまとめて詳細で詳しく出るようにして /
+//  過去のやつが一瞬で見えなくなる」)。
+// 同じ日の同じ話題を1行にまとめ、開いたときにその中身を全部出す。
+// 682件が130行ほどになり、1画面でさかのぼれる日数が大きく増える。
+//
+// ★話題は entry.group があればそれを使い、無ければタイトルと本文から見当をつける。
+//   すでにある682件へ手で group を書き足すのは現実的でないため。
+//   見当は「どの見出しの下に並べるか」を決めるだけで、記録そのものには一切触らない。
+//   外れても害は「見出しが違う」だけなので、迷ったら その他 へ落とす。
+// ★新しく書く項目は group を書いておけば、見当に頼らず確実にそこへ入る。
+const CHANGELOG_GROUPS = Object.freeze([
+  { id:'rhythm',    label:'モンヒロビート', emoji:'🎵', match:/モンヒロビート|モンビー|音ゲー|譜面|ノーツ|レーン|コンボ|判定|新曲|曲えらび|演奏|リズム/ },
+  { id:'masu',      label:'マスモンの育成', emoji:'💜', match:/マスモン|強化|転生|限界突破|超越|魂格|合体|絆|トレーニング|育成|再生|染色|ブリーダー|オート強化/ },
+  { id:'battle',    label:'バトル',         emoji:'⚔', match:/バトル|WAVE|難易度|勇者モン|供モン|カード|AUTO|クイック|極限|種族チャレンジ|スキップ|敵/ },
+  { id:'items',     label:'アイテム・マーケット', emoji:'🎁', match:/マーケット|アイテム|ギフト|チケット|ダイヤ|ログインボーナス|ミッション|プシュケー/ },
+  { id:'ranking',   label:'ランキング',     emoji:'🏆', match:/ランキング/ },
+  { id:'assistant', label:'助手',           emoji:'🎀', match:/助手|みゅあ|きき|ももすけ/ },
+  { id:'ui',        label:'画面・操作',     emoji:'🖥', match:/画面|表示|ボタン|レイアウト|ヘルプ|設定|HOME|更新情報|お知らせ|バナー|図鑑/ },
+  { id:'other',     label:'その他',         emoji:'✦', match:null },
+]);
+const CHANGELOG_GROUP_BY_ID = Object.freeze(Object.fromEntries(CHANGELOG_GROUPS.map(group => [group.id, group])));
+const changelogGroupInfo = (id) => CHANGELOG_GROUP_BY_ID[id] || CHANGELOG_GROUP_BY_ID.other;
+// ★見当をつけるときは、まずタイトルだけで探す。本文まで一度に混ぜると、
+//   ついでに触れただけの言葉へ引っ張られる。実際に
+//   「新しいバージョンのお知らせを…選べるようにしました」が、本文に「演奏中は出さない」と
+//   書いてあるだけでモンヒロビート扱いになっていた。
+//   タイトルで決まらないときだけ、本文の先頭を見る(長い本文ほど関係ない語が増えるので先頭だけ)。
+const changelogGroupMatch = (text) => {
+  if (!text) return null;
+  const hit = CHANGELOG_GROUPS.find(group => group.match && group.match.test(text));
+  return hit ? hit.id : null;
+};
+const changelogGroupIdOf = (entry) => {
+  const written = typeof entry?.group === 'string' ? entry.group.trim() : '';
+  if (written && CHANGELOG_GROUP_BY_ID[written]) return written;
+  const byTitle = changelogGroupMatch(String(entry?.title || ''));
+  if (byTitle) return byTitle;
+  const body = (Array.isArray(entry?.items) ? entry.items.join(' ') : '').slice(0, 200);
+  return changelogGroupMatch(body) || 'other';
+};
+// 日付(降順)→話題 の順にまとめる。並び順は渡された配列のまま(呼び出し側で日付降順に並べてある)。
+// 戻り値: [{ key, day, groupId, label, emoji, entries }]
+// ★1つの話題に1件しかない日も、行の形はそろえる(数だけ「1件」になる)。
+//   件数で形を変えると、その日だけ見え方が変わって「まとまっている」ことが伝わらない。
+const groupChangelogEntries = (entries) => {
+  const rows = [];
+  const index = new Map();
+  (Array.isArray(entries) ? entries : []).forEach(entry => {
+    const day = typeof entry?.date === 'string' ? entry.date.slice(0, 10) : '';
+    const groupId = changelogGroupIdOf(entry);
+    const key = `${day}::${groupId}`;
+    let row = index.get(key);
+    if (!row) {
+      const info = changelogGroupInfo(groupId);
+      row = { key, day, groupId, label:info.label, emoji:info.emoji, entries:[] };
+      index.set(key, row);
+      rows.push(row);
+    }
+    row.entries.push(entry);
+  });
+  return rows;
+};
 // 既読の判定に使う「いま存在するすべてのID」。
 // タブの振り分けを変えると、既読にしたIDが別のタブへ移る。タブごとのID一覧で
 // ふるいにかけると移った先で未読へ戻ってしまうため、こちらで残す・捨てるを決める
