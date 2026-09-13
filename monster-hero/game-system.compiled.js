@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e007603048cad2ee
+// source-sha256: 266be1da794753a2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7a4d04859c4942cb
+// generated-sha256: a3d070004096bec3
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-14 01:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-14 06:36"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11553,14 +11553,71 @@ const grantNewPlayerCampaignGift = (gifts, now = Date.now()) => {
     gifts: [gift, ...list]
   };
 };
+
+// ===== ゲーム内アイテムをそのまま入れられるギフト(2026-09-14) =====
+//
+// 2026-09-14・ユーザー指摘「イベント報酬が直接アイテム欄に入ってた / ギフト経由して」。
+// モンヒロビートの報酬(超越の実の種族ぶん・勇者の証・勇者の証片)をギフトで届けたいが、
+// 種族の数だけ GIFT_REWARD_LABELS へ書き足すと、モンスターが増えるたびに書き漏らす。
+// そこで**アイテムのidをそのまま持つ1種類**を足した。名前は実データから引くので、
+// ここにアイテム名を書き写さない。
+//
+// ★既存のギフト(diamond / rainbowPsyche など)の形は何も変えていない。
+//   古い保存(mh_gifts)はそのまま読めるし、書き方も今までどおりでよい(CLAUDE.md ⑦)。
+const GIFT_ITEM_REWARD_TYPE = 'gameItem';
+// そのidのアイテムの名前と絵文字。知らないidでは null を返し、ギフトごと無効にする
+// (知らないものを黙って配らない)
+const giftItemRewardInfo = itemId => {
+  const id = typeof itemId === 'string' ? itemId : '';
+  if (!id) return null;
+  if (typeof HERO_PROOF_ITEM !== 'undefined' && id === HERO_PROOF_ITEM.id) return HERO_PROOF_ITEM;
+  if (typeof HERO_PROOF_SHARD_ITEM !== 'undefined' && id === HERO_PROOF_SHARD_ITEM.id) return HERO_PROOF_SHARD_ITEM;
+  if (typeof RAINBOW_TRANSCEND_FRUIT_ITEM !== 'undefined' && id === RAINBOW_TRANSCEND_FRUIT_ITEM.id) return RAINBOW_TRANSCEND_FRUIT_ITEM;
+  if (typeof speciesTranscendFruitItems === 'function') {
+    const found = Object.values(speciesTranscendFruitItems()).find(item => item && item.id === id);
+    if (found) return found;
+  }
+  const market = typeof BREEDER_MARKET_ITEMS !== 'undefined' && BREEDER_MARKET_ITEMS || [];
+  return market.find(item => item && item.type === 'item' && item.id === id) || null;
+};
+// ギフト一覧へ1件足す。すでに同じidがあれば何もしない(二重に配らない・CLAUDE.md ⑦)。
+// 報酬の中身は normalizeGiftRewards を通せる形でなければ足さない(壊れたギフトを残さない)
+const grantGiftOnce = (gifts, gift, now = Date.now()) => {
+  const list = Array.isArray(gifts) ? gifts : [];
+  if (!gift || typeof gift.id !== 'string' || !gift.id) return {
+    granted: false,
+    gifts: list
+  };
+  if (list.some(item => item?.id === gift.id)) return {
+    granted: false,
+    gifts: list
+  };
+  const next = {
+    ...gift,
+    createdAt: new Date(now).toISOString(),
+    claimedAt: null
+  };
+  if (!normalizeGiftRewards(next)) return {
+    granted: false,
+    gifts: list
+  };
+  return {
+    granted: true,
+    gifts: [next, ...list]
+  };
+};
 const normalizeGiftRewards = gift => {
   if (!gift || !Array.isArray(gift.rewards) || gift.rewards.length === 0) return null;
   const supported = Object.keys(GIFT_REWARD_LABELS);
-  const rewards = gift.rewards.map(r => ({
+  const rewards = gift.rewards.map(r => r?.type === GIFT_ITEM_REWARD_TYPE ? {
+    type: GIFT_ITEM_REWARD_TYPE,
+    itemId: typeof r?.itemId === 'string' ? r.itemId : '',
+    amount: Math.floor(Number(r?.amount))
+  } : {
     type: r?.type,
     amount: Math.floor(Number(r?.amount))
-  }));
-  return rewards.every(r => supported.includes(r.type) && Number.isFinite(r.amount) && r.amount > 0) ? rewards : null;
+  });
+  return rewards.every(r => (r.type === GIFT_ITEM_REWARD_TYPE ? !!giftItemRewardInfo(r.itemId) : supported.includes(r.type)) && Number.isFinite(r.amount) && r.amount > 0) ? rewards : null;
 };
 // 受取期限。expiresAt を書いていないギフトは「期限なし(ずっと受け取れる)」として扱う。
 // ログインボーナス・お詫び・ミッションの3つは必ず30日の期限を入れているので、
@@ -11609,10 +11666,11 @@ const buildGiftClaim = (gift, balances, now = Date.now()) => {
   };
   rewards.forEach(({
     type,
+    itemId,
     amount
   }) => {
     if (type === 'diamond') next.gold += amount;else if (type === 'breederPoint') next.breederPoints += amount;else if (type === 'breederXp') next.breederXp += amount;else {
-      const id = itemIds[type];
+      const id = type === GIFT_ITEM_REWARD_TYPE ? itemId : itemIds[type];
       next.ownedItems[id] = (next.ownedItems[id] || 0) + amount;
     }
   });
@@ -11625,7 +11683,14 @@ const buildGiftClaim = (gift, balances, now = Date.now()) => {
     }
   };
 };
-const giftRewardText = reward => `${GIFT_REWARD_LABELS[reward.type] || reward.type} ×${Number(reward.amount).toLocaleString()}`;
+const giftRewardText = reward => {
+  if (reward && reward.type === GIFT_ITEM_REWARD_TYPE) {
+    const info = giftItemRewardInfo(reward.itemId);
+    const name = info ? `${info.emoji ? `${info.emoji} ` : ''}${info.name}` : reward.itemId;
+    return `${name} ×${Number(reward.amount).toLocaleString()}`;
+  }
+  return `${GIFT_REWARD_LABELS[reward.type] || reward.type} ×${Number(reward.amount).toLocaleString()}`;
+};
 const giftTitleDisplay = gift => {
   const fallback = '名称なしギフト';
   const title = typeof gift?.title === 'string' && gift.title.trim() ? gift.title.trim() : fallback;
@@ -11635,6 +11700,11 @@ const giftTitleDisplay = gift => {
   };
   if (gift?.source === 'campaign') return {
     label: 'キャンペーン',
+    title
+  };
+  // モンヒロビートのイベント・週間ランキングの報酬(2026-09-14)
+  if (gift?.source === 'rhythmEvent') return {
+    label: 'ランキング報酬',
     title
   };
   if (gift?.source !== 'mission') return {
@@ -20545,6 +20615,47 @@ const RhythmEventBanner = ({
   });
 };
 // 参加報酬の1行。ダイヤと虹のプシュケーだけなので、アイテムの実体は要らない
+// 受け取った報酬を、ギフト1件ぶんの中身へ組み替える(2026-09-14・ユーザー指摘
+// 「イベント報酬が直接アイテム欄に入ってた / ギフト経由して」)。
+//
+// ★同じ種類は1行にまとめる。部門ごとにプシュケーが付くので、まとめないと
+//   「虹のプシュケー×500」が何行も並ぶ。
+// ★アイテムは id をそのまま持つ(GIFT_ITEM_REWARD_TYPE)。名前は実データから引かれるので、
+//   ここに名前を書き写さない。
+const rhythmEventGiftRewards = prize => {
+  const totals = new Map(); // 「種類＋アイテムid」→ 個数
+  const add = (type, itemId, amount) => {
+    const n = Math.max(0, Math.floor(Number(amount) || 0));
+    if (n <= 0) return;
+    const key = `${type}:${itemId || ''}`;
+    const found = totals.get(key);
+    if (found) found.amount += n;else totals.set(key, itemId ? {
+      type,
+      itemId,
+      amount: n
+    } : {
+      type,
+      amount: n
+    });
+  };
+  const addReward = reward => {
+    if (!reward) return;
+    const item = rhythmEventRewardItem(reward);
+    if (item) add(GIFT_ITEM_REWARD_TYPE, item.id, reward.count);
+    add('rainbowPsyche', null, reward.psyche);
+    add('diamond', null, reward.gold);
+  };
+  (Array.isArray(prize && prize.prizes) ? prize.prizes : []).forEach(entry => addReward(entry && entry.reward));
+  // 参加報酬。勇者の証片(count)と勇者の証(heroProof)は別のアイテムなので分けて足す
+  const join = prize && prize.participation;
+  if (join) {
+    if (join.count > 0 && typeof HERO_PROOF_SHARD_ITEM !== 'undefined') add(GIFT_ITEM_REWARD_TYPE, HERO_PROOF_SHARD_ITEM.id, join.count);
+    if (join.heroProof > 0 && typeof HERO_PROOF_ITEM !== 'undefined') add(GIFT_ITEM_REWARD_TYPE, HERO_PROOF_ITEM.id, join.heroProof);
+    add('rainbowPsyche', null, join.psyche);
+    add('diamond', null, join.gold);
+  }
+  return [...totals.values()];
+};
 // 参加報酬の1行。週間は勇者の証片、イベントは勇者の証が付くことがあるので、アイテムぶんも出す
 const rhythmEventParticipationText = reward => {
   if (!reward) return '';
@@ -27111,9 +27222,9 @@ function RhythmEventRewardModal({
     disabled: claiming,
     onClick: onClaim,
     className: "mt-4 min-h-[52px] w-full rounded-2xl border-2 border-amber-300 bg-amber-500/20 text-sm font-black text-amber-50 active:scale-[.98] disabled:opacity-50"
-  }, claiming ? '受け取っています…' : '🎁 受け取る'), /*#__PURE__*/React.createElement("p", {
+  }, claiming ? '受け取っています…' : '🎁 ギフトで受け取る'), /*#__PURE__*/React.createElement("p", {
     className: "mt-2 text-center text-[9px] leading-relaxed text-slate-400"
-  }, "\u8D85\u8D8A\u306E\u5B9F\u30FB\u52C7\u8005\u306E\u8A3C\u30FB\u52C7\u8005\u306E\u8A3C\u7247\u30FB\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\u306FHOME\u306E\u300C\u30A2\u30A4\u30C6\u30E0\u300D\u304B\u3089\u3001\u30C0\u30A4\u30E4\u306F\u753B\u9762\u4E0A\u306E\u8868\u793A\u304B\u3089\u78BA\u8A8D\u3067\u304D\u307E\u3059\u3002", weekly && '勇者の証片はマーケットで20個ごとに「勇者の証」1個と交換できます。')));
+  }, "\u5831\u916C\u306FHOME\u306E\u300C\u30AE\u30D5\u30C8\u300D\u3078\u5C4A\u304D\u307E\u3059\u3002\u30AE\u30D5\u30C8\u30DC\u30C3\u30AF\u30B9\u3067\u300C\u53D7\u3051\u53D6\u308B\u300D\u3092\u62BC\u3059\u3068\u3001\u30A2\u30A4\u30C6\u30E0\u3068\u30C0\u30A4\u30E4\u304C\u5165\u308A\u307E\u3059\u3002", weekly && '勇者の証片はマーケットで20個ごとに「勇者の証」1個と交換できます。')));
 }
 function RhythmRankingScreen({
   loadRhythmEventRanking,
@@ -40539,6 +40650,9 @@ function MonsterHeroGame() {
   const [rhythmEventStorySeen, setRhythmEventStorySeen] = useState(null);
   const rhythmEventStorySeenRef = useRef(null);
   const [rhythmEventStoryPending, setRhythmEventStoryPending] = useState(null);
+  // この起動で一度でも流し始めた会話。二度目を並べないための歯止め(下の useEffect の説明を参照)。
+  // 「見た」の記録(rhythmEventStorySeenRef)とは別に持つ。あちらは最後まで見ないと付かない
+  const rhythmEventStoryStartedRef = useRef([]);
   const markRhythmEventStorySeen = async storyId => {
     const seen = normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current);
     if (seen.includes(storyId)) return;
@@ -40554,6 +40668,13 @@ function MonsterHeroGame() {
     if (!(bootPhase === 'GAME' && gameState === 'HOME' && onboarded && !onboardingPreview && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && !eventReplay)) return;
     const storyId = rhythmEventStoryPending;
     setRhythmEventStoryPending(null);
+    // ★流し始めたことを覚えておく(2026-09-14・ユーザー指摘「閉幕イベントが2回連続で流れた」)。
+    //   「見た」の記録が付くのは**会話を最後まで見たとき**なので、読んでいる最中は
+    //   まだ未読のまま。下の1分おきの見回りがそのあいだに回ると「まだ見ていない」と判断して
+    //   もう一度並べ、会話が終わった瞬間に続けて2回目が流れていた。
+    if (!rhythmEventStoryStartedRef.current.includes(storyId)) {
+      rhythmEventStoryStartedRef.current = [...rhythmEventStoryStartedRef.current, storyId];
+    }
     setEventReplay({
       id: storyId,
       step: 0,
@@ -40578,12 +40699,15 @@ function MonsterHeroGame() {
       // ★終わった瞬間に遊んでいた人にも、閉幕の会話を届ける。
       //   開催中かどうかと同じく、**見るたびに数え直す**(CLAUDE.md ⑥-4)。
       //   開きっぱなしの端末でも、終了時刻をまたいだ次の見回りで流れる
-      if (rhythmLimitedEventJustEnded(Date.now()) && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(MONBEAT_CUP_THANKS_STORY_ID)) {
+      //   ★読んでいる最中にここが回っても並べ直さない(rhythmEventStoryStartedRef)。
+      //     そうしないと会話が終わった瞬間に2回目が流れる
+      const notPlayedYet = storyId => !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(storyId) && !rhythmEventStoryStartedRef.current.includes(storyId);
+      if (rhythmLimitedEventJustEnded(Date.now()) && notPlayedYet(MONBEAT_CUP_THANKS_STORY_ID)) {
         setRhythmEventStoryPending(prev => prev || MONBEAT_CUP_THANKS_STORY_ID);
       }
       if (!rhythmLimitedEventAt(Date.now())) return;
       // ① 会話。まだ見ていなければ、HOMEに着いたところで流す
-      if (!normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(MONBEAT_CUP_STORY_ID)) {
+      if (notPlayedYet(MONBEAT_CUP_STORY_ID)) {
         setRhythmEventStoryPending(prev => prev || MONBEAT_CUP_STORY_ID);
       }
       // ② 助手の告知。起動したときに作った行列には入っていないので、1度だけ組み直す。
@@ -40765,40 +40889,33 @@ function MonsterHeroGame() {
         return;
       }
       await markRhythmEventRewardClaimed(prize.event.id);
-      const next = {
-        ...ownedItemsRef.current
-      };
-      // ダイヤは mh_gold と入れ物が別なので、いったん合計だけ数えて後から足す
-      let goldGain = 0;
-      for (const entry of prize.prizes) {
-        const item = rhythmEventRewardItem(entry.reward);
-        if (item && entry.reward.count > 0) next[item.id] = ownedItemCount(next, item.id) + entry.reward.count;
-        if (entry.reward.psyche > 0) next[BREAKTHROUGH_ITEM_ID] = ownedItemCount(next, BREAKTHROUGH_ITEM_ID) + entry.reward.psyche;
-        // 週間の順位報酬にはダイヤも付く(イベントの順位報酬には無い)
-        if (entry.reward.gold > 0) goldGain += entry.reward.gold;
-      }
-      // 参加報酬。週間は勇者の証片も付く
-      if (prize.participation) {
-        if (prize.participation.count > 0) {
-          next[HERO_PROOF_SHARD_ITEM_ID] = ownedItemCount(next, HERO_PROOF_SHARD_ITEM_ID) + prize.participation.count;
+      // ★アイテム欄へ直接入れず、**ギフトで届ける**(2026-09-14・ユーザー指摘
+      //   「イベント報酬が直接アイテム欄に入ってた / ギフト経由して」)。
+      //   黙って所持品が増えるのではなく、何をもらったかがギフトボックスに残る。
+      //   同じ中身を2か所で組み立てないよう、報酬の並べ方は rhythmEventGiftRewards が持つ
+      const rewards = rhythmEventGiftRewards(prize);
+      if (rewards.length > 0) {
+        const gift = {
+          id: `rhythm_event_${prize.event.id}`,
+          title: `${prize.event.name} の報酬`,
+          source: 'rhythmEvent',
+          rewards
+        };
+        // ★保存の元は state ではなく**保存から読み直したもの**にする。
+        //   ほかの画面でギフトを受け取った直後だと、この画面が持っている一覧が古く、
+        //   そのまま書き戻すと受け取り済みの印が消える(CLAUDE.md ⑦)
+        const savedGifts = await storeGet('mh_gifts', [], false);
+        const before = Array.isArray(savedGifts) ? savedGifts : [];
+        const grant = grantGiftOnce(before, gift);
+        // すでに同じidがある(＝二重)ときは何もしない
+        if (grant.granted) {
+          const saved = await saveStoredValuesOrRollback([{
+            key: 'mh_gifts',
+            before,
+            next: grant.gifts
+          }], storeGet, storeSet);
+          if (saved) setGifts(grant.gifts);else console.error('[rhythm-event-reward] gift save failed');
         }
-        // 勇者の証(2026-09-13・週末ゲリラ杯のお礼)。書いていないイベントでは0なので何もしない
-        if (prize.participation.heroProof > 0) {
-          next[HERO_PROOF_ITEM_ID] = ownedItemCount(next, HERO_PROOF_ITEM_ID) + prize.participation.heroProof;
-        }
-        if (prize.participation.psyche > 0) {
-          next[BREAKTHROUGH_ITEM_ID] = ownedItemCount(next, BREAKTHROUGH_ITEM_ID) + prize.participation.psyche;
-        }
-        if (prize.participation.gold > 0) goldGain += prize.participation.gold;
-      }
-      ownedItemsRef.current = next;
-      setOwnedItems(next);
-      await storeSet('mh_owned_items', next, false);
-      if (goldGain > 0) {
-        const nextGold = (goldRef.current || 0) + goldGain;
-        goldRef.current = nextGold;
-        setGold(nextGold);
-        await storeSet('mh_gold', nextGold, false);
       }
       setRhythmEventRewardPrize(null);
       // 同じ起動でもう1件あるかもしれない(2週間のあいだに2回開催した場合)

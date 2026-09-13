@@ -155,14 +155,20 @@ check('マーケットの上に持ち高を出す（プシュケー・証片・�
   market.includes('data-market-balances')
   &&market.includes("data-market-balance")
   &&/psycheHave|shardHave|proofHave/.test(market));
+// ★2026-09-14にユーザー指摘「イベント報酬が直接アイテム欄に入ってた / ギフト経由して」。
+//   アイテム欄へ直接入れるのをやめ、ギフト1件へまとめて届ける形にした
 check('報酬から証片が配られる',
   /reward\.kind==='heroProofShard'/.test(shared)
-  &&/next\[HERO_PROOF_SHARD_ITEM_ID\] = ownedItemCount\(next, HERO_PROOF_SHARD_ITEM_ID\)/.test(app));
+  &&/if\(item\)add\(GIFT_ITEM_REWARD_TYPE,item\.id,reward\.count\)/.test(shared)
+  &&/join\.count>0&&typeof HERO_PROOF_SHARD_ITEM!=='undefined'/.test(shared));
 check('順位報酬のダイヤも配られる',
-  /if \(entry\.reward\.gold > 0\) goldGain \+= entry\.reward\.gold;/.test(app));
-check('受け取り済みは先に保存してからアイテムを足す',
+  /add\('diamond',null,reward\.gold\)/.test(shared));
+check('報酬はギフトで届ける(アイテム欄へ直接入れない)',
+  app.includes('const rewards = rhythmEventGiftRewards(prize);')
+  &&!app.includes('ownedItemCount(next, HERO_PROOF_SHARD_ITEM_ID)'));
+check('受け取り済みは先に保存してからギフトを作る',
   app.indexOf('await markRhythmEventRewardClaimed(prize.event.id);')
-    < app.indexOf('const next = { ...ownedItemsRef.current };\n      // ダイヤは mh_gold'));
+    < app.indexOf('grantGiftOnce(before, gift)'));
 
 // --- 案内(画面・ヘルプ・更新履歴・仕様書) ---
 check('週間の行に遊んだ回数を出す',/eventWeekly\?`\$\{entry\.playCount\}回/.test(screen));

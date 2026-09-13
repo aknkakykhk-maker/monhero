@@ -493,11 +493,51 @@ const grantNewPlayerCampaignGift = (gifts, now=Date.now()) => {
   return { granted:true, gifts:[gift, ...list] };
 };
 
+// ===== ゲーム内アイテムをそのまま入れられるギフト(2026-09-14) =====
+//
+// 2026-09-14・ユーザー指摘「イベント報酬が直接アイテム欄に入ってた / ギフト経由して」。
+// モンヒロビートの報酬(超越の実の種族ぶん・勇者の証・勇者の証片)をギフトで届けたいが、
+// 種族の数だけ GIFT_REWARD_LABELS へ書き足すと、モンスターが増えるたびに書き漏らす。
+// そこで**アイテムのidをそのまま持つ1種類**を足した。名前は実データから引くので、
+// ここにアイテム名を書き写さない。
+//
+// ★既存のギフト(diamond / rainbowPsyche など)の形は何も変えていない。
+//   古い保存(mh_gifts)はそのまま読めるし、書き方も今までどおりでよい(CLAUDE.md ⑦)。
+const GIFT_ITEM_REWARD_TYPE = 'gameItem';
+// そのidのアイテムの名前と絵文字。知らないidでは null を返し、ギフトごと無効にする
+// (知らないものを黙って配らない)
+const giftItemRewardInfo = (itemId) => {
+  const id = typeof itemId === 'string' ? itemId : '';
+  if (!id) return null;
+  if (typeof HERO_PROOF_ITEM !== 'undefined' && id === HERO_PROOF_ITEM.id) return HERO_PROOF_ITEM;
+  if (typeof HERO_PROOF_SHARD_ITEM !== 'undefined' && id === HERO_PROOF_SHARD_ITEM.id) return HERO_PROOF_SHARD_ITEM;
+  if (typeof RAINBOW_TRANSCEND_FRUIT_ITEM !== 'undefined' && id === RAINBOW_TRANSCEND_FRUIT_ITEM.id) return RAINBOW_TRANSCEND_FRUIT_ITEM;
+  if (typeof speciesTranscendFruitItems === 'function') {
+    const found = Object.values(speciesTranscendFruitItems()).find(item => item && item.id === id);
+    if (found) return found;
+  }
+  const market = (typeof BREEDER_MARKET_ITEMS !== 'undefined' && BREEDER_MARKET_ITEMS) || [];
+  return market.find(item => item && item.type === 'item' && item.id === id) || null;
+};
+// ギフト一覧へ1件足す。すでに同じidがあれば何もしない(二重に配らない・CLAUDE.md ⑦)。
+// 報酬の中身は normalizeGiftRewards を通せる形でなければ足さない(壊れたギフトを残さない)
+const grantGiftOnce = (gifts, gift, now = Date.now()) => {
+  const list = Array.isArray(gifts) ? gifts : [];
+  if (!gift || typeof gift.id !== 'string' || !gift.id) return { granted:false, gifts:list };
+  if (list.some(item => item?.id === gift.id)) return { granted:false, gifts:list };
+  const next = { ...gift, createdAt:new Date(now).toISOString(), claimedAt:null };
+  if (!normalizeGiftRewards(next)) return { granted:false, gifts:list };
+  return { granted:true, gifts:[next, ...list] };
+};
+
 const normalizeGiftRewards = (gift) => {
   if (!gift || !Array.isArray(gift.rewards) || gift.rewards.length === 0) return null;
   const supported = Object.keys(GIFT_REWARD_LABELS);
-  const rewards = gift.rewards.map(r=>({ type:r?.type, amount:Math.floor(Number(r?.amount)) }));
-  return rewards.every(r=>supported.includes(r.type) && Number.isFinite(r.amount) && r.amount > 0) ? rewards : null;
+  const rewards = gift.rewards.map(r => (r?.type === GIFT_ITEM_REWARD_TYPE
+    ? { type:GIFT_ITEM_REWARD_TYPE, itemId:(typeof r?.itemId === 'string' ? r.itemId : ''), amount:Math.floor(Number(r?.amount)) }
+    : { type:r?.type, amount:Math.floor(Number(r?.amount)) }));
+  return rewards.every(r => (r.type === GIFT_ITEM_REWARD_TYPE ? !!giftItemRewardInfo(r.itemId) : supported.includes(r.type))
+    && Number.isFinite(r.amount) && r.amount > 0) ? rewards : null;
 };
 // 受取期限。expiresAt を書いていないギフトは「期限なし(ずっと受け取れる)」として扱う。
 // ログインボーナス・お詫び・ミッションの3つは必ず30日の期限を入れているので、
@@ -520,15 +560,24 @@ const buildGiftClaim = (gift, balances, now=Date.now()) => {
   const next = { gold:Math.max(0,Number(balances?.gold)||0), breederPoints:Math.max(0,Number(balances?.breederPoints)||0), breederXp:Math.max(0,Number(balances?.breederXp)||0), ownedItems:{...(balances?.ownedItems||{})} };
   // 虹の超越の実は既存の RAINBOW_TRANSCEND_FRUIT_ITEM_ID と同じ保存ID。
   const itemIds = { dyeMock:'dye_mock', bondPointReset:'bond_reset_scroll', uniqueSkillResetTicket:'unique_skill_reset_ticket', rainbowPsyche:'rainbow_psyche', rainbowTranscendFruit:'transcend_fruit_rainbow', trainingTicket:'training_ticket', trainingTicketLarge:'training_ticket_l', skipTicketJo:'skip_ticket_jo', skipTicketHa:'skip_ticket_ha', skipTicketKyu:'skip_ticket_kyu' };
-  rewards.forEach(({type,amount})=>{ if(type==='diamond') next.gold+=amount; else if(type==='breederPoint') next.breederPoints+=amount; else if(type==='breederXp') next.breederXp+=amount; else { const id=itemIds[type]; next.ownedItems[id]=(next.ownedItems[id]||0)+amount; } });
+  rewards.forEach(({type,itemId,amount})=>{ if(type==='diamond') next.gold+=amount; else if(type==='breederPoint') next.breederPoints+=amount; else if(type==='breederXp') next.breederXp+=amount; else { const id=type===GIFT_ITEM_REWARD_TYPE?itemId:itemIds[type]; next.ownedItems[id]=(next.ownedItems[id]||0)+amount; } });
   return { ok:true, balances:next, gift:{...gift,claimedAt:new Date(now).toISOString()} };
 };
-const giftRewardText = (reward) => `${GIFT_REWARD_LABELS[reward.type] || reward.type} ×${Number(reward.amount).toLocaleString()}`;
+const giftRewardText = (reward) => {
+  if (reward && reward.type === GIFT_ITEM_REWARD_TYPE) {
+    const info = giftItemRewardInfo(reward.itemId);
+    const name = info ? `${info.emoji ? `${info.emoji} ` : ''}${info.name}` : reward.itemId;
+    return `${name} ×${Number(reward.amount).toLocaleString()}`;
+  }
+  return `${GIFT_REWARD_LABELS[reward.type] || reward.type} ×${Number(reward.amount).toLocaleString()}`;
+};
 const giftTitleDisplay = (gift) => {
   const fallback = '名称なしギフト';
   const title = typeof gift?.title === 'string' && gift.title.trim() ? gift.title.trim() : fallback;
   if (gift?.source === 'compensation') return { label:'お詫び', title };
   if (gift?.source === 'campaign') return { label:'キャンペーン', title };
+  // モンヒロビートのイベント・週間ランキングの報酬(2026-09-14)
+  if (gift?.source === 'rhythmEvent') return { label:'ランキング報酬', title };
   if (gift?.source !== 'mission') return { label:null, title };
   const missionTitle = title.replace(/^ミッション報酬[「『]?/, '').replace(/[」』]$/, '').trim();
   return { label:'ミッション', title:missionTitle || title };

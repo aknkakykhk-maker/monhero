@@ -26,6 +26,8 @@ const grab = (text, a, b) => text.slice(text.indexOf(a), text.indexOf(b));
 const dataTablePrelude = [
   breeder.slice(breeder.indexOf('const TEACHING_CARDS = [')).replace(/\b[A-Z_]+_(?:ICON|IMG)\b|\bDISC_STONE_BASE\b/g, "''"),
   grab(source, 'const LOGIN_BONUS_REWARDS = [', 'const LOGIN_BONUS_DEFAULT'),
+  // ギフトの本文はアイテムのidから名前を引くので、その仕組みも持ち込む(2026-09-14)
+  grab(source, 'const GIFT_ITEM_REWARD_TYPE', 'const grantGiftOnce'),
   grab(source, 'const giftRewardText = ', 'const giftTitleDisplay'),
   "const loginBonusPeriodKey=(now=Date.now())=>new Date(Number(now)+5*60*60*1000).toISOString().slice(0,10);",
   grab(source, 'const missionDailyPeriod =', 'const missionClaimableList ='),

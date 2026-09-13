@@ -20,6 +20,8 @@ const rhythmData=read('monster-hero/data/rhythm-mode.js');
 const supa=read('monster-hero/src/parts/26-supabase.jsx');
 const app=read('monster-hero/src/parts/60-app.jsx');
 const screen=read('monster-hero/src/parts/58-screen-rhythm.jsx');
+const shared=read('monster-hero/src/parts/28-rhythm-shared.jsx');
+const release=read('monster-hero/src/parts/17-release-changelog-login-missions.jsx');
 const game=read('monster-hero/src/game-system.jsx');
 const html=read('monster-hero/index.html');
 const help=read('monster-hero/data/help.js');
@@ -214,9 +216,13 @@ check('参加報酬は自分の行から遊んだ曲数を見る(上位5件に�
   app.includes('if (rhythmEventParticipationReward(event)) {')
   &&app.includes('identityKeys:selfKeys, requestId:`rhythm-reward-${event.id}-join`')
   &&app.includes('rhythmEventParticipationCleared(event, played)'));
-check('参加報酬のダイヤとプシュケーは別の入れ物へ足す',
-  app.includes("await storeSet('mh_gold', nextGold, false);")
-  &&app.includes('prize.participation.psyche'));
+// ★2026-09-14にユーザー指摘「イベント報酬が直接アイテム欄に入ってた / ギフト経由して」。
+//   直接足すのをやめ、ギフト1件へまとめて届ける形にした。ダイヤもプシュケーも
+//   ギフトの受け取り(buildGiftClaim)が既存の入れ物へ振り分ける
+check('参加報酬もギフトの中身へ入る(ダイヤ・プシュケー・アイテム)',
+  shared.includes("add('rainbowPsyche',null,join.psyche)")
+  &&shared.includes("add('diamond',null,join.gold)")
+  &&/join\.heroProof>0&&typeof HERO_PROOF_ITEM!=='undefined'/.test(shared));
 check('参加報酬を画面に出す(開催中と受け取りの両方)',
   screen.includes('data-rhythm-event-participation')
   &&screen.includes('data-rhythm-event-reward-participation')
@@ -234,19 +240,27 @@ check('通信に失敗したら受け取り済みにしない(次の起動でや
   &&app.includes('// 通信の失敗で受け取り済みにはしない。次の起動でやり直す'));
 check('入賞も参加報酬も無ければ受け取り済みにする(毎回問い合わせ直さない)',
   app.includes('if (prizes.length === 0 && !participation) { await markRhythmEventRewardClaimed(event.id); return; }'));
-check('先にフラグを保存してからアイテムを足す(二重付与を防ぐ)',(()=>{
+check('先にフラグを保存してから報酬を配る(二重付与を防ぐ)',(()=>{
   const at=app.indexOf('const claimRhythmEventReward');
   if(at<0)return false;
   // ★切り出す幅は、受け取りの本体がまるごと入る大きさにする。
-  //   足りないと「所持品の保存が見つからない(-1)」で、順番が正しくても落ちる
+  //   足りないと「保存が見つからない(-1)」で、順番が正しくても落ちる
   const body=app.slice(at,at+3000);
   const flagAt=body.indexOf('markRhythmEventRewardClaimed');
-  const itemAt=body.indexOf("storeSet('mh_owned_items'");
-  return flagAt>=0&&itemAt>=0&&flagAt<itemAt;
+  // 2026-09-14: アイテム欄へ直接入れるのをやめ、ギフトで届ける形にした
+  const giftAt=body.indexOf('grantGiftOnce(before, gift)');
+  return flagAt>=0&&giftAt>=0&&flagAt<giftAt;
 })());
-check('報酬は所持品とプシュケーへ足す(既存の入れ物を使う)',
-  app.includes('ownedItemCount(next, item.id) + entry.reward.count')
-  &&app.includes('ownedItemCount(next, BREAKTHROUGH_ITEM_ID) + entry.reward.psyche'));
+check('報酬はギフトで届ける(アイテム欄へ直接入れない)',
+  app.includes('const rewards = rhythmEventGiftRewards(prize);')
+  &&app.includes("source: 'rhythmEvent',")
+  &&app.includes('grantGiftOnce(before, gift)')
+  // 直接足していた古い書き方が残っていないこと
+  &&!app.includes('ownedItemCount(next, item.id) + entry.reward.count'));
+check('ギフトは同じidを二重に作らない',
+  /if \(list\.some\(item => item\?\.id === gift\.id\)\) return \{ granted:false/.test(release));
+check('ギフトの中身は同じ種類をまとめる(同じ行が何本も並ばない)',
+  /const totals=new Map\(\);/.test(shared)&&/found\.amount\+=n;/.test(shared));
 check('受け取り画面を出す(新しいgameStateは増やさない)',
   screen.includes('function RhythmEventRewardModal')&&screen.includes('data-rhythm-event-reward-claim')
   &&app.includes('<RhythmEventRewardModal')&&!/'RHYTHM_EVENT_REWARD'/.test(app));
