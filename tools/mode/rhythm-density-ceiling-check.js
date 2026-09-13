@@ -59,8 +59,17 @@ ok('上限は maxPerSecond より上にある(曲どうしの差を潰さない)
 // 掛けてしまうと上限にならない（これが元の不具合）。
 ok('上限に歯ごたえ(challenge.factor)を掛けていない',
   !/hardMaxPerSecond\s*\*/.test(source),'掛けると上限として働かない');
+// 2026-09-13 に曲ごとの「激しさ」(INTENSITY_STYLES)を足したので、Math.min に入るのは
+// hardMaxPerSecond そのものではなく ceiling という変数になった。
+// ceiling は「激しさに ceiling を書いた難易度」だけその値を使い、**それ以外は
+// target.hardMaxPerSecond のまま**なので、安全柵としての働きは変わっていない。
+// 見るのは2つ ── ceiling の作り方と、それが Math.min に入っていること。
 ok('上限が実際に Math.min へ入っている',
-  /Math\.min\(\s*target\.hardMaxPerSecond,/.test(source));
+  /Math\.min\(\s*(?:target\.hardMaxPerSecond|ceiling),/.test(source));
+ok('激しさを書いていない難易度では、上限が hardMaxPerSecond のままである',
+  /const ceiling=Number\(I\.ceiling\)>0\s*\n?\s*\?Math\.max\(target\.hardMaxPerSecond,Number\(I\.ceiling\)\)\s*\n?\s*:target\.hardMaxPerSecond;/.test(source)
+  ||/Math\.min\(\s*target\.hardMaxPerSecond,/.test(source),
+  '書いていない曲では ceiling === target.hardMaxPerSecond になること');
 
 // ── ④ いまの曲が1曲も変わらないこと ────────────────────────────────────────
 // 柵を外した版と入れた版で生成して、譜面が1バイトも変わらないことを見る。
@@ -73,7 +82,14 @@ try{
   fs.mkdirSync(loose,{recursive:true});
   // 柵を無限へ緩めた生成器を一時的に作る（同じディレクトリに置かないと require が解けない）
   const patched=path.join(ROOT,'tools/mode/.density-ceiling-off.js');
-  fs.writeFileSync(patched,source.replace(/Math\.min\(\s*target\.hardMaxPerSecond,/,'Math.min(Infinity,'));
+  // 2026-09-13: 天井が ceiling という変数になったので、どちらの書き方でも外せるようにする。
+  // ここが空振りすると「柵を外した版」が作れず、下の比較が**必ず一致してしまう**。
+  const loosened=source.replace(/Math\.min\(\s*(?:target\.hardMaxPerSecond|ceiling),/,'Math.min(Infinity,');
+  if(loosened===source){
+    ok('柵を外した版が作れている(検査が空振りしていない)',false,
+      '生成器の Math.min(...) の書き方が変わったので、この置換を直すこと');
+  }
+  fs.writeFileSync(patched,loosened);
   let changed=[];
   for(const track of TRACKS){
     const dashed=track.replace(/_/g,'-');
