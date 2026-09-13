@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3199f8edaf68243d
+// generated-sha256: 9649f4815f251033
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -89,7 +89,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-13 23:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-13 23:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -14586,6 +14586,7 @@ function ProfileScreen({
   profileBattleMode, quickHighestWaves, resolveIconUrl, selectedAssistantId, speciesChallengeProgress,
   onBack, onOpenNameEdit, onOpenIconPicker, onOpenItems, onOpenCallStylePicker, onOpenAssistantPicker,
   onSelectBattleMode, onOpenEventReplayList, onOpenSpeciesRecords,
+  rhythmHistoryCount, onOpenRhythmHistory,
 }) {
   return (
       <div data-mh-screen className="flex-1 flex flex-col h-full min-h-0 p-4">
@@ -14758,6 +14759,21 @@ function ProfileScreen({
             )}
           </section>;
         })()}
+        {/* モンヒロビートの履歴: 終わった週間ランキング・イベントの順位をあとから見る。
+            2026-09-13・ユーザー依頼「モンビーのイベントや週間ランキングの終わったものを
+            ヒストリー的に見れる機能」。置き場所もユーザーが決めた(プロフィール)。
+            ★見るだけ。報酬の受け取りには一切関わらない。
+            ★まだ終わった回が1つも無いあいだは出さない(押しても空の一覧しか出ないため) */}
+        {onboarded&&!onboardingPreview&&Number(rhythmHistoryCount)>0&&(
+          <button type="button" data-profile-rhythm-history onClick={onOpenRhythmHistory} className="w-full mb-4 flex items-center gap-2 bg-amber-950/40 border border-amber-400/40 px-4 py-3 rounded-2xl active:scale-[.98]">
+            <Trophy size={14} className="text-amber-300 shrink-0"/>
+            <span className="flex-1 min-w-0 text-left">
+              <b className="block text-[11px] font-black text-amber-100">モンヒロビート これまでの記録</b>
+              <small className="block text-[9px] text-amber-300/70">終わった週間ランキング・イベントの順位を見られます（{rhythmHistoryCount}件）</small>
+            </span>
+            <ChevronRight size={16} className="shrink-0 text-amber-400"/>
+          </button>
+        )}
         {/* イベント回想: 見たことのある会話イベントを、あとから何度でも見返せる。
             見るだけで、初回閲覧フラグ・助手選択・仲良し度・通常のアップデート通知には一切影響しない */}
         {onboarded&&!onboardingPreview&&(()=>{
@@ -19517,6 +19533,146 @@ function MasuAutoEnhanceScreen({
       );
 }
 
+// ---- part: 73-screen-rhythm-history.jsx ----
+// ==== 画面: モンヒロビートの履歴(gameState === 'RHYTHM_HISTORY') ====
+//
+// 2026-09-13・ユーザー依頼「モンビーのイベントや週間ランキングの終わったものを
+// ヒストリー的に見れる機能」。置き場所はプロフィール(ユーザーが決めた)。
+// ランキング画面は「いま競っている場所」なので、自分の足あとはプロフィールへ置く。
+//
+// 【この画面の決めごと】
+// ・**表示専用**。報酬の受け取りには一切関わらないし、受取フラグ(mh_rhythm_event_reward_v1)も
+//   保存も触らない。新しい保存キーも作らない(CLAUDE.md ⑦)
+// ・一覧は data/rhythm-event.js が計算だけで作る。**サーバーへは一度も聞きに行かない**。
+//   週は年52件ずつ増えるが、行に出すのは日付だけなので件数が増えても重くならない。
+//   順位を取りに行くのは**選んで開いた回だけ**(いまのランキングを1回開くのと同じ)
+// ・順位の集計は今週・開催中とまったく同じ関数を使う(渡す期間が違うだけ)。
+//   集計の仕方をここに持たない
+//
+// 一覧と中身は同じ画面で切り替える(selected が null なら一覧)。
+// 画面(gameState)を2つに分けると、戻るたびに一覧を組み直すことになるため。
+function RhythmHistoryScreen({
+  entries, selected, board, divisionId, rankingBreederIcon,
+  onBack, onSelect, onClearSelection, onSelectDivision, onRefresh,
+}) {
+  const list = Array.isArray(entries) ? entries : [];
+  const view = board || { status:'idle', event:null, boards:{}, error:null };
+  // 部門は**えらんだ回から**作る。取ってきた結果(view.event)を待つと、
+  // 読み込み中や通信に失敗したあいだ部門のボタンが消えて、切り替えて試し直せなくなる
+  const eventDefinition = (selected ? rhythmHistoryBoardEvent(selected) : null) || view.event || null;
+  // 部門(対象曲ごと＋総合)。対象曲を持つのはイベントだけなので、週は総合1つになる
+  const divisions = eventDefinition ? rhythmEventDivisions(eventDefinition, RHYTHM_SONGS) : [];
+  const wanted = divisionId || RHYTHM_EVENT_TOTAL_DIVISION;
+  const activeDivision = divisions.some(division => division.id === wanted) ? wanted : RHYTHM_EVENT_TOTAL_DIVISION;
+  const divisionBoard = (view.boards && view.boards[activeDivision]) || { status:'idle', entries:[], self:null };
+  const songId = rhythmEventDivisionSongId(activeDivision);
+  // 週は累計スコア方式なので、1行に出す補助の数字が「遊んだ回数」になる
+  const weekly = !!selected && selected.kind === 'weekly';
+  const rows = Array.isArray(divisionBoard.entries) ? divisionBoard.entries : [];
+  const self = divisionBoard.self || null;
+  // ランクは素点で決める(回数ボーナス込みの点だと満点を超えてしまうため。ランキング画面と同じ)
+  const rankScore = (entry) => (entry && entry.baseScore !== null && entry.baseScore !== undefined)
+    ? entry.baseScore : ((entry && entry.score) || 0);
+  const row = (entry, rank, mine) => (
+    <div data-rhythm-history-row className={`flex items-center gap-2 rounded-2xl border p-2 ${mine?'border-amber-300/60 bg-amber-500/10':'border-white/10 bg-slate-900/80'}`}>
+      <b className="w-8 shrink-0 text-center text-xs font-black text-amber-200">{rank?`${rank}`:'—'}</b>
+      {rankingBreederIcon(entry)}
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-xs font-black text-white">{entry.userName}</p>
+        <p className="text-[9px] text-slate-400">
+          {songId
+            ? `${RHYTHM_DEMO_DIFFICULTY_LABELS[entry.difficultyId]?.name||entry.difficultyId||'-'} ・ Lv.${entry.level}`
+            : `${weekly?`${entry.playCount}回 ・ `:''}${entry.songCount}曲 ・ Lv.${entry.level}`}
+        </p>
+      </div>
+      <div className="shrink-0 text-right">
+        <p className="font-mono text-sm font-black text-amber-100">{(songId?entry.score:entry.totalScore).toLocaleString()}</p>
+        {songId&&<p className={`text-[10px] font-black ${RHYTHM_RANK_COLORS[rhythmRankForScore(rankScore(entry))]}`}>{rhythmRankForScore(rankScore(entry))}</p>}
+        {entry.bonusScore>0&&<p className="text-[9px] font-black text-amber-300">+{entry.bonusScore.toLocaleString()}（{entry.playCount}回）</p>}
+      </div>
+    </div>
+  );
+  return (
+    <main data-mh-screen data-rhythm-history className="flex h-full flex-1 flex-col bg-slate-950 text-white">
+      <header className="z-10 flex shrink-0 items-center gap-2 border-b border-amber-400/15 bg-slate-950/95 px-3 py-1" style={{paddingTop:'calc(0.25rem + env(safe-area-inset-top))'}}>
+        <button aria-label="戻る" data-rhythm-history-back onClick={()=>selected?onClearSelection():onBack()} className="min-h-[44px] px-2 text-slate-400"><ArrowLeft size={18}/></button>
+        <h2 className="min-w-0 flex-1 truncate text-sm font-black tracking-widest text-amber-200">
+          {selected?rhythmHistoryName(selected):'🕘 これまでの記録'}
+        </h2>
+        {selected&&<button aria-label="更新" data-rhythm-history-refresh onClick={onRefresh} className="ml-auto min-h-[44px] px-2 text-[10px] font-black text-amber-200">更新</button>}
+      </header>
+      <div className="min-h-0 flex-1 overflow-y-auto mh-scroll px-3 py-3">
+        {!selected&&(
+          <>
+            <div className="mb-3"><AssistantBubble scene="rhythmHistory" compact/></div>
+            {list.length===0
+              ? <p className="rounded-2xl border border-white/10 bg-slate-900/70 p-4 text-center text-[11px] font-black text-slate-400">
+                  終わった週やイベントがまだありません。<br/>週間ランキングは毎週 月曜 5:00 に切り替わります。
+                </p>
+              : <div className="flex flex-col gap-2">
+                  {list.map(entry=>(
+                    <button key={entry.id} type="button" data-rhythm-history-entry={entry.id} onClick={()=>onSelect(entry)}
+                      className={`flex min-h-[64px] w-full items-center gap-2 rounded-2xl border px-3 py-2.5 text-left active:scale-[.98] ${entry.kind==='limited'?'border-fuchsia-400/40 bg-fuchsia-950/30':'border-amber-400/25 bg-slate-900/70'}`}>
+                      {/* 週に📅を使うと、端末によっては日付入りの絵で出て「その日の記録」に見えてしまう */}
+                      <span className="text-xl" aria-hidden="true">{entry.kind==='limited'?'🏆':'📊'}</span>
+                      <span className="min-w-0 flex-1">
+                        <b className={`block truncate text-[12px] font-black ${entry.kind==='limited'?'text-fuchsia-100':'text-white'}`}>{rhythmHistoryName(entry)}</b>
+                        <small className="block text-[9px] text-slate-400">{rhythmHistoryPeriodText(entry)}</small>
+                        {entry.kind==='limited'&&<small className="block text-[9px] font-black text-fuchsia-300/80">対象曲 {entry.event?.songIds?.length||0}曲</small>}
+                      </span>
+                      <ChevronRight size={16} className="shrink-0 text-slate-500"/>
+                    </button>
+                  ))}
+                </div>}
+          </>
+        )}
+        {selected&&(
+          <>
+            <div className="mb-3 rounded-2xl border border-white/10 bg-slate-900/70 p-3">
+              <div className="flex items-center gap-2">
+                <span className="rounded-lg bg-slate-800 px-2 py-0.5 text-[9px] font-black tracking-widest text-slate-400">終了</span>
+                <span className="text-[10px] font-black text-slate-300">{rhythmHistoryPeriodText(selected)}</span>
+              </div>
+              <p className="mt-2 text-[9px] leading-relaxed text-slate-500">
+                当時の記録から数え直して出しています。ここから報酬を受け取ることはできません。
+              </p>
+            </div>
+            {/* 部門(対象曲ごと＋総合)。対象曲を持つのはイベントだけなので、週では出ない */}
+            {divisions.length>1&&(
+              <div data-rhythm-history-divisions className="mb-3 flex flex-wrap gap-1">
+                {divisions.map(division=>(
+                  <button key={division.id} type="button" data-rhythm-history-division={division.id} onClick={()=>onSelectDivision(division.id)}
+                    className={`min-h-[44px] flex-1 basis-[45%] rounded-xl border px-2 py-1 text-[10px] font-black leading-tight ${division.id===activeDivision?'border-fuchsia-300/60 bg-fuchsia-500/15 text-fuchsia-100':'border-white/10 bg-slate-900/60 text-slate-400'}`}>
+                    {division.songId?(rhythmSongFullName(division.song)||division.songId):'総合'}
+                  </button>
+                ))}
+              </div>
+            )}
+            {view.status==='notReady'&&<p className="rounded-2xl border border-white/10 bg-slate-900/70 p-4 text-center text-[11px] font-black text-slate-400">この端末ではまだ順位を出せません。</p>}
+            {view.status==='error'&&<p className="rounded-2xl border border-rose-400/30 bg-rose-950/30 p-4 text-center text-[11px] font-black text-rose-200">順位を読み込めませんでした。「更新」を押すともう一度試します。</p>}
+            {divisionBoard.status==='loading'&&rows.length===0&&<p className="p-6 text-center text-[11px] font-black text-slate-500">読み込み中…</p>}
+            {divisionBoard.status==='ready'&&rows.length===0&&<p className="rounded-2xl border border-white/10 bg-slate-900/70 p-4 text-center text-[11px] font-black text-slate-400">この回の記録はありません。</p>}
+            {rows.length>0&&(
+              <div className="flex flex-col gap-1.5">
+                {rows.map((entry,index)=>(
+                  <React.Fragment key={`${entry.identityKey||'row'}-${index}`}>{row(entry,index+1,!!self&&self.identityKey===entry.identityKey)}</React.Fragment>
+                ))}
+              </div>
+            )}
+            {/* 自分が一覧に入っていないときだけ、自分の行を下へ足す */}
+            {self&&self.rank===null&&(
+              <div className="mt-3">
+                <p className="mb-1 px-1 text-[9px] font-black tracking-widest text-amber-300">あなたの記録</p>
+                {row(self,null,true)}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </main>
+  );
+}
+
 // ---- part: 60-app.jsx ----
 function MonsterHeroGame() {
   const [gameState, setGameState] = useState('HOME');
@@ -21332,14 +21488,19 @@ function MonsterHeroGame() {
   // status:'notReady' は「関数をまだ作っていない」状態。合算と同じくエラー扱いにしない。
   // status:'closed'   は「そのkindのランキングがいま無い」状態。
   const RHYTHM_BOARD_EMPTY = { status:'idle', window:null, event:null, boards:{}, error:null };
-  const [rhythmEventDivision, setRhythmEventDivision] = useState({ weekly:RHYTHM_EVENT_TOTAL_DIVISION, limited:RHYTHM_EVENT_TOTAL_DIVISION });
-  const [rhythmEventRanking, setRhythmEventRanking] = useState({ weekly:RHYTHM_BOARD_EMPTY, limited:RHYTHM_BOARD_EMPTY });
-  const rhythmEventRankingRequestRef = useRef({ weekly:0, limited:0 });
+  // kind は 'weekly'(今週) / 'limited'(開催中のイベント) / 'history'(終わった回をあとから見る)。
+  // 履歴は**表示専用**で、報酬の受け取りには一切関わらない(受取フラグも触らない・CLAUDE.md ⑦)
+  const [rhythmEventDivision, setRhythmEventDivision] = useState({ weekly:RHYTHM_EVENT_TOTAL_DIVISION, limited:RHYTHM_EVENT_TOTAL_DIVISION, history:RHYTHM_EVENT_TOTAL_DIVISION });
+  const [rhythmEventRanking, setRhythmEventRanking] = useState({ weekly:RHYTHM_BOARD_EMPTY, limited:RHYTHM_BOARD_EMPTY, history:RHYTHM_BOARD_EMPTY });
+  const rhythmEventRankingRequestRef = useRef({ weekly:0, limited:0, history:0 });
   const setRhythmBoard = (kind, update) => setRhythmEventRanking(prev => ({
     ...prev, [kind]: typeof update === 'function' ? update(prev[kind] || RHYTHM_BOARD_EMPTY) : update,
   }));
-  const loadRhythmEventRanking = useCallback(async (kind, divisionId) => {
-    if (kind !== 'weekly' && kind !== 'limited') return;
+  // historyEntry を渡すと、その「終わった回」の順位を集計してもらう(kind は 'history')。
+  // 集計そのものは今週・開催中とまったく同じ関数を使う。渡す期間が違うだけ
+  const loadRhythmEventRanking = useCallback(async (kind, divisionId, historyEntry = null) => {
+    if (kind !== 'weekly' && kind !== 'limited' && kind !== 'history') return;
+    if (kind === 'history' && !historyEntry) return;
     const requestId = (rhythmEventRankingRequestRef.current[kind] || 0) + 1;
     rhythmEventRankingRequestRef.current = { ...rhythmEventRankingRequestRef.current, [kind]: requestId };
     const wanted = divisionId || RHYTHM_EVENT_TOTAL_DIVISION;
@@ -21363,8 +21524,11 @@ function MonsterHeroGame() {
       // 週間は期間の正本がサーバーにある。期間限定は定義の日時をそのまま使うので聞きに行かない
       const weekWindow = kind === 'weekly' ? await sbFetchRhythmWeekWindow({ requestId:`rhythm-week-${Date.now()}` }) : null;
       if (stale()) return;
-      const event = kind === 'weekly' ? rhythmWeeklyEvent(weekWindow.startMs) : rhythmLimitedEventAt(Date.now());
-      const range = rhythmEventWindow(event, weekWindow);
+      // 履歴は終わっているので期間が動かない。サーバーへ週の窓を聞きに行く必要もない
+      const event = kind === 'history' ? rhythmHistoryBoardEvent(historyEntry)
+        : kind === 'weekly' ? rhythmWeeklyEvent(weekWindow.startMs)
+        : rhythmLimitedEventAt(Date.now());
+      const range = kind === 'history' ? rhythmHistoryRange(historyEntry) : rhythmEventWindow(event, weekWindow);
       if (!event || !range) { setRhythmBoard(kind, { status:'closed', window:weekWindow, event:null, boards:{}, error:null }); return; }
       // 週(またはイベント)が変わっていたら、前のぶんの一覧は捨てる(古い順位を見せない)
       const keepBoards = (prev) => (prev.event && prev.event.id === event.id) ? prev.boards : {};
@@ -21377,7 +21541,8 @@ function MonsterHeroGame() {
       const bonusRates = rhythmEventPlayBonusRates(event);
       // ★週間は**累計スコア方式**(2026-09-13)。曲ごとのベストではなく、その週に出した記録を
       //   ぜんぶ足す。対象曲も部門も無いので、期間だけ渡す専用の関数を呼ぶ
-      const weeklyTotals = kind === 'weekly' && !targetSongId;
+      // 週間(履歴の週をふくむ)は累計スコア方式。対象曲も部門も無いので期間だけ渡す
+      const weeklyTotals = (kind === 'weekly' || (kind === 'history' && historyEntry.kind === 'weekly')) && !targetSongId;
       const fetchRows = (options) => weeklyTotals
         ? sbFetchRhythmWeekTotals({ fromMs:range.startMs, toMs:range.endMs, ...options })
         : targetSongId
@@ -21416,6 +21581,31 @@ function MonsterHeroGame() {
       }));
     }
   }, [breederName]);
+  // ===== モンヒロビートの履歴(2026-09-13・ユーザー依頼) =====
+  // 終わった週・イベントの順位をあとから見るだけの画面。プロフィールから入る。
+  // ★一覧は data/rhythm-event.js が計算だけで作る(サーバーへは聞きに行かない)。
+  //   順位を取りに行くのは、選んで開いた回だけ。
+  // ★**表示専用**。報酬の受け取り・受取フラグ・保存には一切触らない(CLAUDE.md ⑦)。
+  const [rhythmHistoryList, setRhythmHistoryList] = useState([]);
+  const [rhythmHistorySelected, setRhythmHistorySelected] = useState(null);
+  // 公開前は入口ごと出さない(週間ランキングと同じフラグで出し入れする)
+  const rhythmHistoryReleased = RELEASE_FLAGS.rhythmWeeklyRanking === true;
+  // 入口に出す件数。開くまでは一覧を組み立てない(プロフィールを開くたびに数えるのは無駄)
+  const rhythmHistoryCount = rhythmHistoryReleased ? rhythmHistoryEntries(Date.now()).length : 0;
+  const loadRhythmHistoryBoard = (entry, divisionId) => {
+    if (!entry) return;
+    setRhythmEventDivision(prev => ({ ...prev, history: divisionId }));
+    loadRhythmEventRanking('history', divisionId, entry);
+  };
+  const openRhythmHistory = () => {
+    setRhythmHistorySelected(null);
+    setRhythmHistoryList(rhythmHistoryEntries(Date.now()));
+    setGameState('RHYTHM_HISTORY');
+  };
+  const selectRhythmHistory = (entry) => {
+    setRhythmHistorySelected(entry);
+    loadRhythmHistoryBoard(entry, RHYTHM_EVENT_TOTAL_DIVISION);
+  };
   const rhythmRankingRequestRef = useRef(0);
   // 難易度合算(体験版で遊べる難易度をまとめて取得)のランキングを読み込む。
   // 同じユーザーの複数行は読み込み側で最高得点の1件だけへ畳む(rhythmRankingDedupeByUser)。
@@ -32075,6 +32265,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onSelectBattleMode={setProfileBattleMode}
             onOpenEventReplayList={()=>setShowEventReplayList(true)}
             onOpenSpeciesRecords={()=>openSpeciesChallengeRecords('PROFILE')}
+            rhythmHistoryCount={rhythmHistoryCount}
+            onOpenRhythmHistory={openRhythmHistory}
           />
         )}
 
@@ -32369,6 +32561,22 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         )}
 
         {/* アイテム欄: 所持している消耗アイテムを一覧表示し、「使う」から対象のマスモンを選ぶ */}
+        {/* モンヒロビートの履歴: 終わった週・イベントの順位をあとから見る(表示専用) */}
+        {gameState==='RHYTHM_HISTORY'&&(
+          <RhythmHistoryScreen
+            entries={rhythmHistoryList}
+            selected={rhythmHistorySelected}
+            board={rhythmEventRanking.history}
+            divisionId={rhythmEventDivision.history}
+            rankingBreederIcon={rankingBreederIcon}
+            onBack={()=>setGameState('PROFILE')}
+            onSelect={selectRhythmHistory}
+            onClearSelection={()=>setRhythmHistorySelected(null)}
+            onSelectDivision={(id)=>loadRhythmHistoryBoard(rhythmHistorySelected,id)}
+            onRefresh={()=>loadRhythmHistoryBoard(rhythmHistorySelected,rhythmEventDivision.history||RHYTHM_EVENT_TOTAL_DIVISION)}
+          />
+        )}
+
         {gameState==='ITEM_INVENTORY'&&(
           <ItemInventoryScreen
             ownedItems={ownedItems}

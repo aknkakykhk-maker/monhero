@@ -466,3 +466,91 @@ const rhythmEventDivisionIds = (event) => [
   ...((event && Array.isArray(event.songIds)) ? event.songIds.map(rhythmEventSongDivisionId) : []),
   RHYTHM_EVENT_TOTAL_DIVISION,
 ];
+
+// ===== 終わった回をあとから見る(履歴) =====
+//
+// 2026-09-13・ユーザー依頼「モンビーのイベントや週間ランキングの終わったものを
+// ヒストリー的に見れる機能」。置き場所はプロフィール(ユーザーが決めた。
+// ランキング画面は"いま競っている場所"なので、自分の足あとはプロフィールへ置く)。
+//
+// 【なぜ件数が増えても平気か】
+// 一覧は**ここで計算して作るだけ**で、サーバーへは一度も聞きに行かない。
+// 週は年52件ずつ増えるが、増えて困るのは「一覧の各行に順位を出す」ようにしたときで、
+// そうすると件数ぶんの問い合わせが要る。行に出すのは日付だけにして、
+// **選んで開いた回だけ1回集計を呼ぶ**(いまのランキングを1回開くのと同じ)。
+//
+// 【どこまでさかのぼれるか】
+// RHYTHM_WEEKLY_REWARD_FROM_MS(2026-09-14 05:00 JST)より前の週は出さない。
+// 2026-09-13に週間の数え方そのものを変えている(曲別のベストを合算 →
+// その週に出した記録をぜんぶ足す累計)ので、それより前の週をいまの関数で集計すると、
+// **当時プレイヤーが見ていた順位と食い違う**。受け取りの開始時刻と同じ日時なので、
+// 値を2か所に持たないよう、その定数をそのまま境界に使う(2026-09-13・ユーザーが決めた)。
+const rhythmHistoryWeekFromMs = () => RHYTHM_WEEKLY_REWARD_FROM_MS;
+
+// 終わった週(新しい順)。limit>0 でその件数まで
+const rhythmHistoryWeeks = (nowMs, limit = 0) => {
+  const now = Number.isFinite(Number(nowMs)) ? Number(nowMs) : 0;
+  const max = Number.isFinite(Number(limit)) ? Math.floor(Number(limit)) : 0;
+  const fromMs = rhythmHistoryWeekFromMs();
+  const out = [];
+  // 今週の1つ前から、始まりの週まで1週ずつさかのぼる。
+  // 境界(fromMs)で必ず止まるので、数え続けることはない
+  for (let back = 1; ; back++) {
+    const startMs = rhythmWeekStartMs(now) - back * RHYTHM_WEEK_MS;
+    if (startMs < fromMs) break;
+    const endMs = startMs + RHYTHM_WEEK_MS;
+    if (now < endMs) continue;                       // まだ終わっていない週は出さない
+    out.push(Object.freeze({ id: rhythmWeekId(startMs), kind: 'weekly', startMs, endMs, event: null }));
+    if (max > 0 && out.length >= max) break;
+  }
+  return out;
+};
+
+// 終わった期間限定イベント(新しい順)。定義はイベントが終わっても残るので、そこから作る
+const rhythmHistoryEvents = (nowMs) => {
+  const now = Number.isFinite(Number(nowMs)) ? Number(nowMs) : 0;
+  const list = Array.isArray(RHYTHM_EVENTS) ? RHYTHM_EVENTS : [];
+  return list
+    .filter(event => event && event.kind === 'limited' && Array.isArray(event.songIds) && event.songIds.length > 0)
+    .map(event => ({ event, startMs: rhythmEventTimeMs(event.startAt), endMs: rhythmEventTimeMs(event.endAt) }))
+    .filter(row => row.startMs !== null && row.endMs !== null && now >= row.endMs)
+    .map(row => Object.freeze({ id: row.event.id, kind: 'limited', startMs: row.startMs, endMs: row.endMs, event: row.event }))
+    .sort((a, b) => b.endMs - a.endMs);
+};
+
+// 履歴の一覧(終わったのが新しい順)。イベントと週をまぜて1本にする
+const rhythmHistoryEntries = (nowMs, weekLimit = 0) =>
+  [...rhythmHistoryEvents(nowMs), ...rhythmHistoryWeeks(nowMs, weekLimit)]
+    .sort((a, b) => b.endMs - a.endMs);
+
+// 順位を集計してもらうときに渡すイベント。週はその週ぶんを組み立て、イベントは定義そのもの。
+// ★週の songIds は「いま公開されている曲」になるが、週間は部門を分けない(総合だけ)ので
+//   順位には関わらない。曲の部門を持つのはイベントだけ(§6.3)
+const rhythmHistoryBoardEvent = (entry) => {
+  if (!entry) return null;
+  if (entry.kind === 'limited') return entry.event || null;
+  return rhythmWeeklyEvent(entry.startMs);
+};
+// その回の期間。履歴は終わっているので、サーバーへ週の窓を聞きに行く必要がない
+const rhythmHistoryRange = (entry) => {
+  const startMs = Number(entry && entry.startMs);
+  const endMs = Number(entry && entry.endMs);
+  return (Number.isFinite(startMs) && Number.isFinite(endMs) && endMs > startMs) ? { startMs, endMs } : null;
+};
+
+// 画面に出す日付。履歴は年をまたぐので、年まで入れる(rhythmEventJstText は年を出さない)
+const rhythmHistoryDateText = (ms) => {
+  const t = Number(ms);
+  if (!Number.isFinite(t)) return '—';
+  const d = new Date(t + RHYTHM_JST_OFFSET_MS);
+  return `${d.getUTCFullYear()}/${d.getUTCMonth() + 1}/${d.getUTCDate()}(${RHYTHM_EVENT_WEEKDAY_LABELS[d.getUTCDay()]})`;
+};
+// 見出し。週は「◯/◯の週」、イベントは付けた名前をそのまま出す
+const rhythmHistoryName = (entry) => {
+  if (!entry) return '';
+  if (entry.kind === 'limited') return (entry.event && entry.event.name) || 'イベント';
+  return `${rhythmHistoryDateText(entry.startMs)} の週`;
+};
+// 期間の文。終わった回なので、始まりと終わりの両方を出す
+const rhythmHistoryPeriodText = (entry) =>
+  entry ? `${rhythmHistoryDateText(entry.startMs)} 〜 ${rhythmHistoryDateText(entry.endMs)}` : '—';
