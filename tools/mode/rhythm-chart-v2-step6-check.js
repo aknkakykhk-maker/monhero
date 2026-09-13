@@ -46,7 +46,8 @@ check('手のモデルのしきい値を1か所へまとめてある',
    'fingerMinGapLanes','releaseMarginMs','endFlickReleaseMs'].every(k=>new RegExp(`${k}:`).test(handModelSource))
   &&source.includes("require('./rhythm-hand-model.js')"));
 check('生成(STEP3)と自動修正(STEP7)も同じ手のモデルを見ている',
-  fs.readFileSync(path.join(ROOT,'tools/mode/rhythm-chart-v2-step3-generate.js'),'utf8').includes("require('./rhythm-hand-model.js')")
+  // V2の生成器は引退したので、いま使っている生成器(V3)を見る(2026-09-13)
+  fs.readFileSync(path.join(ROOT,'tools/mode/rhythm-chart-v3-generate.js'),'utf8').includes("require('./rhythm-hand-model.js')")
   &&fs.readFileSync(path.join(ROOT,'tools/mode/rhythm-chart-v2-step7-autofix.js'),'utf8').includes("require('./rhythm-hand-model.js')"));
 
 // --- 1. しきい値の較正: 人が確認した既存の正式候補v1が通ること ---

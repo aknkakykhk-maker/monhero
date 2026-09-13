@@ -18,6 +18,8 @@ const path = require('path');
 const root = path.resolve(TOOLS_DIR, '..');
 const web = path.join(root, 'monster-hero');
 const game = fs.readFileSync(path.join(web, 'src/game-system.jsx'), 'utf8');
+// 演奏画面(タイミング合わせのリザルトを含む)は parts 側で見る
+const play = fs.readFileSync(path.join(web, 'src/parts/30-rhythm-play.jsx'), 'utf8');
 
 let failed = 0;
 const check = (name, ok, detail = '') => {
@@ -29,8 +31,8 @@ const grab = (from, to) => {
   const j = game.indexOf(to, i);
   return i >= 0 && j > i ? game.slice(i, j) : '';
 };
-const options = grab('const RhythmOptions=({value,onSave,onBack})=>{', '\n// モンスターノーツ用のマスモン設定');
-const calibrator = grab('const RhythmTimingCalibrator=({onApply,onClose,currentOffsetMs=0})=>{', 'const RhythmOptions=');
+const options = grab('const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=null,onClearCalibration=null})=>{', '\n// モンスターノーツ用のマスモン設定');
+
 
 // ---- ゆとり ----
 check('オプションの本体が取り出せている', options.length > 0);
@@ -46,21 +48,30 @@ check('見出しが本文と同じ大きさになっていない', /const head='
 // ここが1行に詰まると、どの説明がどの項目のものか分からなくなる
 check('項目の並べ方を1か所にまとめてある', /const field=\(title,control,description=null,\{full=false\}=\{\}\)=>/.test(options));
 
-// ---- タップ調整は専用の画面 ----
-check('叩いて合わせるは画面いっぱいで開く',
-  /if\(calibrating\)return <RhythmTimingCalibrator/.test(options));
-check('オプションの中の小さな枠では開かない',
-  !/<div className="mt-2"><RhythmTimingCalibrator/.test(options));
-// 別のgameStateへ飛ばすと、この画面が消えて未保存の変更が全部消える
-check('編集中の値を持ったまま開く(gameStateを移していない)',
-  !/setGameState\('RHYTHM_CALIBRAT/.test(game));
-check('専用画面が画面いっぱいの作りになっている',
-  /return <main data-rhythm-calibrator className="flex flex-1 min-h-0 flex-col/.test(calibrator));
-check('叩く場所が残りいっぱいに広がる(高さ112pxの枠ではない)',
-  calibrator.includes('min-h-0 flex-1 w-full overflow-hidden') && !calibrator.includes('h-28 w-full'));
-check('「この値にする」を押したらオプションへ戻る',
-  /onApply\(result\.offsetMs\);stop\(\);onClose\(\);/.test(calibrator));
-check('戻るボタンがある', calibrator.includes('aria-label="オプションへ戻る"'));
+// ---- タップ調整は「実際の演奏画面」で行う(2026-09-13・ユーザー指示) ----
+// 「今の仕様はみにくすぎるし実用性がない / 特に横画面は終わってる /
+//  普通に実際の画面を使ってやればいい / そこで判定も合わせて出して調整するのが1番合うとおもう」。
+check('専用の小さな画面はもう作らない',
+  !game.includes('const RhythmTimingCalibrator=') && !game.includes('data-rhythm-calibrator-area'));
+check('オプションから演奏画面のタイミング合わせへ送る',
+  options.includes('data-rhythm-calibrator-open') && /onClick=\{goCalibrate\}/.test(options)
+  && game.includes("setRhythmPlay({ song:RHYTHM_CALIBRATION_SONG, difficulty:RHYTHM_CALIBRATION_DIFFICULTY, from:'calibration' });"));
+// 画面を移るので、未保存の変更は先に保存してから送る(戻ってきたときに消えていないように)
+check('未保存の変更を持ったまま画面を移らない',
+  /const goCalibrate=async\(\)=>\{[\s\S]{0,200}if\(dirty\)\{const saved=await onSave\(draft\);setDraft\(saved\);\}/.test(options));
+// 2026-09-13・ユーザー指摘「設定にもなってない」。測り終わった画面でそのまま決められるようにした。
+// 戻ってからもう一度ボタンを押す、という二度手間にしない(勝手に入りもしない)
+check('測った値は本人が選んでから入る(勝手に設定を書き換えない)',
+  play.includes('data-rhythm-calibration-apply')
+  && /onClick=\{\(\)=>onApplyCalibration&&onApplyCalibration\(measured\)\}/.test(play)
+  && game.includes('judgmentTimingOffsetMs:offsetMs'));
+check('決めたらその場で保存してオプションへ戻る',
+  /const saved=await saveRhythmSettings\(\{\.\.\.rhythmSettings,judgmentTimingOffsetMs:offsetMs\}\)/.test(game)
+  && game.includes("setRhythmPlay(null);setGameState('RHYTHM_OPTIONS');"));
+check('オプションへ戻ったら入れた値が分かる',
+  options.includes('data-rhythm-calibrator-result') && options.includes('にしました'));
+check('タイミング合わせの記録は残さない(自己ベストにもランキングにも触れない)',
+  game.includes("if(rhythmPlay.from==='calibration')return;"));
 
 // ---- ノーツの出る位置 ----
 check('ノーツの出る位置を画面から変えられる',

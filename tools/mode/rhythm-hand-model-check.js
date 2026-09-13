@@ -68,7 +68,8 @@ check('寄せられる幅は指の太さより小さい(端まで寄せられる
 }
 // 物差しを1か所にまとめてあること。道具ごとに書き直すと直したつもりで別物になる
 {
-  const users=['rhythm-chart-v3-generate.js','rhythm-chart-v2-step3-generate.js',
+  // V2の生成器(rhythm-chart-v2-step3-generate.js)は引退したので外した(2026-09-13)
+  const users=['rhythm-chart-v3-generate.js',
     'rhythm-chart-v2-step6-playability.js','rhythm-chart-v3-check.js',
     'rhythm-chart-v2-step7-autofix.js','rhythm-runtime-notes.js'];
   for(const file of users){

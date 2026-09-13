@@ -190,6 +190,27 @@ const buildSoulRankRespecProofExchange = (ownedItems, quantity = 1) => {
     },
   };
 };
+// 勇者の証片 → 勇者の証 の交換(2026-09-13)。
+// 20個ごとに1個。足りなければ ok:false を返し、所持品には一切触れない。
+// ★増える側も減る側も同じ mh_owned_items の中なので、書き戻しは1回で済む。
+const buildHeroProofShardExchange = (ownedItems, quantity = 1) => {
+  const before = ownedItems && typeof ownedItems === 'object' && !Array.isArray(ownedItems) ? ownedItems : {};
+  const count = Math.max(1, Math.floor(Number(quantity) || 1));
+  const shardCost = count * HERO_PROOF_SHARD_PER_PROOF;
+  const shardHave = ownedItemCount(before, HERO_PROOF_SHARD_ITEM_ID);
+  if (shardHave < shardCost) return { ok:false, quantity:count, shardCost, shardHave, ownedItems:before };
+  return {
+    ok:true,
+    quantity:count,
+    shardCost,
+    shardHave,
+    ownedItems:{
+      ...before,
+      [HERO_PROOF_SHARD_ITEM_ID]:shardHave - shardCost,
+      [HERO_PROOF_ITEM_ID]:ownedItemCount(before, HERO_PROOF_ITEM_ID) + count,
+    },
+  };
+};
 const formatSoulTraitEffect = (traitOrId, value) => {
   const trait = typeof traitOrId === 'string' ? SOUL_TRAIT_BY_ID[traitOrId] : traitOrId;
   if (!trait) return '';
@@ -1017,6 +1038,20 @@ const HERO_PROOF_ITEM = Object.freeze({
   emoji:'🏅',
   usage:'soulRank',
   desc:'魂格進化Ⅰ〜Ⅴに使う高難度クリア報酬。神殿の「魂格進化」で消費する。',
+});
+
+// 勇者の証片(2026-09-13・ユーザーが決めた)。モンヒロビートの週間ランキングの報酬で増え、
+// マーケットで HERO_PROOF_SHARD_PER_PROOF 個ごとに「勇者の証」1個と交換できる。
+// ★所持数は他アイテムと同じ mh_owned_items の中へ入れ、新しい保存キーは作らない(CLAUDE.md ⑦)。
+// ★20個未満でも無駄にならず貯まる。証そのものではないので、魂格進化には直接使えない。
+const HERO_PROOF_SHARD_ITEM_ID = 'hero_proof_shard';
+const HERO_PROOF_SHARD_PER_PROOF = 20;
+const HERO_PROOF_SHARD_ITEM = Object.freeze({
+  id:HERO_PROOF_SHARD_ITEM_ID,
+  name:'勇者の証片',
+  emoji:'🎖️',
+  usage:'heroProofShard',
+  desc:`モンヒロビートの週間ランキングでもらえるかけら。マーケットで${HERO_PROOF_SHARD_PER_PROOF}個ごとに「勇者の証」1個と交換できる。`,
 });
 const HERO_PROOF_CLEAR_REWARDS = Object.freeze({
   extreme:Object.freeze({ GOD:1, RAGNAROK:2 }),

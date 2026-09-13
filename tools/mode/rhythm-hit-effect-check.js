@@ -43,7 +43,11 @@ check('音量・ON/OFF・全体ミュートは既存のタップ音の設定を�
   &&!/mh_/.test(monsterSe));
 check('モンスターノーツを取ったときにその音を鳴らす',
   game.includes('if(monsterHit)RHYTHM_NOTE_SE_RUNTIME.playMonster();'));
-check('MISSでは鳴らさない・光らせない',/if\(judgment!=='MISS'\)\{[\s\S]{0,200}?const monsterHit=/.test(game));
+// ★monsterHit は 2026-09-13 に「演出量のブロックの外」へ出した(振動をそこへまとめたため)。
+//   MISSでは false になるので、鳴らす・光らせるところへは入らない。
+check('MISSでは鳴らさない・光らせない',
+  game.includes("const monsterHit=judgment!=='MISS'&&!!monsterForNote(note);")
+  &&/if\(judgment!=='MISS'\)\{\s*if\(monsterHit\)RHYTHM_NOTE_SE_RUNTIME\.playMonster\(\);/.test(game));
 
 // --- 重くならない作り ---
 check('使い回す枚数が決まっている',Number.isInteger(RHYTHM_HIT_EFFECT_POOL)&&RHYTHM_HIT_EFFECT_POOL>=6&&RHYTHM_HIT_EFFECT_POOL<=24,
@@ -253,7 +257,8 @@ check('演奏中の判定処理に offsetWidth の読み取りを残さない',
 check('ヒット演出は呼び出し側のまとめへ譲れる(defer)',
   source.includes("if(defer)return {el:item,attr:'rhythmHitKind',value:kind};")
   // 2026-09-12: ぴったりのMARVELOUS(precise)を渡すようになったので、その間へ入る
-  &&game.includes('monster:monsterHit,precise:preciseHit,defer:true'));
+  &&game.includes('monster:bigMonsterEffect,precise:preciseHit,defer:true')
+  &&game.includes("const bigMonsterEffect=monsterHit&&monsterEffect!=='OFF';"));
 
 // --- 判定まわりを変えていない ---
 check('判定窓・スコア・コンボの計算に触っていない',

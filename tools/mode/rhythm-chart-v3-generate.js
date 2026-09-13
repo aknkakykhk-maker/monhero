@@ -212,6 +212,76 @@ const DENSITY_TARGET=Object.freeze({
   MASTER:Object.freeze({perBeat:1.19,minPerSecond:1.92,maxPerSecond:4.6,hardMaxPerSecond:5.4}),
 });
 
+// --- 曲ごとの「激しさ」（上位難易度の歯ごたえだけを強める） ---
+// 【なぜ要るか】(2026-09-13・ユーザー「今の最大を見てダントツぐらいなやつにしてほしい」)
+// 量（ノーツ数）は「実際に鳴っている音」で頭打ちになる。FREEDOM DiVE↓ は打点934件のうち
+// MASTERで使えるのが564件（62%）で、challengeFactor をいくら上げても 569 で止まり、
+// レベルはむしろ下がった（量が増える代わりに配置が素直になるため）。
+// そこで**量ではなく1ノーツの重さ**（細いノーツ・近い同時押し・指の交差・押さえながらの別ノーツ）を
+// 強める道を別に用意する。ボス曲だけに使う。
+//
+// 【既存曲を変えないための作り】
+// 曲の一覧（rhythm-song-registry.json）に chartIntensity を**書いた曲だけ**に効く。
+// 書いていない曲は倍率が全部1で、Object.freeze の中身も素通りするので譜面は1音も変わらない
+// （運用ルール⑩-2。変更前後の生成結果をノーツ数で突き合わせて確かめること）。
+//
+// 【全部の難易度に効かせる】(2026-09-13・ユーザー指示
+// 「基本的に曲の難しさはマスターだけとかじゃなくて全ての難易度に当てはまるから
+//   全体的にむずかしくしてほしい」)
+// はじめはEXPERT/MASTERだけに効かせていたが、それだとEXPERT→MASTERの段差が +20 になり
+// (ほかの曲は最大でも +10)、MASTERだけが遠くにある形になった。曲そのものが速くて音数が多いなら、
+// EASYで遊んでもその曲は難しいはずなので、**全部の難易度を上げて曲ごと持ち上げる**。
+// ただし難易度の「できること」(PROFILESのtypes・widths・maxRun)は動かさないので、
+// EASYがFLICKやSLIDEを持ち出すことはない。増えるのは量と、細さ・同時押しの厚み。
+const INTENSITY_STYLES=Object.freeze({
+  // ボス曲向け。細いノーツと同時押し・交差を厚くして、1ノーツあたりの仕事量を上げる。
+  extreme:Object.freeze({
+    // 16分裏を捨てない（OFF_BEAT_KEEP の上書き）。
+    // 【なぜ要るか】FREEDOM DiVE↓ は「拍の頭 ÷ 16分裏」が 1.054 で BEAT_CLARITY_MIN(1.10)を
+    // わずかに下回り、16分裏の65%が捨てられていた。Stay With Me のように
+    // 「持続音の立ち上がりを16分裏として拾ってしまう曲」を救うための仕掛けだが、
+    // この曲は 222BPM の連打そのものが16分裏にあるので、捨てると発狂が消える。
+    // 拍が立っていないのではなく、**裏も表と同じだけ鳴っている**ための1.05。
+    offBeatKeep:1,
+    // HOLD / SLIDE の素に、ベースの伸び(bassSustains)も混ぜる。
+    // 【なぜ要るか】FREEDOM DiVE↓ は歪んだ高速シンセで音高がほとんど取れず、
+    // 旋律の伸び(sustains)が **8件**しかない（SIX ÉTERNEL は179件）。そのため素の生成では
+    // HOLDもSLIDEも1本も置けず、MASTERまで全部が単押しとフリックだけの譜面になっていた。
+    // ベースの伸びは169件あり、これも実際に鳴っている音なので幽霊ノーツ(§2.1)にはならない。
+    useBassSustains:true,
+    // 倍率は既定のプロファイル(PROFILES)に掛ける。数字は FREEDOM DiVE↓ で
+    // 実際に生成して測った値(2026-09-13)。
+    //   narrow … 幅1のノーツの率（掛けたあと .75 で頭打ち）
+    //   chord / chordRun … 同時押しと、その連なり
+    //   cross … 押さえっぱなしの外側を叩く（指を交差させる）
+    //   minGapLanes … 同時押しの2つの間隔（小さいほど狙いが要る）
+    //   density … 毎秒のノーツ数の目標
+    //   ceiling … 毎秒の天井。既定の安全弁(hardMaxPerSecond)より上を許すときだけ書く。
+    //             どれだけ上げても「実際に鳴っている音」より多くは置けない
+    //             (この曲の打点は 934件 / 145.4秒 = 6.42毎秒)
+    EASY:Object.freeze({narrow:1,chord:2,chordRun:1,cross:1,hold:1.3,flick:1,
+      tapDuringHold:null,minGapLanes:1,maxLaneStep:0,density:1.35,ceiling:3.4,lattice:1}),
+    NORMAL:Object.freeze({narrow:1.8,chord:2.2,chordRun:1,cross:1,hold:1.25,flick:1.3,
+      tapDuringHold:null,minGapLanes:.95,maxLaneStep:0,density:1.5,ceiling:3.9,lattice:1}),
+    HARD:Object.freeze({narrow:2.2,chord:2,chordRun:1.4,cross:1.3,hold:1.2,flick:1.2,
+      tapDuringHold:null,minGapLanes:.9,maxLaneStep:1,density:1.5}),
+    EXPERT:Object.freeze({narrow:3.2,chord:3.4,chordRun:2.6,cross:2.4,hold:1.25,flick:1.3,
+      tapDuringHold:true,minGapLanes:.85,maxLaneStep:1,density:2.6,ceiling:5.6}),
+    MASTER:Object.freeze({narrow:4.5,chord:5,chordRun:4,cross:3.5,hold:1.3,flick:1.35,
+      tapDuringHold:true,minGapLanes:.8,maxLaneStep:1,density:3,ceiling:6.4}),
+  }),
+});
+// 書いていない曲・知らない名前のときは「何も変えない」を返す。
+const NO_INTENSITY=Object.freeze({narrow:1,chord:1,chordRun:1,cross:1,hold:1,flick:1,
+  tapDuringHold:null,minGapLanes:1,maxLaneStep:0,density:1,ceiling:0,lattice:0});
+const songIntensity=(audio,difficulty)=>{
+  const style=INTENSITY_STYLES[String(audio&&audio.chartIntensity||'')];
+  return (style&&style[difficulty])||NO_INTENSITY;
+};
+// 難易度によらない、曲まるごとの設定（拾う音の選び方は難易度で変えない。
+// 変えると「下の難易度は上の難易度の部分集合」という決めごとが崩れるため）。
+const songIntensityCommon=audio=>INTENSITY_STYLES[String(audio&&audio.chartIntensity||'')]||null;
+
 // --- 曲ごとの歯ごたえ（曲の性格を譜面の量に出す） ---
 // 【なぜ要るか】
 // 上の DENSITY_TARGET だけだと、量を決めるのは実質「1拍あたり何個 × テンポ」だけになる。
@@ -334,6 +404,9 @@ const audio=readJson(authoring(`${dashed}-v3-audio.json`));
     const entry=(JSON.parse(fs.readFileSync(registryFile,'utf8')).songs||{})[trackId];
     const pinned=Number(entry&&entry.challengeFactor);
     if(Number.isFinite(pinned)&&pinned>0)audio.challengeFactor=pinned;
+    // 曲ごとの「激しさ」。書いた曲だけに効く（書いていない曲は今までと1音も変わらない）。
+    const style=entry&&entry.chartIntensity;
+    if(typeof style==='string'&&style)audio.chartIntensity=style;
   }
 }
 if(audio.analysisType!=='rhythm-audio-v3')throw new Error('V3音源解析のJSONではありません');
@@ -491,20 +564,33 @@ const buildChart=(difficulty,options={})=>{
   // 濃い曲はその難易度の既定どおりにし、薄い曲だけ中身もやさしくする。
   const vocab=Math.min(1,Math.pow(challengeForProfile,CHALLENGE_VOCABULARY_EXPONENT));
   const scaleRate=value=>Number.isFinite(value)&&value>0?value*vocab:value;
+  // 曲ごとの「激しさ」。書いていない曲では倍率が全部1なので、下の式は今までと同じ値を返す。
+  const I=songIntensity(audio,difficulty);
+  const boost=(value,factor)=>Number.isFinite(value)&&value>0&&factor!==1?value*factor:value;
   const P=(()=>{
     const base=PROFILES[difficulty];
     return Object.freeze({...base,
-      holdPerMinute:scaleRate(base.holdPerMinute),
+      holdPerMinute:boost(scaleRate(base.holdPerMinute),I.hold),
       slidePerMinute:scaleRate(base.slidePerMinute),
-      flickPerMinute:scaleRate(base.flickPerMinute),
+      flickPerMinute:boost(scaleRate(base.flickPerMinute),I.flick),
       endFlickPerMinute:scaleRate(base.endFlickPerMinute),
       accentPerMinute:scaleRate(base.accentPerMinute),
-      crossPerMinute:scaleRate(base.crossPerMinute),
-      // 細いノーツの率（vocab は1以下なので、減る方向にしか動かない）
-      narrowRate:base.narrowRate*vocab,
-      chord:base.chord?Object.freeze({...base.chord,perMinute:scaleRate(base.chord.perMinute)}):base.chord,
+      crossPerMinute:boost(scaleRate(base.crossPerMinute),I.cross),
+      // 細いノーツの率（vocab は1以下なので、減る方向にしか動かない）。
+      // 激しさを書いた曲だけ、そのあとで増やす（上限.75。全部が幅1になると狙う場所が消えるため）。
+      narrowRate:Math.min(.75,base.narrowRate*vocab*I.narrow),
+      // 押さえっぱなしの最中に押す形。激しさを書いた曲では上位難易度で必ず開ける。
+      tapDuringHold:I.tapDuringHold===null?base.tapDuringHold:(base.tapDuringHold||I.tapDuringHold),
+      // 横の跳びの上限。激しさぶんだけ広げる（届くかどうかは両手のシミュレートが見張る）。
+      maxLaneStep:base.maxLaneStep+(I.maxLaneStep||0),
+      // 置ける格子の細かさ。EASY/NORMALは既定が2（8分まで）。
+      // 激しさに lattice を書いた難易度だけ、その細かさまで許す（1＝16分）。
+      lattice:Number(I.lattice)>0?Number(I.lattice):base.lattice,
+      chord:base.chord?Object.freeze({...base.chord,perMinute:boost(scaleRate(base.chord.perMinute),I.chord),
+        // 同時押しの2つの間隔。狭いほど狙いが要る（レベルの物差しでも chordTight が重い）。
+        minGapLanes:base.chord.minGapLanes*I.minGapLanes}):base.chord,
       sweep:base.sweep?Object.freeze({...base.sweep,perMinute:scaleRate(base.sweep.perMinute)}):base.sweep,
-      chordRun:base.chordRun?Object.freeze({...base.chordRun,perMinute:scaleRate(base.chordRun.perMinute)}):base.chordRun,
+      chordRun:base.chordRun?Object.freeze({...base.chordRun,perMinute:boost(scaleRate(base.chordRun.perMinute),I.chordRun)}):base.chordRun,
     });
   })();
   let notes=[];
@@ -542,10 +628,14 @@ const buildChart=(difficulty,options={})=>{
   const offBeatFloor=(()=>{
     const clarity=audio.summary?.beatClarity;
     if(!clarity||!(clarity.ratio>0)||clarity.ratio>=BEAT_CLARITY_MIN)return 0;
+    // 曲ごとの「激しさ」で残す割合を上書きできる（書いていない曲は OFF_BEAT_KEEP のまま）。
+    const keep=Number(songIntensityCommon(audio)?.offBeatKeep);
+    const keepRate=Number.isFinite(keep)&&keep>0?Math.min(1,keep):OFF_BEAT_KEEP;
+    if(keepRate>=1)return 0;
     const strengths=allOnsets.filter(onset=>!onBeatOrEighth(onset))
       .map(onset=>onset.strength).sort((a,b)=>a-b);
     if(!strengths.length)return 0;
-    return strengths[Math.floor(strengths.length*(1-OFF_BEAT_KEEP))]??0;
+    return strengths[Math.floor(strengths.length*(1-keepRate))]??0;
   })();
   // ★大きい一発(FULL)だけは、格子からのずれをもう少し許す。
   //   30msで切っていたため、格子と噛み合わせが悪い曲では**大きい一発の半分が落ちていた**
@@ -570,10 +660,23 @@ const buildChart=(difficulty,options={})=>{
   // **下限は動かさない**。下限は「これ以下だと間延びして拍が取れない」ための線なので、
   // 薄い曲だからといって下げてよいものではない。
   const challenge=songChallengeFactor(audio);
-  // hardMaxPerSecond は factor を掛けない（掛けたら上限にならない。上の但し書きを参照）
+  // 曲ごとの「激しさ」。書いていない曲では density が1・ceiling が0なので、
+  // 下の式は今までとまったく同じ値を返す。
+  const densityBoost=Number(I.density)>0?Number(I.density):1;
+  // 激しさを書いた曲では、上限を1段上げる（既定の maxPerSecond ではなく hardMaxPerSecond を使う）。
+  const softMax=densityBoost>1?target.hardMaxPerSecond:target.maxPerSecond;
+  // いちばん外側の天井。既定は hardMaxPerSecond（ここは全曲共通の安全弁）。
+  // 曲ごとの「激しさ」に ceiling を書いた難易度だけ、その値まで許す。
+  // それでも「実際に鳴っている音」より多くは置けない（幽霊ノーツ §2.1 を作らないため、
+  // 拾う音の数が本当の天井になる）。押せるかどうかは両手のシミュレートが見張る。
+  const ceiling=Number(I.ceiling)>0
+    ?Math.max(target.hardMaxPerSecond,Number(I.ceiling))
+    :target.hardMaxPerSecond;
+  // 天井には factor を掛けない（掛けたら上限にならない。上の但し書きを参照）
   const notesPerSecond=Math.max(target.minPerSecond,
-    Math.min(target.hardMaxPerSecond,
-      target.maxPerSecond*challenge.factor,target.perBeat*beatsPerSecond*challenge.factor));
+    Math.min(ceiling,
+      softMax*challenge.factor*densityBoost,
+      target.perBeat*beatsPerSecond*challenge.factor*densityBoost));
   const targetCount=Math.round(notesPerSecond*playableMs/1000);
   // 小節ごとの取り分は「その小節にある音の数 × 盛り上がりの持ち上げ」の比で配る。
   // どれだけ盛り上がっても、その小節に無い音は叩かせない。
@@ -661,7 +764,17 @@ const buildChart=(difficulty,options={})=>{
   const usedGrids=new Set();
   const spacedGrids=new Set(spaced.map(o=>o.grid));
   if(P.types.includes('HOLD')||P.types.includes('SLIDE')){
-    const spans=audio.sustains
+    // 素は旋律の伸び。曲ごとの「激しさ」で useBassSustains を書いた曲だけ、
+    // ベースの伸びも足す（書いていない曲では audio.sustains そのままなので譜面は変わらない）。
+    const sustainSource=(()=>{
+      const base=Array.isArray(audio.sustains)?audio.sustains:[];
+      if(!songIntensityCommon(audio)?.useBassSustains)return base;
+      const bass=Array.isArray(audio.bassSustains)?audio.bassSustains:[];
+      if(!bass.length)return base;
+      // 旋律の伸びを先に見るため、同じ長さなら旋律が勝つ並びにしておく（下で長い順に並べ直す）。
+      return base.concat(bass.map(span=>({...span,fromBass:true})));
+    })();
+    const spans=sustainSource
       .filter(span=>span.startGrid>=minGrid&&span.endGrid<=maxGrid&&span.grids>=COMMON.holdMinGrids)
       .filter(span=>[0,1,-1,2,-2].some(shift=>spacedGrids.has(span.startGrid+shift)))
       .sort((a,b)=>b.grids-a.grids);
@@ -1811,6 +1924,30 @@ const buildChart=(difficulty,options={})=>{
       return span.start<grid&&grid<=span.end;
     });
   };
+  // 同時押さえ(15.5)の2本目を組み立てる。
+  //
+  // ★HOLDとSLIDEで**座標の単位が違う**。HOLDはサブレーン(0〜9)で位置が決まり、
+  //   SLIDEは lane が経路の中心線。ランタイムへ書く h(...) が読むのは subLane なので、
+  //   レーン単位の値を lane へ入れただけでは subLane が無いまま出てしまう。
+  //   実際に h(…,undefined,…) と [時刻,レーン,undefined] を公開してしまった
+  //   （2026-09-13・作り直した15曲でHOLD20件・SLIDEの中継点46点）。
+  // ★確かめる用と譜面へ入れる用で2回書いていたのが原因なので、ここへ1つにまとめる。
+  // ★HOLDは整数のサブレーンへ載るため、丸めで中心が最大0.5レーン動く。
+  //   動いたあとの中心を返して、指の間隔はその値で測り直す。
+  const buildHeldPairNote=(lanes,startGrid,endGrid,extra)=>{
+    const width=2,durationGrids=endGrid-startGrid;
+    if(lanes.from!==lanes.to){
+      return {lanes,note:{type:'SLIDE',grid:startGrid,durationGrids,
+        lane:lanes.from,endLane:lanes.to,subLaneWidth:width,
+        slidePoints:[{grid:startGrid,lane:lanes.from,subLaneWidth:width},
+          {grid:endGrid,lane:lanes.to,subLaneWidth:width}],...extra}};
+    }
+    const subLane=Math.max(0,Math.min(10-width,Math.round(lanes.from*2-width/2)));
+    const center=subLane/2+width/4;
+    return {lanes:{from:center,to:center},
+      note:{type:'HOLD',grid:startGrid,durationGrids,
+        lane:Math.floor(subLane/2),subLane,subLaneWidth:width,...extra}};
+  };
 
   // --- 15.5 同時押さえ（HOLD/SLIDEを2本いちどに押さえる） ---
   //
@@ -1839,13 +1976,22 @@ const buildChart=(difficulty,options={})=>{
     for(const span of audio.bassSustains){
       if(!(span.startGrid>=minGrid&&span.endGrid<=maxGrid))continue;
       if(span.grids<COMMON.holdMinGrids)continue;
+      // ★2本目の頭は、**実際に鳴っている打点**へ寄せる。
+      //   ベースの伸びの開始位置をそのまま使っていたため、そこに打点が無いと
+      //   パイプラインの「鳴っていない場所へ置いたノーツ」で止まった
+      //   （2026-09-13・既存15曲を作り直したら5曲がこれで止まった）。
+      //   伸びる音の予約(3)が spacedGrids へ寄せているのと同じ考え方。
+      const startGrid=[0,1,-1,2,-2].map(shift=>span.startGrid+shift)
+        .find(grid=>grid>=minGrid&&onsetByGrid.has(grid));
+      if(startGrid==null)continue;
+      if(span.endGrid-startGrid<COMMON.holdMinGrids)continue;
       // 重なっている押さえノーツが**ちょうど1本**のときだけ（2本目までにする）
       const overlapping=heldNotesNow().filter(note=>{
         const s=heldSpanOf(note);
-        return Math.min(span.endGrid,s.end)-Math.max(span.startGrid,s.start)>=HELD_PAIR.minOverlapGrids;
+        return Math.min(span.endGrid,s.end)-Math.max(startGrid,s.start)>=HELD_PAIR.minOverlapGrids;
       });
       if(overlapping.length!==1)continue;
-      candidates.push({span,partner:overlapping[0]});
+      candidates.push({span,partner:overlapping[0],startGrid});
     }
     let previousShapeId=null;
     // ★spreadPick は「グリッド位置」を渡す関数（minGap もグリッド）。
@@ -1853,10 +1999,11 @@ const buildChart=(difficulty,options={})=>{
     //   2組目以降が全部はじかれる。実際にそうなって1組しか置けていなかった。
     const candidateByGrid=new Map();
     for(const candidate of candidates){
-      if(!candidateByGrid.has(candidate.span.startGrid))candidateByGrid.set(candidate.span.startGrid,candidate);
+      if(!candidateByGrid.has(candidate.startGrid))candidateByGrid.set(candidate.startGrid,candidate);
     }
+    let baseImpossible=null;   // 採用済みの譜面の「押せない」ところ。1本採るたびに測り直す
     for(const grid of spreadPick([...candidateByGrid.keys()],heldPairMaxLate,BEAT*8)){
-      const {span,partner}=candidateByGrid.get(grid);
+      const {span,partner,startGrid:ownStartGrid}=candidateByGrid.get(grid);
       // すでに相方を持っている帯へ3本目を足さない（この周回で足したぶんも見る）
       if(partner._heldPairUsed)continue;
       const path=heldPathOf(partner);
@@ -1877,33 +2024,36 @@ const buildChart=(difficulty,options={})=>{
         if(shape.follows==='own'&&lanes.from===lanes.to)continue;
         // 並んで動く形は、相方が動いているのに自分が動かないのはおかしい
         if(shape.follows==='partner'&&path.from!==path.to&&lanes.from===lanes.to)continue;
-        const ownStart=Math.max(span.startGrid,minGrid),ownEnd=Math.min(span.endGrid,maxGrid);
+        const ownStart=ownStartGrid,ownEnd=Math.min(span.endGrid,maxGrid);
+        // ★先にノーツを組み立てる。HOLDはサブレーンへ丸めるぶん中心が動くので、
+        //   間隔もシミュレートも**丸めたあとの位置**で測る（同じものを譜面へ入れる）。
+        const built=buildHeldPairNote(lanes,ownStart,ownEnd);
         // 指2本が入る下限(HAND_MODEL.fingerMinGapLanes)に、難易度ごとの余裕を乗せる
-        if(heldPairNearestGap(lanes,ownStart,ownEnd)
+        if(heldPairNearestGap(built.lanes,ownStart,ownEnd)
           <Math.max(HAND_MODEL.fingerMinGapLanes,HELD_PAIR.minGapLanes))continue;
-        placed={shape,lanes};
+        // ★最後に、出荷を止めるのと同じ両手のシミュレートで確かめる。
+        //   この確認は15.6・15.7へは入れたのに、**この段だけ抜けていた**。
+        //   ベースの解析が無くて一度も動いていなかったので気づけず、既存15曲を
+        //   作り直したときに7曲が「押せない」で止まった（2026-09-13）。
+        //   押さえノーツは16.5でも取り除けない（骨格として残す側）ので、ここで弾く。
+        const trial=notes.concat([built.note]);
+        if(baseImpossible===null)baseImpossible=impossibleKeysOf(dropOverflowFingers(notes).kept);
+        const after=impossibleKeysOf(dropOverflowFingers(trial).kept);
+        if([...after].some(key=>!baseImpossible.has(key)))continue;
+        placed={shape,lanes,built};
         break;
       }
       if(!placed)continue;
-      const {shape,lanes}=placed;
-      const startGrid=Math.max(span.startGrid,minGrid);
-      const endGrid=Math.min(span.endGrid,maxGrid);
-      const durationGrids=endGrid-startGrid;
-      if(durationGrids<COMMON.holdMinGrids)continue;
-      const moving=lanes.from!==lanes.to;
-      const note={
-        type:moving?'SLIDE':'HOLD',
-        grid:startGrid,durationGrids,
-        lane:lanes.from,subLaneWidth:2,
-        heldPair:true,heldPairShape:shape.id,
-        ...(moving?{endLane:lanes.to,slidePoints:[
-          {grid:startGrid,lane:lanes.from},{grid:endGrid,lane:lanes.to}]}:{}),
-      };
+      const {shape}=placed;
+      if(placed.built.note.durationGrids<COMMON.holdMinGrids)continue;
+      // ★確かめたのと同じノーツを入れる（別に書き起こすと座標の単位を取り違える）
+      const note={...placed.built.note,heldPair:true,heldPairShape:shape.id};
       notes.push(note);
       partner._heldPairUsed=true;
       heldPairShapeUsage.set(shape.id,(heldPairShapeUsage.get(shape.id)||0)+1);
       previousShapeId=shape.id;
       heldPairPlaced++;
+      baseImpossible=null;   // 譜面が変わったので測り直す
     }
     // ★お知らせは、ここでは出さない。この後の「指の本数を超える瞬間を作らない」(16)で
     //   落ちることがあり、置いた数と譜面に残る数が食い違う
@@ -2007,12 +2157,31 @@ const buildChart=(difficulty,options={})=>{
     // 採用済みの譜面の「押せない」ところ。1本採るたびに測り直す（同じ譜面では測り直さない）
     let baseImpossible=null;
     const usage=new Map();
-    for(const grid of spreadPick([...byGrid.keys()],aim,DOUBLE_SLIDE.spacingGrids)){
+    // ★置けなかった理由を数える。「0組（置ける場所13箇所）」だけでは、
+    //   相方を取られたのか形が入らないのか押せないのかが分からず、直しようがない
+    //   （2026-09-13・作り直しで2曲が0組になったとき、ここから調べ直した）。
+    const skipped={partner:0,fingers:0,shape:0,speed:0,gap:0,impossible:0};
+    // ★狙いの数だけ置けるまで、**次の候補へ進む**。
+    //   spreadPick が返した数（＝狙いの数）だけ試して終わりにしていたので、
+    //   選ばれた候補がどれも形が入らないと**1組も置けなかった**。
+    //   置ける場所が15箇所あるのに0組という状態が実際に起きた
+    //   （2026-09-13・既存15曲の解析をやり直して15.5が動き出したあと、
+    //     eiki_boss と six_eternel_beat で同時スライドが丸ごと消えた。
+    //     理由の内訳は「指2本が入らない」78件＝相方の経路と交差する形ばかり引いていた）。
+    //   まず spreadPick の順で散らして試し、足りなければ良い順に残りも試す。
+    //   間隔（spacingGrids）は置いたグリッドと自分で比べて守る。
+    const ranked=[...byGrid.keys()];
+    const firstPicks=spreadPick(ranked,aim,DOUBLE_SLIDE.spacingGrids);
+    const order=[...firstPicks,...ranked.filter(grid=>!firstPicks.includes(grid))];
+    const placedGrids=[];
+    for(const grid of order){
+      if(placedCount>=aim)break;
+      if(placedGrids.some(other=>Math.abs(other-grid)<DOUBLE_SLIDE.spacingGrids))continue;
       const candidate=byGrid.get(grid);
       const partner=candidate.note;
-      if(partner._heldPairUsed)continue;
+      if(partner._heldPairUsed){skipped.partner++;continue;}
       // 16で落とされないところだけへ置く（置いた数と残る数を食い違わせない）
-      if(!heldFreeAtStart(candidate.span.start,partner))continue;
+      if(!heldFreeAtStart(candidate.span.start,partner)){skipped.fingers++;continue;}
       // 2本目がどれだけ動くと似合うか。
       // ベースの伸びが重なっていればその実測を使い（本当に鳴っている動き）、
       // 無ければ**その場の盛り上がり**で決める。盛り上がるほど大きく動く形が前へ出る。
@@ -2039,10 +2208,10 @@ const buildChart=(difficulty,options={})=>{
           const lanes=shape.place({partnerFrom:candidate.path.from,partnerTo:candidate.path.to,room,gap});
           // 2本目は必ずしっかり動く。端で潰れて動かなくなったら同時スライドにならないので
           // その形は採らず次へ回す（名前と中身を食い違わせない）
-          if(Math.abs(lanes.to-lanes.from)<DOUBLE_SLIDE.minOwnSpanLanes)continue;
+          if(Math.abs(lanes.to-lanes.from)<DOUBLE_SLIDE.minOwnSpanLanes){skipped.shape++;continue;}
           // 追従の速さ。速すぎる経路は指が追いつかない（sweepと同じ物差し）
-          if(Math.abs(lanes.to-lanes.from)/(spanMs/1000)>DOUBLE_SLIDE.maxLaneSpeed)continue;
-            if(heldPairNearestGap(lanes,startGrid,endGrid)<minGapNeeded)continue;
+          if(Math.abs(lanes.to-lanes.from)/(spanMs/1000)>DOUBLE_SLIDE.maxLaneSpeed){skipped.speed++;continue;}
+          if(heldPairNearestGap(lanes,startGrid,endGrid)<minGapNeeded){skipped.gap++;continue;}
           // ★最後に、出荷を止めるのと同じ物差し（両手のシミュレート）で確かめる。
           //   自分で作った物差しだけで通すと「押せない」が増える（この段のコメント参照）。
           const trial=notes.concat([{type:'SLIDE',grid:startGrid,durationGrids:endGrid-startGrid,
@@ -2051,7 +2220,7 @@ const buildChart=(difficulty,options={})=>{
               {grid:endGrid,lane:lanes.to,subLaneWidth:2}]}]);
           if(baseImpossible===null)baseImpossible=impossibleKeysOf(dropOverflowFingers(notes).kept);
           const after=impossibleKeysOf(dropOverflowFingers(trial).kept);
-          if([...after].some(key=>!baseImpossible.has(key)))continue;
+          if([...after].some(key=>!baseImpossible.has(key))){skipped.impossible++;continue;}
           chosen={shape,lanes};
           break;
         }
@@ -2077,10 +2246,11 @@ const buildChart=(difficulty,options={})=>{
       usage.set(shape.id,(usage.get(shape.id)||0)+1);
       previousShapeId=shape.id;
       placedCount++;
+      placedGrids.push(grid);
       baseImpossible=null;   // 譜面が変わったので測り直す
     }
     // お知らせは16のあとで数え直す（15.5と同じ理由）
-    doubleSlideReport={placed:placedCount,aim,candidates:byGrid.size};
+    doubleSlideReport={placed:placedCount,aim,candidates:byGrid.size,skipped};
     notes.sort((a,b)=>a.grid-b.grid);
   }
 
@@ -2327,7 +2497,12 @@ const buildChart=(difficulty,options={})=>{
     notice.push(`同時スライド ${survived.length}組`
       +`（狙い${doubleSlideReport.aim}組・置ける場所${doubleSlideReport.candidates}箇所`
       +`${droppedPairs>0?`・指が足りず${droppedPairs}組は落ちた`:''}`
-      +`・形 ${used}・素 ${from}）`);
+      +`・形 ${used}・素 ${from}`
+      +`${survived.length<doubleSlideReport.aim?`・置けなかった理由 ${
+        Object.entries(doubleSlideReport.skipped).filter(([,count])=>count>0)
+          .map(([key,count])=>`${{partner:'相方が使用済み',fingers:'指が空いていない',
+            shape:'2本目が動かない',speed:'追従が速すぎる',gap:'指2本が入らない',
+            impossible:'押せなくなる'}[key]}${count}`).join(' / ')||'なし'}`:''}）`);
   }
   // 分岐・合流も、16のあとで残ったぶんだけを数えて出す。
   if(slideFanReport){
@@ -2730,7 +2905,9 @@ for(const difficulty of targets){
 for(const difficulty of targets){
   const {notes,profile,runs}=results[difficulty];
   const typeCounts=notes.reduce((acc,n)=>{acc[n.type]=(acc[n.type]||0)+1;return acc;},{});
-  const characterCounts=notes.reduce((acc,n)=>{acc[n.sourceCharacter]=(acc[n.sourceCharacter]||0)+1;return acc;},{});
+  // 15.5〜15.7 で足した押さえノーツは打点から作らないので出どころが無い。
+  // そのまま数えると「undefined1」と出るため、打点の無いノーツと同じ NONE へ入れる。
+  const characterCounts=notes.reduce((acc,n)=>{const key=n.sourceCharacter||'NONE';acc[key]=(acc[key]||0)+1;return acc;},{});
   const spanMs=gridTimeMs(notes[notes.length-1].grid)-gridTimeMs(notes[0].grid);
   console.log(`${difficulty}: ${notes.length}ノーツ (${Object.entries(typeCounts).map(([k,v])=>`${k}${v}`).join(' / ')})`);
   console.log(`  ${(gridTimeMs(notes[0].grid)/1000).toFixed(1)}s〜${(gridTimeMs(notes[notes.length-1].grid)/1000).toFixed(1)}s / ${(notes.length/(spanMs/1000)).toFixed(2)}ノーツ毎秒 / かたまり${runs}個`);
