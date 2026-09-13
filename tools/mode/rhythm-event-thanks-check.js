@@ -95,6 +95,19 @@ check('1分おきの見回りで流す(読み込み時に1回だけ決まる値�
   &&(app.match(/rhythmLimitedEventJustEnded\(Date\.now\(\)\)/g)||[]).length>=2);
 check('起動したときにも見る(終わったあとに初めて開いた人へ)',
   /rhythmLimitedEventJustEnded\(Date\.now\(\)\)[\s\S]{0,200}setRhythmEventStoryPending\(MONBEAT_CUP_THANKS_STORY_ID\)/.test(app));
+// ★これを書き忘れると、閉幕の会話が**永久に既読にならず**、起動のたびに流れ続ける。
+//   しかも受け取り画面が会話待ちのまま出なくなる(2026-09-14に実際にこの形で書いていた)
+check('会話を最後まで見たら「見た」として記録する',
+  /const RHYTHM_EVENT_STORY_IDS = \[MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID\];/.test(app)
+  &&/RHYTHM_EVENT_STORY_IDS\.includes\(event\.id\)&&!eventReplay\.debug\) void markRhythmEventStorySeen\(event\.id\)/.test(app));
+check('飛ばしたときも本編なら「見た」にする(起動のたびに出ない)',
+  /eventReplay\.live&&!eventReplay\.debug&&event&&RHYTHM_EVENT_STORY_IDS\.includes\(event\.id\)\) void markRhythmEventStorySeen\(event\.id\)/.test(app));
+check('特定の会話IDを決め打ちで記録していない(会話を足したときの書き忘れよけ)',
+  !/markRhythmEventStorySeen\(MONBEAT_CUP_STORY_ID\)/.test(app));
+check('デバッグから閉幕の会話を確かめられる(既読にはしない)',
+  /const debugPlayRhythmEventThanks = \(\) =>/.test(app)
+  &&/id: MONBEAT_CUP_THANKS_STORY_ID, step: 0, live: true, debug: true/.test(app)
+  &&app.includes('data-debug-rhythm-event-thanks'));
 check('見たかどうかは既存の保存キーの中(新しいキーを作っていない)',
   app.includes("const RHYTHM_EVENT_STORY_KEY = 'mh_rhythm_event_story_v1';")
   &&!/mh_.*thanks/.test(app));
