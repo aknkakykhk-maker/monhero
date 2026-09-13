@@ -787,10 +787,13 @@ function RhythmRankingScreen({
                         ★これより前に送られた記録には precise が無い。
                           0と出すと「一度も取れていない」に見えるので「—」で分ける。 */}
                     {id==='MARVELOUS'&&<React.Fragment key="precise">
-                      <dt data-rhythm-ranking-precise-label className="font-black text-cyan-200">JUST MARVELOUS</dt>
-                      <dd data-rhythm-ranking-precise className="text-right font-mono text-cyan-200">{Number.isFinite(Number(rhythmRankingDetail.detail?.precise))?Math.max(0,Math.floor(Number(rhythmRankingDetail.detail.precise))):'—'}</dd>
+                      <dt data-rhythm-ranking-precise-label data-rhythm-judgment-row="JUST">JUST MARVELOUS</dt>
+                      <dd data-rhythm-ranking-precise data-rhythm-judgment-row="JUST" className="text-right font-mono">{Number.isFinite(Number(rhythmRankingDetail.detail?.precise))?Math.max(0,Math.floor(Number(rhythmRankingDetail.detail.precise))):'—'}</dd>
                     </React.Fragment>}
-                    <dt className="text-slate-400">{id}</dt><dd className="text-right font-mono text-white">{rhythmRankingDetail.detail?.judgments?.[id]??0}</dd>
+                    {/* 判定の内訳はリザルトと同じ判定の色で出す(2026-09-13・ユーザー指示)。
+                        ★この画面は音ゲの設定を知らないので、流れる動きは付けず色だけにする
+                        (「演出量」や軽量モードを守れない動きを出さないため) */}
+                    <dt data-rhythm-judgment-row={id}>{id}</dt><dd data-rhythm-judgment-row={id} className="text-right font-mono">{rhythmRankingDetail.detail?.judgments?.[id]??0}</dd>
                   </React.Fragment>)}
                 </dl>
                 {!Number.isFinite(Number(rhythmRankingDetail.detail?.precise))&&<p data-rhythm-ranking-precise-missing className="mt-1 text-[8px] text-slate-500">JUST MARVELOUSの「—」は、この記録を出したときはまだ数えていなかったことを示します。</p>}

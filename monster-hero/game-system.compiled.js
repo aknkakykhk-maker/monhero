@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e7d2cf2e33c89ff3
+// source-sha256: 6bec52ee0c290e9d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 604480f2fdd07e8d
+// generated-sha256: e606c38f729d5183
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-13 21:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-13 21:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -24071,11 +24071,16 @@ const RhythmTapTest = ({
       key: "precise"
     }, /*#__PURE__*/React.createElement("dt", {
       "data-rhythm-result-precise-label": true,
-      className: "text-[11px] font-black text-cyan-200"
+      "data-rhythm-judgment-row": "JUST",
+      className: "text-[11px]"
     }, "JUST MARVELOUS"), /*#__PURE__*/React.createElement("dd", {
       "data-rhythm-result-precise": true,
-      className: "text-right font-mono text-[11px] text-cyan-200"
-    }, Number(view.precise) || 0)), /*#__PURE__*/React.createElement("dt", null, id), /*#__PURE__*/React.createElement("dd", {
+      "data-rhythm-judgment-row": "JUST",
+      className: "text-right font-mono text-[11px]"
+    }, Number(view.precise) || 0)), /*#__PURE__*/React.createElement("dt", {
+      "data-rhythm-judgment-row": id
+    }, id), /*#__PURE__*/React.createElement("dd", {
+      "data-rhythm-judgment-row": id,
       className: "text-right font-mono"
     }, view.counts[id]))), /*#__PURE__*/React.createElement("dt", null, "MAX COMBO"), /*#__PURE__*/React.createElement("dd", {
       className: "text-right"
@@ -27457,14 +27462,16 @@ function RhythmRankingScreen({
       key: "precise"
     }, /*#__PURE__*/React.createElement("dt", {
       "data-rhythm-ranking-precise-label": true,
-      className: "font-black text-cyan-200"
+      "data-rhythm-judgment-row": "JUST"
     }, "JUST MARVELOUS"), /*#__PURE__*/React.createElement("dd", {
       "data-rhythm-ranking-precise": true,
-      className: "text-right font-mono text-cyan-200"
+      "data-rhythm-judgment-row": "JUST",
+      className: "text-right font-mono"
     }, Number.isFinite(Number(rhythmRankingDetail.detail?.precise)) ? Math.max(0, Math.floor(Number(rhythmRankingDetail.detail.precise))) : '—')), /*#__PURE__*/React.createElement("dt", {
-      className: "text-slate-400"
+      "data-rhythm-judgment-row": id
     }, id), /*#__PURE__*/React.createElement("dd", {
-      className: "text-right font-mono text-white"
+      "data-rhythm-judgment-row": id,
+      className: "text-right font-mono"
     }, rhythmRankingDetail.detail?.judgments?.[id] ?? 0)))), !Number.isFinite(Number(rhythmRankingDetail.detail?.precise)) && /*#__PURE__*/React.createElement("p", {
       "data-rhythm-ranking-precise-missing": true,
       className: "mt-1 text-[8px] text-slate-500"
