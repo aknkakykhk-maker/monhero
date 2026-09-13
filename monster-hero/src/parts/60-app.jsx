@@ -36,7 +36,9 @@ function MonsterHeroGame() {
   const [proClearCounts, setProClearCounts] = useState({});
   // このランで「自己ベストを更新したか」「その難易度を初めてクリアしたか」。
   // リザルトで助手に特別なセリフを言わせるためだけに使う(保存はしない)
-  const [runHighlights, setRunHighlights] = useState({ newRecord: false, firstClear: false, firstWin: false, firstLose: false });
+  // rankingFailed … 全国ランキングへ送れなかった周回。リザルトでその旨を知らせる
+  // (これまでは console にだけ出ていて、プレイヤーには成功と区別がつかなかった)
+  const [runHighlights, setRunHighlights] = useState({ newRecord: false, firstClear: false, firstWin: false, firstLose: false, rankingFailed: false });
   // 初回チュートリアル。null=出さない、0以上=そのページを表示中。
   // 見たかどうかは新しい保存キーへ分けて持つ(既存のキーには一切触らない)
   const [tutorialStep, setTutorialStep] = useState(null);
@@ -1947,6 +1949,81 @@ function MonsterHeroGame() {
     if (outcome.error && !outcome.localSaved) console.error('[rhythm-ranking] submit outcome error:', outcome.error?.message || outcome.error);
     else if (outcome.nationalSaved) console.info('[rhythm-ranking] submitted', { difficulty: difficultyKey, score: row.score });
   }, [breederName, breederLevel, breederIcon]);
+
+  // 送れなかった記録を、あとで送り直す(2026-09-13)。
+  //
+  // 全国ランキングへの送信が失敗したとき、これまでは端末へ退避するだけで終わっていた。
+  // 実際に rankings.score が int4 だったころ、45,054,226,345(約450億)が 22003 で拒否され、
+  // 画面には何も出ないまま端末に眠っていた(DB側は bigint へ広げて直した)。
+  //
+  // 同じクリアには clearId が付いていて、DB側に clear_id のユニーク索引があるので、
+  // 送り直しても二重登録にはならない。失敗したら何も変えずに次の起動へ回す。
+  const resendPendingRankingRef = useRef(false);
+  const resendPendingRankingScores = async (limit = RANKING_RESEND_LIMIT) => {
+    if (resendPendingRankingRef.current) return { sent: 0, failed: 0 };
+    resendPendingRankingRef.current = true;
+    let sent = 0, failed = 0;
+    try {
+      // ① バトル(チャレンジ・プロ・極限・種族・モンビー)の記録。難易度ごとに分かれている
+      const keys = await storeList('mh_rank_', false);
+      for (const key of (Array.isArray(keys) ? keys : [])) {
+        if (sent + failed >= limit) break;
+        const diff = key.slice('mh_rank_'.length);
+        if (!diff) continue;
+        const list = await storeGet(key, [], false);
+        const pending = pendingLocalRankingEntries(list);
+        if (pending.length === 0) continue;
+        const done = [];
+        for (const entry of pending) {
+          if (sent + failed >= limit) break;
+          const row = rankingRowFromLocalEntry(entry, diff);
+          if (!row) continue;
+          try {
+            // モンビーの記録は難易度キーが Rhythm-<曲>-<難易度> なので、送り先の関数も分ける
+            const insert = String(diff).startsWith('Rhythm-') ? sbInsertRhythmScore : sbInsertScore;
+            const res = await insert(row);
+            if (res?.saved === true) { done.push(entry.clearId); sent++; } else { failed++; }
+          } catch (e) {
+            failed++;
+            console.error('[ranking] resend failed:', e && e.message ? e.message : e);
+          }
+        }
+        // 送れたぶんにだけ印を付けて書き戻す。行は消さないし、ほかの項目も触らない
+        if (done.length > 0) await storeSet(key, markLocalRankingEntriesSent(list, done), false);
+      }
+      // ② モンビーの未送信キュー。こちらは送る行そのものを貯めてある
+      const rhythmPending = await storeGet(RHYTHM_RANKING_PENDING_KEY, [], false);
+      if (Array.isArray(rhythmPending) && rhythmPending.length > 0) {
+        const rest = [];
+        for (const row of rhythmPending) {
+          if (sent + failed >= limit || !row || !row.clear_id) { rest.push(row); continue; }
+          try {
+            const { at, error, ...payload } = row;
+            const res = await sbInsertRhythmScore(payload);
+            if (res?.saved === true) sent++; else { failed++; rest.push(row); }
+          } catch (e) {
+            failed++; rest.push(row);
+            console.error('[rhythm-ranking] resend failed:', e && e.message ? e.message : e);
+          }
+        }
+        if (rest.length !== rhythmPending.length) await storeSet(RHYTHM_RANKING_PENDING_KEY, rest, false);
+      }
+      if (sent > 0) console.info('[ranking] resent pending scores', { sent, failed });
+    } catch (e) {
+      console.error('[ranking] resend sweep failed:', e && e.message ? e.message : e);
+    } finally {
+      resendPendingRankingRef.current = false;
+    }
+    return { sent, failed };
+  };
+  // HOMEに落ち着いてから1回だけ走らせる。起動直後の読み込みと重ならないよう少し待つ
+  const resendCheckedRef = useRef(false);
+  useEffect(() => {
+    if (bootPhase !== 'GAME' || gameState !== 'HOME' || !dataLoaded || !onboarded || resendCheckedRef.current) return;
+    resendCheckedRef.current = true;
+    const id = setTimeout(() => { resendPendingRankingScores(); }, RANKING_RESEND_DELAY_MS);
+    return () => clearTimeout(id);
+  }, [bootPhase, gameState, dataLoaded, onboarded]);
 
   const loadRankings = useCallback(async (targetDiff=null, includeLevels=false, force=false, levelKind='bond') => {
     const normalizedTargetDiff = targetDiff == null ? null : rankingDifficultyKey(targetDiff);
@@ -4156,6 +4233,7 @@ function MonsterHeroGame() {
         const result = await submitLocalScore(rankingDifficultyForMode(EXTREME_MODE.id, extremeDifficulty), score, runIdRef.current);
         if (!result?.nationalSaved) {
           console.error('[result] extreme score save failed:', result?.error?.message || 'unknown ranking error');
+          setRunHighlights(prev => ({ ...prev, rankingFailed: true }));
           return result;
         }
         const currentBest = extremeBestScores[extremeDifficulty] || 0;
@@ -4177,6 +4255,7 @@ function MonsterHeroGame() {
         const result = await submitLocalScore(rankingDifficultyForMode(BATTLE_MODE_PRO, difficulty), score, runIdRef.current);
         if (!result?.nationalSaved) {
           console.error('[result] pro score save failed:', result?.error?.message || 'unknown ranking error');
+          setRunHighlights(prev => ({ ...prev, rankingFailed: true }));
           return result;
         }
         if (score > (proHighScores[difficulty] || 0)) {
@@ -4194,6 +4273,7 @@ function MonsterHeroGame() {
       const result = await submitLocalScore(difficulty, score, runIdRef.current);
       if (!result?.nationalSaved) {
         console.error('[result] national score save failed:', result?.error?.message || 'unknown ranking error');
+        setRunHighlights(prev => ({ ...prev, rankingFailed: true }));
         return result;
       }
       if (score > (highScores[difficulty] || 0)) {
@@ -4226,6 +4306,7 @@ function MonsterHeroGame() {
       const result = await submitLocalScore(diff, score, runIdRef.current);
       if (!result?.nationalSaved) {
         console.error('[result] species challenge score save failed:', result?.error?.message || 'unknown ranking error');
+        setRunHighlights(prev => ({ ...prev, rankingFailed: true }));
       }
       return result;
     } catch (e) {
@@ -6551,7 +6632,7 @@ function MonsterHeroGame() {
     setCurrentWaveDamage(s.currentWaveDamage); setWaveDistDamage(s.waveDistDamage); setDistDmgBonus(s.distDmgBonus); setDistAptPct(s.distAptPct); setTotalDistDamage(s.totalDistDamage); setTotalAllDamage(s.totalAllDamage); setTotalRecoveryDelta(s.totalRecoveryDelta);
     setWaveResult(s.waveResult); setFocusedCard(s.focusedCard); setSkillPicker(null); setEnemyIntent(s.enemyIntent); setEnemyLastIntent(s.enemyLastIntent); reserveEnemyNextIntent(s.enemyNextIntent); setEffect(s.effect); setTrainingPicks([]); setFinalRewardSummary(s.finalRewardSummary); setWaveHistory(s.waveHistory); setGaveUp(s.gaveUp);
     setMasuRegisteredThisRun(false); setShowMasuRegisterModal(false); setMasuNameInput('');
-    setRunHighlights({ newRecord:false, firstClear:false, firstWin:false, firstLose:false });
+    setRunHighlights({ newRecord:false, firstClear:false, firstWin:false, firstLose:false, rankingFailed:false });
     return s;
   };
 
@@ -7132,7 +7213,7 @@ function MonsterHeroGame() {
     setWaveResult(s.waveResult);
     setTrainingPicks([]); setFocusedCard(s.focusedCard); setSkillPicker(null); setShowQuitConfirm(false); setEnemyIntent(s.enemyIntent); setEnemyLastIntent(s.enemyLastIntent||null); reserveEnemyNextIntent(s.enemyNextIntent||null); setEffect(s.effect); setFinalRewardSummary(s.finalRewardSummary); setWaveHistory(s.waveHistory||[]); setGaveUp(s.gaveUp);
     setMasuRegisteredThisRun(false); setShowMasuRegisterModal(false); setMasuNameInput('');
-    setRunHighlights({ newRecord: false, firstClear: false, firstWin: false, firstLose: false });
+    setRunHighlights({ newRecord: false, firstClear: false, firstWin: false, firstLose: false, rankingFailed: false });
     setSkipFlow(null); setSkipConfirmOpen(false); setSkipResult(null); setSkipInfoItemId(null);
     setGameState('HOME');
   };

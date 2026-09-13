@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9687c4220a3a88c8
+// generated-sha256: 494654cf75891c7a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -89,7 +89,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-13 19:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-13 19:24"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -10630,6 +10630,66 @@ const persistRankingScore = async ({ row, insertScore=sbInsertScore, saveLocal }
   }
 };
 
+// ===== 送れなかった記録を、あとで送り直すための道具(2026-09-13) =====
+//
+// 全国ランキングへの送信が失敗すると、これまでは端末へ退避するだけで終わっていた。
+// 画面にも何も出ないので、プレイヤーからは「出したのに載らない」としか見えない。
+// 実際に、rankings.score が int4 だったころの 45,054,226,345(約450億)が
+// 22003 で拒否され、そのまま端末に眠っていた。
+//
+// ここは「退避した記録を読んで、送り直す形へ戻す」ところだけを純粋な関数にしてある。
+// 通信も保存もしないので、tools/ranking/pending-resend-check.js から直接呼んで確かめられる。
+
+// 一度に送る上限と、HOMEへ着いてから送り直しを始めるまでの待ち時間。
+// 起動直後はランキングの取得や絵の読み込みが重なるので、少し待ってから始める。
+const RANKING_RESEND_LIMIT = 10;
+const RANKING_RESEND_DELAY_MS = 4000;
+
+// 退避した一覧から、まだ送れていないものだけを拾う。
+//   ・nationalSaved が false のものだけ(true や、フラグの無い古い記録は触らない)
+//   ・clearId が無いものは送らない。重複を防ぐ鍵が無く、二重登録になってしまうため
+//   ・スコアが数値として読めないものも送らない
+const pendingLocalRankingEntries = (list) => (Array.isArray(list) ? list : []).filter(entry =>
+  entry && typeof entry === 'object'
+  && entry.nationalSaved === false
+  && typeof entry.clearId === 'string' && entry.clearId.length > 0
+  && Number.isFinite(Number(entry.score)));
+
+// 退避した記録から、送信するときの行を組み立て直す。
+// submitLocalScore が作る row と同じ形にそろえること(列が増えたらここも足す)。
+// 値が無い列は付けない(0やnullを入れて「0ターンでクリア」に見せないため)。
+const rankingRowFromLocalEntry = (entry, difficulty) => {
+  if (!entry) return null;
+  const diff = difficulty || entry.diff;
+  if (!diff) return null;
+  const reachedWave = Number(entry.reachedWave);
+  const turns = Number(entry.turns);
+  const level = Number(entry.level);
+  return {
+    difficulty: diff,
+    user_name: entry.userName || '名無しのブリーダー',
+    hero: entry.hero || 'Unknown',
+    party: Array.isArray(entry.party) ? entry.party : [],
+    score: Number(entry.score),
+    ...(Number.isFinite(level) ? { level } : {}),
+    ...(entry.icon ? { icon: entry.icon } : {}),
+    clear_id: entry.clearId,
+    ...(Number.isFinite(reachedWave) && reachedWave > 0 ? { reached_wave: reachedWave } : {}),
+    ...(Number.isFinite(turns) && turns > 0 ? { turns } : {}),
+    ...(entry.breederId ? { breeder_id: entry.breederId } : {}),
+  };
+};
+
+// 送れたものに「送信済み」の印を付ける。行は消さないし、ほかの項目も触らない。
+// (記録そのものはブリーダーLv・絆Lvの集計にも使われているため)
+const markLocalRankingEntriesSent = (list, sentClearIds) => {
+  const sent = new Set(Array.isArray(sentClearIds) ? sentClearIds : []);
+  if (!Array.isArray(list) || sent.size === 0) return Array.isArray(list) ? list : [];
+  return list.map(entry => (entry && sent.has(entry.clearId))
+    ? { ...entry, nationalSaved: true, nationalError: undefined, resentAt: Date.now() }
+    : entry);
+};
+
 const createRunId = () => globalThis.crypto?.randomUUID?.() || `run_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`;
 
 // ===== ブリーダーを見分けるID(2026-09-11) =====
@@ -17959,6 +18019,22 @@ function RewardPickScreen({
   
 }
 
+// 全国ランキングへ送れなかったときのお知らせ。
+// これまでは console にだけ出ていて、プレイヤーからは成功と区別がつかなかった
+// (rankings.score が int4 だったころ、約450億のスコアが黙って弾かれていた)。
+// 記録は端末に残していて、次にHOMEへ戻ったとき自動で送り直す。
+function RankingFailedNote() {
+  return (
+    <div className="w-full max-w-xs mx-auto mt-3 rounded-2xl border border-amber-300/60 bg-amber-950/40 px-3 py-2 text-left">
+      <div className="text-[11px] font-black text-amber-200">全国ランキングへ送れませんでした</div>
+      <div className="mt-0.5 text-[10px] leading-relaxed text-amber-100/80">
+        記録は端末に残してあります。次にトップ画面へ戻ったとき、自動でもう一度送ります。
+        自己ベストや報酬はいつもどおり反映されています。
+      </div>
+    </div>
+  );
+}
+
 function ChampionScreen({
   autoRepeat, finalRewardSummary, masuRegisterButtonNode, openSpeciesChallengeSelection,
   resultActionPending, resultProcessing, returnToHome, runHighlights, runMode,
@@ -17967,7 +18043,7 @@ function ChampionScreen({
   speciesChallengeFromDebugRef, speciesChallengeSaveRunRef,
 }) {
   return (
-<div className="fixed inset-0 flex flex-col items-center p-6 text-center" style={{position:'fixed',inset:0,zIndex:80000,background:'linear-gradient(to bottom right,#fbbf24,#78350f)'}}><div className="shrink-0 flex flex-col items-center"><Crown size={64} className="text-white animate-bounce mb-3"/><h1 className="text-3xl font-black italic text-white uppercase">CHAMPION</h1>{!isQuickMode(runMode)&&<div className="w-full max-w-xs bg-black/40 border border-white/20 rounded-3xl p-6 mb-3 mt-3 shadow-2xl"><div className="text-5xl font-mono font-black text-white">{score.toLocaleString()}</div></div>}</div><div className="flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll"><div className="m-auto w-full flex flex-col items-center">{masuRegisterButtonNode()}{speciesChallengeClearCardNode()}{finalRewardSummary&&<RewardSummaryCard key={resultProcessing?'locked':'ready'} summary={finalRewardSummary} onPresentationComplete={resultProcessing?undefined:()=>setChampionPresentationComplete(true)}/>}<div className="w-full max-w-xs mx-auto mt-3 text-left"><AssistantBubble scene="resultWin" condition={runHighlights.firstWin?'firstWin':runHighlights.newRecord?'newRecord':runHighlights.firstClear?'firstClear':null} compact/></div></div></div>{isQuickMode(runMode)&&autoRepeat&&<div className="grid grid-cols-2 gap-2 w-full max-w-xs mt-2"><button onClick={()=>setAutoRepeatEnabled(false)} className="min-h-[40px] rounded-xl bg-fuchsia-950/70 border border-fuchsia-300 text-fuchsia-100 text-xs font-black">∞周回 OFF</button><button onClick={()=>setAutoBattleEnabled(false)} className="min-h-[40px] rounded-xl bg-slate-900/70 border border-white/30 text-white text-xs font-black">AUTO OFF</button></div>}{/* 種族チャレンジは続けて別の種族・難易度へ挑みやすいよう、選択画面への導線を足す */}
+<div className="fixed inset-0 flex flex-col items-center p-6 text-center" style={{position:'fixed',inset:0,zIndex:80000,background:'linear-gradient(to bottom right,#fbbf24,#78350f)'}}><div className="shrink-0 flex flex-col items-center"><Crown size={64} className="text-white animate-bounce mb-3"/><h1 className="text-3xl font-black italic text-white uppercase">CHAMPION</h1>{!isQuickMode(runMode)&&<div className="w-full max-w-xs bg-black/40 border border-white/20 rounded-3xl p-6 mb-3 mt-3 shadow-2xl"><div className="text-5xl font-mono font-black text-white">{score.toLocaleString()}</div></div>}</div><div className="flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll"><div className="m-auto w-full flex flex-col items-center">{masuRegisterButtonNode()}{speciesChallengeClearCardNode()}{finalRewardSummary&&<RewardSummaryCard key={resultProcessing?'locked':'ready'} summary={finalRewardSummary} onPresentationComplete={resultProcessing?undefined:()=>setChampionPresentationComplete(true)}/>}{runHighlights.rankingFailed&&<RankingFailedNote/>}<div className="w-full max-w-xs mx-auto mt-3 text-left"><AssistantBubble scene="resultWin" condition={runHighlights.firstWin?'firstWin':runHighlights.newRecord?'newRecord':runHighlights.firstClear?'firstClear':null} compact/></div></div></div>{isQuickMode(runMode)&&autoRepeat&&<div className="grid grid-cols-2 gap-2 w-full max-w-xs mt-2"><button onClick={()=>setAutoRepeatEnabled(false)} className="min-h-[40px] rounded-xl bg-fuchsia-950/70 border border-fuchsia-300 text-fuchsia-100 text-xs font-black">∞周回 OFF</button><button onClick={()=>setAutoBattleEnabled(false)} className="min-h-[40px] rounded-xl bg-slate-900/70 border border-white/30 text-white text-xs font-black">AUTO OFF</button></div>}{/* 種族チャレンジは続けて別の種族・難易度へ挑みやすいよう、選択画面への導線を足す */}
 {speciesChallengeBattleRun&&<button data-species-champion-back onClick={()=>{const keepSaving=speciesChallengeSaveRunRef.current;const keepDebug=speciesChallengeFromDebugRef.current;runResultActionOnce(()=>{returnToHome();openSpeciesChallengeSelection({saveProgress:keepSaving,fromDebug:keepDebug});});}} disabled={resultActionPending} className="w-full max-w-xs bg-cyan-700 text-white py-3.5 rounded-2xl font-black shrink-0 mt-2 disabled:opacity-50">種族チャレンジ選択へ戻る</button>}<button onClick={()=>runResultActionOnce(returnToHome)} disabled={resultActionPending} aria-busy={resultActionPending} className="w-full max-w-xs bg-white text-amber-900 py-4 rounded-3xl font-black text-xl uppercase shadow-2xl active:scale-95 transition-transform shrink-0 mt-2 disabled:opacity-50 disabled:cursor-not-allowed">{resultActionPending?'処理中…':'HOMEへ'}</button></div>
   );
 }
@@ -17977,7 +18053,7 @@ function GameOverScreen({
   runHighlights, runMode, runResultActionOnce, score,
 }) {
   return (
-<div className="mh-game-over-screen fixed inset-0 flex flex-col items-center text-center" style={{position:'fixed',inset:0,zIndex:80000,backgroundColor:'rgba(0,0,0,0.97)'}}><div className="mh-game-over-head shrink-0 flex flex-col items-center"><Skull size={48} className="text-red-700 mb-3 animate-pulse"/><h2 className="text-2xl font-black italic text-white uppercase">敗 北</h2>{!isQuickMode(runMode)&&<div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 mt-3 w-full max-w-xs"><div className="text-3xl font-mono font-black text-white">{score.toLocaleString()}</div></div>}</div><div className="flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll"><div className="m-auto w-full flex flex-col items-center">{masuRegisterButtonNode()}{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}<div className="w-full max-w-xs mx-auto mt-3 text-left"><AssistantBubble scene="resultLose" condition={runHighlights.firstLose?'firstLose':null} compact/></div></div></div><div className="mh-game-over-actions flex flex-col gap-3 w-full max-w-xs shrink-0 mt-2"><button onClick={()=>runResultActionOnce(handleRetry)} disabled={resultActionPending} className="w-full bg-red-600 text-white py-4 rounded-2xl font-black text-lg uppercase shadow-2xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"><RotateCcw size={20}/> {resultActionPending?'処理中…':'再挑戦'}</button><button onClick={()=>runResultActionOnce(returnToHome)} disabled={resultActionPending} className="w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase disabled:opacity-50 disabled:cursor-not-allowed">トップへ</button></div></div>
+<div className="mh-game-over-screen fixed inset-0 flex flex-col items-center text-center" style={{position:'fixed',inset:0,zIndex:80000,backgroundColor:'rgba(0,0,0,0.97)'}}><div className="mh-game-over-head shrink-0 flex flex-col items-center"><Skull size={48} className="text-red-700 mb-3 animate-pulse"/><h2 className="text-2xl font-black italic text-white uppercase">敗 北</h2>{!isQuickMode(runMode)&&<div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 mt-3 w-full max-w-xs"><div className="text-3xl font-mono font-black text-white">{score.toLocaleString()}</div></div>}</div><div className="flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll"><div className="m-auto w-full flex flex-col items-center">{masuRegisterButtonNode()}{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}{runHighlights.rankingFailed&&<RankingFailedNote/>}<div className="w-full max-w-xs mx-auto mt-3 text-left"><AssistantBubble scene="resultLose" condition={runHighlights.firstLose?'firstLose':null} compact/></div></div></div><div className="mh-game-over-actions flex flex-col gap-3 w-full max-w-xs shrink-0 mt-2"><button onClick={()=>runResultActionOnce(handleRetry)} disabled={resultActionPending} className="w-full bg-red-600 text-white py-4 rounded-2xl font-black text-lg uppercase shadow-2xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"><RotateCcw size={20}/> {resultActionPending?'処理中…':'再挑戦'}</button><button onClick={()=>runResultActionOnce(returnToHome)} disabled={resultActionPending} className="w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase disabled:opacity-50 disabled:cursor-not-allowed">トップへ</button></div></div>
   );
 }
 
@@ -19366,7 +19442,9 @@ function MonsterHeroGame() {
   const [proClearCounts, setProClearCounts] = useState({});
   // このランで「自己ベストを更新したか」「その難易度を初めてクリアしたか」。
   // リザルトで助手に特別なセリフを言わせるためだけに使う(保存はしない)
-  const [runHighlights, setRunHighlights] = useState({ newRecord: false, firstClear: false, firstWin: false, firstLose: false });
+  // rankingFailed … 全国ランキングへ送れなかった周回。リザルトでその旨を知らせる
+  // (これまでは console にだけ出ていて、プレイヤーには成功と区別がつかなかった)
+  const [runHighlights, setRunHighlights] = useState({ newRecord: false, firstClear: false, firstWin: false, firstLose: false, rankingFailed: false });
   // 初回チュートリアル。null=出さない、0以上=そのページを表示中。
   // 見たかどうかは新しい保存キーへ分けて持つ(既存のキーには一切触らない)
   const [tutorialStep, setTutorialStep] = useState(null);
@@ -21277,6 +21355,81 @@ function MonsterHeroGame() {
     if (outcome.error && !outcome.localSaved) console.error('[rhythm-ranking] submit outcome error:', outcome.error?.message || outcome.error);
     else if (outcome.nationalSaved) console.info('[rhythm-ranking] submitted', { difficulty: difficultyKey, score: row.score });
   }, [breederName, breederLevel, breederIcon]);
+
+  // 送れなかった記録を、あとで送り直す(2026-09-13)。
+  //
+  // 全国ランキングへの送信が失敗したとき、これまでは端末へ退避するだけで終わっていた。
+  // 実際に rankings.score が int4 だったころ、45,054,226,345(約450億)が 22003 で拒否され、
+  // 画面には何も出ないまま端末に眠っていた(DB側は bigint へ広げて直した)。
+  //
+  // 同じクリアには clearId が付いていて、DB側に clear_id のユニーク索引があるので、
+  // 送り直しても二重登録にはならない。失敗したら何も変えずに次の起動へ回す。
+  const resendPendingRankingRef = useRef(false);
+  const resendPendingRankingScores = async (limit = RANKING_RESEND_LIMIT) => {
+    if (resendPendingRankingRef.current) return { sent: 0, failed: 0 };
+    resendPendingRankingRef.current = true;
+    let sent = 0, failed = 0;
+    try {
+      // ① バトル(チャレンジ・プロ・極限・種族・モンビー)の記録。難易度ごとに分かれている
+      const keys = await storeList('mh_rank_', false);
+      for (const key of (Array.isArray(keys) ? keys : [])) {
+        if (sent + failed >= limit) break;
+        const diff = key.slice('mh_rank_'.length);
+        if (!diff) continue;
+        const list = await storeGet(key, [], false);
+        const pending = pendingLocalRankingEntries(list);
+        if (pending.length === 0) continue;
+        const done = [];
+        for (const entry of pending) {
+          if (sent + failed >= limit) break;
+          const row = rankingRowFromLocalEntry(entry, diff);
+          if (!row) continue;
+          try {
+            // モンビーの記録は難易度キーが Rhythm-<曲>-<難易度> なので、送り先の関数も分ける
+            const insert = String(diff).startsWith('Rhythm-') ? sbInsertRhythmScore : sbInsertScore;
+            const res = await insert(row);
+            if (res?.saved === true) { done.push(entry.clearId); sent++; } else { failed++; }
+          } catch (e) {
+            failed++;
+            console.error('[ranking] resend failed:', e && e.message ? e.message : e);
+          }
+        }
+        // 送れたぶんにだけ印を付けて書き戻す。行は消さないし、ほかの項目も触らない
+        if (done.length > 0) await storeSet(key, markLocalRankingEntriesSent(list, done), false);
+      }
+      // ② モンビーの未送信キュー。こちらは送る行そのものを貯めてある
+      const rhythmPending = await storeGet(RHYTHM_RANKING_PENDING_KEY, [], false);
+      if (Array.isArray(rhythmPending) && rhythmPending.length > 0) {
+        const rest = [];
+        for (const row of rhythmPending) {
+          if (sent + failed >= limit || !row || !row.clear_id) { rest.push(row); continue; }
+          try {
+            const { at, error, ...payload } = row;
+            const res = await sbInsertRhythmScore(payload);
+            if (res?.saved === true) sent++; else { failed++; rest.push(row); }
+          } catch (e) {
+            failed++; rest.push(row);
+            console.error('[rhythm-ranking] resend failed:', e && e.message ? e.message : e);
+          }
+        }
+        if (rest.length !== rhythmPending.length) await storeSet(RHYTHM_RANKING_PENDING_KEY, rest, false);
+      }
+      if (sent > 0) console.info('[ranking] resent pending scores', { sent, failed });
+    } catch (e) {
+      console.error('[ranking] resend sweep failed:', e && e.message ? e.message : e);
+    } finally {
+      resendPendingRankingRef.current = false;
+    }
+    return { sent, failed };
+  };
+  // HOMEに落ち着いてから1回だけ走らせる。起動直後の読み込みと重ならないよう少し待つ
+  const resendCheckedRef = useRef(false);
+  useEffect(() => {
+    if (bootPhase !== 'GAME' || gameState !== 'HOME' || !dataLoaded || !onboarded || resendCheckedRef.current) return;
+    resendCheckedRef.current = true;
+    const id = setTimeout(() => { resendPendingRankingScores(); }, RANKING_RESEND_DELAY_MS);
+    return () => clearTimeout(id);
+  }, [bootPhase, gameState, dataLoaded, onboarded]);
 
   const loadRankings = useCallback(async (targetDiff=null, includeLevels=false, force=false, levelKind='bond') => {
     const normalizedTargetDiff = targetDiff == null ? null : rankingDifficultyKey(targetDiff);
@@ -23486,6 +23639,7 @@ function MonsterHeroGame() {
         const result = await submitLocalScore(rankingDifficultyForMode(EXTREME_MODE.id, extremeDifficulty), score, runIdRef.current);
         if (!result?.nationalSaved) {
           console.error('[result] extreme score save failed:', result?.error?.message || 'unknown ranking error');
+          setRunHighlights(prev => ({ ...prev, rankingFailed: true }));
           return result;
         }
         const currentBest = extremeBestScores[extremeDifficulty] || 0;
@@ -23507,6 +23661,7 @@ function MonsterHeroGame() {
         const result = await submitLocalScore(rankingDifficultyForMode(BATTLE_MODE_PRO, difficulty), score, runIdRef.current);
         if (!result?.nationalSaved) {
           console.error('[result] pro score save failed:', result?.error?.message || 'unknown ranking error');
+          setRunHighlights(prev => ({ ...prev, rankingFailed: true }));
           return result;
         }
         if (score > (proHighScores[difficulty] || 0)) {
@@ -23524,6 +23679,7 @@ function MonsterHeroGame() {
       const result = await submitLocalScore(difficulty, score, runIdRef.current);
       if (!result?.nationalSaved) {
         console.error('[result] national score save failed:', result?.error?.message || 'unknown ranking error');
+        setRunHighlights(prev => ({ ...prev, rankingFailed: true }));
         return result;
       }
       if (score > (highScores[difficulty] || 0)) {
@@ -23556,6 +23712,7 @@ function MonsterHeroGame() {
       const result = await submitLocalScore(diff, score, runIdRef.current);
       if (!result?.nationalSaved) {
         console.error('[result] species challenge score save failed:', result?.error?.message || 'unknown ranking error');
+        setRunHighlights(prev => ({ ...prev, rankingFailed: true }));
       }
       return result;
     } catch (e) {
@@ -25881,7 +26038,7 @@ function MonsterHeroGame() {
     setCurrentWaveDamage(s.currentWaveDamage); setWaveDistDamage(s.waveDistDamage); setDistDmgBonus(s.distDmgBonus); setDistAptPct(s.distAptPct); setTotalDistDamage(s.totalDistDamage); setTotalAllDamage(s.totalAllDamage); setTotalRecoveryDelta(s.totalRecoveryDelta);
     setWaveResult(s.waveResult); setFocusedCard(s.focusedCard); setSkillPicker(null); setEnemyIntent(s.enemyIntent); setEnemyLastIntent(s.enemyLastIntent); reserveEnemyNextIntent(s.enemyNextIntent); setEffect(s.effect); setTrainingPicks([]); setFinalRewardSummary(s.finalRewardSummary); setWaveHistory(s.waveHistory); setGaveUp(s.gaveUp);
     setMasuRegisteredThisRun(false); setShowMasuRegisterModal(false); setMasuNameInput('');
-    setRunHighlights({ newRecord:false, firstClear:false, firstWin:false, firstLose:false });
+    setRunHighlights({ newRecord:false, firstClear:false, firstWin:false, firstLose:false, rankingFailed:false });
     return s;
   };
 
@@ -26462,7 +26619,7 @@ function MonsterHeroGame() {
     setWaveResult(s.waveResult);
     setTrainingPicks([]); setFocusedCard(s.focusedCard); setSkillPicker(null); setShowQuitConfirm(false); setEnemyIntent(s.enemyIntent); setEnemyLastIntent(s.enemyLastIntent||null); reserveEnemyNextIntent(s.enemyNextIntent||null); setEffect(s.effect); setFinalRewardSummary(s.finalRewardSummary); setWaveHistory(s.waveHistory||[]); setGaveUp(s.gaveUp);
     setMasuRegisteredThisRun(false); setShowMasuRegisterModal(false); setMasuNameInput('');
-    setRunHighlights({ newRecord: false, firstClear: false, firstWin: false, firstLose: false });
+    setRunHighlights({ newRecord: false, firstClear: false, firstWin: false, firstLose: false, rankingFailed: false });
     setSkipFlow(null); setSkipConfirmOpen(false); setSkipResult(null); setSkipInfoItemId(null);
     setGameState('HOME');
   };
@@ -35298,16 +35455,34 @@ const createAnimationStyle = () => {
     .mh-transcend-badge>b{display:block;color:#3b1d05;font-size:10px;font-weight:1000;line-height:1;text-shadow:0 1px 0 #fff9}
     .mh-transcend-badge.is-small{width:15px;height:15px;right:-8px;top:-8px;border-width:1px}.mh-transcend-badge.is-small>b{font-size:8px}
     /* 魂格バッジ。超越マークと同じ位置・サイズを再利用し、魂格Ⅰ以上では「超」を置換する。
-       魂格Ⅴも常時アニメーションは付けず、静的な虹グラデーションだけにする。 */
-    .mh-soul-rank-badge{position:absolute;right:-7px;top:-7px;z-index:7;display:flex;align-items:center;justify-content:center;width:19px;height:19px;border-radius:50%;border:1.5px solid #fff;box-shadow:0 0 7px #fff5,0 1px 4px #020617;pointer-events:none}
-    .mh-soul-rank-badge>b{display:block;color:#fff;font-size:9px;font-weight:1000;line-height:1;text-shadow:0 1px 2px #020617,0 0 3px #020617}
-    .mh-soul-rank-badge.is-small{width:15px;height:15px;right:-8px;top:-8px;border-width:1px}.mh-soul-rank-badge.is-small>b{font-size:7px}
-    .mh-soul-rank-badge.is-stage-1{background:linear-gradient(135deg,#1d4ed8,#60a5fa)}
-    .mh-soul-rank-badge.is-stage-2{background:linear-gradient(135deg,#ca8a04,#fde047);color:#3f2a00}
-    .mh-soul-rank-badge.is-stage-2>b{color:#3f2a00;text-shadow:0 1px 0 #fff8}
-    .mh-soul-rank-badge.is-stage-3{background:linear-gradient(135deg,#15803d,#4ade80)}
-    .mh-soul-rank-badge.is-stage-4{background:linear-gradient(135deg,#b91c1c,#fb7185)}
-    .mh-soul-rank-badge.is-stage-5{background:conic-gradient(from 210deg,#f87171,#facc15,#4ade80,#60a5fa,#a78bfa,#f472b6,#f87171)}
+       魂格Ⅴも常時アニメーションは付けず、静的な虹グラデーションだけにする。
+       2026-09-13・ユーザー指摘「魂格のマークがしょぼい / 超越より上なのに表示ださい」。
+       単色のべた塗りに白い細枠だけで、お知らせの点のように見えていた。しかも超越マークは
+       虹グラデーションなので、格下のはずの超越のほうが上等に見えていた。
+       色を変えるだけでは超越の虹に勝てないので、形そのものを変えている。
+         ・王冠(::before)を載せる。段位に関係なく「格上」が形で分かる
+         ・宝石の質感(上からの映り込み・下の陰)と、段位ごとの色つきの光
+         ・「魂」の字(::after)と段位の数字を横に並べ、称号として読ませる
+       ★大きさと位置(19/15px・right/top)は変えていない。広げるとモンスターの絵に重なる
+         (68pxの枠では隙間が1pxしかない)。王冠は上へ伸ばすので絵から離れる向き。
+         tools/masu/transcend-badge-position-check.js が魂格バッジと王冠も測って見張る。
+       ★常時アニメーションは付けない(一覧に何個も並ぶため)。soul-rank-step6a-check が見張る。 */
+    .mh-soul-rank-badge{position:absolute;right:-7px;top:-7px;z-index:7;display:flex;align-items:center;justify-content:center;gap:.5px;width:19px;height:19px;border-radius:50%;border:1.5px solid #ffe9a8;pointer-events:none}
+    .mh-soul-rank-badge::before{content:'';position:absolute;left:50%;top:-7px;width:17px;height:9px;transform:translateX(-50%);background:linear-gradient(180deg,#fff6d5,#f5b429 58%,#a86a12);clip-path:polygon(0 100%,0 20%,21% 62%,50% 0,79% 62%,100% 20%,100% 100%);filter:drop-shadow(0 1px 1px #000a)}
+    .mh-soul-rank-badge::after{content:'魂';order:0;font-size:8.5px;font-weight:900;line-height:1;color:#fff;text-shadow:0 1px 1px #000e,0 0 2px #000c}
+    .mh-soul-rank-badge>b{display:block;order:1;align-self:flex-end;margin-bottom:2px;color:#fff;font-size:6.5px;font-weight:1000;line-height:1;text-shadow:0 1px 1px #000d,0 0 2px #000b}
+    .mh-soul-rank-badge.is-small{width:15px;height:15px;right:-8px;top:-8px;border-width:1px;gap:0}
+    .mh-soul-rank-badge.is-small::before{top:-5.5px;width:13px;height:7px}
+    .mh-soul-rank-badge.is-small::after{font-size:7px}
+    .mh-soul-rank-badge.is-small>b{font-size:5px;margin-bottom:1.5px}
+    .mh-soul-rank-badge.is-stage-1{background:radial-gradient(circle at 33% 25%,#ffffffdd,#ffffff33 20%,transparent 46%),linear-gradient(150deg,#7dd3fc,#1d4ed8 58%,#0a2260);box-shadow:inset 0 1px 1px #ffffffb3,inset 0 -2px 3px #00000066,0 0 8px #60a5facc,0 0 15px #3b82f677,0 1px 4px #020617}
+    .mh-soul-rank-badge.is-stage-2{background:radial-gradient(circle at 33% 25%,#ffffffee,#ffffff3d 20%,transparent 46%),linear-gradient(150deg,#fef08a,#ca8a04 58%,#7c4a02);box-shadow:inset 0 1px 1px #ffffffcc,inset 0 -2px 3px #00000066,0 0 8px #fde047cc,0 0 15px #eab30877,0 1px 4px #020617}
+    .mh-soul-rank-badge.is-stage-2::after{color:#2b1c00;text-shadow:0 1px 0 #ffffffb3,0 0 3px #ffffff80}
+    .mh-soul-rank-badge.is-stage-2>b{color:#2b1c00;text-shadow:0 1px 0 #ffffffb3}
+    .mh-soul-rank-badge.is-stage-3{background:radial-gradient(circle at 33% 25%,#ffffffdd,#ffffff33 20%,transparent 46%),linear-gradient(150deg,#86efac,#15803d 58%,#052e16);box-shadow:inset 0 1px 1px #ffffffb3,inset 0 -2px 3px #00000066,0 0 8px #4ade80cc,0 0 16px #fbbf2488,0 1px 4px #020617}
+    .mh-soul-rank-badge.is-stage-4{background:radial-gradient(circle at 33% 25%,#ffffffdd,#ffffff33 20%,transparent 46%),linear-gradient(150deg,#fda4af,#b91c1c 58%,#4c0519);box-shadow:inset 0 1px 1px #ffffffb3,inset 0 -2px 3px #00000066,0 0 9px #fb7185cc,0 0 17px #fcd34d99,0 1px 4px #020617}
+    .mh-soul-rank-badge.is-stage-5{border-color:#fff;background:radial-gradient(circle at 34% 24%,#ffffffa6,#ffffff1a 15%,transparent 36%),conic-gradient(from 205deg,#ff5f6d,#ffc857,#5ef38c,#3ddcf7,#8b7bff,#ff6fd8,#ff5f6d);box-shadow:inset 0 1px 2px #ffffffcc,inset 0 -2px 3px #00000059,0 0 0 1.2px #7c3aed,0 0 11px #ff6fd8dd,0 0 20px #3ddcf7bb,0 1px 4px #020617}
+    .mh-soul-rank-badge.is-stage-5::before{background:linear-gradient(180deg,#ffffff,#ffd7f5 34%,#8b7bff 68%,#3b2a8a);filter:drop-shadow(0 1px 2px #000a) drop-shadow(0 0 3px #ff6fd8)}
     .mh-transcend-link{border-color:#fcd34daa;background:linear-gradient(135deg,#4c1d95aa,#78350faa)}
     /* 超越の演出。3〜5秒で一度だけ流す。終わったら要素ごと消えるので常時アニメは残らない */
     .mh-transcend-animation{position:fixed;inset:0;z-index:51500;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at 50% 46%,#3b0764 0,#0b0518 42%,#020617 76%);pointer-events:auto;touch-action:none;padding:calc(env(safe-area-inset-top) + 12px) 12px calc(env(safe-area-inset-bottom) + 12px)}
