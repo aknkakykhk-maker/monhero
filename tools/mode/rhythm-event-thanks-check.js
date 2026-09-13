@@ -143,12 +143,18 @@ check('ほかのイベントの受け取りは待たせない',app.includes("con
 // --- 案内 ---
 check('ヘルプに書いてある',/title:'イベントが終わったときの会話'/.test(helpSrc)
   &&helpSrc.includes('勇者の証が付くこともあります'));
-check('更新履歴に書いてある',/勇者の証を10個追加/.test(changelog.slice(0,3000)));
+// ★先頭◯文字で探さない。更新履歴は先頭に足していくので、あとから項目が増えると
+//   同じ検査が「無くなった」と言い出す(2026-09-14に実際に落ちた)。項目の題で探す
+const THANKS_ENTRY_TITLE = '【週末ゲリラ杯】お礼として、参加賞に勇者の証を10個追加しました';
+check('更新履歴に書いてある',changelog.includes(THANKS_ENTRY_TITLE));
 check('更新履歴は終了時刻まで出さない(会話と同時に出はじめる)',(()=>{
-  const head=changelog.slice(0,3000);
-  const at=head.indexOf('勇者の証を10個追加');
-  const around=head.slice(Math.max(0,at-600),at+600);
-  const from=(around.match(/visibleFrom:'([^']+)'/)||[])[1];
+  const at=changelog.indexOf(THANKS_ENTRY_TITLE);
+  if(at<0)return false;
+  // その項目の中だけを見る。次の項目(先頭が「  {」)まで
+  const rest=changelog.slice(at);
+  const end=rest.indexOf('\n  {');
+  const entryText=rest.slice(0,end<0?1200:end);
+  const from=(entryText.match(/visibleFrom:'([^']+)'/)||[])[1];
   return from===String(event&&event.endAt);
 })(),`イベントの終了 ${event&&event.endAt}`);
 

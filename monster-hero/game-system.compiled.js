@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 266be1da794753a2
+// source-sha256: e49bcedaa2f55508
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a3d070004096bec3
+// generated-sha256: fd3c05450d0292da
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-14 06:36"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-14 06:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -39272,9 +39272,27 @@ function MonsterHeroGame() {
     // ★すでに出ている順位は消さない。読み直しのたびに一覧が空になると、
     //   タブや部門を押すたびに画面がちらつく(2026-09-11・押すたびに取り直す形へ変えたため)。
     //   取れたら差し替わる。まだ一度も取れていない部門だけ「読み込み中」にする。
+    //
+    // ★ただし**期間が変わったときは残さない**(2026-09-14・ユーザー指摘
+    //   「5時過ぎてモンヒロビート見たら週間ランキングにスコアが入ってた」)。
+    //   週間の画面には「毎週 月曜 5:00 に切り替わります」としか出ないので、
+    //   先週のぶんがそのまま残っていると、今週の記録と見分けがつかない。
+    //   ここでの判定は端末の時計でよい(残すか捨てるかを決めるだけ。集計する期間は
+    //   サーバーから受け取ったものを使う)。時計がずれていても、少しのあいだ
+    //   「読み込み中」と出るだけで、古い順位を今週のものとして見せることはない。
+    const boardStillCurrent = prev => {
+      const loaded = prev.event && prev.event.id;
+      if (!loaded) return true;
+      if (kind === 'weekly') return loaded === rhythmWeekId(Date.now());
+      if (kind === 'limited') {
+        const now = rhythmLimitedEventAt(Date.now());
+        return !!now && now.id === loaded;
+      }
+      return true; // 履歴は終わった回なので、あとから変わらない
+    };
     setRhythmBoard(kind, prev => {
       const before = prev.boards && prev.boards[wanted] || null;
-      const keep = before && before.status === 'ready';
+      const keep = before && before.status === 'ready' && boardStillCurrent(prev);
       return {
         ...prev,
         status: prev.status === 'ready' ? 'ready' : 'loading',
@@ -40125,6 +40143,9 @@ function MonsterHeroGame() {
     // ギフトボックスはHOMEの曲を止めずに続ける
     MISSIONS: 'home',
     // ミッション画面でもHOMEの曲を続ける
+    RHYTHM_HISTORY: 'home',
+    // モンヒロビート「これまでの記録」もHOMEの曲を続ける
+    // (2026-09-14・ユーザー指摘「BGMがない / 設定してるホームのBGMを流して」)
     BATTLE_MENU: 'enhance',
     // 難易度・ランキング(モンスター選択と同じ曲)
     BATTLE_MODE_SELECT: 'enhance',

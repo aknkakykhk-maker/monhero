@@ -1832,9 +1832,24 @@ function MonsterHeroGame() {
     // ★すでに出ている順位は消さない。読み直しのたびに一覧が空になると、
     //   タブや部門を押すたびに画面がちらつく(2026-09-11・押すたびに取り直す形へ変えたため)。
     //   取れたら差し替わる。まだ一度も取れていない部門だけ「読み込み中」にする。
+    //
+    // ★ただし**期間が変わったときは残さない**(2026-09-14・ユーザー指摘
+    //   「5時過ぎてモンヒロビート見たら週間ランキングにスコアが入ってた」)。
+    //   週間の画面には「毎週 月曜 5:00 に切り替わります」としか出ないので、
+    //   先週のぶんがそのまま残っていると、今週の記録と見分けがつかない。
+    //   ここでの判定は端末の時計でよい(残すか捨てるかを決めるだけ。集計する期間は
+    //   サーバーから受け取ったものを使う)。時計がずれていても、少しのあいだ
+    //   「読み込み中」と出るだけで、古い順位を今週のものとして見せることはない。
+    const boardStillCurrent = (prev) => {
+      const loaded = prev.event && prev.event.id;
+      if (!loaded) return true;
+      if (kind === 'weekly') return loaded === rhythmWeekId(Date.now());
+      if (kind === 'limited') { const now = rhythmLimitedEventAt(Date.now()); return !!now && now.id === loaded; }
+      return true;   // 履歴は終わった回なので、あとから変わらない
+    };
     setRhythmBoard(kind, prev => {
       const before = (prev.boards && prev.boards[wanted]) || null;
-      const keep = before && before.status === 'ready';
+      const keep = before && before.status === 'ready' && boardStillCurrent(prev);
       return {
         ...prev,
         status: prev.status === 'ready' ? 'ready' : 'loading',
@@ -2464,6 +2479,8 @@ function MonsterHeroGame() {
     SETTINGS: 'home',           // 設定ページはHOMEの曲を続ける
     GIFT_BOX: 'home',           // ギフトボックスはHOMEの曲を止めずに続ける
     MISSIONS: 'home',           // ミッション画面でもHOMEの曲を続ける
+    RHYTHM_HISTORY: 'home',     // モンヒロビート「これまでの記録」もHOMEの曲を続ける
+                                // (2026-09-14・ユーザー指摘「BGMがない / 設定してるホームのBGMを流して」)
     BATTLE_MENU: 'enhance',      // 難易度・ランキング(モンスター選択と同じ曲)
     BATTLE_MODE_SELECT: 'enhance',       // 新しいバトルモード選択(BATTLE_MENUと同じ曲を続ける)
     BATTLE_DIFFICULTY_SELECT: 'enhance', // 新しい難易度選択も同じ曲
