@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b68f661bcfaa6fde
+// source-sha256: 28be914384d34969
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 0d12a2d6441d0bc6
+// generated-sha256: 9687c4220a3a88c8
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-13 17:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-13 19:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -22268,6 +22268,7 @@ const RhythmTapTest = ({
     counts: emptyCounts(),
     fast: 0,
     slow: 0,
+    precise: 0,
     life: RHYTHM_LIFE_MAX,
     ability: null,
     result: null
@@ -22650,6 +22651,7 @@ const RhythmTapTest = ({
     run.combo = nextCombo;
     run.maxCombo = Math.max(run.maxCombo, nextCombo);
     run.counts[judgment]++;
+    if (preciseHit) run.precise++;
     const side = judgment === 'MISS' ? null : rhythmFastSlow(deltaMs);
     if (side) run[side.toLowerCase()]++;
     const songTimeMs = run.audio?.songTimeMs?.() ?? 0;
@@ -22762,6 +22764,7 @@ const RhythmTapTest = ({
       },
       fast: run.fast,
       slow: run.slow,
+      precise: run.precise,
       life: run.life,
       ...(showAbilityFlash ? {
         ability: abilityFlash
@@ -22798,6 +22801,7 @@ const RhythmTapTest = ({
       maxCombo: run.maxCombo,
       fast: run.fast,
       slow: run.slow,
+      precise: run.precise,
       cleared: !failed,
       ...(calibration ? {
         calibration
@@ -23331,6 +23335,7 @@ const RhythmTapTest = ({
       counts: emptyCounts(),
       fast: 0,
       slow: 0,
+      precise: 0,
       deltas: [],
       life: RHYTHM_LIFE_MAX,
       lifeDepleted: false,
@@ -23868,9 +23873,27 @@ const RhythmTapTest = ({
   if (view.status === 'result') {
     const result = view.result,
       rank = rhythmRankForScore(view.score);
+    // ===== リザルトの演出は結果で変える(2026-09-13・ユーザー依頼
+    //   「演奏後のリザルト結果に応じて演出を変えてほしい」) =====
+    // ★段(tier)はランクから作る。CSSの条件を増やさずに済むよう、数字ひとつへまとめる。
+    //   M=5 / SS=4 / S=3 / A=2 / B・C=1 / それ以下=0。
+    // ★失敗(FAILED)は段に関わらず出さない。派手に祝う画面ではないため。
+    // ★演出量と軽量モードはここでも効かせる(器へそのまま渡して、CSS側で止める)。
+    const rankTier = result.cleared === false ? 0 : {
+      M: 5,
+      SS: 4,
+      S: 3,
+      A: 2,
+      B: 1,
+      C: 1
+    }[rank] || 0;
     return /*#__PURE__*/React.createElement("main", {
       "data-rhythm-result": true,
-      className: "flex-1 overflow-y-auto bg-slate-950 p-4 text-white",
+      "data-rank": rank,
+      "data-rank-tier": String(rankTier),
+      "data-rhythm-effect": settings.effectAmount,
+      "data-rhythm-lightweight": settings.lightweightMode ? 'true' : 'false',
+      className: "relative flex-1 overflow-y-auto bg-slate-950 p-4 text-white",
       style: {
         paddingTop: 'calc(1rem + env(safe-area-inset-top))',
         paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
@@ -23892,7 +23915,8 @@ const RhythmTapTest = ({
       }, failed ? 'ライフが0になったまま曲が終わりました（DOWN）' : 'ライフを残して最後まで演奏しました'));
     })(), /*#__PURE__*/React.createElement("div", {
       "data-rhythm-result-rank": true,
-      className: `mx-auto mt-2 flex h-20 w-20 items-center justify-center rounded-full border-4 border-current text-4xl font-black ${RHYTHM_RANK_COLORS[rank]}`
+      "data-rank-tier": String(rankTier),
+      className: `relative mx-auto mt-2 flex h-20 w-20 items-center justify-center rounded-full border-4 border-current text-4xl font-black ${RHYTHM_RANK_COLORS[rank]}`
     }, rank), /*#__PURE__*/React.createElement("div", {
       className: "my-3 text-center text-3xl font-black"
     }, view.score.toLocaleString()), /*#__PURE__*/React.createElement("p", {
@@ -23954,7 +23978,15 @@ const RhythmTapTest = ({
       key: id
     }, /*#__PURE__*/React.createElement("dt", null, id), /*#__PURE__*/React.createElement("dd", {
       className: "text-right font-mono"
-    }, view.counts[id]))), /*#__PURE__*/React.createElement("dt", null, "MAX COMBO"), /*#__PURE__*/React.createElement("dd", {
+    }, view.counts[id]), id === 'MARVELOUS' && /*#__PURE__*/React.createElement(React.Fragment, {
+      key: "precise"
+    }, /*#__PURE__*/React.createElement("dt", {
+      "data-rhythm-result-precise-label": true,
+      className: "pl-3 text-[11px] font-black text-cyan-200"
+    }, "\u2514 JUST MARVELOUS"), /*#__PURE__*/React.createElement("dd", {
+      "data-rhythm-result-precise": true,
+      className: "text-right font-mono text-[11px] text-cyan-200"
+    }, Number(view.precise) || 0)))), /*#__PURE__*/React.createElement("dt", null, "MAX COMBO"), /*#__PURE__*/React.createElement("dd", {
       className: "text-right"
     }, view.maxCombo), /*#__PURE__*/React.createElement("dt", null, "FAST"), /*#__PURE__*/React.createElement("dd", {
       className: "text-right"
