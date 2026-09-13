@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bb8ad70f12d25f12
+// source-sha256: c16a35f6a38ee236
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 0ca9801cec757d42
+// generated-sha256: 11cee6631e943e67
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-13 19:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-13 20:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5162,6 +5162,17 @@ const RHYTHM_TIMING_OFFSET_STEP_MS = 1;
 //   変えるのは**画面に出す名前と既定値だけ**なので、自分で選んで保存した人はそのまま。
 const RHYTHM_MONSTER_EFFECT_LABELS = Object.freeze([['NORMAL', '多め'], ['LIGHT', '標準'], ['OFF', '少なめ'], ['NONE', '最小']]);
 const RHYTHM_MONSTER_EFFECT_LEVELS = Object.freeze(RHYTHM_MONSTER_EFFECT_LABELS.map(([id]) => id));
+// 「この段より軽い側か」を1か所で判定する(演出量の rhythmEffectAtMost と同じ考え方)。
+// ★段の名前を並べて比べない。2026-09-13に「最小(NONE)」を足したとき、踏んだ瞬間の
+//   大きな光を外す条件が `!=='OFF'` のままだったため、**いちばん軽いはずの「最小」で
+//   「少なめ」より重い光(900ms・粒2.1倍)が出ていた**。段を足すたびに条件を書き足す
+//   書き方だと、また同じ取りこぼしが起きる。順位で比べればその心配がない。
+// 例: rhythmMonsterEffectAtMost(level,'OFF') は OFF と NONE で true
+const rhythmMonsterEffectRank = level => {
+  const index = RHYTHM_MONSTER_EFFECT_LEVELS.indexOf(level);
+  return index < 0 ? RHYTHM_MONSTER_EFFECT_LEVELS.indexOf(DEFAULT_RHYTHM_SETTINGS.monsterNoteEffect) : index;
+};
+const rhythmMonsterEffectAtMost = (level, limit) => rhythmMonsterEffectRank(level) >= RHYTHM_MONSTER_EFFECT_LEVELS.indexOf(limit);
 // コンボ数の大きさ(2026-09-13・ユーザー依頼「コンボ数のサイズ設定もほしい」)。
 // 置き場所ごとの基準の大きさ(真ん中52px / 端34px)へ、この割合を掛ける。
 // コンボ数の濃さ(2026-09-13・ユーザー依頼「オプションにコンボ数表記の透過度の設定」)。
@@ -22074,7 +22085,7 @@ const RhythmTapTest = ({
   // ★この絵だけは canvas ではなくDOMの要素で、毎フレーム transform と scale を書き換えている。
   //   ふつうのノーツには無い処理なので、ここを止めるといちばん効く。
   const monsterNoteEffect = RHYTHM_MONSTER_EFFECT_LEVELS.includes(settings.monsterNoteEffect) ? settings.monsterNoteEffect : DEFAULT_RHYTHM_SETTINGS.monsterNoteEffect;
-  const monsterFaceHidden = monsterNoteEffect === 'NONE';
+  const monsterFaceHidden = rhythmMonsterEffectAtMost(monsterNoteEffect, 'NONE');
   const chart = song.difficulties[difficulty.id],
     laneRefs = useRef([]),
     runRef = useRef(null),
@@ -22664,8 +22675,13 @@ const RhythmTapTest = ({
         //   LIGHT  … 画面全体の光をやめる(いちばん重いのが全画面の描き直し)。粒と跳ねは残す
         //   OFF    … 粒もふつうのノーツと同じにし、跳ねもやめる
         // ★どの段でも音・能力名・振動は残す。取れたことが分からなくなるのがいちばん困る。
-        const monsterEffect = RHYTHM_MONSTER_EFFECT_LEVELS.includes(settings.monsterNoteEffect) ? settings.monsterNoteEffect : 'NORMAL';
-        const bigMonsterEffect = monsterHit && monsterEffect !== 'OFF';
+        const monsterEffect = RHYTHM_MONSTER_EFFECT_LEVELS.includes(settings.monsterNoteEffect) ? settings.monsterNoteEffect : DEFAULT_RHYTHM_SETTINGS.monsterNoteEffect;
+        // ★段の名前を並べて比べず、必ず順位(rhythmMonsterEffectAtMost)で見る。
+        //   2026-09-13、ここが `monsterEffect!=='OFF'` のままだったため、あとから足した
+        //   いちばん軽い段「最小」(NONE)が素通りし、**「少なめ」より重い光**が出ていた
+        //   (踏んだ瞬間に 900ms・幅1.5倍・粒2.1倍の金色の光。ふつうのノーツは340ms)。
+        //   ユーザー報告「設定を最小にしても固まるときがある / 踏んだときに起こる何かが原因」。
+        const bigMonsterEffect = monsterHit && !rhythmMonsterEffectAtMost(monsterEffect, 'OFF');
         const hitEffect = rhythmSpawnHitEffect(area, {
           centerRatio: span.center,
           widthRatio: span.width,
@@ -22684,12 +22700,12 @@ const RhythmTapTest = ({
         //   (2026-09-13・ユーザー指摘「マスモンの表示より踏んだときの挙動だと思うんだけど」)。
         //   跳ねないのに phase を書き換えてアニメを切り替え、700msのタイマーまで張っていた。
         //   踏んだその瞬間にスタイルの計算が走るので、跳ねを出さない段では何もしないのが正しい。
-        if (monsterHit && monsterEffect !== 'NONE') {
+        if (monsterHit && !rhythmMonsterEffectAtMost(monsterEffect, 'NONE')) {
           const slot = rhythmNoteMonsterSlot(note),
             el = slot ? sideMonsterRefs.current[slot - 1] : null;
           if (el) {
             // 「少なめ」では跳ねない(跳ねはそのマスモンの周りを描き直すため)
-            if (monsterEffect !== 'OFF') restarts.push({
+            if (!rhythmMonsterEffectAtMost(monsterEffect, 'OFF')) restarts.push({
               el,
               attr: 'rhythmSideHit'
             });
@@ -22824,7 +22840,7 @@ const RhythmTapTest = ({
     if (run.life === 0 && lifeBefore > 0) setLifeDownCount(count => count + 1);
     // ★能力名の大きな表示は、いちばん軽い段(NONE)では出さない(2026-09-13)。
     //   効いていることは左上のバッジと音・振動で分かる。能力そのものは当然かかる
-    const showAbilityFlash = abilityFlash && (RHYTHM_MONSTER_EFFECT_LEVELS.includes(settings.monsterNoteEffect) ? settings.monsterNoteEffect : DEFAULT_RHYTHM_SETTINGS.monsterNoteEffect) !== 'NONE';
+    const showAbilityFlash = !!abilityFlash && !rhythmMonsterEffectAtMost(settings.monsterNoteEffect, 'NONE');
     const score = run.lifeDepleted ? run.lockedScore : run.score;
     setView(v => ({
       ...v,

@@ -225,6 +225,17 @@ const RHYTHM_TIMING_OFFSET_STEP_MS = 1;
 //   変えるのは**画面に出す名前と既定値だけ**なので、自分で選んで保存した人はそのまま。
 const RHYTHM_MONSTER_EFFECT_LABELS = Object.freeze([['NORMAL','多め'],['LIGHT','標準'],['OFF','少なめ'],['NONE','最小']]);
 const RHYTHM_MONSTER_EFFECT_LEVELS = Object.freeze(RHYTHM_MONSTER_EFFECT_LABELS.map(([id])=>id));
+// 「この段より軽い側か」を1か所で判定する(演出量の rhythmEffectAtMost と同じ考え方)。
+// ★段の名前を並べて比べない。2026-09-13に「最小(NONE)」を足したとき、踏んだ瞬間の
+//   大きな光を外す条件が `!=='OFF'` のままだったため、**いちばん軽いはずの「最小」で
+//   「少なめ」より重い光(900ms・粒2.1倍)が出ていた**。段を足すたびに条件を書き足す
+//   書き方だと、また同じ取りこぼしが起きる。順位で比べればその心配がない。
+// 例: rhythmMonsterEffectAtMost(level,'OFF') は OFF と NONE で true
+const rhythmMonsterEffectRank = (level)=>{
+  const index=RHYTHM_MONSTER_EFFECT_LEVELS.indexOf(level);
+  return index<0?RHYTHM_MONSTER_EFFECT_LEVELS.indexOf(DEFAULT_RHYTHM_SETTINGS.monsterNoteEffect):index;
+};
+const rhythmMonsterEffectAtMost = (level,limit)=>rhythmMonsterEffectRank(level)>=RHYTHM_MONSTER_EFFECT_LEVELS.indexOf(limit);
 // コンボ数の大きさ(2026-09-13・ユーザー依頼「コンボ数のサイズ設定もほしい」)。
 // 置き場所ごとの基準の大きさ(真ん中52px / 端34px)へ、この割合を掛ける。
 // コンボ数の濃さ(2026-09-13・ユーザー依頼「オプションにコンボ数表記の透過度の設定」)。
