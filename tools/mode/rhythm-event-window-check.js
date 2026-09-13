@@ -322,7 +322,12 @@ check('期間限定の期間は定義の日時そのまま',limited.every(e=>{
 check('期間の文を出し分ける',(()=>{
   const week=O.rhythmWeeklyEvent(Date.now());
   const weekText=O.rhythmEventPeriodText(week,O.rhythmEventWindow(week,O.rhythmWeekWindow(Date.now())));
-  if(!/毎週 月曜 5:00/.test(weekText))return false;
+  // ★2026-09-14: 週間も「今週 9/14(月) 5:00 〜 …」と日付を出す。
+  //   「毎週 月曜 5:00 に切り替わります」だけだと、いま見ているのが今週なのか
+  //   先週のまま残っているのかが画面から分からなかった。
+  //   期間が取れないときだけ、これまでどおりの文へ倒す
+  if(!/^今週 \d+\/\d+\([日月火水木金土]\) \d+:\d\d 〜 \d+\/\d+\([日月火水木金土]\) \d+:\d\d$/.test(weekText))return false;
+  if(O.rhythmEventPeriodText(week,null)!=='毎週 月曜 5:00 に切り替わります')return false;
   return limited.every(e=>{
     const text=O.rhythmEventPeriodText(e,O.rhythmEventWindow(e,null));
     return /\d+\/\d+\([日月火水木金土]\) \d+:\d\d 〜 \d+\/\d+\([日月火水木金土]\) \d+:\d\d/.test(text);
@@ -474,8 +479,15 @@ check('部門も押すたびに取り直す',
   &&screen.includes('loadRhythmEventRanking&&loadRhythmEventRanking(boardKind,divisionId);')
   &&!screen.includes("if(!board||board.status==='idle')loadRhythmEventRanking"));
 check('読み直しのあいだも前の順位を消さない',
-  app.includes('const keep = before && before.status === \'ready\';')
+  app.includes('const keep = before && before.status === \'ready\' && boardStillCurrent(prev);')
   &&app.includes('boards: { ...prev.boards, [wanted]: keep ? before : { status:\'loading\', entries:[], self:null } },'));
+// ★ただし週(またはイベント)が変わったときは残さない。
+//   残すと、先週のスコアが今週の順位として画面に出たままになる
+//   (2026-09-14・ユーザー指摘「5時過ぎてモンヒロビート見たら週間ランキングにスコアが入ってた」)
+check('週・イベントが変わったら前の順位は残さない',
+  /const boardStillCurrent = \(prev\) =>/.test(app)
+  &&/return loaded === rhythmWeekId\(Date\.now\(\)\);/.test(app)
+  &&/const now = rhythmLimitedEventAt\(Date\.now\(\)\); return !!now && now\.id === loaded;/.test(app));
 check('更新ボタンは開いているタブのほうを読み直す',screen.includes('if(boardTab)loadRhythmEventRanking&&loadRhythmEventRanking(boardKind,eventDivisionId);'));
 check('残り時間を出している',screen.includes('data-rhythm-event-remaining')&&screen.includes('rhythmEventRemainingText('));
 check('自分の記録を上に固定で出す',screen.includes('data-rhythm-event-self-empty')&&screen.includes('eventBoard.self'));

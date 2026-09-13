@@ -39,7 +39,8 @@ vm.runInContext(`${demoIds}\n${eventData}\n`
   +'this.out={RHYTHM_WEEKLY_REWARD_RANKS,RHYTHM_WEEKLY_PARTICIPATION,RHYTHM_WEEKLY_REWARD_FROM_MS,'
   +'RHYTHM_WEEK_MS,rhythmWeeklyRewardForRank,rhythmWeeksAwaitingReward,rhythmWeekId,'
   +'rhythmEventRewardForRank,rhythmEventRewardRankCount,rhythmEventParticipationReward,'
-  +'rhythmEventParticipationCleared,rhythmEventHasRewards,rhythmEventPlayBonusRates,rhythmWeeklyEvent};',context);
+  +'rhythmEventParticipationCleared,rhythmEventHasRewards,rhythmEventPlayBonusRates,rhythmWeeklyEvent,'
+  +'rhythmEventPeriodText,rhythmWeekWindow};',context);
 const O=context.out;
 const weekly={kind:'weekly'};
 
@@ -98,6 +99,31 @@ check('成立の見かたが週間とイベントで違う（回数 / 曲数）'
     &&O.rhythmWeeksAwaitingReward(justAfterFirstWeek,'あ').length===0);
   check('まだ終わっていない今週は対象にしない',
     O.rhythmWeeksAwaitingReward(from+O.RHYTHM_WEEK_MS/2,[]).length===0);
+}
+
+// ⑧ 週をまたいだときに、先週の順位を今週として見せない(2026-09-14)
+check('週が変わったら前の順位を画面へ残さない',
+  /const boardStillCurrent = \(prev\) =>/.test(app)
+  &&/if \(kind === 'weekly'\) return loaded === rhythmWeekId\(Date\.now\(\)\);/.test(app)
+  &&/before\.status === 'ready' && boardStillCurrent\(prev\)/.test(app));
+check('イベントが終わったときも同じように残さない',
+  /if \(kind === 'limited'\) \{ const now = rhythmLimitedEventAt\(Date\.now\(\)\); return !!now && now\.id === loaded; \}/.test(app));
+check('どの週を見ているか画面に日付で出る',(()=>{
+  const w=O.rhythmWeeklyEvent?null:null;
+  const text=O.rhythmEventPeriodText({kind:'weekly'},{startMs:O.RHYTHM_WEEKLY_REWARD_FROM_MS,endMs:O.RHYTHM_WEEKLY_REWARD_FROM_MS+O.RHYTHM_WEEK_MS});
+  return /^今週 \d+\/\d+\(.\) \d+:\d+ 〜 \d+\/\d+\(.\) \d+:\d+$/.test(text);
+})(),O.rhythmEventPeriodText({kind:'weekly'},{startMs:O.RHYTHM_WEEKLY_REWARD_FROM_MS,endMs:O.RHYTHM_WEEKLY_REWARD_FROM_MS+O.RHYTHM_WEEK_MS}));
+check('期間が取れないときは、これまでどおりの文へ倒す',
+  O.rhythmEventPeriodText({kind:'weekly'},null)==='毎週 月曜 5:00 に切り替わります');
+
+// ⑨ 切り替わりは月曜5:00ちょうど(2026-09-14・ユーザー「スコア集計の切り替え時間の確認して」)
+{
+  const anchor=O.RHYTHM_WEEKLY_REWARD_FROM_MS;   // 2026-09-14 05:00 JST
+  const before=O.rhythmWeekWindow(anchor-1), after=O.rhythmWeekWindow(anchor);
+  check('05:00の1ミリ秒前はまだ前の週',before.endMs===anchor&&before.startMs===anchor-O.RHYTHM_WEEK_MS);
+  check('05:00ちょうどで新しい週に入る',after.startMs===anchor&&after.endMs===anchor+O.RHYTHM_WEEK_MS);
+  check('週のIDも同じ境界で変わる',
+    O.rhythmWeekId(anchor-1)!==O.rhythmWeekId(anchor)&&O.rhythmWeekId(anchor)===O.rhythmWeekId(anchor+O.RHYTHM_WEEK_MS-1));
 }
 
 // ⑦ 週間に回数ボーナスは付けない

@@ -401,7 +401,13 @@ const rhythmEventEntryScore = (entry) => {
   return Number(value) || 0;
 };
 
-// 画面へ出す期間の文。週間は「毎週 月曜 5:00 に切り替わります」で足りるが、
+// 画面へ出す期間の文。期間限定は開始と終了そのものを出す。
+// ★週間も**その週の日付を出す**(2026-09-14・ユーザー指摘
+//   「5時過ぎてモンヒロビート見たら週間ランキングにスコアが入ってた」)。
+//   「毎週 月曜 5:00 に切り替わります」だけだと、いま見ているのが今週なのか
+//   先週のまま残っているのかが画面から分からなかった。日付が出ていれば一目で分かる。
+//   期間が取れていないときは、これまでどおりの文へ倒す。
+// 以前ここに書いていた説明:  週間は「毎週 月曜 5:00 に切り替わります」で足りるが、
 // 期間限定は終わりの日時そのものを出さないと、いつまでか分からない。
 // 端末の時間帯に左右されないよう、JST(+9時間)へ寄せてから組み立てる。
 const RHYTHM_EVENT_WEEKDAY_LABELS = Object.freeze(['日', '月', '火', '水', '木', '金', '土']);
@@ -415,6 +421,9 @@ const rhythmEventJstText = (ms) => {
 const rhythmEventPeriodText = (event, range) => {
   if (event && event.kind === 'limited' && range) {
     return `${rhythmEventJstText(range.startMs)} 〜 ${rhythmEventJstText(range.endMs)}`;
+  }
+  if (range && Number.isFinite(Number(range.startMs)) && Number.isFinite(Number(range.endMs))) {
+    return `今週 ${rhythmEventJstText(range.startMs)} 〜 ${rhythmEventJstText(range.endMs)}`;
   }
   return '毎週 月曜 5:00 に切り替わります';
 };
