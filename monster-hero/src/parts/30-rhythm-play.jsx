@@ -1009,7 +1009,7 @@ scheduleTick();};
     const rankTier=result.cleared===false?0:({M:5,SS:4,S:3,A:2,B:1,C:1}[rank]||0);
     return <main data-rhythm-result data-rank={rank} data-rank-tier={String(rankTier)}
       data-rhythm-effect={settings.effectAmount} data-rhythm-lightweight={settings.lightweightMode?'true':'false'}
-      className="relative flex-1 overflow-y-auto bg-slate-950 p-4 text-white" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}><p className="text-center text-xs text-cyan-300">{rhythmSongFullName(song)}・{difficulty.id}</p><h2 className="text-center font-black">RHYTHM RESULT</h2>{/* ===== クリアか失敗か(2026-09-12・ユーザー指示) =====
+      className="relative flex-1 overflow-y-auto bg-slate-950 p-4 text-white" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}><p className="text-center text-xs text-cyan-300">{rhythmSongFullName(song)}・<b data-rhythm-difficulty-name className={`font-black ${rhythmDifficultyTextColor(difficulty.id)}`}>{difficulty.id}</b></p><h2 className="text-center font-black">RHYTHM RESULT</h2>{/* ===== クリアか失敗か(2026-09-12・ユーザー指示) =====
     「終了後にクリアか失敗かもわかるようにして / それによって経験値も変わるから」。
     ランクやスコアより先に、まずここで結果を言い切る。失敗はライフが0になったまま
     曲を終えたとき(不可逆のDOWN)だけ。入る周回数(=経験値)も半分になる。
@@ -1054,14 +1054,19 @@ scheduleTick();};
       MARVELOUSの**上**へ置く(2026-09-13・ユーザー指示「普通に表示はMarvelousの上に
       JUST Marvelousがくるようにして」)。スコア・ランク・自己ベストには一切関わらない。 */}
   {id==='MARVELOUS'&&<React.Fragment key="precise">
-    <dt data-rhythm-result-precise-label data-rhythm-judgment-row="JUST" className="text-[11px]">JUST MARVELOUS</dt>
-    <dd data-rhythm-result-precise data-rhythm-judgment-row="JUST" className="text-right font-mono text-[11px]">{Number(view.precise)||0}</dd>
+    {/* ★大きさも並びもほかの判定と同じにする(2026-09-13・ユーザー指摘
+        「リザルトの方もJUST Marvelous地味すぎる / スコアには乗らないだけで
+        並びは同じようにして色合いは合わせて」)。小さくしていたのをやめる */}
+    <dt data-rhythm-result-precise-label data-rhythm-judgment-row="JUST">JUST MARVELOUS</dt>
+    <dd data-rhythm-result-precise data-rhythm-judgment-row="JUST" className="text-right font-mono">{Number(view.precise)||0}</dd>
   </React.Fragment>}
   {/* 判定の内訳は、遊んでいるときに出る判定の色と同じ色で出す
       (2026-09-13・ユーザー指示「JUST Marvelous（虹）/ Marvelous（金）みたいな」)。
       色は index.html の [data-rhythm-judgment-row] で決まる */}
   <dt data-rhythm-judgment-row={id}>{id}</dt><dd data-rhythm-judgment-row={id} className="text-right font-mono">{view.counts[id]}</dd>
-</React.Fragment>)}<dt>MAX COMBO</dt><dd className="text-right">{view.maxCombo}</dd><dt>FAST</dt><dd className="text-right">{view.fast}</dd><dt>SLOW</dt><dd className="text-right">{view.slow}</dd></dl><div className="mt-5 grid grid-cols-1 gap-2"><button className="min-h-[48px] rounded-xl bg-fuchsia-700 font-black" disabled={startLockRef.current} onClick={()=>beginRun(mergeRhythmBestRecord(runRef.current?.startBest,result))}>もう一度プレイ</button><button className="min-h-[48px] rounded-xl bg-indigo-700 font-black" onClick={abort}>{debugPlay?'音ゲーデバッグへ戻る':'曲えらびへ戻る'}</button></div></main>}
+</React.Fragment>)}{/* コンボ数も、遊んでいるときの段と同じ色で出す(2026-09-13・ユーザー指示
+    「マスターとかランクとかコンボ数とかも色が決められてるやつは色つけたい」) */}
+<dt className={rhythmComboTextColor(view.maxCombo)}>MAX COMBO</dt><dd data-rhythm-max-combo className={`text-right tabular-nums ${rhythmComboTextColor(view.maxCombo)}`}>{view.maxCombo}</dd><dt>FAST</dt><dd className="text-right">{view.fast}</dd><dt>SLOW</dt><dd className="text-right">{view.slow}</dd></dl><div className="mt-5 grid grid-cols-1 gap-2"><button className="min-h-[48px] rounded-xl bg-fuchsia-700 font-black" disabled={startLockRef.current} onClick={()=>beginRun(mergeRhythmBestRecord(runRef.current?.startBest,result))}>もう一度プレイ</button><button className="min-h-[48px] rounded-xl bg-indigo-700 font-black" onClick={abort}>{debugPlay?'音ゲーデバッグへ戻る':'曲えらびへ戻る'}</button></div></main>}
   /* ★ここへ属性を足すときは className の「後ろ」へ置く。
      rhythm-screen-layout-check.js が <main data-rhythm-tap-test className="…overflow-hidden という
      文字列の並びをそのまま見ているので、あいだに挟むと「1画面になっていない」と落ちる。 */

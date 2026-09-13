@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e606c38f729d5183
+// generated-sha256: c9f4d2dd5bba1303
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -89,7 +89,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-13 21:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-13 22:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -12285,14 +12285,23 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
 
 // 難易度の色。EASY=緑 / NORMAL=青 / HARD=橙 / EXPERT=赤 / MASTER=紫。
 // 一覧のひし形も難易度ボタンも同じ色を使い、画面のどこでも同じ意味になるようにする。
+// text … 字だけに色を付けたいところ(リザルトの題名・ランキングの行・スコア詳細)用。
+//   2026-09-13・ユーザー指示「マスターとかランクとかコンボ数とかも色が
+//   決められてるやつは色つけたい」。off には枠の色も混ざっているので別に持つ。
 const RHYTHM_DIFFICULTY_TONE=Object.freeze({
-  EASY:  Object.freeze({dot:'bg-emerald-400', on:'border-emerald-300 bg-emerald-600 text-white', off:'border-emerald-400/40 text-emerald-200'}),
-  NORMAL:Object.freeze({dot:'bg-sky-400',     on:'border-sky-300 bg-sky-600 text-white',         off:'border-sky-400/40 text-sky-200'}),
-  HARD:  Object.freeze({dot:'bg-amber-400',   on:'border-amber-300 bg-amber-600 text-white',     off:'border-amber-400/40 text-amber-200'}),
-  EXPERT:Object.freeze({dot:'bg-rose-400',    on:'border-rose-300 bg-rose-600 text-white',       off:'border-rose-400/40 text-rose-200'}),
-  MASTER:Object.freeze({dot:'bg-fuchsia-400', on:'border-fuchsia-300 bg-fuchsia-700 text-white', off:'border-fuchsia-400/40 text-fuchsia-200'}),
+  EASY:  Object.freeze({dot:'bg-emerald-400', on:'border-emerald-300 bg-emerald-600 text-white', off:'border-emerald-400/40 text-emerald-200', text:'text-emerald-300'}),
+  NORMAL:Object.freeze({dot:'bg-sky-400',     on:'border-sky-300 bg-sky-600 text-white',         off:'border-sky-400/40 text-sky-200',         text:'text-sky-300'}),
+  HARD:  Object.freeze({dot:'bg-amber-400',   on:'border-amber-300 bg-amber-600 text-white',     off:'border-amber-400/40 text-amber-200',     text:'text-amber-300'}),
+  EXPERT:Object.freeze({dot:'bg-rose-400',    on:'border-rose-300 bg-rose-600 text-white',       off:'border-rose-400/40 text-rose-200',       text:'text-rose-300'}),
+  MASTER:Object.freeze({dot:'bg-fuchsia-400', on:'border-fuchsia-300 bg-fuchsia-700 text-white', off:'border-fuchsia-400/40 text-fuchsia-200', text:'text-fuchsia-300'}),
 });
 const rhythmDifficultyTone=id=>RHYTHM_DIFFICULTY_TONE[id]||RHYTHM_DIFFICULTY_TONE.EASY;
+// 難易度の字の色だけを欲しいところへ。知らないidは灰に倒す(勝手にEASYの緑にしない)
+const rhythmDifficultyTextColor=id=>RHYTHM_DIFFICULTY_TONE[id]?.text||'text-slate-300';
+// コンボ数の字の色。遊んでいるときの段(rhythmComboTier)と同じ分け方で、
+// 水色→黄→金→白→虹 へ上がる。最上段(7)だけは虹なのでCSSに任せる
+const RHYTHM_COMBO_TIER_TEXT=Object.freeze(['text-slate-200','text-sky-100','text-cyan-200','text-amber-100','text-amber-200','text-amber-300','text-white']);
+const rhythmComboTextColor=combo=>RHYTHM_COMBO_TIER_TEXT[Math.min(RHYTHM_COMBO_TIER_TEXT.length-1,Math.max(0,rhythmComboTier(combo)))];
 
 // 一覧に並ぶひし形の色。
 // 【2026-09-05・ユーザー指示】
@@ -13857,7 +13866,7 @@ scheduleTick();};
     const rankTier=result.cleared===false?0:({M:5,SS:4,S:3,A:2,B:1,C:1}[rank]||0);
     return <main data-rhythm-result data-rank={rank} data-rank-tier={String(rankTier)}
       data-rhythm-effect={settings.effectAmount} data-rhythm-lightweight={settings.lightweightMode?'true':'false'}
-      className="relative flex-1 overflow-y-auto bg-slate-950 p-4 text-white" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}><p className="text-center text-xs text-cyan-300">{rhythmSongFullName(song)}・{difficulty.id}</p><h2 className="text-center font-black">RHYTHM RESULT</h2>{/* ===== クリアか失敗か(2026-09-12・ユーザー指示) =====
+      className="relative flex-1 overflow-y-auto bg-slate-950 p-4 text-white" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}><p className="text-center text-xs text-cyan-300">{rhythmSongFullName(song)}・<b data-rhythm-difficulty-name className={`font-black ${rhythmDifficultyTextColor(difficulty.id)}`}>{difficulty.id}</b></p><h2 className="text-center font-black">RHYTHM RESULT</h2>{/* ===== クリアか失敗か(2026-09-12・ユーザー指示) =====
     「終了後にクリアか失敗かもわかるようにして / それによって経験値も変わるから」。
     ランクやスコアより先に、まずここで結果を言い切る。失敗はライフが0になったまま
     曲を終えたとき(不可逆のDOWN)だけ。入る周回数(=経験値)も半分になる。
@@ -13902,14 +13911,19 @@ scheduleTick();};
       MARVELOUSの**上**へ置く(2026-09-13・ユーザー指示「普通に表示はMarvelousの上に
       JUST Marvelousがくるようにして」)。スコア・ランク・自己ベストには一切関わらない。 */}
   {id==='MARVELOUS'&&<React.Fragment key="precise">
-    <dt data-rhythm-result-precise-label data-rhythm-judgment-row="JUST" className="text-[11px]">JUST MARVELOUS</dt>
-    <dd data-rhythm-result-precise data-rhythm-judgment-row="JUST" className="text-right font-mono text-[11px]">{Number(view.precise)||0}</dd>
+    {/* ★大きさも並びもほかの判定と同じにする(2026-09-13・ユーザー指摘
+        「リザルトの方もJUST Marvelous地味すぎる / スコアには乗らないだけで
+        並びは同じようにして色合いは合わせて」)。小さくしていたのをやめる */}
+    <dt data-rhythm-result-precise-label data-rhythm-judgment-row="JUST">JUST MARVELOUS</dt>
+    <dd data-rhythm-result-precise data-rhythm-judgment-row="JUST" className="text-right font-mono">{Number(view.precise)||0}</dd>
   </React.Fragment>}
   {/* 判定の内訳は、遊んでいるときに出る判定の色と同じ色で出す
       (2026-09-13・ユーザー指示「JUST Marvelous（虹）/ Marvelous（金）みたいな」)。
       色は index.html の [data-rhythm-judgment-row] で決まる */}
   <dt data-rhythm-judgment-row={id}>{id}</dt><dd data-rhythm-judgment-row={id} className="text-right font-mono">{view.counts[id]}</dd>
-</React.Fragment>)}<dt>MAX COMBO</dt><dd className="text-right">{view.maxCombo}</dd><dt>FAST</dt><dd className="text-right">{view.fast}</dd><dt>SLOW</dt><dd className="text-right">{view.slow}</dd></dl><div className="mt-5 grid grid-cols-1 gap-2"><button className="min-h-[48px] rounded-xl bg-fuchsia-700 font-black" disabled={startLockRef.current} onClick={()=>beginRun(mergeRhythmBestRecord(runRef.current?.startBest,result))}>もう一度プレイ</button><button className="min-h-[48px] rounded-xl bg-indigo-700 font-black" onClick={abort}>{debugPlay?'音ゲーデバッグへ戻る':'曲えらびへ戻る'}</button></div></main>}
+</React.Fragment>)}{/* コンボ数も、遊んでいるときの段と同じ色で出す(2026-09-13・ユーザー指示
+    「マスターとかランクとかコンボ数とかも色が決められてるやつは色つけたい」) */}
+<dt className={rhythmComboTextColor(view.maxCombo)}>MAX COMBO</dt><dd data-rhythm-max-combo className={`text-right tabular-nums ${rhythmComboTextColor(view.maxCombo)}`}>{view.maxCombo}</dd><dt>FAST</dt><dd className="text-right">{view.fast}</dd><dt>SLOW</dt><dd className="text-right">{view.slow}</dd></dl><div className="mt-5 grid grid-cols-1 gap-2"><button className="min-h-[48px] rounded-xl bg-fuchsia-700 font-black" disabled={startLockRef.current} onClick={()=>beginRun(mergeRhythmBestRecord(runRef.current?.startBest,result))}>もう一度プレイ</button><button className="min-h-[48px] rounded-xl bg-indigo-700 font-black" onClick={abort}>{debugPlay?'音ゲーデバッグへ戻る':'曲えらびへ戻る'}</button></div></main>}
   /* ★ここへ属性を足すときは className の「後ろ」へ置く。
      rhythm-screen-layout-check.js が <main data-rhythm-tap-test className="…overflow-hidden という
      文字列の並びをそのまま見ているので、あいだに挟むと「1画面になっていない」と落ちる。 */
@@ -15567,7 +15581,9 @@ function RhythmRankingScreen({
           {rankingBreederIcon(entry)}
           <div className="min-w-0 flex-1">
             <p className="truncate text-xs font-black text-white">{entry.userName}</p>
-            <p className="text-[9px] text-slate-400">{RHYTHM_DEMO_DIFFICULTY_LABELS[entry.difficultyId]?.name||entry.difficultyId||'-'} ・ Lv.{entry.level}</p>
+            {/* 難易度は曲えらびと同じ色(EASY=緑 / NORMAL=青 / HARD=橙 / EXPERT=赤 / MASTER=紫)。
+                2026-09-13・ユーザー指示「色が決められてるやつは色つけたい」 */}
+            <p className="text-[9px] text-slate-400"><b data-rhythm-difficulty-name className={`font-black ${rhythmDifficultyTextColor(entry.difficultyId)}`}>{RHYTHM_DEMO_DIFFICULTY_LABELS[entry.difficultyId]?.name||entry.difficultyId||'-'}</b> ・ Lv.{entry.level}</p>
           </div>
           <div className="shrink-0 text-right">
             {/* ★一覧に出る数は**回数ボーナス込み**(2026-09-11・ユーザー指示
@@ -15759,7 +15775,12 @@ function RhythmRankingScreen({
               </div>
               {isTotal
                 ?<p className="text-[10px] text-slate-400">総合 {rhythmRankingDetail.songCount}曲 / スコア {shownScore.toLocaleString()}</p>
-                :<p className="text-[10px] text-slate-400">{RHYTHM_DEMO_DIFFICULTY_LABELS[rhythmRankingDetail.difficultyId]?.name||rhythmRankingDetail.difficultyId} / スコア {shownScore.toLocaleString()} / ランク {rhythmRankForScore(baseScore===null?shownScore:baseScore)}</p>}
+                :(()=>{const detailRank=rhythmRankForScore(baseScore===null?shownScore:baseScore);return (
+                  <p className="text-[10px] text-slate-400">
+                    <b data-rhythm-difficulty-name className={`font-black ${rhythmDifficultyTextColor(rhythmRankingDetail.difficultyId)}`}>{RHYTHM_DEMO_DIFFICULTY_LABELS[rhythmRankingDetail.difficultyId]?.name||rhythmRankingDetail.difficultyId}</b>
+                    {' / スコア '}{shownScore.toLocaleString()}{' / ランク '}
+                    <b data-rhythm-rank-name className={`font-black ${RHYTHM_RANK_COLORS[detailRank]}`}>{detailRank}</b>
+                  </p>);})()}
               {baseScore!==null&&(
               <dl data-rhythm-bonus-breakdown className="mt-2 rounded-xl border border-fuchsia-300/30 bg-fuchsia-500/10 p-2 text-[10px]">
                 <div className="flex items-center justify-between"><dt className="text-slate-300">素点（ベスト）</dt><dd className="font-mono text-white">{baseScore.toLocaleString()}</dd></div>
@@ -15776,7 +15797,8 @@ function RhythmRankingScreen({
                 <div className="mt-1 flex items-center justify-between border-t border-white/15 pt-1"><dt className="font-black text-amber-200">合計（順位に使う点）</dt><dd className="font-mono font-black text-amber-200">{shownScore.toLocaleString()}</dd></div>
               </dl>)}
               {!isTotal&&(<React.Fragment>
-                <p className="mt-1 text-[10px] text-slate-400">最大コンボ {rhythmRankingDetail.detail?.maxCombo??'-'}</p>
+                {/* コンボ数も、遊んでいるときの段と同じ色で出す(伸びるほど金へ) */}
+                <p className="mt-1 text-[10px] text-slate-400">最大コンボ <b data-rhythm-max-combo className={`font-black tabular-nums ${rhythmComboTextColor(rhythmRankingDetail.detail?.maxCombo)}`}>{rhythmRankingDetail.detail?.maxCombo??'-'}</b></p>
                 <dl className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]">
                   {RHYTHM_JUDGMENT_IDS.map(id=><React.Fragment key={id}>
                     {/* ぴったりのMARVELOUSの回数。MARVELOUSの**内数**だが、並びはリザルトとそろえて

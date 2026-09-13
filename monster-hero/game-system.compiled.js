@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6bec52ee0c290e9d
+// source-sha256: 35d3619a8b3f6f73
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e606c38f729d5183
+// generated-sha256: c9f4d2dd5bba1303
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-13 21:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-13 22:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -20959,34 +20959,48 @@ const RhythmOptions = ({
 
 // 難易度の色。EASY=緑 / NORMAL=青 / HARD=橙 / EXPERT=赤 / MASTER=紫。
 // 一覧のひし形も難易度ボタンも同じ色を使い、画面のどこでも同じ意味になるようにする。
+// text … 字だけに色を付けたいところ(リザルトの題名・ランキングの行・スコア詳細)用。
+//   2026-09-13・ユーザー指示「マスターとかランクとかコンボ数とかも色が
+//   決められてるやつは色つけたい」。off には枠の色も混ざっているので別に持つ。
 const RHYTHM_DIFFICULTY_TONE = Object.freeze({
   EASY: Object.freeze({
     dot: 'bg-emerald-400',
     on: 'border-emerald-300 bg-emerald-600 text-white',
-    off: 'border-emerald-400/40 text-emerald-200'
+    off: 'border-emerald-400/40 text-emerald-200',
+    text: 'text-emerald-300'
   }),
   NORMAL: Object.freeze({
     dot: 'bg-sky-400',
     on: 'border-sky-300 bg-sky-600 text-white',
-    off: 'border-sky-400/40 text-sky-200'
+    off: 'border-sky-400/40 text-sky-200',
+    text: 'text-sky-300'
   }),
   HARD: Object.freeze({
     dot: 'bg-amber-400',
     on: 'border-amber-300 bg-amber-600 text-white',
-    off: 'border-amber-400/40 text-amber-200'
+    off: 'border-amber-400/40 text-amber-200',
+    text: 'text-amber-300'
   }),
   EXPERT: Object.freeze({
     dot: 'bg-rose-400',
     on: 'border-rose-300 bg-rose-600 text-white',
-    off: 'border-rose-400/40 text-rose-200'
+    off: 'border-rose-400/40 text-rose-200',
+    text: 'text-rose-300'
   }),
   MASTER: Object.freeze({
     dot: 'bg-fuchsia-400',
     on: 'border-fuchsia-300 bg-fuchsia-700 text-white',
-    off: 'border-fuchsia-400/40 text-fuchsia-200'
+    off: 'border-fuchsia-400/40 text-fuchsia-200',
+    text: 'text-fuchsia-300'
   })
 });
 const rhythmDifficultyTone = id => RHYTHM_DIFFICULTY_TONE[id] || RHYTHM_DIFFICULTY_TONE.EASY;
+// 難易度の字の色だけを欲しいところへ。知らないidは灰に倒す(勝手にEASYの緑にしない)
+const rhythmDifficultyTextColor = id => RHYTHM_DIFFICULTY_TONE[id]?.text || 'text-slate-300';
+// コンボ数の字の色。遊んでいるときの段(rhythmComboTier)と同じ分け方で、
+// 水色→黄→金→白→虹 へ上がる。最上段(7)だけは虹なのでCSSに任せる
+const RHYTHM_COMBO_TIER_TEXT = Object.freeze(['text-slate-200', 'text-sky-100', 'text-cyan-200', 'text-amber-100', 'text-amber-200', 'text-amber-300', 'text-white']);
+const rhythmComboTextColor = combo => RHYTHM_COMBO_TIER_TEXT[Math.min(RHYTHM_COMBO_TIER_TEXT.length - 1, Math.max(0, rhythmComboTier(combo)))];
 
 // 一覧に並ぶひし形の色。
 // 【2026-09-05・ユーザー指示】
@@ -23991,7 +24005,10 @@ const RhythmTapTest = ({
       }
     }, /*#__PURE__*/React.createElement("p", {
       className: "text-center text-xs text-cyan-300"
-    }, rhythmSongFullName(song), "\u30FB", difficulty.id), /*#__PURE__*/React.createElement("h2", {
+    }, rhythmSongFullName(song), "\u30FB", /*#__PURE__*/React.createElement("b", {
+      "data-rhythm-difficulty-name": true,
+      className: `font-black ${rhythmDifficultyTextColor(difficulty.id)}`
+    }, difficulty.id)), /*#__PURE__*/React.createElement("h2", {
       className: "text-center font-black"
     }, "RHYTHM RESULT"), (() => {
       const failed = result.cleared === false;
@@ -24071,19 +24088,21 @@ const RhythmTapTest = ({
       key: "precise"
     }, /*#__PURE__*/React.createElement("dt", {
       "data-rhythm-result-precise-label": true,
-      "data-rhythm-judgment-row": "JUST",
-      className: "text-[11px]"
+      "data-rhythm-judgment-row": "JUST"
     }, "JUST MARVELOUS"), /*#__PURE__*/React.createElement("dd", {
       "data-rhythm-result-precise": true,
       "data-rhythm-judgment-row": "JUST",
-      className: "text-right font-mono text-[11px]"
+      className: "text-right font-mono"
     }, Number(view.precise) || 0)), /*#__PURE__*/React.createElement("dt", {
       "data-rhythm-judgment-row": id
     }, id), /*#__PURE__*/React.createElement("dd", {
       "data-rhythm-judgment-row": id,
       className: "text-right font-mono"
-    }, view.counts[id]))), /*#__PURE__*/React.createElement("dt", null, "MAX COMBO"), /*#__PURE__*/React.createElement("dd", {
-      className: "text-right"
+    }, view.counts[id]))), /*#__PURE__*/React.createElement("dt", {
+      className: rhythmComboTextColor(view.maxCombo)
+    }, "MAX COMBO"), /*#__PURE__*/React.createElement("dd", {
+      "data-rhythm-max-combo": true,
+      className: `text-right tabular-nums ${rhythmComboTextColor(view.maxCombo)}`
     }, view.maxCombo), /*#__PURE__*/React.createElement("dt", null, "FAST"), /*#__PURE__*/React.createElement("dd", {
       className: "text-right"
     }, view.fast), /*#__PURE__*/React.createElement("dt", null, "SLOW"), /*#__PURE__*/React.createElement("dd", {
@@ -27189,7 +27208,10 @@ function RhythmRankingScreen({
     className: "truncate text-xs font-black text-white"
   }, entry.userName), /*#__PURE__*/React.createElement("p", {
     className: "text-[9px] text-slate-400"
-  }, RHYTHM_DEMO_DIFFICULTY_LABELS[entry.difficultyId]?.name || entry.difficultyId || '-', " \u30FB Lv.", entry.level)), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("b", {
+    "data-rhythm-difficulty-name": true,
+    className: `font-black ${rhythmDifficultyTextColor(entry.difficultyId)}`
+  }, RHYTHM_DEMO_DIFFICULTY_LABELS[entry.difficultyId]?.name || entry.difficultyId || '-'), " \u30FB Lv.", entry.level)), /*#__PURE__*/React.createElement("div", {
     className: "shrink-0 text-right"
   }, /*#__PURE__*/React.createElement("p", {
     className: "font-mono text-sm font-black text-fuchsia-100"
@@ -27411,9 +27433,18 @@ function RhythmRankingScreen({
       className: "min-h-[44px] min-w-[44px] px-2 text-slate-400"
     }, "\u2715")), isTotal ? /*#__PURE__*/React.createElement("p", {
       className: "text-[10px] text-slate-400"
-    }, "\u7DCF\u5408 ", rhythmRankingDetail.songCount, "\u66F2 / \u30B9\u30B3\u30A2 ", shownScore.toLocaleString()) : /*#__PURE__*/React.createElement("p", {
-      className: "text-[10px] text-slate-400"
-    }, RHYTHM_DEMO_DIFFICULTY_LABELS[rhythmRankingDetail.difficultyId]?.name || rhythmRankingDetail.difficultyId, " / \u30B9\u30B3\u30A2 ", shownScore.toLocaleString(), " / \u30E9\u30F3\u30AF ", rhythmRankForScore(baseScore === null ? shownScore : baseScore)), baseScore !== null && /*#__PURE__*/React.createElement("dl", {
+    }, "\u7DCF\u5408 ", rhythmRankingDetail.songCount, "\u66F2 / \u30B9\u30B3\u30A2 ", shownScore.toLocaleString()) : (() => {
+      const detailRank = rhythmRankForScore(baseScore === null ? shownScore : baseScore);
+      return /*#__PURE__*/React.createElement("p", {
+        className: "text-[10px] text-slate-400"
+      }, /*#__PURE__*/React.createElement("b", {
+        "data-rhythm-difficulty-name": true,
+        className: `font-black ${rhythmDifficultyTextColor(rhythmRankingDetail.difficultyId)}`
+      }, RHYTHM_DEMO_DIFFICULTY_LABELS[rhythmRankingDetail.difficultyId]?.name || rhythmRankingDetail.difficultyId), ' / スコア ', shownScore.toLocaleString(), ' / ランク ', /*#__PURE__*/React.createElement("b", {
+        "data-rhythm-rank-name": true,
+        className: `font-black ${RHYTHM_RANK_COLORS[detailRank]}`
+      }, detailRank));
+    })(), baseScore !== null && /*#__PURE__*/React.createElement("dl", {
       "data-rhythm-bonus-breakdown": true,
       className: "mt-2 rounded-xl border border-fuchsia-300/30 bg-fuchsia-500/10 p-2 text-[10px]"
     }, /*#__PURE__*/React.createElement("div", {
@@ -27454,7 +27485,10 @@ function RhythmRankingScreen({
       className: "font-mono font-black text-amber-200"
     }, shownScore.toLocaleString()))), !isTotal && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
       className: "mt-1 text-[10px] text-slate-400"
-    }, "\u6700\u5927\u30B3\u30F3\u30DC ", rhythmRankingDetail.detail?.maxCombo ?? '-'), /*#__PURE__*/React.createElement("dl", {
+    }, "\u6700\u5927\u30B3\u30F3\u30DC ", /*#__PURE__*/React.createElement("b", {
+      "data-rhythm-max-combo": true,
+      className: `font-black tabular-nums ${rhythmComboTextColor(rhythmRankingDetail.detail?.maxCombo)}`
+    }, rhythmRankingDetail.detail?.maxCombo ?? '-')), /*#__PURE__*/React.createElement("dl", {
       className: "mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]"
     }, RHYTHM_JUDGMENT_IDS.map(id => /*#__PURE__*/React.createElement(React.Fragment, {
       key: id

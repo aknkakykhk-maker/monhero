@@ -570,7 +570,9 @@ function RhythmRankingScreen({
           {rankingBreederIcon(entry)}
           <div className="min-w-0 flex-1">
             <p className="truncate text-xs font-black text-white">{entry.userName}</p>
-            <p className="text-[9px] text-slate-400">{RHYTHM_DEMO_DIFFICULTY_LABELS[entry.difficultyId]?.name||entry.difficultyId||'-'} ・ Lv.{entry.level}</p>
+            {/* 難易度は曲えらびと同じ色(EASY=緑 / NORMAL=青 / HARD=橙 / EXPERT=赤 / MASTER=紫)。
+                2026-09-13・ユーザー指示「色が決められてるやつは色つけたい」 */}
+            <p className="text-[9px] text-slate-400"><b data-rhythm-difficulty-name className={`font-black ${rhythmDifficultyTextColor(entry.difficultyId)}`}>{RHYTHM_DEMO_DIFFICULTY_LABELS[entry.difficultyId]?.name||entry.difficultyId||'-'}</b> ・ Lv.{entry.level}</p>
           </div>
           <div className="shrink-0 text-right">
             {/* ★一覧に出る数は**回数ボーナス込み**(2026-09-11・ユーザー指示
@@ -762,7 +764,12 @@ function RhythmRankingScreen({
               </div>
               {isTotal
                 ?<p className="text-[10px] text-slate-400">総合 {rhythmRankingDetail.songCount}曲 / スコア {shownScore.toLocaleString()}</p>
-                :<p className="text-[10px] text-slate-400">{RHYTHM_DEMO_DIFFICULTY_LABELS[rhythmRankingDetail.difficultyId]?.name||rhythmRankingDetail.difficultyId} / スコア {shownScore.toLocaleString()} / ランク {rhythmRankForScore(baseScore===null?shownScore:baseScore)}</p>}
+                :(()=>{const detailRank=rhythmRankForScore(baseScore===null?shownScore:baseScore);return (
+                  <p className="text-[10px] text-slate-400">
+                    <b data-rhythm-difficulty-name className={`font-black ${rhythmDifficultyTextColor(rhythmRankingDetail.difficultyId)}`}>{RHYTHM_DEMO_DIFFICULTY_LABELS[rhythmRankingDetail.difficultyId]?.name||rhythmRankingDetail.difficultyId}</b>
+                    {' / スコア '}{shownScore.toLocaleString()}{' / ランク '}
+                    <b data-rhythm-rank-name className={`font-black ${RHYTHM_RANK_COLORS[detailRank]}`}>{detailRank}</b>
+                  </p>);})()}
               {baseScore!==null&&(
               <dl data-rhythm-bonus-breakdown className="mt-2 rounded-xl border border-fuchsia-300/30 bg-fuchsia-500/10 p-2 text-[10px]">
                 <div className="flex items-center justify-between"><dt className="text-slate-300">素点（ベスト）</dt><dd className="font-mono text-white">{baseScore.toLocaleString()}</dd></div>
@@ -779,7 +786,8 @@ function RhythmRankingScreen({
                 <div className="mt-1 flex items-center justify-between border-t border-white/15 pt-1"><dt className="font-black text-amber-200">合計（順位に使う点）</dt><dd className="font-mono font-black text-amber-200">{shownScore.toLocaleString()}</dd></div>
               </dl>)}
               {!isTotal&&(<React.Fragment>
-                <p className="mt-1 text-[10px] text-slate-400">最大コンボ {rhythmRankingDetail.detail?.maxCombo??'-'}</p>
+                {/* コンボ数も、遊んでいるときの段と同じ色で出す(伸びるほど金へ) */}
+                <p className="mt-1 text-[10px] text-slate-400">最大コンボ <b data-rhythm-max-combo className={`font-black tabular-nums ${rhythmComboTextColor(rhythmRankingDetail.detail?.maxCombo)}`}>{rhythmRankingDetail.detail?.maxCombo??'-'}</b></p>
                 <dl className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]">
                   {RHYTHM_JUDGMENT_IDS.map(id=><React.Fragment key={id}>
                     {/* ぴったりのMARVELOUSの回数。MARVELOUSの**内数**だが、並びはリザルトとそろえて
