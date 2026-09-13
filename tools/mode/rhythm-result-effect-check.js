@@ -114,7 +114,7 @@ ${keyframes}
     +`<div><dl id="rank">${rowsHtml}</dl></div>`
     +`<main data-rhythm-result data-rhythm-effect="MINIMAL" data-rhythm-lightweight="false"><dl id="min">${rowsHtml}</dl></main>`;
   const server=await serve(rowPage);
-  let browser,measured=null,rows=null;
+  let browser,measured=null,rows=null,hues=null;
   try{
     browser=await playwright.chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
     const tab=await browser.newPage({viewport:{width:390,height:844}});
@@ -133,6 +133,28 @@ ${keyframes}
           grad:cs.backgroundImage!=='none',anim:cs.animationName};
       });
       return {res:read('res'),rank:read('rank'),min:read('min')};
+    });
+    // 虹が何色出ているかを、実際に描いて数える。
+    // ★字のピクセルを拾うのは面倒なので、同じ背景を幅の広い箱へ当てて横一列を読む。
+    //   見えている窓が虹の1周分なら、色相は一周する
+    hues=await tab.evaluate(()=>{
+      const probe=document.createElement('div');
+      probe.setAttribute('data-rhythm-judgment-row','JUST');
+      probe.style.cssText='position:fixed;left:0;top:0;width:280px;height:12px;-webkit-background-clip:border-box;background-clip:border-box;color:transparent';
+      document.body.appendChild(probe);
+      const cs=getComputedStyle(probe);
+      const canvas=document.createElement('canvas');canvas.width=280;canvas.height=1;
+      const ctx=canvas.getContext('2d');
+      // 計算済みの background-image をそのまま使うのは難しいので、
+      // 停止位置での色を elementFromPoint ではなく、規則の停止点から拾う
+      const stops=[...(cs.backgroundImage.match(/rgba?\([^)]*\)/g)||[])];
+      probe.remove();
+      const hue=(rgb)=>{const [r,g,b]=rgb.match(/[\d.]+/g).slice(0,3).map(Number);
+        const max=Math.max(r,g,b),min=Math.min(r,g,b);if(max===min)return 'gray';
+        const d=max-min;let h=max===r?((g-b)/d+(g<b?6:0)):max===g?((b-r)/d+2):((r-g)/d+4);
+        h=Math.round(h*60);
+        return h<20||h>=330?'赤':h<45?'橙':h<70?'黄':h<170?'緑':h<200?'水':h<255?'青':h<290?'紫':'桃';};
+      return [...new Set(stops.map(hue))];
     });
   }finally{
     if(browser)await browser.close();
@@ -159,14 +181,35 @@ ${keyframes}
     ok('MARVELOUSは金、JUST MARVELOUSは虹(どちらもグラデーション)',
       by(rows.res,'MARVELOUS').grad&&by(rows.res,'JUST').grad
       &&by(rows.res,'MARVELOUS').anim==='mhRhythmJudgmentSweep'
-      &&by(rows.res,'JUST').anim==='mhRhythmJudgmentRainbow');
+      &&by(rows.res,'JUST').anim==='mhRhythmJudgmentRowRainbow');
     ok('ランキングの詳細も同じ色(ただし動かさない)',
       JUDGMENT_ROWS.every(id=>by(rows.rank,id).color===by(rows.res,id).color)
       &&rows.rank.every(r=>r.anim==='none'));
     ok('「演出量」が最小のときは、色は残して動きだけ止まる',
       JUDGMENT_ROWS.every(id=>by(rows.min,id).color===by(rows.res,id).color)
       &&rows.min.every(r=>r.anim==='none'));
+    // ★虹は**字の上に1周分丸ごと**出ていないと意味がない。
+    //   220%で1周だけ並べていたときは、止まっているランキングの詳細で
+    //   橙〜桃だけの帯に見えていた(2026-09-13・ユーザー指摘)。
+    //   実際に描いて、幾つの色合いが出ているか数える。
+    ok('JUST MARVELOUS の字に虹が丸ごと出ている',
+      Array.isArray(hues)&&hues.length>=5,Array.isArray(hues)?`色合い ${hues.length}種: ${hues.join(',')}`:'測れなかった');
   }
+// ---- 色が決まっているもの(難易度・ランク・コンボ数)にも色を付ける ----
+// 2026-09-13・ユーザー指示「マスターとかランクとかコンボ数とかも色が決められてるやつは色つけたい」
+ok('難易度の字の色を、1か所から配っている',
+  game.includes('const rhythmDifficultyTextColor=id=>RHYTHM_DIFFICULTY_TONE[id]?.text||')
+  &&/RHYTHM_DIFFICULTY_TONE=Object\.freeze\(\{[\s\S]{0,900}MASTER:[^\n]*text:'text-fuchsia-300'/.test(game));
+ok('コンボ数の色は、遊んでいるときと同じ段(rhythmComboTier)から作る',
+  game.includes('const rhythmComboTextColor=combo=>RHYTHM_COMBO_TIER_TEXT[')
+  &&game.includes('rhythmComboTier(combo)'));
+ok('リザルトで難易度とコンボ数に色が付いている',
+  /rhythmSongFullName\(song\)\}・<b data-rhythm-difficulty-name className=\{`font-black \$\{rhythmDifficultyTextColor\(difficulty\.id\)\}`\}/.test(game)
+  &&/data-rhythm-max-combo className=\{`text-right tabular-nums \$\{rhythmComboTextColor\(view\.maxCombo\)\}`\}/.test(game));
+ok('ランキングでも難易度・ランク・コンボ数に色が付いている',
+  /data-rhythm-difficulty-name className=\{`font-black \$\{rhythmDifficultyTextColor\(entry\.difficultyId\)\}`\}/.test(game)
+  &&/data-rhythm-rank-name className=\{`font-black \$\{RHYTHM_RANK_COLORS\[detailRank\]\}`\}/.test(game)
+  &&/data-rhythm-max-combo className=\{`font-black tabular-nums \$\{rhythmComboTextColor\(rhythmRankingDetail\.detail\?\.maxCombo\)\}`\}/.test(game));
   console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
   process.exit(failed?1:0);
 })();
