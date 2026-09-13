@@ -261,6 +261,19 @@
     "source": "detected"
    },
    "challengeFactor": 0.9
+  },
+  "freedom_dive": {
+   "audio": "monster-hero/audio/bgm-freedom-dive.mp3",
+   "audioSha256": "34616b2fccd33a1201305344b615f2441b1a9219045c8c2629676ad6cfc8c42c",
+   "durationMs": 145404,
+   "analyzedTiming": {
+    "bpm": 222.22,
+    "beatZeroMs": 117,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "chartIntensity": "extreme"
   }
  }
 }

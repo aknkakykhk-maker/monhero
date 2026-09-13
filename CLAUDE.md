@@ -301,6 +301,18 @@ HOMEの配置(みゅあの吹き出し・施設・はじめての案内)を触�
 - **ヘルプは触らない。** 曲の一覧・絵の有無・レベルの幅は `{t:'data', id:'…'}` が
   実データから作るので自動で載る。手で書き写すと古くなるだけ。
   かわりに更新履歴へ1件書き、`assistantNotice:{id:'update_notice_◯◯_v1',type:'content'}` を付ける
+- **お知らせにジャケットの絵を付ける**(2026-09-13にユーザーがそう指示した。「今後の新曲更新は
+  お知らせにジャケット画もつけて」)。更新履歴の項目へ `image:'images/song-art/◯◯.jpg'` を1行書く。
+  それだけで**更新情報の詳細にも、みゅあの告知にも同じ絵が出る**(`entry.image` を
+  `assistantUpdateNoticeFromChangelog` がそのまま持っていくので、2か所に書かない)。
+  `?v=` は手で書かない(`tools/stamp-version.js` が中身のハッシュから付ける)。
+  書き忘れると画面はふつうに動いてしまうので、`node tools/changelog/song-art-notice-check.js` を通す
+- **難易度が既存の帯から大きく外れるときは、`chartIntensity` を使う**(2026-09-13)。
+  `challengeFactor` は5難易度まとめて効くうえ、上げすぎると量が頭打ちになって
+  **レベルがむしろ下がる**(FREEDOM DiVE↓ で 33→31 になった)。ボス曲のように
+  上だけを尖らせたいときは、曲の一覧へ `chartIntensity:'extreme'` を書く。
+  書いた曲にしか効かないので、ほかの曲の譜面は1音も変わらない。
+  中身と数字は [`docs/spec/RHYTHM_MODE.md`](docs/spec/RHYTHM_MODE.md)「19曲目 FREEDOM DiVE↓」
 
 ### ⑥-4 モンヒロビートのイベントは、決まった手順で開く
 
