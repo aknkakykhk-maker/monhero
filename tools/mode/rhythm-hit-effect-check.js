@@ -258,7 +258,9 @@ check('ヒット演出は呼び出し側のまとめへ譲れる(defer)',
   source.includes("if(defer)return {el:item,attr:'rhythmHitKind',value:kind};")
   // 2026-09-12: ぴったりのMARVELOUS(precise)を渡すようになったので、その間へ入る
   &&game.includes('monster:bigMonsterEffect,precise:preciseHit,defer:true')
-  &&game.includes("const bigMonsterEffect=monsterHit&&monsterEffect!=='OFF';"));
+  // 段は順位でくらべる(2026-09-13。名前を並べてくらべていたせいで、あとから足した
+  // 「最小」が素通りし、いちばん軽い段でモンスターノーツの大きな光が出ていた)
+  &&game.includes("const bigMonsterEffect=monsterHit&&!rhythmMonsterEffectAtMost(monsterEffect,'OFF');"));
 
 // --- 判定まわりを変えていない ---
 check('判定窓・スコア・コンボの計算に触っていない',
