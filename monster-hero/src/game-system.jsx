@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 559b6faaa9dea550
+// generated-sha256: 3a5421fc8160d4f6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -89,7 +89,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-14 06:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-14 06:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -10459,7 +10459,7 @@ const sbFetchBondLevels = async (requestId='untracked') => {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8000);
   try {
-    const res = await fetch(url, { headers: SB_HEADERS, signal: controller.signal });
+    const res = await fetch(url, { headers: SB_HEADERS, cache: 'no-store', signal: controller.signal });
     const body = await res.text();
     if (!res.ok) {
       if (_isMissingTableError(res.status, body)) {
@@ -10569,7 +10569,7 @@ const sbFetchRankings = async (diff, limit=RANKING_SCORE_LIMIT, order='score.des
   // 落ちていた。回線が細くても待てる範囲まで伸ばす(それでも返らなければ打ち切る)
   const timer = setTimeout(() => controller.abort(), 15000);
   try {
-    const res = await fetch(url, { headers: SB_HEADERS, signal: controller.signal });
+    const res = await fetch(url, { headers: SB_HEADERS, cache: 'no-store', signal: controller.signal });
     const body = await res.text();
     rankingLog(requestId, 'supabase-response', { difficulty: normalizedDifficulty, endedAt: new Date().toISOString(), elapsedMs: Date.now() - startedAt, status: res.status, statusText: res.statusText, ok: res.ok, dataCount: res.ok ? (() => { try { const parsed = JSON.parse(body); return Array.isArray(parsed) ? parsed.length : null; } catch { return null; } })() : null, error: res.ok ? null : body });
     if (!res.ok) {
@@ -10894,7 +10894,7 @@ const sbFetchRhythmRankings = async (difficultyKeys, limit=RHYTHM_RANKING_FETCH_
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
   try {
-    const res = await fetch(url, { headers: SB_HEADERS, signal: controller.signal });
+    const res = await fetch(url, { headers: SB_HEADERS, cache: 'no-store', signal: controller.signal });
     const body = await res.text();
     if (!res.ok) throw new Error(`rhythm ranking fetch ${res.status} ${res.statusText}; url=${url}; response=${body || '(empty)'}`);
     try {
@@ -10944,7 +10944,7 @@ const sbFetchRhythmTotalRankings = async ({ limit=RHYTHM_TOTAL_RANKING_DISPLAY_L
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
   try {
-    const res = await fetch(url, { headers: SB_HEADERS, signal: controller.signal });
+    const res = await fetch(url, { headers: SB_HEADERS, cache: 'no-store', signal: controller.signal });
     const body = await res.text();
     if (!res.ok) {
       if (rhythmTotalRankingMissing(res.status, body)) {
@@ -11049,9 +11049,16 @@ const sbFetchRhythmEventRows = async ({ url, body = null, label, requestId = 'un
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
   try {
+    // ★GETは必ずサーバーへ聞きに行く(cache:'no-store')。
+    //   2026-09-14・ユーザー指摘「5時過ぎてモンヒロビート見たら週間ランキングにスコアが入ってた /
+    //   確実に5時以降にはやってないから何かしらの不具合だと思うよ」。
+    //   今週の期間(rhythm_week_window)はGETで聞いているが、キャッシュを止めていなかった。
+    //   ブラウザが前に取った答えを使い回すと、5:00をまたいでも**先週の期間**のまま集計され、
+    //   先週のスコアが今週の順位として出る。時刻で変わる答えをキャッシュから読ませない。
+    //   POSTのほう(集計そのもの)はもともとキャッシュされない。
     const res = await fetch(url, body
       ? { method: 'POST', headers: SB_HEADERS, body: JSON.stringify(body), signal: controller.signal }
-      : { headers: SB_HEADERS, signal: controller.signal });
+      : { headers: SB_HEADERS, cache: 'no-store', signal: controller.signal });
     const text = await res.text();
     if (!res.ok) {
       if (rhythmEventRankingMissing(res.status, text)) {
@@ -11087,6 +11094,18 @@ const sbFetchRhythmWeekWindow = async ({ requestId = 'untracked' } = {}) => {
   // 値が読めないときは「準備中」に倒す。端末時計で代用すると、サーバーと違う期間の
   // 順位を「今週」として見せてしまう(期間の正本はサーバー・§6.1)
   if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs <= startMs) throw rhythmEventNotReadyError();
+  // ★受け取った期間が、もう終わっている/まだ始まっていないときは使わない(2026-09-14)。
+  //   上の cache:'no-store' で普通は起きないが、端末やWebViewがそれを無視して
+  //   前に取った答えを返すことがある。古い期間のまま集計すると、
+  //   **先週のスコアが今週の順位として出る**(実際にそう見えた)。
+  //   ここで気づいたら、期間を当てずっぽうで補わずエラーにして「更新」でやり直してもらう
+  //   (端末の時計で代用すると、時計を進めるだけで別の週を見られてしまう・§6.1)。
+  //   端末の時計のほうがずれていることもあるので、1時間の余裕をみる
+  const slackMs = 60 * 60 * 1000;
+  const now = Date.now();
+  if (now >= endMs + slackMs || now < startMs - slackMs) {
+    throw new Error(`rhythm week window looks stale; window=${new Date(startMs).toISOString()}..${new Date(endMs).toISOString()}; now=${new Date(now).toISOString()}`);
+  }
   return { startMs, endMs };
 };
 // 期間×対象曲の「曲ごとベスト」。部門1つぶん(=曲1つぶん)を取りにいく

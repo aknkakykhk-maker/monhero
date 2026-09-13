@@ -40,7 +40,7 @@ vm.runInContext(`${demoIds}\n${eventData}\n`
   +'RHYTHM_WEEK_MS,rhythmWeeklyRewardForRank,rhythmWeeksAwaitingReward,rhythmWeekId,'
   +'rhythmEventRewardForRank,rhythmEventRewardRankCount,rhythmEventParticipationReward,'
   +'rhythmEventParticipationCleared,rhythmEventHasRewards,rhythmEventPlayBonusRates,rhythmWeeklyEvent,'
-  +'rhythmEventPeriodText,rhythmWeekWindow};',context);
+  +'rhythmEventPeriodText,rhythmWeekWindow,rhythmHistoryEntries};',context);
 const O=context.out;
 const weekly={kind:'weekly'};
 
@@ -124,6 +124,36 @@ check('期間が取れないときは、これまでどおりの文へ倒す',
   check('05:00ちょうどで新しい週に入る',after.startMs===anchor&&after.endMs===anchor+O.RHYTHM_WEEK_MS);
   check('週のIDも同じ境界で変わる',
     O.rhythmWeekId(anchor-1)!==O.rhythmWeekId(anchor)&&O.rhythmWeekId(anchor)===O.rhythmWeekId(anchor+O.RHYTHM_WEEK_MS-1));
+}
+
+// ⑩ 時刻で変わる答えをキャッシュから読まない(2026-09-14)
+//    「5時過ぎてモンヒロビート見たら週間ランキングにスコアが入ってた /
+//      確実に5時以降にはやってない」。今週の期間(rhythm_week_window)はGETで聞いていたが
+//    キャッシュを止めていなかったため、5:00をまたいでも先週の期間のまま集計されていた
+check('ランキングの取得はキャッシュを使わない',
+  !/await fetch\(url, \{ headers: SB_HEADERS, signal/.test(supa)
+  &&(supa.match(/cache: 'no-store'/g)||[]).length>=4);
+check('今週の期間の取得もキャッシュを使わない',
+  /: \{ headers: SB_HEADERS, cache: 'no-store', signal: controller\.signal \}\);/.test(supa));
+check('古い期間を受け取ったら使わない(先週のスコアを今週として見せない)',
+  /rhythm week window looks stale/.test(supa)
+  &&/now >= endMs \+ slackMs \|\| now < startMs - slackMs/.test(supa));
+check('期間を端末の時計で代用しない(時計を進めて別の週を見られないように)',
+  !/weekWindow = .*rhythmWeekWindow\(Date\.now\(\)\)/.test(app));
+
+// ⑪ 「これまでの記録」に週間が並びはじめるのは、累計方式で1週まるごと終わってから
+{
+  const from=O.RHYTHM_WEEKLY_REWARD_FROM_MS;
+  const ids=(t)=>O.rhythmHistoryEntries(t).filter(e=>e.kind==='weekly').map(e=>e.id);
+  check('始めた直後は週間がまだ1つも無い(ベスト合算だったころの週を混ぜない)',
+    ids(from+1000).length===0&&ids(from+O.RHYTHM_WEEK_MS-1000).length===0);
+  check('最初の週が終わると1件目が並ぶ',
+    ids(from+O.RHYTHM_WEEK_MS).join(',')===O.rhythmWeekId(from));
+  check('そのあとは終わった週が新しい順に増える',
+    ids(from+2*O.RHYTHM_WEEK_MS).length===2
+    &&ids(from+2*O.RHYTHM_WEEK_MS)[0]===O.rhythmWeekId(from+O.RHYTHM_WEEK_MS));
+  check('終わったイベントは始めた直後から並ぶ',
+    O.rhythmHistoryEntries(from+1000).some(e=>e.kind==='limited'));
 }
 
 // ⑦ 週間に回数ボーナスは付けない
