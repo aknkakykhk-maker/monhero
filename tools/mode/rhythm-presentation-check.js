@@ -139,11 +139,15 @@ ok('モンスターノーツの演出の強さを選べる',
   &&game.includes("segments('monsterNoteEffect',RHYTHM_MONSTER_EFFECT_LABELS)")
   // 「軽め」「最小」で画面全体の光を出さない
   &&game.includes("if(monsterHit&&monsterEffect==='NORMAL'&&screenFlashRef.current)")
+  // いちばん軽い段では、踏んだ瞬間のマスモンへの反応も丸ごと飛ばす(2026-09-13)
+  &&game.includes("if(monsterHit&&monsterEffect!=='NONE'){")
   // 「最小」では粒もふつうのノーツと同じにし、跳ねもやめる
   &&game.includes("const bigMonsterEffect=monsterHit&&monsterEffect!=='OFF';")
   &&game.includes("if(monsterEffect!=='OFF')restarts.push({el,attr:'rhythmSideHit'});")
-  // 音・能力名・振動はどの段でも残す(条件を付けていない)
-  &&/if\(settings\.vibrationEnabled\)RHYTHM_HAPTICS\.tap\(26\);/.test(game));
+  // 音と振動はどの段でも残す。★振動は演出量のブロックの外で1回だけ(2026-09-13)。
+  //   それまでは中で26ms・外で12msの**2回**走り、演出量を下げると強さも変わっていた
+  &&game.includes("if(settings.vibrationEnabled&&judgment!=='MISS')RHYTHM_HAPTICS.tap(monsterHit?26:12);")
+  &&!/if\(settings\.vibrationEnabled\)RHYTHM_HAPTICS\.tap\(26\);/.test(game));
 // 濃さも設定から変えられる(2026-09-13・ユーザー依頼「コンボ数表記の透過度の設定」)
 ok('コンボ数の濃さを設定から変えられる',
   game.includes('comboOpacity:100')

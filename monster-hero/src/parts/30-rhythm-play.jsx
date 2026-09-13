@@ -502,8 +502,10 @@ if(clearedGesture){
 // --- 取れたノーツを判定ラインで弾けさせる(2026-09-05「画面演出はあまりかわってない」への対応) ---
 // 要素は使い回すので、押すたびにDOMは増えない。動くのは transform と opacity だけ。
 // モンスターノーツは1曲に最大4回しか来ないので、光を大きく長くして特別扱いにする。
+// ★モンスターノーツかどうかは、演出量のブロックの外で1回だけ出す。
+//   振動はここへまとめる(演出量で強さが変わっていた。振動は専用の設定の管轄)。
+const monsterHit=judgment!=='MISS'&&!!monsterForNote(note);
 if(judgment!=='MISS'){
-  const monsterHit=!!monsterForNote(note);
   if(monsterHit)RHYTHM_NOTE_SE_RUNTIME.playMonster();
   if(!settings.lightweightMode&&settings.effectAmount!=='MINIMAL'){
     const area=playAreaRef.current;
@@ -525,12 +527,14 @@ if(judgment!=='MISS'){
     if(hitEffect)restarts.push(hitEffect);
     if(monsterHit&&monsterEffect==='NORMAL'&&screenFlashRef.current)restarts.push({el:screenFlashRef.current,attr:'rhythmFlash'});
     // そのマスモンが両サイドで大きく跳ねる(どのマスモンの番だったかが分かるように)
-    if(monsterHit){
-      // モンスターノーツだけは振動も強くする(ふつうのノーツとの違いを指でも分かるように)
-      if(settings.vibrationEnabled)RHYTHM_HAPTICS.tap(26);
+    // ★いちばん軽い段(NONE)では、このかたまりを丸ごと飛ばす
+    //   (2026-09-13・ユーザー指摘「マスモンの表示より踏んだときの挙動だと思うんだけど」)。
+    //   跳ねないのに phase を書き換えてアニメを切り替え、700msのタイマーまで張っていた。
+    //   踏んだその瞬間にスタイルの計算が走るので、跳ねを出さない段では何もしないのが正しい。
+    if(monsterHit&&monsterEffect!=='NONE'){
       const slot=rhythmNoteMonsterSlot(note),el=slot?sideMonsterRefs.current[slot-1]:null;
       if(el){
-        // 「最小」では跳ねない(跳ねはそのマスモンの周りを描き直すため)
+        // 「少なめ」では跳ねない(跳ねはそのマスモンの周りを描き直すため)
         if(monsterEffect!=='OFF')restarts.push({el,attr:'rhythmSideHit'});
         // 出番が済んだので、このあとの待機は最初のぴょんぴょんとは別の動き(ゆらゆら)にする
         el.dataset.rhythmSidePhase='done';
@@ -549,7 +553,10 @@ if(judgment!=='MISS'){
     rhythmRestartAnimations(restarts);
   }
 }
-if(settings.vibrationEnabled&&judgment!=='MISS')RHYTHM_HAPTICS.tap();const nextCombo=rhythmComboAfter(run.combo,judgment);run.combo=nextCombo;run.maxCombo=Math.max(run.maxCombo,nextCombo);run.counts[judgment]++;const side=judgment==='MISS'?null:rhythmFastSlow(deltaMs);if(side)run[side.toLowerCase()]++;const songTimeMs=run.audio?.songTimeMs?.()??0;
+// ★振動は「タップ時の振動」の管轄。モンスターノーツだけ強めにする(指でも違いが分かるように)。
+//   それまでは演出量のブロックの中で tap(26) を呼んだうえ、ここでも tap() を呼んでいて、
+//   モンスターノーツでは**2回**走っていた。しかも演出量を下げると強さが変わっていた。
+if(settings.vibrationEnabled&&judgment!=='MISS')RHYTHM_HAPTICS.tap(monsterHit?26:12);const nextCombo=rhythmComboAfter(run.combo,judgment);run.combo=nextCombo;run.maxCombo=Math.max(run.maxCombo,nextCombo);run.counts[judgment]++;const side=judgment==='MISS'?null:rhythmFastSlow(deltaMs);if(side)run[side.toLowerCase()]++;const songTimeMs=run.audio?.songTimeMs?.()??0;
 // ライフ変化は能力(無敵・我慢)を通してから反映する。判定・コンボ・スコアそのものは変えない(§4.2)
 // 練習ではライフを減らさない。途中で倒れると、まだ習っていないノーツまで届かなくなる
 // lifeBefore … 減ったことを知らせる演出のためだけに控える(2026-09-12)。計算には使わない
