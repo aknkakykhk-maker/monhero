@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 660750ae97ee0ca1
+// source-sha256: 81852b7049266545
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 32758ef25bbfdbea
+// generated-sha256: 1c594a0514ecb28a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-13 13:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-13 13:49"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6101,13 +6101,16 @@ const Audio_ = (() => {
       const buffer = await loadBuffer(track.src),
         ctx = await ensureAudioCtxRunning();
       if (!ctx) return null;
+      // outputLatencySeconds … 音が耳へ届くまでの遅れ。曲を鳴らしはじめるたびに1回だけ測って固定する
+      // (data/rhythm-mode.js の rhythmAudioOutputLatencyMs。鳴っている最中に読み直すと曲の時刻が飛ぶ)
       let source = null,
         startedAt = ctx.currentTime,
         offsetSeconds = 0,
         playing = false,
         stopped = false,
         naturallyEnded = false,
-        gainEntry = null;
+        gainEntry = null,
+        outputLatencySeconds = 0;
       const dropGainEntry = () => {
         if (gainEntry) {
           activeRhythmGains.delete(gainEntry);
@@ -6143,6 +6146,7 @@ const Audio_ = (() => {
         offsetSeconds = offset;
         startedAt = ctx.currentTime;
         playing = true;
+        outputLatencySeconds = rhythmAudioOutputLatencyMs(ctx) / 1000;
         nextSource.onended = () => {
           if (source === nextSource && playing) {
             playing = false;
@@ -6153,7 +6157,11 @@ const Audio_ = (() => {
         nextSource.start(0, offset);
         return true;
       };
-      const songTimeSeconds = () => Math.min(buffer.duration, Math.max(0, offsetSeconds + (playing ? ctx.currentTime - startedAt : 0)));
+      // 耳に届いている位置を返す。ctx.currentTime は「送り出した」時刻なので、出力遅延ぶん引く。
+      // 引かないと、音に合わせて叩く人が必ずその分だけ遅れて判定される(MARVELOUSは±55ms)。
+      // 見た目も判定も同じこの値から出ているので、ここ1か所でそろう。
+      // 鳴らしはじめの遅延ぶんは Math.max(0,…) が 0 に留める(音が出る前にノーツが動き出さない)
+      const songTimeSeconds = () => Math.min(buffer.duration, Math.max(0, offsetSeconds + (playing ? ctx.currentTime - startedAt - outputLatencySeconds : 0)));
       if (autoStart) startSource(0);
       return {
         // autoStart:false で用意したぶんを、頭から鳴らし始める。
