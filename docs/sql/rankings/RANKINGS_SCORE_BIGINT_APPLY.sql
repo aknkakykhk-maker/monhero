@@ -305,23 +305,39 @@ begin
 
 end $$;
 
--- 結果表示: 型・Index・戻したビュー
-select column_name, data_type, udt_name, is_nullable
-from information_schema.columns
-where table_schema = 'public' and table_name = 'rankings' and column_name = 'score';
-
-select i.relname as index_name, ix.indisunique as is_unique,
-       ix.indisvalid as is_valid, ix.indisready as is_ready
-from pg_class t join pg_namespace n on n.oid = t.relnamespace
-join pg_index ix on ix.indrelid = t.oid
-join pg_class i on i.oid = ix.indexrelid
-where n.nspname = 'public' and t.relname = 'rankings'
-order by i.relname;
-
-select b.depth, b.view_name,
-       (select count(*) from pg_class c join pg_namespace n on n.oid = c.relnamespace
-         where n.nspname = b.schema_name and c.relname = b.view_name) as exists_now
-from rankings_view_backup b order by b.depth, b.view_name;
+-- 結果表示: 最後に「これ1枚で分かる」まとめを出す。
+-- Supabase の SQL Editor は最後のSQLの結果しか画面に出さないので、ここを1枚にしておく。
+select *
+from (
+  values
+    (1, 'score の型',
+        coalesce((select data_type from information_schema.columns
+                   where table_schema = 'public' and table_name = 'rankings' and column_name = 'score'), '(なし)')),
+    (2, '落としたビュー',
+        (select count(*)::text || ' 枚' from rankings_view_backup)),
+    (3, '戻ったビュー',
+        (select count(*)::text || ' 枚' from rankings_view_backup b
+          where exists (select 1 from pg_class c join pg_namespace n on n.oid = c.relnamespace
+                         where n.nspname = b.schema_name and c.relname = b.view_name))),
+    (4, 'いまの最大スコア',
+        (select coalesce(max(score), 0)::text from public.rankings)),
+    (5, '記録の件数(変わっていないこと)',
+        (select count(*)::text from public.rankings)),
+    (6, '使えないIndex',
+        (select count(*)::text || ' 本' from pg_class t join pg_namespace n on n.oid = t.relnamespace
+          join pg_index ix on ix.indrelid = t.oid
+          where n.nspname = 'public' and t.relname = 'rankings' and not (ix.indisvalid and ix.indisready))),
+    (7, '→ どうするか',
+        case when (select data_type from information_schema.columns
+                    where table_schema = 'public' and table_name = 'rankings' and column_name = 'score') = 'bigint'
+              and (select count(*) from rankings_view_backup) =
+                  (select count(*) from rankings_view_backup b
+                    where exists (select 1 from pg_class c join pg_namespace n on n.oid = c.relnamespace
+                                   where n.nspname = b.schema_name and c.relname = b.view_name))
+             then '適用できました。RANKINGS_SCORE_BIGINT_VERIFY.sql へ進んでください'
+             else 'うまくいっていません。結果を共有してください' end)
+) as t(番号, 確認項目, 結果)
+order by 番号;
 
 -- ここまで1つも例外が出ていなければ確定する。
 commit;

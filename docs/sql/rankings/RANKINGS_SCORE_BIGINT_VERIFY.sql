@@ -70,6 +70,12 @@ order by dependent_name;
 --   定義が戻っていても、権限や参照先で落ちることがある。
 --   モンビーの集計(rhythm_scores → … → rhythm_total_rankings)がここで通れば、
 --   ゲーム側の曲別ランキングと全曲合算ランキングも動く。
+--   結果は最後のまとめ表に出す(Supabase の SQL Editor は最後のSQLの結果しか画面に出さないため)。
+-- このファイルはトランザクションで囲んでいないので on commit drop は使えない
+-- (作った直後に消えてしまう)。同じ画面で2回流せるよう、先に落としてから作る。
+drop table if exists score_bigint_view_probe;
+create temporary table score_bigint_view_probe(view_name text, rows_count bigint);
+
 do $$
 declare
   v record;
@@ -101,6 +107,39 @@ begin
     order by grouped.depth, c.relname
   loop
     execute format('select count(*) from %I.%I', v.schema_name, v.view_name) into n;
+    insert into score_bigint_view_probe values (v.view_name, n);
     raise notice 'ビュー %.% は引けます(%行, depth=%)', v.schema_name, v.view_name, n, v.depth;
   end loop;
 end $$;
+
+-- V-7. まとめ。これ1枚で終わったかどうかが分かる。
+select *
+from (
+  values
+    (1, 'score の型',
+        coalesce((select data_type from information_schema.columns
+                   where table_schema = 'public' and table_name = 'rankings' and column_name = 'score'), '(なし)')),
+    (2, '記録の件数',
+        (select count(*)::text from public.rankings)),
+    (3, 'いまの最大スコア',
+        (select coalesce(max(score), 0)::text from public.rankings)),
+    (4, '21億を超えている記録',
+        (select count(*)::text || ' 件(これから増えます)' from public.rankings where score > 2147483647)),
+    (5, '引けたビュー',
+        (select count(*)::text || ' 枚' from score_bigint_view_probe)),
+    (6, '使えないIndex',
+        (select count(*)::text || ' 本' from pg_class t join pg_namespace n on n.oid = t.relnamespace
+          join pg_index ix on ix.indrelid = t.oid
+          where n.nspname = 'public' and t.relname = 'rankings' and not (ix.indisvalid and ix.indisready))),
+    (7, '→ どうするか',
+        case when (select data_type from information_schema.columns
+                    where table_schema = 'public' and table_name = 'rankings' and column_name = 'score') = 'bigint'
+              and (select count(*) from score_bigint_view_probe) > 0
+              and not exists (select 1 from pg_class t join pg_namespace n on n.oid = t.relnamespace
+                               join pg_index ix on ix.indrelid = t.oid
+                               where n.nspname = 'public' and t.relname = 'rankings'
+                                 and not (ix.indisvalid and ix.indisready))
+             then 'ここまでで作業は完了。ゲームでランキング(バトル・モンヒロビート)の表示を確かめてください'
+             else 'うまくいっていません。結果を共有してください' end)
+) as t(番号, 確認項目, 結果)
+order by 番号;
