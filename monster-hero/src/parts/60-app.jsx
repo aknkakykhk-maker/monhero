@@ -59,6 +59,8 @@ function MonsterHeroGame() {
   // 性能計測(デバッグ限定)。既定OFF。ONの記憶は専用キー mh_rhythm_perf_v1 に分ける
   const [rhythmPerfOn,setRhythmPerfOn]=useState(()=>RHYTHM_PERF.enabled);
   const [rhythmPerfStats,setRhythmPerfStats]=useState(null);
+  // 演奏画面の装飾を個別に切って、実機で何が重いかを切り分ける(デバッグ限定・新しい保存キー)
+  const [rhythmStrip,setRhythmStrip]=useState(()=>RHYTHM_STRIP.value);
   // ノーツの描き方の上書き(検証用・デバッグ限定)。'' = 公開設定に従う / 'dom' / 'canvas'
   const [rhythmCanvasPref,setRhythmCanvasPref]=useState(()=>rhythmCanvasNotesPreference());
   const [rhythmChartToolsOpened,setRhythmChartToolsOpened]=useState(false);
@@ -980,6 +982,15 @@ function MonsterHeroGame() {
   const [inheritedUniqueCompensation, setInheritedUniqueCompensation] = useState(false);
   const masuMonsRef = useRef(masuMons);
   masuMonsRef.current = masuMons;
+  // オート強化が実際に振った記録(このアプリを開いているあいだだけ・保存はしない)。
+  // 「裏で本当に働いているのか」を画面で確かめられるようにするためのもので、
+  // ゲームの進行には一切使わないので、セーブデータを増やさない
+  const [autoEnhanceLog, setAutoEnhanceLog] = useState([]);
+  const pushAutoEnhanceLog = (entries) => {
+    if (!Array.isArray(entries) || entries.length <= 0) return;
+    const stamped = entries.map(entry => ({ ...entry, at:Date.now() }));
+    setAutoEnhanceLog(prev => [...stamped, ...prev].slice(0, 30));
+  };
   // ランの報酬を配ったあとのマスモン。setMasuMons の反映は非同期なので、同じ処理の続きで走る
   // ランキング送信からは「そのランで増えた絆経験値が入る前」の値しか見えなかった。
   // そのため、ランキングへ送る絆Lvと育て方が1ラン遅れていた
@@ -1078,6 +1089,14 @@ function MonsterHeroGame() {
   // 画面から消せるようにする。閉じても更新は行わず、次に開き直したときや
   // さらに新しいバージョンが出たときはまた表示する
   const [dismissedUpdateBuild, setDismissedUpdateBuild] = useState(null);
+  // 新しいバージョンのお知らせの出し方('FULL' / 'MINI' / 'OFF')。設定画面から選ぶ。
+  // 保存が無い既存ユーザーは 'FULL'(これまでと同じ)になる
+  const [updateNoticeStyle, setUpdateNoticeStyleState] = useState('FULL');
+  const setUpdateNoticeStyle = (next) => {
+    const value = normalizeUpdateNoticeStyle(next);
+    setUpdateNoticeStyleState(value);
+    storeSet(UPDATE_NOTICE_STYLE_KEY, value, false);
+  };
   const [showGameUpdateConfirm, setShowGameUpdateConfirm] = useState(false);
   const [gameUpdatePending, setGameUpdatePending] = useState(false);
   const gameUpdatePendingRef = useRef(false);
@@ -2227,6 +2246,27 @@ function MonsterHeroGame() {
       storeSet('mh_home_pasture_ids', normalized, false);
     }
   }, [masuMons, homePastureIds, pastureLoaded]);
+
+  // ---- オート強化: 強化ポイントが増えたら、設定どおりに自動で振る ----
+  // マスモンが変わるたびにここを通す。強化ポイントが入る道は
+  // バトル・クイック・演奏の周回・スキップチケット・トレーニングチケット・合体・限界突破・転生と多く、
+  // 1か所ずつ呼び出しを足すと必ずどこかを取りこぼすため、「増えたら振る」を1本にまとめてある。
+  // ★何も振らないときは applyAutoEnhanceToMasuMons が null を返すので保存もstate更新もしない。
+  //   振ったあとは強化ポイントが減るので、次に通ったときは自然に止まる(繰り返しにならない)。
+  // ★読み込みが終わるまでは走らせない。読み込み途中の中途半端な値で振ってしまわないようにする。
+  useEffect(() => {
+    if (!dataLoaded) return;
+    const result = applyAutoEnhanceToMasuMons(masuMonsRef.current || masuMons);
+    if (!result) return;
+    masuMonsRef.current = result.next;
+    // ランキング送信が「振る前」の育て方を見ないよう、ランの控えも同じ内容へそろえる
+    if (postRunMasuMonsRef.current) postRunMasuMonsRef.current = result.next;
+    setMasuMons(result.next);
+    storeSet('mh_masu_mons', result.next, false);
+    setMasuMonDetail(prev => prev ? (result.next.find(m => String(m.id) === String(prev.id)) || prev) : prev);
+    pushAutoEnhanceLog(result.results);
+  }, [masuMons, dataLoaded]);
+
   const homePastureMasumons = homePastureIds.map(id=>masuMons.find(m=>String(m.id)===String(id))).filter(m=>m&&ALL_PLAYER_MONSTERS[m.baseId]);
   // セーブ読込後のタイトル中に、最初のHOMEで必ず使う画像だけを最優先で先読みする。
   // 完了をタイトル操作やHOME遷移の条件にはせず、失敗時も通常のimg読込へそのまま任せる。
@@ -2319,9 +2359,9 @@ function MonsterHeroGame() {
     TRAINING_BOARD: 'trainingBoard',
   };
   // プロフィール本体とアイテムはHOMEの曲を続ける。その他の詳細ページ群は従来のプロフィール曲を維持する。
-  const PROFILE_BGM_STATES = ['ROSTER','OWNED_MONSTERS','MASU_MONS','MASU_ENHANCE','MASU_TRANSCEND_ENHANCE','MASU_SOUL_TRAITS'];
+  const PROFILE_BGM_STATES = ['ROSTER','OWNED_MONSTERS','MASU_MONS','MASU_ENHANCE','MASU_TRANSCEND_ENHANCE','MASU_AUTO_ENHANCE','MASU_SOUL_TRAITS'];
   // マスモンの専用育成画面。ここを開いているあいだは詳細モーダルを重ねない(詳細のほうが手前に出てしまうため)
-  const MASU_ENHANCE_STATES = ['MASU_ENHANCE','MASU_TRANSCEND_ENHANCE','MASU_SOUL_TRAITS'];
+  const MASU_ENHANCE_STATES = ['MASU_ENHANCE','MASU_TRANSCEND_ENHANCE','MASU_AUTO_ENHANCE','MASU_SOUL_TRAITS'];
   // 1回のプレイの中で流れる画面。「まだ1度も戦っていない準備中」か「WAVEを終えたあと」かで曲を分ける。
   //  ・準備中(最初の勇者モン選択〜最初のバトルの直前) … 強化フェーズの曲
   //  ・WAVEを終えたあと(リザルト〜次のバトルの直前)   … リザルトの曲をそのまま続ける
@@ -2360,15 +2400,27 @@ function MonsterHeroGame() {
   // モンビーのうち、裏で周回を続けてよい画面。60fpsも精密入力も要らないところだけを並べる。
   // 演奏中(RHYTHM_PLAY)はここに**入れない**。16.6msごとに全ノーツを走査して判定しているので、
   // バトルのstate更新が割り込むと入力の取りこぼしとカクつきになる(REGRESSION_RISK_MAP.md §4-1)。
-  const RHYTHM_BACKGROUND_RUN_SCREENS = ['RHYTHM_DEMO_HOME','RHYTHM_DEMO_HELP','RHYTHM_DEMO_MONSTERS','RHYTHM_RANKING'];
+  // ★オプション(RHYTHM_OPTIONS)もここへ入れる。遊びかた・ランキングと同じで、
+  //   60fpsも精密入力も要らない。2026-09-12までここだけ抜けていて、オプションを見ている
+  //   あいだは周回が止まっていた(そのぶんは追いつきで取り戻していた)。
+  const RHYTHM_BACKGROUND_RUN_SCREENS = ['RHYTHM_DEMO_HOME','RHYTHM_DEMO_HELP','RHYTHM_DEMO_MONSTERS','RHYTHM_RANKING','RHYTHM_OPTIONS'];
   // モンビーを開いているか(演奏中も含む)。開いている間はランが進んでも画面を切り替えない。
-  // 演奏中に画面がバトルへ飛ぶのを防ぐため、RHYTHM_PLAY もここへ入れる
-  const rhythmScreenOpen = [...RHYTHM_BACKGROUND_RUN_SCREENS,'RHYTHM_PLAY'].includes(gameState);
+  //
+  // ★**一覧で持たず、gameStateの頭で見る。**
+  //   2026-09-12・ユーザー報告「モンビー中にオプションに行くとたまに強制でバトルに飛ばされる」。
+  //   ここが `[...RHYTHM_BACKGROUND_RUN_SCREENS,'RHYTHM_PLAY']` という一覧だったため、
+  //   その一覧から漏れていた RHYTHM_OPTIONS にいるあいだだけ「モンビーを離れた」と判断され、
+  //   裏の周回がWAVEを越えた瞬間に advanceRunStage が画面をバトルへ切り替えていた。
+  //   (WAVEの切り替わりに重なったときだけなので「たまに」になる。
+  //    予約済みの setTimeout は、オプションへ移ったあとも必ず着地するため)
+  //   一覧で持つかぎり、モンビーへ画面を足すたびに同じ事故が起きる。頭文字で見れば漏れない。
+  const isRhythmScreen = state => typeof state === 'string' && state.startsWith('RHYTHM_');
+  const rhythmScreenOpen = isRhythmScreen(gameState);
   // 「モンヒロビートへ入った瞬間」を見分けるための一覧(自動で∞周回を始める判定に使う)。
-  // ★裏で回してよい画面より広く取る。オプション・遊びかたもモンビーの中なので、
-  //   そこから曲えらびへ戻っただけで「入り直した」と数えると、周回が何度も立ち上がる。
+  // ★裏で回してよい画面より広く取る。演奏中もモンビーの中なので、そこから曲えらびへ
+  //   戻っただけで「入り直した」と数えると、周回が何度も立ち上がる。
   //   デバッグ画面(RHYTHM_DEBUG)と、未公開のときに出る案内(RHYTHM_INFO)は入口ではないので入れない
-  const RHYTHM_AUTO_START_SCREENS = [...RHYTHM_BACKGROUND_RUN_SCREENS,'RHYTHM_PLAY','RHYTHM_OPTIONS'];
+  const RHYTHM_AUTO_START_SCREENS = [...RHYTHM_BACKGROUND_RUN_SCREENS,'RHYTHM_PLAY'];
   // 裏で周回してよい状態か。
   //  ・クイックの∞周回だけ(チャレンジ・プロ・極限・種族は全国ランキング対象なので裏で回さない)
   //  ・演奏中は止める(曲が終われば自動で再開する)
@@ -2525,7 +2577,10 @@ function MonsterHeroGame() {
   //   埋める値そのものが存在しないため(CLAUDE.md ⑦「消さない・上書きしない」)。
   // loopScale … その演奏にかかっていた倍率。曲リザルトで「イベント対象曲 ×3」と出すためだけに使う
   //   (配る量そのものは loops に織り込み済みなので、ここで掛け直さない)
-  const awardRhythmPlayRunLoops = async (loops, loopScale = RHYTHM_PLAY_RUN_LOOP_SCALE) => {
+  // cleared / baseLoops … クリアか失敗か(2026-09-12・ユーザー指示「それによって経験値も変わるから」)と、
+  //   失敗していなければ入っていた周回数。どちらも曲リザルトの表示用で、配る量そのものは
+  //   すでに loops へ織り込まれている(ここで掛け直さない)。
+  const awardRhythmPlayRunLoops = async (loops, loopScale = RHYTHM_PLAY_RUN_LOOP_SCALE, { cleared = true, baseLoops = null } = {}) => {
     const count = Math.max(0, Math.trunc(Number(loops) || 0));
     if (count <= 0) return null;
     const scale = Number.isFinite(Number(loopScale)) && Number(loopScale) > 0 ? Number(loopScale) : RHYTHM_PLAY_RUN_LOOP_SCALE;
@@ -2604,13 +2659,17 @@ function MonsterHeroGame() {
     for (let i = 0; i < count; i++) countQuickRunLoop();
     const toLoop = quickRunProgressRef.current ? quickRunProgressRef.current.loops : fromLoop;
     return { loops: count, xp: xpGain, gold: goldGain, bond: bondGain, psyche: psycheGain, fromLoop, toLoop,
-      scale, eventBoosted: scale > RHYTHM_PLAY_RUN_LOOP_SCALE };
+      scale, eventBoosted: scale > RHYTHM_PLAY_RUN_LOOP_SCALE,
+      cleared: cleared !== false,
+      baseLoops: Math.max(0, Math.trunc(Number(baseLoops) || 0)) || count };
   };
   // ---- 画面のなかでの使い方案内(docs/spec/QUICK_RHYTHM_LINK.md PR8) ----
   // ヘルプと更新履歴は探しに行った人しか読まない。この連携は遊んでいるだけでは
   // 気づけない仕組みなので、出るべき場面で1度だけ、みゅあが伝える。
   // ★保存キーは新しく足す(既存の mh_* は触らない・CLAUDE.md ⑦)。
   // ★公開フラグが false のあいだは、ヘルプ・更新履歴・告知と同じくこれも出さない。
+  // ★useState(true) は「読み込みが終わるまで出さない」ためのもの。実際に出すかどうかは
+  //   読み込みのときに保存値から決め直す(保存が無いうちは「まだ見ていない」)。
   const QUICK_RHYTHM_INTRO_KEY = 'mh_quick_rhythm_intro_seen_v1';
   const QUICK_RHYTHM_BACKGROUND_KEY = 'mh_quick_rhythm_bg_seen_v1';
   const [quickRhythmIntroSeen, setQuickRhythmIntroSeen] = useState(true);
@@ -2623,6 +2682,18 @@ function MonsterHeroGame() {
   // 裏で周回したままモンビーを開いた最初の1回だけ
   const quickRhythmBackgroundVisible = quickRhythmGuideReleased && !quickRhythmBackgroundSeen && rhythmBackgroundRun;
   const dismissQuickRhythmBackground = () => { setQuickRhythmBackgroundSeen(true); storeSet(QUICK_RHYTHM_BACKGROUND_KEY, true, false); };
+  // ---- オート強化の使い方案内(CLAUDE.md ⑤) ----
+  // 「強化ポイントが入るたび裏で自動的に振られる」は、遊んでいるだけでは気づけない仕組み。
+  // ヘルプと更新履歴は探しに行った人しか読まないので、強化画面を開いた最初の1回だけ、
+  // 画面のなかでも知らせる。
+  // ★保存キーは新しく足す(既存の mh_* は触らない・CLAUDE.md ⑦)。
+  // ★「見た」と保存されているときだけ出さない。保存が無いうちは出す。
+  //   storeGet は「キーが無い」ときも既定値を返すので、既定値を true にすると
+  //   保存が無い＝見た扱いになり、案内が誰にも一度も出ない
+  const AUTO_ENHANCE_INTRO_KEY = 'mh_masu_auto_enhance_intro_seen_v1';
+  const [autoEnhanceIntroSeen, setAutoEnhanceIntroSeen] = useState(true);
+  const autoEnhanceIntroVisible = !autoEnhanceIntroSeen;
+  const dismissAutoEnhanceIntro = () => { setAutoEnhanceIntroSeen(true); storeSet(AUTO_ENHANCE_INTRO_KEY, true, false); };
   // ---- 曲えらびでの「今週の対象曲」案内(docs/spec/RHYTHM_RANKING.md §10.2) ----
   // ヘルプと更新履歴は探しに行った人しか読まない。週間ランキングは
   // 「開いて初めて気づく」仕組みなので、曲えらびでも1度だけみゅあが伝える(CLAUDE.md ⑤)。
@@ -2895,7 +2966,10 @@ function MonsterHeroGame() {
     const startedAt = rhythmPlayStartedAtRef.current;
     rhythmPlayStartedAtRef.current = 0;
     if (!startedAt) return;
-    if (rhythmPlayRunAwardRef.current) { stopCatchUp(); return; }
+    // ★見るのは「実際に周回が入ったか(loops>0)」。失敗したときは0周なので、
+    //   途中でやめたときと同じく、止まっていたぶんを取り戻す側へ進む
+    //   (失敗しても損はしないが、得もしない。2026-09-12・ユーザー指示)。
+    if (Number(rhythmPlayRunAwardRef.current?.loops) > 0) { stopCatchUp(); return; }
     if (!rhythmScreenOpen || runStageRef.current == null || !autoRepeatRef.current) { stopCatchUp(); return; }
     beginCatchUp(Date.now() - startedAt);
   }, [gameState]);
@@ -3448,6 +3522,7 @@ function MonsterHeroGame() {
       const savedBattleSpeed = normalizeBattleSpeed(await storeGet(BATTLE_SPEED_KEY, 1, false));
       battleSpeedRef.current = savedBattleSpeed;
       setBattleSpeed(savedBattleSpeed);
+      setUpdateNoticeStyleState(normalizeUpdateNoticeStyle(await storeGet(UPDATE_NOTICE_STYLE_KEY, 'FULL', false)));
       const savedSeVolume = await storeGet('mh_se_volume', DEFAULT_VOLUME, false);
       setSeVolumeState(savedSeVolume);
       const savedBgmVolume = await storeGet('mh_bgm_volume', DEFAULT_VOLUME, false);
@@ -3570,10 +3645,17 @@ function MonsterHeroGame() {
         await storeSet('mh_unique_lineage_dedupe_migrated_v1', true, false);
       }
       const compensationNotice = await storeGet('mh_masu_level_cap_compensation_notice_v1', null, false);
-      // 画面のなかの使い方案内(PR8)。読めなかったときは「まだ見ていない」側へ倒さず、
-      // 見た扱い(=出さない)にする。案内が二度出るより、出ないほうが害が小さい
-      setQuickRhythmIntroSeen(await storeGet(QUICK_RHYTHM_INTRO_KEY, true, false) !== false);
-      setQuickRhythmBackgroundSeen(await storeGet(QUICK_RHYTHM_BACKGROUND_KEY, true, false) !== false);
+      // 画面のなかの使い方案内(PR8)。「見た」と保存されているときだけ出さない。
+      // ★以前は既定値を true にして「読めなかったら出さない」つもりだったが、storeGet は
+      //   キーが無いときも既定値を返すので、保存が無い＝見た扱いになり、
+      //   案内が誰にも一度も出ない状態だった(2026-09-12に判明)。
+      //   保存が読めない端末では出てしまうが、閉じるボタン付きの小さな帯なので害は小さい。
+      //   「一度も出ない」ほうがはるかに困る
+      setQuickRhythmIntroSeen(await storeGet(QUICK_RHYTHM_INTRO_KEY, false, false) === true);
+      setQuickRhythmBackgroundSeen(await storeGet(QUICK_RHYTHM_BACKGROUND_KEY, false, false) === true);
+      // オート強化の使い方案内。★保存が無いとき(既存ユーザー・新規ともに)は「まだ見ていない」。
+      //   既定値を true にすると、保存が無い＝見た扱いになり、案内が一度も出ない
+      setAutoEnhanceIntroSeen(await storeGet(AUTO_ENHANCE_INTRO_KEY, false, false) === true);
       // イベントの会話ストーリーを見たかどうか。流すかどうかの判定は、
       // wasOnboarded が決まったあと(きき・ももすけの会話と同じところ)で行う
       {
@@ -4632,6 +4714,14 @@ function MonsterHeroGame() {
   const runHasDebugOnlyMonster = () => [mainHero, ...slots].some(mon =>
     mon && (mon.debugOnly === true || ALL_PLAYER_MONSTERS[mon.id]?.debugOnly === true));
   const debugHeroMonsterList = (list) => {
+    // バトルのれんしゅう(台本つき)の間は混ぜない。練習は記録を残さないために
+    // debugBattleRef を立てているだけで、デバッグ戦がしたいわけではないため。
+    // デバッグ最強モンは Mocchi のコピー(idも 'Mocchi' のまま)なので、混ぜると
+    // 台本の heroId:'Mocchi' の絞り込みに引っかかって本物のモッチーが一覧から消え、
+    // 「選べる勇者モンがデバッグ最強モン1体だけ」になる。そのまま進むと攻撃力99990で
+    // 台本の敵(HP500)を距離技の一撃で倒してしまい、通常攻撃・技変更・固有技の説明が
+    // まるごと飛ぶ(2026-09-12・ユーザー指摘)
+    if (battleScenarioRef.current) return list;
     if (!debugBattleRef.current && !debugMonsterPreviewRef.current) return list;
     const debugMon=makeDebugStrongestMonster();
     const preview=debugOnlyMonsterList();
@@ -5050,6 +5140,47 @@ function MonsterHeroGame() {
     });
     Audio_.se.levelUp();
     return updatedMasu;
+  };
+
+  // ---- オート強化(個体ごとの自動強化) ----
+  // 設定そのものはマスモンの中の1項目(autoEnhance)。書き換えはここに集め、画面は props で受ける。
+  // 実際にどこへ何P振るかは 11-masu-progression.jsx の buildMasuAutoEnhancePlan が正本で、
+  // 適用も手で振るときと同じ applyEnhancePlanToMasu を通る(画面に出した内容と結果がずれない)。
+  const saveMasuMonsList = (next) => {
+    masuMonsRef.current = next;
+    setMasuMons(next);
+    storeSet('mh_masu_mons', next, false);
+    // 詳細モーダルを開いたまま設定を変えても、その場の表示が古い個体のままにならないようにする
+    setMasuMonDetail(prev => prev ? (next.find(m => String(m.id) === String(prev.id)) || prev) : prev);
+  };
+  const updateAutoEnhance = (masuId, patch) => {
+    const current = masuMonsRef.current || [];
+    const masu = current.find(m => String(m.id) === String(masuId));
+    if (!masu) return;
+    saveMasuMonsList(current.map(m => String(m.id) === String(masuId) ? buildMasuAutoEnhanceUpdate(m, patch) : m));
+    Audio_.se.tap();
+  };
+  const moveAutoEnhanceOrder = (masuId, target, direction) => {
+    const current = masuMonsRef.current || [];
+    const masu = current.find(m => String(m.id) === String(masuId));
+    if (!masu) return;
+    const moved = buildMasuAutoEnhanceOrderMove(masu, target, direction);
+    if (moved === masu) return;
+    saveMasuMonsList(current.map(m => String(m.id) === String(masuId) ? moved : m));
+    Audio_.se.tap();
+  };
+  // 「いますぐ振る」。OFFのままでも押した本人の操作なので、設定の中身だけを使って一度だけ振る
+  const applyAutoEnhanceNow = (masuId) => {
+    const current = masuMonsRef.current || [];
+    const masu = current.find(m => String(m.id) === String(masuId));
+    if (!masu) return;
+    const applied = applyMasuAutoEnhance({ ...masu, autoEnhance:{ ...normalizeMasuAutoEnhance(masu.autoEnhance), enabled:true } }, { manual:true });
+    if (!applied) return;
+    saveMasuMonsList(current.map(m => String(m.id) === String(masuId) ? applied.masu : m));
+    pushAutoEnhanceLog([{ masuId:masu.id, name:masu.name, used:applied.used, lines:applied.lines }]);
+    saveMissionProgress('enhance');
+    addAssistantBond('enhance');
+    Audio_.se.levelUp();
   };
 
   // マスモンの強化ポイントを1消費し、対象のステータスを1上げる(バランス調整前の暫定仕様: 1pt=+1)
@@ -5610,6 +5741,24 @@ function MonsterHeroGame() {
     masuMonsRef.current = next; setMasuMons(next);
     setMasuMonDetail(prev=>prev&&String(prev.id)===String(masu.id)?applied.masu:prev);
     setTranscendPlan(null);
+    // 通常強化と同じように、確定したことが分かる全画面演出を出す。
+    // 何がいくつ上がったかは「下書きの数」ではなく実際の前後の差から出す
+    // (間合い適性はMで頭打ちになるので、下書きどおりに上がるとは限らない)
+    const before = normalizeMasuProgression(masu);
+    const lines = [];
+    normalizeTranscendAptBoosts(applied.masu.transcendAptBoosts).forEach((boost, i) => {
+      const gained = boost - before.transcendAptBoosts[i];
+      if (gained > 0) lines.push(`${RANGE_LABELS[i]}距離適性 +${gained}`);
+    });
+    Object.entries(normalizeTranscendStatPoints(applied.masu.transcendStatPoints)).forEach(([key, value]) => {
+      const gained = value - (before.transcendStatPoints[key] || 0);
+      if (gained > 0 && STAT_POINT_KEYS[key]) lines.push(`基礎${STAT_POINT_KEYS[key]} +${gained}`);
+    });
+    const base = ALL_PLAYER_MONSTERS[applied.masu.baseId];
+    setEffect({ type:'transcendEnhance', label:'超越強化！', icon:'🌟', monEmoji:base?.emoji,
+      imgUrl:base?.iconUrl, baseId:applied.masu.baseId, colors:getMasuColors(applied.masu),
+      subLabel:lines.join('\n') });
+    setTimeout(()=>setEffect(null), TRANSCEND_ENHANCE_FX_MS);
     return applied;
   };
   // 虹のプシュケーを超越ポイントへ替える。プシュケーは共通の所持品、超越Pは個体ごとの育成値
@@ -6734,8 +6883,12 @@ function MonsterHeroGame() {
     }
     if (remember) { try { await storeSet(TUTORIAL_SEEN_KEY, true, false); } catch {} }
   };
+  // 村の案内は、はじめての設定(名前とアイコン)が終わった人にだけ出す。
+  // このあとのガード(はじめての設定が終わるまでHOMEへ入れない)で連れ戻される人にも、
+  // 保存を読み終えたころに吹き出しだけ出てしまっていたため、onboarded も条件に入れる。
+  // ここを通らなくても、設定を終えた流れの中で finishOnboarding が村の案内を出す
   useEffect(() => {
-    if (bootPhase !== 'GAME' || gameState !== 'HOME' || tutorialShownRef.current || !dataLoaded) return;
+    if (bootPhase !== 'GAME' || gameState !== 'HOME' || tutorialShownRef.current || !dataLoaded || !onboarded) return;
     tutorialShownRef.current = true;
     let cancelled = false;
     (async () => {
@@ -6743,7 +6896,7 @@ function MonsterHeroGame() {
       if (!cancelled && seen !== true) { setTutorialKind('tour'); setTutorialStep(0); }
     })();
     return () => { cancelled = true; };
-  }, [bootPhase, gameState, dataLoaded]);
+  }, [bootPhase, gameState, dataLoaded, onboarded]);
 
   // モンビー(モンヒロビート)の曲えらびを初めて開いたときに、助手の案内を一度だけ出す。
   // 村の案内・バトルの案内とは別の保存キーなので、互いに邪魔をしない。
@@ -6766,11 +6919,38 @@ function MonsterHeroGame() {
   // 【2026-09-05・ユーザー指示】「実際の音ゲー画面でやり方や各ノーツの操作方法などまで作って」
   // 説明を読むだけでなく、演奏画面をそのまま使って1種類ずつ叩いて覚える。
   // 記録は残さない(from:'tutorial' を見て onComplete が保存を飛ばす)。
+  // タイミング合わせ(2026-09-13・ユーザー指示「普通に実際の画面を使ってやればいい /
+  //   そこで判定も合わせて出して調整するのが1番合うとおもう」)。
+  // 演奏画面をそのまま使い、測り終わったらオプションへ戻して結果を出す。
+  // ★測り終わった画面で「この値にする」を押したら、そこで保存してオプションへ戻す
+  //   (2026-09-13・ユーザー指摘「設定にもなってない」。戻ってからもう一度押させない)。
+  const [rhythmCalibrationResult, setRhythmCalibrationResult] = useState(null);
+  const startRhythmCalibration = () => {
+    if (rhythmSettings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();
+    setRhythmCalibrationResult(null);
+    setRhythmPlay({ song:RHYTHM_CALIBRATION_SONG, difficulty:RHYTHM_CALIBRATION_DIFFICULTY, from:'calibration' });
+    setGameState('RHYTHM_PLAY');
+  };
   const startRhythmPractice = () => {
     if (rhythmSettings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();
     setRhythmPlay({ song:RHYTHM_TUTORIAL_SONG, difficulty:RHYTHM_TUTORIAL_DIFFICULTY, from:'tutorial' });
     setGameState('RHYTHM_PLAY');
   };
+
+  // はじめての設定(名前とアイコン)が終わっていない人を、HOMEへ入れない。
+  // 実際に「ログインボーナスの『ギフトを確認』→ ギフトボックス → 戻る」でHOMEへ着いてしまい、
+  // 名無しのブリーダーのまま遊べる状態になっていた(2026-09-12・ユーザー指摘)。
+  // ギフトボックスに限らず、戻り先がHOME固定の画面はほかにもあるので、
+  // 個別の戻り先を直すのではなく、HOMEへ着いた時点でまとめて連れ戻す。
+  // 助手をまだ選んでいなければ助手えらびから、選んであればプロフィールの続きから。
+  useEffect(() => {
+    if (bootPhase !== 'GAME' || onboarded || onboardingPreview) return;
+    if (gameState !== 'HOME') return;
+    // HOMEに一瞬でも着くと村の案内が始まってしまうので、ここで止めておく
+    // (名前とアイコンが決まったら finishOnboarding が改めて出す)
+    setTutorialStep(null);
+    setGameState(assistantChosen ? 'PROFILE' : 'ASSISTANT_SELECT');
+  }, [bootPhase, gameState, onboarded, onboardingPreview, assistantChosen]);
 
   // 既存の村案内とは別に、バトルチュートリアルをまだ完了していない人へ一度だけ案内する。
   // 初回プロフィール設定や村案内と重ならないよう、それらが閉じたHOMEで判定する。
@@ -9975,11 +10155,40 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // body直下へ描画し、各画面のoverflow・transform・モーダルの積層に隠されないようにする。
   // 新しいバージョンの通知。本体を押すと更新、×を押すと今回は閉じる(更新はしない)。
   // 閉じたバージョンを覚えておき、同じバージョンのあいだは出さない。
-  const updateNotice = updateNoticeVisible ? ReactDOM.createPortal(
-    <div aria-live="assertive" className="fixed z-[100000] left-3 right-3 flex items-stretch gap-1.5" style={{top:'calc(8px + env(safe-area-inset-top))'}}>
-      <button type="button" onClick={reloadLatestVersion} className="flex-1 flex items-center justify-center gap-2 min-h-[48px] px-4 py-3 rounded-2xl border border-amber-200/80 bg-amber-500 text-slate-950 font-black text-sm shadow-[0_8px_28px_rgba(0,0,0,0.55)] active:scale-[.98]"><RefreshCcw size={18}/><span>新しいバージョンがあります　更新する</span></button>
-      <button type="button" aria-label="あとで更新する（この通知を閉じる）" onClick={()=>setDismissedUpdateBuild(latestBuild||BUILD_DATE)} className="shrink-0 w-12 min-h-[48px] flex items-center justify-center rounded-2xl border border-amber-200/80 bg-amber-500/90 text-slate-950 shadow-[0_8px_28px_rgba(0,0,0,0.55)] active:scale-[.98]"><X size={18}/></button>
-    </div>,
+  //
+  // 出し方は設定で選べる(2026-09-12・ユーザー依頼)。'OFF' のときは出さないが、
+  // 設定 →「ゲームを更新」からいつでも更新できるので、更新できなくなるわけではない。
+  //
+  // ★モンヒロビートの演奏中(RHYTHM_PLAY)は、どこにも出さない。
+  //
+  // 2026-09-13・はじめは「画面の上はレーンの奥に重なるから右下へ」としたが、
+  // ユーザー指摘「画面の右下ってモンビー演奏中のレーン上に来ない？」でそのとおりだった。
+  // プレイエリアは flex-1 で画面の下端まで占め(index.html が margin-bottom:0 !important で
+  // 余白も消している)、レーンは inset:0 の全面。台形は下がいちばん広い(上は 27〜73%、
+  // 下は 0〜100%)ので、右下はいちばん右のレーンの真上になる。
+  // しかも判定ラインの下は指で叩く場所なので、誤って押すと曲が中断されて記録が消える。
+  //
+  // 台形の外で空いているのは上部の左右の三角形だけだが、そこはスコアとライフの HUD が
+  // 使っている。つまり演奏中に置ける安全な場所が無い。
+  // 演奏中に更新を押したい場面も無いので、曲が終わって別の画面へ移ってから出す
+  // (updateAvailable は残っているので、戻れば自動的に出る)。
+  const updateNoticeMode = normalizeUpdateNoticeStyle(updateNoticeStyle);
+  const updateNoticeOnPlay = gameState === 'RHYTHM_PLAY';
+  const updateNoticeSmall = updateNoticeMode === 'MINI';
+  const updateNotice = (updateNoticeVisible && updateNoticeMode !== 'OFF' && !updateNoticeOnPlay) ? ReactDOM.createPortal(
+    updateNoticeSmall ? (
+      <div aria-live="assertive" data-update-notice="mini" data-update-notice-place="top"
+        className="fixed z-[100000] right-3 flex items-stretch gap-1"
+        style={{top:'calc(8px + env(safe-area-inset-top))'}}>
+        <button type="button" onClick={reloadLatestVersion} className="flex items-center justify-center gap-1 min-h-[36px] px-2.5 py-1.5 rounded-full border border-amber-200/80 bg-amber-500 text-slate-950 font-black text-[11px] shadow-[0_6px_20px_rgba(0,0,0,0.5)] active:scale-[.98]"><RefreshCcw size={13}/><span>更新あり</span></button>
+        <button type="button" aria-label="あとで更新する（この通知を閉じる）" onClick={()=>setDismissedUpdateBuild(latestBuild||BUILD_DATE)} className="shrink-0 w-8 min-h-[36px] flex items-center justify-center rounded-full border border-amber-200/80 bg-amber-500/90 text-slate-950 shadow-[0_6px_20px_rgba(0,0,0,0.5)] active:scale-[.98]"><X size={13}/></button>
+      </div>
+    ) : (
+      <div aria-live="assertive" data-update-notice="full" data-update-notice-place="top" className="fixed z-[100000] left-3 right-3 flex items-stretch gap-1.5" style={{top:'calc(8px + env(safe-area-inset-top))'}}>
+        <button type="button" onClick={reloadLatestVersion} className="flex-1 flex items-center justify-center gap-2 min-h-[48px] px-4 py-3 rounded-2xl border border-amber-200/80 bg-amber-500 text-slate-950 font-black text-sm shadow-[0_8px_28px_rgba(0,0,0,0.55)] active:scale-[.98]"><RefreshCcw size={18}/><span>新しいバージョンがあります　更新する</span></button>
+        <button type="button" aria-label="あとで更新する（この通知を閉じる）" onClick={()=>setDismissedUpdateBuild(latestBuild||BUILD_DATE)} className="shrink-0 w-12 min-h-[48px] flex items-center justify-center rounded-2xl border border-amber-200/80 bg-amber-500/90 text-slate-950 shadow-[0_8px_28px_rgba(0,0,0,0.55)] active:scale-[.98]"><X size={18}/></button>
+      </div>
+    ),
     document.body
   ) : null;
   const titleModal = showChangelog ? (
@@ -9990,19 +10199,58 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             「更新履歴が壊れた」としか分からないので、読み込み直せることをここで伝える */}
         <div className="mh-changelog-list" data-changelog-list>{CHANGELOG_ENTRIES.length===0
           ? <p className="mh-changelog-empty" data-changelog-empty>更新履歴を読み込めませんでした。通信状況を確かめてから、設定の「ゲームを更新」で読み込み直してください。</p>
-          : changelogEntriesOfTab(changelogTab).map(c=>{const open=changelogOpenId===c.id;
-            {/* 一覧は日付・札・見出しだけ。本文(items)は押した項目だけ出す(1つ開くと他は閉じる) */}
-            return <article key={c.id} data-changelog-type={c.type||'update'} data-changelog-open={open?'1':'0'} className={changelogUnreadIds[changelogTab].includes(c.id)?'unread':''}><time>{c.date}{changelogUnreadIds[changelogTab].includes(c.id)&&<em>NEW</em>}</time><span className="mh-changelog-kind" data-kind={changelogTypeOf(c).tone}>{changelogTypeOf(c).label}</span>
-              <button type="button" className="mh-changelog-head" data-changelog-toggle aria-expanded={open} onClick={()=>setChangelogOpenId(open?null:c.id)}><b>{c.title}</b><small>{open?'閉じる ▲':'詳細 ▼'}</small></button>
-              {/* 開いたときだけ本文を出す。告知画像があれば本文の上に出す
-                  (期間中いつでもここから見返せるように・2026-09-11・ユーザー指示) */}
-              {open&&<div className="mh-changelog-detail" data-changelog-detail>
-                {c.image&&<img data-changelog-image src={c.image} alt={`${c.title}のお知らせ`}
-                  onError={e=>{e.currentTarget.style.display='none';}} loading="lazy" decoding="async"
-                  style={{width:'100%',borderRadius:'12px',marginBottom:'8px'}}/>}
-                {(c.items||[]).map((x,j)=><p key={j}>・{x}</p>)}
-              </div>}
-            </article>;})}</div>
+          : (()=>{
+            // 同じ日の同じ話題を1行にまとめる(2026-09-13・ユーザー指摘
+            // 「同じような内容は同じとこにまとめて詳細で詳しく出るようにして /
+            //  過去のやつが一瞬で見えなくなる」)。
+            // 1行ずつ積み上げていたころは682行あり、少しさかのぼるだけで指が疲れていた。
+            // 日付は行の上に1度だけ出す(同じ日が続くあいだは繰り返さない)。
+            const rows = groupChangelogEntries(changelogEntriesOfTab(changelogTab));
+            const unreadHere = changelogUnreadIds[changelogTab];
+            let shownDay = null;
+            return rows.map(row=>{
+              const open=changelogOpenId===row.key;
+              const unreadCount=row.entries.filter(entry=>unreadHere.includes(entry.id)).length;
+              // まとめた行にも種類の札を出す。折りたたんだままでも、新機能なのか不具合修正なのかが
+              // 分かるようにしておく(2026-09-05・ユーザー指摘「直近の更新情報が不具合修正との
+              // 区別がついてない」)。1つのまとまりに種類が混ざることがあるので、
+              // 出てくる種類ぶんだけ並べ、2件以上あるものには数も付ける
+              const kinds=[];
+              row.entries.forEach(entry=>{const info=changelogTypeOf(entry);
+                const found=kinds.find(kind=>kind.tone===info.tone);
+                if(found)found.count+=1;else kinds.push({tone:info.tone,label:info.label,count:1});});
+              const dayHead=row.day!==shownDay?row.day:null;
+              shownDay=row.day;
+              return (<React.Fragment key={row.key}>
+                {dayHead&&<h4 className="mh-changelog-day" data-changelog-day={dayHead}>{dayHead}</h4>}
+                <article data-changelog-group={row.groupId} data-changelog-open={open?'1':'0'} className={unreadCount>0?'unread':''}>
+                  <button type="button" className="mh-changelog-head" data-changelog-toggle aria-expanded={open} onClick={()=>setChangelogOpenId(open?null:row.key)}>
+                    <span className="mh-changelog-group-emoji" aria-hidden="true">{row.emoji}</span>
+                    <b>{row.label}</b>
+                    <span className="mh-changelog-count">{row.entries.length}件{unreadCount>0&&<em>NEW</em>}</span>
+                    <small>{open?'閉じる ▲':'詳細 ▼'}</small>
+                  </button>
+                  <span className="mh-changelog-kinds">{kinds.map(kind=><span key={kind.tone} className="mh-changelog-kind" data-kind={kind.tone}>{kind.label}{kind.count>1&&<i>{kind.count}</i>}</span>)}</span>
+                  {/* 閉じているあいだも、何があった日なのかが分かるように見出しだけ並べる */}
+                  {!open&&<p className="mh-changelog-peek" data-changelog-peek>{row.entries.map(entry=>entry.title).join(' ／ ')}</p>}
+                  {/* 開いたら、その話題のその日の項目を時刻・種別・本文までぜんぶ出す */}
+                  {open&&<div className="mh-changelog-detail" data-changelog-detail>
+                    {row.entries.map(c=>(<section key={c.id} className="mh-changelog-item" data-changelog-type={c.type||'update'}>
+                      <time>{(c.date||'').slice(11)||c.date}{unreadHere.includes(c.id)&&<em>NEW</em>}</time>
+                      <span className="mh-changelog-kind" data-kind={changelogTypeOf(c).tone}>{changelogTypeOf(c).label}</span>
+                      <b>{c.title}</b>
+                      {/* 告知画像があれば本文の上に出す
+                          (期間中いつでもここから見返せるように・2026-09-11・ユーザー指示) */}
+                      {c.image&&<img data-changelog-image src={c.image} alt={`${c.title}のお知らせ`}
+                        onError={e=>{e.currentTarget.style.display='none';}} loading="lazy" decoding="async"
+                        style={{width:'100%',borderRadius:'12px',margin:'6px 0'}}/>}
+                      {(c.items||[]).map((x,j)=><p key={j}>・{x}</p>)}
+                    </section>))}
+                  </div>}
+                </article>
+              </React.Fragment>);
+            });
+          })()}</div>
       </div>
     </div>
   ) : showTitleSettings ? (
@@ -10363,7 +10611,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         )}
         {/* ギフトボックスから開く、7日ぶんのログインボーナス一覧 */}
         {showLoginBonusList&&<div className="fixed inset-0 flex items-center justify-center p-5" style={{zIndex:60000,backgroundColor:'rgba(2,6,23,.9)'}} role="dialog" aria-modal="true" aria-label="ログインボーナス一覧"><div className="w-full max-w-sm rounded-3xl border-2 border-amber-300/70 bg-gradient-to-b from-indigo-950 to-slate-950 p-5 shadow-2xl"><div className="flex items-center gap-2 mb-3"><Sparkles size={20} className="text-amber-300"/><h2 className="text-base font-black text-amber-200">ログインボーナス</h2></div>{renderLoginBonusList(loginBonusTodayDay)}<button onClick={()=>setShowLoginBonusList(false)} className="w-full mt-4 min-h-[48px] rounded-xl bg-slate-700 text-white font-black text-sm active:scale-[.98]">閉じる</button></div></div>}
-        {loginBonusPopup&&<div className="fixed inset-0 flex items-center justify-center p-5" style={{zIndex:60000,backgroundColor:'rgba(2,6,23,.88)'}} role="dialog" aria-modal="true" aria-label="ログインボーナス"><div className="w-full max-w-sm rounded-3xl border-2 border-amber-300 bg-gradient-to-b from-indigo-950 to-slate-950 p-6 text-center shadow-2xl"><Sparkles size={46} className="mx-auto mb-3 text-amber-300"/><h2 className="text-2xl font-black text-amber-200">ログインボーナス</h2><p className="mt-3 text-sm font-black text-white">{loginBonusPopup.day}日目のログインボーナスを獲得しました！</p><div className="my-3 space-y-1.5">{loginBonusPopup.rewards.map((reward,i)=><div key={i} className="rounded-xl bg-black/35 px-3 py-2 font-black text-cyan-200 break-words">{giftRewardText(reward)}</div>)}</div>{renderLoginBonusList(loginBonusPopup.day)}<p className="text-xs text-slate-300 mt-3">報酬はギフトボックスへ送られました。</p><div className="mt-5 grid grid-cols-2 gap-2"><button onClick={()=>{setLoginBonusPopup(null);openGiftBox();}} className="min-h-[48px] rounded-xl bg-cyan-600 px-2 text-sm font-black text-white">ギフトを確認</button><button onClick={()=>setLoginBonusPopup(null)} className="min-h-[48px] rounded-xl bg-slate-700 px-2 text-sm font-black text-white">閉じる</button></div></div></div>}
+        {/* はじめての設定(名前とアイコン)が終わるまでは出さない。「ギフトを確認」が
+            ギフトボックスへ移動するボタンなので、設定の途中で押せるとそこから抜けられてしまう。
+            報酬はすでにギフトボックスへ配ってあるので、出すのを遅らせても何も失われない
+            (設定を終えてHOMEへ着いた時点でそのまま出る。2026-09-12・ユーザー指摘) */}
+        {loginBonusPopup&&onboarded&&!onboardingPreview&&<div className="fixed inset-0 flex items-center justify-center p-5" style={{zIndex:60000,backgroundColor:'rgba(2,6,23,.88)'}} role="dialog" aria-modal="true" aria-label="ログインボーナス"><div className="w-full max-w-sm rounded-3xl border-2 border-amber-300 bg-gradient-to-b from-indigo-950 to-slate-950 p-6 text-center shadow-2xl"><Sparkles size={46} className="mx-auto mb-3 text-amber-300"/><h2 className="text-2xl font-black text-amber-200">ログインボーナス</h2><p className="mt-3 text-sm font-black text-white">{loginBonusPopup.day}日目のログインボーナスを獲得しました！</p><div className="my-3 space-y-1.5">{loginBonusPopup.rewards.map((reward,i)=><div key={i} className="rounded-xl bg-black/35 px-3 py-2 font-black text-cyan-200 break-words">{giftRewardText(reward)}</div>)}</div>{renderLoginBonusList(loginBonusPopup.day)}<p className="text-xs text-slate-300 mt-3">報酬はギフトボックスへ送られました。</p><div className="mt-5 grid grid-cols-2 gap-2"><button onClick={()=>{setLoginBonusPopup(null);openGiftBox();}} className="min-h-[48px] rounded-xl bg-cyan-600 px-2 text-sm font-black text-white">ギフトを確認</button><button onClick={()=>setLoginBonusPopup(null)} className="min-h-[48px] rounded-xl bg-slate-700 px-2 text-sm font-black text-white">閉じる</button></div></div></div>}
 
         {gameState==='MB_MANAGEMENT'&&(
           <div data-mh-screen className="flex-1 flex flex-col h-full min-h-0 p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
@@ -11099,6 +11351,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onOpenGameUpdate={()=>setShowGameUpdateConfirm(true)}
             gameUpdateDisabled={showGameUpdateConfirm||gameUpdatePending}
             onReturnToTitle={()=>setShowOfficialTitleConfirm(true)}
+            updateNoticeStyle={updateNoticeStyle}
+            onChangeUpdateNoticeStyle={setUpdateNoticeStyle}
           />
         )}
 
@@ -11575,9 +11829,18 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // (1秒だけ演奏してやめる、で稼げないようにするため)。
           // 練習(tutorial)は記録も報酬も動かさないので、その前に判定しない
           if(rhythmPlay.from!=='tutorial'){
-            const loops=rhythmPlayLoopsFor(rhythmPlay.song,rhythmPlay.difficulty);
+            const baseLoops=rhythmPlayLoopsFor(rhythmPlay.song,rhythmPlay.difficulty);
             const loopScale=rhythmPlayRunLoopScaleFor(rhythmPlay.song);
-            const awarded=loops>0?await awardRhythmPlayRunLoops(loops,loopScale):null;
+            // 失敗(ライフ0のまま完走)は半分。クリアかどうかは演奏側が result.cleared で伝える
+            // (2026-09-12・ユーザー指示「終了後にクリアか失敗かもわかるようにして /
+            //  それによって経験値も変わるから」)
+            const cleared=result?.cleared!==false;
+            const loops=rhythmPlayRunLoopsForResult(baseLoops,cleared);
+            // 失敗したときは1周も配らない。ただし「入らなかった」ことは曲リザルトで言う。
+            // ここで何も渡さないと、裏で周回していた人には画面のどこにも理由が出ない
+            if(!cleared&&baseLoops>0)setRhythmPlayRunAward({loops:0,baseLoops,cleared:false,scale:loopScale,
+              eventBoosted:loopScale>RHYTHM_PLAY_RUN_LOOP_SCALE,xp:0,gold:0,bond:0,psyche:0,fromLoop:0,toLoop:0});
+            const awarded=loops>0?await awardRhythmPlayRunLoops(loops,loopScale,{cleared,baseLoops}):null;
             if(awarded){
               setRhythmPlayRunAward(awarded);
               // 限界突破も、通常の周回が終わったときと同じように走らせる
@@ -11604,10 +11867,23 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           }
           // あそびかた練習は記録を残さない。自己ベストにも全国ランキングにも触れない
           // (CLAUDE.md ⑦「消さない・上書きしない」。練習で自己ベストが上書きされてはいけない)
+          // タイミング合わせも同じ(記録に残さない)。測った値は下の onExit で設定へ入れる
+          // 測った値はここで覚えるだけ。設定へ入れるかどうかはオプションの画面で選ぶ
+          if(rhythmPlay.from==='calibration')return;
           if(rhythmPlay.from==='tutorial')return;
-          const records=await saveRhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id,merged);setRhythmBestRecords(records);if(rhythmPlay.from==='demo')submitRhythmRankingScore(rhythmPlay.song,rhythmPlay.difficulty,result);}} onExit={()=>{const back=rhythmPlay.from==='debug'?'RHYTHM_DEBUG':'RHYTHM_DEMO_HOME';setRhythmPlay(null);setGameState(back);}} debugPlay={rhythmPlay.from==='debug'} tutorial={rhythmPlay.from==='tutorial'}/>}
+          const records=await saveRhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id,merged);setRhythmBestRecords(records);if(rhythmPlay.from==='demo')submitRhythmRankingScore(rhythmPlay.song,rhythmPlay.difficulty,result);}} onExit={()=>{const back=rhythmPlay.from==='calibration'?'RHYTHM_OPTIONS':rhythmPlay.from==='debug'?'RHYTHM_DEBUG':'RHYTHM_DEMO_HOME';setRhythmPlay(null);setGameState(back);}} debugPlay={rhythmPlay.from==='debug'} tutorial={rhythmPlay.from==='tutorial'} calibrating={rhythmPlay.from==='calibration'} onApplyCalibration={async measured=>{
+          // 測った値をその場で設定へ入れて保存し、オプションへ戻す。
+          // 判定窓・スコア・ランキングには触れない(入れるのは judgmentTimingOffsetMs だけ)
+          const offsetMs=Number(measured&&measured.offsetMs);
+          if(Number.isFinite(offsetMs)){
+            const saved=await saveRhythmSettings({...rhythmSettings,judgmentTimingOffsetMs:offsetMs});
+            setRhythmSettings(saved);
+            setRhythmCalibrationResult({...measured,offsetMs,applied:true});
+          }
+          setRhythmPlay(null);setGameState('RHYTHM_OPTIONS');
+        }}/>}
 
-        {gameState==='RHYTHM_OPTIONS'&&<RhythmOptions value={rhythmSettings} onBack={()=>setGameState(rhythmOptionsBack)} onSave={async draft=>{const saved=await saveRhythmSettings(draft);setRhythmSettings(saved);return saved;}}/>}
+        {gameState==='RHYTHM_OPTIONS'&&<RhythmOptions value={rhythmSettings} onBack={()=>setGameState(rhythmOptionsBack)} onCalibrate={startRhythmCalibration} calibrationResult={rhythmCalibrationResult} onClearCalibration={()=>setRhythmCalibrationResult(null)} onSave={async draft=>{const saved=await saveRhythmSettings(draft);setRhythmSettings(saved);return saved;}}/>}
 
         {/* 音ゲー体験版のホーム。デバッグ画面をそのまま公開しないために作った、正式導線の最小構成。
             出すのは Monster Hero 1曲 と EASY/NORMAL/HARD だけで、デバッグ用の曲・譜面制作UIは出さない。
@@ -11740,7 +12016,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div data-rhythm-debug-calibration className="mb-3"/>
             {/* 性能計測(デバッグ限定)。既定OFF・OFFのあいだは計測処理が一切動かない。
                 プレイヤーの通常プレイには出ないので、更新履歴・ヘルプには載せない */}
-            <section data-rhythm-perf-panel className="mb-3 rounded-2xl border border-amber-400/40 bg-amber-950/20 p-3"><div className="flex items-center justify-between gap-2"><h3 className="text-xs font-black text-amber-200">性能計測（デバッグ）</h3><button type="button" data-rhythm-perf-toggle aria-pressed={rhythmPerfOn} onClick={()=>{setRhythmPerfOn(RHYTHM_PERF.setEnabled(!rhythmPerfOn));setRhythmPerfStats(null);}} className={`min-h-[44px] rounded-xl px-3 text-[11px] font-black ${rhythmPerfOn?'bg-amber-500 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{rhythmPerfOn?'計測ON':'計測OFF'}</button></div><p className="mt-1 text-[9px] font-bold leading-relaxed text-amber-100/80">ONにしてからプレイすると、フレーム時間と1フレームあたりの負荷（レイアウト測定・DOM検索・SLIDE帯の更新数）を記録します。OFFのあいだは記録処理そのものが動きません。</p><div className="mt-2 flex gap-2"><button type="button" className="min-h-[40px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[11px] font-black text-slate-200" onClick={()=>setRhythmPerfStats(RHYTHM_PERF.snapshot())}>いまの記録を見る</button><button type="button" className="min-h-[40px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[11px] font-black text-slate-200" onClick={()=>{RHYTHM_PERF.reset();setRhythmPerfStats(null);}}>記録をクリア</button></div>{rhythmPerfStats&&<dl data-rhythm-perf-stats className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]">{[['フレーム数',rhythmPerfStats.frames],['平均fps',rhythmPerfStats.fps.toFixed(1)],['平均フレーム',`${rhythmPerfStats.avgMs.toFixed(1)}ms`],['最悪フレーム',`${rhythmPerfStats.maxMs.toFixed(1)}ms`],['16.7ms超',rhythmPerfStats.over16],['25ms超',rhythmPerfStats.over25],['33ms超',rhythmPerfStats.over33],['レイアウト測定/frame',rhythmPerfStats.layoutReadsPerFrame.toFixed(2)],['DOM検索/frame',rhythmPerfStats.domQueriesPerFrame.toFixed(2)],['SLIDE帯更新/frame',rhythmPerfStats.slidePolygonsPerFrame.toFixed(2)],['ジェスチャーrAF',rhythmPerfStats.gestureFrames],['ノーツ再検索',rhythmPerfStats.noteRescans],['走査ノーツ/frame',rhythmPerfStats.notesScannedPerFrame.toFixed(1)],['実描画ノーツ/frame',rhythmPerfStats.notesDrawnPerFrame.toFixed(1)],['最悪frameの走査/実描画',`${rhythmPerfStats.worstFrameScanned} / ${rhythmPerfStats.worstFrameDrawn}`],['先頭スキップ/frame',rhythmPerfStats.headSkippedPerFrame.toFixed(1)],['走査の絞り込み',rhythmPerfStats.narrowed===null?'未計測':(rhythmPerfStats.narrowed?'有効':'無効(昇順でない譜面)')],['tick処理/frame',`${rhythmPerfStats.tickMsPerFrame.toFixed(2)}ms`],['最悪frameのtick処理',`${rhythmPerfStats.worstFrameTickMs.toFixed(1)}ms`],['tick処理の最大',`${rhythmPerfStats.maxTickMs.toFixed(1)}ms`],['frame開始→tick開始の遅れ',`${rhythmPerfStats.tickDelayMsPerFrame.toFixed(2)}ms`],['最悪frameの遅れ',`${rhythmPerfStats.worstFrameDelayMs.toFixed(1)}ms`],['遅れの最大',`${rhythmPerfStats.maxDelayMs.toFixed(1)}ms`]].map(([label,value])=><React.Fragment key={label}><dt className="text-slate-400">{label}</dt><dd className="text-right font-black text-amber-100">{value}</dd></React.Fragment>)}</dl>}</section>{/* ノーツの描き方(検証用・デバッグ限定)。canvas 1枚に描く方式(発熱対策)と要素で描く方式を、次の演奏から切り替える。
+            <section data-rhythm-perf-panel className="mb-3 rounded-2xl border border-amber-400/40 bg-amber-950/20 p-3"><div className="flex items-center justify-between gap-2"><h3 className="text-xs font-black text-amber-200">性能計測（デバッグ）</h3><button type="button" data-rhythm-perf-toggle aria-pressed={rhythmPerfOn} onClick={()=>{setRhythmPerfOn(RHYTHM_PERF.setEnabled(!rhythmPerfOn));setRhythmPerfStats(null);}} className={`min-h-[44px] rounded-xl px-3 text-[11px] font-black ${rhythmPerfOn?'bg-amber-500 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{rhythmPerfOn?'計測ON':'計測OFF'}</button></div><p className="mt-1 text-[9px] font-bold leading-relaxed text-amber-100/80">ONにしてからプレイすると、フレーム時間と1フレームあたりの負荷（レイアウト測定・DOM検索・SLIDE帯の更新数）を記録します。OFFのあいだは記録処理そのものが動きません。「モンスターノーツ」の行が「ノーツを取る処理」よりはっきり大きければ、踏んだときに固まる原因はそこです。ノーツの動きが滑らかかどうかは「曲の時刻」の3つを見ます。ノーツの位置は曲の再生位置だけで決まるので、これが進まないフレームが多いと、フレームレートが60のままでもノーツは止まって飛ぶ動きになります。</p><div className="mt-2 flex gap-2"><button type="button" className="min-h-[40px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[11px] font-black text-slate-200" onClick={()=>setRhythmPerfStats(RHYTHM_PERF.snapshot())}>いまの記録を見る</button><button type="button" className="min-h-[40px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[11px] font-black text-slate-200" onClick={()=>{RHYTHM_PERF.reset();setRhythmPerfStats(null);}}>記録をクリア</button></div>{rhythmPerfStats&&<dl data-rhythm-perf-stats className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]">{[['フレーム数',rhythmPerfStats.frames],['平均fps',rhythmPerfStats.fps.toFixed(1)],['平均フレーム',`${rhythmPerfStats.avgMs.toFixed(1)}ms`],['最悪フレーム',`${rhythmPerfStats.maxMs.toFixed(1)}ms`],['16.7ms超',rhythmPerfStats.over16],['25ms超',rhythmPerfStats.over25],['33ms超',rhythmPerfStats.over33],['レイアウト測定/frame',rhythmPerfStats.layoutReadsPerFrame.toFixed(2)],['DOM検索/frame',rhythmPerfStats.domQueriesPerFrame.toFixed(2)],['SLIDE帯更新/frame',rhythmPerfStats.slidePolygonsPerFrame.toFixed(2)],['ジェスチャーrAF',rhythmPerfStats.gestureFrames],['ノーツ再検索',rhythmPerfStats.noteRescans],['走査ノーツ/frame',rhythmPerfStats.notesScannedPerFrame.toFixed(1)],['実描画ノーツ/frame',rhythmPerfStats.notesDrawnPerFrame.toFixed(1)],['最悪frameの走査/実描画',`${rhythmPerfStats.worstFrameScanned} / ${rhythmPerfStats.worstFrameDrawn}`],['先頭スキップ/frame',rhythmPerfStats.headSkippedPerFrame.toFixed(1)],['走査の絞り込み',rhythmPerfStats.narrowed===null?'未計測':(rhythmPerfStats.narrowed?'有効':'無効(昇順でない譜面)')],['tick処理/frame',`${rhythmPerfStats.tickMsPerFrame.toFixed(2)}ms`],['最悪frameのtick処理',`${rhythmPerfStats.worstFrameTickMs.toFixed(1)}ms`],['tick処理の最大',`${rhythmPerfStats.maxTickMs.toFixed(1)}ms`],['frame開始→tick開始の遅れ',`${rhythmPerfStats.tickDelayMsPerFrame.toFixed(2)}ms`],['最悪frameの遅れ',`${rhythmPerfStats.worstFrameDelayMs.toFixed(1)}ms`],['遅れの最大',`${rhythmPerfStats.maxDelayMs.toFixed(1)}ms`],['曲の時刻の進み/frame',`${(rhythmPerfStats.songStepMsPerFrame??0).toFixed(2)}ms`],['曲の時刻が進まないframe',`${((rhythmPerfStats.songStallRate??0)*100).toFixed(1)}%`],['曲の時刻の最大の飛び',`${(rhythmPerfStats.songStepMaxMs??0).toFixed(1)}ms`],['ノーツを取る処理/回',`${(rhythmPerfStats.judgeMsAvg??0).toFixed(2)}ms（${rhythmPerfStats.judgeCount??0}回）`],['取る処理の最大',`${(rhythmPerfStats.judgeMsMax??0).toFixed(1)}ms`],['モンスターノーツ/回',`${(rhythmPerfStats.monsterJudgeMsAvg??0).toFixed(2)}ms（${rhythmPerfStats.monsterJudgeCount??0}回）`],['モンスターノーツの最大',`${(rhythmPerfStats.monsterJudgeMsMax??0).toFixed(1)}ms`]].map(([label,value])=><React.Fragment key={label}><dt className="text-slate-400">{label}</dt><dd className="text-right font-black text-amber-100">{value}</dd></React.Fragment>)}</dl>}{rhythmPerfStats&&Array.isArray(rhythmPerfStats.spikes)&&rhythmPerfStats.spikes.length>0&&<div data-rhythm-perf-spikes className="mt-2 rounded-xl border border-amber-400/30 bg-slate-950/60 p-2"><h4 className="text-[10px] font-black text-amber-200">飛んだフレーム（33ms超）を起きた順に{rhythmPerfStats.spikes.length}件</h4><p className="mt-1 text-[9px] font-bold leading-relaxed text-amber-100/70">「モンスター後」が小さい行が並ぶなら、踏んだあとの演出が原因です。「tick」が0msなら、その飛びはJSではなく描画側です。</p><ol className="mt-1 space-y-0.5 text-[9px] font-mono text-slate-300">{rhythmPerfStats.spikes.map((sp,i)=><li key={i}>{`${(sp.at/1000).toFixed(1)}s  ${sp.dt}ms  tick ${sp.tick}ms  遅れ ${sp.delay}ms  走査${sp.scan}/描画${sp.draw}  モンスター後 ${sp.mon<0?'—':`${sp.mon}ms`}`}</li>)}</ol></div>}</section><section data-rhythm-strip-panel className="mb-3 rounded-2xl border border-rose-400/40 bg-rose-950/20 p-3"><h3 className="text-xs font-black text-rose-200">装飾を切って切り分ける（デバッグ）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-rose-100/80">演奏画面の重そうな装飾を個別に消します。<b>次の演奏から効きます。</b>ONにして1曲プレイし、性能計測の「33ms超」が減るかを見てください。減ったものが原因です。判定・スコア・譜面には一切関わりません。</p><div className="mt-2 grid grid-cols-2 gap-2">{RHYTHM_STRIP_ITEMS.map(item=><button key={item.id} type="button" data-rhythm-strip-toggle={item.id} aria-pressed={rhythmStrip.split(/\s+/).includes(item.id)} onClick={()=>setRhythmStrip(RHYTHM_STRIP.toggle(item.id))} className={`min-h-[44px] rounded-xl px-2 text-[10px] font-black ${rhythmStrip.split(/\s+/).includes(item.id)?'bg-rose-500 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{item.label}</button>)}</div><button type="button" className="mt-2 min-h-[40px] w-full rounded-xl border border-white/20 bg-slate-900 text-[11px] font-black text-slate-200" onClick={()=>setRhythmStrip(RHYTHM_STRIP.set(''))}>ぜんぶ元に戻す</button></section>{/* ノーツの描き方(検証用・デバッグ限定)。canvas 1枚に描く方式(発熱対策)と要素で描く方式を、次の演奏から切り替える。
                 プレイヤーの通常プレイには出ないので更新履歴・ヘルプには載せない */}
             <section data-rhythm-canvas-panel className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"><h3 className="text-xs font-black text-cyan-200">ノーツの描き方（検証用）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80">canvas 1枚に描く方式（発熱対策）と、これまでの要素ごとに描く方式を切り替えます。次の演奏から効きます。「自動」は公開設定（いまは{RELEASE_FLAGS.rhythmCanvasNotes?'canvas':'要素'}）に従います。</p><div className="mt-2 flex gap-2">{[['','自動'],['dom','要素'],['canvas','canvas']].map(([value,label])=><button key={value||'auto'} type="button" data-rhythm-canvas-pref={value||'auto'} aria-pressed={rhythmCanvasPref===value} onClick={()=>setRhythmCanvasPref(rhythmCanvasNotesSetPreference(value))} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmCanvasPref===value?'bg-cyan-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
             {/* モンスターノーツ用のマスモン設定(RHYTHM_MODE §3.2)。最大4体・同じモンスターの重複禁止・
@@ -12834,6 +13110,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             masuMonDetail={masuMonDetail}
             onBack={()=>{setTranscendPlan(null);setTranscendExchangeOpen(false);setGameState('MASU_ENHANCE');}}
             onMissing={()=>setGameState('MASU_ENHANCE')}
+            onOpenAutoEnhance={()=>setGameState('MASU_AUTO_ENHANCE')}
             ownedItems={ownedItems}
             renderPowerBadge={renderPowerBadge}
             saveMissionProgress={saveMissionProgress}
@@ -12866,12 +13143,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {gameState==='MASU_ENHANCE'&&masuMonDetail&&(
           <MasuEnhanceScreen
             addAssistantBond={addAssistantBond}
+            autoEnhanceIntroVisible={autoEnhanceIntroVisible}
             bulkEnhanceUnit={bulkEnhanceUnit}
             bulkPlan={bulkPlan}
             getMasuMon={getMasuMon}
             masuMonDetail={masuMonDetail}
             onBack={backToDetail}
+            onDismissAutoEnhanceIntro={dismissAutoEnhanceIntro}
             onMissing={()=>{ setGameState(masuEnhanceFrom||'MASU_MONS'); setMasuMonDetail(null); setMasuEnhanceFrom(null); }}
+            onOpenAutoEnhance={()=>setGameState('MASU_AUTO_ENHANCE')}
             onOpenTranscendEnhance={()=>{setTranscendPlan(null);setTranscendExchangeError('');setGameState('MASU_TRANSCEND_ENHANCE');}}
             renderPowerBadge={renderPowerBadge}
             saveMissionProgress={saveMissionProgress}
@@ -12880,6 +13160,22 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             setEffect={setEffect}
             setMasuMonDetail={setMasuMonDetail}
             spendPointsBulk={spendPointsBulk}
+          />
+        )}
+
+        {gameState==='MASU_AUTO_ENHANCE'&&masuMonDetail&&(
+          <MasuAutoEnhanceScreen
+            applyAutoEnhanceNow={applyAutoEnhanceNow}
+            autoEnhanceLog={autoEnhanceLog}
+            getMasuMon={getMasuMon}
+            masuMonDetail={masuMonDetail}
+            moveAutoEnhanceOrder={moveAutoEnhanceOrder}
+            onBack={backToDetail}
+            onMissing={()=>{ setGameState(masuEnhanceFrom||'MASU_MONS'); setMasuMonDetail(null); setMasuEnhanceFrom(null); }}
+            onOpenNormalEnhance={()=>setGameState('MASU_ENHANCE')}
+            onOpenTranscendEnhance={()=>{setTranscendPlan(null);setTranscendExchangeError('');setGameState('MASU_TRANSCEND_ENHANCE');}}
+            renderPowerBadge={renderPowerBadge}
+            updateAutoEnhance={updateAutoEnhance}
           />
         )}
 
@@ -14464,10 +14760,34 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
             </div>
           </>
         )}
-        {effect.imgUrl?(effect.baseId?<DyedMonsterImage baseId={effect.baseId} src={effect.imgUrl} alt="effect" masuColors={effect.colors} style={{width:effect.type==='unique'?'180px':(effect.type==='enhance'?'160px':'150px'),height:effect.type==='unique'?'180px':(effect.type==='enhance'?'160px':'150px'),animation:(effect.type==='unique'||effect.type==='enhance')?'specialThrob 500ms ease-in-out infinite':undefined}} className={`mb-6 object-contain relative ${effect.type==='unique'?'drop-shadow-[0_0_45px_rgba(168,85,247,0.95)]':(effect.type==='enhance'?'drop-shadow-[0_0_45px_rgba(251,191,36,0.9)]':'drop-shadow-[0_0_50px_rgba(255,255,255,0.4)]')}`}/>:<img src={effect.imgUrl} alt="effect" style={{width:effect.type==='unique'?'180px':(effect.type==='enhance'?'160px':'150px'),height:effect.type==='unique'?'180px':(effect.type==='enhance'?'160px':'150px'),animation:(effect.type==='unique'||effect.type==='enhance')?'specialThrob 500ms ease-in-out infinite':undefined}} className={`mb-6 object-contain relative ${effect.type==='unique'?'drop-shadow-[0_0_45px_rgba(168,85,247,0.95)]':(effect.type==='enhance'?'drop-shadow-[0_0_45px_rgba(251,191,36,0.9)]':'drop-shadow-[0_0_50px_rgba(255,255,255,0.4)]')}`}/>):(<div style={{fontSize:effect.type==='unique'?'128px':(effect.type==='enhance'?'120px':'112px'),animation:(effect.type==='unique'||effect.type==='enhance')?'specialThrob 500ms ease-in-out infinite':undefined}} className="mb-6 relative">{effect.monEmoji}</div>)}
-        <h2 className={`text-2xl font-black italic uppercase px-8 py-3 rounded-2xl border relative ${effect.type==='unique'?'text-purple-100 bg-purple-600/30 border-purple-400/60 drop-shadow-[0_0_20px_rgba(168,85,247,0.8)]':(effect.type==='enhance'?'text-amber-100 bg-amber-600/30 border-amber-400/60 drop-shadow-[0_0_20px_rgba(251,191,36,0.8)]':'text-white bg-white/10 border-white/20')}`}>{effect.label}</h2>
-        {effect.subLabel&&<p className={`font-mono text-[10px] mt-4 font-black whitespace-pre-line relative ${effect.type==='enhance'?'text-amber-300':'text-indigo-400'}`}>{effect.subLabel}</p>}
-        <div style={{fontSize:effect.type==='unique'?'60px':'48px'}} className="mt-8 animate-bounce relative">{cardIconNode(effect.icon,effect.type==='unique'?60:48,effect.id)}</div>
+        {/* 超越強化。通常強化(琥珀の輪2枚＋火花6つ)を土台に、金→桃→空の3色へ広げ、
+            回る放射光・輪3枚・二重の火花・開幕の閃光を足して1段派手にしてある。
+            火花は共通の sparkFlicker ではなく mhEffectSpark を使う。あちらはキーフレーム側が
+            transform を丸ごと持っているため、呼び出し側で指定した角度と半径が効かず、
+            すべての火花が同じ場所へ重なってしまう(既存の他の演出も同じ状態) */}
+        {effect.type==='transcendEnhance'&&(
+          <>
+            <div className="absolute inset-0" style={{background:'radial-gradient(circle at 50% 42%, rgba(253,230,138,0.55) 0%, rgba(244,114,182,0.35) 32%, rgba(56,189,248,0.22) 52%, rgba(0,0,0,0) 72%)', animation:'auraPulse 620ms ease-out infinite'}}></div>
+            <div className="absolute" style={{top:'42%',left:'50%',width:'min(170vmax,1400px)',height:'min(170vmax,1400px)',marginTop:'-85vmax',marginLeft:'-85vmax',background:'repeating-conic-gradient(from 0deg, rgba(253,230,138,0.18) 0 4deg, transparent 4deg 18deg)', animation:'mhTranscendFxRays 5200ms linear infinite'}}></div>
+            <div className="absolute" style={{top:'42%',left:'50%',width:'min(70vw,300px)',height:'min(70vw,300px)',transform:'translate(-50%,-50%)'}}>
+              <div className="absolute inset-0 rounded-full border-4 border-amber-300/80" style={{animation:'auraRing 700ms ease-out infinite'}}></div>
+              <div className="absolute inset-0 rounded-full border-[3px] border-pink-300/70" style={{animation:'auraRing 900ms ease-out 150ms infinite'}}></div>
+              <div className="absolute inset-0 rounded-full border-2 border-sky-300/60" style={{animation:'auraRing 1100ms ease-out 300ms infinite'}}></div>
+              {[0,45,90,135,180,225,270,315].map(deg=>(
+                <div key={`tx-out-${deg}`} className="absolute left-1/2 top-1/2 text-3xl" style={{transform:`translate(-50%,-50%) rotate(${deg}deg) translateY(-148px)`, animation:'mhEffectSpark 420ms ease-in-out infinite', animationDelay:`${deg}ms`}}>🌟</div>
+              ))}
+              {[22,67,112,157,202,247,292,337].map(deg=>(
+                <div key={`tx-in-${deg}`} className="absolute left-1/2 top-1/2 text-xl" style={{transform:`translate(-50%,-50%) rotate(${deg}deg) translateY(-98px)`, animation:'mhEffectSpark 540ms ease-in-out infinite', animationDelay:`${deg}ms`}}>✨</div>
+              ))}
+            </div>
+            <div className="absolute inset-0" style={{background:'radial-gradient(circle at 50% 42%, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0) 58%)', animation:'mhTranscendFxFlash 1600ms ease-out forwards'}}></div>
+          </>
+        )}
+        {/* 大きさ・光り方・色は effectVisual(種類) が正本。画面側へ三項演算子を書き並べない */}
+        {effect.imgUrl?(effect.baseId?<DyedMonsterImage baseId={effect.baseId} src={effect.imgUrl} alt="effect" masuColors={effect.colors} style={{width:effectVisual(effect.type).size,height:effectVisual(effect.type).size,animation:effectVisual(effect.type).throb}} className={`mb-6 object-contain relative ${effectVisual(effect.type).glow}`}/>:<img src={effect.imgUrl} alt="effect" style={{width:effectVisual(effect.type).size,height:effectVisual(effect.type).size,animation:effectVisual(effect.type).throb}} className={`mb-6 object-contain relative ${effectVisual(effect.type).glow}`}/>):(<div style={{fontSize:effectVisual(effect.type).emoji,animation:effectVisual(effect.type).throb}} className="mb-6 relative">{effect.monEmoji}</div>)}
+        <h2 className={`text-2xl font-black italic uppercase px-8 py-3 rounded-2xl border relative ${effectVisual(effect.type).label}`}>{effect.label}</h2>
+        {effect.subLabel&&<p className={`font-mono text-[10px] mt-4 font-black whitespace-pre-line relative ${effectVisual(effect.type).sub}`}>{effect.subLabel}</p>}
+        <div style={{fontSize:`${effectVisual(effect.type).icon}px`}} className="mt-8 animate-bounce relative">{cardIconNode(effect.icon,effectVisual(effect.type).icon,effect.id)}</div>
       </div>)}
         {rosterSkillDetail&&(()=>{const mon=rosterSkillDetail.mon; const isUnique=rosterSkillDetail.kind==='unique'; const levels=isUnique?getUniqueSkillLevels(mon):getAtkSkillLevels(mon); const currentLevel=isUnique?Math.max(0,Number(mon.unique?.evoLevel)||0):0; const title=isUnique?`固有技 Lv.${currentLevel}: ${mon.unique.names?.[currentLevel]||mon.unique.name}`:`通常技: ${(HERO_ATK_NAMES[mon.id]||HERO_ATK_NAMES['Mocchi'])[0]}`; return(
           <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:32000}}>

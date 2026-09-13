@@ -80,6 +80,7 @@ const Audio_ = (() => {
     "audio/bgm-enhance.mp3": "eb0690d02d8a",
     "audio/bgm-event-01.mp3": "c57069b5ad2f",
     "audio/bgm-event-02.mp3": "d572118c203e",
+    "audio/bgm-freedom-dive.mp3": "34616b2fccd3",
     "audio/bgm-fusion.mp3": "6f0d4675789f",
     "audio/bgm-game-over.mp3": "d9fb75a7c827",
     "audio/bgm-home-ichika.mp3": "29295336d1af",
@@ -363,7 +364,10 @@ const Audio_ = (() => {
       const startSource=offset=>{
         if(stopped||offset>=buffer.duration){naturallyEnded=true;return false;}
         const nextSource=ctx.createBufferSource(),rhythmGain=ctx.createGain();
-        const raw=Math.max(0,Math.min(1,Number(rhythmVolumePct)/100))*safeTrackGain(track);
+        // 上限は RHYTHM_VOLUME_MAX(=200)ぶん。100までは今までとまったく同じ値。
+        // ★100より上は曲の波形をそのまま持ち上げるので、音源のピーク(-1 dBTP)を
+        //   超えるところから割れる。承知のうえで使う範囲として開けてある(2026-09-12)。
+        const raw=Math.max(0,Math.min(RHYTHM_VOLUME_MAX/100,Number(rhythmVolumePct)/100))*safeTrackGain(track);
         dropGainEntry(); gainEntry={node:rhythmGain,raw}; activeRhythmGains.add(gainEntry);
         rhythmGain.gain.value=enabled?raw:0;
         // 音ゲー専用の音量なので、メインのBGM音量(bgmGain)は経由しない。

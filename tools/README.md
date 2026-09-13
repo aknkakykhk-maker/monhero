@@ -173,9 +173,6 @@ node tools/build.js --check
 `node mode/rhythm-debug-short-check.js` は、同一のあつ杯テーマ音源を使う約60秒のDEBUG専用総合譜面について、短縮時間、4ノーツ種別、幅1〜4、0.5レーン／可変幅SLIDE、複合入力、audio clock終了、再スタート分離、正式EASY候補とMP3の非変更を確認する。
 `node mode/rhythm-easy-v2-review-check.js` は、EASY正式候補v1の78ノーツを保持したv2-review準備データ、22候補の詳細・機械推奨・未入力decision、全尺品質監査、機械的不正なし、正式runtime未接続を確認する。`node mode/rhythm-easy-v2-review-build.js` でv1・100点draft・282点onset候補から同データを再生成できる。
 `node mode/rhythm-audio-timing-analyze.js --v2 --track <trackId> --summary --require-ffmpeg` は、自動譜面制作V2 STEP1の全尺特徴解析を実行し、500ms窓・250ms刻みのenergy、low/mid/high、帯域attack、onset density、spectral change、intensity、confidence、downbeat候補をCLIへ要約表示する。`--write` で `mode/authoring/*-v2-features.json` を決定的に再生成する。
-`node mode/rhythm-chart-v2-step1-check.js` は、あつ杯テーマとMonster Heroの実音源を同一アルゴリズムで再解析し、保存JSONとの完全一致（決定性）、NaN / Infinity / null、値範囲、250ms時系列、全尺終端、onset / downbeatの昇順、既存譜面・候補の非変更、ゲームruntime・STEP2以降への未接続を確認する。ffmpegがないCI環境では再解析だけをSKIPし、保存JSONの全検査と実音源SHA-256一致は必ず行う。
-`node mode/rhythm-chart-v2-step2-analyze.js --track <trackId> --summary` は、STEP1特徴JSONから小節・2〜8小節の可変長フレーズ・類似フレーズ群・セクション境界を決定的に解析し、INTRO / VERSE / BUILD / CHORUS / BREAK / BRIDGE / FINAL_CHORUS / OUTRO候補とconfidenceを表示する。`--write` で `mode/authoring/*-v2-structure.json` を再生成する。
-`node mode/rhythm-chart-v2-step2-check.js` は、2曲のSTEP2構造JSONとの完全一致、STEP1入力SHA、NaN / Infinity、値範囲、全尺を隙間・重複なく覆う時系列、downbeat上のフレーズ境界、可変長、repeat参照、CHORUS / BREAK / FINAL_CHORUS候補、既存譜面の非変更、STEP3以降への未接続を確認する。
 `node mode/rhythm-mode-note-perspective-check.js` は、上部・中央・判定ライン付近の5レーンについて、左右境界・中央・ノーツ幅・Touch／Pointer／SLIDE入力の逆投影が同じprojection結果になることと、時刻を変えない非線形Y移動、HOLD／SLIDE帯、判定ライン、番号、押下発光、描画用rAFの一本化を数値と実装経路の両方で確認する。
 `node mode/rhythm-mode-sublane-projection-check.js` は、旧5レーン互換を保つ10サブレーン座標、TAP幅1〜4、左右端、奥／手前の共通projection、サブ境界とHOLD／SLIDE／ENDバーの回帰を確認する。
 `node mode/rhythm-note-geometry-audit.js` は、ノーツ速度1.0〜12.0（0.1刻み・6.0=2150ms）の変換式と、速度1／3／6／10／12 × ノーツサイズ80／100／120％の全組み合わせについて、ノーツ頭・HOLD帯・SLIDE帯・ENDバーの実描画位置を実ブラウザで測り、共通projectionからのズレとレーン外へのはみ出しを検出する。ノーツサイズは頭だけに掛かり、帯とENDバーはレーンgeometry基準のままであることもここで確認する。帯は上端と下端の2点だけを見ると途中の歪みを見逃すため、clipPath／polygonを実際に線形補間した値を**画面内の複数の高さ**で突き合わせる（画面より長い帯のケースも含む）。
@@ -190,6 +187,59 @@ node tools/build.js --check
 `node mode/rhythm-canvas-render-check.js` は、canvas 版の描画(`RHYTHM_CANVAS_RENDERER`)を実ブラウザ(Playwright Chromium)で動かし、粒の中心に画素が置かれること・何も無い場所が透明のままなこと・種類ごとの色(TAP=桃・FLICK=緑・HOLD=水色・SLIDE=紫・モンスター=金)・120フレーム描き続けたときの1フレームの JS 時間(中央値 4ms 未満)を確かめる。`--shot <path.png>` で描いた絵を保存できる。Playwright が無い環境では SKIP。
 
 `node mode/rhythm-render-cost-check.js` は、音ゲーのノーツ描画が1フレームあたりどれだけ「レイアウト」と「塗り直し」を起こしているかを、本番の `rhythm-mode.js` を読み込んだ実ブラウザ(Playwright Chromium)のトレースで数える(発熱対策の物差し・2026-09-07)。本体と同じ構造のノーツ(TAP×6・FLICK×1・HOLD×2・SLIDE×1)を本体の tick と同じ順で毎フレーム動かし、TAP/FLICK はレイアウトも塗り直しも 0、HOLD はレイアウト 0、全種類でレイアウト≦1(SLIDE の SVG の形の更新だけ)・塗り直し≦6 を要求する。`--report` で数値だけ、`--types=TAP,HOLD` で種類を絞って切り分け、`--write` で `mode/authoring/rhythm-render-cost.json` へ書き出す。Playwright が無い環境では SKIP。
+
+`node mode/rhythm-canvas-note-cost.js` は、**本番で使われている canvas 描画**が、ノーツの種類ごとに1個あたりどれだけ重いかを実ブラウザで測る(2026-09-12)。上の `rhythm-render-cost-check.js` は DOM 版(`rhythmLayoutNoteVisual`)しか測っておらず、本番の canvas 版(`RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE = true`)の数字が誰も無かったため足した。`RHYTHM_CANVAS_RENDERER` を canvas へ繋ぎ、種類ごとに同じノーツを1個だけ毎フレーム描いて、`drawNote` の時間と 2D コンテキストの `drawImage` / 塗り / 線 / グラデーションの回数を数える。スプライトのキャッシュが効いたあとの定常状態を見たいので、ウォームアップぶんは捨てる。`--strict` を付けるとしきい値で落とす。Playwright が無い環境では SKIP。 先焼き(`warmSprites`)が効いているかも見る: 時間は機械の調子で揺れるので、**曲の中で新しく作られるスプライトの枚数**で判定する(先焼きなし11枚 → 先焼きあり0枚)。
+
+`node mode/rhythm-held-pair-variety-check.js` は、押さえノーツの同時押さえ(HOLD/SLIDEを2本いちどに押さえる)が**決めごと1つに戻っていないか**を確かめる(2026-09-12)。ユーザー指示「決めごとがあるとつまんなくなる / バリエーションが大事」に対する見張り。語彙(`HELD_PAIR_SHAPES` 8種)の点数づけを直接動かして「動き量の組み合わせで3種類以上の形が1位になる」「使った形は後ろへ回る」「直前と同じ形は続けて出ない」「曲がちがえば並びも変わる」を見たうえで、実際にベース帯つきで解析→生成し、**2組以上置いた難易度では形が2種類以上使われる**ことを確かめる。わざと「必ず anchor_out」へ戻すと6件落ちる。
+
+`node mode/rhythm-double-slide-check.js` は、**同時スライド**(2本のSLIDEをいちどになぞる)が
+曲によって丸ごと欠けないこと・指2本で押せることを確かめる(2026-09-12)。ユーザー指示
+「同時スライドは結構重要な譜面だから入る仕組みを構築してほしい」に対する見張り。
+同時押さえ(15.5)はベースと旋律が同時に動いている場所待ちで、実測だと曲ごとに0〜3箇所しか無く
+SLIDE＋SLIDEが一度も出なかったため、狙って置く段(15.6)を別に持たせた。この検査は
+6曲を実際に生成して「8割以上の曲で1組は出る」「EASY/NORMAL/HARDには出ない」
+「置いた組は2本とも動くSLIDE」「重なるすべての押さえノーツと指2本ぶん空いている」
+「2本押さえているあいだに3本目を要求する打点が残っていない」「形が3種類以上」を見る。
+`--tracks a,b,c` で曲を指定できる。
+
+`node mode/rhythm-slide-fan-check.js` は、**スライドの分岐・合流**（1本が2本になる／2本が1本になる）が
+形として成立していて指2本で押せることを確かめる(2026-09-12)。データ形式(`slidePoints`)は変えずに、
+**2本のSLIDEの端をそろえる**だけで出している（設計書 §3.1.12 の「形式から要る、は思い違いだった」）。
+6曲を実際に生成して「EASY/NORMAL/HARDには出ない」「ほとんどの曲で出る」「分岐と合流の両方が出る」
+「2本目の頭が実際に鳴っている音に乗っている」「親のSLIDEが2本目の区間をまるごと含む」
+「分岐は終わりがそろう／合流は親が1拍以上残る」「分岐点で指2本が入り、反対の端では0.5レーン以上開く」
+「2本押さえているあいだに3本目を要求する打点が残っていない」を見る。`--tracks a,b,c` で曲を指定できる。
+
+`node mode/rhythm-density-ceiling-check.js` は、譜面の量の上限(`DENSITY_TARGET.hardMaxPerSecond`)が
+**品質レポートの帯とずれていないこと**と**歯ごたえで持ち上がらないこと**を確かめる(2026-09-12)。
+`maxPerSecond` は歯ごたえ(最大1.9倍)を掛けるので速い曲では上限として働かず、実測で
+SIX ÉTERNEL(BPM207)のEXPERTが毎秒4.56＝MASTERの上限4.6に迫っていた。そこで `factor` を掛けない
+上限を足し、値は**レポートが減点を始めるところ**(`BANDS.density` の上端＋許容0.6)へ置いた。
+⚠️ ここを帯の真ん中へ絞るとユーザー指示「もっと振れ幅がほしい」に反するので、
+この検査は**いまの17曲が1曲も柵に当たらないこと**（＝いまの難易度が動かないこと）まで見る。
+
+`node mode/rhythm-hand-restrike-check.js` は、**1本の指で叩き直す間隔の下限**が
+少し動いただけで人間に無理な速さを許していないことを確かめる(2026-09-12)。
+手のモデル(`rhythm-hand-simulate.js` の `evaluateFinger`)は同じレーンのときだけ
+`restrikeLimitMs`(105ms)を見ていて、少しでも動くなら距離だけで判定していた——
+0.5レーンなら28ms＝**1本の指で毎秒36打**が「押せる」扱い。
+実測で譜面の交互率が低い原因はこれだった(同じ指に割り当てられた328組のうち278組が
+「レーン差0.3〜0.8・間隔83ms」)。限界は **max(叩き直しの下限, 距離ぶんの移動時間)** へ直した。
+この検査は「指が2本空いていれば左右へ振り分けられる」「1本しか空いていなければ押せない」
+「下限が距離に関係なく効く」「大きく動くときは移動時間が効く」を見る。
+
+`node mode/rhythm-glide-slide-check.js` は、**走る音（アルペジオ・トレモロ）をなぞるSLIDE**が
+実際に鳴っている音の上にあることと、ほかの押さえる形を食い潰していないことを確かめる(2026-09-12)。
+ユーザー指示「スライドにする材料を広げる」で入れた段（設計書 §3.1.17）の見張り。
+それまでSLIDEの材料は伸びている音だけで、音階を駆け上がる音は1音ずつ短いので全部単押しになっていた。
+検査は「半分以上の曲で出る」「頭が実際に鳴っている音に乗っている」
+「音が動いていないのに動く経路を引いていない」「走る音(8分以下で打点4つ以上)の上にある」を見る。
+⚠️ 判定は**印(`glideSlide`)で拾う**。条件で拾おうとすると端から端まで動くSLIDE(スイープ)まで
+混ざって誤検出する。⚠️ 指は2本しかないので長く押さえる形どうしは取り合いになる。
+食い潰していないことは `rhythm-held-pair-variety-check.js` と
+`rhythm-double-slide-check.js` のほうが見る。
+
+`node mode/rhythm-chart-v3-candidates.js --track <曲id> --count 6` は、同じ曲から譜面の候補を何本か作って6軸で自動採点し、いちばん良いものを選ぶ(2026-09-12)。V2にあった STEP5 をV3へ移したもの。生成器の `--variant N` で候補を作り、`rhythm-chart-quality-report.js` で採点する。**押せない箇所がある候補は失格**。同点なら variant の小さいほう(＝いまの作り方に近いほう)を採る。`--write` で勝った候補を authoring/ へ書き出す(ランタイムへは反映しない)。⚠️ `--variant 0` は指定なしと1バイトも変わらない(既存曲の譜面を変えないため)。`node mode/rhythm-chart-v3-candidates-check.js` がそこと「候補どうしに点数の差が付くこと」を見張る。
 
 `node mode/rhythm-perf-check.js` は、音ゲーの性能計測(デバッグ限定)が「計測のために本体を重くしていない」ことを確かめる。記録器を実際にNode上で動かし、既定OFF・OFFのあいだは一切記録しないこと・フレーム時間と16.7/25/33ms超の数え方・一時停止で空いた数秒を平均へ混ぜないことを検証する。あわせて、計測用のrequestAnimationFrameを増やしていないこと、各計測箇所(measureTravel / areaRect / ジェスチャー側rAF / SLIDE polygon / サブレーン発光)へ結線されていること、判定窓・スコア式・既存の保存キーを変えていないこと、デバッグ専用なので更新履歴・ヘルプへ載せていないことも固定する。
 
@@ -431,6 +481,7 @@ node tools/build.js --check
 | `node image/dye-region-map.js out.png <ID> [y0 y1]` | 染色もどきの部位分けを絵で確かめる。元の絵と、部位ごとに塗り分けた絵（①赤・②緑・③青・④黄・⑤マゼンタ）を左右に並べて書き出す。被覆率だけでは分からない「どこが混ざっているか」を見るために使う。 |
 | `node image/dye-alpha-check.js` | 染色の「濃さ(透過率)」を確かめる。 |
 | `node browser/screen-render-cost-check.js` | 画面を開いたときの描画時間と、その間の「長いタスク」(50ms以上・画面が固まる原因)を実ブラウザで測る。`browser/perf-check.js` は起動までしか測らないので、一覧を開いたときの重さを見る道具として置いた。ランキングは50件返すスタブで測る。上限は1画面500ms・長いタスク200ms(2026-09-12の実測は21〜62ms・長いタスクは全画面0ms)。Tailwind の CDN へ出られないぶん実機より軽く出るので、**改修の前後で比べる**ために使う。結果は [`docs/refactor/RENDER_COST_REPORT.md`](../docs/refactor/RENDER_COST_REPORT.md) |
+| `node mode/rhythm-live-frame-report.js` | **本番の index.html をそのまま開いて実際に演奏させ**、そのあいだのフレーム間隔・詰まったフレーム数・スタイル再計算/レイアウト/JSの時間・長いタスク・canvasへの描き込み回数を測る(報告だけ。しきい値で落とさない)。既存の `rhythm-render-cost-check` と `rhythm-canvas-render-check` は**自前の小さなページ**で測るので配信CSSが当たっておらず、「見た目のCSSが効いた状態での重さ」は分からなかった。`--compare` を付けると、**その画面で実際に使うクラスだけのCSS**(2026-09-12より前のCDNのJIT相当)を作って同じ手順で測り、フレーム間隔と computed style を並べる。`--cpu 4` でCPUを1/4に絞ると実機のスマホに近づく。`--draw` で1フレームあたりの drawImage / fill / stroke / グラデーション作成の回数を出す。ヘッドレスなので**絶対値は実機と違う。同じ条件で2つを比べるための道具**。 |
 | `node layout/tailwind-static-report.js` | 静的CSSで**欠けるクラス**が増えていないかを数える(切替は2026-09-12に済み)。配信しているCSSの大きさと、`className` のテンプレートリテラルのうち**クラス名を組み立てているもの**の数を数える。組み立てていると Tailwind が文字列として見つけられず、静的化したときにそこだけ崩れる。自前CSSのクラス(`index.html` と parts から772種を収集)と、クラス名を文字として書いた条件式(`${cond ? ' m-auto' : ''}`)は除く。結果は [`docs/refactor/TAILWIND_STATIC_REPORT.md`](../docs/refactor/TAILWIND_STATIC_REPORT.md) |
 | `node image/dye-cache-limit-check.js` | 染色の2つのキャッシュ(染め上がり `_dyeRecolorCache` 96件・部位マスク `_dyeRegionMaskCache` 32件)に上限があり、あふれたら**使っていないものから**捨てることを、実際に上限+1件入れて確かめる。どちらも1件がdataURLを持つので重く、とくに部位マスクは1体ぶんで3枚。上限が無いと、デバッグの染色マスクエディタで位置や倍率を動かしたときのようにキーが増え続ける場面で際限なく積み上がる(TD-10)。部位マスクの上限は「部位マスクを持つモンスターの数」より大きいことも見るので、ふつうに遊んでいるだけでマスクを作り直すことにはならない |
 | `node image/dye-edge-check.js` | 染色もどきの「輪郭の塗り残し」を実測して見張る。部位マスクは縮小画像で作るため、等倍へ戻すと境界に隙間が出やすい。 |

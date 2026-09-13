@@ -72,6 +72,7 @@ jobs:
       - name: Check shipped data metadata and rhythm geometry
         run: |
           node tools/boot/data-cache-key-check.js
+          node tools/boot/update-notice-style-check.js
           node tools/mode/rhythm-mode-note-perspective-check.js
           node tools/mode/rhythm-mode-tap-width-input-check.js
           node tools/mode/rhythm-mode-restart-remount-check.js
@@ -93,8 +94,6 @@ jobs:
           node tools/mode/rhythm-easy-alignment-audit.js
           node tools/mode/rhythm-easy-formal-candidate-check.js
           node tools/mode/rhythm-easy-v2-review-check.js
-          node tools/mode/rhythm-chart-v2-step1-check.js
-          node tools/mode/rhythm-chart-v2-step2-check.js
           node tools/mode/rhythm-debug-short-check.js
           node tools/mode/rhythm-easy-ear-review-plan.js
           node tools/mode/rhythm-help-structure-check.js
@@ -103,6 +102,29 @@ jobs:
           node tools/mode/rhythm-event-window-check.js
           node tools/mode/rhythm-play-bonus-check.js
           node tools/mode/rhythm-weekly-reward-check.js
+          node tools/mode/rhythm-keyframe-blur-check.js
+      # 譜面の道具（手のモデル・押せるかの判定・自動修正）を触ったときだけ重い検査を回す。
+      # 毎回だと35秒×毎コミット。実際にこの6ファイルが変わるのは3か月で数回しかない。
+      # 逆に、ここを回していなかったせいで #1369（1本の指の叩き直しに下限を入れた）の
+      # 余波に誰も気づかず、STEP7の検査が20コミットぶん空回りしていた（2026-09-13）。
+      # 前のコミットが分からないとき（新しいブランチの初回pushなど）は、安全側で回す。
+      - name: Check the chart tools when they change
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          else
+            BASE_SHA="${{ github.event.before }}"
+          fi
+          git fetch --no-tags --depth=1 origin "$BASE_SHA" 2>/dev/null || true
+          changed="$(git diff --name-only "$BASE_SHA" "$GITHUB_SHA" 2>/dev/null || echo UNKNOWN)"
+          watched='^tools/mode/(rhythm-hand-model|rhythm-hand-simulate|rhythm-chart-v2-step6-playability|rhythm-chart-v2-step6-check|rhythm-chart-v2-step7-autofix|rhythm-chart-v2-step7-check)\.js$'
+          if [[ "$changed" != "UNKNOWN" ]] && ! printf '%s\n' "$changed" | grep -qE "$watched"; then
+            echo "譜面の道具に変更なし: 重い検査は飛ばします"
+            exit 0
+          fi
+          node tools/mode/rhythm-chart-v2-step6-check.js
+          node tools/mode/rhythm-chart-v2-step7-check.js
       - name: Configure GitHub Pages
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/configure-pages@v5

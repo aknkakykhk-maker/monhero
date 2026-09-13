@@ -67,7 +67,22 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-13 12:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+// 新しいバージョンのお知らせ(画面の上へ出るバナー)の出し方。
+// 2026-09-12・ユーザー依頼「更新バナーのオンオフをゲーム上の設定で出来るようにしたい」。
+//   'FULL' … 横いっぱいのボタンで「新しいバージョンがあります　更新する」(これまでの形)
+//   'MINI' … 小さく「更新あり」だけ出す
+//   'OFF'  … 出さない(設定 →「ゲームを更新」からいつでも更新できる)
+// 既定は 'FULL'。保存が無い既存ユーザーはこれまでと同じ見え方になる。
+const UPDATE_NOTICE_STYLES = ['FULL', 'MINI', 'OFF'];
+const normalizeUpdateNoticeStyle = (value) =>
+  UPDATE_NOTICE_STYLES.includes(String(value)) ? String(value) : 'FULL';
+const UPDATE_NOTICE_STYLE_KEY = 'mh_update_notice_style_v1';
+const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
+  { id: 'FULL', label: 'ふつう', note: '横いっぱいに出す' },
+  { id: 'MINI', label: '小さく', note: '端に小さく出す' },
+  { id: 'OFF', label: '出さない', note: '設定から更新する' },
+]);
+const BUILD_DATE = "2026-09-13 12:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -227,11 +242,27 @@ const modeKeyPrefix = (mode) => isQuickMode(mode) ? 'mh_quick_' : isProMode(mode
 const bestScoreKey = (mode, diff) => `${modeKeyPrefix(mode)}hs_${diff}`;
 const bestWaveKey = (mode, diff) => `${modeKeyPrefix(mode)}highest_wave_${diff}`;
 const clearCountKey = (mode, diff) => `${modeKeyPrefix(mode)}clears_${diff}`;
-// クイックの各難易度は、同じ難易度をチャレンジ・プロ・極限のどれかでクリア済みなら解放する。
+// その難易度を、チャレンジ・プロ・極限のどれかでクリア済みか。
 // 新しい解放フラグは作らず、各モードの既存クリア回数だけを参照するため、既存セーブにも即時反映される。
-const isQuickDifficultyUnlocked = (difficulty, challengeClears, proClears, extremeClears) =>
+const isQuickDifficultyCleared = (difficulty, challengeClears, proClears, extremeClears) =>
   [challengeClears, proClears, extremeClears]
     .some(clears => (Number(clears?.[difficulty]) || 0) > 0);
+// 「その難易度と、それより上のすべて」を弱い順の並びから取り出す。
+// 並びの正本は QUICK_DIFFICULTY_SETTINGS のキー順(Beginner→…→Legend→EXTREME→…→ULTIMATE)なので、
+// 難易度が増えてもここは触らずに済む。表に無い難易度は自分自身だけを見る(従来どおりの判定)。
+const quickDifficultiesAtOrAbove = (difficulty) => {
+  const order = Object.keys(QUICK_DIFFICULTY_SETTINGS);
+  const index = order.indexOf(difficulty);
+  return index < 0 ? [difficulty] : order.slice(index);
+};
+// 上の難易度をクリアしていれば、その下の難易度もすべて選べる
+// (2026-09-12・ユーザー指摘「マスターをクリアしててもイージーをクリアしなきゃイージーを選べない /
+//  裏クイック条件を満たした下の難易度は選べるようにして」)。
+// 下の難易度は上の難易度より必ずやさしいので、上を通せた人にわざわざ下を踏ませる意味がないため。
+// 逆向き(下をクリアしても上は開かない)は従来のまま。
+const isQuickDifficultyUnlocked = (difficulty, challengeClears, proClears, extremeClears) =>
+  quickDifficultiesAtOrAbove(difficulty)
+    .some(id => isQuickDifficultyCleared(id, challengeClears, proClears, extremeClears));
 // ===== モンヒロビートで1曲遊んだぶんを、クイック∞周回の何周ぶんにするか =====
 // (2026-09-07・ユーザー提案)
 //   「演奏に入った段階でのバトルの周分をクリア時のみ少量扱いにする」
@@ -278,6 +309,19 @@ const rhythmPlayRunLoopScale = (songId, event) => {
 //   判定には既存の mh_quick_clears_<難易度> をそのまま読む(新しい保存キーは作らない)。
 const rhythmPlayRunLoopsAllowed = (difficulty, quickClears) =>
   (Number(quickClears?.[difficulty]) || 0) > 0;
+// 演奏の結果(クリア／失敗)で入る周回数を変える(2026-09-12・ユーザー指示
+//   「終了後にクリアか失敗かもわかるようにして / それによって経験値も変わるから」)。
+// 失敗＝ライフが0になったまま曲を終えた(不可逆のDOWN)こと。
+//
+// ★失敗は0。半分入るようにしていたが、**叩かずに放っておいても半分もらえてしまう**ため
+//   0へ直した(2026-09-12・ユーザー指示「失敗しても入るようにすると放置で稼げるように
+//   なるから失敗は0にして」)。周回クリア扱いにするのは、ちゃんと弾ききったときだけ。
+// ★クリアかどうかを渡さない古い呼び出し(undefined)は、これまでどおり全額入る。
+const rhythmPlayRunLoopsForResult = (loops, cleared) => {
+  const base = Math.max(0, Math.trunc(Number(loops) || 0));
+  if (base <= 0) return 0;
+  return cleared === false ? 0 : base;
+};
 
 // モード選択カードの最高スコアは、現在の選択難易度ではなく、そのモードで
 // 記録対象になっている全難易度の自己ベストから求める。未プレイ・壊れた値は0として扱う。

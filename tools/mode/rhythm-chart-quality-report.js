@@ -85,6 +85,11 @@ const measure=(chart,audio,options={})=>{
   const noteGrids=new Set(main.map(note=>note.grid));
   const importantHit=important.filter(onset=>noteGrids.has(onset.grid)).length;
   const importantCoverage=important.length?importantHit/important.length:1;
+  // ★「拾える上限」も一緒に出す。大事な音の数がノーツの数より多い曲では、
+  //   どれだけ上手に選んでも全部は拾えない（実測: toriko MASTER は大事な音250個に対し
+  //   ノーツ151個なので、上限は0.60。MASTERの目標0.85には**構造的に届かない**）。
+  //   目標と比べるときはこの上限で抑える。上限が目標より高い曲では何も変わらない。
+  const importantReach=important.length?Math.min(1,main.length/important.length):1;
   // 音が抜けている場所(鳴っている音が無い1拍以上の区間)にノーツが無いか
   const silentGrids=new Set();
   {
@@ -265,6 +270,29 @@ const measure=(chart,audio,options={})=>{
     const key=span<.5?'flat':turns===0?(span>=2.5?'sweep':'line'):turns===1?'fold':'wave';
     slideShapes[key]=(slideShapes[key]||0)+1;
   }
+  // --- SLIDEの中身のバリエーション ---
+  // ★scores.variety は chart.shapes（expand/contract などのパターン記録）だけで出来ていて、
+  //   **SLIDEの太さ・中継点・移動量が1つも入っていなかった**（設計書 §3.1.8 に既知として
+  //   書いてあったもの）。SLIDEの形を増やしても点数が1点も動かないので、
+  //   「飽きないか」を測れていなかった。ここで3つを足す。
+  //     ① 経路の形の種類（flat / line / sweep / fold / wave）
+  //     ② 太さの並びの種類（同じ並びばかりになっていないか）
+  //     ③ 途中で太さが変わるSLIDEの割合
+  //   SLIDEを持たない難易度（EASY/NORMAL）は、無いことで減点しない（1.0扱い）。
+  const slideWidthSequences=new Set();
+  let slideCount=0,slideVarying=0;
+  for(const note of notes){
+    if(note.type!=='SLIDE'||!Array.isArray(note.slidePoints)||!note.slidePoints.length)continue;
+    const widths=note.slidePoints.map(point=>
+      Number(point.subLaneWidth)||Number(note.subLaneWidth)||2);
+    slideWidthSequences.add(widths.join('-'));
+    if(new Set(widths).size>1)slideVarying++;
+    slideCount++;
+  }
+  const slideVariety=slideCount===0?1:clamp01(
+    .40*clamp01(Object.keys(slideShapes).length/3)
+    +.30*clamp01(slideWidthSequences.size/Math.max(1,Math.min(slideCount,6)))
+    +.30*(slideVarying/slideCount));
 
   // --- 休符・難所 ---
   const gaps=[];
@@ -321,7 +349,14 @@ const measure=(chart,audio,options={})=>{
     if(lastHitByFinger[finger]!=null)sameFingerMinMs=Math.min(sameFingerMinMs,(note.grid-lastHitByFinger[finger])*gridMs);
     lastHitByFinger[finger]=note.grid;
   }
-  const alternationRate=alternationTotal?alternation/alternationTotal:1;
+  // ★分母が小さいときは「交互になっていない」と決めつけない。
+  //   16分で並ぶ組は曲によって極端に少なく、実測で 4u_hitasura MASTER は**2組**しか無い
+  //   (291ノーツ中)。生の割合で出すと、1組が入れ替わるだけで 1.00→0.50 になり、
+  //   flow が30点動く。それで「流れが落ちた」と読み違えた(2026-09-12)。
+  //   そこで疑似カウント(k組ぶんの「交互だった」を足す)で 1.0 側へ寄せる。
+  //   187組ある曲では 0.81→0.82 しか動かないので、濃い曲の測り方は変わらない。
+  const ALTERNATION_PRIOR=8;
+  const alternationRate=(alternation+ALTERNATION_PRIOR)/(alternationTotal+ALTERNATION_PRIOR);
   // 同時押しの前後の余裕(ms)
   let chordClearMinMs=Infinity;
   for(const grid of chordGrids){
@@ -352,9 +387,13 @@ const measure=(chart,audio,options={})=>{
     .55*inBand(strainedRate,band.strain,.08)
     +.25*clamp01(1-Math.max(0,maxStrainStreakMs-STRAIN_STREAK_LIMIT_MS[difficulty])/2000)
     +.20*(heldFreeTotal?heldFreeOk/heldFreeTotal:1)));
+  // 「大事な音を拾えたか」は、目標と**拾える上限**の小さいほうと比べる。
+  // ノーツの数より大事な音のほうが多い曲を、届かない目標で減点しないため。
+  const importantNeed=Math.min(
+    {EASY:.35,NORMAL:.45,HARD:.6,EXPERT:.75,MASTER:.85}[difficulty],importantReach);
   scores.musicality=Math.round(100*(
     .40*onsetHitRate
-    +.25*clamp01(importantCoverage/{EASY:.35,NORMAL:.45,HARD:.6,EXPERT:.75,MASTER:.85}[difficulty])
+    +.25*clamp01(importantNeed>0?importantCoverage/importantNeed:1)
     +.20*phraseConsistency
     +.15*clamp01(1-notesInSilence/Math.max(1,main.length)*20)));
   scores.readability=Math.round(100*(
@@ -367,12 +406,16 @@ const measure=(chart,audio,options={})=>{
     +.25*clamp01(rests/minutes/band.restsPerMinute)
     +.25*clamp01(1-Math.max(0,hardSectionMaxMs-8000)/8000)
     +.20*(hardWindows.length?restAfterHard/hardWindows.length:1)));
+  // 打点の形（.85）＋ SLIDEの中身（.15）。
+  // SLIDEのぶんを足すぶん、既存の5項目は .85 へそろえて掛け直す（合計は1.0のまま）。
   scores.variety=Math.round(100*(
-    .30*clamp01(distinctPatterns/band.vocab)
-    +.20*clamp01(1-Math.max(0,topShare-.25)/.35)
-    +.20*clamp01(transitionEntropy/4)
-    +.15*clamp01(mirrorRate/.15)
-    +.15*clamp01((sectionDensitySpread-1)/1.2)));
+    .85*(
+      .30*clamp01(distinctPatterns/band.vocab)
+      +.20*clamp01(1-Math.max(0,topShare-.25)/.35)
+      +.20*clamp01(transitionEntropy/4)
+      +.15*clamp01(mirrorRate/.15)
+      +.15*clamp01((sectionDensitySpread-1)/1.2))
+    +.15*slideVariety));
   scores.difficultyFit=Math.round(100*(
     .35*inBand(density,band.density,.6)
     +.25*inBand(strainedRate,band.strain,.06)
@@ -387,6 +430,7 @@ const measure=(chart,audio,options={})=>{
     pass,gate:{impossible},
     scores,
     musicality:{onsetHitRate:round(onsetHitRate),ghostNotes,importantOnsets:important.length,importantHit,importantCoverage:round(importantCoverage),
+      importantReach:round(importantReach),importantNeed:round(importantNeed),
       beatShare,notesInSilence,phraseTotal,phraseSame,motifGroups,motifTotal,motifSame,phraseConsistency:round(phraseConsistency),phraseVariations,mirrorRate:round(mirrorRate),
       intensityDensityAgreement:round(intensityDensityAgreement),sectionDensitySpread:round(sectionDensitySpread,2),sectionVocabSpread,sections:sectionStats},
     vocabulary:{patternCounts,distinctPatterns,topPattern:topPattern?topPattern[0]:null,topShare:round(topShare),fallbackShare:round(fallbackShare),
@@ -395,10 +439,12 @@ const measure=(chart,audio,options={})=>{
       meanMove:round(meanMove,2),maxMove:round(maxMove,2),moveSpeedPerSecond:round(moveSpeed,2),hardJumps,fastPairs,
       fingerTravel:sim.fingerTravel.map(value=>round(value,1))},
     types:{...typeCounts,chords:chordGrids.size,chordRuns,sweeps,crosses,accents,endFlicks,tapers,tapDuringHold,tapDuringSlide,
-      expandCount,contractCount,chordShapes,slideShapes,rests,longRests,longestRestMs:Math.round(longestRestMs),
+      expandCount,contractCount,chordShapes,slideShapes,
+      slideWidthSequences:slideWidthSequences.size,slideVarying,slideVariety:round(slideVariety),
+      rests,longRests,longestRestMs:Math.round(longestRestMs),
       hardWindows:hardWindows.length,hardSectionMaxMs,restAfterHard,peakWindowNotes},
     hand:{impossible,strained,strainedRate:round(strainedRate),maxStrainStreakMs,strainStreaks:sim.strainStreaks.length,
-      alternationRate:round(alternationRate),sameFingerMinMs:Number.isFinite(sameFingerMinMs)?Math.round(sameFingerMinMs):null,
+      alternationRate:round(alternationRate),alternationTotal,sameFingerMinMs:Number.isFinite(sameFingerMinMs)?Math.round(sameFingerMinMs):null,
       chordClearMinMs:Number.isFinite(chordClearMinMs)?Math.round(chordClearMinMs):null,
       heldFreeOk,heldFreeTotal,
       issues:sim.issues.slice(0,40).map(x=>({severity:x.severity,timeMs:x.timeMs,bar:x.bar,type:x.type,detail:x.detail}))},

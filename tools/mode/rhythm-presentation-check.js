@@ -69,19 +69,200 @@ ok('FLICKは上へ払うことが分かる印を出す',
 
 // --- コンボの強調 ---
 // data-combo-tier の中に「>=300」の「>」が入るので、タグを正規表現で切らずに前後関係で見る。
-ok('コンボ数を大きく出す',(()=>{
-  const at=game.indexOf('data-rhythm-combo ');
-  // 縦画面は text-3xl（従来の text-2xl から1段大きい）。text-4xl まで上げるとHUDが
-  // レーンの台形へかぶるため、rhythm-hud-wedge-check.js の実測で決めた上限。
-  // 横画面はHUDを画面の25%以内に収める約束があるので従来のサイズを保つ。
-  const block=game.slice(at,at+400);
-  return at>=0&&block.includes('text-3xl')&&block.includes('landscape:text-base');
+// 2026-09-12・ユーザー指示「コンボももう少し目立つように段階的に /
+//   あと右より過ぎるから邪魔にならないように真ん中に寄せて」。
+// 右上のHUDから**プレイエリアの真ん中**へ移した。HUDの左右の列は台形の外側の空きに
+// 置いてあり、その空きは上ほど広いが、上の中央は台形の頂点(ノーツが湧く点・幅18%)なので、
+// HUDの中では「真ん中へ寄せる」余地がそもそも無かった。
+ok('コンボ数はプレイエリアの真ん中に出す(既定)',
+  /\{settings\.comboDisplay!==false&&view\.combo>0&&<div data-rhythm-combo-box[^>]*data-combo-pos=/.test(game)
+  &&html.includes('[data-rhythm-combo-box]{')
+  &&/\[data-rhythm-combo-box\]\{[\s\S]{0,160}top:21%/.test(html)
+  &&/\[data-rhythm-combo-box\]\{[\s\S]{0,160}left:50%;[\s\S]{0,40}transform:translateX\(-50%\)/.test(html)
+  // 座標はCSSだけが持つ。JSX側へ位置のユーティリティを書き戻すと、
+  // [data-combo-pos] での上書きが効かなくなる
+  &&!/data-rhythm-combo-box[^>]*left-1\/2/.test(game));
+// 2026-09-12・ユーザー指示「元位置（元位置より少し右より）とか選べるほうがいい」。
+// 真ん中へ移したその日の指摘。前に居た右上も選べるようにした。
+ok('コンボ数の置き場所を選べる(右上=もとの位置も選べる)',
+  // 値の一覧は名前の一覧から作る(2か所に書くとずれるため)
+  /RHYTHM_COMBO_POSITIONS *= *Object\.freeze\(RHYTHM_COMBO_POSITION_LABELS\.map\(\(\[id\]\)=>id\)\)/.test(game)
+  // 既定は「おすすめ」(2026-09-13。ノーツにもマスモンにも重ならない場所)
+  &&game.includes("comboPosition:'AUTO'")
+  &&game.includes('comboPosition:RHYTHM_COMBO_POSITIONS.includes(source.comboPosition)?source.comboPosition:DEFAULT_RHYTHM_SETTINGS.comboPosition')
+  // 名前は RHYTHM_COMBO_POSITION_LABELS が正本(オプションのボタンと、
+  // 折りたたんだときの「いまの値」の両方がここを見る)
+  &&game.includes("segments('comboPosition',RHYTHM_COMBO_POSITION_LABELS)")
+  &&/RHYTHM_COMBO_POSITION_LABELS *= *Object\.freeze\(\[\['AUTO','おすすめ'\],\['LEFT','左'\],\['CENTER','中央'\],\['RIGHT','右'\],\['HUD','右上'\]\]\)/.test(game)
+  // 高さは「両サイドのマスモンが居ない帯」から選ぶ(2026-09-13)。
+  // どこがどれだけ空いているかは rhythm-combo-space-check.js が計算で確かめる。
+  &&html.includes('[data-rhythm-combo-box][data-combo-pos="RIGHT"]{left:auto;right:4%;top:38%;transform:none}')
+  &&html.includes('[data-rhythm-combo-box][data-combo-pos="LEFT"]{left:4%;right:auto;top:38%;transform:none}')
+  &&html.includes('[data-rhythm-combo-box][data-combo-pos="HUD"]{left:auto;right:3%;top:13%;transform:none}')
+  &&html.includes('[data-rhythm-combo-box][data-combo-pos="AUTO"]{left:auto;right:4%;top:14%;transform:none}')
+  &&html.includes('[data-rhythm-combo-box][data-combo-wide="1"][data-combo-pos="AUTO"]{top:18%;right:22%}')
+  // 端に寄せたときは、数字が伸びても画面の外へ出ないよう内側へ伸ばす
+  &&/\[data-combo-pos="RIGHT"\] \[data-rhythm-combo\],\s*\[data-combo-pos="AUTO"\] \[data-rhythm-combo\],\s*\[data-combo-pos="HUD"\] \[data-rhythm-combo\]\{transform-origin:right center\}/.test(html)
+  &&html.includes('[data-combo-pos="LEFT"] [data-rhythm-combo]{transform-origin:left center}'));
+// ★邪魔にならないよう、ノーツ(z-5)より後ろに描いて少し透かす。0コンボでは出さない
+ok('ノーツより後ろに描いて透かす(邪魔にならない)',
+  /data-rhythm-combo-box[^>]*z-\[2\]/.test(game)
+  &&/data-rhythm-combo-box[^>]*pointer-events-none/.test(game)
+  &&/\[data-rhythm-combo-box\]\{[\s\S]{0,700}opacity:calc\([.\d]+ \* var\(--mh-combo-opacity,1\)\)/.test(html)
+  &&html.includes('[data-rhythm-note] {'));
+// 場に重なるので、邪魔だと感じた人が消せるようにする(設定は前からあったが使われていなかった)
+ok('コンボ数表示のON/OFFを設定から切り替えられる',
+  game.includes("toggle('comboDisplay')")&&game.includes('settings.comboDisplay!==false'));
+ok('コンボ数を大きく出す',
+  /\[data-rhythm-combo\]\{[\s\S]{0,160}font-size:calc\(min\(52px,13\.5vw\) \* var\(--mh-combo-size,1\)\)/.test(html)
+  // 横持ちは data-combo-wide="1" で出し分ける。@media (orientation:landscape) は
+  // **縦横ボタンで自分で回したときに効かない**(端末は縦のまま)ので、そちらには頼らない
+  &&html.includes('[data-rhythm-combo-box][data-combo-wide="1"] [data-rhythm-combo]{font-size:calc(min(40px,7vw) * var(--mh-combo-size,1))}')
+  &&html.includes('[data-rhythm-combo-box][data-combo-wide="1"]{top:15%}')
+  &&game.includes("data-combo-wide={isLandscape?'1':''}")
+  // 端へ寄せるときは小さくする(台形の外の空きは片側100〜145pxしかない)
+  &&/\[data-combo-pos="HUD"\] \[data-rhythm-combo\]\{\s*font-size:calc\(min\(34px,9vw\) \* var\(--mh-combo-size,1\)\);\s*transform:scale\(min\(var\(--mh-combo-scale,1\),1\.25\)\);/.test(html));
+// 2026-09-13・ユーザー依頼「設定でモンスターノーツを踏んだときの軽量化バージョンもほしい /
+//   あとコンボ数のサイズ設定もほしい」。
+// ★モンスターノーツで**いちばん重いのは画面全体の金色の光**(全画面の描き直し)。
+//   「軽め」でそこだけ止め、「最小」では粒も跳ねも通常と同じにする。
+//   どの段でも音・能力名・振動は残す(取れたことが分からなくなるのがいちばん困る)。
+ok('モンスターノーツの演出の強さを選べる',
+  /RHYTHM_MONSTER_EFFECT_LABELS *= *Object\.freeze\(\[\['NORMAL','多め'\],\['LIGHT','標準'\],\['OFF','最小'\]\]\)/.test(game)
+  // 既定は「軽め」(2026-09-13・ユーザー指摘「演出量が普通だと重いという声が多い /
+  // 少なめをデフォルトにして今の普通を多めとかにしたい / モンスターノーツも同じく」)。
+  // IDは変えていないので、自分で選んで保存した人の設定はそのまま(CLAUDE.md ⑦)
+  &&game.includes("monsterNoteEffect:'LIGHT'")
+  &&game.includes('monsterNoteEffect:RHYTHM_MONSTER_EFFECT_LEVELS.includes(source.monsterNoteEffect)?source.monsterNoteEffect:DEFAULT_RHYTHM_SETTINGS.monsterNoteEffect')
+  &&game.includes("segments('monsterNoteEffect',RHYTHM_MONSTER_EFFECT_LABELS)")
+  // 「軽め」「最小」で画面全体の光を出さない
+  &&game.includes("if(monsterHit&&monsterEffect==='NORMAL'&&screenFlashRef.current)")
+  // 「最小」では粒もふつうのノーツと同じにし、跳ねもやめる
+  &&game.includes("const bigMonsterEffect=monsterHit&&monsterEffect!=='OFF';")
+  &&game.includes("if(monsterEffect!=='OFF')restarts.push({el,attr:'rhythmSideHit'});")
+  // 音・能力名・振動はどの段でも残す(条件を付けていない)
+  &&/if\(settings\.vibrationEnabled\)RHYTHM_HAPTICS\.tap\(26\);/.test(game));
+// 濃さも設定から変えられる(2026-09-13・ユーザー依頼「コンボ数表記の透過度の設定」)
+ok('コンボ数の濃さを設定から変えられる',
+  game.includes('comboOpacity:100')
+  &&game.includes('comboOpacity:rhythmFiniteStep(source.comboOpacity,RHYTHM_COMBO_OPACITY_MIN,RHYTHM_COMBO_OPACITY_MAX,RHYTHM_COMBO_OPACITY_STEP')
+  &&game.includes("stepper('comboOpacity',RHYTHM_COMBO_OPACITY_MIN,RHYTHM_COMBO_OPACITY_MAX,RHYTHM_COMBO_OPACITY_STEP")
+  &&game.includes("'--mh-combo-opacity':rhythmFiniteInRange(settings.comboOpacity,RHYTHM_COMBO_OPACITY_MIN,RHYTHM_COMBO_OPACITY_MAX,100)/100")
+  // 段ごとの濃さへ掛ける(段の差はそのまま残る)
+  &&html.includes('[data-rhythm-combo-box][data-combo-tier="7"]{opacity:var(--mh-combo-opacity,1)}'));
+// 【2026-09-13・ユーザー指摘「もとが薄いから濃くしてそれを調整できるようにして」】
+// いちばん下の段でも読める濃さから始めること。数値を固定で書くと調整のたびに落ちるだけなので、
+// 「下限が十分に濃い」「段が上がるほど濃くなる(下がらない)」「どの段にも設定の倍率が掛かる」を見る。
+const comboTierOpacity=(()=>{
+  const base=(html.match(/\[data-rhythm-combo-box\]\{[\s\S]{0,700}?opacity:calc\(([.\d]+) \* var\(--mh-combo-opacity,1\)\)/)||[])[1];
+  const list=[Number(base)];
+  for(let tier=1;tier<=7;tier++){
+    const exact=new RegExp(`\\[data-rhythm-combo-box\\]\\[data-combo-tier="${tier}"\\][^{]*\\{opacity:calc\\(([.\\d]+) \\* var\\(--mh-combo-opacity,1\\)\\)`);
+    const plain=new RegExp(`\\[data-rhythm-combo-box\\]\\[data-combo-tier="${tier}"\\][^{]*\\{opacity:var\\(--mh-combo-opacity,1\\)`);
+    const hit=html.match(exact);
+    list.push(hit?Number(hit[1]):plain.test(html)?1:NaN);
+  }
+  return list;
+})();
+ok('いちばん薄い段でも読める濃さから始まる',
+  Number.isFinite(comboTierOpacity[0])&&comboTierOpacity[0]>=.8,
+  `いちばん下の段 ${comboTierOpacity[0]}`);
+ok('段が上がるほど濃くなる(途中で薄くならない)',
+  comboTierOpacity.every(value=>Number.isFinite(value))
+  &&comboTierOpacity.every((value,index)=>index===0||value>=comboTierOpacity[index-1]),
+  comboTierOpacity.join(' → '));
+ok('どの段にも設定の濃さが掛かる',
+  comboTierOpacity.length===8&&comboTierOpacity.every(value=>Number.isFinite(value)&&value<=1));
+// 光って息づかいをするいちばん熱い段も、底上げした濃さと同じ高さで揺らす
+// (ここだけ低いままだと、熱い段のほうが薄く見える)
+ok('光る段の息づかいも底上げした濃さの範囲で揺れる',(()=>{
+  const lows=[...html.matchAll(/@keyframes mhRhythmComboGlow(?:Hot)?\{\s*0%,100%\{opacity:calc\(([.\d]+) \* var\(--mh-combo-opacity,1\)\)\}/g)].map(m=>Number(m[1]));
+  return lows.length===2&&lows.every(value=>value>=comboTierOpacity[0]);
 })());
-ok('コンボ数は100 / 200 / 300で段階を変える',
-  game.includes("data-combo-tier={view.combo>=300?'3':view.combo>=200?'2':view.combo>=100?'1':'0'}")
-  &&html.includes('[data-rhythm-combo][data-combo-tier="1"]')
-  &&html.includes('[data-rhythm-combo][data-combo-tier="2"]')
-  &&html.includes('[data-rhythm-combo][data-combo-tier="3"]'));
+// コンボ数の大きさ。置き場所ごとの基準へ割合を掛ける(段の倍率とは別)
+ok('コンボ数の大きさを設定から変えられる',
+  game.includes('comboSize:100')
+  &&game.includes('comboSize:rhythmFiniteStep(source.comboSize,RHYTHM_COMBO_SIZE_MIN,RHYTHM_COMBO_SIZE_MAX,RHYTHM_COMBO_SIZE_STEP')
+  &&game.includes("stepper('comboSize',RHYTHM_COMBO_SIZE_MIN,RHYTHM_COMBO_SIZE_MAX,RHYTHM_COMBO_SIZE_STEP")
+  &&game.includes("'--mh-combo-size':rhythmFiniteInRange(settings.comboSize,RHYTHM_COMBO_SIZE_MIN,RHYTHM_COMBO_SIZE_MAX,100)/100")
+  &&html.includes('font-size:calc(min(52px,13.5vw) * var(--mh-combo-size,1))')
+  &&html.includes('font-size:calc(min(34px,9vw) * var(--mh-combo-size,1))'));
+// 2026-09-13・Android勢から「重い」との声。見た目は標準のまま残し、
+// 演出量「少なめ」で**毎フレームの塗り直し**だけを止められるようにした。
+// background-position は合成できないプロパティなので、流しているあいだは
+// 毎フレーム字を塗り直し、そのたびに filter のぼかしを通ることになる。
+ok('演出量「少なめ」で、判定文字とコンボの流れを止められる',
+  html.includes('[data-rhythm-play-area][data-rhythm-effect="LOW"] [data-rhythm-judgment-text]{')
+  &&/\[data-rhythm-effect="LOW"\] \[data-rhythm-judgment-text\]\{\s*animation:none;/.test(html)
+  &&/\[data-rhythm-effect="LOW"\] \[data-rhythm-combo\]\[data-combo-tier="7"\]\{\s*animation:none;/.test(html)
+  // 止めるのは流れとぼかしの枚数だけ。色・グラデ・字の大きさは標準と同じに保つ
+  &&!/\[data-rhythm-effect="LOW"\] \[data-rhythm-judgment-text\][^{]*\{[^}]*background-image/.test(html)
+  &&!/\[data-rhythm-effect="LOW"\] \[data-rhythm-judgment-text\][^{]*\{[^}]*font-size/.test(html)
+  // 重い判定(GREAT以上)はぼかしの枚数も落とす
+  &&['GREAT','EXCELLENT','MARVELOUS'].every(j=>html.includes(`[data-rhythm-play-area][data-rhythm-effect="LOW"] [data-rhythm-judgment-text][data-judgment="${j}"]{`))
+  // 選ぶ場所と、何が止まるのかの説明がオプションにある
+  &&game.includes("segments('effectAmount',RHYTHM_EFFECT_LABELS)")
+  &&/RHYTHM_EFFECT_LABELS *= *Object\.freeze\(\[\['NORMAL','多め'\],\['LOW','標準'\],\['MINIMAL','最小'\]\]\)/.test(game)
+  // 既定は「少なめ」。いちばん重い「判定文字の毎フレームの塗り直し」を既定で避ける
+  &&game.includes("effectAmount:'LOW'")
+  &&game.includes('既定は「標準」です'));
+// 既定の段は「標準」と呼ぶ(2026-09-13・ユーザー指示「デフォルトの名称を標準にして」)。
+// 画面に出す名前と既定値がずれると、既定なのに「少なめ」「軽め」と書いてある状態になる
+ok('既定になっている段の名前が「標準」になっている',(()=>{
+  const labelsOf=name=>{
+    const src=(game.match(new RegExp(`${name} *= *Object\\.freeze\\(\\[(.*?)\\]\\);`))||[])[1]||'';
+    return [...src.matchAll(/\['([A-Z]+)','([^']+)'\]/g)].map(m=>[m[1],m[2]]);
+  };
+  const defaultOf=key=>((game.match(new RegExp(`${key}:'([A-Z]+)'`))||[])[1])||'';
+  const pairs=[['RHYTHM_EFFECT_LABELS','effectAmount'],['RHYTHM_MONSTER_EFFECT_LABELS','monsterNoteEffect']];
+  return pairs.every(([labels,key])=>{
+    const found=labelsOf(labels).find(([id])=>id===defaultOf(key));
+    return !!found&&found[1]==='標準';
+  });
+})());
+// 軽量モードが何を止めるのかを画面から読める(2026-09-13・ユーザーからの質問
+// 「軽量モードはどういう効果があるの？」。それまで説明が1文字も無かった)
+ok('軽量モードの効果が画面に書いてある',
+  /field\('軽量モード',toggle\('lightweightMode'\),\s*'[^']{80,}'/.test(game)
+  &&game.includes('判定・判定窓・スコア・ライフ・譜面・音は一切変わりません'));
+// 2026-09-13・ユーザー指摘「演出量少なめでジャストマーベラスとマーベラスの色の差が少ない /
+//   演出量は少なめキープで差を出したい / マーベラスが金でジャストマーベラスが虹だから出来そう」。
+// ★流す前提の background-size(金260% / 虹220% / コンボ300%)のまま animation だけ止めると、
+//   **左端の一色ぶんしか字に入らない**。虹は赤〜黄の暖色だけになり、金と見分けが付かなかった。
+//   止めるときは 100% にして、色が全部字の上に並ぶようにする。
+ok('流れを止めるときは、止まった位置に色が全部見える',
+  // 判定文字(演出量ひかえめ・最小・軽量モード)
+  /\[data-rhythm-effect="LOW"\] \[data-rhythm-judgment-text\],\s*\[data-rhythm-play-area\]\[data-rhythm-effect="MINIMAL"\] \[data-rhythm-judgment-text\],\s*\[data-rhythm-play-area\]\[data-rhythm-lightweight="true"\] \[data-rhythm-judgment-text\]\{\s*background-size:100% 100%;/.test(html)
+  // 500コンボ以上の虹も同じ
+  &&/\[data-rhythm-effect="LOW"\] \[data-rhythm-combo\]\[data-combo-tier="7"\],[\s\S]{0,240}background-size:100% 100%;/.test(html)
+  // 動きを減らす設定の端末でも同じ(判定ごとのルールと同じ重さで書かないと上書きできない)
+  &&/@media \(prefers-reduced-motion:reduce\)\{\s*\[data-rhythm-judgment-text\]\[data-judgment\]:not\(\[data-judgment=""\]\)\{[\s\S]{0,120}background-size:100% 100%;/.test(html)
+  // 流しているとき(標準)は、これまでどおり広く取って動かす
+  &&/\[data-judgment="MARVELOUS"\]\{[\s\S]{0,200}background-size:260% 100%/.test(html)
+  &&/\[data-judgment-precise="1"\]\{[\s\S]{0,200}background-size:220% 100%/.test(html));
+// 2026-09-12・ユーザー指示「コンボ数もわかりにくい。増えれば増えるほど目立つようにして」。
+// 100/200/300の3段だったのを 10/30/50/100/200/300/500 の7段にし、段が上がるほど
+// 色だけでなく **大きさ** も変わるようにした(--mh-combo-scale)。
+ok('コンボ数は10〜500の7段で見た目が変わる',
+  game.includes('const RHYTHM_COMBO_TIER_STEPS = Object.freeze([10,30,50,100,200,300,500]);')
+  &&game.includes('const comboTier=rhythmComboTier(view.combo);')
+  &&game.includes("data-combo-tier={String(comboTier)}")
+  &&[1,2,3,4,5,6,7].every(tier=>html.includes(`[data-rhythm-combo][data-combo-tier="${tier}"]`)));
+// ★大きさは font-size ではなく倍率で効かせる。段ごとに font-size を上書きすると、
+//   横持ち用に詰めたサイズまで巻き添えで壊れる。
+// ★起点は中央。真ん中に置いたので、左右どちらへ伸びても台形の外の余地がある
+//   (HUDの右上に居たころは右下を起点にして、下端が台形へ近づかないようにしていた)。
+ok('段ごとの大きさは倍率(--mh-combo-scale)で効かせる',
+  game.includes("'--mh-combo-scale':rhythmComboTierScale(comboTier)")
+  &&html.includes('transform:scale(var(--mh-combo-scale,1));')
+  &&html.includes('transform-origin:center center;'));
+// 真ん中へ移して上限が外れたので、段でしっかり大きくする(HUDでは1.13倍が限界だった)
+ok('段が上がるほどはっきり大きくなる',
+  game.includes('const RHYTHM_COMBO_TIER_SCALES = Object.freeze([1,1.08,1.16,1.26,1.36,1.46,1.56,1.66]);'));
+// ★弾む演出(mhRhythmComboPop)も倍率を掛けたうえで戻す。scale(1)へ戻すと、
+//   大きくしたコンボ数が跳ねるたびに一瞬だけ元の大きさへ縮む。
+ok('弾む演出も倍率のままで戻る',
+  rhythm.includes('100%{transform:scale(var(--mh-combo-scale,1))}}'));
 
 // --- 100コンボごとの演出 ---
 ok('節目の刻みを定数で持っている',game.includes('const RHYTHM_COMBO_MILESTONE_STEP = 100'));

@@ -43,12 +43,16 @@ check('新しい保存キーを使っている（既存キーを流用してい�
 check('閉じたら保存する（次からは出ない）',
   /dismissQuickRhythmIntro = \(\) => \{[^}]*storeSet\(QUICK_RHYTHM_INTRO_KEY, true, false\)/.test(app)
   && /dismissQuickRhythmBackground = \(\) => \{[^}]*storeSet\(QUICK_RHYTHM_BACKGROUND_KEY, true, false\)/.test(app));
-// 読めなかったとき(保存が壊れている・読めない端末)は「見た」扱いにする。
-// 案内が二度出るより、出ないほうが害が小さい
-check('読み込みの既定値は「見た」側',
+// ★2026-09-12: ここは以前「読み込みの既定値は『見た』側」を正としていたが、それが不具合だった。
+// storeGet はキーが無いときも既定値を返すので、既定値 true では「保存が無い＝見た扱い」になり、
+// 案内が誰にも一度も出ない状態になっていた。検査のほうが誤った書き方を固定していたため、
+// 長いあいだ誰も気づけなかった。いまは「保存が true のときだけ出さない」を見る。
+check('読み込み前は出さない（起動中に一瞬ちらつかせない）',
   app.includes('const [quickRhythmIntroSeen, setQuickRhythmIntroSeen] = useState(true);')
-  && app.includes('const [quickRhythmBackgroundSeen, setQuickRhythmBackgroundSeen] = useState(true);')
-  && /storeGet\(QUICK_RHYTHM_INTRO_KEY, true, false\) !== false/.test(app));
+  && app.includes('const [quickRhythmBackgroundSeen, setQuickRhythmBackgroundSeen] = useState(true);'));
+check('保存が無いうちは「まだ見ていない」として案内を出す',
+  /storeGet\(QUICK_RHYTHM_INTRO_KEY, false, false\) === true/.test(app)
+  && /storeGet\(QUICK_RHYTHM_BACKGROUND_KEY, false, false\) === true/.test(app));
 check('案内はどちらも「まだ見ていないとき」だけ出す',
   /quickRhythmIntroVisible = [^;]*!quickRhythmIntroSeen/.test(app)
   && /quickRhythmBackgroundVisible = [^;]*!quickRhythmBackgroundSeen/.test(app));

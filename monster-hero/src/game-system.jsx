@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: fcfa0f7b95d697fa
+// generated-sha256: ec42b3e003303911
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,22 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-13 12:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+// 新しいバージョンのお知らせ(画面の上へ出るバナー)の出し方。
+// 2026-09-12・ユーザー依頼「更新バナーのオンオフをゲーム上の設定で出来るようにしたい」。
+//   'FULL' … 横いっぱいのボタンで「新しいバージョンがあります　更新する」(これまでの形)
+//   'MINI' … 小さく「更新あり」だけ出す
+//   'OFF'  … 出さない(設定 →「ゲームを更新」からいつでも更新できる)
+// 既定は 'FULL'。保存が無い既存ユーザーはこれまでと同じ見え方になる。
+const UPDATE_NOTICE_STYLES = ['FULL', 'MINI', 'OFF'];
+const normalizeUpdateNoticeStyle = (value) =>
+  UPDATE_NOTICE_STYLES.includes(String(value)) ? String(value) : 'FULL';
+const UPDATE_NOTICE_STYLE_KEY = 'mh_update_notice_style_v1';
+const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
+  { id: 'FULL', label: 'ふつう', note: '横いっぱいに出す' },
+  { id: 'MINI', label: '小さく', note: '端に小さく出す' },
+  { id: 'OFF', label: '出さない', note: '設定から更新する' },
+]);
+const BUILD_DATE = "2026-09-13 12:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -234,11 +249,27 @@ const modeKeyPrefix = (mode) => isQuickMode(mode) ? 'mh_quick_' : isProMode(mode
 const bestScoreKey = (mode, diff) => `${modeKeyPrefix(mode)}hs_${diff}`;
 const bestWaveKey = (mode, diff) => `${modeKeyPrefix(mode)}highest_wave_${diff}`;
 const clearCountKey = (mode, diff) => `${modeKeyPrefix(mode)}clears_${diff}`;
-// クイックの各難易度は、同じ難易度をチャレンジ・プロ・極限のどれかでクリア済みなら解放する。
+// その難易度を、チャレンジ・プロ・極限のどれかでクリア済みか。
 // 新しい解放フラグは作らず、各モードの既存クリア回数だけを参照するため、既存セーブにも即時反映される。
-const isQuickDifficultyUnlocked = (difficulty, challengeClears, proClears, extremeClears) =>
+const isQuickDifficultyCleared = (difficulty, challengeClears, proClears, extremeClears) =>
   [challengeClears, proClears, extremeClears]
     .some(clears => (Number(clears?.[difficulty]) || 0) > 0);
+// 「その難易度と、それより上のすべて」を弱い順の並びから取り出す。
+// 並びの正本は QUICK_DIFFICULTY_SETTINGS のキー順(Beginner→…→Legend→EXTREME→…→ULTIMATE)なので、
+// 難易度が増えてもここは触らずに済む。表に無い難易度は自分自身だけを見る(従来どおりの判定)。
+const quickDifficultiesAtOrAbove = (difficulty) => {
+  const order = Object.keys(QUICK_DIFFICULTY_SETTINGS);
+  const index = order.indexOf(difficulty);
+  return index < 0 ? [difficulty] : order.slice(index);
+};
+// 上の難易度をクリアしていれば、その下の難易度もすべて選べる
+// (2026-09-12・ユーザー指摘「マスターをクリアしててもイージーをクリアしなきゃイージーを選べない /
+//  裏クイック条件を満たした下の難易度は選べるようにして」)。
+// 下の難易度は上の難易度より必ずやさしいので、上を通せた人にわざわざ下を踏ませる意味がないため。
+// 逆向き(下をクリアしても上は開かない)は従来のまま。
+const isQuickDifficultyUnlocked = (difficulty, challengeClears, proClears, extremeClears) =>
+  quickDifficultiesAtOrAbove(difficulty)
+    .some(id => isQuickDifficultyCleared(id, challengeClears, proClears, extremeClears));
 // ===== モンヒロビートで1曲遊んだぶんを、クイック∞周回の何周ぶんにするか =====
 // (2026-09-07・ユーザー提案)
 //   「演奏に入った段階でのバトルの周分をクリア時のみ少量扱いにする」
@@ -285,6 +316,19 @@ const rhythmPlayRunLoopScale = (songId, event) => {
 //   判定には既存の mh_quick_clears_<難易度> をそのまま読む(新しい保存キーは作らない)。
 const rhythmPlayRunLoopsAllowed = (difficulty, quickClears) =>
   (Number(quickClears?.[difficulty]) || 0) > 0;
+// 演奏の結果(クリア／失敗)で入る周回数を変える(2026-09-12・ユーザー指示
+//   「終了後にクリアか失敗かもわかるようにして / それによって経験値も変わるから」)。
+// 失敗＝ライフが0になったまま曲を終えた(不可逆のDOWN)こと。
+//
+// ★失敗は0。半分入るようにしていたが、**叩かずに放っておいても半分もらえてしまう**ため
+//   0へ直した(2026-09-12・ユーザー指示「失敗しても入るようにすると放置で稼げるように
+//   なるから失敗は0にして」)。周回クリア扱いにするのは、ちゃんと弾ききったときだけ。
+// ★クリアかどうかを渡さない古い呼び出し(undefined)は、これまでどおり全額入る。
+const rhythmPlayRunLoopsForResult = (loops, cleared) => {
+  const base = Math.max(0, Math.trunc(Number(loops) || 0));
+  if (base <= 0) return 0;
+  return cleared === false ? 0 : base;
+};
 
 // モード選択カードの最高スコアは、現在の選択難易度ではなく、そのモードで
 // 記録対象になっている全難易度の自己ベストから求める。未プレイ・壊れた値は0として扱う。
@@ -848,6 +892,218 @@ const normalizeAutoRepeatBreakthroughMode = (value, levelValue) => {
   const level = normalizeAutoRepeatBreakthroughLevel(levelValue);
   if (value === 'fixed') return level > 0 ? 'fixed' : 'off';
   return level > 0 ? 'fixed' : 'off';
+};
+// ===== オート強化(個体ごとの自動強化設定) =====
+// 転生・限界突破のあとは強化が白紙に戻るため、周回で貯まった強化ポイントを
+// 毎回手で振り直すのが大変だった(2026-09-12・ユーザー要望)。
+// そこで個体ごとに「オン/オフ」「どこまで上げてよいか(上限)」「その中での優先順位」を持たせ、
+// 強化ポイントが入るたびに設定どおりへ自動で振る。
+//
+// ★保存は既存の mh_masu_mons の中の1項目として足す(新しいトップレベルキーは作らない)。
+//   autoRepeatBreakthroughMode と同じ置き方で、持っていない既存データは normalize が既定値で補う。
+// ★転生しても設定だけは残す(resetMasuForRebirth の維持対象に入れてある)。
+//   設定が消えると「転生のたびに設定し直し」になり、この機能の意味が無くなるため。
+const AUTO_ENHANCE_STAT_KEYS = ['hp','atk','def','guts'];
+const AUTO_ENHANCE_APT_TARGETS = ['apt0','apt1','apt2','apt3'];
+// 優先順位に並べる8項目。ステータス4つ＋間合い適性4つ
+const AUTO_ENHANCE_TARGETS = [...AUTO_ENHANCE_STAT_KEYS, ...AUTO_ENHANCE_APT_TARGETS];
+const DEFAULT_AUTO_ENHANCE_ORDER = Object.freeze([...AUTO_ENHANCE_TARGETS]);
+const autoEnhanceAptIndexOf = (target) => {
+  const index = AUTO_ENHANCE_APT_TARGETS.indexOf(target);
+  return index >= 0 ? index : null;
+};
+// 目標の入力欄で受け付ける最大値。育ちきった個体の値をはるかに超えるので実質的な制限にはならないが、
+// 壊れた保存値や指がすべった長い数字で描画が崩れないように頭を止めておく
+const AUTO_ENHANCE_STAT_LIMIT_MAX = 999999;
+// 設定の版。2 から「ステータスの上限」を強化Pの数ではなく“目標のステータス値”で持つ
+// (2026-09-12・ユーザー指摘「現在値参照したり今日がポイントで管理したりわかりづらい /
+//  初期ステの数値をもとにどのステまで上げていいかにして」)。
+// 強化Pで持っていたころは「いまいくつなのか」と「あと何P振れるのか」を毎回頭の中で足す必要があった。
+// 素の値からの合計値で持てば、画面に出ている数字とそのまま同じものを指定できる。
+const AUTO_ENHANCE_SETTINGS_VERSION = 2;
+// 目標の読み方。
+// ・ステータス … 「その能力を合計いくつまで上げてよいか」。null は上限なし(残りを全部使う)、0 は振らない
+// ・間合い適性 … 「目標の段階(グレード)」。null は振らない。Mを指定すれば上限なしと同じ
+const normalizeAutoEnhanceStatTarget = (value) => {
+  if (value === null || value === undefined || value === '') return null; // 上限なし
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return 0;
+  return Math.max(0, Math.min(AUTO_ENHANCE_STAT_LIMIT_MAX, Math.floor(amount)));
+};
+const normalizeAutoEnhanceAptLimit = (value) => (typeof value === 'string' && DIST_APTITUDE_GRADES.includes(value) ? value : null);
+const normalizeMasuAutoEnhance = (value) => {
+  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  const version = Math.max(0, Math.floor(Number(source.version) || 0));
+  // 並び順は「8項目がちょうど1回ずつ」でなければならない。壊れていたら既定の並びへ落とす
+  const rawOrder = Array.isArray(source.order) ? source.order.filter(key => AUTO_ENHANCE_TARGETS.includes(key)) : [];
+  const order = [...new Set(rawOrder)];
+  AUTO_ENHANCE_TARGETS.forEach(key => { if (!order.includes(key)) order.push(key); });
+  const rawStat = source.statTargets && typeof source.statTargets === 'object' && !Array.isArray(source.statTargets) ? source.statTargets : {};
+  const statTargets = Object.fromEntries(AUTO_ENHANCE_STAT_KEYS.map(key => [key,
+    Object.prototype.hasOwnProperty.call(rawStat, key) ? normalizeAutoEnhanceStatTarget(rawStat[key]) : 0]));
+  const rawApt = Array.isArray(source.aptLimits) ? source.aptLimits : [];
+  const aptLimits = [0,1,2,3].map(index => normalizeAutoEnhanceAptLimit(rawApt[index]));
+  // ★版1(強化Pの数で持っていたころ)の保存は、ここでは目標値へ直せない。
+  //   合計値にするには、その個体の素の値が要るため(正規化は設定だけしか受け取らない)。
+  //   0(振らない)へ潰すと設定が黙って消えるので、直せるところまで持ち回す。
+  //   実際に直すのは autoEnhanceStatTargetsOf(個体とベースが分かる場所)。
+  const legacy = source.statLimits && typeof source.statLimits === 'object' && !Array.isArray(source.statLimits) ? source.statLimits : null;
+  return {
+    version,
+    // 項目を持っていない既存ユーザーは必ずOFF。ある日いきなり勝手に振られることがないようにする
+    enabled: source.enabled === true,
+    order,
+    statTargets,
+    aptLimits,
+    ...(version < AUTO_ENHANCE_SETTINGS_VERSION && legacy ? { statLimits: Object.fromEntries(AUTO_ENHANCE_STAT_KEYS.map(key => [key,
+      Object.prototype.hasOwnProperty.call(legacy, key) ? normalizeAutoEnhanceStatTarget(legacy[key]) : 0])) } : {}),
+  };
+};
+// その個体の「目標のステータス値」を取り出す。
+// 版1(強化Pの数)の保存は、素の値 ＋ P×1Pあたりの上昇量 で合計値へ直してから返す。
+// 読むときに直すだけで保存は書き換えない(書き換えるのは画面で操作したときだけ)。
+const autoEnhanceStatTargetsOf = (masu, base) => {
+  const settings = normalizeMasuAutoEnhance(masu?.autoEnhance);
+  if (settings.version >= AUTO_ENHANCE_SETTINGS_VERSION || !settings.statLimits || !base) return settings.statTargets;
+  const individual = resolveMasuIndividualStats(masu, base);
+  return Object.fromEntries(AUTO_ENHANCE_STAT_KEYS.map(key => {
+    const limit = settings.statLimits[key];
+    if (limit === null) return [key, null];   // 上限なしはそのまま
+    if (limit <= 0) return [key, 0];          // 振らないもそのまま
+    return [key, Math.max(0, Math.floor(Number(individual[key]) || 0)) + limit * (STAT_POINT_GAIN[key] || 1)];
+  }));
+};
+// 1つでも「振ってよい先」が決まっているか。ONでもここが空なら何も起きない
+const autoEnhanceHasTarget = (masu, base) => {
+  const targets = autoEnhanceStatTargetsOf(masu, base);
+  const settings = normalizeMasuAutoEnhance(masu?.autoEnhance);
+  return AUTO_ENHANCE_STAT_KEYS.some(key => targets[key] === null || targets[key] > 0)
+    || settings.aptLimits.some(grade => grade !== null);
+};
+// いまの値を、そのまま目標として写し取る。
+// 「この形のまま転生して戻したい」がいちばん多い使い方なので、1タップで作れるようにする
+const buildAutoEnhanceLimitsFromCurrent = (masu, base) => {
+  if (!masu || !base) return null;
+  const resolvedApt = resolveMasuDistAptitude(masu, base);
+  const individual = resolveMasuIndividualStats(masu, base);
+  return {
+    version: AUTO_ENHANCE_SETTINGS_VERSION,
+    statTargets: Object.fromEntries(AUTO_ENHANCE_STAT_KEYS.map(key => {
+      const spent = Math.max(0, Number(masu.statPoints?.[key]) || 0);
+      // 1度も振っていない能力は「振らない」。振ってある能力だけ、いまの合計値を目標にする
+      return [key, spent > 0 ? Math.max(0, Math.floor(Number(individual[key]) || 0)) + spent : 0];
+    })),
+    aptLimits: [0,1,2,3].map(index => {
+      const baseGrade = masuTranscendBaseAptitude(masu, base)[index];
+      const current = resolvedApt[index];
+      // ベースから1段も上げていない距離は「振らない」。上げてある距離だけ、いまの段階を目標にする
+      return DIST_APTITUDE_GRADES.indexOf(current) > DIST_APTITUDE_GRADES.indexOf(baseGrade) ? current : null;
+    }),
+  };
+};
+// 設定どおりに振る下書き(plan)を作る。実際の適用は applyEnhancePlanToMasu が行うので、
+// 手で振ったときとまったく同じ計算・同じ上限(間合い適性はMで止まる)を通る。
+// 振る先が無い・強化Pが無いときは null を返し、呼び出し側は何もしない。
+const buildMasuAutoEnhancePlan = (masu, base) => {
+  if (!masu || !base) return null;
+  const settings = normalizeMasuAutoEnhance(masu.autoEnhance);
+  if (!settings.enabled) return null;
+  let remaining = Math.max(0, Math.floor(Number(masu.distAptPoints) || 0));
+  if (remaining <= 0) return null;
+  const resolvedApt = resolveMasuDistAptitude(masu, base);
+  const individual = resolveMasuIndividualStats(masu, base);
+  const statTargets = autoEnhanceStatTargetsOf(masu, base);
+  const plan = { apt:[0,0,0,0], stat:{ hp:0, atk:0, def:0, guts:0 } };
+  for (const target of settings.order) {
+    if (remaining <= 0) break;
+    const aptIndex = autoEnhanceAptIndexOf(target);
+    if (aptIndex != null) {
+      const limitGrade = settings.aptLimits[aptIndex];
+      if (limitGrade === null) continue;
+      const currentIndex = Math.max(0, DIST_APTITUDE_GRADES.indexOf(resolvedApt[aptIndex] || 'C'));
+      const limitIndex = Math.min(DIST_APTITUDE_GRADES.length - 1, DIST_APTITUDE_GRADES.indexOf(limitGrade));
+      const take = Math.min(Math.max(0, limitIndex - currentIndex), remaining);
+      plan.apt[aptIndex] = take;
+      remaining -= take;
+      continue;
+    }
+    if (!AUTO_ENHANCE_STAT_KEYS.includes(target)) continue;
+    const goal = statTargets[target];
+    if (goal === 0) continue;
+    const gain = STAT_POINT_GAIN[target] || 1;
+    // いまの値は「素の値(超越の基礎UPを含む) ＋ 強化で振ったぶん」。強化画面に出ている数字と同じ
+    const currentValue = Math.max(0, Math.floor(Number(individual[target]) || 0)) + Math.max(0, Number(masu.statPoints?.[target]) || 0);
+    // 1Pあたりの上昇量で割り切れないときは、目標をこえないように切り捨てる
+    const capacity = goal === null ? remaining : Math.max(0, Math.floor((goal - currentValue) / gain));
+    const take = Math.min(capacity, remaining);
+    plan.stat[target] = take;
+    remaining -= take;
+  }
+  const used = plan.apt.reduce((sum, value) => sum + value, 0)
+    + Object.values(plan.stat).reduce((sum, value) => sum + value, 0);
+  return used > 0 ? { plan, used } : null;
+};
+// 自動で振ったときの「何がどれだけ増えたか」。画面のお知らせとログに使う
+const describeAutoEnhancePlan = (plan) => {
+  const lines = [];
+  (plan?.apt || []).forEach((count, index) => { if (count > 0) lines.push(`${RANGE_LABELS[index]}距離適性 +${count}段階`); });
+  Object.entries(plan?.stat || {}).forEach(([key, count]) => {
+    if (count > 0) lines.push(`${STAT_POINT_KEYS[key]} +${count * (STAT_POINT_GAIN[key] || 1)}`);
+  });
+  return lines;
+};
+// 絆ポイントリセットの直後かどうか(振り直しの下書きが残っているか)。
+// 「絆ポイントリセットの書」は500ダイヤの、振り直すための道具。使った直後に自動で振ってしまうと、
+// 振り直す機会ごと道具代を失わせることになるので、ここが残っているあいだは自動では振らない。
+// 自分で振り直すか(spendPointsBulk が下書きを消す)、オート強化の「いますぐ振る」を押した時点で再開する。
+const masuAwaitsBondResetReallocation = (masu) => !!(masu && masu.bondResetAllocationSnapshot);
+// 1体ぶんの自動強化。振るものが無ければ null(呼び出し側は保存もしない)。
+// manual は「プレイヤーが自分で『いますぐ振る』を押した」とき。
+// このときだけリセット直後でも振り、手で振ったときと同じく復元の下書きの役目も終わらせる
+// (残したままだと「リセット前の配分を復元」が、いま振ったぶんの上へ重ねて出てしまう)。
+const applyMasuAutoEnhance = (masu, { manual = false } = {}) => {
+  const base = (typeof ALL_PLAYER_MONSTERS !== 'undefined') ? ALL_PLAYER_MONSTERS[masu?.baseId] : null;
+  if (!base) return null;
+  if (!manual && masuAwaitsBondResetReallocation(masu)) return null;
+  const planned = buildMasuAutoEnhancePlan(masu, base);
+  if (!planned) return null;
+  const applied = applyEnhancePlanToMasu(masu, planned.plan);
+  if (!applied) return null;
+  const { bondResetAllocationSnapshot: _usedResetSnapshot, ...withoutSnapshot } = applied.masu;
+  return { masu:manual ? withoutSnapshot : applied.masu, used:applied.used, lines:describeAutoEnhancePlan(planned.plan) };
+};
+// 所持マスモン全体へ一度に通す。1体も変わらなければ null を返すので、
+// 呼び出し側は「変わったときだけ保存する」を素直に書ける(保存のたびに書き込むのを防ぐ)。
+const applyAutoEnhanceToMasuMons = (masuMons) => {
+  const list = Array.isArray(masuMons) ? masuMons : [];
+  const results = [];
+  const next = list.map(masu => {
+    const applied = applyMasuAutoEnhance(masu);
+    if (!applied) return masu;
+    results.push({ masuId:masu.id, name:masu.name, used:applied.used, lines:applied.lines });
+    return applied.masu;
+  });
+  return results.length > 0 ? { next, results } : null;
+};
+// 設定の書き換え。normalize を必ず通すので、画面側は部分的な patch を渡すだけでよい。
+// ★版1(強化Pの数)の保存は、書き換える前に必ず目標値へそろえる。
+//   そろえずに1項目だけ書き換えると、触っていない項目が0(振らない)へ落ちて設定が消える
+const buildMasuAutoEnhanceUpdate = (masu, patch) => {
+  const base = (typeof ALL_PLAYER_MONSTERS !== 'undefined') ? ALL_PLAYER_MONSTERS[masu?.baseId] : null;
+  const current = normalizeMasuAutoEnhance(masu?.autoEnhance);
+  const migrated = { ...current, version:AUTO_ENHANCE_SETTINGS_VERSION, statTargets:autoEnhanceStatTargetsOf(masu, base) };
+  delete migrated.statLimits; // 目標値へそろえたので、版1の持ち回しはここで役目を終える
+  return { ...masu, autoEnhance: normalizeMasuAutoEnhance({ ...migrated, ...(patch || {}) }) };
+};
+// 優先順位を1つ上げ下げする。端では動かさない(押しても何も起きない)
+const buildMasuAutoEnhanceOrderMove = (masu, target, direction) => {
+  const settings = normalizeMasuAutoEnhance(masu?.autoEnhance);
+  const from = settings.order.indexOf(target);
+  const to = from + (direction < 0 ? -1 : 1);
+  if (from < 0 || to < 0 || to >= settings.order.length) return masu;
+  const order = [...settings.order];
+  [order[from], order[to]] = [order[to], order[from]];
+  return buildMasuAutoEnhanceUpdate(masu, { order });
 };
 const MAX_UNIQUE_SKILL_LEVEL = 8;
 // 固有技の強化ポイントは、技を上げるほかに「いまのガッツを戻す」ことにも使える。
@@ -1515,6 +1771,8 @@ const normalizeMasuProgression = (masu) => ({
   // 旧booleanは曖昧な上限へ移行せずOFF。既存の数値設定は fixed として互換維持する。
   autoRepeatBreakthroughMode: normalizeAutoRepeatBreakthroughMode(masu?.autoRepeatBreakthroughMode, masu?.autoRepeatBreakthroughLevel),
   autoRepeatBreakthroughLevel: normalizeAutoRepeatBreakthroughLevel(masu?.autoRepeatBreakthroughLevel),
+  // オート強化の個体設定。項目を持っていない既存データはOFF・振り先なしとして読む(移行処理はいらない)
+  autoEnhance: normalizeMasuAutoEnhance(masu?.autoEnhance),
   rebirthCount: Math.max(0, Math.floor(Number(masu?.rebirthCount) || 0)),
   // 転生回数は後から足した項目なので、持っていない既存データは0として扱う
   reincarnateCount: Math.max(0, Math.floor(Number(masu?.reincarnateCount) || 0)),
@@ -1611,6 +1869,12 @@ const resetMasuForRebirth = (masu, { rebirthCount, reincarnateCount, reincarnate
     inheritedReincarnateBonusPoints: inheritedReincarnateBonusPointsOf(masu),
     inheritedReincarnateCount: inheritedReincarnateCountOf(masu),
     levelCap: Math.min(masuLevelCapLimit(masu), Math.max(INITIAL_MASU_LEVEL_CAP, Math.floor(Number(levelCap ?? masu?.levelCap) || INITIAL_MASU_LEVEL_CAP))),
+    // 自動まわりの設定(オート強化・AUTO∞自動限界突破)は「育てた中身」ではなく個体ごとの設定なので、
+    // 転生では失わせない。ここへ入れておかないと、転生のたびに設定し直すことになり、
+    // 「転生後の周回を楽にする」というオート強化の目的そのものが果たせなくなる。
+    autoEnhance: normalizeMasuAutoEnhance(masu?.autoEnhance),
+    autoRepeatBreakthroughMode: normalizeAutoRepeatBreakthroughMode(masu?.autoRepeatBreakthroughMode, masu?.autoRepeatBreakthroughLevel),
+    autoRepeatBreakthroughLevel: normalizeAutoRepeatBreakthroughLevel(masu?.autoRepeatBreakthroughLevel),
     // 魂格は転生で失われない。初到達Lvを持ち越すことで魂格Pの二重取得も防ぐ。
     soulRankStage: normalizeSoulRankStage(masu?.soulRankStage),
     soulPointMaxReachedLevel: normalizeSoulPointMaxReachedLevel(masu?.soulPointMaxReachedLevel),
@@ -3115,6 +3379,8 @@ const BGM_TRACKS = [
   // モンビーの新曲(2026-09-08)。同じくmp4で受け取った音源から映像を落として入れたもの
   { id:'melo_crossing_field', name:'crossing field', creator:'オリジナル', src:'audio/bgm-crossing-field.mp3', gain:1, loop:true },
   { id:'melo_nothing_without_you', name:'Nothing Without You', creator:'オリジナル', src:'audio/bgm-nothing-without-you.mp3', gain:1, loop:true },
+  // モンビーの新曲(2026-09-13)。同じくmp4で受け取った音源から映像を落として入れたもの
+  { id:'melo_freedom_dive', name:'FREEDOM DiVE↓', creator:'オリジナル', src:'audio/bgm-freedom-dive.mp3', gain:1, loop:true },
   { id:'melo_dullahan_clockwork_alt', name:'呪われた騎士の時計仕掛け -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-clockwork-alt.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost', name:'鋼鉄の亡霊', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost_alt', name:'鋼鉄の亡霊 -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost-alt.mp3', gain:1, loop:true },
@@ -3207,6 +3473,99 @@ const RHYTHM_RANKING_PENDING_MAX = 20;
 const RHYTHM_EFFECT_LEVELS = Object.freeze(['NORMAL','LOW','MINIMAL']);
 // コンボの節目でお祝いを出す刻み。100コンボごと。
 const RHYTHM_COMBO_MILESTONE_STEP = 100;
+// コンボ数の見せ方の段(2026-09-12・ユーザー指示
+//   「コンボ数もわかりにくい。増えれば増えるほど目立つようにして」)。
+// 100コンボごとのお祝い(RHYTHM_COMBO_MILESTONE_STEP)とは別で、こちらはHUDの数字そのものが
+// 段を上がるたびに大きく・熱い色になるための分類。**見た目だけの値で、判定・スコア・
+// コンボの数え方(rhythmComboAfter)には一切関わらない。**
+// 節目は 10 / 30 / 50 / 100 / 200 / 300 / 500 の7つ。最初の段を10に置いているのは、
+// 「増えている」という手応えが序盤から出るようにするため(100まで何も変わらないと気づけない)。
+const RHYTHM_COMBO_TIER_STEPS = Object.freeze([10,30,50,100,200,300,500]);
+const rhythmComboTier = combo => {
+  const value = Number(combo);
+  if (!Number.isFinite(value) || value <= 0) return 0;
+  return RHYTHM_COMBO_TIER_STEPS.reduce((tier,step)=>value>=step?tier+1:tier,0);
+};
+// 段ごとの大きさ。font-size ではなく transform:scale() で効かせる。
+// ★font-size を段ごとに上書きすると、横持ち(landscape:text-base)の詰めた文字サイズまで
+//   巻き添えで壊れる。倍率なら縦持ち・横持ちのどちらの基準サイズもそのまま活かせる。
+// ★2026-09-12にコンボをプレイエリアの真ん中へ移したので、台形にかかる心配がなくなった。
+//   HUDの右上に居たころは1.13倍が上限だった(4桁まで伸びると台形へかかり、奥のノーツが
+//   読めなくなるため)。中央なら左右に十分な余地があるので、段でしっかり大きくできる。
+const RHYTHM_COMBO_TIER_SCALES = Object.freeze([1,1.08,1.16,1.26,1.36,1.46,1.56,1.66]);
+const rhythmComboTierScale = tier => {
+  const index = Math.trunc(Number(tier)||0);
+  return RHYTHM_COMBO_TIER_SCALES[Math.max(0,Math.min(RHYTHM_COMBO_TIER_SCALES.length-1,index))];
+};
+// コンボ数の置き場所(2026-09-12・ユーザー指示「元位置（元位置より少し右より）とか選べるほうがいい」)。
+// 真ん中へ移したのは同じ日で、それまでは右上のHUDの中に居た。人によってはノーツと重なるのが
+// 気になるし、前の位置に慣れている人もいるので、選べるようにする。
+// ★既定は CENTER(いまの真ん中)。既存の保存値にはこのキー自体が無いので、
+//   読み込み時に CENTER で補われる(既存のキーは1つも触らない)。
+// ★実際の座標は index.html の [data-combo-pos="…"] が持つ。ここは名前だけ。
+// ライフの見せ方の段(2026-09-12・ユーザー指示
+//   「ライフ変動や0になったときとか気付きにくいからもっと強調して / 0だとライフが赤くなるとか
+//     バーが割れるとか」)。
+// ライフの数値・減り方(RHYTHM_LIFE_DELTA)・DOWNの扱いは一切変えない。色と点滅とひび割れを
+// CSSへ伝えるためだけの分類で、rhythmLifeRatio の値をそのまま段に読み替える。
+const rhythmLifeState = life => {
+  const ratio = rhythmLifeRatio(life);
+  if (ratio <= 0) return 'down';
+  if (ratio <= .25) return 'danger';
+  if (ratio <= .5) return 'caution';
+  return 'ok';
+};
+// オプション画面の選択肢の「名前」(2026-09-13)。
+// ★閉じているセクションに出す「いまの値」と、開いたときのボタンの**両方がここを見る**。
+//   名前を2か所に書くと必ずずれる(一方だけ直して、もう一方が古い名前のまま残る)。
+// ★並びはそのまま画面のボタンの並びになる。IDの集合は値の正本
+//   (RHYTHM_EFFECT_LEVELS など)と一致していること。tools/mode/rhythm-options-summary-check.js が見る。
+// 判定タイミング調整の範囲と刻み(2026-09-13)。
+// ★刻みを5ms→**1ms**へ細かくした(ユーザー指示「タップ調整ももっと精度良くつくって」)。
+//   いちばん良い判定(MARVELOUS)は±55msなので、5ms刻みだとその1/11ずつしか動かせなかった。
+// ★**広げたのではなく細かくしただけ**なので、これまでの保存値(5の倍数)はすべてそのまま
+//   有効で、意味も変わらない(-100〜+100の範囲は同じ)。
+const RHYTHM_TIMING_OFFSET_MAX_MS = 100;
+const RHYTHM_TIMING_OFFSET_STEP_MS = 1;
+// モンスターノーツを取ったときの演出の強さ(2026-09-13・ユーザー依頼
+// 「設定でモンスターノーツを踏んだときの軽量化バージョンもほしい」)。
+//   NORMAL … いまのまま(粒が2.1倍・画面全体が金色に光る・そのマスモンが大きく跳ねる)
+//   LIGHT  … **画面全体の光をやめる**。粒と跳ねは残す。いちばん重いのが全画面の描き直し
+//   OFF    … 粒もふつうのノーツと同じにして、跳ねもやめる
+// ★どの段でも**音・能力名・振動は残す**。取れたことが分からなくなるのがいちばん困るため。
+// ★既定は LIGHT。2026-09-13にユーザーから「演出量が普通だと重いという声が多い /
+//   少なめをデフォルトにして今の普通を多めとかにしたい / モンスターノーツも同じく」。
+//   同日さらに「デフォルトの名称を標準にして」と指示があり、**既定の段を「標準」と呼ぶ**
+//   ことにした(多め / 標準 / 最小)。演出量も同じ並びにそろえてある。
+//   IDは変えない(保存済みの値の意味が変わらないようにするため。CLAUDE.md ⑦)。
+//   変えるのは**画面に出す名前と既定値だけ**なので、自分で選んで保存した人はそのまま。
+const RHYTHM_MONSTER_EFFECT_LABELS = Object.freeze([['NORMAL','多め'],['LIGHT','標準'],['OFF','最小']]);
+const RHYTHM_MONSTER_EFFECT_LEVELS = Object.freeze(RHYTHM_MONSTER_EFFECT_LABELS.map(([id])=>id));
+// コンボ数の大きさ(2026-09-13・ユーザー依頼「コンボ数のサイズ設定もほしい」)。
+// 置き場所ごとの基準の大きさ(真ん中52px / 端34px)へ、この割合を掛ける。
+// コンボ数の濃さ(2026-09-13・ユーザー依頼「オプションにコンボ数表記の透過度の設定」)。
+// 段ごとの濃さ(.62〜1)へこの割合を掛ける。0にはできない(消したいなら「コンボ数表示」を切る)。
+const RHYTHM_COMBO_OPACITY_MIN = 30;
+const RHYTHM_COMBO_OPACITY_MAX = 100;
+const RHYTHM_COMBO_OPACITY_STEP = 10;
+const RHYTHM_COMBO_SIZE_MIN = 70;
+const RHYTHM_COMBO_SIZE_MAX = 150;
+const RHYTHM_COMBO_SIZE_STEP = 10;
+const RHYTHM_LANE_GLOW_LABELS = Object.freeze([['NORMAL','標準'],['LOW','控えめ'],['NONE','なし']]);
+// ★既定は LOW。2026-09-13・ユーザー指摘「演出量が普通だと重いという声が多い」。
+//   IDはそのまま(NORMAL=いちばん盛る段)。いちばん盛る段を「多め」へ、既定になった LOW を
+//   「標準」と呼ぶ(2026-09-13・ユーザー指示「デフォルトの名称を標準にして」)。
+const RHYTHM_EFFECT_LABELS = Object.freeze([['NORMAL','多め'],['LOW','標準'],['MINIMAL','最小']]);
+const RHYTHM_SIDE_MONSTER_OPACITY_LABELS = Object.freeze([['NORMAL','はっきり'],['SOFT','ふつう'],['FAINT','うっすら'],['OFF','出さない']]);
+const RHYTHM_SIDE_MONSTER_MOTION_LABELS = Object.freeze([['NORMAL','跳ねる'],['SMALL','小さく跳ねる'],['NONE','動かない']]);
+// ★AUTO(おすすめ)は「台形の外でいちばん広く空いているところ」(2026-09-13・ユーザー提案
+//   「コンボ数横画面の場合はこの位置が1番良いと思うんだけどどう？ / もう1枠増やして
+//    デフォルトもここにしたらどう？」)。実際の画面のスクリーンショットで示された場所。
+//   縦は台形の右外・マスモン上段の上、横は台形の右外でマスモンより内側。
+//   どちらもノーツの上に重ならないので、既定をここにした。
+//   HUD(右上)は「ライフのすぐ下・画面の端」として残す(横ではAUTOより外側になる)。
+const RHYTHM_COMBO_POSITION_LABELS = Object.freeze([['AUTO','おすすめ'],['LEFT','左'],['CENTER','中央'],['RIGHT','右'],['HUD','右上']]);
+const RHYTHM_COMBO_POSITIONS = Object.freeze(RHYTHM_COMBO_POSITION_LABELS.map(([id])=>id));
 const RHYTHM_LANE_GLOW_LEVELS = Object.freeze(['NORMAL','LOW','NONE']);
 const RHYTHM_JUDGMENT_IDS = Object.freeze(['MARVELOUS','EXCELLENT','GREAT','GOOD','BAD','MISS']);
 // ランク(G〜M)の表示色(暫定値)。下位ほど地味な色、上位ほど鮮やかにして一目で分かるようにする。
@@ -3217,8 +3576,9 @@ const RHYTHM_RANK_COLORS = Object.freeze({
 });
 const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   bgmVolume:100, noteSpeed:6, noteSize:100, noteStartPosition:0, displayTimingOffsetMs:0, judgmentTimingOffsetMs:0,
-  fastSlowDisplay:true, judgmentTextDisplay:true, judgmentTextPosition:50, comboDisplay:true, holdSlideOpacity:80, laneGlow:'NORMAL',
-  noteSeVolume:70, noteSeEnabled:true, vibrationEnabled:false, effectAmount:'NORMAL', lightweightMode:false,
+  fastSlowDisplay:true, judgmentTextDisplay:true, judgmentTextPosition:50, comboDisplay:true, comboPosition:'AUTO', comboSize:100, comboOpacity:100, holdSlideOpacity:80, laneGlow:'NORMAL',
+  monsterNoteEffect:'LIGHT',
+  noteSeVolume:70, noteSeEnabled:true, vibrationEnabled:false, effectAmount:'LOW', lightweightMode:false,
   livePartnerVisible:true,
   // 両サイドのマスモン(2026-09-05)。既存の保存値には無いので、読み込み時は既定で補われる。
   sideMonsterOpacity:'NORMAL', sideMonsterMotion:'NORMAL', sideMonsterAbilityHighlight:true,
@@ -3242,19 +3602,25 @@ const normalizeRhythmSettings = value => {
   const source=value&&typeof value==='object'&&!Array.isArray(value)?value:{};
   const bool=(key)=>typeof source[key]==='boolean'?source[key]:DEFAULT_RHYTHM_SETTINGS[key];
   return {
-    bgmVolume:rhythmFiniteStep(source.bgmVolume,0,100,1,DEFAULT_RHYTHM_SETTINGS.bgmVolume),
+    // 上限は RHYTHM_VOLUME_MAX(=200)。**広げただけ**なので、保存してある0〜100は
+    // 1つも動かないし、100の意味も今までと同じ(2026-09-12・ユーザー指示)
+    bgmVolume:rhythmFiniteStep(source.bgmVolume,0,RHYTHM_VOLUME_MAX,1,DEFAULT_RHYTHM_SETTINGS.bgmVolume),
     noteSpeed:rhythmFiniteStep(source.noteSpeed,RHYTHM_NOTE_SPEED_MIN,RHYTHM_NOTE_SPEED_MAX,RHYTHM_NOTE_SPEED_STEP,DEFAULT_RHYTHM_SETTINGS.noteSpeed),
     noteSize:rhythmFiniteStep(source.noteSize,80,120,5,DEFAULT_RHYTHM_SETTINGS.noteSize),
     noteStartPosition:rhythmFiniteInRange(source.noteStartPosition,-100,100,DEFAULT_RHYTHM_SETTINGS.noteStartPosition),
     displayTimingOffsetMs:0,
-    judgmentTimingOffsetMs:rhythmFiniteStep(source.judgmentTimingOffsetMs,-100,100,5,DEFAULT_RHYTHM_SETTINGS.judgmentTimingOffsetMs),
+    judgmentTimingOffsetMs:rhythmFiniteStep(source.judgmentTimingOffsetMs,-RHYTHM_TIMING_OFFSET_MAX_MS,RHYTHM_TIMING_OFFSET_MAX_MS,RHYTHM_TIMING_OFFSET_STEP_MS,DEFAULT_RHYTHM_SETTINGS.judgmentTimingOffsetMs),
     fastSlowDisplay:bool('fastSlowDisplay'),
     judgmentTextDisplay:bool('judgmentTextDisplay'),
     judgmentTextPosition:rhythmFiniteInRange(source.judgmentTextPosition,0,100,DEFAULT_RHYTHM_SETTINGS.judgmentTextPosition),
     comboDisplay:bool('comboDisplay'),
+    comboPosition:RHYTHM_COMBO_POSITIONS.includes(source.comboPosition)?source.comboPosition:DEFAULT_RHYTHM_SETTINGS.comboPosition,
+    comboSize:rhythmFiniteStep(source.comboSize,RHYTHM_COMBO_SIZE_MIN,RHYTHM_COMBO_SIZE_MAX,RHYTHM_COMBO_SIZE_STEP,DEFAULT_RHYTHM_SETTINGS.comboSize),
+    comboOpacity:rhythmFiniteStep(source.comboOpacity,RHYTHM_COMBO_OPACITY_MIN,RHYTHM_COMBO_OPACITY_MAX,RHYTHM_COMBO_OPACITY_STEP,DEFAULT_RHYTHM_SETTINGS.comboOpacity),
+    monsterNoteEffect:RHYTHM_MONSTER_EFFECT_LEVELS.includes(source.monsterNoteEffect)?source.monsterNoteEffect:DEFAULT_RHYTHM_SETTINGS.monsterNoteEffect,
     holdSlideOpacity:rhythmFiniteInRange(source.holdSlideOpacity,10,100,DEFAULT_RHYTHM_SETTINGS.holdSlideOpacity),
     laneGlow:RHYTHM_LANE_GLOW_LEVELS.includes(source.laneGlow)?source.laneGlow:DEFAULT_RHYTHM_SETTINGS.laneGlow,
-    noteSeVolume:rhythmFiniteStep(source.noteSeVolume,0,100,1,DEFAULT_RHYTHM_SETTINGS.noteSeVolume),
+    noteSeVolume:rhythmFiniteStep(source.noteSeVolume,0,RHYTHM_VOLUME_MAX,1,DEFAULT_RHYTHM_SETTINGS.noteSeVolume),
     noteSeEnabled:bool('noteSeEnabled'), vibrationEnabled:bool('vibrationEnabled'),
     effectAmount:RHYTHM_EFFECT_LEVELS.includes(source.effectAmount)?source.effectAmount:DEFAULT_RHYTHM_SETTINGS.effectAmount,
     lightweightMode:bool('lightweightMode'), livePartnerVisible:bool('livePartnerVisible'),
@@ -3265,11 +3631,16 @@ const normalizeRhythmSettings = value => {
     quietDuringPlay:bool('quietDuringPlay'),
   };
 };
-const emptyRhythmBestRecord = () => ({bestScore:0,maxCombo:0,clear:false,fullCombo:false,allExcellent:false,allMarvelous:false,judgments:Object.fromEntries(RHYTHM_JUDGMENT_IDS.map(id=>[id,0]))});
+const emptyRhythmBestRecord = () => ({bestScore:0,maxCombo:0,played:false,clear:false,fullCombo:false,allExcellent:false,allMarvelous:false,judgments:Object.fromEntries(RHYTHM_JUDGMENT_IDS.map(id=>[id,0]))});
 const normalizeRhythmBestRecord = value => {
   const source=value&&typeof value==='object'&&!Array.isArray(value)?value:{};
   const count=value=>Math.max(0,Math.floor(Number.isFinite(Number(value))?Number(value):0));
-  return {bestScore:count(source.bestScore),maxCombo:count(source.maxCombo),clear:source.clear===true,
+  return {bestScore:count(source.bestScore),maxCombo:count(source.maxCombo),
+    // played … 一度でも最後まで演奏したか(2026-09-12に追加)。clear は「ライフを残して終えた」に
+    //   意味を絞ったので、失敗した記録を「まだ遊んでいない」と取り違えないための項目。
+    //   ★この項目が無かったころの保存値は、clear が立っていれば played も立っていたものとして読む
+    //     (CLAUDE.md ⑦「既存の値に項目を追加する」「保存値が無いときの既定値を通す」)。
+    played:source.played===true||source.clear===true,clear:source.clear===true,
     fullCombo:source.fullCombo===true,allExcellent:source.allExcellent===true,allMarvelous:source.allMarvelous===true,
     judgments:Object.fromEntries(RHYTHM_JUDGMENT_IDS.map(id=>[id,count(source.judgments?.[id]??source[id])])),};
 };
@@ -3305,7 +3676,11 @@ const mergeRhythmBestRecord = (current,result) => {
     bestScore:isNewRecord?score:previous.bestScore,
     judgments:isNewRecord?result?.judgments:previous.judgments,
     maxCombo:Math.max(previous.maxCombo,Math.max(0,Math.floor(Number(result?.maxCombo)||0))),
-    clear:true,
+    // 最後まで演奏したこと自体は played、ライフを残して終えたことが clear。
+    // ★cleared を渡さない古い呼び出し(undefined)は、これまでどおりクリア扱いにする。
+    //   一度でもクリアしていれば、あとで失敗しても clear は下がらない(記録を消さない)。
+    played:true,
+    clear:previous.clear||result?.cleared!==false,
     fullCombo:previous.fullCombo||result?.fullCombo===true,
     allExcellent:previous.allExcellent||result?.allExcellent===true,
     allMarvelous:previous.allMarvelous||result?.allMarvelous===true,
@@ -3471,6 +3846,7 @@ const Audio_ = (() => {
     "audio/bgm-enhance.mp3": "eb0690d02d8a",
     "audio/bgm-event-01.mp3": "c57069b5ad2f",
     "audio/bgm-event-02.mp3": "d572118c203e",
+    "audio/bgm-freedom-dive.mp3": "34616b2fccd3",
     "audio/bgm-fusion.mp3": "6f0d4675789f",
     "audio/bgm-game-over.mp3": "d9fb75a7c827",
     "audio/bgm-home-ichika.mp3": "29295336d1af",
@@ -3754,7 +4130,10 @@ const Audio_ = (() => {
       const startSource=offset=>{
         if(stopped||offset>=buffer.duration){naturallyEnded=true;return false;}
         const nextSource=ctx.createBufferSource(),rhythmGain=ctx.createGain();
-        const raw=Math.max(0,Math.min(1,Number(rhythmVolumePct)/100))*safeTrackGain(track);
+        // 上限は RHYTHM_VOLUME_MAX(=200)ぶん。100までは今までとまったく同じ値。
+        // ★100より上は曲の波形をそのまま持ち上げるので、音源のピーク(-1 dBTP)を
+        //   超えるところから割れる。承知のうえで使う範囲として開けてある(2026-09-12)。
+        const raw=Math.max(0,Math.min(RHYTHM_VOLUME_MAX/100,Number(rhythmVolumePct)/100))*safeTrackGain(track);
         dropGainEntry(); gainEntry={node:rhythmGain,raw}; activeRhythmGains.add(gainEntry);
         rhythmGain.gain.value=enabled?raw:0;
         // 音ゲー専用の音量なので、メインのBGM音量(bgmGain)は経由しない。
@@ -5326,6 +5705,46 @@ const ASSIST_CARD_ICON_STYLES = Object.freeze({
 const AssistCardIcon = ({ icon, cardId, className='', style }) => (
   <span aria-hidden="true" style={style} className={`relative overflow-hidden rounded-full inline-block shrink-0 align-middle ${className}`}><img src={icon} alt="" draggable={false} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none',...iconAdjustmentTransformStyle(ASSIST_CARD_ICON_STYLES[cardId])}} className="absolute inset-0 w-full h-full object-contain"/></span>
 );
+// 全画面演出(effect)の見た目。種類ごとの大きさ・光り方・色をここ1か所にまとめる。
+// 以前は表示側のJSXへ `effect.type==='unique'?…:(effect.type==='enhance'?…:…)` を
+// 4か所へ書き並べていたため、種類を1つ足すだけで同じ三項演算子を全部直す必要があった。
+//
+// transcendEnhance(超越強化)は通常強化(enhance)を土台に、一段強い光と大きさにしてある。
+// 超越強化は確定しても何も起きず、通常強化だけが全画面演出を持っていた
+// (2026-09-12・ユーザー指摘「超越強化が音もなく地味。普通の強化と同じかそれより派手めにして」)。
+// 超越強化の演出を出しておく長さ。通常強化(1200ms)より少し長く取って、
+// 上がった項目を読み終えられるようにする
+const TRANSCEND_ENHANCE_FX_MS = 1600;
+const EFFECT_VISUALS = {
+  unique: {
+    size: '180px', emoji: '128px', icon: 60,
+    throb: 'specialThrob 500ms ease-in-out infinite',
+    glow: 'drop-shadow-[0_0_45px_rgba(168,85,247,0.95)]',
+    label: 'text-purple-100 bg-purple-600/30 border-purple-400/60 drop-shadow-[0_0_20px_rgba(168,85,247,0.8)]',
+    sub: 'text-indigo-400',
+  },
+  enhance: {
+    size: '160px', emoji: '120px', icon: 48,
+    throb: 'specialThrob 500ms ease-in-out infinite',
+    glow: 'drop-shadow-[0_0_45px_rgba(251,191,36,0.9)]',
+    label: 'text-amber-100 bg-amber-600/30 border-amber-400/60 drop-shadow-[0_0_20px_rgba(251,191,36,0.8)]',
+    sub: 'text-amber-300',
+  },
+  transcendEnhance: {
+    size: '184px', emoji: '134px', icon: 58,
+    throb: 'mhTranscendFxThrob 620ms ease-in-out infinite',
+    glow: 'drop-shadow-[0_0_55px_rgba(253,230,138,0.95)]',
+    label: 'text-amber-50 bg-gradient-to-r from-amber-500/40 via-pink-500/35 to-sky-500/35 border-amber-200/70 drop-shadow-[0_0_24px_rgba(253,230,138,0.9)]',
+    sub: 'text-amber-200',
+  },
+};
+const EFFECT_VISUAL_DEFAULT = Object.freeze({
+  size: '150px', emoji: '112px', icon: 48, throb: undefined,
+  glow: 'drop-shadow-[0_0_50px_rgba(255,255,255,0.4)]',
+  label: 'text-white bg-white/10 border-white/20', sub: 'text-indigo-400',
+});
+const effectVisual = (type) => EFFECT_VISUALS[type] || EFFECT_VISUAL_DEFAULT;
+
 // icon欄が画像なら<img>、絵文字ならそのまま返す。sizePxは画像のときの表示サイズ
 const cardIconNode = (icon, sizePx, cardId) => isImageIconValue(icon)
   ? (ASSIST_CARD_ICON_STYLES[cardId]
@@ -5993,6 +6412,70 @@ const HIDDEN_UPDATE_NOTICE_IDS = new Set((typeof CHANGELOG !== 'undefined' ? CHA
 const CHANGELOG_TIMED_SEEN_FIX_KEY = 'mh_changelog_timed_seen_fix_v1';
 const CHANGELOG_ISSUE_TAB_TYPES = Object.freeze(['issue', 'fix']);
 const changelogEntriesOfTab = (tab) => CHANGELOG_ENTRIES.filter(entry => CHANGELOG_ISSUE_TAB_TYPES.includes(entry.type) === (tab === 'issue'));
+// ===== 更新情報の「話題」ごとのまとめ =====
+// ちょこちょこした更新が1行ずつ積み上がり、過去の項目がすぐ画面の外へ流れていた
+// (2026-09-13・ユーザー指摘「同じような内容は同じとこにまとめて詳細で詳しく出るようにして /
+//  過去のやつが一瞬で見えなくなる」)。
+// 同じ日の同じ話題を1行にまとめ、開いたときにその中身を全部出す。
+// 682件が130行ほどになり、1画面でさかのぼれる日数が大きく増える。
+//
+// ★話題は entry.group があればそれを使い、無ければタイトルと本文から見当をつける。
+//   すでにある682件へ手で group を書き足すのは現実的でないため。
+//   見当は「どの見出しの下に並べるか」を決めるだけで、記録そのものには一切触らない。
+//   外れても害は「見出しが違う」だけなので、迷ったら その他 へ落とす。
+// ★新しく書く項目は group を書いておけば、見当に頼らず確実にそこへ入る。
+const CHANGELOG_GROUPS = Object.freeze([
+  { id:'rhythm',    label:'モンヒロビート', emoji:'🎵', match:/モンヒロビート|モンビー|音ゲー|譜面|ノーツ|レーン|コンボ|判定|新曲|曲えらび|演奏|リズム/ },
+  { id:'masu',      label:'マスモンの育成', emoji:'💜', match:/マスモン|強化|転生|限界突破|超越|魂格|合体|絆|トレーニング|育成|再生|染色|ブリーダー|オート強化/ },
+  { id:'battle',    label:'バトル',         emoji:'⚔', match:/バトル|WAVE|難易度|勇者モン|供モン|カード|AUTO|クイック|極限|種族チャレンジ|スキップ|敵/ },
+  { id:'items',     label:'アイテム・マーケット', emoji:'🎁', match:/マーケット|アイテム|ギフト|チケット|ダイヤ|ログインボーナス|ミッション|プシュケー/ },
+  { id:'ranking',   label:'ランキング',     emoji:'🏆', match:/ランキング/ },
+  { id:'assistant', label:'助手',           emoji:'🎀', match:/助手|みゅあ|きき|ももすけ/ },
+  { id:'ui',        label:'画面・操作',     emoji:'🖥', match:/画面|表示|ボタン|レイアウト|ヘルプ|設定|HOME|更新情報|お知らせ|バナー|図鑑/ },
+  { id:'other',     label:'その他',         emoji:'✦', match:null },
+]);
+const CHANGELOG_GROUP_BY_ID = Object.freeze(Object.fromEntries(CHANGELOG_GROUPS.map(group => [group.id, group])));
+const changelogGroupInfo = (id) => CHANGELOG_GROUP_BY_ID[id] || CHANGELOG_GROUP_BY_ID.other;
+// ★見当をつけるときは、まずタイトルだけで探す。本文まで一度に混ぜると、
+//   ついでに触れただけの言葉へ引っ張られる。実際に
+//   「新しいバージョンのお知らせを…選べるようにしました」が、本文に「演奏中は出さない」と
+//   書いてあるだけでモンヒロビート扱いになっていた。
+//   タイトルで決まらないときだけ、本文の先頭を見る(長い本文ほど関係ない語が増えるので先頭だけ)。
+const changelogGroupMatch = (text) => {
+  if (!text) return null;
+  const hit = CHANGELOG_GROUPS.find(group => group.match && group.match.test(text));
+  return hit ? hit.id : null;
+};
+const changelogGroupIdOf = (entry) => {
+  const written = typeof entry?.group === 'string' ? entry.group.trim() : '';
+  if (written && CHANGELOG_GROUP_BY_ID[written]) return written;
+  const byTitle = changelogGroupMatch(String(entry?.title || ''));
+  if (byTitle) return byTitle;
+  const body = (Array.isArray(entry?.items) ? entry.items.join(' ') : '').slice(0, 200);
+  return changelogGroupMatch(body) || 'other';
+};
+// 日付(降順)→話題 の順にまとめる。並び順は渡された配列のまま(呼び出し側で日付降順に並べてある)。
+// 戻り値: [{ key, day, groupId, label, emoji, entries }]
+// ★1つの話題に1件しかない日も、行の形はそろえる(数だけ「1件」になる)。
+//   件数で形を変えると、その日だけ見え方が変わって「まとまっている」ことが伝わらない。
+const groupChangelogEntries = (entries) => {
+  const rows = [];
+  const index = new Map();
+  (Array.isArray(entries) ? entries : []).forEach(entry => {
+    const day = typeof entry?.date === 'string' ? entry.date.slice(0, 10) : '';
+    const groupId = changelogGroupIdOf(entry);
+    const key = `${day}::${groupId}`;
+    let row = index.get(key);
+    if (!row) {
+      const info = changelogGroupInfo(groupId);
+      row = { key, day, groupId, label:info.label, emoji:info.emoji, entries:[] };
+      index.set(key, row);
+      rows.push(row);
+    }
+    row.entries.push(entry);
+  });
+  return rows;
+};
 // 既読の判定に使う「いま存在するすべてのID」。
 // タブの振り分けを変えると、既読にしたIDが別のタブへ移る。タブごとのID一覧で
 // ふるいにかけると移った先で未読へ戻ってしまうため、こちらで残す・捨てるを決める
@@ -10881,7 +11364,6 @@ const rhythmTravelMsForSpeed=value=>{
   const from=RHYTHM_NOTE_TRAVEL_MS_POINTS[index],to=RHYTHM_NOTE_TRAVEL_MS_POINTS[index+1];
   return Math.round(from+(to-from)*(offset-index));
 };
-const rhythmStepOptionValue=(value,min,max,step,direction)=>Math.max(min,Math.min(max,Number((Number(value)+direction*step).toFixed(6))));
 // スライダーでつまんだ値を、その項目の目盛り(step)に合わせて丸める。
 // 範囲外・数値でない値は必ず範囲の中へ収める(壊れた値を設定へ入れない)。
 const rhythmSnapOptionValue=(value,min,max,step)=>{
@@ -10890,6 +11372,11 @@ const rhythmSnapOptionValue=(value,min,max,step)=>{
   const snapped=min+Math.round((raw-min)/step)*step;
   return Math.max(min,Math.min(max,Number(snapped.toFixed(6))));
 };
+// 数値の項目を、いま決まっている量だけ動かす。
+// ★2026-09-13に「粗く動かす／細かく動かす」の4つのボタンへ変えたので、
+//   ±1目盛りではなく**動かす量(amount)**をそのまま受け取る。
+//   丸めは必ず保存する刻み(step)へ合わせる(rhythmSnapOptionValue)。
+const rhythmNudgeOptionValue=(value,min,max,step,amount)=>rhythmSnapOptionValue(Number(value)+Number(amount),min,max,step);
 // 縦画面のときだけ出す「横画面にも対応している」案内(2026-09-05・ユーザー指示)。
 // 音ゲー中(RHYTHM_PLAY)には置かない。プレイ中に文字が増えると譜面が読みにくくなるため。
 // 出し分けはCSS(portrait:)だけで行う。JSで向きを見張ると、回すたびに再描画が走って重くなる。
@@ -11296,133 +11783,63 @@ const RhythmOrientationButton=({className=''})=>{
 // 20〜40msほどあり、いちばん良い判定(±55ms)の半分を食う。
 // 目分量で合わせるのは難しいので、実際に叩いた結果から決める。
 //
-// 【測り方】
-//   ・一定の間隔(RHYTHM_CALIBRATION_BEAT_MS)で目印が判定ラインへ来る
-//   ・そのときのタップの時刻とのずれを集める
-//   ・外れ値(いちばん大きいものといちばん小さいもの)を落として平均を取る
-//     …1回の押し間違いで全部が狂わないようにするため
-//   ・平均を5ms刻みへ丸めて、-100〜+100の範囲に収める(設定と同じ刻み・範囲)
+// 【測り方】(2026-09-13に、専用の小さな画面から**演奏画面そのもの**へ変えた)
+//   ・data の RHYTHM_CALIBRATION_SONG(2拍ごとの単押し)を、いつもの演奏画面で流す
+//   ・叩くたびのずれ(deltaMs)を run.deltas へ貯める。判定もFAST/SLOWもいつもどおり出る
+//   ・助走(はじめの数回)を捨て、外れ値を落として平均を取る(下の関数)
+//   ・1ms刻みで -100〜+100 の範囲に収める(設定と同じ刻み・範囲)
 //
-// 時刻は音と同じ AudioContext ではなく performance.now() を使う。
-// ここでは音を鳴らさず、目印の動きだけに合わせてもらうため。
-const RHYTHM_CALIBRATION_BEAT_MS=1000;      // 目印が来る間隔。1秒ちょうどで数えやすくする
-const RHYTHM_CALIBRATION_TAPS=8;            // 何回叩いてもらうか
-const RHYTHM_CALIBRATION_DROP_EACH_END=1;   // 外れ値として上下いくつずつ落とすか
-const RHYTHM_CALIBRATION_MAX_MS=100;        // 設定の範囲と同じ
-const RHYTHM_CALIBRATION_STEP_MS=5;         // 設定の刻みと同じ
+// ずれは演奏側が判定に使っている値そのもの(judgmentTimingOffsetMs を通したあとの差)なので、
+// 本番とまったく同じ条件で測れる。専用画面だったころは見た目も指の置き方も違っていた。
+// 【2026-09-13・ユーザー指示】「タップ調整ももっと精度良くつくって」。
+// それまでの測り方は、次の5つで粗かった。
+//   ① 8回しか取らない            → **16回**取る。平均のばらつきは回数の平方根で減る
+//   ② 叩きはじめの回も混ぜていた  → 最初の**4回は助走**として数えない(リズムに乗るまでが混ざる)
+//   ③ 外れ値を上下1つずつ機械的に落としていた
+//                                 → **中央値からの離れ具合(MAD)**で落とす。きれいに叩けた回を捨てない
+//   ④ 5ms刻みへ丸めていた        → 設定を1ms刻みにしたので**1ms**のまま出す
+//   ⑤ ばらつきを見せていなかった  → **ばらつき(標準偏差)**を出し、大きいときはやり直しを勧める
+// あわせて、目印の位置を performance.now() ではなく **requestAnimationFrame の時刻**で決め、
+// 叩いた時刻は **イベントの timeStamp**(ブラウザがその入力を受け取った時刻)を使う。
+// どちらも「JSが動きはじめるまでの待ち」をずれに混ぜないためのもの。
+const RHYTHM_CALIBRATION_MAX_MS=RHYTHM_TIMING_OFFSET_MAX_MS;   // 設定の範囲と同じ
+const RHYTHM_CALIBRATION_STEP_MS=RHYTHM_TIMING_OFFSET_STEP_MS; // 設定の刻みと同じ(1ms)
+const RHYTHM_CALIBRATION_OUTLIER_FLOOR_MS=12; // 外れ値と見なす幅の下限
+const RHYTHM_CALIBRATION_MIN_USED=4;          // これを下回るほど落ちるなら、落とさずに全部使う
+const RHYTHM_CALIBRATION_STABLE_SPREAD_MS=25; // ばらつきがこれ以下なら「安定して叩けている」
+const rhythmCalibrationMedian=(sorted)=>{
+  const count=sorted.length;
+  if(!count)return 0;
+  const middle=count>>1;
+  return count%2?sorted[middle]:(sorted[middle-1]+sorted[middle])/2;
+};
 // 集めたずれから、設定へ入れる値を出す。ここだけ切り出してあるので検査から直接動かせる。
 const rhythmCalibrationOffsetFromTaps=(deltas)=>{
-  const list=(Array.isArray(deltas)?deltas:[]).filter(value=>Number.isFinite(Number(value))).map(Number).sort((a,b)=>a-b);
+  const list=(Array.isArray(deltas)?deltas:[]).filter(value=>typeof value==='number'&&Number.isFinite(value)).sort((a,b)=>a-b);
   if(!list.length)return null;
-  // 上下を落とす。落としたあとに何も残らないなら落とさない
-  const drop=list.length>RHYTHM_CALIBRATION_DROP_EACH_END*2?RHYTHM_CALIBRATION_DROP_EACH_END:0;
-  const used=drop?list.slice(drop,list.length-drop):list;
+  const center=rhythmCalibrationMedian(list);
+  // 中央値からどれだけ離れているかの中央値(MAD)。1回の押し間違いに引っぱられない。
+  // ★きれいに叩けているとMADが2〜3msまで小さくなるので、そのまま使うと**正常な回まで**
+  //   外れ値にしてしまう。下限(12ms)を置いて、それより狭くは切らない。
+  const mad=rhythmCalibrationMedian(list.map(value=>Math.abs(value-center)).sort((a,b)=>a-b));
+  const limit=Math.max(mad*3,RHYTHM_CALIBRATION_OUTLIER_FLOOR_MS);
+  const inside=list.filter(value=>Math.abs(value-center)<=limit);
+  const used=inside.length>=Math.min(RHYTHM_CALIBRATION_MIN_USED,list.length)?inside:list;
   const mean=used.reduce((sum,value)=>sum+value,0)/used.length;
+  const variance=used.reduce((sum,value)=>sum+(value-mean)*(value-mean),0)/used.length;
+  const spread=Math.sqrt(variance);
   const stepped=Math.round(mean/RHYTHM_CALIBRATION_STEP_MS)*RHYTHM_CALIBRATION_STEP_MS;
   return {offsetMs:Math.max(-RHYTHM_CALIBRATION_MAX_MS,Math.min(RHYTHM_CALIBRATION_MAX_MS,stepped)),
-    usedCount:used.length,droppedCount:list.length-used.length,rawMeanMs:Math.round(mean)};
+    usedCount:used.length,droppedCount:list.length-used.length,
+    rawMeanMs:Math.round(mean),medianMs:Math.round(center),
+    spreadMs:Math.round(spread),stable:spread<=RHYTHM_CALIBRATION_STABLE_SPREAD_MS};
 };
 
-// 実際に叩いてもらう部品。オプションの中へ置く。
-// レーンを1本だけ出し、ノーツが上から降りてきて判定ラインへ来る。それに合わせて叩く。
-// 判定・スコア・譜面には一切関わらない(ここで測るのは「ずれ」だけ)。
-const RhythmTimingCalibrator=({onApply,onClose,currentOffsetMs=0})=>{
-  const [taps,setTaps]=useState([]);
-  const [running,setRunning]=useState(false);
-  const startRef=useRef(0);
-  const frameRef=useRef(null);
-  const noteRef=useRef(null);
-  const areaRef=useRef(null);
-  const tapsRef=useRef([]);
-  const result=rhythmCalibrationOffsetFromTaps(taps);
-
-  const stop=useCallback(()=>{
-    if(frameRef.current!==null)cancelAnimationFrame(frameRef.current);
-    frameRef.current=null;setRunning(false);
-  },[]);
-  useEffect(()=>()=>{if(frameRef.current!==null)cancelAnimationFrame(frameRef.current);},[]);
-
-  const start=()=>{
-    setTaps([]);tapsRef.current=[];
-    startRef.current=performance.now();
-    setRunning(true);
-    const tick=()=>{
-      const area=areaRef.current,note=noteRef.current;
-      if(!area||!note){frameRef.current=requestAnimationFrame(tick);return;}
-      const elapsed=performance.now()-startRef.current;
-      // 1拍ぶんを上から判定ラインまで動かし、着いたら次の拍へ回す
-      const phase=(elapsed%RHYTHM_CALIBRATION_BEAT_MS)/RHYTHM_CALIBRATION_BEAT_MS;
-      const height=area.clientHeight||120;
-      note.style.transform=`translate3d(0,${Math.round(phase*(height-18))}px,0)`;
-      if(tapsRef.current.length>=RHYTHM_CALIBRATION_TAPS){stop();return;}
-      frameRef.current=requestAnimationFrame(tick);
-    };
-    frameRef.current=requestAnimationFrame(tick);
-  };
-
-  const tap=()=>{
-    if(!running)return;
-    const elapsed=performance.now()-startRef.current;
-    // いちばん近い拍からのずれ。早ければマイナス、遅ければプラス
-    const nearest=Math.round(elapsed/RHYTHM_CALIBRATION_BEAT_MS)*RHYTHM_CALIBRATION_BEAT_MS;
-    const delta=elapsed-nearest;
-    // 最初の1拍は目印がまだ降りきっていないので数えない
-    if(elapsed<RHYTHM_CALIBRATION_BEAT_MS)return;
-    const next=[...tapsRef.current,delta];
-    tapsRef.current=next;setTaps(next);
-    RHYTHM_NOTE_SE_RUNTIME.playEmpty();
-  };
-
-  // 【2026-09-05・ユーザー指示】「タップ調整が窮屈で見にくい／専用画面に飛ばしたほうがいい」
-  // オプションの中の小さな枠(高さ112px)ではなく、画面いっぱいで開く。
-  // 叩く場所が広いほど、実際のプレイに近い姿勢で測れる。
-  return <main data-rhythm-calibrator className="flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white" style={{paddingTop:'env(safe-area-inset-top)'}}>
-    <header className="z-10 flex shrink-0 items-center gap-2 border-b border-cyan-400/15 bg-slate-950/95 px-3 py-2">
-      <button aria-label="オプションへ戻る" data-rhythm-calibrator-close onClick={()=>{stop();onClose();}} className="min-h-[44px] min-w-[44px] text-slate-300"><ArrowLeft size={20}/></button>
-      <div className="min-w-0 flex-1">
-        <small className="block text-[8px] font-black tracking-[0.2em] text-cyan-300">MONBEAT</small>
-        <h2 className="text-base font-black">🎯 タップのタイミングを合わせる</h2>
-      </div>
-    </header>
-    <div className="flex min-h-0 flex-1 flex-col px-4 pb-4 pt-3">
-      <p className="text-[12px] leading-relaxed text-slate-300">
-        下の線へノーツが重なった瞬間に、リズムよく{RHYTHM_CALIBRATION_TAPS}回叩いてください。
-        画面に見えてから指が触れるまでの遅れは端末ごとに違うので、実際に叩いて測ります。
-      </p>
-      {/* 叩く場所は画面の残りいっぱい。実際のプレイと同じように、指を置く姿勢で測れるようにする */}
-      <div ref={areaRef} data-rhythm-calibrator-area onPointerDown={e=>{e.preventDefault();tap();}}
-        className="relative mt-3 min-h-0 flex-1 w-full overflow-hidden rounded-2xl border border-cyan-400/30 bg-slate-900"
-        style={{touchAction:'none',WebkitUserSelect:'none',userSelect:'none'}}>
-        <i ref={noteRef} data-rhythm-calibrator-note aria-hidden="true"
-          className="absolute left-1/2 top-0 h-6 w-40 -translate-x-1/2 rounded-full bg-gradient-to-b from-amber-200 to-fuchsia-500"/>
-        <i aria-hidden="true" className="absolute inset-x-0 bottom-8 h-[4px] bg-gradient-to-r from-fuchsia-300 via-cyan-100 to-fuchsia-300"/>
-        {!running&&<span className="absolute inset-0 flex items-center justify-center px-6 text-center text-[13px] font-black leading-relaxed text-slate-300">
-          {taps.length?'もう一度やるなら「はじめる」':'「はじめる」を押して、線に重なったら叩いてね'}</span>}
-        {running&&<span className="absolute inset-x-0 bottom-2 text-center text-[11px] font-black text-cyan-200">ここを叩く</span>}
-      </div>
-      <p data-rhythm-calibrator-count className="mt-3 text-center text-[14px] font-black tabular-nums text-cyan-200">
-        {taps.length} / {RHYTHM_CALIBRATION_TAPS} 回
-      </p>
-      {result&&taps.length>=RHYTHM_CALIBRATION_TAPS&&(
-        <p data-rhythm-calibrator-result className="mt-2 text-center text-[12px] font-bold leading-relaxed text-amber-200">
-          平均{result.rawMeanMs>0?'+':''}{result.rawMeanMs}ms（{result.droppedCount}回は外れ値として除外）<br/>→ 判定タイミング調整 {result.offsetMs>0?'+':''}{result.offsetMs}ms
-        </p>
-      )}
-      <p className="mt-2 text-center text-[11px] text-slate-500">いまの値: {currentOffsetMs>0?'+':''}{currentOffsetMs}ms（「この値にする」を押しても、保存するまでは変わりません）</p>
-    </div>
-    <footer className="z-20 shrink-0 border-t border-cyan-400/25 bg-slate-950/98 px-4 pt-2" style={{paddingBottom:'calc(.5rem + env(safe-area-inset-bottom))'}}>
-      <div className="grid grid-cols-2 gap-3">
-        <button type="button" data-rhythm-calibrator-start onClick={start} disabled={running}
-          className="min-h-[54px] rounded-xl bg-cyan-700 text-[13px] font-black text-white disabled:opacity-40">はじめる</button>
-        <button type="button" data-rhythm-calibrator-apply
-          disabled={!result||taps.length<RHYTHM_CALIBRATION_TAPS}
-          onClick={()=>{if(result){onApply(result.offsetMs);stop();onClose();}}}
-          className="min-h-[54px] rounded-xl bg-amber-400 text-[13px] font-black text-slate-950 disabled:opacity-40">この値にする</button>
-      </div>
-    </footer>
-  </main>;
-};
-
+// ★2026-09-13に、専用の小さな画面(1本のレーンに目印が降りるだけ)はやめた。
+//   ユーザー指示「今の仕様はみにくすぎるし実用性がない / 特に横画面は終わってる /
+//   普通に実際の画面を使ってやればいい / そこで判定も合わせて出して調整するのが1番合うとおもう」。
+//   いまは演奏画面をそのまま使い(data の RHYTHM_CALIBRATION_SONG を流す)、
+//   叩いたずれを run.deltas へ貯めて、上の rhythmCalibrationOffsetFromTaps で値を出す。
 // ===== モンヒロビートのイベント報酬(2026-09-11) =====
 // data/rhythm-event.js は「何位に何個」だけを持ち、アイテムの実体(id・名前・絵文字)は
 // ゲーム本体側にある(アイテムの定義は 11-masu-progression.jsx で、data より後に読み込まれるため)。
@@ -11477,132 +11894,262 @@ const rhythmEventRewardText=(reward)=>{
 };
 
 // ---- part: 29-rhythm-screens.jsx ----
-const RhythmOptions=({value,onSave,onBack})=>{
+// ============================================================================
+// 音ゲー設定(オプション)
+// ============================================================================
+// 【2026-09-13・ユーザー指示】「下にどんどん伸びていって使いづらい / 1画面に収まるように
+//   して、いじりたいやつはタップしたら詳細変えれるとかにしたほうがいい」
+//   → そのあと実際の音ゲーの画面を示して「オプションはこういうのを参考にしたい」。
+//
+// 参考の形に合わせて、次の3つで組み立てる。
+//   ① 上のタブで大きく3つに分ける(ライブ / 音量 / システム)。1つのタブに入る量を減らす
+//   ② 1項目=1枠。枠の頭に帯のラベルを置き、ON/OFFのような小さい項目は**2列**に並べる
+//   ③ 数値は「粗く動かす」「細かく動かす」を左右に分けた4つのボタン(-10 -1 値 +1 +10)。
+//      ±1つずつしか無いと、音量(0〜200)のような広い項目で何十回も押すことになる
+// つまむスライダーも残す。指で大きく動かすときはこちらのほうが速い。
+const RHYTHM_OPTION_TABS=Object.freeze([['live','ライブ'],['volume','音量'],['system','システム']]);
+const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=null,onClearCalibration=null})=>{
   const [draft,setDraft]=useState(()=>normalizeRhythmSettings(value));
   const [message,setMessage]=useState('');
-  // 「叩いて合わせる」を開いているか。設定そのものではないので保存には入れない
-  const [calibrating,setCalibrating]=useState(false);
+  // どのタブを見ているか。これも設定ではないので保存しない
+  const [tab,setTab]=useState('live');
   const previewRef=useRef(null);
+  const scrollRef=useRef(null);
+  // 【2026-09-13・ユーザー指摘】縦横ボタンで横にしたオプション画面のスクリーンショット。
+  //   文字が横倒しのまま、1項目しか見えていなかった。
+  // ★原因: モンビーの横画面は**端末を回していない**。器を transform:rotate(90deg) で
+  //   回しているだけなので、CSSの landscape: (＝@media (orientation:landscape)) は
+  //   縦のままと答える。つまり横向け指定が1つも当たっていなかった。
+  // ★なので向きは**JSで決める**。orientationIsLandscape() が端末の向きと自前回転の
+  //   両方を見ているので、実際に横にしたときも縦横ボタンで回したときも同じ形になる。
+  const [wide,setWide]=useState(()=>orientationIsLandscape());
+  useEffect(()=>{
+    if(typeof window==='undefined'||typeof window.matchMedia!=='function')return;
+    const mql=window.matchMedia('(orientation: landscape)');
+    const onChange=()=>setWide(orientationIsLandscape());
+    onChange();
+    // 自前で回したときは端末の向きが変わらないので matchMedia は鳴らない
+    const unsubscribeRotation=RHYTHM_VIEW_ROTATION.subscribe(onChange);
+    if(mql.addEventListener)mql.addEventListener('change',onChange);else mql.addListener?.(onChange);
+    return()=>{
+      unsubscribeRotation();
+      if(mql.removeEventListener)mql.removeEventListener('change',onChange);else mql.removeListener?.(onChange);
+    };
+  },[]);
   useEffect(()=>()=>{previewRef.current?.stop();previewRef.current=null;},[]);
   const savedValue=normalizeRhythmSettings(value),dirty=JSON.stringify(draft)!==JSON.stringify(savedValue);
   const set=(key,next)=>{setDraft(current=>normalizeRhythmSettings({...current,[key]:next}));setMessage('');};
-  const stepper=(key,min,max,step,suffix='',decimals=0)=>{
-    const value=Number(draft[key]),percent=Math.max(0,Math.min(100,((value-min)/(max-min))*100));
-    const change=direction=>set(key,rhythmStepOptionValue(value,min,max,step,direction));
-    const display=`${decimals>0?value.toFixed(decimals):value}${suffix}`;
-    return <div data-rhythm-option-stepper={key} className="grid grid-cols-[48px_minmax(54px,1fr)_48px_minmax(54px,auto)] items-center gap-2">
-      <button type="button" aria-label={`${key}を下げる`} disabled={value<=min} onClick={()=>change(-1)} className="min-h-[48px] min-w-[48px] rounded-xl border border-white/15 bg-slate-800 text-xl font-black text-slate-100 active:scale-95 disabled:opacity-35">−</button>
-      {/* つまんで動かせるスライダー。±ボタンだけだと、音量(0〜100)やノーツ速度のように
-          幅の広い項目で何十回も押すことになるため(実機で「めんどう」という報告があった)。
-          細かく合わせたいときは左右の±で1目盛りずつ動かす。 */}
-      <input type="range" data-rhythm-option-slider={key} aria-label={`${key}を変える`}
-        min={min} max={max} step={step} value={value}
-        onChange={e=>set(key,rhythmSnapOptionValue(e.target.value,min,max,step))}
-        className="mh-rhythm-range h-3 min-w-0 w-full cursor-pointer appearance-none rounded-full border border-white/15 bg-slate-950"
-        style={{background:`linear-gradient(90deg,#d946ef 0%,#22d3ee ${percent}%,#020617 ${percent}%,#020617 100%)`}}/>
-      <button type="button" aria-label={`${key}を上げる`} disabled={value>=max} onClick={()=>change(1)} className="min-h-[48px] min-w-[48px] rounded-xl border border-white/15 bg-slate-800 text-xl font-black text-slate-100 active:scale-95 disabled:opacity-35">＋</button>
-      <output aria-live="polite" className="min-w-[54px] rounded-lg border border-cyan-400/30 bg-slate-950 px-1 py-2 text-center text-xs font-black tabular-nums whitespace-nowrap">{display}</output>
-    </div>;
-  };
-  const toggle=(key,label)=><button type="button" aria-pressed={draft[key]} onClick={()=>set(key,!draft[key])} className={`min-h-[44px] min-w-[88px] rounded-xl border px-4 text-xs font-black ${draft[key]?'border-cyan-200 bg-cyan-600 text-white':'border-white/20 bg-slate-900 text-slate-300'}`}>{label} {draft[key]?'ON':'OFF'}</button>;
-  const segments=(key,items)=><div className="grid grid-cols-3 overflow-hidden rounded-xl border border-white/20">{items.map(([id,label])=><button type="button" key={id} aria-pressed={draft[key]===id} onClick={()=>set(key,id)} className={`min-h-[44px] border-r border-white/10 px-1 text-[10px] font-black last:border-r-0 ${draft[key]===id?'bg-cyan-600 text-white':'bg-slate-900 text-slate-300'}`}>{label}</button>)}</div>;
-  // 【2026-09-05・ユーザー指示】「オプション画面が窮屈すぎる／サイズ感に余裕を持たして」
-  // 余白(p-4)・項目の間(py-3)・説明文(10px)をひとまわり広げてある。
-  // 数値だけを小さくしていくと、指で押す場所と読む場所がどちらも減っていくので、
-  // 「入る量」ではなく「押せる・読める」ほうを優先する。
-  const card='rounded-2xl border border-cyan-400/35 bg-slate-900/85 p-4 shadow-[0_0_18px_rgba(34,211,238,.08)]';
-  const row='grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-white/10 py-3 last:border-b-0';
-  const head='text-[15px] font-black text-cyan-200';
+  // タブを変えたら先頭から見せる(前のタブの位置に残ると、開いた先が途中から見える)
+  const changeTab=id=>{setTab(id);try{scrollRef.current?.scrollTo({top:0});}catch(_){}};
   const label='text-[13px] font-bold';
   const note='text-[10px] leading-relaxed text-slate-400';
-  // 数値の項目。見出し → スライダー → 説明、の順で必ず間を空ける
-  const field=(title,control,description=null)=><div className="border-b border-white/10 py-3 last:border-b-0">
-    <p className={`mb-2 ${label}`}>{title}</p>
-    {control}
-    {description&&<p className={`mt-2 ${note}`}>{description}</p>}
+  const head='border-b border-cyan-400/30 pb-1.5 text-[15px] font-black text-cyan-200';
+  // 横向きのときは外枠と見出しを省く(すぐ上のタブに同じ名前が出ている)。高さをそのぶん中身へ回す
+  const card=wide?'':'rounded-2xl border border-cyan-400/35 bg-slate-900/85 p-4 shadow-[0_0_18px_rgba(34,211,238,.08)]';
+  const row='grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-white/10 py-3 last:border-b-0';
+  // 数値の項目。粗く動かす外側(coarse)と、細かく動かす内側(fine)を分ける。
+  // 刻み(step)は保存する値の刻みそのもので、fine は必ずその倍数にする。
+  // label … 1つの枠へ数値の行を2つ以上並べるときに、行ごとの名前を出す
+  //   (2026-09-13・ユーザー指摘「コンボ数の設定の%いじりが2種類あるけど
+  //    何を示してるからわからない」。%の行が名前なしで2本並ぶと見分けが付かない)
+  const stepper=(key,min,max,step,{fine=step,coarse=step*10,suffix='',decimals=0,label=''}={})=>{
+    const value=Number(draft[key]),percent=Math.max(0,Math.min(100,((value-min)/(max-min))*100));
+    const nudge=amount=>set(key,rhythmNudgeOptionValue(value,min,max,step,amount));
+    const display=`${decimals>0?value.toFixed(decimals):value}${suffix}`;
+    const sign=amount=>`${amount>0?'+':''}${decimals>0?Number(amount).toFixed(decimals):amount}`;
+    const button=(amount,dim)=><button type="button" aria-label={`${key}を${sign(amount)}`} data-rhythm-option-nudge={`${key}${sign(amount)}`}
+      disabled={amount<0?value<=min:value>=max} onClick={()=>nudge(amount)}
+      className={`${wide?'min-h-[38px]':'min-h-[46px]'} rounded-xl border ${dim?'border-white/25 bg-slate-300 text-slate-900':'border-white/40 bg-slate-100 text-slate-900'} px-0.5 text-[11px] font-black tabular-nums shadow-[0_2px_0_rgba(2,6,23,.55)] active:translate-y-[1px] active:shadow-none disabled:opacity-35`}>{sign(amount)}</button>;
+    return <div data-rhythm-option-stepper={key} className={wide?'':'space-y-1.5'}>
+      {label&&<div data-rhythm-option-stepper-label={key} className="flex items-baseline justify-between gap-2 px-0.5 pb-0.5 leading-none">
+        <small className="text-[10px] font-black text-cyan-200">{label}</small>
+        <small className="text-[10px] font-bold tabular-nums text-slate-400">{decimals>0?min.toFixed(decimals):min}〜{decimals>0?max.toFixed(decimals):max}{suffix}</small>
+      </div>}
+      <div className="grid grid-cols-[1fr_1fr_minmax(52px,1.3fr)_1fr_1fr] items-center gap-1">
+        {button(-coarse)}{button(-fine,true)}
+        <output aria-live="polite" className={`rounded-lg border-2 border-cyan-300/70 bg-white px-1 text-center font-black tabular-nums text-slate-900 whitespace-nowrap ${wide?'min-h-[38px] text-[13px] leading-[34px]':'min-h-[46px] text-[14px] leading-[42px]'}`}>{display}</output>
+        {button(fine,true)}{button(coarse)}
+      </div>
+      {/* つまんで動かせるスライダーも残す。指で大きく動かすときはこちらのほうが速い。
+          ★横向きだけは出さない。高さが足りず、4つのボタンで同じことができる */}
+      {!wide&&<input type="range" data-rhythm-option-slider={key} aria-label={`${key}を変える`}
+        min={min} max={max} step={step} value={value}
+        onChange={e=>set(key,rhythmSnapOptionValue(e.target.value,min,max,step))}
+        className="mh-rhythm-range h-3 w-full cursor-pointer appearance-none rounded-full border border-white/15 bg-slate-950"
+        style={{background:`linear-gradient(90deg,#d946ef 0%,#22d3ee ${percent}%,#020617 ${percent}%,#020617 100%)`}}/>}
+    </div>;
+  };
+  // ON/OFFは押すたびに入れ替わるボタンではなく、**どちらが今の状態か**が一目で分かる2択にする
+  // ON/OFFは**丸いラジオ**にする(参考にした画面と同じ)。押すたびに入れ替わるボタンだと
+  // 「いまどちらか」が読み取りにくく、2つのボタンを並べる形だと枠の中で場所を取る。
+  const toggle=key=><div data-rhythm-option-onoff={key} role="radiogroup" className="flex items-center justify-center gap-2">
+    {[[true,'ON'],[false,'OFF']].map(([flag,text])=><button type="button" key={text} role="radio" aria-checked={draft[key]===flag} aria-label={text} onClick={()=>set(key,flag)}
+      className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl px-1 text-[12px] font-black ${wide?'min-h-[38px]':'min-h-[44px]'}`}>
+      <span aria-hidden="true" className={`grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full border-2 ${draft[key]===flag?'border-cyan-300 bg-cyan-500/20':'border-white/35'}`}>
+        {draft[key]===flag&&<span className="h-[9px] w-[9px] rounded-full bg-cyan-300"/>}
+      </span>
+      <span className={draft[key]===flag?'text-white':'text-slate-400'}>{text}</span>
+    </button>)}
   </div>;
+  const segments=(key,items)=><div className={`grid ${items.length>=5?'grid-cols-5':items.length>=4?'grid-cols-4':'grid-cols-3'} overflow-hidden rounded-xl border border-white/20`}>{items.map(([id,text])=><button type="button" key={id} aria-pressed={draft[key]===id} onClick={()=>set(key,id)} className={`border-r border-white/10 px-1 text-[10px] font-black last:border-r-0 ${wide?'min-h-[38px]':'min-h-[44px]'} ${draft[key]===id?'bg-cyan-600 text-white':'bg-slate-900 text-slate-300'}`}>{text}</button>)}</div>;
+  // 1項目=1枠。頭に帯のラベルを置く(参考にした画面と同じ形)。
+  // ★ここは項目の「入れ物」なので、余白・字の大きさは2026-09-05に広げたまま触らない。
+  // ★数値のように横幅の要る項目は wide。縦持ち(2列)ではぶち抜き、
+  //   横持ち(3列)は1列が広いので1つぶんに収める。参考にした画面と同じ並び方。
+  // ★数値のように横幅の要る項目は full。縦向き(2列)ではぶち抜き、
+  //   横向き(3列)は1列が広いので1つぶんに収める。
+  // ★横向きは高さが足りないので、帯と余白を詰め、説明(▸ くわしく)は出さない。
+  //   説明は縦向きで読めるので、消したわけではない。
+  const field=(title,control,description=null,{full=false}={})=><div data-rhythm-option-field className={`${full&&!wide?'col-span-2':''} rounded-xl border border-cyan-400/20 bg-slate-950/55 ${wide?'p-1.5':'p-2.5'}`}>
+    <p className={`rounded-lg bg-cyan-700/70 px-2 text-center ${label} ${wide?'mb-1 py-0.5 text-[11px]':'mb-2 py-1'}`}>{title}</p>
+    {control}
+    {description&&!wide&&<details data-rhythm-option-help className="mt-2">
+      <summary className="min-h-[24px] cursor-pointer list-none text-[10px] font-black leading-[24px] text-cyan-300/90">▸ くわしく</summary>
+      <p className={`mt-1 ${note}`}>{description}</p>
+    </details>}
+  </div>;
+  // 横向きは幅が広いので3列。縦向きは2列のまま(1列にすると1つずつしか見えない)
+  const grid=`grid gap-2.5 ${wide?'grid-cols-3 gap-2':'grid-cols-2'}`;
   const previewBgm=async()=>{previewRef.current?.stop();previewRef.current=null;const audio=await Audio_.startRhythmTrack('atsu_cup_theme',draft.bgmVolume);previewRef.current=audio;if(!audio)setMessage('BGMを再生できませんでした');};
   const resetDraft=()=>{setDraft(normalizeRhythmSettings(DEFAULT_RHYTHM_SETTINGS));setMessage('画面上の値を戻しました（未保存）');};
   const saveDraft=async()=>{const saved=await onSave(draft);setDraft(saved);setMessage('保存しました');};
-  // 「叩いて合わせる」は画面いっぱいで開く(2026-09-05・ユーザー指示
-  // 「タップ調整が窮屈で見にくい／専用画面に飛ばしたほうがいい」)。
-  // gameStateを増やさずここへ重ねるのは、編集中の値(draft)を持ったままにするため。
-  // 別の画面へ飛ばすと、この画面がいったん消えて未保存の変更が全部消える。
-  if(calibrating)return <RhythmTimingCalibrator
-    currentOffsetMs={draft.judgmentTimingOffsetMs}
-    onApply={ms=>{set('judgmentTimingOffsetMs',ms);setMessage(`判定タイミング調整を ${ms>0?'+':''}${ms}ms にしました（未保存）`);}}
-    onClose={()=>setCalibrating(false)}/>;
+  // 【2026-09-13・ユーザー指示】「今の仕様はみにくすぎるし実用性がない / 特に横画面は終わってる /
+  //   普通に実際の画面を使ってやればいい / そこで判定も合わせて出して調整するのが1番合うとおもう」。
+  // ★それまでは専用の小さな画面(1本のレーンに目印が降りるだけ)だった。本番と見た目も
+  //   指の置き方も違ううえ、横持ちでは器の回転を考えていなかった。
+  // ★いまは**演奏画面をそのまま使う**(れんしゅうと同じ作り)。判定もFAST/SLOWもいつもどおり出る。
+  // ★画面を移るので、未保存の変更は先に保存してから送る(戻ってきたときに消えていないように)。
+  const goCalibrate=async()=>{
+    if(!onCalibrate)return;
+    if(dirty){const saved=await onSave(draft);setDraft(saved);}
+    onCalibrate();
+  };
   return <main data-rhythm-options className="flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white" style={{paddingTop:'env(safe-area-inset-top)'}}>
-    <header className="z-10 flex shrink-0 items-center gap-2 border-b border-cyan-400/15 bg-slate-950/95 px-3 py-2"><button aria-label="戻る" onClick={onBack} className="min-h-[44px] min-w-[44px] text-slate-300"><ArrowLeft size={20}/></button><div><small className="block text-[8px] font-black tracking-[0.2em] text-cyan-300">MONBEAT</small><h2 className="text-base font-black">⚙️ オプション</h2></div></header>
-    <div data-rhythm-options-scroll className="flex-1 min-h-0 overflow-y-auto px-3 pb-5 pt-3 mh-scroll">
-      <div className="space-y-4">
-        <RhythmLandscapeHint/>
-        <section className={card}>
-          <h3 className={head}>🔊 音量</h3>
-          {field('BGM音量',stepper('bgmVolume',0,100,1))}
-          {field('タップ音量',stepper('noteSeVolume',0,100,1))}
-          <div className={row}><span className={label}>タップ音</span>{toggle('noteSeEnabled','')}</div>
-          <div className="mt-3 grid grid-cols-2 gap-3"><button type="button" onClick={previewBgm} className="min-h-[48px] rounded-xl bg-indigo-700 text-[12px] font-black">♪ BGM試聴</button><button type="button" onClick={()=>RHYTHM_NOTE_SE_RUNTIME.preview(draft)} className="min-h-[48px] rounded-xl bg-fuchsia-700 text-[12px] font-black">タップ音試聴</button></div>
-          <p className={`mt-3 ${note}`}>この音量はメインゲームの音量設定と別に、音ゲーだけで使います。タイトル画面の全体ミュートのみ共通です。</p>
-        </section>
-        <section className={card}>
-          <h3 className={head}>🎯 プレイ</h3>
-          {field('ノーツ速度',stepper('noteSpeed',RHYTHM_NOTE_SPEED_MIN,RHYTHM_NOTE_SPEED_MAX,RHYTHM_NOTE_SPEED_STEP,'',1),
-            `1.0〜12.0を0.1刻みで調整できます。変わるのはノーツが流れてくる見た目の速さだけで、譜面のタイミング・判定窓・スコアは変わりません（現在 約${rhythmTravelMsForSpeed(draft.noteSpeed).toLocaleString()}ms）。`)}
-          {field('ノーツサイズ',stepper('noteSize',80,120,5,'%'),
-            'ノーツの見た目の大きさだけを変えます。入力判定の範囲・HOLD/SLIDE帯・ENDバーの位置は変わりません。')}
-          {/* 【2026-09-05・ユーザー指示】「ノーツの開始位置（奥行き）もオプションで調整できるようにしたい」
-              値そのものは前からあったが、変える場所が画面に無かった。 */}
-          {field('ノーツの出る位置（奥行き）',stepper('noteStartPosition',-100,100,5),
-            'ノーツが画面のどのあたりから出てくるかを変えます。マイナスにすると奥（画面の上の外側）から、プラスにすると手前寄りから出てきます。判定ラインの位置・判定のタイミング・判定窓・スコアは変わりません。ノーツが流れてくる時間も変わらないので、手前から出すほど見えているあいだの動きは速く見えます。')}
-          {field('判定タイミング調整',stepper('judgmentTimingOffsetMs',-100,100,5,'ms'),
-            '判定窓の幅は変えず、表示と入力の基準を同じ量だけ補正します。数字で決めにくいときは、下の「叩いて合わせる」で実際に叩いて測れます。')}
-          <button type="button" data-rhythm-calibrator-open onClick={()=>setCalibrating(true)} className="mt-3 min-h-[52px] w-full rounded-xl border border-cyan-300/60 bg-cyan-950/50 text-[13px] font-black text-cyan-100">🎯 叩いて合わせる</button>
-          <p className={`mt-2 ${note}`}>画面いっぱいで開きます。合わせ終わってから戻ると、ここの数字に入ります（保存はまだされません）。</p>
-        </section>
-        <section className={card}>
-          <h3 className={head}>👁 表示</h3>
-          <div className={row}><span className={label}>FAST / SLOW表示</span>{toggle('fastSlowDisplay','')}</div>
-          <div className={row}><span className={label}>判定文字表示</span>{toggle('judgmentTextDisplay','')}</div>
-          {field('レーン発光',segments('laneGlow',[['NORMAL','標準'],['LOW','控えめ'],['NONE','なし']]))}
-        </section>
-        <section className={card}>
-          <h3 className={head}>🐾 両サイドのマスモン</h3>
-          <p className={`mt-2 ${note}`}>レーンの外側の空いたところへ、設定したマスモンが出て拍に合わせて跳ねます。ノーツが見づらいときや、端末が熱くなりやすいときは薄くするか止めてください。</p>
-          {field('濃さ',segments('sideMonsterOpacity',[['NORMAL','はっきり'],['SOFT','ふつう'],['FAINT','うっすら'],['OFF','出さない']]))}
-          {field('動き',segments('sideMonsterMotion',[['NORMAL','跳ねる'],['SMALL','小さく跳ねる'],['NONE','動かない']]))}
-          <div className={row}><span className={label}>能力中に光らせる</span>{toggle('sideMonsterAbilityHighlight','')}</div>
-        </section>
-        <section className={card}>
-          <h3 className={head}>✨ 演出・端末</h3>
-          {field('演出量',segments('effectAmount',[['NORMAL','標準'],['LOW','少なめ'],['MINIMAL','最小']]))}
-          <div className={row}><span className={label}>振動</span><div className="flex items-center gap-2">
-            {/* この端末で振動できるかを出す。iPhoneのSafariには振動のしくみが無い時期が長く、
-                「設定はあるのに何も起きない」状態になっていたため(2026-09-05の指摘) */}
-            <button type="button" data-rhythm-vibration-test disabled={!RHYTHM_HAPTICS.supported()}
-              onClick={()=>RHYTHM_HAPTICS.tap(26)}
-              className="min-h-[44px] rounded-xl border border-white/20 bg-slate-900 px-3 text-[11px] font-black text-slate-200 disabled:opacity-40">試す</button>
-            {toggle('vibrationEnabled','')}
-          </div></div>
-          {!RHYTHM_HAPTICS.supported()&&<p data-rhythm-vibration-unsupported className="pb-2 text-[10px] font-bold leading-relaxed text-amber-200">この端末は振動に対応していないため、ONにしても振動しません（音とエフェクトはそのまま出ます）。</p>}
-          <div className={row}><span className={label}>軽量モード</span>{toggle('lightweightMode','')}</div>
-          <div className={row}><span className={label}>曲えらびで試聴する</span>{toggle('songPreviewEnabled','')}</div>
-          {/* 【2026-09-05・ユーザー相談】「演奏中のみ物理的に端末の通知を出さないようにすることは可能？
-              オプションでオンオフできて」。できる範囲は端末とブラウザで違うので、
-              何が起きるかを必ず添える(黙って効かないのがいちばん困る)。 */}
-          <div className={row}><span className={label}>演奏中は通知を出さない</span>{toggle('quietDuringPlay','')}</div>
-          <p className={`pb-1 ${note}`}>{rhythmQuietModeSupportText()}</p>
-        </section>
-        <section className="rounded-2xl border border-cyan-400/30 bg-cyan-950/25 p-4 text-[11px] leading-relaxed text-cyan-100">判定を甘くする設定ではありません。端末ごとの見え方・音量・タイミングを調整する項目です。</section>
+    {/* ★横持ちは**高さ**が足りない(390pxしかない)。縦持ちで2段だった「見出し」と「タブ」を、
+        横持ちでは**1行へ並べる**。これだけで中身へ回せる高さが50pxほど増える。
+        押す場所(戻る・タブ)は44pxのまま縮めない。 */}
+    <div data-rhythm-options-bar className={`z-10 shrink-0 border-b border-cyan-400/15 bg-slate-950/95 ${wide?'flex items-center gap-3':''}`}>
+      <header className={`flex shrink-0 items-center gap-2 px-3 ${wide?'py-1':'py-2'}`}><button aria-label="戻る" onClick={onBack} className="min-h-[44px] min-w-[44px] text-slate-300"><ArrowLeft size={20}/></button><div className={wide?'flex items-baseline gap-2':''}><small className="block text-[8px] font-black tracking-[0.2em] text-cyan-300">MONBEAT</small><h2 className={`font-black ${wide?'text-[13px]':'text-base'}`}>⚙️ オプション</h2></div></header>
+      {/* いま見ているタブだけ色を変え、下へ小さな三角を出して「ここの中身」と分かるようにする */}
+      <nav data-rhythm-options-tabs className={`grid shrink-0 grid-cols-3 px-3 ${wide?'min-w-0 flex-1 gap-1.5 pb-0 pl-0 pr-3':'gap-2 pb-2'}`}>
+        {RHYTHM_OPTION_TABS.map(([id,text])=><button type="button" key={id} data-rhythm-options-tab={id} aria-pressed={tab===id} onClick={()=>changeTab(id)}
+            className={`relative rounded-xl border text-[13px] font-black ${wide?'min-h-[38px]':'min-h-[44px]'} ${tab===id?'border-amber-200 bg-amber-400 text-slate-950':'border-white/15 bg-slate-800 text-slate-300'}`}>
+          {text}{tab===id&&!wide&&<span aria-hidden="true" className="absolute -bottom-[7px] left-1/2 -translate-x-1/2 border-x-[6px] border-t-[7px] border-x-transparent border-t-amber-300"/>}
+        </button>)}
+      </nav>
+    </div>
+    <div ref={scrollRef} data-rhythm-options-scroll className={`flex-1 min-h-0 overflow-y-auto mh-scroll ${wide?'px-3 pb-2 pt-1.5':'px-3 pb-5 pt-3'}`}>
+      <div className={wide?'space-y-2':'space-y-4'}>
+        {tab==='live'&&<section data-rhythm-options-panel="live" className={card}>
+          {!wide&&<h3 className={head}>◆ ライブ設定</h3>}
+          <div className={wide?grid:`mt-3 ${grid}`}>
+            {field('ノーツの速さ',stepper('noteSpeed',RHYTHM_NOTE_SPEED_MIN,RHYTHM_NOTE_SPEED_MAX,RHYTHM_NOTE_SPEED_STEP,{fine:RHYTHM_NOTE_SPEED_STEP,coarse:1,decimals:1}),
+              `1.0〜12.0を0.1刻みで調整できます。変わるのはノーツが流れてくる見た目の速さだけで、譜面のタイミング・判定窓・スコアは変わりません（現在 約${rhythmTravelMsForSpeed(draft.noteSpeed).toLocaleString()}ms）。`,{full:true})}
+            {field('タイミング調整',<>
+              {stepper('judgmentTimingOffsetMs',-RHYTHM_TIMING_OFFSET_MAX_MS,RHYTHM_TIMING_OFFSET_MAX_MS,RHYTHM_TIMING_OFFSET_STEP_MS,{fine:1,coarse:10,suffix:'ms'})}
+              <button type="button" data-rhythm-calibrator-open onClick={goCalibrate} className="mt-2 min-h-[46px] w-full rounded-xl border border-cyan-300/60 bg-cyan-950/50 text-[12px] font-black text-cyan-100">🎯 実際の画面で合わせる</button>
+              {/* 合わせ終わって戻ってきたときのお知らせ。値はもう入っているので、ここは報告だけ
+                  (2026-09-13・ユーザー指摘「設定にもなってない」。決めるのは測り終わった画面) */}
+              {calibrationResult&&<div data-rhythm-calibrator-result className="mt-2 rounded-xl border border-amber-300/50 bg-amber-950/30 p-2 text-[11px] leading-relaxed text-amber-100">
+                <p><b className="tabular-nums">{calibrationResult.offsetMs>0?'+':''}{calibrationResult.offsetMs}ms</b> にしました。叩いた{calibrationResult.usedCount}回の平均は {calibrationResult.rawMeanMs>0?'+':''}{calibrationResult.rawMeanMs}ms（ばらつき±{calibrationResult.spreadMs}ms{calibrationResult.droppedCount>0?`／${calibrationResult.droppedCount}回は外れ値として除外`:''}）でした。</p>
+                {!calibrationResult.stable&&<p className="mt-1 font-black text-rose-300">ばらつきが大きめです。もう一度合わせると、より合った値になります。</p>}
+                <button type="button" data-rhythm-calibrator-dismiss onClick={()=>onClearCalibration&&onClearCalibration()} className="mt-2 min-h-[44px] w-full rounded-xl border border-white/20 bg-slate-800 text-[12px] font-black">とじる</button>
+              </div>}
+            </>,'判定窓の幅は変えず、表示と入力の基準を同じ量だけ補正します。1ms刻みで動かせます。数字で決めにくいときは「実際の画面で合わせる」を押してください。いつもの演奏画面が開き、判定とFAST／SLOWを見ながら2拍ごとのノーツを叩きます。はじめの4回は数えず、そのあとの16回のずれから合う値を出して、その場で「この値にする」を選べます。ライフは減らず、記録にも残りません。',{full:true})}
+            {field('ノーツサイズ',stepper('noteSize',80,120,5,{fine:5,coarse:10,suffix:'%'}),
+              'ノーツの見た目の大きさだけを変えます。入力判定の範囲・HOLD/SLIDE帯・ENDバーの位置は変わりません。',{full:true})}
+            {/* 【2026-09-05・ユーザー指示】「ノーツの開始位置（奥行き）もオプションで調整できるようにしたい」 */}
+            {field('ノーツの出る位置',stepper('noteStartPosition',-100,100,5,{fine:5,coarse:25}),
+              'ノーツが画面のどのあたりから出てくるかを変えます。マイナスにすると奥（画面の上の外側）から、プラスにすると手前寄りから出てきます。判定ラインの位置・判定のタイミング・判定窓・スコアは変わりません。ノーツが流れてくる時間も変わらないので、手前から出すほど見えているあいだの動きは速く見えます。',{full:true})}
+            {field('FAST / SLOW表示',toggle('fastSlowDisplay'))}
+            {field('判定文字表示',toggle('judgmentTextDisplay'))}
+            {field('レーン発光',segments('laneGlow',RHYTHM_LANE_GLOW_LABELS),null,{full:true})}
+            {/* ★出す/出さないと置き場所は**同じ枠にまとめる**(2026-09-13・ユーザー指摘
+                「オプションの配置もコンボを出すとコンボの位置選択から隣り合わせにないのも
+                 意味わからない」)。別々の枠に置くと、あいだに関係ない項目が挟まる。 */}
+            {field('コンボ数',<>
+              {toggle('comboDisplay')}
+              {draft.comboDisplay!==false&&<>
+                <div className={wide?'mt-1.5':'mt-2'}>{segments('comboPosition',RHYTHM_COMBO_POSITION_LABELS)}</div>
+                {/* 大きさも選べる(2026-09-13・ユーザー依頼「コンボ数のサイズ設定もほしい」) */}
+                <div className={wide?'mt-1.5':'mt-2'}>{stepper('comboSize',RHYTHM_COMBO_SIZE_MIN,RHYTHM_COMBO_SIZE_MAX,RHYTHM_COMBO_SIZE_STEP,{fine:RHYTHM_COMBO_SIZE_STEP,coarse:RHYTHM_COMBO_SIZE_STEP*2,suffix:'%',label:'字の大きさ'})}</div>
+                {/* 濃さ(2026-09-13・ユーザー依頼「コンボ数表記の透過度の設定」) */}
+                <div className={wide?'mt-1.5':'mt-2'}>{stepper('comboOpacity',RHYTHM_COMBO_OPACITY_MIN,RHYTHM_COMBO_OPACITY_MAX,RHYTHM_COMBO_OPACITY_STEP,{fine:RHYTHM_COMBO_OPACITY_STEP,coarse:RHYTHM_COMBO_OPACITY_STEP*3,suffix:'%',label:'濃さ（薄くすると透ける）'})}</div>
+              </>}
+            </>,'出す/出さないと、出す場所（おすすめ・左・中央・右・右上）、字の大きさ（70〜150%）、濃さ（30〜100%）を選べます。上から順に「出す/出さない」「場所」「字の大きさ」「濃さ」です。%の行は2つあり、上が字そのものの大きさ、下が濃さ（100%がいちばん濃く、下げるほど透けてノーツが見やすくなります）です。端へ寄せる3つは、両サイドのマスモンに重ならないところへ出ます。大きさを上げると、端に寄せたときはレーンにかかることがあります。どこに置いても判定・スコア・コンボの数え方は変わりません。',{full:true})}
+            {field('両サイドのマスモン｜濃さ',segments('sideMonsterOpacity',RHYTHM_SIDE_MONSTER_OPACITY_LABELS),
+              'レーンの外側の空いたところへ、設定したマスモンが出て拍に合わせて跳ねます。ノーツが見づらいときや、端末が熱くなりやすいときは薄くするか止めてください。',{full:true})}
+            {field('両サイドのマスモン｜動き',segments('sideMonsterMotion',RHYTHM_SIDE_MONSTER_MOTION_LABELS),null,{full:true})}
+            {/* マスモンの項目なので、マスモンの並びへ置く(コンボ数のあいだに挟まっていた) */}
+            {field('マスモン｜能力中に光らせる',toggle('sideMonsterAbilityHighlight'),null,{full:true})}
+          </div>
+        </section>}
+        {tab==='volume'&&<section data-rhythm-options-panel="volume" className={card}>
+          {!wide&&<h3 className={head}>◆ 音量設定</h3>}
+          <div className={wide?grid:`mt-3 ${grid}`}>
+            {field('BGM音量',stepper('bgmVolume',0,RHYTHM_VOLUME_MAX,1,{fine:1,coarse:10}),null,{full:true})}
+            {field('タップ音量',stepper('noteSeVolume',0,RHYTHM_VOLUME_MAX,1,{fine:1,coarse:10}),null,{full:true})}
+            {field('タップ音',toggle('noteSeEnabled'))}
+            <div className="grid gap-2">
+              <button type="button" onClick={previewBgm} className="min-h-[44px] rounded-xl bg-indigo-700 text-[12px] font-black">♪ BGM試聴</button>
+              <button type="button" onClick={()=>RHYTHM_NOTE_SE_RUNTIME.preview(draft)} className="min-h-[44px] rounded-xl bg-fuchsia-700 text-[12px] font-black">タップ音試聴</button>
+            </div>
+          </div>
+          <details data-rhythm-option-help className="mt-3">
+            <summary className="min-h-[24px] cursor-pointer list-none text-[10px] font-black leading-[24px] text-cyan-300/90">▸ 音量についてくわしく</summary>
+            <p className={`mt-1 ${note}`}>この音量はメインゲームの音量設定と別に、音ゲーだけで使います。タイトル画面の全体ミュートのみ共通です。</p>
+            {/* タップ音を10倍にしたので、前に合わせていた人は必ず設定し直すことになる(2026-09-12) */}
+            <p className={`mt-2 ${note}`}>2026-09-12にタップ音を大きくしました（それまでの10倍）。以前に音量を合わせていた場合は、タップ音量を下げるかBGM音量を上げて合わせ直してください。</p>
+            {/* 上限を200まで開けた(2026-09-12・ユーザー指示)。100の意味は今までと同じ */}
+            <p className={`mt-2 ${note}`}>音量は0〜{RHYTHM_VOLUME_MAX}まで上げられます。100はこれまでと同じ大きさです。100より上は端末の音量を上げても足りないときの逃げ道で、とくにBGM音量は上げすぎると曲の大きいところが割れて聞こえることがあります。</p>
+          </details>
+        </section>}
+        {tab==='system'&&<section data-rhythm-options-panel="system" className={card}>
+          {!wide&&<h3 className={head}>◆ システム設定</h3>}
+          <div className={wide?grid:`mt-3 ${grid}`}>
+            {/* 「少なめ」が何を止めるのかを、ここで言い切る(2026-09-13・Android勢から
+                「重い」との声)。判定文字の金の帯・虹の流れは毎フレーム字を塗り直すので、
+                動きがカクつく端末ではここがいちばん効く */}
+            {field('演出量',segments('effectAmount',RHYTHM_EFFECT_LABELS),
+              '既定は「標準」です（重いという声が多かったため、2026-09-13にひとつ軽い段を標準にしました。以前「標準」と呼んでいた段が「多め」です）。「標準」は判定文字の金色の帯や虹が流れるのを止め、光のにじみを減らします。色・グラデーション・字の大きさは「多め」と同じままなので、見た目はほとんど変わりません。よく動く端末で派手にしたいときは「多め」にしてください。「最小」にすると、それに加えて100コンボごとの演出や光そのものもほぼ出なくなります。',{full:true})}
+            {/* モンスターノーツだけを軽くしたい人向け(2026-09-13・ユーザー依頼
+                「設定でモンスターノーツを踏んだときの軽量化バージョンもほしい」) */}
+            {field('モンスターノーツの演出',segments('monsterNoteEffect',RHYTHM_MONSTER_EFFECT_LABELS),
+              'モンスターノーツを取ったときの演出の強さです。既定は「標準」で、画面全体が金色に光るのをやめます（いちばん重いのがこの全画面の描き直しです）。粒と跳ねは残ります。「多め」にすると全画面の光も出ます（2026-09-13より前に「標準」と呼んでいた段です）。「最小」にすると、光る粒もふつうのノーツと同じになり、両サイドのマスモンも跳ねません。どの段でも、音・能力名・振動はそのまま残るので、取れたことは分かります。',{full:true})}
+            {/* 何が起きるのか画面に書いていなかったので、2026-09-13に説明を足した
+                (ユーザーからの質問「軽量モードはどういう効果があるの？」) */}
+            {field('軽量モード',toggle('lightweightMode'),
+              '演出量「最小」と同じところまで演出を止めたうえで、さらに細かい動きも切ります。止まるのは、判定ラインで弾ける光と画面のフラッシュ、判定文字が弾む動きと金・虹が流れる動き、コンボ数が跳ねる動きと枠の脈動、100コンボごとのお祝いとフルコンボの大きな表示、モンスターノーツの光と能力名の弾み、判定ラインが拍に合わせて脈打つ動き、両サイドのマスモンの跳ね、明るさがじわっと変わる動きです。判定・判定窓・スコア・ライフ・譜面・音は一切変わりません。端末が熱くなるときや、演出量「標準」でもカクつくときに使ってください。',{full:true})}
+            {field('曲えらびで試聴する',toggle('songPreviewEnabled'))}
+            {field('タップ時の振動',<>
+              {toggle('vibrationEnabled')}
+              {/* この端末で振動できるかを出す。iPhoneのSafariには振動のしくみが無い時期が長く、
+                  「設定はあるのに何も起きない」状態になっていたため(2026-09-05の指摘) */}
+              <button type="button" data-rhythm-vibration-test disabled={!RHYTHM_HAPTICS.supported()}
+                onClick={()=>RHYTHM_HAPTICS.tap(26)}
+                className="mt-1.5 min-h-[44px] w-full rounded-xl border border-white/20 bg-slate-900 px-3 text-[11px] font-black text-slate-200 disabled:opacity-40">試す</button>
+            </>,!RHYTHM_HAPTICS.supported()?'この端末は振動に対応していないため、ONにしても振動しません（音とエフェクトはそのまま出ます）。':null)}
+            {/* 【2026-09-05・ユーザー相談】「演奏中のみ物理的に端末の通知を出さないようにすることは可能？
+                オプションでオンオフできて」。できる範囲は端末とブラウザで違うので、
+                何が起きるかを必ず添える(黙って効かないのがいちばん困る)。 */}
+            {field('演奏中は通知を出さない',toggle('quietDuringPlay'))}
+          </div>
+          <details data-rhythm-option-help className="mt-3">
+            <summary className="min-h-[24px] cursor-pointer list-none text-[10px] font-black leading-[24px] text-cyan-300/90">▸ この端末で通知をどこまで止められるか</summary>
+            <p className={`mt-1 ${note}`}>{rhythmQuietModeSupportText()}</p>
+          </details>
+          {!RHYTHM_HAPTICS.supported()&&<p data-rhythm-vibration-unsupported className="mt-2 text-[10px] font-bold leading-relaxed text-amber-200">この端末は振動に対応していないため、ONにしても振動しません（音とエフェクトはそのまま出ます）。</p>}
+        </section>}
+        {!wide&&<p className="rounded-xl border border-cyan-400/25 bg-cyan-950/25 px-3 py-2 text-[10px] leading-relaxed text-cyan-100">判定を甘くする設定ではありません。端末ごとの見え方・音量・タイミングを調整する項目です。</p>}
       </div>
     </div>
-    <footer data-rhythm-options-actions className="z-20 shrink-0 border-t border-cyan-400/25 bg-slate-950/98 px-3 pt-2 shadow-[0_-8px_24px_rgba(2,6,23,.72)]" style={{paddingBottom:'calc(.5rem + env(safe-area-inset-bottom))'}}>
+    <footer data-rhythm-options-actions className={`z-20 shrink-0 border-t border-cyan-400/25 bg-slate-950/98 px-3 shadow-[0_-8px_24px_rgba(2,6,23,.72)] ${wide?'pt-1.5':'pt-2'}`} style={{paddingBottom:'calc(.5rem + env(safe-area-inset-bottom))'}}>
       {message&&<p role="status" className="mb-1 text-center text-[11px] font-black text-amber-300">{message}</p>}
-      <div className="grid grid-cols-[.9fr_1.1fr] gap-3"><button type="button" onClick={resetDraft} className="min-h-[52px] rounded-xl border border-white/20 bg-slate-800 px-2 text-[12px] font-black">デフォルトに戻す</button><button type="button" onClick={saveDraft} data-rhythm-options-save data-dirty={dirty?'true':'false'} className={`min-h-[52px] rounded-xl px-3 font-black ${dirty?'bg-amber-400 text-slate-950 shadow-[0_0_18px_rgba(251,191,36,.35)]':'bg-amber-600 text-slate-950'}`}>{dirty?'変更を保存':'保存'}</button></div>
+      {/* 横持ちでは中央寄せで細くする(横いっぱいのボタンは押しにくいだけで、場所も食う) */}
+      <div className={`mx-auto grid grid-cols-[.9fr_1.1fr] gap-3 ${wide?'max-w-[520px]':''}`}><button type="button" onClick={resetDraft} className={`rounded-xl border border-white/20 bg-slate-800 px-2 text-[12px] font-black ${wide?'min-h-[42px]':'min-h-[52px]'}`}>デフォルトに戻す</button><button type="button" onClick={saveDraft} data-rhythm-options-save data-dirty={dirty?'true':'false'} className={`rounded-xl px-3 font-black ${wide?'min-h-[42px]':'min-h-[52px]'} ${dirty?'bg-amber-400 text-slate-950 shadow-[0_0_18px_rgba(251,191,36,.35)]':'bg-amber-600 text-slate-950'}`}>{dirty?'変更を保存':'保存'}</button></div>
     </footer>
   </main>;
 };
-
 // モンスターノーツ用のマスモン設定。音ゲーデバッグ画面と体験版ホームの両方から使うため、
 // 画面の中へ直接書かずにここで1つにまとめてある。中身と操作はどちらから開いても同じ。
 // ============================================================================
@@ -11638,6 +12185,10 @@ const RHYTHM_ACHIEVEMENT_MARKS=Object.freeze({
     style:Object.freeze({background:'rgba(255,255,255,.14)'})}),
   UNPLAYED:  Object.freeze({label:'まだ遊んでいない',
     style:Object.freeze({background:'rgba(203,213,225,.55)'})}),
+  // 遊んだけれどライフが0になって終わった(2026-09-12に追加)。「まだ遊んでいない」と
+  // 区別が付かないままにしないためだけの段で、クリアの段より下に置く
+  FAILED:    Object.freeze({label:'失敗（ライフ0）',
+    style:Object.freeze({background:'linear-gradient(135deg,#7f1d1d,#dc2626)'})}),
   CLEAR:     Object.freeze({label:'クリア',
     style:Object.freeze({background:'linear-gradient(135deg,#7dd3fc,#22d3ee)'})}),
   FULL_COMBO:Object.freeze({label:'フルコンボ',
@@ -11653,7 +12204,8 @@ const RHYTHM_ACHIEVEMENT_MARKS=Object.freeze({
 // 上の段から順に見て、いちばん上の達成を返す。
 const rhythmAchievementMarkId=(playable,record)=>{
   if(!playable)return 'NONE';
-  if(!record||!record.clear)return 'UNPLAYED';
+  if(!record||!record.played)return 'UNPLAYED';
+  if(!record.clear)return 'FAILED';
   if(record.allMarvelous)return 'ALL_MARVELOUS';
   if(record.allExcellent)return 'ALL_EXCELLENT';
   if(record.fullCombo)return 'FULL_COMBO';
@@ -12073,7 +12625,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
               <span data-rhythm-difficulty-best={item.id} className="mt-0.5 block text-[9px] font-black tabular-nums opacity-80">
                 {open
                   ?(()=>{const record=rhythmBestRecord(bestRecords,song.songId,item.id);
-                    return record&&record.clear?record.bestScore.toLocaleString():'—';})()
+                    return record&&record.played?record.bestScore.toLocaleString():'—';})()
                   :`${need}で解放`}
               </span>
             </button>;
@@ -12085,8 +12637,8 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
         <p className="mt-1.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-[10px] font-bold">
           <span data-rhythm-demo-level className="text-slate-300">Lv.{chart.level} / {chart.totalNotes}ノーツ</span>
           <span data-rhythm-demo-best className="text-amber-200">
-            {best&&best.clear
-              ?<>{difficulty.id}の自己ベスト {best.bestScore.toLocaleString()}（ランク {rhythmRankForScore(best.bestScore)}） / 最大コンボ {best.maxCombo}</>
+            {best&&best.played
+              ?<>{difficulty.id}の自己ベスト {best.bestScore.toLocaleString()}（ランク {rhythmRankForScore(best.bestScore)}） / 最大コンボ {best.maxCombo}{best.clear?'':' / まだクリアしていません'}</>
               :<>まだ遊んでいません</>}
           </span>
         </p>
@@ -12359,9 +12911,12 @@ const RhythmMonsterSlotsPanel=({rhythmMonsterSlots,rhythmMonsterSlotIdsInUse,rhy
 //   そこへ知らせを重ねると肝心の進捗が読めなくなっていた
 //   (2026-09-07・ユーザー提案「曲リザルトの画面で出すほうがいい。
 //    そうしたら帯にわざわざ何周分追加とか表示する必要もない」)。
-const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onComplete,onExit,quickRunAward=null,debugPlay=false,tutorial=false})=>{
+const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onComplete,onExit,quickRunAward=null,debugPlay=false,tutorial=false,calibrating=false,onApplyCalibration=null})=>{
   const chart=song.difficulties[difficulty.id],laneRefs=useRef([]),runRef=useRef(null),frameRef=useRef(null),playAreaRef=useRef(null),judgmentLineRef=useRef(null),judgmentBandRef=useRef(null),judgmentTimerRef=useRef(null),judgmentRevisionRef=useRef(0),startLockRef=useRef(false),generationRef=useRef(0),mountedRef=useRef(false),glowNodesRef=useRef(null);
   const tutorialBannerRef=useRef(null),tutorialStepRef=useRef(null);
+  // タイミング合わせの案内(いま何回ぶん数えたか・途中経過のずれ)を書き換えるための控え。
+  // 数えた回数が変わったときだけDOMへ書く(毎フレームReactを動かさない)
+  const calibrationBannerRef=useRef(null),calibrationTapsRef=useRef(-1);
   const hasHold=chart.notes.some(note=>note.type==='HOLD');
   // デバッグ画面で譜面の中身をひと目で見るための表記。プレイヤーの画面には出さない。
   // 以前は data/rhythm-mode.js が DOM を直接 'MIX TEST' へ書き換えていて、
@@ -12402,13 +12957,16 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
   const canvasFaceElements=useMemo(()=>canvasNotes?chart.notes.map((note,index)=>{const monsterSlot=rhythmNoteMonsterSlot(note),monster=monsterSlot?monsters[monsterSlot-1]||null:null;if(!monster)return null;return <span key={index} ref={el=>faceRefs.current[index]=el} data-rhythm-canvas-face aria-hidden="true" style={{display:'none'}}><span data-rhythm-canvas-face-art>{monster.imageUrl&&<DyedMonsterImage baseId={monster.baseId} src={monster.imageUrl} alt="" masuColors={monster.colors} draggable={false} className="h-full w-full object-contain"/>}</span></span>;}).filter(Boolean):null,[canvasNotes,chart.notes,monsterSignature]);
   // レーン枠・サブレーン境界・サブレーン発光も、遊んでいるあいだは中身が変わらない。
   // 発光の ON/OFF は setPressedLanes が直接DOMへ書くので、Reactが作り直す必要はない。
-  const laneElements=useMemo(()=><><div className="pointer-events-none absolute inset-0 grid grid-cols-5">{Array.from({length:5},(_,lane)=><div key={lane} data-rhythm-lane={lane} data-pressed="false" aria-hidden="true" className="relative border-r border-white/20 bg-slate-900/40" style={{transition:settings.lightweightMode?'none':'background-color 60ms linear, box-shadow 60ms linear, filter 60ms linear, border-color 60ms linear',borderBottom:'3px solid transparent',boxSizing:'border-box'}}></div>)}</div><div className="pointer-events-none absolute inset-0" aria-hidden="true">{Array.from({length:5},(_,index)=><i key={index} data-rhythm-sublane-boundary="" />)}</div><div className="pointer-events-none absolute inset-0" aria-hidden="true">{Array.from({length:10},(_,subLane)=><i key={subLane} data-rhythm-sublane-feedback={subLane} data-pressed="false" className="absolute inset-0 opacity-0" style={{clipPath:rhythmSubLanePolygon(subLane),background:'linear-gradient(to bottom,rgba(34,211,238,.12) 0%,rgba(34,211,238,.2) 48%,rgba(103,232,249,.5) 76%,rgba(236,254,255,.94) 88%,rgba(103,232,249,.58) 94%,rgba(34,211,238,.28) 100%)',boxShadow:settings.lightweightMode||settings.effectAmount==='MINIMAL'?'none':settings.effectAmount==='LOW'?'inset 0 -18px 18px rgba(207,250,254,.38),0 0 8px rgba(103,232,249,.38)':'inset 0 -52px 42px rgba(207,250,254,.72),inset 0 -10px 16px rgba(255,255,255,.82),0 0 20px rgba(103,232,249,.72)',filter:settings.effectAmount==='MINIMAL'?'none':settings.effectAmount==='LOW'?'brightness(1.08)':'brightness(1.22)',transition:settings.lightweightMode?'none':'opacity 45ms linear',willChange:settings.lightweightMode?'auto':'opacity'}}/>)}</div></>,[settings.lightweightMode,settings.effectAmount]);
+  const laneElements=useMemo(()=><><div className="pointer-events-none absolute inset-0 grid grid-cols-5">{Array.from({length:5},(_,lane)=><div key={lane} data-rhythm-lane={lane} data-pressed="false" aria-hidden="true" className="relative border-r border-white/20 bg-slate-900/40" style={{/* ★filter をここへ入れない。押したレーンの filter を変えると、変化の60msのあいだ そのレーンが毎フレーム作り直しになる(2026-09-12・実機のカクつき調査) */transition:settings.lightweightMode?'none':'background-color 60ms linear, box-shadow 60ms linear, border-color 60ms linear',borderBottom:'3px solid transparent',boxSizing:'border-box'}}></div>)}</div><div className="pointer-events-none absolute inset-0" aria-hidden="true">{Array.from({length:5},(_,index)=><i key={index} data-rhythm-sublane-boundary="" />)}</div><div className="pointer-events-none absolute inset-0" aria-hidden="true">{/* ★will-change は置かない。以前は10枚すべてに willChange:"opacity" を常時付けていたが、 will-change は「これから変わる」と前もって伝えるものなので、付けっぱなしにすると 押していないあいだも10枚が合成レイヤーとして居座り続ける。opacity の45msの変化は will-change 無しでも十分間に合う(2026-09-12・実機のカクつき調査)。 */}{Array.from({length:10},(_,subLane)=><i key={subLane} data-rhythm-sublane-feedback={subLane} data-pressed="false" className="absolute inset-0 opacity-0" style={{clipPath:rhythmSubLanePolygon(subLane),background:'linear-gradient(to bottom,rgba(34,211,238,.12) 0%,rgba(34,211,238,.2) 48%,rgba(103,232,249,.5) 76%,rgba(236,254,255,.94) 88%,rgba(103,232,249,.58) 94%,rgba(34,211,238,.28) 100%)',boxShadow:settings.lightweightMode||settings.effectAmount==='MINIMAL'?'none':settings.effectAmount==='LOW'?'inset 0 -18px 18px rgba(207,250,254,.38),0 0 8px rgba(103,232,249,.38)':'inset 0 -52px 42px rgba(207,250,254,.72),inset 0 -10px 16px rgba(255,255,255,.82),0 0 20px rgba(103,232,249,.72)',filter:settings.effectAmount==='MINIMAL'?'none':settings.effectAmount==='LOW'?'brightness(1.08)':'brightness(1.22)',transition:settings.lightweightMode?'none':'opacity 45ms linear'}}/>)}</div></>,[settings.lightweightMode,settings.effectAmount]);
   const monsterForNote=note=>{const slot=rhythmNoteMonsterSlot(note);return slot?monstersRef.current[slot-1]||null:null;};
   // --- 両サイドのマスモン ---
   // レーンの外側に空いている三角形へ、設定したマスモンを置いて拍に合わせて跳ねさせる。
   // 跳ねるのはCSSアニメーションなので毎フレームのJSは走らない。置き場所と大きさは
   // rhythmLayoutSideMonsters が、プレイエリアの大きさが変わったときだけ測り直す。
   const sideMonsterRefs=useRef([]),screenFlashRef=useRef(null),judgmentTextRef=useRef(null),comboRef=useRef(null);
+  // ライフの強調(2026-09-12)。DOM へ data 属性を書くだけで、判定・スコア・ライフの数値には触らない。
+  // lifeBoxRef … 減った瞬間にHUDのライフ表示を揺らす／lifeDamageRef … 減った量(「-50」)を一瞬出す
+  const lifeBoxRef=useRef(null),lifeDamageRef=useRef(null);
   const sideMonsterElements=useMemo(()=>{
     if(settings.sideMonsterOpacity==='OFF')return null;
     const opacity=rhythmSideMonsterOpacityValue(settings.sideMonsterOpacity);
@@ -12442,7 +13000,7 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
   // 譜面データそのものは触らず、演奏を始めるときにノーツ1つ1つへ焼き込む
   // (追従の許容・猶予と同じやり方。保存データにもランキングにも影響しない)。
   const makeRuntimeNotes=()=>{const tracking=rhythmSlideTrackingFor(difficulty.id);const checkpointIntervalMs=rhythmSlideCheckpointIntervalMs(difficulty.id,chart?.level);return chart.notes.map((note,index)=>({...note,index,done:false,activePointerId:null,holdJudgment:null,holdDeltaMs:0,_rhythmSlideToleranceBonusLanes:tracking.toleranceBonusLanes,_rhythmTrackingGraceMs:tracking.graceMs,...(note.type==='SLIDE'?{_rhythmSlideRenderPoints:rhythmSlidePoints(note),_rhythmSlideCheckpoints:rhythmSlideCheckpointTimes(note,checkpointIntervalMs)}:{})}));};
-  const initialView=()=>({status:'loading',score:0,combo:0,maxCombo:0,last:'',fastSlow:'',counts:emptyCounts(),fast:0,slow:0,life:RHYTHM_LIFE_MAX,ability:null,result:null});
+  const initialView=()=>({status:'loading',score:0,combo:0,maxCombo:0,last:'',lastPrecise:false,fastSlow:'',counts:emptyCounts(),fast:0,slow:0,life:RHYTHM_LIFE_MAX,ability:null,result:null});
   const [view,setView]=useState(initialView);
   /* 演奏を始める前のカウントダウン(READY→3→2→1)。
      null のあいだは出さない。曲と毎フレームの処理はこれが終わってから動かす */
@@ -12457,6 +13015,18 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
   // 二度と動かず、200・300では何も起きないように見えるバグになっていた。
   // tierを先に計算してそれをeffectの依存にすることで、実際に100の位が変わったときだけ動く。
   // 演出量MINIMAL・軽量モードでは出さない(端末を重くしないため)。
+  // ライフが0になった瞬間だけ、画面の真ん中へ大きく「LIFE 0 / DOWN」を出す(2026-09-12)。
+  // 数字を数えるのではなく「いま倒れた」と気づけるようにするためのもの。
+  // ★comboMilestone と同じく、段(=0になった回数)が変わったときだけ effect を動かす。
+  //   view.life を依存にすると、ライフが動くたびに後片付けが走って消すタイマーを解除してしまう。
+  const [lifeDownCount,setLifeDownCount]=useState(0);
+  const [lifeDownSlam,setLifeDownSlam]=useState(false);
+  useEffect(()=>{
+    if(lifeDownCount<=0){setLifeDownSlam(false);return;}
+    setLifeDownSlam(true);
+    const timer=setTimeout(()=>setLifeDownSlam(false),1400);
+    return ()=>clearTimeout(timer);
+  },[lifeDownCount]);
   const [comboMilestone,setComboMilestone]=useState(0);
   const comboMilestoneTier=Math.floor((Number(view.combo)||0)/RHYTHM_COMBO_MILESTONE_STEP);
   useEffect(()=>{
@@ -12478,6 +13048,14 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
   // 次ランクを出さないようにする(2026-09-04、Codexレビューで指摘された不具合の修正)。
   const rankNextId=rhythmNextRankId(view.score,difficulty.maxScore);
   const rankNextLabel=rankNextId?`→${rankNextId}`:'★MAX';
+  // ライフとコンボの「見せ方の段」(2026-09-12)。どちらも数値そのものは変えず、
+  // CSSへ渡す data 属性と拡大率を決めるだけ。
+  const lifeRatio=rhythmLifeRatio(view.life);
+  const lifeState=rhythmLifeState(view.life);
+  const comboTier=rhythmComboTier(view.combo);
+  // コンボ数の置き場所(2026-09-12・ユーザー指示)。座標は index.html の
+  // [data-combo-pos="…"] が持つので、ここは名前をそのまま属性へ渡すだけ。
+  const comboPosition=RHYTHM_COMBO_POSITIONS.includes(settings.comboPosition)?settings.comboPosition:'CENTER';
   // 横画面向けHUD配置(§6.2)で使う。曲名の折り返し行数(WebkitLineClamp)はインラインstyleで
   // 決めるためTailwindのlandscape:だけでは切り替えられず、ここだけJSの向き判定を使う。
   // ほかのHUDレイアウトの出し分けはTailwindのlandscape:バリアントで完結させ、判定・スコア・
@@ -12500,7 +13078,7 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
   },[]);
   const stopFrame=useCallback(()=>{if(frameRef.current!==null)cancelAnimationFrame(frameRef.current);frameRef.current=null;},[]);
   const clearJudgmentTimer=useCallback(()=>{if(judgmentTimerRef.current!==null)clearTimeout(judgmentTimerRef.current);judgmentTimerRef.current=null;++judgmentRevisionRef.current;},[]);
-  const scheduleJudgmentClear=useCallback(()=>{if(judgmentTimerRef.current!==null)clearTimeout(judgmentTimerRef.current);const revision=++judgmentRevisionRef.current;judgmentTimerRef.current=setTimeout(()=>{if(revision!==judgmentRevisionRef.current)return;judgmentTimerRef.current=null;setView(v=>({...v,last:'',fastSlow:''}));},RHYTHM_JUDGMENT_DISPLAY_MS);},[]);
+  const scheduleJudgmentClear=useCallback(()=>{if(judgmentTimerRef.current!==null)clearTimeout(judgmentTimerRef.current);const revision=++judgmentRevisionRef.current;judgmentTimerRef.current=setTimeout(()=>{if(revision!==judgmentRevisionRef.current)return;judgmentTimerRef.current=null;setView(v=>({...v,last:'',lastPrecise:false,fastSlow:''}));},RHYTHM_JUDGMENT_DISPLAY_MS);},[]);
   // 能力の発動表示(「ミーア　元気！」)は短時間で消す。判定表示とは別のタイマーで持つ
   const clearAbilityTimer=useCallback(()=>{if(abilityTimerRef.current!==null)clearTimeout(abilityTimerRef.current);abilityTimerRef.current=null;++abilityRevisionRef.current;},[]);
   /* カウントダウンの後始末。disposeRun がこれを呼ぶので、必ず disposeRun より前で定義する。
@@ -12620,7 +13198,16 @@ useEffect(()=>{
   window.addEventListener('orientationchange',invalidate);
   return ()=>{window.removeEventListener('resize',invalidate);window.removeEventListener('orientationchange',invalidate);};
 },[settings.noteStartPosition,settings.noteSize,view.status]);
-  const applyJudgment=useCallback((note,judgment,deltaMs)=>{const run=runRef.current;if(!run||run.finished||run.paused||note.done)return;if(note.activePointerId!==null){if(note.activePointerId!==-1)run.activePointers.delete(note.activePointerId);note.activePointerId=null;}note.releasedAtMs=null;rhythmFloatingNoteRemove(note);note.done=true;note._rhythmFinalJudgment=judgment;
+  const applyJudgment=useCallback((note,judgment,deltaMs)=>{const _judgeT0=RHYTHM_PERF.enabled&&typeof performance!=='undefined'?performance.now():0;const run=runRef.current;if(!run||run.finished||run.paused||note.done)return;if(note.activePointerId!==null){if(note.activePointerId!==-1)run.activePointers.delete(note.activePointerId);note.activePointerId=null;}note.releasedAtMs=null;rhythmFloatingNoteRemove(note);note.done=true;note._rhythmFinalJudgment=judgment;
+// MARVELOUSの中でも、とくにぴったり(±20ms)だったか。**見た目にしか使わない**(2026-09-12)。
+// 判定の名前・スコア・コンボ・ライフ・判定数・FAST/SLOWの数え方には一切入れないので、
+// run にも result にも残さない。judgmentTimingOffsetMs を通したあとのズレを見ている
+const preciseHit=rhythmJudgmentIsPrecise(judgment,deltaMs);
+// タイミング合わせのときだけ、叩いたずれをそのまま貯める(2026-09-13・ユーザー指示
+// 「普通に実際の画面を使ってやればいい / そこで判定も合わせて出して調整するのが1番合う」)。
+// ★判定・スコア・コンボ・ライフ・判定数・FAST/SLOWの数え方には一切入れない。貯めるだけ。
+// ★MISSは入れない(叩けていないので、そのずれは意味を持たない)。
+if(calibrating&&judgment!=='MISS'&&typeof deltaMs==='number'&&Number.isFinite(deltaMs)){if(!Array.isArray(run.deltas))run.deltas=[];run.deltas.push(deltaMs);}
 // HOLD / SLIDE を最後まで取れた・FLICKが成立したときは、そこで音と光を返す。
 // TAPは指を置いた時点で音が鳴っているので対象にしない。
 // (実機で「フリックが成功したのか分かりづらい」「取れた手ごたえがほしい」という報告があった)
@@ -12642,20 +13229,27 @@ if(judgment!=='MISS'){
     const span=rhythmNoteIsSlide(note)
       ?rhythmProjectSlideSpan(rhythmReleaseLane(note),note,1,run.audio?.songTimeMs?.()??note.timeMs)
       :rhythmNoteVisualSpan(note,note.lane,1,run.audio?.songTimeMs?.()??note.timeMs);
-    rhythmSpawnHitEffect(area,{centerRatio:span.center,widthRatio:span.width,judgment,monster:monsterHit});
-    if(monsterHit&&screenFlashRef.current){
-      const flash=screenFlashRef.current;
-      flash.dataset.rhythmFlash='';
-      void flash.offsetWidth;
-      flash.dataset.rhythmFlash='1';
-    }
+    // 流し直す印はここで集めて、最後にまとめて1回のレイアウトで付け直す
+    // (箇所ごとに void offsetWidth を書くと、その回数ぶんページ全体のレイアウトが走る)。
+    const restarts=[];
+    // モンスターノーツの演出の強さ(2026-09-13・ユーザー依頼「軽量化バージョンもほしい」)。
+    //   NORMAL … 粒2.1倍 ＋ 画面全体の光 ＋ そのマスモンが大きく跳ねる
+    //   LIGHT  … 画面全体の光をやめる(いちばん重いのが全画面の描き直し)。粒と跳ねは残す
+    //   OFF    … 粒もふつうのノーツと同じにし、跳ねもやめる
+    // ★どの段でも音・能力名・振動は残す。取れたことが分からなくなるのがいちばん困る。
+    const monsterEffect=RHYTHM_MONSTER_EFFECT_LEVELS.includes(settings.monsterNoteEffect)?settings.monsterNoteEffect:'NORMAL';
+    const bigMonsterEffect=monsterHit&&monsterEffect!=='OFF';
+    const hitEffect=rhythmSpawnHitEffect(area,{centerRatio:span.center,widthRatio:span.width,judgment,monster:bigMonsterEffect,precise:preciseHit,defer:true});
+    if(hitEffect)restarts.push(hitEffect);
+    if(monsterHit&&monsterEffect==='NORMAL'&&screenFlashRef.current)restarts.push({el:screenFlashRef.current,attr:'rhythmFlash'});
     // そのマスモンが両サイドで大きく跳ねる(どのマスモンの番だったかが分かるように)
     if(monsterHit){
       // モンスターノーツだけは振動も強くする(ふつうのノーツとの違いを指でも分かるように)
       if(settings.vibrationEnabled)RHYTHM_HAPTICS.tap(26);
       const slot=rhythmNoteMonsterSlot(note),el=slot?sideMonsterRefs.current[slot-1]:null;
       if(el){
-        el.dataset.rhythmSideHit='';void el.offsetWidth;el.dataset.rhythmSideHit='1';
+        // 「最小」では跳ねない(跳ねはそのマスモンの周りを描き直すため)
+        if(monsterEffect!=='OFF')restarts.push({el,attr:'rhythmSideHit'});
         // 出番が済んだので、このあとの待機は最初のぴょんぴょんとは別の動き(ゆらゆら)にする
         el.dataset.rhythmSidePhase='done';
         // 歓声(700ms)が終わったら印を外す。外さないと !important の指定が残り続けて
@@ -12665,16 +13259,20 @@ if(judgment!=='MISS'){
     }
     // 判定文字を一度だけ弾ませる
     const judgmentText=judgmentTextRef.current;
-    if(judgmentText){judgmentText.dataset.rhythmJudgmentPop='';void judgmentText.offsetWidth;judgmentText.dataset.rhythmJudgmentPop='1';}
+    if(judgmentText)restarts.push({el:judgmentText,attr:'rhythmJudgmentPop'});
     // コンボ数も1つ増えるたびに弾ませる(プロセカのように数字が跳ねる)
     const comboText=comboRef.current;
-    if(comboText){comboText.dataset.rhythmComboPop='';void comboText.offsetWidth;comboText.dataset.rhythmComboPop='1';}
+    if(comboText)restarts.push({el:comboText,attr:'rhythmComboPop'});
+    // ここで1回だけレイアウトを読む。集めた印をまとめて付け直す
+    rhythmRestartAnimations(restarts);
   }
 }
 if(settings.vibrationEnabled&&judgment!=='MISS')RHYTHM_HAPTICS.tap();const nextCombo=rhythmComboAfter(run.combo,judgment);run.combo=nextCombo;run.maxCombo=Math.max(run.maxCombo,nextCombo);run.counts[judgment]++;const side=judgment==='MISS'?null:rhythmFastSlow(deltaMs);if(side)run[side.toLowerCase()]++;const songTimeMs=run.audio?.songTimeMs?.()??0;
 // ライフ変化は能力(無敵・我慢)を通してから反映する。判定・コンボ・スコアそのものは変えない(§4.2)
 // 練習ではライフを減らさない。途中で倒れると、まだ習っていないノーツまで届かなくなる
-run.life=tutorial?RHYTHM_LIFE_MAX:rhythmLifeAfterWithMonsterAbilities(run.life,judgment,run.abilities,songTimeMs);
+// lifeBefore … 減ったことを知らせる演出のためだけに控える(2026-09-12)。計算には使わない
+const lifeBefore=run.life;
+run.life=(tutorial||calibrating)?RHYTHM_LIFE_MAX:rhythmLifeAfterWithMonsterAbilities(run.life,judgment,run.abilities,songTimeMs);
 let revived=false,abilityFlash=null;
 // 根性ストックを持ったままライフが0になったら、その場で自動的にライフ50へ復活する(§4.4)
 const stockRevive=rhythmConsumeKonjoStock(run.abilities,run.life);
@@ -12703,16 +13301,45 @@ const calculatedScore=rhythmCalculateScore({judgments:run.counts,maxCombo:run.ma
 // DOWN中に根性で蘇生したら、**その蘇生ノーツ自身は加算せず次のノーツから** 加算を再開する。
 // DOWN中に止まっていたぶんを遡って足さないよう、そのぶんを差し引く量として持つ(§4.4)
 if(revived&&run.lifeDepleted&&run.life>0){run.scoreOffset=rhythmScoreOffsetAfterRevive(calculatedScore,run.lockedScore);run.score=run.lockedScore;run.lifeDepleted=false;}
-const score=run.lifeDepleted?run.lockedScore:run.score;setView(v=>({...v,score,combo:run.combo,maxCombo:run.maxCombo,last:judgment,fastSlow:side||'',counts:{...run.counts},fast:run.fast,slow:run.slow,life:run.life,...(abilityFlash?{ability:abilityFlash}:{})}));scheduleJudgmentClear();if(abilityFlash)scheduleAbilityClear();},[chart.totalNotes,difficulty.maxScore,scheduleAbilityClear,scheduleJudgmentClear,settings.vibrationEnabled,tutorial]);
-  const finish=useCallback(()=>{const run=runRef.current;if(!run||run.finished||run.paused)return;run.finished=true;stopFrame();RHYTHM_GESTURE_RUNTIME.clear();run.activePointers.clear();run.activeTouchInputs?.clear();run.audio?.stop();const score=run.lifeDepleted?run.lockedScore:run.score;const achievements=rhythmResultAchievements(run.counts,chart.totalNotes);const result={score,judgments:{...run.counts},maxCombo:run.maxCombo,fast:run.fast,slow:run.slow,...achievements};const isNewRecord=score>run.startBestScore;const merged=mergeRhythmBestRecord(run.startBest,result);
+// ===== ライフの変化を目で分かるようにする(2026-09-12・ユーザー指示) =====
+// 「ライフ変動や0になったときとか気付きにくい」。バーの数字が小さく動くだけでは気づけないので、
+// 減ったその場でHUDを揺らし、減った量を数字で一瞬出す。書くのは data 属性と文字だけで、
+// 判定・スコア・ライフの計算には一切関わらない。
+// ★根性で蘇生した直後は「増えた」側になるので、減ったときだけ出す(lifeDelta<0)。
+const lifeDelta=run.life-lifeBefore;
+if(lifeDelta<0){
+  // ここも印の付け直しなので、レイアウトの読み取りは1回にまとめる(rhythmRestartAnimations)。
+  // 箇所ごとに void offsetWidth を書くと、その回数ぶんページ全体のレイアウトが走る。
+  const lifeRestarts=[];
+  const lifeBox=lifeBoxRef.current;
+  if(lifeBox)lifeRestarts.push({el:lifeBox,attr:'rhythmLifeHit'});
+  const lifeDamage=lifeDamageRef.current;
+  if(lifeDamage){lifeDamage.textContent=String(lifeDelta);lifeRestarts.push({el:lifeDamage,attr:'rhythmLifeDamageShow'});}
+  rhythmRestartAnimations(lifeRestarts);
+}
+// 0になった瞬間だけ、大きく1度だけ知らせる(蘇生して戻った場合はここを通らない)
+if(run.life===0&&lifeBefore>0)setLifeDownCount(count=>count+1);
+const score=run.lifeDepleted?run.lockedScore:run.score;setView(v=>({...v,score,combo:run.combo,maxCombo:run.maxCombo,last:judgment,lastPrecise:preciseHit,fastSlow:side||'',counts:{...run.counts},fast:run.fast,slow:run.slow,life:run.life,...(abilityFlash?{ability:abilityFlash}:{})}));scheduleJudgmentClear();if(abilityFlash)scheduleAbilityClear();if(_judgeT0)RHYTHM_PERF.judge(performance.now()-_judgeT0,!!monster);},[chart.totalNotes,difficulty.maxScore,scheduleAbilityClear,scheduleJudgmentClear,settings.vibrationEnabled,settings.monsterNoteEffect,tutorial,calibrating]);
+  const finish=useCallback(()=>{const run=runRef.current;if(!run||run.finished||run.paused)return;run.finished=true;stopFrame();RHYTHM_GESTURE_RUNTIME.clear();run.activePointers.clear();run.activeTouchInputs?.clear();run.audio?.stop();const score=run.lifeDepleted?run.lockedScore:run.score;const achievements=rhythmResultAchievements(run.counts,chart.totalNotes);
+    // ===== クリアか失敗か(2026-09-12・ユーザー指示「終了後にクリアか失敗かもわかるようにして」) =====
+    // 失敗＝ライフが0になったまま曲を終えた(不可逆のDOWN)こと。根性で蘇生して0を脱していれば
+    // run.lifeDepleted は false に戻っているので、そのときはクリア扱いになる。
+    // 練習(tutorial)とタイミング合わせ(calibrating)はライフを減らさないので必ずクリア。
+    const failed=!tutorial&&!calibrating&&run.lifeDepleted===true;
+    // タイミング合わせのときは、貯めたずれから「判定タイミング調整」に入れる値を出す。
+    // 助走(はじめの数回)は数に入れない。外れ値の落とし方・刻みは rhythmCalibrationOffsetFromTaps が持つ
+    const calibration=calibrating
+      ? rhythmCalibrationOffsetFromTaps((Array.isArray(run.deltas)?run.deltas:[]).slice(RHYTHM_CALIBRATION_WARMUP_COUNT))
+      : null;
+    const result={score,judgments:{...run.counts},maxCombo:run.maxCombo,fast:run.fast,slow:run.slow,cleared:!failed,...(calibration?{calibration}:{}),...achievements};const isNewRecord=score>run.startBestScore;const merged=mergeRhythmBestRecord(run.startBest,result);
     // フルコンボ等を達成していれば、リザルトの数字を出す前に一度「FULL COMBO!」等を
     // 大きく見せる(2026-09-04、ユーザーからの要望)。演出量MINIMAL・軽量モードでは
     // 従来どおりそのままリザルトへ進む(演出だけの分岐で、判定・保存には関わらない)。
     const celebrateTitle=achievements.allMarvelous?'ALL MARVELOUS!!':achievements.allExcellent?'ALL EXCELLENT!!':achievements.fullCombo?'FULL COMBO!':null;
-    const showCelebrate=!!celebrateTitle&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL';
+    const showCelebrate=!!celebrateTitle&&!failed&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL';
     setView(v=>({...v,status:showCelebrate?'celebrate':'result',score,combo:run.combo,maxCombo:run.maxCombo,counts:{...run.counts},fast:run.fast,slow:run.slow,result:{...result,isNewRecord,bestScore:merged.bestScore}}));
     onComplete(result,merged);
-  },[chart.totalNotes,difficulty.maxScore,onComplete,settings.effectAmount,settings.lightweightMode,stopFrame]);
+  },[chart.totalNotes,difficulty.maxScore,onComplete,settings.effectAmount,settings.lightweightMode,stopFrame,tutorial,calibrating]);
   // celebrate画面: 出た瞬間に合成SEを1回鳴らし、既定の時間で自動的にresultへ進む。
   // 依存はview.statusだけにしてある。もしview.comboなど毎ノーツ変わる値を依存に入れると、
   // (かつてコンボ演出で実際に踏んだ通り)途中でeffectが再実行されるたびcleanupが走り、
@@ -12725,7 +13352,7 @@ const score=run.lifeDepleted?run.lockedScore:run.score;setView(v=>({...v,score,c
     return ()=>{if(celebrateTimerRef.current){clearTimeout(celebrateTimerRef.current);celebrateTimerRef.current=null;}};
   },[view.status]);
   const skipCelebrate=()=>{if(celebrateTimerRef.current){clearTimeout(celebrateTimerRef.current);celebrateTimerRef.current=null;}setView(v=>v.status==='celebrate'?{...v,status:'result'}:v);};
-  const scheduleTick=useCallback(()=>{stopFrame();const tick=(frameNowMs)=>{RHYTHM_PERF.frame(frameNowMs);RHYTHM_GESTURE_RUNTIME.invalidateAreaRect();const run=runRef.current;if(!run||run.finished||run.paused)return;const perfTickStart=RHYTHM_PERF.enabled?performance.now():0;const songTimeMs=run.audio.songTimeMs(),travel=measureTravel(),visualTime=songTimeMs-settings.judgmentTimingOffsetMs,travelMs=rhythmTravelMsForSpeed(settings.noteSpeed);let perfScanned=0,perfDrawn=0;updateJudgmentBand(travel,travelMs);
+  const scheduleTick=useCallback(()=>{stopFrame();const tick=(frameNowMs)=>{RHYTHM_PERF.frame(frameNowMs);RHYTHM_GESTURE_RUNTIME.invalidateAreaRect();const run=runRef.current;if(!run||run.finished||run.paused)return;const perfTickStart=RHYTHM_PERF.enabled?performance.now():0;const songTimeMs=run.audio.songTimeMs();RHYTHM_PERF.songTime(songTimeMs);const travel=measureTravel(),visualTime=songTimeMs-settings.judgmentTimingOffsetMs,travelMs=rhythmTravelMsForSpeed(settings.noteSpeed);let perfScanned=0,perfDrawn=0;updateJudgmentBand(travel,travelMs);
 // このフレームでノーツを正しい場所へ置けるか。置けないなら判定も進めない(下のvisitNoteを参照)
 const placeable=!!travel&&travel.ready!==false;
 // canvas で描くフレームの準備(全面を消し、大きさが変わっていれば作り直す)。DOM 版では何もしない
@@ -12768,6 +13395,21 @@ const paintCanvasNote=note=>{
 };
 // 練習の説明。曲の時刻で切り替わる。変わったときだけDOMへ書く(毎フレームReactを動かさない)
 if(tutorial){const step=rhythmTutorialStepAt(songTimeMs);if(step!==tutorialStepRef.current){tutorialStepRef.current=step;const banner=tutorialBannerRef.current;if(banner){const title=banner.querySelector('[data-rhythm-tutorial-title]'),body=banner.querySelector('[data-rhythm-tutorial-text]');if(title)title.textContent=step.title;if(body)body.textContent=step.text;}}}
+// タイミング合わせの案内。数えた回数が変わったときだけ書き換える。
+// ★チュートリアルの案内(ノーツの種類の説明)とは別物。流用すると「れんしゅう」の文が出て
+//   何をしている画面なのか分からなくなる(2026-09-13・ユーザー指摘「チュートリアルの流用？」)
+if(calibrating){const taps=Array.isArray(run.deltas)?run.deltas.length:0;
+  if(taps!==calibrationTapsRef.current){calibrationTapsRef.current=taps;const banner=calibrationBannerRef.current;
+    if(banner){const title=banner.querySelector('[data-rhythm-calibration-title]'),body=banner.querySelector('[data-rhythm-calibration-text]');
+      const counted=Math.max(0,taps-RHYTHM_CALIBRATION_WARMUP_COUNT);
+      const remain=Math.max(0,RHYTHM_CALIBRATION_TAP_COUNT-counted);
+      const now=counted>0?rhythmCalibrationOffsetFromTaps(run.deltas.slice(RHYTHM_CALIBRATION_WARMUP_COUNT)):null;
+      if(title)title.textContent=taps<RHYTHM_CALIBRATION_WARMUP_COUNT
+        ?`かまえて（はじめの${RHYTHM_CALIBRATION_WARMUP_COUNT}回は数えません）`
+        :remain>0?`あと ${remain} 回`:'おしまい！';
+      if(body)body.textContent=now
+        ?`いまのずれ ${now.rawMeanMs>0?'+':''}${now.rawMeanMs}ms（${counted}回ぶん）／ 判定とFAST・SLOWを見ながら、判定ラインに重なった瞬間に叩いてください`
+        :'判定ラインにノーツが重なった瞬間に叩いてください。判定とFAST・SLOWはいつもどおり出ます';}}}
 const visitNote=note=>{if(note.type==='HOLD'&&note.activePointerId!==null&&songTimeMs>=note.endTimeMs+settings.judgmentTimingOffsetMs)applyJudgment(note,note.holdJudgment||'MISS',note.holdDeltaMs||0);
 // 指を離したまま戻ってこなかったHOLD/SLIDE。持ち替えの猶予を過ぎた時点で失敗にする。
 // 終わりまで来ていたら、離していても成立させる(終わり際に離すぶんは元から許している)
@@ -12914,9 +13556,15 @@ if(RHYTHM_PERF.enabled)RHYTHM_PERF.tick(performance.now()-perfTickStart,perfTick
     };
     if(typeof requestAnimationFrame==='function')requestAnimationFrame(step);else setTimeout(step,16);
   });
-  const beginRun=async startBestValue=>{if(startLockRef.current)return;startLockRef.current=true;const generation=++generationRef.current;disposeRun();setView({...initialView(),status:'loading'});const audio=await Audio_.startRhythmTrack(song.bgmTrackId,settings.bgmVolume,{autoStart:false});if(!mountedRef.current||generation!==generationRef.current){audio?.stop();return;}if(!audio){startLockRef.current=false;setView(v=>({...v,status:'error'}));return;}const startBest=normalizeRhythmBestRecord(startBestValue);rhythmFloatingNotesClear();runRef.current={audio,notes:makeRuntimeNotes(),activePointers:new Map(),standbyPointers:new Map(),activeTouchInputs:new Set(),combo:0,maxCombo:0,counts:emptyCounts(),fast:0,slow:0,life:RHYTHM_LIFE_MAX,lifeDepleted:false,score:0,lockedScore:0,scoreOffset:0,abilities:createRhythmMonsterAbilityState(),konjoOwnerName:'',finished:false,paused:false,generation,startBest,startBestScore:startBest.bestScore};laneRefs.current.forEach(el=>{if(el){el.style.display='block';el.style.opacity='0';el.style.filter='';/* styleを直接書き戻したら、「前に何を書いたか」の控えも一緒に捨てる。   控えだけ古いまま残ると、値が同じだと判断して書き込みを飛ばし、   実際の見た目とズレたまま固まる(例: 透明のまま出てこない)ため */el._rhythmHidden=false;el._rhythmOpacity=undefined;el._rhythmWillChange=undefined;el._rhythmFailedFlag=undefined;el._rhythmClearFlag=undefined;delete el.dataset.rhythmClear;el._rhythmHoldBody=undefined;el._rhythmHoldFilter=undefined;el._rhythmDepthScale=undefined;el._rhythmDepthBrightness=undefined;el._rhythmTransform=undefined;el._rhythmSlideBody=undefined;}});faceRefs.current.forEach(el=>{if(el){el.style.display='none';delete el.dataset.rhythmClear;el._rhythmFaceShown=false;el._rhythmFaceClear=undefined;el._rhythmFaceTransform=undefined;el._rhythmFaceScale=undefined;}});if(canvasNotes)RHYTHM_CANVAS_RENDERER.clear();rhythmLayoutPlayArea(playAreaRef.current);updateJudgmentBand(measureTravel(),rhythmTravelMsForSpeed(settings.noteSpeed));
+  const beginRun=async startBestValue=>{if(startLockRef.current)return;startLockRef.current=true;const generation=++generationRef.current;disposeRun();setLifeDownCount(0);setView({...initialView(),status:'loading'});const audio=await Audio_.startRhythmTrack(song.bgmTrackId,settings.bgmVolume,{autoStart:false});if(!mountedRef.current||generation!==generationRef.current){audio?.stop();return;}if(!audio){startLockRef.current=false;setView(v=>({...v,status:'error'}));return;}const startBest=normalizeRhythmBestRecord(startBestValue);rhythmFloatingNotesClear();runRef.current={audio,notes:makeRuntimeNotes(),activePointers:new Map(),standbyPointers:new Map(),activeTouchInputs:new Set(),combo:0,maxCombo:0,counts:emptyCounts(),fast:0,slow:0,deltas:[],life:RHYTHM_LIFE_MAX,lifeDepleted:false,score:0,lockedScore:0,scoreOffset:0,abilities:createRhythmMonsterAbilityState(),konjoOwnerName:'',finished:false,paused:false,generation,startBest,startBestScore:startBest.bestScore};laneRefs.current.forEach(el=>{if(el){el.style.display='block';el.style.opacity='0';el.style.filter='';/* styleを直接書き戻したら、「前に何を書いたか」の控えも一緒に捨てる。   控えだけ古いまま残ると、値が同じだと判断して書き込みを飛ばし、   実際の見た目とズレたまま固まる(例: 透明のまま出てこない)ため */el._rhythmHidden=false;el._rhythmOpacity=undefined;el._rhythmWillChange=undefined;el._rhythmFailedFlag=undefined;el._rhythmClearFlag=undefined;delete el.dataset.rhythmClear;el._rhythmHoldBody=undefined;el._rhythmHoldFilter=undefined;el._rhythmDepthScale=undefined;el._rhythmDepthBrightness=undefined;el._rhythmTransform=undefined;el._rhythmSlideBody=undefined;}});faceRefs.current.forEach(el=>{if(el){el.style.display='none';delete el.dataset.rhythmClear;el._rhythmFaceShown=false;el._rhythmFaceClear=undefined;el._rhythmFaceTransform=undefined;el._rhythmFaceScale=undefined;}});if(canvasNotes)RHYTHM_CANVAS_RENDERER.clear();rhythmLayoutPlayArea(playAreaRef.current);updateJudgmentBand(measureTravel(),rhythmTravelMsForSpeed(settings.noteSpeed));
 /* 使い回すヒットエフェクトを先に作っておく。曲の途中で10個まとめて作ると、そこで一瞬引っかかる */
 rhythmEnsureHitEffects(playAreaRef.current);
+/* 光のスプライトも先に焼いておく。曲の中で「その種類のノーツが初めて出た瞬間」に作ると
+   そこで数ms引っかかる(モンスターノーツは3枚まとめて作るのでいちばん重い)。
+   カウントダウン(READY→3→2→1 の3.2秒)のあいだに済ませるので、プレイヤーには見えない。
+   ★描くときと同じ設定を渡す。キャッシュのキーは種類と画素密度だけなので、
+     違う設定で焼くとそのまま曲の終わりまで使われてしまう(2026-09-12) */
+if(canvasNotes)RHYTHM_CANVAS_RENDERER.warmSprites({effect:settings.effectAmount,lightweight:settings.lightweightMode});
 /* 両サイドのマスモンが跳ねる速さを曲の1拍へ合わせる。   プレイ開始時に一度書くだけで、あとはCSSアニメーションが回すので毎フレームのJSは走らない */
 const sideBeatMs=rhythmSideMonsterBeatMs(song.bgmTrackId);
 sideMonsterRefs.current.forEach(el=>{if(el){el.style.setProperty('--rhythm-side-beat',`${sideBeatMs}ms`);el.dataset.rhythmSideActive='0';el.dataset.rhythmSideHit='0';el.dataset.rhythmSidePhase='intro';}});
@@ -12966,7 +13614,7 @@ scheduleTick();};
       target.activePointerId=input.inputKey;
       if(handover){target.releasedAtMs=null;rhythmFloatingNoteRemove(target);}
       else{target.holdJudgment=judgment;target.holdDeltaMs=deltaMs;}
-      run.activePointers.set(input.inputKey,target.index);if(input.captureTarget&&input.pointerId!==undefined){try{input.captureTarget.setPointerCapture(input.pointerId);}catch{}}const side=rhythmFastSlow(deltaMs);setView(v=>({...v,last:'HOLD',fastSlow:side||''}));scheduleJudgmentClear();return;}applyJudgment(target,judgment,deltaMs);});};
+      run.activePointers.set(input.inputKey,target.index);if(input.captureTarget&&input.pointerId!==undefined){try{input.captureTarget.setPointerCapture(input.pointerId);}catch{}}const side=rhythmFastSlow(deltaMs);setView(v=>({...v,last:'HOLD',lastPrecise:false,fastSlow:side||''}));scheduleJudgmentClear();return;}applyJudgment(target,judgment,deltaMs);});};
   const inputMoves=(inputKey,subLaneCoordinate)=>{const run=runRef.current,state=run?.inputFeedbackState?.get(inputKey);if(!state||!Number.isFinite(subLaneCoordinate))return;if(Math.abs(subLaneCoordinate-state.subLaneCoordinate)<RHYTHM_TAP_REJUDGE_MOVE_SUBLANES)return;const subLane=Math.max(0,Math.min(9,Math.floor(subLaneCoordinate)));if(subLane===state.subLane)return;state.subLane=subLane;state.subLaneCoordinate=subLaneCoordinate;if(state.empty)inputStarts([{lane:Math.floor(subLane/2),subLaneCoordinate,inputKey}]);};
   // 押さえている帯へ先に置いてあった「控えの指」を探す。
   // 親指で遊ぶ人は「2本目を置いてから1本目を離す」ので、離した瞬間に渡せないと必ずMISSになる
@@ -13013,13 +13661,65 @@ scheduleTick();};
   const pointerEnd=e=>{if(e.pointerType==='touch')return;const run=runRef.current;if(run?.activePointerFeedback){run.activePointerFeedback.delete(e.pointerId);setPressedLanes(run.activePointerFeedback.values());}else setPressedLanes([]);inputEnds([{inputKey:rhythmInputKey('pointer',e.pointerId),releaseTarget:e.currentTarget,pointerId:e.pointerId}]);};
   useEffect(()=>{const area=playAreaRef.current;if(!area||view.status==='result'||view.status==='celebrate')return;const syncTouches=e=>{if(e.cancelable)e.preventDefault();const current=runRef.current;if(!current||current.finished||current.paused)return;current.activeTouchInputs=current.activeTouchInputs||new Set();const rect=inputAreaRect(area),live=new Set(),liveSubLanes=[],starts=[],movedTouchInputs=e.type==='touchmove'?new Set(Array.from(e.changedTouches||[]).map(touch=>rhythmInputKey('touch',touch.identifier))):null;Array.from(e.touches||[]).forEach(touch=>{const inputKey=rhythmInputKey('touch',touch.identifier);live.add(inputKey);const tp=inputPoint(touch.clientX,touch.clientY),lane=rhythmLaneAtPoint(tp.x,tp.y,rect),subLaneCoordinate=rhythmSubLaneCoordinateAtPoint(tp.x,tp.y,rect);if(subLaneCoordinate!==null)liveSubLanes.push(subLaneCoordinate);if(current.activeTouchInputs.has(inputKey)){if(movedTouchInputs?.has(inputKey)&&subLaneCoordinate!==null)inputMoves(inputKey,subLaneCoordinate);return;}current.activeTouchInputs.add(inputKey);if(lane!==null&&subLaneCoordinate!==null)starts.push({lane,subLaneCoordinate,inputKey});});setPressedLanes(liveSubLanes);const ageMs=rhythmInputAgeMs(e.timeStamp,typeof performance!=='undefined'?performance.now():NaN);if(starts.length)inputStarts(starts,ageMs);const ended=[];Array.from(current.activeTouchInputs).forEach(inputKey=>{if(!live.has(inputKey)){current.activeTouchInputs.delete(inputKey);ended.push({inputKey});}});if(ended.length)inputEnds(ended);};RHYTHM_GESTURE_RUNTIME.invalidateAreaRect();area.addEventListener('touchstart',syncTouches,{passive:false});area.addEventListener('touchmove',syncTouches,{passive:false});area.addEventListener('touchend',syncTouches,{passive:false});area.addEventListener('touchcancel',syncTouches,{passive:false});return()=>{area.removeEventListener('touchstart',syncTouches);area.removeEventListener('touchmove',syncTouches);area.removeEventListener('touchend',syncTouches);area.removeEventListener('touchcancel',syncTouches);setPressedLanes([]);};},[view.status]);
   if(view.status==='celebrate'){const celebrateResult=view.result,celebrateTitle=celebrateResult?.allMarvelous?'ALL MARVELOUS!!':celebrateResult?.allExcellent?'ALL EXCELLENT!!':'FULL COMBO!';return <main data-rhythm-celebrate className="flex flex-1 items-center justify-center bg-slate-950 text-white" style={{paddingTop:'env(safe-area-inset-top)',paddingBottom:'env(safe-area-inset-bottom)'}} onClick={skipCelebrate}><div className="px-6 text-center"><b data-rhythm-celebrate-slam className="block text-6xl font-black leading-tight">{celebrateTitle}</b><small className="mt-3 block text-sm font-black tracking-[0.3em] text-slate-300">MAX COMBO {view.maxCombo}</small></div></main>;}
-  if(view.status==='result'){const result=view.result,rank=rhythmRankForScore(view.score);return <main data-rhythm-result className="flex-1 overflow-y-auto bg-slate-950 p-4 text-white" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}><p className="text-center text-xs text-cyan-300">{rhythmSongFullName(song)}・{difficulty.id}</p><h2 className="text-center font-black">RHYTHM RESULT</h2><div data-rhythm-result-rank className={`mx-auto mt-2 flex h-20 w-20 items-center justify-center rounded-full border-4 border-current text-4xl font-black ${RHYTHM_RANK_COLORS[rank]}`}>{rank}</div><div className="my-3 text-center text-3xl font-black">{view.score.toLocaleString()}</div><p className="text-center text-sm">BEST SCORE {result.bestScore.toLocaleString()}</p>{result.isNewRecord&&<p data-rhythm-new-record className="text-center text-xl font-black text-amber-300">NEW RECORD</p>}{/* 達成をひと目で分かるように、いちばん上の称号だけを大きく出す(2026-09-03)。
+  // ===== タイミング合わせのリザルト(2026-09-13・ユーザー指摘「設定にもなってない」) =====
+  // スコアやランクは意味を持たないので出さない。測った値をその場で設定へ入れられるようにする。
+  // ★ここで決めたら、親が保存してオプションへ戻す(戻ってから別のボタンをもう一度押す、という
+  //   二度手間にしない)。入れないまま戻ることもできる。
+  if(calibrating&&view.status==='result'){const measured=view.result&&view.result.calibration?view.result.calibration:null;
+    const label=measured?`${measured.offsetMs>0?'+':''}${measured.offsetMs}ms`:'';
+    return <main data-rhythm-calibration-result className="flex-1 overflow-y-auto bg-slate-950 p-4 text-white" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
+      <p className="text-center text-xs text-cyan-300">モンヒロビート・オプション</p>
+      <h2 className="text-center text-lg font-black">🎯 タイミング合わせ</h2>
+      {measured?<>
+        <div className="mx-auto mt-4 max-w-sm rounded-2xl border border-amber-300/50 bg-amber-950/30 p-4 text-center">
+          <small className="block text-[11px] font-black tracking-[0.2em] text-amber-200">あなたのずれ</small>
+          <b data-rhythm-calibration-offset className="mt-1 block text-4xl font-black tabular-nums text-amber-200">{label}</b>
+          <p className="mt-2 text-[11px] font-bold leading-relaxed text-slate-200">
+            数えた{measured.usedCount}回の平均は {measured.rawMeanMs>0?'+':''}{measured.rawMeanMs}ms（ばらつき ±{measured.spreadMs}ms{measured.droppedCount>0?`／${measured.droppedCount}回は外れ値として除外`:''}）でした。
+          </p>
+          <p className="mt-1 text-[11px] font-bold leading-relaxed text-slate-300">
+            {measured.rawMeanMs<0?'ノーツより少し早く叩くくせがあります。':measured.rawMeanMs>0?'ノーツより少し遅れて叩くくせがあります。':'ほとんどずれていません。'}
+            この値を入れると、いつもどおり叩いたときにちょうど真ん中で取れるようになります。
+          </p>
+          {!measured.stable&&<p data-rhythm-calibration-unstable className="mt-2 text-[11px] font-black text-rose-300">ばらつきが大きめです。もう一度合わせると、より合った値になります。</p>}
+        </div>
+        <div className="mx-auto mt-5 grid max-w-sm grid-cols-1 gap-2">
+          <button data-rhythm-calibration-apply className="min-h-[52px] rounded-xl bg-amber-400 text-base font-black text-slate-950" onClick={()=>onApplyCalibration&&onApplyCalibration(measured)}>この値（{label}）にして戻る</button>
+          <button data-rhythm-calibration-retry className="min-h-[48px] rounded-xl bg-fuchsia-700 font-black" disabled={startLockRef.current} onClick={()=>beginRun(runRef.current?.startBest)}>もう一度合わせる</button>
+          <button data-rhythm-calibration-cancel className="min-h-[48px] rounded-xl border border-white/20 bg-slate-800 font-black" onClick={abort}>使わずにオプションへ戻る</button>
+        </div>
+      </>:<>
+        <p className="mx-auto mt-5 max-w-sm rounded-2xl border border-rose-300/40 bg-rose-950/30 p-4 text-center text-[12px] font-bold leading-relaxed text-rose-100">うまく測れませんでした。ノーツが判定ラインへ来た瞬間に叩いてください（MISSは数えません）。</p>
+        <div className="mx-auto mt-5 grid max-w-sm grid-cols-1 gap-2">
+          <button data-rhythm-calibration-retry className="min-h-[52px] rounded-xl bg-fuchsia-700 text-base font-black" disabled={startLockRef.current} onClick={()=>beginRun(runRef.current?.startBest)}>もう一度合わせる</button>
+          <button data-rhythm-calibration-cancel className="min-h-[48px] rounded-xl border border-white/20 bg-slate-800 font-black" onClick={abort}>オプションへ戻る</button>
+        </div>
+      </>}
+    </main>;}
+  if(view.status==='result'){const result=view.result,rank=rhythmRankForScore(view.score);return <main data-rhythm-result className="flex-1 overflow-y-auto bg-slate-950 p-4 text-white" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}><p className="text-center text-xs text-cyan-300">{rhythmSongFullName(song)}・{difficulty.id}</p><h2 className="text-center font-black">RHYTHM RESULT</h2>{/* ===== クリアか失敗か(2026-09-12・ユーザー指示) =====
+    「終了後にクリアか失敗かもわかるようにして / それによって経験値も変わるから」。
+    ランクやスコアより先に、まずここで結果を言い切る。失敗はライフが0になったまま
+    曲を終えたとき(不可逆のDOWN)だけ。入る周回数(=経験値)も半分になる。
+    ★古い result(cleared を持たない)はクリア扱いにする。 */}
+{(()=>{const failed=result.cleared===false;return <div data-rhythm-result-clear data-cleared={failed?'false':'true'} className="mx-auto mt-3 w-full max-w-xs rounded-2xl border-2 px-3 py-2 text-center"><b className="block text-4xl font-black leading-none">{failed?'FAILED':'CLEAR'}</b><small className="mt-1.5 block text-[10px] font-black leading-relaxed">{failed?'ライフが0になったまま曲が終わりました（DOWN）':'ライフを残して最後まで演奏しました'}</small></div>;})()}
+<div data-rhythm-result-rank className={`mx-auto mt-2 flex h-20 w-20 items-center justify-center rounded-full border-4 border-current text-4xl font-black ${RHYTHM_RANK_COLORS[rank]}`}>{rank}</div><div className="my-3 text-center text-3xl font-black">{view.score.toLocaleString()}</div><p className="text-center text-sm">BEST SCORE {result.bestScore.toLocaleString()}</p>{result.isNewRecord&&<p data-rhythm-new-record className="text-center text-xl font-black text-amber-300">NEW RECORD</p>}{/* 達成をひと目で分かるように、いちばん上の称号だけを大きく出す(2026-09-03)。
     ALL MARVELOUS > ALL EXCELLENT > FULL COMBO の順に上位。残りは下に小さく並べる。 */}
 {(result.fullCombo||result.allExcellent||result.allMarvelous)&&<div data-rhythm-result-celebrate className="my-3 text-center">
   <b className="block text-3xl font-black leading-tight">{result.allMarvelous?'ALL MARVELOUS!!':result.allExcellent?'ALL EXCELLENT!!':'FULL COMBO!'}</b>
   <small className="mt-1 block text-[10px] font-black text-amber-200">{result.allMarvelous?'すべてMARVELOUS。文句なしの完璧です':result.allExcellent?'すべてEXCELLENT以上。ほぼ完璧です':'一度もコンボを切らずに完走しました'}</small>
 </div>}
 <div className="my-3 flex flex-wrap justify-center gap-2 text-xs font-black text-slate-300">{result.fullCombo&&<span>FULL COMBO</span>}{result.allExcellent&&<span>ALL EXCELLENT</span>}{result.allMarvelous&&<span>ALL MARVELOUS</span>}</div>{/* クイック∞周回を裏で回していたときだけ。曲の長さぶんが周回クリア扱いで入る */}
+{/* 裏で∞周回していたのに失敗したとき。1周も入らないので、その理由をここで言う
+    (2026-09-12・ユーザー指示「失敗しても入るようにすると放置で稼げるようになるから失敗は0にして」)。
+    ★裏で周回していない人にはそもそも出ない(quickRunAwardがnullのまま) */}
+{quickRunAward&&quickRunAward.loops===0&&quickRunAward.cleared===false&&<div data-rhythm-result-quick-run-failed className="my-3 rounded-2xl border border-rose-400/50 bg-rose-950/30 p-3 text-left">
+  <div className="flex items-baseline justify-between gap-2">
+    <span className="text-[10px] font-black tracking-wider text-rose-200">クイック∞周回</span>
+    <b className="text-lg font-black leading-none text-rose-200">+0周</b>
+  </div>
+  <p className="mt-1 text-[10px] font-bold leading-relaxed text-rose-100">ライフが0になったので、周回クリアにはなりません（クリアしていれば +{Number(quickRunAward.baseLoops||0)}周でした）。経験値・ダイヤ・絆・虹のプシュケーも入りません。</p>
+  <p className="mt-1 text-[9px] font-bold leading-relaxed text-slate-400">裏の周回は止まっていたぶんを取り戻しながら、そのまま続きます。</p>
+</div>}
 {quickRunAward&&quickRunAward.loops>0&&<div data-rhythm-result-quick-run className="my-3 rounded-2xl border border-fuchsia-400/40 bg-fuchsia-950/30 p-3 text-left">
   <div className="flex items-baseline justify-between gap-2">
     <span className="text-[10px] font-black tracking-wider text-fuchsia-200">クイック∞周回</span>
@@ -13037,10 +13737,32 @@ scheduleTick();};
   </div>
 </div>}
 <dl className="grid grid-cols-2 gap-2 rounded-2xl bg-slate-900 p-4">{RHYTHM_JUDGMENT_IDS.map(id=><React.Fragment key={id}><dt>{id}</dt><dd className="text-right font-mono">{view.counts[id]}</dd></React.Fragment>)}<dt>MAX COMBO</dt><dd className="text-right">{view.maxCombo}</dd><dt>FAST</dt><dd className="text-right">{view.fast}</dd><dt>SLOW</dt><dd className="text-right">{view.slow}</dd></dl><div className="mt-5 grid grid-cols-1 gap-2"><button className="min-h-[48px] rounded-xl bg-fuchsia-700 font-black" disabled={startLockRef.current} onClick={()=>beginRun(mergeRhythmBestRecord(runRef.current?.startBest,result))}>もう一度プレイ</button><button className="min-h-[48px] rounded-xl bg-indigo-700 font-black" onClick={abort}>{debugPlay?'音ゲーデバッグへ戻る':'曲えらびへ戻る'}</button></div></main>}
-  return <main data-rhythm-tap-test className="relative flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white landscape:pl-[env(safe-area-inset-left)] landscape:pr-[env(safe-area-inset-right)]" style={{touchAction:'none'}}><header data-rhythm-hud className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-2 px-3 pt-1.5"><div data-rhythm-hud-left className="min-w-0 max-w-[35vw] text-left landscape:max-w-[28vw]"><div className="landscape:flex landscape:items-center landscape:gap-2"><div className="flex items-center gap-1.5"><div className={`relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-current bg-slate-950/85 landscape:h-7 landscape:w-7 ${RHYTHM_RANK_COLORS[rhythmRankForScore(view.score)]}`} style={{boxShadow:'0 0 8px rgba(103,232,249,.35)'}}><b data-rhythm-rank className="text-sm font-black leading-none" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{rhythmRankForScore(view.score)}</b></div><div className="min-w-0 landscape:min-w-0"><div className="flex items-center gap-0.5 landscape:hidden"><div data-rhythm-rank-gauge className="relative h-1.5 w-14 overflow-hidden rounded-full border border-white/25 bg-slate-950/80"><i aria-hidden="true" className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-cyan-300 to-fuchsia-300" style={{width:`${rhythmRankProgress(view.score)}%`}}/></div><b data-rhythm-rank-next className="shrink-0 text-[9px] font-black leading-none text-slate-300">{rankNextLabel}</b></div><b data-rhythm-score className="mt-0.5 block font-black leading-none tabular-nums landscape:mt-0" style={{fontSize:'min(18px,4.6vw)',textShadow:'0 1px 6px rgba(2,6,23,.96)'}}>{view.score.toLocaleString()}</b><small className="mt-0.5 block text-[9px] font-bold leading-none text-slate-300 landscape:hidden" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>BEST {Number(bestRecord?.bestScore||0).toLocaleString()}</small></div></div><div className="mt-1.5 flex max-w-[34vw] flex-wrap items-center gap-1 landscape:mt-0 landscape:min-w-0 landscape:shrink"><span className="shrink-0 rounded bg-fuchsia-700/85 px-1.5 py-0.5 text-[9px] font-black leading-none">{difficulty.id}</span><small data-rhythm-mode-label className="text-[9px] font-bold leading-none tracking-[0.14em] text-cyan-300 landscape:hidden" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{tutorial?'れんしゅう':debugPlay?debugChartLabel:`Lv.${chart.level}`}</small></div></div><div data-rhythm-hud-song className="mt-1 max-w-[31vw] text-[10px] font-black text-slate-100 landscape:mt-0.5 landscape:max-w-none landscape:min-w-0" style={{display:'-webkit-box',WebkitLineClamp:isLandscape?'1':'3',WebkitBoxOrient:'vertical',overflow:'hidden',lineHeight:'1.25',textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>♪ {rhythmSongFullName(song)}</div></div><div data-rhythm-hud-right className="flex w-[33vw] max-w-[33vw] flex-col items-end gap-1.5"><div className="landscape:flex landscape:items-center landscape:gap-2"><div className="flex items-center justify-end gap-1"><span aria-hidden="true" className="text-sm leading-none text-rose-400" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>♥</span><div className="relative h-1.5 w-12 overflow-hidden rounded-full border border-white/25 bg-slate-950/80 landscape:w-14"><i data-rhythm-life-bar aria-hidden="true" className="absolute inset-y-0 left-0 rounded-full" style={{width:`${(rhythmLifeRatio(view.life)*100).toFixed(1)}%`,background:rhythmLifeRatio(view.life)>.5?'linear-gradient(90deg,#34d399,#22d3ee)':rhythmLifeRatio(view.life)>.25?'linear-gradient(90deg,#fbbf24,#fb923c)':'linear-gradient(90deg,#fb7185,#ef4444)',transition:settings.lightweightMode?'none':'width 140ms linear'}}/></div><b data-rhythm-life-value className="text-[9px] font-black leading-none tabular-nums text-slate-200" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{view.life}</b></div><button data-rhythm-pause aria-label="ポーズ" className="pointer-events-auto mt-1 flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-full border border-white/20 bg-slate-900/90 text-2xl font-black text-white shadow-[0_0_12px_rgba(103,232,249,0.18)] landscape:mt-0" onClick={pause}>Ⅱ</button></div><b ref={abilityBadgeRef} data-rhythm-ability-badge hidden className="mt-1 block text-right text-[9px] font-black leading-none tracking-[0.06em] text-amber-200 landscape:inline-block landscape:mt-0.5" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}/><div className="mt-1 text-right landscape:flex landscape:items-baseline landscape:gap-1.5 landscape:mt-0.5"><span className="block text-[9px] font-black leading-none tracking-[0.18em] text-fuchsia-300" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>COMBO</span><b ref={comboRef} data-rhythm-combo data-combo-tier={view.combo>=300?'3':view.combo>=200?'2':view.combo>=100?'1':'0'} className="mt-0.5 block text-3xl font-black leading-none tabular-nums text-white landscape:mt-0 landscape:text-base">{view.combo}</b></div></div></header><div ref={playAreaRef} data-rhythm-play-area data-rhythm-lightweight={settings.lightweightMode?'true':'false'} data-rhythm-effect={settings.effectAmount} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerEnd} onPointerCancel={pointerEnd} className="relative mx-2 mb-2 flex-1 min-h-0 overflow-hidden border-x border-cyan-400/50" style={{/* position と overflow はここにも直接書く。ノーツも判定ラインもこの箱を基準に
+  /* ★ここへ属性を足すときは className の「後ろ」へ置く。
+     rhythm-screen-layout-check.js が <main data-rhythm-tap-test className="…overflow-hidden という
+     文字列の並びをそのまま見ているので、あいだに挟むと「1画面になっていない」と落ちる。 */
+  return <main data-rhythm-tap-test className="relative flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white landscape:pl-[env(safe-area-inset-left)] landscape:pr-[env(safe-area-inset-right)]" data-rhythm-lightweight={settings.lightweightMode?'true':'false'} data-rhythm-effect={settings.effectAmount} style={{touchAction:'none'}}><header data-rhythm-hud className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-2 px-3 pt-1.5"><div data-rhythm-hud-left className="min-w-0 max-w-[35vw] text-left landscape:max-w-[28vw]"><div className="landscape:flex landscape:items-center landscape:gap-2"><div className="flex items-center gap-1.5"><div className={`relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-current bg-slate-950/85 landscape:h-7 landscape:w-7 ${RHYTHM_RANK_COLORS[rhythmRankForScore(view.score)]}`} style={{boxShadow:'0 0 8px rgba(103,232,249,.35)'}}><b data-rhythm-rank className="text-sm font-black leading-none" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{rhythmRankForScore(view.score)}</b></div><div className="min-w-0 landscape:min-w-0"><div className="flex items-center gap-0.5 landscape:hidden"><div data-rhythm-rank-gauge className="relative h-1.5 w-14 overflow-hidden rounded-full border border-white/25 bg-slate-950/80"><i aria-hidden="true" className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-cyan-300 to-fuchsia-300" style={{width:`${rhythmRankProgress(view.score)}%`}}/></div><b data-rhythm-rank-next className="shrink-0 text-[9px] font-black leading-none text-slate-300">{rankNextLabel}</b></div><b data-rhythm-score className="mt-0.5 block font-black leading-none tabular-nums landscape:mt-0" style={{fontSize:'min(18px,4.6vw)',textShadow:'0 1px 6px rgba(2,6,23,.96)'}}>{view.score.toLocaleString()}</b><small className="mt-0.5 block text-[9px] font-bold leading-none text-slate-300 landscape:hidden" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>BEST {Number(bestRecord?.bestScore||0).toLocaleString()}</small></div></div><div className="mt-1.5 flex max-w-[34vw] flex-wrap items-center gap-1 landscape:mt-0 landscape:min-w-0 landscape:shrink"><span className="shrink-0 rounded bg-fuchsia-700/85 px-1.5 py-0.5 text-[9px] font-black leading-none">{difficulty.id}</span><small data-rhythm-mode-label className="text-[9px] font-bold leading-none tracking-[0.14em] text-cyan-300 landscape:hidden" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{calibrating?'タイミング合わせ':tutorial?'れんしゅう':debugPlay?debugChartLabel:`Lv.${chart.level}`}</small></div></div><div data-rhythm-hud-song className="mt-1 max-w-[31vw] text-[10px] font-black text-slate-100 landscape:mt-0.5 landscape:max-w-none landscape:min-w-0" style={{display:'-webkit-box',WebkitLineClamp:isLandscape?'1':'3',WebkitBoxOrient:'vertical',overflow:'hidden',lineHeight:'1.25',textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>♪ {rhythmSongFullName(song)}</div></div><div data-rhythm-hud-right className="flex w-[33vw] max-w-[33vw] flex-col items-end gap-1.5"><div className="landscape:flex landscape:items-center landscape:gap-2"><div ref={lifeBoxRef} data-rhythm-life data-life-state={lifeState} className="relative flex items-center justify-end gap-1"><span aria-hidden="true" data-rhythm-life-heart className="text-sm leading-none text-rose-400" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{lifeState==='down'?'💔':'♥'}</span>{/* ★太さ・幅は「小さい端末(320px)でも台形の外の空きへ収まる」ところで止めてある。
+        これ以上太く・広くすると tools/mode/rhythm-hud-wedge-check.js が落ちる。
+        気づきやすさは大きさではなく、色・点滅・ひび割れ・減った量の数字で出す */}<div data-rhythm-life-track className="relative h-2.5 w-12 rounded-full border bg-slate-950/80 landscape:h-2 landscape:w-14"><i data-rhythm-life-bar aria-hidden="true" className="absolute inset-y-0 left-0 rounded-full" style={{width:`${(lifeRatio*100).toFixed(1)}%`,background:lifeRatio>.5?'linear-gradient(90deg,#34d399,#22d3ee)':lifeRatio>.25?'linear-gradient(90deg,#fbbf24,#fb923c)':'linear-gradient(90deg,#fb7185,#ef4444)',transition:settings.lightweightMode?'none':'width 140ms linear'}}/></div><b data-rhythm-life-value className="text-[10px] font-black leading-none tabular-nums text-slate-200" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{lifeState==='down'?'DOWN':view.life}</b>{/* 減った量(「-50」)を、減ったその場に一瞬だけ出す。中身はapplyJudgmentが直接書く */}<b ref={lifeDamageRef} data-rhythm-life-damage aria-hidden="true" className="pointer-events-none absolute right-0 top-full mt-0.5 text-[11px] font-black leading-none tabular-nums"/></div><button data-rhythm-pause aria-label="ポーズ" className="pointer-events-auto mt-1 flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-full border border-white/20 bg-slate-900/90 text-2xl font-black text-white shadow-[0_0_12px_rgba(103,232,249,0.18)] landscape:mt-0" onClick={pause}>Ⅱ</button></div><b ref={abilityBadgeRef} data-rhythm-ability-badge hidden className="mt-1 block text-right text-[9px] font-black leading-none tracking-[0.06em] text-amber-200 landscape:inline-block landscape:mt-0.5" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}/></div></header>{/* ===== ライフ0(DOWN)の強調(2026-09-12・ユーザー指示) ===== */}
+{/* 倒れているあいだ、画面のふちをずっと赤く縁取る。HUDの小さなバーだけでは
+    「いつの間にか0だった」に気づけないため。指の当たり判定には関わらない(pointer-events-none) */}
+{lifeState==='down'&&<div data-rhythm-down-vignette aria-hidden="true" className="pointer-events-none absolute inset-0 z-20"/>}
+{/* 0になったその瞬間だけ、大きく1度だけ出す(1.4秒で消える) */}
+{lifeDownSlam&&<div data-rhythm-life-down-slam aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-[32%] z-40 text-center"><b className="block text-5xl font-black leading-none">LIFE 0</b><small className="mt-1 block text-xs font-black tracking-[0.34em]">DOWN</small></div>}
+<div ref={playAreaRef} data-rhythm-play-area data-rhythm-strip={RHYTHM_STRIP.value||undefined} data-rhythm-lightweight={settings.lightweightMode?'true':'false'} data-rhythm-effect={settings.effectAmount} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerEnd} onPointerCancel={pointerEnd} className="relative mx-2 mb-2 flex-1 min-h-0 overflow-hidden border-x border-cyan-400/50" style={{/* position と overflow はここにも直接書く。ノーツも判定ラインもこの箱を基準に
     置いているので、Tailwindの relative が効く前だと基準が別の要素へ移り、
     判定ラインが画面の変なところへ出る(2026-09-05)。中身の置き場所に関わるものは
-    外部CSSに任せない */position:'relative',overflow:'hidden',touchAction:'none',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none','--rhythm-note-size-scale':settings.noteSize/100,filter:settings.effectAmount==='MINIMAL'?'saturate(.78)':settings.effectAmount==='LOW'?'saturate(.92)':'none'}}>{laneElements}{sideMonsterElements}<div ref={screenFlashRef} data-rhythm-screen-flash aria-hidden="true"/>{/* 判定ラインはTailwindのクラスを使わず、位置・高さ・色をすべてここへ直接書く。
+    外部CSSに任せない */position:'relative',overflow:'hidden',touchAction:'none',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none','--rhythm-note-size-scale':settings.noteSize/100,filter:settings.effectAmount==='MINIMAL'?'saturate(.78)':settings.effectAmount==='LOW'?'saturate(.92)':'none'}}>{laneElements}{sideMonsterElements}<div ref={screenFlashRef} data-rhythm-screen-flash aria-hidden="true"/>{/* ===== コンボ数(2026-09-12・ユーザー指示) =====
+    「コンボももう少し目立つように段階的に / あと右より過ぎるから邪魔にならないように真ん中に寄せて」。
+    右上のHUDから**プレイエリアの真ん中**へ移した。
+    ★HUDの左右の列は、レーンの台形の外側の空きに置いてある。その空きは上へ行くほど広く、
+      **画面のいちばん上の中央は台形の頂点(ノーツが湧く点・幅18%)**なので、
+      HUDの中では「真ん中へ寄せる」余地がそもそも無かった(左列35vw / 台形41〜59% / 右列33vw)。
+      プロセカ・チュウニズムと同じく、場に重ねて中央へ置くのが素直な答え。
+    ★邪魔にならないよう **ノーツより後ろ(z-2。ノーツはz-5、判定ラインはz-6)** に描き、
+      少し透かす。コンボが0のあいだは出さない。
+    ★大きさの上限が無くなったので、段(comboTier)でしっかり大きくできる
+      (HUDに居たころは台形にかかるので1.13倍までしか上げられなかった)。 */}
+{settings.comboDisplay!==false&&view.combo>0&&<div data-rhythm-combo-box data-combo-tier={String(comboTier)} data-combo-pos={comboPosition} data-combo-wide={isLandscape?'1':''} aria-hidden="true" style={{'--mh-combo-opacity':rhythmFiniteInRange(settings.comboOpacity,RHYTHM_COMBO_OPACITY_MIN,RHYTHM_COMBO_OPACITY_MAX,100)/100}} className="pointer-events-none absolute z-[2] text-center"><b ref={comboRef} data-rhythm-combo data-combo-tier={String(comboTier)} className="block font-black leading-none tabular-nums text-white" style={{'--mh-combo-scale':rhythmComboTierScale(comboTier),'--mh-combo-size':rhythmFiniteInRange(settings.comboSize,RHYTHM_COMBO_SIZE_MIN,RHYTHM_COMBO_SIZE_MAX,100)/100}}>{view.combo}</b><span data-rhythm-combo-label className="mt-1 block font-black leading-none tracking-[0.36em]">COMBO</span></div>}{/* 判定ラインはTailwindのクラスを使わず、位置・高さ・色をすべてここへ直接書く。
     Tailwindは外部CDNのJITが後からCSSを作るため、間に合わないあいだ
     bottom-[12%] も h-[3px] も bg-gradient-to-r も効かず、
     「高さ0・背景なし＝見えない線」になる。実機で「演奏を始めたときに
@@ -13064,9 +13786,20 @@ scheduleTick();};
 <div ref={judgmentLineRef} data-rhythm-judgment-line style={{position:'absolute',left:0,right:0,bottom:'12%',height:'3px',background:'linear-gradient(90deg,#f0abfc,#cffafe,#f0abfc)',boxShadow:settings.lightweightMode||settings.effectAmount==='MINIMAL'?'none':settings.effectAmount==='LOW'?'0 0 8px #67e8f9':'0 0 18px #67e8f9,0 0 30px #c084fc'}}/>{/* 演奏を始める前のカウントダウン。Tailwindに頼らず直接書くのは判定ラインと同じ理由で、
     CDNのCSSが間に合わなくても必ず読める大きさで出るようにするため */}
 {countdownStep!==null&&<div data-rhythm-countdown aria-live="assertive" style={{position:'absolute',inset:0,zIndex:20,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'8px',pointerEvents:'none',background:'rgba(2,6,23,.35)'}}><b data-rhythm-countdown-step style={{fontSize:countdownStep==='READY'?'44px':'88px',fontWeight:900,lineHeight:1,color:'#fff',letterSpacing:countdownStep==='READY'?'.12em':'0',textShadow:'0 0 18px rgba(103,232,249,.85),0 2px 10px rgba(2,6,23,.95)'}}>{countdownStep}</b><small style={{fontSize:'12px',fontWeight:900,color:'#a5f3fc',textShadow:'0 1px 6px rgba(2,6,23,.95)'}}>まもなく はじまります</small></div>}
-<div data-rhythm-judgment-display className="pointer-events-none absolute left-1/2 z-10 w-[88%] -translate-x-1/2 text-center" style={{bottom:'calc(12% + 38px)'}}><b ref={judgmentTextRef} data-rhythm-judgment-text className={`block text-[26px] font-black leading-none tracking-wide ${view.last==='MARVELOUS'?'text-fuchsia-100':view.last==='EXCELLENT'?'text-cyan-100':view.last==='GREAT'?'text-amber-200':view.last==='GOOD'?'text-lime-300':view.last==='BAD'?'text-rose-300':'text-white'}`} style={{textShadow:settings.lightweightMode||settings.effectAmount==='MINIMAL'?'none':settings.effectAmount==='LOW'?'0 0 7px rgba(255,255,255,.45)':'0 0 10px rgba(255,255,255,.75),0 0 22px rgba(217,70,239,.35)'}}>{view.status==='error'?'音源を再生できません':view.status==='loading'?'LOADING…':settings.judgmentTextDisplay?view.last:''}</b><small className={`mt-1 block min-h-[16px] text-xs font-black tracking-[0.24em] ${!settings.fastSlowDisplay?'text-transparent':view.fastSlow==='FAST'?'text-cyan-300':view.fastSlow==='SLOW'?'text-fuchsia-300':'text-transparent'}`}>{settings.fastSlowDisplay?(view.fastSlow||'—'):'—'}</small></div>{/* 能力が出たら、どのマスモンの何が出たかを短時間だけ見せる(§3.5) */}
+<div data-rhythm-judgment-display className="pointer-events-none absolute left-1/2 z-10 w-[88%] -translate-x-1/2 text-center" style={{bottom:'calc(12% + 38px)'}}>{/* 判定文字の見た目(色のグラデーション・光・大きさ)は index.html が data-judgment ごとに持つ。
+      どれも文字を透かしてグラデーションを敷くので、色を1つだけ選ぶインラインstyleでは書けない。
+      判定ラインで弾ける光の単色は data/rhythm-mode.js の RHYTHM_JUDGMENT_COLORS が正本で、
+      文字のグラデーションにも必ずその色を含める(rhythm-hit-effect-check.js が突き合わせる)。
+      ここが渡すのは「どの判定か」「ぴったりか」の2つだけ。
+      text-[26px] と text-white は、判定がまだ無いとき(LOADING…など)の見た目 */}<b ref={judgmentTextRef} data-rhythm-judgment-text data-judgment={view.last||''} data-judgment-precise={view.lastPrecise?'1':''} className="block text-[26px] font-black leading-none tracking-wide text-white">{view.status==='error'?'音源を再生できません':view.status==='loading'?'LOADING…':settings.judgmentTextDisplay?view.last:''}</b><small className={`mt-1 block min-h-[16px] text-xs font-black tracking-[0.24em] ${!settings.fastSlowDisplay?'text-transparent':view.fastSlow==='FAST'?'text-cyan-300':view.fastSlow==='SLOW'?'text-fuchsia-300':'text-transparent'}`}>{settings.fastSlowDisplay?(view.fastSlow||'—'):'—'}</small></div>{/* 能力が出たら、どのマスモンの何が出たかを短時間だけ見せる(§3.5) */}
 {comboMilestone>0&&<div data-rhythm-combo-milestone data-milestone-stage={comboMilestoneStage} aria-hidden="true" className="pointer-events-none absolute left-1/2 top-[38%] z-20 -translate-x-1/2 whitespace-nowrap text-center"><b className={`block font-black leading-none tabular-nums landscape:text-4xl ${comboMilestoneStage>=3?'text-6xl':'text-5xl'}`}>{comboMilestone}</b><small className="mt-1 block text-sm font-black tracking-[0.3em]">COMBO</small></div>}
-                {view.ability&&<div data-rhythm-ability-flash className="pointer-events-none absolute left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-full border-2 border-amber-200 bg-slate-950/90 px-4 py-1.5 text-lg font-black text-amber-100" style={{bottom:'calc(12% + 78px)',textShadow:settings.lightweightMode||settings.effectAmount==='MINIMAL'?'none':'0 0 10px rgba(251,191,36,.8)'}}>{view.ability.ability}！</div>}{canvasNotes?<canvas ref={noteCanvasRef} data-rhythm-note-canvas aria-hidden="true"/>:noteElements}{canvasFaceElements}{tutorial&&<div ref={tutorialBannerRef} data-rhythm-tutorial-banner className="pointer-events-none absolute inset-x-3 top-[14%] z-20 rounded-2xl border border-cyan-300/50 bg-slate-950/92 px-3 py-2.5 text-center shadow-[0_0_18px_rgba(34,211,238,.18)]"><b data-rhythm-tutorial-title className="block text-[14px] font-black text-cyan-100">{RHYTHM_TUTORIAL_STEPS[0].title}</b><span data-rhythm-tutorial-text className="mt-1 block text-[11px] font-bold leading-relaxed text-slate-200">{RHYTHM_TUTORIAL_STEPS[0].text}</span></div>}{view.status==='paused'&&<div data-rhythm-pause-menu data-rhythm-debug-play={debugPlay?'1':undefined} className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-3 bg-slate-950/95 p-5"><h3 className="text-2xl font-black">PAUSE</h3><button data-rhythm-pause-resume className="min-h-[48px] w-full rounded-xl bg-cyan-700 font-black" onClick={resume}>再開</button><button data-rhythm-pause-restart className="min-h-[48px] w-full rounded-xl bg-fuchsia-700 font-black" onClick={restart}>リスタート</button><button data-rhythm-pause-exit className="min-h-[48px] w-full rounded-xl bg-rose-800 font-black" onClick={abort}>{tutorial?'練習をやめて曲えらびへ戻る':debugPlay?'中断して音ゲーデバッグへ戻る':'中断して曲えらびへ戻る'}</button></div>}</div></main>;
+                {view.ability&&<div data-rhythm-ability-flash className="pointer-events-none absolute left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-full border-2 border-amber-200 bg-slate-950/90 px-4 py-1.5 text-lg font-black text-amber-100" style={{bottom:'calc(12% + 78px)',textShadow:settings.lightweightMode||settings.effectAmount==='MINIMAL'?'none':'0 0 10px rgba(251,191,36,.8)'}}>{view.ability.ability}！</div>}{canvasNotes?<canvas ref={noteCanvasRef} data-rhythm-note-canvas aria-hidden="true"/>:noteElements}{canvasFaceElements}{calibrating&&<div ref={calibrationBannerRef} data-rhythm-calibration-banner className="pointer-events-none absolute z-20 rounded-2xl border border-amber-300/60 bg-slate-950/92 text-center shadow-[0_0_18px_rgba(251,191,36,.18)]" style={isLandscape
+      // 横持ち: HUDの左(スコア)と右(ライフ)にはさまれた上の空きへ。器を自前で回しているので
+      //   CSSの landscape: は効かない(@media が成立しない)。向きはJSで見る
+      ?{left:'50%',width:'52%',top:'2%',transform:'translateX(-50%)',padding:'4px 10px'}
+      // 縦持ち: 判定ラインの下の空き(bottom 12%より下)。上に置くとコンボ数と重なった
+      //   (2026-09-13、実画面で確認)。ここなら目線も判定ラインの近くで済む
+      :{left:'12px',right:'12px',bottom:'1.5%',padding:'8px 12px'}}><b data-rhythm-calibration-title className="block font-black text-amber-200" style={{fontSize:isLandscape?'12px':'14px',lineHeight:1.2}}>かまえて（はじめの{RHYTHM_CALIBRATION_WARMUP_COUNT}回は数えません）</b><span data-rhythm-calibration-text className="mt-1 block font-bold text-slate-200" style={{fontSize:isLandscape?'9px':'11px',lineHeight:isLandscape?1.3:1.6}}>判定ラインにノーツが重なった瞬間に叩いてください。判定とFAST・SLOWはいつもどおり出ます</span></div>}{tutorial&&<div ref={tutorialBannerRef} data-rhythm-tutorial-banner className="pointer-events-none absolute inset-x-3 top-[14%] z-20 rounded-2xl border border-cyan-300/50 bg-slate-950/92 px-3 py-2.5 text-center shadow-[0_0_18px_rgba(34,211,238,.18)]"><b data-rhythm-tutorial-title className="block text-[14px] font-black text-cyan-100">{RHYTHM_TUTORIAL_STEPS[0].title}</b><span data-rhythm-tutorial-text className="mt-1 block text-[11px] font-bold leading-relaxed text-slate-200">{RHYTHM_TUTORIAL_STEPS[0].text}</span></div>}{view.status==='paused'&&<div data-rhythm-pause-menu data-rhythm-debug-play={debugPlay?'1':undefined} className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-3 bg-slate-950/95 p-5"><h3 className="text-2xl font-black">PAUSE</h3><button data-rhythm-pause-resume className="min-h-[48px] w-full rounded-xl bg-cyan-700 font-black" onClick={resume}>再開</button><button data-rhythm-pause-restart className="min-h-[48px] w-full rounded-xl bg-fuchsia-700 font-black" onClick={restart}>リスタート</button><button data-rhythm-pause-exit className="min-h-[48px] w-full rounded-xl bg-rose-800 font-black" onClick={abort}>{calibrating?'やめてオプションへ戻る':tutorial?'練習をやめて曲えらびへ戻る':debugPlay?'中断して音ゲーデバッグへ戻る':'中断して曲えらびへ戻る'}</button></div>}</div></main>;
 };
 
 // ---- part: 40-screen-effects.jsx ----
@@ -13307,7 +14040,7 @@ const DebugThrowScreenError = () => { throw new Error('画面エラーの受け�
 // ・BUILD_DATE・ArrowLeft・AssistantBubble は共有層(10〜30)の持ち物なので props にしない
 // ・この画面にタイマーは無い(docs/refactor/SCREEN_EFFECTS_MAP.md に SETTINGS の行が無い)ので、
 //   useScreenEffects はまだ使っていない
-function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onOpenBackup, onOpenHelp, onOpenGameUpdate, gameUpdateDisabled, onReturnToTitle }) {
+function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onOpenBackup, onOpenHelp, onOpenGameUpdate, gameUpdateDisabled, onReturnToTitle, updateNoticeStyle, onChangeUpdateNoticeStyle }) {
   return (
     <div className="flex-1 flex flex-col h-full p-4 overflow-y-auto mh-scroll">
       <div className="flex items-center gap-2 mb-5">
@@ -13321,6 +14054,26 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
         <button onClick={onOpenBackup} className="w-full bg-slate-900 border border-white/10 py-4 rounded-2xl font-black">データ引き継ぎ</button>
         <button onClick={onOpenHelp} className="w-full bg-slate-900 border border-white/10 py-4 rounded-2xl font-black">ヘルプ</button>
         <button onClick={onOpenGameUpdate} disabled={gameUpdateDisabled} className="w-full bg-slate-900 border border-cyan-500/30 py-3 rounded-2xl font-black disabled:opacity-50"><span className="block text-cyan-200">ゲームを更新</span><span className="block mt-1 text-[10px] text-slate-400">最新のゲームデータを読み込みます</span></button>
+        {/* 新しいバージョンのお知らせ(画面へ出るバナー)の出し方。
+            2026-09-12・ユーザー依頼「更新バナーのオンオフをゲーム上の設定で出来るようにしたい」。
+            選べるのは3つ(UPDATE_NOTICE_STYLE_LABELS が正本。ここへ手で書き写さない)。
+            「出さない」を選んでも、すぐ上の「ゲームを更新」からいつでも更新できる。 */}
+        <div data-update-notice-setting className="w-full bg-slate-900 border border-white/10 px-3 py-3 rounded-2xl text-left">
+          <b className="block text-[13px] font-black text-slate-200">新しいバージョンのお知らせ</b>
+          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">新しいバージョンが出たときに画面へ出るお知らせです。「小さく」にすると端に小さく出ます。「出さない」を選んでも、上の「ゲームを更新」からいつでも更新できます。</p>
+          <div className="mt-2 grid grid-cols-3 gap-2">
+            {UPDATE_NOTICE_STYLE_LABELS.map(option => (
+              <button key={option.id} type="button" data-update-notice-style={option.id}
+                aria-pressed={updateNoticeStyle === option.id}
+                onClick={() => onChangeUpdateNoticeStyle(option.id)}
+                className={`min-h-[52px] rounded-xl px-1 py-1.5 text-[11px] font-black leading-tight ${updateNoticeStyle === option.id ? 'bg-cyan-600 text-white' : 'border border-white/15 bg-slate-950 text-slate-300'}`}>
+                <span className="block">{option.label}</span>
+                <small className="mt-0.5 block text-[8px] font-bold opacity-80">{option.note}</small>
+              </button>
+            ))}
+          </div>
+          <p className="mt-2 text-[9px] font-bold leading-relaxed text-slate-500">モンヒロビートの演奏中は、どの設定でも出ません（レーンの上に重なってしまうため）。曲が終わってから出ます。</p>
+        </div>
         <div className="text-center text-[9px] font-mono text-slate-600">BUILD {BUILD_DATE}</div>
         <button onClick={onReturnToTitle} className="w-full bg-red-950/50 border border-red-500/40 text-red-200 py-4 rounded-2xl font-black">タイトルへ戻る</button>
       </div>
@@ -15530,7 +16283,7 @@ function MasuSoulTraitsScreen({
 
 function MasuTranscendEnhanceScreen({
   commitTranscendExchange, commitTranscendFruit, commitTranscendPlan, getMasuMon, masuMonDetail,
-  onBack, onMissing, ownedItems, renderPowerBadge, saveMissionProgress,
+  onBack, onMissing, onOpenAutoEnhance, ownedItems, renderPowerBadge, saveMissionProgress,
   setTranscendBulkUnit, setTranscendExchangeError, setTranscendExchangeOpen, setTranscendExchangeWant, setTranscendFruitConfirmAmount,
   setTranscendFruitError, setTranscendFruitItemId, setTranscendFruitOpen, setTranscendPlan, setTranscendResetError,
   setTranscendResetOpen, transcendBulkUnit, transcendExchangeError, transcendExchangeOpen, transcendExchangeWant,
@@ -15641,9 +16394,10 @@ function MasuTranscendEnhanceScreen({
               <TranscendenceBadge transcended={normalized.transcended} soulRankStage={normalized.soulRankStage} small/>
             </span>
           </div>
-          <div data-transcend-enhance-tabs className="shrink-0 w-full max-w-md mx-auto px-4 pt-3 grid grid-cols-2 gap-1.5">
+          <div data-transcend-enhance-tabs className="shrink-0 w-full max-w-md mx-auto px-4 pt-3 grid grid-cols-3 gap-1.5">
             <button onClick={onBack} className="min-h-[40px] rounded-xl border border-amber-400/50 bg-slate-900 text-amber-200 text-[11px] font-black active:scale-95">通常強化</button>
             <button className="min-h-[40px] rounded-xl bg-sky-500 text-slate-950 text-[11px] font-black">超越強化</button>
+            <button onClick={onOpenAutoEnhance} className="min-h-[40px] rounded-xl border border-lime-400/50 bg-slate-900 text-lime-300/80 text-[11px] font-black active:scale-95">オート強化</button>
           </div>
           {/* 超越の話をするセリフは、正式に超越した個体のときだけにする */}
           <div className="shrink-0 w-full max-w-md mx-auto px-4 pt-3"><AssistantBubble scene={normalized.transcended?'transcendence':'masuEnhance'} compact/></div>
@@ -15809,8 +16563,9 @@ function MasuTranscendEnhanceScreen({
 // ・戻り先は masuEnhanceFrom(どこから来たか)で決まる。行き先の判断は本体に残す
 
 function MasuEnhanceScreen({
-  addAssistantBond, bulkEnhanceUnit, bulkPlan, getMasuMon, masuMonDetail,
-  onBack, onMissing, onOpenTranscendEnhance, renderPowerBadge, saveMissionProgress,
+  addAssistantBond, autoEnhanceIntroVisible, bulkEnhanceUnit, bulkPlan, getMasuMon, masuMonDetail,
+  onBack, onDismissAutoEnhanceIntro, onMissing, onOpenAutoEnhance, onOpenTranscendEnhance,
+  renderPowerBadge, saveMissionProgress,
   setBulkEnhanceUnit, setBulkPlan, setEffect, setMasuMonDetail, spendPointsBulk,
 })  {
 
@@ -15827,6 +16582,7 @@ function MasuEnhanceScreen({
       // 同じ計算に通した差分を出すので、画面に「+10」を直接書かない
       const currentPower = masuPowerOf(masu);
       const ps = mergeMasuIntoMon(masu)?.plusStats||{};
+      const autoEnhance = normalizeMasuAutoEnhance(masu.autoEnhance);
       // 強化はマスモン詳細の「育成・カスタム」から入るので、戻り先も詳細にする。
       // ここで masuMonDetail を消すと一覧まで戻され、続けて染色やトレーニングをしたいときに
       // また同じ個体を探し直すことになる(詳細の中身は getMasuMon で引き直すので最新の値が出る)
@@ -15891,14 +16647,33 @@ function MasuEnhanceScreen({
             <button onClick={backToDetail} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
             <h2 className="text-xl font-black italic text-amber-400 uppercase tracking-widest flex-1">マスモン強化</h2>
           </div>
-          {/* どのマスモンでも通常強化と超越強化を切り替えられる。
+          {/* どのマスモンでも通常強化・超越強化・オート強化を切り替えられる。
               超越強化が使えるかどうかと、神殿で正式に超越したかどうかは別の話 */}
-          {<div data-transcend-enhance-tabs className="shrink-0 w-full max-w-md mx-auto px-4 pt-3 grid grid-cols-2 gap-1.5">
+          {<div data-transcend-enhance-tabs className="shrink-0 w-full max-w-md mx-auto px-4 pt-3 grid grid-cols-3 gap-1.5">
             <button className="min-h-[40px] rounded-xl bg-amber-600 text-slate-950 text-[11px] font-black">通常強化</button>
             <button onClick={onOpenTranscendEnhance} className="min-h-[40px] rounded-xl border border-sky-400/50 bg-slate-900 text-sky-200 text-[11px] font-black active:scale-95">超越強化</button>
+            <button onClick={onOpenAutoEnhance} className={`min-h-[40px] rounded-xl border bg-slate-900 text-[11px] font-black active:scale-95 ${autoEnhance.enabled?'border-lime-400 text-lime-200':'border-lime-400/50 text-lime-300/80'}`}>オート強化{autoEnhance.enabled&&<small className="block text-[7px] leading-none">ON</small>}</button>
           </div>}
           <div className="shrink-0 w-full max-w-md mx-auto px-4 pt-3"><AssistantBubble scene="masuEnhance" compact/></div>
           <div className="flex-1 overflow-y-auto mh-scroll p-4 space-y-3 max-w-md mx-auto w-full">
+            {/* 画面のなかでの使い方案内(CLAUDE.md ⑤)。オート強化は裏で働く仕組みで、
+                ここを開いた人が上のタブに気づかないと一生出会えないため、最初の1回だけ知らせる */}
+            {autoEnhanceIntroVisible&&(
+              <div className="rounded-2xl border border-lime-400/50 bg-lime-950/30 p-3">
+                <div className="text-[11px] font-black text-lime-200">💡 強化を毎回手で振るのが大変なら</div>
+                <div className="mt-1 text-[9px] font-bold text-slate-200 leading-relaxed">上の「オート強化」で、この子ごとに「どこまで上げてよいか」と「その中での優先順位」を決めておけます。強化ポイントが入るたび自動で振られるので、転生したあとの周回でも放っておくだけで元の形まで戻ります。</div>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  <button type="button" onClick={()=>{onDismissAutoEnhanceIntro();onOpenAutoEnhance();}} className="min-h-[40px] rounded-xl bg-lime-500 text-slate-950 text-[10px] font-black active:scale-95">設定を開く</button>
+                  <button type="button" onClick={onDismissAutoEnhanceIntro} className="min-h-[40px] rounded-xl bg-slate-800 text-slate-300 text-[10px] font-black active:scale-95">あとで</button>
+                </div>
+              </div>
+            )}
+            {autoEnhance.enabled&&(
+              <button type="button" onClick={onOpenAutoEnhance} className="w-full rounded-2xl border border-lime-400/40 bg-lime-950/20 px-3 py-2 text-left active:scale-[.99]">
+                <div className="text-[10px] font-black text-lime-200 flex items-center gap-1.5"><Sparkles size={11}/>オート強化 ON</div>
+                <div className="text-[8px] font-bold text-slate-300 mt-0.5">強化ポイントが入ると、決めた上限と優先順位で自動的に振られます。タップで設定へ。</div>
+              </button>
+            )}
 
             {/* まとめて強化: 1ポイントずつタップするのが手間なので、
                 振り分けを下書きしてから一度に確定できるようにしている */}
@@ -18212,6 +18987,255 @@ function SoulBattleEffects({
   );
 }
 
+// ---- part: 72-screen-masu-auto-enhance.jsx ----
+// ==== 画面: マスモン オート強化設定(gameState === 'MASU_AUTO_ENHANCE') ====
+//
+// 転生や限界突破のあとは強化が白紙へ戻るので、周回で貯まる強化ポイントを毎回手で振り直すのが
+// 大変だった(2026-09-12・ユーザー要望)。この画面では個体ごとに
+//   ・オン / オフ
+//   ・どこまで上げてよいか(上限)
+//   ・その中での優先順位
+// の3つだけを決める。実際に振る計算は 11-masu-progression.jsx の
+// buildMasuAutoEnhancePlan / applyMasuAutoEnhance が持っていて、
+// 手で振るとき(applyEnhancePlanToMasu)とまったく同じ道を通る。
+//
+// 【この画面ならではの注意】
+// ・保存を伴う操作は MonsterHeroGame 側に残し、props で受ける(ほかのマスモン画面と同じ)
+// ・上限の数値入力だけは1文字ごとに保存すると書き込みが増えるので、入力中は下書き(draft)を持ち、
+//   指を離した(blur)ときとEnterのときにだけ保存する。＋−や目標グレードのselectはその場で保存する
+
+function MasuAutoEnhanceScreen({
+  applyAutoEnhanceNow, autoEnhanceLog, getMasuMon, masuMonDetail, moveAutoEnhanceOrder,
+  onBack, onMissing, onOpenNormalEnhance, onOpenTranscendEnhance, renderPowerBadge, updateAutoEnhance,
+}) {
+      // ★フックは必ずいちばん上で呼ぶ。下の「ベースが見つからない」で早期に返す行より後ろへ置くと、
+      //   ある回だけフックの数が変わってReactが壊れる。上限の数値は入力中だけ下書きで持つ
+      const [limitDraft, setLimitDraft] = useState(null);
+      const masu = getMasuMon(masuMonDetail.id) || masuMonDetail;
+      const base = ALL_PLAYER_MONSTERS[masu.baseId];
+      if (!base) { onMissing(); return null; }
+      const settings = normalizeMasuAutoEnhance(masu.autoEnhance);
+      const points = Math.max(0, Math.floor(Number(masu.distAptPoints) || 0));
+      const resolvedApt = resolveMasuDistAptitude(masu, base);
+      const baseApt = masuTranscendBaseAptitude(masu, base);
+      // ステータスは「合計いくつまで上げてよいか」で決める。素の値(超越の基礎UPを含む)と
+      // いまの値は、強化画面に出ている数字とまったく同じものを使う
+      const individual = resolveMasuIndividualStats(masu, base);
+      const statTargets = autoEnhanceStatTargetsOf(masu, base);
+      const baseStatOf = (key) => Math.max(0, Math.floor(Number(individual[key]) || 0));
+      const spentStatOf = (key) => Math.max(0, Number(masu.statPoints?.[key]) || 0);
+      const currentStatOf = (key) => baseStatOf(key) + spentStatOf(key);
+      const hasTarget = autoEnhanceHasTarget(masu, base);
+      // 絆ポイントリセットの直後は自動で振らない(道具代を無駄にしないため)。
+      // 止まっていることを黙っていると「ONなのに働かない」に見えるので、画面で必ず伝える
+      const awaitsReset = masuAwaitsBondResetReallocation(masu);
+      // いま持っているポイントを設定どおりに振ったらどうなるか。設定を変えるたびに作り直すので、
+      // 「この順番でいいのか」を保存前と同じ計算で確かめられる
+      const planned = buildMasuAutoEnhancePlan({ ...masu, autoEnhance:{ ...settings, enabled:true } }, base);
+      const plannedLines = planned ? describeAutoEnhancePlan(planned.plan) : [];
+      const log = (autoEnhanceLog || []).filter(entry => String(entry.masuId) === String(masu.id));
+
+      // null のあいだは保存値をそのまま出す
+      const statTargetText = (key) => {
+        if (limitDraft && limitDraft.key === key) return limitDraft.text;
+        const goal = statTargets[key];
+        return goal === null ? '' : String(goal);
+      };
+      const commitStatTarget = (key) => {
+        if (!limitDraft || limitDraft.key !== key) return;
+        const text = limitDraft.text.trim();
+        setLimitDraft(null);
+        // 空欄は「上限なし」。数字以外が混ざっていたら数字だけを拾う(スマホのキーボード対策)
+        const digits = text.replace(/[^0-9]/g, '');
+        updateAutoEnhance(masu.id, { statTargets:{ ...statTargets, [key]: digits === '' ? null : Number(digits) } });
+      };
+      const setStatTarget = (key, value) => {
+        setLimitDraft(null);
+        updateAutoEnhance(masu.id, { statTargets:{ ...statTargets, [key]: value } });
+      };
+      const setAptLimit = (index, grade) => {
+        const aptLimits = [...settings.aptLimits];
+        aptLimits[index] = grade;
+        updateAutoEnhance(masu.id, { aptLimits });
+      };
+      const captureCurrent = () => {
+        const captured = buildAutoEnhanceLimitsFromCurrent(masu, base);
+        if (captured) { setLimitDraft(null); updateAutoEnhance(masu.id, captured); }
+      };
+      const clearAll = () => {
+        setLimitDraft(null);
+        updateAutoEnhance(masu.id, { statTargets:{ hp:0, atk:0, def:0, guts:0 }, aptLimits:[null,null,null,null] });
+      };
+      const rowLabel = (target) => {
+        const aptIndex = autoEnhanceAptIndexOf(target);
+        return aptIndex != null ? `${RANGE_LABELS[aptIndex]}距離適性` : STAT_POINT_KEYS[target];
+      };
+      // 目標に選べるグレード。いまより下は選べない(下げる強化は存在しないため)
+      const aptChoices = (index) => {
+        const from = Math.max(0, DIST_APTITUDE_GRADES.indexOf(resolvedApt[index] || 'C'));
+        return DIST_APTITUDE_GRADES.slice(from + 1);
+      };
+
+      return (
+        <div style={{position:"absolute",inset:0,backgroundColor:"#020617",zIndex:30000}} className="absolute inset-0 flex flex-col overflow-hidden" data-auto-enhance={masu.id}>
+          <div className="flex items-center gap-2 p-4 shrink-0 border-b border-white/10" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))'}}>
+            <button onClick={onBack} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+            <h2 className="text-xl font-black italic text-lime-300 uppercase tracking-widest flex-1">オート強化</h2>
+          </div>
+          <div data-transcend-enhance-tabs className="shrink-0 w-full max-w-md mx-auto px-4 pt-3 grid grid-cols-3 gap-1.5">
+            <button onClick={onOpenNormalEnhance} className="min-h-[40px] rounded-xl border border-amber-400/50 bg-slate-900 text-amber-200 text-[11px] font-black active:scale-95">通常強化</button>
+            <button onClick={onOpenTranscendEnhance} className="min-h-[40px] rounded-xl border border-sky-400/50 bg-slate-900 text-sky-200 text-[11px] font-black active:scale-95">超越強化</button>
+            <button className="min-h-[40px] rounded-xl bg-lime-500 text-slate-950 text-[11px] font-black">オート強化</button>
+          </div>
+          <div className="shrink-0 w-full max-w-md mx-auto px-4 pt-3"><AssistantBubble scene="masuAutoEnhance" compact/></div>
+          <div className="flex-1 overflow-y-auto mh-scroll p-4 space-y-3 max-w-md mx-auto w-full">
+
+            <div className="flex items-center gap-3 bg-slate-900 border border-lime-500/30 rounded-3xl p-3 shadow-xl">
+              <div className="w-14 h-14 shrink-0 rounded-full overflow-hidden border border-lime-400/40"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/></div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-black text-white truncate">{masu.name}</h3>
+                <div className="text-[9px] text-lime-300 font-black flex items-center gap-1"><Sparkles size={9}/>未使用の強化P {points}</div>
+                <div className="mt-1">{renderPowerBadge(masuPowerOf(masu), {dense:true, size:'sm'})}</div>
+              </div>
+            </div>
+
+            {/* オン / オフ */}
+            <div className={`rounded-3xl border p-3 shadow-xl ${settings.enabled?'border-lime-400/50 bg-lime-950/25':'border-white/10 bg-slate-900'}`}>
+              <button type="button" aria-pressed={settings.enabled} onClick={()=>updateAutoEnhance(masu.id, { enabled: !settings.enabled })}
+                className={`w-full min-h-[52px] rounded-2xl font-black text-[13px] active:scale-95 flex items-center justify-center gap-2 ${settings.enabled?'bg-gradient-to-r from-lime-500 to-emerald-500 text-slate-950':'bg-slate-800 text-slate-300'}`}>
+                <Sparkles size={16}/>{settings.enabled?'オート強化 ON':'オート強化 OFF'}
+              </button>
+              <div className="mt-2 text-[9px] font-bold leading-relaxed text-slate-300">
+                {settings.enabled
+                  ? '強化ポイントが入るたびに、下の順番で上限まで自動で振ります。バトル・スキップ・合体・限界突破・転生のあと、AUTO∞の周回中も同じように働きます。'
+                  : 'OFFのあいだ、この子の強化ポイントは自動では振られません。'}
+              </div>
+              {settings.enabled&&awaitsReset&&(
+                <div className="mt-2 rounded-xl border border-cyan-400/50 bg-cyan-950/30 px-2.5 py-2 text-[9px] font-black text-cyan-200 leading-relaxed">
+                  絆ポイントリセットの直後なので、いまは自動で振りません。振り直すための道具を使ったばかりなので、勝手に振ってしまわないようにしています。通常強化で振り直すか、下の「この内容でいますぐ振る」を押すと、そこから再開します。
+                </div>
+              )}
+              {settings.enabled&&!hasTarget&&(
+                <div className="mt-2 rounded-xl border border-amber-500/50 bg-amber-950/30 px-2.5 py-2 text-[9px] font-black text-amber-200 leading-relaxed">
+                  振ってよい先がまだ1つもないので、ONでも何も振られません。下で目標を決めるか、「いまの値を目標として取り込む」を押してください。
+                </div>
+              )}
+              <div className="mt-2 text-[8px] font-bold text-slate-500 leading-relaxed">設定は転生しても残ります。目標まで届くと止まり、残った強化ポイントはそのまま手元に残るので、手で振ることもできます。</div>
+            </div>
+
+            {/* 上限の一括操作 */}
+            <div className="grid grid-cols-2 gap-2">
+              <button type="button" onClick={captureCurrent} className="min-h-[46px] rounded-xl bg-slate-800 border border-lime-400/40 text-lime-200 text-[10px] font-black active:scale-95 px-2 leading-tight">いまの値を<br/>目標として取り込む</button>
+              <button type="button" onClick={clearAll} className="min-h-[46px] rounded-xl bg-slate-800 border border-white/10 text-slate-300 text-[10px] font-black active:scale-95 px-2 leading-tight">すべて<br/>「振らない」に戻す</button>
+            </div>
+            <div className="text-[8px] text-slate-500 font-bold leading-relaxed px-1">「いまの値を目標として取り込む」は、この子のいまの数値をそのまま目標に写します。転生する前に押しておくと、転生後の周回で同じ数値まで自動で戻ります。</div>
+
+            {/* いま持っているポイントの行き先 */}
+            <div className="rounded-2xl border border-lime-500/30 bg-black/40 p-3">
+              <div className="text-[10px] font-black text-lime-300 uppercase tracking-wider mb-1.5">いまの {points}P の行き先</div>
+              {points<=0
+                ? <div className="text-[9px] text-slate-400 font-bold">未使用の強化ポイントがありません。</div>
+                : plannedLines.length>0
+                  ? (<>
+                      <div className="space-y-0.5">{plannedLines.map((line,idx)=><div key={idx} className="text-[10px] font-black text-white">・{line}</div>)}</div>
+                      <div className="mt-1 text-[8px] font-bold text-slate-400">{planned.used}P を使い、{points-planned.used}P が残ります。{awaitsReset&&'（絆ポイントリセットの直後なので、自動では振りません）'}</div>
+                      <button type="button" onClick={()=>applyAutoEnhanceNow(masu.id)} className="mt-2 w-full min-h-[44px] rounded-xl bg-gradient-to-r from-lime-600 to-emerald-600 text-white font-black text-[11px] active:scale-95">この内容でいますぐ振る</button>
+                    </>)
+                  : <div className="text-[9px] text-amber-300 font-bold">目標まで届いているので、いまの設定では振る先がありません。</div>}
+            </div>
+
+            {/* 優先順位と上限 */}
+            <div className="bg-slate-900 border border-lime-500/40 rounded-3xl p-3 shadow-xl">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <div className="text-[11px] font-black text-lime-300 uppercase tracking-wider flex items-center gap-1.5"><Sparkles size={14}/>優先順位と上限</div>
+                <div className="text-[9px] text-slate-400 font-bold">上から順に埋めます</div>
+              </div>
+              <div className="space-y-1.5">
+                {settings.order.map((target,rank)=>{
+                  const aptIndex = autoEnhanceAptIndexOf(target);
+                  const isApt = aptIndex != null;
+                  const limit = isApt ? settings.aptLimits[aptIndex] : statTargets[target];
+                  const active = isApt ? limit !== null : (limit === null || limit > 0);
+                  const gain = isApt ? 0 : (STAT_POINT_GAIN[target] || 1);
+                  const baseValue = isApt ? 0 : baseStatOf(target);
+                  const spentValue = isApt ? 0 : spentStatOf(target);
+                  const currentValue = isApt ? 0 : currentStatOf(target);
+                  // 目標まであと何ポイント要るか。1Pあたりの上昇量で割り切れないぶんは切り捨て
+                  const neededPoints = (isApt || limit === null || limit <= 0) ? 0 : Math.max(0, Math.floor((limit - currentValue) / gain));
+                  const choices = isApt ? aptChoices(aptIndex) : [];
+                  return (
+                    <div key={target} className={`rounded-2xl p-2 border ${active?'border-lime-500/30 bg-black/40':'border-white/5 bg-black/20'}`}>
+                      <div className="flex items-center gap-1.5">
+                        <span className={`w-5 h-5 shrink-0 rounded-full text-[9px] font-black flex items-center justify-center ${active?'bg-lime-500 text-slate-950':'bg-slate-700 text-slate-400'}`}>{rank+1}</span>
+                        <span className={`flex-1 min-w-0 truncate text-[11px] font-black ${active?'text-white':'text-slate-500'}`}>{rowLabel(target)}</span>
+                        <button type="button" aria-label={`${rowLabel(target)}の優先順位を上げる`} disabled={rank<=0} onClick={()=>moveAutoEnhanceOrder(masu.id,target,-1)} className="w-9 h-9 shrink-0 rounded-lg bg-slate-700 text-sm font-black active:scale-95 disabled:opacity-20">↑</button>
+                        <button type="button" aria-label={`${rowLabel(target)}の優先順位を下げる`} disabled={rank>=settings.order.length-1} onClick={()=>moveAutoEnhanceOrder(masu.id,target,1)} className="w-9 h-9 shrink-0 rounded-lg bg-slate-700 text-sm font-black active:scale-95 disabled:opacity-20">↓</button>
+                      </div>
+                      {isApt
+                        ? (<div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                            <span className="text-[9px] font-bold text-slate-400 shrink-0">いま</span>
+                            <span className={`text-[12px] font-mono font-black shrink-0 ${DIST_APTITUDE_COLOR[resolvedApt[aptIndex]]}`}>{resolvedApt[aptIndex]}</span>
+                            <span className="text-[8px] text-slate-600 shrink-0">(元{baseApt[aptIndex]})</span>
+                            <span className="text-[9px] font-bold text-slate-400 shrink-0">→ 目標</span>
+                            <select aria-label={`${rowLabel(target)}の目標`} value={limit===null?'':limit} onChange={event=>setAptLimit(aptIndex, event.target.value===''?null:event.target.value)}
+                              className="flex-1 basis-24 min-w-0 min-h-[40px] rounded-lg border border-lime-400/40 bg-slate-950 px-1 text-center text-[11px] font-black text-white">
+                              <option value="">振らない</option>
+                              {limit!==null&&!choices.includes(limit)&&<option value={limit}>{limit}（到達済み）</option>}
+                              {choices.map(grade=><option key={grade} value={grade}>{grade} まで</option>)}
+                            </select>
+                          </div>)
+                        : (<div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                            <span className="text-[9px] font-bold text-slate-400 shrink-0">いま</span>
+                            <span className="text-[13px] font-mono font-black text-white shrink-0">{currentValue}</span>
+                            <span className="text-[9px] font-bold text-slate-400 shrink-0">→ ここまで</span>
+                            <label className="flex flex-1 basis-16 min-w-0 items-center gap-0.5">
+                              <input data-auto-enhance-limit={target} aria-label={`${rowLabel(target)}をいくつまで上げてよいか`} type="text" inputMode="numeric" pattern="[0-9]*" enterKeyHint="done" autoComplete="off"
+                                placeholder="上限なし" value={statTargetText(target)} onFocus={event=>event.currentTarget.select()}
+                                onChange={event=>setLimitDraft({ key:target, text:event.currentTarget.value })}
+                                onBlur={()=>commitStatTarget(target)}
+                                onKeyDown={event=>{ if(event.key==='Enter') event.currentTarget.blur(); }}
+                                className="w-full min-w-0 h-10 rounded-lg border border-lime-400/40 bg-slate-950 px-1 text-center text-[13px] font-mono font-black text-white outline-none focus:border-lime-300 placeholder:text-[10px] placeholder:text-slate-600 placeholder:font-bold"/>
+                            </label>
+                            <button type="button" aria-label={`${rowLabel(target)}を上限なしにする`} aria-pressed={limit===null} onClick={()=>setStatTarget(target, null)} className={`w-9 h-10 shrink-0 rounded-lg text-[11px] font-black active:scale-95 ${limit===null?'bg-lime-500 text-slate-950':'bg-slate-700 text-slate-300'}`}>∞</button>
+                            <button type="button" aria-label={`${rowLabel(target)}を振らないにする`} aria-pressed={limit===0} onClick={()=>setStatTarget(target, 0)} className={`w-9 h-10 shrink-0 rounded-lg text-[11px] font-black active:scale-95 ${limit===0?'bg-slate-500 text-slate-950':'bg-slate-700 text-slate-300'}`}>✕</button>
+                          </div>)}
+                      {/* 数字の出どころを1行で見せる。「いま」が素の値と強化ぶんの合計だと分かれば、
+                          目標をいくつにすればいいか考えなくて済む */}
+                      {!isApt&&(
+                        <div className="mt-1 text-[8px] font-bold text-slate-500">
+                          素の値 {baseValue}{spentValue>0&&<span className="text-emerald-400"> ＋ 強化 {spentValue}</span>} ／ 強化P1つで +{gain}
+                          {limit===null&&<span className="text-lime-400"> ／ 上限なし（振れるだけ振ります）</span>}
+                          {limit!==null&&limit>0&&(neededPoints>0
+                            ? <span className="text-lime-400"> ／ 目標まで あと {neededPoints}P</span>
+                            : <span className="text-slate-400"> ／ 目標に届いています</span>)}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="mt-2 text-[8px] text-slate-500 font-bold leading-relaxed">ステータスは「その能力を合計いくつまで上げてよいか」で決めます（画面に出ている数値そのままです）。空欄か∞で上限なし、✕で振りません。強化P1つで上がる量は決まっているので、割り切れないときは目標を超えない手前で止まります。間合い適性はいまより上の段階だけを目標に選べます。</div>
+            </div>
+
+            {/* 直近の自動強化 */}
+            <div className="rounded-2xl border border-white/10 bg-black/30 p-3">
+              <div className="text-[10px] font-black text-slate-300 uppercase tracking-wider mb-1.5">直近の自動強化</div>
+              {log.length<=0
+                ? <div className="text-[9px] text-slate-500 font-bold">このアプリを開いてからは、まだ自動で振られていません。</div>
+                : <div className="space-y-1">{log.slice(0,5).map((entry,idx)=>(
+                    <div key={idx} className="rounded-xl bg-black/40 px-2 py-1.5">
+                      <div className="text-[9px] font-black text-lime-300">{entry.used}P を使いました</div>
+                      <div className="text-[9px] font-bold text-slate-300 leading-relaxed">{entry.lines.join(' ／ ')}</div>
+                    </div>
+                  ))}</div>}
+            </div>
+
+            <button onClick={onBack} className="w-full bg-white text-black py-3.5 rounded-2xl font-black text-sm uppercase active:scale-95 shadow-lg mt-2">完了</button>
+          </div>
+        </div>
+      );
+}
+
 // ---- part: 60-app.jsx ----
 function MonsterHeroGame() {
   const [gameState, setGameState] = useState('HOME');
@@ -18274,6 +19298,8 @@ function MonsterHeroGame() {
   // 性能計測(デバッグ限定)。既定OFF。ONの記憶は専用キー mh_rhythm_perf_v1 に分ける
   const [rhythmPerfOn,setRhythmPerfOn]=useState(()=>RHYTHM_PERF.enabled);
   const [rhythmPerfStats,setRhythmPerfStats]=useState(null);
+  // 演奏画面の装飾を個別に切って、実機で何が重いかを切り分ける(デバッグ限定・新しい保存キー)
+  const [rhythmStrip,setRhythmStrip]=useState(()=>RHYTHM_STRIP.value);
   // ノーツの描き方の上書き(検証用・デバッグ限定)。'' = 公開設定に従う / 'dom' / 'canvas'
   const [rhythmCanvasPref,setRhythmCanvasPref]=useState(()=>rhythmCanvasNotesPreference());
   const [rhythmChartToolsOpened,setRhythmChartToolsOpened]=useState(false);
@@ -19195,6 +20221,15 @@ function MonsterHeroGame() {
   const [inheritedUniqueCompensation, setInheritedUniqueCompensation] = useState(false);
   const masuMonsRef = useRef(masuMons);
   masuMonsRef.current = masuMons;
+  // オート強化が実際に振った記録(このアプリを開いているあいだだけ・保存はしない)。
+  // 「裏で本当に働いているのか」を画面で確かめられるようにするためのもので、
+  // ゲームの進行には一切使わないので、セーブデータを増やさない
+  const [autoEnhanceLog, setAutoEnhanceLog] = useState([]);
+  const pushAutoEnhanceLog = (entries) => {
+    if (!Array.isArray(entries) || entries.length <= 0) return;
+    const stamped = entries.map(entry => ({ ...entry, at:Date.now() }));
+    setAutoEnhanceLog(prev => [...stamped, ...prev].slice(0, 30));
+  };
   // ランの報酬を配ったあとのマスモン。setMasuMons の反映は非同期なので、同じ処理の続きで走る
   // ランキング送信からは「そのランで増えた絆経験値が入る前」の値しか見えなかった。
   // そのため、ランキングへ送る絆Lvと育て方が1ラン遅れていた
@@ -19293,6 +20328,14 @@ function MonsterHeroGame() {
   // 画面から消せるようにする。閉じても更新は行わず、次に開き直したときや
   // さらに新しいバージョンが出たときはまた表示する
   const [dismissedUpdateBuild, setDismissedUpdateBuild] = useState(null);
+  // 新しいバージョンのお知らせの出し方('FULL' / 'MINI' / 'OFF')。設定画面から選ぶ。
+  // 保存が無い既存ユーザーは 'FULL'(これまでと同じ)になる
+  const [updateNoticeStyle, setUpdateNoticeStyleState] = useState('FULL');
+  const setUpdateNoticeStyle = (next) => {
+    const value = normalizeUpdateNoticeStyle(next);
+    setUpdateNoticeStyleState(value);
+    storeSet(UPDATE_NOTICE_STYLE_KEY, value, false);
+  };
   const [showGameUpdateConfirm, setShowGameUpdateConfirm] = useState(false);
   const [gameUpdatePending, setGameUpdatePending] = useState(false);
   const gameUpdatePendingRef = useRef(false);
@@ -20442,6 +21485,27 @@ function MonsterHeroGame() {
       storeSet('mh_home_pasture_ids', normalized, false);
     }
   }, [masuMons, homePastureIds, pastureLoaded]);
+
+  // ---- オート強化: 強化ポイントが増えたら、設定どおりに自動で振る ----
+  // マスモンが変わるたびにここを通す。強化ポイントが入る道は
+  // バトル・クイック・演奏の周回・スキップチケット・トレーニングチケット・合体・限界突破・転生と多く、
+  // 1か所ずつ呼び出しを足すと必ずどこかを取りこぼすため、「増えたら振る」を1本にまとめてある。
+  // ★何も振らないときは applyAutoEnhanceToMasuMons が null を返すので保存もstate更新もしない。
+  //   振ったあとは強化ポイントが減るので、次に通ったときは自然に止まる(繰り返しにならない)。
+  // ★読み込みが終わるまでは走らせない。読み込み途中の中途半端な値で振ってしまわないようにする。
+  useEffect(() => {
+    if (!dataLoaded) return;
+    const result = applyAutoEnhanceToMasuMons(masuMonsRef.current || masuMons);
+    if (!result) return;
+    masuMonsRef.current = result.next;
+    // ランキング送信が「振る前」の育て方を見ないよう、ランの控えも同じ内容へそろえる
+    if (postRunMasuMonsRef.current) postRunMasuMonsRef.current = result.next;
+    setMasuMons(result.next);
+    storeSet('mh_masu_mons', result.next, false);
+    setMasuMonDetail(prev => prev ? (result.next.find(m => String(m.id) === String(prev.id)) || prev) : prev);
+    pushAutoEnhanceLog(result.results);
+  }, [masuMons, dataLoaded]);
+
   const homePastureMasumons = homePastureIds.map(id=>masuMons.find(m=>String(m.id)===String(id))).filter(m=>m&&ALL_PLAYER_MONSTERS[m.baseId]);
   // セーブ読込後のタイトル中に、最初のHOMEで必ず使う画像だけを最優先で先読みする。
   // 完了をタイトル操作やHOME遷移の条件にはせず、失敗時も通常のimg読込へそのまま任せる。
@@ -20534,9 +21598,9 @@ function MonsterHeroGame() {
     TRAINING_BOARD: 'trainingBoard',
   };
   // プロフィール本体とアイテムはHOMEの曲を続ける。その他の詳細ページ群は従来のプロフィール曲を維持する。
-  const PROFILE_BGM_STATES = ['ROSTER','OWNED_MONSTERS','MASU_MONS','MASU_ENHANCE','MASU_TRANSCEND_ENHANCE','MASU_SOUL_TRAITS'];
+  const PROFILE_BGM_STATES = ['ROSTER','OWNED_MONSTERS','MASU_MONS','MASU_ENHANCE','MASU_TRANSCEND_ENHANCE','MASU_AUTO_ENHANCE','MASU_SOUL_TRAITS'];
   // マスモンの専用育成画面。ここを開いているあいだは詳細モーダルを重ねない(詳細のほうが手前に出てしまうため)
-  const MASU_ENHANCE_STATES = ['MASU_ENHANCE','MASU_TRANSCEND_ENHANCE','MASU_SOUL_TRAITS'];
+  const MASU_ENHANCE_STATES = ['MASU_ENHANCE','MASU_TRANSCEND_ENHANCE','MASU_AUTO_ENHANCE','MASU_SOUL_TRAITS'];
   // 1回のプレイの中で流れる画面。「まだ1度も戦っていない準備中」か「WAVEを終えたあと」かで曲を分ける。
   //  ・準備中(最初の勇者モン選択〜最初のバトルの直前) … 強化フェーズの曲
   //  ・WAVEを終えたあと(リザルト〜次のバトルの直前)   … リザルトの曲をそのまま続ける
@@ -20575,15 +21639,27 @@ function MonsterHeroGame() {
   // モンビーのうち、裏で周回を続けてよい画面。60fpsも精密入力も要らないところだけを並べる。
   // 演奏中(RHYTHM_PLAY)はここに**入れない**。16.6msごとに全ノーツを走査して判定しているので、
   // バトルのstate更新が割り込むと入力の取りこぼしとカクつきになる(REGRESSION_RISK_MAP.md §4-1)。
-  const RHYTHM_BACKGROUND_RUN_SCREENS = ['RHYTHM_DEMO_HOME','RHYTHM_DEMO_HELP','RHYTHM_DEMO_MONSTERS','RHYTHM_RANKING'];
+  // ★オプション(RHYTHM_OPTIONS)もここへ入れる。遊びかた・ランキングと同じで、
+  //   60fpsも精密入力も要らない。2026-09-12までここだけ抜けていて、オプションを見ている
+  //   あいだは周回が止まっていた(そのぶんは追いつきで取り戻していた)。
+  const RHYTHM_BACKGROUND_RUN_SCREENS = ['RHYTHM_DEMO_HOME','RHYTHM_DEMO_HELP','RHYTHM_DEMO_MONSTERS','RHYTHM_RANKING','RHYTHM_OPTIONS'];
   // モンビーを開いているか(演奏中も含む)。開いている間はランが進んでも画面を切り替えない。
-  // 演奏中に画面がバトルへ飛ぶのを防ぐため、RHYTHM_PLAY もここへ入れる
-  const rhythmScreenOpen = [...RHYTHM_BACKGROUND_RUN_SCREENS,'RHYTHM_PLAY'].includes(gameState);
+  //
+  // ★**一覧で持たず、gameStateの頭で見る。**
+  //   2026-09-12・ユーザー報告「モンビー中にオプションに行くとたまに強制でバトルに飛ばされる」。
+  //   ここが `[...RHYTHM_BACKGROUND_RUN_SCREENS,'RHYTHM_PLAY']` という一覧だったため、
+  //   その一覧から漏れていた RHYTHM_OPTIONS にいるあいだだけ「モンビーを離れた」と判断され、
+  //   裏の周回がWAVEを越えた瞬間に advanceRunStage が画面をバトルへ切り替えていた。
+  //   (WAVEの切り替わりに重なったときだけなので「たまに」になる。
+  //    予約済みの setTimeout は、オプションへ移ったあとも必ず着地するため)
+  //   一覧で持つかぎり、モンビーへ画面を足すたびに同じ事故が起きる。頭文字で見れば漏れない。
+  const isRhythmScreen = state => typeof state === 'string' && state.startsWith('RHYTHM_');
+  const rhythmScreenOpen = isRhythmScreen(gameState);
   // 「モンヒロビートへ入った瞬間」を見分けるための一覧(自動で∞周回を始める判定に使う)。
-  // ★裏で回してよい画面より広く取る。オプション・遊びかたもモンビーの中なので、
-  //   そこから曲えらびへ戻っただけで「入り直した」と数えると、周回が何度も立ち上がる。
+  // ★裏で回してよい画面より広く取る。演奏中もモンビーの中なので、そこから曲えらびへ
+  //   戻っただけで「入り直した」と数えると、周回が何度も立ち上がる。
   //   デバッグ画面(RHYTHM_DEBUG)と、未公開のときに出る案内(RHYTHM_INFO)は入口ではないので入れない
-  const RHYTHM_AUTO_START_SCREENS = [...RHYTHM_BACKGROUND_RUN_SCREENS,'RHYTHM_PLAY','RHYTHM_OPTIONS'];
+  const RHYTHM_AUTO_START_SCREENS = [...RHYTHM_BACKGROUND_RUN_SCREENS,'RHYTHM_PLAY'];
   // 裏で周回してよい状態か。
   //  ・クイックの∞周回だけ(チャレンジ・プロ・極限・種族は全国ランキング対象なので裏で回さない)
   //  ・演奏中は止める(曲が終われば自動で再開する)
@@ -20740,7 +21816,10 @@ function MonsterHeroGame() {
   //   埋める値そのものが存在しないため(CLAUDE.md ⑦「消さない・上書きしない」)。
   // loopScale … その演奏にかかっていた倍率。曲リザルトで「イベント対象曲 ×3」と出すためだけに使う
   //   (配る量そのものは loops に織り込み済みなので、ここで掛け直さない)
-  const awardRhythmPlayRunLoops = async (loops, loopScale = RHYTHM_PLAY_RUN_LOOP_SCALE) => {
+  // cleared / baseLoops … クリアか失敗か(2026-09-12・ユーザー指示「それによって経験値も変わるから」)と、
+  //   失敗していなければ入っていた周回数。どちらも曲リザルトの表示用で、配る量そのものは
+  //   すでに loops へ織り込まれている(ここで掛け直さない)。
+  const awardRhythmPlayRunLoops = async (loops, loopScale = RHYTHM_PLAY_RUN_LOOP_SCALE, { cleared = true, baseLoops = null } = {}) => {
     const count = Math.max(0, Math.trunc(Number(loops) || 0));
     if (count <= 0) return null;
     const scale = Number.isFinite(Number(loopScale)) && Number(loopScale) > 0 ? Number(loopScale) : RHYTHM_PLAY_RUN_LOOP_SCALE;
@@ -20819,13 +21898,17 @@ function MonsterHeroGame() {
     for (let i = 0; i < count; i++) countQuickRunLoop();
     const toLoop = quickRunProgressRef.current ? quickRunProgressRef.current.loops : fromLoop;
     return { loops: count, xp: xpGain, gold: goldGain, bond: bondGain, psyche: psycheGain, fromLoop, toLoop,
-      scale, eventBoosted: scale > RHYTHM_PLAY_RUN_LOOP_SCALE };
+      scale, eventBoosted: scale > RHYTHM_PLAY_RUN_LOOP_SCALE,
+      cleared: cleared !== false,
+      baseLoops: Math.max(0, Math.trunc(Number(baseLoops) || 0)) || count };
   };
   // ---- 画面のなかでの使い方案内(docs/spec/QUICK_RHYTHM_LINK.md PR8) ----
   // ヘルプと更新履歴は探しに行った人しか読まない。この連携は遊んでいるだけでは
   // 気づけない仕組みなので、出るべき場面で1度だけ、みゅあが伝える。
   // ★保存キーは新しく足す(既存の mh_* は触らない・CLAUDE.md ⑦)。
   // ★公開フラグが false のあいだは、ヘルプ・更新履歴・告知と同じくこれも出さない。
+  // ★useState(true) は「読み込みが終わるまで出さない」ためのもの。実際に出すかどうかは
+  //   読み込みのときに保存値から決め直す(保存が無いうちは「まだ見ていない」)。
   const QUICK_RHYTHM_INTRO_KEY = 'mh_quick_rhythm_intro_seen_v1';
   const QUICK_RHYTHM_BACKGROUND_KEY = 'mh_quick_rhythm_bg_seen_v1';
   const [quickRhythmIntroSeen, setQuickRhythmIntroSeen] = useState(true);
@@ -20838,6 +21921,18 @@ function MonsterHeroGame() {
   // 裏で周回したままモンビーを開いた最初の1回だけ
   const quickRhythmBackgroundVisible = quickRhythmGuideReleased && !quickRhythmBackgroundSeen && rhythmBackgroundRun;
   const dismissQuickRhythmBackground = () => { setQuickRhythmBackgroundSeen(true); storeSet(QUICK_RHYTHM_BACKGROUND_KEY, true, false); };
+  // ---- オート強化の使い方案内(CLAUDE.md ⑤) ----
+  // 「強化ポイントが入るたび裏で自動的に振られる」は、遊んでいるだけでは気づけない仕組み。
+  // ヘルプと更新履歴は探しに行った人しか読まないので、強化画面を開いた最初の1回だけ、
+  // 画面のなかでも知らせる。
+  // ★保存キーは新しく足す(既存の mh_* は触らない・CLAUDE.md ⑦)。
+  // ★「見た」と保存されているときだけ出さない。保存が無いうちは出す。
+  //   storeGet は「キーが無い」ときも既定値を返すので、既定値を true にすると
+  //   保存が無い＝見た扱いになり、案内が誰にも一度も出ない
+  const AUTO_ENHANCE_INTRO_KEY = 'mh_masu_auto_enhance_intro_seen_v1';
+  const [autoEnhanceIntroSeen, setAutoEnhanceIntroSeen] = useState(true);
+  const autoEnhanceIntroVisible = !autoEnhanceIntroSeen;
+  const dismissAutoEnhanceIntro = () => { setAutoEnhanceIntroSeen(true); storeSet(AUTO_ENHANCE_INTRO_KEY, true, false); };
   // ---- 曲えらびでの「今週の対象曲」案内(docs/spec/RHYTHM_RANKING.md §10.2) ----
   // ヘルプと更新履歴は探しに行った人しか読まない。週間ランキングは
   // 「開いて初めて気づく」仕組みなので、曲えらびでも1度だけみゅあが伝える(CLAUDE.md ⑤)。
@@ -21110,7 +22205,10 @@ function MonsterHeroGame() {
     const startedAt = rhythmPlayStartedAtRef.current;
     rhythmPlayStartedAtRef.current = 0;
     if (!startedAt) return;
-    if (rhythmPlayRunAwardRef.current) { stopCatchUp(); return; }
+    // ★見るのは「実際に周回が入ったか(loops>0)」。失敗したときは0周なので、
+    //   途中でやめたときと同じく、止まっていたぶんを取り戻す側へ進む
+    //   (失敗しても損はしないが、得もしない。2026-09-12・ユーザー指示)。
+    if (Number(rhythmPlayRunAwardRef.current?.loops) > 0) { stopCatchUp(); return; }
     if (!rhythmScreenOpen || runStageRef.current == null || !autoRepeatRef.current) { stopCatchUp(); return; }
     beginCatchUp(Date.now() - startedAt);
   }, [gameState]);
@@ -21663,6 +22761,7 @@ function MonsterHeroGame() {
       const savedBattleSpeed = normalizeBattleSpeed(await storeGet(BATTLE_SPEED_KEY, 1, false));
       battleSpeedRef.current = savedBattleSpeed;
       setBattleSpeed(savedBattleSpeed);
+      setUpdateNoticeStyleState(normalizeUpdateNoticeStyle(await storeGet(UPDATE_NOTICE_STYLE_KEY, 'FULL', false)));
       const savedSeVolume = await storeGet('mh_se_volume', DEFAULT_VOLUME, false);
       setSeVolumeState(savedSeVolume);
       const savedBgmVolume = await storeGet('mh_bgm_volume', DEFAULT_VOLUME, false);
@@ -21785,10 +22884,17 @@ function MonsterHeroGame() {
         await storeSet('mh_unique_lineage_dedupe_migrated_v1', true, false);
       }
       const compensationNotice = await storeGet('mh_masu_level_cap_compensation_notice_v1', null, false);
-      // 画面のなかの使い方案内(PR8)。読めなかったときは「まだ見ていない」側へ倒さず、
-      // 見た扱い(=出さない)にする。案内が二度出るより、出ないほうが害が小さい
-      setQuickRhythmIntroSeen(await storeGet(QUICK_RHYTHM_INTRO_KEY, true, false) !== false);
-      setQuickRhythmBackgroundSeen(await storeGet(QUICK_RHYTHM_BACKGROUND_KEY, true, false) !== false);
+      // 画面のなかの使い方案内(PR8)。「見た」と保存されているときだけ出さない。
+      // ★以前は既定値を true にして「読めなかったら出さない」つもりだったが、storeGet は
+      //   キーが無いときも既定値を返すので、保存が無い＝見た扱いになり、
+      //   案内が誰にも一度も出ない状態だった(2026-09-12に判明)。
+      //   保存が読めない端末では出てしまうが、閉じるボタン付きの小さな帯なので害は小さい。
+      //   「一度も出ない」ほうがはるかに困る
+      setQuickRhythmIntroSeen(await storeGet(QUICK_RHYTHM_INTRO_KEY, false, false) === true);
+      setQuickRhythmBackgroundSeen(await storeGet(QUICK_RHYTHM_BACKGROUND_KEY, false, false) === true);
+      // オート強化の使い方案内。★保存が無いとき(既存ユーザー・新規ともに)は「まだ見ていない」。
+      //   既定値を true にすると、保存が無い＝見た扱いになり、案内が一度も出ない
+      setAutoEnhanceIntroSeen(await storeGet(AUTO_ENHANCE_INTRO_KEY, false, false) === true);
       // イベントの会話ストーリーを見たかどうか。流すかどうかの判定は、
       // wasOnboarded が決まったあと(きき・ももすけの会話と同じところ)で行う
       {
@@ -22847,6 +23953,14 @@ function MonsterHeroGame() {
   const runHasDebugOnlyMonster = () => [mainHero, ...slots].some(mon =>
     mon && (mon.debugOnly === true || ALL_PLAYER_MONSTERS[mon.id]?.debugOnly === true));
   const debugHeroMonsterList = (list) => {
+    // バトルのれんしゅう(台本つき)の間は混ぜない。練習は記録を残さないために
+    // debugBattleRef を立てているだけで、デバッグ戦がしたいわけではないため。
+    // デバッグ最強モンは Mocchi のコピー(idも 'Mocchi' のまま)なので、混ぜると
+    // 台本の heroId:'Mocchi' の絞り込みに引っかかって本物のモッチーが一覧から消え、
+    // 「選べる勇者モンがデバッグ最強モン1体だけ」になる。そのまま進むと攻撃力99990で
+    // 台本の敵(HP500)を距離技の一撃で倒してしまい、通常攻撃・技変更・固有技の説明が
+    // まるごと飛ぶ(2026-09-12・ユーザー指摘)
+    if (battleScenarioRef.current) return list;
     if (!debugBattleRef.current && !debugMonsterPreviewRef.current) return list;
     const debugMon=makeDebugStrongestMonster();
     const preview=debugOnlyMonsterList();
@@ -23265,6 +24379,47 @@ function MonsterHeroGame() {
     });
     Audio_.se.levelUp();
     return updatedMasu;
+  };
+
+  // ---- オート強化(個体ごとの自動強化) ----
+  // 設定そのものはマスモンの中の1項目(autoEnhance)。書き換えはここに集め、画面は props で受ける。
+  // 実際にどこへ何P振るかは 11-masu-progression.jsx の buildMasuAutoEnhancePlan が正本で、
+  // 適用も手で振るときと同じ applyEnhancePlanToMasu を通る(画面に出した内容と結果がずれない)。
+  const saveMasuMonsList = (next) => {
+    masuMonsRef.current = next;
+    setMasuMons(next);
+    storeSet('mh_masu_mons', next, false);
+    // 詳細モーダルを開いたまま設定を変えても、その場の表示が古い個体のままにならないようにする
+    setMasuMonDetail(prev => prev ? (next.find(m => String(m.id) === String(prev.id)) || prev) : prev);
+  };
+  const updateAutoEnhance = (masuId, patch) => {
+    const current = masuMonsRef.current || [];
+    const masu = current.find(m => String(m.id) === String(masuId));
+    if (!masu) return;
+    saveMasuMonsList(current.map(m => String(m.id) === String(masuId) ? buildMasuAutoEnhanceUpdate(m, patch) : m));
+    Audio_.se.tap();
+  };
+  const moveAutoEnhanceOrder = (masuId, target, direction) => {
+    const current = masuMonsRef.current || [];
+    const masu = current.find(m => String(m.id) === String(masuId));
+    if (!masu) return;
+    const moved = buildMasuAutoEnhanceOrderMove(masu, target, direction);
+    if (moved === masu) return;
+    saveMasuMonsList(current.map(m => String(m.id) === String(masuId) ? moved : m));
+    Audio_.se.tap();
+  };
+  // 「いますぐ振る」。OFFのままでも押した本人の操作なので、設定の中身だけを使って一度だけ振る
+  const applyAutoEnhanceNow = (masuId) => {
+    const current = masuMonsRef.current || [];
+    const masu = current.find(m => String(m.id) === String(masuId));
+    if (!masu) return;
+    const applied = applyMasuAutoEnhance({ ...masu, autoEnhance:{ ...normalizeMasuAutoEnhance(masu.autoEnhance), enabled:true } }, { manual:true });
+    if (!applied) return;
+    saveMasuMonsList(current.map(m => String(m.id) === String(masuId) ? applied.masu : m));
+    pushAutoEnhanceLog([{ masuId:masu.id, name:masu.name, used:applied.used, lines:applied.lines }]);
+    saveMissionProgress('enhance');
+    addAssistantBond('enhance');
+    Audio_.se.levelUp();
   };
 
   // マスモンの強化ポイントを1消費し、対象のステータスを1上げる(バランス調整前の暫定仕様: 1pt=+1)
@@ -23825,6 +24980,24 @@ function MonsterHeroGame() {
     masuMonsRef.current = next; setMasuMons(next);
     setMasuMonDetail(prev=>prev&&String(prev.id)===String(masu.id)?applied.masu:prev);
     setTranscendPlan(null);
+    // 通常強化と同じように、確定したことが分かる全画面演出を出す。
+    // 何がいくつ上がったかは「下書きの数」ではなく実際の前後の差から出す
+    // (間合い適性はMで頭打ちになるので、下書きどおりに上がるとは限らない)
+    const before = normalizeMasuProgression(masu);
+    const lines = [];
+    normalizeTranscendAptBoosts(applied.masu.transcendAptBoosts).forEach((boost, i) => {
+      const gained = boost - before.transcendAptBoosts[i];
+      if (gained > 0) lines.push(`${RANGE_LABELS[i]}距離適性 +${gained}`);
+    });
+    Object.entries(normalizeTranscendStatPoints(applied.masu.transcendStatPoints)).forEach(([key, value]) => {
+      const gained = value - (before.transcendStatPoints[key] || 0);
+      if (gained > 0 && STAT_POINT_KEYS[key]) lines.push(`基礎${STAT_POINT_KEYS[key]} +${gained}`);
+    });
+    const base = ALL_PLAYER_MONSTERS[applied.masu.baseId];
+    setEffect({ type:'transcendEnhance', label:'超越強化！', icon:'🌟', monEmoji:base?.emoji,
+      imgUrl:base?.iconUrl, baseId:applied.masu.baseId, colors:getMasuColors(applied.masu),
+      subLabel:lines.join('\n') });
+    setTimeout(()=>setEffect(null), TRANSCEND_ENHANCE_FX_MS);
     return applied;
   };
   // 虹のプシュケーを超越ポイントへ替える。プシュケーは共通の所持品、超越Pは個体ごとの育成値
@@ -24949,8 +26122,12 @@ function MonsterHeroGame() {
     }
     if (remember) { try { await storeSet(TUTORIAL_SEEN_KEY, true, false); } catch {} }
   };
+  // 村の案内は、はじめての設定(名前とアイコン)が終わった人にだけ出す。
+  // このあとのガード(はじめての設定が終わるまでHOMEへ入れない)で連れ戻される人にも、
+  // 保存を読み終えたころに吹き出しだけ出てしまっていたため、onboarded も条件に入れる。
+  // ここを通らなくても、設定を終えた流れの中で finishOnboarding が村の案内を出す
   useEffect(() => {
-    if (bootPhase !== 'GAME' || gameState !== 'HOME' || tutorialShownRef.current || !dataLoaded) return;
+    if (bootPhase !== 'GAME' || gameState !== 'HOME' || tutorialShownRef.current || !dataLoaded || !onboarded) return;
     tutorialShownRef.current = true;
     let cancelled = false;
     (async () => {
@@ -24958,7 +26135,7 @@ function MonsterHeroGame() {
       if (!cancelled && seen !== true) { setTutorialKind('tour'); setTutorialStep(0); }
     })();
     return () => { cancelled = true; };
-  }, [bootPhase, gameState, dataLoaded]);
+  }, [bootPhase, gameState, dataLoaded, onboarded]);
 
   // モンビー(モンヒロビート)の曲えらびを初めて開いたときに、助手の案内を一度だけ出す。
   // 村の案内・バトルの案内とは別の保存キーなので、互いに邪魔をしない。
@@ -24981,11 +26158,38 @@ function MonsterHeroGame() {
   // 【2026-09-05・ユーザー指示】「実際の音ゲー画面でやり方や各ノーツの操作方法などまで作って」
   // 説明を読むだけでなく、演奏画面をそのまま使って1種類ずつ叩いて覚える。
   // 記録は残さない(from:'tutorial' を見て onComplete が保存を飛ばす)。
+  // タイミング合わせ(2026-09-13・ユーザー指示「普通に実際の画面を使ってやればいい /
+  //   そこで判定も合わせて出して調整するのが1番合うとおもう」)。
+  // 演奏画面をそのまま使い、測り終わったらオプションへ戻して結果を出す。
+  // ★測り終わった画面で「この値にする」を押したら、そこで保存してオプションへ戻す
+  //   (2026-09-13・ユーザー指摘「設定にもなってない」。戻ってからもう一度押させない)。
+  const [rhythmCalibrationResult, setRhythmCalibrationResult] = useState(null);
+  const startRhythmCalibration = () => {
+    if (rhythmSettings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();
+    setRhythmCalibrationResult(null);
+    setRhythmPlay({ song:RHYTHM_CALIBRATION_SONG, difficulty:RHYTHM_CALIBRATION_DIFFICULTY, from:'calibration' });
+    setGameState('RHYTHM_PLAY');
+  };
   const startRhythmPractice = () => {
     if (rhythmSettings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();
     setRhythmPlay({ song:RHYTHM_TUTORIAL_SONG, difficulty:RHYTHM_TUTORIAL_DIFFICULTY, from:'tutorial' });
     setGameState('RHYTHM_PLAY');
   };
+
+  // はじめての設定(名前とアイコン)が終わっていない人を、HOMEへ入れない。
+  // 実際に「ログインボーナスの『ギフトを確認』→ ギフトボックス → 戻る」でHOMEへ着いてしまい、
+  // 名無しのブリーダーのまま遊べる状態になっていた(2026-09-12・ユーザー指摘)。
+  // ギフトボックスに限らず、戻り先がHOME固定の画面はほかにもあるので、
+  // 個別の戻り先を直すのではなく、HOMEへ着いた時点でまとめて連れ戻す。
+  // 助手をまだ選んでいなければ助手えらびから、選んであればプロフィールの続きから。
+  useEffect(() => {
+    if (bootPhase !== 'GAME' || onboarded || onboardingPreview) return;
+    if (gameState !== 'HOME') return;
+    // HOMEに一瞬でも着くと村の案内が始まってしまうので、ここで止めておく
+    // (名前とアイコンが決まったら finishOnboarding が改めて出す)
+    setTutorialStep(null);
+    setGameState(assistantChosen ? 'PROFILE' : 'ASSISTANT_SELECT');
+  }, [bootPhase, gameState, onboarded, onboardingPreview, assistantChosen]);
 
   // 既存の村案内とは別に、バトルチュートリアルをまだ完了していない人へ一度だけ案内する。
   // 初回プロフィール設定や村案内と重ならないよう、それらが閉じたHOMEで判定する。
@@ -28190,11 +29394,40 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // body直下へ描画し、各画面のoverflow・transform・モーダルの積層に隠されないようにする。
   // 新しいバージョンの通知。本体を押すと更新、×を押すと今回は閉じる(更新はしない)。
   // 閉じたバージョンを覚えておき、同じバージョンのあいだは出さない。
-  const updateNotice = updateNoticeVisible ? ReactDOM.createPortal(
-    <div aria-live="assertive" className="fixed z-[100000] left-3 right-3 flex items-stretch gap-1.5" style={{top:'calc(8px + env(safe-area-inset-top))'}}>
-      <button type="button" onClick={reloadLatestVersion} className="flex-1 flex items-center justify-center gap-2 min-h-[48px] px-4 py-3 rounded-2xl border border-amber-200/80 bg-amber-500 text-slate-950 font-black text-sm shadow-[0_8px_28px_rgba(0,0,0,0.55)] active:scale-[.98]"><RefreshCcw size={18}/><span>新しいバージョンがあります　更新する</span></button>
-      <button type="button" aria-label="あとで更新する（この通知を閉じる）" onClick={()=>setDismissedUpdateBuild(latestBuild||BUILD_DATE)} className="shrink-0 w-12 min-h-[48px] flex items-center justify-center rounded-2xl border border-amber-200/80 bg-amber-500/90 text-slate-950 shadow-[0_8px_28px_rgba(0,0,0,0.55)] active:scale-[.98]"><X size={18}/></button>
-    </div>,
+  //
+  // 出し方は設定で選べる(2026-09-12・ユーザー依頼)。'OFF' のときは出さないが、
+  // 設定 →「ゲームを更新」からいつでも更新できるので、更新できなくなるわけではない。
+  //
+  // ★モンヒロビートの演奏中(RHYTHM_PLAY)は、どこにも出さない。
+  //
+  // 2026-09-13・はじめは「画面の上はレーンの奥に重なるから右下へ」としたが、
+  // ユーザー指摘「画面の右下ってモンビー演奏中のレーン上に来ない？」でそのとおりだった。
+  // プレイエリアは flex-1 で画面の下端まで占め(index.html が margin-bottom:0 !important で
+  // 余白も消している)、レーンは inset:0 の全面。台形は下がいちばん広い(上は 27〜73%、
+  // 下は 0〜100%)ので、右下はいちばん右のレーンの真上になる。
+  // しかも判定ラインの下は指で叩く場所なので、誤って押すと曲が中断されて記録が消える。
+  //
+  // 台形の外で空いているのは上部の左右の三角形だけだが、そこはスコアとライフの HUD が
+  // 使っている。つまり演奏中に置ける安全な場所が無い。
+  // 演奏中に更新を押したい場面も無いので、曲が終わって別の画面へ移ってから出す
+  // (updateAvailable は残っているので、戻れば自動的に出る)。
+  const updateNoticeMode = normalizeUpdateNoticeStyle(updateNoticeStyle);
+  const updateNoticeOnPlay = gameState === 'RHYTHM_PLAY';
+  const updateNoticeSmall = updateNoticeMode === 'MINI';
+  const updateNotice = (updateNoticeVisible && updateNoticeMode !== 'OFF' && !updateNoticeOnPlay) ? ReactDOM.createPortal(
+    updateNoticeSmall ? (
+      <div aria-live="assertive" data-update-notice="mini" data-update-notice-place="top"
+        className="fixed z-[100000] right-3 flex items-stretch gap-1"
+        style={{top:'calc(8px + env(safe-area-inset-top))'}}>
+        <button type="button" onClick={reloadLatestVersion} className="flex items-center justify-center gap-1 min-h-[36px] px-2.5 py-1.5 rounded-full border border-amber-200/80 bg-amber-500 text-slate-950 font-black text-[11px] shadow-[0_6px_20px_rgba(0,0,0,0.5)] active:scale-[.98]"><RefreshCcw size={13}/><span>更新あり</span></button>
+        <button type="button" aria-label="あとで更新する（この通知を閉じる）" onClick={()=>setDismissedUpdateBuild(latestBuild||BUILD_DATE)} className="shrink-0 w-8 min-h-[36px] flex items-center justify-center rounded-full border border-amber-200/80 bg-amber-500/90 text-slate-950 shadow-[0_6px_20px_rgba(0,0,0,0.5)] active:scale-[.98]"><X size={13}/></button>
+      </div>
+    ) : (
+      <div aria-live="assertive" data-update-notice="full" data-update-notice-place="top" className="fixed z-[100000] left-3 right-3 flex items-stretch gap-1.5" style={{top:'calc(8px + env(safe-area-inset-top))'}}>
+        <button type="button" onClick={reloadLatestVersion} className="flex-1 flex items-center justify-center gap-2 min-h-[48px] px-4 py-3 rounded-2xl border border-amber-200/80 bg-amber-500 text-slate-950 font-black text-sm shadow-[0_8px_28px_rgba(0,0,0,0.55)] active:scale-[.98]"><RefreshCcw size={18}/><span>新しいバージョンがあります　更新する</span></button>
+        <button type="button" aria-label="あとで更新する（この通知を閉じる）" onClick={()=>setDismissedUpdateBuild(latestBuild||BUILD_DATE)} className="shrink-0 w-12 min-h-[48px] flex items-center justify-center rounded-2xl border border-amber-200/80 bg-amber-500/90 text-slate-950 shadow-[0_8px_28px_rgba(0,0,0,0.55)] active:scale-[.98]"><X size={18}/></button>
+      </div>
+    ),
     document.body
   ) : null;
   const titleModal = showChangelog ? (
@@ -28205,19 +29438,58 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             「更新履歴が壊れた」としか分からないので、読み込み直せることをここで伝える */}
         <div className="mh-changelog-list" data-changelog-list>{CHANGELOG_ENTRIES.length===0
           ? <p className="mh-changelog-empty" data-changelog-empty>更新履歴を読み込めませんでした。通信状況を確かめてから、設定の「ゲームを更新」で読み込み直してください。</p>
-          : changelogEntriesOfTab(changelogTab).map(c=>{const open=changelogOpenId===c.id;
-            {/* 一覧は日付・札・見出しだけ。本文(items)は押した項目だけ出す(1つ開くと他は閉じる) */}
-            return <article key={c.id} data-changelog-type={c.type||'update'} data-changelog-open={open?'1':'0'} className={changelogUnreadIds[changelogTab].includes(c.id)?'unread':''}><time>{c.date}{changelogUnreadIds[changelogTab].includes(c.id)&&<em>NEW</em>}</time><span className="mh-changelog-kind" data-kind={changelogTypeOf(c).tone}>{changelogTypeOf(c).label}</span>
-              <button type="button" className="mh-changelog-head" data-changelog-toggle aria-expanded={open} onClick={()=>setChangelogOpenId(open?null:c.id)}><b>{c.title}</b><small>{open?'閉じる ▲':'詳細 ▼'}</small></button>
-              {/* 開いたときだけ本文を出す。告知画像があれば本文の上に出す
-                  (期間中いつでもここから見返せるように・2026-09-11・ユーザー指示) */}
-              {open&&<div className="mh-changelog-detail" data-changelog-detail>
-                {c.image&&<img data-changelog-image src={c.image} alt={`${c.title}のお知らせ`}
-                  onError={e=>{e.currentTarget.style.display='none';}} loading="lazy" decoding="async"
-                  style={{width:'100%',borderRadius:'12px',marginBottom:'8px'}}/>}
-                {(c.items||[]).map((x,j)=><p key={j}>・{x}</p>)}
-              </div>}
-            </article>;})}</div>
+          : (()=>{
+            // 同じ日の同じ話題を1行にまとめる(2026-09-13・ユーザー指摘
+            // 「同じような内容は同じとこにまとめて詳細で詳しく出るようにして /
+            //  過去のやつが一瞬で見えなくなる」)。
+            // 1行ずつ積み上げていたころは682行あり、少しさかのぼるだけで指が疲れていた。
+            // 日付は行の上に1度だけ出す(同じ日が続くあいだは繰り返さない)。
+            const rows = groupChangelogEntries(changelogEntriesOfTab(changelogTab));
+            const unreadHere = changelogUnreadIds[changelogTab];
+            let shownDay = null;
+            return rows.map(row=>{
+              const open=changelogOpenId===row.key;
+              const unreadCount=row.entries.filter(entry=>unreadHere.includes(entry.id)).length;
+              // まとめた行にも種類の札を出す。折りたたんだままでも、新機能なのか不具合修正なのかが
+              // 分かるようにしておく(2026-09-05・ユーザー指摘「直近の更新情報が不具合修正との
+              // 区別がついてない」)。1つのまとまりに種類が混ざることがあるので、
+              // 出てくる種類ぶんだけ並べ、2件以上あるものには数も付ける
+              const kinds=[];
+              row.entries.forEach(entry=>{const info=changelogTypeOf(entry);
+                const found=kinds.find(kind=>kind.tone===info.tone);
+                if(found)found.count+=1;else kinds.push({tone:info.tone,label:info.label,count:1});});
+              const dayHead=row.day!==shownDay?row.day:null;
+              shownDay=row.day;
+              return (<React.Fragment key={row.key}>
+                {dayHead&&<h4 className="mh-changelog-day" data-changelog-day={dayHead}>{dayHead}</h4>}
+                <article data-changelog-group={row.groupId} data-changelog-open={open?'1':'0'} className={unreadCount>0?'unread':''}>
+                  <button type="button" className="mh-changelog-head" data-changelog-toggle aria-expanded={open} onClick={()=>setChangelogOpenId(open?null:row.key)}>
+                    <span className="mh-changelog-group-emoji" aria-hidden="true">{row.emoji}</span>
+                    <b>{row.label}</b>
+                    <span className="mh-changelog-count">{row.entries.length}件{unreadCount>0&&<em>NEW</em>}</span>
+                    <small>{open?'閉じる ▲':'詳細 ▼'}</small>
+                  </button>
+                  <span className="mh-changelog-kinds">{kinds.map(kind=><span key={kind.tone} className="mh-changelog-kind" data-kind={kind.tone}>{kind.label}{kind.count>1&&<i>{kind.count}</i>}</span>)}</span>
+                  {/* 閉じているあいだも、何があった日なのかが分かるように見出しだけ並べる */}
+                  {!open&&<p className="mh-changelog-peek" data-changelog-peek>{row.entries.map(entry=>entry.title).join(' ／ ')}</p>}
+                  {/* 開いたら、その話題のその日の項目を時刻・種別・本文までぜんぶ出す */}
+                  {open&&<div className="mh-changelog-detail" data-changelog-detail>
+                    {row.entries.map(c=>(<section key={c.id} className="mh-changelog-item" data-changelog-type={c.type||'update'}>
+                      <time>{(c.date||'').slice(11)||c.date}{unreadHere.includes(c.id)&&<em>NEW</em>}</time>
+                      <span className="mh-changelog-kind" data-kind={changelogTypeOf(c).tone}>{changelogTypeOf(c).label}</span>
+                      <b>{c.title}</b>
+                      {/* 告知画像があれば本文の上に出す
+                          (期間中いつでもここから見返せるように・2026-09-11・ユーザー指示) */}
+                      {c.image&&<img data-changelog-image src={c.image} alt={`${c.title}のお知らせ`}
+                        onError={e=>{e.currentTarget.style.display='none';}} loading="lazy" decoding="async"
+                        style={{width:'100%',borderRadius:'12px',margin:'6px 0'}}/>}
+                      {(c.items||[]).map((x,j)=><p key={j}>・{x}</p>)}
+                    </section>))}
+                  </div>}
+                </article>
+              </React.Fragment>);
+            });
+          })()}</div>
       </div>
     </div>
   ) : showTitleSettings ? (
@@ -28578,7 +29850,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         )}
         {/* ギフトボックスから開く、7日ぶんのログインボーナス一覧 */}
         {showLoginBonusList&&<div className="fixed inset-0 flex items-center justify-center p-5" style={{zIndex:60000,backgroundColor:'rgba(2,6,23,.9)'}} role="dialog" aria-modal="true" aria-label="ログインボーナス一覧"><div className="w-full max-w-sm rounded-3xl border-2 border-amber-300/70 bg-gradient-to-b from-indigo-950 to-slate-950 p-5 shadow-2xl"><div className="flex items-center gap-2 mb-3"><Sparkles size={20} className="text-amber-300"/><h2 className="text-base font-black text-amber-200">ログインボーナス</h2></div>{renderLoginBonusList(loginBonusTodayDay)}<button onClick={()=>setShowLoginBonusList(false)} className="w-full mt-4 min-h-[48px] rounded-xl bg-slate-700 text-white font-black text-sm active:scale-[.98]">閉じる</button></div></div>}
-        {loginBonusPopup&&<div className="fixed inset-0 flex items-center justify-center p-5" style={{zIndex:60000,backgroundColor:'rgba(2,6,23,.88)'}} role="dialog" aria-modal="true" aria-label="ログインボーナス"><div className="w-full max-w-sm rounded-3xl border-2 border-amber-300 bg-gradient-to-b from-indigo-950 to-slate-950 p-6 text-center shadow-2xl"><Sparkles size={46} className="mx-auto mb-3 text-amber-300"/><h2 className="text-2xl font-black text-amber-200">ログインボーナス</h2><p className="mt-3 text-sm font-black text-white">{loginBonusPopup.day}日目のログインボーナスを獲得しました！</p><div className="my-3 space-y-1.5">{loginBonusPopup.rewards.map((reward,i)=><div key={i} className="rounded-xl bg-black/35 px-3 py-2 font-black text-cyan-200 break-words">{giftRewardText(reward)}</div>)}</div>{renderLoginBonusList(loginBonusPopup.day)}<p className="text-xs text-slate-300 mt-3">報酬はギフトボックスへ送られました。</p><div className="mt-5 grid grid-cols-2 gap-2"><button onClick={()=>{setLoginBonusPopup(null);openGiftBox();}} className="min-h-[48px] rounded-xl bg-cyan-600 px-2 text-sm font-black text-white">ギフトを確認</button><button onClick={()=>setLoginBonusPopup(null)} className="min-h-[48px] rounded-xl bg-slate-700 px-2 text-sm font-black text-white">閉じる</button></div></div></div>}
+        {/* はじめての設定(名前とアイコン)が終わるまでは出さない。「ギフトを確認」が
+            ギフトボックスへ移動するボタンなので、設定の途中で押せるとそこから抜けられてしまう。
+            報酬はすでにギフトボックスへ配ってあるので、出すのを遅らせても何も失われない
+            (設定を終えてHOMEへ着いた時点でそのまま出る。2026-09-12・ユーザー指摘) */}
+        {loginBonusPopup&&onboarded&&!onboardingPreview&&<div className="fixed inset-0 flex items-center justify-center p-5" style={{zIndex:60000,backgroundColor:'rgba(2,6,23,.88)'}} role="dialog" aria-modal="true" aria-label="ログインボーナス"><div className="w-full max-w-sm rounded-3xl border-2 border-amber-300 bg-gradient-to-b from-indigo-950 to-slate-950 p-6 text-center shadow-2xl"><Sparkles size={46} className="mx-auto mb-3 text-amber-300"/><h2 className="text-2xl font-black text-amber-200">ログインボーナス</h2><p className="mt-3 text-sm font-black text-white">{loginBonusPopup.day}日目のログインボーナスを獲得しました！</p><div className="my-3 space-y-1.5">{loginBonusPopup.rewards.map((reward,i)=><div key={i} className="rounded-xl bg-black/35 px-3 py-2 font-black text-cyan-200 break-words">{giftRewardText(reward)}</div>)}</div>{renderLoginBonusList(loginBonusPopup.day)}<p className="text-xs text-slate-300 mt-3">報酬はギフトボックスへ送られました。</p><div className="mt-5 grid grid-cols-2 gap-2"><button onClick={()=>{setLoginBonusPopup(null);openGiftBox();}} className="min-h-[48px] rounded-xl bg-cyan-600 px-2 text-sm font-black text-white">ギフトを確認</button><button onClick={()=>setLoginBonusPopup(null)} className="min-h-[48px] rounded-xl bg-slate-700 px-2 text-sm font-black text-white">閉じる</button></div></div></div>}
 
         {gameState==='MB_MANAGEMENT'&&(
           <div data-mh-screen className="flex-1 flex flex-col h-full min-h-0 p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
@@ -29314,6 +30590,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onOpenGameUpdate={()=>setShowGameUpdateConfirm(true)}
             gameUpdateDisabled={showGameUpdateConfirm||gameUpdatePending}
             onReturnToTitle={()=>setShowOfficialTitleConfirm(true)}
+            updateNoticeStyle={updateNoticeStyle}
+            onChangeUpdateNoticeStyle={setUpdateNoticeStyle}
           />
         )}
 
@@ -29790,9 +31068,18 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // (1秒だけ演奏してやめる、で稼げないようにするため)。
           // 練習(tutorial)は記録も報酬も動かさないので、その前に判定しない
           if(rhythmPlay.from!=='tutorial'){
-            const loops=rhythmPlayLoopsFor(rhythmPlay.song,rhythmPlay.difficulty);
+            const baseLoops=rhythmPlayLoopsFor(rhythmPlay.song,rhythmPlay.difficulty);
             const loopScale=rhythmPlayRunLoopScaleFor(rhythmPlay.song);
-            const awarded=loops>0?await awardRhythmPlayRunLoops(loops,loopScale):null;
+            // 失敗(ライフ0のまま完走)は半分。クリアかどうかは演奏側が result.cleared で伝える
+            // (2026-09-12・ユーザー指示「終了後にクリアか失敗かもわかるようにして /
+            //  それによって経験値も変わるから」)
+            const cleared=result?.cleared!==false;
+            const loops=rhythmPlayRunLoopsForResult(baseLoops,cleared);
+            // 失敗したときは1周も配らない。ただし「入らなかった」ことは曲リザルトで言う。
+            // ここで何も渡さないと、裏で周回していた人には画面のどこにも理由が出ない
+            if(!cleared&&baseLoops>0)setRhythmPlayRunAward({loops:0,baseLoops,cleared:false,scale:loopScale,
+              eventBoosted:loopScale>RHYTHM_PLAY_RUN_LOOP_SCALE,xp:0,gold:0,bond:0,psyche:0,fromLoop:0,toLoop:0});
+            const awarded=loops>0?await awardRhythmPlayRunLoops(loops,loopScale,{cleared,baseLoops}):null;
             if(awarded){
               setRhythmPlayRunAward(awarded);
               // 限界突破も、通常の周回が終わったときと同じように走らせる
@@ -29819,10 +31106,23 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           }
           // あそびかた練習は記録を残さない。自己ベストにも全国ランキングにも触れない
           // (CLAUDE.md ⑦「消さない・上書きしない」。練習で自己ベストが上書きされてはいけない)
+          // タイミング合わせも同じ(記録に残さない)。測った値は下の onExit で設定へ入れる
+          // 測った値はここで覚えるだけ。設定へ入れるかどうかはオプションの画面で選ぶ
+          if(rhythmPlay.from==='calibration')return;
           if(rhythmPlay.from==='tutorial')return;
-          const records=await saveRhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id,merged);setRhythmBestRecords(records);if(rhythmPlay.from==='demo')submitRhythmRankingScore(rhythmPlay.song,rhythmPlay.difficulty,result);}} onExit={()=>{const back=rhythmPlay.from==='debug'?'RHYTHM_DEBUG':'RHYTHM_DEMO_HOME';setRhythmPlay(null);setGameState(back);}} debugPlay={rhythmPlay.from==='debug'} tutorial={rhythmPlay.from==='tutorial'}/>}
+          const records=await saveRhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id,merged);setRhythmBestRecords(records);if(rhythmPlay.from==='demo')submitRhythmRankingScore(rhythmPlay.song,rhythmPlay.difficulty,result);}} onExit={()=>{const back=rhythmPlay.from==='calibration'?'RHYTHM_OPTIONS':rhythmPlay.from==='debug'?'RHYTHM_DEBUG':'RHYTHM_DEMO_HOME';setRhythmPlay(null);setGameState(back);}} debugPlay={rhythmPlay.from==='debug'} tutorial={rhythmPlay.from==='tutorial'} calibrating={rhythmPlay.from==='calibration'} onApplyCalibration={async measured=>{
+          // 測った値をその場で設定へ入れて保存し、オプションへ戻す。
+          // 判定窓・スコア・ランキングには触れない(入れるのは judgmentTimingOffsetMs だけ)
+          const offsetMs=Number(measured&&measured.offsetMs);
+          if(Number.isFinite(offsetMs)){
+            const saved=await saveRhythmSettings({...rhythmSettings,judgmentTimingOffsetMs:offsetMs});
+            setRhythmSettings(saved);
+            setRhythmCalibrationResult({...measured,offsetMs,applied:true});
+          }
+          setRhythmPlay(null);setGameState('RHYTHM_OPTIONS');
+        }}/>}
 
-        {gameState==='RHYTHM_OPTIONS'&&<RhythmOptions value={rhythmSettings} onBack={()=>setGameState(rhythmOptionsBack)} onSave={async draft=>{const saved=await saveRhythmSettings(draft);setRhythmSettings(saved);return saved;}}/>}
+        {gameState==='RHYTHM_OPTIONS'&&<RhythmOptions value={rhythmSettings} onBack={()=>setGameState(rhythmOptionsBack)} onCalibrate={startRhythmCalibration} calibrationResult={rhythmCalibrationResult} onClearCalibration={()=>setRhythmCalibrationResult(null)} onSave={async draft=>{const saved=await saveRhythmSettings(draft);setRhythmSettings(saved);return saved;}}/>}
 
         {/* 音ゲー体験版のホーム。デバッグ画面をそのまま公開しないために作った、正式導線の最小構成。
             出すのは Monster Hero 1曲 と EASY/NORMAL/HARD だけで、デバッグ用の曲・譜面制作UIは出さない。
@@ -29955,7 +31255,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div data-rhythm-debug-calibration className="mb-3"/>
             {/* 性能計測(デバッグ限定)。既定OFF・OFFのあいだは計測処理が一切動かない。
                 プレイヤーの通常プレイには出ないので、更新履歴・ヘルプには載せない */}
-            <section data-rhythm-perf-panel className="mb-3 rounded-2xl border border-amber-400/40 bg-amber-950/20 p-3"><div className="flex items-center justify-between gap-2"><h3 className="text-xs font-black text-amber-200">性能計測（デバッグ）</h3><button type="button" data-rhythm-perf-toggle aria-pressed={rhythmPerfOn} onClick={()=>{setRhythmPerfOn(RHYTHM_PERF.setEnabled(!rhythmPerfOn));setRhythmPerfStats(null);}} className={`min-h-[44px] rounded-xl px-3 text-[11px] font-black ${rhythmPerfOn?'bg-amber-500 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{rhythmPerfOn?'計測ON':'計測OFF'}</button></div><p className="mt-1 text-[9px] font-bold leading-relaxed text-amber-100/80">ONにしてからプレイすると、フレーム時間と1フレームあたりの負荷（レイアウト測定・DOM検索・SLIDE帯の更新数）を記録します。OFFのあいだは記録処理そのものが動きません。</p><div className="mt-2 flex gap-2"><button type="button" className="min-h-[40px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[11px] font-black text-slate-200" onClick={()=>setRhythmPerfStats(RHYTHM_PERF.snapshot())}>いまの記録を見る</button><button type="button" className="min-h-[40px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[11px] font-black text-slate-200" onClick={()=>{RHYTHM_PERF.reset();setRhythmPerfStats(null);}}>記録をクリア</button></div>{rhythmPerfStats&&<dl data-rhythm-perf-stats className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]">{[['フレーム数',rhythmPerfStats.frames],['平均fps',rhythmPerfStats.fps.toFixed(1)],['平均フレーム',`${rhythmPerfStats.avgMs.toFixed(1)}ms`],['最悪フレーム',`${rhythmPerfStats.maxMs.toFixed(1)}ms`],['16.7ms超',rhythmPerfStats.over16],['25ms超',rhythmPerfStats.over25],['33ms超',rhythmPerfStats.over33],['レイアウト測定/frame',rhythmPerfStats.layoutReadsPerFrame.toFixed(2)],['DOM検索/frame',rhythmPerfStats.domQueriesPerFrame.toFixed(2)],['SLIDE帯更新/frame',rhythmPerfStats.slidePolygonsPerFrame.toFixed(2)],['ジェスチャーrAF',rhythmPerfStats.gestureFrames],['ノーツ再検索',rhythmPerfStats.noteRescans],['走査ノーツ/frame',rhythmPerfStats.notesScannedPerFrame.toFixed(1)],['実描画ノーツ/frame',rhythmPerfStats.notesDrawnPerFrame.toFixed(1)],['最悪frameの走査/実描画',`${rhythmPerfStats.worstFrameScanned} / ${rhythmPerfStats.worstFrameDrawn}`],['先頭スキップ/frame',rhythmPerfStats.headSkippedPerFrame.toFixed(1)],['走査の絞り込み',rhythmPerfStats.narrowed===null?'未計測':(rhythmPerfStats.narrowed?'有効':'無効(昇順でない譜面)')],['tick処理/frame',`${rhythmPerfStats.tickMsPerFrame.toFixed(2)}ms`],['最悪frameのtick処理',`${rhythmPerfStats.worstFrameTickMs.toFixed(1)}ms`],['tick処理の最大',`${rhythmPerfStats.maxTickMs.toFixed(1)}ms`],['frame開始→tick開始の遅れ',`${rhythmPerfStats.tickDelayMsPerFrame.toFixed(2)}ms`],['最悪frameの遅れ',`${rhythmPerfStats.worstFrameDelayMs.toFixed(1)}ms`],['遅れの最大',`${rhythmPerfStats.maxDelayMs.toFixed(1)}ms`]].map(([label,value])=><React.Fragment key={label}><dt className="text-slate-400">{label}</dt><dd className="text-right font-black text-amber-100">{value}</dd></React.Fragment>)}</dl>}</section>{/* ノーツの描き方(検証用・デバッグ限定)。canvas 1枚に描く方式(発熱対策)と要素で描く方式を、次の演奏から切り替える。
+            <section data-rhythm-perf-panel className="mb-3 rounded-2xl border border-amber-400/40 bg-amber-950/20 p-3"><div className="flex items-center justify-between gap-2"><h3 className="text-xs font-black text-amber-200">性能計測（デバッグ）</h3><button type="button" data-rhythm-perf-toggle aria-pressed={rhythmPerfOn} onClick={()=>{setRhythmPerfOn(RHYTHM_PERF.setEnabled(!rhythmPerfOn));setRhythmPerfStats(null);}} className={`min-h-[44px] rounded-xl px-3 text-[11px] font-black ${rhythmPerfOn?'bg-amber-500 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{rhythmPerfOn?'計測ON':'計測OFF'}</button></div><p className="mt-1 text-[9px] font-bold leading-relaxed text-amber-100/80">ONにしてからプレイすると、フレーム時間と1フレームあたりの負荷（レイアウト測定・DOM検索・SLIDE帯の更新数）を記録します。OFFのあいだは記録処理そのものが動きません。「モンスターノーツ」の行が「ノーツを取る処理」よりはっきり大きければ、踏んだときに固まる原因はそこです。ノーツの動きが滑らかかどうかは「曲の時刻」の3つを見ます。ノーツの位置は曲の再生位置だけで決まるので、これが進まないフレームが多いと、フレームレートが60のままでもノーツは止まって飛ぶ動きになります。</p><div className="mt-2 flex gap-2"><button type="button" className="min-h-[40px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[11px] font-black text-slate-200" onClick={()=>setRhythmPerfStats(RHYTHM_PERF.snapshot())}>いまの記録を見る</button><button type="button" className="min-h-[40px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[11px] font-black text-slate-200" onClick={()=>{RHYTHM_PERF.reset();setRhythmPerfStats(null);}}>記録をクリア</button></div>{rhythmPerfStats&&<dl data-rhythm-perf-stats className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]">{[['フレーム数',rhythmPerfStats.frames],['平均fps',rhythmPerfStats.fps.toFixed(1)],['平均フレーム',`${rhythmPerfStats.avgMs.toFixed(1)}ms`],['最悪フレーム',`${rhythmPerfStats.maxMs.toFixed(1)}ms`],['16.7ms超',rhythmPerfStats.over16],['25ms超',rhythmPerfStats.over25],['33ms超',rhythmPerfStats.over33],['レイアウト測定/frame',rhythmPerfStats.layoutReadsPerFrame.toFixed(2)],['DOM検索/frame',rhythmPerfStats.domQueriesPerFrame.toFixed(2)],['SLIDE帯更新/frame',rhythmPerfStats.slidePolygonsPerFrame.toFixed(2)],['ジェスチャーrAF',rhythmPerfStats.gestureFrames],['ノーツ再検索',rhythmPerfStats.noteRescans],['走査ノーツ/frame',rhythmPerfStats.notesScannedPerFrame.toFixed(1)],['実描画ノーツ/frame',rhythmPerfStats.notesDrawnPerFrame.toFixed(1)],['最悪frameの走査/実描画',`${rhythmPerfStats.worstFrameScanned} / ${rhythmPerfStats.worstFrameDrawn}`],['先頭スキップ/frame',rhythmPerfStats.headSkippedPerFrame.toFixed(1)],['走査の絞り込み',rhythmPerfStats.narrowed===null?'未計測':(rhythmPerfStats.narrowed?'有効':'無効(昇順でない譜面)')],['tick処理/frame',`${rhythmPerfStats.tickMsPerFrame.toFixed(2)}ms`],['最悪frameのtick処理',`${rhythmPerfStats.worstFrameTickMs.toFixed(1)}ms`],['tick処理の最大',`${rhythmPerfStats.maxTickMs.toFixed(1)}ms`],['frame開始→tick開始の遅れ',`${rhythmPerfStats.tickDelayMsPerFrame.toFixed(2)}ms`],['最悪frameの遅れ',`${rhythmPerfStats.worstFrameDelayMs.toFixed(1)}ms`],['遅れの最大',`${rhythmPerfStats.maxDelayMs.toFixed(1)}ms`],['曲の時刻の進み/frame',`${(rhythmPerfStats.songStepMsPerFrame??0).toFixed(2)}ms`],['曲の時刻が進まないframe',`${((rhythmPerfStats.songStallRate??0)*100).toFixed(1)}%`],['曲の時刻の最大の飛び',`${(rhythmPerfStats.songStepMaxMs??0).toFixed(1)}ms`],['ノーツを取る処理/回',`${(rhythmPerfStats.judgeMsAvg??0).toFixed(2)}ms（${rhythmPerfStats.judgeCount??0}回）`],['取る処理の最大',`${(rhythmPerfStats.judgeMsMax??0).toFixed(1)}ms`],['モンスターノーツ/回',`${(rhythmPerfStats.monsterJudgeMsAvg??0).toFixed(2)}ms（${rhythmPerfStats.monsterJudgeCount??0}回）`],['モンスターノーツの最大',`${(rhythmPerfStats.monsterJudgeMsMax??0).toFixed(1)}ms`]].map(([label,value])=><React.Fragment key={label}><dt className="text-slate-400">{label}</dt><dd className="text-right font-black text-amber-100">{value}</dd></React.Fragment>)}</dl>}{rhythmPerfStats&&Array.isArray(rhythmPerfStats.spikes)&&rhythmPerfStats.spikes.length>0&&<div data-rhythm-perf-spikes className="mt-2 rounded-xl border border-amber-400/30 bg-slate-950/60 p-2"><h4 className="text-[10px] font-black text-amber-200">飛んだフレーム（33ms超）を起きた順に{rhythmPerfStats.spikes.length}件</h4><p className="mt-1 text-[9px] font-bold leading-relaxed text-amber-100/70">「モンスター後」が小さい行が並ぶなら、踏んだあとの演出が原因です。「tick」が0msなら、その飛びはJSではなく描画側です。</p><ol className="mt-1 space-y-0.5 text-[9px] font-mono text-slate-300">{rhythmPerfStats.spikes.map((sp,i)=><li key={i}>{`${(sp.at/1000).toFixed(1)}s  ${sp.dt}ms  tick ${sp.tick}ms  遅れ ${sp.delay}ms  走査${sp.scan}/描画${sp.draw}  モンスター後 ${sp.mon<0?'—':`${sp.mon}ms`}`}</li>)}</ol></div>}</section><section data-rhythm-strip-panel className="mb-3 rounded-2xl border border-rose-400/40 bg-rose-950/20 p-3"><h3 className="text-xs font-black text-rose-200">装飾を切って切り分ける（デバッグ）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-rose-100/80">演奏画面の重そうな装飾を個別に消します。<b>次の演奏から効きます。</b>ONにして1曲プレイし、性能計測の「33ms超」が減るかを見てください。減ったものが原因です。判定・スコア・譜面には一切関わりません。</p><div className="mt-2 grid grid-cols-2 gap-2">{RHYTHM_STRIP_ITEMS.map(item=><button key={item.id} type="button" data-rhythm-strip-toggle={item.id} aria-pressed={rhythmStrip.split(/\s+/).includes(item.id)} onClick={()=>setRhythmStrip(RHYTHM_STRIP.toggle(item.id))} className={`min-h-[44px] rounded-xl px-2 text-[10px] font-black ${rhythmStrip.split(/\s+/).includes(item.id)?'bg-rose-500 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{item.label}</button>)}</div><button type="button" className="mt-2 min-h-[40px] w-full rounded-xl border border-white/20 bg-slate-900 text-[11px] font-black text-slate-200" onClick={()=>setRhythmStrip(RHYTHM_STRIP.set(''))}>ぜんぶ元に戻す</button></section>{/* ノーツの描き方(検証用・デバッグ限定)。canvas 1枚に描く方式(発熱対策)と要素で描く方式を、次の演奏から切り替える。
                 プレイヤーの通常プレイには出ないので更新履歴・ヘルプには載せない */}
             <section data-rhythm-canvas-panel className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"><h3 className="text-xs font-black text-cyan-200">ノーツの描き方（検証用）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80">canvas 1枚に描く方式（発熱対策）と、これまでの要素ごとに描く方式を切り替えます。次の演奏から効きます。「自動」は公開設定（いまは{RELEASE_FLAGS.rhythmCanvasNotes?'canvas':'要素'}）に従います。</p><div className="mt-2 flex gap-2">{[['','自動'],['dom','要素'],['canvas','canvas']].map(([value,label])=><button key={value||'auto'} type="button" data-rhythm-canvas-pref={value||'auto'} aria-pressed={rhythmCanvasPref===value} onClick={()=>setRhythmCanvasPref(rhythmCanvasNotesSetPreference(value))} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmCanvasPref===value?'bg-cyan-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
             {/* モンスターノーツ用のマスモン設定(RHYTHM_MODE §3.2)。最大4体・同じモンスターの重複禁止・
@@ -31049,6 +32349,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             masuMonDetail={masuMonDetail}
             onBack={()=>{setTranscendPlan(null);setTranscendExchangeOpen(false);setGameState('MASU_ENHANCE');}}
             onMissing={()=>setGameState('MASU_ENHANCE')}
+            onOpenAutoEnhance={()=>setGameState('MASU_AUTO_ENHANCE')}
             ownedItems={ownedItems}
             renderPowerBadge={renderPowerBadge}
             saveMissionProgress={saveMissionProgress}
@@ -31081,12 +32382,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {gameState==='MASU_ENHANCE'&&masuMonDetail&&(
           <MasuEnhanceScreen
             addAssistantBond={addAssistantBond}
+            autoEnhanceIntroVisible={autoEnhanceIntroVisible}
             bulkEnhanceUnit={bulkEnhanceUnit}
             bulkPlan={bulkPlan}
             getMasuMon={getMasuMon}
             masuMonDetail={masuMonDetail}
             onBack={backToDetail}
+            onDismissAutoEnhanceIntro={dismissAutoEnhanceIntro}
             onMissing={()=>{ setGameState(masuEnhanceFrom||'MASU_MONS'); setMasuMonDetail(null); setMasuEnhanceFrom(null); }}
+            onOpenAutoEnhance={()=>setGameState('MASU_AUTO_ENHANCE')}
             onOpenTranscendEnhance={()=>{setTranscendPlan(null);setTranscendExchangeError('');setGameState('MASU_TRANSCEND_ENHANCE');}}
             renderPowerBadge={renderPowerBadge}
             saveMissionProgress={saveMissionProgress}
@@ -31095,6 +32399,22 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             setEffect={setEffect}
             setMasuMonDetail={setMasuMonDetail}
             spendPointsBulk={spendPointsBulk}
+          />
+        )}
+
+        {gameState==='MASU_AUTO_ENHANCE'&&masuMonDetail&&(
+          <MasuAutoEnhanceScreen
+            applyAutoEnhanceNow={applyAutoEnhanceNow}
+            autoEnhanceLog={autoEnhanceLog}
+            getMasuMon={getMasuMon}
+            masuMonDetail={masuMonDetail}
+            moveAutoEnhanceOrder={moveAutoEnhanceOrder}
+            onBack={backToDetail}
+            onMissing={()=>{ setGameState(masuEnhanceFrom||'MASU_MONS'); setMasuMonDetail(null); setMasuEnhanceFrom(null); }}
+            onOpenNormalEnhance={()=>setGameState('MASU_ENHANCE')}
+            onOpenTranscendEnhance={()=>{setTranscendPlan(null);setTranscendExchangeError('');setGameState('MASU_TRANSCEND_ENHANCE');}}
+            renderPowerBadge={renderPowerBadge}
+            updateAutoEnhance={updateAutoEnhance}
           />
         )}
 
@@ -32679,10 +33999,34 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
             </div>
           </>
         )}
-        {effect.imgUrl?(effect.baseId?<DyedMonsterImage baseId={effect.baseId} src={effect.imgUrl} alt="effect" masuColors={effect.colors} style={{width:effect.type==='unique'?'180px':(effect.type==='enhance'?'160px':'150px'),height:effect.type==='unique'?'180px':(effect.type==='enhance'?'160px':'150px'),animation:(effect.type==='unique'||effect.type==='enhance')?'specialThrob 500ms ease-in-out infinite':undefined}} className={`mb-6 object-contain relative ${effect.type==='unique'?'drop-shadow-[0_0_45px_rgba(168,85,247,0.95)]':(effect.type==='enhance'?'drop-shadow-[0_0_45px_rgba(251,191,36,0.9)]':'drop-shadow-[0_0_50px_rgba(255,255,255,0.4)]')}`}/>:<img src={effect.imgUrl} alt="effect" style={{width:effect.type==='unique'?'180px':(effect.type==='enhance'?'160px':'150px'),height:effect.type==='unique'?'180px':(effect.type==='enhance'?'160px':'150px'),animation:(effect.type==='unique'||effect.type==='enhance')?'specialThrob 500ms ease-in-out infinite':undefined}} className={`mb-6 object-contain relative ${effect.type==='unique'?'drop-shadow-[0_0_45px_rgba(168,85,247,0.95)]':(effect.type==='enhance'?'drop-shadow-[0_0_45px_rgba(251,191,36,0.9)]':'drop-shadow-[0_0_50px_rgba(255,255,255,0.4)]')}`}/>):(<div style={{fontSize:effect.type==='unique'?'128px':(effect.type==='enhance'?'120px':'112px'),animation:(effect.type==='unique'||effect.type==='enhance')?'specialThrob 500ms ease-in-out infinite':undefined}} className="mb-6 relative">{effect.monEmoji}</div>)}
-        <h2 className={`text-2xl font-black italic uppercase px-8 py-3 rounded-2xl border relative ${effect.type==='unique'?'text-purple-100 bg-purple-600/30 border-purple-400/60 drop-shadow-[0_0_20px_rgba(168,85,247,0.8)]':(effect.type==='enhance'?'text-amber-100 bg-amber-600/30 border-amber-400/60 drop-shadow-[0_0_20px_rgba(251,191,36,0.8)]':'text-white bg-white/10 border-white/20')}`}>{effect.label}</h2>
-        {effect.subLabel&&<p className={`font-mono text-[10px] mt-4 font-black whitespace-pre-line relative ${effect.type==='enhance'?'text-amber-300':'text-indigo-400'}`}>{effect.subLabel}</p>}
-        <div style={{fontSize:effect.type==='unique'?'60px':'48px'}} className="mt-8 animate-bounce relative">{cardIconNode(effect.icon,effect.type==='unique'?60:48,effect.id)}</div>
+        {/* 超越強化。通常強化(琥珀の輪2枚＋火花6つ)を土台に、金→桃→空の3色へ広げ、
+            回る放射光・輪3枚・二重の火花・開幕の閃光を足して1段派手にしてある。
+            火花は共通の sparkFlicker ではなく mhEffectSpark を使う。あちらはキーフレーム側が
+            transform を丸ごと持っているため、呼び出し側で指定した角度と半径が効かず、
+            すべての火花が同じ場所へ重なってしまう(既存の他の演出も同じ状態) */}
+        {effect.type==='transcendEnhance'&&(
+          <>
+            <div className="absolute inset-0" style={{background:'radial-gradient(circle at 50% 42%, rgba(253,230,138,0.55) 0%, rgba(244,114,182,0.35) 32%, rgba(56,189,248,0.22) 52%, rgba(0,0,0,0) 72%)', animation:'auraPulse 620ms ease-out infinite'}}></div>
+            <div className="absolute" style={{top:'42%',left:'50%',width:'min(170vmax,1400px)',height:'min(170vmax,1400px)',marginTop:'-85vmax',marginLeft:'-85vmax',background:'repeating-conic-gradient(from 0deg, rgba(253,230,138,0.18) 0 4deg, transparent 4deg 18deg)', animation:'mhTranscendFxRays 5200ms linear infinite'}}></div>
+            <div className="absolute" style={{top:'42%',left:'50%',width:'min(70vw,300px)',height:'min(70vw,300px)',transform:'translate(-50%,-50%)'}}>
+              <div className="absolute inset-0 rounded-full border-4 border-amber-300/80" style={{animation:'auraRing 700ms ease-out infinite'}}></div>
+              <div className="absolute inset-0 rounded-full border-[3px] border-pink-300/70" style={{animation:'auraRing 900ms ease-out 150ms infinite'}}></div>
+              <div className="absolute inset-0 rounded-full border-2 border-sky-300/60" style={{animation:'auraRing 1100ms ease-out 300ms infinite'}}></div>
+              {[0,45,90,135,180,225,270,315].map(deg=>(
+                <div key={`tx-out-${deg}`} className="absolute left-1/2 top-1/2 text-3xl" style={{transform:`translate(-50%,-50%) rotate(${deg}deg) translateY(-148px)`, animation:'mhEffectSpark 420ms ease-in-out infinite', animationDelay:`${deg}ms`}}>🌟</div>
+              ))}
+              {[22,67,112,157,202,247,292,337].map(deg=>(
+                <div key={`tx-in-${deg}`} className="absolute left-1/2 top-1/2 text-xl" style={{transform:`translate(-50%,-50%) rotate(${deg}deg) translateY(-98px)`, animation:'mhEffectSpark 540ms ease-in-out infinite', animationDelay:`${deg}ms`}}>✨</div>
+              ))}
+            </div>
+            <div className="absolute inset-0" style={{background:'radial-gradient(circle at 50% 42%, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0) 58%)', animation:'mhTranscendFxFlash 1600ms ease-out forwards'}}></div>
+          </>
+        )}
+        {/* 大きさ・光り方・色は effectVisual(種類) が正本。画面側へ三項演算子を書き並べない */}
+        {effect.imgUrl?(effect.baseId?<DyedMonsterImage baseId={effect.baseId} src={effect.imgUrl} alt="effect" masuColors={effect.colors} style={{width:effectVisual(effect.type).size,height:effectVisual(effect.type).size,animation:effectVisual(effect.type).throb}} className={`mb-6 object-contain relative ${effectVisual(effect.type).glow}`}/>:<img src={effect.imgUrl} alt="effect" style={{width:effectVisual(effect.type).size,height:effectVisual(effect.type).size,animation:effectVisual(effect.type).throb}} className={`mb-6 object-contain relative ${effectVisual(effect.type).glow}`}/>):(<div style={{fontSize:effectVisual(effect.type).emoji,animation:effectVisual(effect.type).throb}} className="mb-6 relative">{effect.monEmoji}</div>)}
+        <h2 className={`text-2xl font-black italic uppercase px-8 py-3 rounded-2xl border relative ${effectVisual(effect.type).label}`}>{effect.label}</h2>
+        {effect.subLabel&&<p className={`font-mono text-[10px] mt-4 font-black whitespace-pre-line relative ${effectVisual(effect.type).sub}`}>{effect.subLabel}</p>}
+        <div style={{fontSize:`${effectVisual(effect.type).icon}px`}} className="mt-8 animate-bounce relative">{cardIconNode(effect.icon,effectVisual(effect.type).icon,effect.id)}</div>
       </div>)}
         {rosterSkillDetail&&(()=>{const mon=rosterSkillDetail.mon; const isUnique=rosterSkillDetail.kind==='unique'; const levels=isUnique?getUniqueSkillLevels(mon):getAtkSkillLevels(mon); const currentLevel=isUnique?Math.max(0,Number(mon.unique?.evoLevel)||0):0; const title=isUnique?`固有技 Lv.${currentLevel}: ${mon.unique.names?.[currentLevel]||mon.unique.name}`:`通常技: ${(HERO_ATK_NAMES[mon.id]||HERO_ATK_NAMES['Mocchi'])[0]}`; return(
           <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:32000}}>
@@ -33743,6 +35087,16 @@ const createAnimationStyle = () => {
       40% { opacity: 1; }
       100% { transform: translateX(40px) scale(1.1); opacity: 0; }
     }
+    /* 全画面演出(effect)の火花。明滅だけを受け持ち、置き場所は呼び出し側の transform に任せる。
+       共通の sparkFlicker はキーフレーム側が transform を丸ごと持っているため、
+       呼び出し側で書いた角度と半径が効かず、火花が全部1か所へ重なってしまう */
+    @keyframes mhEffectSpark { 0%,100% { opacity: .15; } 50% { opacity: 1; } }
+    @keyframes mhTranscendFxRays { 0% { transform: rotate(0); } 100% { transform: rotate(360deg); } }
+    @keyframes mhTranscendFxFlash { 0% { opacity: 0; } 10% { opacity: .75; } 34%,100% { opacity: 0; } }
+    @keyframes mhTranscendFxThrob {
+      0%,100% { transform: scale(1); filter: drop-shadow(0 0 16px rgba(253,230,138,.95)); }
+      50% { transform: scale(1.22); filter: drop-shadow(0 0 30px rgba(244,114,182,1)) drop-shadow(0 0 46px rgba(56,189,248,.8)); }
+    }
     @keyframes specialFlash {
       0%,100% { opacity: 0; }
       50% { opacity: 1; }
@@ -33990,7 +35344,7 @@ const createAnimationStyle = () => {
     .mh-boot-screen.is-ready .mh-mocchi-wrap img{animation:mhReadyHop .75s ease-out 1,mhMocchiHop 1.8s ease-in-out .75s infinite}.mh-boot-screen.is-ready .mh-boot-copy{animation:titleReveal .55s ease-out both}.mh-boot-screen.is-ready .mh-mocchi-wrap i{display:block;animation:mhSparkle 1.5s infinite}.mh-boot-screen.is-ready .mh-mocchi-wrap i:nth-of-type(1){top:10%;left:4%}.mh-boot-screen.is-ready .mh-mocchi-wrap i:nth-of-type(2){top:24%;right:0;animation-delay:.55s}.mh-boot-screen.is-entering .mh-mocchi-wrap img{animation:mhBigHop .75s ease-in-out both}.mh-entry-flash{position:absolute;z-index:9;inset:0;pointer-events:none;background:radial-gradient(circle,#fff 0,#d8b4fe 18%,transparent 58%);opacity:0}.mh-boot-screen.is-entering .mh-entry-flash{animation:mhEntryFlash .76s ease-in both}
     .mh-title-gate,.mh-entering{position:fixed;inset:0;overflow:hidden;color:#fff;background:#05020e;isolation:isolate}.mh-title-gate{animation:titleReveal .65s ease-out both}.mh-title-visual,.mh-entering>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 50%}
     .mh-title-header{position:absolute;z-index:22;top:0;left:0;right:0;padding:calc(11px + env(safe-area-inset-top)) 12px 0;display:flex;justify-content:space-between;align-items:flex-start;text-shadow:0 2px 5px #000;pointer-events:none}.mh-title-build{display:grid;padding:6px 8px;text-align:left;font-family:monospace;line-height:1.15;border:1px solid #ffffff30;border-radius:10px;background:#160d2588;backdrop-filter:blur(3px)}.mh-title-build b{font-size:7px;letter-spacing:.18em;color:#eadcff}.mh-title-build span{font-size:8px;margin-bottom:5px;color:#fff;max-width:130px;overflow:hidden;text-overflow:ellipsis}.mh-title-actions{display:flex;gap:7px;pointer-events:auto}.mh-title-actions button{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;width:50px;height:50px;border-radius:50%;background:#26152ecc;border:1px solid #ffd87a;color:#fff;font-size:8px;font-weight:800;box-shadow:0 2px 8px #000}.mh-title-actions em{position:absolute;right:-3px;top:-6px;background:#e33;padding:2px 4px;border-radius:8px;font-size:6px;font-style:normal}.mh-title-start{position:absolute;z-index:21;inset:0;width:100%;height:100%;border:0;background:transparent;touch-action:manipulation}.mh-title-start:disabled{pointer-events:none}
-    .mh-title-modal{position:fixed;z-index:100;inset:0;display:flex;align-items:center;justify-content:center;padding:calc(20px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));background:#03020eef}.mh-title-dialog{display:flex;flex-direction:column;gap:12px;width:min(100%,380px);max-height:86vh;padding:18px;border:1px solid #a78bfa77;border-radius:22px;background:#0f172a;color:#fff;overflow:auto}.mh-dialog-head{display:flex;align-items:center;justify-content:space-between}.mh-dialog-head h3{font-weight:900}.mh-dialog-head button{padding:8px}.mh-dialog-choice{display:flex;justify-content:space-between;align-items:center;padding:14px;border:1px solid #ffffff22;border-radius:14px;background:#ffffff0c;font-weight:800}.mh-changelog-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px}.mh-changelog-tabs button{position:relative;padding:9px;border-radius:10px;background:#1e293b;font-size:11px;font-weight:800}.mh-changelog-tabs button.active{background:#b45309}.mh-unread-badge{position:absolute;right:-5px;top:-6px;display:flex;align-items:center;justify-content:center;width:17px;height:17px;border:2px solid #fff;border-radius:50%;background:#dc2626;color:#fff;font:900 11px/1 sans-serif;font-style:normal;box-shadow:0 2px 5px #0008;pointer-events:none}.mh-changelog-list{overflow:auto}.mh-changelog-list article{padding:11px;margin-bottom:8px;border:1px solid #ffffff18;border-radius:13px;background:#0005}.mh-changelog-list time,.mh-changelog-list b{display:block}.mh-changelog-list time{font:9px monospace;color:#94a3b8}.mh-changelog-list b{font-size:12px;margin:4px 0}.mh-changelog-kind{display:inline-block;margin-top:5px;padding:2px 7px;border-radius:999px;border:1px solid currentColor;font:900 9px/1.5 sans-serif}.mh-changelog-kind[data-kind="fix"]{color:#fca5a5;background:#7f1d1d55}.mh-changelog-kind[data-kind="feature"]{color:#86efac;background:#14532d55}.mh-changelog-kind[data-kind="update"]{color:#93c5fd;background:#1e3a8a55}.mh-changelog-kind[data-kind="market"]{color:#fcd34d;background:#78350f55}.mh-changelog-kind[data-kind="issue"]{color:#d8b4fe;background:#4c1d9555}.mh-changelog-list p{font-size:10px;color:#cbd5e1}.mh-changelog-head{display:flex;align-items:center;gap:8px;width:100%;min-height:36px;padding:0;border:0;background:transparent;color:inherit;text-align:left}.mh-changelog-head b{flex:1;min-width:0;margin:4px 0}.mh-changelog-head small{flex:none;font-size:8px;font-weight:900;color:#94a3b8;white-space:nowrap}.mh-changelog-detail{margin-top:2px;padding-top:6px;border-top:1px solid #ffffff14}.mh-changelog-empty{padding:18px 12px;text-align:center;line-height:1.7;color:#fbbf24}.mh-title-dialog textarea{min-height:90px;padding:8px;border-radius:10px;background:#0008;font:9px monospace}
+    .mh-title-modal{position:fixed;z-index:100;inset:0;display:flex;align-items:center;justify-content:center;padding:calc(20px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));background:#03020eef}.mh-title-dialog{display:flex;flex-direction:column;gap:12px;width:min(100%,380px);max-height:86vh;padding:18px;border:1px solid #a78bfa77;border-radius:22px;background:#0f172a;color:#fff;overflow:auto}.mh-dialog-head{display:flex;align-items:center;justify-content:space-between}.mh-dialog-head h3{font-weight:900}.mh-dialog-head button{padding:8px}.mh-dialog-choice{display:flex;justify-content:space-between;align-items:center;padding:14px;border:1px solid #ffffff22;border-radius:14px;background:#ffffff0c;font-weight:800}.mh-changelog-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px}.mh-changelog-tabs button{position:relative;padding:9px;border-radius:10px;background:#1e293b;font-size:11px;font-weight:800}.mh-changelog-tabs button.active{background:#b45309}.mh-unread-badge{position:absolute;right:-5px;top:-6px;display:flex;align-items:center;justify-content:center;width:17px;height:17px;border:2px solid #fff;border-radius:50%;background:#dc2626;color:#fff;font:900 11px/1 sans-serif;font-style:normal;box-shadow:0 2px 5px #0008;pointer-events:none}.mh-changelog-list{overflow:auto}.mh-changelog-list article{padding:11px;margin-bottom:8px;border:1px solid #ffffff18;border-radius:13px;background:#0005}.mh-changelog-list time,.mh-changelog-list b{display:block}.mh-changelog-list time{font:9px monospace;color:#94a3b8}.mh-changelog-list b{font-size:12px;margin:4px 0}.mh-changelog-kind{display:inline-block;margin-top:5px;padding:2px 7px;border-radius:999px;border:1px solid currentColor;font:900 9px/1.5 sans-serif}.mh-changelog-kind[data-kind="fix"]{color:#fca5a5;background:#7f1d1d55}.mh-changelog-kind[data-kind="feature"]{color:#86efac;background:#14532d55}.mh-changelog-kind[data-kind="update"]{color:#93c5fd;background:#1e3a8a55}.mh-changelog-kind[data-kind="market"]{color:#fcd34d;background:#78350f55}.mh-changelog-kind[data-kind="issue"]{color:#d8b4fe;background:#4c1d9555}.mh-changelog-list p{font-size:10px;color:#cbd5e1}.mh-changelog-head{display:flex;align-items:center;gap:8px;width:100%;min-height:36px;padding:0;border:0;background:transparent;color:inherit;text-align:left}.mh-changelog-head b{flex:1;min-width:0;margin:4px 0}.mh-changelog-head small{flex:none;font-size:8px;font-weight:900;color:#94a3b8;white-space:nowrap}.mh-changelog-detail{margin-top:2px;padding-top:6px;border-top:1px solid #ffffff14}.mh-changelog-empty{padding:18px 12px;text-align:center;line-height:1.7;color:#fbbf24}.mh-changelog-day{position:sticky;top:0;z-index:1;margin:10px 0 6px;padding:3px 0;background:#0f172a;color:#a5b4fc;font:900 10px/1.4 monospace;letter-spacing:.04em}.mh-changelog-day:first-child{margin-top:0}.mh-changelog-group-emoji{flex:none;font-size:13px;line-height:1}.mh-changelog-count{flex:none;position:relative;padding:2px 7px;border-radius:999px;background:#ffffff14;color:#cbd5e1;font:900 9px/1.5 sans-serif;white-space:nowrap}.mh-changelog-count em{margin-left:5px;padding:1px 4px;border-radius:5px;background:#dc2626;color:#fff;font:900 7px sans-serif;font-style:normal}.mh-changelog-peek{margin-top:4px;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;font-size:9px;line-height:1.5;color:#94a3b8}.mh-changelog-kinds{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}.mh-changelog-kinds .mh-changelog-kind{margin-top:0}.mh-changelog-kind i{margin-left:3px;font-style:normal;opacity:.85}.mh-changelog-item{padding:9px 0;border-top:1px solid #ffffff14}.mh-changelog-item:first-child{padding-top:2px;border-top:0}.mh-changelog-item time{display:inline-block;margin-right:6px;font:9px monospace;color:#94a3b8}.mh-changelog-item time em{margin-left:4px;padding:1px 4px;border-radius:5px;background:#dc2626;color:#fff;font:900 7px sans-serif;font-style:normal}.mh-changelog-item b{display:block;margin:4px 0;font-size:11px;line-height:1.5}.mh-changelog-item .mh-changelog-kind{margin-top:0}.mh-title-dialog textarea{min-height:90px;padding:8px;border-radius:10px;background:#0008;font:9px monospace}
     .mh-tile-viewport{touch-action:none;overscroll-behavior:contain;cursor:grab}.mh-tile-viewport:active{cursor:grabbing}.mh-tile-viewport.overview{overflow:auto}.mh-tile-viewport.overview .mh-tile-board{transform:none}.mh-training-tile{transform:scale(var(--map-scale,1))}.mh-training-tile.current{transform:scale(calc(var(--map-scale,1)*1.08))}.mh-tile-board>i.route{height:17px;border-color:#fef08a;background:#facc15;box-shadow:0 0 14px #fde047;animation:trainingRoutePulse .7s infinite alternate}.mh-training-tile.route-preview{border-color:#fde047;box-shadow:0 0 16px #fde047,0 5px 0 #713f12}.mh-training-tile.stop-preview{z-index:7;border-color:#fff;box-shadow:0 0 0 5px #f97316,0 0 25px #fb923c}.mh-board-buttons{display:flex;align-items:center;gap:4px}.mh-board-buttons button{min-height:34px;padding:0 8px;border-radius:9px;background:#164e63;font-size:8px;font-weight:900}.mh-board-buttons span{padding:3px 5px;border-radius:7px;background:#020617;color:#bae6fd;font:8px monospace}.mh-changelog-list article.unread{border-color:#f59e0b88}.mh-changelog-list time em{float:right;padding:2px 5px;border-radius:6px;background:#dc2626;color:#fff;font:900 7px sans-serif;font-style:normal}.mh-training-effect{position:fixed;z-index:45000;left:50%;top:43%;width:min(78vw,300px);min-height:150px;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;border:3px solid #fff;border-radius:28px;background:radial-gradient(circle,#0ea5e9dd,#020617ee 72%);box-shadow:0 0 55px #38bdf8;pointer-events:none;animation:trainingEffectPop 1.25s ease-out both}.mh-training-effect>span{font-size:58px;filter:drop-shadow(0 0 15px #fff)}.mh-training-effect>b{z-index:2;max-width:90%;text-align:center;color:#fff;font-size:16px;text-shadow:0 2px 5px #000}.mh-training-effect.xp,.mh-training-effect.effect,.mh-training-effect.turn{background:radial-gradient(circle,#22c55edd,#052e16ee 72%);box-shadow:0 0 55px #4ade80}.mh-training-effect.diamond{background:radial-gradient(circle,#38bdf8ee,#172554ee 72%)}.mh-training-effect.item,.mh-training-effect.tool,.mh-training-effect.goal{background:radial-gradient(circle,#fbbf24ee,#581c87ee 72%);box-shadow:0 0 70px #fde047}.mh-training-effect.move,.mh-training-effect.happening{background:radial-gradient(circle,#ef4444dd,#450a0aee 72%);box-shadow:0 0 55px #fb7185}.mh-training-effect i{position:absolute;width:9px;height:9px;border-radius:50%;background:#fff;box-shadow:0 0 12px #fff;animation:trainingParticle 1s ease-out both}.mh-training-effect i:nth-of-type(1){--a:0deg}.mh-training-effect i:nth-of-type(2){--a:60deg}.mh-training-effect i:nth-of-type(3){--a:120deg}.mh-training-effect i:nth-of-type(4){--a:180deg}.mh-training-effect i:nth-of-type(5){--a:240deg}.mh-training-effect i:nth-of-type(6){--a:300deg}@keyframes trainingEffectPop{0%{opacity:0;transform:translate(-50%,-50%) scale(.4)}18%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}75%{opacity:1}100%{opacity:0;transform:translate(-50%,-58%) scale(.96)}}@keyframes trainingParticle{from{transform:rotate(var(--a)) translateX(18px);opacity:1}to{transform:rotate(var(--a)) translateX(115px) scale(.2);opacity:0}}@keyframes trainingRoutePulse{to{filter:brightness(1.6)}}
     .mh-entering>img{animation:mhGateZoom 1.15s ease-in both}.mh-gate-core{position:absolute;z-index:3;left:50%;top:44%;width:12vmin;height:12vmin;border-radius:50%;background:#fff;box-shadow:0 0 25px 12px #d8b4fe,0 0 90px 40px #7e22ce;transform:translate(-50%,-50%);animation:mhCoreGrow 1.15s ease-in both}.mh-gate-particles{position:absolute;z-index:2;inset:-30%;background:repeating-conic-gradient(from 0deg,transparent 0 8deg,#fbbf2444 9deg,#a855f766 10deg,transparent 11deg 19deg);animation:mhParticles 1.1s ease-in both}.mh-gate-flash{position:absolute;z-index:4;inset:0;background:#f5f0ff;animation:mhGateFlash 1.15s ease-in both}.mh-entering p{position:absolute;z-index:6;left:0;right:0;bottom:calc(9% + env(safe-area-inset-bottom));text-align:center;font-size:11px;font-weight:800;text-shadow:0 2px 6px #000}
     @keyframes mhMocchiHop{0%,100%{transform:translateY(0) scale(1.05,.95)}45%{transform:translateY(-14px) rotate(-2deg) scale(.98,1.02)}70%{transform:translateY(0) scale(1.08,.9)}}@keyframes mhReadyHop{45%{transform:translateY(-25px) scale(1.1)}100%{transform:translateY(0)}}@keyframes mhShadow{0%,100%{transform:scaleX(1);opacity:.6}45%{transform:scaleX(.65);opacity:.3}}@keyframes mhSparkle{50%{transform:scale(1.5) rotate(90deg);opacity:.35}}@keyframes mhBigHop{45%{transform:translateY(-34px) scale(.95,1.08)}100%{transform:translateY(5px) scale(1.12,.88)}}@keyframes mhEntryFlash{45%{opacity:0}80%{opacity:1}100%{opacity:0}}@keyframes titleReveal{from{opacity:0;filter:brightness(2)}to{opacity:1;filter:none}}@keyframes mhGateZoom{to{transform:scale(1.16);filter:blur(2px) brightness(1.5)}}@keyframes mhCoreGrow{0%{transform:translate(-50%,-50%) scale(.15);opacity:0}70%{opacity:1}100%{transform:translate(-50%,-50%) scale(18)}}@keyframes mhParticles{to{transform:rotate(35deg) scale(.2);opacity:0}}@keyframes mhGateFlash{0%,68%{opacity:0}85%{opacity:.95}100%{opacity:1}}
