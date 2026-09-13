@@ -264,7 +264,10 @@ const songLevels=(song,difficulties)=>{
 // --- ランタイムの曲を読む ---
 const loadRuntimeSongs=()=>{
   const source=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js'),'utf8');
-  const context={Object,Number,Math,JSON,Array,String};
+  // Date を渡すのは、時刻で入れ替わる譜面(RHYTHM_SWITCHING_CHARTS)を測るため。
+  // __MH_RHYTHM_CHART_SWITCH=after を付けて走らせると、切り替え後の姿でレベルを測れる。
+  const context={Object,Number,Math,JSON,Array,String,Date,
+    __MH_RHYTHM_CHART_SWITCH:process.env.__MH_RHYTHM_CHART_SWITCH||null};
   vm.runInNewContext(`${source}\nthis.out={RHYTHM_SONGS,RHYTHM_DIFFICULTIES,RHYTHM_DEMO_SONG_IDS};`,context);
   return context.out;
 };

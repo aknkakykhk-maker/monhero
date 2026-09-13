@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ae164a04dad24aa4
+// generated-sha256: 3a5421fc8160d4f6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -89,7 +89,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-14 06:56"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-14 06:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -13885,7 +13885,10 @@ if(!await runCountdown(generation)){audio.stop();return;}
 if(!mountedRef.current||generation!==generationRef.current){audio.stop();return;}
 audio.start();
 scheduleTick();};
-  useEffect(()=>{mountedRef.current=true;beginRun(bestRecord);return()=>{mountedRef.current=false;++generationRef.current;startLockRef.current=false;disposeRun();};},[]);
+  // rhythmChartSwitchHold: 演奏のあいだは「時刻で入れ替わる譜面」の答えを固定する。
+  // 曲の途中で切り替えの時刻をまたいでも、総ノーツ数とレベルが変わらないようにするため
+  // (data/rhythm-mode.js の RHYTHM_SWITCHING_CHARTS)。
+  useEffect(()=>{mountedRef.current=true;rhythmChartSwitchHold(true);beginRun(bestRecord);return()=>{mountedRef.current=false;rhythmChartSwitchHold(false);++generationRef.current;startLockRef.current=false;disposeRun();};},[]);
   const pause=()=>{const run=runRef.current;
     /* カウントダウン中は止められない。まだ曲が鳴っていないので、止めても再開できない。
        ボタンに disabled を付けるのではなくここで弾くのは、HUDの見た目を測る検査
