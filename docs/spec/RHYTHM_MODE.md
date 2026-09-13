@@ -1766,7 +1766,37 @@ PR #954の正式候補v1まで実装済み。ただし、これは完成譜面�
 
 ---
 
-## 14A. 自動譜面制作システム V2（確定・STEP1〜8実装済み）
+## 14A. 自動譜面制作システム V2（引退・記録として残す）
+
+> ⚠️ **V2の生成系統は引退した（2026-09-13）。以下は当時の記録で、いまは動かない道具の話も含む。**
+>
+> いま曲を足すのに使うのは **V3**（「自動譜面制作V3」の章）。V2で作った譜面は
+> デバッグ曲「Monster Hero 候補v2」1つだけで、**凍結**してある（作り直す道具はもう無い）。
+> プレイヤーが遊べる18曲はすべてV3で、V2は1曲も出荷していない。
+>
+> **消した道具**（V2で譜面を作り直すための一式）
+>
+> `rhythm-chart-v2-step1-check.js` / `-step2-analyze.js` / `-step2-check.js` /
+> `-step3-generate.js` / `-step3-check.js` / `-step5-review.js` / `-step5-check.js` /
+> `-step8-pipeline.js` / `-step8-check.js` / `-song-type.js` / `-song-type-check.js`
+>
+> **残した道具**（名前はV2だが**現役**。V3のパイプラインが毎回呼ぶ）
+>
+> `rhythm-chart-v2-step6-playability.js`（押せるかを測る）と
+> `rhythm-chart-v2-step7-autofix.js`（レーンだけ動かして直す）、それぞれの検査。
+> 設計資料（`tools/mode/authoring/*-v2-*.json`）も、この2つの検査の土台なので残してある。
+>
+> **なぜ引退させたか。** #1369 で1本の指の叩き直しに下限を入れたあと、V2の生成器は
+> Monster Hero の EXPERT / MASTER を「押せる」形で作れなくなり、step3 / step5 / step8 の
+> 検査が計9件落ちたままになっていた。V2は何も出荷していないので、検査を緩めるのではなく
+> 系統ごと畳んだ。凍結した譜面には「押せない」が EXPERT 3件 / MASTER 5件あるが、
+> デバッグ画面からしか触れない。
+>
+> **引退のきっかけになった不具合。** `rhythm-chart-v2-step5-check.js` が
+> `--write` を本物の `tools/mode/authoring/` へ流していたため、この検査を回した人の
+> コミットへ、関係のない譜面データの作り直しが巻き添えで入っていた（#1379）。
+> 検査そのものを消したので、この罠も無くなった。
+
 
 ### 目的
 
@@ -3418,6 +3448,51 @@ Stay With Me は**強弱で拍が立っていない**。ドラムではなくス
 - 5ms刻みへ丸め、±100msへ収める（**判定タイミング調整と同じ刻み・範囲**）。
 - 出した値は既存の `judgmentTimingOffsetMs` へ入れる。**新しい保存キーは足さない。**
 - 計算は `rhythmCalibrationOffsetFromTaps` として切り出してあり、検査から直接動かせる。
+
+### タイミング合わせを演奏画面でやる（2026-09-13）
+
+ユーザー指示「今の仕様はみにくすぎるし実用性がない / 特に横画面は終わってる /
+普通に実際の画面を使ってやればいい / そこで判定も合わせて出して調整するのが1番合うとおもう」。
+
+専用の小さな画面（1本のレーンに目印が降りるだけ）をやめ、**演奏画面をそのまま使う**。
+曲と譜面だけを `RHYTHM_CALIBRATION_SONG` / `RHYTHM_CALIBRATION_CHART` へ差し替え、
+`RhythmTapTest` に `calibrating` を渡す。2拍ごとの単押しを、助走4回＋本番16回。
+
+初日の作りには次の4つの不具合があり、同日にユーザーから
+「チュートリアルの流用？ 設定にもなってないし判定も出ないし終わったら進行不能になるし
+終わってる」と指摘された。**同じ踏み方を繰り返さないよう、原因まで残しておく。**
+
+1. **叩いたずれを貯める `run.deltas` を、演奏の状態（`run`）ではなく画面の状態（`view` の
+   `initialView()`）へ足していた。** 叩いた瞬間に
+   `Cannot read properties of undefined (reading 'push')` が投げられ、`applyJudgment` が
+   そこで止まる。だから**判定もコンボもスコアも出ず**、曲の終わりでも
+   `run.deltas.slice` で落ちて**リザルトへ進めない**（＝進行不能）。
+   構文は正しいので `check-syntax.js` では拾えず、画面を開いた瞬間には落ちないので
+   `render-error-check.js` でも拾えない。**実際に叩いてみる検査でしか分からない。**
+   → `tools/mode/rhythm-calibration-check.js` を作り、実ブラウザで最後まで叩いて通す。
+2. **`tutorial` を流用していた。** ライフを減らさない目的で
+   `tutorial={from==='tutorial'||from==='calibration'}` と渡したため、
+   あそびかた練習の案内（「まずは『タップ』」…）と肩書き「れんしゅう」がそのまま出た。
+   → `tutorial` と `calibrating` を分け、ライフ保護だけ `(tutorial||calibrating)` にする。
+   案内は `data-rhythm-calibration-banner` を別に持ち、残り回数と途中経過のずれを出す。
+3. **測った値が設定へ入らなかった。** オプションへ戻ってからもう一度ボタンを押す形で、
+   ユーザーには「設定にもなってない」と映った。
+   → 測り終わった画面（`data-rhythm-calibration-result`）でその場で決める。
+   「この値にする」で `onApplyCalibration` → 親が保存してオプションへ戻す。
+   オプション側のパネルは**入れた値の報告だけ**にする。
+4. **案内の置き場所。** 縦では上に置くとコンボ数（おすすめ位置＝右上）と重なり、
+   横では HUD のスコア・ライフと重なった。
+   → 縦は**判定ラインの下**（`bottom:1.5%`）、横は**上のまん中**（`left:50% / width:52%`）。
+   横の空きは実測で器の x 12〜145（スコア）と 703〜832（ライフ）のあいだ。
+
+> ⚠️ **自前で画面を回しているあいだ、CSS の `landscape:` は効かない。**
+> `tools/build-tailwind.js` は `@media (orientation: landscape)` と
+> `&:is([data-mh-view-rotation="true"] *)` の2つを登録しているが、
+> 出来上がった `tailwind.css` に入るのは**メディアクエリのほうだけ**で、
+> 端末は縦のままなので成立しない（2026-09-13に実ブラウザで確認。
+> `landscape:left-1/2` を付けても computed の `left` は `12px` のままだった）。
+> 向きで見た目を変えるときは、JSの `isLandscape`（`orientationIsLandscape()` と
+> `RHYTHM_VIEW_ROTATION.subscribe`）で決める。
 
 ### モンスターノーツの置き方（2026-09-05・報告を受けて確認）
 

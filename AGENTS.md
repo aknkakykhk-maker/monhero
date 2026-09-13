@@ -63,6 +63,41 @@ ChatGPT・Codex・Claude Code のどれで作業しても、ここは同じ手�
 - 古いPRをそのままマージしない。baseが古いと、その後mainへ入った変更を巻き戻す。
   必要な機能が残っている場合は、現在のmainを基点に作り直す。
 
+### マージがコンフリクトで断られたとき
+
+**それは作業の終わりではない。** GitHubが `Pull Request has merge conflicts` を返しても、
+そこで報告して止まらない。**解消してマージし切るまでが1つの作業**であって、
+ユーザーへ声をかけて判断を仰ぐ場面ではない。
+
+> ⚠️ 2026-09-13にユーザー指摘。「マージ出来なかった場合、そのままこっちから声かけないと
+> そのまま放置のときあるよね？」。作業が終わった気になっているところへ**外部要因のエラー**が
+> 来るので、「報告して止まってよい場面」に見えてしまうのが原因。見えるだけで、そうではない。
+> 放置されたPRは、次に誰かが気づくまでmainへ入らない。
+
+**まず起きないようにする。** PRを作る直前に `git fetch origin main` して、進んでいたら
+取り込んでおく。これだけでほとんど起きなくなる（残るのは、その数十秒の間に
+別の作業がマージしたときだけ）。
+
+**起きたときの手順。** ぶつかるのはほぼ毎回**ビルドの生成物6つ**で、中身の競合ではない。
+セッションを2つ同時に走らせていると、直している場所がまったく別でも必ずぶつかる。
+
+```
+git fetch origin main && git merge origin/main
+# 生成物は main 側を取る（このあと作り直すので中身は何でもよい）
+git checkout --theirs monster-hero/game-system.compiled.js monster-hero/index.html \
+  monster-hero/src/game-system.jsx monster-hero/src/parts/10-core.jsx \
+  monster-hero/tailwind.css monster-hero/version.json
+git add （上の6つ）
+# 中身の競合が残っていないか。残っていたらそこだけ手で直す
+git diff --name-only --diff-filter=U
+#   ★更新履歴(monster-hero/data/changelog.js)は「先頭に足す」規則なので、
+#     同じ日に両方が項目を足すと本当にぶつかる。両方の項目を残し、新しい順に並べる
+# ビルド日時を「いまの実時刻(JST)」に合わせて作り直す
+TZ=Asia/Tokyo date '+%Y-%m-%d %H:%M'   # ← 10-core.jsx の BUILD_DATE と version.json の両方へ
+node tools/build.js && node tools/build.js --check
+# 検査を通してからコミット・プッシュ・マージ
+```
+
 ## Codex 作業ルール
 
 - 依頼された実装を行う。

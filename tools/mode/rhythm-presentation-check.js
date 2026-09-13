@@ -108,7 +108,7 @@ ok('コンボ数の置き場所を選べる(右上=もとの位置も選べる)'
 ok('ノーツより後ろに描いて透かす(邪魔にならない)',
   /data-rhythm-combo-box[^>]*z-\[2\]/.test(game)
   &&/data-rhythm-combo-box[^>]*pointer-events-none/.test(game)
-  &&/\[data-rhythm-combo-box\]\{[\s\S]{0,260}opacity:calc\(\.62 \* var\(--mh-combo-opacity,1\)\)/.test(html)
+  &&/\[data-rhythm-combo-box\]\{[\s\S]{0,700}opacity:calc\([.\d]+ \* var\(--mh-combo-opacity,1\)\)/.test(html)
   &&html.includes('[data-rhythm-note] {'));
 // 場に重なるので、邪魔だと感じた人が消せるようにする(設定は前からあったが使われていなかった)
 ok('コンボ数表示のON/OFFを設定から切り替えられる',
@@ -128,8 +128,11 @@ ok('コンボ数を大きく出す',
 //   「軽め」でそこだけ止め、「最小」では粒も跳ねも通常と同じにする。
 //   どの段でも音・能力名・振動は残す(取れたことが分からなくなるのがいちばん困る)。
 ok('モンスターノーツの演出の強さを選べる',
-  /RHYTHM_MONSTER_EFFECT_LABELS *= *Object\.freeze\(\[\['NORMAL','標準'\],\['LIGHT','軽め'\],\['OFF','最小'\]\]\)/.test(game)
-  &&game.includes("monsterNoteEffect:'NORMAL'")
+  /RHYTHM_MONSTER_EFFECT_LABELS *= *Object\.freeze\(\[\['NORMAL','多め'\],\['LIGHT','標準'\],\['OFF','最小'\]\]\)/.test(game)
+  // 既定は「軽め」(2026-09-13・ユーザー指摘「演出量が普通だと重いという声が多い /
+  // 少なめをデフォルトにして今の普通を多めとかにしたい / モンスターノーツも同じく」)。
+  // IDは変えていないので、自分で選んで保存した人の設定はそのまま(CLAUDE.md ⑦)
+  &&game.includes("monsterNoteEffect:'LIGHT'")
   &&game.includes('monsterNoteEffect:RHYTHM_MONSTER_EFFECT_LEVELS.includes(source.monsterNoteEffect)?source.monsterNoteEffect:DEFAULT_RHYTHM_SETTINGS.monsterNoteEffect')
   &&game.includes("segments('monsterNoteEffect',RHYTHM_MONSTER_EFFECT_LABELS)")
   // 「軽め」「最小」で画面全体の光を出さない
@@ -146,8 +149,36 @@ ok('コンボ数の濃さを設定から変えられる',
   &&game.includes("stepper('comboOpacity',RHYTHM_COMBO_OPACITY_MIN,RHYTHM_COMBO_OPACITY_MAX,RHYTHM_COMBO_OPACITY_STEP")
   &&game.includes("'--mh-combo-opacity':rhythmFiniteInRange(settings.comboOpacity,RHYTHM_COMBO_OPACITY_MIN,RHYTHM_COMBO_OPACITY_MAX,100)/100")
   // 段ごとの濃さへ掛ける(段の差はそのまま残る)
-  &&html.includes('[data-rhythm-combo-box][data-combo-tier="3"]{opacity:calc(.8 * var(--mh-combo-opacity,1))}')
   &&html.includes('[data-rhythm-combo-box][data-combo-tier="7"]{opacity:var(--mh-combo-opacity,1)}'));
+// 【2026-09-13・ユーザー指摘「もとが薄いから濃くしてそれを調整できるようにして」】
+// いちばん下の段でも読める濃さから始めること。数値を固定で書くと調整のたびに落ちるだけなので、
+// 「下限が十分に濃い」「段が上がるほど濃くなる(下がらない)」「どの段にも設定の倍率が掛かる」を見る。
+const comboTierOpacity=(()=>{
+  const base=(html.match(/\[data-rhythm-combo-box\]\{[\s\S]{0,700}?opacity:calc\(([.\d]+) \* var\(--mh-combo-opacity,1\)\)/)||[])[1];
+  const list=[Number(base)];
+  for(let tier=1;tier<=7;tier++){
+    const exact=new RegExp(`\\[data-rhythm-combo-box\\]\\[data-combo-tier="${tier}"\\][^{]*\\{opacity:calc\\(([.\\d]+) \\* var\\(--mh-combo-opacity,1\\)\\)`);
+    const plain=new RegExp(`\\[data-rhythm-combo-box\\]\\[data-combo-tier="${tier}"\\][^{]*\\{opacity:var\\(--mh-combo-opacity,1\\)`);
+    const hit=html.match(exact);
+    list.push(hit?Number(hit[1]):plain.test(html)?1:NaN);
+  }
+  return list;
+})();
+ok('いちばん薄い段でも読める濃さから始まる',
+  Number.isFinite(comboTierOpacity[0])&&comboTierOpacity[0]>=.8,
+  `いちばん下の段 ${comboTierOpacity[0]}`);
+ok('段が上がるほど濃くなる(途中で薄くならない)',
+  comboTierOpacity.every(value=>Number.isFinite(value))
+  &&comboTierOpacity.every((value,index)=>index===0||value>=comboTierOpacity[index-1]),
+  comboTierOpacity.join(' → '));
+ok('どの段にも設定の濃さが掛かる',
+  comboTierOpacity.length===8&&comboTierOpacity.every(value=>Number.isFinite(value)&&value<=1));
+// 光って息づかいをするいちばん熱い段も、底上げした濃さと同じ高さで揺らす
+// (ここだけ低いままだと、熱い段のほうが薄く見える)
+ok('光る段の息づかいも底上げした濃さの範囲で揺れる',(()=>{
+  const lows=[...html.matchAll(/@keyframes mhRhythmComboGlow(?:Hot)?\{\s*0%,100%\{opacity:calc\(([.\d]+) \* var\(--mh-combo-opacity,1\)\)\}/g)].map(m=>Number(m[1]));
+  return lows.length===2&&lows.every(value=>value>=comboTierOpacity[0]);
+})());
 // コンボ数の大きさ。置き場所ごとの基準へ割合を掛ける(段の倍率とは別)
 ok('コンボ数の大きさを設定から変えられる',
   game.includes('comboSize:100')
@@ -171,8 +202,29 @@ ok('演出量「少なめ」で、判定文字とコンボの流れを止めら�
   &&['GREAT','EXCELLENT','MARVELOUS'].every(j=>html.includes(`[data-rhythm-play-area][data-rhythm-effect="LOW"] [data-rhythm-judgment-text][data-judgment="${j}"]{`))
   // 選ぶ場所と、何が止まるのかの説明がオプションにある
   &&game.includes("segments('effectAmount',RHYTHM_EFFECT_LABELS)")
-  &&/RHYTHM_EFFECT_LABELS *= *Object\.freeze\(\[\['NORMAL','標準'\],\['LOW','少なめ'\],\['MINIMAL','最小'\]\]\)/.test(game)
-  &&game.includes('動きがカクついたり'));
+  &&/RHYTHM_EFFECT_LABELS *= *Object\.freeze\(\[\['NORMAL','多め'\],\['LOW','標準'\],\['MINIMAL','最小'\]\]\)/.test(game)
+  // 既定は「少なめ」。いちばん重い「判定文字の毎フレームの塗り直し」を既定で避ける
+  &&game.includes("effectAmount:'LOW'")
+  &&game.includes('既定は「標準」です'));
+// 既定の段は「標準」と呼ぶ(2026-09-13・ユーザー指示「デフォルトの名称を標準にして」)。
+// 画面に出す名前と既定値がずれると、既定なのに「少なめ」「軽め」と書いてある状態になる
+ok('既定になっている段の名前が「標準」になっている',(()=>{
+  const labelsOf=name=>{
+    const src=(game.match(new RegExp(`${name} *= *Object\\.freeze\\(\\[(.*?)\\]\\);`))||[])[1]||'';
+    return [...src.matchAll(/\['([A-Z]+)','([^']+)'\]/g)].map(m=>[m[1],m[2]]);
+  };
+  const defaultOf=key=>((game.match(new RegExp(`${key}:'([A-Z]+)'`))||[])[1])||'';
+  const pairs=[['RHYTHM_EFFECT_LABELS','effectAmount'],['RHYTHM_MONSTER_EFFECT_LABELS','monsterNoteEffect']];
+  return pairs.every(([labels,key])=>{
+    const found=labelsOf(labels).find(([id])=>id===defaultOf(key));
+    return !!found&&found[1]==='標準';
+  });
+})());
+// 軽量モードが何を止めるのかを画面から読める(2026-09-13・ユーザーからの質問
+// 「軽量モードはどういう効果があるの？」。それまで説明が1文字も無かった)
+ok('軽量モードの効果が画面に書いてある',
+  /field\('軽量モード',toggle\('lightweightMode'\),\s*'[^']{80,}'/.test(game)
+  &&game.includes('判定・判定窓・スコア・ライフ・譜面・音は一切変わりません'));
 // 2026-09-13・ユーザー指摘「演出量少なめでジャストマーベラスとマーベラスの色の差が少ない /
 //   演出量は少なめキープで差を出したい / マーベラスが金でジャストマーベラスが虹だから出来そう」。
 // ★流す前提の background-size(金260% / 虹220% / コンボ300%)のまま animation だけ止めると、

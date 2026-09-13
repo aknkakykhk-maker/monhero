@@ -2919,8 +2919,11 @@ const monsterHeroEasyChart=mhChart(1,monsterHeroEasyNotes,MONSTER_HERO_EASY_DURA
 const monsterHeroNormalChart=mhChart(3,monsterHeroNormalNotes,MONSTER_HERO_EASY_DURATION_MS);
 const monsterHeroHardChart=mhChart(5,monsterHeroHardNotes,MONSTER_HERO_EASY_DURATION_MS);
 
-// 自動譜面制作システムV2(STEP1〜7)が作った候補。マーカーの内側は
-// tools/mode/rhythm-chart-v2-step8-pipeline.js --release が差し替えるので手で書かない。
+// 自動譜面制作システムV2(STEP1〜7)が作った候補。**凍結済み**(2026-09-13)。
+// V2の生成系統は引退したので、この中身を作り直す道具はもう無い。手でも書かない。
+// 残してあるのは、V3と聴き比べる入口としてと、検査
+// (rhythm-chart-musical-tempo-check.js / rhythm-chart-v2-step7-check.js)が
+// この譜面を土台に使っているため。
 // v1(monsterHeroEasyNotes ほか)とは別物で、v1は1音も変えていない。
 const monsterHeroV2EasyNotes=((t,h,f,s)=>[
 // <monster-hero-v2-easy-notes>
