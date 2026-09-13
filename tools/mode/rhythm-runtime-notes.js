@@ -184,6 +184,7 @@ const RELEASED_MARKERS=Object.freeze({
   crossing_field:'crossing-field-v3',
   nothing_without_you:'nothing-without-you-v3',
   freedom_dive:'freedom-dive-v3',
+  the_city_beneath_the_comets:'the-city-beneath-the-comets-v3',
 });
 
 // 曲id → 音源の一覧(tools/mode/authoring/rhythm-song-registry.json)のid。
@@ -209,6 +210,7 @@ const RELEASED_TRACKS=Object.freeze({
   crossing_field:'crossing_field',
   nothing_without_you:'nothing_without_you',
   freedom_dive:'freedom_dive',
+  the_city_beneath_the_comets:'the_city_beneath_the_comets',
 });
 
 module.exports={heldSpan,HOLD_SHIFT_SUB,ROOT,RUNTIME,FINGER_GAP_SUB,loadRuntime,makeSpanAt,usableSpan,maxSeparation,

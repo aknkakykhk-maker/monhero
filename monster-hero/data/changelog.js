@@ -34,6 +34,23 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    // 2026-09-14・ユーザーから音源(m4a)1本とジャケット1枚で受け取った20曲目。
+    // テンポは自動判定の 170.466BPM/4拍子(半分・3/4も試したが格子への乗りが低い)。
+    // 難易度は自動のまま(ユーザーが数字を見て「自動のまま 9/11/18/24/33」と決めた)。
+    // challengeFactor は書いていない。1.20 へ上げると MASTER が 33→30 と下がるため。
+    date: "2026-09-14 07:17", type:'update', title:'モンヒロビート：新曲「The City Beneath the Comets」を追加しました', status:'new',
+    image: 'images/song-art/the-city-beneath-the-comets.jpg?v=8fd08d30ea81',
+    items:[
+      'モンヒロビートに「The City Beneath the Comets」（2分40秒）を追加しました。曲えらびからすぐ遊べます。',
+      'BPM170の曲です。音数が多く、MASTERはいちばん詰まったところで4秒に33回押します。',
+      'レベルは EASY Lv.9 ／ NORMAL Lv.11 ／ HARD Lv.18 ／ EXPERT Lv.24 ／ MASTER Lv.33 です。',
+      'ノーツ数は 299 ／ 345 ／ 476 ／ 575 ／ 668 です。',
+      '長押し・スライド・フリックもひととおり入っています（MASTERは長押し23・スライド19・フリック26）。',
+      '音の大きさはほかの曲と同じ -14 LUFS にそろえてあります。',
+    ],
+    assistantNotice: { id:'update_notice_the_city_beneath_the_comets_v1', type:'content' },
+  },
+  {
     // 2026-09-13〜14・ユーザー指示「最新譜面生成ツールでイベント曲以外は更新したけど
     //   イベント曲はまだのまま / イベント終わると同時の時刻で最新譜面に変わるようにできる？」。
     // 新旧どちらの譜面も data/rhythm-mode.js に持ち(-v3- と -v4- のマーカー)、
