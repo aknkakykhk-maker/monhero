@@ -45,8 +45,15 @@ const data=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js'),'u
 const stopsAt=(source,selector,level)=>new RegExp(`\\[data-rhythm-effect="${level}"\\] ${selector.replace(/[[\]]/g,ch=>'\\'+ch)}[^{]*\\{[^}]*animation:none`).test(source);
 ok('「標準」でコンボ数の脈打ちと跳ねが止まる',
   stopsAt(html,'[data-rhythm-combo-box]','LIGHT')&&stopsAt(html,'[data-rhythm-combo]','LIGHT'));
-ok('「標準」で両サイドのマスモンの跳ねが止まる',
-  stopsAt(data,'[data-rhythm-side-monster]','LIGHT'));
+// ★マスモンの動きには専用の設定(両サイドのマスモン｜動き)がある。演出量で横取りしない
+//   (2026-09-13・ユーザー指摘「マスモンの動きが演出量で制御されてる /
+//    マスモンの動きは別に設定がある」)。止めてよいのは軽量モードだけ。
+ok('マスモンの動きを演出量で止めていない(専用の設定に任せる)',
+  ['NORMAL','LOW','LIGHT','MINIMAL'].every(level=>!stopsAt(data,'[data-rhythm-side-monster]',level))
+  &&!/rhythmEffectAtMost\([^)]*\)\?'NONE':settings\.sideMonsterMotion/.test(game)
+  &&game.includes("data-rhythm-side-motion={settings.lightweightMode?'NONE':settings.sideMonsterMotion}"));
+ok('軽量モードでは止まる(重いものを一括で止めるスイッチなので)',
+  /\[data-rhythm-lightweight="true"\] \[data-rhythm-side-monster\][^{]*\{[^}]*animation:none/.test(data));
 ok('「標準」で判定文字が弾む動きが止まる',
   stopsAt(data,'[data-rhythm-judgment-text]','LIGHT'));
 ok('「標準」で判定ラインの脈打ちが止まる',
@@ -55,7 +62,7 @@ ok('「標準」でノーツを取り切ったときの光を出さない',
   game.includes("if(!settings.lightweightMode&&!rhythmEffectAtMost(settings.effectAmount,'LIGHT'))note._rhythmClearAt="));
 // 「最大」では止まっていないこと(段の差が本物であることの裏取り)
 ok('「最大」ではどれも止まっていない',
-  !stopsAt(html,'[data-rhythm-combo-box]','NORMAL')&&!stopsAt(data,'[data-rhythm-side-monster]','NORMAL')
+  !stopsAt(html,'[data-rhythm-combo-box]','NORMAL')
   &&!stopsAt(data,'[data-rhythm-judgment-line]','NORMAL'));
 
 (async()=>{

@@ -14560,12 +14560,11 @@ const installRhythmGeometryStyles=()=>{
       48%{transform:translate3d(0,4%,0) scale(.94)}
       70%{transform:translate3d(0,-14%,0) scale(1.08)}
       100%{transform:translate3d(0,0,0) scale(1)}}
-    [data-rhythm-play-area][data-rhythm-lightweight="true"] [data-rhythm-side-monster],
-    [data-rhythm-play-area][data-rhythm-effect="LIGHT"] [data-rhythm-side-monster],
-    [data-rhythm-play-area][data-rhythm-effect="MINIMAL"] [data-rhythm-side-monster]{animation:none!important}
-    [data-rhythm-play-area][data-rhythm-lightweight="true"] [data-rhythm-side-monster]::after,
-    [data-rhythm-play-area][data-rhythm-effect="LIGHT"] [data-rhythm-side-monster]::after,
-    [data-rhythm-play-area][data-rhythm-effect="MINIMAL"] [data-rhythm-side-monster]::after{animation:none!important}
+    /* ★止めるのは軽量モードだけ。演出量では止めない(2026-09-13・ユーザー指摘
+       「マスモンの動きが演出量で制御されてる / マスモンの動きは別に設定がある」)。
+       動く・動かないは「両サイドのマスモン｜動き」で決める。 */
+    [data-rhythm-play-area][data-rhythm-lightweight="true"] [data-rhythm-side-monster]{animation:none!important}
+    [data-rhythm-play-area][data-rhythm-lightweight="true"] [data-rhythm-side-monster]::after{animation:none!important}
     [data-rhythm-judgment-line]{height:4px!important;background:linear-gradient(90deg,#d8b4fe 0%,#ecfeff 50%,#d8b4fe 100%)!important;border-radius:999px;box-shadow:0 0 14px #67e8f9,0 0 28px #c084fc,0 8px 24px rgba(34,211,238,.34)!important}
     /* 判定ラインを曲の拍に合わせて静かに脈打たせる(2026-09-05・演出強化)。
        1拍の長さ(--rhythm-beat)はプレイ開始時に一度だけ書くので、毎フレームのJSは増えない。
