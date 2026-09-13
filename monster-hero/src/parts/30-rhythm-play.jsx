@@ -887,7 +887,10 @@ if(!await runCountdown(generation)){audio.stop();return;}
 if(!mountedRef.current||generation!==generationRef.current){audio.stop();return;}
 audio.start();
 scheduleTick();};
-  useEffect(()=>{mountedRef.current=true;beginRun(bestRecord);return()=>{mountedRef.current=false;++generationRef.current;startLockRef.current=false;disposeRun();};},[]);
+  // rhythmChartSwitchHold: 演奏のあいだは「時刻で入れ替わる譜面」の答えを固定する。
+  // 曲の途中で切り替えの時刻をまたいでも、総ノーツ数とレベルが変わらないようにするため
+  // (data/rhythm-mode.js の RHYTHM_SWITCHING_CHARTS)。
+  useEffect(()=>{mountedRef.current=true;rhythmChartSwitchHold(true);beginRun(bestRecord);return()=>{mountedRef.current=false;rhythmChartSwitchHold(false);++generationRef.current;startLockRef.current=false;disposeRun();};},[]);
   const pause=()=>{const run=runRef.current;
     /* カウントダウン中は止められない。まだ曲が鳴っていないので、止めても再開できない。
        ボタンに disabled を付けるのではなくここで弾くのは、HUDの見た目を測る検査
