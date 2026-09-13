@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a2832dd8edbc4ded
+// source-sha256: 5ebc3a4f7cdc3334
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f285791c9afa5a51
+// generated-sha256: de3dd2770cd2cc47
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-13 19:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-13 19:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5195,18 +5195,24 @@ const RHYTHM_COMBO_POSITION_LABELS = Object.freeze([['AUTO', 'おすすめ'], ['
 const RHYTHM_COMBO_POSITIONS = Object.freeze(RHYTHM_COMBO_POSITION_LABELS.map(([id]) => id));
 const RHYTHM_LANE_GLOW_LEVELS = Object.freeze(['NORMAL', 'LOW', 'NONE']);
 const RHYTHM_JUDGMENT_IDS = Object.freeze(['MARVELOUS', 'EXCELLENT', 'GREAT', 'GOOD', 'BAD', 'MISS']);
-// ランク(G〜M)の表示色(暫定値)。下位ほど地味な色、上位ほど鮮やかにして一目で分かるようにする。
+// ランク(G〜M)の表示色。
+// このゲームは間合い適性(DIST_APTITUDE_COLOR)でも同じ G〜M の記号を使っていて、
+// そこでは「Mは紫、S系は黄、Aは赤、Bはピンク、Cは緑、Dは青緑…」と決まっている。
+// モンビーだけ別の配色にしていたため、同じ「A」でも画面によって色が違っていた
+// (2026-09-13・ユーザー指示「モンビーのランクもこのゲームの距離適性別色にあわせて」)。
+// 色はそちらに合わせる。SSとSだけは、並んだときに見分けられるよう黄の濃さを変える。
+// 対応がずれていないかは tools/mode/rhythm-rank-color-check.js が見張る。
 const RHYTHM_RANK_COLORS = Object.freeze({
-  G: 'text-slate-500',
-  F: 'text-slate-300',
-  E: 'text-lime-400',
-  D: 'text-lime-300',
-  C: 'text-amber-300',
-  B: 'text-orange-300',
-  A: 'text-cyan-300',
-  S: 'text-fuchsia-300',
-  SS: 'text-fuchsia-200',
-  M: 'text-yellow-200'
+  G: 'text-slate-400',
+  F: 'text-purple-300',
+  E: 'text-cyan-300',
+  D: 'text-teal-300',
+  C: 'text-green-300',
+  B: 'text-pink-300',
+  A: 'text-red-400',
+  S: 'text-yellow-400',
+  SS: 'text-yellow-200',
+  M: 'text-fuchsia-300'
 });
 const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   bgmVolume: 100,
@@ -26292,14 +26298,17 @@ function MonsterDexDetailScreen({
     className: "text-[9px] font-black text-amber-300/90 mt-2 mb-1"
   }, "\u9593\u5408\u3044\u9069\u6027"), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-4 gap-1.5"
-  }, RANGE_LABELS.map((label, i) => /*#__PURE__*/React.createElement("div", {
-    key: label,
-    className: "rounded-xl border border-amber-500/25 bg-black/30 py-1.5 text-center"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[9px] font-black text-slate-400"
-  }, label), /*#__PURE__*/React.createElement("div", {
-    className: "text-[13px] font-mono font-black text-amber-200"
-  }, mon.distAptitude && mon.distAptitude[i] || 'C'))))), tab === 'skills' && /*#__PURE__*/React.createElement("div", {
+  }, RANGE_LABELS.map((label, i) => {
+    const grade = mon.distAptitude && mon.distAptitude[i] || 'C';
+    return /*#__PURE__*/React.createElement("div", {
+      key: label,
+      className: "flex flex-col items-center gap-1 rounded-xl border border-amber-500/25 bg-black/30 py-1.5 text-center"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: `rounded-full px-1.5 py-0.5 text-[8px] font-black leading-none ${RANGE_STYLES[i].labelBg}`
+    }, label), /*#__PURE__*/React.createElement("span", {
+      className: `w-[86%] rounded-lg border py-0.5 text-[13px] font-mono font-black leading-none ${DIST_APTITUDE_COLOR[grade] || DIST_APTITUDE_COLOR.C}`
+    }, grade));
+  }))), tab === 'skills' && /*#__PURE__*/React.createElement("div", {
     "data-dex-tab-skills": true,
     className: "space-y-2"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
