@@ -539,6 +539,41 @@ const RhythmEventBanner=({event,className=''})=>{
   );
 };
 // 参加報酬の1行。ダイヤと虹のプシュケーだけなので、アイテムの実体は要らない
+// 受け取った報酬を、ギフト1件ぶんの中身へ組み替える(2026-09-14・ユーザー指摘
+// 「イベント報酬が直接アイテム欄に入ってた / ギフト経由して」)。
+//
+// ★同じ種類は1行にまとめる。部門ごとにプシュケーが付くので、まとめないと
+//   「虹のプシュケー×500」が何行も並ぶ。
+// ★アイテムは id をそのまま持つ(GIFT_ITEM_REWARD_TYPE)。名前は実データから引かれるので、
+//   ここに名前を書き写さない。
+const rhythmEventGiftRewards=(prize)=>{
+  const totals=new Map();   // 「種類＋アイテムid」→ 個数
+  const add=(type,itemId,amount)=>{
+    const n=Math.max(0,Math.floor(Number(amount)||0));
+    if(n<=0)return;
+    const key=`${type}:${itemId||''}`;
+    const found=totals.get(key);
+    if(found)found.amount+=n;
+    else totals.set(key,itemId?{type,itemId,amount:n}:{type,amount:n});
+  };
+  const addReward=(reward)=>{
+    if(!reward)return;
+    const item=rhythmEventRewardItem(reward);
+    if(item)add(GIFT_ITEM_REWARD_TYPE,item.id,reward.count);
+    add('rainbowPsyche',null,reward.psyche);
+    add('diamond',null,reward.gold);
+  };
+  (Array.isArray(prize&&prize.prizes)?prize.prizes:[]).forEach(entry=>addReward(entry&&entry.reward));
+  // 参加報酬。勇者の証片(count)と勇者の証(heroProof)は別のアイテムなので分けて足す
+  const join=prize&&prize.participation;
+  if(join){
+    if(join.count>0&&typeof HERO_PROOF_SHARD_ITEM!=='undefined')add(GIFT_ITEM_REWARD_TYPE,HERO_PROOF_SHARD_ITEM.id,join.count);
+    if(join.heroProof>0&&typeof HERO_PROOF_ITEM!=='undefined')add(GIFT_ITEM_REWARD_TYPE,HERO_PROOF_ITEM.id,join.heroProof);
+    add('rainbowPsyche',null,join.psyche);
+    add('diamond',null,join.gold);
+  }
+  return [...totals.values()];
+};
 // 参加報酬の1行。週間は勇者の証片、イベントは勇者の証が付くことがあるので、アイテムぶんも出す
 const rhythmEventParticipationText=(reward)=>{
   if(!reward)return '';

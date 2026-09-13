@@ -2890,6 +2890,9 @@ function MonsterHeroGame() {
   const [rhythmEventStorySeen, setRhythmEventStorySeen] = useState(null);
   const rhythmEventStorySeenRef = useRef(null);
   const [rhythmEventStoryPending, setRhythmEventStoryPending] = useState(null);
+  // この起動で一度でも流し始めた会話。二度目を並べないための歯止め(下の useEffect の説明を参照)。
+  // 「見た」の記録(rhythmEventStorySeenRef)とは別に持つ。あちらは最後まで見ないと付かない
+  const rhythmEventStoryStartedRef = useRef([]);
   const markRhythmEventStorySeen = async (storyId) => {
     const seen = normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current);
     if (seen.includes(storyId)) return;
@@ -2906,6 +2909,13 @@ function MonsterHeroGame() {
       && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && !eventReplay)) return;
     const storyId = rhythmEventStoryPending;
     setRhythmEventStoryPending(null);
+    // ★流し始めたことを覚えておく(2026-09-14・ユーザー指摘「閉幕イベントが2回連続で流れた」)。
+    //   「見た」の記録が付くのは**会話を最後まで見たとき**なので、読んでいる最中は
+    //   まだ未読のまま。下の1分おきの見回りがそのあいだに回ると「まだ見ていない」と判断して
+    //   もう一度並べ、会話が終わった瞬間に続けて2回目が流れていた。
+    if (!rhythmEventStoryStartedRef.current.includes(storyId)) {
+      rhythmEventStoryStartedRef.current = [...rhythmEventStoryStartedRef.current, storyId];
+    }
     setEventReplay({ id: storyId, step: 0, live: true });
   }, [rhythmEventStoryPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay]);
   // ★開催の時刻になった瞬間に遊んでいた人にも届ける。
@@ -2926,13 +2936,17 @@ function MonsterHeroGame() {
       // ★終わった瞬間に遊んでいた人にも、閉幕の会話を届ける。
       //   開催中かどうかと同じく、**見るたびに数え直す**(CLAUDE.md ⑥-4)。
       //   開きっぱなしの端末でも、終了時刻をまたいだ次の見回りで流れる
-      if (rhythmLimitedEventJustEnded(Date.now())
-        && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(MONBEAT_CUP_THANKS_STORY_ID)) {
+      //   ★読んでいる最中にここが回っても並べ直さない(rhythmEventStoryStartedRef)。
+      //     そうしないと会話が終わった瞬間に2回目が流れる
+      const notPlayedYet = (storyId) =>
+        !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(storyId)
+        && !rhythmEventStoryStartedRef.current.includes(storyId);
+      if (rhythmLimitedEventJustEnded(Date.now()) && notPlayedYet(MONBEAT_CUP_THANKS_STORY_ID)) {
         setRhythmEventStoryPending(prev => prev || MONBEAT_CUP_THANKS_STORY_ID);
       }
       if (!rhythmLimitedEventAt(Date.now())) return;
       // ① 会話。まだ見ていなければ、HOMEに着いたところで流す
-      if (!normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(MONBEAT_CUP_STORY_ID)) {
+      if (notPlayedYet(MONBEAT_CUP_STORY_ID)) {
         setRhythmEventStoryPending(prev => prev || MONBEAT_CUP_STORY_ID);
       }
       // ② 助手の告知。起動したときに作った行列には入っていないので、1度だけ組み直す。
@@ -3080,38 +3094,31 @@ function MonsterHeroGame() {
       // デバッグ再生は見た目だけ。保存にも所持品にも触れない
       if (prize.debugPreview) { setRhythmEventRewardPrize(null); return; }
       await markRhythmEventRewardClaimed(prize.event.id);
-      const next = { ...ownedItemsRef.current };
-      // ダイヤは mh_gold と入れ物が別なので、いったん合計だけ数えて後から足す
-      let goldGain = 0;
-      for (const entry of prize.prizes) {
-        const item = rhythmEventRewardItem(entry.reward);
-        if (item && entry.reward.count > 0) next[item.id] = ownedItemCount(next, item.id) + entry.reward.count;
-        if (entry.reward.psyche > 0) next[BREAKTHROUGH_ITEM_ID] = ownedItemCount(next, BREAKTHROUGH_ITEM_ID) + entry.reward.psyche;
-        // 週間の順位報酬にはダイヤも付く(イベントの順位報酬には無い)
-        if (entry.reward.gold > 0) goldGain += entry.reward.gold;
-      }
-      // 参加報酬。週間は勇者の証片も付く
-      if (prize.participation) {
-        if (prize.participation.count > 0) {
-          next[HERO_PROOF_SHARD_ITEM_ID] = ownedItemCount(next, HERO_PROOF_SHARD_ITEM_ID) + prize.participation.count;
+      // ★アイテム欄へ直接入れず、**ギフトで届ける**(2026-09-14・ユーザー指摘
+      //   「イベント報酬が直接アイテム欄に入ってた / ギフト経由して」)。
+      //   黙って所持品が増えるのではなく、何をもらったかがギフトボックスに残る。
+      //   同じ中身を2か所で組み立てないよう、報酬の並べ方は rhythmEventGiftRewards が持つ
+      const rewards = rhythmEventGiftRewards(prize);
+      if (rewards.length > 0) {
+        const gift = {
+          id: `rhythm_event_${prize.event.id}`,
+          title: `${prize.event.name} の報酬`,
+          source: 'rhythmEvent',
+          rewards,
+        };
+        // ★保存の元は state ではなく**保存から読み直したもの**にする。
+        //   ほかの画面でギフトを受け取った直後だと、この画面が持っている一覧が古く、
+        //   そのまま書き戻すと受け取り済みの印が消える(CLAUDE.md ⑦)
+        const savedGifts = await storeGet('mh_gifts', [], false);
+        const before = Array.isArray(savedGifts) ? savedGifts : [];
+        const grant = grantGiftOnce(before, gift);
+        // すでに同じidがある(＝二重)ときは何もしない
+        if (grant.granted) {
+          const saved = await saveStoredValuesOrRollback(
+            [{ key:'mh_gifts', before, next:grant.gifts }], storeGet, storeSet);
+          if (saved) setGifts(grant.gifts);
+          else console.error('[rhythm-event-reward] gift save failed');
         }
-        // 勇者の証(2026-09-13・週末ゲリラ杯のお礼)。書いていないイベントでは0なので何もしない
-        if (prize.participation.heroProof > 0) {
-          next[HERO_PROOF_ITEM_ID] = ownedItemCount(next, HERO_PROOF_ITEM_ID) + prize.participation.heroProof;
-        }
-        if (prize.participation.psyche > 0) {
-          next[BREAKTHROUGH_ITEM_ID] = ownedItemCount(next, BREAKTHROUGH_ITEM_ID) + prize.participation.psyche;
-        }
-        if (prize.participation.gold > 0) goldGain += prize.participation.gold;
-      }
-      ownedItemsRef.current = next;
-      setOwnedItems(next);
-      await storeSet('mh_owned_items', next, false);
-      if (goldGain > 0) {
-        const nextGold = (goldRef.current || 0) + goldGain;
-        goldRef.current = nextGold;
-        setGold(nextGold);
-        await storeSet('mh_gold', nextGold, false);
       }
       setRhythmEventRewardPrize(null);
       // 同じ起動でもう1件あるかもしれない(2週間のあいだに2回開催した場合)

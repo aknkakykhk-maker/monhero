@@ -417,9 +417,12 @@ function RhythmEventRewardModal({ prize, onClaim, claiming }) {
         )}
         <button type="button" data-rhythm-event-reward-claim disabled={claiming} onClick={onClaim}
           className="mt-4 min-h-[52px] w-full rounded-2xl border-2 border-amber-300 bg-amber-500/20 text-sm font-black text-amber-50 active:scale-[.98] disabled:opacity-50">
-          {claiming ? '受け取っています…' : '🎁 受け取る'}
+          {claiming ? '受け取っています…' : '🎁 ギフトで受け取る'}
         </button>
-        <p className="mt-2 text-center text-[9px] leading-relaxed text-slate-400">超越の実・勇者の証・勇者の証片・虹のプシュケーはHOMEの「アイテム」から、ダイヤは画面上の表示から確認できます。{weekly&&'勇者の証片はマーケットで20個ごとに「勇者の証」1個と交換できます。'}</p>
+        {/* ★アイテム欄へ直接入れず、ギフトボックスへ届ける(2026-09-14・ユーザー指摘
+            「イベント報酬が直接アイテム欄に入ってた / ギフト経由して」)。
+            何をもらったかが残るので、あとから見返せる */}
+        <p className="mt-2 text-center text-[9px] leading-relaxed text-slate-400">報酬はHOMEの「ギフト」へ届きます。ギフトボックスで「受け取る」を押すと、アイテムとダイヤが入ります。{weekly&&'勇者の証片はマーケットで20個ごとに「勇者の証」1個と交換できます。'}</p>
       </div>
     </div>
   );

@@ -66,9 +66,10 @@ check('参加賞に勇者の証が入っている',!!reward&&reward.heroProof>0,
     songsSaid.length===0||songsSaid.every(n=>n===(reward&&reward.songs)),
     `会話 ${songsSaid.join('/')} ／ 実際 ${reward&&reward.songs}`);
 }
-check('配るのは参加賞のぶんだけ(入賞報酬は触っていない)',
-  /if \(prize\.participation\.heroProof > 0\)/.test(app)
-  &&/next\[HERO_PROOF_ITEM_ID\] = ownedItemCount\(next, HERO_PROOF_ITEM_ID\) \+ prize\.participation\.heroProof/.test(app));
+// 2026-09-14: アイテム欄へ直接入れるのをやめ、ギフトで届ける形にした
+check('勇者の証は参加賞のぶんだけギフトへ入る(入賞報酬は触っていない)',
+  /join\.heroProof>0&&typeof HERO_PROOF_ITEM!=='undefined'\)add\(GIFT_ITEM_REWARD_TYPE,HERO_PROOF_ITEM\.id,join\.heroProof\)/.test(shared)
+  &&!/entry\.reward\.heroProof/.test(shared));
 check('画面の参加賞の文にも出る',/reward\.heroProof>0/.test(shared));
 check('勇者の証を書いていないイベントでは0になる(既存の形をそのまま読める)',(()=>{
   const r=O.rhythmEventParticipationReward({kind:'limited',songIds:['a','b','c'],

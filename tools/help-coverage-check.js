@@ -39,6 +39,8 @@ vm.runInContext([
   "const loginBonusPeriodKey=(now=Date.now())=>new Date(Number(now)+5*60*60*1000).toISOString().slice(0,10);",
   grab(source, 'const missionDailyPeriod =', 'const missionClaimableList ='),
   grab(source, 'const DIFFICULTY_SETTINGS = {', 'const normalizeBattleDifficulty'),
+  // ギフトの本文はアイテムのidから名前を引くので、その仕組みも持ち込む(2026-09-14)
+  grab(source, 'const GIFT_ITEM_REWARD_TYPE', 'const grantGiftOnce'),
   grab(source, 'const giftRewardText = ', 'const giftTitleDisplay'),
   grab(source, 'const helpDataRows = (id)', '// ===== 助手(ナビゲーター) ここから ====='),
   "const SKIP_TICKETS = SKIP_TICKET_BY_DIFFICULTY;",
