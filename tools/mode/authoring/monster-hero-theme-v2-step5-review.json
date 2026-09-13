@@ -789,7 +789,7 @@
      },
      "playability": {
       "impossible": 0,
-      "strained": 1
+      "strained": 0
      },
      "noteCount": 335,
      "densityPerSecond": 2.3,
@@ -810,18 +810,11 @@
    },
    "distinctCandidates": 8,
    "totalVariants": 8,
-   "orderingKept": false,
-   "excludedByOrdering": [],
-   "excludedByPlayability": [
-    "calm",
-    "more",
-    "wide",
-    "base",
-    "sparse",
-    "dense",
-    "variety",
+   "orderingKept": true,
+   "excludedByOrdering": [
     "strong"
    ],
+   "excludedByPlayability": [],
    "candidates": [
     {
      "variant": "calm",
@@ -841,7 +834,7 @@
       "breathing": 1
      },
      "playability": {
-      "impossible": 3,
+      "impossible": 0,
       "strained": 7
      },
      "noteCount": 455,
@@ -871,8 +864,8 @@
       "breathing": 1
      },
      "playability": {
-      "impossible": 2,
-      "strained": 4
+      "impossible": 0,
+      "strained": 3
      },
      "noteCount": 475,
      "densityPerSecond": 3.21,
@@ -901,8 +894,8 @@
       "breathing": 1
      },
      "playability": {
-      "impossible": 3,
-      "strained": 7
+      "impossible": 0,
+      "strained": 5
      },
      "noteCount": 455,
      "densityPerSecond": 3.08,
@@ -929,8 +922,8 @@
       "breathing": 1
      },
      "playability": {
-      "impossible": 3,
-      "strained": 7
+      "impossible": 0,
+      "strained": 4
      },
      "noteCount": 455,
      "densityPerSecond": 3.08,
@@ -963,8 +956,8 @@
       "breathing": 1
      },
      "playability": {
-      "impossible": 5,
-      "strained": 5
+      "impossible": 0,
+      "strained": 6
      },
      "noteCount": 444,
      "densityPerSecond": 3,
@@ -997,8 +990,8 @@
       "breathing": 1
      },
      "playability": {
-      "impossible": 4,
-      "strained": 6
+      "impossible": 0,
+      "strained": 9
      },
      "noteCount": 454,
      "densityPerSecond": 3.07,
@@ -1029,8 +1022,8 @@
       "breathing": 1
      },
      "playability": {
-      "impossible": 5,
-      "strained": 5
+      "impossible": 0,
+      "strained": 4
      },
      "noteCount": 434,
      "densityPerSecond": 2.93,
@@ -1059,8 +1052,8 @@
       "breathing": 0.9375
      },
      "playability": {
-      "impossible": 3,
-      "strained": 6
+      "impossible": 0,
+      "strained": 9
      },
      "noteCount": 348,
      "densityPerSecond": 2.36,
@@ -1074,23 +1067,16 @@
    ]
   },
   "MASTER": {
-   "winner": "strong",
-   "winnerLabel": "強い音だけ拾う",
-   "winnerOverride": {
-    "minStrength": 0.1
-   },
+   "winner": "base",
+   "winnerLabel": "既定",
+   "winnerOverride": {},
    "distinctCandidates": 6,
    "totalVariants": 8,
-   "orderingKept": false,
-   "excludedByOrdering": [],
+   "orderingKept": true,
+   "excludedByOrdering": [
+    "strong"
+   ],
    "excludedByPlayability": [
-    "strong",
-    "base",
-    "more",
-    "wide",
-    "variety",
-    "dense",
-    "calm",
     "sparse"
    ],
    "candidates": [
@@ -1112,8 +1098,8 @@
       "breathing": 1
      },
      "playability": {
-      "impossible": 7,
-      "strained": 12
+      "impossible": 0,
+      "strained": 13
      },
      "noteCount": 484,
      "densityPerSecond": 3.28,
@@ -1140,8 +1126,8 @@
       "breathing": 1
      },
      "playability": {
-      "impossible": 5,
-      "strained": 13
+      "impossible": 0,
+      "strained": 14
      },
      "noteCount": 504,
      "densityPerSecond": 3.42,
@@ -1170,8 +1156,8 @@
       "breathing": 1
      },
      "playability": {
-      "impossible": 5,
-      "strained": 13
+      "impossible": 0,
+      "strained": 14
      },
      "noteCount": 504,
      "densityPerSecond": 3.42,
@@ -1200,8 +1186,8 @@
       "breathing": 1
      },
      "playability": {
-      "impossible": 5,
-      "strained": 13
+      "impossible": 0,
+      "strained": 14
      },
      "noteCount": 504,
      "densityPerSecond": 3.42,
@@ -1232,8 +1218,8 @@
       "breathing": 1
      },
      "playability": {
-      "impossible": 2,
-      "strained": 12
+      "impossible": 0,
+      "strained": 11
      },
      "noteCount": 497,
      "densityPerSecond": 3.36,
@@ -1266,8 +1252,8 @@
       "breathing": 1
      },
      "playability": {
-      "impossible": 6,
-      "strained": 10
+      "impossible": 0,
+      "strained": 13
      },
      "noteCount": 502,
      "densityPerSecond": 3.4,
@@ -1296,7 +1282,7 @@
       "breathing": 1
      },
      "playability": {
-      "impossible": 5,
+      "impossible": 0,
       "strained": 15
      },
      "noteCount": 504,
@@ -1330,7 +1316,7 @@
       "breathing": 1
      },
      "playability": {
-      "impossible": 7,
+      "impossible": 1,
       "strained": 14
      },
      "noteCount": 498,
