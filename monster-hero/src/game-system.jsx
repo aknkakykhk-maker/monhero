@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 11cee6631e943e67
+// generated-sha256: fcd2fd1a05a1e972
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -89,7 +89,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-13 20:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-13 20:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -13898,14 +13898,14 @@ scheduleTick();};
   </div>
 </div>}
 <dl className="grid grid-cols-2 gap-2 rounded-2xl bg-slate-900 p-4">{RHYTHM_JUDGMENT_IDS.map(id=><React.Fragment key={id}>
-  <dt>{id}</dt><dd className="text-right font-mono">{view.counts[id]}</dd>
-  {/* ★ぴったりのMARVELOUS(前後0.02秒以内)の回数。MARVELOUSの**内数**なので、そのすぐ下へ
-      字下げして出す(2026-09-13・ユーザー依頼「スコアには関係ないけど、JUST Marvelousも
-      リザルト結果に出したい」)。スコア・ランク・自己ベストには一切関わらない。 */}
+  {/* ★ぴったりのMARVELOUS(前後0.02秒以内)の回数。MARVELOUSの**内数**だが、並びは
+      MARVELOUSの**上**へ置く(2026-09-13・ユーザー指示「普通に表示はMarvelousの上に
+      JUST Marvelousがくるようにして」)。スコア・ランク・自己ベストには一切関わらない。 */}
   {id==='MARVELOUS'&&<React.Fragment key="precise">
-    <dt data-rhythm-result-precise-label className="pl-3 text-[11px] font-black text-cyan-200">└ JUST MARVELOUS</dt>
+    <dt data-rhythm-result-precise-label className="text-[11px] font-black text-cyan-200">JUST MARVELOUS</dt>
     <dd data-rhythm-result-precise className="text-right font-mono text-[11px] text-cyan-200">{Number(view.precise)||0}</dd>
   </React.Fragment>}
+  <dt>{id}</dt><dd className="text-right font-mono">{view.counts[id]}</dd>
 </React.Fragment>)}<dt>MAX COMBO</dt><dd className="text-right">{view.maxCombo}</dd><dt>FAST</dt><dd className="text-right">{view.fast}</dd><dt>SLOW</dt><dd className="text-right">{view.slow}</dd></dl><div className="mt-5 grid grid-cols-1 gap-2"><button className="min-h-[48px] rounded-xl bg-fuchsia-700 font-black" disabled={startLockRef.current} onClick={()=>beginRun(mergeRhythmBestRecord(runRef.current?.startBest,result))}>もう一度プレイ</button><button className="min-h-[48px] rounded-xl bg-indigo-700 font-black" onClick={abort}>{debugPlay?'音ゲーデバッグへ戻る':'曲えらびへ戻る'}</button></div></main>}
   /* ★ここへ属性を足すときは className の「後ろ」へ置く。
      rhythm-screen-layout-check.js が <main data-rhythm-tap-test className="…overflow-hidden という
@@ -15763,8 +15763,19 @@ function RhythmRankingScreen({
               {!isTotal&&(<React.Fragment>
                 <p className="mt-1 text-[10px] text-slate-400">最大コンボ {rhythmRankingDetail.detail?.maxCombo??'-'}</p>
                 <dl className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]">
-                  {RHYTHM_JUDGMENT_IDS.map(id=><React.Fragment key={id}><dt className="text-slate-400">{id}</dt><dd className="text-right font-mono text-white">{rhythmRankingDetail.detail?.judgments?.[id]??0}</dd></React.Fragment>)}
+                  {RHYTHM_JUDGMENT_IDS.map(id=><React.Fragment key={id}>
+                    {/* ぴったりのMARVELOUSの回数。MARVELOUSの**内数**だが、並びはリザルトとそろえて
+                        MARVELOUSの**上**へ置く(2026-09-13・ユーザー指示)。
+                        ★これより前に送られた記録には precise が無い。
+                          0と出すと「一度も取れていない」に見えるので「—」で分ける。 */}
+                    {id==='MARVELOUS'&&<React.Fragment key="precise">
+                      <dt data-rhythm-ranking-precise-label className="font-black text-cyan-200">JUST MARVELOUS</dt>
+                      <dd data-rhythm-ranking-precise className="text-right font-mono text-cyan-200">{Number.isFinite(Number(rhythmRankingDetail.detail?.precise))?Math.max(0,Math.floor(Number(rhythmRankingDetail.detail.precise))):'—'}</dd>
+                    </React.Fragment>}
+                    <dt className="text-slate-400">{id}</dt><dd className="text-right font-mono text-white">{rhythmRankingDetail.detail?.judgments?.[id]??0}</dd>
+                  </React.Fragment>)}
                 </dl>
+                {!Number.isFinite(Number(rhythmRankingDetail.detail?.precise))&&<p data-rhythm-ranking-precise-missing className="mt-1 text-[8px] text-slate-500">JUST MARVELOUSの「—」は、この記録を出したときはまだ数えていなかったことを示します。</p>}
                 <p className="mt-2 text-[9px] font-black text-amber-200">
                   {rhythmRankingDetail.detail?.allMarvelous?'ALL MARVELOUS!!':rhythmRankingDetail.detail?.allExcellent?'ALL EXCELLENT!!':rhythmRankingDetail.detail?.fullCombo?'FULL COMBO!':''}
                 </p>
@@ -21361,6 +21372,11 @@ function MonsterHeroGame() {
     const detail = {
       songId: song.songId, difficultyId: difficulty.id,
       judgments: result.judgments, maxCombo: result.maxCombo, fast: result.fast, slow: result.slow,
+      // ぴったりのMARVELOUSの回数(2026-09-13・ユーザー依頼「ランキングからのスコア詳細では
+      // JUST Marvelousも見れるようにして」)。party はJSONの列なので**項目を足すだけ**で済み、
+      // テーブルの形は変えない。これより前の記録にはこの項目が無いので、
+      // 読む側(ランキングの詳細)は「無い」と「0回」を分けて出す。
+      precise: Math.max(0, Math.floor(Number(result.precise) || 0)),
       fullCombo: !!result.fullCombo, allExcellent: !!result.allExcellent, allMarvelous: !!result.allMarvelous,
     };
     // partyは既存モードと同じ「配列」の形で送る(種族チャレンジ等が常に配列で送っているため、

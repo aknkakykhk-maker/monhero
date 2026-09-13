@@ -29,9 +29,25 @@ ok('判定・スコア・コンボの数え方は変えていない',
   &&!/precise[^\n]{0,40}rhythmCalculateScore/.test(game));
 ok('リザルトの結果と画面へ渡している',
   game.includes('precise:run.precise,cleared:!failed,')&&game.includes('slow:run.slow,precise:run.precise,life:run.life,'));
-ok('リザルトの内訳にMARVELOUSの内数として出す',
-  game.includes('data-rhythm-result-precise')&&game.includes('└ JUST MARVELOUS')
-  &&game.includes("{id==='MARVELOUS'&&<React.Fragment key=\"precise\">"));
+// 並びは MARVELOUS の**上**(2026-09-13・ユーザー指示「普通に表示はMarvelousの上に
+// JUST Marvelousがくるようにして」)。内数の行が、その判定の行より前に出ていることを見る。
+ok('リザルトの内訳でMARVELOUSのすぐ上に出す',
+  game.includes('data-rhythm-result-precise')&&game.includes('>JUST MARVELOUS<')
+  &&game.includes("{id==='MARVELOUS'&&<React.Fragment key=\"precise\">")
+  &&/data-rhythm-result-precise[\s\S]{0,400}<dt>\{id\}<\/dt>/.test(game)
+  &&!game.includes('└ JUST MARVELOUS'));
+// ランキングのスコア詳細(2026-09-13・ユーザー依頼「ランキングからのスコア詳細では
+// JUST Marvelousも見れるようにして」)。
+// ★party はJSONの列なので**項目を足すだけ**。テーブルの形は変えない(CLAUDE.md ⑦)。
+ok('全国ランキングへも送っている',
+  /const detail = \{[\s\S]{0,900}precise: Math\.max\(0, Math\.floor\(Number\(result\.precise\) \|\| 0\)\),/.test(game));
+ok('ランキングの詳細でもMARVELOUSのすぐ上に出す',
+  game.includes('data-rhythm-ranking-precise')
+  &&/data-rhythm-ranking-precise[\s\S]{0,600}rhythmRankingDetail\.detail\?\.judgments\?\.\[id\]/.test(game));
+// ★前の記録には precise が無い。0と出すと「一度も取れていない」に見えるので分ける
+ok('古い記録の「無い」と「0回」を分けて出す',
+  /Number\.isFinite\(Number\(rhythmRankingDetail\.detail\?\.precise\)\)\?[\s\S]{0,160}:'—'/.test(game)
+  &&game.includes('data-rhythm-ranking-precise-missing'));
 // 自己ベストの保存形式は触らない(mergeRhythmBestRecord はキーを選んで写す)
 ok('自己ベストの保存形式へは足していない',
   !/normalizeRhythmBestRecord\(\{[\s\S]{0,400}precise/.test(game));

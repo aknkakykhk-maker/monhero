@@ -1920,6 +1920,11 @@ function MonsterHeroGame() {
     const detail = {
       songId: song.songId, difficultyId: difficulty.id,
       judgments: result.judgments, maxCombo: result.maxCombo, fast: result.fast, slow: result.slow,
+      // ぴったりのMARVELOUSの回数(2026-09-13・ユーザー依頼「ランキングからのスコア詳細では
+      // JUST Marvelousも見れるようにして」)。party はJSONの列なので**項目を足すだけ**で済み、
+      // テーブルの形は変えない。これより前の記録にはこの項目が無いので、
+      // 読む側(ランキングの詳細)は「無い」と「0回」を分けて出す。
+      precise: Math.max(0, Math.floor(Number(result.precise) || 0)),
       fullCombo: !!result.fullCombo, allExcellent: !!result.allExcellent, allMarvelous: !!result.allMarvelous,
     };
     // partyは既存モードと同じ「配列」の形で送る(種族チャレンジ等が常に配列で送っているため、

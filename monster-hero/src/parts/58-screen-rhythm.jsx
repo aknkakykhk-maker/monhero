@@ -769,8 +769,19 @@ function RhythmRankingScreen({
               {!isTotal&&(<React.Fragment>
                 <p className="mt-1 text-[10px] text-slate-400">最大コンボ {rhythmRankingDetail.detail?.maxCombo??'-'}</p>
                 <dl className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]">
-                  {RHYTHM_JUDGMENT_IDS.map(id=><React.Fragment key={id}><dt className="text-slate-400">{id}</dt><dd className="text-right font-mono text-white">{rhythmRankingDetail.detail?.judgments?.[id]??0}</dd></React.Fragment>)}
+                  {RHYTHM_JUDGMENT_IDS.map(id=><React.Fragment key={id}>
+                    {/* ぴったりのMARVELOUSの回数。MARVELOUSの**内数**だが、並びはリザルトとそろえて
+                        MARVELOUSの**上**へ置く(2026-09-13・ユーザー指示)。
+                        ★これより前に送られた記録には precise が無い。
+                          0と出すと「一度も取れていない」に見えるので「—」で分ける。 */}
+                    {id==='MARVELOUS'&&<React.Fragment key="precise">
+                      <dt data-rhythm-ranking-precise-label className="font-black text-cyan-200">JUST MARVELOUS</dt>
+                      <dd data-rhythm-ranking-precise className="text-right font-mono text-cyan-200">{Number.isFinite(Number(rhythmRankingDetail.detail?.precise))?Math.max(0,Math.floor(Number(rhythmRankingDetail.detail.precise))):'—'}</dd>
+                    </React.Fragment>}
+                    <dt className="text-slate-400">{id}</dt><dd className="text-right font-mono text-white">{rhythmRankingDetail.detail?.judgments?.[id]??0}</dd>
+                  </React.Fragment>)}
                 </dl>
+                {!Number.isFinite(Number(rhythmRankingDetail.detail?.precise))&&<p data-rhythm-ranking-precise-missing className="mt-1 text-[8px] text-slate-500">JUST MARVELOUSの「—」は、この記録を出したときはまだ数えていなかったことを示します。</p>}
                 <p className="mt-2 text-[9px] font-black text-amber-200">
                   {rhythmRankingDetail.detail?.allMarvelous?'ALL MARVELOUS!!':rhythmRankingDetail.detail?.allExcellent?'ALL EXCELLENT!!':rhythmRankingDetail.detail?.fullCombo?'FULL COMBO!':''}
                 </p>

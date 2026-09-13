@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c16a35f6a38ee236
+// source-sha256: 9f79f04fcacb2274
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 11cee6631e943e67
+// generated-sha256: fcd2fd1a05a1e972
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-13 20:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-13 20:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -24067,17 +24067,17 @@ const RhythmTapTest = ({
       className: "grid grid-cols-2 gap-2 rounded-2xl bg-slate-900 p-4"
     }, RHYTHM_JUDGMENT_IDS.map(id => /*#__PURE__*/React.createElement(React.Fragment, {
       key: id
-    }, /*#__PURE__*/React.createElement("dt", null, id), /*#__PURE__*/React.createElement("dd", {
-      className: "text-right font-mono"
-    }, view.counts[id]), id === 'MARVELOUS' && /*#__PURE__*/React.createElement(React.Fragment, {
+    }, id === 'MARVELOUS' && /*#__PURE__*/React.createElement(React.Fragment, {
       key: "precise"
     }, /*#__PURE__*/React.createElement("dt", {
       "data-rhythm-result-precise-label": true,
-      className: "pl-3 text-[11px] font-black text-cyan-200"
-    }, "\u2514 JUST MARVELOUS"), /*#__PURE__*/React.createElement("dd", {
+      className: "text-[11px] font-black text-cyan-200"
+    }, "JUST MARVELOUS"), /*#__PURE__*/React.createElement("dd", {
       "data-rhythm-result-precise": true,
       className: "text-right font-mono text-[11px] text-cyan-200"
-    }, Number(view.precise) || 0)))), /*#__PURE__*/React.createElement("dt", null, "MAX COMBO"), /*#__PURE__*/React.createElement("dd", {
+    }, Number(view.precise) || 0)), /*#__PURE__*/React.createElement("dt", null, id), /*#__PURE__*/React.createElement("dd", {
+      className: "text-right font-mono"
+    }, view.counts[id]))), /*#__PURE__*/React.createElement("dt", null, "MAX COMBO"), /*#__PURE__*/React.createElement("dd", {
       className: "text-right"
     }, view.maxCombo), /*#__PURE__*/React.createElement("dt", null, "FAST"), /*#__PURE__*/React.createElement("dd", {
       className: "text-right"
@@ -27441,11 +27441,22 @@ function RhythmRankingScreen({
       className: "mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]"
     }, RHYTHM_JUDGMENT_IDS.map(id => /*#__PURE__*/React.createElement(React.Fragment, {
       key: id
+    }, id === 'MARVELOUS' && /*#__PURE__*/React.createElement(React.Fragment, {
+      key: "precise"
     }, /*#__PURE__*/React.createElement("dt", {
+      "data-rhythm-ranking-precise-label": true,
+      className: "font-black text-cyan-200"
+    }, "JUST MARVELOUS"), /*#__PURE__*/React.createElement("dd", {
+      "data-rhythm-ranking-precise": true,
+      className: "text-right font-mono text-cyan-200"
+    }, Number.isFinite(Number(rhythmRankingDetail.detail?.precise)) ? Math.max(0, Math.floor(Number(rhythmRankingDetail.detail.precise))) : '—')), /*#__PURE__*/React.createElement("dt", {
       className: "text-slate-400"
     }, id), /*#__PURE__*/React.createElement("dd", {
       className: "text-right font-mono text-white"
-    }, rhythmRankingDetail.detail?.judgments?.[id] ?? 0)))), /*#__PURE__*/React.createElement("p", {
+    }, rhythmRankingDetail.detail?.judgments?.[id] ?? 0)))), !Number.isFinite(Number(rhythmRankingDetail.detail?.precise)) && /*#__PURE__*/React.createElement("p", {
+      "data-rhythm-ranking-precise-missing": true,
+      className: "mt-1 text-[8px] text-slate-500"
+    }, "JUST MARVELOUS\u306E\u300C\u2014\u300D\u306F\u3001\u3053\u306E\u8A18\u9332\u3092\u51FA\u3057\u305F\u3068\u304D\u306F\u307E\u3060\u6570\u3048\u3066\u3044\u306A\u304B\u3063\u305F\u3053\u3068\u3092\u793A\u3057\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("p", {
       className: "mt-2 text-[9px] font-black text-amber-200"
     }, rhythmRankingDetail.detail?.allMarvelous ? 'ALL MARVELOUS!!' : rhythmRankingDetail.detail?.allExcellent ? 'ALL EXCELLENT!!' : rhythmRankingDetail.detail?.fullCombo ? 'FULL COMBO!' : ''))));
   })(), boardTab && eventDetailOpen && /*#__PURE__*/React.createElement("div", {
@@ -39006,6 +39017,11 @@ function MonsterHeroGame() {
       maxCombo: result.maxCombo,
       fast: result.fast,
       slow: result.slow,
+      // ぴったりのMARVELOUSの回数(2026-09-13・ユーザー依頼「ランキングからのスコア詳細では
+      // JUST Marvelousも見れるようにして」)。party はJSONの列なので**項目を足すだけ**で済み、
+      // テーブルの形は変えない。これより前の記録にはこの項目が無いので、
+      // 読む側(ランキングの詳細)は「無い」と「0回」を分けて出す。
+      precise: Math.max(0, Math.floor(Number(result.precise) || 0)),
       fullCombo: !!result.fullCombo,
       allExcellent: !!result.allExcellent,
       allMarvelous: !!result.allMarvelous
