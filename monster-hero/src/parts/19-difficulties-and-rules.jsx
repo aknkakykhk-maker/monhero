@@ -437,6 +437,8 @@ const QUICK_EXTREME_SETTINGS = Object.freeze({
   NIGHTMARE: { label:'NIGHTMARE', power:NIGHTMARE_SETTING.power, xp:25, gold:6, psyche:40, bg:'#6b21a8', text:'#e9d5ff' },
   CHAOS: { label:'CHAOS', power:CHAOS_SETTING.power, xp:30, gold:9, psyche:50, bg:'#581c87', text:'#f5d0fe' },
   ULTIMATE: QUICK_ULTIMATE_SETTING,
+  INFINITY: { label:'INFINITY', power:INFINITY_SETTING.power, xp:40, gold:18, psyche:80, bg:'#1d4ed8', text:'#93c5fd' },
+  GOD: { label:'GOD', power:GOD_SETTING.power, xp:45, gold:24, psyche:100, bg:'#a16207', text:'#fde68a' },
 });
 const QUICK_DIFFICULTY_SETTINGS = Object.freeze({
   ...DIFFICULTY_SETTINGS,
@@ -834,6 +836,7 @@ const CLEAR_PSYCHE_REWARD = Object.freeze({
   Master: 10, GrandMaster: 15, Hell: 20, Legend: 25,
   EXTREME: 30, NIGHTMARE: 40, CHAOS: 50,
   ULTIMATE: QUICK_ULTIMATE_SETTING.psyche,
+  INFINITY: QUICK_EXTREME_SETTINGS.INFINITY.psyche, GOD: QUICK_EXTREME_SETTINGS.GOD.psyche,
 });
 const clearPsycheReward = (difficulty) => Math.max(0, Math.floor(Number(CLEAR_PSYCHE_REWARD[normalizeBattleDifficulty(difficulty)]) || 0));
 // ヘルプの中に出す「実データから作る表」。data/help.js の { t:'data', id } がこれを呼ぶ。

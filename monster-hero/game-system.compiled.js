@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b73172d9f7136279
+// source-sha256: 203822512ddef948
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9649f4815f251033
+// generated-sha256: e1462ec30a61398f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-13 23:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-14 00:58"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1909,7 +1909,7 @@ const HERO_PROOF_SHARD_ITEM = Object.freeze({
   name: '勇者の証片',
   emoji: '🎖️',
   usage: 'heroProofShard',
-  desc: `モンヒロビートの週間ランキングでもらえるかけら。マーケットで${HERO_PROOF_SHARD_PER_PROOF}個ごとに「勇者の証」1個と交換できる。`
+  desc: `モンヒロビートの週間ランキングと、クイックモードGODのクリアでもらえるかけら。マーケットで${HERO_PROOF_SHARD_PER_PROOF}個ごとに「勇者の証」1個と交換できる。`
 });
 const HERO_PROOF_CLEAR_REWARDS = Object.freeze({
   extreme: Object.freeze({
@@ -1943,6 +1943,20 @@ const heroProofClearReward = ({
   if (extremeDifficulty) return HERO_PROOF_CLEAR_REWARDS.extreme[extremeDifficulty] || 0;
   return 0;
 };
+// クイックの高難易度でもらえる勇者の証片(2026-09-13・ユーザーが決めた)。
+// 配るのは「証」ではなく「証片」なので、上の表とは別に持つ(20個で証1個と交換)。
+// クイックは∞周回とモンヒロビート連動で周回数がまとまって入るため、虹のプシュケーと
+// 同じく「1周につき◯個」を周回数ぶん配る。デバッグ戦では配らない。
+const HERO_PROOF_SHARD_CLEAR_REWARDS = Object.freeze({
+  quick: Object.freeze({
+    GOD: 1
+  })
+});
+const heroProofShardClearReward = ({
+  runMode,
+  difficulty,
+  debug = false
+} = {}) => debug || !isQuickMode(runMode) ? 0 : HERO_PROOF_SHARD_CLEAR_REWARDS.quick[difficulty] || 0;
 // 超越ポイントリセットの書。マーケット(data/breeder.js)の同じIDを指す
 const TRANSCEND_RESET_ITEM_ID = 'transcend_reset_scroll';
 const BREAKTHROUGH_ITEM_BASE = 5;
@@ -13571,7 +13585,25 @@ const QUICK_EXTREME_SETTINGS = Object.freeze({
     bg: '#581c87',
     text: '#f5d0fe'
   },
-  ULTIMATE: QUICK_ULTIMATE_SETTING
+  ULTIMATE: QUICK_ULTIMATE_SETTING,
+  INFINITY: {
+    label: 'INFINITY',
+    power: INFINITY_SETTING.power,
+    xp: 40,
+    gold: 18,
+    psyche: 80,
+    bg: '#1d4ed8',
+    text: '#93c5fd'
+  },
+  GOD: {
+    label: 'GOD',
+    power: GOD_SETTING.power,
+    xp: 45,
+    gold: 24,
+    psyche: 100,
+    bg: '#a16207',
+    text: '#fde68a'
+  }
 });
 const QUICK_DIFFICULTY_SETTINGS = Object.freeze({
   ...DIFFICULTY_SETTINGS,
@@ -13970,7 +14002,9 @@ const CLEAR_PSYCHE_REWARD = Object.freeze({
   EXTREME: 30,
   NIGHTMARE: 40,
   CHAOS: 50,
-  ULTIMATE: QUICK_ULTIMATE_SETTING.psyche
+  ULTIMATE: QUICK_ULTIMATE_SETTING.psyche,
+  INFINITY: QUICK_EXTREME_SETTINGS.INFINITY.psyche,
+  GOD: QUICK_EXTREME_SETTINGS.GOD.psyche
 });
 const clearPsycheReward = difficulty => Math.max(0, Math.floor(Number(CLEAR_PSYCHE_REWARD[normalizeBattleDifficulty(difficulty)]) || 0));
 // ヘルプの中に出す「実データから作る表」。data/help.js の { t:'data', id } がこれを呼ぶ。
@@ -18781,7 +18815,15 @@ const RewardSummaryCard = ({
     "aria-hidden": "true"
   }, "\uD83C\uDFC5"), "\u52C7\u8005\u306E\u8A3C"), /*#__PURE__*/React.createElement("span", {
     className: "text-white font-mono font-bold"
-  }, "\xD7", summary.heroProofGain.toLocaleString())), summary.heroBondGain && /*#__PURE__*/React.createElement("div", {
+  }, "\xD7", summary.heroProofGain.toLocaleString())), summary.heroProofShardGain > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "pt-2 border-t border-white/10 flex items-center justify-between text-[11px]"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-amber-200 font-black flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement("span", {
+    "aria-hidden": "true"
+  }, "\uD83C\uDF96\uFE0F"), "\u52C7\u8005\u306E\u8A3C\u7247"), /*#__PURE__*/React.createElement("span", {
+    className: "text-white font-mono font-bold"
+  }, "\xD7", summary.heroProofShardGain.toLocaleString())), summary.heroBondGain && /*#__PURE__*/React.createElement("div", {
     className: "pt-2 border-t border-white/10"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between text-[11px] mb-1"
@@ -24104,7 +24146,9 @@ const RhythmTapTest = ({
       className: "text-pink-300"
     }, "+", Number(quickRunAward.bond).toLocaleString())), quickRunAward.psyche > 0 && /*#__PURE__*/React.createElement("span", null, "\uD83C\uDF08 ", /*#__PURE__*/React.createElement("b", {
       className: "text-fuchsia-200"
-    }, "+", Number(quickRunAward.psyche).toLocaleString())))), /*#__PURE__*/React.createElement("dl", {
+    }, "+", Number(quickRunAward.psyche).toLocaleString())), quickRunAward.shard > 0 && /*#__PURE__*/React.createElement("span", null, "\uD83C\uDF96\uFE0F ", /*#__PURE__*/React.createElement("b", {
+      className: "text-amber-200"
+    }, "+", Number(quickRunAward.shard).toLocaleString())))), /*#__PURE__*/React.createElement("dl", {
       className: "grid grid-cols-2 gap-2 rounded-2xl bg-slate-900 p-4"
     }, RHYTHM_JUDGMENT_IDS.map(id => /*#__PURE__*/React.createElement(React.Fragment, {
       key: id
@@ -40353,6 +40397,22 @@ function MonsterHeroGame() {
       setOwnedItems(nextItems);
       await storeSet('mh_owned_items', nextItems, false);
     }
+    // ---- 勇者の証片 ----
+    // 1周につきの個数は heroProofShardClearReward が正本(実バトルのクリアと同じ関数を通す)
+    const oneShard = heroProofShardClearReward({
+      runMode,
+      difficulty
+    });
+    const shardGain = Math.max(0, Math.floor(oneShard * count));
+    if (shardGain > 0) {
+      const nextItems = {
+        ...ownedItemsRef.current,
+        [HERO_PROOF_SHARD_ITEM_ID]: ownedItemCount(ownedItemsRef.current, HERO_PROOF_SHARD_ITEM_ID) + shardGain
+      };
+      ownedItemsRef.current = nextItems;
+      setOwnedItems(nextItems);
+      await storeSet('mh_owned_items', nextItems, false);
+    }
     // ---- クリア回数・ミッション・助手の絆 ----
     // 記録(最高スコア・最高WAVE)は触らない。演奏にはスコアが無いため
     const nextQuick = (quickClearCounts[difficulty] || 0) + count;
@@ -40378,6 +40438,7 @@ function MonsterHeroGame() {
       gold: goldGain,
       bond: bondGain,
       psyche: psycheGain,
+      shard: shardGain,
       fromLoop,
       toLoop,
       scale,
@@ -45632,6 +45693,29 @@ function MonsterHeroGame() {
     }));
     return gain;
   };
+  // クイックGODのクリアでもらえる勇者の証片。個数は heroProofShardClearReward が正本。
+  // 証そのもの(awardHeroProofForClear)とは別のアイテムなので、足す先も別にする。
+  // 所持数は他の消耗アイテムと同じ mh_owned_items へ足すので、新しい保存キーは作らない。
+  const awardHeroProofShardForClear = async () => {
+    const gain = heroProofShardClearReward({
+      runMode,
+      difficulty,
+      debug: debugBattleRef.current || runHasDebugOnlyMonster()
+    });
+    if (gain <= 0) return 0;
+    const nextItems = {
+      ...ownedItemsRef.current,
+      [HERO_PROOF_SHARD_ITEM_ID]: ownedItemCount(ownedItemsRef.current, HERO_PROOF_SHARD_ITEM_ID) + gain
+    };
+    ownedItemsRef.current = nextItems;
+    setOwnedItems(nextItems);
+    await storeSet('mh_owned_items', nextItems, false);
+    setFinalRewardSummary(prev => ({
+      ...(prev || {}),
+      heroProofShardGain: gain
+    }));
+    return gain;
+  };
   const recordClearOnce = async () => {
     if (clearRecordedRef.current) return;
     clearRecordedRef.current = true;
@@ -45640,6 +45724,7 @@ function MonsterHeroGame() {
     // 敗北・リタイア・スキップチケットはこの関数を通らないので配られない
     await awardClearPsyche();
     await awardHeroProofForClear();
+    await awardHeroProofShardForClear();
     // 種族チャレンジのクリア回数は「種族×難易度」ごとに
     // mh_species_challenge_progress_v1 へ積む(persistSpeciesChallengeClearRewardが正本)。
     // チャレンジの mh_clears_* と極限の mh_extreme_clears_* はどちらも書き換えない。
@@ -54735,6 +54820,11 @@ function MonsterHeroGame() {
           difficulty: key,
           debug: debugBattle
         });
+        const heroProofShardReward = heroProofShardClearReward({
+          runMode: battleMode,
+          difficulty: key,
+          debug: debugBattle
+        });
         return /*#__PURE__*/React.createElement("article", {
           key: key,
           "aria-disabled": !quickUnlocked,
@@ -54814,7 +54904,10 @@ function MonsterHeroGame() {
         }, "\uD83C\uDFC5\u52C7\u8005\u306E\u8A3C\uFF1A", heroProofReward, "\u500B") : /*#__PURE__*/React.createElement("span", {
           "aria-hidden": "true",
           className: "block text-[10px]"
-        }, "\xA0"))))), /*#__PURE__*/React.createElement("div", {
+        }, "\xA0")), quick && heroProofShardReward > 0 && /*#__PURE__*/React.createElement("b", {
+          "data-hero-proof-shard-reward": key,
+          className: "block text-[10px] text-amber-100"
+        }, "\uD83C\uDF96\uFE0F \u52C7\u8005\u306E\u8A3C\u7247\uFF1A", heroProofShardReward, "\u500B")))), /*#__PURE__*/React.createElement("div", {
           className: `grid gap-1.5 mt-1.5 ${quick ? 'mt-auto' : ''}`
         }, !species && /*#__PURE__*/React.createElement("button", {
           disabled: !!battleTutorial,
@@ -56443,6 +56536,7 @@ function MonsterHeroGame() {
             gold: 0,
             bond: 0,
             psyche: 0,
+            shard: 0,
             fromLoop: 0,
             toLoop: 0
           });

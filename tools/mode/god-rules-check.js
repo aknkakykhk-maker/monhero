@@ -41,7 +41,10 @@ check('最低1ダメージ保証なし',applyGod(1,170,0,[8,0,0,0],9,'atk')===0&
 check('170Tでも有限・非負', [1,9].every(w=>[20,40,60,80,100,120,140,160,170].every(t=>{const vals=[damage(t,'GOD',w),combined(t,0,[8,0,0,0],'GOD',w,'atk'),enemy(t,'GOD')*divinity(w).enemyMultiplier];return vals.every(v=>Number.isFinite(v)&&v>=0);}))); 
 check('通常UIへGODを公開しINFINITYクリアで解放',source.includes("available:true, debugAvailable:true")&&source.includes("setting.id==='GOD'?godUnlocked:setting.id==='RAGNAROK'?ragnarokUnlocked:false")&&source.includes("'INFINITYクリアで解放'"));
 check('GODランキングと記録を公開一覧へ分離',source.includes('PUBLIC_EXTREME_DIFFICULTIES.map(setting=><button')&&source.includes('? PUBLIC_EXTREME_DIFFICULTIES.map(setting=>'));
-check('Quick GODなし',G('QUICK_EXTREME_SETTINGS').GOD===undefined);
+// 2026-09-13・ユーザー依頼でクイックへも公開した(報酬は案A)。極限本体の数値は上の検査が見ている。
+check('QuickへGODを公開(経験値45/ダイヤ24/虹100・敵強度は本体を参照)',
+  G('QUICK_EXTREME_SETTINGS').GOD?.xp===45&&G('QUICK_EXTREME_SETTINGS').GOD?.gold===24
+  &&G('QUICK_EXTREME_SETTINGS').GOD?.psyche===100&&G('QUICK_EXTREME_SETTINGS').GOD?.power===G('GOD_SETTING').power);
 check('デバッグ保存禁止経路を維持',source.includes('if (debugBattleRef.current) return;')&&source.includes('if (debugBattleRef.current) {')&&source.includes('debugBattleRef.current=true;debugMonsterPreviewRef.current=true'));
 check('既存難易度値を維持',G('INFINITY_SETTING').power===50&&G('ULTIMATE_SETTING').specialRules.distanceBreak.interval===35&&G('CHAOS_SETTING').specialRules.damageDealt===.5);
 if(failed){console.error(`\n${failed}件のGOD検査に失敗しました。`);process.exit(1);}console.log('\nGOD rules check passed.');
