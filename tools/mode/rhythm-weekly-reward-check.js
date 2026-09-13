@@ -16,6 +16,7 @@ const rhythmData=read('monster-hero/data/rhythm-mode.js');
 const supa=read('monster-hero/src/parts/26-supabase.jsx');
 const app=read('monster-hero/src/parts/60-app.jsx');
 const screen=read('monster-hero/src/parts/58-screen-rhythm.jsx');
+const history=read('monster-hero/src/parts/73-screen-rhythm-history.jsx');
 const market=read('monster-hero/src/parts/55-screen-breeder-market.jsx');
 const inventory=read('monster-hero/src/parts/54-screen-item-inventory.jsx');
 const masu=read('monster-hero/src/parts/11-masu-progression.jsx');
@@ -40,7 +41,7 @@ vm.runInContext(`${demoIds}\n${eventData}\n`
   +'RHYTHM_WEEK_MS,rhythmWeeklyRewardForRank,rhythmWeeksAwaitingReward,rhythmWeekId,'
   +'rhythmEventRewardForRank,rhythmEventRewardRankCount,rhythmEventParticipationReward,'
   +'rhythmEventParticipationCleared,rhythmEventHasRewards,rhythmEventPlayBonusRates,rhythmWeeklyEvent,'
-  +'rhythmEventPeriodText,rhythmWeekWindow,rhythmHistoryEntries};',context);
+  +'rhythmEventPeriodText,rhythmWeekWindow,rhythmHistoryEntries,RHYTHM_WEEKLY_HISTORY_FROM_MS};',context);
 const O=context.out;
 const weekly={kind:'weekly'};
 
@@ -141,19 +142,51 @@ check('古い期間を受け取ったら使わない(先週のスコアを今週
 check('期間を端末の時計で代用しない(時計を進めて別の週を見られないように)',
   !/weekWindow = .*rhythmWeekWindow\(Date\.now\(\)\)/.test(app));
 
-// ⑪ 「これまでの記録」に週間が並びはじめるのは、累計方式で1週まるごと終わってから
+// ⑪ 「これまでの記録」に終わった週が新しい順に並ぶ
+//    ★2026-09-14にユーザー依頼で、累計方式より前の週も載せるようにした
+//      (当時の数え方=ベスト合算で集計するので、当時の順位と数字が変わらない)
 {
   const from=O.RHYTHM_WEEKLY_REWARD_FROM_MS;
   const ids=(t)=>O.rhythmHistoryEntries(t).filter(e=>e.kind==='weekly').map(e=>e.id);
-  check('始めた直後は週間がまだ1つも無い(ベスト合算だったころの週を混ぜない)',
-    ids(from+1000).length===0&&ids(from+O.RHYTHM_WEEK_MS-1000).length===0);
-  check('最初の週が終わると1件目が並ぶ',
-    ids(from+O.RHYTHM_WEEK_MS).join(',')===O.rhythmWeekId(from));
-  check('そのあとは終わった週が新しい順に増える',
-    ids(from+2*O.RHYTHM_WEEK_MS).length===2
-    &&ids(from+2*O.RHYTHM_WEEK_MS)[0]===O.rhythmWeekId(from+O.RHYTHM_WEEK_MS));
-  check('終わったイベントは始めた直後から並ぶ',
+  check('累計方式が始まった直後でも、その前の週が並ぶ',
+    ids(from+1000).length===1&&ids(from+1000)[0]===O.rhythmWeekId(from-O.RHYTHM_WEEK_MS));
+  check('最初の累計方式の週が終わると、そのぶんも並ぶ',
+    ids(from+O.RHYTHM_WEEK_MS).length===2
+    &&ids(from+O.RHYTHM_WEEK_MS)[0]===O.rhythmWeekId(from));
+  check('新しい順に並ぶ',(()=>{
+    const list=O.rhythmHistoryEntries(from+2*O.RHYTHM_WEEK_MS);
+    return list.length>=3&&list.every((e,i)=>i===0||list[i-1].endMs>=e.endMs);
+  })());
+  check('終わったイベントも並ぶ',
     O.rhythmHistoryEntries(from+1000).some(e=>e.kind==='limited'));
+}
+
+// ⑫ 「その週のものか」を画面で確かめられる(2026-09-14)
+check('週間の行に最後の記録の日時を出す',
+  supa.includes('lastScoredAtMs:')
+  &&screen.includes('data-rhythm-week-last')
+  &&/eventWeekly&&entry\.lastScoredAtMs&&<p data-rhythm-week-last/.test(screen));
+
+// ⑬ 累計方式より前の週も「これまでの記録」に載せる(当時の数え方で集計する)
+{
+  const from=O.RHYTHM_WEEKLY_REWARD_FROM_MS;
+  const weeks=(t)=>O.rhythmHistoryEntries(t).filter(e=>e.kind==='weekly');
+  const now=weeks(from+1000);
+  check('累計方式より前の週も並ぶ',now.length>=1,now.map(w=>w.id+'('+w.scoring+')').join(' / '));
+  check('前の週は当時の数え方(ベスト合算)の印が付く',
+    now.every(w=>w.startMs<from?w.scoring==='best':w.scoring==='total'));
+  check('累計方式になってからの週は累計の印が付く',
+    weeks(from+O.RHYTHM_WEEK_MS).filter(w=>w.startMs>=from).every(w=>w.scoring==='total'));
+  check('週間ランキングが遊べるようになる前の週までは遡らない',
+    weeks(from+1000).every(w=>w.startMs>=O.RHYTHM_WEEKLY_HISTORY_FROM_MS));
+  check('数え方で集計する関数を選び分ける',
+    /const historyWeekScoring = \(kind === 'history' && historyEntry\.kind === 'weekly'\)/.test(app)
+    &&/const weeklyTotals = \(\(kind === 'weekly'\) \|\| historyWeekScoring === 'total'\) && !targetSongId;/.test(app));
+  check('どちらの数え方かを画面で伝える',
+    history.includes('data-rhythm-history-best-note')&&history.includes('data-rhythm-history-total-note')
+    &&/const weeklyBest = weekly && selected\.scoring === 'best';/.test(history));
+  check('前の週では「遊んだ回数」を出さない(当時は数えていないため)',
+    /weeklyTotals\?`\$\{entry\.playCount\}回 ・ `:''/.test(history));
 }
 
 // ⑦ 週間に回数ボーナスは付けない
@@ -182,7 +215,7 @@ check('予行演習(rollback)と手順書がそろっている',
 // 2026-09-13、履歴(終わった週をあとから見る)も同じ累計方式で数える
 check('アプリは累計の関数を呼ぶ',
   supa.includes('rpc/rhythm_week_score_totals')
-  &&/const weeklyTotals = \(kind === 'weekly' \|\| \(kind === 'history' && historyEntry\.kind === 'weekly'\)\) && !targetSongId;/.test(app));
+  &&/const weeklyTotals = \(\(kind === 'weekly'\) \|\| historyWeekScoring === 'total'\) && !targetSongId;/.test(app));
 check('関数が無い環境を「準備中」として扱う',
   /rhythm_week_score_totals\|rhythm_event_song_bests/.test(supa));
 check('端末側で累計を足していない',

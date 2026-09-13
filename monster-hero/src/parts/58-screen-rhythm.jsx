@@ -600,6 +600,10 @@ function RhythmRankingScreen({
           <div className="min-w-0 flex-1">
             <p className="truncate text-xs font-black text-white">{entry.userName}</p>
             <p className="text-[9px] text-slate-400">{eventWeekly?`${entry.playCount}回 ・ ${entry.songCount}曲`:`${entry.songCount} / ${eventSongCount}曲`} ・ Lv.{entry.level}</p>
+            {/* ★週間は「いつの記録か」を出す(2026-09-14・ユーザー指摘
+                「普通に朝起きたらスコア残ってたからそこが気になる」)。
+                その週のものかどうかを、画面を見ただけで確かめられるようにするため */}
+            {eventWeekly&&entry.lastScoredAtMs&&<p data-rhythm-week-last className="text-[9px] text-slate-500">最後の記録 {rhythmEventJstText(entry.lastScoredAtMs)}</p>}
           </div>
           <div className="shrink-0 text-right">
             <p className="font-mono text-sm font-black text-fuchsia-100">{entry.totalScore.toLocaleString()}</p>
