@@ -286,6 +286,18 @@
     "subdivisionsPerBeat": 4,
     "source": "detected"
    }
+  },
+  "mou_hitotsu_no_sekai_e": {
+   "audio": "monster-hero/audio/bgm-mou-hitotsu-no-sekai-e.mp3",
+   "audioSha256": "633ed0ee2501b3b6bcf36daf4328c95dbd01fe1e5a4d06b489cc4de51afd054f",
+   "durationMs": 226980,
+   "analyzedTiming": {
+    "bpm": 187.5,
+    "beatZeroMs": 384.1,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
   }
  }
 }

@@ -196,6 +196,73 @@ const serve=()=>new Promise(resolve=>{
       ok('別の曲を選んでも、その曲の絵が出る',second.open&&second.complete,second.src);
     }
 
+    // --- よその作品の曲は、紹介文とリンクが出る ---
+    // (2026-09-14・ユーザー指示「ジャケットを押してアップにしたときに紹介文やリンクを載せることってできる？」)
+    // 曲のデータに credit を書いた曲だけに出る。お知らせは日が経つと埋もれるが、
+    // ここは曲を選ぶたびに目に入るので、宣伝としてはこちらが効く。
+    // ★リンクは外へ出るので、https であることと rel/target が付いていることまで見る
+    //   (付いていないと、開いた先から window.opener でこちらのページを触れる)。
+    const creditSongs=await page.evaluate(()=>{
+      const songs=(typeof RHYTHM_SONGS!=='undefined')?RHYTHM_SONGS:[];
+      return songs.filter(song=>song&&song.credit&&song.credit.text)
+        .map(song=>({id:song.songId,text:song.credit.text,
+          url:(song.credit.link&&song.credit.link.url)||'',label:(song.credit.link&&song.credit.link.label)||''}));
+    });
+    if(creditSongs.length===0){
+      console.log('--  紹介文(credit)を持つ曲は無い。この項目は飛ばす');
+    }else{
+      const target=creditSongs[0];
+      await tap(`${sel} [data-rhythm-song-art-close]`).catch(()=>{});
+      await page.waitForTimeout(200);
+      await tap(`${sel} [data-rhythm-song-row="${target.id}"]`);
+      await page.waitForTimeout(300);
+      await tap(`${sel} [data-rhythm-song-art-zoom]`);
+      await page.waitForTimeout(400);
+      const credit=await page.evaluate(root=>{
+        const modal=document.querySelector(root).querySelector('[data-rhythm-song-art-modal]');
+        const text=modal&&modal.querySelector('[data-rhythm-song-credit]');
+        const link=modal&&modal.querySelector('[data-rhythm-song-credit-link]');
+        return {
+          open:!!modal,
+          text:text?text.textContent.trim():'',
+          href:link?link.getAttribute('href'):'',
+          label:link?link.textContent.trim():'',
+          target:link?link.getAttribute('target'):'',
+          rel:link?link.getAttribute('rel'):'',
+        };
+      },sel);
+      ok('よその作品の曲は、大きい絵に紹介文が出る',
+        credit.open&&credit.text===target.text,`${credit.text||'(出ていない)'}`);
+      ok('紹介文の下にリンクのボタンが出る',
+        credit.href===target.url&&credit.label.includes(target.label),
+        `${credit.href||'(出ていない)'} / ${credit.label}`);
+      ok('リンクは https で、別のタブで開く',
+        credit.href.startsWith('https://')&&credit.target==='_blank',
+        `${credit.target}`);
+      ok('開いた先からこちらを触られない（rel="noopener noreferrer"）',
+        /noopener/.test(credit.rel)&&/noreferrer/.test(credit.rel),credit.rel||'(付いていない)');
+      // 紹介文を持たない曲では出ないこと（ほかの曲の見た目を変えていない）
+      const plain=await page.evaluate(root=>[...document.querySelector(root)
+        .querySelectorAll('[data-rhythm-song-row]')].map(el=>el.getAttribute('data-rhythm-song-row')),sel);
+      const other=plain.find(id=>!creditSongs.some(song=>song.id===id));
+      if(other){
+        await tap(`${sel} [data-rhythm-song-art-close]`);
+        await page.waitForTimeout(200);
+        await tap(`${sel} [data-rhythm-song-row="${other}"]`);
+        await page.waitForTimeout(300);
+        await tap(`${sel} [data-rhythm-song-art-zoom]`);
+        await page.waitForTimeout(400);
+        const none=await page.evaluate(root=>{
+          const modal=document.querySelector(root).querySelector('[data-rhythm-song-art-modal]');
+          return {open:!!modal,
+            hasText:!!(modal&&modal.querySelector('[data-rhythm-song-credit]')),
+            hasLink:!!(modal&&modal.querySelector('[data-rhythm-song-credit-link]'))};
+        },sel);
+        ok('紹介文を書いていない曲には出ない（ほかの曲の見た目は変えていない）',
+          none.open&&!none.hasText&&!none.hasLink,other);
+      }
+    }
+
     ok('実行時エラーが出ていない',errors.length===0,errors.slice(0,2).join(' / '));
   }finally{
     if(browser)await browser.close();

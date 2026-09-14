@@ -1,5 +1,25 @@
 function MonsterHeroGame() {
-  const [gameState, setGameState] = useState('HOME');
+  const [gameState, setGameStateRaw] = useState('HOME');
+  // モンビーを開いているか(演奏中も含む)。判定の理由は下の rhythmScreenOpen のところに書いてある。
+  // ★定義がここにあるのは、すぐ下の setGameState から使うため。
+  const isRhythmScreen = state => typeof state === 'string' && state.startsWith('RHYTHM_');
+  // 「いまモンビーを開いているか」の控え。advanceRunStage が呼ばれた時点の値で判断するために使う。
+  const runBackgroundAllowedRef = useRef(false);
+  // 画面を切り替える唯一の入口。★必ずこれを通す(useStateのsetterを直接呼ばない)。
+  //
+  // 2026-09-14・ユーザー報告「モンビークイックからバトルに戻るとフリーズする」。
+  //   setGameState は次の描画まで gameState を変えない。いっぽう
+  //   runBackgroundAllowedRef は描画のたびに入れ直していたので、
+  //   **画面を切り替えてから次の描画までのあいだ、1描画ぶん古い判断が残っていた。**
+  //   モンビーからバトルへ戻った直後(まだ古い＝「モンビーにいる」)に、裏で予約されていた
+  //   advanceRunStage が着地すると、画面を切り替えないまま段階だけ進む。
+  //   その結果 gameState と runStage がずれ、runProgressAllowed が false のまま戻らなくなる。
+  //   AUTOの3つのループはどれも runProgressAllowed を見ているので、
+  //   **バトル画面のまま、何の知らせも出さずに完全に止まる。**
+  //   (WAVEの切り替わりに重なったときだけなので「たまに」になる。2026-09-12の
+  //    「モンビー中にオプションに行くとたまにバトルに飛ばされる」と同じ型の、逆向きの事故)
+  // ここで控えも一緒に更新すれば、切り替えたその瞬間から正しい判断になる。
+  const setGameState = (next) => { runBackgroundAllowedRef.current = isRhythmScreen(next); setGameStateRaw(next); };
   const [debugThrowScreenError, setDebugThrowScreenError] = useState(false); // デバッグ設定から画面エラーの受け止めを試すためだけの印
   const [battleMenuTab, setBattleMenuTab] = useState('difficulty');
   // バトルメニューで選んでいるモード。挑戦を始めた時点の値が runMode に固定される
@@ -503,8 +523,6 @@ function MonsterHeroGame() {
   // ★真偽値ではだめ。次のランが始まって旗を下ろすと、古い待ちがそのとき目を覚まして
   //   新しいランを触る。世代番号なら、古い待ちは永久に目を覚まさない。
   const runGenerationRef = useRef(0);
-  // ランを片付けるときに呼ぶ。これ以降、古いターンの演出は一切進まなくなる
-  const abandonRunAnimations = () => { runGenerationRef.current += 1; };
   // 曲えらびで「⏹ 終了」を押してからHOMEへ抜けるまでのあいだ(報酬の付与と記録)。
   // いまは端末の中だけで済むのでほぼ一瞬だが、二度押しを止めるために残してある
   const [rhythmExitingRun, setRhythmExitingRun] = useState(false);
@@ -516,6 +534,24 @@ function MonsterHeroGame() {
   const autoTurnScheduledRef = useRef(false);
   const autoPostWaveRunningRef = useRef(false);
   const autoPostWaveScheduledRef = useRef(false);
+  // ランを片付けるときに呼ぶ。これ以降、古いターンの演出は一切進まなくなる。
+  //
+  // ★世代を進めたら「実行中の印」も必ずここで下ろす
+  //   (2026-09-14・ユーザー報告「モンビー入る→ホーム戻る→モンビー入る→止まる」)。
+  //   世代を進めると、古い await battleWait は**二度と先へ進まない**。つまり
+  //   その先にある finally も走らないので、実行中の印を自分で下ろせない。
+  //   印は ref なので applyResetAllState でも戻らず、**次のランへそのまま持ち越される**。
+  //   すると AUTO のループが毎回 `if(...||autoTurnRunningRef.current)return;` で弾かれ、
+  //   新しい周回が一度も回らない。知らせは何も出ないので、
+  //   「バトル画面のまま、ただ動かない」「アプリを閉じ直すまで直らない」になる。
+  //   stopAutoBattle が下ろしているのは Scheduled(予約)だけで、Running(実行中)は別物。
+  const abandonRunAnimations = () => {
+    runGenerationRef.current += 1;
+    autoTurnRunningRef.current = false;
+    autoTurnScheduledRef.current = false;
+    autoPostWaveRunningRef.current = false;
+    autoPostWaveScheduledRef.current = false;
+  };
   const [autoTurnCycle, setAutoTurnCycle] = useState(0);
   // AUTO∞もラン中だけの一時状態。リロード後は必ずOFFに戻す。
   const [autoRepeat, setAutoRepeat] = useState(false);
@@ -1822,16 +1858,20 @@ function MonsterHeroGame() {
   const RHYTHM_BOARD_EMPTY = { status:'idle', window:null, event:null, boards:{}, error:null };
   // kind は 'weekly'(今週) / 'limited'(開催中のイベント) / 'history'(終わった回をあとから見る)。
   // 履歴は**表示専用**で、報酬の受け取りには一切関わらない(受取フラグも触らない・CLAUDE.md ⑦)
-  const [rhythmEventDivision, setRhythmEventDivision] = useState({ weekly:RHYTHM_EVENT_TOTAL_DIVISION, limited:RHYTHM_EVENT_TOTAL_DIVISION, history:RHYTHM_EVENT_TOTAL_DIVISION });
-  const [rhythmEventRanking, setRhythmEventRanking] = useState({ weekly:RHYTHM_BOARD_EMPTY, limited:RHYTHM_BOARD_EMPTY, history:RHYTHM_BOARD_EMPTY });
-  const rhythmEventRankingRequestRef = useRef({ weekly:0, limited:0, history:0 });
+  const [rhythmEventDivision, setRhythmEventDivision] = useState({ weekly:RHYTHM_EVENT_TOTAL_DIVISION, limited:RHYTHM_EVENT_TOTAL_DIVISION, prevEvent:RHYTHM_EVENT_TOTAL_DIVISION, history:RHYTHM_EVENT_TOTAL_DIVISION });
+  const [rhythmEventRanking, setRhythmEventRanking] = useState({ weekly:RHYTHM_BOARD_EMPTY, limited:RHYTHM_BOARD_EMPTY, prevEvent:RHYTHM_BOARD_EMPTY, history:RHYTHM_BOARD_EMPTY });
+  const rhythmEventRankingRequestRef = useRef({ weekly:0, limited:0, prevEvent:0, history:0 });
   const setRhythmBoard = (kind, update) => setRhythmEventRanking(prev => ({
     ...prev, [kind]: typeof update === 'function' ? update(prev[kind] || RHYTHM_BOARD_EMPTY) : update,
   }));
   // historyEntry を渡すと、その「終わった回」の順位を集計してもらう(kind は 'history')。
-  // 集計そのものは今週・開催中とまったく同じ関数を使う。渡す期間が違うだけ
+  // 集計そのものは今週・開催中とまったく同じ関数を使う。渡す期間が違うだけ。
+  // ★'prevEvent' は「前回のイベント」(2026-09-14・ユーザー依頼「イベントタブを常設して、
+  //   前回のランキングと今回のランキングを見れるようにしたい」)。中身は history と同じだが、
+  //   画面の別の場所から開くので、一覧の置き場所を分けてある
+  //   (履歴の画面と行き来しても、お互いの順位を上書きしない)。
   const loadRhythmEventRanking = useCallback(async (kind, divisionId, historyEntry = null) => {
-    if (kind !== 'weekly' && kind !== 'limited' && kind !== 'history') return;
+    if (kind !== 'weekly' && kind !== 'limited' && kind !== 'prevEvent' && kind !== 'history') return;
     if (kind === 'history' && !historyEntry) return;
     const requestId = (rhythmEventRankingRequestRef.current[kind] || 0) + 1;
     rhythmEventRankingRequestRef.current = { ...rhythmEventRankingRequestRef.current, [kind]: requestId };
@@ -1853,6 +1893,8 @@ function MonsterHeroGame() {
       if (!loaded) return true;
       if (kind === 'weekly') return loaded === rhythmWeekId(Date.now());
       if (kind === 'limited') { const now = rhythmLimitedEventAt(Date.now()); return !!now && now.id === loaded; }
+      // 前回のイベントも、次の回が終われば別のイベントに変わる
+      if (kind === 'prevEvent') { const prev = rhythmPreviousLimitedEvent(Date.now()); return !!prev && prev.id === loaded; }
       return true;   // 履歴は終わった回なので、あとから変わらない
     };
     setRhythmBoard(kind, prev => {
@@ -1872,10 +1914,13 @@ function MonsterHeroGame() {
       const weekWindow = kind === 'weekly' ? await sbFetchRhythmWeekWindow({ requestId:`rhythm-week-${Date.now()}` }) : null;
       if (stale()) return;
       // 履歴は終わっているので期間が動かない。サーバーへ週の窓を聞きに行く必要もない
-      const event = kind === 'history' ? rhythmHistoryBoardEvent(historyEntry)
+      // 前回のイベントは、終わった回なので履歴とまったく同じ扱いでよい
+      const prevEntry = kind === 'prevEvent' ? rhythmPreviousLimitedEvent(Date.now()) : null;
+      const pastEntry = kind === 'history' ? historyEntry : prevEntry;
+      const event = pastEntry ? rhythmHistoryBoardEvent(pastEntry)
         : kind === 'weekly' ? rhythmWeeklyEvent(weekWindow.startMs)
         : rhythmLimitedEventAt(Date.now());
-      const range = kind === 'history' ? rhythmHistoryRange(historyEntry) : rhythmEventWindow(event, weekWindow);
+      const range = pastEntry ? rhythmHistoryRange(pastEntry) : rhythmEventWindow(event, weekWindow);
       if (!event || !range) { setRhythmBoard(kind, { status:'closed', window:weekWindow, event:null, boards:{}, error:null }); return; }
       // 週(またはイベント)が変わっていたら、前のぶんの一覧は捨てる(古い順位を見せない)
       const keepBoards = (prev) => (prev.event && prev.event.id === event.id) ? prev.boards : {};
@@ -2584,7 +2629,7 @@ function MonsterHeroGame() {
   //   (WAVEの切り替わりに重なったときだけなので「たまに」になる。
   //    予約済みの setTimeout は、オプションへ移ったあとも必ず着地するため)
   //   一覧で持つかぎり、モンビーへ画面を足すたびに同じ事故が起きる。頭文字で見れば漏れない。
-  const isRhythmScreen = state => typeof state === 'string' && state.startsWith('RHYTHM_');
+  //   ※判定そのもの(isRhythmScreen)は、setGameState から使うので冒頭で定義している。
   const rhythmScreenOpen = isRhythmScreen(gameState);
   // 「モンヒロビートへ入った瞬間」を見分けるための一覧(自動で∞周回を始める判定に使う)。
   // ★裏で回してよい画面より広く取る。演奏中もモンビーの中なので、そこから曲えらびへ
@@ -2603,8 +2648,10 @@ function MonsterHeroGame() {
   //   そこで値をそのまま読むと「バトル画面で作られたときの古い値」を掴んでしまい、
   //   モンビーへ移った直後に敵を倒した瞬間、画面がバトルへ飛び戻る
   //   (2026-09-06・ユーザー報告「モンビーを押すと一瞬で戻る」の原因)。
-  //   呼ばれた時点の値で判断するため、必ずこの控えを見る
-  const runBackgroundAllowedRef = useRef(false);
+  //   呼ばれた時点の値で判断するため、必ずこの控えを見る(宣言は冒頭・setGameStateと同じ場所)。
+  // ★描画のたびの入れ直しは、ここだけに頼らない。setGameState も同時に更新する。
+  //   ここだけだと「画面を切り替えてから次の描画まで」のあいだ古い値が残り、
+  //   モンビーから戻った直後に段階だけ進んで進行不能になる(2026-09-14)。
   runBackgroundAllowedRef.current = runBackgroundAllowed;
   // ランの段階を1つ進める唯一の入口。
   // 画面を切り替えてよいときは gameState も一緒に動かす(いまは必ず切り替わる)。
@@ -6952,12 +6999,14 @@ function MonsterHeroGame() {
   // (docs/spec/QUICK_RHYTHM_LINK.md PR5)。
   // 1周目をバトル画面で組まなくても∞周回を始められるようにするためのもので、
   // 作るだけならここは副作用を持たない。実際に始めるのは startRunFromRepeatTemplate。
-  // 設定が欠けている・勇者モンがいない・難易度が未解放のときは null を返し、
+  // 設定が欠けている・勇者モンがいない・その難易度をクイックで通していないときは null を返し、
   // 呼び出し側はこれまでどおり周回テンプレート(1周目に自分で組んだ編成)を使う。
+  // ★難易度の条件はクイックのクリア記録(2026-09-14・ユーザー指摘)。保存してある設定は
+  //   書き換えず、条件を満たさないあいだ使わないだけなので、あとでクリアすれば復活する。
   const repeatTemplateFromAutoSettings = (settings = autoSettings) => {
     if (!autoQuickRunConfigured(settings)) return null;
     const quick = settings.quickRun;
-    if (!isQuickDifficultyUnlocked(quick.difficulty, clearCounts, proClearCounts, extremeDifficultyClearCounts)) return null;
+    if (!isAutoQuickRunDifficultyAllowed(quick.difficulty, quickClearCounts)) return null;
     if (!resolveRosterEntryToMon(quick.heroRosterEntry)) return null;
     return Object.freeze({
       runMode:BATTLE_MODE_QUICK,
@@ -10544,6 +10593,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         onError={e=>{e.currentTarget.style.display='none';}} loading="lazy" decoding="async"
                         style={{width:'100%',borderRadius:'12px',margin:'6px 0'}}/>}
                       {(c.items||[]).map((x,j)=><p key={j}>・{x}</p>)}
+                      {/* 外に出るリンク(2026-09-14・よそのゲームの曲を入れたときの案内用)。
+                          https だけ通し、target="_blank" と rel="noopener noreferrer" を必ず付ける
+                          (開いた先からこのページを触られないようにするため)。
+                          リンクは更新履歴のエントリに link:{url,label} と書いたときだけ出る */}
+                      {changelogSafeLink(c.link)&&<a data-changelog-link
+                        href={changelogSafeLink(c.link)} target="_blank" rel="noopener noreferrer">
+                        {(c.link&&c.link.label)||'くわしく見る'} ↗
+                      </a>}
                     </section>))}
                   </div>}
                 </article>
@@ -10999,7 +11056,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {/* モンヒロビートから∞周回を始めるための事前設定(docs/spec/QUICK_RHYTHM_LINK.md PR5)。
                   3つとも決めたときだけ使う。決めていないあいだは、これまでどおり
                   「1周目に自分で組んだ編成」をそのまま繰り返す */}
-              <section className="space-y-3"><div><h3 className="text-sm font-black text-indigo-200">3. モンヒロビート中に回すクイック周回</h3><p className="text-[9px] leading-relaxed text-slate-400 mt-1">モンヒロビートから∞周回を始めるときの編成です。勇者モン・配置距離・難易度の3つを決めると使えます。決めていないあいだは、いつもどおりバトル画面で1周目を組んでから∞にしてください。</p></div><div className="rounded-2xl border border-fuchsia-500/30 bg-slate-900 p-3 space-y-2"><label className="block text-xs font-black text-white" htmlFor="auto-quick-hero">勇者モン</label><select id="auto-quick-hero" value={draftAutoSettings.quickRun?.heroRosterEntry||''} onChange={event=>updateDraftAutoQuickRun({heroRosterEntry:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-slate-600 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">未設定（この機能を使わない）</option>{monsterRosterIds.filter(entry=>!!resolveRosterEntryToMon(entry)).map(entry=><option key={entry} value={entry}>{autoRosterLabel(entry)}</option>)}</select>{renderAutoAllySummary(draftAutoSettings.quickRun?.heroRosterEntry)}<div><div className="text-[10px] font-black text-slate-300 mb-1.5">配置距離</div><div className="grid grid-cols-4 gap-1">{ranges.filter(([slot])=>slot!==null).map(([slot,label])=><button key={label} onClick={()=>updateDraftAutoQuickRun({distance:slot})} aria-pressed={draftAutoSettings.quickRun?.distance===slot} className={`min-h-[44px] min-w-0 rounded-lg border text-[10px] font-black active:scale-95 ${draftAutoSettings.quickRun?.distance===slot?'ring-2 ring-white border-white':''} ${RANGE_STYLES[slot].labelBg} ${RANGE_STYLES[slot].border}`}>{label}</button>)}</div></div><div><label className="block text-[10px] font-black text-slate-300 mb-1.5" htmlFor="auto-quick-difficulty">難易度</label><select id="auto-quick-difficulty" value={draftAutoSettings.quickRun?.difficulty||''} onChange={event=>updateDraftAutoQuickRun({difficulty:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-slate-600 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">未設定</option>{Object.entries(QUICK_DIFFICULTY_SETTINGS).map(([key,setting])=>{const unlocked=isQuickDifficultyUnlocked(key,clearCounts,proClearCounts,extremeDifficultyClearCounts);return <option key={key} value={key} disabled={!unlocked}>{setting.label}{unlocked?'':'（未解放）'}</option>;})}</select></div><div><div className="text-[10px] font-black text-slate-300 mb-1.5">モンヒロビートを開いたら自動で始める</div><button type="button" data-auto-quick-run-autostart aria-pressed={draftAutoSettings.quickRun?.autoStart===true} disabled={!autoQuickRunConfigured(draftAutoSettings)} onClick={()=>updateDraftAutoQuickRun({autoStart:!(draftAutoSettings.quickRun?.autoStart===true)})} className={`flex min-h-[48px] w-full items-center justify-between gap-2 rounded-xl border px-3 text-left active:scale-[.99] disabled:opacity-50 ${draftAutoSettings.quickRun?.autoStart===true?'border-fuchsia-300 bg-fuchsia-900/50':'border-slate-600 bg-slate-950'}`}><span className="min-w-0 flex-1 text-[11px] font-black text-white">{draftAutoSettings.quickRun?.autoStart===true?'ON（開いたらすぐ回しはじめる）':'OFF（自分で「始める」を押す）'}</span><span className={`shrink-0 rounded-md px-2 py-0.5 text-[10px] font-black ${draftAutoSettings.quickRun?.autoStart===true?'bg-fuchsia-500 text-white':'bg-slate-700 text-slate-300'}`}>{draftAutoSettings.quickRun?.autoStart===true?'ON':'OFF'}</span></button><p className="mt-1 text-[9px] leading-relaxed text-slate-400">ONにすると、HOMEなどからモンヒロビートを開いたときに、この編成でクイックの∞周回が裏で始まります。すでに周回しているとき・ほかのモードのバトルが続いているときは何もしません。曲えらびの上の帯から、いつでも止められます。</p></div><div className="pt-1"><AssistantBubble scene="autoQuickRunSettings" compact/></div><p className="text-[9px] leading-relaxed text-slate-400">{autoQuickRunConfigured(draftAutoSettings)?'✅ 3つとも決まっています。モンヒロビートから周回を始められます。':'まだ使えません（3つとも決めると使えます）。'}</p></div></section>
+              <section className="space-y-3"><div><h3 className="text-sm font-black text-indigo-200">3. モンヒロビート中に回すクイック周回</h3><p className="text-[9px] leading-relaxed text-slate-400 mt-1">モンヒロビートから∞周回を始めるときの編成です。勇者モン・配置距離・難易度の3つを決めると使えます。決めていないあいだは、いつもどおりバトル画面で1周目を組んでから∞にしてください。難易度は「クイックでクリア済み」のものだけ選べます（演奏したぶんが周回クリアとして入るのも同じ条件のため）。</p></div><div className="rounded-2xl border border-fuchsia-500/30 bg-slate-900 p-3 space-y-2"><label className="block text-xs font-black text-white" htmlFor="auto-quick-hero">勇者モン</label><select id="auto-quick-hero" value={draftAutoSettings.quickRun?.heroRosterEntry||''} onChange={event=>updateDraftAutoQuickRun({heroRosterEntry:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-slate-600 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">未設定（この機能を使わない）</option>{monsterRosterIds.filter(entry=>!!resolveRosterEntryToMon(entry)).map(entry=><option key={entry} value={entry}>{autoRosterLabel(entry)}</option>)}</select>{renderAutoAllySummary(draftAutoSettings.quickRun?.heroRosterEntry)}<div><div className="text-[10px] font-black text-slate-300 mb-1.5">配置距離</div><div className="grid grid-cols-4 gap-1">{ranges.filter(([slot])=>slot!==null).map(([slot,label])=><button key={label} onClick={()=>updateDraftAutoQuickRun({distance:slot})} aria-pressed={draftAutoSettings.quickRun?.distance===slot} className={`min-h-[44px] min-w-0 rounded-lg border text-[10px] font-black active:scale-95 ${draftAutoSettings.quickRun?.distance===slot?'ring-2 ring-white border-white':''} ${RANGE_STYLES[slot].labelBg} ${RANGE_STYLES[slot].border}`}>{label}</button>)}</div></div><div><label className="block text-[10px] font-black text-slate-300 mb-1.5" htmlFor="auto-quick-difficulty">難易度</label><select id="auto-quick-difficulty" value={draftAutoSettings.quickRun?.difficulty||''} onChange={event=>updateDraftAutoQuickRun({difficulty:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-slate-600 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">未設定</option>{Object.entries(QUICK_DIFFICULTY_SETTINGS).map(([key,setting])=>{const unlocked=isAutoQuickRunDifficultyAllowed(key,quickClearCounts);return <option key={key} value={key} disabled={!unlocked}>{setting.label}{unlocked?'':'（クイック未クリア）'}</option>;})}</select></div><div><div className="text-[10px] font-black text-slate-300 mb-1.5">モンヒロビートを開いたら自動で始める</div><button type="button" data-auto-quick-run-autostart aria-pressed={draftAutoSettings.quickRun?.autoStart===true} disabled={!autoQuickRunConfigured(draftAutoSettings)} onClick={()=>updateDraftAutoQuickRun({autoStart:!(draftAutoSettings.quickRun?.autoStart===true)})} className={`flex min-h-[48px] w-full items-center justify-between gap-2 rounded-xl border px-3 text-left active:scale-[.99] disabled:opacity-50 ${draftAutoSettings.quickRun?.autoStart===true?'border-fuchsia-300 bg-fuchsia-900/50':'border-slate-600 bg-slate-950'}`}><span className="min-w-0 flex-1 text-[11px] font-black text-white">{draftAutoSettings.quickRun?.autoStart===true?'ON（開いたらすぐ回しはじめる）':'OFF（自分で「始める」を押す）'}</span><span className={`shrink-0 rounded-md px-2 py-0.5 text-[10px] font-black ${draftAutoSettings.quickRun?.autoStart===true?'bg-fuchsia-500 text-white':'bg-slate-700 text-slate-300'}`}>{draftAutoSettings.quickRun?.autoStart===true?'ON':'OFF'}</span></button><p className="mt-1 text-[9px] leading-relaxed text-slate-400">ONにすると、HOMEなどからモンヒロビートを開いたときに、この編成でクイックの∞周回が裏で始まります。すでに周回しているとき・ほかのモードのバトルが続いているときは何もしません。曲えらびの上の帯から、いつでも止められます。</p></div><div className="pt-1"><AssistantBubble scene="autoQuickRunSettings" compact/></div><p className="text-[9px] leading-relaxed text-slate-400">{autoQuickRunConfigured(draftAutoSettings)?'✅ 3つとも決まっています。モンヒロビートから周回を始められます。':'まだ使えません（3つとも決めると使えます）。'}</p></div></section>
               <section data-auto-breakthrough-bulk-settings className="rounded-2xl border border-cyan-500/40 bg-cyan-950/20 p-3 space-y-3">
                 <div><h3 className="text-sm font-black text-cyan-200">4. AUTO∞ 自動限界突破</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-slate-300">現在所有しているマスモンをまとめて設定し、限界突破で使い切らないようダイヤと虹のプシュケーを残せます。</p></div>
                 <div className="rounded-xl border border-cyan-500/30 bg-slate-950/70 p-3 space-y-2">
