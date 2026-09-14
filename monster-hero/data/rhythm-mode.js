@@ -1687,6 +1687,17 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
   // 終点フリックの受付を開始する。終端の RHYTHM_END_FLICK_ARM_MS 前に入ったら、
   // 「その瞬間の指の位置」を基準として覚え、以後の移動量をフリックとして測る。
   // 指が動かないまま受付へ入る場合もあるので、tick からも呼んで必ず基準を作る。
+  // 追従(laneCoordinate)と同じ高さ＝判定ラインでの、レーン1つぶんの横幅(px)。
+  // 「譜面が求める横移動」をピクセルへ直すために使う。測る高さを合わせておかないと、
+  // 台形の効きで幅が変わり、差し引く量がずれる
+  const trackingLaneWidthPx=()=>{
+    const rect=areaRect();
+    if(!rect||!(rect.width>0))return 0;
+    const yRatio=RHYTHM_JUDGMENT_LINE_Y.ratio;
+    const left=rhythmProjectBoundary(0,yRatio),right=rhythmProjectBoundary(RHYTHM_LANE_COUNT,yRatio);
+    const width=(right-left)/RHYTHM_LANE_COUNT*rect.width;
+    return width>0?width:0;
+  };
   const armEndFlick=(session,pos)=>{
     if(!session||!session.endFlickRequired||session.endFlickArmed||session.note.done)return;
     if((session.releaseTargetMs+session.offsetMs)-estimatedSongMs(session)>RHYTHM_END_FLICK_ARM_MS)return;
@@ -1694,6 +1705,14 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
     session.endFlickArmed=true;
     session.endFlickAnchorX=at?at.clientX:session.startX;
     session.endFlickAnchorY=at?at.clientY:session.startY;
+    // ★斜めのSLIDEは、受付に入ったあとも終端へ向かって指が動き続ける。
+    //   その移動をそのまま測るとフリックとして拾われるので、基準にしたときの
+    //   「譜面が求めるレーン」も一緒に覚えておき、以後その動きぶんを差し引く
+    //   (2026-09-14・ユーザー報告「斜めになってるスライダーノーツのフィニッシュ部分の
+    //    フリックがなぜか到達前にミス扱いになる」)。
+    session.endFlickAnchorLane=session.kind==='SLIDE'
+      ?rhythmSlideExpectedLane(session.note,estimatedSongMs(session)-session.offsetMs)
+      :null;
     // 受付に入る前の「外れっぱなし」の計測は捨てる。ここから先の移動はフリックの動作なので、
     // 追従が外れたことを理由にMISSにしてはいけない。
     session.trackingBadSincePerf=null;
@@ -1711,13 +1730,27 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
       armEndFlick(session,pos);
       if(session.endFlickArmed){
         if(!session.endFlickDone){
-          const dx=pos.clientX-session.endFlickAnchorX,dy=pos.clientY-session.endFlickAnchorY;
-          if(Math.hypot(dx,dy)>=RHYTHM_FLICK_DISTANCE_PX){
-            session.endFlickDone=true;
-            // 指を離すのを待たず、その場で終端判定を確定する。
-            // release() が既存の判定合成(開始判定と終端判定の悪いほう)をそのまま行う。
-            release(session.key,false);
+          // 譜面が求める横移動ぶんだけ基準をずらす。まっすぐなSLIDEとHOLDでは0になるので、
+          // これまでの測り方と1ミリも変わらない
+          let anchorX=session.endFlickAnchorX;
+          if(session.kind==='SLIDE'&&Number.isFinite(Number(session.endFlickAnchorLane))){
+            const shift=rhythmSlideExpectedLane(session.note,estimatedSongMs(session)-session.offsetMs)
+              -Number(session.endFlickAnchorLane);
+            anchorX+=shift*trackingLaneWidthPx();
           }
+          const dx=pos.clientX-anchorX,dy=pos.clientY-session.endFlickAnchorY;
+          if(Math.hypot(dx,dy)>=RHYTHM_FLICK_DISTANCE_PX)session.endFlickDone=true;
+        }
+        // 弾き終えたら、指を離すのを待たずその場で終端判定を確定する。
+        // release() が既存の判定合成(開始判定と終端判定の悪いほう)をそのまま行う。
+        // ★ただし**終端の判定窓へ入ってから**。受付(250ms前)は窓(185ms)より早いので、
+        //   窓の外で確定すると「まだ届いていない終端」に対する大きく早い判定になり、
+        //   指を置いたままなのにMISSになる。窓に入るまでは弾いたことだけ覚えて待つ
+        //   (指が動かなくても tick からここへ来るので、待ったまま取り残されることはない)。
+        if(session.endFlickDone&&!session.endFlickReleased
+          &&(session.releaseTargetMs+session.offsetMs)-estimatedSongMs(session)<=RHYTHM_RELEASE_MAX_MS){
+          session.endFlickReleased=true;
+          release(session.key,false);
         }
         // 受付中は追従の外れを見ない(フリックで的から外れるのは当たり前のため)。
         return;
