@@ -25,6 +25,34 @@ const { REPO_ROOT, GAME_SYSTEM, transformGameSystem, syncPartsAndGameSystem, ass
 
 const OUT_FILE = path.join(REPO_ROOT, 'monster-hero', 'game-system.compiled.js');
 
+// GitHubコネクタは巨大な data/help.js / data/changelog.js の部分編集を安全に行えないため、
+// 今回のスキップチケット公開に限り、正規ビルドの開始時に既知の旧文言だけを厳密一致で置換する。
+// --check では一切書き換えない。この一時処理はビルド後のコミットで削除する。
+if (!process.argv.includes('--check')) {
+  const helpPath = path.join(REPO_ROOT, 'monster-hero', 'data', 'help.js');
+  let help = fs.readFileSync(helpPath, 'utf8');
+  const oldPrice = "{ t:'p', text:'マーケットでの販売価格は、序が3,300ダイヤ、破が5,900ダイヤ、急が8,500ダイヤです。' },";
+  const newPrice = "{ t:'p', text:'マーケットでの販売価格は、序が3,000ダイヤ、破が5,000ダイヤ、急が7,000ダイヤ、極が15,000ダイヤ、覇が30,000ダイヤです。' },";
+  const oldAcquire = "{ t:'p', text:'入手方法は、序＝ログインボーナスに毎日1枚／破＝デイリーコンプリートの報酬／急＝ウィークリーコンプリートの報酬。マーケットでも購入できます。所持数は難易度選択画面の上部に3種まとまって出ています（チャレンジモードでは「クイックモード専用」と表示されます）。' },";
+  const newAcquire = "{ t:'p', text:'入手方法は、序＝ログインボーナスに毎日1枚／破＝デイリーコンプリートの報酬／急＝ウィークリーコンプリートの報酬。極・覇を含む5種類はマーケットでも購入できます。所持数は難易度選択画面の上部に、その難易度で使えるチケットが表示されます（チャレンジモードでは「クイックモード専用」と表示されます）。' },";
+  if (help.includes(oldPrice)) help = help.replace(oldPrice, newPrice);
+  else if (!help.includes(newPrice)) throw new Error('skip ticket help price text not found');
+  if (help.includes(oldAcquire)) help = help.replace(oldAcquire, newAcquire);
+  else if (!help.includes(newAcquire)) throw new Error('skip ticket help acquisition text not found');
+  fs.writeFileSync(helpPath, help);
+
+  const changelogPath = path.join(REPO_ROOT, 'monster-hero', 'data', 'changelog.js');
+  let changelog = fs.readFileSync(changelogPath, 'utf8');
+  const noticeId = 'update_notice_skip_ticket_market_v2';
+  if (!changelog.includes(noticeId)) {
+    const marker = 'const CHANGELOG = [\n';
+    if (!changelog.includes(marker)) throw new Error('CHANGELOG marker not found');
+    const entry = `  {\n    date: "2026-09-14 22:00", type:'market', title:'スキップチケットの価格を見直し、「極」「覇」を追加しました', status:'new',\n    assistantNotice: { id:'${noticeId}', type:'market' },\n    items:[\n      'スキップチケット・序／破／急のマーケット価格を、それぞれ3,000／5,000／7,000ダイヤへ変更しました。',\n      '新しく「スキップチケット・極」を追加しました。Masterで使え、15,000ダイヤで購入できます。',\n      '新しく「スキップチケット・覇」を追加しました。Grand Masterで使え、30,000ダイヤで購入できます。',\n      '使い方はこれまでと同じで、クイックモードの「育成」方針で使用します。スコア・ランキング・クリア回数には記録されません。',\n    ],\n  },\n`;
+    changelog = changelog.replace(marker, marker + entry);
+    fs.writeFileSync(changelogPath, changelog);
+  }
+}
+
 // 元ファイルのハッシュを出力の先頭に埋め込み、--check で最新かどうか判定できるようにする
 function sourceHash() {
   return crypto.createHash('sha256').update(fs.readFileSync(GAME_SYSTEM)).digest('hex').slice(0, 16);
