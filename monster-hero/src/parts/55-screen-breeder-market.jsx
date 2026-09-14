@@ -54,7 +54,7 @@ function BreederMarketScreen({
     const isSoulRankRespec=item.id===SOUL_RANK_RESPEC_ITEM_ID;
     const exchangeItem=isSoulRankRespec?{...item,currency:'heroProof',cost:1}:null;
     return (
-      <React.Fragment key={`${item.id}-${showBase?'base':'exchange'}`}>
+      <React.Fragment key={item.id}>
         {showBase&&<MarketProductCard
           item={item} owned={owned} comingSoon={comingSoon} canBuy={canBuy}
           onZoom={()=>onZoomIcon(item)} onBuy={()=>onBuy(item)}
