@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0d40e3d6f81a51a3
+// source-sha256: 8a694d4e1020b3d0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c4f595e7e68df966
+// generated-sha256: b1c7fc11adce5597
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-14 14:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-14 15:52"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -25752,50 +25752,68 @@ function BreederMarketScreen({
     condition: Number.isFinite(CHEAPEST_GOLD_ITEM_COST) && gold < CHEAPEST_GOLD_ITEM_COST ? 'lowGold' : null
   })), !marketSection && /*#__PURE__*/React.createElement("div", {
     "data-market-top": true,
-    className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
+    className: "relative flex-1 min-h-0 overflow-y-auto mh-scroll"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-2 gap-2 pb-2"
+    "aria-hidden": "true",
+    className: "pointer-events-none absolute inset-x-4 top-5 h-60 rounded-[40px] bg-gradient-to-br from-cyan-500/10 via-amber-500/5 to-violet-500/10 blur-2xl"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "relative grid grid-cols-2 gap-2 pt-8 pb-2"
   }, [{
     key: 'diamond',
     emoji: '💎',
     label: 'ダイヤショップ',
     value: gold.toLocaleString(),
-    hint: 'ダイヤで購入'
+    hint: 'ダイヤで購入',
+    border: 'border-cyan-400/35',
+    title: 'text-cyan-200',
+    arrow: 'text-cyan-300/80'
   }, {
     key: 'breeder',
     emoji: '🪙',
     label: 'ブリーダーP交換所',
     value: breederPoints.toLocaleString(),
-    hint: 'Lv.UPで獲得'
+    hint: 'Lv.UPで獲得',
+    border: 'border-amber-400/35',
+    title: 'text-amber-200',
+    arrow: 'text-amber-300/80'
   }, {
     key: 'exchange',
     emoji: '🔄',
     label: 'アイテム交換所',
     value: null,
-    hint: 'プシュケー・証など'
+    hint: 'プシュケー・証など',
+    border: 'border-emerald-400/35',
+    title: 'text-emerald-200',
+    arrow: 'text-emerald-300/80'
   }, {
     key: 'event',
     emoji: '🎟️',
     label: 'イベントP交換所',
     value: null,
-    hint: '準備中'
+    hint: '準備中',
+    border: 'border-violet-400/20',
+    title: 'text-violet-300/70',
+    arrow: 'text-violet-400/40'
   }].map(section => /*#__PURE__*/React.createElement("button", {
     key: section.key,
     "data-market-section": section.key,
     onClick: () => setMarketSection(section.key),
-    className: "min-h-[92px] rounded-2xl border border-amber-500/25 bg-slate-950/70 px-3 py-3 text-left active:scale-[0.98]"
+    className: `relative min-h-[108px] rounded-2xl border ${section.border} bg-slate-950/70 px-4 py-4 pr-9 text-left active:scale-[0.98]`
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-2"
+    className: "flex items-center gap-2.5"
   }, /*#__PURE__*/React.createElement("span", {
     "aria-hidden": "true",
-    className: "text-xl"
+    className: "text-2xl"
   }, section.emoji), /*#__PURE__*/React.createElement("span", {
-    className: "text-[11px] font-black leading-tight text-amber-200"
+    className: `text-[12px] font-black leading-tight ${section.title}`
   }, section.label)), section.value !== null && /*#__PURE__*/React.createElement("div", {
-    className: "mt-2 font-mono text-lg font-black text-white"
+    className: "mt-2.5 font-mono text-xl font-black text-white"
   }, section.value), /*#__PURE__*/React.createElement("div", {
-    className: `text-[9px] font-bold ${section.value === null ? 'mt-3' : 'mt-0.5'} ${section.key === 'event' ? 'text-slate-500' : 'text-slate-400'}`
-  }, section.hint))))), marketSection === 'diamond' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    className: `text-[10px] font-bold ${section.value === null ? 'mt-3.5' : 'mt-0.5'} ${section.key === 'event' ? 'text-slate-500' : 'text-slate-400'}`
+  }, section.hint), /*#__PURE__*/React.createElement("span", {
+    "aria-hidden": "true",
+    className: `absolute bottom-3 right-3 text-xl font-black ${section.arrow}`
+  }, "\u203A"))))), marketSection === 'diamond' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "mb-2 shrink-0 flex items-center justify-center gap-2 rounded-2xl border border-cyan-500/25 bg-cyan-950/25 py-2"
   }, /*#__PURE__*/React.createElement(Gem, {
     size: 15,
