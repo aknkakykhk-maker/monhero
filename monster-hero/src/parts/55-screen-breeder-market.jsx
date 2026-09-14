@@ -20,33 +20,127 @@ function BreederMarketScreen({
   isItemOwned, onBack, onSelectTab, onZoomIcon, onBuy, onOpenDetail, onOpenItemDetail, onExchangeSoulRankRespec,
   onExchangeHeroProof,
 }) {
-  // 上に出す所持数(2026-09-13・ユーザー指示「マーケットにプシュケーとか証片も
-  // いくつあるかダイヤみたいに表示がほしい」)。ダイヤ・ptと同じ帯へ並べる
+  // 2026-09-14・マーケットのタブ乱立を避けるため、最初に用途別の入口を選ぶ。
+  // 入口だけこの画面のローカル状態で持ち、購入・交換・商品タブの既存stateは親側をそのまま使う。
+  const [marketSection,setMarketSection]=useState(null);
   const psycheHave = ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID);
   const shardHave = ownedItemCount(ownedItems, HERO_PROOF_SHARD_ITEM_ID);
   const proofHave = ownedItemCount(ownedItems, HERO_PROOF_ITEM_ID);
+  const marketItems = BREEDER_MARKET_ITEMS.filter(item=>item.shop!==false);
+  const diamondTabs = [
+    {key:'disc',label:'円盤石'},
+    {key:'assist',label:'アシスト'},
+    {key:'item',label:'アイテム'},
+  ];
+  const activeDiamondTab = diamondTabs.some(tab=>tab.key===marketTab)?marketTab:'disc';
+  const diamondItems = marketItems.filter(item=>item.type===activeDiamondTab&&item.type!=='icon'&&item.currency!=='psyche');
+  const breederPointItems = marketItems.filter(item=>item.type==='icon');
+  const itemExchangeItems = marketItems.filter(item=>item.currency==='psyche');
+  const soulRankRespecItem = marketItems.find(item=>item.id===SOUL_RANK_RESPEC_ITEM_ID) || null;
+  const sectionMeta = {
+    diamond:{label:'ダイヤショップ',emoji:'💎'},
+    breeder:{label:'ブリーダーP交換所',emoji:'🪙'},
+    exchange:{label:'アイテム交換所',emoji:'🔄'},
+    event:{label:'イベントP交換所',emoji:'🎟️'},
+  };
+
+  const renderMarketItem=(item,{showBase=true,showHeroProofExchange=false}={})=>{
+    const comingSoon = item.available === false;
+    const owned = !comingSoon && isItemOwned(item);
+    const balance = item.currency==='psyche' ? psycheHave : item.type==='disc' || item.type==='assist' || item.type==='item' ? gold : breederPoints;
+    const canBuy = !comingSoon && !owned && balance>=item.cost;
+    const detailMon = item.type==='disc' ? ALL_PLAYER_MONSTERS[item.id] : null;
+    const detailTeaching = item.type==='assist' ? TEACHING_CARDS.find(t=>t.id===item.id) : null;
+    const isSoulRankRespec=item.id===SOUL_RANK_RESPEC_ITEM_ID;
+    const exchangeItem=isSoulRankRespec?{...item,currency:'heroProof',cost:1}:null;
+    return (
+      <React.Fragment key={`${item.id}-${showBase?'base':'exchange'}`}>
+        {showBase&&<MarketProductCard
+          item={item} owned={owned} comingSoon={comingSoon} canBuy={canBuy}
+          onZoom={()=>onZoomIcon(item)} onBuy={()=>onBuy(item)}
+          detail={detailMon||detailTeaching}
+          onDetail={()=>onOpenDetail(item,detailMon,detailTeaching)}
+          middle={item.type==='item'?<><span className={`text-[9px] font-black ${(ownedItems[item.id]||0)>0?'text-cyan-300':'text-slate-600'}`}>×{ownedItems[item.id]||0}</span>{item.desc&&<button onClick={()=>onOpenItemDetail(item)} aria-label={`${item.name}の効果を見る`} className="text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"><BookOpen size={8}/>詳細</button>}</>:null}
+        />}
+        {showHeroProofExchange&&exchangeItem&&<MarketProductCard
+          item={exchangeItem} owned={false} comingSoon={false}
+          canBuy={proofHave>0&&!purchaseProcessing}
+          disabled={purchaseProcessing}
+          onBuy={onExchangeSoulRankRespec}
+          middle={<><span className={`text-[9px] font-black ${ownedItemCount(ownedItems,SOUL_RANK_RESPEC_ITEM_ID)>0?'text-cyan-300':'text-slate-600'}`}>×{ownedItemCount(ownedItems,SOUL_RANK_RESPEC_ITEM_ID)}</span>{item.desc&&<button onClick={()=>onOpenItemDetail(item)} aria-label={`${item.name}の効果を見る`} className="text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"><BookOpen size={8}/>詳細</button>}</>}
+        />}
+      </React.Fragment>
+    );
+  };
+
+  const headerTitle = marketSection ? sectionMeta[marketSection].label : 'マーケット';
+  const handleBack = ()=>{
+    if(marketSection){ setMarketSection(null); return; }
+    onBack();
+  };
+
   return (
-      <div data-mh-screen className="flex-1 flex flex-col h-full min-h-0 p-4">
-        <div className="flex items-center gap-2 mb-2 shrink-0">
-          <button onClick={onBack} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
-          <h2 className="text-xl font-black italic text-amber-400 uppercase tracking-widest">マーケット</h2>
+    <div data-mh-screen className="flex-1 flex flex-col h-full min-h-0 p-4">
+      <div className="flex items-center gap-2 mb-2 shrink-0">
+        <button onClick={handleBack} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+        <h2 className="text-xl font-black italic text-amber-400 uppercase tracking-widest">{headerTitle}</h2>
+      </div>
+      <div className="shrink-0 w-full max-w-md mx-auto mb-3"><AssistantBubble scene="market" condition={Number.isFinite(CHEAPEST_GOLD_ITEM_COST)&&gold<CHEAPEST_GOLD_ITEM_COST?'lowGold':null}/></div>
+
+      {!marketSection&&<div data-market-top className="flex-1 min-h-0 overflow-y-auto mh-scroll">
+        <div className="grid grid-cols-2 gap-2 pb-2">
+          {[
+            {key:'diamond',emoji:'💎',label:'ダイヤショップ',value:gold.toLocaleString(),hint:'ダイヤで購入'},
+            {key:'breeder',emoji:'🪙',label:'ブリーダーP交換所',value:breederPoints.toLocaleString(),hint:'Lv.UPで獲得'},
+            {key:'exchange',emoji:'🔄',label:'アイテム交換所',value:null,hint:'プシュケー・証など'},
+            {key:'event',emoji:'🎟️',label:'イベントP交換所',value:null,hint:'準備中'},
+          ].map(section=>(
+            <button
+              key={section.key}
+              data-market-section={section.key}
+              onClick={()=>setMarketSection(section.key)}
+              className="min-h-[92px] rounded-2xl border border-amber-500/25 bg-slate-950/70 px-3 py-3 text-left active:scale-[0.98]"
+            >
+              <div className="flex items-center gap-2">
+                <span aria-hidden="true" className="text-xl">{section.emoji}</span>
+                <span className="text-[11px] font-black leading-tight text-amber-200">{section.label}</span>
+              </div>
+              {section.value!==null&&<div className="mt-2 font-mono text-lg font-black text-white">{section.value}</div>}
+              <div className={`text-[9px] font-bold ${section.value===null?'mt-3':'mt-0.5'} ${section.key==='event'?'text-slate-500':'text-slate-400'}`}>{section.hint}</div>
+            </button>
+          ))}
         </div>
-        <div className="shrink-0 w-full max-w-md mx-auto mb-3"><AssistantBubble scene="market" condition={Number.isFinite(CHEAPEST_GOLD_ITEM_COST)&&gold<CHEAPEST_GOLD_ITEM_COST?'lowGold':null}/></div>
-        <div className="flex gap-2 mb-2 shrink-0">
-          <div className="flex-1 flex items-center justify-center gap-2 bg-amber-950/40 border border-amber-500/30 rounded-2xl py-3">
-            <Coins size={16} className="text-amber-400"/>
-            <span className="text-lg font-black text-amber-300">{breederPoints}</span>
-            <span className="text-[9px] text-slate-400 font-bold">pt(Lv.UPで+1)</span>
-          </div>
-          <div className="flex-1 flex items-center justify-center gap-2 bg-amber-950/40 border border-amber-500/30 rounded-2xl py-3">
-            <Gem size={16} className="text-amber-400"/>
-            <span className="text-lg font-black text-amber-300">{gold.toLocaleString()}</span>
-            <span className="text-[9px] text-slate-400 font-bold">ダイヤ(WAVEクリアで獲得)</span>
-          </div>
+      </div>}
+
+      {marketSection==='diamond'&&<>
+        <div className="mb-2 shrink-0 flex items-center justify-center gap-2 rounded-2xl border border-cyan-500/25 bg-cyan-950/25 py-2">
+          <Gem size={15} className="text-cyan-300"/>
+          <span className="font-mono text-base font-black text-cyan-100">{gold.toLocaleString()}</span>
+          <span className="text-[9px] font-bold text-slate-400">所持ダイヤ</span>
         </div>
-        {/* ダイヤ以外の「持ち高」も同じように見せる。買う前に足りるかどうかが分かるようにするため
-            (2026-09-13・ユーザー指示)。0個でも出す(存在そのものを知らせたいので隠さない) */}
-        <div data-market-balances className="grid grid-cols-3 gap-2 mb-4 shrink-0">
+        <div className="flex gap-1.5 mb-3 shrink-0">
+          {diamondTabs.map(tab=>(
+            <button key={tab.key} onClick={()=>onSelectTab(tab.key)} className={`flex-1 py-2 rounded-xl text-[10px] font-black ${activeDiamondTab===tab.key?'bg-amber-500 text-black':'bg-slate-900 border border-slate-800 text-slate-400'}`}>{tab.label}</button>
+          ))}
+        </div>
+        <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
+          {diamondItems.length===0?<div className="text-center text-[11px] text-slate-600 font-bold py-10">まだ商品がありません</div>:<div className={MARKET_GRID_CLASS}>{diamondItems.map(item=>renderMarketItem(item))}</div>}
+        </div>
+      </>}
+
+      {marketSection==='breeder'&&<>
+        <div className="mb-3 shrink-0 flex items-center justify-center gap-2 rounded-2xl border border-amber-500/25 bg-amber-950/25 py-2">
+          <Coins size={15} className="text-amber-300"/>
+          <span className="font-mono text-base font-black text-amber-100">{breederPoints.toLocaleString()}</span>
+          <span className="text-[9px] font-bold text-slate-400">所持ブリーダーP</span>
+        </div>
+        <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
+          {breederPointItems.length===0?<div className="text-center text-[11px] text-slate-600 font-bold py-10">まだ商品がありません</div>:<div className={MARKET_GRID_CLASS}>{breederPointItems.map(item=>renderMarketItem(item))}</div>}
+        </div>
+      </>}
+
+      {marketSection==='exchange'&&<>
+        <div data-market-balances className="grid grid-cols-3 gap-2 mb-3 shrink-0">
           {[
             { key:'psyche', emoji:'🌈', label:'虹のプシュケー', value:psycheHave, tone:'text-fuchsia-200 border-fuchsia-500/30 bg-fuchsia-950/30' },
             { key:'shard',  emoji:'🎖️', label:'勇者の証片',     value:shardHave,  tone:'text-amber-100 border-amber-400/30 bg-amber-950/30' },
@@ -61,59 +155,30 @@ function BreederMarketScreen({
             </div>
           ))}
         </div>
-        <div className="flex gap-1.5 mb-3 shrink-0">
-          {[{key:'icon',label:'アイコン'},{key:'disc',label:'円盤石'},{key:'assist',label:'アシスト'},{key:'item',label:'アイテム'}].map(tab=>(
-            <button key={tab.key} onClick={()=>onSelectTab(tab.key)} className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase ${marketTab===tab.key?'bg-amber-500 text-black':'bg-slate-900 border border-slate-800 text-slate-400'}`}>{tab.label}</button>
-          ))}
-        </div>
-        {marketTab==='item'&&marketExchangeError&&<div className="mb-2 shrink-0 rounded-xl border border-red-500/40 bg-red-950/30 px-3 py-2 text-center text-[9px] font-black text-red-300">{marketExchangeError}</div>}
+        {marketExchangeError&&<div className="mb-2 shrink-0 rounded-xl border border-red-500/40 bg-red-950/30 px-3 py-2 text-center text-[9px] font-black text-red-300">{marketExchangeError}</div>}
         <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
-        {/* shop:false のアイテム(虹のプシュケー)は売り物ではないので陳列しない */}
-        {BREEDER_MARKET_ITEMS.filter(item=>item.type===marketTab&&item.shop!==false).length===0?(
-          <div className="text-center text-[11px] text-slate-600 font-bold py-10">まだ商品がありません</div>
-        ):(
           <div className={MARKET_GRID_CLASS}>
-            {BREEDER_MARKET_ITEMS.filter(item=>item.type===marketTab&&item.shop!==false).map(item=>{
-              const comingSoon = item.available === false;
-              const owned = !comingSoon && isItemOwned(item);
-              const balance = item.currency==='psyche' ? ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID) : item.type==='disc' || item.type==='assist' || item.type==='item' ? gold : breederPoints;
-              const canBuy = !comingSoon && !owned && balance>=item.cost;
-              const detailMon = item.type==='disc' ? ALL_PLAYER_MONSTERS[item.id] : null;
-              const detailTeaching = item.type==='assist' ? TEACHING_CARDS.find(t=>t.id===item.id) : null;
-              const isSoulRankRespec=item.id===SOUL_RANK_RESPEC_ITEM_ID;
-              const exchangeItem=isSoulRankRespec?{...item,currency:'heroProof',cost:1}:null;
-              return (
-                <React.Fragment key={item.id}>
-                  <MarketProductCard
-                    item={item} owned={owned} comingSoon={comingSoon} canBuy={canBuy}
-                    onZoom={()=>onZoomIcon(item)} onBuy={()=>onBuy(item)}
-                    detail={detailMon||detailTeaching}
-                    onDetail={()=>onOpenDetail(item,detailMon,detailTeaching)}
-                    middle={item.type==='item'?<><span className={`text-[9px] font-black ${(ownedItems[item.id]||0)>0?'text-cyan-300':'text-slate-600'}`}>×{ownedItems[item.id]||0}</span>{item.desc&&<button onClick={()=>onOpenItemDetail(item)} aria-label={`${item.name}の効果を見る`} className="text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"><BookOpen size={8}/>詳細</button>}</>:null}
-                  />
-                  {exchangeItem&&<MarketProductCard
-                    item={exchangeItem} owned={false} comingSoon={false}
-                    canBuy={ownedItemCount(ownedItems,HERO_PROOF_ITEM_ID)>0&&!purchaseProcessing}
-                    disabled={purchaseProcessing}
-                    onBuy={onExchangeSoulRankRespec}
-                    middle={<><span className={`text-[9px] font-black ${ownedItemCount(ownedItems,SOUL_RANK_RESPEC_ITEM_ID)>0?'text-cyan-300':'text-slate-600'}`}>×{ownedItemCount(ownedItems,SOUL_RANK_RESPEC_ITEM_ID)}</span>{item.desc&&<button onClick={()=>onOpenItemDetail(item)} aria-label={`${item.name}の効果を見る`} className="text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"><BookOpen size={8}/>詳細</button>}</>}
-                  />}
-                </React.Fragment>
-              );
-            })}
-            {/* 勇者の証は売り物ではないので BREEDER_MARKET_ITEMS に無い。
-                アイテムのタブの最後へ「証片◯個で交換」の1枚だけ足す
-                (2026-09-13・ユーザーが決めた。モンヒロビートの週間ランキングで証片がたまる) */}
-            {marketTab==='item'&&<MarketProductCard
+            {itemExchangeItems.map(item=>renderMarketItem(item))}
+            {soulRankRespecItem&&renderMarketItem(soulRankRespecItem,{showBase:false,showHeroProofExchange:true})}
+            <MarketProductCard
               item={{...HERO_PROOF_ITEM, type:'item', currency:'heroProofShard', cost:HERO_PROOF_SHARD_PER_PROOF}}
               owned={false} comingSoon={false}
               canBuy={shardHave>=HERO_PROOF_SHARD_PER_PROOF&&!purchaseProcessing}
               disabled={purchaseProcessing}
               onBuy={onExchangeHeroProof}
               middle={<><span className={`text-[9px] font-black ${proofHave>0?'text-cyan-300':'text-slate-600'}`}>×{proofHave}</span><button onClick={()=>onOpenItemDetail(HERO_PROOF_ITEM)} aria-label="勇者の証の効果を見る" className="text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"><BookOpen size={8}/>詳細</button></>}
-            />}
+            />
           </div>
-        )}
         </div>
-      </div>  );
+      </>}
+
+      {marketSection==='event'&&<div className="flex-1 min-h-0 flex items-center justify-center">
+        <div className="w-full max-w-sm rounded-2xl border border-slate-700 bg-slate-950/70 px-4 py-8 text-center">
+          <div className="text-3xl mb-2" aria-hidden="true">🎟️</div>
+          <div className="text-sm font-black text-slate-300">イベントP交換所は準備中です</div>
+          <div className="mt-2 text-[10px] font-bold leading-relaxed text-slate-500">イベントP機能と商品ラインナップは今後追加します。</div>
+        </div>
+      </div>}
+    </div>
+  );
 }
