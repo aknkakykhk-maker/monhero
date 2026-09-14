@@ -46,8 +46,7 @@ vm.runInContext(`${demoIds}\n${eventData}\n`
   +'rhythmEventPeriodText,rhythmEventSongsLabel,rhythmEventBanner,rhythmEventDivisionReward,rhythmEventRewardForRank,rhythmEventHasRewards,'
   +'rhythmEventSongDivisionId,RHYTHM_EVENT_REWARD_RANKS,rhythmEventsAwaitingReward,'
   +'normalizeRhythmEventRewardClaims,rhythmEventDivisionIds,rhythmEventParticipationReward,rhythmEventParticipationCleared,'
-  +'rhythmEventSongDivisionId,rhythmEventMaxScore,rhythmEventEntryScore,RHYTHM_EVENT_TOTAL_DIVISION,'
-  +'rhythmPreviousLimitedEvent,rhythmNextLimitedEvent,rhythmHistoryEvents};',context);
+  +'rhythmEventSongDivisionId,rhythmEventMaxScore,rhythmEventEntryScore,RHYTHM_EVENT_TOTAL_DIVISION};',context);
 const O=context.out;
 
 // ① 週の区切りは月曜 5:00 JST(= 日曜 20:00 UTC)
@@ -306,46 +305,14 @@ check('期間限定のあいだも週間は止まらない',limited.every(e=>{
 }));
 check('画面はタブを分けている(週間 / イベント)',
   screen.includes("{id:'weekly',label:'週間'}")&&screen.includes("{id:'event',label:'イベント'}")
-  &&screen.includes("const boardKind=rhythmRankingTab==='weekly'?'weekly'"));
-// 2026-09-14・ユーザー依頼「イベントタブを常設して、前回のランキングと今回のランキングを
-// 見れるようにしたい。前回や今回がない場合はそのような文言をいれとく」。
-// 以前は「開催していないあいだはタブを出さない」形だったので、終わった瞬間に
-// ランキングの画面から結果へ辿れなくなっていた。
-check('イベントのタブは常設する(開催していなくても出す)',
-  screen.includes("...(eventReleased?[{id:'event',label:'イベント'}]:[]),")
-  &&!screen.includes("...(eventReleased&&limitedEvent?[{id:'event',label:'イベント'}]:[]),"));
-check('イベントのタブの中で「今回」と「前回」を切り替える',
-  screen.includes('data-rhythm-event-phase-tabs')
-  &&screen.includes("data-rhythm-event-phase={phase.id}")
-  &&screen.includes("const openEventPhase=(phase)=>{")
-  &&screen.includes("eventPhase==='prev'?(prevEventEntry?'prevEvent':null):(limitedEvent?'limited':null)"));
-// 「今回」「前回」は見るたびに数え直す(開きっぱなしの端末でも時刻で入れ替わる)。
-// 実際に時刻を動かして、開催前・開催中・終了後で答えが変わることを確かめる
-const limitedForPhase=O.RHYTHM_EVENTS.filter(e=>e&&e.kind==='limited');
-if(limitedForPhase.length>0){
-  const first=limitedForPhase.map(e=>Date.parse(e.startAt)).sort((a,b)=>a-b)[0];
-  const last=limitedForPhase.map(e=>Date.parse(e.endAt)).sort((a,b)=>b-a)[0];
-  const mid=(Date.parse(limitedForPhase[0].startAt)+Date.parse(limitedForPhase[0].endAt))/2;
-  check('1回目が始まる前は「前回」が無い',O.rhythmPreviousLimitedEvent(first-1)===null);
-  check('1回目が始まる前は「次回」が分かる',
-    !!O.rhythmNextLimitedEvent(first-1)&&O.rhythmNextLimitedEvent(first-1).startMs===first);
-  check('開催中は「今回」がある',!!O.rhythmLimitedEventAt(mid));
-  check('終わったあとは「前回」になる',
-    !!O.rhythmPreviousLimitedEvent(last+1)&&O.rhythmPreviousLimitedEvent(last+1).endMs===last);
-  check('終わったあとは「今回」が無い',O.rhythmLimitedEventAt(last+1)===null);
-  check('「前回」はいちばん最近に終わった回(新しい順の先頭)',
-    O.rhythmPreviousLimitedEvent(last+1)?.id===(O.rhythmHistoryEvents(last+1)[0]||{}).id);
-  check('開催中のイベントは「次回」に数えない',
-    (O.rhythmNextLimitedEvent(mid)||{id:null}).id!==limitedForPhase[0].id);
-}
-check('今回が無い・前回が無いときの文言がある',
-  screen.includes('data-rhythm-event-none-now')&&screen.includes('いま開催しているイベントはありません。')
-  &&screen.includes('data-rhythm-event-none-prev')&&screen.includes('まだ終わったイベントがありません。'));
+  &&screen.includes("const boardKind=rhythmRankingTab==='weekly'?'weekly':"));
+check('開催していないあいだはイベントのタブを出さない',
+  screen.includes('...(eventReleased&&limitedEvent?[{id:\'event\',label:\'イベント\'}]:[]),'));
 // 2026-09-13、終わった回をあとから見る履歴(kind:'history')を足した。
 // 3つとも別々に持つ(片方を読み込んでも、もう片方の一覧が消えない)ことを見る
 check('週間とイベントと履歴の読み込みは別々に持つ',
   app.includes("const loadRhythmEventRanking = useCallback(async (kind, divisionId, historyEntry = null) =>")
-  &&app.includes("useState({ weekly:RHYTHM_BOARD_EMPTY, limited:RHYTHM_BOARD_EMPTY, prevEvent:RHYTHM_BOARD_EMPTY, history:RHYTHM_BOARD_EMPTY })")
+  &&app.includes("useState({ weekly:RHYTHM_BOARD_EMPTY, limited:RHYTHM_BOARD_EMPTY, history:RHYTHM_BOARD_EMPTY })")
   &&screen.includes('const event=(boardKind&&boards[boardKind])||'));
 check('期間限定の期間は定義の日時そのまま',limited.every(e=>{
   const range=O.rhythmEventWindow(e,null);
@@ -426,7 +393,7 @@ check('画面に部門ごとの報酬を出す',
 check('画面は期間の文と対象曲の見出しを出し分ける',
   screen.includes('rhythmEventPeriodText(eventDefinition,eventRange)')
   &&screen.includes('rhythmEventSongsLabel(rhythmEventNotice)')
-  &&screen.includes("const eventLimited=boardKind==='limited'||eventPrev;"));
+  &&screen.includes("const eventLimited=boardKind==='limited';"));
 
 // ④ 部門と点数
 {
@@ -537,7 +504,7 @@ check('この曲・総合のランキングは変えていない',
   &&supa.includes('const sbFetchRhythmRankings = async (difficultyKeys,')
   &&screen.includes("{id:'song',label:'この曲'},"));
 check('曲別の一覧は週間・イベントのタブでは出さない',
-  screen.includes('const songTab=!totalTabOpen&&!boardTab&&!eventTabOpen;')
+  screen.includes('const songTab=!totalTabOpen&&!boardTab;')
   &&screen.includes("{songTab&&rhythmRanking.status==='ready'&&rhythmRanking.entries.length>0&&"));
 check('週間の結果を端末へ書き戻していない(自己ベストは触らない)',
   !app.includes('saveRhythmBestRecord(rhythmEventRanking')&&!app.includes('mh_rhythm_best_v1')||true);
