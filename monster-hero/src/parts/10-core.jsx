@@ -82,7 +82,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-14 18:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-14 18:49"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -303,12 +303,29 @@ const rhythmPlayRunLoopScale = (songId, event) => {
   const id = songId === null || songId === undefined ? '' : String(songId);
   return (id && ids && ids.includes(id)) ? RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE : RHYTHM_PLAY_RUN_LOOP_SCALE;
 };
+// その難易度を「クイックで」通したことがあるか。
+// ★上の難易度を通していれば、その下も通したものとして扱う。下は上より必ずやさしいので、
+//   上を通せた人にわざわざ下を踏ませる意味がないため(2026-09-12・ユーザー指示の考え方を
+//   クイックのクリア記録にもそろえた)。並びの正本は isQuickDifficultyUnlocked と同じ。
+// ★見るのは既存の mh_quick_clears_<難易度> だけ。新しい保存キーは作らない。
+const isQuickModeClearedAtOrAbove = (difficulty, quickClears) =>
+  quickDifficultiesAtOrAbove(difficulty)
+    .some(id => (Number(quickClears?.[id]) || 0) > 0);
 // 演奏を「周回クリア扱い」にしてよいか。
 // ★過去にその難易度をクイックで1回でもクリアしていること(2026-09-07・ユーザー指示)。
 //   これが無いと、勝てないほど高い難易度でも演奏さえすればクリア扱いになってしまう。
-//   判定には既存の mh_quick_clears_<難易度> をそのまま読む(新しい保存キーは作らない)。
 const rhythmPlayRunLoopsAllowed = (difficulty, quickClears) =>
-  (Number(quickClears?.[difficulty]) || 0) > 0;
+  isQuickModeClearedAtOrAbove(difficulty, quickClears);
+// AUTO設定「モンヒロビート中に回すクイック周回」で選べる難易度。
+// ★ここはクイックのクリア記録で見る(2026-09-14・ユーザー指摘「モンビーとのクイック連携で
+//   オート難易度設定の条件がチャレンジや極限クリアになってない？ これの条件はクイックの
+//   その難易度をクリアしないと選べない仕様にしたはず」)。
+//   クイック本体の解放条件(チャレンジ・プロ・極限＝isQuickDifficultyUnlocked)で選ばせていたため、
+//   「AUTO設定では選べるのに、演奏しても周回クリアが入らない」難易度を作れてしまっていた。
+//   連携のための設定なので、rhythmPlayRunLoopsAllowed と同じ判定にそろえて、
+//   選べる＝演奏ぶんが入る、が構造的に一致するようにする。
+const isAutoQuickRunDifficultyAllowed = (difficulty, quickClears) =>
+  isQuickModeClearedAtOrAbove(difficulty, quickClears);
 // 演奏の結果(クリア／失敗)で入る周回数を変える(2026-09-12・ユーザー指示
 //   「終了後にクリアか失敗かもわかるようにして / それによって経験値も変わるから」)。
 // 失敗＝ライフが0になったまま曲を終えた(不可逆のDOWN)こと。

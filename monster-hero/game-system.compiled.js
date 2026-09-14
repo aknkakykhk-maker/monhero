@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 30b87b0d18a3eb0f
+// source-sha256: 99c661151f55fb87
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: da23029e3f6ff300
+// generated-sha256: 60cb294fdafcc3dd
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-14 18:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-14 18:49"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -375,11 +375,25 @@ const rhythmPlayRunLoopScale = (songId, event) => {
   const id = songId === null || songId === undefined ? '' : String(songId);
   return id && ids && ids.includes(id) ? RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE : RHYTHM_PLAY_RUN_LOOP_SCALE;
 };
+// その難易度を「クイックで」通したことがあるか。
+// ★上の難易度を通していれば、その下も通したものとして扱う。下は上より必ずやさしいので、
+//   上を通せた人にわざわざ下を踏ませる意味がないため(2026-09-12・ユーザー指示の考え方を
+//   クイックのクリア記録にもそろえた)。並びの正本は isQuickDifficultyUnlocked と同じ。
+// ★見るのは既存の mh_quick_clears_<難易度> だけ。新しい保存キーは作らない。
+const isQuickModeClearedAtOrAbove = (difficulty, quickClears) => quickDifficultiesAtOrAbove(difficulty).some(id => (Number(quickClears?.[id]) || 0) > 0);
 // 演奏を「周回クリア扱い」にしてよいか。
 // ★過去にその難易度をクイックで1回でもクリアしていること(2026-09-07・ユーザー指示)。
 //   これが無いと、勝てないほど高い難易度でも演奏さえすればクリア扱いになってしまう。
-//   判定には既存の mh_quick_clears_<難易度> をそのまま読む(新しい保存キーは作らない)。
-const rhythmPlayRunLoopsAllowed = (difficulty, quickClears) => (Number(quickClears?.[difficulty]) || 0) > 0;
+const rhythmPlayRunLoopsAllowed = (difficulty, quickClears) => isQuickModeClearedAtOrAbove(difficulty, quickClears);
+// AUTO設定「モンヒロビート中に回すクイック周回」で選べる難易度。
+// ★ここはクイックのクリア記録で見る(2026-09-14・ユーザー指摘「モンビーとのクイック連携で
+//   オート難易度設定の条件がチャレンジや極限クリアになってない？ これの条件はクイックの
+//   その難易度をクリアしないと選べない仕様にしたはず」)。
+//   クイック本体の解放条件(チャレンジ・プロ・極限＝isQuickDifficultyUnlocked)で選ばせていたため、
+//   「AUTO設定では選べるのに、演奏しても周回クリアが入らない」難易度を作れてしまっていた。
+//   連携のための設定なので、rhythmPlayRunLoopsAllowed と同じ判定にそろえて、
+//   選べる＝演奏ぶんが入る、が構造的に一致するようにする。
+const isAutoQuickRunDifficultyAllowed = (difficulty, quickClears) => isQuickModeClearedAtOrAbove(difficulty, quickClears);
 // 演奏の結果(クリア／失敗)で入る周回数を変える(2026-09-12・ユーザー指示
 //   「終了後にクリアか失敗かもわかるようにして / それによって経験値も変わるから」)。
 // 失敗＝ライフが0になったまま曲を終えた(不可逆のDOWN)こと。
@@ -46734,12 +46748,14 @@ function MonsterHeroGame() {
   // (docs/spec/QUICK_RHYTHM_LINK.md PR5)。
   // 1周目をバトル画面で組まなくても∞周回を始められるようにするためのもので、
   // 作るだけならここは副作用を持たない。実際に始めるのは startRunFromRepeatTemplate。
-  // 設定が欠けている・勇者モンがいない・難易度が未解放のときは null を返し、
+  // 設定が欠けている・勇者モンがいない・その難易度をクイックで通していないときは null を返し、
   // 呼び出し側はこれまでどおり周回テンプレート(1周目に自分で組んだ編成)を使う。
+  // ★難易度の条件はクイックのクリア記録(2026-09-14・ユーザー指摘)。保存してある設定は
+  //   書き換えず、条件を満たさないあいだ使わないだけなので、あとでクリアすれば復活する。
   const repeatTemplateFromAutoSettings = (settings = autoSettings) => {
     if (!autoQuickRunConfigured(settings)) return null;
     const quick = settings.quickRun;
-    if (!isQuickDifficultyUnlocked(quick.difficulty, clearCounts, proClearCounts, extremeDifficultyClearCounts)) return null;
+    if (!isAutoQuickRunDifficultyAllowed(quick.difficulty, quickClearCounts)) return null;
     if (!resolveRosterEntryToMon(quick.heroRosterEntry)) return null;
     return Object.freeze({
       runMode: BATTLE_MODE_QUICK,
@@ -53818,7 +53834,7 @@ function MonsterHeroGame() {
         className: "text-sm font-black text-indigo-200"
       }, "3. \u30E2\u30F3\u30D2\u30ED\u30D3\u30FC\u30C8\u4E2D\u306B\u56DE\u3059\u30AF\u30A4\u30C3\u30AF\u5468\u56DE"), /*#__PURE__*/React.createElement("p", {
         className: "text-[9px] leading-relaxed text-slate-400 mt-1"
-      }, "\u30E2\u30F3\u30D2\u30ED\u30D3\u30FC\u30C8\u304B\u3089\u221E\u5468\u56DE\u3092\u59CB\u3081\u308B\u3068\u304D\u306E\u7DE8\u6210\u3067\u3059\u3002\u52C7\u8005\u30E2\u30F3\u30FB\u914D\u7F6E\u8DDD\u96E2\u30FB\u96E3\u6613\u5EA6\u306E3\u3064\u3092\u6C7A\u3081\u308B\u3068\u4F7F\u3048\u307E\u3059\u3002\u6C7A\u3081\u3066\u3044\u306A\u3044\u3042\u3044\u3060\u306F\u3001\u3044\u3064\u3082\u3069\u304A\u308A\u30D0\u30C8\u30EB\u753B\u9762\u30671\u5468\u76EE\u3092\u7D44\u3093\u3067\u304B\u3089\u221E\u306B\u3057\u3066\u304F\u3060\u3055\u3044\u3002")), /*#__PURE__*/React.createElement("div", {
+      }, "\u30E2\u30F3\u30D2\u30ED\u30D3\u30FC\u30C8\u304B\u3089\u221E\u5468\u56DE\u3092\u59CB\u3081\u308B\u3068\u304D\u306E\u7DE8\u6210\u3067\u3059\u3002\u52C7\u8005\u30E2\u30F3\u30FB\u914D\u7F6E\u8DDD\u96E2\u30FB\u96E3\u6613\u5EA6\u306E3\u3064\u3092\u6C7A\u3081\u308B\u3068\u4F7F\u3048\u307E\u3059\u3002\u6C7A\u3081\u3066\u3044\u306A\u3044\u3042\u3044\u3060\u306F\u3001\u3044\u3064\u3082\u3069\u304A\u308A\u30D0\u30C8\u30EB\u753B\u9762\u30671\u5468\u76EE\u3092\u7D44\u3093\u3067\u304B\u3089\u221E\u306B\u3057\u3066\u304F\u3060\u3055\u3044\u3002\u96E3\u6613\u5EA6\u306F\u300C\u30AF\u30A4\u30C3\u30AF\u3067\u30AF\u30EA\u30A2\u6E08\u307F\u300D\u306E\u3082\u306E\u3060\u3051\u9078\u3079\u307E\u3059\uFF08\u6F14\u594F\u3057\u305F\u3076\u3093\u304C\u5468\u56DE\u30AF\u30EA\u30A2\u3068\u3057\u3066\u5165\u308B\u306E\u3082\u540C\u3058\u6761\u4EF6\u306E\u305F\u3081\uFF09\u3002")), /*#__PURE__*/React.createElement("div", {
         className: "rounded-2xl border border-fuchsia-500/30 bg-slate-900 p-3 space-y-2"
       }, /*#__PURE__*/React.createElement("label", {
         className: "block text-xs font-black text-white",
@@ -53859,12 +53875,12 @@ function MonsterHeroGame() {
       }, /*#__PURE__*/React.createElement("option", {
         value: ""
       }, "\u672A\u8A2D\u5B9A"), Object.entries(QUICK_DIFFICULTY_SETTINGS).map(([key, setting]) => {
-        const unlocked = isQuickDifficultyUnlocked(key, clearCounts, proClearCounts, extremeDifficultyClearCounts);
+        const unlocked = isAutoQuickRunDifficultyAllowed(key, quickClearCounts);
         return /*#__PURE__*/React.createElement("option", {
           key: key,
           value: key,
           disabled: !unlocked
-        }, setting.label, unlocked ? '' : '（未解放）');
+        }, setting.label, unlocked ? '' : '（クイック未クリア）');
       }))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
         className: "text-[10px] font-black text-slate-300 mb-1.5"
       }, "\u30E2\u30F3\u30D2\u30ED\u30D3\u30FC\u30C8\u3092\u958B\u3044\u305F\u3089\u81EA\u52D5\u3067\u59CB\u3081\u308B"), /*#__PURE__*/React.createElement("button", {
