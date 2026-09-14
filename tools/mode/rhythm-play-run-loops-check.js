@@ -39,15 +39,34 @@ const pickLine = (startsWith) => {
   if (from < 0) throw new Error(`見つかりません: ${startsWith}`);
   return src.slice(from, src.indexOf('\n', from));
 };
-// 2行にまたがるアロー式(条件のほう)は、その次の行まで取る
-const pickTwoLines = (startsWith) => {
+// 複数行にまたがるアロー式は、行末の「;」まで取る。
+// ★行数で決め打ちにしない。2行前提にしていたところへ3行の式が来て、
+//   式の後半を静かに切り落とし、条件の検査が全部NGになった(2026-09-14)
+const pickStatement = (startsWith) => {
   const from = src.indexOf(startsWith);
   if (from < 0) throw new Error(`見つかりません: ${startsWith}`);
-  const first = src.indexOf('\n', from);
-  return src.slice(from, src.indexOf('\n', first + 1));
+  const end = src.indexOf(';\n', from);
+  if (end < 0) throw new Error(`終わりが見つかりません: ${startsWith}`);
+  return src.slice(from, end + 1);
 };
 
-const ctx = {};
+// 「その難易度以上をクイックでクリアしているか」を見るので、難易度の並びが要る
+// (2026-09-14。それまでは自分の難易度だけを見ていたので並びは不要だった)。
+// 並びは実データのキー順が正本。手で書き写すと難易度が増えたとき検査だけ古くなる
+// 難易度の表は 19-difficulties-and-rules.jsx にある(判定そのものは 10-core.jsx)
+const difficultySrc = fs.readFileSync(path.join(root, 'monster-hero/src/parts/19-difficulties-and-rules.jsx'), 'utf8');
+const settingKeys = (pattern, name) => {
+  const found = difficultySrc.match(pattern);
+  if (!found) throw new Error(`${name}が見つかりません`);
+  return [...found[0].matchAll(/^ {2}([A-Za-z_]\w*):/gm)].map(hit => hit[1]);
+};
+const difficultyOrder = [
+  ...settingKeys(/const DIFFICULTY_SETTINGS = \{[\s\S]*?\n\};\n/, '通常難易度の一覧'),
+  ...settingKeys(/const QUICK_EXTREME_SETTINGS = Object\.freeze\(\{[\s\S]*?\n\}\);\n/, 'クイックの極限難易度の一覧'),
+];
+if (difficultyOrder[0] !== 'Beginner') throw new Error('難易度の並びが Beginner で始まらない');
+
+const ctx = { QUICK_DIFFICULTY_SETTINGS: Object.fromEntries(difficultyOrder.map(id => [id, {}])) };
 vm.createContext(ctx);
 vm.runInContext(`${[
   pickLine('const RHYTHM_PLAY_RUN_LOOP_MIN ='),
@@ -55,7 +74,9 @@ vm.runInContext(`${[
   pickLine('const RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE ='),
   pickBlock('const rhythmPlayRunLoops ='),
   pickBlock('const rhythmPlayRunLoopScale ='),
-  pickTwoLines('const rhythmPlayRunLoopsAllowed ='),
+  pickBlock('const quickDifficultiesAtOrAbove ='),
+  pickStatement('const isQuickModeClearedAtOrAbove ='),
+  pickStatement('const rhythmPlayRunLoopsAllowed ='),
 ].join('\n')}
 globalThis.__x = { rhythmPlayRunLoops, rhythmPlayRunLoopScale, rhythmPlayRunLoopsAllowed,
   RHYTHM_PLAY_RUN_LOOP_MIN, RHYTHM_PLAY_RUN_LOOP_SCALE, RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE };`, ctx);
@@ -138,6 +159,10 @@ check('何度もクリアしていればもちろん認める',
   rhythmPlayRunLoopsAllowed('Normal', { Normal: 42 }) === true);
 check('一度もクリアしていない難易度では認めない',
   rhythmPlayRunLoopsAllowed('Legend', { Normal: 5 }) === false);
+// 2026-09-14。AUTO設定の難易度と条件をそろえたときに、上を通した人は下も通るようにした。
+// 上を通せた人が下で勝てないことはないので、悪用対策(勝てない難易度で演奏だけ)の趣旨は変わらない
+check('上の難易度をクイックでクリアしていれば下の難易度も認める',
+  rhythmPlayRunLoopsAllowed('Easy', { Master: 1 }) === true);
 check('クリア回数が0なら認めない',
   rhythmPlayRunLoopsAllowed('Normal', { Normal: 0 }) === false);
 check('記録そのものが無くても落ちない',
