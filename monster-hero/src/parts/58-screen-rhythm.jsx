@@ -97,14 +97,14 @@ function RhythmSongSelectScreen({
         : null;
       return (
       <main data-rhythm-demo-home className="relative flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white">
-        {/* 周回を締めているあいだ(報酬の付与・全国ランキングへの送信・バトルの演出の終わり待ち)。
-            数秒かかることがあるので、その間は他を押せなくして待ってもらう。
-            ★番を待たずに片付けると、進んでいるターンの残りが空の状態を触って画面が落ちる
-            (2026-09-13・ユーザー報告「そのまま戻ったときに結構な頻度でエラーが起きる」) */}
+        {/* 周回を締めているあいだ。いまは報酬の付与と記録だけで端末の中で完結するので
+            ほぼ一瞬だが、まれに引っかかったときに二度押しされないよう薄い幕だけ残す
+            (2026-09-14・ユーザー指摘「待ち時間が長くてストレス」。
+             それまでは進んでいるターンの演出の終わりを待っていて、実測で3〜6秒かかっていた。
+             いまは returnToHome がランの世代を1つ進めて演出を止めるので、待つ必要がない) */}
         {exitingQuickRun&&<div data-rhythm-exiting-run role="status" aria-live="polite"
-          className="absolute inset-0 z-[90000] flex flex-col items-center justify-center gap-2 bg-slate-950/85 px-6 text-center">
+          className="absolute inset-0 z-[90000] flex items-center justify-center bg-slate-950/60 px-6 text-center">
           <b className="text-sm font-black text-amber-200">周回を終えています…</b>
-          <small className="text-[10px] font-bold leading-relaxed text-slate-300">ここまでのWAVEぶんの報酬を付けて、記録を送っています。<br/>終わると自動でホームへ戻ります。</small>
         </div>}
         <header className="z-10 flex shrink-0 items-center gap-1 border-b border-cyan-400/15 bg-slate-950/95 px-2 py-1" style={{paddingTop:'calc(0.25rem + env(safe-area-inset-top))'}}>
           {/* ★裏でクイック∞周回が回っていても、ここからHOMEへ戻れる

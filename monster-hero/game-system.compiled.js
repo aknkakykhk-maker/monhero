@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 106c95c5b973c5f2
+// source-sha256: ca85a542d10a5dc8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1c4cb10a1a79cfc0
+// generated-sha256: 39cc54b234618a60
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-14 07:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-14 09:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -26870,12 +26870,10 @@ function RhythmSongSelectScreen({
     "data-rhythm-exiting-run": true,
     role: "status",
     "aria-live": "polite",
-    className: "absolute inset-0 z-[90000] flex flex-col items-center justify-center gap-2 bg-slate-950/85 px-6 text-center"
+    className: "absolute inset-0 z-[90000] flex items-center justify-center bg-slate-950/60 px-6 text-center"
   }, /*#__PURE__*/React.createElement("b", {
     className: "text-sm font-black text-amber-200"
-  }, "\u5468\u56DE\u3092\u7D42\u3048\u3066\u3044\u307E\u3059\u2026"), /*#__PURE__*/React.createElement("small", {
-    className: "text-[10px] font-bold leading-relaxed text-slate-300"
-  }, "\u3053\u3053\u307E\u3067\u306EWAVE\u3076\u3093\u306E\u5831\u916C\u3092\u4ED8\u3051\u3066\u3001\u8A18\u9332\u3092\u9001\u3063\u3066\u3044\u307E\u3059\u3002", /*#__PURE__*/React.createElement("br", null), "\u7D42\u308F\u308B\u3068\u81EA\u52D5\u3067\u30DB\u30FC\u30E0\u3078\u623B\u308A\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("header", {
+  }, "\u5468\u56DE\u3092\u7D42\u3048\u3066\u3044\u307E\u3059\u2026")), /*#__PURE__*/React.createElement("header", {
     className: "z-10 flex shrink-0 items-center gap-1 border-b border-cyan-400/15 bg-slate-950/95 px-2 py-1",
     style: {
       paddingTop: 'calc(0.25rem + env(safe-area-inset-top))'
@@ -37554,27 +37552,27 @@ function MonsterHeroGame() {
   const repeatRunTemplateRef = useRef(null);
   const [selectedCards, setSelectedCards] = useState([]);
   const [isBusy, setIsBusy] = useState(false);
-  // ★ターンの演出(executeTurn→敵の行動)は await で繋いだ長い一本道で、途中で止める手立てが無い。
-  //   その最中にランを片付ける(returnToHome)と、残りの setEnemy(prev=>...) が
-  //   null を掘って画面が落ちる。「いま演出の途中か」を ref でも読めるようにして、
-  //   片付ける前に終わるのを待てるようにしてある(2026-09-13・ユーザー報告
-  //   「モンビーからそのまま戻ったときに結構な頻度でエラーが起きる」)。
-  const isBusyRef = useRef(false);
-  // 曲えらびで「⼹ 終了」を押してからHOMEへ抜けるまでのあいだ(報酬の付与・送信・演出の終わり待ち)。
-  // 数秒かかることがあるので、そのあいだは畫面でそう言っておき、二度押しも止める
+  // ★ターンの演出(processTurn→handleEnemyTurn)は await battleWait で繋いだ長い一本道で、
+  //   途中で止める手立てが無かった。その最中にランを片付ける(returnToHome)と、
+  //   残りの setEnemy(prev=>...) が null を掘って画面が落ちる
+  //   (2026-09-13・ユーザー報告「結構な頻度でエラーが起きる」)。
+  //
+  // はじめは「終わるまで待つ」で逃げたが、それだと最大6秒待たされる
+  // (2026-09-14・ユーザー指摘「待ち時間が長くてストレス / もっと良い方法ない？」)。
+  // → 待つのをやめ、**ランに世代番号を持たせる**。片付けるときに1つ進めると、
+  //   古い世代で始まった battleWait は**二度と先へ進まない**ので、
+  //   残りの処理が片付いたあとの状態を触ることがそもそも起きない。待ち時間は0になる。
+  // ★真偽値ではだめ。次のランが始まって旗を下ろすと、古い待ちがそのとき目を覚まして
+  //   新しいランを触る。世代番号なら、古い待ちは永久に目を覚まさない。
+  const runGenerationRef = useRef(0);
+  // ランを片付けるときに呼ぶ。これ以降、古いターンの演出は一切進まなくなる
+  const abandonRunAnimations = () => {
+    runGenerationRef.current += 1;
+  };
+  // 曲えらびで「⏹ 終了」を押してからHOMEへ抜けるまでのあいだ(報酬の付与と記録)。
+  // いまは端末の中だけで済むのでほぼ一瞬だが、二度押しを止めるために残してある
   const [rhythmExitingRun, setRhythmExitingRun] = useState(false);
   const rhythmExitingRunRef = useRef(false);
-  useEffect(() => {
-    isBusyRef.current = isBusy;
-  }, [isBusy]);
-  // 演出が終わるのを待つ(最大 timeoutMs)。待ちちょうで止まらないよう上限を必ず置く
-  const waitForBattleIdle = async (timeoutMs = 6000) => {
-    const until = Date.now() + Math.max(0, timeoutMs);
-    while (isBusyRef.current && Date.now() < until) {
-      await new Promise(resolve => setTimeout(resolve, 120));
-    }
-    return !isBusyRef.current;
-  };
   // AUTOのON/OFFはラン中だけの一時状態。state反映前の操作やeffect再実行にも同じ値を見せるためrefも同期する。
   const [autoBattle, setAutoBattle] = useState(false);
   const autoBattleRef = useRef(false);
@@ -37737,7 +37735,15 @@ function MonsterHeroGame() {
     if (!(catchUpUntilRef.current > Date.now())) return base;
     return Math.max(0, Math.round(base / CATCH_UP_SPEED));
   }, []);
-  const battleWait = useCallback(baseMs => new Promise(resolve => setTimeout(resolve, battleMs(baseMs))), [battleMs]);
+  // ★待ちは「そのランのもの」。片付けられたあとに目を覚ました待ちは、そこで止まる。
+  //   resolve しないだけにする(reject にすると await している55か所すべてで受ける必要があり、
+  //   1つでも漏れると unhandled rejection になる)。
+  const battleWait = useCallback(baseMs => {
+    const generation = runGenerationRef.current;
+    return new Promise(resolve => setTimeout(() => {
+      if (runGenerationRef.current === generation) resolve();
+    }, battleMs(baseMs)));
+  }, [battleMs]);
   const setAutoRepeatBattleSpeed = enabled => {
     if (enabled) {
       if (autoRepeatBattleSpeedRef.current == null) autoRepeatBattleSpeedRef.current = normalizeBattleSpeed(battleSpeedRef.current);
@@ -47073,6 +47079,9 @@ function MonsterHeroGame() {
   };
   const returnToHome = () => {
     stopAllAuto();
+    // ★まず世代を進める。この行より先で中身を空にするので、
+    //   いま進んでいるターンの演出はここで止まり、空になった状態を触らない
+    abandonRunAnimations();
     // HOMEへ戻った時点でランは終わり。段階を残すと、次にランの画面を開いたときに
     // 「前のランの続き」と見なされてしまう
     clearRunStage();
@@ -47538,15 +47547,13 @@ function MonsterHeroGame() {
       setRhythmExitingRun(true);
       // ★リザルトは見せない(silent)。立ててしまうと、締めている途中でバトルの
       //   リザルトが描かれ、そのあと returnToHome() が中身を片付けるので落ちる
+      // ★ここでやるのは報酬の付与と記録だけ。どちらも端末の中で完結する
+      //   (クイックは全国ランキング対象外なので、網を待つ処理は入らない)。
+      //   進んでいるターンの演出は returnToHome が世代を進めて止めるので、**待たない**
+      //   (2026-09-14・ユーザー指摘「待ち時間が長くてストレス」)。
       await handleGiveUp({
         silent: true
       });
-      // ★そのとき進んでいるターンの演出を待ってから片付ける。
-      //   stopAllAuto は「次のターンを始めない」だけで、いま進んでいる一本道は止められない。
-      //   待たずに returnToHome すると、残りの処理が片付いたあとの状態を触り、
-      //   画面が「表示でエラーが起きました」へ落ちる
-      //   (2026-09-13・ユーザー報告「結構な頻度でエラーが起きる」。実測で再現した)。
-      await waitForBattleIdle();
       rhythmExitingRunRef.current = false;
       setRhythmExitingRun(false);
       returnToHome();
