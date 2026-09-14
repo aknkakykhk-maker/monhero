@@ -88,7 +88,7 @@ function BreederMarketScreen({
       <div className="shrink-0 w-full max-w-md mx-auto mb-3"><AssistantBubble scene="market" condition={Number.isFinite(CHEAPEST_GOLD_ITEM_COST)&&gold<CHEAPEST_GOLD_ITEM_COST?'lowGold':null}/></div>
 
       {!marketSection&&<div data-market-top className="flex-1 min-h-0 overflow-y-auto mh-scroll">
-        <div className="grid grid-cols-2 gap-2 pb-2">
+        <div className="grid grid-cols-2 gap-2 pt-8 pb-2">
           {[
             {key:'diamond',emoji:'💎',label:'ダイヤショップ',value:gold.toLocaleString(),hint:'ダイヤで購入'},
             {key:'breeder',emoji:'🪙',label:'ブリーダーP交換所',value:breederPoints.toLocaleString(),hint:'Lv.UPで獲得'},
