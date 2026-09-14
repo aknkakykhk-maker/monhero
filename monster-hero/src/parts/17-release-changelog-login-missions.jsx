@@ -204,6 +204,21 @@ const CHANGELOG_TYPE_LABELS = Object.freeze({
   issue:   { label:'調査中',     tone:'issue' },
 });
 const changelogTypeOf = (entry) => CHANGELOG_TYPE_LABELS[entry?.type] || CHANGELOG_TYPE_LABELS.update;
+
+// 更新履歴のエントリに書いた外部リンク(link:{url,label})を、出してよい形だけ通す。
+// 【なぜ絞るか】(2026-09-14・よそのゲームの曲を入れたときの案内用に足した)
+// ここはデータ(data/changelog.js)から来た文字列をそのまま href へ入れる場所なので、
+//   ・https だけ通す(javascript: や data: を弾く。書き間違いでも動かないようにする)
+//   ・見た目だけ https に見える文字列を弾く(URL で解釈できないものは出さない)
+// 呼ぶ側は target="_blank" と rel="noopener noreferrer" を必ず付ける。
+const changelogSafeLink = (link) => {
+  const url = (link && typeof link.url === 'string') ? link.url.trim() : '';
+  if (!url) return '';
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'https:' ? parsed.href : '';
+  } catch { return ''; }
+};
 const CHANGELOG_IDS_BY_TYPE = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, changelogEntriesOfTab(type).map(entry => entry.id)]));
 // 一覧の並べかえに使えるキー。画面の選択肢(MONSTER_SORT_OPTIONS)と必ず同じ顔ぶれにする。
 // 片方にだけ足すと、画面では選べるのに保存だけ弾かれて、開き直すと元に戻る
