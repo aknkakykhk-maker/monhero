@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8a694d4e1020b3d0
+// source-sha256: 33bdfe595fbf475f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b1c7fc11adce5597
+// generated-sha256: e173bc281a23caa8
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-14 15:52"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-14 16:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -25771,6 +25771,7 @@ function BreederMarketScreen({
     key: 'breeder',
     emoji: '🪙',
     label: 'ブリーダーP交換所',
+    titleLines: ['ブリーダーP', '交換所'],
     value: breederPoints.toLocaleString(),
     hint: 'Lv.UPで獲得',
     border: 'border-amber-400/35',
@@ -25789,6 +25790,7 @@ function BreederMarketScreen({
     key: 'event',
     emoji: '🎟️',
     label: 'イベントP交換所',
+    titleLines: ['イベントP', '交換所'],
     value: null,
     hint: '準備中',
     border: 'border-violet-400/20',
@@ -25806,7 +25808,10 @@ function BreederMarketScreen({
     className: "text-2xl"
   }, section.emoji), /*#__PURE__*/React.createElement("span", {
     className: `text-[12px] font-black leading-tight ${section.title}`
-  }, section.label)), section.value !== null && /*#__PURE__*/React.createElement("div", {
+  }, section.titleLines ? section.titleLines.map(line => /*#__PURE__*/React.createElement("span", {
+    key: line,
+    className: "block"
+  }, line)) : section.label)), section.value !== null && /*#__PURE__*/React.createElement("div", {
     className: "mt-2.5 font-mono text-xl font-black text-white"
   }, section.value), /*#__PURE__*/React.createElement("div", {
     className: `text-[10px] font-bold ${section.value === null ? 'mt-3.5' : 'mt-0.5'} ${section.key === 'event' ? 'text-slate-500' : 'text-slate-400'}`
