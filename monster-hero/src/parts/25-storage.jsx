@@ -57,6 +57,23 @@ const saveRhythmBestRecord = async (records,songId,difficultyId,value) => {
   normalized[songId][difficultyId]=normalizeRhythmBestRecord(value);
   await storeSet(RHYTHM_BEST_RECORDS_KEY,normalized,false); return normalized;
 };
+// イベントPは通常イベント共通の恒久残高。イベント終了では消さない。
+const RHYTHM_EVENT_POINTS_KEY='mh_rhythm_event_points_v1';
+const normalizeRhythmEventPoints=value=>{
+  const n=Number(value);
+  return Number.isFinite(n)?Math.min(Number.MAX_SAFE_INTEGER,Math.max(0,Math.floor(n))):0;
+};
+const loadRhythmEventPoints=async()=>normalizeRhythmEventPoints(await storeGet(RHYTHM_EVENT_POINTS_KEY,0,false));
+const addRhythmEventPoints=async amount=>{
+  const requested=normalizeRhythmEventPoints(amount);
+  const before=await loadRhythmEventPoints();
+  if(requested<=0)return {before,after:before,added:0};
+  const after=Math.min(Number.MAX_SAFE_INTEGER,before+requested);
+  const added=after-before;
+  if(added>0)await storeSet(RHYTHM_EVENT_POINTS_KEY,after,false);
+  return {before,after,added};
+};
+
 const storeList = async (prefix, shared=false) => {
   try {
     if (hasWinStorage()) {
