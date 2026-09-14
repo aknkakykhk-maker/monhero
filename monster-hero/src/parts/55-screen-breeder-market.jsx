@@ -90,24 +90,24 @@ function BreederMarketScreen({
       {!marketSection&&<div data-market-top className="flex-1 min-h-0 overflow-y-auto mh-scroll">
         <div className="grid grid-cols-2 gap-2 pt-8 pb-2">
           {[
-            {key:'diamond',emoji:'💎',label:'ダイヤショップ',value:gold.toLocaleString(),hint:'ダイヤで購入'},
-            {key:'breeder',emoji:'🪙',label:'ブリーダーP交換所',value:breederPoints.toLocaleString(),hint:'Lv.UPで獲得'},
-            {key:'exchange',emoji:'🔄',label:'アイテム交換所',value:null,hint:'プシュケー・証など'},
-            {key:'event',emoji:'🎟️',label:'イベントP交換所',value:null,hint:'準備中'},
+            {key:'diamond',emoji:'💎',label:'ダイヤショップ',value:gold.toLocaleString(),hint:'ダイヤで購入',border:'border-cyan-400/35',title:'text-cyan-200',arrow:'text-cyan-300/80'},
+            {key:'breeder',emoji:'🪙',label:'ブリーダーP交換所',value:breederPoints.toLocaleString(),hint:'Lv.UPで獲得',border:'border-amber-400/35',title:'text-amber-200',arrow:'text-amber-300/80'},
+            {key:'exchange',emoji:'🔄',label:'アイテム交換所',value:null,hint:'プシュケー・証など',border:'border-emerald-400/35',title:'text-emerald-200',arrow:'text-emerald-300/80'},
+            {key:'event',emoji:'🎟️',label:'イベントP交換所',value:null,hint:'準備中',border:'border-violet-400/20',title:'text-violet-300/70',arrow:'text-violet-400/40'},
           ].map(section=>(
             <button
               key={section.key}
               data-market-section={section.key}
               onClick={()=>setMarketSection(section.key)}
-              className="relative min-h-[108px] rounded-2xl border border-amber-500/25 bg-slate-950/70 px-4 py-4 pr-9 text-left active:scale-[0.98]"
+              className={`relative min-h-[108px] rounded-2xl border ${section.border} bg-slate-950/70 px-4 py-4 pr-9 text-left active:scale-[0.98]`}
             >
               <div className="flex items-center gap-2.5">
                 <span aria-hidden="true" className="text-2xl">{section.emoji}</span>
-                <span className="text-[12px] font-black leading-tight text-amber-200">{section.label}</span>
+                <span className={`text-[12px] font-black leading-tight ${section.title}`}>{section.label}</span>
               </div>
               {section.value!==null&&<div className="mt-2.5 font-mono text-xl font-black text-white">{section.value}</div>}
               <div className={`text-[10px] font-bold ${section.value===null?'mt-3.5':'mt-0.5'} ${section.key==='event'?'text-slate-500':'text-slate-400'}`}>{section.hint}</div>
-              <span aria-hidden="true" className={`absolute bottom-3 right-3 text-xl font-black ${section.key==='event'?'text-slate-600':'text-amber-300/70'}`}>›</span>
+              <span aria-hidden="true" className={`absolute bottom-3 right-3 text-xl font-black ${section.arrow}`}>›</span>
             </button>
           ))}
         </div>
