@@ -16560,6 +16560,13 @@ const RHYTHM_SONG_ENTRIES = [
     songId:'mou_hitotsu_no_sekai_e',
     displayName:'もう一つの世界へ',
     bgmTrackId:'melo_mou_hitotsu_no_sekai_e',
+    // よその作品の曲なので、ジャケットを大きくしたときに作者とゲームを紹介する
+    // (2026-09-14・ユーザー指示。お知らせは日が経つと埋もれるが、ここは曲を選ぶたびに目に入る)。
+    // credit を書いた曲だけに出る。リンクは https だけ通る関門を経由する
+    credit:Object.freeze({
+      text:'ドラさんのゲーム「CREATE MONSTERS」の曲です。',
+      link:Object.freeze({url:'https://crimon.pages.dev/',label:'CREATE MONSTERS を開く'}),
+    }),
     artwork:'images/song-art/mou-hitotsu-no-sekai-e.jpg?v=82a25df70a16',
     difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[
       id,mouHitotsuNoSekaiECharts[id]||emptyRhythmChart()

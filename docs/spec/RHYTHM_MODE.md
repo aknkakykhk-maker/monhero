@@ -7715,3 +7715,39 @@ target と rel が付いているか）の両方を見る。
 ゲームの中身（ジャンルや特徴）は、このサンドボックスから外部サイトを開けないため
 確かめられず、書いていない（`EGRESS_BLOCKED`）。
 よその作品を紹介するときに、確かめていないことを足すと嘘になるため。
+
+### ジャケットを大きくしたときに、よその作品の曲を紹介する（2026-09-14）
+
+ユーザーの質問「この曲のジャケットを押してアップにしたときに紹介文やリンクを載せることってできる？」から。
+**お知らせは日が経つと埋もれるが、ジャケットの拡大は曲を選ぶたびに目に入る**ので、
+宣伝としてはこちらのほうが効く。
+
+| 部品 | 場所 | 役割 |
+| --- | --- | --- |
+| `credit:{ text, link:{url,label} }` | `data/rhythm-mode.js` の `RHYTHM_SONG_ENTRIES` | **書いた曲だけ**に出る。ほかの曲の見た目は変わらない |
+| `[data-rhythm-song-credit]` | `parts/29-rhythm-screens.jsx` | 曲名の下のひとこと |
+| `[data-rhythm-song-credit-link]` | 同上 | 相手のページへのボタン。`changelogSafeLink` を通す |
+
+リンクは更新履歴と**同じ関門**（`changelogSafeLink`。17番のパーツにあるので29番から使える）を経由する。
+https だけ通り、`target="_blank"` と `rel="noopener noreferrer"` が付く。
+絵の外を押すと閉じる作りなので、リンクには `onClick={e=>e.stopPropagation()}` を置いて
+「リンクを押したのに閉じるだけ」にならないようにしてある。
+
+文面は短く1行（ユーザー「紹介文はもうちょいシンプルでダイジョブ」）。
+
+```js
+credit:Object.freeze({
+  text:'ドラさんのゲーム「CREATE MONSTERS」の曲です。',
+  link:Object.freeze({url:'https://crimon.pages.dev/',label:'CREATE MONSTERS を開く'}),
+}),
+```
+
+`node tools/mode/rhythm-song-art-zoom-check.js` が**実際のブラウザで**次を見る。
+
+- 紹介文が出て、データに書いた文と一致する
+- リンクのボタンが出て、URLとボタンの文字が一致する
+- リンクが https で、別のタブで開く（`target="_blank"`）
+- `rel="noopener noreferrer"` が付いている
+- **紹介文を書いていない曲には出ない**（ほかの曲の見た目を変えていない）
+
+ヘルプの「絵を大きく見る」の下にも1項目足した（`data/help.js`）。

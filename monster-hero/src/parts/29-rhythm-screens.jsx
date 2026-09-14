@@ -792,6 +792,20 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
         className="max-h-[74vh] w-auto max-w-[92vw] rounded-2xl border border-white/25 object-contain"
         style={{maxHeight:'74vh',maxWidth:'92vw'}}/>
       <b className="mt-3 max-w-[92vw] text-center text-sm font-black leading-tight text-white">{rhythmSongFullName(song)}</b>
+      {/* よその作品の曲のときだけ、ひとこと紹介と相手のページへのリンクを出す
+          (2026-09-14・ユーザー「ジャケットを押してアップにしたときに紹介文やリンクを載せることってできる？」)。
+          曲のデータ(RHYTHM_SONG_ENTRIES)に credit を書いた曲だけに出るので、ほかの曲は見た目が変わらない。
+          リンクは更新履歴と同じ関門(changelogSafeLink)を通す。https だけ通り、
+          target="_blank" と rel="noopener noreferrer" が付く */}
+      {song.credit&&song.credit.text&&<p data-rhythm-song-credit
+        className="mt-2 max-w-[92vw] text-center text-[11px] leading-relaxed text-slate-300">{song.credit.text}</p>}
+      {song.credit&&changelogSafeLink(song.credit.link)&&<a data-rhythm-song-credit-link
+        href={changelogSafeLink(song.credit.link)} target="_blank" rel="noopener noreferrer"
+        onClick={e=>e.stopPropagation()}
+        className="mt-2 inline-flex min-h-[44px] items-center gap-1 rounded-xl border border-sky-300/40 bg-sky-500/15 px-4 text-[11px] font-black text-sky-200"
+        style={{minHeight:'44px'}}>
+        {(song.credit.link&&song.credit.link.label)||'くわしく見る'} ↗
+      </a>}
       <button type="button" data-rhythm-song-art-close onClick={()=>setArtZoom(false)}
         className="mt-3 min-h-[52px] w-full max-w-xs rounded-xl bg-slate-700 text-sm font-black text-white"
         style={{minHeight:'52px'}}>とじる</button>
