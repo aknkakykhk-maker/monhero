@@ -115,7 +115,7 @@ check('この曲のランキングの取得は変えていない',
   supa.includes('const sbFetchRhythmRankings = async (difficultyKeys, limit=RHYTHM_RANKING_FETCH_LIMIT, offset=0,')
   &&app.includes('const keys = rhythmRankingCombinedMembers(song.songId);'));
 check('この曲の一覧は総合タブでは出さない',
-  screen.includes('const songTab=!totalTabOpen&&!boardTab;')
+  screen.includes('const songTab=!totalTabOpen&&!boardTab&&!eventTabOpen;')
   &&screen.includes("{songTab&&rhythmRanking.status==='ready'&&rhythmRanking.entries.length>0&&"));
 
 // --- 公開フラグ(機能と案内をまとめて出し入れする) ---
