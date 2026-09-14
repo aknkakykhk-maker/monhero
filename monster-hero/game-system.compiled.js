@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 94e852551a6284c4
+// source-sha256: 9704d122faf5582d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 70b625d24fa01ffc
+// generated-sha256: c045438ce9e33830
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-14 20:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-14 21:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -21996,7 +21996,20 @@ const RhythmSongSelect = ({
     }
   }), /*#__PURE__*/React.createElement("b", {
     className: "mt-3 max-w-[92vw] text-center text-sm font-black leading-tight text-white"
-  }, rhythmSongFullName(song)), /*#__PURE__*/React.createElement("button", {
+  }, rhythmSongFullName(song)), song.credit && song.credit.text && /*#__PURE__*/React.createElement("p", {
+    "data-rhythm-song-credit": true,
+    className: "mt-2 max-w-[92vw] text-center text-[11px] leading-relaxed text-slate-300"
+  }, song.credit.text), song.credit && changelogSafeLink(song.credit.link) && /*#__PURE__*/React.createElement("a", {
+    "data-rhythm-song-credit-link": true,
+    href: changelogSafeLink(song.credit.link),
+    target: "_blank",
+    rel: "noopener noreferrer",
+    onClick: e => e.stopPropagation(),
+    className: "mt-2 inline-flex min-h-[44px] items-center gap-1 rounded-xl border border-sky-300/40 bg-sky-500/15 px-4 text-[11px] font-black text-sky-200",
+    style: {
+      minHeight: '44px'
+    }
+  }, song.credit.link && song.credit.link.label || 'くわしく見る', " \u2197"), /*#__PURE__*/React.createElement("button", {
     type: "button",
     "data-rhythm-song-art-close": true,
     onClick: () => setArtZoom(false),
