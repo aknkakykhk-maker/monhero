@@ -99,39 +99,45 @@ const seed = () => {
     await page.waitForTimeout(2200);
     await dismissOverlays();
 
-    // クイックモードで1ラン始める
-    await page.evaluate(() => document.querySelector('button[aria-label="バトル"]')?.click());
-    await page.waitForTimeout(1200);
-    await page.evaluate(() => {
-      const card = [...document.querySelectorAll('article')].find((a) => a.textContent.includes('クイックモード'));
-      const b = card && [...card.querySelectorAll('button')].find((x) => /難易度を選ぶ/.test(x.textContent));
-      b?.click();
-    });
-    await page.waitForTimeout(1300);
-    await clickMatching('この難易度で挑戦');
-    await page.waitForTimeout(1500);
-    await page.evaluate(() => { [...document.querySelectorAll('article,button')].find((x) => /スエゾー/.test(x.textContent))?.click(); });
-    await page.waitForTimeout(900);
-    await clickMatching('勇者モンに選ぶ');
-    await page.waitForTimeout(900);
-    await page.evaluate(() => { [...document.querySelectorAll('button')].find((x) => /近距離|中距離|零距離|遠距離/.test(x.textContent))?.click(); });
-    await page.waitForTimeout(1300);
-    await dismissOverlays();
-    await page.evaluate(() => { [...document.querySelectorAll('button')].find((x) => /新規習得/.test(x.textContent))?.click(); });
-    await page.waitForTimeout(900);
-    await clickExact('習得する');
-    await page.waitForTimeout(1800);
-
-    // 一括実行だとブラウザが重く、待ち時間だけでは間に合わないことがある。
-    // バトル画面(AUTOボタン)が出るまで待ってから先へ進む
-    await page.waitForFunction(() => !!document.querySelector('button[aria-label^="AUTO"]'), { timeout: 25000 }).catch(() => {});
-    // AUTO を ∞ まで回す(OFF → ON → ∞)
+    // クイックモードで1ラン始めて、AUTOを∞まで回す。
+    // ★HOMEへ戻ったあとの「2回目」でも同じ手順を使うので関数にしてある
+    //   (2026-09-14・ユーザー報告「モンビー入る→ホーム戻る→モンビー入る→止まる」)。
+    //   1回だけ回す検査では、実行中の印の持ち越しを絶対に拾えない。
     const autoLabel = async () => page.evaluate(() => document.querySelector('button[aria-label^="AUTO"]')?.getAttribute('aria-label'));
-    for (let i = 0; i < 3 && (await autoLabel()) !== 'AUTO ∞'; i++) {
-      await page.evaluate(() => document.querySelector('button[aria-label^="AUTO"]')?.click());
+    const startQuickInfinityRun = async () => {
+    await page.evaluate(() => document.querySelector('button[aria-label="バトル"]')?.click());
+      await page.waitForTimeout(1200);
+      await page.evaluate(() => {
+        const card = [...document.querySelectorAll('article')].find((a) => a.textContent.includes('クイックモード'));
+        const b = card && [...card.querySelectorAll('button')].find((x) => /難易度を選ぶ/.test(x.textContent));
+        b?.click();
+      });
+      await page.waitForTimeout(1300);
+      await clickMatching('この難易度で挑戦');
+      await page.waitForTimeout(1500);
+      await page.evaluate(() => { [...document.querySelectorAll('article,button')].find((x) => /スエゾー/.test(x.textContent))?.click(); });
       await page.waitForTimeout(900);
-    }
-    check('クイックで∞周回を始められる', (await autoLabel()) === 'AUTO ∞', await autoLabel());
+      await clickMatching('勇者モンに選ぶ');
+      await page.waitForTimeout(900);
+      await page.evaluate(() => { [...document.querySelectorAll('button')].find((x) => /近距離|中距離|零距離|遠距離/.test(x.textContent))?.click(); });
+      await page.waitForTimeout(1300);
+      await dismissOverlays();
+      await page.evaluate(() => { [...document.querySelectorAll('button')].find((x) => /新規習得/.test(x.textContent))?.click(); });
+      await page.waitForTimeout(900);
+      await clickExact('習得する');
+      await page.waitForTimeout(1800);
+    // 一括実行だとブラウザが重く、待ち時間だけでは間に合わないことがある。
+      // バトル画面(AUTOボタン)が出るまで待ってから先へ進む
+      await page.waitForFunction(() => !!document.querySelector('button[aria-label^="AUTO"]'), { timeout: 25000 }).catch(() => {});
+      // AUTO を ∞ まで回す(OFF → ON → ∞)
+      // AUTO を ∞ まで回す(OFF → ON → ∞)
+      for (let i = 0; i < 3 && (await autoLabel()) !== 'AUTO ∞'; i++) {
+        await page.evaluate(() => document.querySelector('button[aria-label^="AUTO"]')?.click());
+        await page.waitForTimeout(900);
+      }
+      return (await autoLabel()) === 'AUTO ∞';
+    };
+    check('クイックで∞周回を始められる', await startQuickInfinityRun(), await autoLabel());
 
     // ---- ① 入口が出る ----
     const hasEntry = await page.evaluate(() => !!document.querySelector('[data-quick-to-rhythm]'));
@@ -166,6 +172,31 @@ const seed = () => {
     check('モンビーを開いているあいだも周回が進む', advancedInRhythm,
       `W${before.wave}/T${before.turn} → W${afterRhythm.wave}/T${afterRhythm.turn}`);
     check('モンビーからクイックのバトルへ戻れる', await page.evaluate(() => !!document.querySelector('button[aria-label^="AUTO"]')));
+    // ★戻れるだけでは足りない。戻ったあとも動き続けるかを必ず見る
+    //   (2026-09-14・ユーザー報告「モンビークイックからバトルに戻ると
+    //    バトルが進行しなくなる / アプリ閉じ直さないと、モンビーに戻っても
+    //    オートバトル進んでなかった」)。
+    //   画面(gameState)とランの段階(runStage)がずれると runProgressAllowed が
+    //   false のまま戻らず、AUTOの3つのループが全部止まる。知らせは何も出ないので、
+    //   「戻れた」ところまでの検査では素通りしてしまっていた。
+    const afterBack = await readProgress();
+    await page.waitForTimeout(WATCH_MS);
+    const afterBackWatched = await readProgress();
+    const advancedAfterBack = afterBackWatched.wave > afterBack.wave || afterBackWatched.turn > afterBack.turn
+      || afterBackWatched.wave < afterBack.wave;
+    check('バトルへ戻ったあとも周回が進む（戻ると止まる不具合の再発を見張る）', advancedAfterBack,
+      `W${afterBack.wave}/T${afterBack.turn} → W${afterBackWatched.wave}/T${afterBackWatched.turn}`);
+    // 戻ってからもう一度モンビーへ入っても進み続けること。
+    // 報告では「モンビーに戻ってもオートバトル進んでなかった」ので、往復でも見る
+    await clickSelector('[data-quick-to-rhythm]');
+    await page.waitForTimeout(600);
+    const backInRhythm = await readProgress();
+    await page.waitForTimeout(WATCH_MS);
+    const backInRhythmWatched = await readProgress();
+    const advancedBackInRhythm = backInRhythmWatched.wave > backInRhythm.wave || backInRhythmWatched.turn > backInRhythm.turn
+      || backInRhythmWatched.wave < backInRhythm.wave;
+    check('バトルへ戻ったあと、もう一度モンビーへ入っても進む', advancedBackInRhythm,
+      `W${backInRhythm.wave}/T${backInRhythm.turn} → W${backInRhythmWatched.wave}/T${backInRhythmWatched.turn}`);
 
     // ---- ⑤ 超省エネでもモンビーへ行ける ----
     // 超省エネは画面ごと簡易表示へ差し替わる。入口を通常のバトル画面にしか置いていなかったため
@@ -219,6 +250,29 @@ const seed = () => {
         && !document.querySelector('[data-quick-run-progress]')
         && !document.querySelector('button[aria-label^="AUTO"]')),
       `戻る前 W${beforeHome.wave}/T${beforeHome.turn}`);
+
+    // ---- ⑦ HOMEへ戻ったあと、もう一度周回を始めても回る ----
+    // 2026-09-14・ユーザー報告「モンビー入る→ホーム戻る→モンビー入る→止まる→
+    //   バトル入ってみる→いないはずの距離枠で攻撃してるモーションを発見」。
+    // ★HOMEへ戻ると abandonRunAnimations が世代を進める。すると走っていた
+    //   await battleWait は二度と先へ進まず、その先の finally も走らない。
+    //   そこで下ろすはずだった「実行中の印」(autoTurnRunningRef など)は ref なので
+    //   applyResetAllState でも戻らず、次のランへ持ち越される。
+    //   するとAUTOのループが毎回「まだ実行中」と誤解して弾かれ、一度も回らない。
+    //   知らせは何も出ないので「バトル画面のまま、ただ動かない」になり、
+    //   アプリを閉じ直すまで直らない。**周回を2回始めないと出ない**ので、
+    //   1回だけ回す検査では素通りしていた。
+    const restarted = await startQuickInfinityRun();
+    check('HOMEへ戻ったあと、もう一度クイック∞周回を始められる', restarted);
+    if (restarted) {
+      const secondBefore = await readProgress();
+      await page.waitForTimeout(WATCH_MS);
+      const secondAfter = await readProgress();
+      const advancedSecond = secondAfter.wave > secondBefore.wave || secondAfter.turn > secondBefore.turn
+        || secondAfter.wave < secondBefore.wave;
+      check('2回目の周回もちゃんと進む（実行中の印の持ち越しで止まらない）', advancedSecond,
+        `W${secondBefore.wave}/T${secondBefore.turn} → W${secondAfter.wave}/T${secondAfter.turn}`);
+    }
 
     check('操作中に致命的なJSエラーが出ない', fatal.length === 0, fatal.slice(0, 2).join(' / '));
   } finally {

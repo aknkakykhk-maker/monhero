@@ -31,6 +31,10 @@ const slice = (from, to) => {
 // ---- ① 定義がある / 表を二重に持っていない ----
 const DEFINITION_END = 'const runProgressAllowed = runStage !== null && (gameState === runStage || rhythmBackgroundRun);';
 const definition = slice('const RUN_PHASE_STATES =', DEFINITION_END);
+// 画面を切り替える入口(setGameState)は本体の冒頭にある。advanceRunStage の判断材料を
+// ここで同時に更新しているかが、モンビーとの行き来で進行不能になるかどうかを分ける
+// (2026-09-14・ユーザー報告「モンビークイックからバトルに戻るとフリーズする」)。
+const screenEntry = slice('const isRhythmScreen = state =>', 'setGameStateRaw(next); };');
 check('RUN_STAGE_SCREENS は RUN_PHASE_STATES を再利用している（画面の表を二重に持たない）',
   definition.includes("const RUN_STAGE_SCREENS = [...RUN_PHASE_STATES,'BATTLE'];"));
 check('runStage を画面とは別のstateとして持っている',
@@ -43,9 +47,19 @@ check('ランの段階を変える入口が advanceRunStage の1つだけある'
 //   「バトル画面で作られたときの古い値」を掴み、モンビーへ移った直後に敵を倒した瞬間
 //   画面がバトルへ飛び戻る(2026-09-06に実際に出た不具合)
 check('advanceRunStage は呼ばれた時点の値(ref)で画面を切り替えるか決める',
-  definition.includes('const runBackgroundAllowedRef = useRef(false);')
+  screenEntry.includes('const runBackgroundAllowedRef = useRef(false);')
   && definition.includes('runBackgroundAllowedRef.current = runBackgroundAllowed;')
   && !/if \(!runBackgroundAllowed\) setGameState/.test(definition));
+// ★描画のたびの入れ直しだけに頼ると、画面を切り替えてから次の描画までのあいだ
+//   1描画ぶん古い判断が残る。そこへ advanceRunStage が着地すると段階だけ進み、
+//   gameState と runStage がずれて runProgressAllowed が false のまま戻らなくなる
+//   (2026-09-14・ユーザー報告「モンビークイックからバトルに戻るとフリーズする」)。
+check('画面を切り替える入口は1つで、そこで判断材料も同時に更新する',
+  screenEntry.includes("const setGameState = (next) => { runBackgroundAllowedRef.current = isRhythmScreen(next); setGameStateRaw(next); };")
+  && source.includes("const [gameState, setGameStateRaw] = useState('HOME');"));
+check('useStateのsetterを直接呼んでいない(必ず入口を通す)',
+  (source.match(/setGameStateRaw\(/g) || []).length === 1
+  && (source.match(/setGameState\(/g) || []).length > 50);
 check('ランから抜けるときに段階を捨てる helper がある',
   definition.includes('const clearRunStage = () => { runStageRef.current = null; setRunStage(null); };')
   && source.includes('    clearRunStage();'));
@@ -63,10 +77,11 @@ const evaluateWith = (initialGameState, { runStage: initialRunStage = null, auto
   // runBackgroundAllowedRef には本体が描画のたびに入れ直す値がそのまま入る
   const sandbox = { console, useRef: (init) => ({ current: init === undefined ? initialRunStage : init }) };
   vm.createContext(sandbox);
-  vm.runInContext(`let gameState=${JSON.stringify(initialGameState)}; const setGameState=(v)=>{gameState=v;};
+  vm.runInContext(`let gameState=${JSON.stringify(initialGameState)}; const setGameStateRaw=(v)=>{gameState=v;};
+${screenEntry}
 const autoRepeat=${autoRepeat}; const runMode=${JSON.stringify(quick ? 'quick' : 'challenge')}; const isQuickMode=(m)=>m==='quick';
 ${definition.replace('const [runStage, setRunStage] = useState(null);', `let runStage=${JSON.stringify(initialRunStage)}; const setRunStage=(v)=>{runStage=v;};`)}
-this.api={ advanceRunStage, clearRunStage, isRunStage, screens:RUN_STAGE_SCREENS, rhythmScreens:RHYTHM_BACKGROUND_RUN_SCREENS,
+this.api={ advanceRunStage, clearRunStage, isRunStage, setGameState, screens:RUN_STAGE_SCREENS, rhythmScreens:RHYTHM_BACKGROUND_RUN_SCREENS,
   read:()=>({ runStage, gameState, allowed: runProgressAllowed,
               backgroundAllowed: runBackgroundAllowed, backgroundRun: rhythmBackgroundRun }) };`, sandbox);
   return sandbox.api;
@@ -122,7 +137,7 @@ check('モンビーを開いている間は、ランが進んでも画面が切�
   EXPECTED_RHYTHM_SCREENS.join(','));
 // ★一覧ではなく頭文字で見る作りにしてある。これならモンビーへ画面を足しても漏れない
 check('モンビーにいるかどうかは一覧ではなく gameState の頭で見る（画面を足しても漏れない）',
-  definition.includes("const isRhythmScreen = state => typeof state === 'string' && state.startsWith('RHYTHM_');")
+  screenEntry.includes("const isRhythmScreen = state => typeof state === 'string' && state.startsWith('RHYTHM_');")
   && definition.includes('const rhythmScreenOpen = isRhythmScreen(gameState);'));
 check('オプション(RHYTHM_OPTIONS)でも裏の周回が続く',
   rhythmScreens.includes('RHYTHM_OPTIONS')
@@ -180,9 +195,20 @@ check('ランの段階の遷移はすべて advanceRunStage を通っている',
 check('∞周回中のバトルからモンビーへ移れる（returnToHomeを通さない）',
   source.includes('data-quick-to-rhythm') && source.includes('onClick={openRhythmDemo}'));
 // 中身が増えても落ちないよう、1行そのままではなく「段階へ戻していること」を見る
+// ★2026-09-13から、曲えらびの「戻る」はHOMEへ抜ける(周回も締める)。
+//   バトルへ戻る導線は周回の帯の詳細にある [data-quick-run-progress-back] のほう
+//   (ユーザー指摘「止めないでもホームに戻れて自動的に周回も終わるようにしたい」)。
 check('モンビーからクイックのバトルへ戻れる',
   /const returnToBackgroundRun = \(\) => \{[\s\S]{0,300}?if \(runStageRef\.current\) setGameState\(runStageRef\.current\);/.test(source)
-  && source.includes('data-rhythm-back') && source.includes('if(rhythmBackgroundRun){returnToBackgroundRun();return;}'));
+  && source.includes('data-quick-run-progress-back')
+  && /data-quick-run-progress-back onClick=\{\(\)=>\{if\(runStageRef\.current\)returnToBackgroundRun\(\);\}\}/.test(source));
+// ★ランを片付けるときは「実行中の印」も必ず下ろす
+//   (2026-09-14・ユーザー報告「モンビー入る→ホーム戻る→モンビー入る→止まる」)。
+//   世代を進めると古い await battleWait は先へ進まず、その先の finally も走らない。
+//   印は ref なので applyResetAllState でも戻らず、次のランへ持ち越されて
+//   AUTO のループが一度も回らなくなる(知らせは何も出ない)。
+check('ランを片付けるときに「実行中の印」も下ろす',
+  /const abandonRunAnimations = \(\) => \{[\s\S]{0,400}?runGenerationRef\.current \+= 1;[\s\S]{0,400}?autoTurnRunningRef\.current = false;[\s\S]{0,400}?autoPostWaveRunningRef\.current = false;/.test(source));
 check('モンビーを開いている間はバトルのSEを鳴らさない',
   source.includes('Audio_.setSeVolume((ultraEcoSession || rhythmScreenOpen) ? 0 : seVolume);'));
 

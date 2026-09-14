@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 99c661151f55fb87
+// source-sha256: 23692416e22f71d6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 60cb294fdafcc3dd
+// generated-sha256: beb8b350778ce131
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-14 18:49"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-14 19:56"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -37141,7 +37141,30 @@ function RhythmHistoryScreen({
 
 // ---- part: 60-app.jsx ----
 function MonsterHeroGame() {
-  const [gameState, setGameState] = useState('HOME');
+  const [gameState, setGameStateRaw] = useState('HOME');
+  // モンビーを開いているか(演奏中も含む)。判定の理由は下の rhythmScreenOpen のところに書いてある。
+  // ★定義がここにあるのは、すぐ下の setGameState から使うため。
+  const isRhythmScreen = state => typeof state === 'string' && state.startsWith('RHYTHM_');
+  // 「いまモンビーを開いているか」の控え。advanceRunStage が呼ばれた時点の値で判断するために使う。
+  const runBackgroundAllowedRef = useRef(false);
+  // 画面を切り替える唯一の入口。★必ずこれを通す(useStateのsetterを直接呼ばない)。
+  //
+  // 2026-09-14・ユーザー報告「モンビークイックからバトルに戻るとフリーズする」。
+  //   setGameState は次の描画まで gameState を変えない。いっぽう
+  //   runBackgroundAllowedRef は描画のたびに入れ直していたので、
+  //   **画面を切り替えてから次の描画までのあいだ、1描画ぶん古い判断が残っていた。**
+  //   モンビーからバトルへ戻った直後(まだ古い＝「モンビーにいる」)に、裏で予約されていた
+  //   advanceRunStage が着地すると、画面を切り替えないまま段階だけ進む。
+  //   その結果 gameState と runStage がずれ、runProgressAllowed が false のまま戻らなくなる。
+  //   AUTOの3つのループはどれも runProgressAllowed を見ているので、
+  //   **バトル画面のまま、何の知らせも出さずに完全に止まる。**
+  //   (WAVEの切り替わりに重なったときだけなので「たまに」になる。2026-09-12の
+  //    「モンビー中にオプションに行くとたまにバトルに飛ばされる」と同じ型の、逆向きの事故)
+  // ここで控えも一緒に更新すれば、切り替えたその瞬間から正しい判断になる。
+  const setGameState = next => {
+    runBackgroundAllowedRef.current = isRhythmScreen(next);
+    setGameStateRaw(next);
+  };
   const [debugThrowScreenError, setDebugThrowScreenError] = useState(false); // デバッグ設定から画面エラーの受け止めを試すためだけの印
   const [battleMenuTab, setBattleMenuTab] = useState('difficulty');
   // バトルメニューで選んでいるモード。挑戦を始めた時点の値が runMode に固定される
@@ -37759,10 +37782,6 @@ function MonsterHeroGame() {
   // ★真偽値ではだめ。次のランが始まって旗を下ろすと、古い待ちがそのとき目を覚まして
   //   新しいランを触る。世代番号なら、古い待ちは永久に目を覚まさない。
   const runGenerationRef = useRef(0);
-  // ランを片付けるときに呼ぶ。これ以降、古いターンの演出は一切進まなくなる
-  const abandonRunAnimations = () => {
-    runGenerationRef.current += 1;
-  };
   // 曲えらびで「⏹ 終了」を押してからHOMEへ抜けるまでのあいだ(報酬の付与と記録)。
   // いまは端末の中だけで済むのでほぼ一瞬だが、二度押しを止めるために残してある
   const [rhythmExitingRun, setRhythmExitingRun] = useState(false);
@@ -37774,6 +37793,24 @@ function MonsterHeroGame() {
   const autoTurnScheduledRef = useRef(false);
   const autoPostWaveRunningRef = useRef(false);
   const autoPostWaveScheduledRef = useRef(false);
+  // ランを片付けるときに呼ぶ。これ以降、古いターンの演出は一切進まなくなる。
+  //
+  // ★世代を進めたら「実行中の印」も必ずここで下ろす
+  //   (2026-09-14・ユーザー報告「モンビー入る→ホーム戻る→モンビー入る→止まる」)。
+  //   世代を進めると、古い await battleWait は**二度と先へ進まない**。つまり
+  //   その先にある finally も走らないので、実行中の印を自分で下ろせない。
+  //   印は ref なので applyResetAllState でも戻らず、**次のランへそのまま持ち越される**。
+  //   すると AUTO のループが毎回 `if(...||autoTurnRunningRef.current)return;` で弾かれ、
+  //   新しい周回が一度も回らない。知らせは何も出ないので、
+  //   「バトル画面のまま、ただ動かない」「アプリを閉じ直すまで直らない」になる。
+  //   stopAutoBattle が下ろしているのは Scheduled(予約)だけで、Running(実行中)は別物。
+  const abandonRunAnimations = () => {
+    runGenerationRef.current += 1;
+    autoTurnRunningRef.current = false;
+    autoTurnScheduledRef.current = false;
+    autoPostWaveRunningRef.current = false;
+    autoPostWaveScheduledRef.current = false;
+  };
   const [autoTurnCycle, setAutoTurnCycle] = useState(0);
   // AUTO∞もラン中だけの一時状態。リロード後は必ずOFFに戻す。
   const [autoRepeat, setAutoRepeat] = useState(false);
@@ -40597,7 +40634,7 @@ function MonsterHeroGame() {
   //   (WAVEの切り替わりに重なったときだけなので「たまに」になる。
   //    予約済みの setTimeout は、オプションへ移ったあとも必ず着地するため)
   //   一覧で持つかぎり、モンビーへ画面を足すたびに同じ事故が起きる。頭文字で見れば漏れない。
-  const isRhythmScreen = state => typeof state === 'string' && state.startsWith('RHYTHM_');
+  //   ※判定そのもの(isRhythmScreen)は、setGameState から使うので冒頭で定義している。
   const rhythmScreenOpen = isRhythmScreen(gameState);
   // 「モンヒロビートへ入った瞬間」を見分けるための一覧(自動で∞周回を始める判定に使う)。
   // ★裏で回してよい画面より広く取る。演奏中もモンビーの中なので、そこから曲えらびへ
@@ -40615,8 +40652,10 @@ function MonsterHeroGame() {
   //   そこで値をそのまま読むと「バトル画面で作られたときの古い値」を掴んでしまい、
   //   モンビーへ移った直後に敵を倒した瞬間、画面がバトルへ飛び戻る
   //   (2026-09-06・ユーザー報告「モンビーを押すと一瞬で戻る」の原因)。
-  //   呼ばれた時点の値で判断するため、必ずこの控えを見る
-  const runBackgroundAllowedRef = useRef(false);
+  //   呼ばれた時点の値で判断するため、必ずこの控えを見る(宣言は冒頭・setGameStateと同じ場所)。
+  // ★描画のたびの入れ直しは、ここだけに頼らない。setGameState も同時に更新する。
+  //   ここだけだと「画面を切り替えてから次の描画まで」のあいだ古い値が残り、
+  //   モンビーから戻った直後に段階だけ進んで進行不能になる(2026-09-14)。
   runBackgroundAllowedRef.current = runBackgroundAllowed;
   // ランの段階を1つ進める唯一の入口。
   // 画面を切り替えてよいときは gameState も一緒に動かす(いまは必ず切り替わる)。
