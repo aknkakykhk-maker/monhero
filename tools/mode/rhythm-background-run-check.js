@@ -197,18 +197,17 @@ const seed = () => {
           && (back.getAttribute('aria-label') || '').includes('ホームへ戻る');
       }));
     const beforeHome = await readProgress();
+    const exitStartedAt = Date.now();
     await clickSelector('[data-rhythm-back]');
-    // ★押してすぐにはHOMEへ抜けない。報酬の付与・全国ランキングへの送信・
-    //   進んでいるターンの演出の終わりを待つため(実測で3〜6秒)。
-    //   待っているあいだは、何を待っているのかを畫面で言う
-    //   (2026-09-13・ユーザー報告「そのまま戻ったときに結構な頻度でエラーが起きる」。
-    //    待たずに片付けていたのが原因で、実測で再現してから直した)
-    await page.waitForTimeout(400);
-    check('締めているあいだは待ち画面を出し、戻るボタンを押せなくする',
-      await page.evaluate(() => !!document.querySelector('[data-rhythm-exiting-run]')
-        && document.querySelector('[data-rhythm-back]')?.disabled === true));
-    // 抜けるまで待つ(待ちちょうで止まらないよう上限を置く)
+    // ★押したらすぐHOMEへ抜ける。やることは報酬の付与と記録だけで、どちらも端末の中で完結する
+    //   (クイックは全国ランキング対象外なので、網を待つ処理は入らない)。
+    //   進んでいるターンの演出は returnToHome がランの世代を1つ進めて止めるので、待たない
+    //   (2026-09-14・ユーザー指摘「待ち時間が長くてストレス / もっと良い方法ない？」。
+    //    それまでは終わるのを待っていて、実測で3〜6秒かかっていた)。
     await page.waitForFunction(() => !document.querySelector('[data-rhythm-demo-home]'), { timeout: 25000 }).catch(() => {});
+    const exitMs = Date.now() - exitStartedAt;
+    check('押したらすぐHOMEへ抜ける(待たされない)', exitMs < 2000, `${exitMs}ms`);
+    await page.waitForFunction(() => (document.body.innerText || '').includes('モンヒロビート'), { timeout: 15000 }).catch(() => {});
     await page.waitForTimeout(1200);
     check('周回中でもそのままHOMEへ戻れる',
       await page.evaluate(() => !document.querySelector('[data-rhythm-demo-home]')
