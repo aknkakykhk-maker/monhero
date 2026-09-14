@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ca85a542d10a5dc8
+// source-sha256: 0d40e3d6f81a51a3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 39cc54b234618a60
+// generated-sha256: c4f595e7e68df966
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-14 09:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-14 14:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -25631,51 +25631,209 @@ function BreederMarketScreen({
   onExchangeSoulRankRespec,
   onExchangeHeroProof
 }) {
-  // 上に出す所持数(2026-09-13・ユーザー指示「マーケットにプシュケーとか証片も
-  // いくつあるかダイヤみたいに表示がほしい」)。ダイヤ・ptと同じ帯へ並べる
+  // 2026-09-14・マーケットのタブ乱立を避けるため、最初に用途別の入口を選ぶ。
+  // 入口だけこの画面のローカル状態で持ち、購入・交換・商品タブの既存stateは親側をそのまま使う。
+  const [marketSection, setMarketSection] = useState(null);
   const psycheHave = ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID);
   const shardHave = ownedItemCount(ownedItems, HERO_PROOF_SHARD_ITEM_ID);
   const proofHave = ownedItemCount(ownedItems, HERO_PROOF_ITEM_ID);
+  const marketItems = BREEDER_MARKET_ITEMS.filter(item => item.shop !== false);
+  const diamondTabs = [{
+    key: 'disc',
+    label: '円盤石'
+  }, {
+    key: 'assist',
+    label: 'アシスト'
+  }, {
+    key: 'item',
+    label: 'アイテム'
+  }];
+  const activeDiamondTab = diamondTabs.some(tab => tab.key === marketTab) ? marketTab : 'disc';
+  const diamondItems = marketItems.filter(item => item.type === activeDiamondTab && item.type !== 'icon' && item.currency !== 'psyche');
+  const breederPointItems = marketItems.filter(item => item.type === 'icon');
+  const itemExchangeItems = marketItems.filter(item => item.currency === 'psyche');
+  const soulRankRespecItem = marketItems.find(item => item.id === SOUL_RANK_RESPEC_ITEM_ID) || null;
+  const sectionMeta = {
+    diamond: {
+      label: 'ダイヤショップ',
+      emoji: '💎'
+    },
+    breeder: {
+      label: 'ブリーダーP交換所',
+      emoji: '🪙'
+    },
+    exchange: {
+      label: 'アイテム交換所',
+      emoji: '🔄'
+    },
+    event: {
+      label: 'イベントP交換所',
+      emoji: '🎟️'
+    }
+  };
+  const renderMarketItem = (item, {
+    showBase = true,
+    showHeroProofExchange = false
+  } = {}) => {
+    const comingSoon = item.available === false;
+    const owned = !comingSoon && isItemOwned(item);
+    const balance = item.currency === 'psyche' ? psycheHave : item.type === 'disc' || item.type === 'assist' || item.type === 'item' ? gold : breederPoints;
+    const canBuy = !comingSoon && !owned && balance >= item.cost;
+    const detailMon = item.type === 'disc' ? ALL_PLAYER_MONSTERS[item.id] : null;
+    const detailTeaching = item.type === 'assist' ? TEACHING_CARDS.find(t => t.id === item.id) : null;
+    const isSoulRankRespec = item.id === SOUL_RANK_RESPEC_ITEM_ID;
+    const exchangeItem = isSoulRankRespec ? {
+      ...item,
+      currency: 'heroProof',
+      cost: 1
+    } : null;
+    return /*#__PURE__*/React.createElement(React.Fragment, {
+      key: item.id
+    }, showBase && /*#__PURE__*/React.createElement(MarketProductCard, {
+      item: item,
+      owned: owned,
+      comingSoon: comingSoon,
+      canBuy: canBuy,
+      onZoom: () => onZoomIcon(item),
+      onBuy: () => onBuy(item),
+      detail: detailMon || detailTeaching,
+      onDetail: () => onOpenDetail(item, detailMon, detailTeaching),
+      middle: item.type === 'item' ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
+        className: `text-[9px] font-black ${(ownedItems[item.id] || 0) > 0 ? 'text-cyan-300' : 'text-slate-600'}`
+      }, "\xD7", ownedItems[item.id] || 0), item.desc && /*#__PURE__*/React.createElement("button", {
+        onClick: () => onOpenItemDetail(item),
+        "aria-label": `${item.name}の効果を見る`,
+        className: "text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"
+      }, /*#__PURE__*/React.createElement(BookOpen, {
+        size: 8
+      }), "\u8A73\u7D30")) : null
+    }), showHeroProofExchange && exchangeItem && /*#__PURE__*/React.createElement(MarketProductCard, {
+      item: exchangeItem,
+      owned: false,
+      comingSoon: false,
+      canBuy: proofHave > 0 && !purchaseProcessing,
+      disabled: purchaseProcessing,
+      onBuy: onExchangeSoulRankRespec,
+      middle: /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
+        className: `text-[9px] font-black ${ownedItemCount(ownedItems, SOUL_RANK_RESPEC_ITEM_ID) > 0 ? 'text-cyan-300' : 'text-slate-600'}`
+      }, "\xD7", ownedItemCount(ownedItems, SOUL_RANK_RESPEC_ITEM_ID)), item.desc && /*#__PURE__*/React.createElement("button", {
+        onClick: () => onOpenItemDetail(item),
+        "aria-label": `${item.name}の効果を見る`,
+        className: "text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"
+      }, /*#__PURE__*/React.createElement(BookOpen, {
+        size: 8
+      }), "\u8A73\u7D30"))
+    }));
+  };
+  const headerTitle = marketSection ? sectionMeta[marketSection].label : 'マーケット';
+  const handleBack = () => {
+    if (marketSection) {
+      setMarketSection(null);
+      return;
+    }
+    onBack();
+  };
   return /*#__PURE__*/React.createElement("div", {
     "data-mh-screen": true,
     className: "flex-1 flex flex-col h-full min-h-0 p-4"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-2 mb-2 shrink-0"
   }, /*#__PURE__*/React.createElement("button", {
-    onClick: onBack,
+    onClick: handleBack,
     className: "p-3 text-slate-400 active:scale-90"
   }, /*#__PURE__*/React.createElement(ArrowLeft, {
     size: 20
   })), /*#__PURE__*/React.createElement("h2", {
     className: "text-xl font-black italic text-amber-400 uppercase tracking-widest"
-  }, "\u30DE\u30FC\u30B1\u30C3\u30C8")), /*#__PURE__*/React.createElement("div", {
+  }, headerTitle)), /*#__PURE__*/React.createElement("div", {
     className: "shrink-0 w-full max-w-md mx-auto mb-3"
   }, /*#__PURE__*/React.createElement(AssistantBubble, {
     scene: "market",
     condition: Number.isFinite(CHEAPEST_GOLD_ITEM_COST) && gold < CHEAPEST_GOLD_ITEM_COST ? 'lowGold' : null
-  })), /*#__PURE__*/React.createElement("div", {
-    className: "flex gap-2 mb-2 shrink-0"
+  })), !marketSection && /*#__PURE__*/React.createElement("div", {
+    "data-market-top": true,
+    className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex-1 flex items-center justify-center gap-2 bg-amber-950/40 border border-amber-500/30 rounded-2xl py-3"
-  }, /*#__PURE__*/React.createElement(Coins, {
-    size: 16,
-    className: "text-amber-400"
-  }), /*#__PURE__*/React.createElement("span", {
-    className: "text-lg font-black text-amber-300"
-  }, breederPoints), /*#__PURE__*/React.createElement("span", {
-    className: "text-[9px] text-slate-400 font-bold"
-  }, "pt(Lv.UP\u3067+1)")), /*#__PURE__*/React.createElement("div", {
-    className: "flex-1 flex items-center justify-center gap-2 bg-amber-950/40 border border-amber-500/30 rounded-2xl py-3"
+    className: "grid grid-cols-2 gap-2 pb-2"
+  }, [{
+    key: 'diamond',
+    emoji: '💎',
+    label: 'ダイヤショップ',
+    value: gold.toLocaleString(),
+    hint: 'ダイヤで購入'
+  }, {
+    key: 'breeder',
+    emoji: '🪙',
+    label: 'ブリーダーP交換所',
+    value: breederPoints.toLocaleString(),
+    hint: 'Lv.UPで獲得'
+  }, {
+    key: 'exchange',
+    emoji: '🔄',
+    label: 'アイテム交換所',
+    value: null,
+    hint: 'プシュケー・証など'
+  }, {
+    key: 'event',
+    emoji: '🎟️',
+    label: 'イベントP交換所',
+    value: null,
+    hint: '準備中'
+  }].map(section => /*#__PURE__*/React.createElement("button", {
+    key: section.key,
+    "data-market-section": section.key,
+    onClick: () => setMarketSection(section.key),
+    className: "min-h-[92px] rounded-2xl border border-amber-500/25 bg-slate-950/70 px-3 py-3 text-left active:scale-[0.98]"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    "aria-hidden": "true",
+    className: "text-xl"
+  }, section.emoji), /*#__PURE__*/React.createElement("span", {
+    className: "text-[11px] font-black leading-tight text-amber-200"
+  }, section.label)), section.value !== null && /*#__PURE__*/React.createElement("div", {
+    className: "mt-2 font-mono text-lg font-black text-white"
+  }, section.value), /*#__PURE__*/React.createElement("div", {
+    className: `text-[9px] font-bold ${section.value === null ? 'mt-3' : 'mt-0.5'} ${section.key === 'event' ? 'text-slate-500' : 'text-slate-400'}`
+  }, section.hint))))), marketSection === 'diamond' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    className: "mb-2 shrink-0 flex items-center justify-center gap-2 rounded-2xl border border-cyan-500/25 bg-cyan-950/25 py-2"
   }, /*#__PURE__*/React.createElement(Gem, {
-    size: 16,
-    className: "text-amber-400"
+    size: 15,
+    className: "text-cyan-300"
   }), /*#__PURE__*/React.createElement("span", {
-    className: "text-lg font-black text-amber-300"
+    className: "font-mono text-base font-black text-cyan-100"
   }, gold.toLocaleString()), /*#__PURE__*/React.createElement("span", {
-    className: "text-[9px] text-slate-400 font-bold"
-  }, "\u30C0\u30A4\u30E4(WAVE\u30AF\u30EA\u30A2\u3067\u7372\u5F97)"))), /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] font-bold text-slate-400"
+  }, "\u6240\u6301\u30C0\u30A4\u30E4")), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-1.5 mb-3 shrink-0"
+  }, diamondTabs.map(tab => /*#__PURE__*/React.createElement("button", {
+    key: tab.key,
+    onClick: () => onSelectTab(tab.key),
+    className: `flex-1 py-2 rounded-xl text-[10px] font-black ${activeDiamondTab === tab.key ? 'bg-amber-500 text-black' : 'bg-slate-900 border border-slate-800 text-slate-400'}`
+  }, tab.label))), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
+  }, diamondItems.length === 0 ? /*#__PURE__*/React.createElement("div", {
+    className: "text-center text-[11px] text-slate-600 font-bold py-10"
+  }, "\u307E\u3060\u5546\u54C1\u304C\u3042\u308A\u307E\u305B\u3093") : /*#__PURE__*/React.createElement("div", {
+    className: MARKET_GRID_CLASS
+  }, diamondItems.map(item => renderMarketItem(item))))), marketSection === 'breeder' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    className: "mb-3 shrink-0 flex items-center justify-center gap-2 rounded-2xl border border-amber-500/25 bg-amber-950/25 py-2"
+  }, /*#__PURE__*/React.createElement(Coins, {
+    size: 15,
+    className: "text-amber-300"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "font-mono text-base font-black text-amber-100"
+  }, breederPoints.toLocaleString()), /*#__PURE__*/React.createElement("span", {
+    className: "text-[9px] font-bold text-slate-400"
+  }, "\u6240\u6301\u30D6\u30EA\u30FC\u30C0\u30FCP")), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
+  }, breederPointItems.length === 0 ? /*#__PURE__*/React.createElement("div", {
+    className: "text-center text-[11px] text-slate-600 font-bold py-10"
+  }, "\u307E\u3060\u5546\u54C1\u304C\u3042\u308A\u307E\u305B\u3093") : /*#__PURE__*/React.createElement("div", {
+    className: MARKET_GRID_CLASS
+  }, breederPointItems.map(item => renderMarketItem(item))))), marketSection === 'exchange' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     "data-market-balances": true,
-    className: "grid grid-cols-3 gap-2 mb-4 shrink-0"
+    className: "grid grid-cols-3 gap-2 mb-3 shrink-0"
   }, [{
     key: 'psyche',
     emoji: '🌈',
@@ -25707,83 +25865,16 @@ function BreederMarketScreen({
     className: "font-mono text-sm font-black"
   }, row.value.toLocaleString())), /*#__PURE__*/React.createElement("span", {
     className: "text-[8px] font-bold leading-tight text-slate-400"
-  }, row.label)))), /*#__PURE__*/React.createElement("div", {
-    className: "flex gap-1.5 mb-3 shrink-0"
-  }, [{
-    key: 'icon',
-    label: 'アイコン'
-  }, {
-    key: 'disc',
-    label: '円盤石'
-  }, {
-    key: 'assist',
-    label: 'アシスト'
-  }, {
-    key: 'item',
-    label: 'アイテム'
-  }].map(tab => /*#__PURE__*/React.createElement("button", {
-    key: tab.key,
-    onClick: () => onSelectTab(tab.key),
-    className: `flex-1 py-2 rounded-xl text-[10px] font-black uppercase ${marketTab === tab.key ? 'bg-amber-500 text-black' : 'bg-slate-900 border border-slate-800 text-slate-400'}`
-  }, tab.label))), marketTab === 'item' && marketExchangeError && /*#__PURE__*/React.createElement("div", {
+  }, row.label)))), marketExchangeError && /*#__PURE__*/React.createElement("div", {
     className: "mb-2 shrink-0 rounded-xl border border-red-500/40 bg-red-950/30 px-3 py-2 text-center text-[9px] font-black text-red-300"
   }, marketExchangeError), /*#__PURE__*/React.createElement("div", {
     className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
-  }, BREEDER_MARKET_ITEMS.filter(item => item.type === marketTab && item.shop !== false).length === 0 ? /*#__PURE__*/React.createElement("div", {
-    className: "text-center text-[11px] text-slate-600 font-bold py-10"
-  }, "\u307E\u3060\u5546\u54C1\u304C\u3042\u308A\u307E\u305B\u3093") : /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("div", {
     className: MARKET_GRID_CLASS
-  }, BREEDER_MARKET_ITEMS.filter(item => item.type === marketTab && item.shop !== false).map(item => {
-    const comingSoon = item.available === false;
-    const owned = !comingSoon && isItemOwned(item);
-    const balance = item.currency === 'psyche' ? ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID) : item.type === 'disc' || item.type === 'assist' || item.type === 'item' ? gold : breederPoints;
-    const canBuy = !comingSoon && !owned && balance >= item.cost;
-    const detailMon = item.type === 'disc' ? ALL_PLAYER_MONSTERS[item.id] : null;
-    const detailTeaching = item.type === 'assist' ? TEACHING_CARDS.find(t => t.id === item.id) : null;
-    const isSoulRankRespec = item.id === SOUL_RANK_RESPEC_ITEM_ID;
-    const exchangeItem = isSoulRankRespec ? {
-      ...item,
-      currency: 'heroProof',
-      cost: 1
-    } : null;
-    return /*#__PURE__*/React.createElement(React.Fragment, {
-      key: item.id
-    }, /*#__PURE__*/React.createElement(MarketProductCard, {
-      item: item,
-      owned: owned,
-      comingSoon: comingSoon,
-      canBuy: canBuy,
-      onZoom: () => onZoomIcon(item),
-      onBuy: () => onBuy(item),
-      detail: detailMon || detailTeaching,
-      onDetail: () => onOpenDetail(item, detailMon, detailTeaching),
-      middle: item.type === 'item' ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
-        className: `text-[9px] font-black ${(ownedItems[item.id] || 0) > 0 ? 'text-cyan-300' : 'text-slate-600'}`
-      }, "\xD7", ownedItems[item.id] || 0), item.desc && /*#__PURE__*/React.createElement("button", {
-        onClick: () => onOpenItemDetail(item),
-        "aria-label": `${item.name}の効果を見る`,
-        className: "text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"
-      }, /*#__PURE__*/React.createElement(BookOpen, {
-        size: 8
-      }), "\u8A73\u7D30")) : null
-    }), exchangeItem && /*#__PURE__*/React.createElement(MarketProductCard, {
-      item: exchangeItem,
-      owned: false,
-      comingSoon: false,
-      canBuy: ownedItemCount(ownedItems, HERO_PROOF_ITEM_ID) > 0 && !purchaseProcessing,
-      disabled: purchaseProcessing,
-      onBuy: onExchangeSoulRankRespec,
-      middle: /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
-        className: `text-[9px] font-black ${ownedItemCount(ownedItems, SOUL_RANK_RESPEC_ITEM_ID) > 0 ? 'text-cyan-300' : 'text-slate-600'}`
-      }, "\xD7", ownedItemCount(ownedItems, SOUL_RANK_RESPEC_ITEM_ID)), item.desc && /*#__PURE__*/React.createElement("button", {
-        onClick: () => onOpenItemDetail(item),
-        "aria-label": `${item.name}の効果を見る`,
-        className: "text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"
-      }, /*#__PURE__*/React.createElement(BookOpen, {
-        size: 8
-      }), "\u8A73\u7D30"))
-    }));
-  }), marketTab === 'item' && /*#__PURE__*/React.createElement(MarketProductCard, {
+  }, itemExchangeItems.map(item => renderMarketItem(item)), soulRankRespecItem && renderMarketItem(soulRankRespecItem, {
+    showBase: false,
+    showHeroProofExchange: true
+  }), /*#__PURE__*/React.createElement(MarketProductCard, {
     item: {
       ...HERO_PROOF_ITEM,
       type: 'item',
@@ -25804,7 +25895,18 @@ function BreederMarketScreen({
     }, /*#__PURE__*/React.createElement(BookOpen, {
       size: 8
     }), "\u8A73\u7D30"))
-  }))));
+  })))), marketSection === 'event' && /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 min-h-0 flex items-center justify-center"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-full max-w-sm rounded-2xl border border-slate-700 bg-slate-950/70 px-4 py-8 text-center"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-3xl mb-2",
+    "aria-hidden": "true"
+  }, "\uD83C\uDF9F\uFE0F"), /*#__PURE__*/React.createElement("div", {
+    className: "text-sm font-black text-slate-300"
+  }, "\u30A4\u30D9\u30F3\u30C8P\u4EA4\u63DB\u6240\u306F\u6E96\u5099\u4E2D\u3067\u3059"), /*#__PURE__*/React.createElement("div", {
+    className: "mt-2 text-[10px] font-bold leading-relaxed text-slate-500"
+  }, "\u30A4\u30D9\u30F3\u30C8P\u6A5F\u80FD\u3068\u5546\u54C1\u30E9\u30A4\u30F3\u30CA\u30C3\u30D7\u306F\u4ECA\u5F8C\u8FFD\u52A0\u3057\u307E\u3059\u3002"))));
 }
 
 // ---- part: 56-screen-profile.jsx ----
