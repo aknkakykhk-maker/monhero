@@ -10529,6 +10529,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         onError={e=>{e.currentTarget.style.display='none';}} loading="lazy" decoding="async"
                         style={{width:'100%',borderRadius:'12px',margin:'6px 0'}}/>}
                       {(c.items||[]).map((x,j)=><p key={j}>・{x}</p>)}
+                      {/* 外に出るリンク(2026-09-14・よそのゲームの曲を入れたときの案内用)。
+                          https だけ通し、target="_blank" と rel="noopener noreferrer" を必ず付ける
+                          (開いた先からこのページを触られないようにするため)。
+                          リンクは更新履歴のエントリに link:{url,label} と書いたときだけ出る */}
+                      {changelogSafeLink(c.link)&&<a data-changelog-link
+                        href={changelogSafeLink(c.link)} target="_blank" rel="noopener noreferrer">
+                        {(c.link&&c.link.label)||'くわしく見る'} ↗
+                      </a>}
                     </section>))}
                   </div>}
                 </article>
