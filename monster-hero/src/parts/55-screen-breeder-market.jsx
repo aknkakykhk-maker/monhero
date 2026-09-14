@@ -99,14 +99,14 @@ function BreederMarketScreen({
               key={section.key}
               data-market-section={section.key}
               onClick={()=>setMarketSection(section.key)}
-              className="min-h-[92px] rounded-2xl border border-amber-500/25 bg-slate-950/70 px-3 py-3 text-left active:scale-[0.98]"
+              className="min-h-[108px] rounded-2xl border border-amber-500/25 bg-slate-950/70 px-4 py-4 text-left active:scale-[0.98]"
             >
-              <div className="flex items-center gap-2">
-                <span aria-hidden="true" className="text-xl">{section.emoji}</span>
-                <span className="text-[11px] font-black leading-tight text-amber-200">{section.label}</span>
+              <div className="flex items-center gap-2.5">
+                <span aria-hidden="true" className="text-2xl">{section.emoji}</span>
+                <span className="text-[12px] font-black leading-tight text-amber-200">{section.label}</span>
               </div>
-              {section.value!==null&&<div className="mt-2 font-mono text-lg font-black text-white">{section.value}</div>}
-              <div className={`text-[9px] font-bold ${section.value===null?'mt-3':'mt-0.5'} ${section.key==='event'?'text-slate-500':'text-slate-400'}`}>{section.hint}</div>
+              {section.value!==null&&<div className="mt-2.5 font-mono text-xl font-black text-white">{section.value}</div>}
+              <div className={`text-[10px] font-bold ${section.value===null?'mt-3.5':'mt-0.5'} ${section.key==='event'?'text-slate-500':'text-slate-400'}`}>{section.hint}</div>
             </button>
           ))}
         </div>
