@@ -10,7 +10,7 @@ const chaos = { damageDealt: 0.5, allyJoinBonus: 0.5, gutsCost: 1.5 };
 const rule = (rules, key) => rules?.[key] ?? 1;
 const specialRuleDifficulty = (runMode, difficultyId, extremeRun=false, extremeDifficultyId=null) => {
   const candidate=extremeRun ? extremeDifficultyId : (runMode==='quick' ? difficultyId : null);
-  return ['EXTREME','NIGHTMARE','CHAOS','ULTIMATE'].includes(candidate) ? candidate : null;
+  return ['EXTREME','NIGHTMARE','CHAOS','ULTIMATE','INFINITY','GOD'].includes(candidate) ? candidate : null;
 };
 assert.strictEqual(rule(extreme, 'assistCardEffect'), 0.5);
 assert.strictEqual(rule(extreme, 'waveEnhancement'), 1);
@@ -27,6 +27,9 @@ assert.strictEqual(specialRuleDifficulty('quick','Normal'),null);
 assert.strictEqual(specialRuleDifficulty('quick','EXTREME'),'EXTREME');
 assert.strictEqual(specialRuleDifficulty('quick','ULTIMATE'),'ULTIMATE');
 assert.strictEqual(specialRuleDifficulty('challenge','Normal',true,'ULTIMATE'),'ULTIMATE');
+// クイックへ足した INFINITY・GOD も、極限本体と同じ specialRules をそのまま通す
+assert.strictEqual(specialRuleDifficulty('quick','INFINITY'),'INFINITY');
+assert.strictEqual(specialRuleDifficulty('quick','GOD'),'GOD');
 
 assert(source.includes('const specialRuleDifficultyForRun = (runMode, difficultyId, extremeRun=false, extremeDifficultyId=null) =>'));
 assert(source.includes('const candidate=extremeRun ? extremeDifficultyId : (isQuickMode(runMode) ? difficultyId : null);'));

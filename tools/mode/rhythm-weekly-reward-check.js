@@ -16,6 +16,7 @@ const rhythmData=read('monster-hero/data/rhythm-mode.js');
 const supa=read('monster-hero/src/parts/26-supabase.jsx');
 const app=read('monster-hero/src/parts/60-app.jsx');
 const screen=read('monster-hero/src/parts/58-screen-rhythm.jsx');
+const history=read('monster-hero/src/parts/73-screen-rhythm-history.jsx');
 const market=read('monster-hero/src/parts/55-screen-breeder-market.jsx');
 const inventory=read('monster-hero/src/parts/54-screen-item-inventory.jsx');
 const masu=read('monster-hero/src/parts/11-masu-progression.jsx');
@@ -39,7 +40,8 @@ vm.runInContext(`${demoIds}\n${eventData}\n`
   +'this.out={RHYTHM_WEEKLY_REWARD_RANKS,RHYTHM_WEEKLY_PARTICIPATION,RHYTHM_WEEKLY_REWARD_FROM_MS,'
   +'RHYTHM_WEEK_MS,rhythmWeeklyRewardForRank,rhythmWeeksAwaitingReward,rhythmWeekId,'
   +'rhythmEventRewardForRank,rhythmEventRewardRankCount,rhythmEventParticipationReward,'
-  +'rhythmEventParticipationCleared,rhythmEventHasRewards,rhythmEventPlayBonusRates,rhythmWeeklyEvent};',context);
+  +'rhythmEventParticipationCleared,rhythmEventHasRewards,rhythmEventPlayBonusRates,rhythmWeeklyEvent,'
+  +'rhythmEventPeriodText,rhythmWeekWindow,rhythmHistoryEntries,RHYTHM_WEEKLY_HISTORY_FROM_MS};',context);
 const O=context.out;
 const weekly={kind:'weekly'};
 
@@ -100,6 +102,91 @@ check('成立の見かたが週間とイベントで違う（回数 / 曲数）'
     O.rhythmWeeksAwaitingReward(from+O.RHYTHM_WEEK_MS/2,[]).length===0);
 }
 
+// ⑧ 週をまたいだときに、先週の順位を今週として見せない(2026-09-14)
+check('週が変わったら前の順位を画面へ残さない',
+  /const boardStillCurrent = \(prev\) =>/.test(app)
+  &&/if \(kind === 'weekly'\) return loaded === rhythmWeekId\(Date\.now\(\)\);/.test(app)
+  &&/before\.status === 'ready' && boardStillCurrent\(prev\)/.test(app));
+check('イベントが終わったときも同じように残さない',
+  /if \(kind === 'limited'\) \{ const now = rhythmLimitedEventAt\(Date\.now\(\)\); return !!now && now\.id === loaded; \}/.test(app));
+check('どの週を見ているか画面に日付で出る',(()=>{
+  const w=O.rhythmWeeklyEvent?null:null;
+  const text=O.rhythmEventPeriodText({kind:'weekly'},{startMs:O.RHYTHM_WEEKLY_REWARD_FROM_MS,endMs:O.RHYTHM_WEEKLY_REWARD_FROM_MS+O.RHYTHM_WEEK_MS});
+  return /^今週 \d+\/\d+\(.\) \d+:\d+ 〜 \d+\/\d+\(.\) \d+:\d+$/.test(text);
+})(),O.rhythmEventPeriodText({kind:'weekly'},{startMs:O.RHYTHM_WEEKLY_REWARD_FROM_MS,endMs:O.RHYTHM_WEEKLY_REWARD_FROM_MS+O.RHYTHM_WEEK_MS}));
+check('期間が取れないときは、これまでどおりの文へ倒す',
+  O.rhythmEventPeriodText({kind:'weekly'},null)==='毎週 月曜 5:00 に切り替わります');
+
+// ⑨ 切り替わりは月曜5:00ちょうど(2026-09-14・ユーザー「スコア集計の切り替え時間の確認して」)
+{
+  const anchor=O.RHYTHM_WEEKLY_REWARD_FROM_MS;   // 2026-09-14 05:00 JST
+  const before=O.rhythmWeekWindow(anchor-1), after=O.rhythmWeekWindow(anchor);
+  check('05:00の1ミリ秒前はまだ前の週',before.endMs===anchor&&before.startMs===anchor-O.RHYTHM_WEEK_MS);
+  check('05:00ちょうどで新しい週に入る',after.startMs===anchor&&after.endMs===anchor+O.RHYTHM_WEEK_MS);
+  check('週のIDも同じ境界で変わる',
+    O.rhythmWeekId(anchor-1)!==O.rhythmWeekId(anchor)&&O.rhythmWeekId(anchor)===O.rhythmWeekId(anchor+O.RHYTHM_WEEK_MS-1));
+}
+
+// ⑩ 時刻で変わる答えをキャッシュから読まない(2026-09-14)
+//    「5時過ぎてモンヒロビート見たら週間ランキングにスコアが入ってた /
+//      確実に5時以降にはやってない」。今週の期間(rhythm_week_window)はGETで聞いていたが
+//    キャッシュを止めていなかったため、5:00をまたいでも先週の期間のまま集計されていた
+check('ランキングの取得はキャッシュを使わない',
+  !/await fetch\(url, \{ headers: SB_HEADERS, signal/.test(supa)
+  &&(supa.match(/cache: 'no-store'/g)||[]).length>=4);
+check('今週の期間の取得もキャッシュを使わない',
+  /: \{ headers: SB_HEADERS, cache: 'no-store', signal: controller\.signal \}\);/.test(supa));
+check('古い期間を受け取ったら使わない(先週のスコアを今週として見せない)',
+  /rhythm week window looks stale/.test(supa)
+  &&/now >= endMs \+ slackMs \|\| now < startMs - slackMs/.test(supa));
+check('期間を端末の時計で代用しない(時計を進めて別の週を見られないように)',
+  !/weekWindow = .*rhythmWeekWindow\(Date\.now\(\)\)/.test(app));
+
+// ⑪ 「これまでの記録」に終わった週が新しい順に並ぶ
+//    ★2026-09-14にユーザー依頼で、累計方式より前の週も載せるようにした
+//      (当時の数え方=ベスト合算で集計するので、当時の順位と数字が変わらない)
+{
+  const from=O.RHYTHM_WEEKLY_REWARD_FROM_MS;
+  const ids=(t)=>O.rhythmHistoryEntries(t).filter(e=>e.kind==='weekly').map(e=>e.id);
+  check('累計方式が始まった直後でも、その前の週が並ぶ',
+    ids(from+1000).length===1&&ids(from+1000)[0]===O.rhythmWeekId(from-O.RHYTHM_WEEK_MS));
+  check('最初の累計方式の週が終わると、そのぶんも並ぶ',
+    ids(from+O.RHYTHM_WEEK_MS).length===2
+    &&ids(from+O.RHYTHM_WEEK_MS)[0]===O.rhythmWeekId(from));
+  check('新しい順に並ぶ',(()=>{
+    const list=O.rhythmHistoryEntries(from+2*O.RHYTHM_WEEK_MS);
+    return list.length>=3&&list.every((e,i)=>i===0||list[i-1].endMs>=e.endMs);
+  })());
+  check('終わったイベントも並ぶ',
+    O.rhythmHistoryEntries(from+1000).some(e=>e.kind==='limited'));
+}
+
+// ⑫ 「その週のものか」を画面で確かめられる(2026-09-14)
+check('週間の行に最後の記録の日時を出す',
+  supa.includes('lastScoredAtMs:')
+  &&screen.includes('data-rhythm-week-last')
+  &&/eventWeekly&&entry\.lastScoredAtMs&&<p data-rhythm-week-last/.test(screen));
+
+// ⑬ 累計方式より前の週も「これまでの記録」に載せる(当時の数え方で集計する)
+{
+  const from=O.RHYTHM_WEEKLY_REWARD_FROM_MS;
+  const weeks=(t)=>O.rhythmHistoryEntries(t).filter(e=>e.kind==='weekly');
+  const now=weeks(from+1000);
+  check('累計方式より前の週も並ぶ',now.length>=1,now.map(w=>w.id+'('+w.scoring+')').join(' / '));
+  // ★どの週も「その週が終わった時点の数え方」＝累計で出す(2026-09-14・ユーザー指摘)。
+  //   累計へ変えたのは2026-09-13の昼で、9/07〜9/14の週の途中。
+  //   いったん「当時はベスト合算」と考えて数え方を分けたが、切り替え時刻の取り違えだった
+  check('週ごとに数え方を分けていない',
+    !/scoring/.test(eventData)&&!/historyWeekScoring/.test(app)&&!/weeklyBest/.test(history));
+  check('履歴の週も累計で集計する',
+    /const weeklyTotals = \(kind === 'weekly' \|\| \(kind === 'history' && historyEntry\.kind === 'weekly'\)\) && !targetSongId;/.test(app));
+  check('週間ランキングが遊べるようになる前の週までは遡らない',
+    weeks(from+1000).every(w=>w.startMs>=O.RHYTHM_WEEKLY_HISTORY_FROM_MS));
+  check('履歴の週でも「遊んだ回数」を出す',
+    /weekly\?`\$\{entry\.playCount\}回 ・ `:''/.test(history));
+  check('数え方を画面に書いている',history.includes('data-rhythm-history-total-note'));
+}
+
 // ⑦ 週間に回数ボーナスは付けない
 check('週間に回数ボーナスは付かない',O.rhythmEventPlayBonusRates(weekly)===null);
 check('週間の行は加点の内訳を持たない',
@@ -123,9 +210,10 @@ check('何度流しても同じ結果になる（作り直す形）',
 check('予行演習(rollback)と手順書がそろっている',
   /^rollback;$/m.test(testSql)&&!/^commit;$/m.test(testSql)
   &&steps.includes('RHYTHM_WEEK_TOTAL_APPLY_TEST.sql'));
+// 2026-09-13、履歴(終わった週をあとから見る)も同じ累計方式で数える
 check('アプリは累計の関数を呼ぶ',
   supa.includes('rpc/rhythm_week_score_totals')
-  &&/const weeklyTotals = kind === 'weekly' && !targetSongId;/.test(app));
+  &&/const weeklyTotals = \(kind === 'weekly' \|\| \(kind === 'history' && historyEntry\.kind === 'weekly'\)\) && !targetSongId;/.test(app));
 check('関数が無い環境を「準備中」として扱う',
   /rhythm_week_score_totals\|rhythm_event_song_bests/.test(supa));
 check('端末側で累計を足していない',
@@ -154,14 +242,20 @@ check('マーケットの上に持ち高を出す（プシュケー・証片・�
   market.includes('data-market-balances')
   &&market.includes("data-market-balance")
   &&/psycheHave|shardHave|proofHave/.test(market));
+// ★2026-09-14にユーザー指摘「イベント報酬が直接アイテム欄に入ってた / ギフト経由して」。
+//   アイテム欄へ直接入れるのをやめ、ギフト1件へまとめて届ける形にした
 check('報酬から証片が配られる',
   /reward\.kind==='heroProofShard'/.test(shared)
-  &&/next\[HERO_PROOF_SHARD_ITEM_ID\] = ownedItemCount\(next, HERO_PROOF_SHARD_ITEM_ID\)/.test(app));
+  &&/if\(item\)add\(GIFT_ITEM_REWARD_TYPE,item\.id,reward\.count\)/.test(shared)
+  &&/join\.count>0&&typeof HERO_PROOF_SHARD_ITEM!=='undefined'/.test(shared));
 check('順位報酬のダイヤも配られる',
-  /if \(entry\.reward\.gold > 0\) goldGain \+= entry\.reward\.gold;/.test(app));
-check('受け取り済みは先に保存してからアイテムを足す',
+  /add\('diamond',null,reward\.gold\)/.test(shared));
+check('報酬はギフトで届ける(アイテム欄へ直接入れない)',
+  app.includes('const rewards = rhythmEventGiftRewards(prize);')
+  &&!app.includes('ownedItemCount(next, HERO_PROOF_SHARD_ITEM_ID)'));
+check('受け取り済みは先に保存してからギフトを作る',
   app.indexOf('await markRhythmEventRewardClaimed(prize.event.id);')
-    < app.indexOf('const next = { ...ownedItemsRef.current };\n      // ダイヤは mh_gold'));
+    < app.indexOf('grantGiftOnce(before, gift)'));
 
 // --- 案内(画面・ヘルプ・更新履歴・仕様書) ---
 check('週間の行に遊んだ回数を出す',/eventWeekly\?`\$\{entry\.playCount\}回/.test(screen));

@@ -221,9 +221,12 @@ check('通常チャレンジ・プロのキーへ混ざらない',
   && !G('RANKING_DIFFICULTY_KEYS').includes('INFINITY'));
 
 // ---- ⑥ クイックINFINITYを作っていない ----
-check('クイックへINFINITYを足していない',
-  G('QUICK_EXTREME_SETTINGS').INFINITY === undefined
-  && !/QUICK_EXTREME_SETTINGS[\s\S]{0,400}INFINITY/.test(source));
+// 2026-09-13・ユーザー依頼でクイックへも公開した(報酬は案A)。極限本体の数値は上の検査が見ている。
+check('クイックへINFINITYを公開(経験値40/ダイヤ18/虹80・敵強度は本体を参照)',
+  G('QUICK_EXTREME_SETTINGS').INFINITY?.xp === 40
+  && G('QUICK_EXTREME_SETTINGS').INFINITY?.gold === 18
+  && G('QUICK_EXTREME_SETTINGS').INFINITY?.psyche === 80
+  && G('QUICK_EXTREME_SETTINGS').INFINITY?.power === G('INFINITY_SETTING').power);
 
 // ---- ルール詳細UI ----
 check('ルール詳細の本文はspecialRulesから作る（数値を書き写していない）', (() => {

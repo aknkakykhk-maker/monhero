@@ -255,7 +255,7 @@ const sbFetchBondLevels = async (requestId='untracked') => {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8000);
   try {
-    const res = await fetch(url, { headers: SB_HEADERS, signal: controller.signal });
+    const res = await fetch(url, { headers: SB_HEADERS, cache: 'no-store', signal: controller.signal });
     const body = await res.text();
     if (!res.ok) {
       if (_isMissingTableError(res.status, body)) {
@@ -365,7 +365,7 @@ const sbFetchRankings = async (diff, limit=RANKING_SCORE_LIMIT, order='score.des
   // 落ちていた。回線が細くても待てる範囲まで伸ばす(それでも返らなければ打ち切る)
   const timer = setTimeout(() => controller.abort(), 15000);
   try {
-    const res = await fetch(url, { headers: SB_HEADERS, signal: controller.signal });
+    const res = await fetch(url, { headers: SB_HEADERS, cache: 'no-store', signal: controller.signal });
     const body = await res.text();
     rankingLog(requestId, 'supabase-response', { difficulty: normalizedDifficulty, endedAt: new Date().toISOString(), elapsedMs: Date.now() - startedAt, status: res.status, statusText: res.statusText, ok: res.ok, dataCount: res.ok ? (() => { try { const parsed = JSON.parse(body); return Array.isArray(parsed) ? parsed.length : null; } catch { return null; } })() : null, error: res.ok ? null : body });
     if (!res.ok) {
@@ -517,6 +517,115 @@ const persistRankingScore = async ({ row, insertScore=sbInsertScore, saveLocal }
   }
 };
 
+// ===== 送れなかった記録を、あとで送り直すための道具(2026-09-13) =====
+//
+// 全国ランキングへの送信が失敗すると、これまでは端末へ退避するだけで終わっていた。
+// 画面にも何も出ないので、プレイヤーからは「出したのに載らない」としか見えない。
+// 実際に、rankings.score が int4 だったころの 45,054,226,345(約450億)が
+// 22003 で拒否され、そのまま端末に眠っていた。
+//
+// ここは「退避した記録を読んで、送り直す形へ戻す」ところだけを純粋な関数にしてある。
+// 通信も保存もしないので、tools/ranking/pending-resend-check.js から直接呼んで確かめられる。
+
+// 一度に送る上限と、HOMEへ着いてから送り直しを始めるまでの待ち時間。
+// 起動直後はランキングの取得や絵の読み込みが重なるので、少し待ってから始める。
+const RANKING_RESEND_LIMIT = 10;
+const RANKING_RESEND_DELAY_MS = 4000;
+
+// 退避した一覧から、まだ送れていないものだけを拾う。
+//   ・nationalSaved が false のものだけ(true や、フラグの無い古い記録は触らない)
+//   ・clearId が無いものは送らない。重複を防ぐ鍵が無く、二重登録になってしまうため
+//   ・スコアが数値として読めないものも送らない
+const pendingLocalRankingEntries = (list) => (Array.isArray(list) ? list : []).filter(entry =>
+  entry && typeof entry === 'object'
+  && entry.nationalSaved === false
+  && typeof entry.clearId === 'string' && entry.clearId.length > 0
+  && Number.isFinite(Number(entry.score)));
+
+// 送り直すときは、遊んだ時刻を行に入れて送る(2026-09-14)。
+//
+// rankings.created_at の既定値は now() なので、この列を付けずに送ると
+// **送り直した瞬間**が記録の時刻になる。週間ランキング(月曜5:00区切り)は
+// created_at で期間を数えているため、先週以前の未送信記録を送り直すと
+// 遊んでいない今週の合計へ足されてしまう。
+// 実際に 2026-09-14 6:22 にアプリを開いただけで、4曲ぶんが今週の週間ランキングへ載った
+// (ユーザー指摘「この時間は開いた時間なんだけどそれがスコアとして何かしらの方法でカウントされてる？」)。
+//
+// ★既にあるデータの created_at は書き換えない。これから入れる行に、
+//   端末が控えていた本当の時刻(entry.at)を入れるだけ(CLAUDE.md ⑦)。
+// ★端末の時計が狂っていることもあるので、ありえない値のときは付けない
+//   (付けなければ従来どおり now() になる)。
+const RANKING_CREATED_AT_MIN_MS = Date.UTC(2024, 0, 1);
+const rankingCreatedAtFromLocal = (atMs) => {
+  const ms = Number(atMs);
+  if (!Number.isFinite(ms)) return null;
+  if (ms < RANKING_CREATED_AT_MIN_MS || ms > Date.now() + 60 * 1000) return null;
+  try { return new Date(ms).toISOString(); } catch { return null; }
+};
+
+// 退避した記録から、送信するときの行を組み立て直す。
+// submitLocalScore が作る row と同じ形にそろえること(列が増えたらここも足す)。
+// 値が無い列は付けない(0やnullを入れて「0ターンでクリア」に見せないため)。
+const rankingRowFromLocalEntry = (entry, difficulty) => {
+  if (!entry) return null;
+  const diff = difficulty || entry.diff;
+  if (!diff) return null;
+  const reachedWave = Number(entry.reachedWave);
+  const turns = Number(entry.turns);
+  const level = Number(entry.level);
+  const createdAt = rankingCreatedAtFromLocal(entry.at);
+  return {
+    difficulty: diff,
+    user_name: entry.userName || '名無しのブリーダー',
+    hero: entry.hero || 'Unknown',
+    party: Array.isArray(entry.party) ? entry.party : [],
+    score: Number(entry.score),
+    ...(Number.isFinite(level) ? { level } : {}),
+    ...(entry.icon ? { icon: entry.icon } : {}),
+    clear_id: entry.clearId,
+    ...(Number.isFinite(reachedWave) && reachedWave > 0 ? { reached_wave: reachedWave } : {}),
+    ...(Number.isFinite(turns) && turns > 0 ? { turns } : {}),
+    ...(entry.breederId ? { breeder_id: entry.breederId } : {}),
+    ...(createdAt ? { created_at: createdAt } : {}),
+  };
+};
+
+// 送れたものに「送信済み」の印を付ける。行は消さないし、ほかの項目も触らない。
+// (記録そのものはブリーダーLv・絆Lvの集計にも使われているため)
+const markLocalRankingEntriesSent = (list, sentClearIds) => {
+  const sent = new Set(Array.isArray(sentClearIds) ? sentClearIds : []);
+  if (!Array.isArray(list) || sent.size === 0) return Array.isArray(list) ? list : [];
+  return list.map(entry => (entry && sent.has(entry.clearId))
+    ? { ...entry, nationalSaved: true, nationalError: undefined, resentAt: Date.now() }
+    : entry);
+};
+
+// 送り直しの1件を実際に送る。
+//
+// created_at を明示して送るのが本筋だが、その列を書けない環境も考えられる。
+// そこで拒まれたときは、**今週ぶんに限って** created_at を外して送り直す
+// (どのみち今週として数えられるので、週間ランキングは歪まない)。
+// 先週以前の記録は、付けずに送ると遊んでいない週の合計へ足されてしまうため、
+// 送らずに端末へ残したままにする(次の起動でまた試す。記録は消えない)。
+const insertResentRankingRow = async (insert, row) => {
+  try {
+    return await insert(row);
+  } catch (error) {
+    if (!row || row.created_at === undefined) throw error;
+    const playedMs = Date.parse(row.created_at);
+    const week = (typeof rhythmWeekWindow === 'function') ? rhythmWeekWindow(Date.now()) : null;
+    const inThisWeek = Number.isFinite(playedMs) && week
+      && playedMs >= Number(week.startMs) && playedMs < Number(week.endMs);
+    if (!inThisWeek) {
+      console.error('[ranking] resend kept pending (created_at rejected, old record):',
+        error && error.message ? error.message : error);
+      return { saved: false, keptPending: true };
+    }
+    const { created_at, ...withoutCreatedAt } = row;
+    return await insert(withoutCreatedAt);
+  }
+};
+
 const createRunId = () => globalThis.crypto?.randomUUID?.() || `run_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`;
 
 // ===== ブリーダーを見分けるID(2026-09-11) =====
@@ -630,7 +739,7 @@ const sbFetchRhythmRankings = async (difficultyKeys, limit=RHYTHM_RANKING_FETCH_
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
   try {
-    const res = await fetch(url, { headers: SB_HEADERS, signal: controller.signal });
+    const res = await fetch(url, { headers: SB_HEADERS, cache: 'no-store', signal: controller.signal });
     const body = await res.text();
     if (!res.ok) throw new Error(`rhythm ranking fetch ${res.status} ${res.statusText}; url=${url}; response=${body || '(empty)'}`);
     try {
@@ -680,7 +789,7 @@ const sbFetchRhythmTotalRankings = async ({ limit=RHYTHM_TOTAL_RANKING_DISPLAY_L
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
   try {
-    const res = await fetch(url, { headers: SB_HEADERS, signal: controller.signal });
+    const res = await fetch(url, { headers: SB_HEADERS, cache: 'no-store', signal: controller.signal });
     const body = await res.text();
     if (!res.ok) {
       if (rhythmTotalRankingMissing(res.status, body)) {
@@ -785,9 +894,16 @@ const sbFetchRhythmEventRows = async ({ url, body = null, label, requestId = 'un
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
   try {
+    // ★GETは必ずサーバーへ聞きに行く(cache:'no-store')。
+    //   2026-09-14・ユーザー指摘「5時過ぎてモンヒロビート見たら週間ランキングにスコアが入ってた /
+    //   確実に5時以降にはやってないから何かしらの不具合だと思うよ」。
+    //   今週の期間(rhythm_week_window)はGETで聞いているが、キャッシュを止めていなかった。
+    //   ブラウザが前に取った答えを使い回すと、5:00をまたいでも**先週の期間**のまま集計され、
+    //   先週のスコアが今週の順位として出る。時刻で変わる答えをキャッシュから読ませない。
+    //   POSTのほう(集計そのもの)はもともとキャッシュされない。
     const res = await fetch(url, body
       ? { method: 'POST', headers: SB_HEADERS, body: JSON.stringify(body), signal: controller.signal }
-      : { headers: SB_HEADERS, signal: controller.signal });
+      : { headers: SB_HEADERS, cache: 'no-store', signal: controller.signal });
     const text = await res.text();
     if (!res.ok) {
       if (rhythmEventRankingMissing(res.status, text)) {
@@ -823,6 +939,18 @@ const sbFetchRhythmWeekWindow = async ({ requestId = 'untracked' } = {}) => {
   // 値が読めないときは「準備中」に倒す。端末時計で代用すると、サーバーと違う期間の
   // 順位を「今週」として見せてしまう(期間の正本はサーバー・§6.1)
   if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs <= startMs) throw rhythmEventNotReadyError();
+  // ★受け取った期間が、もう終わっている/まだ始まっていないときは使わない(2026-09-14)。
+  //   上の cache:'no-store' で普通は起きないが、端末やWebViewがそれを無視して
+  //   前に取った答えを返すことがある。古い期間のまま集計すると、
+  //   **先週のスコアが今週の順位として出る**(実際にそう見えた)。
+  //   ここで気づいたら、期間を当てずっぽうで補わずエラーにして「更新」でやり直してもらう
+  //   (端末の時計で代用すると、時計を進めるだけで別の週を見られてしまう・§6.1)。
+  //   端末の時計のほうがずれていることもあるので、1時間の余裕をみる
+  const slackMs = 60 * 60 * 1000;
+  const now = Date.now();
+  if (now >= endMs + slackMs || now < startMs - slackMs) {
+    throw new Error(`rhythm week window looks stale; window=${new Date(startMs).toISOString()}..${new Date(endMs).toISOString()}; now=${new Date(now).toISOString()}`);
+  }
   return { startMs, endMs };
 };
 // 期間×対象曲の「曲ごとベスト」。部門1つぶん(=曲1つぶん)を取りにいく
@@ -969,6 +1097,9 @@ const rhythmWeekTotalEntryFromRow = (row) => ({
   userName: row?.user_name || '名無しのブリーダー',
   totalScore: Number(row?.total_score) || 0,
   playCount: Number(row?.play_count) || 0,
+  // 最後に記録した日時。画面に出して「その週のものかどうか」を目で確かめられるようにする
+  // (2026-09-14・ユーザー指摘「普通に朝起きたらスコア残ってたからそこが気になる」)
+  lastScoredAtMs: Number.isFinite(Date.parse(String(row?.last_scored_at || ''))) ? Date.parse(row.last_scored_at) : null,
   songCount: Number(row?.song_count) || 0,
   level: Number(row?.level) || 0,
   icon: row?.icon ?? null,

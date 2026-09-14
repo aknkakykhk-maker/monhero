@@ -134,12 +134,22 @@ check('壊れたズレ・値なしはぴったりにしない',
   rhythmJudgmentIsPrecise('MARVELOUS',NaN)===false&&rhythmJudgmentIsPrecise('MARVELOUS',null)===false
   &&rhythmJudgmentIsPrecise('MARVELOUS',undefined)===false);
 // ★スコア・コンボ・ライフ・判定数・FAST/SLOWの数え方へ入れていないこと。
-//   run と result に持たせていないことを、変数名で直接見る
-check('ぴったりはスコア・記録に一切入れない(runにもresultにも持たせない)',
+//   2026-09-13にユーザー依頼でリザルトへ**回数だけ**出すようにしたので、
+//   「run と result に持たせない」ではなく「**計算と保存へ混ぜない**」を見る。
+//   数えるだけなら run に持ってよい(むしろ view へ持たせると叩いた瞬間に落ちる)。
+check('ぴったりはスコア・判定数・コンボ・ライフの計算へ混ぜない',
   game.includes('const preciseHit=rhythmJudgmentIsPrecise(judgment,deltaMs);')
-  &&!/run\.[A-Za-z]*[Pp]recise/.test(game)
-  &&!/result=\{[^}]*precise/i.test(game)
-  &&!/counts\[[^\]]*precise/i.test(game));
+  // 判定数(counts)はそのまま。ぴったりは別の数として持つ
+  &&game.includes('run.counts[judgment]++;if(preciseHit)run.precise++;')
+  &&!/counts\[[^\]]*precise/i.test(game)
+  // スコア・コンボ・ライフの計算へは渡らない
+  &&!/rhythmCalculateScore\(\{[^}]*precise/i.test(game)
+  &&!/rhythmComboAfter\([^)]*precise/i.test(game)
+  &&!/rhythmLifeAfterWithMonsterAbilities\([^)]*precise/i.test(game));
+check('ぴったりは自己ベストの保存へ入れない(保存形式を変えない)',
+  !/normalizeRhythmBestRecord\(\{[\s\S]{0,400}precise/.test(game)
+  // mergeRhythmBestRecord はキーを選んで写す。ここへ precise が増えていないこと
+  &&!/const mergeRhythmBestRecord[\s\S]{0,700}precise/.test(game));
 check('ぴったりは表示だけへ渡す(viewと演出)',
   game.includes('lastPrecise:preciseHit')
   &&game.includes("data-judgment-precise={view.lastPrecise?'1':''}")
@@ -258,7 +268,9 @@ check('ヒット演出は呼び出し側のまとめへ譲れる(defer)',
   source.includes("if(defer)return {el:item,attr:'rhythmHitKind',value:kind};")
   // 2026-09-12: ぴったりのMARVELOUS(precise)を渡すようになったので、その間へ入る
   &&game.includes('monster:bigMonsterEffect,precise:preciseHit,defer:true')
-  &&game.includes("const bigMonsterEffect=monsterHit&&monsterEffect!=='OFF';"));
+  // 段は順位でくらべる(2026-09-13。名前を並べてくらべていたせいで、あとから足した
+  // 「最小」が素通りし、いちばん軽い段でモンスターノーツの大きな光が出ていた)
+  &&game.includes("const bigMonsterEffect=monsterHit&&!rhythmMonsterEffectAtMost(monsterEffect,'OFF');"));
 
 // --- 判定まわりを変えていない ---
 check('判定窓・スコア・コンボの計算に触っていない',

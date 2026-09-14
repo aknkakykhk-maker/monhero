@@ -132,6 +132,78 @@ note=start('HOLD',true);
 frame(1800);frame(2000);frame(2200);
 check('押しっぱなしのまま終端を過ぎたら従来どおりMISSガードが働く',note.holdJudgment==='MISS',note.holdJudgment);
 
+// --- 7. 斜めのSLIDE(2026-09-14・ユーザー報告) ---
+//
+//   「斜めになってるスライダーノーツのフィニッシュ部分のフリックがなぜか到達前にミス扱いになる」
+//
+// 原因は、受付に入った瞬間の**指の位置**を基準にして移動量を測っていたこと。
+// 斜めのSLIDEは受付(終端250ms前)に入ったあとも終端へ向かって指が動き続けるので、
+// その移動がフリックとして拾われ、終端へ着く前に判定が確定していた。
+// 終端まで200msあれば -200ms の終端判定になるので、窓(185ms)を外れてMISSになる。
+//
+// ここでは実際に指を軌道どおりへ動かして、
+//   ・なぞるだけでは確定しない(フリックと取り違えない)
+//   ・斜めでもフリックすれば、まっすぐなSLIDEと同じように成立する
+// を確かめる。★laneCoordinate は画面の大きさを見るので、ここだけDOMを用意する。
+{
+  const RECT={left:0,top:0,width:390,height:743,right:390,bottom:743};
+  const playArea={isConnected:true,getBoundingClientRect:()=>({...RECT}),dispatchEvent:()=>true,closest(){return playArea;}};
+  context.document={querySelector:(sel)=>String(sel).includes('play-area')?playArea:null,
+    querySelectorAll:()=>[],addEventListener(){},removeEventListener(){}};
+  vm.runInContext('this.geo={rhythmSlideExpectedLane,rhythmProjectBoundary,RHYTHM_LANE_COUNT,RHYTHM_JUDGMENT_LINE_Y};',context);
+  const {rhythmSlideExpectedLane,rhythmProjectBoundary,RHYTHM_LANE_COUNT,RHYTHM_JUDGMENT_LINE_Y}=context.geo;
+  const yRatio=RHYTHM_JUDGMENT_LINE_Y.ratio;
+  const edgeL=rhythmProjectBoundary(0,yRatio),edgeR=rhythmProjectBoundary(RHYTHM_LANE_COUNT,yRatio);
+  // 判定ラインの高さでの、そのレーンの中心x(px)
+  const laneToX=(lane)=>(edgeL+(lane+.5)*(edgeR-edgeL)/RHYTHM_LANE_COUNT)*RECT.width;
+  // points の軌道どおりに指を動かす。flickAt を渡すと、その時刻から上へ弾く
+  const trace=(points,flickAt)=>{
+    const target={type:'SLIDE',timeMs:1000,endTimeMs:2000,lane:points[0].lane,subLane:0,subLaneWidth:2,
+      done:false,holdJudgment:'MARVELOUS',holdDeltaMs:0,index:0,endFlick:true,slidePoints:points};
+    runtime.clear();now=1000;rafCb=null;
+    runtime.record('touch:1',laneToX(points[0].lane),650);
+    runtime.bind('touch:1',target,'SLIDE',1000,0);
+    target.holdJudgment='MARVELOUS';target.holdDeltaMs=0;
+    let settledAt=null;
+    for(let t=1000;t<=2000;t+=5){
+      now=t;
+      const lane=rhythmSlideExpectedLane(target,t);
+      const lift=(flickAt!==null&&t>=flickAt)?Math.min(60,(t-flickAt)*1.5):0;
+      runtime.record('touch:1',laneToX(lane),650-lift);
+      if(settledAt===null&&target.endTimeMs!==2000)settledAt=t;
+    }
+    return {note:target,settledAt};
+  };
+  const straight=[{timeMs:1000,lane:2},{timeMs:2000,lane:2}];
+  const gentle=[{timeMs:1000,lane:0},{timeMs:2000,lane:4}];     // 1秒かけて4レーン移動
+  const sharp=[{timeMs:1000,lane:0},{timeMs:1750,lane:0},{timeMs:2000,lane:4}]; // 終端250msで4レーン
+
+  // ★なぞるだけ(フリックしない)なら、どの形でも終端の前に確定しない
+  for(const [label,points] of [['まっすぐ',straight],['ゆるい斜め',gentle],['急な斜め',sharp]]){
+    const {note:traced,settledAt}=trace(points,null);
+    check(`${label}のSLIDEは、なぞるだけでは終端の前に確定しない`,
+      settledAt===null&&traced.endTimeMs===2000&&traced.holdJudgment!=='MISS',
+      `確定=${settledAt??'—'} / 判定=${traced.holdJudgment}`);
+  }
+  // ★フリックすれば、斜めでもまっすぐと同じように成立する
+  const results=[['まっすぐ',straight],['ゆるい斜め',gentle],['急な斜め',sharp]]
+    .map(([label,points])=>{const {note:traced}=trace(points,1900);return [label,traced.holdJudgment,traced._rhythmEndFlickDone];});
+  check('斜めでもフリックすれば成立する',results.every(([,,done])=>done===true),
+    results.map(([label,judgment])=>`${label}:${judgment}`).join(' / '));
+  check('斜めかどうかで判定が変わらない',new Set(results.map(([,judgment])=>judgment)).size===1,
+    results.map(([label,judgment])=>`${label}:${judgment}`).join(' / '));
+
+  // ★受付(250ms前)は終端の判定窓(185ms)より早い。窓の外で弾いても、そこでは確定しない。
+  //   確定を待たずに release すると「まだ届いていない終端」への早い判定になってMISSになる
+  {
+    const early=trace(sharp,1760);          // 受付(1750ms〜)に入った直後に弾く
+    check('窓の外で弾いても、そこでは確定しない(窓に入ってから確定する)',
+      early.settledAt!==null&&early.settledAt>=2000-RHYTHM_RELEASE_MAX_MS,
+      `確定=${early.settledAt??'—'} / 窓に入るのは ${2000-RHYTHM_RELEASE_MAX_MS}ms から`);
+  }
+  context.document=undefined;
+}
+
 // 【2026-09-05・指の置き換えに対応してから】
 // 受付前に離しても、その場では判定を確定しない。持ち替えの途中かもしれないので
 // 「浮いている」状態にして、戻ってこなければ本体のrAFが猶予(200ms)後にMISSにする。

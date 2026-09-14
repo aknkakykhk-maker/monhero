@@ -214,14 +214,21 @@ function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, getA
                   {row('ちから', mon.baseAtk)}
                   {row('丈夫さ', mon.baseDef)}
                   {row('ガッツ', mon.baseGuts)}
+                  {/* 間合い適性の色は、マスモンの詳細やバトル画面と同じ決まりで塗る。
+                      ここだけ琥珀色1色だったため、A・C・Dの違いが図鑑では見分けられなかった
+                      (2026-09-13・ユーザー指摘「図鑑の距離適性の色がみんな同じになってる」)。
+                      距離のラベルは RANGE_STYLES、ランクは DIST_APTITUDE_COLOR を使う。 */}
                   <div className="text-[9px] font-black text-amber-300/90 mt-2 mb-1">間合い適性</div>
                   <div className="grid grid-cols-4 gap-1.5">
-                    {RANGE_LABELS.map((label,i)=>(
-                      <div key={label} className="rounded-xl border border-amber-500/25 bg-black/30 py-1.5 text-center">
-                        <div className="text-[9px] font-black text-slate-400">{label}</div>
-                        <div className="text-[13px] font-mono font-black text-amber-200">{(mon.distAptitude&&mon.distAptitude[i])||'C'}</div>
+                    {RANGE_LABELS.map((label,i)=>{
+                      const grade=(mon.distAptitude&&mon.distAptitude[i])||'C';
+                      return (
+                      <div key={label} className="flex flex-col items-center gap-1 rounded-xl border border-amber-500/25 bg-black/30 py-1.5 text-center">
+                        <span className={`rounded-full px-1.5 py-0.5 text-[8px] font-black leading-none ${RANGE_STYLES[i].labelBg}`}>{label}</span>
+                        <span className={`w-[86%] rounded-lg border py-0.5 text-[13px] font-mono font-black leading-none ${DIST_APTITUDE_COLOR[grade]||DIST_APTITUDE_COLOR.C}`}>{grade}</span>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>)}
                 {tab==='skills'&&(<div data-dex-tab-skills className="space-y-2">

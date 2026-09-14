@@ -20,6 +20,8 @@ const rhythmData=read('monster-hero/data/rhythm-mode.js');
 const supa=read('monster-hero/src/parts/26-supabase.jsx');
 const app=read('monster-hero/src/parts/60-app.jsx');
 const screen=read('monster-hero/src/parts/58-screen-rhythm.jsx');
+const shared=read('monster-hero/src/parts/28-rhythm-shared.jsx');
+const release=read('monster-hero/src/parts/17-release-changelog-login-missions.jsx');
 const game=read('monster-hero/src/game-system.jsx');
 const html=read('monster-hero/index.html');
 const help=read('monster-hero/data/help.js');
@@ -44,7 +46,8 @@ vm.runInContext(`${demoIds}\n${eventData}\n`
   +'rhythmEventPeriodText,rhythmEventSongsLabel,rhythmEventBanner,rhythmEventDivisionReward,rhythmEventRewardForRank,rhythmEventHasRewards,'
   +'rhythmEventSongDivisionId,RHYTHM_EVENT_REWARD_RANKS,rhythmEventsAwaitingReward,'
   +'normalizeRhythmEventRewardClaims,rhythmEventDivisionIds,rhythmEventParticipationReward,rhythmEventParticipationCleared,'
-  +'rhythmEventSongDivisionId,rhythmEventMaxScore,rhythmEventEntryScore,RHYTHM_EVENT_TOTAL_DIVISION};',context);
+  +'rhythmEventSongDivisionId,rhythmEventMaxScore,rhythmEventEntryScore,RHYTHM_EVENT_TOTAL_DIVISION,'
+  +'rhythmPreviousLimitedEvent,rhythmNextLimitedEvent,rhythmHistoryEvents};',context);
 const O=context.out;
 
 // ① 週の区切りは月曜 5:00 JST(= 日曜 20:00 UTC)
@@ -214,9 +217,13 @@ check('参加報酬は自分の行から遊んだ曲数を見る(上位5件に�
   app.includes('if (rhythmEventParticipationReward(event)) {')
   &&app.includes('identityKeys:selfKeys, requestId:`rhythm-reward-${event.id}-join`')
   &&app.includes('rhythmEventParticipationCleared(event, played)'));
-check('参加報酬のダイヤとプシュケーは別の入れ物へ足す',
-  app.includes("await storeSet('mh_gold', nextGold, false);")
-  &&app.includes('prize.participation.psyche'));
+// ★2026-09-14にユーザー指摘「イベント報酬が直接アイテム欄に入ってた / ギフト経由して」。
+//   直接足すのをやめ、ギフト1件へまとめて届ける形にした。ダイヤもプシュケーも
+//   ギフトの受け取り(buildGiftClaim)が既存の入れ物へ振り分ける
+check('参加報酬もギフトの中身へ入る(ダイヤ・プシュケー・アイテム)',
+  shared.includes("add('rainbowPsyche',null,join.psyche)")
+  &&shared.includes("add('diamond',null,join.gold)")
+  &&/join\.heroProof>0&&typeof HERO_PROOF_ITEM!=='undefined'/.test(shared));
 check('参加報酬を画面に出す(開催中と受け取りの両方)',
   screen.includes('data-rhythm-event-participation')
   &&screen.includes('data-rhythm-event-reward-participation')
@@ -234,15 +241,27 @@ check('通信に失敗したら受け取り済みにしない(次の起動でや
   &&app.includes('// 通信の失敗で受け取り済みにはしない。次の起動でやり直す'));
 check('入賞も参加報酬も無ければ受け取り済みにする(毎回問い合わせ直さない)',
   app.includes('if (prizes.length === 0 && !participation) { await markRhythmEventRewardClaimed(event.id); return; }'));
-check('先にフラグを保存してからアイテムを足す(二重付与を防ぐ)',(()=>{
+check('先にフラグを保存してから報酬を配る(二重付与を防ぐ)',(()=>{
   const at=app.indexOf('const claimRhythmEventReward');
   if(at<0)return false;
-  const body=app.slice(at,at+1600);
-  return body.indexOf('markRhythmEventRewardClaimed')<body.indexOf("storeSet('mh_owned_items'");
+  // ★切り出す幅は、受け取りの本体がまるごと入る大きさにする。
+  //   足りないと「保存が見つからない(-1)」で、順番が正しくても落ちる
+  const body=app.slice(at,at+3000);
+  const flagAt=body.indexOf('markRhythmEventRewardClaimed');
+  // 2026-09-14: アイテム欄へ直接入れるのをやめ、ギフトで届ける形にした
+  const giftAt=body.indexOf('grantGiftOnce(before, gift)');
+  return flagAt>=0&&giftAt>=0&&flagAt<giftAt;
 })());
-check('報酬は所持品とプシュケーへ足す(既存の入れ物を使う)',
-  app.includes('ownedItemCount(next, item.id) + entry.reward.count')
-  &&app.includes('ownedItemCount(next, BREAKTHROUGH_ITEM_ID) + entry.reward.psyche'));
+check('報酬はギフトで届ける(アイテム欄へ直接入れない)',
+  app.includes('const rewards = rhythmEventGiftRewards(prize);')
+  &&app.includes("source: 'rhythmEvent',")
+  &&app.includes('grantGiftOnce(before, gift)')
+  // 直接足していた古い書き方が残っていないこと
+  &&!app.includes('ownedItemCount(next, item.id) + entry.reward.count'));
+check('ギフトは同じidを二重に作らない',
+  /if \(list\.some\(item => item\?\.id === gift\.id\)\) return \{ granted:false/.test(release));
+check('ギフトの中身は同じ種類をまとめる(同じ行が何本も並ばない)',
+  /const totals=new Map\(\);/.test(shared)&&/found\.amount\+=n;/.test(shared));
 check('受け取り画面を出す(新しいgameStateは増やさない)',
   screen.includes('function RhythmEventRewardModal')&&screen.includes('data-rhythm-event-reward-claim')
   &&app.includes('<RhythmEventRewardModal')&&!/'RHYTHM_EVENT_REWARD'/.test(app));
@@ -287,12 +306,46 @@ check('期間限定のあいだも週間は止まらない',limited.every(e=>{
 }));
 check('画面はタブを分けている(週間 / イベント)',
   screen.includes("{id:'weekly',label:'週間'}")&&screen.includes("{id:'event',label:'イベント'}")
-  &&screen.includes("const boardKind=rhythmRankingTab==='weekly'?'weekly':"));
-check('開催していないあいだはイベントのタブを出さない',
-  screen.includes('...(eventReleased&&limitedEvent?[{id:\'event\',label:\'イベント\'}]:[]),'));
-check('週間とイベントの読み込みは別々に持つ',
-  app.includes("const loadRhythmEventRanking = useCallback(async (kind, divisionId) =>")
-  &&app.includes("useState({ weekly:RHYTHM_BOARD_EMPTY, limited:RHYTHM_BOARD_EMPTY })")
+  &&screen.includes("const boardKind=rhythmRankingTab==='weekly'?'weekly'"));
+// 2026-09-14・ユーザー依頼「イベントタブを常設して、前回のランキングと今回のランキングを
+// 見れるようにしたい。前回や今回がない場合はそのような文言をいれとく」。
+// 以前は「開催していないあいだはタブを出さない」形だったので、終わった瞬間に
+// ランキングの画面から結果へ辿れなくなっていた。
+check('イベントのタブは常設する(開催していなくても出す)',
+  screen.includes("...(eventReleased?[{id:'event',label:'イベント'}]:[]),")
+  &&!screen.includes("...(eventReleased&&limitedEvent?[{id:'event',label:'イベント'}]:[]),"));
+check('イベントのタブの中で「今回」と「前回」を切り替える',
+  screen.includes('data-rhythm-event-phase-tabs')
+  &&screen.includes("data-rhythm-event-phase={phase.id}")
+  &&screen.includes("const openEventPhase=(phase)=>{")
+  &&screen.includes("eventPhase==='prev'?(prevEventEntry?'prevEvent':null):(limitedEvent?'limited':null)"));
+// 「今回」「前回」は見るたびに数え直す(開きっぱなしの端末でも時刻で入れ替わる)。
+// 実際に時刻を動かして、開催前・開催中・終了後で答えが変わることを確かめる
+const limitedForPhase=O.RHYTHM_EVENTS.filter(e=>e&&e.kind==='limited');
+if(limitedForPhase.length>0){
+  const first=limitedForPhase.map(e=>Date.parse(e.startAt)).sort((a,b)=>a-b)[0];
+  const last=limitedForPhase.map(e=>Date.parse(e.endAt)).sort((a,b)=>b-a)[0];
+  const mid=(Date.parse(limitedForPhase[0].startAt)+Date.parse(limitedForPhase[0].endAt))/2;
+  check('1回目が始まる前は「前回」が無い',O.rhythmPreviousLimitedEvent(first-1)===null);
+  check('1回目が始まる前は「次回」が分かる',
+    !!O.rhythmNextLimitedEvent(first-1)&&O.rhythmNextLimitedEvent(first-1).startMs===first);
+  check('開催中は「今回」がある',!!O.rhythmLimitedEventAt(mid));
+  check('終わったあとは「前回」になる',
+    !!O.rhythmPreviousLimitedEvent(last+1)&&O.rhythmPreviousLimitedEvent(last+1).endMs===last);
+  check('終わったあとは「今回」が無い',O.rhythmLimitedEventAt(last+1)===null);
+  check('「前回」はいちばん最近に終わった回(新しい順の先頭)',
+    O.rhythmPreviousLimitedEvent(last+1)?.id===(O.rhythmHistoryEvents(last+1)[0]||{}).id);
+  check('開催中のイベントは「次回」に数えない',
+    (O.rhythmNextLimitedEvent(mid)||{id:null}).id!==limitedForPhase[0].id);
+}
+check('今回が無い・前回が無いときの文言がある',
+  screen.includes('data-rhythm-event-none-now')&&screen.includes('いま開催しているイベントはありません。')
+  &&screen.includes('data-rhythm-event-none-prev')&&screen.includes('まだ終わったイベントがありません。'));
+// 2026-09-13、終わった回をあとから見る履歴(kind:'history')を足した。
+// 3つとも別々に持つ(片方を読み込んでも、もう片方の一覧が消えない)ことを見る
+check('週間とイベントと履歴の読み込みは別々に持つ',
+  app.includes("const loadRhythmEventRanking = useCallback(async (kind, divisionId, historyEntry = null) =>")
+  &&app.includes("useState({ weekly:RHYTHM_BOARD_EMPTY, limited:RHYTHM_BOARD_EMPTY, prevEvent:RHYTHM_BOARD_EMPTY, history:RHYTHM_BOARD_EMPTY })")
   &&screen.includes('const event=(boardKind&&boards[boardKind])||'));
 check('期間限定の期間は定義の日時そのまま',limited.every(e=>{
   const range=O.rhythmEventWindow(e,null);
@@ -302,7 +355,12 @@ check('期間限定の期間は定義の日時そのまま',limited.every(e=>{
 check('期間の文を出し分ける',(()=>{
   const week=O.rhythmWeeklyEvent(Date.now());
   const weekText=O.rhythmEventPeriodText(week,O.rhythmEventWindow(week,O.rhythmWeekWindow(Date.now())));
-  if(!/毎週 月曜 5:00/.test(weekText))return false;
+  // ★2026-09-14: 週間も「今週 9/14(月) 5:00 〜 …」と日付を出す。
+  //   「毎週 月曜 5:00 に切り替わります」だけだと、いま見ているのが今週なのか
+  //   先週のまま残っているのかが画面から分からなかった。
+  //   期間が取れないときだけ、これまでどおりの文へ倒す
+  if(!/^今週 \d+\/\d+\([日月火水木金土]\) \d+:\d\d 〜 \d+\/\d+\([日月火水木金土]\) \d+:\d\d$/.test(weekText))return false;
+  if(O.rhythmEventPeriodText(week,null)!=='毎週 月曜 5:00 に切り替わります')return false;
   return limited.every(e=>{
     const text=O.rhythmEventPeriodText(e,O.rhythmEventWindow(e,null));
     return /\d+\/\d+\([日月火水木金土]\) \d+:\d\d 〜 \d+\/\d+\([日月火水木金土]\) \d+:\d\d/.test(text);
@@ -368,7 +426,7 @@ check('画面に部門ごとの報酬を出す',
 check('画面は期間の文と対象曲の見出しを出し分ける',
   screen.includes('rhythmEventPeriodText(eventDefinition,eventRange)')
   &&screen.includes('rhythmEventSongsLabel(rhythmEventNotice)')
-  &&screen.includes("const eventLimited=boardKind==='limited';"));
+  &&screen.includes("const eventLimited=boardKind==='limited'||eventPrev;"));
 
 // ④ 部門と点数
 {
@@ -417,7 +475,10 @@ check('週の窓はサーバーから受け取る',
 // 週間の期間の正本はサーバー。期間限定は定義に書いた日時をそのまま使うので聞きに行かない
 check('週間の期間はサーバーから受け取る',
   app.includes('const weekWindow = kind === \'weekly\' ? await sbFetchRhythmWeekWindow(')
-  &&app.includes("rhythmWeeklyEvent(weekWindow.startMs) : rhythmLimitedEventAt(Date.now())"));
+  // 2026-09-13、履歴を足したので三項が1つ増えた。今週はサーバーの窓、開催中は定義の日時、
+  // 履歴は終わっているので渡された期間をそのまま使う(聞きに行かない)
+  &&app.includes("kind === 'weekly' ? rhythmWeeklyEvent(weekWindow.startMs)")
+  &&app.includes("rhythmLimitedEventAt(Date.now());"));
 check('期間×対象曲の集計は関数を呼ぶ',
   supa.includes('/rest/v1/rpc/rhythm_event_song_bests')&&supa.includes('/rest/v1/rpc/rhythm_event_totals'));
 // ★行の文字列そのままを見ない。曲ごとのほうは party の取り直しを足したときに
@@ -451,8 +512,15 @@ check('部門も押すたびに取り直す',
   &&screen.includes('loadRhythmEventRanking&&loadRhythmEventRanking(boardKind,divisionId);')
   &&!screen.includes("if(!board||board.status==='idle')loadRhythmEventRanking"));
 check('読み直しのあいだも前の順位を消さない',
-  app.includes('const keep = before && before.status === \'ready\';')
+  app.includes('const keep = before && before.status === \'ready\' && boardStillCurrent(prev);')
   &&app.includes('boards: { ...prev.boards, [wanted]: keep ? before : { status:\'loading\', entries:[], self:null } },'));
+// ★ただし週(またはイベント)が変わったときは残さない。
+//   残すと、先週のスコアが今週の順位として画面に出たままになる
+//   (2026-09-14・ユーザー指摘「5時過ぎてモンヒロビート見たら週間ランキングにスコアが入ってた」)
+check('週・イベントが変わったら前の順位は残さない',
+  /const boardStillCurrent = \(prev\) =>/.test(app)
+  &&/return loaded === rhythmWeekId\(Date\.now\(\)\);/.test(app)
+  &&/const now = rhythmLimitedEventAt\(Date\.now\(\)\); return !!now && now\.id === loaded;/.test(app));
 check('更新ボタンは開いているタブのほうを読み直す',screen.includes('if(boardTab)loadRhythmEventRanking&&loadRhythmEventRanking(boardKind,eventDivisionId);'));
 check('残り時間を出している',screen.includes('data-rhythm-event-remaining')&&screen.includes('rhythmEventRemainingText('));
 check('自分の記録を上に固定で出す',screen.includes('data-rhythm-event-self-empty')&&screen.includes('eventBoard.self'));
@@ -469,7 +537,7 @@ check('この曲・総合のランキングは変えていない',
   &&supa.includes('const sbFetchRhythmRankings = async (difficultyKeys,')
   &&screen.includes("{id:'song',label:'この曲'},"));
 check('曲別の一覧は週間・イベントのタブでは出さない',
-  screen.includes('const songTab=!totalTabOpen&&!boardTab;')
+  screen.includes('const songTab=!totalTabOpen&&!boardTab&&!eventTabOpen;')
   &&screen.includes("{songTab&&rhythmRanking.status==='ready'&&rhythmRanking.entries.length>0&&"));
 check('週間の結果を端末へ書き戻していない(自己ベストは触らない)',
   !app.includes('saveRhythmBestRecord(rhythmEventRanking')&&!app.includes('mh_rhythm_best_v1')||true);

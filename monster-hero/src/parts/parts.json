@@ -182,6 +182,10 @@
       "role": "画面: マスモンのオート強化設定(MASU_AUTO_ENHANCE)。オン/オフ・上限・優先順位だけを決める"
     },
     {
+      "file": "73-screen-rhythm-history.jsx",
+      "role": "画面: モンヒロビートの履歴(RHYTHM_HISTORY)。終わった週・イベントの順位をあとから見る。表示専用で保存に触らない"
+    },
+    {
       "file": "60-app.jsx",
       "role": "MonsterHeroGame 本体(全 state・ロジック・各 gameState の JSX)"
     },

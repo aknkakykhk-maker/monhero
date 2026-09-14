@@ -30,7 +30,12 @@ check('ポーズの再開と中断は元React onClickへ橋渡し',script.includ
 check('ポーズのリスタートは旧runを再利用せず完全再マウント',script.includes('if(info.isPauseRestart)')&&script.includes('remount(event)')&&script.includes('RHYTHM_GESTURE_RUNTIME.clear?.()'));
 check('touchendを旧プレイ入力へ渡さず遮断',script.includes('if(event.cancelable)event.preventDefault()')&&script.includes('event.stopPropagation()')&&script.includes('event.stopImmediatePropagation?.()'));
 check('touch後のghost click二重実行を抑止',script.includes('lastPauseTouchAt')&&script.includes('Date.now()-lastPauseTouchAt<800'));
-check('元RhythmTapTestのunmount cleanupを維持',source.includes('return()=>{mountedRef.current=false;++generationRef.current;startLockRef.current=false;disposeRun();};'));
+// 後片付けの4つ(mountedRefを倒す・generationを進める・ロックを外す・disposeRun)が
+// **この順で揃っている**ことを見る。2026-09-13 に、時刻で入れ替わる譜面を演奏のあいだ
+// 固定する rhythmChartSwitchHold(false) を同じ場所へ足したので、文字列の丸ごと一致では
+// 通らなくなった。見たいのは「4つが抜けていないこと」なので、間に足したものは通す。
+check('元RhythmTapTestのunmount cleanupを維持',
+  /return\(\)=>\{mountedRef\.current=false;(?:(?!\}).)*?\+\+generationRef\.current;startLockRef\.current=false;disposeRun\(\);\};/.test(source));
 const releaseDate=release.match(/const RHYTHM_RELEASE_DATE='([^']+)'/)?.[1];
 const dataBuild=release.match(/const RHYTHM_DATA_BUILD='([^']+)'/)?.[1];
 const compiledBuild=release.match(/const RHYTHM_COMPILED_BUILD='([^']+)'/)?.[1];

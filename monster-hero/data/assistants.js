@@ -603,6 +603,12 @@ const ASSISTANT_SCENES = {
     help: 'rhythm/rhythm-ranking',
     lines: [],
   },
+  // これまでの記録(2026-09-13)。プロフィールから入る、終わった週・イベントの一覧。
+  // 本文は下の addAssistantLinePack から合流する。
+  rhythmHistory: {
+    help: 'rhythm/rhythm-history',
+    lines: [],
+  },
   // マスモン設定(モンスターノーツ)。本文は下の addAssistantLinePack から合流する。
   rhythmMonsters: {
     help: 'rhythm/rhythm-monster-note-display',
@@ -3192,6 +3198,40 @@ const stampSceneAuthoredLines = () => {
 };
 stampSceneAuthoredLines();
 
+// これまでの記録(2026-09-13・ユーザー依頼「モンビーのイベントや週間ランキングの
+// 終わったものをヒストリー的に見れる機能」)。プロフィールから入る一覧の案内。
+addAssistantLinePack({
+  id: 'rhythmHistory',
+  label: 'モンヒロビート・これまでの記録',
+  lines: {
+    rhythmHistory: [
+      { e:'normal',  t:'終わった週間ランキングとイベントの順位を、あとから見られるよ。' },
+      { e:'happy',   t:'見たい回をえらぶと、そのときの順位を数え直して出すね♪' },
+      { e:'normal',  t:'ここは見るだけの場所だよ。報酬の受け取りはここではできないの。' },
+      { e:'wink',    t:'先週どれくらいだったっけ？ っていうときに覗いてみて♪' },
+      { e:'excited', t:'自分の記録が残ってると、続けてきたんだなーって思えるよね！' },
+    ],
+  },
+});
+
+// 同じ場面の「きき」のぶん。場面を足したときに片方だけになっていると、
+// ききを選んでいる人にみゅあのセリフが出てしまう(2026-09-14・assistant-bond-check が検出)。
+addAssistantLinePack({
+  id: 'kikiRhythmHistory',
+  assistantId: 'kiki',
+  label: 'きき・モンヒロビート・これまでの記録',
+  lines: {
+    rhythmHistory: [
+      { e:'normal',  t:'終わった週間ランキングとイベントの順位を、あとから見られまつ。' },
+      { e:'normal',  t:'見たい回をえらぶと、そのときの順位を数え直して出しまつ。' },
+      { e:'normal',  t:'ここは見るだけの場所でつ。報酬の受け取りは、ここではできません。' },
+      { e:'wink',    t:'「先週はどれくらいだったかな」と思ったときに、開いてみるといいでつよ♪' },
+      { e:'happy',   t:'記録が並んでいると、続けてきたことがそのまま見えまつね。' },
+      { e:'happy',   t:'{name}の積み重ねが残る場所でつ。たまに眺めるのも、いいものでつよ。' },
+    ],
+  },
+});
+
 // 束を ASSISTANT_SCENES へ合流させる。二重に合流しないよう、済んだ束は覚えておく
 //   lines      … { 場面キー: [ …セリフ… ] } を通常のセリフへ足す
 //   conditions … { 場面キー: { 条件キー: [ …セリフ… ] } } を条件つきのセリフへ足す
@@ -3482,6 +3522,58 @@ const ASSISTANT_MONBEAT_CUP_EVENT = [
 // 会話の中だけの呼び名(回想の一覧にも使う)
 const ASSISTANT_MONBEAT_CUP_EVENT_CALLS = { mua: 'もも', kiki: 'ももさん', momosuke: 'みゅあねぇ／ききちゃん' };
 
+// 週末ゲリラ杯の閉幕(2026-09-13・ユーザー指示「初のイベントで結構な数が参加してくれて
+// 感謝の気持ちとして参加賞に勇者の証を10個追加でプレゼント。そんな感じのやつを助手の
+// ストーリーで作って」)。**イベントが終わった時刻に自動で流れる**。
+//
+// ★数字(勇者の証10個)はこの台本に書いてある1か所だけ。実際に配るのは
+//   data/rhythm-event.js の participationReward。食い違うと嘘になるので、
+//   tools/mode/rhythm-event-thanks-check.js が突き合わせる。
+const ASSISTANT_MONBEAT_CUP_THANKS = [
+  // 導入: 終わった直後の3人
+  { who:'momosuke', e:'happy',    t:'……ふぅ。週末ゲリラ杯、これにて閉幕♡' },
+  { who:'kiki',     e:'normal',   t:'おつかれさまでつ、ももさん。' },
+  { who:'mua',      e:'excited',  t:'ねえねえ、集計見た!? あたしびっくりしたんだけど。' },
+  { who:'momosuke', e:'surprise', t:'見た見た〜。……正直ね、ももは「数人来てくれたらいいな」くらいに思ってたの。' },
+  { who:'kiki',     e:'surprise', t:'ゲリラ告知でつからね。準備期間ゼロでつし。' },
+  { who:'momosuke', e:'excited',  t:'それなのに、あんなにいっぱい叩きに来てくれてさ〜。' },
+  // 感謝
+  { who:'mua',      e:'happy',    t:'しかも1回だけじゃなくて、何回も来てくれてた人が多かったよね。' },
+  { who:'kiki',     e:'happy',    t:'記録が伸びていく様子が、そのまま残っていまつ。見ていて嬉しかったでつ。' },
+  { who:'momosuke', e:'troubled', t:'……なんかね、もものほうが元気もらっちゃった。' },
+  { who:'mua',      e:'surprise', t:'めずらしい。もも、しおらしくなってる。' },
+  { who:'momosuke', e:'angry',    t:'うるさいなー！ ……たまには素直にもなるの！' },
+  // 追加報酬
+  { who:'momosuke', e:'wink',     t:'でね。お礼にひとつ、勝手に決めてきた♡' },
+  { who:'kiki',     e:'troubled', t:'……また相談なしでつか。' },
+  { who:'momosuke', e:'happy',    t:'参加賞にね、勇者の証を10個おまけすることにしたの。' },
+  { who:'mua',      e:'surprise', t:'じゅっ……10個!? もも、それ気前よすぎない!?' },
+  { who:'kiki',     e:'surprise', t:'魂格進化に使うものでつよ。ひとつでも貴重でつ。' },
+  { who:'momosuke', e:'excited',  t:'いいの！ はじめての大会に付き合ってくれたお礼なんだから♪' },
+  { who:'mua',      e:'happy',    t:'……まあ、それだけの人が来てくれたってことだもんね。' },
+  { who:'kiki',     e:'normal',   t:'では、受け取りの案内も直しておきまつね。' },
+  // 受け取り方
+  { who:'momosuke', e:'wink',     t:'対象曲を3曲ぜんぶ遊んだ人が参加賞。そこに証10個が乗るよ♡' },
+  { who:'mua',      e:'normal',   t:'入賞したぶんとは別ってこと？' },
+  { who:'momosuke', e:'happy',    t:'別々♪ どっちも当てはまるなら、両方もらえる。' },
+  { who:'kiki',     e:'happy',    t:'受け取りは、このあと出る画面の「受け取る」からでつ。' },
+  { who:'mua',      e:'troubled', t:'あ、もし出なかったら……？' },
+  { who:'kiki',     e:'normal',   t:'条件に届かなかったときは何も出ません。順位は終わった時点で決まっていまつ。' },
+  { who:'momosuke', e:'normal',   t:'受け取れるのは2週間だから、そこだけ忘れないでね〜。' },
+  // 次回へ
+  { who:'mua',      e:'excited',  t:'ねえもも、次もやるの？' },
+  { who:'momosuke', e:'wink',     t:'ふふ。……どうしよっかな♡' },
+  { who:'kiki',     e:'troubled', t:'その言い方、だいたいやる気でつよね。' },
+  { who:'momosuke', e:'excited',  t:'バレた？ ……まあ、様子を見ながらね♪' },
+  // 締め
+  { who:'momosuke', e:'happy',    t:'{name}、来てくれてほんとにありがとう。' },
+  { who:'kiki',     e:'happy',    t:'{name}、おつかれさまでつ。記録はぜんぶ残っていまつよ。' },
+  { who:'mua',      e:'excited',  t:'また next の大会でも、いっしょに叩こうね！' },
+  { who:'mua',      e:'troubled', t:'……あっ、いま「next」って言っちゃった。次ね、次！' },
+  { who:'momosuke', e:'happy',    t:'みゅあねぇ、そういうとこだよ〜♡' },
+];
+const ASSISTANT_MONBEAT_CUP_THANKS_CALLS = { mua: 'もも', kiki: 'ももさん', momosuke: 'みゅあねぇ／ききちゃん' };
+
 // ---------- イベント回想 ----------
 // 一度見た会話イベントを、プロフィール画面から何度でも見返せるようにするための一覧。
 // 台本(script)は既存のシーン定義をそのまま参照し、ここで二重に持たない。
@@ -3506,6 +3598,9 @@ const EVENT_REPLAYS = [
   // イベント開催の会話(2026-09-11)。開催中に1度だけ本編で流れ、そのあとは回想からいつでも見られる。
   // 期間が終わっても回想には残る(そのときどういう会話だったかを見返せるように)
   { id: 'monbeat_cup_2026_09', title: '週末ゲリラ杯 ～はじめての大会～', script: ASSISTANT_MONBEAT_CUP_EVENT, calls: ASSISTANT_MONBEAT_CUP_EVENT_CALLS, unlockedKey: 'monbeatCupEventSeen' },
+  // 閉幕の会話(2026-09-13)。**イベントが終わった時刻に自動で流れる**。
+  // 参加賞へ勇者の証10個を足したことを、ここで知らせる
+  { id: 'monbeat_cup_2026_09_thanks', title: '週末ゲリラ杯 ～閉幕とお礼～', script: ASSISTANT_MONBEAT_CUP_THANKS, calls: ASSISTANT_MONBEAT_CUP_THANKS_CALLS, unlockedKey: 'monbeatCupThanksSeen' },
 ];
 
 // ---------- 助手ごとのあいさつ・村の案内 ----------

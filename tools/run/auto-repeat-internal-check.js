@@ -55,13 +55,15 @@ for(const token of [
   "else if(gaveUp)stopAllAuto('retire');",
   "else if(gameState==='PICK_HERO')stopAllAuto('manual');",
   'const returnToHome = () => {\n    stopAllAuto()',
-  // あきらめるは理由つき(帯に「途中でやめた」と出す)
-  'const handleGiveUp = useCallback(async () => {',
+  // あきらめるは理由つき(帯に「途中でやめた」と出す)。
+  // ★引数は足せる(2026-09-13に silent を足した)ので、宣言を丸ごと固定で書かない。
+  //   見たいのは「あきらめるが stopAllAuto('retire') を通ること」。
   "    stopAllAuto('retire');",
   'const handleRetry = () => {\n    stopAllAuto()',
   "const onHidden = () => { Audio_.setPageHidden(true); stopAllAuto('hidden'); }",
   'const startBattleTutorial =', 'const startDebugBattle =',
 ])if(!source.includes(token))fail(`停止経路 ${token} がありません`);
+if(!/const handleGiveUp = useCallback\(async \([^)]*\) => \{/.test(source))fail('停止経路 handleGiveUp がありません');
 // ★blur/pagehide は「他のアプリへ行った」以外でも飛ぶので、visibilityState で裏を取ってから止める
 //   (2026-09-07・ユーザー報告「クイック中に1曲やったら周回が止まってた」)
 if(!source.includes("window.addEventListener('pagehide', onMaybeHidden)"))fail('pagehide停止がありません');

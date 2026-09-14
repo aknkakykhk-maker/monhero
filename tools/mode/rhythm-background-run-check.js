@@ -152,8 +152,13 @@ const seed = () => {
     //   (2026-09-06・ユーザー報告「モンビーを押すと一瞬で戻る」)
     check('敵を倒しても画面がバトルへ飛び戻らない', await onRhythmHome(),
       await page.evaluate(() => (document.body.innerText || '').replace(/\s+/g, ' ').slice(0, 60)));
-    // いったんバトルへ戻して、進んだかどうかを読む
-    await clickSelector('[data-rhythm-back]');
+    // いったんバトルへ戻して、進んだかどうかを読む。
+    // ★2026-09-13から、曲えらびの「戻る」はHOMEへ抜ける(周回も終える)ようになったので、
+    //   バトルへ戻る導線は周回の帯の詳細にある [data-quick-run-progress-back] を使う
+    //   (ユーザー指摘「止めないでもホームに戻れて自動的に周回も終わるようにしたい」)。
+    await page.evaluate(() => document.querySelector('[data-quick-run-progress-header] button, [data-quick-run-progress] button')?.click());
+    await page.waitForTimeout(400);
+    await clickSelector('[data-quick-run-progress-back]');
     await page.waitForTimeout(2000);
     const afterRhythm = await readProgress();
     // WAVE10のあと次の周へ入るとWAVEが1へ戻る。「減った」もまた進んだ証拠として数える
@@ -180,6 +185,40 @@ const seed = () => {
     // 超省エネの暗幕はバトルを見ないためのもの。モンビーでは外れていないと譜面が暗くて遊べない
     check('モンビーでは超省エネの暗幕が外れている',
       await page.evaluate(() => !document.querySelector('[data-ultra-eco-session-dimmer]')));
+
+    // ---- ⑥ 周回を止めずにHOMEへ戻れる(2026-09-13・ユーザー指摘
+    //      「止めないでもホームに戻れて自動的に周回も終わるようにしたい」) ----
+    // それまでは「⚔ バトルへ戻る」しかできず、バトルで∞を切ってからHOMEへ、という
+    // 2工程だった。いまは曲えらびの「戻る」がそのままHOMEで、周回はその場で締まる。
+    check('周回中の戻るボタンが「終わる」と分かる見た目になっている',
+      await page.evaluate(() => {
+        const back = document.querySelector('[data-rhythm-back]');
+        return !!back && back.getAttribute('data-quick-run-finishing') === '1'
+          && (back.getAttribute('aria-label') || '').includes('ホームへ戻る');
+      }));
+    const beforeHome = await readProgress();
+    const exitStartedAt = Date.now();
+    await clickSelector('[data-rhythm-back]');
+    // ★押したらすぐHOMEへ抜ける。やることは報酬の付与と記録だけで、どちらも端末の中で完結する
+    //   (クイックは全国ランキング対象外なので、網を待つ処理は入らない)。
+    //   進んでいるターンの演出は returnToHome がランの世代を1つ進めて止めるので、待たない
+    //   (2026-09-14・ユーザー指摘「待ち時間が長くてストレス / もっと良い方法ない？」。
+    //    それまでは終わるのを待っていて、実測で3〜6秒かかっていた)。
+    await page.waitForFunction(() => !document.querySelector('[data-rhythm-demo-home]'), { timeout: 25000 }).catch(() => {});
+    const exitMs = Date.now() - exitStartedAt;
+    check('押したらすぐHOMEへ抜ける(待たされない)', exitMs < 2000, `${exitMs}ms`);
+    await page.waitForFunction(() => (document.body.innerText || '').includes('モンヒロビート'), { timeout: 15000 }).catch(() => {});
+    await page.waitForTimeout(1200);
+    check('周回中でもそのままHOMEへ戻れる',
+      await page.evaluate(() => !document.querySelector('[data-rhythm-demo-home]')
+        && (document.body.innerText || '').includes('モンヒロビート')),
+      await page.evaluate(() => (document.body.innerText || '').replace(/\s+/g, ' ').slice(0, 60)));
+    // 戻ったあとに周回が残っていないこと(帯もバトルの段階も消えている)
+    check('戻ると周回も終わっている',
+      await page.evaluate(() => !document.querySelector('[data-quick-run-progress-header]')
+        && !document.querySelector('[data-quick-run-progress]')
+        && !document.querySelector('button[aria-label^="AUTO"]')),
+      `戻る前 W${beforeHome.wave}/T${beforeHome.turn}`);
 
     check('操作中に致命的なJSエラーが出ない', fatal.length === 0, fatal.slice(0, 2).join(' / '));
   } finally {
