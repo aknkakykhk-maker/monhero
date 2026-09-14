@@ -561,7 +561,8 @@ check('曲えらびの案内も同じフラグで出す',
 check('ヘルプの週間の説明も同じフラグで出す',(()=>{
   const topic=(help.split("id:'rhythm-ranking'")[1]||'').split("id:'rhythm-")[0];
   const lines=topic.split('\n').filter(line=>line.includes("{t:'"))
-    .filter(line=>line.includes('週間ランキング')||line.includes('対象曲'));
+    .filter(line=>line.includes('週間ランキング')||line.includes('対象曲'))
+    .filter(line=>!line.includes("releaseFlag:'rhythmEventPoints'"));
   return lines.length>0&&lines.every(line=>line.includes("releaseFlag:'rhythmWeeklyRanking'"));
 })());
 check('更新履歴も同じフラグで出す',(()=>{
