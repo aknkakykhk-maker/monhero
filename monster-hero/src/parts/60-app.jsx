@@ -490,25 +490,25 @@ function MonsterHeroGame() {
   const repeatRunTemplateRef = useRef(null);
   const [selectedCards, setSelectedCards] = useState([]);
   const [isBusy, setIsBusy] = useState(false);
-  // ★ターンの演出(executeTurn→敵の行動)は await で繋いだ長い一本道で、途中で止める手立てが無い。
-  //   その最中にランを片付ける(returnToHome)と、残りの setEnemy(prev=>...) が
-  //   null を掘って画面が落ちる。「いま演出の途中か」を ref でも読めるようにして、
-  //   片付ける前に終わるのを待てるようにしてある(2026-09-13・ユーザー報告
-  //   「モンビーからそのまま戻ったときに結構な頻度でエラーが起きる」)。
-  const isBusyRef = useRef(false);
-  // 曲えらびで「⼹ 終了」を押してからHOMEへ抜けるまでのあいだ(報酬の付与・送信・演出の終わり待ち)。
-  // 数秒かかることがあるので、そのあいだは畫面でそう言っておき、二度押しも止める
+  // ★ターンの演出(processTurn→handleEnemyTurn)は await battleWait で繋いだ長い一本道で、
+  //   途中で止める手立てが無かった。その最中にランを片付ける(returnToHome)と、
+  //   残りの setEnemy(prev=>...) が null を掘って画面が落ちる
+  //   (2026-09-13・ユーザー報告「結構な頻度でエラーが起きる」)。
+  //
+  // はじめは「終わるまで待つ」で逃げたが、それだと最大6秒待たされる
+  // (2026-09-14・ユーザー指摘「待ち時間が長くてストレス / もっと良い方法ない？」)。
+  // → 待つのをやめ、**ランに世代番号を持たせる**。片付けるときに1つ進めると、
+  //   古い世代で始まった battleWait は**二度と先へ進まない**ので、
+  //   残りの処理が片付いたあとの状態を触ることがそもそも起きない。待ち時間は0になる。
+  // ★真偽値ではだめ。次のランが始まって旗を下ろすと、古い待ちがそのとき目を覚まして
+  //   新しいランを触る。世代番号なら、古い待ちは永久に目を覚まさない。
+  const runGenerationRef = useRef(0);
+  // ランを片付けるときに呼ぶ。これ以降、古いターンの演出は一切進まなくなる
+  const abandonRunAnimations = () => { runGenerationRef.current += 1; };
+  // 曲えらびで「⏹ 終了」を押してからHOMEへ抜けるまでのあいだ(報酬の付与と記録)。
+  // いまは端末の中だけで済むのでほぼ一瞬だが、二度押しを止めるために残してある
   const [rhythmExitingRun, setRhythmExitingRun] = useState(false);
   const rhythmExitingRunRef = useRef(false);
-  useEffect(()=>{isBusyRef.current=isBusy;},[isBusy]);
-  // 演出が終わるのを待つ(最大 timeoutMs)。待ちちょうで止まらないよう上限を必ず置く
-  const waitForBattleIdle = async (timeoutMs = 6000) => {
-    const until = Date.now() + Math.max(0, timeoutMs);
-    while (isBusyRef.current && Date.now() < until) {
-      await new Promise(resolve => setTimeout(resolve, 120));
-    }
-    return !isBusyRef.current;
-  };
   // AUTOのON/OFFはラン中だけの一時状態。state反映前の操作やeffect再実行にも同じ値を見せるためrefも同期する。
   const [autoBattle, setAutoBattle] = useState(false);
   const autoBattleRef = useRef(false);
@@ -668,7 +668,15 @@ function MonsterHeroGame() {
     if (!(catchUpUntilRef.current > Date.now())) return base;
     return Math.max(0, Math.round(base / CATCH_UP_SPEED));
   }, []);
-  const battleWait = useCallback((baseMs) => new Promise(resolve => setTimeout(resolve, battleMs(baseMs))), [battleMs]);
+  // ★待ちは「そのランのもの」。片付けられたあとに目を覚ました待ちは、そこで止まる。
+  //   resolve しないだけにする(reject にすると await している55か所すべてで受ける必要があり、
+  //   1つでも漏れると unhandled rejection になる)。
+  const battleWait = useCallback((baseMs) => {
+    const generation = runGenerationRef.current;
+    return new Promise(resolve => setTimeout(() => {
+      if (runGenerationRef.current === generation) resolve();
+    }, battleMs(baseMs)));
+  }, [battleMs]);
   const setAutoRepeatBattleSpeed = (enabled) => {
     if(enabled){
       if(autoRepeatBattleSpeedRef.current==null)autoRepeatBattleSpeedRef.current=normalizeBattleSpeed(battleSpeedRef.current);
@@ -7357,6 +7365,9 @@ function MonsterHeroGame() {
 
   const returnToHome = () => {
     stopAllAuto();
+    // ★まず世代を進める。この行より先で中身を空にするので、
+    //   いま進んでいるターンの演出はここで止まり、空になった状態を触らない
+    abandonRunAnimations();
     // HOMEへ戻った時点でランは終わり。段階を残すと、次にランの画面を開いたときに
     // 「前のランの続き」と見なされてしまう
     clearRunStage();
@@ -7611,13 +7622,11 @@ function MonsterHeroGame() {
       setRhythmExitingRun(true);
       // ★リザルトは見せない(silent)。立ててしまうと、締めている途中でバトルの
       //   リザルトが描かれ、そのあと returnToHome() が中身を片付けるので落ちる
+      // ★ここでやるのは報酬の付与と記録だけ。どちらも端末の中で完結する
+      //   (クイックは全国ランキング対象外なので、網を待つ処理は入らない)。
+      //   進んでいるターンの演出は returnToHome が世代を進めて止めるので、**待たない**
+      //   (2026-09-14・ユーザー指摘「待ち時間が長くてストレス」)。
       await handleGiveUp({ silent: true });
-      // ★そのとき進んでいるターンの演出を待ってから片付ける。
-      //   stopAllAuto は「次のターンを始めない」だけで、いま進んでいる一本道は止められない。
-      //   待たずに returnToHome すると、残りの処理が片付いたあとの状態を触り、
-      //   画面が「表示でエラーが起きました」へ落ちる
-      //   (2026-09-13・ユーザー報告「結構な頻度でエラーが起きる」。実測で再現した)。
-      await waitForBattleIdle();
       rhythmExitingRunRef.current = false;
       setRhythmExitingRun(false);
       returnToHome();
