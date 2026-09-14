@@ -97,14 +97,14 @@ function RhythmSongSelectScreen({
         : null;
       return (
       <main data-rhythm-demo-home className="relative flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white">
-        {/* 周回を締めているあいだ(報酬の付与・全国ランキングへの送信・バトルの演出の終わり待ち)。
-            数秒かかることがあるので、その間は他を押せなくして待ってもらう。
-            ★番を待たずに片付けると、進んでいるターンの残りが空の状態を触って画面が落ちる
-            (2026-09-13・ユーザー報告「そのまま戻ったときに結構な頻度でエラーが起きる」) */}
+        {/* 周回を締めているあいだ。いまは報酬の付与と記録だけで端末の中で完結するので
+            ほぼ一瞬だが、まれに引っかかったときに二度押しされないよう薄い幕だけ残す
+            (2026-09-14・ユーザー指摘「待ち時間が長くてストレス」。
+             それまでは進んでいるターンの演出の終わりを待っていて、実測で3〜6秒かかっていた。
+             いまは returnToHome がランの世代を1つ進めて演出を止めるので、待つ必要がない) */}
         {exitingQuickRun&&<div data-rhythm-exiting-run role="status" aria-live="polite"
-          className="absolute inset-0 z-[90000] flex flex-col items-center justify-center gap-2 bg-slate-950/85 px-6 text-center">
+          className="absolute inset-0 z-[90000] flex items-center justify-center bg-slate-950/60 px-6 text-center">
           <b className="text-sm font-black text-amber-200">周回を終えています…</b>
-          <small className="text-[10px] font-bold leading-relaxed text-slate-300">ここまでのWAVEぶんの報酬を付けて、記録を送っています。<br/>終わると自動でホームへ戻ります。</small>
         </div>}
         <header className="z-10 flex shrink-0 items-center gap-1 border-b border-cyan-400/15 bg-slate-950/95 px-2 py-1" style={{paddingTop:'calc(0.25rem + env(safe-area-inset-top))'}}>
           {/* ★裏でクイック∞周回が回っていても、ここからHOMEへ戻れる
@@ -461,13 +461,29 @@ function RhythmRankingScreen({
       //   ビュー・関数が行うので、SQLを適用するまで中身が出せない(総合タブと同じ考え方)。
       // ★部門(対象曲ごと＋総合)の数は対象曲の数から作る。3曲でも5曲でも画面は書き換えない。
       const eventReleased=RELEASE_FLAGS.rhythmWeeklyRanking===true;
-      // 期間限定は開催しているときだけタブを出す。開催の判定は端末の時計でよい
-      // (順位の期間はサーバーから受け取ったもの・定義に書いた日時を使う)
+      // ★イベントのタブは**常設**する(2026-09-14・ユーザー依頼「イベントタブを常設して、
+      //   前回のランキングと今回のランキングを見れるようにしたい。前回や今回がない場合は
+      //   そのような文言をいれとく」)。これまでは開催しているあいだしかタブを出していなかったので、
+      //   終わった瞬間に順位を見る場所が消えていた。
+      //   タブの中で「今回(開催中)」と「前回(いちばん最近に終わった回)」を切り替える。
+      // ★開催の判定は端末の時計でよい(順位の期間はサーバーから受け取ったもの・定義に書いた日時を使う)。
+      //   ★見るたびに数え直す(CLAUDE.md ⑥-4)。開きっぱなしの端末でも、開始・終了の時刻を
+      //     またいだ瞬間に「今回」「前回」の中身が入れ替わる。
       const limitedEvent=eventReleased?rhythmLimitedEventAt(Date.now()):null;
-      const boardKind=rhythmRankingTab==='weekly'?'weekly':(rhythmRankingTab==='event'&&limitedEvent?'limited':null);
+      const prevEventEntry=eventReleased?rhythmPreviousLimitedEvent(Date.now()):null;
+      const nextEventEntry=eventReleased?rhythmNextLimitedEvent(Date.now()):null;
+      // 押されるまではおまかせ。開催中なら「今回」、開催していなければ「前回」を先に見せる
+      const [eventPhasePicked,setEventPhasePicked]=useState(null);
+      const eventPhase=(eventPhasePicked==='prev'&&!prevEventEntry)?'now'
+        :(eventPhasePicked||(limitedEvent?'now':(prevEventEntry?'prev':'now')));
+      const eventTabOpen=eventReleased&&rhythmRankingTab==='event';
+      const boardKind=rhythmRankingTab==='weekly'?'weekly'
+        :(eventTabOpen?(eventPhase==='prev'?(prevEventEntry?'prevEvent':null):(limitedEvent?'limited':null)):null);
       const boardTab=eventReleased&&!!boardKind;
-      const totalTabOpen=totalTab&&!boardTab;
-      const songTab=!totalTabOpen&&!boardTab;
+      // イベントのタブを開いていて中身が無いとき(今回が未開催・前回がまだ無い)は、
+      // 曲別の一覧へ落ちないようにする。文言だけを出す
+      const totalTabOpen=totalTab&&!boardTab&&!eventTabOpen;
+      const songTab=!totalTabOpen&&!boardTab&&!eventTabOpen;
       const boards=rhythmEventRanking||{};
       const event=(boardKind&&boards[boardKind])||{status:'idle',window:null,event:null,boards:{}};
       const eventDefinition=event.event||null;
@@ -505,22 +521,32 @@ function RhythmRankingScreen({
         :[];
       // 参加報酬(入賞しなくても、対象曲をすべて遊べばもらえる)
       const eventParticipation=rhythmEventParticipationReward(eventDefinition);
-      const eventLimited=boardKind==='limited';
+      // 「イベント」の言い回しをするのは、開催中と前回のどちらも(週間だけ別の言い回し)
+      const eventPrev=boardKind==='prevEvent';
+      const eventLimited=boardKind==='limited'||eventPrev;
       // 残り時間だけは端末の時計で数える(1秒ごとにサーバーへ聞きに行かないため・§6.1)。
       // 30秒ごとに数え直せば「残り ◯時間 ◯分」の表示には足りる
       const [eventNowMs,setEventNowMs]=React.useState(()=>Date.now());
       React.useEffect(()=>{
-        if(!boardTab)return undefined;
+        if(!boardTab&&!eventTabOpen)return undefined;
         setEventNowMs(Date.now());
         const timer=setInterval(()=>setEventNowMs(Date.now()),30000);
         return ()=>clearInterval(timer);
-      },[boardTab]);
+      },[boardTab,eventTabOpen]);
+      // タブを開いたままこの画面へ戻ってきたときに、その一覧をまだ一度も読んでいなければ読む。
+      // ★これが無いと status が 'idle' のままで、画面に何も出ない状態になりうる
+      //   (タブの中身は loading / ready / error / closed しか描いていないため)。
+      React.useEffect(()=>{
+        if(!boardTab||event.status!=='idle')return;
+        loadRhythmEventRanking&&loadRhythmEventRanking(boardKind,eventDivisionId);
+      },[boardTab,boardKind,event.status,eventDivisionId]);
       const rankingTabs=[
         {id:'song',label:'この曲'},
         ...(totalReleased?[{id:'total',label:'総合'}]:[]),
         ...(eventReleased?[{id:'weekly',label:'週間'}]:[]),
-        // 開催していないあいだはイベントのタブそのものを出さない
-        ...(eventReleased&&limitedEvent?[{id:'event',label:'イベント'}]:[]),
+        // ★開催していないあいだもタブを出す(2026-09-14・ユーザー依頼「イベントタブを常設」)。
+        //   中で「今回／前回」を切り替える。どちらも無いときは、その旨の文言を出す
+        ...(eventReleased?[{id:'event',label:'イベント'}]:[]),
       ];
       // ★タブも部門も、押すたびに取り直す(2026-09-11・ユーザー指摘「総合だけ反映が遅い」)。
       //   「初めて開いたときだけ」にしていたため、一度見た部門は古い順位のまま残っていた。
@@ -532,12 +558,22 @@ function RhythmRankingScreen({
       const openTab=(tab)=>{
         setRhythmRankingTab(tab);
         if(tab==='total')loadRhythmTotalRanking&&loadRhythmTotalRanking();
-        const kind=tab==='weekly'?'weekly':(tab==='event'?'limited':null);
+        // イベントのタブは「今回／前回」で読む先が変わる。どちらも無いときは読みに行かない
+        const kind=tab==='weekly'?'weekly'
+          :(tab==='event'?(eventPhase==='prev'?(prevEventEntry?'prevEvent':null):(limitedEvent?'limited':null)):null);
         if(kind){
           // その種別でいま見ている部門をそのまま読み直す(初回は総合)
           const want=(rhythmEventDivision&&rhythmEventDivision[kind])||RHYTHM_EVENT_TOTAL_DIVISION;
           loadRhythmEventRanking&&loadRhythmEventRanking(kind,want);
         }
+      };
+      // イベントのタブの中で「今回／前回」を切り替える。押した側をそのまま読みに行く
+      const openEventPhase=(phase)=>{
+        setEventPhasePicked(phase);
+        const kind=phase==='prev'?(prevEventEntry?'prevEvent':null):(limitedEvent?'limited':null);
+        if(!kind)return;
+        const want=(rhythmEventDivision&&rhythmEventDivision[kind])||RHYTHM_EVENT_TOTAL_DIVISION;
+        loadRhythmEventRanking&&loadRhythmEventRanking(kind,want);
       };
       const openDivision=(divisionId)=>{
         if(!boardKind)return;
@@ -667,6 +703,31 @@ function RhythmRankingScreen({
               </ol>}
             </>)}
           </>)}
+          {/* イベントのタブは常設。中で「今回／前回」を切り替える
+              (2026-09-14・ユーザー依頼)。どちらも無いときは、その旨を文言で出す */}
+          {eventTabOpen&&(<>
+            <div data-rhythm-event-phase-tabs className="mb-3 flex gap-1">
+              {[{id:'now',label:'今回'},{id:'prev',label:'前回'}].map(phase=>(
+                <button key={phase.id} type="button" data-rhythm-event-phase={phase.id}
+                  data-rhythm-event-phase-active={eventPhase===phase.id?'1':undefined}
+                  onClick={()=>openEventPhase(phase.id)}
+                  className={`min-h-[44px] flex-1 rounded-xl border px-2 text-[11px] font-black ${eventPhase===phase.id?'border-fuchsia-300/60 bg-fuchsia-500/15 text-fuchsia-100':'border-white/10 bg-slate-900/60 text-slate-400'}`}>
+                  {phase.label}
+                </button>
+              ))}
+            </div>
+            {/* 今回が開催していないとき。決まっている次の予定があれば一緒に出す */}
+            {eventPhase==='now'&&!limitedEvent&&<p data-rhythm-event-none-now className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs leading-relaxed text-slate-300">
+              いま開催しているイベントはありません。
+              {nextEventEntry
+                ?<><br/>次回は {rhythmEventJstText(nextEventEntry.startMs)} から「{nextEventEntry.event.name}」を開催します。</>
+                :<><br/>次の開催をお待ちください。{prevEventEntry&&'「前回」から、前のイベントの結果を見られます。'}</>}
+            </p>}
+            {/* 前回がまだ無いとき(1度も終わっていない) */}
+            {eventPhase==='prev'&&!prevEventEntry&&<p data-rhythm-event-none-prev className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs leading-relaxed text-slate-300">
+              まだ終わったイベントがありません。<br/>イベントが1回終わると、ここで結果を見られるようになります。
+            </p>}
+          </>)}
           {boardTab&&(<>
             {event.status==='loading'&&<p data-rhythm-event-loading className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">読み込み中…</p>}
             {/* 集計のしたくがまだのとき。エラーではないので、赤い表示にはしない */}
@@ -715,9 +776,9 @@ function RhythmRankingScreen({
                 {!eventBoard.self&&<div className="mb-3">
                   {/* ★「対象曲をえらぶ」ボタンは外した(2026-09-11・ユーザー指摘「対象曲を選ぶはいらない」)。
                       この画面は曲えらびから来るので、戻る道はもう上にある */}
-                  <p data-rhythm-event-self-empty className="rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-center text-[10px] text-slate-300">{eventLimited?'まだあなたの記録がありません。対象曲を1曲でも遊ぶとここに載ります。':'今週はまだあなたの記録がありません。どの曲でも1曲遊ぶとここに載ります。'}</p>
+                  <p data-rhythm-event-self-empty className="rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-center text-[10px] text-slate-300">{eventPrev?'このイベントに、あなたの記録はありませんでした。':eventLimited?'まだあなたの記録がありません。対象曲を1曲でも遊ぶとここに載ります。':'今週はまだあなたの記録がありません。どの曲でも1曲遊ぶとここに載ります。'}</p>
                 </div>}
-                {eventBoard.entries.length===0&&<p data-rhythm-event-empty className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">{eventLimited?'まだ記録がありません。最初の1件になってみましょう。':'今週はまだ記録がありません。最初の1件になってみましょう。'}</p>}
+                {eventBoard.entries.length===0&&<p data-rhythm-event-empty className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">{eventPrev?'このイベントの記録はありませんでした。':eventLimited?'まだ記録がありません。最初の1件になってみましょう。':'今週はまだ記録がありません。最初の1件になってみましょう。'}</p>}
                 {eventBoard.entries.length>0&&<ol data-rhythm-event-list className="space-y-2">
                   {eventBoard.entries.map((entry,index)=>(
                     <li key={`${entry.identityKey}-${index}`}>

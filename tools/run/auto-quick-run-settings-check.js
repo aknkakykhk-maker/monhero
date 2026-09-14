@@ -104,18 +104,25 @@ check('読み込み時の正規化へ難易度の一覧を渡している',
 // (2026-09-06・ユーザー指摘「難易度がレジェンドまでしか出てない」)
 check('難易度の顔ぶれはバトルの難易度選択と同じ表から取る',
   app.includes('const AUTO_QUICK_DIFFICULTY_IDS = Object.keys(QUICK_DIFFICULTY_SETTINGS);')
-  && app.includes('{Object.entries(QUICK_DIFFICULTY_SETTINGS).map(([key,setting])=>{const unlocked=isQuickDifficultyUnlocked('));
+  && app.includes('{Object.entries(QUICK_DIFFICULTY_SETTINGS).map(([key,setting])=>{const unlocked=isAutoQuickRunDifficultyAllowed('));
 // 「DIFFICULTY_SETTINGS を見ている箇所」はランキングの集計などにもあるので、
 // ここで見るのはAUTO設定に関わる2か所だけに絞る
 check('AUTO設定が通常の難易度表だけを見ている形へ戻っていない',
   !app.includes('const AUTO_QUICK_DIFFICULTY_IDS = Object.keys(DIFFICULTY_SETTINGS);')
   && !app.includes('activeMonsterRoster, Object.keys(DIFFICULTY_SETTINGS))')
   && !app.includes('Object.entries(DIFFICULTY_SETTINGS).map(([key,setting])=>{const unlocked='));
-check('未解放の難易度は選べないだけで一覧には出す',
-  /QUICK_DIFFICULTY_SETTINGS\)\.map\(\(\[key,setting\]\)=>\{const unlocked=[\s\S]{0,220}?disabled=\{!unlocked\}[\s\S]{0,60}?未解放/.test(app));
+check('選べない難易度は選べないだけで一覧には出す',
+  /QUICK_DIFFICULTY_SETTINGS\)\.map\(\(\[key,setting\]\)=>\{const unlocked=[\s\S]{0,220}?disabled=\{!unlocked\}[\s\S]{0,80}?クイック未クリア/.test(app));
+// ★難易度の条件はクイックのクリア記録(2026-09-14・ユーザー指摘「オート難易度設定の条件が
+//   チャレンジや極限クリアになってない？」)。クイック本体の解放条件で選ばせていたため、
+//   「選べるのに演奏ぶんが周回クリアとして入らない」難易度を作れてしまっていた。
+//   演奏側(rhythmPlayRunLoopsAllowed)と同じ判定を通しているかを、名前で見張る
+check('難易度の条件をクイック本体の解放条件へ戻していない',
+  !/const unlocked=isQuickDifficultyUnlocked\(key/.test(app)
+  && !/repeatTemplateFromAutoSettings[\s\S]{0,700}?isQuickDifficultyUnlocked\(quick\.difficulty/.test(app));
 check('事前設定から周回テンプレートを作れる', app.includes('const repeatTemplateFromAutoSettings ='));
-check('未解放の難易度では始めない',
-  /repeatTemplateFromAutoSettings[\s\S]{0,700}?isQuickDifficultyUnlocked\(quick\.difficulty/.test(app));
+check('クイックで通していない難易度では始めない',
+  /repeatTemplateFromAutoSettings[\s\S]{0,700}?isAutoQuickRunDifficultyAllowed\(quick\.difficulty, quickClearCounts\)/.test(app));
 check('いなくなった勇者モンでは始めない',
   /repeatTemplateFromAutoSettings[\s\S]{0,900}?resolveRosterEntryToMon\(quick\.heroRosterEntry\)/.test(app));
 check('作るテンプレートはクイックの通常難易度（極限を混ぜない）',

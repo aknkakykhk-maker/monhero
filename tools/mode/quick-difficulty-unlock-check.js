@@ -80,4 +80,47 @@ assert(!/QUICK_EXTREME_SETTINGS[\s\S]{0,700}power:\s*\d/.test(source), 'クイ�
 assert(source.includes("key==='EXTREME'?'―― 極限難易度 ――':'BATTLE DIFFICULTY'"), 'Legendの次のEXTREMEカードに極限難易度の区切りを表示する');
 assert(source.includes('disabled={(pro&&!proReady)||!quickUnlocked'), 'クイックだけに解放条件を適用する');
 
+// ===== AUTO設定「モンヒロビート中に回すクイック周回」の難易度 =====
+// 2026-09-14・ユーザー指摘「モンビーとのクイック連携でオート難易度設定の条件が
+//   チャレンジや極限クリアになってない？ これの条件はクイックのその難易度を
+//   クリアしないと選べない仕様にしたはず」。
+// 直す前は上の isQuickDifficultyUnlocked(チャレンジ・プロ・極限)を使っていたため、
+// 「AUTO設定では選べるのに、演奏しても周回クリアが入らない」難易度を作れてしまっていた。
+// ★この検査の値打ちは、演奏側(rhythmPlayRunLoopsAllowed)と答えが必ず一致することを
+//   実際に動かして確かめる点にある。片方だけ条件を変えると落ちる。
+const autoContext = { QUICK_DIFFICULTY_SETTINGS:Object.fromEntries(difficultyOrder.map(id => [id, {}])) };
+vm.createContext(autoContext);
+vm.runInContext([
+  pick(/const quickDifficultiesAtOrAbove = [\s\S]*?\n\};\n/, 'クイック難易度の並び取り出し'),
+  pick(/const isQuickModeClearedAtOrAbove = [\s\S]*?;\n/, 'クイックのクリア判定(その難易度以上)'),
+  pick(/const rhythmPlayRunLoopsAllowed = [\s\S]*?;\n/, '演奏を周回クリア扱いにしてよいかの判定'),
+  pick(/const isAutoQuickRunDifficultyAllowed = [\s\S]*?;\n/, 'AUTO設定で選べる難易度の判定'),
+  'globalThis.checkAuto=isAutoQuickRunDifficultyAllowed;globalThis.checkPlay=rhythmPlayRunLoopsAllowed;',
+].join(''), autoContext);
+const autoAllowed = autoContext.checkAuto;
+const playAllowed = autoContext.checkPlay;
+
+assert(autoAllowed('Master', { Master: 1 }), 'クイックでその難易度をクリアしていれば選べる');
+assert(!autoAllowed('Master', {}), 'クイック未クリアなら選べない');
+// ここが今回の核心。チャレンジ・極限の記録はもう見ない
+assert(!autoAllowed('Master', { Hard: 3 }), '下の難易度をクイックでクリアしても上は選べない');
+assert(autoAllowed('Easy', { Master: 1 }), '上の難易度をクイックでクリアしていれば下も選べる');
+assert(!autoAllowed('Master', { Master: 0 }), 'クリア回数0は未クリア扱い');
+assert(!autoAllowed('Master', null) && !autoAllowed(null, {}), '壊れた入力でも落ちずに false');
+assert(!autoAllowed('Master', { Master: 'たくさん' }) && !autoAllowed('Master', { Master: -2 }),
+  '数でない値・負の数はクリアとして数えない');
+// AUTO設定で選べる＝演奏ぶんが入る、が全難易度で一致する(条件が2つに割れない)
+difficultyOrder.forEach(id => {
+  [{}, { [id]: 1 }, { Master: 1 }, { Beginner: 1 }].forEach(clears => {
+    assert(autoAllowed(id, clears) === playAllowed(id, clears),
+      `AUTO設定と演奏の条件が${id}で食い違っている`);
+  });
+});
+// 本体の呼び出しもクイックのクリア記録を渡しているか(引数を取り違えると静かに全部通る)
+const app = fs.readFileSync('monster-hero/src/parts/60-app.jsx', 'utf8');
+assert(app.includes('isAutoQuickRunDifficultyAllowed(quick.difficulty, quickClearCounts)'),
+  'AUTO設定から周回を始めるときにクイックのクリア記録で判定している');
+assert(app.includes('const unlocked=isAutoQuickRunDifficultyAllowed(key,quickClearCounts);'),
+  'AUTO設定の難易度一覧がクイックのクリア記録で判定している');
+
 console.log('quick difficulty unlock checks passed');

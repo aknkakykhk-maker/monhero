@@ -42,12 +42,14 @@ vm.runInContext(`
 ${pick('RANKING_RESEND_LIMIT')}
 ${pick('RANKING_RESEND_DELAY_MS')}
 ${pick('pendingLocalRankingEntries')}
+${pick('RANKING_CREATED_AT_MIN_MS')}
+${pick('rankingCreatedAtFromLocal')}
 ${pick('rankingRowFromLocalEntry')}
 ${pick('markLocalRankingEntriesSent')}
 globalThis.__t = { RANKING_RESEND_LIMIT, RANKING_RESEND_DELAY_MS,
-  pendingLocalRankingEntries, rankingRowFromLocalEntry, markLocalRankingEntriesSent };`, ctx);
+  pendingLocalRankingEntries, rankingCreatedAtFromLocal, rankingRowFromLocalEntry, markLocalRankingEntriesSent };`, ctx);
 const { RANKING_RESEND_LIMIT, RANKING_RESEND_DELAY_MS,
-  pendingLocalRankingEntries, rankingRowFromLocalEntry, markLocalRankingEntriesSent } = ctx.__t;
+  pendingLocalRankingEntries, rankingCreatedAtFromLocal, rankingRowFromLocalEntry, markLocalRankingEntriesSent } = ctx.__t;
 
 // 端末に残っている記録を模したもの。実際に submitLocalScore が作る形にそろえてある
 const sent = { userName:'送信済み', hero:'Mocchi', party:[], score:100, diff:'Legend', level:9,
@@ -102,6 +104,23 @@ const rhythmRow = rankingRowFromLocalEntry(
 check('モンビーの記録も送り直せる(ブリーダーIDも一緒に)',
   rhythmRow.difficulty === 'Rhythm-crossing_field-master' && rhythmRow.breeder_id === 'MH-XXXX');
 
+// --- ①-2 送り直しでも「遊んだ時刻」のまま残ること(2026-09-14) ---
+// created_at を付けずに送ると DB が now() を入れるため、先週の記録が
+// 「今週遊んだこと」になって週間ランキングの合計へ足されてしまう。
+const playedMs = Date.UTC(2026, 8, 8, 12, 34, 0); // 2026-09-08 21:34 JST(先週)
+const playedEntry = { ...pending450, at: playedMs };
+const playedRow = rankingRowFromLocalEntry(playedEntry, 'Legend');
+check('送り直す行に、遊んだ時刻(created_at)が入る',
+  playedRow.created_at === new Date(playedMs).toISOString(), String(playedRow.created_at));
+check('遊んだ時刻が分からない記録には created_at を付けない(従来どおり now() になる)',
+  !('created_at' in rankingRowFromLocalEntry({ ...pending450, at: undefined }, 'Legend')));
+check('ありえない昔の時刻は付けない', rankingCreatedAtFromLocal(1) === null);
+check('端末の時計が進んでいる場合も付けない', rankingCreatedAtFromLocal(Date.now() + 86400000) === null);
+check('数値でない時刻は付けない',
+  rankingCreatedAtFromLocal('あ') === null && rankingCreatedAtFromLocal(null) === null
+    && rankingCreatedAtFromLocal(undefined) === null);
+check('いまの時刻は付けられる', typeof rankingCreatedAtFromLocal(Date.now()) === 'string');
+
 // 送れたものに印を付ける。行は消さず、ほかの項目も触らない
 const after = markLocalRankingEntriesSent(list, ['pending-450']);
 const afterTarget = after.find(e => e && e.clearId === 'pending-450');
@@ -127,6 +146,14 @@ check('端末に残した記録を難易度ごとに拾う', hasApp("storeList('
 check('モンビーの未送信キューも送り直す', hasApp('RHYTHM_RANKING_PENDING_KEY'));
 check('モンビーの記録は専用の送信を通す', hasApp("String(diff).startsWith('Rhythm-') ? sbInsertRhythmScore : sbInsertScore"));
 check('送れたぶんにだけ印を付けて書き戻す', hasApp('markLocalRankingEntriesSent(list, done)'));
+check('送り直しは insertResentRankingRow を通す(DBに「いま」を刻ませない)',
+  hasApp('insertResentRankingRow(insert, row)')
+    && hasApp('insertResentRankingRow(sbInsertRhythmScore, payload)')
+    && supabaseSrc.includes('const insertResentRankingRow = async (insert, row) =>'));
+check('モンビーの未送信キューも、退避したときの時刻を付けて送る',
+  hasApp('rankingCreatedAtFromLocal(at)'));
+check('created_at が拒まれても、先週以前の記録は今週へ混ぜない',
+  supabaseSrc.includes('keptPending: true') && supabaseSrc.includes('inThisWeek'));
 check('同時に2回走らせない', hasApp('resendPendingRankingRef.current'));
 check('HOMEへ落ち着いてから1回だけ走らせる',
   hasApp("if (bootPhase !== 'GAME' || gameState !== 'HOME' || !dataLoaded || !onboarded || resendCheckedRef.current) return;")

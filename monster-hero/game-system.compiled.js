@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7bd259090d8d5aa0
+// source-sha256: 94e852551a6284c4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9b4af3f1823d5d69
+// generated-sha256: 70b625d24fa01ffc
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-14 20:29"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-14 20:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -375,11 +375,25 @@ const rhythmPlayRunLoopScale = (songId, event) => {
   const id = songId === null || songId === undefined ? '' : String(songId);
   return id && ids && ids.includes(id) ? RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE : RHYTHM_PLAY_RUN_LOOP_SCALE;
 };
+// その難易度を「クイックで」通したことがあるか。
+// ★上の難易度を通していれば、その下も通したものとして扱う。下は上より必ずやさしいので、
+//   上を通せた人にわざわざ下を踏ませる意味がないため(2026-09-12・ユーザー指示の考え方を
+//   クイックのクリア記録にもそろえた)。並びの正本は isQuickDifficultyUnlocked と同じ。
+// ★見るのは既存の mh_quick_clears_<難易度> だけ。新しい保存キーは作らない。
+const isQuickModeClearedAtOrAbove = (difficulty, quickClears) => quickDifficultiesAtOrAbove(difficulty).some(id => (Number(quickClears?.[id]) || 0) > 0);
 // 演奏を「周回クリア扱い」にしてよいか。
 // ★過去にその難易度をクイックで1回でもクリアしていること(2026-09-07・ユーザー指示)。
 //   これが無いと、勝てないほど高い難易度でも演奏さえすればクリア扱いになってしまう。
-//   判定には既存の mh_quick_clears_<難易度> をそのまま読む(新しい保存キーは作らない)。
-const rhythmPlayRunLoopsAllowed = (difficulty, quickClears) => (Number(quickClears?.[difficulty]) || 0) > 0;
+const rhythmPlayRunLoopsAllowed = (difficulty, quickClears) => isQuickModeClearedAtOrAbove(difficulty, quickClears);
+// AUTO設定「モンヒロビート中に回すクイック周回」で選べる難易度。
+// ★ここはクイックのクリア記録で見る(2026-09-14・ユーザー指摘「モンビーとのクイック連携で
+//   オート難易度設定の条件がチャレンジや極限クリアになってない？ これの条件はクイックの
+//   その難易度をクリアしないと選べない仕様にしたはず」)。
+//   クイック本体の解放条件(チャレンジ・プロ・極限＝isQuickDifficultyUnlocked)で選ばせていたため、
+//   「AUTO設定では選べるのに、演奏しても周回クリアが入らない」難易度を作れてしまっていた。
+//   連携のための設定なので、rhythmPlayRunLoopsAllowed と同じ判定にそろえて、
+//   選べる＝演奏ぶんが入る、が構造的に一致するようにする。
+const isAutoQuickRunDifficultyAllowed = (difficulty, quickClears) => isQuickModeClearedAtOrAbove(difficulty, quickClears);
 // 演奏の結果(クリア／失敗)で入る周回数を変える(2026-09-12・ユーザー指示
 //   「終了後にクリアか失敗かもわかるようにして / それによって経験値も変わるから」)。
 // 失敗＝ライフが0になったまま曲を終えた(不可逆のDOWN)こと。
@@ -18075,6 +18089,31 @@ const RANKING_RESEND_DELAY_MS = 4000;
 //   ・スコアが数値として読めないものも送らない
 const pendingLocalRankingEntries = list => (Array.isArray(list) ? list : []).filter(entry => entry && typeof entry === 'object' && entry.nationalSaved === false && typeof entry.clearId === 'string' && entry.clearId.length > 0 && Number.isFinite(Number(entry.score)));
 
+// 送り直すときは、遊んだ時刻を行に入れて送る(2026-09-14)。
+//
+// rankings.created_at の既定値は now() なので、この列を付けずに送ると
+// **送り直した瞬間**が記録の時刻になる。週間ランキング(月曜5:00区切り)は
+// created_at で期間を数えているため、先週以前の未送信記録を送り直すと
+// 遊んでいない今週の合計へ足されてしまう。
+// 実際に 2026-09-14 6:22 にアプリを開いただけで、4曲ぶんが今週の週間ランキングへ載った
+// (ユーザー指摘「この時間は開いた時間なんだけどそれがスコアとして何かしらの方法でカウントされてる？」)。
+//
+// ★既にあるデータの created_at は書き換えない。これから入れる行に、
+//   端末が控えていた本当の時刻(entry.at)を入れるだけ(CLAUDE.md ⑦)。
+// ★端末の時計が狂っていることもあるので、ありえない値のときは付けない
+//   (付けなければ従来どおり now() になる)。
+const RANKING_CREATED_AT_MIN_MS = Date.UTC(2024, 0, 1);
+const rankingCreatedAtFromLocal = atMs => {
+  const ms = Number(atMs);
+  if (!Number.isFinite(ms)) return null;
+  if (ms < RANKING_CREATED_AT_MIN_MS || ms > Date.now() + 60 * 1000) return null;
+  try {
+    return new Date(ms).toISOString();
+  } catch {
+    return null;
+  }
+};
+
 // 退避した記録から、送信するときの行を組み立て直す。
 // submitLocalScore が作る row と同じ形にそろえること(列が増えたらここも足す)。
 // 値が無い列は付けない(0やnullを入れて「0ターンでクリア」に見せないため)。
@@ -18085,6 +18124,7 @@ const rankingRowFromLocalEntry = (entry, difficulty) => {
   const reachedWave = Number(entry.reachedWave);
   const turns = Number(entry.turns);
   const level = Number(entry.level);
+  const createdAt = rankingCreatedAtFromLocal(entry.at);
   return {
     difficulty: diff,
     user_name: entry.userName || '名無しのブリーダー',
@@ -18106,6 +18146,9 @@ const rankingRowFromLocalEntry = (entry, difficulty) => {
     } : {}),
     ...(entry.breederId ? {
       breeder_id: entry.breederId
+    } : {}),
+    ...(createdAt ? {
+      created_at: createdAt
     } : {})
   };
 };
@@ -18121,6 +18164,36 @@ const markLocalRankingEntriesSent = (list, sentClearIds) => {
     nationalError: undefined,
     resentAt: Date.now()
   } : entry);
+};
+
+// 送り直しの1件を実際に送る。
+//
+// created_at を明示して送るのが本筋だが、その列を書けない環境も考えられる。
+// そこで拒まれたときは、**今週ぶんに限って** created_at を外して送り直す
+// (どのみち今週として数えられるので、週間ランキングは歪まない)。
+// 先週以前の記録は、付けずに送ると遊んでいない週の合計へ足されてしまうため、
+// 送らずに端末へ残したままにする(次の起動でまた試す。記録は消えない)。
+const insertResentRankingRow = async (insert, row) => {
+  try {
+    return await insert(row);
+  } catch (error) {
+    if (!row || row.created_at === undefined) throw error;
+    const playedMs = Date.parse(row.created_at);
+    const week = typeof rhythmWeekWindow === 'function' ? rhythmWeekWindow(Date.now()) : null;
+    const inThisWeek = Number.isFinite(playedMs) && week && playedMs >= Number(week.startMs) && playedMs < Number(week.endMs);
+    if (!inThisWeek) {
+      console.error('[ranking] resend kept pending (created_at rejected, old record):', error && error.message ? error.message : error);
+      return {
+        saved: false,
+        keptPending: true
+      };
+    }
+    const {
+      created_at,
+      ...withoutCreatedAt
+    } = row;
+    return await insert(withoutCreatedAt);
+  }
 };
 const createRunId = () => globalThis.crypto?.randomUUID?.() || `run_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`;
 
@@ -25599,51 +25672,232 @@ function BreederMarketScreen({
   onExchangeSoulRankRespec,
   onExchangeHeroProof
 }) {
-  // 上に出す所持数(2026-09-13・ユーザー指示「マーケットにプシュケーとか証片も
-  // いくつあるかダイヤみたいに表示がほしい」)。ダイヤ・ptと同じ帯へ並べる
+  // 2026-09-14・マーケットのタブ乱立を避けるため、最初に用途別の入口を選ぶ。
+  // 入口だけこの画面のローカル状態で持ち、購入・交換・商品タブの既存stateは親側をそのまま使う。
+  const [marketSection, setMarketSection] = useState(null);
   const psycheHave = ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID);
   const shardHave = ownedItemCount(ownedItems, HERO_PROOF_SHARD_ITEM_ID);
   const proofHave = ownedItemCount(ownedItems, HERO_PROOF_ITEM_ID);
+  const marketItems = BREEDER_MARKET_ITEMS.filter(item => item.shop !== false);
+  const diamondTabs = [{
+    key: 'disc',
+    label: '円盤石'
+  }, {
+    key: 'assist',
+    label: 'アシスト'
+  }, {
+    key: 'item',
+    label: 'アイテム'
+  }];
+  const activeDiamondTab = diamondTabs.some(tab => tab.key === marketTab) ? marketTab : 'disc';
+  const diamondItems = marketItems.filter(item => item.type === activeDiamondTab && item.type !== 'icon' && item.currency !== 'psyche');
+  const breederPointItems = marketItems.filter(item => item.type === 'icon');
+  const itemExchangeItems = marketItems.filter(item => item.currency === 'psyche');
+  const soulRankRespecItem = marketItems.find(item => item.id === SOUL_RANK_RESPEC_ITEM_ID) || null;
+  const sectionMeta = {
+    diamond: {
+      label: 'ダイヤショップ',
+      emoji: '💎'
+    },
+    breeder: {
+      label: 'ブリーダーP交換所',
+      emoji: '🪙'
+    },
+    exchange: {
+      label: 'アイテム交換所',
+      emoji: '🔄'
+    },
+    event: {
+      label: 'イベントP交換所',
+      emoji: '🎟️'
+    }
+  };
+  const renderMarketItem = (item, {
+    showBase = true,
+    showHeroProofExchange = false
+  } = {}) => {
+    const comingSoon = item.available === false;
+    const owned = !comingSoon && isItemOwned(item);
+    const balance = item.currency === 'psyche' ? psycheHave : item.type === 'disc' || item.type === 'assist' || item.type === 'item' ? gold : breederPoints;
+    const canBuy = !comingSoon && !owned && balance >= item.cost;
+    const detailMon = item.type === 'disc' ? ALL_PLAYER_MONSTERS[item.id] : null;
+    const detailTeaching = item.type === 'assist' ? TEACHING_CARDS.find(t => t.id === item.id) : null;
+    const isSoulRankRespec = item.id === SOUL_RANK_RESPEC_ITEM_ID;
+    const exchangeItem = isSoulRankRespec ? {
+      ...item,
+      currency: 'heroProof',
+      cost: 1
+    } : null;
+    return /*#__PURE__*/React.createElement(React.Fragment, {
+      key: item.id
+    }, showBase && /*#__PURE__*/React.createElement(MarketProductCard, {
+      item: item,
+      owned: owned,
+      comingSoon: comingSoon,
+      canBuy: canBuy,
+      onZoom: () => onZoomIcon(item),
+      onBuy: () => onBuy(item),
+      detail: detailMon || detailTeaching,
+      onDetail: () => onOpenDetail(item, detailMon, detailTeaching),
+      middle: item.type === 'item' ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
+        className: `text-[9px] font-black ${(ownedItems[item.id] || 0) > 0 ? 'text-cyan-300' : 'text-slate-600'}`
+      }, "\xD7", ownedItems[item.id] || 0), item.desc && /*#__PURE__*/React.createElement("button", {
+        onClick: () => onOpenItemDetail(item),
+        "aria-label": `${item.name}の効果を見る`,
+        className: "text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"
+      }, /*#__PURE__*/React.createElement(BookOpen, {
+        size: 8
+      }), "\u8A73\u7D30")) : null
+    }), showHeroProofExchange && exchangeItem && /*#__PURE__*/React.createElement(MarketProductCard, {
+      item: exchangeItem,
+      owned: false,
+      comingSoon: false,
+      canBuy: proofHave > 0 && !purchaseProcessing,
+      disabled: purchaseProcessing,
+      onBuy: onExchangeSoulRankRespec,
+      middle: /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
+        className: `text-[9px] font-black ${ownedItemCount(ownedItems, SOUL_RANK_RESPEC_ITEM_ID) > 0 ? 'text-cyan-300' : 'text-slate-600'}`
+      }, "\xD7", ownedItemCount(ownedItems, SOUL_RANK_RESPEC_ITEM_ID)), item.desc && /*#__PURE__*/React.createElement("button", {
+        onClick: () => onOpenItemDetail(item),
+        "aria-label": `${item.name}の効果を見る`,
+        className: "text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"
+      }, /*#__PURE__*/React.createElement(BookOpen, {
+        size: 8
+      }), "\u8A73\u7D30"))
+    }));
+  };
+  const headerTitle = marketSection ? sectionMeta[marketSection].label : 'マーケット';
+  const handleBack = () => {
+    if (marketSection) {
+      setMarketSection(null);
+      return;
+    }
+    onBack();
+  };
   return /*#__PURE__*/React.createElement("div", {
     "data-mh-screen": true,
     className: "flex-1 flex flex-col h-full min-h-0 p-4"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-2 mb-2 shrink-0"
   }, /*#__PURE__*/React.createElement("button", {
-    onClick: onBack,
+    onClick: handleBack,
     className: "p-3 text-slate-400 active:scale-90"
   }, /*#__PURE__*/React.createElement(ArrowLeft, {
     size: 20
   })), /*#__PURE__*/React.createElement("h2", {
     className: "text-xl font-black italic text-amber-400 uppercase tracking-widest"
-  }, "\u30DE\u30FC\u30B1\u30C3\u30C8")), /*#__PURE__*/React.createElement("div", {
+  }, headerTitle)), /*#__PURE__*/React.createElement("div", {
     className: "shrink-0 w-full max-w-md mx-auto mb-3"
   }, /*#__PURE__*/React.createElement(AssistantBubble, {
     scene: "market",
     condition: Number.isFinite(CHEAPEST_GOLD_ITEM_COST) && gold < CHEAPEST_GOLD_ITEM_COST ? 'lowGold' : null
-  })), /*#__PURE__*/React.createElement("div", {
-    className: "flex gap-2 mb-2 shrink-0"
+  })), !marketSection && /*#__PURE__*/React.createElement("div", {
+    "data-market-top": true,
+    className: "relative flex-1 min-h-0 overflow-y-auto mh-scroll"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex-1 flex items-center justify-center gap-2 bg-amber-950/40 border border-amber-500/30 rounded-2xl py-3"
-  }, /*#__PURE__*/React.createElement(Coins, {
-    size: 16,
-    className: "text-amber-400"
-  }), /*#__PURE__*/React.createElement("span", {
-    className: "text-lg font-black text-amber-300"
-  }, breederPoints), /*#__PURE__*/React.createElement("span", {
-    className: "text-[9px] text-slate-400 font-bold"
-  }, "pt(Lv.UP\u3067+1)")), /*#__PURE__*/React.createElement("div", {
-    className: "flex-1 flex items-center justify-center gap-2 bg-amber-950/40 border border-amber-500/30 rounded-2xl py-3"
+    "aria-hidden": "true",
+    className: "pointer-events-none absolute inset-x-4 top-5 h-60 rounded-[40px] bg-gradient-to-br from-cyan-500/10 via-amber-500/5 to-violet-500/10 blur-2xl"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "relative grid grid-cols-2 gap-2 pt-8 pb-2"
+  }, [{
+    key: 'diamond',
+    emoji: '💎',
+    label: 'ダイヤショップ',
+    value: gold.toLocaleString(),
+    hint: 'ダイヤで購入',
+    border: 'border-cyan-400/35',
+    title: 'text-cyan-200',
+    arrow: 'text-cyan-300/80'
+  }, {
+    key: 'breeder',
+    emoji: '🪙',
+    label: 'ブリーダーP交換所',
+    titleLines: ['ブリーダーP', '交換所'],
+    value: breederPoints.toLocaleString(),
+    hint: 'Lv.UPで獲得',
+    border: 'border-amber-400/35',
+    title: 'text-amber-200',
+    arrow: 'text-amber-300/80'
+  }, {
+    key: 'exchange',
+    emoji: '🔄',
+    label: 'アイテム交換所',
+    value: null,
+    hint: 'プシュケー・証など',
+    border: 'border-emerald-400/35',
+    title: 'text-emerald-200',
+    arrow: 'text-emerald-300/80'
+  }, {
+    key: 'event',
+    emoji: '🎟️',
+    label: 'イベントP交換所',
+    titleLines: ['イベントP', '交換所'],
+    value: null,
+    hint: '準備中',
+    border: 'border-violet-400/20',
+    title: 'text-violet-300/70',
+    arrow: 'text-violet-400/40'
+  }].map(section => /*#__PURE__*/React.createElement("button", {
+    key: section.key,
+    "data-market-section": section.key,
+    onClick: () => setMarketSection(section.key),
+    className: `relative min-h-[108px] rounded-2xl border ${section.border} bg-slate-950/70 px-4 py-4 pr-9 text-left active:scale-[0.98]`
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2.5"
+  }, /*#__PURE__*/React.createElement("span", {
+    "aria-hidden": "true",
+    className: "text-2xl"
+  }, section.emoji), /*#__PURE__*/React.createElement("span", {
+    className: `text-[12px] font-black leading-tight ${section.title}`
+  }, section.titleLines ? section.titleLines.map(line => /*#__PURE__*/React.createElement("span", {
+    key: line,
+    className: "block"
+  }, line)) : section.label)), section.value !== null && /*#__PURE__*/React.createElement("div", {
+    className: "mt-2.5 font-mono text-xl font-black text-white"
+  }, section.value), /*#__PURE__*/React.createElement("div", {
+    className: `text-[10px] font-bold ${section.value === null ? 'mt-3.5' : 'mt-0.5'} ${section.key === 'event' ? 'text-slate-500' : 'text-slate-400'}`
+  }, section.hint), /*#__PURE__*/React.createElement("span", {
+    "aria-hidden": "true",
+    className: `absolute bottom-3 right-3 text-xl font-black ${section.arrow}`
+  }, "\u203A"))))), marketSection === 'diamond' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    className: "mb-2 shrink-0 flex items-center justify-center gap-2 rounded-2xl border border-cyan-500/25 bg-cyan-950/25 py-2"
   }, /*#__PURE__*/React.createElement(Gem, {
-    size: 16,
-    className: "text-amber-400"
+    size: 15,
+    className: "text-cyan-300"
   }), /*#__PURE__*/React.createElement("span", {
-    className: "text-lg font-black text-amber-300"
+    className: "font-mono text-base font-black text-cyan-100"
   }, gold.toLocaleString()), /*#__PURE__*/React.createElement("span", {
-    className: "text-[9px] text-slate-400 font-bold"
-  }, "\u30C0\u30A4\u30E4(WAVE\u30AF\u30EA\u30A2\u3067\u7372\u5F97)"))), /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] font-bold text-slate-400"
+  }, "\u6240\u6301\u30C0\u30A4\u30E4")), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-1.5 mb-3 shrink-0"
+  }, diamondTabs.map(tab => /*#__PURE__*/React.createElement("button", {
+    key: tab.key,
+    onClick: () => onSelectTab(tab.key),
+    className: `flex-1 py-2 rounded-xl text-[10px] font-black ${activeDiamondTab === tab.key ? 'bg-amber-500 text-black' : 'bg-slate-900 border border-slate-800 text-slate-400'}`
+  }, tab.label))), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
+  }, diamondItems.length === 0 ? /*#__PURE__*/React.createElement("div", {
+    className: "text-center text-[11px] text-slate-600 font-bold py-10"
+  }, "\u307E\u3060\u5546\u54C1\u304C\u3042\u308A\u307E\u305B\u3093") : /*#__PURE__*/React.createElement("div", {
+    className: MARKET_GRID_CLASS
+  }, diamondItems.map(item => renderMarketItem(item))))), marketSection === 'breeder' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    className: "mb-3 shrink-0 flex items-center justify-center gap-2 rounded-2xl border border-amber-500/25 bg-amber-950/25 py-2"
+  }, /*#__PURE__*/React.createElement(Coins, {
+    size: 15,
+    className: "text-amber-300"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "font-mono text-base font-black text-amber-100"
+  }, breederPoints.toLocaleString()), /*#__PURE__*/React.createElement("span", {
+    className: "text-[9px] font-bold text-slate-400"
+  }, "\u6240\u6301\u30D6\u30EA\u30FC\u30C0\u30FCP")), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
+  }, breederPointItems.length === 0 ? /*#__PURE__*/React.createElement("div", {
+    className: "text-center text-[11px] text-slate-600 font-bold py-10"
+  }, "\u307E\u3060\u5546\u54C1\u304C\u3042\u308A\u307E\u305B\u3093") : /*#__PURE__*/React.createElement("div", {
+    className: MARKET_GRID_CLASS
+  }, breederPointItems.map(item => renderMarketItem(item))))), marketSection === 'exchange' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     "data-market-balances": true,
-    className: "grid grid-cols-3 gap-2 mb-4 shrink-0"
+    className: "grid grid-cols-3 gap-2 mb-3 shrink-0"
   }, [{
     key: 'psyche',
     emoji: '🌈',
@@ -25675,83 +25929,16 @@ function BreederMarketScreen({
     className: "font-mono text-sm font-black"
   }, row.value.toLocaleString())), /*#__PURE__*/React.createElement("span", {
     className: "text-[8px] font-bold leading-tight text-slate-400"
-  }, row.label)))), /*#__PURE__*/React.createElement("div", {
-    className: "flex gap-1.5 mb-3 shrink-0"
-  }, [{
-    key: 'icon',
-    label: 'アイコン'
-  }, {
-    key: 'disc',
-    label: '円盤石'
-  }, {
-    key: 'assist',
-    label: 'アシスト'
-  }, {
-    key: 'item',
-    label: 'アイテム'
-  }].map(tab => /*#__PURE__*/React.createElement("button", {
-    key: tab.key,
-    onClick: () => onSelectTab(tab.key),
-    className: `flex-1 py-2 rounded-xl text-[10px] font-black uppercase ${marketTab === tab.key ? 'bg-amber-500 text-black' : 'bg-slate-900 border border-slate-800 text-slate-400'}`
-  }, tab.label))), marketTab === 'item' && marketExchangeError && /*#__PURE__*/React.createElement("div", {
+  }, row.label)))), marketExchangeError && /*#__PURE__*/React.createElement("div", {
     className: "mb-2 shrink-0 rounded-xl border border-red-500/40 bg-red-950/30 px-3 py-2 text-center text-[9px] font-black text-red-300"
   }, marketExchangeError), /*#__PURE__*/React.createElement("div", {
     className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
-  }, BREEDER_MARKET_ITEMS.filter(item => item.type === marketTab && item.shop !== false).length === 0 ? /*#__PURE__*/React.createElement("div", {
-    className: "text-center text-[11px] text-slate-600 font-bold py-10"
-  }, "\u307E\u3060\u5546\u54C1\u304C\u3042\u308A\u307E\u305B\u3093") : /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("div", {
     className: MARKET_GRID_CLASS
-  }, BREEDER_MARKET_ITEMS.filter(item => item.type === marketTab && item.shop !== false).map(item => {
-    const comingSoon = item.available === false;
-    const owned = !comingSoon && isItemOwned(item);
-    const balance = item.currency === 'psyche' ? ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID) : item.type === 'disc' || item.type === 'assist' || item.type === 'item' ? gold : breederPoints;
-    const canBuy = !comingSoon && !owned && balance >= item.cost;
-    const detailMon = item.type === 'disc' ? ALL_PLAYER_MONSTERS[item.id] : null;
-    const detailTeaching = item.type === 'assist' ? TEACHING_CARDS.find(t => t.id === item.id) : null;
-    const isSoulRankRespec = item.id === SOUL_RANK_RESPEC_ITEM_ID;
-    const exchangeItem = isSoulRankRespec ? {
-      ...item,
-      currency: 'heroProof',
-      cost: 1
-    } : null;
-    return /*#__PURE__*/React.createElement(React.Fragment, {
-      key: item.id
-    }, /*#__PURE__*/React.createElement(MarketProductCard, {
-      item: item,
-      owned: owned,
-      comingSoon: comingSoon,
-      canBuy: canBuy,
-      onZoom: () => onZoomIcon(item),
-      onBuy: () => onBuy(item),
-      detail: detailMon || detailTeaching,
-      onDetail: () => onOpenDetail(item, detailMon, detailTeaching),
-      middle: item.type === 'item' ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
-        className: `text-[9px] font-black ${(ownedItems[item.id] || 0) > 0 ? 'text-cyan-300' : 'text-slate-600'}`
-      }, "\xD7", ownedItems[item.id] || 0), item.desc && /*#__PURE__*/React.createElement("button", {
-        onClick: () => onOpenItemDetail(item),
-        "aria-label": `${item.name}の効果を見る`,
-        className: "text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"
-      }, /*#__PURE__*/React.createElement(BookOpen, {
-        size: 8
-      }), "\u8A73\u7D30")) : null
-    }), exchangeItem && /*#__PURE__*/React.createElement(MarketProductCard, {
-      item: exchangeItem,
-      owned: false,
-      comingSoon: false,
-      canBuy: ownedItemCount(ownedItems, HERO_PROOF_ITEM_ID) > 0 && !purchaseProcessing,
-      disabled: purchaseProcessing,
-      onBuy: onExchangeSoulRankRespec,
-      middle: /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
-        className: `text-[9px] font-black ${ownedItemCount(ownedItems, SOUL_RANK_RESPEC_ITEM_ID) > 0 ? 'text-cyan-300' : 'text-slate-600'}`
-      }, "\xD7", ownedItemCount(ownedItems, SOUL_RANK_RESPEC_ITEM_ID)), item.desc && /*#__PURE__*/React.createElement("button", {
-        onClick: () => onOpenItemDetail(item),
-        "aria-label": `${item.name}の効果を見る`,
-        className: "text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"
-      }, /*#__PURE__*/React.createElement(BookOpen, {
-        size: 8
-      }), "\u8A73\u7D30"))
-    }));
-  }), marketTab === 'item' && /*#__PURE__*/React.createElement(MarketProductCard, {
+  }, itemExchangeItems.map(item => renderMarketItem(item)), soulRankRespecItem && renderMarketItem(soulRankRespecItem, {
+    showBase: false,
+    showHeroProofExchange: true
+  }), /*#__PURE__*/React.createElement(MarketProductCard, {
     item: {
       ...HERO_PROOF_ITEM,
       type: 'item',
@@ -25772,7 +25959,18 @@ function BreederMarketScreen({
     }, /*#__PURE__*/React.createElement(BookOpen, {
       size: 8
     }), "\u8A73\u7D30"))
-  }))));
+  })))), marketSection === 'event' && /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 min-h-0 flex items-center justify-center"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-full max-w-sm rounded-2xl border border-slate-700 bg-slate-950/70 px-4 py-8 text-center"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-3xl mb-2",
+    "aria-hidden": "true"
+  }, "\uD83C\uDF9F\uFE0F"), /*#__PURE__*/React.createElement("div", {
+    className: "text-sm font-black text-slate-300"
+  }, "\u30A4\u30D9\u30F3\u30C8P\u4EA4\u63DB\u6240\u306F\u6E96\u5099\u4E2D\u3067\u3059"), /*#__PURE__*/React.createElement("div", {
+    className: "mt-2 text-[10px] font-bold leading-relaxed text-slate-500"
+  }, "\u30A4\u30D9\u30F3\u30C8P\u6A5F\u80FD\u3068\u5546\u54C1\u30E9\u30A4\u30F3\u30CA\u30C3\u30D7\u306F\u4ECA\u5F8C\u8FFD\u52A0\u3057\u307E\u3059\u3002"))));
 }
 
 // ---- part: 56-screen-profile.jsx ----
@@ -26838,12 +27036,10 @@ function RhythmSongSelectScreen({
     "data-rhythm-exiting-run": true,
     role: "status",
     "aria-live": "polite",
-    className: "absolute inset-0 z-[90000] flex flex-col items-center justify-center gap-2 bg-slate-950/85 px-6 text-center"
+    className: "absolute inset-0 z-[90000] flex items-center justify-center bg-slate-950/60 px-6 text-center"
   }, /*#__PURE__*/React.createElement("b", {
     className: "text-sm font-black text-amber-200"
-  }, "\u5468\u56DE\u3092\u7D42\u3048\u3066\u3044\u307E\u3059\u2026"), /*#__PURE__*/React.createElement("small", {
-    className: "text-[10px] font-bold leading-relaxed text-slate-300"
-  }, "\u3053\u3053\u307E\u3067\u306EWAVE\u3076\u3093\u306E\u5831\u916C\u3092\u4ED8\u3051\u3066\u3001\u8A18\u9332\u3092\u9001\u3063\u3066\u3044\u307E\u3059\u3002", /*#__PURE__*/React.createElement("br", null), "\u7D42\u308F\u308B\u3068\u81EA\u52D5\u3067\u30DB\u30FC\u30E0\u3078\u623B\u308A\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("header", {
+  }, "\u5468\u56DE\u3092\u7D42\u3048\u3066\u3044\u307E\u3059\u2026")), /*#__PURE__*/React.createElement("header", {
     className: "z-10 flex shrink-0 items-center gap-1 border-b border-cyan-400/15 bg-slate-950/95 px-2 py-1",
     style: {
       paddingTop: 'calc(0.25rem + env(safe-area-inset-top))'
@@ -27343,13 +27539,27 @@ function RhythmRankingScreen({
   //   ビュー・関数が行うので、SQLを適用するまで中身が出せない(総合タブと同じ考え方)。
   // ★部門(対象曲ごと＋総合)の数は対象曲の数から作る。3曲でも5曲でも画面は書き換えない。
   const eventReleased = RELEASE_FLAGS.rhythmWeeklyRanking === true;
-  // 期間限定は開催しているときだけタブを出す。開催の判定は端末の時計でよい
-  // (順位の期間はサーバーから受け取ったもの・定義に書いた日時を使う)
+  // ★イベントのタブは**常設**する(2026-09-14・ユーザー依頼「イベントタブを常設して、
+  //   前回のランキングと今回のランキングを見れるようにしたい。前回や今回がない場合は
+  //   そのような文言をいれとく」)。これまでは開催しているあいだしかタブを出していなかったので、
+  //   終わった瞬間に順位を見る場所が消えていた。
+  //   タブの中で「今回(開催中)」と「前回(いちばん最近に終わった回)」を切り替える。
+  // ★開催の判定は端末の時計でよい(順位の期間はサーバーから受け取ったもの・定義に書いた日時を使う)。
+  //   ★見るたびに数え直す(CLAUDE.md ⑥-4)。開きっぱなしの端末でも、開始・終了の時刻を
+  //     またいだ瞬間に「今回」「前回」の中身が入れ替わる。
   const limitedEvent = eventReleased ? rhythmLimitedEventAt(Date.now()) : null;
-  const boardKind = rhythmRankingTab === 'weekly' ? 'weekly' : rhythmRankingTab === 'event' && limitedEvent ? 'limited' : null;
+  const prevEventEntry = eventReleased ? rhythmPreviousLimitedEvent(Date.now()) : null;
+  const nextEventEntry = eventReleased ? rhythmNextLimitedEvent(Date.now()) : null;
+  // 押されるまではおまかせ。開催中なら「今回」、開催していなければ「前回」を先に見せる
+  const [eventPhasePicked, setEventPhasePicked] = useState(null);
+  const eventPhase = eventPhasePicked === 'prev' && !prevEventEntry ? 'now' : eventPhasePicked || (limitedEvent ? 'now' : prevEventEntry ? 'prev' : 'now');
+  const eventTabOpen = eventReleased && rhythmRankingTab === 'event';
+  const boardKind = rhythmRankingTab === 'weekly' ? 'weekly' : eventTabOpen ? eventPhase === 'prev' ? prevEventEntry ? 'prevEvent' : null : limitedEvent ? 'limited' : null : null;
   const boardTab = eventReleased && !!boardKind;
-  const totalTabOpen = totalTab && !boardTab;
-  const songTab = !totalTabOpen && !boardTab;
+  // イベントのタブを開いていて中身が無いとき(今回が未開催・前回がまだ無い)は、
+  // 曲別の一覧へ落ちないようにする。文言だけを出す
+  const totalTabOpen = totalTab && !boardTab && !eventTabOpen;
+  const songTab = !totalTabOpen && !boardTab && !eventTabOpen;
   const boards = rhythmEventRanking || {};
   const event = boardKind && boards[boardKind] || {
     status: 'idle',
@@ -27397,16 +27607,25 @@ function RhythmRankingScreen({
   })).filter(entry => entry.ranks.length > 0) : [];
   // 参加報酬(入賞しなくても、対象曲をすべて遊べばもらえる)
   const eventParticipation = rhythmEventParticipationReward(eventDefinition);
-  const eventLimited = boardKind === 'limited';
+  // 「イベント」の言い回しをするのは、開催中と前回のどちらも(週間だけ別の言い回し)
+  const eventPrev = boardKind === 'prevEvent';
+  const eventLimited = boardKind === 'limited' || eventPrev;
   // 残り時間だけは端末の時計で数える(1秒ごとにサーバーへ聞きに行かないため・§6.1)。
   // 30秒ごとに数え直せば「残り ◯時間 ◯分」の表示には足りる
   const [eventNowMs, setEventNowMs] = React.useState(() => Date.now());
   React.useEffect(() => {
-    if (!boardTab) return undefined;
+    if (!boardTab && !eventTabOpen) return undefined;
     setEventNowMs(Date.now());
     const timer = setInterval(() => setEventNowMs(Date.now()), 30000);
     return () => clearInterval(timer);
-  }, [boardTab]);
+  }, [boardTab, eventTabOpen]);
+  // タブを開いたままこの画面へ戻ってきたときに、その一覧をまだ一度も読んでいなければ読む。
+  // ★これが無いと status が 'idle' のままで、画面に何も出ない状態になりうる
+  //   (タブの中身は loading / ready / error / closed しか描いていないため)。
+  React.useEffect(() => {
+    if (!boardTab || event.status !== 'idle') return;
+    loadRhythmEventRanking && loadRhythmEventRanking(boardKind, eventDivisionId);
+  }, [boardTab, boardKind, event.status, eventDivisionId]);
   const rankingTabs = [{
     id: 'song',
     label: 'この曲'
@@ -27417,8 +27636,9 @@ function RhythmRankingScreen({
     id: 'weekly',
     label: '週間'
   }] : []),
-  // 開催していないあいだはイベントのタブそのものを出さない
-  ...(eventReleased && limitedEvent ? [{
+  // ★開催していないあいだもタブを出す(2026-09-14・ユーザー依頼「イベントタブを常設」)。
+  //   中で「今回／前回」を切り替える。どちらも無いときは、その旨の文言を出す
+  ...(eventReleased ? [{
     id: 'event',
     label: 'イベント'
   }] : [])];
@@ -27432,12 +27652,21 @@ function RhythmRankingScreen({
   const openTab = tab => {
     setRhythmRankingTab(tab);
     if (tab === 'total') loadRhythmTotalRanking && loadRhythmTotalRanking();
-    const kind = tab === 'weekly' ? 'weekly' : tab === 'event' ? 'limited' : null;
+    // イベントのタブは「今回／前回」で読む先が変わる。どちらも無いときは読みに行かない
+    const kind = tab === 'weekly' ? 'weekly' : tab === 'event' ? eventPhase === 'prev' ? prevEventEntry ? 'prevEvent' : null : limitedEvent ? 'limited' : null : null;
     if (kind) {
       // その種別でいま見ている部門をそのまま読み直す(初回は総合)
       const want = rhythmEventDivision && rhythmEventDivision[kind] || RHYTHM_EVENT_TOTAL_DIVISION;
       loadRhythmEventRanking && loadRhythmEventRanking(kind, want);
     }
+  };
+  // イベントのタブの中で「今回／前回」を切り替える。押した側をそのまま読みに行く
+  const openEventPhase = phase => {
+    setEventPhasePicked(phase);
+    const kind = phase === 'prev' ? prevEventEntry ? 'prevEvent' : null : limitedEvent ? 'limited' : null;
+    if (!kind) return;
+    const want = rhythmEventDivision && rhythmEventDivision[kind] || RHYTHM_EVENT_TOTAL_DIVISION;
+    loadRhythmEventRanking && loadRhythmEventRanking(kind, want);
   };
   const openDivision = divisionId => {
     if (!boardKind) return;
@@ -27584,7 +27813,29 @@ function RhythmRankingScreen({
     className: "space-y-2"
   }, total.entries.map((entry, index) => /*#__PURE__*/React.createElement("li", {
     key: `${entry.identityKey}-${index}`
-  }, totalRow(entry, index + 1, !!total.self && entry.identityKey === total.self.identityKey)))))), boardTab && /*#__PURE__*/React.createElement(React.Fragment, null, event.status === 'loading' && /*#__PURE__*/React.createElement("p", {
+  }, totalRow(entry, index + 1, !!total.self && entry.identityKey === total.self.identityKey)))))), eventTabOpen && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-event-phase-tabs": true,
+    className: "mb-3 flex gap-1"
+  }, [{
+    id: 'now',
+    label: '今回'
+  }, {
+    id: 'prev',
+    label: '前回'
+  }].map(phase => /*#__PURE__*/React.createElement("button", {
+    key: phase.id,
+    type: "button",
+    "data-rhythm-event-phase": phase.id,
+    "data-rhythm-event-phase-active": eventPhase === phase.id ? '1' : undefined,
+    onClick: () => openEventPhase(phase.id),
+    className: `min-h-[44px] flex-1 rounded-xl border px-2 text-[11px] font-black ${eventPhase === phase.id ? 'border-fuchsia-300/60 bg-fuchsia-500/15 text-fuchsia-100' : 'border-white/10 bg-slate-900/60 text-slate-400'}`
+  }, phase.label))), eventPhase === 'now' && !limitedEvent && /*#__PURE__*/React.createElement("p", {
+    "data-rhythm-event-none-now": true,
+    className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs leading-relaxed text-slate-300"
+  }, "\u3044\u307E\u958B\u50AC\u3057\u3066\u3044\u308B\u30A4\u30D9\u30F3\u30C8\u306F\u3042\u308A\u307E\u305B\u3093\u3002", nextEventEntry ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("br", null), "\u6B21\u56DE\u306F ", rhythmEventJstText(nextEventEntry.startMs), " \u304B\u3089\u300C", nextEventEntry.event.name, "\u300D\u3092\u958B\u50AC\u3057\u307E\u3059\u3002") : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("br", null), "\u6B21\u306E\u958B\u50AC\u3092\u304A\u5F85\u3061\u304F\u3060\u3055\u3044\u3002", prevEventEntry && '「前回」から、前のイベントの結果を見られます。')), eventPhase === 'prev' && !prevEventEntry && /*#__PURE__*/React.createElement("p", {
+    "data-rhythm-event-none-prev": true,
+    className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs leading-relaxed text-slate-300"
+  }, "\u307E\u3060\u7D42\u308F\u3063\u305F\u30A4\u30D9\u30F3\u30C8\u304C\u3042\u308A\u307E\u305B\u3093\u3002", /*#__PURE__*/React.createElement("br", null), "\u30A4\u30D9\u30F3\u30C8\u304C1\u56DE\u7D42\u308F\u308B\u3068\u3001\u3053\u3053\u3067\u7D50\u679C\u3092\u898B\u3089\u308C\u308B\u3088\u3046\u306B\u306A\u308A\u307E\u3059\u3002")), boardTab && /*#__PURE__*/React.createElement(React.Fragment, null, event.status === 'loading' && /*#__PURE__*/React.createElement("p", {
     "data-rhythm-event-loading": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
   }, "\u8AAD\u307F\u8FBC\u307F\u4E2D\u2026"), event.status === 'notReady' && /*#__PURE__*/React.createElement("p", {
@@ -27642,10 +27893,10 @@ function RhythmRankingScreen({
   }, /*#__PURE__*/React.createElement("p", {
     "data-rhythm-event-self-empty": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-center text-[10px] text-slate-300"
-  }, eventLimited ? 'まだあなたの記録がありません。対象曲を1曲でも遊ぶとここに載ります。' : '今週はまだあなたの記録がありません。どの曲でも1曲遊ぶとここに載ります。')), eventBoard.entries.length === 0 && /*#__PURE__*/React.createElement("p", {
+  }, eventPrev ? 'このイベントに、あなたの記録はありませんでした。' : eventLimited ? 'まだあなたの記録がありません。対象曲を1曲でも遊ぶとここに載ります。' : '今週はまだあなたの記録がありません。どの曲でも1曲遊ぶとここに載ります。')), eventBoard.entries.length === 0 && /*#__PURE__*/React.createElement("p", {
     "data-rhythm-event-empty": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
-  }, eventLimited ? 'まだ記録がありません。最初の1件になってみましょう。' : '今週はまだ記録がありません。最初の1件になってみましょう。'), eventBoard.entries.length > 0 && /*#__PURE__*/React.createElement("ol", {
+  }, eventPrev ? 'このイベントの記録はありませんでした。' : eventLimited ? 'まだ記録がありません。最初の1件になってみましょう。' : '今週はまだ記録がありません。最初の1件になってみましょう。'), eventBoard.entries.length > 0 && /*#__PURE__*/React.createElement("ol", {
     "data-rhythm-event-list": true,
     className: "space-y-2"
   }, eventBoard.entries.map((entry, index) => /*#__PURE__*/React.createElement("li", {
@@ -36917,7 +37168,30 @@ function RhythmHistoryScreen({
 
 // ---- part: 60-app.jsx ----
 function MonsterHeroGame() {
-  const [gameState, setGameState] = useState('HOME');
+  const [gameState, setGameStateRaw] = useState('HOME');
+  // モンビーを開いているか(演奏中も含む)。判定の理由は下の rhythmScreenOpen のところに書いてある。
+  // ★定義がここにあるのは、すぐ下の setGameState から使うため。
+  const isRhythmScreen = state => typeof state === 'string' && state.startsWith('RHYTHM_');
+  // 「いまモンビーを開いているか」の控え。advanceRunStage が呼ばれた時点の値で判断するために使う。
+  const runBackgroundAllowedRef = useRef(false);
+  // 画面を切り替える唯一の入口。★必ずこれを通す(useStateのsetterを直接呼ばない)。
+  //
+  // 2026-09-14・ユーザー報告「モンビークイックからバトルに戻るとフリーズする」。
+  //   setGameState は次の描画まで gameState を変えない。いっぽう
+  //   runBackgroundAllowedRef は描画のたびに入れ直していたので、
+  //   **画面を切り替えてから次の描画までのあいだ、1描画ぶん古い判断が残っていた。**
+  //   モンビーからバトルへ戻った直後(まだ古い＝「モンビーにいる」)に、裏で予約されていた
+  //   advanceRunStage が着地すると、画面を切り替えないまま段階だけ進む。
+  //   その結果 gameState と runStage がずれ、runProgressAllowed が false のまま戻らなくなる。
+  //   AUTOの3つのループはどれも runProgressAllowed を見ているので、
+  //   **バトル画面のまま、何の知らせも出さずに完全に止まる。**
+  //   (WAVEの切り替わりに重なったときだけなので「たまに」になる。2026-09-12の
+  //    「モンビー中にオプションに行くとたまにバトルに飛ばされる」と同じ型の、逆向きの事故)
+  // ここで控えも一緒に更新すれば、切り替えたその瞬間から正しい判断になる。
+  const setGameState = next => {
+    runBackgroundAllowedRef.current = isRhythmScreen(next);
+    setGameStateRaw(next);
+  };
   const [debugThrowScreenError, setDebugThrowScreenError] = useState(false); // デバッグ設定から画面エラーの受け止めを試すためだけの印
   const [battleMenuTab, setBattleMenuTab] = useState('difficulty');
   // バトルメニューで選んでいるモード。挑戦を始めた時点の値が runMode に固定される
@@ -37522,27 +37796,23 @@ function MonsterHeroGame() {
   const repeatRunTemplateRef = useRef(null);
   const [selectedCards, setSelectedCards] = useState([]);
   const [isBusy, setIsBusy] = useState(false);
-  // ★ターンの演出(executeTurn→敵の行動)は await で繋いだ長い一本道で、途中で止める手立てが無い。
-  //   その最中にランを片付ける(returnToHome)と、残りの setEnemy(prev=>...) が
-  //   null を掘って画面が落ちる。「いま演出の途中か」を ref でも読めるようにして、
-  //   片付ける前に終わるのを待てるようにしてある(2026-09-13・ユーザー報告
-  //   「モンビーからそのまま戻ったときに結構な頻度でエラーが起きる」)。
-  const isBusyRef = useRef(false);
-  // 曲えらびで「⼹ 終了」を押してからHOMEへ抜けるまでのあいだ(報酬の付与・送信・演出の終わり待ち)。
-  // 数秒かかることがあるので、そのあいだは畫面でそう言っておき、二度押しも止める
+  // ★ターンの演出(processTurn→handleEnemyTurn)は await battleWait で繋いだ長い一本道で、
+  //   途中で止める手立てが無かった。その最中にランを片付ける(returnToHome)と、
+  //   残りの setEnemy(prev=>...) が null を掘って画面が落ちる
+  //   (2026-09-13・ユーザー報告「結構な頻度でエラーが起きる」)。
+  //
+  // はじめは「終わるまで待つ」で逃げたが、それだと最大6秒待たされる
+  // (2026-09-14・ユーザー指摘「待ち時間が長くてストレス / もっと良い方法ない？」)。
+  // → 待つのをやめ、**ランに世代番号を持たせる**。片付けるときに1つ進めると、
+  //   古い世代で始まった battleWait は**二度と先へ進まない**ので、
+  //   残りの処理が片付いたあとの状態を触ることがそもそも起きない。待ち時間は0になる。
+  // ★真偽値ではだめ。次のランが始まって旗を下ろすと、古い待ちがそのとき目を覚まして
+  //   新しいランを触る。世代番号なら、古い待ちは永久に目を覚まさない。
+  const runGenerationRef = useRef(0);
+  // 曲えらびで「⏹ 終了」を押してからHOMEへ抜けるまでのあいだ(報酬の付与と記録)。
+  // いまは端末の中だけで済むのでほぼ一瞬だが、二度押しを止めるために残してある
   const [rhythmExitingRun, setRhythmExitingRun] = useState(false);
   const rhythmExitingRunRef = useRef(false);
-  useEffect(() => {
-    isBusyRef.current = isBusy;
-  }, [isBusy]);
-  // 演出が終わるのを待つ(最大 timeoutMs)。待ちちょうで止まらないよう上限を必ず置く
-  const waitForBattleIdle = async (timeoutMs = 6000) => {
-    const until = Date.now() + Math.max(0, timeoutMs);
-    while (isBusyRef.current && Date.now() < until) {
-      await new Promise(resolve => setTimeout(resolve, 120));
-    }
-    return !isBusyRef.current;
-  };
   // AUTOのON/OFFはラン中だけの一時状態。state反映前の操作やeffect再実行にも同じ値を見せるためrefも同期する。
   const [autoBattle, setAutoBattle] = useState(false);
   const autoBattleRef = useRef(false);
@@ -37550,6 +37820,24 @@ function MonsterHeroGame() {
   const autoTurnScheduledRef = useRef(false);
   const autoPostWaveRunningRef = useRef(false);
   const autoPostWaveScheduledRef = useRef(false);
+  // ランを片付けるときに呼ぶ。これ以降、古いターンの演出は一切進まなくなる。
+  //
+  // ★世代を進めたら「実行中の印」も必ずここで下ろす
+  //   (2026-09-14・ユーザー報告「モンビー入る→ホーム戻る→モンビー入る→止まる」)。
+  //   世代を進めると、古い await battleWait は**二度と先へ進まない**。つまり
+  //   その先にある finally も走らないので、実行中の印を自分で下ろせない。
+  //   印は ref なので applyResetAllState でも戻らず、**次のランへそのまま持ち越される**。
+  //   すると AUTO のループが毎回 `if(...||autoTurnRunningRef.current)return;` で弾かれ、
+  //   新しい周回が一度も回らない。知らせは何も出ないので、
+  //   「バトル画面のまま、ただ動かない」「アプリを閉じ直すまで直らない」になる。
+  //   stopAutoBattle が下ろしているのは Scheduled(予約)だけで、Running(実行中)は別物。
+  const abandonRunAnimations = () => {
+    runGenerationRef.current += 1;
+    autoTurnRunningRef.current = false;
+    autoTurnScheduledRef.current = false;
+    autoPostWaveRunningRef.current = false;
+    autoPostWaveScheduledRef.current = false;
+  };
   const [autoTurnCycle, setAutoTurnCycle] = useState(0);
   // AUTO∞もラン中だけの一時状態。リロード後は必ずOFFに戻す。
   const [autoRepeat, setAutoRepeat] = useState(false);
@@ -37705,7 +37993,15 @@ function MonsterHeroGame() {
     if (!(catchUpUntilRef.current > Date.now())) return base;
     return Math.max(0, Math.round(base / CATCH_UP_SPEED));
   }, []);
-  const battleWait = useCallback(baseMs => new Promise(resolve => setTimeout(resolve, battleMs(baseMs))), [battleMs]);
+  // ★待ちは「そのランのもの」。片付けられたあとに目を覚ました待ちは、そこで止まる。
+  //   resolve しないだけにする(reject にすると await している55か所すべてで受ける必要があり、
+  //   1つでも漏れると unhandled rejection になる)。
+  const battleWait = useCallback(baseMs => {
+    const generation = runGenerationRef.current;
+    return new Promise(resolve => setTimeout(() => {
+      if (runGenerationRef.current === generation) resolve();
+    }, battleMs(baseMs)));
+  }, [battleMs]);
   const setAutoRepeatBattleSpeed = enabled => {
     if (enabled) {
       if (autoRepeatBattleSpeedRef.current == null) autoRepeatBattleSpeedRef.current = normalizeBattleSpeed(battleSpeedRef.current);
@@ -39316,16 +39612,19 @@ function MonsterHeroGame() {
   const [rhythmEventDivision, setRhythmEventDivision] = useState({
     weekly: RHYTHM_EVENT_TOTAL_DIVISION,
     limited: RHYTHM_EVENT_TOTAL_DIVISION,
+    prevEvent: RHYTHM_EVENT_TOTAL_DIVISION,
     history: RHYTHM_EVENT_TOTAL_DIVISION
   });
   const [rhythmEventRanking, setRhythmEventRanking] = useState({
     weekly: RHYTHM_BOARD_EMPTY,
     limited: RHYTHM_BOARD_EMPTY,
+    prevEvent: RHYTHM_BOARD_EMPTY,
     history: RHYTHM_BOARD_EMPTY
   });
   const rhythmEventRankingRequestRef = useRef({
     weekly: 0,
     limited: 0,
+    prevEvent: 0,
     history: 0
   });
   const setRhythmBoard = (kind, update) => setRhythmEventRanking(prev => ({
@@ -39333,9 +39632,13 @@ function MonsterHeroGame() {
     [kind]: typeof update === 'function' ? update(prev[kind] || RHYTHM_BOARD_EMPTY) : update
   }));
   // historyEntry を渡すと、その「終わった回」の順位を集計してもらう(kind は 'history')。
-  // 集計そのものは今週・開催中とまったく同じ関数を使う。渡す期間が違うだけ
+  // 集計そのものは今週・開催中とまったく同じ関数を使う。渡す期間が違うだけ。
+  // ★'prevEvent' は「前回のイベント」(2026-09-14・ユーザー依頼「イベントタブを常設して、
+  //   前回のランキングと今回のランキングを見れるようにしたい」)。中身は history と同じだが、
+  //   画面の別の場所から開くので、一覧の置き場所を分けてある
+  //   (履歴の画面と行き来しても、お互いの順位を上書きしない)。
   const loadRhythmEventRanking = useCallback(async (kind, divisionId, historyEntry = null) => {
-    if (kind !== 'weekly' && kind !== 'limited' && kind !== 'history') return;
+    if (kind !== 'weekly' && kind !== 'limited' && kind !== 'prevEvent' && kind !== 'history') return;
     if (kind === 'history' && !historyEntry) return;
     const requestId = (rhythmEventRankingRequestRef.current[kind] || 0) + 1;
     rhythmEventRankingRequestRef.current = {
@@ -39362,6 +39665,11 @@ function MonsterHeroGame() {
       if (kind === 'limited') {
         const now = rhythmLimitedEventAt(Date.now());
         return !!now && now.id === loaded;
+      }
+      // 前回のイベントも、次の回が終われば別のイベントに変わる
+      if (kind === 'prevEvent') {
+        const prev = rhythmPreviousLimitedEvent(Date.now());
+        return !!prev && prev.id === loaded;
       }
       return true; // 履歴は終わった回なので、あとから変わらない
     };
@@ -39391,8 +39699,11 @@ function MonsterHeroGame() {
       }) : null;
       if (stale()) return;
       // 履歴は終わっているので期間が動かない。サーバーへ週の窓を聞きに行く必要もない
-      const event = kind === 'history' ? rhythmHistoryBoardEvent(historyEntry) : kind === 'weekly' ? rhythmWeeklyEvent(weekWindow.startMs) : rhythmLimitedEventAt(Date.now());
-      const range = kind === 'history' ? rhythmHistoryRange(historyEntry) : rhythmEventWindow(event, weekWindow);
+      // 前回のイベントは、終わった回なので履歴とまったく同じ扱いでよい
+      const prevEntry = kind === 'prevEvent' ? rhythmPreviousLimitedEvent(Date.now()) : null;
+      const pastEntry = kind === 'history' ? historyEntry : prevEntry;
+      const event = pastEntry ? rhythmHistoryBoardEvent(pastEntry) : kind === 'weekly' ? rhythmWeeklyEvent(weekWindow.startMs) : rhythmLimitedEventAt(Date.now());
+      const range = pastEntry ? rhythmHistoryRange(pastEntry) : rhythmEventWindow(event, weekWindow);
       if (!event || !range) {
         setRhythmBoard(kind, {
           status: 'closed',
@@ -39689,7 +40000,9 @@ function MonsterHeroGame() {
           try {
             // モンビーの記録は難易度キーが Rhythm-<曲>-<難易度> なので、送り先の関数も分ける
             const insert = String(diff).startsWith('Rhythm-') ? sbInsertRhythmScore : sbInsertScore;
-            const res = await insert(row);
+            // 送り直しは insertResentRankingRow を通す。行には遊んだ時刻(created_at)が
+            // 入っているので、DBに「いま」を刻ませない=先週の記録が今週の週間へ混ざらない
+            const res = await insertResentRankingRow(insert, row);
             if (res?.saved === true) {
               done.push(entry.clearId);
               sent++;
@@ -39717,9 +40030,19 @@ function MonsterHeroGame() {
             const {
               at,
               error,
-              ...payload
+              created_at: storedCreatedAt,
+              ...columns
             } = row;
-            const res = await sbInsertRhythmScore(payload);
+            // 退避したときの時刻(at)をそのまま created_at として送る。
+            // 付けずに送ると、送り直した瞬間が記録の時刻になってしまう
+            const createdAt = storedCreatedAt || rankingCreatedAtFromLocal(at);
+            const payload = {
+              ...columns,
+              ...(createdAt ? {
+                created_at: createdAt
+              } : {})
+            };
+            const res = await insertResentRankingRow(sbInsertRhythmScore, payload);
             if (res?.saved === true) sent++;else {
               failed++;
               rest.push(row);
@@ -40338,7 +40661,7 @@ function MonsterHeroGame() {
   //   (WAVEの切り替わりに重なったときだけなので「たまに」になる。
   //    予約済みの setTimeout は、オプションへ移ったあとも必ず着地するため)
   //   一覧で持つかぎり、モンビーへ画面を足すたびに同じ事故が起きる。頭文字で見れば漏れない。
-  const isRhythmScreen = state => typeof state === 'string' && state.startsWith('RHYTHM_');
+  //   ※判定そのもの(isRhythmScreen)は、setGameState から使うので冒頭で定義している。
   const rhythmScreenOpen = isRhythmScreen(gameState);
   // 「モンヒロビートへ入った瞬間」を見分けるための一覧(自動で∞周回を始める判定に使う)。
   // ★裏で回してよい画面より広く取る。演奏中もモンビーの中なので、そこから曲えらびへ
@@ -40356,8 +40679,10 @@ function MonsterHeroGame() {
   //   そこで値をそのまま読むと「バトル画面で作られたときの古い値」を掴んでしまい、
   //   モンビーへ移った直後に敵を倒した瞬間、画面がバトルへ飛び戻る
   //   (2026-09-06・ユーザー報告「モンビーを押すと一瞬で戻る」の原因)。
-  //   呼ばれた時点の値で判断するため、必ずこの控えを見る
-  const runBackgroundAllowedRef = useRef(false);
+  //   呼ばれた時点の値で判断するため、必ずこの控えを見る(宣言は冒頭・setGameStateと同じ場所)。
+  // ★描画のたびの入れ直しは、ここだけに頼らない。setGameState も同時に更新する。
+  //   ここだけだと「画面を切り替えてから次の描画まで」のあいだ古い値が残り、
+  //   モンビーから戻った直後に段階だけ進んで進行不能になる(2026-09-14)。
   runBackgroundAllowedRef.current = runBackgroundAllowed;
   // ランの段階を1つ進める唯一の入口。
   // 画面を切り替えてよいときは gameState も一緒に動かす(いまは必ず切り替わる)。
@@ -46489,12 +46814,14 @@ function MonsterHeroGame() {
   // (docs/spec/QUICK_RHYTHM_LINK.md PR5)。
   // 1周目をバトル画面で組まなくても∞周回を始められるようにするためのもので、
   // 作るだけならここは副作用を持たない。実際に始めるのは startRunFromRepeatTemplate。
-  // 設定が欠けている・勇者モンがいない・難易度が未解放のときは null を返し、
+  // 設定が欠けている・勇者モンがいない・その難易度をクイックで通していないときは null を返し、
   // 呼び出し側はこれまでどおり周回テンプレート(1周目に自分で組んだ編成)を使う。
+  // ★難易度の条件はクイックのクリア記録(2026-09-14・ユーザー指摘)。保存してある設定は
+  //   書き換えず、条件を満たさないあいだ使わないだけなので、あとでクリアすれば復活する。
   const repeatTemplateFromAutoSettings = (settings = autoSettings) => {
     if (!autoQuickRunConfigured(settings)) return null;
     const quick = settings.quickRun;
-    if (!isQuickDifficultyUnlocked(quick.difficulty, clearCounts, proClearCounts, extremeDifficultyClearCounts)) return null;
+    if (!isAutoQuickRunDifficultyAllowed(quick.difficulty, quickClearCounts)) return null;
     if (!resolveRosterEntryToMon(quick.heroRosterEntry)) return null;
     return Object.freeze({
       runMode: BATTLE_MODE_QUICK,
@@ -47029,6 +47356,9 @@ function MonsterHeroGame() {
   };
   const returnToHome = () => {
     stopAllAuto();
+    // ★まず世代を進める。この行より先で中身を空にするので、
+    //   いま進んでいるターンの演出はここで止まり、空になった状態を触らない
+    abandonRunAnimations();
     // HOMEへ戻った時点でランは終わり。段階を残すと、次にランの画面を開いたときに
     // 「前のランの続き」と見なされてしまう
     clearRunStage();
@@ -47494,15 +47824,13 @@ function MonsterHeroGame() {
       setRhythmExitingRun(true);
       // ★リザルトは見せない(silent)。立ててしまうと、締めている途中でバトルの
       //   リザルトが描かれ、そのあと returnToHome() が中身を片付けるので落ちる
+      // ★ここでやるのは報酬の付与と記録だけ。どちらも端末の中で完結する
+      //   (クイックは全国ランキング対象外なので、網を待つ処理は入らない)。
+      //   進んでいるターンの演出は returnToHome が世代を進めて止めるので、**待たない**
+      //   (2026-09-14・ユーザー指摘「待ち時間が長くてストレス」)。
       await handleGiveUp({
         silent: true
       });
-      // ★そのとき進んでいるターンの演出を待ってから片付ける。
-      //   stopAllAuto は「次のターンを始めない」だけで、いま進んでいる一本道は止められない。
-      //   待たずに returnToHome すると、残りの処理が片付いたあとの状態を触り、
-      //   画面が「表示でエラーが起きました」へ落ちる
-      //   (2026-09-13・ユーザー報告「結構な頻度でエラーが起きる」。実測で再現した)。
-      await waitForBattleIdle();
       rhythmExitingRunRef.current = false;
       setRhythmExitingRun(false);
       returnToHome();
@@ -53577,7 +53905,7 @@ function MonsterHeroGame() {
         className: "text-sm font-black text-indigo-200"
       }, "3. \u30E2\u30F3\u30D2\u30ED\u30D3\u30FC\u30C8\u4E2D\u306B\u56DE\u3059\u30AF\u30A4\u30C3\u30AF\u5468\u56DE"), /*#__PURE__*/React.createElement("p", {
         className: "text-[9px] leading-relaxed text-slate-400 mt-1"
-      }, "\u30E2\u30F3\u30D2\u30ED\u30D3\u30FC\u30C8\u304B\u3089\u221E\u5468\u56DE\u3092\u59CB\u3081\u308B\u3068\u304D\u306E\u7DE8\u6210\u3067\u3059\u3002\u52C7\u8005\u30E2\u30F3\u30FB\u914D\u7F6E\u8DDD\u96E2\u30FB\u96E3\u6613\u5EA6\u306E3\u3064\u3092\u6C7A\u3081\u308B\u3068\u4F7F\u3048\u307E\u3059\u3002\u6C7A\u3081\u3066\u3044\u306A\u3044\u3042\u3044\u3060\u306F\u3001\u3044\u3064\u3082\u3069\u304A\u308A\u30D0\u30C8\u30EB\u753B\u9762\u30671\u5468\u76EE\u3092\u7D44\u3093\u3067\u304B\u3089\u221E\u306B\u3057\u3066\u304F\u3060\u3055\u3044\u3002")), /*#__PURE__*/React.createElement("div", {
+      }, "\u30E2\u30F3\u30D2\u30ED\u30D3\u30FC\u30C8\u304B\u3089\u221E\u5468\u56DE\u3092\u59CB\u3081\u308B\u3068\u304D\u306E\u7DE8\u6210\u3067\u3059\u3002\u52C7\u8005\u30E2\u30F3\u30FB\u914D\u7F6E\u8DDD\u96E2\u30FB\u96E3\u6613\u5EA6\u306E3\u3064\u3092\u6C7A\u3081\u308B\u3068\u4F7F\u3048\u307E\u3059\u3002\u6C7A\u3081\u3066\u3044\u306A\u3044\u3042\u3044\u3060\u306F\u3001\u3044\u3064\u3082\u3069\u304A\u308A\u30D0\u30C8\u30EB\u753B\u9762\u30671\u5468\u76EE\u3092\u7D44\u3093\u3067\u304B\u3089\u221E\u306B\u3057\u3066\u304F\u3060\u3055\u3044\u3002\u96E3\u6613\u5EA6\u306F\u300C\u30AF\u30A4\u30C3\u30AF\u3067\u30AF\u30EA\u30A2\u6E08\u307F\u300D\u306E\u3082\u306E\u3060\u3051\u9078\u3079\u307E\u3059\uFF08\u6F14\u594F\u3057\u305F\u3076\u3093\u304C\u5468\u56DE\u30AF\u30EA\u30A2\u3068\u3057\u3066\u5165\u308B\u306E\u3082\u540C\u3058\u6761\u4EF6\u306E\u305F\u3081\uFF09\u3002")), /*#__PURE__*/React.createElement("div", {
         className: "rounded-2xl border border-fuchsia-500/30 bg-slate-900 p-3 space-y-2"
       }, /*#__PURE__*/React.createElement("label", {
         className: "block text-xs font-black text-white",
@@ -53618,12 +53946,12 @@ function MonsterHeroGame() {
       }, /*#__PURE__*/React.createElement("option", {
         value: ""
       }, "\u672A\u8A2D\u5B9A"), Object.entries(QUICK_DIFFICULTY_SETTINGS).map(([key, setting]) => {
-        const unlocked = isQuickDifficultyUnlocked(key, clearCounts, proClearCounts, extremeDifficultyClearCounts);
+        const unlocked = isAutoQuickRunDifficultyAllowed(key, quickClearCounts);
         return /*#__PURE__*/React.createElement("option", {
           key: key,
           value: key,
           disabled: !unlocked
-        }, setting.label, unlocked ? '' : '（未解放）');
+        }, setting.label, unlocked ? '' : '（クイック未クリア）');
       }))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
         className: "text-[10px] font-black text-slate-300 mb-1.5"
       }, "\u30E2\u30F3\u30D2\u30ED\u30D3\u30FC\u30C8\u3092\u958B\u3044\u305F\u3089\u81EA\u52D5\u3067\u59CB\u3081\u308B"), /*#__PURE__*/React.createElement("button", {
