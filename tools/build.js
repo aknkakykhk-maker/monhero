@@ -25,6 +25,12 @@ const { REPO_ROOT, GAME_SYSTEM, transformGameSystem, syncPartsAndGameSystem, ass
 
 const OUT_FILE = path.join(REPO_ROOT, 'monster-hero', 'game-system.compiled.js');
 
+// モバイル経由のSTEP2実装を、正規ビルドの直前に厳密一致で適用する一時処理。
+// ビルド成功後にこの呼び出しとパッチファイルは削除する。
+if (!process.argv.includes('--check')) {
+  require('./patch-rhythm-event-p-step2');
+}
+
 // 元ファイルのハッシュを出力の先頭に埋め込み、--check で最新かどうか判定できるようにする
 function sourceHash() {
   return crypto.createHash('sha256').update(fs.readFileSync(GAME_SYSTEM)).digest('hex').slice(0, 16);
