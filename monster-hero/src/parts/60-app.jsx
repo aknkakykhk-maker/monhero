@@ -1822,16 +1822,20 @@ function MonsterHeroGame() {
   const RHYTHM_BOARD_EMPTY = { status:'idle', window:null, event:null, boards:{}, error:null };
   // kind は 'weekly'(今週) / 'limited'(開催中のイベント) / 'history'(終わった回をあとから見る)。
   // 履歴は**表示専用**で、報酬の受け取りには一切関わらない(受取フラグも触らない・CLAUDE.md ⑦)
-  const [rhythmEventDivision, setRhythmEventDivision] = useState({ weekly:RHYTHM_EVENT_TOTAL_DIVISION, limited:RHYTHM_EVENT_TOTAL_DIVISION, history:RHYTHM_EVENT_TOTAL_DIVISION });
-  const [rhythmEventRanking, setRhythmEventRanking] = useState({ weekly:RHYTHM_BOARD_EMPTY, limited:RHYTHM_BOARD_EMPTY, history:RHYTHM_BOARD_EMPTY });
-  const rhythmEventRankingRequestRef = useRef({ weekly:0, limited:0, history:0 });
+  const [rhythmEventDivision, setRhythmEventDivision] = useState({ weekly:RHYTHM_EVENT_TOTAL_DIVISION, limited:RHYTHM_EVENT_TOTAL_DIVISION, prevEvent:RHYTHM_EVENT_TOTAL_DIVISION, history:RHYTHM_EVENT_TOTAL_DIVISION });
+  const [rhythmEventRanking, setRhythmEventRanking] = useState({ weekly:RHYTHM_BOARD_EMPTY, limited:RHYTHM_BOARD_EMPTY, prevEvent:RHYTHM_BOARD_EMPTY, history:RHYTHM_BOARD_EMPTY });
+  const rhythmEventRankingRequestRef = useRef({ weekly:0, limited:0, prevEvent:0, history:0 });
   const setRhythmBoard = (kind, update) => setRhythmEventRanking(prev => ({
     ...prev, [kind]: typeof update === 'function' ? update(prev[kind] || RHYTHM_BOARD_EMPTY) : update,
   }));
   // historyEntry を渡すと、その「終わった回」の順位を集計してもらう(kind は 'history')。
-  // 集計そのものは今週・開催中とまったく同じ関数を使う。渡す期間が違うだけ
+  // 集計そのものは今週・開催中とまったく同じ関数を使う。渡す期間が違うだけ。
+  // ★'prevEvent' は「前回のイベント」(2026-09-14・ユーザー依頼「イベントタブを常設して、
+  //   前回のランキングと今回のランキングを見れるようにしたい」)。中身は history と同じだが、
+  //   画面の別の場所から開くので、一覧の置き場所を分けてある
+  //   (履歴の画面と行き来しても、お互いの順位を上書きしない)。
   const loadRhythmEventRanking = useCallback(async (kind, divisionId, historyEntry = null) => {
-    if (kind !== 'weekly' && kind !== 'limited' && kind !== 'history') return;
+    if (kind !== 'weekly' && kind !== 'limited' && kind !== 'prevEvent' && kind !== 'history') return;
     if (kind === 'history' && !historyEntry) return;
     const requestId = (rhythmEventRankingRequestRef.current[kind] || 0) + 1;
     rhythmEventRankingRequestRef.current = { ...rhythmEventRankingRequestRef.current, [kind]: requestId };
@@ -1853,6 +1857,8 @@ function MonsterHeroGame() {
       if (!loaded) return true;
       if (kind === 'weekly') return loaded === rhythmWeekId(Date.now());
       if (kind === 'limited') { const now = rhythmLimitedEventAt(Date.now()); return !!now && now.id === loaded; }
+      // 前回のイベントも、次の回が終われば別のイベントに変わる
+      if (kind === 'prevEvent') { const prev = rhythmPreviousLimitedEvent(Date.now()); return !!prev && prev.id === loaded; }
       return true;   // 履歴は終わった回なので、あとから変わらない
     };
     setRhythmBoard(kind, prev => {
@@ -1872,10 +1878,13 @@ function MonsterHeroGame() {
       const weekWindow = kind === 'weekly' ? await sbFetchRhythmWeekWindow({ requestId:`rhythm-week-${Date.now()}` }) : null;
       if (stale()) return;
       // 履歴は終わっているので期間が動かない。サーバーへ週の窓を聞きに行く必要もない
-      const event = kind === 'history' ? rhythmHistoryBoardEvent(historyEntry)
+      // 前回のイベントは、終わった回なので履歴とまったく同じ扱いでよい
+      const prevEntry = kind === 'prevEvent' ? rhythmPreviousLimitedEvent(Date.now()) : null;
+      const pastEntry = kind === 'history' ? historyEntry : prevEntry;
+      const event = pastEntry ? rhythmHistoryBoardEvent(pastEntry)
         : kind === 'weekly' ? rhythmWeeklyEvent(weekWindow.startMs)
         : rhythmLimitedEventAt(Date.now());
-      const range = kind === 'history' ? rhythmHistoryRange(historyEntry) : rhythmEventWindow(event, weekWindow);
+      const range = pastEntry ? rhythmHistoryRange(pastEntry) : rhythmEventWindow(event, weekWindow);
       if (!event || !range) { setRhythmBoard(kind, { status:'closed', window:weekWindow, event:null, boards:{}, error:null }); return; }
       // 週(またはイベント)が変わっていたら、前のぶんの一覧は捨てる(古い順位を見せない)
       const keepBoards = (prev) => (prev.event && prev.event.id === event.id) ? prev.boards : {};

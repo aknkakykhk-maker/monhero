@@ -561,6 +561,34 @@ const rhythmHistoryEvents = (nowMs) => {
     .sort((a, b) => b.endMs - a.endMs);
 };
 
+// ===== イベントタブの「今回」と「前回」(2026-09-14・ユーザー依頼) =====
+//
+// 「イベントタブを常設して、前回のランキングと今回のランキングを見れるようにしたい。
+//   前回や今回がない場合はそのような文言をいれとく」。
+//
+// これまでイベントのタブは**開催しているあいだしか出していなかった**ので、
+// 終わった瞬間に順位を見る場所が消えていた(プロフィールの「これまでの記録」からは見られるが、
+// ランキングの画面からは辿れない)。タブは常に出し、中で「今回／前回」を切り替える。
+//
+// ★どちらも**見るたびに数え直す**(読み込みのときに1回だけ決まる値を使わない・CLAUDE.md ⑥-4)。
+//   開きっぱなしの端末でも、開始・終了の時刻をまたいだ瞬間に中身が入れ替わる。
+
+// 前回の期間限定イベント。いちばん最近に終わったもの。まだ1回も終わっていなければ null
+const rhythmPreviousLimitedEvent = (nowMs) => rhythmHistoryEvents(nowMs)[0] || null;
+
+// 次に始まる期間限定イベント。まだ始まっていないもののうち、いちばん早いもの。無ければ null。
+// 「いまは開催していません」の下に、決まっている次の予定を出すために使う
+const rhythmNextLimitedEvent = (nowMs) => {
+  const now = Number.isFinite(Number(nowMs)) ? Number(nowMs) : 0;
+  const list = Array.isArray(RHYTHM_EVENTS) ? RHYTHM_EVENTS : [];
+  return list
+    .filter(event => event && event.kind === 'limited' && Array.isArray(event.songIds) && event.songIds.length > 0)
+    .map(event => ({ event, startMs: rhythmEventTimeMs(event.startAt) }))
+    .filter(row => row.startMs !== null && row.startMs > now)
+    .sort((a, b) => a.startMs - b.startMs)
+    .map(row => Object.freeze({ id: row.event.id, kind: 'limited', startMs: row.startMs, event: row.event }))[0] || null;
+};
+
 // 履歴の一覧(終わったのが新しい順)。イベントと週をまぜて1本にする
 const rhythmHistoryEntries = (nowMs, weekLimit = 0) =>
   [...rhythmHistoryEvents(nowMs), ...rhythmHistoryWeeks(nowMs, weekLimit)]
