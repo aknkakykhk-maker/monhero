@@ -99,7 +99,7 @@ function BreederMarketScreen({
               key={section.key}
               data-market-section={section.key}
               onClick={()=>setMarketSection(section.key)}
-              className="min-h-[108px] rounded-2xl border border-amber-500/25 bg-slate-950/70 px-4 py-4 text-left active:scale-[0.98]"
+              className="relative min-h-[108px] rounded-2xl border border-amber-500/25 bg-slate-950/70 px-4 py-4 pr-9 text-left active:scale-[0.98]"
             >
               <div className="flex items-center gap-2.5">
                 <span aria-hidden="true" className="text-2xl">{section.emoji}</span>
@@ -107,6 +107,7 @@ function BreederMarketScreen({
               </div>
               {section.value!==null&&<div className="mt-2.5 font-mono text-xl font-black text-white">{section.value}</div>}
               <div className={`text-[10px] font-bold ${section.value===null?'mt-3.5':'mt-0.5'} ${section.key==='event'?'text-slate-500':'text-slate-400'}`}>{section.hint}</div>
+              <span aria-hidden="true" className={`absolute bottom-3 right-3 text-xl font-black ${section.key==='event'?'text-slate-600':'text-amber-300/70'}`}>›</span>
             </button>
           ))}
         </div>
