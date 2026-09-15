@@ -817,6 +817,35 @@ grant execute on function public.rhythm_event_song_bests(text[], timestamptz, ti
 
 書き込み権限は一切与えない。除外テーブルへの追加は Supabase の画面から手で行う。
 
+### 8.9 プロフィールフレーム列（`profile_frame`・2026-09-15）
+
+ランキングには**他のブリーダーが選んだ飾り枠**も出す。そのため記録と一緒にフレームidを残す。
+仕様の本体は [`PROFILE_FRAME.md`](PROFILE_FRAME.md)。ここではランキング側の決めごとだけを書く。
+
+- `rankings` へ **NULL許容の `profile_frame` 列を1つだけ**足す（`NULL` = フレームなし）。
+  既存の行は NULL のままで、あとから埋めない。既存の `icon` / `party` へ詰め込まない
+- **順位・スコア・集計方法は一切変えない。** この列は表示にしか使わない
+- 上のビュー4つ（`rhythm_scores` / `rhythm_identified_scores` / `rhythm_song_bests` /
+  `rhythm_total_rankings`）と関数5つ（`rhythm_event_song_bests` / `rhythm_event_totals` /
+  `rhythm_week_score_totals` / `rhythm_event_song_bests_bonus` / `rhythm_event_totals_bonus`）へ
+  そのまま通す。集計するときは、表示名・Lv・アイコンと同じく
+  **その人のいちばん新しい記録のもの**を採る
+- ★ビューへ足す列は必ず**いちばん最後**。`create or replace view` は列の名前も並びも
+  変えられず、真ん中へ入れると `42P16` で止まる（§8.2 の `party` と同じ)
+- 適用は `docs/sql/rankings/PROFILE_FRAME_APPLY.sql`（予行演習は `_TEST`、確認は `_VERIFY`、
+  手順は `PROFILE_FRAME_IPHONE_STEPS.md`）
+
+SQLの適用とアプリの公開は**どちらが先でもよい**。列が無い間は `breeder_id`（§4.7）と
+まったく同じ構えで、送るときは列を外して送り直し（記録は必ず残る）、出すときは列を外して
+取り直す（枠が出ないだけ）。判定と旗は `26-supabase.jsx` の
+`_isMissingProfileFrameError` / `_rankingProfileFrameUnavailable` に1か所だけ置き、
+ビューも関数も同じものを使う。`node tools/ranking/profile-frame-check.js` が、
+列が無い環境で送信が落ちないことを実際に関数を動かして確かめる。
+
+> 絆Lv・総合力ランキングが読む `bond_levels` テーブルには、この列を足していない。
+> あちらは1人1個体1行の別テーブルで、フレームを出すには同じ手当てをもう一度することになる。
+> 必要になったときに別の作業として足す（それまで絆Lv・総合力の行は「フレームなし」で出る）。
+
 ---
 
 ## 9. 報酬

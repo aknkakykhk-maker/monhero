@@ -33,10 +33,19 @@ check('体験版難易度idの定数を抽出できる',demoIdsLine.length>0);
 check('ランキングのデータ層を抽出できる',rankingBlock.length>0);
 if(!difficultiesBlock||!demoIdsLine||!rankingBlock){console.log(`\n${failed}件のNGがあります`);process.exit(1);}
 
+// プロフィールフレームの正規化(data/breeder.js)も一緒に読み込む。
+// rhythmRankingEntryFromRow が normalizeProfileFrameId を呼ぶため、
+// スタブで代用せず**本物の実装**をそのまま持ち込む(判定がずれないように)
+const breederData=fs.readFileSync(path.join(ROOT,'monster-hero/data/breeder.js'),'utf8');
+const frameStart=breederData.indexOf("const PROFILE_FRAME_NONE_ID");
+const frameEnd=frameStart>=0?breederData.indexOf('\n',breederData.indexOf('const releasedProfileFrames'))+1:-1;
+const frameBlock=frameStart>=0&&frameEnd>frameStart?breederData.slice(frameStart,frameEnd):'';
+check('プロフィールフレームの正規化を抽出できる',frameBlock.length>0);
+
 const context={};
 vm.createContext(context);
 vm.runInContext(
-  `${difficultiesBlock}\n${demoIdsLine}\n${rankingBlock}\n`+
+  `${frameBlock}\n${difficultiesBlock}\n${demoIdsLine}\n${rankingBlock}\n`+
   `this.out={RHYTHM_RANKING_PREFIX,RHYTHM_RANKING_SEPARATOR,RHYTHM_DEMO_DIFFICULTY_IDS,rhythmRankingDifficultyKey,parseRhythmRankingDifficultyKey,rhythmRankingCombinedMembers,rhythmRankingDedupeByUser,rhythmRankingEntryFromRow,RHYTHM_RANKING_FETCH_LIMIT,RHYTHM_RANKING_DISPLAY_LIMIT};`,
   context
 );

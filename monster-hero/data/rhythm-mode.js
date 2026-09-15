@@ -16893,6 +16893,8 @@ const rhythmRankingEntryFromRow=(row)=>{
     score:Number(row?.score)||0,
     level:Number(row?.level)||0,
     icon:row?.icon??null,
+    // プロフィールフレーム(2026-09-15)。列がまだ無い環境・選んでいない人は 'none' になる
+    profileFrame:normalizeProfileFrameId(row?.profile_frame),
     difficultyId:parsed?.difficultyId||row?.hero||null,
     detail,
   };

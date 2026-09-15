@@ -89,10 +89,55 @@ const BreederIcon = ({ src, id, alt='', className='', roundedClass='rounded-full
     <img src={src} alt={alt} className="absolute inset-0 w-full h-full object-contain" style={adjustment?profileIconTransformStyle(adjustment):marketProfileIconStyle(id)}/>
   </span>
 );
-// HOME本番と調整Debugで、丸枠・余白・画像の有無による代替表示まで同じ部品を使う。
-const HomeProfileIcon = ({ src, id, adjustment }) => (
-  <div className="mh-home-avatar">{src?<BreederIcon src={src} id={id} adjustment={adjustment} alt="プロフィール画像" className="w-full h-full"/>:<User size={24}/>}</div>
+// ==================== プロフィールフレーム(2026-09-15) ====================
+//
+// 既存の BreederIcon は一切変えない。その**外側**へ別レイヤーとして枠だけを重ねる。
+//   下層 … BreederIcon(これまでどおり円形に切り抜く。顔の位置調整もそのまま)
+//   上層 … ProfileFrameLayer(円の外側まではみ出して描く。当たり判定は持たない)
+// 画面ごとに枠の描き方を書かず、ここに1つだけ置く(HOME・プロフィール・ランキングで同じ構図)。
+//
+// ★大きさの指定(w-8 h-8 など)は**外側の span** へ付ける。内側は w-full h-full なので、
+//   32pxでも80pxでも枠の太さが比例して変わり、小さいアイコンでもズレない。
+// ★出してよいフレームかどうかは normalizeProfileFrameId だけが決める
+//   (未公開の豪華フレームはここで 'none' に倒れるので、通常プレイヤーには出ない)。
+const ProfileFrameLayer = ({ frameId }) => {
+  const frame = profileFrameById(normalizeProfileFrameId(frameId));
+  if (!frame || frame.kind === 'none') return null;
+  // 画像フレームは透過PNGをそのまま重ねる。object-contain なので縦横比は変わらない
+  if (frame.kind === 'image') return (
+    <img src={frame.src} alt="" aria-hidden="true" draggable={false} className="mh-profile-frame mh-profile-frame-image"/>
+  );
+  return <span aria-hidden="true" className={`mh-profile-frame mh-profile-frame-ring ${frame.className||''}`}/>;
+};
+// ブリーダーアイコン＋プロフィールフレームの共通部品。
+// frameId を渡さない(または 'none')ときは、これまでの BreederIcon と見た目が変わらない。
+// badge は「アイコンと同じ円の中へ収めたい飾り」(プロフィールの鉛筆マークなど)。
+// 内側の円でクリップされ、フレームだけがその外へ出る。
+const ProfileAvatar = ({ src, id, frameId=null, alt='', className='', roundedClass='rounded-full', adjustment, fallback=null, badge=null }) => (
+  <span className={`mh-profile-avatar ${className}`}>
+    <span className={`relative flex h-full w-full items-center justify-center overflow-hidden ${roundedClass}`}>
+      {src
+        ? <BreederIcon src={src} id={id} adjustment={adjustment} alt={alt} roundedClass={roundedClass} className="w-full h-full"/>
+        : fallback}
+      {badge}
+    </span>
+    <ProfileFrameLayer frameId={frameId}/>
+  </span>
 );
+// フレームを選んでいるか(もとから付いている縁を消すかどうかの判定に使う)
+const hasProfileFrame = (frameId) => normalizeProfileFrameId(frameId) !== PROFILE_FRAME_NONE_ID;
+
+// HOME本番と調整Debugで、丸枠・余白・画像の有無による代替表示まで同じ部品を使う。
+// フレームを選んでいるときだけ、もともとの金色の縁を消す(枠が二重に見えないようにする)。
+// 選んでいないとき(=フレームなし)は、これまでとまったく同じ見た目になる。
+const HomeProfileIcon = ({ src, id, adjustment, frameId=null }) => {
+  const framed = normalizeProfileFrameId(frameId) !== PROFILE_FRAME_NONE_ID;
+  return (
+    <div className={`mh-home-avatar${framed?' is-framed':''}`}>
+      <ProfileAvatar src={src} id={id} frameId={frameId} adjustment={adjustment} alt="プロフィール画像" className="w-full h-full" fallback={<User size={24}/>}/>
+    </div>
+  );
+};
 
 // 図鑑一覧・血統チップ・立ち絵は本番とDEBUGで同じ収め方を使う。
 const DexMonsterIcon = ({ src, alt='', hidden=false, lineage=false }) => (
@@ -360,6 +405,11 @@ const helpDataRows = (id) => {
         return [`Lv.${s.level}`, `${s.need} から ／ ${per}`];
       });
     }
+    // プロフィールフレームの一覧。フレームを足したらヘルプへも自動で載る
+    // (手で書き写すと、増やしたときに古いままになる)。未公開のものはここに出さない
+    case 'profileFrames':
+      return ((typeof releasedProfileFrames === 'function' ? releasedProfileFrames() : []) || [])
+        .map(frame => [frame.name, frame.desc || '']);
     // 助手の一覧。名前と性格の違いを実データから出す
     case 'assistants':
       return ((typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST) || [])
@@ -491,6 +541,7 @@ const HELP_DATA_TITLES = {
   missionsMonthly: 'マンスリーミッション',
   masuCosts: '神殿でかかるダイヤ',
   assistants: '助手の種類',
+  profileFrames: '選べるプロフィールフレーム',
   assistantBond: '仲良し度の段階と呼び方',
   assistantBondActions: '仲良し度が増える行動',
   monsterPower: '総合力の内訳',

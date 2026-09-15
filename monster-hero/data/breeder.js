@@ -283,3 +283,60 @@ const BREEDER_MARKET_ITEMS = [
 const SKIP_TICKET_BY_DIFFICULTY = Object.freeze(Object.fromEntries(
   BREEDER_MARKET_ITEMS.filter(item => item.usage === 'battleSkip').map(item => [item.skipDifficulty, item.id])
 ));
+// ==================== プロフィールフレーム(2026-09-15) ====================
+//
+// ブリーダーアイコンの「外側」へ重ねる飾り枠。アイコン画像そのものには一切手を触れない
+// (下層=これまでのアイコン / 上層=フレーム、の2枚重ね)。顔の位置調整
+// (MARKET_PROFILE_ICON_STYLES)も、フレームの有無に関係なくそのまま効く。
+//
+// 【最初から全員が選べるもの】
+//   画像を1枚も増やさずに済むよう、シルバー・ゴールド・ブルー・ピンクは CSS だけで描く
+//   (kind:'css')。太さは「アイコンの大きさに対する割合」で決まるので、
+//   ランキングの32pxでも、プロフィールの80pxでも同じ見え方になる。
+//
+// 【まだ公開しないもの】
+//   豪華フレームは kind:'image' + released:false で登録する。released:false のものは
+//   normalizeProfileFrameId が 'none' へ倒すので、
+//     ・選択画面に出ない
+//     ・保存値に入っても「フレームなし」になる
+//     ・ランキングで他人の記録に入っていても描画されない
+//   の3つがまとめて成り立つ。公開するときは released:true へ変えるだけでよい。
+//   (画像は monster-hero/images/profile-frames/ へ置く。base64にはしない)
+const PROFILE_FRAME_NONE_ID = 'none';
+// 選んでいるフレームの保存キー。既存の mh_breeder_icon とは別に持つ(アイコンとフレームは独立した設定)
+const PROFILE_FRAME_KEY = 'mh_profile_frame_v1';
+const PROFILE_FRAMES = [
+  { id:'none',   name:'フレームなし', kind:'none', released:true,
+    desc:'飾り枠を付けません。これまでと同じ見た目です。' },
+  { id:'silver', name:'シルバー', kind:'css', released:true, className:'mh-profile-frame-silver',
+    desc:'落ち着いた銀色の細い輪。どのアイコンにも合わせやすい枠です。' },
+  { id:'gold',   name:'ゴールド', kind:'css', released:true, className:'mh-profile-frame-gold',
+    desc:'金色の輪。少しだけ華やかに見せたいときに。' },
+  { id:'blue',   name:'ブルー',   kind:'css', released:true, className:'mh-profile-frame-blue',
+    desc:'澄んだ青の輪。暗い背景でもはっきり見えます。' },
+  { id:'pink',   name:'ピンク',   kind:'css', released:true, className:'mh-profile-frame-pink',
+    desc:'やわらかい桃色の輪。明るい印象になります。' },
+  // ↓ ここへ未公開の豪華フレームを足す(公開の条件・価格・入手方法が決まるまで released:false)
+  //   1行の形は { id, name, kind:'image', released:false, src, desc }。
+  //   src は images/profile-frames/ 以下の透過PNGのパス(base64にしない)。
+  //   ?v= は手で書かない(tools/stamp-version.js が中身のハッシュから付ける)。
+  //   公開するときに released:true へ変えると、選択画面とランキング表示の両方へ同時に出る。
+];
+const PROFILE_FRAME_MAP = Object.freeze(Object.fromEntries(PROFILE_FRAMES.map(frame => [frame.id, frame])));
+// idからフレームの定義を引く。未公開のものもそのまま返す(デバッグの見た目確認はこちらを使う)
+const profileFrameById = (id) => (typeof id === 'string' && PROFILE_FRAME_MAP[id]) || null;
+// 保存値・ランキングから受け取った値を「いま画面に出してよいid」へそろえる。
+// 知らないid・未公開のid・壊れた値はすべて 'none'(フレームなし)へ倒す。
+// ★この関数だけが「出してよいか」を決める。画面ごとに判定を書かない
+const normalizeProfileFrameId = (value) => {
+  const frame = profileFrameById(value);
+  return (frame && frame.released === true) ? frame.id : PROFILE_FRAME_NONE_ID;
+};
+// 全国ランキングへ送る値。フレームなしのときは null を返し、呼ぶ側は列ごと付けない
+// (既存の記録と同じくNULLのままにしておく。NULL = フレームなし)
+const rankingProfileFrameValue = (value) => {
+  const id = normalizeProfileFrameId(value);
+  return id === PROFILE_FRAME_NONE_ID ? null : id;
+};
+// 選択画面に並べるもの(公開済みのみ。並びは PROFILE_FRAMES のとおり)
+const releasedProfileFrames = () => PROFILE_FRAMES.filter(frame => frame.released === true);
