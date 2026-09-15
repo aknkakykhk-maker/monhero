@@ -142,6 +142,54 @@ const rhythmEventPointAwardAt = (nowMs, songId, score) => {
   return Object.freeze({ eventId:event.id, base, target, multiplier, amount:Math.floor(base * multiplier) });
 };
 
+// ===== イベントP交換所 STEP3 =====
+// 初期価格は docs/spec/RHYTHM_EVENT_POINTS.md §20.1 が正本。
+// アイコンは価格(2,000P)だけ決まっており対象IDが未決定なので、ここへは推測で追加しない。
+const RHYTHM_EVENT_POINT_SHOP_OFFERS = Object.freeze([
+  Object.freeze({ id:'diamond_300', name:'ダイヤ', emoji:'💎', kind:'diamond', grantAmount:300, unit:'ダイヤ', cost:1 }),
+  Object.freeze({ id:'training_ticket_x3', name:'トレーニングチケット', emoji:'🎫', kind:'item', itemId:'training_ticket', grantAmount:3, unit:'枚', cost:1 }),
+  Object.freeze({ id:'training_ticket_l', name:'重トレーニングチケット', emoji:'🎟️', kind:'item', itemId:'training_ticket_l', grantAmount:1, unit:'枚', cost:3 }),
+  Object.freeze({ id:'rainbow_psyche', name:'虹のプシュケー', emoji:'🌈', kind:'item', itemId:'rainbow_psyche', grantAmount:1, unit:'個', cost:1 }),
+  Object.freeze({ id:'skip_ticket_jo', name:'スキップチケット・序', emoji:'⏩', kind:'item', itemId:'skip_ticket_jo', grantAmount:1, unit:'枚', cost:10 }),
+  Object.freeze({ id:'skip_ticket_ha', name:'スキップチケット・破', emoji:'⏩', kind:'item', itemId:'skip_ticket_ha', grantAmount:1, unit:'枚', cost:16 }),
+  Object.freeze({ id:'skip_ticket_kyu', name:'スキップチケット・急', emoji:'⏩', kind:'item', itemId:'skip_ticket_kyu', grantAmount:1, unit:'枚', cost:23 }),
+  Object.freeze({ id:'skip_ticket_kiwami', name:'スキップチケット・極', emoji:'⏩', kind:'item', itemId:'skip_ticket_kiwami', grantAmount:1, unit:'枚', cost:50 }),
+  Object.freeze({ id:'skip_ticket_haou', name:'スキップチケット・覇', emoji:'⏩', kind:'item', itemId:'skip_ticket_haou', grantAmount:1, unit:'枚', cost:100 }),
+  Object.freeze({ id:'hero_proof_shard', name:'勇者の証片', emoji:'🎖️', kind:'item', itemId:'hero_proof_shard', grantAmount:1, unit:'個', cost:500 }),
+  Object.freeze({ id:'transcend_fruit_rainbow', name:'虹の超越の実', emoji:'🍇', kind:'item', itemId:'transcend_fruit_rainbow', grantAmount:1, unit:'個', cost:5000 }),
+  Object.freeze({ id:'hero_proof', name:'勇者の証', emoji:'🏅', kind:'item', itemId:'hero_proof', grantAmount:1, unit:'個', cost:10000 }),
+]);
+const rhythmEventPointExchangePreview = ({ offer, eventPoints=0, gold=0, ownedItems={}, quantity=1 } = {}) => {
+  const max = Number.MAX_SAFE_INTEGER;
+  const safeInt = (value) => {
+    const n = Number(value);
+    return Number.isFinite(n) ? Math.min(max, Math.max(0, Math.floor(n))) : 0;
+  };
+  const q = Math.max(1, safeInt(quantity));
+  const points = safeInt(eventPoints);
+  const beforeGold = safeInt(gold);
+  const sourceItems = ownedItems && typeof ownedItems === 'object' && !Array.isArray(ownedItems) ? ownedItems : {};
+  const unitCost = safeInt(offer?.cost);
+  const grantAmount = safeInt(offer?.grantAmount);
+  if (!offer || !unitCost || !grantAmount || !['diamond','item'].includes(offer.kind)) {
+    return { ok:false, reason:'invalidOffer', quantity:q, eventPoints:points, gold:beforeGold, ownedItems:sourceItems };
+  }
+  const totalCost = Math.min(max, unitCost * q);
+  if (points < totalCost) {
+    return { ok:false, reason:'points', quantity:q, cost:totalCost, eventPoints:points, gold:beforeGold, ownedItems:sourceItems };
+  }
+  const grantTotal = Math.min(max, grantAmount * q);
+  const nextItems = { ...sourceItems };
+  let nextGold = beforeGold;
+  if (offer.kind === 'diamond') nextGold = Math.min(max, beforeGold + grantTotal);
+  else {
+    const itemId = typeof offer.itemId === 'string' ? offer.itemId : '';
+    if (!itemId) return { ok:false, reason:'invalidOffer', quantity:q, eventPoints:points, gold:beforeGold, ownedItems:sourceItems };
+    nextItems[itemId] = Math.min(max, safeInt(sourceItems[itemId]) + grantTotal);
+  }
+  return { ok:true, reason:null, quantity:q, cost:totalCost, eventPoints:points-totalCost, gold:nextGold, ownedItems:nextItems };
+};
+
 // ===== 回数ボーナス(2026-09-11・ユーザー指示) =====
 //
 // 「ただスコアを競うだけだと、うまい人が毎回上位に行く。それはそれでいいけど、
