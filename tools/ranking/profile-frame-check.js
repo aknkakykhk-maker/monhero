@@ -259,7 +259,8 @@ check('通常バトルの送信にフレームIDを載せている', app.include
 check('モンビーの送信にフレームIDを載せている', app.includes('{ profile_frame: rankingProfileFrameValue(profileFrameId) }'));
 check('送れなかった記録の送り直しにも載せている', supa.includes('{ profile_frame: entry.profileFrame }'));
 // ===== ⑤-2 絆Lv・総合力ランキング(bond_levels は rankings とは別テーブル) =====
-check('絆Lv: bond_levels の取得へも足している', supa.includes('const bondLevelsSelectWithProfileFrame'));
+check('絆Lv: bond_levels の取得へも足している',
+  /const bondLevelsSelectColumns = \(\) => \{[\s\S]{0,400}RANKING_PROFILE_FRAME_COLUMN/.test(supa));
 check('絆Lv: 列があるかどうかを rankings とは別に覚える',
   supa.includes('let _bondLevelsProfileFrameUnavailable = false;')
   && /sbFetchBondLevels[\s\S]{0,1500}_bondLevelsProfileFrameUnavailable = true/.test(supa)
@@ -270,7 +271,7 @@ check('絆Lv: 送る行にフレームIDを載せている',
   /bondLevelRowsFromParty = \(userName, icon, party, profileFrame/.test(supa)
   && /rankingProfileFrameValue\(profileFrame\) \? \{ profile_frame: rankingProfileFrameValue\(profileFrame\) \}/.test(supa));
 check('絆Lv: 呼び出し元がフレームを渡している',
-  app.includes('bondLevelRowsFromParty(name, icon, party, profileFrame)'));
+  /bondLevelRowsFromParty\(name, icon, party, profileFrame(, breederId)?\)/.test(app));
 check('絆Lv: 受け取った行からフレームを取り出している',
   /const bondLevelRowToEntry[\s\S]{0,800}profileFrame: rankingProfileFrameFromRow\(row\)/.test(supa));
 check('絆Lv: 古い経路(rankingsのpartyから作る一覧)にもフレームを渡している',

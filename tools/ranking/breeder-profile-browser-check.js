@@ -23,6 +23,15 @@ const RANKING_ROWS = [
   { user_name: 'ずっと同じさん', hero: 'スエゾー', party: [], score: 88888, level: 80, icon: 'Golem' },
   { user_name: 'かぶり太郎',     hero: 'ゴーレム', party: [], score: 77777, level: 70, icon: 'Golem' },
   { user_name: 'しらない人',     hero: 'ライガー', party: [], score: 66666, level: 60, icon: 'Suezo' },
+  // ★同じ人(bd-1)が別の名前でも記録を残している。改名の前後で2行あるのと同じ状態
+  { user_name: 'べつの名前',     hero: 'モッチー', party: [], score: 55555, level: 95, icon: 'Golem', breeder_id: 'bd-1' },
+];
+// 絆Lv・総合力は rankings ではなく bond_levels から読む。
+// ★bd-1 は「同じ個体(m-7)」を古い名前と新しい名前の2行で持っている(改名するとこうなる)
+const BOND_ROWS = [
+  { user_name: 'むかしの名前', individual_id: 'm-7', monster_id: 'Mocchi', mon_name: 'モッチー', bond_level: 70, icon: 'Golem', breeder_id: 'bd-1' },
+  { user_name: 'べつの名前',   individual_id: 'm-7', monster_id: 'Mocchi', mon_name: 'モッチー', bond_level: 72, icon: 'Golem', breeder_id: 'bd-1' },
+  { user_name: 'しらない人',   individual_id: 'm-8', monster_id: 'Suezo',  mon_name: 'スエゾー', bond_level: 50, icon: 'Suezo' },
 ];
 const PROFILES = [
   { breeder_id: 'bd-1', user_name: 'いまの名前',    icon: 'Mocchi', profile_frame: 'rainbow' },
@@ -51,6 +60,7 @@ async function run() {
     gets.push({ path: url.pathname, select: url.searchParams.get('select') || '' });
     if (url.pathname.endsWith('/breeder_profiles')) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(PROFILES) });
     if (url.pathname.endsWith('/rankings')) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(RANKING_ROWS) });
+    if (url.pathname.endsWith('/bond_levels')) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(BOND_ROWS) });
     return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
   });
   const down = (f) => page.evaluate((s) => {
@@ -113,7 +123,7 @@ async function run() {
     icon: el.querySelector('.mh-profile-avatar img')?.getAttribute('src')?.split('/').pop()?.split('?')[0] || 'なし',
     frame: [...el.querySelectorAll('.mh-profile-frame')].map(f => [...f.classList].find(c => c.startsWith('mh-profile-frame-') && c !== 'mh-profile-frame-ring'))[0] || 'なし',
   })));
-  check('ランキングの一覧が出る', cards.length === 4, `${cards.length}件`);
+  check('ランキングの一覧が出る', cards.length === 5, `${cards.length}件`);
   const at = (i) => cards[i] || { text: '', icon: '', frame: '' };
 
   check('① IDが合えば、改名していても「いまの見た目」で出る(名前も新しくなる)',
@@ -130,12 +140,69 @@ async function run() {
     at(3).text.includes('しらない人') && at(3).icon === 'suezo.png' && at(3).frame === 'なし',
     `${at(3).icon} / ${at(3).frame}`);
 
+  check('スコアは1プレイ1行のまま(まとめない)。同じ人の別の記録も「いまの見た目」で出る',
+    at(4).text.includes('いまの名前') && at(4).icon === 'mocchi.png' && at(4).frame === 'mh-profile-frame-rainbow',
+    `${at(4).icon} / ${at(4).frame}`);
+
   const rankingGets = gets.filter(g => g.path.endsWith('/rankings'));
   check('記録の取得でブリーダーIDも受け取っている(名前だけに頼らない)',
     rankingGets.length > 0 && rankingGets[0].select.includes('breeder_id'), rankingGets[0]?.select || '(GETなし)');
   check('プロフィール表は何度も読み直さない(間引いている)',
     gets.filter(g => g.path.endsWith('/breeder_profiles')).length <= 2,
     `${gets.filter(g => g.path.endsWith('/breeder_profiles')).length}回`);
+  // --- 改名しても1行にまとまること(人を名前でなくIDで見分ける) ---
+  // スコアのランキング画面からバトルのタブへ戻る。開いている画面によって
+  // 「そのタブが押せる」まで戻る回数が違うので、押せるまで戻ってから押す
+  const goBack = () => page.evaluate(() => {
+    const b = [...document.querySelectorAll('button')].find(x => x.querySelector('svg') && x.className.includes('text-slate-400'));
+    if (b) b.click();
+  });
+  const clickTab = (t) => page.evaluate((label) => {
+    const b = [...document.querySelectorAll('button')].find(x => x.textContent.trim() === label);
+    if (!b) return false;
+    b.click();
+    return true;
+  }, t);
+  const openTab = async (label, kind) => {
+    for (let i = 0; i < 4; i++) {
+      if (await clickTab(label)) break;
+      await goBack();
+      await page.waitForTimeout(1500);
+    }
+    await page.waitForTimeout(4000);
+    return page.evaluate((k) => [...document.querySelectorAll(`[data-ranking-kind="${k}"]`)].map(el => ({
+      text: el.innerText.replace(/\s+/g, ' '),
+      icon: el.querySelector('.mh-profile-avatar img')?.getAttribute('src')?.split('/').pop()?.split('?')[0] || 'なし',
+      frame: [...el.querySelectorAll('.mh-profile-frame')].map(f => [...f.classList].find(c => c.startsWith('mh-profile-frame-') && c !== 'mh-profile-frame-ring'))[0] || 'なし',
+    })), kind);
+  };
+
+  const breederRows = await openTab('ブリーダーLv', 'breeder');
+  const bdRows = breederRows.filter(r => r.text.includes('いまの名前'));
+  check('ブリーダーLv: 改名しても1人1行にまとまる(名前で分かれない)',
+    bdRows.length === 1, `${bdRows.length}行 / 全${breederRows.length}行`);
+  check('ブリーダーLv: 残るのは高いほうのレベル(いまの値)',
+    bdRows.length === 1 && bdRows[0].text.includes('95'), bdRows[0]?.text || '(なし)');
+  check('ブリーダーLv: まとめた行も「いまの見た目」で出る',
+    bdRows.length === 1 && bdRows[0].icon === 'mocchi.png' && bdRows[0].frame === 'mh-profile-frame-rainbow',
+    `${bdRows[0]?.icon} / ${bdRows[0]?.frame}`);
+  check('ブリーダーLv: 古い名前の行は残らない',
+    !breederRows.some(r => r.text.includes('むかしの名前') || r.text.includes('べつの名前')),
+    breederRows.map(r => r.text.slice(0, 12)).join(' / '));
+
+  const bondRows = await openTab('絆Lv', 'bond');
+  const bondMine = bondRows.filter(r => r.text.includes('いまの名前'));
+  check('絆Lv: 改名しても同じ個体は1行にまとまる',
+    bondMine.length === 1, `${bondMine.length}行 / 全${bondRows.length}行`);
+  check('絆Lv: 残るのは高いほうの絆Lv(いまの値)',
+    bondMine.length === 1 && bondMine[0].text.includes('72'), bondMine[0]?.text?.slice(0, 40) || '(なし)');
+  check('絆Lv: まとめた行も「いまの見た目」で出る',
+    bondMine.length === 1 && bondMine[0].icon === 'mocchi.png' && bondMine[0].frame === 'mh-profile-frame-rainbow',
+    `${bondMine[0]?.icon} / ${bondMine[0]?.frame}`);
+  const bondGets = gets.filter(g => g.path.endsWith('/bond_levels'));
+  check('絆Lvの取得でもブリーダーIDを受け取っている',
+    bondGets.length > 0 && bondGets[0].select.includes('breeder_id'), bondGets[0]?.select || '(GETなし)');
+
   check('実行時エラーが出ていない', fatal.length === 0, fatal.slice(0, 2).join(' | '));
 
   await browser.close();

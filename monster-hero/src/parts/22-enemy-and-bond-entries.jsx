@@ -131,7 +131,7 @@ const collectBondRankingEntries = (rankingPool) => {
       const key=`${userName}\u0000${individualId}`;
       // detail / colors は「詳細 ›」で1体ぶんの中身を開くために持ち回る。
       // 育て方を記録するようになる前の古い記録には入っていないので、その場合はnullのまま。
-      const entry={userName,icon:record.icon,profileFrame:record.profileFrame??null,monName,bondLevel,imgUrl:ALL_PLAYER_MONSTERS[monsterId]?.iconUrl||member.imgUrl||null,emoji:member.emoji||ALL_PLAYER_MONSTERS[monsterId]?.emoji||null,masuId:member.masuId??null,monsterId,detail:member.detail??null,colors:Array.isArray(member.colors)?member.colors:[]};
+      const entry={userName,breederId:record.breederId??null,icon:record.icon,profileFrame:record.profileFrame??null,monName,bondLevel,imgUrl:ALL_PLAYER_MONSTERS[monsterId]?.iconUrl||member.imgUrl||null,emoji:member.emoji||ALL_PLAYER_MONSTERS[monsterId]?.emoji||null,masuId:member.masuId??null,monsterId,detail:member.detail??null,colors:Array.isArray(member.colors)?member.colors:[]};
       const current=byIndividual.get(key);
       if(!current)byIndividual.set(key,entry);
       else byIndividual.set(key,{...(bondLevel>current.bondLevel?entry:current),bondLevel:Math.max(current.bondLevel,bondLevel)});

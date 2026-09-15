@@ -69,7 +69,32 @@ with facts as (
           from (select user_name, count(*) as n from public.breeder_profiles
                  where user_name is not null group by user_name having count(*) > 1) t)
   union all
-  select 15, 'rankings の件数(触っていないこと)',
+  select 15, '③ bond_levels.breeder_id 列',
+         (select coalesce(string_agg(data_type || ' / ' || is_nullable, ''), 'なし')
+          from information_schema.columns
+          where table_schema='public' and table_name='bond_levels' and column_name='breeder_id')
+         || ' (text / YES なら正しい)'
+  union all
+  select 16, '③ IDが入っている絆Lvの記録(遊ぶたびに増える)',
+         (select count(*)::text from public.bond_levels where breeder_id is not null)
+  union all
+  select 17, '③ 改名で2行になっている人(消さずに画面でまとめています)',
+         (select coalesce(string_agg(names, ' / ' order by names), 'なし')
+          from (select string_agg(distinct user_name, '→') as names
+                from public.bond_levels
+                where breeder_id is not null
+                group by breeder_id, individual_id
+                having count(*) > 1) t)
+  union all
+  select 18, '③ bond_levels の主キー(変わっていないこと)',
+         (select coalesce(string_agg(a.attname, ', ' order by a.attname), 'なし')
+          from pg_constraint c join pg_class t on t.oid=c.conrelid
+          join pg_namespace n on n.oid=t.relnamespace
+          join unnest(c.conkey) k(attnum) on true
+          join pg_attribute a on a.attrelid=t.oid and a.attnum=k.attnum
+          where n.nspname='public' and t.relname='bond_levels' and c.contype='p')
+  union all
+  select 19, 'rankings の件数(触っていないこと)',
          (select count(*)::text from public.rankings)
 )
 select item as "項目", value as "値" from facts order by sort;

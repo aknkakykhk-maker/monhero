@@ -250,6 +250,9 @@ const bondLevelRowFromRow = (row) => {
   const individualId = String(row?.individual_id || '');
   return {
     userName: row?.user_name || '名無しのブリーダー',
+    // ブリーダーID(2026-09-16)。あれば「いまの見た目」も改名の見分けもこれで決まる。
+    // 列を足す前の記録には無いので、そのときは今までどおり名前で見分ける
+    breederId: (typeof row?.breeder_id === 'string' && row.breeder_id) ? row.breeder_id : null,
     icon: row?.icon ?? null,
     profileFrame: rankingProfileFrameFromRow(row),
     monName, bondLevel, monsterId,
@@ -264,12 +267,33 @@ const bondLevelRowFromRow = (row) => {
 };
 // 正本テーブルの結果と、rankings から集計した結果を1つに束ねる。
 // 同じ「人 × 個体」は正本テーブル側を採用し、正本にまだ載っていない人だけ
-// 従来どおり rankings の集計で補う(テーブルを作った直後から一覧が欠けないようにするため)
+// 従来どおり rankings の集計で補う(テーブルを作った直後から一覧が欠けないようにするため)。
+//
+// ★「人」の見分けはブリーダーIDを最優先にする(2026-09-16)。
+//   bond_levels の主キーは (user_name, individual_id) なので、名前を変えると
+//   同じマスモンが古い名前と新しい名前の2行になって残る。行を消すのは危険なので消さず、
+//   **ここで1行にまとめて見せる**(絆Lvの高いほう＝いまの値を採用する)。
+//   IDが無い古い行は、これまでどおり名前で見分ける。
+const bondRankingIndividualOf = (e) =>
+  e?.individualId || (e?.masuId != null && String(e.masuId) !== '' ? String(e.masuId) : `legacy:${e?.monsterId || e?.monName}`);
+const bondRankingKeyOf = (e) => {
+  const id = resolveBreederIdFor(e);
+  return id ? `id:${id}\u0000${bondRankingIndividualOf(e)}`
+            : `name:${e?.userName}\u0000${bondRankingIndividualOf(e)}`;
+};
 const mergeBondRankingEntries = (primaryEntries, legacyEntries) => {
-  const keyOf = (e) => `${e?.userName}\u0000${e?.individualId || (e?.masuId != null && String(e.masuId) !== '' ? String(e.masuId) : `legacy:${e?.monsterId || e?.monName}`)}`;
   const merged = new Map();
-  (primaryEntries || []).forEach(e => { if (e) merged.set(keyOf(e), e); });
-  (legacyEntries || []).forEach(e => { if (e && !merged.has(keyOf(e))) merged.set(keyOf(e), e); });
+  // 同じ鍵が重なったら、絆Lvの高いほうを残す(改名で2行になっている人はここで1行になる)
+  const put = (e, onlyIfNew) => {
+    if (!e) return;
+    const key = bondRankingKeyOf(e);
+    const current = merged.get(key);
+    if (!current) { merged.set(key, e); return; }
+    if (onlyIfNew) return;
+    if ((Number(e.bondLevel) || 0) > (Number(current.bondLevel) || 0)) merged.set(key, e);
+  };
+  (primaryEntries || []).forEach(e => put(e, false));
+  (legacyEntries || []).forEach(e => put(e, true));
   return [...merged.values()].sort((a, b) => b.bondLevel - a.bondLevel);
 };
 // ==================== 絆Lvの正本テーブル(bond_levels) ====================
@@ -288,10 +312,26 @@ const BOND_LEVELS_SELECT = 'user_name,individual_id,monster_id,mon_name,bond_lev
 // 判定そのもの(_isMissingProfileFrameError)と正規化は rankings と同じものを使う。
 let _bondLevelsProfileFrameUnavailable = false;
 const bondLevelsProfileFrameUnavailable = () => _bondLevelsProfileFrameUnavailable;
-const bondLevelsSelectWithProfileFrame = () =>
-  _bondLevelsProfileFrameUnavailable ? BOND_LEVELS_SELECT : `${BOND_LEVELS_SELECT},${RANKING_PROFILE_FRAME_COLUMN}`;
 const bondLevelRowsWithoutProfileFrame = (rows) =>
   (Array.isArray(rows) ? rows : []).map(row => rankingRowWithoutProfileFrame(row));
+// ブリーダーID(2026-09-16)。bond_levels は主キーが (user_name, individual_id) ＝
+// 「名前 × 個体」なので、人を見分ける手がかりが名前しか無かった。そのため
+// 改名すると同じマスモンが2行に分かれて並び、同名の人がいるとどれが誰か決められなかった
+// (ユーザー指摘「名前管理はさすがにだめだろ」)。rankings と同じ breeder_id を持たせて、
+// **表示ではIDで見分ける**。★主キーは変えない(既存の行を壊さないため)。
+// 増えてしまった古い行は mergeBondRankingEntries がIDでまとめて1行に見せる。
+// 列があるかどうかは rankings ともフレームとも別に覚える(どれか1つだけ当たっていても取り違えない)。
+let _bondLevelsBreederIdUnavailable = false;
+const bondLevelsBreederIdUnavailable = () => _bondLevelsBreederIdUnavailable;
+const bondLevelRowsWithoutBreederId = (rows) =>
+  (Array.isArray(rows) ? rows : []).map(row => { const { breeder_id, ...rest } = row || {}; return rest; });
+// いま取れる列の並び。無いと分かっている列は最初から外す
+const bondLevelsSelectColumns = () => {
+  let select = BOND_LEVELS_SELECT;
+  if (!_bondLevelsProfileFrameUnavailable) select += `,${RANKING_PROFILE_FRAME_COLUMN}`;
+  if (!_bondLevelsBreederIdUnavailable) select += ',breeder_id';
+  return select;
+};
 // 1行が数百バイトなので、種類別タブぶんまで含めて1回で取り切れる余裕を持たせる
 const BOND_LEVELS_FETCH_LIMIT = 1000;
 // 「テーブルが無い」と分かったあとは、毎回404を出しにいかない
@@ -307,7 +347,7 @@ const _isMissingTableError = (status, body) => {
 const sbFetchBondLevels = async (requestId='untracked') => {
   if (_bondLevelsUnavailable) return null;
   await ensureBreederProfiles(requestId);
-  const select = bondLevelsSelectWithProfileFrame();
+  const select = bondLevelsSelectColumns();
   const url = `${SUPABASE_URL}/rest/v1/${BOND_LEVELS_TABLE}?select=${select}`
     + `&order=bond_level.desc.nullslast&limit=${BOND_LEVELS_FETCH_LIMIT}`;
   const controller = new AbortController();
@@ -318,9 +358,16 @@ const sbFetchBondLevels = async (requestId='untracked') => {
     if (!res.ok) {
       // プロフィールフレームの列がまだ無い環境。外して取り直せば今までどおり出せる
       // (飾り枠が出ないだけで、絆Lv・総合力の順位は変わらない)
-      if (select !== BOND_LEVELS_SELECT && _isMissingProfileFrameError(res.status, body)) {
+      if (select.includes(RANKING_PROFILE_FRAME_COLUMN) && _isMissingProfileFrameError(res.status, body)) {
         _bondLevelsProfileFrameUnavailable = true;
         rankingLog(requestId, 'bond-levels-profile-frame-missing', { status: res.status });
+        return sbFetchBondLevels(requestId);
+      }
+      // ブリーダーIDの列がまだ無い環境。外して取り直せば今までどおり出せる
+      // (名前で見分けるだけに戻り、絆Lv・総合力の順位は変わらない)
+      if (select.includes(',breeder_id') && _isMissingBreederIdError(res.status, body)) {
+        _bondLevelsBreederIdUnavailable = true;
+        rankingLog(requestId, 'bond-levels-breeder-id-missing', { status: res.status });
         return sbFetchBondLevels(requestId);
       }
       if (_isMissingTableError(res.status, body)) {
@@ -343,7 +390,8 @@ const sbFetchBondLevels = async (requestId='untracked') => {
 const sbUpsertBondLevels = async (rows) => {
   if (_bondLevelsUnavailable || !Array.isArray(rows) || rows.length === 0) return false;
   // 列がまだ無いと分かっている間は、最初から外して送る
-  const payload = _bondLevelsProfileFrameUnavailable ? bondLevelRowsWithoutProfileFrame(rows) : rows;
+  let payload = _bondLevelsProfileFrameUnavailable ? bondLevelRowsWithoutProfileFrame(rows) : rows;
+  if (_bondLevelsBreederIdUnavailable) payload = bondLevelRowsWithoutBreederId(payload);
   const url = `${SUPABASE_URL}/rest/v1/${BOND_LEVELS_TABLE}?on_conflict=user_name,individual_id`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8000);
@@ -361,6 +409,12 @@ const sbUpsertBondLevels = async (rows) => {
         _bondLevelsProfileFrameUnavailable = true;
         return sbUpsertBondLevels(bondLevelRowsWithoutProfileFrame(rows));
       }
+      // ブリーダーIDの列がまだ無い環境。IDのために絆Lvの記録を落とさない。
+      // その列だけ外して必ず送り直す(一度気付けば以後は最初から外して送る)
+      if (!_bondLevelsBreederIdUnavailable && _isMissingBreederIdError(res.status, body)) {
+        _bondLevelsBreederIdUnavailable = true;
+        return sbUpsertBondLevels(bondLevelRowsWithoutBreederId(rows));
+      }
       if (_isMissingTableError(res.status, body)) { _bondLevelsUnavailable = true; return false; }
       throw new Error(`bond_levels upsert ${res.status}: ${body || res.statusText}`);
     }
@@ -372,7 +426,7 @@ const sbUpsertBondLevels = async (rows) => {
 // ランキングへ送る編成から、絆Lvの正本へ入れる行を作る。
 // 個体が特定できる記録は masuId、できない古い形は legacy:種ID でまとめる
 // (どちらも rankings 側の集計と同じ考え方)。
-const bondLevelRowsFromParty = (userName, icon, party, profileFrame = null) => {
+const bondLevelRowsFromParty = (userName, icon, party, profileFrame = null, breederId = null) => {
   const byIndividual = new Map();
   (Array.isArray(party) ? party : []).forEach(member => {
     const bondLevel = Number(member?.bondLevel);
@@ -388,6 +442,8 @@ const bondLevelRowsFromParty = (userName, icon, party, profileFrame = null) => {
     byIndividual.set(individualId, {
       user_name: userName || '名無しのブリーダー',
       individual_id: individualId,
+      // ブリーダーID。作れない端末では列ごと付けない(既存の行と同じくNULLのまま)
+      ...(typeof breederId === 'string' && breederId ? { breeder_id: breederId } : {}),
       monster_id: monsterId, mon_name: monName,
       bond_level: Math.floor(bondLevel),
       icon: icon ?? null,
@@ -487,14 +543,18 @@ const sbFetchRankings = async (diff, limit=RANKING_SCORE_LIMIT, order='score.des
 // 1プレイ=1行なので同じ人が何行も持つ。取得直後にここでまとめておくと、
 // 端末へ残すキャッシュも人数ぶんの大きさで収まる
 const aggregateBreederLevels = (rows) => {
-  const byName = new Map();
+  // ★束ねる単位はブリーダーID(2026-09-16)。名前で束ねると、改名した人が2行に分かれ、
+  //   同名の別人が1行に混ざる。IDが決められない古い記録だけ、これまでどおり名前で束ねる
+  const byBreeder = new Map();
   (rows || []).forEach(r => {
     const name = r?.userName || '名無しのブリーダー';
+    const id = resolveBreederIdFor(r);
+    const key = id ? `id:${id}` : `name:${name}`;
     const lv = Number(r?.level) || 0;
-    const cur = byName.get(name);
-    if (!cur || lv > cur.level) byName.set(name, { ...r, userName: name, level: lv });
+    const cur = byBreeder.get(key);
+    if (!cur || lv > cur.level) byBreeder.set(key, { ...r, userName: name, level: lv });
   });
-  return [...byName.values()].filter(x => x.level > 0).sort((a, b) => b.level - a.level);
+  return [...byBreeder.values()].filter(x => x.level > 0).sort((a, b) => b.level - a.level);
 };
 // ブリーダーLv用に、rankingsの全行をページ送りで読む。
 // 1プレイ=1行なので同じ人が何行も持つ。「上位N行」では下位の人が消えるため、
@@ -767,6 +827,8 @@ const setBreederProfiles = (rows) => {
     const id = typeof row?.breeder_id === 'string' ? row.breeder_id.trim() : '';
     if (!id) return;
     const profile = {
+      // 「誰か」も一緒に持つ。IDの無い古い記録を、その人の行として束ねるのに使う
+      breederId: id,
       userName: (typeof row?.user_name === 'string' && row.user_name.trim()) ? row.user_name : null,
       icon: row?.icon ?? null,
       profileFrame: normalizeProfileFrameId(row?.profile_frame),
@@ -870,6 +932,19 @@ const latestBreederProfileFor = (entry) => {
   // ② 名前。その名前の人が1人だけのときしか使わない
   const name = typeof entry.userName === 'string' ? entry.userName : '';
   return (name && _breederProfileByName.has(name)) ? _breederProfileByName.get(name) : null;
+};
+// ランキングの1行が「誰のものか」を決める。
+// ① 記録に付いているブリーダーID ② その名前がプロフィール表で1人に定まるときのID ③ 決められない
+// ★同じ人の行を1つに束ねるのはこのIDで行う(名前で束ねると、改名で分かれ、同名で混ざる)。
+//   ②があるので、IDが付く前の古い記録も、改名していない人ならその人の行として束ねられる。
+const resolveBreederIdFor = (entry) => {
+  if (!entry) return null;
+  if (typeof entry.breederId === 'string' && entry.breederId) return entry.breederId;
+  const identity = typeof entry.identityKey === 'string' ? entry.identityKey : '';
+  if (identity && !identity.startsWith('name:')) return identity;
+  const name = typeof entry.userName === 'string' ? entry.userName : '';
+  const profile = name ? _breederProfileByName.get(name) : null;
+  return (profile && profile.breederId) ? profile.breederId : null;
 };
 const applyLatestBreederProfile = (entry) => {
   const profile = latestBreederProfileFor(entry);
