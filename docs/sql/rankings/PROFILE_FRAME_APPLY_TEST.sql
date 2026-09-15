@@ -26,6 +26,8 @@ begin;
 
 -- 土台が揃っているかを先に見る。揃っていなければ何もせず止まる。
 do $$
+declare
+  total_score_type text;
 begin
   if to_regclass('public.rankings') is null then
     raise exception 'public.rankings がありません。先に RANKINGS_APPLY.sql を適用してください。';
@@ -38,6 +40,16 @@ begin
   end if;
   if to_regprocedure('public.rhythm_week_score_totals(timestamptz, timestamptz)') is null then
     raise exception 'public.rhythm_week_score_totals がありません。先に RHYTHM_WEEK_TOTAL_APPLY.sql を適用してください。';
+  end if;
+
+  -- create or replace view は「列の型を変える」ことができない。
+  -- このSQLは total_score が numeric である前提で書いてある(理由は下の②を読むこと)。
+  -- 違っていたら、分かりにくい 42P16 ではなく、何を直せばよいかをここで伝えて止まる。
+  select data_type into total_score_type from information_schema.columns
+   where table_schema = 'public' and table_name = 'rhythm_total_rankings'
+     and column_name = 'total_score';
+  if total_score_type is distinct from 'numeric' then
+    raise exception 'rhythm_total_rankings.total_score がこの環境では % です。このSQLの「sum(b.score)::numeric」を「sum(b.score)::%s」へ書き換えてから実行してください', total_score_type, total_score_type;
   end if;
 end $$;
 
@@ -149,11 +161,21 @@ comment on view public.rhythm_song_bests is
   '人×曲ごとの最高スコア1件(難易度は問わない)。全曲合算とイベント集計の土台。';
 
 -- 全曲合算。表示名・Lv・アイコンと同じく、飾り枠もその人のいちばん新しい記録のものを採る
+-- ★total_score は **numeric** にする。bigint にしてはいけない。
+--   RHYTHM_TOTAL_APPLY.sql には sum(b.score)::bigint と書いてあるが、これは
+--   rankings.score が int4 だったころの姿。その後 RANKINGS_SCORE_BIGINT_APPLY.sql が
+--   score を bigint へ広げたとき、ビューは pg_get_viewdef の定義で作り直された。
+--   元の ::bigint は「sum(int4) はもともと bigint」なので無意味な変換として消えており、
+--   復元後は sum(bigint) = **numeric** になっている。
+--   create or replace view は列の型を変えられないので、bigint に戻そうとすると
+--   「42P16: cannot change data type of view column "total_score"」で止まる
+--   (2026-09-15・ユーザーが予行演習で実際に踏んだ)。
+--   ローカルのPostgreSQL 16で同じ手順を再現して確かめてある。
 create or replace view public.rhythm_total_rankings
 with (security_invoker = on) as
 select b.identity_key,
        (array_agg(b.user_name order by b.created_at desc))[1] as user_name,
-       sum(b.score)::bigint                                   as total_score,
+       sum(b.score)::numeric                                  as total_score,
        count(*)::int                                          as song_count,
        max(b.created_at)                                      as last_scored_at,
        (array_agg(b.level order by b.created_at desc))[1]     as level,
@@ -458,7 +480,7 @@ with facts as (
   select 7, 'rankings の件数(適用前と同じであること)',
          (select count(*)::text from public.rankings)
   union all
-  select 8, 'profile_frame が入っている記録(適用直後は0)',
+  select 8, 'profile_frame が入っている記録(初回の適用直後は0)',
          (select count(*)::text from public.rankings where profile_frame is not null)
 )
 select item as "項目", value as "値" from facts order by sort;
