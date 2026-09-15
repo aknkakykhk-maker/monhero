@@ -164,11 +164,46 @@
   SQLの適用とアプリの公開はどちらが先でもよい
 - **順位・スコア・集計方法は何も変えていない**
 
+### 6.1 `total_score` の型（2026-09-15・予行演習が止まった）
+
+本番で `PROFILE_FRAME_APPLY_TEST.sql` を流したら、こう言われて止まった。
+
+```
+ERROR: 42P16: cannot change data type of view column "total_score" from numeric to bigint
+```
+
+**リポジトリのSQLに書いてある姿と、本番のビューの姿がずれていた**のが原因。
+
+1. `RHYTHM_TOTAL_APPLY.sql` は `sum(b.score)::bigint as total_score` と書いている
+2. そのころ `rankings.score` は `int4` で、`sum(int4)` はもともと `bigint`。
+   つまりこの `::bigint` は**何も変換していない**ので、PostgreSQL は保存する定義から取り除く
+3. あとで `RANKINGS_SCORE_BIGINT_APPLY.sql` が `score` を `bigint` へ広げた。
+   このSQLはビューを `pg_get_viewdef`（＝いま動いている定義）で作り直すため、
+   戻ってきた定義には `::bigint` が無い
+4. `score` が `bigint` になった今、`sum(bigint)` は **`numeric`**。
+   本番の `total_score` は numeric になっていた
+5. `create or replace view` は列の型を変えられないので、`bigint` に戻そうとして止まった
+
+**直し方**: このSQLでは `sum(b.score)::numeric` と明示して、本番と同じ型で作り直す。
+集計の値は変わらない（合計は整数のまま）。念のため先頭の点検で現在の型を見て、
+numeric でなければ「どこをどう書き換えればよいか」を日本語で言って止まるようにした。
+
+> **教訓**: `pg_get_viewdef` で作り直された後のビューは、リポジトリのSQLと字面が違うことがある。
+> 既存のビューを `create or replace` するSQLを書くときは、
+> **本番の列の型を先に確かめる**か、下の `profile-frame-sql-check.js` のように
+> 本番と同じ順でSQLを流した環境で試す。
+
 ## 7. 検査
 
 ```
 node tools/ranking/profile-frame-check.js
+node tools/ranking/profile-frame-sql-check.js   # PostgreSQL があるときだけ
 ```
+
+`profile-frame-sql-check.js` は、本番と同じ順番でSQLを流した使い捨てのデータベースを作り
+（`RHYTHM_TOTAL_APPLY` → … → `RANKINGS_SCORE_BIGINT_APPLY` まで）、そのうえで
+`PROFILE_FRAME_APPLY_TEST` → `APPLY` → `VERIFY` を通す。§6.1 のずれもここで再現しているので、
+同じことが起きたら気づける。PostgreSQL が無い環境では SKIP する。
 
 未公開フレームが漏れないこと、共通部品を全画面が通ること、図鑑・マーケットに付かないこと、
 列が無い環境でもスコアが必ず保存されること（実際に送信関数を動かす）、

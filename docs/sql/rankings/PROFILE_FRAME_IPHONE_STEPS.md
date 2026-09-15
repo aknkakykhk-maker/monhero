@@ -57,3 +57,9 @@
   アプリは一度「列が無い」と気づくと、その回の起動中は列を外したまま動きます。**アプリを開き直す**と直ります。
 - **`42P16: cannot change name of view column`**
   ビューへ列を足す場所が途中になっています。`profile_frame` は必ず**いちばん最後**へ足します（このSQLはそうなっています）。
+- **`42P16: cannot change data type of view column "total_score"`**
+  2026-09-15 に実際に出たエラーです（予行演習で止まったので、本番には何も残っていません）。
+  `rhythm_total_rankings.total_score` の型が、このSQLが作ろうとした型と違うと出ます。
+  いまのSQLは本番と同じ **numeric** で作るように直してあるので、もう出ません。
+  もし別の環境で出たときは、先頭の点検が「どう直せばよいか」を日本語で教えて止まります。
+  経緯は [`../../spec/PROFILE_FRAME.md`](../../spec/PROFILE_FRAME.md) §6.1。
