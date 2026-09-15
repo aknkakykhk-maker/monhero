@@ -16,16 +16,33 @@
 
 `PROFILE_FRAMES` が正本。1件は `{ id, name, kind, released, desc, className?, src? }`。
 
-| id | 名前 | kind | released | 見た目 |
-| --- | --- | --- | --- | --- |
-| `none` | フレームなし | `none` | true | 何も重ねない（＝これまでの見た目） |
-| `silver` | シルバー | `css` | true | 銀の輪 |
-| `gold` | ゴールド | `css` | true | 金の輪 |
-| `blue` | ブルー | `css` | true | 青の輪 |
-| `pink` | ピンク | `css` | true | 桃色の輪 |
+`none`（フレームなし）＋ **12色**。並び順は `PROFILE_FRAMES` のとおり。
 
-最初の5つは**画像を1枚も増やしていない**（`kind:'css'` で `conic-gradient` の輪を描く）。
+`none` / `silver` / `gold` / `white` / `black` / `red` / `orange` / `green` / `aqua` / `blue` /
+`purple` / `pink` / `rainbow`
+
+すべて**画像を1枚も増やしていない**（`kind:'css'` で `conic-gradient` の輪を描く）。
 一覧はヘルプへ手で書き写さず、`{ t:'data', id:'profileFrames' }` が実データから表を作る。
+
+> **既存のidは消さない・変えない。** 選んでいる人がいるし、ランキングの記録
+> （`profile_frame` 列）にも入っている（CLAUDE.md ⑦）。色を増やすときは並びへ足すだけにする。
+> 2026-09-15 に `silver` / `gold` / `blue` / `pink` の4色から8色足して12色にしたときも、
+> 既存の4つはそのまま残した。
+
+### 2.0 輪の太さ（2026-09-15・ユーザー指摘「太すぎてかっこ悪い」）
+
+太さは px で書かず、`inset` と `mask` の割合で決める。いまの値は
+
+| | 値 |
+| --- | --- |
+| `.mh-profile-frame` の `inset` | `-5.5%` |
+| `.mh-profile-frame-ring` のくり抜き | 内側 `86.5%` |
+| 輪の太さ（アイコン幅に対して） | **7.5%** — 32pxで約2.4px / 80pxで約6.0px |
+| アイコンにかぶさる量 | 半径の **4%** だけ（ほとんど隠さない） |
+
+はじめは 13.7%（80pxで11px）あって太すぎた。`node tools/ranking/profile-frame-check.js` が
+この3つ（太すぎない・小さくても見える・アイコンを隠さない）を数字で見張るので、
+値を戻してしまったら気づける。
 
 ### 2.1 未公開の豪華フレーム（`released:false`・2026-09-15）
 
@@ -97,9 +114,9 @@
 
 - 既存の `BreederIcon` は**変えていない**。`ProfileAvatar` がその外側に枠を足すだけ
 - **大きさの指定（`w-8 h-8` など）は外側へ**付ける。内側は `w-full h-full`
-- 枠の太さは `inset:-7%` と `mask: radial-gradient(closest-side, …)` の**割合**で決まるので、
-  ランキングの 32px でもプロフィールの 80px でも同じ見え方になる（実測：32px で約2.2px、
-  48px で約3.4px はみ出す）
+- 枠の太さは `inset:-5.5%` と `mask: radial-gradient(closest-side, …)` の**割合**で決まるので、
+  ランキングの 32px でもプロフィールの 80px でも同じ見え方になる（実測：32px で 1.75px、
+  80px で 4.4px はみ出す）
 - `pointer-events:none`。枠がボタンのタップを食べない
 - 外側は `overflow:visible`。**フレーム側を切らない**（内側のクリップは `ProfileAvatar` が持つ）
 - `badge`（プロフィールの鉛筆マークなど）は内側の円に入り、これまでどおりクリップされる

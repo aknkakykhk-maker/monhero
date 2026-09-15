@@ -113,10 +113,22 @@ const F = ctx.out;
 check('保存キーは新設の mh_profile_frame_v1', F.PROFILE_FRAME_KEY === 'mh_profile_frame_v1', F.PROFILE_FRAME_KEY);
 check('既定は「フレームなし」', F.PROFILE_FRAME_NONE_ID === 'none');
 const released = F.releasedProfileFrames().map(f => f.id);
-check('最初から選べるのは none/silver/gold/blue/pink の5つ',
-  JSON.stringify(released) === JSON.stringify(['none', 'silver', 'gold', 'blue', 'pink']), released.join(','));
+// ★最初に出した5つのidは消さない・変えない。選んでいる人がいるし、
+//   ランキングの記録(profile_frame 列)にも入っている(CLAUDE.md ⑦)
+check('最初に出したidが残っている(選んでいる人がいる)',
+  ['none', 'silver', 'gold', 'blue', 'pink'].every(id => released.includes(id)), released.join(','));
+check('「フレームなし」が先頭', released[0] === 'none');
+check('色が複数ある', released.length >= 5, `${released.length - 1}色`);
 check('公開フレームは画像を増やさない(kind:none か css だけ)',
   F.releasedProfileFrames().every(f => f.kind === 'none' || f.kind === 'css'));
+// CSSの書き忘れは「枠を選んだのに何も出ない」になり、画面はふつうに動いてしまう
+const cssFrames = F.releasedProfileFrames().filter(f => f.kind === 'css');
+check('公開フレームにはCSSの名前が付いている',
+  cssFrames.every(f => typeof f.className === 'string' && f.className.startsWith('mh-profile-frame-')),
+  cssFrames.map(f => f.className).join(' '));
+check('その名前のCSSが実際に書いてある',
+  cssFrames.every(f => bootstrap.includes(`.${f.className}{`)),
+  cssFrames.filter(f => !bootstrap.includes(`.${f.className}{`)).map(f => f.id).join(',') || 'すべてあり');
 check('どのフレームにも名前と説明がある',
   F.PROFILE_FRAMES.every(f => typeof f.name === 'string' && f.name && typeof f.desc === 'string' && f.desc));
 check('idが重複していない', new Set(F.PROFILE_FRAMES.map(f => f.id)).size === F.PROFILE_FRAMES.length);
@@ -200,9 +212,22 @@ check('画像フレームは縦横比を変えない(object-contain)', bootstrap
 check('フレームはタップを食べない(pointer-events:none)', /\.mh-profile-frame\{[^}]*pointer-events:none/.test(bootstrap));
 check('フレーム側を overflow で切らない', /\.mh-profile-avatar\{[^}]*overflow:visible/.test(bootstrap));
 check('太さは割合で決める(小さいアイコンでもズレない)',
-  /\.mh-profile-frame\{[^}]*inset:-\d+%/.test(bootstrap) && /\.mh-profile-frame-ring\{[^}]*closest-side/.test(bootstrap));
-check('5色ぶんのCSSがある(silver/gold/blue/pink)',
-  ['silver', 'gold', 'blue', 'pink'].every(id => bootstrap.includes(`.mh-profile-frame-${id}{`)));
+  /\.mh-profile-frame\{[^}]*inset:-[\d.]+%/.test(bootstrap) && /\.mh-profile-frame-ring\{[^}]*closest-side/.test(bootstrap));
+// 2026-09-15・ユーザー指摘「太すぎてかっこ悪い」。細くしたものを元へ戻さないよう数字で見張る。
+// 輪の太さ = 箱の半径 × (1 - くり抜く割合)。アイコンの幅に対する割合で見る
+{
+  const insetPct = parseFloat((bootstrap.match(/\.mh-profile-frame\{[^}]*inset:(-?[\d.]+)%/) || [])[1]);
+  const maskPct = parseFloat((bootstrap.match(/\.mh-profile-frame-ring\{[^}]*closest-side,#0000 0 ([\d.]+)%/) || [])[1]);
+  const box = 1 - insetPct / 50;                      // 箱の幅 ÷ アイコンの幅
+  const thickness = (box / 2) * (1 - maskPct / 100);  // 輪の太さ ÷ アイコンの幅
+  check('輪が太すぎない(アイコン幅の10%以下)', thickness > 0 && thickness <= 0.10,
+    `${(thickness * 100).toFixed(1)}% — 32pxで${(thickness * 32).toFixed(1)}px / 80pxで${(thickness * 80).toFixed(1)}px`);
+  check('小さいアイコンでも見える太さがある(32pxで2px以上)', thickness * 32 >= 2,
+    `${(thickness * 32).toFixed(1)}px`);
+  check('アイコンをほとんど隠さない(かぶさるのは半径の5%まで)',
+    (0.5 - (box / 2) * (maskPct / 100)) <= 0.5 * 0.05,
+    `${(((0.5 - (box / 2) * (maskPct / 100)) / 0.5) * 100).toFixed(1)}%`);
+}
 
 // ===== ③ 反映先 =====
 check('HOMEのプロフィールアイコンに反映する', homeScreen.includes('frameId={profileFrameId}'));

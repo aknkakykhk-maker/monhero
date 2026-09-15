@@ -308,14 +308,32 @@ const PROFILE_FRAME_KEY = 'mh_profile_frame_v1';
 const PROFILE_FRAMES = [
   { id:'none',   name:'フレームなし', kind:'none', released:true,
     desc:'飾り枠を付けません。これまでと同じ見た目です。' },
+  // ★既存のidは消さない・変えない(選んでいる人がいるし、ランキングの記録にも入っている)。
+  //   色を増やすときは、この並びへ足すだけにする。
   { id:'silver', name:'シルバー', kind:'css', released:true, className:'mh-profile-frame-silver',
     desc:'落ち着いた銀色の細い輪。どのアイコンにも合わせやすい枠です。' },
   { id:'gold',   name:'ゴールド', kind:'css', released:true, className:'mh-profile-frame-gold',
     desc:'金色の輪。少しだけ華やかに見せたいときに。' },
+  { id:'white',  name:'ホワイト', kind:'css', released:true, className:'mh-profile-frame-white',
+    desc:'白い輪。色の濃いアイコンをすっきり見せます。' },
+  { id:'black',  name:'ブラック', kind:'css', released:true, className:'mh-profile-frame-black',
+    desc:'黒い輪。明るいアイコンを引き締めます。' },
+  { id:'red',    name:'レッド',   kind:'css', released:true, className:'mh-profile-frame-red',
+    desc:'赤い輪。いちばん目を引く色です。' },
+  { id:'orange', name:'オレンジ', kind:'css', released:true, className:'mh-profile-frame-orange',
+    desc:'橙色の輪。あたたかい印象になります。' },
+  { id:'green',  name:'グリーン', kind:'css', released:true, className:'mh-profile-frame-green',
+    desc:'緑の輪。落ち着いた自然な色合いです。' },
+  { id:'aqua',   name:'アクア',   kind:'css', released:true, className:'mh-profile-frame-aqua',
+    desc:'水色の輪。涼しげで明るい色です。' },
   { id:'blue',   name:'ブルー',   kind:'css', released:true, className:'mh-profile-frame-blue',
     desc:'澄んだ青の輪。暗い背景でもはっきり見えます。' },
+  { id:'purple', name:'パープル', kind:'css', released:true, className:'mh-profile-frame-purple',
+    desc:'紫の輪。落ち着いた華やかさがあります。' },
   { id:'pink',   name:'ピンク',   kind:'css', released:true, className:'mh-profile-frame-pink',
     desc:'やわらかい桃色の輪。明るい印象になります。' },
+  { id:'rainbow',name:'レインボー', kind:'css', released:true, className:'mh-profile-frame-rainbow',
+    desc:'七色がぐるりと回る輪。いちばん目立つ色です。' },
   // ==================== 豪華フレーム(2026-09-15・未公開) ====================
   // ユーザーから受け取った透過PNG6枚。released:false なので
   //   ・選択画面に出ない   ・保存値に入っても「フレームなし」になる
