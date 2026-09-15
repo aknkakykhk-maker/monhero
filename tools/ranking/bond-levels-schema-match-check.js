@@ -86,7 +86,10 @@ const upsertColumns = rowBuildMatch
 // あとから足した列も「本物のテーブルの姿」に含める。
 // create table だけを見ていると、alter table で足した列が「実在しない列」に見えてしまう
 // (2026-09-15、profile_frame を足したときに実際にそうなった)。
-const BOND_ADDED_SQL = [path.join(REPO_ROOT, 'docs', 'sql', 'rankings', 'PROFILE_FRAME_BOND_APPLY.sql')];
+const BOND_ADDED_SQL = [
+  path.join(REPO_ROOT, 'docs', 'sql', 'rankings', 'PROFILE_FRAME_BOND_APPLY.sql'),
+  path.join(REPO_ROOT, 'docs', 'sql', 'bond-levels', 'BOND_LEVELS_BREEDER_ID_APPLY.sql'),
+];
 const bondAddedColumns = [];
 for (const file of BOND_ADDED_SQL) {
   if (!fs.existsSync(file)) continue;
@@ -179,7 +182,7 @@ check('upsertは周回の進行を止めない(結果を待たない)',
 // 絆Lv・総合力ランキングだけは rankings ではなくこのテーブルから読むので、
 // 枠を出すにはここへも同じ列が要る。列が無い環境で絆Lvの記録を落とさないことまで見る
 if (bondAddedColumns.length > 0) {
-  console.log('\n== bond_levels に足した列(プロフィールフレーム) ==');
+  console.log('\n== bond_levels に足した列(プロフィールフレーム・ブリーダーID) ==');
   console.log(`  SQLが足す列: ${bondAddedColumns.map(c => `${c.name}(${c.type})`).join(', ')}`);
   check('足した列はNULL許容(既存の記録を書き換えない)',
     bondAddedColumns.every(c => !new RegExp(`add column if not exists ${c.name} ${c.type} not null`).test(c.sql)),
@@ -190,6 +193,22 @@ if (bondAddedColumns.length > 0) {
     /sbFetchBondLevels[\s\S]{0,1500}return sbFetchBondLevels\(requestId\)/.test(src));
   check('「列があるか」は rankings とは別に覚える(片方だけ適用しても取り違えない)',
     src.includes('_bondLevelsProfileFrameUnavailable') && src.includes('_rankingProfileFrameUnavailable'));
+  // ブリーダーID(2026-09-16)。フレームとも rankings とも別の旗で覚える
+  check('ブリーダーIDの列も、無い環境では外して送り直す(絆Lvの記録を落とさない)',
+    /sbUpsertBondLevels[\s\S]{0,2200}return sbUpsertBondLevels\(bondLevelRowsWithoutBreederId\(rows\)\)/.test(src));
+  check('ブリーダーIDの列も、無い環境では外して取り直す(一覧は出る)',
+    /_bondLevelsBreederIdUnavailable = true;[\s\S]{0,200}return sbFetchBondLevels\(requestId\)/.test(src));
+  check('ブリーダーIDの「列があるか」もフレームとは別に覚える',
+    src.includes('_bondLevelsBreederIdUnavailable') && src.includes('_bondLevelsProfileFrameUnavailable'));
+  check('主キーは変えない(既存の行を壊さない)',
+    bondAddedColumns.every(c => !/(alter table public\.bond_levels[\s\S]{0,200}(drop constraint|add constraint) bond_levels_pkey)/.test(c.sql)));
+  check('人を束ねるのは名前でなくブリーダーID',
+    /const resolveBreederIdFor = \(entry\)/.test(src)
+    && /bondRankingKeyOf[\s\S]{0,200}resolveBreederIdFor/.test(src)
+    && /aggregateBreederLevels[\s\S]{0,400}resolveBreederIdFor/.test(src));
+  check('改名で2行になった記録は、消さずに表示でまとめる(行は消さない)',
+    !/delete from public\.bond_levels/i.test(bondAddedColumns.map(c => c.sql).join('\n'))
+    && /絆Lvの高いほうを残す/.test(src));
 }
 
 // ---- ④ rankings へ後から足した列(ターン数・到達WAVE)も同じ考え方で照合する ----

@@ -1112,16 +1112,38 @@ function MonsterHeroGame() {
     }
   }, [onboardingPreview, breederName, breederIcon, profileFrameId]);
 
-  // 選んだその場で画面へ反映し、同時に保存する。保存できなくても表示だけは変わる
+  // 選んだその場で画面へ反映し、同時に保存する。保存できなくても表示だけは変わる。
+  // ランキングへの反映は下の「いまの見た目を登録する」effectが受け持つので、ここでは送らない
   const selectProfileFrame = useCallback((id) => {
     const next = normalizeProfileFrameId(id);
     setProfileFrameId(next);
     Promise.resolve(storeSet(PROFILE_FRAME_KEY, next, false)).catch(error => {
       console.error('[profile-frame] save failed:', error && error.message ? error.message : error);
     });
-    // ランキングの見え方もその場で変える
-    publishBreederProfile({ profileFrame: next });
-  }, [publishBreederProfile]);
+  }, []);
+
+  // ===== ランキングに出す「いまの見た目」を登録する(2026-09-16) =====
+  //
+  // ★送るきっかけを決めるのはここ1か所だけ。ボタンごとに書かない。
+  //
+  // 最初は「名前・アイコン・フレームを変えたとき」と「記録を送ったあと」だけで送っていた。
+  // ところがそれだと、**一度も変えていない人の行がいつまでも登録されない**。
+  // 登録が無い人は引き当てようが無いので、ランキングはその人の行を
+  // 「記録に写した当時の見た目」で出し続ける。画面によって枠が出たり出なかったりして見えるのは
+  // (2026-09-16・ユーザー指摘「フレームが反映されてる画面とされてない画面がある」)、
+  // 記録ごとに写っている値が違うためで、引き当てが効いていないときの症状そのものだった。
+  //
+  // そこで「起動してセーブデータを読み終えた時点」でも1回送る。値が変わったときも同じ道を通る。
+  // 同じ値を何度も送らないよう、最後に送った内容を覚えておく(upsertなので送っても害は無いが、
+  // 通信を無駄にしない)。失敗しても進行は止めない。
+  const lastPublishedProfileRef = useRef('');
+  useEffect(() => {
+    if (!dataLoaded || !onboarded || onboardingPreview) return;
+    const signature = `${breederName || ''}\u0000${breederIcon || ''}\u0000${normalizeProfileFrameId(profileFrameId)}`;
+    if (lastPublishedProfileRef.current === signature) return;
+    lastPublishedProfileRef.current = signature;
+    publishBreederProfile();
+  }, [dataLoaded, onboarded, onboardingPreview, breederName, breederIcon, profileFrameId, publishBreederProfile]);
   // 呼び方の上書き(絆Lv6から自由入力)。助手ごとに分けて持つので、みゅあとききで別々に決められる
   const [assistantCallStyles, setAssistantCallStylesState] = useState({});
   const assistantCallStyle = assistantCallStyles[selectedAssistantId] || null;
@@ -2111,8 +2133,6 @@ function MonsterHeroGame() {
       // (既存の記録と同じくNULLのままにしておく)。列がまだ無い環境は送信側で吸収する
       ...(rankingProfileFrameValue(profileFrameId) ? { profile_frame: rankingProfileFrameValue(profileFrameId) } : {}),
     };
-    // ランキングに出す「いまの見た目」も1行だけ上書きしておく(待たせない)
-    publishBreederProfile();
     const outcome = await persistRankingScore({
       row, insertScore: sbInsertRhythmScore,
       saveLocal: async (error) => {
@@ -2125,7 +2145,7 @@ function MonsterHeroGame() {
     });
     if (outcome.error && !outcome.localSaved) console.error('[rhythm-ranking] submit outcome error:', outcome.error?.message || outcome.error);
     else if (outcome.nationalSaved) console.info('[rhythm-ranking] submitted', { difficulty: difficultyKey, score: row.score });
-  }, [breederName, breederLevel, breederIcon, profileFrameId, publishBreederProfile]);
+  }, [breederName, breederLevel, breederIcon, profileFrameId]);
 
   // 送れなかった記録を、あとで送り直す(2026-09-13)。
   //
@@ -4401,20 +4421,22 @@ function MonsterHeroGame() {
       ? Number(runClearTurnsRef.current) : null;
     // プロフィールフレーム(2026-09-15)。フレームなしのときは列ごと付けない
     const profileFrame = rankingProfileFrameValue(profileFrameId);
+    // ブリーダーID(2026-09-16)。これまでバトルの記録には付けていなかったため、
+    // ブリーダーLv・絆Lv・総合力は名前でしか人を見分けられなかった
+    // (ユーザー指摘「名前管理はさすがにだめだろ」)。作れない端末では列ごと付けない。
+    // 順位・スコア・集計には関わらず、「誰の行か」を決めるためだけに使う
+    const breederId = await ensureBreederId();
     const row = { difficulty: diff, user_name: name, hero: heroName, party, score: finalScore, level, icon, clear_id: clearId,
+      ...(breederId ? { breeder_id: breederId } : {}),
       ...(reachedWave != null ? { reached_wave: reachedWave } : {}),
       ...(profileFrame ? { profile_frame: profileFrame } : {}),
       ...(clearTurns != null ? { turns: clearTurns } : {}) };
-    // ランキングに出す「いまの見た目」も1行だけ上書きしておく(2026-09-16)。
-    // 設定を一度も変えていない人でも、遊べばここで登録される。
-    // 待たせない(結果画面が遅れないように)し、失敗しても周回の進行は止めない
-    publishBreederProfile();
     // 絆Lvの正本テーブルへも同じ内容を書く(1人1個体1行で上書き)。
     // 結果画面はスコア送信の完了を待つので、こちらは待たせない(待つと最大8秒ぶん
     // リザルトが遅れる)。書けなくても次の周回で書き直されるし、一覧は記録側の
     // 集計で補われる。テーブルがまだ無い環境ではsbUpsertBondLevels側が気付いて以後スキップする
     try {
-      const bondRows = bondLevelRowsFromParty(name, icon, party, profileFrame);
+      const bondRows = bondLevelRowsFromParty(name, icon, party, profileFrame, breederId);
       if (bondRows.length) {
         Promise.resolve(sbUpsertBondLevels(bondRows)).catch(bondErr => {
           console.error('[ranking] bond_levels upsert failed:', bondErr && bondErr.message ? bondErr.message : bondErr);
@@ -4582,7 +4604,6 @@ function MonsterHeroGame() {
     setOnboardingName(n); // はじめての設定で「名前が決まった」判定に使う
     // デバッグの「見るだけ」表示では保存しない(いま遊んでいるデータを変えないため)
     if (!onboardingPreview) await storeSet('mh_breeder_name', n, false);
-    publishBreederProfile({ userName: n });
     setShowNameEdit(false);
   };
   // はじめての設定の完了。プロフィール画面で名前とアイコンが決まったら押せる。
@@ -13896,7 +13917,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               </div>
               <div className="grid grid-cols-4 gap-3 mb-4">
                 {breederIconOptions().filter(m=>m.source==='starter').map(m=>(
-                  <button key={m.id} onClick={()=>{setBreederIcon(m.id); setOnboardingIcon(m.id); if(!onboardingPreview) storeSet('mh_breeder_icon', m.id, false); publishBreederProfile({icon:m.id}); setShowIconPicker(false);}} className={`aspect-square rounded-2xl overflow-hidden border-2 active:scale-90 ${breederIcon===m.id?'border-indigo-400 ring-2 ring-indigo-400':'border-slate-700'}`}>
+                  <button key={m.id} onClick={()=>{setBreederIcon(m.id); setOnboardingIcon(m.id); if(!onboardingPreview) storeSet('mh_breeder_icon', m.id, false); setShowIconPicker(false);}} className={`aspect-square rounded-2xl overflow-hidden border-2 active:scale-90 ${breederIcon===m.id?'border-indigo-400 ring-2 ring-indigo-400':'border-slate-700'}`}>
                     <BreederIcon src={m.src} id={m.id} alt={m.name} roundedClass="rounded-2xl" className="w-full h-full"/>
                   </button>
                 ))}
@@ -13905,7 +13926,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <h4 className="text-[10px] font-black text-amber-400 mb-2 text-center uppercase tracking-widest flex items-center justify-center gap-1"><ShoppingBag size={10}/>マーケット購入アイコン</h4>
                 <div className="grid grid-cols-4 gap-3 mb-4">
                   {breederIconOptions({ownedMarketIconIds:ownedMarketIcons}).filter(m=>m.source==='market').map(m=>(
-                    <button key={m.id} onClick={()=>{setBreederIcon(m.id); setOnboardingIcon(m.id); if(!onboardingPreview) storeSet('mh_breeder_icon', m.id, false); publishBreederProfile({icon:m.id}); setShowIconPicker(false);}} className={`aspect-square rounded-2xl overflow-hidden border-2 active:scale-90 ${breederIcon===m.id?'border-amber-400 ring-2 ring-amber-400':'border-slate-700'}`}>
+                    <button key={m.id} onClick={()=>{setBreederIcon(m.id); setOnboardingIcon(m.id); if(!onboardingPreview) storeSet('mh_breeder_icon', m.id, false); setShowIconPicker(false);}} className={`aspect-square rounded-2xl overflow-hidden border-2 active:scale-90 ${breederIcon===m.id?'border-amber-400 ring-2 ring-amber-400':'border-slate-700'}`}>
                       <BreederIcon src={m.src} id={m.id} alt={m.name} roundedClass="rounded-2xl" className="w-full h-full"/>
                     </button>
                   ))}

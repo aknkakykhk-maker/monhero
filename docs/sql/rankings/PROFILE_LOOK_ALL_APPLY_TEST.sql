@@ -9,9 +9,12 @@
 --   ② public.breeder_profiles テーブルを1つ作る
 --      (名前・アイコン・フレームを「いま設定しているもの」で出すため)
 --      = BREEDER_PROFILE_APPLY.sql と同じ内容
+--   ③ public.bond_levels へ breeder_id 列を1つ足す
+--      (絆Lv・総合力で、人を名前ではなくIDで見分けるため)
+--      = BOND_LEVELS_BREEDER_ID_APPLY.sql と同じ内容
 --
--- ★①②は1つのトランザクションに入っているので、途中で1つでもおかしければ
---   **両方とも**元に戻る。中途半端に片方だけ当たった状態にはならない。
+-- ★①②③は1つのトランザクションに入っているので、途中で1つでもおかしければ
+--   **すべて**元に戻る。中途半端に一部だけ当たった状態にはならない。
 -- ★既存の記録(rankings / bond_levels の行)は1行も書き換えない。DROP・DELETE・UPDATEをしない。
 -- ★順位・スコア・集計には一切関わらない。変わるのは見た目だけ。
 --
@@ -57,6 +60,15 @@ select count(*) as row_count from public.bond_levels;
 
 create temporary table rankings_count_before on commit drop as
 select count(*) as row_count from public.rankings;
+
+create temporary table bond_look_pkey_before on commit drop as
+select a.attname
+from pg_constraint c
+join pg_class t on t.oid = c.conrelid
+join pg_namespace n on n.oid = t.relnamespace
+join unnest(c.conkey) k(attnum) on true
+join pg_attribute a on a.attrelid = t.oid and a.attnum = k.attnum
+where n.nspname = 'public' and t.relname = 'bond_levels' and c.contype = 'p';
 
 create temporary table bond_frame_security_before on commit drop as
 select c.relrowsecurity, c.relforcerowsecurity
@@ -197,7 +209,56 @@ revoke delete on public.breeder_profiles from anon, authenticated;
 
 
 -- ============================================================
--- ここから先は検査。1つでも違えば例外で止まり、①②とも元に戻る
+-- ③ bond_levels へ breeder_id 列を足す
+--    (絆Lv・総合力で、人を名前ではなくIDで見分けるため)
+-- ============================================================
+--
+-- bond_levels は主キーが (user_name, individual_id) ＝「名前 × 個体」なので、
+-- 人を見分ける手がかりが名前しか無かった。そのため改名すると同じマスモンが2行に分かれ、
+-- 同名の人がいるとどれが誰か決められなかった
+-- (2026-09-16・ユーザー指摘「名前管理はさすがにだめだろ」)。
+--
+-- ★主キーは変えない。既存の行はそのまま残り、これまでのupsertも今までどおり動く。
+--   改名して増えてしまった古い行は、**画面側がIDでまとめて1行に見せる**。
+--   行を消すのは危険なので消さない。
+
+do $$
+declare
+  id_type text;
+begin
+  select data_type into id_type from information_schema.columns
+  where table_schema = 'public' and table_name = 'bond_levels' and column_name = 'breeder_id';
+  if id_type is not null and id_type <> 'text' then
+    raise exception 'public.bond_levels.breeder_id が別の型(%)で既に存在します。内容を確認してから再実行してください', id_type;
+  end if;
+end $$;
+
+alter table public.bond_levels add column if not exists breeder_id text;
+
+comment on column public.bond_levels.breeder_id is
+  '端末ごとに1回だけ作るブリーダーID(mh_breeder_id_v1)。rankings.breeder_id と同じ値。NULL = IDが無かった時代の記録。表示で人を見分けるためだけに使い、順位や集計には影響しない。';
+
+do $$
+begin
+  if not exists (select 1 from pg_constraint c
+                 join pg_class t on t.oid = c.conrelid
+                 join pg_namespace n on n.oid = t.relnamespace
+                 where n.nspname = 'public' and t.relname = 'bond_levels'
+                   and c.conname = 'bond_levels_breeder_id_shape') then
+    alter table public.bond_levels add constraint bond_levels_breeder_id_shape
+      check (breeder_id is null or (length(breeder_id) between 1 and 100));
+  end if;
+end $$;
+
+-- 「同じ人の同じ個体」をまとめて引くための索引。
+-- ★unique にはしない。改名して2行になっている人が既にいる可能性があり、
+--   unique を付けると適用そのものが失敗する(既存データを壊しにいかない)。
+create index if not exists bond_levels_breeder_idx
+  on public.bond_levels (breeder_id, individual_id);
+
+
+-- ============================================================
+-- ここから先は検査。1つでも違えば例外で止まり、①②③とも元に戻る
 -- ============================================================
 
 -- ①の検査: 既存の中身と権限に触っていないこと
@@ -261,6 +322,30 @@ begin
   if not exists (select 1 from information_schema.columns
                  where table_schema='public' and table_name='bond_levels' and column_name='profile_frame') then
     raise exception 'bond_levels.profile_frame が作られていません';
+  end if;
+
+  -- ③ 主キーを変えていないこと(既存の行を壊さない)
+  if exists (
+    (select * from bond_look_pkey_before except
+     select a.attname from pg_constraint c
+     join pg_class t on t.oid = c.conrelid
+     join pg_namespace n on n.oid = t.relnamespace
+     join unnest(c.conkey) k(attnum) on true
+     join pg_attribute a on a.attrelid = t.oid and a.attnum = k.attnum
+     where n.nspname = 'public' and t.relname = 'bond_levels' and c.contype = 'p')
+    union all
+    (select a.attname from pg_constraint c
+     join pg_class t on t.oid = c.conrelid
+     join pg_namespace n on n.oid = t.relnamespace
+     join unnest(c.conkey) k(attnum) on true
+     join pg_attribute a on a.attrelid = t.oid and a.attnum = k.attnum
+     where n.nspname = 'public' and t.relname = 'bond_levels' and c.contype = 'p'
+     except select * from bond_look_pkey_before)
+  ) then raise exception 'bond_levels の主キーが変化しました'; end if;
+
+  if not exists (select 1 from information_schema.columns
+                 where table_schema='public' and table_name='bond_levels' and column_name='breeder_id') then
+    raise exception 'bond_levels.breeder_id が作られていません';
   end if;
 end $$;
 
@@ -374,7 +459,26 @@ with facts as (
   select 13, '② breeder_profiles の件数(最初は0)',
          (select count(*)::text from public.breeder_profiles)
   union all
-  select 14, 'rankings の件数(触っていないこと)',
+  select 14, '③ bond_levels.breeder_id 列',
+         (select coalesce(string_agg(data_type || ' / ' || is_nullable, ''), 'なし')
+          from information_schema.columns
+          where table_schema='public' and table_name='bond_levels' and column_name='breeder_id')
+         || ' (text / YES なら正しい)'
+  union all
+  select 15, '③ bond_levels の索引',
+         (select coalesce(string_agg(indexname, ', ' order by indexname), 'なし')
+          from pg_indexes where schemaname='public' and tablename='bond_levels'
+            and indexname = 'bond_levels_breeder_idx')
+  union all
+  select 16, '③ bond_levels の主キー(変わっていないこと)',
+         (select coalesce(string_agg(a.attname, ', ' order by a.attname), 'なし')
+          from pg_constraint c join pg_class t on t.oid=c.conrelid
+          join pg_namespace n on n.oid=t.relnamespace
+          join unnest(c.conkey) k(attnum) on true
+          join pg_attribute a on a.attrelid=t.oid and a.attnum=k.attnum
+          where n.nspname='public' and t.relname='bond_levels' and c.contype='p')
+  union all
+  select 17, 'rankings の件数(触っていないこと)',
          (select count(*)::text from public.rankings)
 )
 select item as "項目", value as "値" from facts order by sort;

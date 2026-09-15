@@ -31,9 +31,10 @@ for (const text of ['勇者モン情報なし', '編成情報なし（過去の�
   check(`古い記録でも代わりの文言が出る: ${text}`, has(text));
 }
 check('ブリーダーLv集計後も編成・スコアを保持', has('{ ...r, userName: name, level: lv }'));
-// 絆Lvは個体ごとに畳むが、誰の記録か・アイコン・プロフィールフレームは残す
+// 絆Lvは個体ごとに畳むが、誰の記録か・ブリーダーID・アイコン・プロフィールフレームは残す
+// (ブリーダーIDは「同じ人か」を名前でなくIDで見分けるために要る。2026-09-16)
 check('絆Lv集計後もプレイヤー詳細を保持',
-  has("const entry={userName,icon:record.icon,profileFrame:record.profileFrame??null,monName,bondLevel,"));
+  has("const entry={userName,breederId:record.breederId??null,icon:record.icon,profileFrame:record.profileFrame??null,monName,bondLevel,"));
 
 // --- ③ 編成の詳細 ---
 check('行をタップすると編成の詳細が開く',

@@ -75,6 +75,10 @@ const CHAIN = [
 ];
 // 絆Lv・総合力ランキングは rankings ではなく bond_levels から読む(別テーブル)
 const BOND_CHAIN = ['BOND_LEVELS_APPLY.sql'];
+// bond_levels へあとから足すSQL(同じフォルダから持ってくる)
+const BOND_EXTRA_SQL = [
+  'BOND_LEVELS_BREEDER_ID_APPLY_TEST.sql', 'BOND_LEVELS_BREEDER_ID_APPLY.sql', 'BOND_LEVELS_BREEDER_ID_VERIFY.sql',
+];
 const BOND_SQL_DIR = path.join(ROOT, 'docs/sql/bond-levels');
 const PROFILE_FRAME_FILES = [
   'PROFILE_FRAME_APPLY_TEST.sql', 'PROFILE_FRAME_APPLY.sql', 'PROFILE_FRAME_VERIFY.sql',
@@ -97,7 +101,7 @@ try {
   for (const f of [...CHAIN, ...PROFILE_FRAME_FILES]) {
     fs.copyFileSync(path.join(SQL_DIR, f), path.join(WORK, f));
   }
-  for (const f of BOND_CHAIN) fs.copyFileSync(path.join(BOND_SQL_DIR, f), path.join(WORK, f));
+  for (const f of [...BOND_CHAIN, ...BOND_EXTRA_SQL]) fs.copyFileSync(path.join(BOND_SQL_DIR, f), path.join(WORK, f));
   fs.writeFileSync(path.join(WORK, '00-base.sql'), BASE);
   fs.chmodSync(WORK, 0o755);
   for (const f of fs.readdirSync(WORK)) fs.chmodSync(path.join(WORK, f), 0o644);
@@ -185,6 +189,41 @@ try {
   const bondVerify = runFile('PROFILE_FRAME_BOND_VERIFY.sql');
   check('絆Lv: 確認用が通る', bondVerify.status === 0, (bondVerify.stderr || '').trim().slice(0, 200));
 
+  // ===== 絆Lvを名前でなくIDで見分ける(bond_levels.breeder_id) =====
+  const bidBefore = query('select count(*) from public.bond_levels');
+  const BOND_PKEY_SQL = "select string_agg(a.attname, ',' order by a.attname) from pg_constraint c join pg_class t on t.oid=c.conrelid join pg_namespace n on n.oid=t.relnamespace join unnest(c.conkey) k(attnum) on true join pg_attribute a on a.attrelid=t.oid and a.attnum=k.attnum where n.nspname='public' and t.relname='bond_levels' and c.contype='p'";
+  const bidPkeyBefore = query(BOND_PKEY_SQL);
+  const bidTest = runFile('BOND_LEVELS_BREEDER_ID_APPLY_TEST.sql');
+  check('絆LvのID: 予行演習が通る', bidTest.status === 0, (bidTest.stderr || '').trim().slice(0, 300));
+  check('絆LvのID: 予行演習は本番へ何も残さない(rollback)',
+    query("select count(*) from information_schema.columns where table_name='bond_levels' and column_name='breeder_id'") === '0');
+  const bidApply = runFile('BOND_LEVELS_BREEDER_ID_APPLY.sql');
+  check('絆LvのID: 本番用が通る', bidApply.status === 0, (bidApply.stderr || '').trim().slice(0, 300));
+  const bidAgain = runFile('BOND_LEVELS_BREEDER_ID_APPLY.sql');
+  check('絆LvのID: もう一度流しても壊れない', bidAgain.status === 0, (bidAgain.stderr || '').trim().slice(0, 200));
+  check('絆LvのID: breeder_id 列ができている(NULL許容のtext)',
+    query("select data_type||'/'||is_nullable from information_schema.columns where table_name='bond_levels' and column_name='breeder_id'") === 'text/YES');
+  check('絆LvのID: 主キーは変えていない(既存の行を壊さない)',
+    query(BOND_PKEY_SQL) === bidPkeyBefore,
+    `前 ${bidPkeyBefore}`);
+  check('絆LvのID: 既存の記録は1件も減っていない', query('select count(*) from public.bond_levels') === bidBefore, `前 ${bidBefore}`);
+  check('絆LvのID: 列を足す前の記録は NULL のまま',
+    query('select count(*) from public.bond_levels where breeder_id is not null') === '0');
+  check('絆LvのID: 索引ができている',
+    query("select count(*) from pg_indexes where tablename='bond_levels' and indexname='bond_levels_breeder_idx'") === '1');
+  // 改名すると同じ人の同じ個体が2行に分かれる(＝画面側でまとめる必要がある)ことを、実データで示す
+  psql(`-q -d ${DB} -c "insert into public.bond_levels (user_name,individual_id,monster_id,mon_name,bond_level,icon,breeder_id) values ('むかしの名前','m-7','Mocchi','モッチー',70,'Mocchi','bd-9')"`);
+  psql(`-q -d ${DB} -c "insert into public.bond_levels (user_name,individual_id,monster_id,mon_name,bond_level,icon,breeder_id) values ('いまの名前','m-7','Mocchi','モッチー',72,'Mocchi','bd-9') on conflict (user_name,individual_id) do update set bond_level=excluded.bond_level"`);
+  check('絆LvのID: 改名すると2行に分かれる(消さずに表示でまとめる前提)',
+    query("select count(*) from public.bond_levels where breeder_id='bd-9' and individual_id='m-7'") === '2');
+  check('絆LvのID: そのときIDは同じ(まとめる手がかりになる)',
+    query("select count(distinct breeder_id) from public.bond_levels where individual_id='m-7'") === '1');
+  const bidBad = psql(`-q -d ${DB} -c "insert into public.bond_levels (user_name,individual_id,mon_name,bond_level,breeder_id) values ('x','m-bad2','モッチー',1,'${'a'.repeat(101)}')"`);
+  check('絆LvのID: 長すぎるIDは検査制約が弾く',
+    bidBad.status !== 0 && /bond_levels_breeder_id_shape/.test(bidBad.stderr || ''));
+  const bidVerify = runFile('BOND_LEVELS_BREEDER_ID_VERIFY.sql');
+  check('絆LvのID: 確認用が通る', bidVerify.status === 0, (bidVerify.stderr || '').trim().slice(0, 200));
+
   // ===== ランキングに出す「いまの見た目」(breeder_profiles) =====
   const rankingsBefore = query('select count(*) from public.rankings');
   const profTest = runFile('BREEDER_PROFILE_APPLY_TEST.sql');
@@ -227,15 +266,17 @@ try {
 
   buildBase(DB_ALL, true);
   const allRankingsBefore = queryOn(DB_ALL, 'select count(*) from public.rankings');
-  check('まとめ: 試す前は①②どちらも入っていない',
+  check('まとめ: 試す前は①②③どれも入っていない',
     queryOn(DB_ALL, "select count(*) from information_schema.columns where table_name='bond_levels' and column_name='profile_frame'") === '0'
-    && queryOn(DB_ALL, "select count(*) from information_schema.tables where table_name='breeder_profiles'") === '0');
+    && queryOn(DB_ALL, "select count(*) from information_schema.tables where table_name='breeder_profiles'") === '0'
+    && queryOn(DB_ALL, "select count(*) from information_schema.columns where table_name='bond_levels' and column_name='breeder_id'") === '0');
 
   const allTest = runFileOn(DB_ALL, 'PROFILE_LOOK_ALL_APPLY_TEST.sql');
   check('まとめ: 予行演習が通る', allTest.status === 0, (allTest.stderr || '').trim().slice(0, 300));
   check('まとめ: 予行演習は本番へ何も残さない(rollback)',
     queryOn(DB_ALL, "select count(*) from information_schema.columns where table_name='bond_levels' and column_name='profile_frame'") === '0'
-    && queryOn(DB_ALL, "select count(*) from information_schema.tables where table_name='breeder_profiles'") === '0');
+    && queryOn(DB_ALL, "select count(*) from information_schema.tables where table_name='breeder_profiles'") === '0'
+    && queryOn(DB_ALL, "select count(*) from information_schema.columns where table_name='bond_levels' and column_name='breeder_id'") === '0');
 
   const allApply = runFileOn(DB_ALL, 'PROFILE_LOOK_ALL_APPLY.sql');
   check('まとめ: 本番用が通る', allApply.status === 0, (allApply.stderr || '').trim().slice(0, 300));
@@ -243,6 +284,12 @@ try {
     queryOn(DB_ALL, "select data_type||'/'||is_nullable from information_schema.columns where table_name='bond_levels' and column_name='profile_frame'") === 'text/YES');
   check('まとめ: 1回で② breeder_profiles が入る',
     queryOn(DB_ALL, "select count(*) from information_schema.tables where table_name='breeder_profiles'") === '1');
+  check('まとめ: 1回で③ bond_levels.breeder_id が入る',
+    queryOn(DB_ALL, "select data_type||'/'||is_nullable from information_schema.columns where table_name='bond_levels' and column_name='breeder_id'") === 'text/YES');
+  check('まとめ: ③の索引もできている',
+    queryOn(DB_ALL, "select count(*) from pg_indexes where tablename='bond_levels' and indexname='bond_levels_breeder_idx'") === '1');
+  check('まとめ: ③でも絆Lvの主キーは変えていない',
+    queryOn(DB_ALL, BOND_PKEY_SQL) === 'individual_id,user_name', queryOn(DB_ALL, BOND_PKEY_SQL));
   check('まとめ: 記録(rankings)を1件も触っていない',
     queryOn(DB_ALL, 'select count(*) from public.rankings') === allRankingsBefore, `前 ${allRankingsBefore}`);
   check('まとめ: 絆Lvの記録も1件も減っていない',
@@ -262,11 +309,12 @@ try {
   // 片方だけ当たっている環境から流しても通ること(個別SQLを先に当ててしまった人向け)
   const halfDone = (() => {
     buildBase(DB_ALL_BARE, true);
-    runFileOn(DB_ALL_BARE, 'PROFILE_FRAME_BOND_APPLY.sql');   // ①だけ当てた状態
+    runFileOn(DB_ALL_BARE, 'PROFILE_FRAME_BOND_APPLY.sql');            // ①だけ当てた状態
+    runFileOn(DB_ALL_BARE, 'BOND_LEVELS_BREEDER_ID_APPLY.sql');        // ③も個別に当てた状態
     return runFileOn(DB_ALL_BARE, 'PROFILE_LOOK_ALL_APPLY.sql');
   })();
-  check('まとめ: ①だけ先に当てていても通る', halfDone.status === 0, (halfDone.stderr || '').trim().slice(0, 300));
-  check('まとめ: ①だけ先に当てていても②が入る',
+  check('まとめ: ①③を先に個別で当てていても通る', halfDone.status === 0, (halfDone.stderr || '').trim().slice(0, 300));
+  check('まとめ: ①③を先に当てていても②が入る',
     queryOn(DB_ALL_BARE, "select count(*) from information_schema.tables where table_name='breeder_profiles'") === '1');
 
   const allVerify = runFileOn(DB_ALL, 'PROFILE_LOOK_ALL_VERIFY.sql');
@@ -283,10 +331,13 @@ try {
     && queryOn(DB_ALL_BARE, "select count(*) from information_schema.tables where table_name='breeder_profiles'") === '0');
 
   // 個別SQLとまとめSQLが食い違わないこと(片方だけ直して忘れるのを防ぐ)
-  const readSql = (f) => fs.readFileSync(path.join(SQL_DIR, f), 'utf8');
+  const readSql = (f) => fs.readFileSync(fs.existsSync(path.join(SQL_DIR, f)) ? path.join(SQL_DIR, f) : path.join(BOND_SQL_DIR, f), 'utf8');
   const allBody = readSql('PROFILE_LOOK_ALL_APPLY.sql');
   const KEY_LINES = [
     'alter table public.bond_levels add column if not exists profile_frame text;',
+    'alter table public.bond_levels add column if not exists breeder_id text;',
+    "alter table public.bond_levels add constraint bond_levels_breeder_id_shape",
+    'on public.bond_levels (breeder_id, individual_id);',
     "alter table public.bond_levels add constraint bond_levels_profile_frame_shape",
     'create table if not exists public.breeder_profiles (',
     'constraint breeder_profiles_pkey primary key (breeder_id),',

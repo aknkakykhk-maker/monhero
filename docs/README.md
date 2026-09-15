@@ -49,7 +49,7 @@ Claude 固有の会話・公開フローは [`CLAUDE.md`](../CLAUDE.md) が正�
 | フォルダ | 対象 |
 | --- | --- |
 | [`sql/rankings/`](sql/rankings/) | `rankings` テーブル本体、緊急対応、重複整理 |
-| [`sql/bond-levels/`](sql/bond-levels/) | `bond_levels` テーブル（2026-08-14 適用済み） |
+| [`sql/bond-levels/`](sql/bond-levels/) | `bond_levels` テーブル（2026-08-14 適用済み）。`BOND_LEVELS_BREEDER_ID_APPLY.sql` は人を名前でなくIDで見分けるための列（`PROFILE_LOOK_ALL_APPLY.sql` にも含む） |
 | [`sql/run-stats/`](sql/run-stats/) | `rankings` へ後から足した `turns` / `reached_wave`（2026-08-15 適用済み） |
 
 再現可能な構造変更の正本はリポジトリルートの [`supabase/migrations/`](../supabase/migrations/)。

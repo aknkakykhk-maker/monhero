@@ -136,12 +136,24 @@ for (const [name, src, label] of [
     || new RegExp(`const ${name}=\\(row\\)=>\\{[\\s\\S]{0,500}?applyLatestBreederProfile`).test(src));
 }
 
-// ===== ⑥ 見た目を変えたその場で送ること =====
-check('フレームを変えたら送る', /selectProfileFrame[\s\S]{0,600}publishBreederProfile\(\{ profileFrame: next \}\)/.test(app));
-check('名前を変えたら送る', /handleSaveName[\s\S]{0,600}publishBreederProfile\(\{ userName: n \}\)/.test(app));
-check('アイコンを変えたら送る', (app.match(/publishBreederProfile\(\{icon:m\.id\}\)/g) || []).length === 2);
-check('遊んだときも送る(設定を変えていない人も登録される)',
-  (app.match(/^\s*publishBreederProfile\(\);/gm) || []).length >= 2);
+// ===== ⑥ 「いまの見た目」を送るきっかけ =====
+// 2026-09-16。最初は「変えたとき」と「遊んだあと」だけで送っていたが、それだと
+// **一度も変えていない人の行が登録されない**。登録が無い人は引き当てようが無いので、
+// ランキングはその人を記録に写した当時の見た目で出し続ける(画面ごとに枠が出たり
+// 出なかったりして見える)。起動してセーブデータを読み終えた時点でも送るようにした。
+const publishEffect = (app.match(/const lastPublishedProfileRef[\s\S]{0,900}?publishBreederProfile\(\);[\s\S]{0,200}?\]\);/) || [''])[0];
+check('送るきっかけを決める場所を抽出できる', publishEffect.length > 0);
+check('送るのは1か所だけ(ボタンごとに書かない)',
+  (app.match(/publishBreederProfile\(/g) || []).length === 1,   // 呼び出しはeffectの1回だけ
+  `${(app.match(/publishBreederProfile\(/g) || []).length}か所`);
+check('起動してセーブデータを読み終えたら送る(一度も変えていない人も登録される)',
+  /dataLoaded/.test(publishEffect) && /if \(!dataLoaded/.test(publishEffect));
+check('名前・アイコン・フレームのどれかが変わったら送る',
+  ['breederName', 'breederIcon', 'profileFrameId'].every(name => publishEffect.includes(name)));
+check('同じ内容は送り直さない(通信を無駄にしない)',
+  /lastPublishedProfileRef\.current === signature/.test(publishEffect)
+  && /lastPublishedProfileRef\.current = signature/.test(publishEffect));
+check('はじめての設定が終わるまでは送らない', /if \(!dataLoaded \|\| !onboarded \|\| onboardingPreview\) return;/.test(publishEffect));
 check('「見るだけ」のプレビュー中は送らない',
   /publishBreederProfile = useCallback[\s\S]{0,300}if \(onboardingPreview\) return;/.test(app));
 check('IDが作れない端末では送らない(その場合は記録の値で出る)',
