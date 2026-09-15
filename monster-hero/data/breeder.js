@@ -343,28 +343,30 @@ const PROFILE_FRAMES = [
   //
   // ★公開の条件・入手方法・価格・レアリティ・期間はまだ何も決めていない。
   //   決まったら released:true にする(そのとき「持っているか」の仕組みも要る)。
-  // ★name と desc は仮。公開するときに決め直す。
+  // ★name と desc は仮。公開するときに決め直す(2026-09-15にユーザーが呼び名を指定)。
   // ★hole は「穴の直径 ÷ 画像の幅」を実測した値。位置合わせに使う(profileFrameImageInset)。
   // ★元絵は 1254px / 1.2〜1.9MB だったものを 384px へ落として入れてある(6枚で281KB)。
   //   表示は最大80pxなので、これで足りる(CLAUDE.md ⑥-2)。
-  { id:'frame_sakura_mochi', name:'桜もち', kind:'image', released:false, hole:0.656,
-    src:'images/profile-frames/sakura-mochi.png?v=7c842f6ed7bf',
-    desc:'桜の花びらと桜もちをあしらった、春の和風フレーム。' },
-  { id:'frame_dark_lord', name:'魔王', kind:'image', released:false, hole:0.682,
-    src:'images/profile-frames/dark-lord.png?v=fc64f9da9806',
-    desc:'紫の宝玉と金の角をいただく、闇をまとったフレーム。' },
-  { id:'frame_beat_suezo', name:'モンヒロビート', kind:'image', released:false, hole:0.724,
-    src:'images/profile-frames/beat-suezo.png?v=0b43f621dd89',
+  { id:'frame_mocchi', name:'モッチー', kind:'image', released:false, hole:0.656,
+    src:'images/profile-frames/mocchi.png?v=7c842f6ed7bf',
+    desc:'桜の花びらと桜もちをあしらった、モッチーの和風フレーム。' },
+  { id:'frame_moo', name:'ムー', kind:'image', released:false, hole:0.682,
+    src:'images/profile-frames/moo.png?v=fc64f9da9806',
+    desc:'紫の宝玉と金の角をいただく、ラスボス「ムー」のフレーム。' },
+  { id:'frame_suezo_beat', name:'スエゾービート', kind:'image', released:false, hole:0.724,
+    src:'images/profile-frames/suezo-beat.png?v=0b43f621dd89',
     desc:'スエゾーと音符が跳ねる、モンヒロビートのフレーム。' },
-  { id:'frame_pink_ribbon', name:'ピンクリボン', kind:'image', released:false, hole:0.755,
-    src:'images/profile-frames/pink-ribbon.png?v=09b871ec464c',
-    desc:'紅いリボンと白いくつ下をあしらったフレーム。' },
-  { id:'frame_pink_bloom', name:'ピンクブルーム', kind:'image', released:false, hole:0.698,
-    src:'images/profile-frames/pink-bloom.png?v=fb89e34bd92b',
-    desc:'金の縁飾りと桜、幾重ものリボンで華やかにしたフレーム。' },
-  { id:'frame_pink_radiance', name:'ピンクレイディアンス', kind:'image', released:false, hole:0.677,
-    src:'images/profile-frames/pink-radiance.png?v=88238cde0306',
-    desc:'髪とリボンが渦を巻き、星とハートが輝くいちばん豪華なフレーム。' },
+  // ききの3枚は同じ意匠を段階的に豪華にしたもの。呼び分けは教えカードの3段階
+  // (BREEDER_EVO_NAMES.kiki の 応援 → 本気 → 全力全開)にそろえてある。
+  { id:'frame_kiki_ouen', name:'きき・応援', kind:'image', released:false, hole:0.755,
+    src:'images/profile-frames/kiki-ouen.png?v=09b871ec464c',
+    desc:'紅いリボンと白いくつ下をあしらった、ききのフレーム。' },
+  { id:'frame_kiki_honki', name:'きき・本気', kind:'image', released:false, hole:0.698,
+    src:'images/profile-frames/kiki-honki.png?v=fb89e34bd92b',
+    desc:'金の縁飾りと桜、幾重ものリボンで華やかにした、ききのフレーム。' },
+  { id:'frame_kiki_zenryoku', name:'きき・全力全開', kind:'image', released:false, hole:0.677,
+    src:'images/profile-frames/kiki-zenryoku.png?v=88238cde0306',
+    desc:'髪とリボンが渦を巻き、星とハートが輝く、ききのいちばん豪華なフレーム。' },
 ];
 const PROFILE_FRAME_MAP = Object.freeze(Object.fromEntries(PROFILE_FRAMES.map(frame => [frame.id, frame])));
 // 画像フレームの「穴」を、アイコンの円のどこに合わせるか。
