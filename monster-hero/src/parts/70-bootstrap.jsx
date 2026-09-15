@@ -1140,16 +1140,27 @@ const createAnimationStyle = () => {
        ブリーダーアイコンの外側へ重ねる飾り枠。アイコン画像そのものには触らない。
        ★太さを px で書かない。inset と mask を割合で書いてあるので、ランキングの 32px でも
          プロフィールの 80px でも同じ見え方になる(小さいアイコンでもズレない)。
+       ★2026-09-15にユーザー指摘「太すぎてかっこ悪い」。輪の太さをアイコン幅の 13.7% から
+         7.5% へ細くし、アイコンへかぶさる量もほとんど無くした(内側 86.5% でくり抜く)。
+         32px で約2.4px・80px で約6px。細くしたぶん、輪郭の影を少し濃くして小さくても見えるようにした。
        ★枠は円の外へはみ出すので、外側の .mh-profile-avatar は overflow:visible のままにする。
        ★pointer-events:none。枠がボタンのタップを食べない。 */
     .mh-profile-avatar{position:relative;display:flex;align-items:center;justify-content:center;overflow:visible}
-    .mh-profile-frame{position:absolute;inset:-7%;z-index:1;border-radius:50%;pointer-events:none}
+    .mh-profile-frame{position:absolute;inset:-5.5%;z-index:1;border-radius:50%;pointer-events:none}
     /* 輪の内側をくり抜く。内側 76% は透明、そこから外が枠。割合なので大きさに比例する */
-    .mh-profile-frame-ring{-webkit-mask:radial-gradient(closest-side,#0000 0 76%,#000 76.5%);mask:radial-gradient(closest-side,#0000 0 76%,#000 76.5%);filter:drop-shadow(0 0 1px #000a)}
+    .mh-profile-frame-ring{-webkit-mask:radial-gradient(closest-side,#0000 0 86.5%,#000 87%);mask:radial-gradient(closest-side,#0000 0 86.5%,#000 87%);filter:drop-shadow(0 0 1px #000c)}
     .mh-profile-frame-silver{background:conic-gradient(from 210deg,#f8fafc,#94a3b8,#e2e8f0,#64748b,#f1f5f9,#94a3b8,#f8fafc)}
     .mh-profile-frame-gold{background:conic-gradient(from 210deg,#fef3c7,#b45309,#fde68a,#92400e,#fffbeb,#d97706,#fef3c7)}
+    .mh-profile-frame-white{background:conic-gradient(from 210deg,#ffffff,#cbd5e1,#f8fafc,#94a3b8,#ffffff,#cbd5e1,#ffffff)}
+    .mh-profile-frame-black{background:conic-gradient(from 210deg,#64748b,#0f172a,#475569,#020617,#94a3b8,#1e293b,#64748b)}
+    .mh-profile-frame-red{background:conic-gradient(from 210deg,#fee2e2,#991b1b,#fca5a5,#7f1d1d,#fff1f2,#dc2626,#fee2e2)}
+    .mh-profile-frame-orange{background:conic-gradient(from 210deg,#ffedd5,#c2410c,#fdba74,#9a3412,#fff7ed,#ea580c,#ffedd5)}
+    .mh-profile-frame-green{background:conic-gradient(from 210deg,#dcfce7,#15803d,#86efac,#14532d,#f0fdf4,#16a34a,#dcfce7)}
+    .mh-profile-frame-aqua{background:conic-gradient(from 210deg,#cffafe,#0e7490,#67e8f9,#155e75,#ecfeff,#06b6d4,#cffafe)}
     .mh-profile-frame-blue{background:conic-gradient(from 210deg,#e0f2fe,#0369a1,#7dd3fc,#075985,#f0f9ff,#0284c7,#e0f2fe)}
+    .mh-profile-frame-purple{background:conic-gradient(from 210deg,#f3e8ff,#6b21a8,#d8b4fe,#581c87,#faf5ff,#9333ea,#f3e8ff)}
     .mh-profile-frame-pink{background:conic-gradient(from 210deg,#fce7f3,#be185d,#f9a8d4,#9d174d,#fff1f2,#db2777,#fce7f3)}
+    .mh-profile-frame-rainbow{background:conic-gradient(from 210deg,#ef4444,#f59e0b,#fde047,#22c55e,#06b6d4,#3b82f6,#a855f7,#ec4899,#ef4444)}
     /* 画像フレーム(豪華フレーム用)。透過PNGを縦横比そのままで重ねる。
        大きさと位置は絵ごとに profileFrameImageStyle が出す(穴の大きさが絵ごとに違うため)。
        ここでは object-fit だけを決める(width/height を auto のままにすると広がらない) */

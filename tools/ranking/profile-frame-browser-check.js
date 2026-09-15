@@ -16,7 +16,16 @@
 //   ⑥ 枠が親要素に切られていない / タップを食べない
 const { chromium } = require('playwright');
 
+const fs = require('fs');
+const path = require('path');
+
 const PAGE_URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/index.html';
+// 選択画面に並ぶはずのフレーム名。data/breeder.js の released:true から作る
+// (検査へ名前を書き写すと、色を足したときにここだけ古くなる)
+const EXPECTED_FRAMES = [...fs
+  .readFileSync(path.join(__dirname, '../../monster-hero/data/breeder.js'), 'utf8')
+  .matchAll(/\{\s*id:'[a-z_]+',\s*name:'([^']+)',\s*kind:'(?:none|css)',\s*released:true/g)]
+  .map(m => m[1]);
 const results = [];
 const check = (name, ok, detail = '') => { results.push(ok); console.log(`  ${ok ? 'OK' : 'NG'}  ${name}${detail ? ' — ' + detail : ''}`); };
 
@@ -133,10 +142,13 @@ async function run() {
   await page.waitForTimeout(800);
 
   const options = await page.evaluate(() => [...document.querySelectorAll('button[data-profile-frame-option]')].map(b => b.textContent.trim()));
-  check('選べるのは5種類', options.length === 5, options.join(' / '));
-  check('シルバー・ゴールド・ブルー・ピンクが並ぶ',
-    ['フレームなし', 'シルバー', 'ゴールド', 'ブルー', 'ピンク'].every(n => options.includes(n)), options.join(' / '));
-  check('④ 未公開の豪華フレームは出ない', !options.some(n => n.includes('未公開')), options.join(' / '));
+  // 並ぶ数と名前は data/breeder.js の公開フレームと一致していること(画面側へ書き写さない)
+  check('公開フレームが全部並ぶ', options.length === EXPECTED_FRAMES.length,
+    `画面 ${options.length}件 / データ ${EXPECTED_FRAMES.length}件`);
+  check('名前がデータどおり', EXPECTED_FRAMES.every(n => options.includes(n)), options.join(' / '));
+  check('④ 未公開の豪華フレームは出ない',
+    !options.some(n => /未公開|桜もち|魔王|モンヒロビート|ピンクリボン|ピンクブルーム|ピンクレイディアンス/.test(n)),
+    options.join(' / '));
 
   // ゴールドを押す
   await page.evaluate(() => {
@@ -199,7 +211,9 @@ async function run() {
   const rankFrames = await page.evaluate(() => [...document.querySelectorAll('[data-ranking-kind="breeder"] .mh-profile-frame')]
     .map(el => { const r = el.getBoundingClientRect(), p = el.parentElement.getBoundingClientRect();
       return { out: +((r.width - p.width) / 2).toFixed(2), parent: Math.round(p.width) }; }));
-  check('小さいランキングアイコンでも枠の太さが残る(32px前後で2px以上はみ出す)',
+  // 2026-09-15にユーザー指摘「太すぎてかっこ悪い」を受けて細くした。細くしすぎて
+  // 32pxで消えてしまわないこと(はみ出し1.5px以上)を、実寸で見張る
+  check('小さいランキングアイコンでも枠が見える(32px前後で1.5px以上はみ出す)',
     rankFrames.length > 0 && rankFrames.every(f => f.parent <= 40 && f.out >= 1.5),
     rankFrames.map(f => `${f.parent}px/+${f.out}`).join(' '));
   check('iPhone縦画面で横にはみ出さない',
