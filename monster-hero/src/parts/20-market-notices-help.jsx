@@ -103,9 +103,11 @@ const BreederIcon = ({ src, id, alt='', className='', roundedClass='rounded-full
 const ProfileFrameLayer = ({ frameId }) => {
   const frame = profileFrameById(normalizeProfileFrameId(frameId));
   if (!frame || frame.kind === 'none') return null;
-  // 画像フレームは透過PNGをそのまま重ねる。object-contain なので縦横比は変わらない
+  // 画像フレームは透過PNGをそのまま重ねる。object-contain なので縦横比は変わらない。
+  // 重ねる大きさと位置は絵ごとに違う(穴の大きさが違う)ので、profileFrameImageStyle が出す
   if (frame.kind === 'image') return (
-    <img src={frame.src} alt="" aria-hidden="true" draggable={false} className="mh-profile-frame mh-profile-frame-image"/>
+    <img src={frame.src} alt="" aria-hidden="true" draggable={false}
+      style={profileFrameImageStyle(frame)} className="mh-profile-frame mh-profile-frame-image"/>
   );
   return <span aria-hidden="true" className={`mh-profile-frame mh-profile-frame-ring ${frame.className||''}`}/>;
 };

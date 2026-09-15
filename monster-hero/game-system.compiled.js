@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: db040a0bcb63b3d2
+// source-sha256: 62c28b46f0507898
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d4d6c1378d2f6d4d
+// generated-sha256: ff5ce5d4a1e06dd0
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-15 18:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-15 22:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -14409,12 +14409,14 @@ const ProfileFrameLayer = ({
 }) => {
   const frame = profileFrameById(normalizeProfileFrameId(frameId));
   if (!frame || frame.kind === 'none') return null;
-  // 画像フレームは透過PNGをそのまま重ねる。object-contain なので縦横比は変わらない
+  // 画像フレームは透過PNGをそのまま重ねる。object-contain なので縦横比は変わらない。
+  // 重ねる大きさと位置は絵ごとに違う(穴の大きさが違う)ので、profileFrameImageStyle が出す
   if (frame.kind === 'image') return /*#__PURE__*/React.createElement("img", {
     src: frame.src,
     alt: "",
     "aria-hidden": "true",
     draggable: false,
+    style: profileFrameImageStyle(frame),
     className: "mh-profile-frame mh-profile-frame-image"
   });
   return /*#__PURE__*/React.createElement("span", {
@@ -58179,10 +58181,10 @@ function MonsterHeroGame() {
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] text-amber-300 font-black mb-2"
     }, "\uD83D\uDDBC\uFE0F \u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u30D5\u30EC\u30FC\u30E0\u898B\u305F\u76EE\u78BA\u8A8D\uFF08\u672A\u516C\u958B\u3076\u3093\u3082\u8868\u793A\u30FB\u4FDD\u5B58\u3057\u307E\u305B\u3093\uFF09"), /*#__PURE__*/React.createElement("div", {
-      className: "grid grid-cols-4 gap-2"
+      className: "grid grid-cols-3 gap-x-3 gap-y-7"
     }, PROFILE_FRAMES.map(frame => /*#__PURE__*/React.createElement("div", {
       key: frame.id,
-      className: "flex flex-col items-center gap-1"
+      className: "flex flex-col items-center gap-2.5"
     }, /*#__PURE__*/React.createElement("span", {
       className: "mh-profile-avatar w-12 h-12"
     }, /*#__PURE__*/React.createElement("span", {
@@ -58202,6 +58204,7 @@ function MonsterHeroGame() {
       alt: "",
       "aria-hidden": "true",
       draggable: false,
+      style: profileFrameImageStyle(frame),
       className: "mh-profile-frame mh-profile-frame-image"
     }), !frame.released && frame.kind === 'css' && /*#__PURE__*/React.createElement("span", {
       "aria-hidden": "true",
@@ -65333,8 +65336,10 @@ const createAnimationStyle = () => {
     .mh-profile-frame-gold{background:conic-gradient(from 210deg,#fef3c7,#b45309,#fde68a,#92400e,#fffbeb,#d97706,#fef3c7)}
     .mh-profile-frame-blue{background:conic-gradient(from 210deg,#e0f2fe,#0369a1,#7dd3fc,#075985,#f0f9ff,#0284c7,#e0f2fe)}
     .mh-profile-frame-pink{background:conic-gradient(from 210deg,#fce7f3,#be185d,#f9a8d4,#9d174d,#fff1f2,#db2777,#fce7f3)}
-    /* 画像フレーム(豪華フレーム用)。透過PNGを縦横比そのままで重ねる */
-    .mh-profile-frame-image{inset:-16%;display:block;width:auto;height:auto;object-fit:contain}
+    /* 画像フレーム(豪華フレーム用)。透過PNGを縦横比そのままで重ねる。
+       大きさと位置は絵ごとに profileFrameImageStyle が出す(穴の大きさが絵ごとに違うため)。
+       ここでは object-fit だけを決める(width/height を auto のままにすると広がらない) */
+    .mh-profile-frame-image{display:block;object-fit:contain}
     /* 転生オーラ画像。同じPNGの主炎・残光・足元炎を別周期で動かし、本体とUIには発光を掛けない。 */
     .mh-reincarnate-stack{isolation:isolate}.mh-reincarnate-aura{position:absolute;z-index:-1;inset:-34%;display:block;pointer-events:none;overflow:visible;contain:layout style}.mh-monster-card-name{position:relative;z-index:2}
     .mh-reincarnate-flame{position:absolute;inset:0;display:block;transform-origin:center bottom;will-change:transform,opacity}

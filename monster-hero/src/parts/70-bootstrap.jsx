@@ -1150,8 +1150,10 @@ const createAnimationStyle = () => {
     .mh-profile-frame-gold{background:conic-gradient(from 210deg,#fef3c7,#b45309,#fde68a,#92400e,#fffbeb,#d97706,#fef3c7)}
     .mh-profile-frame-blue{background:conic-gradient(from 210deg,#e0f2fe,#0369a1,#7dd3fc,#075985,#f0f9ff,#0284c7,#e0f2fe)}
     .mh-profile-frame-pink{background:conic-gradient(from 210deg,#fce7f3,#be185d,#f9a8d4,#9d174d,#fff1f2,#db2777,#fce7f3)}
-    /* 画像フレーム(豪華フレーム用)。透過PNGを縦横比そのままで重ねる */
-    .mh-profile-frame-image{inset:-16%;display:block;width:auto;height:auto;object-fit:contain}
+    /* 画像フレーム(豪華フレーム用)。透過PNGを縦横比そのままで重ねる。
+       大きさと位置は絵ごとに profileFrameImageStyle が出す(穴の大きさが絵ごとに違うため)。
+       ここでは object-fit だけを決める(width/height を auto のままにすると広がらない) */
+    .mh-profile-frame-image{display:block;object-fit:contain}
     /* 転生オーラ画像。同じPNGの主炎・残光・足元炎を別周期で動かし、本体とUIには発光を掛けない。 */
     .mh-reincarnate-stack{isolation:isolate}.mh-reincarnate-aura{position:absolute;z-index:-1;inset:-34%;display:block;pointer-events:none;overflow:visible;contain:layout style}.mh-monster-card-name{position:relative;z-index:2}
     .mh-reincarnate-flame{position:absolute;inset:0;display:block;transform-origin:center bottom;will-change:transform,opacity}

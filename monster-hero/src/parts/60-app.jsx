@@ -12476,15 +12476,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   デバッグ専用なので更新履歴・ヘルプには載せない(CLAUDE.md ⑤の但し書き) */}
               <section data-debug-profile-frames className="rounded-2xl border-2 border-amber-500/60 bg-amber-950/20 p-3">
                 <div className="text-[10px] text-amber-300 font-black mb-2">🖼️ プロフィールフレーム見た目確認（未公開ぶんも表示・保存しません）</div>
-                <div className="grid grid-cols-4 gap-2">
+                {/* 豪華フレームはアイコンの外へ大きく出るので、3列にして上下の間を広く取る
+                    (4列だと隣どうし・名前と重なって確認しづらい) */}
+                <div className="grid grid-cols-3 gap-x-3 gap-y-7">
                   {PROFILE_FRAMES.map(frame=>(
-                    <div key={frame.id} className="flex flex-col items-center gap-1">
+                    <div key={frame.id} className="flex flex-col items-center gap-2.5">
                       <span className="mh-profile-avatar w-12 h-12">
                         <span className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-full">
                           {resolveIconUrl(breederIcon)?<BreederIcon src={resolveIconUrl(breederIcon)} id={breederIcon} alt="" className="w-full h-full"/>:<User size={22} className="text-indigo-400"/>}
                         </span>
                         <ProfileFrameLayer frameId={frame.released?frame.id:null}/>
-                        {!frame.released&&frame.kind==='image'&&<img src={frame.src} alt="" aria-hidden="true" draggable={false} className="mh-profile-frame mh-profile-frame-image"/>}
+                        {!frame.released&&frame.kind==='image'&&<img src={frame.src} alt="" aria-hidden="true" draggable={false} style={profileFrameImageStyle(frame)} className="mh-profile-frame mh-profile-frame-image"/>}
                         {!frame.released&&frame.kind==='css'&&<span aria-hidden="true" className={`mh-profile-frame mh-profile-frame-ring ${frame.className||''}`}/>}
                       </span>
                       <span className="text-[8px] font-black text-slate-300 leading-tight text-center">{frame.name}{frame.released?'':'（未公開）'}</span>
