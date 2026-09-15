@@ -852,6 +852,8 @@ SQLの適用とアプリの公開は**どちらが先でもよい**。列が無�
 - **絆Lv・総合力の順位や集計は何も変えない**
 - 適用は `docs/sql/rankings/PROFILE_FRAME_BOND_APPLY.sql`
   （手順は `PROFILE_FRAME_BOND_IPHONE_STEPS.md`）。§8.9 とは**独立**で、どちらが先でもよい
+- `breeder_profiles`（`docs/spec/BREEDER_PROFILE.md`）もまだなら、2本をまとめた
+  `docs/sql/rankings/PROFILE_LOOK_ALL_APPLY.sql` が1回で両方入れる（中身は同じ）
 
 ★アプリは**テーブルごとに別々に**「列があるか」を覚える
 （`_rankingProfileFrameUnavailable` と `_bondLevelsProfileFrameUnavailable`）。

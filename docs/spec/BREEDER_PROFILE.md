@@ -80,6 +80,13 @@ public.breeder_profiles   … 1人1行。breeder_id が主キー
 `docs/sql/rankings/BREEDER_PROFILE_APPLY.sql`
 （予行演習 `_TEST`、確認 `_VERIFY`、手順 `BREEDER_PROFILE_IPHONE_STEPS.md`）。
 
+**ふつうはこちらを使う**: `docs/sql/rankings/PROFILE_LOOK_ALL_APPLY.sql`。
+これ1本で `bond_levels.profile_frame`（RHYTHM_RANKING.md §8.10）とこの表の両方を、
+**1つのトランザクションで**作る。途中で1つでもおかしければ両方とも元に戻るので、
+片方だけ当たった状態にならない。中身は個別の2本とまったく同じ
+（`profile-frame-sql-check.js` が、要点の文がすべて入っているかを突き合わせる）。
+手順は `PROFILE_LOOK_ALL_IPHONE_STEPS.md`、確認は `PROFILE_LOOK_ALL_VERIFY.sql`。
+
 既存のテーブルには一切触らない。表がまだ無い環境では、アプリは「まだ準備中」として
 そのセッションでは以後さわらない（記録に写した値で今までどおり出る）ので、
 SQLの適用とアプリの公開はどちらが先でもよい。

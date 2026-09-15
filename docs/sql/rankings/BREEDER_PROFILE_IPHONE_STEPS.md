@@ -1,5 +1,9 @@
 # iPhoneでの「いまの見た目をランキングに出す」実行順
 
+> 🟢 **`PROFILE_FRAME_BOND_APPLY.sql`（絆Lv・総合力のフレーム）もまだなら、2本を1つにまとめた
+> [`PROFILE_LOOK_ALL_IPHONE_STEPS.md`](PROFILE_LOOK_ALL_IPHONE_STEPS.md) のほうが1回で済みます。**
+> 中身は同じです。こちらは個別に当てたいときの手順です。
+
 ランキングに出る**名前・アイコン・プロフィールフレーム**を、記録した当時のものではなく**いま設定しているもの**にするための作業です。新しいテーブル `public.breeder_profiles` を1つ作ります。
 
 **既存のテーブル（`rankings` / `bond_levels`）には一切触りません。** 記録も順位もスコアも変わりません。

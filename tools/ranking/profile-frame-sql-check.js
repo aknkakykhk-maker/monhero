@@ -80,11 +80,18 @@ const PROFILE_FRAME_FILES = [
   'PROFILE_FRAME_APPLY_TEST.sql', 'PROFILE_FRAME_APPLY.sql', 'PROFILE_FRAME_VERIFY.sql',
   'PROFILE_FRAME_BOND_APPLY_TEST.sql', 'PROFILE_FRAME_BOND_APPLY.sql', 'PROFILE_FRAME_BOND_VERIFY.sql',
   'BREEDER_PROFILE_APPLY_TEST.sql', 'BREEDER_PROFILE_APPLY.sql', 'BREEDER_PROFILE_VERIFY.sql',
+  // ①②を1本にまとめたもの(ユーザーはふつうこちらを流す)
+  'PROFILE_LOOK_ALL_APPLY_TEST.sql', 'PROFILE_LOOK_ALL_APPLY.sql', 'PROFILE_LOOK_ALL_VERIFY.sql',
 ];
+// まとめSQL用に、まっさらな土台をもう1つ作って試す(片方だけ当たっている状態で試しても意味が無いため)
+const DB_ALL = 'monhero_profile_look_all_check';
+const DB_ALL_BARE = 'monhero_profile_look_all_bare_check';
 
 const psql = (args) => spawnSync('su', ['postgres', '-c', `psql ${args}`], { encoding: 'utf8' });
-const runFile = (file) => psql(`-v ON_ERROR_STOP=1 -q -d ${DB} -f ${path.join(WORK, file)}`);
-const query = (sql) => (psql(`-tA -d ${DB} -c ${JSON.stringify(sql)}`).stdout || '').trim();
+const runFileOn = (db, file) => psql(`-v ON_ERROR_STOP=1 -q -d ${db} -f ${path.join(WORK, file)}`);
+const queryOn = (db, sql) => (psql(`-tA -d ${db} -c ${JSON.stringify(sql)}`).stdout || '').trim();
+const runFile = (file) => runFileOn(DB, file);
+const query = (sql) => queryOn(DB, sql);
 
 try {
   for (const f of [...CHAIN, ...PROFILE_FRAME_FILES]) {
@@ -205,8 +212,100 @@ try {
     profBad.status !== 0 && /breeder_profiles_frame_shape/.test(profBad.stderr || ''));
   const profVerify = runFile('BREEDER_PROFILE_VERIFY.sql');
   check('いまの見た目: 確認用が通る', profVerify.status === 0, (profVerify.stderr || '').trim().slice(0, 200));
+
+  // ===== ①②を1本にまとめた PROFILE_LOOK_ALL_*.sql =====
+  // ユーザーが実際に流すのはこちら。まっさらな土台をもう1つ作り、
+  // 「両方まだ当たっていない」状態から1回で両方入ることを確かめる。
+  const buildBase = (db, withRankingsFrame) => {
+    psql(`-q -c "drop database if exists ${db}"`);
+    psql(`-q -c "create database ${db}"`);
+    runFileOn(db, '00-base.sql');
+    for (const f of [...CHAIN, ...BOND_CHAIN]) runFileOn(db, f);
+    psql(`-q -d ${db} -c "insert into public.bond_levels (user_name,individual_id,monster_id,mon_name,bond_level,icon) values ('太郎','m-1','Mocchi','モッチー',50,'Mocchi'),('花子','m-2','Suezo','スエゾー',60,'Suezo')"`);
+    if (withRankingsFrame) runFileOn(db, 'PROFILE_FRAME_APPLY.sql');
+  };
+
+  buildBase(DB_ALL, true);
+  const allRankingsBefore = queryOn(DB_ALL, 'select count(*) from public.rankings');
+  check('まとめ: 試す前は①②どちらも入っていない',
+    queryOn(DB_ALL, "select count(*) from information_schema.columns where table_name='bond_levels' and column_name='profile_frame'") === '0'
+    && queryOn(DB_ALL, "select count(*) from information_schema.tables where table_name='breeder_profiles'") === '0');
+
+  const allTest = runFileOn(DB_ALL, 'PROFILE_LOOK_ALL_APPLY_TEST.sql');
+  check('まとめ: 予行演習が通る', allTest.status === 0, (allTest.stderr || '').trim().slice(0, 300));
+  check('まとめ: 予行演習は本番へ何も残さない(rollback)',
+    queryOn(DB_ALL, "select count(*) from information_schema.columns where table_name='bond_levels' and column_name='profile_frame'") === '0'
+    && queryOn(DB_ALL, "select count(*) from information_schema.tables where table_name='breeder_profiles'") === '0');
+
+  const allApply = runFileOn(DB_ALL, 'PROFILE_LOOK_ALL_APPLY.sql');
+  check('まとめ: 本番用が通る', allApply.status === 0, (allApply.stderr || '').trim().slice(0, 300));
+  check('まとめ: 1回で① bond_levels.profile_frame が入る',
+    queryOn(DB_ALL, "select data_type||'/'||is_nullable from information_schema.columns where table_name='bond_levels' and column_name='profile_frame'") === 'text/YES');
+  check('まとめ: 1回で② breeder_profiles が入る',
+    queryOn(DB_ALL, "select count(*) from information_schema.tables where table_name='breeder_profiles'") === '1');
+  check('まとめ: 記録(rankings)を1件も触っていない',
+    queryOn(DB_ALL, 'select count(*) from public.rankings') === allRankingsBefore, `前 ${allRankingsBefore}`);
+  check('まとめ: 絆Lvの記録も1件も減っていない',
+    queryOn(DB_ALL, 'select count(*) from public.bond_levels') === '2');
+  check('まとめ: 列を足す前の絆Lvの記録は NULL のまま',
+    queryOn(DB_ALL, 'select count(*) from public.bond_levels where profile_frame is not null') === '0');
+  check('まとめ: breeder_profiles に消す権限を与えていない',
+    queryOn(DB_ALL, "select count(*) from information_schema.role_table_grants where table_name='breeder_profiles' and grantee in ('anon','authenticated') and privilege_type='DELETE'") === '0');
+  check('まとめ: breeder_profiles のRLSが有効',
+    queryOn(DB_ALL, "select relrowsecurity from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relname='breeder_profiles'") === 't');
+  check('まとめ: 検査用に入れた行が残っていない(__apply_check__)',
+    queryOn(DB_ALL, "select count(*) from public.breeder_profiles") === '0');
+
+  const allAgain = runFileOn(DB_ALL, 'PROFILE_LOOK_ALL_APPLY.sql');
+  check('まとめ: もう一度流しても壊れない(二重適用に強い)', allAgain.status === 0, (allAgain.stderr || '').trim().slice(0, 200));
+
+  // 片方だけ当たっている環境から流しても通ること(個別SQLを先に当ててしまった人向け)
+  const halfDone = (() => {
+    buildBase(DB_ALL_BARE, true);
+    runFileOn(DB_ALL_BARE, 'PROFILE_FRAME_BOND_APPLY.sql');   // ①だけ当てた状態
+    return runFileOn(DB_ALL_BARE, 'PROFILE_LOOK_ALL_APPLY.sql');
+  })();
+  check('まとめ: ①だけ先に当てていても通る', halfDone.status === 0, (halfDone.stderr || '').trim().slice(0, 300));
+  check('まとめ: ①だけ先に当てていても②が入る',
+    queryOn(DB_ALL_BARE, "select count(*) from information_schema.tables where table_name='breeder_profiles'") === '1');
+
+  const allVerify = runFileOn(DB_ALL, 'PROFILE_LOOK_ALL_VERIFY.sql');
+  check('まとめ: 確認用が通る', allVerify.status === 0, (allVerify.stderr || '').trim().slice(0, 200));
+
+  // 前提が足りないときは、何も変えずに分かる言葉で止まること
+  buildBase(DB_ALL_BARE, false);   // rankings.profile_frame がまだ無い状態
+  const allMissing = runFileOn(DB_ALL_BARE, 'PROFILE_LOOK_ALL_APPLY.sql');
+  check('まとめ: 前提(rankings.profile_frame)が無ければ止まる',
+    allMissing.status !== 0 && /PROFILE_FRAME_APPLY\.sql/.test(allMissing.stderr || ''),
+    (allMissing.stderr || '').trim().slice(0, 200));
+  check('まとめ: 前提が無くて止まったときは何も残さない',
+    queryOn(DB_ALL_BARE, "select count(*) from information_schema.columns where table_name='bond_levels' and column_name='profile_frame'") === '0'
+    && queryOn(DB_ALL_BARE, "select count(*) from information_schema.tables where table_name='breeder_profiles'") === '0');
+
+  // 個別SQLとまとめSQLが食い違わないこと(片方だけ直して忘れるのを防ぐ)
+  const readSql = (f) => fs.readFileSync(path.join(SQL_DIR, f), 'utf8');
+  const allBody = readSql('PROFILE_LOOK_ALL_APPLY.sql');
+  const KEY_LINES = [
+    'alter table public.bond_levels add column if not exists profile_frame text;',
+    "alter table public.bond_levels add constraint bond_levels_profile_frame_shape",
+    'create table if not exists public.breeder_profiles (',
+    'constraint breeder_profiles_pkey primary key (breeder_id),',
+    'grant select, insert, update on public.breeder_profiles to anon, authenticated;',
+    'revoke delete on public.breeder_profiles from anon, authenticated;',
+  ];
+  check('まとめ: 個別SQLの要点をすべて含んでいる',
+    KEY_LINES.every(line => allBody.includes(line)),
+    KEY_LINES.filter(line => !allBody.includes(line)).join(' / '));
+  check('まとめ: 本番用はcommitで終わり、予行演習はrollbackで終わる',
+    /\ncommit;\n/.test(allBody) && !/\nrollback;/.test(allBody)
+    && /\nrollback;/.test(readSql('PROFILE_LOOK_ALL_APPLY_TEST.sql'))
+    && !/\ncommit;/.test(readSql('PROFILE_LOOK_ALL_APPLY_TEST.sql')));
+  check('まとめ: 記録を消す・書き換える文が1つも無い',
+    !/\b(drop\s+table|delete\s+from\s+public\.(rankings|bond_levels)|update\s+public\.(rankings|bond_levels)|truncate)\b/i.test(allBody));
 } finally {
   psql(`-q -c "drop database if exists ${DB}"`);
+  psql(`-q -c "drop database if exists ${DB_ALL}"`);
+  psql(`-q -c "drop database if exists ${DB_ALL_BARE}"`);
   try { fs.rmSync(WORK, { recursive: true, force: true }); } catch {}
 }
 
