@@ -79,6 +79,7 @@ const BOND_SQL_DIR = path.join(ROOT, 'docs/sql/bond-levels');
 const PROFILE_FRAME_FILES = [
   'PROFILE_FRAME_APPLY_TEST.sql', 'PROFILE_FRAME_APPLY.sql', 'PROFILE_FRAME_VERIFY.sql',
   'PROFILE_FRAME_BOND_APPLY_TEST.sql', 'PROFILE_FRAME_BOND_APPLY.sql', 'PROFILE_FRAME_BOND_VERIFY.sql',
+  'BREEDER_PROFILE_APPLY_TEST.sql', 'BREEDER_PROFILE_APPLY.sql', 'BREEDER_PROFILE_VERIFY.sql',
 ];
 
 const psql = (args) => spawnSync('su', ['postgres', '-c', `psql ${args}`], { encoding: 'utf8' });
@@ -176,6 +177,34 @@ try {
     bondBad.status !== 0 && /bond_levels_profile_frame_shape/.test(bondBad.stderr || ''));
   const bondVerify = runFile('PROFILE_FRAME_BOND_VERIFY.sql');
   check('絆Lv: 確認用が通る', bondVerify.status === 0, (bondVerify.stderr || '').trim().slice(0, 200));
+
+  // ===== ランキングに出す「いまの見た目」(breeder_profiles) =====
+  const rankingsBefore = query('select count(*) from public.rankings');
+  const profTest = runFile('BREEDER_PROFILE_APPLY_TEST.sql');
+  check('いまの見た目: 予行演習が通る', profTest.status === 0, (profTest.stderr || '').trim().slice(0, 300));
+  check('いまの見た目: 予行演習は本番へ何も残さない(rollback)',
+    query("select count(*) from information_schema.tables where table_name='breeder_profiles'") === '0');
+  const profApply = runFile('BREEDER_PROFILE_APPLY.sql');
+  check('いまの見た目: 本番用が通る', profApply.status === 0, (profApply.stderr || '').trim().slice(0, 300));
+  const profAgain = runFile('BREEDER_PROFILE_APPLY.sql');
+  check('いまの見た目: もう一度流しても壊れない', profAgain.status === 0, (profAgain.stderr || '').trim().slice(0, 200));
+  check('いまの見た目: 記録(rankings)を1件も触っていない',
+    query('select count(*) from public.rankings') === rankingsBefore, `前 ${rankingsBefore}`);
+  check('いまの見た目: 消す権限を与えていない',
+    query("select count(*) from information_schema.role_table_grants where table_name='breeder_profiles' and grantee in ('anon','authenticated') and privilege_type='DELETE'") === '0');
+  check('いまの見た目: RLSが有効',
+    query("select relrowsecurity from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relname='breeder_profiles'") === 't');
+  // 1人1行で上書きされること(遊ぶたびに行が増えない)
+  psql(`-q -d ${DB} -c "insert into public.breeder_profiles (breeder_id,user_name,icon,profile_frame) values ('bd-1','むかし','Golem','gold')"`);
+  psql(`-q -d ${DB} -c "insert into public.breeder_profiles (breeder_id,user_name,icon,profile_frame) values ('bd-1','いま','Mocchi','rainbow') on conflict (breeder_id) do update set user_name=excluded.user_name, icon=excluded.icon, profile_frame=excluded.profile_frame"`);
+  check('いまの見た目: 同じ人は1行のまま上書きされる', query("select count(*) from public.breeder_profiles where breeder_id='bd-1'") === '1');
+  check('いまの見た目: 上書きが効いている',
+    query("select user_name||'/'||icon||'/'||profile_frame from public.breeder_profiles where breeder_id='bd-1'") === 'いま/Mocchi/rainbow');
+  const profBad = psql(`-q -d ${DB} -c "insert into public.breeder_profiles (breeder_id,profile_frame) values ('bd-x','DROP TABLE; --')"`);
+  check('いまの見た目: idの形をしていない値は検査制約が弾く',
+    profBad.status !== 0 && /breeder_profiles_frame_shape/.test(profBad.stderr || ''));
+  const profVerify = runFile('BREEDER_PROFILE_VERIFY.sql');
+  check('いまの見た目: 確認用が通る', profVerify.status === 0, (profVerify.stderr || '').trim().slice(0, 200));
 } finally {
   psql(`-q -c "drop database if exists ${DB}"`);
   try { fs.rmSync(WORK, { recursive: true, force: true }); } catch {}

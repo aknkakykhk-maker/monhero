@@ -107,7 +107,12 @@ const check = (name, ok) => { checks.push(ok); console.log(`  ${ok ? 'OK' : 'NG'
       && /duplicate key/.test(uniqueError?.body || ''));
   check('全INSERTがon_conflict=clear_idを指定', posts.every(request => request.url.includes('?on_conflict=clear_id')));
   check('全INSERTがignore-duplicatesを指定', posts.every(request => request.init.headers.Prefer.includes('resolution=ignore-duplicates')));
-  const gets = requests.filter(request => !request.init.method);
+  const isTable = (request, table) => new URL(request.url).pathname.endsWith(`/${table}`);
+  const reads = requests.filter(request => !request.init.method);
+  const gets = reads.filter(request => isTable(request, 'rankings'));
+  const profileReads = reads.filter(request => isTable(request, 'breeder_profiles'));
+  check('ランキングの取得と「いまの見た目」の取得が混ざっていない', gets.length > 0 && gets.length + profileReads.length === reads.length);
+  check('「いまの見た目」の取得は難易度で絞らない(1人1行の表なので)', profileReads.every(request => !new URL(request.url).searchParams.has('difficulty')));
   check('全SELECTがclear_idを表示フィルターに使用しない', gets.every(request => !new URL(request.url).searchParams.has('clear_id')));
   check('全SELECTが正規difficultyのeq完全一致', gets.every(request => /^eq\.(Normal|Hard|Master)$/.test(new URL(request.url).searchParams.get('difficulty') || '')));
   const getFilter = difficulty => new URL(gets.find(request => new URL(request.url).searchParams.get('difficulty') === `eq.${difficulty}`)?.url || 'https://invalid/').search;

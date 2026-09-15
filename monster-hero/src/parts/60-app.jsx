@@ -1087,6 +1087,31 @@ function MonsterHeroGame() {
   // 値が無い・壊れている・知らないid・未公開のidは、読み込み時に必ず 'none' へ倒れる
   const [profileFrameId, setProfileFrameId] = useState(PROFILE_FRAME_NONE_ID);
   const [showFramePicker, setShowFramePicker] = useState(false);
+  // ランキングに出す「いまの見た目」を上書きする(2026-09-16)。
+  //
+  // ランキングは1プレイ=1行で、その瞬間の名前・アイコン・フレームを記録へ写している。
+  // あとから見た目を変えても過去の行は古いままなので、表示に使う見た目だけを
+  // 1人1行の表(breeder_profiles)へ持たせ、そこを見て描く。
+  // ★記録そのものは書き換えない。順位・スコア・集計にも一切関わらない。
+  // ★見た目を変えたその場で送るので、遊ばなくてもランキングの見え方が変わる。
+  //   失敗しても進行は止めない(次に変えたときか、次に遊んだときに送り直される)。
+  // ★「見るだけ」のプレビュー中(onboardingPreview)は送らない。本物の見た目を書き換えないため
+  const publishBreederProfile = useCallback(async (overrides = {}) => {
+    if (onboardingPreview) return;
+    try {
+      const breederId = await ensureBreederId();
+      if (!breederId) return;   // IDが作れない端末では何もしない(記録の値で今までどおり出る)
+      await sbUpsertBreederProfile({
+        breederId,
+        userName: overrides.userName ?? breederName,
+        icon: overrides.icon !== undefined ? overrides.icon : breederIcon,
+        profileFrame: overrides.profileFrame ?? profileFrameId,
+      });
+    } catch (error) {
+      console.error('[breeder-profile] publish failed:', error && error.message ? error.message : error);
+    }
+  }, [onboardingPreview, breederName, breederIcon, profileFrameId]);
+
   // 選んだその場で画面へ反映し、同時に保存する。保存できなくても表示だけは変わる
   const selectProfileFrame = useCallback((id) => {
     const next = normalizeProfileFrameId(id);
@@ -1094,7 +1119,9 @@ function MonsterHeroGame() {
     Promise.resolve(storeSet(PROFILE_FRAME_KEY, next, false)).catch(error => {
       console.error('[profile-frame] save failed:', error && error.message ? error.message : error);
     });
-  }, []);
+    // ランキングの見え方もその場で変える
+    publishBreederProfile({ profileFrame: next });
+  }, [publishBreederProfile]);
   // 呼び方の上書き(絆Lv6から自由入力)。助手ごとに分けて持つので、みゅあとききで別々に決められる
   const [assistantCallStyles, setAssistantCallStylesState] = useState({});
   const assistantCallStyle = assistantCallStyles[selectedAssistantId] || null;
@@ -2084,6 +2111,8 @@ function MonsterHeroGame() {
       // (既存の記録と同じくNULLのままにしておく)。列がまだ無い環境は送信側で吸収する
       ...(rankingProfileFrameValue(profileFrameId) ? { profile_frame: rankingProfileFrameValue(profileFrameId) } : {}),
     };
+    // ランキングに出す「いまの見た目」も1行だけ上書きしておく(待たせない)
+    publishBreederProfile();
     const outcome = await persistRankingScore({
       row, insertScore: sbInsertRhythmScore,
       saveLocal: async (error) => {
@@ -2096,7 +2125,7 @@ function MonsterHeroGame() {
     });
     if (outcome.error && !outcome.localSaved) console.error('[rhythm-ranking] submit outcome error:', outcome.error?.message || outcome.error);
     else if (outcome.nationalSaved) console.info('[rhythm-ranking] submitted', { difficulty: difficultyKey, score: row.score });
-  }, [breederName, breederLevel, breederIcon, profileFrameId]);
+  }, [breederName, breederLevel, breederIcon, profileFrameId, publishBreederProfile]);
 
   // 送れなかった記録を、あとで送り直す(2026-09-13)。
   //
@@ -2195,7 +2224,10 @@ function MonsterHeroGame() {
     // それ以外の難易度では常に同じ値になり画面側で使わないため、来ていればそのまま運ぶだけにする
     // profileFrame は「その人が選んでいる飾り枠」(2026-09-15)。列がまだ無い環境・端末内へ
     // 退避した古い記録には入っていないので、そのときは normalizeProfileFrameId が 'none' に倒す
-    const toEntry = (r) => ({ userName: r.user_name, hero: r.hero, party: stripPartyImages(r.party), score: r.score, level: r.level, icon: r.icon,
+    // 名前・アイコン・フレームは「いま設定しているもの」で出す(2026-09-16)。
+    // 記録に写した値は、その人が見つからなかったときの受け皿として残る
+    const toEntry = (r) => applyLatestBreederProfile({ userName: r.user_name, hero: r.hero, party: stripPartyImages(r.party), score: r.score, level: r.level, icon: r.icon,
+      breederId: (typeof r.breeder_id === 'string' && r.breeder_id) ? r.breeder_id : undefined,
       profileFrame: normalizeProfileFrameId(r.profile_frame ?? r.profileFrame),
       turns: r.turns ?? undefined, reachedWave: r.reached_wave ?? r.reachedWave ?? undefined, difficulty: r.difficulty ?? undefined });
     // 過去の多重送信はidが異なるため、プレイ内容そのものをキーにして畳む。
@@ -4373,6 +4405,10 @@ function MonsterHeroGame() {
       ...(reachedWave != null ? { reached_wave: reachedWave } : {}),
       ...(profileFrame ? { profile_frame: profileFrame } : {}),
       ...(clearTurns != null ? { turns: clearTurns } : {}) };
+    // ランキングに出す「いまの見た目」も1行だけ上書きしておく(2026-09-16)。
+    // 設定を一度も変えていない人でも、遊べばここで登録される。
+    // 待たせない(結果画面が遅れないように)し、失敗しても周回の進行は止めない
+    publishBreederProfile();
     // 絆Lvの正本テーブルへも同じ内容を書く(1人1個体1行で上書き)。
     // 結果画面はスコア送信の完了を待つので、こちらは待たせない(待つと最大8秒ぶん
     // リザルトが遅れる)。書けなくても次の周回で書き直されるし、一覧は記録側の
@@ -4546,6 +4582,7 @@ function MonsterHeroGame() {
     setOnboardingName(n); // はじめての設定で「名前が決まった」判定に使う
     // デバッグの「見るだけ」表示では保存しない(いま遊んでいるデータを変えないため)
     if (!onboardingPreview) await storeSet('mh_breeder_name', n, false);
+    publishBreederProfile({ userName: n });
     setShowNameEdit(false);
   };
   // はじめての設定の完了。プロフィール画面で名前とアイコンが決まったら押せる。
@@ -13859,7 +13896,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               </div>
               <div className="grid grid-cols-4 gap-3 mb-4">
                 {breederIconOptions().filter(m=>m.source==='starter').map(m=>(
-                  <button key={m.id} onClick={()=>{setBreederIcon(m.id); setOnboardingIcon(m.id); if(!onboardingPreview) storeSet('mh_breeder_icon', m.id, false); setShowIconPicker(false);}} className={`aspect-square rounded-2xl overflow-hidden border-2 active:scale-90 ${breederIcon===m.id?'border-indigo-400 ring-2 ring-indigo-400':'border-slate-700'}`}>
+                  <button key={m.id} onClick={()=>{setBreederIcon(m.id); setOnboardingIcon(m.id); if(!onboardingPreview) storeSet('mh_breeder_icon', m.id, false); publishBreederProfile({icon:m.id}); setShowIconPicker(false);}} className={`aspect-square rounded-2xl overflow-hidden border-2 active:scale-90 ${breederIcon===m.id?'border-indigo-400 ring-2 ring-indigo-400':'border-slate-700'}`}>
                     <BreederIcon src={m.src} id={m.id} alt={m.name} roundedClass="rounded-2xl" className="w-full h-full"/>
                   </button>
                 ))}
@@ -13868,7 +13905,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <h4 className="text-[10px] font-black text-amber-400 mb-2 text-center uppercase tracking-widest flex items-center justify-center gap-1"><ShoppingBag size={10}/>マーケット購入アイコン</h4>
                 <div className="grid grid-cols-4 gap-3 mb-4">
                   {breederIconOptions({ownedMarketIconIds:ownedMarketIcons}).filter(m=>m.source==='market').map(m=>(
-                    <button key={m.id} onClick={()=>{setBreederIcon(m.id); setOnboardingIcon(m.id); if(!onboardingPreview) storeSet('mh_breeder_icon', m.id, false); setShowIconPicker(false);}} className={`aspect-square rounded-2xl overflow-hidden border-2 active:scale-90 ${breederIcon===m.id?'border-amber-400 ring-2 ring-amber-400':'border-slate-700'}`}>
+                    <button key={m.id} onClick={()=>{setBreederIcon(m.id); setOnboardingIcon(m.id); if(!onboardingPreview) storeSet('mh_breeder_icon', m.id, false); publishBreederProfile({icon:m.id}); setShowIconPicker(false);}} className={`aspect-square rounded-2xl overflow-hidden border-2 active:scale-90 ${breederIcon===m.id?'border-amber-400 ring-2 ring-amber-400':'border-slate-700'}`}>
                       <BreederIcon src={m.src} id={m.id} alt={m.name} roundedClass="rounded-2xl" className="w-full h-full"/>
                     </button>
                   ))}

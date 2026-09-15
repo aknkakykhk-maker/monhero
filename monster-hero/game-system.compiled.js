@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f2bea75cfb20fd49
+// source-sha256: fc1d83bad5323963
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5239aea795901dd5
+// generated-sha256: 624273894d6588c9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-16 00:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-16 01:14"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -17756,6 +17756,11 @@ const _isMissingProfileFrameError = (status, body) => {
 };
 // 取得する列へ profile_frame を足す。無いと分かっている間は足さない
 const rankingSelectWithProfileFrame = base => _rankingProfileFrameUnavailable || !base ? base : `${base},${RANKING_PROFILE_FRAME_COLUMN}`;
+// 取得する列へ breeder_id を足す(2026-09-16)。
+// 「いまの見た目」を引くときに、名前ではなく**IDで**その人を特定するために要る。
+// 名前だけで引くと、名前を変えた人が自分の記録に当たらなくなる。
+// 列がまだ無い環境では外す(そのときは名前で引く=これまでどおりの動き)。
+const rankingSelectWithBreederId = base => _rankingBreederIdUnavailable || !base ? base : `${base},breeder_id`;
 // 送る行から profile_frame を落とす(列がまだ無い環境で記録を落とさないため)
 const rankingRowWithoutProfileFrame = row => {
   const {
@@ -17770,7 +17775,9 @@ const rankingRowWithoutProfileFrame = row => {
 const rankingProfileFrameFromRow = row => normalizeProfileFrameId(row?.profile_frame);
 // bond_levels の1行を、rankings から集計したものと同じ形のエントリへ直す。
 // 表示側(renderBondRankingEntry)はどちらから来た行かを知らなくてよい
-const bondLevelRowToEntry = row => {
+const bondLevelRowToEntry = row => applyLatestBreederProfile(bondLevelRowFromRow(row));
+// 行を素直な形へ直すところ(見た目のかぶせは bondLevelRowToEntry が行う)
+const bondLevelRowFromRow = row => {
   const monsterId = row?.monster_id || null;
   const monName = ALL_PLAYER_MONSTERS[monsterId]?.name || row?.mon_name || null;
   const bondLevel = Number(row?.bond_level);
@@ -17838,6 +17845,7 @@ const _isMissingTableError = (status, body) => {
 // rankings から集計する(新旧併用)
 const sbFetchBondLevels = async (requestId = 'untracked') => {
   if (_bondLevelsUnavailable) return null;
+  await ensureBreederProfiles(requestId);
   const select = bondLevelsSelectWithProfileFrame();
   const url = `${SUPABASE_URL}/rest/v1/${BOND_LEVELS_TABLE}?select=${select}` + `&order=bond_level.desc.nullslast&limit=${BOND_LEVELS_FETCH_LIMIT}`;
   const controller = new AbortController();
@@ -17949,12 +17957,14 @@ const bondLevelRowsFromParty = (userName, icon, party, profileFrame = null) => {
   return [...byIndividual.values()];
 };
 const sbFetchRankings = async (diff, limit = RANKING_SCORE_LIMIT, order = 'score.desc.nullslast', offset = 0, requestId = 'untracked', selectColumns = RANKING_SELECT_FULL) => {
+  // 行を組み立てる前に「いまの見た目」をそろえておく(失敗しても投げない・TTLで間引く)
+  await ensureBreederProfiles(requestId);
   // diff を省略(null)すると難易度で絞らず、全難易度をまとめて取る
   const normalizedDifficulty = diff == null ? null : normalizeRankingDifficulty(diff);
   // 必要な列だけを受け取り、過去記録が多い難易度でもレスポンスを不用意に大きくしない。
   // ターン数・到達WAVEはSQLをまだ適用していない環境では選べないので、そのときは外れる。
   const baseSelect = selectColumns || RANKING_SELECT_FULL;
-  const select = rankingSelectWithProfileFrame(rankingSelectWithRunStats(baseSelect));
+  const select = rankingSelectWithBreederId(rankingSelectWithProfileFrame(rankingSelectWithRunStats(baseSelect)));
   // DBに保存する正規keyと同じ値をeqで取得する。ilikeによる別系統の
   // 取得条件を残さず、NormalもHardと完全に同じSELECT経路にする。
   //
@@ -18019,6 +18029,14 @@ const sbFetchRankings = async (diff, limit = RANKING_SCORE_LIMIT, order = 'score
       error: res.ok ? null : body
     });
     if (!res.ok) {
+      // ブリーダーIDの列がまだ無い環境。外して取り直す(そのときは名前で引く)
+      if (select.includes(',breeder_id') && _isMissingBreederIdError(res.status, body)) {
+        _rankingBreederIdUnavailable = true;
+        rankingLog(requestId, 'breeder-id-column-missing-on-select', {
+          status: res.status
+        });
+        return sbFetchRankings(diff, limit, order, offset, requestId, baseSelect);
+      }
       // プロフィールフレームの列がまだ無い環境。外して取り直せば今までどおり表示できる
       // (飾り枠が出ないだけで、順位もスコアも変わらない)
       if (select.includes(RANKING_PROFILE_FRAME_COLUMN) && _isMissingProfileFrameError(res.status, body)) {
@@ -18396,6 +18414,191 @@ const insertResentRankingRow = async (insert, row) => {
 };
 const createRunId = () => globalThis.crypto?.randomUUID?.() || `run_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`;
 
+// ===== ブリーダーの「いまの見た目」(2026-09-16) =====
+//
+// ランキングは「1プレイ＝1行」で、その瞬間の名前・アイコン・フレームを記録へ写している。
+// そのため、あとから見た目を変えても過去の行は古いままだった
+// (2026-09-16・ユーザー指摘「アイコンとフレームは更新時じゃなくて常に設定してるやつが
+//  ランキングに出るようにできないの？」)。
+//
+// 記録(rankings / bond_levels)は**1行も書き換えない**。かわりに「1人1行」の小さな表を持ち、
+// **表示に使う見た目だけ**をそこから引く。順位・スコア・集計には一切関わらない。
+//
+// ★引く順番は ① ブリーダーID ② 名前 ③ 記録に写した値。
+//   ②は「その名前の人が1人だけ」のときしか使わない(同名の別人へ他人の見た目を出さないため。
+//   全曲合算の rhythm_identity_map と同じ考え方・docs/spec/RHYTHM_RANKING.md §4.4)。
+// ★表がまだ無い環境(SQL未適用)では404が返る。エラーではなく「まだ準備中」として扱い、
+//   そのセッションでは以後アクセスしない(記録に写した値で今までどおり出る)。
+const BREEDER_PROFILES_TABLE = 'breeder_profiles';
+const BREEDER_PROFILES_SELECT = 'breeder_id,user_name,icon,profile_frame';
+// 1人1行しか増えないので、全部読んでも小さい。上限はいちおうの保険
+const BREEDER_PROFILES_FETCH_LIMIT = 5000;
+// 取り直す間隔。ランキングを開くたびに読み直さない
+const BREEDER_PROFILES_TTL_MS = 60 * 1000;
+let _breederProfilesUnavailable = false;
+const breederProfilesUnavailable = () => _breederProfilesUnavailable;
+let _breederProfileById = new Map();
+let _breederProfileByName = new Map();
+let _breederProfilesFetchedAt = 0;
+let _breederProfilesPending = null;
+
+// 受け取った行から、IDで引く表と名前で引く表を作る。
+// 名前の表は「その名前がちょうど1人」のときだけ入れる(同名の別人には使わない)。
+const setBreederProfiles = rows => {
+  const byId = new Map(),
+    nameCount = new Map(),
+    byName = new Map();
+  (Array.isArray(rows) ? rows : []).forEach(row => {
+    const id = typeof row?.breeder_id === 'string' ? row.breeder_id.trim() : '';
+    if (!id) return;
+    const profile = {
+      userName: typeof row?.user_name === 'string' && row.user_name.trim() ? row.user_name : null,
+      icon: row?.icon ?? null,
+      profileFrame: normalizeProfileFrameId(row?.profile_frame)
+    };
+    byId.set(id, profile);
+    if (profile.userName) {
+      nameCount.set(profile.userName, (nameCount.get(profile.userName) || 0) + 1);
+      byName.set(profile.userName, profile);
+    }
+  });
+  for (const [name, count] of nameCount) if (count > 1) byName.delete(name);
+  _breederProfileById = byId;
+  _breederProfileByName = byName;
+  return {
+    ids: byId.size,
+    names: byName.size
+  };
+};
+const sbFetchBreederProfiles = async (requestId = 'untracked') => {
+  const url = `${SUPABASE_URL}/rest/v1/${BREEDER_PROFILES_TABLE}?select=${BREEDER_PROFILES_SELECT}` + `&order=updated_at.desc&limit=${BREEDER_PROFILES_FETCH_LIMIT}`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(url, {
+      headers: SB_HEADERS,
+      cache: 'no-store',
+      signal: controller.signal
+    });
+    const body = await res.text();
+    if (!res.ok) {
+      if (_isMissingTableError(res.status, body)) {
+        _breederProfilesUnavailable = true;
+        rankingLog(requestId, 'breeder-profiles-missing', {
+          status: res.status
+        });
+        return null;
+      }
+      throw new Error(`breeder_profiles ${res.status}: ${body || res.statusText}`);
+    }
+    const rows = JSON.parse(body || '[]');
+    const counted = setBreederProfiles(rows);
+    rankingLog(requestId, 'breeder-profiles-fetched', {
+      received: Array.isArray(rows) ? rows.length : 0,
+      ...counted
+    });
+    return Array.isArray(rows) ? rows : [];
+  } finally {
+    clearTimeout(timer);
+  }
+};
+// ランキングを組み立てる前に呼ぶ。一定時間は読み直さないので、何度呼んでも重くならない。
+// 失敗しても投げない(見た目が古いままになるだけで、順位は出る)。
+const ensureBreederProfiles = async (requestId = 'untracked', {
+  force = false
+} = {}) => {
+  if (_breederProfilesUnavailable) return false;
+  if (!force && Date.now() - _breederProfilesFetchedAt < BREEDER_PROFILES_TTL_MS) return true;
+  if (_breederProfilesPending) {
+    try {
+      await _breederProfilesPending;
+    } catch {}
+    return true;
+  }
+  _breederProfilesPending = (async () => {
+    try {
+      await sbFetchBreederProfiles(requestId);
+      _breederProfilesFetchedAt = Date.now();
+    } catch (error) {
+      console.error('[ranking] breeder profiles fetch failed:', error && error.message ? error.message : error);
+    } finally {
+      _breederProfilesPending = null;
+    }
+  })();
+  await _breederProfilesPending;
+  return true;
+};
+// 自分の行を上書きする。1人1行なので、何度呼んでも行は増えない。
+// 見た目を変えたときと、記録を送ったときに呼ぶ。失敗しても進行は止めない。
+const sbUpsertBreederProfile = async ({
+  breederId,
+  userName,
+  icon,
+  profileFrame
+}) => {
+  if (_breederProfilesUnavailable) return false;
+  const id = typeof breederId === 'string' ? breederId.trim() : '';
+  if (!id) return false; // IDが作れていない端末では何もしない(今までどおり記録の値で出る)
+  const row = {
+    breeder_id: id,
+    user_name: userName || '名無しのブリーダー',
+    icon: icon ?? null,
+    profile_frame: rankingProfileFrameValue(profileFrame)
+  };
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${BREEDER_PROFILES_TABLE}?on_conflict=breeder_id`, {
+      method: 'POST',
+      headers: {
+        ...SB_HEADERS,
+        'Prefer': 'resolution=merge-duplicates,return=minimal'
+      },
+      body: JSON.stringify([row]),
+      signal: controller.signal
+    });
+    if (!res.ok) {
+      const body = await res.text();
+      if (_isMissingTableError(res.status, body)) {
+        _breederProfilesUnavailable = true;
+        return false;
+      }
+      throw new Error(`breeder_profiles upsert ${res.status}: ${body || res.statusText}`);
+    }
+    // 自分の変更はすぐ画面へ出したいので、手元の表も更新しておく
+    _breederProfileById.set(id, {
+      userName: row.user_name,
+      icon: row.icon,
+      profileFrame: normalizeProfileFrameId(row.profile_frame)
+    });
+    return true;
+  } finally {
+    clearTimeout(timer);
+  }
+};
+// ランキングの1行へ「いまの見た目」をかぶせる。見つからなければ記録に写した値のまま。
+// ★ここだけが差し替えを決める。画面ごとに書かない
+const latestBreederProfileFor = entry => {
+  if (!entry) return null;
+  // ① ブリーダーID。モンビーの合算・週間・イベントは identityKey に入っている
+  //    (IDが無かった時代の記録は 'name:<名前>' なので、そのときは②へ回す)
+  const identity = typeof entry.breederId === 'string' && entry.breederId ? entry.breederId : typeof entry.identityKey === 'string' && entry.identityKey && !entry.identityKey.startsWith('name:') ? entry.identityKey : '';
+  if (identity && _breederProfileById.has(identity)) return _breederProfileById.get(identity);
+  // ② 名前。その名前の人が1人だけのときしか使わない
+  const name = typeof entry.userName === 'string' ? entry.userName : '';
+  return name && _breederProfileByName.has(name) ? _breederProfileByName.get(name) : null;
+};
+const applyLatestBreederProfile = entry => {
+  const profile = latestBreederProfileFor(entry);
+  if (!profile) return entry;
+  return {
+    ...entry,
+    userName: profile.userName || entry.userName,
+    icon: profile.icon ?? entry.icon ?? null,
+    profileFrame: profile.profileFrame
+  };
+};
+
 // ===== ブリーダーを見分けるID(2026-09-11) =====
 //
 // これまで全国ランキングは user_name だけで人を見分けていた。曲別ランキング(その名前の
@@ -18547,7 +18750,8 @@ const sbInsertRhythmScore = async row => {
 const sbFetchRhythmRankings = async (difficultyKeys, limit = RHYTHM_RANKING_FETCH_LIMIT, offset = 0, requestId = 'untracked') => {
   const keys = (Array.isArray(difficultyKeys) ? difficultyKeys : [difficultyKeys]).filter(Boolean);
   if (keys.length === 0) return [];
-  const select = rankingSelectWithProfileFrame(RHYTHM_RANKING_SELECT);
+  await ensureBreederProfiles(requestId);
+  const select = rankingSelectWithBreederId(rankingSelectWithProfileFrame(RHYTHM_RANKING_SELECT));
   const url = `${SUPABASE_URL}/rest/v1/rankings?select=${select}&difficulty=in.(${keys.map(k => encodeURIComponent(`"${k}"`)).join(',')})&order=score.desc.nullslast&limit=${limit}&offset=${offset}`;
   rankingLog(requestId, 'rhythm-request-start', {
     keys,
@@ -18566,6 +18770,14 @@ const sbFetchRhythmRankings = async (difficultyKeys, limit = RHYTHM_RANKING_FETC
     });
     const body = await res.text();
     if (!res.ok) {
+      // ブリーダーIDの列がまだ無い環境。外して取り直す(そのときは名前で引く)
+      if (select.includes(',breeder_id') && _isMissingBreederIdError(res.status, body)) {
+        _rankingBreederIdUnavailable = true;
+        rankingLog(requestId, 'breeder-id-column-missing-on-select', {
+          status: res.status
+        });
+        return sbFetchRhythmRankings(difficultyKeys, limit, offset, requestId);
+      }
       // プロフィールフレームの列がまだ無い環境。外して取り直す(飾り枠が出ないだけ)
       if (select !== RHYTHM_RANKING_SELECT && _isMissingProfileFrameError(res.status, body)) {
         _rankingProfileFrameUnavailable = true;
@@ -18617,6 +18829,7 @@ const sbFetchRhythmTotalRankings = async ({
   identityKeys = null,
   requestId = 'untracked'
 } = {}) => {
+  await ensureBreederProfiles(requestId);
   // identityKeys を渡すと、その人の行だけを取りにいく(50位圏外の自分を出すため)
   const filter = Array.isArray(identityKeys) && identityKeys.length ? `&identity_key=in.(${identityKeys.map(k => encodeURIComponent(`"${k}"`)).join(',')})` : '';
   const select = rankingSelectWithProfileFrame(RHYTHM_TOTAL_RANKING_SELECT);
@@ -18672,7 +18885,7 @@ const sbFetchRhythmTotalRankings = async ({
   }
 };
 // Supabaseの生の行を画面用の形へ整える。合計点・曲数は数として確かめてから使う
-const rhythmTotalRankingEntryFromRow = row => ({
+const rhythmTotalRankingEntryFromRow = row => applyLatestBreederProfile({
   identityKey: typeof row?.identity_key === 'string' ? row.identity_key : '',
   userName: row?.user_name || '名無しのブリーダー',
   totalScore: Number(row?.total_score) || 0,
@@ -18752,6 +18965,7 @@ const sbFetchRhythmEventRows = async ({
   label,
   requestId = 'untracked'
 }) => {
+  await ensureBreederProfiles(requestId);
   rankingLog(requestId, `${label}-request-start`, {
     url,
     body
@@ -19021,7 +19235,7 @@ const sbFetchRhythmWeekTotals = async ({
   }), RHYTHM_WEEK_TOTAL_SELECT);
 };
 // 生の行を画面用の形へ整える。壊れた値でも落ちないよう、数として確かめてから使う
-const rhythmEventSongEntryFromRow = row => ({
+const rhythmEventSongEntryFromRow = row => applyLatestBreederProfile({
   identityKey: typeof row?.identity_key === 'string' ? row.identity_key : '',
   userName: row?.user_name || '名無しのブリーダー',
   songId: typeof row?.song_id === 'string' ? row.song_id : '',
@@ -19037,7 +19251,7 @@ const rhythmEventSongEntryFromRow = row => ({
   // 画面は内訳の枠を出さない(加点していないのに「+0」と出さないため)
   ...rhythmEventBonusFields(row, 'base_score')
 });
-const rhythmEventTotalEntryFromRow = row => ({
+const rhythmEventTotalEntryFromRow = row => applyLatestBreederProfile({
   identityKey: typeof row?.identity_key === 'string' ? row.identity_key : '',
   userName: row?.user_name || '名無しのブリーダー',
   totalScore: Number(row?.total_score) || 0,
@@ -19049,7 +19263,7 @@ const rhythmEventTotalEntryFromRow = row => ({
 });
 // 週間の行。イベントの総合と形をそろえておくと、画面側で分岐が増えない。
 // 違うのは playCount(遊んだ回数)を必ず持つことだけ
-const rhythmWeekTotalEntryFromRow = row => ({
+const rhythmWeekTotalEntryFromRow = row => applyLatestBreederProfile({
   identityKey: typeof row?.identity_key === 'string' ? row.identity_key : '',
   userName: row?.user_name || '名無しのブリーダー',
   totalScore: Number(row?.total_score) || 0,
@@ -38882,6 +39096,31 @@ function MonsterHeroGame() {
   // 値が無い・壊れている・知らないid・未公開のidは、読み込み時に必ず 'none' へ倒れる
   const [profileFrameId, setProfileFrameId] = useState(PROFILE_FRAME_NONE_ID);
   const [showFramePicker, setShowFramePicker] = useState(false);
+  // ランキングに出す「いまの見た目」を上書きする(2026-09-16)。
+  //
+  // ランキングは1プレイ=1行で、その瞬間の名前・アイコン・フレームを記録へ写している。
+  // あとから見た目を変えても過去の行は古いままなので、表示に使う見た目だけを
+  // 1人1行の表(breeder_profiles)へ持たせ、そこを見て描く。
+  // ★記録そのものは書き換えない。順位・スコア・集計にも一切関わらない。
+  // ★見た目を変えたその場で送るので、遊ばなくてもランキングの見え方が変わる。
+  //   失敗しても進行は止めない(次に変えたときか、次に遊んだときに送り直される)。
+  // ★「見るだけ」のプレビュー中(onboardingPreview)は送らない。本物の見た目を書き換えないため
+  const publishBreederProfile = useCallback(async (overrides = {}) => {
+    if (onboardingPreview) return;
+    try {
+      const breederId = await ensureBreederId();
+      if (!breederId) return; // IDが作れない端末では何もしない(記録の値で今までどおり出る)
+      await sbUpsertBreederProfile({
+        breederId,
+        userName: overrides.userName ?? breederName,
+        icon: overrides.icon !== undefined ? overrides.icon : breederIcon,
+        profileFrame: overrides.profileFrame ?? profileFrameId
+      });
+    } catch (error) {
+      console.error('[breeder-profile] publish failed:', error && error.message ? error.message : error);
+    }
+  }, [onboardingPreview, breederName, breederIcon, profileFrameId]);
+
   // 選んだその場で画面へ反映し、同時に保存する。保存できなくても表示だけは変わる
   const selectProfileFrame = useCallback(id => {
     const next = normalizeProfileFrameId(id);
@@ -38889,7 +39128,11 @@ function MonsterHeroGame() {
     Promise.resolve(storeSet(PROFILE_FRAME_KEY, next, false)).catch(error => {
       console.error('[profile-frame] save failed:', error && error.message ? error.message : error);
     });
-  }, []);
+    // ランキングの見え方もその場で変える
+    publishBreederProfile({
+      profileFrame: next
+    });
+  }, [publishBreederProfile]);
   // 呼び方の上書き(絆Lv6から自由入力)。助手ごとに分けて持つので、みゅあとききで別々に決められる
   const [assistantCallStyles, setAssistantCallStylesState] = useState({});
   const assistantCallStyle = assistantCallStyles[selectedAssistantId] || null;
@@ -40400,6 +40643,8 @@ function MonsterHeroGame() {
         profile_frame: rankingProfileFrameValue(profileFrameId)
       } : {})
     };
+    // ランキングに出す「いまの見た目」も1行だけ上書きしておく(待たせない)
+    publishBreederProfile();
     const outcome = await persistRankingScore({
       row,
       insertScore: sbInsertRhythmScore,
@@ -40422,7 +40667,7 @@ function MonsterHeroGame() {
       difficulty: difficultyKey,
       score: row.score
     });
-  }, [breederName, breederLevel, breederIcon, profileFrameId]);
+  }, [breederName, breederLevel, breederIcon, profileFrameId, publishBreederProfile]);
 
   // 送れなかった記録を、あとで送り直す(2026-09-13)。
   //
@@ -40557,13 +40802,16 @@ function MonsterHeroGame() {
     // それ以外の難易度では常に同じ値になり画面側で使わないため、来ていればそのまま運ぶだけにする
     // profileFrame は「その人が選んでいる飾り枠」(2026-09-15)。列がまだ無い環境・端末内へ
     // 退避した古い記録には入っていないので、そのときは normalizeProfileFrameId が 'none' に倒す
-    const toEntry = r => ({
+    // 名前・アイコン・フレームは「いま設定しているもの」で出す(2026-09-16)。
+    // 記録に写した値は、その人が見つからなかったときの受け皿として残る
+    const toEntry = r => applyLatestBreederProfile({
       userName: r.user_name,
       hero: r.hero,
       party: stripPartyImages(r.party),
       score: r.score,
       level: r.level,
       icon: r.icon,
+      breederId: typeof r.breeder_id === 'string' && r.breeder_id ? r.breeder_id : undefined,
       profileFrame: normalizeProfileFrameId(r.profile_frame ?? r.profileFrame),
       turns: r.turns ?? undefined,
       reachedWave: r.reached_wave ?? r.reachedWave ?? undefined,
@@ -43181,6 +43429,10 @@ function MonsterHeroGame() {
         turns: clearTurns
       } : {})
     };
+    // ランキングに出す「いまの見た目」も1行だけ上書きしておく(2026-09-16)。
+    // 設定を一度も変えていない人でも、遊べばここで登録される。
+    // 待たせない(結果画面が遅れないように)し、失敗しても周回の進行は止めない
+    publishBreederProfile();
     // 絆Lvの正本テーブルへも同じ内容を書く(1人1個体1行で上書き)。
     // 結果画面はスコア送信の完了を待つので、こちらは待たせない(待つと最大8秒ぶん
     // リザルトが遅れる)。書けなくても次の周回で書き直されるし、一覧は記録側の
@@ -43414,6 +43666,9 @@ function MonsterHeroGame() {
     setOnboardingName(n); // はじめての設定で「名前が決まった」判定に使う
     // デバッグの「見るだけ」表示では保存しない(いま遊んでいるデータを変えないため)
     if (!onboardingPreview) await storeSet('mh_breeder_name', n, false);
+    publishBreederProfile({
+      userName: n
+    });
     setShowNameEdit(false);
   };
   // はじめての設定の完了。プロフィール画面で名前とアイコンが決まったら押せる。
@@ -61300,6 +61555,9 @@ function MonsterHeroGame() {
         setBreederIcon(m.id);
         setOnboardingIcon(m.id);
         if (!onboardingPreview) storeSet('mh_breeder_icon', m.id, false);
+        publishBreederProfile({
+          icon: m.id
+        });
         setShowIconPicker(false);
       },
       className: `aspect-square rounded-2xl overflow-hidden border-2 active:scale-90 ${breederIcon === m.id ? 'border-indigo-400 ring-2 ring-indigo-400' : 'border-slate-700'}`
@@ -61323,6 +61581,9 @@ function MonsterHeroGame() {
         setBreederIcon(m.id);
         setOnboardingIcon(m.id);
         if (!onboardingPreview) storeSet('mh_breeder_icon', m.id, false);
+        publishBreederProfile({
+          icon: m.id
+        });
         setShowIconPicker(false);
       },
       className: `aspect-square rounded-2xl overflow-hidden border-2 active:scale-90 ${breederIcon === m.id ? 'border-amber-400 ring-2 ring-amber-400' : 'border-slate-700'}`
