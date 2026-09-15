@@ -47,6 +47,7 @@ vm.runInContext(`${demoIds}\n${eventData}\n`
   +'rhythmEventSongDivisionId,RHYTHM_EVENT_REWARD_RANKS,rhythmEventsAwaitingReward,'
   +'normalizeRhythmEventRewardClaims,rhythmEventDivisionIds,rhythmEventParticipationReward,rhythmEventParticipationCleared,'
   +'rhythmEventSongDivisionId,rhythmEventMaxScore,rhythmEventEntryScore,RHYTHM_EVENT_TOTAL_DIVISION,'
+  +'RHYTHM_EVENT_POINT_TARGET_MULTIPLIER,rhythmEventPointBaseForScore,rhythmEventPointAwardAt,'
   +'rhythmPreviousLimitedEvent,rhythmNextLimitedEvent,rhythmHistoryEvents};',context);
 const O=context.out;
 
@@ -560,7 +561,8 @@ check('曲えらびの案内も同じフラグで出す',
 check('ヘルプの週間の説明も同じフラグで出す',(()=>{
   const topic=(help.split("id:'rhythm-ranking'")[1]||'').split("id:'rhythm-")[0];
   const lines=topic.split('\n').filter(line=>line.includes("{t:'"))
-    .filter(line=>line.includes('週間ランキング')||line.includes('対象曲'));
+    .filter(line=>line.includes('週間ランキング')||line.includes('対象曲'))
+    .filter(line=>!line.includes("releaseFlag:'rhythmEventPoints'"));
   return lines.length>0&&lines.every(line=>line.includes("releaseFlag:'rhythmWeeklyRanking'"));
 })());
 check('更新履歴も同じフラグで出す',(()=>{
@@ -618,6 +620,51 @@ check('助手3人ぶんのセリフがある',(assistants.match(/rhythmWeeklyEve
 check('曲えらびの案内は週ごとに1度だけ',
   screen.includes('data-rhythm-event-notice')&&screen.includes('data-rhythm-event-notice-close')
   &&app.includes('rhythmEventNoticeSeen !== rhythmSongSelectEvent.id'));
+
+// --- イベントP STEP2（獲得式・保存・二重付与防止） ---
+check('イベントPの基本式は確定仕様どおり',
+  [[800000,80],[850000,85],[900000,90],[950000,95],[960000,116],[970000,137],[980000,158],[990000,179],[1000000,200]]
+    .every(([score,want])=>O.rhythmEventPointBaseForScore(score)===want));
+check('壊れたスコアは0Pへ倒す',
+  O.rhythmEventPointBaseForScore(null)===0&&O.rhythmEventPointBaseForScore('x')===0&&O.rhythmEventPointBaseForScore(-100)===0);
+if(limited.length){
+  const e=limited[0],mid=(Date.parse(e.startAt)+Date.parse(e.endAt))/2;
+  const target=e.songIds[0];
+  const normal=O.RHYTHM_DEMO_SONG_IDS.find(id=>!e.songIds.includes(id));
+  const targetAward=O.rhythmEventPointAwardAt(mid,target,1000000);
+  const normalAward=normal?O.rhythmEventPointAwardAt(mid,normal,1000000):null;
+  check('イベント対象曲だけ1.5倍になる',!!targetAward&&targetAward.amount===300&&targetAward.multiplier===1.5&&targetAward.target===true
+    &&(!normal||!!normalAward&&normalAward.amount===200&&normalAward.multiplier===1&&normalAward.target===false));
+  check('イベント期間外はイベントPを出さない',O.rhythmEventPointAwardAt(Date.parse(e.endAt),target,1000000)===null);
+  check('DEBUG専用など公開曲でないIDはイベントP対象外',O.rhythmEventPointAwardAt(mid,'atsu_cup_theme_debug_short',1000000)===null);
+}
+check('イベントPは新しい後方互換キーへ保存する',
+  game.includes("const RHYTHM_EVENT_POINTS_KEY='mh_rhythm_event_points_v1';")
+  &&game.includes('const normalizeRhythmEventPoints=value=>')
+  &&game.includes('await storeGet(RHYTHM_EVENT_POINTS_KEY,0,false)')
+  &&saveSpec.includes('mh_rhythm_event_points_v1'));
+check('イベント終了でイベントPを0へ戻す処理を持たない',!game.includes('storeSet(RHYTHM_EVENT_POINTS_KEY,0'));
+check('正常リザルトのfinishでだけイベントP付与を判定する',
+  game.includes('const eventPointAward=(!debugPlay&&!tutorial&&!calibrating')
+  &&game.includes('rhythmEventPointAwardAt(Date.now(),song.songId,score)')
+  &&game.includes('void addRhythmEventPoints(eventPointAward.amount)'));
+check('STEP2中は公開フラグOFFで、未完成のまま付与しない',
+  /const RHYTHM_EVENT_POINTS_PUBLIC_RELEASE = false;/.test(flags)
+  &&flags.includes('rhythmEventPoints:RHYTHM_EVENT_POINTS_PUBLIC_RELEASE')
+  &&game.includes('RELEASE_FLAGS?.rhythmEventPoints===true'));
+check('finishは二重付与防止のfinished印を先に立てる',(()=>{
+  const from=game.indexOf('const finish=useCallback');
+  const done=game.indexOf('run.finished=true;',from);
+  const award=game.indexOf('addRhythmEventPoints(eventPointAward.amount)',from);
+  return from>=0&&done>from&&award>done;
+})());
+check('イベントPのヘルプは公開フラグと一緒に隠す',help.includes("releaseFlag:'rhythmEventPoints'")&&help.includes("title:'イベントP'"));
+check('STEP2の更新履歴は開発メモとして残し、未完成機能を告知しない',(()=>{
+  const at=changelog.indexOf('イベントPの獲得・保存基盤を実装しました');
+  if(at<0)return false;
+  const entry=changelog.slice(at,changelog.indexOf('  },',at));
+  return entry.includes('dev:true');
+})());
 
 // 適用SQLと仕様書
 check('適用SQLを用意している',

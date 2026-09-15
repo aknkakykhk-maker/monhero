@@ -122,6 +122,26 @@ const RHYTHM_EVENTS = Object.freeze([
   }),
 ]);
 
+// ===== イベントP（docs/spec/RHYTHM_EVENT_POINTS.md） =====
+// 初期実装の正式式。ランキング用スコアや回数ボーナスとは完全に分離する。
+const RHYTHM_EVENT_POINT_TARGET_MULTIPLIER = 1.5;
+const rhythmEventPointBaseForScore = (score) => {
+  const n = Number(score);
+  const safe = Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
+  return Math.floor(safe / 10000 + Math.max(0, safe - 950000) / 500);
+};
+const rhythmEventPointAwardAt = (nowMs, songId, score) => {
+  const published = (typeof RHYTHM_DEMO_SONG_IDS !== 'undefined' && Array.isArray(RHYTHM_DEMO_SONG_IDS)) ? RHYTHM_DEMO_SONG_IDS : [];
+  const id = typeof songId === 'string' ? songId : '';
+  if (!id || !published.includes(id)) return null;
+  const event = rhythmLimitedEventAt(nowMs);
+  if (!event) return null;
+  const base = rhythmEventPointBaseForScore(score);
+  const target = Array.isArray(event.songIds) && event.songIds.includes(id);
+  const multiplier = target ? RHYTHM_EVENT_POINT_TARGET_MULTIPLIER : 1;
+  return Object.freeze({ eventId:event.id, base, target, multiplier, amount:Math.floor(base * multiplier) });
+};
+
 // ===== 回数ボーナス(2026-09-11・ユーザー指示) =====
 //
 // 「ただスコアを競うだけだと、うまい人が毎回上位に行く。それはそれでいいけど、

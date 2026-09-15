@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a2065e54debe1ad6
+// source-sha256: 2321c02d9730476c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ff268db0f89ef5e8
+// generated-sha256: 4c28812d900fbefd
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-14 22:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-15 08:29"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -10884,13 +10884,17 @@ const RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE = true;
 // 2026-09-07 05:00(月) 〜 2026-09-14 05:00(月) で並ぶことを確かめたうえで公開。
 // イベントタブ・曲えらびの案内・ヘルプ・更新履歴・助手の告知がここで同時に出る。
 const RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE = true;
+// イベントPは獲得・保存→交換所→表示を段階実装する。全部そろうまでプレイヤーへ公開しない。
+// true にすると獲得処理と、同じ releaseFlag を持つヘルプ・更新履歴・助手告知が同時に有効になる。
+const RHYTHM_EVENT_POINTS_PUBLIC_RELEASE = false;
 const RELEASE_FLAGS = {
   speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE,
   rhythmMode: RHYTHM_MODE_PUBLIC_RELEASE,
   quickRhythmLink: QUICK_RHYTHM_LINK_PUBLIC_RELEASE,
   rhythmCanvasNotes: RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE,
   rhythmTotalRanking: RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE,
-  rhythmWeeklyRanking: RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE
+  rhythmWeeklyRanking: RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE,
+  rhythmEventPoints: RHYTHM_EVENT_POINTS_PUBLIC_RELEASE
 };
 // releaseFlag = そのフラグが立つまで出さない。unreleasedFlag = そのフラグが立ったら出さない。
 // 逆向きの名札が要るのは「準備中です」の案内で、公開したあとも残っていると
@@ -17396,6 +17400,30 @@ const saveRhythmBestRecord = async (records, songId, difficultyId, value) => {
   await storeSet(RHYTHM_BEST_RECORDS_KEY, normalized, false);
   return normalized;
 };
+// イベントPは通常イベント共通の恒久残高。イベント終了では消さない。
+const RHYTHM_EVENT_POINTS_KEY = 'mh_rhythm_event_points_v1';
+const normalizeRhythmEventPoints = value => {
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(n))) : 0;
+};
+const loadRhythmEventPoints = async () => normalizeRhythmEventPoints(await storeGet(RHYTHM_EVENT_POINTS_KEY, 0, false));
+const addRhythmEventPoints = async amount => {
+  const requested = normalizeRhythmEventPoints(amount);
+  const before = await loadRhythmEventPoints();
+  if (requested <= 0) return {
+    before,
+    after: before,
+    added: 0
+  };
+  const after = Math.min(Number.MAX_SAFE_INTEGER, before + requested);
+  const added = after - before;
+  if (added > 0) await storeSet(RHYTHM_EVENT_POINTS_KEY, after, false);
+  return {
+    before,
+    after,
+    added
+  };
+};
 const storeList = async (prefix, shared = false) => {
   try {
     if (hasWinStorage()) {
@@ -23225,6 +23253,9 @@ const RhythmTapTest = ({
     // run.lifeDepleted は false に戻っているので、そのときはクリア扱いになる。
     // 練習(tutorial)とタイミング合わせ(calibrating)はライフを減らさないので必ずクリア。
     const failed = !tutorial && !calibrating && run.lifeDepleted === true;
+    // イベントPは正常に最後まで到達した公開プレイだけ。公開フラグがfalseのSTEP2中は一切付与しない。
+    // finishは先頭で run.finished=true にするため、再描画・画面遷移で同じ結果を二重付与しない。
+    const eventPointAward = !debugPlay && !tutorial && !calibrating && typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS?.rhythmEventPoints === true && typeof rhythmEventPointAwardAt === 'function' ? rhythmEventPointAwardAt(Date.now(), song.songId, score) : null;
     // タイミング合わせのときは、貯めたずれから「判定タイミング調整」に入れる値を出す。
     // 助走(はじめの数回)は数に入れない。外れ値の落とし方・刻みは rhythmCalibrationOffsetFromTaps が持つ
     const calibration = calibrating ? rhythmCalibrationOffsetFromTaps((Array.isArray(run.deltas) ? run.deltas : []).slice(RHYTHM_CALIBRATION_WARMUP_COUNT)) : null;
@@ -23264,11 +23295,13 @@ const RhythmTapTest = ({
       result: {
         ...result,
         isNewRecord,
-        bestScore: merged.bestScore
+        bestScore: merged.bestScore,
+        eventPointAward
       }
     }));
+    if (eventPointAward && eventPointAward.amount > 0 && typeof addRhythmEventPoints === 'function') void addRhythmEventPoints(eventPointAward.amount);
     onComplete(result, merged);
-  }, [chart.totalNotes, difficulty.maxScore, onComplete, settings.effectAmount, settings.lightweightMode, stopFrame, tutorial, calibrating]);
+  }, [chart.totalNotes, difficulty.maxScore, onComplete, settings.effectAmount, settings.lightweightMode, stopFrame, tutorial, calibrating, debugPlay, song.songId]);
   // celebrate画面: 出た瞬間に合成SEを1回鳴らし、既定の時間で自動的にresultへ進む。
   // 依存はview.statusだけにしてある。もしview.comboなど毎ノーツ変わる値を依存に入れると、
   // (かつてコンボ演出で実際に踏んだ通り)途中でeffectが再実行されるたびcleanupが走り、
