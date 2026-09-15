@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d4d6c1378d2f6d4d
+// generated-sha256: ff5ce5d4a1e06dd0
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -89,7 +89,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-15 18:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-15 22:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8435,9 +8435,11 @@ const BreederIcon = ({ src, id, alt='', className='', roundedClass='rounded-full
 const ProfileFrameLayer = ({ frameId }) => {
   const frame = profileFrameById(normalizeProfileFrameId(frameId));
   if (!frame || frame.kind === 'none') return null;
-  // 画像フレームは透過PNGをそのまま重ねる。object-contain なので縦横比は変わらない
+  // 画像フレームは透過PNGをそのまま重ねる。object-contain なので縦横比は変わらない。
+  // 重ねる大きさと位置は絵ごとに違う(穴の大きさが違う)ので、profileFrameImageStyle が出す
   if (frame.kind === 'image') return (
-    <img src={frame.src} alt="" aria-hidden="true" draggable={false} className="mh-profile-frame mh-profile-frame-image"/>
+    <img src={frame.src} alt="" aria-hidden="true" draggable={false}
+      style={profileFrameImageStyle(frame)} className="mh-profile-frame mh-profile-frame-image"/>
   );
   return <span aria-hidden="true" className={`mh-profile-frame mh-profile-frame-ring ${frame.className||''}`}/>;
 };
@@ -32779,15 +32781,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   デバッグ専用なので更新履歴・ヘルプには載せない(CLAUDE.md ⑤の但し書き) */}
               <section data-debug-profile-frames className="rounded-2xl border-2 border-amber-500/60 bg-amber-950/20 p-3">
                 <div className="text-[10px] text-amber-300 font-black mb-2">🖼️ プロフィールフレーム見た目確認（未公開ぶんも表示・保存しません）</div>
-                <div className="grid grid-cols-4 gap-2">
+                {/* 豪華フレームはアイコンの外へ大きく出るので、3列にして上下の間を広く取る
+                    (4列だと隣どうし・名前と重なって確認しづらい) */}
+                <div className="grid grid-cols-3 gap-x-3 gap-y-7">
                   {PROFILE_FRAMES.map(frame=>(
-                    <div key={frame.id} className="flex flex-col items-center gap-1">
+                    <div key={frame.id} className="flex flex-col items-center gap-2.5">
                       <span className="mh-profile-avatar w-12 h-12">
                         <span className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-full">
                           {resolveIconUrl(breederIcon)?<BreederIcon src={resolveIconUrl(breederIcon)} id={breederIcon} alt="" className="w-full h-full"/>:<User size={22} className="text-indigo-400"/>}
                         </span>
                         <ProfileFrameLayer frameId={frame.released?frame.id:null}/>
-                        {!frame.released&&frame.kind==='image'&&<img src={frame.src} alt="" aria-hidden="true" draggable={false} className="mh-profile-frame mh-profile-frame-image"/>}
+                        {!frame.released&&frame.kind==='image'&&<img src={frame.src} alt="" aria-hidden="true" draggable={false} style={profileFrameImageStyle(frame)} className="mh-profile-frame mh-profile-frame-image"/>}
                         {!frame.released&&frame.kind==='css'&&<span aria-hidden="true" className={`mh-profile-frame mh-profile-frame-ring ${frame.className||''}`}/>}
                       </span>
                       <span className="text-[8px] font-black text-slate-300 leading-tight text-center">{frame.name}{frame.released?'':'（未公開）'}</span>
@@ -36767,8 +36771,10 @@ const createAnimationStyle = () => {
     .mh-profile-frame-gold{background:conic-gradient(from 210deg,#fef3c7,#b45309,#fde68a,#92400e,#fffbeb,#d97706,#fef3c7)}
     .mh-profile-frame-blue{background:conic-gradient(from 210deg,#e0f2fe,#0369a1,#7dd3fc,#075985,#f0f9ff,#0284c7,#e0f2fe)}
     .mh-profile-frame-pink{background:conic-gradient(from 210deg,#fce7f3,#be185d,#f9a8d4,#9d174d,#fff1f2,#db2777,#fce7f3)}
-    /* 画像フレーム(豪華フレーム用)。透過PNGを縦横比そのままで重ねる */
-    .mh-profile-frame-image{inset:-16%;display:block;width:auto;height:auto;object-fit:contain}
+    /* 画像フレーム(豪華フレーム用)。透過PNGを縦横比そのままで重ねる。
+       大きさと位置は絵ごとに profileFrameImageStyle が出す(穴の大きさが絵ごとに違うため)。
+       ここでは object-fit だけを決める(width/height を auto のままにすると広がらない) */
+    .mh-profile-frame-image{display:block;object-fit:contain}
     /* 転生オーラ画像。同じPNGの主炎・残光・足元炎を別周期で動かし、本体とUIには発光を掛けない。 */
     .mh-reincarnate-stack{isolation:isolate}.mh-reincarnate-aura{position:absolute;z-index:-1;inset:-34%;display:block;pointer-events:none;overflow:visible;contain:layout style}.mh-monster-card-name{position:relative;z-index:2}
     .mh-reincarnate-flame{position:absolute;inset:0;display:block;transform-origin:center bottom;will-change:transform,opacity}

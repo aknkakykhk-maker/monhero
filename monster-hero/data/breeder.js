@@ -316,13 +316,60 @@ const PROFILE_FRAMES = [
     desc:'澄んだ青の輪。暗い背景でもはっきり見えます。' },
   { id:'pink',   name:'ピンク',   kind:'css', released:true, className:'mh-profile-frame-pink',
     desc:'やわらかい桃色の輪。明るい印象になります。' },
-  // ↓ ここへ未公開の豪華フレームを足す(公開の条件・価格・入手方法が決まるまで released:false)
-  //   1行の形は { id, name, kind:'image', released:false, src, desc }。
-  //   src は images/profile-frames/ 以下の透過PNGのパス(base64にしない)。
-  //   ?v= は手で書かない(tools/stamp-version.js が中身のハッシュから付ける)。
-  //   公開するときに released:true へ変えると、選択画面とランキング表示の両方へ同時に出る。
+  // ==================== 豪華フレーム(2026-09-15・未公開) ====================
+  // ユーザーから受け取った透過PNG6枚。released:false なので
+  //   ・選択画面に出ない   ・保存値に入っても「フレームなし」になる
+  //   ・ランキングで他人の記録に入っていても描画されない
+  // (normalizeProfileFrameId が1か所でそう決めている)。
+  // 見た目だけは DEBUG_SETTINGS の「プロフィールフレーム見た目確認」から見られる。
+  //
+  // ★公開の条件・入手方法・価格・レアリティ・期間はまだ何も決めていない。
+  //   決まったら released:true にする(そのとき「持っているか」の仕組みも要る)。
+  // ★name と desc は仮。公開するときに決め直す。
+  // ★hole は「穴の直径 ÷ 画像の幅」を実測した値。位置合わせに使う(profileFrameImageInset)。
+  // ★元絵は 1254px / 1.2〜1.9MB だったものを 384px へ落として入れてある(6枚で281KB)。
+  //   表示は最大80pxなので、これで足りる(CLAUDE.md ⑥-2)。
+  { id:'frame_sakura_mochi', name:'桜もち', kind:'image', released:false, hole:0.656,
+    src:'images/profile-frames/sakura-mochi.png?v=7c842f6ed7bf',
+    desc:'桜の花びらと桜もちをあしらった、春の和風フレーム。' },
+  { id:'frame_dark_lord', name:'魔王', kind:'image', released:false, hole:0.682,
+    src:'images/profile-frames/dark-lord.png?v=fc64f9da9806',
+    desc:'紫の宝玉と金の角をいただく、闇をまとったフレーム。' },
+  { id:'frame_beat_suezo', name:'モンヒロビート', kind:'image', released:false, hole:0.724,
+    src:'images/profile-frames/beat-suezo.png?v=0b43f621dd89',
+    desc:'スエゾーと音符が跳ねる、モンヒロビートのフレーム。' },
+  { id:'frame_pink_ribbon', name:'ピンクリボン', kind:'image', released:false, hole:0.755,
+    src:'images/profile-frames/pink-ribbon.png?v=09b871ec464c',
+    desc:'紅いリボンと白いくつ下をあしらったフレーム。' },
+  { id:'frame_pink_bloom', name:'ピンクブルーム', kind:'image', released:false, hole:0.698,
+    src:'images/profile-frames/pink-bloom.png?v=fb89e34bd92b',
+    desc:'金の縁飾りと桜、幾重ものリボンで華やかにしたフレーム。' },
+  { id:'frame_pink_radiance', name:'ピンクレイディアンス', kind:'image', released:false, hole:0.677,
+    src:'images/profile-frames/pink-radiance.png?v=88238cde0306',
+    desc:'髪とリボンが渦を巻き、星とハートが輝くいちばん豪華なフレーム。' },
 ];
 const PROFILE_FRAME_MAP = Object.freeze(Object.fromEntries(PROFILE_FRAMES.map(frame => [frame.id, frame])));
+// 画像フレームの「穴」を、アイコンの円のどこに合わせるか。
+// 1.00 でちょうど重なり、小さくするほど枠がアイコンへかぶさる。
+// 0.98 は「アイコンをほとんど隠さず、境目だけ少し重ねる」値
+// (公開のしかたを決めるときに、ここだけ変えれば6枚まとめて寄り引きできる)。
+const PROFILE_FRAME_HOLE_FIT = 0.98;
+// 画像フレームを重ねる大きさと位置。絵ごとに穴の大きさ(hole)が違うので、1つのCSSではそろわない。
+// hole は「穴の直径 ÷ 画像の幅」で、tools/ranking/profile-frame-check.js が
+// 実際のPNGを測って書いてある値と合っているかを確かめる(絵を差し替えたらそこで気づく)。
+//
+// ★width / height を必ず書く。<img> は位置指定(inset)だけでは広がらず、
+//   さらに Tailwind の img{max-width:100%} でアイコンと同じ大きさに抑えられてしまう
+//   (2026-09-15・実際にそうなって枠が拡大されなかった)。maxWidth:'none' もここで外す。
+const PROFILE_FRAME_IMAGE_FALLBACK_BOX = 1.32; // hole が読めないときの大きさ(アイコン比)
+const profileFrameImageStyle = (frame) => {
+  const hole = Number(frame && frame.hole);
+  const box = (Number.isFinite(hole) && hole > 0.2 && hole < 1)
+    ? (PROFILE_FRAME_HOLE_FIT / hole) : PROFILE_FRAME_IMAGE_FALLBACK_BOX;
+  const size = `${(box * 100).toFixed(2)}%`;
+  const offset = `${(-((box - 1) / 2) * 100).toFixed(2)}%`;
+  return { width: size, height: size, left: offset, top: offset, right: 'auto', bottom: 'auto', maxWidth: 'none' };
+};
 // idからフレームの定義を引く。未公開のものもそのまま返す(デバッグの見た目確認はこちらを使う)
 const profileFrameById = (id) => (typeof id === 'string' && PROFILE_FRAME_MAP[id]) || null;
 // 保存値・ランキングから受け取った値を「いま画面に出してよいid」へそろえる。
