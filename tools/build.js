@@ -25,6 +25,12 @@ const { REPO_ROOT, GAME_SYSTEM, transformGameSystem, syncPartsAndGameSystem, ass
 
 const OUT_FILE = path.join(REPO_ROOT, 'monster-hero', 'game-system.compiled.js');
 
+// STEP3の大容量source差分をモバイル経由で安全に適用する一時フック。
+// --checkでは書き換えず、正規ビルド時だけ厳密一致パッチを先に当てる。ビルド後に削除する。
+if (!process.argv.includes('--check')) {
+  require('./patch-rhythm-event-point-shop');
+}
+
 // 元ファイルのハッシュを出力の先頭に埋め込み、--check で最新かどうか判定できるようにする
 function sourceHash() {
   return crypto.createHash('sha256').update(fs.readFileSync(GAME_SYSTEM)).digest('hex').slice(0, 16);
