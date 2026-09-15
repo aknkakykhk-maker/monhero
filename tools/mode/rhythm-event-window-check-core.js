@@ -422,7 +422,7 @@ check('アイテムの名前は実データから引く',
   game.includes('const rhythmEventRewardItem=')&&game.includes('HERO_PROOF_ITEM.name')
   &&game.includes('speciesTranscendFruitItems()[reward.lineageId]')
   // データ側は名前を「文字列として」持たないこと(コメントでの言及は説明なので見ない)
-  &&!/['"`](勇者の証|超越の実|虹のプシュケー)/.test(eventData));
+  &&!/['"`](勇者の証|超越の実|虹のプシュケー)/.test(eventData.slice(eventData.indexOf('// ===== 報酬(docs/spec/RHYTHM_RANKING.md §9) ====='))));
 check('画面に部門ごとの報酬を出す',
   screen.includes('data-rhythm-event-rewards')&&screen.includes('rhythmEventRewardText(reward)')
   &&screen.includes('rhythmEventRewardForRank(eventDefinition,eventDivisionId,index+1)'));
@@ -623,8 +623,8 @@ check('曲えらびの案内は週ごとに1度だけ',
   screen.includes('data-rhythm-event-notice')&&screen.includes('data-rhythm-event-notice-close')
   &&app.includes('rhythmEventNoticeSeen !== rhythmSongSelectEvent.id'));
 
-// --- イベントP STEP2（獲得式・保存・二重付与防止） ---
-check('イベントPの基本式は確定仕様どおり',
+// --- ビートP STEP2（獲得式・保存・二重付与防止） ---
+check('ビートPの基本式は確定仕様どおり',
   [[800000,80],[850000,85],[900000,90],[950000,95],[960000,116],[970000,137],[980000,158],[990000,179],[1000000,200]]
     .every(([score,want])=>O.rhythmEventPointBaseForScore(score)===want));
 check('壊れたスコアは0Pへ倒す',
@@ -637,21 +637,21 @@ if(limited.length){
   const normalAward=normal?O.rhythmEventPointAwardAt(mid,normal,1000000):null;
   check('イベント対象曲だけ1.5倍になる',!!targetAward&&targetAward.amount===300&&targetAward.multiplier===1.5&&targetAward.target===true
     &&(!normal||!!normalAward&&normalAward.amount===200&&normalAward.multiplier===1&&normalAward.target===false));
-  check('イベント期間外はイベントPを出さない',O.rhythmEventPointAwardAt(Date.parse(e.endAt),target,1000000)===null);
-  check('DEBUG専用など公開曲でないIDはイベントP対象外',O.rhythmEventPointAwardAt(mid,'atsu_cup_theme_debug_short',1000000)===null);
+  check('公開後もイベント期間外はビートPを出さない',O.rhythmEventPointAwardAt(Date.parse(e.endAt),target,1000000)===null);
+  check('DEBUG専用など公開曲でないIDはビートP対象外',O.rhythmEventPointAwardAt(mid,'atsu_cup_theme_debug_short',1000000)===null);
 }
-check('イベントPは新しい後方互換キーへ保存する',
+check('ビートPは既存の後方互換キーへ保存する',
   game.includes("const RHYTHM_EVENT_POINTS_KEY='mh_rhythm_event_points_v1';")
   &&game.includes('const normalizeRhythmEventPoints=value=>')
   &&game.includes('await storeGet(RHYTHM_EVENT_POINTS_KEY,0,false)')
   &&saveSpec.includes('mh_rhythm_event_points_v1'));
-check('イベント終了でイベントPを0へ戻す処理を持たない',!game.includes('storeSet(RHYTHM_EVENT_POINTS_KEY,0'));
-check('正常リザルトのfinishでだけイベントP付与を判定する',
+check('イベント終了でビートPを0へ戻す処理を持たない',!game.includes('storeSet(RHYTHM_EVENT_POINTS_KEY,0'));
+check('正常リザルトのfinishでだけビートP付与を判定する',
   game.includes('const eventPointAward=(!debugPlay&&!tutorial&&!calibrating')
   &&game.includes('rhythmEventPointAwardAt(Date.now(),song.songId,score)')
   &&game.includes('void addRhythmEventPoints(eventPointAward.amount)'));
-check('STEP2中は公開フラグOFFで、未完成のまま付与しない',
-  /const RHYTHM_EVENT_POINTS_PUBLIC_RELEASE = false;/.test(flags)
+check('STEP4でビートP公開フラグをONにする',
+  /const RHYTHM_EVENT_POINTS_PUBLIC_RELEASE = true;/.test(flags)
   &&flags.includes('rhythmEventPoints:RHYTHM_EVENT_POINTS_PUBLIC_RELEASE')
   &&game.includes('RELEASE_FLAGS?.rhythmEventPoints===true'));
 check('finishは二重付与防止のfinished印を先に立てる',(()=>{
@@ -660,7 +660,7 @@ check('finishは二重付与防止のfinished印を先に立てる',(()=>{
   const award=game.indexOf('addRhythmEventPoints(eventPointAward.amount)',from);
   return from>=0&&done>from&&award>done;
 })());
-check('イベントPのヘルプは公開フラグと一緒に隠す',help.includes("releaseFlag:'rhythmEventPoints'")&&help.includes("title:'イベントP'"));
+check('ビートPのヘルプは公開フラグと一緒に出す',help.includes("releaseFlag:'rhythmEventPoints'")&&help.includes("title:'ビートP'"));
 check('STEP2の更新履歴は開発メモとして残し、未完成機能を告知しない',(()=>{
   const at=changelog.indexOf('イベントPの獲得・保存基盤を実装しました');
   if(at<0)return false;
@@ -668,8 +668,8 @@ check('STEP2の更新履歴は開発メモとして残し、未完成機能を�
   return entry.includes('dev:true');
 })());
 
-// --- イベントP STEP3（交換所・固定12商品・数量交換・原子的保存） ---
-check('イベントP交換所は対象確定済みの固定12商品だけ',(()=>{
+// --- ビートP STEP3（交換所・固定12商品・数量交換・原子的保存） ---
+check('ビートP交換所は対象確定済みの固定12商品だけ',(()=>{
   const got=(O.RHYTHM_EVENT_POINT_SHOP_OFFERS||[]).map(o=>[o.id,o.itemId||'',o.grantAmount,o.cost]);
   const want=[
     ['diamond_300','',300,1],['training_ticket_x3','training_ticket',3,1],['training_ticket_l','training_ticket_l',1,3],
@@ -679,10 +679,10 @@ check('イベントP交換所は対象確定済みの固定12商品だけ',(()=>
   ];
   return JSON.stringify(got)===JSON.stringify(want);
 })());
-check('対象未決定のアイコンを推測でイベントP商品へ入れない',
+check('対象未決定のアイコンを推測でビートP商品へ入れない',
   (O.RHYTHM_EVENT_POINT_SHOP_OFFERS||[]).length===12
   &&!(O.RHYTHM_EVENT_POINT_SHOP_OFFERS||[]).some(o=>o.kind==='icon'||/アイコン/.test(o.name||'')));
-check('イベントPの数量交換計算はダイヤと複数個アイテムを正しく扱う',(()=>{
+check('ビートPの数量交換計算はダイヤと複数個アイテムを正しく扱う',(()=>{
   const diamond=O.RHYTHM_EVENT_POINT_SHOP_OFFERS.find(o=>o.id==='diamond_300');
   const ticket=O.RHYTHM_EVENT_POINT_SHOP_OFFERS.find(o=>o.id==='training_ticket_x3');
   const a=O.rhythmEventPointExchangePreview({offer:diamond,eventPoints:5,gold:100,ownedItems:{},quantity:2});
@@ -692,7 +692,7 @@ check('イベントPの数量交換計算はダイヤと複数個アイテムを
     &&b.ok&&b.eventPoints===3&&b.ownedItems.training_ticket===10
     &&!c.ok&&c.reason==='points'&&c.eventPoints===1&&c.ownedItems.training_ticket===4;
 })());
-check('交換保存はイベントP・ダイヤ・所持品を1取引で扱う',(()=>{
+check('交換保存はビートP・ダイヤ・所持品を1取引で扱う',(()=>{
   const from=app.indexOf('const exchangeRhythmEventPoints = async');
   const to=app.indexOf('// 編成画面:',from);
   const body=app.slice(from,to);
@@ -703,14 +703,16 @@ check('交換保存はイベントP・ダイヤ・所持品を1取引で扱う',
     &&body.includes('setRhythmEventPoints(exchange.eventPoints)')
     &&body.includes('setOwnedItems(exchange.ownedItems)');
 })());
-check('マーケットを開くたびイベントP保存値を読み直す',
+check('マーケットを開くたびビートP保存値を読み直す',
   app.includes("onOpenMarket={async()=>{addAssistantBond('market');setMarketExchangeError('');setRhythmEventPoints(await loadRhythmEventPoints());setGameState('BREEDER_MARKET');}}"));
-check('イベントP交換所は公開フラグOFF中は準備中のまま隠す',
-  /const RHYTHM_EVENT_POINTS_PUBLIC_RELEASE = false;/.test(flags)
-  &&marketScreen.includes("const eventPointReleased=typeof RELEASE_FLAGS!=='undefined'&&RELEASE_FLAGS?.rhythmEventPoints===true;")
-  &&marketScreen.includes("marketSection==='event'&&!eventPointReleased")
-  &&marketScreen.includes("marketSection==='event'&&eventPointReleased"));
-check('イベントP交換所は数量選択とMAX・交換後残高を出す',
+check('ビートP交換所はイベント非開催中・0Pでも常設表示する',
+  marketScreen.includes("event:{label:'ビートP交換所'")
+  &&marketScreen.includes("marketSection==='event'&&<>")
+  &&marketScreen.includes('value:safeEventPoints.toLocaleString()')
+  &&marketScreen.includes('所持ビートP')
+  &&!marketScreen.includes("marketSection==='event'&&!eventPointReleased")
+  &&!marketScreen.includes('ビートP交換所は準備中'));
+check('ビートP交換所は数量選択とMAX・交換後残高を出す',
   marketScreen.includes('data-event-point-shop')
   &&marketScreen.includes('MAX（{Math.max(0,maxQuantity).toLocaleString()}回）')
   &&marketScreen.includes('交換後')
@@ -720,6 +722,34 @@ check('STEP3の更新履歴も開発メモとして隠す',(()=>{
   if(at<0)return false;
   const entry=changelog.slice(at,changelog.indexOf('  },',at));
   return entry.includes('dev:true')&&entry.includes("releaseFlag:'rhythmEventPoints'");
+})());
+
+// --- ビートP STEP4（正式公開・表示・案内） ---
+check('曲選択の獲得案内は開催中だけビートPとして出す',
+  screen.includes("const beatPointEvent=RELEASE_FLAGS.rhythmEventPoints===true?rhythmLimitedEventAt(Date.now()):null;")
+  &&screen.includes('data-rhythm-beat-point-active')
+  &&screen.includes('ビートP獲得期間中'));
+check('リザルトは獲得したときだけビートPと対象曲倍率を出す',
+  game.includes('data-rhythm-result-beat-points')
+  &&game.includes('ビートP獲得')
+  &&game.includes('result.eventPointAward.target'));
+check('プレイヤー向け主要画面はビートP表記へ統一する',
+  ![marketScreen,screen,read('monster-hero/src/parts/30-rhythm-play.jsx'),app,help].some(source=>source.includes('イベントP')));
+check('正式公開の更新履歴と助手告知を同じ公開フラグで出す',(()=>{
+  const at=changelog.indexOf('ビートP交換所を正式公開しました');
+  if(at<0)return false;
+  const entry=changelog.slice(at,changelog.indexOf('  },',at));
+  return entry.includes("releaseFlag:'rhythmEventPoints'")
+    &&entry.includes("assistantNotice: { id:'update_notice_rhythm_beat_point_shop_v1', type:'market' }")
+    &&!entry.includes('dev:true');
+})());
+check('正式仕様は名称・常設・非開催時獲得なし・保存互換・アイコン未実装を明記する',(()=>{
+  const pointSpec=read('docs/spec/RHYTHM_EVENT_POINTS.md');
+  return /STEP4[^\n]*正式公開済み/.test(pointSpec)
+    &&pointSpec.includes('ビートP交換所は常設する')
+    &&pointSpec.includes('イベント非開催中は新規ビートPを獲得しない')
+    &&pointSpec.includes('保存キー `mh_rhythm_event_points_v1` は変更・削除せず')
+    &&pointSpec.includes('対象が決まっていないアイコン商品は未実装');
 })());
 
 // 適用SQLと仕様書

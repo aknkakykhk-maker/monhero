@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9dea76cb46590f92
+// generated-sha256: 5fb8b4169a51e06b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -89,7 +89,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-15 12:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-15 15:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6432,9 +6432,9 @@ const RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE = true;
 // 2026-09-07 05:00(月) 〜 2026-09-14 05:00(月) で並ぶことを確かめたうえで公開。
 // イベントタブ・曲えらびの案内・ヘルプ・更新履歴・助手の告知がここで同時に出る。
 const RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE = true;
-// イベントPは獲得・保存→交換所→表示を段階実装する。全部そろうまでプレイヤーへ公開しない。
-// true にすると獲得処理と、同じ releaseFlag を持つヘルプ・更新履歴・助手告知が同時に有効になる。
-const RHYTHM_EVENT_POINTS_PUBLIC_RELEASE = false;
+// ビートPはSTEP4で正式公開。獲得はこのフラグに加えて期間限定イベント開催中だけに限定し、
+// 常設の交換所・ヘルプ・更新履歴・助手告知を同じタイミングで公開する。
+const RHYTHM_EVENT_POINTS_PUBLIC_RELEASE = true;
 const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE, rhythmWeeklyRanking:RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE, rhythmEventPoints:RHYTHM_EVENT_POINTS_PUBLIC_RELEASE };
 // releaseFlag = そのフラグが立つまで出さない。unreleasedFlag = そのフラグが立ったら出さない。
 // 逆向きの名札が要るのは「準備中です」の案内で、公開したあとも残っていると
@@ -13750,7 +13750,8 @@ const score=run.lifeDepleted?run.lockedScore:run.score;setView(v=>({...v,score,c
     // run.lifeDepleted は false に戻っているので、そのときはクリア扱いになる。
     // 練習(tutorial)とタイミング合わせ(calibrating)はライフを減らさないので必ずクリア。
     const failed=!tutorial&&!calibrating&&run.lifeDepleted===true;
-    // イベントPは正常に最後まで到達した公開プレイだけ。公開フラグがfalseのSTEP2中は一切付与しない。
+    // ビートPは正常に最後まで到達した公開プレイだけ。公開後も期間判定は
+    // rhythmEventPointAwardAt 側に残し、イベント非開催中は一切付与しない。
     // finishは先頭で run.finished=true にするため、再描画・画面遷移で同じ結果を二重付与しない。
     const eventPointAward=(!debugPlay&&!tutorial&&!calibrating
       &&typeof RELEASE_FLAGS!=='undefined'&&RELEASE_FLAGS?.rhythmEventPoints===true
@@ -14152,7 +14153,7 @@ scheduleTick();};
     曲を終えたとき(不可逆のDOWN)だけ。入る周回数(=経験値)も半分になる。
     ★古い result(cleared を持たない)はクリア扱いにする。 */}
 {(()=>{const failed=result.cleared===false;return <div data-rhythm-result-clear data-cleared={failed?'false':'true'} className="mx-auto mt-3 w-full max-w-xs rounded-2xl border-2 px-3 py-2 text-center"><b className="block text-4xl font-black leading-none">{failed?'FAILED':'CLEAR'}</b><small className="mt-1.5 block text-[10px] font-black leading-relaxed">{failed?'ライフが0になったまま曲が終わりました（DOWN）':'ライフを残して最後まで演奏しました'}</small></div>;})()}
-<div data-rhythm-result-rank data-rank-tier={String(rankTier)} className={`relative mx-auto mt-2 flex h-20 w-20 items-center justify-center rounded-full border-4 border-current text-4xl font-black ${RHYTHM_RANK_COLORS[rank]}`}>{rank}</div><div className="my-3 text-center text-3xl font-black">{view.score.toLocaleString()}</div><p className="text-center text-sm">BEST SCORE {result.bestScore.toLocaleString()}</p>{result.isNewRecord&&<p data-rhythm-new-record className="text-center text-xl font-black text-amber-300">NEW RECORD</p>}{/* 達成をひと目で分かるように、いちばん上の称号だけを大きく出す(2026-09-03)。
+<div data-rhythm-result-rank data-rank-tier={String(rankTier)} className={`relative mx-auto mt-2 flex h-20 w-20 items-center justify-center rounded-full border-4 border-current text-4xl font-black ${RHYTHM_RANK_COLORS[rank]}`}>{rank}</div><div className="my-3 text-center text-3xl font-black">{view.score.toLocaleString()}</div><p className="text-center text-sm">BEST SCORE {result.bestScore.toLocaleString()}</p>{result.isNewRecord&&<p data-rhythm-new-record className="text-center text-xl font-black text-amber-300">NEW RECORD</p>}{result.eventPointAward&&result.eventPointAward.amount>0&&<div data-rhythm-result-beat-points className="mx-auto my-3 max-w-xs rounded-2xl border border-violet-400/50 bg-violet-950/35 px-3 py-2 text-center"><small className="block text-[10px] font-black tracking-wider text-violet-200">🎟️ ビートP獲得</small><b className="mt-0.5 block text-2xl font-black text-white">+{result.eventPointAward.amount.toLocaleString()}P</b>{result.eventPointAward.target&&<span className="mt-1 block text-[9px] font-black text-amber-200">イベント対象曲 1.5倍</span>}</div>}{/* 達成をひと目で分かるように、いちばん上の称号だけを大きく出す(2026-09-03)。
     ALL MARVELOUS > ALL EXCELLENT > FULL COMBO の順に上位。残りは下に小さく並べる。 */}
 {(result.fullCombo||result.allExcellent||result.allMarvelous)&&<div data-rhythm-result-celebrate className="my-3 text-center">
   <b className="block text-3xl font-black leading-tight">{result.allMarvelous?'ALL MARVELOUS!!':result.allExcellent?'ALL EXCELLENT!!':'FULL COMBO!'}</b>
@@ -14728,7 +14729,6 @@ function BreederMarketScreen({
   const [eventQuantityOffer,setEventQuantityOffer]=useState(null);
   const [eventQuantity,setEventQuantity]=useState(1);
   const [eventExchangePending,setEventExchangePending]=useState(false);
-  const eventPointReleased=typeof RELEASE_FLAGS!=='undefined'&&RELEASE_FLAGS?.rhythmEventPoints===true;
   const safeEventPoints=normalizeRhythmEventPoints(eventPoints);
   const psycheHave = ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID);
   const shardHave = ownedItemCount(ownedItems, HERO_PROOF_SHARD_ITEM_ID);
@@ -14748,7 +14748,7 @@ function BreederMarketScreen({
     diamond:{label:'ダイヤショップ',emoji:'💎'},
     breeder:{label:'ブリーダーP交換所',emoji:'🪙'},
     exchange:{label:'アイテム交換所',emoji:'🔄'},
-    event:{label:'イベントP交換所',emoji:'🎟️'},
+    event:{label:'ビートP交換所',emoji:'🎟️'},
   };
 
   const renderMarketItem=(item,{showBase=true,showHeroProofExchange=false}={})=>{
@@ -14801,7 +14801,7 @@ function BreederMarketScreen({
             {key:'diamond',emoji:'💎',label:'ダイヤショップ',value:gold.toLocaleString(),hint:'ダイヤで購入',border:'border-cyan-400/35',title:'text-cyan-200',arrow:'text-cyan-300/80'},
             {key:'breeder',emoji:'🪙',label:'ブリーダーP交換所',titleLines:['ブリーダーP','交換所'],value:breederPoints.toLocaleString(),hint:'Lv.UPで獲得',border:'border-amber-400/35',title:'text-amber-200',arrow:'text-amber-300/80'},
             {key:'exchange',emoji:'🔄',label:'アイテム交換所',value:null,hint:'プシュケー・証など',border:'border-emerald-400/35',title:'text-emerald-200',arrow:'text-emerald-300/80'},
-            {key:'event',emoji:'🎟️',label:'イベントP交換所',titleLines:['イベントP','交換所'],value:eventPointReleased?safeEventPoints.toLocaleString():null,hint:eventPointReleased?'所持イベントP':'準備中',border:eventPointReleased?'border-violet-400/35':'border-violet-400/20',title:eventPointReleased?'text-violet-200':'text-violet-300/70',arrow:eventPointReleased?'text-violet-300/80':'text-violet-400/40'},
+            {key:'event',emoji:'🎟️',label:'ビートP交換所',titleLines:['ビートP','交換所'],value:safeEventPoints.toLocaleString(),hint:'所持ビートP',border:'border-violet-400/35',title:'text-violet-200',arrow:'text-violet-300/80'},
           ].map(section=>(
             <button
               key={section.key}
@@ -14881,19 +14881,11 @@ function BreederMarketScreen({
         </div>
       </>}
 
-      {marketSection==='event'&&!eventPointReleased&&<div className="flex-1 min-h-0 flex items-center justify-center">
-        <div className="w-full max-w-sm rounded-2xl border border-slate-700 bg-slate-950/70 px-4 py-8 text-center">
-          <div className="text-3xl mb-2" aria-hidden="true">🎟️</div>
-          <div className="text-sm font-black text-slate-300">イベントP交換所は準備中です</div>
-          <div className="mt-2 text-[10px] font-bold leading-relaxed text-slate-500">イベントPの獲得・交換・表示がすべて揃ってから公開します。</div>
-        </div>
-      </div>}
-
-      {marketSection==='event'&&eventPointReleased&&<>
+      {marketSection==='event'&&<>
         <div data-event-point-balance className="mb-3 shrink-0 flex items-center justify-center gap-2 rounded-2xl border border-violet-500/30 bg-violet-950/30 py-2">
           <span aria-hidden="true">🎟️</span>
           <span className="font-mono text-base font-black text-violet-100">{safeEventPoints.toLocaleString()}</span>
-          <span className="text-[9px] font-bold text-slate-400">所持イベントP</span>
+          <span className="text-[9px] font-bold text-slate-400">所持ビートP</span>
         </div>
         {marketExchangeError&&<div className="mb-2 shrink-0 rounded-xl border border-red-500/40 bg-red-950/30 px-3 py-2 text-center text-[9px] font-black text-red-300">{marketExchangeError}</div>}
         <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
@@ -14918,14 +14910,14 @@ function BreederMarketScreen({
         </div>
       </>}
 
-      {eventQuantityOffer&&eventPointReleased&&(()=>{
+      {eventQuantityOffer&&(()=>{
         const maxQuantity=Math.floor(safeEventPoints/eventQuantityOffer.cost);
         const quantity=Math.max(1,Math.min(Math.max(1,maxQuantity),Math.floor(Number(eventQuantity)||1)));
         const totalCost=eventQuantityOffer.cost*quantity;
         const totalGrant=eventQuantityOffer.grantAmount*quantity;
         const changeQuantity=(delta)=>setEventQuantity(Math.max(1,Math.min(Math.max(1,maxQuantity),quantity+delta)));
         const canExchange=maxQuantity>0&&!eventExchangePending&&!purchaseProcessing;
-        return <div className="fixed inset-0 z-[42000] flex items-center justify-center bg-black/90 p-4" role="dialog" aria-modal="true" aria-label="イベントP交換数を選ぶ">
+        return <div className="fixed inset-0 z-[42000] flex items-center justify-center bg-black/90 p-4" role="dialog" aria-modal="true" aria-label="ビートP交換数を選ぶ">
           <div className="w-full max-w-sm rounded-3xl border-2 border-violet-500 bg-slate-950 p-5 shadow-2xl">
             <div className="flex items-center gap-2"><span className="text-3xl" aria-hidden="true">{eventQuantityOffer.emoji}</span><div><div className="text-base font-black text-violet-200">{eventQuantityOffer.name}</div><div className="text-[10px] font-bold text-slate-500">1回 {eventQuantityOffer.grantAmount.toLocaleString()}{eventQuantityOffer.unit} ／ {eventQuantityOffer.cost.toLocaleString()}P</div></div></div>
             <div className="mt-4 grid grid-cols-[1fr_1fr_1.4fr_1fr_1fr] items-center gap-1.5">
@@ -15507,6 +15499,9 @@ function RhythmSongSelectScreen({
       const eventSongTitles=rhythmEventNotice
         ?rhythmEventNotice.songIds.map(songId=>rhythmSongFullName(rhythmEventSong(songId,RHYTHM_SONGS))||songId)
         :[];
+      // ビートP交換所は常設だが、獲得案内は期間限定イベント開催中だけ出す。
+      const beatPointEvent=RELEASE_FLAGS.rhythmEventPoints===true?rhythmLimitedEventAt(Date.now()):null;
+      const beatPointTargetSong=!!beatPointEvent&&Array.isArray(beatPointEvent.songIds)&&beatPointEvent.songIds.includes(rhythmSelectedSongId);
       // ===== クイック∞周回の進捗(docs/spec/QUICK_RHYTHM_LINK.md PR6) =====
       // 1行の帯は、縦持ちならヘッダーの下、横持ちならヘッダーの空きへ入れる。
       // 横は上のタブに余白があるので、そこを使えば曲の一覧を押し下げずに済む
@@ -15685,6 +15680,7 @@ function RhythmSongSelectScreen({
             <button type="button" data-rhythm-event-notice-close onClick={dismissRhythmEventNotice} aria-label="この案内を閉じる" className="min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black">×</button>
           </div>
         </div>}
+        {beatPointEvent&&<div data-rhythm-beat-point-active data-target-song={beatPointTargetSong?'true':'false'} className="shrink-0 border-b border-violet-400/20 bg-violet-950/25 px-3 py-1 text-center text-[10px] font-black text-violet-100">🎟️ ビートP獲得期間中{beatPointTargetSong?'・選択中のイベント対象曲は1.5倍':'・公開曲なら獲得できます'}</div>}
         {/* 裏で周回したままモンビーを開いた最初の1回だけ(PR8) */}
         {quickRhythmBackgroundVisible&&<div data-quick-rhythm-background className="shrink-0 border-b border-fuchsia-400/20 bg-slate-950/90 px-2 py-1">
           <div className="flex items-start gap-1">
@@ -20273,7 +20269,7 @@ function MonsterHeroGame() {
   const dailyMasuAdviceCheckedRef = useRef(false);
   // マーケットのアイテムの効果説明。カードを小さくしたぶん、詳細ボタンから出す
   const [marketItemDetail, setMarketItemDetail] = useState(null);
-  // イベントPは交換所を開くたび保存値から読み直し、交換成功時だけstateも更新する。
+  // ビートPは交換所を開くたび保存値から読み直し、交換成功時だけstateも更新する。
   const [rhythmEventPoints, setRhythmEventPoints] = useState(0);
   // 虹の超越の実だけは、価格タップ後に数量と購入後残高を確認してから一括購入する。
   const [marketQuantityItem, setMarketQuantityItem] = useState(null);
@@ -25482,7 +25478,7 @@ function MonsterHeroGame() {
     } finally { marketPurchaseProcessingRef.current = false; }
   };
 
-  // イベントP交換所。残高・ダイヤ・所持アイテムを1取引で保存し、どれか1つでも失敗したら全部戻す。
+  // ビートP交換所。残高・ダイヤ・所持アイテムを1取引で保存し、どれか1つでも失敗したら全部戻す。
   const exchangeRhythmEventPoints = async (offer, quantity=1) => {
     if (marketPurchaseProcessingRef.current) return { ok:false, reason:'busy' };
     marketPurchaseProcessingRef.current = true;
@@ -25494,7 +25490,7 @@ function MonsterHeroGame() {
       setRhythmEventPoints(beforePoints);
       const exchange = rhythmEventPointExchangePreview({ offer, eventPoints:beforePoints, gold:beforeGold, ownedItems:beforeItems, quantity });
       if (!exchange.ok) {
-        setMarketExchangeError(exchange.reason==='points'?'イベントPが足りません。':'この商品は交換できません。');
+        setMarketExchangeError(exchange.reason==='points'?'ビートPが足りません。':'この商品は交換できません。');
         return exchange;
       }
       const saved = await saveStoredValuesOrRollback([
@@ -25503,7 +25499,7 @@ function MonsterHeroGame() {
         { key:'mh_owned_items', before:beforeItems, next:exchange.ownedItems },
       ], storeGet, storeSet);
       if (!saved) {
-        setMarketExchangeError('交換を保存できませんでした。イベントPと所持品は変更していません。');
+        setMarketExchangeError('交換を保存できませんでした。ビートPと所持品は変更していません。');
         return { ok:false, reason:'save' };
       }
       setRhythmEventPoints(exchange.eventPoints);
@@ -25513,7 +25509,7 @@ function MonsterHeroGame() {
       saveMissionProgress('market');
       return exchange;
     } catch {
-      setMarketExchangeError('交換を保存できませんでした。イベントPと所持品は変更していません。');
+      setMarketExchangeError('交換を保存できませんでした。ビートPと所持品は変更していません。');
       return { ok:false, reason:'save' };
     } finally { marketPurchaseProcessingRef.current = false; }
   };
