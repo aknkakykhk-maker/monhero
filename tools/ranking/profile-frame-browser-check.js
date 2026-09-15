@@ -31,6 +31,20 @@ const HIDDEN_FRAMES = frameNames(false);
 const results = [];
 const check = (name, ok, detail = '') => { results.push(ok); console.log(`  ${ok ? 'OK' : 'NG'}  ${name}${detail ? ' — ' + detail : ''}`); };
 
+// 絆Lv・総合力ランキング用の行(bond_levels テーブル。rankings とは別)。
+// 総合力は detail.power を持つ行だけが載る
+const bondDetail = (name, power) => ({ v:6, name, bondXp:9000, levelCap:35,
+  statPoints:{ hp:3, atk:4, def:1, guts:2 }, power });
+const BOND_ROWS = [
+  { user_name:'金枠さん', individual_id:'m-1', monster_id:'Mocchi', mon_name:'モッチー',
+    bond_level:99, icon:'Mocchi', detail:bondDetail('きんモッチ', 52000), colors:[], profile_frame:'gold' },
+  { user_name:'桃枠さん', individual_id:'m-2', monster_id:'Suezo', mon_name:'スエゾー',
+    bond_level:80, icon:'Suezo', detail:bondDetail('ももスエ', 30000), colors:[], profile_frame:'pink' },
+  { user_name:'枠なしさん', individual_id:'m-3', monster_id:'Golem', mon_name:'ゴーレム',
+    bond_level:70, icon:'Golem', detail:bondDetail('わくなしゴレ', 9000), colors:[] },
+  { user_name:'未公開さん', individual_id:'m-4', monster_id:'Tiger', mon_name:'ライガー',
+    bond_level:60, icon:'Mocchi', detail:bondDetail('みこうかいライ', 8000), colors:[], profile_frame:'frame_moo' },
+];
 // ブリーダーLvランキング用の行。フレームを選んでいる人・いない人・知らないidの人を混ぜる
 const RANKING_ROWS = [
   { user_name: '金枠さん',   level: 90, icon: 'Mocchi', profile_frame: 'gold' },
@@ -86,6 +100,10 @@ async function run() {
     const url = new URL(route.request().url());
     if (url.pathname.endsWith('/rankings')) {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(RANKING_ROWS) });
+      return;
+    }
+    if (url.pathname.endsWith('/bond_levels')) {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(BOND_ROWS) });
       return;
     }
     await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
@@ -221,6 +239,29 @@ async function run() {
   check('iPhone縦画面で横にはみ出さない',
     await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1),
     await page.evaluate(() => `${document.documentElement.scrollWidth} / ${window.innerWidth}`));
+
+  // ⑥ 絆Lv・総合力タブ(bond_levels から読む。rankings とは別テーブル)
+  const openTab = async (label, kind) => {
+    await page.evaluate((t) => {
+      const b = [...document.querySelectorAll('button')].find(x => x.textContent.trim() === t);
+      if (b) b.click();
+    }, label);
+    await page.waitForTimeout(3500);
+    return page.evaluate((k) => [...document.querySelectorAll(`[data-ranking-kind="${k}"]`)].map(el => ({
+      text: el.innerText.replace(/\s+/g, ' ').slice(0, 30),
+      frame: [...el.querySelectorAll('.mh-profile-frame')].map(f => [...f.classList].find(c => c.startsWith('mh-profile-frame-') && c !== 'mh-profile-frame-ring') || '?'),
+    })), kind);
+  };
+  for (const [label, kind] of [['絆Lv', 'bond'], ['総合力', 'power']]) {
+    const rows2 = await openTab(label, kind);
+    const by = (n) => rows2.find(r => r.text.includes(n)) || { frame: [] };
+    check(`⑥ ${label}タブの一覧が出る`, rows2.length >= 3, `${rows2.length}件`);
+    check(`⑥ ${label}タブに他プレイヤーのフレームが出る`,
+      by('金枠さん').frame.includes('mh-profile-frame-gold') && by('桃枠さん').frame.includes('mh-profile-frame-pink'),
+      `金枠 ${by('金枠さん').frame.join(',')} / 桃枠 ${by('桃枠さん').frame.join(',')}`);
+    check(`⑥ ${label}タブ: フレームを選んでいない人には出ない`, by('枠なしさん').frame.length === 0);
+    check(`⑥ ${label}タブ: 未公開のフレームは描かない`, by('未公開さん').frame.length === 0, by('未公開さん').frame.join(','));
+  }
 
   check('実行時エラーが出ていない', fatal.length === 0, fatal.slice(0, 2).join(' | '));
   await browser.close();

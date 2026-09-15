@@ -21,6 +21,7 @@ const widgets = read('monster-hero/src/parts/20-market-notices-help.jsx');
 const supa = read('monster-hero/src/parts/26-supabase.jsx');
 const app = read('monster-hero/src/parts/60-app.jsx');
 const profileScreen = read('monster-hero/src/parts/56-screen-profile.jsx');
+const bondEntries = read('monster-hero/src/parts/22-enemy-and-bond-entries.jsx');
 const homeScreen = read('monster-hero/src/parts/69-screen-home.jsx');
 const bootstrap = read('monster-hero/src/parts/70-bootstrap.jsx');
 const compiled = read('monster-hero/game-system.compiled.js');
@@ -257,6 +258,25 @@ check('曲別・全曲合算・週間・イベントのどれも外して取り�
 check('通常バトルの送信にフレームIDを載せている', app.includes('{ profile_frame: profileFrame }'));
 check('モンビーの送信にフレームIDを載せている', app.includes('{ profile_frame: rankingProfileFrameValue(profileFrameId) }'));
 check('送れなかった記録の送り直しにも載せている', supa.includes('{ profile_frame: entry.profileFrame }'));
+// ===== ⑤-2 絆Lv・総合力ランキング(bond_levels は rankings とは別テーブル) =====
+check('絆Lv: bond_levels の取得へも足している', supa.includes('const bondLevelsSelectWithProfileFrame'));
+check('絆Lv: 列があるかどうかを rankings とは別に覚える',
+  supa.includes('let _bondLevelsProfileFrameUnavailable = false;')
+  && /sbFetchBondLevels[\s\S]{0,1500}_bondLevelsProfileFrameUnavailable = true/.test(supa)
+  && /sbUpsertBondLevels[\s\S]{0,1500}_bondLevelsProfileFrameUnavailable = true/.test(supa));
+check('絆Lv: 列が無い環境でも絆Lvの記録は落とさない(外して送り直す)',
+  /sbUpsertBondLevels[\s\S]{0,1500}return sbUpsertBondLevels\(bondLevelRowsWithoutProfileFrame\(rows\)\)/.test(supa));
+check('絆Lv: 送る行にフレームIDを載せている',
+  /bondLevelRowsFromParty = \(userName, icon, party, profileFrame/.test(supa)
+  && /rankingProfileFrameValue\(profileFrame\) \? \{ profile_frame: rankingProfileFrameValue\(profileFrame\) \}/.test(supa));
+check('絆Lv: 呼び出し元がフレームを渡している',
+  app.includes('bondLevelRowsFromParty(name, icon, party, profileFrame)'));
+check('絆Lv: 受け取った行からフレームを取り出している',
+  /const bondLevelRowToEntry[\s\S]{0,800}profileFrame: rankingProfileFrameFromRow\(row\)/.test(supa));
+check('絆Lv: 古い経路(rankingsのpartyから作る一覧)にもフレームを渡している',
+  bondEntries.includes('profileFrame:record.profileFrame??null'));
+check('総合力: 絆Lvの一覧をそのまま並べ替えるので、フレームも一緒に運ばれる',
+  /const collectPowerRankingEntries[\s\S]{0,400}\{ \.\.\.entry, power:/.test(bondEntries));
 check('順位・スコアの決め方を変えていない(order は元のまま)',
   supa.includes('order=score.desc.nullslast') && supa.includes('order=total_score.desc,last_scored_at.asc'));
 

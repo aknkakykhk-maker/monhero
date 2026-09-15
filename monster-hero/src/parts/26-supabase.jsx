@@ -243,6 +243,7 @@ const bondLevelRowToEntry = (row) => {
   return {
     userName: row?.user_name || '名無しのブリーダー',
     icon: row?.icon ?? null,
+    profileFrame: rankingProfileFrameFromRow(row),
     monName, bondLevel, monsterId,
     imgUrl: ALL_PLAYER_MONSTERS[monsterId]?.iconUrl || null,
     emoji: ALL_PLAYER_MONSTERS[monsterId]?.emoji || null,
@@ -274,6 +275,15 @@ const mergeBondRankingEntries = (primaryEntries, legacyEntries) => {
 // 1度でも「テーブルが無い」と分かったら、そのセッションでは以後アクセスしない。
 const BOND_LEVELS_TABLE = 'bond_levels';
 const BOND_LEVELS_SELECT = 'user_name,individual_id,monster_id,mon_name,bond_level,icon,detail,colors';
+// プロフィールフレーム(2026-09-15)。bond_levels は rankings とは別のテーブルなので、
+// 「列があるかどうか」も別に覚える(片方だけSQLを当てた環境で取り違えないため)。
+// 判定そのもの(_isMissingProfileFrameError)と正規化は rankings と同じものを使う。
+let _bondLevelsProfileFrameUnavailable = false;
+const bondLevelsProfileFrameUnavailable = () => _bondLevelsProfileFrameUnavailable;
+const bondLevelsSelectWithProfileFrame = () =>
+  _bondLevelsProfileFrameUnavailable ? BOND_LEVELS_SELECT : `${BOND_LEVELS_SELECT},${RANKING_PROFILE_FRAME_COLUMN}`;
+const bondLevelRowsWithoutProfileFrame = (rows) =>
+  (Array.isArray(rows) ? rows : []).map(row => rankingRowWithoutProfileFrame(row));
 // 1行が数百バイトなので、種類別タブぶんまで含めて1回で取り切れる余裕を持たせる
 const BOND_LEVELS_FETCH_LIMIT = 1000;
 // 「テーブルが無い」と分かったあとは、毎回404を出しにいかない
@@ -288,7 +298,8 @@ const _isMissingTableError = (status, body) => {
 // rankings から集計する(新旧併用)
 const sbFetchBondLevels = async (requestId='untracked') => {
   if (_bondLevelsUnavailable) return null;
-  const url = `${SUPABASE_URL}/rest/v1/${BOND_LEVELS_TABLE}?select=${BOND_LEVELS_SELECT}`
+  const select = bondLevelsSelectWithProfileFrame();
+  const url = `${SUPABASE_URL}/rest/v1/${BOND_LEVELS_TABLE}?select=${select}`
     + `&order=bond_level.desc.nullslast&limit=${BOND_LEVELS_FETCH_LIMIT}`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8000);
@@ -296,6 +307,13 @@ const sbFetchBondLevels = async (requestId='untracked') => {
     const res = await fetch(url, { headers: SB_HEADERS, cache: 'no-store', signal: controller.signal });
     const body = await res.text();
     if (!res.ok) {
+      // プロフィールフレームの列がまだ無い環境。外して取り直せば今までどおり出せる
+      // (飾り枠が出ないだけで、絆Lv・総合力の順位は変わらない)
+      if (select !== BOND_LEVELS_SELECT && _isMissingProfileFrameError(res.status, body)) {
+        _bondLevelsProfileFrameUnavailable = true;
+        rankingLog(requestId, 'bond-levels-profile-frame-missing', { status: res.status });
+        return sbFetchBondLevels(requestId);
+      }
       if (_isMissingTableError(res.status, body)) {
         _bondLevelsUnavailable = true;
         rankingLog(requestId, 'bond-levels-missing', { status: res.status });
@@ -315,6 +333,8 @@ const sbFetchBondLevels = async (requestId='untracked') => {
 // ランキング送信の付随処理なので、失敗しても周回の進行は止めない。
 const sbUpsertBondLevels = async (rows) => {
   if (_bondLevelsUnavailable || !Array.isArray(rows) || rows.length === 0) return false;
+  // 列がまだ無いと分かっている間は、最初から外して送る
+  const payload = _bondLevelsProfileFrameUnavailable ? bondLevelRowsWithoutProfileFrame(rows) : rows;
   const url = `${SUPABASE_URL}/rest/v1/${BOND_LEVELS_TABLE}?on_conflict=user_name,individual_id`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8000);
@@ -322,10 +342,16 @@ const sbUpsertBondLevels = async (rows) => {
     const res = await fetch(url, {
       method: 'POST',
       headers: { ...SB_HEADERS, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
-      body: JSON.stringify(rows), signal: controller.signal,
+      body: JSON.stringify(payload), signal: controller.signal,
     });
     if (!res.ok) {
       const body = await res.text();
+      // プロフィールフレームの列がまだ無い環境。飾り枠のために絆Lvの記録を落とさない。
+      // その列だけ外して必ず送り直す(一度気付けば以後は最初から外して送る)
+      if (!_bondLevelsProfileFrameUnavailable && _isMissingProfileFrameError(res.status, body)) {
+        _bondLevelsProfileFrameUnavailable = true;
+        return sbUpsertBondLevels(bondLevelRowsWithoutProfileFrame(rows));
+      }
       if (_isMissingTableError(res.status, body)) { _bondLevelsUnavailable = true; return false; }
       throw new Error(`bond_levels upsert ${res.status}: ${body || res.statusText}`);
     }
@@ -337,7 +363,7 @@ const sbUpsertBondLevels = async (rows) => {
 // ランキングへ送る編成から、絆Lvの正本へ入れる行を作る。
 // 個体が特定できる記録は masuId、できない古い形は legacy:種ID でまとめる
 // (どちらも rankings 側の集計と同じ考え方)。
-const bondLevelRowsFromParty = (userName, icon, party) => {
+const bondLevelRowsFromParty = (userName, icon, party, profileFrame = null) => {
   const byIndividual = new Map();
   (Array.isArray(party) ? party : []).forEach(member => {
     const bondLevel = Number(member?.bondLevel);
@@ -356,6 +382,8 @@ const bondLevelRowsFromParty = (userName, icon, party) => {
       monster_id: monsterId, mon_name: monName,
       bond_level: Math.floor(bondLevel),
       icon: icon ?? null,
+      // プロフィールフレーム。選んでいなければ列ごと付けない(既存の行と同じくNULLのまま)
+      ...(rankingProfileFrameValue(profileFrame) ? { profile_frame: rankingProfileFrameValue(profileFrame) } : {}),
       detail: member.detail ?? null,
       colors: Array.isArray(member.colors) ? member.colors : null,
     });

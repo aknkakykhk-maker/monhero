@@ -73,15 +73,23 @@ const CHAIN = [
   'RHYTHM_TOTAL_APPLY.sql', 'RHYTHM_EVENT_APPLY.sql', 'RHYTHM_EVENT_DETAIL_APPLY.sql',
   'RHYTHM_EVENT_BONUS_APPLY.sql', 'RHYTHM_WEEK_TOTAL_APPLY.sql', 'RANKINGS_SCORE_BIGINT_APPLY.sql',
 ];
+// 絆Lv・総合力ランキングは rankings ではなく bond_levels から読む(別テーブル)
+const BOND_CHAIN = ['BOND_LEVELS_APPLY.sql'];
+const BOND_SQL_DIR = path.join(ROOT, 'docs/sql/bond-levels');
+const PROFILE_FRAME_FILES = [
+  'PROFILE_FRAME_APPLY_TEST.sql', 'PROFILE_FRAME_APPLY.sql', 'PROFILE_FRAME_VERIFY.sql',
+  'PROFILE_FRAME_BOND_APPLY_TEST.sql', 'PROFILE_FRAME_BOND_APPLY.sql', 'PROFILE_FRAME_BOND_VERIFY.sql',
+];
 
 const psql = (args) => spawnSync('su', ['postgres', '-c', `psql ${args}`], { encoding: 'utf8' });
 const runFile = (file) => psql(`-v ON_ERROR_STOP=1 -q -d ${DB} -f ${path.join(WORK, file)}`);
 const query = (sql) => (psql(`-tA -d ${DB} -c ${JSON.stringify(sql)}`).stdout || '').trim();
 
 try {
-  for (const f of [...CHAIN, 'PROFILE_FRAME_APPLY_TEST.sql', 'PROFILE_FRAME_APPLY.sql', 'PROFILE_FRAME_VERIFY.sql']) {
+  for (const f of [...CHAIN, ...PROFILE_FRAME_FILES]) {
     fs.copyFileSync(path.join(SQL_DIR, f), path.join(WORK, f));
   }
+  for (const f of BOND_CHAIN) fs.copyFileSync(path.join(BOND_SQL_DIR, f), path.join(WORK, f));
   fs.writeFileSync(path.join(WORK, '00-base.sql'), BASE);
   fs.chmodSync(WORK, 0o755);
   for (const f of fs.readdirSync(WORK)) fs.chmodSync(path.join(WORK, f), 0o644);
@@ -94,10 +102,12 @@ try {
   const base = runFile('00-base.sql');
   check('本番をまねた rankings を用意できる', base.status === 0, (base.stderr || '').trim().slice(0, 200));
 
-  for (const f of CHAIN) {
+  for (const f of [...CHAIN, ...BOND_CHAIN]) {
     const r = runFile(f);
     check(`既存のSQLが通る: ${f}`, r.status === 0, (r.stderr || '').trim().slice(0, 200));
   }
+  // bond_levels は BOND_LEVELS_APPLY.sql が作るので、中身はそのあとで入れる
+  psql(`-q -d ${DB} -c "insert into public.bond_levels (user_name,individual_id,monster_id,mon_name,bond_level,icon) values ('太郎','m-1','Mocchi','モッチー',50,'Mocchi'),('花子','m-2','Suezo','スエゾー',60,'Suezo')"`);
 
   // ここが本番と同じ状態になっていることの確認(この前提が崩れたら下の検査の意味が無い)
   check('bigint移行のあと total_score は numeric になる(本番と同じずれを再現できている)',
@@ -144,6 +154,28 @@ try {
 
   const verify = runFile('PROFILE_FRAME_VERIFY.sql');
   check('確認用(PROFILE_FRAME_VERIFY.sql)が通る', verify.status === 0, (verify.stderr || '').trim().slice(0, 200));
+
+  // ===== 絆Lv・総合力ランキング(bond_levels)側 =====
+  const bondTest = runFile('PROFILE_FRAME_BOND_APPLY_TEST.sql');
+  check('絆Lv: 予行演習が通る', bondTest.status === 0, (bondTest.stderr || '').trim().slice(0, 300));
+  check('絆Lv: 予行演習は本番へ何も残さない(rollback)',
+    query("select count(*) from information_schema.columns where table_name='bond_levels' and column_name='profile_frame'") === '0');
+  const bondApply = runFile('PROFILE_FRAME_BOND_APPLY.sql');
+  check('絆Lv: 本番用が通る', bondApply.status === 0, (bondApply.stderr || '').trim().slice(0, 300));
+  const bondAgain = runFile('PROFILE_FRAME_BOND_APPLY.sql');
+  check('絆Lv: もう一度流しても壊れない', bondAgain.status === 0, (bondAgain.stderr || '').trim().slice(0, 200));
+  check('絆Lv: profile_frame 列ができている(NULL許容のtext)',
+    query("select data_type||'/'||is_nullable from information_schema.columns where table_name='bond_levels' and column_name='profile_frame'") === 'text/YES');
+  check('絆Lv: 既存の記録は1件も減っていない', query('select count(*) from public.bond_levels') === '2');
+  check('絆Lv: 列を足す前の記録は NULL のまま', query('select count(*) from public.bond_levels where profile_frame is not null') === '0');
+  psql(`-q -d ${DB} -c "insert into public.bond_levels (user_name,individual_id,monster_id,mon_name,bond_level,icon,profile_frame) values ('太郎','m-9','Mocchi','モッチー',80,'Mocchi','gold')"`);
+  check('絆Lv: フレーム付きで書ける',
+    query("select profile_frame from public.bond_levels where individual_id='m-9'") === 'gold');
+  const bondBad = psql(`-q -d ${DB} -c "insert into public.bond_levels (user_name,individual_id,mon_name,bond_level,profile_frame) values ('x','m-bad','モッチー',1,'DROP TABLE; --')"`);
+  check('絆Lv: idの形をしていない値は検査制約が弾く',
+    bondBad.status !== 0 && /bond_levels_profile_frame_shape/.test(bondBad.stderr || ''));
+  const bondVerify = runFile('PROFILE_FRAME_BOND_VERIFY.sql');
+  check('絆Lv: 確認用が通る', bondVerify.status === 0, (bondVerify.stderr || '').trim().slice(0, 200));
 } finally {
   psql(`-q -c "drop database if exists ${DB}"`);
   try { fs.rmSync(WORK, { recursive: true, force: true }); } catch {}
