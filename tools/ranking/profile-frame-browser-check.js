@@ -20,12 +20,14 @@ const fs = require('fs');
 const path = require('path');
 
 const PAGE_URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/index.html';
-// 選択画面に並ぶはずのフレーム名。data/breeder.js の released:true から作る
-// (検査へ名前を書き写すと、色を足したときにここだけ古くなる)
-const EXPECTED_FRAMES = [...fs
-  .readFileSync(path.join(__dirname, '../../monster-hero/data/breeder.js'), 'utf8')
-  .matchAll(/\{\s*id:'[a-z_]+',\s*name:'([^']+)',\s*kind:'(?:none|css)',\s*released:true/g)]
-  .map(m => m[1]);
+// 選択画面に並ぶはずのフレーム名と、**並んではいけない**未公開フレームの名前。
+// どちらも data/breeder.js から作る(検査へ名前を書き写すと、増やしたときにここだけ古くなる)
+const BREEDER_DATA = fs.readFileSync(path.join(__dirname, '../../monster-hero/data/breeder.js'), 'utf8');
+const frameNames = (released) => [...BREEDER_DATA
+  .matchAll(/\{\s*id:'[a-z0-9_]+',\s*name:'([^']+)',\s*kind:'(?:none|css|image)',\s*released:(true|false)/g)]
+  .filter(m => (m[2] === 'true') === released).map(m => m[1]);
+const EXPECTED_FRAMES = frameNames(true);
+const HIDDEN_FRAMES = frameNames(false);
 const results = [];
 const check = (name, ok, detail = '') => { results.push(ok); console.log(`  ${ok ? 'OK' : 'NG'}  ${name}${detail ? ' — ' + detail : ''}`); };
 
@@ -147,8 +149,8 @@ async function run() {
     `画面 ${options.length}件 / データ ${EXPECTED_FRAMES.length}件`);
   check('名前がデータどおり', EXPECTED_FRAMES.every(n => options.includes(n)), options.join(' / '));
   check('④ 未公開の豪華フレームは出ない',
-    !options.some(n => /未公開|桜もち|魔王|モンヒロビート|ピンクリボン|ピンクブルーム|ピンクレイディアンス/.test(n)),
-    options.join(' / '));
+    HIDDEN_FRAMES.length > 0 && !options.some(n => HIDDEN_FRAMES.includes(n)),
+    `隠すべき ${HIDDEN_FRAMES.length}件: ${HIDDEN_FRAMES.join(' / ') || '(1件も無い)'}`);
 
   // ゴールドを押す
   await page.evaluate(() => {

@@ -48,14 +48,18 @@
 
 ユーザーから受け取った透過PNG6枚を、**内部登録だけ**してある。
 
-| id | 仮の名前 | 絵 | `hole` |
+| id | 名前 | 絵 | `hole` |
 | --- | --- | --- | ---: |
-| `frame_sakura_mochi` | 桜もち | `sakura-mochi.png` | 0.656 |
-| `frame_dark_lord` | 魔王 | `dark-lord.png` | 0.682 |
-| `frame_beat_suezo` | モンヒロビート | `beat-suezo.png` | 0.724 |
-| `frame_pink_ribbon` | ピンクリボン | `pink-ribbon.png` | 0.755 |
-| `frame_pink_bloom` | ピンクブルーム | `pink-bloom.png` | 0.698 |
-| `frame_pink_radiance` | ピンクレイディアンス | `pink-radiance.png` | 0.677 |
+| `frame_mocchi` | モッチー | `mocchi.png` | 0.656 |
+| `frame_moo` | ムー | `moo.png` | 0.682 |
+| `frame_suezo_beat` | スエゾービート | `suezo-beat.png` | 0.724 |
+| `frame_kiki_ouen` | きき・応援 | `kiki-ouen.png` | 0.755 |
+| `frame_kiki_honki` | きき・本気 | `kiki-honki.png` | 0.698 |
+| `frame_kiki_zenryoku` | きき・全力全開 | `kiki-zenryoku.png` | 0.677 |
+
+呼び名は 2026-09-15 にユーザーが決めた。`moo` はラスボス「ムー」の既存id（`ENEMY_MONSTERS.Moo`）に合わせてある。
+ききの3枚は同じ意匠を段階的に豪華にしたもので、**段階の呼び分けは教えカードの3段階
+（`BREEDER_EVO_NAMES.kiki` の 応援 → 本気 → 全力全開）にそろえた**。
 
 出す／出さないの判定は **`normalizeProfileFrameId` の1か所だけ**。ここが
 知らないid・壊れた値・`released:false` のidを**すべて `'none'` へ倒す**ので、
@@ -68,9 +72,7 @@
 見た目だけは DEBUG（設定 → ヘルプ → いちばん下の 💊 → 「プロフィールフレーム見た目確認」）で
 確かめられる。そこは表示専用で、保存もしないし所持状態にも触らない。
 
-名前（`name`）と説明（`desc`）は**仮**で、公開するときに決め直す。
-`frame_pink_*` の3枚は同じ意匠を段階的に豪華にしたものだが、**どのキャラクターを指した絵かは
-確認できていない**ため、見た目から付けた仮のidになっている。
+説明（`desc`）は仮で、公開するときに整える。
 
 ### 2.2 画像の取り込み方
 
