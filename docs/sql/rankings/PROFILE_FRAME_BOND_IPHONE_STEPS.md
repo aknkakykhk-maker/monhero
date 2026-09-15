@@ -1,5 +1,9 @@
 # iPhoneでの絆Lv・総合力ランキングのフレーム対応 実行順
 
+> 🟢 **`BREEDER_PROFILE_APPLY.sql`（いまの見た目）もまだなら、2本を1つにまとめた
+> [`PROFILE_LOOK_ALL_IPHONE_STEPS.md`](PROFILE_LOOK_ALL_IPHONE_STEPS.md) のほうが1回で済みます。**
+> 中身は同じです。こちらは個別に当てたいときの手順です。
+
 `public.bond_levels` へ `profile_frame` を1列だけ追加する作業です。**既存の行・列・RLS・ポリシー・権限には触りません**（`drop`・`delete`・`update` をしません）。
 
 > **「Run and enable RLS」ではなく「Run without RLS」を選んでください。**
