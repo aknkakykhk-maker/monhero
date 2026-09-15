@@ -25,12 +25,6 @@ const { REPO_ROOT, GAME_SYSTEM, transformGameSystem, syncPartsAndGameSystem, ass
 
 const OUT_FILE = path.join(REPO_ROOT, 'monster-hero', 'game-system.compiled.js');
 
-// STEP3の大容量source差分をモバイル経由で安全に適用する一時フック。
-// --checkでは書き換えず、正規ビルド時だけ厳密一致パッチを先に当てる。ビルド後に削除する。
-if (!process.argv.includes('--check')) {
-  require('./patch-rhythm-event-point-shop');
-}
-
 // 元ファイルのハッシュを出力の先頭に埋め込み、--check で最新かどうか判定できるようにする
 function sourceHash() {
   return crypto.createHash('sha256').update(fs.readFileSync(GAME_SYSTEM)).digest('hex').slice(0, 16);
@@ -43,12 +37,6 @@ function readEmbeddedHash() {
   return m ? m[1] : null;
 }
 
-// 書き出す内容そのものを作る関数。--check もこれと丸ごと比べるので、
-// 「先頭の注記がどこで終わるか」を推測する必要がなくなる。
-// (以前は --check 側が「空行までが注記」と決め打ちしていたが、
-//  実際の注記は空行を挟まないため、変換後コードの最初の空行までを注記とみなし、
-//  正しくビルドした直後でも必ず不一致になっていた。GitHub Actions が
-//  ここで必ず落ち、Pagesへの公開が丸ごと止まっていた)
 function buildFileContents(hash, code) {
   const header = [
     '// ============================================================',
@@ -63,8 +51,6 @@ function buildFileContents(hash, code) {
 }
 
 if (process.argv.includes('--check')) {
-  // 編集元(parts)と連結生成物(game-system.jsx)が一致しているかを先に見る。
-  // parts だけ直して build.js を忘れると、ここで止まる(compiled の --check と同じ考え方)
   {
     const current = splitGeneratedFile(fs.readFileSync(GAME_SYSTEM, 'utf8'));
     if (current.body !== assembleParts()) {
@@ -83,23 +69,15 @@ if (process.argv.includes('--check')) {
     console.error(`  compiled: ${embedded} / jsx: ${hash}`);
     process.exit(1);
   }
-
-  // ハッシュだけでは、別の変換器で生成したコードへ同じハッシュを付けた不整合を検出できない。
-  // 正規ビルドの出力そのものを比較し、tools/build.js 以外による生成物の混入を防ぐ。
   if (fs.readFileSync(OUT_FILE, 'utf8') !== buildFileContents(hash, transformGameSystem())) {
     console.error('NG: game-system.compiled.js が正規ビルドの出力と一致しません。node tools/build.js を実行してください');
     process.exit(1);
   }
-  // 音源を差し替えたのにキーが古いままだと、端末に古い音が残り続ける(2026-09-10)
   {
     const {spawnSync}=require('child_process');
     const r=spawnSync(process.execPath,[path.join(__dirname,'stamp-audio-keys.js'),'--check'],{encoding:'utf8'});
     if(r.status!==0){process.stderr.write(r.stderr||r.stdout||'');process.exit(1);}
   }
-  // 見た目のCSS(tailwind.css)が今のソースから作られたものかを見る。
-  // tailwindcss は optionalDependencies なので CI では作り直せない。かわりに
-  // CSSの1行目へ書いてある「元の中身の指紋」と今のソースを突き合わせる。
-  // クラスを1つ足して build.js を忘れると、そのクラスだけ効かない画面が公開されてしまう
   {
     const r = require('./build-tailwind').checkTailwind();
     if (!r.ok) {
@@ -111,17 +89,11 @@ if (process.argv.includes('--check')) {
   process.exit(0);
 }
 
-// まず編集元(parts)と game-system.jsx をそろえる。parts が変わっていれば連結し直し、
-// game-system.jsx が直接編集されていれば parts へ書き戻す(両方が別々に変わっていれば止まる)
 {
   const sync = syncPartsAndGameSystem({ fromParts: process.argv.includes('--from-parts') });
   if (sync.action !== 'none') console.log(`parts と game-system.jsx をそろえました: ${sync.action}(${sync.reason})`);
 }
 
-// 音源(audio/*.mp3)のキャッシュキーを中身に合わせる。
-// 音源を差し替えてもURLが同じままだと、loadBuffer の force-cache のせいで
-// 端末に残った古い音が鳴り続ける(2026-09-10・ユーザー指摘で発覚)。
-// parts を書き換えるので、変わったら game-system.jsx を作り直す。
 {
   const stampAudio = require('./stamp-audio-keys');
   if (stampAudio.changed) {
@@ -130,9 +102,6 @@ if (process.argv.includes('--check')) {
   }
 }
 
-// 見た目のCSS(tailwind.css)を、いまのソースから作り直す。
-// 中身が変わっていなければ何もしない(作るのに7秒かかるため)。
-// stamp-version はこのファイルのキャッシュキーを打つので、必ずその前に行う。
 {
   const { buildTailwindIfNeeded } = require('./build-tailwind');
   const r = buildTailwindIfNeeded();
@@ -145,8 +114,6 @@ if (process.argv.includes('--check')) {
     : `tailwind.css は最新でした(${r.fingerprint})`);
 }
 
-// 公開用ビルドではバージョン3箇所を先に同一時刻へ揃える。機能変更後に古い日時の
-// compiled.jsを作れてしまわないよう、出荷工程を別コマンドの実行忘れに依存させない。
 require('./stamp-version');
 
 const hash = sourceHash();
@@ -157,8 +124,6 @@ const kb = (fs.statSync(OUT_FILE).size / 1024).toFixed(0);
 console.log(`書き出しました: ${path.relative(process.cwd(), OUT_FILE)} (${kb} KB)`);
 console.log(`source-sha256: ${hash}`);
 
-// ローディングのゲージが使う「起動時に読み込むファイルの実サイズ」を測り直す。
-// game-system.compiled.js 自身も対象なので、必ず書き出したあとに行う。
 const { stampBootSizes } = require('./stamp-boot-sizes');
 const boot = stampBootSizes();
 console.log(`起動時に読み込むファイル: ${boot.count}件 / 合計 ${(boot.total / 1024 / 1024).toFixed(2)}MB (ローディングのゲージの分母)`);
