@@ -46,9 +46,9 @@ const RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE = true;
 // 2026-09-07 05:00(月) 〜 2026-09-14 05:00(月) で並ぶことを確かめたうえで公開。
 // イベントタブ・曲えらびの案内・ヘルプ・更新履歴・助手の告知がここで同時に出る。
 const RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE = true;
-// イベントPは獲得・保存→交換所→表示を段階実装する。全部そろうまでプレイヤーへ公開しない。
-// true にすると獲得処理と、同じ releaseFlag を持つヘルプ・更新履歴・助手告知が同時に有効になる。
-const RHYTHM_EVENT_POINTS_PUBLIC_RELEASE = false;
+// ビートPはSTEP4で正式公開。獲得はこのフラグに加えて期間限定イベント開催中だけに限定し、
+// 常設の交換所・ヘルプ・更新履歴・助手告知を同じタイミングで公開する。
+const RHYTHM_EVENT_POINTS_PUBLIC_RELEASE = true;
 const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE, rhythmWeeklyRanking:RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE, rhythmEventPoints:RHYTHM_EVENT_POINTS_PUBLIC_RELEASE };
 // releaseFlag = そのフラグが立つまで出さない。unreleasedFlag = そのフラグが立ったら出さない。
 // 逆向きの名札が要るのは「準備中です」の案内で、公開したあとも残っていると

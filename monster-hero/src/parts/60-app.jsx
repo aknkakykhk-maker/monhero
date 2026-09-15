@@ -134,7 +134,7 @@ function MonsterHeroGame() {
   const dailyMasuAdviceCheckedRef = useRef(false);
   // マーケットのアイテムの効果説明。カードを小さくしたぶん、詳細ボタンから出す
   const [marketItemDetail, setMarketItemDetail] = useState(null);
-  // イベントPは交換所を開くたび保存値から読み直し、交換成功時だけstateも更新する。
+  // ビートPは交換所を開くたび保存値から読み直し、交換成功時だけstateも更新する。
   const [rhythmEventPoints, setRhythmEventPoints] = useState(0);
   // 虹の超越の実だけは、価格タップ後に数量と購入後残高を確認してから一括購入する。
   const [marketQuantityItem, setMarketQuantityItem] = useState(null);
@@ -5343,7 +5343,7 @@ function MonsterHeroGame() {
     } finally { marketPurchaseProcessingRef.current = false; }
   };
 
-  // イベントP交換所。残高・ダイヤ・所持アイテムを1取引で保存し、どれか1つでも失敗したら全部戻す。
+  // ビートP交換所。残高・ダイヤ・所持アイテムを1取引で保存し、どれか1つでも失敗したら全部戻す。
   const exchangeRhythmEventPoints = async (offer, quantity=1) => {
     if (marketPurchaseProcessingRef.current) return { ok:false, reason:'busy' };
     marketPurchaseProcessingRef.current = true;
@@ -5355,7 +5355,7 @@ function MonsterHeroGame() {
       setRhythmEventPoints(beforePoints);
       const exchange = rhythmEventPointExchangePreview({ offer, eventPoints:beforePoints, gold:beforeGold, ownedItems:beforeItems, quantity });
       if (!exchange.ok) {
-        setMarketExchangeError(exchange.reason==='points'?'イベントPが足りません。':'この商品は交換できません。');
+        setMarketExchangeError(exchange.reason==='points'?'ビートPが足りません。':'この商品は交換できません。');
         return exchange;
       }
       const saved = await saveStoredValuesOrRollback([
@@ -5364,7 +5364,7 @@ function MonsterHeroGame() {
         { key:'mh_owned_items', before:beforeItems, next:exchange.ownedItems },
       ], storeGet, storeSet);
       if (!saved) {
-        setMarketExchangeError('交換を保存できませんでした。イベントPと所持品は変更していません。');
+        setMarketExchangeError('交換を保存できませんでした。ビートPと所持品は変更していません。');
         return { ok:false, reason:'save' };
       }
       setRhythmEventPoints(exchange.eventPoints);
@@ -5374,7 +5374,7 @@ function MonsterHeroGame() {
       saveMissionProgress('market');
       return exchange;
     } catch {
-      setMarketExchangeError('交換を保存できませんでした。イベントPと所持品は変更していません。');
+      setMarketExchangeError('交換を保存できませんでした。ビートPと所持品は変更していません。');
       return { ok:false, reason:'save' };
     } finally { marketPurchaseProcessingRef.current = false; }
   };

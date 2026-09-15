@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ef92a26f18662b89
+// source-sha256: cc3b856ba56b8123
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9dea76cb46590f92
+// generated-sha256: 5fb8b4169a51e06b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-15 12:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-15 15:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -10884,9 +10884,9 @@ const RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE = true;
 // 2026-09-07 05:00(月) 〜 2026-09-14 05:00(月) で並ぶことを確かめたうえで公開。
 // イベントタブ・曲えらびの案内・ヘルプ・更新履歴・助手の告知がここで同時に出る。
 const RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE = true;
-// イベントPは獲得・保存→交換所→表示を段階実装する。全部そろうまでプレイヤーへ公開しない。
-// true にすると獲得処理と、同じ releaseFlag を持つヘルプ・更新履歴・助手告知が同時に有効になる。
-const RHYTHM_EVENT_POINTS_PUBLIC_RELEASE = false;
+// ビートPはSTEP4で正式公開。獲得はこのフラグに加えて期間限定イベント開催中だけに限定し、
+// 常設の交換所・ヘルプ・更新履歴・助手告知を同じタイミングで公開する。
+const RHYTHM_EVENT_POINTS_PUBLIC_RELEASE = true;
 const RELEASE_FLAGS = {
   speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE,
   rhythmMode: RHYTHM_MODE_PUBLIC_RELEASE,
@@ -23253,7 +23253,8 @@ const RhythmTapTest = ({
     // run.lifeDepleted は false に戻っているので、そのときはクリア扱いになる。
     // 練習(tutorial)とタイミング合わせ(calibrating)はライフを減らさないので必ずクリア。
     const failed = !tutorial && !calibrating && run.lifeDepleted === true;
-    // イベントPは正常に最後まで到達した公開プレイだけ。公開フラグがfalseのSTEP2中は一切付与しない。
+    // ビートPは正常に最後まで到達した公開プレイだけ。公開後も期間判定は
+    // rhythmEventPointAwardAt 側に残し、イベント非開催中は一切付与しない。
     // finishは先頭で run.finished=true にするため、再描画・画面遷移で同じ結果を二重付与しない。
     const eventPointAward = !debugPlay && !tutorial && !calibrating && typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS?.rhythmEventPoints === true && typeof rhythmEventPointAwardAt === 'function' ? rhythmEventPointAwardAt(Date.now(), song.songId, score) : null;
     // タイミング合わせのときは、貯めたずれから「判定タイミング調整」に入れる値を出す。
@@ -24400,7 +24401,16 @@ const RhythmTapTest = ({
     }, "BEST SCORE ", result.bestScore.toLocaleString()), result.isNewRecord && /*#__PURE__*/React.createElement("p", {
       "data-rhythm-new-record": true,
       className: "text-center text-xl font-black text-amber-300"
-    }, "NEW RECORD"), (result.fullCombo || result.allExcellent || result.allMarvelous) && /*#__PURE__*/React.createElement("div", {
+    }, "NEW RECORD"), result.eventPointAward && result.eventPointAward.amount > 0 && /*#__PURE__*/React.createElement("div", {
+      "data-rhythm-result-beat-points": true,
+      className: "mx-auto my-3 max-w-xs rounded-2xl border border-violet-400/50 bg-violet-950/35 px-3 py-2 text-center"
+    }, /*#__PURE__*/React.createElement("small", {
+      className: "block text-[10px] font-black tracking-wider text-violet-200"
+    }, "\uD83C\uDF9F\uFE0F \u30D3\u30FC\u30C8P\u7372\u5F97"), /*#__PURE__*/React.createElement("b", {
+      className: "mt-0.5 block text-2xl font-black text-white"
+    }, "+", result.eventPointAward.amount.toLocaleString(), "P"), result.eventPointAward.target && /*#__PURE__*/React.createElement("span", {
+      className: "mt-1 block text-[9px] font-black text-amber-200"
+    }, "\u30A4\u30D9\u30F3\u30C8\u5BFE\u8C61\u66F2 1.5\u500D")), (result.fullCombo || result.allExcellent || result.allMarvelous) && /*#__PURE__*/React.createElement("div", {
       "data-rhythm-result-celebrate": true,
       className: "my-3 text-center"
     }, /*#__PURE__*/React.createElement("b", {
@@ -25726,7 +25736,6 @@ function BreederMarketScreen({
   const [eventQuantityOffer, setEventQuantityOffer] = useState(null);
   const [eventQuantity, setEventQuantity] = useState(1);
   const [eventExchangePending, setEventExchangePending] = useState(false);
-  const eventPointReleased = typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS?.rhythmEventPoints === true;
   const safeEventPoints = normalizeRhythmEventPoints(eventPoints);
   const psycheHave = ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID);
   const shardHave = ownedItemCount(ownedItems, HERO_PROOF_SHARD_ITEM_ID);
@@ -25761,7 +25770,7 @@ function BreederMarketScreen({
       emoji: '🔄'
     },
     event: {
-      label: 'イベントP交換所',
+      label: 'ビートP交換所',
       emoji: '🎟️'
     }
   };
@@ -25883,13 +25892,13 @@ function BreederMarketScreen({
   }, {
     key: 'event',
     emoji: '🎟️',
-    label: 'イベントP交換所',
-    titleLines: ['イベントP', '交換所'],
-    value: eventPointReleased ? safeEventPoints.toLocaleString() : null,
-    hint: eventPointReleased ? '所持イベントP' : '準備中',
-    border: eventPointReleased ? 'border-violet-400/35' : 'border-violet-400/20',
-    title: eventPointReleased ? 'text-violet-200' : 'text-violet-300/70',
-    arrow: eventPointReleased ? 'text-violet-300/80' : 'text-violet-400/40'
+    label: 'ビートP交換所',
+    titleLines: ['ビートP', '交換所'],
+    value: safeEventPoints.toLocaleString(),
+    hint: '所持ビートP',
+    border: 'border-violet-400/35',
+    title: 'text-violet-200',
+    arrow: 'text-violet-300/80'
   }].map(section => /*#__PURE__*/React.createElement("button", {
     key: section.key,
     "data-market-section": section.key,
@@ -26012,18 +26021,7 @@ function BreederMarketScreen({
     }, /*#__PURE__*/React.createElement(BookOpen, {
       size: 8
     }), "\u8A73\u7D30"))
-  })))), marketSection === 'event' && !eventPointReleased && /*#__PURE__*/React.createElement("div", {
-    className: "flex-1 min-h-0 flex items-center justify-center"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "w-full max-w-sm rounded-2xl border border-slate-700 bg-slate-950/70 px-4 py-8 text-center"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "text-3xl mb-2",
-    "aria-hidden": "true"
-  }, "\uD83C\uDF9F\uFE0F"), /*#__PURE__*/React.createElement("div", {
-    className: "text-sm font-black text-slate-300"
-  }, "\u30A4\u30D9\u30F3\u30C8P\u4EA4\u63DB\u6240\u306F\u6E96\u5099\u4E2D\u3067\u3059"), /*#__PURE__*/React.createElement("div", {
-    className: "mt-2 text-[10px] font-bold leading-relaxed text-slate-500"
-  }, "\u30A4\u30D9\u30F3\u30C8P\u306E\u7372\u5F97\u30FB\u4EA4\u63DB\u30FB\u8868\u793A\u304C\u3059\u3079\u3066\u63C3\u3063\u3066\u304B\u3089\u516C\u958B\u3057\u307E\u3059\u3002"))), marketSection === 'event' && eventPointReleased && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+  })))), marketSection === 'event' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     "data-event-point-balance": true,
     className: "mb-3 shrink-0 flex items-center justify-center gap-2 rounded-2xl border border-violet-500/30 bg-violet-950/30 py-2"
   }, /*#__PURE__*/React.createElement("span", {
@@ -26032,7 +26030,7 @@ function BreederMarketScreen({
     className: "font-mono text-base font-black text-violet-100"
   }, safeEventPoints.toLocaleString()), /*#__PURE__*/React.createElement("span", {
     className: "text-[9px] font-bold text-slate-400"
-  }, "\u6240\u6301\u30A4\u30D9\u30F3\u30C8P")), marketExchangeError && /*#__PURE__*/React.createElement("div", {
+  }, "\u6240\u6301\u30D3\u30FC\u30C8P")), marketExchangeError && /*#__PURE__*/React.createElement("div", {
     className: "mb-2 shrink-0 rounded-xl border border-red-500/40 bg-red-950/30 px-3 py-2 text-center text-[9px] font-black text-red-300"
   }, marketExchangeError), /*#__PURE__*/React.createElement("div", {
     className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
@@ -26069,7 +26067,7 @@ function BreederMarketScreen({
       },
       className: "min-h-[36px] rounded-xl bg-violet-500 px-3 text-[10px] font-black text-white active:scale-95 disabled:bg-slate-800 disabled:text-slate-500"
     }, "\u4EA4\u63DB")));
-  })))), eventQuantityOffer && eventPointReleased && (() => {
+  })))), eventQuantityOffer && (() => {
     const maxQuantity = Math.floor(safeEventPoints / eventQuantityOffer.cost);
     const quantity = Math.max(1, Math.min(Math.max(1, maxQuantity), Math.floor(Number(eventQuantity) || 1)));
     const totalCost = eventQuantityOffer.cost * quantity;
@@ -26080,7 +26078,7 @@ function BreederMarketScreen({
       className: "fixed inset-0 z-[42000] flex items-center justify-center bg-black/90 p-4",
       role: "dialog",
       "aria-modal": "true",
-      "aria-label": "\u30A4\u30D9\u30F3\u30C8P\u4EA4\u63DB\u6570\u3092\u9078\u3076"
+      "aria-label": "\u30D3\u30FC\u30C8P\u4EA4\u63DB\u6570\u3092\u9078\u3076"
     }, /*#__PURE__*/React.createElement("div", {
       className: "w-full max-w-sm rounded-3xl border-2 border-violet-500 bg-slate-950 p-5 shadow-2xl"
     }, /*#__PURE__*/React.createElement("div", {
@@ -27173,6 +27171,9 @@ function RhythmSongSelectScreen({
   // 今週の対象曲の名前。曲名はデータから引くので、ここに書き写さない。
   // 副題まで入れるのは rhythmSongFullName の役目(原曲とリミックスが同じ displayName を持つため)
   const eventSongTitles = rhythmEventNotice ? rhythmEventNotice.songIds.map(songId => rhythmSongFullName(rhythmEventSong(songId, RHYTHM_SONGS)) || songId) : [];
+  // ビートP交換所は常設だが、獲得案内は期間限定イベント開催中だけ出す。
+  const beatPointEvent = RELEASE_FLAGS.rhythmEventPoints === true ? rhythmLimitedEventAt(Date.now()) : null;
+  const beatPointTargetSong = !!beatPointEvent && Array.isArray(beatPointEvent.songIds) && beatPointEvent.songIds.includes(rhythmSelectedSongId);
   // ===== クイック∞周回の進捗(docs/spec/QUICK_RHYTHM_LINK.md PR6) =====
   // 1行の帯は、縦持ちならヘッダーの下、横持ちならヘッダーの空きへ入れる。
   // 横は上のタブに余白があるので、そこを使えば曲の一覧を押し下げずに済む
@@ -27410,7 +27411,11 @@ function RhythmSongSelectScreen({
     onClick: dismissRhythmEventNotice,
     "aria-label": "\u3053\u306E\u6848\u5185\u3092\u9589\u3058\u308B",
     className: "min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black"
-  }, "\xD7"))), quickRhythmBackgroundVisible && /*#__PURE__*/React.createElement("div", {
+  }, "\xD7"))), beatPointEvent && /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-beat-point-active": true,
+    "data-target-song": beatPointTargetSong ? 'true' : 'false',
+    className: "shrink-0 border-b border-violet-400/20 bg-violet-950/25 px-3 py-1 text-center text-[10px] font-black text-violet-100"
+  }, "\uD83C\uDF9F\uFE0F \u30D3\u30FC\u30C8P\u7372\u5F97\u671F\u9593\u4E2D", beatPointTargetSong ? '・選択中のイベント対象曲は1.5倍' : '・公開曲なら獲得できます'), quickRhythmBackgroundVisible && /*#__PURE__*/React.createElement("div", {
     "data-quick-rhythm-background": true,
     className: "shrink-0 border-b border-fuchsia-400/20 bg-slate-950/90 px-2 py-1"
   }, /*#__PURE__*/React.createElement("div", {
@@ -37505,7 +37510,7 @@ function MonsterHeroGame() {
   const dailyMasuAdviceCheckedRef = useRef(false);
   // マーケットのアイテムの効果説明。カードを小さくしたぶん、詳細ボタンから出す
   const [marketItemDetail, setMarketItemDetail] = useState(null);
-  // イベントPは交換所を開くたび保存値から読み直し、交換成功時だけstateも更新する。
+  // ビートPは交換所を開くたび保存値から読み直し、交換成功時だけstateも更新する。
   const [rhythmEventPoints, setRhythmEventPoints] = useState(0);
   // 虹の超越の実だけは、価格タップ後に数量と購入後残高を確認してから一括購入する。
   const [marketQuantityItem, setMarketQuantityItem] = useState(null);
@@ -44230,7 +44235,7 @@ function MonsterHeroGame() {
     }
   };
 
-  // イベントP交換所。残高・ダイヤ・所持アイテムを1取引で保存し、どれか1つでも失敗したら全部戻す。
+  // ビートP交換所。残高・ダイヤ・所持アイテムを1取引で保存し、どれか1つでも失敗したら全部戻す。
   const exchangeRhythmEventPoints = async (offer, quantity = 1) => {
     if (marketPurchaseProcessingRef.current) return {
       ok: false,
@@ -44251,7 +44256,7 @@ function MonsterHeroGame() {
         quantity
       });
       if (!exchange.ok) {
-        setMarketExchangeError(exchange.reason === 'points' ? 'イベントPが足りません。' : 'この商品は交換できません。');
+        setMarketExchangeError(exchange.reason === 'points' ? 'ビートPが足りません。' : 'この商品は交換できません。');
         return exchange;
       }
       const saved = await saveStoredValuesOrRollback([{
@@ -44268,7 +44273,7 @@ function MonsterHeroGame() {
         next: exchange.ownedItems
       }], storeGet, storeSet);
       if (!saved) {
-        setMarketExchangeError('交換を保存できませんでした。イベントPと所持品は変更していません。');
+        setMarketExchangeError('交換を保存できませんでした。ビートPと所持品は変更していません。');
         return {
           ok: false,
           reason: 'save'
@@ -44281,7 +44286,7 @@ function MonsterHeroGame() {
       saveMissionProgress('market');
       return exchange;
     } catch {
-      setMarketExchangeError('交換を保存できませんでした。イベントPと所持品は変更していません。');
+      setMarketExchangeError('交換を保存できませんでした。ビートPと所持品は変更していません。');
       return {
         ok: false,
         reason: 'save'
