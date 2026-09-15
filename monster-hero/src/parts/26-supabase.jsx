@@ -194,6 +194,44 @@ const _isMissingColumnError = (status, body) => {
 // 全件をページ送りで読むので、使わない列を運ばせない
 const rankingSelectWithRunStats = (base) =>
   (_rankingRunStatsUnavailable || !base || !base.includes('score')) ? base : `${base},${RANKING_RUN_STATS_COLUMNS}`;
+
+// ==================== プロフィールフレーム(2026-09-15) ====================
+// ランキングで「その人が選んでいる飾り枠」を出すための列。rankings へ後から足すNULL許容の
+// 1列で、既存の行はNULLのまま(NULL = フレームなし)。順位・スコア・集計には一切関わらない。
+//
+// turns / reached_wave / breeder_id とまったく同じ構えにしてある。
+// PostgRESTは知らない列を送る/選ぶと400を返すので、素通しにすると
+//   ・送るとき … 記録が1件も保存できない
+//   ・選ぶとき … ランキングが開けない
+// になる。一度400で気付いたらその後は列を外して動き、SQLを適用すれば自動的に載りはじめる。
+// これで「SQLの適用」と「アプリの公開」はどちらが先でもよい。
+//
+// ★ビューや関数(全曲合算・週間・イベント)も同じ列名で返すので、判定と旗はここで共有する。
+const RANKING_PROFILE_FRAME_COLUMN = 'profile_frame';
+let _rankingProfileFrameUnavailable = false;
+const rankingProfileFrameUnavailable = () => _rankingProfileFrameUnavailable;
+// 「profile_frame という列は無い」という応答かどうか。通信の失敗や権限の失敗と取り違えない
+//   選ぶとき  … 400 + 42703 / PGRST100(column rankings.profile_frame does not exist)
+//   送るとき  … 400 + PGRST204(Could not find the 'profile_frame' column of 'rankings')
+//   関数      … 404 + PGRST202(関数の戻り値に無い)
+const _isMissingProfileFrameError = (status, body) => {
+  if (status !== 400 && status !== 404) return false;
+  const text = String(body || '');
+  if (!/profile_frame/i.test(text)) return false;
+  return /PGRST202|PGRST204|PGRST205|PGRST200|PGRST100|42703|42883|does not exist|Could not find the/i.test(text);
+};
+// 取得する列へ profile_frame を足す。無いと分かっている間は足さない
+const rankingSelectWithProfileFrame = (base) =>
+  (_rankingProfileFrameUnavailable || !base) ? base : `${base},${RANKING_PROFILE_FRAME_COLUMN}`;
+// 送る行から profile_frame を落とす(列がまだ無い環境で記録を落とさないため)
+const rankingRowWithoutProfileFrame = (row) => {
+  const { profile_frame, ...rest } = row || {};
+  return rest;
+};
+// 受け取った行から、画面へ出すフレームidを取り出す。
+// 知らないid・未公開のid・NULL・壊れた値はすべて「フレームなし」へ倒れる
+// (normalizeProfileFrameId が唯一の判定。data/breeder.js)
+const rankingProfileFrameFromRow = (row) => normalizeProfileFrameId(row?.profile_frame);
 // bond_levels の1行を、rankings から集計したものと同じ形のエントリへ直す。
 // 表示側(renderBondRankingEntry)はどちらから来た行かを知らなくてよい
 const bondLevelRowToEntry = (row) => {
@@ -330,7 +368,7 @@ const sbFetchRankings = async (diff, limit=RANKING_SCORE_LIMIT, order='score.des
   // 必要な列だけを受け取り、過去記録が多い難易度でもレスポンスを不用意に大きくしない。
   // ターン数・到達WAVEはSQLをまだ適用していない環境では選べないので、そのときは外れる。
   const baseSelect = selectColumns || RANKING_SELECT_FULL;
-  const select = rankingSelectWithRunStats(baseSelect);
+  const select = rankingSelectWithProfileFrame(rankingSelectWithRunStats(baseSelect));
   // DBに保存する正規keyと同じ値をeqで取得する。ilikeによる別系統の
   // 取得条件を残さず、NormalもHardと完全に同じSELECT経路にする。
   //
@@ -369,6 +407,13 @@ const sbFetchRankings = async (diff, limit=RANKING_SCORE_LIMIT, order='score.des
     const body = await res.text();
     rankingLog(requestId, 'supabase-response', { difficulty: normalizedDifficulty, endedAt: new Date().toISOString(), elapsedMs: Date.now() - startedAt, status: res.status, statusText: res.statusText, ok: res.ok, dataCount: res.ok ? (() => { try { const parsed = JSON.parse(body); return Array.isArray(parsed) ? parsed.length : null; } catch { return null; } })() : null, error: res.ok ? null : body });
     if (!res.ok) {
+      // プロフィールフレームの列がまだ無い環境。外して取り直せば今までどおり表示できる
+      // (飾り枠が出ないだけで、順位もスコアも変わらない)
+      if (select.includes(RANKING_PROFILE_FRAME_COLUMN) && _isMissingProfileFrameError(res.status, body)) {
+        _rankingProfileFrameUnavailable = true;
+        rankingLog(requestId, 'profile-frame-column-missing', { status: res.status });
+        return sbFetchRankings(diff, limit, order, offset, requestId, baseSelect);
+      }
       // ターン数・到達WAVEの列がまだ無い環境。列を外して取り直せば今までどおり表示できる。
       // 一度気付いたら以後は最初から外して送るので、この寄り道は多くても1回きり
       if (select !== baseSelect && _isMissingColumnError(res.status, body)) {
@@ -438,6 +483,8 @@ const sbInsertScore = async (row) => {
   // ターン数・到達WAVEの列がまだ無い環境では、その2つを送ると400になり
   // 記録そのものが保存できない。無いと分かっている間は最初から外して送る
   if (_rankingRunStatsUnavailable) { delete normalizedRow.turns; delete normalizedRow.reached_wave; }
+  // プロフィールフレームの列も同じ。無いと分かっている間は最初から外して送る
+  if (_rankingProfileFrameUnavailable) delete normalizedRow.profile_frame;
   const requestId = `insert-${normalizedRow.difficulty}-${Date.now()}`;
   const query = '?on_conflict=clear_id';
   const prefer = 'resolution=ignore-duplicates,return=minimal';
@@ -465,6 +512,14 @@ const sbInsertScore = async (row) => {
       errorCode, isUniqueViolation, error: res.ok ? null : (body || res.statusText)
     });
     if (!res.ok) {
+      // プロフィールフレームの列がまだ無い環境。飾り枠のためにスコアを落とさない。
+      // その列だけを外して必ず送り直す(一度気付けば以後は最初から外して送る)
+      if (!_rankingProfileFrameUnavailable && normalizedRow.profile_frame !== undefined
+          && _isMissingProfileFrameError(res.status, body)) {
+        _rankingProfileFrameUnavailable = true;
+        rankingLog(requestId, 'profile-frame-column-missing', { status: res.status });
+        return sbInsertScore(rankingRowWithoutProfileFrame(normalizedRow));
+      }
       // ターン数・到達WAVEの列がまだ無い環境。ここで諦めるとスコアが1件も残らなくなるので、
       // その2つを外して必ず送り直す(記録を落とさないことを最優先にする)。
       // 一度気付けば以後は最初から外して送るので、この寄り道は多くても1回きり
@@ -586,6 +641,9 @@ const rankingRowFromLocalEntry = (entry, difficulty) => {
     ...(Number.isFinite(reachedWave) && reachedWave > 0 ? { reached_wave: reachedWave } : {}),
     ...(Number.isFinite(turns) && turns > 0 ? { turns } : {}),
     ...(entry.breederId ? { breeder_id: entry.breederId } : {}),
+    // プロフィールフレーム。退避した時点で選んでいたものをそのまま送り直す
+    // (未選択・古い退避データには入っていないので、その場合は列ごと付けない)
+    ...(entry.profileFrame ? { profile_frame: entry.profileFrame } : {}),
     ...(createdAt ? { created_at: createdAt } : {}),
   };
 };
@@ -684,6 +742,7 @@ const _isMissingBreederIdError = (status, body) => {
 // 送受信をここへ分けて持つ。テーブル・列は既存の rankings をそのまま使う
 // (difficulty列の値だけで区別する、種族チャレンジと同じ考え方)。
 const RHYTHM_RANKING_SELECT = 'user_name,hero,party,score,level,icon,difficulty';
+// profile_frame は列がある環境でだけ足す(rankingSelectWithProfileFrame)
 const sbInsertRhythmScore = async (row) => {
   if (typeof row?.clear_id !== 'string' || !row.clear_id.trim()) {
     throw new Error('rhythm ranking clear_id is required; unsafe insert skipped');
@@ -697,6 +756,8 @@ const sbInsertRhythmScore = async (row) => {
   // breeder_id の列がまだ無いと分かっている間は、最初から外して送る
   const payload = { ...row };
   if (_rankingBreederIdUnavailable) delete payload.breeder_id;
+  // プロフィールフレームの列も同じ扱い(無いと分かっている間は最初から外して送る)
+  if (_rankingProfileFrameUnavailable) delete payload.profile_frame;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8000);
   try {
@@ -709,6 +770,12 @@ const sbInsertRhythmScore = async (row) => {
       // その列を外して必ず送り直す(記録を落とさないことを最優先にする)。
       // 一度気付けば以後は最初から外して送るので、この寄り道は多くても1回きり。
       // 最初のPOSTは400で入っていないため、同じclear_idで送り直しても重複にならない
+      if (!_rankingProfileFrameUnavailable && payload.profile_frame !== undefined
+          && _isMissingProfileFrameError(res.status, body)) {
+        _rankingProfileFrameUnavailable = true;
+        rankingLog(requestId, 'profile-frame-column-missing', { status: res.status });
+        return sbInsertRhythmScore(rankingRowWithoutProfileFrame(payload));
+      }
       if (!_rankingBreederIdUnavailable && payload.breeder_id !== undefined
           && _isMissingBreederIdError(res.status, body)) {
         _rankingBreederIdUnavailable = true;
@@ -734,14 +801,23 @@ const sbInsertRhythmScore = async (row) => {
 const sbFetchRhythmRankings = async (difficultyKeys, limit=RHYTHM_RANKING_FETCH_LIMIT, offset=0, requestId='untracked') => {
   const keys = (Array.isArray(difficultyKeys) ? difficultyKeys : [difficultyKeys]).filter(Boolean);
   if (keys.length === 0) return [];
-  const url = `${SUPABASE_URL}/rest/v1/rankings?select=${RHYTHM_RANKING_SELECT}&difficulty=in.(${keys.map(k=>encodeURIComponent(`"${k}"`)).join(',')})&order=score.desc.nullslast&limit=${limit}&offset=${offset}`;
+  const select = rankingSelectWithProfileFrame(RHYTHM_RANKING_SELECT);
+  const url = `${SUPABASE_URL}/rest/v1/rankings?select=${select}&difficulty=in.(${keys.map(k=>encodeURIComponent(`"${k}"`)).join(',')})&order=score.desc.nullslast&limit=${limit}&offset=${offset}`;
   rankingLog(requestId, 'rhythm-request-start', { keys, limit, offset, url, table: 'rankings' });
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
   try {
     const res = await fetch(url, { headers: SB_HEADERS, cache: 'no-store', signal: controller.signal });
     const body = await res.text();
-    if (!res.ok) throw new Error(`rhythm ranking fetch ${res.status} ${res.statusText}; url=${url}; response=${body || '(empty)'}`);
+    if (!res.ok) {
+      // プロフィールフレームの列がまだ無い環境。外して取り直す(飾り枠が出ないだけ)
+      if (select !== RHYTHM_RANKING_SELECT && _isMissingProfileFrameError(res.status, body)) {
+        _rankingProfileFrameUnavailable = true;
+        rankingLog(requestId, 'profile-frame-column-missing', { status: res.status });
+        return sbFetchRhythmRankings(difficultyKeys, limit, offset, requestId);
+      }
+      throw new Error(`rhythm ranking fetch ${res.status} ${res.statusText}; url=${url}; response=${body || '(empty)'}`);
+    }
     try {
       return JSON.parse(body);
     } catch (e) {
@@ -783,7 +859,8 @@ const sbFetchRhythmTotalRankings = async ({ limit=RHYTHM_TOTAL_RANKING_DISPLAY_L
   const filter = Array.isArray(identityKeys) && identityKeys.length
     ? `&identity_key=in.(${identityKeys.map(k=>encodeURIComponent(`"${k}"`)).join(',')})`
     : '';
-  const url = `${SUPABASE_URL}/rest/v1/rhythm_total_rankings?select=${RHYTHM_TOTAL_RANKING_SELECT}`
+  const select = rankingSelectWithProfileFrame(RHYTHM_TOTAL_RANKING_SELECT);
+  const url = `${SUPABASE_URL}/rest/v1/rhythm_total_rankings?select=${select}`
     + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`;
   rankingLog(requestId, 'rhythm-total-request-start', { limit, identityKeys, url, view: 'rhythm_total_rankings' });
   const controller = new AbortController();
@@ -792,6 +869,12 @@ const sbFetchRhythmTotalRankings = async ({ limit=RHYTHM_TOTAL_RANKING_DISPLAY_L
     const res = await fetch(url, { headers: SB_HEADERS, cache: 'no-store', signal: controller.signal });
     const body = await res.text();
     if (!res.ok) {
+      // ビューはあるが profile_frame をまだ返さない環境。その列だけ外して取り直す
+      if (select !== RHYTHM_TOTAL_RANKING_SELECT && _isMissingProfileFrameError(res.status, body)) {
+        _rankingProfileFrameUnavailable = true;
+        rankingLog(requestId, 'profile-frame-column-missing', { status: res.status });
+        return sbFetchRhythmTotalRankings({ limit, identityKeys, requestId });
+      }
       if (rhythmTotalRankingMissing(res.status, body)) {
         rankingLog(requestId, 'rhythm-total-view-missing', { status: res.status });
         const error = new Error('rhythm total ranking view is not ready');
@@ -820,6 +903,7 @@ const rhythmTotalRankingEntryFromRow = (row) => ({
   songCount: Number(row?.song_count) || 0,
   level: Number(row?.level) || 0,
   icon: row?.icon ?? null,
+  profileFrame: rankingProfileFrameFromRow(row),
 });
 // 自分がどの行かを見分けるためのキー。IDがある人はそのID、IDが付く前からの人は name:<名前>。
 // どちらの記録も持っている人がいるので、両方を候補として渡す(§4.4)
@@ -906,13 +990,18 @@ const sbFetchRhythmEventRows = async ({ url, body = null, label, requestId = 'un
       : { headers: SB_HEADERS, cache: 'no-store', signal: controller.signal });
     const text = await res.text();
     if (!res.ok) {
-      if (rhythmEventRankingMissing(res.status, text)) {
+      // ★profile_frame の判定を先に見る。関数・ビューそのものが無いときの本文には
+      //   profile_frame という語が出てこないので、取り違えない
+      const profileFrameMissing = _isMissingProfileFrameError(res.status, text);
+      if (!profileFrameMissing && rhythmEventRankingMissing(res.status, text)) {
         rankingLog(requestId, `${label}-not-ready`, { status: res.status });
         throw rhythmEventNotReadyError();
       }
       const failure = new Error(`${label} fetch ${res.status} ${res.statusText}; url=${url}; response=${text || '(empty)'}`);
       // 「party という列は無い」だけなら、呼んだ側が party 無しで取り直せるように印を付ける
       if (rhythmEventDetailColumnMissing(res.status, text)) failure.detailColumnMissing = true;
+      // 「profile_frame という列は無い」だけなら、その列を外して取り直せるように印を付ける
+      if (profileFrameMissing) failure.profileFrameColumnMissing = true;
       throw failure;
     }
     try {
@@ -925,6 +1014,18 @@ const sbFetchRhythmEventRows = async ({ url, body = null, label, requestId = 'un
     throw error;
   } finally {
     clearTimeout(timer);
+  }
+};
+// profile_frame を足して頼み、その列がまだ無い環境なら外してもう一度だけ頼む。
+// ビュー・関数のどれでも同じ形で使えるように、select を受け取る関数のほうを包む
+const askWithProfileFrame = async (askFn, select) => {
+  const wanted = rankingSelectWithProfileFrame(select);
+  try {
+    return await askFn(wanted);
+  } catch (error) {
+    if (wanted === select || !error || !error.profileFrameColumnMissing) throw error;
+    _rankingProfileFrameUnavailable = true;
+    return askFn(select);
   }
 };
 // 今週の始まり・終わり(月曜5:00 JST区切り)。1行だけ返る
@@ -959,19 +1060,21 @@ const sbFetchRhythmEventSongBests = async ({ songId, fromMs, toMs, bonusRates = 
     ? `&identity_key=in.(${identityKeys.map(k => encodeURIComponent(`"${k}"`)).join(',')})`
     : '';
   const body = { song_ids: [songId], from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() };
-  const ask = (select) => sbFetchRhythmEventRows({
+  const askRaw = (select) => sbFetchRhythmEventRows({
     url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_song_bests?select=${select}`
       + `&order=score.desc,scored_at.asc&limit=${limit}${filter}`,
     body, label: 'rhythm-event-song', requestId,
   });
+  const ask = (select) => askWithProfileFrame(askRaw, select);
   // 回数ボーナスを使うイベントでは、加点込みの関数を先に試す。
   // 関数がまだ無い環境では加点なしへ戻す(順位は出る。加点と内訳だけ出ない)
   if (bonusRates) {
-    const askBonus = (select) => sbFetchRhythmEventRows({
+    const askBonusRaw = (select) => sbFetchRhythmEventRows({
       url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_song_bests_bonus?select=${select}`
         + `&order=score.desc,scored_at.asc&limit=${limit}${filter}`,
       body: { ...body, bonus_rates: bonusRates }, label: 'rhythm-event-song-bonus', requestId,
     });
+    const askBonus = (select) => askWithProfileFrame(askBonusRaw, select);
     try {
       return await askBonus(RHYTHM_EVENT_SONG_BONUS_SELECT);
     } catch (error) {
@@ -1005,11 +1108,12 @@ const sbFetchRhythmEventTotals = async ({ songIds, fromMs, toMs, bonusRates = nu
   const body = { song_ids: songIds, from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() };
   // 曲の部門と同じく、加点込みの関数を先に試して、無ければ加点なしへ戻す
   if (bonusRates) {
-    const askBonus = (select) => sbFetchRhythmEventRows({
+    const askBonusRaw = (select) => sbFetchRhythmEventRows({
       url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals_bonus?select=${select}`
         + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
       body: { ...body, bonus_rates: bonusRates }, label: 'rhythm-event-total-bonus', requestId,
     });
+    const askBonus = (select) => askWithProfileFrame(askBonusRaw, select);
     try {
       return await askBonus(RHYTHM_EVENT_TOTAL_BONUS_SELECT);
     } catch (error) {
@@ -1021,11 +1125,11 @@ const sbFetchRhythmEventTotals = async ({ songIds, fromMs, toMs, bonusRates = nu
       }
     }
   }
-  return sbFetchRhythmEventRows({
-    url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals?select=${RHYTHM_EVENT_TOTAL_SELECT}`
+  return askWithProfileFrame((select) => sbFetchRhythmEventRows({
+    url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals?select=${select}`
       + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
     body, label: 'rhythm-event-total', requestId,
-  });
+  }), RHYTHM_EVENT_TOTAL_SELECT);
 };
 // 回数ボーナスの内訳(素点・加点・回数)を取り出す。加点なしの関数から取った行には
 // これらの列が無いので、baseScore を null にして「内訳を出さない」と伝える。
@@ -1058,12 +1162,12 @@ const sbFetchRhythmWeekTotals = async ({ fromMs, toMs, limit = RHYTHM_EVENT_RANK
   const filter = Array.isArray(identityKeys) && identityKeys.length
     ? `&identity_key=in.(${identityKeys.map(k => encodeURIComponent(`"${k}"`)).join(',')})`
     : '';
-  return sbFetchRhythmEventRows({
-    url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_week_score_totals?select=${RHYTHM_WEEK_TOTAL_SELECT}`
+  return askWithProfileFrame((select) => sbFetchRhythmEventRows({
+    url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_week_score_totals?select=${select}`
       + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
     body: { from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() },
     label: 'rhythm-week-total', requestId,
-  });
+  }), RHYTHM_WEEK_TOTAL_SELECT);
 };
 // 生の行を画面用の形へ整える。壊れた値でも落ちないよう、数として確かめてから使う
 const rhythmEventSongEntryFromRow = (row) => ({
@@ -1074,6 +1178,7 @@ const rhythmEventSongEntryFromRow = (row) => ({
   score: Number(row?.score) || 0,
   level: Number(row?.level) || 0,
   icon: row?.icon ?? null,
+  profileFrame: rankingProfileFrameFromRow(row),
   // 判定の内訳。「この曲」タブと同じく party の先頭要素を読む(rhythmRankingEntryFromRow と同じ形)。
   // SQL未適用の環境・内訳が保存される前の古い記録では null になり、詳細ボタンが出ないだけ
   detail: (Array.isArray(row?.party) && row.party[0] && typeof row.party[0] === 'object') ? row.party[0] : null,
@@ -1088,6 +1193,7 @@ const rhythmEventTotalEntryFromRow = (row) => ({
   songCount: Number(row?.song_count) || 0,
   level: Number(row?.level) || 0,
   icon: row?.icon ?? null,
+  profileFrame: rankingProfileFrameFromRow(row),
   ...rhythmEventBonusFields(row, 'base_total'),
 });
 // 週間の行。イベントの総合と形をそろえておくと、画面側で分岐が増えない。
@@ -1103,6 +1209,7 @@ const rhythmWeekTotalEntryFromRow = (row) => ({
   songCount: Number(row?.song_count) || 0,
   level: Number(row?.level) || 0,
   icon: row?.icon ?? null,
+  profileFrame: rankingProfileFrameFromRow(row),
   // 週間に回数ボーナスは無いので、内訳の枠は出さない(CLAUDE.md の決めごとどおり)
   baseScore: null, bonusScore: 0, playCounts: {},
 });

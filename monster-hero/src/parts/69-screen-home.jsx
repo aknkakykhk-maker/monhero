@@ -51,7 +51,7 @@ function HomeScreen({
   assistantBondUp, breederIcon, breederLevel, breederName, breederPoints, gifts, gold,
   hasUnreadChangelog, homeBackgroundReady, homePastureMasumons, masuMons, missions,
   onOpenBattle, onOpenManagement, onOpenMarket, onOpenProfile, onOpenRhythm, onOpenSettings,
-  onOpenTemple, openChangelog, openGiftBox, openMissions, resolveIconUrl, spotClass,
+  onOpenTemple, openChangelog, openGiftBox, openMissions, profileFrameId, resolveIconUrl, spotClass,
 }) {
   // ★バッジのCSSは <head> へ1回だけ入れる。HOMEのDOMへ <style> を混ぜると、
   //   配置の検査(home-layout-check.js)が施設の位置を測るときに数がずれる。
@@ -78,7 +78,7 @@ function HomeScreen({
         {/* 設定を光らせるときは、上の帯ごと暗幕より前に出す(帯が z-index を持っていて中だけ前に出せないため) */}
         <header className={`mh-home-status${spotClass('settings')}`}>
           <button type="button" className="mh-home-player" onClick={onOpenProfile} aria-label="プロフィールを開く">
-            <HomeProfileIcon src={resolveIconUrl(breederIcon)} id={breederIcon}/>
+            <HomeProfileIcon src={resolveIconUrl(breederIcon)} id={breederIcon} frameId={profileFrameId}/>
             <div className="mh-home-player-copy"><strong>{breederName}</strong><span>ブリーダー Lv.{breederLevel.level}</span><div className="mh-home-xp"><i style={{width:`${Math.min(100,(breederLevel.xpIntoLevel/breederLevel.xpForNext)*100)}%`}}></i></div><small>{breederLevel.xpIntoLevel.toLocaleString()} / {breederLevel.xpForNext.toLocaleString()} XP</small></div>
             <ChevronRight className="mh-home-profile-arrow" size={15}/>
           </button>

@@ -21,6 +21,7 @@ Claude 固有の会話・公開フローは [`CLAUDE.md`](../CLAUDE.md) が正�
 | [`spec/MONSTER_SYSTEM.md`](spec/MONSTER_SYSTEM.md) | 育成、マスモン、総合力、融合、ランキング詳細 |
 | [`spec/RHYTHM_MODE.md`](spec/RHYTHM_MODE.md) | 音ゲーの初期設計、現行の基礎仕様、確定済み追加仕様と未確定項目 |
 | [`spec/RHYTHM_RANKING.md`](spec/RHYTHM_RANKING.md) | モンヒロビートのランキング正本(曲別・全曲合算・週間・イベント・Supabase設計) |
+| [`spec/PROFILE_FRAME.md`](spec/PROFILE_FRAME.md) | プロフィールフレーム(ブリーダーアイコンの外側に重ねる飾り枠)の正本 |
 | [`spec/SAVE_DATA.md`](spec/SAVE_DATA.md) | 保存キー(`mh_*`)の一覧と互換性の方針 |
 | [`spec/UI_RULES.md`](spec/UI_RULES.md) | 画面まわりの共通ルール |
 

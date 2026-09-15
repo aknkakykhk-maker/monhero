@@ -18,8 +18,8 @@ function ProfileScreen({
   breederIcon, breederLevel, breederName, breederPoints, extremeBestScores, extremeClearCounts,
   finishOnboarding, gold, highScores, isEventReplayUnlocked, modeRecordFor, onboarded,
   onboardingIcon, onboardingName, onboardingPreview, ownedItems, playtimeView, proHighScores,
-  profileBattleMode, quickHighestWaves, resolveIconUrl, selectedAssistantId, speciesChallengeProgress,
-  onBack, onOpenNameEdit, onOpenIconPicker, onOpenItems, onOpenCallStylePicker, onOpenAssistantPicker,
+  profileBattleMode, profileFrameId, quickHighestWaves, resolveIconUrl, selectedAssistantId, speciesChallengeProgress,
+  onBack, onOpenNameEdit, onOpenIconPicker, onOpenFramePicker, onOpenItems, onOpenCallStylePicker, onOpenAssistantPicker,
   onSelectBattleMode, onOpenEventReplayList, onOpenSpeciesRecords,
   rhythmHistoryCount, onOpenRhythmHistory,
 }) {
@@ -56,9 +56,19 @@ function ProfileScreen({
           </div>);
         })()}
         <div className="shrink-0 bg-slate-900/80 border border-white/10 rounded-3xl p-5 flex flex-col items-center gap-3 mb-4">
-          <button onClick={onOpenIconPicker} className="relative w-20 h-20 rounded-full bg-slate-800 border-2 border-indigo-400/50 flex items-center justify-center overflow-hidden active:scale-95">
-            {resolveIconUrl(breederIcon)?(<BreederIcon src={resolveIconUrl(breederIcon)} id={breederIcon} alt="icon" className="w-full h-full"/>):(<User size={36} className="text-indigo-400"/>)}
-            <div className="absolute bottom-0 inset-x-0 bg-black/60 py-0.5 flex items-center justify-center"><Edit3 size={9} className="text-white"/></div>
+          {/* アイコン(下層)とプロフィールフレーム(上層)。フレームは円の外へ出るので、
+              ここでは overflow-hidden を掛けない(内側のクリップは ProfileAvatar が持つ)。
+              フレームを選んでいるときだけ、もとから付いている紫の縁を消して二重に見せない */}
+          <button onClick={onOpenIconPicker} aria-label="ブリーダーアイコンを変える" className={`relative w-20 h-20 rounded-full bg-slate-800 border-2 flex items-center justify-center active:scale-95 ${hasProfileFrame(profileFrameId)?'border-transparent':'border-indigo-400/50'}`}>
+            <ProfileAvatar src={resolveIconUrl(breederIcon)} id={breederIcon} frameId={profileFrameId} alt="icon" className="w-full h-full"
+              fallback={<User size={36} className="text-indigo-400"/>}
+              badge={<span className="absolute bottom-0 inset-x-0 bg-black/60 py-0.5 flex items-center justify-center"><Edit3 size={9} className="text-white"/></span>}/>
+          </button>
+          {/* アイコンとは独立した設定。ここを変えてもアイコンは変わらない */}
+          <button onClick={onOpenFramePicker} className="flex items-center gap-2 bg-slate-800 border border-slate-700 px-3 py-1.5 rounded-xl active:scale-95 group">
+            <Sparkles size={12} className="text-amber-300"/>
+            <span className="text-[10px] font-black text-slate-200">フレーム：{(profileFrameById(normalizeProfileFrameId(profileFrameId))||{}).name||'フレームなし'}</span>
+            <Edit3 size={11} className="text-slate-500 group-hover:text-white"/>
           </button>
           <button onClick={()=>onOpenNameEdit(breederName)} className="flex items-center gap-2 bg-slate-800 border border-slate-700 px-4 py-2 rounded-xl active:scale-95 group">
             <span className="font-black text-base text-white">{breederName}</span><Edit3 size={13} className="text-slate-500 group-hover:text-white"/>

@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: cc3b856ba56b8123
+// source-sha256: db040a0bcb63b3d2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5fb8b4169a51e06b
+// generated-sha256: d4d6c1378d2f6d4d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-15 15:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-15 18:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -14393,22 +14393,90 @@ const BreederIcon = ({
   className: "absolute inset-0 w-full h-full object-contain",
   style: adjustment ? profileIconTransformStyle(adjustment) : marketProfileIconStyle(id)
 }));
-// HOME本番と調整Debugで、丸枠・余白・画像の有無による代替表示まで同じ部品を使う。
-const HomeProfileIcon = ({
+// ==================== プロフィールフレーム(2026-09-15) ====================
+//
+// 既存の BreederIcon は一切変えない。その**外側**へ別レイヤーとして枠だけを重ねる。
+//   下層 … BreederIcon(これまでどおり円形に切り抜く。顔の位置調整もそのまま)
+//   上層 … ProfileFrameLayer(円の外側まではみ出して描く。当たり判定は持たない)
+// 画面ごとに枠の描き方を書かず、ここに1つだけ置く(HOME・プロフィール・ランキングで同じ構図)。
+//
+// ★大きさの指定(w-8 h-8 など)は**外側の span** へ付ける。内側は w-full h-full なので、
+//   32pxでも80pxでも枠の太さが比例して変わり、小さいアイコンでもズレない。
+// ★出してよいフレームかどうかは normalizeProfileFrameId だけが決める
+//   (未公開の豪華フレームはここで 'none' に倒れるので、通常プレイヤーには出ない)。
+const ProfileFrameLayer = ({
+  frameId
+}) => {
+  const frame = profileFrameById(normalizeProfileFrameId(frameId));
+  if (!frame || frame.kind === 'none') return null;
+  // 画像フレームは透過PNGをそのまま重ねる。object-contain なので縦横比は変わらない
+  if (frame.kind === 'image') return /*#__PURE__*/React.createElement("img", {
+    src: frame.src,
+    alt: "",
+    "aria-hidden": "true",
+    draggable: false,
+    className: "mh-profile-frame mh-profile-frame-image"
+  });
+  return /*#__PURE__*/React.createElement("span", {
+    "aria-hidden": "true",
+    className: `mh-profile-frame mh-profile-frame-ring ${frame.className || ''}`
+  });
+};
+// ブリーダーアイコン＋プロフィールフレームの共通部品。
+// frameId を渡さない(または 'none')ときは、これまでの BreederIcon と見た目が変わらない。
+// badge は「アイコンと同じ円の中へ収めたい飾り」(プロフィールの鉛筆マークなど)。
+// 内側の円でクリップされ、フレームだけがその外へ出る。
+const ProfileAvatar = ({
   src,
   id,
-  adjustment
-}) => /*#__PURE__*/React.createElement("div", {
-  className: "mh-home-avatar"
+  frameId = null,
+  alt = '',
+  className = '',
+  roundedClass = 'rounded-full',
+  adjustment,
+  fallback = null,
+  badge = null
+}) => /*#__PURE__*/React.createElement("span", {
+  className: `mh-profile-avatar ${className}`
+}, /*#__PURE__*/React.createElement("span", {
+  className: `relative flex h-full w-full items-center justify-center overflow-hidden ${roundedClass}`
 }, src ? /*#__PURE__*/React.createElement(BreederIcon, {
   src: src,
   id: id,
   adjustment: adjustment,
-  alt: "\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u753B\u50CF",
+  alt: alt,
+  roundedClass: roundedClass,
   className: "w-full h-full"
-}) : /*#__PURE__*/React.createElement(User, {
-  size: 24
+}) : fallback, badge), /*#__PURE__*/React.createElement(ProfileFrameLayer, {
+  frameId: frameId
 }));
+// フレームを選んでいるか(もとから付いている縁を消すかどうかの判定に使う)
+const hasProfileFrame = frameId => normalizeProfileFrameId(frameId) !== PROFILE_FRAME_NONE_ID;
+
+// HOME本番と調整Debugで、丸枠・余白・画像の有無による代替表示まで同じ部品を使う。
+// フレームを選んでいるときだけ、もともとの金色の縁を消す(枠が二重に見えないようにする)。
+// 選んでいないとき(=フレームなし)は、これまでとまったく同じ見た目になる。
+const HomeProfileIcon = ({
+  src,
+  id,
+  adjustment,
+  frameId = null
+}) => {
+  const framed = normalizeProfileFrameId(frameId) !== PROFILE_FRAME_NONE_ID;
+  return /*#__PURE__*/React.createElement("div", {
+    className: `mh-home-avatar${framed ? ' is-framed' : ''}`
+  }, /*#__PURE__*/React.createElement(ProfileAvatar, {
+    src: src,
+    id: id,
+    frameId: frameId,
+    adjustment: adjustment,
+    alt: "\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u753B\u50CF",
+    className: "w-full h-full",
+    fallback: /*#__PURE__*/React.createElement(User, {
+      size: 24
+    })
+  }));
+};
 
 // 図鑑一覧・血統チップ・立ち絵は本番とDEBUGで同じ収め方を使う。
 const DexMonsterIcon = ({
@@ -14789,6 +14857,10 @@ const helpDataRows = id => {
           return [`Lv.${s.level}`, `${s.need} から ／ ${per}`];
         });
       }
+    // プロフィールフレームの一覧。フレームを足したらヘルプへも自動で載る
+    // (手で書き写すと、増やしたときに古いままになる)。未公開のものはここに出さない
+    case 'profileFrames':
+      return ((typeof releasedProfileFrames === 'function' ? releasedProfileFrames() : []) || []).map(frame => [frame.name, frame.desc || '']);
     // 助手の一覧。名前と性格の違いを実データから出す
     case 'assistants':
       return (typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST || []).map(who => [who.name, `${who.tagline || ''}${who.intro ? ` ／ ${who.intro}` : ''}`]);
@@ -14913,6 +14985,7 @@ const HELP_DATA_TITLES = {
   missionsMonthly: 'マンスリーミッション',
   masuCosts: '神殿でかかるダイヤ',
   assistants: '助手の種類',
+  profileFrames: '選べるプロフィールフレーム',
   assistantBond: '仲良し度の段階と呼び方',
   assistantBondActions: '仲良し度が増える行動',
   monsterPower: '総合力の内訳',
@@ -17652,6 +17725,46 @@ const _isMissingColumnError = (status, body) => {
 // 取得する列。ターン数を使う一覧(スコア)にだけ足す。ブリーダーLvの一覧は
 // 全件をページ送りで読むので、使わない列を運ばせない
 const rankingSelectWithRunStats = base => _rankingRunStatsUnavailable || !base || !base.includes('score') ? base : `${base},${RANKING_RUN_STATS_COLUMNS}`;
+
+// ==================== プロフィールフレーム(2026-09-15) ====================
+// ランキングで「その人が選んでいる飾り枠」を出すための列。rankings へ後から足すNULL許容の
+// 1列で、既存の行はNULLのまま(NULL = フレームなし)。順位・スコア・集計には一切関わらない。
+//
+// turns / reached_wave / breeder_id とまったく同じ構えにしてある。
+// PostgRESTは知らない列を送る/選ぶと400を返すので、素通しにすると
+//   ・送るとき … 記録が1件も保存できない
+//   ・選ぶとき … ランキングが開けない
+// になる。一度400で気付いたらその後は列を外して動き、SQLを適用すれば自動的に載りはじめる。
+// これで「SQLの適用」と「アプリの公開」はどちらが先でもよい。
+//
+// ★ビューや関数(全曲合算・週間・イベント)も同じ列名で返すので、判定と旗はここで共有する。
+const RANKING_PROFILE_FRAME_COLUMN = 'profile_frame';
+let _rankingProfileFrameUnavailable = false;
+const rankingProfileFrameUnavailable = () => _rankingProfileFrameUnavailable;
+// 「profile_frame という列は無い」という応答かどうか。通信の失敗や権限の失敗と取り違えない
+//   選ぶとき  … 400 + 42703 / PGRST100(column rankings.profile_frame does not exist)
+//   送るとき  … 400 + PGRST204(Could not find the 'profile_frame' column of 'rankings')
+//   関数      … 404 + PGRST202(関数の戻り値に無い)
+const _isMissingProfileFrameError = (status, body) => {
+  if (status !== 400 && status !== 404) return false;
+  const text = String(body || '');
+  if (!/profile_frame/i.test(text)) return false;
+  return /PGRST202|PGRST204|PGRST205|PGRST200|PGRST100|42703|42883|does not exist|Could not find the/i.test(text);
+};
+// 取得する列へ profile_frame を足す。無いと分かっている間は足さない
+const rankingSelectWithProfileFrame = base => _rankingProfileFrameUnavailable || !base ? base : `${base},${RANKING_PROFILE_FRAME_COLUMN}`;
+// 送る行から profile_frame を落とす(列がまだ無い環境で記録を落とさないため)
+const rankingRowWithoutProfileFrame = row => {
+  const {
+    profile_frame,
+    ...rest
+  } = row || {};
+  return rest;
+};
+// 受け取った行から、画面へ出すフレームidを取り出す。
+// 知らないid・未公開のid・NULL・壊れた値はすべて「フレームなし」へ倒れる
+// (normalizeProfileFrameId が唯一の判定。data/breeder.js)
+const rankingProfileFrameFromRow = row => normalizeProfileFrameId(row?.profile_frame);
 // bond_levels の1行を、rankings から集計したものと同じ形のエントリへ直す。
 // 表示側(renderBondRankingEntry)はどちらから来た行かを知らなくてよい
 const bondLevelRowToEntry = row => {
@@ -17808,7 +17921,7 @@ const sbFetchRankings = async (diff, limit = RANKING_SCORE_LIMIT, order = 'score
   // 必要な列だけを受け取り、過去記録が多い難易度でもレスポンスを不用意に大きくしない。
   // ターン数・到達WAVEはSQLをまだ適用していない環境では選べないので、そのときは外れる。
   const baseSelect = selectColumns || RANKING_SELECT_FULL;
-  const select = rankingSelectWithRunStats(baseSelect);
+  const select = rankingSelectWithProfileFrame(rankingSelectWithRunStats(baseSelect));
   // DBに保存する正規keyと同じ値をeqで取得する。ilikeによる別系統の
   // 取得条件を残さず、NormalもHardと完全に同じSELECT経路にする。
   //
@@ -17873,6 +17986,15 @@ const sbFetchRankings = async (diff, limit = RANKING_SCORE_LIMIT, order = 'score
       error: res.ok ? null : body
     });
     if (!res.ok) {
+      // プロフィールフレームの列がまだ無い環境。外して取り直せば今までどおり表示できる
+      // (飾り枠が出ないだけで、順位もスコアも変わらない)
+      if (select.includes(RANKING_PROFILE_FRAME_COLUMN) && _isMissingProfileFrameError(res.status, body)) {
+        _rankingProfileFrameUnavailable = true;
+        rankingLog(requestId, 'profile-frame-column-missing', {
+          status: res.status
+        });
+        return sbFetchRankings(diff, limit, order, offset, requestId, baseSelect);
+      }
       // ターン数・到達WAVEの列がまだ無い環境。列を外して取り直せば今までどおり表示できる。
       // 一度気付いたら以後は最初から外して送るので、この寄り道は多くても1回きり
       if (select !== baseSelect && _isMissingColumnError(res.status, body)) {
@@ -17967,6 +18089,8 @@ const sbInsertScore = async row => {
     delete normalizedRow.turns;
     delete normalizedRow.reached_wave;
   }
+  // プロフィールフレームの列も同じ。無いと分かっている間は最初から外して送る
+  if (_rankingProfileFrameUnavailable) delete normalizedRow.profile_frame;
   const requestId = `insert-${normalizedRow.difficulty}-${Date.now()}`;
   const query = '?on_conflict=clear_id';
   const prefer = 'resolution=ignore-duplicates,return=minimal';
@@ -18015,6 +18139,15 @@ const sbInsertScore = async row => {
       error: res.ok ? null : body || res.statusText
     });
     if (!res.ok) {
+      // プロフィールフレームの列がまだ無い環境。飾り枠のためにスコアを落とさない。
+      // その列だけを外して必ず送り直す(一度気付けば以後は最初から外して送る)
+      if (!_rankingProfileFrameUnavailable && normalizedRow.profile_frame !== undefined && _isMissingProfileFrameError(res.status, body)) {
+        _rankingProfileFrameUnavailable = true;
+        rankingLog(requestId, 'profile-frame-column-missing', {
+          status: res.status
+        });
+        return sbInsertScore(rankingRowWithoutProfileFrame(normalizedRow));
+      }
       // ターン数・到達WAVEの列がまだ無い環境。ここで諦めるとスコアが1件も残らなくなるので、
       // その2つを外して必ず送り直す(記録を落とさないことを最優先にする)。
       // 一度気付けば以後は最初から外して送るので、この寄り道は多くても1回きり
@@ -18175,6 +18308,11 @@ const rankingRowFromLocalEntry = (entry, difficulty) => {
     ...(entry.breederId ? {
       breeder_id: entry.breederId
     } : {}),
+    // プロフィールフレーム。退避した時点で選んでいたものをそのまま送り直す
+    // (未選択・古い退避データには入っていないので、その場合は列ごと付けない)
+    ...(entry.profileFrame ? {
+      profile_frame: entry.profileFrame
+    } : {}),
     ...(createdAt ? {
       created_at: createdAt
     } : {})
@@ -18287,6 +18425,7 @@ const _isMissingBreederIdError = (status, body) => {
 // 送受信をここへ分けて持つ。テーブル・列は既存の rankings をそのまま使う
 // (difficulty列の値だけで区別する、種族チャレンジと同じ考え方)。
 const RHYTHM_RANKING_SELECT = 'user_name,hero,party,score,level,icon,difficulty';
+// profile_frame は列がある環境でだけ足す(rankingSelectWithProfileFrame)
 const sbInsertRhythmScore = async row => {
   if (typeof row?.clear_id !== 'string' || !row.clear_id.trim()) {
     throw new Error('rhythm ranking clear_id is required; unsafe insert skipped');
@@ -18302,6 +18441,8 @@ const sbInsertRhythmScore = async row => {
     ...row
   };
   if (_rankingBreederIdUnavailable) delete payload.breeder_id;
+  // プロフィールフレームの列も同じ扱い(無いと分かっている間は最初から外して送る)
+  if (_rankingProfileFrameUnavailable) delete payload.profile_frame;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8000);
   try {
@@ -18332,6 +18473,13 @@ const sbInsertRhythmScore = async row => {
       // その列を外して必ず送り直す(記録を落とさないことを最優先にする)。
       // 一度気付けば以後は最初から外して送るので、この寄り道は多くても1回きり。
       // 最初のPOSTは400で入っていないため、同じclear_idで送り直しても重複にならない
+      if (!_rankingProfileFrameUnavailable && payload.profile_frame !== undefined && _isMissingProfileFrameError(res.status, body)) {
+        _rankingProfileFrameUnavailable = true;
+        rankingLog(requestId, 'profile-frame-column-missing', {
+          status: res.status
+        });
+        return sbInsertRhythmScore(rankingRowWithoutProfileFrame(payload));
+      }
       if (!_rankingBreederIdUnavailable && payload.breeder_id !== undefined && _isMissingBreederIdError(res.status, body)) {
         _rankingBreederIdUnavailable = true;
         rankingLog(requestId, 'breeder-id-column-missing', {
@@ -18366,7 +18514,8 @@ const sbInsertRhythmScore = async row => {
 const sbFetchRhythmRankings = async (difficultyKeys, limit = RHYTHM_RANKING_FETCH_LIMIT, offset = 0, requestId = 'untracked') => {
   const keys = (Array.isArray(difficultyKeys) ? difficultyKeys : [difficultyKeys]).filter(Boolean);
   if (keys.length === 0) return [];
-  const url = `${SUPABASE_URL}/rest/v1/rankings?select=${RHYTHM_RANKING_SELECT}&difficulty=in.(${keys.map(k => encodeURIComponent(`"${k}"`)).join(',')})&order=score.desc.nullslast&limit=${limit}&offset=${offset}`;
+  const select = rankingSelectWithProfileFrame(RHYTHM_RANKING_SELECT);
+  const url = `${SUPABASE_URL}/rest/v1/rankings?select=${select}&difficulty=in.(${keys.map(k => encodeURIComponent(`"${k}"`)).join(',')})&order=score.desc.nullslast&limit=${limit}&offset=${offset}`;
   rankingLog(requestId, 'rhythm-request-start', {
     keys,
     limit,
@@ -18383,7 +18532,17 @@ const sbFetchRhythmRankings = async (difficultyKeys, limit = RHYTHM_RANKING_FETC
       signal: controller.signal
     });
     const body = await res.text();
-    if (!res.ok) throw new Error(`rhythm ranking fetch ${res.status} ${res.statusText}; url=${url}; response=${body || '(empty)'}`);
+    if (!res.ok) {
+      // プロフィールフレームの列がまだ無い環境。外して取り直す(飾り枠が出ないだけ)
+      if (select !== RHYTHM_RANKING_SELECT && _isMissingProfileFrameError(res.status, body)) {
+        _rankingProfileFrameUnavailable = true;
+        rankingLog(requestId, 'profile-frame-column-missing', {
+          status: res.status
+        });
+        return sbFetchRhythmRankings(difficultyKeys, limit, offset, requestId);
+      }
+      throw new Error(`rhythm ranking fetch ${res.status} ${res.statusText}; url=${url}; response=${body || '(empty)'}`);
+    }
     try {
       return JSON.parse(body);
     } catch (e) {
@@ -18427,7 +18586,8 @@ const sbFetchRhythmTotalRankings = async ({
 } = {}) => {
   // identityKeys を渡すと、その人の行だけを取りにいく(50位圏外の自分を出すため)
   const filter = Array.isArray(identityKeys) && identityKeys.length ? `&identity_key=in.(${identityKeys.map(k => encodeURIComponent(`"${k}"`)).join(',')})` : '';
-  const url = `${SUPABASE_URL}/rest/v1/rhythm_total_rankings?select=${RHYTHM_TOTAL_RANKING_SELECT}` + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`;
+  const select = rankingSelectWithProfileFrame(RHYTHM_TOTAL_RANKING_SELECT);
+  const url = `${SUPABASE_URL}/rest/v1/rhythm_total_rankings?select=${select}` + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`;
   rankingLog(requestId, 'rhythm-total-request-start', {
     limit,
     identityKeys,
@@ -18444,6 +18604,18 @@ const sbFetchRhythmTotalRankings = async ({
     });
     const body = await res.text();
     if (!res.ok) {
+      // ビューはあるが profile_frame をまだ返さない環境。その列だけ外して取り直す
+      if (select !== RHYTHM_TOTAL_RANKING_SELECT && _isMissingProfileFrameError(res.status, body)) {
+        _rankingProfileFrameUnavailable = true;
+        rankingLog(requestId, 'profile-frame-column-missing', {
+          status: res.status
+        });
+        return sbFetchRhythmTotalRankings({
+          limit,
+          identityKeys,
+          requestId
+        });
+      }
       if (rhythmTotalRankingMissing(res.status, body)) {
         rankingLog(requestId, 'rhythm-total-view-missing', {
           status: res.status
@@ -18473,7 +18645,8 @@ const rhythmTotalRankingEntryFromRow = row => ({
   totalScore: Number(row?.total_score) || 0,
   songCount: Number(row?.song_count) || 0,
   level: Number(row?.level) || 0,
-  icon: row?.icon ?? null
+  icon: row?.icon ?? null,
+  profileFrame: rankingProfileFrameFromRow(row)
 });
 // 自分がどの行かを見分けるためのキー。IDがある人はそのID、IDが付く前からの人は name:<名前>。
 // どちらの記録も持っている人がいるので、両方を候補として渡す(§4.4)
@@ -18572,7 +18745,10 @@ const sbFetchRhythmEventRows = async ({
     });
     const text = await res.text();
     if (!res.ok) {
-      if (rhythmEventRankingMissing(res.status, text)) {
+      // ★profile_frame の判定を先に見る。関数・ビューそのものが無いときの本文には
+      //   profile_frame という語が出てこないので、取り違えない
+      const profileFrameMissing = _isMissingProfileFrameError(res.status, text);
+      if (!profileFrameMissing && rhythmEventRankingMissing(res.status, text)) {
         rankingLog(requestId, `${label}-not-ready`, {
           status: res.status
         });
@@ -18581,6 +18757,8 @@ const sbFetchRhythmEventRows = async ({
       const failure = new Error(`${label} fetch ${res.status} ${res.statusText}; url=${url}; response=${text || '(empty)'}`);
       // 「party という列は無い」だけなら、呼んだ側が party 無しで取り直せるように印を付ける
       if (rhythmEventDetailColumnMissing(res.status, text)) failure.detailColumnMissing = true;
+      // 「profile_frame という列は無い」だけなら、その列を外して取り直せるように印を付ける
+      if (profileFrameMissing) failure.profileFrameColumnMissing = true;
       throw failure;
     }
     try {
@@ -18593,6 +18771,18 @@ const sbFetchRhythmEventRows = async ({
     throw error;
   } finally {
     clearTimeout(timer);
+  }
+};
+// profile_frame を足して頼み、その列がまだ無い環境なら外してもう一度だけ頼む。
+// ビュー・関数のどれでも同じ形で使えるように、select を受け取る関数のほうを包む
+const askWithProfileFrame = async (askFn, select) => {
+  const wanted = rankingSelectWithProfileFrame(select);
+  try {
+    return await askFn(wanted);
+  } catch (error) {
+    if (wanted === select || !error || !error.profileFrameColumnMissing) throw error;
+    _rankingProfileFrameUnavailable = true;
+    return askFn(select);
   }
 };
 // 今週の始まり・終わり(月曜5:00 JST区切り)。1行だけ返る
@@ -18643,16 +18833,17 @@ const sbFetchRhythmEventSongBests = async ({
     from_at: new Date(fromMs).toISOString(),
     to_at: new Date(toMs).toISOString()
   };
-  const ask = select => sbFetchRhythmEventRows({
+  const askRaw = select => sbFetchRhythmEventRows({
     url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_song_bests?select=${select}` + `&order=score.desc,scored_at.asc&limit=${limit}${filter}`,
     body,
     label: 'rhythm-event-song',
     requestId
   });
+  const ask = select => askWithProfileFrame(askRaw, select);
   // 回数ボーナスを使うイベントでは、加点込みの関数を先に試す。
   // 関数がまだ無い環境では加点なしへ戻す(順位は出る。加点と内訳だけ出ない)
   if (bonusRates) {
-    const askBonus = select => sbFetchRhythmEventRows({
+    const askBonusRaw = select => sbFetchRhythmEventRows({
       url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_song_bests_bonus?select=${select}` + `&order=score.desc,scored_at.asc&limit=${limit}${filter}`,
       body: {
         ...body,
@@ -18661,6 +18852,7 @@ const sbFetchRhythmEventSongBests = async ({
       label: 'rhythm-event-song-bonus',
       requestId
     });
+    const askBonus = select => askWithProfileFrame(askBonusRaw, select);
     try {
       return await askBonus(RHYTHM_EVENT_SONG_BONUS_SELECT);
     } catch (error) {
@@ -18711,7 +18903,7 @@ const sbFetchRhythmEventTotals = async ({
   };
   // 曲の部門と同じく、加点込みの関数を先に試して、無ければ加点なしへ戻す
   if (bonusRates) {
-    const askBonus = select => sbFetchRhythmEventRows({
+    const askBonusRaw = select => sbFetchRhythmEventRows({
       url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals_bonus?select=${select}` + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
       body: {
         ...body,
@@ -18720,6 +18912,7 @@ const sbFetchRhythmEventTotals = async ({
       label: 'rhythm-event-total-bonus',
       requestId
     });
+    const askBonus = select => askWithProfileFrame(askBonusRaw, select);
     try {
       return await askBonus(RHYTHM_EVENT_TOTAL_BONUS_SELECT);
     } catch (error) {
@@ -18738,12 +18931,12 @@ const sbFetchRhythmEventTotals = async ({
       }
     }
   }
-  return sbFetchRhythmEventRows({
-    url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals?select=${RHYTHM_EVENT_TOTAL_SELECT}` + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
+  return askWithProfileFrame(select => sbFetchRhythmEventRows({
+    url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals?select=${select}` + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
     body,
     label: 'rhythm-event-total',
     requestId
-  });
+  }), RHYTHM_EVENT_TOTAL_SELECT);
 };
 // 回数ボーナスの内訳(素点・加点・回数)を取り出す。加点なしの関数から取った行には
 // これらの列が無いので、baseScore を null にして「内訳を出さない」と伝える。
@@ -18784,15 +18977,15 @@ const sbFetchRhythmWeekTotals = async ({
   requestId = 'untracked'
 }) => {
   const filter = Array.isArray(identityKeys) && identityKeys.length ? `&identity_key=in.(${identityKeys.map(k => encodeURIComponent(`"${k}"`)).join(',')})` : '';
-  return sbFetchRhythmEventRows({
-    url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_week_score_totals?select=${RHYTHM_WEEK_TOTAL_SELECT}` + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
+  return askWithProfileFrame(select => sbFetchRhythmEventRows({
+    url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_week_score_totals?select=${select}` + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
     body: {
       from_at: new Date(fromMs).toISOString(),
       to_at: new Date(toMs).toISOString()
     },
     label: 'rhythm-week-total',
     requestId
-  });
+  }), RHYTHM_WEEK_TOTAL_SELECT);
 };
 // 生の行を画面用の形へ整える。壊れた値でも落ちないよう、数として確かめてから使う
 const rhythmEventSongEntryFromRow = row => ({
@@ -18803,6 +18996,7 @@ const rhythmEventSongEntryFromRow = row => ({
   score: Number(row?.score) || 0,
   level: Number(row?.level) || 0,
   icon: row?.icon ?? null,
+  profileFrame: rankingProfileFrameFromRow(row),
   // 判定の内訳。「この曲」タブと同じく party の先頭要素を読む(rhythmRankingEntryFromRow と同じ形)。
   // SQL未適用の環境・内訳が保存される前の古い記録では null になり、詳細ボタンが出ないだけ
   detail: Array.isArray(row?.party) && row.party[0] && typeof row.party[0] === 'object' ? row.party[0] : null,
@@ -18817,6 +19011,7 @@ const rhythmEventTotalEntryFromRow = row => ({
   songCount: Number(row?.song_count) || 0,
   level: Number(row?.level) || 0,
   icon: row?.icon ?? null,
+  profileFrame: rankingProfileFrameFromRow(row),
   ...rhythmEventBonusFields(row, 'base_total')
 });
 // 週間の行。イベントの総合と形をそろえておくと、画面側で分岐が増えない。
@@ -18832,6 +19027,7 @@ const rhythmWeekTotalEntryFromRow = row => ({
   songCount: Number(row?.song_count) || 0,
   level: Number(row?.level) || 0,
   icon: row?.icon ?? null,
+  profileFrame: rankingProfileFrameFromRow(row),
   // 週間に回数ボーナスは無いので、内訳の枠は出さない(CLAUDE.md の決めごとどおり)
   baseScore: null,
   bonusScore: 0,
@@ -26199,6 +26395,7 @@ function ProfileScreen({
   playtimeView,
   proHighScores,
   profileBattleMode,
+  profileFrameId,
   quickHighestWaves,
   resolveIconUrl,
   selectedAssistantId,
@@ -26206,6 +26403,7 @@ function ProfileScreen({
   onBack,
   onOpenNameEdit,
   onOpenIconPicker,
+  onOpenFramePicker,
   onOpenItems,
   onOpenCallStylePicker,
   onOpenAssistantPicker,
@@ -26276,21 +26474,36 @@ function ProfileScreen({
     className: "shrink-0 bg-slate-900/80 border border-white/10 rounded-3xl p-5 flex flex-col items-center gap-3 mb-4"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: onOpenIconPicker,
-    className: "relative w-20 h-20 rounded-full bg-slate-800 border-2 border-indigo-400/50 flex items-center justify-center overflow-hidden active:scale-95"
-  }, resolveIconUrl(breederIcon) ? /*#__PURE__*/React.createElement(BreederIcon, {
+    "aria-label": "\u30D6\u30EA\u30FC\u30C0\u30FC\u30A2\u30A4\u30B3\u30F3\u3092\u5909\u3048\u308B",
+    className: `relative w-20 h-20 rounded-full bg-slate-800 border-2 flex items-center justify-center active:scale-95 ${hasProfileFrame(profileFrameId) ? 'border-transparent' : 'border-indigo-400/50'}`
+  }, /*#__PURE__*/React.createElement(ProfileAvatar, {
     src: resolveIconUrl(breederIcon),
     id: breederIcon,
+    frameId: profileFrameId,
     alt: "icon",
-    className: "w-full h-full"
-  }) : /*#__PURE__*/React.createElement(User, {
-    size: 36,
-    className: "text-indigo-400"
-  }), /*#__PURE__*/React.createElement("div", {
-    className: "absolute bottom-0 inset-x-0 bg-black/60 py-0.5 flex items-center justify-center"
-  }, /*#__PURE__*/React.createElement(Edit3, {
-    size: 9,
-    className: "text-white"
-  }))), /*#__PURE__*/React.createElement("button", {
+    className: "w-full h-full",
+    fallback: /*#__PURE__*/React.createElement(User, {
+      size: 36,
+      className: "text-indigo-400"
+    }),
+    badge: /*#__PURE__*/React.createElement("span", {
+      className: "absolute bottom-0 inset-x-0 bg-black/60 py-0.5 flex items-center justify-center"
+    }, /*#__PURE__*/React.createElement(Edit3, {
+      size: 9,
+      className: "text-white"
+    }))
+  })), /*#__PURE__*/React.createElement("button", {
+    onClick: onOpenFramePicker,
+    className: "flex items-center gap-2 bg-slate-800 border border-slate-700 px-3 py-1.5 rounded-xl active:scale-95 group"
+  }, /*#__PURE__*/React.createElement(Sparkles, {
+    size: 12,
+    className: "text-amber-300"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] font-black text-slate-200"
+  }, "\u30D5\u30EC\u30FC\u30E0\uFF1A", (profileFrameById(normalizeProfileFrameId(profileFrameId)) || {}).name || 'フレームなし'), /*#__PURE__*/React.createElement(Edit3, {
+    size: 11,
+    className: "text-slate-500 group-hover:text-white"
+  })), /*#__PURE__*/React.createElement("button", {
     onClick: () => onOpenNameEdit(breederName),
     className: "flex items-center gap-2 bg-slate-800 border border-slate-700 px-4 py-2 rounded-xl active:scale-95 group"
   }, /*#__PURE__*/React.createElement("span", {
@@ -34380,6 +34593,7 @@ function HomeScreen({
   openChangelog,
   openGiftBox,
   openMissions,
+  profileFrameId,
   resolveIconUrl,
   spotClass
 }) {
@@ -34428,7 +34642,8 @@ function HomeScreen({
     "aria-label": "\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u3092\u958B\u304F"
   }, /*#__PURE__*/React.createElement(HomeProfileIcon, {
     src: resolveIconUrl(breederIcon),
-    id: breederIcon
+    id: breederIcon,
+    frameId: profileFrameId
   }), /*#__PURE__*/React.createElement("div", {
     className: "mh-home-player-copy"
   }, /*#__PURE__*/React.createElement("strong", null, breederName), /*#__PURE__*/React.createElement("span", null, "\u30D6\u30EA\u30FC\u30C0\u30FC Lv.", breederLevel.level), /*#__PURE__*/React.createElement("div", {
@@ -38629,6 +38844,19 @@ function MonsterHeroGame() {
   const [waveHistory, setWaveHistory] = useState([]); // 今回のプレイでWAVEをクリアするたびに記録するスコア・経験値ログ(最終リザルト画面表示用)
   const [breederIcon, setBreederIcon] = useState(null); // 選択中アイコンのモンスターid、またはマーケットで購入したアイコンid(未選択はnull)
   const [showIconPicker, setShowIconPicker] = useState(false);
+  // プロフィールフレーム(2026-09-15)。ブリーダーアイコンとは**別の設定**として持つ。
+  // 既存の mh_breeder_icon には一切触らず、新しいキー mh_profile_frame_v1 だけを足す(CLAUDE.md ⑦)。
+  // 値が無い・壊れている・知らないid・未公開のidは、読み込み時に必ず 'none' へ倒れる
+  const [profileFrameId, setProfileFrameId] = useState(PROFILE_FRAME_NONE_ID);
+  const [showFramePicker, setShowFramePicker] = useState(false);
+  // 選んだその場で画面へ反映し、同時に保存する。保存できなくても表示だけは変わる
+  const selectProfileFrame = useCallback(id => {
+    const next = normalizeProfileFrameId(id);
+    setProfileFrameId(next);
+    Promise.resolve(storeSet(PROFILE_FRAME_KEY, next, false)).catch(error => {
+      console.error('[profile-frame] save failed:', error && error.message ? error.message : error);
+    });
+  }, []);
   // 呼び方の上書き(絆Lv6から自由入力)。助手ごとに分けて持つので、みゅあとききで別々に決められる
   const [assistantCallStyles, setAssistantCallStylesState] = useState({});
   const assistantCallStyle = assistantCallStyles[selectedAssistantId] || null;
@@ -40132,6 +40360,11 @@ function MonsterHeroGame() {
       clear_id: createRunId(),
       ...(breederId ? {
         breeder_id: breederId
+      } : {}),
+      // プロフィールフレーム(2026-09-15)。フレームなしのときは列ごと付けない
+      // (既存の記録と同じくNULLのままにしておく)。列がまだ無い環境は送信側で吸収する
+      ...(rankingProfileFrameValue(profileFrameId) ? {
+        profile_frame: rankingProfileFrameValue(profileFrameId)
       } : {})
     };
     const outcome = await persistRankingScore({
@@ -40156,7 +40389,7 @@ function MonsterHeroGame() {
       difficulty: difficultyKey,
       score: row.score
     });
-  }, [breederName, breederLevel, breederIcon]);
+  }, [breederName, breederLevel, breederIcon, profileFrameId]);
 
   // 送れなかった記録を、あとで送り直す(2026-09-13)。
   //
@@ -40289,6 +40522,8 @@ function MonsterHeroGame() {
     // 端末内へ退避した記録は最初から画面用の名前(reachedWave)で持っているため、両方を見る
     // difficulty は「全種族」タブを取得したときだけ選んでいる列(sbFetchRankings)。
     // それ以外の難易度では常に同じ値になり画面側で使わないため、来ていればそのまま運ぶだけにする
+    // profileFrame は「その人が選んでいる飾り枠」(2026-09-15)。列がまだ無い環境・端末内へ
+    // 退避した古い記録には入っていないので、そのときは normalizeProfileFrameId が 'none' に倒す
     const toEntry = r => ({
       userName: r.user_name,
       hero: r.hero,
@@ -40296,6 +40531,7 @@ function MonsterHeroGame() {
       score: r.score,
       level: r.level,
       icon: r.icon,
+      profileFrame: normalizeProfileFrameId(r.profile_frame ?? r.profileFrame),
       turns: r.turns ?? undefined,
       reachedWave: r.reached_wave ?? r.reachedWave ?? undefined,
       difficulty: r.difficulty ?? undefined
@@ -42314,6 +42550,8 @@ function MonsterHeroGame() {
       setBreederName(savedName);
       const savedIcon = await storeGet('mh_breeder_icon', null, false);
       setBreederIcon(savedIcon);
+      // プロフィールフレーム。既存のセーブデータには無いキーなので、既定値は必ず「フレームなし」
+      setProfileFrameId(normalizeProfileFrameId(await storeGet(PROFILE_FRAME_KEY, PROFILE_FRAME_NONE_ID, false)));
       // 呼び方の上書きは助手ごとに別のキーへ。みゅあのぶんは今までのキーをそのまま読む
       const loadedCallStyles = {};
       for (const who of ASSISTANT_LIST) {
@@ -42889,6 +43127,8 @@ function MonsterHeroGame() {
     // 値が取れないときは列ごと付けない(0を入れて「0ターンでクリア」に見せない)
     const reachedWave = Number.isFinite(Number(runEndWaveRef.current)) ? Number(runEndWaveRef.current) : null;
     const clearTurns = Number.isFinite(Number(runClearTurnsRef.current)) && Number(runClearTurnsRef.current) > 0 ? Number(runClearTurnsRef.current) : null;
+    // プロフィールフレーム(2026-09-15)。フレームなしのときは列ごと付けない
+    const profileFrame = rankingProfileFrameValue(profileFrameId);
     const row = {
       difficulty: diff,
       user_name: name,
@@ -42900,6 +43140,9 @@ function MonsterHeroGame() {
       clear_id: clearId,
       ...(reachedWave != null ? {
         reached_wave: reachedWave
+      } : {}),
+      ...(profileFrame ? {
+        profile_frame: profileFrame
       } : {}),
       ...(clearTurns != null ? {
         turns: clearTurns
@@ -42933,6 +43176,9 @@ function MonsterHeroGame() {
           icon,
           clearId,
           at: Date.now(),
+          ...(profileFrame ? {
+            profileFrame
+          } : {}),
           ...(reachedWave != null ? {
             reachedWave
           } : {}),
@@ -52928,13 +53174,22 @@ function MonsterHeroGame() {
   const rankingPlace = index => /*#__PURE__*/React.createElement("div", {
     className: `w-7 h-7 rounded-full flex items-center justify-center font-black text-[9px] shrink-0 ${index === 0 ? 'bg-amber-500 text-black' : index === 1 ? 'bg-slate-300 text-black' : index === 2 ? 'bg-orange-600 text-white' : 'bg-slate-800 text-slate-400'}`
   }, index + 1);
-  const rankingBreederIcon = entry => resolveIconUrl(entry?.icon) ? /*#__PURE__*/React.createElement(BreederIcon, {
+  // ランキングのブリーダーアイコン。全ランキング画面(スコア・ブリーダーLv・絆Lv・総合力・
+  // モンビー曲別・全曲合算・週間・イベント・履歴)がこの1つを使う。
+  // 他の人が選んでいるプロフィールフレーム(entry.profileFrame)もここで一緒に描く。
+  // フレームを持たない記録・列がまだ無い環境では 'none' になり、これまでと同じ見た目になる
+  const rankingBreederIcon = entry => resolveIconUrl(entry?.icon) ? /*#__PURE__*/React.createElement(ProfileAvatar, {
     src: resolveIconUrl(entry.icon),
     id: entry.icon,
+    frameId: entry?.profileFrame,
     className: "w-8 h-8 shrink-0"
-  }) : /*#__PURE__*/React.createElement("div", {
-    className: "w-8 h-8 rounded-full bg-slate-800 shrink-0 flex items-center justify-center text-xs"
-  }, "\uD83D\uDC64");
+  }) : /*#__PURE__*/React.createElement(ProfileAvatar, {
+    frameId: entry?.profileFrame,
+    className: "w-8 h-8 shrink-0",
+    fallback: /*#__PURE__*/React.createElement("span", {
+      className: "flex h-full w-full items-center justify-center rounded-full bg-slate-800 text-xs"
+    }, "\uD83D\uDC64")
+  });
   const rankingCardClass = index => `rounded-xl border ${index === 0 ? 'bg-amber-500/10 border-amber-500/50' : 'bg-slate-900 border-white/5'}`;
   // スコア専用カード。編成表示と勇者モン重複防止はこのカードだけが担当する。
   // showSpecies … 種族チャレンジの「全種族」タブから呼ばれたときだけtrue。
@@ -53588,6 +53843,7 @@ function MonsterHeroGame() {
       openChangelog: openChangelog,
       openGiftBox: openGiftBox,
       openMissions: openMissions,
+      profileFrameId: profileFrameId,
       resolveIconUrl: resolveIconUrl,
       spotClass: spotClass
     }), gameState === 'RHYTHM_INFO' && /*#__PURE__*/React.createElement(RhythmInfoScreen, {
@@ -57918,6 +58174,41 @@ function MonsterHeroGame() {
     }, "\u2694\uFE0F \u30D0\u30C8\u30EB\u30E2\u30FC\u30C9", /*#__PURE__*/React.createElement("small", {
       className: "block text-[8px] text-fuchsia-300"
     }, "\u7A2E\u65CF\u30C1\u30E3\u30EC\u30F3\u30B8\u30FB\u6975\u9650\u30C1\u30E3\u30EC\u30F3\u30B8\u3092\u542B\u3080\u8A66\u9A13\u7528\u30E2\u30FC\u30C9\u9078\u629E\u30FB\u7D50\u679C\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("section", {
+      "data-debug-profile-frames": true,
+      className: "rounded-2xl border-2 border-amber-500/60 bg-amber-950/20 p-3"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-[10px] text-amber-300 font-black mb-2"
+    }, "\uD83D\uDDBC\uFE0F \u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u30D5\u30EC\u30FC\u30E0\u898B\u305F\u76EE\u78BA\u8A8D\uFF08\u672A\u516C\u958B\u3076\u3093\u3082\u8868\u793A\u30FB\u4FDD\u5B58\u3057\u307E\u305B\u3093\uFF09"), /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-4 gap-2"
+    }, PROFILE_FRAMES.map(frame => /*#__PURE__*/React.createElement("div", {
+      key: frame.id,
+      className: "flex flex-col items-center gap-1"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "mh-profile-avatar w-12 h-12"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "relative flex h-full w-full items-center justify-center overflow-hidden rounded-full"
+    }, resolveIconUrl(breederIcon) ? /*#__PURE__*/React.createElement(BreederIcon, {
+      src: resolveIconUrl(breederIcon),
+      id: breederIcon,
+      alt: "",
+      className: "w-full h-full"
+    }) : /*#__PURE__*/React.createElement(User, {
+      size: 22,
+      className: "text-indigo-400"
+    })), /*#__PURE__*/React.createElement(ProfileFrameLayer, {
+      frameId: frame.released ? frame.id : null
+    }), !frame.released && frame.kind === 'image' && /*#__PURE__*/React.createElement("img", {
+      src: frame.src,
+      alt: "",
+      "aria-hidden": "true",
+      draggable: false,
+      className: "mh-profile-frame mh-profile-frame-image"
+    }), !frame.released && frame.kind === 'css' && /*#__PURE__*/React.createElement("span", {
+      "aria-hidden": "true",
+      className: `mh-profile-frame mh-profile-frame-ring ${frame.className || ''}`
+    })), /*#__PURE__*/React.createElement("span", {
+      className: "text-[8px] font-black text-slate-300 leading-tight text-center"
+    }, frame.name, frame.released ? '' : '（未公開）'))))), /*#__PURE__*/React.createElement("section", {
       className: "rounded-2xl border-2 border-pink-500/60 bg-pink-950/30 p-3"
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] text-pink-300 font-black mb-2"
@@ -59139,6 +59430,7 @@ function MonsterHeroGame() {
       playtimeView: playtimeView,
       proHighScores: proHighScores,
       profileBattleMode: profileBattleMode,
+      profileFrameId: profileFrameId,
       quickHighestWaves: quickHighestWaves,
       resolveIconUrl: resolveIconUrl,
       selectedAssistantId: selectedAssistantId,
@@ -59149,6 +59441,7 @@ function MonsterHeroGame() {
         setShowNameEdit(true);
       },
       onOpenIconPicker: () => setShowIconPicker(true),
+      onOpenFramePicker: () => setShowFramePicker(true),
       onOpenItems: () => setGameState('ITEM_INVENTORY'),
       onOpenCallStylePicker: () => {
         setTempCallStyle(assistantCallStyle || '');
@@ -60950,8 +61243,22 @@ function MonsterHeroGame() {
     }, /*#__PURE__*/React.createElement("div", {
       className: "bg-slate-900 border border-indigo-500 rounded-3xl p-6 w-full max-w-xs shadow-2xl"
     }, /*#__PURE__*/React.createElement("h3", {
-      className: "text-lg font-black text-white mb-4 text-center"
+      className: "text-lg font-black text-white mb-2 text-center"
     }, "\u30A2\u30A4\u30B3\u30F3\u3092\u9078\u629E"), /*#__PURE__*/React.createElement("div", {
+      className: "flex flex-col items-center gap-1 mb-4"
+    }, /*#__PURE__*/React.createElement(ProfileAvatar, {
+      src: resolveIconUrl(breederIcon),
+      id: breederIcon,
+      frameId: profileFrameId,
+      alt: "\u3044\u307E\u306E\u898B\u305F\u76EE",
+      className: "w-16 h-16",
+      fallback: /*#__PURE__*/React.createElement(User, {
+        size: 28,
+        className: "text-indigo-400"
+      })
+    }), /*#__PURE__*/React.createElement("span", {
+      className: "text-[9px] font-black text-slate-500"
+    }, "\u30D5\u30EC\u30FC\u30E0\uFF1A", (profileFrameById(normalizeProfileFrameId(profileFrameId)) || {}).name || 'フレームなし')), /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-4 gap-3 mb-4"
     }, breederIconOptions().filter(m => m.source === 'starter').map(m => /*#__PURE__*/React.createElement("button", {
       key: m.id,
@@ -60993,6 +61300,59 @@ function MonsterHeroGame() {
       className: "w-full h-full"
     }))))), /*#__PURE__*/React.createElement("button", {
       onClick: () => setShowIconPicker(false),
+      className: "w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs"
+    }, "\u9589\u3058\u308B"))), showFramePicker && /*#__PURE__*/React.createElement("div", {
+      className: "fixed inset-0 z-[9000] flex flex-col items-center justify-center p-6",
+      style: {
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: 'rgba(0,0,0,0.92)',
+        zIndex: 90000
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "bg-slate-900 border border-indigo-500 rounded-3xl p-6 w-full max-w-xs shadow-2xl max-h-full overflow-y-auto mh-scroll"
+    }, /*#__PURE__*/React.createElement("h3", {
+      className: "text-lg font-black text-white mb-1 text-center"
+    }, "\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u30D5\u30EC\u30FC\u30E0"), /*#__PURE__*/React.createElement("p", {
+      className: "text-[9px] text-slate-500 text-center mb-4 leading-tight"
+    }, "\u30A2\u30A4\u30B3\u30F3\u306E\u5916\u5074\u306B\u98FE\u308A\u67A0\u3092\u91CD\u306D\u307E\u3059\u3002\u30A2\u30A4\u30B3\u30F3\u305D\u306E\u3082\u306E\u306F\u5909\u308F\u308A\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("div", {
+      className: "flex flex-col items-center gap-1 mb-4"
+    }, /*#__PURE__*/React.createElement(ProfileAvatar, {
+      src: resolveIconUrl(breederIcon),
+      id: breederIcon,
+      frameId: profileFrameId,
+      alt: "\u3044\u307E\u306E\u898B\u305F\u76EE",
+      className: "w-20 h-20",
+      fallback: /*#__PURE__*/React.createElement(User, {
+        size: 36,
+        className: "text-indigo-400"
+      })
+    }), /*#__PURE__*/React.createElement("span", {
+      className: "text-[9px] font-black text-slate-500"
+    }, "\u3044\u307E\u306E\u898B\u305F\u76EE")), /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-3 gap-3 mb-4"
+    }, releasedProfileFrames().map(frame => /*#__PURE__*/React.createElement("button", {
+      key: frame.id,
+      "data-profile-frame-option": frame.id,
+      onClick: () => selectProfileFrame(frame.id),
+      "aria-pressed": normalizeProfileFrameId(profileFrameId) === frame.id,
+      className: `flex flex-col items-center gap-2 rounded-2xl border-2 p-2 active:scale-95 ${normalizeProfileFrameId(profileFrameId) === frame.id ? 'border-indigo-400 bg-indigo-950/50' : 'border-slate-700 bg-slate-950/40'}`
+    }, /*#__PURE__*/React.createElement(ProfileAvatar, {
+      src: resolveIconUrl(breederIcon),
+      id: breederIcon,
+      frameId: frame.id,
+      alt: frame.name,
+      className: "w-12 h-12",
+      fallback: /*#__PURE__*/React.createElement(User, {
+        size: 22,
+        className: "text-indigo-400"
+      })
+    }), /*#__PURE__*/React.createElement("span", {
+      className: "text-[9px] font-black text-slate-200 leading-tight text-center"
+    }, frame.name)))), /*#__PURE__*/React.createElement("p", {
+      className: "text-[9px] text-slate-500 text-center mb-3 leading-tight"
+    }, (profileFrameById(normalizeProfileFrameId(profileFrameId)) || {}).desc || ''), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setShowFramePicker(false),
       className: "w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs"
     }, "\u9589\u3058\u308B"))), showBackup && /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 z-[9000] flex flex-col items-center justify-center p-6",
@@ -64958,7 +65318,23 @@ const createAnimationStyle = () => {
     .mh-game-over-screen{padding:calc(24px + env(safe-area-inset-top)) 24px calc(24px + env(safe-area-inset-bottom))}.mh-game-over-head{width:100%}.mh-game-over-actions{padding-bottom:0}
     @media(max-height:620px){.mh-game-over-screen{padding-top:calc(14px + env(safe-area-inset-top));padding-bottom:calc(12px + env(safe-area-inset-bottom))}.mh-game-over-head>svg{width:38px;height:38px;margin-bottom:6px}.mh-game-over-head h2{font-size:20px}.mh-game-over-head>div{padding:10px;margin-top:7px;margin-bottom:7px}.mh-game-over-actions{gap:7px;margin-top:5px}.mh-game-over-actions button:first-child{padding-top:10px;padding-bottom:10px}.mh-game-over-actions button:last-child{padding-top:8px;padding-bottom:8px}}
     .mh-regeneration-animation{position:fixed;inset:0;z-index:52000;display:flex;align-items:center;justify-content:center;padding:calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));background:radial-gradient(circle,#4c1d95,#020617 65%)}.mh-regeneration-disc{position:absolute;width:170px;height:170px;object-fit:contain;animation:mhRegenerationDisc 1.5s ease-in forwards}.mh-regeneration-born{position:relative;width:min(330px,100%);padding:20px;border:2px solid #fbbf24;border-radius:24px;background:#0f172a;text-align:center;opacity:0;animation:mhRegenerationBorn .6s 1.4s ease-out forwards}.mh-regeneration-born h3{font-size:20px;font-weight:1000;color:#fde68a}.mh-regeneration-born b{float:right;color:#f9a8d4}@keyframes mhRegenerationDisc{0%{transform:rotate(0) scale(.7);opacity:1}85%{transform:rotate(1080deg) scale(1.15);opacity:1}100%{transform:rotate(1260deg) scale(.1);opacity:0}}@keyframes mhRegenerationBorn{to{opacity:1;transform:none}}
-    .mh-home-scene{position:relative;isolation:isolate;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:29%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:7px;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:6px monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:auto 43px;grid-template-rows:1fr 1fr;width:139px;padding:4px;border-radius:14px}.mh-home-wallet>div{display:grid;grid-template-columns:14px 1fr auto;align-items:center;gap:2px;padding:1px 3px;color:#ffe08a}.mh-home-wallet>div b{font-size:8px;text-align:right}.mh-home-wallet>div small{font-size:6px;color:#f4e7c3}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:7px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;border:0;background:transparent;color:#fff;touch-action:manipulation}.mh-home-facility>span{position:absolute;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:0;top:14%;width:42%;height:34%}.mh-home-facility.management>span{left:6%;top:37%;border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}.mh-home-facility.temple{right:0;top:14%;width:42%;height:34%}.mh-home-facility.temple>span{right:7%;top:35%;border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}.mh-home-facility.market{right:0;top:45%;width:39%;height:30%}.mh-home-facility.market>span{right:5%;top:40%;border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}.mh-home-facility.battle{left:16%;right:16%;bottom:0;height:31%}.mh-home-facility.battle>span{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}.mh-home-facility.battle:active>span{transform:translateX(-50%) scale(.94)}.mh-home-gift{position:absolute;z-index:5;right:5%;top:73%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #67e8f9aa;border-radius:13px;background:#083344e8;color:#cffafe;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-gift em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-gift:active{transform:scale(.94);filter:brightness(1.25)}.mh-home-update{position:absolute;z-index:5;right:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-update:active{transform:scale(.94);filter:brightness(1.25)}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-rebirth-stars{display:flex;justify-content:center;align-items:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rainbow-breakthrough-star{display:block;width:1em;height:1em;object-fit:contain;transform:scale(1.07) translateY(-.06em)}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
+    .mh-home-scene{position:relative;isolation:isolate;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:29%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:visible;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar.is-framed{border-color:transparent}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:7px;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:6px monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:auto 43px;grid-template-rows:1fr 1fr;width:139px;padding:4px;border-radius:14px}.mh-home-wallet>div{display:grid;grid-template-columns:14px 1fr auto;align-items:center;gap:2px;padding:1px 3px;color:#ffe08a}.mh-home-wallet>div b{font-size:8px;text-align:right}.mh-home-wallet>div small{font-size:6px;color:#f4e7c3}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:7px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;border:0;background:transparent;color:#fff;touch-action:manipulation}.mh-home-facility>span{position:absolute;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:0;top:14%;width:42%;height:34%}.mh-home-facility.management>span{left:6%;top:37%;border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}.mh-home-facility.temple{right:0;top:14%;width:42%;height:34%}.mh-home-facility.temple>span{right:7%;top:35%;border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}.mh-home-facility.market{right:0;top:45%;width:39%;height:30%}.mh-home-facility.market>span{right:5%;top:40%;border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}.mh-home-facility.battle{left:16%;right:16%;bottom:0;height:31%}.mh-home-facility.battle>span{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}.mh-home-facility.battle:active>span{transform:translateX(-50%) scale(.94)}.mh-home-gift{position:absolute;z-index:5;right:5%;top:73%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #67e8f9aa;border-radius:13px;background:#083344e8;color:#cffafe;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-gift em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-gift:active{transform:scale(.94);filter:brightness(1.25)}.mh-home-update{position:absolute;z-index:5;right:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-update:active{transform:scale(.94);filter:brightness(1.25)}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-rebirth-stars{display:flex;justify-content:center;align-items:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rainbow-breakthrough-star{display:block;width:1em;height:1em;object-fit:contain;transform:scale(1.07) translateY(-.06em)}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
+    /* ==================== プロフィールフレーム(2026-09-15) ====================
+       ブリーダーアイコンの外側へ重ねる飾り枠。アイコン画像そのものには触らない。
+       ★太さを px で書かない。inset と mask を割合で書いてあるので、ランキングの 32px でも
+         プロフィールの 80px でも同じ見え方になる(小さいアイコンでもズレない)。
+       ★枠は円の外へはみ出すので、外側の .mh-profile-avatar は overflow:visible のままにする。
+       ★pointer-events:none。枠がボタンのタップを食べない。 */
+    .mh-profile-avatar{position:relative;display:flex;align-items:center;justify-content:center;overflow:visible}
+    .mh-profile-frame{position:absolute;inset:-7%;z-index:1;border-radius:50%;pointer-events:none}
+    /* 輪の内側をくり抜く。内側 76% は透明、そこから外が枠。割合なので大きさに比例する */
+    .mh-profile-frame-ring{-webkit-mask:radial-gradient(closest-side,#0000 0 76%,#000 76.5%);mask:radial-gradient(closest-side,#0000 0 76%,#000 76.5%);filter:drop-shadow(0 0 1px #000a)}
+    .mh-profile-frame-silver{background:conic-gradient(from 210deg,#f8fafc,#94a3b8,#e2e8f0,#64748b,#f1f5f9,#94a3b8,#f8fafc)}
+    .mh-profile-frame-gold{background:conic-gradient(from 210deg,#fef3c7,#b45309,#fde68a,#92400e,#fffbeb,#d97706,#fef3c7)}
+    .mh-profile-frame-blue{background:conic-gradient(from 210deg,#e0f2fe,#0369a1,#7dd3fc,#075985,#f0f9ff,#0284c7,#e0f2fe)}
+    .mh-profile-frame-pink{background:conic-gradient(from 210deg,#fce7f3,#be185d,#f9a8d4,#9d174d,#fff1f2,#db2777,#fce7f3)}
+    /* 画像フレーム(豪華フレーム用)。透過PNGを縦横比そのままで重ねる */
+    .mh-profile-frame-image{inset:-16%;display:block;width:auto;height:auto;object-fit:contain}
     /* 転生オーラ画像。同じPNGの主炎・残光・足元炎を別周期で動かし、本体とUIには発光を掛けない。 */
     .mh-reincarnate-stack{isolation:isolate}.mh-reincarnate-aura{position:absolute;z-index:-1;inset:-34%;display:block;pointer-events:none;overflow:visible;contain:layout style}.mh-monster-card-name{position:relative;z-index:2}
     .mh-reincarnate-flame{position:absolute;inset:0;display:block;transform-origin:center bottom;will-change:transform,opacity}
