@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2321c02d9730476c
+// source-sha256: ef92a26f18662b89
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4c28812d900fbefd
+// generated-sha256: 9dea76cb46590f92
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-15 08:29"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-15 12:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -25716,11 +25716,18 @@ function BreederMarketScreen({
   onOpenDetail,
   onOpenItemDetail,
   onExchangeSoulRankRespec,
-  onExchangeHeroProof
+  onExchangeHeroProof,
+  eventPoints = 0,
+  onExchangeEventPoints
 }) {
   // 2026-09-14・マーケットのタブ乱立を避けるため、最初に用途別の入口を選ぶ。
   // 入口だけこの画面のローカル状態で持ち、購入・交換・商品タブの既存stateは親側をそのまま使う。
   const [marketSection, setMarketSection] = useState(null);
+  const [eventQuantityOffer, setEventQuantityOffer] = useState(null);
+  const [eventQuantity, setEventQuantity] = useState(1);
+  const [eventExchangePending, setEventExchangePending] = useState(false);
+  const eventPointReleased = typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS?.rhythmEventPoints === true;
+  const safeEventPoints = normalizeRhythmEventPoints(eventPoints);
   const psycheHave = ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID);
   const shardHave = ownedItemCount(ownedItems, HERO_PROOF_SHARD_ITEM_ID);
   const proofHave = ownedItemCount(ownedItems, HERO_PROOF_ITEM_ID);
@@ -25878,11 +25885,11 @@ function BreederMarketScreen({
     emoji: '🎟️',
     label: 'イベントP交換所',
     titleLines: ['イベントP', '交換所'],
-    value: null,
-    hint: '準備中',
-    border: 'border-violet-400/20',
-    title: 'text-violet-300/70',
-    arrow: 'text-violet-400/40'
+    value: eventPointReleased ? safeEventPoints.toLocaleString() : null,
+    hint: eventPointReleased ? '所持イベントP' : '準備中',
+    border: eventPointReleased ? 'border-violet-400/35' : 'border-violet-400/20',
+    title: eventPointReleased ? 'text-violet-200' : 'text-violet-300/70',
+    arrow: eventPointReleased ? 'text-violet-300/80' : 'text-violet-400/40'
   }].map(section => /*#__PURE__*/React.createElement("button", {
     key: section.key,
     "data-market-section": section.key,
@@ -26005,7 +26012,7 @@ function BreederMarketScreen({
     }, /*#__PURE__*/React.createElement(BookOpen, {
       size: 8
     }), "\u8A73\u7D30"))
-  })))), marketSection === 'event' && /*#__PURE__*/React.createElement("div", {
+  })))), marketSection === 'event' && !eventPointReleased && /*#__PURE__*/React.createElement("div", {
     className: "flex-1 min-h-0 flex items-center justify-center"
   }, /*#__PURE__*/React.createElement("div", {
     className: "w-full max-w-sm rounded-2xl border border-slate-700 bg-slate-950/70 px-4 py-8 text-center"
@@ -26016,7 +26023,140 @@ function BreederMarketScreen({
     className: "text-sm font-black text-slate-300"
   }, "\u30A4\u30D9\u30F3\u30C8P\u4EA4\u63DB\u6240\u306F\u6E96\u5099\u4E2D\u3067\u3059"), /*#__PURE__*/React.createElement("div", {
     className: "mt-2 text-[10px] font-bold leading-relaxed text-slate-500"
-  }, "\u30A4\u30D9\u30F3\u30C8P\u6A5F\u80FD\u3068\u5546\u54C1\u30E9\u30A4\u30F3\u30CA\u30C3\u30D7\u306F\u4ECA\u5F8C\u8FFD\u52A0\u3057\u307E\u3059\u3002"))));
+  }, "\u30A4\u30D9\u30F3\u30C8P\u306E\u7372\u5F97\u30FB\u4EA4\u63DB\u30FB\u8868\u793A\u304C\u3059\u3079\u3066\u63C3\u3063\u3066\u304B\u3089\u516C\u958B\u3057\u307E\u3059\u3002"))), marketSection === 'event' && eventPointReleased && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    "data-event-point-balance": true,
+    className: "mb-3 shrink-0 flex items-center justify-center gap-2 rounded-2xl border border-violet-500/30 bg-violet-950/30 py-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    "aria-hidden": "true"
+  }, "\uD83C\uDF9F\uFE0F"), /*#__PURE__*/React.createElement("span", {
+    className: "font-mono text-base font-black text-violet-100"
+  }, safeEventPoints.toLocaleString()), /*#__PURE__*/React.createElement("span", {
+    className: "text-[9px] font-bold text-slate-400"
+  }, "\u6240\u6301\u30A4\u30D9\u30F3\u30C8P")), marketExchangeError && /*#__PURE__*/React.createElement("div", {
+    className: "mb-2 shrink-0 rounded-xl border border-red-500/40 bg-red-950/30 px-3 py-2 text-center text-[9px] font-black text-red-300"
+  }, marketExchangeError), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
+  }, /*#__PURE__*/React.createElement("div", {
+    "data-event-point-shop": true,
+    className: "grid grid-cols-2 gap-2 pb-4"
+  }, RHYTHM_EVENT_POINT_SHOP_OFFERS.map(offer => {
+    const maxQuantity = Math.floor(safeEventPoints / offer.cost);
+    return /*#__PURE__*/React.createElement("div", {
+      key: offer.id,
+      "data-event-point-offer": offer.id,
+      className: "rounded-2xl border border-violet-500/20 bg-slate-950/80 p-3 flex flex-col min-h-[124px]"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-start gap-2"
+    }, /*#__PURE__*/React.createElement("span", {
+      "aria-hidden": "true",
+      className: "text-xl shrink-0"
+    }, offer.emoji), /*#__PURE__*/React.createElement("div", {
+      className: "min-w-0 flex-1"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-[11px] leading-tight font-black text-slate-100"
+    }, offer.name), /*#__PURE__*/React.createElement("div", {
+      className: "mt-1 text-[9px] font-bold text-slate-500"
+    }, "1\u56DE\uFF1A", offer.grantAmount.toLocaleString(), offer.unit))), /*#__PURE__*/React.createElement("div", {
+      className: "mt-auto pt-2 flex items-end justify-between gap-2"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "font-mono text-sm font-black text-violet-300"
+    }, offer.cost.toLocaleString(), "P"), /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      disabled: maxQuantity <= 0 || eventExchangePending || purchaseProcessing,
+      onClick: () => {
+        setEventQuantityOffer(offer);
+        setEventQuantity(1);
+      },
+      className: "min-h-[36px] rounded-xl bg-violet-500 px-3 text-[10px] font-black text-white active:scale-95 disabled:bg-slate-800 disabled:text-slate-500"
+    }, "\u4EA4\u63DB")));
+  })))), eventQuantityOffer && eventPointReleased && (() => {
+    const maxQuantity = Math.floor(safeEventPoints / eventQuantityOffer.cost);
+    const quantity = Math.max(1, Math.min(Math.max(1, maxQuantity), Math.floor(Number(eventQuantity) || 1)));
+    const totalCost = eventQuantityOffer.cost * quantity;
+    const totalGrant = eventQuantityOffer.grantAmount * quantity;
+    const changeQuantity = delta => setEventQuantity(Math.max(1, Math.min(Math.max(1, maxQuantity), quantity + delta)));
+    const canExchange = maxQuantity > 0 && !eventExchangePending && !purchaseProcessing;
+    return /*#__PURE__*/React.createElement("div", {
+      className: "fixed inset-0 z-[42000] flex items-center justify-center bg-black/90 p-4",
+      role: "dialog",
+      "aria-modal": "true",
+      "aria-label": "\u30A4\u30D9\u30F3\u30C8P\u4EA4\u63DB\u6570\u3092\u9078\u3076"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "w-full max-w-sm rounded-3xl border-2 border-violet-500 bg-slate-950 p-5 shadow-2xl"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-2"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-3xl",
+      "aria-hidden": "true"
+    }, eventQuantityOffer.emoji), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+      className: "text-base font-black text-violet-200"
+    }, eventQuantityOffer.name), /*#__PURE__*/React.createElement("div", {
+      className: "text-[10px] font-bold text-slate-500"
+    }, "1\u56DE ", eventQuantityOffer.grantAmount.toLocaleString(), eventQuantityOffer.unit, " \uFF0F ", eventQuantityOffer.cost.toLocaleString(), "P"))), /*#__PURE__*/React.createElement("div", {
+      className: "mt-4 grid grid-cols-[1fr_1fr_1.4fr_1fr_1fr] items-center gap-1.5"
+    }, /*#__PURE__*/React.createElement("button", {
+      disabled: quantity <= 1,
+      onClick: () => changeQuantity(-10),
+      className: "min-h-[44px] rounded-xl bg-slate-800 font-black disabled:opacity-30"
+    }, "-10"), /*#__PURE__*/React.createElement("button", {
+      disabled: quantity <= 1,
+      onClick: () => changeQuantity(-1),
+      className: "min-h-[44px] rounded-xl bg-slate-800 font-black disabled:opacity-30"
+    }, "-1"), /*#__PURE__*/React.createElement("strong", {
+      className: "text-center text-xl font-black font-mono"
+    }, quantity), /*#__PURE__*/React.createElement("button", {
+      disabled: quantity >= maxQuantity,
+      onClick: () => changeQuantity(1),
+      className: "min-h-[44px] rounded-xl bg-slate-800 font-black disabled:opacity-30"
+    }, "+1"), /*#__PURE__*/React.createElement("button", {
+      disabled: quantity >= maxQuantity,
+      onClick: () => changeQuantity(10),
+      className: "min-h-[44px] rounded-xl bg-slate-800 font-black disabled:opacity-30"
+    }, "+10")), /*#__PURE__*/React.createElement("button", {
+      disabled: maxQuantity <= 0,
+      onClick: () => setEventQuantity(Math.max(1, maxQuantity)),
+      className: "mt-2 min-h-[44px] w-full rounded-xl bg-violet-900 font-black disabled:opacity-30"
+    }, "MAX\uFF08", Math.max(0, maxQuantity).toLocaleString(), "\u56DE\uFF09"), /*#__PURE__*/React.createElement("div", {
+      className: "mt-3 space-y-1.5 rounded-2xl border border-white/10 bg-black/30 p-3 text-[12px] font-black"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex justify-between"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-slate-400"
+    }, "\u53D7\u3051\u53D6\u308A"), /*#__PURE__*/React.createElement("span", null, totalGrant.toLocaleString(), eventQuantityOffer.unit)), /*#__PURE__*/React.createElement("div", {
+      className: "flex justify-between text-base"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-slate-300"
+    }, "\u5408\u8A08"), /*#__PURE__*/React.createElement("span", {
+      className: "text-violet-300"
+    }, totalCost.toLocaleString(), "P")), /*#__PURE__*/React.createElement("div", {
+      className: "flex justify-between"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-slate-400"
+    }, "\u4EA4\u63DB\u5F8C"), /*#__PURE__*/React.createElement("span", {
+      className: "text-violet-200"
+    }, "\u6B8B\u308A", Math.max(0, safeEventPoints - totalCost).toLocaleString(), "P"))), marketExchangeError && /*#__PURE__*/React.createElement("p", {
+      className: "mt-2 text-center text-[11px] font-black text-red-300"
+    }, marketExchangeError), /*#__PURE__*/React.createElement("div", {
+      className: "mt-3 grid grid-cols-1 gap-2"
+    }, /*#__PURE__*/React.createElement("button", {
+      disabled: !canExchange,
+      onClick: async () => {
+        if (!onExchangeEventPoints) return;
+        setEventExchangePending(true);
+        try {
+          const result = await onExchangeEventPoints(eventQuantityOffer, quantity);
+          if (result?.ok) setEventQuantityOffer(null);
+        } finally {
+          setEventExchangePending(false);
+        }
+      },
+      className: "min-h-[48px] rounded-2xl bg-violet-500 text-white font-black active:scale-[.98] disabled:bg-slate-800 disabled:text-slate-500"
+    }, "\u4EA4\u63DB\u3059\u308B"), /*#__PURE__*/React.createElement("button", {
+      disabled: eventExchangePending,
+      onClick: () => setEventQuantityOffer(null),
+      className: "min-h-[48px] rounded-2xl border border-white/20 bg-slate-900 font-black active:scale-[.98] disabled:opacity-40"
+    }, "\u30AD\u30E3\u30F3\u30BB\u30EB"))));
+  })());
 }
 
 // ---- part: 56-screen-profile.jsx ----
@@ -37365,6 +37505,8 @@ function MonsterHeroGame() {
   const dailyMasuAdviceCheckedRef = useRef(false);
   // マーケットのアイテムの効果説明。カードを小さくしたぶん、詳細ボタンから出す
   const [marketItemDetail, setMarketItemDetail] = useState(null);
+  // イベントPは交換所を開くたび保存値から読み直し、交換成功時だけstateも更新する。
+  const [rhythmEventPoints, setRhythmEventPoints] = useState(0);
   // 虹の超越の実だけは、価格タップ後に数量と購入後残高を確認してから一括購入する。
   const [marketQuantityItem, setMarketQuantityItem] = useState(null);
   const [marketPurchaseQuantity, setMarketPurchaseQuantity] = useState(1);
@@ -44083,6 +44225,67 @@ function MonsterHeroGame() {
       saveMissionProgress('market');
     } catch {
       setMarketExchangeError('交換を保存できませんでした。勇者の証片は消費していません。');
+    } finally {
+      marketPurchaseProcessingRef.current = false;
+    }
+  };
+
+  // イベントP交換所。残高・ダイヤ・所持アイテムを1取引で保存し、どれか1つでも失敗したら全部戻す。
+  const exchangeRhythmEventPoints = async (offer, quantity = 1) => {
+    if (marketPurchaseProcessingRef.current) return {
+      ok: false,
+      reason: 'busy'
+    };
+    marketPurchaseProcessingRef.current = true;
+    setMarketExchangeError('');
+    try {
+      const beforePoints = await loadRhythmEventPoints();
+      const beforeGold = Math.max(0, Math.floor(Number(gold) || 0));
+      const beforeItems = ownedItemsRef.current;
+      setRhythmEventPoints(beforePoints);
+      const exchange = rhythmEventPointExchangePreview({
+        offer,
+        eventPoints: beforePoints,
+        gold: beforeGold,
+        ownedItems: beforeItems,
+        quantity
+      });
+      if (!exchange.ok) {
+        setMarketExchangeError(exchange.reason === 'points' ? 'イベントPが足りません。' : 'この商品は交換できません。');
+        return exchange;
+      }
+      const saved = await saveStoredValuesOrRollback([{
+        key: RHYTHM_EVENT_POINTS_KEY,
+        before: beforePoints,
+        next: exchange.eventPoints
+      }, {
+        key: 'mh_gold',
+        before: beforeGold,
+        next: exchange.gold
+      }, {
+        key: 'mh_owned_items',
+        before: beforeItems,
+        next: exchange.ownedItems
+      }], storeGet, storeSet);
+      if (!saved) {
+        setMarketExchangeError('交換を保存できませんでした。イベントPと所持品は変更していません。');
+        return {
+          ok: false,
+          reason: 'save'
+        };
+      }
+      setRhythmEventPoints(exchange.eventPoints);
+      setGold(exchange.gold);
+      ownedItemsRef.current = exchange.ownedItems;
+      setOwnedItems(exchange.ownedItems);
+      saveMissionProgress('market');
+      return exchange;
+    } catch {
+      setMarketExchangeError('交換を保存できませんでした。イベントPと所持品は変更していません。');
+      return {
+        ok: false,
+        reason: 'save'
+      };
     } finally {
       marketPurchaseProcessingRef.current = false;
     }
@@ -53364,8 +53567,10 @@ function MonsterHeroGame() {
         setManagementTab('monster');
         setGameState('MB_MANAGEMENT');
       },
-      onOpenMarket: () => {
+      onOpenMarket: async () => {
         addAssistantBond('market');
+        setMarketExchangeError('');
+        setRhythmEventPoints(await loadRhythmEventPoints());
         setGameState('BREEDER_MARKET');
       },
       onOpenProfile: () => setGameState('PROFILE'),
@@ -58979,7 +59184,9 @@ function MonsterHeroGame() {
       },
       onOpenItemDetail: setMarketItemDetail,
       onExchangeSoulRankRespec: exchangeSoulRankRespecByProof,
-      onExchangeHeroProof: exchangeHeroProofByShard
+      onExchangeHeroProof: exchangeHeroProofByShard,
+      eventPoints: rhythmEventPoints,
+      onExchangeEventPoints: exchangeRhythmEventPoints
     }), gameState === 'ROSTER' && /*#__PURE__*/React.createElement("div", {
       "data-mh-screen": true,
       className: "flex-1 flex flex-col h-full min-h-0 p-4"

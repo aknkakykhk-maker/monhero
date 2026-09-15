@@ -30,6 +30,7 @@ const assistants=read('monster-hero/data/assistants.js');
 const spec=read('docs/spec/RHYTHM_RANKING.md');
 const flags=read('monster-hero/src/parts/17-release-changelog-login-missions.jsx');
 const saveSpec=read('docs/spec/SAVE_DATA.md');
+const marketScreen=read('monster-hero/src/parts/55-screen-breeder-market.jsx');
 
 let failed=0;
 const check=(name,ok,detail='')=>{console.log(`${ok?'✓':'✗'} ${name}${detail?` — ${detail}`:''}`);if(!ok)failed++;};
@@ -48,6 +49,7 @@ vm.runInContext(`${demoIds}\n${eventData}\n`
   +'normalizeRhythmEventRewardClaims,rhythmEventDivisionIds,rhythmEventParticipationReward,rhythmEventParticipationCleared,'
   +'rhythmEventSongDivisionId,rhythmEventMaxScore,rhythmEventEntryScore,RHYTHM_EVENT_TOTAL_DIVISION,'
   +'RHYTHM_EVENT_POINT_TARGET_MULTIPLIER,rhythmEventPointBaseForScore,rhythmEventPointAwardAt,'
+  +'RHYTHM_EVENT_POINT_SHOP_OFFERS,rhythmEventPointExchangePreview,'
   +'rhythmPreviousLimitedEvent,rhythmNextLimitedEvent,rhythmHistoryEvents};',context);
 const O=context.out;
 
@@ -664,6 +666,60 @@ check('STEP2の更新履歴は開発メモとして残し、未完成機能を�
   if(at<0)return false;
   const entry=changelog.slice(at,changelog.indexOf('  },',at));
   return entry.includes('dev:true');
+})());
+
+// --- イベントP STEP3（交換所・固定12商品・数量交換・原子的保存） ---
+check('イベントP交換所は対象確定済みの固定12商品だけ',(()=>{
+  const got=(O.RHYTHM_EVENT_POINT_SHOP_OFFERS||[]).map(o=>[o.id,o.itemId||'',o.grantAmount,o.cost]);
+  const want=[
+    ['diamond_300','',300,1],['training_ticket_x3','training_ticket',3,1],['training_ticket_l','training_ticket_l',1,3],
+    ['rainbow_psyche','rainbow_psyche',1,1],['skip_ticket_jo','skip_ticket_jo',1,10],['skip_ticket_ha','skip_ticket_ha',1,16],
+    ['skip_ticket_kyu','skip_ticket_kyu',1,23],['skip_ticket_kiwami','skip_ticket_kiwami',1,50],['skip_ticket_haou','skip_ticket_haou',1,100],
+    ['hero_proof_shard','hero_proof_shard',1,500],['transcend_fruit_rainbow','transcend_fruit_rainbow',1,5000],['hero_proof','hero_proof',1,10000],
+  ];
+  return JSON.stringify(got)===JSON.stringify(want);
+})());
+check('対象未決定のアイコンを推測でイベントP商品へ入れない',
+  (O.RHYTHM_EVENT_POINT_SHOP_OFFERS||[]).length===12
+  &&!(O.RHYTHM_EVENT_POINT_SHOP_OFFERS||[]).some(o=>o.kind==='icon'||/アイコン/.test(o.name||'')));
+check('イベントPの数量交換計算はダイヤと複数個アイテムを正しく扱う',(()=>{
+  const diamond=O.RHYTHM_EVENT_POINT_SHOP_OFFERS.find(o=>o.id==='diamond_300');
+  const ticket=O.RHYTHM_EVENT_POINT_SHOP_OFFERS.find(o=>o.id==='training_ticket_x3');
+  const a=O.rhythmEventPointExchangePreview({offer:diamond,eventPoints:5,gold:100,ownedItems:{},quantity:2});
+  const b=O.rhythmEventPointExchangePreview({offer:ticket,eventPoints:5,gold:100,ownedItems:{training_ticket:4},quantity:2});
+  const c=O.rhythmEventPointExchangePreview({offer:ticket,eventPoints:1,gold:100,ownedItems:{training_ticket:4},quantity:2});
+  return a.ok&&a.eventPoints===3&&a.gold===700
+    &&b.ok&&b.eventPoints===3&&b.ownedItems.training_ticket===10
+    &&!c.ok&&c.reason==='points'&&c.eventPoints===1&&c.ownedItems.training_ticket===4;
+})());
+check('交換保存はイベントP・ダイヤ・所持品を1取引で扱う',(()=>{
+  const from=app.indexOf('const exchangeRhythmEventPoints = async');
+  const to=app.indexOf('// 編成画面:',from);
+  const body=app.slice(from,to);
+  return from>=0&&body.includes('saveStoredValuesOrRollback([')
+    &&body.includes('{ key:RHYTHM_EVENT_POINTS_KEY')
+    &&body.includes("{ key:'mh_gold'")
+    &&body.includes("{ key:'mh_owned_items'")
+    &&body.includes('setRhythmEventPoints(exchange.eventPoints)')
+    &&body.includes('setOwnedItems(exchange.ownedItems)');
+})());
+check('マーケットを開くたびイベントP保存値を読み直す',
+  app.includes("onOpenMarket={async()=>{addAssistantBond('market');setMarketExchangeError('');setRhythmEventPoints(await loadRhythmEventPoints());setGameState('BREEDER_MARKET');}}"));
+check('イベントP交換所は公開フラグOFF中は準備中のまま隠す',
+  /const RHYTHM_EVENT_POINTS_PUBLIC_RELEASE = false;/.test(flags)
+  &&marketScreen.includes("const eventPointReleased=typeof RELEASE_FLAGS!=='undefined'&&RELEASE_FLAGS?.rhythmEventPoints===true;")
+  &&marketScreen.includes("marketSection==='event'&&!eventPointReleased")
+  &&marketScreen.includes("marketSection==='event'&&eventPointReleased"));
+check('イベントP交換所は数量選択とMAX・交換後残高を出す',
+  marketScreen.includes('data-event-point-shop')
+  &&marketScreen.includes('MAX（{Math.max(0,maxQuantity).toLocaleString()}回）')
+  &&marketScreen.includes('交換後')
+  &&marketScreen.includes('onExchangeEventPoints(eventQuantityOffer,quantity)'));
+check('STEP3の更新履歴も開発メモとして隠す',(()=>{
+  const at=changelog.indexOf('イベントP交換所の基盤を実装しました');
+  if(at<0)return false;
+  const entry=changelog.slice(at,changelog.indexOf('  },',at));
+  return entry.includes('dev:true')&&entry.includes("releaseFlag:'rhythmEventPoints'");
 })());
 
 // 適用SQLと仕様書
