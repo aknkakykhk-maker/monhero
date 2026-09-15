@@ -4378,7 +4378,7 @@ function MonsterHeroGame() {
     // リザルトが遅れる)。書けなくても次の周回で書き直されるし、一覧は記録側の
     // 集計で補われる。テーブルがまだ無い環境ではsbUpsertBondLevels側が気付いて以後スキップする
     try {
-      const bondRows = bondLevelRowsFromParty(name, icon, party);
+      const bondRows = bondLevelRowsFromParty(name, icon, party, profileFrame);
       if (bondRows.length) {
         Promise.resolve(sbUpsertBondLevels(bondRows)).catch(bondErr => {
           console.error('[ranking] bond_levels upsert failed:', bondErr && bondErr.message ? bondErr.message : bondErr);
