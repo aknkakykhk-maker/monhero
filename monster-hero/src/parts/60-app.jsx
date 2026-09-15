@@ -134,6 +134,8 @@ function MonsterHeroGame() {
   const dailyMasuAdviceCheckedRef = useRef(false);
   // マーケットのアイテムの効果説明。カードを小さくしたぶん、詳細ボタンから出す
   const [marketItemDetail, setMarketItemDetail] = useState(null);
+  // イベントPは交換所を開くたび保存値から読み直し、交換成功時だけstateも更新する。
+  const [rhythmEventPoints, setRhythmEventPoints] = useState(0);
   // 虹の超越の実だけは、価格タップ後に数量と購入後残高を確認してから一括購入する。
   const [marketQuantityItem, setMarketQuantityItem] = useState(null);
   const [marketPurchaseQuantity, setMarketPurchaseQuantity] = useState(1);
@@ -5338,6 +5340,42 @@ function MonsterHeroGame() {
       saveMissionProgress('market');
     } catch {
       setMarketExchangeError('交換を保存できませんでした。勇者の証片は消費していません。');
+    } finally { marketPurchaseProcessingRef.current = false; }
+  };
+
+  // イベントP交換所。残高・ダイヤ・所持アイテムを1取引で保存し、どれか1つでも失敗したら全部戻す。
+  const exchangeRhythmEventPoints = async (offer, quantity=1) => {
+    if (marketPurchaseProcessingRef.current) return { ok:false, reason:'busy' };
+    marketPurchaseProcessingRef.current = true;
+    setMarketExchangeError('');
+    try {
+      const beforePoints = await loadRhythmEventPoints();
+      const beforeGold = Math.max(0, Math.floor(Number(gold) || 0));
+      const beforeItems = ownedItemsRef.current;
+      setRhythmEventPoints(beforePoints);
+      const exchange = rhythmEventPointExchangePreview({ offer, eventPoints:beforePoints, gold:beforeGold, ownedItems:beforeItems, quantity });
+      if (!exchange.ok) {
+        setMarketExchangeError(exchange.reason==='points'?'イベントPが足りません。':'この商品は交換できません。');
+        return exchange;
+      }
+      const saved = await saveStoredValuesOrRollback([
+        { key:RHYTHM_EVENT_POINTS_KEY, before:beforePoints, next:exchange.eventPoints },
+        { key:'mh_gold', before:beforeGold, next:exchange.gold },
+        { key:'mh_owned_items', before:beforeItems, next:exchange.ownedItems },
+      ], storeGet, storeSet);
+      if (!saved) {
+        setMarketExchangeError('交換を保存できませんでした。イベントPと所持品は変更していません。');
+        return { ok:false, reason:'save' };
+      }
+      setRhythmEventPoints(exchange.eventPoints);
+      setGold(exchange.gold);
+      ownedItemsRef.current = exchange.ownedItems;
+      setOwnedItems(exchange.ownedItems);
+      saveMissionProgress('market');
+      return exchange;
+    } catch {
+      setMarketExchangeError('交換を保存できませんでした。イベントPと所持品は変更していません。');
+      return { ok:false, reason:'save' };
     } finally { marketPurchaseProcessingRef.current = false; }
   };
 
@@ -10913,7 +10951,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             homePastureMasumons={homePastureMasumons} masuMons={masuMons} missions={missions}
             onOpenBattle={()=>{setModeSelectTab('mode');setGameState('BATTLE_MODE_SELECT');}}
             onOpenManagement={()=>{addAssistantBond('management');setManagementTab('monster');setGameState('MB_MANAGEMENT');}}
-            onOpenMarket={()=>{addAssistantBond('market');setGameState('BREEDER_MARKET');}}
+            onOpenMarket={async()=>{addAssistantBond('market');setMarketExchangeError('');setRhythmEventPoints(await loadRhythmEventPoints());setGameState('BREEDER_MARKET');}}
             onOpenProfile={()=>setGameState('PROFILE')}
             onOpenRhythm={RHYTHM_MODE_PUBLIC_RELEASE?openRhythmDemo:()=>setGameState('RHYTHM_INFO')}
             onOpenSettings={()=>setGameState('SETTINGS')}
@@ -12793,6 +12831,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onOpenItemDetail={setMarketItemDetail}
             onExchangeSoulRankRespec={exchangeSoulRankRespecByProof}
             onExchangeHeroProof={exchangeHeroProofByShard}
+            eventPoints={rhythmEventPoints}
+            onExchangeEventPoints={exchangeRhythmEventPoints}
           />
         )}
 

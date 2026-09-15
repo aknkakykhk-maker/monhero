@@ -18,11 +18,16 @@
 function BreederMarketScreen({
   gold, breederPoints, ownedItems, marketTab, marketExchangeError, purchaseProcessing,
   isItemOwned, onBack, onSelectTab, onZoomIcon, onBuy, onOpenDetail, onOpenItemDetail, onExchangeSoulRankRespec,
-  onExchangeHeroProof,
+  onExchangeHeroProof, eventPoints=0, onExchangeEventPoints,
 }) {
   // 2026-09-14・マーケットのタブ乱立を避けるため、最初に用途別の入口を選ぶ。
   // 入口だけこの画面のローカル状態で持ち、購入・交換・商品タブの既存stateは親側をそのまま使う。
   const [marketSection,setMarketSection]=useState(null);
+  const [eventQuantityOffer,setEventQuantityOffer]=useState(null);
+  const [eventQuantity,setEventQuantity]=useState(1);
+  const [eventExchangePending,setEventExchangePending]=useState(false);
+  const eventPointReleased=typeof RELEASE_FLAGS!=='undefined'&&RELEASE_FLAGS?.rhythmEventPoints===true;
+  const safeEventPoints=normalizeRhythmEventPoints(eventPoints);
   const psycheHave = ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID);
   const shardHave = ownedItemCount(ownedItems, HERO_PROOF_SHARD_ITEM_ID);
   const proofHave = ownedItemCount(ownedItems, HERO_PROOF_ITEM_ID);
@@ -94,7 +99,7 @@ function BreederMarketScreen({
             {key:'diamond',emoji:'💎',label:'ダイヤショップ',value:gold.toLocaleString(),hint:'ダイヤで購入',border:'border-cyan-400/35',title:'text-cyan-200',arrow:'text-cyan-300/80'},
             {key:'breeder',emoji:'🪙',label:'ブリーダーP交換所',titleLines:['ブリーダーP','交換所'],value:breederPoints.toLocaleString(),hint:'Lv.UPで獲得',border:'border-amber-400/35',title:'text-amber-200',arrow:'text-amber-300/80'},
             {key:'exchange',emoji:'🔄',label:'アイテム交換所',value:null,hint:'プシュケー・証など',border:'border-emerald-400/35',title:'text-emerald-200',arrow:'text-emerald-300/80'},
-            {key:'event',emoji:'🎟️',label:'イベントP交換所',titleLines:['イベントP','交換所'],value:null,hint:'準備中',border:'border-violet-400/20',title:'text-violet-300/70',arrow:'text-violet-400/40'},
+            {key:'event',emoji:'🎟️',label:'イベントP交換所',titleLines:['イベントP','交換所'],value:eventPointReleased?safeEventPoints.toLocaleString():null,hint:eventPointReleased?'所持イベントP':'準備中',border:eventPointReleased?'border-violet-400/35':'border-violet-400/20',title:eventPointReleased?'text-violet-200':'text-violet-300/70',arrow:eventPointReleased?'text-violet-300/80':'text-violet-400/40'},
           ].map(section=>(
             <button
               key={section.key}
@@ -174,13 +179,74 @@ function BreederMarketScreen({
         </div>
       </>}
 
-      {marketSection==='event'&&<div className="flex-1 min-h-0 flex items-center justify-center">
+      {marketSection==='event'&&!eventPointReleased&&<div className="flex-1 min-h-0 flex items-center justify-center">
         <div className="w-full max-w-sm rounded-2xl border border-slate-700 bg-slate-950/70 px-4 py-8 text-center">
           <div className="text-3xl mb-2" aria-hidden="true">🎟️</div>
           <div className="text-sm font-black text-slate-300">イベントP交換所は準備中です</div>
-          <div className="mt-2 text-[10px] font-bold leading-relaxed text-slate-500">イベントP機能と商品ラインナップは今後追加します。</div>
+          <div className="mt-2 text-[10px] font-bold leading-relaxed text-slate-500">イベントPの獲得・交換・表示がすべて揃ってから公開します。</div>
         </div>
       </div>}
+
+      {marketSection==='event'&&eventPointReleased&&<>
+        <div data-event-point-balance className="mb-3 shrink-0 flex items-center justify-center gap-2 rounded-2xl border border-violet-500/30 bg-violet-950/30 py-2">
+          <span aria-hidden="true">🎟️</span>
+          <span className="font-mono text-base font-black text-violet-100">{safeEventPoints.toLocaleString()}</span>
+          <span className="text-[9px] font-bold text-slate-400">所持イベントP</span>
+        </div>
+        {marketExchangeError&&<div className="mb-2 shrink-0 rounded-xl border border-red-500/40 bg-red-950/30 px-3 py-2 text-center text-[9px] font-black text-red-300">{marketExchangeError}</div>}
+        <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
+          <div data-event-point-shop className="grid grid-cols-2 gap-2 pb-4">
+            {RHYTHM_EVENT_POINT_SHOP_OFFERS.map(offer=>{
+              const maxQuantity=Math.floor(safeEventPoints/offer.cost);
+              return <div key={offer.id} data-event-point-offer={offer.id} className="rounded-2xl border border-violet-500/20 bg-slate-950/80 p-3 flex flex-col min-h-[124px]">
+                <div className="flex items-start gap-2">
+                  <span aria-hidden="true" className="text-xl shrink-0">{offer.emoji}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[11px] leading-tight font-black text-slate-100">{offer.name}</div>
+                    <div className="mt-1 text-[9px] font-bold text-slate-500">1回：{offer.grantAmount.toLocaleString()}{offer.unit}</div>
+                  </div>
+                </div>
+                <div className="mt-auto pt-2 flex items-end justify-between gap-2">
+                  <div className="font-mono text-sm font-black text-violet-300">{offer.cost.toLocaleString()}P</div>
+                  <button type="button" disabled={maxQuantity<=0||eventExchangePending||purchaseProcessing} onClick={()=>{setEventQuantityOffer(offer);setEventQuantity(1);}} className="min-h-[36px] rounded-xl bg-violet-500 px-3 text-[10px] font-black text-white active:scale-95 disabled:bg-slate-800 disabled:text-slate-500">交換</button>
+                </div>
+              </div>;
+            })}
+          </div>
+        </div>
+      </>}
+
+      {eventQuantityOffer&&eventPointReleased&&(()=>{
+        const maxQuantity=Math.floor(safeEventPoints/eventQuantityOffer.cost);
+        const quantity=Math.max(1,Math.min(Math.max(1,maxQuantity),Math.floor(Number(eventQuantity)||1)));
+        const totalCost=eventQuantityOffer.cost*quantity;
+        const totalGrant=eventQuantityOffer.grantAmount*quantity;
+        const changeQuantity=(delta)=>setEventQuantity(Math.max(1,Math.min(Math.max(1,maxQuantity),quantity+delta)));
+        const canExchange=maxQuantity>0&&!eventExchangePending&&!purchaseProcessing;
+        return <div className="fixed inset-0 z-[42000] flex items-center justify-center bg-black/90 p-4" role="dialog" aria-modal="true" aria-label="イベントP交換数を選ぶ">
+          <div className="w-full max-w-sm rounded-3xl border-2 border-violet-500 bg-slate-950 p-5 shadow-2xl">
+            <div className="flex items-center gap-2"><span className="text-3xl" aria-hidden="true">{eventQuantityOffer.emoji}</span><div><div className="text-base font-black text-violet-200">{eventQuantityOffer.name}</div><div className="text-[10px] font-bold text-slate-500">1回 {eventQuantityOffer.grantAmount.toLocaleString()}{eventQuantityOffer.unit} ／ {eventQuantityOffer.cost.toLocaleString()}P</div></div></div>
+            <div className="mt-4 grid grid-cols-[1fr_1fr_1.4fr_1fr_1fr] items-center gap-1.5">
+              <button disabled={quantity<=1} onClick={()=>changeQuantity(-10)} className="min-h-[44px] rounded-xl bg-slate-800 font-black disabled:opacity-30">-10</button>
+              <button disabled={quantity<=1} onClick={()=>changeQuantity(-1)} className="min-h-[44px] rounded-xl bg-slate-800 font-black disabled:opacity-30">-1</button>
+              <strong className="text-center text-xl font-black font-mono">{quantity}</strong>
+              <button disabled={quantity>=maxQuantity} onClick={()=>changeQuantity(1)} className="min-h-[44px] rounded-xl bg-slate-800 font-black disabled:opacity-30">+1</button>
+              <button disabled={quantity>=maxQuantity} onClick={()=>changeQuantity(10)} className="min-h-[44px] rounded-xl bg-slate-800 font-black disabled:opacity-30">+10</button>
+            </div>
+            <button disabled={maxQuantity<=0} onClick={()=>setEventQuantity(Math.max(1,maxQuantity))} className="mt-2 min-h-[44px] w-full rounded-xl bg-violet-900 font-black disabled:opacity-30">MAX（{Math.max(0,maxQuantity).toLocaleString()}回）</button>
+            <div className="mt-3 space-y-1.5 rounded-2xl border border-white/10 bg-black/30 p-3 text-[12px] font-black">
+              <div className="flex justify-between"><span className="text-slate-400">受け取り</span><span>{totalGrant.toLocaleString()}{eventQuantityOffer.unit}</span></div>
+              <div className="flex justify-between text-base"><span className="text-slate-300">合計</span><span className="text-violet-300">{totalCost.toLocaleString()}P</span></div>
+              <div className="flex justify-between"><span className="text-slate-400">交換後</span><span className="text-violet-200">残り{Math.max(0,safeEventPoints-totalCost).toLocaleString()}P</span></div>
+            </div>
+            {marketExchangeError&&<p className="mt-2 text-center text-[11px] font-black text-red-300">{marketExchangeError}</p>}
+            <div className="mt-3 grid grid-cols-1 gap-2">
+              <button disabled={!canExchange} onClick={async()=>{if(!onExchangeEventPoints)return;setEventExchangePending(true);try{const result=await onExchangeEventPoints(eventQuantityOffer,quantity);if(result?.ok)setEventQuantityOffer(null);}finally{setEventExchangePending(false);}}} className="min-h-[48px] rounded-2xl bg-violet-500 text-white font-black active:scale-[.98] disabled:bg-slate-800 disabled:text-slate-500">交換する</button>
+              <button disabled={eventExchangePending} onClick={()=>setEventQuantityOffer(null)} className="min-h-[48px] rounded-2xl border border-white/20 bg-slate-900 font-black active:scale-[.98] disabled:opacity-40">キャンセル</button>
+            </div>
+          </div>
+        </div>;
+      })()}
     </div>
   );
 }
