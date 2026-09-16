@@ -390,6 +390,19 @@ const PROFILE_FRAMES = [
     unlock:{ assistantId:'kiki', bondLevel:7 },
     src:'images/profile-frames/kiki-zenryoku.png?v=88238cde0306',
     desc:'髪とリボンが渦を巻き、星とハートが輝く、ききのいちばん豪華なフレーム。' },
+  // ももすけの3枚。みゅあ・ききと同じく、細い輪 → 飾りの増えた輪 → 本人が寄り添うもの
+  { id:'frame_momosuke_1', name:'ももすけのリボン', kind:'image', released:true, hole:0.737,
+    unlock:{ assistantId:'momosuke', bondLevel:2 },
+    src:'images/profile-frames/momosuke-1.png?v=85af4bc2f2e2',
+    desc:'黒とピンクのリボンに、うさぎと三日月をあしらった細い輪。' },
+  { id:'frame_momosuke_2', name:'ももすけのムーンリース', kind:'image', released:true, hole:0.635,
+    unlock:{ assistantId:'momosuke', bondLevel:5 },
+    src:'images/profile-frames/momosuke-2.png?v=15c231b28a6b',
+    desc:'大きな三日月と魔法陣、こうもりの羽で飾った、ももすけの輪。' },
+  { id:'frame_momosuke_3', name:'ももすけといっしょ', kind:'image', released:true, hole:0.609,
+    unlock:{ assistantId:'momosuke', bondLevel:7 },
+    src:'images/profile-frames/momosuke-3.png?v=43e227e5fc16',
+    desc:'ももすけ本人がうさぎのぬいぐるみと寄りかかる、いちばん特別な輪。' },
 ];
 const PROFILE_FRAME_MAP = Object.freeze(Object.fromEntries(PROFILE_FRAMES.map(frame => [frame.id, frame])));
 // 画像フレームの「穴」を、アイコンの円のどこに合わせるか。

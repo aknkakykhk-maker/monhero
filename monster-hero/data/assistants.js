@@ -415,6 +415,30 @@ const ASSISTANT_UNLOCK_NOTICES = [
     },
   },
   {
+    // 飾り枠の解放(2026-09-16)。仲良し度が上がって新しい枠をもらったとき、
+    // 次にプロフィールを開いたところで1回だけ知らせる。
+    // ★idは1つだけ。何枚目でも同じ案内を出すと2回目以降が出なくなるので、
+    //   画面側は「もらった枚数」が増えるたびに既読を外して出し直す
+    //   (60-app.jsx の profileFrameNoticeSeen)。
+    id: 'unlock_profile_frame_v1',
+    scene: 'profile',
+    expression: 'excited',
+    when: (ctx) => Number(ctx && ctx.newProfileFrameCount) > 0,
+    title: '新しい飾り枠をもらったよ',
+    // 遷移先は書かない。この案内はプロフィール画面に出るので、
+    // 「フレーム：〜」のボタンはもう目の前にある
+    pages: (ctx) => {
+      const names = (ctx && Array.isArray(ctx.newProfileFrameNames)) ? ctx.newProfileFrameNames.filter(Boolean) : [];
+      const who = (ctx && ctx.newProfileFrameAssistantName) || 'あたし';
+      return [
+        `{name}、ありがとう！ ${who}との仲良し度が上がったから、新しい飾り枠が届いたよ♪`,
+        names.length ? `もらったのは「${names.join('」「')}」。プロフィールの「フレーム：〜」から選べるよ。` : 'プロフィールの「フレーム：〜」から選べるよ。',
+        'ブリーダーアイコンの外側に重なる飾りだから、アイコンはそのままなんだ。全国ランキングにも出るよ！',
+        'まだ鍵が付いているものは、その助手との仲良し度を上げるともらえるよ。押すと、あとどれくらいか見られるんだ。',
+      ];
+    },
+  },
+  {
     // 種族チャレンジの解放。条件(チャレンジ Master以上クリア)を満たしたあと、
     // HOMEを開いたときに一度だけ知らせる。一般公開する前は ctx 側が false のままなので出ない
     id: 'unlock_species_challenge_v1',
@@ -440,6 +464,8 @@ const assistantUnlockNoticePages = (notice, ctx) => {
 // 既読の記録。壊れた値・古い形が入っていても必ず文字列の配列へ落とす
 // (保存キーは新しく足すので、既存のセーブデータには一切触らない)
 const ASSISTANT_UNLOCK_NOTICE_SEEN_KEY = 'mh_assistant_unlock_seen_v1';
+// 飾り枠の案内だけは、新しくもらうたびに出し直す(画面側が既読を外すのに使う)
+const PROFILE_FRAME_NOTICE_ID = 'unlock_profile_frame_v1';
 const normalizeAssistantUnlockSeen = (value) => {
   const list = Array.isArray(value) ? value : [];
   return [...new Set(list.filter(id => typeof id === 'string' && id.trim()).map(id => id.trim()))];

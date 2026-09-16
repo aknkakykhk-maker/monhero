@@ -410,8 +410,14 @@ const helpDataRows = (id) => {
     // プロフィールフレームの一覧。フレームを足したらヘルプへも自動で載る
     // (手で書き写すと、増やしたときに古いままになる)。未公開のものはここに出さない
     case 'profileFrames':
+      // もらう条件も実データから出す(ヘルプへ手で書き写すと、Lvを変えたときに古くなる)
       return ((typeof releasedProfileFrames === 'function' ? releasedProfileFrames() : []) || [])
-        .map(frame => [frame.name, frame.desc || '']);
+        .map(frame => {
+          const unlock = (typeof profileFrameUnlock === 'function') ? profileFrameUnlock(frame) : null;
+          const who = unlock && typeof assistantById === 'function' ? assistantById(unlock.assistantId) : null;
+          const how = unlock ? `${(who && who.name) || ''}との仲良し度 Lv${unlock.bondLevel}でもらえます。` : 'はじめから選べます。';
+          return [frame.name, `${how}${frame.desc ? ` ${frame.desc}` : ''}`];
+        });
     // 助手の一覧。名前と性格の違いを実データから出す
     case 'assistants':
       return ((typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST) || [])

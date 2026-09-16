@@ -18,7 +18,7 @@ function ProfileScreen({
   breederIcon, breederLevel, breederName, breederPoints, extremeBestScores, extremeClearCounts,
   finishOnboarding, gold, highScores, isEventReplayUnlocked, modeRecordFor, onboarded,
   onboardingIcon, onboardingName, onboardingPreview, ownedItems, playtimeView, proHighScores,
-  profileBattleMode, profileFrameId, quickHighestWaves, resolveIconUrl, selectedAssistantId, speciesChallengeProgress,
+  profileBattleMode, profileFrameId, ownedProfileFrames, quickHighestWaves, resolveIconUrl, selectedAssistantId, speciesChallengeProgress,
   onBack, onOpenNameEdit, onOpenIconPicker, onOpenFramePicker, onOpenItems, onOpenCallStylePicker, onOpenAssistantPicker,
   onSelectBattleMode, onOpenEventReplayList, onOpenSpeciesRecords,
   rhythmHistoryCount, onOpenRhythmHistory,
@@ -135,6 +135,25 @@ function ProfileScreen({
               </div>
               <div className="h-1.5 mt-2 rounded-full bg-black/50 overflow-hidden"><i className="block h-full rounded-full" style={{width:`${width}%`,background:`linear-gradient(90deg,${accent},#fbbf24)`}}/></div>
               <div className="text-[8px] text-slate-400 font-bold mt-1 text-right">{next?`次のLv.${next.level}まで あと${next.remain}`:'いちばん仲良し！'}</div>
+              {/* 次にもらえる飾り枠(2026-09-16)。貯める理由がその場で見えるように、
+                  仲良し度の下へ1行だけ出す。全部もらっていれば出さない */}
+              {(()=>{
+                const nextFrame=(typeof nextProfileFrameForAssistant==='function')
+                  ? nextProfileFrameForAssistant(selectedAssistantId,assistantBondLevelNow,ownedProfileFrames) : null;
+                if(!nextFrame) return null;
+                const unlock=profileFrameUnlock(nextFrame);
+                return (
+                  <button type="button" data-assistant-next-frame={nextFrame.id} onClick={onOpenFramePicker}
+                    className="mt-2 w-full flex items-center gap-2 rounded-xl border border-amber-500/40 bg-amber-950/25 px-2 py-1.5 active:scale-95">
+                    <ProfileAvatar src={resolveIconUrl(breederIcon)} id={breederIcon} frameId={nextFrame.id} alt={nextFrame.name} className="w-8 h-8 shrink-0" fallback={null}/>
+                    <span className="flex-1 min-w-0 text-left">
+                      <span className="block text-[8px] font-black text-amber-400 leading-tight">Lv.{unlock.bondLevel}でもらえる飾り枠</span>
+                      <span className="block text-[10px] font-black text-white leading-tight truncate">{nextFrame.name}</span>
+                    </span>
+                    <ChevronRight size={12} className="shrink-0 text-amber-400"/>
+                  </button>
+                );
+              })()}
               {/* 助手の切り替え。もう片方の仲良し度Lvもここで確認できる */}
               {ASSISTANT_LIST.length>1&&(
                 <div className="mt-2.5 pt-2.5 border-t border-white/10">
