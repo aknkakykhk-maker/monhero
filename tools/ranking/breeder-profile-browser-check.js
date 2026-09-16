@@ -25,6 +25,10 @@ const RANKING_ROWS = [
   { user_name: 'しらない人',     hero: 'ライガー', party: [], score: 66666, level: 60, icon: 'Suezo' },
   // ★同じ人(bd-1)が別の名前でも記録を残している。改名の前後で2行あるのと同じ状態
   { user_name: 'べつの名前',     hero: 'モッチー', party: [], score: 55555, level: 95, icon: 'Golem', breeder_id: 'bd-1' },
+  // ★同じ人で「IDの付いた記録(モンビー)」と「IDの無い記録(昔のバトル)」が混ざっている状態。
+  //   プロフィール表には載っていない人。2026-09-16、ここで2行に割れて並ぶ不具合を出した
+  { user_name: 'びーとさん',     hero: 'ライガー', party: [], score: 44444, level: 50, icon: 'Golem', breeder_id: 'bd-7' },
+  { user_name: 'びーとさん',     hero: 'ライガー', party: [], score: 33333, level: 49, icon: 'Golem' },
 ];
 // 絆Lv・総合力は rankings ではなく bond_levels から読む。
 // ★bd-1 は「同じ個体(m-7)」を古い名前と新しい名前の2行で持っている(改名するとこうなる)
@@ -123,7 +127,7 @@ async function run() {
     icon: el.querySelector('.mh-profile-avatar img')?.getAttribute('src')?.split('/').pop()?.split('?')[0] || 'なし',
     frame: [...el.querySelectorAll('.mh-profile-frame')].map(f => [...f.classList].find(c => c.startsWith('mh-profile-frame-') && c !== 'mh-profile-frame-ring'))[0] || 'なし',
   })));
-  check('ランキングの一覧が出る', cards.length === 5, `${cards.length}件`);
+  check('ランキングの一覧が出る', cards.length === 7, `${cards.length}件`);
   const at = (i) => cards[i] || { text: '', icon: '', frame: '' };
 
   check('① IDが合えば、改名していても「いまの見た目」で出る(名前も新しくなる)',
@@ -186,6 +190,13 @@ async function run() {
   check('ブリーダーLv: まとめた行も「いまの見た目」で出る',
     bdRows.length === 1 && bdRows[0].icon === 'mocchi.png' && bdRows[0].frame === 'mh-profile-frame-rainbow',
     `${bdRows[0]?.icon} / ${bdRows[0]?.frame}`);
+  const beat = breederRows.filter(r => r.text.includes('びーとさん'));
+  check('ブリーダーLv: IDのある記録と無い記録が混ざっていても1行にまとまる',
+    beat.length === 1, `${beat.length}行`);
+  check('ブリーダーLv: そのときも高いほうのレベルが残る',
+    beat.length === 1 && beat[0].text.includes('50'), beat[0]?.text || '(なし)');
+  check('ブリーダーLv: 全体の行数(1人1行)',
+    breederRows.length === 5, `${breederRows.length}行`);
   check('ブリーダーLv: 古い名前の行は残らない',
     !breederRows.some(r => r.text.includes('むかしの名前') || r.text.includes('べつの名前')),
     breederRows.map(r => r.text.slice(0, 12)).join(' / '));

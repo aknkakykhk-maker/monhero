@@ -136,6 +136,20 @@ for (const [name, src, label] of [
     || new RegExp(`const ${name}=\\(row\\)=>\\{[\\s\\S]{0,500}?applyLatestBreederProfile`).test(src));
 }
 
+// ===== ⑤-2 「名前 → ブリーダーID」の橋 =====
+// 2026-09-16、ここが無くて「ランキングが重複で出てる」を出した。
+// モンビーの記録にはIDが付いていて、これまでのバトルの記録には付いていない。
+// IDのある行を id で、無い行を名前で束ねると、**同じ人が2行に割れて並ぶ**。
+check('一覧のなかで「名前 → ID」の橋を作っている', /const breederIdBridgeFrom = \(entries\)/.test(supa));
+check('同じ名前に2つ以上のIDがぶら下がるときは橋を架けない(別人を混ぜない)',
+  /breederIdBridgeFrom[\s\S]{0,500}byName\.set\(name, null\)/.test(supa));
+check('ブリーダーLvは橋を作ってから束ねる',
+  /aggregateBreederLevels[\s\S]{0,600}breederIdBridgeFrom\(rows\)[\s\S]{0,400}resolveBreederIdFor\(r, bridge\)/.test(supa));
+check('絆Lv・総合力は正本と旧経路の両方を見てから橋を作る',
+  /mergeBondRankingEntries[\s\S]{0,600}breederIdBridgeFrom\(\[\.\.\.\(primaryEntries \|\| \[\]\), \.\.\.\(legacyEntries \|\| \[\]\)\]\)/.test(supa));
+check('橋が無いときはプロフィール表の名前を見る(それも無ければ名前で束ねる)',
+  /resolveBreederIdFor = \(entry, bridge = null\)[\s\S]{0,500}_breederProfileByName\.get\(name\)/.test(supa));
+
 // ===== ⑥ 「いまの見た目」を送るきっかけ =====
 // 2026-09-16。最初は「変えたとき」と「遊んだあと」だけで送っていたが、それだと
 // **一度も変えていない人の行が登録されない**。登録が無い人は引き当てようが無いので、

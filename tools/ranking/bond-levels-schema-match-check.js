@@ -203,9 +203,14 @@ if (bondAddedColumns.length > 0) {
   check('主キーは変えない(既存の行を壊さない)',
     bondAddedColumns.every(c => !/(alter table public\.bond_levels[\s\S]{0,200}(drop constraint|add constraint) bond_levels_pkey)/.test(c.sql)));
   check('人を束ねるのは名前でなくブリーダーID',
-    /const resolveBreederIdFor = \(entry\)/.test(src)
-    && /bondRankingKeyOf[\s\S]{0,200}resolveBreederIdFor/.test(src)
-    && /aggregateBreederLevels[\s\S]{0,400}resolveBreederIdFor/.test(src));
+    /const resolveBreederIdFor = \(entry, bridge = null\)/.test(src)
+    && /bondRankingKeyOf[\s\S]{0,300}resolveBreederIdFor/.test(src)
+    && /aggregateBreederLevels[\s\S]{0,700}resolveBreederIdFor/.test(src));
+  // IDのある記録と無い記録が混ざっていても同じ人を1行にまとめる「橋」(2026-09-16)
+  check('IDの無い記録も、名前からその人のIDへ橋を架けてまとめる',
+    /const breederIdBridgeFrom = \(entries\)/.test(src)
+    && /aggregateBreederLevels[\s\S]{0,700}breederIdBridgeFrom\(rows\)/.test(src)
+    && /mergeBondRankingEntries[\s\S]{0,600}breederIdBridgeFrom\(\[/.test(src));
   check('改名で2行になった記録は、消さずに表示でまとめる(行は消さない)',
     !/delete from public\.bond_levels/i.test(bondAddedColumns.map(c => c.sql).join('\n'))
     && /絆Lvの高いほうを残す/.test(src));

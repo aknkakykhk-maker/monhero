@@ -276,17 +276,20 @@ const bondLevelRowFromRow = (row) => {
 //   IDが無い古い行は、これまでどおり名前で見分ける。
 const bondRankingIndividualOf = (e) =>
   e?.individualId || (e?.masuId != null && String(e.masuId) !== '' ? String(e.masuId) : `legacy:${e?.monsterId || e?.monName}`);
-const bondRankingKeyOf = (e) => {
-  const id = resolveBreederIdFor(e);
+const bondRankingKeyOf = (e, bridge = null) => {
+  const id = resolveBreederIdFor(e, bridge);
   return id ? `id:${id}\u0000${bondRankingIndividualOf(e)}`
             : `name:${e?.userName}\u0000${bondRankingIndividualOf(e)}`;
 };
 const mergeBondRankingEntries = (primaryEntries, legacyEntries) => {
   const merged = new Map();
+  // 「名前 → ID」の橋は、正本と旧経路の両方を見てから作る
+  // (IDの付いた行と付いていない行が混ざっていても、同じ人なら1つに束ねるため)
+  const bridge = breederIdBridgeFrom([...(primaryEntries || []), ...(legacyEntries || [])]);
   // 同じ鍵が重なったら、絆Lvの高いほうを残す(改名で2行になっている人はここで1行になる)
   const put = (e, onlyIfNew) => {
     if (!e) return;
-    const key = bondRankingKeyOf(e);
+    const key = bondRankingKeyOf(e, bridge);
     const current = merged.get(key);
     if (!current) { merged.set(key, e); return; }
     if (onlyIfNew) return;
@@ -546,9 +549,13 @@ const aggregateBreederLevels = (rows) => {
   // ★束ねる単位はブリーダーID(2026-09-16)。名前で束ねると、改名した人が2行に分かれ、
   //   同名の別人が1行に混ざる。IDが決められない古い記録だけ、これまでどおり名前で束ねる
   const byBreeder = new Map();
+  // 先に全行を見て「名前 → ID」の橋を作る。
+  // モンビーの記録にはIDが付いていて、これまでのバトルの記録には付いていない。
+  // 橋が無いと、同じ人がIDの行と名前の行に割れて2行並ぶ
+  const bridge = breederIdBridgeFrom(rows);
   (rows || []).forEach(r => {
     const name = r?.userName || '名無しのブリーダー';
-    const id = resolveBreederIdFor(r);
+    const id = resolveBreederIdFor(r, bridge);
     const key = id ? `id:${id}` : `name:${name}`;
     const lv = Number(r?.level) || 0;
     const cur = byBreeder.get(key);
@@ -933,17 +940,47 @@ const latestBreederProfileFor = (entry) => {
   const name = typeof entry.userName === 'string' ? entry.userName : '';
   return (name && _breederProfileByName.has(name)) ? _breederProfileByName.get(name) : null;
 };
-// ランキングの1行が「誰のものか」を決める。
-// ① 記録に付いているブリーダーID ② その名前がプロフィール表で1人に定まるときのID ③ 決められない
-// ★同じ人の行を1つに束ねるのはこのIDで行う(名前で束ねると、改名で分かれ、同名で混ざる)。
-//   ②があるので、IDが付く前の古い記録も、改名していない人ならその人の行として束ねられる。
-const resolveBreederIdFor = (entry) => {
+// 記録そのものに付いているブリーダーID。無ければ null。
+const directBreederIdOf = (entry) => {
   if (!entry) return null;
   if (typeof entry.breederId === 'string' && entry.breederId) return entry.breederId;
   const identity = typeof entry.identityKey === 'string' ? entry.identityKey : '';
-  if (identity && !identity.startsWith('name:')) return identity;
+  return (identity && !identity.startsWith('name:')) ? identity : null;
+};
+// 一覧のなかだけで通じる「名前 → ブリーダーID」の橋を作る。
+//
+// ★これが無いと同じ人が2行に分かれる(2026-09-16・ユーザー指摘「ランキングが重複で出てる」)。
+//   モンヒロビートの記録にはIDが付いているが、これまでのバトルの記録には付いていない。
+//   IDのある行は id で、無い行は名前で束ねると、**同じ人が id の行と名前の行に割れる**。
+//   そこで「この一覧のなかで、その名前に1つのIDしかぶら下がっていない」なら、
+//   IDの無い行もその人のものとみなす(記録そのものから橋を架けるので、
+//   breeder_profiles にまだ登録が無い人にも効く)。
+// ★同じ名前に2つ以上のIDがぶら下がっていたら、別人の可能性があるので橋を架けない。
+const breederIdBridgeFrom = (entries) => {
+  const byName = new Map();   // 名前 → ID(1つに定まるとき) / null(あいまい)
+  (entries || []).forEach(entry => {
+    const id = directBreederIdOf(entry);
+    const name = typeof entry?.userName === 'string' ? entry.userName : '';
+    if (!id || !name) return;
+    if (!byName.has(name)) byName.set(name, id);
+    else if (byName.get(name) !== id) byName.set(name, null);
+  });
+  return byName;
+};
+// ランキングの1行が「誰のものか」を決める。
+// ① 記録に付いているブリーダーID
+// ② その一覧のなかで、その名前に1つのIDしかぶら下がっていないとき、そのID
+// ③ プロフィール表でその名前が1人に定まるときのID
+// ④ 決められない(名前で束ねるしかない)
+// ★同じ人の行を1つに束ねるのはこのIDで行う(名前で束ねると、改名で分かれ、同名で混ざる)。
+const resolveBreederIdFor = (entry, bridge = null) => {
+  if (!entry) return null;
+  const direct = directBreederIdOf(entry);
+  if (direct) return direct;
   const name = typeof entry.userName === 'string' ? entry.userName : '';
-  const profile = name ? _breederProfileByName.get(name) : null;
+  if (!name) return null;
+  if (bridge && bridge.get(name)) return bridge.get(name);
+  const profile = _breederProfileByName.get(name);
   return (profile && profile.breederId) ? profile.breederId : null;
 };
 const applyLatestBreederProfile = (entry) => {
