@@ -334,19 +334,21 @@ const PROFILE_FRAMES = [
     desc:'やわらかい桃色の輪。明るい印象になります。' },
   { id:'rainbow',name:'レインボー', kind:'css', released:true, className:'mh-profile-frame-rainbow',
     desc:'七色がぐるりと回る輪。いちばん目立つ色です。' },
-  // ==================== 豪華フレーム(2026-09-15・未公開) ====================
-  // ユーザーから受け取った透過PNG6枚。released:false なので
-  //   ・選択画面に出ない   ・保存値に入っても「フレームなし」になる
-  //   ・ランキングで他人の記録に入っていても描画されない
-  // (normalizeProfileFrameId が1か所でそう決めている)。
-  // 見た目だけは DEBUG_SETTINGS の「プロフィールフレーム見た目確認」から見られる。
-  //
-  // ★公開の条件・入手方法・価格・レアリティ・期間はまだ何も決めていない。
-  //   決まったら released:true にする(そのとき「持っているか」の仕組みも要る)。
-  // ★name と desc は仮。公開するときに決め直す(2026-09-15にユーザーが呼び名を指定)。
-  // ★hole は「穴の直径 ÷ 画像の幅」を実測した値。位置合わせに使う(profileFrameImageInset)。
-  // ★元絵は 1254px / 1.2〜1.9MB だったものを 384px へ落として入れてある(6枚で281KB)。
+  // ==================== 豪華フレーム(2026-09-15) ====================
+  // ユーザーから受け取った透過PNG。
+  // ★hole は「穴の直径 ÷ 画像の幅」の実測値(360方向の中央値)。位置合わせに使う。
+  //   tools/ranking/profile-frame-check.js が実際のPNGを測って突き合わせる。
+  // ★元絵は 1254px / 0.9〜2.2MB だったものを 384px へ落として入れてある。
   //   表示は最大80pxなので、これで足りる(CLAUDE.md ⑥-2)。
+  //
+  // 【released と unlock の役割はまったく別】(2026-09-16)
+  //   released … **描いてよいか**。false のものは選択画面にも出ないし、
+  //               ランキングで他人の記録に入っていても描かれない
+  //   unlock   … **自分が選べるか**。書いてあるものは条件を満たすまで選べない
+  //               (描くのは自由。持っている人の枠は、他人の画面でもちゃんと出る)
+  //   ★ここを一緒にすると「解放した人の枠が他人の画面で消える」ので、必ず分けること。
+  // モンスターの3枚は助手とは無関係。配り方を決めていないので未公開のまま
+  // (released:false。選択画面に出ず、他人の記録に入っていても描かれない)
   { id:'frame_mocchi', name:'モッチー', kind:'image', released:false, hole:0.656,
     src:'images/profile-frames/mocchi.png?v=7c842f6ed7bf',
     desc:'桜の花びらと桜もちをあしらった、モッチーの和風フレーム。' },
@@ -356,15 +358,36 @@ const PROFILE_FRAMES = [
   { id:'frame_suezo_beat', name:'スエゾービート', kind:'image', released:false, hole:0.724,
     src:'images/profile-frames/suezo-beat.png?v=0b43f621dd89',
     desc:'スエゾーと音符が跳ねる、モンヒロビートのフレーム。' },
-  // ききの3枚は同じ意匠を段階的に豪華にしたもの。呼び分けは教えカードの3段階
+  // ==================== 助手の仲良し度でもらえる枠(2026-09-16) ====================
+  // 助手1人につき3枚。その助手との仲良し度が Lv2 / Lv5 / Lv7 になると自動でもらえる。
+  // ★unlock を書いた枠は「もらうまで選べない」だけで、描くのは自由(released:true)。
+  // ★並びは助手の登場順(みゅあ → きき → ももすけ)。Lvの小さい順に3枚ずつ。
+  //
+  // みゅあの3枚。細いリース → 飾りの増えたリース → みゅあ本人が寄り添うもの、と豪華になる
+  { id:'frame_mua_1', name:'みゅあのリボン', kind:'image', released:true, hole:0.669,
+    unlock:{ assistantId:'mua', bondLevel:2 },
+    src:'images/profile-frames/mua-1.png?v=cf21c351ff0a',
+    desc:'桜色のリボンと星をあしらった、みゅあの細いリース。' },
+  { id:'frame_mua_2', name:'みゅあのスターリース', kind:'image', released:true, hole:0.604,
+    unlock:{ assistantId:'mua', bondLevel:5 },
+    src:'images/profile-frames/mua-2.png?v=6e1f91081335',
+    desc:'金の飾りと真珠、虹のリボンで華やかにした、みゅあのリース。' },
+  { id:'frame_mua_3', name:'みゅあといっしょ', kind:'image', released:true, hole:0.591,
+    unlock:{ assistantId:'mua', bondLevel:7 },
+    src:'images/profile-frames/mua-3.png?v=2d1320625212',
+    desc:'みゅあ本人が寄り添って眠る、いちばん特別なリース。' },
+  // ききの3枚。同じ意匠を段階的に豪華にしたもので、呼び分けは教えカードの3段階
   // (BREEDER_EVO_NAMES.kiki の 応援 → 本気 → 全力全開)にそろえてある。
-  { id:'frame_kiki_ouen', name:'きき・応援', kind:'image', released:false, hole:0.755,
+  { id:'frame_kiki_ouen', name:'きき・応援', kind:'image', released:true, hole:0.755,
+    unlock:{ assistantId:'kiki', bondLevel:2 },
     src:'images/profile-frames/kiki-ouen.png?v=09b871ec464c',
     desc:'紅いリボンと白いくつ下をあしらった、ききのフレーム。' },
-  { id:'frame_kiki_honki', name:'きき・本気', kind:'image', released:false, hole:0.698,
+  { id:'frame_kiki_honki', name:'きき・本気', kind:'image', released:true, hole:0.698,
+    unlock:{ assistantId:'kiki', bondLevel:5 },
     src:'images/profile-frames/kiki-honki.png?v=fb89e34bd92b',
     desc:'金の縁飾りと桜、幾重ものリボンで華やかにした、ききのフレーム。' },
-  { id:'frame_kiki_zenryoku', name:'きき・全力全開', kind:'image', released:false, hole:0.677,
+  { id:'frame_kiki_zenryoku', name:'きき・全力全開', kind:'image', released:true, hole:0.677,
+    unlock:{ assistantId:'kiki', bondLevel:7 },
     src:'images/profile-frames/kiki-zenryoku.png?v=88238cde0306',
     desc:'髪とリボンが渦を巻き、星とハートが輝く、ききのいちばん豪華なフレーム。' },
 ];
@@ -405,5 +428,56 @@ const rankingProfileFrameValue = (value) => {
   const id = normalizeProfileFrameId(value);
   return id === PROFILE_FRAME_NONE_ID ? null : id;
 };
-// 選択画面に並べるもの(公開済みのみ。並びは PROFILE_FRAMES のとおり)
+// 選択画面に並べるもの(公開済みのみ。並びは PROFILE_FRAMES のとおり)。
+// ★もらっていない枠もここに入る。「選べるか」は profileFrameOwned が別に決める
+//   (絵は見せて鍵を付ける、という見せ方。2026-09-16にユーザーが選択)
 const releasedProfileFrames = () => PROFILE_FRAMES.filter(frame => frame.released === true);
+
+// ==================== もらえる枠(2026-09-16) ====================
+//
+// 助手との仲良し度が Lv2 / Lv5 / Lv7 になると、その助手の枠が1枚ずつもらえる。
+//
+// ★もらったidは**新しいキー**へ積む。既存の mh_* は読みも書きも変えない(CLAUDE.md ⑦)。
+// ★一度もらったら絶対に外さない。助手を切り替えても、あとで条件を変えても残す
+//   (取り上げになるため)。だから「いまのLv」ではなく「もらった記録」を持つ。
+const PROFILE_FRAME_OWNED_KEY = 'mh_profile_frame_owned_v1';
+// 壊れた値・古い形が入っていても必ず文字列の配列へ落とす
+const normalizeOwnedProfileFrames = (value) => {
+  const list = Array.isArray(value) ? value : [];
+  return [...new Set(list.filter(id => typeof id === 'string' && id.trim()).map(id => id.trim()))];
+};
+// その枠にもらう条件が付いているか(付いていなければ最初から誰でも選べる)
+const profileFrameUnlock = (frame) => {
+  const unlock = frame && frame.unlock;
+  const level = Number(unlock && unlock.bondLevel);
+  return (unlock && typeof unlock.assistantId === 'string' && Number.isFinite(level))
+    ? { assistantId: unlock.assistantId, bondLevel: level } : null;
+};
+// いま選べるか。条件の無い枠は常に true、条件つきは「もらった記録」にあるときだけ true
+const profileFrameOwned = (id, owned) => {
+  const frame = profileFrameById(id);
+  if (!frame || frame.released !== true) return false;
+  if (!profileFrameUnlock(frame)) return true;
+  return normalizeOwnedProfileFrames(owned).includes(frame.id);
+};
+// その助手の枠を、もらえるLvの小さい順に返す(助手の画面・ヘルプの表で使う)
+const profileFramesForAssistant = (assistantId) => releasedProfileFrames()
+  .filter(frame => (profileFrameUnlock(frame) || {}).assistantId === assistantId)
+  .sort((a, b) => profileFrameUnlock(a).bondLevel - profileFrameUnlock(b).bondLevel);
+// 仲良し度がLvまで上がったときに、新しくもらえる枠のidを返す(既に持っているものは除く)。
+// ★条件は「いまのLv以下」で見る。間のLvを飛ばして上がっても取りこぼさない
+const profileFramesEarnedAt = (assistantId, bondLevel, owned) => {
+  const level = Number(bondLevel);
+  if (!Number.isFinite(level)) return [];
+  const have = new Set(normalizeOwnedProfileFrames(owned));
+  return profileFramesForAssistant(assistantId)
+    .filter(frame => profileFrameUnlock(frame).bondLevel <= level && !have.has(frame.id))
+    .map(frame => frame.id);
+};
+// その助手で「次にもらえる枠」。全部もらっていれば null(助手の画面の1行に使う)
+const nextProfileFrameForAssistant = (assistantId, bondLevel, owned) => {
+  const level = Number(bondLevel);
+  const have = new Set(normalizeOwnedProfileFrames(owned));
+  return profileFramesForAssistant(assistantId)
+    .find(frame => !have.has(frame.id) && !(Number.isFinite(level) && profileFrameUnlock(frame).bondLevel <= level)) || null;
+};
