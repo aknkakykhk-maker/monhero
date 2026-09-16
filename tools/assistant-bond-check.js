@@ -408,7 +408,12 @@ check('指定した助手へ加算できる共通処理がある(既存処理は
     && has('const id = normalizeAssistantId(assistantId);'));
 // 選んでいない助手のLvが上がっても「Lvが上がった」とは言わせない(本人以外が言ってしまうため)
 check('Lvアップの通知は、いま選んでいる助手のときだけ出す',
-  has("if (id === selectedAssistantIdRef.current && assistantBondLevelOf(result.state.points) > before) setAssistantBondUp(true);"));
+  has("const after = assistantBondLevelOf(result.state.points);")
+    && has("if (id === selectedAssistantIdRef.current && after > before) setAssistantBondUp(true);"));
+// 飾り枠は「Lvが上がった助手」のものを配る。選んでいない助手でも、アシストカード経由で
+// 仲良し度が増えることがあるので、そちらのぶんも取りこぼさない(2026-09-16)
+check('飾り枠は、選んでいない助手のLvが上がったときも配る',
+  has('if (after > before) grantProfileFrames(id, after);'));
 check('助手を切り替えても、もう片方の仲良し度に触れない',
   has('const chooseAssistant = useCallback((id) => {')
     && !/chooseAssistant[\s\S]{0,400}setAssistantBonds\(\{\}\)/.test(source));

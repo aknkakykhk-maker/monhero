@@ -165,7 +165,9 @@ async function run() {
   // 並ぶ数と名前は data/breeder.js の公開フレームと一致していること(画面側へ書き写さない)
   check('公開フレームが全部並ぶ', options.length === EXPECTED_FRAMES.length,
     `画面 ${options.length}件 / データ ${EXPECTED_FRAMES.length}件`);
-  check('名前がデータどおり', EXPECTED_FRAMES.every(n => options.includes(n)), options.join(' / '));
+  // もらっていない枠には名前の下に条件(「みゅあ Lv2」)も付くので、丸ごと一致ではなく含むかで見る
+  check('名前がデータどおり', EXPECTED_FRAMES.every(n => options.some(o => o.includes(n))),
+    EXPECTED_FRAMES.filter(n => !options.some(o => o.includes(n))).join(' / ') || `${options.length}件`);
   check('④ 未公開の豪華フレームは出ない',
     HIDDEN_FRAMES.length > 0 && !options.some(n => HIDDEN_FRAMES.includes(n)),
     `隠すべき ${HIDDEN_FRAMES.length}件: ${HIDDEN_FRAMES.join(' / ') || '(1件も無い)'}`);

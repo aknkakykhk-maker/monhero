@@ -120,8 +120,11 @@ check('最初に出したidが残っている(選んでいる人がいる)',
   ['none', 'silver', 'gold', 'blue', 'pink'].every(id => released.includes(id)), released.join(','));
 check('「フレームなし」が先頭', released[0] === 'none');
 check('色が複数ある', released.length >= 5, `${released.length - 1}色`);
-check('公開フレームは画像を増やさない(kind:none か css だけ)',
-  F.releasedProfileFrames().every(f => f.kind === 'none' || f.kind === 'css'));
+// はじめから誰でも選べる枠は、画像を1枚も増やさずCSSだけで描く(通信量を増やさないため)。
+// 助手の仲良し度でもらう枠(unlock つき)は絵を使ってよい(2026-09-16)
+check('条件なしで選べる枠は画像を増やさない(kind:none か css だけ)',
+  F.releasedProfileFrames().filter(f => !f.unlock).every(f => f.kind === 'none' || f.kind === 'css'),
+  F.releasedProfileFrames().filter(f => !f.unlock && f.kind === 'image').map(f => f.id).join(', '));
 // CSSの書き忘れは「枠を選んだのに何も出ない」になり、画面はふつうに動いてしまう
 const cssFrames = F.releasedProfileFrames().filter(f => f.kind === 'css');
 check('公開フレームにはCSSの名前が付いている',
@@ -170,8 +173,14 @@ check('画像フレームは images/profile-frames/ の透過PNGを指してい�
   imageFrames.map(frame => frame.src).join(' '));
 check('画像フレームは base64 で埋め込んでいない',
   imageFrames.every(frame => !String(frame.src || '').startsWith('data:')));
-check('画像フレームはすべて未公開(released:false)',
-  imageFrames.every(frame => frame.released !== true), `${imageFrames.length}枚`);
+// 画像の枠を無条件に配らない。公開するなら必ず「もらう条件(unlock)」が要る。
+// ★released(描いてよいか) と unlock(自分が選べるか) は別物。一緒にすると
+//   「解放した人の枠が他人のランキングで消える」(2026-09-16)
+check('画像フレームは、公開するなら必ずもらう条件が付いている',
+  imageFrames.every(frame => frame.released !== true || (frame.unlock && frame.unlock.assistantId)),
+  imageFrames.filter(frame => frame.released === true && !frame.unlock).map(f => f.id).join(', ') || `${imageFrames.length}枚`);
+check('もらう条件つきの枠は、他人の記録なら描いてよい(選べるかとは別)',
+  imageFrames.filter(frame => frame.unlock).every(frame => F.normalizeProfileFrameId(frame.id) === frame.id));
 for (const frame of imageFrames) {
   const file = path.join(ROOT, 'monster-hero', String(frame.src || '').split('?')[0]);
   const exists = fs.existsSync(file);

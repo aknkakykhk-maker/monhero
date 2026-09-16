@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 50c37ba903ce26e8
+// generated-sha256: 22eeb060087d6b93
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -49,6 +49,8 @@ const _ICON_PATHS = {
   RefreshCcw: '<polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4-4.64 4.36A9 9 0 0 1 3.51 15"/>',
   Coins: '<circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m16.71 13.88.7.71-2.82 2.82"/>',
   ShoppingBag: '<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>',
+  // 鍵(まだもらっていない飾り枠に重ねる。2026-09-16)
+  Lock: '<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
   Gem: '<path d="M6 3h12l4 6-10 12L2 9Z"/><path d="M11 3 8 9l4 12 4-12-3-6"/><path d="M2 9h20"/>',
   Package: '<path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="M3.3 7 12 12l8.7-5"/><path d="M12 22V12"/>',
   Settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21h-4v-.1A1.7 1.7 0 0 0 8.6 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3v-4h.1A1.7 1.7 0 0 0 4.6 8.6a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3h4v.1A1.7 1.7 0 0 0 15.4 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.4 9c.14.37.35.7.6 1 .3.28.68.42 1.1.4h.1v4h-.1A1.7 1.7 0 0 0 19.4 15Z"/>',
@@ -66,7 +68,7 @@ const _icon = (name) => (props) => {
     dangerouslySetInnerHTML:{ __html: inner }
   });
 };
-const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon('Shield'), X=_icon('X'), Award=_icon('Award'), Skull=_icon('Skull'), PlusCircle=_icon('PlusCircle'), Target=_icon('Target'), ShieldCheck=_icon('ShieldCheck'), Trophy=_icon('Trophy'), Timer=_icon('Timer'), Play=_icon('Play'), Sparkles=_icon('Sparkles'), Activity=_icon('Activity'), ChevronLeft=_icon('ChevronLeft'), ChevronRight=_icon('ChevronRight'), Crown=_icon('Crown'), Edit3=_icon('Edit3'), ArrowLeft=_icon('ArrowLeft'), Search=_icon('Search'), Layers=_icon('Layers'), AlertCircle=_icon('AlertCircle'), Flag=_icon('Flag'), RotateCcw=_icon('RotateCcw'), MinusCircle=_icon('MinusCircle'), Star=_icon('Star'), Users=_icon('Users'), User=_icon('User'), Check=_icon('Check'), HelpCircle=_icon('HelpCircle'), BookOpen=_icon('BookOpen'), Info=_icon('Info'), RefreshCcw=_icon('RefreshCcw'), ArrowDownCircle=_icon('ArrowDownCircle'), Coins=_icon('Coins'), ShoppingBag=_icon('ShoppingBag'), Gem=_icon('Gem'), Package=_icon('Package'), Settings=_icon('Settings'), List=_icon('List');
+const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon('Shield'), X=_icon('X'), Award=_icon('Award'), Skull=_icon('Skull'), PlusCircle=_icon('PlusCircle'), Target=_icon('Target'), ShieldCheck=_icon('ShieldCheck'), Trophy=_icon('Trophy'), Timer=_icon('Timer'), Play=_icon('Play'), Sparkles=_icon('Sparkles'), Activity=_icon('Activity'), ChevronLeft=_icon('ChevronLeft'), ChevronRight=_icon('ChevronRight'), Crown=_icon('Crown'), Edit3=_icon('Edit3'), ArrowLeft=_icon('ArrowLeft'), Search=_icon('Search'), Layers=_icon('Layers'), AlertCircle=_icon('AlertCircle'), Flag=_icon('Flag'), RotateCcw=_icon('RotateCcw'), MinusCircle=_icon('MinusCircle'), Star=_icon('Star'), Users=_icon('Users'), User=_icon('User'), Check=_icon('Check'), HelpCircle=_icon('HelpCircle'), BookOpen=_icon('BookOpen'), Info=_icon('Info'), RefreshCcw=_icon('RefreshCcw'), ArrowDownCircle=_icon('ArrowDownCircle'), Coins=_icon('Coins'), ShoppingBag=_icon('ShoppingBag'), Gem=_icon('Gem'), Package=_icon('Package'), Settings=_icon('Settings'), List=_icon('List'), Lock=_icon('Lock');
 
 
 // --- Helpers ---
@@ -89,7 +91,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-16 11:01"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-16 17:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8742,8 +8744,14 @@ const helpDataRows = (id) => {
     // プロフィールフレームの一覧。フレームを足したらヘルプへも自動で載る
     // (手で書き写すと、増やしたときに古いままになる)。未公開のものはここに出さない
     case 'profileFrames':
+      // もらう条件も実データから出す(ヘルプへ手で書き写すと、Lvを変えたときに古くなる)
       return ((typeof releasedProfileFrames === 'function' ? releasedProfileFrames() : []) || [])
-        .map(frame => [frame.name, frame.desc || '']);
+        .map(frame => {
+          const unlock = (typeof profileFrameUnlock === 'function') ? profileFrameUnlock(frame) : null;
+          const who = unlock && typeof assistantById === 'function' ? assistantById(unlock.assistantId) : null;
+          const how = unlock ? `${(who && who.name) || ''}との仲良し度 Lv${unlock.bondLevel}でもらえます。` : 'はじめから選べます。';
+          return [frame.name, `${how}${frame.desc ? ` ${frame.desc}` : ''}`];
+        });
     // 助手の一覧。名前と性格の違いを実データから出す
     case 'assistants':
       return ((typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST) || [])
@@ -15530,7 +15538,7 @@ function ProfileScreen({
   breederIcon, breederLevel, breederName, breederPoints, extremeBestScores, extremeClearCounts,
   finishOnboarding, gold, highScores, isEventReplayUnlocked, modeRecordFor, onboarded,
   onboardingIcon, onboardingName, onboardingPreview, ownedItems, playtimeView, proHighScores,
-  profileBattleMode, profileFrameId, quickHighestWaves, resolveIconUrl, selectedAssistantId, speciesChallengeProgress,
+  profileBattleMode, profileFrameId, ownedProfileFrames, quickHighestWaves, resolveIconUrl, selectedAssistantId, speciesChallengeProgress,
   onBack, onOpenNameEdit, onOpenIconPicker, onOpenFramePicker, onOpenItems, onOpenCallStylePicker, onOpenAssistantPicker,
   onSelectBattleMode, onOpenEventReplayList, onOpenSpeciesRecords,
   rhythmHistoryCount, onOpenRhythmHistory,
@@ -15647,6 +15655,25 @@ function ProfileScreen({
               </div>
               <div className="h-1.5 mt-2 rounded-full bg-black/50 overflow-hidden"><i className="block h-full rounded-full" style={{width:`${width}%`,background:`linear-gradient(90deg,${accent},#fbbf24)`}}/></div>
               <div className="text-[8px] text-slate-400 font-bold mt-1 text-right">{next?`次のLv.${next.level}まで あと${next.remain}`:'いちばん仲良し！'}</div>
+              {/* 次にもらえる飾り枠(2026-09-16)。貯める理由がその場で見えるように、
+                  仲良し度の下へ1行だけ出す。全部もらっていれば出さない */}
+              {(()=>{
+                const nextFrame=(typeof nextProfileFrameForAssistant==='function')
+                  ? nextProfileFrameForAssistant(selectedAssistantId,assistantBondLevelNow,ownedProfileFrames) : null;
+                if(!nextFrame) return null;
+                const unlock=profileFrameUnlock(nextFrame);
+                return (
+                  <button type="button" data-assistant-next-frame={nextFrame.id} onClick={onOpenFramePicker}
+                    className="mt-2 w-full flex items-center gap-2 rounded-xl border border-amber-500/40 bg-amber-950/25 px-2 py-1.5 active:scale-95">
+                    <ProfileAvatar src={resolveIconUrl(breederIcon)} id={breederIcon} frameId={nextFrame.id} alt={nextFrame.name} className="w-8 h-8 shrink-0" fallback={null}/>
+                    <span className="flex-1 min-w-0 text-left">
+                      <span className="block text-[8px] font-black text-amber-400 leading-tight">Lv.{unlock.bondLevel}でもらえる飾り枠</span>
+                      <span className="block text-[10px] font-black text-white leading-tight truncate">{nextFrame.name}</span>
+                    </span>
+                    <ChevronRight size={12} className="shrink-0 text-amber-400"/>
+                  </button>
+                );
+              })()}
               {/* 助手の切り替え。もう片方の仲良し度Lvもここで確認できる */}
               {ASSISTANT_LIST.length>1&&(
                 <div className="mt-2.5 pt-2.5 border-t border-white/10">
@@ -21796,6 +21823,31 @@ function MonsterHeroGame() {
   // 値が無い・壊れている・知らないid・未公開のidは、読み込み時に必ず 'none' へ倒れる
   const [profileFrameId, setProfileFrameId] = useState(PROFILE_FRAME_NONE_ID);
   const [showFramePicker, setShowFramePicker] = useState(false);
+  // 鍵つきの枠を押したとき、その条件を出すためのid(押していなければ null)
+  const [frameLockedInfo, setFrameLockedInfo] = useState(null);
+  // もらった飾り枠(2026-09-16)。助手との仲良し度が Lv2/5/7 になると1枚ずつ増える。
+  // ★保存キーは新設のみ。既存の mh_* には一切触らない(CLAUDE.md ⑦)
+  // ★一度もらったら外さない。助手を切り替えても、条件を変えても残す
+  const [ownedProfileFrames, setOwnedProfileFrames] = useState([]);
+  const ownedProfileFramesRef = useRef([]);
+  // 「新しくもらったよ」と助手が知らせ終えた枠のid。
+  // ★もらうたびに知らせたいので、既読は1回きりの id ではなく**枠ごと**に覚える
+  //   (1つのidだけで既読にすると、2枚目以降が永久に知らされない)
+  const PROFILE_FRAME_NOTICE_KEY = 'mh_profile_frame_notice_v1';
+  const [profileFrameNoticed, setProfileFrameNoticed] = useState([]);
+  // 条件を満たしたぶんを配る。増えた枠のidを返す(何ももらえないときは空)
+  const grantProfileFrames = useCallback((assistantId, bondLevel) => {
+    const earned = profileFramesEarnedAt(assistantId, bondLevel, ownedProfileFramesRef.current);
+    if (!earned.length) return [];
+    const next = normalizeOwnedProfileFrames([...ownedProfileFramesRef.current, ...earned]);
+    ownedProfileFramesRef.current = next;
+    setOwnedProfileFrames(next);
+    // 「見るだけ」のプレビュー中は storeSet 側が書き込みを止めるので、ここでは気にしない
+    Promise.resolve(storeSet(PROFILE_FRAME_OWNED_KEY, next, false)).catch(error => {
+      console.error('[profile-frame] owned save failed:', error && error.message ? error.message : error);
+    });
+    return earned;
+  }, []);
   // ランキングに出す「いまの見た目」を上書きする(2026-09-16)。
   //
   // ランキングは1プレイ=1行で、その瞬間の名前・アイコン・フレームを記録へ写している。
@@ -21825,6 +21877,8 @@ function MonsterHeroGame() {
   // ランキングへの反映は下の「いまの見た目を登録する」effectが受け持つので、ここでは送らない
   const selectProfileFrame = useCallback((id) => {
     const next = normalizeProfileFrameId(id);
+    // まだもらっていない枠は選べない(押しても何も起きない)。鍵の説明は画面側が出す
+    if (!profileFrameOwned(next, ownedProfileFramesRef.current)) return;
     setProfileFrameId(next);
     Promise.resolve(storeSet(PROFILE_FRAME_KEY, next, false)).catch(error => {
       console.error('[profile-frame] save failed:', error && error.message ? error.message : error);
@@ -24872,6 +24926,21 @@ function MonsterHeroGame() {
       loadedBonds[activeAssistant] = bondLogin.state;
       assistantBondsRef.current = loadedBonds;
       setAssistantBonds(loadedBonds);
+      // もらった飾り枠を読む。★この更新より前から仲良し度が高い人にも、その場で配る
+      //   (あとから条件を足したので、追いつかせないと「Lv10なのに1枚も無い」になる)
+      const loadedFrames = normalizeOwnedProfileFrames(await storeGet(PROFILE_FRAME_OWNED_KEY, [], false));
+      let catchUp = loadedFrames;
+      for (const who of ASSISTANT_LIST) {
+        const level = assistantBondLevelOf(normalizeAssistantBond(loadedBonds[who.id]).points);
+        const earned = profileFramesEarnedAt(who.id, level, catchUp);
+        if (earned.length) catchUp = normalizeOwnedProfileFrames([...catchUp, ...earned]);
+      }
+      ownedProfileFramesRef.current = catchUp;
+      setOwnedProfileFrames(catchUp);
+      setProfileFrameNoticed(normalizeOwnedProfileFrames(await storeGet(PROFILE_FRAME_NOTICE_KEY, [], false)));
+      if (catchUp.length !== loadedFrames.length) {
+        try { await storeSet(PROFILE_FRAME_OWNED_KEY, catchUp, false); } catch {}
+      }
       if (bondLogin.changed) await storeSet(assistantBondKeyFor(activeAssistant), bondLogin.state, false);
       const savedLoginBonus = await storeGet('mh_login_bonus', LOGIN_BONUS_DEFAULT, false);
       const loginGrant = grantLoginBonus(savedLoginBonus, savedGifts);
@@ -25847,9 +25916,13 @@ function MonsterHeroGame() {
     setAssistantBonds(prev => ({ ...prev, [id]: result.state }));
     // Lvが上がったら、次にHOMEを開いたときに助手がそのことに触れる。
     // ただし、いま選んでいる助手のときだけ(選んでいない助手のLvアップを本人以外に言わせない)
-    if (id === selectedAssistantIdRef.current && assistantBondLevelOf(result.state.points) > before) setAssistantBondUp(true);
+    const after = assistantBondLevelOf(result.state.points);
+    if (id === selectedAssistantIdRef.current && after > before) setAssistantBondUp(true);
+    // Lvが上がったぶんの飾り枠を配る。選んでいない助手のLvが上がったときも、その助手の枠がもらえる
+    // (アシストカードで本人の仲良し度が増える経路があるため)
+    if (after > before) grantProfileFrames(id, after);
     try { storeSet(assistantBondKeyFor(id), result.state, false); } catch {}
-  }, []);
+  }, [grantProfileFrames]);
   // 行動に応じて助手との仲良し度を増やす。
   // 増えるのは「いま選んでいる助手」のぶんだけ。もう片方の助手の値には触れない
   const addAssistantBond = useCallback((actionKey) => {
@@ -25870,6 +25943,20 @@ function MonsterHeroGame() {
   const assistantBondLevelNow = assistantBondLevelOf(assistantBond.points);
   // いま選んでいる助手そのもの。画面はこれを見て顔・名前・色を出す
   const activeAssistant = assistantById(selectedAssistantId);
+  // まだ助手が知らせていない飾り枠。もらった順に並ぶ
+  const newProfileFrames = ownedProfileFrames
+    .filter(id => !profileFrameNoticed.includes(id)).map(id => profileFrameById(id)).filter(Boolean);
+  // 知らせる助手の名前。全部同じ助手のものならその名前、混ざっていたら助手名は出さない
+  const newProfileFrameAssistantName = (() => {
+    const ids = [...new Set(newProfileFrames.map(frame => (profileFrameUnlock(frame) || {}).assistantId).filter(Boolean))];
+    if (ids.length !== 1) return '';
+    const who = assistantById(ids[0]);
+    return (who && who.name) || '';
+  })();
+  // ★飾り枠の案内だけは、新しくもらったぶんがあるあいだ既読を外して出し直す
+  //   (ほかの案内は1回きりなので、そのまま既読を使う)
+  const assistantUnlockSeenForNotices = newProfileFrames.length > 0
+    ? assistantUnlockSeen.filter(id => id !== PROFILE_FRAME_NOTICE_ID) : assistantUnlockSeen;
   // その画面で出すべき「解放の案内」。無ければ null。
   // 出す条件・本文はすべて data/assistants.js 側が持つので、ここは渡して受け取るだけ
   const assistantUnlockNoticeOf = (scene) => (typeof assistantUnlockNoticeFor === 'function')
@@ -25880,7 +25967,11 @@ function MonsterHeroGame() {
         // 種族チャレンジの解放。一般公開する前は必ず false のままなので、案内も出ない
         speciesChallengeUnlocked: SPECIES_CHALLENGE_PUBLIC_RELEASE && speciesChallengeUnlocked,
         speciesChallengeUnlockText: SPECIES_CHALLENGE_UNLOCK_TEXT,
-      }, assistantUnlockSeen)
+        // まだ知らせていない飾り枠(2026-09-16)。もらうたびに1回ずつ知らせる
+        newProfileFrameCount: newProfileFrames.length,
+        newProfileFrameNames: newProfileFrames.map(frame => frame.name),
+        newProfileFrameAssistantName: newProfileFrameAssistantName,
+      }, assistantUnlockSeenForNotices)
     : null;
   // 読み終わったら既読へ足して保存する。同じ案内は二度と出ない。
   // destination を持つ案内は、閉じたあとその画面へ連れていく
@@ -25897,6 +25988,15 @@ function MonsterHeroGame() {
     setAssistantUnlockPage(0);
     if (!id) return;
     markAssistantUnlockNoticeSeen(id);
+    // 飾り枠の案内は、読み終えた時点で持っている枠を「知らせ済み」にする。
+    // 次に新しい枠が増えたら、また同じ案内が出る
+    if (id === PROFILE_FRAME_NOTICE_ID) {
+      const next = normalizeOwnedProfileFrames(ownedProfileFramesRef.current);
+      setProfileFrameNoticed(next);
+      Promise.resolve(storeSet(PROFILE_FRAME_NOTICE_KEY, next, false)).catch(error => {
+        console.error('[profile-frame] notice save failed:', error && error.message ? error.message : error);
+      });
+    }
     const destinationState = noticeDestinationState(destination);
     if (destinationState) setGameState(destinationState);
   };
@@ -33618,6 +33718,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             proHighScores={proHighScores}
             profileBattleMode={profileBattleMode}
             profileFrameId={profileFrameId}
+            ownedProfileFrames={ownedProfileFrames}
             quickHighestWaves={quickHighestWaves}
             resolveIconUrl={resolveIconUrl}
             selectedAssistantId={selectedAssistantId}
@@ -34661,14 +34762,45 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <span className="text-[9px] font-black text-slate-500">いまの見た目</span>
               </div>
               <div className="grid grid-cols-3 gap-3 mb-4">
-                {releasedProfileFrames().map(frame=>(
-                  <button key={frame.id} data-profile-frame-option={frame.id} onClick={()=>selectProfileFrame(frame.id)} aria-pressed={normalizeProfileFrameId(profileFrameId)===frame.id}
-                    className={`flex flex-col items-center gap-2 rounded-2xl border-2 p-2 active:scale-95 ${normalizeProfileFrameId(profileFrameId)===frame.id?'border-indigo-400 bg-indigo-950/50':'border-slate-700 bg-slate-950/40'}`}>
-                    <ProfileAvatar src={resolveIconUrl(breederIcon)} id={breederIcon} frameId={frame.id} alt={frame.name} className="w-12 h-12" fallback={<User size={22} className="text-indigo-400"/>}/>
-                    <span className="text-[9px] font-black text-slate-200 leading-tight text-center">{frame.name}</span>
-                  </button>
-                ))}
+                {releasedProfileFrames().map(frame=>{
+                  // まだもらっていない枠も並べる。絵は見せて、鍵と条件だけを重ねる
+                  // (2026-09-16にユーザーが「絵を見せて鍵だけ付ける」を選択)
+                  const owned=profileFrameOwned(frame.id, ownedProfileFrames);
+                  const unlock=profileFrameUnlock(frame);
+                  const who=unlock?assistantById(unlock.assistantId):null;
+                  const selected=normalizeProfileFrameId(profileFrameId)===frame.id;
+                  return (
+                    <button key={frame.id} data-profile-frame-option={frame.id} data-profile-frame-locked={owned?'no':'yes'}
+                      onClick={()=>{ if(owned) selectProfileFrame(frame.id); else setFrameLockedInfo(frame.id); }}
+                      aria-pressed={selected} aria-disabled={!owned}
+                      className={`relative flex flex-col items-center gap-2 rounded-2xl border-2 p-2 active:scale-95 ${selected?'border-indigo-400 bg-indigo-950/50':'border-slate-700 bg-slate-950/40'}`}>
+                      <span className={`relative block ${owned?'':'opacity-45'}`}>
+                        <ProfileAvatar src={resolveIconUrl(breederIcon)} id={breederIcon} frameId={frame.id} alt={frame.name} className="w-12 h-12" fallback={<User size={22} className="text-indigo-400"/>}/>
+                        {!owned&&<Lock size={14} className="absolute inset-0 m-auto text-white drop-shadow-[0_0_3px_rgba(0,0,0,0.9)]"/>}
+                      </span>
+                      <span className={`text-[9px] font-black leading-tight text-center ${owned?'text-slate-200':'text-slate-500'}`}>{frame.name}</span>
+                      {!owned&&unlock&&<span className="text-[8px] font-black leading-tight text-center text-amber-400">{(who&&who.name)||''} Lv{unlock.bondLevel}</span>}
+                    </button>
+                  );
+                })}
               </div>
+              {/* 鍵を押したときだけ、条件といまの進み具合をその場に出す */}
+              {frameLockedInfo&&(()=>{
+                const frame=profileFrameById(frameLockedInfo); const unlock=frame?profileFrameUnlock(frame):null;
+                if(!frame||!unlock) return null;
+                const who=assistantById(unlock.assistantId);
+                const points=normalizeAssistantBond(assistantBonds[unlock.assistantId]).points;
+                const level=assistantBondLevelOf(points);
+                const needPoints=(assistantBondLevelsOf(unlock.assistantId).find(st=>st.level===unlock.bondLevel)||{}).need;
+                const remain=Number.isFinite(needPoints)?Math.max(0, needPoints-points):null;
+                return (
+                  <div data-profile-frame-locked-info className="mb-3 rounded-2xl border border-amber-500/60 bg-amber-950/30 px-3 py-2">
+                    <p className="text-[10px] font-black text-amber-300 leading-tight text-center">{(who&&who.name)||''}との仲良し度 Lv{unlock.bondLevel} でもらえます</p>
+                    <p className="text-[9px] text-slate-400 leading-tight text-center mt-1">いまは Lv{level}{remain!=null&&remain>0?` ／ あと ${remain}`:''}</p>
+                    <p className="text-[9px] text-slate-500 leading-tight text-center mt-1">{frame.desc||''}</p>
+                  </div>
+                );
+              })()}
               <p className="text-[9px] text-slate-500 text-center mb-3 leading-tight">{(profileFrameById(normalizeProfileFrameId(profileFrameId))||{}).desc||''}</p>
               <button onClick={()=>setShowFramePicker(false)} className="w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">閉じる</button>
             </div>
