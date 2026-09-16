@@ -150,6 +150,34 @@ check('絆Lv・総合力は正本と旧経路の両方を見てから橋を作�
 check('橋が無いときはプロフィール表の名前を見る(それも無ければ名前で束ねる)',
   /resolveBreederIdFor = \(entry, bridge = null\)[\s\S]{0,500}_breederProfileByName\.get\(name\)/.test(supa));
 
+// ===== ⑤-3 登録がまだ無い人の受け皿(記録から枠を拾う) =====
+// 2026-09-16、ここが無くて「過去のランキングにフレームが対応されてない」を出した。
+// breeder_profiles に登録があるのはこの版を開いた人だけ。まだ開いていない人は
+// 引き当てようが無く、同じ人の行なのに1行だけ枠が出る状態になっていた。
+check('取ってきた行から、その人の枠を覚えている', /const rememberLooksFromRows = \(rows\)/.test(supa));
+check('枠の入っている行だけを手がかりにする(列を足した後のプレイ＝新しい姿)',
+  /rememberLooksFromRows[\s\S]{0,1200}if \(!frame \|\| frame === noneId\) return;/.test(supa));
+check('正規化がまだ読めていない場面でも落ちない',
+  /rememberLooksFromRows[\s\S]{0,1200}typeof normalizeProfileFrameId === 'function'/.test(supa));
+check('時刻が取れるときは新しいほうを採る',
+  /rememberLooksFromRows[\s\S]{0,900}at > cur\.at/.test(supa));
+check('同じ名前の人が2人以上いるときは使わない(他人の枠を出さない)',
+  /const recordFrameFor[\s\S]{0,500}_recordIdByName\.get\(name\) === null\) return null;/.test(supa));
+check('プロフィール表に登録がある人は、そちらが優先',
+  /const applyLatestBreederProfile[\s\S]{0,700}if \(profile\) \{[\s\S]{0,400}\}\s*\n\s*\/\/[\s\S]{0,200}recordFrameFor\(entry\)/.test(supa));
+check('受け皿で変えるのは枠だけ(名前やアイコンは記録のまま)',
+  /recordFrameFor\(entry\);\s*\n\s*return \(frame && frame !== entry\.profileFrame\) \? \{ \.\.\.entry, profileFrame: frame \} : entry;/.test(supa));
+for (const [label, fn] of [['通常・ブリーダーLv', 'sbFetchRankings'], ['絆Lv・総合力', 'sbFetchBondLevels'],
+                           ['モンビー曲別', 'sbFetchRhythmRankings'], ['モンビー合算', 'sbFetchRhythmTotalRankings'],
+                           ['モンビーイベント・週間', 'sbFetchRhythmEventRows']]) {
+  const block = (supa.split(`const ${fn} = async`)[1] || '').slice(0, 6000);
+  check(`${label}(${fn})の取得で枠を覚えている`, block.includes('rememberLooksFromRows'));
+}
+check('時刻(created_at)は件数の決まっている一覧だけで取る(全件を読むブリーダーLvには足さない)',
+  /RANKING_SELECT_FULL = 'user_name,hero,party,score,level,icon,created_at'/.test(supa)
+  && /RHYTHM_RANKING_SELECT = '[^']*,created_at'/.test(supa)
+  && /RANKING_SELECT_BREEDER = 'user_name,level,icon'/.test(supa));
+
 // ===== ⑥ 「いまの見た目」を送るきっかけ =====
 // 2026-09-16。最初は「変えたとき」と「遊んだあと」だけで送っていたが、それだと
 // **一度も変えていない人の行が登録されない**。登録が無い人は引き当てようが無いので、

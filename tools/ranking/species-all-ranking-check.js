@@ -122,8 +122,12 @@ check('送信は種族別キーのままで、全種族キーへ書き込まな�
 check('全種族キーを組み立てるのは取得と画面だけ',
   !/storeSet\([^)]*speciesChallengeAllRankingDifficulty/.test(source)
   && !/persistRankingScore[\s\S]{0,400}speciesChallengeAllRankingDifficulty/.test(source));
+// 種族チャレンジのためにテーブルへ列を足していないこと(difficulty のキーだけで表す)。
+// created_at はもとからある列で、2026-09-16に「同じ人の記録から最後に分かっている枠を選ぶ」
+// ために取得へ足したもの(docs/spec/BREEDER_PROFILE.md §2.3)。種族チャレンジとは関係しない
 check('rankingsテーブルの列は増やしていない',
-  source.includes("const RANKING_SELECT_FULL = 'user_name,hero,party,score,level,icon';"));
+  source.includes("const RANKING_SELECT_FULL = 'user_name,hero,party,score,level,icon,created_at';")
+  && !/RANKING_SELECT_FULL = '[^']*species/i.test(source));
 
 // --- ⑤ 画面 ---
 const rankBody = grab('const renderSpeciesChallengeRecordBody = () => {', 'const renderBreederRankingBody =');

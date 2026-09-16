@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: cf189c5672219c85
+// generated-sha256: 50c37ba903ce26e8
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -89,7 +89,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-16 10:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-16 11:01"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -10478,8 +10478,8 @@ const RANKING_BREEDER_MAX_ROWS = 24000;
 const RANKING_BREEDER_MAX_PAGES = 12;
 // ブリーダーLvは編成(party)を使わない。partyはJSONで1行あたりが大きいため、
 // 使わない場面では取得しないだけで転送量と待ち時間がはっきり減る
-const RANKING_SELECT_FULL = 'user_name,hero,party,score,level,icon';
-const RANKING_SELECT_NO_PARTY = 'user_name,hero,score,level,icon';
+const RANKING_SELECT_FULL = 'user_name,hero,party,score,level,icon,created_at';
+const RANKING_SELECT_NO_PARTY = 'user_name,hero,score,level,icon,created_at';
 // ブリーダーLvの一覧は名前・レベル・アイコンしか出さない。全件をページ送りで読むので、
 // 使わない列(hero/score)まで運ばない
 const RANKING_SELECT_BREEDER = 'user_name,level,icon';
@@ -10697,6 +10697,7 @@ const sbFetchBondLevels = async (requestId='untracked') => {
     }
     const rows = JSON.parse(body || '[]');
     rankingLog(requestId, 'bond-levels-fetched', { received: Array.isArray(rows) ? rows.length : 0 });
+    rememberLooksFromRows(rows);
     return Array.isArray(rows) ? rows : [];
   } finally {
     clearTimeout(timer);
@@ -10843,7 +10844,10 @@ const sbFetchRankings = async (diff, limit=RANKING_SCORE_LIMIT, order='score.des
       throw new Error(`fetch ${res.status} ${res.statusText}; url=${url}; response=${body || '(empty)'}`);
     }
     try {
-      return JSON.parse(body);
+      const rows = JSON.parse(body);
+      // 記録から分かる「その人の枠」を覚えておく(登録がまだ無い人の受け皿)
+      rememberLooksFromRows(rows);
+      return rows;
     } catch (e) {
       throw new Error(`invalid JSON; url=${url}; response=${body || '(empty)'}; error=${e.message}`);
     }
@@ -11241,6 +11245,73 @@ const sbUpsertBreederProfile = async ({ breederId, userName, icon, profileFrame 
     clearTimeout(timer);
   }
 };
+// ===== 記録そのものから拾う「その人の最後に分かっている枠」(2026-09-16) =====
+//
+// breeder_profiles に登録があるのは、この版のゲームを開いた人だけ。まだ開いていない人は
+// 引き当てようが無く、**同じ人の行なのに枠が出たり出なかったりする**
+// (ユーザー指摘「過去のランキングにフレームが対応されてない」。チャレンジの一覧で
+//  同じ♪みゅあ♪さんの5行のうち1行だけ枠が出た)。
+//
+// ★フレームの列は 2026-09-15 に足したもの。**値が入っている行は必ずそれ以降のプレイ**なので、
+//   その人の新しい姿として使ってよい。時刻(created_at)が取れる一覧では新しいほうを選ぶ。
+// ★登録がある人は breeder_profiles が優先(いま設定しているものが正)。ここは登録が無い人の受け皿。
+// ★同じ名前の人が2人以上いるときは使わない(他人の枠を出さないため)。
+let _recordLookById = new Map();     // ブリーダーID → { profileFrame, at }
+let _recordLookByName = new Map();   // 名前 → { profileFrame, at } / null(あいまい)
+let _recordIdByName = new Map();     // 名前 → ブリーダーID / null(あいまい)
+const recordLookCounts = () => ({ ids: _recordLookById.size, names: _recordLookByName.size });
+const _rowIdentityOf = (row) => {
+  const id = typeof row?.breeder_id === 'string' && row.breeder_id ? row.breeder_id : '';
+  if (id) return id;
+  const key = typeof row?.identity_key === 'string' ? row.identity_key : '';
+  return (key && !key.startsWith('name:')) ? key : '';
+};
+const _rowLookAt = (row) => {
+  const raw = row?.created_at ?? row?.last_created_at ?? row?.last_at ?? null;
+  const ms = raw ? Date.parse(raw) : NaN;
+  return Number.isFinite(ms) ? ms : -1;
+};
+// 取ってきた行から、枠の手がかりと「名前 → ID」の橋を覚えておく。
+// 画面をまたいで貯まるので、モンビーの記録で分かった枠をバトルの一覧でも使える。
+const rememberLooksFromRows = (rows) => {
+  (Array.isArray(rows) ? rows : []).forEach(row => {
+    const name = (typeof row?.user_name === 'string' && row.user_name) ? row.user_name : '';
+    const id = _rowIdentityOf(row);
+    if (id && name) {
+      if (!_recordIdByName.has(name)) _recordIdByName.set(name, id);
+      else if (_recordIdByName.get(name) !== id) _recordIdByName.set(name, null);
+    }
+    // 正規化は data/breeder.js の関数。まだ読めていない場面でも落ちないように包む
+    const raw = typeof row?.profile_frame === 'string' ? row.profile_frame.trim() : '';
+    if (!raw) return;
+    const frame = (typeof normalizeProfileFrameId === 'function') ? normalizeProfileFrameId(raw) : raw;
+    const noneId = (typeof PROFILE_FRAME_NONE_ID === 'string') ? PROFILE_FRAME_NONE_ID : 'none';
+    if (!frame || frame === noneId) return;
+    const at = _rowLookAt(row);
+    if (id) {
+      const cur = _recordLookById.get(id);
+      if (!cur || at > cur.at) _recordLookById.set(id, { profileFrame: frame, at });
+    }
+    if (name) {
+      const cur = _recordLookByName.get(name);
+      if (cur === null) return;                       // あいまいな名前には使わない
+      if (!cur) { _recordLookByName.set(name, { profileFrame: frame, at }); return; }
+      if (at > cur.at) _recordLookByName.set(name, { profileFrame: frame, at });
+    }
+  });
+};
+// 登録が無い人のための、記録から拾った枠。見つからなければ null。
+const recordFrameFor = (entry) => {
+  if (!entry) return null;
+  const name = typeof entry.userName === 'string' ? entry.userName : '';
+  const id = directBreederIdOf(entry) || (name ? _recordIdByName.get(name) : null) || null;
+  if (id && _recordLookById.has(id)) return _recordLookById.get(id).profileFrame;
+  if (!name) return null;
+  // 名前しか手がかりが無いときは、その名前が1人に定まるときだけ使う
+  if (_recordIdByName.get(name) === null) return null;
+  const byName = _recordLookByName.get(name);
+  return (byName && byName.profileFrame) ? byName.profileFrame : null;
+};
 // ランキングの1行へ「いまの見た目」をかぶせる。見つからなければ記録に写した値のまま。
 // ★ここだけが差し替えを決める。画面ごとに書かない
 const latestBreederProfileFor = (entry) => {
@@ -11296,17 +11367,24 @@ const resolveBreederIdFor = (entry, bridge = null) => {
   if (!name) return null;
   if (bridge && bridge.get(name)) return bridge.get(name);
   const profile = _breederProfileByName.get(name);
-  return (profile && profile.breederId) ? profile.breederId : null;
+  if (profile && profile.breederId) return profile.breederId;
+  return _recordIdByName.get(name) || null;
 };
 const applyLatestBreederProfile = (entry) => {
   const profile = latestBreederProfileFor(entry);
-  if (!profile) return entry;
-  return {
-    ...entry,
-    userName: profile.userName || entry.userName,
-    icon: profile.icon ?? entry.icon ?? null,
-    profileFrame: profile.profileFrame,
-  };
+  // ① プロフィール表に登録があれば、それが「いま設定しているもの」。名前もアイコンも枠もこれ
+  if (profile) {
+    return {
+      ...entry,
+      userName: profile.userName || entry.userName,
+      icon: profile.icon ?? entry.icon ?? null,
+      profileFrame: profile.profileFrame,
+    };
+  }
+  // ② 登録が無い人(この版をまだ開いていない人)は、記録から分かる最後の枠でそろえる。
+  //    同じ人の行なのに枠が出たり出なかったりするのを防ぐ
+  const frame = recordFrameFor(entry);
+  return (frame && frame !== entry.profileFrame) ? { ...entry, profileFrame: frame } : entry;
 };
 
 // ===== ブリーダーを見分けるID(2026-09-11) =====
@@ -11364,7 +11442,7 @@ const _isMissingBreederIdError = (status, body) => {
 // そこを緩めると他モードの検証まで一緒に緩んでしまう。そのため触らず、モンビー専用の
 // 送受信をここへ分けて持つ。テーブル・列は既存の rankings をそのまま使う
 // (difficulty列の値だけで区別する、種族チャレンジと同じ考え方)。
-const RHYTHM_RANKING_SELECT = 'user_name,hero,party,score,level,icon,difficulty';
+const RHYTHM_RANKING_SELECT = 'user_name,hero,party,score,level,icon,difficulty,created_at';
 // profile_frame は列がある環境でだけ足す(rankingSelectWithProfileFrame)
 const sbInsertRhythmScore = async (row) => {
   if (typeof row?.clear_id !== 'string' || !row.clear_id.trim()) {
@@ -11449,7 +11527,10 @@ const sbFetchRhythmRankings = async (difficultyKeys, limit=RHYTHM_RANKING_FETCH_
       throw new Error(`rhythm ranking fetch ${res.status} ${res.statusText}; url=${url}; response=${body || '(empty)'}`);
     }
     try {
-      return JSON.parse(body);
+      const rows = JSON.parse(body);
+      // 記録から分かる「その人の枠」を覚えておく(登録がまだ無い人の受け皿)
+      rememberLooksFromRows(rows);
+      return rows;
     } catch (e) {
       throw new Error(`invalid JSON; url=${url}; response=${body || '(empty)'}; error=${e.message}`);
     }
@@ -11515,7 +11596,10 @@ const sbFetchRhythmTotalRankings = async ({ limit=RHYTHM_TOTAL_RANKING_DISPLAY_L
       throw new Error(`rhythm total ranking fetch ${res.status} ${res.statusText}; url=${url}; response=${body || '(empty)'}`);
     }
     try {
-      return JSON.parse(body);
+      const rows = JSON.parse(body);
+      // 記録から分かる「その人の枠」を覚えておく(登録がまだ無い人の受け皿)
+      rememberLooksFromRows(rows);
+      return rows;
     } catch (e) {
       throw new Error(`invalid JSON; url=${url}; response=${body || '(empty)'}; error=${e.message}`);
     }
@@ -11637,7 +11721,10 @@ const sbFetchRhythmEventRows = async ({ url, body = null, label, requestId = 'un
       throw failure;
     }
     try {
-      return JSON.parse(text);
+      const rows = JSON.parse(text);
+      // 記録から分かる「その人の枠」を覚えておく(登録がまだ無い人の受け皿)
+      rememberLooksFromRows(rows);
+      return rows;
     } catch (e) {
       throw new Error(`invalid JSON; url=${url}; response=${text || '(empty)'}; error=${e.message}`);
     }

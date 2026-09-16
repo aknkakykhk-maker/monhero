@@ -29,6 +29,12 @@ const RANKING_ROWS = [
   //   プロフィール表には載っていない人。2026-09-16、ここで2行に割れて並ぶ不具合を出した
   { user_name: 'びーとさん',     hero: 'ライガー', party: [], score: 44444, level: 50, icon: 'Golem', breeder_id: 'bd-7' },
   { user_name: 'びーとさん',     hero: 'ライガー', party: [], score: 33333, level: 49, icon: 'Golem' },
+  // ★プロフィール表に登録が無い人の、同じ難易度の複数プレイ。
+  //   新しいほうの記録にだけ枠が写っている(枠の列を足す前のプレイには入っていない)。
+  //   2026-09-16、ここで「同じ人の5行のうち1行だけ枠が出る」不具合を出した
+  { user_name: 'わくさん', hero: 'モッチー', party: [], score: 22222, level: 40, icon: 'Suezo', profile_frame: 'purple', created_at: '2026-09-16T01:00:00Z' },
+  { user_name: 'わくさん', hero: 'モッチー', party: [], score: 21111, level: 39, icon: 'Suezo', created_at: '2026-09-10T01:00:00Z' },
+  { user_name: 'わくさん', hero: 'モッチー', party: [], score: 20000, level: 38, icon: 'Suezo', created_at: '2026-09-01T01:00:00Z' },
 ];
 // 絆Lv・総合力は rankings ではなく bond_levels から読む。
 // ★bd-1 は「同じ個体(m-7)」を古い名前と新しい名前の2行で持っている(改名するとこうなる)
@@ -127,7 +133,7 @@ async function run() {
     icon: el.querySelector('.mh-profile-avatar img')?.getAttribute('src')?.split('/').pop()?.split('?')[0] || 'なし',
     frame: [...el.querySelectorAll('.mh-profile-frame')].map(f => [...f.classList].find(c => c.startsWith('mh-profile-frame-') && c !== 'mh-profile-frame-ring'))[0] || 'なし',
   })));
-  check('ランキングの一覧が出る', cards.length === 7, `${cards.length}件`);
+  check('ランキングの一覧が出る', cards.length === 10, `${cards.length}件`);
   const at = (i) => cards[i] || { text: '', icon: '', frame: '' };
 
   check('① IDが合えば、改名していても「いまの見た目」で出る(名前も新しくなる)',
@@ -147,6 +153,14 @@ async function run() {
   check('スコアは1プレイ1行のまま(まとめない)。同じ人の別の記録も「いまの見た目」で出る',
     at(4).text.includes('いまの名前') && at(4).icon === 'mocchi.png' && at(4).frame === 'mh-profile-frame-rainbow',
     `${at(4).icon} / ${at(4).frame}`);
+
+  // ★登録が無い人でも、記録から分かる枠で全行そろえる(2026-09-16の不具合)
+  const waku = cards.filter(c => c.text.includes('わくさん'));
+  check('登録が無い人でも、過去の記録の行にも枠が出る(同じ人で出たり出なかったりしない)',
+    waku.length === 3 && waku.every(c => c.frame === 'mh-profile-frame-purple'),
+    waku.map(c => c.frame).join(' / '));
+  check('その人のアイコンは記録のまま(枠だけそろえる)',
+    waku.length === 3 && waku.every(c => c.icon === 'suezo.png'), waku.map(c => c.icon).join(' / '));
 
   const rankingGets = gets.filter(g => g.path.endsWith('/rankings'));
   check('記録の取得でブリーダーIDも受け取っている(名前だけに頼らない)',
@@ -196,7 +210,7 @@ async function run() {
   check('ブリーダーLv: そのときも高いほうのレベルが残る',
     beat.length === 1 && beat[0].text.includes('50'), beat[0]?.text || '(なし)');
   check('ブリーダーLv: 全体の行数(1人1行)',
-    breederRows.length === 5, `${breederRows.length}行`);
+    breederRows.length === 6, `${breederRows.length}行`);
   check('ブリーダーLv: 古い名前の行は残らない',
     !breederRows.some(r => r.text.includes('むかしの名前') || r.text.includes('べつの名前')),
     breederRows.map(r => r.text.slice(0, 12)).join(' / '));
