@@ -34,6 +34,13 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-09-16 18:05", type:'fix', title:'みゅあ・ももすけのプロフィールフレームの絵を、細いものに差し替えました', status:'new',
+    items:[
+      'みゅあとももすけの2枚目・3枚目のフレームが太すぎて、アイコンの絵にかぶって見えていました。',
+      '飾りを細くした絵に差し替えて、アイコンがちゃんと見えるようにしました。もらう条件（仲良し度 Lv5・Lv7）は変わりません。',
+    ],
+  },
+  {
     date: "2026-09-16 17:23", type:'update', title:'助手と仲良くなると、プロフィールフレームがもらえるようになりました', status:'new',
     assistantNotice:{ id:'update_notice_assistant_profile_frame_v1', type:'content' },
     items:[

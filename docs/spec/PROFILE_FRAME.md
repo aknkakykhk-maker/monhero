@@ -50,9 +50,9 @@
 
 | 助手 | Lv2 | Lv5 | Lv7 |
 | --- | --- | --- | --- |
-| みゅあ | `frame_mua_1` みゅあ・愛（0.669） | `frame_mua_2` みゅあ・深愛（0.604） | `frame_mua_3` みゅあ・慈愛（0.591） |
+| みゅあ | `frame_mua_1` みゅあ・愛（0.669） | `frame_mua_2` みゅあ・深愛（0.745） | `frame_mua_3` みゅあ・慈愛（0.719） |
 | きき | `frame_kiki_ouen` きき・応援（0.755） | `frame_kiki_honki` きき・本気（0.698） | `frame_kiki_zenryoku` きき・全力全開（0.677） |
-| ももすけ | `frame_momosuke_1` ももすけ・おねだり（0.737） | `frame_momosuke_2` ももすけ・だだこね（0.635） | `frame_momosuke_3` ももすけ・独り占め（0.609） |
+| ももすけ | `frame_momosuke_1` ももすけ・おねだり（0.737） | `frame_momosuke_2` ももすけ・だだこね（0.714） | `frame_momosuke_3` ももすけ・独り占め（0.714） |
 
 括弧内は `hole`。どの助手も、段階が上がるほど飾りが増え、**Lv7では本人が枠に入る**。
 
