@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c045438ce9e33830
+// generated-sha256: af62a6b02d0009c2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -49,6 +49,8 @@ const _ICON_PATHS = {
   RefreshCcw: '<polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4-4.64 4.36A9 9 0 0 1 3.51 15"/>',
   Coins: '<circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m16.71 13.88.7.71-2.82 2.82"/>',
   ShoppingBag: '<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>',
+  // 鍵(まだもらっていない飾り枠に重ねる。2026-09-16)
+  Lock: '<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
   Gem: '<path d="M6 3h12l4 6-10 12L2 9Z"/><path d="M11 3 8 9l4 12 4-12-3-6"/><path d="M2 9h20"/>',
   Package: '<path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="M3.3 7 12 12l8.7-5"/><path d="M12 22V12"/>',
   Settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21h-4v-.1A1.7 1.7 0 0 0 8.6 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3v-4h.1A1.7 1.7 0 0 0 4.6 8.6a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3h4v.1A1.7 1.7 0 0 0 15.4 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.4 9c.14.37.35.7.6 1 .3.28.68.42 1.1.4h.1v4h-.1A1.7 1.7 0 0 0 19.4 15Z"/>',
@@ -66,7 +68,7 @@ const _icon = (name) => (props) => {
     dangerouslySetInnerHTML:{ __html: inner }
   });
 };
-const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon('Shield'), X=_icon('X'), Award=_icon('Award'), Skull=_icon('Skull'), PlusCircle=_icon('PlusCircle'), Target=_icon('Target'), ShieldCheck=_icon('ShieldCheck'), Trophy=_icon('Trophy'), Timer=_icon('Timer'), Play=_icon('Play'), Sparkles=_icon('Sparkles'), Activity=_icon('Activity'), ChevronLeft=_icon('ChevronLeft'), ChevronRight=_icon('ChevronRight'), Crown=_icon('Crown'), Edit3=_icon('Edit3'), ArrowLeft=_icon('ArrowLeft'), Search=_icon('Search'), Layers=_icon('Layers'), AlertCircle=_icon('AlertCircle'), Flag=_icon('Flag'), RotateCcw=_icon('RotateCcw'), MinusCircle=_icon('MinusCircle'), Star=_icon('Star'), Users=_icon('Users'), User=_icon('User'), Check=_icon('Check'), HelpCircle=_icon('HelpCircle'), BookOpen=_icon('BookOpen'), Info=_icon('Info'), RefreshCcw=_icon('RefreshCcw'), ArrowDownCircle=_icon('ArrowDownCircle'), Coins=_icon('Coins'), ShoppingBag=_icon('ShoppingBag'), Gem=_icon('Gem'), Package=_icon('Package'), Settings=_icon('Settings'), List=_icon('List');
+const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon('Shield'), X=_icon('X'), Award=_icon('Award'), Skull=_icon('Skull'), PlusCircle=_icon('PlusCircle'), Target=_icon('Target'), ShieldCheck=_icon('ShieldCheck'), Trophy=_icon('Trophy'), Timer=_icon('Timer'), Play=_icon('Play'), Sparkles=_icon('Sparkles'), Activity=_icon('Activity'), ChevronLeft=_icon('ChevronLeft'), ChevronRight=_icon('ChevronRight'), Crown=_icon('Crown'), Edit3=_icon('Edit3'), ArrowLeft=_icon('ArrowLeft'), Search=_icon('Search'), Layers=_icon('Layers'), AlertCircle=_icon('AlertCircle'), Flag=_icon('Flag'), RotateCcw=_icon('RotateCcw'), MinusCircle=_icon('MinusCircle'), Star=_icon('Star'), Users=_icon('Users'), User=_icon('User'), Check=_icon('Check'), HelpCircle=_icon('HelpCircle'), BookOpen=_icon('BookOpen'), Info=_icon('Info'), RefreshCcw=_icon('RefreshCcw'), ArrowDownCircle=_icon('ArrowDownCircle'), Coins=_icon('Coins'), ShoppingBag=_icon('ShoppingBag'), Gem=_icon('Gem'), Package=_icon('Package'), Settings=_icon('Settings'), List=_icon('List'), Lock=_icon('Lock');
 
 
 // --- Helpers ---
@@ -89,7 +91,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-14 21:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-16 18:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6432,7 +6434,10 @@ const RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE = true;
 // 2026-09-07 05:00(月) 〜 2026-09-14 05:00(月) で並ぶことを確かめたうえで公開。
 // イベントタブ・曲えらびの案内・ヘルプ・更新履歴・助手の告知がここで同時に出る。
 const RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE = true;
-const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE, rhythmWeeklyRanking:RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE };
+// ビートPはSTEP4で正式公開。獲得はこのフラグに加えて期間限定イベント開催中だけに限定し、
+// 常設の交換所・ヘルプ・更新履歴・助手告知を同じタイミングで公開する。
+const RHYTHM_EVENT_POINTS_PUBLIC_RELEASE = true;
+const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE, rhythmWeeklyRanking:RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE, rhythmEventPoints:RHYTHM_EVENT_POINTS_PUBLIC_RELEASE };
 // releaseFlag = そのフラグが立つまで出さない。unreleasedFlag = そのフラグが立ったら出さない。
 // 逆向きの名札が要るのは「準備中です」の案内で、公開したあとも残っていると
 // 遊べているのに準備中の項目が並ぶ(ヘルプのモンヒロビートで実際にそうなっていた・2026-09-06)。
@@ -8418,10 +8423,57 @@ const BreederIcon = ({ src, id, alt='', className='', roundedClass='rounded-full
     <img src={src} alt={alt} className="absolute inset-0 w-full h-full object-contain" style={adjustment?profileIconTransformStyle(adjustment):marketProfileIconStyle(id)}/>
   </span>
 );
-// HOME本番と調整Debugで、丸枠・余白・画像の有無による代替表示まで同じ部品を使う。
-const HomeProfileIcon = ({ src, id, adjustment }) => (
-  <div className="mh-home-avatar">{src?<BreederIcon src={src} id={id} adjustment={adjustment} alt="プロフィール画像" className="w-full h-full"/>:<User size={24}/>}</div>
+// ==================== プロフィールフレーム(2026-09-15) ====================
+//
+// 既存の BreederIcon は一切変えない。その**外側**へ別レイヤーとして枠だけを重ねる。
+//   下層 … BreederIcon(これまでどおり円形に切り抜く。顔の位置調整もそのまま)
+//   上層 … ProfileFrameLayer(円の外側まではみ出して描く。当たり判定は持たない)
+// 画面ごとに枠の描き方を書かず、ここに1つだけ置く(HOME・プロフィール・ランキングで同じ構図)。
+//
+// ★大きさの指定(w-8 h-8 など)は**外側の span** へ付ける。内側は w-full h-full なので、
+//   32pxでも80pxでも枠の太さが比例して変わり、小さいアイコンでもズレない。
+// ★出してよいフレームかどうかは normalizeProfileFrameId だけが決める
+//   (未公開の豪華フレームはここで 'none' に倒れるので、通常プレイヤーには出ない)。
+const ProfileFrameLayer = ({ frameId }) => {
+  const frame = profileFrameById(normalizeProfileFrameId(frameId));
+  if (!frame || frame.kind === 'none') return null;
+  // 画像フレームは透過PNGをそのまま重ねる。object-contain なので縦横比は変わらない。
+  // 重ねる大きさと位置は絵ごとに違う(穴の大きさが違う)ので、profileFrameImageStyle が出す
+  if (frame.kind === 'image') return (
+    <img src={frame.src} alt="" aria-hidden="true" draggable={false}
+      style={profileFrameImageStyle(frame)} className="mh-profile-frame mh-profile-frame-image"/>
+  );
+  return <span aria-hidden="true" className={`mh-profile-frame mh-profile-frame-ring ${frame.className||''}`}/>;
+};
+// ブリーダーアイコン＋プロフィールフレームの共通部品。
+// frameId を渡さない(または 'none')ときは、これまでの BreederIcon と見た目が変わらない。
+// badge は「アイコンと同じ円の中へ収めたい飾り」(プロフィールの鉛筆マークなど)。
+// 内側の円でクリップされ、フレームだけがその外へ出る。
+const ProfileAvatar = ({ src, id, frameId=null, alt='', className='', roundedClass='rounded-full', adjustment, fallback=null, badge=null }) => (
+  <span className={`mh-profile-avatar ${className}`}>
+    <span className={`relative flex h-full w-full items-center justify-center overflow-hidden ${roundedClass}`}>
+      {src
+        ? <BreederIcon src={src} id={id} adjustment={adjustment} alt={alt} roundedClass={roundedClass} className="w-full h-full"/>
+        : fallback}
+      {badge}
+    </span>
+    <ProfileFrameLayer frameId={frameId}/>
+  </span>
 );
+// フレームを選んでいるか(もとから付いている縁を消すかどうかの判定に使う)
+const hasProfileFrame = (frameId) => normalizeProfileFrameId(frameId) !== PROFILE_FRAME_NONE_ID;
+
+// HOME本番と調整Debugで、丸枠・余白・画像の有無による代替表示まで同じ部品を使う。
+// フレームを選んでいるときだけ、もともとの金色の縁を消す(枠が二重に見えないようにする)。
+// 選んでいないとき(=フレームなし)は、これまでとまったく同じ見た目になる。
+const HomeProfileIcon = ({ src, id, adjustment, frameId=null }) => {
+  const framed = normalizeProfileFrameId(frameId) !== PROFILE_FRAME_NONE_ID;
+  return (
+    <div className={`mh-home-avatar${framed?' is-framed':''}`}>
+      <ProfileAvatar src={src} id={id} frameId={frameId} adjustment={adjustment} alt="プロフィール画像" className="w-full h-full" fallback={<User size={24}/>}/>
+    </div>
+  );
+};
 
 // 図鑑一覧・血統チップ・立ち絵は本番とDEBUGで同じ収め方を使う。
 const DexMonsterIcon = ({ src, alt='', hidden=false, lineage=false }) => (
@@ -8689,6 +8741,17 @@ const helpDataRows = (id) => {
         return [`Lv.${s.level}`, `${s.need} から ／ ${per}`];
       });
     }
+    // プロフィールフレームの一覧。フレームを足したらヘルプへも自動で載る
+    // (手で書き写すと、増やしたときに古いままになる)。未公開のものはここに出さない
+    case 'profileFrames':
+      // もらう条件も実データから出す(ヘルプへ手で書き写すと、Lvを変えたときに古くなる)
+      return ((typeof releasedProfileFrames === 'function' ? releasedProfileFrames() : []) || [])
+        .map(frame => {
+          const unlock = (typeof profileFrameUnlock === 'function') ? profileFrameUnlock(frame) : null;
+          const who = unlock && typeof assistantById === 'function' ? assistantById(unlock.assistantId) : null;
+          const how = unlock ? `${(who && who.name) || ''}との仲良し度 Lv${unlock.bondLevel}でもらえます。` : 'はじめから選べます。';
+          return [frame.name, `${how}${frame.desc ? ` ${frame.desc}` : ''}`];
+        });
     // 助手の一覧。名前と性格の違いを実データから出す
     case 'assistants':
       return ((typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST) || [])
@@ -8820,6 +8883,7 @@ const HELP_DATA_TITLES = {
   missionsMonthly: 'マンスリーミッション',
   masuCosts: '神殿でかかるダイヤ',
   assistants: '助手の種類',
+  profileFrames: '選べるプロフィールフレーム',
   assistantBond: '仲良し度の段階と呼び方',
   assistantBondActions: '仲良し度が増える行動',
   monsterPower: '総合力の内訳',
@@ -9166,7 +9230,7 @@ const collectBondRankingEntries = (rankingPool) => {
       const key=`${userName}\u0000${individualId}`;
       // detail / colors は「詳細 ›」で1体ぶんの中身を開くために持ち回る。
       // 育て方を記録するようになる前の古い記録には入っていないので、その場合はnullのまま。
-      const entry={userName,icon:record.icon,monName,bondLevel,imgUrl:ALL_PLAYER_MONSTERS[monsterId]?.iconUrl||member.imgUrl||null,emoji:member.emoji||ALL_PLAYER_MONSTERS[monsterId]?.emoji||null,masuId:member.masuId??null,monsterId,detail:member.detail??null,colors:Array.isArray(member.colors)?member.colors:[]};
+      const entry={userName,breederId:record.breederId??null,icon:record.icon,profileFrame:record.profileFrame??null,monName,bondLevel,imgUrl:ALL_PLAYER_MONSTERS[monsterId]?.iconUrl||member.imgUrl||null,emoji:member.emoji||ALL_PLAYER_MONSTERS[monsterId]?.emoji||null,masuId:member.masuId??null,monsterId,detail:member.detail??null,colors:Array.isArray(member.colors)?member.colors:[]};
       const current=byIndividual.get(key);
       if(!current)byIndividual.set(key,entry);
       else byIndividual.set(key,{...(bondLevel>current.bondLevel?entry:current),bondLevel:Math.max(current.bondLevel,bondLevel)});
@@ -10222,6 +10286,23 @@ const saveRhythmBestRecord = async (records,songId,difficultyId,value) => {
   normalized[songId][difficultyId]=normalizeRhythmBestRecord(value);
   await storeSet(RHYTHM_BEST_RECORDS_KEY,normalized,false); return normalized;
 };
+// イベントPは通常イベント共通の恒久残高。イベント終了では消さない。
+const RHYTHM_EVENT_POINTS_KEY='mh_rhythm_event_points_v1';
+const normalizeRhythmEventPoints=value=>{
+  const n=Number(value);
+  return Number.isFinite(n)?Math.min(Number.MAX_SAFE_INTEGER,Math.max(0,Math.floor(n))):0;
+};
+const loadRhythmEventPoints=async()=>normalizeRhythmEventPoints(await storeGet(RHYTHM_EVENT_POINTS_KEY,0,false));
+const addRhythmEventPoints=async amount=>{
+  const requested=normalizeRhythmEventPoints(amount);
+  const before=await loadRhythmEventPoints();
+  if(requested<=0)return {before,after:before,added:0};
+  const after=Math.min(Number.MAX_SAFE_INTEGER,before+requested);
+  const added=after-before;
+  if(added>0)await storeSet(RHYTHM_EVENT_POINTS_KEY,after,false);
+  return {before,after,added};
+};
+
 const storeList = async (prefix, shared=false) => {
   try {
     if (hasWinStorage()) {
@@ -10405,8 +10486,8 @@ const RANKING_BREEDER_MAX_ROWS = 24000;
 const RANKING_BREEDER_MAX_PAGES = 12;
 // ブリーダーLvは編成(party)を使わない。partyはJSONで1行あたりが大きいため、
 // 使わない場面では取得しないだけで転送量と待ち時間がはっきり減る
-const RANKING_SELECT_FULL = 'user_name,hero,party,score,level,icon';
-const RANKING_SELECT_NO_PARTY = 'user_name,hero,score,level,icon';
+const RANKING_SELECT_FULL = 'user_name,hero,party,score,level,icon,created_at';
+const RANKING_SELECT_NO_PARTY = 'user_name,hero,score,level,icon,created_at';
 // ブリーダーLvの一覧は名前・レベル・アイコンしか出さない。全件をページ送りで読むので、
 // 使わない列(hero/score)まで運ばない
 const RANKING_SELECT_BREEDER = 'user_name,level,icon';
@@ -10436,9 +10517,55 @@ const _isMissingColumnError = (status, body) => {
 // 全件をページ送りで読むので、使わない列を運ばせない
 const rankingSelectWithRunStats = (base) =>
   (_rankingRunStatsUnavailable || !base || !base.includes('score')) ? base : `${base},${RANKING_RUN_STATS_COLUMNS}`;
+
+// ==================== プロフィールフレーム(2026-09-15) ====================
+// ランキングで「その人が選んでいる飾り枠」を出すための列。rankings へ後から足すNULL許容の
+// 1列で、既存の行はNULLのまま(NULL = フレームなし)。順位・スコア・集計には一切関わらない。
+//
+// turns / reached_wave / breeder_id とまったく同じ構えにしてある。
+// PostgRESTは知らない列を送る/選ぶと400を返すので、素通しにすると
+//   ・送るとき … 記録が1件も保存できない
+//   ・選ぶとき … ランキングが開けない
+// になる。一度400で気付いたらその後は列を外して動き、SQLを適用すれば自動的に載りはじめる。
+// これで「SQLの適用」と「アプリの公開」はどちらが先でもよい。
+//
+// ★ビューや関数(全曲合算・週間・イベント)も同じ列名で返すので、判定と旗はここで共有する。
+const RANKING_PROFILE_FRAME_COLUMN = 'profile_frame';
+let _rankingProfileFrameUnavailable = false;
+const rankingProfileFrameUnavailable = () => _rankingProfileFrameUnavailable;
+// 「profile_frame という列は無い」という応答かどうか。通信の失敗や権限の失敗と取り違えない
+//   選ぶとき  … 400 + 42703 / PGRST100(column rankings.profile_frame does not exist)
+//   送るとき  … 400 + PGRST204(Could not find the 'profile_frame' column of 'rankings')
+//   関数      … 404 + PGRST202(関数の戻り値に無い)
+const _isMissingProfileFrameError = (status, body) => {
+  if (status !== 400 && status !== 404) return false;
+  const text = String(body || '');
+  if (!/profile_frame/i.test(text)) return false;
+  return /PGRST202|PGRST204|PGRST205|PGRST200|PGRST100|42703|42883|does not exist|Could not find the/i.test(text);
+};
+// 取得する列へ profile_frame を足す。無いと分かっている間は足さない
+const rankingSelectWithProfileFrame = (base) =>
+  (_rankingProfileFrameUnavailable || !base) ? base : `${base},${RANKING_PROFILE_FRAME_COLUMN}`;
+// 取得する列へ breeder_id を足す(2026-09-16)。
+// 「いまの見た目」を引くときに、名前ではなく**IDで**その人を特定するために要る。
+// 名前だけで引くと、名前を変えた人が自分の記録に当たらなくなる。
+// 列がまだ無い環境では外す(そのときは名前で引く=これまでどおりの動き)。
+const rankingSelectWithBreederId = (base) =>
+  (_rankingBreederIdUnavailable || !base) ? base : `${base},breeder_id`;
+// 送る行から profile_frame を落とす(列がまだ無い環境で記録を落とさないため)
+const rankingRowWithoutProfileFrame = (row) => {
+  const { profile_frame, ...rest } = row || {};
+  return rest;
+};
+// 受け取った行から、画面へ出すフレームidを取り出す。
+// 知らないid・未公開のid・NULL・壊れた値はすべて「フレームなし」へ倒れる
+// (normalizeProfileFrameId が唯一の判定。data/breeder.js)
+const rankingProfileFrameFromRow = (row) => normalizeProfileFrameId(row?.profile_frame);
 // bond_levels の1行を、rankings から集計したものと同じ形のエントリへ直す。
 // 表示側(renderBondRankingEntry)はどちらから来た行かを知らなくてよい
-const bondLevelRowToEntry = (row) => {
+const bondLevelRowToEntry = (row) => applyLatestBreederProfile(bondLevelRowFromRow(row));
+// 行を素直な形へ直すところ(見た目のかぶせは bondLevelRowToEntry が行う)
+const bondLevelRowFromRow = (row) => {
   const monsterId = row?.monster_id || null;
   const monName = ALL_PLAYER_MONSTERS[monsterId]?.name || row?.mon_name || null;
   const bondLevel = Number(row?.bond_level);
@@ -10446,7 +10573,11 @@ const bondLevelRowToEntry = (row) => {
   const individualId = String(row?.individual_id || '');
   return {
     userName: row?.user_name || '名無しのブリーダー',
+    // ブリーダーID(2026-09-16)。あれば「いまの見た目」も改名の見分けもこれで決まる。
+    // 列を足す前の記録には無いので、そのときは今までどおり名前で見分ける
+    breederId: (typeof row?.breeder_id === 'string' && row.breeder_id) ? row.breeder_id : null,
     icon: row?.icon ?? null,
+    profileFrame: rankingProfileFrameFromRow(row),
     monName, bondLevel, monsterId,
     imgUrl: ALL_PLAYER_MONSTERS[monsterId]?.iconUrl || null,
     emoji: ALL_PLAYER_MONSTERS[monsterId]?.emoji || null,
@@ -10459,12 +10590,36 @@ const bondLevelRowToEntry = (row) => {
 };
 // 正本テーブルの結果と、rankings から集計した結果を1つに束ねる。
 // 同じ「人 × 個体」は正本テーブル側を採用し、正本にまだ載っていない人だけ
-// 従来どおり rankings の集計で補う(テーブルを作った直後から一覧が欠けないようにするため)
+// 従来どおり rankings の集計で補う(テーブルを作った直後から一覧が欠けないようにするため)。
+//
+// ★「人」の見分けはブリーダーIDを最優先にする(2026-09-16)。
+//   bond_levels の主キーは (user_name, individual_id) なので、名前を変えると
+//   同じマスモンが古い名前と新しい名前の2行になって残る。行を消すのは危険なので消さず、
+//   **ここで1行にまとめて見せる**(絆Lvの高いほう＝いまの値を採用する)。
+//   IDが無い古い行は、これまでどおり名前で見分ける。
+const bondRankingIndividualOf = (e) =>
+  e?.individualId || (e?.masuId != null && String(e.masuId) !== '' ? String(e.masuId) : `legacy:${e?.monsterId || e?.monName}`);
+const bondRankingKeyOf = (e, bridge = null) => {
+  const id = resolveBreederIdFor(e, bridge);
+  return id ? `id:${id}\u0000${bondRankingIndividualOf(e)}`
+            : `name:${e?.userName}\u0000${bondRankingIndividualOf(e)}`;
+};
 const mergeBondRankingEntries = (primaryEntries, legacyEntries) => {
-  const keyOf = (e) => `${e?.userName}\u0000${e?.individualId || (e?.masuId != null && String(e.masuId) !== '' ? String(e.masuId) : `legacy:${e?.monsterId || e?.monName}`)}`;
   const merged = new Map();
-  (primaryEntries || []).forEach(e => { if (e) merged.set(keyOf(e), e); });
-  (legacyEntries || []).forEach(e => { if (e && !merged.has(keyOf(e))) merged.set(keyOf(e), e); });
+  // 「名前 → ID」の橋は、正本と旧経路の両方を見てから作る
+  // (IDの付いた行と付いていない行が混ざっていても、同じ人なら1つに束ねるため)
+  const bridge = breederIdBridgeFrom([...(primaryEntries || []), ...(legacyEntries || [])]);
+  // 同じ鍵が重なったら、絆Lvの高いほうを残す(改名で2行になっている人はここで1行になる)
+  const put = (e, onlyIfNew) => {
+    if (!e) return;
+    const key = bondRankingKeyOf(e, bridge);
+    const current = merged.get(key);
+    if (!current) { merged.set(key, e); return; }
+    if (onlyIfNew) return;
+    if ((Number(e.bondLevel) || 0) > (Number(current.bondLevel) || 0)) merged.set(key, e);
+  };
+  (primaryEntries || []).forEach(e => put(e, false));
+  (legacyEntries || []).forEach(e => put(e, true));
   return [...merged.values()].sort((a, b) => b.bondLevel - a.bondLevel);
 };
 // ==================== 絆Lvの正本テーブル(bond_levels) ====================
@@ -10478,6 +10633,31 @@ const mergeBondRankingEntries = (primaryEntries, legacyEntries) => {
 // 1度でも「テーブルが無い」と分かったら、そのセッションでは以後アクセスしない。
 const BOND_LEVELS_TABLE = 'bond_levels';
 const BOND_LEVELS_SELECT = 'user_name,individual_id,monster_id,mon_name,bond_level,icon,detail,colors';
+// プロフィールフレーム(2026-09-15)。bond_levels は rankings とは別のテーブルなので、
+// 「列があるかどうか」も別に覚える(片方だけSQLを当てた環境で取り違えないため)。
+// 判定そのもの(_isMissingProfileFrameError)と正規化は rankings と同じものを使う。
+let _bondLevelsProfileFrameUnavailable = false;
+const bondLevelsProfileFrameUnavailable = () => _bondLevelsProfileFrameUnavailable;
+const bondLevelRowsWithoutProfileFrame = (rows) =>
+  (Array.isArray(rows) ? rows : []).map(row => rankingRowWithoutProfileFrame(row));
+// ブリーダーID(2026-09-16)。bond_levels は主キーが (user_name, individual_id) ＝
+// 「名前 × 個体」なので、人を見分ける手がかりが名前しか無かった。そのため
+// 改名すると同じマスモンが2行に分かれて並び、同名の人がいるとどれが誰か決められなかった
+// (ユーザー指摘「名前管理はさすがにだめだろ」)。rankings と同じ breeder_id を持たせて、
+// **表示ではIDで見分ける**。★主キーは変えない(既存の行を壊さないため)。
+// 増えてしまった古い行は mergeBondRankingEntries がIDでまとめて1行に見せる。
+// 列があるかどうかは rankings ともフレームとも別に覚える(どれか1つだけ当たっていても取り違えない)。
+let _bondLevelsBreederIdUnavailable = false;
+const bondLevelsBreederIdUnavailable = () => _bondLevelsBreederIdUnavailable;
+const bondLevelRowsWithoutBreederId = (rows) =>
+  (Array.isArray(rows) ? rows : []).map(row => { const { breeder_id, ...rest } = row || {}; return rest; });
+// いま取れる列の並び。無いと分かっている列は最初から外す
+const bondLevelsSelectColumns = () => {
+  let select = BOND_LEVELS_SELECT;
+  if (!_bondLevelsProfileFrameUnavailable) select += `,${RANKING_PROFILE_FRAME_COLUMN}`;
+  if (!_bondLevelsBreederIdUnavailable) select += ',breeder_id';
+  return select;
+};
 // 1行が数百バイトなので、種類別タブぶんまで含めて1回で取り切れる余裕を持たせる
 const BOND_LEVELS_FETCH_LIMIT = 1000;
 // 「テーブルが無い」と分かったあとは、毎回404を出しにいかない
@@ -10492,7 +10672,9 @@ const _isMissingTableError = (status, body) => {
 // rankings から集計する(新旧併用)
 const sbFetchBondLevels = async (requestId='untracked') => {
   if (_bondLevelsUnavailable) return null;
-  const url = `${SUPABASE_URL}/rest/v1/${BOND_LEVELS_TABLE}?select=${BOND_LEVELS_SELECT}`
+  await ensureBreederProfiles(requestId);
+  const select = bondLevelsSelectColumns();
+  const url = `${SUPABASE_URL}/rest/v1/${BOND_LEVELS_TABLE}?select=${select}`
     + `&order=bond_level.desc.nullslast&limit=${BOND_LEVELS_FETCH_LIMIT}`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8000);
@@ -10500,6 +10682,20 @@ const sbFetchBondLevels = async (requestId='untracked') => {
     const res = await fetch(url, { headers: SB_HEADERS, cache: 'no-store', signal: controller.signal });
     const body = await res.text();
     if (!res.ok) {
+      // プロフィールフレームの列がまだ無い環境。外して取り直せば今までどおり出せる
+      // (飾り枠が出ないだけで、絆Lv・総合力の順位は変わらない)
+      if (select.includes(RANKING_PROFILE_FRAME_COLUMN) && _isMissingProfileFrameError(res.status, body)) {
+        _bondLevelsProfileFrameUnavailable = true;
+        rankingLog(requestId, 'bond-levels-profile-frame-missing', { status: res.status });
+        return sbFetchBondLevels(requestId);
+      }
+      // ブリーダーIDの列がまだ無い環境。外して取り直せば今までどおり出せる
+      // (名前で見分けるだけに戻り、絆Lv・総合力の順位は変わらない)
+      if (select.includes(',breeder_id') && _isMissingBreederIdError(res.status, body)) {
+        _bondLevelsBreederIdUnavailable = true;
+        rankingLog(requestId, 'bond-levels-breeder-id-missing', { status: res.status });
+        return sbFetchBondLevels(requestId);
+      }
       if (_isMissingTableError(res.status, body)) {
         _bondLevelsUnavailable = true;
         rankingLog(requestId, 'bond-levels-missing', { status: res.status });
@@ -10509,6 +10705,7 @@ const sbFetchBondLevels = async (requestId='untracked') => {
     }
     const rows = JSON.parse(body || '[]');
     rankingLog(requestId, 'bond-levels-fetched', { received: Array.isArray(rows) ? rows.length : 0 });
+    rememberLooksFromRows(rows);
     return Array.isArray(rows) ? rows : [];
   } finally {
     clearTimeout(timer);
@@ -10519,6 +10716,9 @@ const sbFetchBondLevels = async (requestId='untracked') => {
 // ランキング送信の付随処理なので、失敗しても周回の進行は止めない。
 const sbUpsertBondLevels = async (rows) => {
   if (_bondLevelsUnavailable || !Array.isArray(rows) || rows.length === 0) return false;
+  // 列がまだ無いと分かっている間は、最初から外して送る
+  let payload = _bondLevelsProfileFrameUnavailable ? bondLevelRowsWithoutProfileFrame(rows) : rows;
+  if (_bondLevelsBreederIdUnavailable) payload = bondLevelRowsWithoutBreederId(payload);
   const url = `${SUPABASE_URL}/rest/v1/${BOND_LEVELS_TABLE}?on_conflict=user_name,individual_id`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8000);
@@ -10526,10 +10726,22 @@ const sbUpsertBondLevels = async (rows) => {
     const res = await fetch(url, {
       method: 'POST',
       headers: { ...SB_HEADERS, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
-      body: JSON.stringify(rows), signal: controller.signal,
+      body: JSON.stringify(payload), signal: controller.signal,
     });
     if (!res.ok) {
       const body = await res.text();
+      // プロフィールフレームの列がまだ無い環境。飾り枠のために絆Lvの記録を落とさない。
+      // その列だけ外して必ず送り直す(一度気付けば以後は最初から外して送る)
+      if (!_bondLevelsProfileFrameUnavailable && _isMissingProfileFrameError(res.status, body)) {
+        _bondLevelsProfileFrameUnavailable = true;
+        return sbUpsertBondLevels(bondLevelRowsWithoutProfileFrame(rows));
+      }
+      // ブリーダーIDの列がまだ無い環境。IDのために絆Lvの記録を落とさない。
+      // その列だけ外して必ず送り直す(一度気付けば以後は最初から外して送る)
+      if (!_bondLevelsBreederIdUnavailable && _isMissingBreederIdError(res.status, body)) {
+        _bondLevelsBreederIdUnavailable = true;
+        return sbUpsertBondLevels(bondLevelRowsWithoutBreederId(rows));
+      }
       if (_isMissingTableError(res.status, body)) { _bondLevelsUnavailable = true; return false; }
       throw new Error(`bond_levels upsert ${res.status}: ${body || res.statusText}`);
     }
@@ -10541,7 +10753,7 @@ const sbUpsertBondLevels = async (rows) => {
 // ランキングへ送る編成から、絆Lvの正本へ入れる行を作る。
 // 個体が特定できる記録は masuId、できない古い形は legacy:種ID でまとめる
 // (どちらも rankings 側の集計と同じ考え方)。
-const bondLevelRowsFromParty = (userName, icon, party) => {
+const bondLevelRowsFromParty = (userName, icon, party, profileFrame = null, breederId = null) => {
   const byIndividual = new Map();
   (Array.isArray(party) ? party : []).forEach(member => {
     const bondLevel = Number(member?.bondLevel);
@@ -10557,9 +10769,13 @@ const bondLevelRowsFromParty = (userName, icon, party) => {
     byIndividual.set(individualId, {
       user_name: userName || '名無しのブリーダー',
       individual_id: individualId,
+      // ブリーダーID。作れない端末では列ごと付けない(既存の行と同じくNULLのまま)
+      ...(typeof breederId === 'string' && breederId ? { breeder_id: breederId } : {}),
       monster_id: monsterId, mon_name: monName,
       bond_level: Math.floor(bondLevel),
       icon: icon ?? null,
+      // プロフィールフレーム。選んでいなければ列ごと付けない(既存の行と同じくNULLのまま)
+      ...(rankingProfileFrameValue(profileFrame) ? { profile_frame: rankingProfileFrameValue(profileFrame) } : {}),
       detail: member.detail ?? null,
       colors: Array.isArray(member.colors) ? member.colors : null,
     });
@@ -10567,12 +10783,14 @@ const bondLevelRowsFromParty = (userName, icon, party) => {
   return [...byIndividual.values()];
 };
 const sbFetchRankings = async (diff, limit=RANKING_SCORE_LIMIT, order='score.desc.nullslast', offset=0, requestId='untracked', selectColumns=RANKING_SELECT_FULL) => {
+  // 行を組み立てる前に「いまの見た目」をそろえておく(失敗しても投げない・TTLで間引く)
+  await ensureBreederProfiles(requestId);
   // diff を省略(null)すると難易度で絞らず、全難易度をまとめて取る
   const normalizedDifficulty = diff == null ? null : normalizeRankingDifficulty(diff);
   // 必要な列だけを受け取り、過去記録が多い難易度でもレスポンスを不用意に大きくしない。
   // ターン数・到達WAVEはSQLをまだ適用していない環境では選べないので、そのときは外れる。
   const baseSelect = selectColumns || RANKING_SELECT_FULL;
-  const select = rankingSelectWithRunStats(baseSelect);
+  const select = rankingSelectWithBreederId(rankingSelectWithProfileFrame(rankingSelectWithRunStats(baseSelect)));
   // DBに保存する正規keyと同じ値をeqで取得する。ilikeによる別系統の
   // 取得条件を残さず、NormalもHardと完全に同じSELECT経路にする。
   //
@@ -10611,6 +10829,19 @@ const sbFetchRankings = async (diff, limit=RANKING_SCORE_LIMIT, order='score.des
     const body = await res.text();
     rankingLog(requestId, 'supabase-response', { difficulty: normalizedDifficulty, endedAt: new Date().toISOString(), elapsedMs: Date.now() - startedAt, status: res.status, statusText: res.statusText, ok: res.ok, dataCount: res.ok ? (() => { try { const parsed = JSON.parse(body); return Array.isArray(parsed) ? parsed.length : null; } catch { return null; } })() : null, error: res.ok ? null : body });
     if (!res.ok) {
+      // ブリーダーIDの列がまだ無い環境。外して取り直す(そのときは名前で引く)
+      if (select.includes(',breeder_id') && _isMissingBreederIdError(res.status, body)) {
+        _rankingBreederIdUnavailable = true;
+        rankingLog(requestId, 'breeder-id-column-missing-on-select', { status: res.status });
+        return sbFetchRankings(diff, limit, order, offset, requestId, baseSelect);
+      }
+      // プロフィールフレームの列がまだ無い環境。外して取り直せば今までどおり表示できる
+      // (飾り枠が出ないだけで、順位もスコアも変わらない)
+      if (select.includes(RANKING_PROFILE_FRAME_COLUMN) && _isMissingProfileFrameError(res.status, body)) {
+        _rankingProfileFrameUnavailable = true;
+        rankingLog(requestId, 'profile-frame-column-missing', { status: res.status });
+        return sbFetchRankings(diff, limit, order, offset, requestId, baseSelect);
+      }
       // ターン数・到達WAVEの列がまだ無い環境。列を外して取り直せば今までどおり表示できる。
       // 一度気付いたら以後は最初から外して送るので、この寄り道は多くても1回きり
       if (select !== baseSelect && _isMissingColumnError(res.status, body)) {
@@ -10621,7 +10852,10 @@ const sbFetchRankings = async (diff, limit=RANKING_SCORE_LIMIT, order='score.des
       throw new Error(`fetch ${res.status} ${res.statusText}; url=${url}; response=${body || '(empty)'}`);
     }
     try {
-      return JSON.parse(body);
+      const rows = JSON.parse(body);
+      // 記録から分かる「その人の枠」を覚えておく(登録がまだ無い人の受け皿)
+      rememberLooksFromRows(rows);
+      return rows;
     } catch (e) {
       throw new Error(`invalid JSON; url=${url}; response=${body || '(empty)'}; error=${e.message}`);
     }
@@ -10639,14 +10873,22 @@ const sbFetchRankings = async (diff, limit=RANKING_SCORE_LIMIT, order='score.des
 // 1プレイ=1行なので同じ人が何行も持つ。取得直後にここでまとめておくと、
 // 端末へ残すキャッシュも人数ぶんの大きさで収まる
 const aggregateBreederLevels = (rows) => {
-  const byName = new Map();
+  // ★束ねる単位はブリーダーID(2026-09-16)。名前で束ねると、改名した人が2行に分かれ、
+  //   同名の別人が1行に混ざる。IDが決められない古い記録だけ、これまでどおり名前で束ねる
+  const byBreeder = new Map();
+  // 先に全行を見て「名前 → ID」の橋を作る。
+  // モンビーの記録にはIDが付いていて、これまでのバトルの記録には付いていない。
+  // 橋が無いと、同じ人がIDの行と名前の行に割れて2行並ぶ
+  const bridge = breederIdBridgeFrom(rows);
   (rows || []).forEach(r => {
     const name = r?.userName || '名無しのブリーダー';
+    const id = resolveBreederIdFor(r, bridge);
+    const key = id ? `id:${id}` : `name:${name}`;
     const lv = Number(r?.level) || 0;
-    const cur = byName.get(name);
-    if (!cur || lv > cur.level) byName.set(name, { ...r, userName: name, level: lv });
+    const cur = byBreeder.get(key);
+    if (!cur || lv > cur.level) byBreeder.set(key, { ...r, userName: name, level: lv });
   });
-  return [...byName.values()].filter(x => x.level > 0).sort((a, b) => b.level - a.level);
+  return [...byBreeder.values()].filter(x => x.level > 0).sort((a, b) => b.level - a.level);
 };
 // ブリーダーLv用に、rankingsの全行をページ送りで読む。
 // 1プレイ=1行なので同じ人が何行も持つ。「上位N行」では下位の人が消えるため、
@@ -10680,6 +10922,8 @@ const sbInsertScore = async (row) => {
   // ターン数・到達WAVEの列がまだ無い環境では、その2つを送ると400になり
   // 記録そのものが保存できない。無いと分かっている間は最初から外して送る
   if (_rankingRunStatsUnavailable) { delete normalizedRow.turns; delete normalizedRow.reached_wave; }
+  // プロフィールフレームの列も同じ。無いと分かっている間は最初から外して送る
+  if (_rankingProfileFrameUnavailable) delete normalizedRow.profile_frame;
   const requestId = `insert-${normalizedRow.difficulty}-${Date.now()}`;
   const query = '?on_conflict=clear_id';
   const prefer = 'resolution=ignore-duplicates,return=minimal';
@@ -10707,6 +10951,14 @@ const sbInsertScore = async (row) => {
       errorCode, isUniqueViolation, error: res.ok ? null : (body || res.statusText)
     });
     if (!res.ok) {
+      // プロフィールフレームの列がまだ無い環境。飾り枠のためにスコアを落とさない。
+      // その列だけを外して必ず送り直す(一度気付けば以後は最初から外して送る)
+      if (!_rankingProfileFrameUnavailable && normalizedRow.profile_frame !== undefined
+          && _isMissingProfileFrameError(res.status, body)) {
+        _rankingProfileFrameUnavailable = true;
+        rankingLog(requestId, 'profile-frame-column-missing', { status: res.status });
+        return sbInsertScore(rankingRowWithoutProfileFrame(normalizedRow));
+      }
       // ターン数・到達WAVEの列がまだ無い環境。ここで諦めるとスコアが1件も残らなくなるので、
       // その2つを外して必ず送り直す(記録を落とさないことを最優先にする)。
       // 一度気付けば以後は最初から外して送るので、この寄り道は多くても1回きり
@@ -10828,6 +11080,9 @@ const rankingRowFromLocalEntry = (entry, difficulty) => {
     ...(Number.isFinite(reachedWave) && reachedWave > 0 ? { reached_wave: reachedWave } : {}),
     ...(Number.isFinite(turns) && turns > 0 ? { turns } : {}),
     ...(entry.breederId ? { breeder_id: entry.breederId } : {}),
+    // プロフィールフレーム。退避した時点で選んでいたものをそのまま送り直す
+    // (未選択・古い退避データには入っていないので、その場合は列ごと付けない)
+    ...(entry.profileFrame ? { profile_frame: entry.profileFrame } : {}),
     ...(createdAt ? { created_at: createdAt } : {}),
   };
 };
@@ -10869,6 +11124,276 @@ const insertResentRankingRow = async (insert, row) => {
 };
 
 const createRunId = () => globalThis.crypto?.randomUUID?.() || `run_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`;
+
+// ===== ブリーダーの「いまの見た目」(2026-09-16) =====
+//
+// ランキングは「1プレイ＝1行」で、その瞬間の名前・アイコン・フレームを記録へ写している。
+// そのため、あとから見た目を変えても過去の行は古いままだった
+// (2026-09-16・ユーザー指摘「アイコンとフレームは更新時じゃなくて常に設定してるやつが
+//  ランキングに出るようにできないの？」)。
+//
+// 記録(rankings / bond_levels)は**1行も書き換えない**。かわりに「1人1行」の小さな表を持ち、
+// **表示に使う見た目だけ**をそこから引く。順位・スコア・集計には一切関わらない。
+//
+// ★引く順番は ① ブリーダーID ② 名前 ③ 記録に写した値。
+//   ②は「その名前の人が1人だけ」のときしか使わない(同名の別人へ他人の見た目を出さないため。
+//   全曲合算の rhythm_identity_map と同じ考え方・docs/spec/RHYTHM_RANKING.md §4.4)。
+// ★表がまだ無い環境(SQL未適用)では404が返る。エラーではなく「まだ準備中」として扱い、
+//   そのセッションでは以後アクセスしない(記録に写した値で今までどおり出る)。
+const BREEDER_PROFILES_TABLE = 'breeder_profiles';
+const BREEDER_PROFILES_SELECT = 'breeder_id,user_name,icon,profile_frame';
+// 1人1行しか増えないので、全部読んでも小さい。上限はいちおうの保険
+const BREEDER_PROFILES_FETCH_LIMIT = 5000;
+// 取り直す間隔。ランキングを開くたびに読み直さない
+const BREEDER_PROFILES_TTL_MS = 60 * 1000;
+let _breederProfilesUnavailable = false;
+const breederProfilesUnavailable = () => _breederProfilesUnavailable;
+let _breederProfileById = new Map();
+let _breederProfileByName = new Map();
+let _breederProfilesFetchedAt = 0;
+let _breederProfilesPending = null;
+
+// 受け取った行から、IDで引く表と名前で引く表を作る。
+// 名前の表は「その名前がちょうど1人」のときだけ入れる(同名の別人には使わない)。
+const setBreederProfiles = (rows) => {
+  const byId = new Map(), nameCount = new Map(), byName = new Map();
+  (Array.isArray(rows) ? rows : []).forEach(row => {
+    const id = typeof row?.breeder_id === 'string' ? row.breeder_id.trim() : '';
+    if (!id) return;
+    const profile = {
+      // 「誰か」も一緒に持つ。IDの無い古い記録を、その人の行として束ねるのに使う
+      breederId: id,
+      userName: (typeof row?.user_name === 'string' && row.user_name.trim()) ? row.user_name : null,
+      icon: row?.icon ?? null,
+      profileFrame: normalizeProfileFrameId(row?.profile_frame),
+    };
+    byId.set(id, profile);
+    if (profile.userName) {
+      nameCount.set(profile.userName, (nameCount.get(profile.userName) || 0) + 1);
+      byName.set(profile.userName, profile);
+    }
+  });
+  for (const [name, count] of nameCount) if (count > 1) byName.delete(name);
+  _breederProfileById = byId;
+  _breederProfileByName = byName;
+  return { ids: byId.size, names: byName.size };
+};
+const sbFetchBreederProfiles = async (requestId = 'untracked') => {
+  const url = `${SUPABASE_URL}/rest/v1/${BREEDER_PROFILES_TABLE}?select=${BREEDER_PROFILES_SELECT}`
+    + `&order=updated_at.desc&limit=${BREEDER_PROFILES_FETCH_LIMIT}`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(url, { headers: SB_HEADERS, cache: 'no-store', signal: controller.signal });
+    const body = await res.text();
+    if (!res.ok) {
+      if (_isMissingTableError(res.status, body)) {
+        _breederProfilesUnavailable = true;
+        rankingLog(requestId, 'breeder-profiles-missing', { status: res.status });
+        return null;
+      }
+      throw new Error(`breeder_profiles ${res.status}: ${body || res.statusText}`);
+    }
+    const rows = JSON.parse(body || '[]');
+    const counted = setBreederProfiles(rows);
+    rankingLog(requestId, 'breeder-profiles-fetched', { received: Array.isArray(rows) ? rows.length : 0, ...counted });
+    return Array.isArray(rows) ? rows : [];
+  } finally {
+    clearTimeout(timer);
+  }
+};
+// ランキングを組み立てる前に呼ぶ。一定時間は読み直さないので、何度呼んでも重くならない。
+// 失敗しても投げない(見た目が古いままになるだけで、順位は出る)。
+const ensureBreederProfiles = async (requestId = 'untracked', { force = false } = {}) => {
+  if (_breederProfilesUnavailable) return false;
+  if (!force && Date.now() - _breederProfilesFetchedAt < BREEDER_PROFILES_TTL_MS) return true;
+  if (_breederProfilesPending) { try { await _breederProfilesPending; } catch {} return true; }
+  _breederProfilesPending = (async () => {
+    try {
+      await sbFetchBreederProfiles(requestId);
+      _breederProfilesFetchedAt = Date.now();
+    } catch (error) {
+      console.error('[ranking] breeder profiles fetch failed:', error && error.message ? error.message : error);
+    } finally {
+      _breederProfilesPending = null;
+    }
+  })();
+  await _breederProfilesPending;
+  return true;
+};
+// 自分の行を上書きする。1人1行なので、何度呼んでも行は増えない。
+// 見た目を変えたときと、記録を送ったときに呼ぶ。失敗しても進行は止めない。
+const sbUpsertBreederProfile = async ({ breederId, userName, icon, profileFrame }) => {
+  if (_breederProfilesUnavailable) return false;
+  const id = typeof breederId === 'string' ? breederId.trim() : '';
+  if (!id) return false;   // IDが作れていない端末では何もしない(今までどおり記録の値で出る)
+  const row = {
+    breeder_id: id,
+    user_name: userName || '名無しのブリーダー',
+    icon: icon ?? null,
+    profile_frame: rankingProfileFrameValue(profileFrame),
+  };
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${BREEDER_PROFILES_TABLE}?on_conflict=breeder_id`, {
+      method: 'POST',
+      headers: { ...SB_HEADERS, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify([row]), signal: controller.signal,
+    });
+    if (!res.ok) {
+      const body = await res.text();
+      if (_isMissingTableError(res.status, body)) { _breederProfilesUnavailable = true; return false; }
+      throw new Error(`breeder_profiles upsert ${res.status}: ${body || res.statusText}`);
+    }
+    // 自分の変更はすぐ画面へ出したいので、手元の表も更新しておく
+    _breederProfileById.set(id, { userName: row.user_name, icon: row.icon, profileFrame: normalizeProfileFrameId(row.profile_frame) });
+    return true;
+  } finally {
+    clearTimeout(timer);
+  }
+};
+// ===== 記録そのものから拾う「その人の最後に分かっている枠」(2026-09-16) =====
+//
+// breeder_profiles に登録があるのは、この版のゲームを開いた人だけ。まだ開いていない人は
+// 引き当てようが無く、**同じ人の行なのに枠が出たり出なかったりする**
+// (ユーザー指摘「過去のランキングにフレームが対応されてない」。チャレンジの一覧で
+//  同じ♪みゅあ♪さんの5行のうち1行だけ枠が出た)。
+//
+// ★フレームの列は 2026-09-15 に足したもの。**値が入っている行は必ずそれ以降のプレイ**なので、
+//   その人の新しい姿として使ってよい。時刻(created_at)が取れる一覧では新しいほうを選ぶ。
+// ★登録がある人は breeder_profiles が優先(いま設定しているものが正)。ここは登録が無い人の受け皿。
+// ★同じ名前の人が2人以上いるときは使わない(他人の枠を出さないため)。
+let _recordLookById = new Map();     // ブリーダーID → { profileFrame, at }
+let _recordLookByName = new Map();   // 名前 → { profileFrame, at } / null(あいまい)
+let _recordIdByName = new Map();     // 名前 → ブリーダーID / null(あいまい)
+const recordLookCounts = () => ({ ids: _recordLookById.size, names: _recordLookByName.size });
+const _rowIdentityOf = (row) => {
+  const id = typeof row?.breeder_id === 'string' && row.breeder_id ? row.breeder_id : '';
+  if (id) return id;
+  const key = typeof row?.identity_key === 'string' ? row.identity_key : '';
+  return (key && !key.startsWith('name:')) ? key : '';
+};
+const _rowLookAt = (row) => {
+  const raw = row?.created_at ?? row?.last_created_at ?? row?.last_at ?? null;
+  const ms = raw ? Date.parse(raw) : NaN;
+  return Number.isFinite(ms) ? ms : -1;
+};
+// 取ってきた行から、枠の手がかりと「名前 → ID」の橋を覚えておく。
+// 画面をまたいで貯まるので、モンビーの記録で分かった枠をバトルの一覧でも使える。
+const rememberLooksFromRows = (rows) => {
+  (Array.isArray(rows) ? rows : []).forEach(row => {
+    const name = (typeof row?.user_name === 'string' && row.user_name) ? row.user_name : '';
+    const id = _rowIdentityOf(row);
+    if (id && name) {
+      if (!_recordIdByName.has(name)) _recordIdByName.set(name, id);
+      else if (_recordIdByName.get(name) !== id) _recordIdByName.set(name, null);
+    }
+    // 正規化は data/breeder.js の関数。まだ読めていない場面でも落ちないように包む
+    const raw = typeof row?.profile_frame === 'string' ? row.profile_frame.trim() : '';
+    if (!raw) return;
+    const frame = (typeof normalizeProfileFrameId === 'function') ? normalizeProfileFrameId(raw) : raw;
+    const noneId = (typeof PROFILE_FRAME_NONE_ID === 'string') ? PROFILE_FRAME_NONE_ID : 'none';
+    if (!frame || frame === noneId) return;
+    const at = _rowLookAt(row);
+    if (id) {
+      const cur = _recordLookById.get(id);
+      if (!cur || at > cur.at) _recordLookById.set(id, { profileFrame: frame, at });
+    }
+    if (name) {
+      const cur = _recordLookByName.get(name);
+      if (cur === null) return;                       // あいまいな名前には使わない
+      if (!cur) { _recordLookByName.set(name, { profileFrame: frame, at }); return; }
+      if (at > cur.at) _recordLookByName.set(name, { profileFrame: frame, at });
+    }
+  });
+};
+// 登録が無い人のための、記録から拾った枠。見つからなければ null。
+const recordFrameFor = (entry) => {
+  if (!entry) return null;
+  const name = typeof entry.userName === 'string' ? entry.userName : '';
+  const id = directBreederIdOf(entry) || (name ? _recordIdByName.get(name) : null) || null;
+  if (id && _recordLookById.has(id)) return _recordLookById.get(id).profileFrame;
+  if (!name) return null;
+  // 名前しか手がかりが無いときは、その名前が1人に定まるときだけ使う
+  if (_recordIdByName.get(name) === null) return null;
+  const byName = _recordLookByName.get(name);
+  return (byName && byName.profileFrame) ? byName.profileFrame : null;
+};
+// ランキングの1行へ「いまの見た目」をかぶせる。見つからなければ記録に写した値のまま。
+// ★ここだけが差し替えを決める。画面ごとに書かない
+const latestBreederProfileFor = (entry) => {
+  if (!entry) return null;
+  // ① ブリーダーID。モンビーの合算・週間・イベントは identityKey に入っている
+  //    (IDが無かった時代の記録は 'name:<名前>' なので、そのときは②へ回す)
+  const identity = typeof entry.breederId === 'string' && entry.breederId ? entry.breederId
+    : (typeof entry.identityKey === 'string' && entry.identityKey && !entry.identityKey.startsWith('name:')
+      ? entry.identityKey : '');
+  if (identity && _breederProfileById.has(identity)) return _breederProfileById.get(identity);
+  // ② 名前。その名前の人が1人だけのときしか使わない
+  const name = typeof entry.userName === 'string' ? entry.userName : '';
+  return (name && _breederProfileByName.has(name)) ? _breederProfileByName.get(name) : null;
+};
+// 記録そのものに付いているブリーダーID。無ければ null。
+const directBreederIdOf = (entry) => {
+  if (!entry) return null;
+  if (typeof entry.breederId === 'string' && entry.breederId) return entry.breederId;
+  const identity = typeof entry.identityKey === 'string' ? entry.identityKey : '';
+  return (identity && !identity.startsWith('name:')) ? identity : null;
+};
+// 一覧のなかだけで通じる「名前 → ブリーダーID」の橋を作る。
+//
+// ★これが無いと同じ人が2行に分かれる(2026-09-16・ユーザー指摘「ランキングが重複で出てる」)。
+//   モンヒロビートの記録にはIDが付いているが、これまでのバトルの記録には付いていない。
+//   IDのある行は id で、無い行は名前で束ねると、**同じ人が id の行と名前の行に割れる**。
+//   そこで「この一覧のなかで、その名前に1つのIDしかぶら下がっていない」なら、
+//   IDの無い行もその人のものとみなす(記録そのものから橋を架けるので、
+//   breeder_profiles にまだ登録が無い人にも効く)。
+// ★同じ名前に2つ以上のIDがぶら下がっていたら、別人の可能性があるので橋を架けない。
+const breederIdBridgeFrom = (entries) => {
+  const byName = new Map();   // 名前 → ID(1つに定まるとき) / null(あいまい)
+  (entries || []).forEach(entry => {
+    const id = directBreederIdOf(entry);
+    const name = typeof entry?.userName === 'string' ? entry.userName : '';
+    if (!id || !name) return;
+    if (!byName.has(name)) byName.set(name, id);
+    else if (byName.get(name) !== id) byName.set(name, null);
+  });
+  return byName;
+};
+// ランキングの1行が「誰のものか」を決める。
+// ① 記録に付いているブリーダーID
+// ② その一覧のなかで、その名前に1つのIDしかぶら下がっていないとき、そのID
+// ③ プロフィール表でその名前が1人に定まるときのID
+// ④ 決められない(名前で束ねるしかない)
+// ★同じ人の行を1つに束ねるのはこのIDで行う(名前で束ねると、改名で分かれ、同名で混ざる)。
+const resolveBreederIdFor = (entry, bridge = null) => {
+  if (!entry) return null;
+  const direct = directBreederIdOf(entry);
+  if (direct) return direct;
+  const name = typeof entry.userName === 'string' ? entry.userName : '';
+  if (!name) return null;
+  if (bridge && bridge.get(name)) return bridge.get(name);
+  const profile = _breederProfileByName.get(name);
+  if (profile && profile.breederId) return profile.breederId;
+  return _recordIdByName.get(name) || null;
+};
+const applyLatestBreederProfile = (entry) => {
+  const profile = latestBreederProfileFor(entry);
+  // ① プロフィール表に登録があれば、それが「いま設定しているもの」。名前もアイコンも枠もこれ
+  if (profile) {
+    return {
+      ...entry,
+      userName: profile.userName || entry.userName,
+      icon: profile.icon ?? entry.icon ?? null,
+      profileFrame: profile.profileFrame,
+    };
+  }
+  // ② 登録が無い人(この版をまだ開いていない人)は、記録から分かる最後の枠でそろえる。
+  //    同じ人の行なのに枠が出たり出なかったりするのを防ぐ
+  const frame = recordFrameFor(entry);
+  return (frame && frame !== entry.profileFrame) ? { ...entry, profileFrame: frame } : entry;
+};
 
 // ===== ブリーダーを見分けるID(2026-09-11) =====
 //
@@ -10925,7 +11450,8 @@ const _isMissingBreederIdError = (status, body) => {
 // そこを緩めると他モードの検証まで一緒に緩んでしまう。そのため触らず、モンビー専用の
 // 送受信をここへ分けて持つ。テーブル・列は既存の rankings をそのまま使う
 // (difficulty列の値だけで区別する、種族チャレンジと同じ考え方)。
-const RHYTHM_RANKING_SELECT = 'user_name,hero,party,score,level,icon,difficulty';
+const RHYTHM_RANKING_SELECT = 'user_name,hero,party,score,level,icon,difficulty,created_at';
+// profile_frame は列がある環境でだけ足す(rankingSelectWithProfileFrame)
 const sbInsertRhythmScore = async (row) => {
   if (typeof row?.clear_id !== 'string' || !row.clear_id.trim()) {
     throw new Error('rhythm ranking clear_id is required; unsafe insert skipped');
@@ -10939,6 +11465,8 @@ const sbInsertRhythmScore = async (row) => {
   // breeder_id の列がまだ無いと分かっている間は、最初から外して送る
   const payload = { ...row };
   if (_rankingBreederIdUnavailable) delete payload.breeder_id;
+  // プロフィールフレームの列も同じ扱い(無いと分かっている間は最初から外して送る)
+  if (_rankingProfileFrameUnavailable) delete payload.profile_frame;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8000);
   try {
@@ -10951,6 +11479,12 @@ const sbInsertRhythmScore = async (row) => {
       // その列を外して必ず送り直す(記録を落とさないことを最優先にする)。
       // 一度気付けば以後は最初から外して送るので、この寄り道は多くても1回きり。
       // 最初のPOSTは400で入っていないため、同じclear_idで送り直しても重複にならない
+      if (!_rankingProfileFrameUnavailable && payload.profile_frame !== undefined
+          && _isMissingProfileFrameError(res.status, body)) {
+        _rankingProfileFrameUnavailable = true;
+        rankingLog(requestId, 'profile-frame-column-missing', { status: res.status });
+        return sbInsertRhythmScore(rankingRowWithoutProfileFrame(payload));
+      }
       if (!_rankingBreederIdUnavailable && payload.breeder_id !== undefined
           && _isMissingBreederIdError(res.status, body)) {
         _rankingBreederIdUnavailable = true;
@@ -10976,16 +11510,35 @@ const sbInsertRhythmScore = async (row) => {
 const sbFetchRhythmRankings = async (difficultyKeys, limit=RHYTHM_RANKING_FETCH_LIMIT, offset=0, requestId='untracked') => {
   const keys = (Array.isArray(difficultyKeys) ? difficultyKeys : [difficultyKeys]).filter(Boolean);
   if (keys.length === 0) return [];
-  const url = `${SUPABASE_URL}/rest/v1/rankings?select=${RHYTHM_RANKING_SELECT}&difficulty=in.(${keys.map(k=>encodeURIComponent(`"${k}"`)).join(',')})&order=score.desc.nullslast&limit=${limit}&offset=${offset}`;
+  await ensureBreederProfiles(requestId);
+  const select = rankingSelectWithBreederId(rankingSelectWithProfileFrame(RHYTHM_RANKING_SELECT));
+  const url = `${SUPABASE_URL}/rest/v1/rankings?select=${select}&difficulty=in.(${keys.map(k=>encodeURIComponent(`"${k}"`)).join(',')})&order=score.desc.nullslast&limit=${limit}&offset=${offset}`;
   rankingLog(requestId, 'rhythm-request-start', { keys, limit, offset, url, table: 'rankings' });
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
   try {
     const res = await fetch(url, { headers: SB_HEADERS, cache: 'no-store', signal: controller.signal });
     const body = await res.text();
-    if (!res.ok) throw new Error(`rhythm ranking fetch ${res.status} ${res.statusText}; url=${url}; response=${body || '(empty)'}`);
+    if (!res.ok) {
+      // ブリーダーIDの列がまだ無い環境。外して取り直す(そのときは名前で引く)
+      if (select.includes(',breeder_id') && _isMissingBreederIdError(res.status, body)) {
+        _rankingBreederIdUnavailable = true;
+        rankingLog(requestId, 'breeder-id-column-missing-on-select', { status: res.status });
+        return sbFetchRhythmRankings(difficultyKeys, limit, offset, requestId);
+      }
+      // プロフィールフレームの列がまだ無い環境。外して取り直す(飾り枠が出ないだけ)
+      if (select !== RHYTHM_RANKING_SELECT && _isMissingProfileFrameError(res.status, body)) {
+        _rankingProfileFrameUnavailable = true;
+        rankingLog(requestId, 'profile-frame-column-missing', { status: res.status });
+        return sbFetchRhythmRankings(difficultyKeys, limit, offset, requestId);
+      }
+      throw new Error(`rhythm ranking fetch ${res.status} ${res.statusText}; url=${url}; response=${body || '(empty)'}`);
+    }
     try {
-      return JSON.parse(body);
+      const rows = JSON.parse(body);
+      // 記録から分かる「その人の枠」を覚えておく(登録がまだ無い人の受け皿)
+      rememberLooksFromRows(rows);
+      return rows;
     } catch (e) {
       throw new Error(`invalid JSON; url=${url}; response=${body || '(empty)'}; error=${e.message}`);
     }
@@ -11021,11 +11574,13 @@ const rhythmTotalRankingMissing = (status, body) => {
   return /PGRST205|PGRST200|42P01|does not exist|Could not find the/i.test(text);
 };
 const sbFetchRhythmTotalRankings = async ({ limit=RHYTHM_TOTAL_RANKING_DISPLAY_LIMIT, identityKeys=null, requestId='untracked' } = {}) => {
+  await ensureBreederProfiles(requestId);
   // identityKeys を渡すと、その人の行だけを取りにいく(50位圏外の自分を出すため)
   const filter = Array.isArray(identityKeys) && identityKeys.length
     ? `&identity_key=in.(${identityKeys.map(k=>encodeURIComponent(`"${k}"`)).join(',')})`
     : '';
-  const url = `${SUPABASE_URL}/rest/v1/rhythm_total_rankings?select=${RHYTHM_TOTAL_RANKING_SELECT}`
+  const select = rankingSelectWithProfileFrame(RHYTHM_TOTAL_RANKING_SELECT);
+  const url = `${SUPABASE_URL}/rest/v1/rhythm_total_rankings?select=${select}`
     + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`;
   rankingLog(requestId, 'rhythm-total-request-start', { limit, identityKeys, url, view: 'rhythm_total_rankings' });
   const controller = new AbortController();
@@ -11034,6 +11589,12 @@ const sbFetchRhythmTotalRankings = async ({ limit=RHYTHM_TOTAL_RANKING_DISPLAY_L
     const res = await fetch(url, { headers: SB_HEADERS, cache: 'no-store', signal: controller.signal });
     const body = await res.text();
     if (!res.ok) {
+      // ビューはあるが profile_frame をまだ返さない環境。その列だけ外して取り直す
+      if (select !== RHYTHM_TOTAL_RANKING_SELECT && _isMissingProfileFrameError(res.status, body)) {
+        _rankingProfileFrameUnavailable = true;
+        rankingLog(requestId, 'profile-frame-column-missing', { status: res.status });
+        return sbFetchRhythmTotalRankings({ limit, identityKeys, requestId });
+      }
       if (rhythmTotalRankingMissing(res.status, body)) {
         rankingLog(requestId, 'rhythm-total-view-missing', { status: res.status });
         const error = new Error('rhythm total ranking view is not ready');
@@ -11043,7 +11604,10 @@ const sbFetchRhythmTotalRankings = async ({ limit=RHYTHM_TOTAL_RANKING_DISPLAY_L
       throw new Error(`rhythm total ranking fetch ${res.status} ${res.statusText}; url=${url}; response=${body || '(empty)'}`);
     }
     try {
-      return JSON.parse(body);
+      const rows = JSON.parse(body);
+      // 記録から分かる「その人の枠」を覚えておく(登録がまだ無い人の受け皿)
+      rememberLooksFromRows(rows);
+      return rows;
     } catch (e) {
       throw new Error(`invalid JSON; url=${url}; response=${body || '(empty)'}; error=${e.message}`);
     }
@@ -11055,13 +11619,14 @@ const sbFetchRhythmTotalRankings = async ({ limit=RHYTHM_TOTAL_RANKING_DISPLAY_L
   }
 };
 // Supabaseの生の行を画面用の形へ整える。合計点・曲数は数として確かめてから使う
-const rhythmTotalRankingEntryFromRow = (row) => ({
+const rhythmTotalRankingEntryFromRow = (row) => applyLatestBreederProfile({
   identityKey: typeof row?.identity_key === 'string' ? row.identity_key : '',
   userName: row?.user_name || '名無しのブリーダー',
   totalScore: Number(row?.total_score) || 0,
   songCount: Number(row?.song_count) || 0,
   level: Number(row?.level) || 0,
   icon: row?.icon ?? null,
+  profileFrame: rankingProfileFrameFromRow(row),
 });
 // 自分がどの行かを見分けるためのキー。IDがある人はそのID、IDが付く前からの人は name:<名前>。
 // どちらの記録も持っている人がいるので、両方を候補として渡す(§4.4)
@@ -11132,6 +11697,7 @@ const rhythmEventNotReadyError = () => {
 };
 // 取得の共通部分。集計済みの行しか返ってこないので、待ち時間は合算と同じ15秒で足りる
 const sbFetchRhythmEventRows = async ({ url, body = null, label, requestId = 'untracked' }) => {
+  await ensureBreederProfiles(requestId);
   rankingLog(requestId, `${label}-request-start`, { url, body });
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
@@ -11148,17 +11714,25 @@ const sbFetchRhythmEventRows = async ({ url, body = null, label, requestId = 'un
       : { headers: SB_HEADERS, cache: 'no-store', signal: controller.signal });
     const text = await res.text();
     if (!res.ok) {
-      if (rhythmEventRankingMissing(res.status, text)) {
+      // ★profile_frame の判定を先に見る。関数・ビューそのものが無いときの本文には
+      //   profile_frame という語が出てこないので、取り違えない
+      const profileFrameMissing = _isMissingProfileFrameError(res.status, text);
+      if (!profileFrameMissing && rhythmEventRankingMissing(res.status, text)) {
         rankingLog(requestId, `${label}-not-ready`, { status: res.status });
         throw rhythmEventNotReadyError();
       }
       const failure = new Error(`${label} fetch ${res.status} ${res.statusText}; url=${url}; response=${text || '(empty)'}`);
       // 「party という列は無い」だけなら、呼んだ側が party 無しで取り直せるように印を付ける
       if (rhythmEventDetailColumnMissing(res.status, text)) failure.detailColumnMissing = true;
+      // 「profile_frame という列は無い」だけなら、その列を外して取り直せるように印を付ける
+      if (profileFrameMissing) failure.profileFrameColumnMissing = true;
       throw failure;
     }
     try {
-      return JSON.parse(text);
+      const rows = JSON.parse(text);
+      // 記録から分かる「その人の枠」を覚えておく(登録がまだ無い人の受け皿)
+      rememberLooksFromRows(rows);
+      return rows;
     } catch (e) {
       throw new Error(`invalid JSON; url=${url}; response=${text || '(empty)'}; error=${e.message}`);
     }
@@ -11167,6 +11741,18 @@ const sbFetchRhythmEventRows = async ({ url, body = null, label, requestId = 'un
     throw error;
   } finally {
     clearTimeout(timer);
+  }
+};
+// profile_frame を足して頼み、その列がまだ無い環境なら外してもう一度だけ頼む。
+// ビュー・関数のどれでも同じ形で使えるように、select を受け取る関数のほうを包む
+const askWithProfileFrame = async (askFn, select) => {
+  const wanted = rankingSelectWithProfileFrame(select);
+  try {
+    return await askFn(wanted);
+  } catch (error) {
+    if (wanted === select || !error || !error.profileFrameColumnMissing) throw error;
+    _rankingProfileFrameUnavailable = true;
+    return askFn(select);
   }
 };
 // 今週の始まり・終わり(月曜5:00 JST区切り)。1行だけ返る
@@ -11201,19 +11787,21 @@ const sbFetchRhythmEventSongBests = async ({ songId, fromMs, toMs, bonusRates = 
     ? `&identity_key=in.(${identityKeys.map(k => encodeURIComponent(`"${k}"`)).join(',')})`
     : '';
   const body = { song_ids: [songId], from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() };
-  const ask = (select) => sbFetchRhythmEventRows({
+  const askRaw = (select) => sbFetchRhythmEventRows({
     url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_song_bests?select=${select}`
       + `&order=score.desc,scored_at.asc&limit=${limit}${filter}`,
     body, label: 'rhythm-event-song', requestId,
   });
+  const ask = (select) => askWithProfileFrame(askRaw, select);
   // 回数ボーナスを使うイベントでは、加点込みの関数を先に試す。
   // 関数がまだ無い環境では加点なしへ戻す(順位は出る。加点と内訳だけ出ない)
   if (bonusRates) {
-    const askBonus = (select) => sbFetchRhythmEventRows({
+    const askBonusRaw = (select) => sbFetchRhythmEventRows({
       url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_song_bests_bonus?select=${select}`
         + `&order=score.desc,scored_at.asc&limit=${limit}${filter}`,
       body: { ...body, bonus_rates: bonusRates }, label: 'rhythm-event-song-bonus', requestId,
     });
+    const askBonus = (select) => askWithProfileFrame(askBonusRaw, select);
     try {
       return await askBonus(RHYTHM_EVENT_SONG_BONUS_SELECT);
     } catch (error) {
@@ -11247,11 +11835,12 @@ const sbFetchRhythmEventTotals = async ({ songIds, fromMs, toMs, bonusRates = nu
   const body = { song_ids: songIds, from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() };
   // 曲の部門と同じく、加点込みの関数を先に試して、無ければ加点なしへ戻す
   if (bonusRates) {
-    const askBonus = (select) => sbFetchRhythmEventRows({
+    const askBonusRaw = (select) => sbFetchRhythmEventRows({
       url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals_bonus?select=${select}`
         + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
       body: { ...body, bonus_rates: bonusRates }, label: 'rhythm-event-total-bonus', requestId,
     });
+    const askBonus = (select) => askWithProfileFrame(askBonusRaw, select);
     try {
       return await askBonus(RHYTHM_EVENT_TOTAL_BONUS_SELECT);
     } catch (error) {
@@ -11263,11 +11852,11 @@ const sbFetchRhythmEventTotals = async ({ songIds, fromMs, toMs, bonusRates = nu
       }
     }
   }
-  return sbFetchRhythmEventRows({
-    url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals?select=${RHYTHM_EVENT_TOTAL_SELECT}`
+  return askWithProfileFrame((select) => sbFetchRhythmEventRows({
+    url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals?select=${select}`
       + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
     body, label: 'rhythm-event-total', requestId,
-  });
+  }), RHYTHM_EVENT_TOTAL_SELECT);
 };
 // 回数ボーナスの内訳(素点・加点・回数)を取り出す。加点なしの関数から取った行には
 // これらの列が無いので、baseScore を null にして「内訳を出さない」と伝える。
@@ -11300,15 +11889,15 @@ const sbFetchRhythmWeekTotals = async ({ fromMs, toMs, limit = RHYTHM_EVENT_RANK
   const filter = Array.isArray(identityKeys) && identityKeys.length
     ? `&identity_key=in.(${identityKeys.map(k => encodeURIComponent(`"${k}"`)).join(',')})`
     : '';
-  return sbFetchRhythmEventRows({
-    url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_week_score_totals?select=${RHYTHM_WEEK_TOTAL_SELECT}`
+  return askWithProfileFrame((select) => sbFetchRhythmEventRows({
+    url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_week_score_totals?select=${select}`
       + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
     body: { from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() },
     label: 'rhythm-week-total', requestId,
-  });
+  }), RHYTHM_WEEK_TOTAL_SELECT);
 };
 // 生の行を画面用の形へ整える。壊れた値でも落ちないよう、数として確かめてから使う
-const rhythmEventSongEntryFromRow = (row) => ({
+const rhythmEventSongEntryFromRow = (row) => applyLatestBreederProfile({
   identityKey: typeof row?.identity_key === 'string' ? row.identity_key : '',
   userName: row?.user_name || '名無しのブリーダー',
   songId: typeof row?.song_id === 'string' ? row.song_id : '',
@@ -11316,6 +11905,7 @@ const rhythmEventSongEntryFromRow = (row) => ({
   score: Number(row?.score) || 0,
   level: Number(row?.level) || 0,
   icon: row?.icon ?? null,
+  profileFrame: rankingProfileFrameFromRow(row),
   // 判定の内訳。「この曲」タブと同じく party の先頭要素を読む(rhythmRankingEntryFromRow と同じ形)。
   // SQL未適用の環境・内訳が保存される前の古い記録では null になり、詳細ボタンが出ないだけ
   detail: (Array.isArray(row?.party) && row.party[0] && typeof row.party[0] === 'object') ? row.party[0] : null,
@@ -11323,18 +11913,19 @@ const rhythmEventSongEntryFromRow = (row) => ({
   // 画面は内訳の枠を出さない(加点していないのに「+0」と出さないため)
   ...rhythmEventBonusFields(row, 'base_score'),
 });
-const rhythmEventTotalEntryFromRow = (row) => ({
+const rhythmEventTotalEntryFromRow = (row) => applyLatestBreederProfile({
   identityKey: typeof row?.identity_key === 'string' ? row.identity_key : '',
   userName: row?.user_name || '名無しのブリーダー',
   totalScore: Number(row?.total_score) || 0,
   songCount: Number(row?.song_count) || 0,
   level: Number(row?.level) || 0,
   icon: row?.icon ?? null,
+  profileFrame: rankingProfileFrameFromRow(row),
   ...rhythmEventBonusFields(row, 'base_total'),
 });
 // 週間の行。イベントの総合と形をそろえておくと、画面側で分岐が増えない。
 // 違うのは playCount(遊んだ回数)を必ず持つことだけ
-const rhythmWeekTotalEntryFromRow = (row) => ({
+const rhythmWeekTotalEntryFromRow = (row) => applyLatestBreederProfile({
   identityKey: typeof row?.identity_key === 'string' ? row.identity_key : '',
   userName: row?.user_name || '名無しのブリーダー',
   totalScore: Number(row?.total_score) || 0,
@@ -11345,6 +11936,7 @@ const rhythmWeekTotalEntryFromRow = (row) => ({
   songCount: Number(row?.song_count) || 0,
   level: Number(row?.level) || 0,
   icon: row?.icon ?? null,
+  profileFrame: rankingProfileFrameFromRow(row),
   // 週間に回数ボーナスは無いので、内訳の枠は出さない(CLAUDE.md の決めごとどおり)
   baseScore: null, bonusScore: 0, playCounts: {},
 });
@@ -13730,6 +14322,13 @@ const score=run.lifeDepleted?run.lockedScore:run.score;setView(v=>({...v,score,c
     // run.lifeDepleted は false に戻っているので、そのときはクリア扱いになる。
     // 練習(tutorial)とタイミング合わせ(calibrating)はライフを減らさないので必ずクリア。
     const failed=!tutorial&&!calibrating&&run.lifeDepleted===true;
+    // ビートPは正常に最後まで到達した公開プレイだけ。公開後も期間判定は
+    // rhythmEventPointAwardAt 側に残し、イベント非開催中は一切付与しない。
+    // finishは先頭で run.finished=true にするため、再描画・画面遷移で同じ結果を二重付与しない。
+    const eventPointAward=(!debugPlay&&!tutorial&&!calibrating
+      &&typeof RELEASE_FLAGS!=='undefined'&&RELEASE_FLAGS?.rhythmEventPoints===true
+      &&typeof rhythmEventPointAwardAt==='function')
+      ?rhythmEventPointAwardAt(Date.now(),song.songId,score):null;
     // タイミング合わせのときは、貯めたずれから「判定タイミング調整」に入れる値を出す。
     // 助走(はじめの数回)は数に入れない。外れ値の落とし方・刻みは rhythmCalibrationOffsetFromTaps が持つ
     const calibration=calibrating
@@ -13741,9 +14340,10 @@ const score=run.lifeDepleted?run.lockedScore:run.score;setView(v=>({...v,score,c
     // 従来どおりそのままリザルトへ進む(演出だけの分岐で、判定・保存には関わらない)。
     const celebrateTitle=achievements.allMarvelous?'ALL MARVELOUS!!':achievements.allExcellent?'ALL EXCELLENT!!':achievements.fullCombo?'FULL COMBO!':null;
     const showCelebrate=!!celebrateTitle&&!failed&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL';
-    setView(v=>({...v,status:showCelebrate?'celebrate':'result',score,combo:run.combo,maxCombo:run.maxCombo,counts:{...run.counts},fast:run.fast,slow:run.slow,result:{...result,isNewRecord,bestScore:merged.bestScore}}));
+    setView(v=>({...v,status:showCelebrate?'celebrate':'result',score,combo:run.combo,maxCombo:run.maxCombo,counts:{...run.counts},fast:run.fast,slow:run.slow,result:{...result,isNewRecord,bestScore:merged.bestScore,eventPointAward}}));
+    if(eventPointAward&&eventPointAward.amount>0&&typeof addRhythmEventPoints==='function')void addRhythmEventPoints(eventPointAward.amount);
     onComplete(result,merged);
-  },[chart.totalNotes,difficulty.maxScore,onComplete,settings.effectAmount,settings.lightweightMode,stopFrame,tutorial,calibrating]);
+  },[chart.totalNotes,difficulty.maxScore,onComplete,settings.effectAmount,settings.lightweightMode,stopFrame,tutorial,calibrating,debugPlay,song.songId]);
   // celebrate画面: 出た瞬間に合成SEを1回鳴らし、既定の時間で自動的にresultへ進む。
   // 依存はview.statusだけにしてある。もしview.comboなど毎ノーツ変わる値を依存に入れると、
   // (かつてコンボ演出で実際に踏んだ通り)途中でeffectが再実行されるたびcleanupが走り、
@@ -14125,7 +14725,7 @@ scheduleTick();};
     曲を終えたとき(不可逆のDOWN)だけ。入る周回数(=経験値)も半分になる。
     ★古い result(cleared を持たない)はクリア扱いにする。 */}
 {(()=>{const failed=result.cleared===false;return <div data-rhythm-result-clear data-cleared={failed?'false':'true'} className="mx-auto mt-3 w-full max-w-xs rounded-2xl border-2 px-3 py-2 text-center"><b className="block text-4xl font-black leading-none">{failed?'FAILED':'CLEAR'}</b><small className="mt-1.5 block text-[10px] font-black leading-relaxed">{failed?'ライフが0になったまま曲が終わりました（DOWN）':'ライフを残して最後まで演奏しました'}</small></div>;})()}
-<div data-rhythm-result-rank data-rank-tier={String(rankTier)} className={`relative mx-auto mt-2 flex h-20 w-20 items-center justify-center rounded-full border-4 border-current text-4xl font-black ${RHYTHM_RANK_COLORS[rank]}`}>{rank}</div><div className="my-3 text-center text-3xl font-black">{view.score.toLocaleString()}</div><p className="text-center text-sm">BEST SCORE {result.bestScore.toLocaleString()}</p>{result.isNewRecord&&<p data-rhythm-new-record className="text-center text-xl font-black text-amber-300">NEW RECORD</p>}{/* 達成をひと目で分かるように、いちばん上の称号だけを大きく出す(2026-09-03)。
+<div data-rhythm-result-rank data-rank-tier={String(rankTier)} className={`relative mx-auto mt-2 flex h-20 w-20 items-center justify-center rounded-full border-4 border-current text-4xl font-black ${RHYTHM_RANK_COLORS[rank]}`}>{rank}</div><div className="my-3 text-center text-3xl font-black">{view.score.toLocaleString()}</div><p className="text-center text-sm">BEST SCORE {result.bestScore.toLocaleString()}</p>{result.isNewRecord&&<p data-rhythm-new-record className="text-center text-xl font-black text-amber-300">NEW RECORD</p>}{result.eventPointAward&&result.eventPointAward.amount>0&&<div data-rhythm-result-beat-points className="mx-auto my-3 max-w-xs rounded-2xl border border-violet-400/50 bg-violet-950/35 px-3 py-2 text-center"><small className="block text-[10px] font-black tracking-wider text-violet-200">🎟️ ビートP獲得</small><b className="mt-0.5 block text-2xl font-black text-white">+{result.eventPointAward.amount.toLocaleString()}P</b>{result.eventPointAward.target&&<span className="mt-1 block text-[9px] font-black text-amber-200">イベント対象曲 1.5倍</span>}</div>}{/* 達成をひと目で分かるように、いちばん上の称号だけを大きく出す(2026-09-03)。
     ALL MARVELOUS > ALL EXCELLENT > FULL COMBO の順に上位。残りは下に小さく並べる。 */}
 {(result.fullCombo||result.allExcellent||result.allMarvelous)&&<div data-rhythm-result-celebrate className="my-3 text-center">
   <b className="block text-3xl font-black leading-tight">{result.allMarvelous?'ALL MARVELOUS!!':result.allExcellent?'ALL EXCELLENT!!':'FULL COMBO!'}</b>
@@ -14693,11 +15293,15 @@ function ItemInventoryScreen({ ownedItems, onBack, onUseItem }) {
 function BreederMarketScreen({
   gold, breederPoints, ownedItems, marketTab, marketExchangeError, purchaseProcessing,
   isItemOwned, onBack, onSelectTab, onZoomIcon, onBuy, onOpenDetail, onOpenItemDetail, onExchangeSoulRankRespec,
-  onExchangeHeroProof,
+  onExchangeHeroProof, eventPoints=0, onExchangeEventPoints,
 }) {
   // 2026-09-14・マーケットのタブ乱立を避けるため、最初に用途別の入口を選ぶ。
   // 入口だけこの画面のローカル状態で持ち、購入・交換・商品タブの既存stateは親側をそのまま使う。
   const [marketSection,setMarketSection]=useState(null);
+  const [eventQuantityOffer,setEventQuantityOffer]=useState(null);
+  const [eventQuantity,setEventQuantity]=useState(1);
+  const [eventExchangePending,setEventExchangePending]=useState(false);
+  const safeEventPoints=normalizeRhythmEventPoints(eventPoints);
   const psycheHave = ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID);
   const shardHave = ownedItemCount(ownedItems, HERO_PROOF_SHARD_ITEM_ID);
   const proofHave = ownedItemCount(ownedItems, HERO_PROOF_ITEM_ID);
@@ -14716,7 +15320,7 @@ function BreederMarketScreen({
     diamond:{label:'ダイヤショップ',emoji:'💎'},
     breeder:{label:'ブリーダーP交換所',emoji:'🪙'},
     exchange:{label:'アイテム交換所',emoji:'🔄'},
-    event:{label:'イベントP交換所',emoji:'🎟️'},
+    event:{label:'ビートP交換所',emoji:'🎟️'},
   };
 
   const renderMarketItem=(item,{showBase=true,showHeroProofExchange=false}={})=>{
@@ -14769,7 +15373,7 @@ function BreederMarketScreen({
             {key:'diamond',emoji:'💎',label:'ダイヤショップ',value:gold.toLocaleString(),hint:'ダイヤで購入',border:'border-cyan-400/35',title:'text-cyan-200',arrow:'text-cyan-300/80'},
             {key:'breeder',emoji:'🪙',label:'ブリーダーP交換所',titleLines:['ブリーダーP','交換所'],value:breederPoints.toLocaleString(),hint:'Lv.UPで獲得',border:'border-amber-400/35',title:'text-amber-200',arrow:'text-amber-300/80'},
             {key:'exchange',emoji:'🔄',label:'アイテム交換所',value:null,hint:'プシュケー・証など',border:'border-emerald-400/35',title:'text-emerald-200',arrow:'text-emerald-300/80'},
-            {key:'event',emoji:'🎟️',label:'イベントP交換所',titleLines:['イベントP','交換所'],value:null,hint:'準備中',border:'border-violet-400/20',title:'text-violet-300/70',arrow:'text-violet-400/40'},
+            {key:'event',emoji:'🎟️',label:'ビートP交換所',titleLines:['ビートP','交換所'],value:safeEventPoints.toLocaleString(),hint:'所持ビートP',border:'border-violet-400/35',title:'text-violet-200',arrow:'text-violet-300/80'},
           ].map(section=>(
             <button
               key={section.key}
@@ -14849,13 +15453,66 @@ function BreederMarketScreen({
         </div>
       </>}
 
-      {marketSection==='event'&&<div className="flex-1 min-h-0 flex items-center justify-center">
-        <div className="w-full max-w-sm rounded-2xl border border-slate-700 bg-slate-950/70 px-4 py-8 text-center">
-          <div className="text-3xl mb-2" aria-hidden="true">🎟️</div>
-          <div className="text-sm font-black text-slate-300">イベントP交換所は準備中です</div>
-          <div className="mt-2 text-[10px] font-bold leading-relaxed text-slate-500">イベントP機能と商品ラインナップは今後追加します。</div>
+      {marketSection==='event'&&<>
+        <div data-event-point-balance className="mb-3 shrink-0 flex items-center justify-center gap-2 rounded-2xl border border-violet-500/30 bg-violet-950/30 py-2">
+          <span aria-hidden="true">🎟️</span>
+          <span className="font-mono text-base font-black text-violet-100">{safeEventPoints.toLocaleString()}</span>
+          <span className="text-[9px] font-bold text-slate-400">所持ビートP</span>
         </div>
-      </div>}
+        {marketExchangeError&&<div className="mb-2 shrink-0 rounded-xl border border-red-500/40 bg-red-950/30 px-3 py-2 text-center text-[9px] font-black text-red-300">{marketExchangeError}</div>}
+        <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
+          <div data-event-point-shop className="grid grid-cols-2 gap-2 pb-4">
+            {RHYTHM_EVENT_POINT_SHOP_OFFERS.map(offer=>{
+              const maxQuantity=Math.floor(safeEventPoints/offer.cost);
+              return <div key={offer.id} data-event-point-offer={offer.id} className="rounded-2xl border border-violet-500/20 bg-slate-950/80 p-3 flex flex-col min-h-[124px]">
+                <div className="flex items-start gap-2">
+                  <span aria-hidden="true" className="text-xl shrink-0">{offer.emoji}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[11px] leading-tight font-black text-slate-100">{offer.name}</div>
+                    <div className="mt-1 text-[9px] font-bold text-slate-500">1回：{offer.grantAmount.toLocaleString()}{offer.unit}</div>
+                  </div>
+                </div>
+                <div className="mt-auto pt-2 flex items-end justify-between gap-2">
+                  <div className="font-mono text-sm font-black text-violet-300">{offer.cost.toLocaleString()}P</div>
+                  <button type="button" disabled={maxQuantity<=0||eventExchangePending||purchaseProcessing} onClick={()=>{setEventQuantityOffer(offer);setEventQuantity(1);}} className="min-h-[36px] rounded-xl bg-violet-500 px-3 text-[10px] font-black text-white active:scale-95 disabled:bg-slate-800 disabled:text-slate-500">交換</button>
+                </div>
+              </div>;
+            })}
+          </div>
+        </div>
+      </>}
+
+      {eventQuantityOffer&&(()=>{
+        const maxQuantity=Math.floor(safeEventPoints/eventQuantityOffer.cost);
+        const quantity=Math.max(1,Math.min(Math.max(1,maxQuantity),Math.floor(Number(eventQuantity)||1)));
+        const totalCost=eventQuantityOffer.cost*quantity;
+        const totalGrant=eventQuantityOffer.grantAmount*quantity;
+        const changeQuantity=(delta)=>setEventQuantity(Math.max(1,Math.min(Math.max(1,maxQuantity),quantity+delta)));
+        const canExchange=maxQuantity>0&&!eventExchangePending&&!purchaseProcessing;
+        return <div className="fixed inset-0 z-[42000] flex items-center justify-center bg-black/90 p-4" role="dialog" aria-modal="true" aria-label="ビートP交換数を選ぶ">
+          <div className="w-full max-w-sm rounded-3xl border-2 border-violet-500 bg-slate-950 p-5 shadow-2xl">
+            <div className="flex items-center gap-2"><span className="text-3xl" aria-hidden="true">{eventQuantityOffer.emoji}</span><div><div className="text-base font-black text-violet-200">{eventQuantityOffer.name}</div><div className="text-[10px] font-bold text-slate-500">1回 {eventQuantityOffer.grantAmount.toLocaleString()}{eventQuantityOffer.unit} ／ {eventQuantityOffer.cost.toLocaleString()}P</div></div></div>
+            <div className="mt-4 grid grid-cols-[1fr_1fr_1.4fr_1fr_1fr] items-center gap-1.5">
+              <button disabled={quantity<=1} onClick={()=>changeQuantity(-10)} className="min-h-[44px] rounded-xl bg-slate-800 font-black disabled:opacity-30">-10</button>
+              <button disabled={quantity<=1} onClick={()=>changeQuantity(-1)} className="min-h-[44px] rounded-xl bg-slate-800 font-black disabled:opacity-30">-1</button>
+              <strong className="text-center text-xl font-black font-mono">{quantity}</strong>
+              <button disabled={quantity>=maxQuantity} onClick={()=>changeQuantity(1)} className="min-h-[44px] rounded-xl bg-slate-800 font-black disabled:opacity-30">+1</button>
+              <button disabled={quantity>=maxQuantity} onClick={()=>changeQuantity(10)} className="min-h-[44px] rounded-xl bg-slate-800 font-black disabled:opacity-30">+10</button>
+            </div>
+            <button disabled={maxQuantity<=0} onClick={()=>setEventQuantity(Math.max(1,maxQuantity))} className="mt-2 min-h-[44px] w-full rounded-xl bg-violet-900 font-black disabled:opacity-30">MAX（{Math.max(0,maxQuantity).toLocaleString()}回）</button>
+            <div className="mt-3 space-y-1.5 rounded-2xl border border-white/10 bg-black/30 p-3 text-[12px] font-black">
+              <div className="flex justify-between"><span className="text-slate-400">受け取り</span><span>{totalGrant.toLocaleString()}{eventQuantityOffer.unit}</span></div>
+              <div className="flex justify-between text-base"><span className="text-slate-300">合計</span><span className="text-violet-300">{totalCost.toLocaleString()}P</span></div>
+              <div className="flex justify-between"><span className="text-slate-400">交換後</span><span className="text-violet-200">残り{Math.max(0,safeEventPoints-totalCost).toLocaleString()}P</span></div>
+            </div>
+            {marketExchangeError&&<p className="mt-2 text-center text-[11px] font-black text-red-300">{marketExchangeError}</p>}
+            <div className="mt-3 grid grid-cols-1 gap-2">
+              <button disabled={!canExchange} onClick={async()=>{if(!onExchangeEventPoints)return;setEventExchangePending(true);try{const result=await onExchangeEventPoints(eventQuantityOffer,quantity);if(result?.ok)setEventQuantityOffer(null);}finally{setEventExchangePending(false);}}} className="min-h-[48px] rounded-2xl bg-violet-500 text-white font-black active:scale-[.98] disabled:bg-slate-800 disabled:text-slate-500">交換する</button>
+              <button disabled={eventExchangePending} onClick={()=>setEventQuantityOffer(null)} className="min-h-[48px] rounded-2xl border border-white/20 bg-slate-900 font-black active:scale-[.98] disabled:opacity-40">キャンセル</button>
+            </div>
+          </div>
+        </div>;
+      })()}
     </div>
   );
 }
@@ -14881,8 +15538,8 @@ function ProfileScreen({
   breederIcon, breederLevel, breederName, breederPoints, extremeBestScores, extremeClearCounts,
   finishOnboarding, gold, highScores, isEventReplayUnlocked, modeRecordFor, onboarded,
   onboardingIcon, onboardingName, onboardingPreview, ownedItems, playtimeView, proHighScores,
-  profileBattleMode, quickHighestWaves, resolveIconUrl, selectedAssistantId, speciesChallengeProgress,
-  onBack, onOpenNameEdit, onOpenIconPicker, onOpenItems, onOpenCallStylePicker, onOpenAssistantPicker,
+  profileBattleMode, profileFrameId, ownedProfileFrames, quickHighestWaves, resolveIconUrl, selectedAssistantId, speciesChallengeProgress,
+  onBack, onOpenNameEdit, onOpenIconPicker, onOpenFramePicker, onOpenItems, onOpenCallStylePicker, onOpenAssistantPicker,
   onSelectBattleMode, onOpenEventReplayList, onOpenSpeciesRecords,
   rhythmHistoryCount, onOpenRhythmHistory,
 }) {
@@ -14919,9 +15576,19 @@ function ProfileScreen({
           </div>);
         })()}
         <div className="shrink-0 bg-slate-900/80 border border-white/10 rounded-3xl p-5 flex flex-col items-center gap-3 mb-4">
-          <button onClick={onOpenIconPicker} className="relative w-20 h-20 rounded-full bg-slate-800 border-2 border-indigo-400/50 flex items-center justify-center overflow-hidden active:scale-95">
-            {resolveIconUrl(breederIcon)?(<BreederIcon src={resolveIconUrl(breederIcon)} id={breederIcon} alt="icon" className="w-full h-full"/>):(<User size={36} className="text-indigo-400"/>)}
-            <div className="absolute bottom-0 inset-x-0 bg-black/60 py-0.5 flex items-center justify-center"><Edit3 size={9} className="text-white"/></div>
+          {/* アイコン(下層)とプロフィールフレーム(上層)。フレームは円の外へ出るので、
+              ここでは overflow-hidden を掛けない(内側のクリップは ProfileAvatar が持つ)。
+              フレームを選んでいるときだけ、もとから付いている紫の縁を消して二重に見せない */}
+          <button onClick={onOpenIconPicker} aria-label="ブリーダーアイコンを変える" className={`relative w-20 h-20 rounded-full bg-slate-800 border-2 flex items-center justify-center active:scale-95 ${hasProfileFrame(profileFrameId)?'border-transparent':'border-indigo-400/50'}`}>
+            <ProfileAvatar src={resolveIconUrl(breederIcon)} id={breederIcon} frameId={profileFrameId} alt="icon" className="w-full h-full"
+              fallback={<User size={36} className="text-indigo-400"/>}
+              badge={<span className="absolute bottom-0 inset-x-0 bg-black/60 py-0.5 flex items-center justify-center"><Edit3 size={9} className="text-white"/></span>}/>
+          </button>
+          {/* アイコンとは独立した設定。ここを変えてもアイコンは変わらない */}
+          <button onClick={onOpenFramePicker} className="flex items-center gap-2 bg-slate-800 border border-slate-700 px-3 py-1.5 rounded-xl active:scale-95 group">
+            <Sparkles size={12} className="text-amber-300"/>
+            <span className="text-[10px] font-black text-slate-200">フレーム：{(profileFrameById(normalizeProfileFrameId(profileFrameId))||{}).name||'フレームなし'}</span>
+            <Edit3 size={11} className="text-slate-500 group-hover:text-white"/>
           </button>
           <button onClick={()=>onOpenNameEdit(breederName)} className="flex items-center gap-2 bg-slate-800 border border-slate-700 px-4 py-2 rounded-xl active:scale-95 group">
             <span className="font-black text-base text-white">{breederName}</span><Edit3 size={13} className="text-slate-500 group-hover:text-white"/>
@@ -14988,6 +15655,25 @@ function ProfileScreen({
               </div>
               <div className="h-1.5 mt-2 rounded-full bg-black/50 overflow-hidden"><i className="block h-full rounded-full" style={{width:`${width}%`,background:`linear-gradient(90deg,${accent},#fbbf24)`}}/></div>
               <div className="text-[8px] text-slate-400 font-bold mt-1 text-right">{next?`次のLv.${next.level}まで あと${next.remain}`:'いちばん仲良し！'}</div>
+              {/* 次にもらえる飾り枠(2026-09-16)。貯める理由がその場で見えるように、
+                  仲良し度の下へ1行だけ出す。全部もらっていれば出さない */}
+              {(()=>{
+                const nextFrame=(typeof nextProfileFrameForAssistant==='function')
+                  ? nextProfileFrameForAssistant(selectedAssistantId,assistantBondLevelNow,ownedProfileFrames) : null;
+                if(!nextFrame) return null;
+                const unlock=profileFrameUnlock(nextFrame);
+                return (
+                  <button type="button" data-assistant-next-frame={nextFrame.id} onClick={onOpenFramePicker}
+                    className="mt-2 w-full flex items-center gap-2 rounded-xl border border-amber-500/40 bg-amber-950/25 px-2 py-1.5 active:scale-95">
+                    <ProfileAvatar src={resolveIconUrl(breederIcon)} id={breederIcon} frameId={nextFrame.id} alt={nextFrame.name} className="w-8 h-8 shrink-0" fallback={null}/>
+                    <span className="flex-1 min-w-0 text-left">
+                      <span className="block text-[8px] font-black text-amber-400 leading-tight">Lv.{unlock.bondLevel}でもらえる飾り枠</span>
+                      <span className="block text-[10px] font-black text-white leading-tight truncate">{nextFrame.name}</span>
+                    </span>
+                    <ChevronRight size={12} className="shrink-0 text-amber-400"/>
+                  </button>
+                );
+              })()}
               {/* 助手の切り替え。もう片方の仲良し度Lvもここで確認できる */}
               {ASSISTANT_LIST.length>1&&(
                 <div className="mt-2.5 pt-2.5 border-t border-white/10">
@@ -15414,6 +16100,9 @@ function RhythmSongSelectScreen({
       const eventSongTitles=rhythmEventNotice
         ?rhythmEventNotice.songIds.map(songId=>rhythmSongFullName(rhythmEventSong(songId,RHYTHM_SONGS))||songId)
         :[];
+      // ビートP交換所は常設だが、獲得案内は期間限定イベント開催中だけ出す。
+      const beatPointEvent=RELEASE_FLAGS.rhythmEventPoints===true?rhythmLimitedEventAt(Date.now()):null;
+      const beatPointTargetSong=!!beatPointEvent&&Array.isArray(beatPointEvent.songIds)&&beatPointEvent.songIds.includes(rhythmSelectedSongId);
       // ===== クイック∞周回の進捗(docs/spec/QUICK_RHYTHM_LINK.md PR6) =====
       // 1行の帯は、縦持ちならヘッダーの下、横持ちならヘッダーの空きへ入れる。
       // 横は上のタブに余白があるので、そこを使えば曲の一覧を押し下げずに済む
@@ -15592,6 +16281,7 @@ function RhythmSongSelectScreen({
             <button type="button" data-rhythm-event-notice-close onClick={dismissRhythmEventNotice} aria-label="この案内を閉じる" className="min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black">×</button>
           </div>
         </div>}
+        {beatPointEvent&&<div data-rhythm-beat-point-active data-target-song={beatPointTargetSong?'true':'false'} className="shrink-0 border-b border-violet-400/20 bg-violet-950/25 px-3 py-1 text-center text-[10px] font-black text-violet-100">🎟️ ビートP獲得期間中{beatPointTargetSong?'・選択中のイベント対象曲は1.5倍':'・公開曲なら獲得できます'}</div>}
         {/* 裏で周回したままモンビーを開いた最初の1回だけ(PR8) */}
         {quickRhythmBackgroundVisible&&<div data-quick-rhythm-background className="shrink-0 border-b border-fuchsia-400/20 bg-slate-950/90 px-2 py-1">
           <div className="flex items-start gap-1">
@@ -18639,7 +19329,7 @@ function HomeScreen({
   assistantBondUp, breederIcon, breederLevel, breederName, breederPoints, gifts, gold,
   hasUnreadChangelog, homeBackgroundReady, homePastureMasumons, masuMons, missions,
   onOpenBattle, onOpenManagement, onOpenMarket, onOpenProfile, onOpenRhythm, onOpenSettings,
-  onOpenTemple, openChangelog, openGiftBox, openMissions, resolveIconUrl, spotClass,
+  onOpenTemple, openChangelog, openGiftBox, openMissions, profileFrameId, resolveIconUrl, spotClass,
 }) {
   // ★バッジのCSSは <head> へ1回だけ入れる。HOMEのDOMへ <style> を混ぜると、
   //   配置の検査(home-layout-check.js)が施設の位置を測るときに数がずれる。
@@ -18666,7 +19356,7 @@ function HomeScreen({
         {/* 設定を光らせるときは、上の帯ごと暗幕より前に出す(帯が z-index を持っていて中だけ前に出せないため) */}
         <header className={`mh-home-status${spotClass('settings')}`}>
           <button type="button" className="mh-home-player" onClick={onOpenProfile} aria-label="プロフィールを開く">
-            <HomeProfileIcon src={resolveIconUrl(breederIcon)} id={breederIcon}/>
+            <HomeProfileIcon src={resolveIconUrl(breederIcon)} id={breederIcon} frameId={profileFrameId}/>
             <div className="mh-home-player-copy"><strong>{breederName}</strong><span>ブリーダー Lv.{breederLevel.level}</span><div className="mh-home-xp"><i style={{width:`${Math.min(100,(breederLevel.xpIntoLevel/breederLevel.xpForNext)*100)}%`}}></i></div><small>{breederLevel.xpIntoLevel.toLocaleString()} / {breederLevel.xpForNext.toLocaleString()} XP</small></div>
             <ChevronRight className="mh-home-profile-arrow" size={15}/>
           </button>
@@ -20180,6 +20870,8 @@ function MonsterHeroGame() {
   const dailyMasuAdviceCheckedRef = useRef(false);
   // マーケットのアイテムの効果説明。カードを小さくしたぶん、詳細ボタンから出す
   const [marketItemDetail, setMarketItemDetail] = useState(null);
+  // ビートPは交換所を開くたび保存値から読み直し、交換成功時だけstateも更新する。
+  const [rhythmEventPoints, setRhythmEventPoints] = useState(0);
   // 虹の超越の実だけは、価格タップ後に数量と購入後残高を確認してから一括購入する。
   const [marketQuantityItem, setMarketQuantityItem] = useState(null);
   const [marketPurchaseQuantity, setMarketPurchaseQuantity] = useState(1);
@@ -21126,6 +21818,95 @@ function MonsterHeroGame() {
   const [waveHistory, setWaveHistory] = useState([]); // 今回のプレイでWAVEをクリアするたびに記録するスコア・経験値ログ(最終リザルト画面表示用)
   const [breederIcon, setBreederIcon] = useState(null); // 選択中アイコンのモンスターid、またはマーケットで購入したアイコンid(未選択はnull)
   const [showIconPicker, setShowIconPicker] = useState(false);
+  // プロフィールフレーム(2026-09-15)。ブリーダーアイコンとは**別の設定**として持つ。
+  // 既存の mh_breeder_icon には一切触らず、新しいキー mh_profile_frame_v1 だけを足す(CLAUDE.md ⑦)。
+  // 値が無い・壊れている・知らないid・未公開のidは、読み込み時に必ず 'none' へ倒れる
+  const [profileFrameId, setProfileFrameId] = useState(PROFILE_FRAME_NONE_ID);
+  const [showFramePicker, setShowFramePicker] = useState(false);
+  // 鍵つきの枠を押したとき、その条件を出すためのid(押していなければ null)
+  const [frameLockedInfo, setFrameLockedInfo] = useState(null);
+  // もらった飾り枠(2026-09-16)。助手との仲良し度が Lv2/5/7 になると1枚ずつ増える。
+  // ★保存キーは新設のみ。既存の mh_* には一切触らない(CLAUDE.md ⑦)
+  // ★一度もらったら外さない。助手を切り替えても、条件を変えても残す
+  const [ownedProfileFrames, setOwnedProfileFrames] = useState([]);
+  const ownedProfileFramesRef = useRef([]);
+  // 「新しくもらったよ」と助手が知らせ終えた枠のid。
+  // ★もらうたびに知らせたいので、既読は1回きりの id ではなく**枠ごと**に覚える
+  //   (1つのidだけで既読にすると、2枚目以降が永久に知らされない)
+  const PROFILE_FRAME_NOTICE_KEY = 'mh_profile_frame_notice_v1';
+  const [profileFrameNoticed, setProfileFrameNoticed] = useState([]);
+  // 条件を満たしたぶんを配る。増えた枠のidを返す(何ももらえないときは空)
+  const grantProfileFrames = useCallback((assistantId, bondLevel) => {
+    const earned = profileFramesEarnedAt(assistantId, bondLevel, ownedProfileFramesRef.current);
+    if (!earned.length) return [];
+    const next = normalizeOwnedProfileFrames([...ownedProfileFramesRef.current, ...earned]);
+    ownedProfileFramesRef.current = next;
+    setOwnedProfileFrames(next);
+    // 「見るだけ」のプレビュー中は storeSet 側が書き込みを止めるので、ここでは気にしない
+    Promise.resolve(storeSet(PROFILE_FRAME_OWNED_KEY, next, false)).catch(error => {
+      console.error('[profile-frame] owned save failed:', error && error.message ? error.message : error);
+    });
+    return earned;
+  }, []);
+  // ランキングに出す「いまの見た目」を上書きする(2026-09-16)。
+  //
+  // ランキングは1プレイ=1行で、その瞬間の名前・アイコン・フレームを記録へ写している。
+  // あとから見た目を変えても過去の行は古いままなので、表示に使う見た目だけを
+  // 1人1行の表(breeder_profiles)へ持たせ、そこを見て描く。
+  // ★記録そのものは書き換えない。順位・スコア・集計にも一切関わらない。
+  // ★見た目を変えたその場で送るので、遊ばなくてもランキングの見え方が変わる。
+  //   失敗しても進行は止めない(次に変えたときか、次に遊んだときに送り直される)。
+  // ★「見るだけ」のプレビュー中(onboardingPreview)は送らない。本物の見た目を書き換えないため
+  const publishBreederProfile = useCallback(async (overrides = {}) => {
+    if (onboardingPreview) return;
+    try {
+      const breederId = await ensureBreederId();
+      if (!breederId) return;   // IDが作れない端末では何もしない(記録の値で今までどおり出る)
+      await sbUpsertBreederProfile({
+        breederId,
+        userName: overrides.userName ?? breederName,
+        icon: overrides.icon !== undefined ? overrides.icon : breederIcon,
+        profileFrame: overrides.profileFrame ?? profileFrameId,
+      });
+    } catch (error) {
+      console.error('[breeder-profile] publish failed:', error && error.message ? error.message : error);
+    }
+  }, [onboardingPreview, breederName, breederIcon, profileFrameId]);
+
+  // 選んだその場で画面へ反映し、同時に保存する。保存できなくても表示だけは変わる。
+  // ランキングへの反映は下の「いまの見た目を登録する」effectが受け持つので、ここでは送らない
+  const selectProfileFrame = useCallback((id) => {
+    const next = normalizeProfileFrameId(id);
+    // まだもらっていない枠は選べない(押しても何も起きない)。鍵の説明は画面側が出す
+    if (!profileFrameOwned(next, ownedProfileFramesRef.current)) return;
+    setProfileFrameId(next);
+    Promise.resolve(storeSet(PROFILE_FRAME_KEY, next, false)).catch(error => {
+      console.error('[profile-frame] save failed:', error && error.message ? error.message : error);
+    });
+  }, []);
+
+  // ===== ランキングに出す「いまの見た目」を登録する(2026-09-16) =====
+  //
+  // ★送るきっかけを決めるのはここ1か所だけ。ボタンごとに書かない。
+  //
+  // 最初は「名前・アイコン・フレームを変えたとき」と「記録を送ったあと」だけで送っていた。
+  // ところがそれだと、**一度も変えていない人の行がいつまでも登録されない**。
+  // 登録が無い人は引き当てようが無いので、ランキングはその人の行を
+  // 「記録に写した当時の見た目」で出し続ける。画面によって枠が出たり出なかったりして見えるのは
+  // (2026-09-16・ユーザー指摘「フレームが反映されてる画面とされてない画面がある」)、
+  // 記録ごとに写っている値が違うためで、引き当てが効いていないときの症状そのものだった。
+  //
+  // そこで「起動してセーブデータを読み終えた時点」でも1回送る。値が変わったときも同じ道を通る。
+  // 同じ値を何度も送らないよう、最後に送った内容を覚えておく(upsertなので送っても害は無いが、
+  // 通信を無駄にしない)。失敗しても進行は止めない。
+  const lastPublishedProfileRef = useRef('');
+  useEffect(() => {
+    if (!dataLoaded || !onboarded || onboardingPreview) return;
+    const signature = `${breederName || ''}\u0000${breederIcon || ''}\u0000${normalizeProfileFrameId(profileFrameId)}`;
+    if (lastPublishedProfileRef.current === signature) return;
+    lastPublishedProfileRef.current = signature;
+    publishBreederProfile();
+  }, [dataLoaded, onboarded, onboardingPreview, breederName, breederIcon, profileFrameId, publishBreederProfile]);
   // 呼び方の上書き(絆Lv6から自由入力)。助手ごとに分けて持つので、みゅあとききで別々に決められる
   const [assistantCallStyles, setAssistantCallStylesState] = useState({});
   const assistantCallStyle = assistantCallStyles[selectedAssistantId] || null;
@@ -22111,6 +22892,9 @@ function MonsterHeroGame() {
       party: [detail], score: Number(result.score) || 0, level: breederLevel.level, icon: breederIcon,
       clear_id: createRunId(),
       ...(breederId ? { breeder_id: breederId } : {}),
+      // プロフィールフレーム(2026-09-15)。フレームなしのときは列ごと付けない
+      // (既存の記録と同じくNULLのままにしておく)。列がまだ無い環境は送信側で吸収する
+      ...(rankingProfileFrameValue(profileFrameId) ? { profile_frame: rankingProfileFrameValue(profileFrameId) } : {}),
     };
     const outcome = await persistRankingScore({
       row, insertScore: sbInsertRhythmScore,
@@ -22124,7 +22908,7 @@ function MonsterHeroGame() {
     });
     if (outcome.error && !outcome.localSaved) console.error('[rhythm-ranking] submit outcome error:', outcome.error?.message || outcome.error);
     else if (outcome.nationalSaved) console.info('[rhythm-ranking] submitted', { difficulty: difficultyKey, score: row.score });
-  }, [breederName, breederLevel, breederIcon]);
+  }, [breederName, breederLevel, breederIcon, profileFrameId]);
 
   // 送れなかった記録を、あとで送り直す(2026-09-13)。
   //
@@ -22221,7 +23005,13 @@ function MonsterHeroGame() {
     // 端末内へ退避した記録は最初から画面用の名前(reachedWave)で持っているため、両方を見る
     // difficulty は「全種族」タブを取得したときだけ選んでいる列(sbFetchRankings)。
     // それ以外の難易度では常に同じ値になり画面側で使わないため、来ていればそのまま運ぶだけにする
-    const toEntry = (r) => ({ userName: r.user_name, hero: r.hero, party: stripPartyImages(r.party), score: r.score, level: r.level, icon: r.icon,
+    // profileFrame は「その人が選んでいる飾り枠」(2026-09-15)。列がまだ無い環境・端末内へ
+    // 退避した古い記録には入っていないので、そのときは normalizeProfileFrameId が 'none' に倒す
+    // 名前・アイコン・フレームは「いま設定しているもの」で出す(2026-09-16)。
+    // 記録に写した値は、その人が見つからなかったときの受け皿として残る
+    const toEntry = (r) => applyLatestBreederProfile({ userName: r.user_name, hero: r.hero, party: stripPartyImages(r.party), score: r.score, level: r.level, icon: r.icon,
+      breederId: (typeof r.breeder_id === 'string' && r.breeder_id) ? r.breeder_id : undefined,
+      profileFrame: normalizeProfileFrameId(r.profile_frame ?? r.profileFrame),
       turns: r.turns ?? undefined, reachedWave: r.reached_wave ?? r.reachedWave ?? undefined, difficulty: r.difficulty ?? undefined });
     // 過去の多重送信はidが異なるため、プレイ内容そのものをキーにして畳む。
     const rowKey = (r) => `v:${r?.user_name}|${r?.score}|${r?.level}|${r?.hero}|${JSON.stringify(r?.party || null)}|${r?.icon || ''}`;
@@ -23871,6 +24661,8 @@ function MonsterHeroGame() {
       setBreederName(savedName);
       const savedIcon = await storeGet('mh_breeder_icon', null, false);
       setBreederIcon(savedIcon);
+      // プロフィールフレーム。既存のセーブデータには無いキーなので、既定値は必ず「フレームなし」
+      setProfileFrameId(normalizeProfileFrameId(await storeGet(PROFILE_FRAME_KEY, PROFILE_FRAME_NONE_ID, false)));
       // 呼び方の上書きは助手ごとに別のキーへ。みゅあのぶんは今までのキーをそのまま読む
       const loadedCallStyles = {};
       for (const who of ASSISTANT_LIST) {
@@ -24134,6 +24926,21 @@ function MonsterHeroGame() {
       loadedBonds[activeAssistant] = bondLogin.state;
       assistantBondsRef.current = loadedBonds;
       setAssistantBonds(loadedBonds);
+      // もらった飾り枠を読む。★この更新より前から仲良し度が高い人にも、その場で配る
+      //   (あとから条件を足したので、追いつかせないと「Lv10なのに1枚も無い」になる)
+      const loadedFrames = normalizeOwnedProfileFrames(await storeGet(PROFILE_FRAME_OWNED_KEY, [], false));
+      let catchUp = loadedFrames;
+      for (const who of ASSISTANT_LIST) {
+        const level = assistantBondLevelOf(normalizeAssistantBond(loadedBonds[who.id]).points);
+        const earned = profileFramesEarnedAt(who.id, level, catchUp);
+        if (earned.length) catchUp = normalizeOwnedProfileFrames([...catchUp, ...earned]);
+      }
+      ownedProfileFramesRef.current = catchUp;
+      setOwnedProfileFrames(catchUp);
+      setProfileFrameNoticed(normalizeOwnedProfileFrames(await storeGet(PROFILE_FRAME_NOTICE_KEY, [], false)));
+      if (catchUp.length !== loadedFrames.length) {
+        try { await storeSet(PROFILE_FRAME_OWNED_KEY, catchUp, false); } catch {}
+      }
       if (bondLogin.changed) await storeSet(assistantBondKeyFor(activeAssistant), bondLogin.state, false);
       const savedLoginBonus = await storeGet('mh_login_bonus', LOGIN_BONUS_DEFAULT, false);
       const loginGrant = grantLoginBonus(savedLoginBonus, savedGifts);
@@ -24390,15 +25197,24 @@ function MonsterHeroGame() {
     const reachedWave = Number.isFinite(Number(runEndWaveRef.current)) ? Number(runEndWaveRef.current) : null;
     const clearTurns = Number.isFinite(Number(runClearTurnsRef.current)) && Number(runClearTurnsRef.current) > 0
       ? Number(runClearTurnsRef.current) : null;
+    // プロフィールフレーム(2026-09-15)。フレームなしのときは列ごと付けない
+    const profileFrame = rankingProfileFrameValue(profileFrameId);
+    // ブリーダーID(2026-09-16)。これまでバトルの記録には付けていなかったため、
+    // ブリーダーLv・絆Lv・総合力は名前でしか人を見分けられなかった
+    // (ユーザー指摘「名前管理はさすがにだめだろ」)。作れない端末では列ごと付けない。
+    // 順位・スコア・集計には関わらず、「誰の行か」を決めるためだけに使う
+    const breederId = await ensureBreederId();
     const row = { difficulty: diff, user_name: name, hero: heroName, party, score: finalScore, level, icon, clear_id: clearId,
+      ...(breederId ? { breeder_id: breederId } : {}),
       ...(reachedWave != null ? { reached_wave: reachedWave } : {}),
+      ...(profileFrame ? { profile_frame: profileFrame } : {}),
       ...(clearTurns != null ? { turns: clearTurns } : {}) };
     // 絆Lvの正本テーブルへも同じ内容を書く(1人1個体1行で上書き)。
     // 結果画面はスコア送信の完了を待つので、こちらは待たせない(待つと最大8秒ぶん
     // リザルトが遅れる)。書けなくても次の周回で書き直されるし、一覧は記録側の
     // 集計で補われる。テーブルがまだ無い環境ではsbUpsertBondLevels側が気付いて以後スキップする
     try {
-      const bondRows = bondLevelRowsFromParty(name, icon, party);
+      const bondRows = bondLevelRowsFromParty(name, icon, party, profileFrame, breederId);
       if (bondRows.length) {
         Promise.resolve(sbUpsertBondLevels(bondRows)).catch(bondErr => {
           console.error('[ranking] bond_levels upsert failed:', bondErr && bondErr.message ? bondErr.message : bondErr);
@@ -24412,6 +25228,7 @@ function MonsterHeroGame() {
       saveLocal: async (error) => {
         console.error('[ranking] supabase submit failed, falling back to local:', error && error.message ? error.message : error);
         const entry = { userName: name, hero: heroName, party, score: finalScore, diff, level, icon, clearId, at: Date.now(),
+          ...(profileFrame ? { profileFrame } : {}),
           ...(reachedWave != null ? { reachedWave } : {}), ...(clearTurns != null ? { turns: clearTurns } : {}),
           nationalSaved: false, nationalError: { message: error?.message || String(error), status: error?.status || null, code: error?.code || null, body: error?.body || null } };
         const rows = await storeGet(`mh_rank_${diff}`, [], false);
@@ -25099,9 +25916,13 @@ function MonsterHeroGame() {
     setAssistantBonds(prev => ({ ...prev, [id]: result.state }));
     // Lvが上がったら、次にHOMEを開いたときに助手がそのことに触れる。
     // ただし、いま選んでいる助手のときだけ(選んでいない助手のLvアップを本人以外に言わせない)
-    if (id === selectedAssistantIdRef.current && assistantBondLevelOf(result.state.points) > before) setAssistantBondUp(true);
+    const after = assistantBondLevelOf(result.state.points);
+    if (id === selectedAssistantIdRef.current && after > before) setAssistantBondUp(true);
+    // Lvが上がったぶんの飾り枠を配る。選んでいない助手のLvが上がったときも、その助手の枠がもらえる
+    // (アシストカードで本人の仲良し度が増える経路があるため)
+    if (after > before) grantProfileFrames(id, after);
     try { storeSet(assistantBondKeyFor(id), result.state, false); } catch {}
-  }, []);
+  }, [grantProfileFrames]);
   // 行動に応じて助手との仲良し度を増やす。
   // 増えるのは「いま選んでいる助手」のぶんだけ。もう片方の助手の値には触れない
   const addAssistantBond = useCallback((actionKey) => {
@@ -25122,6 +25943,20 @@ function MonsterHeroGame() {
   const assistantBondLevelNow = assistantBondLevelOf(assistantBond.points);
   // いま選んでいる助手そのもの。画面はこれを見て顔・名前・色を出す
   const activeAssistant = assistantById(selectedAssistantId);
+  // まだ助手が知らせていない飾り枠。もらった順に並ぶ
+  const newProfileFrames = ownedProfileFrames
+    .filter(id => !profileFrameNoticed.includes(id)).map(id => profileFrameById(id)).filter(Boolean);
+  // 知らせる助手の名前。全部同じ助手のものならその名前、混ざっていたら助手名は出さない
+  const newProfileFrameAssistantName = (() => {
+    const ids = [...new Set(newProfileFrames.map(frame => (profileFrameUnlock(frame) || {}).assistantId).filter(Boolean))];
+    if (ids.length !== 1) return '';
+    const who = assistantById(ids[0]);
+    return (who && who.name) || '';
+  })();
+  // ★飾り枠の案内だけは、新しくもらったぶんがあるあいだ既読を外して出し直す
+  //   (ほかの案内は1回きりなので、そのまま既読を使う)
+  const assistantUnlockSeenForNotices = newProfileFrames.length > 0
+    ? assistantUnlockSeen.filter(id => id !== PROFILE_FRAME_NOTICE_ID) : assistantUnlockSeen;
   // その画面で出すべき「解放の案内」。無ければ null。
   // 出す条件・本文はすべて data/assistants.js 側が持つので、ここは渡して受け取るだけ
   const assistantUnlockNoticeOf = (scene) => (typeof assistantUnlockNoticeFor === 'function')
@@ -25132,7 +25967,11 @@ function MonsterHeroGame() {
         // 種族チャレンジの解放。一般公開する前は必ず false のままなので、案内も出ない
         speciesChallengeUnlocked: SPECIES_CHALLENGE_PUBLIC_RELEASE && speciesChallengeUnlocked,
         speciesChallengeUnlockText: SPECIES_CHALLENGE_UNLOCK_TEXT,
-      }, assistantUnlockSeen)
+        // まだ知らせていない飾り枠(2026-09-16)。もらうたびに1回ずつ知らせる
+        newProfileFrameCount: newProfileFrames.length,
+        newProfileFrameNames: newProfileFrames.map(frame => frame.name),
+        newProfileFrameAssistantName: newProfileFrameAssistantName,
+      }, assistantUnlockSeenForNotices)
     : null;
   // 読み終わったら既読へ足して保存する。同じ案内は二度と出ない。
   // destination を持つ案内は、閉じたあとその画面へ連れていく
@@ -25149,6 +25988,15 @@ function MonsterHeroGame() {
     setAssistantUnlockPage(0);
     if (!id) return;
     markAssistantUnlockNoticeSeen(id);
+    // 飾り枠の案内は、読み終えた時点で持っている枠を「知らせ済み」にする。
+    // 次に新しい枠が増えたら、また同じ案内が出る
+    if (id === PROFILE_FRAME_NOTICE_ID) {
+      const next = normalizeOwnedProfileFrames(ownedProfileFramesRef.current);
+      setProfileFrameNoticed(next);
+      Promise.resolve(storeSet(PROFILE_FRAME_NOTICE_KEY, next, false)).catch(error => {
+        console.error('[profile-frame] notice save failed:', error && error.message ? error.message : error);
+      });
+    }
     const destinationState = noticeDestinationState(destination);
     if (destinationState) setGameState(destinationState);
   };
@@ -25384,6 +26232,42 @@ function MonsterHeroGame() {
       saveMissionProgress('market');
     } catch {
       setMarketExchangeError('交換を保存できませんでした。勇者の証片は消費していません。');
+    } finally { marketPurchaseProcessingRef.current = false; }
+  };
+
+  // ビートP交換所。残高・ダイヤ・所持アイテムを1取引で保存し、どれか1つでも失敗したら全部戻す。
+  const exchangeRhythmEventPoints = async (offer, quantity=1) => {
+    if (marketPurchaseProcessingRef.current) return { ok:false, reason:'busy' };
+    marketPurchaseProcessingRef.current = true;
+    setMarketExchangeError('');
+    try {
+      const beforePoints = await loadRhythmEventPoints();
+      const beforeGold = Math.max(0, Math.floor(Number(gold) || 0));
+      const beforeItems = ownedItemsRef.current;
+      setRhythmEventPoints(beforePoints);
+      const exchange = rhythmEventPointExchangePreview({ offer, eventPoints:beforePoints, gold:beforeGold, ownedItems:beforeItems, quantity });
+      if (!exchange.ok) {
+        setMarketExchangeError(exchange.reason==='points'?'ビートPが足りません。':'この商品は交換できません。');
+        return exchange;
+      }
+      const saved = await saveStoredValuesOrRollback([
+        { key:RHYTHM_EVENT_POINTS_KEY, before:beforePoints, next:exchange.eventPoints },
+        { key:'mh_gold', before:beforeGold, next:exchange.gold },
+        { key:'mh_owned_items', before:beforeItems, next:exchange.ownedItems },
+      ], storeGet, storeSet);
+      if (!saved) {
+        setMarketExchangeError('交換を保存できませんでした。ビートPと所持品は変更していません。');
+        return { ok:false, reason:'save' };
+      }
+      setRhythmEventPoints(exchange.eventPoints);
+      setGold(exchange.gold);
+      ownedItemsRef.current = exchange.ownedItems;
+      setOwnedItems(exchange.ownedItems);
+      saveMissionProgress('market');
+      return exchange;
+    } catch {
+      setMarketExchangeError('交換を保存できませんでした。ビートPと所持品は変更していません。');
+      return { ok:false, reason:'save' };
     } finally { marketPurchaseProcessingRef.current = false; }
   };
 
@@ -30686,7 +31570,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     </main>{updateNotice}</>
   );
   const rankingPlace = index => <div className={`w-7 h-7 rounded-full flex items-center justify-center font-black text-[9px] shrink-0 ${index===0?'bg-amber-500 text-black':index===1?'bg-slate-300 text-black':index===2?'bg-orange-600 text-white':'bg-slate-800 text-slate-400'}`}>{index+1}</div>;
-  const rankingBreederIcon = entry => resolveIconUrl(entry?.icon)?<BreederIcon src={resolveIconUrl(entry.icon)} id={entry.icon} className="w-8 h-8 shrink-0"/>:<div className="w-8 h-8 rounded-full bg-slate-800 shrink-0 flex items-center justify-center text-xs">👤</div>;
+  // ランキングのブリーダーアイコン。全ランキング画面(スコア・ブリーダーLv・絆Lv・総合力・
+  // モンビー曲別・全曲合算・週間・イベント・履歴)がこの1つを使う。
+  // 他の人が選んでいるプロフィールフレーム(entry.profileFrame)もここで一緒に描く。
+  // フレームを持たない記録・列がまだ無い環境では 'none' になり、これまでと同じ見た目になる
+  const rankingBreederIcon = entry => resolveIconUrl(entry?.icon)
+    ? <ProfileAvatar src={resolveIconUrl(entry.icon)} id={entry.icon} frameId={entry?.profileFrame} className="w-8 h-8 shrink-0"/>
+    : <ProfileAvatar frameId={entry?.profileFrame} className="w-8 h-8 shrink-0" fallback={<span className="flex h-full w-full items-center justify-center rounded-full bg-slate-800 text-xs">👤</span>}/>;
   const rankingCardClass = index => `rounded-xl border ${index===0?'bg-amber-500/10 border-amber-500/50':'bg-slate-900 border-white/5'}`;
   // スコア専用カード。編成表示と勇者モン重複防止はこのカードだけが担当する。
   // showSpecies … 種族チャレンジの「全種族」タブから呼ばれたときだけtrue。
@@ -30959,12 +31849,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             homePastureMasumons={homePastureMasumons} masuMons={masuMons} missions={missions}
             onOpenBattle={()=>{setModeSelectTab('mode');setGameState('BATTLE_MODE_SELECT');}}
             onOpenManagement={()=>{addAssistantBond('management');setManagementTab('monster');setGameState('MB_MANAGEMENT');}}
-            onOpenMarket={()=>{addAssistantBond('market');setGameState('BREEDER_MARKET');}}
+            onOpenMarket={async()=>{addAssistantBond('market');setMarketExchangeError('');setRhythmEventPoints(await loadRhythmEventPoints());setGameState('BREEDER_MARKET');}}
             onOpenProfile={()=>setGameState('PROFILE')}
             onOpenRhythm={RHYTHM_MODE_PUBLIC_RELEASE?openRhythmDemo:()=>setGameState('RHYTHM_INFO')}
             onOpenSettings={()=>setGameState('SETTINGS')}
             onOpenTemple={()=>{addAssistantBond('temple');setGameState('TEMPLE');}}
             openChangelog={openChangelog} openGiftBox={openGiftBox} openMissions={openMissions}
+            profileFrameId={profileFrameId}
             resolveIconUrl={resolveIconUrl} spotClass={spotClass}
           />
         )}
@@ -32447,6 +33338,29 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   通常HOME・通常バトル・マスモン管理には出さない。保存・報酬・ランキングへは触れない */}
               <button data-debug-rpg-battle onClick={()=>{setRpgBattle(null);setGameState('RPG_DEBUG_SETUP');}} className="w-full min-h-[64px] rounded-2xl border-2 border-emerald-400/70 bg-emerald-950/40 text-emerald-100 font-black">⚔️ ダンジョンRPG戦闘テスト<small className="block text-[8px] text-emerald-300">コマンド式ターン制の試作・ベースモンのみ・保存も報酬もありません</small></button>
               <button data-debug-battle-mode onClick={()=>{debugBattleRef.current=true;debugMonsterPreviewRef.current=true;extremeRunRef.current=false;setDebugBattle(true);setExtremeRun(false);setBattleMode(BATTLE_MODE_CHALLENGE);setModeSelectTab('mode');setGameState('BATTLE_MODE_SELECT');}} className="w-full min-h-[64px] rounded-2xl border-2 border-fuchsia-500/70 bg-fuchsia-950/30 text-fuchsia-100 font-black">⚔️ バトルモード<small className="block text-[8px] text-fuchsia-300">種族チャレンジ・極限チャレンジを含む試験用モード選択・結果は保存されません</small></button>
+              {/* プロフィールフレームの見た目確認(2026-09-15)。
+                  未公開(released:false)のものも含めて**表示するだけ**。ここでは保存も付与もしない。
+                  デバッグ専用なので更新履歴・ヘルプには載せない(CLAUDE.md ⑤の但し書き) */}
+              <section data-debug-profile-frames className="rounded-2xl border-2 border-amber-500/60 bg-amber-950/20 p-3">
+                <div className="text-[10px] text-amber-300 font-black mb-2">🖼️ プロフィールフレーム見た目確認（未公開ぶんも表示・保存しません）</div>
+                {/* 豪華フレームはアイコンの外へ大きく出るので、3列にして上下の間を広く取る
+                    (4列だと隣どうし・名前と重なって確認しづらい) */}
+                <div className="grid grid-cols-3 gap-x-3 gap-y-7">
+                  {PROFILE_FRAMES.map(frame=>(
+                    <div key={frame.id} className="flex flex-col items-center gap-2.5">
+                      <span className="mh-profile-avatar w-12 h-12">
+                        <span className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-full">
+                          {resolveIconUrl(breederIcon)?<BreederIcon src={resolveIconUrl(breederIcon)} id={breederIcon} alt="" className="w-full h-full"/>:<User size={22} className="text-indigo-400"/>}
+                        </span>
+                        <ProfileFrameLayer frameId={frame.released?frame.id:null}/>
+                        {!frame.released&&frame.kind==='image'&&<img src={frame.src} alt="" aria-hidden="true" draggable={false} style={profileFrameImageStyle(frame)} className="mh-profile-frame mh-profile-frame-image"/>}
+                        {!frame.released&&frame.kind==='css'&&<span aria-hidden="true" className={`mh-profile-frame mh-profile-frame-ring ${frame.className||''}`}/>}
+                      </span>
+                      <span className="text-[8px] font-black text-slate-300 leading-tight text-center">{frame.name}{frame.released?'':'（未公開）'}</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
               {/* 助手(みゅあ)の確認用。通常のプレイでは出ない画面からだけ開ける */}
               <section className="rounded-2xl border-2 border-pink-500/60 bg-pink-950/30 p-3">
                 <div className="text-[10px] text-pink-300 font-black mb-2">💖 みゅあデバッグ</div>
@@ -32803,6 +33717,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             playtimeView={playtimeView}
             proHighScores={proHighScores}
             profileBattleMode={profileBattleMode}
+            profileFrameId={profileFrameId}
+            ownedProfileFrames={ownedProfileFrames}
             quickHighestWaves={quickHighestWaves}
             resolveIconUrl={resolveIconUrl}
             selectedAssistantId={selectedAssistantId}
@@ -32810,6 +33726,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onBack={returnToHome}
             onOpenNameEdit={(name)=>{setTempName(name);setShowNameEdit(true);}}
             onOpenIconPicker={()=>setShowIconPicker(true)}
+            onOpenFramePicker={()=>setShowFramePicker(true)}
             onOpenItems={()=>setGameState('ITEM_INVENTORY')}
             onOpenCallStylePicker={()=>{setTempCallStyle(assistantCallStyle||'');setShowCallStylePicker(true);}}
             onOpenAssistantPicker={()=>setShowAssistantPicker(true)}
@@ -32839,6 +33756,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onOpenItemDetail={setMarketItemDetail}
             onExchangeSoulRankRespec={exchangeSoulRankRespecByProof}
             onExchangeHeroProof={exchangeHeroProofByShard}
+            eventPoints={rhythmEventPoints}
+            onExchangeEventPoints={exchangeRhythmEventPoints}
           />
         )}
 
@@ -33800,7 +34719,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {showIconPicker&&(
           <div className="fixed inset-0 z-[9000] flex flex-col items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
             <div className="bg-slate-900 border border-indigo-500 rounded-3xl p-6 w-full max-w-xs shadow-2xl">
-              <h3 className="text-lg font-black text-white mb-4 text-center">アイコンを選択</h3>
+              <h3 className="text-lg font-black text-white mb-2 text-center">アイコンを選択</h3>
+              {/* いまの見た目。フレームはここでは変えられない(プロフィールの「フレーム」から変える) */}
+              <div className="flex flex-col items-center gap-1 mb-4">
+                <ProfileAvatar src={resolveIconUrl(breederIcon)} id={breederIcon} frameId={profileFrameId} alt="いまの見た目" className="w-16 h-16" fallback={<User size={28} className="text-indigo-400"/>}/>
+                <span className="text-[9px] font-black text-slate-500">フレーム：{(profileFrameById(normalizeProfileFrameId(profileFrameId))||{}).name||'フレームなし'}</span>
+              </div>
               <div className="grid grid-cols-4 gap-3 mb-4">
                 {breederIconOptions().filter(m=>m.source==='starter').map(m=>(
                   <button key={m.id} onClick={()=>{setBreederIcon(m.id); setOnboardingIcon(m.id); if(!onboardingPreview) storeSet('mh_breeder_icon', m.id, false); setShowIconPicker(false);}} className={`aspect-square rounded-2xl overflow-hidden border-2 active:scale-90 ${breederIcon===m.id?'border-indigo-400 ring-2 ring-indigo-400':'border-slate-700'}`}>
@@ -33819,6 +34743,66 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 </div>
               </>)}
               <button onClick={()=>setShowIconPicker(false)} className="w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">閉じる</button>
+            </div>
+          </div>
+        )}
+
+        {/* プロフィールフレームを選ぶ(2026-09-15)。
+            ・アイコンとは独立した設定。ここではアイコンを変えない
+            ・候補は「いまのブリーダーアイコン＋そのフレーム」を重ねて見せる
+            ・押したその場で反映して保存する(閉じるまで見比べられるよう、モーダルは開いたまま)
+            ・並ぶのは公開済み(released:true)のフレームだけ。未公開の豪華フレームは出ない */}
+        {showFramePicker&&(
+          <div className="fixed inset-0 z-[9000] flex flex-col items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
+            <div className="bg-slate-900 border border-indigo-500 rounded-3xl p-6 w-full max-w-xs shadow-2xl max-h-full overflow-y-auto mh-scroll">
+              <h3 className="text-lg font-black text-white mb-1 text-center">プロフィールフレーム</h3>
+              <p className="text-[9px] text-slate-500 text-center mb-4 leading-tight">アイコンの外側に飾り枠を重ねます。アイコンそのものは変わりません。</p>
+              <div className="flex flex-col items-center gap-1 mb-4">
+                <ProfileAvatar src={resolveIconUrl(breederIcon)} id={breederIcon} frameId={profileFrameId} alt="いまの見た目" className="w-20 h-20" fallback={<User size={36} className="text-indigo-400"/>}/>
+                <span className="text-[9px] font-black text-slate-500">いまの見た目</span>
+              </div>
+              <div className="grid grid-cols-3 gap-3 mb-4">
+                {releasedProfileFrames().map(frame=>{
+                  // まだもらっていない枠も並べる。絵は見せて、鍵と条件だけを重ねる
+                  // (2026-09-16にユーザーが「絵を見せて鍵だけ付ける」を選択)
+                  const owned=profileFrameOwned(frame.id, ownedProfileFrames);
+                  const unlock=profileFrameUnlock(frame);
+                  const who=unlock?assistantById(unlock.assistantId):null;
+                  const selected=normalizeProfileFrameId(profileFrameId)===frame.id;
+                  return (
+                    <button key={frame.id} data-profile-frame-option={frame.id} data-profile-frame-locked={owned?'no':'yes'}
+                      onClick={()=>{ if(owned) selectProfileFrame(frame.id); else setFrameLockedInfo(frame.id); }}
+                      aria-pressed={selected} aria-disabled={!owned}
+                      className={`relative flex flex-col items-center gap-2 rounded-2xl border-2 p-2 active:scale-95 ${selected?'border-indigo-400 bg-indigo-950/50':'border-slate-700 bg-slate-950/40'}`}>
+                      <span className={`relative block ${owned?'':'opacity-45'}`}>
+                        <ProfileAvatar src={resolveIconUrl(breederIcon)} id={breederIcon} frameId={frame.id} alt={frame.name} className="w-12 h-12" fallback={<User size={22} className="text-indigo-400"/>}/>
+                        {!owned&&<Lock size={14} className="absolute inset-0 m-auto text-white drop-shadow-[0_0_3px_rgba(0,0,0,0.9)]"/>}
+                      </span>
+                      <span className={`text-[9px] font-black leading-tight text-center ${owned?'text-slate-200':'text-slate-500'}`}>{frame.name}</span>
+                      {!owned&&unlock&&<span className="text-[8px] font-black leading-tight text-center text-amber-400">{(who&&who.name)||''} Lv{unlock.bondLevel}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+              {/* 鍵を押したときだけ、条件といまの進み具合をその場に出す */}
+              {frameLockedInfo&&(()=>{
+                const frame=profileFrameById(frameLockedInfo); const unlock=frame?profileFrameUnlock(frame):null;
+                if(!frame||!unlock) return null;
+                const who=assistantById(unlock.assistantId);
+                const points=normalizeAssistantBond(assistantBonds[unlock.assistantId]).points;
+                const level=assistantBondLevelOf(points);
+                const needPoints=(assistantBondLevelsOf(unlock.assistantId).find(st=>st.level===unlock.bondLevel)||{}).need;
+                const remain=Number.isFinite(needPoints)?Math.max(0, needPoints-points):null;
+                return (
+                  <div data-profile-frame-locked-info className="mb-3 rounded-2xl border border-amber-500/60 bg-amber-950/30 px-3 py-2">
+                    <p className="text-[10px] font-black text-amber-300 leading-tight text-center">{(who&&who.name)||''}との仲良し度 Lv{unlock.bondLevel} でもらえます</p>
+                    <p className="text-[9px] text-slate-400 leading-tight text-center mt-1">いまは Lv{level}{remain!=null&&remain>0?` ／ あと ${remain}`:''}</p>
+                    <p className="text-[9px] text-slate-500 leading-tight text-center mt-1">{frame.desc||''}</p>
+                  </div>
+                );
+              })()}
+              <p className="text-[9px] text-slate-500 text-center mb-3 leading-tight">{(profileFrameById(normalizeProfileFrameId(profileFrameId))||{}).desc||''}</p>
+              <button onClick={()=>setShowFramePicker(false)} className="w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">閉じる</button>
             </div>
           </div>
         )}
@@ -36366,7 +37350,36 @@ const createAnimationStyle = () => {
     .mh-game-over-screen{padding:calc(24px + env(safe-area-inset-top)) 24px calc(24px + env(safe-area-inset-bottom))}.mh-game-over-head{width:100%}.mh-game-over-actions{padding-bottom:0}
     @media(max-height:620px){.mh-game-over-screen{padding-top:calc(14px + env(safe-area-inset-top));padding-bottom:calc(12px + env(safe-area-inset-bottom))}.mh-game-over-head>svg{width:38px;height:38px;margin-bottom:6px}.mh-game-over-head h2{font-size:20px}.mh-game-over-head>div{padding:10px;margin-top:7px;margin-bottom:7px}.mh-game-over-actions{gap:7px;margin-top:5px}.mh-game-over-actions button:first-child{padding-top:10px;padding-bottom:10px}.mh-game-over-actions button:last-child{padding-top:8px;padding-bottom:8px}}
     .mh-regeneration-animation{position:fixed;inset:0;z-index:52000;display:flex;align-items:center;justify-content:center;padding:calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));background:radial-gradient(circle,#4c1d95,#020617 65%)}.mh-regeneration-disc{position:absolute;width:170px;height:170px;object-fit:contain;animation:mhRegenerationDisc 1.5s ease-in forwards}.mh-regeneration-born{position:relative;width:min(330px,100%);padding:20px;border:2px solid #fbbf24;border-radius:24px;background:#0f172a;text-align:center;opacity:0;animation:mhRegenerationBorn .6s 1.4s ease-out forwards}.mh-regeneration-born h3{font-size:20px;font-weight:1000;color:#fde68a}.mh-regeneration-born b{float:right;color:#f9a8d4}@keyframes mhRegenerationDisc{0%{transform:rotate(0) scale(.7);opacity:1}85%{transform:rotate(1080deg) scale(1.15);opacity:1}100%{transform:rotate(1260deg) scale(.1);opacity:0}}@keyframes mhRegenerationBorn{to{opacity:1;transform:none}}
-    .mh-home-scene{position:relative;isolation:isolate;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:29%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:7px;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:6px monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:auto 43px;grid-template-rows:1fr 1fr;width:139px;padding:4px;border-radius:14px}.mh-home-wallet>div{display:grid;grid-template-columns:14px 1fr auto;align-items:center;gap:2px;padding:1px 3px;color:#ffe08a}.mh-home-wallet>div b{font-size:8px;text-align:right}.mh-home-wallet>div small{font-size:6px;color:#f4e7c3}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:7px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;border:0;background:transparent;color:#fff;touch-action:manipulation}.mh-home-facility>span{position:absolute;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:0;top:14%;width:42%;height:34%}.mh-home-facility.management>span{left:6%;top:37%;border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}.mh-home-facility.temple{right:0;top:14%;width:42%;height:34%}.mh-home-facility.temple>span{right:7%;top:35%;border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}.mh-home-facility.market{right:0;top:45%;width:39%;height:30%}.mh-home-facility.market>span{right:5%;top:40%;border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}.mh-home-facility.battle{left:16%;right:16%;bottom:0;height:31%}.mh-home-facility.battle>span{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}.mh-home-facility.battle:active>span{transform:translateX(-50%) scale(.94)}.mh-home-gift{position:absolute;z-index:5;right:5%;top:73%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #67e8f9aa;border-radius:13px;background:#083344e8;color:#cffafe;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-gift em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-gift:active{transform:scale(.94);filter:brightness(1.25)}.mh-home-update{position:absolute;z-index:5;right:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-update:active{transform:scale(.94);filter:brightness(1.25)}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-rebirth-stars{display:flex;justify-content:center;align-items:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rainbow-breakthrough-star{display:block;width:1em;height:1em;object-fit:contain;transform:scale(1.07) translateY(-.06em)}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
+    .mh-home-scene{position:relative;isolation:isolate;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:29%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:visible;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar.is-framed{border-color:transparent}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:7px;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:6px monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:auto 43px;grid-template-rows:1fr 1fr;width:139px;padding:4px;border-radius:14px}.mh-home-wallet>div{display:grid;grid-template-columns:14px 1fr auto;align-items:center;gap:2px;padding:1px 3px;color:#ffe08a}.mh-home-wallet>div b{font-size:8px;text-align:right}.mh-home-wallet>div small{font-size:6px;color:#f4e7c3}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:7px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;border:0;background:transparent;color:#fff;touch-action:manipulation}.mh-home-facility>span{position:absolute;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:0;top:14%;width:42%;height:34%}.mh-home-facility.management>span{left:6%;top:37%;border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}.mh-home-facility.temple{right:0;top:14%;width:42%;height:34%}.mh-home-facility.temple>span{right:7%;top:35%;border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}.mh-home-facility.market{right:0;top:45%;width:39%;height:30%}.mh-home-facility.market>span{right:5%;top:40%;border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}.mh-home-facility.battle{left:16%;right:16%;bottom:0;height:31%}.mh-home-facility.battle>span{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}.mh-home-facility.battle:active>span{transform:translateX(-50%) scale(.94)}.mh-home-gift{position:absolute;z-index:5;right:5%;top:73%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #67e8f9aa;border-radius:13px;background:#083344e8;color:#cffafe;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-gift em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-gift:active{transform:scale(.94);filter:brightness(1.25)}.mh-home-update{position:absolute;z-index:5;right:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-update:active{transform:scale(.94);filter:brightness(1.25)}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-rebirth-stars{display:flex;justify-content:center;align-items:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rainbow-breakthrough-star{display:block;width:1em;height:1em;object-fit:contain;transform:scale(1.07) translateY(-.06em)}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
+    /* ==================== プロフィールフレーム(2026-09-15) ====================
+       ブリーダーアイコンの外側へ重ねる飾り枠。アイコン画像そのものには触らない。
+       ★太さを px で書かない。inset と mask を割合で書いてあるので、ランキングの 32px でも
+         プロフィールの 80px でも同じ見え方になる(小さいアイコンでもズレない)。
+       ★2026-09-15にユーザー指摘「太すぎてかっこ悪い」。輪の太さをアイコン幅の 13.7% から
+         7.5% へ細くし、アイコンへかぶさる量もほとんど無くした(内側 86.5% でくり抜く)。
+         32px で約2.4px・80px で約6px。細くしたぶん、輪郭の影を少し濃くして小さくても見えるようにした。
+       ★枠は円の外へはみ出すので、外側の .mh-profile-avatar は overflow:visible のままにする。
+       ★pointer-events:none。枠がボタンのタップを食べない。 */
+    .mh-profile-avatar{position:relative;display:flex;align-items:center;justify-content:center;overflow:visible}
+    .mh-profile-frame{position:absolute;inset:-5.5%;z-index:1;border-radius:50%;pointer-events:none}
+    /* 輪の内側をくり抜く。内側 76% は透明、そこから外が枠。割合なので大きさに比例する */
+    .mh-profile-frame-ring{-webkit-mask:radial-gradient(closest-side,#0000 0 86.5%,#000 87%);mask:radial-gradient(closest-side,#0000 0 86.5%,#000 87%);filter:drop-shadow(0 0 1px #000c)}
+    .mh-profile-frame-silver{background:conic-gradient(from 210deg,#f8fafc,#94a3b8,#e2e8f0,#64748b,#f1f5f9,#94a3b8,#f8fafc)}
+    .mh-profile-frame-gold{background:conic-gradient(from 210deg,#fef3c7,#b45309,#fde68a,#92400e,#fffbeb,#d97706,#fef3c7)}
+    .mh-profile-frame-white{background:conic-gradient(from 210deg,#ffffff,#cbd5e1,#f8fafc,#94a3b8,#ffffff,#cbd5e1,#ffffff)}
+    .mh-profile-frame-black{background:conic-gradient(from 210deg,#64748b,#0f172a,#475569,#020617,#94a3b8,#1e293b,#64748b)}
+    .mh-profile-frame-red{background:conic-gradient(from 210deg,#fee2e2,#991b1b,#fca5a5,#7f1d1d,#fff1f2,#dc2626,#fee2e2)}
+    .mh-profile-frame-orange{background:conic-gradient(from 210deg,#ffedd5,#c2410c,#fdba74,#9a3412,#fff7ed,#ea580c,#ffedd5)}
+    .mh-profile-frame-green{background:conic-gradient(from 210deg,#dcfce7,#15803d,#86efac,#14532d,#f0fdf4,#16a34a,#dcfce7)}
+    .mh-profile-frame-aqua{background:conic-gradient(from 210deg,#cffafe,#0e7490,#67e8f9,#155e75,#ecfeff,#06b6d4,#cffafe)}
+    .mh-profile-frame-blue{background:conic-gradient(from 210deg,#e0f2fe,#0369a1,#7dd3fc,#075985,#f0f9ff,#0284c7,#e0f2fe)}
+    .mh-profile-frame-purple{background:conic-gradient(from 210deg,#f3e8ff,#6b21a8,#d8b4fe,#581c87,#faf5ff,#9333ea,#f3e8ff)}
+    .mh-profile-frame-pink{background:conic-gradient(from 210deg,#fce7f3,#be185d,#f9a8d4,#9d174d,#fff1f2,#db2777,#fce7f3)}
+    .mh-profile-frame-rainbow{background:conic-gradient(from 210deg,#ef4444,#f59e0b,#fde047,#22c55e,#06b6d4,#3b82f6,#a855f7,#ec4899,#ef4444)}
+    /* 画像フレーム(豪華フレーム用)。透過PNGを縦横比そのままで重ねる。
+       大きさと位置は絵ごとに profileFrameImageStyle が出す(穴の大きさが絵ごとに違うため)。
+       ここでは object-fit だけを決める(width/height を auto のままにすると広がらない) */
+    .mh-profile-frame-image{display:block;object-fit:contain}
     /* 転生オーラ画像。同じPNGの主炎・残光・足元炎を別周期で動かし、本体とUIには発光を掛けない。 */
     .mh-reincarnate-stack{isolation:isolate}.mh-reincarnate-aura{position:absolute;z-index:-1;inset:-34%;display:block;pointer-events:none;overflow:visible;contain:layout style}.mh-monster-card-name{position:relative;z-index:2}
     .mh-reincarnate-flame{position:absolute;inset:0;display:block;transform-origin:center bottom;will-change:transform,opacity}

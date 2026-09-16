@@ -1,5 +1,5 @@
 const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分類フォルダから見た1つ上
-// スキップチケット(序・破・急)と、勇者モン選択のタブ(編成/ベースモン)を検証する。
+// スキップチケット(序・破・急・極・覇)と、勇者モン選択のタブ(編成/ベースモン)を検証する。
 // 報酬の計算は本番の関数をNode上で動かし、画面側の結線はソースで確認する。
 const fs = require('fs');
 const vm = require('vm');
@@ -40,13 +40,31 @@ vm.runInContext([
 const { goldForWavesCleared, xpForWavesCleared, DIFFICULTY_SETTINGS } = goldCtx.__g;
 const skipClearGold = (diff) => goldForWavesCleared(10, DIFFICULTY_SETTINGS[diff].gold);
 const skipClearXp = (diff) => xpForWavesCleared(10, DIFFICULTY_SETTINGS[diff].score);
-check('スキップチケット・序は3,300ダイヤ', ticket('skip_ticket_jo')?.cost === 3300 && ticket('skip_ticket_jo')?.skipDifficulty === 'Normal');
-check('スキップチケット・破は5,900ダイヤ', ticket('skip_ticket_ha')?.cost === 5900 && ticket('skip_ticket_ha')?.skipDifficulty === 'Hard');
-check('スキップチケット・急は8,500ダイヤ', ticket('skip_ticket_kyu')?.cost === 8500 && ticket('skip_ticket_kyu')?.skipDifficulty === 'Expert');
-check('価格は難易度が上がるほど高い', ticket('skip_ticket_jo').cost < ticket('skip_ticket_ha').cost && ticket('skip_ticket_ha').cost < ticket('skip_ticket_kyu').cost);
-check('3種ともマーケットで買える消耗アイテム', ['skip_ticket_jo', 'skip_ticket_ha', 'skip_ticket_kyu'].every(id => ticket(id)?.type === 'item' && ticket(id)?.usage === 'battleSkip'));
-check('難易度→チケットの対応表がある', byDiff.Normal === 'skip_ticket_jo' && byDiff.Hard === 'skip_ticket_ha' && byDiff.Expert === 'skip_ticket_kyu');
-check('スキップできる難易度は3つだけ', Object.keys(byDiff).length === 3, Object.keys(byDiff).join('/'));
+check('スキップチケット・序は3,000ダイヤ', ticket('skip_ticket_jo')?.cost === 3000 && ticket('skip_ticket_jo')?.skipDifficulty === 'Normal');
+check('スキップチケット・破は5,000ダイヤ', ticket('skip_ticket_ha')?.cost === 5000 && ticket('skip_ticket_ha')?.skipDifficulty === 'Hard');
+check('スキップチケット・急は7,000ダイヤ', ticket('skip_ticket_kyu')?.cost === 7000 && ticket('skip_ticket_kyu')?.skipDifficulty === 'Expert');
+check('スキップチケット・極は15,000ダイヤ', ticket('skip_ticket_kiwami')?.cost === 15000 && ticket('skip_ticket_kiwami')?.skipDifficulty === 'Master');
+check('スキップチケット・覇は30,000ダイヤ', ticket('skip_ticket_haou')?.cost === 30000 && ticket('skip_ticket_haou')?.skipDifficulty === 'GrandMaster');
+check('価格は難易度が上がるほど高い',
+  ticket('skip_ticket_jo').cost < ticket('skip_ticket_ha').cost
+  && ticket('skip_ticket_ha').cost < ticket('skip_ticket_kyu').cost
+  && ticket('skip_ticket_kyu').cost < ticket('skip_ticket_kiwami').cost
+  && ticket('skip_ticket_kiwami').cost < ticket('skip_ticket_haou').cost);
+const skipTicketIds = ['skip_ticket_jo', 'skip_ticket_ha', 'skip_ticket_kyu', 'skip_ticket_kiwami', 'skip_ticket_haou'];
+check('5種ともマーケットで買える消耗アイテム', skipTicketIds.every(id => ticket(id)?.type === 'item' && ticket(id)?.usage === 'battleSkip'));
+check('難易度→チケットの対応表が5段階そろう',
+  byDiff.Normal === 'skip_ticket_jo'
+  && byDiff.Hard === 'skip_ticket_ha'
+  && byDiff.Expert === 'skip_ticket_kyu'
+  && byDiff.Master === 'skip_ticket_kiwami'
+  && byDiff.GrandMaster === 'skip_ticket_haou');
+check('スキップできる難易度は5つ', Object.keys(byDiff).length === 5, Object.keys(byDiff).join('/'));
+check('極/覇の1枚報酬は難易度倍率どおり',
+  skipClearXp('Master') === 500
+  && skipClearXp('GrandMaster') === 800
+  && skipClearGold('Master') === 2000
+  && skipClearGold('GrandMaster') === 2500,
+  `Master=${skipClearXp('Master')}XP/${skipClearGold('Master')}G GrandMaster=${skipClearXp('GrandMaster')}XP/${skipClearGold('GrandMaster')}G`);
 
 // --- 配布(ログインボーナス・ミッション) ---
 const rewardCtx = {};
@@ -66,9 +84,9 @@ const dailyComplete = r.MISSION_DEFS.daily.find(x => x.id === 'daily_complete');
 const weeklyComplete = r.MISSION_DEFS.weekly.find(x => x.id === 'weekly_complete');
 check('デイリーコンプリート報酬に 破 を1枚追加', amountOf(dailyComplete.rewards, 'skipTicketHa') === 1 && amountOf(dailyComplete.rewards, 'diamond') === 500);
 check('ウィークリーコンプリート報酬に 急 を1枚追加', amountOf(weeklyComplete.rewards, 'skipTicketKyu') === 1 && amountOf(weeklyComplete.rewards, 'diamond') === 2000);
-check('ギフトの表示名が3種とも登録されている',
+check('配布対象3種のギフト表示名はそのまま',
   r.GIFT_REWARD_LABELS.skipTicketJo === 'スキップチケット・序' && r.GIFT_REWARD_LABELS.skipTicketHa === 'スキップチケット・破' && r.GIFT_REWARD_LABELS.skipTicketKyu === 'スキップチケット・急');
-check('ギフト受取で正しいアイテムidへ変換する',
+check('配布対象3種はギフト受取で正しいアイテムidへ変換する',
   has("skipTicketJo:'skip_ticket_jo', skipTicketHa:'skip_ticket_ha', skipTicketKyu:'skip_ticket_kyu'"));
 
 // --- スキップの実処理 ---
@@ -169,15 +187,15 @@ check('確認画面とリザルトに使った枚数が出る',
 check('リザルトに使った枚数を残す', skipBlock.includes('itemEmoji: item.emoji, count,'));
 check('説明モーダルにも所持数を出す', has('所持数: <b className="text-white">{ownedItems[item.id]||0}</b> 枚'));
 // 難易度カードのバッジは中央に来ている1難易度ぶんしか見えないため、
-// 難易度タブの上に3種の所持数をまとめて常時出す
+// 難易度タブの上に5種の所持数をまとめて常時出す
 const ticketRow = grab(source, "tracking-[.12em]\">{quick?'所持スキップチケット'", '</div>\n              )}<div className="relative shrink-0">');
-check('難易度タブに3種の所持数をまとめて出す', ticketRow.length > 0 && ticketRow.includes('Object.entries(SKIP_TICKETS).map(([diff,tid])=>'));
+check('難易度タブに5種の所持数をまとめて出す', ticketRow.length > 0 && ticketRow.includes('Object.entries(SKIP_TICKETS).map(([diff,tid])=>'));
 // 帯そのものは両モードで出す(片方だけ消すと難易度カードの位置がずれるため)。
 // 枚数のバッジはクイックのときだけ出し、チャレンジでは専用である旨だけ書く
 check('枚数のバッジはクイックのときだけ出す',
   ticketRow.includes('{quick&&Object.entries(SKIP_TICKETS).map(([diff,tid])=>')
     && ticketRow.includes("'スキップチケットはクイックモード専用'"));
-check('まとめ表示は序/破/急の短い名前と枚数を出す', ticketRow.includes("(item?.name||'').split('・')[1]") && ticketRow.includes('<span className="font-mono">{have}枚</span>'));
+check('まとめ表示は序/破/急/極/覇の短い名前と枚数を出す', ticketRow.includes("(item?.name||'').split('・')[1]") && ticketRow.includes('<span className="font-mono">{have}枚</span>'));
 check('まとめ表示は0枚でも消さずに灰色で出す', ticketRow.includes("have>0?'bg-teal-950/70 border-teal-500/40 text-teal-200':'bg-black/30 border-white/5 text-slate-500'"));
 check('まとめ表示から説明を開ける', ticketRow.includes('onClick={()=>setSkipInfoItemId(tid)}'));
 

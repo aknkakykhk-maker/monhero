@@ -32,6 +32,13 @@ const insertEnd=insertStart>=0?supa.indexOf('\n};',insertStart)+3:-1;
 check('breeder_idと送信のブロックを抽出できる',start>=0&&insertStart>start&&insertEnd>insertStart);
 if(start<0||insertStart<=start||insertEnd<=insertStart){console.log(`\n${failed}件のNGがあります`);process.exit(1);}
 const block=supa.slice(start,insertEnd);
+// プロフィールフレームの列まわり(2026-09-15)も同じ送信経路に乗っているので、
+// スタブで代用せず**本物の実装**を持ち込む。判定がずれると
+// 「列がまだ無い環境でスコアが1件も残らない」を見逃す
+const frameStart=supa.indexOf("const RANKING_PROFILE_FRAME_COLUMN = 'profile_frame';");
+const frameEnd=frameStart>=0?supa.indexOf('\n',supa.indexOf('const rankingProfileFrameFromRow'))+1:-1;
+const frameBlock=frameStart>=0&&frameEnd>frameStart?supa.slice(frameStart,frameEnd):'';
+check('プロフィールフレームの列まわりを抽出できる',frameBlock.length>0);
 
 // --- 実際に動かすための土台(ゲーム側の動きは持ち込まず、必要な入口だけスタブする) ---
 let uuidCount=0;
@@ -43,6 +50,9 @@ const RHYTHM_RANKING_PREFIX='Rhythm';
 const RHYTHM_RANKING_SEPARATOR='-';
 const storeGet=async(key,def)=>(key in __store?__store[key]:def);
 const storeSet=async(key,val)=>{if(__writable)__store[key]=val;};
+// data/breeder.js 側の入口。ここでは「知らないidはフレームなし」だけ分かればよい
+const PROFILE_FRAME_NONE_ID='none';
+const normalizeProfileFrameId=(value)=>(value==='silver'||value==='gold'||value==='blue'||value==='pink')?value:'none';
 `;
 const makeContext=({stored={},writable=true,responses=[]}={})=>{
   const store={...stored};
@@ -58,7 +68,7 @@ const makeContext=({stored={},writable=true,responses=[]}={})=>{
     },
   };
   vm.createContext(context);
-  vm.runInContext(`${PRELUDE}\n${block}\n this.out={BREEDER_ID_KEY,ensureBreederId,rankingBreederIdUnavailable,sbInsertRhythmScore};`,context);
+  vm.runInContext(`${PRELUDE}\n${frameBlock}\n${block}\n this.out={BREEDER_ID_KEY,ensureBreederId,rankingBreederIdUnavailable,sbInsertRhythmScore,rankingProfileFrameUnavailable,rankingProfileFrameFromRow};`,context);
   return {...context.out,store,calls};
 };
 

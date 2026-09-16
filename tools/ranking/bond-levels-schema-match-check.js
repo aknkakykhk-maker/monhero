@@ -65,7 +65,8 @@ const selectMatch = src.match(/const BOND_LEVELS_SELECT = '([^']+)';/);
 const appTable = tableMatch ? tableMatch[1] : null;
 const appSelect = selectMatch ? selectMatch[1].split(',').map(s => s.trim()) : [];
 
-const fetchUrlMatch = src.match(/\$\{SUPABASE_URL\}\/rest\/v1\/\$\{BOND_LEVELS_TABLE\}\?select=\$\{BOND_LEVELS_SELECT\}`\s*\n?\s*\+ `&order=([a-z_]+)\.([a-z.]+)&limit=/);
+// select は BOND_LEVELS_SELECT そのままのことも、あとから足した列を混ぜた変数のこともある
+const fetchUrlMatch = src.match(/\$\{SUPABASE_URL\}\/rest\/v1\/\$\{BOND_LEVELS_TABLE\}\?select=\$\{[A-Za-z_]+\}`\s*\n?\s*\+ `&order=([a-z_]+)\.([a-z.]+)&limit=/);
 const orderColumn = fetchUrlMatch ? fetchUrlMatch[1] : null;
 const orderDirection = fetchUrlMatch ? fetchUrlMatch[2] : null;
 
@@ -82,7 +83,24 @@ const upsertColumns = rowBuildMatch
   : [];
 
 // ---- ③ 突き合わせ ----
-console.log('== テーブルの姿(docs/sql/bond-levels/BOND_LEVELS_APPLY.sql) ==');
+// あとから足した列も「本物のテーブルの姿」に含める。
+// create table だけを見ていると、alter table で足した列が「実在しない列」に見えてしまう
+// (2026-09-15、profile_frame を足したときに実際にそうなった)。
+const BOND_ADDED_SQL = [
+  path.join(REPO_ROOT, 'docs', 'sql', 'rankings', 'PROFILE_FRAME_BOND_APPLY.sql'),
+  path.join(REPO_ROOT, 'docs', 'sql', 'bond-levels', 'BOND_LEVELS_BREEDER_ID_APPLY.sql'),
+];
+const bondAddedColumns = [];
+for (const file of BOND_ADDED_SQL) {
+  if (!fs.existsSync(file)) continue;
+  const added = fs.readFileSync(file, 'utf8');
+  for (const m of added.matchAll(/alter table public\.bond_levels add column if not exists ([a-z_]+) ([a-z]+)/g)) {
+    bondAddedColumns.push({ name: m[1], type: m[2], sql: added });
+    if (!sqlColumns.includes(m[1])) sqlColumns.push(m[1]);
+  }
+}
+
+console.log('== テーブルの姿(docs/sql/bond-levels/BOND_LEVELS_APPLY.sql + あとから足した列) ==');
 console.log(`  列: ${sqlColumns.join(', ')}`);
 console.log(`  主キー: ${pkColumns.join(', ')}`);
 console.log(`  権限: ${grantedPrivileges.join(', ')}`);
@@ -159,6 +177,44 @@ check('deleteの権限は与えない(自動付与ぶんもrevokeで外す)',
 check('upsertは周回の進行を止めない(結果を待たない)',
   /sbUpsertBondLevels\(bondRows\)[\s\S]{0,200}?\.catch\(/.test(src),
   '投げっぱなし + catchで握りつぶし');
+
+// ---- ③-2 bond_levels へ後から足した列(プロフィールフレーム) ----
+// 絆Lv・総合力ランキングだけは rankings ではなくこのテーブルから読むので、
+// 枠を出すにはここへも同じ列が要る。列が無い環境で絆Lvの記録を落とさないことまで見る
+if (bondAddedColumns.length > 0) {
+  console.log('\n== bond_levels に足した列(プロフィールフレーム・ブリーダーID) ==');
+  console.log(`  SQLが足す列: ${bondAddedColumns.map(c => `${c.name}(${c.type})`).join(', ')}`);
+  check('足した列はNULL許容(既存の記録を書き換えない)',
+    bondAddedColumns.every(c => !new RegExp(`add column if not exists ${c.name} ${c.type} not null`).test(c.sql)),
+    bondAddedColumns.map(c => c.type).join(', '));
+  check('列がまだ無い環境では、その列を外して送り直す(絆Lvの記録を落とさない)',
+    /sbUpsertBondLevels[\s\S]{0,1500}return sbUpsertBondLevels\(bondLevelRowsWithoutProfileFrame\(rows\)\)/.test(src));
+  check('列がまだ無い環境では、その列を外して取り直す(一覧は出る)',
+    /sbFetchBondLevels[\s\S]{0,1500}return sbFetchBondLevels\(requestId\)/.test(src));
+  check('「列があるか」は rankings とは別に覚える(片方だけ適用しても取り違えない)',
+    src.includes('_bondLevelsProfileFrameUnavailable') && src.includes('_rankingProfileFrameUnavailable'));
+  // ブリーダーID(2026-09-16)。フレームとも rankings とも別の旗で覚える
+  check('ブリーダーIDの列も、無い環境では外して送り直す(絆Lvの記録を落とさない)',
+    /sbUpsertBondLevels[\s\S]{0,2200}return sbUpsertBondLevels\(bondLevelRowsWithoutBreederId\(rows\)\)/.test(src));
+  check('ブリーダーIDの列も、無い環境では外して取り直す(一覧は出る)',
+    /_bondLevelsBreederIdUnavailable = true;[\s\S]{0,200}return sbFetchBondLevels\(requestId\)/.test(src));
+  check('ブリーダーIDの「列があるか」もフレームとは別に覚える',
+    src.includes('_bondLevelsBreederIdUnavailable') && src.includes('_bondLevelsProfileFrameUnavailable'));
+  check('主キーは変えない(既存の行を壊さない)',
+    bondAddedColumns.every(c => !/(alter table public\.bond_levels[\s\S]{0,200}(drop constraint|add constraint) bond_levels_pkey)/.test(c.sql)));
+  check('人を束ねるのは名前でなくブリーダーID',
+    /const resolveBreederIdFor = \(entry, bridge = null\)/.test(src)
+    && /bondRankingKeyOf[\s\S]{0,300}resolveBreederIdFor/.test(src)
+    && /aggregateBreederLevels[\s\S]{0,700}resolveBreederIdFor/.test(src));
+  // IDのある記録と無い記録が混ざっていても同じ人を1行にまとめる「橋」(2026-09-16)
+  check('IDの無い記録も、名前からその人のIDへ橋を架けてまとめる',
+    /const breederIdBridgeFrom = \(entries\)/.test(src)
+    && /aggregateBreederLevels[\s\S]{0,700}breederIdBridgeFrom\(rows\)/.test(src)
+    && /mergeBondRankingEntries[\s\S]{0,600}breederIdBridgeFrom\(\[/.test(src));
+  check('改名で2行になった記録は、消さずに表示でまとめる(行は消さない)',
+    !/delete from public\.bond_levels/i.test(bondAddedColumns.map(c => c.sql).join('\n'))
+    && /絆Lvの高いほうを残す/.test(src));
+}
 
 // ---- ④ rankings へ後から足した列(ターン数・到達WAVE)も同じ考え方で照合する ----
 // 足した列を送る/選ぶと、SQLをまだ適用していない環境では400になる。

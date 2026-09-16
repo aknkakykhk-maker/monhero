@@ -163,8 +163,8 @@ const RANKING_BREEDER_MAX_ROWS = 24000;
 const RANKING_BREEDER_MAX_PAGES = 12;
 // ブリーダーLvは編成(party)を使わない。partyはJSONで1行あたりが大きいため、
 // 使わない場面では取得しないだけで転送量と待ち時間がはっきり減る
-const RANKING_SELECT_FULL = 'user_name,hero,party,score,level,icon';
-const RANKING_SELECT_NO_PARTY = 'user_name,hero,score,level,icon';
+const RANKING_SELECT_FULL = 'user_name,hero,party,score,level,icon,created_at';
+const RANKING_SELECT_NO_PARTY = 'user_name,hero,score,level,icon,created_at';
 // ブリーダーLvの一覧は名前・レベル・アイコンしか出さない。全件をページ送りで読むので、
 // 使わない列(hero/score)まで運ばない
 const RANKING_SELECT_BREEDER = 'user_name,level,icon';
@@ -194,9 +194,55 @@ const _isMissingColumnError = (status, body) => {
 // 全件をページ送りで読むので、使わない列を運ばせない
 const rankingSelectWithRunStats = (base) =>
   (_rankingRunStatsUnavailable || !base || !base.includes('score')) ? base : `${base},${RANKING_RUN_STATS_COLUMNS}`;
+
+// ==================== プロフィールフレーム(2026-09-15) ====================
+// ランキングで「その人が選んでいる飾り枠」を出すための列。rankings へ後から足すNULL許容の
+// 1列で、既存の行はNULLのまま(NULL = フレームなし)。順位・スコア・集計には一切関わらない。
+//
+// turns / reached_wave / breeder_id とまったく同じ構えにしてある。
+// PostgRESTは知らない列を送る/選ぶと400を返すので、素通しにすると
+//   ・送るとき … 記録が1件も保存できない
+//   ・選ぶとき … ランキングが開けない
+// になる。一度400で気付いたらその後は列を外して動き、SQLを適用すれば自動的に載りはじめる。
+// これで「SQLの適用」と「アプリの公開」はどちらが先でもよい。
+//
+// ★ビューや関数(全曲合算・週間・イベント)も同じ列名で返すので、判定と旗はここで共有する。
+const RANKING_PROFILE_FRAME_COLUMN = 'profile_frame';
+let _rankingProfileFrameUnavailable = false;
+const rankingProfileFrameUnavailable = () => _rankingProfileFrameUnavailable;
+// 「profile_frame という列は無い」という応答かどうか。通信の失敗や権限の失敗と取り違えない
+//   選ぶとき  … 400 + 42703 / PGRST100(column rankings.profile_frame does not exist)
+//   送るとき  … 400 + PGRST204(Could not find the 'profile_frame' column of 'rankings')
+//   関数      … 404 + PGRST202(関数の戻り値に無い)
+const _isMissingProfileFrameError = (status, body) => {
+  if (status !== 400 && status !== 404) return false;
+  const text = String(body || '');
+  if (!/profile_frame/i.test(text)) return false;
+  return /PGRST202|PGRST204|PGRST205|PGRST200|PGRST100|42703|42883|does not exist|Could not find the/i.test(text);
+};
+// 取得する列へ profile_frame を足す。無いと分かっている間は足さない
+const rankingSelectWithProfileFrame = (base) =>
+  (_rankingProfileFrameUnavailable || !base) ? base : `${base},${RANKING_PROFILE_FRAME_COLUMN}`;
+// 取得する列へ breeder_id を足す(2026-09-16)。
+// 「いまの見た目」を引くときに、名前ではなく**IDで**その人を特定するために要る。
+// 名前だけで引くと、名前を変えた人が自分の記録に当たらなくなる。
+// 列がまだ無い環境では外す(そのときは名前で引く=これまでどおりの動き)。
+const rankingSelectWithBreederId = (base) =>
+  (_rankingBreederIdUnavailable || !base) ? base : `${base},breeder_id`;
+// 送る行から profile_frame を落とす(列がまだ無い環境で記録を落とさないため)
+const rankingRowWithoutProfileFrame = (row) => {
+  const { profile_frame, ...rest } = row || {};
+  return rest;
+};
+// 受け取った行から、画面へ出すフレームidを取り出す。
+// 知らないid・未公開のid・NULL・壊れた値はすべて「フレームなし」へ倒れる
+// (normalizeProfileFrameId が唯一の判定。data/breeder.js)
+const rankingProfileFrameFromRow = (row) => normalizeProfileFrameId(row?.profile_frame);
 // bond_levels の1行を、rankings から集計したものと同じ形のエントリへ直す。
 // 表示側(renderBondRankingEntry)はどちらから来た行かを知らなくてよい
-const bondLevelRowToEntry = (row) => {
+const bondLevelRowToEntry = (row) => applyLatestBreederProfile(bondLevelRowFromRow(row));
+// 行を素直な形へ直すところ(見た目のかぶせは bondLevelRowToEntry が行う)
+const bondLevelRowFromRow = (row) => {
   const monsterId = row?.monster_id || null;
   const monName = ALL_PLAYER_MONSTERS[monsterId]?.name || row?.mon_name || null;
   const bondLevel = Number(row?.bond_level);
@@ -204,7 +250,11 @@ const bondLevelRowToEntry = (row) => {
   const individualId = String(row?.individual_id || '');
   return {
     userName: row?.user_name || '名無しのブリーダー',
+    // ブリーダーID(2026-09-16)。あれば「いまの見た目」も改名の見分けもこれで決まる。
+    // 列を足す前の記録には無いので、そのときは今までどおり名前で見分ける
+    breederId: (typeof row?.breeder_id === 'string' && row.breeder_id) ? row.breeder_id : null,
     icon: row?.icon ?? null,
+    profileFrame: rankingProfileFrameFromRow(row),
     monName, bondLevel, monsterId,
     imgUrl: ALL_PLAYER_MONSTERS[monsterId]?.iconUrl || null,
     emoji: ALL_PLAYER_MONSTERS[monsterId]?.emoji || null,
@@ -217,12 +267,36 @@ const bondLevelRowToEntry = (row) => {
 };
 // 正本テーブルの結果と、rankings から集計した結果を1つに束ねる。
 // 同じ「人 × 個体」は正本テーブル側を採用し、正本にまだ載っていない人だけ
-// 従来どおり rankings の集計で補う(テーブルを作った直後から一覧が欠けないようにするため)
+// 従来どおり rankings の集計で補う(テーブルを作った直後から一覧が欠けないようにするため)。
+//
+// ★「人」の見分けはブリーダーIDを最優先にする(2026-09-16)。
+//   bond_levels の主キーは (user_name, individual_id) なので、名前を変えると
+//   同じマスモンが古い名前と新しい名前の2行になって残る。行を消すのは危険なので消さず、
+//   **ここで1行にまとめて見せる**(絆Lvの高いほう＝いまの値を採用する)。
+//   IDが無い古い行は、これまでどおり名前で見分ける。
+const bondRankingIndividualOf = (e) =>
+  e?.individualId || (e?.masuId != null && String(e.masuId) !== '' ? String(e.masuId) : `legacy:${e?.monsterId || e?.monName}`);
+const bondRankingKeyOf = (e, bridge = null) => {
+  const id = resolveBreederIdFor(e, bridge);
+  return id ? `id:${id}\u0000${bondRankingIndividualOf(e)}`
+            : `name:${e?.userName}\u0000${bondRankingIndividualOf(e)}`;
+};
 const mergeBondRankingEntries = (primaryEntries, legacyEntries) => {
-  const keyOf = (e) => `${e?.userName}\u0000${e?.individualId || (e?.masuId != null && String(e.masuId) !== '' ? String(e.masuId) : `legacy:${e?.monsterId || e?.monName}`)}`;
   const merged = new Map();
-  (primaryEntries || []).forEach(e => { if (e) merged.set(keyOf(e), e); });
-  (legacyEntries || []).forEach(e => { if (e && !merged.has(keyOf(e))) merged.set(keyOf(e), e); });
+  // 「名前 → ID」の橋は、正本と旧経路の両方を見てから作る
+  // (IDの付いた行と付いていない行が混ざっていても、同じ人なら1つに束ねるため)
+  const bridge = breederIdBridgeFrom([...(primaryEntries || []), ...(legacyEntries || [])]);
+  // 同じ鍵が重なったら、絆Lvの高いほうを残す(改名で2行になっている人はここで1行になる)
+  const put = (e, onlyIfNew) => {
+    if (!e) return;
+    const key = bondRankingKeyOf(e, bridge);
+    const current = merged.get(key);
+    if (!current) { merged.set(key, e); return; }
+    if (onlyIfNew) return;
+    if ((Number(e.bondLevel) || 0) > (Number(current.bondLevel) || 0)) merged.set(key, e);
+  };
+  (primaryEntries || []).forEach(e => put(e, false));
+  (legacyEntries || []).forEach(e => put(e, true));
   return [...merged.values()].sort((a, b) => b.bondLevel - a.bondLevel);
 };
 // ==================== 絆Lvの正本テーブル(bond_levels) ====================
@@ -236,6 +310,31 @@ const mergeBondRankingEntries = (primaryEntries, legacyEntries) => {
 // 1度でも「テーブルが無い」と分かったら、そのセッションでは以後アクセスしない。
 const BOND_LEVELS_TABLE = 'bond_levels';
 const BOND_LEVELS_SELECT = 'user_name,individual_id,monster_id,mon_name,bond_level,icon,detail,colors';
+// プロフィールフレーム(2026-09-15)。bond_levels は rankings とは別のテーブルなので、
+// 「列があるかどうか」も別に覚える(片方だけSQLを当てた環境で取り違えないため)。
+// 判定そのもの(_isMissingProfileFrameError)と正規化は rankings と同じものを使う。
+let _bondLevelsProfileFrameUnavailable = false;
+const bondLevelsProfileFrameUnavailable = () => _bondLevelsProfileFrameUnavailable;
+const bondLevelRowsWithoutProfileFrame = (rows) =>
+  (Array.isArray(rows) ? rows : []).map(row => rankingRowWithoutProfileFrame(row));
+// ブリーダーID(2026-09-16)。bond_levels は主キーが (user_name, individual_id) ＝
+// 「名前 × 個体」なので、人を見分ける手がかりが名前しか無かった。そのため
+// 改名すると同じマスモンが2行に分かれて並び、同名の人がいるとどれが誰か決められなかった
+// (ユーザー指摘「名前管理はさすがにだめだろ」)。rankings と同じ breeder_id を持たせて、
+// **表示ではIDで見分ける**。★主キーは変えない(既存の行を壊さないため)。
+// 増えてしまった古い行は mergeBondRankingEntries がIDでまとめて1行に見せる。
+// 列があるかどうかは rankings ともフレームとも別に覚える(どれか1つだけ当たっていても取り違えない)。
+let _bondLevelsBreederIdUnavailable = false;
+const bondLevelsBreederIdUnavailable = () => _bondLevelsBreederIdUnavailable;
+const bondLevelRowsWithoutBreederId = (rows) =>
+  (Array.isArray(rows) ? rows : []).map(row => { const { breeder_id, ...rest } = row || {}; return rest; });
+// いま取れる列の並び。無いと分かっている列は最初から外す
+const bondLevelsSelectColumns = () => {
+  let select = BOND_LEVELS_SELECT;
+  if (!_bondLevelsProfileFrameUnavailable) select += `,${RANKING_PROFILE_FRAME_COLUMN}`;
+  if (!_bondLevelsBreederIdUnavailable) select += ',breeder_id';
+  return select;
+};
 // 1行が数百バイトなので、種類別タブぶんまで含めて1回で取り切れる余裕を持たせる
 const BOND_LEVELS_FETCH_LIMIT = 1000;
 // 「テーブルが無い」と分かったあとは、毎回404を出しにいかない
@@ -250,7 +349,9 @@ const _isMissingTableError = (status, body) => {
 // rankings から集計する(新旧併用)
 const sbFetchBondLevels = async (requestId='untracked') => {
   if (_bondLevelsUnavailable) return null;
-  const url = `${SUPABASE_URL}/rest/v1/${BOND_LEVELS_TABLE}?select=${BOND_LEVELS_SELECT}`
+  await ensureBreederProfiles(requestId);
+  const select = bondLevelsSelectColumns();
+  const url = `${SUPABASE_URL}/rest/v1/${BOND_LEVELS_TABLE}?select=${select}`
     + `&order=bond_level.desc.nullslast&limit=${BOND_LEVELS_FETCH_LIMIT}`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8000);
@@ -258,6 +359,20 @@ const sbFetchBondLevels = async (requestId='untracked') => {
     const res = await fetch(url, { headers: SB_HEADERS, cache: 'no-store', signal: controller.signal });
     const body = await res.text();
     if (!res.ok) {
+      // プロフィールフレームの列がまだ無い環境。外して取り直せば今までどおり出せる
+      // (飾り枠が出ないだけで、絆Lv・総合力の順位は変わらない)
+      if (select.includes(RANKING_PROFILE_FRAME_COLUMN) && _isMissingProfileFrameError(res.status, body)) {
+        _bondLevelsProfileFrameUnavailable = true;
+        rankingLog(requestId, 'bond-levels-profile-frame-missing', { status: res.status });
+        return sbFetchBondLevels(requestId);
+      }
+      // ブリーダーIDの列がまだ無い環境。外して取り直せば今までどおり出せる
+      // (名前で見分けるだけに戻り、絆Lv・総合力の順位は変わらない)
+      if (select.includes(',breeder_id') && _isMissingBreederIdError(res.status, body)) {
+        _bondLevelsBreederIdUnavailable = true;
+        rankingLog(requestId, 'bond-levels-breeder-id-missing', { status: res.status });
+        return sbFetchBondLevels(requestId);
+      }
       if (_isMissingTableError(res.status, body)) {
         _bondLevelsUnavailable = true;
         rankingLog(requestId, 'bond-levels-missing', { status: res.status });
@@ -267,6 +382,7 @@ const sbFetchBondLevels = async (requestId='untracked') => {
     }
     const rows = JSON.parse(body || '[]');
     rankingLog(requestId, 'bond-levels-fetched', { received: Array.isArray(rows) ? rows.length : 0 });
+    rememberLooksFromRows(rows);
     return Array.isArray(rows) ? rows : [];
   } finally {
     clearTimeout(timer);
@@ -277,6 +393,9 @@ const sbFetchBondLevels = async (requestId='untracked') => {
 // ランキング送信の付随処理なので、失敗しても周回の進行は止めない。
 const sbUpsertBondLevels = async (rows) => {
   if (_bondLevelsUnavailable || !Array.isArray(rows) || rows.length === 0) return false;
+  // 列がまだ無いと分かっている間は、最初から外して送る
+  let payload = _bondLevelsProfileFrameUnavailable ? bondLevelRowsWithoutProfileFrame(rows) : rows;
+  if (_bondLevelsBreederIdUnavailable) payload = bondLevelRowsWithoutBreederId(payload);
   const url = `${SUPABASE_URL}/rest/v1/${BOND_LEVELS_TABLE}?on_conflict=user_name,individual_id`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8000);
@@ -284,10 +403,22 @@ const sbUpsertBondLevels = async (rows) => {
     const res = await fetch(url, {
       method: 'POST',
       headers: { ...SB_HEADERS, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
-      body: JSON.stringify(rows), signal: controller.signal,
+      body: JSON.stringify(payload), signal: controller.signal,
     });
     if (!res.ok) {
       const body = await res.text();
+      // プロフィールフレームの列がまだ無い環境。飾り枠のために絆Lvの記録を落とさない。
+      // その列だけ外して必ず送り直す(一度気付けば以後は最初から外して送る)
+      if (!_bondLevelsProfileFrameUnavailable && _isMissingProfileFrameError(res.status, body)) {
+        _bondLevelsProfileFrameUnavailable = true;
+        return sbUpsertBondLevels(bondLevelRowsWithoutProfileFrame(rows));
+      }
+      // ブリーダーIDの列がまだ無い環境。IDのために絆Lvの記録を落とさない。
+      // その列だけ外して必ず送り直す(一度気付けば以後は最初から外して送る)
+      if (!_bondLevelsBreederIdUnavailable && _isMissingBreederIdError(res.status, body)) {
+        _bondLevelsBreederIdUnavailable = true;
+        return sbUpsertBondLevels(bondLevelRowsWithoutBreederId(rows));
+      }
       if (_isMissingTableError(res.status, body)) { _bondLevelsUnavailable = true; return false; }
       throw new Error(`bond_levels upsert ${res.status}: ${body || res.statusText}`);
     }
@@ -299,7 +430,7 @@ const sbUpsertBondLevels = async (rows) => {
 // ランキングへ送る編成から、絆Lvの正本へ入れる行を作る。
 // 個体が特定できる記録は masuId、できない古い形は legacy:種ID でまとめる
 // (どちらも rankings 側の集計と同じ考え方)。
-const bondLevelRowsFromParty = (userName, icon, party) => {
+const bondLevelRowsFromParty = (userName, icon, party, profileFrame = null, breederId = null) => {
   const byIndividual = new Map();
   (Array.isArray(party) ? party : []).forEach(member => {
     const bondLevel = Number(member?.bondLevel);
@@ -315,9 +446,13 @@ const bondLevelRowsFromParty = (userName, icon, party) => {
     byIndividual.set(individualId, {
       user_name: userName || '名無しのブリーダー',
       individual_id: individualId,
+      // ブリーダーID。作れない端末では列ごと付けない(既存の行と同じくNULLのまま)
+      ...(typeof breederId === 'string' && breederId ? { breeder_id: breederId } : {}),
       monster_id: monsterId, mon_name: monName,
       bond_level: Math.floor(bondLevel),
       icon: icon ?? null,
+      // プロフィールフレーム。選んでいなければ列ごと付けない(既存の行と同じくNULLのまま)
+      ...(rankingProfileFrameValue(profileFrame) ? { profile_frame: rankingProfileFrameValue(profileFrame) } : {}),
       detail: member.detail ?? null,
       colors: Array.isArray(member.colors) ? member.colors : null,
     });
@@ -325,12 +460,14 @@ const bondLevelRowsFromParty = (userName, icon, party) => {
   return [...byIndividual.values()];
 };
 const sbFetchRankings = async (diff, limit=RANKING_SCORE_LIMIT, order='score.desc.nullslast', offset=0, requestId='untracked', selectColumns=RANKING_SELECT_FULL) => {
+  // 行を組み立てる前に「いまの見た目」をそろえておく(失敗しても投げない・TTLで間引く)
+  await ensureBreederProfiles(requestId);
   // diff を省略(null)すると難易度で絞らず、全難易度をまとめて取る
   const normalizedDifficulty = diff == null ? null : normalizeRankingDifficulty(diff);
   // 必要な列だけを受け取り、過去記録が多い難易度でもレスポンスを不用意に大きくしない。
   // ターン数・到達WAVEはSQLをまだ適用していない環境では選べないので、そのときは外れる。
   const baseSelect = selectColumns || RANKING_SELECT_FULL;
-  const select = rankingSelectWithRunStats(baseSelect);
+  const select = rankingSelectWithBreederId(rankingSelectWithProfileFrame(rankingSelectWithRunStats(baseSelect)));
   // DBに保存する正規keyと同じ値をeqで取得する。ilikeによる別系統の
   // 取得条件を残さず、NormalもHardと完全に同じSELECT経路にする。
   //
@@ -369,6 +506,19 @@ const sbFetchRankings = async (diff, limit=RANKING_SCORE_LIMIT, order='score.des
     const body = await res.text();
     rankingLog(requestId, 'supabase-response', { difficulty: normalizedDifficulty, endedAt: new Date().toISOString(), elapsedMs: Date.now() - startedAt, status: res.status, statusText: res.statusText, ok: res.ok, dataCount: res.ok ? (() => { try { const parsed = JSON.parse(body); return Array.isArray(parsed) ? parsed.length : null; } catch { return null; } })() : null, error: res.ok ? null : body });
     if (!res.ok) {
+      // ブリーダーIDの列がまだ無い環境。外して取り直す(そのときは名前で引く)
+      if (select.includes(',breeder_id') && _isMissingBreederIdError(res.status, body)) {
+        _rankingBreederIdUnavailable = true;
+        rankingLog(requestId, 'breeder-id-column-missing-on-select', { status: res.status });
+        return sbFetchRankings(diff, limit, order, offset, requestId, baseSelect);
+      }
+      // プロフィールフレームの列がまだ無い環境。外して取り直せば今までどおり表示できる
+      // (飾り枠が出ないだけで、順位もスコアも変わらない)
+      if (select.includes(RANKING_PROFILE_FRAME_COLUMN) && _isMissingProfileFrameError(res.status, body)) {
+        _rankingProfileFrameUnavailable = true;
+        rankingLog(requestId, 'profile-frame-column-missing', { status: res.status });
+        return sbFetchRankings(diff, limit, order, offset, requestId, baseSelect);
+      }
       // ターン数・到達WAVEの列がまだ無い環境。列を外して取り直せば今までどおり表示できる。
       // 一度気付いたら以後は最初から外して送るので、この寄り道は多くても1回きり
       if (select !== baseSelect && _isMissingColumnError(res.status, body)) {
@@ -379,7 +529,10 @@ const sbFetchRankings = async (diff, limit=RANKING_SCORE_LIMIT, order='score.des
       throw new Error(`fetch ${res.status} ${res.statusText}; url=${url}; response=${body || '(empty)'}`);
     }
     try {
-      return JSON.parse(body);
+      const rows = JSON.parse(body);
+      // 記録から分かる「その人の枠」を覚えておく(登録がまだ無い人の受け皿)
+      rememberLooksFromRows(rows);
+      return rows;
     } catch (e) {
       throw new Error(`invalid JSON; url=${url}; response=${body || '(empty)'}; error=${e.message}`);
     }
@@ -397,14 +550,22 @@ const sbFetchRankings = async (diff, limit=RANKING_SCORE_LIMIT, order='score.des
 // 1プレイ=1行なので同じ人が何行も持つ。取得直後にここでまとめておくと、
 // 端末へ残すキャッシュも人数ぶんの大きさで収まる
 const aggregateBreederLevels = (rows) => {
-  const byName = new Map();
+  // ★束ねる単位はブリーダーID(2026-09-16)。名前で束ねると、改名した人が2行に分かれ、
+  //   同名の別人が1行に混ざる。IDが決められない古い記録だけ、これまでどおり名前で束ねる
+  const byBreeder = new Map();
+  // 先に全行を見て「名前 → ID」の橋を作る。
+  // モンビーの記録にはIDが付いていて、これまでのバトルの記録には付いていない。
+  // 橋が無いと、同じ人がIDの行と名前の行に割れて2行並ぶ
+  const bridge = breederIdBridgeFrom(rows);
   (rows || []).forEach(r => {
     const name = r?.userName || '名無しのブリーダー';
+    const id = resolveBreederIdFor(r, bridge);
+    const key = id ? `id:${id}` : `name:${name}`;
     const lv = Number(r?.level) || 0;
-    const cur = byName.get(name);
-    if (!cur || lv > cur.level) byName.set(name, { ...r, userName: name, level: lv });
+    const cur = byBreeder.get(key);
+    if (!cur || lv > cur.level) byBreeder.set(key, { ...r, userName: name, level: lv });
   });
-  return [...byName.values()].filter(x => x.level > 0).sort((a, b) => b.level - a.level);
+  return [...byBreeder.values()].filter(x => x.level > 0).sort((a, b) => b.level - a.level);
 };
 // ブリーダーLv用に、rankingsの全行をページ送りで読む。
 // 1プレイ=1行なので同じ人が何行も持つ。「上位N行」では下位の人が消えるため、
@@ -438,6 +599,8 @@ const sbInsertScore = async (row) => {
   // ターン数・到達WAVEの列がまだ無い環境では、その2つを送ると400になり
   // 記録そのものが保存できない。無いと分かっている間は最初から外して送る
   if (_rankingRunStatsUnavailable) { delete normalizedRow.turns; delete normalizedRow.reached_wave; }
+  // プロフィールフレームの列も同じ。無いと分かっている間は最初から外して送る
+  if (_rankingProfileFrameUnavailable) delete normalizedRow.profile_frame;
   const requestId = `insert-${normalizedRow.difficulty}-${Date.now()}`;
   const query = '?on_conflict=clear_id';
   const prefer = 'resolution=ignore-duplicates,return=minimal';
@@ -465,6 +628,14 @@ const sbInsertScore = async (row) => {
       errorCode, isUniqueViolation, error: res.ok ? null : (body || res.statusText)
     });
     if (!res.ok) {
+      // プロフィールフレームの列がまだ無い環境。飾り枠のためにスコアを落とさない。
+      // その列だけを外して必ず送り直す(一度気付けば以後は最初から外して送る)
+      if (!_rankingProfileFrameUnavailable && normalizedRow.profile_frame !== undefined
+          && _isMissingProfileFrameError(res.status, body)) {
+        _rankingProfileFrameUnavailable = true;
+        rankingLog(requestId, 'profile-frame-column-missing', { status: res.status });
+        return sbInsertScore(rankingRowWithoutProfileFrame(normalizedRow));
+      }
       // ターン数・到達WAVEの列がまだ無い環境。ここで諦めるとスコアが1件も残らなくなるので、
       // その2つを外して必ず送り直す(記録を落とさないことを最優先にする)。
       // 一度気付けば以後は最初から外して送るので、この寄り道は多くても1回きり
@@ -586,6 +757,9 @@ const rankingRowFromLocalEntry = (entry, difficulty) => {
     ...(Number.isFinite(reachedWave) && reachedWave > 0 ? { reached_wave: reachedWave } : {}),
     ...(Number.isFinite(turns) && turns > 0 ? { turns } : {}),
     ...(entry.breederId ? { breeder_id: entry.breederId } : {}),
+    // プロフィールフレーム。退避した時点で選んでいたものをそのまま送り直す
+    // (未選択・古い退避データには入っていないので、その場合は列ごと付けない)
+    ...(entry.profileFrame ? { profile_frame: entry.profileFrame } : {}),
     ...(createdAt ? { created_at: createdAt } : {}),
   };
 };
@@ -627,6 +801,276 @@ const insertResentRankingRow = async (insert, row) => {
 };
 
 const createRunId = () => globalThis.crypto?.randomUUID?.() || `run_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`;
+
+// ===== ブリーダーの「いまの見た目」(2026-09-16) =====
+//
+// ランキングは「1プレイ＝1行」で、その瞬間の名前・アイコン・フレームを記録へ写している。
+// そのため、あとから見た目を変えても過去の行は古いままだった
+// (2026-09-16・ユーザー指摘「アイコンとフレームは更新時じゃなくて常に設定してるやつが
+//  ランキングに出るようにできないの？」)。
+//
+// 記録(rankings / bond_levels)は**1行も書き換えない**。かわりに「1人1行」の小さな表を持ち、
+// **表示に使う見た目だけ**をそこから引く。順位・スコア・集計には一切関わらない。
+//
+// ★引く順番は ① ブリーダーID ② 名前 ③ 記録に写した値。
+//   ②は「その名前の人が1人だけ」のときしか使わない(同名の別人へ他人の見た目を出さないため。
+//   全曲合算の rhythm_identity_map と同じ考え方・docs/spec/RHYTHM_RANKING.md §4.4)。
+// ★表がまだ無い環境(SQL未適用)では404が返る。エラーではなく「まだ準備中」として扱い、
+//   そのセッションでは以後アクセスしない(記録に写した値で今までどおり出る)。
+const BREEDER_PROFILES_TABLE = 'breeder_profiles';
+const BREEDER_PROFILES_SELECT = 'breeder_id,user_name,icon,profile_frame';
+// 1人1行しか増えないので、全部読んでも小さい。上限はいちおうの保険
+const BREEDER_PROFILES_FETCH_LIMIT = 5000;
+// 取り直す間隔。ランキングを開くたびに読み直さない
+const BREEDER_PROFILES_TTL_MS = 60 * 1000;
+let _breederProfilesUnavailable = false;
+const breederProfilesUnavailable = () => _breederProfilesUnavailable;
+let _breederProfileById = new Map();
+let _breederProfileByName = new Map();
+let _breederProfilesFetchedAt = 0;
+let _breederProfilesPending = null;
+
+// 受け取った行から、IDで引く表と名前で引く表を作る。
+// 名前の表は「その名前がちょうど1人」のときだけ入れる(同名の別人には使わない)。
+const setBreederProfiles = (rows) => {
+  const byId = new Map(), nameCount = new Map(), byName = new Map();
+  (Array.isArray(rows) ? rows : []).forEach(row => {
+    const id = typeof row?.breeder_id === 'string' ? row.breeder_id.trim() : '';
+    if (!id) return;
+    const profile = {
+      // 「誰か」も一緒に持つ。IDの無い古い記録を、その人の行として束ねるのに使う
+      breederId: id,
+      userName: (typeof row?.user_name === 'string' && row.user_name.trim()) ? row.user_name : null,
+      icon: row?.icon ?? null,
+      profileFrame: normalizeProfileFrameId(row?.profile_frame),
+    };
+    byId.set(id, profile);
+    if (profile.userName) {
+      nameCount.set(profile.userName, (nameCount.get(profile.userName) || 0) + 1);
+      byName.set(profile.userName, profile);
+    }
+  });
+  for (const [name, count] of nameCount) if (count > 1) byName.delete(name);
+  _breederProfileById = byId;
+  _breederProfileByName = byName;
+  return { ids: byId.size, names: byName.size };
+};
+const sbFetchBreederProfiles = async (requestId = 'untracked') => {
+  const url = `${SUPABASE_URL}/rest/v1/${BREEDER_PROFILES_TABLE}?select=${BREEDER_PROFILES_SELECT}`
+    + `&order=updated_at.desc&limit=${BREEDER_PROFILES_FETCH_LIMIT}`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(url, { headers: SB_HEADERS, cache: 'no-store', signal: controller.signal });
+    const body = await res.text();
+    if (!res.ok) {
+      if (_isMissingTableError(res.status, body)) {
+        _breederProfilesUnavailable = true;
+        rankingLog(requestId, 'breeder-profiles-missing', { status: res.status });
+        return null;
+      }
+      throw new Error(`breeder_profiles ${res.status}: ${body || res.statusText}`);
+    }
+    const rows = JSON.parse(body || '[]');
+    const counted = setBreederProfiles(rows);
+    rankingLog(requestId, 'breeder-profiles-fetched', { received: Array.isArray(rows) ? rows.length : 0, ...counted });
+    return Array.isArray(rows) ? rows : [];
+  } finally {
+    clearTimeout(timer);
+  }
+};
+// ランキングを組み立てる前に呼ぶ。一定時間は読み直さないので、何度呼んでも重くならない。
+// 失敗しても投げない(見た目が古いままになるだけで、順位は出る)。
+const ensureBreederProfiles = async (requestId = 'untracked', { force = false } = {}) => {
+  if (_breederProfilesUnavailable) return false;
+  if (!force && Date.now() - _breederProfilesFetchedAt < BREEDER_PROFILES_TTL_MS) return true;
+  if (_breederProfilesPending) { try { await _breederProfilesPending; } catch {} return true; }
+  _breederProfilesPending = (async () => {
+    try {
+      await sbFetchBreederProfiles(requestId);
+      _breederProfilesFetchedAt = Date.now();
+    } catch (error) {
+      console.error('[ranking] breeder profiles fetch failed:', error && error.message ? error.message : error);
+    } finally {
+      _breederProfilesPending = null;
+    }
+  })();
+  await _breederProfilesPending;
+  return true;
+};
+// 自分の行を上書きする。1人1行なので、何度呼んでも行は増えない。
+// 見た目を変えたときと、記録を送ったときに呼ぶ。失敗しても進行は止めない。
+const sbUpsertBreederProfile = async ({ breederId, userName, icon, profileFrame }) => {
+  if (_breederProfilesUnavailable) return false;
+  const id = typeof breederId === 'string' ? breederId.trim() : '';
+  if (!id) return false;   // IDが作れていない端末では何もしない(今までどおり記録の値で出る)
+  const row = {
+    breeder_id: id,
+    user_name: userName || '名無しのブリーダー',
+    icon: icon ?? null,
+    profile_frame: rankingProfileFrameValue(profileFrame),
+  };
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${BREEDER_PROFILES_TABLE}?on_conflict=breeder_id`, {
+      method: 'POST',
+      headers: { ...SB_HEADERS, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify([row]), signal: controller.signal,
+    });
+    if (!res.ok) {
+      const body = await res.text();
+      if (_isMissingTableError(res.status, body)) { _breederProfilesUnavailable = true; return false; }
+      throw new Error(`breeder_profiles upsert ${res.status}: ${body || res.statusText}`);
+    }
+    // 自分の変更はすぐ画面へ出したいので、手元の表も更新しておく
+    _breederProfileById.set(id, { userName: row.user_name, icon: row.icon, profileFrame: normalizeProfileFrameId(row.profile_frame) });
+    return true;
+  } finally {
+    clearTimeout(timer);
+  }
+};
+// ===== 記録そのものから拾う「その人の最後に分かっている枠」(2026-09-16) =====
+//
+// breeder_profiles に登録があるのは、この版のゲームを開いた人だけ。まだ開いていない人は
+// 引き当てようが無く、**同じ人の行なのに枠が出たり出なかったりする**
+// (ユーザー指摘「過去のランキングにフレームが対応されてない」。チャレンジの一覧で
+//  同じ♪みゅあ♪さんの5行のうち1行だけ枠が出た)。
+//
+// ★フレームの列は 2026-09-15 に足したもの。**値が入っている行は必ずそれ以降のプレイ**なので、
+//   その人の新しい姿として使ってよい。時刻(created_at)が取れる一覧では新しいほうを選ぶ。
+// ★登録がある人は breeder_profiles が優先(いま設定しているものが正)。ここは登録が無い人の受け皿。
+// ★同じ名前の人が2人以上いるときは使わない(他人の枠を出さないため)。
+let _recordLookById = new Map();     // ブリーダーID → { profileFrame, at }
+let _recordLookByName = new Map();   // 名前 → { profileFrame, at } / null(あいまい)
+let _recordIdByName = new Map();     // 名前 → ブリーダーID / null(あいまい)
+const recordLookCounts = () => ({ ids: _recordLookById.size, names: _recordLookByName.size });
+const _rowIdentityOf = (row) => {
+  const id = typeof row?.breeder_id === 'string' && row.breeder_id ? row.breeder_id : '';
+  if (id) return id;
+  const key = typeof row?.identity_key === 'string' ? row.identity_key : '';
+  return (key && !key.startsWith('name:')) ? key : '';
+};
+const _rowLookAt = (row) => {
+  const raw = row?.created_at ?? row?.last_created_at ?? row?.last_at ?? null;
+  const ms = raw ? Date.parse(raw) : NaN;
+  return Number.isFinite(ms) ? ms : -1;
+};
+// 取ってきた行から、枠の手がかりと「名前 → ID」の橋を覚えておく。
+// 画面をまたいで貯まるので、モンビーの記録で分かった枠をバトルの一覧でも使える。
+const rememberLooksFromRows = (rows) => {
+  (Array.isArray(rows) ? rows : []).forEach(row => {
+    const name = (typeof row?.user_name === 'string' && row.user_name) ? row.user_name : '';
+    const id = _rowIdentityOf(row);
+    if (id && name) {
+      if (!_recordIdByName.has(name)) _recordIdByName.set(name, id);
+      else if (_recordIdByName.get(name) !== id) _recordIdByName.set(name, null);
+    }
+    // 正規化は data/breeder.js の関数。まだ読めていない場面でも落ちないように包む
+    const raw = typeof row?.profile_frame === 'string' ? row.profile_frame.trim() : '';
+    if (!raw) return;
+    const frame = (typeof normalizeProfileFrameId === 'function') ? normalizeProfileFrameId(raw) : raw;
+    const noneId = (typeof PROFILE_FRAME_NONE_ID === 'string') ? PROFILE_FRAME_NONE_ID : 'none';
+    if (!frame || frame === noneId) return;
+    const at = _rowLookAt(row);
+    if (id) {
+      const cur = _recordLookById.get(id);
+      if (!cur || at > cur.at) _recordLookById.set(id, { profileFrame: frame, at });
+    }
+    if (name) {
+      const cur = _recordLookByName.get(name);
+      if (cur === null) return;                       // あいまいな名前には使わない
+      if (!cur) { _recordLookByName.set(name, { profileFrame: frame, at }); return; }
+      if (at > cur.at) _recordLookByName.set(name, { profileFrame: frame, at });
+    }
+  });
+};
+// 登録が無い人のための、記録から拾った枠。見つからなければ null。
+const recordFrameFor = (entry) => {
+  if (!entry) return null;
+  const name = typeof entry.userName === 'string' ? entry.userName : '';
+  const id = directBreederIdOf(entry) || (name ? _recordIdByName.get(name) : null) || null;
+  if (id && _recordLookById.has(id)) return _recordLookById.get(id).profileFrame;
+  if (!name) return null;
+  // 名前しか手がかりが無いときは、その名前が1人に定まるときだけ使う
+  if (_recordIdByName.get(name) === null) return null;
+  const byName = _recordLookByName.get(name);
+  return (byName && byName.profileFrame) ? byName.profileFrame : null;
+};
+// ランキングの1行へ「いまの見た目」をかぶせる。見つからなければ記録に写した値のまま。
+// ★ここだけが差し替えを決める。画面ごとに書かない
+const latestBreederProfileFor = (entry) => {
+  if (!entry) return null;
+  // ① ブリーダーID。モンビーの合算・週間・イベントは identityKey に入っている
+  //    (IDが無かった時代の記録は 'name:<名前>' なので、そのときは②へ回す)
+  const identity = typeof entry.breederId === 'string' && entry.breederId ? entry.breederId
+    : (typeof entry.identityKey === 'string' && entry.identityKey && !entry.identityKey.startsWith('name:')
+      ? entry.identityKey : '');
+  if (identity && _breederProfileById.has(identity)) return _breederProfileById.get(identity);
+  // ② 名前。その名前の人が1人だけのときしか使わない
+  const name = typeof entry.userName === 'string' ? entry.userName : '';
+  return (name && _breederProfileByName.has(name)) ? _breederProfileByName.get(name) : null;
+};
+// 記録そのものに付いているブリーダーID。無ければ null。
+const directBreederIdOf = (entry) => {
+  if (!entry) return null;
+  if (typeof entry.breederId === 'string' && entry.breederId) return entry.breederId;
+  const identity = typeof entry.identityKey === 'string' ? entry.identityKey : '';
+  return (identity && !identity.startsWith('name:')) ? identity : null;
+};
+// 一覧のなかだけで通じる「名前 → ブリーダーID」の橋を作る。
+//
+// ★これが無いと同じ人が2行に分かれる(2026-09-16・ユーザー指摘「ランキングが重複で出てる」)。
+//   モンヒロビートの記録にはIDが付いているが、これまでのバトルの記録には付いていない。
+//   IDのある行は id で、無い行は名前で束ねると、**同じ人が id の行と名前の行に割れる**。
+//   そこで「この一覧のなかで、その名前に1つのIDしかぶら下がっていない」なら、
+//   IDの無い行もその人のものとみなす(記録そのものから橋を架けるので、
+//   breeder_profiles にまだ登録が無い人にも効く)。
+// ★同じ名前に2つ以上のIDがぶら下がっていたら、別人の可能性があるので橋を架けない。
+const breederIdBridgeFrom = (entries) => {
+  const byName = new Map();   // 名前 → ID(1つに定まるとき) / null(あいまい)
+  (entries || []).forEach(entry => {
+    const id = directBreederIdOf(entry);
+    const name = typeof entry?.userName === 'string' ? entry.userName : '';
+    if (!id || !name) return;
+    if (!byName.has(name)) byName.set(name, id);
+    else if (byName.get(name) !== id) byName.set(name, null);
+  });
+  return byName;
+};
+// ランキングの1行が「誰のものか」を決める。
+// ① 記録に付いているブリーダーID
+// ② その一覧のなかで、その名前に1つのIDしかぶら下がっていないとき、そのID
+// ③ プロフィール表でその名前が1人に定まるときのID
+// ④ 決められない(名前で束ねるしかない)
+// ★同じ人の行を1つに束ねるのはこのIDで行う(名前で束ねると、改名で分かれ、同名で混ざる)。
+const resolveBreederIdFor = (entry, bridge = null) => {
+  if (!entry) return null;
+  const direct = directBreederIdOf(entry);
+  if (direct) return direct;
+  const name = typeof entry.userName === 'string' ? entry.userName : '';
+  if (!name) return null;
+  if (bridge && bridge.get(name)) return bridge.get(name);
+  const profile = _breederProfileByName.get(name);
+  if (profile && profile.breederId) return profile.breederId;
+  return _recordIdByName.get(name) || null;
+};
+const applyLatestBreederProfile = (entry) => {
+  const profile = latestBreederProfileFor(entry);
+  // ① プロフィール表に登録があれば、それが「いま設定しているもの」。名前もアイコンも枠もこれ
+  if (profile) {
+    return {
+      ...entry,
+      userName: profile.userName || entry.userName,
+      icon: profile.icon ?? entry.icon ?? null,
+      profileFrame: profile.profileFrame,
+    };
+  }
+  // ② 登録が無い人(この版をまだ開いていない人)は、記録から分かる最後の枠でそろえる。
+  //    同じ人の行なのに枠が出たり出なかったりするのを防ぐ
+  const frame = recordFrameFor(entry);
+  return (frame && frame !== entry.profileFrame) ? { ...entry, profileFrame: frame } : entry;
+};
 
 // ===== ブリーダーを見分けるID(2026-09-11) =====
 //
@@ -683,7 +1127,8 @@ const _isMissingBreederIdError = (status, body) => {
 // そこを緩めると他モードの検証まで一緒に緩んでしまう。そのため触らず、モンビー専用の
 // 送受信をここへ分けて持つ。テーブル・列は既存の rankings をそのまま使う
 // (difficulty列の値だけで区別する、種族チャレンジと同じ考え方)。
-const RHYTHM_RANKING_SELECT = 'user_name,hero,party,score,level,icon,difficulty';
+const RHYTHM_RANKING_SELECT = 'user_name,hero,party,score,level,icon,difficulty,created_at';
+// profile_frame は列がある環境でだけ足す(rankingSelectWithProfileFrame)
 const sbInsertRhythmScore = async (row) => {
   if (typeof row?.clear_id !== 'string' || !row.clear_id.trim()) {
     throw new Error('rhythm ranking clear_id is required; unsafe insert skipped');
@@ -697,6 +1142,8 @@ const sbInsertRhythmScore = async (row) => {
   // breeder_id の列がまだ無いと分かっている間は、最初から外して送る
   const payload = { ...row };
   if (_rankingBreederIdUnavailable) delete payload.breeder_id;
+  // プロフィールフレームの列も同じ扱い(無いと分かっている間は最初から外して送る)
+  if (_rankingProfileFrameUnavailable) delete payload.profile_frame;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8000);
   try {
@@ -709,6 +1156,12 @@ const sbInsertRhythmScore = async (row) => {
       // その列を外して必ず送り直す(記録を落とさないことを最優先にする)。
       // 一度気付けば以後は最初から外して送るので、この寄り道は多くても1回きり。
       // 最初のPOSTは400で入っていないため、同じclear_idで送り直しても重複にならない
+      if (!_rankingProfileFrameUnavailable && payload.profile_frame !== undefined
+          && _isMissingProfileFrameError(res.status, body)) {
+        _rankingProfileFrameUnavailable = true;
+        rankingLog(requestId, 'profile-frame-column-missing', { status: res.status });
+        return sbInsertRhythmScore(rankingRowWithoutProfileFrame(payload));
+      }
       if (!_rankingBreederIdUnavailable && payload.breeder_id !== undefined
           && _isMissingBreederIdError(res.status, body)) {
         _rankingBreederIdUnavailable = true;
@@ -734,16 +1187,35 @@ const sbInsertRhythmScore = async (row) => {
 const sbFetchRhythmRankings = async (difficultyKeys, limit=RHYTHM_RANKING_FETCH_LIMIT, offset=0, requestId='untracked') => {
   const keys = (Array.isArray(difficultyKeys) ? difficultyKeys : [difficultyKeys]).filter(Boolean);
   if (keys.length === 0) return [];
-  const url = `${SUPABASE_URL}/rest/v1/rankings?select=${RHYTHM_RANKING_SELECT}&difficulty=in.(${keys.map(k=>encodeURIComponent(`"${k}"`)).join(',')})&order=score.desc.nullslast&limit=${limit}&offset=${offset}`;
+  await ensureBreederProfiles(requestId);
+  const select = rankingSelectWithBreederId(rankingSelectWithProfileFrame(RHYTHM_RANKING_SELECT));
+  const url = `${SUPABASE_URL}/rest/v1/rankings?select=${select}&difficulty=in.(${keys.map(k=>encodeURIComponent(`"${k}"`)).join(',')})&order=score.desc.nullslast&limit=${limit}&offset=${offset}`;
   rankingLog(requestId, 'rhythm-request-start', { keys, limit, offset, url, table: 'rankings' });
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
   try {
     const res = await fetch(url, { headers: SB_HEADERS, cache: 'no-store', signal: controller.signal });
     const body = await res.text();
-    if (!res.ok) throw new Error(`rhythm ranking fetch ${res.status} ${res.statusText}; url=${url}; response=${body || '(empty)'}`);
+    if (!res.ok) {
+      // ブリーダーIDの列がまだ無い環境。外して取り直す(そのときは名前で引く)
+      if (select.includes(',breeder_id') && _isMissingBreederIdError(res.status, body)) {
+        _rankingBreederIdUnavailable = true;
+        rankingLog(requestId, 'breeder-id-column-missing-on-select', { status: res.status });
+        return sbFetchRhythmRankings(difficultyKeys, limit, offset, requestId);
+      }
+      // プロフィールフレームの列がまだ無い環境。外して取り直す(飾り枠が出ないだけ)
+      if (select !== RHYTHM_RANKING_SELECT && _isMissingProfileFrameError(res.status, body)) {
+        _rankingProfileFrameUnavailable = true;
+        rankingLog(requestId, 'profile-frame-column-missing', { status: res.status });
+        return sbFetchRhythmRankings(difficultyKeys, limit, offset, requestId);
+      }
+      throw new Error(`rhythm ranking fetch ${res.status} ${res.statusText}; url=${url}; response=${body || '(empty)'}`);
+    }
     try {
-      return JSON.parse(body);
+      const rows = JSON.parse(body);
+      // 記録から分かる「その人の枠」を覚えておく(登録がまだ無い人の受け皿)
+      rememberLooksFromRows(rows);
+      return rows;
     } catch (e) {
       throw new Error(`invalid JSON; url=${url}; response=${body || '(empty)'}; error=${e.message}`);
     }
@@ -779,11 +1251,13 @@ const rhythmTotalRankingMissing = (status, body) => {
   return /PGRST205|PGRST200|42P01|does not exist|Could not find the/i.test(text);
 };
 const sbFetchRhythmTotalRankings = async ({ limit=RHYTHM_TOTAL_RANKING_DISPLAY_LIMIT, identityKeys=null, requestId='untracked' } = {}) => {
+  await ensureBreederProfiles(requestId);
   // identityKeys を渡すと、その人の行だけを取りにいく(50位圏外の自分を出すため)
   const filter = Array.isArray(identityKeys) && identityKeys.length
     ? `&identity_key=in.(${identityKeys.map(k=>encodeURIComponent(`"${k}"`)).join(',')})`
     : '';
-  const url = `${SUPABASE_URL}/rest/v1/rhythm_total_rankings?select=${RHYTHM_TOTAL_RANKING_SELECT}`
+  const select = rankingSelectWithProfileFrame(RHYTHM_TOTAL_RANKING_SELECT);
+  const url = `${SUPABASE_URL}/rest/v1/rhythm_total_rankings?select=${select}`
     + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`;
   rankingLog(requestId, 'rhythm-total-request-start', { limit, identityKeys, url, view: 'rhythm_total_rankings' });
   const controller = new AbortController();
@@ -792,6 +1266,12 @@ const sbFetchRhythmTotalRankings = async ({ limit=RHYTHM_TOTAL_RANKING_DISPLAY_L
     const res = await fetch(url, { headers: SB_HEADERS, cache: 'no-store', signal: controller.signal });
     const body = await res.text();
     if (!res.ok) {
+      // ビューはあるが profile_frame をまだ返さない環境。その列だけ外して取り直す
+      if (select !== RHYTHM_TOTAL_RANKING_SELECT && _isMissingProfileFrameError(res.status, body)) {
+        _rankingProfileFrameUnavailable = true;
+        rankingLog(requestId, 'profile-frame-column-missing', { status: res.status });
+        return sbFetchRhythmTotalRankings({ limit, identityKeys, requestId });
+      }
       if (rhythmTotalRankingMissing(res.status, body)) {
         rankingLog(requestId, 'rhythm-total-view-missing', { status: res.status });
         const error = new Error('rhythm total ranking view is not ready');
@@ -801,7 +1281,10 @@ const sbFetchRhythmTotalRankings = async ({ limit=RHYTHM_TOTAL_RANKING_DISPLAY_L
       throw new Error(`rhythm total ranking fetch ${res.status} ${res.statusText}; url=${url}; response=${body || '(empty)'}`);
     }
     try {
-      return JSON.parse(body);
+      const rows = JSON.parse(body);
+      // 記録から分かる「その人の枠」を覚えておく(登録がまだ無い人の受け皿)
+      rememberLooksFromRows(rows);
+      return rows;
     } catch (e) {
       throw new Error(`invalid JSON; url=${url}; response=${body || '(empty)'}; error=${e.message}`);
     }
@@ -813,13 +1296,14 @@ const sbFetchRhythmTotalRankings = async ({ limit=RHYTHM_TOTAL_RANKING_DISPLAY_L
   }
 };
 // Supabaseの生の行を画面用の形へ整える。合計点・曲数は数として確かめてから使う
-const rhythmTotalRankingEntryFromRow = (row) => ({
+const rhythmTotalRankingEntryFromRow = (row) => applyLatestBreederProfile({
   identityKey: typeof row?.identity_key === 'string' ? row.identity_key : '',
   userName: row?.user_name || '名無しのブリーダー',
   totalScore: Number(row?.total_score) || 0,
   songCount: Number(row?.song_count) || 0,
   level: Number(row?.level) || 0,
   icon: row?.icon ?? null,
+  profileFrame: rankingProfileFrameFromRow(row),
 });
 // 自分がどの行かを見分けるためのキー。IDがある人はそのID、IDが付く前からの人は name:<名前>。
 // どちらの記録も持っている人がいるので、両方を候補として渡す(§4.4)
@@ -890,6 +1374,7 @@ const rhythmEventNotReadyError = () => {
 };
 // 取得の共通部分。集計済みの行しか返ってこないので、待ち時間は合算と同じ15秒で足りる
 const sbFetchRhythmEventRows = async ({ url, body = null, label, requestId = 'untracked' }) => {
+  await ensureBreederProfiles(requestId);
   rankingLog(requestId, `${label}-request-start`, { url, body });
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
@@ -906,17 +1391,25 @@ const sbFetchRhythmEventRows = async ({ url, body = null, label, requestId = 'un
       : { headers: SB_HEADERS, cache: 'no-store', signal: controller.signal });
     const text = await res.text();
     if (!res.ok) {
-      if (rhythmEventRankingMissing(res.status, text)) {
+      // ★profile_frame の判定を先に見る。関数・ビューそのものが無いときの本文には
+      //   profile_frame という語が出てこないので、取り違えない
+      const profileFrameMissing = _isMissingProfileFrameError(res.status, text);
+      if (!profileFrameMissing && rhythmEventRankingMissing(res.status, text)) {
         rankingLog(requestId, `${label}-not-ready`, { status: res.status });
         throw rhythmEventNotReadyError();
       }
       const failure = new Error(`${label} fetch ${res.status} ${res.statusText}; url=${url}; response=${text || '(empty)'}`);
       // 「party という列は無い」だけなら、呼んだ側が party 無しで取り直せるように印を付ける
       if (rhythmEventDetailColumnMissing(res.status, text)) failure.detailColumnMissing = true;
+      // 「profile_frame という列は無い」だけなら、その列を外して取り直せるように印を付ける
+      if (profileFrameMissing) failure.profileFrameColumnMissing = true;
       throw failure;
     }
     try {
-      return JSON.parse(text);
+      const rows = JSON.parse(text);
+      // 記録から分かる「その人の枠」を覚えておく(登録がまだ無い人の受け皿)
+      rememberLooksFromRows(rows);
+      return rows;
     } catch (e) {
       throw new Error(`invalid JSON; url=${url}; response=${text || '(empty)'}; error=${e.message}`);
     }
@@ -925,6 +1418,18 @@ const sbFetchRhythmEventRows = async ({ url, body = null, label, requestId = 'un
     throw error;
   } finally {
     clearTimeout(timer);
+  }
+};
+// profile_frame を足して頼み、その列がまだ無い環境なら外してもう一度だけ頼む。
+// ビュー・関数のどれでも同じ形で使えるように、select を受け取る関数のほうを包む
+const askWithProfileFrame = async (askFn, select) => {
+  const wanted = rankingSelectWithProfileFrame(select);
+  try {
+    return await askFn(wanted);
+  } catch (error) {
+    if (wanted === select || !error || !error.profileFrameColumnMissing) throw error;
+    _rankingProfileFrameUnavailable = true;
+    return askFn(select);
   }
 };
 // 今週の始まり・終わり(月曜5:00 JST区切り)。1行だけ返る
@@ -959,19 +1464,21 @@ const sbFetchRhythmEventSongBests = async ({ songId, fromMs, toMs, bonusRates = 
     ? `&identity_key=in.(${identityKeys.map(k => encodeURIComponent(`"${k}"`)).join(',')})`
     : '';
   const body = { song_ids: [songId], from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() };
-  const ask = (select) => sbFetchRhythmEventRows({
+  const askRaw = (select) => sbFetchRhythmEventRows({
     url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_song_bests?select=${select}`
       + `&order=score.desc,scored_at.asc&limit=${limit}${filter}`,
     body, label: 'rhythm-event-song', requestId,
   });
+  const ask = (select) => askWithProfileFrame(askRaw, select);
   // 回数ボーナスを使うイベントでは、加点込みの関数を先に試す。
   // 関数がまだ無い環境では加点なしへ戻す(順位は出る。加点と内訳だけ出ない)
   if (bonusRates) {
-    const askBonus = (select) => sbFetchRhythmEventRows({
+    const askBonusRaw = (select) => sbFetchRhythmEventRows({
       url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_song_bests_bonus?select=${select}`
         + `&order=score.desc,scored_at.asc&limit=${limit}${filter}`,
       body: { ...body, bonus_rates: bonusRates }, label: 'rhythm-event-song-bonus', requestId,
     });
+    const askBonus = (select) => askWithProfileFrame(askBonusRaw, select);
     try {
       return await askBonus(RHYTHM_EVENT_SONG_BONUS_SELECT);
     } catch (error) {
@@ -1005,11 +1512,12 @@ const sbFetchRhythmEventTotals = async ({ songIds, fromMs, toMs, bonusRates = nu
   const body = { song_ids: songIds, from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() };
   // 曲の部門と同じく、加点込みの関数を先に試して、無ければ加点なしへ戻す
   if (bonusRates) {
-    const askBonus = (select) => sbFetchRhythmEventRows({
+    const askBonusRaw = (select) => sbFetchRhythmEventRows({
       url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals_bonus?select=${select}`
         + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
       body: { ...body, bonus_rates: bonusRates }, label: 'rhythm-event-total-bonus', requestId,
     });
+    const askBonus = (select) => askWithProfileFrame(askBonusRaw, select);
     try {
       return await askBonus(RHYTHM_EVENT_TOTAL_BONUS_SELECT);
     } catch (error) {
@@ -1021,11 +1529,11 @@ const sbFetchRhythmEventTotals = async ({ songIds, fromMs, toMs, bonusRates = nu
       }
     }
   }
-  return sbFetchRhythmEventRows({
-    url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals?select=${RHYTHM_EVENT_TOTAL_SELECT}`
+  return askWithProfileFrame((select) => sbFetchRhythmEventRows({
+    url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals?select=${select}`
       + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
     body, label: 'rhythm-event-total', requestId,
-  });
+  }), RHYTHM_EVENT_TOTAL_SELECT);
 };
 // 回数ボーナスの内訳(素点・加点・回数)を取り出す。加点なしの関数から取った行には
 // これらの列が無いので、baseScore を null にして「内訳を出さない」と伝える。
@@ -1058,15 +1566,15 @@ const sbFetchRhythmWeekTotals = async ({ fromMs, toMs, limit = RHYTHM_EVENT_RANK
   const filter = Array.isArray(identityKeys) && identityKeys.length
     ? `&identity_key=in.(${identityKeys.map(k => encodeURIComponent(`"${k}"`)).join(',')})`
     : '';
-  return sbFetchRhythmEventRows({
-    url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_week_score_totals?select=${RHYTHM_WEEK_TOTAL_SELECT}`
+  return askWithProfileFrame((select) => sbFetchRhythmEventRows({
+    url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_week_score_totals?select=${select}`
       + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
     body: { from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() },
     label: 'rhythm-week-total', requestId,
-  });
+  }), RHYTHM_WEEK_TOTAL_SELECT);
 };
 // 生の行を画面用の形へ整える。壊れた値でも落ちないよう、数として確かめてから使う
-const rhythmEventSongEntryFromRow = (row) => ({
+const rhythmEventSongEntryFromRow = (row) => applyLatestBreederProfile({
   identityKey: typeof row?.identity_key === 'string' ? row.identity_key : '',
   userName: row?.user_name || '名無しのブリーダー',
   songId: typeof row?.song_id === 'string' ? row.song_id : '',
@@ -1074,6 +1582,7 @@ const rhythmEventSongEntryFromRow = (row) => ({
   score: Number(row?.score) || 0,
   level: Number(row?.level) || 0,
   icon: row?.icon ?? null,
+  profileFrame: rankingProfileFrameFromRow(row),
   // 判定の内訳。「この曲」タブと同じく party の先頭要素を読む(rhythmRankingEntryFromRow と同じ形)。
   // SQL未適用の環境・内訳が保存される前の古い記録では null になり、詳細ボタンが出ないだけ
   detail: (Array.isArray(row?.party) && row.party[0] && typeof row.party[0] === 'object') ? row.party[0] : null,
@@ -1081,18 +1590,19 @@ const rhythmEventSongEntryFromRow = (row) => ({
   // 画面は内訳の枠を出さない(加点していないのに「+0」と出さないため)
   ...rhythmEventBonusFields(row, 'base_score'),
 });
-const rhythmEventTotalEntryFromRow = (row) => ({
+const rhythmEventTotalEntryFromRow = (row) => applyLatestBreederProfile({
   identityKey: typeof row?.identity_key === 'string' ? row.identity_key : '',
   userName: row?.user_name || '名無しのブリーダー',
   totalScore: Number(row?.total_score) || 0,
   songCount: Number(row?.song_count) || 0,
   level: Number(row?.level) || 0,
   icon: row?.icon ?? null,
+  profileFrame: rankingProfileFrameFromRow(row),
   ...rhythmEventBonusFields(row, 'base_total'),
 });
 // 週間の行。イベントの総合と形をそろえておくと、画面側で分岐が増えない。
 // 違うのは playCount(遊んだ回数)を必ず持つことだけ
-const rhythmWeekTotalEntryFromRow = (row) => ({
+const rhythmWeekTotalEntryFromRow = (row) => applyLatestBreederProfile({
   identityKey: typeof row?.identity_key === 'string' ? row.identity_key : '',
   userName: row?.user_name || '名無しのブリーダー',
   totalScore: Number(row?.total_score) || 0,
@@ -1103,6 +1613,7 @@ const rhythmWeekTotalEntryFromRow = (row) => ({
   songCount: Number(row?.song_count) || 0,
   level: Number(row?.level) || 0,
   icon: row?.icon ?? null,
+  profileFrame: rankingProfileFrameFromRow(row),
   // 週間に回数ボーナスは無いので、内訳の枠は出さない(CLAUDE.md の決めごとどおり)
   baseScore: null, bonusScore: 0, playCounts: {},
 });

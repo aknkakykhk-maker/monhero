@@ -21,6 +21,8 @@ Claude 固有の会話・公開フローは [`CLAUDE.md`](../CLAUDE.md) が正�
 | [`spec/MONSTER_SYSTEM.md`](spec/MONSTER_SYSTEM.md) | 育成、マスモン、総合力、融合、ランキング詳細 |
 | [`spec/RHYTHM_MODE.md`](spec/RHYTHM_MODE.md) | 音ゲーの初期設計、現行の基礎仕様、確定済み追加仕様と未確定項目 |
 | [`spec/RHYTHM_RANKING.md`](spec/RHYTHM_RANKING.md) | モンヒロビートのランキング正本(曲別・全曲合算・週間・イベント・Supabase設計) |
+| [`spec/PROFILE_FRAME.md`](spec/PROFILE_FRAME.md) | プロフィールフレーム(ブリーダーアイコンの外側に重ねる飾り枠)の正本 |
+| [`spec/BREEDER_PROFILE.md`](spec/BREEDER_PROFILE.md) | ランキングに「いまの名前・アイコン・フレーム」を出すしくみ |
 | [`spec/SAVE_DATA.md`](spec/SAVE_DATA.md) | 保存キー(`mh_*`)の一覧と互換性の方針 |
 | [`spec/UI_RULES.md`](spec/UI_RULES.md) | 画面まわりの共通ルール |
 
@@ -47,7 +49,7 @@ Claude 固有の会話・公開フローは [`CLAUDE.md`](../CLAUDE.md) が正�
 | フォルダ | 対象 |
 | --- | --- |
 | [`sql/rankings/`](sql/rankings/) | `rankings` テーブル本体、緊急対応、重複整理 |
-| [`sql/bond-levels/`](sql/bond-levels/) | `bond_levels` テーブル（2026-08-14 適用済み） |
+| [`sql/bond-levels/`](sql/bond-levels/) | `bond_levels` テーブル（2026-08-14 適用済み）。`BOND_LEVELS_BREEDER_ID_APPLY.sql` は人を名前でなくIDで見分けるための列（`PROFILE_LOOK_ALL_APPLY.sql` にも含む） |
 | [`sql/run-stats/`](sql/run-stats/) | `rankings` へ後から足した `turns` / `reached_wave`（2026-08-15 適用済み） |
 
 再現可能な構造変更の正本はリポジトリルートの [`supabase/migrations/`](../supabase/migrations/)。

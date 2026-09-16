@@ -76,7 +76,7 @@ const TEACHING_CARDS = [
   { id:'dra',     baseName:"ドラの緑膝",      icon:DRA_FACE_ICON,     type:'buff',   subType:'dmg_cut_buff', baseValue:0.03,step:0.03, desc:"被ダメージダウン",     evoLevel:0, guts:20 },
   { id:'cadmium', baseName:"かどみうむの計算", icon:CADMIUM_FACE_ICON, type:'buff',   subType:'guts_buff',   baseValue:1.3, step:0.2,  desc:"自動回復・上限アップ",   evoLevel:0, guts:20 },
   { id:'mua',     baseName:"みゅあの愛",      icon:MUA_FACE_ICON,     type:'heal',   subType:'heal_mua',    baseValue:0.5, step:0.2,  desc:"回復・能力永続アップ",   evoLevel:0, guts:20 },
-  { id:'atsu',    baseName:"あつの挑発",      icon:ATSU_FACE_ICON,    type:'debuff', subType:'stun_atsu',   baseValue:1.5, step:1.5,  desc:"敵の行動を無効・攻撃", evoLevel:0, guts:20 },
+  { id:'atsu',    baseName:"あつの挑発",      icon:ATSU_FACE_ICON,     type:'debuff', subType:'stun_atsu',   baseValue:1.5, step:1.5,  desc:"敵の行動を無効・攻撃", evoLevel:0, guts:20 },
   { id:'myaru',   baseName:"みゃるの薬",      icon:MYARU_FACE_ICON,   type:'buff',   subType:'buff_myaru',  baseValue:2.0, step:0.5, selfDmg:0.5, dmgStep:0.1, desc:"次ターン攻撃2倍・自傷", evoLevel:0, guts:20 },
   { id:'kiki',    baseName:"ききの応援",      icon:KIKI_FACE_ICON,    type:'buff',   subType:'buff_kiki',   baseValue:0.03, step:0.02, desc:"次ターンからカード上限アップ・全体連撃", evoLevel:0, guts:20 },
   // メロソの回復量はレベルで変わらない(強化で増えるのは次ターンの予約効果)。
@@ -261,10 +261,12 @@ const BREEDER_MARKET_ITEMS = [
   // 1枚消費してボス撃破まで到達したのと同じ絆経験値・ブリーダー経験値・ダイヤを受け取る。
   // スコア・ランキング・クリア回数・マスモン登録は対象外(通常のクリアとは別扱い)。
   //
-  // 販売価格は序=3300 / 破=5900 / 急=8500。報酬計算とは独立した固定価格。
-  { id:'skip_ticket_jo',  name:"スキップチケット・序", type:'item', emoji:"⏩", cost:3300, usage:'battleSkip', skipDifficulty:'Normal', desc:"バトルのNormalで使う。1枚消費して、ボスまで倒したときと同じ絆経験値・ブリーダー経験値・ダイヤを受け取れる。まとめて使うこともでき、その場合は枚数ぶん受け取れる。スコアとランキングには記録されない。" },
-  { id:'skip_ticket_ha',  name:"スキップチケット・破", type:'item', emoji:"⏭️", cost:5900, usage:'battleSkip', skipDifficulty:'Hard',   desc:"バトルのHardで使う。1枚消費して、ボスまで倒したときと同じ絆経験値・ブリーダー経験値・ダイヤを受け取れる。まとめて使うこともでき、その場合は枚数ぶん受け取れる。スコアとランキングには記録されない。" },
-  { id:'skip_ticket_kyu', name:"スキップチケット・急", type:'item', emoji:"⚡", cost:8500, usage:'battleSkip', skipDifficulty:'Expert', desc:"バトルのExpertで使う。1枚消費して、ボスまで倒したときと同じ絆経験値・ブリーダー経験値・ダイヤを受け取れる。まとめて使うこともでき、その場合は枚数ぶん受け取れる。スコアとランキングには記録されない。" },
+  // 販売価格は序=3000 / 破=5000 / 急=7000 / 極=15000 / 覇=30000。報酬計算とは独立した固定価格。
+  { id:'skip_ticket_jo',  name:"スキップチケット・序", type:'item', emoji:"⏩", cost:3000, usage:'battleSkip', skipDifficulty:'Normal', desc:"バトルのNormalで使う。1枚消費して、ボスまで倒したときと同じ絆経験値・ブリーダー経験値・ダイヤを受け取れる。まとめて使うこともでき、その場合は枚数ぶん受け取れる。スコアとランキングには記録されない。" },
+  { id:'skip_ticket_ha',  name:"スキップチケット・破", type:'item', emoji:"⏭️", cost:5000, usage:'battleSkip', skipDifficulty:'Hard',   desc:"バトルのHardで使う。1枚消費して、ボスまで倒したときと同じ絆経験値・ブリーダー経験値・ダイヤを受け取れる。まとめて使うこともでき、その場合は枚数ぶん受け取れる。スコアとランキングには記録されない。" },
+  { id:'skip_ticket_kyu', name:"スキップチケット・急", type:'item', emoji:"⚡", cost:7000, usage:'battleSkip', skipDifficulty:'Expert', desc:"バトルのExpertで使う。1枚消費して、ボスまで倒したときと同じ絆経験値・ブリーダー経験値・ダイヤを受け取れる。まとめて使うこともでき、その場合は枚数ぶん受け取れる。スコアとランキングには記録されない。" },
+  { id:'skip_ticket_kiwami', name:"スキップチケット・極", type:'item', emoji:"🔥", cost:15000, usage:'battleSkip', skipDifficulty:'Master', desc:"バトルのMasterで使う。1枚消費して、ボスまで倒したときと同じ絆経験値・ブリーダー経験値・ダイヤを受け取れる。まとめて使うこともでき、その場合は枚数ぶん受け取れる。スコアとランキングには記録されない。" },
+  { id:'skip_ticket_haou', name:"スキップチケット・覇", type:'item', emoji:"👑", cost:30000, usage:'battleSkip', skipDifficulty:'GrandMaster', desc:"バトルのGrand Masterで使う。1枚消費して、ボスまで倒したときと同じ絆経験値・ブリーダー経験値・ダイヤを受け取れる。まとめて使うこともでき、その場合は枚数ぶん受け取れる。スコアとランキングには記録されない。" },
   // 限界突破専用のアイテム。マーケットでは売らない(shop:false)ので、
   // 入手はチャレンジモード・クイックモードのクリア報酬だけ。
   // 必要数は限界突破1回ごとに増える(1回目5個・以降+1個)。計算は game-system.jsx の
@@ -281,3 +283,218 @@ const BREEDER_MARKET_ITEMS = [
 const SKIP_TICKET_BY_DIFFICULTY = Object.freeze(Object.fromEntries(
   BREEDER_MARKET_ITEMS.filter(item => item.usage === 'battleSkip').map(item => [item.skipDifficulty, item.id])
 ));
+// ==================== プロフィールフレーム(2026-09-15) ====================
+//
+// ブリーダーアイコンの「外側」へ重ねる飾り枠。アイコン画像そのものには一切手を触れない
+// (下層=これまでのアイコン / 上層=フレーム、の2枚重ね)。顔の位置調整
+// (MARKET_PROFILE_ICON_STYLES)も、フレームの有無に関係なくそのまま効く。
+//
+// 【最初から全員が選べるもの】
+//   画像を1枚も増やさずに済むよう、シルバー・ゴールド・ブルー・ピンクは CSS だけで描く
+//   (kind:'css')。太さは「アイコンの大きさに対する割合」で決まるので、
+//   ランキングの32pxでも、プロフィールの80pxでも同じ見え方になる。
+//
+// 【まだ公開しないもの】
+//   豪華フレームは kind:'image' + released:false で登録する。released:false のものは
+//   normalizeProfileFrameId が 'none' へ倒すので、
+//     ・選択画面に出ない
+//     ・保存値に入っても「フレームなし」になる
+//     ・ランキングで他人の記録に入っていても描画されない
+//   の3つがまとめて成り立つ。公開するときは released:true へ変えるだけでよい。
+//   (画像は monster-hero/images/profile-frames/ へ置く。base64にはしない)
+const PROFILE_FRAME_NONE_ID = 'none';
+// 選んでいるフレームの保存キー。既存の mh_breeder_icon とは別に持つ(アイコンとフレームは独立した設定)
+const PROFILE_FRAME_KEY = 'mh_profile_frame_v1';
+const PROFILE_FRAMES = [
+  { id:'none',   name:'フレームなし', kind:'none', released:true,
+    desc:'飾り枠を付けません。これまでと同じ見た目です。' },
+  // ★既存のidは消さない・変えない(選んでいる人がいるし、ランキングの記録にも入っている)。
+  //   色を増やすときは、この並びへ足すだけにする。
+  { id:'silver', name:'シルバー', kind:'css', released:true, className:'mh-profile-frame-silver',
+    desc:'落ち着いた銀色の細い輪。どのアイコンにも合わせやすい枠です。' },
+  { id:'gold',   name:'ゴールド', kind:'css', released:true, className:'mh-profile-frame-gold',
+    desc:'金色の輪。少しだけ華やかに見せたいときに。' },
+  { id:'white',  name:'ホワイト', kind:'css', released:true, className:'mh-profile-frame-white',
+    desc:'白い輪。色の濃いアイコンをすっきり見せます。' },
+  { id:'black',  name:'ブラック', kind:'css', released:true, className:'mh-profile-frame-black',
+    desc:'黒い輪。明るいアイコンを引き締めます。' },
+  { id:'red',    name:'レッド',   kind:'css', released:true, className:'mh-profile-frame-red',
+    desc:'赤い輪。いちばん目を引く色です。' },
+  { id:'orange', name:'オレンジ', kind:'css', released:true, className:'mh-profile-frame-orange',
+    desc:'橙色の輪。あたたかい印象になります。' },
+  { id:'green',  name:'グリーン', kind:'css', released:true, className:'mh-profile-frame-green',
+    desc:'緑の輪。落ち着いた自然な色合いです。' },
+  { id:'aqua',   name:'アクア',   kind:'css', released:true, className:'mh-profile-frame-aqua',
+    desc:'水色の輪。涼しげで明るい色です。' },
+  { id:'blue',   name:'ブルー',   kind:'css', released:true, className:'mh-profile-frame-blue',
+    desc:'澄んだ青の輪。暗い背景でもはっきり見えます。' },
+  { id:'purple', name:'パープル', kind:'css', released:true, className:'mh-profile-frame-purple',
+    desc:'紫の輪。落ち着いた華やかさがあります。' },
+  { id:'pink',   name:'ピンク',   kind:'css', released:true, className:'mh-profile-frame-pink',
+    desc:'やわらかい桃色の輪。明るい印象になります。' },
+  { id:'rainbow',name:'レインボー', kind:'css', released:true, className:'mh-profile-frame-rainbow',
+    desc:'七色がぐるりと回る輪。いちばん目立つ色です。' },
+  // ==================== 豪華フレーム(2026-09-15) ====================
+  // ユーザーから受け取った透過PNG。
+  // ★hole は「穴の直径 ÷ 画像の幅」の実測値(360方向の中央値)。位置合わせに使う。
+  //   tools/ranking/profile-frame-check.js が実際のPNGを測って突き合わせる。
+  // ★元絵は 1254px / 0.9〜2.2MB だったものを 384px へ落として入れてある。
+  //   表示は最大80pxなので、これで足りる(CLAUDE.md ⑥-2)。
+  //
+  // 【released と unlock の役割はまったく別】(2026-09-16)
+  //   released … **描いてよいか**。false のものは選択画面にも出ないし、
+  //               ランキングで他人の記録に入っていても描かれない
+  //   unlock   … **自分が選べるか**。書いてあるものは条件を満たすまで選べない
+  //               (描くのは自由。持っている人の枠は、他人の画面でもちゃんと出る)
+  //   ★ここを一緒にすると「解放した人の枠が他人の画面で消える」ので、必ず分けること。
+  // モンスターの3枚は助手とは無関係。配り方を決めていないので未公開のまま
+  // (released:false。選択画面に出ず、他人の記録に入っていても描かれない)
+  { id:'frame_mocchi', name:'モッチー', kind:'image', released:false, hole:0.656,
+    src:'images/profile-frames/mocchi.png?v=7c842f6ed7bf',
+    desc:'桜の花びらと桜もちをあしらった、モッチーの和風フレーム。' },
+  { id:'frame_moo', name:'ムー', kind:'image', released:false, hole:0.682,
+    src:'images/profile-frames/moo.png?v=fc64f9da9806',
+    desc:'紫の宝玉と金の角をいただく、ラスボス「ムー」のフレーム。' },
+  { id:'frame_suezo_beat', name:'スエゾービート', kind:'image', released:false, hole:0.724,
+    src:'images/profile-frames/suezo-beat.png?v=0b43f621dd89',
+    desc:'スエゾーと音符が跳ねる、モンヒロビートのフレーム。' },
+  // ==================== 助手の仲良し度でもらえる枠(2026-09-16) ====================
+  // 助手1人につき3枚。その助手との仲良し度が Lv2 / Lv5 / Lv7 になると自動でもらえる。
+  // ★unlock を書いた枠は「もらうまで選べない」だけで、描くのは自由(released:true)。
+  // ★並びは助手の登場順(みゅあ → きき → ももすけ)。Lvの小さい順に3枚ずつ。
+  //
+  // みゅあの3枚。呼び分けはアシストカードの3段階
+  // (BREEDER_EVO_NAMES.mua の 愛 → 深愛 → 慈愛)にそろえてある。
+  { id:'frame_mua_1', name:'みゅあ・愛', kind:'image', released:true, hole:0.669,
+    unlock:{ assistantId:'mua', bondLevel:2 },
+    src:'images/profile-frames/mua-1.png?v=cf21c351ff0a',
+    desc:'桜色のリボンと星をあしらった、みゅあの細いリース。' },
+  { id:'frame_mua_2', name:'みゅあ・深愛', kind:'image', released:true, hole:0.745,
+    unlock:{ assistantId:'mua', bondLevel:5 },
+    src:'images/profile-frames/mua-2.png?v=ec2adae9b6f6',
+    desc:'金の飾りと真珠、虹のリボンで華やかにした、みゅあのリース。' },
+  { id:'frame_mua_3', name:'みゅあ・慈愛', kind:'image', released:true, hole:0.719,
+    unlock:{ assistantId:'mua', bondLevel:7 },
+    src:'images/profile-frames/mua-3.png?v=d18cf1740410',
+    desc:'みゅあ本人が寄り添って眠る、いちばん特別なリース。' },
+  // ききの3枚。同じ意匠を段階的に豪華にしたもので、呼び分けは教えカードの3段階
+  // (BREEDER_EVO_NAMES.kiki の 応援 → 本気 → 全力全開)にそろえてある。
+  { id:'frame_kiki_ouen', name:'きき・応援', kind:'image', released:true, hole:0.755,
+    unlock:{ assistantId:'kiki', bondLevel:2 },
+    src:'images/profile-frames/kiki-ouen.png?v=09b871ec464c',
+    desc:'紅いリボンと白いくつ下をあしらった、ききのフレーム。' },
+  { id:'frame_kiki_honki', name:'きき・本気', kind:'image', released:true, hole:0.698,
+    unlock:{ assistantId:'kiki', bondLevel:5 },
+    src:'images/profile-frames/kiki-honki.png?v=fb89e34bd92b',
+    desc:'金の縁飾りと桜、幾重ものリボンで華やかにした、ききのフレーム。' },
+  { id:'frame_kiki_zenryoku', name:'きき・全力全開', kind:'image', released:true, hole:0.677,
+    unlock:{ assistantId:'kiki', bondLevel:7 },
+    src:'images/profile-frames/kiki-zenryoku.png?v=88238cde0306',
+    desc:'髪とリボンが渦を巻き、星とハートが輝く、ききのいちばん豪華なフレーム。' },
+  // ももすけの3枚。ももすけにはまだアシストカードが無いので、呼び分けを先に決めてある
+  // (2026-09-16・ユーザーが選択)。おねだり → だだこね → 独り占め。
+  // カードを実装するときも、この3段階をそのまま使う
+  // (BREEDER_EVO_NAMES へ momosuke:['ももすけのおねだり','ももすけのだだこね','ももすけの独り占め'])。
+  { id:'frame_momosuke_1', name:'ももすけ・おねだり', kind:'image', released:true, hole:0.737,
+    unlock:{ assistantId:'momosuke', bondLevel:2 },
+    src:'images/profile-frames/momosuke-1.png?v=85af4bc2f2e2',
+    desc:'黒とピンクのリボンに、うさぎと三日月をあしらった細い輪。' },
+  { id:'frame_momosuke_2', name:'ももすけ・だだこね', kind:'image', released:true, hole:0.714,
+    unlock:{ assistantId:'momosuke', bondLevel:5 },
+    src:'images/profile-frames/momosuke-2.png?v=9c1adfb2e8b6',
+    desc:'大きな三日月と魔法陣、こうもりの羽で飾った、ももすけの輪。' },
+  { id:'frame_momosuke_3', name:'ももすけ・独り占め', kind:'image', released:true, hole:0.714,
+    unlock:{ assistantId:'momosuke', bondLevel:7 },
+    src:'images/profile-frames/momosuke-3.png?v=15ed59e8cf51',
+    desc:'ももすけ本人がうさぎのぬいぐるみを抱えて陣取る、いちばん特別な輪。' },
+];
+const PROFILE_FRAME_MAP = Object.freeze(Object.fromEntries(PROFILE_FRAMES.map(frame => [frame.id, frame])));
+// 画像フレームの「穴」を、アイコンの円のどこに合わせるか。
+// 1.00 でちょうど重なり、小さくするほど枠がアイコンへかぶさる。
+// 0.98 は「アイコンをほとんど隠さず、境目だけ少し重ねる」値
+// (公開のしかたを決めるときに、ここだけ変えれば6枚まとめて寄り引きできる)。
+const PROFILE_FRAME_HOLE_FIT = 0.98;
+// 画像フレームを重ねる大きさと位置。絵ごとに穴の大きさ(hole)が違うので、1つのCSSではそろわない。
+// hole は「穴の直径 ÷ 画像の幅」で、tools/ranking/profile-frame-check.js が
+// 実際のPNGを測って書いてある値と合っているかを確かめる(絵を差し替えたらそこで気づく)。
+//
+// ★width / height を必ず書く。<img> は位置指定(inset)だけでは広がらず、
+//   さらに Tailwind の img{max-width:100%} でアイコンと同じ大きさに抑えられてしまう
+//   (2026-09-15・実際にそうなって枠が拡大されなかった)。maxWidth:'none' もここで外す。
+const PROFILE_FRAME_IMAGE_FALLBACK_BOX = 1.32; // hole が読めないときの大きさ(アイコン比)
+const profileFrameImageStyle = (frame) => {
+  const hole = Number(frame && frame.hole);
+  const box = (Number.isFinite(hole) && hole > 0.2 && hole < 1)
+    ? (PROFILE_FRAME_HOLE_FIT / hole) : PROFILE_FRAME_IMAGE_FALLBACK_BOX;
+  const size = `${(box * 100).toFixed(2)}%`;
+  const offset = `${(-((box - 1) / 2) * 100).toFixed(2)}%`;
+  return { width: size, height: size, left: offset, top: offset, right: 'auto', bottom: 'auto', maxWidth: 'none' };
+};
+// idからフレームの定義を引く。未公開のものもそのまま返す(デバッグの見た目確認はこちらを使う)
+const profileFrameById = (id) => (typeof id === 'string' && PROFILE_FRAME_MAP[id]) || null;
+// 保存値・ランキングから受け取った値を「いま画面に出してよいid」へそろえる。
+// 知らないid・未公開のid・壊れた値はすべて 'none'(フレームなし)へ倒す。
+// ★この関数だけが「出してよいか」を決める。画面ごとに判定を書かない
+const normalizeProfileFrameId = (value) => {
+  const frame = profileFrameById(value);
+  return (frame && frame.released === true) ? frame.id : PROFILE_FRAME_NONE_ID;
+};
+// 全国ランキングへ送る値。フレームなしのときは null を返し、呼ぶ側は列ごと付けない
+// (既存の記録と同じくNULLのままにしておく。NULL = フレームなし)
+const rankingProfileFrameValue = (value) => {
+  const id = normalizeProfileFrameId(value);
+  return id === PROFILE_FRAME_NONE_ID ? null : id;
+};
+// 選択画面に並べるもの(公開済みのみ。並びは PROFILE_FRAMES のとおり)。
+// ★もらっていない枠もここに入る。「選べるか」は profileFrameOwned が別に決める
+//   (絵は見せて鍵を付ける、という見せ方。2026-09-16にユーザーが選択)
+const releasedProfileFrames = () => PROFILE_FRAMES.filter(frame => frame.released === true);
+
+// ==================== もらえる枠(2026-09-16) ====================
+//
+// 助手との仲良し度が Lv2 / Lv5 / Lv7 になると、その助手の枠が1枚ずつもらえる。
+//
+// ★もらったidは**新しいキー**へ積む。既存の mh_* は読みも書きも変えない(CLAUDE.md ⑦)。
+// ★一度もらったら絶対に外さない。助手を切り替えても、あとで条件を変えても残す
+//   (取り上げになるため)。だから「いまのLv」ではなく「もらった記録」を持つ。
+const PROFILE_FRAME_OWNED_KEY = 'mh_profile_frame_owned_v1';
+// 壊れた値・古い形が入っていても必ず文字列の配列へ落とす
+const normalizeOwnedProfileFrames = (value) => {
+  const list = Array.isArray(value) ? value : [];
+  return [...new Set(list.filter(id => typeof id === 'string' && id.trim()).map(id => id.trim()))];
+};
+// その枠にもらう条件が付いているか(付いていなければ最初から誰でも選べる)
+const profileFrameUnlock = (frame) => {
+  const unlock = frame && frame.unlock;
+  const level = Number(unlock && unlock.bondLevel);
+  return (unlock && typeof unlock.assistantId === 'string' && Number.isFinite(level))
+    ? { assistantId: unlock.assistantId, bondLevel: level } : null;
+};
+// いま選べるか。条件の無い枠は常に true、条件つきは「もらった記録」にあるときだけ true
+const profileFrameOwned = (id, owned) => {
+  const frame = profileFrameById(id);
+  if (!frame || frame.released !== true) return false;
+  if (!profileFrameUnlock(frame)) return true;
+  return normalizeOwnedProfileFrames(owned).includes(frame.id);
+};
+// その助手の枠を、もらえるLvの小さい順に返す(助手の画面・ヘルプの表で使う)
+const profileFramesForAssistant = (assistantId) => releasedProfileFrames()
+  .filter(frame => (profileFrameUnlock(frame) || {}).assistantId === assistantId)
+  .sort((a, b) => profileFrameUnlock(a).bondLevel - profileFrameUnlock(b).bondLevel);
+// 仲良し度がLvまで上がったときに、新しくもらえる枠のidを返す(既に持っているものは除く)。
+// ★条件は「いまのLv以下」で見る。間のLvを飛ばして上がっても取りこぼさない
+const profileFramesEarnedAt = (assistantId, bondLevel, owned) => {
+  const level = Number(bondLevel);
+  if (!Number.isFinite(level)) return [];
+  const have = new Set(normalizeOwnedProfileFrames(owned));
+  return profileFramesForAssistant(assistantId)
+    .filter(frame => profileFrameUnlock(frame).bondLevel <= level && !have.has(frame.id))
+    .map(frame => frame.id);
+};
+// その助手で「次にもらえる枠」。全部もらっていれば null(助手の画面の1行に使う)
+const nextProfileFrameForAssistant = (assistantId, bondLevel, owned) => {
+  const level = Number(bondLevel);
+  const have = new Set(normalizeOwnedProfileFrames(owned));
+  return profileFramesForAssistant(assistantId)
+    .find(frame => !have.has(frame.id) && !(Number.isFinite(level) && profileFrameUnlock(frame).bondLevel <= level)) || null;
+};

@@ -16888,14 +16888,20 @@ const rhythmRankingEntryFromRow=(row)=>{
   const parsed=parseRhythmRankingDifficultyKey(row?.difficulty);
   const partyDetail=Array.isArray(row?.party)?row.party[0]:null;
   const detail=(partyDetail&&typeof partyDetail==='object')?partyDetail:null;
-  return {
+  // 名前・アイコン・フレームは「いま設定しているもの」で出す(2026-09-16)。
+  // 記録に写した値は、その人が見つからなかったときの受け皿として残る
+  return (typeof applyLatestBreederProfile==='function'?applyLatestBreederProfile:(e=>e))({
     userName:row?.user_name||'名無しのブリーダー',
+    // 「いまの見た目」を名前ではなくIDで引くために持つ(改名しても当たる)
+    breederId:(typeof row?.breeder_id==='string'&&row.breeder_id)?row.breeder_id:undefined,
     score:Number(row?.score)||0,
     level:Number(row?.level)||0,
     icon:row?.icon??null,
+    // プロフィールフレーム(2026-09-15)。列がまだ無い環境・選んでいない人は 'none' になる
+    profileFrame:normalizeProfileFrameId(row?.profile_frame),
     difficultyId:parsed?.difficultyId||row?.hero||null,
     detail,
-  };
+  });
 };
 
 // ブリーダー別 全曲合算ランキング(2026-09-11)。

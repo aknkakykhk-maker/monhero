@@ -134,6 +134,8 @@ function MonsterHeroGame() {
   const dailyMasuAdviceCheckedRef = useRef(false);
   // マーケットのアイテムの効果説明。カードを小さくしたぶん、詳細ボタンから出す
   const [marketItemDetail, setMarketItemDetail] = useState(null);
+  // ビートPは交換所を開くたび保存値から読み直し、交換成功時だけstateも更新する。
+  const [rhythmEventPoints, setRhythmEventPoints] = useState(0);
   // 虹の超越の実だけは、価格タップ後に数量と購入後残高を確認してから一括購入する。
   const [marketQuantityItem, setMarketQuantityItem] = useState(null);
   const [marketPurchaseQuantity, setMarketPurchaseQuantity] = useState(1);
@@ -1080,6 +1082,95 @@ function MonsterHeroGame() {
   const [waveHistory, setWaveHistory] = useState([]); // 今回のプレイでWAVEをクリアするたびに記録するスコア・経験値ログ(最終リザルト画面表示用)
   const [breederIcon, setBreederIcon] = useState(null); // 選択中アイコンのモンスターid、またはマーケットで購入したアイコンid(未選択はnull)
   const [showIconPicker, setShowIconPicker] = useState(false);
+  // プロフィールフレーム(2026-09-15)。ブリーダーアイコンとは**別の設定**として持つ。
+  // 既存の mh_breeder_icon には一切触らず、新しいキー mh_profile_frame_v1 だけを足す(CLAUDE.md ⑦)。
+  // 値が無い・壊れている・知らないid・未公開のidは、読み込み時に必ず 'none' へ倒れる
+  const [profileFrameId, setProfileFrameId] = useState(PROFILE_FRAME_NONE_ID);
+  const [showFramePicker, setShowFramePicker] = useState(false);
+  // 鍵つきの枠を押したとき、その条件を出すためのid(押していなければ null)
+  const [frameLockedInfo, setFrameLockedInfo] = useState(null);
+  // もらった飾り枠(2026-09-16)。助手との仲良し度が Lv2/5/7 になると1枚ずつ増える。
+  // ★保存キーは新設のみ。既存の mh_* には一切触らない(CLAUDE.md ⑦)
+  // ★一度もらったら外さない。助手を切り替えても、条件を変えても残す
+  const [ownedProfileFrames, setOwnedProfileFrames] = useState([]);
+  const ownedProfileFramesRef = useRef([]);
+  // 「新しくもらったよ」と助手が知らせ終えた枠のid。
+  // ★もらうたびに知らせたいので、既読は1回きりの id ではなく**枠ごと**に覚える
+  //   (1つのidだけで既読にすると、2枚目以降が永久に知らされない)
+  const PROFILE_FRAME_NOTICE_KEY = 'mh_profile_frame_notice_v1';
+  const [profileFrameNoticed, setProfileFrameNoticed] = useState([]);
+  // 条件を満たしたぶんを配る。増えた枠のidを返す(何ももらえないときは空)
+  const grantProfileFrames = useCallback((assistantId, bondLevel) => {
+    const earned = profileFramesEarnedAt(assistantId, bondLevel, ownedProfileFramesRef.current);
+    if (!earned.length) return [];
+    const next = normalizeOwnedProfileFrames([...ownedProfileFramesRef.current, ...earned]);
+    ownedProfileFramesRef.current = next;
+    setOwnedProfileFrames(next);
+    // 「見るだけ」のプレビュー中は storeSet 側が書き込みを止めるので、ここでは気にしない
+    Promise.resolve(storeSet(PROFILE_FRAME_OWNED_KEY, next, false)).catch(error => {
+      console.error('[profile-frame] owned save failed:', error && error.message ? error.message : error);
+    });
+    return earned;
+  }, []);
+  // ランキングに出す「いまの見た目」を上書きする(2026-09-16)。
+  //
+  // ランキングは1プレイ=1行で、その瞬間の名前・アイコン・フレームを記録へ写している。
+  // あとから見た目を変えても過去の行は古いままなので、表示に使う見た目だけを
+  // 1人1行の表(breeder_profiles)へ持たせ、そこを見て描く。
+  // ★記録そのものは書き換えない。順位・スコア・集計にも一切関わらない。
+  // ★見た目を変えたその場で送るので、遊ばなくてもランキングの見え方が変わる。
+  //   失敗しても進行は止めない(次に変えたときか、次に遊んだときに送り直される)。
+  // ★「見るだけ」のプレビュー中(onboardingPreview)は送らない。本物の見た目を書き換えないため
+  const publishBreederProfile = useCallback(async (overrides = {}) => {
+    if (onboardingPreview) return;
+    try {
+      const breederId = await ensureBreederId();
+      if (!breederId) return;   // IDが作れない端末では何もしない(記録の値で今までどおり出る)
+      await sbUpsertBreederProfile({
+        breederId,
+        userName: overrides.userName ?? breederName,
+        icon: overrides.icon !== undefined ? overrides.icon : breederIcon,
+        profileFrame: overrides.profileFrame ?? profileFrameId,
+      });
+    } catch (error) {
+      console.error('[breeder-profile] publish failed:', error && error.message ? error.message : error);
+    }
+  }, [onboardingPreview, breederName, breederIcon, profileFrameId]);
+
+  // 選んだその場で画面へ反映し、同時に保存する。保存できなくても表示だけは変わる。
+  // ランキングへの反映は下の「いまの見た目を登録する」effectが受け持つので、ここでは送らない
+  const selectProfileFrame = useCallback((id) => {
+    const next = normalizeProfileFrameId(id);
+    // まだもらっていない枠は選べない(押しても何も起きない)。鍵の説明は画面側が出す
+    if (!profileFrameOwned(next, ownedProfileFramesRef.current)) return;
+    setProfileFrameId(next);
+    Promise.resolve(storeSet(PROFILE_FRAME_KEY, next, false)).catch(error => {
+      console.error('[profile-frame] save failed:', error && error.message ? error.message : error);
+    });
+  }, []);
+
+  // ===== ランキングに出す「いまの見た目」を登録する(2026-09-16) =====
+  //
+  // ★送るきっかけを決めるのはここ1か所だけ。ボタンごとに書かない。
+  //
+  // 最初は「名前・アイコン・フレームを変えたとき」と「記録を送ったあと」だけで送っていた。
+  // ところがそれだと、**一度も変えていない人の行がいつまでも登録されない**。
+  // 登録が無い人は引き当てようが無いので、ランキングはその人の行を
+  // 「記録に写した当時の見た目」で出し続ける。画面によって枠が出たり出なかったりして見えるのは
+  // (2026-09-16・ユーザー指摘「フレームが反映されてる画面とされてない画面がある」)、
+  // 記録ごとに写っている値が違うためで、引き当てが効いていないときの症状そのものだった。
+  //
+  // そこで「起動してセーブデータを読み終えた時点」でも1回送る。値が変わったときも同じ道を通る。
+  // 同じ値を何度も送らないよう、最後に送った内容を覚えておく(upsertなので送っても害は無いが、
+  // 通信を無駄にしない)。失敗しても進行は止めない。
+  const lastPublishedProfileRef = useRef('');
+  useEffect(() => {
+    if (!dataLoaded || !onboarded || onboardingPreview) return;
+    const signature = `${breederName || ''}\u0000${breederIcon || ''}\u0000${normalizeProfileFrameId(profileFrameId)}`;
+    if (lastPublishedProfileRef.current === signature) return;
+    lastPublishedProfileRef.current = signature;
+    publishBreederProfile();
+  }, [dataLoaded, onboarded, onboardingPreview, breederName, breederIcon, profileFrameId, publishBreederProfile]);
   // 呼び方の上書き(絆Lv6から自由入力)。助手ごとに分けて持つので、みゅあとききで別々に決められる
   const [assistantCallStyles, setAssistantCallStylesState] = useState({});
   const assistantCallStyle = assistantCallStyles[selectedAssistantId] || null;
@@ -2065,6 +2156,9 @@ function MonsterHeroGame() {
       party: [detail], score: Number(result.score) || 0, level: breederLevel.level, icon: breederIcon,
       clear_id: createRunId(),
       ...(breederId ? { breeder_id: breederId } : {}),
+      // プロフィールフレーム(2026-09-15)。フレームなしのときは列ごと付けない
+      // (既存の記録と同じくNULLのままにしておく)。列がまだ無い環境は送信側で吸収する
+      ...(rankingProfileFrameValue(profileFrameId) ? { profile_frame: rankingProfileFrameValue(profileFrameId) } : {}),
     };
     const outcome = await persistRankingScore({
       row, insertScore: sbInsertRhythmScore,
@@ -2078,7 +2172,7 @@ function MonsterHeroGame() {
     });
     if (outcome.error && !outcome.localSaved) console.error('[rhythm-ranking] submit outcome error:', outcome.error?.message || outcome.error);
     else if (outcome.nationalSaved) console.info('[rhythm-ranking] submitted', { difficulty: difficultyKey, score: row.score });
-  }, [breederName, breederLevel, breederIcon]);
+  }, [breederName, breederLevel, breederIcon, profileFrameId]);
 
   // 送れなかった記録を、あとで送り直す(2026-09-13)。
   //
@@ -2175,7 +2269,13 @@ function MonsterHeroGame() {
     // 端末内へ退避した記録は最初から画面用の名前(reachedWave)で持っているため、両方を見る
     // difficulty は「全種族」タブを取得したときだけ選んでいる列(sbFetchRankings)。
     // それ以外の難易度では常に同じ値になり画面側で使わないため、来ていればそのまま運ぶだけにする
-    const toEntry = (r) => ({ userName: r.user_name, hero: r.hero, party: stripPartyImages(r.party), score: r.score, level: r.level, icon: r.icon,
+    // profileFrame は「その人が選んでいる飾り枠」(2026-09-15)。列がまだ無い環境・端末内へ
+    // 退避した古い記録には入っていないので、そのときは normalizeProfileFrameId が 'none' に倒す
+    // 名前・アイコン・フレームは「いま設定しているもの」で出す(2026-09-16)。
+    // 記録に写した値は、その人が見つからなかったときの受け皿として残る
+    const toEntry = (r) => applyLatestBreederProfile({ userName: r.user_name, hero: r.hero, party: stripPartyImages(r.party), score: r.score, level: r.level, icon: r.icon,
+      breederId: (typeof r.breeder_id === 'string' && r.breeder_id) ? r.breeder_id : undefined,
+      profileFrame: normalizeProfileFrameId(r.profile_frame ?? r.profileFrame),
       turns: r.turns ?? undefined, reachedWave: r.reached_wave ?? r.reachedWave ?? undefined, difficulty: r.difficulty ?? undefined });
     // 過去の多重送信はidが異なるため、プレイ内容そのものをキーにして畳む。
     const rowKey = (r) => `v:${r?.user_name}|${r?.score}|${r?.level}|${r?.hero}|${JSON.stringify(r?.party || null)}|${r?.icon || ''}`;
@@ -3825,6 +3925,8 @@ function MonsterHeroGame() {
       setBreederName(savedName);
       const savedIcon = await storeGet('mh_breeder_icon', null, false);
       setBreederIcon(savedIcon);
+      // プロフィールフレーム。既存のセーブデータには無いキーなので、既定値は必ず「フレームなし」
+      setProfileFrameId(normalizeProfileFrameId(await storeGet(PROFILE_FRAME_KEY, PROFILE_FRAME_NONE_ID, false)));
       // 呼び方の上書きは助手ごとに別のキーへ。みゅあのぶんは今までのキーをそのまま読む
       const loadedCallStyles = {};
       for (const who of ASSISTANT_LIST) {
@@ -4088,6 +4190,21 @@ function MonsterHeroGame() {
       loadedBonds[activeAssistant] = bondLogin.state;
       assistantBondsRef.current = loadedBonds;
       setAssistantBonds(loadedBonds);
+      // もらった飾り枠を読む。★この更新より前から仲良し度が高い人にも、その場で配る
+      //   (あとから条件を足したので、追いつかせないと「Lv10なのに1枚も無い」になる)
+      const loadedFrames = normalizeOwnedProfileFrames(await storeGet(PROFILE_FRAME_OWNED_KEY, [], false));
+      let catchUp = loadedFrames;
+      for (const who of ASSISTANT_LIST) {
+        const level = assistantBondLevelOf(normalizeAssistantBond(loadedBonds[who.id]).points);
+        const earned = profileFramesEarnedAt(who.id, level, catchUp);
+        if (earned.length) catchUp = normalizeOwnedProfileFrames([...catchUp, ...earned]);
+      }
+      ownedProfileFramesRef.current = catchUp;
+      setOwnedProfileFrames(catchUp);
+      setProfileFrameNoticed(normalizeOwnedProfileFrames(await storeGet(PROFILE_FRAME_NOTICE_KEY, [], false)));
+      if (catchUp.length !== loadedFrames.length) {
+        try { await storeSet(PROFILE_FRAME_OWNED_KEY, catchUp, false); } catch {}
+      }
       if (bondLogin.changed) await storeSet(assistantBondKeyFor(activeAssistant), bondLogin.state, false);
       const savedLoginBonus = await storeGet('mh_login_bonus', LOGIN_BONUS_DEFAULT, false);
       const loginGrant = grantLoginBonus(savedLoginBonus, savedGifts);
@@ -4344,15 +4461,24 @@ function MonsterHeroGame() {
     const reachedWave = Number.isFinite(Number(runEndWaveRef.current)) ? Number(runEndWaveRef.current) : null;
     const clearTurns = Number.isFinite(Number(runClearTurnsRef.current)) && Number(runClearTurnsRef.current) > 0
       ? Number(runClearTurnsRef.current) : null;
+    // プロフィールフレーム(2026-09-15)。フレームなしのときは列ごと付けない
+    const profileFrame = rankingProfileFrameValue(profileFrameId);
+    // ブリーダーID(2026-09-16)。これまでバトルの記録には付けていなかったため、
+    // ブリーダーLv・絆Lv・総合力は名前でしか人を見分けられなかった
+    // (ユーザー指摘「名前管理はさすがにだめだろ」)。作れない端末では列ごと付けない。
+    // 順位・スコア・集計には関わらず、「誰の行か」を決めるためだけに使う
+    const breederId = await ensureBreederId();
     const row = { difficulty: diff, user_name: name, hero: heroName, party, score: finalScore, level, icon, clear_id: clearId,
+      ...(breederId ? { breeder_id: breederId } : {}),
       ...(reachedWave != null ? { reached_wave: reachedWave } : {}),
+      ...(profileFrame ? { profile_frame: profileFrame } : {}),
       ...(clearTurns != null ? { turns: clearTurns } : {}) };
     // 絆Lvの正本テーブルへも同じ内容を書く(1人1個体1行で上書き)。
     // 結果画面はスコア送信の完了を待つので、こちらは待たせない(待つと最大8秒ぶん
     // リザルトが遅れる)。書けなくても次の周回で書き直されるし、一覧は記録側の
     // 集計で補われる。テーブルがまだ無い環境ではsbUpsertBondLevels側が気付いて以後スキップする
     try {
-      const bondRows = bondLevelRowsFromParty(name, icon, party);
+      const bondRows = bondLevelRowsFromParty(name, icon, party, profileFrame, breederId);
       if (bondRows.length) {
         Promise.resolve(sbUpsertBondLevels(bondRows)).catch(bondErr => {
           console.error('[ranking] bond_levels upsert failed:', bondErr && bondErr.message ? bondErr.message : bondErr);
@@ -4366,6 +4492,7 @@ function MonsterHeroGame() {
       saveLocal: async (error) => {
         console.error('[ranking] supabase submit failed, falling back to local:', error && error.message ? error.message : error);
         const entry = { userName: name, hero: heroName, party, score: finalScore, diff, level, icon, clearId, at: Date.now(),
+          ...(profileFrame ? { profileFrame } : {}),
           ...(reachedWave != null ? { reachedWave } : {}), ...(clearTurns != null ? { turns: clearTurns } : {}),
           nationalSaved: false, nationalError: { message: error?.message || String(error), status: error?.status || null, code: error?.code || null, body: error?.body || null } };
         const rows = await storeGet(`mh_rank_${diff}`, [], false);
@@ -5053,9 +5180,13 @@ function MonsterHeroGame() {
     setAssistantBonds(prev => ({ ...prev, [id]: result.state }));
     // Lvが上がったら、次にHOMEを開いたときに助手がそのことに触れる。
     // ただし、いま選んでいる助手のときだけ(選んでいない助手のLvアップを本人以外に言わせない)
-    if (id === selectedAssistantIdRef.current && assistantBondLevelOf(result.state.points) > before) setAssistantBondUp(true);
+    const after = assistantBondLevelOf(result.state.points);
+    if (id === selectedAssistantIdRef.current && after > before) setAssistantBondUp(true);
+    // Lvが上がったぶんの飾り枠を配る。選んでいない助手のLvが上がったときも、その助手の枠がもらえる
+    // (アシストカードで本人の仲良し度が増える経路があるため)
+    if (after > before) grantProfileFrames(id, after);
     try { storeSet(assistantBondKeyFor(id), result.state, false); } catch {}
-  }, []);
+  }, [grantProfileFrames]);
   // 行動に応じて助手との仲良し度を増やす。
   // 増えるのは「いま選んでいる助手」のぶんだけ。もう片方の助手の値には触れない
   const addAssistantBond = useCallback((actionKey) => {
@@ -5076,6 +5207,20 @@ function MonsterHeroGame() {
   const assistantBondLevelNow = assistantBondLevelOf(assistantBond.points);
   // いま選んでいる助手そのもの。画面はこれを見て顔・名前・色を出す
   const activeAssistant = assistantById(selectedAssistantId);
+  // まだ助手が知らせていない飾り枠。もらった順に並ぶ
+  const newProfileFrames = ownedProfileFrames
+    .filter(id => !profileFrameNoticed.includes(id)).map(id => profileFrameById(id)).filter(Boolean);
+  // 知らせる助手の名前。全部同じ助手のものならその名前、混ざっていたら助手名は出さない
+  const newProfileFrameAssistantName = (() => {
+    const ids = [...new Set(newProfileFrames.map(frame => (profileFrameUnlock(frame) || {}).assistantId).filter(Boolean))];
+    if (ids.length !== 1) return '';
+    const who = assistantById(ids[0]);
+    return (who && who.name) || '';
+  })();
+  // ★飾り枠の案内だけは、新しくもらったぶんがあるあいだ既読を外して出し直す
+  //   (ほかの案内は1回きりなので、そのまま既読を使う)
+  const assistantUnlockSeenForNotices = newProfileFrames.length > 0
+    ? assistantUnlockSeen.filter(id => id !== PROFILE_FRAME_NOTICE_ID) : assistantUnlockSeen;
   // その画面で出すべき「解放の案内」。無ければ null。
   // 出す条件・本文はすべて data/assistants.js 側が持つので、ここは渡して受け取るだけ
   const assistantUnlockNoticeOf = (scene) => (typeof assistantUnlockNoticeFor === 'function')
@@ -5086,7 +5231,11 @@ function MonsterHeroGame() {
         // 種族チャレンジの解放。一般公開する前は必ず false のままなので、案内も出ない
         speciesChallengeUnlocked: SPECIES_CHALLENGE_PUBLIC_RELEASE && speciesChallengeUnlocked,
         speciesChallengeUnlockText: SPECIES_CHALLENGE_UNLOCK_TEXT,
-      }, assistantUnlockSeen)
+        // まだ知らせていない飾り枠(2026-09-16)。もらうたびに1回ずつ知らせる
+        newProfileFrameCount: newProfileFrames.length,
+        newProfileFrameNames: newProfileFrames.map(frame => frame.name),
+        newProfileFrameAssistantName: newProfileFrameAssistantName,
+      }, assistantUnlockSeenForNotices)
     : null;
   // 読み終わったら既読へ足して保存する。同じ案内は二度と出ない。
   // destination を持つ案内は、閉じたあとその画面へ連れていく
@@ -5103,6 +5252,15 @@ function MonsterHeroGame() {
     setAssistantUnlockPage(0);
     if (!id) return;
     markAssistantUnlockNoticeSeen(id);
+    // 飾り枠の案内は、読み終えた時点で持っている枠を「知らせ済み」にする。
+    // 次に新しい枠が増えたら、また同じ案内が出る
+    if (id === PROFILE_FRAME_NOTICE_ID) {
+      const next = normalizeOwnedProfileFrames(ownedProfileFramesRef.current);
+      setProfileFrameNoticed(next);
+      Promise.resolve(storeSet(PROFILE_FRAME_NOTICE_KEY, next, false)).catch(error => {
+        console.error('[profile-frame] notice save failed:', error && error.message ? error.message : error);
+      });
+    }
     const destinationState = noticeDestinationState(destination);
     if (destinationState) setGameState(destinationState);
   };
@@ -5338,6 +5496,42 @@ function MonsterHeroGame() {
       saveMissionProgress('market');
     } catch {
       setMarketExchangeError('交換を保存できませんでした。勇者の証片は消費していません。');
+    } finally { marketPurchaseProcessingRef.current = false; }
+  };
+
+  // ビートP交換所。残高・ダイヤ・所持アイテムを1取引で保存し、どれか1つでも失敗したら全部戻す。
+  const exchangeRhythmEventPoints = async (offer, quantity=1) => {
+    if (marketPurchaseProcessingRef.current) return { ok:false, reason:'busy' };
+    marketPurchaseProcessingRef.current = true;
+    setMarketExchangeError('');
+    try {
+      const beforePoints = await loadRhythmEventPoints();
+      const beforeGold = Math.max(0, Math.floor(Number(gold) || 0));
+      const beforeItems = ownedItemsRef.current;
+      setRhythmEventPoints(beforePoints);
+      const exchange = rhythmEventPointExchangePreview({ offer, eventPoints:beforePoints, gold:beforeGold, ownedItems:beforeItems, quantity });
+      if (!exchange.ok) {
+        setMarketExchangeError(exchange.reason==='points'?'ビートPが足りません。':'この商品は交換できません。');
+        return exchange;
+      }
+      const saved = await saveStoredValuesOrRollback([
+        { key:RHYTHM_EVENT_POINTS_KEY, before:beforePoints, next:exchange.eventPoints },
+        { key:'mh_gold', before:beforeGold, next:exchange.gold },
+        { key:'mh_owned_items', before:beforeItems, next:exchange.ownedItems },
+      ], storeGet, storeSet);
+      if (!saved) {
+        setMarketExchangeError('交換を保存できませんでした。ビートPと所持品は変更していません。');
+        return { ok:false, reason:'save' };
+      }
+      setRhythmEventPoints(exchange.eventPoints);
+      setGold(exchange.gold);
+      ownedItemsRef.current = exchange.ownedItems;
+      setOwnedItems(exchange.ownedItems);
+      saveMissionProgress('market');
+      return exchange;
+    } catch {
+      setMarketExchangeError('交換を保存できませんでした。ビートPと所持品は変更していません。');
+      return { ok:false, reason:'save' };
     } finally { marketPurchaseProcessingRef.current = false; }
   };
 
@@ -10640,7 +10834,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     </main>{updateNotice}</>
   );
   const rankingPlace = index => <div className={`w-7 h-7 rounded-full flex items-center justify-center font-black text-[9px] shrink-0 ${index===0?'bg-amber-500 text-black':index===1?'bg-slate-300 text-black':index===2?'bg-orange-600 text-white':'bg-slate-800 text-slate-400'}`}>{index+1}</div>;
-  const rankingBreederIcon = entry => resolveIconUrl(entry?.icon)?<BreederIcon src={resolveIconUrl(entry.icon)} id={entry.icon} className="w-8 h-8 shrink-0"/>:<div className="w-8 h-8 rounded-full bg-slate-800 shrink-0 flex items-center justify-center text-xs">👤</div>;
+  // ランキングのブリーダーアイコン。全ランキング画面(スコア・ブリーダーLv・絆Lv・総合力・
+  // モンビー曲別・全曲合算・週間・イベント・履歴)がこの1つを使う。
+  // 他の人が選んでいるプロフィールフレーム(entry.profileFrame)もここで一緒に描く。
+  // フレームを持たない記録・列がまだ無い環境では 'none' になり、これまでと同じ見た目になる
+  const rankingBreederIcon = entry => resolveIconUrl(entry?.icon)
+    ? <ProfileAvatar src={resolveIconUrl(entry.icon)} id={entry.icon} frameId={entry?.profileFrame} className="w-8 h-8 shrink-0"/>
+    : <ProfileAvatar frameId={entry?.profileFrame} className="w-8 h-8 shrink-0" fallback={<span className="flex h-full w-full items-center justify-center rounded-full bg-slate-800 text-xs">👤</span>}/>;
   const rankingCardClass = index => `rounded-xl border ${index===0?'bg-amber-500/10 border-amber-500/50':'bg-slate-900 border-white/5'}`;
   // スコア専用カード。編成表示と勇者モン重複防止はこのカードだけが担当する。
   // showSpecies … 種族チャレンジの「全種族」タブから呼ばれたときだけtrue。
@@ -10913,12 +11113,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             homePastureMasumons={homePastureMasumons} masuMons={masuMons} missions={missions}
             onOpenBattle={()=>{setModeSelectTab('mode');setGameState('BATTLE_MODE_SELECT');}}
             onOpenManagement={()=>{addAssistantBond('management');setManagementTab('monster');setGameState('MB_MANAGEMENT');}}
-            onOpenMarket={()=>{addAssistantBond('market');setGameState('BREEDER_MARKET');}}
+            onOpenMarket={async()=>{addAssistantBond('market');setMarketExchangeError('');setRhythmEventPoints(await loadRhythmEventPoints());setGameState('BREEDER_MARKET');}}
             onOpenProfile={()=>setGameState('PROFILE')}
             onOpenRhythm={RHYTHM_MODE_PUBLIC_RELEASE?openRhythmDemo:()=>setGameState('RHYTHM_INFO')}
             onOpenSettings={()=>setGameState('SETTINGS')}
             onOpenTemple={()=>{addAssistantBond('temple');setGameState('TEMPLE');}}
             openChangelog={openChangelog} openGiftBox={openGiftBox} openMissions={openMissions}
+            profileFrameId={profileFrameId}
             resolveIconUrl={resolveIconUrl} spotClass={spotClass}
           />
         )}
@@ -12401,6 +12602,29 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   通常HOME・通常バトル・マスモン管理には出さない。保存・報酬・ランキングへは触れない */}
               <button data-debug-rpg-battle onClick={()=>{setRpgBattle(null);setGameState('RPG_DEBUG_SETUP');}} className="w-full min-h-[64px] rounded-2xl border-2 border-emerald-400/70 bg-emerald-950/40 text-emerald-100 font-black">⚔️ ダンジョンRPG戦闘テスト<small className="block text-[8px] text-emerald-300">コマンド式ターン制の試作・ベースモンのみ・保存も報酬もありません</small></button>
               <button data-debug-battle-mode onClick={()=>{debugBattleRef.current=true;debugMonsterPreviewRef.current=true;extremeRunRef.current=false;setDebugBattle(true);setExtremeRun(false);setBattleMode(BATTLE_MODE_CHALLENGE);setModeSelectTab('mode');setGameState('BATTLE_MODE_SELECT');}} className="w-full min-h-[64px] rounded-2xl border-2 border-fuchsia-500/70 bg-fuchsia-950/30 text-fuchsia-100 font-black">⚔️ バトルモード<small className="block text-[8px] text-fuchsia-300">種族チャレンジ・極限チャレンジを含む試験用モード選択・結果は保存されません</small></button>
+              {/* プロフィールフレームの見た目確認(2026-09-15)。
+                  未公開(released:false)のものも含めて**表示するだけ**。ここでは保存も付与もしない。
+                  デバッグ専用なので更新履歴・ヘルプには載せない(CLAUDE.md ⑤の但し書き) */}
+              <section data-debug-profile-frames className="rounded-2xl border-2 border-amber-500/60 bg-amber-950/20 p-3">
+                <div className="text-[10px] text-amber-300 font-black mb-2">🖼️ プロフィールフレーム見た目確認（未公開ぶんも表示・保存しません）</div>
+                {/* 豪華フレームはアイコンの外へ大きく出るので、3列にして上下の間を広く取る
+                    (4列だと隣どうし・名前と重なって確認しづらい) */}
+                <div className="grid grid-cols-3 gap-x-3 gap-y-7">
+                  {PROFILE_FRAMES.map(frame=>(
+                    <div key={frame.id} className="flex flex-col items-center gap-2.5">
+                      <span className="mh-profile-avatar w-12 h-12">
+                        <span className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-full">
+                          {resolveIconUrl(breederIcon)?<BreederIcon src={resolveIconUrl(breederIcon)} id={breederIcon} alt="" className="w-full h-full"/>:<User size={22} className="text-indigo-400"/>}
+                        </span>
+                        <ProfileFrameLayer frameId={frame.released?frame.id:null}/>
+                        {!frame.released&&frame.kind==='image'&&<img src={frame.src} alt="" aria-hidden="true" draggable={false} style={profileFrameImageStyle(frame)} className="mh-profile-frame mh-profile-frame-image"/>}
+                        {!frame.released&&frame.kind==='css'&&<span aria-hidden="true" className={`mh-profile-frame mh-profile-frame-ring ${frame.className||''}`}/>}
+                      </span>
+                      <span className="text-[8px] font-black text-slate-300 leading-tight text-center">{frame.name}{frame.released?'':'（未公開）'}</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
               {/* 助手(みゅあ)の確認用。通常のプレイでは出ない画面からだけ開ける */}
               <section className="rounded-2xl border-2 border-pink-500/60 bg-pink-950/30 p-3">
                 <div className="text-[10px] text-pink-300 font-black mb-2">💖 みゅあデバッグ</div>
@@ -12757,6 +12981,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             playtimeView={playtimeView}
             proHighScores={proHighScores}
             profileBattleMode={profileBattleMode}
+            profileFrameId={profileFrameId}
+            ownedProfileFrames={ownedProfileFrames}
             quickHighestWaves={quickHighestWaves}
             resolveIconUrl={resolveIconUrl}
             selectedAssistantId={selectedAssistantId}
@@ -12764,6 +12990,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onBack={returnToHome}
             onOpenNameEdit={(name)=>{setTempName(name);setShowNameEdit(true);}}
             onOpenIconPicker={()=>setShowIconPicker(true)}
+            onOpenFramePicker={()=>setShowFramePicker(true)}
             onOpenItems={()=>setGameState('ITEM_INVENTORY')}
             onOpenCallStylePicker={()=>{setTempCallStyle(assistantCallStyle||'');setShowCallStylePicker(true);}}
             onOpenAssistantPicker={()=>setShowAssistantPicker(true)}
@@ -12793,6 +13020,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onOpenItemDetail={setMarketItemDetail}
             onExchangeSoulRankRespec={exchangeSoulRankRespecByProof}
             onExchangeHeroProof={exchangeHeroProofByShard}
+            eventPoints={rhythmEventPoints}
+            onExchangeEventPoints={exchangeRhythmEventPoints}
           />
         )}
 
@@ -13754,7 +13983,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {showIconPicker&&(
           <div className="fixed inset-0 z-[9000] flex flex-col items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
             <div className="bg-slate-900 border border-indigo-500 rounded-3xl p-6 w-full max-w-xs shadow-2xl">
-              <h3 className="text-lg font-black text-white mb-4 text-center">アイコンを選択</h3>
+              <h3 className="text-lg font-black text-white mb-2 text-center">アイコンを選択</h3>
+              {/* いまの見た目。フレームはここでは変えられない(プロフィールの「フレーム」から変える) */}
+              <div className="flex flex-col items-center gap-1 mb-4">
+                <ProfileAvatar src={resolveIconUrl(breederIcon)} id={breederIcon} frameId={profileFrameId} alt="いまの見た目" className="w-16 h-16" fallback={<User size={28} className="text-indigo-400"/>}/>
+                <span className="text-[9px] font-black text-slate-500">フレーム：{(profileFrameById(normalizeProfileFrameId(profileFrameId))||{}).name||'フレームなし'}</span>
+              </div>
               <div className="grid grid-cols-4 gap-3 mb-4">
                 {breederIconOptions().filter(m=>m.source==='starter').map(m=>(
                   <button key={m.id} onClick={()=>{setBreederIcon(m.id); setOnboardingIcon(m.id); if(!onboardingPreview) storeSet('mh_breeder_icon', m.id, false); setShowIconPicker(false);}} className={`aspect-square rounded-2xl overflow-hidden border-2 active:scale-90 ${breederIcon===m.id?'border-indigo-400 ring-2 ring-indigo-400':'border-slate-700'}`}>
@@ -13773,6 +14007,66 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 </div>
               </>)}
               <button onClick={()=>setShowIconPicker(false)} className="w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">閉じる</button>
+            </div>
+          </div>
+        )}
+
+        {/* プロフィールフレームを選ぶ(2026-09-15)。
+            ・アイコンとは独立した設定。ここではアイコンを変えない
+            ・候補は「いまのブリーダーアイコン＋そのフレーム」を重ねて見せる
+            ・押したその場で反映して保存する(閉じるまで見比べられるよう、モーダルは開いたまま)
+            ・並ぶのは公開済み(released:true)のフレームだけ。未公開の豪華フレームは出ない */}
+        {showFramePicker&&(
+          <div className="fixed inset-0 z-[9000] flex flex-col items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
+            <div className="bg-slate-900 border border-indigo-500 rounded-3xl p-6 w-full max-w-xs shadow-2xl max-h-full overflow-y-auto mh-scroll">
+              <h3 className="text-lg font-black text-white mb-1 text-center">プロフィールフレーム</h3>
+              <p className="text-[9px] text-slate-500 text-center mb-4 leading-tight">アイコンの外側に飾り枠を重ねます。アイコンそのものは変わりません。</p>
+              <div className="flex flex-col items-center gap-1 mb-4">
+                <ProfileAvatar src={resolveIconUrl(breederIcon)} id={breederIcon} frameId={profileFrameId} alt="いまの見た目" className="w-20 h-20" fallback={<User size={36} className="text-indigo-400"/>}/>
+                <span className="text-[9px] font-black text-slate-500">いまの見た目</span>
+              </div>
+              <div className="grid grid-cols-3 gap-3 mb-4">
+                {releasedProfileFrames().map(frame=>{
+                  // まだもらっていない枠も並べる。絵は見せて、鍵と条件だけを重ねる
+                  // (2026-09-16にユーザーが「絵を見せて鍵だけ付ける」を選択)
+                  const owned=profileFrameOwned(frame.id, ownedProfileFrames);
+                  const unlock=profileFrameUnlock(frame);
+                  const who=unlock?assistantById(unlock.assistantId):null;
+                  const selected=normalizeProfileFrameId(profileFrameId)===frame.id;
+                  return (
+                    <button key={frame.id} data-profile-frame-option={frame.id} data-profile-frame-locked={owned?'no':'yes'}
+                      onClick={()=>{ if(owned) selectProfileFrame(frame.id); else setFrameLockedInfo(frame.id); }}
+                      aria-pressed={selected} aria-disabled={!owned}
+                      className={`relative flex flex-col items-center gap-2 rounded-2xl border-2 p-2 active:scale-95 ${selected?'border-indigo-400 bg-indigo-950/50':'border-slate-700 bg-slate-950/40'}`}>
+                      <span className={`relative block ${owned?'':'opacity-45'}`}>
+                        <ProfileAvatar src={resolveIconUrl(breederIcon)} id={breederIcon} frameId={frame.id} alt={frame.name} className="w-12 h-12" fallback={<User size={22} className="text-indigo-400"/>}/>
+                        {!owned&&<Lock size={14} className="absolute inset-0 m-auto text-white drop-shadow-[0_0_3px_rgba(0,0,0,0.9)]"/>}
+                      </span>
+                      <span className={`text-[9px] font-black leading-tight text-center ${owned?'text-slate-200':'text-slate-500'}`}>{frame.name}</span>
+                      {!owned&&unlock&&<span className="text-[8px] font-black leading-tight text-center text-amber-400">{(who&&who.name)||''} Lv{unlock.bondLevel}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+              {/* 鍵を押したときだけ、条件といまの進み具合をその場に出す */}
+              {frameLockedInfo&&(()=>{
+                const frame=profileFrameById(frameLockedInfo); const unlock=frame?profileFrameUnlock(frame):null;
+                if(!frame||!unlock) return null;
+                const who=assistantById(unlock.assistantId);
+                const points=normalizeAssistantBond(assistantBonds[unlock.assistantId]).points;
+                const level=assistantBondLevelOf(points);
+                const needPoints=(assistantBondLevelsOf(unlock.assistantId).find(st=>st.level===unlock.bondLevel)||{}).need;
+                const remain=Number.isFinite(needPoints)?Math.max(0, needPoints-points):null;
+                return (
+                  <div data-profile-frame-locked-info className="mb-3 rounded-2xl border border-amber-500/60 bg-amber-950/30 px-3 py-2">
+                    <p className="text-[10px] font-black text-amber-300 leading-tight text-center">{(who&&who.name)||''}との仲良し度 Lv{unlock.bondLevel} でもらえます</p>
+                    <p className="text-[9px] text-slate-400 leading-tight text-center mt-1">いまは Lv{level}{remain!=null&&remain>0?` ／ あと ${remain}`:''}</p>
+                    <p className="text-[9px] text-slate-500 leading-tight text-center mt-1">{frame.desc||''}</p>
+                  </div>
+                );
+              })()}
+              <p className="text-[9px] text-slate-500 text-center mb-3 leading-tight">{(profileFrameById(normalizeProfileFrameId(profileFrameId))||{}).desc||''}</p>
+              <button onClick={()=>setShowFramePicker(false)} className="w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">閉じる</button>
             </div>
           </div>
         )}
