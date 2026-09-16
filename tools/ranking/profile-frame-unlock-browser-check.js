@@ -145,9 +145,13 @@ async function run() {
     noticeAllPages += ' ' + await high.evaluate(() => document.body.innerText.replace(/\s+/g, ' '));
     if (!clicked) break;
   }
+  // 名前は data/breeder.js が正本。ここへ書き写すと、名前を変えたときにここだけ古くなる
+  const MUA_FRAME_NAMES = [...require('fs')
+    .readFileSync(require('path').join(__dirname, '../../monster-hero/data/breeder.js'), 'utf8')
+    .matchAll(/id:'frame_mua_\d',\s*name:'([^']+)'/g)].map(m => m[1]);
   check('どの枠をもらったか名前で言う',
-    sawFrameNotice && /みゅあのリボン/.test(noticeAllPages) && /みゅあといっしょ/.test(noticeAllPages),
-    sawFrameNotice ? '名前あり' : '(案内が出ていない)');
+    sawFrameNotice && MUA_FRAME_NAMES.length === 3 && MUA_FRAME_NAMES.every(n => noticeAllPages.includes(n)),
+    MUA_FRAME_NAMES.filter(n => !noticeAllPages.includes(n)).join(' / ') || MUA_FRAME_NAMES.join(' / '));
   check('どこから選べるかも伝える', /フレーム/.test(noticeAllPages) && /選べる/.test(noticeAllPages));
   await closeAll(high);
   check('読み終えたら「知らせ済み」として保存される',

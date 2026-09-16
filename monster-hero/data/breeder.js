@@ -363,16 +363,17 @@ const PROFILE_FRAMES = [
   // ★unlock を書いた枠は「もらうまで選べない」だけで、描くのは自由(released:true)。
   // ★並びは助手の登場順(みゅあ → きき → ももすけ)。Lvの小さい順に3枚ずつ。
   //
-  // みゅあの3枚。細いリース → 飾りの増えたリース → みゅあ本人が寄り添うもの、と豪華になる
-  { id:'frame_mua_1', name:'みゅあのリボン', kind:'image', released:true, hole:0.669,
+  // みゅあの3枚。呼び分けはアシストカードの3段階
+  // (BREEDER_EVO_NAMES.mua の 愛 → 深愛 → 慈愛)にそろえてある。
+  { id:'frame_mua_1', name:'みゅあ・愛', kind:'image', released:true, hole:0.669,
     unlock:{ assistantId:'mua', bondLevel:2 },
     src:'images/profile-frames/mua-1.png?v=cf21c351ff0a',
     desc:'桜色のリボンと星をあしらった、みゅあの細いリース。' },
-  { id:'frame_mua_2', name:'みゅあのスターリース', kind:'image', released:true, hole:0.604,
+  { id:'frame_mua_2', name:'みゅあ・深愛', kind:'image', released:true, hole:0.604,
     unlock:{ assistantId:'mua', bondLevel:5 },
     src:'images/profile-frames/mua-2.png?v=6e1f91081335',
     desc:'金の飾りと真珠、虹のリボンで華やかにした、みゅあのリース。' },
-  { id:'frame_mua_3', name:'みゅあといっしょ', kind:'image', released:true, hole:0.591,
+  { id:'frame_mua_3', name:'みゅあ・慈愛', kind:'image', released:true, hole:0.591,
     unlock:{ assistantId:'mua', bondLevel:7 },
     src:'images/profile-frames/mua-3.png?v=2d1320625212',
     desc:'みゅあ本人が寄り添って眠る、いちばん特別なリース。' },
@@ -390,19 +391,22 @@ const PROFILE_FRAMES = [
     unlock:{ assistantId:'kiki', bondLevel:7 },
     src:'images/profile-frames/kiki-zenryoku.png?v=88238cde0306',
     desc:'髪とリボンが渦を巻き、星とハートが輝く、ききのいちばん豪華なフレーム。' },
-  // ももすけの3枚。みゅあ・ききと同じく、細い輪 → 飾りの増えた輪 → 本人が寄り添うもの
-  { id:'frame_momosuke_1', name:'ももすけのリボン', kind:'image', released:true, hole:0.737,
+  // ももすけの3枚。ももすけにはまだアシストカードが無いので、呼び分けを先に決めてある
+  // (2026-09-16・ユーザーが選択)。おねだり → だだこね → 独り占め。
+  // カードを実装するときも、この3段階をそのまま使う
+  // (BREEDER_EVO_NAMES へ momosuke:['ももすけのおねだり','ももすけのだだこね','ももすけの独り占め'])。
+  { id:'frame_momosuke_1', name:'ももすけ・おねだり', kind:'image', released:true, hole:0.737,
     unlock:{ assistantId:'momosuke', bondLevel:2 },
     src:'images/profile-frames/momosuke-1.png?v=85af4bc2f2e2',
     desc:'黒とピンクのリボンに、うさぎと三日月をあしらった細い輪。' },
-  { id:'frame_momosuke_2', name:'ももすけのムーンリース', kind:'image', released:true, hole:0.635,
+  { id:'frame_momosuke_2', name:'ももすけ・だだこね', kind:'image', released:true, hole:0.635,
     unlock:{ assistantId:'momosuke', bondLevel:5 },
     src:'images/profile-frames/momosuke-2.png?v=15c231b28a6b',
     desc:'大きな三日月と魔法陣、こうもりの羽で飾った、ももすけの輪。' },
-  { id:'frame_momosuke_3', name:'ももすけといっしょ', kind:'image', released:true, hole:0.609,
+  { id:'frame_momosuke_3', name:'ももすけ・独り占め', kind:'image', released:true, hole:0.609,
     unlock:{ assistantId:'momosuke', bondLevel:7 },
     src:'images/profile-frames/momosuke-3.png?v=43e227e5fc16',
-    desc:'ももすけ本人がうさぎのぬいぐるみと寄りかかる、いちばん特別な輪。' },
+    desc:'ももすけ本人がうさぎのぬいぐるみを抱えて陣取る、いちばん特別な輪。' },
 ];
 const PROFILE_FRAME_MAP = Object.freeze(Object.fromEntries(PROFILE_FRAMES.map(frame => [frame.id, frame])));
 // 画像フレームの「穴」を、アイコンの円のどこに合わせるか。
