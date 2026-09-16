@@ -205,6 +205,12 @@ const CHANGELOG_TYPE_LABELS = Object.freeze({
   update:  { label:'改善',       tone:'update' },
   market:  { label:'マーケット', tone:'market' },
   issue:   { label:'調査中',     tone:'issue' },
+  // 2026-09-17 に足した。data/changelog.js は前から mode / content も使っていたのに
+  // ここに無く、changelogTypeOf の既定へ落ちて「改善」と表示されていた
+  // (クイックモードの「INFINITY」「GOD」追加が「改善」になっていた)。
+  // content は新曲・新しい助手のような「新しい遊び」に付くので、公開のたびに起きる。
+  mode:    { label:'新モード',   tone:'mode' },
+  content: { label:'新コンテンツ', tone:'content' },
 });
 const changelogTypeOf = (entry) => CHANGELOG_TYPE_LABELS[entry?.type] || CHANGELOG_TYPE_LABELS.update;
 

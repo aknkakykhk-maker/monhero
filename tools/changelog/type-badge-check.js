@@ -26,7 +26,7 @@ const vm=require('vm');
 const src=fs.readFileSync(path.join(ROOT,'monster-hero','data','changelog.js'),'utf8');
 const box={};vm.createContext(box);vm.runInContext(src+';globalThis.__c=CHANGELOG;',box);
 const shipped=box.__c.filter(e=>e.dev!==true);
-const KNOWN=['fix','feature','update','market','issue'];
+const KNOWN=['fix','feature','update','market','issue','mode','content'];
 ok('出している項目に必ず種類が付いている',
   shipped.every(e=>KNOWN.includes(e.type)),
   shipped.filter(e=>!KNOWN.includes(e.type)).slice(0,3).map(e=>`${e.date} ${e.title}`).join(' / ')||`${shipped.length}件すべて`);
