@@ -672,9 +672,11 @@ check('STEP2の更新履歴は開発メモとして残し、未完成機能を�
 check('ビートP交換所は対象確定済みの固定12商品だけ',(()=>{
   const got=(O.RHYTHM_EVENT_POINT_SHOP_OFFERS||[]).map(o=>[o.id,o.itemId||'',o.grantAmount,o.cost]);
   const want=[
-    ['diamond_300','',300,1],['training_ticket_x3','training_ticket',3,1],['training_ticket_l','training_ticket_l',1,3],
-    ['rainbow_psyche','rainbow_psyche',1,1],['skip_ticket_jo','skip_ticket_jo',1,10],['skip_ticket_ha','skip_ticket_ha',1,16],
-    ['skip_ticket_kyu','skip_ticket_kyu',1,23],['skip_ticket_kiwami','skip_ticket_kiwami',1,50],['skip_ticket_haou','skip_ticket_haou',1,100],
+    // ★2026-09-17に値上げ(ユーザー指示)。高額の3つ(証片・虹の超越の実・勇者の証)は据え置き、
+    //   それ以外の9商品を5倍にした。仕様書は RHYTHM_EVENT_POINTS.md §20.1
+    ['diamond_300','',300,5],['training_ticket_x3','training_ticket',3,5],['training_ticket_l','training_ticket_l',1,15],
+    ['rainbow_psyche','rainbow_psyche',1,5],['skip_ticket_jo','skip_ticket_jo',1,50],['skip_ticket_ha','skip_ticket_ha',1,80],
+    ['skip_ticket_kyu','skip_ticket_kyu',1,115],['skip_ticket_kiwami','skip_ticket_kiwami',1,250],['skip_ticket_haou','skip_ticket_haou',1,500],
     ['hero_proof_shard','hero_proof_shard',1,500],['transcend_fruit_rainbow','transcend_fruit_rainbow',1,5000],['hero_proof','hero_proof',1,10000],
   ];
   return JSON.stringify(got)===JSON.stringify(want);
@@ -685,12 +687,15 @@ check('対象未決定のアイコンを推測でビートP商品へ入れない
 check('ビートPの数量交換計算はダイヤと複数個アイテムを正しく扱う',(()=>{
   const diamond=O.RHYTHM_EVENT_POINT_SHOP_OFFERS.find(o=>o.id==='diamond_300');
   const ticket=O.RHYTHM_EVENT_POINT_SHOP_OFFERS.find(o=>o.id==='training_ticket_x3');
-  const a=O.rhythmEventPointExchangePreview({offer:diamond,eventPoints:5,gold:100,ownedItems:{},quantity:2});
-  const b=O.rhythmEventPointExchangePreview({offer:ticket,eventPoints:5,gold:100,ownedItems:{training_ticket:4},quantity:2});
-  const c=O.rhythmEventPointExchangePreview({offer:ticket,eventPoints:1,gold:100,ownedItems:{training_ticket:4},quantity:2});
+  // ★必要Pは offer.cost から出す。ここへ数字を直書きすると、値上げのたびに
+  //   「計算が正しいか」を見たいだけの検査が落ちる(2026-09-17の値上げで実際に落ちた)
+  const need=(offer,q)=>offer.cost*q;
+  const a=O.rhythmEventPointExchangePreview({offer:diamond,eventPoints:need(diamond,2)+3,gold:100,ownedItems:{},quantity:2});
+  const b=O.rhythmEventPointExchangePreview({offer:ticket,eventPoints:need(ticket,2)+3,gold:100,ownedItems:{training_ticket:4},quantity:2});
+  const c=O.rhythmEventPointExchangePreview({offer:ticket,eventPoints:need(ticket,2)-1,gold:100,ownedItems:{training_ticket:4},quantity:2});
   return a.ok&&a.eventPoints===3&&a.gold===700
     &&b.ok&&b.eventPoints===3&&b.ownedItems.training_ticket===10
-    &&!c.ok&&c.reason==='points'&&c.eventPoints===1&&c.ownedItems.training_ticket===4;
+    &&!c.ok&&c.reason==='points'&&c.eventPoints===need(ticket,2)-1&&c.ownedItems.training_ticket===4;
 })());
 check('交換保存はビートP・ダイヤ・所持品を1取引で扱う',(()=>{
   const from=app.indexOf('const exchangeRhythmEventPoints = async');
