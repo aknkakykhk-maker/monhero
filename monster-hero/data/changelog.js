@@ -40,7 +40,10 @@ const CHANGELOG = [
     //   (RHYTHM_EVENT_PLAYBOOK.md の落とし穴の表)。
     // ★対象曲の名前と作者はここに書いてよい(この回かぎりの案内なので古くならない)。
     //   「全◯曲」のような、曲が増えると古くなる数字は書かない。
-    date: "2026-09-17 11:37", type:'update', title:'第2回モンヒロビート「異世界交響祭」を開催！', status:'new',
+    // ★date は visibleFrom と同じ時刻にする(2026-09-17・ユーザー指摘「時間前に更新情報が入ってた」)。
+    //   一覧に出はじめるのは visibleFrom の時刻なのに、書いた時刻(11:37)を入れていたため、
+    //   12:00開始のイベントなのに 11:37 と表示されていた。時刻で出す項目は両方そろえる。
+    date: "2026-09-17 12:00", type:'event', title:'第2回モンヒロビート「異世界交響祭」を開催！', status:'new',
     releaseFlag:'rhythmWeeklyRanking',
     visibleFrom:'2026-09-17T12:00:00+09:00',
     image: 'images/events/monbeat-event-2026-09-17.jpg?v=29df7296db9b',
@@ -476,7 +479,7 @@ const CHANGELOG = [
     // 会話は data/assistants.js の ASSISTANT_MONBEAT_CUP_THANKS。
     // 数(10個)が食い違わないよう tools/mode/rhythm-event-thanks-check.js が突き合わせる。
     // visibleFrom はイベントの終了時刻と同じにしてある(会話と同時に出はじめる)。
-    date: "2026-09-14 00:59", type:'update', title:'【週末ゲリラ杯】お礼として、参加賞に勇者の証を10個追加しました', status:'new',
+    date: "2026-09-14 00:59", type:'event', title:'【週末ゲリラ杯】お礼として、参加賞に勇者の証を10個追加しました', status:'new',
     releaseFlag:'rhythmWeeklyRanking',
     visibleFrom:'2026-09-14T05:00:00+09:00',
     items:[
@@ -1814,7 +1817,7 @@ const CHANGELOG = [
   {
     // 報酬の受け取り方の案内。イベントのお知らせで「終了までにご案内します」と書いたぶん。
     // 助手の告知は付けない(イベント開催の告知で1件出しており、重ねない)。
-    date: "2026-09-11 13:44", type:'update', title:'イベント報酬の受け取り方をご案内します', status:'new',
+    date: "2026-09-11 13:44", type:'event', title:'イベント報酬の受け取り方をご案内します', status:'new',
     releaseFlag:'rhythmWeeklyRanking',
     // ★開催のことを書いてあるので、開始まで一覧へ出さない(下のイベント本体の項目と同じ)。
     visibleFrom:'2026-09-11T15:00:00+09:00',
@@ -1830,7 +1833,7 @@ const CHANGELOG = [
     // ★対象曲の名前と報酬の中身はここに書いてよい(このイベント1回かぎりの案内のため)。
     //   曲数や「全◯曲」のような、曲が増えると古くなる数字は書かない。
     // ★週間ランキングと同じ公開フラグで出す。イベントもそのタブの上で動くため。
-    date: "2026-09-11 13:43", type:'update', title:'【週末限定】モンヒロビート 週末ゲリラ杯を開催します', status:'new',
+    date: "2026-09-11 13:43", type:'event', title:'【週末限定】モンヒロビート 週末ゲリラ杯を開催します', status:'new',
     releaseFlag:'rhythmWeeklyRanking',
     // ★開始(15:00)までお知らせ一覧に出さない。助手の告知だけ notifyFrom で止めていたため、
     //   公開した時点(13:40)で一覧に並んでしまった(2026-09-11・ユーザー指摘「お知らせに出ちゃってる」)。

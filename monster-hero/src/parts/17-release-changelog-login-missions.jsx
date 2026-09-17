@@ -211,6 +211,10 @@ const CHANGELOG_TYPE_LABELS = Object.freeze({
   // content は新曲・新しい助手のような「新しい遊び」に付くので、公開のたびに起きる。
   mode:    { label:'新モード',   tone:'mode' },
   content: { label:'新コンテンツ', tone:'content' },
+  // 2026-09-17 に足した。期間限定イベントの開催・閉幕は「改善」でも「新コンテンツ」でもない。
+  // 第1回・第2回とも update(=改善) と表示されていた(ユーザー指摘)。
+  // イベントは今後も繰り返し開くので、一覧で見分けられるよう専用の種別にする。
+  event:   { label:'イベント',   tone:'event' },
 });
 const changelogTypeOf = (entry) => CHANGELOG_TYPE_LABELS[entry?.type] || CHANGELOG_TYPE_LABELS.update;
 

@@ -181,6 +181,17 @@ check('横長の画像がイベントのバナーに指定されている',
 check('更新履歴に第2回の項目がある', changelogSrc.includes('異世界交響祭'));
 check('更新履歴が開始時刻まで一覧に出ない(visibleFrom)',
   /visibleFrom:'2026-09-17T12:00:00\+09:00'/.test(changelogSrc));
+// ★一覧に出はじめるのは visibleFrom の時刻なので、そこに出る日時(date)も同じにする。
+//   ずれていると「12:00開始のイベントなのに 11:37 と表示される」ことになる
+//   (2026-09-17・ユーザー指摘「時間前に更新情報が入ってた」)。
+check('更新履歴の日時が、出はじめる時刻と同じ',
+  /date: "2026-09-17 12:00", type:'event', title:'第2回モンヒロビート/.test(changelogSrc));
+// ★イベントの開催・閉幕は「改善(update)」ではない。専用の種別で出す
+//   (2026-09-17・ユーザー指摘「タブが改善になってる」)
+check('更新履歴の種別がイベントになっている', /type:'event', title:'第2回モンヒロビート/.test(changelogSrc));
+check('イベントの種別に画面のラベルと色がある',
+  /event:\s*\{ label:'イベント',\s*tone:'event' \}/.test(read('monster-hero/src/parts/17-release-changelog-login-missions.jsx'))
+  && /data-kind="event"\]\{color:/.test(read('monster-hero/src/parts/70-bootstrap.jsx')));
 check('助手の告知も同じ時刻から出る(notifyFrom が visibleFrom と同じ)',
   /notifyFrom:'2026-09-17T12:00:00\+09:00'/.test(changelogSrc));
 check('助手の告知がイベント終了で止まる(notifyUntil)',
