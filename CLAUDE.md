@@ -257,9 +257,11 @@ node tools/render-error-check.js         # 実際に開いて真っ白になら�
 
 ```
 node tools/ctx.js find <語>              定義を探す（node tools/ctx.js text <語> で本文検索）
-node tools/ctx.js read <ファイル> <名前>  その定義の本体だけ（終わりの行は機械が決める）
+node tools/ctx.js read <名前>            その定義の本体だけ（置き場所も終わりの行も機械が決める）
+node tools/ctx.js refs <名前>            その名前を使っている場所の全体像（直し忘れを防ぐ）
 node tools/ctx.js toc <ファイル>          見出し／骨格の一覧
-node tools/ctx.js doc <ファイル> <見出し> 巨大なMarkdownの、その節だけ
+node tools/ctx.js doc <語>               資料を横断して見出しを探す（<ファイル> <見出し> でその節だけ）
+node tools/ctx.js checks <語>            検査を「名前＋何を見るか」で引く（520本ある）
 node tools/ctx.js diff                   生成物を除いた差分
 node tools/where.js --screens            画面(gameState)の一覧
 ```

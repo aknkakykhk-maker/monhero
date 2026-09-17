@@ -131,9 +131,11 @@ node tools/build.js && node tools/build.js --check
 ```
 node tools/ctx.js brief                  いまの状態(ブランチ・変更・次に打つもの)
 node tools/ctx.js find <語>              定義を探す（text で本文検索）
-node tools/ctx.js read <ファイル> <名前>  その定義の本体だけ（終わりの行は機械が決める）
+node tools/ctx.js read <名前>            その定義の本体だけ（置き場所も終わりの行も機械が決める）
+node tools/ctx.js refs <名前>            その名前を使っている場所の全体像（直し忘れを防ぐ）
 node tools/ctx.js toc <ファイル>          見出し／骨格の一覧
-node tools/ctx.js doc <ファイル> <見出し> 巨大なMarkdownの、その節だけ
+node tools/ctx.js doc <語>               資料を横断して見出しを探す
+node tools/ctx.js checks <語>            検査を「名前＋何を見るか」で引く
 node tools/ctx.js diff                   生成物を除いた差分（素の git diff の代わり）
 node tools/run-checks.js --changed       変更内容から要る検査を選んで回す
 ```

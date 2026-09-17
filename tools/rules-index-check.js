@@ -12,6 +12,9 @@
 //   2. CLAUDE.md と docs/rules/ のリンク先が実在するか
 //   3. docs/rules/ に、どこからも参照されていない置き去りのページが無いか
 //   4. 要のことばが CLAUDE.md 本体から消えていないか  ← これが本体
+//   5. tools/ 直下のスクリプトが tools/README.md に載っていて、説明コメントを持っているか
+//      （直下は CLAUDE.md と CI が名指しする場所。ここだけは索引を腐らせない。
+//        node tools/ctx.js checks が説明コメントから検査を引くので、説明が無いと見つからない）
 const fs = require('fs');
 const path = require('path');
 
@@ -155,10 +158,29 @@ for (const [word, where] of missing) {
     + '\n    移してよいのは経緯・失敗例・手順だけです。決めごと本体は CLAUDE.md に残してください。');
 }
 
+// 5. tools/ 直下の索引（CLAUDE.md と CI が名指しする場所だけを見る）
+const TOOLS_DIR = path.join(ROOT, 'tools');
+const TOOLS_README = path.join(TOOLS_DIR, 'README.md');
+let rootScripts = 0;
+if (fs.existsSync(TOOLS_README)) {
+  const readme = fs.readFileSync(TOOLS_README, 'utf8');
+  for (const name of fs.readdirSync(TOOLS_DIR).sort()) {
+    if (!name.endsWith('.js')) continue;
+    rootScripts++;
+    if (!readme.includes(name)) {
+      problems.push(`tools/${name} が tools/README.md に載っていません（直下は CLAUDE.md と CI が名指しする場所なので、足したら同じPRで1行足す）。`);
+    }
+    const head = fs.readFileSync(path.join(TOOLS_DIR, name), 'utf8').split('\n').slice(0, 6);
+    if (!head.some(l => /^\s*\/\/\s*\S/.test(l))) {
+      problems.push(`tools/${name} の先頭に、何をするものかを1行で書いたコメントがありません（node tools/ctx.js checks がここを読んで検査を探します）。`);
+    }
+  }
+}
+
 const kb = (bytes / 1024).toFixed(1);
 if (problems.length) {
   console.error(`NG: ルールの索引に ${problems.length} 件の問題`);
   for (const p of problems) console.error(`  - ${p}`);
   process.exit(1);
 }
-console.log(`OK: CLAUDE.md ${kb}KB（上限 ${(MAX_BYTES / 1024).toFixed(1)}KB） / 詳細 ${checkedFiles.length - 1} ページ / 要のことば ${MUST_KEEP.length} 件すべて健在`);
+console.log(`OK: CLAUDE.md ${kb}KB（上限 ${(MAX_BYTES / 1024).toFixed(1)}KB） / 詳細 ${checkedFiles.length - 1} ページ / 要のことば ${MUST_KEEP.length} 件すべて健在 / tools直下 ${rootScripts} 本すべて索引済み`);

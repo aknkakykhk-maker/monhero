@@ -143,6 +143,10 @@ function planForChanges(files, areas, wide, limit) {
   const hitAreas = new Set();
   for (const f of files) {
     if (GENERATED_RE.test(f)) continue;
+    // 検査スクリプト自身を直したときは、その検査を回す。
+    // ファイル名から語を取る仕組みでは拾えず、直した本人だけが素通りしていた。
+    const self = /^tools\/(.+\.js)$/.exec(f);
+    if (self && allChecks.includes(self[1])) { reasons.set(self[1], `この検査自体を変えた（${f}）`); rank.set(self[1], 0); }
     for (const rule of FORCE_CHECKS) {
       if (!rule.re.test(f)) continue;
       for (const c of rule.checks) if (!reasons.has(c)) { reasons.set(c, `${rule.why}（${f}）`); rank.set(c, 0); }
@@ -340,10 +344,19 @@ async function main() {
   const totalSec = (Date.now() - started) / 1000;
   console.log(`\n合計 ${results.length} 本 / OK ${count('OK')} / NG ${count('NG')} / TIMEOUT ${count('TIMEOUT')} / SKIP ${count('SKIP')} / MISSING ${count('MISSING')} / ${Math.round(totalSec)}秒`);
   const bad = results.filter(r => !['OK', 'SKIP'].includes(r.status));
-  for (const r of bad) {
+  // 失敗の中身は「最後の8行」ではなく、失敗をじかに言っている行を拾う。
+  // 検査によっては原因が途中に出て、最後は集計だけということがあるため。
+  const FAIL_LINE = /(^|\s)(NG|FAIL|失敗|不一致|エラー|Error|Cannot|undefined|✗|❌)/;
+  for (const r of bad.slice(0, 5)) {
     console.log(`\n--- ${r.status}: ${r.command}`);
-    console.log(r.output.trim().split('\n').slice(-8).map(l => '    ' + l).join('\n'));
+    const lines = r.output.trim().split('\n').filter(l => l.trim());
+    const core = lines.filter(l => FAIL_LINE.test(l));
+    const show = core.length ? core.slice(0, 10) : lines.slice(-8);
+    console.log(show.map(l => '    ' + (l.length > 200 ? l.slice(0, 200) + ' …' : l)).join('\n'));
+    if (core.length > 10) console.log(`    … ほか ${core.length - 10} 行（全部見るなら  node tools/${r.command}）`);
+    else if (!core.length) console.log(`    （失敗を名指しする行が見つからないので末尾を出しています: node tools/${r.command}）`);
   }
+  if (bad.length > 5) console.log(`\n… ほか ${bad.length - 5} 本が失敗しています（1本ずつ見るなら  node tools/run-checks.js --script <名前>）`);
   if (opts.json) {
     fs.writeFileSync(opts.json, JSON.stringify({ at: new Date().toISOString(), areas: wanted, totalSec, results: results.map(r => ({ command: r.command, status: r.status, sec: Math.round(r.sec * 10) / 10, needsServer: r.needsServer, needsPlaywright: r.needsPlaywright, tail: r.status === 'OK' ? undefined : r.output.trim().split('\n').slice(-8) })) }, null, 2));
     console.log(`\n結果を書き出した: ${opts.json}`);
