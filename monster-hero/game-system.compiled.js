@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ef53ae100f702fa5
+// source-sha256: 00279ee5ccdcbfbd
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f4ff714d6d6afdda
+// generated-sha256: d774d728315ea4a2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -161,7 +161,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-18 00:36"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-18 01:05"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -25601,6 +25601,88 @@ const RhythmTapTest = ({
     onClick: abort
   }, calibrating ? 'やめてオプションへ戻る' : tutorial ? '練習をやめて曲えらびへ戻る' : debugPlay ? '中断して音ゲーデバッグへ戻る' : '中断して曲えらびへ戻る'))));
 };
+
+// ---- part: 31-debug-ui.jsx ----
+// ==================== デバッグ画面の共通部品 ====================
+// デバッグ画面は「必要になったら1つずつ足す」で増えてきたため、画面ごとに頭の作りが
+// ばらばらになっていた(2026-09-17・ユーザー指摘「デバッグモード自体がほんとに適当に
+// 追加してったその場しのぎの作りになってる」)。
+//
+// とくに困るのが**「この画面はセーブを書き換えるのか」の伝わり方が画面ごとに違う**こと。
+// 赤帯(mh-debug-banner)を出すものもあれば、見出しの下に8pxの小さい字で書くだけのものもあり、
+// 何も書いていないものもあった。押す前に分からないのは危ない。
+//
+// そこで、どのデバッグ画面も同じ頭を持つようにする。
+//
+//   ← 戻る ／ 画面の名前 ／ 「保存しません」か「保存します」のバッジ
+//
+// saves=true のときだけ赤くなる。バッジは必ず同じ位置に出るので、
+// 「書いていない＝たぶん大丈夫」という読み取りが起きない。
+
+// デバッグ画面の頭。すべてのデバッグ画面がこれを使う。
+//   title … 画面の名前(日本語)
+//   note  … 補足(省略可。本番と同じ部品を使っていることなど)
+//   saves … セーブデータを書き換える画面なら true
+//   onBack… 戻るときにすること(画面は自分の戻り先を知らない)
+const DebugScreenHead = ({
+  title,
+  note = '',
+  saves = false,
+  onBack,
+  backLabel = 'デバッグ設定へ戻る',
+  right = null
+}) => /*#__PURE__*/React.createElement("header", {
+  className: "mb-2 flex shrink-0 items-center gap-2"
+}, /*#__PURE__*/React.createElement("button", {
+  "aria-label": backLabel,
+  onClick: onBack,
+  className: "p-3 text-slate-400 active:scale-90"
+}, /*#__PURE__*/React.createElement(ArrowLeft, {
+  size: 20
+})), /*#__PURE__*/React.createElement("div", {
+  className: "min-w-0"
+}, /*#__PURE__*/React.createElement("h2", {
+  className: "truncate text-sm font-black text-white"
+}, title), note && /*#__PURE__*/React.createElement("small", {
+  className: "block truncate text-[9px] font-bold text-slate-400"
+}, note)), /*#__PURE__*/React.createElement("span", {
+  "data-debug-saves": saves ? 'yes' : 'no',
+  className: `ml-auto shrink-0 rounded-full px-2.5 py-1 text-[9px] font-black ${saves ? 'bg-rose-700 text-white' : 'border border-white/15 bg-slate-900 text-slate-300'}`
+}, saves ? '保存します' : '保存しません'), right);
+
+// デバッグメニューの1行。入口はすべてこの形にそろえる。
+// **メニューには入口だけを置き、道具そのものを埋めない**のが決めごと。
+// 以前はデバッグ戦の「難易度9個 → 敵10個 → 勇者モン → 開始」がメニューの中に直接あり、
+// 次の欄へ行くのに1500pxスクロールする必要があった。
+//   tone … 'go'(画面へ移る) / 'play'(その場で再生する) / 'save'(セーブを書き換える)
+const DEBUG_ROW_TONE = {
+  go: 'border-cyan-400/50 bg-cyan-950/40 text-cyan-50',
+  play: 'border-pink-400/50 bg-pink-950/40 text-pink-50',
+  save: 'border-rose-400/60 bg-rose-950/50 text-rose-50'
+};
+const DebugMenuRow = ({
+  icon = '',
+  label,
+  desc = '',
+  tone = 'go',
+  onClick,
+  ...rest
+}) => /*#__PURE__*/React.createElement("button", _extends({
+  type: "button",
+  onClick: onClick
+}, rest, {
+  className: `w-full min-h-[56px] rounded-2xl border-2 px-3 py-2 text-left font-black active:scale-95 ${DEBUG_ROW_TONE[tone] || DEBUG_ROW_TONE.go}`
+}), /*#__PURE__*/React.createElement("span", {
+  className: "flex items-center gap-2"
+}, icon && /*#__PURE__*/React.createElement("span", {
+  className: "shrink-0 text-[15px]"
+}, icon), /*#__PURE__*/React.createElement("span", {
+  className: "min-w-0 flex-1 text-[12px] leading-tight"
+}, label), tone === 'save' && /*#__PURE__*/React.createElement("span", {
+  className: "shrink-0 rounded-full bg-rose-600 px-1.5 py-0.5 text-[8px] text-white"
+}, "\u4FDD\u5B58")), desc && /*#__PURE__*/React.createElement("small", {
+  className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
+}, desc));
 
 // ---- part: 40-screen-effects.jsx ----
 // ==== 画面ライフサイクル: タイマー・リスナーの登録簿(useScreenEffects) ====
@@ -59633,153 +59715,22 @@ function MonsterHeroGame() {
     })), rhythmChartToolsOpened && /*#__PURE__*/React.createElement("div", {
       "data-rhythm-debug": true,
       hidden: rhythmDebugTab !== 'chart'
-    }))), gameState === 'DEBUG_SETTINGS' && /*#__PURE__*/React.createElement("div", {
-      className: "flex-1 flex flex-col h-full p-4",
+    }))), gameState === 'DEBUG_BATTLE_SETUP' && /*#__PURE__*/React.createElement("main", {
+      "data-debug-battle-setup-screen": true,
+      "data-mh-screen": true,
+      className: "flex-1 flex flex-col h-full min-h-0 p-4",
       style: {
         paddingTop: 'calc(1rem + env(safe-area-inset-top))',
         paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
       }
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center gap-2 mb-2 shrink-0"
-    }, /*#__PURE__*/React.createElement("button", {
-      onClick: () => {
-        setGameState('SETTINGS');
-        openHelp();
-      },
-      className: "p-3 text-slate-500"
-    }, /*#__PURE__*/React.createElement(ArrowLeft, {
-      size: 20
-    })), /*#__PURE__*/React.createElement("h2", {
-      className: "text-base font-black text-slate-400 tracking-widest"
-    }, "DEBUG MENU")), /*#__PURE__*/React.createElement("p", {
-      className: "mb-3 shrink-0 text-[9px] leading-relaxed text-slate-500"
-    }, "\u7528\u9014\u3054\u3068\u306B\u7573\u3093\u3067\u3042\u308A\u307E\u3059\u3002\u898B\u51FA\u3057\u3092\u62BC\u3059\u3068\u958B\u304D\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
-      className: "flex-1 overflow-y-auto mh-scroll space-y-2"
-    }, /*#__PURE__*/React.createElement("details", {
-      className: "rounded-2xl border border-emerald-500/40 bg-emerald-950/20"
-    }, /*#__PURE__*/React.createElement("summary", {
-      className: "cursor-pointer select-none px-3 py-3 text-[11px] font-black text-emerald-200"
-    }, "\uD83E\uDDEC \u30E2\u30F3\u30B9\u30BF\u30FC", /*#__PURE__*/React.createElement("small", {
-      className: "block text-[8px] font-bold text-emerald-400/80"
-    }, "\u65B0\u30E2\u30F3\u30B9\u30BF\u30FC\u78BA\u8A8D\u30FB\u753B\u50CF\u3068\u67D3\u8272\u30FB\u8EE2\u751F\uFF0F\u9650\u754C\u7A81\u7834\uFF0F\u8D85\u8D8A\u306E\u898B\u305F\u76EE\u30FB\u30A2\u30A4\u30B3\u30F3\u8ABF\u6574")), /*#__PURE__*/React.createElement("div", {
-      className: "space-y-2 border-t border-emerald-500/30 p-3"
-    }, /*#__PURE__*/React.createElement("button", {
-      "data-debug-monster-check": true,
-      onClick: () => setGameState('MONSTER_CHECK_DEBUG'),
-      className: "w-full min-h-[64px] rounded-2xl border-2 border-emerald-300 bg-emerald-900 text-emerald-50 font-black"
-    }, "\uD83C\uDD95 \u65B0\u30E2\u30F3\u30B9\u30BF\u30FC\u78BA\u8A8D", /*#__PURE__*/React.createElement("small", {
-      className: "block text-[8px] text-emerald-300"
-    }, "\u5168\u7A2E\u3092\u6240\u6301\u306B\u95A2\u4FC2\u306A\u304F\u8868\u793A\u3002\u753B\u50CF\u30FB\u67D3\u8272\u30FB\u30E2\u30FC\u30B7\u30E7\u30F3\u30FB\u80FD\u529B\u30FB\u6280\u30FB\u8840\u7D71\u30FB\u30DE\u30FC\u30B1\u30C3\u30C8\u3068\u5B9F\u88C5\u30C1\u30A7\u30C3\u30AF")), /*#__PURE__*/React.createElement("button", {
-      onClick: () => {
-        setDyeMaskEditorOpened(true);
-        setGameState('DYE_MASK_POSITION_DEBUG');
-      },
-      className: "w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-400 text-cyan-100 rounded-2xl font-black"
-    }, "\uD83D\uDD8C\uFE0F \u67D3\u8272\u30DE\u30B9\u30AF\u7DE8\u96C6", /*#__PURE__*/React.createElement("small", {
-      className: "block text-[8px] text-cyan-300"
-    }, "\u5168\u30D9\u30FC\u30B9\u30E2\u30F3\u3092\u9078\u629E\u3057\u3066\u76F4\u63A5\u63CF\u753B\u30FBPNG\u51FA\u529B")), /*#__PURE__*/React.createElement("button", {
-      onClick: () => {
-        setPatternMasuId(null);
-        setPatternSettings(makePatternSettings());
-        setGameState('MASU_PATTERN_DEBUG');
-      },
-      className: "w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black"
-    }, "\uD83C\uDFA8 \u30DE\u30B9\u30E2\u30F3\u6A21\u69D8\u30AB\u30B9\u30BF\u30E0\u30C6\u30B9\u30C8", /*#__PURE__*/React.createElement("small", {
-      className: "block text-[8px] text-cyan-300"
-    }, "\u6A21\u69D8\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("button", {
-      "data-debug-transcend": true,
-      onClick: () => {
-        setTranscendDebugId(null);
-        setMasuLookTab('reincarnate');
-        setGameState('TRANSCEND_DEBUG');
-      },
-      className: "w-full min-h-[64px] bg-amber-950 border-2 border-amber-400 text-amber-100 rounded-2xl font-black"
-    }, "\u2B50 \u80B2\u6210\u30DE\u30FC\u30AF\u306E\u898B\u305F\u76EE", /*#__PURE__*/React.createElement("small", {
-      className: "block text-[8px] text-amber-300"
-    }, "\u8EE2\u751F\u306E\u30AA\u30FC\u30E9\u30FB\u9650\u754C\u7A81\u7834\u306E\u2605\u30FB\u8D85\u8D8A\u30DE\u30FC\u30AF\u30921\u753B\u9762\u3067\u898B\u6BD4\u3079\u308B\uFF0F\u8D85\u8D8A\u3092\u8A66\u3059\u6E96\u5099\u3082\u3053\u3053")), /*#__PURE__*/React.createElement("button", {
-      onClick: () => setGameState('BREEDER_ICON_DEBUG'),
-      className: "w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black"
-    }, "\uD83D\uDE42 \u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u306E\u898B\u305F\u76EE", /*#__PURE__*/React.createElement("small", {
-      className: "block text-[8px] text-fuchsia-300"
-    }, "\u9854\u30A2\u30A4\u30B3\u30F3\u306E\u62E1\u5927\u30FB\u4F4D\u7F6E\u3092\u6C7A\u3081\u3066\u30B3\u30D4\u30FC\uFF0F\u30D5\u30EC\u30FC\u30E0\u3068\u306E\u76F8\u6027\u3082\u3053\u3053\u3067\u898B\u308B")))), /*#__PURE__*/React.createElement("details", {
-      className: "rounded-2xl border border-fuchsia-500/40 bg-fuchsia-950/20"
-    }, /*#__PURE__*/React.createElement("summary", {
-      className: "cursor-pointer select-none px-3 py-3 text-[11px] font-black text-fuchsia-200"
-    }, "\u2694\uFE0F \u30D0\u30C8\u30EB", /*#__PURE__*/React.createElement("small", {
-      className: "block text-[8px] font-bold text-fuchsia-400/80"
-    }, "\u30E2\u30FC\u30C9\u9078\u629E\u30FB\u7A2E\u65CF\u30C1\u30E3\u30EC\u30F3\u30B8\u30FB\u30C0\u30F3\u30B8\u30E7\u30F3RPG\u30FB\u30C1\u30E5\u30FC\u30C8\u30EA\u30A2\u30EB\u30FB\u30C7\u30D0\u30C3\u30B0\u6226")), /*#__PURE__*/React.createElement("div", {
-      className: "space-y-2 border-t border-fuchsia-500/30 p-3"
-    }, /*#__PURE__*/React.createElement("button", {
-      "data-debug-battle-mode": true,
-      onClick: () => {
-        debugBattleRef.current = true;
-        debugMonsterPreviewRef.current = true;
-        extremeRunRef.current = false;
-        setDebugBattle(true);
-        setExtremeRun(false);
-        setBattleMode(BATTLE_MODE_CHALLENGE);
-        setModeSelectTab('mode');
-        setGameState('BATTLE_MODE_SELECT');
-      },
-      className: "w-full min-h-[64px] rounded-2xl border-2 border-fuchsia-500/70 bg-fuchsia-950/30 text-fuchsia-100 font-black"
-    }, "\u2694\uFE0F \u30D0\u30C8\u30EB\u30E2\u30FC\u30C9", /*#__PURE__*/React.createElement("small", {
-      className: "block text-[8px] text-fuchsia-300"
-    }, "\u7A2E\u65CF\u30C1\u30E3\u30EC\u30F3\u30B8\u30FB\u6975\u9650\u30C1\u30E3\u30EC\u30F3\u30B8\u3092\u542B\u3080\u8A66\u9A13\u7528\u30E2\u30FC\u30C9\u9078\u629E\u30FB\u7D50\u679C\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("button", {
-      "data-debug-species-challenge": true,
-      onClick: async () => {
-        await loadSpeciesChallengeProgress();
-        setGameState('SPECIES_CHALLENGE_DEBUG');
-      },
-      className: "w-full min-h-[64px] bg-emerald-950 border-2 border-emerald-400 text-emerald-100 rounded-2xl font-black"
-    }, "\uD83E\uDDEC \u7A2E\u65CF\u30C1\u30E3\u30EC\u30F3\u30B8\u9032\u884C\u78BA\u8A8D", /*#__PURE__*/React.createElement("small", {
-      className: "block text-[8px] text-emerald-300"
-    }, "\u7A2E\u65CF\u5225\u306E\u89E3\u653E\u30FB\u30AF\u30EA\u30A2\u30FB\u521D\u56DE\u5831\u916C\u3092\u78BA\u8A8D\uFF0F\u7DE8\u96C6")), /*#__PURE__*/React.createElement("button", {
-      "data-debug-rpg-battle": true,
-      onClick: () => {
-        setRpgBattle(null);
-        setGameState('RPG_DEBUG_SETUP');
-      },
-      className: "w-full min-h-[64px] rounded-2xl border-2 border-emerald-400/70 bg-emerald-950/40 text-emerald-100 font-black"
-    }, "\u2694\uFE0F \u30C0\u30F3\u30B8\u30E7\u30F3RPG\u6226\u95D8\u30C6\u30B9\u30C8", /*#__PURE__*/React.createElement("small", {
-      className: "block text-[8px] text-emerald-300"
-    }, "\u30B3\u30DE\u30F3\u30C9\u5F0F\u30BF\u30FC\u30F3\u5236\u306E\u8A66\u4F5C\u30FB\u30D9\u30FC\u30B9\u30E2\u30F3\u306E\u307F\u30FB\u4FDD\u5B58\u3082\u5831\u916C\u3082\u3042\u308A\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("div", {
-      className: "grid grid-cols-2 gap-2"
-    }, /*#__PURE__*/React.createElement("button", {
-      onClick: () => {
-        setBattleMenuTab('difficulty');
-        setGameState('BATTLE_MENU');
-      },
-      className: "col-span-2 min-h-[46px] rounded-xl bg-slate-800 border border-white/20 text-slate-300 text-[10px] font-black active:scale-95"
-    }, "\u65E7\u30D0\u30C8\u30EB\u753B\u9762\u3092\u958B\u304F\uFF08\u898B\u6BD4\u3079\u7528\uFF09"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => startBattleTutorial(),
-      className: "col-span-2 min-h-[46px] rounded-xl bg-indigo-700/80 border border-indigo-300/60 text-white text-[10px] font-black active:scale-95"
-    }, "\u30D0\u30C8\u30EB\u30C1\u30E5\u30FC\u30C8\u30EA\u30A2\u30EB\u958B\u59CB\uFF08\u8A18\u9332\u306F\u6B8B\u308A\u307E\u305B\u3093\uFF09"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => startBattleTutorial('DEBUG_SETTINGS', 'v1'),
-      className: "col-span-2 min-h-[46px] rounded-xl bg-slate-800 border border-white/20 text-slate-300 text-[10px] font-black active:scale-95"
-    }, "\u65E7\u30D0\u30C8\u30EB\u30C1\u30E5\u30FC\u30C8\u30EA\u30A2\u30EB\u3092\u898B\u308B\uFF08\u65E7\u30D0\u30C8\u30EB\u753B\u9762\u30FB\u8A18\u9332\u306F\u6B8B\u308A\u307E\u305B\u3093\uFF09"), /*#__PURE__*/React.createElement("button", {
-      onClick: async () => {
-        await storeSet(BATTLE_TUTORIAL_SEEN_KEY, false, false);
-        window.alert('バトルチュートリアルを未視聴に戻しました。');
-      },
-      className: "min-h-[46px] rounded-xl bg-amber-950/60 border border-amber-500/50 text-amber-100 text-[10px] font-black active:scale-95"
-    }, "\u30D0\u30C8\u30EB\u7DF4\u7FD2\u3092\u672A\u8996\u8074\u3078\u623B\u3059"), /*#__PURE__*/React.createElement("button", {
-      onClick: async () => {
-        await storeSet(BATTLE_TUTORIAL_GUIDE_SHOWN_KEY, false, false);
-        battleTutorialGuideCheckedRef.current = false;
-        window.alert('初回案内を未表示に戻しました。');
-      },
-      className: "min-h-[46px] rounded-xl bg-amber-950/60 border border-amber-500/50 text-amber-100 text-[10px] font-black active:scale-95"
-    }, "\u521D\u56DE\u6848\u5185\u3092\u672A\u8868\u793A\u3078\u623B\u3059"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => {
-        returnToHome();
-        startTutorial('battleGuide');
-      },
-      className: "col-span-2 min-h-[46px] rounded-xl bg-pink-700/70 border border-pink-300/60 text-white text-[10px] font-black active:scale-95"
-    }, "\u30D0\u30C8\u30EB\u521D\u56DE\u6848\u5185\u3092\u518D\u751F")), /*#__PURE__*/React.createElement("div", {
-      className: "space-y-3 rounded-2xl border border-white/10 bg-black/20 p-3"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "text-[10px] font-black text-slate-300"
-    }, "\uD83D\uDEE0 \u30C7\u30D0\u30C3\u30B0\u6226\uFF08\u7D50\u679C\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093\uFF09"), /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("div", {
+    }, /*#__PURE__*/React.createElement(DebugScreenHead, {
+      title: "\u30C7\u30D0\u30C3\u30B0\u6226",
+      note: "\u96E3\u6613\u5EA6\u3068\u6575\u3092\u9078\u3093\u3067\u3001\u305D\u306E\u5834\u3067\u6226\u3046",
+      saves: false,
+      onBack: () => setGameState('DEBUG_SETTINGS')
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "flex-1 min-h-0 overflow-y-auto mh-scroll space-y-4"
+    }, /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] text-slate-500 font-black mb-2"
     }, "1. \u96E3\u6613\u5EA6"), /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-3 gap-2"
@@ -59819,58 +59770,212 @@ function MonsterHeroGame() {
       disabled: !getDebugEnemyOptions(difficulty).some(o => o.key === debugEnemyKey) || !debugStrongestHero && getActiveMonsterList().length === 0,
       onClick: startDebugBattle,
       className: "w-full min-h-[58px] bg-slate-200 text-slate-950 rounded-2xl font-black disabled:opacity-30"
-    }, "4. \u30C7\u30D0\u30C3\u30B0\u6226\u958B\u59CB")))), /*#__PURE__*/React.createElement("details", {
+    }, "4. \u30C7\u30D0\u30C3\u30B0\u6226\u958B\u59CB"))), gameState === 'DEBUG_SETTINGS' && /*#__PURE__*/React.createElement("div", {
+      className: "flex-1 flex flex-col h-full p-4",
+      style: {
+        paddingTop: 'calc(1rem + env(safe-area-inset-top))',
+        paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-2 mb-2 shrink-0"
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: () => {
+        setGameState('SETTINGS');
+        openHelp();
+      },
+      className: "p-3 text-slate-500"
+    }, /*#__PURE__*/React.createElement(ArrowLeft, {
+      size: 20
+    })), /*#__PURE__*/React.createElement("h2", {
+      className: "text-base font-black text-slate-400 tracking-widest"
+    }, "DEBUG MENU")), /*#__PURE__*/React.createElement("p", {
+      className: "mb-3 shrink-0 text-[9px] leading-relaxed text-slate-500"
+    }, "\u7528\u9014\u3054\u3068\u306B\u7573\u3093\u3067\u3042\u308A\u307E\u3059\u3002\u898B\u51FA\u3057\u3092\u62BC\u3059\u3068\u958B\u304D\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
+      className: "flex-1 overflow-y-auto mh-scroll space-y-2"
+    }, /*#__PURE__*/React.createElement("details", {
+      className: "rounded-2xl border border-emerald-500/40 bg-emerald-950/20"
+    }, /*#__PURE__*/React.createElement("summary", {
+      className: "cursor-pointer select-none px-3 py-3 text-[11px] font-black text-emerald-200"
+    }, "\uD83E\uDDEC \u30E2\u30F3\u30B9\u30BF\u30FC", /*#__PURE__*/React.createElement("small", {
+      className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
+    }, "\u65B0\u30E2\u30F3\u30B9\u30BF\u30FC\u78BA\u8A8D\u30FB\u753B\u50CF\u3068\u67D3\u8272\u30FB\u8EE2\u751F\uFF0F\u9650\u754C\u7A81\u7834\uFF0F\u8D85\u8D8A\u306E\u898B\u305F\u76EE\u30FB\u30A2\u30A4\u30B3\u30F3\u8ABF\u6574")), /*#__PURE__*/React.createElement("div", {
+      className: "space-y-2 border-t border-emerald-500/30 p-3"
+    }, /*#__PURE__*/React.createElement("button", {
+      "data-debug-monster-check": true,
+      onClick: () => setGameState('MONSTER_CHECK_DEBUG'),
+      className: "w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
+    }, "\uD83C\uDD95 \u65B0\u30E2\u30F3\u30B9\u30BF\u30FC\u78BA\u8A8D", /*#__PURE__*/React.createElement("small", {
+      className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
+    }, "\u5168\u7A2E\u3092\u6240\u6301\u306B\u95A2\u4FC2\u306A\u304F\u8868\u793A\u3002\u753B\u50CF\u30FB\u67D3\u8272\u30FB\u30E2\u30FC\u30B7\u30E7\u30F3\u30FB\u80FD\u529B\u30FB\u6280\u30FB\u8840\u7D71\u30FB\u30DE\u30FC\u30B1\u30C3\u30C8\u3068\u5B9F\u88C5\u30C1\u30A7\u30C3\u30AF")), /*#__PURE__*/React.createElement("button", {
+      onClick: () => {
+        setDyeMaskEditorOpened(true);
+        setGameState('DYE_MASK_POSITION_DEBUG');
+      },
+      className: "w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
+    }, "\uD83D\uDD8C\uFE0F \u67D3\u8272\u30DE\u30B9\u30AF\u7DE8\u96C6", /*#__PURE__*/React.createElement("small", {
+      className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
+    }, "\u5168\u30D9\u30FC\u30B9\u30E2\u30F3\u3092\u9078\u629E\u3057\u3066\u76F4\u63A5\u63CF\u753B\u30FBPNG\u51FA\u529B")), /*#__PURE__*/React.createElement("button", {
+      onClick: () => {
+        setPatternMasuId(null);
+        setPatternSettings(makePatternSettings());
+        setGameState('MASU_PATTERN_DEBUG');
+      },
+      className: "w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
+    }, "\uD83C\uDFA8 \u30DE\u30B9\u30E2\u30F3\u6A21\u69D8\u30AB\u30B9\u30BF\u30E0\u30C6\u30B9\u30C8", /*#__PURE__*/React.createElement("small", {
+      className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
+    }, "\u6A21\u69D8\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("button", {
+      "data-debug-transcend": true,
+      onClick: () => {
+        setTranscendDebugId(null);
+        setMasuLookTab('reincarnate');
+        setGameState('TRANSCEND_DEBUG');
+      },
+      className: "w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
+    }, "\u2B50 \u80B2\u6210\u30DE\u30FC\u30AF\u306E\u898B\u305F\u76EE", /*#__PURE__*/React.createElement("small", {
+      className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
+    }, "\u8EE2\u751F\u306E\u30AA\u30FC\u30E9\u30FB\u9650\u754C\u7A81\u7834\u306E\u2605\u30FB\u8D85\u8D8A\u30DE\u30FC\u30AF\u30921\u753B\u9762\u3067\u898B\u6BD4\u3079\u308B\uFF0F\u8D85\u8D8A\u3092\u8A66\u3059\u6E96\u5099\u3082\u3053\u3053")), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setGameState('BREEDER_ICON_DEBUG'),
+      className: "w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
+    }, "\uD83D\uDE42 \u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u306E\u898B\u305F\u76EE", /*#__PURE__*/React.createElement("small", {
+      className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
+    }, "\u9854\u30A2\u30A4\u30B3\u30F3\u306E\u62E1\u5927\u30FB\u4F4D\u7F6E\u3092\u6C7A\u3081\u3066\u30B3\u30D4\u30FC\uFF0F\u30D5\u30EC\u30FC\u30E0\u3068\u306E\u76F8\u6027\u3082\u3053\u3053\u3067\u898B\u308B")))), /*#__PURE__*/React.createElement("details", {
+      className: "rounded-2xl border border-fuchsia-500/40 bg-fuchsia-950/20"
+    }, /*#__PURE__*/React.createElement("summary", {
+      className: "cursor-pointer select-none px-3 py-3 text-[11px] font-black text-fuchsia-200"
+    }, "\u2694\uFE0F \u30D0\u30C8\u30EB", /*#__PURE__*/React.createElement("small", {
+      className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
+    }, "\u30E2\u30FC\u30C9\u9078\u629E\u30FB\u30C7\u30D0\u30C3\u30B0\u6226\u30FB\u7A2E\u65CF\u30C1\u30E3\u30EC\u30F3\u30B8\u30FB\u30C0\u30F3\u30B8\u30E7\u30F3RPG\u30FB\u30C1\u30E5\u30FC\u30C8\u30EA\u30A2\u30EB")), /*#__PURE__*/React.createElement("div", {
+      className: "space-y-2 border-t border-fuchsia-500/30 p-3"
+    }, /*#__PURE__*/React.createElement("button", {
+      "data-debug-battle-mode": true,
+      onClick: () => {
+        debugBattleRef.current = true;
+        debugMonsterPreviewRef.current = true;
+        extremeRunRef.current = false;
+        setDebugBattle(true);
+        setExtremeRun(false);
+        setBattleMode(BATTLE_MODE_CHALLENGE);
+        setModeSelectTab('mode');
+        setGameState('BATTLE_MODE_SELECT');
+      },
+      className: "w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
+    }, "\u2694\uFE0F \u30D0\u30C8\u30EB\u30E2\u30FC\u30C9", /*#__PURE__*/React.createElement("small", {
+      className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
+    }, "\u7A2E\u65CF\u30C1\u30E3\u30EC\u30F3\u30B8\u30FB\u6975\u9650\u30C1\u30E3\u30EC\u30F3\u30B8\u3092\u542B\u3080\u8A66\u9A13\u7528\u30E2\u30FC\u30C9\u9078\u629E\u30FB\u7D50\u679C\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093")), /*#__PURE__*/React.createElement(DebugMenuRow, {
+      "data-debug-battle-setup": true,
+      icon: "\uD83D\uDEE0",
+      label: "\u30C7\u30D0\u30C3\u30B0\u6226",
+      desc: "\u96E3\u6613\u5EA6\u3068\u6575\u3092\u9078\u3093\u3067\u6226\u3046\u3002\u7D50\u679C\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093",
+      onClick: () => setGameState('DEBUG_BATTLE_SETUP')
+    }), /*#__PURE__*/React.createElement("button", {
+      "data-debug-species-challenge": true,
+      onClick: async () => {
+        await loadSpeciesChallengeProgress();
+        setGameState('SPECIES_CHALLENGE_DEBUG');
+      },
+      className: "w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
+    }, "\uD83E\uDDEC \u7A2E\u65CF\u30C1\u30E3\u30EC\u30F3\u30B8\u9032\u884C\u78BA\u8A8D", /*#__PURE__*/React.createElement("small", {
+      className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
+    }, "\u7A2E\u65CF\u5225\u306E\u89E3\u653E\u30FB\u30AF\u30EA\u30A2\u30FB\u521D\u56DE\u5831\u916C\u3092\u78BA\u8A8D\uFF0F\u7DE8\u96C6")), /*#__PURE__*/React.createElement("button", {
+      "data-debug-rpg-battle": true,
+      onClick: () => {
+        setRpgBattle(null);
+        setGameState('RPG_DEBUG_SETUP');
+      },
+      className: "w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
+    }, "\u2694\uFE0F \u30C0\u30F3\u30B8\u30E7\u30F3RPG\u6226\u95D8\u30C6\u30B9\u30C8", /*#__PURE__*/React.createElement("small", {
+      className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
+    }, "\u30B3\u30DE\u30F3\u30C9\u5F0F\u30BF\u30FC\u30F3\u5236\u306E\u8A66\u4F5C\u30FB\u30D9\u30FC\u30B9\u30E2\u30F3\u306E\u307F\u30FB\u4FDD\u5B58\u3082\u5831\u916C\u3082\u3042\u308A\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("details", {
+      className: "rounded-2xl border border-white/10 bg-black/20"
+    }, /*#__PURE__*/React.createElement("summary", {
+      className: "cursor-pointer select-none px-3 py-2.5 text-[11px] font-black text-slate-200"
+    }, "\uD83D\uDCD6 \u30C1\u30E5\u30FC\u30C8\u30EA\u30A2\u30EB\u3068\u65E7\u753B\u9762", /*#__PURE__*/React.createElement("small", {
+      className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
+    }, "\u518D\u751F\u30FB\u672A\u8AAD\u3078\u623B\u3059\u30FB\u898B\u6BD4\u3079\u7528\u306E\u65E7\u30D0\u30C8\u30EB\u753B\u9762")), /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-2 gap-2 border-t border-white/10 p-3"
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: () => startBattleTutorial(),
+      className: "min-h-[50px] rounded-xl border border-cyan-400/50 bg-cyan-950/40 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
+    }, "\u30D0\u30C8\u30EB\u30C1\u30E5\u30FC\u30C8\u30EA\u30A2\u30EB\u958B\u59CB\uFF08\u8A18\u9332\u306F\u6B8B\u308A\u307E\u305B\u3093\uFF09"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => {
+        returnToHome();
+        startTutorial('battleGuide');
+      },
+      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
+    }, "\u30D0\u30C8\u30EB\u521D\u56DE\u6848\u5185\u3092\u518D\u751F"), /*#__PURE__*/React.createElement("button", {
+      onClick: async () => {
+        await storeSet(BATTLE_TUTORIAL_SEEN_KEY, false, false);
+        window.alert('バトルチュートリアルを未視聴に戻しました。');
+      },
+      className: "min-h-[50px] rounded-xl border border-rose-400/60 bg-rose-950/50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
+    }, "\u30D0\u30C8\u30EB\u7DF4\u7FD2\u3092\u672A\u8996\u8074\u3078\u623B\u3059"), /*#__PURE__*/React.createElement("button", {
+      onClick: async () => {
+        await storeSet(BATTLE_TUTORIAL_GUIDE_SHOWN_KEY, false, false);
+        battleTutorialGuideCheckedRef.current = false;
+        window.alert('初回案内を未表示に戻しました。');
+      },
+      className: "min-h-[50px] rounded-xl border border-rose-400/60 bg-rose-950/50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
+    }, "\u521D\u56DE\u6848\u5185\u3092\u672A\u8868\u793A\u3078\u623B\u3059"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => {
+        setBattleMenuTab('difficulty');
+        setGameState('BATTLE_MENU');
+      },
+      className: "min-h-[50px] rounded-xl border border-cyan-400/50 bg-cyan-950/40 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
+    }, "\u65E7\u30D0\u30C8\u30EB\u753B\u9762\u3092\u958B\u304F\uFF08\u898B\u6BD4\u3079\u7528\uFF09"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => startBattleTutorial('DEBUG_SETTINGS', 'v1'),
+      className: "min-h-[50px] rounded-xl border border-cyan-400/50 bg-cyan-950/40 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
+    }, "\u65E7\u30D0\u30C8\u30EB\u30C1\u30E5\u30FC\u30C8\u30EA\u30A2\u30EB\u3092\u898B\u308B\uFF08\u65E7\u30D0\u30C8\u30EB\u753B\u9762\u30FB\u8A18\u9332\u306F\u6B8B\u308A\u307E\u305B\u3093\uFF09"))))), /*#__PURE__*/React.createElement("details", {
       className: "rounded-2xl border border-indigo-400/40 bg-indigo-950/30"
     }, /*#__PURE__*/React.createElement("summary", {
       className: "cursor-pointer select-none px-3 py-3 text-[11px] font-black text-cyan-200"
     }, "\uD83C\uDFB5 \u30E2\u30F3\u30D2\u30ED\u30D3\u30FC\u30C8", /*#__PURE__*/React.createElement("small", {
-      className: "block text-[8px] font-bold text-cyan-400/80"
+      className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
     }, "\u97F3\u30B2\u30FC\u30C7\u30D0\u30C3\u30B0\u30FB\u4F53\u9A13\u7248\u306E\u5C0E\u7DDA\u30FB\u30A4\u30D9\u30F3\u30C8\u306E\u4F1A\u8A71\u3068\u544A\u77E5")), /*#__PURE__*/React.createElement("div", {
       className: "space-y-2 border-t border-indigo-400/30 p-3"
     }, /*#__PURE__*/React.createElement("button", {
       "data-debug-rhythm-mode": true,
       onClick: openRhythmDebug,
-      className: "w-full min-h-[64px] rounded-2xl border-2 border-cyan-300 bg-indigo-950 text-cyan-100 font-black"
+      className: "w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
     }, "\uD83C\uDFB5 \u30E2\u30F3\u30D2\u30ED\u30D3\u30FC\u30C8 \u30C7\u30D0\u30C3\u30B0", /*#__PURE__*/React.createElement("small", {
-      className: "block text-[8px] text-cyan-300"
+      className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
     }, "\u66F2\u30FB\u96E3\u6613\u5EA6\u30FB\u8A2D\u5B9A\u30FBBEST\u4FDD\u5B58\u57FA\u76E4\u3092\u78BA\u8A8D")), /*#__PURE__*/React.createElement("button", {
       "data-debug-rhythm-demo": true,
       onClick: openRhythmDemo,
-      className: "w-full min-h-[64px] rounded-2xl border-2 border-amber-300 bg-amber-950/40 text-amber-100 font-black"
+      className: "w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
     }, "\uD83C\uDFBC \u30E2\u30F3\u30D2\u30ED\u30D3\u30FC\u30C8 \u4F53\u9A13\u7248\uFF08\u6B63\u5F0F\u5C0E\u7DDA\uFF09", /*#__PURE__*/React.createElement("small", {
-      className: "block text-[8px] text-amber-300"
+      className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
     }, "\u516C\u958B\u3057\u305F\u3068\u304D\u30D7\u30EC\u30A4\u30E4\u30FC\u304C\u901A\u308B\u753B\u9762\u3002Monster Hero 1\u66F2\u30FB3\u96E3\u6613\u5EA6")), /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-2 gap-2"
     }, /*#__PURE__*/React.createElement("button", {
       "data-debug-rhythm-event-intro": true,
       onClick: debugPlayRhythmEventIntro,
-      className: "col-span-2 min-h-[46px] rounded-xl bg-fuchsia-800/70 border border-fuchsia-300/60 text-white text-[10px] font-black active:scale-95"
+      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
     }, "\uD83C\uDFC6 \u30A4\u30D9\u30F3\u30C8\u958B\u50AC\u3092\u518D\u751F\uFF08\u4F1A\u8A71\u2192\u544A\u77E5\uFF09"), /*#__PURE__*/React.createElement("button", {
       "data-debug-rhythm-event-story": true,
       onClick: debugPlayRhythmEventStory,
-      className: "min-h-[46px] rounded-xl bg-fuchsia-900/60 border border-fuchsia-400/50 text-fuchsia-100 text-[10px] font-black active:scale-95"
+      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
     }, "\u30A4\u30D9\u30F3\u30C8\u4F1A\u8A71\u3060\u3051\u518D\u751F"), /*#__PURE__*/React.createElement("button", {
       "data-debug-rhythm-event-thanks": true,
       onClick: debugPlayRhythmEventThanks,
-      className: "min-h-[46px] rounded-xl bg-fuchsia-900/60 border border-fuchsia-400/50 text-fuchsia-100 text-[10px] font-black active:scale-95"
+      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
     }, "\u9589\u5E55\u3068\u304A\u793C\u306E\u4F1A\u8A71\u3092\u518D\u751F"), /*#__PURE__*/React.createElement("button", {
       "data-debug-rhythm-event-notice": true,
       onClick: debugPlayRhythmEventNotice,
-      className: "min-h-[46px] rounded-xl bg-fuchsia-900/60 border border-fuchsia-400/50 text-fuchsia-100 text-[10px] font-black active:scale-95"
+      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
     }, "\u30A4\u30D9\u30F3\u30C8\u544A\u77E5\u3060\u3051\u518D\u751F"), /*#__PURE__*/React.createElement("button", {
       "data-debug-rhythm-event-reward": true,
       onClick: debugPlayRhythmEventReward,
-      className: "min-h-[46px] rounded-xl bg-amber-900/60 border border-amber-400/50 text-amber-100 text-[10px] font-black active:scale-95"
+      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
     }, "\u5165\u8CDE\u306E\u53D7\u3051\u53D6\u308A\u753B\u9762\u3092\u898B\u308B"), /*#__PURE__*/React.createElement("button", {
       "data-debug-rhythm-event-reset": true,
       onClick: debugResetRhythmEventSeen,
-      className: "col-span-2 min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95"
+      className: "min-h-[50px] rounded-xl border border-rose-400/60 bg-rose-950/50 text-cyan-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
     }, "\u30A4\u30D9\u30F3\u30C8\u3092\u672A\u8AAD\u3078\u623B\u3059")))), /*#__PURE__*/React.createElement("details", {
       className: "rounded-2xl border border-pink-500/50 bg-pink-950/25"
     }, /*#__PURE__*/React.createElement("summary", {
       className: "cursor-pointer select-none px-3 py-3 text-[11px] font-black text-pink-200"
     }, "\uD83D\uDC96 \u307F\u3085\u3042\u30C7\u30D0\u30C3\u30B0", /*#__PURE__*/React.createElement("small", {
-      className: "block text-[8px] font-bold text-pink-400/80"
+      className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
     }, "\u521D\u56DE\u30D7\u30EC\u30A4\u306E\u518D\u751F\u30FB\u30BB\u30EA\u30D5\u3068\u8868\u60C5\u30FB\u89AA\u5BC6\u5EA6\u30FB\u30A2\u30C3\u30D7\u30C7\u30FC\u30C8\u901A\u77E5\u30FB\u30EF\u30F3\u30DD\u30A4\u30F3\u30C8\u6848\u5185")), /*#__PURE__*/React.createElement("div", {
       className: "space-y-2 border-t border-pink-500/30 p-3"
     }, /*#__PURE__*/React.createElement("div", {
@@ -59878,64 +59983,64 @@ function MonsterHeroGame() {
     }, /*#__PURE__*/React.createElement("button", {
       "data-debug-onboarding-preview": true,
       onClick: startOnboardingPreview,
-      className: "col-span-2 min-h-[46px] rounded-xl bg-pink-700/70 border border-pink-300/60 text-white text-[10px] font-black active:scale-95"
+      className: "w-full min-h-[58px] rounded-2xl border-2 border-pink-400/50 bg-pink-950/40 text-pink-50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
     }, "\u521D\u56DE\u30D7\u30EC\u30A4\u3092\u6700\u521D\u304B\u3089\u518D\u751F", /*#__PURE__*/React.createElement("small", {
-      className: "block text-[8px] font-bold opacity-80"
+      className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
     }, "\u52A9\u624B\u9078\u629E\u2192\u3042\u3044\u3055\u3064\u2192\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u2192\u6751\u306E\u6848\u5185\u2192HOME\u30FB\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("button", {
       onClick: () => {
         returnToHome();
         startTutorial('intro');
       },
-      className: "min-h-[46px] rounded-xl bg-pink-900/60 border border-pink-400/50 text-pink-100 text-[10px] font-black active:scale-95"
+      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
     }, "\u307F\u3085\u3042\u306E\u3042\u3044\u3055\u3064\u3060\u3051\u518D\u751F"), /*#__PURE__*/React.createElement("button", {
       onClick: () => {
         returnToHome();
         startTutorial('tour');
       },
-      className: "min-h-[46px] rounded-xl bg-pink-900/60 border border-pink-400/50 text-pink-100 text-[10px] font-black active:scale-95"
+      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
     }, "\u6751\u306E\u6848\u5185\u3060\u3051\u518D\u751F"), /*#__PURE__*/React.createElement("button", {
       onClick: () => {
         returnToHome();
         setKikiIntroStep(0);
       },
-      className: "col-span-2 min-h-[46px] rounded-xl bg-pink-900/60 border border-pink-400/50 text-pink-100 text-[10px] font-black active:scale-95"
+      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
     }, "\u304D\u304D\u52A0\u5165\u306E\u4F1A\u8A71\u3092\u518D\u751F"), /*#__PURE__*/React.createElement("button", {
       onClick: () => setAssistantDebug('lines'),
-      className: "min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95"
+      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
     }, "\u5168\u52A9\u624B\u30B3\u30E1\u30F3\u30C8\u78BA\u8A8D"), /*#__PURE__*/React.createElement("button", {
       onClick: () => setAssistantDebug('expressions'),
-      className: "min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95"
+      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
     }, "\u5168\u8868\u60C5\u78BA\u8A8D"), /*#__PURE__*/React.createElement("button", {
       onClick: () => setAssistantDebug('conditions'),
-      className: "min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95"
+      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
     }, "\u6761\u4EF6\u30B3\u30E1\u30F3\u30C8\u78BA\u8A8D"), /*#__PURE__*/React.createElement("button", {
       onClick: () => setAssistantDebug('spam'),
-      className: "min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95"
+      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
     }, "\u9023\u6253\u30EA\u30A2\u30AF\u30B7\u30E7\u30F3\u78BA\u8A8D"), /*#__PURE__*/React.createElement("button", {
       onClick: () => setAssistantDebug('bond'),
-      className: "min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95"
+      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
     }, "\u89AA\u5BC6\u5EA6\u30FB\u547C\u3073\u65B9\u78BA\u8A8D"), /*#__PURE__*/React.createElement("button", {
       onClick: () => setAssistantDebug('random'),
-      className: "min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95"
+      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
     }, "\u30E9\u30F3\u30C0\u30E0\u30C6\u30B9\u30C8"), /*#__PURE__*/React.createElement("button", {
       onClick: debugPlayUpdateGuide,
-      className: "min-h-[46px] rounded-xl bg-pink-700/70 border border-pink-300/60 text-white text-[10px] font-black active:scale-95"
+      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
     }, "\u30A2\u30C3\u30D7\u30C7\u30FC\u30C8\u901A\u77E5\u30C6\u30B9\u30C8"), /*#__PURE__*/React.createElement("button", {
       onClick: debugResetUpdateGuide,
-      className: "min-h-[46px] rounded-xl bg-amber-950/60 border border-amber-500/50 text-amber-100 text-[10px] font-black active:scale-95"
+      className: "min-h-[50px] rounded-xl border border-rose-400/60 bg-rose-950/50 text-cyan-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
     }, "\u901A\u77E5\u30C6\u30B9\u30C8\u3092\u672A\u8AAD\u3078\u623B\u3059"), /*#__PURE__*/React.createElement("button", {
       onClick: () => debugDailyMasuAdviceAt(7),
-      className: "col-span-2 min-h-[46px] rounded-xl bg-pink-700/70 border border-pink-300/60 text-white text-[10px] font-black active:scale-95"
+      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
     }, "\u30EF\u30F3\u30DD\u30A4\u30F3\u30C8\u6848\u5185\u3092\u518D\u751F\uFF08\u767B\u9332\u65707\u4F53\uFF09"), /*#__PURE__*/React.createElement("button", {
       onClick: () => debugDailyMasuAdviceAt(8),
-      className: "min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95"
+      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
     }, "\u767B\u9332\u65708\u4F53\u306E\u6761\u4EF6\u78BA\u8A8D"), /*#__PURE__*/React.createElement("button", {
       onClick: async () => {
         await storeSet(DAILY_MASU_ADVICE_KEY, '', false);
         dailyMasuAdviceCheckedRef.current = false;
         window.alert('本日のワンポイント表示済みフラグをリセットしました。');
       },
-      className: "min-h-[46px] rounded-xl bg-amber-950/60 border border-amber-500/50 text-amber-100 text-[10px] font-black active:scale-95"
+      className: "min-h-[50px] rounded-xl border border-rose-400/60 bg-rose-950/50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
     }, "\u672C\u65E5\u306E\u8868\u793A\u6E08\u307F\u3092\u30EA\u30BB\u30C3\u30C8")), /*#__PURE__*/React.createElement("button", {
       onClick: async () => {
         if (!window.confirm('「はじめての案内」を見ていない状態に戻します。モンスターやダイヤなどのセーブデータは消えません。よろしいですか？')) return;
@@ -59945,24 +60050,24 @@ function MonsterHeroGame() {
         tutorialShownRef.current = false;
         window.alert('初回状態へ戻しました。HOMEを開くと案内が始まります。');
       },
-      className: "w-full min-h-[42px] rounded-xl bg-amber-950/60 border border-amber-500/50 text-amber-100 text-[10px] font-black active:scale-95"
+      className: "min-h-[50px] rounded-xl border border-rose-400/60 bg-rose-950/50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
     }, "\u521D\u56DE\u72B6\u614B\u3078\u623B\u3059\uFF08\u30BB\u30FC\u30D6\u306F\u6D88\u3048\u307E\u305B\u3093\uFF09"))), /*#__PURE__*/React.createElement("details", {
       className: "rounded-2xl border border-slate-500/40 bg-slate-900/50"
     }, /*#__PURE__*/React.createElement("summary", {
       className: "cursor-pointer select-none px-3 py-3 text-[11px] font-black text-slate-200"
     }, "\uD83D\uDEE0 \u305D\u306E\u4ED6", /*#__PURE__*/React.createElement("small", {
-      className: "block text-[8px] font-bold text-slate-400/80"
+      className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
     }, "\u4FEE\u884C\u30C6\u30B9\u30C8\u30FB\u753B\u9762\u30A8\u30E9\u30FC\u306E\u53D7\u3051\u6B62\u3081")), /*#__PURE__*/React.createElement("div", {
       className: "space-y-2 border-t border-slate-500/30 p-3"
     }, /*#__PURE__*/React.createElement("button", {
       onClick: openDebugTraining,
-      className: "w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black"
+      className: "w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
     }, "\uD83C\uDFB2 \u4FEE\u884C\u30C6\u30B9\u30C8", /*#__PURE__*/React.createElement("small", {
-      className: "block text-[8px] text-fuchsia-300"
+      className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
     }, "\u5831\u916C\u30FB\u9032\u884C\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("button", {
       "data-debug-screen-error": true,
       onClick: () => setDebugThrowScreenError(true),
-      className: "w-full min-h-[48px] rounded-2xl border border-rose-400/70 bg-rose-950/40 text-rose-100 font-black text-sm"
+      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
     }, "\u26A0\uFE0F \u753B\u9762\u30A8\u30E9\u30FC\u306E\u53D7\u3051\u6B62\u3081\u3092\u8A66\u3059"), debugThrowScreenError && /*#__PURE__*/React.createElement(DebugThrowScreenError, null))))), gameState === 'SPECIES_CHALLENGE_DEBUG' && (() => {
       // 種族は主血統。ここも本番と同じ一覧を使う
       const speciesEntries = speciesChallengeLineages();
