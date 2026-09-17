@@ -88,9 +88,47 @@ const ASSISTANTS = [
     tagline: '生意気かわいい小悪魔系アイドル',
     intro: 'ちょっぴり生意気で小悪魔系。からかったり煽ったりしながら、一緒に楽しく盛り上がってくれる。',
   },
+  {
+    // ドラ(2026-09-17・第2回イベント「異世界交響祭」で加入)。
+    // ★「はじめまして」の人ではない。アシストカード「ドラ」・ブリーダーの教え「ドラの緑膝」・
+    //   マーケットの「ドラのアイコン」で前から居て、モンヒロビートの「もう一つの世界へ」も
+    //   この人が作っている。イベントで初めて**会話の中心**に出てきた、という位置付け。
+    id: 'dra',
+    name: 'ドラ',
+    role: '助手',
+    imageDir: 'images/assistant',
+    imagePrefix: 'dra',
+    expressions: ASSISTANT_EXPRESSIONS,
+    defaultExpression: ASSISTANT_DEFAULT_EXPRESSION,
+    emoji: '💚',
+    accent: '#4ade80',
+    greeting: 'おでに聞いてくれてもいいぞ。膝以外もちゃんと役に立つからな。えへへ',
+    tagline: 'ふざけてるのに説明は上手いおじさん',
+    intro: '肩の力を抜いて遊びたい人向け。ふざけた言い方をするわりに、仕組みの話はいちばん分かりやすい。',
+  },
 ];
 const DEFAULT_ASSISTANT_ID = 'mua';
 const assistantIdOrDefault = (id) => (ASSISTANTS.some(a => a.id === id) ? id : DEFAULT_ASSISTANT_ID);
+
+// ---------- あとから増える助手の解放 ----------
+// ここに書いた助手は、そのイベント会話を**最後まで見るまで**選べない。
+// 書かなかった助手(みゅあ・きき・ももすけ)は今までどおり最初から選べる。
+//
+// ★判定に使うのは既存の「見終えたイベント会話のid」(mh_rhythm_event_story_v1)だけ。
+//   保存キーを新しく作らないので、既存のセーブデータには一切触らない(CLAUDE.md ⑦)。
+// ★「見た」が付くのは最後まで見たときだけ。回想で何度見ても同じidが並ぶだけなので、
+//   二重解放にならない(冪等)。イベントが終わってもidは消えないため、解放も残る。
+const ASSISTANT_UNLOCK_STORIES = Object.freeze({ dra: 'symphony_2026_09_17' });
+const assistantUnlockStoryId = (assistantId) => ASSISTANT_UNLOCK_STORIES[assistantId] || null;
+const assistantUnlockedBy = (assistantId, seenStoryIds) => {
+  const need = assistantUnlockStoryId(assistantId);
+  if (!need) return true;
+  return Array.isArray(seenStoryIds) && seenStoryIds.includes(need);
+};
+// 選べる助手だけを残す。読み込みが間に合っていない・壊れた値でも、
+// 条件のない助手は必ず残る(画面から助手が消えない)
+const assistantsUnlockedFrom = (seenStoryIds) =>
+  ASSISTANTS.filter(who => assistantUnlockedBy(who && who.id, seenStoryIds));
 
 // ---------- 正式アップデートの初回案内 ----------
 // 通常通知の本文は更新履歴を正本とし、assistantNotice を付けた主要更新だけを案内する。
@@ -155,6 +193,44 @@ const assistantUpdateNoticeFromChangelog = entry => {
 // ★呼び方の決めごと: みゅあ・ももすけは「モンビー」、ききは「モンヒロビート」
 //   (2026-09-11・ユーザー指示)。
 const ASSISTANT_UPDATE_NOTICE_SCRIPTS = {
+  // 第2回イベント「異世界交響祭」(2026-09-17)。
+  // ★呼び方の決めごと: みゅあ・ももすけは「モンビー」、きき・ドラは「モンヒロビート」。
+  // ★ドラぶんも用意する。会話を見て加入したあと、ドラを選んでいる人にもこの告知が出るため
+  //   (用意しないと更新履歴の事務的な文をそのまま読み上げる)。
+  update_notice_rhythm_symphony_v1: {
+    mua: [
+      { e:'excited',  t:'{name}、モンビーで第2回のイベントが始まったよ！ 「異世界交響祭」っていうんだ♪' },
+      { e:'happy',    t:'対象は3曲。「もう一つの世界へ」「Stay With Me ～Locked Fate～ remix」「The City Beneath the Comets」だよ。' },
+      { e:'normal',   t:'期間中にモンビーを最後まで遊ぶと「ビートP」が貯まるの。普通の曲でも貯まるけど、対象の3曲は1.5倍なんだって♪' },
+      { e:'wink',     t:'自己ベストを更新しなくても、遊ぶたびにもらえるよ。何回でもね♡' },
+      { e:'normal',   t:'貯まったビートPはマーケットの「ビートP交換所」で使えるよ。余っても消えないで次に持ち越せるの。' },
+      { e:'excited',  t:'終わるのは9月21日(月)の朝4時！ イベントのお話も見てみてね♪' },
+    ],
+    kiki: [
+      { e:'happy',    t:'{name}、モンヒロビートで第2回のイベントが始まりまつ。「異世界交響祭」でつ。' },
+      { e:'normal',   t:'対象は3曲。「もう一つの世界へ」「Stay With Me ～Locked Fate～ remix」「The City Beneath the Comets」でつ。' },
+      { e:'normal',   t:'期間中に最後まで遊ぶと「ビートP」がもらえまつ。公開中の曲ならどれでも貯まりまつが、対象の3曲は1.5倍でつ。' },
+      { e:'happy',    t:'自己ベストの更新は要りません。同じ曲を何度遊んでも、そのたびにもらえまつ♪' },
+      { e:'normal',   t:'貯めたビートPはマーケットの「ビートP交換所」で交換できまつ。余っても消えず、次のイベントへ持ち越せまつ。' },
+      { e:'wink',     t:'9月21日(月)の4時まででつ。イベントのお話もぜひご覧ください。' },
+    ],
+    momosuke: [
+      { e:'excited',  t:'{name}、モンビーで第2回だって！ 「異世界交響祭」♡' },
+      { e:'wink',     t:'対象は3曲ね。「もう一つの世界へ」「Stay With Me ～Locked Fate～ remix」「The City Beneath the Comets」。' },
+      { e:'happy',    t:'遊ぶと「ビートP」が貯まるの。普通の曲でもいいけど、対象の3曲は1.5倍だよ♪' },
+      { e:'normal',   t:'ベスト更新しなくてもいいから。ちゃんと最後まで遊べば毎回もらえるの。' },
+      { e:'wink',     t:'貯めたのはマーケットの「ビートP交換所」で使ってね。余っても消えないから安心して♡' },
+      { e:'excited',  t:'締め切りは9月21日(月)の4時！ お話も見てよね、ももも出てるから♪' },
+    ],
+    dra: [
+      { e:'happy',    t:'{name}、モンヒロビートの第2回な。「異世界交響祭」っていうんよ' },
+      { e:'normal',   t:'対象は3曲。「もう一つの世界へ」「Stay With Me ～Locked Fate～ remix」「The City Beneath the Comets」だ' },
+      { e:'normal',   t:'期間中に最後まで遊ぶと「ビートP」が貯まる。普通の曲でも貰えるけど、対象の3曲は1.5倍な' },
+      { e:'happy',    t:'ベスト更新しなくても大丈夫。同じ曲を何回遊んでも、ちゃんと終わればその都度貰える' },
+      { e:'normal',   t:'貯めたやつはマーケットの「ビートP交換所」で使える。余っても消えないから、次まで取っといてもいいぞ' },
+      { e:'happy',    t:'終わりは9月21日(月)の朝4時な。好きに遊んでくれ。えへへ' },
+    ],
+  },
   update_notice_rhythm_weekend_cup_v1: {
     mua: [
       { e:'excited',  t:'{name}、モンヒロビートで大会が始まったよ！ その名も「週末ゲリラ杯」♪' },
@@ -3224,6 +3300,128 @@ const stampSceneAuthoredLines = () => {
 };
 stampSceneAuthoredLines();
 
+// ---------- ドラ・主要画面の基本セリフ(2026-09-17) ----------
+// 一人称は必ず「おで」。ふざけた言い方をするが、仕組みの話になると急に整理して話す。
+// 自虐と膝のネタを持っていて、ツッコミのときだけ少し強くなる(乱暴にはしない)。
+// 口癖は「えへへ」。
+//
+// ★ここに書いていない場面は、みゅあのセリフへ落ちる(filterAssistantLines)ので黙り込まない。
+//   残りの場面は追って足す。
+// ★ももネタは入れすぎない。ドラ単体で成り立つセリフにする(ユーザー指示)。
+addAssistantLinePack({
+  id: 'draCore',
+  assistantId: 'dra',
+  label: 'ドラ・主要画面の基本セリフ',
+  lines: {
+    home: [
+      { e:'normal',   t:'今日もぼちぼちやるか。無理してもしょうがないからな' },
+      { e:'happy',    t:'{name}、来たな。おではだいたいここにいるぞ。えへへ' },
+      { e:'normal',   t:'やることに迷ったら、ミッションでも見てみりゃいいんよ。だいたい道しるべになる' },
+      { e:'wink',     t:'何から始める？ おでに聞いてくれてもいいぞ。膝以外も役に立つからな' },
+      { e:'happy',    t:'毎日ちょっとずつでいいんよ。おでもそうやってゲーム作ってる' },
+      { e:'troubled', t:'……なんか今日、膝が重いな。気のせいか' },
+    ],
+    market: [
+      { e:'normal',   t:'使いすぎんなよ。おでみたいに後で泣くぞ' },
+      { e:'happy',    t:'{name}、何か狙ってるのあるん？ 先に値段だけ見とくのもアリだぞ' },
+      { e:'normal',   t:'ダイヤは戻ってこないからな。迷ったら一回離れて考えていいんよ' },
+      { e:'wink',     t:'ビートPの交換所もここな。イベントで貯めたやつ、寝かせとくと忘れるぞ' },
+      { e:'happy',    t:'必要なもんから買え。かっこいいから買う、はおでの悪い癖' },
+    ],
+    inventory: [
+      { e:'normal',   t:'持ちもんの確認な。使わないまま溜め込むやつ、けっこういるんよ' },
+      { e:'happy',    t:'{name}、いいの持ってんじゃん。使ってこそだぞ' },
+      { e:'wink',     t:'とっておきは、とっておきすぎると出番が来ないまま終わるからな' },
+      { e:'normal',   t:'どれが何に効くか分からんくなったら、押して説明を読めばいいんよ' },
+      { e:'troubled', t:'おでも昔、いい実を3年くらい寝かせたことある。えへへ……' },
+    ],
+    rhythmHome: [
+      { e:'happy',    t:'お、モンビーやる？ 「もう一つの世界へ」もよろしくな。えへへ' },
+      { e:'normal',   t:'曲えらんで、難易度えらんで、決定。それだけなんよ' },
+      { e:'wink',     t:'{name}、どれにする？ 迷ったら聴きながら決めりゃいいぞ' },
+      { e:'normal',   t:'難しいと思ったら、オプションでノーツ速度いじっていいからな。恥ずかしいことじゃない' },
+      { e:'happy',    t:'おでは作るほうが専門だけど、叩くのも普通に楽しいんよ' },
+    ],
+    rhythmWeeklyEvent: [
+      { e:'happy',    t:'イベントな。対象の曲で、その期間に出した点だけで競うんよ' },
+      { e:'normal',   t:'部門は曲ごとと、ぜんぶの合計。1曲しか遊んでなくても合計には載るぞ' },
+      { e:'normal',   t:'難易度はどれでもいい。得意なやつで出した点がそのまま載る' },
+      { e:'wink',     t:'{name}、気楽にやりゃいいんよ。ビートPは順位と関係なく貯まるからな' },
+      { e:'happy',    t:'残り時間は上に出てる。終わったらそこで締め切りな' },
+    ],
+    resultWin: [
+      { e:'excited',  t:'おお、やるじゃん。おで普通に感心したわ' },
+      { e:'happy',    t:'{name}、いい流れだな。この調子でいけ' },
+      { e:'normal',   t:'勝ったときこそ、何が効いたか覚えとくといいぞ' },
+      { e:'wink',     t:'おでの出番、なかったな。まあいいか。えへへ' },
+      { e:'happy',    t:'ちゃんと強くなってるじゃん。前より動きがいいぞ' },
+    ],
+    resultLose: [
+      { e:'normal',   t:'まあまあ。次やりゃいいんよ' },
+      { e:'troubled', t:'{name}、落ち込むなって。おでなんか膝で負けてるからな' },
+      { e:'normal',   t:'どこで崩れたかだけ覚えとけ。それだけで次は変わる' },
+      { e:'happy',    t:'一回休んでもいいんよ。焦ってやると同じとこでコケる' },
+      { e:'normal',   t:'編成をちょっと変えるだけで急に通ることもある。試してみ' },
+    ],
+    resultRetire: [
+      { e:'normal',   t:'やめどきを決められるのは強さだぞ。おでは真面目にそう思う' },
+      { e:'happy',    t:'{name}、引き際うまいじゃん' },
+      { e:'wink',     t:'また来りゃいいんよ。逃げてないって、切り上げただけ' },
+      { e:'normal',   t:'途中までのぶんはちゃんと残る。無駄にはならん' },
+      { e:'troubled', t:'おでも昔、粘りすぎて全部溶かしたことあるからな……' },
+    ],
+    profile: [
+      { e:'normal',   t:'{name}の記録な。ここ見てると伸びてんのが分かるぞ' },
+      { e:'happy',    t:'名前もアイコンも、あとからいくらでも変えられるからな' },
+      { e:'wink',     t:'助手もここで変えられる。おでを選ぶかはまあ、好みだな。えへへ' },
+      { e:'normal',   t:'イベントの話も、ここの回想からいつでも見返せるぞ' },
+      { e:'happy',    t:'仲良し度は助手ごとに別々に貯まる。切り替えても消えんから安心しろ' },
+    ],
+    ranking: [
+      { e:'normal',   t:'全国のやつな。上を見ると果てしないけど、参考にはなる' },
+      { e:'happy',    t:'{name}、自分の記録が載ってるか見てみ。けっこう嬉しいぞ' },
+      { e:'wink',     t:'順位は気にしすぎんなよ。おでなんか膝の順位なら1位だけどな' },
+      { e:'normal',   t:'イベントのタブは、その期間に出した記録だけで別に並ぶんよ' },
+      { e:'happy',    t:'上のやつの編成を見ると、だいたい何が強いか分かる' },
+    ],
+    missionsNormal: [
+      { e:'normal',   t:'ミッションな。やることに迷ったら、ここから拾えばいいんよ' },
+      { e:'happy',    t:'{name}、ついでに終わるやつが混じってるからな。見とくと得だぞ' },
+      { e:'wink',     t:'受け取り忘れがいちばんもったいない。おでがよくやるやつ' },
+      { e:'normal',   t:'週のぶんは月曜に切り替わる。終わりそうなやつから片づけろ' },
+      { e:'happy',    t:'焦らんでいい。溜めといて一気に受け取るのも気持ちいいぞ' },
+    ],
+    missionsClaimable: [
+      { e:'excited',  t:'お、受け取れるやつ溜まってるぞ！ 早く押せ押せ' },
+      { e:'happy',    t:'{name}、これ全部もらえるからな。えへへ' },
+      { e:'wink',     t:'こういうの放っとくと忘れるんよ。おでみたいに' },
+      { e:'normal',   t:'受け取ってから次のやつを狙うと効率いいぞ' },
+      { e:'happy',    t:'いい仕事したじゃん。ちゃんと貰っとけ' },
+    ],
+    giftClaimable: [
+      { e:'excited',  t:'ギフト届いてるぞ。開けてみ' },
+      { e:'happy',    t:'{name}、中身なんだろな。おでもちょっと気になる' },
+      { e:'normal',   t:'受け取るとアイテム欄へ入る。期限は無いけど、忘れんうちにな' },
+      { e:'wink',     t:'イベントの報酬もここへ届くんよ' },
+      { e:'happy',    t:'もらえるもんはもらっとけ。えへへ' },
+    ],
+    helpTop: [
+      { e:'normal',   t:'分からんことがあったら、だいたいここに書いてある' },
+      { e:'happy',    t:'{name}、遠慮せず読め。読んだほうが早いことって多いんよ' },
+      { e:'wink',     t:'おでも自分のゲーム作るとき、説明書いてて気づくこと多いからな' },
+      { e:'normal',   t:'カテゴリから項目を選ぶと、細かい話まで出てくるぞ' },
+      { e:'happy',    t:'それでも分からんかったら、おでの吹き出しを押してくれ' },
+    ],
+    settings: [
+      { e:'normal',   t:'設定な。音とか表示とか、自分がやりやすいようにしろ' },
+      { e:'happy',    t:'{name}、BGMは曲ごとに選べるぞ。好きなやつに変えていい' },
+      { e:'wink',     t:'重いと思ったら軽くする設定もある。無理して飾らんでいいんよ' },
+      { e:'normal',   t:'データの引き継ぎもここな。機種変える前にやっとけ' },
+      { e:'troubled', t:'おでは設定をいじりすぎて元に戻せなくなるタイプ。気をつけろ' },
+    ],
+  },
+});
+
 // これまでの記録(2026-09-13・ユーザー依頼「モンビーのイベントや週間ランキングの
 // 終わったものをヒストリー的に見れる機能」)。プロフィールから入る一覧の案内。
 addAssistantLinePack({
@@ -3600,6 +3798,160 @@ const ASSISTANT_MONBEAT_CUP_THANKS = [
 ];
 const ASSISTANT_MONBEAT_CUP_THANKS_CALLS = { mua: 'もも', kiki: 'ももさん', momosuke: 'みゅあねぇ／ききちゃん' };
 
+// ---------- 第2回イベント「異世界交響祭」(2026-09-17) ----------
+// ドラが会話の中心に出てくる回。台本はユーザーが書いたものをそのまま入れている。
+//
+// ★ドラは「はじめまして」の人ではない。アシストカード・ブリーダーの教え「ドラの緑膝」・
+//   マーケットのアイコンで前から居る。みゅあ達も存在は知っている、という前提で書かれている。
+// ★呼び方: みゅあ→ドラケン / きき→ドラさん / ももすけ→ドラちゃん /
+//   ドラ→きき は「靴下さん」、ドラ→ももすけ は「もも」(好意が暴走すると「ももぉ〜」)。
+//   ドラの一人称は必ず「おで」。
+// ★最後まで見ると markRhythmEventStorySeen(id) が走り、助手ドラが解放される
+//   (ASSISTANT_UNLOCK_STORIES)。回想で見直しても同じidが並ぶだけなので二重解放にならない。
+const ASSISTANT_SYMPHONY_EVENT = [
+  // SCENE 1 ドラ登場
+  { who:'mua',      e:'surprise', t:'あれっ！？ ドラケンじゃん！' },
+  { who:'dra',      e:'normal',   t:'おいおい、その反応なんなんだよ。おでは前からいるだろ。アシストカードに' },
+  { who:'mua',      e:'happy',    t:'いや、それはそうなんだけど！ こうやって普通に出てくるのなんか新鮮なんだって！' },
+  { who:'kiki',     e:'happy',    t:'ドラさん、ちゃんとお話しするのはほとんど初めてですね！' },
+  { who:'dra',      e:'happy',    t:'そうなんよ、靴下さん。今までは膝ばっか働かされてたからな' },
+  { who:'kiki',     e:'angry',    t:'誰が靴下さんですか！' },
+  { who:'dra',      e:'normal',   t:'何言ってんだよ。おでら同じニオイを背負ってる仲だろ？' },
+  { who:'kiki',     e:'angry',    t:'そんな仲になった覚えありません！' },
+  { who:'mua',      e:'happy',    t:'出た、足臭い仲間' },
+  { who:'kiki',     e:'troubled', t:'仲間じゃありません！' },
+  // SCENE 2 もも登場
+  { who:'momosuke', e:'happy',    t:'あっ、ドラちゃんだ〜♡' },
+  { who:'dra',      e:'excited',  t:'ももぉ〜！' },
+  { who:'momosuke', e:'normal',   t:'今日も膝くさいの？' },
+  { who:'dra',      e:'troubled', t:'ももぉ……会って一発目に聞くことそれかよ……' },
+  { who:'momosuke', e:'wink',     t:'じゃあ今日はいい匂いだったら、ちょっと好きになってあげる♡' },
+  { who:'dra',      e:'surprise', t:'マジ！？ もも、おで今日けっこう――' },
+  { who:'momosuke', e:'happy',    t:'うそ♡' },
+  { who:'dra',      e:'troubled', t:'ももぉぉ……！' },
+  { who:'mua',      e:'happy',    t:'ドラケン、今日も簡単だね' },
+  { who:'dra',      e:'angry',    t:'おい、みゅあ。おでをチョロいみたいに言うなよ' },
+  { who:'momosuke', e:'wink',     t:'チョロいよ♡' },
+  { who:'dra',      e:'troubled', t:'ももが言うと否定できねぇんよ……' },
+  // SCENE 3 ドラが持ってきたもの
+  { who:'dra',      e:'normal',   t:'まあ今日は、みんなに会いに来ただけじゃないんよ' },
+  { who:'kiki',     e:'normal',   t:'何かあるんですか？' },
+  { who:'dra',      e:'happy',    t:'モンヒロビートの第2回イベントな' },
+  { who:'mua',      e:'surprise', t:'もう第2回やるの！？' },
+  { who:'dra',      e:'happy',    t:'やるよ。しかも今回は3曲ある' },
+  { who:'kiki',     e:'excited',  t:'3曲！' },
+  { who:'dra',      e:'normal',   t:'まず一つ目が――「もう一つの世界へ」' },
+  { who:'mua',      e:'normal',   t:'あ、この曲もうモンビーに入ってるよね？' },
+  { who:'dra',      e:'happy',    t:'そうそう。これ、おでが作ってるゲーム「CREATE MONSTERS」で使ってる曲なんよ' },
+  { who:'kiki',     e:'surprise', t:'ドラさん、ゲームも作ってるんですか？' },
+  { who:'dra',      e:'happy',    t:'作ってるよ。おで、こういうのちまちま作るの好きなんよ' },
+  { who:'momosuke', e:'wink',     t:'ドラちゃん意外とそういうことできるんだ〜♡' },
+  { who:'dra',      e:'angry',    t:'おい、もも。“意外と”はいらんだろ' },
+  { who:'momosuke', e:'happy',    t:'じゃあ……ドラちゃん、かっこいい♡' },
+  { who:'dra',      e:'surprise', t:'……えっ' },
+  { who:'momosuke', e:'wink',     t:'今、本気にした？' },
+  { who:'dra',      e:'troubled', t:'ももぉ〜……おでの心で遊ぶなよぉ……' },
+  // SCENE 4 残り2曲
+  { who:'kiki',     e:'excited',  t:'残りの2曲も教えてください！' },
+  { who:'dra',      e:'normal',   t:'二つ目は、いちかさんの「Stay With Me ～Locked Fate～ remix」' },
+  { who:'mua',      e:'excited',  t:'おおー！' },
+  { who:'dra',      e:'normal',   t:'で、三つ目が仙夜玖子さんの「The City Beneath the Comets」' },
+  { who:'kiki',     e:'happy',    t:'この3曲が今回のイベント対象曲なんですね！' },
+  { who:'dra',      e:'happy',    t:'そういうこと。3曲とも雰囲気違うし、好きなのから遊んでくれればいいよ' },
+  { who:'momosuke', e:'wink',     t:'私はドラちゃんの曲からやってあげよっかな〜♡' },
+  { who:'dra',      e:'excited',  t:'ももぉ！ マジ！？' },
+  { who:'momosuke', e:'normal',   t:'どうしよっかな〜♡' },
+  { who:'dra',      e:'troubled', t:'頼むから一回くらい素直に喜ばせてくれよ……' },
+  // SCENE 5 異世界交響祭
+  { who:'mua',      e:'normal',   t:'で、今回のイベント名は？' },
+  { who:'dra',      e:'happy',    t:'第2回 モンヒロビート――「異世界交響祭」' },
+  { who:'kiki',     e:'excited',  t:'異世界交響祭！' },
+  { who:'dra',      e:'normal',   t:'音でいろんな世界がつながる、みたいな感じだな' },
+  { who:'mua',      e:'happy',    t:'「もう一つの世界へ」にもぴったりじゃん！' },
+  { who:'dra',      e:'happy',    t:'だろ？ えへへ' },
+  // SCENE 6 ビートP
+  { who:'dra',      e:'normal',   t:'で、今回もう一個ちゃんと覚えてほしいのがある' },
+  { who:'mua',      e:'normal',   t:'なに？' },
+  { who:'dra',      e:'happy',    t:'ビートP' },
+  { who:'kiki',     e:'surprise', t:'ビートP？' },
+  { who:'dra',      e:'normal',   t:'イベント期間中にモンヒロビートを遊ぶと貯まっていくポイントなんよ' },
+  { who:'kiki',     e:'normal',   t:'イベント対象曲だけですか？' },
+  { who:'dra',      e:'normal',   t:'いや。そこは違うんよ、靴下さん' },
+  { who:'kiki',     e:'angry',    t:'だから靴下さんじゃありません！' },
+  { who:'dra',      e:'happy',    t:'イベント開催中なら、公開されてる普通の曲でもビートPは貰える' },
+  { who:'mua',      e:'surprise', t:'じゃあ好きな曲やってもいいんだ！' },
+  { who:'dra',      e:'normal',   t:'そうそう。ただし――今回のイベント対象3曲はビートPが1.5倍' },
+  { who:'kiki',     e:'excited',  t:'対象曲のほうが貯まりやすいんですね！' },
+  { who:'dra',      e:'happy',    t:'そういうこと' },
+  // SCENE 7 スコアとビートP
+  { who:'mua',      e:'normal',   t:'どれくらい貰えるの？' },
+  { who:'dra',      e:'normal',   t:'スコアで変わる。たとえば普通の曲なら、80万点で80P、95万点で95P' },
+  { who:'kiki',     e:'normal',   t:'そこまでは比較的ゆっくり増えるんですね' },
+  { who:'dra',      e:'happy',    t:'そう。でも95万点を超えてから伸びが大きくなる' },
+  { who:'dra',      e:'normal',   t:'100万点なら基本200P' },
+  { who:'kiki',     e:'surprise', t:'じゃあ今回のイベント曲で100万点なら……' },
+  { who:'dra',      e:'excited',  t:'1.5倍で300P' },
+  { who:'mua',      e:'excited',  t:'結構変わる！' },
+  { who:'dra',      e:'normal',   t:'だから回数だけじゃなくて、いいスコア出す意味もあるんよ' },
+  // SCENE 8 何度でも獲得
+  { who:'mua',      e:'normal',   t:'でもさ、一回ベスト出したらもう貰えないとか？' },
+  { who:'dra',      e:'normal',   t:'いや。ビートPはランキングとは別' },
+  { who:'dra',      e:'happy',    t:'最後までちゃんと遊べば毎回貰える' },
+  { who:'kiki',     e:'surprise', t:'自己ベストを更新しなくても？' },
+  { who:'dra',      e:'normal',   t:'大丈夫。同じ曲を何回遊んでも、ちゃんと終わればその都度貰える' },
+  { who:'mua',      e:'happy',    t:'それならランキング上位を狙わない人でも遊びやすいね！' },
+  { who:'dra',      e:'happy',    t:'そういうこと。競いたい奴はランキングやればいいし、のんびりビートP集めてもいい。好きな遊び方すりゃいいんよ' },
+  { who:'mua',      e:'happy',    t:'ドラケン、意外とちゃんと考えてるじゃん' },
+  { who:'dra',      e:'angry',    t:'おい。おでをなんだと思ってんだよ' },
+  { who:'momosuke', e:'normal',   t:'膝？' },
+  { who:'dra',      e:'troubled', t:'ももぉ……人間として見てくれよぉ……' },
+  // SCENE 9 ビートP交換所
+  { who:'kiki',     e:'normal',   t:'貯めたビートPはどうするんですか？' },
+  { who:'dra',      e:'normal',   t:'マーケットにある「ビートP交換所」で使える' },
+  { who:'dra',      e:'happy',    t:'貯めたビートPを使って、好きなアイテムと交換するんよ' },
+  { who:'momosuke', e:'normal',   t:'イベントが終わったら余ったポイント消えちゃう？' },
+  { who:'dra',      e:'happy',    t:'消えない' },
+  { who:'dra',      e:'normal',   t:'次のイベントまでそのまま持ち越せる' },
+  { who:'mua',      e:'surprise', t:'じゃあ無理に全部使わなくてもいいんだ！' },
+  { who:'dra',      e:'normal',   t:'そう。交換所自体はイベント終わっても開いてるからな' },
+  { who:'kiki',     e:'normal',   t:'でもイベントが終わったら、新しいビートPは増えない？' },
+  { who:'dra',      e:'happy',    t:'正解、靴下さん' },
+  { who:'kiki',     e:'angry',    t:'その呼び方で褒めないでください！' },
+  { who:'dra',      e:'normal',   t:'照れんなって。同じ足臭仲間なんだから' },
+  { who:'kiki',     e:'angry',    t:'違います！！' },
+  // SCENE 10 イベント開始
+  { who:'dra',      e:'happy',    t:'まあ説明はこんなもんだな' },
+  { who:'dra',      e:'normal',   t:'今回は3曲。ランキング狙うのもよし、ビートP集めるのもよし。好きに遊んでくれ' },
+  { who:'momosuke', e:'wink',     t:'じゃあ私、「もう一つの世界へ」から遊ぼっかな〜♡' },
+  { who:'dra',      e:'excited',  t:'ももぉ！！ おで今のは信じていい！？' },
+  { who:'momosuke', e:'happy',    t:'ドラちゃんがお願いしてくれたらね♡' },
+  { who:'dra',      e:'surprise', t:'お願いする！ めちゃくちゃお願いする！' },
+  { who:'momosuke', e:'wink',     t:'じゃあ考えとく♡' },
+  { who:'dra',      e:'troubled', t:'ももぉぉ……！' },
+  { who:'mua',      e:'happy',    t:'はいはい。そろそろ始めるよ、ドラケン！' },
+  { who:'kiki',     e:'excited',  t:'私もやります！ ドラさん！' },
+  { who:'dra',      e:'happy',    t:'おう、靴下さん。足でリズム取るなよ' },
+  { who:'kiki',     e:'angry',    t:'ドラさん！！' },
+  // SCENE 11 ドラ助手加入
+  { who:'mua',      e:'happy',    t:'そうだドラケン。せっかくこうやって出てきたんだしさ' },
+  { who:'dra',      e:'normal',   t:'ん？' },
+  { who:'mua',      e:'happy',    t:'これから助手もやれば？' },
+  { who:'dra',      e:'surprise', t:'おでが？' },
+  { who:'kiki',     e:'happy',    t:'いいじゃないですか！ ドラさん、説明も分かりやすかったですし' },
+  { who:'dra',      e:'troubled', t:'靴下さんにまともに褒められると、なんか調子狂うな……' },
+  { who:'kiki',     e:'angry',    t:'余計な一言です！' },
+  { who:'momosuke', e:'wink',     t:'ドラちゃん助手になるの？' },
+  { who:'dra',      e:'normal',   t:'まあ……ももがいてほしいって言うなら' },
+  { who:'momosuke', e:'happy',    t:'いてほしい♡' },
+  { who:'dra',      e:'surprise', t:'えっ' },
+  { who:'momosuke', e:'wink',     t:'助手としてね♡' },
+  { who:'dra',      e:'troubled', t:'ももぉ〜……一瞬だけ夢見たじゃん……' },
+  { who:'mua',      e:'happy',    t:'決まりだね！' },
+  { who:'dra',      e:'happy',    t:'まあいいか。じゃあおでも助手やってみるわ' },
+  { who:'dra',      e:'happy',    t:'困ったら呼んでくれ。膝以外もちゃんと役に立つからな。えへへ' },
+];
+const ASSISTANT_SYMPHONY_EVENT_CALLS = { mua: 'ドラケン', kiki: 'ドラさん', momosuke: 'ドラちゃん', dra: 'みゅあ／靴下さん／もも' };
+
 // ---------- イベント回想 ----------
 // 一度見た会話イベントを、プロフィール画面から何度でも見返せるようにするための一覧。
 // 台本(script)は既存のシーン定義をそのまま参照し、ここで二重に持たない。
@@ -3627,6 +3979,9 @@ const EVENT_REPLAYS = [
   // 閉幕の会話(2026-09-13)。**イベントが終わった時刻に自動で流れる**。
   // 参加賞へ勇者の証10個を足したことを、ここで知らせる
   { id: 'monbeat_cup_2026_09_thanks', title: '週末ゲリラ杯 ～閉幕とお礼～', script: ASSISTANT_MONBEAT_CUP_THANKS, calls: ASSISTANT_MONBEAT_CUP_THANKS_CALLS, unlockedKey: 'monbeatCupThanksSeen' },
+  // 第2回イベントの開催会話(2026-09-17)。最後まで見ると助手ドラが解放される
+  // (ASSISTANT_UNLOCK_STORIES)。期間が終わっても回想からいつでも見返せる
+  { id: 'symphony_2026_09_17', title: '異世界交響祭 ～ドラ登場～', script: ASSISTANT_SYMPHONY_EVENT, calls: ASSISTANT_SYMPHONY_EVENT_CALLS, unlockedKey: 'symphonyEventSeen' },
 ];
 
 // ---------- 助手ごとのあいさつ・村の案内 ----------

@@ -82,8 +82,10 @@ check('勇者の証を書いていないイベントでは0になる(既存の�
   const endMs=O.rhythmEventTimeMs(event&&event.endAt);
   check('終了の直前はまだ「終わった直後」にならない',O.rhythmLimitedEventJustEnded(endMs-1)===null);
   check('終了ちょうどで「終わった直後」になる',(O.rhythmLimitedEventJustEnded(endMs)||{}).id===EVENT_ID);
+  // ★null ではなく「この回が返らないこと」で見る。イベントが増えると、
+  //   この回の期限が切れたあとは**別の回**が返るため(2026-09-17に第2回を足して実際にそうなった)
   check('受取期限(2週間)を過ぎたらもう流さない',
-    O.rhythmLimitedEventJustEnded(endMs+O.RHYTHM_EVENT_REWARD_CLAIM_MS)===null
+    (O.rhythmLimitedEventJustEnded(endMs+O.RHYTHM_EVENT_REWARD_CLAIM_MS)||{}).id!==EVENT_ID
     &&(O.rhythmLimitedEventJustEnded(endMs+O.RHYTHM_EVENT_REWARD_CLAIM_MS-1000)||{}).id===EVENT_ID);
   check('開催中は流さない',O.rhythmLimitedEventJustEnded(endMs-3600000)===null
     &&!!O.rhythmLimitedEventAt(endMs-3600000));
@@ -94,12 +96,18 @@ check('1分おきの見回りで流す(読み込み時に1回だけ決まる値�
   /rhythmLimitedEventJustEnded\(Date\.now\(\)\)/.test(app)
   &&app.includes('setInterval(look, 60000)')
   &&(app.match(/rhythmLimitedEventJustEnded\(Date\.now\(\)\)/g)||[]).length>=2);
+// ★閉幕の会話はイベントidから引く(RHYTHM_EVENT_THANKS_STORY_BY_EVENT)。
+//   用意していない回では流さないので、直書きではなく変数で渡している
 check('起動したときにも見る(終わったあとに初めて開いた人へ)',
-  /rhythmLimitedEventJustEnded\(Date\.now\(\)\)[\s\S]{0,200}setRhythmEventStoryPending\(MONBEAT_CUP_THANKS_STORY_ID\)/.test(app));
+  /rhythmLimitedEventJustEnded\(Date\.now\(\)\)[\s\S]{0,300}setRhythmEventStoryPending\((?:MONBEAT_CUP_THANKS_STORY_ID|bootThanksId)\)/.test(app));
+check('閉幕の会話をイベントidから引いている(ほかの回の終了で流さない)',
+  app.includes('RHYTHM_EVENT_THANKS_STORY_BY_EVENT')
+  && new RegExp(`RHYTHM_EVENT_THANKS_STORY_BY_EVENT = \\{ \\[MONBEAT_CUP_EVENT_ID\\]: MONBEAT_CUP_THANKS_STORY_ID`).test(app));
 // ★これを書き忘れると、閉幕の会話が**永久に既読にならず**、起動のたびに流れ続ける。
 //   しかも受け取り画面が会話待ちのまま出なくなる(2026-09-14に実際にこの形で書いていた)
+// ★一覧は会話を足すたびに増える。「開催と閉幕の両方が入っていること」だけを見る
 check('会話を最後まで見たら「見た」として記録する',
-  /const RHYTHM_EVENT_STORY_IDS = \[MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID\];/.test(app)
+  /const RHYTHM_EVENT_STORY_IDS = \[[^\]]*\bMONBEAT_CUP_STORY_ID\b[^\]]*\bMONBEAT_CUP_THANKS_STORY_ID\b[^\]]*\];/.test(app)
   &&/RHYTHM_EVENT_STORY_IDS\.includes\(event\.id\)&&!eventReplay\.debug\) void markRhythmEventStorySeen\(event\.id\)/.test(app));
 check('飛ばしたときも本編なら「見た」にする(起動のたびに出ない)',
   /eventReplay\.live&&!eventReplay\.debug&&event&&RHYTHM_EVENT_STORY_IDS\.includes\(event\.id\)\) void markRhythmEventStorySeen\(event\.id\)/.test(app));
