@@ -120,6 +120,27 @@ const RHYTHM_EVENTS = Object.freeze([
     //   ここを変えたら台本も直すこと(rhythm-event-thanks-check.js が突き合わせる)。
     participationReward: Object.freeze({ songs: 3, gold: 3000, psyche: 50, heroProof: 10 }),
   }),
+  // 第2回(2026-09-17・ユーザー指示)。木曜12:00から月曜4:00まで。
+  //
+  // ★終わりは週の区切り(月曜5:00)の1時間前。週をまたがないので、この回の記録は
+  //   まるごと 9/14 5:00〜9/21 5:00 の週の中に収まる(RHYTHM_EVENT_PLAYBOOK.md §0)。
+  // ★対象3曲はすべて既存の公開曲。新曲は足していない
+  //   (mou_hitotsu_no_sekai_e はドラさんのゲーム「CREATE MONSTERS」の曲で、
+  //    2026-09-14 からモンヒロビートに入っている)。
+  // ★ビートPは songIds に入れるだけで 1.5倍になる(rhythmEventPointAwardAt)。
+  //   期間中は公開曲ならどれでも1.0倍で貯まり、対象3曲だけ1.5倍。ここに書くこと以外は無い。
+  // ★報酬(rewardLineageBySongId / totalReward / participationReward / playBonus)は
+  //   2026-09-17 時点で未確定のため、まだ書いていない。決まったらここへ足す。
+  //   受け取り画面が出るのは終了(9/21 4:00)のあとなので、それまでに足せば間に合う。
+  Object.freeze({
+    id: 'symphony_2026_09_17',
+    kind: 'limited',
+    name: '第2回 モンヒロビート「異世界交響祭」',
+    startAt: '2026-09-17T12:00:00+09:00',
+    endAt: '2026-09-21T04:00:00+09:00',
+    banner: 'images/events/monbeat-event-2026-09-17-wide.jpg?v=b2ff791693ca',
+    songIds: Object.freeze(['mou_hitotsu_no_sekai_e', 'pandora_boss_remix', 'the_city_beneath_the_comets']),
+  }),
 ]);
 
 // ===== イベントP（docs/spec/RHYTHM_EVENT_POINTS.md） =====

@@ -22,7 +22,12 @@ function ProfileScreen({
   onBack, onOpenNameEdit, onOpenIconPicker, onOpenFramePicker, onOpenItems, onOpenCallStylePicker, onOpenAssistantPicker,
   onSelectBattleMode, onOpenEventReplayList, onOpenSpeciesRecords,
   rhythmHistoryCount, onOpenRhythmHistory,
+  // 選べる助手だけ(イベントで加入する助手は、その会話を見るまで並べない)。
+  // 渡されなければ今までどおり全員を並べる
+  unlockedAssistants,
 }) {
+  const assistantChoices = Array.isArray(unlockedAssistants) && unlockedAssistants.length
+    ? unlockedAssistants : ASSISTANT_LIST;
   return (
       <div data-mh-screen className="flex-1 flex flex-col h-full min-h-0 p-4">
         {/* プレビュー中は上に帯が出るので、見出しが隠れないぶんだけ下げる */}
@@ -155,11 +160,11 @@ function ProfileScreen({
                 );
               })()}
               {/* 助手の切り替え。もう片方の仲良し度Lvもここで確認できる */}
-              {ASSISTANT_LIST.length>1&&(
+              {assistantChoices.length>1&&(
                 <div className="mt-2.5 pt-2.5 border-t border-white/10">
                   <div className="text-[8px] font-black text-slate-500 tracking-widest mb-1.5">いっしょに遊ぶ助手</div>
                   <div className="grid grid-cols-2 gap-1.5">
-                    {ASSISTANT_LIST.map(who=>{
+                    {assistantChoices.map(who=>{
                       const active=who.id===selectedAssistantId;
                       const lv=assistantBondLevelOf(normalizeAssistantBond(assistantBonds[who.id]).points);
                       const t=(typeof assistantBondStageByLevel==='function')?assistantBondStageByLevel(lv,who.id):null;

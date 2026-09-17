@@ -3068,7 +3068,22 @@ function MonsterHeroGame() {
   //   書き忘れると、その会話は**永久に既読にならず**、起動のたびに流れ続ける
   //   (しかも受け取り画面が会話待ちのまま出なくなる)。
   //   tools/mode/rhythm-event-thanks-check.js が見張る
-  const RHYTHM_EVENT_STORY_IDS = [MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID];
+  // 第2回イベント「異世界交響祭」の会話(2026-09-17)。最後まで見ると助手ドラが解放される
+  const SYMPHONY_STORY_ID = 'symphony_2026_09_17';
+  const RHYTHM_EVENT_STORY_IDS = [MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID];
+  // ★イベントid → そのイベントの会話id。**イベントを足したらここへ1行足す。**
+  //   以前はここが第1回のidの直書きで、第2回が始まっても第1回の会話が流れる形になっていた
+  //   (2026-09-17に第2回を足したときに直した)。書かなかったイベントでは会話は流れない。
+  const RHYTHM_EVENT_STORY_BY_EVENT = {
+    [MONBEAT_CUP_EVENT_ID]: MONBEAT_CUP_STORY_ID,
+    symphony_2026_09_17: SYMPHONY_STORY_ID,
+  };
+  // イベントid → 閉幕の会話id。用意していないイベントでは閉幕の会話は流れない
+  // (第2回には閉幕の会話が無いので、終わっても第1回の「閉幕とお礼」は流さない)
+  const RHYTHM_EVENT_THANKS_STORY_BY_EVENT = { [MONBEAT_CUP_EVENT_ID]: MONBEAT_CUP_THANKS_STORY_ID };
+  // いま開催中／いま終わったばかりのイベントに対応する会話id(無ければ null)
+  const rhythmEventStoryIdFor = (event) => (event && RHYTHM_EVENT_STORY_BY_EVENT[event.id]) || null;
+  const rhythmEventThanksStoryIdFor = (event) => (event && RHYTHM_EVENT_THANKS_STORY_BY_EVENT[event.id]) || null;
   const [rhythmEventStorySeen, setRhythmEventStorySeen] = useState(null);
   const rhythmEventStorySeenRef = useRef(null);
   const [rhythmEventStoryPending, setRhythmEventStoryPending] = useState(null);
@@ -3123,13 +3138,16 @@ function MonsterHeroGame() {
       const notPlayedYet = (storyId) =>
         !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(storyId)
         && !rhythmEventStoryStartedRef.current.includes(storyId);
-      if (rhythmLimitedEventJustEnded(Date.now()) && notPlayedYet(MONBEAT_CUP_THANKS_STORY_ID)) {
-        setRhythmEventStoryPending(prev => prev || MONBEAT_CUP_THANKS_STORY_ID);
+      const endedThanksId = rhythmEventThanksStoryIdFor(rhythmLimitedEventJustEnded(Date.now()));
+      if (endedThanksId && notPlayedYet(endedThanksId)) {
+        setRhythmEventStoryPending(prev => prev || endedThanksId);
       }
-      if (!rhythmLimitedEventAt(Date.now())) return;
+      const liveEvent = rhythmLimitedEventAt(Date.now());
+      if (!liveEvent) return;
       // ① 会話。まだ見ていなければ、HOMEに着いたところで流す
-      if (notPlayedYet(MONBEAT_CUP_STORY_ID)) {
-        setRhythmEventStoryPending(prev => prev || MONBEAT_CUP_STORY_ID);
+      const liveStoryId = rhythmEventStoryIdFor(liveEvent);
+      if (liveStoryId && notPlayedYet(liveStoryId)) {
+        setRhythmEventStoryPending(prev => prev || liveStoryId);
       }
       // ② 助手の告知。起動したときに作った行列には入っていないので、1度だけ組み直す。
       //    組み直すのは起動時とまったく同じ道すじ(planUpdateNoticesForLogin)なので、
@@ -4350,16 +4368,17 @@ function MonsterHeroGame() {
       // モンヒロビートのイベント会話。開催中で、まだ見ていなければHOMEで1度だけ流す。
       // ★ここに置くのは wasOnboarded が決まったあとだから。前に置くと
       //   「Cannot access 'wasOnboarded' before initialization」で画面が真っ白になる
-      if (RELEASE_FLAGS.rhythmWeeklyRanking === true && wasOnboarded
-        && rhythmLimitedEventAt(Date.now())
-        && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(MONBEAT_CUP_STORY_ID)) {
-        setRhythmEventStoryPending(MONBEAT_CUP_STORY_ID);
+      const bootStoryId = rhythmEventStoryIdFor(rhythmLimitedEventAt(Date.now()));
+      if (RELEASE_FLAGS.rhythmWeeklyRanking === true && wasOnboarded && bootStoryId
+        && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(bootStoryId)) {
+        setRhythmEventStoryPending(bootStoryId);
       }
-      // 終わったあとに初めて開いた人へは、閉幕とお礼の会話を流す(受け取り画面より先)
-      if (RELEASE_FLAGS.rhythmWeeklyRanking === true && wasOnboarded
-        && rhythmLimitedEventJustEnded(Date.now())
-        && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(MONBEAT_CUP_THANKS_STORY_ID)) {
-        setRhythmEventStoryPending(MONBEAT_CUP_THANKS_STORY_ID);
+      // 終わったあとに初めて開いた人へは、閉幕とお礼の会話を流す(受け取り画面より先)。
+      // 閉幕の会話を用意していないイベントでは何も流さない
+      const bootThanksId = rhythmEventThanksStoryIdFor(rhythmLimitedEventJustEnded(Date.now()));
+      if (RELEASE_FLAGS.rhythmWeeklyRanking === true && wasOnboarded && bootThanksId
+        && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(bootThanksId)) {
+        setRhythmEventStoryPending(bootThanksId);
       }
       const seenUpdateIds = normalizeSeenUpdateNoticeIds(await storeGet(UPDATE_NOTICE_SEEN_KEY, [], false));
       // 新規プレイヤーには、その時点ですでに公開済みの案内を見せない。既存プレイヤーだけ未読を並べる。
@@ -5316,7 +5335,8 @@ function MonsterHeroGame() {
   // 今後イベントを増やすときは、そのイベントの既読フラグをここへ1行足すだけでよい
   const EVENT_REPLAY_UNLOCK_FLAGS = { kikiIntroSeen: kikiIntroSeenFlag, momosukeIntroSeen: momosukeIntroSeenFlag,
     monbeatCupEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONBEAT_CUP_STORY_ID),
-    monbeatCupThanksSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONBEAT_CUP_THANKS_STORY_ID) };
+    monbeatCupThanksSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONBEAT_CUP_THANKS_STORY_ID),
+    symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID) };
   // alwaysUnlocked のイベントは、本編でまだ見ていなくても回想から見られる
   const isEventReplayUnlocked = (event) => !!(event && event.alwaysUnlocked) || !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];
   // 助手を切り替える。仲良し度も呼び方も助手ごとに分けてあるので、切り替えても何も失われない
@@ -7543,7 +7563,7 @@ function MonsterHeroGame() {
   const debugPlayRhythmEventStory = () => {
     setDailyMasuAdvice(null); setUpdateGuideQueue([]);
     returnToHome();
-    setEventReplay({ id: MONBEAT_CUP_STORY_ID, step: 0, live: true, debug: true });
+    setEventReplay({ id: SYMPHONY_STORY_ID, step: 0, live: true, debug: true });
   };
   // 閉幕とお礼の会話(2026-09-13)。本番では終了時刻に自動で流れるので、
   // それを待たずに中身を確かめるためのボタン。debug:true なので既読にはならない
@@ -7564,11 +7584,11 @@ function MonsterHeroGame() {
   // 会話 → 告知 の並びをそのまま確かめる。会話を閉じたら告知が続く
   const debugPlayRhythmEventIntro = () => {
     const list = (typeof ASSISTANT_UPDATE_NOTICES !== 'undefined' && ASSISTANT_UPDATE_NOTICES) || [];
-    const notice = list.find(n => n && n.id === 'update_notice_rhythm_weekend_cup_v1');
+    const notice = list.find(n => n && n.id === 'update_notice_rhythm_symphony_v1');
     setDailyMasuAdvice(null); setUpdateGuidePage(0);
     setUpdateGuideQueue(notice ? [{ ...notice, debugPreview: true }] : []);
     returnToHome();
-    setEventReplay({ id: MONBEAT_CUP_STORY_ID, step: 0, live: true, debug: true });
+    setEventReplay({ id: SYMPHONY_STORY_ID, step: 0, live: true, debug: true });
   };
   // 報酬の受け取り画面。実際の順位は使わず、見本の中身で見た目だけ確かめる
   const debugPlayRhythmEventReward = () => {
@@ -12933,7 +12953,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             </div>
             <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
               <div className="w-full max-w-md mx-auto grid grid-cols-2 gap-2.5 pb-3">
-                {ASSISTANT_LIST.map(who=>(
+                {/* はじめの助手えらび。イベントで加入する助手(ドラ)は、その会話を見るまで並べない */}
+                {assistantsUnlockedFrom(rhythmEventStorySeen).map(who=>(
                   <button key={who.id} type="button" onClick={()=>{chooseAssistant(who.id);markKikiIntroSeen();markMomosukeIntroSeen();setGameState('PROFILE');setTutorialKind('intro');setTutorialStep(0);}}
                     aria-label={`${who.name}をえらぶ`}
                     className={`rounded-2xl p-3 flex flex-col items-center gap-2 active:scale-[.97] ${who.id===selectedAssistantId?'':'opacity-95'}`}
@@ -12998,6 +13019,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onOpenEventReplayList={()=>setShowEventReplayList(true)}
             onOpenSpeciesRecords={()=>openSpeciesChallengeRecords('PROFILE')}
             rhythmHistoryCount={rhythmHistoryCount}
+            unlockedAssistants={assistantsUnlockedFrom(rhythmEventStorySeen)}
             onOpenRhythmHistory={openRhythmHistory}
           />
         )}
@@ -13912,14 +13934,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   const active=who.id===selectedAssistantId;
                   const lv=assistantBondLevelOf(normalizeAssistantBond(assistantBonds[who.id]).points);
                   const t=(typeof assistantBondStageByLevel==='function')?assistantBondStageByLevel(lv,who.id):null;
-                  // まだ登場の会話を見ていない助手は選べない。どこで会えるかは添えておく
-                  const locked=who.id==='momosuke'&&!momosukeIntroSeenFlag;
+                  // まだ登場の会話を見ていない助手は選べない。どこで会えるかは添えておく。
+                  // ★イベントで加入する助手(ドラ)は、その回の会話を最後まで見たかで決まる
+                  //   (assistantUnlockedBy。判定に使うのは既存の「見終えた会話のid」だけ)
+                  const locked=(who.id==='momosuke'&&!momosukeIntroSeenFlag)
+                    ||!assistantUnlockedBy(who.id,rhythmEventStorySeen);
                   if(locked) return(
                     <div key={who.id} className="w-full min-h-[76px] rounded-2xl px-3 py-2.5 flex items-center gap-2.5 border border-white/10 bg-slate-950/60 opacity-60">
                       <span className="text-2xl" aria-hidden="true">🔒</span>
                       <span className="min-w-0 flex-1">
                         <b className="block text-[12px] font-black text-slate-400">？？？</b>
-                        <small className="block text-[9px] text-slate-500 leading-tight">HOMEでの出会いを見ると選べるようになります。</small>
+                        <small className="block text-[9px] text-slate-500 leading-tight">{assistantUnlockStoryId(who.id)?'イベントの話を最後まで見ると選べるようになります。':'HOMEでの出会いを見ると選べるようになります。'}</small>
                       </span>
                     </div>
                   );
