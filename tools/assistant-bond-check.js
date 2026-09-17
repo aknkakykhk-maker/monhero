@@ -451,8 +451,11 @@ const C = cardCtx.__c;
 
 check('みゅあカード(id:mua)はみゅあ本人へ結び付く', C.assistantIdOfAssistCard('mua') === 'mua', String(C.assistantIdOfAssistCard('mua')));
 check('ききカード(id:kiki)はきき本人へ結び付く', C.assistantIdOfAssistCard('kiki') === 'kiki', String(C.assistantIdOfAssistCard('kiki')));
+// ★ドラは 2026-09-17 に助手へ加わったので、ここから外して下の行へ移した。
+//   カードidと助手idが同じ綴りなら、そのまま本人へ結び付く(17-release… の作りどおり)
+check('ドラカード(id:dra)はドラ本人へ結び付く', C.assistantIdOfAssistCard('dra') === 'dra', String(C.assistantIdOfAssistCard('dra')));
 check('助手以外のアシストカードは結び付かない',
-  ['oryo', 'dra', 'atsu', 'cadmium', 'meloso', 'mocchi'].every(id => C.assistantIdOfAssistCard(id) === null));
+  ['oryo', 'atsu', 'cadmium', 'meloso', 'mocchi'].every(id => C.assistantIdOfAssistCard(id) === null));
 check('壊れた値でも落ちずにnullを返す',
   [null, undefined, '', 0, {}, []].every(v => C.assistantIdOfAssistCard(v) === null));
 // カード名は進化で変わる(みゅあの愛→深愛→慈愛)。名前で判定していたら、ここで外れる
