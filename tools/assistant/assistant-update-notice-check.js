@@ -20,7 +20,10 @@ const annotatedEntries = changelog.filter(entry => entry.assistantNotice);
 // 更新履歴の種別。画面のタブは「更新情報」「不具合情報」の2つで、
 // issue 以外はすべて更新情報へ出る(game-system.jsx の changelogEntriesOfTab)。
 // ここに無い種別を書くと、画面での扱いが決まっていないまま増えてしまうので止める
-const CHANGELOG_ENTRY_TYPES = ['update', 'issue', 'fix', 'feature', 'market', 'mode'];
+// ★event / content は 2026-09-17 に足した。どちらも画面側(CHANGELOG_TYPE_LABELS)へ
+//   ラベルと色を用意してあるので「扱いが決まっていない種別」ではない。
+//   event は期間限定イベントの開催・閉幕用(それまで update=「改善」と表示されていた)。
+const CHANGELOG_ENTRY_TYPES = ['update', 'issue', 'fix', 'feature', 'market', 'mode', 'content', 'event'];
 const unknownTypes = [...new Set(changelog.map(entry => entry.type).filter(type => !CHANGELOG_ENTRY_TYPES.includes(type)))];
 assert(unknownTypes.length === 0, `更新履歴に知らない種別があります: ${unknownTypes.join(', ')}`);
 assert(annotatedEntries.length, 'assistantNotice 付きの更新履歴が必要です');
