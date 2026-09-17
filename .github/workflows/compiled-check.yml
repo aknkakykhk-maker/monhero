@@ -65,6 +65,10 @@ jobs:
         run: |
           node tools/check-syntax.js
           node tools/undefined-reference-check.js
+      # CLAUDE.md は会話のたびに全文が読み込まれるので、大きさがそのまま恒久コストになる。
+      # 小さく保ちつつ、短くする作業で守るべき一文が落ちていないかを見る。
+      - name: Check the rules index
+        run: node tools/rules-index-check.js
       - name: Check the boot path
         run: node tools/boot-flow-check.js
       - name: Check the shipped version stamps
