@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c1f9625d34c42090
+// generated-sha256: f4ff714d6d6afdda
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -91,7 +91,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-18 00:14"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-18 00:36"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -20779,6 +20779,16 @@ function RhythmHistoryScreen({
 //
 // 演出は本番と同じ BattleAttackMotionPreview / attackMotionPreviewSequence を使い、
 // この画面のためのモーションは作らない。字の大きさ・カード・タブも図鑑にそろえてある。
+//
+// 【「モンスター画像・染色確認」を吸収した】(2026-09-17・ユーザー指摘「似たようなのもあるし」)
+//
+// 2画面の中身が9割同じだった(背景の切り替え・本番の表示条件6枠・染色UI・攻撃モーションが、
+// 配色指定まで同じコードで二重にあった)。あちら(MONSTER_IMAGE_DEBUG)にしか無かった4つ
+//   ・部位ごとの切り分け(染色Nのみ)   ・ライガーの旧画像/高画質版/比較
+//   ・一時マスクが当たっていることの表示  ・生URL(?v= 付き)
+// をこの画面の「画像」「データ」タブへ移したうえで、あちらは消した。
+// 攻撃モーションはあちらだけ独自の setTimeout 列で組み直していたぶん、
+// パンドラの分身が再生できなかった。こちらへ寄せたことでそれも見られるようになっている。
 
 // 距離の並び。distAptitude は [零, 近, 中, 遠] の順で持っている。
 // 本番と同じ RANGE_LABELS から作るので、間合いの呼び方を変えてもここだけ古くならない
@@ -20912,8 +20922,9 @@ const monsterCheckStatRows = (mon) => {
 // 画面の中だけで完結するもの(いまどの画面か・タブ・検索語・背景)はここで持つ。
 function MonsterCheckDebugScreen({
   masuMons = [], unlockedMonsterIds = [], selectedId, colors = [], attackPreview,
+  artMode = 'new', temporaryDyeMasks = null, maskEditorOpened = false,
   getAtkSkillLevels, getUniqueSkillLevels,
-  onSelect, onColorsChange, onCustomColor, onPlayPreview, onStopPreview, onBack, onOpenImageDebug,
+  onSelect, onColorsChange, onCustomColor, onArtMode, onPlayPreview, onStopPreview, onBack, onOpenMaskEditor,
 }) {
   const monsters = monsterCheckAllMonsters();
   const [view, setView] = useState('list');   // 'list' | 'detail' | 'motion'
@@ -20957,6 +20968,16 @@ function MonsterCheckDebugScreen({
         backgroundSize: '16px 16px', backgroundPosition: '0 0,0 8px,8px -8px,-8px 0' };
 
   const noteImageBroken = (url) => setBrokenImages(prev => (prev[url] ? prev : { ...prev, [url]: true }));
+  // ライガーだけは、高画質版へ差し替える前の絵(ロールバック用)も残してある。
+  // 「いまの本番」「旧画像」「並べて比較」を切り替えて見られるようにしておく
+  const productionSources = { imgUrl: mon.imgUrl, iconUrl: mon.iconUrl, faceIconUrl: mon.faceIconUrl };
+  const rollbackSources = (typeof TIGER_ROLLBACK_IMG !== 'undefined' && mon.id === 'Tiger')
+    ? { imgUrl: TIGER_ROLLBACK_IMG, iconUrl: TIGER_ROLLBACK_ICON, faceIconUrl: TIGER_ROLLBACK_ICON }
+    : null;
+  const artSources = (rollbackSources && artMode === 'old') ? rollbackSources : productionSources;
+  // 染色マスクを描いて「ゲームで試す」と、その種だけ一時的なマスクが当たる。
+  // マスクは _temporaryDyeMasks 経由で DyedMonsterImage が勝手に見るので、ここでは印を出すだけでよい
+  const temporaryMask = !!(temporaryDyeMasks && temporaryDyeMasks[mon.id]);
   const pickMonster = (id) => { onStopPreview(); onSelect(id); onColorsChange([]); setShowRaw(false); setTab('check'); setView('detail'); };
   const go = (delta) => { onStopPreview(); const next = monsters[(index + delta + monsters.length) % monsters.length]; if (!next) return; onSelect(next.id); onColorsChange([]); Audio_.se.tap(); };
   const dyedArt = (className = 'w-full h-full object-contain') =>
@@ -21083,10 +21104,10 @@ function MonsterCheckDebugScreen({
       ))}
     </div>
   );
-  // 本番と同じ収め方・同じ染色で1枚出す。読み込みに失敗した絵は赤くして、
-  // 「パスの綴り間違いで絵が出ない」を公開前に気づけるようにする
-  const artFrame = (label, sourceKey, frameClass, fit, imgStyle, note) => {
-    const src = mon[sourceKey];
+  // 1枚ぶんの枠。絵のURLと染色を指定できるようにしてあるので、「本番の表示条件」だけでなく
+  // 「部位ごとの切り分け」「ライガーの新旧比較」も同じ部品で出せる。
+  // 読み込みに失敗した絵は赤くして、「パスの綴り間違いで絵が出ない」を公開前に気づけるようにする
+  const artBox = (label, src, palette, frameClass, fit, imgStyle, note) => {
     const broken = !!brokenImages[src];
     return (
       <section key={label} className="rounded-xl bg-black/30 p-2 text-center">
@@ -21094,7 +21115,7 @@ function MonsterCheckDebugScreen({
         {note && <small className="mb-1 block text-[8px] font-bold text-slate-400">{note}</small>}
         <div className={`${frameClass} overflow-hidden border ${broken ? 'border-rose-500' : 'border-white/20'}`} style={bgStyle}>
           {src
-            ? <DyedMonsterImage baseId={mon.id} src={src} alt={label} masuColors={dyeColors} className={`w-full h-full ${fit}`} style={{ ...monsterArtFitStyle(mon.id, undefined), ...(imgStyle || {}) }}/>
+            ? <DyedMonsterImage baseId={mon.id} src={src} alt={label} masuColors={palette} className={`w-full h-full ${fit}`} style={{ ...monsterArtFitStyle(mon.id, undefined), ...(imgStyle || {}) }}/>
             : <span className="flex h-full w-full items-center justify-center text-[9px] font-black text-rose-300">未設定</span>}
         </div>
         {/* 綴りを間違えた絵は、染色を通すと「何も出ない」だけで理由が分からない。
@@ -21104,6 +21125,8 @@ function MonsterCheckDebugScreen({
       </section>
     );
   };
+  const artFrame = (label, sourceKey, frameClass, fit, imgStyle, note) =>
+    artBox(label, artSources[sourceKey], dyeColors, frameClass, fit, imgStyle, note);
   const stateMark = (state) => state === 'ng' ? '✕' : state === 'warn' ? '△' : '✓';
   const stateClass = (state) => state === 'ng' ? 'text-rose-300' : state === 'warn' ? 'text-amber-300' : 'text-emerald-300';
 
@@ -21112,7 +21135,8 @@ function MonsterCheckDebugScreen({
       <div className="flex shrink-0 items-center gap-2 px-3">
         <button onClick={() => { onStopPreview(); setView('list'); }} className="p-3 text-slate-400 active:scale-90" aria-label="一覧へ戻る"><ArrowLeft size={20}/></button>
         <h2 className="text-base font-black italic text-emerald-300 uppercase tracking-widest">新モンスター確認</h2>
-        <span className="ml-auto shrink-0 pr-1 text-[10px] font-mono font-black tabular-nums text-emerald-200/80">{index + 1} / {monsters.length}</span>
+        {temporaryMask&&<span className="ml-auto shrink-0 rounded-full bg-fuchsia-800 px-2 py-1 text-[9px] font-black text-white">一時マスク反映中</span>}
+        <span className={`shrink-0 pr-1 text-[10px] font-mono font-black tabular-nums text-emerald-200/80 ${temporaryMask?'':'ml-auto'}`}>{index + 1} / {monsters.length}</span>
       </div>
       {/* 上半分: 立ち絵。左右のボタンと横スワイプで前後へ移る(図鑑と同じ) */}
       <div data-monster-check-hero className="relative flex shrink-0 items-center justify-center px-14" style={{ height: 'clamp(150px, 20dvh, 180px)' }}
@@ -21173,6 +21197,17 @@ function MonsterCheckDebugScreen({
                     style={id === 'white' ? { background: '#fff', color: '#000' } : id === 'black' ? { background: '#000' } : { background: '#64748b' }}>{label}</button>
                 ))}
               </div>
+              {/* ライガーだけ、高画質版へ差し替える前の絵も残してある */}
+              {rollbackSources&&<div className="grid grid-cols-3 gap-1">
+                {[['new','いまの本番'],['old','旧画像（ロールバック用）'],['compare','並べて比較']].map(([id,label])=>(
+                  <button key={id} data-monster-check-art-mode={id} onClick={()=>onArtMode(id)}
+                    className={`min-h-[46px] rounded-xl border px-1 text-[9px] font-black active:scale-95 ${artMode===id?'border-amber-300 bg-amber-700 text-white':'border-white/10 bg-slate-900 text-slate-300'}`}>{label}</button>
+                ))}
+              </div>}
+              {rollbackSources&&artMode==='compare'&&<div className="grid grid-cols-2 gap-2">
+                {artBox('旧画像', rollbackSources.imgUrl, dyeColors, 'aspect-square', 'object-contain', null, '差し替える前')}
+                {artBox('高画質版', productionSources.imgUrl, dyeColors, 'aspect-square', 'object-contain', null, 'いまの本番')}
+              </div>}
               <div className="grid grid-cols-2 gap-2">
                 {artFrame('バトル／立ち絵', 'imgUrl', 'aspect-square', 'object-contain', null, '本番 64px・角丸なし')}
                 {artFrame('一覧／全身アイコン', 'iconUrl', 'aspect-square rounded-full', 'object-cover', null, '本番 48px・丸')}
@@ -21188,8 +21223,19 @@ function MonsterCheckDebugScreen({
                   onCustom={(idx) => onCustomColor(idx, dyeColors[idx])}/>
                 <div className="mt-2 grid grid-cols-2 gap-2">
                   <button onClick={() => onColorsChange([])} className="min-h-[42px] rounded-xl bg-fuchsia-800 text-[10px] font-black">元の色へ戻す</button>
-                  {/* 部位ごとの切り分け・マスクの当たり方・ライガーの新旧比較は、専用の画面のほうが詳しい */}
-                  <button data-monster-check-open-image onClick={() => { onStopPreview(); onOpenImageDebug(mon.id); }} className="min-h-[42px] rounded-xl border border-cyan-400/60 bg-cyan-950 text-[10px] font-black text-cyan-100">染色をくわしく見る</button>
+                  {/* マスクそのものを描いて直すのは専用の編集器。往復できるようにしておく */}
+                  <button data-monster-check-open-mask onClick={() => { onStopPreview(); onOpenMaskEditor(); }} className="min-h-[42px] rounded-xl border border-cyan-400/60 bg-cyan-950 text-[10px] font-black text-cyan-100">染色マスクを編集する</button>
+                </div>
+              </section>
+              {/* 部位ごとの切り分け。マスクが当たっているか(どこまでが①でどこからが②か)は
+                  1部位ずつ塗って見るのがいちばん早い。ここでしか見られない */}
+              <section data-monster-check-region className="rounded-2xl border border-fuchsia-500/30 bg-fuchsia-950/10 p-2.5">
+                <h3 className="mb-2 text-[11px] font-black text-fuchsia-300">部位ごとの切り分け（{regionCount}部位）</h3>
+                <div className="grid grid-cols-2 gap-2">
+                  {artBox('元画像', artSources.imgUrl, [], 'aspect-square', 'object-contain', null, '染色なし')}
+                  {artBox('合成後', artSources.imgUrl, dyeColors, 'aspect-square', 'object-contain', null, '全部位を重ねたもの')}
+                  {Array.from({ length: regionCount }, (_, i) =>
+                    artBox(`染色${i + 1}のみ`, artSources.imgUrl, dyeColors.map((c, j) => i === j ? c : null), 'aspect-square', 'object-contain', null, `${i + 1}番目の部位だけ`))}
                 </div>
               </section>
             </div>)}
@@ -21248,6 +21294,12 @@ function MonsterCheckDebugScreen({
               {row('円盤石（解放用）', market.disc ? `${market.disc.name}／${market.disc.cost} ダイヤ` : '無し')}
               {row('顔アイコン商品', market.faceIcon ? `${market.faceIcon.name}／${market.faceIcon.cost}` : '無し')}
               {row('円盤石アイコン商品', market.discIcon ? `${market.discIcon.name}／${market.discIcon.cost}` : '無し')}
+              {/* キャッシュキー(?v=)まで見たいことがあるので、素のURLも出しておく */}
+              <div data-monster-check-urls className="rounded-lg bg-black/40 p-2 text-[9px] leading-relaxed text-cyan-200 break-all">
+                <div>imgUrl = {mon.imgUrl || '未設定'}</div>
+                <div>iconUrl = {mon.iconUrl || '未設定'}</div>
+                <div>faceIconUrl = {mon.faceIconUrl || '未設定'}</div>
+              </div>
               <button onClick={() => setShowRaw(v => !v)} className="min-h-[42px] w-full rounded-xl bg-slate-800 text-[11px] font-black active:scale-95">{showRaw ? '生データを隠す' : '生データ（ALL_PLAYER_MONSTERS の中身）を見る'}</button>
               {showRaw && <pre className="max-h-72 overflow-auto whitespace-pre-wrap break-all rounded-xl bg-black/50 p-3 text-[9px] leading-relaxed text-cyan-200">{JSON.stringify(mon, null, 2)}</pre>}
             </div>)}
@@ -21412,7 +21464,7 @@ function MonsterHeroGame() {
   // モンスター画像確認はデバッグ画面を開いている間だけ保持し、セーブ領域へは書き込まない。
   const [monsterImageDebugId, setMonsterImageDebugId] = useState(null);
   const [monsterImageDebugBg, setMonsterImageDebugBg] = useState('checker');
-  const [monsterImageDebugTigerMode, setMonsterImageDebugTigerMode] = useState('old');
+  const [monsterImageDebugTigerMode, setMonsterImageDebugTigerMode] = useState('new');
   const [monsterImageDebugColors, setMonsterImageDebugColors] = useState(null);
   // モンスター画像・染色確認から、専用の攻撃モーション(atkMotion)を実際に再生して見るための状態。
   // 形は本番の attackAnim と同じ({charge}→{zanCombo,sakura}や{charge:false,motion,sakura})にして、
@@ -21486,8 +21538,9 @@ function MonsterHeroGame() {
     releaseTemporaryDyeMask(target.baseId);
     const url=URL.createObjectURL(blob);temporaryDyeMasksRef.current[target.baseId]=url;_temporaryDyeMasks[target.baseId]=url;
     setTemporaryDyeMasks({...temporaryDyeMasksRef.current});
-    const individual=masuMons.find(m=>m.baseId===target.baseId),preview=individual||{id:`temporary-dye-${target.baseId}`,baseId:target.baseId,name:target.name,colors:[]};
-    setMonsterImageDebugId(preview.id);setMonsterImageDebugColors(colors||getMasuColors(preview));setGameState('MONSTER_IMAGE_DEBUG');
+    // 確認先は「新モンスター確認」1つへまとめた(2026-09-17)。あちらは全種を並べるので、
+    // 所持していない種でも擬似個体を作らずにそのまま選べる
+    setMonsterCheckDebugId(target.baseId);setMonsterCheckDebugColors(colors||[]);setGameState('MONSTER_CHECK_DEBUG');
   };
   // バトルチュートリアル(操作しながら覚える)。null のときは動いていない。
   // いまはデバッグ設定からだけ開始できる。台本は data/assistants.js が持つ
@@ -33935,7 +33988,6 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   {/* 新モンスターを足したとき、確認すべきものが1枚で全部見られる画面。
                       所持・解放・debugOnly を問わず全種を並べるので、実装したあとも消えない */}
                   <button data-debug-monster-check onClick={()=>setGameState('MONSTER_CHECK_DEBUG')} className="w-full min-h-[64px] rounded-2xl border-2 border-emerald-300 bg-emerald-900 text-emerald-50 font-black">🆕 新モンスター確認<small className="block text-[8px] text-emerald-300">全種を所持に関係なく表示。画像・染色・モーション・能力・技・血統・マーケットと実装チェック</small></button>
-                  <button onClick={()=>setGameState('MONSTER_IMAGE_DEBUG')} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black">🖼️ モンスター画像・染色確認<small className="block text-[8px] text-cyan-300">本番表示と染色を保存せず確認</small></button>
                   <button onClick={()=>{setDyeMaskEditorOpened(true);setGameState('DYE_MASK_POSITION_DEBUG');}} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-400 text-cyan-100 rounded-2xl font-black">🖌️ 染色マスク編集<small className="block text-[8px] text-cyan-300">全ベースモンを選択して直接描画・PNG出力</small></button>
                   <button onClick={()=>{setPatternMasuId(null);setPatternSettings(makePatternSettings());setGameState('MASU_PATTERN_DEBUG');}} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black">🎨 マスモン模様カスタムテスト<small className="block text-[8px] text-cyan-300">模様は保存されません</small></button>
                   {/* 転生・限界突破★・超越の見た目は1画面のタブへまとめた(2026-09-17)。入口もここ1つだけにする */}
@@ -34186,117 +34238,6 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </main>;
         })()}
 
-        {gameState==='MONSTER_IMAGE_DEBUG'&&(()=>{
-          const owned=[...masuMons.filter(m=>ALL_PLAYER_MONSTERS[m.baseId])];
-          if(temporaryDyeMasks.Mia)owned.push({id:'temporary-dye-Mia',baseId:'Mia',name:'ミーア（一時確認）',colors:[]});
-          Object.keys(temporaryDyeMasks).forEach(baseId=>{if(!owned.some(m=>m.baseId===baseId)&&ALL_PLAYER_MONSTERS[baseId])owned.push({id:`temporary-dye-${baseId}`,baseId,name:`${ALL_PLAYER_MONSTERS[baseId].name}（一時確認）`,colors:[]});});
-          // 正式実装前のモンスター(debugOnly)は、そもそもマスモン登録ができない
-          // (registerMasuMon 側で弾いている)ため、上のマスモン一覧には絶対に出てこない。
-          // 所持を経ずにここへ入れておくことで、実装中でも立ち絵・染色・顔アイコン・
-          // 攻撃モーションを保存データに触れず確認できるようにする
-          Object.values(ALL_PLAYER_MONSTERS).forEach(mon=>{if(mon?.debugOnly&&!owned.some(m=>m.baseId===mon.id))owned.push({id:`debug-preview-${mon.id}`,baseId:mon.id,name:`${mon.name}（実装確認・DEBUG専用）`,colors:[]});});
-          // ★ここから下は「正式実装したあとも消えないようにする」ぶん(2026-09-17・ユーザー指摘
-          //   「実装したら消えちゃうのも良くない」)。上の debugOnly の差し込みは、正式実装して
-          //   debugOnly を外したとたん効かなくなり、所持していない種はこの一覧から丸ごと消えていた
-          //   (エイキが実際にそうなった。いま debugOnly の種は1体もいないので、上の行は何も足していない)。
-          //   所持・解放を問わず全種を並べておけば、実装の前も後も同じように確認できる。
-          //   保存には一切触れない表示専用の擬似個体なので、セーブデータへは何の影響も無い
-          Object.values(ALL_PLAYER_MONSTERS).forEach(mon=>{if(mon?.id&&!owned.some(m=>m.baseId===mon.id))owned.push({id:`debug-preview-${mon.id}`,baseId:mon.id,name:`${mon.name}（未所持）`,colors:[]});});
-          const selected=owned.find(m=>String(m.id)===String(monsterImageDebugId))||owned[0];
-          if(!selected)return <main className="flex-1 p-4"><header className="flex items-center"><button onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3"><ArrowLeft/></button><h2 className="font-black">モンスター画像・染色確認</h2></header><p className="p-6 text-center text-slate-400">確認できる所持モンスター個体がありません。</p></main>;
-          const base=ALL_PLAYER_MONSTERS[selected.baseId];
-          const regionCount=dyeRegionCount(selected.baseId);
-          const colors=Array.from({length:regionCount},(_,i)=>monsterImageDebugColors===null?(getMasuColors(selected)[i]||null):(monsterImageDebugColors[i]||null));
-          const isTiger=selected.baseId==='Tiger';
-          const productionSources={imgUrl:base.imgUrl,iconUrl:base.iconUrl,faceIconUrl:base.faceIconUrl};
-          // プロフィールアイコンは本番(BreederIcon)で MARKET_PROFILE_ICON_STYLES の拡大・位置調整が掛かる。
-          // ライガー・ミーア・パンドラ等は faceIconUrl が立ち絵そのままなので、これが無いとプレビューだけ
-          // 全身が写り、本番とまったく別物になる。idは本番と同じ一覧(breederIconOptions)から絵で引き当てる
-          // (base.id を直に使うと、同じidで登録されている円盤石用の値を誤って拾う)
-          const profileIconStyle=marketProfileIconStyle((breederIconOptions({includeUnowned:true}).find(o=>String(o.src||'').split('?')[0]===String(base.faceIconUrl||'').split('?')[0])||{}).id);
-          const oldSources=isTiger?{imgUrl:TIGER_ROLLBACK_IMG,iconUrl:TIGER_ROLLBACK_ICON,faceIconUrl:TIGER_ROLLBACK_ICON}:productionSources;
-          const newSources=productionSources;
-          const variants=isTiger&&monsterImageDebugTigerMode==='compare'?[['旧',oldSources],['新',newSources]]:[[isTiger&&monsterImageDebugTigerMode==='new'?'新':'本番',isTiger&&monsterImageDebugTigerMode==='new'?newSources:oldSources]];
-          const bgStyle=monsterImageDebugBg==='white'?{background:'#fff'}:monsterImageDebugBg==='black'?{background:'#000'}:{backgroundColor:'#cbd5e1',backgroundImage:'linear-gradient(45deg,#64748b 25%,transparent 25%),linear-gradient(-45deg,#64748b 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#64748b 75%),linear-gradient(-45deg,transparent 75%,#64748b 75%)',backgroundSize:'16px 16px',backgroundPosition:'0 0,0 8px,8px -8px,-8px 0'};
-          const frameNote=(note)=>note?<small className="mt-0.5 block text-[7px] font-normal text-slate-400">{note}</small>:null;
-          const renderPair=(label,sourceKey,palette,frameClass='h-32',fit='object-contain',imgStyle=null,note='')=><section className="rounded-xl bg-black/30 p-2"><b className="block mb-2 text-center text-[9px] text-cyan-200">{label}{frameNote(note)}</b><div className={`grid gap-2 ${variants.length===2?'grid-cols-2':'grid-cols-1'}`}>{variants.map(([name,sources])=><div key={name} className="text-center"><div className={`${frameClass} overflow-hidden border border-white/20 flex items-center justify-center`} style={bgStyle}>{palette===null?<img src={sources[sourceKey]} alt={`${name}${label}`} className={`w-full h-full ${fit}`} style={imgStyle||undefined}/>:<DyedMonsterImage baseId="Tiger" src={sources[sourceKey]} alt={`${name}${label}`} masuColors={palette} className={`w-full h-full ${fit}`} style={imgStyle||undefined}/>}</div><small className="text-[8px] font-black">{name}</small></div>)}</div></section>;
-          const renderCurrent=(label,sourceKey,palette,frameClass='h-32',fit='object-contain',imgStyle=null,note='')=>{if(isTiger)return renderPair(label,sourceKey,palette,frameClass,fit,imgStyle,note);const src=oldSources[sourceKey];
-            // 染色なし(元画像)の表示も、本番と同じ収め方(MONSTER_ART_CONTAIN_IDSのcontain上書き)を通す。
-            // ここを通さないと、縦長の立ち絵(ウンディーネ・エイキ等)の「元画像」だけ本番よりきつく
-            // 切り取られて出てしまい、確認画面のほうが実際の見え方より悪く見えてしまう
-            return <section className="rounded-xl bg-black/30 p-2 text-center"><b className="block mb-2 text-[9px] text-cyan-200">{label}{frameNote(note)}</b><div className={`${frameClass} overflow-hidden border border-white/20`} style={bgStyle}>{palette===null?<img src={src} alt={label} className={`w-full h-full ${fit}`} style={{...monsterArtFitStyle(base.id,undefined),...(imgStyle||{})}}/>:<DyedMonsterImage baseId={base.id} src={src} alt={label} masuColors={palette} className={`w-full h-full ${fit}`} style={imgStyle||undefined}/>}</div></section>};
-          const colorText=(c)=>{if(!c)return '元の色';const{base,alpha}=splitColorAlpha(c);const name=_parseCustomColorId(base)?`カスタム(${base})`:(MASU_COLOR_LABELS[base]||base);return alpha<MASU_COLOR_ALPHA_MAX?`${name} 濃さ${alpha}%`:name;};
-          // 専用の攻撃モーション(atkMotion)を、本番のバトル画面とまったく同じ関数・同じCSSで再生する。
-          // パンドラの分身(pandoraDualThunder)は枠を動かすのではなく専用コンポーネントが要るため、ここでは対象外にする
-          const atkMotion=base.atkMotion||'default';
-          const motionSupported=atkMotion!=='default'&&atkMotion!=='pandoraDualThunder';
-          const isDashMotion=atkMotion==='zanCombo'||atkMotion==='eikiSakuraCombo'||atkMotion==='kenshiTwinBlade';
-          const playMotionPreview=async()=>{
-            if(!motionSupported||monsterImageDebugMotionPlaying)return;
-            setMonsterImageDebugMotionPlaying({charge:true});
-            await new Promise(r=>setTimeout(r,650));
-            if(isDashMotion){
-              const isTwin=atkMotion==='kenshiTwinBlade';
-              setMonsterImageDebugMotionPlaying({zanCombo:!isTwin,twinBlade:isTwin,sakura:atkMotion==='eikiSakuraCombo'});
-              await new Promise(r=>setTimeout(r,atkMotion==='eikiSakuraCombo'?500:(isTwin?560:320)));
-            }else{
-              setMonsterImageDebugMotionPlaying({charge:false,motion:atkMotion,sakura:false});
-              await new Promise(r=>setTimeout(r,atkMotion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(atkMotion==='miaSongNotes'?MIA_SONG_NOTES_MOTION_MS:(atkMotion==='floatStab'?700:(atkMotion==='waterBurst'?WATER_BURST_MOTION_MS:500)))));
-            }
-            setMonsterImageDebugMotionPlaying(null);
-          };
-          return <main data-mh-screen className="flex-1 flex flex-col h-full min-h-0 p-3" style={{paddingTop:'calc(.75rem + env(safe-area-inset-top))',paddingBottom:'calc(.75rem + env(safe-area-inset-bottom))'}}>
-            <header className="flex items-center gap-2 mb-2"><button onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><div><small className="text-[8px] font-black text-cyan-400">DEBUG・保存されません</small><h2 className="text-sm font-black">モンスター画像・染色確認</h2></div>{temporaryDyeMasks[selected.baseId]&&<span className="ml-auto rounded-full bg-fuchsia-800 px-2 py-1 text-[8px] font-black">一時反映中</span>}</header>
-            {temporaryDyeMasks[selected.baseId]&&dyeMaskEditorOpened&&<button onClick={()=>setGameState('DYE_MASK_POSITION_DEBUG')} className="mb-2 min-h-[42px] shrink-0 rounded-xl border border-fuchsia-300 bg-fuchsia-800 text-[10px] font-black">マスク編集へ戻る</button>}
-            <div className="flex-1 min-h-0 overflow-y-auto mh-scroll space-y-3 pb-3">
-              <select value={selected.id} onChange={e=>{const m=owned.find(x=>String(x.id)===e.target.value);setMonsterImageDebugId(e.target.value);setMonsterImageDebugColors(m?getMasuColors(m):[]);setMonsterImageDebugTigerMode('old');}} className="w-full min-h-[50px] rounded-xl bg-slate-900 border border-white/10 px-3 text-[10px] font-black">{owned.map(m=>{const b=ALL_PLAYER_MONSTERS[m.baseId];return <option key={m.id} value={m.id}>{m.name}／{b.name}／{m.baseId}／①{colorText(getMasuColors(m)[0])} ②{colorText(getMasuColors(m)[1])} ③{colorText(getMasuColors(m)[2])}</option>})}</select>
-              {isTiger&&<div className="grid grid-cols-3 gap-1">{[['old','旧画像／ロールバック用'],['new','高画質版／現在の本番構成'],['compare','旧画像と高画質版の比較表示']].map(([id,label])=><button key={id} onClick={()=>setMonsterImageDebugTigerMode(id)} className={`min-h-[54px] rounded-xl px-1 text-[8px] font-black border ${monsterImageDebugTigerMode===id?'bg-amber-700 border-amber-300':'bg-slate-900 border-white/10'}`}>{label}</button>)}</div>}
-              <div className="grid grid-cols-3 gap-2">{[['checker','市松模様'],['white','白'],['black','黒']].map(([id,label])=><button key={id} onClick={()=>setMonsterImageDebugBg(id)} className={`min-h-[42px] rounded-xl text-[10px] font-black border ${monsterImageDebugBg===id?'ring-2 ring-cyan-500':'border-white/10'}`} style={id==='white'?{background:'#fff',color:'#000'}:id==='black'?{background:'#000'}:{background:'#64748b'}}>{label}</button>)}</div>
-              <div className="grid grid-cols-2 gap-2">{renderCurrent('元画像','imgUrl',null)}{renderCurrent('実際の合成後プレビュー','imgUrl',colors)}{Array.from({length:regionCount},(_,i)=>renderCurrent(`染色${i+1}のみ`,'imgUrl',colors.map((c,j)=>i===j?c:null)))}</div>
-              <h3 className="text-[10px] font-black text-cyan-300">実際の表示条件</h3><div className="grid grid-cols-2 gap-2">{renderCurrent('バトル／立ち絵','imgUrl',colors,'aspect-square','object-contain',null,'本番 64px・角丸なし')}{renderCurrent('一覧／全身アイコン','iconUrl',colors,'aspect-square rounded-full','object-cover',null,'本番 48px・丸')}{renderCurrent('詳細／大きな全身表示','imgUrl',colors,'h-40','object-contain',null,'本番 図鑑詳細の横長枠')}{renderCurrent('顔アイコン','faceIconUrl',colors,'aspect-square rounded-full','object-contain',profileIconStyle,'本番 プロフィール80px・丸')}{renderCurrent('プロフィール／選択アイコン','faceIconUrl',colors,'aspect-square rounded-2xl','object-contain',profileIconStyle,'本番 選択マス約59px・角丸')}{renderCurrent('小型／編成枠','imgUrl',colors,'aspect-square rounded-full','object-contain',null,'本番 40px・丸')}</div>
-              {/* 染色のパレットは28色×部位ぶんあり、開いたままだと画像へ届くまでに1500pxほどスクロールすることになる。ふだん見たいのは絵のほうなので畳んでおく(2026-09-17・ユーザー指摘「ほんとうにみにくいしつかいづらい」) */}
-              <details className="rounded-2xl border border-fuchsia-500/30 bg-fuchsia-950/20">
-                <summary className="cursor-pointer select-none px-3 py-3 text-[11px] font-black text-fuchsia-200">🎨 色を変えて試す（{regionCount}部位・本番と共通）</summary>
-                <div className="border-t border-fuchsia-500/20 p-3">
-<section><h3 className="mb-2 text-[10px] font-black text-fuchsia-300">本番と共通の染色（{regionCount}部位）</h3><DyeRegionColorControls baseId={selected.baseId} colors={colors} onChange={(idx,colorId)=>setMonsterImageDebugColors(prev=>{const next=[...colors];next[idx]=colorId;return next;})} onCustom={(idx)=>{const parsed=_parseCustomColorId(colors[idx]);setCustomColorPicker({mode:'debug',idx,h:parsed?.h??210,s:parsed?.s??.7,v:parsed?.v??.7});}}/><button onClick={()=>setMonsterImageDebugColors(getMasuColors(selected))} className="w-full mt-2 min-h-[40px] rounded-xl bg-fuchsia-800 text-[9px] font-black">個体の現在色へ戻す</button></section>
-                </div>
-              </details>
-              {motionSupported&&(
-                <section className="rounded-2xl border border-cyan-500/30 bg-cyan-950/20 p-3">
-                  <h3 className="mb-2 text-[10px] font-black text-cyan-300">攻撃モーション確認（atkMotion: {atkMotion}）</h3>
-                  <p className="mb-2 text-[8px] leading-relaxed text-slate-400">本番のバトル画面と同じ関数・同じCSSでこの場で再生する。連撃の巻き添えヒットは無いのでこの1回だけ動く。</p>
-                  <div className={`mx-auto h-28 w-28 ${(atkMotion==='waterBurst'||atkMotion==='arkHolyRain'||atkMotion==='miaSongNotes')?'overflow-visible':'overflow-hidden'} rounded-xl border border-white/20`} style={bgStyle}>
-                    <div className="relative h-full w-full" style={{isolation:'isolate',animation:attackMotionAnimation(monsterImageDebugMotionPlaying)}}>
-                      {monsterImageDebugMotionPlaying?.motion==='arkHolyRain'
-                        ?<ArkHolyRainMotion
-                          image={<DyedMonsterImage baseId={base.id} src={oldSources.imgUrl} alt="攻撃モーション確認" masuColors={colors} className="h-full w-full object-contain"/>}
-                          charging={monsterImageDebugMotionPlaying?.charge===true}
-                          empowered={monsterImageDebugMotionPlaying?.charge===false}/>
-                        :monsterImageDebugMotionPlaying?.motion==='waterBurst'
-                          ?<WaterBurstMotion
-                            image={<DyedMonsterImage baseId={base.id} src={oldSources.imgUrl} alt="攻撃モーション確認" masuColors={colors} className="h-full w-full object-contain"/>}
-                            lunge={monsterImageDebugMotionPlaying?.charge===false}
-                            charging={monsterImageDebugMotionPlaying?.charge===true}/>
-                        :monsterImageDebugMotionPlaying?.motion==='miaSongNotes'
-                          ?<MiaSongNotesMotion
-                            image={<DyedMonsterImage baseId={base.id} src={oldSources.imgUrl} alt="攻撃モーション確認" masuColors={colors} className="h-full w-full object-contain"/>}
-                            lunge={monsterImageDebugMotionPlaying?.charge===false}
-                            charging={monsterImageDebugMotionPlaying?.charge===true}/>
-                          :<>
-                          <DyedMonsterImage baseId={base.id} src={oldSources.imgUrl} alt="攻撃モーション確認" masuColors={colors} className="h-full w-full object-contain"/>
-                          {monsterImageDebugMotionPlaying?.sakura&&<EikiSakuraPetals/>}
-                          {monsterImageDebugMotionPlaying?.twinBlade&&<KenshiTwinSlash/>}
-                        </>}
-                    </div>
-                  </div>
-                  <button onClick={playMotionPreview} disabled={!!monsterImageDebugMotionPlaying} className="mt-2 w-full min-h-[42px] rounded-xl bg-cyan-700 text-[10px] font-black disabled:opacity-40">{monsterImageDebugMotionPlaying?'再生中…':'攻撃モーションを再生'}</button>
-                </section>
-              )}
-              <section className="rounded-xl bg-black/40 p-3 text-[8px] break-all"><b>baseId: {selected.baseId}</b>{variants.map(([name,v])=><div key={name}>{name}: imgUrl={v.imgUrl} / iconUrl={v.iconUrl} / faceIconUrl={v.faceIconUrl}</div>)}</section>
-            </div>
-          </main>;
-        })()}
-
         {/* 新モンスター確認(デバッグ専用)。所持・解放・debugOnly を問わず全種を並べ、
             1体ぶんの画像・染色・モーション・能力・技・血統・マーケットと「実装チェック」を見る。
             作りは図鑑にそろえてあり、一覧→詳細(タブ)→攻撃アクション全画面の3段。
@@ -34310,15 +34251,19 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             selectedId={monsterCheckDebugId}
             colors={monsterCheckDebugColors}
             attackPreview={dexAttackPreview}
+            artMode={monsterImageDebugTigerMode}
+            temporaryDyeMasks={temporaryDyeMasks}
+            maskEditorOpened={dyeMaskEditorOpened}
             getAtkSkillLevels={getAtkSkillLevels}
             getUniqueSkillLevels={getUniqueSkillLevels}
             onSelect={setMonsterCheckDebugId}
             onColorsChange={setMonsterCheckDebugColors}
             onCustomColor={(idx,colorId)=>{const parsed=_parseCustomColorId(colorId);setCustomColorPicker({mode:'monsterCheck',idx,h:parsed?.h??210,s:parsed?.s??.7,v:parsed?.v??.7});}}
+            onArtMode={setMonsterImageDebugTigerMode}
             onPlayPreview={playDexAttackPreview}
             onStopPreview={stopDexAttackPreview}
             onBack={()=>{stopDexAttackPreview();setGameState('DEBUG_SETTINGS');}}
-            onOpenImageDebug={(monsterId)=>{const owned=masuMons.find(m=>String(m.baseId)===String(monsterId));setMonsterImageDebugId(owned?owned.id:`debug-preview-${monsterId}`);setMonsterImageDebugColors(owned?getMasuColors(owned):[]);setMonsterImageDebugTigerMode('old');setGameState('MONSTER_IMAGE_DEBUG');}}/>
+            onOpenMaskEditor={()=>{setDyeMaskEditorOpened(true);setGameState('DYE_MASK_POSITION_DEBUG');}}/>
         )}
 
         {/* ASSISTANT_SELECT: はじめて遊ぶ人が、名前を決めるより前にどの助手と遊ぶかを選ぶ。

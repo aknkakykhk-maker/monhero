@@ -1746,7 +1746,6 @@ const HELP_SCREEN_COVERAGE = {
   SETTINGS:         'tips/settings',
   // 模様テストは開発用の隠し画面なので、公開説明は増やさず既存の染色項目を参照先にする。
   MASU_PATTERN_DEBUG:'masu/dye',
-  MONSTER_IMAGE_DEBUG:'masu/dye',
   DYE_MASK_POSITION_DEBUG:'masu/dye',
   // 新モンスター確認も開発用の隠し画面。出しているのは図鑑と同じ「1体ぶんの情報」なので、
   // 説明は増やさず図鑑の項目を参照先にする。

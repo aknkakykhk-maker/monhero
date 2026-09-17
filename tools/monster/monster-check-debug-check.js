@@ -8,7 +8,7 @@
 // 【なぜ道具にするか】
 // この画面の値打ちは「所持も解放も見ずに全種が必ず出る」ことにある。
 // 絞り込みを1つ足すだけで静かに戻ってしまい、画面はふつうに開くので気づけない。
-// 実際に MONSTER_IMAGE_DEBUG は「所持マスモンだけ」になっていて、正式実装した
+// 実際に旧「モンスター画像・染色確認」(MONSTER_IMAGE_DEBUG)は「所持マスモンだけ」になっていて、正式実装した
 // エイキ・剣士モッチーが一覧から消えていた(2026-09-17・ユーザー指摘
 // 「今は見れないものが多い」「実装したら消えちゃうのも良くない」)。
 // そこで ①ソースで絞り込みを入れていないこと ②実ブラウザで全種が並ぶこと の両方を見る。
@@ -57,15 +57,24 @@ check('一覧を所持マスモンで絞っていない', !/masuMons/.test(listF
 check('一覧を解放済みで絞っていない', !/unlockedMonsterIds/.test(listFn));
 check('一覧を debugOnly で絞っていない(実装したら消える、を作らない)', !/debugOnly/.test(listFn));
 
-// 既存の画像・染色確認も、正式実装したあと消えないこと(所持を問わず全種を足している)
-check('モンスター画像・染色確認も所持を問わず全種を並べる',
-  /Object\.values\(ALL_PLAYER_MONSTERS\)\.forEach\(mon=>\{if\(mon\?\.id&&!owned\.some\(m=>m\.baseId===mon\.id\)\)owned\.push\(/.test(source));
 // 模様テストも同じ理由で全種を並べる
 check('マスモン模様カスタムテストも所持を問わず全種を並べる',
   /Object\.values\(ALL_PLAYER_MONSTERS\)\.forEach\(mon=>\{if\(mon\?\.id&&!eligible\.some\(m=>m\.baseId===mon\.id\)\)eligible\.push\(/.test(source));
 
+// ---------- 旧「モンスター画像・染色確認」から引き取ったもの ----------
+// 2画面の中身が9割同じだったので、この画面へ吸収して MONSTER_IMAGE_DEBUG は消した(2026-09-17)。
+// 吸収したはずのものが落ちていないかを、ここで1つずつ見張る
+check('旧「モンスター画像・染色確認」は消えている', !source.includes("gameState==='MONSTER_IMAGE_DEBUG'"));
+check('部位ごとの切り分け（染色Nのみ）を引き取っている',
+  part.includes('data-monster-check-region') && part.includes('`染色${i + 1}のみ`'));
+check('ライガーの旧画像・高画質版・比較を引き取っている',
+  part.includes('TIGER_ROLLBACK_IMG') && part.includes('data-monster-check-art-mode'));
+check('一時マスクが当たっていることを出している', part.includes('temporaryDyeMasks') && part.includes('一時マスク反映中'));
+check('生URL（?v= 付き）を出している', part.includes('data-monster-check-urls'));
+check('染色マスク編集へ往復できる', part.includes('data-monster-check-open-mask'));
+
 const debugStart = source.indexOf("gameState==='DEBUG_SETTINGS'&&(");
-const debugEnd = source.indexOf("{gameState==='MONSTER_IMAGE_DEBUG'&&(", debugStart);
+const debugEnd = source.indexOf("{gameState==='MONSTER_CHECK_DEBUG'&&(", debugStart);
 const debugBlock = (debugStart >= 0 && debugEnd > debugStart) ? source.slice(debugStart, debugEnd) : '';
 check('デバッグ設定に入口がある', debugBlock.includes('data-debug-monster-check')
   && source.split('data-debug-monster-check').length === 2);
@@ -210,11 +219,12 @@ const seed = () => {
     await clickSel('[data-monster-check-tab="art"]');
     await page.waitForTimeout(900);
     check('画像タブに本番の表示条件が並ぶ', await page.evaluate(() => !!document.querySelector('[data-monster-check-tab-art]')));
-    await clickSel('[data-monster-check-open-image]');
+    check('部位ごとの切り分けが出ている',
+      await page.evaluate(() => !!document.querySelector('[data-monster-check-region]')));
+    await clickSel('[data-monster-check-open-mask]');
     await page.waitForTimeout(1200);
-    check('「染色をくわしく見る」で画像・染色確認へ移れる',
-      await page.evaluate(() => document.body.innerText.includes('モンスター画像・染色確認')
-        && !document.body.innerText.includes('確認できる所持モンスター個体がありません')));
+    check('「染色マスクを編集する」で編集器へ移れる',
+      await page.evaluate(() => /マスク|ブラシ|PNG/.test(document.body.innerText)));
 
     check('実行時エラーが出ていない', errors.length === 0, errors.slice(0, 2).join(' / '));
   } catch (e) {
