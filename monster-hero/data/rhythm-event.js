@@ -178,17 +178,22 @@ const rhythmEventPointAwardAt = (nowMs, songId, score) => {
 
 // ===== イベントP交換所 STEP3 =====
 // 初期価格は docs/spec/RHYTHM_EVENT_POINTS.md §20.1 が正本。
+// ★2026-09-17・ユーザー指示「勇者の証片・虹の超越の実・勇者の証**以外**の単価を5倍に」。
+//   ダイヤ 1→5 / トレーニングチケット 1→5 / 重トレーニングチケット 3→15 /
+//   虹のプシュケー 1→5 / スキップチケット 序10→50・破16→80・急23→115・極50→250・覇100→500。
+//   高額の3つ(証片500 / 虹の超越の実5,000 / 勇者の証10,000)は**据え置き**。
+//   そのため「証片×20個=勇者の証1個」の価値の対応(500×20=10,000)もそのまま保たれる。
 // アイコンは価格(2,000P)だけ決まっており対象IDが未決定なので、ここへは推測で追加しない。
 const RHYTHM_EVENT_POINT_SHOP_OFFERS = Object.freeze([
-  Object.freeze({ id:'diamond_300', name:'ダイヤ', emoji:'💎', kind:'diamond', grantAmount:300, unit:'ダイヤ', cost:1 }),
-  Object.freeze({ id:'training_ticket_x3', name:'トレーニングチケット', emoji:'🎫', kind:'item', itemId:'training_ticket', grantAmount:3, unit:'枚', cost:1 }),
-  Object.freeze({ id:'training_ticket_l', name:'重トレーニングチケット', emoji:'🎟️', kind:'item', itemId:'training_ticket_l', grantAmount:1, unit:'枚', cost:3 }),
-  Object.freeze({ id:'rainbow_psyche', name:'虹のプシュケー', emoji:'🌈', kind:'item', itemId:'rainbow_psyche', grantAmount:1, unit:'個', cost:1 }),
-  Object.freeze({ id:'skip_ticket_jo', name:'スキップチケット・序', emoji:'⏩', kind:'item', itemId:'skip_ticket_jo', grantAmount:1, unit:'枚', cost:10 }),
-  Object.freeze({ id:'skip_ticket_ha', name:'スキップチケット・破', emoji:'⏩', kind:'item', itemId:'skip_ticket_ha', grantAmount:1, unit:'枚', cost:16 }),
-  Object.freeze({ id:'skip_ticket_kyu', name:'スキップチケット・急', emoji:'⏩', kind:'item', itemId:'skip_ticket_kyu', grantAmount:1, unit:'枚', cost:23 }),
-  Object.freeze({ id:'skip_ticket_kiwami', name:'スキップチケット・極', emoji:'⏩', kind:'item', itemId:'skip_ticket_kiwami', grantAmount:1, unit:'枚', cost:50 }),
-  Object.freeze({ id:'skip_ticket_haou', name:'スキップチケット・覇', emoji:'⏩', kind:'item', itemId:'skip_ticket_haou', grantAmount:1, unit:'枚', cost:100 }),
+  Object.freeze({ id:'diamond_300', name:'ダイヤ', emoji:'💎', kind:'diamond', grantAmount:300, unit:'ダイヤ', cost:5 }),
+  Object.freeze({ id:'training_ticket_x3', name:'トレーニングチケット', emoji:'🎫', kind:'item', itemId:'training_ticket', grantAmount:3, unit:'枚', cost:5 }),
+  Object.freeze({ id:'training_ticket_l', name:'重トレーニングチケット', emoji:'🎟️', kind:'item', itemId:'training_ticket_l', grantAmount:1, unit:'枚', cost:15 }),
+  Object.freeze({ id:'rainbow_psyche', name:'虹のプシュケー', emoji:'🌈', kind:'item', itemId:'rainbow_psyche', grantAmount:1, unit:'個', cost:5 }),
+  Object.freeze({ id:'skip_ticket_jo', name:'スキップチケット・序', emoji:'⏩', kind:'item', itemId:'skip_ticket_jo', grantAmount:1, unit:'枚', cost:50 }),
+  Object.freeze({ id:'skip_ticket_ha', name:'スキップチケット・破', emoji:'⏩', kind:'item', itemId:'skip_ticket_ha', grantAmount:1, unit:'枚', cost:80 }),
+  Object.freeze({ id:'skip_ticket_kyu', name:'スキップチケット・急', emoji:'⏩', kind:'item', itemId:'skip_ticket_kyu', grantAmount:1, unit:'枚', cost:115 }),
+  Object.freeze({ id:'skip_ticket_kiwami', name:'スキップチケット・極', emoji:'⏩', kind:'item', itemId:'skip_ticket_kiwami', grantAmount:1, unit:'枚', cost:250 }),
+  Object.freeze({ id:'skip_ticket_haou', name:'スキップチケット・覇', emoji:'⏩', kind:'item', itemId:'skip_ticket_haou', grantAmount:1, unit:'枚', cost:500 }),
   Object.freeze({ id:'hero_proof_shard', name:'勇者の証片', emoji:'🎖️', kind:'item', itemId:'hero_proof_shard', grantAmount:1, unit:'個', cost:500 }),
   Object.freeze({ id:'transcend_fruit_rainbow', name:'虹の超越の実', emoji:'🍇', kind:'item', itemId:'transcend_fruit_rainbow', grantAmount:1, unit:'個', cost:5000 }),
   Object.freeze({ id:'hero_proof', name:'勇者の証', emoji:'🏅', kind:'item', itemId:'hero_proof', grantAmount:1, unit:'個', cost:10000 }),

@@ -26,7 +26,9 @@ const vm=require('vm');
 const src=fs.readFileSync(path.join(ROOT,'monster-hero','data','changelog.js'),'utf8');
 const box={};vm.createContext(box);vm.runInContext(src+';globalThis.__c=CHANGELOG;',box);
 const shipped=box.__c.filter(e=>e.dev!==true);
-const KNOWN=['fix','feature','update','market','issue','mode','content'];
+// event は 2026-09-17 に足した(期間限定イベントの開催・閉幕。それまで update=「改善」と出ていた)。
+// 画面側の CHANGELOG_TYPE_LABELS にラベルと色がある種別だけをここへ並べる
+const KNOWN=['fix','feature','update','market','issue','mode','content','event'];
 ok('出している項目に必ず種類が付いている',
   shipped.every(e=>KNOWN.includes(e.type)),
   shipped.filter(e=>!KNOWN.includes(e.type)).slice(0,3).map(e=>`${e.date} ${e.title}`).join(' / ')||`${shipped.length}件すべて`);
