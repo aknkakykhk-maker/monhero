@@ -1751,10 +1751,8 @@ const HELP_SCREEN_COVERAGE = {
   // 新モンスター確認も開発用の隠し画面。出しているのは図鑑と同じ「1体ぶんの情報」なので、
   // 説明は増やさず図鑑の項目を参照先にする。
   MONSTER_CHECK_DEBUG:'home/monster-dex',
-  // 限界突破★テストは開発用だが、本番と同じ★を確認するため限界突破の説明へ対応させる。
-  BREAKTHROUGH_STAR_DEBUG:'masu/rebirth',
-  REINCARNATE_DISPLAY_DEBUG:'masu/reincarnate',
-  // 超越テストも開発用だが、本番と同じマーク・演出を確認するため超越の説明へ対応させる。
+  // 育成マークの見た目(転生・限界突破★・超越を1画面のタブにまとめたもの)。開発用だが、
+  // 本番と同じマーク・演出を確認するため超越の説明へ対応させる。
   TRANSCEND_DEBUG:'masu/transcendence',
   EXTREME_DIFFICULTY_SELECT: 'basics/extreme-challenge',
   // 種族チャレンジの選択画面(種族→難易度→勇者→供モン)は、正式なヘルプ項目で説明する。

@@ -183,8 +183,10 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
   check(`${label}: 固定上限の共通関数を使う`,
     /const isFinal = nextCount === FINAL_BREAKTHROUGH_COUNT;/.test(code)
     && /const nextLevelCap = breakthroughLevelCap\(nextCount\)/.test(code));
+  // 限界突破★の確認画面は「育成マークの見た目」(TRANSCEND_DEBUG)の1タブへ統合した(2026-09-17)。
+  // 転生・超越と同じ形をした3画面が並んでいたため。見ている約束(共通の RebirthStars を使う)は変えていない
   check(`${label}: デバッグ画面も共通の RebirthStars を使う`,
-    code.includes("gameState==='BREAKTHROUGH_STAR_DEBUG'") || code.includes("gameState === 'BREAKTHROUGH_STAR_DEBUG'"));
+    code.includes("data-masu-look-breakthrough") && code.includes('BreakthroughStarDebugCard'));
   check(`${label}: デバッグ画面に指定された代表段階がある`,
     /\[0,\s*5,\s*10,\s*15,\s*20,\s*25,\s*30,\s*31,\s*32,\s*33,\s*34,\s*35\]/.test(code)
     && /\[1,\s*6,\s*11,\s*16,\s*21,\s*26\]/.test(code)

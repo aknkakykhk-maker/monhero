@@ -1033,6 +1033,8 @@ function MonsterHeroGame() {
   const [transcendExchangeError, setTranscendExchangeError] = useState('');
   // 超越デバッグ画面で選んでいる個体。デバッグ専用なので保存はしない
   const [transcendDebugId, setTranscendDebugId] = useState(null);
+  // 育成マークの見た目(転生/限界突破★/超越/試す準備)のタブ。保存しない画面の中だけの状態
+  const [masuLookTab, setMasuLookTab] = useState('reincarnate');
   // 超越強化の振り分け単位。通常強化(bulkEnhanceUnit)と同じ 1 / 5 / 10 / 100 / MAX
   const [transcendBulkUnit, setTranscendBulkUnit] = useState(1);
   // 超越ポイントリセットの書。確認シートの開閉と、連打で2冊消費しないためのロック
@@ -7122,7 +7124,7 @@ function MonsterHeroGame() {
   };
 
   // WAVE10を勝ち切ったときだけ呼ぶ。敗北・リタイア・途中離脱からは呼ばない。
-  // 保存するのは「実進行保存で実戦確認」から始めたランだけで、通常のBATTLE TESTでは
+  // 保存するのは「実進行保存で実戦確認」から始めたランだけで、通常のデバッグ戦では
   // 何が起きるはずだったかを画面へ出すだけにする(保存なし)。
   const finishSpeciesChallengeClear = async () => {
     const run=speciesChallengeBattleRunRef.current;
@@ -11946,13 +11948,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // (2026-09-17・ユーザー指摘「今は見れないものが多い」)。模様は元から保存しないので、
           // ここで擬似個体を足してもセーブデータには何の影響も無い
           const eligible=[...masuMons.filter(m=>ALL_PLAYER_MONSTERS[m.baseId])];
-          Object.values(ALL_PLAYER_MONSTERS).forEach(mon=>{if(mon?.id&&!eligible.some(m=>m.baseId===mon.id))eligible.push({id:`pattern-preview-${mon.id}`,baseId:mon.id,name:`${mon.name}（未所持・DEBUG表示）`,colors:[]});});
+          Object.values(ALL_PLAYER_MONSTERS).forEach(mon=>{if(mon?.id&&!eligible.some(m=>m.baseId===mon.id))eligible.push({id:`pattern-preview-${mon.id}`,baseId:mon.id,name:mon.name,colors:[]});});
           const selected=eligible.find(m=>String(m.id)===String(patternMasuId));
           const resetPattern=()=>{setPatternStep('attach');setPatternSettings(makePatternSettings());setPatternCustomColor({open:false,h:198,s:.77,v:.97});setPatternSizePreview(false);};
           return <main className="flex-1 min-h-0 flex flex-col bg-slate-950" style={{paddingTop:'env(safe-area-inset-top)',paddingBottom:'env(safe-area-inset-bottom)'}}>
             <div className="mh-debug-banner">DEBUG・模様は保存されません</div>
             <header className="flex items-center gap-2 px-2 py-1 shrink-0 border-b border-white/10"><button aria-label="戻る" onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3 text-slate-300"><ArrowLeft size={20}/></button><div className="min-w-0"><small className="block text-[8px] font-black text-fuchsia-400">PATTERN CUSTOM TEST</small><h2 className="truncate text-xs font-black">{selected?selected.name:'マスモン模様カスタム'}</h2></div>{selected&&<button onClick={()=>setPatternMasuId(null)} className="ml-auto min-h-[40px] px-3 rounded-xl bg-slate-800 text-[9px] font-black">変更</button>}</header>
-            {eligible.length===0?<section className="flex-1 flex items-center justify-center p-6 text-center font-black text-slate-300">カスタマイズできる所持マスモンがいません</section>:!selected?<section className="flex-1 min-h-0 overflow-y-auto mh-scroll p-4"><p className="mb-3 text-[11px] font-bold text-slate-400">所持マスモンを1体選択してください。</p><div className="grid grid-cols-3 gap-2">{eligible.map(m=>{const base=ALL_PLAYER_MONSTERS[m.baseId];return <button key={m.id} onClick={()=>{setPatternMasuId(m.id);resetPattern();}} className="min-h-[116px] rounded-2xl border border-fuchsia-500/30 bg-slate-900 p-2"><DyedMonsterImage baseId={m.baseId} src={masuDisplayImageUrl(base)} alt={m.name} masuColors={getMasuColors(m)} className="w-16 h-16 mx-auto object-contain"/><b className="block truncate text-[10px]">{m.name}</b></button>})}</div></section>:(()=>{
+            {eligible.length===0?<section className="flex-1 flex items-center justify-center p-6 text-center font-black text-slate-300">カスタマイズできる所持マスモンがいません</section>:!selected?<section className="flex-1 min-h-0 overflow-y-auto mh-scroll p-4"><p className="mb-3 text-[11px] font-bold text-slate-400">模様を試すモンスターを1体えらんでください（所持していない種もそのまま試せます）。</p><div className="grid grid-cols-3 gap-2">{eligible.map(m=>{const base=ALL_PLAYER_MONSTERS[m.baseId];return <button key={m.id} onClick={()=>{setPatternMasuId(m.id);resetPattern();}} className="min-h-[116px] rounded-2xl border border-fuchsia-500/30 bg-slate-900 p-2"><DyedMonsterImage baseId={m.baseId} src={masuDisplayImageUrl(base)} alt={m.name} masuColors={getMasuColors(m)} className="w-16 h-16 mx-auto object-contain"/><b className="block truncate text-[10px]">{m.name}</b></button>})}</div></section>:(()=>{
               const base=ALL_PLAYER_MONSTERS[selected.baseId],regions=dyeRegionCount(selected.baseId),colors=getMasuColors(selected);
               const mode=patternSettings.mode,selectedKey=patternSettings.selectedLayer;
               const selectedDecal=patternSettings.decals.find(d=>`decal:${d.id}`===selectedKey)||null;
@@ -12004,7 +12006,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const slider=(key,label,min,max,step)=><label className="block rounded-xl bg-slate-900 p-3"><span className="mb-2 flex justify-between text-[10px] font-black text-slate-300"><b>{label}</b><output>{values[key]}</output></span><input className="w-full accent-fuchsia-500" type="range" min={min} max={max} step={step} value={values[key]} onChange={e=>patchValue(key,e.target.value)}/></label>;
           const copyText=`${item.id}: { scale: ${values.scale}, x: ${values.x}, y: ${values.y} }`;
           return <main data-mh-screen className="flex-1 flex flex-col h-full min-h-0 p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
-            <header className="flex items-center gap-2 mb-3 shrink-0"><button onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><div><small className="text-[8px] font-black text-fuchsia-400">DEBUG・保存されません</small><h2 className="text-sm font-black">ブリーダーアイコン調整</h2></div></header>
+            <header className="flex items-center gap-2 mb-3 shrink-0"><button onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><div><small className="text-[8px] font-black text-fuchsia-400">DEBUG・保存されません</small><h2 className="text-sm font-black">プロフィールの見た目</h2></div></header>
             <div className="flex-1 min-h-0 overflow-y-auto mh-scroll space-y-3">
               <input type="search" value={iconAdjustQuery} onChange={e=>setIconAdjustQuery(e.target.value)} placeholder="名前・内部IDで検索" className="w-full min-h-[46px] rounded-xl bg-slate-900 border border-white/10 px-3 text-xs font-black"/>
               <select value={filteredItems.some(entry=>entry.id===item.id)?item.id:''} onChange={e=>e.target.value&&setIconAdjustId(e.target.value)} size={Math.min(6,Math.max(2,filteredItems.length))} className="w-full rounded-xl bg-slate-900 border border-white/10 p-2 text-xs font-black">{!filteredItems.length&&<option value="">一致するアイコンはありません</option>}{filteredItems.map(entry=><option key={entry.id} value={entry.id}>{entry.name}（{entry.id}）</option>)}</select>
@@ -12013,6 +12015,31 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {slider('scale','拡大率 scale',.5,5,.01)}{slider('x','左右位置 X',-50,50,1)}{slider('y','上下位置 Y',-50,130,1)}
               <pre className="whitespace-pre-wrap break-all rounded-xl bg-black/40 p-3 text-[10px] text-cyan-200">{copyText}</pre>
               <div className="grid grid-cols-2 gap-2"><button onClick={()=>setIconAdjustments(current=>({...current,[item.id]:initial}))} className="min-h-[46px] rounded-xl bg-slate-800 text-[10px] font-black">初期値へ戻す</button><button onClick={async()=>{await navigator.clipboard.writeText(copyText);window.alert('設定値をコピーしました。');}} className="min-h-[46px] rounded-xl bg-fuchsia-700 text-[10px] font-black">設定値をコピー</button></div>
+                    {/* プロフィールフレームの見た目確認(2026-09-15。2026-09-17にデバッグ設定からここへ移した)。
+                        未公開(released:false)のものも含めて**表示するだけ**。ここでは保存も付与もしない。
+                        デバッグ専用なので更新履歴・ヘルプには載せない(CLAUDE.md ⑤の但し書き)。
+                  ★以前はデバッグ設定の中にあり、枠へ入る絵が「いまの自分のアイコン」1つに固定されていた。
+                    ここへ移したことで、上で選んだどのアイコンでも枠との相性を見られる */}
+                    <section data-debug-profile-frames className="rounded-2xl border-2 border-amber-500/60 bg-amber-950/20 p-3">
+                      <div className="text-[10px] text-amber-300 font-black mb-2">🖼️ プロフィールフレーム × このアイコン（未公開ぶんも表示・保存しません）</div>
+                      {/* 豪華フレームはアイコンの外へ大きく出るので、3列にして上下の間を広く取る
+                          (4列だと隣どうし・名前と重なって確認しづらい) */}
+                      <div className="grid grid-cols-3 gap-x-3 gap-y-7">
+                        {PROFILE_FRAMES.map(frame=>(
+                          <div key={frame.id} className="flex flex-col items-center gap-2.5">
+                            <span className="mh-profile-avatar w-12 h-12">
+                              <span className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-full">
+                                <BreederIcon src={item.src} id={item.id} adjustment={values} alt="" className="w-full h-full"/>
+                              </span>
+                              <ProfileFrameLayer frameId={frame.released?frame.id:null}/>
+                              {!frame.released&&frame.kind==='image'&&<img src={frame.src} alt="" aria-hidden="true" draggable={false} style={profileFrameImageStyle(frame)} className="mh-profile-frame mh-profile-frame-image"/>}
+                              {!frame.released&&frame.kind==='css'&&<span aria-hidden="true" className={`mh-profile-frame mh-profile-frame-ring ${frame.className||''}`}/>}
+                            </span>
+                            <span className="text-[8px] font-black text-slate-300 leading-tight text-center">{frame.name}{frame.released?'':'（未公開）'}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
             </div>
           </main>;
         })()}
@@ -12020,6 +12047,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {/* ===== 超越デバッグ(デバッグ専用) =====
             上は「保存しない確認」、下は「セーブデータを書き換える準備」。
             準備のほうは押すたびに確認を出し、何が変わるかを画面にも書いておく。 */}
+        {/* ===== 育成マークの見た目(デバッグ専用) =====
+            もとは「転生表示確認」「限界突破★表示確認」「超越確認」の3画面に分かれていたが、
+            どれも『擬似個体を1体つくる → ★やバッジを重ねて見る → 演出を再生する』という
+            まったく同じ形で、超越の画面には転生3回と限界突破MAXの★がすでに両方写っていた
+            (2026-09-17・ユーザー指摘「似たようなのもあるし」)。1画面のタブにまとめてある。
+            ★最後の「試す準備」タブだけはセーブデータを書き換える。赤帯で区別する。 */}
         {gameState==='TRANSCEND_DEBUG'&&(()=>{
           const previewBase=Object.values(ALL_PLAYER_MONSTERS)[0];
           const previewMasu=(transcended)=>({id:`transcend-preview-${transcended}`,baseId:previewBase?.id,name:previewBase?.name,bondXp:0,rebirthCount:FINAL_BREAKTHROUGH_COUNT,reincarnateCount:3,colors:[],transcended});
@@ -12029,80 +12062,76 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const eligible=selected?canTranscendMasu(selected):null;
           const psycheHave=ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID);
           const xpRows=[MAX_MASU_LEVEL_CAP,MAX_MASU_LEVEL_CAP+1,MAX_MASU_LEVEL_CAP+10,MAX_MASU_LEVEL_CAP+50,TRANSCEND_LEVEL_CAP-1];
-          return <main data-mh-screen className="flex-1 flex flex-col h-full min-h-0 p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
-            <header className="flex items-center gap-2 mb-3 shrink-0"><button onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><div><small className="text-[8px] font-black text-amber-300">DEBUG・本番と同じ TranscendenceBadge / 超越演出</small><h2 className="text-sm font-black">超越確認</h2></div></header>
+          // 転生タブぶん。超越側の previewMasu と名前がぶつからないよう別名にしてある
+          const reincarnatePreview=(count)=>({id:`reincarnate-preview-${count}`,baseId:previewBase.id,name:previewBase.name,bondXp:0,rebirthCount:3,reincarnateCount:count,colors:[]});
+          const playPreview=(soulRankStage=0)=>{const masu={...reincarnatePreview(3),soulRankStage};setReincarnateAnimation({masu,base:previewBase,fromLevel:100,nextLevel:1,raisesSkill:false,keptSkillPoints:1,nextPoints:13});setTimeout(()=>setReincarnateAnimation(null),4100);};
+          const looks=[['reincarnate','転生'],['breakthrough','限界突破★'],['transcend','超越'],['prepare','試す準備']];
+          const look=looks.some(([id])=>id===masuLookTab)?masuLookTab:'reincarnate';
+          if(!previewBase)return null;
+          return <main data-mh-screen data-masu-look-debug className="flex-1 flex flex-col h-full min-h-0 p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
+            <header className="flex items-center gap-2 mb-2 shrink-0"><button onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><div><small className="text-[8px] font-black text-amber-300">DEBUG・本番と同じ★・オーラ・バッジ／「試す準備」だけ保存します</small><h2 className="text-sm font-black">育成マークの見た目</h2></div></header>
+            <div role="tablist" aria-label="見る段階" className="shrink-0 mb-2 grid grid-cols-4 gap-1">
+              {looks.map(([id,label])=><button key={id} type="button" role="tab" aria-selected={look===id} data-masu-look-tab={id} onClick={()=>setMasuLookTab(id)} className={`min-h-[42px] rounded-xl border px-0.5 text-[10px] font-black active:scale-95 ${look===id?(id==='prepare'?'border-rose-300 bg-rose-700 text-white':'border-amber-300 bg-amber-600 text-white'):'border-amber-500/30 bg-slate-900 text-amber-200/80'}`}>{label}</button>)}
+            </div>
+            {look==='prepare'&&<div className="mh-debug-banner shrink-0 mb-2">DEBUG・このタブだけセーブデータを書き換えます</div>}
             <div className="flex-1 min-h-0 overflow-y-auto mh-scroll space-y-4">
-              <section>
-                <h3 className="mb-2 text-[9px] font-black text-amber-300">1. 超越マーク（保存しません）</h3>
+              {look==='reincarnate'&&<div data-masu-look-reincarnate className="space-y-3">
+                <p className="mb-3 text-[9px] leading-relaxed text-slate-400">表示用の一時データだけを使います。所持マスモン・転生回数・ダイヤは変更も保存もしません。</p>
+                <section className="grid grid-cols-2 gap-3">{[0,1,2,3].map(count=>{const masu=reincarnatePreview(count);return <article key={count} className="rounded-2xl border border-white/10 bg-slate-900/90 p-3 text-center"><div className="mx-auto flex h-28 w-28 items-center justify-center"><div className="relative w-16 h-16 mh-reincarnate-stack"><div className="relative z-[1] w-16 h-16 overflow-hidden rounded-full border border-pink-400/40"><DyedMonsterImage baseId={previewBase.id} src={previewBase.iconUrl||previewBase.imgUrl} alt={previewBase.name} masuColors={[]} className="w-full h-full object-cover"/></div><SoulRankAura soulRankStage={Math.max(0,Math.min(5,count))}/><RebirthStars count={3} className="mh-rebirth-stars-overlay"/></div></div><b className="mh-monster-card-name mt-1 block text-[11px] text-white">{count===0?'未転生':count===1?'1回：青画像':count===2?'2回：黄画像':'3回：赤画像'}</b></article>})}</section>
+                <div className="grid grid-cols-2 gap-2">
+                  <button data-reincarnate-preview="plain" onClick={()=>playPreview(0)} className="min-h-[52px] rounded-2xl border-2 border-violet-300 bg-gradient-to-r from-violet-700 to-blue-600 text-[12px] font-black text-white active:scale-95">転生演出を再生<small className="block text-[8px] font-black text-violet-200">魂格なし</small></button>
+                  <button data-reincarnate-preview="soul" onClick={()=>playPreview(4)} className="min-h-[52px] rounded-2xl border-2 border-rose-300 bg-gradient-to-r from-rose-700 to-amber-600 text-[12px] font-black text-white active:scale-95">転生演出を再生<small className="block text-[8px] font-black text-rose-100">魂格Ⅳ</small></button>
+                </div>
+              </div>}
+              {look==='breakthrough'&&<div data-masu-look-breakthrough className="space-y-4">
+                <section><h3 className="mb-2 text-[9px] font-black text-amber-300">黄色・金・虹 比較</h3><div className="grid grid-cols-3 gap-1.5">{[10,30,35].map(count=><BreakthroughStarDebugCard key={count} count={count} compact/>)}</div></section>
+                <section><h3 className="mb-2 text-[9px] font-black text-slate-300">完成状態</h3><div className="grid grid-cols-2 gap-2">{[0,5,10,15,20,25,30,31,32,33,34,35].map(count=><BreakthroughStarDebugCard key={count} count={count}/>)}</div></section>
+                <section><h3 className="mb-2 text-[9px] font-black text-slate-300">色の切り替わり</h3><div className="grid grid-cols-2 gap-2">{[1,6,11,16,21,26].map(count=><BreakthroughStarDebugCard key={count} count={count}/>)}</div></section>
+              </div>}
+              {look==='transcend'&&<div data-masu-look-transcend className="space-y-4">
+                <section>
+                <h3 className="mb-2 text-[9px] font-black text-amber-300">超越マーク（保存しません）</h3>
                 <p className="mb-2 text-[9px] leading-relaxed text-slate-400">虹★{BREAKTHROUGH_STARS_PER_TIER}・転生3回と重ねて、隠れていないかを見ます。表示用の一時データだけを使います。</p>
-                {previewBase&&<div className="grid grid-cols-2 gap-3">{[false,true].map(on=>{const masu=previewMasu(on);return <article key={String(on)} className="rounded-2xl border border-white/10 bg-slate-900/90 p-3 text-center"><div className="relative mx-auto w-16 h-16 mh-reincarnate-stack"><div className="relative z-[1] w-16 h-16 overflow-hidden rounded-full border border-amber-400/40"><DyedMonsterImage baseId={masu.baseId} src={previewBase.iconUrl||previewBase.imgUrl} alt={previewBase.name} masuColors={[]} className="w-full h-full object-cover"/></div><SoulRankAura soulRankStage={3}/><RebirthStars count={FINAL_BREAKTHROUGH_COUNT} className="mh-rebirth-stars-overlay"/><TranscendenceBadge transcended={on}/></div><b className="mt-3 block text-[11px] text-white">{on?'超越済み':'未超越'}</b></article>})}</div>}
+                {previewBase&&<div className="grid grid-cols-2 gap-3">{[false,true].map(on=>{const masu=previewMasu(on);return <article key={String(on)} className="rounded-2xl border border-white/10 bg-slate-900/90 p-3 text-center"><div className="mx-auto flex h-28 w-28 items-center justify-center"><div className="relative w-16 h-16 mh-reincarnate-stack"><div className="relative z-[1] w-16 h-16 overflow-hidden rounded-full border border-amber-400/40"><DyedMonsterImage baseId={masu.baseId} src={previewBase.iconUrl||previewBase.imgUrl} alt={previewBase.name} masuColors={[]} className="w-full h-full object-cover"/></div><SoulRankAura soulRankStage={3}/><RebirthStars count={FINAL_BREAKTHROUGH_COUNT} className="mh-rebirth-stars-overlay"/><TranscendenceBadge transcended={on}/></div></div><b className="mh-monster-card-name mt-1 block text-[11px] text-white">{on?'超越済み':'未超越'}</b></article>})}</div>}
                 <div className="mt-2 flex items-center justify-center gap-4 rounded-2xl border border-white/10 bg-slate-900/90 py-3"><span className="relative inline-block w-10 h-10"><span className="block w-10 h-10 rounded-full bg-slate-800"/><TranscendenceBadge transcended small/></span><span className="relative inline-block w-10 h-10"><span className="block w-10 h-10 rounded-full bg-slate-800"/><TranscendenceBadge transcended/></span><small className="text-[9px] text-slate-400">small / 通常</small></div>
                 <button onClick={debugPlayTranscendAnimation} className="mt-2 w-full min-h-[52px] rounded-2xl border-2 border-amber-300 bg-gradient-to-r from-fuchsia-700 to-amber-600 text-sm font-black text-white active:scale-95">超越演出を再生</button>
-              </section>
-              <section>
-                <h3 className="mb-2 text-[9px] font-black text-slate-300">2. 数値の確認（保存しません）</h3>
+                </section>
+                <section>
+                <h3 className="mb-2 text-[9px] font-black text-slate-300">数値の確認（保存しません）</h3>
                 <div className="rounded-2xl border border-white/10 bg-slate-900/90 p-3 space-y-1 text-[10px] text-slate-300">
-                  <div className="flex justify-between"><span>解放条件</span><b className="text-white">Lv.{MAX_MASU_LEVEL_CAP}・限界突破{FINAL_BREAKTHROUGH_COUNT}回</b></div>
-                  <div className="flex justify-between"><span>費用</span><b className="text-white">虹のプシュケー {TRANSCEND_PSYCHE_COST.toLocaleString()} ＋ ダイヤ {TRANSCEND_DIAMOND_COST.toLocaleString()}</b></div>
-                  <div className="flex justify-between"><span>Lv上限</span><b className="text-white">{MAX_MASU_LEVEL_CAP} → {TRANSCEND_LEVEL_CAP}</b></div>
-                  <div className="flex justify-between"><span>交換レート</span><b className="text-white">虹のプシュケー {TRANSCEND_PSYCHE_PER_POINT} → 超越P 1</b></div>
-                  <div className="pt-1 border-t border-white/10">{xpRows.map(lv=><div key={lv} className="flex justify-between"><span>Lv.{lv} → {lv+1}</span><b className="text-white font-mono">{xpForBondLevelAt(lv).toLocaleString()}</b></div>)}</div>
-                  <div className="flex justify-between pt-1 border-t border-white/10"><span>Lv.{MAX_MASU_LEVEL_CAP} → {TRANSCEND_LEVEL_CAP} 累計</span><b className="text-white font-mono">{(totalBondXpForLevel(TRANSCEND_LEVEL_CAP)-totalBondXpForLevel(MAX_MASU_LEVEL_CAP)).toLocaleString()}</b></div>
+                <div className="flex justify-between"><span>解放条件</span><b className="text-white">Lv.{MAX_MASU_LEVEL_CAP}・限界突破{FINAL_BREAKTHROUGH_COUNT}回</b></div>
+                <div className="flex justify-between"><span>費用</span><b className="text-white">虹のプシュケー {TRANSCEND_PSYCHE_COST.toLocaleString()} ＋ ダイヤ {TRANSCEND_DIAMOND_COST.toLocaleString()}</b></div>
+                <div className="flex justify-between"><span>Lv上限</span><b className="text-white">{MAX_MASU_LEVEL_CAP} → {TRANSCEND_LEVEL_CAP}</b></div>
+                <div className="flex justify-between"><span>交換レート</span><b className="text-white">虹のプシュケー {TRANSCEND_PSYCHE_PER_POINT} → 超越P 1</b></div>
+                <div className="pt-1 border-t border-white/10">{xpRows.map(lv=><div key={lv} className="flex justify-between"><span>Lv.{lv} → {lv+1}</span><b className="text-white font-mono">{xpForBondLevelAt(lv).toLocaleString()}</b></div>)}</div>
+                <div className="flex justify-between pt-1 border-t border-white/10"><span>Lv.{MAX_MASU_LEVEL_CAP} → {TRANSCEND_LEVEL_CAP} 累計</span><b className="text-white font-mono">{(totalBondXpForLevel(TRANSCEND_LEVEL_CAP)-totalBondXpForLevel(MAX_MASU_LEVEL_CAP)).toLocaleString()}</b></div>
                 </div>
-              </section>
-              <section>
-                <h3 className="mb-2 text-[9px] font-black text-rose-300">3. 実際に試す準備（セーブデータを書き換えます）</h3>
+                </section>
+              </div>}
+              {look==='prepare'&&<div data-masu-look-prepare className="space-y-2">
+                <section>
+                <h3 className="mb-2 text-[9px] font-black text-rose-300">実際に試す準備（セーブデータを書き換えます）</h3>
                 <p className="mb-2 text-[9px] leading-relaxed text-slate-400">選んだ個体の絆経験値・限界突破回数と、共通の虹のプシュケー・ダイヤを書き換えます。押すたびに確認が出ます。</p>
                 {masuMons.length===0
-                  ? <p className="rounded-2xl border border-white/10 bg-slate-900/90 p-4 text-center text-[10px] text-slate-400">所持マスモンがありません。</p>
-                  : <>
-                    <div className="grid grid-cols-3 gap-1.5">{masuMons.map(m=><button key={m.id} data-transcend-debug-candidate onClick={()=>setTranscendDebugId(m.id)} className={`min-h-[62px] rounded-xl p-1 text-[8px] font-black ${String(m.id)===String(transcendDebugId)?'bg-amber-900 border-2 border-amber-300 text-amber-100':'bg-slate-900 border border-white/10 text-slate-400'}`}><span className="relative mx-auto block w-8 h-8"><span className="block w-8 h-8 overflow-hidden rounded-full"><DyedMonsterImage baseId={m.baseId} src={ALL_PLAYER_MONSTERS[m.baseId]?.iconUrl} alt={m.name} masuColors={getMasuColors(m)} className="w-full h-full object-cover"/></span><TranscendenceBadge transcended={normalizeMasuProgression(m).transcended} soulRankStage={normalizeMasuProgression(m).soulRankStage} small/></span><b className="mt-1 block truncate">{m.name}</b><small className="block">Lv.{masuBondLevelInfo(m).level}／{normalizeMasuProgression(m).rebirthCount}凸</small></button>)}</div>
-                    {selected&&<div className="mt-2 rounded-2xl border border-white/10 bg-slate-900/90 p-3 space-y-1 text-[10px] text-slate-300">
-                      <div className="flex justify-between"><span>{selected.name}</span><b className="text-white">Lv.{level}／上限{norm.levelCap}／{norm.rebirthCount}凸</b></div>
-                      <div className="flex justify-between"><span>超越</span><b className="text-white">{norm.transcended?'済み':'まだ'}／超越P {norm.transcendPoints}／基礎+適性 {transcendAptBoostTotal(selected)}段階</b></div>
-                      <div className="flex justify-between"><span>所持</span><b className="text-white">虹のプシュケー {psycheHave.toLocaleString()}／ダイヤ {gold.toLocaleString()}</b></div>
-                      <div className="pt-1 border-t border-white/10 text-[9px] text-amber-200">{eligible.ok?'いまの状態で超越できます。':eligible.reason}</div>
-                    </div>}
-                    <div className="mt-2 grid grid-cols-2 gap-2">
-                      <button data-transcend-debug-prepare disabled={!selected} onClick={debugTranscendPrepare} className="col-span-2 min-h-[46px] rounded-xl bg-amber-800/70 border border-amber-300/60 text-white text-[10px] font-black active:scale-95 disabled:opacity-30">解放条件を満たす（Lv.{MAX_MASU_LEVEL_CAP}・{FINAL_BREAKTHROUGH_COUNT}凸）</button>
-                      <button data-transcend-debug-cost onClick={debugTranscendGrantCost} className="col-span-2 min-h-[46px] rounded-xl bg-amber-800/70 border border-amber-300/60 text-white text-[10px] font-black active:scale-95">費用ぶんを配る（プシュケー・ダイヤ）</button>
-                      <button data-transcend-debug-points disabled={!selected} onClick={()=>debugTranscendGrantPoints(10)} className="min-h-[46px] rounded-xl bg-slate-800 border border-white/20 text-slate-200 text-[10px] font-black active:scale-95 disabled:opacity-30">超越Pを+10</button>
-                      <button data-transcend-debug-reset disabled={!selected} onClick={debugTranscendReset} className="min-h-[46px] rounded-xl bg-rose-950/70 border border-rose-500/50 text-rose-100 text-[10px] font-black active:scale-95 disabled:opacity-30">超越を取り消す</button>
-                      <button disabled={!selected} onClick={()=>{setTranscendSelectedId(transcendDebugId);setTranscendError('');setGameState('MASU_TRANSCENDENCE');}} className="col-span-2 min-h-[46px] rounded-xl bg-fuchsia-900/70 border border-fuchsia-300/60 text-white text-[10px] font-black active:scale-95 disabled:opacity-30">神殿の「超越」を開く</button>
-                    </div>
-                  </>}
-              </section>
-            </div>
-          </main>;
-        })()}
-
-        {gameState==='BREAKTHROUGH_STAR_DEBUG'&&(
-          <main data-mh-screen className="flex-1 flex flex-col h-full min-h-0 p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
-            <header className="flex items-center gap-2 mb-3 shrink-0"><button onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><div><small className="text-[8px] font-black text-amber-400">DEBUG・本番と同じ RebirthStars</small><h2 className="text-sm font-black">限界突破★表示確認</h2></div></header>
-            <div className="flex-1 min-h-0 overflow-y-auto mh-scroll space-y-4">
-              <section><h3 className="mb-2 text-[9px] font-black text-amber-300">黄色・金・虹 比較</h3><div className="grid grid-cols-3 gap-1.5">{[10,30,35].map(count=><BreakthroughStarDebugCard key={count} count={count} compact/>)}</div></section>
-              <section><h3 className="mb-2 text-[9px] font-black text-slate-300">完成状態</h3><div className="grid grid-cols-2 gap-2">{[0,5,10,15,20,25,30,31,32,33,34,35].map(count=><BreakthroughStarDebugCard key={count} count={count}/>)}</div></section>
-              <section><h3 className="mb-2 text-[9px] font-black text-slate-300">色の切り替わり</h3><div className="grid grid-cols-2 gap-2">{[1,6,11,16,21,26].map(count=><BreakthroughStarDebugCard key={count} count={count}/>)}</div></section>
-            </div>
-          </main>
-        )}
-
-        {gameState==='REINCARNATE_DISPLAY_DEBUG'&&(()=>{
-          const base=Object.values(ALL_PLAYER_MONSTERS)[0];
-          if(!base)return null;
-          const previewMasu=(count)=>({id:`reincarnate-preview-${count}`,baseId:base.id,name:base.name,bondXp:0,rebirthCount:3,reincarnateCount:count,colors:[]});
-          // 魂格オーラは魂格を持つ個体にしか出ない。演出そのものは魂格0でも成立していないといけないので、
-          // 「魂格なし」と「魂格あり」の両方をここから再生できるようにしてある
-          const playPreview=(soulRankStage=0)=>{const masu={...previewMasu(3),soulRankStage};setReincarnateAnimation({masu,base,fromLevel:100,nextLevel:1,raisesSkill:false,keptSkillPoints:1,nextPoints:13});setTimeout(()=>setReincarnateAnimation(null),4100);};
-          return <main data-mh-screen className="flex-1 flex flex-col h-full min-h-0 p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
-            <header className="flex items-center gap-2 mb-3 shrink-0"><button onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><div><small className="text-[8px] font-black text-cyan-300">DEBUG・本番と同じ ReincarnateAura / RebirthStars</small><h2 className="text-sm font-black">転生表示確認</h2></div></header>
-            <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
-            <p className="mb-3 text-[9px] leading-relaxed text-slate-400">表示用の一時データだけを使います。所持マスモン・転生回数・ダイヤは変更も保存もしません。</p>
-            <section className="grid grid-cols-2 gap-3">{[0,1,2,3].map(count=>{const masu=previewMasu(count);return <article key={count} className="rounded-2xl border border-white/10 bg-slate-900/90 p-3 text-center"><div className="relative mx-auto w-16 h-16 mh-reincarnate-stack"><div className="relative z-[1] w-16 h-16 overflow-hidden rounded-full border border-pink-400/40"><DyedMonsterImage baseId={base.id} src={base.iconUrl||base.imgUrl} alt={base.name} masuColors={[]} className="w-full h-full object-cover"/></div><SoulRankAura soulRankStage={Math.max(0,Math.min(5,count))}/><RebirthStars count={3} className="mh-rebirth-stars-overlay"/></div><b className="mt-3 block text-[11px] text-white">{count===0?'未転生':count===1?'1回：青画像':count===2?'2回：黄画像':'3回：赤画像'}</b></article>})}</section>
-            </div>
-            <div className="mt-3 shrink-0 grid grid-cols-2 gap-2">
-              <button data-reincarnate-preview="plain" onClick={()=>playPreview(0)} className="min-h-[52px] rounded-2xl border-2 border-violet-300 bg-gradient-to-r from-violet-700 to-blue-600 text-[12px] font-black text-white active:scale-95">転生演出を再生<small className="block text-[8px] font-black text-violet-200">魂格なし</small></button>
-              <button data-reincarnate-preview="soul" onClick={()=>playPreview(4)} className="min-h-[52px] rounded-2xl border-2 border-rose-300 bg-gradient-to-r from-rose-700 to-amber-600 text-[12px] font-black text-white active:scale-95">転生演出を再生<small className="block text-[8px] font-black text-rose-100">魂格Ⅳ</small></button>
+                ? <p className="rounded-2xl border border-white/10 bg-slate-900/90 p-4 text-center text-[10px] text-slate-400">所持マスモンがありません。</p>
+                : <>
+                <div className="grid grid-cols-3 gap-1.5">{masuMons.map(m=><button key={m.id} data-transcend-debug-candidate onClick={()=>setTranscendDebugId(m.id)} className={`min-h-[62px] rounded-xl p-1 text-[8px] font-black ${String(m.id)===String(transcendDebugId)?'bg-amber-900 border-2 border-amber-300 text-amber-100':'bg-slate-900 border border-white/10 text-slate-400'}`}><span className="relative mx-auto block w-8 h-8"><span className="block w-8 h-8 overflow-hidden rounded-full"><DyedMonsterImage baseId={m.baseId} src={ALL_PLAYER_MONSTERS[m.baseId]?.iconUrl} alt={m.name} masuColors={getMasuColors(m)} className="w-full h-full object-cover"/></span><TranscendenceBadge transcended={normalizeMasuProgression(m).transcended} soulRankStage={normalizeMasuProgression(m).soulRankStage} small/></span><b className="mt-1 block truncate">{m.name}</b><small className="block">Lv.{masuBondLevelInfo(m).level}／{normalizeMasuProgression(m).rebirthCount}凸</small></button>)}</div>
+                {selected&&<div className="mt-2 rounded-2xl border border-white/10 bg-slate-900/90 p-3 space-y-1 text-[10px] text-slate-300">
+                <div className="flex justify-between"><span>{selected.name}</span><b className="text-white">Lv.{level}／上限{norm.levelCap}／{norm.rebirthCount}凸</b></div>
+                <div className="flex justify-between"><span>超越</span><b className="text-white">{norm.transcended?'済み':'まだ'}／超越P {norm.transcendPoints}／基礎+適性 {transcendAptBoostTotal(selected)}段階</b></div>
+                <div className="flex justify-between"><span>所持</span><b className="text-white">虹のプシュケー {psycheHave.toLocaleString()}／ダイヤ {gold.toLocaleString()}</b></div>
+                <div className="pt-1 border-t border-white/10 text-[9px] text-amber-200">{eligible.ok?'いまの状態で超越できます。':eligible.reason}</div>
+                </div>}
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                <button data-transcend-debug-prepare disabled={!selected} onClick={debugTranscendPrepare} className="col-span-2 min-h-[46px] rounded-xl bg-amber-800/70 border border-amber-300/60 text-white text-[10px] font-black active:scale-95 disabled:opacity-30">解放条件を満たす（Lv.{MAX_MASU_LEVEL_CAP}・{FINAL_BREAKTHROUGH_COUNT}凸）</button>
+                <button data-transcend-debug-cost onClick={debugTranscendGrantCost} className="col-span-2 min-h-[46px] rounded-xl bg-amber-800/70 border border-amber-300/60 text-white text-[10px] font-black active:scale-95">費用ぶんを配る（プシュケー・ダイヤ）</button>
+                <button data-transcend-debug-points disabled={!selected} onClick={()=>debugTranscendGrantPoints(10)} className="min-h-[46px] rounded-xl bg-slate-800 border border-white/20 text-slate-200 text-[10px] font-black active:scale-95 disabled:opacity-30">超越Pを+10</button>
+                <button data-transcend-debug-reset disabled={!selected} onClick={debugTranscendReset} className="min-h-[46px] rounded-xl bg-rose-950/70 border border-rose-500/50 text-rose-100 text-[10px] font-black active:scale-95 disabled:opacity-30">超越を取り消す</button>
+                <button disabled={!selected} onClick={()=>{setTranscendSelectedId(transcendDebugId);setTranscendError('');setGameState('MASU_TRANSCENDENCE');}} className="col-span-2 min-h-[46px] rounded-xl bg-fuchsia-900/70 border border-fuchsia-300/60 text-white text-[10px] font-black active:scale-95 disabled:opacity-30">神殿の「超越」を開く</button>
+                </div>
+                </>}
+                </section>
+              </div>}
             </div>
           </main>;
         })()}
@@ -12599,8 +12628,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
         {gameState==='RHYTHM_DEBUG'&&(
           <main data-rhythm-debug-screen className="flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white" style={{paddingTop:'env(safe-area-inset-top)'}}>
-            <header className="z-10 flex shrink-0 items-center gap-2 border-b border-cyan-400/15 bg-slate-950/95 px-3 py-1"><button aria-label="デバッグ設定へ戻る" onClick={()=>setGameState('DEBUG_SETTINGS')} className="min-h-[44px] min-w-[44px] text-slate-300"><ArrowLeft size={20}/></button><div className="min-w-0 flex-1"><small className="block text-[8px] font-black text-cyan-300">DEBUG ONLY・STEP 1</small><h2 className="text-sm font-black">音ゲー基盤確認</h2></div><button data-rhythm-options-open onClick={()=>{setRhythmOptionsBack('RHYTHM_DEBUG');setGameState('RHYTHM_OPTIONS');}} className="min-h-[44px] shrink-0 rounded-xl border border-cyan-300/60 bg-cyan-950 px-3 text-[10px] font-black text-cyan-100">⚙️ オプション</button></header>
-            <nav data-rhythm-debug-tabs aria-label="音ゲーデバッグの表示切り替え" className="grid shrink-0 grid-cols-3 border-b border-cyan-400/15 bg-slate-950/95">{[['play','▶ プレイ'],['chart','🎼 譜面制作'],['settings','⚙️ 設定・記録']].map(([id,label])=><button key={id} type="button" aria-pressed={rhythmDebugTab===id} onClick={()=>{if(id==='chart')setRhythmChartToolsOpened(true);setRhythmDebugTab(id);}} className={`min-h-[44px] border-b-2 px-1 text-[11px] font-black ${rhythmDebugTab===id?'border-cyan-300 bg-cyan-950/50 text-cyan-100':'border-transparent text-slate-400'}`}>{label}</button>)}</nav>
+            <header className="z-10 flex shrink-0 items-center gap-2 border-b border-cyan-400/15 bg-slate-950/95 px-3 py-1"><button aria-label="デバッグ設定へ戻る" onClick={()=>setGameState('DEBUG_SETTINGS')} className="min-h-[44px] min-w-[44px] text-slate-300"><ArrowLeft size={20}/></button><div className="min-w-0 flex-1"><small className="block text-[8px] font-black text-cyan-300">DEBUG ONLY・STEP 1</small><h2 className="text-sm font-black">モンヒロビート 基盤確認</h2></div><button data-rhythm-options-open onClick={()=>{setRhythmOptionsBack('RHYTHM_DEBUG');setGameState('RHYTHM_OPTIONS');}} className="min-h-[44px] shrink-0 rounded-xl border border-cyan-300/60 bg-cyan-950 px-3 text-[10px] font-black text-cyan-100">⚙️ オプション</button></header>
+            <nav data-rhythm-debug-tabs aria-label="モンヒロビート デバッグの表示切り替え" className="grid shrink-0 grid-cols-3 border-b border-cyan-400/15 bg-slate-950/95">{[['play','▶ プレイ'],['chart','🎼 譜面制作'],['settings','⚙️ 設定・記録']].map(([id,label])=><button key={id} type="button" aria-pressed={rhythmDebugTab===id} onClick={()=>{if(id==='chart')setRhythmChartToolsOpened(true);setRhythmDebugTab(id);}} className={`min-h-[44px] border-b-2 px-1 text-[11px] font-black ${rhythmDebugTab===id?'border-cyan-300 bg-cyan-950/50 text-cyan-100':'border-transparent text-slate-400'}`}>{label}</button>)}</nav>
             <div className="flex-1 min-h-0 overflow-y-auto mh-scroll px-3 pt-3" style={{paddingBottom:'calc(.75rem + env(safe-area-inset-bottom))'}}>
             <div hidden={rhythmDebugTab!=='settings'}>
             <div data-rhythm-debug-calibration className="mb-3"/>
@@ -12647,33 +12676,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <button onClick={()=>setGameState('MONSTER_IMAGE_DEBUG')} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black">🖼️ モンスター画像・染色確認<small className="block text-[8px] text-cyan-300">本番表示と染色を保存せず確認</small></button>
                   <button onClick={()=>{setDyeMaskEditorOpened(true);setGameState('DYE_MASK_POSITION_DEBUG');}} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-400 text-cyan-100 rounded-2xl font-black">🖌️ 染色マスク編集<small className="block text-[8px] text-cyan-300">全ベースモンを選択して直接描画・PNG出力</small></button>
                   <button onClick={()=>{setPatternMasuId(null);setPatternSettings(makePatternSettings());setGameState('MASU_PATTERN_DEBUG');}} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black">🎨 マスモン模様カスタムテスト<small className="block text-[8px] text-cyan-300">模様は保存されません</small></button>
-                  <button onClick={()=>setGameState('REINCARNATE_DISPLAY_DEBUG')} className="w-full min-h-[64px] bg-violet-950 border-2 border-cyan-300 text-violet-100 rounded-2xl font-black">♻️ 転生表示確認<small className="block text-[8px] text-cyan-200">0～3回と完了演出を保存せず比較</small></button>
-                  <button onClick={()=>setGameState('BREAKTHROUGH_STAR_DEBUG')} className="w-full min-h-[64px] bg-amber-950 border-2 border-amber-500 text-amber-100 rounded-2xl font-black">⭐ 限界突破★表示確認<small className="block text-[8px] text-amber-300">全色段階を本番と同じ★で比較</small></button>
-                  <button data-debug-transcend onClick={()=>{setTranscendDebugId(null);setGameState('TRANSCEND_DEBUG');}} className="w-full min-h-[64px] bg-fuchsia-950 border-2 border-amber-300 text-amber-100 rounded-2xl font-black">🌟 超越確認<small className="block text-[8px] text-amber-200">マーク・演出・必要XPの確認と、試すための準備</small></button>
-                  <button onClick={()=>setGameState('BREEDER_ICON_DEBUG')} className="w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black">🙂 ブリーダーアイコン調整<small className="block text-[8px] text-fuchsia-300">表示値は保存されません</small></button>
-                  {/* プロフィールフレームの見た目確認(2026-09-15)。
-                      未公開(released:false)のものも含めて**表示するだけ**。ここでは保存も付与もしない。
-                      デバッグ専用なので更新履歴・ヘルプには載せない(CLAUDE.md ⑤の但し書き) */}
-                  <section data-debug-profile-frames className="rounded-2xl border-2 border-amber-500/60 bg-amber-950/20 p-3">
-                    <div className="text-[10px] text-amber-300 font-black mb-2">🖼️ プロフィールフレーム見た目確認（未公開ぶんも表示・保存しません）</div>
-                    {/* 豪華フレームはアイコンの外へ大きく出るので、3列にして上下の間を広く取る
-                        (4列だと隣どうし・名前と重なって確認しづらい) */}
-                    <div className="grid grid-cols-3 gap-x-3 gap-y-7">
-                      {PROFILE_FRAMES.map(frame=>(
-                        <div key={frame.id} className="flex flex-col items-center gap-2.5">
-                          <span className="mh-profile-avatar w-12 h-12">
-                            <span className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-full">
-                              {resolveIconUrl(breederIcon)?<BreederIcon src={resolveIconUrl(breederIcon)} id={breederIcon} alt="" className="w-full h-full"/>:<User size={22} className="text-indigo-400"/>}
-                            </span>
-                            <ProfileFrameLayer frameId={frame.released?frame.id:null}/>
-                            {!frame.released&&frame.kind==='image'&&<img src={frame.src} alt="" aria-hidden="true" draggable={false} style={profileFrameImageStyle(frame)} className="mh-profile-frame mh-profile-frame-image"/>}
-                            {!frame.released&&frame.kind==='css'&&<span aria-hidden="true" className={`mh-profile-frame mh-profile-frame-ring ${frame.className||''}`}/>}
-                          </span>
-                          <span className="text-[8px] font-black text-slate-300 leading-tight text-center">{frame.name}{frame.released?'':'（未公開）'}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
+                  {/* 転生・限界突破★・超越の見た目は1画面のタブへまとめた(2026-09-17)。入口もここ1つだけにする */}
+                  <button data-debug-transcend onClick={()=>{setTranscendDebugId(null);setMasuLookTab('reincarnate');setGameState('TRANSCEND_DEBUG');}} className="w-full min-h-[64px] bg-amber-950 border-2 border-amber-400 text-amber-100 rounded-2xl font-black">⭐ 育成マークの見た目<small className="block text-[8px] text-amber-300">転生のオーラ・限界突破の★・超越マークを1画面で見比べる／超越を試す準備もここ</small></button>
+                  <button onClick={()=>setGameState('BREEDER_ICON_DEBUG')} className="w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black">🙂 プロフィールの見た目<small className="block text-[8px] text-fuchsia-300">顔アイコンの拡大・位置を決めてコピー／フレームとの相性もここで見る</small></button>
                 </div>
               </details>
 
@@ -12715,8 +12720,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <details className="rounded-2xl border border-indigo-400/40 bg-indigo-950/30">
                 <summary className="cursor-pointer select-none px-3 py-3 text-[11px] font-black text-cyan-200">🎵 モンヒロビート<small className="block text-[8px] font-bold text-cyan-400/80">音ゲーデバッグ・体験版の導線・イベントの会話と告知</small></summary>
                 <div className="space-y-2 border-t border-indigo-400/30 p-3">
-                  <button data-debug-rhythm-mode onClick={openRhythmDebug} className="w-full min-h-[64px] rounded-2xl border-2 border-cyan-300 bg-indigo-950 text-cyan-100 font-black">🎵 音ゲーデバッグ<small className="block text-[8px] text-cyan-300">曲・難易度・設定・BEST保存基盤を確認</small></button>
-                  <button data-debug-rhythm-demo onClick={openRhythmDemo} className="w-full min-h-[64px] rounded-2xl border-2 border-amber-300 bg-amber-950/40 text-amber-100 font-black">🎼 音ゲー体験版（正式導線）<small className="block text-[8px] text-amber-300">公開したときプレイヤーが通る画面。Monster Hero 1曲・3難易度</small></button>
+                  <button data-debug-rhythm-mode onClick={openRhythmDebug} className="w-full min-h-[64px] rounded-2xl border-2 border-cyan-300 bg-indigo-950 text-cyan-100 font-black">🎵 モンヒロビート デバッグ<small className="block text-[8px] text-cyan-300">曲・難易度・設定・BEST保存基盤を確認</small></button>
+                  <button data-debug-rhythm-demo onClick={openRhythmDemo} className="w-full min-h-[64px] rounded-2xl border-2 border-amber-300 bg-amber-950/40 text-amber-100 font-black">🎼 モンヒロビート 体験版（正式導線）<small className="block text-[8px] text-amber-300">公開したときプレイヤーが通る画面。Monster Hero 1曲・3難易度</small></button>
                   {/* モンヒロビートのイベント(週末ゲリラ杯)の確認。開催の時刻を待たずに見られる。
                       どれも「見た」にしないので、本番のときにちゃんと出る。
                       デバッグ専用なので更新履歴・ヘルプには載せない(CLAUDE.md ⑤の但し書き) */}
@@ -12818,11 +12823,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 {!speciesChallengeDebugRun?<button disabled={!heroId||!selectionValidation.valid} onClick={startJoinSimulation} className="min-h-[46px] w-full rounded-xl bg-emerald-700 text-[10px] font-black disabled:opacity-30">この編成でシミュレーション開始</button>:<section className="space-y-2 rounded-xl bg-black/30 p-2 text-[9px]"><div><b>勇者：</b>{entryLabel(speciesChallengeDebugRun.heroId)}</div><div><b>加入済み：</b>{speciesChallengeDebugRun.joinedAllyIds.length?speciesChallengeDebugRun.joinedAllyIds.map(entryLabel).join('、'):'なし'}</div><div><b>未加入：</b>{speciesChallengeUnjoinedAllies(speciesChallengeDebugRun).length?speciesChallengeUnjoinedAllies(speciesChallengeDebugRun).map(entryLabel).join('、'):'なし'}</div>{speciesChallengeDebugWaveLog.map(log=><div key={log.wave} data-species-wave-log={log.wave} className="rounded-lg border border-white/10 p-2"><b>WAVE{log.wave}：</b>{log.joinedAllyId?entryLabel(log.joinedAllyId):'加入なし'}<br/><span className="text-amber-300">⚡ ガッツ回復：実行対象</span><br/><span className="text-fuchsia-300">加入ボーナス：{log.bonus?`HP+${log.bonus.hp}／力+${log.bonus.atk}／防+${log.bonus.def}／G+${log.bonus.guts}`:'なし'}</span></div>)}{nextJoinWave&&<div><b>WAVE{nextJoinWave}で誰を加入させるか</b>{speciesChallengeUnjoinedAllies(speciesChallengeDebugRun).length?<div className="mt-1 grid grid-cols-2 gap-1">{speciesChallengeUnjoinedAllies(speciesChallengeDebugRun).map(id=><button key={id} onClick={()=>simulateWave(id)} className="min-h-[44px] rounded-xl bg-fuchsia-800 px-2 text-[8px] font-black">{entryLabel(id)}を加入</button>)}</div>:<button onClick={()=>simulateWave(null)} className="mt-1 min-h-[44px] w-full rounded-xl bg-slate-700 font-black">加入なしで進む（ガッツ回復あり）</button>}</div>}{!nextJoinWave&&<button onClick={()=>{setSpeciesChallengeDebugRun(null);setSpeciesChallengeDebugWaveLog([]);}} className="min-h-[44px] w-full rounded-xl border border-cyan-400 font-black">編成選択へ戻る</button>}</section>}
               </article>
               {/* 内部完成の確認用。ここからだけ、本番と同じ流れのまま結果を実際に保存できる。
-                  通常の BATTLE TEST → ⚔️バトルモード は保存なしのまま変えない */}
+                  通常の デバッグ設定 → ⚔️バトル → ⚔️バトルモード は保存なしのまま変えない */}
               <article data-species-real-run className="space-y-2 rounded-2xl border-2 border-red-400/60 bg-red-950/25 p-3">
                 <h3 className="text-[11px] font-black text-red-200">実進行保存で実戦確認</h3>
                 <p className="text-[8px] leading-relaxed text-red-100">⚠️ 実際の種族チャレンジ進行・所持品を変更します。本番と同じ画面・同じバトルで進み、WAVE10までクリアすると「クリア状況」「次の難易度の解放」「初回の超越の実」「種族×難易度の自己記録」を実際に保存します。全国ランキングへは送信しません。</p>
-                <p className="text-[8px] text-slate-400">通常の BATTLE TEST →「⚔️ バトルモード」から入った場合は、これまでどおり何も保存しません。</p>
+                <p className="text-[9px] text-slate-400">通常のデバッグ設定 →「⚔️ バトル」→「⚔️ バトルモード」から入った場合は、これまでどおり何も保存しません。</p>
                 <button data-species-real-run-start onClick={()=>{if(!window.confirm('実際の種族チャレンジ進行・所持品を変更します。よろしいですか？'))return;openSpeciesChallengeSelection({saveProgress:true,fromDebug:true});}} className="min-h-[46px] w-full rounded-xl bg-red-700 text-[10px] font-black text-white">実進行を保存する実戦を始める</button>
               </article>
               <article data-transcend-fruit-debug className="space-y-2 rounded-2xl border border-fuchsia-400/50 bg-fuchsia-950/20 p-3"><h3 className="text-[11px] font-black text-fuchsia-200">超越の実 → 超越ポイント確認</h3>{selectedMasu?<><label className="block text-[9px] font-black">所持マスモン<select aria-label="所持マスモン" value={selectedMasu.id} onChange={e=>{setTranscendFruitDebugMasuId(e.target.value);setTranscendFruitDebugItemId('');setTranscendFruitDebugResult(null);}} className="mt-1 block min-h-[44px] w-full rounded-xl bg-slate-900 px-3">{masuMons.map(m=><option key={m.id} value={m.id}>{m.name}／{ALL_PLAYER_MONSTERS[m.baseId]?.name||m.baseId}</option>)}</select></label><div className="grid grid-cols-2 gap-2 text-center text-[9px]"><span className="rounded-lg bg-slate-900 p-2">対応種族の実<br/><b>{transcendFruitOwnedCount(ownedItems,speciesFruitId)}</b></span><span className="rounded-lg bg-slate-900 p-2">虹の実<br/><b>{transcendFruitOwnedCount(ownedItems,RAINBOW_TRANSCEND_FRUIT_ITEM_ID)}</b></span></div><div className="grid grid-cols-2 gap-2"><button aria-pressed={selectedFruitId===speciesFruitId} onClick={()=>setTranscendFruitDebugItemId(speciesFruitId)} className={`min-h-[44px] rounded-xl text-[9px] font-black ${selectedFruitId===speciesFruitId?'bg-fuchsia-700 ring-2 ring-white':'bg-slate-800'}`}>対応種族の実を選択</button><button aria-pressed={selectedFruitId===RAINBOW_TRANSCEND_FRUIT_ITEM_ID} onClick={()=>setTranscendFruitDebugItemId(RAINBOW_TRANSCEND_FRUIT_ITEM_ID)} className={`min-h-[44px] rounded-xl text-[9px] font-black ${selectedFruitId===RAINBOW_TRANSCEND_FRUIT_ITEM_ID?'bg-fuchsia-700 ring-2 ring-white':'bg-slate-800'}`}>虹の実を選択</button></div><div>{!selectedFruitId&&<p className="text-center text-[8px] font-black text-amber-300">使用する実を明示選択してください。</p>}</div><div className="grid grid-cols-3 gap-2"><button disabled={!selectedFruitId} onClick={()=>useFruit(1)} className="min-h-[44px] rounded-xl bg-emerald-700 font-black disabled:opacity-30">1</button><button disabled={!selectedFruitId} onClick={()=>useFruit(10)} className="min-h-[44px] rounded-xl bg-emerald-700 font-black disabled:opacity-30">10</button><button disabled={!selectedFruitId} onClick={()=>useFruit(transcendFruitOwnedCount(ownedItems,selectedFruitId))} className="min-h-[44px] rounded-xl bg-emerald-700 font-black disabled:opacity-30">MAX</button></div><div className="rounded-xl bg-black/30 p-2 text-center text-[10px]">超越P：{transcendFruitDebugResult?`${transcendFruitDebugResult.before} → ${transcendFruitDebugResult.after}${transcendFruitDebugResult.ok?'':'（失敗・変更なし）'}`:`${Math.max(0,Math.floor(Number(selectedMasu.transcendPoints)||0))} → ―`}</div><div className="grid grid-cols-2 gap-2"><button onClick={()=>grantFruit(speciesFruitId)} className="min-h-[40px] rounded-xl border border-fuchsia-500 text-[8px] font-black">対応種族の実 +10</button><button onClick={()=>grantFruit(RAINBOW_TRANSCEND_FRUIT_ITEM_ID)} className="min-h-[40px] rounded-xl border border-fuchsia-500 text-[8px] font-black">虹の実 +10</button></div></>:<p className="text-[9px] text-slate-400">所持マスモンがいません。</p>}</article>
@@ -12934,7 +12939,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           //   (エイキが実際にそうなった。いま debugOnly の種は1体もいないので、上の行は何も足していない)。
           //   所持・解放を問わず全種を並べておけば、実装の前も後も同じように確認できる。
           //   保存には一切触れない表示専用の擬似個体なので、セーブデータへは何の影響も無い
-          Object.values(ALL_PLAYER_MONSTERS).forEach(mon=>{if(mon?.id&&!owned.some(m=>m.baseId===mon.id))owned.push({id:`debug-preview-${mon.id}`,baseId:mon.id,name:`${mon.name}（未所持・DEBUG表示）`,colors:[]});});
+          Object.values(ALL_PLAYER_MONSTERS).forEach(mon=>{if(mon?.id&&!owned.some(m=>m.baseId===mon.id))owned.push({id:`debug-preview-${mon.id}`,baseId:mon.id,name:`${mon.name}（未所持）`,colors:[]});});
           const selected=owned.find(m=>String(m.id)===String(monsterImageDebugId))||owned[0];
           if(!selected)return <main className="flex-1 p-4"><header className="flex items-center"><button onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3"><ArrowLeft/></button><h2 className="font-black">モンスター画像・染色確認</h2></header><p className="p-6 text-center text-slate-400">確認できる所持モンスター個体がありません。</p></main>;
           const base=ALL_PLAYER_MONSTERS[selected.baseId];
@@ -12985,9 +12990,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <select value={selected.id} onChange={e=>{const m=owned.find(x=>String(x.id)===e.target.value);setMonsterImageDebugId(e.target.value);setMonsterImageDebugColors(m?getMasuColors(m):[]);setMonsterImageDebugTigerMode('old');}} className="w-full min-h-[50px] rounded-xl bg-slate-900 border border-white/10 px-3 text-[10px] font-black">{owned.map(m=>{const b=ALL_PLAYER_MONSTERS[m.baseId];return <option key={m.id} value={m.id}>{m.name}／{b.name}／{m.baseId}／①{colorText(getMasuColors(m)[0])} ②{colorText(getMasuColors(m)[1])} ③{colorText(getMasuColors(m)[2])}</option>})}</select>
               {isTiger&&<div className="grid grid-cols-3 gap-1">{[['old','旧画像／ロールバック用'],['new','高画質版／現在の本番構成'],['compare','旧画像と高画質版の比較表示']].map(([id,label])=><button key={id} onClick={()=>setMonsterImageDebugTigerMode(id)} className={`min-h-[54px] rounded-xl px-1 text-[8px] font-black border ${monsterImageDebugTigerMode===id?'bg-amber-700 border-amber-300':'bg-slate-900 border-white/10'}`}>{label}</button>)}</div>}
               <div className="grid grid-cols-3 gap-2">{[['checker','市松模様'],['white','白'],['black','黒']].map(([id,label])=><button key={id} onClick={()=>setMonsterImageDebugBg(id)} className={`min-h-[42px] rounded-xl text-[10px] font-black border ${monsterImageDebugBg===id?'ring-2 ring-cyan-500':'border-white/10'}`} style={id==='white'?{background:'#fff',color:'#000'}:id==='black'?{background:'#000'}:{background:'#64748b'}}>{label}</button>)}</div>
-              <section className="rounded-2xl border border-fuchsia-500/30 bg-fuchsia-950/20 p-3"><h3 className="mb-2 text-[10px] font-black text-fuchsia-300">本番と共通の染色（{regionCount}部位）</h3><DyeRegionColorControls baseId={selected.baseId} colors={colors} onChange={(idx,colorId)=>setMonsterImageDebugColors(prev=>{const next=[...colors];next[idx]=colorId;return next;})} onCustom={(idx)=>{const parsed=_parseCustomColorId(colors[idx]);setCustomColorPicker({mode:'debug',idx,h:parsed?.h??210,s:parsed?.s??.7,v:parsed?.v??.7});}}/><button onClick={()=>setMonsterImageDebugColors(getMasuColors(selected))} className="w-full mt-2 min-h-[40px] rounded-xl bg-fuchsia-800 text-[9px] font-black">個体の現在色へ戻す</button></section>
               <div className="grid grid-cols-2 gap-2">{renderCurrent('元画像','imgUrl',null)}{renderCurrent('実際の合成後プレビュー','imgUrl',colors)}{Array.from({length:regionCount},(_,i)=>renderCurrent(`染色${i+1}のみ`,'imgUrl',colors.map((c,j)=>i===j?c:null)))}</div>
               <h3 className="text-[10px] font-black text-cyan-300">実際の表示条件</h3><div className="grid grid-cols-2 gap-2">{renderCurrent('バトル／立ち絵','imgUrl',colors,'aspect-square','object-contain',null,'本番 64px・角丸なし')}{renderCurrent('一覧／全身アイコン','iconUrl',colors,'aspect-square rounded-full','object-cover',null,'本番 48px・丸')}{renderCurrent('詳細／大きな全身表示','imgUrl',colors,'h-40','object-contain',null,'本番 図鑑詳細の横長枠')}{renderCurrent('顔アイコン','faceIconUrl',colors,'aspect-square rounded-full','object-contain',profileIconStyle,'本番 プロフィール80px・丸')}{renderCurrent('プロフィール／選択アイコン','faceIconUrl',colors,'aspect-square rounded-2xl','object-contain',profileIconStyle,'本番 選択マス約59px・角丸')}{renderCurrent('小型／編成枠','imgUrl',colors,'aspect-square rounded-full','object-contain',null,'本番 40px・丸')}</div>
+              {/* 染色のパレットは28色×部位ぶんあり、開いたままだと画像へ届くまでに1500pxほどスクロールすることになる。ふだん見たいのは絵のほうなので畳んでおく(2026-09-17・ユーザー指摘「ほんとうにみにくいしつかいづらい」) */}
+              <details className="rounded-2xl border border-fuchsia-500/30 bg-fuchsia-950/20">
+                <summary className="cursor-pointer select-none px-3 py-3 text-[11px] font-black text-fuchsia-200">🎨 色を変えて試す（{regionCount}部位・本番と共通）</summary>
+                <div className="border-t border-fuchsia-500/20 p-3">
+<section><h3 className="mb-2 text-[10px] font-black text-fuchsia-300">本番と共通の染色（{regionCount}部位）</h3><DyeRegionColorControls baseId={selected.baseId} colors={colors} onChange={(idx,colorId)=>setMonsterImageDebugColors(prev=>{const next=[...colors];next[idx]=colorId;return next;})} onCustom={(idx)=>{const parsed=_parseCustomColorId(colors[idx]);setCustomColorPicker({mode:'debug',idx,h:parsed?.h??210,s:parsed?.s??.7,v:parsed?.v??.7});}}/><button onClick={()=>setMonsterImageDebugColors(getMasuColors(selected))} className="w-full mt-2 min-h-[40px] rounded-xl bg-fuchsia-800 text-[9px] font-black">個体の現在色へ戻す</button></section>
+                </div>
+              </details>
               {motionSupported&&(
                 <section className="rounded-2xl border border-cyan-500/30 bg-cyan-950/20 p-3">
                   <h3 className="mb-2 text-[10px] font-black text-cyan-300">攻撃モーション確認（atkMotion: {atkMotion}）</h3>
