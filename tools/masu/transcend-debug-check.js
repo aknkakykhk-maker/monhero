@@ -125,7 +125,7 @@ const seed = () => {
     await page.waitForTimeout(900);
     await clickText('💊');
     await page.waitForTimeout(1200);
-    check('デバッグ設定へ入れる', await page.evaluate(() => document.body.innerText.includes('BATTLE TEST')));
+    check('デバッグ設定へ入れる', await page.evaluate(() => document.body.innerText.includes('DEBUG MENU')));
     check('デバッグ設定に超越確認の入口がある', await page.evaluate(() => !!document.querySelector('[data-debug-transcend]')));
 
     await page.evaluate(() => { const b = document.querySelector('[data-debug-transcend]'); b && b.click(); });

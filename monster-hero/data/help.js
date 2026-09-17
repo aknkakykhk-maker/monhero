@@ -1748,6 +1748,9 @@ const HELP_SCREEN_COVERAGE = {
   MASU_PATTERN_DEBUG:'masu/dye',
   MONSTER_IMAGE_DEBUG:'masu/dye',
   DYE_MASK_POSITION_DEBUG:'masu/dye',
+  // 新モンスター確認も開発用の隠し画面。出しているのは図鑑と同じ「1体ぶんの情報」なので、
+  // 説明は増やさず図鑑の項目を参照先にする。
+  MONSTER_CHECK_DEBUG:'home/monster-dex',
   // 限界突破★テストは開発用だが、本番と同じ★を確認するため限界突破の説明へ対応させる。
   BREAKTHROUGH_STAR_DEBUG:'masu/rebirth',
   REINCARNATE_DISPLAY_DEBUG:'masu/reincarnate',

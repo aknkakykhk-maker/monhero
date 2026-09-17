@@ -29,7 +29,14 @@ const providerClose = source.indexOf('</AssistantBondContext.Provider>');
 const inner = source.slice(providerOpen, providerClose);
 check('MonsterHeroGame の中身を gameState 付きのエラー境界で包んでいる', /<MhErrorBoundary screen=\{gameState\}/.test(inner) && inner.includes('</MhErrorBoundary>'));
 check('画面が変わったらエラーを捨てる(getDerivedStateFromProps)', /static getDerivedStateFromProps\(props, state\)[\s\S]*props\.screen !== state\.screen/.test(source));
-const debugBlock = source.slice(source.indexOf("gameState==='DEBUG_SETTINGS'&&("), source.indexOf("gameState==='DEBUG_SETTINGS'&&(") + 6000);
+// デバッグ画面は項目が増えていくので、距離(文字数の窓)ではなく「その画面の中にあるか」で見る。
+// tools/run/training-check.js が同じ理由で先にこの形にしてある。
+// 以前は先頭から6000文字で切っていたため、入口を別のまとまりへ移しただけで窓の外へ出て落ちた
+// (2026-09-17・デバッグ設定をカテゴリ分けに作り直したとき。実測 3823文字 → 20712文字)。
+// 見ている約束は変わっていない: 入口がデバッグ設定の中にあり、ソース全体でちょうど1回だけ出ること。
+const debugStart = source.indexOf("gameState==='DEBUG_SETTINGS'&&(");
+const debugEnd = source.indexOf("{gameState==='MONSTER_IMAGE_DEBUG'&&(", debugStart);
+const debugBlock = (debugStart >= 0 && debugEnd > debugStart) ? source.slice(debugStart, debugEnd) : '';
 check('デバッグ設定に試す入口がある(通常画面には無い)', debugBlock.includes('data-debug-screen-error') && source.split('data-debug-screen-error').length === 2);
 
 // --- ② 実ブラウザ ---
@@ -86,7 +93,7 @@ const seed = () => {
     await page.waitForTimeout(900);
     await clickText('💊');
     await page.waitForTimeout(1200);
-    check('デバッグ設定へ入れる', await page.evaluate(() => document.body.innerText.includes('BATTLE TEST')));
+    check('デバッグ設定へ入れる', await page.evaluate(() => document.body.innerText.includes('DEBUG MENU')));
     check('デバッグ設定に「画面エラーの受け止めを試す」がある', await page.evaluate(() => !!document.querySelector('[data-debug-screen-error]')));
 
     await clickSel('[data-debug-screen-error]');
