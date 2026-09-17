@@ -186,6 +186,10 @@
       "role": "画面: モンヒロビートの履歴(RHYTHM_HISTORY)。終わった週・イベントの順位をあとから見る。表示専用で保存に触らない"
     },
     {
+      "file": "74-screen-monster-check-debug.jsx",
+      "role": "画面: 新モンスター確認(MONSTER_CHECK_DEBUG。デバッグ専用)。所持・解放に関係なく全種を並べ、画像・染色・モーション・能力・技・血統・マーケットと「実装チェック」を1枚で見る"
+    },
+    {
       "file": "60-app.jsx",
       "role": "MonsterHeroGame 本体(全 state・ロジック・各 gameState の JSX)"
     },

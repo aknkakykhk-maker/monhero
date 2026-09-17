@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bd9439d9da0a8c2f
+// source-sha256: 16f5195fd7d7bac3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f72dcb40cee4510f
+// generated-sha256: 79bb90df842ca71f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -161,7 +161,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-17 20:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-17 22:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -38103,6 +38103,683 @@ function RhythmHistoryScreen({
   }, "\u3042\u306A\u305F\u306E\u8A18\u9332"), row(self, null, true)))));
 }
 
+// ---- part: 74-screen-monster-check-debug.jsx ----
+// ==================== 新モンスター確認(デバッグ専用) ====================
+// 「モンスターを1体足したとき、確認すべきものがここだけで全部見られる」画面。
+// 入口はデバッグ設定(DEBUG_SETTINGS)だけで、通常プレイには一切出さない。
+// 保存・付与・ランキングへは一切触れない(表示だけ)。
+//
+// 【なぜ要るか】(2026-09-17・ユーザー指摘「新モンスター実装用に全て確認出来る画面も必要 /
+//  今は見れないものが多い / あと実装したら消えちゃうのも良くない」)
+//
+// 既存の「モンスター画像・染色確認」(MONSTER_IMAGE_DEBUG)は、表示の候補を
+// **所持しているマスモン(個体)**から作っていた。そのため次の2つが起きていた。
+//
+//   ① 所持していないモンスターは1体も見られない。確認のためだけに円盤石を買う必要があった
+//   ② 正式実装前は debugOnly で所持を経ずに差し込んでいたが、**実装して debugOnly を外した
+//      とたん一覧から消えた**。実際にエイキがそうなっている(いまは debugOnly のモンスターが
+//      1体も無いので、あの差し込みは何も足していない)
+//
+// この画面は ALL_PLAYER_MONSTERS を**そのまま全部**並べる。所持・解放・debugOnly を
+// 一切見ないので、実装の前も後も同じように見られて、あとから消えることがない。
+//
+// 【見られるもの】画像(本番と同じ収め方)・染色・攻撃モーション・能力値と他種との比較・
+// 距離適性・勇者特性・固有技9段階・通常攻撃9段階・血統と区分・図鑑説明・マーケットの商品・
+// そして「実装チェック」(足りていない項目を機械的に見つける)。
+
+// 攻撃モーションの再生にかかる時間。バトル画面と同じ値を使う
+const MONSTER_CHECK_MOTION_MS = atkMotion => {
+  if (atkMotion === 'arkHolyRain') return ARK_HOLY_RAIN_MOTION_MS;
+  if (atkMotion === 'miaSongNotes') return MIA_SONG_NOTES_MOTION_MS;
+  if (atkMotion === 'waterBurst') return WATER_BURST_MOTION_MS;
+  if (atkMotion === 'floatStab') return 700;
+  return 500;
+};
+
+// 距離の並び。distAptitude は [零, 近, 中, 遠] の順で持っている。
+// 本番と同じ RANGE_LABELS から作るので、間合いの呼び方を変えてもここだけ古くならない
+const monsterCheckDistanceLabels = () => RANGE_LABELS.map(label => `${label}距離`);
+
+// この画面が確認の対象にするモンスター。
+// **所持も解放も debugOnly も見ない**。ALL_PLAYER_MONSTERS にあるものは必ず並べる。
+// 並びは図鑑と同じ「主血統(種族)ごと」にしておくと、同じ種族が隣り合って見比べやすい。
+// dexMonsterList() は debugOnly を落とすので、落ちたぶんを後ろへ足して取りこぼしを無くす。
+const monsterCheckAllMonsters = () => {
+  if (typeof ALL_PLAYER_MONSTERS === 'undefined') return [];
+  const ordered = dexMonsterList();
+  const seen = new Set(ordered.map(mon => mon.id));
+  const rest = Object.values(ALL_PLAYER_MONSTERS).filter(mon => mon && mon.id && !seen.has(mon.id));
+  return [...ordered, ...rest];
+};
+
+// マーケットの商品を引く。円盤石(type:'disc')は解放用でidがモンスターidと一致する決まり。
+// 顔アイコン(type:'icon')はidが別なので、絵のパスで引き当てる(?v= は外して比べる)
+const monsterCheckMarketItems = mon => {
+  const items = typeof BREEDER_MARKET_ITEMS !== 'undefined' && BREEDER_MARKET_ITEMS || [];
+  const bare = url => String(url || '').split('?')[0];
+  const disc = items.find(item => item?.type === 'disc' && item.id === mon?.id) || null;
+  const faceIcon = mon?.faceIconUrl ? items.find(item => item?.type === 'icon' && bare(item.icon) === bare(mon.faceIconUrl)) || null : null;
+  const discIcon = disc ? items.find(item => item?.type === 'icon' && bare(item.icon) === bare(disc.icon)) || null : null;
+  return {
+    disc,
+    faceIcon,
+    discIcon
+  };
+};
+
+// 「実装できているか」を機械的に見る。画面はどれが欠けても普通に開いてしまうので、
+// 目で見て気づくのではなく一覧で出す。ok=揃っている / warn=意図的なこともある /
+// ng=足りない(必ず直す)
+const monsterCheckImplRows = mon => {
+  if (!mon) return [];
+  const id = mon.id;
+  const bare = url => String(url || '').split('?')[0];
+  const atkNames = typeof HERO_ATK_NAMES !== 'undefined' && HERO_ATK_NAMES[id] || [];
+  const uniqueNames = mon.unique?.names || [];
+  const lineage = monsterLineageOf(id);
+  const dexText = typeof MONSTER_DEX_DESCRIPTIONS !== 'undefined' && MONSTER_DEX_DESCRIPTIONS?.[id] || '';
+  const {
+    disc,
+    faceIcon
+  } = monsterCheckMarketItems(mon);
+  const starter = typeof STARTER_MONSTER_IDS !== 'undefined' && STARTER_MONSTER_IDS.includes(id);
+  const plus = mon.plusStats || {};
+  const apt = Array.isArray(mon.distAptitude) ? mon.distAptitude : [];
+  const containFixed = typeof MONSTER_ART_CONTAIN_IDS !== 'undefined' && MONSTER_ART_CONTAIN_IDS.includes(id);
+  const sameArt = bare(mon.faceIconUrl) === bare(mon.imgUrl);
+  const rows = [{
+    label: '立ち絵 imgUrl',
+    state: mon.imgUrl ? 'ok' : 'ng',
+    value: bare(mon.imgUrl) || '未設定'
+  }, {
+    label: '一覧アイコン iconUrl',
+    state: mon.iconUrl ? 'ok' : 'ng',
+    value: bare(mon.iconUrl) || '未設定'
+  }, {
+    label: '顔アイコン faceIconUrl',
+    state: mon.faceIconUrl ? sameArt ? 'warn' : 'ok' : 'ng',
+    value: bare(mon.faceIconUrl) || '未設定',
+    note: sameArt ? '立ち絵と同じ絵。丸く抜くと全身が入るので、拡大・位置の調整(MARKET_PROFILE_ICON_STYLES)が要る' : ''
+  }, {
+    label: '攻撃モーション atkMotion',
+    state: mon.atkMotion ? 'ok' : 'ng',
+    value: mon.atkMotion || '未設定',
+    note: mon.atkMotion === 'default' ? '共通の汎用モーション' : ''
+  }, {
+    label: '絵文字 emoji',
+    state: mon.emoji ? 'ok' : 'warn',
+    value: mon.emoji || '未設定',
+    note: mon.emoji ? '' : '絵が読めなかったときの代わりに出る'
+  }, {
+    label: '通常攻撃名 HERO_ATK_NAMES',
+    state: atkNames.length === 9 ? 'ok' : 'ng',
+    value: `${atkNames.length} / 9 段階`,
+    // getAtkSkillLevels が HERO_ATK_NAMES[id] || HERO_ATK_NAMES['Mocchi'] と落ちるので、
+    // 書き忘れてもエラーにならず、モッチーの技名が静かに出てしまう
+    note: atkNames.length === 9 ? '' : '書き忘れるとモッチーの技名が静かに表示される（エラーにならない）'
+  }, {
+    label: '固有技の9段階名',
+    state: uniqueNames.length === 9 ? 'ok' : 'ng',
+    value: `${uniqueNames.length} / 9 段階`
+  }, {
+    label: '固有技の中身',
+    state: mon.unique?.name && mon.unique?.effectDesc ? 'ok' : 'ng',
+    value: mon.unique?.name ? `${mon.unique.name}／倍率${mon.unique.baseMult}／消費${mon.unique.baseGuts}` : '未設定'
+  }, {
+    label: '勇者特性 trait',
+    state: mon.trait && mon.traitDesc ? 'ok' : 'ng',
+    value: mon.trait ? `${mon.trait}` : '未設定'
+  }, {
+    label: '基礎能力 baseHp/Atk/Def/Guts',
+    state: [mon.baseHp, mon.baseAtk, mon.baseDef, mon.baseGuts].every(v => Number.isFinite(v)) ? 'ok' : 'ng',
+    value: `${mon.baseHp}／${mon.baseAtk}／${mon.baseDef}／${mon.baseGuts}`
+  }, {
+    label: '供モン加算 plusStats',
+    state: ['hp', 'atk', 'def', 'guts'].every(k => Number.isFinite(plus[k])) ? 'ok' : 'ng',
+    value: `ライフ${plus.hp}／ちから${plus.atk}／丈夫さ${plus.def}／ガッツ${plus.guts}`
+  }, {
+    label: '距離適性 distAptitude',
+    state: apt.length === 4 ? 'ok' : 'ng',
+    value: apt.length ? monsterCheckDistanceLabels().map((label, i) => `${label} ${apt[i]}`).join('／') : '未設定'
+  }, {
+    label: '血統 MONSTER_LINEAGE_MAP',
+    state: lineage.known ? 'ok' : 'ng',
+    value: lineage.known ? `${lineage.main.name} × ${lineage.sub.name}（${monsterCategoryName(monsterCategoryOf(id))}）` : '未登録',
+    note: lineage.known ? '' : 'data/lineages.js へ1行足す。tools/monster/lineage-dex-check.js が見張る'
+  }, {
+    label: '図鑑の説明文',
+    state: dexText ? 'ok' : 'ng',
+    value: dexText ? `${dexText.length}文字` : '未記入',
+    note: dexText ? '' : 'MONSTER_DEX_DESCRIPTIONS が無いと図鑑に「調査中」と出る'
+  }, {
+    label: '図鑑に並ぶか',
+    state: mon.debugOnly ? 'warn' : 'ok',
+    value: mon.debugOnly ? '出ない（debugOnly）' : '出る',
+    note: mon.debugOnly ? '正式実装前。図鑑・RPG一覧・マスモン登録から外れている' : ''
+  }, {
+    label: '入手方法',
+    state: starter || disc ? 'ok' : 'ng',
+    value: starter ? '初期解放（STARTER_MONSTER_IDS）' : disc ? `円盤石 ${disc.cost} ダイヤ` : '入手できない',
+    note: starter || disc ? '' : 'BREEDER_MARKET_ITEMS へ type:\'disc\' の円盤石を足す'
+  },
+  // 初期解放の8種は、この決まりができる前からいるので商品を持っていない。そこは注意にしない
+  {
+    label: 'プロフィールアイコン商品',
+    state: faceIcon || starter ? 'ok' : 'warn',
+    value: faceIcon ? `${faceIcon.name}（${faceIcon.cost} ダイヤ）` : starter ? '無し（初期解放の8種は対象外）' : '無し',
+    note: faceIcon || starter ? '' : '新モンスターは顔アイコン(type:\'icon\')と円盤石を同時に足す決まり'
+  }, {
+    label: '染色の部位数',
+    state: 'ok',
+    value: `${dyeRegionCount(id)} 部位`
+  }, {
+    label: '縦長立ち絵の丸枠対策',
+    state: 'ok',
+    value: containFixed ? 'MONSTER_ART_CONTAIN_IDS に入っている' : '対象外',
+    note: containFixed ? '' : '丸いアイコンで頭や足が切れるなら、ここへ足すと contain で収まる'
+  }];
+  return rows;
+};
+
+// 能力値を他の種と見比べる。1体だけ見ても高いのか低いのか分からないため、
+// 全種の中の順位と、最小〜最大のどのあたりかを帯で出す
+const monsterCheckStatRows = mon => {
+  const all = monsterCheckAllMonsters();
+  const defs = [['ライフ', 'baseHp', m => m.baseHp], ['ちから', 'baseAtk', m => m.baseAtk], ['丈夫さ', 'baseDef', m => m.baseDef], ['ガッツ', 'baseGuts', m => m.baseGuts], ['合流ライフ', 'plus.hp', m => m.plusStats?.hp], ['合流ちから', 'plus.atk', m => m.plusStats?.atk], ['合流丈夫さ', 'plus.def', m => m.plusStats?.def], ['合流ガッツ', 'plus.guts', m => m.plusStats?.guts]];
+  return defs.map(([label, key, pick]) => {
+    const values = all.map(pick).filter(Number.isFinite);
+    const value = Number(pick(mon)) || 0;
+    const min = values.length ? Math.min(...values) : 0;
+    const max = values.length ? Math.max(...values) : 0;
+    // 同じ値の種がいるときは同順位。降順で「上から何番目か」
+    const rank = values.filter(v => v > value).length + 1;
+    const ratio = max > min ? (value - min) / (max - min) : 1;
+    return {
+      label,
+      key,
+      value,
+      min,
+      max,
+      rank,
+      total: values.length,
+      ratio
+    };
+  });
+};
+
+// 選んでいるモンスターと染色の色は MonsterHeroGame 側に持たせて props で受ける。
+// カスタムカラーのモーダル(customColorPicker)が本体側にあり、そこから色を書き戻すため
+// (「保存を伴うモーダルは本体に残す」という parts の決めごとに合わせてある)。
+// 画面の中だけで完結する見た目の状態(検索語・背景・再生中・生データの開閉)はここで持つ。
+function MonsterCheckDebugScreen({
+  masuMons = [],
+  unlockedMonsterIds = [],
+  selectedId,
+  colors = [],
+  onSelect,
+  onColorsChange,
+  onCustomColor,
+  onBack,
+  onOpenImageDebug
+}) {
+  const monsters = monsterCheckAllMonsters();
+  const [query, setQuery] = useState('');
+  const [bg, setBg] = useState('checker');
+  const [motion, setMotion] = useState(null);
+  const [brokenImages, setBrokenImages] = useState({});
+  const [showRaw, setShowRaw] = useState(false);
+  const mon = monsters.find(m => m.id === selectedId) || monsters[0] || null;
+  if (!mon) {
+    return /*#__PURE__*/React.createElement("main", {
+      "data-mh-screen": true,
+      className: "flex-1 flex flex-col h-full min-h-0 p-4"
+    }, /*#__PURE__*/React.createElement("header", {
+      className: "flex items-center gap-2"
+    }, /*#__PURE__*/React.createElement("button", {
+      "aria-label": "\u30C7\u30D0\u30C3\u30B0\u8A2D\u5B9A\u3078\u623B\u308B",
+      onClick: onBack,
+      className: "p-3 text-slate-400"
+    }, /*#__PURE__*/React.createElement(ArrowLeft, {
+      size: 20
+    })), /*#__PURE__*/React.createElement("h2", {
+      className: "text-sm font-black"
+    }, "\u65B0\u30E2\u30F3\u30B9\u30BF\u30FC\u78BA\u8A8D")), /*#__PURE__*/React.createElement("p", {
+      className: "p-6 text-center text-[11px] text-slate-400"
+    }, "ALL_PLAYER_MONSTERS \u304C\u8AAD\u307F\u8FBC\u3081\u3066\u3044\u307E\u305B\u3093\u3002"));
+  }
+  const normalizedQuery = query.trim().toLocaleLowerCase('ja');
+  const listed = monsters.filter(entry => !normalizedQuery || `${entry.name} ${entry.id} ${monsterLineageOf(entry.id).main.name}`.toLocaleLowerCase('ja').includes(normalizedQuery));
+  const regionCount = dyeRegionCount(mon.id);
+  const dyeColors = Array.from({
+    length: regionCount
+  }, (_, i) => colors[i] || null);
+  const atkMotion = mon.atkMotion || 'default';
+  // パンドラの分身(pandoraDualThunder)は枠を動かすのではなく専用の部品が要るため、ここでは再生しない
+  const motionSupported = atkMotion !== 'default' && atkMotion !== 'pandoraDualThunder';
+  const isDashMotion = atkMotion === 'zanCombo' || atkMotion === 'eikiSakuraCombo' || atkMotion === 'kenshiTwinBlade';
+  const atkNames = typeof HERO_ATK_NAMES !== 'undefined' && HERO_ATK_NAMES[mon.id] || [];
+  const uniqueNames = mon.unique?.names || [];
+  const lineage = monsterLineageOf(mon.id);
+  const market = monsterCheckMarketItems(mon);
+  const implRows = monsterCheckImplRows(mon);
+  const statRows = monsterCheckStatRows(mon);
+  const ngCount = implRows.filter(row => row.state === 'ng').length;
+  const warnCount = implRows.filter(row => row.state === 'warn').length;
+  const owned = masuMons.filter(m => m && String(m.baseId) === String(mon.id)).length;
+  const unlocked = unlockedMonsterIds.includes(mon.id);
+  const starter = typeof STARTER_MONSTER_IDS !== 'undefined' && STARTER_MONSTER_IDS.includes(mon.id);
+  // プロフィールアイコンは本番(BreederIcon)で拡大・位置の調整が掛かる。これを通さないと
+  // 顔アイコンが立ち絵そのままのモンスターだけ、確認画面のほうが本番と別物に見えてしまう
+  const profileIconStyle = marketProfileIconStyle((breederIconOptions({
+    includeUnowned: true
+  }).find(o => String(o.src || '').split('?')[0] === String(mon.faceIconUrl || '').split('?')[0]) || {}).id);
+  const bgStyle = bg === 'white' ? {
+    background: '#fff'
+  } : bg === 'black' ? {
+    background: '#000'
+  } : {
+    backgroundColor: '#cbd5e1',
+    backgroundImage: 'linear-gradient(45deg,#64748b 25%,transparent 25%),linear-gradient(-45deg,#64748b 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#64748b 75%),linear-gradient(-45deg,transparent 75%,#64748b 75%)',
+    backgroundSize: '16px 16px',
+    backgroundPosition: '0 0,0 8px,8px -8px,-8px 0'
+  };
+  const pickMonster = id => {
+    onSelect(id);
+    onColorsChange([]);
+    setMotion(null);
+    setShowRaw(false);
+  };
+  const noteImageBroken = url => setBrokenImages(prev => prev[url] ? prev : {
+    ...prev,
+    [url]: true
+  });
+  const playMotion = async () => {
+    if (!motionSupported || motion) return;
+    setMotion({
+      charge: true
+    });
+    await wait(650);
+    if (isDashMotion) {
+      const isTwin = atkMotion === 'kenshiTwinBlade';
+      setMotion({
+        zanCombo: !isTwin,
+        twinBlade: isTwin,
+        sakura: atkMotion === 'eikiSakuraCombo'
+      });
+      await wait(atkMotion === 'eikiSakuraCombo' ? 500 : isTwin ? 560 : 320);
+    } else {
+      setMotion({
+        charge: false,
+        motion: atkMotion,
+        sakura: false
+      });
+      await wait(MONSTER_CHECK_MOTION_MS(atkMotion));
+    }
+    setMotion(null);
+  };
+
+  // 本番と同じ収め方・同じ染色で1枚出す。読み込みに失敗した絵は赤くして、
+  // 「パスの綴り間違いで絵が出ない」を公開前に気づけるようにする
+  const artFrame = (label, sourceKey, frameClass, fit, imgStyle, note) => {
+    const src = mon[sourceKey];
+    const broken = !!brokenImages[src];
+    return /*#__PURE__*/React.createElement("section", {
+      key: label,
+      className: "rounded-xl bg-black/30 p-2 text-center"
+    }, /*#__PURE__*/React.createElement("b", {
+      className: "block mb-1 text-[9px] text-cyan-200"
+    }, label), note && /*#__PURE__*/React.createElement("small", {
+      className: "mb-1 block text-[7px] font-normal text-slate-400"
+    }, note), /*#__PURE__*/React.createElement("div", {
+      className: `${frameClass} overflow-hidden border ${broken ? 'border-rose-500' : 'border-white/20'}`,
+      style: bgStyle
+    }, src ? /*#__PURE__*/React.createElement(DyedMonsterImage, {
+      baseId: mon.id,
+      src: src,
+      alt: label,
+      masuColors: dyeColors,
+      className: `w-full h-full ${fit}`,
+      style: {
+        ...monsterArtFitStyle(mon.id, undefined),
+        ...(imgStyle || {})
+      }
+    }) : /*#__PURE__*/React.createElement("span", {
+      className: "flex h-full w-full items-center justify-center text-[8px] font-black text-rose-300"
+    }, "\u672A\u8A2D\u5B9A")), src && /*#__PURE__*/React.createElement("img", {
+      src: src,
+      alt: "",
+      "aria-hidden": "true",
+      className: "hidden",
+      onError: () => noteImageBroken(src)
+    }), broken && /*#__PURE__*/React.createElement("small", {
+      className: "mt-1 block text-[8px] font-black text-rose-300"
+    }, "\u8AAD\u307F\u8FBC\u3081\u307E\u305B\u3093"));
+  };
+  const stateMark = state => state === 'ng' ? '✕' : state === 'warn' ? '△' : '✓';
+  const stateClass = state => state === 'ng' ? 'text-rose-300' : state === 'warn' ? 'text-amber-300' : 'text-emerald-300';
+  return /*#__PURE__*/React.createElement("main", {
+    "data-monster-check-debug": true,
+    "data-mh-screen": true,
+    className: "flex-1 flex flex-col h-full min-h-0 bg-slate-950 p-3",
+    style: {
+      paddingTop: 'calc(.75rem + env(safe-area-inset-top))',
+      paddingBottom: 'calc(.75rem + env(safe-area-inset-bottom))'
+    }
+  }, /*#__PURE__*/React.createElement("header", {
+    className: "mb-2 flex shrink-0 items-center gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    "aria-label": "\u30C7\u30D0\u30C3\u30B0\u8A2D\u5B9A\u3078\u623B\u308B",
+    onClick: onBack,
+    className: "p-3 text-slate-400"
+  }, /*#__PURE__*/React.createElement(ArrowLeft, {
+    size: 20
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
+    className: "text-[8px] font-black text-emerald-300"
+  }, "DEBUG\u30FB\u5168", monsters.length, "\u7A2E\u3092\u6240\u6301\u3084\u89E3\u653E\u306B\u95A2\u4FC2\u306A\u304F\u8868\u793A\uFF0F\u4FDD\u5B58\u3057\u307E\u305B\u3093"), /*#__PURE__*/React.createElement("h2", {
+    className: "text-sm font-black"
+  }, "\u65B0\u30E2\u30F3\u30B9\u30BF\u30FC\u78BA\u8A8D"))), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 min-h-0 overflow-y-auto mh-scroll space-y-3 pb-3"
+  }, /*#__PURE__*/React.createElement("section", {
+    className: "rounded-2xl border border-emerald-500/40 bg-emerald-950/20 p-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mb-2 flex items-baseline justify-between"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-[10px] font-black text-emerald-300"
+  }, "\u2460 \u30E2\u30F3\u30B9\u30BF\u30FC\u3092\u3048\u3089\u3076"), /*#__PURE__*/React.createElement("small", {
+    className: "text-[8px] text-slate-400"
+  }, "\u5168", monsters.length, "\u7A2E\u30FB\u8868\u793A", listed.length, "\u7A2E")), /*#__PURE__*/React.createElement("input", {
+    type: "search",
+    value: query,
+    onChange: e => setQuery(e.target.value),
+    placeholder: "\u540D\u524D\u30FB\u5185\u90E8ID\u30FB\u7A2E\u65CF\u3067\u691C\u7D22",
+    className: "mb-2 w-full min-h-[44px] rounded-xl border border-white/10 bg-slate-900 px-3 text-xs font-black"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-3 gap-1.5"
+  }, !listed.length && /*#__PURE__*/React.createElement("p", {
+    className: "col-span-3 py-4 text-center text-[10px] text-slate-400"
+  }, "\u4E00\u81F4\u3059\u308B\u30E2\u30F3\u30B9\u30BF\u30FC\u306F\u3044\u307E\u305B\u3093\u3002"), listed.map(entry => {
+    const isSel = entry.id === mon.id;
+    const entryOwned = masuMons.some(m => m && String(m.baseId) === String(entry.id));
+    const entryNg = monsterCheckImplRows(entry).filter(row => row.state === 'ng').length;
+    return /*#__PURE__*/React.createElement("button", {
+      key: entry.id,
+      "data-monster-check-option": entry.id,
+      onClick: () => pickMonster(entry.id),
+      className: `min-h-[76px] rounded-xl p-1 text-[8px] font-black ${isSel ? 'border-2 border-emerald-300 bg-emerald-900 text-emerald-50' : 'border border-white/10 bg-slate-900 text-slate-400'}`
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "mx-auto block h-9 w-9 overflow-hidden rounded-full bg-black/30"
+    }, entry.iconUrl && /*#__PURE__*/React.createElement("img", {
+      src: entry.iconUrl,
+      alt: "",
+      className: "h-full w-full object-cover",
+      style: monsterArtFitStyle(entry.id, undefined)
+    })), /*#__PURE__*/React.createElement("b", {
+      className: "mt-1 block truncate"
+    }, entry.name), /*#__PURE__*/React.createElement("small", {
+      className: "block truncate text-[7px] opacity-80"
+    }, monsterLineageOf(entry.id).main.name, "\u7A2E"), /*#__PURE__*/React.createElement("small", {
+      className: "block text-[7px]"
+    }, entry.debugOnly ? /*#__PURE__*/React.createElement("span", {
+      className: "text-fuchsia-300"
+    }, "\u672A\u5B9F\u88C5") : entryNg ? /*#__PURE__*/React.createElement("span", {
+      className: "text-rose-300"
+    }, "\u8981\u78BA\u8A8D", entryNg) : entryOwned ? /*#__PURE__*/React.createElement("span", {
+      className: "text-cyan-300"
+    }, "\u6240\u6301\u4E2D") : /*#__PURE__*/React.createElement("span", {
+      className: "text-slate-500"
+    }, "\u2014")));
+  }))), /*#__PURE__*/React.createElement("section", {
+    className: `rounded-2xl border-2 p-3 ${ngCount ? 'border-rose-500/60 bg-rose-950/20' : 'border-emerald-500/50 bg-emerald-950/20'}`
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mb-2 flex items-baseline justify-between"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-[10px] font-black text-white"
+  }, "\u2461 \u5B9F\u88C5\u30C1\u30A7\u30C3\u30AF\uFF08", mon.name, "\uFF09"), /*#__PURE__*/React.createElement("small", {
+    className: `text-[9px] font-black ${ngCount ? 'text-rose-300' : 'text-emerald-300'}`
+  }, ngCount ? `足りない ${ngCount} 件` : '足りない項目はありません', warnCount ? `／注意 ${warnCount} 件` : '')), /*#__PURE__*/React.createElement("div", {
+    className: "space-y-1"
+  }, implRows.map(row => /*#__PURE__*/React.createElement("div", {
+    key: row.label,
+    className: "rounded-lg bg-black/30 px-2 py-1.5 text-[9px] leading-relaxed"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-start gap-2"
+  }, /*#__PURE__*/React.createElement("b", {
+    className: `shrink-0 font-black ${stateClass(row.state)}`
+  }, stateMark(row.state)), /*#__PURE__*/React.createElement("span", {
+    className: "shrink-0 font-black text-slate-300"
+  }, row.label), /*#__PURE__*/React.createElement("span", {
+    className: "ml-auto break-all text-right text-slate-400"
+  }, row.value)), row.note && /*#__PURE__*/React.createElement("p", {
+    className: "mt-0.5 pl-5 text-[8px] text-amber-200/80"
+  }, row.note))))), /*#__PURE__*/React.createElement("section", {
+    className: "rounded-2xl border border-cyan-500/40 bg-cyan-950/20 p-3"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "mb-2 text-[10px] font-black text-cyan-300"
+  }, "\u2462 \u5B9F\u969B\u306E\u8868\u793A\u6761\u4EF6"), /*#__PURE__*/React.createElement("div", {
+    className: "mb-2 grid grid-cols-3 gap-2"
+  }, [['checker', '市松模様'], ['white', '白'], ['black', '黒']].map(([id, label]) => /*#__PURE__*/React.createElement("button", {
+    key: id,
+    onClick: () => setBg(id),
+    className: `min-h-[40px] rounded-xl text-[10px] font-black border ${bg === id ? 'ring-2 ring-cyan-400' : 'border-white/10'}`,
+    style: id === 'white' ? {
+      background: '#fff',
+      color: '#000'
+    } : id === 'black' ? {
+      background: '#000'
+    } : {
+      background: '#64748b'
+    }
+  }, label))), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-2"
+  }, artFrame('バトル／立ち絵', 'imgUrl', 'aspect-square', 'object-contain', null, '本番 64px・角丸なし'), artFrame('一覧／全身アイコン', 'iconUrl', 'aspect-square rounded-full', 'object-cover', null, '本番 48px・丸'), artFrame('図鑑／大きな全身', 'imgUrl', 'h-40', 'object-contain', null, '本番 図鑑詳細の横長枠'), artFrame('顔アイコン', 'faceIconUrl', 'aspect-square rounded-full', 'object-contain', profileIconStyle, '本番 プロフィール80px・丸'), artFrame('プロフィール／選択', 'faceIconUrl', 'aspect-square rounded-2xl', 'object-contain', profileIconStyle, '本番 選択マス約59px・角丸'), artFrame('小型／編成枠', 'imgUrl', 'aspect-square rounded-full', 'object-contain', null, '本番 40px・丸'))), /*#__PURE__*/React.createElement("section", {
+    className: "rounded-2xl border border-fuchsia-500/40 bg-fuchsia-950/20 p-3"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "mb-2 text-[10px] font-black text-fuchsia-300"
+  }, "\u2463 \u67D3\u8272\uFF08", regionCount, "\u90E8\u4F4D\u30FB\u672C\u756A\u3068\u5171\u901A\uFF09"), /*#__PURE__*/React.createElement(DyeRegionColorControls, {
+    baseId: mon.id,
+    colors: dyeColors,
+    onChange: (idx, colorId) => {
+      const next = Array.from({
+        length: regionCount
+      }, (_, i) => dyeColors[i] || null);
+      next[idx] = colorId;
+      onColorsChange(next);
+    },
+    onCustom: idx => onCustomColor(idx, dyeColors[idx])
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "mt-2 grid grid-cols-2 gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => onColorsChange([]),
+    className: "min-h-[40px] rounded-xl bg-fuchsia-800 text-[9px] font-black"
+  }, "\u5143\u306E\u8272\u3078\u623B\u3059"), /*#__PURE__*/React.createElement("button", {
+    "data-monster-check-open-image": true,
+    onClick: () => onOpenImageDebug(mon.id),
+    className: "min-h-[40px] rounded-xl border border-cyan-400/60 bg-cyan-950 text-[9px] font-black text-cyan-100"
+  }, "\u67D3\u8272\u3092\u304F\u308F\u3057\u304F\u898B\u308B"))), /*#__PURE__*/React.createElement("section", {
+    className: "rounded-2xl border border-cyan-500/30 bg-cyan-950/20 p-3"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "mb-1 text-[10px] font-black text-cyan-300"
+  }, "\u2464 \u653B\u6483\u30E2\u30FC\u30B7\u30E7\u30F3\uFF08atkMotion: ", atkMotion, "\uFF09"), motionSupported ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
+    className: "mb-2 text-[8px] leading-relaxed text-slate-400"
+  }, "\u672C\u756A\u306E\u30D0\u30C8\u30EB\u753B\u9762\u3068\u540C\u3058\u95A2\u6570\u30FB\u540C\u3058CSS\u3067\u518D\u751F\u3059\u308B\u3002\u9023\u6483\u306E\u5DFB\u304D\u6DFB\u3048\u30D2\u30C3\u30C8\u306F\u7121\u3044\u306E\u3067\u3053\u306E1\u56DE\u3060\u3051\u52D5\u304F\u3002"), /*#__PURE__*/React.createElement("div", {
+    className: `mx-auto h-28 w-28 ${atkMotion === 'waterBurst' || atkMotion === 'arkHolyRain' || atkMotion === 'miaSongNotes' ? 'overflow-visible' : 'overflow-hidden'} rounded-xl border border-white/20`,
+    style: bgStyle
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "relative h-full w-full",
+    style: {
+      isolation: 'isolate',
+      animation: attackMotionAnimation(motion)
+    }
+  }, motion?.motion === 'arkHolyRain' ? /*#__PURE__*/React.createElement(ArkHolyRainMotion, {
+    image: /*#__PURE__*/React.createElement(DyedMonsterImage, {
+      baseId: mon.id,
+      src: mon.imgUrl,
+      alt: "\u653B\u6483\u30E2\u30FC\u30B7\u30E7\u30F3\u78BA\u8A8D",
+      masuColors: dyeColors,
+      className: "h-full w-full object-contain"
+    }),
+    charging: motion?.charge === true,
+    empowered: motion?.charge === false
+  }) : motion?.motion === 'waterBurst' ? /*#__PURE__*/React.createElement(WaterBurstMotion, {
+    image: /*#__PURE__*/React.createElement(DyedMonsterImage, {
+      baseId: mon.id,
+      src: mon.imgUrl,
+      alt: "\u653B\u6483\u30E2\u30FC\u30B7\u30E7\u30F3\u78BA\u8A8D",
+      masuColors: dyeColors,
+      className: "h-full w-full object-contain"
+    }),
+    lunge: motion?.charge === false,
+    charging: motion?.charge === true
+  }) : motion?.motion === 'miaSongNotes' ? /*#__PURE__*/React.createElement(MiaSongNotesMotion, {
+    image: /*#__PURE__*/React.createElement(DyedMonsterImage, {
+      baseId: mon.id,
+      src: mon.imgUrl,
+      alt: "\u653B\u6483\u30E2\u30FC\u30B7\u30E7\u30F3\u78BA\u8A8D",
+      masuColors: dyeColors,
+      className: "h-full w-full object-contain"
+    }),
+    lunge: motion?.charge === false,
+    charging: motion?.charge === true
+  }) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(DyedMonsterImage, {
+    baseId: mon.id,
+    src: mon.imgUrl,
+    alt: "\u653B\u6483\u30E2\u30FC\u30B7\u30E7\u30F3\u78BA\u8A8D",
+    masuColors: dyeColors,
+    className: "h-full w-full object-contain"
+  }), motion?.sakura && /*#__PURE__*/React.createElement(EikiSakuraPetals, null), motion?.twinBlade && /*#__PURE__*/React.createElement(KenshiTwinSlash, null)))), /*#__PURE__*/React.createElement("button", {
+    "data-monster-check-motion": true,
+    onClick: playMotion,
+    disabled: !!motion,
+    className: "mt-2 min-h-[42px] w-full rounded-xl bg-cyan-700 text-[10px] font-black disabled:opacity-40"
+  }, motion ? '再生中…' : '攻撃モーションを再生')) : /*#__PURE__*/React.createElement("p", {
+    className: "text-[9px] leading-relaxed text-slate-400"
+  }, atkMotion === 'default' ? '共通の汎用モーション(attackFly / specialLunge)を使う。専用モーションはありません。' : 'このモーションは専用の部品が要るため、ここでは再生できません（バトル画面で確認する）。')), /*#__PURE__*/React.createElement("section", {
+    className: "rounded-2xl border border-amber-500/40 bg-amber-950/20 p-3"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "mb-2 text-[10px] font-black text-amber-300"
+  }, "\u2465 \u80FD\u529B\u5024\uFF08\u5168", monsters.length, "\u7A2E\u306E\u4E2D\u306E\u4F4D\u7F6E\uFF09"), /*#__PURE__*/React.createElement("div", {
+    className: "space-y-1.5"
+  }, statRows.map(row => /*#__PURE__*/React.createElement("div", {
+    key: row.key,
+    className: "rounded-lg bg-black/30 px-2 py-1.5"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-baseline justify-between text-[9px] font-black"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-300"
+  }, row.label), /*#__PURE__*/React.createElement("span", {
+    className: "text-white"
+  }, row.value.toLocaleString(), /*#__PURE__*/React.createElement("small", {
+    className: "ml-1 text-[8px] font-black text-amber-300"
+  }, row.rank, "\u4F4D / ", row.total, "\u7A2E"))), /*#__PURE__*/React.createElement("div", {
+    className: "mt-1 h-1.5 w-full overflow-hidden rounded-full bg-slate-800"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "h-full rounded-full bg-amber-500",
+    style: {
+      width: `${Math.round(Math.max(0, Math.min(1, row.ratio)) * 100)}%`
+    }
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "mt-0.5 flex justify-between text-[7px] text-slate-500"
+  }, /*#__PURE__*/React.createElement("span", null, "\u6700\u5C0F ", row.min.toLocaleString()), /*#__PURE__*/React.createElement("span", null, "\u6700\u5927 ", row.max.toLocaleString()))))), /*#__PURE__*/React.createElement("div", {
+    className: "mt-2 rounded-lg bg-black/30 p-2"
+  }, /*#__PURE__*/React.createElement("b", {
+    className: "block text-[9px] font-black text-amber-300"
+  }, "\u8DDD\u96E2\u9069\u6027"), /*#__PURE__*/React.createElement("div", {
+    className: "mt-1 grid grid-cols-4 gap-1 text-center"
+  }, monsterCheckDistanceLabels().map((label, i) => /*#__PURE__*/React.createElement("div", {
+    key: label,
+    className: "rounded-lg bg-slate-900 py-1"
+  }, /*#__PURE__*/React.createElement("small", {
+    className: "block text-[7px] text-slate-400"
+  }, label), /*#__PURE__*/React.createElement("b", {
+    className: "block text-[13px] font-black text-white"
+  }, mon.distAptitude?.[i] || '—')))))), /*#__PURE__*/React.createElement("section", {
+    className: "rounded-2xl border border-indigo-500/40 bg-indigo-950/20 p-3"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "mb-2 text-[10px] font-black text-indigo-300"
+  }, "\u2466 \u7279\u6027\u3068\u6280"), /*#__PURE__*/React.createElement("div", {
+    className: "space-y-1 text-[9px] leading-relaxed"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "rounded-lg bg-black/30 p-2"
+  }, /*#__PURE__*/React.createElement("b", {
+    className: "block text-white"
+  }, "\u52C7\u8005\u7279\u6027\uFF1A", mon.trait || '未設定'), /*#__PURE__*/React.createElement("p", {
+    className: "mt-0.5 text-slate-300"
+  }, mon.traitDesc || '未設定')), /*#__PURE__*/React.createElement("div", {
+    className: "rounded-lg bg-black/30 p-2"
+  }, /*#__PURE__*/React.createElement("b", {
+    className: "block text-white"
+  }, "\u56FA\u6709\u6280\uFF1A", mon.unique?.name || '未設定'), /*#__PURE__*/React.createElement("p", {
+    className: "mt-0.5 text-slate-400"
+  }, "\u30C0\u30E1\u30FC\u30B8\u500D\u7387 ", mon.unique?.baseMult ?? '—', "\uFF0F\u6D88\u8CBB\u30AC\u30C3\u30C4 ", mon.unique?.baseGuts ?? '—'), /*#__PURE__*/React.createElement("p", {
+    className: "mt-0.5 text-slate-300"
+  }, mon.unique?.effectDesc || '未設定')), /*#__PURE__*/React.createElement("div", {
+    className: "rounded-lg bg-black/30 p-2"
+  }, /*#__PURE__*/React.createElement("b", {
+    className: "block text-white"
+  }, "\u56FA\u6709\u6280\u306E9\u6BB5\u968E\uFF08", uniqueNames.length, "\u4EF6\uFF09"), /*#__PURE__*/React.createElement("ol", {
+    className: "mt-1 space-y-0.5 text-slate-300"
+  }, uniqueNames.map((name, i) => /*#__PURE__*/React.createElement("li", {
+    key: `${name}-${i}`
+  }, "Lv.", i + 1, "\u3000", name)))), /*#__PURE__*/React.createElement("div", {
+    className: "rounded-lg bg-black/30 p-2"
+  }, /*#__PURE__*/React.createElement("b", {
+    className: "block text-white"
+  }, "\u901A\u5E38\u653B\u6483\u306E9\u6BB5\u968E\uFF08", atkNames.length, "\u4EF6\uFF09"), /*#__PURE__*/React.createElement("ol", {
+    className: "mt-1 space-y-0.5 text-slate-300"
+  }, atkNames.map((name, i) => /*#__PURE__*/React.createElement("li", {
+    key: `${name}-${i}`
+  }, "Lv.", i + 1, "\u3000", name)))))), /*#__PURE__*/React.createElement("section", {
+    className: "rounded-2xl border border-violet-500/40 bg-violet-950/20 p-3"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "mb-2 text-[10px] font-black text-violet-300"
+  }, "\u2467 \u8840\u7D71\u30FB\u56F3\u9451\u30FB\u30DE\u30FC\u30B1\u30C3\u30C8"), /*#__PURE__*/React.createElement("div", {
+    className: "space-y-1 text-[9px] leading-relaxed"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "rounded-lg bg-black/30 p-2 text-slate-300"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between"
+  }, /*#__PURE__*/React.createElement("span", null, "\u4E3B\u8840\u7D71 \xD7 \u526F\u8840\u7D71"), /*#__PURE__*/React.createElement("b", {
+    className: "text-white"
+  }, lineage.main.name, " \xD7 ", lineage.sub.name)), /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between"
+  }, /*#__PURE__*/React.createElement("span", null, "\u533A\u5206"), /*#__PURE__*/React.createElement("b", {
+    className: "text-white"
+  }, monsterCategoryName(monsterCategoryOf(mon.id)))), /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between"
+  }, /*#__PURE__*/React.createElement("span", null, "\u89E3\u653E\u72B6\u614B"), /*#__PURE__*/React.createElement("b", {
+    className: "text-white"
+  }, starter ? '初期解放' : unlocked ? '解放済み' : '未解放', "\uFF0F\u6240\u6301 ", owned, " \u4F53"))), /*#__PURE__*/React.createElement("div", {
+    className: "rounded-lg bg-black/30 p-2"
+  }, /*#__PURE__*/React.createElement("b", {
+    className: "block text-white"
+  }, "\u56F3\u9451\u306E\u8AAC\u660E"), /*#__PURE__*/React.createElement("p", {
+    className: "mt-0.5 text-slate-300"
+  }, monsterDexDescription(mon.id))), /*#__PURE__*/React.createElement("div", {
+    className: "rounded-lg bg-black/30 p-2 text-slate-300"
+  }, /*#__PURE__*/React.createElement("b", {
+    className: "block text-white"
+  }, "\u30DE\u30FC\u30B1\u30C3\u30C8\u306E\u5546\u54C1"), /*#__PURE__*/React.createElement("div", {
+    className: "mt-0.5 flex justify-between"
+  }, /*#__PURE__*/React.createElement("span", null, "\u5186\u76E4\u77F3\uFF08\u89E3\u653E\u7528\uFF09"), /*#__PURE__*/React.createElement("b", {
+    className: "text-white"
+  }, market.disc ? `${market.disc.name}／${market.disc.cost} ダイヤ` : '無し')), /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between"
+  }, /*#__PURE__*/React.createElement("span", null, "\u9854\u30A2\u30A4\u30B3\u30F3"), /*#__PURE__*/React.createElement("b", {
+    className: "text-white"
+  }, market.faceIcon ? `${market.faceIcon.name}／${market.faceIcon.cost} ダイヤ` : '無し')), /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between"
+  }, /*#__PURE__*/React.createElement("span", null, "\u5186\u76E4\u77F3\u30A2\u30A4\u30B3\u30F3"), /*#__PURE__*/React.createElement("b", {
+    className: "text-white"
+  }, market.discIcon ? `${market.discIcon.name}／${market.discIcon.cost} ダイヤ` : '無し'))))), /*#__PURE__*/React.createElement("section", {
+    className: "rounded-2xl border border-white/10 bg-slate-900/60 p-3"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setShowRaw(v => !v),
+    className: "min-h-[40px] w-full rounded-xl bg-slate-800 text-[10px] font-black"
+  }, showRaw ? '生データを隠す' : '⑨ 生データ（ALL_PLAYER_MONSTERS の中身）を見る'), showRaw && /*#__PURE__*/React.createElement("pre", {
+    className: "mt-2 max-h-72 overflow-auto whitespace-pre-wrap break-all rounded-xl bg-black/50 p-3 text-[8px] leading-relaxed text-cyan-200"
+  }, JSON.stringify(mon, null, 2)))));
+}
+
 // ---- part: 60-app.jsx ----
 function MonsterHeroGame() {
   const [gameState, setGameStateRaw] = useState('HOME');
@@ -38282,6 +38959,11 @@ function MonsterHeroGame() {
   // 形は本番の attackAnim と同じ({charge}→{zanCombo,sakura}や{charge:false,motion,sakura})にして、
   // 同じ attackMotionAnimation/EikiSakuraPetals をそのまま使い、演出だけ別に持たない
   const [monsterImageDebugMotionPlaying, setMonsterImageDebugMotionPlaying] = useState(null);
+  // 新モンスター確認(MONSTER_CHECK_DEBUG)で選んでいる種と、試し塗りの色。
+  // 画面の中だけで完結する見た目(検索語・背景・再生中)は画面部品側が持ち、
+  // カスタムカラーのモーダルが本体側にあるこの2つだけをここへ置く。どちらも保存しない
+  const [monsterCheckDebugId, setMonsterCheckDebugId] = useState(null);
+  const [monsterCheckDebugColors, setMonsterCheckDebugColors] = useState([]);
   // 本番の選択フローと進行デバッグで、STEP1の保存形式・helperを共有する。
   // 選択中の種族・難易度だけがデバッグ専用で、保存先は既存の進行キー1つに限る。
   const [speciesChallengeDebugSpeciesId, setSpeciesChallengeDebugSpeciesId] = useState(() => speciesChallengeLineages()[0]?.id || '');
@@ -56916,7 +57598,18 @@ function MonsterHeroGame() {
       updateNoticeStyle: updateNoticeStyle,
       onChangeUpdateNoticeStyle: setUpdateNoticeStyle
     }), gameState === 'MASU_PATTERN_DEBUG' && (() => {
-      const eligible = masuMons.filter(m => ALL_PLAYER_MONSTERS[m.baseId]);
+      // 所持しているマスモンに加えて、所持していない種も表示用の一時データで並べる
+      // (2026-09-17・ユーザー指摘「今は見れないものが多い」)。模様は元から保存しないので、
+      // ここで擬似個体を足してもセーブデータには何の影響も無い
+      const eligible = [...masuMons.filter(m => ALL_PLAYER_MONSTERS[m.baseId])];
+      Object.values(ALL_PLAYER_MONSTERS).forEach(mon => {
+        if (mon?.id && !eligible.some(m => m.baseId === mon.id)) eligible.push({
+          id: `pattern-preview-${mon.id}`,
+          baseId: mon.id,
+          name: `${mon.name}（未所持・DEBUG表示）`,
+          colors: []
+        });
+      });
       const selected = eligible.find(m => String(m.id) === String(patternMasuId));
       const resetPattern = () => {
         setPatternStep('attach');
@@ -58751,7 +59444,7 @@ function MonsterHeroGame() {
         paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
       }
     }, /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center gap-2 mb-4 shrink-0"
+      className: "flex items-center gap-2 mb-2 shrink-0"
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => {
         setGameState('SETTINGS');
@@ -58762,30 +59455,47 @@ function MonsterHeroGame() {
       size: 20
     })), /*#__PURE__*/React.createElement("h2", {
       className: "text-base font-black text-slate-400 tracking-widest"
-    }, "BATTLE TEST")), /*#__PURE__*/React.createElement("div", {
-      className: "flex-1 overflow-y-auto mh-scroll space-y-5"
+    }, "DEBUG MENU")), /*#__PURE__*/React.createElement("p", {
+      className: "mb-3 shrink-0 text-[9px] leading-relaxed text-slate-500"
+    }, "\u7528\u9014\u3054\u3068\u306B\u7573\u3093\u3067\u3042\u308A\u307E\u3059\u3002\u898B\u51FA\u3057\u3092\u62BC\u3059\u3068\u958B\u304D\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
+      className: "flex-1 overflow-y-auto mh-scroll space-y-2"
+    }, /*#__PURE__*/React.createElement("details", {
+      className: "rounded-2xl border border-emerald-500/40 bg-emerald-950/20"
+    }, /*#__PURE__*/React.createElement("summary", {
+      className: "cursor-pointer select-none px-3 py-3 text-[11px] font-black text-emerald-200"
+    }, "\uD83E\uDDEC \u30E2\u30F3\u30B9\u30BF\u30FC", /*#__PURE__*/React.createElement("small", {
+      className: "block text-[8px] font-bold text-emerald-400/80"
+    }, "\u65B0\u30E2\u30F3\u30B9\u30BF\u30FC\u78BA\u8A8D\u30FB\u753B\u50CF\u3068\u67D3\u8272\u30FB\u8EE2\u751F\uFF0F\u9650\u754C\u7A81\u7834\uFF0F\u8D85\u8D8A\u306E\u898B\u305F\u76EE\u30FB\u30A2\u30A4\u30B3\u30F3\u8ABF\u6574")), /*#__PURE__*/React.createElement("div", {
+      className: "space-y-2 border-t border-emerald-500/30 p-3"
     }, /*#__PURE__*/React.createElement("button", {
-      "data-debug-rhythm-mode": true,
-      onClick: openRhythmDebug,
-      className: "w-full min-h-[64px] rounded-2xl border-2 border-cyan-300 bg-indigo-950 text-cyan-100 font-black"
-    }, "\uD83C\uDFB5 \u97F3\u30B2\u30FC\u30C7\u30D0\u30C3\u30B0", /*#__PURE__*/React.createElement("small", {
-      className: "block text-[8px] text-cyan-300"
-    }, "\u66F2\u30FB\u96E3\u6613\u5EA6\u30FB\u8A2D\u5B9A\u30FBBEST\u4FDD\u5B58\u57FA\u76E4\u3092\u78BA\u8A8D")), /*#__PURE__*/React.createElement("button", {
-      "data-debug-rhythm-demo": true,
-      onClick: openRhythmDemo,
-      className: "w-full min-h-[64px] rounded-2xl border-2 border-amber-300 bg-amber-950/40 text-amber-100 font-black"
-    }, "\uD83C\uDFBC \u97F3\u30B2\u30FC\u4F53\u9A13\u7248\uFF08\u6B63\u5F0F\u5C0E\u7DDA\uFF09", /*#__PURE__*/React.createElement("small", {
-      className: "block text-[8px] text-amber-300"
-    }, "\u516C\u958B\u3057\u305F\u3068\u304D\u30D7\u30EC\u30A4\u30E4\u30FC\u304C\u901A\u308B\u753B\u9762\u3002Monster Hero 1\u66F2\u30FB3\u96E3\u6613\u5EA6")), /*#__PURE__*/React.createElement("button", {
-      "data-debug-species-challenge": true,
-      onClick: async () => {
-        await loadSpeciesChallengeProgress();
-        setGameState('SPECIES_CHALLENGE_DEBUG');
-      },
-      className: "w-full min-h-[64px] bg-emerald-950 border-2 border-emerald-400 text-emerald-100 rounded-2xl font-black"
-    }, "\uD83E\uDDEC \u7A2E\u65CF\u30C1\u30E3\u30EC\u30F3\u30B8\u9032\u884C\u78BA\u8A8D", /*#__PURE__*/React.createElement("small", {
+      "data-debug-monster-check": true,
+      onClick: () => setGameState('MONSTER_CHECK_DEBUG'),
+      className: "w-full min-h-[64px] rounded-2xl border-2 border-emerald-300 bg-emerald-900 text-emerald-50 font-black"
+    }, "\uD83C\uDD95 \u65B0\u30E2\u30F3\u30B9\u30BF\u30FC\u78BA\u8A8D", /*#__PURE__*/React.createElement("small", {
       className: "block text-[8px] text-emerald-300"
-    }, "\u7A2E\u65CF\u5225\u306E\u89E3\u653E\u30FB\u30AF\u30EA\u30A2\u30FB\u521D\u56DE\u5831\u916C\u3092\u78BA\u8A8D\uFF0F\u7DE8\u96C6")), /*#__PURE__*/React.createElement("button", {
+    }, "\u5168\u7A2E\u3092\u6240\u6301\u306B\u95A2\u4FC2\u306A\u304F\u8868\u793A\u3002\u753B\u50CF\u30FB\u67D3\u8272\u30FB\u30E2\u30FC\u30B7\u30E7\u30F3\u30FB\u80FD\u529B\u30FB\u6280\u30FB\u8840\u7D71\u30FB\u30DE\u30FC\u30B1\u30C3\u30C8\u3068\u5B9F\u88C5\u30C1\u30A7\u30C3\u30AF")), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setGameState('MONSTER_IMAGE_DEBUG'),
+      className: "w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black"
+    }, "\uD83D\uDDBC\uFE0F \u30E2\u30F3\u30B9\u30BF\u30FC\u753B\u50CF\u30FB\u67D3\u8272\u78BA\u8A8D", /*#__PURE__*/React.createElement("small", {
+      className: "block text-[8px] text-cyan-300"
+    }, "\u672C\u756A\u8868\u793A\u3068\u67D3\u8272\u3092\u4FDD\u5B58\u305B\u305A\u78BA\u8A8D")), /*#__PURE__*/React.createElement("button", {
+      onClick: () => {
+        setDyeMaskEditorOpened(true);
+        setGameState('DYE_MASK_POSITION_DEBUG');
+      },
+      className: "w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-400 text-cyan-100 rounded-2xl font-black"
+    }, "\uD83D\uDD8C\uFE0F \u67D3\u8272\u30DE\u30B9\u30AF\u7DE8\u96C6", /*#__PURE__*/React.createElement("small", {
+      className: "block text-[8px] text-cyan-300"
+    }, "\u5168\u30D9\u30FC\u30B9\u30E2\u30F3\u3092\u9078\u629E\u3057\u3066\u76F4\u63A5\u63CF\u753B\u30FBPNG\u51FA\u529B")), /*#__PURE__*/React.createElement("button", {
+      onClick: () => {
+        setPatternMasuId(null);
+        setPatternSettings(makePatternSettings());
+        setGameState('MASU_PATTERN_DEBUG');
+      },
+      className: "w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black"
+    }, "\uD83C\uDFA8 \u30DE\u30B9\u30E2\u30F3\u6A21\u69D8\u30AB\u30B9\u30BF\u30E0\u30C6\u30B9\u30C8", /*#__PURE__*/React.createElement("small", {
+      className: "block text-[8px] text-cyan-300"
+    }, "\u6A21\u69D8\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("button", {
       onClick: () => setGameState('REINCARNATE_DISPLAY_DEBUG'),
       className: "w-full min-h-[64px] bg-violet-950 border-2 border-cyan-300 text-violet-100 rounded-2xl font-black"
     }, "\u267B\uFE0F \u8EE2\u751F\u8868\u793A\u78BA\u8A8D", /*#__PURE__*/React.createElement("small", {
@@ -58805,66 +59515,11 @@ function MonsterHeroGame() {
     }, "\uD83C\uDF1F \u8D85\u8D8A\u78BA\u8A8D", /*#__PURE__*/React.createElement("small", {
       className: "block text-[8px] text-amber-200"
     }, "\u30DE\u30FC\u30AF\u30FB\u6F14\u51FA\u30FB\u5FC5\u8981XP\u306E\u78BA\u8A8D\u3068\u3001\u8A66\u3059\u305F\u3081\u306E\u6E96\u5099")), /*#__PURE__*/React.createElement("button", {
-      onClick: () => setGameState('MONSTER_IMAGE_DEBUG'),
-      className: "w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black"
-    }, "\uD83D\uDDBC\uFE0F \u30E2\u30F3\u30B9\u30BF\u30FC\u753B\u50CF\u30FB\u67D3\u8272\u78BA\u8A8D", /*#__PURE__*/React.createElement("small", {
-      className: "block text-[8px] text-cyan-300"
-    }, "\u672C\u756A\u8868\u793A\u3068\u67D3\u8272\u3092\u4FDD\u5B58\u305B\u305A\u78BA\u8A8D")), /*#__PURE__*/React.createElement("button", {
-      onClick: () => {
-        setDyeMaskEditorOpened(true);
-        setGameState('DYE_MASK_POSITION_DEBUG');
-      },
-      className: "w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-400 text-cyan-100 rounded-2xl font-black"
-    }, "\uD83D\uDD8C\uFE0F \u67D3\u8272\u30DE\u30B9\u30AF\u7DE8\u96C6", /*#__PURE__*/React.createElement("small", {
-      className: "block text-[8px] text-cyan-300"
-    }, "\u5168\u30D9\u30FC\u30B9\u30E2\u30F3\u3092\u9078\u629E\u3057\u3066\u76F4\u63A5\u63CF\u753B\u30FBPNG\u51FA\u529B")), /*#__PURE__*/React.createElement("button", {
-      onClick: openDebugTraining,
-      className: "w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black"
-    }, "\uD83C\uDFB2 \u4FEE\u884C\u30C6\u30B9\u30C8", /*#__PURE__*/React.createElement("small", {
-      className: "block text-[8px] text-fuchsia-300"
-    }, "\u5831\u916C\u30FB\u9032\u884C\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("button", {
       onClick: () => setGameState('BREEDER_ICON_DEBUG'),
       className: "w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black"
     }, "\uD83D\uDE42 \u30D6\u30EA\u30FC\u30C0\u30FC\u30A2\u30A4\u30B3\u30F3\u8ABF\u6574", /*#__PURE__*/React.createElement("small", {
       className: "block text-[8px] text-fuchsia-300"
-    }, "\u8868\u793A\u5024\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("button", {
-      onClick: () => {
-        setPatternMasuId(null);
-        setPatternSettings(makePatternSettings());
-        setGameState('MASU_PATTERN_DEBUG');
-      },
-      className: "w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black"
-    }, "\uD83C\uDFA8 \u30DE\u30B9\u30E2\u30F3\u6A21\u69D8\u30AB\u30B9\u30BF\u30E0\u30C6\u30B9\u30C8", /*#__PURE__*/React.createElement("small", {
-      className: "block text-[8px] text-cyan-300"
-    }, "\u6A21\u69D8\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("button", {
-      "data-debug-screen-error": true,
-      onClick: () => setDebugThrowScreenError(true),
-      className: "w-full min-h-[48px] rounded-2xl border border-rose-400/70 bg-rose-950/40 text-rose-100 font-black text-sm"
-    }, "\u26A0\uFE0F \u753B\u9762\u30A8\u30E9\u30FC\u306E\u53D7\u3051\u6B62\u3081\u3092\u8A66\u3059"), debugThrowScreenError && /*#__PURE__*/React.createElement(DebugThrowScreenError, null), /*#__PURE__*/React.createElement("button", {
-      "data-debug-rpg-battle": true,
-      onClick: () => {
-        setRpgBattle(null);
-        setGameState('RPG_DEBUG_SETUP');
-      },
-      className: "w-full min-h-[64px] rounded-2xl border-2 border-emerald-400/70 bg-emerald-950/40 text-emerald-100 font-black"
-    }, "\u2694\uFE0F \u30C0\u30F3\u30B8\u30E7\u30F3RPG\u6226\u95D8\u30C6\u30B9\u30C8", /*#__PURE__*/React.createElement("small", {
-      className: "block text-[8px] text-emerald-300"
-    }, "\u30B3\u30DE\u30F3\u30C9\u5F0F\u30BF\u30FC\u30F3\u5236\u306E\u8A66\u4F5C\u30FB\u30D9\u30FC\u30B9\u30E2\u30F3\u306E\u307F\u30FB\u4FDD\u5B58\u3082\u5831\u916C\u3082\u3042\u308A\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("button", {
-      "data-debug-battle-mode": true,
-      onClick: () => {
-        debugBattleRef.current = true;
-        debugMonsterPreviewRef.current = true;
-        extremeRunRef.current = false;
-        setDebugBattle(true);
-        setExtremeRun(false);
-        setBattleMode(BATTLE_MODE_CHALLENGE);
-        setModeSelectTab('mode');
-        setGameState('BATTLE_MODE_SELECT');
-      },
-      className: "w-full min-h-[64px] rounded-2xl border-2 border-fuchsia-500/70 bg-fuchsia-950/30 text-fuchsia-100 font-black"
-    }, "\u2694\uFE0F \u30D0\u30C8\u30EB\u30E2\u30FC\u30C9", /*#__PURE__*/React.createElement("small", {
-      className: "block text-[8px] text-fuchsia-300"
-    }, "\u7A2E\u65CF\u30C1\u30E3\u30EC\u30F3\u30B8\u30FB\u6975\u9650\u30C1\u30E3\u30EC\u30F3\u30B8\u3092\u542B\u3080\u8A66\u9A13\u7528\u30E2\u30FC\u30C9\u9078\u629E\u30FB\u7D50\u679C\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("section", {
+    }, "\u8868\u793A\u5024\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("section", {
       "data-debug-profile-frames": true,
       className: "rounded-2xl border-2 border-amber-500/60 bg-amber-950/20 p-3"
     }, /*#__PURE__*/React.createElement("div", {
@@ -58900,85 +59555,50 @@ function MonsterHeroGame() {
       className: `mh-profile-frame mh-profile-frame-ring ${frame.className || ''}`
     })), /*#__PURE__*/React.createElement("span", {
       className: "text-[8px] font-black text-slate-300 leading-tight text-center"
-    }, frame.name, frame.released ? '' : '（未公開）'))))), /*#__PURE__*/React.createElement("section", {
-      className: "rounded-2xl border-2 border-pink-500/60 bg-pink-950/30 p-3"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "text-[10px] text-pink-300 font-black mb-2"
-    }, "\uD83D\uDC96 \u307F\u3085\u3042\u30C7\u30D0\u30C3\u30B0"), /*#__PURE__*/React.createElement("div", {
+    }, frame.name, frame.released ? '' : '（未公開）'))))))), /*#__PURE__*/React.createElement("details", {
+      className: "rounded-2xl border border-fuchsia-500/40 bg-fuchsia-950/20"
+    }, /*#__PURE__*/React.createElement("summary", {
+      className: "cursor-pointer select-none px-3 py-3 text-[11px] font-black text-fuchsia-200"
+    }, "\u2694\uFE0F \u30D0\u30C8\u30EB", /*#__PURE__*/React.createElement("small", {
+      className: "block text-[8px] font-bold text-fuchsia-400/80"
+    }, "\u30E2\u30FC\u30C9\u9078\u629E\u30FB\u7A2E\u65CF\u30C1\u30E3\u30EC\u30F3\u30B8\u30FB\u30C0\u30F3\u30B8\u30E7\u30F3RPG\u30FB\u30C1\u30E5\u30FC\u30C8\u30EA\u30A2\u30EB\u30FB\u30C7\u30D0\u30C3\u30B0\u6226")), /*#__PURE__*/React.createElement("div", {
+      className: "space-y-2 border-t border-fuchsia-500/30 p-3"
+    }, /*#__PURE__*/React.createElement("button", {
+      "data-debug-battle-mode": true,
+      onClick: () => {
+        debugBattleRef.current = true;
+        debugMonsterPreviewRef.current = true;
+        extremeRunRef.current = false;
+        setDebugBattle(true);
+        setExtremeRun(false);
+        setBattleMode(BATTLE_MODE_CHALLENGE);
+        setModeSelectTab('mode');
+        setGameState('BATTLE_MODE_SELECT');
+      },
+      className: "w-full min-h-[64px] rounded-2xl border-2 border-fuchsia-500/70 bg-fuchsia-950/30 text-fuchsia-100 font-black"
+    }, "\u2694\uFE0F \u30D0\u30C8\u30EB\u30E2\u30FC\u30C9", /*#__PURE__*/React.createElement("small", {
+      className: "block text-[8px] text-fuchsia-300"
+    }, "\u7A2E\u65CF\u30C1\u30E3\u30EC\u30F3\u30B8\u30FB\u6975\u9650\u30C1\u30E3\u30EC\u30F3\u30B8\u3092\u542B\u3080\u8A66\u9A13\u7528\u30E2\u30FC\u30C9\u9078\u629E\u30FB\u7D50\u679C\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("button", {
+      "data-debug-species-challenge": true,
+      onClick: async () => {
+        await loadSpeciesChallengeProgress();
+        setGameState('SPECIES_CHALLENGE_DEBUG');
+      },
+      className: "w-full min-h-[64px] bg-emerald-950 border-2 border-emerald-400 text-emerald-100 rounded-2xl font-black"
+    }, "\uD83E\uDDEC \u7A2E\u65CF\u30C1\u30E3\u30EC\u30F3\u30B8\u9032\u884C\u78BA\u8A8D", /*#__PURE__*/React.createElement("small", {
+      className: "block text-[8px] text-emerald-300"
+    }, "\u7A2E\u65CF\u5225\u306E\u89E3\u653E\u30FB\u30AF\u30EA\u30A2\u30FB\u521D\u56DE\u5831\u916C\u3092\u78BA\u8A8D\uFF0F\u7DE8\u96C6")), /*#__PURE__*/React.createElement("button", {
+      "data-debug-rpg-battle": true,
+      onClick: () => {
+        setRpgBattle(null);
+        setGameState('RPG_DEBUG_SETUP');
+      },
+      className: "w-full min-h-[64px] rounded-2xl border-2 border-emerald-400/70 bg-emerald-950/40 text-emerald-100 font-black"
+    }, "\u2694\uFE0F \u30C0\u30F3\u30B8\u30E7\u30F3RPG\u6226\u95D8\u30C6\u30B9\u30C8", /*#__PURE__*/React.createElement("small", {
+      className: "block text-[8px] text-emerald-300"
+    }, "\u30B3\u30DE\u30F3\u30C9\u5F0F\u30BF\u30FC\u30F3\u5236\u306E\u8A66\u4F5C\u30FB\u30D9\u30FC\u30B9\u30E2\u30F3\u306E\u307F\u30FB\u4FDD\u5B58\u3082\u5831\u916C\u3082\u3042\u308A\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-2 gap-2"
     }, /*#__PURE__*/React.createElement("button", {
-      "data-debug-onboarding-preview": true,
-      onClick: startOnboardingPreview,
-      className: "col-span-2 min-h-[46px] rounded-xl bg-pink-700/70 border border-pink-300/60 text-white text-[10px] font-black active:scale-95"
-    }, "\u521D\u56DE\u30D7\u30EC\u30A4\u3092\u6700\u521D\u304B\u3089\u518D\u751F", /*#__PURE__*/React.createElement("small", {
-      className: "block text-[8px] font-bold opacity-80"
-    }, "\u52A9\u624B\u9078\u629E\u2192\u3042\u3044\u3055\u3064\u2192\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u2192\u6751\u306E\u6848\u5185\u2192HOME\u30FB\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("button", {
-      onClick: () => {
-        returnToHome();
-        startTutorial('intro');
-      },
-      className: "min-h-[46px] rounded-xl bg-pink-900/60 border border-pink-400/50 text-pink-100 text-[10px] font-black active:scale-95"
-    }, "\u307F\u3085\u3042\u306E\u3042\u3044\u3055\u3064\u3060\u3051\u518D\u751F"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => {
-        returnToHome();
-        startTutorial('tour');
-      },
-      className: "min-h-[46px] rounded-xl bg-pink-900/60 border border-pink-400/50 text-pink-100 text-[10px] font-black active:scale-95"
-    }, "\u6751\u306E\u6848\u5185\u3060\u3051\u518D\u751F"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => {
-        returnToHome();
-        setKikiIntroStep(0);
-      },
-      className: "min-h-[46px] rounded-xl bg-pink-900/60 border border-pink-400/50 text-pink-100 text-[10px] font-black active:scale-95"
-    }, "\u304D\u304D\u52A0\u5165\u306E\u4F1A\u8A71\u3092\u518D\u751F"), /*#__PURE__*/React.createElement("button", {
-      "data-debug-rhythm-event-intro": true,
-      onClick: debugPlayRhythmEventIntro,
-      className: "col-span-2 min-h-[46px] rounded-xl bg-fuchsia-800/70 border border-fuchsia-300/60 text-white text-[10px] font-black active:scale-95"
-    }, "\uD83C\uDFC6 \u30A4\u30D9\u30F3\u30C8\u958B\u50AC\u3092\u518D\u751F\uFF08\u4F1A\u8A71\u2192\u544A\u77E5\uFF09"), /*#__PURE__*/React.createElement("button", {
-      "data-debug-rhythm-event-story": true,
-      onClick: debugPlayRhythmEventStory,
-      className: "min-h-[46px] rounded-xl bg-fuchsia-900/60 border border-fuchsia-400/50 text-fuchsia-100 text-[10px] font-black active:scale-95"
-    }, "\u30A4\u30D9\u30F3\u30C8\u4F1A\u8A71\u3060\u3051\u518D\u751F"), /*#__PURE__*/React.createElement("button", {
-      "data-debug-rhythm-event-thanks": true,
-      onClick: debugPlayRhythmEventThanks,
-      className: "min-h-[46px] rounded-xl bg-fuchsia-900/60 border border-fuchsia-400/50 text-fuchsia-100 text-[10px] font-black active:scale-95"
-    }, "\u9589\u5E55\u3068\u304A\u793C\u306E\u4F1A\u8A71\u3092\u518D\u751F"), /*#__PURE__*/React.createElement("button", {
-      "data-debug-rhythm-event-notice": true,
-      onClick: debugPlayRhythmEventNotice,
-      className: "min-h-[46px] rounded-xl bg-fuchsia-900/60 border border-fuchsia-400/50 text-fuchsia-100 text-[10px] font-black active:scale-95"
-    }, "\u30A4\u30D9\u30F3\u30C8\u544A\u77E5\u3060\u3051\u518D\u751F"), /*#__PURE__*/React.createElement("button", {
-      "data-debug-rhythm-event-reward": true,
-      onClick: debugPlayRhythmEventReward,
-      className: "min-h-[46px] rounded-xl bg-amber-900/60 border border-amber-400/50 text-amber-100 text-[10px] font-black active:scale-95"
-    }, "\u5165\u8CDE\u306E\u53D7\u3051\u53D6\u308A\u753B\u9762\u3092\u898B\u308B"), /*#__PURE__*/React.createElement("button", {
-      "data-debug-rhythm-event-reset": true,
-      onClick: debugResetRhythmEventSeen,
-      className: "min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95"
-    }, "\u30A4\u30D9\u30F3\u30C8\u3092\u672A\u8AAD\u3078\u623B\u3059"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => setAssistantDebug('lines'),
-      className: "min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95"
-    }, "\u5168\u52A9\u624B\u30B3\u30E1\u30F3\u30C8\u78BA\u8A8D"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => setAssistantDebug('expressions'),
-      className: "min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95"
-    }, "\u5168\u8868\u60C5\u78BA\u8A8D"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => setAssistantDebug('conditions'),
-      className: "min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95"
-    }, "\u6761\u4EF6\u30B3\u30E1\u30F3\u30C8\u78BA\u8A8D"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => setAssistantDebug('spam'),
-      className: "min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95"
-    }, "\u9023\u6253\u30EA\u30A2\u30AF\u30B7\u30E7\u30F3\u78BA\u8A8D"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => setAssistantDebug('bond'),
-      className: "min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95"
-    }, "\u89AA\u5BC6\u5EA6\u30FB\u547C\u3073\u65B9\u78BA\u8A8D"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => setAssistantDebug('random'),
-      className: "min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95"
-    }, "\u30E9\u30F3\u30C0\u30E0\u30C6\u30B9\u30C8"), /*#__PURE__*/React.createElement("button", {
-      onClick: debugPlayUpdateGuide,
-      className: "min-h-[46px] rounded-xl bg-pink-700/70 border border-pink-300/60 text-white text-[10px] font-black active:scale-95"
-    }, "\u30A2\u30C3\u30D7\u30C7\u30FC\u30C8\u901A\u77E5\u30C6\u30B9\u30C8"), /*#__PURE__*/React.createElement("button", {
-      onClick: debugResetUpdateGuide,
-      className: "min-h-[46px] rounded-xl bg-amber-950/60 border border-amber-500/50 text-amber-100 text-[10px] font-black active:scale-95"
-    }, "\u901A\u77E5\u30C6\u30B9\u30C8\u3092\u672A\u8AAD\u3078\u623B\u3059"), /*#__PURE__*/React.createElement("button", {
       onClick: () => {
         setBattleMenuTab('difficulty');
         setGameState('BATTLE_MENU');
@@ -59009,30 +59629,11 @@ function MonsterHeroGame() {
         startTutorial('battleGuide');
       },
       className: "col-span-2 min-h-[46px] rounded-xl bg-pink-700/70 border border-pink-300/60 text-white text-[10px] font-black active:scale-95"
-    }, "\u30D0\u30C8\u30EB\u521D\u56DE\u6848\u5185\u3092\u518D\u751F"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => debugDailyMasuAdviceAt(7),
-      className: "col-span-2 min-h-[46px] rounded-xl bg-pink-700/70 border border-pink-300/60 text-white text-[10px] font-black active:scale-95"
-    }, "\u30EF\u30F3\u30DD\u30A4\u30F3\u30C8\u6848\u5185\u3092\u518D\u751F\uFF08\u767B\u9332\u65707\u4F53\uFF09"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => debugDailyMasuAdviceAt(8),
-      className: "min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95"
-    }, "\u767B\u9332\u65708\u4F53\u306E\u6761\u4EF6\u78BA\u8A8D"), /*#__PURE__*/React.createElement("button", {
-      onClick: async () => {
-        await storeSet(DAILY_MASU_ADVICE_KEY, '', false);
-        dailyMasuAdviceCheckedRef.current = false;
-        window.alert('本日のワンポイント表示済みフラグをリセットしました。');
-      },
-      className: "min-h-[46px] rounded-xl bg-amber-950/60 border border-amber-500/50 text-amber-100 text-[10px] font-black active:scale-95"
-    }, "\u672C\u65E5\u306E\u8868\u793A\u6E08\u307F\u3092\u30EA\u30BB\u30C3\u30C8")), /*#__PURE__*/React.createElement("button", {
-      onClick: async () => {
-        if (!window.confirm('「はじめての案内」を見ていない状態に戻します。モンスターやダイヤなどのセーブデータは消えません。よろしいですか？')) return;
-        try {
-          await storeSet(TUTORIAL_SEEN_KEY, false, false);
-        } catch {}
-        tutorialShownRef.current = false;
-        window.alert('初回状態へ戻しました。HOMEを開くと案内が始まります。');
-      },
-      className: "w-full mt-2 min-h-[42px] rounded-xl bg-amber-950/60 border border-amber-500/50 text-amber-100 text-[10px] font-black active:scale-95"
-    }, "\u521D\u56DE\u72B6\u614B\u3078\u623B\u3059\uFF08\u30BB\u30FC\u30D6\u306F\u6D88\u3048\u307E\u305B\u3093\uFF09")), /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("div", {
+    }, "\u30D0\u30C8\u30EB\u521D\u56DE\u6848\u5185\u3092\u518D\u751F")), /*#__PURE__*/React.createElement("div", {
+      className: "space-y-3 rounded-2xl border border-white/10 bg-black/20 p-3"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-[10px] font-black text-slate-300"
+    }, "\uD83D\uDEE0 \u30C7\u30D0\u30C3\u30B0\u6226\uFF08\u7D50\u679C\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093\uFF09"), /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] text-slate-500 font-black mb-2"
     }, "1. \u96E3\u6613\u5EA6"), /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-3 gap-2"
@@ -59072,7 +59673,151 @@ function MonsterHeroGame() {
       disabled: !getDebugEnemyOptions(difficulty).some(o => o.key === debugEnemyKey) || !debugStrongestHero && getActiveMonsterList().length === 0,
       onClick: startDebugBattle,
       className: "w-full min-h-[58px] bg-slate-200 text-slate-950 rounded-2xl font-black disabled:opacity-30"
-    }, "4. \u30C7\u30D0\u30C3\u30B0\u6226\u958B\u59CB"))), gameState === 'SPECIES_CHALLENGE_DEBUG' && (() => {
+    }, "4. \u30C7\u30D0\u30C3\u30B0\u6226\u958B\u59CB")))), /*#__PURE__*/React.createElement("details", {
+      className: "rounded-2xl border border-indigo-400/40 bg-indigo-950/30"
+    }, /*#__PURE__*/React.createElement("summary", {
+      className: "cursor-pointer select-none px-3 py-3 text-[11px] font-black text-cyan-200"
+    }, "\uD83C\uDFB5 \u30E2\u30F3\u30D2\u30ED\u30D3\u30FC\u30C8", /*#__PURE__*/React.createElement("small", {
+      className: "block text-[8px] font-bold text-cyan-400/80"
+    }, "\u97F3\u30B2\u30FC\u30C7\u30D0\u30C3\u30B0\u30FB\u4F53\u9A13\u7248\u306E\u5C0E\u7DDA\u30FB\u30A4\u30D9\u30F3\u30C8\u306E\u4F1A\u8A71\u3068\u544A\u77E5")), /*#__PURE__*/React.createElement("div", {
+      className: "space-y-2 border-t border-indigo-400/30 p-3"
+    }, /*#__PURE__*/React.createElement("button", {
+      "data-debug-rhythm-mode": true,
+      onClick: openRhythmDebug,
+      className: "w-full min-h-[64px] rounded-2xl border-2 border-cyan-300 bg-indigo-950 text-cyan-100 font-black"
+    }, "\uD83C\uDFB5 \u97F3\u30B2\u30FC\u30C7\u30D0\u30C3\u30B0", /*#__PURE__*/React.createElement("small", {
+      className: "block text-[8px] text-cyan-300"
+    }, "\u66F2\u30FB\u96E3\u6613\u5EA6\u30FB\u8A2D\u5B9A\u30FBBEST\u4FDD\u5B58\u57FA\u76E4\u3092\u78BA\u8A8D")), /*#__PURE__*/React.createElement("button", {
+      "data-debug-rhythm-demo": true,
+      onClick: openRhythmDemo,
+      className: "w-full min-h-[64px] rounded-2xl border-2 border-amber-300 bg-amber-950/40 text-amber-100 font-black"
+    }, "\uD83C\uDFBC \u97F3\u30B2\u30FC\u4F53\u9A13\u7248\uFF08\u6B63\u5F0F\u5C0E\u7DDA\uFF09", /*#__PURE__*/React.createElement("small", {
+      className: "block text-[8px] text-amber-300"
+    }, "\u516C\u958B\u3057\u305F\u3068\u304D\u30D7\u30EC\u30A4\u30E4\u30FC\u304C\u901A\u308B\u753B\u9762\u3002Monster Hero 1\u66F2\u30FB3\u96E3\u6613\u5EA6")), /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-2 gap-2"
+    }, /*#__PURE__*/React.createElement("button", {
+      "data-debug-rhythm-event-intro": true,
+      onClick: debugPlayRhythmEventIntro,
+      className: "col-span-2 min-h-[46px] rounded-xl bg-fuchsia-800/70 border border-fuchsia-300/60 text-white text-[10px] font-black active:scale-95"
+    }, "\uD83C\uDFC6 \u30A4\u30D9\u30F3\u30C8\u958B\u50AC\u3092\u518D\u751F\uFF08\u4F1A\u8A71\u2192\u544A\u77E5\uFF09"), /*#__PURE__*/React.createElement("button", {
+      "data-debug-rhythm-event-story": true,
+      onClick: debugPlayRhythmEventStory,
+      className: "min-h-[46px] rounded-xl bg-fuchsia-900/60 border border-fuchsia-400/50 text-fuchsia-100 text-[10px] font-black active:scale-95"
+    }, "\u30A4\u30D9\u30F3\u30C8\u4F1A\u8A71\u3060\u3051\u518D\u751F"), /*#__PURE__*/React.createElement("button", {
+      "data-debug-rhythm-event-thanks": true,
+      onClick: debugPlayRhythmEventThanks,
+      className: "min-h-[46px] rounded-xl bg-fuchsia-900/60 border border-fuchsia-400/50 text-fuchsia-100 text-[10px] font-black active:scale-95"
+    }, "\u9589\u5E55\u3068\u304A\u793C\u306E\u4F1A\u8A71\u3092\u518D\u751F"), /*#__PURE__*/React.createElement("button", {
+      "data-debug-rhythm-event-notice": true,
+      onClick: debugPlayRhythmEventNotice,
+      className: "min-h-[46px] rounded-xl bg-fuchsia-900/60 border border-fuchsia-400/50 text-fuchsia-100 text-[10px] font-black active:scale-95"
+    }, "\u30A4\u30D9\u30F3\u30C8\u544A\u77E5\u3060\u3051\u518D\u751F"), /*#__PURE__*/React.createElement("button", {
+      "data-debug-rhythm-event-reward": true,
+      onClick: debugPlayRhythmEventReward,
+      className: "min-h-[46px] rounded-xl bg-amber-900/60 border border-amber-400/50 text-amber-100 text-[10px] font-black active:scale-95"
+    }, "\u5165\u8CDE\u306E\u53D7\u3051\u53D6\u308A\u753B\u9762\u3092\u898B\u308B"), /*#__PURE__*/React.createElement("button", {
+      "data-debug-rhythm-event-reset": true,
+      onClick: debugResetRhythmEventSeen,
+      className: "col-span-2 min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95"
+    }, "\u30A4\u30D9\u30F3\u30C8\u3092\u672A\u8AAD\u3078\u623B\u3059")))), /*#__PURE__*/React.createElement("details", {
+      className: "rounded-2xl border border-pink-500/50 bg-pink-950/25"
+    }, /*#__PURE__*/React.createElement("summary", {
+      className: "cursor-pointer select-none px-3 py-3 text-[11px] font-black text-pink-200"
+    }, "\uD83D\uDC96 \u307F\u3085\u3042\u30C7\u30D0\u30C3\u30B0", /*#__PURE__*/React.createElement("small", {
+      className: "block text-[8px] font-bold text-pink-400/80"
+    }, "\u521D\u56DE\u30D7\u30EC\u30A4\u306E\u518D\u751F\u30FB\u30BB\u30EA\u30D5\u3068\u8868\u60C5\u30FB\u89AA\u5BC6\u5EA6\u30FB\u30A2\u30C3\u30D7\u30C7\u30FC\u30C8\u901A\u77E5\u30FB\u30EF\u30F3\u30DD\u30A4\u30F3\u30C8\u6848\u5185")), /*#__PURE__*/React.createElement("div", {
+      className: "space-y-2 border-t border-pink-500/30 p-3"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-2 gap-2"
+    }, /*#__PURE__*/React.createElement("button", {
+      "data-debug-onboarding-preview": true,
+      onClick: startOnboardingPreview,
+      className: "col-span-2 min-h-[46px] rounded-xl bg-pink-700/70 border border-pink-300/60 text-white text-[10px] font-black active:scale-95"
+    }, "\u521D\u56DE\u30D7\u30EC\u30A4\u3092\u6700\u521D\u304B\u3089\u518D\u751F", /*#__PURE__*/React.createElement("small", {
+      className: "block text-[8px] font-bold opacity-80"
+    }, "\u52A9\u624B\u9078\u629E\u2192\u3042\u3044\u3055\u3064\u2192\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u2192\u6751\u306E\u6848\u5185\u2192HOME\u30FB\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("button", {
+      onClick: () => {
+        returnToHome();
+        startTutorial('intro');
+      },
+      className: "min-h-[46px] rounded-xl bg-pink-900/60 border border-pink-400/50 text-pink-100 text-[10px] font-black active:scale-95"
+    }, "\u307F\u3085\u3042\u306E\u3042\u3044\u3055\u3064\u3060\u3051\u518D\u751F"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => {
+        returnToHome();
+        startTutorial('tour');
+      },
+      className: "min-h-[46px] rounded-xl bg-pink-900/60 border border-pink-400/50 text-pink-100 text-[10px] font-black active:scale-95"
+    }, "\u6751\u306E\u6848\u5185\u3060\u3051\u518D\u751F"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => {
+        returnToHome();
+        setKikiIntroStep(0);
+      },
+      className: "col-span-2 min-h-[46px] rounded-xl bg-pink-900/60 border border-pink-400/50 text-pink-100 text-[10px] font-black active:scale-95"
+    }, "\u304D\u304D\u52A0\u5165\u306E\u4F1A\u8A71\u3092\u518D\u751F"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setAssistantDebug('lines'),
+      className: "min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95"
+    }, "\u5168\u52A9\u624B\u30B3\u30E1\u30F3\u30C8\u78BA\u8A8D"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setAssistantDebug('expressions'),
+      className: "min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95"
+    }, "\u5168\u8868\u60C5\u78BA\u8A8D"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setAssistantDebug('conditions'),
+      className: "min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95"
+    }, "\u6761\u4EF6\u30B3\u30E1\u30F3\u30C8\u78BA\u8A8D"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setAssistantDebug('spam'),
+      className: "min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95"
+    }, "\u9023\u6253\u30EA\u30A2\u30AF\u30B7\u30E7\u30F3\u78BA\u8A8D"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setAssistantDebug('bond'),
+      className: "min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95"
+    }, "\u89AA\u5BC6\u5EA6\u30FB\u547C\u3073\u65B9\u78BA\u8A8D"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setAssistantDebug('random'),
+      className: "min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95"
+    }, "\u30E9\u30F3\u30C0\u30E0\u30C6\u30B9\u30C8"), /*#__PURE__*/React.createElement("button", {
+      onClick: debugPlayUpdateGuide,
+      className: "min-h-[46px] rounded-xl bg-pink-700/70 border border-pink-300/60 text-white text-[10px] font-black active:scale-95"
+    }, "\u30A2\u30C3\u30D7\u30C7\u30FC\u30C8\u901A\u77E5\u30C6\u30B9\u30C8"), /*#__PURE__*/React.createElement("button", {
+      onClick: debugResetUpdateGuide,
+      className: "min-h-[46px] rounded-xl bg-amber-950/60 border border-amber-500/50 text-amber-100 text-[10px] font-black active:scale-95"
+    }, "\u901A\u77E5\u30C6\u30B9\u30C8\u3092\u672A\u8AAD\u3078\u623B\u3059"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => debugDailyMasuAdviceAt(7),
+      className: "col-span-2 min-h-[46px] rounded-xl bg-pink-700/70 border border-pink-300/60 text-white text-[10px] font-black active:scale-95"
+    }, "\u30EF\u30F3\u30DD\u30A4\u30F3\u30C8\u6848\u5185\u3092\u518D\u751F\uFF08\u767B\u9332\u65707\u4F53\uFF09"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => debugDailyMasuAdviceAt(8),
+      className: "min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95"
+    }, "\u767B\u9332\u65708\u4F53\u306E\u6761\u4EF6\u78BA\u8A8D"), /*#__PURE__*/React.createElement("button", {
+      onClick: async () => {
+        await storeSet(DAILY_MASU_ADVICE_KEY, '', false);
+        dailyMasuAdviceCheckedRef.current = false;
+        window.alert('本日のワンポイント表示済みフラグをリセットしました。');
+      },
+      className: "min-h-[46px] rounded-xl bg-amber-950/60 border border-amber-500/50 text-amber-100 text-[10px] font-black active:scale-95"
+    }, "\u672C\u65E5\u306E\u8868\u793A\u6E08\u307F\u3092\u30EA\u30BB\u30C3\u30C8")), /*#__PURE__*/React.createElement("button", {
+      onClick: async () => {
+        if (!window.confirm('「はじめての案内」を見ていない状態に戻します。モンスターやダイヤなどのセーブデータは消えません。よろしいですか？')) return;
+        try {
+          await storeSet(TUTORIAL_SEEN_KEY, false, false);
+        } catch {}
+        tutorialShownRef.current = false;
+        window.alert('初回状態へ戻しました。HOMEを開くと案内が始まります。');
+      },
+      className: "w-full min-h-[42px] rounded-xl bg-amber-950/60 border border-amber-500/50 text-amber-100 text-[10px] font-black active:scale-95"
+    }, "\u521D\u56DE\u72B6\u614B\u3078\u623B\u3059\uFF08\u30BB\u30FC\u30D6\u306F\u6D88\u3048\u307E\u305B\u3093\uFF09"))), /*#__PURE__*/React.createElement("details", {
+      className: "rounded-2xl border border-slate-500/40 bg-slate-900/50"
+    }, /*#__PURE__*/React.createElement("summary", {
+      className: "cursor-pointer select-none px-3 py-3 text-[11px] font-black text-slate-200"
+    }, "\uD83D\uDEE0 \u305D\u306E\u4ED6", /*#__PURE__*/React.createElement("small", {
+      className: "block text-[8px] font-bold text-slate-400/80"
+    }, "\u4FEE\u884C\u30C6\u30B9\u30C8\u30FB\u753B\u9762\u30A8\u30E9\u30FC\u306E\u53D7\u3051\u6B62\u3081")), /*#__PURE__*/React.createElement("div", {
+      className: "space-y-2 border-t border-slate-500/30 p-3"
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: openDebugTraining,
+      className: "w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black"
+    }, "\uD83C\uDFB2 \u4FEE\u884C\u30C6\u30B9\u30C8", /*#__PURE__*/React.createElement("small", {
+      className: "block text-[8px] text-fuchsia-300"
+    }, "\u5831\u916C\u30FB\u9032\u884C\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("button", {
+      "data-debug-screen-error": true,
+      onClick: () => setDebugThrowScreenError(true),
+      className: "w-full min-h-[48px] rounded-2xl border border-rose-400/70 bg-rose-950/40 text-rose-100 font-black text-sm"
+    }, "\u26A0\uFE0F \u753B\u9762\u30A8\u30E9\u30FC\u306E\u53D7\u3051\u6B62\u3081\u3092\u8A66\u3059"), debugThrowScreenError && /*#__PURE__*/React.createElement(DebugThrowScreenError, null))))), gameState === 'SPECIES_CHALLENGE_DEBUG' && (() => {
       // 種族は主血統。ここも本番と同じ一覧を使う
       const speciesEntries = speciesChallengeLineages();
       const speciesId = speciesEntries.some(l => l.id === speciesChallengeDebugSpeciesId) ? speciesChallengeDebugSpeciesId : speciesEntries[0]?.id || '';
@@ -59732,7 +60477,7 @@ function MonsterHeroGame() {
         });
       });
       // 正式実装前のモンスター(debugOnly)は、そもそもマスモン登録ができない
-      // (registerMasuFromRun 側で弾いている)ため、上のマスモン一覧には絶対に出てこない。
+      // (registerMasuMon 側で弾いている)ため、上のマスモン一覧には絶対に出てこない。
       // 所持を経ずにここへ入れておくことで、実装中でも立ち絵・染色・顔アイコン・
       // 攻撃モーションを保存データに触れず確認できるようにする
       Object.values(ALL_PLAYER_MONSTERS).forEach(mon => {
@@ -59740,6 +60485,20 @@ function MonsterHeroGame() {
           id: `debug-preview-${mon.id}`,
           baseId: mon.id,
           name: `${mon.name}（実装確認・DEBUG専用）`,
+          colors: []
+        });
+      });
+      // ★ここから下は「正式実装したあとも消えないようにする」ぶん(2026-09-17・ユーザー指摘
+      //   「実装したら消えちゃうのも良くない」)。上の debugOnly の差し込みは、正式実装して
+      //   debugOnly を外したとたん効かなくなり、所持していない種はこの一覧から丸ごと消えていた
+      //   (エイキが実際にそうなった。いま debugOnly の種は1体もいないので、上の行は何も足していない)。
+      //   所持・解放を問わず全種を並べておけば、実装の前も後も同じように確認できる。
+      //   保存には一切触れない表示専用の擬似個体なので、セーブデータへは何の影響も無い
+      Object.values(ALL_PLAYER_MONSTERS).forEach(mon => {
+        if (mon?.id && !owned.some(m => m.baseId === mon.id)) owned.push({
+          id: `debug-preview-${mon.id}`,
+          baseId: mon.id,
+          name: `${mon.name}（未所持・DEBUG表示）`,
           colors: []
         });
       });
@@ -60042,7 +60801,32 @@ function MonsterHeroGame() {
       }, /*#__PURE__*/React.createElement("b", null, "baseId: ", selected.baseId), variants.map(([name, v]) => /*#__PURE__*/React.createElement("div", {
         key: name
       }, name, ": imgUrl=", v.imgUrl, " / iconUrl=", v.iconUrl, " / faceIconUrl=", v.faceIconUrl)))));
-    })(), gameState === 'ASSISTANT_SELECT' && /*#__PURE__*/React.createElement("div", {
+    })(), gameState === 'MONSTER_CHECK_DEBUG' && /*#__PURE__*/React.createElement(MonsterCheckDebugScreen, {
+      masuMons: masuMons,
+      unlockedMonsterIds: unlockedMonsterIds,
+      selectedId: monsterCheckDebugId,
+      colors: monsterCheckDebugColors,
+      onSelect: setMonsterCheckDebugId,
+      onColorsChange: setMonsterCheckDebugColors,
+      onCustomColor: (idx, colorId) => {
+        const parsed = _parseCustomColorId(colorId);
+        setCustomColorPicker({
+          mode: 'monsterCheck',
+          idx,
+          h: parsed?.h ?? 210,
+          s: parsed?.s ?? .7,
+          v: parsed?.v ?? .7
+        });
+      },
+      onBack: () => setGameState('DEBUG_SETTINGS'),
+      onOpenImageDebug: monsterId => {
+        const owned = masuMons.find(m => String(m.baseId) === String(monsterId));
+        setMonsterImageDebugId(owned ? owned.id : `debug-preview-${monsterId}`);
+        setMonsterImageDebugColors(owned ? getMasuColors(owned) : []);
+        setMonsterImageDebugTigerMode('old');
+        setGameState('MONSTER_IMAGE_DEBUG');
+      }
+    }), gameState === 'ASSISTANT_SELECT' && /*#__PURE__*/React.createElement("div", {
       "data-mh-screen": true,
       className: "flex-1 flex flex-col h-full min-h-0 p-4"
     }, /*#__PURE__*/React.createElement("div", {
@@ -61614,11 +62398,18 @@ function MonsterHeroGame() {
         s,
         v
       } = customColorPicker;
-      // パンドラはまだマスモンでもベースモンでもないので、個体を引かずDEBUG定義をそのまま使う
-      const masu = mode === 'debug' ? masuMons.find(m => String(m.id) === String(monsterImageDebugId)) : getMasuMon(dyeTargetMasuId);
+      // パンドラはまだマスモンでもベースモンでもないので、個体を引かずDEBUG定義をそのまま使う。
+      // mode==='monsterCheck' は新モンスター確認からの呼び出しで、所持していない種も塗れる必要がある。
+      // そこだけは個体を探さず、選んでいる種から表示用の一時データを作る(保存には触れない)
+      const masu = mode === 'monsterCheck' ? ALL_PLAYER_MONSTERS[monsterCheckDebugId] ? {
+        id: `monster-check-${monsterCheckDebugId}`,
+        baseId: monsterCheckDebugId,
+        name: ALL_PLAYER_MONSTERS[monsterCheckDebugId].name,
+        colors: []
+      } : null : mode === 'debug' ? masuMons.find(m => String(m.id) === String(monsterImageDebugId)) : getMasuMon(dyeTargetMasuId);
       const base = masu && ALL_PLAYER_MONSTERS[masu.baseId];
       const applyCustom = () => {
-        const setter = mode === 'debug' ? setMonsterImageDebugColors : setDyePreviewColors;
+        const setter = mode === 'monsterCheck' ? setMonsterCheckDebugColors : mode === 'debug' ? setMonsterImageDebugColors : setDyePreviewColors;
         // 濃さ(@NN)は色を作り直しても引き継ぐ
         setter(prev => {
           const next = [...(prev || (mode === 'debug' ? getMasuColors(masu) : []))];
@@ -61630,7 +62421,7 @@ function MonsterHeroGame() {
       // ドラッグ中は毎フレームcolorIdが変わり染色エンジンの再描画(Canvas処理)が大量発生するため、
       // プレビュー表示だけは色相/彩度/明度を粗く丸めて再描画の頻度を抑える(確定時は元の値をそのまま使う)
       const previewColorId = _encodeCustomColorId(Math.round(h / 4) * 4, Math.round(s * 20) / 20, Math.round(v * 20) / 20);
-      const sourceColors = mode === 'debug' ? monsterImageDebugColors || getMasuColors(masu) : dyePreviewColors;
+      const sourceColors = mode === 'monsterCheck' ? monsterCheckDebugColors || [] : mode === 'debug' ? monsterImageDebugColors || getMasuColors(masu) : dyePreviewColors;
       const previewColors = sourceColors.map((c, i) => i === idx ? withColorAlpha(previewColorId, colorAlphaOf(c)) : c);
       return /*#__PURE__*/React.createElement("div", {
         className: "fixed inset-0 flex items-center justify-center p-4",
