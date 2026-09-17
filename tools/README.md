@@ -53,6 +53,26 @@ node tools/build.js --check
 以下はすべて `tools/` の中で実行する。`node tools/〇〇.js` のようにリポジトリのルートから
 呼んでもよい(ルート配信を前提とする実ブラウザ検査は、ルートから呼ぶほうが確実)。
 
+### 文脈とトークンを節約する道具（改修に入る前に使う）
+
+このリポジトリには1ファイルで数MBのものが複数ある。全文を開くとAIの文脈も人の集中力も
+そこで尽きるので、「探す」「必要なところだけ読む」「変更から検査を選ぶ」を道具に寄せている。
+考え方と経緯は [`docs/rules/CONTEXT_BUDGET.md`](../docs/rules/CONTEXT_BUDGET.md)。
+
+| コマンド | 何をするか |
+| --- | --- |
+| `node ctx.js brief` | いまの状態(ブランチ・未コミットの変更・次に打つもの)を数行で出す。作業の入口。 |
+| `node ctx.js find <語>` / `text <語>` | 定義／本文を探す(`where.js` へ委譲。生成物は対象外)。 |
+| `node ctx.js read <ファイル> <名前>` | **その定義の本体だけ**を切り出す。終わりの行は、文字列・コメント・テンプレート文字列・正規表現を飛ばしながら括弧を数えて決める(JSXの `…}/>` を正規表現と取り違えないようにしてある)。`parts/*.jsx` のトップレベル定義1437件すべてで終端が取れることを確認済み。長すぎる定義は上限で切ったうえで**中にある定義の地図**を出すので、`sed` の範囲を当て推量しなくてよい。 |
+| `node ctx.js read <ファイル> <行>` | その行の前後だけ(`-C` で幅)。 |
+| `node ctx.js toc <ファイル>` | 見出し／骨格の一覧(`.md` は見出し、`.js`/`.jsx` は定義、`.json` はトップレベルのキー)。 |
+| `node ctx.js doc <ファイル> <見出し>` | 巨大なMarkdownの、その節だけ。`RHYTHM_MODE.md`(0.5MB)を開かずに読むため。 |
+| `node ctx.js rules [語]` | `CLAUDE.md` / `AGENTS.md` / `docs/rules/` を横断して、その語に触れている節だけを出す。 |
+| `node ctx.js diff [パス…]` | 生成物を除いた差分。素の `git diff` の代わり(`--staged` `--base <ref>` `--all`)。 |
+| `node where.js` | 場所だけを知る道具(`--screens` / `--outline` / `--text`)。`ctx.js` が内部で呼ぶ。 |
+| `node run-checks.js --changed` | **変更したファイルから、要る検査だけを選んで回す。** `--plan` で選んだ検査と理由だけ出す。上限は既定40本で、切ったぶんは本数を必ず出す(`--limit` / `--wide` で広げる)。 |
+| `node rules-index-check.js` | `CLAUDE.md` の大きさ・`docs/rules/` とのリンク・**要のことばが消えていないか**を見る。CIでも回す。 |
+
 ### ビルドと必須検査（`game-system.jsx` を触ったら必ず通す）
 
 | コマンド | 内容 |
@@ -68,6 +88,7 @@ node tools/build.js --check
 | `node boot-flow-check.js` | 音声失敗時のTITLE遷移、全画面タイトルタップ、同期的な多重実行防止、GAME準備と演出の並列化を静的に確認する。 |
 | `node update-notice-check.js` | 新バージョンの定期検知、常時表示、キャッシュ回避付き更新を静的に確認する。 |
 | `node stamp-version.js` | BUILD_DATE、version.json、本体JSのキャッシュキーを現在の日本時間に揃える。手で書くと未来の時刻が入るので必ずこれを使う。 |
+| `node run-checks.js --changed` | **変更したファイルから要る検査を選んで回す**(上の節を参照)。何を通すか毎回考えずに済み、選び漏れも無くなる。 |
 | `node run-checks.js --area required` | **検査を領域ごとにまとめて回す入口。**`required` は CLAUDE.md ⑤⑥ の必須検査、`ci` は `compiled-check.yml` と同じ並び、`battle` `masu` `mode` などはフォルダ単位、`all` は全部(30分以上)。`--list` で一覧、`--json <出力先>` で結果を保存。実ブラウザ検査に必要な配信(`serve.py`)は自動で起動し、playwright が無い環境ではそれを要る検査を SKIP にする。検査の中身や判定は変えず、既存スクリプトを順に呼ぶだけ。 |
 | `node stamp-boot-sizes.js` | 起動時に読み込むファイルの実サイズ(バイト)を `index.html` の `__mhBoot` へ書き込む。`build.js` から自動で呼ばれる。 |
 | `node boot/data-cache-key-check.js` | index.htmlが読み込むdata/*.jsのキャッシュキーが中身と一致しているか確認する(古いデータが読まれて画面が真っ暗になるのを防ぐ)。 |

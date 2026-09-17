@@ -21,8 +21,9 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.join(__dirname, '..');
-const SEARCH_ROOTS = ['monster-hero/src/parts', 'monster-hero/data'];
-const EXCLUDE = /(game-system\.jsx|\.compiled\.js|node_modules|\.min\.js)/;
+const SEARCH_ROOTS = ['monster-hero/src/parts', 'monster-hero/data', 'tools', 'docs', '.claude/skills'];
+const EXCLUDE = /(game-system\.jsx|\.compiled\.js|node_modules|\.min\.js|art-sources|authoring|\/out\/)/;
+const EXT = /\.(jsx?|json|md)$/;
 
 // 定義らしい行。const/let/var の代入、function 宣言、オブジェクトの中の関数、Reactのフック。
 const DEF_RE = /^(\s*)(?:export\s+)?(?:async\s+)?(?:function\s+([A-Za-z_$][\w$]*)|(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=|([A-Za-z_$][\w$]*)\s*:\s*(?:\(|async|function))/;
@@ -39,9 +40,17 @@ function collectFiles() {
       if (st.isDirectory()) {
         for (const inner of fs.readdirSync(full)) {
           const f = path.join(full, inner);
-          if (!EXCLUDE.test(f) && /\.(jsx?|json)$/.test(inner) && fs.statSync(f).isFile()) out.push(f);
+          if (EXCLUDE.test(f)) continue;
+          const innerStat = fs.statSync(f);
+          // スキルは .claude/skills/<名前>/SKILL.md のように1段深い
+          if (innerStat.isDirectory()) {
+            for (const leaf of fs.readdirSync(f)) {
+              const g = path.join(f, leaf);
+              if (!EXCLUDE.test(g) && EXT.test(leaf) && fs.statSync(g).isFile()) out.push(g);
+            }
+          } else if (EXT.test(inner)) out.push(f);
         }
-      } else if (/\.(jsx?)$/.test(name)) {
+      } else if (EXT.test(name)) {
         out.push(full);
       }
     }
