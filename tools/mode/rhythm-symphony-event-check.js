@@ -148,6 +148,26 @@ check('イベントが終わっても解放は残る(判定に期間を使って
 check('既存の助手3人は条件なしで選べるまま',
   ['mua', 'kiki', 'momosuke'].every(id => A.assistantUnlockedBy(id, [])));
 
+// ---- ⑤-2 アシストカードと飾り枠(2026-09-17・ユーザー指示) ----
+// 「ドラの親密度はみゅあ・ききと同様にアシストカードを使っても上がる」
+// 「ドラの獲得フレームは後日対応」
+const breederSrc = read('monster-hero/data/breeder.js');
+check('アシストカード「ドラの緑膝」がある(使うとドラの仲良し度が上がる)',
+  /\{ id:'dra',\s+baseName:"ドラの緑膝"/.test(breederSrc));
+check('カードidと助手idが同じ綴りなので本人へ結び付く',
+  A.ASSISTANTS.some(a => a.id === 'dra')
+  && /const assistantIdOfAssistCard = \(cardId\) => \{[\s\S]{0,300}list\.some\(a => a && a\.id === id\) \? id : null/
+    .test(read('monster-hero/src/parts/17-release-changelog-login-missions.jsx')));
+check('カードを切ったときに本人の仲良し度を足している',
+  /assistantIdOfAssistCard\(card\.id\); if\(cardAssistant\) addAssistantBondFor\(cardAssistant,'assistantCardUse'\)/
+    .test(read('monster-hero/src/parts/60-app.jsx')));
+// 飾り枠は後日対応。無いあいだも画面が壊れないことだけ固定しておく
+check('ドラの飾り枠はまだ無い(後日対応と明記してある)',
+  !/unlock:\{ assistantId:'dra'/.test(breederSrc) && breederSrc.includes('後日対応と決めてある'));
+check('枠が無い助手でも「次にもらえる枠」は出ない(落ちない)',
+  /\.find\(frame => !have\.has\(frame\.id\)[\s\S]{0,160}\) \|\| null;/.test(breederSrc)
+  && /if\(!nextFrame\) return null;/.test(read('monster-hero/src/parts/56-screen-profile.jsx')));
+
 // ---- ⑥ 画面のつなぎ(本体側) ----
 const appSrc = read('monster-hero/src/parts/60-app.jsx');
 const bgmSrc = read('monster-hero/src/parts/13-bgm-and-rhythm-settings.jsx');
