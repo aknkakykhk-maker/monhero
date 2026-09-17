@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// SLIDEのサブレーンと、幅の上限が全幅(10)まで広がっているか。
 const fs=require('fs');
 const path=require('path');
 const vm=require('vm');

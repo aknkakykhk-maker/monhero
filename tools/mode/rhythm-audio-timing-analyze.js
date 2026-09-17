@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// 音源を解析して、制作用のタイミングデータ(テンポ・オフセット)を作る。
 const fs=require('fs');
 const path=require('path');
 const crypto=require('crypto');

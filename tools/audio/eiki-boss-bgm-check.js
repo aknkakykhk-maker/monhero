@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// エイキ専用の最終ボスBGM「綺季一閃～花雪に舞う詠姫～」の音源・発動条件・ヘルプ記載がそろっているか。
 const fs = require('fs');
 const path = require('path');
 

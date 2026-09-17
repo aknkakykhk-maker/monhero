@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// 譜面の不正配置(16分グリッド外・同時刻同位置)を見つける道具が、通常プレイで読み込まれないか。
 const fs=require('fs');
 const path=require('path');
 const vm=require('vm');

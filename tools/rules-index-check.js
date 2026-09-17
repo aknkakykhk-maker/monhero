@@ -12,9 +12,11 @@
 //   2. CLAUDE.md と docs/rules/ のリンク先が実在するか
 //   3. docs/rules/ に、どこからも参照されていない置き去りのページが無いか
 //   4. 要のことばが CLAUDE.md 本体から消えていないか  ← これが本体
-//   5. tools/ 直下のスクリプトが tools/README.md に載っていて、説明コメントを持っているか
-//      （直下は CLAUDE.md と CI が名指しする場所。ここだけは索引を腐らせない。
-//        node tools/ctx.js checks が説明コメントから検査を引くので、説明が無いと見つからない）
+//   5. tools/ 直下のスクリプトが tools/README.md に載っているか
+//      （直下は CLAUDE.md と CI が名指しする場所。ここだけは掲載を必須にする）
+//   6. tools/ のスクリプト全部が、先頭に「何をするものか」の1行を持っているか
+//      （node tools/ctx.js checks がそこを読んで検査を探す。説明が無い＝日本語で探しても
+//        見つからない、という取りこぼしになる。手書きの README より、こちらを正本にする）
 const fs = require('fs');
 const path = require('path');
 
@@ -170,12 +172,28 @@ if (fs.existsSync(TOOLS_README)) {
     if (!readme.includes(name)) {
       problems.push(`tools/${name} が tools/README.md に載っていません（直下は CLAUDE.md と CI が名指しする場所なので、足したら同じPRで1行足す）。`);
     }
-    const head = fs.readFileSync(path.join(TOOLS_DIR, name), 'utf8').split('\n').slice(0, 6);
-    if (!head.some(l => /^\s*\/\/\s*\S/.test(l))) {
-      problems.push(`tools/${name} の先頭に、何をするものかを1行で書いたコメントがありません（node tools/ctx.js checks がここを読んで検査を探します）。`);
-    }
   }
 }
+
+// 6. すべてのスクリプトが「何をするものか」の1行を持っているか
+let scripts = 0, noDesc = 0;
+(function walk(dir, depth) {
+  for (const name of fs.readdirSync(dir).sort()) {
+    if (['node_modules', 'art-sources', 'out'].includes(name)) continue;
+    const full = path.join(dir, name);
+    if (fs.statSync(full).isDirectory()) { if (depth < 2) walk(full, depth + 1); continue; }
+    if (!name.endsWith('.js')) continue;
+    scripts++;
+    const head = fs.readFileSync(full, 'utf8').split('\n').slice(0, 6);
+    if (head.some(l => /^\s*\/\/\s*\S/.test(l))) continue;
+    noDesc++;
+    if (noDesc <= 10) {
+      problems.push(`${path.relative(ROOT, full)} の先頭に、何をするものかを1行で書いたコメントがありません`
+        + '\n    （node tools/ctx.js checks がここを読んで検査を探します。無いと日本語で探しても見つかりません）。');
+    }
+  }
+})(TOOLS_DIR, 0);
+if (noDesc > 10) problems.push(`… ほか ${noDesc - 10} 本にも先頭の1行がありません。`);
 
 const kb = (bytes / 1024).toFixed(1);
 if (problems.length) {
@@ -183,4 +201,4 @@ if (problems.length) {
   for (const p of problems) console.error(`  - ${p}`);
   process.exit(1);
 }
-console.log(`OK: CLAUDE.md ${kb}KB（上限 ${(MAX_BYTES / 1024).toFixed(1)}KB） / 詳細 ${checkedFiles.length - 1} ページ / 要のことば ${MUST_KEEP.length} 件すべて健在 / tools直下 ${rootScripts} 本すべて索引済み`);
+console.log(`OK: CLAUDE.md ${kb}KB（上限 ${(MAX_BYTES / 1024).toFixed(1)}KB） / 詳細 ${checkedFiles.length - 1} ページ / 要のことば ${MUST_KEEP.length} 件すべて健在 / tools直下 ${rootScripts} 本すべて索引済み / スクリプト ${scripts} 本すべて説明つき`);

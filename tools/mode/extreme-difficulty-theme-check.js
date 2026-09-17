@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// 極限チャレンジの難易度ごとの色と、ランキングタブへの反映。
 const fs = require('fs');
 const path = require('path');
 const assert = require('assert');

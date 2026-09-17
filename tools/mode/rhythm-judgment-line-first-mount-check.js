@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// 判定ラインが初回・再マウントのどちらでも二重に作られないか。
 const fs=require('fs');
 const path=require('path');
 const vm=require('vm');

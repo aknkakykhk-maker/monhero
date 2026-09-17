@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// AUTO∞の一時テンプレートと、開始条件の保持。
 'use strict';
 const fs=require('fs');
 const path=require('path');

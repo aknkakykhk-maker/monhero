@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// 正式パンドラ・マーケット解放・禁忌解錠・双極共振・共通モーションを確かめる。
 'use strict';
 const fs=require('fs');
 const assert=require('assert');

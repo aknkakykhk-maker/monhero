@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// SLIDEの経路が帯(fill)・ふち(edge)・チェックポイント(marks)の3つに分かれているか。
 const fs=require('fs'),path=require('path'),vm=require('vm'),crypto=require('crypto');
 const ROOT=path.resolve(__dirname,'../..'),file=path.join(ROOT,'monster-hero/data/rhythm-mode.js'),source=fs.readFileSync(file,'utf8'),game=fs.readFileSync(path.join(ROOT,'monster-hero/src/game-system.jsx'),'utf8');
 let failed=0;const check=(name,ok)=>{console.log(`${ok?'✓':'✗'} ${name}`);if(!ok)failed++;};

@@ -1,3 +1,4 @@
+// 種族チャレンジのデバッグ用の入口。
 const fs = require('fs');
 const vm = require('vm');
 

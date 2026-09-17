@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// 下書き譜面が実音源由来で、完成譜面として配信につながっていないか。
 const fs=require('fs'),path=require('path');
 const ROOT=path.resolve(__dirname,'..','..');
 const draft=JSON.parse(fs.readFileSync(path.join(ROOT,'tools/mode/authoring/atsu-cup-theme-easy-draft.json'),'utf8'));

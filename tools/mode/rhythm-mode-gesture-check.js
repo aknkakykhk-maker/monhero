@@ -1,3 +1,4 @@
+// 同時フリックを別のノーツへ割り当てているか。
 const fs=require('fs');
 const path=require('path');
 const vm=require('vm');

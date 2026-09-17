@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// 実音源の解析がデバッグ画面の手動実行に限られ、本番譜面を動的生成しないか。
 const fs=require('fs');
 const path=require('path');
 const vm=require('vm');

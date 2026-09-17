@@ -1,3 +1,4 @@
+// AUTO∞でのLv上限(ブリーダーLvと個体levelCap)の効き方。
 const TOOLS_DIR = require('path').join(__dirname, '..');
 const fs = require('fs');
 const vm = require('vm');

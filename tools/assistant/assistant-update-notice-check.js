@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// 助手の告知(assistantNotice)の種別と書き方が決まりどおりか。
 const fs = require('fs');
 const vm = require('vm');
 const assert = require('assert');

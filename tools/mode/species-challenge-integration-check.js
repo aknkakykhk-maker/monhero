@@ -1,3 +1,4 @@
+// 種族チャレンジが既存のゲームへつながっているか。
 const fs = require('fs');
 const vm = require('vm');
 const { loadDyeModule } = require('../harness');

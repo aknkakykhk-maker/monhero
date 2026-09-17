@@ -1,3 +1,4 @@
+// AUTO中に画面が変わってもBGMが途切れず続くか。
 const fs = require('fs');
 const path = require('path');
 const ROOT = path.resolve(__dirname, '../..');

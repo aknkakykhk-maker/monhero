@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// ノーツの奥行き(収束率)と、Safe Areaの掛かり方。
 const fs=require('fs'),path=require('path'),vm=require('vm');
 const ROOT=path.resolve(__dirname,'../..'),read=file=>fs.readFileSync(path.join(ROOT,file),'utf8');
 const source=read('monster-hero/data/rhythm-mode.js'),game=read('monster-hero/src/game-system.jsx'),html=read('monster-hero/index.html'),release=read('monster-hero/data/rhythm-step3-release.js'),help=read('monster-hero/data/help.js');

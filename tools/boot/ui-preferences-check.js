@@ -1,3 +1,4 @@
+// 更新履歴のタブ別既読と、並び替え・表示設定の保存を確かめる。
 const fs = require('fs');
 const vm = require('vm');
 const assert = require('assert');

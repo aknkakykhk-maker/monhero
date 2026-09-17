@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// EASYの正式候補が、耳確認待ちの点を採用せず元候補由来に収まっているか。
 const fs=require('fs');
 const path=require('path');
 const assert=require('assert');
