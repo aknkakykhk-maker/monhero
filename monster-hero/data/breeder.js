@@ -305,6 +305,10 @@ const SKIP_TICKET_BY_DIFFICULTY = Object.freeze(Object.fromEntries(
 const PROFILE_FRAME_NONE_ID = 'none';
 // 選んでいるフレームの保存キー。既存の mh_breeder_icon とは別に持つ(アイコンとフレームは独立した設定)
 const PROFILE_FRAME_KEY = 'mh_profile_frame_v1';
+// ★助手ごとの飾り枠は unlock:{assistantId, bondLevel} で結び付ける。
+//   ドラ(2026-09-17に加入)のぶんは**まだ無い**。後日対応と決めてある(ユーザー指示)。
+//   無くても画面は壊れない(nextProfileFrameForAssistant が null を返し、
+//   プロフィールの「次にもらえる枠」ボタンが出ないだけ)。足すときはここへ3枠。
 const PROFILE_FRAMES = [
   { id:'none',   name:'フレームなし', kind:'none', released:true,
     desc:'飾り枠を付けません。これまでと同じ見た目です。' },

@@ -8570,7 +8570,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       const totalHealBeforeCard=totalHeal;
       // 2枚目以降のカードは効果が半減する。アシストカードは対象外で、枚数にも数えない。
       const isBreeder=isAssistCard(card);
-      // 助手のアシストカード(みゅあ・きき)を実際に切ったぶん。
+      // 助手のアシストカード(みゅあ・きき・ドラ)を実際に切ったぶん。
+      // ★対象は「カードidと助手idの綴りが同じもの」で決まる(assistantIdOfAssistCard)。
+      //   助手を増やしたとき、カードが既にあればここは書き換えずにそのまま効く
+      //   (2026-09-17・ドラを助手にしたとき、ドラの緑膝がそのまま対象になった)。
       // 手札にあるだけ・編成しているだけでは増えず、使ったここでだけ数える。
       // 増えるのは、いま選んでいる助手ではなく「そのカード本人」の仲良し度
       if(isBreeder&&!debugBattleRef.current){ const cardAssistant=assistantIdOfAssistCard(card.id); if(cardAssistant) addAssistantBondFor(cardAssistant,'assistantCardUse'); }
