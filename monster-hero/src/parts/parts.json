@@ -194,6 +194,10 @@
       "role": "画面: 新モンスター確認(MONSTER_CHECK_DEBUG。デバッグ専用)。所持・解放に関係なく全種を並べ、画像・染色・モーション・能力・技・血統・マーケットと「実装チェック」を1枚で見る"
     },
     {
+      "file": "76-screen-debug-data.jsx",
+      "role": "画面: データを用意する(DEBUG_DATA_SETUP。デバッグ専用)。条件が揃わないと始まらないもの(ログインボーナス・ミッション・購入・アイテム・育成)をすぐ試せる状態にする"
+    },
+    {
       "file": "60-app.jsx",
       "role": "MonsterHeroGame 本体(全 state・ロジック・各 gameState の JSX)"
     },
