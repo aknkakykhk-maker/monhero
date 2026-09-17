@@ -60,7 +60,8 @@ check('演出の再生は保存へ触れない',
   !/storeSet/.test(debugBlock.slice(debugBlock.indexOf('const debugPlayTranscendAnimation'))));
 // 横幅はTailwindが要るのでこのサンドボックスでは測れない。代わりに、他のデバッグ画面と
 // 同じ入れ物(Safe Area込みの余白 + 縦スクロール)を使っているかをソースで見る
-const screenBlock = source.slice(source.indexOf("gameState==='TRANSCEND_DEBUG'"), source.indexOf("gameState==='BREAKTHROUGH_STAR_DEBUG'"));
+// 終端の目印は、統合で消えた BREAKTHROUGH_STAR_DEBUG から次のデバッグ画面へ移した(2026-09-17)
+const screenBlock = source.slice(source.indexOf("gameState==='TRANSCEND_DEBUG'"), source.indexOf("{gameState==='RPG_DEBUG_SETUP'&&("));
 check('他のデバッグ画面と同じ入れ物を使っている',
   screenBlock.includes('env(safe-area-inset-top)') && screenBlock.includes('env(safe-area-inset-bottom)')
   && screenBlock.includes('overflow-y-auto mh-scroll'));
@@ -125,31 +126,42 @@ const seed = () => {
     await page.waitForTimeout(900);
     await clickText('💊');
     await page.waitForTimeout(1200);
-    check('デバッグ設定へ入れる', await page.evaluate(() => document.body.innerText.includes('BATTLE TEST')));
+    check('デバッグ設定へ入れる', await page.evaluate(() => document.body.innerText.includes('DEBUG MENU')));
     check('デバッグ設定に超越確認の入口がある', await page.evaluate(() => !!document.querySelector('[data-debug-transcend]')));
 
     await page.evaluate(() => { const b = document.querySelector('[data-debug-transcend]'); b && b.click(); });
     await page.waitForTimeout(1200);
+    // 転生・限界突破★・超越・試す準備の4タブへ統合したので、見たいものを順に開く。
+    // 超越マークと定数表は「超越」タブ、準備のボタンは「試す準備」タブにある
+    const openTab = async (id) => {
+      await page.evaluate((t) => { const b = document.querySelector(`[data-masu-look-tab="${t}"]`); b && b.click(); }, id);
+      await page.waitForTimeout(700);
+    };
+    await openTab('transcend');
+    const transcendTab = await page.evaluate(() => ({
+      badges: document.querySelectorAll('.mh-transcend-badge').length,
+      hasCost: /5,000/.test(document.body.innerText) && /1,000,000/.test(document.body.innerText),
+      hasCap: /400 → 500/.test(document.body.innerText),
+      hasScroller: !!document.querySelector('main .mh-scroll'),
+    }));
+    await openTab('prepare');
 
     const view = await page.evaluate(() => ({
-      opened: document.body.innerText.includes('超越確認'),
-      badges: document.querySelectorAll('.mh-transcend-badge').length,
+      opened: document.body.innerText.includes('育成マークの見た目'),
       candidates: document.querySelectorAll('[data-transcend-debug-candidate]').length,
       prepare: !!document.querySelector('[data-transcend-debug-prepare]'),
       cost: !!document.querySelector('[data-transcend-debug-cost]'),
       points: !!document.querySelector('[data-transcend-debug-points]'),
       reset: !!document.querySelector('[data-transcend-debug-reset]'),
-      hasCost: /5,000/.test(document.body.innerText) && /1,000,000/.test(document.body.innerText),
-      hasCap: /400 → 500/.test(document.body.innerText),
       // 見た目の大きさ・位置はTailwindが要るのでこのサンドボックスでは測れない。
       // ここは「スクロールする入れ物が実際に描画されているか」だけを見る(寸法は上の静的検査で見る)
       hasScroller: !!document.querySelector('main .mh-scroll'),
     }));
-    check('超越確認の画面が開く', view.opened);
-    check('超越マークが本番の部品で出ている', view.badges >= 3, `${view.badges}個`);
+    check('育成マークの見た目が開く', view.opened);
+    check('超越マークが本番の部品で出ている', transcendTab.badges >= 3, `${transcendTab.badges}個`);
     check('所持マスモンから対象を選べる', view.candidates === 2, `${view.candidates}体`);
     check('準備のボタンがそろっている', view.prepare && view.cost && view.points && view.reset);
-    check('費用とLv上限を数値で出している', view.hasCost && view.hasCap);
+    check('費用とLv上限を数値で出している', transcendTab.hasCost && transcendTab.hasCap);
     check('縦スクロールする入れ物が描画されている', view.hasScroller);
 
     // 選択 → 演出の再生(保存へは触れない操作)
@@ -157,6 +169,8 @@ const seed = () => {
     await page.waitForTimeout(600);
     check('選ぶと対象の状態が出る', await page.evaluate(() => /限界突破|凸/.test(document.body.innerText)));
     const before = await page.evaluate(() => localStorage.getItem('mh_masu_mons'));
+    // 演出の再生ボタンは「超越」タブにある。統合後は開き直してから押す
+    await openTab('transcend');
     await clickText('超越演出を再生');
     await page.waitForTimeout(1200);
     check('超越演出が再生される', await page.evaluate(() => !!document.querySelector('.mh-transcend-animation')));

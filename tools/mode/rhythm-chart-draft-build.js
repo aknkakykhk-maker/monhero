@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// 候補からEASYの下書き譜面を書き出す。
 const fs=require('fs');
 const path=require('path');
 const vm=require('vm');

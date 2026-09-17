@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// 譜面エディタの画面(SLIDE経路の時刻順など)を確かめる。
 const fs=require('fs');
 const path=require('path');
 const vm=require('vm');

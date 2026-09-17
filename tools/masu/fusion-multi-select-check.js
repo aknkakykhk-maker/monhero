@@ -1,3 +1,4 @@
+// 複数の副を選ぶ合体(限界突破・固有技の個別選択・実継承数の課金・履歴)を確かめる。
 const fs = require('fs');
 const path = require('path');
 const source = fs.readFileSync(path.join(__dirname, '../../monster-hero/src/game-system.jsx'), 'utf8');

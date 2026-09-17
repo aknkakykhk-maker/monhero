@@ -5,6 +5,9 @@
 //   node tools/run-checks.js --area ci              … compiled-check.yml が回すものと同じ並び
 //   node tools/run-checks.js --area battle,masu     … フォルダ単位(tools/<分類>/ の *-check.js)
 //   node tools/run-checks.js --area all             … 全部(30分以上かかる)
+//   node tools/run-checks.js --changed              … いま変更しているファイルから、要る検査だけを選んで回す
+//   node tools/run-checks.js --changed --plan       … 選んだ検査を出すだけ(実行しない)
+//   オプション: --limit N(選ぶ上限。既定40) --wide(当たった領域を丸ごと) --base <ref>(そのrefとの差も見る)
 //   オプション: --no-server(実ブラウザ検査用の配信を起動しない) --timeout <秒> --json <出力先>
 //
 // 【なぜ要るか】
@@ -52,11 +55,132 @@ const EXTRA_CHECKS = {
   mode: ['rhythm-easy-alignment-audit.js', 'rhythm-easy-ear-review-plan.js', 'rhythm-note-geometry-audit.js'],
 };
 
+// ---- 変更ファイルから、要る検査だけを選ぶ ----------------------------------------
+// 「どの検査を通すか」を毎回その場で考えると、打ち漏らす(精度が落ちる)か、
+// 念のため全部回す(時間を食う)のどちらかになる。機械に選ばせて、選んだ理由も出す。
+//
+// フォルダ(領域)を丸ごと足すと mode だけで 184 本になって実用にならないので、
+// 変更したファイル名から語を取り出し、その語を名前に含む検査だけを拾う。
+// 広げたいときは --changed --wide（領域を丸ごと）か --area <名前>。
+
+// build.js が作り直すぶん。これだけが変わっていても検査を増やす理由にはならない
+const GENERATED_RE = /(^|\/)(game-system\.jsx|game-system\.compiled\.js|tailwind\.css|version\.json|package-lock\.json)$/;
+
+// ゲーム本体・データが変わったら、CLAUDE.md ⑥ の必須検査は必ず通す
+const CORE_RE = /^monster-hero\/(src\/parts\/|data\/|index\.html$|images\/)/;
+
+// ファイル名から取り出しても検査の絞り込みに効かない語
+const GENERIC_TOKENS = new Set([
+  'monster', 'hero', 'src', 'parts', 'data', 'screen', 'index', 'main', 'app', 'core', 'util', 'utils',
+  'js', 'jsx', 'css', 'html', 'json', 'png', 'jpg', 'mp3', 'md', 'check', 'tools', 'test', 'tmp', 'probe',
+]);
+
+// ファイル名では拾えない結び付き（変えたもの → 一緒に見ておきたい語）
+const EXTRA_TOKENS = [
+  { re: /^monster-hero\/audio\//, add: ['bgm', 'loudness', 'boot'] },
+  { re: /^monster-hero\/images\/song-art\//, add: ['song-art', 'changelog', 'boot'] },
+  { re: /^monster-hero\/images\//, add: ['image-asset', 'boot'] },
+  { re: /^monster-hero\/data\/changelog\.js$/, add: ['notice', 'update-notice'] },
+  { re: /^monster-hero\/data\/help\.js$/, add: ['help'] },
+  { re: /^monster-hero\/data\/assistants\.js$/, add: ['assistant', 'bond'] },
+  { re: /^monster-hero\/data\/rhythm-/, add: ['rhythm', 'chart', 'song'] },
+  { re: /^monster-hero\/index\.html$/, add: ['boot'] },
+  { re: /^tools\/([a-z-]+)\//, add: m => [m[1]] },
+];
+
+// ファイル名の語では拾えないので、検査そのものを名指しするもの
+const FORCE_CHECKS = [
+  { re: /^(CLAUDE|AGENTS|README)\.md$|^docs\/|^\.claude\/skills\//, checks: ['rules-index-check.js'], why: 'ルールと資料' },
+];
+
+function tokensOf(file) {
+  const rel = file.replace(/^monster-hero\//, '').replace(/\.[^./]+$/, '');
+  const out = new Set();
+  // tools/ 直下のスクリプト名と、資料(.md)からは語を取らない。
+  // run / where / rules のような一般的な語が、無関係な検査に当たってしまう。
+  if (!/^tools\/[^/]+$/.test(file) && !/^docs\//.test(file) && !/^[^/]+\.md$/.test(file)) {
+    for (const t of rel.split(/[/\-_.]+/)) {
+      const w = t.toLowerCase();
+      if (w.length < 3 || GENERIC_TOKENS.has(w) || /^\d+$/.test(w)) continue;
+      out.add(w);
+    }
+  }
+  for (const rule of EXTRA_TOKENS) {
+    const m = rule.re.exec(file);
+    if (!m) continue;
+    for (const a of (typeof rule.add === 'function' ? rule.add(m) : rule.add)) out.add(a);
+  }
+  return [...out];
+}
+
+function changedFiles(base) {
+  const run = args => {
+    const r = spawnSync('git', args, { cwd: REPO_ROOT, encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 });
+    return (r.stdout || '').split('\n').filter(l => l.length);
+  };
+  const out = new Set();
+  // porcelain は「XY<空白>パス」。先に trim すると状態の記号を消しそこねる
+  for (const l of run(['status', '--porcelain', '-uall'])) out.add(l.slice(3).replace(/^.* -> /, '').replace(/^"|"$/g, ''));
+  if (base) for (const f of run(['diff', '--name-only', `${base}...HEAD`])) out.add(f.trim());
+  return [...out].filter(Boolean);
+}
+
+function checkTokens(command) {
+  return new Set(command.replace(/\.[^./]+$/, '').split(/[/\-_.\s]+/).map(t => t.toLowerCase()).filter(Boolean));
+}
+
+// 変更から「通す検査の並び」を作る。
+// 語が当たる検査が多いほど、その語は大まかだということなので、当たりの少ない語から順に並べる。
+// 上限で切ったぶんは必ず本数を出す（黙って減らすと「全部通した」と読めてしまう）。
+function planForChanges(files, areas, wide, limit) {
+  const core = files.some(f => !GENERATED_RE.test(f) && CORE_RE.test(f));
+  const reasons = new Map();      // 検査 -> なぜ選ばれたか
+  const rank = new Map();         // 検査 -> 当たった語の大まかさ（小さいほど的確）
+  const allChecks = [];
+  for (const [name, list] of areas) if (!['required', 'ci'].includes(name)) for (const c of list) if (!allChecks.includes(c)) allChecks.push(c);
+  const tokenIndex = allChecks.map(c => ({ c, t: checkTokens(c), area: c.includes('/') ? c.split('/')[0] : 'root' }));
+
+  const hitAreas = new Set();
+  for (const f of files) {
+    if (GENERATED_RE.test(f)) continue;
+    // 検査スクリプト自身を直したときは、その検査を回す。
+    // ファイル名から語を取る仕組みでは拾えず、直した本人だけが素通りしていた。
+    const self = /^tools\/(.+\.js)$/.exec(f);
+    if (self && allChecks.includes(self[1])) { reasons.set(self[1], `この検査自体を変えた（${f}）`); rank.set(self[1], 0); }
+    for (const rule of FORCE_CHECKS) {
+      if (!rule.re.test(f)) continue;
+      for (const c of rule.checks) if (!reasons.has(c)) { reasons.set(c, `${rule.why}（${f}）`); rank.set(c, 0); }
+    }
+    for (const token of tokensOf(f)) {
+      const matched = tokenIndex.filter(x => x.t.has(token));
+      for (const x of matched) {
+        hitAreas.add(x.area);
+        if (!reasons.has(x.c) || matched.length < rank.get(x.c)) { reasons.set(x.c, `${token}（${f}）`); rank.set(x.c, matched.length); }
+      }
+    }
+  }
+  if (wide) {
+    for (const a of hitAreas) for (const c of areas.get(a) || []) if (!reasons.has(c)) { reasons.set(c, `領域 ${a} を丸ごと（--wide）`); rank.set(c, 9999); }
+  }
+  const required = core ? areas.get('required').slice() : [];
+  for (const c of required) if (!reasons.has(c)) reasons.set(c, 'ゲーム本体を触った（CLAUDE.md ⑥ の必須検査）');
+  const rest = [...reasons.keys()].filter(c => !required.includes(c))
+    .sort((a, b) => (rank.get(a) - rank.get(b)) || a.localeCompare(b));
+  const room = wide ? rest.length : Math.max(0, limit - required.length);
+  const picked = [...required, ...rest.slice(0, room)];
+  return { picked, reasons, core, dropped: rest.length - Math.min(room, rest.length) };
+}
+
 function parseArgs(argv) {
-  const opts = { areas: [], list: false, server: true, timeoutSec: 600, json: null };
+  const opts = { areas: [], list: false, server: true, timeoutSec: 600, json: null, changed: false, plan: false, wide: false, base: null, limit: 40 };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--list') opts.list = true;
+    else if (a === '--changed') opts.changed = true;
+    else if (a === '--plan' || a === '--dry-run') opts.plan = true;
+    else if (a === '--wide') opts.wide = true;
+    else if (a === '--limit') opts.limit = Number(argv[++i]) || opts.limit;
+    else if (a === '--base') opts.base = argv[++i];
     else if (a === '--no-server') opts.server = false;
     else if (a === '--area') opts.areas.push(...String(argv[++i] || '').split(',').filter(Boolean));
     else if (a === '--timeout') opts.timeoutSec = Number(argv[++i]) || opts.timeoutSec;
@@ -83,6 +207,7 @@ function discoverAreas() {
   const areas = new Map();
   areas.set('required', REQUIRED.slice());
   areas.set('ci', ciCommands());
+  areas.set('docs', ['rules-index-check.js']);
   const rootChecks = fs.readdirSync(TOOLS_DIR).filter(f => f.endsWith('-check.js')).sort();
   areas.set('root', rootChecks);
   for (const dir of fs.readdirSync(TOOLS_DIR).sort()) {
@@ -147,6 +272,29 @@ function runOne(command, timeoutSec) {
 async function main() {
   const opts = parseArgs(process.argv.slice(2));
   const areas = discoverAreas();
+
+  if (opts.changed) {
+    const files = changedFiles(opts.base);
+    const { picked, reasons, core, dropped } = planForChanges(files, areas, opts.wide, opts.limit);
+    const src = files.filter(f => !GENERATED_RE.test(f));
+    console.log(`変更 ${src.length} 件（ほかに生成物 ${files.length - src.length} 件）→ 検査 ${picked.length} 本`);
+    for (const f of src.slice(0, 15)) console.log(`  変更: ${f}`);
+    if (src.length > 15) console.log(`  … ほか ${src.length - 15} 件`);
+    if (!picked.length) {
+      console.log('該当する検査はありません。広げるなら --changed --wide か --area <名前>（--list で一覧）。');
+      process.exit(0);
+    }
+    if (dropped) console.log(`  ※ 当てはまる検査があと ${dropped} 本ありますが、上限 ${opts.limit} 本で切りました（--limit で増やす / --wide で領域ごと）`);
+    if (opts.plan) {
+      console.log(`\n通す検査 ${picked.length} 本${core ? '（必須検査を含む）' : ''}:`);
+      for (const c of picked) console.log(`  ${c.padEnd(46)} ← ${reasons.get(c)}`);
+      console.log('\n実行するなら --plan を外してください。広げるなら --wide。');
+      return;
+    }
+    opts.scripts = (opts.scripts || []).concat(picked);
+    console.log('');
+  }
+
   if (opts.list || (opts.areas.length === 0 && !(opts.scripts && opts.scripts.length))) {
     console.log('領域と検査の一覧(--area <名前> で実行。all で全部):');
     for (const [name, list] of areas) {
@@ -196,10 +344,19 @@ async function main() {
   const totalSec = (Date.now() - started) / 1000;
   console.log(`\n合計 ${results.length} 本 / OK ${count('OK')} / NG ${count('NG')} / TIMEOUT ${count('TIMEOUT')} / SKIP ${count('SKIP')} / MISSING ${count('MISSING')} / ${Math.round(totalSec)}秒`);
   const bad = results.filter(r => !['OK', 'SKIP'].includes(r.status));
-  for (const r of bad) {
+  // 失敗の中身は「最後の8行」ではなく、失敗をじかに言っている行を拾う。
+  // 検査によっては原因が途中に出て、最後は集計だけということがあるため。
+  const FAIL_LINE = /(^|\s)(NG|FAIL|失敗|不一致|エラー|Error|Cannot|undefined|✗|❌)/;
+  for (const r of bad.slice(0, 5)) {
     console.log(`\n--- ${r.status}: ${r.command}`);
-    console.log(r.output.trim().split('\n').slice(-8).map(l => '    ' + l).join('\n'));
+    const lines = r.output.trim().split('\n').filter(l => l.trim());
+    const core = lines.filter(l => FAIL_LINE.test(l));
+    const show = core.length ? core.slice(0, 10) : lines.slice(-8);
+    console.log(show.map(l => '    ' + (l.length > 200 ? l.slice(0, 200) + ' …' : l)).join('\n'));
+    if (core.length > 10) console.log(`    … ほか ${core.length - 10} 行（全部見るなら  node tools/${r.command}）`);
+    else if (!core.length) console.log(`    （失敗を名指しする行が見つからないので末尾を出しています: node tools/${r.command}）`);
   }
+  if (bad.length > 5) console.log(`\n… ほか ${bad.length - 5} 本が失敗しています（1本ずつ見るなら  node tools/run-checks.js --script <名前>）`);
   if (opts.json) {
     fs.writeFileSync(opts.json, JSON.stringify({ at: new Date().toISOString(), areas: wanted, totalSec, results: results.map(r => ({ command: r.command, status: r.status, sec: Math.round(r.sec * 10) / 10, needsServer: r.needsServer, needsPlaywright: r.needsPlaywright, tail: r.status === 'OK' ? undefined : r.output.trim().split('\n').slice(-8) })) }, null, 2));
     console.log(`\n結果を書き出した: ${opts.json}`);

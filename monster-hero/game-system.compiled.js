@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9798e4c24bbc59fd
+// source-sha256: 13cd170cd1116a4f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 81057a022d7aeb01
+// generated-sha256: 4bc9b1f1e4b51809
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -161,7 +161,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-18 08:01"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-18 08:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -25602,6 +25602,88 @@ const RhythmTapTest = ({
   }, calibrating ? 'やめてオプションへ戻る' : tutorial ? '練習をやめて曲えらびへ戻る' : debugPlay ? '中断して音ゲーデバッグへ戻る' : '中断して曲えらびへ戻る'))));
 };
 
+// ---- part: 31-debug-ui.jsx ----
+// ==================== デバッグ画面の共通部品 ====================
+// デバッグ画面は「必要になったら1つずつ足す」で増えてきたため、画面ごとに頭の作りが
+// ばらばらになっていた(2026-09-17・ユーザー指摘「デバッグモード自体がほんとに適当に
+// 追加してったその場しのぎの作りになってる」)。
+//
+// とくに困るのが**「この画面はセーブを書き換えるのか」の伝わり方が画面ごとに違う**こと。
+// 赤帯(mh-debug-banner)を出すものもあれば、見出しの下に8pxの小さい字で書くだけのものもあり、
+// 何も書いていないものもあった。押す前に分からないのは危ない。
+//
+// そこで、どのデバッグ画面も同じ頭を持つようにする。
+//
+//   ← 戻る ／ 画面の名前 ／ 「保存しません」か「保存します」のバッジ
+//
+// saves=true のときだけ赤くなる。バッジは必ず同じ位置に出るので、
+// 「書いていない＝たぶん大丈夫」という読み取りが起きない。
+
+// デバッグ画面の頭。すべてのデバッグ画面がこれを使う。
+//   title … 画面の名前(日本語)
+//   note  … 補足(省略可。本番と同じ部品を使っていることなど)
+//   saves … セーブデータを書き換える画面なら true
+//   onBack… 戻るときにすること(画面は自分の戻り先を知らない)
+const DebugScreenHead = ({
+  title,
+  note = '',
+  saves = false,
+  onBack,
+  backLabel = 'デバッグ設定へ戻る',
+  right = null
+}) => /*#__PURE__*/React.createElement("header", {
+  className: "mb-2 flex shrink-0 items-center gap-2"
+}, /*#__PURE__*/React.createElement("button", {
+  "aria-label": backLabel,
+  onClick: onBack,
+  className: "p-3 text-slate-400 active:scale-90"
+}, /*#__PURE__*/React.createElement(ArrowLeft, {
+  size: 20
+})), /*#__PURE__*/React.createElement("div", {
+  className: "min-w-0"
+}, /*#__PURE__*/React.createElement("h2", {
+  className: "truncate text-sm font-black text-white"
+}, title), note && /*#__PURE__*/React.createElement("small", {
+  className: "block truncate text-[9px] font-bold text-slate-400"
+}, note)), /*#__PURE__*/React.createElement("span", {
+  "data-debug-saves": saves ? 'yes' : 'no',
+  className: `ml-auto shrink-0 rounded-full px-2.5 py-1 text-[9px] font-black ${saves ? 'bg-rose-700 text-white' : 'border border-white/15 bg-slate-900 text-slate-300'}`
+}, saves ? '保存します' : '保存しません'), right);
+
+// デバッグメニューの1行。入口はすべてこの形にそろえる。
+// **メニューには入口だけを置き、道具そのものを埋めない**のが決めごと。
+// 以前はデバッグ戦の「難易度9個 → 敵10個 → 勇者モン → 開始」がメニューの中に直接あり、
+// 次の欄へ行くのに1500pxスクロールする必要があった。
+//   tone … 'go'(画面へ移る) / 'play'(その場で再生する) / 'save'(セーブを書き換える)
+const DEBUG_ROW_TONE = {
+  go: 'border-cyan-400/50 bg-cyan-950/40 text-cyan-50',
+  play: 'border-pink-400/50 bg-pink-950/40 text-pink-50',
+  save: 'border-rose-400/60 bg-rose-950/50 text-rose-50'
+};
+const DebugMenuRow = ({
+  icon = '',
+  label,
+  desc = '',
+  tone = 'go',
+  onClick,
+  ...rest
+}) => /*#__PURE__*/React.createElement("button", _extends({
+  type: "button",
+  onClick: onClick
+}, rest, {
+  className: `w-full min-h-[56px] rounded-2xl border-2 px-3 py-2 text-left font-black active:scale-95 ${DEBUG_ROW_TONE[tone] || DEBUG_ROW_TONE.go}`
+}), /*#__PURE__*/React.createElement("span", {
+  className: "flex items-center gap-2"
+}, icon && /*#__PURE__*/React.createElement("span", {
+  className: "shrink-0 text-[15px]"
+}, icon), /*#__PURE__*/React.createElement("span", {
+  className: "min-w-0 flex-1 text-[12px] leading-tight"
+}, label), tone === 'save' && /*#__PURE__*/React.createElement("span", {
+  className: "shrink-0 rounded-full bg-rose-600 px-1.5 py-0.5 text-[8px] text-white"
+}, "\u4FDD\u5B58")), desc && /*#__PURE__*/React.createElement("small", {
+  className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
+}, desc));
+
 // ---- part: 40-screen-effects.jsx ----
 // ==== 画面ライフサイクル: タイマー・リスナーの登録簿(useScreenEffects) ====
 //
@@ -38103,6 +38185,1015 @@ function RhythmHistoryScreen({
   }, "\u3042\u306A\u305F\u306E\u8A18\u9332"), row(self, null, true)))));
 }
 
+// ---- part: 74-screen-monster-check-debug.jsx ----
+// ==================== 新モンスター確認(デバッグ専用) ====================
+// 「モンスターを1体足したとき、確認すべきものがここだけで全部見られる」画面。
+// 入口はデバッグ設定(DEBUG_SETTINGS)だけで、通常プレイには一切出さない。
+// 保存・付与・ランキングへは一切触れない(表示だけ)。
+//
+// 【なぜ要るか】(2026-09-17・ユーザー指摘「新モンスター実装用に全て確認出来る画面も必要 /
+//  今は見れないものが多い / あと実装したら消えちゃうのも良くない」)
+//
+// 既存の「モンスター画像・染色確認」(MONSTER_IMAGE_DEBUG)は、表示の候補を
+// **所持しているマスモン(個体)**から作っていた。そのため次の2つが起きていた。
+//
+//   ① 所持していないモンスターは1体も見られない。確認のためだけに円盤石を買う必要があった
+//   ② 正式実装前は debugOnly で所持を経ずに差し込んでいたが、**実装して debugOnly を外した
+//      とたん一覧から消えた**。実際にエイキ・剣士モッチーがそうなっている
+//
+// この画面は ALL_PLAYER_MONSTERS を**そのまま全部**並べる。所持・解放・debugOnly を
+// 一切見ないので、実装の前も後も同じように見られて、あとから消えることがない。
+//
+// 【作りは図鑑にそろえる】(2026-09-17・ユーザー指摘「攻撃モーションの枠が小さすぎてわからない /
+//  全てにおいて作りがごちゃついててみにくい / 実際のゲームみたいにわかりやすくして」)
+//
+// はじめは1本の長いスクロールへ9つの節を縦に積んでいたため、字が小さく目当てに届かず、
+// 攻撃モーションの枠も112pxしか無くて演出が枠の外へ出ていた。
+// いまは**本物の図鑑とまったく同じ3画面立て**にしてある。
+//
+//   一覧(MONSTER_DEX 相当) → 詳細＋タブ(MONSTER_DEX_DETAIL 相当)
+//                          → 攻撃アクション全画面(MONSTER_ATTACK_PREVIEW 相当)
+//
+// 演出は本番と同じ BattleAttackMotionPreview / attackMotionPreviewSequence を使い、
+// この画面のためのモーションは作らない。字の大きさ・カード・タブも図鑑にそろえてある。
+//
+// 【「モンスター画像・染色確認」を吸収した】(2026-09-17・ユーザー指摘「似たようなのもあるし」)
+//
+// 2画面の中身が9割同じだった(背景の切り替え・本番の表示条件6枠・染色UI・攻撃モーションが、
+// 配色指定まで同じコードで二重にあった)。あちら(MONSTER_IMAGE_DEBUG)にしか無かった4つ
+//   ・部位ごとの切り分け(染色Nのみ)   ・ライガーの旧画像/高画質版/比較
+//   ・一時マスクが当たっていることの表示  ・生URL(?v= 付き)
+// をこの画面の「画像」「データ」タブへ移したうえで、あちらは消した。
+// 攻撃モーションはあちらだけ独自の setTimeout 列で組み直していたぶん、
+// パンドラの分身が再生できなかった。こちらへ寄せたことでそれも見られるようになっている。
+
+// 距離の並び。distAptitude は [零, 近, 中, 遠] の順で持っている。
+// 本番と同じ RANGE_LABELS から作るので、間合いの呼び方を変えてもここだけ古くならない
+const monsterCheckDistanceLabels = () => RANGE_LABELS.map(label => `${label}距離`);
+
+// この画面が確認の対象にするモンスター。
+// **所持も解放も debugOnly も見ない**。ALL_PLAYER_MONSTERS にあるものは必ず並べる。
+// 並びは図鑑と同じ「主血統(種族)ごと」にしておくと、同じ種族が隣り合って見比べやすい。
+// dexMonsterList() は debugOnly を落とすので、落ちたぶんを後ろへ足して取りこぼしを無くす。
+const monsterCheckAllMonsters = () => {
+  if (typeof ALL_PLAYER_MONSTERS === 'undefined') return [];
+  const ordered = dexMonsterList();
+  const seen = new Set(ordered.map(mon => mon.id));
+  const rest = Object.values(ALL_PLAYER_MONSTERS).filter(mon => mon && mon.id && !seen.has(mon.id));
+  return [...ordered, ...rest];
+};
+
+// マーケットの商品を引く。円盤石(type:'disc')は解放用でidがモンスターidと一致する決まり。
+// 顔アイコン(type:'icon')はidが別なので、絵のパスで引き当てる(?v= は外して比べる)
+const monsterCheckMarketItems = mon => {
+  const items = typeof BREEDER_MARKET_ITEMS !== 'undefined' && BREEDER_MARKET_ITEMS || [];
+  const bare = url => String(url || '').split('?')[0];
+  const disc = items.find(item => item?.type === 'disc' && item.id === mon?.id) || null;
+  const faceIcon = mon?.faceIconUrl ? items.find(item => item?.type === 'icon' && bare(item.icon) === bare(mon.faceIconUrl)) || null : null;
+  const discIcon = disc ? items.find(item => item?.type === 'icon' && bare(item.icon) === bare(disc.icon)) || null : null;
+  return {
+    disc,
+    faceIcon,
+    discIcon
+  };
+};
+
+// 「実装できているか」を機械的に見る。画面はどれが欠けても普通に開いてしまうので、
+// 目で見て気づくのではなく一覧で出す。ok=揃っている / warn=意図的なこともある /
+// ng=足りない(必ず直す)
+const monsterCheckImplRows = mon => {
+  if (!mon) return [];
+  const id = mon.id;
+  const bare = url => String(url || '').split('?')[0];
+  const atkNames = typeof HERO_ATK_NAMES !== 'undefined' && HERO_ATK_NAMES[id] || [];
+  const uniqueNames = mon.unique?.names || [];
+  const lineage = monsterLineageOf(id);
+  const dexText = typeof MONSTER_DEX_DESCRIPTIONS !== 'undefined' && MONSTER_DEX_DESCRIPTIONS?.[id] || '';
+  const {
+    disc,
+    faceIcon
+  } = monsterCheckMarketItems(mon);
+  const starter = typeof STARTER_MONSTER_IDS !== 'undefined' && STARTER_MONSTER_IDS.includes(id);
+  const plus = mon.plusStats || {};
+  const apt = Array.isArray(mon.distAptitude) ? mon.distAptitude : [];
+  const containFixed = typeof MONSTER_ART_CONTAIN_IDS !== 'undefined' && MONSTER_ART_CONTAIN_IDS.includes(id);
+  const sameArt = bare(mon.faceIconUrl) === bare(mon.imgUrl);
+  return [{
+    label: '立ち絵',
+    code: 'imgUrl',
+    state: mon.imgUrl ? 'ok' : 'ng',
+    value: bare(mon.imgUrl) || '未設定'
+  }, {
+    label: '一覧アイコン',
+    code: 'iconUrl',
+    state: mon.iconUrl ? 'ok' : 'ng',
+    value: bare(mon.iconUrl) || '未設定'
+  }, {
+    label: '顔アイコン',
+    code: 'faceIconUrl',
+    state: mon.faceIconUrl ? sameArt ? 'warn' : 'ok' : 'ng',
+    value: bare(mon.faceIconUrl) || '未設定',
+    note: sameArt ? '立ち絵と同じ絵。丸く抜くと全身が入るので、拡大・位置の調整(MARKET_PROFILE_ICON_STYLES)が要る' : ''
+  }, {
+    label: '攻撃モーション',
+    code: 'atkMotion',
+    state: mon.atkMotion ? 'ok' : 'ng',
+    value: mon.atkMotion || '未設定',
+    note: mon.atkMotion === 'default' ? '共通の汎用モーション' : ''
+  }, {
+    label: '絵文字',
+    code: 'emoji',
+    state: mon.emoji ? 'ok' : 'warn',
+    value: mon.emoji || '未設定',
+    note: mon.emoji ? '' : '絵が読めなかったときの代わりに出る'
+  }, {
+    label: '通常攻撃名',
+    code: 'HERO_ATK_NAMES',
+    state: atkNames.length === 9 ? 'ok' : 'ng',
+    value: `${atkNames.length} / 9 段階`,
+    // getAtkSkillLevels が HERO_ATK_NAMES[id] || HERO_ATK_NAMES['Mocchi'] と落ちるので、
+    // 書き忘れてもエラーにならず、モッチーの技名が静かに出てしまう
+    note: atkNames.length === 9 ? '' : '書き忘れるとモッチーの技名が静かに表示される（エラーにならない）'
+  }, {
+    label: '固有技の9段階名',
+    code: 'unique.names',
+    state: uniqueNames.length === 9 ? 'ok' : 'ng',
+    value: `${uniqueNames.length} / 9 段階`
+  }, {
+    label: '固有技の中身',
+    code: 'unique',
+    state: mon.unique?.name && mon.unique?.effectDesc ? 'ok' : 'ng',
+    value: mon.unique?.name ? `${mon.unique.name}／倍率${mon.unique.baseMult}／消費${mon.unique.baseGuts}` : '未設定'
+  }, {
+    label: '勇者特性',
+    code: 'trait',
+    state: mon.trait && mon.traitDesc ? 'ok' : 'ng',
+    value: mon.trait || '未設定'
+  }, {
+    label: '基礎能力',
+    code: 'baseHp/Atk/Def/Guts',
+    state: [mon.baseHp, mon.baseAtk, mon.baseDef, mon.baseGuts].every(v => Number.isFinite(v)) ? 'ok' : 'ng',
+    value: `${mon.baseHp}／${mon.baseAtk}／${mon.baseDef}／${mon.baseGuts}`
+  }, {
+    label: '供モン加算',
+    code: 'plusStats',
+    state: ['hp', 'atk', 'def', 'guts'].every(k => Number.isFinite(plus[k])) ? 'ok' : 'ng',
+    value: `ライフ${plus.hp}／ちから${plus.atk}／丈夫さ${plus.def}／ガッツ${plus.guts}`
+  }, {
+    label: '距離適性',
+    code: 'distAptitude',
+    state: apt.length === 4 ? 'ok' : 'ng',
+    value: apt.length ? monsterCheckDistanceLabels().map((label, i) => `${label} ${apt[i]}`).join('／') : '未設定'
+  }, {
+    label: '血統',
+    code: 'MONSTER_LINEAGE_MAP',
+    state: lineage.known ? 'ok' : 'ng',
+    value: lineage.known ? `${lineage.main.name} × ${lineage.sub.name}（${monsterCategoryName(monsterCategoryOf(id))}）` : '未登録',
+    note: lineage.known ? '' : 'data/lineages.js へ1行足す。tools/monster/lineage-dex-check.js が見張る'
+  }, {
+    label: '図鑑の説明文',
+    code: 'MONSTER_DEX_DESCRIPTIONS',
+    state: dexText ? 'ok' : 'ng',
+    value: dexText ? `${dexText.length}文字` : '未記入',
+    note: dexText ? '' : '無いと図鑑に「調査中」と出る'
+  }, {
+    label: '図鑑に並ぶか',
+    code: 'debugOnly',
+    state: mon.debugOnly ? 'warn' : 'ok',
+    value: mon.debugOnly ? '出ない（debugOnly）' : '出る',
+    note: mon.debugOnly ? '正式実装前。図鑑・RPG一覧・マスモン登録から外れている' : ''
+  }, {
+    label: '入手方法',
+    code: 'disc / STARTER',
+    state: starter || disc ? 'ok' : 'ng',
+    value: starter ? '初期解放' : disc ? `円盤石 ${disc.cost} ダイヤ` : '入手できない',
+    note: starter || disc ? '' : 'BREEDER_MARKET_ITEMS へ type:\'disc\' の円盤石を足す'
+  },
+  // 初期解放の8種は、この決まりができる前からいるので商品を持っていない。そこは注意にしない
+  {
+    label: 'アイコン商品',
+    code: "type:'icon'",
+    state: faceIcon || starter ? 'ok' : 'warn',
+    value: faceIcon ? `${faceIcon.name}（${faceIcon.cost}）` : starter ? '無し（初期解放は対象外）' : '無し',
+    note: faceIcon || starter ? '' : '新モンスターは顔アイコンと円盤石を同時に足す決まり'
+  }, {
+    label: '染色の部位数',
+    code: 'MASU_COLOR_REGION_HUES',
+    state: 'ok',
+    value: `${dyeRegionCount(id)} 部位`
+  }, {
+    label: '丸枠での収め方',
+    code: 'MONSTER_ART_CONTAIN_IDS',
+    state: 'ok',
+    value: containFixed ? 'contain で収める' : '既定のまま',
+    note: containFixed ? '' : '丸いアイコンで頭や足が切れるなら、ここへ足すと収まる'
+  }];
+};
+
+// この1体に足りていない項目の数。一覧のバッジと見出しで使う
+const monsterCheckNgCount = mon => monsterCheckImplRows(mon).filter(row => row.state === 'ng').length;
+
+// 能力値を他の種と見比べる。1体だけ見ても高いのか低いのか分からないため、
+// 全種の中の順位と、最小〜最大のどのあたりかを帯で出す
+const monsterCheckStatRows = mon => {
+  const all = monsterCheckAllMonsters();
+  const defs = [['ライフ', 'baseHp', m => m.baseHp], ['ちから', 'baseAtk', m => m.baseAtk], ['丈夫さ', 'baseDef', m => m.baseDef], ['ガッツ', 'baseGuts', m => m.baseGuts], ['合流ライフ', 'plus.hp', m => m.plusStats?.hp], ['合流ちから', 'plus.atk', m => m.plusStats?.atk], ['合流丈夫さ', 'plus.def', m => m.plusStats?.def], ['合流ガッツ', 'plus.guts', m => m.plusStats?.guts]];
+  return defs.map(([label, key, pick]) => {
+    const values = all.map(pick).filter(Number.isFinite);
+    const value = Number(pick(mon)) || 0;
+    const min = values.length ? Math.min(...values) : 0;
+    const max = values.length ? Math.max(...values) : 0;
+    // 同じ値の種がいるときは同順位。降順で「上から何番目か」
+    const rank = values.filter(v => v > value).length + 1;
+    const ratio = max > min ? (value - min) / (max - min) : 1;
+    return {
+      label,
+      key,
+      value,
+      min,
+      max,
+      rank,
+      total: values.length,
+      ratio
+    };
+  });
+};
+
+// 選んでいるモンスターと染色の色は MonsterHeroGame 側に持たせて props で受ける。
+// カスタムカラーのモーダル(customColorPicker)が本体側にあり、そこから色を書き戻すため。
+// 攻撃アクションの再生も、コマ送りのタイマーと世代管理を本体へ残してある
+// (図鑑の MonsterAttackPreviewScreen と同じ作り。画面のライフサイクルで止めると演出が固まる)。
+// 画面の中だけで完結するもの(いまどの画面か・タブ・検索語・背景)はここで持つ。
+function MonsterCheckDebugScreen({
+  masuMons = [],
+  unlockedMonsterIds = [],
+  selectedId,
+  colors = [],
+  attackPreview,
+  artMode = 'new',
+  temporaryDyeMasks = null,
+  maskEditorOpened = false,
+  getAtkSkillLevels,
+  getUniqueSkillLevels,
+  onSelect,
+  onColorsChange,
+  onCustomColor,
+  onArtMode,
+  onPlayPreview,
+  onStopPreview,
+  onBack,
+  onOpenMaskEditor
+}) {
+  const monsters = monsterCheckAllMonsters();
+  const [view, setView] = useState('list'); // 'list' | 'detail' | 'motion'
+  const [tab, setTab] = useState('check'); // 'check' | 'art' | 'stats' | 'skills' | 'data'
+  const [query, setQuery] = useState('');
+  const [bg, setBg] = useState('checker');
+  const [brokenImages, setBrokenImages] = useState({});
+  const [showRaw, setShowRaw] = useState(false);
+  const swipeRef = useRef(null);
+  const index = Math.max(0, monsters.findIndex(m => m.id === selectedId));
+  const mon = monsters[index] || null;
+  if (!mon) {
+    return /*#__PURE__*/React.createElement("main", {
+      "data-monster-check-debug": true,
+      "data-mh-screen": true,
+      className: "flex-1 flex flex-col h-full min-h-0 p-4"
+    }, /*#__PURE__*/React.createElement("header", {
+      className: "flex items-center gap-2"
+    }, /*#__PURE__*/React.createElement("button", {
+      "aria-label": "\u30C7\u30D0\u30C3\u30B0\u8A2D\u5B9A\u3078\u623B\u308B",
+      onClick: onBack,
+      className: "p-3 text-slate-400 active:scale-90"
+    }, /*#__PURE__*/React.createElement(ArrowLeft, {
+      size: 20
+    })), /*#__PURE__*/React.createElement("h2", {
+      className: "text-lg font-black italic text-emerald-300 uppercase tracking-widest"
+    }, "\u65B0\u30E2\u30F3\u30B9\u30BF\u30FC\u78BA\u8A8D")), /*#__PURE__*/React.createElement("div", {
+      className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
+    }, /*#__PURE__*/React.createElement("p", {
+      className: "p-6 text-center text-[11px] font-bold text-slate-400"
+    }, "ALL_PLAYER_MONSTERS \u304C\u8AAD\u307F\u8FBC\u3081\u3066\u3044\u307E\u305B\u3093\u3002")));
+  }
+  const ngCount = monsterCheckNgCount(mon);
+  const atkMotion = mon.atkMotion || 'default';
+  const playing = attackPreview?.monsterId === mon.id ? attackPreview : null;
+  const regionCount = dyeRegionCount(mon.id);
+  const dyeColors = Array.from({
+    length: regionCount
+  }, (_, i) => colors[i] || null);
+  const {
+    main,
+    sub
+  } = monsterLineageOf(mon.id);
+  const category = monsterCategoryOf(mon.id);
+  const categoryClass = category === 'rare' ? 'bg-amber-600 text-white' : category === 'pure' ? 'bg-emerald-700 text-white' : 'bg-indigo-700 text-white';
+  const market = monsterCheckMarketItems(mon);
+  const owned = masuMons.filter(m => m && String(m.baseId) === String(mon.id)).length;
+  const starter = typeof STARTER_MONSTER_IDS !== 'undefined' && STARTER_MONSTER_IDS.includes(mon.id);
+  // プロフィールアイコンは本番(BreederIcon)で拡大・位置の調整が掛かる。これを通さないと
+  // 顔アイコンが立ち絵そのままのモンスターだけ、確認画面のほうが本番と別物に見えてしまう
+  const profileIconStyle = marketProfileIconStyle((breederIconOptions({
+    includeUnowned: true
+  }).find(o => String(o.src || '').split('?')[0] === String(mon.faceIconUrl || '').split('?')[0]) || {}).id);
+  const bgStyle = bg === 'white' ? {
+    background: '#fff'
+  } : bg === 'black' ? {
+    background: '#000'
+  } : {
+    backgroundColor: '#cbd5e1',
+    backgroundImage: 'linear-gradient(45deg,#64748b 25%,transparent 25%),linear-gradient(-45deg,#64748b 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#64748b 75%),linear-gradient(-45deg,transparent 75%,#64748b 75%)',
+    backgroundSize: '16px 16px',
+    backgroundPosition: '0 0,0 8px,8px -8px,-8px 0'
+  };
+  const noteImageBroken = url => setBrokenImages(prev => prev[url] ? prev : {
+    ...prev,
+    [url]: true
+  });
+  // ライガーだけは、高画質版へ差し替える前の絵(ロールバック用)も残してある。
+  // 「いまの本番」「旧画像」「並べて比較」を切り替えて見られるようにしておく
+  const productionSources = {
+    imgUrl: mon.imgUrl,
+    iconUrl: mon.iconUrl,
+    faceIconUrl: mon.faceIconUrl
+  };
+  const rollbackSources = typeof TIGER_ROLLBACK_IMG !== 'undefined' && mon.id === 'Tiger' ? {
+    imgUrl: TIGER_ROLLBACK_IMG,
+    iconUrl: TIGER_ROLLBACK_ICON,
+    faceIconUrl: TIGER_ROLLBACK_ICON
+  } : null;
+  const artSources = rollbackSources && artMode === 'old' ? rollbackSources : productionSources;
+  // 染色マスクを描いて「ゲームで試す」と、その種だけ一時的なマスクが当たる。
+  // マスクは _temporaryDyeMasks 経由で DyedMonsterImage が勝手に見るので、ここでは印を出すだけでよい
+  const temporaryMask = !!(temporaryDyeMasks && temporaryDyeMasks[mon.id]);
+  const pickMonster = id => {
+    onStopPreview();
+    onSelect(id);
+    onColorsChange([]);
+    setShowRaw(false);
+    setTab('check');
+    setView('detail');
+  };
+  const go = delta => {
+    onStopPreview();
+    const next = monsters[(index + delta + monsters.length) % monsters.length];
+    if (!next) return;
+    onSelect(next.id);
+    onColorsChange([]);
+    Audio_.se.tap();
+  };
+  const dyedArt = (className = 'w-full h-full object-contain') => /*#__PURE__*/React.createElement(DyedMonsterImage, {
+    baseId: mon.id,
+    src: mon.imgUrl,
+    alt: mon.name,
+    masuColors: dyeColors,
+    draggable: false,
+    className: className
+  });
+
+  // ---------- ① 一覧。図鑑の一覧と同じ作りで、所持も解放も関係なく全種を並べる ----------
+  if (view === 'list') {
+    const normalizedQuery = query.trim().toLocaleLowerCase('ja');
+    const shown = monsters.filter(entry => !normalizedQuery || `${entry.name} ${entry.id} ${monsterLineageOf(entry.id).main.name}`.toLocaleLowerCase('ja').includes(normalizedQuery));
+    const needsFix = monsters.filter(entry => monsterCheckNgCount(entry) > 0).length;
+    return /*#__PURE__*/React.createElement("div", {
+      "data-monster-check-debug": true,
+      "data-mh-screen": true,
+      className: "flex-1 flex flex-col h-full min-h-0 p-4",
+      style: {
+        paddingTop: 'calc(1rem + env(safe-area-inset-top))',
+        paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-2 mb-2 shrink-0"
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: onBack,
+      className: "p-3 text-slate-400 active:scale-90",
+      "aria-label": "\u30C7\u30D0\u30C3\u30B0\u8A2D\u5B9A\u3078\u623B\u308B"
+    }, /*#__PURE__*/React.createElement(ArrowLeft, {
+      size: 20
+    })), /*#__PURE__*/React.createElement("h2", {
+      className: "text-lg font-black italic text-emerald-300 uppercase tracking-widest"
+    }, "\u65B0\u30E2\u30F3\u30B9\u30BF\u30FC\u78BA\u8A8D")), /*#__PURE__*/React.createElement("div", {
+      className: "shrink-0 w-full max-w-md mx-auto mb-2 rounded-xl border border-emerald-500/40 bg-gradient-to-r from-emerald-950/70 to-slate-950 px-3 py-2 flex items-center justify-between gap-2"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-[9px] font-black text-emerald-300 uppercase tracking-widest shrink-0"
+    }, "\u78BA\u8A8D\u3067\u304D\u308B\u7A2E"), /*#__PURE__*/React.createElement("span", {
+      className: "text-[15px] font-mono font-black text-emerald-100 tabular-nums"
+    }, monsters.length, /*#__PURE__*/React.createElement("span", {
+      className: "text-slate-400 text-[10px]"
+    }, " \u7A2E\uFF08\u6240\u6301\u30FB\u89E3\u653E\u306B\u95A2\u4FC2\u306A\u304F\u5168\u90E8\uFF09"))), /*#__PURE__*/React.createElement("div", {
+      className: `shrink-0 w-full max-w-md mx-auto mb-2 rounded-xl border px-3 py-2 text-[11px] font-black ${needsFix ? 'border-rose-500/50 bg-rose-950/30 text-rose-200' : 'border-emerald-500/40 bg-emerald-950/30 text-emerald-200'}`
+    }, needsFix ? `⚠ ${needsFix}種に足りない項目があります` : '✓ 足りない項目のあるモンスターはいません'), /*#__PURE__*/React.createElement("input", {
+      type: "search",
+      value: query,
+      onChange: e => setQuery(e.target.value),
+      placeholder: "\u540D\u524D\u30FB\u5185\u90E8ID\u30FB\u7A2E\u65CF\u3067\u691C\u7D22",
+      className: "shrink-0 w-full max-w-md mx-auto mb-2 min-h-[46px] rounded-xl border border-white/10 bg-slate-900 px-3 text-[12px] font-black"
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "flex-1 min-h-0 overflow-y-auto mh-scroll w-full max-w-md mx-auto"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-3 gap-2.5 pb-4"
+    }, shown.map(entry => {
+      const entryNg = monsterCheckNgCount(entry);
+      const entryOwned = masuMons.some(m => m && String(m.baseId) === String(entry.id));
+      return /*#__PURE__*/React.createElement("button", {
+        key: entry.id,
+        type: "button",
+        "data-monster-check-option": entry.id,
+        "aria-label": `${entry.name}を確認する`,
+        onClick: () => {
+          Audio_.se.tap();
+          pickMonster(entry.id);
+        },
+        className: `w-full min-h-[128px] rounded-2xl border-2 p-2 flex flex-col items-center gap-1 active:scale-95 select-none ${entry.id === mon.id ? 'border-emerald-300 bg-emerald-900/50' : 'border-emerald-600/30 bg-gradient-to-b from-emerald-950/40 to-slate-900'}`
+      }, /*#__PURE__*/React.createElement(DexMonsterIcon, {
+        src: entry.iconUrl || entry.imgUrl || ''
+      }), /*#__PURE__*/React.createElement("div", {
+        className: "text-[11px] font-black truncate w-full text-center leading-tight text-emerald-50"
+      }, entry.name), /*#__PURE__*/React.createElement("div", {
+        className: "text-[8px] font-black text-emerald-400/80 leading-tight truncate w-full text-center"
+      }, monsterLineageOf(entry.id).main.name, "\u7A2E"), /*#__PURE__*/React.createElement("div", {
+        className: "text-[9px] font-black leading-tight"
+      }, entry.debugOnly ? /*#__PURE__*/React.createElement("span", {
+        className: "text-fuchsia-300"
+      }, "\u672A\u5B9F\u88C5") : entryNg ? /*#__PURE__*/React.createElement("span", {
+        className: "text-rose-300"
+      }, "\u8981\u78BA\u8A8D ", entryNg) : entryOwned ? /*#__PURE__*/React.createElement("span", {
+        className: "text-cyan-300"
+      }, "\u6240\u6301\u4E2D") : /*#__PURE__*/React.createElement("span", {
+        className: "text-slate-500"
+      }, "\u2014")));
+    })), shown.length === 0 && /*#__PURE__*/React.createElement("div", {
+      className: "py-6 text-center text-[11px] font-bold text-slate-400"
+    }, "\u4E00\u81F4\u3059\u308B\u30E2\u30F3\u30B9\u30BF\u30FC\u306F\u3044\u307E\u305B\u3093\u3002")));
+  }
+
+  // ---------- ③ 攻撃アクション。図鑑の MONSTER_ATTACK_PREVIEW とまったく同じ舞台 ----------
+  // 詳細の立ち絵の枠では、上へ飛ぶ音符や光が枠の外へ出て見えない。ここは縦を大きく取り、
+  // 立ち絵を下寄りに置いて、上の余白へ演出が収まるようにする
+  if (view === 'motion') {
+    const kindButton = (kind, label) => /*#__PURE__*/React.createElement("button", {
+      key: kind,
+      type: "button",
+      "data-monster-check-motion": kind,
+      onClick: () => {
+        Audio_.se.tap();
+        if (!playing) onPlayPreview(mon, kind, atkMotion);
+      },
+      disabled: !!playing,
+      className: `flex-1 min-w-0 min-h-[48px] rounded-2xl border-2 px-2 text-[12px] font-black active:scale-95 disabled:opacity-45 ${playing?.kind === kind ? 'border-cyan-200 bg-cyan-700 text-white' : 'border-cyan-400/50 bg-slate-900 text-cyan-100'}`
+    }, playing?.kind === kind ? '再生中…' : label);
+    return /*#__PURE__*/React.createElement("main", {
+      "data-monster-check-debug": true,
+      "data-mh-screen": true,
+      className: "flex-1 flex flex-col h-full min-h-0",
+      style: {
+        paddingTop: 'calc(0.5rem + env(safe-area-inset-top))',
+        paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom))'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "shrink-0 flex items-center gap-2 px-3"
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: () => {
+        onStopPreview();
+        setView('detail');
+      },
+      className: "p-3 text-slate-400 active:scale-90",
+      "aria-label": "\u8A73\u7D30\u3078\u623B\u308B"
+    }, /*#__PURE__*/React.createElement(ArrowLeft, {
+      size: 20
+    })), /*#__PURE__*/React.createElement("div", {
+      className: "min-w-0"
+    }, /*#__PURE__*/React.createElement("small", {
+      className: "block text-[8px] font-black text-cyan-300 uppercase tracking-[0.2em]"
+    }, "Attack Action"), /*#__PURE__*/React.createElement("h2", {
+      className: "truncate text-base font-black text-emerald-100"
+    }, mon.name, "\u306E\u653B\u6483\u30A2\u30AF\u30B7\u30E7\u30F3")), /*#__PURE__*/React.createElement("span", {
+      className: "ml-auto shrink-0 pr-1 text-[9px] font-mono font-black text-cyan-300/80"
+    }, atkMotion)), /*#__PURE__*/React.createElement("div", {
+      "data-monster-check-stage": true,
+      className: "relative flex-1 min-h-0 overflow-hidden mx-3 mt-2 rounded-3xl border-2 border-cyan-500/30 bg-gradient-to-b from-slate-900 to-slate-950",
+      style: bg === 'checker' ? undefined : bgStyle
+    }, /*#__PURE__*/React.createElement("div", {
+      "data-monster-check-art": true,
+      className: "absolute left-1/2",
+      style: {
+        bottom: '11%',
+        width: 'clamp(132px, 44vw, 184px)',
+        height: 'clamp(132px, 44vw, 184px)',
+        transform: 'translateX(-50%) scale(1.15)',
+        transformOrigin: 'bottom center'
+      }
+    }, /*#__PURE__*/React.createElement(BattleAttackMotionPreview, {
+      image: dyedArt('h-full w-full object-contain'),
+      anim: playing ? playing.anim : null
+    })), /*#__PURE__*/React.createElement("span", {
+      className: "absolute bottom-2 left-0 right-0 text-center text-[8px] font-bold text-slate-500"
+    }, "\u30D0\u30C8\u30EB\u3068\u540C\u3058\u6F14\u51FA\u3067\u3059\uFF08\u30C0\u30E1\u30FC\u30B8\u3084\u6027\u80FD\u306F\u5909\u308F\u308A\u307E\u305B\u3093\uFF09")), /*#__PURE__*/React.createElement("div", {
+      className: "shrink-0 px-3 pt-2"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "mx-auto flex w-full max-w-md gap-2"
+    }, kindButton('normal', '通常攻撃'), kindButton('unique', '固有技'))));
+  }
+
+  // ---------- ② 詳細。図鑑の MONSTER_DEX_DETAIL と同じ「上=立ち絵 / 下=カード＋タブ」 ----------
+  const tabs = [['check', 'チェック'], ['art', '画像'], ['stats', '能力'], ['skills', '技'], ['data', 'データ']];
+  // 図鑑と同じ行の出し方。長い値はラベルを上に置いて幅いっぱいを使う
+  const row = (label, value, {
+    block = false
+  } = {}) => block ? /*#__PURE__*/React.createElement("div", {
+    key: label,
+    className: "border-b border-emerald-500/15 py-1.5 last:border-b-0"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "block text-[10px] font-black text-emerald-300/90"
+  }, label), /*#__PURE__*/React.createElement("span", {
+    className: "mt-1 block break-words text-[11px] font-bold leading-relaxed text-white"
+  }, value)) : /*#__PURE__*/React.createElement("div", {
+    key: label,
+    className: "flex items-start justify-between gap-3 border-b border-emerald-500/15 py-1.5 last:border-b-0"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "shrink-0 text-[10px] font-black text-emerald-300/90"
+  }, label), /*#__PURE__*/React.createElement("span", {
+    className: "min-w-0 break-words text-[11px] font-bold text-white"
+  }, value));
+  const skillPills = (list, accent) => /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-1.5"
+  }, list.map(skill => /*#__PURE__*/React.createElement("div", {
+    key: skill.lvl,
+    className: `min-w-0 rounded-xl border px-2 py-1.5 ${accent}`
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex min-w-0 items-center justify-between gap-1.5"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "min-w-0 truncate text-[10px] font-black text-white"
+  }, skill.name), /*#__PURE__*/React.createElement("span", {
+    className: "shrink-0 text-[8px] font-mono font-black text-amber-300"
+  }, "Lv.", skill.lvl)), /*#__PURE__*/React.createElement("div", {
+    className: "mt-0.5 flex items-center gap-2 text-[8px] font-mono font-black text-slate-400"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-red-300"
+  }, "\u5A01\u529B", skill.power), /*#__PURE__*/React.createElement("span", {
+    className: "text-amber-300"
+  }, "\u6D88\u8CBBG", skill.guts), /*#__PURE__*/React.createElement("span", {
+    className: "text-yellow-300"
+  }, "\u4F1A\u5FC3", skill.crit, "%")))));
+  // 1枚ぶんの枠。絵のURLと染色を指定できるようにしてあるので、「本番の表示条件」だけでなく
+  // 「部位ごとの切り分け」「ライガーの新旧比較」も同じ部品で出せる。
+  // 読み込みに失敗した絵は赤くして、「パスの綴り間違いで絵が出ない」を公開前に気づけるようにする
+  const artBox = (label, src, palette, frameClass, fit, imgStyle, note) => {
+    const broken = !!brokenImages[src];
+    return /*#__PURE__*/React.createElement("section", {
+      key: label,
+      className: "rounded-xl bg-black/30 p-2 text-center"
+    }, /*#__PURE__*/React.createElement("b", {
+      className: "block text-[10px] font-black text-cyan-200"
+    }, label), note && /*#__PURE__*/React.createElement("small", {
+      className: "mb-1 block text-[8px] font-bold text-slate-400"
+    }, note), /*#__PURE__*/React.createElement("div", {
+      className: `${frameClass} overflow-hidden border ${broken ? 'border-rose-500' : 'border-white/20'}`,
+      style: bgStyle
+    }, src ? /*#__PURE__*/React.createElement(DyedMonsterImage, {
+      baseId: mon.id,
+      src: src,
+      alt: label,
+      masuColors: palette,
+      className: `w-full h-full ${fit}`,
+      style: {
+        ...monsterArtFitStyle(mon.id, undefined),
+        ...(imgStyle || {})
+      }
+    }) : /*#__PURE__*/React.createElement("span", {
+      className: "flex h-full w-full items-center justify-center text-[9px] font-black text-rose-300"
+    }, "\u672A\u8A2D\u5B9A")), src && /*#__PURE__*/React.createElement("img", {
+      src: src,
+      alt: "",
+      "aria-hidden": "true",
+      className: "hidden",
+      onError: () => noteImageBroken(src)
+    }), broken && /*#__PURE__*/React.createElement("small", {
+      className: "mt-1 block text-[9px] font-black text-rose-300"
+    }, "\u8AAD\u307F\u8FBC\u3081\u307E\u305B\u3093"));
+  };
+  const artFrame = (label, sourceKey, frameClass, fit, imgStyle, note) => artBox(label, artSources[sourceKey], dyeColors, frameClass, fit, imgStyle, note);
+  const stateMark = state => state === 'ng' ? '✕' : state === 'warn' ? '△' : '✓';
+  const stateClass = state => state === 'ng' ? 'text-rose-300' : state === 'warn' ? 'text-amber-300' : 'text-emerald-300';
+  return /*#__PURE__*/React.createElement("div", {
+    "data-monster-check-debug": true,
+    "data-mh-screen": true,
+    className: "flex-1 flex flex-col h-full min-h-0",
+    style: {
+      paddingTop: 'calc(0.5rem + env(safe-area-inset-top))',
+      paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom))'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex shrink-0 items-center gap-2 px-3"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      onStopPreview();
+      setView('list');
+    },
+    className: "p-3 text-slate-400 active:scale-90",
+    "aria-label": "\u4E00\u89A7\u3078\u623B\u308B"
+  }, /*#__PURE__*/React.createElement(ArrowLeft, {
+    size: 20
+  })), /*#__PURE__*/React.createElement("h2", {
+    className: "text-base font-black italic text-emerald-300 uppercase tracking-widest"
+  }, "\u65B0\u30E2\u30F3\u30B9\u30BF\u30FC\u78BA\u8A8D"), temporaryMask && /*#__PURE__*/React.createElement("span", {
+    className: "ml-auto shrink-0 rounded-full bg-fuchsia-800 px-2 py-1 text-[9px] font-black text-white"
+  }, "\u4E00\u6642\u30DE\u30B9\u30AF\u53CD\u6620\u4E2D"), /*#__PURE__*/React.createElement("span", {
+    className: `shrink-0 pr-1 text-[10px] font-mono font-black tabular-nums text-emerald-200/80 ${temporaryMask ? '' : 'ml-auto'}`
+  }, index + 1, " / ", monsters.length)), /*#__PURE__*/React.createElement("div", {
+    "data-monster-check-hero": true,
+    className: "relative flex shrink-0 items-center justify-center px-14",
+    style: {
+      height: 'clamp(150px, 20dvh, 180px)'
+    },
+    onTouchStart: e => {
+      swipeRef.current = e.touches && e.touches[0] ? e.touches[0].clientX : null;
+    },
+    onTouchEnd: e => {
+      const from = swipeRef.current;
+      swipeRef.current = null;
+      if (from == null) return;
+      const to = e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientX : from;
+      const dx = to - from;
+      if (Math.abs(dx) >= 48) go(dx < 0 ? 1 : -1);
+    }
+  }, dyedArt(), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "aria-label": "\u524D\u306E\u30E2\u30F3\u30B9\u30BF\u30FC",
+    onClick: () => go(-1),
+    className: "absolute left-1 top-1/2 flex w-11 min-h-[48px] -translate-y-1/2 items-center justify-center rounded-full border border-emerald-400/40 bg-black/50 text-emerald-200 active:scale-90"
+  }, /*#__PURE__*/React.createElement(ChevronLeft, {
+    size: 22
+  })), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "aria-label": "\u6B21\u306E\u30E2\u30F3\u30B9\u30BF\u30FC",
+    onClick: () => go(1),
+    className: "absolute right-1 top-1/2 flex w-11 min-h-[48px] -translate-y-1/2 items-center justify-center rounded-full border border-emerald-400/40 bg-black/50 text-emerald-200 active:scale-90"
+  }, /*#__PURE__*/React.createElement(ChevronRight, {
+    size: 22
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "flex shrink-0 justify-center px-3 pt-1"
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "data-monster-check-open-motion": true,
+    onClick: () => {
+      Audio_.se.tap();
+      onStopPreview();
+      setView('motion');
+    },
+    className: "min-h-[40px] rounded-full border border-cyan-300/60 bg-slate-950/85 px-5 text-[11px] font-black text-cyan-100 shadow-lg active:scale-95"
+  }, "\u25B6 \u653B\u6483\u30A2\u30AF\u30B7\u30E7\u30F3\u3092\u5927\u304D\u304F\u898B\u308B")), /*#__PURE__*/React.createElement("div", {
+    className: "min-h-0 flex-1 px-3 pt-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mx-auto flex h-full w-full max-w-md min-h-0 flex-col rounded-3xl border-2 border-emerald-500/40 bg-gradient-to-b from-emerald-950/50 to-slate-950 p-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 truncate text-center text-[17px] font-black text-emerald-100"
+  }, mon.name), /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 mt-2 grid items-center gap-1.5",
+    style: {
+      gridTemplateColumns: 'auto minmax(0,1fr) auto minmax(0,1fr) auto'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "shrink-0 text-[9px] font-black uppercase tracking-widest text-emerald-300"
+  }, "\u8840\u7D71"), /*#__PURE__*/React.createElement(DexLineageChip, {
+    lineage: main,
+    iconUrl: lineageIconUrl(main)
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "shrink-0 text-center text-[12px] font-black text-emerald-300"
+  }, "\xD7"), /*#__PURE__*/React.createElement(DexLineageChip, {
+    lineage: sub,
+    iconUrl: lineageIconUrl(sub)
+  }), /*#__PURE__*/React.createElement("span", {
+    className: `shrink-0 min-w-[42px] rounded-full px-1.5 py-1 text-center text-[9px] font-black ${categoryClass}`
+  }, monsterCategoryName(category))), /*#__PURE__*/React.createElement("div", {
+    className: `shrink-0 mt-2 rounded-xl border px-3 py-1.5 text-[11px] font-black ${ngCount ? 'border-rose-500/50 bg-rose-950/30 text-rose-200' : 'border-emerald-500/40 bg-emerald-950/40 text-emerald-200'}`
+  }, ngCount ? `⚠ 足りない項目が ${ngCount} 件あります` : '✓ 足りない項目はありません'), /*#__PURE__*/React.createElement("div", {
+    role: "tablist",
+    "aria-label": "\u78BA\u8A8D\u3059\u308B\u5185\u5BB9",
+    className: "shrink-0 mt-2 grid grid-cols-5 gap-1"
+  }, tabs.map(([id, label]) => /*#__PURE__*/React.createElement("button", {
+    key: id,
+    type: "button",
+    role: "tab",
+    "aria-selected": tab === id,
+    "data-monster-check-tab": id,
+    onClick: () => {
+      Audio_.se.tap();
+      setTab(id);
+    },
+    className: `min-h-[40px] rounded-xl border px-0.5 text-[10px] font-black active:scale-95 ${tab === id ? 'border-emerald-300 bg-emerald-600 text-white' : 'border-emerald-500/30 bg-slate-900 text-emerald-200/80'}`
+  }, label))), /*#__PURE__*/React.createElement("div", {
+    className: "mt-2 min-h-0 flex-1 overflow-y-auto mh-scroll pr-0.5"
+  }, tab === 'check' && /*#__PURE__*/React.createElement("div", {
+    "data-monster-check-tab-check": true,
+    className: "space-y-1"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "mb-1 text-[9px] font-black leading-relaxed text-emerald-300/90"
+  }, "\u5B9F\u30C7\u30FC\u30BF\u3092\u898B\u3066\u3001\u8DB3\u308A\u306A\u3044\u3082\u306E\u3060\u3051\u3092\u6A5F\u68B0\u7684\u306B\u51FA\u3057\u3066\u3044\u307E\u3059\u3002"), monsterCheckImplRows(mon).map(row2 => /*#__PURE__*/React.createElement("div", {
+    key: row2.label,
+    className: "rounded-xl bg-black/30 px-2.5 py-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-start justify-between gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "flex shrink-0 items-center gap-1.5"
+  }, /*#__PURE__*/React.createElement("b", {
+    className: `text-[12px] font-black ${stateClass(row2.state)}`
+  }, stateMark(row2.state)), /*#__PURE__*/React.createElement("span", {
+    className: "text-[11px] font-black text-white"
+  }, row2.label)), /*#__PURE__*/React.createElement("span", {
+    className: "min-w-0 break-all text-right text-[10px] font-bold text-slate-300"
+  }, row2.value)), /*#__PURE__*/React.createElement("div", {
+    className: "mt-0.5 pl-5 text-[8px] font-mono font-bold text-emerald-400/60"
+  }, row2.code), row2.note && /*#__PURE__*/React.createElement("p", {
+    className: "mt-1 pl-5 text-[9px] font-bold leading-relaxed text-amber-200/90"
+  }, row2.note)))), tab === 'art' && /*#__PURE__*/React.createElement("div", {
+    "data-monster-check-tab-art": true,
+    className: "space-y-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-3 gap-2"
+  }, [['checker', '市松模様'], ['white', '白'], ['black', '黒']].map(([id, label]) => /*#__PURE__*/React.createElement("button", {
+    key: id,
+    onClick: () => setBg(id),
+    className: `min-h-[40px] rounded-xl border text-[11px] font-black active:scale-95 ${bg === id ? 'ring-2 ring-cyan-400' : 'border-white/10'}`,
+    style: id === 'white' ? {
+      background: '#fff',
+      color: '#000'
+    } : id === 'black' ? {
+      background: '#000'
+    } : {
+      background: '#64748b'
+    }
+  }, label))), rollbackSources && /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-3 gap-1"
+  }, [['new', 'いまの本番'], ['old', '旧画像（ロールバック用）'], ['compare', '並べて比較']].map(([id, label]) => /*#__PURE__*/React.createElement("button", {
+    key: id,
+    "data-monster-check-art-mode": id,
+    onClick: () => onArtMode(id),
+    className: `min-h-[46px] rounded-xl border px-1 text-[9px] font-black active:scale-95 ${artMode === id ? 'border-amber-300 bg-amber-700 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`
+  }, label))), rollbackSources && artMode === 'compare' && /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-2"
+  }, artBox('旧画像', rollbackSources.imgUrl, dyeColors, 'aspect-square', 'object-contain', null, '差し替える前'), artBox('高画質版', productionSources.imgUrl, dyeColors, 'aspect-square', 'object-contain', null, 'いまの本番')), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-2"
+  }, artFrame('バトル／立ち絵', 'imgUrl', 'aspect-square', 'object-contain', null, '本番 64px・角丸なし'), artFrame('一覧／全身アイコン', 'iconUrl', 'aspect-square rounded-full', 'object-cover', null, '本番 48px・丸'), artFrame('図鑑／大きな全身', 'imgUrl', 'h-36', 'object-contain', null, '本番 図鑑詳細の枠'), artFrame('顔アイコン', 'faceIconUrl', 'aspect-square rounded-full', 'object-contain', profileIconStyle, '本番 プロフィール80px・丸'), artFrame('プロフィール／選択', 'faceIconUrl', 'aspect-square rounded-2xl', 'object-contain', profileIconStyle, '本番 選択マス約59px・角丸'), artFrame('小型／編成枠', 'imgUrl', 'aspect-square rounded-full', 'object-contain', null, '本番 40px・丸')), /*#__PURE__*/React.createElement("section", {
+    className: "rounded-2xl border border-fuchsia-500/40 bg-fuchsia-950/20 p-2.5"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "mb-2 text-[11px] font-black text-fuchsia-300"
+  }, "\u67D3\u8272\uFF08", regionCount, "\u90E8\u4F4D\u30FB\u672C\u756A\u3068\u5171\u901A\uFF09"), /*#__PURE__*/React.createElement(DyeRegionColorControls, {
+    baseId: mon.id,
+    colors: dyeColors,
+    onChange: (idx, colorId) => {
+      const next = Array.from({
+        length: regionCount
+      }, (_, i) => dyeColors[i] || null);
+      next[idx] = colorId;
+      onColorsChange(next);
+    },
+    onCustom: idx => onCustomColor(idx, dyeColors[idx])
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "mt-2 grid grid-cols-2 gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => onColorsChange([]),
+    className: "min-h-[42px] rounded-xl bg-fuchsia-800 text-[10px] font-black"
+  }, "\u5143\u306E\u8272\u3078\u623B\u3059"), /*#__PURE__*/React.createElement("button", {
+    "data-monster-check-open-mask": true,
+    onClick: () => {
+      onStopPreview();
+      onOpenMaskEditor();
+    },
+    className: "min-h-[42px] rounded-xl border border-cyan-400/60 bg-cyan-950 text-[10px] font-black text-cyan-100"
+  }, "\u67D3\u8272\u30DE\u30B9\u30AF\u3092\u7DE8\u96C6\u3059\u308B"))), /*#__PURE__*/React.createElement("section", {
+    "data-monster-check-region": true,
+    className: "rounded-2xl border border-fuchsia-500/30 bg-fuchsia-950/10 p-2.5"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "mb-2 text-[11px] font-black text-fuchsia-300"
+  }, "\u90E8\u4F4D\u3054\u3068\u306E\u5207\u308A\u5206\u3051\uFF08", regionCount, "\u90E8\u4F4D\uFF09"), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-2"
+  }, artBox('元画像', artSources.imgUrl, [], 'aspect-square', 'object-contain', null, '染色なし'), artBox('合成後', artSources.imgUrl, dyeColors, 'aspect-square', 'object-contain', null, '全部位を重ねたもの'), Array.from({
+    length: regionCount
+  }, (_, i) => artBox(`染色${i + 1}のみ`, artSources.imgUrl, dyeColors.map((c, j) => i === j ? c : null), 'aspect-square', 'object-contain', null, `${i + 1}番目の部位だけ`))))), tab === 'stats' && /*#__PURE__*/React.createElement("div", {
+    "data-monster-check-tab-stats": true,
+    className: "space-y-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] font-black text-emerald-300/90"
+  }, "\u305D\u306E\u7A2E\u306E\u57FA\u790E\u80FD\u529B\u3068\u3001\u5168", monsters.length, "\u7A2E\u306E\u4E2D\u3067\u306E\u4F4D\u7F6E"), monsterCheckStatRows(mon).map(stat => /*#__PURE__*/React.createElement("div", {
+    key: stat.key,
+    className: "rounded-xl bg-black/30 px-2.5 py-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-baseline justify-between text-[11px] font-black"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-200"
+  }, stat.label), /*#__PURE__*/React.createElement("span", {
+    className: "text-white"
+  }, stat.value.toLocaleString(), /*#__PURE__*/React.createElement("small", {
+    className: "ml-1.5 text-[9px] font-black text-amber-300"
+  }, stat.rank, "\u4F4D / ", stat.total, "\u7A2E"))), /*#__PURE__*/React.createElement("div", {
+    className: "mt-1 h-2 w-full overflow-hidden rounded-full bg-slate-800"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "h-full rounded-full bg-amber-500",
+    style: {
+      width: `${Math.round(Math.max(0, Math.min(1, stat.ratio)) * 100)}%`
+    }
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "mt-0.5 flex justify-between text-[8px] font-bold text-slate-500"
+  }, /*#__PURE__*/React.createElement("span", null, "\u6700\u5C0F ", stat.min.toLocaleString()), /*#__PURE__*/React.createElement("span", null, "\u6700\u5927 ", stat.max.toLocaleString())))), /*#__PURE__*/React.createElement("div", {
+    className: "mb-1 mt-2 text-[9px] font-black text-emerald-300/90"
+  }, "\u9593\u5408\u3044\u9069\u6027"), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-4 gap-1.5"
+  }, RANGE_LABELS.map((label, i) => {
+    const grade = mon.distAptitude && mon.distAptitude[i] || 'C';
+    return /*#__PURE__*/React.createElement("div", {
+      key: label,
+      className: "flex flex-col items-center gap-1 rounded-xl border border-emerald-500/25 bg-black/30 py-1.5 text-center"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: `rounded-full px-1.5 py-0.5 text-[8px] font-black leading-none ${RANGE_STYLES[i].labelBg}`
+    }, label), /*#__PURE__*/React.createElement("span", {
+      className: `w-[86%] rounded-lg border py-0.5 text-[13px] font-mono font-black leading-none ${DIST_APTITUDE_COLOR[grade] || DIST_APTITUDE_COLOR.C}`
+    }, grade));
+  }))), tab === 'skills' && /*#__PURE__*/React.createElement("div", {
+    "data-monster-check-tab-skills": true,
+    className: "space-y-2"
+  }, row('勇者特性', mon.trait || 'なし'), row('特性の効果', mon.traitDesc || '特性なし', {
+    block: true
+  }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "mb-1 text-center text-[9px] font-black tracking-widest text-emerald-300/90"
+  }, "\u901A\u5E38\u6280"), skillPills(getAtkSkillLevels(mon), 'border-red-500/30 bg-red-950/25')), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "mb-1 text-center text-[9px] font-black tracking-widest text-emerald-300/90"
+  }, "\u56FA\u6709\u6280\uFF08\u9032\u5316\u6BB5\u968E\uFF09"), skillPills(getUniqueSkillLevels(mon), 'border-amber-500/40 bg-amber-950/30'), /*#__PURE__*/React.createElement("div", {
+    className: "mt-1.5 break-words text-[10px] font-bold italic leading-relaxed text-slate-300"
+  }, "\"", mon.unique?.effectDesc || '', "\""))), tab === 'data' && /*#__PURE__*/React.createElement("div", {
+    "data-monster-check-tab-data": true,
+    className: "space-y-2"
+  }, row('内部ID', mon.id), row('主血統 × 副血統', `${main.name} × ${sub.name}`), row('区分', monsterCategoryName(category)), row('攻撃モーション', atkMotion), row('解放状態', starter ? '初期解放' : unlockedMonsterIds.includes(mon.id) ? '解放済み' : '未解放'), row('所持している個体', `${owned} 体`), row('図鑑の説明', monsterDexDescription(mon.id), {
+    block: true
+  }), row('円盤石（解放用）', market.disc ? `${market.disc.name}／${market.disc.cost} ダイヤ` : '無し'), row('顔アイコン商品', market.faceIcon ? `${market.faceIcon.name}／${market.faceIcon.cost}` : '無し'), row('円盤石アイコン商品', market.discIcon ? `${market.discIcon.name}／${market.discIcon.cost}` : '無し'), /*#__PURE__*/React.createElement("div", {
+    "data-monster-check-urls": true,
+    className: "rounded-lg bg-black/40 p-2 text-[9px] leading-relaxed text-cyan-200 break-all"
+  }, /*#__PURE__*/React.createElement("div", null, "imgUrl = ", mon.imgUrl || '未設定'), /*#__PURE__*/React.createElement("div", null, "iconUrl = ", mon.iconUrl || '未設定'), /*#__PURE__*/React.createElement("div", null, "faceIconUrl = ", mon.faceIconUrl || '未設定')), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setShowRaw(v => !v),
+    className: "min-h-[42px] w-full rounded-xl bg-slate-800 text-[11px] font-black active:scale-95"
+  }, showRaw ? '生データを隠す' : '生データ（ALL_PLAYER_MONSTERS の中身）を見る'), showRaw && /*#__PURE__*/React.createElement("pre", {
+    className: "max-h-72 overflow-auto whitespace-pre-wrap break-all rounded-xl bg-black/50 p-3 text-[9px] leading-relaxed text-cyan-200"
+  }, JSON.stringify(mon, null, 2)))))));
+}
+
+// ---- part: 76-screen-debug-data.jsx ----
+// ==================== データを用意する(デバッグ専用) ====================
+// 「実装したらデバッグで確認できるようになってる？」への答えが半分だったので足した画面
+// (2026-09-17)。デバッグの入口はこれまで「画面を開く」ものばかりで、
+// **条件が揃わないと始まらないもの**には入口が無かった。
+//
+//   ログインボーナス … 日付が変わるのを待つ
+//   ミッション       … 実際に条件を達成する
+//   マーケットの購入 … ダイヤを貯める
+//   アイテムの使用   … まず入手する
+//   マスモンの育成   … 個体を作って育てる（強化・合体・再生・寄付・魂格）
+//
+// ここで「用意」だけできるようにすると、上のどれもすぐ確認できるようになる。
+//
+// 【この画面はセーブデータを書き換える】
+// CLAUDE.md ⑦ を守るため、次を必ず通す。
+//   ・既存の保存キーだけを使う。新しいキーは1つも作らない
+//   ・押すたびに window.confirm を出す(何が変わるかを文面に書く)
+//   ・配るもの(ダイヤ・アイテム・マスモン)は**足すだけ**。既存の値を消さない
+//   ・「もう一度出す」は進行が消えるので、文面でそれを明言してから確認を取る
+
+// マスモンをどの段階で作るか。育成のどの画面を試したいかで選ぶ
+const DEBUG_MASU_STAGES = Object.freeze([{
+  id: 'fresh',
+  label: '登録したて',
+  desc: '絆Lv.1。強化・合体の入口を見る'
+}, {
+  id: 'grown',
+  label: '上限まで育てた',
+  desc: '絆Lvが上限。限界突破が押せる'
+}, {
+  id: 'rebirth',
+  label: '限界突破MAX',
+  desc: '虹★。転生・超越の条件を満たす'
+}]);
+function DebugDataScreen({
+  gold = 0,
+  breederPoints = 0,
+  ownedItems = {},
+  masuMons = [],
+  itemDefs = [],
+  monsters = [],
+  stageId = 'fresh',
+  monsterId = '',
+  onStage,
+  onMonster,
+  onGrantGold,
+  onGrantPoints,
+  onGrantItem,
+  onCreateMasu,
+  onResetLoginBonus,
+  onResetMissions,
+  onResetChangelogSeen,
+  onBack
+}) {
+  const stage = DEBUG_MASU_STAGES.find(s => s.id === stageId) || DEBUG_MASU_STAGES[0];
+  const mon = monsters.find(m => m.id === monsterId) || monsters[0] || null;
+  const num = n => Math.max(0, Math.floor(Number(n) || 0)).toLocaleString();
+  const section = (title, note, children, tone = 'safe') => /*#__PURE__*/React.createElement("section", {
+    className: `rounded-2xl border p-3 ${tone === 'danger' ? 'border-rose-500/50 bg-rose-950/20' : 'border-cyan-500/40 bg-cyan-950/15'}`
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: `text-[12px] font-black ${tone === 'danger' ? 'text-rose-200' : 'text-cyan-200'}`
+  }, title), note && /*#__PURE__*/React.createElement("p", {
+    className: "mt-0.5 mb-2 text-[9px] font-bold leading-relaxed text-slate-400"
+  }, note), children);
+  const btn = (label, onClick, tone = 'safe', extra = {}) => /*#__PURE__*/React.createElement("button", _extends({
+    key: label,
+    type: "button",
+    onClick: onClick
+  }, extra, {
+    className: `min-h-[48px] rounded-xl border px-2 text-center text-[11px] font-black leading-tight active:scale-95 ${tone === 'danger' ? 'border-rose-400/60 bg-rose-950/50' : 'border-cyan-400/50 bg-cyan-950/40'}`
+  }), label);
+  return /*#__PURE__*/React.createElement("main", {
+    "data-debug-data-screen": true,
+    "data-mh-screen": true,
+    className: "flex-1 flex flex-col h-full min-h-0 p-4",
+    style: {
+      paddingTop: 'calc(1rem + env(safe-area-inset-top))',
+      paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+    }
+  }, /*#__PURE__*/React.createElement(DebugScreenHead, {
+    title: "\u30C7\u30FC\u30BF\u3092\u7528\u610F\u3059\u308B",
+    note: "\u6761\u4EF6\u304C\u63C3\u308F\u306A\u3044\u3068\u59CB\u307E\u3089\u306A\u3044\u3082\u306E\u3092\u3001\u3059\u3050\u8A66\u305B\u308B\u72B6\u614B\u306B\u3059\u308B",
+    saves: true,
+    onBack: onBack
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "mh-debug-banner shrink-0 mb-2"
+  }, "DEBUG\u30FB\u3053\u306E\u753B\u9762\u306F\u30BB\u30FC\u30D6\u30C7\u30FC\u30BF\u3092\u66F8\u304D\u63DB\u3048\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 min-h-0 overflow-y-auto mh-scroll space-y-3"
+  }, section('① ダイヤとブリーダーP', `いま ダイヤ ${num(gold)} ／ ブリーダーP ${num(breederPoints)}。足すだけで、減らしたり書き換えたりはしません。`, /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-3 gap-2"
+  }, btn('ダイヤ +1万', () => onGrantGold(10000), 'safe', {
+    'data-debug-grant-gold': '10000'
+  }), btn('ダイヤ +100万', () => onGrantGold(1000000)), btn('ブリーダーP +100', () => onGrantPoints(100), 'safe', {
+    'data-debug-grant-points': '100'
+  }))), section('② アイテムを配る', 'マーケットの消耗アイテムをそのまま並べています。10個ずつ足します。', /*#__PURE__*/React.createElement("div", {
+    className: "space-y-1.5"
+  }, !itemDefs.length && /*#__PURE__*/React.createElement("p", {
+    className: "text-[10px] text-slate-400"
+  }, "\u30A2\u30A4\u30C6\u30E0\u304C\u8AAD\u307F\u8FBC\u3081\u3066\u3044\u307E\u305B\u3093\u3002"), itemDefs.map(item => /*#__PURE__*/React.createElement("div", {
+    key: item.id,
+    className: "flex items-center gap-2 rounded-xl bg-black/30 px-2.5 py-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "shrink-0 text-[15px]"
+  }, item.emoji || '📦'), /*#__PURE__*/React.createElement("span", {
+    className: "min-w-0 flex-1 truncate text-[11px] font-black text-white"
+  }, item.name), /*#__PURE__*/React.createElement("span", {
+    className: "shrink-0 font-mono text-[11px] font-black text-cyan-300"
+  }, num(ownedItems[item.id])), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "data-debug-grant-item": item.id,
+    onClick: () => onGrantItem(item.id, 10),
+    className: "shrink-0 min-h-[40px] rounded-lg border border-cyan-400/50 bg-cyan-950/40 px-3 text-[11px] font-black active:scale-95"
+  }, "+10"))))), section('③ テストのマスモンを作る', `いま ${masuMons.length} 体。神殿の強化・合体・再生・寄付・魂格は、個体が無いと何も試せません。`, /*#__PURE__*/React.createElement("div", {
+    className: "space-y-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-3 gap-1.5"
+  }, DEBUG_MASU_STAGES.map(s => /*#__PURE__*/React.createElement("button", {
+    key: s.id,
+    type: "button",
+    "data-debug-masu-stage": s.id,
+    onClick: () => onStage(s.id),
+    className: `min-h-[52px] rounded-xl border px-1 text-[10px] font-black leading-tight active:scale-95 ${stage.id === s.id ? 'border-cyan-300 bg-cyan-700 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`
+  }, s.label))), /*#__PURE__*/React.createElement("p", {
+    className: "text-[9px] font-bold text-cyan-300/80"
+  }, stage.desc), /*#__PURE__*/React.createElement("select", {
+    "aria-label": "\u4F5C\u308B\u30E2\u30F3\u30B9\u30BF\u30FC",
+    value: mon ? mon.id : '',
+    onChange: e => onMonster(e.target.value),
+    className: "block min-h-[46px] w-full rounded-xl border border-white/10 bg-slate-900 px-3 text-[12px] font-black text-white"
+  }, monsters.map(m => /*#__PURE__*/React.createElement("option", {
+    key: m.id,
+    value: m.id
+  }, m.name))), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "data-debug-create-masu": true,
+    disabled: !mon,
+    onClick: () => mon && onCreateMasu(mon.id, stage.id),
+    className: "min-h-[50px] w-full rounded-xl border border-cyan-400/60 bg-cyan-800 text-[12px] font-black text-white active:scale-95 disabled:opacity-40"
+  }, mon ? `${mon.name}を「${stage.label}」で1体つくる` : 'モンスターがいません'))), section('④ もう一度出す（進行が消えます）', '待たずに出すための操作です。いまの進み具合は失われます。押すと確認が出ます。', /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-1 gap-2"
+  }, btn('ログインボーナスを未受け取りへ戻す', onResetLoginBonus, 'danger', {
+    'data-debug-reset-login': '1'
+  }), btn('ミッションを未達成へ戻す', onResetMissions, 'danger', {
+    'data-debug-reset-missions': '1'
+  }), btn('更新履歴を未読へ戻す', onResetChangelogSeen, 'danger', {
+    'data-debug-reset-changelog': '1'
+  })), 'danger'), /*#__PURE__*/React.createElement("section", {
+    className: "rounded-2xl border border-white/10 bg-slate-900/50 p-3"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-[11px] font-black text-slate-300"
+  }, "\u307E\u3060\u3053\u3053\u304B\u3089\u7528\u610F\u3067\u304D\u306A\u3044\u3082\u306E"), /*#__PURE__*/React.createElement("p", {
+    className: "mt-1 text-[9px] font-bold leading-relaxed text-slate-400"
+  }, "\u30AE\u30D5\u30C8\u30DC\u30C3\u30AF\u30B9\u306E\u914D\u5E03\u30FB\u88DC\u511F\uFF0F\u30AD\u30E3\u30F3\u30DA\u30FC\u30F3\uFF0F\u30E9\u30F3\u30AD\u30F3\u30B0\u306E\u9001\u4FE1\u3002\u3069\u308C\u3082\u914D\u5E03\u3084\u9001\u4FE1\u306E\u6761\u4EF6\u305D\u306E\u3082\u306E\u3092\u66F8\u304D\u63DB\u3048\u308B\u3053\u3068\u306B\u306A\u308B\u305F\u3081\u3001 \u3046\u3063\u304B\u308A\u672C\u7269\u306E\u8A18\u9332\u3092\u89E6\u3089\u306A\u3044\u3088\u3046\u5165\u53E3\u3092\u4F5C\u3063\u3066\u3044\u307E\u305B\u3093\u3002"))));
+}
+
 // ---- part: 60-app.jsx ----
 function MonsterHeroGame() {
   const [gameState, setGameStateRaw] = useState('HOME');
@@ -38276,12 +39367,17 @@ function MonsterHeroGame() {
   // モンスター画像確認はデバッグ画面を開いている間だけ保持し、セーブ領域へは書き込まない。
   const [monsterImageDebugId, setMonsterImageDebugId] = useState(null);
   const [monsterImageDebugBg, setMonsterImageDebugBg] = useState('checker');
-  const [monsterImageDebugTigerMode, setMonsterImageDebugTigerMode] = useState('old');
+  const [monsterImageDebugTigerMode, setMonsterImageDebugTigerMode] = useState('new');
   const [monsterImageDebugColors, setMonsterImageDebugColors] = useState(null);
   // モンスター画像・染色確認から、専用の攻撃モーション(atkMotion)を実際に再生して見るための状態。
   // 形は本番の attackAnim と同じ({charge}→{zanCombo,sakura}や{charge:false,motion,sakura})にして、
   // 同じ attackMotionAnimation/EikiSakuraPetals をそのまま使い、演出だけ別に持たない
   const [monsterImageDebugMotionPlaying, setMonsterImageDebugMotionPlaying] = useState(null);
+  // 新モンスター確認(MONSTER_CHECK_DEBUG)で選んでいる種と、試し塗りの色。
+  // 画面の中だけで完結する見た目(検索語・背景・再生中)は画面部品側が持ち、
+  // カスタムカラーのモーダルが本体側にあるこの2つだけをここへ置く。どちらも保存しない
+  const [monsterCheckDebugId, setMonsterCheckDebugId] = useState(null);
+  const [monsterCheckDebugColors, setMonsterCheckDebugColors] = useState([]);
   // 本番の選択フローと進行デバッグで、STEP1の保存形式・helperを共有する。
   // 選択中の種族・難易度だけがデバッグ専用で、保存先は既存の進行キー1つに限る。
   const [speciesChallengeDebugSpeciesId, setSpeciesChallengeDebugSpeciesId] = useState(() => speciesChallengeLineages()[0]?.id || '');
@@ -38378,16 +39474,11 @@ function MonsterHeroGame() {
     setTemporaryDyeMasks({
       ...temporaryDyeMasksRef.current
     });
-    const individual = masuMons.find(m => m.baseId === target.baseId),
-      preview = individual || {
-        id: `temporary-dye-${target.baseId}`,
-        baseId: target.baseId,
-        name: target.name,
-        colors: []
-      };
-    setMonsterImageDebugId(preview.id);
-    setMonsterImageDebugColors(colors || getMasuColors(preview));
-    setGameState('MONSTER_IMAGE_DEBUG');
+    // 確認先は「新モンスター確認」1つへまとめた(2026-09-17)。あちらは全種を並べるので、
+    // 所持していない種でも擬似個体を作らずにそのまま選べる
+    setMonsterCheckDebugId(target.baseId);
+    setMonsterCheckDebugColors(colors || []);
+    setGameState('MONSTER_CHECK_DEBUG');
   };
   // バトルチュートリアル(操作しながら覚える)。null のときは動いていない。
   // いまはデバッグ設定からだけ開始できる。台本は data/assistants.js が持つ
@@ -39318,6 +40409,8 @@ function MonsterHeroGame() {
   const [transcendExchangeError, setTranscendExchangeError] = useState('');
   // 超越デバッグ画面で選んでいる個体。デバッグ専用なので保存はしない
   const [transcendDebugId, setTranscendDebugId] = useState(null);
+  // 育成マークの見た目(転生/限界突破★/超越/試す準備)のタブ。保存しない画面の中だけの状態
+  const [masuLookTab, setMasuLookTab] = useState('reincarnate');
   // 超越強化の振り分け単位。通常強化(bulkEnhanceUnit)と同じ 1 / 5 / 10 / 100 / MAX
   const [transcendBulkUnit, setTranscendBulkUnit] = useState(1);
   // 超越ポイントリセットの書。確認シートの開閉と、連打で2冊消費しないためのロック
@@ -46672,6 +47765,128 @@ function MonsterHeroGame() {
       transcendFruitProcessingRef.current = false;
     }
   };
+  // ---------- データを用意する(DEBUG_DATA_SETUP) ----------
+  // 条件が揃わないと始まらないもの(ログインボーナス・ミッション・購入・アイテム・育成)を
+  // すぐ試せる状態にするための操作。CLAUDE.md ⑦ を守り、**既存の保存キーだけ**を使い、
+  // 配るものは足すだけにし、押すたびに確認を出す。
+  const [debugDataMasuStage, setDebugDataMasuStage] = useState('fresh');
+  const [debugDataMonsterId, setDebugDataMonsterId] = useState('');
+  // マーケットの消耗アイテムをそのまま使う(手で書き写すと古くなる)
+  const debugDataItemDefs = () => (typeof BREEDER_MARKET_ITEMS !== 'undefined' ? BREEDER_MARKET_ITEMS : []).filter(i => i?.type === 'item');
+  const debugGrantGold = async amount => {
+    const next = Math.max(0, Math.floor(gold)) + amount;
+    if (!window.confirm(`ダイヤを ${amount.toLocaleString()} 足して ${next.toLocaleString()} にします。よろしいですか？`)) return;
+    try {
+      await storeSet('mh_gold', next, false);
+      setGold(next);
+      window.alert(`ダイヤを ${next.toLocaleString()} にしました。`);
+    } catch {
+      window.alert('保存できませんでした。');
+    }
+  };
+  const debugGrantBreederPoints = async amount => {
+    const next = Math.max(0, Math.floor(breederPoints)) + amount;
+    if (!window.confirm(`ブリーダーPを ${amount} 足して ${next} にします。よろしいですか？`)) return;
+    try {
+      await storeSet('mh_breeder_points', next, false);
+      setBreederPoints(next);
+      window.alert(`ブリーダーPを ${next} にしました。`);
+    } catch {
+      window.alert('保存できませんでした。');
+    }
+  };
+  const debugGrantItem = async (itemId, amount) => {
+    const item = debugDataItemDefs().find(i => i.id === itemId);
+    if (!item) return;
+    const base = ownedItemsRef.current || ownedItems;
+    const next = {
+      ...base,
+      [itemId]: ownedItemCount(base, itemId) + amount
+    };
+    if (!window.confirm(`${item.name} を ${amount} 個足して ${next[itemId]} 個にします。よろしいですか？`)) return;
+    try {
+      await storeSet('mh_owned_items', next, false);
+      ownedItemsRef.current = next;
+      setOwnedItems(next);
+    } catch {
+      window.alert('保存できませんでした。');
+    }
+  };
+  // 登録したてと同じ形の個体を作る。形は registerMasuMon とそろえ、
+  // 段階だけ後から足す(masuBaselineRepresentationsMatch を必ず通す)
+  const debugCreateMasu = async (baseId, stageId) => {
+    const base = ALL_PLAYER_MONSTERS[baseId];
+    if (!base) return;
+    const cap = stageId === 'fresh' ? INITIAL_MASU_LEVEL_CAP : stageId === 'rebirth' ? breakthroughLevelCap(FINAL_BREAKTHROUGH_COUNT) : INITIAL_MASU_LEVEL_CAP;
+    const xp = totalBondXpForLevel(cap);
+    const label = stageId === 'fresh' ? '登録したて' : stageId === 'rebirth' ? '限界突破MAX' : '上限まで育てた';
+    if (!window.confirm(`${base.name} を「${label}」で1体つくり、マスモンへ足します。いまの所持はそのままです。よろしいですか？`)) return;
+    const level = bondLevelInfo(stageId === 'fresh' ? 0 : xp);
+    const masu = {
+      id: 'masu_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+      baseId,
+      name: `${base.name}(DEBUG)`.slice(0, 12),
+      bondXp: stageId === 'fresh' ? 0 : xp,
+      rebirthCount: stageId === 'rebirth' ? FINAL_BREAKTHROUGH_COUNT : 0,
+      levelCap: cap,
+      soulRankStage: 0,
+      soulPointMaxReachedLevel: SOUL_RANK_BASE_LEVEL,
+      soulTraitLevels: {},
+      uniqueSkillLevels: {},
+      distAptPoints: Math.max(0, level.level - 1),
+      distApt: [...(base.distAptitude || ['C', 'C', 'C', 'C'])],
+      distAptBoosts: [0, 0, 0, 0],
+      statPoints: {
+        hp: 0,
+        atk: 0,
+        def: 0,
+        guts: 0
+      },
+      createdAt: Date.now()
+    };
+    if (!masuBaselineRepresentationsMatch(masu)) {
+      window.alert('作れませんでした(形が本番とそろっていません)。');
+      return;
+    }
+    const next = [...masuMons, masu];
+    try {
+      await storeSet('mh_masu_mons', next, false);
+      setMasuMons(next);
+      window.alert(`${masu.name} を足しました。`);
+    } catch {
+      window.alert('保存できませんでした。');
+    }
+  };
+  const debugResetLoginBonus = async () => {
+    if (!window.confirm('ログインボーナスを未受け取りへ戻します。いまの連続日数・受け取り済みは失われます。よろしいですか？')) return;
+    try {
+      await storeSet('mh_login_bonus', LOGIN_BONUS_DEFAULT, false);
+      setLoginBonusState(LOGIN_BONUS_DEFAULT);
+      window.alert('戻しました。HOMEを開き直すと出ます。');
+    } catch {
+      window.alert('保存できませんでした。');
+    }
+  };
+  const debugResetMissions = async () => {
+    if (!window.confirm('ミッションを未達成へ戻します。いまの進み具合と受け取り済みは失われます。よろしいですか？')) return;
+    const fresh = normalizeMissions(null);
+    try {
+      await storeSet('mh_missions', fresh, false);
+      setMissions(fresh);
+      window.alert('戻しました。');
+    } catch {
+      window.alert('保存できませんでした。');
+    }
+  };
+  const debugResetChangelogSeen = async () => {
+    if (!window.confirm('更新履歴を未読へ戻します。よろしいですか？')) return;
+    try {
+      await storeSet('mh_changelog_seen', '', false);
+      window.alert('戻しました。');
+    } catch {
+      window.alert('保存できませんでした。');
+    }
+  };
   // ===== 超越のデバッグ(DEBUG_SETTINGS からだけ開ける) =====
   // 超越はLv400・35凸という到達点のうえに乗る機能なので、ふつうに遊んで条件を満たすまで
   // 動作を確かめられない。ここで「条件を満たした状態」「費用」「超越ポイント」を用意し、
@@ -47865,7 +49080,7 @@ function MonsterHeroGame() {
   };
 
   // WAVE10を勝ち切ったときだけ呼ぶ。敗北・リタイア・途中離脱からは呼ばない。
-  // 保存するのは「実進行保存で実戦確認」から始めたランだけで、通常のBATTLE TESTでは
+  // 保存するのは「実進行保存で実戦確認」から始めたランだけで、通常のデバッグ戦では
   // 何が起きるはずだったかを画面へ出すだけにする(保存なし)。
   const finishSpeciesChallengeClear = async () => {
     const run = speciesChallengeBattleRunRef.current;
@@ -56916,7 +58131,18 @@ function MonsterHeroGame() {
       updateNoticeStyle: updateNoticeStyle,
       onChangeUpdateNoticeStyle: setUpdateNoticeStyle
     }), gameState === 'MASU_PATTERN_DEBUG' && (() => {
-      const eligible = masuMons.filter(m => ALL_PLAYER_MONSTERS[m.baseId]);
+      // 所持しているマスモンに加えて、所持していない種も表示用の一時データで並べる
+      // (2026-09-17・ユーザー指摘「今は見れないものが多い」)。模様は元から保存しないので、
+      // ここで擬似個体を足してもセーブデータには何の影響も無い
+      const eligible = [...masuMons.filter(m => ALL_PLAYER_MONSTERS[m.baseId])];
+      Object.values(ALL_PLAYER_MONSTERS).forEach(mon => {
+        if (mon?.id && !eligible.some(m => m.baseId === mon.id)) eligible.push({
+          id: `pattern-preview-${mon.id}`,
+          baseId: mon.id,
+          name: mon.name,
+          colors: []
+        });
+      });
       const selected = eligible.find(m => String(m.id) === String(patternMasuId));
       const resetPattern = () => {
         setPatternStep('attach');
@@ -56960,7 +58186,7 @@ function MonsterHeroGame() {
         className: "flex-1 min-h-0 overflow-y-auto mh-scroll p-4"
       }, /*#__PURE__*/React.createElement("p", {
         className: "mb-3 text-[11px] font-bold text-slate-400"
-      }, "\u6240\u6301\u30DE\u30B9\u30E2\u30F3\u30921\u4F53\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044\u3002"), /*#__PURE__*/React.createElement("div", {
+      }, "\u6A21\u69D8\u3092\u8A66\u3059\u30E2\u30F3\u30B9\u30BF\u30FC\u30921\u4F53\u3048\u3089\u3093\u3067\u304F\u3060\u3055\u3044\uFF08\u6240\u6301\u3057\u3066\u3044\u306A\u3044\u7A2E\u3082\u305D\u306E\u307E\u307E\u8A66\u305B\u307E\u3059\uFF09\u3002"), /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-3 gap-2"
       }, eligible.map(m => {
         const base = ALL_PLAYER_MONSTERS[m.baseId];
@@ -57468,7 +58694,7 @@ function MonsterHeroGame() {
         className: "text-[8px] font-black text-fuchsia-400"
       }, "DEBUG\u30FB\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093"), /*#__PURE__*/React.createElement("h2", {
         className: "text-sm font-black"
-      }, "\u30D6\u30EA\u30FC\u30C0\u30FC\u30A2\u30A4\u30B3\u30F3\u8ABF\u6574"))), /*#__PURE__*/React.createElement("div", {
+      }, "\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u306E\u898B\u305F\u76EE"))), /*#__PURE__*/React.createElement("div", {
         className: "flex-1 min-h-0 overflow-y-auto mh-scroll space-y-3"
       }, /*#__PURE__*/React.createElement("input", {
         type: "search",
@@ -57533,7 +58759,41 @@ function MonsterHeroGame() {
           window.alert('設定値をコピーしました。');
         },
         className: "min-h-[46px] rounded-xl bg-fuchsia-700 text-[10px] font-black"
-      }, "\u8A2D\u5B9A\u5024\u3092\u30B3\u30D4\u30FC"))));
+      }, "\u8A2D\u5B9A\u5024\u3092\u30B3\u30D4\u30FC")), /*#__PURE__*/React.createElement("section", {
+        "data-debug-profile-frames": true,
+        className: "rounded-2xl border-2 border-amber-500/60 bg-amber-950/20 p-3"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "text-[10px] text-amber-300 font-black mb-2"
+      }, "\uD83D\uDDBC\uFE0F \u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u30D5\u30EC\u30FC\u30E0 \xD7 \u3053\u306E\u30A2\u30A4\u30B3\u30F3\uFF08\u672A\u516C\u958B\u3076\u3093\u3082\u8868\u793A\u30FB\u4FDD\u5B58\u3057\u307E\u305B\u3093\uFF09"), /*#__PURE__*/React.createElement("div", {
+        className: "grid grid-cols-3 gap-x-3 gap-y-7"
+      }, PROFILE_FRAMES.map(frame => /*#__PURE__*/React.createElement("div", {
+        key: frame.id,
+        className: "flex flex-col items-center gap-2.5"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "mh-profile-avatar w-12 h-12"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "relative flex h-full w-full items-center justify-center overflow-hidden rounded-full"
+      }, /*#__PURE__*/React.createElement(BreederIcon, {
+        src: item.src,
+        id: item.id,
+        adjustment: values,
+        alt: "",
+        className: "w-full h-full"
+      })), /*#__PURE__*/React.createElement(ProfileFrameLayer, {
+        frameId: frame.released ? frame.id : null
+      }), !frame.released && frame.kind === 'image' && /*#__PURE__*/React.createElement("img", {
+        src: frame.src,
+        alt: "",
+        "aria-hidden": "true",
+        draggable: false,
+        style: profileFrameImageStyle(frame),
+        className: "mh-profile-frame mh-profile-frame-image"
+      }), !frame.released && frame.kind === 'css' && /*#__PURE__*/React.createElement("span", {
+        "aria-hidden": "true",
+        className: `mh-profile-frame mh-profile-frame-ring ${frame.className || ''}`
+      })), /*#__PURE__*/React.createElement("span", {
+        className: "text-[8px] font-black text-slate-300 leading-tight text-center"
+      }, frame.name, frame.released ? '' : '（未公開）')))))));
     })(), gameState === 'TRANSCEND_DEBUG' && (() => {
       const previewBase = Object.values(ALL_PLAYER_MONSTERS)[0];
       const previewMasu = transcended => ({
@@ -57552,15 +58812,45 @@ function MonsterHeroGame() {
       const eligible = selected ? canTranscendMasu(selected) : null;
       const psycheHave = ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID);
       const xpRows = [MAX_MASU_LEVEL_CAP, MAX_MASU_LEVEL_CAP + 1, MAX_MASU_LEVEL_CAP + 10, MAX_MASU_LEVEL_CAP + 50, TRANSCEND_LEVEL_CAP - 1];
+      // 転生タブぶん。超越側の previewMasu と名前がぶつからないよう別名にしてある
+      const reincarnatePreview = count => ({
+        id: `reincarnate-preview-${count}`,
+        baseId: previewBase.id,
+        name: previewBase.name,
+        bondXp: 0,
+        rebirthCount: 3,
+        reincarnateCount: count,
+        colors: []
+      });
+      const playPreview = (soulRankStage = 0) => {
+        const masu = {
+          ...reincarnatePreview(3),
+          soulRankStage
+        };
+        setReincarnateAnimation({
+          masu,
+          base: previewBase,
+          fromLevel: 100,
+          nextLevel: 1,
+          raisesSkill: false,
+          keptSkillPoints: 1,
+          nextPoints: 13
+        });
+        setTimeout(() => setReincarnateAnimation(null), 4100);
+      };
+      const looks = [['reincarnate', '転生'], ['breakthrough', '限界突破★'], ['transcend', '超越'], ['prepare', '試す準備']];
+      const look = looks.some(([id]) => id === masuLookTab) ? masuLookTab : 'reincarnate';
+      if (!previewBase) return null;
       return /*#__PURE__*/React.createElement("main", {
         "data-mh-screen": true,
+        "data-masu-look-debug": true,
         className: "flex-1 flex flex-col h-full min-h-0 p-4",
         style: {
           paddingTop: 'calc(1rem + env(safe-area-inset-top))',
           paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
         }
       }, /*#__PURE__*/React.createElement("header", {
-        className: "flex items-center gap-2 mb-3 shrink-0"
+        className: "flex items-center gap-2 mb-2 shrink-0"
       }, /*#__PURE__*/React.createElement("button", {
         onClick: () => setGameState('DEBUG_SETTINGS'),
         className: "p-3 text-slate-400"
@@ -57568,13 +58858,101 @@ function MonsterHeroGame() {
         size: 20
       })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
         className: "text-[8px] font-black text-amber-300"
-      }, "DEBUG\u30FB\u672C\u756A\u3068\u540C\u3058 TranscendenceBadge / \u8D85\u8D8A\u6F14\u51FA"), /*#__PURE__*/React.createElement("h2", {
+      }, "DEBUG\u30FB\u672C\u756A\u3068\u540C\u3058\u2605\u30FB\u30AA\u30FC\u30E9\u30FB\u30D0\u30C3\u30B8\uFF0F\u300C\u8A66\u3059\u6E96\u5099\u300D\u3060\u3051\u4FDD\u5B58\u3057\u307E\u3059"), /*#__PURE__*/React.createElement("h2", {
         className: "text-sm font-black"
-      }, "\u8D85\u8D8A\u78BA\u8A8D"))), /*#__PURE__*/React.createElement("div", {
+      }, "\u80B2\u6210\u30DE\u30FC\u30AF\u306E\u898B\u305F\u76EE"))), /*#__PURE__*/React.createElement("div", {
+        role: "tablist",
+        "aria-label": "\u898B\u308B\u6BB5\u968E",
+        className: "shrink-0 mb-2 grid grid-cols-4 gap-1"
+      }, looks.map(([id, label]) => /*#__PURE__*/React.createElement("button", {
+        key: id,
+        type: "button",
+        role: "tab",
+        "aria-selected": look === id,
+        "data-masu-look-tab": id,
+        onClick: () => setMasuLookTab(id),
+        className: `min-h-[42px] rounded-xl border px-0.5 text-[10px] font-black active:scale-95 ${look === id ? id === 'prepare' ? 'border-rose-300 bg-rose-700 text-white' : 'border-amber-300 bg-amber-600 text-white' : 'border-amber-500/30 bg-slate-900 text-amber-200/80'}`
+      }, label))), look === 'prepare' && /*#__PURE__*/React.createElement("div", {
+        className: "mh-debug-banner shrink-0 mb-2"
+      }, "DEBUG\u30FB\u3053\u306E\u30BF\u30D6\u3060\u3051\u30BB\u30FC\u30D6\u30C7\u30FC\u30BF\u3092\u66F8\u304D\u63DB\u3048\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
         className: "flex-1 min-h-0 overflow-y-auto mh-scroll space-y-4"
+      }, look === 'reincarnate' && /*#__PURE__*/React.createElement("div", {
+        "data-masu-look-reincarnate": true,
+        className: "space-y-3"
+      }, /*#__PURE__*/React.createElement("p", {
+        className: "mb-3 text-[9px] leading-relaxed text-slate-400"
+      }, "\u8868\u793A\u7528\u306E\u4E00\u6642\u30C7\u30FC\u30BF\u3060\u3051\u3092\u4F7F\u3044\u307E\u3059\u3002\u6240\u6301\u30DE\u30B9\u30E2\u30F3\u30FB\u8EE2\u751F\u56DE\u6570\u30FB\u30C0\u30A4\u30E4\u306F\u5909\u66F4\u3082\u4FDD\u5B58\u3082\u3057\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("section", {
+        className: "grid grid-cols-2 gap-3"
+      }, [0, 1, 2, 3].map(count => {
+        const masu = reincarnatePreview(count);
+        return /*#__PURE__*/React.createElement("article", {
+          key: count,
+          className: "rounded-2xl border border-white/10 bg-slate-900/90 p-3 text-center"
+        }, /*#__PURE__*/React.createElement("div", {
+          className: "mx-auto flex h-28 w-28 items-center justify-center"
+        }, /*#__PURE__*/React.createElement("div", {
+          className: "relative w-16 h-16 mh-reincarnate-stack"
+        }, /*#__PURE__*/React.createElement("div", {
+          className: "relative z-[1] w-16 h-16 overflow-hidden rounded-full border border-pink-400/40"
+        }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
+          baseId: previewBase.id,
+          src: previewBase.iconUrl || previewBase.imgUrl,
+          alt: previewBase.name,
+          masuColors: [],
+          className: "w-full h-full object-cover"
+        })), /*#__PURE__*/React.createElement(SoulRankAura, {
+          soulRankStage: Math.max(0, Math.min(5, count))
+        }), /*#__PURE__*/React.createElement(RebirthStars, {
+          count: 3,
+          className: "mh-rebirth-stars-overlay"
+        }))), /*#__PURE__*/React.createElement("b", {
+          className: "mh-monster-card-name mt-1 block text-[11px] text-white"
+        }, count === 0 ? '未転生' : count === 1 ? '1回：青画像' : count === 2 ? '2回：黄画像' : '3回：赤画像'));
+      })), /*#__PURE__*/React.createElement("div", {
+        className: "grid grid-cols-2 gap-2"
+      }, /*#__PURE__*/React.createElement("button", {
+        "data-reincarnate-preview": "plain",
+        onClick: () => playPreview(0),
+        className: "min-h-[52px] rounded-2xl border-2 border-violet-300 bg-gradient-to-r from-violet-700 to-blue-600 text-[12px] font-black text-white active:scale-95"
+      }, "\u8EE2\u751F\u6F14\u51FA\u3092\u518D\u751F", /*#__PURE__*/React.createElement("small", {
+        className: "block text-[8px] font-black text-violet-200"
+      }, "\u9B42\u683C\u306A\u3057")), /*#__PURE__*/React.createElement("button", {
+        "data-reincarnate-preview": "soul",
+        onClick: () => playPreview(4),
+        className: "min-h-[52px] rounded-2xl border-2 border-rose-300 bg-gradient-to-r from-rose-700 to-amber-600 text-[12px] font-black text-white active:scale-95"
+      }, "\u8EE2\u751F\u6F14\u51FA\u3092\u518D\u751F", /*#__PURE__*/React.createElement("small", {
+        className: "block text-[8px] font-black text-rose-100"
+      }, "\u9B42\u683C\u2163")))), look === 'breakthrough' && /*#__PURE__*/React.createElement("div", {
+        "data-masu-look-breakthrough": true,
+        className: "space-y-4"
       }, /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("h3", {
         className: "mb-2 text-[9px] font-black text-amber-300"
-      }, "1. \u8D85\u8D8A\u30DE\u30FC\u30AF\uFF08\u4FDD\u5B58\u3057\u307E\u305B\u3093\uFF09"), /*#__PURE__*/React.createElement("p", {
+      }, "\u9EC4\u8272\u30FB\u91D1\u30FB\u8679 \u6BD4\u8F03"), /*#__PURE__*/React.createElement("div", {
+        className: "grid grid-cols-3 gap-1.5"
+      }, [10, 30, 35].map(count => /*#__PURE__*/React.createElement(BreakthroughStarDebugCard, {
+        key: count,
+        count: count,
+        compact: true
+      })))), /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("h3", {
+        className: "mb-2 text-[9px] font-black text-slate-300"
+      }, "\u5B8C\u6210\u72B6\u614B"), /*#__PURE__*/React.createElement("div", {
+        className: "grid grid-cols-2 gap-2"
+      }, [0, 5, 10, 15, 20, 25, 30, 31, 32, 33, 34, 35].map(count => /*#__PURE__*/React.createElement(BreakthroughStarDebugCard, {
+        key: count,
+        count: count
+      })))), /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("h3", {
+        className: "mb-2 text-[9px] font-black text-slate-300"
+      }, "\u8272\u306E\u5207\u308A\u66FF\u308F\u308A"), /*#__PURE__*/React.createElement("div", {
+        className: "grid grid-cols-2 gap-2"
+      }, [1, 6, 11, 16, 21, 26].map(count => /*#__PURE__*/React.createElement(BreakthroughStarDebugCard, {
+        key: count,
+        count: count
+      }))))), look === 'transcend' && /*#__PURE__*/React.createElement("div", {
+        "data-masu-look-transcend": true,
+        className: "space-y-4"
+      }, /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("h3", {
+        className: "mb-2 text-[9px] font-black text-amber-300"
+      }, "\u8D85\u8D8A\u30DE\u30FC\u30AF\uFF08\u4FDD\u5B58\u3057\u307E\u305B\u3093\uFF09"), /*#__PURE__*/React.createElement("p", {
         className: "mb-2 text-[9px] leading-relaxed text-slate-400"
       }, "\u8679\u2605", BREAKTHROUGH_STARS_PER_TIER, "\u30FB\u8EE2\u751F3\u56DE\u3068\u91CD\u306D\u3066\u3001\u96A0\u308C\u3066\u3044\u306A\u3044\u304B\u3092\u898B\u307E\u3059\u3002\u8868\u793A\u7528\u306E\u4E00\u6642\u30C7\u30FC\u30BF\u3060\u3051\u3092\u4F7F\u3044\u307E\u3059\u3002"), previewBase && /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-2 gap-3"
@@ -57584,7 +58962,9 @@ function MonsterHeroGame() {
           key: String(on),
           className: "rounded-2xl border border-white/10 bg-slate-900/90 p-3 text-center"
         }, /*#__PURE__*/React.createElement("div", {
-          className: "relative mx-auto w-16 h-16 mh-reincarnate-stack"
+          className: "mx-auto flex h-28 w-28 items-center justify-center"
+        }, /*#__PURE__*/React.createElement("div", {
+          className: "relative w-16 h-16 mh-reincarnate-stack"
         }, /*#__PURE__*/React.createElement("div", {
           className: "relative z-[1] w-16 h-16 overflow-hidden rounded-full border border-amber-400/40"
         }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
@@ -57600,8 +58980,8 @@ function MonsterHeroGame() {
           className: "mh-rebirth-stars-overlay"
         }), /*#__PURE__*/React.createElement(TranscendenceBadge, {
           transcended: on
-        })), /*#__PURE__*/React.createElement("b", {
-          className: "mt-3 block text-[11px] text-white"
+        }))), /*#__PURE__*/React.createElement("b", {
+          className: "mh-monster-card-name mt-1 block text-[11px] text-white"
         }, on ? '超越済み' : '未超越'));
       })), /*#__PURE__*/React.createElement("div", {
         className: "mt-2 flex items-center justify-center gap-4 rounded-2xl border border-white/10 bg-slate-900/90 py-3"
@@ -57625,7 +59005,7 @@ function MonsterHeroGame() {
         className: "mt-2 w-full min-h-[52px] rounded-2xl border-2 border-amber-300 bg-gradient-to-r from-fuchsia-700 to-amber-600 text-sm font-black text-white active:scale-95"
       }, "\u8D85\u8D8A\u6F14\u51FA\u3092\u518D\u751F")), /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("h3", {
         className: "mb-2 text-[9px] font-black text-slate-300"
-      }, "2. \u6570\u5024\u306E\u78BA\u8A8D\uFF08\u4FDD\u5B58\u3057\u307E\u305B\u3093\uFF09"), /*#__PURE__*/React.createElement("div", {
+      }, "\u6570\u5024\u306E\u78BA\u8A8D\uFF08\u4FDD\u5B58\u3057\u307E\u305B\u3093\uFF09"), /*#__PURE__*/React.createElement("div", {
         className: "rounded-2xl border border-white/10 bg-slate-900/90 p-3 space-y-1 text-[10px] text-slate-300"
       }, /*#__PURE__*/React.createElement("div", {
         className: "flex justify-between"
@@ -57654,9 +59034,12 @@ function MonsterHeroGame() {
         className: "flex justify-between pt-1 border-t border-white/10"
       }, /*#__PURE__*/React.createElement("span", null, "Lv.", MAX_MASU_LEVEL_CAP, " \u2192 ", TRANSCEND_LEVEL_CAP, " \u7D2F\u8A08"), /*#__PURE__*/React.createElement("b", {
         className: "text-white font-mono"
-      }, (totalBondXpForLevel(TRANSCEND_LEVEL_CAP) - totalBondXpForLevel(MAX_MASU_LEVEL_CAP)).toLocaleString())))), /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("h3", {
+      }, (totalBondXpForLevel(TRANSCEND_LEVEL_CAP) - totalBondXpForLevel(MAX_MASU_LEVEL_CAP)).toLocaleString()))))), look === 'prepare' && /*#__PURE__*/React.createElement("div", {
+        "data-masu-look-prepare": true,
+        className: "space-y-2"
+      }, /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("h3", {
         className: "mb-2 text-[9px] font-black text-rose-300"
-      }, "3. \u5B9F\u969B\u306B\u8A66\u3059\u6E96\u5099\uFF08\u30BB\u30FC\u30D6\u30C7\u30FC\u30BF\u3092\u66F8\u304D\u63DB\u3048\u307E\u3059\uFF09"), /*#__PURE__*/React.createElement("p", {
+      }, "\u5B9F\u969B\u306B\u8A66\u3059\u6E96\u5099\uFF08\u30BB\u30FC\u30D6\u30C7\u30FC\u30BF\u3092\u66F8\u304D\u63DB\u3048\u307E\u3059\uFF09"), /*#__PURE__*/React.createElement("p", {
         className: "mb-2 text-[9px] leading-relaxed text-slate-400"
       }, "\u9078\u3093\u3060\u500B\u4F53\u306E\u7D46\u7D4C\u9A13\u5024\u30FB\u9650\u754C\u7A81\u7834\u56DE\u6570\u3068\u3001\u5171\u901A\u306E\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\u30FB\u30C0\u30A4\u30E4\u3092\u66F8\u304D\u63DB\u3048\u307E\u3059\u3002\u62BC\u3059\u305F\u3073\u306B\u78BA\u8A8D\u304C\u51FA\u307E\u3059\u3002"), masuMons.length === 0 ? /*#__PURE__*/React.createElement("p", {
         className: "rounded-2xl border border-white/10 bg-slate-900/90 p-4 text-center text-[10px] text-slate-400"
@@ -57730,141 +59113,7 @@ function MonsterHeroGame() {
           setGameState('MASU_TRANSCENDENCE');
         },
         className: "col-span-2 min-h-[46px] rounded-xl bg-fuchsia-900/70 border border-fuchsia-300/60 text-white text-[10px] font-black active:scale-95 disabled:opacity-30"
-      }, "\u795E\u6BBF\u306E\u300C\u8D85\u8D8A\u300D\u3092\u958B\u304F"))))));
-    })(), gameState === 'BREAKTHROUGH_STAR_DEBUG' && /*#__PURE__*/React.createElement("main", {
-      "data-mh-screen": true,
-      className: "flex-1 flex flex-col h-full min-h-0 p-4",
-      style: {
-        paddingTop: 'calc(1rem + env(safe-area-inset-top))',
-        paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
-      }
-    }, /*#__PURE__*/React.createElement("header", {
-      className: "flex items-center gap-2 mb-3 shrink-0"
-    }, /*#__PURE__*/React.createElement("button", {
-      onClick: () => setGameState('DEBUG_SETTINGS'),
-      className: "p-3 text-slate-400"
-    }, /*#__PURE__*/React.createElement(ArrowLeft, {
-      size: 20
-    })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
-      className: "text-[8px] font-black text-amber-400"
-    }, "DEBUG\u30FB\u672C\u756A\u3068\u540C\u3058 RebirthStars"), /*#__PURE__*/React.createElement("h2", {
-      className: "text-sm font-black"
-    }, "\u9650\u754C\u7A81\u7834\u2605\u8868\u793A\u78BA\u8A8D"))), /*#__PURE__*/React.createElement("div", {
-      className: "flex-1 min-h-0 overflow-y-auto mh-scroll space-y-4"
-    }, /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("h3", {
-      className: "mb-2 text-[9px] font-black text-amber-300"
-    }, "\u9EC4\u8272\u30FB\u91D1\u30FB\u8679 \u6BD4\u8F03"), /*#__PURE__*/React.createElement("div", {
-      className: "grid grid-cols-3 gap-1.5"
-    }, [10, 30, 35].map(count => /*#__PURE__*/React.createElement(BreakthroughStarDebugCard, {
-      key: count,
-      count: count,
-      compact: true
-    })))), /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("h3", {
-      className: "mb-2 text-[9px] font-black text-slate-300"
-    }, "\u5B8C\u6210\u72B6\u614B"), /*#__PURE__*/React.createElement("div", {
-      className: "grid grid-cols-2 gap-2"
-    }, [0, 5, 10, 15, 20, 25, 30, 31, 32, 33, 34, 35].map(count => /*#__PURE__*/React.createElement(BreakthroughStarDebugCard, {
-      key: count,
-      count: count
-    })))), /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("h3", {
-      className: "mb-2 text-[9px] font-black text-slate-300"
-    }, "\u8272\u306E\u5207\u308A\u66FF\u308F\u308A"), /*#__PURE__*/React.createElement("div", {
-      className: "grid grid-cols-2 gap-2"
-    }, [1, 6, 11, 16, 21, 26].map(count => /*#__PURE__*/React.createElement(BreakthroughStarDebugCard, {
-      key: count,
-      count: count
-    })))))), gameState === 'REINCARNATE_DISPLAY_DEBUG' && (() => {
-      const base = Object.values(ALL_PLAYER_MONSTERS)[0];
-      if (!base) return null;
-      const previewMasu = count => ({
-        id: `reincarnate-preview-${count}`,
-        baseId: base.id,
-        name: base.name,
-        bondXp: 0,
-        rebirthCount: 3,
-        reincarnateCount: count,
-        colors: []
-      });
-      // 魂格オーラは魂格を持つ個体にしか出ない。演出そのものは魂格0でも成立していないといけないので、
-      // 「魂格なし」と「魂格あり」の両方をここから再生できるようにしてある
-      const playPreview = (soulRankStage = 0) => {
-        const masu = {
-          ...previewMasu(3),
-          soulRankStage
-        };
-        setReincarnateAnimation({
-          masu,
-          base,
-          fromLevel: 100,
-          nextLevel: 1,
-          raisesSkill: false,
-          keptSkillPoints: 1,
-          nextPoints: 13
-        });
-        setTimeout(() => setReincarnateAnimation(null), 4100);
-      };
-      return /*#__PURE__*/React.createElement("main", {
-        "data-mh-screen": true,
-        className: "flex-1 flex flex-col h-full min-h-0 p-4",
-        style: {
-          paddingTop: 'calc(1rem + env(safe-area-inset-top))',
-          paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
-        }
-      }, /*#__PURE__*/React.createElement("header", {
-        className: "flex items-center gap-2 mb-3 shrink-0"
-      }, /*#__PURE__*/React.createElement("button", {
-        onClick: () => setGameState('DEBUG_SETTINGS'),
-        className: "p-3 text-slate-400"
-      }, /*#__PURE__*/React.createElement(ArrowLeft, {
-        size: 20
-      })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
-        className: "text-[8px] font-black text-cyan-300"
-      }, "DEBUG\u30FB\u672C\u756A\u3068\u540C\u3058 ReincarnateAura / RebirthStars"), /*#__PURE__*/React.createElement("h2", {
-        className: "text-sm font-black"
-      }, "\u8EE2\u751F\u8868\u793A\u78BA\u8A8D"))), /*#__PURE__*/React.createElement("div", {
-        className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
-      }, /*#__PURE__*/React.createElement("p", {
-        className: "mb-3 text-[9px] leading-relaxed text-slate-400"
-      }, "\u8868\u793A\u7528\u306E\u4E00\u6642\u30C7\u30FC\u30BF\u3060\u3051\u3092\u4F7F\u3044\u307E\u3059\u3002\u6240\u6301\u30DE\u30B9\u30E2\u30F3\u30FB\u8EE2\u751F\u56DE\u6570\u30FB\u30C0\u30A4\u30E4\u306F\u5909\u66F4\u3082\u4FDD\u5B58\u3082\u3057\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("section", {
-        className: "grid grid-cols-2 gap-3"
-      }, [0, 1, 2, 3].map(count => {
-        const masu = previewMasu(count);
-        return /*#__PURE__*/React.createElement("article", {
-          key: count,
-          className: "rounded-2xl border border-white/10 bg-slate-900/90 p-3 text-center"
-        }, /*#__PURE__*/React.createElement("div", {
-          className: "relative mx-auto w-16 h-16 mh-reincarnate-stack"
-        }, /*#__PURE__*/React.createElement("div", {
-          className: "relative z-[1] w-16 h-16 overflow-hidden rounded-full border border-pink-400/40"
-        }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
-          baseId: base.id,
-          src: base.iconUrl || base.imgUrl,
-          alt: base.name,
-          masuColors: [],
-          className: "w-full h-full object-cover"
-        })), /*#__PURE__*/React.createElement(SoulRankAura, {
-          soulRankStage: Math.max(0, Math.min(5, count))
-        }), /*#__PURE__*/React.createElement(RebirthStars, {
-          count: 3,
-          className: "mh-rebirth-stars-overlay"
-        })), /*#__PURE__*/React.createElement("b", {
-          className: "mt-3 block text-[11px] text-white"
-        }, count === 0 ? '未転生' : count === 1 ? '1回：青画像' : count === 2 ? '2回：黄画像' : '3回：赤画像'));
-      }))), /*#__PURE__*/React.createElement("div", {
-        className: "mt-3 shrink-0 grid grid-cols-2 gap-2"
-      }, /*#__PURE__*/React.createElement("button", {
-        "data-reincarnate-preview": "plain",
-        onClick: () => playPreview(0),
-        className: "min-h-[52px] rounded-2xl border-2 border-violet-300 bg-gradient-to-r from-violet-700 to-blue-600 text-[12px] font-black text-white active:scale-95"
-      }, "\u8EE2\u751F\u6F14\u51FA\u3092\u518D\u751F", /*#__PURE__*/React.createElement("small", {
-        className: "block text-[8px] font-black text-violet-200"
-      }, "\u9B42\u683C\u306A\u3057")), /*#__PURE__*/React.createElement("button", {
-        "data-reincarnate-preview": "soul",
-        onClick: () => playPreview(4),
-        className: "min-h-[52px] rounded-2xl border-2 border-rose-300 bg-gradient-to-r from-rose-700 to-amber-600 text-[12px] font-black text-white active:scale-95"
-      }, "\u8EE2\u751F\u6F14\u51FA\u3092\u518D\u751F", /*#__PURE__*/React.createElement("small", {
-        className: "block text-[8px] font-black text-rose-100"
-      }, "\u9B42\u683C\u2163"))));
+      }, "\u795E\u6BBF\u306E\u300C\u8D85\u8D8A\u300D\u3092\u958B\u304F")))))));
     })(), gameState === 'RPG_DEBUG_SETUP' && (() => {
       const monsters = rpgMonsterList();
       const renderCount = (value, max, onPick) => /*#__PURE__*/React.createElement("div", {
@@ -58551,7 +59800,7 @@ function MonsterHeroGame() {
       className: "block text-[8px] font-black text-cyan-300"
     }, "DEBUG ONLY\u30FBSTEP 1"), /*#__PURE__*/React.createElement("h2", {
       className: "text-sm font-black"
-    }, "\u97F3\u30B2\u30FC\u57FA\u76E4\u78BA\u8A8D")), /*#__PURE__*/React.createElement("button", {
+    }, "\u30E2\u30F3\u30D2\u30ED\u30D3\u30FC\u30C8 \u57FA\u76E4\u78BA\u8A8D")), /*#__PURE__*/React.createElement("button", {
       "data-rhythm-options-open": true,
       onClick: () => {
         setRhythmOptionsBack('RHYTHM_DEBUG');
@@ -58560,7 +59809,7 @@ function MonsterHeroGame() {
       className: "min-h-[44px] shrink-0 rounded-xl border border-cyan-300/60 bg-cyan-950 px-3 text-[10px] font-black text-cyan-100"
     }, "\u2699\uFE0F \u30AA\u30D7\u30B7\u30E7\u30F3")), /*#__PURE__*/React.createElement("nav", {
       "data-rhythm-debug-tabs": true,
-      "aria-label": "\u97F3\u30B2\u30FC\u30C7\u30D0\u30C3\u30B0\u306E\u8868\u793A\u5207\u308A\u66FF\u3048",
+      "aria-label": "\u30E2\u30F3\u30D2\u30ED\u30D3\u30FC\u30C8 \u30C7\u30D0\u30C3\u30B0\u306E\u8868\u793A\u5207\u308A\u66FF\u3048",
       className: "grid shrink-0 grid-cols-3 border-b border-cyan-400/15 bg-slate-950/95"
     }, [['play', '▶ プレイ'], ['chart', '🎼 譜面制作'], ['settings', '⚙️ 設定・記録']].map(([id, label]) => /*#__PURE__*/React.createElement("button", {
       key: id,
@@ -58744,295 +59993,41 @@ function MonsterHeroGame() {
     })), rhythmChartToolsOpened && /*#__PURE__*/React.createElement("div", {
       "data-rhythm-debug": true,
       hidden: rhythmDebugTab !== 'chart'
-    }))), gameState === 'DEBUG_SETTINGS' && /*#__PURE__*/React.createElement("div", {
-      className: "flex-1 flex flex-col h-full p-4",
+    }))), gameState === 'DEBUG_DATA_SETUP' && /*#__PURE__*/React.createElement(DebugDataScreen, {
+      gold: gold,
+      breederPoints: breederPoints,
+      ownedItems: ownedItems,
+      masuMons: masuMons,
+      itemDefs: debugDataItemDefs(),
+      monsters: monsterCheckAllMonsters(),
+      stageId: debugDataMasuStage,
+      monsterId: debugDataMonsterId,
+      onStage: setDebugDataMasuStage,
+      onMonster: setDebugDataMonsterId,
+      onGrantGold: debugGrantGold,
+      onGrantPoints: debugGrantBreederPoints,
+      onGrantItem: debugGrantItem,
+      onCreateMasu: debugCreateMasu,
+      onResetLoginBonus: debugResetLoginBonus,
+      onResetMissions: debugResetMissions,
+      onResetChangelogSeen: debugResetChangelogSeen,
+      onBack: () => setGameState('DEBUG_SETTINGS')
+    }), gameState === 'DEBUG_BATTLE_SETUP' && /*#__PURE__*/React.createElement("main", {
+      "data-debug-battle-setup-screen": true,
+      "data-mh-screen": true,
+      className: "flex-1 flex flex-col h-full min-h-0 p-4",
       style: {
         paddingTop: 'calc(1rem + env(safe-area-inset-top))',
         paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
       }
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center gap-2 mb-4 shrink-0"
-    }, /*#__PURE__*/React.createElement("button", {
-      onClick: () => {
-        setGameState('SETTINGS');
-        openHelp();
-      },
-      className: "p-3 text-slate-500"
-    }, /*#__PURE__*/React.createElement(ArrowLeft, {
-      size: 20
-    })), /*#__PURE__*/React.createElement("h2", {
-      className: "text-base font-black text-slate-400 tracking-widest"
-    }, "BATTLE TEST")), /*#__PURE__*/React.createElement("div", {
-      className: "flex-1 overflow-y-auto mh-scroll space-y-5"
-    }, /*#__PURE__*/React.createElement("button", {
-      "data-debug-rhythm-mode": true,
-      onClick: openRhythmDebug,
-      className: "w-full min-h-[64px] rounded-2xl border-2 border-cyan-300 bg-indigo-950 text-cyan-100 font-black"
-    }, "\uD83C\uDFB5 \u97F3\u30B2\u30FC\u30C7\u30D0\u30C3\u30B0", /*#__PURE__*/React.createElement("small", {
-      className: "block text-[8px] text-cyan-300"
-    }, "\u66F2\u30FB\u96E3\u6613\u5EA6\u30FB\u8A2D\u5B9A\u30FBBEST\u4FDD\u5B58\u57FA\u76E4\u3092\u78BA\u8A8D")), /*#__PURE__*/React.createElement("button", {
-      "data-debug-rhythm-demo": true,
-      onClick: openRhythmDemo,
-      className: "w-full min-h-[64px] rounded-2xl border-2 border-amber-300 bg-amber-950/40 text-amber-100 font-black"
-    }, "\uD83C\uDFBC \u97F3\u30B2\u30FC\u4F53\u9A13\u7248\uFF08\u6B63\u5F0F\u5C0E\u7DDA\uFF09", /*#__PURE__*/React.createElement("small", {
-      className: "block text-[8px] text-amber-300"
-    }, "\u516C\u958B\u3057\u305F\u3068\u304D\u30D7\u30EC\u30A4\u30E4\u30FC\u304C\u901A\u308B\u753B\u9762\u3002Monster Hero 1\u66F2\u30FB3\u96E3\u6613\u5EA6")), /*#__PURE__*/React.createElement("button", {
-      "data-debug-species-challenge": true,
-      onClick: async () => {
-        await loadSpeciesChallengeProgress();
-        setGameState('SPECIES_CHALLENGE_DEBUG');
-      },
-      className: "w-full min-h-[64px] bg-emerald-950 border-2 border-emerald-400 text-emerald-100 rounded-2xl font-black"
-    }, "\uD83E\uDDEC \u7A2E\u65CF\u30C1\u30E3\u30EC\u30F3\u30B8\u9032\u884C\u78BA\u8A8D", /*#__PURE__*/React.createElement("small", {
-      className: "block text-[8px] text-emerald-300"
-    }, "\u7A2E\u65CF\u5225\u306E\u89E3\u653E\u30FB\u30AF\u30EA\u30A2\u30FB\u521D\u56DE\u5831\u916C\u3092\u78BA\u8A8D\uFF0F\u7DE8\u96C6")), /*#__PURE__*/React.createElement("button", {
-      onClick: () => setGameState('REINCARNATE_DISPLAY_DEBUG'),
-      className: "w-full min-h-[64px] bg-violet-950 border-2 border-cyan-300 text-violet-100 rounded-2xl font-black"
-    }, "\u267B\uFE0F \u8EE2\u751F\u8868\u793A\u78BA\u8A8D", /*#__PURE__*/React.createElement("small", {
-      className: "block text-[8px] text-cyan-200"
-    }, "0\uFF5E3\u56DE\u3068\u5B8C\u4E86\u6F14\u51FA\u3092\u4FDD\u5B58\u305B\u305A\u6BD4\u8F03")), /*#__PURE__*/React.createElement("button", {
-      onClick: () => setGameState('BREAKTHROUGH_STAR_DEBUG'),
-      className: "w-full min-h-[64px] bg-amber-950 border-2 border-amber-500 text-amber-100 rounded-2xl font-black"
-    }, "\u2B50 \u9650\u754C\u7A81\u7834\u2605\u8868\u793A\u78BA\u8A8D", /*#__PURE__*/React.createElement("small", {
-      className: "block text-[8px] text-amber-300"
-    }, "\u5168\u8272\u6BB5\u968E\u3092\u672C\u756A\u3068\u540C\u3058\u2605\u3067\u6BD4\u8F03")), /*#__PURE__*/React.createElement("button", {
-      "data-debug-transcend": true,
-      onClick: () => {
-        setTranscendDebugId(null);
-        setGameState('TRANSCEND_DEBUG');
-      },
-      className: "w-full min-h-[64px] bg-fuchsia-950 border-2 border-amber-300 text-amber-100 rounded-2xl font-black"
-    }, "\uD83C\uDF1F \u8D85\u8D8A\u78BA\u8A8D", /*#__PURE__*/React.createElement("small", {
-      className: "block text-[8px] text-amber-200"
-    }, "\u30DE\u30FC\u30AF\u30FB\u6F14\u51FA\u30FB\u5FC5\u8981XP\u306E\u78BA\u8A8D\u3068\u3001\u8A66\u3059\u305F\u3081\u306E\u6E96\u5099")), /*#__PURE__*/React.createElement("button", {
-      onClick: () => setGameState('MONSTER_IMAGE_DEBUG'),
-      className: "w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black"
-    }, "\uD83D\uDDBC\uFE0F \u30E2\u30F3\u30B9\u30BF\u30FC\u753B\u50CF\u30FB\u67D3\u8272\u78BA\u8A8D", /*#__PURE__*/React.createElement("small", {
-      className: "block text-[8px] text-cyan-300"
-    }, "\u672C\u756A\u8868\u793A\u3068\u67D3\u8272\u3092\u4FDD\u5B58\u305B\u305A\u78BA\u8A8D")), /*#__PURE__*/React.createElement("button", {
-      onClick: () => {
-        setDyeMaskEditorOpened(true);
-        setGameState('DYE_MASK_POSITION_DEBUG');
-      },
-      className: "w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-400 text-cyan-100 rounded-2xl font-black"
-    }, "\uD83D\uDD8C\uFE0F \u67D3\u8272\u30DE\u30B9\u30AF\u7DE8\u96C6", /*#__PURE__*/React.createElement("small", {
-      className: "block text-[8px] text-cyan-300"
-    }, "\u5168\u30D9\u30FC\u30B9\u30E2\u30F3\u3092\u9078\u629E\u3057\u3066\u76F4\u63A5\u63CF\u753B\u30FBPNG\u51FA\u529B")), /*#__PURE__*/React.createElement("button", {
-      onClick: openDebugTraining,
-      className: "w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black"
-    }, "\uD83C\uDFB2 \u4FEE\u884C\u30C6\u30B9\u30C8", /*#__PURE__*/React.createElement("small", {
-      className: "block text-[8px] text-fuchsia-300"
-    }, "\u5831\u916C\u30FB\u9032\u884C\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("button", {
-      onClick: () => setGameState('BREEDER_ICON_DEBUG'),
-      className: "w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black"
-    }, "\uD83D\uDE42 \u30D6\u30EA\u30FC\u30C0\u30FC\u30A2\u30A4\u30B3\u30F3\u8ABF\u6574", /*#__PURE__*/React.createElement("small", {
-      className: "block text-[8px] text-fuchsia-300"
-    }, "\u8868\u793A\u5024\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("button", {
-      onClick: () => {
-        setPatternMasuId(null);
-        setPatternSettings(makePatternSettings());
-        setGameState('MASU_PATTERN_DEBUG');
-      },
-      className: "w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black"
-    }, "\uD83C\uDFA8 \u30DE\u30B9\u30E2\u30F3\u6A21\u69D8\u30AB\u30B9\u30BF\u30E0\u30C6\u30B9\u30C8", /*#__PURE__*/React.createElement("small", {
-      className: "block text-[8px] text-cyan-300"
-    }, "\u6A21\u69D8\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("button", {
-      "data-debug-screen-error": true,
-      onClick: () => setDebugThrowScreenError(true),
-      className: "w-full min-h-[48px] rounded-2xl border border-rose-400/70 bg-rose-950/40 text-rose-100 font-black text-sm"
-    }, "\u26A0\uFE0F \u753B\u9762\u30A8\u30E9\u30FC\u306E\u53D7\u3051\u6B62\u3081\u3092\u8A66\u3059"), debugThrowScreenError && /*#__PURE__*/React.createElement(DebugThrowScreenError, null), /*#__PURE__*/React.createElement("button", {
-      "data-debug-rpg-battle": true,
-      onClick: () => {
-        setRpgBattle(null);
-        setGameState('RPG_DEBUG_SETUP');
-      },
-      className: "w-full min-h-[64px] rounded-2xl border-2 border-emerald-400/70 bg-emerald-950/40 text-emerald-100 font-black"
-    }, "\u2694\uFE0F \u30C0\u30F3\u30B8\u30E7\u30F3RPG\u6226\u95D8\u30C6\u30B9\u30C8", /*#__PURE__*/React.createElement("small", {
-      className: "block text-[8px] text-emerald-300"
-    }, "\u30B3\u30DE\u30F3\u30C9\u5F0F\u30BF\u30FC\u30F3\u5236\u306E\u8A66\u4F5C\u30FB\u30D9\u30FC\u30B9\u30E2\u30F3\u306E\u307F\u30FB\u4FDD\u5B58\u3082\u5831\u916C\u3082\u3042\u308A\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("button", {
-      "data-debug-battle-mode": true,
-      onClick: () => {
-        debugBattleRef.current = true;
-        debugMonsterPreviewRef.current = true;
-        extremeRunRef.current = false;
-        setDebugBattle(true);
-        setExtremeRun(false);
-        setBattleMode(BATTLE_MODE_CHALLENGE);
-        setModeSelectTab('mode');
-        setGameState('BATTLE_MODE_SELECT');
-      },
-      className: "w-full min-h-[64px] rounded-2xl border-2 border-fuchsia-500/70 bg-fuchsia-950/30 text-fuchsia-100 font-black"
-    }, "\u2694\uFE0F \u30D0\u30C8\u30EB\u30E2\u30FC\u30C9", /*#__PURE__*/React.createElement("small", {
-      className: "block text-[8px] text-fuchsia-300"
-    }, "\u7A2E\u65CF\u30C1\u30E3\u30EC\u30F3\u30B8\u30FB\u6975\u9650\u30C1\u30E3\u30EC\u30F3\u30B8\u3092\u542B\u3080\u8A66\u9A13\u7528\u30E2\u30FC\u30C9\u9078\u629E\u30FB\u7D50\u679C\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("section", {
-      "data-debug-profile-frames": true,
-      className: "rounded-2xl border-2 border-amber-500/60 bg-amber-950/20 p-3"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "text-[10px] text-amber-300 font-black mb-2"
-    }, "\uD83D\uDDBC\uFE0F \u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u30D5\u30EC\u30FC\u30E0\u898B\u305F\u76EE\u78BA\u8A8D\uFF08\u672A\u516C\u958B\u3076\u3093\u3082\u8868\u793A\u30FB\u4FDD\u5B58\u3057\u307E\u305B\u3093\uFF09"), /*#__PURE__*/React.createElement("div", {
-      className: "grid grid-cols-3 gap-x-3 gap-y-7"
-    }, PROFILE_FRAMES.map(frame => /*#__PURE__*/React.createElement("div", {
-      key: frame.id,
-      className: "flex flex-col items-center gap-2.5"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "mh-profile-avatar w-12 h-12"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "relative flex h-full w-full items-center justify-center overflow-hidden rounded-full"
-    }, resolveIconUrl(breederIcon) ? /*#__PURE__*/React.createElement(BreederIcon, {
-      src: resolveIconUrl(breederIcon),
-      id: breederIcon,
-      alt: "",
-      className: "w-full h-full"
-    }) : /*#__PURE__*/React.createElement(User, {
-      size: 22,
-      className: "text-indigo-400"
-    })), /*#__PURE__*/React.createElement(ProfileFrameLayer, {
-      frameId: frame.released ? frame.id : null
-    }), !frame.released && frame.kind === 'image' && /*#__PURE__*/React.createElement("img", {
-      src: frame.src,
-      alt: "",
-      "aria-hidden": "true",
-      draggable: false,
-      style: profileFrameImageStyle(frame),
-      className: "mh-profile-frame mh-profile-frame-image"
-    }), !frame.released && frame.kind === 'css' && /*#__PURE__*/React.createElement("span", {
-      "aria-hidden": "true",
-      className: `mh-profile-frame mh-profile-frame-ring ${frame.className || ''}`
-    })), /*#__PURE__*/React.createElement("span", {
-      className: "text-[8px] font-black text-slate-300 leading-tight text-center"
-    }, frame.name, frame.released ? '' : '（未公開）'))))), /*#__PURE__*/React.createElement("section", {
-      className: "rounded-2xl border-2 border-pink-500/60 bg-pink-950/30 p-3"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "text-[10px] text-pink-300 font-black mb-2"
-    }, "\uD83D\uDC96 \u307F\u3085\u3042\u30C7\u30D0\u30C3\u30B0"), /*#__PURE__*/React.createElement("div", {
-      className: "grid grid-cols-2 gap-2"
-    }, /*#__PURE__*/React.createElement("button", {
-      "data-debug-onboarding-preview": true,
-      onClick: startOnboardingPreview,
-      className: "col-span-2 min-h-[46px] rounded-xl bg-pink-700/70 border border-pink-300/60 text-white text-[10px] font-black active:scale-95"
-    }, "\u521D\u56DE\u30D7\u30EC\u30A4\u3092\u6700\u521D\u304B\u3089\u518D\u751F", /*#__PURE__*/React.createElement("small", {
-      className: "block text-[8px] font-bold opacity-80"
-    }, "\u52A9\u624B\u9078\u629E\u2192\u3042\u3044\u3055\u3064\u2192\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u2192\u6751\u306E\u6848\u5185\u2192HOME\u30FB\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("button", {
-      onClick: () => {
-        returnToHome();
-        startTutorial('intro');
-      },
-      className: "min-h-[46px] rounded-xl bg-pink-900/60 border border-pink-400/50 text-pink-100 text-[10px] font-black active:scale-95"
-    }, "\u307F\u3085\u3042\u306E\u3042\u3044\u3055\u3064\u3060\u3051\u518D\u751F"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => {
-        returnToHome();
-        startTutorial('tour');
-      },
-      className: "min-h-[46px] rounded-xl bg-pink-900/60 border border-pink-400/50 text-pink-100 text-[10px] font-black active:scale-95"
-    }, "\u6751\u306E\u6848\u5185\u3060\u3051\u518D\u751F"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => {
-        returnToHome();
-        setKikiIntroStep(0);
-      },
-      className: "min-h-[46px] rounded-xl bg-pink-900/60 border border-pink-400/50 text-pink-100 text-[10px] font-black active:scale-95"
-    }, "\u304D\u304D\u52A0\u5165\u306E\u4F1A\u8A71\u3092\u518D\u751F"), /*#__PURE__*/React.createElement("button", {
-      "data-debug-rhythm-event-intro": true,
-      onClick: debugPlayRhythmEventIntro,
-      className: "col-span-2 min-h-[46px] rounded-xl bg-fuchsia-800/70 border border-fuchsia-300/60 text-white text-[10px] font-black active:scale-95"
-    }, "\uD83C\uDFC6 \u30A4\u30D9\u30F3\u30C8\u958B\u50AC\u3092\u518D\u751F\uFF08\u4F1A\u8A71\u2192\u544A\u77E5\uFF09"), /*#__PURE__*/React.createElement("button", {
-      "data-debug-rhythm-event-story": true,
-      onClick: debugPlayRhythmEventStory,
-      className: "min-h-[46px] rounded-xl bg-fuchsia-900/60 border border-fuchsia-400/50 text-fuchsia-100 text-[10px] font-black active:scale-95"
-    }, "\u30A4\u30D9\u30F3\u30C8\u4F1A\u8A71\u3060\u3051\u518D\u751F"), /*#__PURE__*/React.createElement("button", {
-      "data-debug-rhythm-event-thanks": true,
-      onClick: debugPlayRhythmEventThanks,
-      className: "min-h-[46px] rounded-xl bg-fuchsia-900/60 border border-fuchsia-400/50 text-fuchsia-100 text-[10px] font-black active:scale-95"
-    }, "\u9589\u5E55\u3068\u304A\u793C\u306E\u4F1A\u8A71\u3092\u518D\u751F"), /*#__PURE__*/React.createElement("button", {
-      "data-debug-rhythm-event-notice": true,
-      onClick: debugPlayRhythmEventNotice,
-      className: "min-h-[46px] rounded-xl bg-fuchsia-900/60 border border-fuchsia-400/50 text-fuchsia-100 text-[10px] font-black active:scale-95"
-    }, "\u30A4\u30D9\u30F3\u30C8\u544A\u77E5\u3060\u3051\u518D\u751F"), /*#__PURE__*/React.createElement("button", {
-      "data-debug-rhythm-event-reward": true,
-      onClick: debugPlayRhythmEventReward,
-      className: "min-h-[46px] rounded-xl bg-amber-900/60 border border-amber-400/50 text-amber-100 text-[10px] font-black active:scale-95"
-    }, "\u5165\u8CDE\u306E\u53D7\u3051\u53D6\u308A\u753B\u9762\u3092\u898B\u308B"), /*#__PURE__*/React.createElement("button", {
-      "data-debug-rhythm-event-reset": true,
-      onClick: debugResetRhythmEventSeen,
-      className: "min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95"
-    }, "\u30A4\u30D9\u30F3\u30C8\u3092\u672A\u8AAD\u3078\u623B\u3059"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => setAssistantDebug('lines'),
-      className: "min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95"
-    }, "\u5168\u52A9\u624B\u30B3\u30E1\u30F3\u30C8\u78BA\u8A8D"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => setAssistantDebug('expressions'),
-      className: "min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95"
-    }, "\u5168\u8868\u60C5\u78BA\u8A8D"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => setAssistantDebug('conditions'),
-      className: "min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95"
-    }, "\u6761\u4EF6\u30B3\u30E1\u30F3\u30C8\u78BA\u8A8D"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => setAssistantDebug('spam'),
-      className: "min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95"
-    }, "\u9023\u6253\u30EA\u30A2\u30AF\u30B7\u30E7\u30F3\u78BA\u8A8D"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => setAssistantDebug('bond'),
-      className: "min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95"
-    }, "\u89AA\u5BC6\u5EA6\u30FB\u547C\u3073\u65B9\u78BA\u8A8D"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => setAssistantDebug('random'),
-      className: "min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95"
-    }, "\u30E9\u30F3\u30C0\u30E0\u30C6\u30B9\u30C8"), /*#__PURE__*/React.createElement("button", {
-      onClick: debugPlayUpdateGuide,
-      className: "min-h-[46px] rounded-xl bg-pink-700/70 border border-pink-300/60 text-white text-[10px] font-black active:scale-95"
-    }, "\u30A2\u30C3\u30D7\u30C7\u30FC\u30C8\u901A\u77E5\u30C6\u30B9\u30C8"), /*#__PURE__*/React.createElement("button", {
-      onClick: debugResetUpdateGuide,
-      className: "min-h-[46px] rounded-xl bg-amber-950/60 border border-amber-500/50 text-amber-100 text-[10px] font-black active:scale-95"
-    }, "\u901A\u77E5\u30C6\u30B9\u30C8\u3092\u672A\u8AAD\u3078\u623B\u3059"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => {
-        setBattleMenuTab('difficulty');
-        setGameState('BATTLE_MENU');
-      },
-      className: "col-span-2 min-h-[46px] rounded-xl bg-slate-800 border border-white/20 text-slate-300 text-[10px] font-black active:scale-95"
-    }, "\u65E7\u30D0\u30C8\u30EB\u753B\u9762\u3092\u958B\u304F\uFF08\u898B\u6BD4\u3079\u7528\uFF09"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => startBattleTutorial(),
-      className: "col-span-2 min-h-[46px] rounded-xl bg-indigo-700/80 border border-indigo-300/60 text-white text-[10px] font-black active:scale-95"
-    }, "\u30D0\u30C8\u30EB\u30C1\u30E5\u30FC\u30C8\u30EA\u30A2\u30EB\u958B\u59CB\uFF08\u8A18\u9332\u306F\u6B8B\u308A\u307E\u305B\u3093\uFF09"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => startBattleTutorial('DEBUG_SETTINGS', 'v1'),
-      className: "col-span-2 min-h-[46px] rounded-xl bg-slate-800 border border-white/20 text-slate-300 text-[10px] font-black active:scale-95"
-    }, "\u65E7\u30D0\u30C8\u30EB\u30C1\u30E5\u30FC\u30C8\u30EA\u30A2\u30EB\u3092\u898B\u308B\uFF08\u65E7\u30D0\u30C8\u30EB\u753B\u9762\u30FB\u8A18\u9332\u306F\u6B8B\u308A\u307E\u305B\u3093\uFF09"), /*#__PURE__*/React.createElement("button", {
-      onClick: async () => {
-        await storeSet(BATTLE_TUTORIAL_SEEN_KEY, false, false);
-        window.alert('バトルチュートリアルを未視聴に戻しました。');
-      },
-      className: "min-h-[46px] rounded-xl bg-amber-950/60 border border-amber-500/50 text-amber-100 text-[10px] font-black active:scale-95"
-    }, "\u30D0\u30C8\u30EB\u7DF4\u7FD2\u3092\u672A\u8996\u8074\u3078\u623B\u3059"), /*#__PURE__*/React.createElement("button", {
-      onClick: async () => {
-        await storeSet(BATTLE_TUTORIAL_GUIDE_SHOWN_KEY, false, false);
-        battleTutorialGuideCheckedRef.current = false;
-        window.alert('初回案内を未表示に戻しました。');
-      },
-      className: "min-h-[46px] rounded-xl bg-amber-950/60 border border-amber-500/50 text-amber-100 text-[10px] font-black active:scale-95"
-    }, "\u521D\u56DE\u6848\u5185\u3092\u672A\u8868\u793A\u3078\u623B\u3059"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => {
-        returnToHome();
-        startTutorial('battleGuide');
-      },
-      className: "col-span-2 min-h-[46px] rounded-xl bg-pink-700/70 border border-pink-300/60 text-white text-[10px] font-black active:scale-95"
-    }, "\u30D0\u30C8\u30EB\u521D\u56DE\u6848\u5185\u3092\u518D\u751F"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => debugDailyMasuAdviceAt(7),
-      className: "col-span-2 min-h-[46px] rounded-xl bg-pink-700/70 border border-pink-300/60 text-white text-[10px] font-black active:scale-95"
-    }, "\u30EF\u30F3\u30DD\u30A4\u30F3\u30C8\u6848\u5185\u3092\u518D\u751F\uFF08\u767B\u9332\u65707\u4F53\uFF09"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => debugDailyMasuAdviceAt(8),
-      className: "min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95"
-    }, "\u767B\u9332\u65708\u4F53\u306E\u6761\u4EF6\u78BA\u8A8D"), /*#__PURE__*/React.createElement("button", {
-      onClick: async () => {
-        await storeSet(DAILY_MASU_ADVICE_KEY, '', false);
-        dailyMasuAdviceCheckedRef.current = false;
-        window.alert('本日のワンポイント表示済みフラグをリセットしました。');
-      },
-      className: "min-h-[46px] rounded-xl bg-amber-950/60 border border-amber-500/50 text-amber-100 text-[10px] font-black active:scale-95"
-    }, "\u672C\u65E5\u306E\u8868\u793A\u6E08\u307F\u3092\u30EA\u30BB\u30C3\u30C8")), /*#__PURE__*/React.createElement("button", {
-      onClick: async () => {
-        if (!window.confirm('「はじめての案内」を見ていない状態に戻します。モンスターやダイヤなどのセーブデータは消えません。よろしいですか？')) return;
-        try {
-          await storeSet(TUTORIAL_SEEN_KEY, false, false);
-        } catch {}
-        tutorialShownRef.current = false;
-        window.alert('初回状態へ戻しました。HOMEを開くと案内が始まります。');
-      },
-      className: "w-full mt-2 min-h-[42px] rounded-xl bg-amber-950/60 border border-amber-500/50 text-amber-100 text-[10px] font-black active:scale-95"
-    }, "\u521D\u56DE\u72B6\u614B\u3078\u623B\u3059\uFF08\u30BB\u30FC\u30D6\u306F\u6D88\u3048\u307E\u305B\u3093\uFF09")), /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("div", {
+    }, /*#__PURE__*/React.createElement(DebugScreenHead, {
+      title: "\u30C7\u30D0\u30C3\u30B0\u6226",
+      note: "\u96E3\u6613\u5EA6\u3068\u6575\u3092\u9078\u3093\u3067\u3001\u305D\u306E\u5834\u3067\u6226\u3046",
+      saves: false,
+      onBack: () => setGameState('DEBUG_SETTINGS')
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "flex-1 min-h-0 overflow-y-auto mh-scroll space-y-4"
+    }, /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] text-slate-500 font-black mb-2"
     }, "1. \u96E3\u6613\u5EA6"), /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-3 gap-2"
@@ -59072,7 +60067,311 @@ function MonsterHeroGame() {
       disabled: !getDebugEnemyOptions(difficulty).some(o => o.key === debugEnemyKey) || !debugStrongestHero && getActiveMonsterList().length === 0,
       onClick: startDebugBattle,
       className: "w-full min-h-[58px] bg-slate-200 text-slate-950 rounded-2xl font-black disabled:opacity-30"
-    }, "4. \u30C7\u30D0\u30C3\u30B0\u6226\u958B\u59CB"))), gameState === 'SPECIES_CHALLENGE_DEBUG' && (() => {
+    }, "4. \u30C7\u30D0\u30C3\u30B0\u6226\u958B\u59CB"))), gameState === 'DEBUG_SETTINGS' && /*#__PURE__*/React.createElement("div", {
+      className: "flex-1 flex flex-col h-full p-4",
+      style: {
+        paddingTop: 'calc(1rem + env(safe-area-inset-top))',
+        paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-2 mb-2 shrink-0"
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: () => {
+        setGameState('SETTINGS');
+        openHelp();
+      },
+      className: "p-3 text-slate-500"
+    }, /*#__PURE__*/React.createElement(ArrowLeft, {
+      size: 20
+    })), /*#__PURE__*/React.createElement("h2", {
+      className: "text-base font-black text-slate-400 tracking-widest"
+    }, "DEBUG MENU")), /*#__PURE__*/React.createElement("p", {
+      className: "mb-3 shrink-0 text-[9px] leading-relaxed text-slate-500"
+    }, "\u7528\u9014\u3054\u3068\u306B\u7573\u3093\u3067\u3042\u308A\u307E\u3059\u3002\u898B\u51FA\u3057\u3092\u62BC\u3059\u3068\u958B\u304D\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
+      className: "flex-1 overflow-y-auto mh-scroll space-y-2"
+    }, /*#__PURE__*/React.createElement("details", {
+      className: "rounded-2xl border border-emerald-500/40 bg-emerald-950/20"
+    }, /*#__PURE__*/React.createElement("summary", {
+      className: "cursor-pointer select-none px-3 py-3 text-[11px] font-black text-emerald-200"
+    }, "\uD83E\uDDEC \u30E2\u30F3\u30B9\u30BF\u30FC", /*#__PURE__*/React.createElement("small", {
+      className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
+    }, "\u65B0\u30E2\u30F3\u30B9\u30BF\u30FC\u78BA\u8A8D\u30FB\u753B\u50CF\u3068\u67D3\u8272\u30FB\u8EE2\u751F\uFF0F\u9650\u754C\u7A81\u7834\uFF0F\u8D85\u8D8A\u306E\u898B\u305F\u76EE\u30FB\u30A2\u30A4\u30B3\u30F3\u8ABF\u6574")), /*#__PURE__*/React.createElement("div", {
+      className: "space-y-2 border-t border-emerald-500/30 p-3"
+    }, /*#__PURE__*/React.createElement("button", {
+      "data-debug-monster-check": true,
+      onClick: () => setGameState('MONSTER_CHECK_DEBUG'),
+      className: "w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
+    }, "\uD83C\uDD95 \u65B0\u30E2\u30F3\u30B9\u30BF\u30FC\u78BA\u8A8D", /*#__PURE__*/React.createElement("small", {
+      className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
+    }, "\u5168\u7A2E\u3092\u6240\u6301\u306B\u95A2\u4FC2\u306A\u304F\u8868\u793A\u3002\u753B\u50CF\u30FB\u67D3\u8272\u30FB\u30E2\u30FC\u30B7\u30E7\u30F3\u30FB\u80FD\u529B\u30FB\u6280\u30FB\u8840\u7D71\u30FB\u30DE\u30FC\u30B1\u30C3\u30C8\u3068\u5B9F\u88C5\u30C1\u30A7\u30C3\u30AF")), /*#__PURE__*/React.createElement("button", {
+      onClick: () => {
+        setDyeMaskEditorOpened(true);
+        setGameState('DYE_MASK_POSITION_DEBUG');
+      },
+      className: "w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
+    }, "\uD83D\uDD8C\uFE0F \u67D3\u8272\u30DE\u30B9\u30AF\u7DE8\u96C6", /*#__PURE__*/React.createElement("small", {
+      className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
+    }, "\u5168\u30D9\u30FC\u30B9\u30E2\u30F3\u3092\u9078\u629E\u3057\u3066\u76F4\u63A5\u63CF\u753B\u30FBPNG\u51FA\u529B")), /*#__PURE__*/React.createElement("button", {
+      onClick: () => {
+        setPatternMasuId(null);
+        setPatternSettings(makePatternSettings());
+        setGameState('MASU_PATTERN_DEBUG');
+      },
+      className: "w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
+    }, "\uD83C\uDFA8 \u30DE\u30B9\u30E2\u30F3\u6A21\u69D8\u30AB\u30B9\u30BF\u30E0\u30C6\u30B9\u30C8", /*#__PURE__*/React.createElement("small", {
+      className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
+    }, "\u6A21\u69D8\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("button", {
+      "data-debug-transcend": true,
+      onClick: () => {
+        setTranscendDebugId(null);
+        setMasuLookTab('reincarnate');
+        setGameState('TRANSCEND_DEBUG');
+      },
+      className: "w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
+    }, "\u2B50 \u80B2\u6210\u30DE\u30FC\u30AF\u306E\u898B\u305F\u76EE", /*#__PURE__*/React.createElement("small", {
+      className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
+    }, "\u8EE2\u751F\u306E\u30AA\u30FC\u30E9\u30FB\u9650\u754C\u7A81\u7834\u306E\u2605\u30FB\u8D85\u8D8A\u30DE\u30FC\u30AF\u30921\u753B\u9762\u3067\u898B\u6BD4\u3079\u308B\uFF0F\u8D85\u8D8A\u3092\u8A66\u3059\u6E96\u5099\u3082\u3053\u3053")), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setGameState('BREEDER_ICON_DEBUG'),
+      className: "w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
+    }, "\uD83D\uDE42 \u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u306E\u898B\u305F\u76EE", /*#__PURE__*/React.createElement("small", {
+      className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
+    }, "\u9854\u30A2\u30A4\u30B3\u30F3\u306E\u62E1\u5927\u30FB\u4F4D\u7F6E\u3092\u6C7A\u3081\u3066\u30B3\u30D4\u30FC\uFF0F\u30D5\u30EC\u30FC\u30E0\u3068\u306E\u76F8\u6027\u3082\u3053\u3053\u3067\u898B\u308B")))), /*#__PURE__*/React.createElement("details", {
+      className: "rounded-2xl border border-fuchsia-500/40 bg-fuchsia-950/20"
+    }, /*#__PURE__*/React.createElement("summary", {
+      className: "cursor-pointer select-none px-3 py-3 text-[11px] font-black text-fuchsia-200"
+    }, "\u2694\uFE0F \u30D0\u30C8\u30EB", /*#__PURE__*/React.createElement("small", {
+      className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
+    }, "\u30E2\u30FC\u30C9\u9078\u629E\u30FB\u30C7\u30D0\u30C3\u30B0\u6226\u30FB\u7A2E\u65CF\u30C1\u30E3\u30EC\u30F3\u30B8\u30FB\u30C0\u30F3\u30B8\u30E7\u30F3RPG\u30FB\u30C1\u30E5\u30FC\u30C8\u30EA\u30A2\u30EB")), /*#__PURE__*/React.createElement("div", {
+      className: "space-y-2 border-t border-fuchsia-500/30 p-3"
+    }, /*#__PURE__*/React.createElement("button", {
+      "data-debug-battle-mode": true,
+      onClick: () => {
+        debugBattleRef.current = true;
+        debugMonsterPreviewRef.current = true;
+        extremeRunRef.current = false;
+        setDebugBattle(true);
+        setExtremeRun(false);
+        setBattleMode(BATTLE_MODE_CHALLENGE);
+        setModeSelectTab('mode');
+        setGameState('BATTLE_MODE_SELECT');
+      },
+      className: "w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
+    }, "\u2694\uFE0F \u30D0\u30C8\u30EB\u30E2\u30FC\u30C9", /*#__PURE__*/React.createElement("small", {
+      className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
+    }, "\u7A2E\u65CF\u30C1\u30E3\u30EC\u30F3\u30B8\u30FB\u6975\u9650\u30C1\u30E3\u30EC\u30F3\u30B8\u3092\u542B\u3080\u8A66\u9A13\u7528\u30E2\u30FC\u30C9\u9078\u629E\u30FB\u7D50\u679C\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093")), /*#__PURE__*/React.createElement(DebugMenuRow, {
+      "data-debug-battle-setup": true,
+      icon: "\uD83D\uDEE0",
+      label: "\u30C7\u30D0\u30C3\u30B0\u6226",
+      desc: "\u96E3\u6613\u5EA6\u3068\u6575\u3092\u9078\u3093\u3067\u6226\u3046\u3002\u7D50\u679C\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093",
+      onClick: () => setGameState('DEBUG_BATTLE_SETUP')
+    }), /*#__PURE__*/React.createElement("button", {
+      "data-debug-species-challenge": true,
+      onClick: async () => {
+        await loadSpeciesChallengeProgress();
+        setGameState('SPECIES_CHALLENGE_DEBUG');
+      },
+      className: "w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
+    }, "\uD83E\uDDEC \u7A2E\u65CF\u30C1\u30E3\u30EC\u30F3\u30B8\u9032\u884C\u78BA\u8A8D", /*#__PURE__*/React.createElement("small", {
+      className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
+    }, "\u7A2E\u65CF\u5225\u306E\u89E3\u653E\u30FB\u30AF\u30EA\u30A2\u30FB\u521D\u56DE\u5831\u916C\u3092\u78BA\u8A8D\uFF0F\u7DE8\u96C6")), /*#__PURE__*/React.createElement("button", {
+      "data-debug-rpg-battle": true,
+      onClick: () => {
+        setRpgBattle(null);
+        setGameState('RPG_DEBUG_SETUP');
+      },
+      className: "w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
+    }, "\u2694\uFE0F \u30C0\u30F3\u30B8\u30E7\u30F3RPG\u6226\u95D8\u30C6\u30B9\u30C8", /*#__PURE__*/React.createElement("small", {
+      className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
+    }, "\u30B3\u30DE\u30F3\u30C9\u5F0F\u30BF\u30FC\u30F3\u5236\u306E\u8A66\u4F5C\u30FB\u30D9\u30FC\u30B9\u30E2\u30F3\u306E\u307F\u30FB\u4FDD\u5B58\u3082\u5831\u916C\u3082\u3042\u308A\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("details", {
+      className: "rounded-2xl border border-white/10 bg-black/20"
+    }, /*#__PURE__*/React.createElement("summary", {
+      className: "cursor-pointer select-none px-3 py-2.5 text-[11px] font-black text-slate-200"
+    }, "\uD83D\uDCD6 \u30C1\u30E5\u30FC\u30C8\u30EA\u30A2\u30EB\u3068\u65E7\u753B\u9762", /*#__PURE__*/React.createElement("small", {
+      className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
+    }, "\u518D\u751F\u30FB\u672A\u8AAD\u3078\u623B\u3059\u30FB\u898B\u6BD4\u3079\u7528\u306E\u65E7\u30D0\u30C8\u30EB\u753B\u9762")), /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-2 gap-2 border-t border-white/10 p-3"
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: () => startBattleTutorial(),
+      className: "min-h-[50px] rounded-xl border border-cyan-400/50 bg-cyan-950/40 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
+    }, "\u30D0\u30C8\u30EB\u30C1\u30E5\u30FC\u30C8\u30EA\u30A2\u30EB\u958B\u59CB\uFF08\u8A18\u9332\u306F\u6B8B\u308A\u307E\u305B\u3093\uFF09"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => {
+        returnToHome();
+        startTutorial('battleGuide');
+      },
+      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
+    }, "\u30D0\u30C8\u30EB\u521D\u56DE\u6848\u5185\u3092\u518D\u751F"), /*#__PURE__*/React.createElement("button", {
+      onClick: async () => {
+        await storeSet(BATTLE_TUTORIAL_SEEN_KEY, false, false);
+        window.alert('バトルチュートリアルを未視聴に戻しました。');
+      },
+      className: "min-h-[50px] rounded-xl border border-rose-400/60 bg-rose-950/50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
+    }, "\u30D0\u30C8\u30EB\u7DF4\u7FD2\u3092\u672A\u8996\u8074\u3078\u623B\u3059"), /*#__PURE__*/React.createElement("button", {
+      onClick: async () => {
+        await storeSet(BATTLE_TUTORIAL_GUIDE_SHOWN_KEY, false, false);
+        battleTutorialGuideCheckedRef.current = false;
+        window.alert('初回案内を未表示に戻しました。');
+      },
+      className: "min-h-[50px] rounded-xl border border-rose-400/60 bg-rose-950/50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
+    }, "\u521D\u56DE\u6848\u5185\u3092\u672A\u8868\u793A\u3078\u623B\u3059"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => {
+        setBattleMenuTab('difficulty');
+        setGameState('BATTLE_MENU');
+      },
+      className: "min-h-[50px] rounded-xl border border-cyan-400/50 bg-cyan-950/40 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
+    }, "\u65E7\u30D0\u30C8\u30EB\u753B\u9762\u3092\u958B\u304F\uFF08\u898B\u6BD4\u3079\u7528\uFF09"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => startBattleTutorial('DEBUG_SETTINGS', 'v1'),
+      className: "min-h-[50px] rounded-xl border border-cyan-400/50 bg-cyan-950/40 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
+    }, "\u65E7\u30D0\u30C8\u30EB\u30C1\u30E5\u30FC\u30C8\u30EA\u30A2\u30EB\u3092\u898B\u308B\uFF08\u65E7\u30D0\u30C8\u30EB\u753B\u9762\u30FB\u8A18\u9332\u306F\u6B8B\u308A\u307E\u305B\u3093\uFF09"))))), /*#__PURE__*/React.createElement("details", {
+      className: "rounded-2xl border border-indigo-400/40 bg-indigo-950/30"
+    }, /*#__PURE__*/React.createElement("summary", {
+      className: "cursor-pointer select-none px-3 py-3 text-[11px] font-black text-cyan-200"
+    }, "\uD83C\uDFB5 \u30E2\u30F3\u30D2\u30ED\u30D3\u30FC\u30C8", /*#__PURE__*/React.createElement("small", {
+      className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
+    }, "\u97F3\u30B2\u30FC\u30C7\u30D0\u30C3\u30B0\u30FB\u4F53\u9A13\u7248\u306E\u5C0E\u7DDA\u30FB\u30A4\u30D9\u30F3\u30C8\u306E\u4F1A\u8A71\u3068\u544A\u77E5")), /*#__PURE__*/React.createElement("div", {
+      className: "space-y-2 border-t border-indigo-400/30 p-3"
+    }, /*#__PURE__*/React.createElement("button", {
+      "data-debug-rhythm-mode": true,
+      onClick: openRhythmDebug,
+      className: "w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
+    }, "\uD83C\uDFB5 \u30E2\u30F3\u30D2\u30ED\u30D3\u30FC\u30C8 \u30C7\u30D0\u30C3\u30B0", /*#__PURE__*/React.createElement("small", {
+      className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
+    }, "\u66F2\u30FB\u96E3\u6613\u5EA6\u30FB\u8A2D\u5B9A\u30FBBEST\u4FDD\u5B58\u57FA\u76E4\u3092\u78BA\u8A8D")), /*#__PURE__*/React.createElement("button", {
+      "data-debug-rhythm-demo": true,
+      onClick: openRhythmDemo,
+      className: "w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
+    }, "\uD83C\uDFBC \u30E2\u30F3\u30D2\u30ED\u30D3\u30FC\u30C8 \u4F53\u9A13\u7248\uFF08\u6B63\u5F0F\u5C0E\u7DDA\uFF09", /*#__PURE__*/React.createElement("small", {
+      className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
+    }, "\u516C\u958B\u3057\u305F\u3068\u304D\u30D7\u30EC\u30A4\u30E4\u30FC\u304C\u901A\u308B\u753B\u9762\u3002Monster Hero 1\u66F2\u30FB3\u96E3\u6613\u5EA6")), /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-2 gap-2"
+    }, /*#__PURE__*/React.createElement("button", {
+      "data-debug-rhythm-event-intro": true,
+      onClick: debugPlayRhythmEventIntro,
+      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
+    }, "\uD83C\uDFC6 \u30A4\u30D9\u30F3\u30C8\u958B\u50AC\u3092\u518D\u751F\uFF08\u4F1A\u8A71\u2192\u544A\u77E5\uFF09"), /*#__PURE__*/React.createElement("button", {
+      "data-debug-rhythm-event-story": true,
+      onClick: debugPlayRhythmEventStory,
+      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
+    }, "\u30A4\u30D9\u30F3\u30C8\u4F1A\u8A71\u3060\u3051\u518D\u751F"), /*#__PURE__*/React.createElement("button", {
+      "data-debug-rhythm-event-thanks": true,
+      onClick: debugPlayRhythmEventThanks,
+      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
+    }, "\u9589\u5E55\u3068\u304A\u793C\u306E\u4F1A\u8A71\u3092\u518D\u751F"), /*#__PURE__*/React.createElement("button", {
+      "data-debug-rhythm-event-notice": true,
+      onClick: debugPlayRhythmEventNotice,
+      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
+    }, "\u30A4\u30D9\u30F3\u30C8\u544A\u77E5\u3060\u3051\u518D\u751F"), /*#__PURE__*/React.createElement("button", {
+      "data-debug-rhythm-event-reward": true,
+      onClick: debugPlayRhythmEventReward,
+      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
+    }, "\u5165\u8CDE\u306E\u53D7\u3051\u53D6\u308A\u753B\u9762\u3092\u898B\u308B"), /*#__PURE__*/React.createElement("button", {
+      "data-debug-rhythm-event-reset": true,
+      onClick: debugResetRhythmEventSeen,
+      className: "min-h-[50px] rounded-xl border border-rose-400/60 bg-rose-950/50 text-cyan-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
+    }, "\u30A4\u30D9\u30F3\u30C8\u3092\u672A\u8AAD\u3078\u623B\u3059")))), /*#__PURE__*/React.createElement("details", {
+      className: "rounded-2xl border border-pink-500/50 bg-pink-950/25"
+    }, /*#__PURE__*/React.createElement("summary", {
+      className: "cursor-pointer select-none px-3 py-3 text-[11px] font-black text-pink-200"
+    }, "\uD83D\uDC96 \u307F\u3085\u3042\u30C7\u30D0\u30C3\u30B0", /*#__PURE__*/React.createElement("small", {
+      className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
+    }, "\u521D\u56DE\u30D7\u30EC\u30A4\u306E\u518D\u751F\u30FB\u30BB\u30EA\u30D5\u3068\u8868\u60C5\u30FB\u89AA\u5BC6\u5EA6\u30FB\u30A2\u30C3\u30D7\u30C7\u30FC\u30C8\u901A\u77E5\u30FB\u30EF\u30F3\u30DD\u30A4\u30F3\u30C8\u6848\u5185")), /*#__PURE__*/React.createElement("div", {
+      className: "space-y-2 border-t border-pink-500/30 p-3"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-2 gap-2"
+    }, /*#__PURE__*/React.createElement("button", {
+      "data-debug-onboarding-preview": true,
+      onClick: startOnboardingPreview,
+      className: "w-full min-h-[58px] rounded-2xl border-2 border-pink-400/50 bg-pink-950/40 text-pink-50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
+    }, "\u521D\u56DE\u30D7\u30EC\u30A4\u3092\u6700\u521D\u304B\u3089\u518D\u751F", /*#__PURE__*/React.createElement("small", {
+      className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
+    }, "\u52A9\u624B\u9078\u629E\u2192\u3042\u3044\u3055\u3064\u2192\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u2192\u6751\u306E\u6848\u5185\u2192HOME\u30FB\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("button", {
+      onClick: () => {
+        returnToHome();
+        startTutorial('intro');
+      },
+      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
+    }, "\u307F\u3085\u3042\u306E\u3042\u3044\u3055\u3064\u3060\u3051\u518D\u751F"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => {
+        returnToHome();
+        startTutorial('tour');
+      },
+      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
+    }, "\u6751\u306E\u6848\u5185\u3060\u3051\u518D\u751F"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => {
+        returnToHome();
+        setKikiIntroStep(0);
+      },
+      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
+    }, "\u304D\u304D\u52A0\u5165\u306E\u4F1A\u8A71\u3092\u518D\u751F"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setAssistantDebug('lines'),
+      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
+    }, "\u5168\u52A9\u624B\u30B3\u30E1\u30F3\u30C8\u78BA\u8A8D"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setAssistantDebug('expressions'),
+      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
+    }, "\u5168\u8868\u60C5\u78BA\u8A8D"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setAssistantDebug('conditions'),
+      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
+    }, "\u6761\u4EF6\u30B3\u30E1\u30F3\u30C8\u78BA\u8A8D"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setAssistantDebug('spam'),
+      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
+    }, "\u9023\u6253\u30EA\u30A2\u30AF\u30B7\u30E7\u30F3\u78BA\u8A8D"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setAssistantDebug('bond'),
+      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
+    }, "\u89AA\u5BC6\u5EA6\u30FB\u547C\u3073\u65B9\u78BA\u8A8D"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setAssistantDebug('random'),
+      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
+    }, "\u30E9\u30F3\u30C0\u30E0\u30C6\u30B9\u30C8"), /*#__PURE__*/React.createElement("button", {
+      onClick: debugPlayUpdateGuide,
+      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
+    }, "\u30A2\u30C3\u30D7\u30C7\u30FC\u30C8\u901A\u77E5\u30C6\u30B9\u30C8"), /*#__PURE__*/React.createElement("button", {
+      onClick: debugResetUpdateGuide,
+      className: "min-h-[50px] rounded-xl border border-rose-400/60 bg-rose-950/50 text-cyan-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
+    }, "\u901A\u77E5\u30C6\u30B9\u30C8\u3092\u672A\u8AAD\u3078\u623B\u3059"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => debugDailyMasuAdviceAt(7),
+      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
+    }, "\u30EF\u30F3\u30DD\u30A4\u30F3\u30C8\u6848\u5185\u3092\u518D\u751F\uFF08\u767B\u9332\u65707\u4F53\uFF09"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => debugDailyMasuAdviceAt(8),
+      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
+    }, "\u767B\u9332\u65708\u4F53\u306E\u6761\u4EF6\u78BA\u8A8D"), /*#__PURE__*/React.createElement("button", {
+      onClick: async () => {
+        await storeSet(DAILY_MASU_ADVICE_KEY, '', false);
+        dailyMasuAdviceCheckedRef.current = false;
+        window.alert('本日のワンポイント表示済みフラグをリセットしました。');
+      },
+      className: "min-h-[50px] rounded-xl border border-rose-400/60 bg-rose-950/50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
+    }, "\u672C\u65E5\u306E\u8868\u793A\u6E08\u307F\u3092\u30EA\u30BB\u30C3\u30C8")), /*#__PURE__*/React.createElement("button", {
+      onClick: async () => {
+        if (!window.confirm('「はじめての案内」を見ていない状態に戻します。モンスターやダイヤなどのセーブデータは消えません。よろしいですか？')) return;
+        try {
+          await storeSet(TUTORIAL_SEEN_KEY, false, false);
+        } catch {}
+        tutorialShownRef.current = false;
+        window.alert('初回状態へ戻しました。HOMEを開くと案内が始まります。');
+      },
+      className: "min-h-[50px] rounded-xl border border-rose-400/60 bg-rose-950/50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
+    }, "\u521D\u56DE\u72B6\u614B\u3078\u623B\u3059\uFF08\u30BB\u30FC\u30D6\u306F\u6D88\u3048\u307E\u305B\u3093\uFF09"))), /*#__PURE__*/React.createElement("details", {
+      className: "rounded-2xl border border-slate-500/40 bg-slate-900/50"
+    }, /*#__PURE__*/React.createElement("summary", {
+      className: "cursor-pointer select-none px-3 py-3 text-[11px] font-black text-slate-200"
+    }, "\uD83D\uDEE0 \u305D\u306E\u4ED6", /*#__PURE__*/React.createElement("small", {
+      className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
+    }, "\u4FEE\u884C\u30C6\u30B9\u30C8\u30FB\u753B\u9762\u30A8\u30E9\u30FC\u306E\u53D7\u3051\u6B62\u3081")), /*#__PURE__*/React.createElement("div", {
+      className: "space-y-2 border-t border-slate-500/30 p-3"
+    }, /*#__PURE__*/React.createElement("button", {
+      "data-debug-data-setup": true,
+      onClick: () => setGameState('DEBUG_DATA_SETUP'),
+      className: "w-full min-h-[58px] rounded-2xl border-2 border-rose-400/60 bg-rose-950/50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
+    }, "\uD83E\uDDF0 \u30C7\u30FC\u30BF\u3092\u7528\u610F\u3059\u308B", /*#__PURE__*/React.createElement("small", {
+      className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
+    }, "\u30C0\u30A4\u30E4\u30FB\u30A2\u30A4\u30C6\u30E0\u30FB\u30C6\u30B9\u30C8\u306E\u30DE\u30B9\u30E2\u30F3\u3092\u914D\u308B\uFF0F\u30ED\u30B0\u30A4\u30F3\u30DC\u30FC\u30CA\u30B9\u3068\u30DF\u30C3\u30B7\u30E7\u30F3\u3092\u3082\u3046\u4E00\u5EA6\u51FA\u3059")), /*#__PURE__*/React.createElement("button", {
+      onClick: openDebugTraining,
+      className: "w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
+    }, "\uD83C\uDFB2 \u4FEE\u884C\u30C6\u30B9\u30C8", /*#__PURE__*/React.createElement("small", {
+      className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
+    }, "\u5831\u916C\u30FB\u9032\u884C\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("button", {
+      "data-debug-screen-error": true,
+      onClick: () => setDebugThrowScreenError(true),
+      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
+    }, "\u26A0\uFE0F \u753B\u9762\u30A8\u30E9\u30FC\u306E\u53D7\u3051\u6B62\u3081\u3092\u8A66\u3059"), debugThrowScreenError && /*#__PURE__*/React.createElement(DebugThrowScreenError, null))))), gameState === 'SPECIES_CHALLENGE_DEBUG' && (() => {
       // 種族は主血統。ここも本番と同じ一覧を使う
       const speciesEntries = speciesChallengeLineages();
       const speciesId = speciesEntries.some(l => l.id === speciesChallengeDebugSpeciesId) ? speciesChallengeDebugSpeciesId : speciesEntries[0]?.id || '';
@@ -59311,8 +60610,8 @@ function MonsterHeroGame() {
       }, "\u5B9F\u9032\u884C\u4FDD\u5B58\u3067\u5B9F\u6226\u78BA\u8A8D"), /*#__PURE__*/React.createElement("p", {
         className: "text-[8px] leading-relaxed text-red-100"
       }, "\u26A0\uFE0F \u5B9F\u969B\u306E\u7A2E\u65CF\u30C1\u30E3\u30EC\u30F3\u30B8\u9032\u884C\u30FB\u6240\u6301\u54C1\u3092\u5909\u66F4\u3057\u307E\u3059\u3002\u672C\u756A\u3068\u540C\u3058\u753B\u9762\u30FB\u540C\u3058\u30D0\u30C8\u30EB\u3067\u9032\u307F\u3001WAVE10\u307E\u3067\u30AF\u30EA\u30A2\u3059\u308B\u3068\u300C\u30AF\u30EA\u30A2\u72B6\u6CC1\u300D\u300C\u6B21\u306E\u96E3\u6613\u5EA6\u306E\u89E3\u653E\u300D\u300C\u521D\u56DE\u306E\u8D85\u8D8A\u306E\u5B9F\u300D\u300C\u7A2E\u65CF\xD7\u96E3\u6613\u5EA6\u306E\u81EA\u5DF1\u8A18\u9332\u300D\u3092\u5B9F\u969B\u306B\u4FDD\u5B58\u3057\u307E\u3059\u3002\u5168\u56FD\u30E9\u30F3\u30AD\u30F3\u30B0\u3078\u306F\u9001\u4FE1\u3057\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("p", {
-        className: "text-[8px] text-slate-400"
-      }, "\u901A\u5E38\u306E BATTLE TEST \u2192\u300C\u2694\uFE0F \u30D0\u30C8\u30EB\u30E2\u30FC\u30C9\u300D\u304B\u3089\u5165\u3063\u305F\u5834\u5408\u306F\u3001\u3053\u308C\u307E\u3067\u3069\u304A\u308A\u4F55\u3082\u4FDD\u5B58\u3057\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("button", {
+        className: "text-[9px] text-slate-400"
+      }, "\u901A\u5E38\u306E\u30C7\u30D0\u30C3\u30B0\u8A2D\u5B9A \u2192\u300C\u2694\uFE0F \u30D0\u30C8\u30EB\u300D\u2192\u300C\u2694\uFE0F \u30D0\u30C8\u30EB\u30E2\u30FC\u30C9\u300D\u304B\u3089\u5165\u3063\u305F\u5834\u5408\u306F\u3001\u3053\u308C\u307E\u3067\u3069\u304A\u308A\u4F55\u3082\u4FDD\u5B58\u3057\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("button", {
         "data-species-real-run-start": true,
         onClick: () => {
           if (!window.confirm('実際の種族チャレンジ進行・所持品を変更します。よろしいですか？')) return;
@@ -59715,334 +61014,41 @@ function MonsterHeroGame() {
         onClick: makeRun,
         className: "min-h-[56px] w-full rounded-2xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-[12px] font-black shadow-lg disabled:opacity-30"
       }, "\u3053\u306E\u7DE8\u6210\u3067\u51FA\u6483")));
-    })(), gameState === 'MONSTER_IMAGE_DEBUG' && (() => {
-      const owned = [...masuMons.filter(m => ALL_PLAYER_MONSTERS[m.baseId])];
-      if (temporaryDyeMasks.Mia) owned.push({
-        id: 'temporary-dye-Mia',
-        baseId: 'Mia',
-        name: 'ミーア（一時確認）',
-        colors: []
-      });
-      Object.keys(temporaryDyeMasks).forEach(baseId => {
-        if (!owned.some(m => m.baseId === baseId) && ALL_PLAYER_MONSTERS[baseId]) owned.push({
-          id: `temporary-dye-${baseId}`,
-          baseId,
-          name: `${ALL_PLAYER_MONSTERS[baseId].name}（一時確認）`,
-          colors: []
+    })(), gameState === 'MONSTER_CHECK_DEBUG' && /*#__PURE__*/React.createElement(MonsterCheckDebugScreen, {
+      masuMons: masuMons,
+      unlockedMonsterIds: unlockedMonsterIds,
+      selectedId: monsterCheckDebugId,
+      colors: monsterCheckDebugColors,
+      attackPreview: dexAttackPreview,
+      artMode: monsterImageDebugTigerMode,
+      temporaryDyeMasks: temporaryDyeMasks,
+      maskEditorOpened: dyeMaskEditorOpened,
+      getAtkSkillLevels: getAtkSkillLevels,
+      getUniqueSkillLevels: getUniqueSkillLevels,
+      onSelect: setMonsterCheckDebugId,
+      onColorsChange: setMonsterCheckDebugColors,
+      onCustomColor: (idx, colorId) => {
+        const parsed = _parseCustomColorId(colorId);
+        setCustomColorPicker({
+          mode: 'monsterCheck',
+          idx,
+          h: parsed?.h ?? 210,
+          s: parsed?.s ?? .7,
+          v: parsed?.v ?? .7
         });
-      });
-      // 正式実装前のモンスター(debugOnly)は、そもそもマスモン登録ができない
-      // (registerMasuFromRun 側で弾いている)ため、上のマスモン一覧には絶対に出てこない。
-      // 所持を経ずにここへ入れておくことで、実装中でも立ち絵・染色・顔アイコン・
-      // 攻撃モーションを保存データに触れず確認できるようにする
-      Object.values(ALL_PLAYER_MONSTERS).forEach(mon => {
-        if (mon?.debugOnly && !owned.some(m => m.baseId === mon.id)) owned.push({
-          id: `debug-preview-${mon.id}`,
-          baseId: mon.id,
-          name: `${mon.name}（実装確認・DEBUG専用）`,
-          colors: []
-        });
-      });
-      const selected = owned.find(m => String(m.id) === String(monsterImageDebugId)) || owned[0];
-      if (!selected) return /*#__PURE__*/React.createElement("main", {
-        className: "flex-1 p-4"
-      }, /*#__PURE__*/React.createElement("header", {
-        className: "flex items-center"
-      }, /*#__PURE__*/React.createElement("button", {
-        onClick: () => setGameState('DEBUG_SETTINGS'),
-        className: "p-3"
-      }, /*#__PURE__*/React.createElement(ArrowLeft, null)), /*#__PURE__*/React.createElement("h2", {
-        className: "font-black"
-      }, "\u30E2\u30F3\u30B9\u30BF\u30FC\u753B\u50CF\u30FB\u67D3\u8272\u78BA\u8A8D")), /*#__PURE__*/React.createElement("p", {
-        className: "p-6 text-center text-slate-400"
-      }, "\u78BA\u8A8D\u3067\u304D\u308B\u6240\u6301\u30E2\u30F3\u30B9\u30BF\u30FC\u500B\u4F53\u304C\u3042\u308A\u307E\u305B\u3093\u3002"));
-      const base = ALL_PLAYER_MONSTERS[selected.baseId];
-      const regionCount = dyeRegionCount(selected.baseId);
-      const colors = Array.from({
-        length: regionCount
-      }, (_, i) => monsterImageDebugColors === null ? getMasuColors(selected)[i] || null : monsterImageDebugColors[i] || null);
-      const isTiger = selected.baseId === 'Tiger';
-      const productionSources = {
-        imgUrl: base.imgUrl,
-        iconUrl: base.iconUrl,
-        faceIconUrl: base.faceIconUrl
-      };
-      // プロフィールアイコンは本番(BreederIcon)で MARKET_PROFILE_ICON_STYLES の拡大・位置調整が掛かる。
-      // ライガー・ミーア・パンドラ等は faceIconUrl が立ち絵そのままなので、これが無いとプレビューだけ
-      // 全身が写り、本番とまったく別物になる。idは本番と同じ一覧(breederIconOptions)から絵で引き当てる
-      // (base.id を直に使うと、同じidで登録されている円盤石用の値を誤って拾う)
-      const profileIconStyle = marketProfileIconStyle((breederIconOptions({
-        includeUnowned: true
-      }).find(o => String(o.src || '').split('?')[0] === String(base.faceIconUrl || '').split('?')[0]) || {}).id);
-      const oldSources = isTiger ? {
-        imgUrl: TIGER_ROLLBACK_IMG,
-        iconUrl: TIGER_ROLLBACK_ICON,
-        faceIconUrl: TIGER_ROLLBACK_ICON
-      } : productionSources;
-      const newSources = productionSources;
-      const variants = isTiger && monsterImageDebugTigerMode === 'compare' ? [['旧', oldSources], ['新', newSources]] : [[isTiger && monsterImageDebugTigerMode === 'new' ? '新' : '本番', isTiger && monsterImageDebugTigerMode === 'new' ? newSources : oldSources]];
-      const bgStyle = monsterImageDebugBg === 'white' ? {
-        background: '#fff'
-      } : monsterImageDebugBg === 'black' ? {
-        background: '#000'
-      } : {
-        backgroundColor: '#cbd5e1',
-        backgroundImage: 'linear-gradient(45deg,#64748b 25%,transparent 25%),linear-gradient(-45deg,#64748b 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#64748b 75%),linear-gradient(-45deg,transparent 75%,#64748b 75%)',
-        backgroundSize: '16px 16px',
-        backgroundPosition: '0 0,0 8px,8px -8px,-8px 0'
-      };
-      const frameNote = note => note ? /*#__PURE__*/React.createElement("small", {
-        className: "mt-0.5 block text-[7px] font-normal text-slate-400"
-      }, note) : null;
-      const renderPair = (label, sourceKey, palette, frameClass = 'h-32', fit = 'object-contain', imgStyle = null, note = '') => /*#__PURE__*/React.createElement("section", {
-        className: "rounded-xl bg-black/30 p-2"
-      }, /*#__PURE__*/React.createElement("b", {
-        className: "block mb-2 text-center text-[9px] text-cyan-200"
-      }, label, frameNote(note)), /*#__PURE__*/React.createElement("div", {
-        className: `grid gap-2 ${variants.length === 2 ? 'grid-cols-2' : 'grid-cols-1'}`
-      }, variants.map(([name, sources]) => /*#__PURE__*/React.createElement("div", {
-        key: name,
-        className: "text-center"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: `${frameClass} overflow-hidden border border-white/20 flex items-center justify-center`,
-        style: bgStyle
-      }, palette === null ? /*#__PURE__*/React.createElement("img", {
-        src: sources[sourceKey],
-        alt: `${name}${label}`,
-        className: `w-full h-full ${fit}`,
-        style: imgStyle || undefined
-      }) : /*#__PURE__*/React.createElement(DyedMonsterImage, {
-        baseId: "Tiger",
-        src: sources[sourceKey],
-        alt: `${name}${label}`,
-        masuColors: palette,
-        className: `w-full h-full ${fit}`,
-        style: imgStyle || undefined
-      })), /*#__PURE__*/React.createElement("small", {
-        className: "text-[8px] font-black"
-      }, name)))));
-      const renderCurrent = (label, sourceKey, palette, frameClass = 'h-32', fit = 'object-contain', imgStyle = null, note = '') => {
-        if (isTiger) return renderPair(label, sourceKey, palette, frameClass, fit, imgStyle, note);
-        const src = oldSources[sourceKey];
-        // 染色なし(元画像)の表示も、本番と同じ収め方(MONSTER_ART_CONTAIN_IDSのcontain上書き)を通す。
-        // ここを通さないと、縦長の立ち絵(ウンディーネ・エイキ等)の「元画像」だけ本番よりきつく
-        // 切り取られて出てしまい、確認画面のほうが実際の見え方より悪く見えてしまう
-        return /*#__PURE__*/React.createElement("section", {
-          className: "rounded-xl bg-black/30 p-2 text-center"
-        }, /*#__PURE__*/React.createElement("b", {
-          className: "block mb-2 text-[9px] text-cyan-200"
-        }, label, frameNote(note)), /*#__PURE__*/React.createElement("div", {
-          className: `${frameClass} overflow-hidden border border-white/20`,
-          style: bgStyle
-        }, palette === null ? /*#__PURE__*/React.createElement("img", {
-          src: src,
-          alt: label,
-          className: `w-full h-full ${fit}`,
-          style: {
-            ...monsterArtFitStyle(base.id, undefined),
-            ...(imgStyle || {})
-          }
-        }) : /*#__PURE__*/React.createElement(DyedMonsterImage, {
-          baseId: base.id,
-          src: src,
-          alt: label,
-          masuColors: palette,
-          className: `w-full h-full ${fit}`,
-          style: imgStyle || undefined
-        })));
-      };
-      const colorText = c => {
-        if (!c) return '元の色';
-        const {
-          base,
-          alpha
-        } = splitColorAlpha(c);
-        const name = _parseCustomColorId(base) ? `カスタム(${base})` : MASU_COLOR_LABELS[base] || base;
-        return alpha < MASU_COLOR_ALPHA_MAX ? `${name} 濃さ${alpha}%` : name;
-      };
-      // 専用の攻撃モーション(atkMotion)を、本番のバトル画面とまったく同じ関数・同じCSSで再生する。
-      // パンドラの分身(pandoraDualThunder)は枠を動かすのではなく専用コンポーネントが要るため、ここでは対象外にする
-      const atkMotion = base.atkMotion || 'default';
-      const motionSupported = atkMotion !== 'default' && atkMotion !== 'pandoraDualThunder';
-      const isDashMotion = atkMotion === 'zanCombo' || atkMotion === 'eikiSakuraCombo' || atkMotion === 'kenshiTwinBlade';
-      const playMotionPreview = async () => {
-        if (!motionSupported || monsterImageDebugMotionPlaying) return;
-        setMonsterImageDebugMotionPlaying({
-          charge: true
-        });
-        await new Promise(r => setTimeout(r, 650));
-        if (isDashMotion) {
-          const isTwin = atkMotion === 'kenshiTwinBlade';
-          setMonsterImageDebugMotionPlaying({
-            zanCombo: !isTwin,
-            twinBlade: isTwin,
-            sakura: atkMotion === 'eikiSakuraCombo'
-          });
-          await new Promise(r => setTimeout(r, atkMotion === 'eikiSakuraCombo' ? 500 : isTwin ? 560 : 320));
-        } else {
-          setMonsterImageDebugMotionPlaying({
-            charge: false,
-            motion: atkMotion,
-            sakura: false
-          });
-          await new Promise(r => setTimeout(r, atkMotion === 'arkHolyRain' ? ARK_HOLY_RAIN_MOTION_MS : atkMotion === 'miaSongNotes' ? MIA_SONG_NOTES_MOTION_MS : atkMotion === 'floatStab' ? 700 : atkMotion === 'waterBurst' ? WATER_BURST_MOTION_MS : 500));
-        }
-        setMonsterImageDebugMotionPlaying(null);
-      };
-      return /*#__PURE__*/React.createElement("main", {
-        "data-mh-screen": true,
-        className: "flex-1 flex flex-col h-full min-h-0 p-3",
-        style: {
-          paddingTop: 'calc(.75rem + env(safe-area-inset-top))',
-          paddingBottom: 'calc(.75rem + env(safe-area-inset-bottom))'
-        }
-      }, /*#__PURE__*/React.createElement("header", {
-        className: "flex items-center gap-2 mb-2"
-      }, /*#__PURE__*/React.createElement("button", {
-        onClick: () => setGameState('DEBUG_SETTINGS'),
-        className: "p-3 text-slate-400"
-      }, /*#__PURE__*/React.createElement(ArrowLeft, {
-        size: 20
-      })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
-        className: "text-[8px] font-black text-cyan-400"
-      }, "DEBUG\u30FB\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093"), /*#__PURE__*/React.createElement("h2", {
-        className: "text-sm font-black"
-      }, "\u30E2\u30F3\u30B9\u30BF\u30FC\u753B\u50CF\u30FB\u67D3\u8272\u78BA\u8A8D")), temporaryDyeMasks[selected.baseId] && /*#__PURE__*/React.createElement("span", {
-        className: "ml-auto rounded-full bg-fuchsia-800 px-2 py-1 text-[8px] font-black"
-      }, "\u4E00\u6642\u53CD\u6620\u4E2D")), temporaryDyeMasks[selected.baseId] && dyeMaskEditorOpened && /*#__PURE__*/React.createElement("button", {
-        onClick: () => setGameState('DYE_MASK_POSITION_DEBUG'),
-        className: "mb-2 min-h-[42px] shrink-0 rounded-xl border border-fuchsia-300 bg-fuchsia-800 text-[10px] font-black"
-      }, "\u30DE\u30B9\u30AF\u7DE8\u96C6\u3078\u623B\u308B"), /*#__PURE__*/React.createElement("div", {
-        className: "flex-1 min-h-0 overflow-y-auto mh-scroll space-y-3 pb-3"
-      }, /*#__PURE__*/React.createElement("select", {
-        value: selected.id,
-        onChange: e => {
-          const m = owned.find(x => String(x.id) === e.target.value);
-          setMonsterImageDebugId(e.target.value);
-          setMonsterImageDebugColors(m ? getMasuColors(m) : []);
-          setMonsterImageDebugTigerMode('old');
-        },
-        className: "w-full min-h-[50px] rounded-xl bg-slate-900 border border-white/10 px-3 text-[10px] font-black"
-      }, owned.map(m => {
-        const b = ALL_PLAYER_MONSTERS[m.baseId];
-        return /*#__PURE__*/React.createElement("option", {
-          key: m.id,
-          value: m.id
-        }, m.name, "\uFF0F", b.name, "\uFF0F", m.baseId, "\uFF0F\u2460", colorText(getMasuColors(m)[0]), " \u2461", colorText(getMasuColors(m)[1]), " \u2462", colorText(getMasuColors(m)[2]));
-      })), isTiger && /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-3 gap-1"
-      }, [['old', '旧画像／ロールバック用'], ['new', '高画質版／現在の本番構成'], ['compare', '旧画像と高画質版の比較表示']].map(([id, label]) => /*#__PURE__*/React.createElement("button", {
-        key: id,
-        onClick: () => setMonsterImageDebugTigerMode(id),
-        className: `min-h-[54px] rounded-xl px-1 text-[8px] font-black border ${monsterImageDebugTigerMode === id ? 'bg-amber-700 border-amber-300' : 'bg-slate-900 border-white/10'}`
-      }, label))), /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-3 gap-2"
-      }, [['checker', '市松模様'], ['white', '白'], ['black', '黒']].map(([id, label]) => /*#__PURE__*/React.createElement("button", {
-        key: id,
-        onClick: () => setMonsterImageDebugBg(id),
-        className: `min-h-[42px] rounded-xl text-[10px] font-black border ${monsterImageDebugBg === id ? 'ring-2 ring-cyan-500' : 'border-white/10'}`,
-        style: id === 'white' ? {
-          background: '#fff',
-          color: '#000'
-        } : id === 'black' ? {
-          background: '#000'
-        } : {
-          background: '#64748b'
-        }
-      }, label))), /*#__PURE__*/React.createElement("section", {
-        className: "rounded-2xl border border-fuchsia-500/30 bg-fuchsia-950/20 p-3"
-      }, /*#__PURE__*/React.createElement("h3", {
-        className: "mb-2 text-[10px] font-black text-fuchsia-300"
-      }, "\u672C\u756A\u3068\u5171\u901A\u306E\u67D3\u8272\uFF08", regionCount, "\u90E8\u4F4D\uFF09"), /*#__PURE__*/React.createElement(DyeRegionColorControls, {
-        baseId: selected.baseId,
-        colors: colors,
-        onChange: (idx, colorId) => setMonsterImageDebugColors(prev => {
-          const next = [...colors];
-          next[idx] = colorId;
-          return next;
-        }),
-        onCustom: idx => {
-          const parsed = _parseCustomColorId(colors[idx]);
-          setCustomColorPicker({
-            mode: 'debug',
-            idx,
-            h: parsed?.h ?? 210,
-            s: parsed?.s ?? .7,
-            v: parsed?.v ?? .7
-          });
-        }
-      }), /*#__PURE__*/React.createElement("button", {
-        onClick: () => setMonsterImageDebugColors(getMasuColors(selected)),
-        className: "w-full mt-2 min-h-[40px] rounded-xl bg-fuchsia-800 text-[9px] font-black"
-      }, "\u500B\u4F53\u306E\u73FE\u5728\u8272\u3078\u623B\u3059")), /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-2 gap-2"
-      }, renderCurrent('元画像', 'imgUrl', null), renderCurrent('実際の合成後プレビュー', 'imgUrl', colors), Array.from({
-        length: regionCount
-      }, (_, i) => renderCurrent(`染色${i + 1}のみ`, 'imgUrl', colors.map((c, j) => i === j ? c : null)))), /*#__PURE__*/React.createElement("h3", {
-        className: "text-[10px] font-black text-cyan-300"
-      }, "\u5B9F\u969B\u306E\u8868\u793A\u6761\u4EF6"), /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-2 gap-2"
-      }, renderCurrent('バトル／立ち絵', 'imgUrl', colors, 'aspect-square', 'object-contain', null, '本番 64px・角丸なし'), renderCurrent('一覧／全身アイコン', 'iconUrl', colors, 'aspect-square rounded-full', 'object-cover', null, '本番 48px・丸'), renderCurrent('詳細／大きな全身表示', 'imgUrl', colors, 'h-40', 'object-contain', null, '本番 図鑑詳細の横長枠'), renderCurrent('顔アイコン', 'faceIconUrl', colors, 'aspect-square rounded-full', 'object-contain', profileIconStyle, '本番 プロフィール80px・丸'), renderCurrent('プロフィール／選択アイコン', 'faceIconUrl', colors, 'aspect-square rounded-2xl', 'object-contain', profileIconStyle, '本番 選択マス約59px・角丸'), renderCurrent('小型／編成枠', 'imgUrl', colors, 'aspect-square rounded-full', 'object-contain', null, '本番 40px・丸')), motionSupported && /*#__PURE__*/React.createElement("section", {
-        className: "rounded-2xl border border-cyan-500/30 bg-cyan-950/20 p-3"
-      }, /*#__PURE__*/React.createElement("h3", {
-        className: "mb-2 text-[10px] font-black text-cyan-300"
-      }, "\u653B\u6483\u30E2\u30FC\u30B7\u30E7\u30F3\u78BA\u8A8D\uFF08atkMotion: ", atkMotion, "\uFF09"), /*#__PURE__*/React.createElement("p", {
-        className: "mb-2 text-[8px] leading-relaxed text-slate-400"
-      }, "\u672C\u756A\u306E\u30D0\u30C8\u30EB\u753B\u9762\u3068\u540C\u3058\u95A2\u6570\u30FB\u540C\u3058CSS\u3067\u3053\u306E\u5834\u3067\u518D\u751F\u3059\u308B\u3002\u9023\u6483\u306E\u5DFB\u304D\u6DFB\u3048\u30D2\u30C3\u30C8\u306F\u7121\u3044\u306E\u3067\u3053\u306E1\u56DE\u3060\u3051\u52D5\u304F\u3002"), /*#__PURE__*/React.createElement("div", {
-        className: `mx-auto h-28 w-28 ${atkMotion === 'waterBurst' || atkMotion === 'arkHolyRain' || atkMotion === 'miaSongNotes' ? 'overflow-visible' : 'overflow-hidden'} rounded-xl border border-white/20`,
-        style: bgStyle
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "relative h-full w-full",
-        style: {
-          isolation: 'isolate',
-          animation: attackMotionAnimation(monsterImageDebugMotionPlaying)
-        }
-      }, monsterImageDebugMotionPlaying?.motion === 'arkHolyRain' ? /*#__PURE__*/React.createElement(ArkHolyRainMotion, {
-        image: /*#__PURE__*/React.createElement(DyedMonsterImage, {
-          baseId: base.id,
-          src: oldSources.imgUrl,
-          alt: "\u653B\u6483\u30E2\u30FC\u30B7\u30E7\u30F3\u78BA\u8A8D",
-          masuColors: colors,
-          className: "h-full w-full object-contain"
-        }),
-        charging: monsterImageDebugMotionPlaying?.charge === true,
-        empowered: monsterImageDebugMotionPlaying?.charge === false
-      }) : monsterImageDebugMotionPlaying?.motion === 'waterBurst' ? /*#__PURE__*/React.createElement(WaterBurstMotion, {
-        image: /*#__PURE__*/React.createElement(DyedMonsterImage, {
-          baseId: base.id,
-          src: oldSources.imgUrl,
-          alt: "\u653B\u6483\u30E2\u30FC\u30B7\u30E7\u30F3\u78BA\u8A8D",
-          masuColors: colors,
-          className: "h-full w-full object-contain"
-        }),
-        lunge: monsterImageDebugMotionPlaying?.charge === false,
-        charging: monsterImageDebugMotionPlaying?.charge === true
-      }) : monsterImageDebugMotionPlaying?.motion === 'miaSongNotes' ? /*#__PURE__*/React.createElement(MiaSongNotesMotion, {
-        image: /*#__PURE__*/React.createElement(DyedMonsterImage, {
-          baseId: base.id,
-          src: oldSources.imgUrl,
-          alt: "\u653B\u6483\u30E2\u30FC\u30B7\u30E7\u30F3\u78BA\u8A8D",
-          masuColors: colors,
-          className: "h-full w-full object-contain"
-        }),
-        lunge: monsterImageDebugMotionPlaying?.charge === false,
-        charging: monsterImageDebugMotionPlaying?.charge === true
-      }) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(DyedMonsterImage, {
-        baseId: base.id,
-        src: oldSources.imgUrl,
-        alt: "\u653B\u6483\u30E2\u30FC\u30B7\u30E7\u30F3\u78BA\u8A8D",
-        masuColors: colors,
-        className: "h-full w-full object-contain"
-      }), monsterImageDebugMotionPlaying?.sakura && /*#__PURE__*/React.createElement(EikiSakuraPetals, null), monsterImageDebugMotionPlaying?.twinBlade && /*#__PURE__*/React.createElement(KenshiTwinSlash, null)))), /*#__PURE__*/React.createElement("button", {
-        onClick: playMotionPreview,
-        disabled: !!monsterImageDebugMotionPlaying,
-        className: "mt-2 w-full min-h-[42px] rounded-xl bg-cyan-700 text-[10px] font-black disabled:opacity-40"
-      }, monsterImageDebugMotionPlaying ? '再生中…' : '攻撃モーションを再生')), /*#__PURE__*/React.createElement("section", {
-        className: "rounded-xl bg-black/40 p-3 text-[8px] break-all"
-      }, /*#__PURE__*/React.createElement("b", null, "baseId: ", selected.baseId), variants.map(([name, v]) => /*#__PURE__*/React.createElement("div", {
-        key: name
-      }, name, ": imgUrl=", v.imgUrl, " / iconUrl=", v.iconUrl, " / faceIconUrl=", v.faceIconUrl)))));
-    })(), gameState === 'ASSISTANT_SELECT' && /*#__PURE__*/React.createElement("div", {
+      },
+      onArtMode: setMonsterImageDebugTigerMode,
+      onPlayPreview: playDexAttackPreview,
+      onStopPreview: stopDexAttackPreview,
+      onBack: () => {
+        stopDexAttackPreview();
+        setGameState('DEBUG_SETTINGS');
+      },
+      onOpenMaskEditor: () => {
+        setDyeMaskEditorOpened(true);
+        setGameState('DYE_MASK_POSITION_DEBUG');
+      }
+    }), gameState === 'ASSISTANT_SELECT' && /*#__PURE__*/React.createElement("div", {
       "data-mh-screen": true,
       className: "flex-1 flex flex-col h-full min-h-0 p-4"
     }, /*#__PURE__*/React.createElement("div", {
@@ -61614,11 +62620,18 @@ function MonsterHeroGame() {
         s,
         v
       } = customColorPicker;
-      // パンドラはまだマスモンでもベースモンでもないので、個体を引かずDEBUG定義をそのまま使う
-      const masu = mode === 'debug' ? masuMons.find(m => String(m.id) === String(monsterImageDebugId)) : getMasuMon(dyeTargetMasuId);
+      // パンドラはまだマスモンでもベースモンでもないので、個体を引かずDEBUG定義をそのまま使う。
+      // mode==='monsterCheck' は新モンスター確認からの呼び出しで、所持していない種も塗れる必要がある。
+      // そこだけは個体を探さず、選んでいる種から表示用の一時データを作る(保存には触れない)
+      const masu = mode === 'monsterCheck' ? ALL_PLAYER_MONSTERS[monsterCheckDebugId] ? {
+        id: `monster-check-${monsterCheckDebugId}`,
+        baseId: monsterCheckDebugId,
+        name: ALL_PLAYER_MONSTERS[monsterCheckDebugId].name,
+        colors: []
+      } : null : mode === 'debug' ? masuMons.find(m => String(m.id) === String(monsterImageDebugId)) : getMasuMon(dyeTargetMasuId);
       const base = masu && ALL_PLAYER_MONSTERS[masu.baseId];
       const applyCustom = () => {
-        const setter = mode === 'debug' ? setMonsterImageDebugColors : setDyePreviewColors;
+        const setter = mode === 'monsterCheck' ? setMonsterCheckDebugColors : mode === 'debug' ? setMonsterImageDebugColors : setDyePreviewColors;
         // 濃さ(@NN)は色を作り直しても引き継ぐ
         setter(prev => {
           const next = [...(prev || (mode === 'debug' ? getMasuColors(masu) : []))];
@@ -61630,7 +62643,7 @@ function MonsterHeroGame() {
       // ドラッグ中は毎フレームcolorIdが変わり染色エンジンの再描画(Canvas処理)が大量発生するため、
       // プレビュー表示だけは色相/彩度/明度を粗く丸めて再描画の頻度を抑える(確定時は元の値をそのまま使う)
       const previewColorId = _encodeCustomColorId(Math.round(h / 4) * 4, Math.round(s * 20) / 20, Math.round(v * 20) / 20);
-      const sourceColors = mode === 'debug' ? monsterImageDebugColors || getMasuColors(masu) : dyePreviewColors;
+      const sourceColors = mode === 'monsterCheck' ? monsterCheckDebugColors || [] : mode === 'debug' ? monsterImageDebugColors || getMasuColors(masu) : dyePreviewColors;
       const previewColors = sourceColors.map((c, i) => i === idx ? withColorAlpha(previewColorId, colorAlphaOf(c)) : c);
       return /*#__PURE__*/React.createElement("div", {
         className: "fixed inset-0 flex items-center justify-center p-4",

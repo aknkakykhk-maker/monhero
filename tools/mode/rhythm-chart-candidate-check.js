@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// 音源から取り出したノーツ候補が、実音と45ms以内で並んでいるか。
 const fs=require('fs'),path=require('path'),vm=require('vm');
 const ROOT=path.resolve(__dirname,'..','..');
 const candidates=JSON.parse(fs.readFileSync(path.join(ROOT,'tools/mode/authoring/atsu-cup-theme-onset-candidates.json'),'utf8'));

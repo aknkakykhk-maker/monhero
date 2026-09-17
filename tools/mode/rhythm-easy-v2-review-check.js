@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// EASYのレビュー資料が全候補ぶんそろい、正式runtimeへつながっていないか。
 const fs=require('fs');
 const path=require('path');
 const assert=require('assert');

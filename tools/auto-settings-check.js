@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// AUTO設定・個体識別・供モンの自動加入・配置のフォールバックを確かめる。
 'use strict';
 const fs = require('fs');
 const vm = require('vm');

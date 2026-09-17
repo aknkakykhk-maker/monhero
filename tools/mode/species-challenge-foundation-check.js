@@ -1,3 +1,4 @@
+// 種族チャレンジの土台(難易度と種族の定義)。
 const fs = require('fs');
 const vm = require('vm');
 

@@ -1,3 +1,4 @@
+// AUTO∞の最終リザルトで鳴るBGMが正しいか。
 const fs=require('fs');
 const path=require('path');
 const ROOT=path.resolve(__dirname,'../..');

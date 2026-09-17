@@ -11,7 +11,7 @@ check('重トレーニングチケットの内部ID・価格・絆XP効果を維
 // デバッグ画面は項目が増えていくので、距離ではなく「その画面の中にあるか」で見る
 check('デバッグ設定に修行テスト導線',(()=>{
   const a=source.indexOf("{gameState==='DEBUG_SETTINGS'&&(");
-  const b=source.indexOf("{gameState==='MONSTER_IMAGE_DEBUG'&&(",a);
+  const b=source.indexOf("{gameState==='MONSTER_CHECK_DEBUG'&&(",a);
   return a>=0&&b>a&&source.slice(a,b).includes('修行テスト');
 })());
 check('保存禁止バナーを常時表示',(source.match(/DEBUG・報酬や進行状況は保存されません/g)||[]).length>=4&&/DEBUG保存なし/.test(source));

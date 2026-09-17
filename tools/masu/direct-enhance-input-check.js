@@ -1,3 +1,4 @@
+// 強化の直接入力が、残量を超えた値・負数・小数・文字でも壊れないか。
 const fs = require('fs');
 const path = require('path');
 

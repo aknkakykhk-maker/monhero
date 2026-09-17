@@ -1,3 +1,4 @@
+// 転生ボーナスの計算と、旧セーブの一度きりの正規化を確かめる。
 const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分類フォルダから見た1つ上
 const fs = require('fs');
 const vm = require('vm');

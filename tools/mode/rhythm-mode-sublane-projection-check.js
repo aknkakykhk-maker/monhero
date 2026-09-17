@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// サブレーンの投影が、再マウント時と画面回転時に組み直されるか。
 const fs=require('fs'),path=require('path'),vm=require('vm');
 const ROOT=path.resolve(__dirname,'../..'),read=file=>fs.readFileSync(path.join(ROOT,file),'utf8');
 const source=read('monster-hero/data/rhythm-mode.js'),game=read('monster-hero/src/game-system.jsx');

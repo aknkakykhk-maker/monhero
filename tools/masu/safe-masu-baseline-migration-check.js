@@ -1,3 +1,4 @@
+// マスモンの基準値の移行が、古い保存を読み直しても二重に効かないか。
 const fs = require('fs');
 const { loadDyeModule } = require('../harness');
 const m = loadDyeModule();

@@ -1,3 +1,4 @@
+// 種族チャレンジの進行の保存と読み出し。
 const fs = require('fs');
 const vm = require('vm');
 

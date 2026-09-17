@@ -1,3 +1,4 @@
+// モンヒロビートの画面(STEP A)の作りを確かめる。
 const fs=require('fs');
 const g=fs.readFileSync('monster-hero/src/game-system.jsx','utf8');
 const h=fs.readFileSync('monster-hero/data/help.js','utf8');

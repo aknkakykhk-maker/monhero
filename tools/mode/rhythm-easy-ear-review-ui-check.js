@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// EASY耳確認のナビ(前後移動・ループ再生・停止)が既存UIを使い回しているか。
 const fs=require('fs');
 const path=require('path');
 const vm=require('vm');

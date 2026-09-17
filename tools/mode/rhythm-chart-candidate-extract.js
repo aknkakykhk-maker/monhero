@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// 音源の解析結果からノーツ候補を取り出す。
 const fs=require('fs');
 const path=require('path');
 const vm=require('vm');

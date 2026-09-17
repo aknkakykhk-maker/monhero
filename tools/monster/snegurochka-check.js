@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// スネグーラチカの絶氷の楔(距離条件・自動ガッツ回復率の加算と上限)。
 const fs = require('fs');
 const ally = fs.readFileSync('monster-hero/data/ally-monsters.js', 'utf8');
 const breeder = fs.readFileSync('monster-hero/data/breeder.js', 'utf8');

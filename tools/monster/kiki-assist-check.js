@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// ききのアシストカードの定義。
 const fs = require('fs');
 const assert = require('assert');
 const breederSource = fs.readFileSync('monster-hero/data/breeder.js','utf8');

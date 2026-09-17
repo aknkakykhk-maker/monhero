@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// 同時入力のまとめ方と、iPhoneのタッチの扱い。
 const fs=require('fs');
 const vm=require('vm');
 const assert=require('assert');

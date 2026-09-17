@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// 難易度ごとの強さ・上書きのfallback・EXTREMEの倍率・バトル生成の共通化を確かめる。
 const fs = require('fs');
 const assert = require('assert');
 

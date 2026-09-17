@@ -1,3 +1,4 @@
+// クイックモードの難易度解放の条件。
 const fs = require('fs');
 const vm = require('vm');
 
