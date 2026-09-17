@@ -113,6 +113,8 @@ const seed = () => {
       if (b) b.click();
       return !!b;
     }, re);
+    // カテゴリは畳んであるので DOM の click() で押す(見えていなくても押せる)
+    const clickSel = (sel) => page.evaluate((s) => { const b = document.querySelector(s); if (b) b.click(); return !!b; }, sel);
 
     await page.waitForFunction(() => document.body.innerText.includes('TAP TO START'), { timeout: 40000 }).catch(() => {});
     await pointerDown({ text: 'TAP TO START' });
@@ -133,33 +135,82 @@ const seed = () => {
     await clickText('💊');
     await page.waitForTimeout(1200);
     check('デバッグ設定へ入れる', await page.evaluate(() => document.body.innerText.includes('DEBUG MENU')));
-    // カテゴリは畳んであるので、入口は DOM の click() で押す(見えていなくても押せる)
     check('デバッグ設定に「新モンスター確認」の入口がある',
       await page.evaluate(() => !!document.querySelector('[data-debug-monster-check]')));
-    await page.evaluate(() => { const b = document.querySelector('[data-debug-monster-check]'); b && b.click(); });
+    await clickSel('[data-debug-monster-check]');
     await page.waitForTimeout(1500);
 
-    const view = await page.evaluate(() => ({
+    // --- 一覧 ---
+    const list = await page.evaluate(() => ({
       opened: !!document.querySelector('[data-monster-check-debug]'),
       options: document.querySelectorAll('[data-monster-check-option]').length,
       ids: [...document.querySelectorAll('[data-monster-check-option]')].map(b => b.getAttribute('data-monster-check-option')),
       needsFix: [...document.querySelectorAll('[data-monster-check-option]')].filter(b => /要確認/.test(b.textContent)).length,
-      text: document.body.innerText,
-      broken: (document.body.innerText.match(/読み込めません/g) || []).length,
-      hasScroller: !!document.querySelector('main .mh-scroll'),
+      hasScroller: !!document.querySelector('.mh-scroll'),
     }));
-    check('新モンスター確認の画面が開く', view.opened);
-    check('全種が並ぶ(所持も解放も関係なく)', view.options === MONSTERS.length,
-      `画面 ${view.options}種 / 実データ ${MONSTERS.length}種`);
-    const missing = MONSTERS.map(m => m.id).filter(id => !view.ids.includes(id));
+    check('新モンスター確認の画面が開く', list.opened);
+    check('全種が並ぶ(所持も解放も関係なく)', list.options === MONSTERS.length,
+      `画面 ${list.options}種 / 実データ ${MONSTERS.length}種`);
+    const missing = MONSTERS.map(m => m.id).filter(id => !list.ids.includes(id));
     check('欠けているモンスターがいない', missing.length === 0, missing.join(', '));
-    check('実装チェックが出ている', /実装チェック/.test(view.text));
-    check('いまの全種は「足りない項目」が無い', view.needsFix === 0, `${view.needsFix}種に要確認`);
-    check('絵がすべて読み込める', view.broken === 0, `${view.broken}枚が読み込めない`);
-    check('縦スクロールできる入れ物がある', view.hasScroller);
+    check('いまの全種は「足りない項目」が無い', list.needsFix === 0, `${list.needsFix}種に要確認`);
+    check('一覧が縦スクロールできる', list.hasScroller);
 
-    // 染色をくわしく見る → 既存のモンスター画像・染色確認へ。所持していない種でも開けること
-    await page.evaluate(() => { const b = document.querySelector('[data-monster-check-open-image]'); b && b.click(); });
+    // --- 詳細(タブ) ---
+    await clickSel('[data-monster-check-option]');
+    await page.waitForTimeout(1200);
+    const detail = await page.evaluate(() => ({
+      tabs: [...document.querySelectorAll('[data-monster-check-tab]')].map(b => b.getAttribute('data-monster-check-tab')),
+      hero: !!document.querySelector('[data-monster-check-hero]'),
+      check: !!document.querySelector('[data-monster-check-tab-check]'),
+      toMotion: !!document.querySelector('[data-monster-check-open-motion]'),
+      broken: (document.body.innerText.match(/読み込めません/g) || []).length,
+    }));
+    check('詳細に立ち絵がある', detail.hero);
+    check('図鑑と同じタブで分かれている', detail.tabs.join(',') === 'check,art,stats,skills,data', detail.tabs.join(','));
+    check('はじめに実装チェックが出ている', detail.check);
+    check('攻撃アクションの入口がある', detail.toMotion);
+    check('絵がすべて読み込める', detail.broken === 0, `${detail.broken}枚が読み込めない`);
+
+    // --- 攻撃アクション(全画面) ---
+    // ★枠の大きさを実測する。以前は112px四方しかなく、演出が枠の外へ出て見えなかった
+    // (2026-09-17・ユーザー指摘「攻撃モーションの枠が小さすぎてわからない」)。
+    // 図鑑の攻撃アクションと同じ「画面の残り全部」を使っていることを数字で確かめる
+    await clickSel('[data-monster-check-open-motion]');
+    await page.waitForTimeout(900);
+    const motion = await page.evaluate(() => {
+      const stage = document.querySelector('[data-monster-check-stage]');
+      const art = document.querySelector('[data-monster-check-art]');
+      const s = stage && stage.getBoundingClientRect();
+      const a = art && art.getBoundingClientRect();
+      return {
+        stage: s ? { w: Math.round(s.width), h: Math.round(s.height) } : null,
+        art: a ? { w: Math.round(a.width), h: Math.round(a.height) } : null,
+        kinds: [...document.querySelectorAll('[data-monster-check-motion]')].map(b => b.getAttribute('data-monster-check-motion')),
+        viewport: window.innerHeight,
+      };
+    });
+    check('攻撃アクションの舞台がある', !!motion.stage);
+    check('舞台が画面の半分以上を使っている（小さすぎない）',
+      !!motion.stage && motion.stage.h >= motion.viewport * 0.5,
+      motion.stage ? `${motion.stage.w}×${motion.stage.h} / 画面高 ${motion.viewport}` : '');
+    check('立ち絵が図鑑の攻撃アクションと同じ大きさ（132px以上）',
+      !!motion.art && motion.art.w >= 132, motion.art ? `${motion.art.w}px` : '');
+    check('通常攻撃と固有技を選べる', motion.kinds.join(',') === 'normal,unique', motion.kinds.join(','));
+
+    // 実際に再生してみる(本番と同じ attackMotionPreviewSequence を通る)
+    await clickSel('[data-monster-check-motion="unique"]');
+    await page.waitForTimeout(400);
+    check('固有技の演出が再生される', await page.evaluate(() => /再生中/.test(document.body.innerText)));
+    await page.waitForTimeout(2000);
+
+    // --- 画像タブ → 染色をくわしく見る ---
+    await clickSel('[aria-label="詳細へ戻る"]');
+    await page.waitForTimeout(800);
+    await clickSel('[data-monster-check-tab="art"]');
+    await page.waitForTimeout(900);
+    check('画像タブに本番の表示条件が並ぶ', await page.evaluate(() => !!document.querySelector('[data-monster-check-tab-art]')));
+    await clickSel('[data-monster-check-open-image]');
     await page.waitForTimeout(1200);
     check('「染色をくわしく見る」で画像・染色確認へ移れる',
       await page.evaluate(() => document.body.innerText.includes('モンスター画像・染色確認')
