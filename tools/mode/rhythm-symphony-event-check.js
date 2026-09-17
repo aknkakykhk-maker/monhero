@@ -56,6 +56,33 @@ check('「もう一つの世界へ」は既存の曲データを参照してい�
   modeSrc.includes("songId:'mou_hitotsu_no_sekai_e'")
   && modeSrc.includes("bgmTrackId:'melo_mou_hitotsu_no_sekai_e'"));
 
+// ---- ①-2 報酬(2026-09-17・ユーザーが決めた値) ----
+// 順位ごとの個数とプシュケーは全イベント共通の決めごとなので、ここでは見ない。
+// この回で決めるのは「曲ごとの超越の実の種族」「総合の中身」「参加報酬」「回数ボーナス」だけ。
+const lineagesSrc = read('monster-hero/data/lineages.js');
+const WANT_LINEAGE = { mou_hitotsu_no_sekai_e: 'golem', pandora_boss_remix: 'pixie', the_city_beneath_the_comets: 'ham' };
+check('曲ごとの報酬が3曲ぶんそろっている',
+  !!event && !!event.rewardLineageBySongId
+  && event.songIds.every(id => !!event.rewardLineageBySongId[id]),
+  event && event.rewardLineageBySongId ? JSON.stringify(event.rewardLineageBySongId) : '');
+check('曲ごとの報酬が指定どおりの種族',
+  !!event && Object.entries(WANT_LINEAGE).every(([songId, lineage]) =>
+    (event.rewardLineageBySongId || {})[songId] === lineage));
+check('報酬の血統idが実在する',
+  !!event && Object.values(event.rewardLineageBySongId || {}).every(id =>
+    new RegExp(`\\b${id}:\\s*\\{\\s*id:'${id}'`).test(lineagesSrc)),
+  Object.values((event && event.rewardLineageBySongId) || {}).join(', '));
+check('総合部門の報酬が勇者の証', !!event && event.totalReward === 'heroProof');
+check('回数ボーナスを付けている', !!event && event.playBonus === true);
+check('参加報酬が 3曲・ダイヤ3,000・虹のプシュケー50',
+  !!event && !!event.participationReward
+  && event.participationReward.songs === 3
+  && event.participationReward.gold === 3000
+  && event.participationReward.psyche === 50,
+  event && event.participationReward ? JSON.stringify(event.participationReward) : '');
+check('参加報酬に勇者の証を入れていない(第1回のお礼ぶんを持ち込んでいない)',
+  !!event && !('heroProof' in (event.participationReward || {})));
+
 // ---- ② 開催期間の判定 ----
 const at = (iso) => rhythmLimitedEventAt(Date.parse(iso));
 check('開始前は開催していない', at('2026-09-17T11:59:00+09:00')?.id !== EVENT_ID);

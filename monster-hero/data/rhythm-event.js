@@ -129,9 +129,9 @@ const RHYTHM_EVENTS = Object.freeze([
   //    2026-09-14 からモンヒロビートに入っている)。
   // ★ビートPは songIds に入れるだけで 1.5倍になる(rhythmEventPointAwardAt)。
   //   期間中は公開曲ならどれでも1.0倍で貯まり、対象3曲だけ1.5倍。ここに書くこと以外は無い。
-  // ★報酬(rewardLineageBySongId / totalReward / participationReward / playBonus)は
-  //   2026-09-17 時点で未確定のため、まだ書いていない。決まったらここへ足す。
-  //   受け取り画面が出るのは終了(9/21 4:00)のあとなので、それまでに足せば間に合う。
+  // ★報酬は 2026-09-17 にユーザーが決めた。曲ごとの超越の実の種族だけが今回ぶんで、
+  //   順位ごとの個数(5/4/3/2/1)とプシュケー(1,000〜200)は全イベント共通の決めごと
+  //   (RHYTHM_EVENT_REWARD_COUNTS / RHYTHM_EVENT_REWARD_PSYCHE)をそのまま使う。
   Object.freeze({
     id: 'symphony_2026_09_17',
     kind: 'limited',
@@ -140,6 +140,19 @@ const RHYTHM_EVENTS = Object.freeze([
     endAt: '2026-09-21T04:00:00+09:00',
     banner: 'images/events/monbeat-event-2026-09-17-wide.jpg?v=b2ff791693ca',
     songIds: Object.freeze(['mou_hitotsu_no_sekai_e', 'pandora_boss_remix', 'the_city_beneath_the_comets']),
+    // 曲ごとの部門の1〜5位へ配る超越の実の種族(2026-09-17・ユーザー指示)。
+    // Stay With Me は Pandora のエンディングテーマで、Pandora の主血統が pixie
+    rewardLineageBySongId: Object.freeze({
+      mou_hitotsu_no_sekai_e: 'golem',
+      pandora_boss_remix: 'pixie',
+      the_city_beneath_the_comets: 'ham',
+    }),
+    totalReward: 'heroProof',
+    // 回数ボーナス。期間中に対象曲を遊んだ回数ぶん、ランキング用のスコアへ加点される
+    // (ビートPとは無関係。ビートP側へ混ぜない・RHYTHM_EVENT_POINTS.md §8)
+    playBonus: true,
+    // 参加報酬。対象3曲を**すべて**遊べば、入賞しなくてももらえる
+    participationReward: Object.freeze({ songs: 3, gold: 3000, psyche: 50 }),
   }),
 ]);
 
