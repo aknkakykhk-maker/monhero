@@ -13025,18 +13025,26 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         })()}
 
         {/* 新モンスター確認(デバッグ専用)。所持・解放・debugOnly を問わず全種を並べ、
-            1体ぶんの画像・染色・モーション・能力・技・血統・マーケットと「実装チェック」を1枚で見る。
-            中身は 74-screen-monster-check-debug.jsx。ここは遷移と、本体が持つ状態を渡すだけ */}
+            1体ぶんの画像・染色・モーション・能力・技・血統・マーケットと「実装チェック」を見る。
+            作りは図鑑にそろえてあり、一覧→詳細(タブ)→攻撃アクション全画面の3段。
+            中身は 74-screen-monster-check-debug.jsx。ここは遷移と、本体が持つ状態を渡すだけ。
+            攻撃アクションの再生は図鑑とまったく同じ playDexAttackPreview を使う
+            (コマ送りのタイマーと世代管理を画面側へ移すと、演出が途中で固まるため) */}
         {gameState==='MONSTER_CHECK_DEBUG'&&(
           <MonsterCheckDebugScreen
             masuMons={masuMons}
             unlockedMonsterIds={unlockedMonsterIds}
             selectedId={monsterCheckDebugId}
             colors={monsterCheckDebugColors}
+            attackPreview={dexAttackPreview}
+            getAtkSkillLevels={getAtkSkillLevels}
+            getUniqueSkillLevels={getUniqueSkillLevels}
             onSelect={setMonsterCheckDebugId}
             onColorsChange={setMonsterCheckDebugColors}
             onCustomColor={(idx,colorId)=>{const parsed=_parseCustomColorId(colorId);setCustomColorPicker({mode:'monsterCheck',idx,h:parsed?.h??210,s:parsed?.s??.7,v:parsed?.v??.7});}}
-            onBack={()=>setGameState('DEBUG_SETTINGS')}
+            onPlayPreview={playDexAttackPreview}
+            onStopPreview={stopDexAttackPreview}
+            onBack={()=>{stopDexAttackPreview();setGameState('DEBUG_SETTINGS');}}
             onOpenImageDebug={(monsterId)=>{const owned=masuMons.find(m=>String(m.baseId)===String(monsterId));setMonsterImageDebugId(owned?owned.id:`debug-preview-${monsterId}`);setMonsterImageDebugColors(owned?getMasuColors(owned):[]);setMonsterImageDebugTigerMode('old');setGameState('MONSTER_IMAGE_DEBUG');}}/>
         )}
 
