@@ -51,7 +51,12 @@ check('助手選択は本番と同じボタンをそのまま使う',
   has("onClick={()=>{chooseAssistant(who.id);markKikiIntroSeen();")
     && has("setGameState('PROFILE');setTutorialKind('intro');setTutorialStep(0);}}")
     && (source.match(/chooseAssistant\(who\.id\);markKikiIntroSeen\(\)/g) || []).length === 1);
-check('助手を全員そのまま出している(一覧を使っている)', has('{ASSISTANT_LIST.map(who=>('));
+// 以前は ASSISTANT_LIST をそのまま並べていたが、イベントで加入する助手(ドラ)は
+// その会話を見るまで出さない作りになった(assistantsUnlockedFrom)。
+// 見ている約束は「1体ずつ手で書かず、一覧から作る」こと。そこは変わっていない
+check('助手は一覧から作っている(1体ずつ手で並べていない)',
+  has('assistantsUnlockedFrom(rhythmEventStorySeen).map(who=>(')
+    && typeof ASSISTANT_LIST_OK === 'undefined');
 // あいさつ→プロフィール→村の案内は既存の仕組み(tutorialKind)をそのまま使う
 check('あいさつは既存の intro をそのまま使う', has("setTutorialKind('intro')"));
 check('あいさつのあとはプロフィールへ進む(既存の処理のまま)',

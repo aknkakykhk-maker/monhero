@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c1f9625d34c42090
+// generated-sha256: 316d60f27d80eeae
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -91,7 +91,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-18 00:14"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-18 07:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -14861,6 +14861,65 @@ scheduleTick();};
       :{left:'12px',right:'12px',bottom:'1.5%',padding:'8px 12px'}}><b data-rhythm-calibration-title className="block font-black text-amber-200" style={{fontSize:isLandscape?'12px':'14px',lineHeight:1.2}}>かまえて（はじめの{RHYTHM_CALIBRATION_WARMUP_COUNT}回は数えません）</b><span data-rhythm-calibration-text className="mt-1 block font-bold text-slate-200" style={{fontSize:isLandscape?'9px':'11px',lineHeight:isLandscape?1.3:1.6}}>判定ラインにノーツが重なった瞬間に叩いてください。判定とFAST・SLOWはいつもどおり出ます</span></div>}{tutorial&&<div ref={tutorialBannerRef} data-rhythm-tutorial-banner className="pointer-events-none absolute inset-x-3 top-[14%] z-20 rounded-2xl border border-cyan-300/50 bg-slate-950/92 px-3 py-2.5 text-center shadow-[0_0_18px_rgba(34,211,238,.18)]"><b data-rhythm-tutorial-title className="block text-[14px] font-black text-cyan-100">{RHYTHM_TUTORIAL_STEPS[0].title}</b><span data-rhythm-tutorial-text className="mt-1 block text-[11px] font-bold leading-relaxed text-slate-200">{RHYTHM_TUTORIAL_STEPS[0].text}</span></div>}{view.status==='paused'&&<div data-rhythm-pause-menu data-rhythm-debug-play={debugPlay?'1':undefined} className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-3 bg-slate-950/95 p-5"><h3 className="text-2xl font-black">PAUSE</h3><button data-rhythm-pause-resume className="min-h-[48px] w-full rounded-xl bg-cyan-700 font-black" onClick={resume}>再開</button><button data-rhythm-pause-restart className="min-h-[48px] w-full rounded-xl bg-fuchsia-700 font-black" onClick={restart}>リスタート</button><button data-rhythm-pause-exit className="min-h-[48px] w-full rounded-xl bg-rose-800 font-black" onClick={abort}>{calibrating?'やめてオプションへ戻る':tutorial?'練習をやめて曲えらびへ戻る':debugPlay?'中断して音ゲーデバッグへ戻る':'中断して曲えらびへ戻る'}</button></div>}</div></main>;
 };
 
+// ---- part: 31-debug-ui.jsx ----
+// ==================== デバッグ画面の共通部品 ====================
+// デバッグ画面は「必要になったら1つずつ足す」で増えてきたため、画面ごとに頭の作りが
+// ばらばらになっていた(2026-09-17・ユーザー指摘「デバッグモード自体がほんとに適当に
+// 追加してったその場しのぎの作りになってる」)。
+//
+// とくに困るのが**「この画面はセーブを書き換えるのか」の伝わり方が画面ごとに違う**こと。
+// 赤帯(mh-debug-banner)を出すものもあれば、見出しの下に8pxの小さい字で書くだけのものもあり、
+// 何も書いていないものもあった。押す前に分からないのは危ない。
+//
+// そこで、どのデバッグ画面も同じ頭を持つようにする。
+//
+//   ← 戻る ／ 画面の名前 ／ 「保存しません」か「保存します」のバッジ
+//
+// saves=true のときだけ赤くなる。バッジは必ず同じ位置に出るので、
+// 「書いていない＝たぶん大丈夫」という読み取りが起きない。
+
+// デバッグ画面の頭。すべてのデバッグ画面がこれを使う。
+//   title … 画面の名前(日本語)
+//   note  … 補足(省略可。本番と同じ部品を使っていることなど)
+//   saves … セーブデータを書き換える画面なら true
+//   onBack… 戻るときにすること(画面は自分の戻り先を知らない)
+const DebugScreenHead = ({ title, note = '', saves = false, onBack, backLabel = 'デバッグ設定へ戻る', right = null }) => (
+  <header className="mb-2 flex shrink-0 items-center gap-2">
+    <button aria-label={backLabel} onClick={onBack} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+    <div className="min-w-0">
+      <h2 className="truncate text-sm font-black text-white">{title}</h2>
+      {note && <small className="block truncate text-[9px] font-bold text-slate-400">{note}</small>}
+    </div>
+    <span data-debug-saves={saves ? 'yes' : 'no'}
+      className={`ml-auto shrink-0 rounded-full px-2.5 py-1 text-[9px] font-black ${saves ? 'bg-rose-700 text-white' : 'border border-white/15 bg-slate-900 text-slate-300'}`}>
+      {saves ? '保存します' : '保存しません'}
+    </span>
+    {right}
+  </header>
+);
+
+// デバッグメニューの1行。入口はすべてこの形にそろえる。
+// **メニューには入口だけを置き、道具そのものを埋めない**のが決めごと。
+// 以前はデバッグ戦の「難易度9個 → 敵10個 → 勇者モン → 開始」がメニューの中に直接あり、
+// 次の欄へ行くのに1500pxスクロールする必要があった。
+//   tone … 'go'(画面へ移る) / 'play'(その場で再生する) / 'save'(セーブを書き換える)
+const DEBUG_ROW_TONE = {
+  go:   'border-cyan-400/50 bg-cyan-950/40 text-cyan-50',
+  play: 'border-pink-400/50 bg-pink-950/40 text-pink-50',
+  save: 'border-rose-400/60 bg-rose-950/50 text-rose-50',
+};
+const DebugMenuRow = ({ icon = '', label, desc = '', tone = 'go', onClick, ...rest }) => (
+  <button type="button" onClick={onClick} {...rest}
+    className={`w-full min-h-[56px] rounded-2xl border-2 px-3 py-2 text-left font-black active:scale-95 ${DEBUG_ROW_TONE[tone] || DEBUG_ROW_TONE.go}`}>
+    <span className="flex items-center gap-2">
+      {icon && <span className="shrink-0 text-[15px]">{icon}</span>}
+      <span className="min-w-0 flex-1 text-[12px] leading-tight">{label}</span>
+      {tone === 'save' && <span className="shrink-0 rounded-full bg-rose-600 px-1.5 py-0.5 text-[8px] text-white">保存</span>}
+    </span>
+    {desc && <small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">{desc}</small>}
+  </button>
+);
+
 // ---- part: 40-screen-effects.jsx ----
 // ==== 画面ライフサイクル: タイマー・リスナーの登録簿(useScreenEffects) ====
 //
@@ -20779,6 +20838,16 @@ function RhythmHistoryScreen({
 //
 // 演出は本番と同じ BattleAttackMotionPreview / attackMotionPreviewSequence を使い、
 // この画面のためのモーションは作らない。字の大きさ・カード・タブも図鑑にそろえてある。
+//
+// 【「モンスター画像・染色確認」を吸収した】(2026-09-17・ユーザー指摘「似たようなのもあるし」)
+//
+// 2画面の中身が9割同じだった(背景の切り替え・本番の表示条件6枠・染色UI・攻撃モーションが、
+// 配色指定まで同じコードで二重にあった)。あちら(MONSTER_IMAGE_DEBUG)にしか無かった4つ
+//   ・部位ごとの切り分け(染色Nのみ)   ・ライガーの旧画像/高画質版/比較
+//   ・一時マスクが当たっていることの表示  ・生URL(?v= 付き)
+// をこの画面の「画像」「データ」タブへ移したうえで、あちらは消した。
+// 攻撃モーションはあちらだけ独自の setTimeout 列で組み直していたぶん、
+// パンドラの分身が再生できなかった。こちらへ寄せたことでそれも見られるようになっている。
 
 // 距離の並び。distAptitude は [零, 近, 中, 遠] の順で持っている。
 // 本番と同じ RANGE_LABELS から作るので、間合いの呼び方を変えてもここだけ古くならない
@@ -20912,8 +20981,9 @@ const monsterCheckStatRows = (mon) => {
 // 画面の中だけで完結するもの(いまどの画面か・タブ・検索語・背景)はここで持つ。
 function MonsterCheckDebugScreen({
   masuMons = [], unlockedMonsterIds = [], selectedId, colors = [], attackPreview,
+  artMode = 'new', temporaryDyeMasks = null, maskEditorOpened = false,
   getAtkSkillLevels, getUniqueSkillLevels,
-  onSelect, onColorsChange, onCustomColor, onPlayPreview, onStopPreview, onBack, onOpenImageDebug,
+  onSelect, onColorsChange, onCustomColor, onArtMode, onPlayPreview, onStopPreview, onBack, onOpenMaskEditor,
 }) {
   const monsters = monsterCheckAllMonsters();
   const [view, setView] = useState('list');   // 'list' | 'detail' | 'motion'
@@ -20957,6 +21027,16 @@ function MonsterCheckDebugScreen({
         backgroundSize: '16px 16px', backgroundPosition: '0 0,0 8px,8px -8px,-8px 0' };
 
   const noteImageBroken = (url) => setBrokenImages(prev => (prev[url] ? prev : { ...prev, [url]: true }));
+  // ライガーだけは、高画質版へ差し替える前の絵(ロールバック用)も残してある。
+  // 「いまの本番」「旧画像」「並べて比較」を切り替えて見られるようにしておく
+  const productionSources = { imgUrl: mon.imgUrl, iconUrl: mon.iconUrl, faceIconUrl: mon.faceIconUrl };
+  const rollbackSources = (typeof TIGER_ROLLBACK_IMG !== 'undefined' && mon.id === 'Tiger')
+    ? { imgUrl: TIGER_ROLLBACK_IMG, iconUrl: TIGER_ROLLBACK_ICON, faceIconUrl: TIGER_ROLLBACK_ICON }
+    : null;
+  const artSources = (rollbackSources && artMode === 'old') ? rollbackSources : productionSources;
+  // 染色マスクを描いて「ゲームで試す」と、その種だけ一時的なマスクが当たる。
+  // マスクは _temporaryDyeMasks 経由で DyedMonsterImage が勝手に見るので、ここでは印を出すだけでよい
+  const temporaryMask = !!(temporaryDyeMasks && temporaryDyeMasks[mon.id]);
   const pickMonster = (id) => { onStopPreview(); onSelect(id); onColorsChange([]); setShowRaw(false); setTab('check'); setView('detail'); };
   const go = (delta) => { onStopPreview(); const next = monsters[(index + delta + monsters.length) % monsters.length]; if (!next) return; onSelect(next.id); onColorsChange([]); Audio_.se.tap(); };
   const dyedArt = (className = 'w-full h-full object-contain') =>
@@ -21083,10 +21163,10 @@ function MonsterCheckDebugScreen({
       ))}
     </div>
   );
-  // 本番と同じ収め方・同じ染色で1枚出す。読み込みに失敗した絵は赤くして、
-  // 「パスの綴り間違いで絵が出ない」を公開前に気づけるようにする
-  const artFrame = (label, sourceKey, frameClass, fit, imgStyle, note) => {
-    const src = mon[sourceKey];
+  // 1枚ぶんの枠。絵のURLと染色を指定できるようにしてあるので、「本番の表示条件」だけでなく
+  // 「部位ごとの切り分け」「ライガーの新旧比較」も同じ部品で出せる。
+  // 読み込みに失敗した絵は赤くして、「パスの綴り間違いで絵が出ない」を公開前に気づけるようにする
+  const artBox = (label, src, palette, frameClass, fit, imgStyle, note) => {
     const broken = !!brokenImages[src];
     return (
       <section key={label} className="rounded-xl bg-black/30 p-2 text-center">
@@ -21094,7 +21174,7 @@ function MonsterCheckDebugScreen({
         {note && <small className="mb-1 block text-[8px] font-bold text-slate-400">{note}</small>}
         <div className={`${frameClass} overflow-hidden border ${broken ? 'border-rose-500' : 'border-white/20'}`} style={bgStyle}>
           {src
-            ? <DyedMonsterImage baseId={mon.id} src={src} alt={label} masuColors={dyeColors} className={`w-full h-full ${fit}`} style={{ ...monsterArtFitStyle(mon.id, undefined), ...(imgStyle || {}) }}/>
+            ? <DyedMonsterImage baseId={mon.id} src={src} alt={label} masuColors={palette} className={`w-full h-full ${fit}`} style={{ ...monsterArtFitStyle(mon.id, undefined), ...(imgStyle || {}) }}/>
             : <span className="flex h-full w-full items-center justify-center text-[9px] font-black text-rose-300">未設定</span>}
         </div>
         {/* 綴りを間違えた絵は、染色を通すと「何も出ない」だけで理由が分からない。
@@ -21104,6 +21184,8 @@ function MonsterCheckDebugScreen({
       </section>
     );
   };
+  const artFrame = (label, sourceKey, frameClass, fit, imgStyle, note) =>
+    artBox(label, artSources[sourceKey], dyeColors, frameClass, fit, imgStyle, note);
   const stateMark = (state) => state === 'ng' ? '✕' : state === 'warn' ? '△' : '✓';
   const stateClass = (state) => state === 'ng' ? 'text-rose-300' : state === 'warn' ? 'text-amber-300' : 'text-emerald-300';
 
@@ -21112,7 +21194,8 @@ function MonsterCheckDebugScreen({
       <div className="flex shrink-0 items-center gap-2 px-3">
         <button onClick={() => { onStopPreview(); setView('list'); }} className="p-3 text-slate-400 active:scale-90" aria-label="一覧へ戻る"><ArrowLeft size={20}/></button>
         <h2 className="text-base font-black italic text-emerald-300 uppercase tracking-widest">新モンスター確認</h2>
-        <span className="ml-auto shrink-0 pr-1 text-[10px] font-mono font-black tabular-nums text-emerald-200/80">{index + 1} / {monsters.length}</span>
+        {temporaryMask&&<span className="ml-auto shrink-0 rounded-full bg-fuchsia-800 px-2 py-1 text-[9px] font-black text-white">一時マスク反映中</span>}
+        <span className={`shrink-0 pr-1 text-[10px] font-mono font-black tabular-nums text-emerald-200/80 ${temporaryMask?'':'ml-auto'}`}>{index + 1} / {monsters.length}</span>
       </div>
       {/* 上半分: 立ち絵。左右のボタンと横スワイプで前後へ移る(図鑑と同じ) */}
       <div data-monster-check-hero className="relative flex shrink-0 items-center justify-center px-14" style={{ height: 'clamp(150px, 20dvh, 180px)' }}
@@ -21173,6 +21256,17 @@ function MonsterCheckDebugScreen({
                     style={id === 'white' ? { background: '#fff', color: '#000' } : id === 'black' ? { background: '#000' } : { background: '#64748b' }}>{label}</button>
                 ))}
               </div>
+              {/* ライガーだけ、高画質版へ差し替える前の絵も残してある */}
+              {rollbackSources&&<div className="grid grid-cols-3 gap-1">
+                {[['new','いまの本番'],['old','旧画像（ロールバック用）'],['compare','並べて比較']].map(([id,label])=>(
+                  <button key={id} data-monster-check-art-mode={id} onClick={()=>onArtMode(id)}
+                    className={`min-h-[46px] rounded-xl border px-1 text-[9px] font-black active:scale-95 ${artMode===id?'border-amber-300 bg-amber-700 text-white':'border-white/10 bg-slate-900 text-slate-300'}`}>{label}</button>
+                ))}
+              </div>}
+              {rollbackSources&&artMode==='compare'&&<div className="grid grid-cols-2 gap-2">
+                {artBox('旧画像', rollbackSources.imgUrl, dyeColors, 'aspect-square', 'object-contain', null, '差し替える前')}
+                {artBox('高画質版', productionSources.imgUrl, dyeColors, 'aspect-square', 'object-contain', null, 'いまの本番')}
+              </div>}
               <div className="grid grid-cols-2 gap-2">
                 {artFrame('バトル／立ち絵', 'imgUrl', 'aspect-square', 'object-contain', null, '本番 64px・角丸なし')}
                 {artFrame('一覧／全身アイコン', 'iconUrl', 'aspect-square rounded-full', 'object-cover', null, '本番 48px・丸')}
@@ -21188,8 +21282,19 @@ function MonsterCheckDebugScreen({
                   onCustom={(idx) => onCustomColor(idx, dyeColors[idx])}/>
                 <div className="mt-2 grid grid-cols-2 gap-2">
                   <button onClick={() => onColorsChange([])} className="min-h-[42px] rounded-xl bg-fuchsia-800 text-[10px] font-black">元の色へ戻す</button>
-                  {/* 部位ごとの切り分け・マスクの当たり方・ライガーの新旧比較は、専用の画面のほうが詳しい */}
-                  <button data-monster-check-open-image onClick={() => { onStopPreview(); onOpenImageDebug(mon.id); }} className="min-h-[42px] rounded-xl border border-cyan-400/60 bg-cyan-950 text-[10px] font-black text-cyan-100">染色をくわしく見る</button>
+                  {/* マスクそのものを描いて直すのは専用の編集器。往復できるようにしておく */}
+                  <button data-monster-check-open-mask onClick={() => { onStopPreview(); onOpenMaskEditor(); }} className="min-h-[42px] rounded-xl border border-cyan-400/60 bg-cyan-950 text-[10px] font-black text-cyan-100">染色マスクを編集する</button>
+                </div>
+              </section>
+              {/* 部位ごとの切り分け。マスクが当たっているか(どこまでが①でどこからが②か)は
+                  1部位ずつ塗って見るのがいちばん早い。ここでしか見られない */}
+              <section data-monster-check-region className="rounded-2xl border border-fuchsia-500/30 bg-fuchsia-950/10 p-2.5">
+                <h3 className="mb-2 text-[11px] font-black text-fuchsia-300">部位ごとの切り分け（{regionCount}部位）</h3>
+                <div className="grid grid-cols-2 gap-2">
+                  {artBox('元画像', artSources.imgUrl, [], 'aspect-square', 'object-contain', null, '染色なし')}
+                  {artBox('合成後', artSources.imgUrl, dyeColors, 'aspect-square', 'object-contain', null, '全部位を重ねたもの')}
+                  {Array.from({ length: regionCount }, (_, i) =>
+                    artBox(`染色${i + 1}のみ`, artSources.imgUrl, dyeColors.map((c, j) => i === j ? c : null), 'aspect-square', 'object-contain', null, `${i + 1}番目の部位だけ`))}
                 </div>
               </section>
             </div>)}
@@ -21248,6 +21353,12 @@ function MonsterCheckDebugScreen({
               {row('円盤石（解放用）', market.disc ? `${market.disc.name}／${market.disc.cost} ダイヤ` : '無し')}
               {row('顔アイコン商品', market.faceIcon ? `${market.faceIcon.name}／${market.faceIcon.cost}` : '無し')}
               {row('円盤石アイコン商品', market.discIcon ? `${market.discIcon.name}／${market.discIcon.cost}` : '無し')}
+              {/* キャッシュキー(?v=)まで見たいことがあるので、素のURLも出しておく */}
+              <div data-monster-check-urls className="rounded-lg bg-black/40 p-2 text-[9px] leading-relaxed text-cyan-200 break-all">
+                <div>imgUrl = {mon.imgUrl || '未設定'}</div>
+                <div>iconUrl = {mon.iconUrl || '未設定'}</div>
+                <div>faceIconUrl = {mon.faceIconUrl || '未設定'}</div>
+              </div>
               <button onClick={() => setShowRaw(v => !v)} className="min-h-[42px] w-full rounded-xl bg-slate-800 text-[11px] font-black active:scale-95">{showRaw ? '生データを隠す' : '生データ（ALL_PLAYER_MONSTERS の中身）を見る'}</button>
               {showRaw && <pre className="max-h-72 overflow-auto whitespace-pre-wrap break-all rounded-xl bg-black/50 p-3 text-[9px] leading-relaxed text-cyan-200">{JSON.stringify(mon, null, 2)}</pre>}
             </div>)}
@@ -21256,6 +21367,133 @@ function MonsterCheckDebugScreen({
         </div>
       </div>
     </div>
+  );
+}
+
+// ---- part: 76-screen-debug-data.jsx ----
+// ==================== データを用意する(デバッグ専用) ====================
+// 「実装したらデバッグで確認できるようになってる？」への答えが半分だったので足した画面
+// (2026-09-17)。デバッグの入口はこれまで「画面を開く」ものばかりで、
+// **条件が揃わないと始まらないもの**には入口が無かった。
+//
+//   ログインボーナス … 日付が変わるのを待つ
+//   ミッション       … 実際に条件を達成する
+//   マーケットの購入 … ダイヤを貯める
+//   アイテムの使用   … まず入手する
+//   マスモンの育成   … 個体を作って育てる（強化・合体・再生・寄付・魂格）
+//
+// ここで「用意」だけできるようにすると、上のどれもすぐ確認できるようになる。
+//
+// 【この画面はセーブデータを書き換える】
+// CLAUDE.md ⑦ を守るため、次を必ず通す。
+//   ・既存の保存キーだけを使う。新しいキーは1つも作らない
+//   ・押すたびに window.confirm を出す(何が変わるかを文面に書く)
+//   ・配るもの(ダイヤ・アイテム・マスモン)は**足すだけ**。既存の値を消さない
+//   ・「もう一度出す」は進行が消えるので、文面でそれを明言してから確認を取る
+
+// マスモンをどの段階で作るか。育成のどの画面を試したいかで選ぶ
+const DEBUG_MASU_STAGES = Object.freeze([
+  { id: 'fresh',   label: '登録したて',     desc: '絆Lv.1。強化・合体の入口を見る' },
+  { id: 'grown',   label: '上限まで育てた', desc: '絆Lvが上限。限界突破が押せる' },
+  { id: 'rebirth', label: '限界突破MAX',    desc: '虹★。転生・超越の条件を満たす' },
+]);
+
+function DebugDataScreen({
+  gold = 0, breederPoints = 0, ownedItems = {}, masuMons = [],
+  itemDefs = [], monsters = [], stageId = 'fresh', monsterId = '',
+  onStage, onMonster, onGrantGold, onGrantPoints, onGrantItem, onCreateMasu,
+  onResetLoginBonus, onResetMissions, onResetChangelogSeen, onBack,
+}) {
+  const stage = DEBUG_MASU_STAGES.find(s => s.id === stageId) || DEBUG_MASU_STAGES[0];
+  const mon = monsters.find(m => m.id === monsterId) || monsters[0] || null;
+  const num = (n) => Math.max(0, Math.floor(Number(n) || 0)).toLocaleString();
+
+  const section = (title, note, children, tone = 'safe') => (
+    <section className={`rounded-2xl border p-3 ${tone === 'danger' ? 'border-rose-500/50 bg-rose-950/20' : 'border-cyan-500/40 bg-cyan-950/15'}`}>
+      <h3 className={`text-[12px] font-black ${tone === 'danger' ? 'text-rose-200' : 'text-cyan-200'}`}>{title}</h3>
+      {note && <p className="mt-0.5 mb-2 text-[9px] font-bold leading-relaxed text-slate-400">{note}</p>}
+      {children}
+    </section>
+  );
+  const btn = (label, onClick, tone = 'safe', extra = {}) => (
+    <button key={label} type="button" onClick={onClick} {...extra}
+      className={`min-h-[48px] rounded-xl border px-2 text-center text-[11px] font-black leading-tight active:scale-95 ${tone === 'danger' ? 'border-rose-400/60 bg-rose-950/50' : 'border-cyan-400/50 bg-cyan-950/40'}`}>
+      {label}
+    </button>
+  );
+
+  return (
+    <main data-debug-data-screen data-mh-screen className="flex-1 flex flex-col h-full min-h-0 p-4"
+      style={{ paddingTop: 'calc(1rem + env(safe-area-inset-top))', paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}>
+      <DebugScreenHead title="データを用意する" note="条件が揃わないと始まらないものを、すぐ試せる状態にする" saves onBack={onBack}/>
+      <div className="mh-debug-banner shrink-0 mb-2">DEBUG・この画面はセーブデータを書き換えます</div>
+      <div className="flex-1 min-h-0 overflow-y-auto mh-scroll space-y-3">
+
+        {/* ① 通貨。マーケットの購入・アイテムの入手を試すのに要る */}
+        {section('① ダイヤとブリーダーP', `いま ダイヤ ${num(gold)} ／ ブリーダーP ${num(breederPoints)}。足すだけで、減らしたり書き換えたりはしません。`, (
+          <div className="grid grid-cols-3 gap-2">
+            {btn('ダイヤ +1万', () => onGrantGold(10000), 'safe', { 'data-debug-grant-gold': '10000' })}
+            {btn('ダイヤ +100万', () => onGrantGold(1000000))}
+            {btn('ブリーダーP +100', () => onGrantPoints(100), 'safe', { 'data-debug-grant-points': '100' })}
+          </div>
+        ))}
+
+        {/* ② アイテム。マーケットの type:'item' をそのまま並べる(手で書き写さない) */}
+        {section('② アイテムを配る', 'マーケットの消耗アイテムをそのまま並べています。10個ずつ足します。', (
+          <div className="space-y-1.5">
+            {!itemDefs.length && <p className="text-[10px] text-slate-400">アイテムが読み込めていません。</p>}
+            {itemDefs.map(item => (
+              <div key={item.id} className="flex items-center gap-2 rounded-xl bg-black/30 px-2.5 py-2">
+                <span className="shrink-0 text-[15px]">{item.emoji || '📦'}</span>
+                <span className="min-w-0 flex-1 truncate text-[11px] font-black text-white">{item.name}</span>
+                <span className="shrink-0 font-mono text-[11px] font-black text-cyan-300">{num(ownedItems[item.id])}</span>
+                <button type="button" data-debug-grant-item={item.id} onClick={() => onGrantItem(item.id, 10)}
+                  className="shrink-0 min-h-[40px] rounded-lg border border-cyan-400/50 bg-cyan-950/40 px-3 text-[11px] font-black active:scale-95">+10</button>
+              </div>
+            ))}
+          </div>
+        ))}
+
+        {/* ③ マスモン。強化・合体・再生・寄付・魂格はどれも「個体が要る」ので、ここが無いと始まらない */}
+        {section('③ テストのマスモンを作る', `いま ${masuMons.length} 体。神殿の強化・合体・再生・寄付・魂格は、個体が無いと何も試せません。`, (
+          <div className="space-y-2">
+            <div className="grid grid-cols-3 gap-1.5">
+              {DEBUG_MASU_STAGES.map(s => (
+                <button key={s.id} type="button" data-debug-masu-stage={s.id} onClick={() => onStage(s.id)}
+                  className={`min-h-[52px] rounded-xl border px-1 text-[10px] font-black leading-tight active:scale-95 ${stage.id === s.id ? 'border-cyan-300 bg-cyan-700 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`}>{s.label}</button>
+              ))}
+            </div>
+            <p className="text-[9px] font-bold text-cyan-300/80">{stage.desc}</p>
+            <select aria-label="作るモンスター" value={mon ? mon.id : ''} onChange={e => onMonster(e.target.value)}
+              className="block min-h-[46px] w-full rounded-xl border border-white/10 bg-slate-900 px-3 text-[12px] font-black text-white">
+              {monsters.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+            </select>
+            <button type="button" data-debug-create-masu disabled={!mon} onClick={() => mon && onCreateMasu(mon.id, stage.id)}
+              className="min-h-[50px] w-full rounded-xl border border-cyan-400/60 bg-cyan-800 text-[12px] font-black text-white active:scale-95 disabled:opacity-40">
+              {mon ? `${mon.name}を「${stage.label}」で1体つくる` : 'モンスターがいません'}
+            </button>
+          </div>
+        ))}
+
+        {/* ④ もう一度出す。ここだけは進行が消えるので、文面で言い切ってから確認を取る */}
+        {section('④ もう一度出す（進行が消えます）', '待たずに出すための操作です。いまの進み具合は失われます。押すと確認が出ます。', (
+          <div className="grid grid-cols-1 gap-2">
+            {btn('ログインボーナスを未受け取りへ戻す', onResetLoginBonus, 'danger', { 'data-debug-reset-login': '1' })}
+            {btn('ミッションを未達成へ戻す', onResetMissions, 'danger', { 'data-debug-reset-missions': '1' })}
+            {btn('更新履歴を未読へ戻す', onResetChangelogSeen, 'danger', { 'data-debug-reset-changelog': '1' })}
+          </div>
+        ), 'danger')}
+
+        {/* まだ入口が無いものは、黙って落とさず書いておく */}
+        <section className="rounded-2xl border border-white/10 bg-slate-900/50 p-3">
+          <h3 className="text-[11px] font-black text-slate-300">まだここから用意できないもの</h3>
+          <p className="mt-1 text-[9px] font-bold leading-relaxed text-slate-400">
+            ギフトボックスの配布・補償／キャンペーン／ランキングの送信。どれも配布や送信の条件そのものを書き換えることになるため、
+            うっかり本物の記録を触らないよう入口を作っていません。
+          </p>
+        </section>
+      </div>
+    </main>
   );
 }
 
@@ -21412,7 +21650,7 @@ function MonsterHeroGame() {
   // モンスター画像確認はデバッグ画面を開いている間だけ保持し、セーブ領域へは書き込まない。
   const [monsterImageDebugId, setMonsterImageDebugId] = useState(null);
   const [monsterImageDebugBg, setMonsterImageDebugBg] = useState('checker');
-  const [monsterImageDebugTigerMode, setMonsterImageDebugTigerMode] = useState('old');
+  const [monsterImageDebugTigerMode, setMonsterImageDebugTigerMode] = useState('new');
   const [monsterImageDebugColors, setMonsterImageDebugColors] = useState(null);
   // モンスター画像・染色確認から、専用の攻撃モーション(atkMotion)を実際に再生して見るための状態。
   // 形は本番の attackAnim と同じ({charge}→{zanCombo,sakura}や{charge:false,motion,sakura})にして、
@@ -21486,8 +21724,9 @@ function MonsterHeroGame() {
     releaseTemporaryDyeMask(target.baseId);
     const url=URL.createObjectURL(blob);temporaryDyeMasksRef.current[target.baseId]=url;_temporaryDyeMasks[target.baseId]=url;
     setTemporaryDyeMasks({...temporaryDyeMasksRef.current});
-    const individual=masuMons.find(m=>m.baseId===target.baseId),preview=individual||{id:`temporary-dye-${target.baseId}`,baseId:target.baseId,name:target.name,colors:[]};
-    setMonsterImageDebugId(preview.id);setMonsterImageDebugColors(colors||getMasuColors(preview));setGameState('MONSTER_IMAGE_DEBUG');
+    // 確認先は「新モンスター確認」1つへまとめた(2026-09-17)。あちらは全種を並べるので、
+    // 所持していない種でも擬似個体を作らずにそのまま選べる
+    setMonsterCheckDebugId(target.baseId);setMonsterCheckDebugColors(colors||[]);setGameState('MONSTER_CHECK_DEBUG');
   };
   // バトルチュートリアル(操作しながら覚える)。null のときは動いていない。
   // いまはデバッグ設定からだけ開始できる。台本は data/assistants.js が持つ
@@ -27579,6 +27818,81 @@ function MonsterHeroGame() {
     } finally {
       transcendFruitProcessingRef.current = false;
     }
+  };
+  // ---------- データを用意する(DEBUG_DATA_SETUP) ----------
+  // 条件が揃わないと始まらないもの(ログインボーナス・ミッション・購入・アイテム・育成)を
+  // すぐ試せる状態にするための操作。CLAUDE.md ⑦ を守り、**既存の保存キーだけ**を使い、
+  // 配るものは足すだけにし、押すたびに確認を出す。
+  const [debugDataMasuStage, setDebugDataMasuStage] = useState('fresh');
+  const [debugDataMonsterId, setDebugDataMonsterId] = useState('');
+  // マーケットの消耗アイテムをそのまま使う(手で書き写すと古くなる)
+  const debugDataItemDefs = () => (typeof BREEDER_MARKET_ITEMS !== 'undefined' ? BREEDER_MARKET_ITEMS : []).filter(i => i?.type === 'item');
+  const debugGrantGold = async (amount) => {
+    const next = Math.max(0, Math.floor(gold)) + amount;
+    if (!window.confirm(`ダイヤを ${amount.toLocaleString()} 足して ${next.toLocaleString()} にします。よろしいですか？`)) return;
+    try { await storeSet('mh_gold', next, false); setGold(next); window.alert(`ダイヤを ${next.toLocaleString()} にしました。`); }
+    catch { window.alert('保存できませんでした。'); }
+  };
+  const debugGrantBreederPoints = async (amount) => {
+    const next = Math.max(0, Math.floor(breederPoints)) + amount;
+    if (!window.confirm(`ブリーダーPを ${amount} 足して ${next} にします。よろしいですか？`)) return;
+    try { await storeSet('mh_breeder_points', next, false); setBreederPoints(next); window.alert(`ブリーダーPを ${next} にしました。`); }
+    catch { window.alert('保存できませんでした。'); }
+  };
+  const debugGrantItem = async (itemId, amount) => {
+    const item = debugDataItemDefs().find(i => i.id === itemId);
+    if (!item) return;
+    const base = ownedItemsRef.current || ownedItems;
+    const next = { ...base, [itemId]: ownedItemCount(base, itemId) + amount };
+    if (!window.confirm(`${item.name} を ${amount} 個足して ${next[itemId]} 個にします。よろしいですか？`)) return;
+    try { await storeSet('mh_owned_items', next, false); ownedItemsRef.current = next; setOwnedItems(next); }
+    catch { window.alert('保存できませんでした。'); }
+  };
+  // 登録したてと同じ形の個体を作る。形は registerMasuMon とそろえ、
+  // 段階だけ後から足す(masuBaselineRepresentationsMatch を必ず通す)
+  const debugCreateMasu = async (baseId, stageId) => {
+    const base = ALL_PLAYER_MONSTERS[baseId];
+    if (!base) return;
+    const cap = stageId === 'fresh' ? INITIAL_MASU_LEVEL_CAP : (stageId === 'rebirth' ? breakthroughLevelCap(FINAL_BREAKTHROUGH_COUNT) : INITIAL_MASU_LEVEL_CAP);
+    const xp = totalBondXpForLevel(cap);
+    const label = stageId === 'fresh' ? '登録したて' : stageId === 'rebirth' ? '限界突破MAX' : '上限まで育てた';
+    if (!window.confirm(`${base.name} を「${label}」で1体つくり、マスモンへ足します。いまの所持はそのままです。よろしいですか？`)) return;
+    const level = bondLevelInfo(stageId === 'fresh' ? 0 : xp);
+    const masu = {
+      id: 'masu_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+      baseId, name: `${base.name}(DEBUG)`.slice(0, 12),
+      bondXp: stageId === 'fresh' ? 0 : xp,
+      rebirthCount: stageId === 'rebirth' ? FINAL_BREAKTHROUGH_COUNT : 0,
+      levelCap: cap,
+      soulRankStage: 0,
+      soulPointMaxReachedLevel: SOUL_RANK_BASE_LEVEL,
+      soulTraitLevels: {}, uniqueSkillLevels: {},
+      distAptPoints: Math.max(0, level.level - 1),
+      distApt: [...(base.distAptitude || ['C','C','C','C'])],
+      distAptBoosts: [0,0,0,0],
+      statPoints: { hp: 0, atk: 0, def: 0, guts: 0 },
+      createdAt: Date.now(),
+    };
+    if (!masuBaselineRepresentationsMatch(masu)) { window.alert('作れませんでした(形が本番とそろっていません)。'); return; }
+    const next = [...masuMons, masu];
+    try { await storeSet('mh_masu_mons', next, false); setMasuMons(next); window.alert(`${masu.name} を足しました。`); }
+    catch { window.alert('保存できませんでした。'); }
+  };
+  const debugResetLoginBonus = async () => {
+    if (!window.confirm('ログインボーナスを未受け取りへ戻します。いまの連続日数・受け取り済みは失われます。よろしいですか？')) return;
+    try { await storeSet('mh_login_bonus', LOGIN_BONUS_DEFAULT, false); setLoginBonusState(LOGIN_BONUS_DEFAULT); window.alert('戻しました。HOMEを開き直すと出ます。'); }
+    catch { window.alert('保存できませんでした。'); }
+  };
+  const debugResetMissions = async () => {
+    if (!window.confirm('ミッションを未達成へ戻します。いまの進み具合と受け取り済みは失われます。よろしいですか？')) return;
+    const fresh = normalizeMissions(null);
+    try { await storeSet('mh_missions', fresh, false); setMissions(fresh); window.alert('戻しました。'); }
+    catch { window.alert('保存できませんでした。'); }
+  };
+  const debugResetChangelogSeen = async () => {
+    if (!window.confirm('更新履歴を未読へ戻します。よろしいですか？')) return;
+    try { await storeSet('mh_changelog_seen', '', false); window.alert('戻しました。'); }
+    catch { window.alert('保存できませんでした。'); }
   };
   // ===== 超越のデバッグ(DEBUG_SETTINGS からだけ開ける) =====
   // 超越はLv400・35凸という到達点のうえに乗る機能なので、ふつうに遊んで条件を満たすまで
@@ -33922,6 +34236,49 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             畳むのは <details> そのものに任せているので、開閉のための state は持たない。
             ★中身(ボタンの文言・data-debug-* 属性・押したときの処理)は1つも変えていない。
               並べ替えただけで、検査が見ている目印はすべてこの画面の中に残してある */}
+        {/* データを用意する(デバッグ専用)。条件が揃わないと始まらないものを、すぐ試せる状態にする。
+            セーブデータを書き換えるので、押すたびに確認を出す(処理は本体側 debugGrant* / debugReset*) */}
+        {gameState==='DEBUG_DATA_SETUP'&&(
+          <DebugDataScreen
+            gold={gold}
+            breederPoints={breederPoints}
+            ownedItems={ownedItems}
+            masuMons={masuMons}
+            itemDefs={debugDataItemDefs()}
+            monsters={monsterCheckAllMonsters()}
+            stageId={debugDataMasuStage}
+            monsterId={debugDataMonsterId}
+            onStage={setDebugDataMasuStage}
+            onMonster={setDebugDataMonsterId}
+            onGrantGold={debugGrantGold}
+            onGrantPoints={debugGrantBreederPoints}
+            onGrantItem={debugGrantItem}
+            onCreateMasu={debugCreateMasu}
+            onResetLoginBonus={debugResetLoginBonus}
+            onResetMissions={debugResetMissions}
+            onResetChangelogSeen={debugResetChangelogSeen}
+            onBack={()=>setGameState('DEBUG_SETTINGS')}/>
+        )}
+
+        {/* ===== デバッグ戦の設定(デバッグ専用) =====
+            「難易度 → 敵 → 勇者モン → 開始」の4段。以前はデバッグ設定のメニューの中へ
+            そのまま埋まっていて、縦に1500pxほど伸びていた。次の欄へ行くのにそこを全部
+            スクロールする必要があり、メニューとして使えなかった
+            (2026-09-17・ユーザー指摘「デバッグモードのバトルに入った画面がごちゃついてる」)。
+            **メニューには入口だけを置き、道具そのものは専用の画面へ置く** ことにした。
+            中身と押したときの処理は1つも変えていない。 */}
+        {gameState==='DEBUG_BATTLE_SETUP'&&(
+          <main data-debug-battle-setup-screen data-mh-screen className="flex-1 flex flex-col h-full min-h-0 p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
+            <DebugScreenHead title="デバッグ戦" note="難易度と敵を選んで、その場で戦う" saves={false} onBack={()=>setGameState('DEBUG_SETTINGS')}/>
+            <div className="flex-1 min-h-0 overflow-y-auto mh-scroll space-y-4">
+              <section><div className="text-[10px] text-slate-500 font-black mb-2">1. 難易度</div><div className="grid grid-cols-3 gap-2">{Object.entries(DIFFICULTY_SETTINGS).map(([key,setting])=><button key={key} onClick={()=>{setDifficulty(key);const options=getDebugEnemyOptions(key);if(!options.some(o=>o.key===debugEnemyKey))setDebugEnemyKey(options[0]?.key||null);}} className={`min-h-[48px] rounded-xl text-[9px] font-black ${difficulty===key?'ring-2 ring-white':'border border-white/10'}`} style={difficultyStyle(setting,difficulty===key)}>{setting.label}</button>)}</div></section>
+              <section><div className="text-[10px] text-slate-500 font-black mb-2">2. 敵</div><div className="grid grid-cols-2 gap-2">{getDebugEnemyOptions(difficulty).map(({key,enemy:debugEnemy})=><button key={key} onClick={()=>setDebugEnemyKey(key)} className={`min-h-[46px] px-3 rounded-xl text-[11px] font-black ${debugEnemyKey===key?'bg-purple-950 border-2 border-purple-400 text-purple-100':'bg-slate-900 border border-white/10 text-slate-400'}`}>{debugEnemy.emoji} {debugEnemy.name}</button>)}</div></section>
+              <section><div className="text-[10px] text-slate-500 font-black mb-2">3. 勇者モン</div><button type="button" data-debug-strongest-monster aria-pressed={debugStrongestHero} onClick={()=>setDebugStrongestHero(v=>!v)} className={`w-full min-h-[58px] rounded-2xl border-2 px-3 font-black ${debugStrongestHero?'border-fuchsia-300 bg-fuchsia-800 text-white':'border-white/15 bg-slate-900 text-slate-300'}`}><span className="block">🛠 デバッグ最強モン</span><small className="block text-[8px] opacity-80">DEBUG専用・ライフ/ちから/丈夫さ/最大ガッツ 99990・全距離M</small></button></section>
+              <button disabled={!getDebugEnemyOptions(difficulty).some(o=>o.key===debugEnemyKey)||(!debugStrongestHero&&getActiveMonsterList().length===0)} onClick={startDebugBattle} className="w-full min-h-[58px] bg-slate-200 text-slate-950 rounded-2xl font-black disabled:opacity-30">4. デバッグ戦開始</button>
+            </div>
+          </main>
+        )}
+
         {gameState==='DEBUG_SETTINGS'&&(
           <div className="flex-1 flex flex-col h-full p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
             <div className="flex items-center gap-2 mb-2 shrink-0"><button onClick={()=>{setGameState('SETTINGS');openHelp();}} className="p-3 text-slate-500"><ArrowLeft size={20}/></button><h2 className="text-base font-black text-slate-400 tracking-widest">DEBUG MENU</h2></div>
@@ -33930,111 +34287,108 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
               {/* ---------- ① モンスター ---------- */}
               <details className="rounded-2xl border border-emerald-500/40 bg-emerald-950/20">
-                <summary className="cursor-pointer select-none px-3 py-3 text-[11px] font-black text-emerald-200">🧬 モンスター<small className="block text-[8px] font-bold text-emerald-400/80">新モンスター確認・画像と染色・転生／限界突破／超越の見た目・アイコン調整</small></summary>
+                <summary className="cursor-pointer select-none px-3 py-3 text-[11px] font-black text-emerald-200">🧬 モンスター<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">新モンスター確認・画像と染色・転生／限界突破／超越の見た目・アイコン調整</small></summary>
                 <div className="space-y-2 border-t border-emerald-500/30 p-3">
                   {/* 新モンスターを足したとき、確認すべきものが1枚で全部見られる画面。
                       所持・解放・debugOnly を問わず全種を並べるので、実装したあとも消えない */}
-                  <button data-debug-monster-check onClick={()=>setGameState('MONSTER_CHECK_DEBUG')} className="w-full min-h-[64px] rounded-2xl border-2 border-emerald-300 bg-emerald-900 text-emerald-50 font-black">🆕 新モンスター確認<small className="block text-[8px] text-emerald-300">全種を所持に関係なく表示。画像・染色・モーション・能力・技・血統・マーケットと実装チェック</small></button>
-                  <button onClick={()=>setGameState('MONSTER_IMAGE_DEBUG')} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black">🖼️ モンスター画像・染色確認<small className="block text-[8px] text-cyan-300">本番表示と染色を保存せず確認</small></button>
-                  <button onClick={()=>{setDyeMaskEditorOpened(true);setGameState('DYE_MASK_POSITION_DEBUG');}} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-400 text-cyan-100 rounded-2xl font-black">🖌️ 染色マスク編集<small className="block text-[8px] text-cyan-300">全ベースモンを選択して直接描画・PNG出力</small></button>
-                  <button onClick={()=>{setPatternMasuId(null);setPatternSettings(makePatternSettings());setGameState('MASU_PATTERN_DEBUG');}} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black">🎨 マスモン模様カスタムテスト<small className="block text-[8px] text-cyan-300">模様は保存されません</small></button>
+                  <button data-debug-monster-check onClick={()=>setGameState('MONSTER_CHECK_DEBUG')} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🆕 新モンスター確認<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">全種を所持に関係なく表示。画像・染色・モーション・能力・技・血統・マーケットと実装チェック</small></button>
+                  <button onClick={()=>{setDyeMaskEditorOpened(true);setGameState('DYE_MASK_POSITION_DEBUG');}} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🖌️ 染色マスク編集<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">全ベースモンを選択して直接描画・PNG出力</small></button>
+                  <button onClick={()=>{setPatternMasuId(null);setPatternSettings(makePatternSettings());setGameState('MASU_PATTERN_DEBUG');}} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🎨 マスモン模様カスタムテスト<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">模様は保存されません</small></button>
                   {/* 転生・限界突破★・超越の見た目は1画面のタブへまとめた(2026-09-17)。入口もここ1つだけにする */}
-                  <button data-debug-transcend onClick={()=>{setTranscendDebugId(null);setMasuLookTab('reincarnate');setGameState('TRANSCEND_DEBUG');}} className="w-full min-h-[64px] bg-amber-950 border-2 border-amber-400 text-amber-100 rounded-2xl font-black">⭐ 育成マークの見た目<small className="block text-[8px] text-amber-300">転生のオーラ・限界突破の★・超越マークを1画面で見比べる／超越を試す準備もここ</small></button>
-                  <button onClick={()=>setGameState('BREEDER_ICON_DEBUG')} className="w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black">🙂 プロフィールの見た目<small className="block text-[8px] text-fuchsia-300">顔アイコンの拡大・位置を決めてコピー／フレームとの相性もここで見る</small></button>
+                  <button data-debug-transcend onClick={()=>{setTranscendDebugId(null);setMasuLookTab('reincarnate');setGameState('TRANSCEND_DEBUG');}} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">⭐ 育成マークの見た目<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">転生のオーラ・限界突破の★・超越マークを1画面で見比べる／超越を試す準備もここ</small></button>
+                  <button onClick={()=>setGameState('BREEDER_ICON_DEBUG')} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🙂 プロフィールの見た目<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">顔アイコンの拡大・位置を決めてコピー／フレームとの相性もここで見る</small></button>
                 </div>
               </details>
 
               {/* ---------- ② バトル ---------- */}
               <details className="rounded-2xl border border-fuchsia-500/40 bg-fuchsia-950/20">
-                <summary className="cursor-pointer select-none px-3 py-3 text-[11px] font-black text-fuchsia-200">⚔️ バトル<small className="block text-[8px] font-bold text-fuchsia-400/80">モード選択・種族チャレンジ・ダンジョンRPG・チュートリアル・デバッグ戦</small></summary>
+                <summary className="cursor-pointer select-none px-3 py-3 text-[11px] font-black text-fuchsia-200">⚔️ バトル<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">モード選択・デバッグ戦・種族チャレンジ・ダンジョンRPG・チュートリアル</small></summary>
                 <div className="space-y-2 border-t border-fuchsia-500/30 p-3">
-                  <button data-debug-battle-mode onClick={()=>{debugBattleRef.current=true;debugMonsterPreviewRef.current=true;extremeRunRef.current=false;setDebugBattle(true);setExtremeRun(false);setBattleMode(BATTLE_MODE_CHALLENGE);setModeSelectTab('mode');setGameState('BATTLE_MODE_SELECT');}} className="w-full min-h-[64px] rounded-2xl border-2 border-fuchsia-500/70 bg-fuchsia-950/30 text-fuchsia-100 font-black">⚔️ バトルモード<small className="block text-[8px] text-fuchsia-300">種族チャレンジ・極限チャレンジを含む試験用モード選択・結果は保存されません</small></button>
-                  <button data-debug-species-challenge onClick={async()=>{await loadSpeciesChallengeProgress();setGameState('SPECIES_CHALLENGE_DEBUG');}} className="w-full min-h-[64px] bg-emerald-950 border-2 border-emerald-400 text-emerald-100 rounded-2xl font-black">🧬 種族チャレンジ進行確認<small className="block text-[8px] text-emerald-300">種族別の解放・クリア・初回報酬を確認／編集</small></button>
+                  <button data-debug-battle-mode onClick={()=>{debugBattleRef.current=true;debugMonsterPreviewRef.current=true;extremeRunRef.current=false;setDebugBattle(true);setExtremeRun(false);setBattleMode(BATTLE_MODE_CHALLENGE);setModeSelectTab('mode');setGameState('BATTLE_MODE_SELECT');}} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">⚔️ バトルモード<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">種族チャレンジ・極限チャレンジを含む試験用モード選択・結果は保存されません</small></button>
+                  {/* デバッグ戦の「難易度9個 → 敵10個 → 勇者モン → 開始」は、以前このメニューの中へ
+                      そのまま埋まっていた。1500pxほど縦に伸びていて、次の欄へ行くのにそこを全部
+                      スクロールする必要があった(2026-09-17・ユーザー指摘)。専用の画面へ移した。
+                      **メニューには入口だけを置き、道具そのものを埋めない** のが決めごと */}
+                  <DebugMenuRow data-debug-battle-setup icon="🛠" label="デバッグ戦" desc="難易度と敵を選んで戦う。結果は保存されません" onClick={()=>setGameState('DEBUG_BATTLE_SETUP')}/>
+                  <button data-debug-species-challenge onClick={async()=>{await loadSpeciesChallengeProgress();setGameState('SPECIES_CHALLENGE_DEBUG');}} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🧬 種族チャレンジ進行確認<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">種族別の解放・クリア・初回報酬を確認／編集</small></button>
                   {/* 将来つくる独立型ダンジョンRPGの戦闘だけを先に試す試作。入口はここだけで、
                       通常HOME・通常バトル・マスモン管理には出さない。保存・報酬・ランキングへは触れない */}
-                  <button data-debug-rpg-battle onClick={()=>{setRpgBattle(null);setGameState('RPG_DEBUG_SETUP');}} className="w-full min-h-[64px] rounded-2xl border-2 border-emerald-400/70 bg-emerald-950/40 text-emerald-100 font-black">⚔️ ダンジョンRPG戦闘テスト<small className="block text-[8px] text-emerald-300">コマンド式ターン制の試作・ベースモンのみ・保存も報酬もありません</small></button>
-                  <div className="grid grid-cols-2 gap-2">
-                    {/* 新しいバトルの入口(バトルモード再編・第2段階)。ふだんの「バトル」はこれまでどおりで、
-                        ここからだけ新しいモード選択・難易度選択・モード別ランキングを見られる。
-                        チャレンジ・クイックはそのまま遊べて記録も通常どおり残る。プロモードの中身は第3段階 */}
-                    <button onClick={()=>{setBattleMenuTab('difficulty');setGameState('BATTLE_MENU');}} className="col-span-2 min-h-[46px] rounded-xl bg-slate-800 border border-white/20 text-slate-300 text-[10px] font-black active:scale-95">旧バトル画面を開く（見比べ用）</button>
-                    {/* バトルチュートリアル(お試し)。記録は一切残らないので何度でも遊べる */}
-                    <button onClick={()=>startBattleTutorial()} className="col-span-2 min-h-[46px] rounded-xl bg-indigo-700/80 border border-indigo-300/60 text-white text-[10px] font-black active:scale-95">バトルチュートリアル開始（記録は残りません）</button>
-                    {/* 旧バージョンのチュートリアル。旧バトル画面(BATTLE_MENU)から始まる。
-                        見比べ用にここからだけ開ける。最後まで通しても「見た」とは記録しない */}
-                    <button onClick={()=>startBattleTutorial('DEBUG_SETTINGS','v1')} className="col-span-2 min-h-[46px] rounded-xl bg-slate-800 border border-white/20 text-slate-300 text-[10px] font-black active:scale-95">旧バトルチュートリアルを見る（旧バトル画面・記録は残りません）</button>
-                    <button onClick={async()=>{await storeSet(BATTLE_TUTORIAL_SEEN_KEY,false,false);window.alert('バトルチュートリアルを未視聴に戻しました。');}} className="min-h-[46px] rounded-xl bg-amber-950/60 border border-amber-500/50 text-amber-100 text-[10px] font-black active:scale-95">バトル練習を未視聴へ戻す</button>
-                    <button onClick={async()=>{await storeSet(BATTLE_TUTORIAL_GUIDE_SHOWN_KEY,false,false);battleTutorialGuideCheckedRef.current=false;window.alert('初回案内を未表示に戻しました。');}} className="min-h-[46px] rounded-xl bg-amber-950/60 border border-amber-500/50 text-amber-100 text-[10px] font-black active:scale-95">初回案内を未表示へ戻す</button>
-                    <button onClick={()=>{returnToHome();startTutorial('battleGuide');}} className="col-span-2 min-h-[46px] rounded-xl bg-pink-700/70 border border-pink-300/60 text-white text-[10px] font-black active:scale-95">バトル初回案内を再生</button>
-                  </div>
-                  {/* デバッグ戦は「難易度 → 敵 → 勇者モン → 開始」の4段。順番に選ぶものなので囲って続けて置く */}
-                  <div className="space-y-3 rounded-2xl border border-white/10 bg-black/20 p-3">
-                    <div className="text-[10px] font-black text-slate-300">🛠 デバッグ戦（結果は保存されません）</div>
-                    <section><div className="text-[10px] text-slate-500 font-black mb-2">1. 難易度</div><div className="grid grid-cols-3 gap-2">{Object.entries(DIFFICULTY_SETTINGS).map(([key,setting])=><button key={key} onClick={()=>{setDifficulty(key);const options=getDebugEnemyOptions(key);if(!options.some(o=>o.key===debugEnemyKey))setDebugEnemyKey(options[0]?.key||null);}} className={`min-h-[48px] rounded-xl text-[9px] font-black ${difficulty===key?'ring-2 ring-white':'border border-white/10'}`} style={difficultyStyle(setting,difficulty===key)}>{setting.label}</button>)}</div></section>
-                    <section><div className="text-[10px] text-slate-500 font-black mb-2">2. 敵</div><div className="grid grid-cols-2 gap-2">{getDebugEnemyOptions(difficulty).map(({key,enemy:debugEnemy})=><button key={key} onClick={()=>setDebugEnemyKey(key)} className={`min-h-[46px] px-3 rounded-xl text-[11px] font-black ${debugEnemyKey===key?'bg-purple-950 border-2 border-purple-400 text-purple-100':'bg-slate-900 border border-white/10 text-slate-400'}`}>{debugEnemy.emoji} {debugEnemy.name}</button>)}</div></section>
-                    <section><div className="text-[10px] text-slate-500 font-black mb-2">3. 勇者モン</div><button type="button" data-debug-strongest-monster aria-pressed={debugStrongestHero} onClick={()=>setDebugStrongestHero(v=>!v)} className={`w-full min-h-[58px] rounded-2xl border-2 px-3 font-black ${debugStrongestHero?'border-fuchsia-300 bg-fuchsia-800 text-white':'border-white/15 bg-slate-900 text-slate-300'}`}><span className="block">🛠 デバッグ最強モン</span><small className="block text-[8px] opacity-80">DEBUG専用・ライフ/ちから/丈夫さ/最大ガッツ 99990・全距離M</small></button></section>
-                    <button disabled={!getDebugEnemyOptions(difficulty).some(o=>o.key===debugEnemyKey)||(!debugStrongestHero&&getActiveMonsterList().length===0)} onClick={startDebugBattle} className="w-full min-h-[58px] bg-slate-200 text-slate-950 rounded-2xl font-black disabled:opacity-30">4. デバッグ戦開始</button>
-                  </div>
+                  <button data-debug-rpg-battle onClick={()=>{setRpgBattle(null);setGameState('RPG_DEBUG_SETUP');}} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">⚔️ ダンジョンRPG戦闘テスト<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">コマンド式ターン制の試作・ベースモンのみ・保存も報酬もありません</small></button>
+                  {/* チュートリアルと、見比べ用の旧画面。ふだんは使わないので畳んでおく */}
+                  <details className="rounded-2xl border border-white/10 bg-black/20">
+                    <summary className="cursor-pointer select-none px-3 py-2.5 text-[11px] font-black text-slate-200">📖 チュートリアルと旧画面<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">再生・未読へ戻す・見比べ用の旧バトル画面</small></summary>
+                    <div className="grid grid-cols-2 gap-2 border-t border-white/10 p-3">
+                      <button onClick={()=>startBattleTutorial()} className="min-h-[50px] rounded-xl border border-cyan-400/50 bg-cyan-950/40 px-2 text-center text-[11px] font-black leading-tight active:scale-95">バトルチュートリアル開始（記録は残りません）</button>
+                      <button onClick={()=>{returnToHome();startTutorial('battleGuide');}} className="min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95">バトル初回案内を再生</button>
+                      <button onClick={async()=>{await storeSet(BATTLE_TUTORIAL_SEEN_KEY,false,false);window.alert('バトルチュートリアルを未視聴に戻しました。');}} className="min-h-[50px] rounded-xl border border-rose-400/60 bg-rose-950/50 px-2 text-center text-[11px] font-black leading-tight active:scale-95">バトル練習を未視聴へ戻す</button>
+                      <button onClick={async()=>{await storeSet(BATTLE_TUTORIAL_GUIDE_SHOWN_KEY,false,false);battleTutorialGuideCheckedRef.current=false;window.alert('初回案内を未表示に戻しました。');}} className="min-h-[50px] rounded-xl border border-rose-400/60 bg-rose-950/50 px-2 text-center text-[11px] font-black leading-tight active:scale-95">初回案内を未表示へ戻す</button>
+                      <button onClick={()=>{setBattleMenuTab('difficulty');setGameState('BATTLE_MENU');}} className="min-h-[50px] rounded-xl border border-cyan-400/50 bg-cyan-950/40 px-2 text-center text-[11px] font-black leading-tight active:scale-95">旧バトル画面を開く（見比べ用）</button>
+                      <button onClick={()=>startBattleTutorial('DEBUG_SETTINGS','v1')} className="min-h-[50px] rounded-xl border border-cyan-400/50 bg-cyan-950/40 px-2 text-center text-[11px] font-black leading-tight active:scale-95">旧バトルチュートリアルを見る（旧バトル画面・記録は残りません）</button>
+                    </div>
+                  </details>
                 </div>
               </details>
 
               {/* ---------- ③ モンヒロビート ---------- */}
               <details className="rounded-2xl border border-indigo-400/40 bg-indigo-950/30">
-                <summary className="cursor-pointer select-none px-3 py-3 text-[11px] font-black text-cyan-200">🎵 モンヒロビート<small className="block text-[8px] font-bold text-cyan-400/80">音ゲーデバッグ・体験版の導線・イベントの会話と告知</small></summary>
+                <summary className="cursor-pointer select-none px-3 py-3 text-[11px] font-black text-cyan-200">🎵 モンヒロビート<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">音ゲーデバッグ・体験版の導線・イベントの会話と告知</small></summary>
                 <div className="space-y-2 border-t border-indigo-400/30 p-3">
-                  <button data-debug-rhythm-mode onClick={openRhythmDebug} className="w-full min-h-[64px] rounded-2xl border-2 border-cyan-300 bg-indigo-950 text-cyan-100 font-black">🎵 モンヒロビート デバッグ<small className="block text-[8px] text-cyan-300">曲・難易度・設定・BEST保存基盤を確認</small></button>
-                  <button data-debug-rhythm-demo onClick={openRhythmDemo} className="w-full min-h-[64px] rounded-2xl border-2 border-amber-300 bg-amber-950/40 text-amber-100 font-black">🎼 モンヒロビート 体験版（正式導線）<small className="block text-[8px] text-amber-300">公開したときプレイヤーが通る画面。Monster Hero 1曲・3難易度</small></button>
+                  <button data-debug-rhythm-mode onClick={openRhythmDebug} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🎵 モンヒロビート デバッグ<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">曲・難易度・設定・BEST保存基盤を確認</small></button>
+                  <button data-debug-rhythm-demo onClick={openRhythmDemo} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🎼 モンヒロビート 体験版（正式導線）<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">公開したときプレイヤーが通る画面。Monster Hero 1曲・3難易度</small></button>
                   {/* モンヒロビートのイベント(週末ゲリラ杯)の確認。開催の時刻を待たずに見られる。
                       どれも「見た」にしないので、本番のときにちゃんと出る。
                       デバッグ専用なので更新履歴・ヘルプには載せない(CLAUDE.md ⑤の但し書き) */}
                   <div className="grid grid-cols-2 gap-2">
-                    <button data-debug-rhythm-event-intro onClick={debugPlayRhythmEventIntro} className="col-span-2 min-h-[46px] rounded-xl bg-fuchsia-800/70 border border-fuchsia-300/60 text-white text-[10px] font-black active:scale-95">🏆 イベント開催を再生（会話→告知）</button>
-                    <button data-debug-rhythm-event-story onClick={debugPlayRhythmEventStory} className="min-h-[46px] rounded-xl bg-fuchsia-900/60 border border-fuchsia-400/50 text-fuchsia-100 text-[10px] font-black active:scale-95">イベント会話だけ再生</button>
-                    <button data-debug-rhythm-event-thanks onClick={debugPlayRhythmEventThanks} className="min-h-[46px] rounded-xl bg-fuchsia-900/60 border border-fuchsia-400/50 text-fuchsia-100 text-[10px] font-black active:scale-95">閉幕とお礼の会話を再生</button>
-                    <button data-debug-rhythm-event-notice onClick={debugPlayRhythmEventNotice} className="min-h-[46px] rounded-xl bg-fuchsia-900/60 border border-fuchsia-400/50 text-fuchsia-100 text-[10px] font-black active:scale-95">イベント告知だけ再生</button>
-                    <button data-debug-rhythm-event-reward onClick={debugPlayRhythmEventReward} className="min-h-[46px] rounded-xl bg-amber-900/60 border border-amber-400/50 text-amber-100 text-[10px] font-black active:scale-95">入賞の受け取り画面を見る</button>
-                    <button data-debug-rhythm-event-reset onClick={debugResetRhythmEventSeen} className="col-span-2 min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95">イベントを未読へ戻す</button>
+                    <button data-debug-rhythm-event-intro onClick={debugPlayRhythmEventIntro} className="min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95">🏆 イベント開催を再生（会話→告知）</button>
+                    <button data-debug-rhythm-event-story onClick={debugPlayRhythmEventStory} className="min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95">イベント会話だけ再生</button>
+                    <button data-debug-rhythm-event-thanks onClick={debugPlayRhythmEventThanks} className="min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95">閉幕とお礼の会話を再生</button>
+                    <button data-debug-rhythm-event-notice onClick={debugPlayRhythmEventNotice} className="min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95">イベント告知だけ再生</button>
+                    <button data-debug-rhythm-event-reward onClick={debugPlayRhythmEventReward} className="min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95">入賞の受け取り画面を見る</button>
+                    <button data-debug-rhythm-event-reset onClick={debugResetRhythmEventSeen} className="min-h-[50px] rounded-xl border border-rose-400/60 bg-rose-950/50 text-cyan-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95">イベントを未読へ戻す</button>
                   </div>
                 </div>
               </details>
 
               {/* ---------- ④ 助手・案内 ---------- */}
               <details className="rounded-2xl border border-pink-500/50 bg-pink-950/25">
-                <summary className="cursor-pointer select-none px-3 py-3 text-[11px] font-black text-pink-200">💖 みゅあデバッグ<small className="block text-[8px] font-bold text-pink-400/80">初回プレイの再生・セリフと表情・親密度・アップデート通知・ワンポイント案内</small></summary>
+                <summary className="cursor-pointer select-none px-3 py-3 text-[11px] font-black text-pink-200">💖 みゅあデバッグ<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">初回プレイの再生・セリフと表情・親密度・アップデート通知・ワンポイント案内</small></summary>
                 <div className="space-y-2 border-t border-pink-500/30 p-3">
                   {/* 助手(みゅあ)の確認用。通常のプレイでは出ない画面からだけ開ける */}
                   <div className="grid grid-cols-2 gap-2">
                     {/* 初回導線の通し確認。助手選択から村の案内まで、本番と同じ画面・同じ台本を順に出す。
                         再生中は保存を丸ごと止めるので、何度くり返しても本物のセーブは変わらない */}
-                    <button data-debug-onboarding-preview onClick={startOnboardingPreview} className="col-span-2 min-h-[46px] rounded-xl bg-pink-700/70 border border-pink-300/60 text-white text-[10px] font-black active:scale-95">初回プレイを最初から再生<small className="block text-[8px] font-bold opacity-80">助手選択→あいさつ→プロフィール→村の案内→HOME・保存されません</small></button>
-                    <button onClick={()=>{returnToHome();startTutorial('intro');}} className="min-h-[46px] rounded-xl bg-pink-900/60 border border-pink-400/50 text-pink-100 text-[10px] font-black active:scale-95">みゅあのあいさつだけ再生</button>
-                    <button onClick={()=>{returnToHome();startTutorial('tour');}} className="min-h-[46px] rounded-xl bg-pink-900/60 border border-pink-400/50 text-pink-100 text-[10px] font-black active:scale-95">村の案内だけ再生</button>
-                    <button onClick={()=>{returnToHome();setKikiIntroStep(0);}} className="col-span-2 min-h-[46px] rounded-xl bg-pink-900/60 border border-pink-400/50 text-pink-100 text-[10px] font-black active:scale-95">きき加入の会話を再生</button>
-                    <button onClick={()=>setAssistantDebug('lines')} className="min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95">全助手コメント確認</button>
-                    <button onClick={()=>setAssistantDebug('expressions')} className="min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95">全表情確認</button>
-                    <button onClick={()=>setAssistantDebug('conditions')} className="min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95">条件コメント確認</button>
-                    <button onClick={()=>setAssistantDebug('spam')} className="min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95">連打リアクション確認</button>
-                    <button onClick={()=>setAssistantDebug('bond')} className="min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95">親密度・呼び方確認</button>
-                    <button onClick={()=>setAssistantDebug('random')} className="min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95">ランダムテスト</button>
-                    <button onClick={debugPlayUpdateGuide} className="min-h-[46px] rounded-xl bg-pink-700/70 border border-pink-300/60 text-white text-[10px] font-black active:scale-95">アップデート通知テスト</button>
-                    <button onClick={debugResetUpdateGuide} className="min-h-[46px] rounded-xl bg-amber-950/60 border border-amber-500/50 text-amber-100 text-[10px] font-black active:scale-95">通知テストを未読へ戻す</button>
-                    <button onClick={()=>debugDailyMasuAdviceAt(7)} className="col-span-2 min-h-[46px] rounded-xl bg-pink-700/70 border border-pink-300/60 text-white text-[10px] font-black active:scale-95">ワンポイント案内を再生（登録数7体）</button>
-                    <button onClick={()=>debugDailyMasuAdviceAt(8)} className="min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95">登録数8体の条件確認</button>
-                    <button onClick={async()=>{await storeSet(DAILY_MASU_ADVICE_KEY,'',false);dailyMasuAdviceCheckedRef.current=false;window.alert('本日のワンポイント表示済みフラグをリセットしました。');}} className="min-h-[46px] rounded-xl bg-amber-950/60 border border-amber-500/50 text-amber-100 text-[10px] font-black active:scale-95">本日の表示済みをリセット</button>
+                    <button data-debug-onboarding-preview onClick={startOnboardingPreview} className="w-full min-h-[58px] rounded-2xl border-2 border-pink-400/50 bg-pink-950/40 text-pink-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">初回プレイを最初から再生<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">助手選択→あいさつ→プロフィール→村の案内→HOME・保存されません</small></button>
+                    <button onClick={()=>{returnToHome();startTutorial('intro');}} className="min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95">みゅあのあいさつだけ再生</button>
+                    <button onClick={()=>{returnToHome();startTutorial('tour');}} className="min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95">村の案内だけ再生</button>
+                    <button onClick={()=>{returnToHome();setKikiIntroStep(0);}} className="min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95">きき加入の会話を再生</button>
+                    <button onClick={()=>setAssistantDebug('lines')} className="min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95">全助手コメント確認</button>
+                    <button onClick={()=>setAssistantDebug('expressions')} className="min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95">全表情確認</button>
+                    <button onClick={()=>setAssistantDebug('conditions')} className="min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95">条件コメント確認</button>
+                    <button onClick={()=>setAssistantDebug('spam')} className="min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95">連打リアクション確認</button>
+                    <button onClick={()=>setAssistantDebug('bond')} className="min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95">親密度・呼び方確認</button>
+                    <button onClick={()=>setAssistantDebug('random')} className="min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95">ランダムテスト</button>
+                    <button onClick={debugPlayUpdateGuide} className="min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95">アップデート通知テスト</button>
+                    <button onClick={debugResetUpdateGuide} className="min-h-[50px] rounded-xl border border-rose-400/60 bg-rose-950/50 text-cyan-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95">通知テストを未読へ戻す</button>
+                    <button onClick={()=>debugDailyMasuAdviceAt(7)} className="min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95">ワンポイント案内を再生（登録数7体）</button>
+                    <button onClick={()=>debugDailyMasuAdviceAt(8)} className="min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95">登録数8体の条件確認</button>
+                    <button onClick={async()=>{await storeSet(DAILY_MASU_ADVICE_KEY,'',false);dailyMasuAdviceCheckedRef.current=false;window.alert('本日のワンポイント表示済みフラグをリセットしました。');}} className="min-h-[50px] rounded-xl border border-rose-400/60 bg-rose-950/50 px-2 text-center text-[11px] font-black leading-tight active:scale-95">本日の表示済みをリセット</button>
                   </div>
                   {/* 初回状態へ戻すのは、はじめての案内をもう一度見るためのもの。
                       セーブデータ(モンスター・ダイヤ・記録)には一切触らない */}
-                  <button onClick={async()=>{ if(!window.confirm('「はじめての案内」を見ていない状態に戻します。モンスターやダイヤなどのセーブデータは消えません。よろしいですか？')) return; try{ await storeSet(TUTORIAL_SEEN_KEY,false,false); }catch{} tutorialShownRef.current=false; window.alert('初回状態へ戻しました。HOMEを開くと案内が始まります。'); }} className="w-full min-h-[42px] rounded-xl bg-amber-950/60 border border-amber-500/50 text-amber-100 text-[10px] font-black active:scale-95">初回状態へ戻す（セーブは消えません）</button>
+                  <button onClick={async()=>{ if(!window.confirm('「はじめての案内」を見ていない状態に戻します。モンスターやダイヤなどのセーブデータは消えません。よろしいですか？')) return; try{ await storeSet(TUTORIAL_SEEN_KEY,false,false); }catch{} tutorialShownRef.current=false; window.alert('初回状態へ戻しました。HOMEを開くと案内が始まります。'); }} className="min-h-[50px] rounded-xl border border-rose-400/60 bg-rose-950/50 px-2 text-center text-[11px] font-black leading-tight active:scale-95">初回状態へ戻す（セーブは消えません）</button>
                 </div>
               </details>
 
               {/* ---------- ⑤ その他 ---------- */}
               <details className="rounded-2xl border border-slate-500/40 bg-slate-900/50">
-                <summary className="cursor-pointer select-none px-3 py-3 text-[11px] font-black text-slate-200">🛠 その他<small className="block text-[8px] font-bold text-slate-400/80">修行テスト・画面エラーの受け止め</small></summary>
+                <summary className="cursor-pointer select-none px-3 py-3 text-[11px] font-black text-slate-200">🛠 その他<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">修行テスト・画面エラーの受け止め</small></summary>
                 <div className="space-y-2 border-t border-slate-500/30 p-3">
-                  <button onClick={openDebugTraining} className="w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black">🎲 修行テスト<small className="block text-[8px] text-fuchsia-300">報酬・進行は保存されません</small></button>
+                  {/* 条件が揃わないと始まらないもの(ログインボーナス・ミッション・購入・アイテム・育成)を用意する。
+                      セーブデータを書き換えるので赤にしてある */}
+                  <button data-debug-data-setup onClick={()=>setGameState('DEBUG_DATA_SETUP')} className="w-full min-h-[58px] rounded-2xl border-2 border-rose-400/60 bg-rose-950/50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🧰 データを用意する<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">ダイヤ・アイテム・テストのマスモンを配る／ログインボーナスとミッションをもう一度出す</small></button>
+                  <button onClick={openDebugTraining} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🎲 修行テスト<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">報酬・進行は保存されません</small></button>
                   {/* 画面エラーの受け止め(MhErrorBoundary)を実際に試す。押すとこの画面の描画で例外が起き、真っ白の代わりに「ホームへ戻る」が出るはず */}
-                  <button data-debug-screen-error onClick={()=>setDebugThrowScreenError(true)} className="w-full min-h-[48px] rounded-2xl border border-rose-400/70 bg-rose-950/40 text-rose-100 font-black text-sm">⚠️ 画面エラーの受け止めを試す</button>
+                  <button data-debug-screen-error onClick={()=>setDebugThrowScreenError(true)} className="min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95">⚠️ 画面エラーの受け止めを試す</button>
                   {debugThrowScreenError&&<DebugThrowScreenError/>}
                 </div>
               </details>
@@ -34186,117 +34540,6 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </main>;
         })()}
 
-        {gameState==='MONSTER_IMAGE_DEBUG'&&(()=>{
-          const owned=[...masuMons.filter(m=>ALL_PLAYER_MONSTERS[m.baseId])];
-          if(temporaryDyeMasks.Mia)owned.push({id:'temporary-dye-Mia',baseId:'Mia',name:'ミーア（一時確認）',colors:[]});
-          Object.keys(temporaryDyeMasks).forEach(baseId=>{if(!owned.some(m=>m.baseId===baseId)&&ALL_PLAYER_MONSTERS[baseId])owned.push({id:`temporary-dye-${baseId}`,baseId,name:`${ALL_PLAYER_MONSTERS[baseId].name}（一時確認）`,colors:[]});});
-          // 正式実装前のモンスター(debugOnly)は、そもそもマスモン登録ができない
-          // (registerMasuMon 側で弾いている)ため、上のマスモン一覧には絶対に出てこない。
-          // 所持を経ずにここへ入れておくことで、実装中でも立ち絵・染色・顔アイコン・
-          // 攻撃モーションを保存データに触れず確認できるようにする
-          Object.values(ALL_PLAYER_MONSTERS).forEach(mon=>{if(mon?.debugOnly&&!owned.some(m=>m.baseId===mon.id))owned.push({id:`debug-preview-${mon.id}`,baseId:mon.id,name:`${mon.name}（実装確認・DEBUG専用）`,colors:[]});});
-          // ★ここから下は「正式実装したあとも消えないようにする」ぶん(2026-09-17・ユーザー指摘
-          //   「実装したら消えちゃうのも良くない」)。上の debugOnly の差し込みは、正式実装して
-          //   debugOnly を外したとたん効かなくなり、所持していない種はこの一覧から丸ごと消えていた
-          //   (エイキが実際にそうなった。いま debugOnly の種は1体もいないので、上の行は何も足していない)。
-          //   所持・解放を問わず全種を並べておけば、実装の前も後も同じように確認できる。
-          //   保存には一切触れない表示専用の擬似個体なので、セーブデータへは何の影響も無い
-          Object.values(ALL_PLAYER_MONSTERS).forEach(mon=>{if(mon?.id&&!owned.some(m=>m.baseId===mon.id))owned.push({id:`debug-preview-${mon.id}`,baseId:mon.id,name:`${mon.name}（未所持）`,colors:[]});});
-          const selected=owned.find(m=>String(m.id)===String(monsterImageDebugId))||owned[0];
-          if(!selected)return <main className="flex-1 p-4"><header className="flex items-center"><button onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3"><ArrowLeft/></button><h2 className="font-black">モンスター画像・染色確認</h2></header><p className="p-6 text-center text-slate-400">確認できる所持モンスター個体がありません。</p></main>;
-          const base=ALL_PLAYER_MONSTERS[selected.baseId];
-          const regionCount=dyeRegionCount(selected.baseId);
-          const colors=Array.from({length:regionCount},(_,i)=>monsterImageDebugColors===null?(getMasuColors(selected)[i]||null):(monsterImageDebugColors[i]||null));
-          const isTiger=selected.baseId==='Tiger';
-          const productionSources={imgUrl:base.imgUrl,iconUrl:base.iconUrl,faceIconUrl:base.faceIconUrl};
-          // プロフィールアイコンは本番(BreederIcon)で MARKET_PROFILE_ICON_STYLES の拡大・位置調整が掛かる。
-          // ライガー・ミーア・パンドラ等は faceIconUrl が立ち絵そのままなので、これが無いとプレビューだけ
-          // 全身が写り、本番とまったく別物になる。idは本番と同じ一覧(breederIconOptions)から絵で引き当てる
-          // (base.id を直に使うと、同じidで登録されている円盤石用の値を誤って拾う)
-          const profileIconStyle=marketProfileIconStyle((breederIconOptions({includeUnowned:true}).find(o=>String(o.src||'').split('?')[0]===String(base.faceIconUrl||'').split('?')[0])||{}).id);
-          const oldSources=isTiger?{imgUrl:TIGER_ROLLBACK_IMG,iconUrl:TIGER_ROLLBACK_ICON,faceIconUrl:TIGER_ROLLBACK_ICON}:productionSources;
-          const newSources=productionSources;
-          const variants=isTiger&&monsterImageDebugTigerMode==='compare'?[['旧',oldSources],['新',newSources]]:[[isTiger&&monsterImageDebugTigerMode==='new'?'新':'本番',isTiger&&monsterImageDebugTigerMode==='new'?newSources:oldSources]];
-          const bgStyle=monsterImageDebugBg==='white'?{background:'#fff'}:monsterImageDebugBg==='black'?{background:'#000'}:{backgroundColor:'#cbd5e1',backgroundImage:'linear-gradient(45deg,#64748b 25%,transparent 25%),linear-gradient(-45deg,#64748b 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#64748b 75%),linear-gradient(-45deg,transparent 75%,#64748b 75%)',backgroundSize:'16px 16px',backgroundPosition:'0 0,0 8px,8px -8px,-8px 0'};
-          const frameNote=(note)=>note?<small className="mt-0.5 block text-[7px] font-normal text-slate-400">{note}</small>:null;
-          const renderPair=(label,sourceKey,palette,frameClass='h-32',fit='object-contain',imgStyle=null,note='')=><section className="rounded-xl bg-black/30 p-2"><b className="block mb-2 text-center text-[9px] text-cyan-200">{label}{frameNote(note)}</b><div className={`grid gap-2 ${variants.length===2?'grid-cols-2':'grid-cols-1'}`}>{variants.map(([name,sources])=><div key={name} className="text-center"><div className={`${frameClass} overflow-hidden border border-white/20 flex items-center justify-center`} style={bgStyle}>{palette===null?<img src={sources[sourceKey]} alt={`${name}${label}`} className={`w-full h-full ${fit}`} style={imgStyle||undefined}/>:<DyedMonsterImage baseId="Tiger" src={sources[sourceKey]} alt={`${name}${label}`} masuColors={palette} className={`w-full h-full ${fit}`} style={imgStyle||undefined}/>}</div><small className="text-[8px] font-black">{name}</small></div>)}</div></section>;
-          const renderCurrent=(label,sourceKey,palette,frameClass='h-32',fit='object-contain',imgStyle=null,note='')=>{if(isTiger)return renderPair(label,sourceKey,palette,frameClass,fit,imgStyle,note);const src=oldSources[sourceKey];
-            // 染色なし(元画像)の表示も、本番と同じ収め方(MONSTER_ART_CONTAIN_IDSのcontain上書き)を通す。
-            // ここを通さないと、縦長の立ち絵(ウンディーネ・エイキ等)の「元画像」だけ本番よりきつく
-            // 切り取られて出てしまい、確認画面のほうが実際の見え方より悪く見えてしまう
-            return <section className="rounded-xl bg-black/30 p-2 text-center"><b className="block mb-2 text-[9px] text-cyan-200">{label}{frameNote(note)}</b><div className={`${frameClass} overflow-hidden border border-white/20`} style={bgStyle}>{palette===null?<img src={src} alt={label} className={`w-full h-full ${fit}`} style={{...monsterArtFitStyle(base.id,undefined),...(imgStyle||{})}}/>:<DyedMonsterImage baseId={base.id} src={src} alt={label} masuColors={palette} className={`w-full h-full ${fit}`} style={imgStyle||undefined}/>}</div></section>};
-          const colorText=(c)=>{if(!c)return '元の色';const{base,alpha}=splitColorAlpha(c);const name=_parseCustomColorId(base)?`カスタム(${base})`:(MASU_COLOR_LABELS[base]||base);return alpha<MASU_COLOR_ALPHA_MAX?`${name} 濃さ${alpha}%`:name;};
-          // 専用の攻撃モーション(atkMotion)を、本番のバトル画面とまったく同じ関数・同じCSSで再生する。
-          // パンドラの分身(pandoraDualThunder)は枠を動かすのではなく専用コンポーネントが要るため、ここでは対象外にする
-          const atkMotion=base.atkMotion||'default';
-          const motionSupported=atkMotion!=='default'&&atkMotion!=='pandoraDualThunder';
-          const isDashMotion=atkMotion==='zanCombo'||atkMotion==='eikiSakuraCombo'||atkMotion==='kenshiTwinBlade';
-          const playMotionPreview=async()=>{
-            if(!motionSupported||monsterImageDebugMotionPlaying)return;
-            setMonsterImageDebugMotionPlaying({charge:true});
-            await new Promise(r=>setTimeout(r,650));
-            if(isDashMotion){
-              const isTwin=atkMotion==='kenshiTwinBlade';
-              setMonsterImageDebugMotionPlaying({zanCombo:!isTwin,twinBlade:isTwin,sakura:atkMotion==='eikiSakuraCombo'});
-              await new Promise(r=>setTimeout(r,atkMotion==='eikiSakuraCombo'?500:(isTwin?560:320)));
-            }else{
-              setMonsterImageDebugMotionPlaying({charge:false,motion:atkMotion,sakura:false});
-              await new Promise(r=>setTimeout(r,atkMotion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(atkMotion==='miaSongNotes'?MIA_SONG_NOTES_MOTION_MS:(atkMotion==='floatStab'?700:(atkMotion==='waterBurst'?WATER_BURST_MOTION_MS:500)))));
-            }
-            setMonsterImageDebugMotionPlaying(null);
-          };
-          return <main data-mh-screen className="flex-1 flex flex-col h-full min-h-0 p-3" style={{paddingTop:'calc(.75rem + env(safe-area-inset-top))',paddingBottom:'calc(.75rem + env(safe-area-inset-bottom))'}}>
-            <header className="flex items-center gap-2 mb-2"><button onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><div><small className="text-[8px] font-black text-cyan-400">DEBUG・保存されません</small><h2 className="text-sm font-black">モンスター画像・染色確認</h2></div>{temporaryDyeMasks[selected.baseId]&&<span className="ml-auto rounded-full bg-fuchsia-800 px-2 py-1 text-[8px] font-black">一時反映中</span>}</header>
-            {temporaryDyeMasks[selected.baseId]&&dyeMaskEditorOpened&&<button onClick={()=>setGameState('DYE_MASK_POSITION_DEBUG')} className="mb-2 min-h-[42px] shrink-0 rounded-xl border border-fuchsia-300 bg-fuchsia-800 text-[10px] font-black">マスク編集へ戻る</button>}
-            <div className="flex-1 min-h-0 overflow-y-auto mh-scroll space-y-3 pb-3">
-              <select value={selected.id} onChange={e=>{const m=owned.find(x=>String(x.id)===e.target.value);setMonsterImageDebugId(e.target.value);setMonsterImageDebugColors(m?getMasuColors(m):[]);setMonsterImageDebugTigerMode('old');}} className="w-full min-h-[50px] rounded-xl bg-slate-900 border border-white/10 px-3 text-[10px] font-black">{owned.map(m=>{const b=ALL_PLAYER_MONSTERS[m.baseId];return <option key={m.id} value={m.id}>{m.name}／{b.name}／{m.baseId}／①{colorText(getMasuColors(m)[0])} ②{colorText(getMasuColors(m)[1])} ③{colorText(getMasuColors(m)[2])}</option>})}</select>
-              {isTiger&&<div className="grid grid-cols-3 gap-1">{[['old','旧画像／ロールバック用'],['new','高画質版／現在の本番構成'],['compare','旧画像と高画質版の比較表示']].map(([id,label])=><button key={id} onClick={()=>setMonsterImageDebugTigerMode(id)} className={`min-h-[54px] rounded-xl px-1 text-[8px] font-black border ${monsterImageDebugTigerMode===id?'bg-amber-700 border-amber-300':'bg-slate-900 border-white/10'}`}>{label}</button>)}</div>}
-              <div className="grid grid-cols-3 gap-2">{[['checker','市松模様'],['white','白'],['black','黒']].map(([id,label])=><button key={id} onClick={()=>setMonsterImageDebugBg(id)} className={`min-h-[42px] rounded-xl text-[10px] font-black border ${monsterImageDebugBg===id?'ring-2 ring-cyan-500':'border-white/10'}`} style={id==='white'?{background:'#fff',color:'#000'}:id==='black'?{background:'#000'}:{background:'#64748b'}}>{label}</button>)}</div>
-              <div className="grid grid-cols-2 gap-2">{renderCurrent('元画像','imgUrl',null)}{renderCurrent('実際の合成後プレビュー','imgUrl',colors)}{Array.from({length:regionCount},(_,i)=>renderCurrent(`染色${i+1}のみ`,'imgUrl',colors.map((c,j)=>i===j?c:null)))}</div>
-              <h3 className="text-[10px] font-black text-cyan-300">実際の表示条件</h3><div className="grid grid-cols-2 gap-2">{renderCurrent('バトル／立ち絵','imgUrl',colors,'aspect-square','object-contain',null,'本番 64px・角丸なし')}{renderCurrent('一覧／全身アイコン','iconUrl',colors,'aspect-square rounded-full','object-cover',null,'本番 48px・丸')}{renderCurrent('詳細／大きな全身表示','imgUrl',colors,'h-40','object-contain',null,'本番 図鑑詳細の横長枠')}{renderCurrent('顔アイコン','faceIconUrl',colors,'aspect-square rounded-full','object-contain',profileIconStyle,'本番 プロフィール80px・丸')}{renderCurrent('プロフィール／選択アイコン','faceIconUrl',colors,'aspect-square rounded-2xl','object-contain',profileIconStyle,'本番 選択マス約59px・角丸')}{renderCurrent('小型／編成枠','imgUrl',colors,'aspect-square rounded-full','object-contain',null,'本番 40px・丸')}</div>
-              {/* 染色のパレットは28色×部位ぶんあり、開いたままだと画像へ届くまでに1500pxほどスクロールすることになる。ふだん見たいのは絵のほうなので畳んでおく(2026-09-17・ユーザー指摘「ほんとうにみにくいしつかいづらい」) */}
-              <details className="rounded-2xl border border-fuchsia-500/30 bg-fuchsia-950/20">
-                <summary className="cursor-pointer select-none px-3 py-3 text-[11px] font-black text-fuchsia-200">🎨 色を変えて試す（{regionCount}部位・本番と共通）</summary>
-                <div className="border-t border-fuchsia-500/20 p-3">
-<section><h3 className="mb-2 text-[10px] font-black text-fuchsia-300">本番と共通の染色（{regionCount}部位）</h3><DyeRegionColorControls baseId={selected.baseId} colors={colors} onChange={(idx,colorId)=>setMonsterImageDebugColors(prev=>{const next=[...colors];next[idx]=colorId;return next;})} onCustom={(idx)=>{const parsed=_parseCustomColorId(colors[idx]);setCustomColorPicker({mode:'debug',idx,h:parsed?.h??210,s:parsed?.s??.7,v:parsed?.v??.7});}}/><button onClick={()=>setMonsterImageDebugColors(getMasuColors(selected))} className="w-full mt-2 min-h-[40px] rounded-xl bg-fuchsia-800 text-[9px] font-black">個体の現在色へ戻す</button></section>
-                </div>
-              </details>
-              {motionSupported&&(
-                <section className="rounded-2xl border border-cyan-500/30 bg-cyan-950/20 p-3">
-                  <h3 className="mb-2 text-[10px] font-black text-cyan-300">攻撃モーション確認（atkMotion: {atkMotion}）</h3>
-                  <p className="mb-2 text-[8px] leading-relaxed text-slate-400">本番のバトル画面と同じ関数・同じCSSでこの場で再生する。連撃の巻き添えヒットは無いのでこの1回だけ動く。</p>
-                  <div className={`mx-auto h-28 w-28 ${(atkMotion==='waterBurst'||atkMotion==='arkHolyRain'||atkMotion==='miaSongNotes')?'overflow-visible':'overflow-hidden'} rounded-xl border border-white/20`} style={bgStyle}>
-                    <div className="relative h-full w-full" style={{isolation:'isolate',animation:attackMotionAnimation(monsterImageDebugMotionPlaying)}}>
-                      {monsterImageDebugMotionPlaying?.motion==='arkHolyRain'
-                        ?<ArkHolyRainMotion
-                          image={<DyedMonsterImage baseId={base.id} src={oldSources.imgUrl} alt="攻撃モーション確認" masuColors={colors} className="h-full w-full object-contain"/>}
-                          charging={monsterImageDebugMotionPlaying?.charge===true}
-                          empowered={monsterImageDebugMotionPlaying?.charge===false}/>
-                        :monsterImageDebugMotionPlaying?.motion==='waterBurst'
-                          ?<WaterBurstMotion
-                            image={<DyedMonsterImage baseId={base.id} src={oldSources.imgUrl} alt="攻撃モーション確認" masuColors={colors} className="h-full w-full object-contain"/>}
-                            lunge={monsterImageDebugMotionPlaying?.charge===false}
-                            charging={monsterImageDebugMotionPlaying?.charge===true}/>
-                        :monsterImageDebugMotionPlaying?.motion==='miaSongNotes'
-                          ?<MiaSongNotesMotion
-                            image={<DyedMonsterImage baseId={base.id} src={oldSources.imgUrl} alt="攻撃モーション確認" masuColors={colors} className="h-full w-full object-contain"/>}
-                            lunge={monsterImageDebugMotionPlaying?.charge===false}
-                            charging={monsterImageDebugMotionPlaying?.charge===true}/>
-                          :<>
-                          <DyedMonsterImage baseId={base.id} src={oldSources.imgUrl} alt="攻撃モーション確認" masuColors={colors} className="h-full w-full object-contain"/>
-                          {monsterImageDebugMotionPlaying?.sakura&&<EikiSakuraPetals/>}
-                          {monsterImageDebugMotionPlaying?.twinBlade&&<KenshiTwinSlash/>}
-                        </>}
-                    </div>
-                  </div>
-                  <button onClick={playMotionPreview} disabled={!!monsterImageDebugMotionPlaying} className="mt-2 w-full min-h-[42px] rounded-xl bg-cyan-700 text-[10px] font-black disabled:opacity-40">{monsterImageDebugMotionPlaying?'再生中…':'攻撃モーションを再生'}</button>
-                </section>
-              )}
-              <section className="rounded-xl bg-black/40 p-3 text-[8px] break-all"><b>baseId: {selected.baseId}</b>{variants.map(([name,v])=><div key={name}>{name}: imgUrl={v.imgUrl} / iconUrl={v.iconUrl} / faceIconUrl={v.faceIconUrl}</div>)}</section>
-            </div>
-          </main>;
-        })()}
-
         {/* 新モンスター確認(デバッグ専用)。所持・解放・debugOnly を問わず全種を並べ、
             1体ぶんの画像・染色・モーション・能力・技・血統・マーケットと「実装チェック」を見る。
             作りは図鑑にそろえてあり、一覧→詳細(タブ)→攻撃アクション全画面の3段。
@@ -34310,15 +34553,19 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             selectedId={monsterCheckDebugId}
             colors={monsterCheckDebugColors}
             attackPreview={dexAttackPreview}
+            artMode={monsterImageDebugTigerMode}
+            temporaryDyeMasks={temporaryDyeMasks}
+            maskEditorOpened={dyeMaskEditorOpened}
             getAtkSkillLevels={getAtkSkillLevels}
             getUniqueSkillLevels={getUniqueSkillLevels}
             onSelect={setMonsterCheckDebugId}
             onColorsChange={setMonsterCheckDebugColors}
             onCustomColor={(idx,colorId)=>{const parsed=_parseCustomColorId(colorId);setCustomColorPicker({mode:'monsterCheck',idx,h:parsed?.h??210,s:parsed?.s??.7,v:parsed?.v??.7});}}
+            onArtMode={setMonsterImageDebugTigerMode}
             onPlayPreview={playDexAttackPreview}
             onStopPreview={stopDexAttackPreview}
             onBack={()=>{stopDexAttackPreview();setGameState('DEBUG_SETTINGS');}}
-            onOpenImageDebug={(monsterId)=>{const owned=masuMons.find(m=>String(m.baseId)===String(monsterId));setMonsterImageDebugId(owned?owned.id:`debug-preview-${monsterId}`);setMonsterImageDebugColors(owned?getMasuColors(owned):[]);setMonsterImageDebugTigerMode('old');setGameState('MONSTER_IMAGE_DEBUG');}}/>
+            onOpenMaskEditor={()=>{setDyeMaskEditorOpened(true);setGameState('DYE_MASK_POSITION_DEBUG');}}/>
         )}
 
         {/* ASSISTANT_SELECT: はじめて遊ぶ人が、名前を決めるより前にどの助手と遊ぶかを選ぶ。

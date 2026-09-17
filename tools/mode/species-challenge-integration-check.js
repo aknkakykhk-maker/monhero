@@ -73,7 +73,7 @@ for (const id of ['EXTREME','NIGHTMARE','CHAOS','ULTIMATE','INFINITY']) {
   assert(api.extremeDifficultySetting(id) === api.EXTREME_DIFFICULTIES.find(setting => setting.id === id), `${id}は既存specialRulesの同一オブジェクトを返す`);
 }
 const debugStart = source.indexOf("{gameState==='SPECIES_CHALLENGE_DEBUG'&&(()=>{");
-const debugEnd = source.indexOf("{gameState==='MONSTER_IMAGE_DEBUG'", debugStart);
+const debugEnd = source.indexOf("{gameState==='MONSTER_CHECK_DEBUG'", debugStart);
 const debugScreen = source.slice(debugStart, debugEnd);
 assert(debugScreen.includes('buildUnifiedMonsterEntries(unlockedMonsterIds,masuMons,[])'), '勇者候補は解放済Baseと所持Masuの既存統合一覧を使う');
 assert(debugScreen.includes('heroCandidates=challengeEntries.filter(entry=>monsterLineageOf(entry.baseId).main.id===speciesId)'), '勇者候補を選択種族(主血統)だけへ絞る');

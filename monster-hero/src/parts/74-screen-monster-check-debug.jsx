@@ -28,6 +28,16 @@
 //
 // 演出は本番と同じ BattleAttackMotionPreview / attackMotionPreviewSequence を使い、
 // この画面のためのモーションは作らない。字の大きさ・カード・タブも図鑑にそろえてある。
+//
+// 【「モンスター画像・染色確認」を吸収した】(2026-09-17・ユーザー指摘「似たようなのもあるし」)
+//
+// 2画面の中身が9割同じだった(背景の切り替え・本番の表示条件6枠・染色UI・攻撃モーションが、
+// 配色指定まで同じコードで二重にあった)。あちら(MONSTER_IMAGE_DEBUG)にしか無かった4つ
+//   ・部位ごとの切り分け(染色Nのみ)   ・ライガーの旧画像/高画質版/比較
+//   ・一時マスクが当たっていることの表示  ・生URL(?v= 付き)
+// をこの画面の「画像」「データ」タブへ移したうえで、あちらは消した。
+// 攻撃モーションはあちらだけ独自の setTimeout 列で組み直していたぶん、
+// パンドラの分身が再生できなかった。こちらへ寄せたことでそれも見られるようになっている。
 
 // 距離の並び。distAptitude は [零, 近, 中, 遠] の順で持っている。
 // 本番と同じ RANGE_LABELS から作るので、間合いの呼び方を変えてもここだけ古くならない
@@ -161,8 +171,9 @@ const monsterCheckStatRows = (mon) => {
 // 画面の中だけで完結するもの(いまどの画面か・タブ・検索語・背景)はここで持つ。
 function MonsterCheckDebugScreen({
   masuMons = [], unlockedMonsterIds = [], selectedId, colors = [], attackPreview,
+  artMode = 'new', temporaryDyeMasks = null, maskEditorOpened = false,
   getAtkSkillLevels, getUniqueSkillLevels,
-  onSelect, onColorsChange, onCustomColor, onPlayPreview, onStopPreview, onBack, onOpenImageDebug,
+  onSelect, onColorsChange, onCustomColor, onArtMode, onPlayPreview, onStopPreview, onBack, onOpenMaskEditor,
 }) {
   const monsters = monsterCheckAllMonsters();
   const [view, setView] = useState('list');   // 'list' | 'detail' | 'motion'
@@ -206,6 +217,16 @@ function MonsterCheckDebugScreen({
         backgroundSize: '16px 16px', backgroundPosition: '0 0,0 8px,8px -8px,-8px 0' };
 
   const noteImageBroken = (url) => setBrokenImages(prev => (prev[url] ? prev : { ...prev, [url]: true }));
+  // ライガーだけは、高画質版へ差し替える前の絵(ロールバック用)も残してある。
+  // 「いまの本番」「旧画像」「並べて比較」を切り替えて見られるようにしておく
+  const productionSources = { imgUrl: mon.imgUrl, iconUrl: mon.iconUrl, faceIconUrl: mon.faceIconUrl };
+  const rollbackSources = (typeof TIGER_ROLLBACK_IMG !== 'undefined' && mon.id === 'Tiger')
+    ? { imgUrl: TIGER_ROLLBACK_IMG, iconUrl: TIGER_ROLLBACK_ICON, faceIconUrl: TIGER_ROLLBACK_ICON }
+    : null;
+  const artSources = (rollbackSources && artMode === 'old') ? rollbackSources : productionSources;
+  // 染色マスクを描いて「ゲームで試す」と、その種だけ一時的なマスクが当たる。
+  // マスクは _temporaryDyeMasks 経由で DyedMonsterImage が勝手に見るので、ここでは印を出すだけでよい
+  const temporaryMask = !!(temporaryDyeMasks && temporaryDyeMasks[mon.id]);
   const pickMonster = (id) => { onStopPreview(); onSelect(id); onColorsChange([]); setShowRaw(false); setTab('check'); setView('detail'); };
   const go = (delta) => { onStopPreview(); const next = monsters[(index + delta + monsters.length) % monsters.length]; if (!next) return; onSelect(next.id); onColorsChange([]); Audio_.se.tap(); };
   const dyedArt = (className = 'w-full h-full object-contain') =>
@@ -332,10 +353,10 @@ function MonsterCheckDebugScreen({
       ))}
     </div>
   );
-  // 本番と同じ収め方・同じ染色で1枚出す。読み込みに失敗した絵は赤くして、
-  // 「パスの綴り間違いで絵が出ない」を公開前に気づけるようにする
-  const artFrame = (label, sourceKey, frameClass, fit, imgStyle, note) => {
-    const src = mon[sourceKey];
+  // 1枚ぶんの枠。絵のURLと染色を指定できるようにしてあるので、「本番の表示条件」だけでなく
+  // 「部位ごとの切り分け」「ライガーの新旧比較」も同じ部品で出せる。
+  // 読み込みに失敗した絵は赤くして、「パスの綴り間違いで絵が出ない」を公開前に気づけるようにする
+  const artBox = (label, src, palette, frameClass, fit, imgStyle, note) => {
     const broken = !!brokenImages[src];
     return (
       <section key={label} className="rounded-xl bg-black/30 p-2 text-center">
@@ -343,7 +364,7 @@ function MonsterCheckDebugScreen({
         {note && <small className="mb-1 block text-[8px] font-bold text-slate-400">{note}</small>}
         <div className={`${frameClass} overflow-hidden border ${broken ? 'border-rose-500' : 'border-white/20'}`} style={bgStyle}>
           {src
-            ? <DyedMonsterImage baseId={mon.id} src={src} alt={label} masuColors={dyeColors} className={`w-full h-full ${fit}`} style={{ ...monsterArtFitStyle(mon.id, undefined), ...(imgStyle || {}) }}/>
+            ? <DyedMonsterImage baseId={mon.id} src={src} alt={label} masuColors={palette} className={`w-full h-full ${fit}`} style={{ ...monsterArtFitStyle(mon.id, undefined), ...(imgStyle || {}) }}/>
             : <span className="flex h-full w-full items-center justify-center text-[9px] font-black text-rose-300">未設定</span>}
         </div>
         {/* 綴りを間違えた絵は、染色を通すと「何も出ない」だけで理由が分からない。
@@ -353,6 +374,8 @@ function MonsterCheckDebugScreen({
       </section>
     );
   };
+  const artFrame = (label, sourceKey, frameClass, fit, imgStyle, note) =>
+    artBox(label, artSources[sourceKey], dyeColors, frameClass, fit, imgStyle, note);
   const stateMark = (state) => state === 'ng' ? '✕' : state === 'warn' ? '△' : '✓';
   const stateClass = (state) => state === 'ng' ? 'text-rose-300' : state === 'warn' ? 'text-amber-300' : 'text-emerald-300';
 
@@ -361,7 +384,8 @@ function MonsterCheckDebugScreen({
       <div className="flex shrink-0 items-center gap-2 px-3">
         <button onClick={() => { onStopPreview(); setView('list'); }} className="p-3 text-slate-400 active:scale-90" aria-label="一覧へ戻る"><ArrowLeft size={20}/></button>
         <h2 className="text-base font-black italic text-emerald-300 uppercase tracking-widest">新モンスター確認</h2>
-        <span className="ml-auto shrink-0 pr-1 text-[10px] font-mono font-black tabular-nums text-emerald-200/80">{index + 1} / {monsters.length}</span>
+        {temporaryMask&&<span className="ml-auto shrink-0 rounded-full bg-fuchsia-800 px-2 py-1 text-[9px] font-black text-white">一時マスク反映中</span>}
+        <span className={`shrink-0 pr-1 text-[10px] font-mono font-black tabular-nums text-emerald-200/80 ${temporaryMask?'':'ml-auto'}`}>{index + 1} / {monsters.length}</span>
       </div>
       {/* 上半分: 立ち絵。左右のボタンと横スワイプで前後へ移る(図鑑と同じ) */}
       <div data-monster-check-hero className="relative flex shrink-0 items-center justify-center px-14" style={{ height: 'clamp(150px, 20dvh, 180px)' }}
@@ -422,6 +446,17 @@ function MonsterCheckDebugScreen({
                     style={id === 'white' ? { background: '#fff', color: '#000' } : id === 'black' ? { background: '#000' } : { background: '#64748b' }}>{label}</button>
                 ))}
               </div>
+              {/* ライガーだけ、高画質版へ差し替える前の絵も残してある */}
+              {rollbackSources&&<div className="grid grid-cols-3 gap-1">
+                {[['new','いまの本番'],['old','旧画像（ロールバック用）'],['compare','並べて比較']].map(([id,label])=>(
+                  <button key={id} data-monster-check-art-mode={id} onClick={()=>onArtMode(id)}
+                    className={`min-h-[46px] rounded-xl border px-1 text-[9px] font-black active:scale-95 ${artMode===id?'border-amber-300 bg-amber-700 text-white':'border-white/10 bg-slate-900 text-slate-300'}`}>{label}</button>
+                ))}
+              </div>}
+              {rollbackSources&&artMode==='compare'&&<div className="grid grid-cols-2 gap-2">
+                {artBox('旧画像', rollbackSources.imgUrl, dyeColors, 'aspect-square', 'object-contain', null, '差し替える前')}
+                {artBox('高画質版', productionSources.imgUrl, dyeColors, 'aspect-square', 'object-contain', null, 'いまの本番')}
+              </div>}
               <div className="grid grid-cols-2 gap-2">
                 {artFrame('バトル／立ち絵', 'imgUrl', 'aspect-square', 'object-contain', null, '本番 64px・角丸なし')}
                 {artFrame('一覧／全身アイコン', 'iconUrl', 'aspect-square rounded-full', 'object-cover', null, '本番 48px・丸')}
@@ -437,8 +472,19 @@ function MonsterCheckDebugScreen({
                   onCustom={(idx) => onCustomColor(idx, dyeColors[idx])}/>
                 <div className="mt-2 grid grid-cols-2 gap-2">
                   <button onClick={() => onColorsChange([])} className="min-h-[42px] rounded-xl bg-fuchsia-800 text-[10px] font-black">元の色へ戻す</button>
-                  {/* 部位ごとの切り分け・マスクの当たり方・ライガーの新旧比較は、専用の画面のほうが詳しい */}
-                  <button data-monster-check-open-image onClick={() => { onStopPreview(); onOpenImageDebug(mon.id); }} className="min-h-[42px] rounded-xl border border-cyan-400/60 bg-cyan-950 text-[10px] font-black text-cyan-100">染色をくわしく見る</button>
+                  {/* マスクそのものを描いて直すのは専用の編集器。往復できるようにしておく */}
+                  <button data-monster-check-open-mask onClick={() => { onStopPreview(); onOpenMaskEditor(); }} className="min-h-[42px] rounded-xl border border-cyan-400/60 bg-cyan-950 text-[10px] font-black text-cyan-100">染色マスクを編集する</button>
+                </div>
+              </section>
+              {/* 部位ごとの切り分け。マスクが当たっているか(どこまでが①でどこからが②か)は
+                  1部位ずつ塗って見るのがいちばん早い。ここでしか見られない */}
+              <section data-monster-check-region className="rounded-2xl border border-fuchsia-500/30 bg-fuchsia-950/10 p-2.5">
+                <h3 className="mb-2 text-[11px] font-black text-fuchsia-300">部位ごとの切り分け（{regionCount}部位）</h3>
+                <div className="grid grid-cols-2 gap-2">
+                  {artBox('元画像', artSources.imgUrl, [], 'aspect-square', 'object-contain', null, '染色なし')}
+                  {artBox('合成後', artSources.imgUrl, dyeColors, 'aspect-square', 'object-contain', null, '全部位を重ねたもの')}
+                  {Array.from({ length: regionCount }, (_, i) =>
+                    artBox(`染色${i + 1}のみ`, artSources.imgUrl, dyeColors.map((c, j) => i === j ? c : null), 'aspect-square', 'object-contain', null, `${i + 1}番目の部位だけ`))}
                 </div>
               </section>
             </div>)}
@@ -497,6 +543,12 @@ function MonsterCheckDebugScreen({
               {row('円盤石（解放用）', market.disc ? `${market.disc.name}／${market.disc.cost} ダイヤ` : '無し')}
               {row('顔アイコン商品', market.faceIcon ? `${market.faceIcon.name}／${market.faceIcon.cost}` : '無し')}
               {row('円盤石アイコン商品', market.discIcon ? `${market.discIcon.name}／${market.discIcon.cost}` : '無し')}
+              {/* キャッシュキー(?v=)まで見たいことがあるので、素のURLも出しておく */}
+              <div data-monster-check-urls className="rounded-lg bg-black/40 p-2 text-[9px] leading-relaxed text-cyan-200 break-all">
+                <div>imgUrl = {mon.imgUrl || '未設定'}</div>
+                <div>iconUrl = {mon.iconUrl || '未設定'}</div>
+                <div>faceIconUrl = {mon.faceIconUrl || '未設定'}</div>
+              </div>
               <button onClick={() => setShowRaw(v => !v)} className="min-h-[42px] w-full rounded-xl bg-slate-800 text-[11px] font-black active:scale-95">{showRaw ? '生データを隠す' : '生データ（ALL_PLAYER_MONSTERS の中身）を見る'}</button>
               {showRaw && <pre className="max-h-72 overflow-auto whitespace-pre-wrap break-all rounded-xl bg-black/50 p-3 text-[9px] leading-relaxed text-cyan-200">{JSON.stringify(mon, null, 2)}</pre>}
             </div>)}

@@ -4,7 +4,7 @@ const vm = require('vm');
 const source = fs.readFileSync('monster-hero/src/game-system.jsx', 'utf8');
 const assert = (condition, message) => { if (!condition) throw new Error(message); };
 const screenStart = source.indexOf("{gameState==='SPECIES_CHALLENGE_DEBUG'");
-const screenEnd = source.indexOf("{gameState==='MONSTER_IMAGE_DEBUG'", screenStart);
+const screenEnd = source.indexOf("{gameState==='MONSTER_CHECK_DEBUG'", screenStart);
 assert(screenStart >= 0 && screenEnd > screenStart, '種族チャレンジ専用デバッグ画面がある');
 const screen = source.slice(screenStart, screenEnd);
 

@@ -35,7 +35,7 @@ check('画面が変わったらエラーを捨てる(getDerivedStateFromProps)',
 // (2026-09-17・デバッグ設定をカテゴリ分けに作り直したとき。実測 3823文字 → 20712文字)。
 // 見ている約束は変わっていない: 入口がデバッグ設定の中にあり、ソース全体でちょうど1回だけ出ること。
 const debugStart = source.indexOf("gameState==='DEBUG_SETTINGS'&&(");
-const debugEnd = source.indexOf("{gameState==='MONSTER_IMAGE_DEBUG'&&(", debugStart);
+const debugEnd = source.indexOf("{gameState==='MONSTER_CHECK_DEBUG'&&(", debugStart);
 const debugBlock = (debugStart >= 0 && debugEnd > debugStart) ? source.slice(debugStart, debugEnd) : '';
 check('デバッグ設定に試す入口がある(通常画面には無い)', debugBlock.includes('data-debug-screen-error') && source.split('data-debug-screen-error').length === 2);
 

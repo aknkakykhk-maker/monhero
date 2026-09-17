@@ -1746,7 +1746,6 @@ const HELP_SCREEN_COVERAGE = {
   SETTINGS:         'tips/settings',
   // 模様テストは開発用の隠し画面なので、公開説明は増やさず既存の染色項目を参照先にする。
   MASU_PATTERN_DEBUG:'masu/dye',
-  MONSTER_IMAGE_DEBUG:'masu/dye',
   DYE_MASK_POSITION_DEBUG:'masu/dye',
   // 新モンスター確認も開発用の隠し画面。出しているのは図鑑と同じ「1体ぶんの情報」なので、
   // 説明は増やさず図鑑の項目を参照先にする。
@@ -1767,6 +1766,10 @@ const HELP_SCREEN_COVERAGE = {
   RHYTHM_DEMO_HELP:     'rhythm/rhythm-tutorial',
   RHYTHM_DEMO_MONSTERS: 'rhythm/rhythm-monster-note-display',
   RHYTHM_RANKING:       'rhythm/rhythm-ranking',
+  // デバッグ戦の設定(難易度→敵→勇者モン→開始)。デバッグ設定のメニューから切り出したもの
+  DEBUG_BATTLE_SETUP: 'basics/battle-modes',
+  // データを用意する(デバッグ専用)。触るのは所持品と進行なので、アイテムの説明へ対応させる
+  DEBUG_DATA_SETUP: 'items/items',
   DEBUG_SETTINGS:   null,
   SPECIES_CHALLENGE_DEBUG: null,
   BREEDER_ICON_DEBUG:'home/profile',
