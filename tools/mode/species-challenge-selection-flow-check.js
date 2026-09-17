@@ -54,7 +54,7 @@ const run = api.createSpeciesChallengeRunState({ speciesId:'mocchi', difficultyI
 assert(run?.speciesId === 'mocchi' && run?.allyIds[0] === 'masu:mitarashi-masu', '確認画面から種族限定run情報を生成する');
 
 const screenStart = source.indexOf("{gameState==='SPECIES_CHALLENGE_SELECT'");
-const screenEnd = source.indexOf("{gameState==='MONSTER_IMAGE_DEBUG'", screenStart);
+const screenEnd = source.indexOf("{gameState==='MONSTER_CHECK_DEBUG'", screenStart);
 const screen = source.slice(screenStart, screenEnd);
 assert(screenStart >= 0 && screenEnd > screenStart, '本番形式の共通選択画面が存在する');
 // 画面側でも、勇者と同じモンスターは供モン候補から外す

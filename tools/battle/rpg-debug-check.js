@@ -431,7 +431,7 @@ check('同じ能力なら攻撃側が味方でも敵でも回避率・クリテ�
 //   読んでいたが、あいだにモンヒロビートの画面群が入ったため、そちらが使う masuMons まで
 //   「RPG がマスモンを使っている」と誤って拾っていた(2026-09-07)。
 const rpgUi = grab(source, '{/* ===== ダンジョンRPG戦闘テスト', "{gameState==='RHYTHM_PLAY'&&rhythmPlay&&");
-const debugScreen = grab(source, "{gameState==='DEBUG_SETTINGS'&&(", "{gameState==='MONSTER_IMAGE_DEBUG'&&(");
+const debugScreen = grab(source, "{gameState==='DEBUG_SETTINGS'&&(", "{gameState==='MONSTER_CHECK_DEBUG'&&(");
 check('入口はデバッグ設定の中にだけある',
   debugScreen.includes('data-debug-rpg-battle') && debugScreen.includes("setGameState('RPG_DEBUG_SETUP')")
   && (source.match(/setGameState\('RPG_DEBUG_SETUP'\)/g) || []).length === 3,
