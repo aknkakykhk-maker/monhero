@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ad90835715d31279
+// source-sha256: bd9439d9da0a8c2f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: becccd6b3a89f0ea
+// generated-sha256: f72dcb40cee4510f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -161,7 +161,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-17 20:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-17 20:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -62786,10 +62786,12 @@ function MonsterHeroGame() {
           background: 'transparent'
         }
       }), /*#__PURE__*/React.createElement("div", {
+        onClick: next,
         className: "relative w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] overflow-y-auto mh-scroll rounded-t-3xl border-t-2 border-x-2 border-fuchsia-400 bg-slate-950 p-4",
         style: {
           paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))',
-          pointerEvents: 'none'
+          pointerEvents: 'auto',
+          zIndex: 1
         }
       }, /*#__PURE__*/React.createElement("p", {
         className: "mb-2 text-center text-[10px] font-black tracking-widest text-fuchsia-300"
@@ -62837,15 +62839,24 @@ function MonsterHeroGame() {
       })())), /*#__PURE__*/React.createElement("p", {
         className: "mt-2 text-center text-[8px] text-slate-500"
       }, step + 1, " / ", script.length, Object.keys(calls).length > 0 && `　／　${cast.filter(who => calls[who.id]).map(who => `${who.name}は「${calls[who.id]}」`).join('、')}と呼び合います`), /*#__PURE__*/React.createElement("div", {
-        className: `mt-3 grid ${last ? 'grid-cols-1' : 'grid-cols-[1fr_2fr]'} gap-2`,
+        className: `relative mt-3 grid ${last ? 'grid-cols-1' : 'grid-cols-[1fr_2fr]'} gap-2`,
         style: {
-          pointerEvents: 'auto'
+          pointerEvents: 'auto',
+          zIndex: 2
         }
       }, !last && /*#__PURE__*/React.createElement("button", {
-        onClick: skip,
+        type: "button",
+        onClick: e => {
+          e.stopPropagation();
+          skip();
+        },
         className: "min-h-[50px] rounded-2xl bg-slate-700 text-sm font-black text-white active:scale-[.98]"
       }, "\u30B9\u30AD\u30C3\u30D7"), /*#__PURE__*/React.createElement("button", {
-        onClick: next,
+        type: "button",
+        onClick: e => {
+          e.stopPropagation();
+          next();
+        },
         className: "min-h-[50px] rounded-2xl bg-fuchsia-500 text-sm font-black text-slate-950 active:scale-[.98]"
       }, last ? 'とじる' : 'つぎへ'))));
     })(), dailyMasuAdvice && (() => {

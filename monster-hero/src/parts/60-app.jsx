@@ -14492,7 +14492,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         return(
         <div className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:77000,backgroundColor:'rgba(2,6,23,.95)'}} role="dialog" aria-modal="true" aria-label={`イベント回想: ${event?.title||''}`}>
           <button type="button" onClick={next} aria-label="次へ" className="absolute inset-0 w-full h-full" style={{background:'transparent'}}/>
-          <div className="relative w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] overflow-y-auto mh-scroll rounded-t-3xl border-t-2 border-x-2 border-fuchsia-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))',pointerEvents:'none'}}>
+          {/* ★会話の紙は「タップを受け取る側」にしておく(2026-09-17・ユーザー報告
+                「イベント中のスキップを押してもスキップ出来ない／次のセリフへ進むだけ」)。
+              もとは紙を pointerEvents:'none' にして、ボタン列だけ 'auto' で切り抜いていた。
+              そのため「スキップ」を押しても、当たり判定が背面の“画面全体＝次へ”ボタンへ
+              抜けてしまう端末があり、飛ばすつもりが1枚進むだけになっていた。
+              いまは紙ごと 'auto' にして、重なり順も z-index で明示する。
+              「どこをタップしても次へ」は紙自身の onClick が受け持ち、
+              ボタンは stopPropagation で二重に動かないようにする。
+              ついでに紙が指でスクロールできるようになる(pointerEvents:'none' では出来なかった) */}
+          <div onClick={next} className="relative w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] overflow-y-auto mh-scroll rounded-t-3xl border-t-2 border-x-2 border-fuchsia-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))',pointerEvents:'auto',zIndex:1}}>
             <p className="mb-2 text-center text-[10px] font-black tracking-widest text-fuchsia-300">{eventReplay.live?'':'回想・'}{event?.title||''}</p>
             <div className="mb-3 flex items-end justify-center gap-3">
               {cast.map(who=>{
@@ -14524,9 +14533,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {step+1} / {script.length}
               {Object.keys(calls).length>0&&`　／　${cast.filter(who=>calls[who.id]).map(who=>`${who.name}は「${calls[who.id]}」`).join('、')}と呼び合います`}
             </p>
-            <div className={`mt-3 grid ${last?'grid-cols-1':'grid-cols-[1fr_2fr]'} gap-2`} style={{pointerEvents:'auto'}}>
-              {!last&&<button onClick={skip} className="min-h-[50px] rounded-2xl bg-slate-700 text-sm font-black text-white active:scale-[.98]">スキップ</button>}
-              <button onClick={next} className="min-h-[50px] rounded-2xl bg-fuchsia-500 text-sm font-black text-slate-950 active:scale-[.98]">{last?'とじる':'つぎへ'}</button>
+            <div className={`relative mt-3 grid ${last?'grid-cols-1':'grid-cols-[1fr_2fr]'} gap-2`} style={{pointerEvents:'auto',zIndex:2}}>
+              {!last&&<button type="button" onClick={(e)=>{e.stopPropagation();skip();}} className="min-h-[50px] rounded-2xl bg-slate-700 text-sm font-black text-white active:scale-[.98]">スキップ</button>}
+              <button type="button" onClick={(e)=>{e.stopPropagation();next();}} className="min-h-[50px] rounded-2xl bg-fuchsia-500 text-sm font-black text-slate-950 active:scale-[.98]">{last?'とじる':'つぎへ'}</button>
             </div>
           </div>
         </div>);
