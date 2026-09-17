@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 251309168d4890e7
+// source-sha256: 0799bf2091e88f77
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 74146f4ea137d5da
+// generated-sha256: ea060f4af65559c2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -161,7 +161,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-17 23:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-18 00:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -48669,7 +48669,7 @@ function MonsterHeroGame() {
   };
 
   // WAVE10を勝ち切ったときだけ呼ぶ。敗北・リタイア・途中離脱からは呼ばない。
-  // 保存するのは「実進行保存で実戦確認」から始めたランだけで、通常のBATTLE TESTでは
+  // 保存するのは「実進行保存で実戦確認」から始めたランだけで、通常のデバッグ戦では
   // 何が起きるはずだったかを画面へ出すだけにする(保存なし)。
   const finishSpeciesChallengeClear = async () => {
     const run = speciesChallengeBattleRunRef.current;
@@ -57728,7 +57728,7 @@ function MonsterHeroGame() {
         if (mon?.id && !eligible.some(m => m.baseId === mon.id)) eligible.push({
           id: `pattern-preview-${mon.id}`,
           baseId: mon.id,
-          name: `${mon.name}（未所持・DEBUG表示）`,
+          name: mon.name,
           colors: []
         });
       });
@@ -57775,7 +57775,7 @@ function MonsterHeroGame() {
         className: "flex-1 min-h-0 overflow-y-auto mh-scroll p-4"
       }, /*#__PURE__*/React.createElement("p", {
         className: "mb-3 text-[11px] font-bold text-slate-400"
-      }, "\u6240\u6301\u30DE\u30B9\u30E2\u30F3\u30921\u4F53\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044\u3002"), /*#__PURE__*/React.createElement("div", {
+      }, "\u6A21\u69D8\u3092\u8A66\u3059\u30E2\u30F3\u30B9\u30BF\u30FC\u30921\u4F53\u3048\u3089\u3093\u3067\u304F\u3060\u3055\u3044\uFF08\u6240\u6301\u3057\u3066\u3044\u306A\u3044\u7A2E\u3082\u305D\u306E\u307E\u307E\u8A66\u305B\u307E\u3059\uFF09\u3002"), /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-3 gap-2"
       }, eligible.map(m => {
         const base = ALL_PLAYER_MONSTERS[m.baseId];
@@ -58399,7 +58399,9 @@ function MonsterHeroGame() {
           key: String(on),
           className: "rounded-2xl border border-white/10 bg-slate-900/90 p-3 text-center"
         }, /*#__PURE__*/React.createElement("div", {
-          className: "relative mx-auto w-16 h-16 mh-reincarnate-stack"
+          className: "mx-auto flex h-28 w-28 items-center justify-center"
+        }, /*#__PURE__*/React.createElement("div", {
+          className: "relative w-16 h-16 mh-reincarnate-stack"
         }, /*#__PURE__*/React.createElement("div", {
           className: "relative z-[1] w-16 h-16 overflow-hidden rounded-full border border-amber-400/40"
         }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
@@ -58415,8 +58417,8 @@ function MonsterHeroGame() {
           className: "mh-rebirth-stars-overlay"
         }), /*#__PURE__*/React.createElement(TranscendenceBadge, {
           transcended: on
-        })), /*#__PURE__*/React.createElement("b", {
-          className: "mt-3 block text-[11px] text-white"
+        }))), /*#__PURE__*/React.createElement("b", {
+          className: "mh-monster-card-name mt-1 block text-[11px] text-white"
         }, on ? '超越済み' : '未超越'));
       })), /*#__PURE__*/React.createElement("div", {
         className: "mt-2 flex items-center justify-center gap-4 rounded-2xl border border-white/10 bg-slate-900/90 py-3"
@@ -58648,7 +58650,9 @@ function MonsterHeroGame() {
           key: count,
           className: "rounded-2xl border border-white/10 bg-slate-900/90 p-3 text-center"
         }, /*#__PURE__*/React.createElement("div", {
-          className: "relative mx-auto w-16 h-16 mh-reincarnate-stack"
+          className: "mx-auto flex h-28 w-28 items-center justify-center"
+        }, /*#__PURE__*/React.createElement("div", {
+          className: "relative w-16 h-16 mh-reincarnate-stack"
         }, /*#__PURE__*/React.createElement("div", {
           className: "relative z-[1] w-16 h-16 overflow-hidden rounded-full border border-pink-400/40"
         }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
@@ -58662,8 +58666,8 @@ function MonsterHeroGame() {
         }), /*#__PURE__*/React.createElement(RebirthStars, {
           count: 3,
           className: "mh-rebirth-stars-overlay"
-        })), /*#__PURE__*/React.createElement("b", {
-          className: "mt-3 block text-[11px] text-white"
+        }))), /*#__PURE__*/React.createElement("b", {
+          className: "mh-monster-card-name mt-1 block text-[11px] text-white"
         }, count === 0 ? '未転生' : count === 1 ? '1回：青画像' : count === 2 ? '2回：黄画像' : '3回：赤画像'));
       }))), /*#__PURE__*/React.createElement("div", {
         className: "mt-3 shrink-0 grid grid-cols-2 gap-2"
@@ -60178,8 +60182,8 @@ function MonsterHeroGame() {
       }, "\u5B9F\u9032\u884C\u4FDD\u5B58\u3067\u5B9F\u6226\u78BA\u8A8D"), /*#__PURE__*/React.createElement("p", {
         className: "text-[8px] leading-relaxed text-red-100"
       }, "\u26A0\uFE0F \u5B9F\u969B\u306E\u7A2E\u65CF\u30C1\u30E3\u30EC\u30F3\u30B8\u9032\u884C\u30FB\u6240\u6301\u54C1\u3092\u5909\u66F4\u3057\u307E\u3059\u3002\u672C\u756A\u3068\u540C\u3058\u753B\u9762\u30FB\u540C\u3058\u30D0\u30C8\u30EB\u3067\u9032\u307F\u3001WAVE10\u307E\u3067\u30AF\u30EA\u30A2\u3059\u308B\u3068\u300C\u30AF\u30EA\u30A2\u72B6\u6CC1\u300D\u300C\u6B21\u306E\u96E3\u6613\u5EA6\u306E\u89E3\u653E\u300D\u300C\u521D\u56DE\u306E\u8D85\u8D8A\u306E\u5B9F\u300D\u300C\u7A2E\u65CF\xD7\u96E3\u6613\u5EA6\u306E\u81EA\u5DF1\u8A18\u9332\u300D\u3092\u5B9F\u969B\u306B\u4FDD\u5B58\u3057\u307E\u3059\u3002\u5168\u56FD\u30E9\u30F3\u30AD\u30F3\u30B0\u3078\u306F\u9001\u4FE1\u3057\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("p", {
-        className: "text-[8px] text-slate-400"
-      }, "\u901A\u5E38\u306E BATTLE TEST \u2192\u300C\u2694\uFE0F \u30D0\u30C8\u30EB\u30E2\u30FC\u30C9\u300D\u304B\u3089\u5165\u3063\u305F\u5834\u5408\u306F\u3001\u3053\u308C\u307E\u3067\u3069\u304A\u308A\u4F55\u3082\u4FDD\u5B58\u3057\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("button", {
+        className: "text-[9px] text-slate-400"
+      }, "\u901A\u5E38\u306E\u30C7\u30D0\u30C3\u30B0\u8A2D\u5B9A \u2192\u300C\u2694\uFE0F \u30D0\u30C8\u30EB\u300D\u2192\u300C\u2694\uFE0F \u30D0\u30C8\u30EB\u30E2\u30FC\u30C9\u300D\u304B\u3089\u5165\u3063\u305F\u5834\u5408\u306F\u3001\u3053\u308C\u307E\u3067\u3069\u304A\u308A\u4F55\u3082\u4FDD\u5B58\u3057\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("button", {
         "data-species-real-run-start": true,
         onClick: () => {
           if (!window.confirm('実際の種族チャレンジ進行・所持品を変更します。よろしいですか？')) return;
@@ -60620,7 +60624,7 @@ function MonsterHeroGame() {
         if (mon?.id && !owned.some(m => m.baseId === mon.id)) owned.push({
           id: `debug-preview-${mon.id}`,
           baseId: mon.id,
-          name: `${mon.name}（未所持・DEBUG表示）`,
+          name: `${mon.name}（未所持）`,
           colors: []
         });
       });
@@ -60830,9 +60834,21 @@ function MonsterHeroGame() {
         } : {
           background: '#64748b'
         }
-      }, label))), /*#__PURE__*/React.createElement("section", {
-        className: "rounded-2xl border border-fuchsia-500/30 bg-fuchsia-950/20 p-3"
-      }, /*#__PURE__*/React.createElement("h3", {
+      }, label))), /*#__PURE__*/React.createElement("div", {
+        className: "grid grid-cols-2 gap-2"
+      }, renderCurrent('元画像', 'imgUrl', null), renderCurrent('実際の合成後プレビュー', 'imgUrl', colors), Array.from({
+        length: regionCount
+      }, (_, i) => renderCurrent(`染色${i + 1}のみ`, 'imgUrl', colors.map((c, j) => i === j ? c : null)))), /*#__PURE__*/React.createElement("h3", {
+        className: "text-[10px] font-black text-cyan-300"
+      }, "\u5B9F\u969B\u306E\u8868\u793A\u6761\u4EF6"), /*#__PURE__*/React.createElement("div", {
+        className: "grid grid-cols-2 gap-2"
+      }, renderCurrent('バトル／立ち絵', 'imgUrl', colors, 'aspect-square', 'object-contain', null, '本番 64px・角丸なし'), renderCurrent('一覧／全身アイコン', 'iconUrl', colors, 'aspect-square rounded-full', 'object-cover', null, '本番 48px・丸'), renderCurrent('詳細／大きな全身表示', 'imgUrl', colors, 'h-40', 'object-contain', null, '本番 図鑑詳細の横長枠'), renderCurrent('顔アイコン', 'faceIconUrl', colors, 'aspect-square rounded-full', 'object-contain', profileIconStyle, '本番 プロフィール80px・丸'), renderCurrent('プロフィール／選択アイコン', 'faceIconUrl', colors, 'aspect-square rounded-2xl', 'object-contain', profileIconStyle, '本番 選択マス約59px・角丸'), renderCurrent('小型／編成枠', 'imgUrl', colors, 'aspect-square rounded-full', 'object-contain', null, '本番 40px・丸')), /*#__PURE__*/React.createElement("details", {
+        className: "rounded-2xl border border-fuchsia-500/30 bg-fuchsia-950/20"
+      }, /*#__PURE__*/React.createElement("summary", {
+        className: "cursor-pointer select-none px-3 py-3 text-[11px] font-black text-fuchsia-200"
+      }, "\uD83C\uDFA8 \u8272\u3092\u5909\u3048\u3066\u8A66\u3059\uFF08", regionCount, "\u90E8\u4F4D\u30FB\u672C\u756A\u3068\u5171\u901A\uFF09"), /*#__PURE__*/React.createElement("div", {
+        className: "border-t border-fuchsia-500/20 p-3"
+      }, /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("h3", {
         className: "mb-2 text-[10px] font-black text-fuchsia-300"
       }, "\u672C\u756A\u3068\u5171\u901A\u306E\u67D3\u8272\uFF08", regionCount, "\u90E8\u4F4D\uFF09"), /*#__PURE__*/React.createElement(DyeRegionColorControls, {
         baseId: selected.baseId,
@@ -60855,15 +60871,7 @@ function MonsterHeroGame() {
       }), /*#__PURE__*/React.createElement("button", {
         onClick: () => setMonsterImageDebugColors(getMasuColors(selected)),
         className: "w-full mt-2 min-h-[40px] rounded-xl bg-fuchsia-800 text-[9px] font-black"
-      }, "\u500B\u4F53\u306E\u73FE\u5728\u8272\u3078\u623B\u3059")), /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-2 gap-2"
-      }, renderCurrent('元画像', 'imgUrl', null), renderCurrent('実際の合成後プレビュー', 'imgUrl', colors), Array.from({
-        length: regionCount
-      }, (_, i) => renderCurrent(`染色${i + 1}のみ`, 'imgUrl', colors.map((c, j) => i === j ? c : null)))), /*#__PURE__*/React.createElement("h3", {
-        className: "text-[10px] font-black text-cyan-300"
-      }, "\u5B9F\u969B\u306E\u8868\u793A\u6761\u4EF6"), /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-2 gap-2"
-      }, renderCurrent('バトル／立ち絵', 'imgUrl', colors, 'aspect-square', 'object-contain', null, '本番 64px・角丸なし'), renderCurrent('一覧／全身アイコン', 'iconUrl', colors, 'aspect-square rounded-full', 'object-cover', null, '本番 48px・丸'), renderCurrent('詳細／大きな全身表示', 'imgUrl', colors, 'h-40', 'object-contain', null, '本番 図鑑詳細の横長枠'), renderCurrent('顔アイコン', 'faceIconUrl', colors, 'aspect-square rounded-full', 'object-contain', profileIconStyle, '本番 プロフィール80px・丸'), renderCurrent('プロフィール／選択アイコン', 'faceIconUrl', colors, 'aspect-square rounded-2xl', 'object-contain', profileIconStyle, '本番 選択マス約59px・角丸'), renderCurrent('小型／編成枠', 'imgUrl', colors, 'aspect-square rounded-full', 'object-contain', null, '本番 40px・丸')), motionSupported && /*#__PURE__*/React.createElement("section", {
+      }, "\u500B\u4F53\u306E\u73FE\u5728\u8272\u3078\u623B\u3059")))), motionSupported && /*#__PURE__*/React.createElement("section", {
         className: "rounded-2xl border border-cyan-500/30 bg-cyan-950/20 p-3"
       }, /*#__PURE__*/React.createElement("h3", {
         className: "mb-2 text-[10px] font-black text-cyan-300"
