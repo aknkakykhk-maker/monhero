@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// 制作用のタイミングデータ(音源長・基準BPM・解析由来オフセット)が保たれているか。
 const fs=require('fs');
 const path=require('path');
 const vm=require('vm');

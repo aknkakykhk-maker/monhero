@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// 複数の指の入力IDが touch/pointer で衝突しないか。
 const fs=require('fs'),path=require('path'),vm=require('vm');
 const ROOT=path.resolve(__dirname,'../..'),read=file=>fs.readFileSync(path.join(ROOT,file),'utf8');
 let failed=0;const check=(name,ok)=>{console.log(`${ok?'✓':'✗'} ${name}`);if(!ok)failed++;};

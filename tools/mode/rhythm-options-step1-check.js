@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// モンヒロビートの設定画面(STEP1)で、数値を動かすhelperがあるか。
 const fs=require('fs');
 const path=require('path');
 const vm=require('vm');

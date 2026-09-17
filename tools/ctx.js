@@ -272,12 +272,14 @@ function checkScripts() {
       if (!/\.js$/.test(name)) continue;
       // 表示は先頭の1行だけ。探すのは先頭のコメントのかたまり全体
       // （「音量」のように、1行目に出てこない語で探されることが多いため）
+      // 先頭40行にあるコメントを全部ひろう（途中で途切れても止めない）。
+      // 1行目だけ、あるいは最初のかたまりだけを見ていたときは、
+      // 「音量」のような語が本文の少し下にあるだけで当たらなかった。
       let desc = '';
       const head = [];
       for (const l of readLines(full).slice(0, 40)) {
         const t = l.trim();
-        if (t.startsWith('#!')) continue;
-        if (!t.startsWith('//')) { if (head.length) break; else continue; }
+        if (t.startsWith('#!') || !t.startsWith('//')) continue;
         const body = t.replace(/^\/\/\s?/, '');
         head.push(body);
         if (!desc && body.trim()) desc = body.trim();

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// TAPの判定幅(MARVELOUS/EXCELLENT…)が決めた値どおりか。
 const fs=require('fs'),path=require('path'),vm=require('vm');
 const ROOT=path.resolve(__dirname,'../..'),read=file=>fs.readFileSync(path.join(ROOT,file),'utf8');
 let failed=0;const check=(name,ok)=>{console.log(`${ok?'✓':'✗'} ${name}`);if(!ok)failed++;};

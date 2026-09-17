@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// 可変幅のHOLD/FLICKの投影・入力・互換と、性能の回帰。
 const fs=require('fs'),vm=require('vm'),assert=require('assert');
 const source=fs.readFileSync('monster-hero/data/rhythm-mode.js','utf8');
 const game=fs.readFileSync('monster-hero/src/game-system.jsx','utf8');

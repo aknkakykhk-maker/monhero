@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// CHAOS難易度の特殊ルール(与ダメージ50%・加入ボーナス50%・消費ガッツ150%・一重適用・他難易度へ波及しないこと)。
 'use strict';
 
 const fs = require('fs');

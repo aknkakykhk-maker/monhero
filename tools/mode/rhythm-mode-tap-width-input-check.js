@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// 10サブレーン可変幅TAPの入力(接触半径の補正・重なり条件・デッドゾーン・異常radiusのfallback)。
 const fs=require('fs'),vm=require('vm'),assert=require('assert');
 const source=fs.readFileSync('monster-hero/data/rhythm-mode.js','utf8');
 const laneSvg=fs.readFileSync('monster-hero/data/rhythm-lane-svg.js','utf8');

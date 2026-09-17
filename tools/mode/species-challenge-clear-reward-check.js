@@ -1,3 +1,4 @@
+// 種族チャレンジのクリア報酬。
 const fs = require('fs');
 const { loadDyeModule } = require('../harness');
 

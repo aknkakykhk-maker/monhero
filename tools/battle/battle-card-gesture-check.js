@@ -1,3 +1,4 @@
+// バトルカードのタップ／スワイプ判定が正しく結線されているか。
 const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分類フォルダから見た1つ上
 const fs = require('fs');
 const path = require('path');

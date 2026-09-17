@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// AUTO∞の内部状態が初期OFFで、保存キーを持たないこと。
 'use strict';
 const fs=require('fs');
 const path=require('path');

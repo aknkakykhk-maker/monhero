@@ -1,3 +1,4 @@
+// 起動タップでの音声有効化・保存ミュートの保護・ブリーダーLvの独立取得。
 const fs = require('fs');
 const assert = require('assert');
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// TAPの成立判定と、曲の時刻をAudioContextだけから取ること。
 const fs=require('fs'),path=require('path'),vm=require('vm');
 const ROOT=path.resolve(__dirname,'../..'),read=file=>fs.readFileSync(path.join(ROOT,file),'utf8');
 let failed=0;const check=(name,ok)=>{console.log(`${ok?'✓':'✗'} ${name}`);if(!ok)failed++;};

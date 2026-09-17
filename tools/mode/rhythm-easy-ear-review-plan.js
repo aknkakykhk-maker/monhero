@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// EASYの耳確認を、区間ごとの確認計画にまとめる。
 const fs = require('fs');
 const path = require('path');
 const assert = require('assert');

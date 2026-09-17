@@ -1,3 +1,4 @@
+// 種族チャレンジの選択画面から、種族限定のrun情報が作られるか。
 const fs = require('fs');
 const vm = require('vm');
 const { installLineageHelpers } = require('./species-challenge-lineage-stub');

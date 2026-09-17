@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// プレイヤーモンスター全20種と、初期解放8種・図鑑説明がそろっているか。
 'use strict';
 
 const fs = require('fs');

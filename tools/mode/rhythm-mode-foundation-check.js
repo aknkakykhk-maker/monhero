@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// モンヒロビートの土台(設定の正規化・段階名の読み込み)を確かめる。
 const fs=require('fs');
 const path=require('path');
 const vm=require('vm');

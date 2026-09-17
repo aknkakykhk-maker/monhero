@@ -1,3 +1,4 @@
+// リポジトリのルートを開いたとき、描画前に履歴を残さずゲームへ移るか。
 const fs = require('fs');
 const assert = require('assert');
 const html = fs.readFileSync('index.html', 'utf8');

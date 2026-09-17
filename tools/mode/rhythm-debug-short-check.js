@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// 短縮再生を持ってよいのが、そのために足したデバッグ専用曲だけになっているか。
 const fs=require('fs');
 const path=require('path');
 const vm=require('vm');

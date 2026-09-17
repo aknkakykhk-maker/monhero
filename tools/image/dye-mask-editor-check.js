@@ -1,3 +1,4 @@
+// 染色マスクの編集(逐次編集・viewport共有・掃除/Undo・PNG正規化・縦横比)を確かめる。
 'use strict';
 const fs = require('fs');
 const vm = require('vm');

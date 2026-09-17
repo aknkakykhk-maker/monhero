@@ -1,3 +1,4 @@
+// 種族チャレンジの進行がプロフィールに出るか。
 const fs = require('fs');
 const vm = require('vm');
 const { screenSource } = require(require('path').join(__dirname, '..', 'harness'));
