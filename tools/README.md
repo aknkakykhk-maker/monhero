@@ -67,6 +67,10 @@ node tools/build.js --check
 | `node ctx.js read <ファイル> <行>` | その行の前後だけ(`-C` で幅)。 |
 | `node ctx.js toc <ファイル>` | 見出し／骨格の一覧(`.md` は見出し、`.js`/`.jsx` は定義、`.json` はトップレベルのキー)。 |
 | `node ctx.js doc <ファイル> <見出し>` | 巨大なMarkdownの、その節だけ。`RHYTHM_MODE.md`(0.5MB)を開かずに読むため。 |
+| `node ctx.js read <名前>` | ファイル名を渡さなくても、リポジトリ全体から定義を探して切り出す。探す→読むの往復が1回で済む。 |
+| `node ctx.js refs <名前>` | **その名前を使っている場所の全体像**をファイルごとの件数で出す。「5か所で綴りが違う」ような作りで1か所直し忘れると画面はふつうに動いてしまうので、footprint を先に見るためのもの。 |
+| `node ctx.js doc <語>` | どの `.md` にあるか分からないとき、資料を横断して見出しを探す（語に近い順）。 |
+| `node ctx.js checks [語]` | **検査スクリプトを名前と説明から引く。** スクリプト自身の先頭コメントを読むので、手で書いているこのREADMEより取りこぼしが少ない（520本のうち187本はここに未掲載）。 |
 | `node ctx.js rules [語]` | `CLAUDE.md` / `AGENTS.md` / `docs/rules/` を横断して、その語に触れている節だけを出す。 |
 | `node ctx.js diff [パス…]` | 生成物を除いた差分。素の `git diff` の代わり(`--staged` `--base <ref>` `--all`)。 |
 | `node where.js` | 場所だけを知る道具(`--screens` / `--outline` / `--text`)。`ctx.js` が内部で呼ぶ。 |
@@ -532,6 +536,12 @@ SIX ÉTERNEL(BPM207)のEXPERTが毎秒4.56＝MASTERの上限4.6に迫ってい�
 
 | コマンド | 内容 |
 | --- | --- |
+| `node assistant-bubble-wrap-check.js` | 助手の吹き出しの中身が、箱からはみ出さないことを実際に測って確かめる。 |
+| `node auto-settings-check.js` | AUTO設定・個体識別・供モンの自動加入・配置のフォールバックを確かめる。 |
+| `node playtime-check.js` | プロフィールの「プレイ時間」を確かめる。 |
+| `node teaching-roster-size-check.js` | アシストカードの編成が、いつでも「ちょうど6枚」になるかを確かめる。 |
+| `node viewport-height-check.js` | 画面の高さの取り方が、どの端末でも「1画面に収まる」ものになっているかを確かめる。 |
+| `node stamp-audio-keys.js` | 音源(`audio/*.mp3`)のキャッシュキーを、中身のハッシュから書き直す(`build.js` が呼ぶ)。 |
 | `node browser/feature-check.js` | 実ブラウザでゲームを起動し、主要機能が動くかを確認する。 |
 | `node browser/perf-check.js` | 読み込みにかかる時間と転送量を実ブラウザで計測する。 |
 | `node browser/smoke.js` | 実ブラウザ(Chromium)で `data/*.js` を読み込み、画像の変数がすべて解決されるか確認する。事前にリポジトリのルートをHTTPで配信しておくこと(`python3 tools/serve.py`)。 |

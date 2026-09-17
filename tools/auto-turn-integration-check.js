@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// AUTOの1ターンが、明示／手動どちらの経路でも state を経由せず安全につながるかを確かめる。
 'use strict';
 
 const fs = require('fs');

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// AUTOの1ターン判断(chooseAutoTurn)の合法判定・4つの方針・固定rng・非破壊性を確かめる。
 'use strict';
 
 const fs = require('fs');

@@ -9,11 +9,15 @@
 //   node tools/ctx.js brief                  … いまの状態（ブランチ・変更・通すべき検査）を数行で
 //   node tools/ctx.js find <語>              … 定義を探す（where.js へ委譲）
 //   node tools/ctx.js text <語>              … 本文を探す（where.js --text へ委譲）
-//   node tools/ctx.js read <ファイル> <名前>  … その定義の本体だけを切り出す（終端は自動判定）
+//   node tools/ctx.js read <名前>            … その定義の本体だけを切り出す（どのファイルかも自分で探す）
+//   node tools/ctx.js read <ファイル> <名前>  … ファイルが分かっているとき
 //   node tools/ctx.js read <ファイル> <行>    … その行の前後だけ（-C で幅、既定20行）
+//   node tools/ctx.js refs <名前>            … その名前を使っている場所の全体像（変え忘れを防ぐ）
 //   node tools/ctx.js toc <ファイル>          … 見出し／骨格の一覧（.md も .js も）
+//   node tools/ctx.js doc <語>               … 資料を横断して見出しを探す
 //   node tools/ctx.js doc <ファイル> <見出し> … その節だけ
 //   node tools/ctx.js rules [語]             … ルール（CLAUDE.md / AGENTS.md / docs/rules）の該当節だけ
+//   node tools/ctx.js checks [語]            … 検査スクリプトを「名前＋何を見るか」で引く
 //   node tools/ctx.js diff [パス…]           … 生成物を除いた差分（素の git diff の代わり）
 //
 // 共通のオプション: --max <行数>（切り出しの上限） --width <字数>（1行の上限）
@@ -23,6 +27,7 @@
 const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
+const where = require('./where.js');
 
 const ROOT = path.resolve(__dirname, '..');
 
@@ -156,13 +161,189 @@ const NAME_DEF_RE = name => new RegExp(
   `|${name}\\s*\\([^)]*\\)\\s*\\{` +
   `)`);
 
+// ---- リポジトリ全体から探す -------------------------------------------------
+const esc = t => String(t).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+function allFiles() {
+  try { return where.collectFiles(); } catch { return []; }
+}
+
+// 名前から定義のある場所を探す（どのファイルかを人が覚えていなくて済むように）
+function findDefs(name) {
+  const re = NAME_DEF_RE(esc(name));
+  const hits = [];
+  for (const f of allFiles()) {
+    if (!/\.(jsx?)$/.test(f)) continue;
+    const lines = readLines(f);
+    for (let i = 0; i < lines.length; i++) if (re.test(lines[i])) hits.push({ file: f, line: i + 1, text: lines[i] });
+  }
+  return hits;
+}
+
+// その名前を使っている場所の全体像。
+// 「5か所で綴りが違う」ような作りだと、1か所直し忘れても画面はふつうに動いてしまう。
+// ファイルごとの件数だけ先に見せて、取りこぼしに気づけるようにする。
+function cmdRefs(argv, opts) {
+  const name = argv[0];
+  if (!name) { console.error('NG: 探す名前を渡してください'); process.exit(1); }
+  const word = new RegExp(`(^|[^A-Za-z0-9_$])${esc(name)}([^A-Za-z0-9_$]|$)`);
+  const defRe = NAME_DEF_RE(esc(name));
+  const byFile = [];
+  let total = 0;
+  for (const f of allFiles()) {
+    const lines = readLines(f);
+    let count = 0, defLine = 0, firstLine = 0;
+    const g = new RegExp(word.source, 'g');
+    for (let i = 0; i < lines.length; i++) {
+      g.lastIndex = 0;
+      let n = 0;
+      // 前後の1文字ごと見るので、隣り合う一致を取りこぼさないよう1つ戻しながら数える
+      for (let m; (m = g.exec(lines[i]));) { n++; g.lastIndex = Math.max(g.lastIndex - 1, m.index + 1); }
+      if (!n) continue;
+      count += n;
+      if (!firstLine) firstLine = i + 1;
+      if (!defLine && defRe.test(lines[i])) defLine = i + 1;
+    }
+    if (count) { byFile.push({ file: relOf(f), count, defLine, firstLine }); total += count; }
+  }
+  if (!total) {
+    console.log(`「${name}」はどこからも使われていません。`);
+    return;
+  }
+  byFile.sort((a, b) => (b.defLine ? 1 : 0) - (a.defLine ? 1 : 0) || b.count - a.count || a.file.localeCompare(b.file));
+  console.log(`# 「${name}」の参照 ${total}件 / ${byFile.length}ファイル`);
+  const width = Math.min(opts.width - 24, Math.max(...byFile.map(x => x.file.length)));
+  for (const x of byFile.slice(0, opts.max)) {
+    const mark = x.defLine ? `定義 ${x.defLine}行目` : `最初 ${x.firstLine}行目`;
+    console.log(`  ${cut(x.file, width).padEnd(width)}  ${String(x.count).padStart(3)}件  ${mark}`);
+  }
+  if (byFile.length > opts.max) console.log(`  … ほか ${byFile.length - opts.max} ファイル`);
+  const def = byFile.find(x => x.defLine);
+  console.log(`\n中身を読む:  node tools/ctx.js read ${def ? def.file + ' ' + name : name}`);
+  console.log(`行ごとに見る:  node tools/ctx.js text ${name}`);
+}
+
+// 資料を横断して見出しを探す。どの .md にあるかを覚えていなくて済むように
+function docFiles() {
+  const out = allFiles().filter(f => /\.md$/i.test(f));
+  for (const rel of ['CLAUDE.md', 'AGENTS.md', 'README.md', 'DEVELOPMENT.md']) {
+    const full = path.join(ROOT, rel);
+    if (fs.existsSync(full) && !out.includes(full)) out.push(full);
+  }
+  return out;
+}
+
+function cmdDocSearch(argv, opts) {
+  const needle = argv.join(' ').toLowerCase();
+  const hits = [];
+  for (const f of docFiles()) {
+    const lines = readLines(f);
+    const hs = mdHeadings(lines);
+    for (let i = 0; i < hs.length; i++) {
+      if (!hs[i].title.toLowerCase().includes(needle)) continue;
+      const next = hs.find(x => x.line > hs[i].line && x.level <= hs[i].level);
+      hits.push({ file: relOf(f), line: hs[i].line, title: hs[i].title, len: (next ? next.line : lines.length + 1) - hs[i].line });
+    }
+  }
+  if (!hits.length) {
+    console.log(`「${argv.join(' ')}」を含む見出しは見つかりませんでした。本文を探すなら  node tools/ctx.js text ${argv.join(' ')}`);
+    return;
+  }
+  // 見出しが短いほど、探した語そのものを指している見込みが高い
+  hits.sort((a, b) => a.title.length - b.title.length || a.len - b.len || a.file.localeCompare(b.file));
+  console.log(`# 「${argv.join(' ')}」を含む見出し ${hits.length}件（語に近い順）`);
+  for (const h of hits.slice(0, opts.max)) console.log(`  ${h.file}:${h.line}  ${cut(h.title, opts.width - 40)}  (${h.len}行)`);
+  if (hits.length > opts.max) console.log(`  … ほか ${hits.length - opts.max} 件`);
+  console.log(`\n節だけ読む:  node tools/ctx.js doc <ファイル> <見出しの一部>`);
+}
+
+// ---- 検査を引く ---------------------------------------------------------------
+// 検査は520本あり、tools/README.md は手で書いているので187本が載っていない。
+// スクリプト自身の先頭コメントを読むほうが確実で、しかも安い。
+function checkScripts() {
+  const out = [];
+  const toolsDir = __dirname;
+  const walk = (dir, depth) => {
+    for (const name of fs.readdirSync(dir).sort()) {
+      if (['node_modules', 'art-sources', 'out'].includes(name)) continue;
+      const full = path.join(dir, name);
+      const st = fs.statSync(full);
+      if (st.isDirectory()) { if (depth < 2) walk(full, depth + 1); continue; }
+      if (!/\.js$/.test(name)) continue;
+      // 表示は先頭の1行だけ。探すのは先頭のコメントのかたまり全体
+      // （「音量」のように、1行目に出てこない語で探されることが多いため）
+      let desc = '';
+      const head = [];
+      for (const l of readLines(full).slice(0, 40)) {
+        const t = l.trim();
+        if (t.startsWith('#!')) continue;
+        if (!t.startsWith('//')) { if (head.length) break; else continue; }
+        const body = t.replace(/^\/\/\s?/, '');
+        head.push(body);
+        if (!desc && body.trim()) desc = body.trim();
+      }
+      out.push({ file: path.relative(toolsDir, full), desc, head: head.join(' ') });
+    }
+  };
+  walk(toolsDir, 0);
+  return out;
+}
+
+function cmdChecks(argv, opts) {
+  const all = checkScripts();
+  const needle = argv.join(' ').toLowerCase();
+  if (!needle) {
+    const byDir = new Map();
+    for (const c of all) {
+      const dir = c.file.includes('/') ? c.file.split('/')[0] : '(直下)';
+      byDir.set(dir, (byDir.get(dir) || 0) + 1);
+    }
+    console.log(`# tools/ のスクリプト ${all.length}本`);
+    for (const [dir, n] of [...byDir].sort((a, b) => b[1] - a[1])) console.log(`  ${dir.padEnd(14)} ${String(n).padStart(3)}本`);
+    console.log(`\n語で絞る:  node tools/ctx.js checks <語>（名前と説明の両方を見る）`);
+    return;
+  }
+  const hits = all.filter(c => c.file.toLowerCase().includes(needle) || (c.head || c.desc).toLowerCase().includes(needle));
+  if (!hits.length) {
+    console.log(`「${argv.join(' ')}」に当てはまる検査はありません。一覧:  node tools/ctx.js checks`);
+    return;
+  }
+  // 名前に入っているものを先に（説明にだけ出てくるものより的確なので）
+  hits.sort((a, b) => (b.file.toLowerCase().includes(needle) ? 1 : 0) - (a.file.toLowerCase().includes(needle) ? 1 : 0) || a.file.localeCompare(b.file));
+  console.log(`# 「${argv.join(' ')}」に当てはまる検査 ${hits.length}本`);
+  const width = Math.min(46, Math.max(...hits.map(h => h.file.length)));
+  for (const h of hits.slice(0, opts.max)) console.log(`  ${h.file.padEnd(width)}  ${cut(h.desc || '(説明なし)', opts.width - width - 4)}`);
+  if (hits.length > opts.max) console.log(`  … ほか ${hits.length - opts.max} 本`);
+  console.log(`\n回すなら:  node tools/run-checks.js --script <上の名前>   / 変更から選ぶなら --changed`);
+}
+
 function cmdRead(argv, opts) {
+  if (!argv.length) { console.error('NG: 定義の名前か、ファイルと名前を渡してください'); process.exit(1); }
+
+  // 引数が1つのとき。ファイルなら骨格、そうでなければ名前とみなして置き場所も探す
+  if (argv.length === 1) {
+    const asFile = resolveFile(argv[0]);
+    if (asFile) { console.log(`（${relOf(asFile)} は骨格を出します。本体を読むなら名前か行番号も渡してください）`); return cmdToc(argv, opts); }
+    const defs = findDefs(argv[0]);
+    if (!defs.length) {
+      console.log(`「${argv[0]}」の定義は見つかりませんでした。`);
+      console.log(`本文を探す:  node tools/ctx.js text ${argv[0]}    使われ方を見る:  node tools/ctx.js refs ${argv[0]}`);
+      process.exit(1);
+    }
+    if (defs.length > 3) {
+      console.log(`「${argv[0]}」らしい定義が ${defs.length} 件あります。ファイルを指定してください:`);
+      for (const d of defs.slice(0, 20)) console.log(`  ${relOf(d.file)}:${d.line}  ${cut(d.text.trim(), opts.width - 40)}`);
+      if (defs.length > 20) console.log(`  … ほか ${defs.length - 20} 件`);
+      return;
+    }
+    for (const d of defs) cmdRead([relOf(d.file), argv[0]], opts);
+    return;
+  }
+
   const file = resolveFile(argv[0]);
   if (!file) { console.error(`NG: ${argv[0]} が見つかりません`); process.exit(1); }
   const target = argv[1];
   const lines = readLines(file);
-
-  if (!target) { console.error('NG: 定義の名前か行番号を渡してください'); process.exit(1); }
 
   // 行番号 / 行範囲
   const asRange = /^(\d+)(?:[-:,](\d+))?$/.exec(target);
@@ -253,8 +434,9 @@ function cmdToc(argv, opts) {
 }
 
 function cmdDoc(argv, opts) {
+  if (!argv.length) { console.error('NG: ファイルか、探す語を渡してください'); process.exit(1); }
   const file = resolveFile(argv[0]);
-  if (!file) { console.error(`NG: ${argv[0]} が見つかりません`); process.exit(1); }
+  if (!file) return cmdDocSearch(argv, opts);   // ファイル名でなければ、資料を横断して見出しを探す
   const needle = argv.slice(1).join(' ');
   if (!needle) return cmdToc(argv, opts);
   const lines = readLines(file);
@@ -412,6 +594,8 @@ function main() {
     case 'brief': return cmdBrief(rest, opts);
     case 'find': case 'text': return cmdWhere(sub, rest, opts);
     case 'read': return cmdRead(rest, opts);
+    case 'refs': return cmdRefs(rest, opts);
+    case 'checks': return cmdChecks(rest, opts);
     case 'toc': return cmdToc(rest, opts);
     case 'doc': return cmdDoc(rest, opts);
     case 'rules': return cmdRules(rest, opts);

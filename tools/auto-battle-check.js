@@ -1,3 +1,4 @@
+// AUTOバトルの連続実行・同期ロック・停止条件と、手動操作との排他を確かめる。
 const fs = require('fs');
 const assert = require('assert');
 
