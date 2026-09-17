@@ -6319,6 +6319,81 @@ function MonsterHeroGame() {
       transcendFruitProcessingRef.current = false;
     }
   };
+  // ---------- データを用意する(DEBUG_DATA_SETUP) ----------
+  // 条件が揃わないと始まらないもの(ログインボーナス・ミッション・購入・アイテム・育成)を
+  // すぐ試せる状態にするための操作。CLAUDE.md ⑦ を守り、**既存の保存キーだけ**を使い、
+  // 配るものは足すだけにし、押すたびに確認を出す。
+  const [debugDataMasuStage, setDebugDataMasuStage] = useState('fresh');
+  const [debugDataMonsterId, setDebugDataMonsterId] = useState('');
+  // マーケットの消耗アイテムをそのまま使う(手で書き写すと古くなる)
+  const debugDataItemDefs = () => (typeof BREEDER_MARKET_ITEMS !== 'undefined' ? BREEDER_MARKET_ITEMS : []).filter(i => i?.type === 'item');
+  const debugGrantGold = async (amount) => {
+    const next = Math.max(0, Math.floor(gold)) + amount;
+    if (!window.confirm(`ダイヤを ${amount.toLocaleString()} 足して ${next.toLocaleString()} にします。よろしいですか？`)) return;
+    try { await storeSet('mh_gold', next, false); setGold(next); window.alert(`ダイヤを ${next.toLocaleString()} にしました。`); }
+    catch { window.alert('保存できませんでした。'); }
+  };
+  const debugGrantBreederPoints = async (amount) => {
+    const next = Math.max(0, Math.floor(breederPoints)) + amount;
+    if (!window.confirm(`ブリーダーPを ${amount} 足して ${next} にします。よろしいですか？`)) return;
+    try { await storeSet('mh_breeder_points', next, false); setBreederPoints(next); window.alert(`ブリーダーPを ${next} にしました。`); }
+    catch { window.alert('保存できませんでした。'); }
+  };
+  const debugGrantItem = async (itemId, amount) => {
+    const item = debugDataItemDefs().find(i => i.id === itemId);
+    if (!item) return;
+    const base = ownedItemsRef.current || ownedItems;
+    const next = { ...base, [itemId]: ownedItemCount(base, itemId) + amount };
+    if (!window.confirm(`${item.name} を ${amount} 個足して ${next[itemId]} 個にします。よろしいですか？`)) return;
+    try { await storeSet('mh_owned_items', next, false); ownedItemsRef.current = next; setOwnedItems(next); }
+    catch { window.alert('保存できませんでした。'); }
+  };
+  // 登録したてと同じ形の個体を作る。形は registerMasuMon とそろえ、
+  // 段階だけ後から足す(masuBaselineRepresentationsMatch を必ず通す)
+  const debugCreateMasu = async (baseId, stageId) => {
+    const base = ALL_PLAYER_MONSTERS[baseId];
+    if (!base) return;
+    const cap = stageId === 'fresh' ? INITIAL_MASU_LEVEL_CAP : (stageId === 'rebirth' ? breakthroughLevelCap(FINAL_BREAKTHROUGH_COUNT) : INITIAL_MASU_LEVEL_CAP);
+    const xp = totalBondXpForLevel(cap);
+    const label = stageId === 'fresh' ? '登録したて' : stageId === 'rebirth' ? '限界突破MAX' : '上限まで育てた';
+    if (!window.confirm(`${base.name} を「${label}」で1体つくり、マスモンへ足します。いまの所持はそのままです。よろしいですか？`)) return;
+    const level = bondLevelInfo(stageId === 'fresh' ? 0 : xp);
+    const masu = {
+      id: 'masu_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+      baseId, name: `${base.name}(DEBUG)`.slice(0, 12),
+      bondXp: stageId === 'fresh' ? 0 : xp,
+      rebirthCount: stageId === 'rebirth' ? FINAL_BREAKTHROUGH_COUNT : 0,
+      levelCap: cap,
+      soulRankStage: 0,
+      soulPointMaxReachedLevel: SOUL_RANK_BASE_LEVEL,
+      soulTraitLevels: {}, uniqueSkillLevels: {},
+      distAptPoints: Math.max(0, level.level - 1),
+      distApt: [...(base.distAptitude || ['C','C','C','C'])],
+      distAptBoosts: [0,0,0,0],
+      statPoints: { hp: 0, atk: 0, def: 0, guts: 0 },
+      createdAt: Date.now(),
+    };
+    if (!masuBaselineRepresentationsMatch(masu)) { window.alert('作れませんでした(形が本番とそろっていません)。'); return; }
+    const next = [...masuMons, masu];
+    try { await storeSet('mh_masu_mons', next, false); setMasuMons(next); window.alert(`${masu.name} を足しました。`); }
+    catch { window.alert('保存できませんでした。'); }
+  };
+  const debugResetLoginBonus = async () => {
+    if (!window.confirm('ログインボーナスを未受け取りへ戻します。いまの連続日数・受け取り済みは失われます。よろしいですか？')) return;
+    try { await storeSet('mh_login_bonus', LOGIN_BONUS_DEFAULT, false); setLoginBonusState(LOGIN_BONUS_DEFAULT); window.alert('戻しました。HOMEを開き直すと出ます。'); }
+    catch { window.alert('保存できませんでした。'); }
+  };
+  const debugResetMissions = async () => {
+    if (!window.confirm('ミッションを未達成へ戻します。いまの進み具合と受け取り済みは失われます。よろしいですか？')) return;
+    const fresh = normalizeMissions(null);
+    try { await storeSet('mh_missions', fresh, false); setMissions(fresh); window.alert('戻しました。'); }
+    catch { window.alert('保存できませんでした。'); }
+  };
+  const debugResetChangelogSeen = async () => {
+    if (!window.confirm('更新履歴を未読へ戻します。よろしいですか？')) return;
+    try { await storeSet('mh_changelog_seen', '', false); window.alert('戻しました。'); }
+    catch { window.alert('保存できませんでした。'); }
+  };
   // ===== 超越のデバッグ(DEBUG_SETTINGS からだけ開ける) =====
   // 超越はLv400・35凸という到達点のうえに乗る機能なので、ふつうに遊んで条件を満たすまで
   // 動作を確かめられない。ここで「条件を満たした状態」「費用」「超越ポイント」を用意し、
@@ -12661,6 +12736,30 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             畳むのは <details> そのものに任せているので、開閉のための state は持たない。
             ★中身(ボタンの文言・data-debug-* 属性・押したときの処理)は1つも変えていない。
               並べ替えただけで、検査が見ている目印はすべてこの画面の中に残してある */}
+        {/* データを用意する(デバッグ専用)。条件が揃わないと始まらないものを、すぐ試せる状態にする。
+            セーブデータを書き換えるので、押すたびに確認を出す(処理は本体側 debugGrant* / debugReset*) */}
+        {gameState==='DEBUG_DATA_SETUP'&&(
+          <DebugDataScreen
+            gold={gold}
+            breederPoints={breederPoints}
+            ownedItems={ownedItems}
+            masuMons={masuMons}
+            itemDefs={debugDataItemDefs()}
+            monsters={monsterCheckAllMonsters()}
+            stageId={debugDataMasuStage}
+            monsterId={debugDataMonsterId}
+            onStage={setDebugDataMasuStage}
+            onMonster={setDebugDataMonsterId}
+            onGrantGold={debugGrantGold}
+            onGrantPoints={debugGrantBreederPoints}
+            onGrantItem={debugGrantItem}
+            onCreateMasu={debugCreateMasu}
+            onResetLoginBonus={debugResetLoginBonus}
+            onResetMissions={debugResetMissions}
+            onResetChangelogSeen={debugResetChangelogSeen}
+            onBack={()=>setGameState('DEBUG_SETTINGS')}/>
+        )}
+
         {/* ===== デバッグ戦の設定(デバッグ専用) =====
             「難易度 → 敵 → 勇者モン → 開始」の4段。以前はデバッグ設定のメニューの中へ
             そのまま埋まっていて、縦に1500pxほど伸びていた。次の欄へ行くのにそこを全部
@@ -12784,6 +12883,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <details className="rounded-2xl border border-slate-500/40 bg-slate-900/50">
                 <summary className="cursor-pointer select-none px-3 py-3 text-[11px] font-black text-slate-200">🛠 その他<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">修行テスト・画面エラーの受け止め</small></summary>
                 <div className="space-y-2 border-t border-slate-500/30 p-3">
+                  {/* 条件が揃わないと始まらないもの(ログインボーナス・ミッション・購入・アイテム・育成)を用意する。
+                      セーブデータを書き換えるので赤にしてある */}
+                  <button data-debug-data-setup onClick={()=>setGameState('DEBUG_DATA_SETUP')} className="w-full min-h-[58px] rounded-2xl border-2 border-rose-400/60 bg-rose-950/50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🧰 データを用意する<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">ダイヤ・アイテム・テストのマスモンを配る／ログインボーナスとミッションをもう一度出す</small></button>
                   <button onClick={openDebugTraining} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🎲 修行テスト<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">報酬・進行は保存されません</small></button>
                   {/* 画面エラーの受け止め(MhErrorBoundary)を実際に試す。押すとこの画面の描画で例外が起き、真っ白の代わりに「ホームへ戻る」が出るはず */}
                   <button data-debug-screen-error onClick={()=>setDebugThrowScreenError(true)} className="min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95">⚠️ 画面エラーの受け止めを試す</button>

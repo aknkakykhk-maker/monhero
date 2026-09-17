@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 00279ee5ccdcbfbd
+// source-sha256: 03253b18f04bd611
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d774d728315ea4a2
+// generated-sha256: 316d60f27d80eeae
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -161,7 +161,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-18 01:05"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-18 07:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -39038,6 +39038,162 @@ function MonsterCheckDebugScreen({
   }, JSON.stringify(mon, null, 2)))))));
 }
 
+// ---- part: 76-screen-debug-data.jsx ----
+// ==================== データを用意する(デバッグ専用) ====================
+// 「実装したらデバッグで確認できるようになってる？」への答えが半分だったので足した画面
+// (2026-09-17)。デバッグの入口はこれまで「画面を開く」ものばかりで、
+// **条件が揃わないと始まらないもの**には入口が無かった。
+//
+//   ログインボーナス … 日付が変わるのを待つ
+//   ミッション       … 実際に条件を達成する
+//   マーケットの購入 … ダイヤを貯める
+//   アイテムの使用   … まず入手する
+//   マスモンの育成   … 個体を作って育てる（強化・合体・再生・寄付・魂格）
+//
+// ここで「用意」だけできるようにすると、上のどれもすぐ確認できるようになる。
+//
+// 【この画面はセーブデータを書き換える】
+// CLAUDE.md ⑦ を守るため、次を必ず通す。
+//   ・既存の保存キーだけを使う。新しいキーは1つも作らない
+//   ・押すたびに window.confirm を出す(何が変わるかを文面に書く)
+//   ・配るもの(ダイヤ・アイテム・マスモン)は**足すだけ**。既存の値を消さない
+//   ・「もう一度出す」は進行が消えるので、文面でそれを明言してから確認を取る
+
+// マスモンをどの段階で作るか。育成のどの画面を試したいかで選ぶ
+const DEBUG_MASU_STAGES = Object.freeze([{
+  id: 'fresh',
+  label: '登録したて',
+  desc: '絆Lv.1。強化・合体の入口を見る'
+}, {
+  id: 'grown',
+  label: '上限まで育てた',
+  desc: '絆Lvが上限。限界突破が押せる'
+}, {
+  id: 'rebirth',
+  label: '限界突破MAX',
+  desc: '虹★。転生・超越の条件を満たす'
+}]);
+function DebugDataScreen({
+  gold = 0,
+  breederPoints = 0,
+  ownedItems = {},
+  masuMons = [],
+  itemDefs = [],
+  monsters = [],
+  stageId = 'fresh',
+  monsterId = '',
+  onStage,
+  onMonster,
+  onGrantGold,
+  onGrantPoints,
+  onGrantItem,
+  onCreateMasu,
+  onResetLoginBonus,
+  onResetMissions,
+  onResetChangelogSeen,
+  onBack
+}) {
+  const stage = DEBUG_MASU_STAGES.find(s => s.id === stageId) || DEBUG_MASU_STAGES[0];
+  const mon = monsters.find(m => m.id === monsterId) || monsters[0] || null;
+  const num = n => Math.max(0, Math.floor(Number(n) || 0)).toLocaleString();
+  const section = (title, note, children, tone = 'safe') => /*#__PURE__*/React.createElement("section", {
+    className: `rounded-2xl border p-3 ${tone === 'danger' ? 'border-rose-500/50 bg-rose-950/20' : 'border-cyan-500/40 bg-cyan-950/15'}`
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: `text-[12px] font-black ${tone === 'danger' ? 'text-rose-200' : 'text-cyan-200'}`
+  }, title), note && /*#__PURE__*/React.createElement("p", {
+    className: "mt-0.5 mb-2 text-[9px] font-bold leading-relaxed text-slate-400"
+  }, note), children);
+  const btn = (label, onClick, tone = 'safe', extra = {}) => /*#__PURE__*/React.createElement("button", _extends({
+    key: label,
+    type: "button",
+    onClick: onClick
+  }, extra, {
+    className: `min-h-[48px] rounded-xl border px-2 text-center text-[11px] font-black leading-tight active:scale-95 ${tone === 'danger' ? 'border-rose-400/60 bg-rose-950/50' : 'border-cyan-400/50 bg-cyan-950/40'}`
+  }), label);
+  return /*#__PURE__*/React.createElement("main", {
+    "data-debug-data-screen": true,
+    "data-mh-screen": true,
+    className: "flex-1 flex flex-col h-full min-h-0 p-4",
+    style: {
+      paddingTop: 'calc(1rem + env(safe-area-inset-top))',
+      paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+    }
+  }, /*#__PURE__*/React.createElement(DebugScreenHead, {
+    title: "\u30C7\u30FC\u30BF\u3092\u7528\u610F\u3059\u308B",
+    note: "\u6761\u4EF6\u304C\u63C3\u308F\u306A\u3044\u3068\u59CB\u307E\u3089\u306A\u3044\u3082\u306E\u3092\u3001\u3059\u3050\u8A66\u305B\u308B\u72B6\u614B\u306B\u3059\u308B",
+    saves: true,
+    onBack: onBack
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "mh-debug-banner shrink-0 mb-2"
+  }, "DEBUG\u30FB\u3053\u306E\u753B\u9762\u306F\u30BB\u30FC\u30D6\u30C7\u30FC\u30BF\u3092\u66F8\u304D\u63DB\u3048\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 min-h-0 overflow-y-auto mh-scroll space-y-3"
+  }, section('① ダイヤとブリーダーP', `いま ダイヤ ${num(gold)} ／ ブリーダーP ${num(breederPoints)}。足すだけで、減らしたり書き換えたりはしません。`, /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-3 gap-2"
+  }, btn('ダイヤ +1万', () => onGrantGold(10000), 'safe', {
+    'data-debug-grant-gold': '10000'
+  }), btn('ダイヤ +100万', () => onGrantGold(1000000)), btn('ブリーダーP +100', () => onGrantPoints(100), 'safe', {
+    'data-debug-grant-points': '100'
+  }))), section('② アイテムを配る', 'マーケットの消耗アイテムをそのまま並べています。10個ずつ足します。', /*#__PURE__*/React.createElement("div", {
+    className: "space-y-1.5"
+  }, !itemDefs.length && /*#__PURE__*/React.createElement("p", {
+    className: "text-[10px] text-slate-400"
+  }, "\u30A2\u30A4\u30C6\u30E0\u304C\u8AAD\u307F\u8FBC\u3081\u3066\u3044\u307E\u305B\u3093\u3002"), itemDefs.map(item => /*#__PURE__*/React.createElement("div", {
+    key: item.id,
+    className: "flex items-center gap-2 rounded-xl bg-black/30 px-2.5 py-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "shrink-0 text-[15px]"
+  }, item.emoji || '📦'), /*#__PURE__*/React.createElement("span", {
+    className: "min-w-0 flex-1 truncate text-[11px] font-black text-white"
+  }, item.name), /*#__PURE__*/React.createElement("span", {
+    className: "shrink-0 font-mono text-[11px] font-black text-cyan-300"
+  }, num(ownedItems[item.id])), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "data-debug-grant-item": item.id,
+    onClick: () => onGrantItem(item.id, 10),
+    className: "shrink-0 min-h-[40px] rounded-lg border border-cyan-400/50 bg-cyan-950/40 px-3 text-[11px] font-black active:scale-95"
+  }, "+10"))))), section('③ テストのマスモンを作る', `いま ${masuMons.length} 体。神殿の強化・合体・再生・寄付・魂格は、個体が無いと何も試せません。`, /*#__PURE__*/React.createElement("div", {
+    className: "space-y-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-3 gap-1.5"
+  }, DEBUG_MASU_STAGES.map(s => /*#__PURE__*/React.createElement("button", {
+    key: s.id,
+    type: "button",
+    "data-debug-masu-stage": s.id,
+    onClick: () => onStage(s.id),
+    className: `min-h-[52px] rounded-xl border px-1 text-[10px] font-black leading-tight active:scale-95 ${stage.id === s.id ? 'border-cyan-300 bg-cyan-700 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`
+  }, s.label))), /*#__PURE__*/React.createElement("p", {
+    className: "text-[9px] font-bold text-cyan-300/80"
+  }, stage.desc), /*#__PURE__*/React.createElement("select", {
+    "aria-label": "\u4F5C\u308B\u30E2\u30F3\u30B9\u30BF\u30FC",
+    value: mon ? mon.id : '',
+    onChange: e => onMonster(e.target.value),
+    className: "block min-h-[46px] w-full rounded-xl border border-white/10 bg-slate-900 px-3 text-[12px] font-black text-white"
+  }, monsters.map(m => /*#__PURE__*/React.createElement("option", {
+    key: m.id,
+    value: m.id
+  }, m.name))), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "data-debug-create-masu": true,
+    disabled: !mon,
+    onClick: () => mon && onCreateMasu(mon.id, stage.id),
+    className: "min-h-[50px] w-full rounded-xl border border-cyan-400/60 bg-cyan-800 text-[12px] font-black text-white active:scale-95 disabled:opacity-40"
+  }, mon ? `${mon.name}を「${stage.label}」で1体つくる` : 'モンスターがいません'))), section('④ もう一度出す（進行が消えます）', '待たずに出すための操作です。いまの進み具合は失われます。押すと確認が出ます。', /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-1 gap-2"
+  }, btn('ログインボーナスを未受け取りへ戻す', onResetLoginBonus, 'danger', {
+    'data-debug-reset-login': '1'
+  }), btn('ミッションを未達成へ戻す', onResetMissions, 'danger', {
+    'data-debug-reset-missions': '1'
+  }), btn('更新履歴を未読へ戻す', onResetChangelogSeen, 'danger', {
+    'data-debug-reset-changelog': '1'
+  })), 'danger'), /*#__PURE__*/React.createElement("section", {
+    className: "rounded-2xl border border-white/10 bg-slate-900/50 p-3"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-[11px] font-black text-slate-300"
+  }, "\u307E\u3060\u3053\u3053\u304B\u3089\u7528\u610F\u3067\u304D\u306A\u3044\u3082\u306E"), /*#__PURE__*/React.createElement("p", {
+    className: "mt-1 text-[9px] font-bold leading-relaxed text-slate-400"
+  }, "\u30AE\u30D5\u30C8\u30DC\u30C3\u30AF\u30B9\u306E\u914D\u5E03\u30FB\u88DC\u511F\uFF0F\u30AD\u30E3\u30F3\u30DA\u30FC\u30F3\uFF0F\u30E9\u30F3\u30AD\u30F3\u30B0\u306E\u9001\u4FE1\u3002\u3069\u308C\u3082\u914D\u5E03\u3084\u9001\u4FE1\u306E\u6761\u4EF6\u305D\u306E\u3082\u306E\u3092\u66F8\u304D\u63DB\u3048\u308B\u3053\u3068\u306B\u306A\u308B\u305F\u3081\u3001 \u3046\u3063\u304B\u308A\u672C\u7269\u306E\u8A18\u9332\u3092\u89E6\u3089\u306A\u3044\u3088\u3046\u5165\u53E3\u3092\u4F5C\u3063\u3066\u3044\u307E\u305B\u3093\u3002"))));
+}
+
 // ---- part: 60-app.jsx ----
 function MonsterHeroGame() {
   const [gameState, setGameStateRaw] = useState('HOME');
@@ -47607,6 +47763,128 @@ function MonsterHeroGame() {
       return null;
     } finally {
       transcendFruitProcessingRef.current = false;
+    }
+  };
+  // ---------- データを用意する(DEBUG_DATA_SETUP) ----------
+  // 条件が揃わないと始まらないもの(ログインボーナス・ミッション・購入・アイテム・育成)を
+  // すぐ試せる状態にするための操作。CLAUDE.md ⑦ を守り、**既存の保存キーだけ**を使い、
+  // 配るものは足すだけにし、押すたびに確認を出す。
+  const [debugDataMasuStage, setDebugDataMasuStage] = useState('fresh');
+  const [debugDataMonsterId, setDebugDataMonsterId] = useState('');
+  // マーケットの消耗アイテムをそのまま使う(手で書き写すと古くなる)
+  const debugDataItemDefs = () => (typeof BREEDER_MARKET_ITEMS !== 'undefined' ? BREEDER_MARKET_ITEMS : []).filter(i => i?.type === 'item');
+  const debugGrantGold = async amount => {
+    const next = Math.max(0, Math.floor(gold)) + amount;
+    if (!window.confirm(`ダイヤを ${amount.toLocaleString()} 足して ${next.toLocaleString()} にします。よろしいですか？`)) return;
+    try {
+      await storeSet('mh_gold', next, false);
+      setGold(next);
+      window.alert(`ダイヤを ${next.toLocaleString()} にしました。`);
+    } catch {
+      window.alert('保存できませんでした。');
+    }
+  };
+  const debugGrantBreederPoints = async amount => {
+    const next = Math.max(0, Math.floor(breederPoints)) + amount;
+    if (!window.confirm(`ブリーダーPを ${amount} 足して ${next} にします。よろしいですか？`)) return;
+    try {
+      await storeSet('mh_breeder_points', next, false);
+      setBreederPoints(next);
+      window.alert(`ブリーダーPを ${next} にしました。`);
+    } catch {
+      window.alert('保存できませんでした。');
+    }
+  };
+  const debugGrantItem = async (itemId, amount) => {
+    const item = debugDataItemDefs().find(i => i.id === itemId);
+    if (!item) return;
+    const base = ownedItemsRef.current || ownedItems;
+    const next = {
+      ...base,
+      [itemId]: ownedItemCount(base, itemId) + amount
+    };
+    if (!window.confirm(`${item.name} を ${amount} 個足して ${next[itemId]} 個にします。よろしいですか？`)) return;
+    try {
+      await storeSet('mh_owned_items', next, false);
+      ownedItemsRef.current = next;
+      setOwnedItems(next);
+    } catch {
+      window.alert('保存できませんでした。');
+    }
+  };
+  // 登録したてと同じ形の個体を作る。形は registerMasuMon とそろえ、
+  // 段階だけ後から足す(masuBaselineRepresentationsMatch を必ず通す)
+  const debugCreateMasu = async (baseId, stageId) => {
+    const base = ALL_PLAYER_MONSTERS[baseId];
+    if (!base) return;
+    const cap = stageId === 'fresh' ? INITIAL_MASU_LEVEL_CAP : stageId === 'rebirth' ? breakthroughLevelCap(FINAL_BREAKTHROUGH_COUNT) : INITIAL_MASU_LEVEL_CAP;
+    const xp = totalBondXpForLevel(cap);
+    const label = stageId === 'fresh' ? '登録したて' : stageId === 'rebirth' ? '限界突破MAX' : '上限まで育てた';
+    if (!window.confirm(`${base.name} を「${label}」で1体つくり、マスモンへ足します。いまの所持はそのままです。よろしいですか？`)) return;
+    const level = bondLevelInfo(stageId === 'fresh' ? 0 : xp);
+    const masu = {
+      id: 'masu_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+      baseId,
+      name: `${base.name}(DEBUG)`.slice(0, 12),
+      bondXp: stageId === 'fresh' ? 0 : xp,
+      rebirthCount: stageId === 'rebirth' ? FINAL_BREAKTHROUGH_COUNT : 0,
+      levelCap: cap,
+      soulRankStage: 0,
+      soulPointMaxReachedLevel: SOUL_RANK_BASE_LEVEL,
+      soulTraitLevels: {},
+      uniqueSkillLevels: {},
+      distAptPoints: Math.max(0, level.level - 1),
+      distApt: [...(base.distAptitude || ['C', 'C', 'C', 'C'])],
+      distAptBoosts: [0, 0, 0, 0],
+      statPoints: {
+        hp: 0,
+        atk: 0,
+        def: 0,
+        guts: 0
+      },
+      createdAt: Date.now()
+    };
+    if (!masuBaselineRepresentationsMatch(masu)) {
+      window.alert('作れませんでした(形が本番とそろっていません)。');
+      return;
+    }
+    const next = [...masuMons, masu];
+    try {
+      await storeSet('mh_masu_mons', next, false);
+      setMasuMons(next);
+      window.alert(`${masu.name} を足しました。`);
+    } catch {
+      window.alert('保存できませんでした。');
+    }
+  };
+  const debugResetLoginBonus = async () => {
+    if (!window.confirm('ログインボーナスを未受け取りへ戻します。いまの連続日数・受け取り済みは失われます。よろしいですか？')) return;
+    try {
+      await storeSet('mh_login_bonus', LOGIN_BONUS_DEFAULT, false);
+      setLoginBonusState(LOGIN_BONUS_DEFAULT);
+      window.alert('戻しました。HOMEを開き直すと出ます。');
+    } catch {
+      window.alert('保存できませんでした。');
+    }
+  };
+  const debugResetMissions = async () => {
+    if (!window.confirm('ミッションを未達成へ戻します。いまの進み具合と受け取り済みは失われます。よろしいですか？')) return;
+    const fresh = normalizeMissions(null);
+    try {
+      await storeSet('mh_missions', fresh, false);
+      setMissions(fresh);
+      window.alert('戻しました。');
+    } catch {
+      window.alert('保存できませんでした。');
+    }
+  };
+  const debugResetChangelogSeen = async () => {
+    if (!window.confirm('更新履歴を未読へ戻します。よろしいですか？')) return;
+    try {
+      await storeSet('mh_changelog_seen', '', false);
+      window.alert('戻しました。');
+    } catch {
+      window.alert('保存できませんでした。');
     }
   };
   // ===== 超越のデバッグ(DEBUG_SETTINGS からだけ開ける) =====
@@ -59715,7 +59993,26 @@ function MonsterHeroGame() {
     })), rhythmChartToolsOpened && /*#__PURE__*/React.createElement("div", {
       "data-rhythm-debug": true,
       hidden: rhythmDebugTab !== 'chart'
-    }))), gameState === 'DEBUG_BATTLE_SETUP' && /*#__PURE__*/React.createElement("main", {
+    }))), gameState === 'DEBUG_DATA_SETUP' && /*#__PURE__*/React.createElement(DebugDataScreen, {
+      gold: gold,
+      breederPoints: breederPoints,
+      ownedItems: ownedItems,
+      masuMons: masuMons,
+      itemDefs: debugDataItemDefs(),
+      monsters: monsterCheckAllMonsters(),
+      stageId: debugDataMasuStage,
+      monsterId: debugDataMonsterId,
+      onStage: setDebugDataMasuStage,
+      onMonster: setDebugDataMonsterId,
+      onGrantGold: debugGrantGold,
+      onGrantPoints: debugGrantBreederPoints,
+      onGrantItem: debugGrantItem,
+      onCreateMasu: debugCreateMasu,
+      onResetLoginBonus: debugResetLoginBonus,
+      onResetMissions: debugResetMissions,
+      onResetChangelogSeen: debugResetChangelogSeen,
+      onBack: () => setGameState('DEBUG_SETTINGS')
+    }), gameState === 'DEBUG_BATTLE_SETUP' && /*#__PURE__*/React.createElement("main", {
       "data-debug-battle-setup-screen": true,
       "data-mh-screen": true,
       className: "flex-1 flex flex-col h-full min-h-0 p-4",
@@ -60060,6 +60357,12 @@ function MonsterHeroGame() {
     }, "\u4FEE\u884C\u30C6\u30B9\u30C8\u30FB\u753B\u9762\u30A8\u30E9\u30FC\u306E\u53D7\u3051\u6B62\u3081")), /*#__PURE__*/React.createElement("div", {
       className: "space-y-2 border-t border-slate-500/30 p-3"
     }, /*#__PURE__*/React.createElement("button", {
+      "data-debug-data-setup": true,
+      onClick: () => setGameState('DEBUG_DATA_SETUP'),
+      className: "w-full min-h-[58px] rounded-2xl border-2 border-rose-400/60 bg-rose-950/50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
+    }, "\uD83E\uDDF0 \u30C7\u30FC\u30BF\u3092\u7528\u610F\u3059\u308B", /*#__PURE__*/React.createElement("small", {
+      className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
+    }, "\u30C0\u30A4\u30E4\u30FB\u30A2\u30A4\u30C6\u30E0\u30FB\u30C6\u30B9\u30C8\u306E\u30DE\u30B9\u30E2\u30F3\u3092\u914D\u308B\uFF0F\u30ED\u30B0\u30A4\u30F3\u30DC\u30FC\u30CA\u30B9\u3068\u30DF\u30C3\u30B7\u30E7\u30F3\u3092\u3082\u3046\u4E00\u5EA6\u51FA\u3059")), /*#__PURE__*/React.createElement("button", {
       onClick: openDebugTraining,
       className: "w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
     }, "\uD83C\uDFB2 \u4FEE\u884C\u30C6\u30B9\u30C8", /*#__PURE__*/React.createElement("small", {

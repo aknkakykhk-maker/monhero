@@ -1768,6 +1768,8 @@ const HELP_SCREEN_COVERAGE = {
   RHYTHM_RANKING:       'rhythm/rhythm-ranking',
   // デバッグ戦の設定(難易度→敵→勇者モン→開始)。デバッグ設定のメニューから切り出したもの
   DEBUG_BATTLE_SETUP: 'basics/battle-modes',
+  // データを用意する(デバッグ専用)。触るのは所持品と進行なので、アイテムの説明へ対応させる
+  DEBUG_DATA_SETUP: 'items/items',
   DEBUG_SETTINGS:   null,
   SPECIES_CHALLENGE_DEBUG: null,
   BREEDER_ICON_DEBUG:'home/profile',
