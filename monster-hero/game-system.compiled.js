@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 41cd76c61bd665dc
+// source-sha256: b02d86c4f51b11ef
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 094b5565154e4f90
+// generated-sha256: f8d4ca39ccc9df1f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -161,7 +161,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-18 19:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-18 23:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -36859,7 +36859,7 @@ function BattleScreen({
     // ここを数えてしまうと、1枚目なのに自分自身を2枚目とみなして半減表示になる。
     const pendingCardObj = pendingCard != null ? hand[pendingCard] : dragState && dragState.active ? dragState.card : null;
     const pendingIdx = pendingCard != null ? pendingCard : dragState && dragState.active ? dragState.cardIndex : null;
-    // おりょう・ゴーレム・モッチー/ミタラシ・ききは使ったターンからすぐ効くため、
+    // ニコラオ・ゴーレム・モッチー/ミタラシ・ききは使ったターンからすぐ効くため、
     // 先に選んだカードぶんの補正を、あとに続くカードの予測へも反映する
     // (processTurnの実行順序と同じ数え方。localBoostFromCard/previewLocalBoosts参照)。
     const boosts = previewLocalBoosts(pendingIdx);
@@ -37009,7 +37009,7 @@ function BattleScreen({
     // - if a card is pending assignment, show what THIS card would do on this monster
     // - otherwise show the sum of damage from cards already assigned to this slot,
     //   using the GLOBAL attack order (2nd+ attack = half damage), matching processTurn
-    // おりょう・ゴーレム・モッチー/ミタラシ・ききの同ターン即時効果を、
+    // ニコラオ・ゴーレム・モッチー/ミタラシ・ききの同ターン即時効果を、
     // このスロットの予測にも反映する(合計DMG欄と同じpreviewLocalBoosts)。
     const slotBoosts = previewLocalBoosts(pendingIdx);
     let previewDmg = 0;
@@ -50656,7 +50656,7 @@ function MonsterHeroGame() {
   // flat は互換用（現行定義は0）。実質は「実効丈夫さ × 倍率の合計」。
   const guardValueOf = (flat, mult) => flat > 0 || mult > 0 ? Math.floor(flat + effectiveDef * mult) : 0;
   // このカードを使うと、同じターンの「あとに続くカード」へ即座に乗る補正の生値(effMul適用前)。
-  // おりょうの力・ゴーレム・モッチー/ミタラシ・ききの応援は、説明どおり使ったターンから効く
+  // ニコラオの力・ゴーレム・モッチー/ミタラシ・ききの応援は、説明どおり使ったターンから効く
   // (他の永続バフは次のターンから効く。詳細はヘルプ「ずっと続く効果は次のターンから」を参照)。
   // processTurn(実行)とpreviewLocalBoosts(カード選択中の予測)の両方がここを通ることで、
   // 効果量を変えるときに直すのはこの1箇所だけで済み、表示と実際の計算がずれなくなる。
@@ -50682,7 +50682,7 @@ function MonsterHeroGame() {
   };
   // 固有技は「自分の効果を乗せてから、その同じカードで攻撃する」(processTurnの並び。
   // 効果を足す if(card.type==='unique'){…} のあとで getDmg を呼んでいる)。
-  // おりょう・きき・かどみうむのようなバフカードは自分では攻撃しないので、ここには入らない。
+  // ニコラオ・きき・かどみうむのようなバフカードは自分では攻撃しないので、ここには入らない。
   const localBoostAppliesToSelf = card => card?.type === 'unique';
   // このカードのダメージを出すときに使う即時補正。自分の効果が自分に乗るカード(固有技)は
   // 自分のぶんも足す。これを忘れると、カード選択中の予測より実行後のダメージが増える

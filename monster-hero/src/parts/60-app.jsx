@@ -8249,7 +8249,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // flat は互換用（現行定義は0）。実質は「実効丈夫さ × 倍率の合計」。
   const guardValueOf = (flat, mult) => (flat > 0 || mult > 0) ? Math.floor(flat + effectiveDef * mult) : 0;
   // このカードを使うと、同じターンの「あとに続くカード」へ即座に乗る補正の生値(effMul適用前)。
-  // おりょうの力・ゴーレム・モッチー/ミタラシ・ききの応援は、説明どおり使ったターンから効く
+  // ニコラオの力・ゴーレム・モッチー/ミタラシ・ききの応援は、説明どおり使ったターンから効く
   // (他の永続バフは次のターンから効く。詳細はヘルプ「ずっと続く効果は次のターンから」を参照)。
   // processTurn(実行)とpreviewLocalBoosts(カード選択中の予測)の両方がここを通ることで、
   // 効果量を変えるときに直すのはこの1箇所だけで済み、表示と実際の計算がずれなくなる。
@@ -8267,7 +8267,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   };
   // 固有技は「自分の効果を乗せてから、その同じカードで攻撃する」(processTurnの並び。
   // 効果を足す if(card.type==='unique'){…} のあとで getDmg を呼んでいる)。
-  // おりょう・きき・かどみうむのようなバフカードは自分では攻撃しないので、ここには入らない。
+  // ニコラオ・きき・かどみうむのようなバフカードは自分では攻撃しないので、ここには入らない。
   const localBoostAppliesToSelf = (card) => card?.type==='unique';
   // このカードのダメージを出すときに使う即時補正。自分の効果が自分に乗るカード(固有技)は
   // 自分のぶんも足す。これを忘れると、カード選択中の予測より実行後のダメージが増える
