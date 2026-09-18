@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 18e960ffaa06997d
+// source-sha256: 0263caeff1023c8c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ae6a548e1fd98dee
+// generated-sha256: af0f9126137c65dd
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -161,7 +161,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-18 18:42"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-19 01:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -35862,7 +35862,7 @@ function BattleScreen({
     "data-battle-turn": true,
     className: "flex flex-col items-center justify-center whitespace-nowrap font-black text-blue-400"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "flex items-center gap-0.5 text-[7px] tracking-wide"
+    className: "flex items-center gap-0.5 text-[10px] tracking-wide"
   }, /*#__PURE__*/React.createElement(Timer, {
     size: 7
   }), "TURN"), /*#__PURE__*/React.createElement("span", {
@@ -35871,7 +35871,7 @@ function BattleScreen({
     "data-battle-score": true,
     className: "flex min-w-[64px] flex-col items-end justify-center whitespace-nowrap font-mono font-black text-amber-500"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "flex items-center gap-0.5 text-[7px] tracking-wide"
+    className: "flex items-center gap-0.5 text-[10px] tracking-wide"
   }, /*#__PURE__*/React.createElement(Award, {
     size: 7
   }), "SCORE"), /*#__PURE__*/React.createElement("span", {
@@ -35894,7 +35894,7 @@ function BattleScreen({
       boxShadow: '0 0 9px rgba(245,158,11,.35)'
     }
   }, "\xD7", battleSpeed, autoRepeat && /*#__PURE__*/React.createElement("span", {
-    className: "ml-0.5 text-[7px]"
+    className: "ml-0.5 text-[10px]"
   }, "\u56FA\u5B9A")), /*#__PURE__*/React.createElement("button", {
     onClick: () => openHelp(),
     "aria-label": "\u30D8\u30EB\u30D7",
@@ -35945,7 +35945,7 @@ function BattleScreen({
   }, enemy.emoji)), /*#__PURE__*/React.createElement("div", {
     className: "text-center"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[8px] font-black text-slate-400"
+    className: "text-[10px] font-black text-slate-400"
   }, "\u73FE\u5728\u8DDD\u96E2"), /*#__PURE__*/React.createElement("div", {
     className: `mt-1 rounded-full border px-3 py-1 text-[11px] font-black ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border}`
   }, RANGE_LABELS[enemyDist], "\u8DDD\u96E2"))), /*#__PURE__*/React.createElement("div", {
@@ -35965,13 +35965,13 @@ function BattleScreen({
     key: i,
     className: `flex h-[42px] min-w-0 flex-col items-center justify-center rounded-lg border px-0.5 py-1 text-center ${RANGE_STYLES[i].bg} ${RANGE_STYLES[i].border}`
   }, /*#__PURE__*/React.createElement("div", {
-    className: "w-full truncate text-[9px] font-black text-white"
+    className: "w-full truncate text-[10px] font-black text-white"
   }, s?.name || '---'), /*#__PURE__*/React.createElement("div", {
-    className: "mt-1 text-[8px] font-black"
+    className: "mt-1 text-[10px] font-black"
   }, RANGE_LABELS[i], "\u8DDD\u96E2")))), /*#__PURE__*/React.createElement("div", {
     className: "mt-1.5 space-y-1"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-    className: "flex justify-between text-[8px] font-black text-pink-300"
+    className: "flex justify-between text-[10px] font-black text-pink-300"
   }, /*#__PURE__*/React.createElement("span", null, "\u5473\u65B9HP"), /*#__PURE__*/React.createElement("span", {
     className: "font-mono"
   }, hp.toLocaleString(), " / ", effectiveMaxHp.toLocaleString())), /*#__PURE__*/React.createElement("div", {
@@ -35982,7 +35982,7 @@ function BattleScreen({
       width: `${hp / effectiveMaxHp * 100}%`
     }
   }))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-    className: "flex justify-between text-[8px] font-black text-amber-300"
+    className: "flex justify-between text-[10px] font-black text-amber-300"
   }, /*#__PURE__*/React.createElement("span", null, "\u30AC\u30C3\u30C4"), /*#__PURE__*/React.createElement("span", {
     className: "font-mono"
   }, Math.floor(guts).toLocaleString(), " / ", effectiveMaxGuts.toLocaleString())), /*#__PURE__*/React.createElement("div", {
@@ -36012,7 +36012,7 @@ function BattleScreen({
     className: "truncate text-[9px] font-bold text-slate-300"
   }, "AUTO\u221E\u3067\u9032\u884C\u4E2D")), /*#__PURE__*/React.createElement("button", {
     onClick: () => setShowDeckInfo(true),
-    className: "flex min-h-[32px] items-center gap-0.5 rounded-lg border border-white/10 bg-white/5 px-2 text-[7px] font-black"
+    className: "flex min-h-[32px] items-center gap-0.5 rounded-lg border border-white/10 bg-white/5 px-2 text-[10px] font-black"
   }, /*#__PURE__*/React.createElement(Layers, {
     size: 9
   }), "VIEW"), /*#__PURE__*/React.createElement("div", {
@@ -36027,7 +36027,7 @@ function BattleScreen({
   }, /*#__PURE__*/React.createElement("span", {
     className: "block text-[13px] leading-none"
   }, "\uD83C\uDFB5"), /*#__PURE__*/React.createElement("span", {
-    className: "mt-0.5 block text-[7px] font-black leading-none"
+    className: "mt-0.5 block text-[10px] font-black leading-none"
   }, "BGM")), quickToRhythmButtonNode), /*#__PURE__*/React.createElement("div", {
     className: "w-[44px] shrink-0 flex flex-col gap-0.5"
   }, /*#__PURE__*/React.createElement("button", {
@@ -36036,16 +36036,16 @@ function BattleScreen({
     onClick: cycleBattleAuto,
     "aria-pressed": autoBattle,
     "aria-label": `AUTO ${autoRepeat ? '∞' : autoBattle ? 'ON' : 'OFF'}`,
-    className: "h-8 w-full rounded-lg border-2 border-fuchsia-300 bg-fuchsia-500 text-[8px] font-black leading-tight text-slate-950"
+    className: "h-8 w-full rounded-lg border-2 border-fuchsia-300 bg-fuchsia-500 text-[10px] font-black leading-tight text-slate-950"
   }, /*#__PURE__*/React.createElement("span", {
     className: "block"
   }, "AUTO"), /*#__PURE__*/React.createElement("span", {
-    className: "block text-[7px]"
+    className: "block text-[10px]"
   }, autoRepeat ? '∞' : autoBattle ? 'ON' : 'OFF')), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: cycleEcoMode,
     "aria-label": "\u7701\u30A8\u30CD \u8D85",
-    className: "min-h-[24px] w-full rounded-md border border-lime-200 bg-lime-500 text-[7px] font-black leading-[9px] text-slate-950"
+    className: "min-h-[24px] w-full rounded-md border border-lime-200 bg-lime-500 text-[10px] font-black leading-[9px] text-slate-950"
   }, /*#__PURE__*/React.createElement("span", {
     className: "block"
   }, "\u7701\u30A8\u30CD"), /*#__PURE__*/React.createElement("span", {
@@ -36072,7 +36072,7 @@ function BattleScreen({
     const revivalTotal = extremeRevivalCount(statusRule, wave);
     return /*#__PURE__*/React.createElement("div", {
       "data-ultimate-battle-status": statusRule,
-      className: "shrink-0 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 border-b border-fuchsia-500/30 bg-purple-950/80 px-2 py-1 text-[8px] font-black leading-none text-purple-100"
+      className: "shrink-0 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 border-b border-fuchsia-500/30 bg-purple-950/80 px-2 py-1 text-[10px] font-black leading-none text-purple-100"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-amber-300"
     }, statusRule, stageLabel ? ` ${stageLabel} Lv.${extremeWaveStageLevel(wave)}` : ''), revivalTotal > 0 && /*#__PURE__*/React.createElement("span", {
@@ -36082,7 +36082,7 @@ function BattleScreen({
     const rule = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
     return [NIGHTMARE_SETTING.id, CHAOS_SETTING.id].includes(rule) && /*#__PURE__*/React.createElement("div", {
       "data-extreme-battle-status": rule,
-      className: "shrink-0 grid grid-cols-4 items-center gap-1 border-b border-fuchsia-500/30 bg-purple-950/80 px-2 py-1 text-[9px] font-black leading-none text-purple-100"
+      className: "shrink-0 grid grid-cols-4 items-center gap-1 border-b border-fuchsia-500/30 bg-purple-950/80 px-2 py-1 text-[10px] font-black leading-none text-purple-100"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-amber-300"
     }, rule), extremeSpecialRuleLines(rule).map(([label, value]) => /*#__PURE__*/React.createElement("span", {
@@ -36101,10 +36101,10 @@ function BattleScreen({
   }), /*#__PURE__*/React.createElement("span", {
     className: "max-w-[34vw] truncate"
   }, enemy.name), /*#__PURE__*/React.createElement("span", {
-    className: `shrink-0 px-1.5 py-0.5 rounded-full text-[8px] text-white font-bold border ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border}`
+    className: `shrink-0 px-1.5 py-0.5 rounded-full text-[10px] text-white font-bold border ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border}`
   }, RANGE_LABELS[enemyDist]), iceLockTurns > 0 && /*#__PURE__*/React.createElement("span", {
     "data-ice-lock-status": true,
-    className: "shrink-0 px-1 py-0.5 rounded-full border border-cyan-400/60 bg-cyan-950/80 text-[7px] not-italic tracking-tighter whitespace-nowrap text-cyan-100"
+    className: "shrink-0 px-1 py-0.5 rounded-full border border-cyan-400/60 bg-cyan-950/80 text-[10px] not-italic tracking-tighter whitespace-nowrap text-cyan-100"
   }, "\u2744\uFE0F\u7D76\u6C37 ", iceLockPreparing ? '準備' : /*#__PURE__*/React.createElement(React.Fragment, null, iceLockTurns, "T\u3000\u2B0730%"))), /*#__PURE__*/React.createElement("span", {
     className: "text-red-500 flex items-center gap-1 font-mono drop-shadow-[0_1px_3px_rgba(0,0,0,1)]"
   }, Math.max(0, enemy.hp).toLocaleString(), " / ", enemy.maxHp.toLocaleString())), /*#__PURE__*/React.createElement("div", {
@@ -36124,7 +36124,7 @@ function BattleScreen({
     className: "text-red-400 mb-0.5",
     size: 14
   }), /*#__PURE__*/React.createElement("span", {
-    className: "text-[7px] font-black text-white"
+    className: "text-[10px] font-black text-white"
   }, "\u89E3\u6790")), /*#__PURE__*/React.createElement("button", {
     onClick: () => setShowHeroInfo(true),
     className: `absolute left-2 top-10 flex flex-col items-center justify-center p-2 rounded-2xl border border-indigo-500 bg-indigo-950/30 active:scale-90 z-20 shadow-lg${battleTutorialSpotClass('heroStatus')}`
@@ -36132,7 +36132,7 @@ function BattleScreen({
     className: "text-indigo-400 mb-0.5",
     size: 14
   }), /*#__PURE__*/React.createElement("span", {
-    className: "text-[7px] font-black text-white"
+    className: "text-[10px] font-black text-white"
   }, "\u30B9\u30C6\u30FC\u30BF\u30B9")), battleSoulMasus.some(m => normalizeSoulRankStage(m.soulRankStage) > 0) && /*#__PURE__*/React.createElement("button", {
     "data-soul-battle-effects-button": true,
     type: "button",
@@ -36142,10 +36142,10 @@ function BattleScreen({
     className: "text-sky-300 mb-0.5",
     size: 14
   }), /*#__PURE__*/React.createElement("span", {
-    className: "text-[7px] font-black text-white"
+    className: "text-[10px] font-black text-white"
   }, "\u9B42\u683C\u52B9\u679C")), turnCount === 1 && battleSoulMasus.some(m => normalizeSoulRankStage(m.soulRankStage) > 0) && !isBusy && /*#__PURE__*/React.createElement("div", {
     "data-soul-battle-start-summary": true,
-    className: "absolute left-1/2 top-2 -translate-x-1/2 z-10 max-w-[62%] truncate rounded-full border border-sky-400/30 bg-sky-950/75 px-2 py-1 text-[7px] font-black text-sky-100 pointer-events-none"
+    className: "absolute left-1/2 top-2 -translate-x-1/2 z-10 max-w-[62%] truncate rounded-full border border-sky-400/30 bg-sky-950/75 px-2 py-1 text-[10px] font-black text-sky-100 pointer-events-none"
   }, "\u9B42\u683C\u52B9\u679C \u767A\u52D5\u4E2D", Math.round(soulBattleParty.damageReduction * 10) / 10 > 0 ? ` ・鉄壁${Math.round(soulBattleParty.damageReduction * 10) / 10}%` : '', unifiedSpecialDefense.rate > 0 ? ` ・特殊防御${Math.round(unifiedSpecialDefense.rate * 10) / 10}%` : '', battleIntimidate > 0 ? ` ・威圧${Math.round(battleIntimidate * 10) / 10}%` : '', soulCoordinationCardBonus > 0 ? ' ・カード+1' : ''), /*#__PURE__*/React.createElement("button", {
     onClick: useEmergency,
     disabled: isBusy || autoBattle || !battleTutorialAllowsEmergency,
@@ -36154,7 +36154,7 @@ function BattleScreen({
     className: "text-blue-400 mb-0.5",
     size: 16
   }), /*#__PURE__*/React.createElement("span", {
-    className: "text-[7px] font-black text-white"
+    className: "text-[10px] font-black text-white"
   }, "\u7DCA\u6025")), /*#__PURE__*/React.createElement("div", {
     className: "mt-1 relative flex flex-col items-center"
   }, enemySkillName && /*#__PURE__*/React.createElement("div", {
@@ -36656,121 +36656,124 @@ function BattleScreen({
     });
     const plannedDmg = applyTurnDamageReduction(Math.max(0, rawDmg - guardValueOf(previewGuardFlat, previewGuardMult)));
     const tone = enemyIntent.type === 'SPECIAL' ? 'bg-fuchsia-950 border-fuchsia-500 text-fuchsia-300' : enemyIntent.type === 'CHARGE' ? 'bg-amber-950 border-amber-500 text-amber-400' : enemyIntent.type === 'MOVE' ? 'bg-cyan-950 border-cyan-500/60 text-cyan-300' : 'bg-red-950 border-red-600/50 text-red-400';
+    // 敵の絵のすぐ下へ置く(2026-09-18・ユーザー依頼)。mt-auto で下端へ押しやっていたため、
+    // 絵と「次に何をしてくるか」のあいだに200pxほどの空きができ、視線が大きく動いていた。
+    // 余りの高さは、この下のバフ帯の mt-auto がまとめて吸う。
     return /*#__PURE__*/React.createElement("div", {
-      className: `mt-auto mb-1 border p-1 px-4 rounded-full flex items-center gap-1.5 animate-pulse z-[45] shadow-lg shrink-0${battleTutorialSpotClass('enemyIntent')} ${focusedCard ? 'invisible' : 'visible'} ${tone}`
+      className: `mt-2 mb-1 border p-1 px-4 rounded-full flex items-center gap-1.5 animate-pulse z-[45] shadow-lg shrink-0${battleTutorialSpotClass('enemyIntent')} ${focusedCard ? 'invisible' : 'visible'} ${tone}`
     }, /*#__PURE__*/React.createElement(Target, {
       size: 12
     }), /*#__PURE__*/React.createElement("div", {
-      className: "text-[9px] font-black uppercase tracking-tight"
+      className: "text-[10px] font-black uppercase tracking-tight"
     }, enemyIntent.label, rawDmg > 0 ? ` (予定: ${plannedDmg})` : ''));
   })(), /*#__PURE__*/React.createElement("div", {
     className: `flex flex-wrap justify-center gap-1 max-w-[340px] mt-auto mb-1 shrink-0 relative z-[40] ${focusedCard ? 'invisible' : 'visible'}`
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[7px] font-black text-red-500 bg-black/60 px-2 py-0.5 rounded border border-red-500/50 flex items-center gap-1 shadow-lg uppercase"
+  }, Math.floor((getPermaBuff('atkPct') + getPermaBuff('muaAtkPct')) * 100) > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] font-black text-red-500 bg-black/60 px-2 py-0.5 rounded border border-red-500/50 flex items-center gap-1 shadow-lg uppercase"
   }, /*#__PURE__*/React.createElement(Sword, {
-    size: 7
-  }), " ATK +", Math.floor((getPermaBuff('atkPct') + getPermaBuff('muaAtkPct')) * 100), "%"), /*#__PURE__*/React.createElement("div", {
-    className: "text-[7px] font-black text-emerald-500 bg-black/60 px-2 py-0.5 rounded border border-emerald-500/50 flex items-center gap-1 shadow-lg uppercase"
+    size: 9
+  }), " ATK +", Math.floor((getPermaBuff('atkPct') + getPermaBuff('muaAtkPct')) * 100), "%"), Math.floor(getPermaBuff('dmgCutPct') * 100) > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] font-black text-emerald-500 bg-black/60 px-2 py-0.5 rounded border border-emerald-500/50 flex items-center gap-1 shadow-lg uppercase"
   }, /*#__PURE__*/React.createElement(Shield, {
-    size: 7
-  }), " \u88AB\u30C0\u30E1 -", Math.floor(getPermaBuff('dmgCutPct') * 100), "%"), /*#__PURE__*/React.createElement("div", {
-    className: "text-[7px] font-black text-emerald-500 bg-black/60 px-2 py-0.5 rounded border border-emerald-500/50 flex items-center gap-1 shadow-lg uppercase"
+    size: 9
+  }), " \u88AB\u30C0\u30E1 -", Math.floor(getPermaBuff('dmgCutPct') * 100), "%"), Math.floor(getPermaBuff('defPct') * 100) > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] font-black text-emerald-500 bg-black/60 px-2 py-0.5 rounded border border-emerald-500/50 flex items-center gap-1 shadow-lg uppercase"
   }, /*#__PURE__*/React.createElement(Shield, {
-    size: 7
-  }), " DEF +", Math.floor(getPermaBuff('defPct') * 100), "%"), /*#__PURE__*/React.createElement("div", {
-    className: "text-[7px] font-black text-pink-500 bg-black/60 px-2 py-0.5 rounded border border-pink-500/50 flex items-center gap-1 shadow-lg uppercase"
+    size: 9
+  }), " DEF +", Math.floor(getPermaBuff('defPct') * 100), "%"), Math.floor(getPermaBuff('muaHpPct') * 100) > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] font-black text-pink-500 bg-black/60 px-2 py-0.5 rounded border border-pink-500/50 flex items-center gap-1 shadow-lg uppercase"
   }, /*#__PURE__*/React.createElement(Heart, {
-    size: 7
-  }), " \u30E9\u30A4\u30D5 +", Math.floor(getPermaBuff('muaHpPct') * 100), "%"), /*#__PURE__*/React.createElement("div", {
-    className: "text-[7px] font-black text-amber-500 bg-black/60 px-2 py-0.5 rounded border border-amber-500/50 flex items-center gap-1 shadow-lg uppercase"
+    size: 9
+  }), " \u30E9\u30A4\u30D5 +", Math.floor(getPermaBuff('muaHpPct') * 100), "%"), Math.floor(getPermaBuff('muaGutsPct') * 100) > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] font-black text-amber-500 bg-black/60 px-2 py-0.5 rounded border border-amber-500/50 flex items-center gap-1 shadow-lg uppercase"
   }, /*#__PURE__*/React.createElement(Zap, {
-    size: 7
-  }), " \u30AC\u30C3\u30C4 +", Math.floor(getPermaBuff('muaGutsPct') * 100), "%"), /*#__PURE__*/React.createElement("div", {
-    className: "text-[7px] font-black text-yellow-400 bg-black/60 px-2 py-0.5 rounded border border-yellow-400/50 flex items-center gap-1 shadow-lg uppercase"
+    size: 9
+  }), " \u30AC\u30C3\u30C4 +", Math.floor(getPermaBuff('muaGutsPct') * 100), "%"), Math.round(getPermaBuff('critRatePct') * 100) > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] font-black text-yellow-400 bg-black/60 px-2 py-0.5 rounded border border-yellow-400/50 flex items-center gap-1 shadow-lg uppercase"
   }, /*#__PURE__*/React.createElement(Sparkles, {
-    size: 7
-  }), " \u30AF\u30EA\u7387 +", Math.round(getPermaBuff('critRatePct') * 100), "%"), /*#__PURE__*/React.createElement("div", {
-    className: "text-[7px] font-black text-yellow-400 bg-black/60 px-2 py-0.5 rounded border border-yellow-400/50 flex items-center gap-1 shadow-lg uppercase"
+    size: 9
+  }), " \u30AF\u30EA\u7387 +", Math.round(getPermaBuff('critRatePct') * 100), "%"), Math.round(getPermaBuff('critDmgPct') * 100) > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] font-black text-yellow-400 bg-black/60 px-2 py-0.5 rounded border border-yellow-400/50 flex items-center gap-1 shadow-lg uppercase"
   }, /*#__PURE__*/React.createElement(Sparkles, {
-    size: 7
-  }), " \u30AF\u30EA\u30C0\u30E1 +", Math.round(getPermaBuff('critDmgPct') * 100), "%"), /*#__PURE__*/React.createElement("div", {
-    className: "text-[7px] font-black text-cyan-400 bg-black/60 px-2 py-0.5 rounded border border-cyan-400/50 flex items-center gap-1 shadow-lg uppercase"
+    size: 9
+  }), " \u30AF\u30EA\u30C0\u30E1 +", Math.round(getPermaBuff('critDmgPct') * 100), "%"), Math.round(getPermaBuff('comboDmgPct') * 100) > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] font-black text-cyan-400 bg-black/60 px-2 py-0.5 rounded border border-cyan-400/50 flex items-center gap-1 shadow-lg uppercase"
   }, /*#__PURE__*/React.createElement(Sword, {
-    size: 7
+    size: 9
   }), " \u9023\u6483 +", Math.round(getPermaBuff('comboDmgPct') * 100), "%"), getPermaBuff('globalComboDmgPct') > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "text-[7px] font-black text-sky-300 bg-black/60 px-2 py-0.5 rounded border border-sky-300/50 flex items-center gap-1 shadow-lg"
+    className: "text-[10px] font-black text-sky-300 bg-black/60 px-2 py-0.5 rounded border border-sky-300/50 flex items-center gap-1 shadow-lg"
   }, /*#__PURE__*/React.createElement(Sword, {
     size: 7
   }), " \u5168\u4F53\u9023\u6483 +", Math.round(getPermaBuff('globalComboDmgPct') * 100), "%"), kikiCardBonus > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "text-[7px] font-black text-violet-300 bg-black/60 px-2 py-0.5 rounded border border-violet-300/50 flex items-center gap-1 shadow-lg"
+    className: "text-[10px] font-black text-violet-300 bg-black/60 px-2 py-0.5 rounded border border-violet-300/50 flex items-center gap-1 shadow-lg"
   }, /*#__PURE__*/React.createElement(PlusCircle, {
     size: 7
   }), " \u30AB\u30FC\u30C9\u4E0A\u9650 +1\uFF08\u6B8B\u308A", Math.ceil(getPermaBuff('kikiCardBonusTurns')), "T\uFF09"), (getPermaBuff('kenshiComboPower') > 0 || getPermaBuff('kenshiExtraCombo') > 0) && /*#__PURE__*/React.createElement("div", {
-    className: "text-[7px] font-black text-violet-300 bg-black/60 px-2 py-0.5 rounded border border-violet-300/50 flex items-center gap-1 shadow-lg"
+    className: "text-[10px] font-black text-violet-300 bg-black/60 px-2 py-0.5 rounded border border-violet-300/50 flex items-center gap-1 shadow-lg"
   }, /*#__PURE__*/React.createElement(Sword, {
     size: 7
   }), " \u9023\u6483\u30D1\u30EF\u30FC ", getPermaBuff('kenshiComboPower'), "/", KENSHI_COMBO_POWER_MAX, getPermaBuff('kenshiExtraCombo') > 0 ? `・追加連撃 +${getPermaBuff('kenshiExtraCombo')}` : ''), /*#__PURE__*/React.createElement("div", {
-    className: `text-[7px] font-black bg-black/60 px-2 py-0.5 rounded border flex items-center gap-1 shadow-lg uppercase ${getPermaBuff('autoHpRecovery', 0.1) >= 0.1 ? 'text-rose-400 border-rose-400/50' : 'text-red-400 border-red-400/50'}`
+    className: `text-[10px] font-black bg-black/60 px-2 py-0.5 rounded border flex items-center gap-1 shadow-lg uppercase ${getPermaBuff('autoHpRecovery', 0.1) >= 0.1 ? 'text-rose-400 border-rose-400/50' : 'text-red-400 border-red-400/50'}`
   }, /*#__PURE__*/React.createElement(Heart, {
     size: 7
   }), " \u30E9\u30A4\u30D5\u56DE\u5FA9 ", Math.round(getPermaBuff('autoHpRecovery', 0.1) * 100), "%"), /*#__PURE__*/React.createElement("div", {
-    className: "text-[7px] font-black text-amber-400 bg-black/60 px-2 py-0.5 rounded border border-amber-400/50 flex items-center gap-1 shadow-lg uppercase"
+    className: "text-[10px] font-black text-amber-400 bg-black/60 px-2 py-0.5 rounded border border-amber-400/50 flex items-center gap-1 shadow-lg uppercase"
   }, /*#__PURE__*/React.createElement(Zap, {
     size: 7
   }), " \u30AC\u30C3\u30C4\u56DE\u5FA9 ", Math.round(applyIceRulerAutoGutsRecovery(Math.max(0, 0.05 + (getPermaBuff('autoHpRecovery', 0.1) - 0.1)) + getPermaBuff('gutsRecoverPct'), mainHero?.id, iceLockActive, heroDist, enemyDist) * 100), "%"), getPermaBuff('poltzCharges') > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "text-[7px] font-black text-lime-300 bg-lime-950/60 px-2 py-1 rounded-full border border-lime-400/50 animate-pulse flex items-center gap-1"
+    className: "text-[10px] font-black text-lime-300 bg-lime-950/60 px-2 py-1 rounded-full border border-lime-400/50 animate-pulse flex items-center gap-1"
   }, /*#__PURE__*/React.createElement(Zap, {
     size: 8
   }), " ", BREEDER_EVO_NAMES.poltz[Math.max(0, Math.min(getPermaBuff('poltzTier'), 2))], " \xD7", Math.floor(getPermaBuff('poltzCharges'))), getNextTurnBuff('melosoFullRecoveryMult', 0) > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "text-[7px] font-black text-rose-300 bg-rose-950/60 px-2 py-1 rounded-full border border-rose-400/50 animate-pulse flex items-center gap-1"
+    className: "text-[10px] font-black text-rose-300 bg-rose-950/60 px-2 py-1 rounded-full border border-rose-400/50 animate-pulse flex items-center gap-1"
   }, /*#__PURE__*/React.createElement(Heart, {
     size: 8
   }), " \u6B21\u30BF\u30FC\u30F3\u5168\u56DE\u5FA9"), getTurnBuff('atkMult', 1.0) > 1 && /*#__PURE__*/React.createElement("div", {
-    className: "text-[7px] font-black text-red-500 bg-red-950/60 px-2 py-1 rounded-full border border-red-500/50 animate-pulse uppercase flex items-center gap-1"
+    className: "text-[10px] font-black text-red-500 bg-red-950/60 px-2 py-1 rounded-full border border-red-500/50 animate-pulse uppercase flex items-center gap-1"
   }, /*#__PURE__*/React.createElement(Sparkles, {
     size: 8
   }), " Boost x", getTurnBuff('atkMult', 1.0).toFixed(1)), getTurnBuff('stunEnemy', false) && /*#__PURE__*/React.createElement("div", {
-    className: "text-[7px] font-black text-yellow-400 bg-yellow-950/60 px-2 py-1 rounded-full border border-yellow-500/50 animate-pulse uppercase flex items-center gap-1"
+    className: "text-[10px] font-black text-yellow-400 bg-yellow-950/60 px-2 py-1 rounded-full border border-yellow-500/50 animate-pulse uppercase flex items-center gap-1"
   }, /*#__PURE__*/React.createElement(Zap, {
     size: 8
   }), " \u30B9\u30BF\u30F3\u4E88\u7D04"), getTurnBuff('guaranteedCrit', false) && /*#__PURE__*/React.createElement("div", {
-    className: "text-[7px] font-black text-orange-400 bg-orange-950/60 px-2 py-1 rounded-full border border-orange-500/50 animate-pulse uppercase flex items-center gap-1"
+    className: "text-[10px] font-black text-orange-400 bg-orange-950/60 px-2 py-1 rounded-full border border-orange-500/50 animate-pulse uppercase flex items-center gap-1"
   }, /*#__PURE__*/React.createElement(Target, {
     size: 8
   }), " \u4F1A\u5FC3\u4E88\u7D04"), (getTurnBuff('zeroGuts', false) || getNextTurnBuff('zeroGuts', false)) && /*#__PURE__*/React.createElement("div", {
-    className: "text-[7px] font-black text-blue-400 bg-blue-950/60 px-2 py-1 rounded-full border border-blue-500/50 animate-pulse uppercase flex items-center gap-1"
+    className: "text-[10px] font-black text-blue-400 bg-blue-950/60 px-2 py-1 rounded-full border border-blue-500/50 animate-pulse uppercase flex items-center gap-1"
   }, /*#__PURE__*/React.createElement(Star, {
     size: 8
   }), " 0\u6D88\u8CBB\u4E2D"), getNextTurnBuff('reflect', false) && /*#__PURE__*/React.createElement("div", {
-    className: "text-[7px] font-black text-purple-400 bg-purple-950/60 px-2 py-1 rounded-full border border-purple-500/50 animate-pulse uppercase flex items-center gap-1"
+    className: "text-[10px] font-black text-purple-400 bg-purple-950/60 px-2 py-1 rounded-full border border-purple-500/50 animate-pulse uppercase flex items-center gap-1"
   }, /*#__PURE__*/React.createElement(RefreshCcw, {
     size: 8
   }), " \u6B21\u53CD\u5C04"), getTurnBuff('reflect', false) && /*#__PURE__*/React.createElement("div", {
-    className: "text-[7px] font-black text-purple-300 bg-purple-900/80 px-2 py-1 rounded-full border border-purple-400 animate-bounce uppercase flex items-center gap-1"
+    className: "text-[10px] font-black text-purple-300 bg-purple-900/80 px-2 py-1 rounded-full border border-purple-400 animate-bounce uppercase flex items-center gap-1"
   }, /*#__PURE__*/React.createElement(RefreshCcw, {
     size: 8
   }), " \u53CD\u5C04\u5F85\u6A5F"), getWaveBuff('enemyAtkDebuffPct') > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "text-[7px] font-black text-indigo-400 bg-indigo-950/60 px-2 py-1 rounded-full border border-indigo-500/50 animate-pulse uppercase flex items-center gap-1"
+    className: "text-[10px] font-black text-indigo-400 bg-indigo-950/60 px-2 py-1 rounded-full border border-indigo-500/50 animate-pulse uppercase flex items-center gap-1"
   }, /*#__PURE__*/React.createElement(ArrowDownCircle, {
     size: 8
   }), " \u6575\u653B-", Math.round(getWaveBuff('enemyAtkDebuffPct') * 100), "%"), getWaveBuff('enemyTakenDmgBonus') > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "text-[7px] font-black text-orange-400 bg-orange-950/60 px-2 py-1 rounded-full border border-orange-500/50 animate-pulse uppercase flex items-center gap-1"
+    className: "text-[10px] font-black text-orange-400 bg-orange-950/60 px-2 py-1 rounded-full border border-orange-500/50 animate-pulse uppercase flex items-center gap-1"
   }, /*#__PURE__*/React.createElement(PlusCircle, {
     size: 8
   }), " \u6575\u88AB\u30C0\u30E1+", Math.round(getWaveBuff('enemyTakenDmgBonus') * 100), "%"), getNextTurnBuff('takenDamageMult', 1.0) < 1 && /*#__PURE__*/React.createElement("div", {
-    className: "text-[7px] font-black text-pink-400 bg-pink-950/60 px-2 py-1 rounded-full border border-pink-500/50 animate-pulse uppercase flex items-center gap-1"
+    className: "text-[10px] font-black text-pink-400 bg-pink-950/60 px-2 py-1 rounded-full border border-pink-500/50 animate-pulse uppercase flex items-center gap-1"
   }, /*#__PURE__*/React.createElement(Shield, {
     size: 8
   }), " \u6B21T\u88AB\u30C0\u30E1-", Math.round((1 - getNextTurnBuff('takenDamageMult', 1.0)) * 100), "%"), getTurnBuff('takenDamageMult', 1.0) < 1 && /*#__PURE__*/React.createElement("div", {
-    className: "text-[7px] font-black text-pink-300 bg-pink-900/80 px-2 py-1 rounded-full border border-pink-400 animate-bounce uppercase flex items-center gap-1"
+    className: "text-[10px] font-black text-pink-300 bg-pink-900/80 px-2 py-1 rounded-full border border-pink-400 animate-bounce uppercase flex items-center gap-1"
   }, /*#__PURE__*/React.createElement(Shield, {
     size: 8
   }), " \u88AB\u30C0\u30E1-", Math.round((1 - getTurnBuff('takenDamageMult', 1.0)) * 100), "%"), getNextTurnBuff('gutsCostMult', 1.0) > 1 && /*#__PURE__*/React.createElement("div", {
-    className: "text-[7px] font-black text-amber-400 bg-amber-950/60 px-2 py-1 rounded-full border border-amber-500/50 animate-pulse uppercase flex items-center gap-1"
+    className: "text-[10px] font-black text-amber-400 bg-amber-950/60 px-2 py-1 rounded-full border border-amber-500/50 animate-pulse uppercase flex items-center gap-1"
   }, /*#__PURE__*/React.createElement(Zap, {
     size: 8
   }), " \u6B21T\u6D88\u8CBBG+", Math.round((getNextTurnBuff('gutsCostMult', 1.0) - 1) * 100), "%"), getTurnBuff('gutsCostMult', 1.0) > 1 && /*#__PURE__*/React.createElement("div", {
-    className: "text-[7px] font-black text-amber-300 bg-amber-900/80 px-2 py-1 rounded-full border border-amber-400 animate-bounce uppercase flex items-center gap-1"
+    className: "text-[10px] font-black text-amber-300 bg-amber-900/80 px-2 py-1 rounded-full border border-amber-400 animate-bounce uppercase flex items-center gap-1"
   }, /*#__PURE__*/React.createElement(Zap, {
     size: 8
   }), " \u6D88\u8CBBG+", Math.round((getTurnBuff('gutsCostMult', 1.0) - 1) * 100), "%"))), /*#__PURE__*/React.createElement("div", {
@@ -36797,7 +36800,7 @@ function BattleScreen({
   }), /*#__PURE__*/React.createElement("div", {
     className: "flex-1"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex justify-between text-[7px] font-bold text-pink-400 mb-0.5 uppercase tracking-widest"
+    className: "flex justify-between text-[10px] font-bold text-pink-400 mb-0.5 uppercase tracking-widest"
   }, /*#__PURE__*/React.createElement("span", null, "Ally Life"), /*#__PURE__*/React.createElement("span", {
     className: "font-mono"
   }, hp.toLocaleString(), " / ", effectiveMaxHp.toLocaleString())), /*#__PURE__*/React.createElement("div", {
@@ -36827,7 +36830,7 @@ function BattleScreen({
   }), /*#__PURE__*/React.createElement("div", {
     className: "flex-1"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex justify-between text-[7px] font-bold text-amber-400 mb-0.5 uppercase tracking-widest"
+    className: "flex justify-between text-[10px] font-bold text-amber-400 mb-0.5 uppercase tracking-widest"
   }, /*#__PURE__*/React.createElement("span", null, "Ally Guts"), /*#__PURE__*/React.createElement("span", {
     className: "font-mono"
   }, Math.floor(guts).toLocaleString(), " / ", effectiveMaxGuts.toLocaleString())), /*#__PURE__*/React.createElement("div", {
@@ -36933,7 +36936,7 @@ function BattleScreen({
       size: 11,
       className: showProjected ? 'text-yellow-400' : 'text-red-400'
     }), /*#__PURE__*/React.createElement("span", {
-      className: "text-[8px] font-black uppercase tracking-widest text-slate-300"
+      className: "text-[10px] font-black uppercase tracking-widest text-slate-300"
     }, "\u5408\u8A08DMG"), showProjected ? /*#__PURE__*/React.createElement("span", {
       className: "text-[11px] font-black font-mono flex items-center gap-1"
     }, /*#__PURE__*/React.createElement("span", {
@@ -36953,7 +36956,7 @@ function BattleScreen({
       size: 11,
       className: showGuardProjected ? 'text-yellow-400' : 'text-emerald-400'
     }), /*#__PURE__*/React.createElement("span", {
-      className: "text-[8px] font-black uppercase tracking-widest text-slate-300"
+      className: "text-[10px] font-black uppercase tracking-widest text-slate-300"
     }, "\u5408\u8A08\u8EFD\u6E1B"), showGuardProjected ? /*#__PURE__*/React.createElement("span", {
       className: "text-[11px] font-black font-mono flex items-center gap-1"
     }, /*#__PURE__*/React.createElement("span", {
@@ -37109,7 +37112,7 @@ function BattleScreen({
         boxShadow: 'inset 0 0 12px rgba(239,68,68,.7)'
       }
     }), /*#__PURE__*/React.createElement("div", {
-      className: "absolute -top-2 left-1/2 -translate-x-1/2 z-[65] whitespace-nowrap rounded-full border-2 border-red-200 bg-red-950 px-1.5 py-0.5 text-[7px] font-black text-white shadow-[0_0_10px_rgba(239,68,68,.9)]"
+      className: "absolute -top-2 left-1/2 -translate-x-1/2 z-[65] whitespace-nowrap rounded-full border-2 border-red-200 bg-red-950 px-1.5 py-0.5 text-[10px] font-black text-white shadow-[0_0_10px_rgba(239,68,68,.9)]"
     }, distanceBreakLevel === 1 ? '⚠' : '☠', " BREAK ", distanceBreakRoman, "\uFF5C\u4E0E\u30C0\u30E1 ", distanceBreakPercent, "%"), !s && /*#__PURE__*/React.createElement("div", {
       className: "absolute inset-0 z-[25] flex items-center justify-center pointer-events-none text-red-200/80"
     }, /*#__PURE__*/React.createElement("span", {
@@ -37120,9 +37123,9 @@ function BattleScreen({
       size: 8,
       className: "shrink-0 mr-0.5 text-amber-300"
     }), /*#__PURE__*/React.createElement("span", {
-      className: `text-[7px] font-black truncate uppercase leading-none ${isHeroSlotMon(s) ? 'text-amber-100' : 'text-white'}`
+      className: `text-[10px] font-black truncate uppercase leading-none ${isHeroSlotMon(s) ? 'text-amber-100' : 'text-white'}`
     }, s?.name || '---'), assignedCount > 0 && /*#__PURE__*/React.createElement("span", {
-      className: "ml-1 text-[7px] font-black text-indigo-300"
+      className: "ml-1 text-[10px] font-black text-indigo-300"
     }, "\xD7", assignedCount)), (() => {
       const uOptions = getAvailableUniquesForSlot(s, ownedUniques, i);
       if (uOptions.length < 2) return null;
@@ -37140,7 +37143,7 @@ function BattleScreen({
         size: 7,
         className: "text-white"
       }), /*#__PURE__*/React.createElement("span", {
-        className: "text-[6px] font-black text-white leading-none"
+        className: "text-[10px] font-black text-white leading-none"
       }, "\u56FA\u6709\u6280 ", curIdx + 1, "/", uOptions.length));
     })(), /*#__PURE__*/React.createElement("div", {
       className: "flex-1 flex flex-col items-center justify-center relative"
@@ -37224,15 +37227,15 @@ function BattleScreen({
     }, "\u26A1"))), (() => {
       const totalBonus = distTotalBonus(i);
       return /*#__PURE__*/React.createElement("div", {
-        className: `absolute bottom-0.5 right-0.5 text-[6px] font-black leading-none flex items-center gap-0.5 bg-black/50 px-1 py-0.5 rounded border z-30 ${totalBonus > 0 ? 'text-cyan-300 border-cyan-400/30' : totalBonus < 0 ? 'text-red-300 border-red-400/30' : 'text-slate-300 border-white/20'}`
+        className: `absolute bottom-0.5 right-0.5 text-[10px] font-black leading-none flex items-center gap-0.5 bg-black/50 px-1 py-0.5 rounded border z-30 ${totalBonus > 0 ? 'text-cyan-300 border-cyan-400/30' : totalBonus < 0 ? 'text-red-300 border-red-400/30' : 'text-slate-300 border-white/20'}`
       }, /*#__PURE__*/React.createElement(Sword, {
         size: 5
       }), totalBonus > 0 ? '+' : '', (totalBonus * 100).toFixed(1), "%");
     })(), previewDmg > 0 && /*#__PURE__*/React.createElement("div", {
-      className: `absolute ${slotAssignedCards.length > 0 ? 'top-[18px]' : 'top-0'} ${isPendingPreview ? 'bg-yellow-500 text-black ring-yellow-200' : 'bg-red-600 text-white ring-white/50'} text-[8px] font-black px-1.5 py-0.5 rounded shadow-lg z-50 animate-bounce ring-1`
+      className: `absolute ${slotAssignedCards.length > 0 ? 'top-[18px]' : 'top-0'} ${isPendingPreview ? 'bg-yellow-500 text-black ring-yellow-200' : 'bg-red-600 text-white ring-white/50'} text-[10px] font-black px-1.5 py-0.5 rounded shadow-lg z-50 animate-bounce ring-1`
     }, isPendingPreview && isPendingHalved ? '½ ' : '', "DMG:", previewDmg, isPendingPreview && previewSoulPct > 0 && /*#__PURE__*/React.createElement("span", {
       "data-soul-damage-preview": true,
-      className: "ml-1 rounded bg-sky-950/80 px-1 py-0.5 text-[6px] text-sky-100"
+      className: "ml-1 rounded bg-sky-950/80 px-1 py-0.5 text-[10px] text-sky-100"
     }, "\u9B42\u683C +", previewSoulPct, "%")), s?.imgUrl ? isAnimating && s.id === 'Pandora' && attackAnim.motion === 'pandoraDualThunder' ? /*#__PURE__*/React.createElement(PandoraDualThunder, {
       image: /*#__PURE__*/React.createElement(DyedMonsterImage, {
         baseId: s.id,
@@ -37305,7 +37308,7 @@ function BattleScreen({
     }, s?.emoji || ''), isAnimating && attackAnim.twinBlade && /*#__PURE__*/React.createElement(KenshiTwinSlash, null), isAnimating && attackAnim.sakura && /*#__PURE__*/React.createElement(EikiSakuraPetals, null)), /*#__PURE__*/React.createElement("div", {
       className: `h-[28%] ${RANGE_STYLES[i].labelBg} flex items-center justify-center border-t border-white/20 z-20`
     }, /*#__PURE__*/React.createElement("span", {
-      className: "text-[9px] font-black uppercase tracking-tighter leading-none"
+      className: "text-[10px] font-black uppercase tracking-tighter leading-none"
     }, RANGE_LABELS[i], "\u8DDD\u96E2")));
   }))), quickRhythmIntroVisible && /*#__PURE__*/React.createElement("div", {
     "data-quick-rhythm-intro": true,
@@ -37325,7 +37328,7 @@ function BattleScreen({
   }, "\xD7"))), /*#__PURE__*/React.createElement("div", {
     className: "h-[24%] shrink-0 bg-slate-900/95 p-1 flex flex-col relative border-t border-white/10"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[7px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-1 flex justify-between px-2 items-center gap-1"
+    className: "text-[8px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-1 flex justify-between px-2 items-center gap-1"
   }, /*#__PURE__*/React.createElement("span", {
     className: `flex-1 min-w-0 flex flex-wrap items-center gap-x-1 gap-y-0.5${battleTutorialSpotClass('cardCount')}`
   }, /*#__PURE__*/React.createElement("span", {
@@ -37349,7 +37352,7 @@ function BattleScreen({
   }, /*#__PURE__*/React.createElement(Layers, {
     size: 9
   }), /*#__PURE__*/React.createElement("span", {
-    className: "text-[7px]"
+    className: "text-[10px]"
   }, "VIEW")), /*#__PURE__*/React.createElement("div", {
     className: "shrink-0 flex flex-col gap-0.5"
   }, /*#__PURE__*/React.createElement("button", {
@@ -37362,7 +37365,7 @@ function BattleScreen({
   }, /*#__PURE__*/React.createElement("span", {
     className: "block text-[13px] leading-none"
   }, "\uD83C\uDFB5"), /*#__PURE__*/React.createElement("span", {
-    className: "mt-0.5 block text-[7px] font-black leading-none"
+    className: "mt-0.5 block text-[10px] font-black leading-none"
   }, "BGM")), quickToRhythmButtonNode), /*#__PURE__*/React.createElement("div", {
     className: "w-[44px] shrink-0 flex flex-col gap-0.5"
   }, /*#__PURE__*/React.createElement("button", {
@@ -37371,31 +37374,35 @@ function BattleScreen({
     onClick: cycleBattleAuto,
     "aria-pressed": autoBattle,
     "aria-label": `AUTO ${autoRepeat ? '∞' : autoBattle ? 'ON' : 'OFF'}`,
-    className: `h-8 w-full px-1 rounded-lg border-2 font-black text-[8px] leading-tight active:scale-90 disabled:opacity-25 ${autoRepeat ? 'border-fuchsia-300 bg-fuchsia-500 text-slate-950 shadow-[0_0_12px_rgba(217,70,239,.65)]' : autoBattle ? 'border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_12px_rgba(34,211,238,.65)]' : 'border-slate-500 bg-slate-800 text-slate-300'}`
+    className: `h-8 w-full px-1 rounded-lg border-2 font-black text-[10px] leading-tight active:scale-90 disabled:opacity-25 ${autoRepeat ? 'border-fuchsia-300 bg-fuchsia-500 text-slate-950 shadow-[0_0_12px_rgba(217,70,239,.65)]' : autoBattle ? 'border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_12px_rgba(34,211,238,.65)]' : 'border-slate-500 bg-slate-800 text-slate-300'}`
   }, /*#__PURE__*/React.createElement("span", {
     className: "block"
   }, "AUTO"), /*#__PURE__*/React.createElement("span", {
-    className: "block text-[7px]"
+    className: "block text-[10px]"
   }, autoRepeat ? '∞' : autoBattle ? 'ON' : 'OFF')), battleScreenActive && isQuickMode(runMode) && autoRepeat === true && /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: cycleEcoMode,
     "aria-label": `省エネ ${ecoMode === 'lite' ? '簡易' : ecoMode === 'ultra' ? '超' : 'OFF'}`,
-    className: `min-h-[24px] w-full rounded-md border font-black text-[7px] leading-[9px] active:scale-90 ${ecoMode === 'lite' ? 'border-emerald-300 bg-emerald-700 text-emerald-50' : ecoMode === 'ultra' ? 'border-lime-200 bg-lime-500 text-slate-950' : 'border-slate-500 bg-slate-700 text-slate-200'}`
+    className: `min-h-[24px] w-full rounded-md border font-black text-[10px] leading-[9px] active:scale-90 ${ecoMode === 'lite' ? 'border-emerald-300 bg-emerald-700 text-emerald-50' : ecoMode === 'ultra' ? 'border-lime-200 bg-lime-500 text-slate-950' : 'border-slate-500 bg-slate-700 text-slate-200'}`
   }, /*#__PURE__*/React.createElement("span", {
     className: "block"
   }, "\u7701\u30A8\u30CD"), /*#__PURE__*/React.createElement("span", {
     className: "block"
   }, ecoMode === 'lite' ? '簡易' : ecoMode === 'ultra' ? '超' : 'OFF'))), (() => {
     const allAttackAssigned = selectedCards.filter(idx => cardNeedsMonster(hand[idx])).every(idx => cardAssignments[idx] != null);
-    const canAct = !autoBattle && !isBusy && selectedCards.length > 0 && pendingCard === null && allAttackAssigned && battleTutorialNeed !== 'skillPicker';
+    const canAct = !autoBattle && !isBusy && selectedCards.length > 0 && pendingCard === null && allAttackAssigned && battleTutorialNeed !== 'skillPicker'; // 押せないときは**理由**を出す(2026-09-18・ユーザー依頼「各コマンドをもっとよくしたい」)。
+    // 灰色になるだけでは「何が足りなくて押せないのか」が分からず、
+    // カードを選んだのに置き場所を決めていない、という取りこぼしに気づけなかった。
+    // 押せるときの字は Action のまま(検査がこの字でボタンを押している)。
+    const actionHint = canAct ? null : autoBattle || isBusy ? null : selectedCards.length === 0 ? 'カードを選ぶ' : !allAttackAssigned ? '置き場所を選ぶ' : null;
     return /*#__PURE__*/React.createElement("button", {
       onClick: () => processTurn(),
       disabled: !canAct,
-      className: `min-h-[44px] min-w-[84px] shrink-0 px-2 sm:px-5 rounded-full font-black text-[11px] sm:text-[13px] whitespace-nowrap active:scale-90 flex items-center justify-center gap-1 border-2 border-black uppercase tracking-wide transition-all${battleTutorialSpotClass('action')} ${canAct ? 'bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.4)]' : 'bg-slate-700 text-slate-500 opacity-50'}`
+      className: `min-h-[48px] min-w-[96px] shrink-0 px-2 sm:px-5 rounded-full font-black text-[11px] sm:text-[13px] whitespace-nowrap active:scale-90 flex items-center justify-center gap-1 border-2 border-black tracking-wide transition-all${actionHint ? '' : ' uppercase'}${battleTutorialSpotClass('action')} ${canAct ? 'bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.4)]' : actionHint ? 'bg-slate-800 text-slate-300 border-white/20' : 'bg-slate-700 text-slate-500 opacity-50'}`
     }, /*#__PURE__*/React.createElement(Play, {
       fill: "currentColor",
       size: 12
-    }), " Action");
+    }), " ", actionHint || 'Action');
   })())), /*#__PURE__*/React.createElement("div", {
     className: `flex-1 flex gap-1.5 overflow-x-auto items-stretch scrollbar-hide px-1 pb-1 justify-center${battleTutorialCardTarget ? '' : battleTutorialSpotClass('cards')}`
   }, hand.map((c, i) => {
@@ -37459,7 +37466,7 @@ function BattleScreen({
       alt: "",
       className: "w-full h-full object-contain"
     }) : /*#__PURE__*/React.createElement("span", {
-      className: "text-[9px]"
+      className: "text-[10px]"
     }, assignedMon.emoji)), /*#__PURE__*/React.createElement("div", {
       className: "text-3xl mt-1.5"
     }, cardIconNode(c.icon, 32, c.id)), /*#__PURE__*/React.createElement("div", {
@@ -37472,11 +37479,11 @@ function BattleScreen({
           handIndex: i
         });
       },
-      className: `text-[9px] font-black leading-tight w-full whitespace-normal h-7 flex items-center justify-center overflow-hidden uppercase italic px-0.5 underline decoration-dotted decoration-white/60 underline-offset-2 active:opacity-60${battleTutorialNeedCard && tutorialTargeted ? ' is-battle-tutorial-spot' : ''}`
+      className: `text-[10px] font-black leading-[12px] w-full whitespace-normal h-8 flex items-center justify-center overflow-hidden px-0.5 underline decoration-dotted decoration-white/60 underline-offset-2 active:opacity-60${battleTutorialNeedCard && tutorialTargeted ? ' is-battle-tutorial-spot' : ''}`
     }, c.name) : /*#__PURE__*/React.createElement("div", {
-      className: "text-[9px] font-black leading-tight w-full whitespace-normal h-7 flex items-center justify-center overflow-hidden uppercase italic px-0.5"
+      className: "text-[10px] font-black leading-[12px] w-full whitespace-normal h-8 flex items-center justify-center overflow-hidden px-0.5"
     }, c.name), /*#__PURE__*/React.createElement("div", {
-      className: "text-[9px] font-black bg-black/40 text-white rounded py-1 flex items-center justify-center gap-0.5"
+      className: "text-[10px] font-black bg-black/40 text-white rounded py-1 flex items-center justify-center gap-0.5"
     }, /*#__PURE__*/React.createElement(Zap, {
       size: 9
     }), curGuts))));
@@ -37599,7 +37606,7 @@ function ExtremeRuleOverlay({
       key: group.title,
       className: "rounded-xl border border-fuchsia-400/25 bg-purple-950/55 px-2.5 py-1.5"
     }, /*#__PURE__*/React.createElement("div", {
-      className: "text-[9px] font-black text-fuchsia-300"
+      className: "text-[10px] font-black text-fuchsia-300"
     }, "\u3010", group.title, "\u3011"), group.lines.map(([label, value]) => /*#__PURE__*/React.createElement("div", {
       key: label,
       className: "mt-0.5 grid grid-cols-[auto_1fr] items-start gap-2 text-[10px] font-bold leading-snug text-white"
@@ -37619,7 +37626,7 @@ function ExtremeRuleOverlay({
       className: ultimateDistanceBreakLevels.some(level => level > 0) ? 'text-red-200' : 'text-white'
     }, ultimateDistanceBreakLevels.map((level, index) => level > 0 ? `${RANGE_LABELS[index]} Lv${level}` : null).filter(Boolean).join(' / ') || 'なし'))));
   })(), /*#__PURE__*/React.createElement("div", {
-    className: "mt-4 shrink-0 text-[9px] font-black tracking-widest text-fuchsia-200"
+    className: "mt-4 shrink-0 text-[10px] font-black tracking-widest text-fuchsia-200"
   }, "\u30BF\u30C3\u30D7\u3057\u3066\u30D0\u30C8\u30EB\u958B\u59CB")));
 }
 function SoulBattleEffects({
@@ -37643,7 +37650,7 @@ function SoulBattleEffects({
   }, /*#__PURE__*/React.createElement("div", {
     className: "shrink-0 flex items-center justify-between gap-3 border-b border-sky-400/20 px-4 pb-3"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-    className: "text-[9px] font-black tracking-[.25em] text-sky-400"
+    className: "text-[10px] font-black tracking-[.25em] text-sky-400"
   }, "SOUL RANK"), /*#__PURE__*/React.createElement("h3", {
     className: "text-lg font-black text-sky-100"
   }, "\u9B42\u683C\u52B9\u679C")), /*#__PURE__*/React.createElement("button", {
@@ -37695,7 +37702,7 @@ function SoulBattleEffects({
   }, "\u4F7F\u7528\u53EF\u80FD\u30AB\u30FC\u30C9"), /*#__PURE__*/React.createElement("b", {
     className: "text-sky-300"
   }, soulCoordinationCardBonus > 0 ? '+1' : '変化なし'))), unifiedSpecialDefense.rate > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "mt-2 text-[9px] leading-relaxed text-slate-400"
+    className: "mt-2 text-[10px] leading-relaxed text-slate-400"
   }, "\u7279\u6B8A\u9632\u5FA1\u304C\u767A\u52D5\u3057\u305F\u5834\u5408\u3001\u56DE\u907F\u30FB\u53CD\u5C04\u30FB\u5438\u53CE\u306E\u6BD4\u7387\u304B\u30891\u3064\u3060\u3051\u767A\u52D5\u3057\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("section", {
     className: "space-y-2"
   }, /*#__PURE__*/React.createElement("div", {
@@ -37712,18 +37719,18 @@ function SoulBattleEffects({
     }, /*#__PURE__*/React.createElement("b", {
       className: "truncate text-[11px]"
     }, masu.name || base?.name || 'マスモン'), /*#__PURE__*/React.createElement("span", {
-      className: "shrink-0 rounded-full border border-sky-400/30 bg-sky-950/50 px-2 py-1 text-[8px] font-black text-sky-200"
+      className: "shrink-0 rounded-full border border-sky-400/30 bg-sky-950/50 px-2 py-1 text-[10px] font-black text-sky-200"
     }, "\u9B42\u683C", ['', 'Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ', 'Ⅴ'][stage])), active.length > 0 ? /*#__PURE__*/React.createElement("div", {
       className: "mt-2 flex flex-wrap gap-1"
     }, active.map(t => /*#__PURE__*/React.createElement("span", {
       key: t.id,
-      className: "rounded-lg border border-white/10 bg-black/30 px-2 py-1 text-[8px]"
+      className: "rounded-lg border border-white/10 bg-black/30 px-2 py-1 text-[10px]"
     }, /*#__PURE__*/React.createElement("b", {
       className: "text-slate-200"
     }, t.name), " ", /*#__PURE__*/React.createElement("span", {
       className: "text-sky-300"
     }, formatSoulTraitEffect(t, soulTraitEffectValue(masu, t.id)))))) : /*#__PURE__*/React.createElement("div", {
-      className: "mt-2 text-[9px] text-slate-500"
+      className: "mt-2 text-[10px] text-slate-500"
     }, "\u632F\u308A\u5206\u3051\u6E08\u307F\u306E\u9B42\u683C\u7279\u6027\u306F\u3042\u308A\u307E\u305B\u3093\u3002"));
   }))));
 }
