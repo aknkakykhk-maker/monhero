@@ -24,11 +24,13 @@ const count = (needle) => source.split(needle).length - 1;
 // --- ① モンスターカードの統一 ---
 check('カードの共通サイズを1か所で決めている',
   has("const MONSTER_CARD_CLASS = 'w-full rounded-2xl border-2 p-2 flex flex-col items-center gap-1 active:scale-95 select-none';")
-    && has("const MONSTER_CARD_STYLE = { minHeight: '96px' };")
+    && has("const MONSTER_CARD_STYLE = { minHeight: '112px' };")
     && has("const MONSTER_CARD_ICON_CLASS = 'w-12 h-12 rounded-full overflow-hidden shrink-0';"));
 // 行の高さは共通部品の中だけで決める。画面ごとに書くとそこだけずれる
+// 2026-09-18: 7〜8pxの字をやめて読める大きさへ上げたので、行の高さも 16 / 20 px へ上げた。
+// 大事なのは「画面ごとに書かず、共通部品の中だけで決めている」ことなので、そこを見る。
 check('行の高さは共通部品の中で決めている',
-  has("style={{height:'14px'}}") && has("style={{height:'16px'}}") && has("style={{height:'18px'}}"));
+  has("style={{minHeight:'16px'}}") && has("style={{height:'20px'}}"));
 // カードを描く画面は増えていくので件数は決め打ちにせず、「外枠のクラスを使う行は
 // 必ず共通サイズも指定する」で見る。片方だけ書いた画面があるとそこだけ高さがずれる
 // 2026-09-10に画面を別部品へ切り出したので、呼び出し側はクラスとサイズを「1行ずつ並べて」渡す
@@ -61,11 +63,11 @@ check('出す行が無いときは行ごと作らない',
   has('const monsterCardStatus = (node) => node ?') && has('const monsterCardPower = (power) => power==null ? null :')
     && has('{monsterCardStatus(status)}'));
 check('マスモンの個体名は転生オーラより前面に固定する',
-  has('mh-monster-card-name text-[10px]')
+  has('mh-monster-card-name text-[11px]')
     && has('.mh-reincarnate-aura{position:absolute;z-index:-1;')
     && has('.mh-monster-card-name{position:relative;z-index:2}'));
 check('マスモン一覧の個体名は画像とオーラの下に独立した名前帯で表示する',
-  has("band?'min-h-[26px] px-1 py-0.5 rounded-md border border-pink-300/50 bg-slate-950/80 whitespace-normal break-words")
+  has("band?'min-h-[28px] px-1 py-0.5 rounded-lg border border-white/15 bg-slate-950/80 whitespace-normal break-words")
     && has("style={band?{textShadow:'0 1px 2px rgba(0,0,0,.95)'}:undefined}")
     // 2026-09-10に画面を MasuMonsScreen へ切り出した。切り出し先は 60-app.jsx より前に連結されるので、
     // ファイル内の並び順ではなく、その画面の本体そのものを見る
@@ -111,7 +113,11 @@ check('モードのタブはランキングでは出さない',
 // 名前の行数・説明の有無・所持数の有無・詳細ボタンの有無で、
 // 「〜で購入」ボタンの位置がカードごとにずれていた
 // 名前は最長14文字。細い端末では3行になるので、3行ぶんの枠を確保しておく
-check('商品名は行数が変わっても同じ高さの枠に入れる', has("style={{minHeight:'36px'}}>{item.name}</div>"));
+// 2026-09-18: 枠の高さに加えて「上寄せ(items-start)」もここで見る。中央寄せに戻すと、
+// 1行で収まる品だけが枠の真ん中へ降りて、2行の品の1行目と高さがそろわなくなる。
+check('商品名は行数が変わっても同じ高さの枠に入れる',
+  has("style={{minHeight:'36px',wordBreak:'keep-all',overflowWrap:'anywhere'}}>{marketNameNodes(item.name)}</div>")
+    && has('w-full flex items-start justify-center text-center text-[11px] font-black leading-tight'));
 // アイテムの効果は詳細ボタンから出す(カードに長い説明を載せると縦に伸びるため)
 // 2026-09-10(STEP 6-6)にマーケットを切り出したので、画面は onOpenItemDetail を呼び、
 // 本体がそれに setMarketItemDetail を渡す形になった
