@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 // 見分けられない場所に付いている終点フリック(endFlick)を外す。譜面の中身は1音も動かさない。
 //
-//   node tools/mode/rhythm-end-flick-swing-fix.js           # 何を外すかだけ出す
-//   node tools/mode/rhythm-end-flick-swing-fix.js --write    # 実際に外す
+//   node tools/mode/rhythm-end-flick-swing-fix.js                   # 何を外すかだけ出す
+//   node tools/mode/rhythm-end-flick-swing-fix.js --write            # 実際に外す
+//   node tools/mode/rhythm-end-flick-swing-fix.js --include-event    # イベント開催中の曲も外す
 //
 // 【なぜ要るか】
 //   rhythm-end-flick-swing-check.js を見る。受付のあいだに経路そのものが
@@ -13,7 +14,11 @@
 //
 // 【やらないこと】
 //   ・譜面を作り直さない(ノーツの時刻・位置・種類・本数は一切変えない。外すのは endFlick だけ)
-//   ・イベント開催中の曲は触らない(CLAUDE.md ⑥-4)。検査が「保留」として出す
+//   ・イベント開催中の曲は触らない(CLAUDE.md ⑥-4)。検査が「保留」として出す。
+//     ★--include-event を付けたときだけ、それも外す。**ユーザーが明示的にそう言ったときだけ**使う。
+//     開催中に譜面が変わると、変わる前に遊んだ人と後の人で条件が違ってしまうため既定では触らない。
+//     2026-09-18、開催の翌日(残り3日)にユーザーが「まだ始まったばかりだから全部直して」と
+//     判断し、この経路で13本を外した
 //   ・レベルの表は書き換えない(終点フリック1本=仕事量0.35。1譜面あたり1〜4本なので、
 //     実測でどの譜面もLv.は変わらない。変わったら検査が教えてくれる)
 'use strict';
@@ -22,6 +27,7 @@ const {loadRuntime,renderBlock,markerBlock,replaceBlock,RUNTIME}=require('./rhyt
 const {swingReport}=require('./rhythm-end-flick-swing-check.js');
 
 const write=process.argv.includes('--write');
+const includeEvent=process.argv.includes('--include-event');
 const rt=loadRuntime();
 let source=rt.source;
 
@@ -38,7 +44,13 @@ const liveMarker=(song,difficultyId)=>{
   return hit.length===1?hit[0]:null;
 };
 
-const targets=swingReport().rows.filter(r=>r.over&&!r.heldByEvent);
+const report=swingReport();
+const targets=report.rows.filter(r=>r.over&&(includeEvent||!r.heldByEvent));
+const heldSkipped=includeEvent?[]:report.rows.filter(r=>r.over&&r.heldByEvent);
+if(includeEvent){
+  const onEvent=targets.filter(r=>r.heldByEvent);
+  if(onEvent.length)console.log(`★イベント開催中の曲も対象にします(--include-event): ${onEvent.length}本\n`);
+}
 if(!targets.length){
   console.log('外すものはありません。');
   process.exit(0);
@@ -86,6 +98,7 @@ if(failed){
   process.exit(1);
 }
 console.log(`\n${charts}譜面 / ${removed}本の終点フリックを外${write?'しました':'せます'}。`);
+if(heldSkipped.length)console.log(`イベント開催中の曲の ${heldSkipped.length}本 は残してあります(--include-event で外せます)。`);
 if(write){
   fs.writeFileSync(RUNTIME,source);
   console.log('書き換えました。node tools/build.js と検査を通してください。');

@@ -133,6 +133,7 @@ if(require.main===module){
     console.log(`\n保留: ${holdOn.length}本 — イベント開催中の曲なので、いまは直せません(CLAUDE.md ⑥-4)。`);
     for(const r of holdOn)console.log(`${line(r)} [${r.eventId}]`);
     console.log('  イベントが終わったら node tools/mode/rhythm-end-flick-swing-fix.js --write で直す。');
+    console.log('  始まったばかりで記録がまだ少ないなら、--include-event を付ければいま外せる(ユーザーの判断で)。');
   }
   if(ng.length){
     console.error(`\nNG: 見分けられない場所に終点フリックが ${ng.length}本あります。`);
