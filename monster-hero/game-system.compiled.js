@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0693028cdb5c5c13
+// source-sha256: 65a1ad39f6dd80ef
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 471a7e438e27e471
+// generated-sha256: 832b3ff4811107ee
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -161,7 +161,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-18 18:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-18 18:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -41053,7 +41053,14 @@ function MonsterHeroGame() {
       className: "w-full h-full object-cover"
     }) : /*#__PURE__*/React.createElement("div", {
       className: "w-full h-full flex items-center justify-center text-2xl"
-    }, base.emoji)), masu && /*#__PURE__*/React.createElement(RebirthStars, {
+    }, base.emoji)), masu && (masu.distAptPoints || 0) > 0 && /*#__PURE__*/React.createElement("span", {
+      "aria-label": `ふり分けできる強化ポイント ${masu.distAptPoints}`,
+      className: "absolute -left-1.5 -bottom-1 z-10 rounded-full border border-amber-200/60 bg-amber-400 px-1 text-[10px] font-black leading-[15px] text-slate-950 shadow",
+      style: {
+        minWidth: '17px',
+        textAlign: 'center'
+      }
+    }, masu.distAptPoints), masu && /*#__PURE__*/React.createElement(RebirthStars, {
       count: masu.rebirthCount,
       className: "mh-rebirth-stars-overlay"
     }), masu && /*#__PURE__*/React.createElement(TranscendenceBadge, {
@@ -41063,9 +41070,7 @@ function MonsterHeroGame() {
     }), badge, masu && /*#__PURE__*/React.createElement(SoulRankAura, {
       soulRankStage: normalizeMasuProgression(masu).soulRankStage,
       className: "is-small"
-    })), monsterCardName(masu ? masu.name : base.name, nameBand ? 'text-white' : masu ? 'text-pink-200' : 'text-white', nameBand), monsterCardInfo(info !== undefined ? info : masu ? monsterCardBond(masuBondLevelInfo(masu), normalizeMasuProgression(masu).levelCap) : null, monsterCardSub(sub !== undefined ? sub : masu && (masu.distAptPoints || 0) > 0 ? /*#__PURE__*/React.createElement("span", {
-      className: "shrink-0 rounded-full bg-amber-400/15 px-1.5 text-[10px] font-black leading-[15px] text-amber-300 whitespace-nowrap"
-    }, "+", masu.distAptPoints, "P") : null)), monsterCardPower(power), monsterCardStatus(status), extra);
+    })), monsterCardName(masu ? masu.name : base.name, nameBand ? 'text-white' : masu ? 'text-pink-200' : 'text-white', nameBand), monsterCardInfo(info !== undefined ? info : masu ? monsterCardBond(masuBondLevelInfo(masu), normalizeMasuProgression(masu).levelCap) : null, monsterCardSub(sub !== undefined ? sub : null)), monsterCardPower(power), monsterCardStatus(status), extra);
   };
   // mon引数は素のモンスター種、またはresolveRosterEntryToMonで解決済みのマスモン反映後オブジェクトのどちらもあり得る。
   // どちらの場合もmon.distAptitudeを見るだけでよい(マスモンの場合はresolve時にdistApt配列が既に反映されている)
@@ -61317,7 +61322,9 @@ function MonsterHeroGame() {
     React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
       className: "shrink-0 mb-2 rounded-2xl border border-indigo-500/40 bg-slate-900/90 p-2"
     }, /*#__PURE__*/React.createElement("div", {
-      className: "flex gap-2 overflow-x-auto pb-1",
+      className: "flex items-center gap-2"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex min-w-0 flex-1 gap-2 overflow-x-auto pb-1",
       role: "tablist",
       "aria-label": "\u7DE8\u6210\u30BB\u30C3\u30C8",
       style: {
@@ -61328,24 +61335,22 @@ function MonsterHeroGame() {
       role: "tab",
       "aria-selected": editingPartySetIndex === index,
       onClick: () => switchMonsterPartySet(index),
-      className: `shrink-0 min-w-[92px] min-h-[44px] rounded-xl border px-2 py-1 text-left active:scale-95 ${editingPartySetIndex === index ? 'border-indigo-300 bg-indigo-600/40' : 'border-slate-700 bg-slate-800'}`
+      className: `flex shrink-0 min-w-[76px] min-h-[44px] items-center justify-center gap-1 rounded-xl border px-2.5 active:scale-95 ${editingPartySetIndex === index ? 'border-indigo-300 bg-indigo-600/40' : 'border-slate-700 bg-slate-800'}`
     }, /*#__PURE__*/React.createElement("span", {
-      className: "block text-[11px] font-black truncate"
-    }, index + 1, ". ", name), monsterPartySets.activeIndex === index ? /*#__PURE__*/React.createElement("span", {
-      className: "text-[10px] font-black text-emerald-300"
-    }, "\u2713 \u4F7F\u7528\u4E2D") : /*#__PURE__*/React.createElement("span", {
-      className: "text-[10px] text-slate-400"
-    }, "\u30BF\u30C3\u30D7\u3067\u4F7F\u7528")))), /*#__PURE__*/React.createElement("button", {
+      className: "min-w-0 truncate text-[11px] font-black"
+    }, index + 1, ". ", name), monsterPartySets.activeIndex === index && /*#__PURE__*/React.createElement("span", {
+      className: "shrink-0 text-[11px] font-black text-emerald-300",
+      "aria-label": "\u4F7F\u7528\u4E2D"
+    }, "\u2713")))), /*#__PURE__*/React.createElement("button", {
       type: "button",
       "data-party-set-edit-toggle": true,
       onClick: () => toggleScreenNote('partySetEdit'),
       "aria-expanded": screenNoteOpen.partySetEdit === true,
-      className: "mt-1 flex min-h-[44px] w-full items-center justify-between gap-2 rounded-xl px-1 text-left text-[10px] font-black text-slate-400 active:scale-[.995]"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "min-w-0 truncate"
-    }, "\u30BB\u30C3\u30C8\u540D\u3092\u5909\u3048\u308B\u30FB\u307B\u304B\u306E\u30BB\u30C3\u30C8\u3078\u30B3\u30D4\u30FC"), /*#__PURE__*/React.createElement("span", {
-      className: "shrink-0"
-    }, screenNoteOpen.partySetEdit === true ? '閉じる ▲' : '開く ▼')), screenNoteOpen.partySetEdit === true && /*#__PURE__*/React.createElement("div", {
+      "aria-label": "\u30BB\u30C3\u30C8\u540D\u3092\u5909\u3048\u308B\u30FB\u307B\u304B\u306E\u30BB\u30C3\u30C8\u3078\u30B3\u30D4\u30FC",
+      className: `flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border active:scale-95 ${screenNoteOpen.partySetEdit === true ? 'border-indigo-300 bg-indigo-600/40 text-white' : 'border-slate-700 bg-slate-800 text-slate-400'}`
+    }, /*#__PURE__*/React.createElement(Settings, {
+      size: 16
+    }))), screenNoteOpen.partySetEdit === true && /*#__PURE__*/React.createElement("div", {
       className: "mt-1 grid grid-cols-[minmax(0,1fr)_auto] gap-2 items-end"
     }, /*#__PURE__*/React.createElement("label", {
       className: "min-w-0 text-[10px] font-black text-slate-400"
