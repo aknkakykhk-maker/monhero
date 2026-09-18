@@ -172,7 +172,12 @@ check('アップデート通知と重ならない',
 check('見終わったときの処理が1か所にまとまっている',
   (gameSrc.match(/const markMomosukeIntroSeen = useCallback/g) || []).length === 1);
 check('回想を先に見ても解放される', gameSrc.includes("if(event&&event.id==='momosuke_intro') markMomosukeIntroSeen();"));
-check('解放されるまで助手として選べない', gameSrc.includes("const locked=who.id==='momosuke'&&!momosukeIntroSeenFlag;"));
+// ★2026-09-17にイベントで加入する助手(ドラ)が増え、locked の式へ条件が1つ足された。
+//   1行まるごと突き合わせていたので、正しい実装なのに落ちていた。
+//   見たいのは「ももすけの解放フラグが locked に入っていること」なので、そこだけ見る
+check('解放されるまで助手として選べない',
+  /const locked=\(who\.id==='momosuke'&&!momosukeIntroSeenFlag\)/.test(gameSrc)
+    || gameSrc.includes("const locked=who.id==='momosuke'&&!momosukeIntroSeenFlag;"));
 check('新規プレイヤーは助手選択の時点で選べる',
   gameSrc.includes('chooseAssistant(who.id);markKikiIntroSeen();markMomosukeIntroSeen();'));
 check('選んでいる助手を勝手に変えていない',
