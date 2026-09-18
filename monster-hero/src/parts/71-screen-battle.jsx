@@ -427,7 +427,7 @@ function BattleScreen({
             // ここを数えてしまうと、1枚目なのに自分自身を2枚目とみなして半減表示になる。
             const pendingCardObj=pendingCard!=null?hand[pendingCard]:(dragState&&dragState.active?dragState.card:null);
             const pendingIdx=pendingCard!=null?pendingCard:((dragState&&dragState.active)?dragState.cardIndex:null);
-            // おりょう・ゴーレム・モッチー/ミタラシ・ききは使ったターンからすぐ効くため、
+            // ニコラオ・ゴーレム・モッチー/ミタラシ・ききは使ったターンからすぐ効くため、
             // 先に選んだカードぶんの補正を、あとに続くカードの予測へも反映する
             // (processTurnの実行順序と同じ数え方。localBoostFromCard/previewLocalBoosts参照)。
             const boosts=previewLocalBoosts(pendingIdx);
@@ -537,7 +537,7 @@ function BattleScreen({
               // - if a card is pending assignment, show what THIS card would do on this monster
               // - otherwise show the sum of damage from cards already assigned to this slot,
               //   using the GLOBAL attack order (2nd+ attack = half damage), matching processTurn
-              // おりょう・ゴーレム・モッチー/ミタラシ・ききの同ターン即時効果を、
+              // ニコラオ・ゴーレム・モッチー/ミタラシ・ききの同ターン即時効果を、
               // このスロットの予測にも反映する(合計DMG欄と同じpreviewLocalBoosts)。
               const slotBoosts=previewLocalBoosts(pendingIdx);
               let previewDmg=0; let isPendingPreview=false; let isPendingHalved=false; let previewSoulPct=0;

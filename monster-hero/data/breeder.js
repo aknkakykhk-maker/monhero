@@ -1,6 +1,9 @@
 // ==================== 教えカード用アイコン ====================
 // TEACHING_CARDSのicon欄(教えカードの表示アイコン)として使用。モンスターとは無関係。
-const ORYO_FACE_ICON = "images/breeder-icons/oryo.png?v=a5ec60be5094";
+// ニコラオ(旧おりょう)。2026-09-18にキャラクターを差し替えた。
+// id は 'oryo' のまま据え置く。持ち込み中のアシストカード(mh_teaching_roster)と、
+// 攻撃バフの種別キー(ゴーレムの固有技も同じキーを使う)がこのIDで保存されているため。
+const NICOLAO_FACE_ICON = "images/breeder-icons/nicolao.png?v=fc5a1318af2d";
 const DRA_FACE_ICON = "images/breeder-icons/dra.png?v=423f4119d101";
 const MYARU_FACE_ICON = "images/breeder-icons/myaru.png?v=88a5201c9b51";
 const ATSU_FACE_ICON = "images/breeder-icons/atsu.png?v=3df879752dee";
@@ -34,7 +37,7 @@ const EIKI_DISC_ICON = "images/disc-icons/eiki-disc.PNG?v=0b8dca1d94c0";
 const KENSHI_MOCCHI_DISC_ICON = "images/disc-icons/kenshi-mocchi-disc.PNG?v=57ec53a942c7";
 
 const BREEDER_EVO_NAMES = {
-  oryo: ["おりょうの力", "おりょうの気合", "おりょうの憤怒"],
+  oryo: ["ニコラオの力", "ニコラオの気合", "ニコラオの憤怒"],
   dra: ["ドラの緑膝", "ドラの黒膝臭", "ドラの毒膝地獄"],
   cadmium: ["かどみうむの計算", "かどみうむの理論", "かどみうむの叡智"],
   mua: ["みゅあの愛", "みゅあの深愛", "みゅあの慈愛"],
@@ -72,7 +75,7 @@ const POLTZ_TIERS = [
 ];
 
 const TEACHING_CARDS = [
-  { id:'oryo',    baseName:"おりょうの力",    icon:ORYO_FACE_ICON,    type:'buff',   subType:'atk_buff',    baseValue:0.1, step:0.1,  desc:"攻撃アップ",   evoLevel:0, guts:20 },
+  { id:'oryo',    baseName:"ニコラオの力",    icon:NICOLAO_FACE_ICON,    type:'buff',   subType:'atk_buff',    baseValue:0.1, step:0.1,  desc:"攻撃アップ",   evoLevel:0, guts:20 },
   { id:'dra',     baseName:"ドラの緑膝",      icon:DRA_FACE_ICON,     type:'buff',   subType:'dmg_cut_buff', baseValue:0.03,step:0.03, desc:"被ダメージダウン",     evoLevel:0, guts:20 },
   { id:'cadmium', baseName:"かどみうむの計算", icon:CADMIUM_FACE_ICON, type:'buff',   subType:'guts_buff',   baseValue:1.3, step:0.2,  desc:"自動回復・上限アップ",   evoLevel:0, guts:20 },
   { id:'mua',     baseName:"みゅあの愛",      icon:MUA_FACE_ICON,     type:'heal',   subType:'heal_mua',    baseValue:0.5, step:0.2,  desc:"回復・能力永続アップ",   evoLevel:0, guts:20 },
@@ -189,7 +192,7 @@ const BREEDER_MARKET_ITEMS = [
   { id:'kiki', name:"アシストカード「きき」", type:'assist', icon:KIKI_FACE_ICON, cost:1500, desc:"次ターンから使用可能カード枚数+1・バトル中永続で全体連撃を強化" },
   { id:'meloso', name:"アシストカード「メロソ」", type:'assist', icon:MELOPANMAN_ICON, cost:1500, desc:"緊急回復相当＋現在ガード。複数枚使用で次ターンを強化" },
   { id:'poltz', name:"アシストカード「ポルツ」", type:'assist', icon:POLTZ_FACE_ICON, cost:1500, desc:"敵の攻撃を受けるたびガッツ回復・自動ガッツ回復アップ（Lv3は攻撃アップも）" },
-  { id:'oryo',    name:"おりょうのアイコン",     type:'icon', icon:ORYO_FACE_ICON,    cost:1 },
+  { id:'oryo',    name:"ニコラオのアイコン",     type:'icon', icon:NICOLAO_FACE_ICON, cost:1 },
   { id:'dra',     name:"ドラのアイコン",        type:'icon', icon:DRA_FACE_ICON,     cost:1 },
   { id:'cadmium', name:"かどみうむのアイコン",   type:'icon', icon:CADMIUM_FACE_ICON, cost:1 },
   { id:'mua',     name:"みゅあのアイコン",      type:'icon', icon:MUA_FACE_ICON,     cost:1 },
