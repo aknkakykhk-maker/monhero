@@ -178,8 +178,10 @@ const detail = screenSource('MONSTER_DEX_DETAIL', 'MonsterDexDetailScreen');
 // 攻撃アクションの確認は専用画面。画面ごと切り出してあるので、list/detail とは混ざらない
 const attackPreview = screenSource('MONSTER_ATTACK_PREVIEW', 'MonsterAttackPreviewScreen');
 const sharedDex = slice('const DexMonsterIcon =', 'const MarketProductIcon =');
+// 2026-09-18: M/B管理の行を共通の形(managementLink: 絵・名前・一言の説明・行き先)へ寄せたので、
+// 「モンスター図鑑</button>」という並びではなくなった。入口があることを名前で見る。
 check('M/B管理のモンスターから図鑑へ入れる',
-  source.includes("setGameState('MONSTER_DEX');") && source.includes('モンスター図鑑</button>'));
+  source.includes("setGameState('MONSTER_DEX');") && /managementLink\([^)]*'モンスター図鑑'/.test(source));
 check('HOMEへ施設を増やしていない', !/mh-home-facility [a-z]*dex/.test(source));
 check('図鑑登録数と全体数を出している', list.includes('data-dex-count') && list.includes('図鑑登録数'));
 check('解放判定は既存の mh_unlocked_monsters を使う',
@@ -299,7 +301,13 @@ check('図鑑プレビューは本番と同じモーション描画を使う',
   check('パンドラも専用分身モーションを図鑑で再生できる',
     previewCtx.preview('pandoraDualThunder').some(step=>step.anim?.motion==='pandoraDualThunder'));
 }
-check('Safe Areaを避けている', list.includes('env(safe-area-inset-top)') && detail.includes('env(safe-area-inset-bottom)'));
+// 2026-09-18: 画面ごとに env(safe-area-inset-*) を足すのをやめた。index.html の body が
+// 既に同じものを持っていて、画面側でも足すと切り欠きぶんを二重に取る。しかも足している画面と
+// 足していない画面があり、画面を移るたびに中身の始まる位置が動いていた。
+// ノッチを避けているかは「アプリの器(body)がそうしているか」で見る。
+const indexHtmlForSafeArea = fs.readFileSync(path.join(root, 'monster-hero/index.html'), 'utf8');
+check('Safe Areaを避けている',
+  /body\s*\{[^}]*padding-top:\s*env\(safe-area-inset-top\)[^}]*padding-bottom:\s*env\(safe-area-inset-bottom\)/.test(indexHtmlForSafeArea));
 check('横はみ出し対策(truncate/min-w-0/break-words)がある',
   detail.includes('truncate') && detail.includes('min-w-0') && detail.includes('break-words'));
 // 全モンスターぶん、詳細で参照する値が取り出せる(画面が落ちないこと)
