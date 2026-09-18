@@ -46,9 +46,13 @@ check('カードを描く画面はすべて共通クラスと共通サイズを�
   `${cardLines.length}画面 / サイズ指定もれ ${cardLinesWithoutStyle.length}件`);
 // 中身(アイコン・補足行・状態行)は共通部品の中だけで組み立てる。画面ごとに書き写すと
 // 片方だけ直したときにずれる(実際にプロモードの横長カードで起きた)
+// 2026-09-18: 編成のアシストカードも、自前の w-10 h-10 をやめて共通のアイコン枠へ寄せた。
+// 共通の定数を使う場所が増えるのは「ずれる原因が減る」ほうなので、数では縛らない
+// (以前はちょうど2か所=定義1+使用1で見ていた)。
+// 「中身を画面ごとに組み立てていないか」は、補足行と状態行が1か所ずつであることで見る。
 check('カードの中身は共通部品1か所だけで組み立てる',
-  count('MONSTER_CARD_ICON_CLASS') === 2 && count('monsterCardSub(') === 1 && count('monsterCardStatus(') === 1,
-  `アイコン${count('MONSTER_CARD_ICON_CLASS') - 1}か所 / 補足行${count('monsterCardSub(')}か所 / 状態行${count('monsterCardStatus(')}か所`);
+  count('MONSTER_CARD_ICON_CLASS') >= 2 && count('monsterCardSub(') === 1 && count('monsterCardStatus(') === 1,
+  `アイコン枠の共通定数${count('MONSTER_CARD_ICON_CLASS') - 1}か所 / 補足行${count('monsterCardSub(')}か所 / 状態行${count('monsterCardStatus(')}か所`);
 // ★2026-09-07・ユーザー指摘「1枚目 まだ窮屈 / 2枚目 このサイズ感がいい」。
 // 以前は中身が無くても行を確保していたため、絆Lvしか出さない画面(合体の主・副など)でも
 // 総合力・強化P・状態の3行ぶん(約59px)が空のまま場所を取っていた。
@@ -116,9 +120,11 @@ check('アイテムの効果は詳細ボタンから出す',
     && !has("style={{minHeight:'40px'}}>{item.desc||null}</div>"));
 check('所持数と詳細ボタンは同じ高さの1行にまとめる',
   has("<div className=\"w-full flex items-center justify-center gap-1\" style={{height:'22px'}}>"));
-// 1行に4商品。カードが細くなるので、アイコンの大きさもそれに合わせて1か所で決める
-check('1行に4商品ずつ並べる',
-  has("const MARKET_GRID_CLASS = 'grid grid-cols-4 gap-2 pb-4';") && has('<div className={MARKET_GRID_CLASS}>'));
+// 1行に3商品(2026-09-18)。4商品のときは幅360pxの端末で1枚76pxしかなく、商品名が9pxまで
+// 落ちて2〜3行に折り返していた。3商品なら1枚103pxあり、名前が11pxで1行に収まる。
+// アイコンの大きさもそれに合わせて1か所で決める
+check('1行に3商品ずつ並べる',
+  has("const MARKET_GRID_CLASS = 'grid grid-cols-3 gap-2.5 pb-4';") && has('<div className={MARKET_GRID_CLASS}>'));
 // 4つ並べるとアイコンが小さいので、タップで大きく見られるようにしている
 check('商品アイコンはタップで拡大できる',
   has('onZoom={()=>onZoomIcon(item)}') && has('onZoomIcon={setMarketIconZoom}')
@@ -137,7 +143,7 @@ check('購入ボタンはカードの下端に揃える', has('<div className="w
 // 「指で押せる高さ(min-h-[30px])がある」こと。クラスの並びは変わりうるので、
 // 並び全体の丸写しではなく、この2つだけを見る(2026-09-05)。
 check('詳細と購入ボタンを押し間違えない間隔がある',
-  has('mt-auto pt-2') && has('min-h-[30px] max-w-full rounded-xl'));
+  has('mt-auto pt-2') && has('min-h-[44px]') && has('max-w-full rounded-xl'));
 // 細いカードから通貨表示がはみ出さないこと。
 // もとは「プシュケーだけ通貨名と価格を2行に分ける」作りだったが、
 // いまは絵文字＋数字(🌈 1,200)の短い1行になっている。
@@ -146,7 +152,7 @@ check('購入ボタンの通貨表示がカード内に収まる',
   has('max-w-full rounded-xl flex items-center justify-center gap-1 whitespace-nowrap')
     && has('usesPsyche?<><span aria-hidden="true">🌈</span><span>{item.cost.toLocaleString()}</span></>')
     // 勇者の証は名前が長いので、字を小さくして1行(whitespace-nowrap)に収めている
-    && has('usesHeroProof?<><span aria-hidden="true">🏅</span><span className="text-[8px]">勇者の証 ×{item.cost.toLocaleString()}</span></>'));
+    && has('usesHeroProof?<><span aria-hidden="true">🏅</span><span className="text-[10px]">勇者の証 ×{item.cost.toLocaleString()}</span></>'));
 check('状態の表示も折り返さない', has('rounded-full whitespace-nowrap">近日追加</div>') && has('rounded-full whitespace-nowrap">所持済み</div>'));
 // 拡大量は表示コードへ直接書かず、アイコンIDごとの表を1か所に持つ。
 // ききはマーケット商品とアシストカードの両方で同じ値を使うので、定数を共有する
@@ -207,6 +213,10 @@ const sharedComponentSource = (component) => {
   return '';
 };
 
+// 2026-09-18: 管理系の画面は一覧のクラスを共通化した(41-screen-ui.jsx の SCREEN_LIST_CLASS
+// = 'flex-1 min-h-0 overflow-y-auto mh-scroll')。画面のソースに overflow-y-auto の文字が
+// 出てこなくなるので、共通の一覧クラスを使っていればスクロールできるものとして数える。
+const hasScroll = (text) => text.includes('overflow-y-auto') || text.includes('SCREEN_LIST_CLASS');
 const noScroll = screens.filter(name => {
   if (ABSOLUTE_LAYOUT_SCREENS.includes(name) || OUT_OF_SCOPE_SCREENS(name)) return false;
   if (COMPONENT_OWNED_SCREENS[name]) return false;
@@ -220,17 +230,17 @@ const noScroll = screens.filter(name => {
     // screenSource は部品が見つからないとき gameState の窓へ落ちる。落ちた結果は
     // 呼び出しの数行でしかないので、「部品そのものが返ってきたとき」だけ信用する
     const moved = screenSource(name, called);
-    if (moved.startsWith(`function ${called}`)) return !moved.includes('overflow-y-auto');
+    if (moved.startsWith(`function ${called}`)) return !hasScroll(moved);
     // 共有の部品(QuickStepScreen など)は 51〜71-screen-*.jsx ではなく共有層にいるので
     // screenSource では拾えない。部品の定義そのものを探して、その中身を見る
     // (2026-09-11。ここが空振りすると、呼び出しの数行だけを見て「スクロールが無い」と
     //  誤って言う。実際 QUICK_GROWTH / QUICK_JOIN がそうなっていた)
     const shared = sharedComponentSource(called);
-    if (shared) return !shared.includes('overflow-y-auto');
+    if (shared) return !hasScroll(shared);
   }
   const at = screenStart(name);
   if (at < 0) return false;
-  return !source.slice(at, at + 9000).includes('overflow-y-auto');
+  return !hasScroll(source.slice(at, at + 9000));
 });
 check('各画面に縦スクロールできる場所がある', noScroll.length === 0, noScroll.join(', '));
 

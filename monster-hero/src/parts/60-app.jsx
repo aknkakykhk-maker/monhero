@@ -5103,20 +5103,20 @@ function MonsterHeroGame() {
     const openModal = (tab) => { setSortFilterModalSingleType(!!singleType); setSortFilterModalTab(tab); setShowSortFilterModal(true); };
     return (
       <div className="mb-2 shrink-0 flex gap-2">
-        <button onClick={() => openModal('sort')} style={{minHeight:'40px'}} className="flex-1 min-w-0 flex items-center justify-between gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 active:scale-95">
+        <button onClick={() => openModal('sort')} className="flex-1 min-w-0 min-h-[44px] flex items-center justify-between gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 border border-white/10 active:scale-95">
           <span className="text-[11px] font-black text-white truncate">並べかえ: {currentSortOpt?.label}{monsterSortKey === currentSortOpt?.key && <span>{monsterSortDir === 'asc' ? '▲' : '▼'}</span>}</span>
-          <ChevronRight size={14} className="text-slate-500 shrink-0"/>
+          <ChevronRight size={14} className="text-slate-400 shrink-0"/>
         </button>
         {/* 種族のしぼりこみ。並べかえと掛け合わせて使えるので、別のボタンとして常に出す。
             しぼりこみ中はひと目で分かるように色を変える(戻し忘れて「いない」と勘違いしないため) */}
-        <button onClick={() => openModal('lineage')} style={{minHeight:'40px'}} className={`shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl border active:scale-95 ${monsterLineageFilter==='all'?'bg-slate-900 border-slate-700':'bg-indigo-900 border-indigo-400'}`}>
+        <button onClick={() => openModal('lineage')} className={`shrink-0 min-h-[44px] flex items-center gap-1.5 px-3 py-2 rounded-xl border active:scale-95 ${monsterLineageFilter==='all'?'bg-slate-900 border-white/10':'bg-indigo-900 border-indigo-400'}`}>
           <span className="text-[11px] font-black text-white truncate">{monsterLineageFilter==='all'?'種族':`${lineageById(monsterLineageFilter).name}種`}</span>
-          <ChevronRight size={14} className="text-slate-500 shrink-0"/>
+          <ChevronRight size={14} className="text-slate-400 shrink-0"/>
         </button>
-        <button onClick={() => openModal('display')} style={{minHeight:'40px'}} className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 active:scale-95">
+        <button onClick={() => openModal('display')} className="shrink-0 min-h-[44px] flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-900 border border-white/10 active:scale-95">
           <span className="text-[11px] font-black text-white">表示</span>
-          <span className="text-[9px] text-teal-400 font-black">{activeDisplayCount}</span>
-          <ChevronRight size={14} className="text-slate-500 shrink-0"/>
+          <span className="text-[10px] text-teal-400 font-black">{activeDisplayCount}</span>
+          <ChevronRight size={14} className="text-slate-400 shrink-0"/>
         </button>
       </div>
     );
@@ -11280,16 +11280,38 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             (設定を終えてHOMEへ着いた時点でそのまま出る。2026-09-12・ユーザー指摘) */}
         {loginBonusPopup&&onboarded&&!onboardingPreview&&<div className="fixed inset-0 flex items-center justify-center p-5" style={{zIndex:60000,backgroundColor:'rgba(2,6,23,.88)'}} role="dialog" aria-modal="true" aria-label="ログインボーナス"><div className="w-full max-w-sm rounded-3xl border-2 border-amber-300 bg-gradient-to-b from-indigo-950 to-slate-950 p-6 text-center shadow-2xl"><Sparkles size={46} className="mx-auto mb-3 text-amber-300"/><h2 className="text-2xl font-black text-amber-200">ログインボーナス</h2><p className="mt-3 text-sm font-black text-white">{loginBonusPopup.day}日目のログインボーナスを獲得しました！</p><div className="my-3 space-y-1.5">{loginBonusPopup.rewards.map((reward,i)=><div key={i} className="rounded-xl bg-black/35 px-3 py-2 font-black text-cyan-200 break-words">{giftRewardText(reward)}</div>)}</div>{renderLoginBonusList(loginBonusPopup.day)}<p className="text-xs text-slate-300 mt-3">報酬はギフトボックスへ送られました。</p><div className="mt-5 grid grid-cols-2 gap-2"><button onClick={()=>{setLoginBonusPopup(null);openGiftBox();}} className="min-h-[48px] rounded-xl bg-cyan-600 px-2 text-sm font-black text-white">ギフトを確認</button><button onClick={()=>setLoginBonusPopup(null)} className="min-h-[48px] rounded-xl bg-slate-700 px-2 text-sm font-black text-white">閉じる</button></div></div></div>}
 
-        {gameState==='MB_MANAGEMENT'&&(
-          <div data-mh-screen className="flex-1 flex flex-col h-full min-h-0 p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
-            <div className="flex items-center gap-2 mb-5 shrink-0"><button onClick={returnToHome} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-indigo-300">M/B管理</h2></div><div className="shrink-0 w-full max-w-md mx-auto mb-3"><AssistantBubble scene="mbManagement"/></div>
-            <div className="grid grid-cols-2 gap-2 mb-5 shrink-0"><button onClick={()=>setManagementTab('monster')} className={`min-h-[48px] rounded-xl font-black ${managementTab==='monster'?'bg-indigo-600 text-white':'bg-slate-900 text-slate-400'}`}>モンスター</button><button onClick={()=>setManagementTab('assist')} className={`min-h-[48px] rounded-xl font-black ${managementTab==='assist'?'bg-purple-600 text-white':'bg-slate-900 text-slate-400'}`}>アシストカード</button></div>
-            <div className="w-full max-w-md mx-auto space-y-3 overflow-y-auto mh-scroll">
-              {managementTab==='monster'?<><button onClick={()=>setGameState('OWNED_MONSTERS')} className="mh-management-link">ベースモン一覧</button><button onClick={()=>setGameState('MASU_MONS')} className="mh-management-link">マスモン一覧</button><button onClick={()=>{setDexLineageFilter('all');setGameState('MONSTER_DEX');}} className="mh-management-link">モンスター図鑑</button><button onClick={()=>{setDraftMonsterRoster(monsterRosterIds);setDraftTeachingRoster(normalizeTeachingRoster(teachingRosterIds,unlockedTeachingIds));setRosterTab('monster');setGameState('ROSTER');}} className="mh-management-link">モンスター編成</button><button onClick={openPastureSettings} className="mh-management-link">放牧設定</button></>:<button onClick={()=>{setDraftMonsterRoster(monsterRosterIds);setDraftTeachingRoster(normalizeTeachingRoster(teachingRosterIds,unlockedTeachingIds));setRosterTab('teaching');setGameState('ROSTER');}} className="mh-management-link">アシストカード編成</button>}
-              <button onClick={openAutoSettings} className="mh-management-link">AUTO設定</button>
+        {gameState==='MB_MANAGEMENT'&&(()=>{
+          /* 行き先が名前だけでは分からなかったので、デバッグ画面の DebugMenuRow と同じ
+             「絵＋名前＋一言」の形へそろえる。行き先とすることは変えない(2026-09-18) */
+          const managementLink = (icon, label, desc, onClick, rest = {}) => (
+            <button type="button" onClick={onClick} {...rest}
+              className="w-full min-h-[64px] rounded-xl border border-indigo-400/60 bg-indigo-950/60 px-3 py-2 text-left text-white shadow-lg active:scale-95">
+              <span className="flex items-center gap-2">
+                <span className="shrink-0 text-indigo-200">{icon}</span>
+                <span className="min-w-0 flex-1 text-[13px] font-black leading-tight">{label}</span>
+                <ChevronRight size={16} className="shrink-0 text-indigo-300"/>
+              </span>
+              <small className="mt-0.5 block text-[10px] font-bold leading-relaxed text-slate-400">{desc}</small>
+            </button>
+          );
+          return (
+          <div data-mh-screen className={SCREEN_SHELL_CLASS}>
+            <ScreenHead title="M/B管理" accent="text-indigo-300" onBack={returnToHome} backLabel="HOMEへ戻る"/>
+            <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="mbManagement"/></div>
+            <ScreenTabs className="w-full max-w-md mx-auto" value={managementTab} onChange={setManagementTab}
+              items={[{id:'monster',label:'モンスター',color:'#4f46e5'},{id:'assist',label:'アシストカード',color:'#9333ea'}]}/>
+            <div className={`w-full max-w-md mx-auto space-y-2 ${SCREEN_LIST_CLASS}`}>
+              {managementTab==='monster'?<>
+                {managementLink(<List size={18}/>,'ベースモン一覧','解放したベースモンを並べて確かめる',()=>setGameState('OWNED_MONSTERS'))}
+                {managementLink(<Star size={18}/>,'マスモン一覧','育てたマスモンの絆・状態を見る',()=>setGameState('MASU_MONS'))}
+                {managementLink(<BookOpen size={18}/>,'モンスター図鑑','出会ったモンスターと血統をふり返る',()=>{setDexLineageFilter('all');setGameState('MONSTER_DEX');})}
+                {managementLink(<Users size={18}/>,'モンスター編成','バトルへ連れていくモンスターを決める',()=>{setDraftMonsterRoster(monsterRosterIds);setDraftTeachingRoster(normalizeTeachingRoster(teachingRosterIds,unlockedTeachingIds));setRosterTab('monster');setGameState('ROSTER');})}
+                {managementLink(<Flag size={18}/>,'放牧設定','HOMEに出しておくマスモンを選ぶ',openPastureSettings)}
+              </>:managementLink(<Layers size={18}/>,'アシストカード編成','バトルで使うアシストカードを選ぶ',()=>{setDraftMonsterRoster(monsterRosterIds);setDraftTeachingRoster(normalizeTeachingRoster(teachingRosterIds,unlockedTeachingIds));setRosterTab('teaching');setGameState('ROSTER');})}
+              {managementLink(<Settings size={18}/>,'AUTO設定','AUTOで戦うときの方針と供モンを決めておく',openAutoSettings)}
             </div>
-          </div>
-        )}
+          </div>);
+        })()}
 
         {/* モンスター図鑑(一覧): 図鑑登録数・主血統でのしぼりこみ・アイコン一覧。
             解放判定は既存の mh_unlocked_monsters をそのまま使い、図鑑用の保存は増やさない */}
@@ -11355,37 +11377,37 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const autoBreakthroughBulkMax = autoRepeatBreakthroughMaxLevel(breederLevel.level);
           const reserveGold = draftAutoSettings.breakthroughReserve?.gold || 0;
           const reservePsyche = draftAutoSettings.breakthroughReserve?.psyche || 0;
-          return <div data-mh-screen className="flex-1 flex flex-col h-full min-h-0 p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
-            <div className="flex items-center gap-2 mb-3 shrink-0"><button onClick={()=>setGameState('MB_MANAGEMENT')} className="p-3 text-slate-400 active:scale-90" aria-label="M/B管理へ戻る"><ArrowLeft size={20}/></button><div><h2 className="text-xl font-black italic text-indigo-300">AUTO設定</h2><p className="text-[9px] text-slate-400 font-bold">将来のAUTO用事前設定</p></div></div>
-            <div className="flex-1 min-h-0 overflow-y-auto mh-scroll w-full max-w-md mx-auto space-y-4 pb-3">
-              <section className="rounded-2xl border border-indigo-500/40 bg-slate-950/70 p-3"><h3 className="text-sm font-black text-indigo-200 mb-2">1. AUTO方針</h3><div className="grid grid-cols-2 gap-2">{strategies.map(([key,label,description])=><button key={key} aria-pressed={draftAutoSettings.strategy===key} onClick={()=>setDraftAutoSettings(current=>({...current,strategy:key}))} className={`min-h-[68px] min-w-0 rounded-xl border p-2 text-left active:scale-[.98] ${draftAutoSettings.strategy===key?'border-cyan-300 bg-indigo-600 ring-2 ring-cyan-300/50':'border-slate-700 bg-slate-900'}`}><span className="block text-xs font-black">{label}</span><span className="block mt-1 text-[9px] leading-snug text-slate-300">{description}</span></button>)}</div></section>
-              <section className="space-y-3"><div><h3 className="text-sm font-black text-indigo-200">2. 供モン事前設定</h3><p className="text-[9px] leading-relaxed text-slate-400 mt-1">WAVE2・4・6の順に対応します。設定した供モンが候補にいない場合はAUTO時にランダムで補完されます。</p></div>{draftAutoSettings.allies.map((ally,index)=><div key={index} className="rounded-2xl border border-indigo-500/30 bg-slate-900 p-3 space-y-2"><label className="block text-xs font-black text-white" htmlFor={`auto-ally-${index}`}>供モン{['①','②','③'][index]}</label><select id={`auto-ally-${index}`} value={ally.rosterEntry||''} onChange={event=>updateDraftAutoAlly(index,{rosterEntry:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-slate-600 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">未指定（ランダム）</option>{monsterRosterIds.filter(entry=>!!resolveRosterEntryToMon(entry)).map(entry=><option key={entry} value={entry} disabled={selectedEntries.includes(entry)&&ally.rosterEntry!==entry}>{autoRosterLabel(entry)}</option>)}</select>{renderAutoAllySummary(ally.rosterEntry)}<div><div className="text-[10px] font-black text-slate-300 mb-1.5">配置距離</div><div className="grid grid-cols-5 gap-1">{ranges.map(([slot,label])=><button key={label} onClick={()=>updateDraftAutoAlly(index,{slot})} aria-pressed={ally.slot===slot} className={`min-h-[44px] min-w-0 rounded-lg border text-[10px] font-black active:scale-95 ${ally.slot===slot?'ring-2 ring-white border-white':slot===null?'bg-slate-700 border-slate-500 text-white':`${RANGE_STYLES[slot].labelBg} ${RANGE_STYLES[slot].border}`}`}>{label}</button>)}</div></div></div>)}</section>
+          return <div data-mh-screen className={SCREEN_SHELL_CLASS}>
+            <ScreenHead title="AUTO設定" accent="text-indigo-300" note="将来のAUTO用事前設定" onBack={()=>setGameState('MB_MANAGEMENT')} backLabel="M/B管理へ戻る"/>
+            <div className={`${SCREEN_LIST_CLASS} w-full max-w-md mx-auto space-y-3 pb-3`}>
+              <section className={SCREEN_PANEL_CLASS}><h3 className="text-[13px] font-black text-indigo-200 mb-2">1. AUTO方針</h3><div className="grid grid-cols-2 gap-2">{strategies.map(([key,label,description])=><button key={key} aria-pressed={draftAutoSettings.strategy===key} onClick={()=>setDraftAutoSettings(current=>({...current,strategy:key}))} className={`min-h-[68px] min-w-0 rounded-xl border p-2 text-left active:scale-[.98] ${draftAutoSettings.strategy===key?'border-cyan-300 bg-indigo-600 ring-2 ring-cyan-300/50':'border-white/10 bg-slate-950/60'}`}><span className="block text-[12px] font-black">{label}</span><span className="block mt-1 text-[10px] leading-snug text-slate-300">{description}</span></button>)}</div></section>
+              <section className="space-y-3"><div><h3 className="text-[13px] font-black text-indigo-200">2. 供モン事前設定</h3><p className="text-[11px] leading-relaxed text-slate-400 mt-1">WAVE2・4・6の順に対応します。設定した供モンが候補にいない場合はAUTO時にランダムで補完されます。</p></div>{draftAutoSettings.allies.map((ally,index)=><div key={index} className={`${SCREEN_PANEL_CLASS} space-y-2`}><label className="block text-[12px] font-black text-white" htmlFor={`auto-ally-${index}`}>供モン{['①','②','③'][index]}</label><select id={`auto-ally-${index}`} value={ally.rosterEntry||''} onChange={event=>updateDraftAutoAlly(index,{rosterEntry:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">未指定（ランダム）</option>{monsterRosterIds.filter(entry=>!!resolveRosterEntryToMon(entry)).map(entry=><option key={entry} value={entry} disabled={selectedEntries.includes(entry)&&ally.rosterEntry!==entry}>{autoRosterLabel(entry)}</option>)}</select>{renderAutoAllySummary(ally.rosterEntry)}<div><div className="text-[11px] font-black text-slate-300 mb-1.5">配置距離</div><div className="grid grid-cols-5 gap-1">{ranges.map(([slot,label])=><button key={label} onClick={()=>updateDraftAutoAlly(index,{slot})} aria-pressed={ally.slot===slot} className={`min-h-[44px] min-w-0 rounded-xl border text-[10px] font-black active:scale-95 ${ally.slot===slot?'ring-2 ring-white border-white':slot===null?'bg-slate-700 border-slate-500 text-white':`${RANGE_STYLES[slot].labelBg} ${RANGE_STYLES[slot].border}`}`}>{label}</button>)}</div></div></div>)}</section>
               {/* モンヒロビートから∞周回を始めるための事前設定(docs/spec/QUICK_RHYTHM_LINK.md PR5)。
                   3つとも決めたときだけ使う。決めていないあいだは、これまでどおり
                   「1周目に自分で組んだ編成」をそのまま繰り返す */}
-              <section className="space-y-3"><div><h3 className="text-sm font-black text-indigo-200">3. モンヒロビート中に回すクイック周回</h3><p className="text-[9px] leading-relaxed text-slate-400 mt-1">モンヒロビートから∞周回を始めるときの編成です。勇者モン・配置距離・難易度の3つを決めると使えます。決めていないあいだは、いつもどおりバトル画面で1周目を組んでから∞にしてください。難易度は「クイックでクリア済み」のものだけ選べます（演奏したぶんが周回クリアとして入るのも同じ条件のため）。</p></div><div className="rounded-2xl border border-fuchsia-500/30 bg-slate-900 p-3 space-y-2"><label className="block text-xs font-black text-white" htmlFor="auto-quick-hero">勇者モン</label><select id="auto-quick-hero" value={draftAutoSettings.quickRun?.heroRosterEntry||''} onChange={event=>updateDraftAutoQuickRun({heroRosterEntry:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-slate-600 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">未設定（この機能を使わない）</option>{monsterRosterIds.filter(entry=>!!resolveRosterEntryToMon(entry)).map(entry=><option key={entry} value={entry}>{autoRosterLabel(entry)}</option>)}</select>{renderAutoAllySummary(draftAutoSettings.quickRun?.heroRosterEntry)}<div><div className="text-[10px] font-black text-slate-300 mb-1.5">配置距離</div><div className="grid grid-cols-4 gap-1">{ranges.filter(([slot])=>slot!==null).map(([slot,label])=><button key={label} onClick={()=>updateDraftAutoQuickRun({distance:slot})} aria-pressed={draftAutoSettings.quickRun?.distance===slot} className={`min-h-[44px] min-w-0 rounded-lg border text-[10px] font-black active:scale-95 ${draftAutoSettings.quickRun?.distance===slot?'ring-2 ring-white border-white':''} ${RANGE_STYLES[slot].labelBg} ${RANGE_STYLES[slot].border}`}>{label}</button>)}</div></div><div><label className="block text-[10px] font-black text-slate-300 mb-1.5" htmlFor="auto-quick-difficulty">難易度</label><select id="auto-quick-difficulty" value={draftAutoSettings.quickRun?.difficulty||''} onChange={event=>updateDraftAutoQuickRun({difficulty:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-slate-600 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">未設定</option>{Object.entries(QUICK_DIFFICULTY_SETTINGS).map(([key,setting])=>{const unlocked=isAutoQuickRunDifficultyAllowed(key,quickClearCounts);return <option key={key} value={key} disabled={!unlocked}>{setting.label}{unlocked?'':'（クイック未クリア）'}</option>;})}</select></div><div><div className="text-[10px] font-black text-slate-300 mb-1.5">モンヒロビートを開いたら自動で始める</div><button type="button" data-auto-quick-run-autostart aria-pressed={draftAutoSettings.quickRun?.autoStart===true} disabled={!autoQuickRunConfigured(draftAutoSettings)} onClick={()=>updateDraftAutoQuickRun({autoStart:!(draftAutoSettings.quickRun?.autoStart===true)})} className={`flex min-h-[48px] w-full items-center justify-between gap-2 rounded-xl border px-3 text-left active:scale-[.99] disabled:opacity-50 ${draftAutoSettings.quickRun?.autoStart===true?'border-fuchsia-300 bg-fuchsia-900/50':'border-slate-600 bg-slate-950'}`}><span className="min-w-0 flex-1 text-[11px] font-black text-white">{draftAutoSettings.quickRun?.autoStart===true?'ON（開いたらすぐ回しはじめる）':'OFF（自分で「始める」を押す）'}</span><span className={`shrink-0 rounded-md px-2 py-0.5 text-[10px] font-black ${draftAutoSettings.quickRun?.autoStart===true?'bg-fuchsia-500 text-white':'bg-slate-700 text-slate-300'}`}>{draftAutoSettings.quickRun?.autoStart===true?'ON':'OFF'}</span></button><p className="mt-1 text-[9px] leading-relaxed text-slate-400">ONにすると、HOMEなどからモンヒロビートを開いたときに、この編成でクイックの∞周回が裏で始まります。すでに周回しているとき・ほかのモードのバトルが続いているときは何もしません。曲えらびの上の帯から、いつでも止められます。</p></div><div className="pt-1"><AssistantBubble scene="autoQuickRunSettings" compact/></div><p className="text-[9px] leading-relaxed text-slate-400">{autoQuickRunConfigured(draftAutoSettings)?'✅ 3つとも決まっています。モンヒロビートから周回を始められます。':'まだ使えません（3つとも決めると使えます）。'}</p></div></section>
-              <section data-auto-breakthrough-bulk-settings className="rounded-2xl border border-cyan-500/40 bg-cyan-950/20 p-3 space-y-3">
-                <div><h3 className="text-sm font-black text-cyan-200">4. AUTO∞ 自動限界突破</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-slate-300">現在所有しているマスモンをまとめて設定し、限界突破で使い切らないようダイヤと虹のプシュケーを残せます。</p></div>
-                <div className="rounded-xl border border-cyan-500/30 bg-slate-950/70 p-3 space-y-2">
-                  <div className="text-[10px] font-black text-cyan-200">所有マスモンへ一括設定</div>
-                  <select aria-label="所有マスモンのAUTO∞ 自動限界突破一括設定" value={autoBreakthroughBulkValue} onChange={event=>setAutoBreakthroughBulkValue(event.target.value)} className="w-full min-h-[48px] rounded-xl border border-cyan-400/50 bg-slate-900 px-3 text-center text-xs font-black text-white">
+              <section className="space-y-3"><div><h3 className="text-[13px] font-black text-indigo-200">3. モンヒロビート中に回すクイック周回</h3><p className="text-[11px] leading-relaxed text-slate-400 mt-1">モンヒロビートから∞周回を始めるときの編成です。勇者モン・配置距離・難易度の3つを決めると使えます。決めていないあいだは、いつもどおりバトル画面で1周目を組んでから∞にしてください。難易度は「クイックでクリア済み」のものだけ選べます（演奏したぶんが周回クリアとして入るのも同じ条件のため）。</p></div><div className={`${SCREEN_PANEL_CLASS} space-y-2`}><label className="block text-[12px] font-black text-white" htmlFor="auto-quick-hero">勇者モン</label><select id="auto-quick-hero" value={draftAutoSettings.quickRun?.heroRosterEntry||''} onChange={event=>updateDraftAutoQuickRun({heroRosterEntry:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">未設定（この機能を使わない）</option>{monsterRosterIds.filter(entry=>!!resolveRosterEntryToMon(entry)).map(entry=><option key={entry} value={entry}>{autoRosterLabel(entry)}</option>)}</select>{renderAutoAllySummary(draftAutoSettings.quickRun?.heroRosterEntry)}<div><div className="text-[11px] font-black text-slate-300 mb-1.5">配置距離</div><div className="grid grid-cols-4 gap-1">{ranges.filter(([slot])=>slot!==null).map(([slot,label])=><button key={label} onClick={()=>updateDraftAutoQuickRun({distance:slot})} aria-pressed={draftAutoSettings.quickRun?.distance===slot} className={`min-h-[44px] min-w-0 rounded-xl border text-[10px] font-black active:scale-95 ${draftAutoSettings.quickRun?.distance===slot?'ring-2 ring-white border-white':''} ${RANGE_STYLES[slot].labelBg} ${RANGE_STYLES[slot].border}`}>{label}</button>)}</div></div><div><label className="block text-[11px] font-black text-slate-300 mb-1.5" htmlFor="auto-quick-difficulty">難易度</label><select id="auto-quick-difficulty" value={draftAutoSettings.quickRun?.difficulty||''} onChange={event=>updateDraftAutoQuickRun({difficulty:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">未設定</option>{Object.entries(QUICK_DIFFICULTY_SETTINGS).map(([key,setting])=>{const unlocked=isAutoQuickRunDifficultyAllowed(key,quickClearCounts);return <option key={key} value={key} disabled={!unlocked}>{setting.label}{unlocked?'':'（クイック未クリア）'}</option>;})}</select></div><div><div className="text-[11px] font-black text-slate-300 mb-1.5">モンヒロビートを開いたら自動で始める</div><button type="button" data-auto-quick-run-autostart aria-pressed={draftAutoSettings.quickRun?.autoStart===true} disabled={!autoQuickRunConfigured(draftAutoSettings)} onClick={()=>updateDraftAutoQuickRun({autoStart:!(draftAutoSettings.quickRun?.autoStart===true)})} className={`flex min-h-[48px] w-full items-center justify-between gap-2 rounded-xl border px-3 text-left active:scale-[.99] disabled:opacity-40 ${draftAutoSettings.quickRun?.autoStart===true?'border-fuchsia-300 bg-fuchsia-900/50':'border-white/10 bg-slate-950'}`}><span className="min-w-0 flex-1 text-[11px] font-black text-white">{draftAutoSettings.quickRun?.autoStart===true?'ON（開いたらすぐ回しはじめる）':'OFF（自分で「始める」を押す）'}</span><span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black ${draftAutoSettings.quickRun?.autoStart===true?'bg-fuchsia-500 text-white':'bg-slate-700 text-slate-300'}`}>{draftAutoSettings.quickRun?.autoStart===true?'ON':'OFF'}</span></button><p className="mt-1 text-[10px] leading-relaxed text-slate-400">ONにすると、HOMEなどからモンヒロビートを開いたときに、この編成でクイックの∞周回が裏で始まります。すでに周回しているとき・ほかのモードのバトルが続いているときは何もしません。曲えらびの上の帯から、いつでも止められます。</p></div><div className="pt-1"><AssistantBubble scene="autoQuickRunSettings" compact/></div><p className="text-[11px] leading-relaxed text-slate-400">{autoQuickRunConfigured(draftAutoSettings)?'✅ 3つとも決まっています。モンヒロビートから周回を始められます。':'まだ使えません（3つとも決めると使えます）。'}</p></div></section>
+              <section data-auto-breakthrough-bulk-settings className={`${SCREEN_PANEL_CLASS} space-y-3`}>
+                <div><h3 className="text-[13px] font-black text-cyan-200">4. AUTO∞ 自動限界突破</h3><p className="mt-1 text-[11px] font-bold leading-relaxed text-slate-400">現在所有しているマスモンをまとめて設定し、限界突破で使い切らないようダイヤと虹のプシュケーを残せます。</p></div>
+                <div className="rounded-xl border border-white/10 bg-slate-950/60 p-3 space-y-2">
+                  <div className="text-[11px] font-black text-cyan-200">所有マスモンへ一括設定</div>
+                  <select aria-label="所有マスモンのAUTO∞ 自動限界突破一括設定" value={autoBreakthroughBulkValue} onChange={event=>setAutoBreakthroughBulkValue(event.target.value)} className="w-full min-h-[48px] rounded-xl border border-white/10 bg-slate-900 px-3 text-center text-[12px] font-black text-white">
                     <option value="off">全員OFF</option>
                     <option value="follow">全員 ブリーダーLvに自動追従</option>
                     {autoBreakthroughBulkLevels.map(level=><option key={level} value={`fixed:${level}`}>全員 Lv{level}まで固定</option>)}
                   </select>
-                  <div className="text-[8px] font-bold leading-relaxed text-slate-400">ブリーダーLv{breederLevel.level} ／ 現在の追従上限：{autoBreakthroughBulkMax>0?`Lv${autoBreakthroughBulkMax}`:'まだ対象外'} ／ 所有 {masuMons.length}体</div>
-                  <button type="button" disabled={masuMons.length<=0} onClick={applyAutoBreakthroughBulk} className="w-full min-h-[48px] rounded-xl border border-cyan-300 bg-cyan-700 text-xs font-black text-white active:scale-[.98] disabled:opacity-40">この内容を全マスモンに一括適用</button>
-                  <p className="text-[8px] font-bold leading-relaxed text-amber-200/90">※確認後すぐ保存します。個別設定は上書きされます。今後新しく入手するマスモンは自動ではONになりません。</p>
+                  <div className="text-[10px] font-bold leading-relaxed text-slate-400">ブリーダーLv{breederLevel.level} ／ 現在の追従上限：{autoBreakthroughBulkMax>0?`Lv${autoBreakthroughBulkMax}`:'まだ対象外'} ／ 所有 {masuMons.length}体</div>
+                  <button type="button" disabled={masuMons.length<=0} onClick={applyAutoBreakthroughBulk} className="w-full min-h-[48px] rounded-xl border border-cyan-300/60 bg-cyan-700 text-[12px] font-black text-white active:scale-[.98] disabled:opacity-40">この内容を全マスモンに一括適用</button>
+                  <p className="text-[10px] font-bold leading-relaxed text-amber-200/90">※確認後すぐ保存します。個別設定は上書きされます。今後新しく入手するマスモンは自動ではONになりません。</p>
                 </div>
-                <div className="rounded-xl border border-amber-500/30 bg-slate-950/70 p-3 space-y-3">
-                  <div><div className="text-[10px] font-black text-amber-200">資源を残す</div><p className="mt-1 text-[8px] font-bold leading-relaxed text-slate-400">限界突破後にこの数を下回る場合、その個体の自動限界突破だけ見送ります。0なら保護なしです。</p></div>
-                  <div className="space-y-1.5"><div className="flex items-center justify-between gap-2"><label htmlFor="auto-breakthrough-reserve-gold" className="text-[10px] font-black text-white">残すダイヤ</label><span className="text-[8px] font-bold text-slate-400">所持 {gold.toLocaleString()}</span></div><div className="grid grid-cols-[48px_1fr_48px] gap-2"><button type="button" aria-label="残すダイヤを1000減らす" onClick={()=>updateDraftAutoBreakthroughReserve({gold:Math.max(0,reserveGold-1000)})} className="min-h-[48px] rounded-xl border border-slate-600 bg-slate-800 text-lg font-black">−</button><input id="auto-breakthrough-reserve-gold" type="number" inputMode="numeric" min="0" step="1000" value={reserveGold} onChange={event=>updateDraftAutoBreakthroughReserve({gold:Number(event.target.value)})} className="min-w-0 min-h-[48px] rounded-xl border border-amber-400/50 bg-slate-900 px-2 text-center text-sm font-black text-white"/><button type="button" aria-label="残すダイヤを1000増やす" onClick={()=>updateDraftAutoBreakthroughReserve({gold:reserveGold+1000})} className="min-h-[48px] rounded-xl border border-slate-600 bg-slate-800 text-lg font-black">＋</button></div></div>
-                  <div className="space-y-1.5"><div className="flex items-center justify-between gap-2"><label htmlFor="auto-breakthrough-reserve-psyche" className="text-[10px] font-black text-white">残す虹のプシュケー</label><span className="text-[8px] font-bold text-slate-400">所持 {ownedItemCount(ownedItems,BREAKTHROUGH_ITEM_ID).toLocaleString()}</span></div><div className="grid grid-cols-[48px_1fr_48px] gap-2"><button type="button" aria-label="残す虹のプシュケーを10減らす" onClick={()=>updateDraftAutoBreakthroughReserve({psyche:Math.max(0,reservePsyche-10)})} className="min-h-[48px] rounded-xl border border-slate-600 bg-slate-800 text-lg font-black">−</button><input id="auto-breakthrough-reserve-psyche" type="number" inputMode="numeric" min="0" step="10" value={reservePsyche} onChange={event=>updateDraftAutoBreakthroughReserve({psyche:Number(event.target.value)})} className="min-w-0 min-h-[48px] rounded-xl border border-amber-400/50 bg-slate-900 px-2 text-center text-sm font-black text-white"/><button type="button" aria-label="残す虹のプシュケーを10増やす" onClick={()=>updateDraftAutoBreakthroughReserve({psyche:reservePsyche+10})} className="min-h-[48px] rounded-xl border border-slate-600 bg-slate-800 text-lg font-black">＋</button></div></div>
-                  <p className="text-[8px] font-bold leading-relaxed text-cyan-200/80">残高保護は下の「決定」を押したときにAUTO設定へ保存されます。</p>
+                <div className="rounded-xl border border-white/10 bg-slate-950/60 p-3 space-y-3">
+                  <div><div className="text-[11px] font-black text-amber-200">資源を残す</div><p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">限界突破後にこの数を下回る場合、その個体の自動限界突破だけ見送ります。0なら保護なしです。</p></div>
+                  <div className="space-y-1.5"><div className="flex items-center justify-between gap-2"><label htmlFor="auto-breakthrough-reserve-gold" className="text-[11px] font-black text-white">残すダイヤ</label><span className="text-[10px] font-bold text-slate-400">所持 {gold.toLocaleString()}</span></div><div className="grid grid-cols-[48px_1fr_48px] gap-2"><button type="button" aria-label="残すダイヤを1000減らす" onClick={()=>updateDraftAutoBreakthroughReserve({gold:Math.max(0,reserveGold-1000)})} className="min-h-[48px] rounded-xl border border-white/10 bg-slate-800 text-lg font-black active:scale-95">−</button><input id="auto-breakthrough-reserve-gold" type="number" inputMode="numeric" min="0" step="1000" value={reserveGold} onChange={event=>updateDraftAutoBreakthroughReserve({gold:Number(event.target.value)})} className="min-w-0 min-h-[48px] rounded-xl border border-white/10 bg-slate-900 px-2 text-center text-sm font-black text-white"/><button type="button" aria-label="残すダイヤを1000増やす" onClick={()=>updateDraftAutoBreakthroughReserve({gold:reserveGold+1000})} className="min-h-[48px] rounded-xl border border-white/10 bg-slate-800 text-lg font-black active:scale-95">＋</button></div></div>
+                  <div className="space-y-1.5"><div className="flex items-center justify-between gap-2"><label htmlFor="auto-breakthrough-reserve-psyche" className="text-[11px] font-black text-white">残す虹のプシュケー</label><span className="text-[10px] font-bold text-slate-400">所持 {ownedItemCount(ownedItems,BREAKTHROUGH_ITEM_ID).toLocaleString()}</span></div><div className="grid grid-cols-[48px_1fr_48px] gap-2"><button type="button" aria-label="残す虹のプシュケーを10減らす" onClick={()=>updateDraftAutoBreakthroughReserve({psyche:Math.max(0,reservePsyche-10)})} className="min-h-[48px] rounded-xl border border-white/10 bg-slate-800 text-lg font-black active:scale-95">−</button><input id="auto-breakthrough-reserve-psyche" type="number" inputMode="numeric" min="0" step="10" value={reservePsyche} onChange={event=>updateDraftAutoBreakthroughReserve({psyche:Number(event.target.value)})} className="min-w-0 min-h-[48px] rounded-xl border border-white/10 bg-slate-900 px-2 text-center text-sm font-black text-white"/><button type="button" aria-label="残す虹のプシュケーを10増やす" onClick={()=>updateDraftAutoBreakthroughReserve({psyche:reservePsyche+10})} className="min-h-[48px] rounded-xl border border-white/10 bg-slate-800 text-lg font-black active:scale-95">＋</button></div></div>
+                  <p className="text-[10px] font-bold leading-relaxed text-cyan-200/80">残高保護は下の「決定」を押したときにAUTO設定へ保存されます。</p>
                 </div>
               </section>
             </div>
-            <button onClick={saveAutoSettings} className="w-full max-w-md mx-auto min-h-[52px] shrink-0 rounded-2xl bg-indigo-600 text-white font-black text-sm shadow-lg active:scale-[.98]">決定</button>
+            <div className={SCREEN_FOOTER_CLASS}><button onClick={saveAutoSettings} className="w-full max-w-md mx-auto block min-h-[52px] rounded-2xl bg-indigo-600 text-white font-black text-sm shadow-lg active:scale-[.98]">決定</button></div>
             {autoAllyDetail&&renderMonsterDetailModal({mon:autoAllyDetail.mon,masu:autoAllyDetail.masu,onClose:()=>setAutoAllyDetail(null),accent:'indigo',readOnly:true,label:`${autoAllyDetail.mon.name}の確認用詳細`})}
           </div>;
         })()}
@@ -13176,40 +13198,46 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
         {/* ROSTER (編成) */}
         {gameState==='ROSTER'&&(
-          <div data-mh-screen className="flex-1 flex flex-col h-full min-h-0 p-4">
-            <div className="flex items-center gap-2 mb-2 shrink-0">
-              <button onClick={()=>{setManagementTab(rosterTab==='monster'?'monster':'assist');setGameState('MB_MANAGEMENT');}} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
-              <h2 className="text-xl font-black italic text-indigo-400 uppercase tracking-widest">{rosterTab==='monster'?'モンスター編成':'アシストカード編成'}</h2>
-            </div>
-            <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="roster" compact/></div>
+          <div data-mh-screen className={SCREEN_SHELL_CLASS}>
+            {/* 形は ScreenHead とそろえてある。戻るの導線を tools/boot/mission-gift-badge-check.js が
+                この onClick の文字列のまま見張っているので、ここだけは手書きのまま残す */}
+            <header className="mb-3 flex shrink-0 items-center gap-1.5 border-b border-white/10 pb-2">
+              <button type="button" aria-label="M/B管理へ戻る" onClick={()=>{setManagementTab(rosterTab==='monster'?'monster':'assist');setGameState('MB_MANAGEMENT');}} className="-ml-1 shrink-0 p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+              <div className="min-w-0 flex-1">
+                <h2 className="truncate text-xl font-black italic leading-tight text-indigo-400">{rosterTab==='monster'?'モンスター編成':'アシストカード編成'}</h2>
+              </div>
+            </header>
+            <div className="shrink-0 w-full mb-2"><AssistantBubble scene="roster" compact/></div>
             {rosterTab==='monster'?(
-              <div className="flex-1 min-h-0 flex flex-col">
+              /* 横画面の2カラムは [data-mh-screen]:has(> .mh-scroll) で「根の直下」だけを見る。
+                 ここを div で包むと編成画面だけ組み替わらないので、包まない(フラグメント) */
+              <>
                 <div className="shrink-0 mb-2 rounded-2xl border border-indigo-500/40 bg-slate-900/90 p-2">
-                  <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide" role="tablist" aria-label="編成セット">
-                    {monsterPartySets.names.map((name,index)=><button key={index} role="tab" aria-selected={editingPartySetIndex===index} onClick={()=>switchMonsterPartySet(index)} className={`shrink-0 min-w-[92px] min-h-[44px] rounded-xl border px-2 py-1 text-left active:scale-95 ${editingPartySetIndex===index?'border-indigo-300 bg-indigo-600/40':'border-slate-700 bg-slate-800'}`}><span className="block text-[10px] font-black truncate">{index+1}. {name}</span>{monsterPartySets.activeIndex===index?<span className="text-[8px] font-black text-emerald-300">✓ 使用中</span>:<span className="text-[8px] text-slate-500">タップで使用</span>}</button>)}
+                  <div className="flex gap-2 overflow-x-auto pb-1" role="tablist" aria-label="編成セット" style={{scrollbarWidth:'none'}}>
+                    {monsterPartySets.names.map((name,index)=><button key={index} role="tab" aria-selected={editingPartySetIndex===index} onClick={()=>switchMonsterPartySet(index)} className={`shrink-0 min-w-[92px] min-h-[44px] rounded-xl border px-2 py-1 text-left active:scale-95 ${editingPartySetIndex===index?'border-indigo-300 bg-indigo-600/40':'border-slate-700 bg-slate-800'}`}><span className="block text-[11px] font-black truncate">{index+1}. {name}</span>{monsterPartySets.activeIndex===index?<span className="text-[10px] font-black text-emerald-300">✓ 使用中</span>:<span className="text-[10px] text-slate-400">タップで使用</span>}</button>)}
                   </div>
                   {/* セット名を変えるのもコピーも、毎回やることではない。
                       畳んでおいて、必要なときだけ開く(2026-09-07・ユーザー指摘
                       「モンスターの部分がメインなのに他でスペースを取りすぎ」) */}
                   <button type="button" data-party-set-edit-toggle onClick={()=>toggleScreenNote('partySetEdit')}
                     aria-expanded={screenNoteOpen.partySetEdit===true}
-                    className="mt-1 flex min-h-[36px] w-full items-center justify-between gap-2 rounded-lg px-1 text-left text-[9px] font-black text-slate-400 active:scale-[.995]">
+                    className="mt-1 flex min-h-[44px] w-full items-center justify-between gap-2 rounded-xl px-1 text-left text-[10px] font-black text-slate-400 active:scale-[.995]">
                     <span className="min-w-0 truncate">セット名を変える・ほかのセットへコピー</span>
                     <span className="shrink-0">{screenNoteOpen.partySetEdit===true?'閉じる ▲':'開く ▼'}</span>
                   </button>
                   {screenNoteOpen.partySetEdit===true&&<div className="mt-1 grid grid-cols-[minmax(0,1fr)_auto] gap-2 items-end">
-                    <label className="min-w-0 text-[8px] font-black text-slate-400">セット名<input key={`${editingPartySetIndex}:${monsterPartySets.names[editingPartySetIndex]}`} defaultValue={monsterPartySets.names[editingPartySetIndex]} maxLength={20} onBlur={e=>renameMonsterPartySet(editingPartySetIndex,e.target.value)} onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();}} className="mt-0.5 block w-full min-w-0 rounded-lg border border-slate-600 bg-slate-950 px-2 py-2 text-[12px] text-white"/></label>
-                    <button onClick={()=>setPartySetCopyTarget(partySetCopyTarget==null?((editingPartySetIndex+1)%MONSTER_PARTY_SET_COUNT):null)} className="min-h-[38px] rounded-lg border border-amber-500/50 px-3 text-[10px] font-black text-amber-200">編成をコピー</button>
+                    <label className="min-w-0 text-[10px] font-black text-slate-400">セット名<input key={`${editingPartySetIndex}:${monsterPartySets.names[editingPartySetIndex]}`} defaultValue={monsterPartySets.names[editingPartySetIndex]} maxLength={20} onBlur={e=>renameMonsterPartySet(editingPartySetIndex,e.target.value)} onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();}} className="mt-0.5 block w-full min-w-0 rounded-xl border border-white/10 bg-slate-950 px-2 py-2 text-[12px] text-white"/></label>
+                    <button onClick={()=>setPartySetCopyTarget(partySetCopyTarget==null?((editingPartySetIndex+1)%MONSTER_PARTY_SET_COUNT):null)} className="min-h-[44px] rounded-xl border border-amber-500/60 px-3 text-[10px] font-black text-amber-200 active:scale-95">編成をコピー</button>
                   </div>}
-                  {screenNoteOpen.partySetEdit===true&&partySetCopyTarget!=null&&<div className="mt-2 rounded-xl bg-amber-950/40 p-2"><div className="text-[9px] font-bold text-amber-100 mb-1">「{monsterPartySets.names[editingPartySetIndex]}」の編成内容をコピーする先（名前は変わりません）</div><div className="flex flex-wrap gap-1">{monsterPartySets.names.map((name,index)=>index===editingPartySetIndex?null:<button key={index} onClick={()=>setPartySetCopyTarget(index)} className={`min-h-[34px] max-w-[120px] truncate rounded-lg border px-2 text-[9px] font-black ${partySetCopyTarget===index?'border-amber-300 bg-amber-600 text-white':'border-slate-600 text-slate-300'}`}>{index+1}. {name}</button>)}</div><div className="mt-2 flex gap-2"><button onClick={()=>setPartySetCopyTarget(null)} className="flex-1 min-h-[36px] rounded-lg bg-slate-700 text-[10px] font-black">やめる</button><button onClick={()=>copyMonsterPartySet(partySetCopyTarget)} className="flex-1 min-h-[36px] rounded-lg bg-amber-500 text-slate-950 text-[10px] font-black">このセットへ上書き</button></div></div>}
+                  {screenNoteOpen.partySetEdit===true&&partySetCopyTarget!=null&&<div className="mt-2 rounded-xl border border-white/10 bg-amber-950/40 p-2"><div className="text-[10px] font-bold text-amber-100 mb-1">「{monsterPartySets.names[editingPartySetIndex]}」の編成内容をコピーする先（名前は変わりません）</div><div className="flex flex-wrap gap-1">{monsterPartySets.names.map((name,index)=>index===editingPartySetIndex?null:<button key={index} onClick={()=>setPartySetCopyTarget(index)} className={`min-h-[44px] max-w-[120px] truncate rounded-xl border px-2 text-[10px] font-black active:scale-95 ${partySetCopyTarget===index?'border-amber-300 bg-amber-600 text-white':'border-white/10 text-slate-300'}`}>{index+1}. {name}</button>)}</div><div className="mt-2 flex gap-2"><button onClick={()=>setPartySetCopyTarget(null)} className="flex-1 min-h-[44px] rounded-xl bg-slate-700 text-[11px] font-black active:scale-95">やめる</button><button onClick={()=>copyMonsterPartySet(partySetCopyTarget)} className="flex-1 min-h-[44px] rounded-xl bg-amber-500 text-slate-950 text-[11px] font-black active:scale-95">このセットへ上書き</button></div></div>}
                 {/* 編成中のモンスターを小さいアイコンで並べ、タップで編成から外せる。
                     ★別の箱として下に置いていたが、枠と余白のぶんだけ一覧が押し下げられていたので
                       セットの箱の中へ入れた(2026-09-07・ユーザー指摘「1枚目 まだ窮屈」) */}
                 <div className="mt-1 flex items-center gap-2 border-t border-indigo-500/20 pt-1.5">
-                  <span className="text-[9px] font-black text-indigo-300 shrink-0 leading-tight">編成中<br/>{draftMonsterRoster.length}/{STARTER_MONSTER_IDS.length}</span>
-                  <div className="flex-1 flex gap-1.5 overflow-x-auto scrollbar-hide min-h-[36px] items-center">
+                  <span className="text-[10px] font-black text-indigo-300 shrink-0 leading-tight">編成中<br/>{draftMonsterRoster.length}/{STARTER_MONSTER_IDS.length}</span>
+                  <div className="flex-1 flex gap-1.5 overflow-x-auto min-h-[36px] items-center" style={{scrollbarWidth:'none'}}>
                     {draftMonsterRoster.length===0?(
-                      <span className="text-[9px] text-slate-600 font-bold">まだ選ばれていません</span>
+                      <span className="text-[10px] text-slate-400 font-bold">まだ選ばれていません</span>
                     ):(draftMonsterRoster.map(entryId=>{
                       const isMasu = entryId.startsWith('masu:');
                       const masu = isMasu ? getMasuMon(entryId.slice(5)) : null;
@@ -13231,7 +13259,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                    '同じ種は1体までです（マスモンも含めて数えます）。'])}
                 {renderMonsterSortFilterBar()}
                 <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
-                  <div className="grid grid-cols-3 gap-3 pb-4">
+                  {unifiedMonsterEntriesDraft.length===0&&<ScreenEmpty emoji="🔍" lines={['表示するモンスターがいません。','上の「表示」「種族」でしぼりこみを見直してください。']}/>}
+                  <div className="grid grid-cols-3 gap-2.5 pb-4">
                     {unifiedMonsterEntriesDraft.map(e=>{
                       if (e.type==='base') {
                         const m = e.base;
@@ -13244,11 +13273,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                             <button aria-pressed={selected} onClick={()=>toggleDraftMonster(e.entryId)} style={MONSTER_CARD_STYLE} className={`${MONSTER_CARD_CLASS} relative ${selected?'bg-indigo-900/40 border-indigo-400 ring-2 ring-indigo-400':'bg-slate-900 border-slate-800'}`}>
                               {renderMonsterCardBody({
                                 base: m,
-                                info: <div className="text-[8px] text-slate-500 font-bold text-center leading-none">ベースモン</div>,
+                                info: <div className="text-[10px] text-slate-400 font-bold text-center leading-none">ベースモン</div>,
                               })}
                               {selected&&<div className="absolute top-1 left-1 z-10 w-6 h-6 rounded-full bg-indigo-500 border-2 border-white flex items-center justify-center shadow-lg"><Check size={13} className="text-white" strokeWidth={4}/></div>}
                             </button>
-                            <button onClick={(ev)=>{ev.stopPropagation(); setRosterDetailMon(m);}} className="absolute top-1 right-1 z-10 w-6 h-6 rounded-full bg-black/70 border border-white/20 flex items-center justify-center active:scale-90"><Info size={12} className="text-white"/></button>
+                            <button onClick={(ev)=>{ev.stopPropagation(); setRosterDetailMon(m);}} className="absolute top-1 right-1 z-10 w-7 h-7 rounded-full bg-black/70 border border-white/20 flex items-center justify-center active:scale-90"><Info size={13} className="text-white"/></button>
                           </div>
                         );
                       }
@@ -13258,26 +13287,26 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                           <button aria-pressed={selected} onClick={()=>toggleDraftMonster(e.entryId)} style={MONSTER_CARD_STYLE} className={`${MONSTER_CARD_CLASS} relative ${selected?'bg-pink-900/40 border-pink-400 ring-2 ring-pink-400':'bg-slate-900 border-pink-900/50'}`}>
                             {renderMonsterCardBody({
                               masu, base,
-                              badge: <div className="absolute -top-1 -right-1 bg-pink-500 rounded-full px-1 text-[6px] font-black text-white leading-tight">マスモン</div>,
+                              badge: <div className="absolute -top-1 -right-1 bg-pink-500 rounded-full px-1 text-[10px] font-black text-white leading-none">マスモン</div>,
                             })}
                             {selected&&<div className="absolute top-1 left-1 z-10 w-6 h-6 rounded-full bg-pink-500 border-2 border-white flex items-center justify-center shadow-lg"><Check size={13} className="text-white" strokeWidth={4}/></div>}
                           </button>
-                          <button onClick={(ev)=>{ev.stopPropagation(); setMasuMonDetail(masu);}} className="absolute top-1 right-1 z-10 w-6 h-6 rounded-full bg-black/70 border border-white/20 flex items-center justify-center active:scale-90"><Info size={12} className="text-white"/></button>
+                          <button onClick={(ev)=>{ev.stopPropagation(); setMasuMonDetail(masu);}} className="absolute top-1 right-1 z-10 w-7 h-7 rounded-full bg-black/70 border border-white/20 flex items-center justify-center active:scale-90"><Info size={13} className="text-white"/></button>
                         </div>
                       );
                     })}
                   </div>
                 </div>
-                <button onClick={confirmMonsterRoster} disabled={draftMonsterRoster.length!==STARTER_MONSTER_IDS.length} className={`w-full py-3 rounded-2xl font-black text-sm mt-2 shrink-0 ${draftMonsterRoster.length===STARTER_MONSTER_IDS.length?'bg-indigo-500 text-white active:scale-95':'bg-slate-800 text-slate-500'}`}>決定 ({draftMonsterRoster.length}/{STARTER_MONSTER_IDS.length})</button>
-              </div>
+                <div className={SCREEN_FOOTER_CLASS}><button onClick={confirmMonsterRoster} disabled={draftMonsterRoster.length!==STARTER_MONSTER_IDS.length} className="block w-full max-w-md mx-auto min-h-[52px] rounded-2xl bg-indigo-500 text-white font-black text-sm shadow-lg active:scale-[.98] disabled:opacity-40">決定 ({draftMonsterRoster.length}/{STARTER_MONSTER_IDS.length})</button></div>
+              </>
             ):(
-              <div className="flex-1 min-h-0 flex flex-col">
+              <>
                 {/* 編成中のアシストカードを小さいアイコンで並べ、タップで編成から外せる */}
                 <div className="flex items-center gap-2 mb-2 shrink-0 bg-purple-950/30 border border-purple-500/30 rounded-2xl px-2 py-2">
-                  <span className="text-[9px] font-black text-purple-300 shrink-0 leading-tight">編成中<br/>{draftTeachingRoster.length}/{TEACHING_ROSTER_SIZE}</span>
-                  <div className="flex-1 flex gap-1.5 overflow-x-auto scrollbar-hide min-h-[36px] items-center">
+                  <span className="text-[10px] font-black text-purple-300 shrink-0 leading-tight">編成中<br/>{draftTeachingRoster.length}/{TEACHING_ROSTER_SIZE}</span>
+                  <div className="flex-1 flex gap-1.5 overflow-x-auto min-h-[36px] items-center" style={{scrollbarWidth:'none'}}>
                     {draftTeachingRoster.length===0?(
-                      <span className="text-[9px] text-slate-600 font-bold">まだ選ばれていません</span>
+                      <span className="text-[10px] text-slate-400 font-bold">まだ選ばれていません</span>
                     ):(draftTeachingRoster.map(id=>{
                       const t = TEACHING_CARDS.find(tc=>tc.id===id);
                       if (!t) return null;
@@ -13287,27 +13316,28 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     }))}
                   </div>
                 </div>
-                <div className="text-[9px] text-slate-500 font-bold mb-2 px-1 shrink-0">解放済み{unlockedTeachingIds.length}枚・ちょうど{TEACHING_ROSTER_SIZE}枚選ぶと「決定」できます・アイコンタップで編成/解除、iボタンで詳細</div>
+                <div className="text-[10px] text-slate-400 font-bold leading-relaxed mb-2 px-1 shrink-0">解放済み{unlockedTeachingIds.length}枚・ちょうど{TEACHING_ROSTER_SIZE}枚選ぶと「決定」できます・アイコンタップで編成/解除、iボタンで詳細</div>
                 <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
-                  <div className="grid grid-cols-3 gap-3 pb-4">
+                  {unlockedTeachingIds.length===0&&<ScreenEmpty emoji="🃏" lines={['まだアシストカードを持っていません。','ブリーダーの教えを進めると使えるカードが増えます。']}/>}
+                  <div className="grid grid-cols-3 gap-2.5 pb-4">
                     {unlockedTeachingIds.map(id=>TEACHING_CARDS.find(t=>t.id===id)).filter(Boolean).map(t=>{
                       const selected = draftTeachingRoster.includes(t.id);
                       return (
                         <div key={t.id} className="relative">
                           {/* モンスターのカードと同じ形にそろえる。選択状態は角のチェックで出す */}
-                          <button aria-pressed={selected} onClick={()=>toggleDraftTeaching(t.id)} className={`w-full relative rounded-2xl border-2 p-2 flex flex-col items-center gap-1.5 active:scale-95 select-none ${selected?'bg-purple-900/40 border-purple-400 ring-2 ring-purple-400':'bg-slate-900 border-slate-800'}`}>
-                            <div className="w-10 h-10 rounded-full overflow-hidden border border-white/10 shrink-0 flex items-center justify-center bg-black/30">{cardIconNode(t.icon,40,t.id)}</div>
-                            <div className="text-[10px] font-black text-white truncate w-full text-center">{t.baseName}</div>
+                          <button aria-pressed={selected} onClick={()=>toggleDraftTeaching(t.id)} style={MONSTER_CARD_STYLE} className={`${MONSTER_CARD_CLASS} relative ${selected?'bg-purple-900/40 border-purple-400 ring-2 ring-purple-400':'bg-slate-900 border-slate-800'}`}>
+                            <div className={`${MONSTER_CARD_ICON_CLASS} border border-white/10 flex items-center justify-center bg-black/30`}>{cardIconNode(t.icon,48,t.id)}</div>
+                            {monsterCardName(t.baseName)}
                             {selected&&<div className="absolute top-1 left-1 z-10 w-6 h-6 rounded-full bg-purple-500 border-2 border-white flex items-center justify-center shadow-lg"><Check size={13} className="text-white" strokeWidth={4}/></div>}
                           </button>
-                          <button onClick={(e)=>{e.stopPropagation(); setRosterDetailTeaching(t);}} className="absolute top-1 right-1 z-10 w-6 h-6 rounded-full bg-black/70 border border-white/20 flex items-center justify-center active:scale-90"><Info size={12} className="text-white"/></button>
+                          <button onClick={(e)=>{e.stopPropagation(); setRosterDetailTeaching(t);}} className="absolute top-1 right-1 z-10 w-7 h-7 rounded-full bg-black/70 border border-white/20 flex items-center justify-center active:scale-90"><Info size={13} className="text-white"/></button>
                         </div>
                       );
                     })}
                   </div>
                 </div>
-                <button onClick={confirmTeachingRoster} disabled={draftTeachingRoster.length!==TEACHING_ROSTER_SIZE} className={`w-full py-3 rounded-2xl font-black text-sm mt-2 shrink-0 ${draftTeachingRoster.length===TEACHING_ROSTER_SIZE?'bg-purple-500 text-white active:scale-95':'bg-slate-800 text-slate-500'}`}>決定 ({draftTeachingRoster.length}/{TEACHING_ROSTER_SIZE})</button>
-              </div>
+                <div className={SCREEN_FOOTER_CLASS}><button onClick={confirmTeachingRoster} disabled={draftTeachingRoster.length!==TEACHING_ROSTER_SIZE} className="block w-full max-w-md mx-auto min-h-[52px] rounded-2xl bg-purple-500 text-white font-black text-sm shadow-lg active:scale-[.98] disabled:opacity-40">決定 ({draftTeachingRoster.length}/{TEACHING_ROSTER_SIZE})</button></div>
+              </>
             )}
           </div>
         )}
@@ -13325,30 +13355,28 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         })}
         {rosterDetailTeaching&&(()=>{const owned=ownedTeachings.find(ot=>ot.id===rosterDetailTeaching.id); const currentLvl=owned?owned.evoLevel:-1; return(
           <div className="fixed inset-0 flex items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:31000}}>
-            <div className="bg-slate-900 border-2 border-purple-500 rounded-3xl p-6 w-full max-w-xs flex flex-col items-center gap-4 shadow-2xl h-auto max-h-full">
+            <div className="bg-slate-900 border-2 border-purple-500 rounded-2xl p-6 w-full max-w-xs flex flex-col items-center gap-4 shadow-2xl h-auto max-h-full">
               <div className="text-6xl mb-2 shrink-0">{cardIconNode(rosterDetailTeaching.icon,76,rosterDetailTeaching.id)}</div>
               <h3 className="text-lg font-black text-white mb-4 shrink-0">{BREEDER_EVO_NAMES[rosterDetailTeaching.id][Math.max(currentLvl,0)]}</h3>
               <div className="w-full space-y-2 mb-4 overflow-y-auto min-h-0 flex-1">
                 {getFullEvolutionDetails(rosterDetailTeaching).map(info=>{const isCurrent=info.lvl===currentLvl; const isNext=info.lvl===currentLvl+1;
-                  return(<div key={info.lvl} className={`p-2 rounded-xl border ${isCurrent?'bg-purple-900/50 border-purple-400':isNext?'bg-amber-900/30 border-amber-500/50':'bg-black/30 border-white/5'}`}><div className="flex justify-between items-center mb-1"><span className={`text-[9px] font-black ${isCurrent?'text-purple-300':isNext?'text-amber-300':'text-slate-500'}`}>Lv.{info.lvl} {info.name}</span>{isCurrent&&<span className="text-[7px] bg-purple-500 text-white px-1.5 rounded">所持</span>}{!owned&&info.lvl===0&&<span className="text-[7px] bg-slate-600 text-white px-1.5 rounded">未習得</span>}</div><div className="text-[8px] text-slate-300">{info.desc}</div></div>);
+                  return(<div key={info.lvl} className={`p-2 rounded-xl border ${isCurrent?'bg-purple-900/50 border-purple-400':isNext?'bg-amber-900/30 border-amber-500/50':'bg-black/30 border-white/5'}`}><div className="flex justify-between items-center mb-1"><span className={`text-[11px] font-black ${isCurrent?'text-purple-300':isNext?'text-amber-300':'text-slate-400'}`}>Lv.{info.lvl} {info.name}</span>{isCurrent&&<span className="text-[10px] bg-purple-500 text-white px-1.5 rounded-full leading-none py-0.5">所持</span>}{!owned&&info.lvl===0&&<span className="text-[10px] bg-slate-600 text-white px-1.5 rounded-full leading-none py-0.5">未習得</span>}</div><div className="text-[11px] leading-relaxed text-slate-300">{info.desc}</div></div>);
                 })}
               </div>
-              <button onClick={()=>setRosterDetailTeaching(null)} className="w-full bg-purple-600 text-white py-3 rounded-xl font-black shadow-lg text-xs shrink-0">閉じる</button>
+              <button onClick={()=>setRosterDetailTeaching(null)} className="w-full min-h-[52px] bg-purple-600 text-white rounded-xl font-black shadow-lg text-sm shrink-0 active:scale-[.98]">閉じる</button>
             </div>
           </div>
         );})()}
 
         {/* モンスター一覧(解放済みの種を一覧表示・タップで詳細) */}
         {gameState==='OWNED_MONSTERS'&&(
-          <div data-mh-screen className="flex-1 flex flex-col h-full min-h-0 p-4">
-            <div className="flex items-center gap-2 mb-2 shrink-0">
-              <button onClick={()=>setGameState('MB_MANAGEMENT')} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
-              <h2 className="text-xl font-black italic text-cyan-400 uppercase tracking-widest">ベースモン一覧</h2>
-            </div>
-            <div className="shrink-0 w-full max-w-md mx-auto mb-3"><AssistantBubble scene="monsterList"/></div>
-            <div className="text-[10px] text-slate-400 font-bold mb-1 px-1 shrink-0">解放済み{unlockedMonsterIds.length}体・タップで詳細を確認できます</div>
+          <div data-mh-screen className={SCREEN_SHELL_CLASS}>
+            <ScreenHead title="ベースモン一覧" accent="text-cyan-400" onBack={()=>setGameState('MB_MANAGEMENT')} backLabel="M/B管理へ戻る"/>
+            <div className="shrink-0 w-full mb-2"><AssistantBubble scene="monsterList"/></div>
+            <ScreenLead>解放済み{unlockedMonsterIds.length}体・タップで詳細を確認できます</ScreenLead>
             {renderMonsterSortFilterBar({ singleType: true })}
-            <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
+            <div className={SCREEN_LIST_CLASS}>
+              {unifiedMonsterEntriesSingleType.filter(e=>e.type==='base').length===0&&<ScreenEmpty emoji="🔍" lines={['表示するベースモンがいません。','上の「表示」「種族」でしぼりこみを見直してください。']}/>}
               <div className="grid grid-cols-3 gap-2.5 pb-4">
                 {unifiedMonsterEntriesSingleType.filter(e=>e.type==='base').map(e=>{
                   const m = e.base;
@@ -13358,11 +13386,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       <button onClick={()=>setRosterDetailMon(m)} style={MONSTER_CARD_STYLE} className={`${MONSTER_CARD_CLASS} border-slate-800 bg-slate-900`}>
                         {renderMonsterCardBody({
                           base: m,
-                          info: <div className="text-[8px] text-pink-400 font-bold text-center leading-none">{masuCount>0?`マスモン${masuCount}体`:'マスモン未登録'}</div>,
-                          status: monsterDisplayFlags.active&&e.active?<span className="text-[7px] font-black px-1.5 py-0.5 rounded-full bg-indigo-500 text-white">編成中</span>:null,
+                          info: <div className="text-[10px] text-pink-400 font-bold text-center leading-none">{masuCount>0?`マスモン${masuCount}体`:'マスモン未登録'}</div>,
+                          status: monsterDisplayFlags.active&&e.active?<span className="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-indigo-500 text-white leading-none">編成中</span>:null,
                         })}
                       </button>
-                      <button onClick={(ev)=>{ev.stopPropagation(); setRosterDetailMon(m);}} className="absolute top-1 right-1 z-10 w-6 h-6 rounded-full bg-black/70 border border-white/20 flex items-center justify-center active:scale-90"><Info size={12} className="text-white"/></button>
+                      <button onClick={(ev)=>{ev.stopPropagation(); setRosterDetailMon(m);}} aria-label={`${m.name}の詳細`} className="absolute top-1 right-1 z-10 w-7 h-7 rounded-full bg-black/70 border border-white/20 flex items-center justify-center active:scale-90"><Info size={13} className="text-white"/></button>
                     </div>
                   );
                 })}
@@ -13371,15 +13399,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </div>
         )}
 
-        {gameState==='PASTURE_SETTINGS'&&(
-          <div data-mh-screen className="flex-1 flex flex-col h-full min-h-0 p-4">
-            <div className="flex items-center justify-between gap-2 mb-2 shrink-0">
-              <button onClick={()=>setGameState('MB_MANAGEMENT')} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
-              <h2 className="text-xl font-black italic text-emerald-300">放牧設定</h2>
-              <div className="min-w-[52px] text-center text-sm font-black text-emerald-200">{draftHomePastureIds.length} / 5</div>
-            </div>
-            <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="pasture" compact/></div>
-            <div className="text-[10px] text-slate-400 font-bold mb-3 px-1 shrink-0">HOMEに表示するマスモンをタップで選択してください。0体でも保存できます。</div>
+        {gameState==='PASTURE_SETTINGS'&&(()=>{
+          /* 並べる候補は0件のときの表示とグリッドの両方で見るので、数えるのは1回だけにする */
+          const pastureEntries = sortMonsterEntries(buildUnifiedMonsterEntries([],masuMons,monsterRosterIds)).filter(e=>e.type==='masu'&&monsterEntryMatchesDisplayFlags(e,monsterDisplayFlags)&&monsterEntryMatchesLineage(e));
+          return (
+          <div data-mh-screen className={SCREEN_SHELL_CLASS}>
+            <ScreenHead title="放牧設定" accent="text-emerald-300" onBack={()=>setGameState('MB_MANAGEMENT')} backLabel="M/B管理へ戻る"
+              right={<span className="rounded-full border border-emerald-400/60 px-2 py-1 text-[12px] font-black text-emerald-200">{draftHomePastureIds.length} / 5</span>}/>
+            <div className="shrink-0 w-full mb-2"><AssistantBubble scene="pasture" compact/></div>
+            <ScreenLead>HOMEに表示するマスモンをタップで選択してください。0体でも保存できます。</ScreenLead>
             <div className="grid grid-cols-5 gap-2 mb-2 shrink-0" aria-label="選択中の放牧マスモン">
               {Array.from({length:5},(_,index)=>{const id=draftHomePastureIds[index],masu=id?masuMons.find(m=>String(m.id)===id):null,base=masu&&ALL_PLAYER_MONSTERS[masu.baseId];return masu&&base?(
                 <button key={id} onClick={()=>toggleDraftPasture(id)} aria-label={`${masu.name}を放牧から外す`} className="relative min-w-0 aspect-square rounded-full border-2 border-emerald-300 bg-emerald-950 active:scale-90 overflow-hidden">
@@ -13389,23 +13417,24 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               ):<div key={`empty-${index}`} className="aspect-square rounded-full border-2 border-dashed border-slate-700 bg-slate-900/50" aria-hidden="true"/>;})}
             </div>
             {renderMonsterSortFilterBar({singleType:true})}
-            <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
+            <div className={SCREEN_LIST_CLASS}>
+              {pastureEntries.length===0&&<ScreenEmpty emoji="🌱" lines={['放牧できるマスモンがいません。','バトルでマスモンを登録するか、上の「表示」「種族」を見直してください。']}/>}
               <div className="grid grid-cols-3 gap-2.5 pb-4">
-                {sortMonsterEntries(buildUnifiedMonsterEntries([],masuMons,monsterRosterIds)).filter(e=>e.type==='masu'&&monsterEntryMatchesDisplayFlags(e,monsterDisplayFlags)&&monsterEntryMatchesLineage(e)).map(({masu,base})=>{
+                {pastureEntries.map(({masu,base})=>{
                   const id=String(masu.id), selected=draftHomePastureIds.includes(id), disabled=!selected&&draftHomePastureIds.length>=5;
-                  return <div key={id} className="relative"><button disabled={disabled} onClick={()=>toggleDraftPasture(id)} aria-pressed={selected} style={MONSTER_CARD_STYLE} className={`${MONSTER_CARD_CLASS} relative ${selected?'border-emerald-300 bg-emerald-950/80 ring-2 ring-emerald-400/30':'border-slate-800 bg-slate-900'} disabled:opacity-35`}>
-                    {selected&&<span className="absolute top-1 right-1 w-5 h-5 rounded-full bg-emerald-400 text-slate-950 font-black text-xs">✓</span>}
+                  return <div key={id} className="relative"><button disabled={disabled} onClick={()=>toggleDraftPasture(id)} aria-pressed={selected} style={MONSTER_CARD_STYLE} className={`${MONSTER_CARD_CLASS} relative ${selected?'border-emerald-300 bg-emerald-950/80 ring-2 ring-emerald-400/30':'border-slate-800 bg-slate-900'} disabled:opacity-40`}>
+                    {selected&&<div className="absolute top-1 left-1 z-10 w-6 h-6 rounded-full bg-emerald-500 border-2 border-white flex items-center justify-center shadow-lg"><Check size={13} className="text-white" strokeWidth={4}/></div>}
                     {renderMonsterCardBody({
                       masu, base,
-                      status: selected?<span className="text-[7px] font-black px-1.5 py-0.5 rounded-full bg-emerald-500 text-white">放牧中</span>:null,
+                      status: selected?<span className="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-emerald-500 text-white leading-none">放牧中</span>:null,
                     })}
-                  </button><button onClick={(ev)=>{ev.stopPropagation();setMasuMonDetail(masu);}} aria-label={`${masu.name}の詳細`} className="absolute top-1 right-1 z-10 w-6 h-6 rounded-full bg-black/70 border border-white/20 flex items-center justify-center active:scale-90"><Info size={12} className="text-white"/></button></div>;
+                  </button><button onClick={(ev)=>{ev.stopPropagation();setMasuMonDetail(masu);}} aria-label={`${masu.name}の詳細`} className="absolute top-1 right-1 z-10 w-7 h-7 rounded-full bg-black/70 border border-white/20 flex items-center justify-center active:scale-90"><Info size={13} className="text-white"/></button></div>;
                 })}
               </div>
             </div>
-            <button onClick={savePastureSettings} className="w-full min-h-[52px] shrink-0 rounded-2xl bg-emerald-600 text-white font-black shadow-lg active:scale-[.98]">決定（{draftHomePastureIds.length}体）</button>
-          </div>
-        )}
+            <div className={SCREEN_FOOTER_CLASS}><button onClick={savePastureSettings} className="block w-full max-w-md mx-auto min-h-[52px] rounded-2xl bg-emerald-600 text-white font-black text-sm shadow-lg active:scale-[.98]">決定（{draftHomePastureIds.length}体）</button></div>
+          </div>);
+        })()}
 
         {/* マスモン一覧: ラン終了時に登録した固有インスタンス。タップで詳細・改名・強化ポイント使用 */}
         {gameState==='MASU_MONS'&&(
@@ -13471,16 +13500,20 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {/* アイテムの使用対象マスモンを選ぶ画面(アイテム欄で「使う」を押した直後) */}
         {pendingItemUse&&(()=>{
           const item = BREEDER_MARKET_ITEMS.find(i=>i.id===pendingItemUse);
+          /* 全画面のかぶせなので body の余白が届かない。ここだけは safe-area を自分で取る。
+             data-mh-screen は横画面で左右2カラムへ組み替えるための目印 */
           return (
-            <div className="fixed inset-0 flex flex-col p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.97)',zIndex:31000,paddingTop:'calc(1rem + env(safe-area-inset-top))'}}>
-              <div className="flex items-center gap-2 mb-2 shrink-0">
-                <button onClick={()=>setPendingItemUse(null)} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
-                <h2 className="text-lg font-black italic text-teal-400 uppercase tracking-widest truncate">{item?.name}を使う対象を選択</h2>
-              </div>
-              <div className="text-[10px] text-slate-400 font-bold mb-2 px-1 shrink-0">対象のマスモンをタップしてください</div>
-              <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
+            <div data-mh-screen className="fixed inset-0 flex flex-col p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.97)',zIndex:31000,paddingTop:'calc(1rem + env(safe-area-inset-top))'}}>
+              <header className="mb-3 flex shrink-0 items-center gap-1.5 border-b border-white/10 pb-2">
+                <button type="button" aria-label="アイテムへ戻る" onClick={()=>setPendingItemUse(null)} className="-ml-1 shrink-0 p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+                <div className="min-w-0 flex-1">
+                  <h2 className="truncate text-xl font-black italic leading-tight text-teal-400">{item?.name}を使う対象を選択</h2>
+                </div>
+              </header>
+              <ScreenLead>対象のマスモンをタップしてください</ScreenLead>
+              <div className={SCREEN_LIST_CLASS}>
                 {masuMons.length===0?(
-                  <div className="empty-state" style={{padding:'32px 16px', textAlign:'center'}}><span className="big" style={{fontSize:'40px'}}>🐾</span><div className="text-[11px] text-slate-400 mt-2">まだマスモンがいません。</div></div>
+                  <ScreenEmpty emoji="🐾" lines={['まだマスモンがいません。','バトルをクリアしてマスモンを登録すると使えます。']}/>
                 ):(
                   <div className="grid grid-cols-4 gap-2 pb-4">
                     {masuMons.map(masu=>{
@@ -13499,11 +13532,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                           } else if (pendingItemUse==='bond_reset_scroll') {
                             if (window.confirm(`「${masu.name}」の強化ポイント(間合い適性・ステータス強化)をすべて未使用に戻しますか？絆Lvはそのままです。`)) { useBondResetScroll(masu.id); setPendingItemUse(null); }
                           }
-                        }} className="rounded-2xl border-2 border-teal-900/50 bg-slate-900 p-1.5 flex flex-col items-center gap-0.5 active:scale-95">
+                        }} className="rounded-2xl border-2 border-teal-900/50 bg-slate-900 p-1.5 flex flex-col items-center gap-0.5 active:scale-95 min-h-[44px]">
                           <div className="w-10 h-10 rounded-full overflow-hidden border border-teal-400/40 shrink-0"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/></div>
-                          <div className="text-[9px] font-black text-teal-200 truncate w-full text-center">{masu.name}</div>
-                          <div className="text-[6px] text-slate-500 font-bold -mt-0.5 truncate w-full text-center">({base.name})</div>
-                          <div className="text-[7px] text-pink-300 font-black flex items-center gap-0.5"><Heart size={6}/>絆Lv.{lvl.level}</div>
+                          <div className="text-[11px] font-black text-teal-200 truncate w-full text-center leading-tight">{masu.name}</div>
+                          <div className="text-[10px] text-slate-400 font-bold truncate w-full text-center leading-tight">({base.name})</div>
+                          <div className="text-[10px] text-pink-300 font-black flex items-center gap-0.5 leading-none"><Heart size={9}/>絆Lv.{lvl.level}</div>
                         </button>
                       );
                     })}
