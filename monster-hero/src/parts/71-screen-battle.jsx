@@ -349,6 +349,13 @@ function BattleScreen({
             <div className="h-2"></div>
           </div>
           {/* 技詳細パネルはmain外(画面直下)に移動して、ムー画像と同階層でz-index勝負させる */}
+        </main>
+        {/* 敵が次に何をしてくるかの札(2026-09-19・ユーザー指摘「敵の行動予測が見えない」)。
+            2026-09-18に「絵の直下へ寄せる」ため mt-auto(下端へ固定)を外したところ、
+            敵の絵が大きい場面で main(overflow-y-auto)の表示の外へ押し出され、
+            画面の低い端末では見えなくなっていた。**私が持ち込んだ不具合**。
+            強化の札と同じく main の外へ出す。main の直後なので絵のすぐ下に出て、
+            しかも押し出されようがない。 */}
           {enemy&&enemyIntent&&!isBusy&&(()=>{
             // ためる・待機・移動はダメージが無いので「予測」を出さない。
             // 出すと必ず0になり、ガードを構える判断の邪魔になる
@@ -370,9 +377,8 @@ function BattleScreen({
             // 敵の絵のすぐ下へ置く(2026-09-18・ユーザー依頼)。mt-auto で下端へ押しやっていたため、
             // 絵と「次に何をしてくるか」のあいだに200pxほどの空きができ、視線が大きく動いていた。
             // 余りの高さは、この下のバフ帯の mt-auto がまとめて吸う。
-            return <div className={`mt-2 mb-1 border p-1 px-4 rounded-full flex items-center gap-1.5 animate-pulse z-[45] shadow-lg shrink-0${battleTutorialSpotClass('enemyIntent')} ${focusedCard?'invisible':'visible'} ${tone}`}><Target size={12}/><div className="text-[10px] font-black uppercase tracking-tight">{enemyIntent.label}{rawDmg>0?` (予定: ${plannedDmg})`:''}</div></div>;
+            return <div className={`mt-1 mb-1 mx-auto w-fit max-w-full border p-1 px-4 rounded-full flex items-center gap-1.5 animate-pulse z-[45] shadow-lg shrink-0${battleTutorialSpotClass('enemyIntent')} ${focusedCard?'invisible':'visible'} ${tone}`}><Target size={12}/><div className="text-[10px] font-black uppercase tracking-tight">{enemyIntent.label}{rawDmg>0?` (予定: ${plannedDmg})`:''}</div></div>;
           })()}
-        </main>
         {/* 強化の札(2026-09-19・ユーザー指摘「バフデバフ欄が見にくくなってる」)。
             もとは敵のいる main の中に置いていたが、main は overflow-y-auto なので、
             強化が増えて札が2行3行になると表示の外へ押し出され、下の味方バーに隠れて読めなくなっていた。
