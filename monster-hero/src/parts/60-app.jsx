@@ -1465,6 +1465,15 @@ function MonsterHeroGame() {
               ? <img src={iconSrc} alt={base.name} draggable={false} style={monsterArtFitStyle(base.id, MONSTER_CARD_NO_SELECT)} className="w-full h-full object-cover"/>
               : <div className="w-full h-full flex items-center justify-center text-2xl">{base.emoji}</div>)}
         </div>
+        {/* ふり分けできる強化ポイント。絆Lvと同じ行に並べると、3桁になった個体で
+            行が2段になり、一覧に並ぶカードが1枚ぶん背高くなっていた。
+            置き場所は**左下**。右上は「マスモン」の札(13312)と超越バッジ、
+            下の中央は転生★が使っているので、空いているのはここだけ。 */}
+        {masu&&(masu.distAptPoints||0)>0&&(
+          <span aria-label={`ふり分けできる強化ポイント ${masu.distAptPoints}`}
+            className="absolute -left-1.5 -bottom-1 z-10 rounded-full border border-amber-200/60 bg-amber-400 px-1 text-[10px] font-black leading-[15px] text-slate-950 shadow"
+            style={{minWidth:'17px',textAlign:'center'}}>{masu.distAptPoints}</span>
+        )}
         {masu&&<RebirthStars count={masu.rebirthCount} className="mh-rebirth-stars-overlay"/>}
         {masu&&<TranscendenceBadge transcended={normalizeMasuProgression(masu).transcended} soulRankStage={normalizeMasuProgression(masu).soulRankStage} small/>}
         {badge}
@@ -1473,7 +1482,7 @@ function MonsterHeroGame() {
       {monsterCardName(masu?masu.name:base.name, nameBand?'text-white':(masu?'text-pink-200':'text-white'), nameBand)}
       {monsterCardInfo(
         info!==undefined?info:(masu?monsterCardBond(masuBondLevelInfo(masu), normalizeMasuProgression(masu).levelCap):null),
-        monsterCardSub(sub!==undefined?sub:((masu&&(masu.distAptPoints||0)>0)?<span className="shrink-0 rounded-full bg-amber-400/15 px-1.5 text-[10px] font-black leading-[15px] text-amber-300 whitespace-nowrap">+{masu.distAptPoints}P</span>:null)))}
+        monsterCardSub(sub!==undefined?sub:null))}
       {monsterCardPower(power)}
       {monsterCardStatus(status)}
       {extra}
@@ -13222,18 +13231,23 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                  ここを div で包むと編成画面だけ組み替わらないので、包まない(フラグメント) */
               <>
                 <div className="shrink-0 mb-2 rounded-2xl border border-indigo-500/40 bg-slate-900/90 p-2">
-                  <div className="flex gap-2 overflow-x-auto pb-1" role="tablist" aria-label="編成セット" style={{scrollbarWidth:'none'}}>
-                    {monsterPartySets.names.map((name,index)=><button key={index} role="tab" aria-selected={editingPartySetIndex===index} onClick={()=>switchMonsterPartySet(index)} className={`shrink-0 min-w-[92px] min-h-[44px] rounded-xl border px-2 py-1 text-left active:scale-95 ${editingPartySetIndex===index?'border-indigo-300 bg-indigo-600/40':'border-slate-700 bg-slate-800'}`}><span className="block text-[11px] font-black truncate">{index+1}. {name}</span>{monsterPartySets.activeIndex===index?<span className="text-[10px] font-black text-emerald-300">✓ 使用中</span>:<span className="text-[10px] text-slate-400">タップで使用</span>}</button>)}
+                  {/* セットのタブと「セット名を変える」を同じ行へ(2026-09-18・ユーザー指摘
+                      「編成画面の狭さをなんとかしたい」)。編集は別の行に44pxの帯を持っていて、
+                      毎回やることではないのに一覧をそのぶん押し下げていた。 */}
+                  <div className="flex items-center gap-2">
+                  <div className="flex min-w-0 flex-1 gap-2 overflow-x-auto pb-1" role="tablist" aria-label="編成セット" style={{scrollbarWidth:'none'}}>
+                    {monsterPartySets.names.map((name,index)=><button key={index} role="tab" aria-selected={editingPartySetIndex===index} onClick={()=>switchMonsterPartySet(index)} className={`flex shrink-0 min-w-[76px] min-h-[44px] items-center justify-center gap-1 rounded-xl border px-2.5 active:scale-95 ${editingPartySetIndex===index?'border-indigo-300 bg-indigo-600/40':'border-slate-700 bg-slate-800'}`}><span className="min-w-0 truncate text-[11px] font-black">{index+1}. {name}</span>{monsterPartySets.activeIndex===index&&<span className="shrink-0 text-[11px] font-black text-emerald-300" aria-label="使用中">✓</span>}</button>)}
                   </div>
                   {/* セット名を変えるのもコピーも、毎回やることではない。
                       畳んでおいて、必要なときだけ開く(2026-09-07・ユーザー指摘
                       「モンスターの部分がメインなのに他でスペースを取りすぎ」) */}
                   <button type="button" data-party-set-edit-toggle onClick={()=>toggleScreenNote('partySetEdit')}
                     aria-expanded={screenNoteOpen.partySetEdit===true}
-                    className="mt-1 flex min-h-[44px] w-full items-center justify-between gap-2 rounded-xl px-1 text-left text-[10px] font-black text-slate-400 active:scale-[.995]">
-                    <span className="min-w-0 truncate">セット名を変える・ほかのセットへコピー</span>
-                    <span className="shrink-0">{screenNoteOpen.partySetEdit===true?'閉じる ▲':'開く ▼'}</span>
+                    aria-label="セット名を変える・ほかのセットへコピー"
+                    className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border active:scale-95 ${screenNoteOpen.partySetEdit===true?'border-indigo-300 bg-indigo-600/40 text-white':'border-slate-700 bg-slate-800 text-slate-400'}`}>
+                    <Settings size={16}/>
                   </button>
+                  </div>
                   {screenNoteOpen.partySetEdit===true&&<div className="mt-1 grid grid-cols-[minmax(0,1fr)_auto] gap-2 items-end">
                     <label className="min-w-0 text-[10px] font-black text-slate-400">セット名<input key={`${editingPartySetIndex}:${monsterPartySets.names[editingPartySetIndex]}`} defaultValue={monsterPartySets.names[editingPartySetIndex]} maxLength={20} onBlur={e=>renameMonsterPartySet(editingPartySetIndex,e.target.value)} onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();}} className="mt-0.5 block w-full min-w-0 rounded-xl border border-white/10 bg-slate-950 px-2 py-2 text-[12px] text-white"/></label>
                     <button onClick={()=>setPartySetCopyTarget(partySetCopyTarget==null?((editingPartySetIndex+1)%MONSTER_PARTY_SET_COUNT):null)} className="min-h-[44px] rounded-xl border border-amber-500/60 px-3 text-[10px] font-black text-amber-200 active:scale-95">編成をコピー</button>
