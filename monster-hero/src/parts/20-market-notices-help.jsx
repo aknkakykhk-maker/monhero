@@ -182,6 +182,13 @@ const MarketDetailChip = ({ label, onClick }) => (
 const MARKET_NAME_WRAP_WORDS = Object.freeze(['チケット', 'カード', 'リセット', 'ショップ', 'ボーナス', 'プシュケー', '円盤石', 'アイコン']);
 const marketNameForWrap = (name) => MARKET_NAME_WRAP_WORDS.reduce(
   (text, word) => text.split(word).join(`​${word}`), String(name || ''));
+// ★印は文字(U+200B)のままDOMへ置かず、<wbr> に変えてから描く。
+//   U+200B は幅0でも**文字として残る**ので、画面の文字を拾う検査やブラウザの検索で
+//   「ウンディーネのアイコン」が見つからなくなる(2026-09-18に monster/mermaid-browser-check.js が
+//   実際に落ちた。商品はちゃんと並んでいるのに「無い」と言われた)。
+//   <wbr> は「ここで折り返してよい」だけを表し、innerText には現れない。
+const marketNameNodes = (name) => marketNameForWrap(name).split('​')
+  .map((seg, index) => <React.Fragment key={index}>{index>0&&<wbr/>}{seg}</React.Fragment>);
 const MarketProductCard = ({ item, owned=false, comingSoon=false, detail=null, middle=null, onDetail, onZoom, onBuy, canBuy=false, disabled=false }) => {
   const usesGold=item.type==='disc'||item.type==='assist'||item.type==='item';
   const usesPsyche=item.currency==='psyche';
@@ -199,7 +206,7 @@ const MarketProductCard = ({ item, owned=false, comingSoon=false, detail=null, m
           (「トレーニングチケッ/ト」「アシストカード「き/き」」)。
           text-wrap:balance も試したが、行の長さをならす方を優先して「トレーニン/グチケット」に
           なるため使わない。印が無く1行に入りきらない名前だけ overflow-wrap:anywhere で折る。 */}
-    <div className={`w-full flex items-start justify-center text-center text-[11px] font-black leading-tight ${comingSoon?'text-slate-400':'text-white'}`} style={{minHeight:'36px',wordBreak:'keep-all',overflowWrap:'anywhere'}}>{marketNameForWrap(item.name)}</div>
+    <div className={`w-full flex items-start justify-center text-center text-[11px] font-black leading-tight ${comingSoon?'text-slate-400':'text-white'}`} style={{minHeight:'36px',wordBreak:'keep-all',overflowWrap:'anywhere'}}>{marketNameNodes(item.name)}</div>
     <div className="w-full flex items-center justify-center gap-1" style={{height:'22px'}}>{middle||detail&&!comingSoon?<>{middle}{!middle&&<MarketDetailChip label={`${item.name}の詳細を見る`} onClick={onDetail}/>}</>:null}</div>
     <div className="w-full flex items-center justify-center mt-auto pt-2">{comingSoon?<div className="text-[10px] font-black text-slate-400 bg-slate-800/60 px-2 py-1 rounded-full whitespace-nowrap">近日追加</div>:owned?<div className="text-[10px] font-black text-emerald-400 bg-emerald-950/50 px-2 py-1 rounded-full whitespace-nowrap">所持済み</div>:<button onClick={onBuy} disabled={disabled||!canBuy} aria-label={`${item.name}${disabled?'（デバッグのため購入不可）':`を${priceLabel}で${usesHeroProof||usesHeroProofShard?'交換':'購入'}`}`} className={`text-[11px] font-black px-2 min-h-[44px] w-full max-w-full rounded-xl flex items-center justify-center gap-1 whitespace-nowrap ${disabled||!canBuy?'bg-slate-800 text-slate-500':usesPsyche?'bg-fuchsia-600 text-white active:scale-95':'bg-amber-500 text-black active:scale-95'}`}>{usesHeroProofShard?<><span aria-hidden="true">🎖️</span><span className="text-[10px]">証片 ×{item.cost.toLocaleString()}</span></>:usesHeroProof?<><span aria-hidden="true">🏅</span><span className="text-[10px]">勇者の証 ×{item.cost.toLocaleString()}</span></>:usesPsyche?<><span aria-hidden="true">🌈</span><span>{item.cost.toLocaleString()}</span></>:<>{usesGold?<Gem size={11} className="shrink-0"/>:<Coins size={11} className="shrink-0"/>}<span>{item.cost.toLocaleString()}</span></>}</button>}</div>
   </div>;
