@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f4d10c866f69d3b7
+// generated-sha256: 0171693da7b62b24
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -91,7 +91,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-18 16:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-18 17:36"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8513,6 +8513,19 @@ const MarketDetailChip = ({ label, onClick }) => (
   <button type="button" onClick={onClick} aria-label={label}
     className="flex shrink-0 items-center gap-0.5 whitespace-nowrap rounded-full border border-indigo-500/40 bg-indigo-950/50 px-2 py-1 text-[10px] font-black leading-none text-indigo-300 active:scale-95"><BookOpen size={10}/>詳細</button>
 );
+// 商品名の折り返し(2026-09-18・ユーザー指摘「商品名の行ズレがださい」)。
+// カードの幅では2行になる名前があるが、ブラウザは日本語の語の切れ目を知らないので
+// 「トレーニン／グチケット」「スキップチ／ケット・序」のように語の途中で切っていた。
+// カタカナの複合語でよく使う後ろ半分の前に「ここで折り返してよい」印(U+200B)を入れて教える。
+//   トレーニング|チケット   スキップ|チケット   絆ポイント|リセットの書   アシスト|カード「きき」
+//   イブリースの|円盤石   おりょうの|アイコン
+//   (「イブリースの円盤／石」「おりょうのアイコ／ン」と最後の1文字が落ちていた)
+// ★入れるのは画面へ出す文字だけ。item.name そのものは変えないので、読み上げラベル・詳細・
+//   検索・保存はこれまでどおり(U+200B は幅0で、コピーしても見た目に出ない)。
+// ★語の頭に印が来ても害はない(行の先頭では折り返しの機会にならない)。
+const MARKET_NAME_WRAP_WORDS = Object.freeze(['チケット', 'カード', 'リセット', 'ショップ', 'ボーナス', 'プシュケー', '円盤石', 'アイコン']);
+const marketNameForWrap = (name) => MARKET_NAME_WRAP_WORDS.reduce(
+  (text, word) => text.split(word).join(`​${word}`), String(name || ''));
 const MarketProductCard = ({ item, owned=false, comingSoon=false, detail=null, middle=null, onDetail, onZoom, onBuy, canBuy=false, disabled=false }) => {
   const usesGold=item.type==='disc'||item.type==='assist'||item.type==='item';
   const usesPsyche=item.currency==='psyche';
@@ -8521,7 +8534,16 @@ const MarketProductCard = ({ item, owned=false, comingSoon=false, detail=null, m
   const priceLabel=usesHeroProofShard?`勇者の証片${item.cost}個`:usesHeroProof?`勇者の証${item.cost}個`:usesPsyche?`${item.cost}プシュケー`:usesGold?`${item.cost}ダイヤ`:`${item.cost}pt`;
   return <div className={`rounded-2xl border p-2 flex flex-col items-center gap-1 ${owned?'bg-emerald-900/30 border-emerald-500/60':comingSoon?'bg-slate-900/60 border-white/10':'bg-slate-900 border-white/10'}`}>
     <MarketProductIcon item={item} onZoom={onZoom} disabled={disabled}/>
-    <div className={`w-full flex items-center justify-center text-center text-[11px] font-black leading-tight ${comingSoon?'text-slate-400':'text-white'}`} style={{minHeight:'36px'}}>{item.name}</div>
+    {/* 商品名(2026-09-18・ユーザー指摘「商品名の行ズレがださい」)。
+        ★縦は**上寄せ**にする。中央寄せだと、1行で収まる品(魂格再編の書・染色もどき)だけが
+          枠の真ん中へ降りてきて、2行の品の1行目と高さがそろわなかった。
+        ★word-break:keep-all で「どの文字の間でも折ってよい」をやめ、marketNameForWrap が
+          入れた印(U+200B)の位置だけで折るようにする。既定のままだと日本語は文字単位で
+          折れるので、幅ぴったりのときに最後の1文字だけが2行目へ落ちていた
+          (「トレーニングチケッ/ト」「アシストカード「き/き」」)。
+          text-wrap:balance も試したが、行の長さをならす方を優先して「トレーニン/グチケット」に
+          なるため使わない。印が無く1行に入りきらない名前だけ overflow-wrap:anywhere で折る。 */}
+    <div className={`w-full flex items-start justify-center text-center text-[11px] font-black leading-tight ${comingSoon?'text-slate-400':'text-white'}`} style={{minHeight:'36px',wordBreak:'keep-all',overflowWrap:'anywhere'}}>{marketNameForWrap(item.name)}</div>
     <div className="w-full flex items-center justify-center gap-1" style={{height:'22px'}}>{middle||detail&&!comingSoon?<>{middle}{!middle&&<MarketDetailChip label={`${item.name}の詳細を見る`} onClick={onDetail}/>}</>:null}</div>
     <div className="w-full flex items-center justify-center mt-auto pt-2">{comingSoon?<div className="text-[10px] font-black text-slate-400 bg-slate-800/60 px-2 py-1 rounded-full whitespace-nowrap">近日追加</div>:owned?<div className="text-[10px] font-black text-emerald-400 bg-emerald-950/50 px-2 py-1 rounded-full whitespace-nowrap">所持済み</div>:<button onClick={onBuy} disabled={disabled||!canBuy} aria-label={`${item.name}${disabled?'（デバッグのため購入不可）':`を${priceLabel}で${usesHeroProof||usesHeroProofShard?'交換':'購入'}`}`} className={`text-[11px] font-black px-2 min-h-[44px] w-full max-w-full rounded-xl flex items-center justify-center gap-1 whitespace-nowrap ${disabled||!canBuy?'bg-slate-800 text-slate-500':usesPsyche?'bg-fuchsia-600 text-white active:scale-95':'bg-amber-500 text-black active:scale-95'}`}>{usesHeroProofShard?<><span aria-hidden="true">🎖️</span><span className="text-[10px]">証片 ×{item.cost.toLocaleString()}</span></>:usesHeroProof?<><span aria-hidden="true">🏅</span><span className="text-[10px]">勇者の証 ×{item.cost.toLocaleString()}</span></>:usesPsyche?<><span aria-hidden="true">🌈</span><span>{item.cost.toLocaleString()}</span></>:<>{usesGold?<Gem size={11} className="shrink-0"/>:<Coins size={11} className="shrink-0"/>}<span>{item.cost.toLocaleString()}</span></>}</button>}</div>
   </div>;

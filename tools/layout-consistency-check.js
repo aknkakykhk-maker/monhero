@@ -111,7 +111,11 @@ check('モードのタブはランキングでは出さない',
 // 名前の行数・説明の有無・所持数の有無・詳細ボタンの有無で、
 // 「〜で購入」ボタンの位置がカードごとにずれていた
 // 名前は最長14文字。細い端末では3行になるので、3行ぶんの枠を確保しておく
-check('商品名は行数が変わっても同じ高さの枠に入れる', has("style={{minHeight:'36px'}}>{item.name}</div>"));
+// 2026-09-18: 枠の高さに加えて「上寄せ(items-start)」もここで見る。中央寄せに戻すと、
+// 1行で収まる品だけが枠の真ん中へ降りて、2行の品の1行目と高さがそろわなくなる。
+check('商品名は行数が変わっても同じ高さの枠に入れる',
+  has("style={{minHeight:'36px',wordBreak:'keep-all',overflowWrap:'anywhere'}}>{marketNameForWrap(item.name)}</div>")
+    && has('w-full flex items-start justify-center text-center text-[11px] font-black leading-tight'));
 // アイテムの効果は詳細ボタンから出す(カードに長い説明を載せると縦に伸びるため)
 // 2026-09-10(STEP 6-6)にマーケットを切り出したので、画面は onOpenItemDetail を呼び、
 // 本体がそれに setMarketItemDetail を渡す形になった
