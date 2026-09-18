@@ -186,17 +186,30 @@ check('押しっぱなしのまま終端を過ぎたら従来どおりMISSガー
       `確定=${settledAt??'—'} / 判定=${traced.holdJudgment}`);
   }
   // ★フリックすれば、斜めでもまっすぐと同じように成立する
-  const results=[['まっすぐ',straight],['ゆるい斜め',gentle],['急な斜め',sharp]]
+  //   ただし対象は「弾いたのか経路を追っただけなのか**見分けられる**形」だけ。
+  //   急な斜めは下で別に見る(2026-09-18)。
+  const results=[['まっすぐ',straight],['ゆるい斜め',gentle]]
     .map(([label,points])=>{const {note:traced}=trace(points,1900);return [label,traced.holdJudgment,traced._rhythmEndFlickDone];});
   check('斜めでもフリックすれば成立する',results.every(([,,done])=>done===true),
     results.map(([label,judgment])=>`${label}:${judgment}`).join(' / '));
   check('斜めかどうかで判定が変わらない',new Set(results.map(([,judgment])=>judgment)).size===1,
     results.map(([label,judgment])=>`${label}:${judgment}`).join(' / '));
 
+  // ★受付のあいだに経路そのものが24pxより大きく振れる形(急な斜め＝終端250msで4レーン)は、
+  //   指の追従が遅れるぶんだけで24pxを超えてしまい、「弾いた」と「追っただけ」を見分けられない。
+  //   弾いたことは覚えるが、**指を離すのを待たずに確定させるのはやめる**(2026-09-18)。
+  //   早く確定させると、終端の185ms手前で「大きく早い離し」としてBADが出ていた。
+  //   確定させないあとの判定は rhythm-end-flick-swing-check.js / -diagonal-check.js が見る。
+  {
+    const {settledAt}=trace(sharp,1900);
+    check('経路が大きく振れる形は、弾いても早く確定させない(見分けられないため)',
+      settledAt===null,`確定=${settledAt??'—'}`);
+  }
+
   // ★受付(250ms前)は終端の判定窓(185ms)より早い。窓の外で弾いても、そこでは確定しない。
   //   確定を待たずに release すると「まだ届いていない終端」への早い判定になってMISSになる
   {
-    const early=trace(sharp,1760);          // 受付(1750ms〜)に入った直後に弾く
+    const early=trace(gentle,1760);          // 受付(1750ms〜)に入った直後に弾く
     check('窓の外で弾いても、そこでは確定しない(窓に入ってから確定する)',
       early.settledAt!==null&&early.settledAt>=2000-RHYTHM_RELEASE_MAX_MS,
       `確定=${early.settledAt??'—'} / 窓に入るのは ${2000-RHYTHM_RELEASE_MAX_MS}ms から`);

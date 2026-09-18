@@ -95,6 +95,9 @@ const EXTRA_TOKENS = [
 // ファイル名の語では拾えないので、検査そのものを名指しするもの
 const FORCE_CHECKS = [
   { re: /^(CLAUDE|AGENTS|README)\.md$|^docs\/|^\.claude\/skills\//, checks: ['rules-index-check.js'], why: 'ルールと資料' },
+  // 譜面(data/rhythm-mode.js)を触ったら、終点フリックの置き場所は必ず見る。
+  // 語の当たりだけでは本数の上限で落ちることがあり、曲を足した回だけ静かに見逃す(2026-09-18)
+  { re: /^monster-hero\/data\/rhythm-mode\.js$/, checks: ['mode/rhythm-end-flick-swing-check.js'], why: '譜面の終点フリックの置き場所' },
 ];
 
 function tokensOf(file) {
