@@ -48,7 +48,8 @@ for (const [rel, src] of sources) {
   // 高さは1か所(MONSTER_CARD_STYLE)で決める。
   // 2026-09-07・ユーザー指摘「1枚目 まだ窮屈 / 2枚目 このサイズ感がいい」。
   // 空の行を確保するのをやめ、出す行のぶんだけの高さにしたので下限だけを持つ
-  check(`${rel}: カードの高さは1か所で決める`, compact.includes("minHeight:'96px'"));
+  // 2026-09-18: 絆Lv・強化P・総合力の字を読める大きさへ上げたので、下限も 96 → 112px にした
+  check(`${rel}: カードの高さは1か所で決める`, compact.includes("minHeight:'112px'"));
   // 生成物では `(node) =>` の括弧が外れて `node =>` になるので、どちらでも通る形で見る
   check(`${rel}: 中身の無い行は高さを取らない`,
     /monsterCardStatus=\(?node\)?=>node\?/.test(compact)
