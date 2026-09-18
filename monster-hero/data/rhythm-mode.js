@@ -1739,7 +1739,18 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
             anchorX+=shift*trackingLaneWidthPx();
           }
           const dx=pos.clientX-anchorX,dy=pos.clientY-session.endFlickAnchorY;
-          if(Math.hypot(dx,dy)>=RHYTHM_FLICK_DISTANCE_PX)session.endFlickDone=true;
+          // ★経路ぶんを差し引いた距離だけで見てはいけない(2026-09-18・プレイヤーの声
+          //   「スライドノーツ＋フリックフィニッシュが指置いてるだけで手前で勝手にBAD判定」)。
+          //   上の補正は「経路を追った動き」をフリックと数えないためのものだが、
+          //   裏返すと**指を置いたまま**でも経路が逃げたぶんが距離として積み上がり、
+          //   弾いていないのにフリック成立 → 終端の判定窓へ入った瞬間に早い判定が出ていた。
+          //   フリックは「指そのものが動く」動作なので、実際の指の移動も同時に要る。
+          //     ・経路を追っただけ  … 実移動は大きいが、経路ぶんを引くと小さい → 成立しない
+          //     ・指を置いたまま    … 実移動が小さい                         → 成立しない
+          //     ・本当に弾いた      … どちらも大きい                         → 成立する
+          const rawDx=pos.clientX-session.endFlickAnchorX,rawDy=pos.clientY-session.endFlickAnchorY;
+          if(Math.hypot(dx,dy)>=RHYTHM_FLICK_DISTANCE_PX
+            &&Math.hypot(rawDx,rawDy)>=RHYTHM_FLICK_DISTANCE_PX)session.endFlickDone=true;
         }
         // 弾き終えたら、指を離すのを待たずその場で終端判定を確定する。
         // release() が既存の判定合成(開始判定と終端判定の悪いほう)をそのまま行う。
@@ -2288,6 +2299,34 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
       const span=inputSpan(note);
       return span?Math.abs(subCoordinate-span.center):0;
     };
+    // いま押さえられている HOLD/SLIDE の帯の上へ置いた指か(＝持ち替えの2本目)を探す。
+    // withTolerance=false なら帯の内側そのもの、true なら受付の広がりぶんまで見る。
+    const heldBandNote=withTolerance=>{
+      if(tapOnly||!Number.isFinite(subCoordinate))return null;   // 仮の入力では持ち替えを扱わない
+      for(let index=0;index<source.length;index++){
+        const note=source[index];
+        if(!note||note.done||note.activePointerId===null)continue;
+        if(!(note.type==='HOLD'||rhythmNoteIsSlide(note)||note._rhythmOriginalType==='SLIDE'))continue;
+        if(note.activePointerId===key)continue;   // 自分がいま押さえている指
+        const span=rhythmHandoverSpanAt(note,now-offset);
+        const tolerance=withTolerance
+          ?(span.width<=1?RHYTHM_NARROW_TAP_TOLERANCE_SUB_LANES:RHYTHM_TAP_TOLERANCE_SUB_LANES)
+          :0;
+        if(subCoordinate<span.start-tolerance||subCoordinate>span.end+tolerance)continue;
+        return note;
+      }
+      return null;
+    };
+    // ★押さえている帯の**内側そのもの**へ置いた指は、相手を決める前に控えへ回す
+    //   (2026-09-18・プレイヤーの声「スライドノーツの近くに普通のノーツがある時、
+    //    指置き換えしたらそっちに引っ張られちゃう」)。
+    //   控えの判断はこれまで「どのノーツにも当たらなかったとき」だけだったので、
+    //   近くに普通のノーツがあると2本目がそちらへ吸われ、持ち替えが成立しないまま
+    //   1本目を離してMISS、しかも巻き込まれたノーツの判定まで狂っていた。
+    //   帯の内側にいるなら狙いははっきりしているので、そこだけ先に通す。
+    //   受付の広がり(tolerance)ぶんしか掛かっていないときは、これまでどおり後段で見る。
+    const insideHeldBand=heldBandNote(false);
+    if(insideHeldBand)return {input,target:null,deltaMs:null,standby:insideHeldBand};
     // どのノーツを叩いたことにするかの決め方。
     //
     // 【なぜ「近い順」だけではいけないか】
@@ -2460,17 +2499,9 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
     //
     // ここでは「控えの指」として返すだけで、判定も音も出さない。
     // 実際の引き継ぎは、1本目が離れたときに game-system.jsx 側が行う。
-    if(!picked&&!tapOnly&&Number.isFinite(subCoordinate)){
-      for(let index=0;index<source.length;index++){
-        const note=source[index];
-        if(!note||note.done||note.activePointerId===null)continue;
-        if(!(note.type==='HOLD'||rhythmNoteIsSlide(note)||note._rhythmOriginalType==='SLIDE'))continue;
-        if(note.activePointerId===key)continue;   // 自分がいま押さえている指
-        const span=rhythmHandoverSpanAt(note,now-offset);
-        const tolerance=span.width<=1?RHYTHM_NARROW_TAP_TOLERANCE_SUB_LANES:RHYTHM_TAP_TOLERANCE_SUB_LANES;
-        if(subCoordinate<span.start-tolerance||subCoordinate>span.end+tolerance)continue;
-        return {input,target:null,deltaMs:null,standby:note};
-      }
+    if(!picked){
+      const nearHeldBand=heldBandNote(true);
+      if(nearHeldBand)return {input,target:null,deltaMs:null,standby:nearHeldBand};
     }
     if(!picked)return {input,target:null,deltaMs:null};
     claimed.add(pickedIndex);

@@ -153,6 +153,59 @@ for(const [label,make] of [['スライド',slide],['長押し',hold]]){
   check('渡したあと最後まで押さえれば成立する',note.done&&!note._miss);
 }
 
+// --- すぐ隣に普通のノーツがあるとき ---
+// (2026-09-18・プレイヤーの声「スライドノーツの近くに普通のノーツがある時、
+//  指置き換えしたらそっちに引っ張られちゃう」)
+//
+// 控えの指の判断は「どのノーツにも当たらなかったとき」だけだった。押さえている帯の
+// **内側**へ置いた2本目でも、隣のノーツの受付(±0.6サブレーン)が掛かっているとそちらへ吸われ、
+// 持ち替えが成立しないまま1本目を離してMISS。巻き込まれたノーツの判定まで狂っていた。
+// ★この検査が今まで見逃したのは、近くに競合するノーツを1つも置いていなかったから。
+{
+  // 押さえているSLIDEの帯はサブレーン1〜5。すぐ隣(5〜7)に普通のノーツを置く。
+  // 隣のノーツの受付は 5-0.6=4.4 から始まるので、4.4〜5.0 が取り合いになる
+  const nextTo=()=>({index:1,type:'TAP',timeMs:1000,lane:2,subLane:5,subLaneWidth:2,
+    done:false,activePointerId:null});
+  for(const spot of [4.4,4.6,4.8,5.0]){
+    reset();
+    const run=makeRun([slide(),nextTo()]);
+    starts(run,[at('touch:1',3)],0);               // 1本目でSLIDEを押さえる
+    starts(run,[at('touch:2',spot)],1000);         // 2本目を帯の内側へ置く
+    check(`帯の内側(${spot})へ置いた2本目は、隣の普通のノーツに取られない`,
+      run.standbyPointers.get('touch:2')===0&&!run.notes[1].done,
+      `控え=${run.standbyPointers.get('touch:2')} / 隣のノーツ done=${run.notes[1].done}`);
+  }
+  // 帯の外は、これまでどおり普通のノーツを取る
+  {
+    reset();
+    const run=makeRun([slide(),nextTo()]);
+    starts(run,[at('touch:1',3)],0);
+    const got=match(run.notes,[at('touch:2',5.2)],1000,0)[0];
+    check('帯の外(5.2)へ置いた指は、これまでどおり普通のノーツを取る',
+      got.target===run.notes[1],`取ったもの=${got.target?got.target.type:'なし'}`);
+  }
+  // 誰も押さえていなければ、同じ場所でも普通のノーツを取る
+  {
+    reset();
+    const run=makeRun([slide(),nextTo()]);
+    const got=match(run.notes,[at('touch:1',4.8)],1000,0)[0];
+    check('誰も押さえていなければ、同じ場所でも普通のノーツを取る',
+      got.target===run.notes[1],`取ったもの=${got.target?got.target.type:'なし'}`);
+  }
+  // 渡したあと最後まで押さえれば、隣のノーツを巻き込まずに成立する
+  {
+    reset();
+    const run=makeRun([slide(),nextTo()]);
+    starts(run,[at('touch:1',3)],0);
+    starts(run,[at('touch:2',4.8)],1000);
+    ends(run,['touch:1'],1020);
+    ends(run,['touch:2'],3000);
+    check('持ち替えたあと最後まで押さえれば成立する(隣のノーツも巻き込まない)',
+      run.notes[0].done&&!run.notes[0]._miss&&!run.notes[1].done,
+      `SLIDE done=${run.notes[0].done} / 隣のノーツ done=${run.notes[1].done}`);
+  }
+}
+
 // --- 本体側の作り ---
 check('渡す先を探す仕組みがある',/const standbyFingerFor=/.test(game));
 check('控えの指は run.standbyPointers で覚える',
@@ -163,6 +216,10 @@ check('控えとして置いた指では空打ち音を鳴らさない',
 check('渡すときは元の種類で結び直す(SLIDEがただのHOLDへ化けない)',
   /RHYTHM_GESTURE_RUNTIME\.bind\(takeover,note,note\._rhythmOriginalType\|\|note\.type/.test(game));
 check('ポーズしたら控えも捨てる',/run\.standbyPointers\?\.clear\(\)/.test(game));
+// 押さえている帯の内側へ置いた指は、相手を決める前に控えへ回す(近くのノーツに取られないように)
+check('帯の内側の指は、相手を決める前に控えへ回す',
+  /const insideHeldBand=heldBandNote\(false\);/.test(src)
+  &&/if\(insideHeldBand\)return \{input,target:null,deltaMs:null,standby:insideHeldBand\};/.test(src));
 
 console.log('');
 if(failed){console.log(`${failed}件のNGがあります`);process.exit(1);}
