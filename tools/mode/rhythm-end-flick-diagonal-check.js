@@ -92,10 +92,55 @@ check('ゆるい斜めでも弾けば成立する',play(0,1,'still+flick').judgm
 check('経路を追っても弾かなければ成立しない',play(0,3,'follow').judgment==='MISS');
 check('置いたまま弾かなければ成立しない',play(0,3,'still').judgment==='MISS');
 
+// ── ジグザグのSLIDE(2026-09-18・動画で示された症状) ──
+// 実物は pandora_boss_remix の MASTER 13.44〜14.92s。17点の折れ線で、終端250msの受付のあいだに
+// 経路が 0.694 → 2.414 → 1.500 レーン(＝115px。フリック距離24pxの約4.8倍)も振れる。
+// 指は経路を追うしかないが、追従はどうしても遅れる。すると
+//   ・経路ぶんを引いた距離(＝遅れぶん)  … 大きい
+//   ・指そのものの移動                  … 大きい
+// の両方が成り立ってしまい、弾いていないのに「弾いた」と見なされる。
+// そのまま早く確定させると、終端の手前でBADが出る。ここではその形をそのまま組む。
+const playZigzag=(lagMs,flick)=>{
+  runtime.clear();now=1000;rafCb=null;
+  const points=[{timeMs:1000,lane:1.5},{timeMs:1750,lane:0.694},{timeMs:1870,lane:2.414},{timeMs:2000,lane:1.5}];
+  const note={type:'SLIDE',timeMs:1000,endTimeMs:2000,lane:1,subLane:3,subLaneWidth:3,
+    done:false,holdJudgment:null,holdDeltaMs:0,index:0,endFlick:true,slidePoints:points};
+  runtime.record('touch:1',xForLane(1.5),Y);
+  runtime.bind('touch:1',note,'SLIDE',1000,0);
+  note.holdJudgment='MARVELOUS';note.holdDeltaMs=0;
+  let settledAt=null;
+  for(let t=1010;t<=2400;t+=10){
+    // 遅れて追う指。lagMs だけ前の経路の位置にいる
+    const lane=O.rhythmSlideExpectedLane(note,Math.min(Math.max(t-lagMs,1000),2000));
+    runtime.record('touch:1',xForLane(lane),Y-(flick&&t>=1960?60:0));
+    now=t;const cb=rafCb;rafCb=null;if(cb)cb();
+    if(settledAt===null&&!runtime._sessions.has('touch:1')&&t<1950)settledAt=t;
+    if(note.done)break;
+  }
+  return {judgment:note.holdJudgment,earlyMs:settledAt===null?0:2000-settledAt};
+};
+
+for(const lag of [20,40,60,80,100]){
+  const r=playZigzag(lag,false);
+  check(`ジグザグの経路を${lag}ms遅れで追っただけでは、終端より手前で確定しない`,
+    r.earlyMs===0,`判定=${r.judgment}${r.earlyMs?` / ${r.earlyMs}ms手前で確定`:''}`);
+}
+for(const lag of [20,40,60,80,100]){
+  const r=playZigzag(lag,true);
+  check(`ジグザグの経路を${lag}ms遅れで追って弾けば、BADにもMISSにもならない`,
+    r.judgment!=='BAD'&&r.judgment!=='MISS',`判定=${r.judgment}`);
+}
+
 // ── 実装の決めごと ──
 check('フリックは「経路ぶんを引いた距離」と「指そのものの移動」の両方で見る',
   /const rawDx=pos\.clientX-session\.endFlickAnchorX,rawDy=pos\.clientY-session\.endFlickAnchorY;/.test(source)
   &&/Math\.hypot\(dx,dy\)>=RHYTHM_FLICK_DISTANCE_PX\s*\n\s*&&Math\.hypot\(rawDx,rawDy\)>=RHYTHM_FLICK_DISTANCE_PX/.test(source));
+
+check('経路が速く動いているあいだの検出では、指を離すのを待たずに確定させない',
+  /session\.endFlickUncertain=true;/.test(source)
+  &&/session\.endFlickDone&&!session\.endFlickUncertain&&!session\.endFlickReleased/.test(source));
+check('弾いたまま指を置いていたら、終端でMISSにしない',
+  /session\.failed\|\|\(session\.endFlickRequired&&!session\.endFlickDone\)\?'MISS'/.test(source));
 
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
 process.exit(failed?1:0);
