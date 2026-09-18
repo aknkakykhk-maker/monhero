@@ -94,7 +94,12 @@ for (const [rel, src] of sources) {
   check(`${rel}: 合体のルールを畳んだ側に置いている`,
     compact.includes("renderScreenNote('fusion'")
     && !compact.includes('<divclassName="text-[9px]font-blacktext-violet-300uppercasetracking-wider">合体のルール'));
-  check(`${rel}: 編成の説明を畳んだ側に置いている`, compact.includes("renderScreenNote('partyPick'"));
+  // 2026-09-18: 「解放済み◯体。ちょうど8体選ぶと『決定』できます。」の帯は消した
+  // (ユーザー指示)。すぐ上の「編成中 8/8」と下の「決定 (8/8)」が同じことを言っていて、
+  // そのぶん一覧が46px押し下げられていた。**説明を常時ひろげない**という決めごとは変わらないので、
+  // 「長い操作説明を画面へ直に書いていないか」で見る。
+  check(`${rel}: 編成に長い説明を直に置いていない`,
+    !compact.includes('アイコンをタップすると編成に入れたり外したりできます'));
   check(`${rel}: 編成のセット名・コピーも畳める`,
     src.includes('data-party-set-edit-toggle') && compact.includes("toggleScreenNote('partySetEdit')"));
 }
