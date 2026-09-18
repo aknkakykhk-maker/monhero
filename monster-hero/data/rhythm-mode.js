@@ -2366,8 +2366,39 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
     //   1本目を離してMISS、しかも巻き込まれたノーツの判定まで狂っていた。
     //   帯の内側にいるなら狙いははっきりしているので、そこだけ先に通す。
     //   受付の広がり(tolerance)ぶんしか掛かっていないときは、これまでどおり後段で見る。
+    //
+    // ★ただし「帯の内側そのものへ、別のノーツが重なって降りてきている」ときは譲る
+    //   (2026-09-18・プレイヤーの声「スライドやホールド中の被りノーツを押しても判定されてない」)。
+    //   押さえながら別のノーツを叩く形(HAND_MODEL の tapDuringHold。EXPERT以上で出る)は、
+    //   叩く場所が**押さえている帯の内側**になることがふつうにある。配信中の譜面で306本。
+    //   上の分岐だけだと、そこへ置いた指が必ず控えへ回って**叩けるノーツが1つも無くなる**。
+    //   見分けは下の insideOverlapWith(帯と相手が**幅を持って重なっている**ところに指がいるか)。
+    //     ・帯と重なっているノーツの、その重なりの上 … そのノーツを狙っている → 後段へ通す
+    //     ・帯の内側だけ                            … 持ち替えの2本目       → 控えへ
+    //     ・帯の外(広がりでだけ届く)                … これまでどおり後段で見る
+    // 押した位置が「押さえている帯」と「叩く相手」の**重なっているところ**に入っているか。
+    // 被りノーツ(帯の上へ重ねて置かれたノーツ)と、ただ隣り合っているだけのノーツを分ける。
+    //   ・重なっている   … 帯の内側にいても、その入力は被りノーツを狙っている
+    //   ・接しているだけ … 帯の端と相手の端が同じ座標。狙いは持ち替えのほう
+    // 幅0(接しているだけ)を弾くのが要で、これが無いと #1493 で直した
+    // 「すぐ隣のノーツへ持ち替えの2本目が吸われる」が境界の1点だけ戻ってしまう。
+    const insideOverlapWith=heldNote=>{
+      if(!Number.isFinite(subCoordinate))return false;
+      const held=rhythmHandoverSpanAt(heldNote,now-offset);
+      for(let index=matchStart;index<matchEnd;index++){
+        const note=source[index];
+        if(!note||note.done||note.activePointerId!==null||!RHYTHM_NOTE_TYPES.includes(note.type))continue;
+        if(Math.abs(now-(Number(note.timeMs)+offset))>RHYTHM_INPUT_MATCH_WINDOW_MS)continue;
+        const span=inputSpan(note);
+        if(!span)continue;
+        const start=Math.max(span.start,held.start),end=Math.min(span.end,held.end);
+        if(!(end>start))continue;                       // 接しているだけは「被り」ではない
+        if(subCoordinate>=start&&subCoordinate<=end)return true;
+      }
+      return false;
+    };
     const insideHeldBand=heldBandNote(false);
-    if(insideHeldBand)return {input,target:null,deltaMs:null,standby:insideHeldBand};
+    if(insideHeldBand&&!insideOverlapWith(insideHeldBand))return {input,target:null,deltaMs:null,standby:insideHeldBand};
     // どのノーツを叩いたことにするかの決め方。
     //
     // 【なぜ「近い順」だけではいけないか】
