@@ -219,7 +219,13 @@ check('ポーズしたら控えも捨てる',/run\.standbyPointers\?\.clear\(\)/
 // 押さえている帯の内側へ置いた指は、相手を決める前に控えへ回す(近くのノーツに取られないように)
 check('帯の内側の指は、相手を決める前に控えへ回す',
   /const insideHeldBand=heldBandNote\(false\);/.test(src)
-  &&/if\(insideHeldBand\)return \{input,target:null,deltaMs:null,standby:insideHeldBand\};/.test(src));
+  &&/if\(insideHeldBand&&!insideOverlapWith\(insideHeldBand\)\)return \{input,target:null,deltaMs:null,standby:insideHeldBand\};/.test(src));
+// ★ただし帯の上へ**重なって**降ってくるノーツ(被りノーツ)には譲る。
+//   接しているだけ(重なりの幅0)は譲らない＝上の「隣のノーツに取られない」が成り立つ。
+//   中身は tools/mode/rhythm-tap-during-hold-check.js が見る(2026-09-18)。
+check('帯の上へ重なって降ってくるノーツには譲る(被りノーツを叩けるように)',
+  /const insideOverlapWith=heldNote=>/.test(src)
+  &&/if\(!\(end>start\)\)continue;/.test(src));
 
 console.log('');
 if(failed){console.log(`${failed}件のNGがあります`);process.exit(1);}
