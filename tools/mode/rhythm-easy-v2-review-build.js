@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// EASY譜面の耳確認用レビュー資料を書き出す。
 const fs=require('fs');
 const path=require('path');
 

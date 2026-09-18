@@ -1,3 +1,4 @@
+// AUTO中に鳴らすBGMの選び方が正しいか。
 const fs=require('fs');
 const path=require('path');
 const ROOT=path.resolve(__dirname,'../..');

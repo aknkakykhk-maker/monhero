@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// 編成セットの旧セーブ移行・5セット正規化・使用中復元・コピー／全除去を確かめる。
 'use strict';
 const fs=require('fs'),vm=require('vm'),assert=require('assert');
 const source=fs.readFileSync('monster-hero/src/game-system.jsx','utf8');

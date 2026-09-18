@@ -124,6 +124,22 @@ node tools/build.js && node tools/build.js --check
 - 全文を読む必要があると判断した場合のみ、分割して作業に必要な範囲を読む。
 - 一度取得した情報を理由なく何度も再読み込みしない。「念のため全文を読む」は避け、必要性を判断してから読む。
 
+このリポジトリには、上の作法を手で守らなくて済むようにした道具がある。範囲を当て推量して読み直す
+往復が消えるので、消費量だけでなく調査の精度も上がる。詳細は
+[`docs/rules/CONTEXT_BUDGET.md`](docs/rules/CONTEXT_BUDGET.md)。
+
+```
+node tools/ctx.js brief                  いまの状態(ブランチ・変更・次に打つもの)
+node tools/ctx.js find <語>              定義を探す（text で本文検索）
+node tools/ctx.js read <名前>            その定義の本体だけ（置き場所も終わりの行も機械が決める）
+node tools/ctx.js refs <名前>            その名前を使っている場所の全体像（直し忘れを防ぐ）
+node tools/ctx.js toc <ファイル>          見出し／骨格の一覧
+node tools/ctx.js doc <語>               資料を横断して見出しを探す
+node tools/ctx.js checks <語>            検査を「名前＋何を見るか」で引く
+node tools/ctx.js diff                   生成物を除いた差分（素の git diff の代わり）
+node tools/run-checks.js --changed       変更内容から要る検査を選んで回す
+```
+
 ## 実装時の互換性と品質
 
 - 既存の音量・ミュート設定とデータ引き継ぎ設定を維持する。保存キーや保存形式を変える場合は、既存利用者向けの移行と後方互換性を設計・検証する。

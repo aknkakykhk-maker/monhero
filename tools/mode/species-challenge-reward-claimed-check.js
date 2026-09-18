@@ -103,7 +103,7 @@ const UNCLAIMED_DIFFICULTY = 'Easy';
     await page.getByRole('button', { name: 'ヘルプ' }).first().dispatchEvent('click');
     await page.getByRole('button', { name: 'わかった！冒険に戻る' }).waitFor({ timeout: 20000 });
     await page.locator('footer button[aria-label=""]').dispatchEvent('click');
-    await page.getByText('BATTLE TEST').first().waitFor({ timeout: 20000 });
+    await page.getByText('DEBUG MENU').first().waitFor({ timeout: 20000 });
     await page.getByRole('button', { name: '⚔️ バトルモード' }).dispatchEvent('click');
     await page.getByText('BATTLE MODE').first().waitFor({ timeout: 20000 });
     const speciesCard = page.locator('article').filter({ hasText: '種族チャレンジ' }).first();

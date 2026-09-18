@@ -1,3 +1,4 @@
+// AUTOが全画面で動くとき、画面遷移ごとに同期ロックが戻るか。
 const fs = require('fs');
 
 const source = fs.readFileSync('monster-hero/src/game-system.jsx', 'utf8');

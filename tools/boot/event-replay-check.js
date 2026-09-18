@@ -198,8 +198,10 @@ check('回想を途中でやめるスキップがある', (() => {
   const at = source.indexOf('const skip=()=>{');
   if (at < 0) return false;
   const body = source.slice(at, source.indexOf('};', at));
+  // ★ボタンの書き方は2026-09-17に変わった(当たり判定の直しで stopPropagation を挟んだ)。
+  //   形ではなく「スキップを呼んでいるボタンがある」ことで見る
   return body.includes('setEventReplay(null)')
-    && /onClick=\{skip\}/.test(source)
+    && /onClick=\{(skip|\(e\)=>\{e\.stopPropagation\(\);skip\(\);\})\}/.test(source)
     && /スキップ/.test(source);
 })());
 check('スキップは既読フラグを立てない(最後まで見ていないため)',
@@ -210,7 +212,7 @@ check('スキップは既読フラグを立てない(最後まで見ていない
     return !/markMomosukeIntroSeen|markKikiIntroSeen/.test(body);
   })());
 check('最後の1枚ではスキップを出さない(そこは「とじる」だけ)',
-  /\{!last&&<button onClick=\{skip\}/.test(source));
+  /\{!last&&<button [^>]*onClick=\{\(e\)=>\{e\.stopPropagation\(\);skip\(\);\}\}/.test(source));
 
 // --- 更新履歴とヘルプ ---
 check('更新履歴に書いてある', /イベント回想/.test(changelogSrc));

@@ -13,6 +13,13 @@
 開発手順そのものはルートの [`DEVELOPMENT.md`](../DEVELOPMENT.md)、
 Claude 固有の会話・公開フローは [`CLAUDE.md`](../CLAUDE.md) が正本。
 
+## `rules/` — 運用ルールの詳細
+
+[`CLAUDE.md`](../CLAUDE.md) は会話のたびに全文が読み込まれるので、守ることの本文だけを置き、
+経緯・失敗例・細かい手順は [`rules/`](rules/README.md) へ寄せている。**正本は CLAUDE.md**。
+必要な節だけを引くには `node tools/ctx.js rules <語>`。
+`node tools/rules-index-check.js` が、両者の対応と「要のことばが消えていないか」を見張る。
+
 ## `spec/` — 現行のゲーム仕様
 
 | 文書 | 中身 |

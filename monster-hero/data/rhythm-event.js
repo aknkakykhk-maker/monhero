@@ -120,6 +120,40 @@ const RHYTHM_EVENTS = Object.freeze([
     //   ここを変えたら台本も直すこと(rhythm-event-thanks-check.js が突き合わせる)。
     participationReward: Object.freeze({ songs: 3, gold: 3000, psyche: 50, heroProof: 10 }),
   }),
+  // 第2回(2026-09-17・ユーザー指示)。木曜12:00から月曜4:00まで。
+  //
+  // ★終わりは週の区切り(月曜5:00)の1時間前。週をまたがないので、この回の記録は
+  //   まるごと 9/14 5:00〜9/21 5:00 の週の中に収まる(RHYTHM_EVENT_PLAYBOOK.md §0)。
+  // ★対象3曲はすべて既存の公開曲。新曲は足していない
+  //   (mou_hitotsu_no_sekai_e はドラさんのゲーム「CREATE MONSTERS」の曲で、
+  //    2026-09-14 からモンヒロビートに入っている)。
+  // ★ビートPは songIds に入れるだけで 1.5倍になる(rhythmEventPointAwardAt)。
+  //   期間中は公開曲ならどれでも1.0倍で貯まり、対象3曲だけ1.5倍。ここに書くこと以外は無い。
+  // ★報酬は 2026-09-17 にユーザーが決めた。曲ごとの超越の実の種族だけが今回ぶんで、
+  //   順位ごとの個数(5/4/3/2/1)とプシュケー(1,000〜200)は全イベント共通の決めごと
+  //   (RHYTHM_EVENT_REWARD_COUNTS / RHYTHM_EVENT_REWARD_PSYCHE)をそのまま使う。
+  Object.freeze({
+    id: 'symphony_2026_09_17',
+    kind: 'limited',
+    name: '第2回 モンヒロビート「異世界交響祭」',
+    startAt: '2026-09-17T12:00:00+09:00',
+    endAt: '2026-09-21T04:00:00+09:00',
+    banner: 'images/events/monbeat-event-2026-09-17-wide.jpg?v=b2ff791693ca',
+    songIds: Object.freeze(['mou_hitotsu_no_sekai_e', 'pandora_boss_remix', 'the_city_beneath_the_comets']),
+    // 曲ごとの部門の1〜5位へ配る超越の実の種族(2026-09-17・ユーザー指示)。
+    // Stay With Me は Pandora のエンディングテーマで、Pandora の主血統が pixie
+    rewardLineageBySongId: Object.freeze({
+      mou_hitotsu_no_sekai_e: 'golem',
+      pandora_boss_remix: 'pixie',
+      the_city_beneath_the_comets: 'ham',
+    }),
+    totalReward: 'heroProof',
+    // 回数ボーナス。期間中に対象曲を遊んだ回数ぶん、ランキング用のスコアへ加点される
+    // (ビートPとは無関係。ビートP側へ混ぜない・RHYTHM_EVENT_POINTS.md §8)
+    playBonus: true,
+    // 参加報酬。対象3曲を**すべて**遊べば、入賞しなくてももらえる
+    participationReward: Object.freeze({ songs: 3, gold: 3000, psyche: 50 }),
+  }),
 ]);
 
 // ===== イベントP（docs/spec/RHYTHM_EVENT_POINTS.md） =====
@@ -144,17 +178,22 @@ const rhythmEventPointAwardAt = (nowMs, songId, score) => {
 
 // ===== イベントP交換所 STEP3 =====
 // 初期価格は docs/spec/RHYTHM_EVENT_POINTS.md §20.1 が正本。
+// ★2026-09-17・ユーザー指示「勇者の証片・虹の超越の実・勇者の証**以外**の単価を5倍に」。
+//   ダイヤ 1→5 / トレーニングチケット 1→5 / 重トレーニングチケット 3→15 /
+//   虹のプシュケー 1→5 / スキップチケット 序10→50・破16→80・急23→115・極50→250・覇100→500。
+//   高額の3つ(証片500 / 虹の超越の実5,000 / 勇者の証10,000)は**据え置き**。
+//   そのため「証片×20個=勇者の証1個」の価値の対応(500×20=10,000)もそのまま保たれる。
 // アイコンは価格(2,000P)だけ決まっており対象IDが未決定なので、ここへは推測で追加しない。
 const RHYTHM_EVENT_POINT_SHOP_OFFERS = Object.freeze([
-  Object.freeze({ id:'diamond_300', name:'ダイヤ', emoji:'💎', kind:'diamond', grantAmount:300, unit:'ダイヤ', cost:1 }),
-  Object.freeze({ id:'training_ticket_x3', name:'トレーニングチケット', emoji:'🎫', kind:'item', itemId:'training_ticket', grantAmount:3, unit:'枚', cost:1 }),
-  Object.freeze({ id:'training_ticket_l', name:'重トレーニングチケット', emoji:'🎟️', kind:'item', itemId:'training_ticket_l', grantAmount:1, unit:'枚', cost:3 }),
-  Object.freeze({ id:'rainbow_psyche', name:'虹のプシュケー', emoji:'🌈', kind:'item', itemId:'rainbow_psyche', grantAmount:1, unit:'個', cost:1 }),
-  Object.freeze({ id:'skip_ticket_jo', name:'スキップチケット・序', emoji:'⏩', kind:'item', itemId:'skip_ticket_jo', grantAmount:1, unit:'枚', cost:10 }),
-  Object.freeze({ id:'skip_ticket_ha', name:'スキップチケット・破', emoji:'⏩', kind:'item', itemId:'skip_ticket_ha', grantAmount:1, unit:'枚', cost:16 }),
-  Object.freeze({ id:'skip_ticket_kyu', name:'スキップチケット・急', emoji:'⏩', kind:'item', itemId:'skip_ticket_kyu', grantAmount:1, unit:'枚', cost:23 }),
-  Object.freeze({ id:'skip_ticket_kiwami', name:'スキップチケット・極', emoji:'⏩', kind:'item', itemId:'skip_ticket_kiwami', grantAmount:1, unit:'枚', cost:50 }),
-  Object.freeze({ id:'skip_ticket_haou', name:'スキップチケット・覇', emoji:'⏩', kind:'item', itemId:'skip_ticket_haou', grantAmount:1, unit:'枚', cost:100 }),
+  Object.freeze({ id:'diamond_300', name:'ダイヤ', emoji:'💎', kind:'diamond', grantAmount:300, unit:'ダイヤ', cost:5 }),
+  Object.freeze({ id:'training_ticket_x3', name:'トレーニングチケット', emoji:'🎫', kind:'item', itemId:'training_ticket', grantAmount:3, unit:'枚', cost:5 }),
+  Object.freeze({ id:'training_ticket_l', name:'重トレーニングチケット', emoji:'🎟️', kind:'item', itemId:'training_ticket_l', grantAmount:1, unit:'枚', cost:15 }),
+  Object.freeze({ id:'rainbow_psyche', name:'虹のプシュケー', emoji:'🌈', kind:'item', itemId:'rainbow_psyche', grantAmount:1, unit:'個', cost:5 }),
+  Object.freeze({ id:'skip_ticket_jo', name:'スキップチケット・序', emoji:'⏩', kind:'item', itemId:'skip_ticket_jo', grantAmount:1, unit:'枚', cost:50 }),
+  Object.freeze({ id:'skip_ticket_ha', name:'スキップチケット・破', emoji:'⏩', kind:'item', itemId:'skip_ticket_ha', grantAmount:1, unit:'枚', cost:80 }),
+  Object.freeze({ id:'skip_ticket_kyu', name:'スキップチケット・急', emoji:'⏩', kind:'item', itemId:'skip_ticket_kyu', grantAmount:1, unit:'枚', cost:115 }),
+  Object.freeze({ id:'skip_ticket_kiwami', name:'スキップチケット・極', emoji:'⏩', kind:'item', itemId:'skip_ticket_kiwami', grantAmount:1, unit:'枚', cost:250 }),
+  Object.freeze({ id:'skip_ticket_haou', name:'スキップチケット・覇', emoji:'⏩', kind:'item', itemId:'skip_ticket_haou', grantAmount:1, unit:'枚', cost:500 }),
   Object.freeze({ id:'hero_proof_shard', name:'勇者の証片', emoji:'🎖️', kind:'item', itemId:'hero_proof_shard', grantAmount:1, unit:'個', cost:500 }),
   Object.freeze({ id:'transcend_fruit_rainbow', name:'虹の超越の実', emoji:'🍇', kind:'item', itemId:'transcend_fruit_rainbow', grantAmount:1, unit:'個', cost:5000 }),
   Object.freeze({ id:'hero_proof', name:'勇者の証', emoji:'🏅', kind:'item', itemId:'hero_proof', grantAmount:1, unit:'個', cost:10000 }),

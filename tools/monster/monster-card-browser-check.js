@@ -14,6 +14,16 @@
 //   (実際に測ったら 216〜1262px とばらけた。実装ではなく環境の都合)。
 //   そのかわり「同じ部品を通っているか」は確実に分かるので、そちらで見る。
 const { chromium } = require('playwright');
+const fs = require('fs');
+const path = require('path');
+// カードの高さの下限は実装(MONSTER_CARD_STYLE)が正本。ここへ値を書き写すと、
+// 字の大きさを見直して高さを変えるたびに検査だけが取り残される
+// (2026-09-18に実際そうなった。96px のまま探していて「共通の器に入っていない」と言った)。
+const CARD_MIN_HEIGHT = (() => {
+  const src = fs.readFileSync(path.join(__dirname, '../../monster-hero/src/parts/60-app.jsx'), 'utf8');
+  const m = src.match(/const MONSTER_CARD_STYLE = \{ minHeight: '(\d+px)' \}/);
+  return m ? m[1] : '112px';
+})();
 
 const PAGE_URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/index.html';
 const results = [];
@@ -78,13 +88,13 @@ const seed = () => {
   //   Tailwind のクラスなので効かず、まったく別の場所へ飛んでしまう
   //   (実際に旧実装へ戻して測ったら、名前 y=2758 に対しバッジ y=842 と1900pxずれた)。
   //   そちらは monster-card-consistency-check.js が「絵の下へ絶対配置しないこと」で見る。
-  const cards = () => page.evaluate(() => {
+  const cards = () => page.evaluate((minHeight) => {
     const names = [...document.querySelectorAll('.mh-monster-card-name')];
     if (!names.length) return null;
     // 名前の行を持つカードの器(高さを直に指定しているもの)を数える
-    const shells = names.map((el) => el.closest('[style*="96px"]')).filter(Boolean);
+    const shells = names.map((el) => el.closest(`[style*="${minHeight}"]`)).filter(Boolean);
     return { count: names.length, shells: shells.length };
-  });
+  }, CARD_MIN_HEIGHT);
 
   try {
     await page.goto(PAGE_URL, { waitUntil: 'load', timeout: 60000 });

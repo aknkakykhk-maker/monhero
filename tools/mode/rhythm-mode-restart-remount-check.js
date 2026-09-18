@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// やり直しでの作り直しが、ボタンの文言に頼らず判定されるか。
 const fs=require('fs');
 const path=require('path');
 const crypto=require('crypto');

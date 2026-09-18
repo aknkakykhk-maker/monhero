@@ -1,3 +1,4 @@
+// 継承固有技が最新定義に追従し、旧スナップショットへfallbackするか。
 const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分類フォルダから見た1つ上
 const assert = require('assert');
 const fs = require('fs');

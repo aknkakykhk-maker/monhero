@@ -280,24 +280,29 @@ console.log('--- ⑨ 縦長立ち絵の丸枠(object-cover)対策 ---');
 check('縦長立ち絵の丸枠対策(MONSTER_ART_CONTAIN_IDS)にエイキが入っている',
   /MONSTER_ART_CONTAIN_IDS = Object\.freeze\(\[[^\]]*'Eiki'[^\]]*\]\)/.test(source));
 
-console.log('--- ⑩ 既存デバッグ画面(モンスター画像・染色確認)からも見られること ---');
-// エイキはdebugOnlyのためマスモン登録ができず、通常の「所持モンスター個体」経由では
-// この画面(MONSTER_IMAGE_DEBUG)へ出せない。所持を経ずに直接差し込んでいるかを確かめる
-check('MONSTER_IMAGE_DEBUGの選択肢へ debugOnly モンスターを所持を問わず差し込んでいる',
-  /Object\.values\(ALL_PLAYER_MONSTERS\)\.forEach\(mon=>\{if\(mon\?\.debugOnly&&!owned\.some\(m=>m\.baseId===mon\.id\)\)owned\.push\(\{id:`debug-preview-\$\{mon\.id\}`/.test(source));
+console.log('--- ⑩ 「新モンスター確認」からも見られること ---');
+// もとは「モンスター画像・染色確認」(MONSTER_IMAGE_DEBUG)を見ていた。中身が9割同じだったので
+// 「新モンスター確認」(MONSTER_CHECK_DEBUG)へ吸収し、あちらは消した(2026-09-17)。
+// 見ている約束は変えていない: 所持していなくてもエイキが出ること・本番と同じ収め方を通すこと・
+// 染色マスクの縮尺が className から決まること・攻撃モーションをその場で再生できること。
+const checkPart = fs.readFileSync(path.join(ROOT, 'monster-hero/src/parts/74-screen-monster-check-debug.jsx'), 'utf8');
+check('選択肢は所持も解放も見ず ALL_PLAYER_MONSTERS から作る(エイキも必ず出る)',
+  /const monsterCheckAllMonsters = \(\) => \{[\s\S]*?Object\.values\(ALL_PLAYER_MONSTERS\)/.test(checkPart)
+  && !/masuMons|unlockedMonsterIds|debugOnly/.test(
+      checkPart.slice(checkPart.indexOf('const monsterCheckAllMonsters'), checkPart.indexOf('const monsterCheckMarketItems'))));
 check('元画像の表示も本番と同じ収め方(monsterArtFitStyle)を通す(丸枠だけ実物より切れて見えるのを防ぐ)',
-  /palette===null\?<img src=\{src\} alt=\{label\} className=\{`w-full h-full \$\{fit\}`\} style=\{\{\.\.\.monsterArtFitStyle\(base\.id,undefined\),/.test(source));
+  /style=\{\{ \.\.\.monsterArtFitStyle\(mon\.id, undefined\),/.test(checkPart));
 // 染色マスクの縮尺は img の className に書いた object-cover / object-contain から決まる
 // (monsterArtMaskSize)。ここを style 側へ移すと、どの検査も落ちないまま染色だけがずれる
 check('収め方(object-fit)は className に書いたままにする(マスクの縮尺がここから決まる)',
-  /className=\{`w-full h-full \$\{fit\}`\}/.test(source));
-check('攻撃モーションを同じ画面でその場で再生できる(atkMotionがdefault以外のときだけ)',
-  source.includes("const motionSupported=atkMotion!=='default'&&atkMotion!=='pandoraDualThunder';")
-  && source.includes('攻撃モーション確認（atkMotion: {atkMotion}）')
-  && source.includes('攻撃モーションを再生'));
-check('モーション再生は本番と同じ関数(attackMotionAnimation)・同じ桜(EikiSakuraPetals)を使う(別実装を増やしていない)',
-  source.includes('style={{isolation:\'isolate\',animation:attackMotionAnimation(monsterImageDebugMotionPlaying)}}')
-  && source.includes('{monsterImageDebugMotionPlaying?.sakura&&<EikiSakuraPetals/>}'));
+  /className=\{`w-full h-full \$\{fit\}`\}/.test(checkPart));
+// 演出は本番(図鑑)とまったく同じ部品・同じ手順を通す。別実装を増やさない。
+// 吸収前は独自の setTimeout 列で組み直していたぶん、パンドラの分身だけ再生できなかった
+check('攻撃モーションは本番と同じ BattleAttackMotionPreview / 同じ手順で再生する',
+  checkPart.includes('<BattleAttackMotionPreview image={dyedArt(')
+  && checkPart.includes('data-monster-check-motion')
+  && source.includes('attackMotionUniquePreviewSequence'));
+check('部位ごとの切り分け(染色Nのみ)をエイキでも見られる', checkPart.includes('data-monster-check-region'));
 
 discCheck().then(() => {
   console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');

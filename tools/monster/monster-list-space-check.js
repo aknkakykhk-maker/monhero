@@ -83,11 +83,15 @@ const seed = () => {
     if (openedRoster) {
       await page.waitForTimeout(1400);
       await dismissOverlays();
-      // 説明とセット名がたたまれた状態で始まる(＝一覧がすぐ始まる)
-      check('編成: 説明がたたまれている',
+      // 一覧がすぐ始まる(＝上の帯が画面の半分を超えて占めていない)。
+      // 2026-09-18: 説明の帯そのものを消したので、[data-screen-note="partyPick"] は
+      // もう無い。見たいのは「一覧がどれだけ残っているか」なので、そちらを直に測る。
+      check('編成: 一覧が画面の3分の1以上ある',
         await page.evaluate(() => {
-          const el = document.querySelector('[data-screen-note="partyPick"]');
-          return !!el && el.getBoundingClientRect().height <= 70;
+          const root = document.querySelector('[data-mh-screen]');
+          if (!root) return false;
+          const list = [...root.children].find((el) => el.classList.contains('mh-scroll'));
+          return !!list && list.getBoundingClientRect().height >= innerHeight / 3;
         }));
       check('編成: セット名・コピーがたたまれている',
         await page.evaluate(() => !!document.querySelector('[data-party-set-edit-toggle][aria-expanded="false"]')));

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// EASY譜面が音とどれだけずれているかを測る監査。
 const fs=require('fs');
 const path=require('path');
 

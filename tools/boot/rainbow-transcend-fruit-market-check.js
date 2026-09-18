@@ -1,3 +1,4 @@
+// 「虹の超越の実」がマーケットに1000プシュケーで常設されているか。
 const { loadDyeModule } = require('../harness');
 const api = loadDyeModule();
 const assert = (condition, message) => { if (!condition) throw new Error(message); console.log(`OK: ${message}`); };

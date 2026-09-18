@@ -4,7 +4,7 @@
 //   node tools/mode/species-challenge-browser-check.js
 //
 // 見るのは次のとおり。
-//   ① デバッグ設定 → BATTLE TEST → ⚔️バトルモード → 本番と同じBATTLE MODEカルーセルから入れる
+//   ① デバッグ設定(DEBUG MENU) → ⚔️バトル → ⚔️バトルモード → 本番と同じBATTLE MODEカルーセルから入れる
 //   ② 種族選択 → 難易度 → 勇者 → 供モン → 出撃確認 の各画面が出て、iPhone縦で横にはみ出さない
 //   ③ 勇者と同じモンスターは供モンに出ない(同じbaseIdの重複拒否)
 //   ④ 供モン0体でも出撃できる
@@ -98,14 +98,14 @@ const check = (name, ok, detail = '') => {
       check(`${label}が横にはみ出さない`, size.scrollWidth <= size.clientWidth + 1, `${size.scrollWidth} / ${size.clientWidth}`);
     };
 
-    // --- ① デバッグ設定 → BATTLE TEST → ⚔️バトルモード ---
+    // --- ① デバッグ設定(DEBUG MENU) → ⚔️バトル → ⚔️バトルモード ---
     // デバッグ設定はヘルプの下にある目立たないボタンからだけ開ける
     await page.getByRole('button', { name: '設定' }).first().dispatchEvent('click');
     await page.getByRole('button', { name: 'ヘルプ' }).first().waitFor({ timeout: 20000 });
     await page.getByRole('button', { name: 'ヘルプ' }).first().dispatchEvent('click');
     await page.getByRole('button', { name: 'わかった！冒険に戻る' }).waitFor({ timeout: 20000 });
     await page.locator('footer button[aria-label=""]').dispatchEvent('click');
-    await page.getByText('BATTLE TEST').first().waitFor({ timeout: 20000 });
+    await page.getByText('DEBUG MENU').first().waitFor({ timeout: 20000 });
     check('デバッグ設定を開ける', true);
     await page.getByRole('button', { name: '⚔️ バトルモード' }).dispatchEvent('click');
     await page.getByText('BATTLE MODE').first().waitFor({ timeout: 20000 });

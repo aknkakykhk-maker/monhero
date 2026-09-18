@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// 省エネモードの内部状態と、stopAllAutoでOFFに戻ること。
 'use strict';
 const fs=require('fs');
 const path=require('path');

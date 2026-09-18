@@ -417,6 +417,50 @@ const gridMs=timing.gridMs;
 const gridTimeMs=grid=>timing.beatZeroMs+grid*gridMs;
 const BEAT=timing.subdivisionsPerBeat;
 const BAR=BEAT*timing.beatsPerBar;
+// --- 終点フリックを置いてよい場所か（2026-09-18） ---
+// 終点フリックは「受付に入った位置から24px動いたら弾いた」と見る。ところが斜めやジグザグの
+// SLIDEでは指は経路を追って動き続けるしかなく、人の追従はどうしても遅れる。受付のあいだに
+// 経路そのものが24pxより大きく振れる区間では、「弾いた」と「追っただけ」を見分けられない。
+// ＝弾かなくても成立し、弾いてもいちばん良い判定にはならない。だから**置かない**。
+// 物差しは実装(RHYTHM_END_FLICK_*)と rhythm-end-flick-swing-check.js に合わせる。
+//   24px ÷ 68.6px(幅390pxの画面の1レーン) = 0.35レーン
+const END_FLICK_ARM_MS=250;              // 受付が始まる時刻（終端の何ms前か）
+const END_FLICK_BACK_MS=80;              // 追従の遅れとして見込む長さ
+const END_FLICK_BACK_STEPS=4;            // さかのぼる区間の刻み
+const END_FLICK_MAX_SWING_LANES=0.35;    // これ以上振れる場所には置かない
+// 経路の位置（ランタイムの rhythmSlideExpectedLane と同じ直線補間。端はそのまま伸ばす）
+const slideLaneAtGrid=(note,grid)=>{
+  const points=note.slidePoints;
+  if(!Array.isArray(points)||!points.length)return Number(note.lane)||0;
+  if(grid<=points[0].grid)return Number(points[0].lane)||0;
+  for(let i=1;i<points.length;i++){
+    const a=points[i-1],b=points[i];
+    if(grid<=b.grid){
+      const span=Math.max(1e-6,Number(b.grid)-Number(a.grid));
+      const p=Math.max(0,Math.min(1,(grid-Number(a.grid))/span));
+      return Number(a.lane)+(Number(b.lane)-Number(a.lane))*p;
+    }
+  }
+  return Number(points[points.length-1].lane)||0;
+};
+// 受付のあいだの「直近 END_FLICK_BACK_MS の経路の振れ」の最大（レーン）
+const endFlickPathSwingLanes=note=>{
+  if(note.type!=='SLIDE')return 0;
+  const endGrid=note.grid+(Number(note.durationGrids)||0);
+  let peak=0;
+  for(let ms=-END_FLICK_ARM_MS;ms<=0;ms+=10){
+    let min=Infinity,max=-Infinity;
+    for(let i=0;i<=END_FLICK_BACK_STEPS;i++){
+      const at=endGrid+(ms-END_FLICK_BACK_MS*(1-i/END_FLICK_BACK_STEPS))/gridMs;
+      const lane=slideLaneAtGrid(note,at);
+      if(!Number.isFinite(lane))continue;
+      if(lane<min)min=lane;
+      if(lane>max)max=lane;
+    }
+    if(max>=min&&max-min>peak)peak=max-min;
+  }
+  return peak;
+};
 // --- 曲の途中で終わらせる指定（2026-09-06・ユーザー指示「長すぎるから2分ぐらいで
 //     ちょうどいいとこで終わるような作りにして」）---
 // 音源そのものは切らない。デュラハンの2曲はバトルのBGMと同じファイルを使っているので、
@@ -1274,6 +1318,8 @@ const buildChart=(difficulty,options={})=>{
       if(note.type!=='HOLD'&&note.type!=='SLIDE')return;
       const endGrid=note.grid+(Number(note.durationGrids)||0);
       if(notes.some(other=>other!==note&&Math.abs(other.grid-endGrid)<BEAT))return;
+      // 経路が大きく振れる終わり方には付けない（弾いたことにされる／弾いても報われない）
+      if(endFlickPathSwingLanes(note)>=END_FLICK_MAX_SWING_LANES)return;
       candidates.push(index);
     });
     for(const index of spreadPick(candidates,endFlickMax,3))notes[index].endFlick=true;

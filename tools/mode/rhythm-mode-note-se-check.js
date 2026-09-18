@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// 空押しSEが、ノーツを取ったときのSEと混ざらないか。
 const fs=require('fs');
 const path=require('path');
 const vm=require('vm');

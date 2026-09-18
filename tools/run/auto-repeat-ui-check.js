@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// AUTO∞の切替UIで、ONのときも印が戻ること。
 'use strict';
 const fs=require('fs');
 const path=require('path');

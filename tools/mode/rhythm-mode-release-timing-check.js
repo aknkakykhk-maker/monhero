@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// 離す判定の窓(遅れたときにGOODかGREATか)。
 const fs=require('fs'),path=require('path'),vm=require('vm');
 const ROOT=path.resolve(__dirname,'../..');
 const source=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js'),'utf8');

@@ -1,3 +1,4 @@
+// 種族チャレンジのバトルが、既存の難易度設定へ正しく渡されるか。
 const fs = require('fs');
 const source = fs.readFileSync('monster-hero/src/game-system.jsx', 'utf8');
 

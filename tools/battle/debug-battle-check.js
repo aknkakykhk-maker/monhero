@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// デバッグバトルが通常プレイと混ざらないか(敵の使い回し・BGM経路・画面遷移・通常モードへの復帰)。
 const fs = require('fs');
 const assert = require('assert');
 const source = fs.readFileSync('monster-hero/src/game-system.jsx', 'utf8');

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// HOLDの終端バーが「終端の時刻の幅」で描かれるか。
 const fs=require('fs'),path=require('path'),vm=require('vm');
 const ROOT=path.resolve(__dirname,'../..'),read=file=>fs.readFileSync(path.join(ROOT,file),'utf8');
 const source=read('monster-hero/data/rhythm-mode.js'),game=read('monster-hero/src/game-system.jsx'),help=read('monster-hero/data/help.js');

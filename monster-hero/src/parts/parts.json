@@ -1,197 +1,213 @@
 {
-  "_comment": "game-system.jsx はこの順に連結して tools/build.js が生成する。新しい部品を足したらここへ並べる(順番が依存の正本)。10〜30 は共有層(MonsterHeroGame を知らないもの)、40 は画面ライフサイクル、50 以降が画面。 pure:true の部品は React・JSX・document・window・保存(storeGet/storeSet)・Audio_・fetch・タイマーを一切参照しない「純粋な計算とデータ」で、tools/boot/parts-purity-check.js が守る。",
-  "parts": [
-    {
-      "file": "10-core.jsx",
-      "role": "共有層の土台。React フック・SVG アイコン・wait・バトル速度・XP/ゴールド表・バトルモード・モード別報酬"
-    },
-    {
-      "file": "11-masu-progression.jsx",
-      "role": "マスモン育成の純関数。レベル・絆・限界突破・超越・固有技継承・合体・寄付・再生・血統・総合力・一度きり移行と診断",
-      "pure": true
-    },
-    {
-      "file": "12-training.jsx",
-      "role": "修行(TRAINING。未公開)の定義",
-      "pure": true
-    },
-    {
-      "file": "13-bgm-and-rhythm-settings.jsx",
-      "role": "BGM 一覧、音ゲー設定・BEST の既定値と正規化、BGM アレンジの正規化と既定曲の一度きり移行",
-      "pure": true
-    },
-    {
-      "file": "14-audio.jsx",
-      "role": "Audio_(BGM・ジングル・SE・AudioContext の復帰。音の唯一の入口)"
-    },
-    {
-      "file": "15-dye-and-art.jsx",
-      "role": "染色(色ID・領域マスク解析・再着色・キャッシュ)、模様、モンスターの絵とアイコンの部品"
-    },
-    {
-      "file": "16-ranking-detail-and-widgets.jsx",
-      "role": "ランキング詳細形式(RANKING_DETAIL_VERSION)、合体履歴、★・オーラなどの小部品、色ピッカー、音量スライダー"
-    },
-    {
-      "file": "17-release-changelog-login-missions.jsx",
-      "role": "公開フラグ、更新履歴の整形、一覧設定の正規化、ログインボーナス、助手の親密度、補償ギフト、キャンペーン、プレイ時間、ミッション定義",
-      "pure": true
-    },
-    {
-      "file": "18-points-and-auto.jsx",
-      "role": "強化ポイントの補填と補正、AUTO 設定と自動ターン選択",
-      "pure": true
-    },
-    {
-      "file": "19-difficulties-and-rules.jsx",
-      "role": "スキップチケット、ヘルプ目次、難易度(通常・極限・クイック・種族チャレンジ)、極限の特別ルール、トレーニングの選択肢、極限モードの解放",
-      "pure": true
-    },
-    {
-      "file": "20-market-notices-help.jsx",
-      "role": "マーケット部品、画像先読みキュー、チュートリアル・更新通知の保存キー、ヘルプの実データ表"
-    },
-    {
-      "file": "21-assistant.jsx",
-      "role": "助手(みゅあ・きき・ももすけ)の文脈と吹き出し AssistantBubble、QuickStepScreen"
-    },
-    {
-      "file": "22-enemy-and-bond-entries.jsx",
-      "role": "難易度の見た目、敵の行動選択と生成、絆ランキングの集計、教えの演出スタイル",
-      "pure": true
-    },
-    {
-      "file": "23-rpg-debug.jsx",
-      "role": "ダンジョン RPG 戦闘テスト(デバッグ専用の別エンジン)",
-      "pure": true
-    },
-    {
-      "file": "24-battle-fx.jsx",
-      "role": "エイキの桜・パンドラの雷などバトル演出の部品"
-    },
-    {
-      "file": "25-storage.jsx",
-      "role": "保存層(storeGet / storeSet / storeList / setStorageWriteBlocked)と音ゲー保存の薄い関数"
-    },
-    {
-      "file": "26-supabase.jsx",
-      "role": "全国ランキング(Supabase REST)。難易度キー、取得、送信、絆Lv、周回ID"
-    },
-    {
-      "file": "27-result-widgets.jsx",
-      "role": "リザルト部品(LevelGrowthBar・CountUpNumber・RewardSummaryCard)、起動ゲージ連携、染色マスクの手動エディタ、長押しボタン"
-    },
-    {
-      "file": "28-rhythm-shared.jsx",
-      "role": "音ゲーの共有部品: 表示時間の定数、入力キー、ノーツ速度、画面回転・静音、タイミング調整"
-    },
-    {
-      "file": "29-rhythm-screens.jsx",
-      "role": "音ゲーのオプション画面・曲えらび・マスモン枠(演奏画面以外)"
-    },
-    {
-      "file": "30-rhythm-play.jsx",
-      "role": "音ゲーの演奏画面 RhythmTapTest(rAF 1本・判定・描画)と振動・サイドの応援。タイミング基盤は触らない"
-    },
-    {
-      "file": "40-screen-effects.jsx",
-      "role": "画面ライフサイクル。タイマー・リスナーの登録簿 useScreenEffects(画面専用は画面を離れたら止め、進行は止めない)"
-    },
-    {
-      "file": "50-error-boundary.jsx",
-      "role": "画面のエラー境界 MhErrorBoundary と、デバッグ用にわざと例外を投げる部品"
-    },
-    {
-      "file": "51-screen-settings.jsx",
-      "role": "画面: 設定(SETTINGS)。MonsterHeroGame から切り出した1画面目"
-    },
-    {
-      "file": "52-screen-missions.jsx",
-      "role": "画面: ミッション(MISSIONS)。受け取りは MonsterHeroGame 側に残し、props で受ける"
-    },
-    {
-      "file": "53-screen-gift-box.jsx",
-      "role": "画面: ギフトボックス(GIFT_BOX)。受け取りは MonsterHeroGame 側に残し、props で受ける"
-    },
-    {
-      "file": "54-screen-item-inventory.jsx",
-      "role": "画面: アイテム(ITEM_INVENTORY)。戻り先はプロフィール。使う対象えらびは本体側"
-    },
-    {
-      "file": "55-screen-breeder-market.jsx",
-      "role": "画面: マーケット(BREEDER_MARKET)。購入と交換は MonsterHeroGame 側に残し、props で受ける"
-    },
-    {
-      "file": "56-screen-profile.jsx",
-      "role": "画面: プロフィール(PROFILE)。記録の置き場。保存を伴うモーダルは MonsterHeroGame 側に残す"
-    },
-    {
-      "file": "57-screen-monster-dex.jsx",
-      "role": "画面: モンスター図鑑(MONSTER_DEX / MONSTER_DEX_DETAIL / MONSTER_ATTACK_PREVIEW)。表示のみ"
-    },
-    {
-      "file": "58-screen-rhythm.jsx",
-      "role": "画面: モンヒロビート(曲えらび・案内・マスモン枠・ランキング)。演奏画面は触らない"
-    },
-    {
-      "file": "59-screen-masu-mons.jsx",
-      "role": "画面: マスモン一覧(MASU_MONS)。一覧を出すだけで保存に触らない"
-    },
-    {
-      "file": "61-screen-masu-regen-donation.jsx",
-      "role": "画面: 神殿の再生と寄付(MASU_REGENERATION / _DETAIL / MASU_DONATION と、その確認・結果)"
-    },
-    {
-      "file": "62-screen-masu-temple.jsx",
-      "role": "画面: 神殿の限界突破・転生・超越・魂格進化と、その演出・補償告知"
-    },
-    {
-      "file": "63-screen-masu-soul-traits.jsx",
-      "role": "画面: 魂格特性(MASU_SOUL_TRAITS)"
-    },
-    {
-      "file": "64-screen-masu-transcend-enhance.jsx",
-      "role": "画面: 超越強化(MASU_TRANSCEND_ENHANCE)"
-    },
-    {
-      "file": "65-screen-masu-enhance.jsx",
-      "role": "画面: マスモン強化(MASU_ENHANCE)"
-    },
-    {
-      "file": "66-screen-masu-fusion.jsx",
-      "role": "画面: マスモン合体(MASU_FUSION)。MASU 系で最大"
-    },
-    {
-      "file": "67-screen-pick.jsx",
-      "role": "画面: ラン開始まわりのえらぶ画面(SKIP_PICK / SKIP_RESULT / PICK_HERO・PICK_ALLY / PICK_PRO_ALLIES / PICK_SLOT / PICK_TEACHING)"
-    },
-    {
-      "file": "68-screen-run-result.jsx",
-      "role": "画面: バトルの結果まわり(UPGRADE_SKILL / WAVE_RESULT / REWARD_PICK / CHAMPION・敗北・リタイア・マスモン登録)"
-    },
-    {
-      "file": "69-screen-home.jsx",
-      "role": "画面: HOME(村の広場)と、そこに重なる案内3つ(ききの加入・ももすけの登場・アップデート案内)"
-    },
-    {
-      "file": "71-screen-battle.jsx",
-      "role": "画面: バトル(BATTLE)と、バトル中にだけ重なる演出4つ。番号が飛んでいるのは 70 が bootstrap のため"
-    },
-    {
-      "file": "72-screen-masu-auto-enhance.jsx",
-      "role": "画面: マスモンのオート強化設定(MASU_AUTO_ENHANCE)。オン/オフ・上限・優先順位だけを決める"
-    },
-    {
-      "file": "73-screen-rhythm-history.jsx",
-      "role": "画面: モンヒロビートの履歴(RHYTHM_HISTORY)。終わった週・イベントの順位をあとから見る。表示専用で保存に触らない"
-    },
-    {
-      "file": "60-app.jsx",
-      "role": "MonsterHeroGame 本体(全 state・ロジック・各 gameState の JSX)"
-    },
-    {
-      "file": "70-bootstrap.jsx",
-      "role": "CSS 文字列の注入(createAnimationStyle)、ReactDOM.createRoot、HTML ローディングの非表示"
-    }
-  ]
+ "_comment": "game-system.jsx はこの順に連結して tools/build.js が生成する。新しい部品を足したらここへ並べる(順番が依存の正本)。10〜30 は共有層(MonsterHeroGame を知らないもの)、40 は画面ライフサイクル、50 以降が画面。 pure:true の部品は React・JSX・document・window・保存(storeGet/storeSet)・Audio_・fetch・タイマーを一切参照しない「純粋な計算とデータ」で、tools/boot/parts-purity-check.js が守る。",
+ "parts": [
+  {
+   "file": "10-core.jsx",
+   "role": "共有層の土台。React フック・SVG アイコン・wait・バトル速度・XP/ゴールド表・バトルモード・モード別報酬"
+  },
+  {
+   "file": "11-masu-progression.jsx",
+   "role": "マスモン育成の純関数。レベル・絆・限界突破・超越・固有技継承・合体・寄付・再生・血統・総合力・一度きり移行と診断",
+   "pure": true
+  },
+  {
+   "file": "12-training.jsx",
+   "role": "修行(TRAINING。未公開)の定義",
+   "pure": true
+  },
+  {
+   "file": "13-bgm-and-rhythm-settings.jsx",
+   "role": "BGM 一覧、音ゲー設定・BEST の既定値と正規化、BGM アレンジの正規化と既定曲の一度きり移行",
+   "pure": true
+  },
+  {
+   "file": "14-audio.jsx",
+   "role": "Audio_(BGM・ジングル・SE・AudioContext の復帰。音の唯一の入口)"
+  },
+  {
+   "file": "15-dye-and-art.jsx",
+   "role": "染色(色ID・領域マスク解析・再着色・キャッシュ)、模様、モンスターの絵とアイコンの部品"
+  },
+  {
+   "file": "16-ranking-detail-and-widgets.jsx",
+   "role": "ランキング詳細形式(RANKING_DETAIL_VERSION)、合体履歴、★・オーラなどの小部品、色ピッカー、音量スライダー"
+  },
+  {
+   "file": "17-release-changelog-login-missions.jsx",
+   "role": "公開フラグ、更新履歴の整形、一覧設定の正規化、ログインボーナス、助手の親密度、補償ギフト、キャンペーン、プレイ時間、ミッション定義",
+   "pure": true
+  },
+  {
+   "file": "18-points-and-auto.jsx",
+   "role": "強化ポイントの補填と補正、AUTO 設定と自動ターン選択",
+   "pure": true
+  },
+  {
+   "file": "19-difficulties-and-rules.jsx",
+   "role": "スキップチケット、ヘルプ目次、難易度(通常・極限・クイック・種族チャレンジ)、極限の特別ルール、トレーニングの選択肢、極限モードの解放",
+   "pure": true
+  },
+  {
+   "file": "20-market-notices-help.jsx",
+   "role": "マーケット部品、画像先読みキュー、チュートリアル・更新通知の保存キー、ヘルプの実データ表"
+  },
+  {
+   "file": "21-assistant.jsx",
+   "role": "助手(みゅあ・きき・ももすけ)の文脈と吹き出し AssistantBubble、QuickStepScreen"
+  },
+  {
+   "file": "22-enemy-and-bond-entries.jsx",
+   "role": "難易度の見た目、敵の行動選択と生成、絆ランキングの集計、教えの演出スタイル",
+   "pure": true
+  },
+  {
+   "file": "23-rpg-debug.jsx",
+   "role": "ダンジョン RPG 戦闘テスト(デバッグ専用の別エンジン)",
+   "pure": true
+  },
+  {
+   "file": "24-battle-fx.jsx",
+   "role": "エイキの桜・パンドラの雷などバトル演出の部品"
+  },
+  {
+   "file": "25-storage.jsx",
+   "role": "保存層(storeGet / storeSet / storeList / setStorageWriteBlocked)と音ゲー保存の薄い関数"
+  },
+  {
+   "file": "26-supabase.jsx",
+   "role": "全国ランキング(Supabase REST)。難易度キー、取得、送信、絆Lv、周回ID"
+  },
+  {
+   "file": "27-result-widgets.jsx",
+   "role": "リザルト部品(LevelGrowthBar・CountUpNumber・RewardSummaryCard)、起動ゲージ連携、染色マスクの手動エディタ、長押しボタン"
+  },
+  {
+   "file": "28-rhythm-shared.jsx",
+   "role": "音ゲーの共有部品: 表示時間の定数、入力キー、ノーツ速度、画面回転・静音、タイミング調整"
+  },
+  {
+   "file": "29-rhythm-screens.jsx",
+   "role": "音ゲーのオプション画面・曲えらび・マスモン枠(演奏画面以外)"
+  },
+  {
+   "file": "30-rhythm-play.jsx",
+   "role": "音ゲーの演奏画面 RhythmTapTest(rAF 1本・判定・描画)と振動・サイドの応援。タイミング基盤は触らない"
+  },
+  {
+   "file": "31-debug-ui.jsx",
+   "role": "デバッグ画面の共通部品(どの画面も同じ頭・同じ「保存します/しません」のバッジ・メニューの1行)"
+  },
+  {
+   "file": "40-screen-effects.jsx",
+   "role": "画面ライフサイクル。タイマー・リスナーの登録簿 useScreenEffects(画面専用は画面を離れたら止め、進行は止めない)"
+  },
+  {
+   "file": "41-screen-ui.jsx",
+   "role": "画面の共通ガワ(頭・説明文・空状態・タブ・小見出しと、根/パネル/一覧の型)"
+  },
+  {
+   "file": "50-error-boundary.jsx",
+   "role": "画面のエラー境界 MhErrorBoundary と、デバッグ用にわざと例外を投げる部品"
+  },
+  {
+   "file": "51-screen-settings.jsx",
+   "role": "画面: 設定(SETTINGS)。MonsterHeroGame から切り出した1画面目"
+  },
+  {
+   "file": "52-screen-missions.jsx",
+   "role": "画面: ミッション(MISSIONS)。受け取りは MonsterHeroGame 側に残し、props で受ける"
+  },
+  {
+   "file": "53-screen-gift-box.jsx",
+   "role": "画面: ギフトボックス(GIFT_BOX)。受け取りは MonsterHeroGame 側に残し、props で受ける"
+  },
+  {
+   "file": "54-screen-item-inventory.jsx",
+   "role": "画面: アイテム(ITEM_INVENTORY)。戻り先はプロフィール。使う対象えらびは本体側"
+  },
+  {
+   "file": "55-screen-breeder-market.jsx",
+   "role": "画面: マーケット(BREEDER_MARKET)。購入と交換は MonsterHeroGame 側に残し、props で受ける"
+  },
+  {
+   "file": "56-screen-profile.jsx",
+   "role": "画面: プロフィール(PROFILE)。記録の置き場。保存を伴うモーダルは MonsterHeroGame 側に残す"
+  },
+  {
+   "file": "57-screen-monster-dex.jsx",
+   "role": "画面: モンスター図鑑(MONSTER_DEX / MONSTER_DEX_DETAIL / MONSTER_ATTACK_PREVIEW)。表示のみ"
+  },
+  {
+   "file": "58-screen-rhythm.jsx",
+   "role": "画面: モンヒロビート(曲えらび・案内・マスモン枠・ランキング)。演奏画面は触らない"
+  },
+  {
+   "file": "59-screen-masu-mons.jsx",
+   "role": "画面: マスモン一覧(MASU_MONS)。一覧を出すだけで保存に触らない"
+  },
+  {
+   "file": "61-screen-masu-regen-donation.jsx",
+   "role": "画面: 神殿の再生と寄付(MASU_REGENERATION / _DETAIL / MASU_DONATION と、その確認・結果)"
+  },
+  {
+   "file": "62-screen-masu-temple.jsx",
+   "role": "画面: 神殿の限界突破・転生・超越・魂格進化と、その演出・補償告知"
+  },
+  {
+   "file": "63-screen-masu-soul-traits.jsx",
+   "role": "画面: 魂格特性(MASU_SOUL_TRAITS)"
+  },
+  {
+   "file": "64-screen-masu-transcend-enhance.jsx",
+   "role": "画面: 超越強化(MASU_TRANSCEND_ENHANCE)"
+  },
+  {
+   "file": "65-screen-masu-enhance.jsx",
+   "role": "画面: マスモン強化(MASU_ENHANCE)"
+  },
+  {
+   "file": "66-screen-masu-fusion.jsx",
+   "role": "画面: マスモン合体(MASU_FUSION)。MASU 系で最大"
+  },
+  {
+   "file": "67-screen-pick.jsx",
+   "role": "画面: ラン開始まわりのえらぶ画面(SKIP_PICK / SKIP_RESULT / PICK_HERO・PICK_ALLY / PICK_PRO_ALLIES / PICK_SLOT / PICK_TEACHING)"
+  },
+  {
+   "file": "68-screen-run-result.jsx",
+   "role": "画面: バトルの結果まわり(UPGRADE_SKILL / WAVE_RESULT / REWARD_PICK / CHAMPION・敗北・リタイア・マスモン登録)"
+  },
+  {
+   "file": "69-screen-home.jsx",
+   "role": "画面: HOME(村の広場)と、そこに重なる案内3つ(ききの加入・ももすけの登場・アップデート案内)"
+  },
+  {
+   "file": "71-screen-battle.jsx",
+   "role": "画面: バトル(BATTLE)と、バトル中にだけ重なる演出4つ。番号が飛んでいるのは 70 が bootstrap のため"
+  },
+  {
+   "file": "72-screen-masu-auto-enhance.jsx",
+   "role": "画面: マスモンのオート強化設定(MASU_AUTO_ENHANCE)。オン/オフ・上限・優先順位だけを決める"
+  },
+  {
+   "file": "73-screen-rhythm-history.jsx",
+   "role": "画面: モンヒロビートの履歴(RHYTHM_HISTORY)。終わった週・イベントの順位をあとから見る。表示専用で保存に触らない"
+  },
+  {
+   "file": "74-screen-monster-check-debug.jsx",
+   "role": "画面: 新モンスター確認(MONSTER_CHECK_DEBUG。デバッグ専用)。所持・解放に関係なく全種を並べ、画像・染色・モーション・能力・技・血統・マーケットと「実装チェック」を1枚で見る"
+  },
+  {
+   "file": "76-screen-debug-data.jsx",
+   "role": "画面: データを用意する(DEBUG_DATA_SETUP。デバッグ専用)。条件が揃わないと始まらないもの(ログインボーナス・ミッション・購入・アイテム・育成)をすぐ試せる状態にする"
+  },
+  {
+   "file": "60-app.jsx",
+   "role": "MonsterHeroGame 本体(全 state・ロジック・各 gameState の JSX)"
+  },
+  {
+   "file": "70-bootstrap.jsx",
+   "role": "CSS 文字列の注入(createAnimationStyle)、ReactDOM.createRoot、HTML ローディングの非表示"
+  }
+ ]
 }

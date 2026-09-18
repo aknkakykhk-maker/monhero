@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// AUTO∞の自動限界突破の上限設定と、その保存。
 'use strict';
 
 const assert = require('assert');
