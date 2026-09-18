@@ -13258,7 +13258,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       セットの箱の中へ入れた(2026-09-07・ユーザー指摘「1枚目 まだ窮屈」) */}
                 <div className="mt-1 flex items-center gap-2 border-t border-indigo-500/20 pt-1.5">
                   <span className="text-[10px] font-black text-indigo-300 shrink-0 leading-tight">編成中<br/>{draftMonsterRoster.length}/{STARTER_MONSTER_IDS.length}</span>
-                  <div className="flex-1 flex gap-1.5 overflow-x-auto min-h-[36px] items-center" style={{scrollbarWidth:'none'}}>
+                  {/* ★4体ずつ2段に並べる(2026-09-18・ユーザー指示)。
+                      横スクロールだった頃は8体のうち7体しか見えず、いま誰を入れているのかを
+                      確かめるのに横へ送る必要があった。2段にすれば8体が一度に見える。 */}
+                  <div className="grid flex-1 grid-cols-4 gap-1.5 justify-items-center min-h-[36px] items-center">
                     {draftMonsterRoster.length===0?(
                       <span className="text-[10px] text-slate-400 font-bold">まだ選ばれていません</span>
                     ):(draftMonsterRoster.map(entryId=>{
@@ -13275,11 +13278,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   </div>
                 </div>
                 </div>{/* ← セットの箱(タブ・セット名・編成中)ここまで */}
-                {renderScreenNote('partyPick',
-                  `解放済み${unlockedMonsterIds.length}体。ちょうど${STARTER_MONSTER_IDS.length}体選ぶと「決定」できます。`,
-                  ['アイコンをタップすると編成に入れたり外したりできます。',
-                   'カードの「i」ボタンでそのモンスターの詳細を見られます。',
-                   '同じ種は1体までです（マスモンも含めて数えます）。'])}
+                {/* 「解放済み◯体。ちょうど8体選ぶと『決定』できます。」の帯は消した
+                    (2026-09-18・ユーザー指示)。すぐ上の「編成中 8/8」と下の「決定 (8/8)」が
+                    同じことを言っていて、そのぶん一覧が46px押し下げられていた。
+                    操作の説明は助手の吹き出し(scene="roster")が受け持つ。 */}
                 {renderMonsterSortFilterBar()}
                 <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
                   {unifiedMonsterEntriesDraft.length===0&&<ScreenEmpty emoji="🔍" lines={['表示するモンスターがいません。','上の「表示」「種族」でしぼりこみを見直してください。']}/>}
