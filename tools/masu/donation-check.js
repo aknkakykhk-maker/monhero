@@ -74,5 +74,8 @@ check('寄付一覧と演出の画像サイズを抑えて全身を収める',
     && /\.mh-donation-monster\{position:absolute;width:96px;height:96px/.test(source));
 check('MASU_DONATIONは神殿BGM', /MASU_DONATION:\s*'temple'/.test(source));
 check('寄付の戻り先は神殿', /resetDonationFlow\(\);setGameState\('TEMPLE'\)/.test(source));
-check('一覧タイトルが統一されている', source.includes('>ベースモン一覧</h2>') && source.includes('>マスモン一覧</h2>'));
+// 2026-09-18: 画面の頭を共通部品(ScreenHead)へ寄せたので、h2 は部品の中に1つだけになり、
+// 画面の名前は title で渡す形になった。
+check('一覧タイトルが統一されている',
+  source.includes('<ScreenHead title="ベースモン一覧"') && source.includes('<ScreenHead title="マスモン一覧"'));
 process.exit(failed ? 1 : 0);
