@@ -372,7 +372,12 @@ function BattleScreen({
             // 余りの高さは、この下のバフ帯の mt-auto がまとめて吸う。
             return <div className={`mt-2 mb-1 border p-1 px-4 rounded-full flex items-center gap-1.5 animate-pulse z-[45] shadow-lg shrink-0${battleTutorialSpotClass('enemyIntent')} ${focusedCard?'invisible':'visible'} ${tone}`}><Target size={12}/><div className="text-[10px] font-black uppercase tracking-tight">{enemyIntent.label}{rawDmg>0?` (予定: ${plannedDmg})`:''}</div></div>;
           })()}
-          <div className={`flex flex-wrap justify-center gap-1 max-w-[340px] mt-auto mb-1 shrink-0 relative z-[40] ${focusedCard?'invisible':'visible'}`}>
+        </main>
+        {/* 強化の札(2026-09-19・ユーザー指摘「バフデバフ欄が見にくくなってる」)。
+            もとは敵のいる main の中に置いていたが、main は overflow-y-auto なので、
+            強化が増えて札が2行3行になると表示の外へ押し出され、下の味方バーに隠れて読めなくなっていた。
+            main の外へ出し、味方バーのすぐ上に置く。これで札が何行になっても必ず見える。 */}
+          <div className={`flex flex-wrap justify-center gap-1 max-w-[340px] shrink-0 px-2 pt-1 pb-0.5 bg-slate-950 relative z-[40] ${focusedCard?'invisible':'visible'}`}>
             {/* === 永続バフ === */}
             {/* ★0のものは出さない(2026-09-18・ユーザー依頼「情報量をもっとよくしたい」)。
                 以前は8つが値に関わらず並び、始めたばかりの周回では「ATK +0%」「被ダメ -0%」…
@@ -410,7 +415,6 @@ function BattleScreen({
             {getNextTurnBuff('gutsCostMult',1.0)>1&&<div className="text-[10px] font-black text-amber-400 bg-amber-950/60 px-2 py-1 rounded-full border border-amber-500/50 animate-pulse uppercase flex items-center gap-1"><Zap size={8}/> 次T消費G+{Math.round((getNextTurnBuff('gutsCostMult',1.0)-1)*100)}%</div>}
             {getTurnBuff('gutsCostMult',1.0)>1&&<div className="text-[10px] font-black text-amber-300 bg-amber-900/80 px-2 py-1 rounded-full border border-amber-400 animate-bounce uppercase flex items-center gap-1"><Zap size={8}/> 消費G+{Math.round((getTurnBuff('gutsCostMult',1.0)-1)*100)}%</div>}
           </div>
-        </main>
         <div className="shrink-0 py-2 px-2 bg-slate-950 border-y border-white/5 flex flex-col items-center justify-center gap-1 z-10 relative">
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none gap-1" style={{zIndex:200}}>{popups.filter(p=>p.side==='hero').map((p)=>(<div key={p.id} data-lite-damage={liteBattleView?'true':undefined} className={`${p.color} font-black leading-tight px-2 py-0.5 rounded-lg ${liteBattleView?'border border-white/20 text-base':'drop-shadow-[0_2px_8px_rgba(0,0,0,1)]'}`} style={{backgroundColor:liteBattleView?'rgba(2,6,23,0.95)':'rgba(2,6,23,0.55)'}}>{p.text}</div>))}</div>
           <div className="w-full space-y-1 px-2 py-1 bg-black/40 rounded-xl border border-white/5">

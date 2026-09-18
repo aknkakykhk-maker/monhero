@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bed85d0c98ccd85e
+// source-sha256: bee6d386b54ed7b0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 246f35222e8b7d96
+// generated-sha256: 07e1bc5907beb544
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -161,7 +161,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-19 01:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-19 01:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -36666,8 +36666,8 @@ function BattleScreen({
     }), /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] font-black uppercase tracking-tight"
     }, enemyIntent.label, rawDmg > 0 ? ` (予定: ${plannedDmg})` : ''));
-  })(), /*#__PURE__*/React.createElement("div", {
-    className: `flex flex-wrap justify-center gap-1 max-w-[340px] mt-auto mb-1 shrink-0 relative z-[40] ${focusedCard ? 'invisible' : 'visible'}`
+  })()), /*#__PURE__*/React.createElement("div", {
+    className: `flex flex-wrap justify-center gap-1 max-w-[340px] shrink-0 px-2 pt-1 pb-0.5 bg-slate-950 relative z-[40] ${focusedCard ? 'invisible' : 'visible'}`
   }, Math.floor((getPermaBuff('atkPct') + getPermaBuff('muaAtkPct')) * 100) > 0 && /*#__PURE__*/React.createElement("div", {
     className: "text-[10px] font-black text-red-500 bg-black/60 px-2 py-0.5 rounded border border-red-500/50 flex items-center gap-1 shadow-lg uppercase"
   }, /*#__PURE__*/React.createElement(Sword, {
@@ -36776,7 +36776,7 @@ function BattleScreen({
     className: "text-[10px] font-black text-amber-300 bg-amber-900/80 px-2 py-1 rounded-full border border-amber-400 animate-bounce uppercase flex items-center gap-1"
   }, /*#__PURE__*/React.createElement(Zap, {
     size: 8
-  }), " \u6D88\u8CBBG+", Math.round((getTurnBuff('gutsCostMult', 1.0) - 1) * 100), "%"))), /*#__PURE__*/React.createElement("div", {
+  }), " \u6D88\u8CBBG+", Math.round((getTurnBuff('gutsCostMult', 1.0) - 1) * 100), "%")), /*#__PURE__*/React.createElement("div", {
     className: "shrink-0 py-2 px-2 bg-slate-950 border-y border-white/5 flex flex-col items-center justify-center gap-1 z-10 relative"
   }, /*#__PURE__*/React.createElement("div", {
     className: "absolute inset-0 flex flex-col items-center justify-center pointer-events-none gap-1",
