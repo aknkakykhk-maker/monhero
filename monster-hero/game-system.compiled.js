@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 62986de71ad996a9
+// source-sha256: 9d5285224324e922
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ec78fe2845fc8979
+// generated-sha256: 8a3bdcb7233001c1
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -161,7 +161,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-18 16:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-18 17:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -14607,6 +14607,18 @@ const MarketDetailChip = ({
 }, /*#__PURE__*/React.createElement(BookOpen, {
   size: 10
 }), "\u8A73\u7D30");
+// 商品名の折り返し(2026-09-18・ユーザー指摘「商品名の行ズレがださい」)。
+// カードの幅では2行になる名前があるが、ブラウザは日本語の語の切れ目を知らないので
+// 「トレーニン／グチケット」「スキップチ／ケット・序」のように語の途中で切っていた。
+// カタカナの複合語でよく使う後ろ半分の前に「ここで折り返してよい」印(U+200B)を入れて教える。
+//   トレーニング|チケット   スキップ|チケット   絆ポイント|リセットの書   アシスト|カード「きき」
+//   イブリースの|円盤石   おりょうの|アイコン
+//   (「イブリースの円盤／石」「おりょうのアイコ／ン」と最後の1文字が落ちていた)
+// ★入れるのは画面へ出す文字だけ。item.name そのものは変えないので、読み上げラベル・詳細・
+//   検索・保存はこれまでどおり(U+200B は幅0で、コピーしても見た目に出ない)。
+// ★語の頭に印が来ても害はない(行の先頭では折り返しの機会にならない)。
+const MARKET_NAME_WRAP_WORDS = Object.freeze(['チケット', 'カード', 'リセット', 'ショップ', 'ボーナス', 'プシュケー', '円盤石', 'アイコン']);
+const marketNameForWrap = name => MARKET_NAME_WRAP_WORDS.reduce((text, word) => text.split(word).join(`​${word}`), String(name || ''));
 const MarketProductCard = ({
   item,
   owned = false,
@@ -14631,11 +14643,13 @@ const MarketProductCard = ({
     onZoom: onZoom,
     disabled: disabled
   }), /*#__PURE__*/React.createElement("div", {
-    className: `w-full flex items-center justify-center text-center text-[11px] font-black leading-tight ${comingSoon ? 'text-slate-400' : 'text-white'}`,
+    className: `w-full flex items-start justify-center text-center text-[11px] font-black leading-tight ${comingSoon ? 'text-slate-400' : 'text-white'}`,
     style: {
-      minHeight: '36px'
+      minHeight: '36px',
+      wordBreak: 'keep-all',
+      overflowWrap: 'anywhere'
     }
-  }, item.name), /*#__PURE__*/React.createElement("div", {
+  }, marketNameForWrap(item.name)), /*#__PURE__*/React.createElement("div", {
     className: "w-full flex items-center justify-center gap-1",
     style: {
       height: '22px'
