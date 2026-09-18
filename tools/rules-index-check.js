@@ -179,7 +179,9 @@ if (fs.existsSync(TOOLS_README)) {
 let scripts = 0, noDesc = 0;
 (function walk(dir, depth) {
   for (const name of fs.readdirSync(dir).sort()) {
-    if (['node_modules', 'art-sources', 'out'].includes(name)) continue;
+    // ★ドット始まりのフォルダは生成物の置き場(tools/.tailwind-build など。gitignore 済み)。
+    //   build.js を走らせたあとだけ現れて「説明コメントが無い」と言われるので、最初から見ない
+    if (['node_modules', 'art-sources', 'out'].includes(name) || name.startsWith('.')) continue;
     const full = path.join(dir, name);
     if (fs.statSync(full).isDirectory()) { if (depth < 2) walk(full, depth + 1); continue; }
     if (!name.endsWith('.js')) continue;

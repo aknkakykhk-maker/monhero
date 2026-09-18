@@ -47,6 +47,10 @@ const REQUIRED = [
   'assistant-bond-check.js',
   'boot/market-notice-check.js',
   'assistant/assistant-update-notice-check.js',
+  // 更新履歴が「作業報告」になっていないか(2026-09-18・ユーザー指摘
+  // 「更新情報はよくあーいう形になってるから、今後はプレイヤー向けに出すようにして」)。
+  // 書き忘れと違って画面はふつうに動いてしまうので、必須に入れて毎回通す
+  'changelog/player-words-check.js',
   'image-asset-check.js',
 ];
 
