@@ -8238,15 +8238,20 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     soulBattleParty.coordinationCardBonus>0?`カード +${soulBattleParty.coordinationCardBonus}`:null,
   ].filter(Boolean) : [];
 
-  const getIncomingDamageBeforeTurnReduction = useCallback((intent) => {
+  // targetSlot は新モード専用。★渡したときだけ「その子の丈夫さ」で受ける。
+  //   渡さなければ今までどおりパーティの丈夫さなので、既存モードの呼び出しは何も変わらない
+  const getIncomingDamageBeforeTurnReduction = useCallback((intent, targetSlot=null) => {
     // ためる(CHARGE)ターンはダメージが無い。必殺技のダメージは発動(SPECIAL)ターンに出る
     if (!intent||(intent.type!=='ATTACK'&&intent.type!=='SPECIAL')) return 0;
     const atkVal = Math.floor(intent.value*(1.0-getWaveBuff('enemyAtkDebuffPct')));
     const chuuniCutActive = (mainHero?.id==='Ark'||mainHero?.id==='Iblis') && getWaveBuff('chuuniDmgCutUses')<2; // 中二病特性: WAVE毎2回まで被ダメ50%カット
+    const targetUnit = Number.isInteger(targetSlot) ? tacticsUnitsRef.current[targetSlot] : null;
+    const defVal = targetUnit
+      ? resolveEffectiveMaxStat(normalizeTacticsUnit(targetUnit).def, getPermaBuff('defPct')) : effectiveDef;
     // 丈夫さは固定軽減(×0.5)のあと、0.015%/pt（上限50%）を乗算する。
     // 最低30はこの基本防御部分だけに適用し、後続の既存軽減順は変えない。
-    const defenseRate = Math.min(0.5,effectiveDef*0.00015);
-    const dmgBase = Math.max(30,(atkVal-effectiveDef*0.5)*(1-defenseRate))*((mainHero?.id==='Mocchi'||mainHero?.id==='Mitarashi')?0.8:1.0)*(chuuniCutActive?0.5:1.0);
+    const defenseRate = Math.min(0.5,defVal*0.00015);
+    const dmgBase = Math.max(30,(atkVal-defVal*0.5)*(1-defenseRate))*((mainHero?.id==='Mocchi'||mainHero?.id==='Mitarashi')?0.8:1.0)*(chuuniCutActive?0.5:1.0);
     const soulDamageRemaining=Math.max(0,1-(soulBattleParty.damageReduction/100));
     return Math.max(1,Math.floor(dmgBase*Math.max(0.01,(1.0-getPermaBuff('dmgCutPct')))*iceLockEnemyDamageMult*soulDamageRemaining));
   }, [effectiveDef, mainHero, permaBuffs, waveBuffs, soulBattleParty.damageReduction]);
@@ -8516,7 +8521,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const distBonusMult=1.0+(distDmgBonus[slotIdx]||0)+(distAptPct[slotIdx]||0);
     const soulAttack=soulTraitAttackProfile(mon?.masuId?getMasuMon(mon.masuId):null,card,slotIdx);
     const totalBuffMult=traitMult*getTurnBuff('atkMult',1.0)*(1.0+getPermaBuff('atkPct')+getPermaBuff('muaAtkPct')+additionalOryo)*distBonusMult*soulAttack.damageMultiplier;
-    let finalDmg=Math.floor(atk*distMult*baseDmgMult*totalBuffMult*(1.0+getWaveBuff('enemyTakenDmgBonus')+additionalDmgMod));
+    // 新モードは「攻撃したその子のちから」で殴る(設計 §4.1)。ほかのモードはパーティ共通のまま
+    const attackerAtk=isTacticsMode(runMode)&&tacticsUnitsRef.current[slotIdx]
+      ? Math.max(0,normalizeTacticsUnit(tacticsUnitsRef.current[slotIdx]).atk) : atk;
+    let finalDmg=Math.floor(attackerAtk*distMult*baseDmgMult*totalBuffMult*(1.0+getWaveBuff('enemyTakenDmgBonus')+additionalDmgMod));
     if (isSecondOrLaterAtk) finalDmg=Math.floor(finalDmg*0.5);
     const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
     const elapsedTotalTurns=totalTurnCount+Math.max(0,turnCount-1);
@@ -8804,10 +8812,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             let units=tacticsUnitsRef.current, dealt=0, saved=0, guardedCount=0, gutsBack=0;
             targets.forEach(slotIdx=>{
               const own=slotGuards[slotIdx]||{flat:0,mult:0};
-              const base=(own.flat>0||own.mult>0)?Math.floor(own.flat+effectiveDef*own.mult):0;
+              // ガードの軽減量も「その子の丈夫さ」から出す
+              const slotDef=tacticsUnitsRef.current[slotIdx]
+                ? resolveEffectiveMaxStat(normalizeTacticsUnit(tacticsUnitsRef.current[slotIdx]).def,getPermaBuff('defPct')) : effectiveDef;
+              const base=(own.flat>0||own.mult>0)?Math.floor(own.flat+slotDef*own.mult):0;
               // 貫通撃はガードが効かない。連撃は手数ぶんガードが効く(既存モードと同じ決まり)
               const slotGuard=intent.variant==='pierce'?0:(intent.variant==='rush'?base*rushHits:base);
-              const diff=slotGuard-incomingBeforeTurnReduction;
+              // ★受けるダメージもその子の丈夫さで決まるので、狙われた子ごとに計算し直す
+              const slotIncoming=getIncomingDamageBeforeTurnReduction(intent,slotIdx);
+              const diff=slotGuard-slotIncoming;
               if(diff<0){
                 const fd=applyTurnDamageReduction(Math.abs(diff));
                 units=damageTacticsTargets(units,[slotIdx],fd); dealt+=fd;
@@ -10455,11 +10468,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // 新モードのパーティのライフ上限は盤面の合計なので、直に書き換えない。
     // 伸びたぶんを盤面へ配る(段階6で「1体ずつ選ぶ」形にする)
     if(isTacticsMode(runMode)){
-      const grown=growTacticsMaxGuts(
-        growTacticsMaxHp(tacticsUnitsRef.current,nMaxHp-maxHp,getPermaBuff('muaHpPct')),
-        nMaxGuts-maxGuts,getPermaBuff('muaGutsPct'));
+      // ライフ・ガッツ・ちから・丈夫さのどれも盤面が正本。伸びたぶんを配る
+      // (段階11で「1体ずつ選ぶ」形にする)
+      const grown=growTacticsAtkDef(
+        growTacticsMaxGuts(
+          growTacticsMaxHp(tacticsUnitsRef.current,nMaxHp-maxHp,getPermaBuff('muaHpPct')),
+          nMaxGuts-maxGuts,getPermaBuff('muaGutsPct')),
+        nAtk-atk,nDef-def);
       commitTacticsUnits(grown);
     } else { setMaxHp(nMaxHp); setMaxGuts(nMaxGuts); }
+    // パーティのちから・丈夫さは、新モードでもガードの段階・攻撃段階(カードの枚数と威力)を
+    // 決めるのに使い続ける。ダメージそのものは1体ずつの値で出す
     setAtk(nAtk); setDef(nDef);
     const nGrdL=computeGuardLevel(nDef);
     const currentGuardLevel=computeGuardLevel(def);

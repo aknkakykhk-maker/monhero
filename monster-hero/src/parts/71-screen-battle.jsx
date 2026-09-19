@@ -361,14 +361,18 @@ function BattleScreen({
           {enemy&&enemyIntent&&!isBusy&&(()=>{
             // ためる・待機・移動はダメージが無いので「予測」を出さない。
             // 出すと必ず0になり、ガードを構える判断の邪魔になる
-            const rawDmg=getIncomingDamageBeforeTurnReduction(enemyIntent);
+            // 新モードは「狙われた子の丈夫さ」で受け、「その子が構えたガード」だけが効く。
+            // ★targetSlot が無いモードでは今までどおりパーティの値で出る
+            const aimedSlot=Number.isInteger(enemyIntent.targetSlot)?enemyIntent.targetSlot:null;
+            const rawDmg=getIncomingDamageBeforeTurnReduction(enemyIntent,aimedSlot);
             let previewGuardFlat=0, previewGuardMult=0, previewPenaltyCnt=0;
             selectedCards.forEach(idx=>{
               const card=hand[idx];
               const isPenalty=!isAssistCard(card);
               const halved=isPenalty&&previewPenaltyCnt>0;
               const weight=guardCardWeight(card);
-              if(weight>0){const effect=cardEffectMultiplier(card,halved); previewGuardFlat+=GUARD_EVOLUTION[guardLevel].flat*weight*effect; previewGuardMult+=GUARD_EVOLUTION[guardLevel].mult*weight*effect;}
+              const guardsAimed=aimedSlot===null||cardAssignments[idx]===aimedSlot;
+              if(weight>0&&guardsAimed){const effect=cardEffectMultiplier(card,halved); previewGuardFlat+=GUARD_EVOLUTION[guardLevel].flat*weight*effect; previewGuardMult+=GUARD_EVOLUTION[guardLevel].mult*weight*effect;}
               if(isPenalty) previewPenaltyCnt++;
             });
             const plannedDmg=applyTurnDamageReduction(Math.max(0,rawDmg-guardValueOf(previewGuardFlat,previewGuardMult)));

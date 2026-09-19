@@ -13,6 +13,7 @@ const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分�
 //   ⑩⑪ ガッツも1体ずつ。カードは「使う子」を選び、その子のガッツで払う(段階6)
 //   ⑫⑬ ガードは使った子自身を守る。回復カードは使う子へ、倒れた子へ向けると起こす(段階7)
 //   ⑭⑮ 画面へ1体ずつの帯を出す(段階8)／合流すると総合力に応じて敵も強くなる(段階9)
+//   ⑯ ちから・丈夫さも1体ずつ。攻撃はその子のちから、被弾はその子の丈夫さ(段階10)
 //
 // 数式をこのファイルへ書き写すと、本体を変えたときに検査だけ古くなる。
 // 計算は必ず本体から切り出した実装をそのまま動かす。
@@ -50,7 +51,7 @@ vm.runInContext(
     + 'scaleTacticsUnitMaxGuts,canTacticsSlotPay,payTacticsGutsAt,recoverTacticsGutsBoard,'
     + 'growTacticsMaxGuts,healTacticsAt,recoverTacticsGutsAt,selfDamageTacticsAt,'
     + 'reviveTacticsAt,tacticsReviveHelper,tacticsPayerSlot,tacticsEnemyPowerMultiplier,'
-    + 'TACTICS_ENEMY_POWER_MAX};', sandbox);
+    + 'TACTICS_ENEMY_POWER_MAX,growTacticsAtkDef};', sandbox);
 const api = sandbox.api;
 
 // モンスター1体ぶんの入力。マスモンなら育成済みの値が baseHp などに入っている
@@ -410,7 +411,7 @@ check('新モードの被弾は専用の経路を通る', has('} else if (isTact
   && has('const targets=tacticsIntentTargets(intent,tacticsUnitsRef.current,actingEnemyDist);'));
 check('ガードは構えた子のぶんだけで受ける',
   has('const own=slotGuards[slotIdx]||{flat:0,mult:0};')
-    && has('const base=(own.flat>0||own.mult>0)?Math.floor(own.flat+effectiveDef*own.mult):0;'));
+    && has('const base=(own.flat>0||own.mult>0)?Math.floor(own.flat+slotDef*own.mult):0;'));
 check('誰が構えたかをスロットごとに集める',
   has('const addGuardForSlot=(idx,flat,mult)=>{')
     && (source.match(/addGuardForSlot\(slotIdx,/g) || []).length === 3,
@@ -458,6 +459,46 @@ check('ガッツを書き換える場所は数えてある', setGutsSites === 12
 // 既存モードを巻き込んでいないこと
 check('既存モードの実効最大ライフはそのまま',
   has("const effectiveMaxHp = useMemo(() => resolveEffectiveMaxStat(maxHp, getPermaBuff('muaHpPct')), [maxHp, permaBuffs]);"));
+
+// --- ⑯ ちから・丈夫さも1体ずつ(段階10) ---
+check('1体ずつのちから・丈夫さを持っている', pair[0].atk === 120 && pair[0].def === 120,
+  `${pair[0].atk} / ${pair[0].def}`);
+const statGrown = api.growTacticsAtkDef(pair, 50, 30);
+check('トレーニングの伸びは配り切る', (() => {
+  const atkSum = statGrown.filter(Boolean).reduce((s, u) => s + u.atk, 0);
+  const defSum = statGrown.filter(Boolean).reduce((s, u) => s + u.def, 0);
+  const atkBefore = pair.filter(Boolean).reduce((s, u) => s + u.atk, 0);
+  const defBefore = pair.filter(Boolean).reduce((s, u) => s + u.def, 0);
+  return atkSum === atkBefore + 50 && defSum === defBefore + 30;
+})());
+check('ライフ・ガッツには触らない',
+  api.tacticsTotalHp(statGrown) === api.tacticsTotalHp(pair)
+    && api.tacticsTotalGuts(statGrown) === api.tacticsTotalGuts(pair));
+// ★倒れた子にも配る。起き上がったときに置いていかれないように
+check('倒れた子にも配る', (() => {
+  const board = api.damageTacticsTargets(pair, [0], 9999);
+  const after = api.growTacticsAtkDef(board, 40, 0);
+  return after[0].atk > board[0].atk;
+})());
+check('0を渡しても壊れない', api.growTacticsAtkDef(pair, 0, 0)[0].atk === 120
+  && api.growTacticsAtkDef(null, 10, 10).length === 0);
+// 本体への結線
+check('攻撃は「その子のちから」で出す',
+  has('const attackerAtk=isTacticsMode(runMode)&&tacticsUnitsRef.current[slotIdx]'));
+// ★targetSlot を渡したときだけ1体ずつの丈夫さになる。渡さない既存モードは今までどおり
+check('被弾は「狙われた子の丈夫さ」で受ける',
+  has('const getIncomingDamageBeforeTurnReduction = useCallback((intent, targetSlot=null) => {')
+    && has('const targetUnit = Number.isInteger(targetSlot) ? tacticsUnitsRef.current[targetSlot] : null;'));
+check('新モードの受け方も1体ずつ計算し直す',
+  has('const slotIncoming=getIncomingDamageBeforeTurnReduction(intent,slotIdx);')
+    && has('const base=(own.flat>0||own.mult>0)?Math.floor(own.flat+slotDef*own.mult):0;'));
+check('トレーニングのちから・丈夫さも盤面へ配る', has('nAtk-atk,nDef-def);'));
+{
+  const screen = fs.readFileSync(path.join(root, 'monster-hero/src/parts/71-screen-battle.jsx'), 'utf8');
+  check('予告の予測も狙われた子で出す',
+    screen.includes('const rawDmg=getIncomingDamageBeforeTurnReduction(enemyIntent,aimedSlot);')
+      && screen.includes('const guardsAimed=aimedSlot===null||cardAssignments[idx]===aimedSlot;'));
+}
 
 // --- ⑮ 供モンが合流すると敵も強くなる(段階9) ---
 // ★人数ごとの固定倍率にすると弱い編成ほど苦しくなるので、総合力で決める(ユーザーが選択)
