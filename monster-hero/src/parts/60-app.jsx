@@ -948,6 +948,10 @@ function MonsterHeroGame() {
   };
   const tacticsHeal = (amount) => isTacticsMode(runMode)
     ? commitTacticsUnits(healTacticsBoard(tacticsUnitsRef.current, amount)) : null;
+  // 自動再生だけの入口。倒れた子には入れない(2026-09-20 ユーザー指示)。
+  // ★毎ターン勝手に貯まって復活すると、何もしなくても誰も倒れたままにならない
+  const tacticsHealAlive = (amount) => isTacticsMode(runMode)
+    ? commitTacticsUnits(healTacticsAliveBoard(tacticsUnitsRef.current, amount)) : null;
   // ガッツの回復も立っている子へ配る。戻り値は「新モードなら合計ライフ、ほかは null」で、
   // 呼び出し側は null のときだけ今までどおりの1行を通す(ライフの helper と同じ約束)
   const tacticsGutsRecover = (amount) => isTacticsMode(runMode)
@@ -8958,7 +8962,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     let didRegen=false;
     if (autoHpRecoveryRate>0) {
       const autoHealVal=Math.floor(liveEffectiveMaxHp()*autoHpRecoveryRate);
-      if (autoHealVal>0) { if(tacticsHeal(autoHealVal)===null) setHp(p=>Math.min(liveEffectiveMaxHp(),p+autoHealVal)); addPopup(`🌿 自動再生 +${autoHealVal}`,'life','text-teal-300 font-black text-lg italic drop-shadow-md'); didRegen=true; }
+      if (autoHealVal>0) { if(tacticsHealAlive(autoHealVal)===null) setHp(p=>Math.min(liveEffectiveMaxHp(),p+autoHealVal)); addPopup(`🌿 自動再生 +${autoHealVal}`,'life','text-teal-300 font-black text-lg italic drop-shadow-md'); didRegen=true; }
     }
     if (gutsRegen>0) { addPopup(`🌿 自動ガッツ +${gutsRegen}`,'guts','text-cyan-300 font-black text-lg italic drop-shadow-md'); didRegen=true; }
     if (didRegen) { await battleWait(500); }

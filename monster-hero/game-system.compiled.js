@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c51126009e506e98
+// source-sha256: a9bfcdcf98b46020
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 12a677f8f19494fb
+// generated-sha256: 2c9f68156afa6fb4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -161,7 +161,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-20 02:01"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-20 04:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -26230,13 +26230,12 @@ const damageTacticsTargets = (units, targetSlots, damage) => {
 
 // 回復を盤面へ配る。足りない量に比例して配り、端数は足りない量の大きい子から埋める。
 // 均等割りにすると、瀕死の子が置き去りのまま満タンの子へ回復が消える
-const healTacticsBoard = (units, amount) => {
+const healTacticsBoardTo = (units, amount, targetSlots) => {
   const list = (Array.isArray(units) ? units : []).slice();
   const give = Math.max(0, tacticsSafeInt(amount, 0));
   if (give <= 0) return list;
-  // ★倒れた子にも配る。自動再生・緊急回復・吸収も「復活までの貯め」に乗る
-  //   (2026-09-19 ユーザーが決めた形)。足りない量が多いぶん、倒れた子へ多く入る
-  const missing = tacticsFilledSlots(list).map(index => {
+  // 足りない量が多いぶん、多く入る
+  const missing = (Array.isArray(targetSlots) ? targetSlots : []).map(index => {
     const unit = normalizeTacticsUnit(list[index]);
     return {
       index,
@@ -26266,6 +26265,13 @@ const healTacticsBoard = (units, amount) => {
   });
   return list;
 };
+// ★倒れた子にも配る。緊急回復・吸収・回復カードは「復活までの貯め」に乗る
+//   (2026-09-19 ユーザーが決めた形)
+const healTacticsBoard = (units, amount) => healTacticsBoardTo(units, amount, tacticsFilledSlots(units));
+// ★自動再生だけは倒れた子へ入れない(2026-09-20 ユーザー指示)。
+//   毎ターン勝手に貯まって復活すると、何もしなくても誰も倒れたままにならない
+//   =「一生死ななくなる」。起こすのは 回復カード・緊急回復・吸収・トレーニング に限る
+const healTacticsAliveBoard = (units, amount) => healTacticsBoardTo(units, amount, tacticsAliveSlots(units));
 
 // ===== ガッツ(1体ずつ) =====
 //
@@ -36757,6 +36763,10 @@ function BattleScreen({
   useEmergency,
   wave
 }) {
+  // 強化の札を「アイコン1行」と「数値つきの一覧」で切り替える(2026-09-20 ユーザー指摘)。
+  // ★いくつ付いても高さが変わらないようにするための状態。ここが無いと、
+  //   札が3行4行に伸びて敵の絵・緊急のボタン・与ダメの数字を押し出す
+  const [buffDetail, setBuffDetail] = useState(false);
   return /*#__PURE__*/React.createElement("div", {
     className: "flex-1 flex flex-col h-full relative",
     "data-battle-speed": battleSpeed,
@@ -37608,117 +37618,189 @@ function BattleScreen({
     }), /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] font-black uppercase tracking-tight"
     }, enemyIntent.label, enemyIntent.targetName ? ` 🎯${enemyIntent.targetName}` : '', rawDmg > 0 ? ` (予定: ${plannedDmg})` : ''));
+  })(), (() => {
+    // 強化の札(2026-09-20 ユーザー指摘「バフ欄が増えてくると敵や緊急回復等が見えなくなる」)。
+    // ★もとは flex-wrap で何行にも伸びていた。強化が10個を超えると札だけで3行4行になり、
+    //   敵の絵・「緊急」のボタン・与ダメの数字が押し出されて読めなくなっていた。
+    // ★ふだんは**アイコン1行**(横に溢れたら横スクロール)。数値は「詳細」を押したときだけ出す。
+    //   どちらの見た目でも周りの高さは変わらないので、下の画面が動かない。
+    // ★札を1つずつ書くのをやめ、いったん配列にしてから並べる。
+    //   文面と色をここ1か所に置くと、2つの見た目がずれない。
+    const chips = [];
+    // ★`icon` という名前は使わない。カードの絵は cardIconNode() を通す決まりがあり、
+    //   card-icon-check.js が `c.icon` をそのまま描く書き方を禁じている
+    const chip = (key, mark, label, value, tone, opts) => {
+      const o = opts || {};
+      chips.push({
+        key,
+        mark,
+        label,
+        value,
+        tone,
+        short: o.short != null ? o.short : value,
+        pulse: !!o.pulse
+      });
+    };
+    const atkPct = Math.floor((getPermaBuff('atkPct') + getPermaBuff('muaAtkPct')) * 100);
+    if (atkPct > 0) chip('atk', /*#__PURE__*/React.createElement(Sword, {
+      size: 9
+    }), 'ATK', `+${atkPct}%`, 'text-red-500 border-red-500/50');
+    const dmgCutPct = Math.floor(getPermaBuff('dmgCutPct') * 100);
+    if (dmgCutPct > 0) chip('dmgCut', /*#__PURE__*/React.createElement(Shield, {
+      size: 9
+    }), '被ダメ', `-${dmgCutPct}%`, 'text-emerald-500 border-emerald-500/50');
+    const defPct = Math.floor(getPermaBuff('defPct') * 100);
+    if (defPct > 0) chip('def', /*#__PURE__*/React.createElement(Shield, {
+      size: 9
+    }), 'DEF', `+${defPct}%`, 'text-emerald-500 border-emerald-500/50');
+    const muaHpPct = Math.floor(getPermaBuff('muaHpPct') * 100);
+    if (muaHpPct > 0) chip('muaHp', /*#__PURE__*/React.createElement(Heart, {
+      size: 9
+    }), 'ライフ', `+${muaHpPct}%`, 'text-pink-500 border-pink-500/50');
+    const muaGutsPct = Math.floor(getPermaBuff('muaGutsPct') * 100);
+    if (muaGutsPct > 0) chip('muaGuts', /*#__PURE__*/React.createElement(Zap, {
+      size: 9
+    }), 'ガッツ', `+${muaGutsPct}%`, 'text-amber-500 border-amber-500/50');
+    const critRate = Math.round(getPermaBuff('critRatePct') * 100);
+    if (critRate > 0) chip('critRate', /*#__PURE__*/React.createElement(Sparkles, {
+      size: 9
+    }), 'クリ率', `+${critRate}%`, 'text-yellow-400 border-yellow-400/50');
+    const critDmg = Math.round(getPermaBuff('critDmgPct') * 100);
+    if (critDmg > 0) chip('critDmg', /*#__PURE__*/React.createElement(Sparkles, {
+      size: 9
+    }), 'クリダメ', `+${critDmg}%`, 'text-yellow-400 border-yellow-400/50');
+    const comboDmg = Math.round(getPermaBuff('comboDmgPct') * 100);
+    if (comboDmg > 0) chip('combo', /*#__PURE__*/React.createElement(Sword, {
+      size: 9
+    }), '連撃', `+${comboDmg}%`, 'text-cyan-400 border-cyan-400/50');
+    if (getPermaBuff('globalComboDmgPct') > 0) chip('globalCombo', /*#__PURE__*/React.createElement(Sword, {
+      size: 9
+    }), '全体連撃', `+${Math.round(getPermaBuff('globalComboDmgPct') * 100)}%`, 'text-sky-300 border-sky-300/50');
+    if (kikiCardBonus > 0) chip('kikiCard', /*#__PURE__*/React.createElement(PlusCircle, {
+      size: 9
+    }), 'カード上限', `+1（残り${Math.ceil(getPermaBuff('kikiCardBonusTurns'))}T）`, 'text-violet-300 border-violet-300/50', {
+      short: '+1'
+    });
+    // ソードスキル(剣士モッチー)。連撃パワーは3たまるごとに永久追加連撃へ変わるので、
+    // 両方が見えないと進み具合が分からない
+    if (getPermaBuff('kenshiComboPower') > 0 || getPermaBuff('kenshiExtraCombo') > 0) {
+      const kenshiExtra = getPermaBuff('kenshiExtraCombo');
+      chip('kenshi', /*#__PURE__*/React.createElement(Sword, {
+        size: 9
+      }), '連撃パワー', `${getPermaBuff('kenshiComboPower')}/${KENSHI_COMBO_POWER_MAX}${kenshiExtra > 0 ? `・追加連撃 +${kenshiExtra}` : ''}`, 'text-violet-300 border-violet-300/50', {
+        short: `${getPermaBuff('kenshiComboPower')}/${KENSHI_COMBO_POWER_MAX}`
+      });
+    }
+    chip('autoHp', /*#__PURE__*/React.createElement(Heart, {
+      size: 9
+    }), 'ライフ回復', `${Math.round(getPermaBuff('autoHpRecovery', 0.1) * 100)}%`, getPermaBuff('autoHpRecovery', 0.1) >= 0.1 ? 'text-rose-400 border-rose-400/50' : 'text-red-400 border-red-400/50');
+    chip('autoGuts', /*#__PURE__*/React.createElement(Zap, {
+      size: 9
+    }), 'ガッツ回復', `${Math.round(applyIceRulerAutoGutsRecovery(Math.max(0, 0.05 + (getPermaBuff('autoHpRecovery', 0.1) - 0.1)) + getPermaBuff('gutsRecoverPct'), mainHero?.id, iceLockActive, heroDist, enemyDist) * 100)}%`, 'text-amber-400 border-amber-400/50');
+    // ポルツの待機。あと何回ぶん敵の攻撃で発動するかを出す(0になったら消える。得た効果は残る)
+    if (getPermaBuff('poltzCharges') > 0) chip('poltz', /*#__PURE__*/React.createElement(Zap, {
+      size: 9
+    }), BREEDER_EVO_NAMES.poltz[Math.max(0, Math.min(getPermaBuff('poltzTier'), 2))], `×${Math.floor(getPermaBuff('poltzCharges'))}`, 'text-lime-300 border-lime-400/50', {
+      pulse: true
+    });
+    // === ターン限定バフ（都度表示） ===
+    if (getNextTurnBuff('melosoFullRecoveryMult', 0) > 0) chip('meloso', /*#__PURE__*/React.createElement(Heart, {
+      size: 9
+    }), '次ターン全回復', '', 'text-rose-300 border-rose-400/50', {
+      pulse: true
+    });
+    if (getTurnBuff('atkMult', 1.0) > 1) chip('boost', /*#__PURE__*/React.createElement(Sparkles, {
+      size: 9
+    }), 'Boost', `x${getTurnBuff('atkMult', 1.0).toFixed(1)}`, 'text-red-500 border-red-500/50', {
+      pulse: true
+    });
+    if (getTurnBuff('stunEnemy', false)) chip('stun', /*#__PURE__*/React.createElement(Zap, {
+      size: 9
+    }), 'スタン予約', '', 'text-yellow-400 border-yellow-500/50', {
+      pulse: true
+    });
+    if (getTurnBuff('guaranteedCrit', false)) chip('critFix', /*#__PURE__*/React.createElement(Target, {
+      size: 9
+    }), '会心予約', '', 'text-orange-400 border-orange-500/50', {
+      pulse: true
+    });
+    if (getTurnBuff('zeroGuts', false) || getNextTurnBuff('zeroGuts', false)) chip('zeroGuts', /*#__PURE__*/React.createElement(Star, {
+      size: 9
+    }), '0消費中', '', 'text-blue-400 border-blue-500/50', {
+      pulse: true
+    });
+    if (getNextTurnBuff('reflect', false)) chip('reflectNext', /*#__PURE__*/React.createElement(RefreshCcw, {
+      size: 9
+    }), '次反射', '', 'text-purple-400 border-purple-500/50', {
+      pulse: true
+    });
+    if (getTurnBuff('reflect', false)) chip('reflectNow', /*#__PURE__*/React.createElement(RefreshCcw, {
+      size: 9
+    }), '反射待機', '', 'text-purple-300 border-purple-400', {
+      pulse: true
+    });
+    if (getWaveBuff('enemyAtkDebuffPct') > 0) chip('enemyAtkDown', /*#__PURE__*/React.createElement(ArrowDownCircle, {
+      size: 9
+    }), '敵攻', `-${Math.round(getWaveBuff('enemyAtkDebuffPct') * 100)}%`, 'text-indigo-400 border-indigo-500/50', {
+      pulse: true
+    });
+    if (getWaveBuff('enemyTakenDmgBonus') > 0) chip('enemyTaken', /*#__PURE__*/React.createElement(PlusCircle, {
+      size: 9
+    }), '敵被ダメ', `+${Math.round(getWaveBuff('enemyTakenDmgBonus') * 100)}%`, 'text-orange-400 border-orange-500/50', {
+      pulse: true
+    });
+    if (getNextTurnBuff('takenDamageMult', 1.0) < 1) chip('takenNext', /*#__PURE__*/React.createElement(Shield, {
+      size: 9
+    }), '次T被ダメ', `-${Math.round((1 - getNextTurnBuff('takenDamageMult', 1.0)) * 100)}%`, 'text-pink-400 border-pink-500/50', {
+      pulse: true
+    });
+    if (getTurnBuff('takenDamageMult', 1.0) < 1) chip('takenNow', /*#__PURE__*/React.createElement(Shield, {
+      size: 9
+    }), '被ダメ', `-${Math.round((1 - getTurnBuff('takenDamageMult', 1.0)) * 100)}%`, 'text-pink-300 border-pink-400', {
+      pulse: true
+    });
+    if (getNextTurnBuff('gutsCostMult', 1.0) > 1) chip('costNext', /*#__PURE__*/React.createElement(Zap, {
+      size: 9
+    }), '次T消費G', `+${Math.round((getNextTurnBuff('gutsCostMult', 1.0) - 1) * 100)}%`, 'text-amber-400 border-amber-500/50', {
+      pulse: true
+    });
+    if (getTurnBuff('gutsCostMult', 1.0) > 1) chip('costNow', /*#__PURE__*/React.createElement(Zap, {
+      size: 9
+    }), '消費G', `+${Math.round((getTurnBuff('gutsCostMult', 1.0) - 1) * 100)}%`, 'text-amber-300 border-amber-400', {
+      pulse: true
+    });
+    if (!chips.length) return null;
+    return /*#__PURE__*/React.createElement("div", {
+      "data-battle-buffs": chips.length,
+      "data-battle-buffs-mode": buffDetail ? 'detail' : 'icon',
+      className: `shrink-0 w-full max-w-[360px] mx-auto px-2 pt-1 pb-0.5 bg-slate-950 relative z-[40] ${focusedCard ? 'invisible' : 'visible'}`
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-start gap-1"
+    }, buffDetail ? /*#__PURE__*/React.createElement("div", {
+      "data-battle-buff-list": true,
+      className: "flex-1 min-w-0 flex flex-wrap justify-center gap-1 overflow-y-auto mh-scroll",
+      style: {
+        maxHeight: '92px'
+      }
+    }, chips.map(c => /*#__PURE__*/React.createElement("div", {
+      key: c.key,
+      className: `text-[11px] font-black bg-black/60 px-2 py-0.5 rounded border flex items-center gap-1 shadow-lg ${c.tone}${c.pulse ? ' animate-pulse' : ''}`
+    }, c.mark, " ", c.label, c.value ? ` ${c.value}` : ''))) : /*#__PURE__*/React.createElement("div", {
+      "data-battle-buff-icons": true,
+      className: "flex-1 min-w-0 flex items-center gap-1 overflow-x-auto scrollbar-hide"
+    }, chips.map(c => /*#__PURE__*/React.createElement("div", {
+      key: c.key,
+      "aria-label": `${c.label}${c.value ? ` ${c.value}` : ''}`,
+      title: `${c.label}${c.value ? ` ${c.value}` : ''}`,
+      className: `shrink-0 text-[10px] font-black bg-black/60 px-1.5 py-0.5 rounded-full border flex items-center gap-0.5 leading-none ${c.tone}${c.pulse ? ' animate-pulse' : ''}`
+    }, c.mark, c.short ? /*#__PURE__*/React.createElement("span", null, c.short) : null))), /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      "data-battle-buff-toggle": buffDetail ? 'close' : 'open',
+      onClick: () => setBuffDetail(v => !v),
+      "aria-label": buffDetail ? '強化の詳細を閉じる' : `強化の詳細を見る（${chips.length}件）`,
+      className: "shrink-0 min-h-[20px] px-1.5 rounded-full border border-white/25 bg-black/60 text-[9px] font-black leading-none text-slate-200 active:scale-90 flex items-center"
+    }, buffDetail ? 'とじる' : `詳細 ${chips.length}`)));
   })(), /*#__PURE__*/React.createElement("div", {
-    className: `flex flex-wrap justify-center gap-1 max-w-[340px] shrink-0 px-2 pt-1 pb-0.5 bg-slate-950 relative z-[40] ${focusedCard ? 'invisible' : 'visible'}`
-  }, Math.floor((getPermaBuff('atkPct') + getPermaBuff('muaAtkPct')) * 100) > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] font-black text-red-500 bg-black/60 px-2 py-0.5 rounded border border-red-500/50 flex items-center gap-1 shadow-lg uppercase"
-  }, /*#__PURE__*/React.createElement(Sword, {
-    size: 9
-  }), " ATK +", Math.floor((getPermaBuff('atkPct') + getPermaBuff('muaAtkPct')) * 100), "%"), Math.floor(getPermaBuff('dmgCutPct') * 100) > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] font-black text-emerald-500 bg-black/60 px-2 py-0.5 rounded border border-emerald-500/50 flex items-center gap-1 shadow-lg uppercase"
-  }, /*#__PURE__*/React.createElement(Shield, {
-    size: 9
-  }), " \u88AB\u30C0\u30E1 -", Math.floor(getPermaBuff('dmgCutPct') * 100), "%"), Math.floor(getPermaBuff('defPct') * 100) > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] font-black text-emerald-500 bg-black/60 px-2 py-0.5 rounded border border-emerald-500/50 flex items-center gap-1 shadow-lg uppercase"
-  }, /*#__PURE__*/React.createElement(Shield, {
-    size: 9
-  }), " DEF +", Math.floor(getPermaBuff('defPct') * 100), "%"), Math.floor(getPermaBuff('muaHpPct') * 100) > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] font-black text-pink-500 bg-black/60 px-2 py-0.5 rounded border border-pink-500/50 flex items-center gap-1 shadow-lg uppercase"
-  }, /*#__PURE__*/React.createElement(Heart, {
-    size: 9
-  }), " \u30E9\u30A4\u30D5 +", Math.floor(getPermaBuff('muaHpPct') * 100), "%"), Math.floor(getPermaBuff('muaGutsPct') * 100) > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] font-black text-amber-500 bg-black/60 px-2 py-0.5 rounded border border-amber-500/50 flex items-center gap-1 shadow-lg uppercase"
-  }, /*#__PURE__*/React.createElement(Zap, {
-    size: 9
-  }), " \u30AC\u30C3\u30C4 +", Math.floor(getPermaBuff('muaGutsPct') * 100), "%"), Math.round(getPermaBuff('critRatePct') * 100) > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] font-black text-yellow-400 bg-black/60 px-2 py-0.5 rounded border border-yellow-400/50 flex items-center gap-1 shadow-lg uppercase"
-  }, /*#__PURE__*/React.createElement(Sparkles, {
-    size: 9
-  }), " \u30AF\u30EA\u7387 +", Math.round(getPermaBuff('critRatePct') * 100), "%"), Math.round(getPermaBuff('critDmgPct') * 100) > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] font-black text-yellow-400 bg-black/60 px-2 py-0.5 rounded border border-yellow-400/50 flex items-center gap-1 shadow-lg uppercase"
-  }, /*#__PURE__*/React.createElement(Sparkles, {
-    size: 9
-  }), " \u30AF\u30EA\u30C0\u30E1 +", Math.round(getPermaBuff('critDmgPct') * 100), "%"), Math.round(getPermaBuff('comboDmgPct') * 100) > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] font-black text-cyan-400 bg-black/60 px-2 py-0.5 rounded border border-cyan-400/50 flex items-center gap-1 shadow-lg uppercase"
-  }, /*#__PURE__*/React.createElement(Sword, {
-    size: 9
-  }), " \u9023\u6483 +", Math.round(getPermaBuff('comboDmgPct') * 100), "%"), getPermaBuff('globalComboDmgPct') > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] font-black text-sky-300 bg-black/60 px-2 py-0.5 rounded border border-sky-300/50 flex items-center gap-1 shadow-lg"
-  }, /*#__PURE__*/React.createElement(Sword, {
-    size: 7
-  }), " \u5168\u4F53\u9023\u6483 +", Math.round(getPermaBuff('globalComboDmgPct') * 100), "%"), kikiCardBonus > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] font-black text-violet-300 bg-black/60 px-2 py-0.5 rounded border border-violet-300/50 flex items-center gap-1 shadow-lg"
-  }, /*#__PURE__*/React.createElement(PlusCircle, {
-    size: 7
-  }), " \u30AB\u30FC\u30C9\u4E0A\u9650 +1\uFF08\u6B8B\u308A", Math.ceil(getPermaBuff('kikiCardBonusTurns')), "T\uFF09"), (getPermaBuff('kenshiComboPower') > 0 || getPermaBuff('kenshiExtraCombo') > 0) && /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] font-black text-violet-300 bg-black/60 px-2 py-0.5 rounded border border-violet-300/50 flex items-center gap-1 shadow-lg"
-  }, /*#__PURE__*/React.createElement(Sword, {
-    size: 7
-  }), " \u9023\u6483\u30D1\u30EF\u30FC ", getPermaBuff('kenshiComboPower'), "/", KENSHI_COMBO_POWER_MAX, getPermaBuff('kenshiExtraCombo') > 0 ? `・追加連撃 +${getPermaBuff('kenshiExtraCombo')}` : ''), /*#__PURE__*/React.createElement("div", {
-    className: `text-[11px] font-black bg-black/60 px-2 py-0.5 rounded border flex items-center gap-1 shadow-lg uppercase ${getPermaBuff('autoHpRecovery', 0.1) >= 0.1 ? 'text-rose-400 border-rose-400/50' : 'text-red-400 border-red-400/50'}`
-  }, /*#__PURE__*/React.createElement(Heart, {
-    size: 7
-  }), " \u30E9\u30A4\u30D5\u56DE\u5FA9 ", Math.round(getPermaBuff('autoHpRecovery', 0.1) * 100), "%"), /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] font-black text-amber-400 bg-black/60 px-2 py-0.5 rounded border border-amber-400/50 flex items-center gap-1 shadow-lg uppercase"
-  }, /*#__PURE__*/React.createElement(Zap, {
-    size: 7
-  }), " \u30AC\u30C3\u30C4\u56DE\u5FA9 ", Math.round(applyIceRulerAutoGutsRecovery(Math.max(0, 0.05 + (getPermaBuff('autoHpRecovery', 0.1) - 0.1)) + getPermaBuff('gutsRecoverPct'), mainHero?.id, iceLockActive, heroDist, enemyDist) * 100), "%"), getPermaBuff('poltzCharges') > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] font-black text-lime-300 bg-lime-950/60 px-2 py-1 rounded-full border border-lime-400/50 animate-pulse flex items-center gap-1"
-  }, /*#__PURE__*/React.createElement(Zap, {
-    size: 8
-  }), " ", BREEDER_EVO_NAMES.poltz[Math.max(0, Math.min(getPermaBuff('poltzTier'), 2))], " \xD7", Math.floor(getPermaBuff('poltzCharges'))), getNextTurnBuff('melosoFullRecoveryMult', 0) > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] font-black text-rose-300 bg-rose-950/60 px-2 py-1 rounded-full border border-rose-400/50 animate-pulse flex items-center gap-1"
-  }, /*#__PURE__*/React.createElement(Heart, {
-    size: 8
-  }), " \u6B21\u30BF\u30FC\u30F3\u5168\u56DE\u5FA9"), getTurnBuff('atkMult', 1.0) > 1 && /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] font-black text-red-500 bg-red-950/60 px-2 py-1 rounded-full border border-red-500/50 animate-pulse uppercase flex items-center gap-1"
-  }, /*#__PURE__*/React.createElement(Sparkles, {
-    size: 8
-  }), " Boost x", getTurnBuff('atkMult', 1.0).toFixed(1)), getTurnBuff('stunEnemy', false) && /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] font-black text-yellow-400 bg-yellow-950/60 px-2 py-1 rounded-full border border-yellow-500/50 animate-pulse uppercase flex items-center gap-1"
-  }, /*#__PURE__*/React.createElement(Zap, {
-    size: 8
-  }), " \u30B9\u30BF\u30F3\u4E88\u7D04"), getTurnBuff('guaranteedCrit', false) && /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] font-black text-orange-400 bg-orange-950/60 px-2 py-1 rounded-full border border-orange-500/50 animate-pulse uppercase flex items-center gap-1"
-  }, /*#__PURE__*/React.createElement(Target, {
-    size: 8
-  }), " \u4F1A\u5FC3\u4E88\u7D04"), (getTurnBuff('zeroGuts', false) || getNextTurnBuff('zeroGuts', false)) && /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] font-black text-blue-400 bg-blue-950/60 px-2 py-1 rounded-full border border-blue-500/50 animate-pulse uppercase flex items-center gap-1"
-  }, /*#__PURE__*/React.createElement(Star, {
-    size: 8
-  }), " 0\u6D88\u8CBB\u4E2D"), getNextTurnBuff('reflect', false) && /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] font-black text-purple-400 bg-purple-950/60 px-2 py-1 rounded-full border border-purple-500/50 animate-pulse uppercase flex items-center gap-1"
-  }, /*#__PURE__*/React.createElement(RefreshCcw, {
-    size: 8
-  }), " \u6B21\u53CD\u5C04"), getTurnBuff('reflect', false) && /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] font-black text-purple-300 bg-purple-900/80 px-2 py-1 rounded-full border border-purple-400 animate-bounce uppercase flex items-center gap-1"
-  }, /*#__PURE__*/React.createElement(RefreshCcw, {
-    size: 8
-  }), " \u53CD\u5C04\u5F85\u6A5F"), getWaveBuff('enemyAtkDebuffPct') > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] font-black text-indigo-400 bg-indigo-950/60 px-2 py-1 rounded-full border border-indigo-500/50 animate-pulse uppercase flex items-center gap-1"
-  }, /*#__PURE__*/React.createElement(ArrowDownCircle, {
-    size: 8
-  }), " \u6575\u653B-", Math.round(getWaveBuff('enemyAtkDebuffPct') * 100), "%"), getWaveBuff('enemyTakenDmgBonus') > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] font-black text-orange-400 bg-orange-950/60 px-2 py-1 rounded-full border border-orange-500/50 animate-pulse uppercase flex items-center gap-1"
-  }, /*#__PURE__*/React.createElement(PlusCircle, {
-    size: 8
-  }), " \u6575\u88AB\u30C0\u30E1+", Math.round(getWaveBuff('enemyTakenDmgBonus') * 100), "%"), getNextTurnBuff('takenDamageMult', 1.0) < 1 && /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] font-black text-pink-400 bg-pink-950/60 px-2 py-1 rounded-full border border-pink-500/50 animate-pulse uppercase flex items-center gap-1"
-  }, /*#__PURE__*/React.createElement(Shield, {
-    size: 8
-  }), " \u6B21T\u88AB\u30C0\u30E1-", Math.round((1 - getNextTurnBuff('takenDamageMult', 1.0)) * 100), "%"), getTurnBuff('takenDamageMult', 1.0) < 1 && /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] font-black text-pink-300 bg-pink-900/80 px-2 py-1 rounded-full border border-pink-400 animate-bounce uppercase flex items-center gap-1"
-  }, /*#__PURE__*/React.createElement(Shield, {
-    size: 8
-  }), " \u88AB\u30C0\u30E1-", Math.round((1 - getTurnBuff('takenDamageMult', 1.0)) * 100), "%"), getNextTurnBuff('gutsCostMult', 1.0) > 1 && /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] font-black text-amber-400 bg-amber-950/60 px-2 py-1 rounded-full border border-amber-500/50 animate-pulse uppercase flex items-center gap-1"
-  }, /*#__PURE__*/React.createElement(Zap, {
-    size: 8
-  }), " \u6B21T\u6D88\u8CBBG+", Math.round((getNextTurnBuff('gutsCostMult', 1.0) - 1) * 100), "%"), getTurnBuff('gutsCostMult', 1.0) > 1 && /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] font-black text-amber-300 bg-amber-900/80 px-2 py-1 rounded-full border border-amber-400 animate-bounce uppercase flex items-center gap-1"
-  }, /*#__PURE__*/React.createElement(Zap, {
-    size: 8
-  }), " \u6D88\u8CBBG+", Math.round((getTurnBuff('gutsCostMult', 1.0) - 1) * 100), "%")), /*#__PURE__*/React.createElement("div", {
     className: "shrink-0 py-1.5 px-2 bg-slate-950 border-y border-white/5 flex flex-col items-center justify-center gap-1 z-10 relative"
   }, /*#__PURE__*/React.createElement("div", {
     className: "absolute inset-0 flex flex-col items-center justify-center pointer-events-none gap-1",
@@ -41425,6 +41507,9 @@ function MonsterHeroGame() {
     return commitTacticsUnits(damageTacticsTargets(tacticsUnitsRef.current, targets, damage));
   };
   const tacticsHeal = amount => isTacticsMode(runMode) ? commitTacticsUnits(healTacticsBoard(tacticsUnitsRef.current, amount)) : null;
+  // 自動再生だけの入口。倒れた子には入れない(2026-09-20 ユーザー指示)。
+  // ★毎ターン勝手に貯まって復活すると、何もしなくても誰も倒れたままにならない
+  const tacticsHealAlive = amount => isTacticsMode(runMode) ? commitTacticsUnits(healTacticsAliveBoard(tacticsUnitsRef.current, amount)) : null;
   // ガッツの回復も立っている子へ配る。戻り値は「新モードなら合計ライフ、ほかは null」で、
   // 呼び出し側は null のときだけ今までどおりの1行を通す(ライフの helper と同じ約束)
   const tacticsGutsRecover = amount => isTacticsMode(runMode) ? commitTacticsUnits(recoverTacticsGutsBoard(tacticsUnitsRef.current, amount)) : null;
@@ -52656,7 +52741,7 @@ function MonsterHeroGame() {
     if (autoHpRecoveryRate > 0) {
       const autoHealVal = Math.floor(liveEffectiveMaxHp() * autoHpRecoveryRate);
       if (autoHealVal > 0) {
-        if (tacticsHeal(autoHealVal) === null) setHp(p => Math.min(liveEffectiveMaxHp(), p + autoHealVal));
+        if (tacticsHealAlive(autoHealVal) === null) setHp(p => Math.min(liveEffectiveMaxHp(), p + autoHealVal));
         addPopup(`🌿 自動再生 +${autoHealVal}`, 'life', 'text-teal-300 font-black text-lg italic drop-shadow-md');
         didRegen = true;
       }
