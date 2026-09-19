@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 564a51d278c129c7
+// source-sha256: 833a5676d4f6dc1c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 59c163829223b552
+// generated-sha256: be597d3f79dec25c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -161,7 +161,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-19 11:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-19 12:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -13735,6 +13735,23 @@ const extremeWaveStageLabel = difficultyId => extremeWaveStage(difficultyId)?.la
 // 段階ぶんの敵倍率。段階を持たない難易度では1倍(既存の挙動のまま)。
 const extremeWaveEnemyMultiplier = (difficultyId, waveNumber = 1) => extremeWaveStageRules(difficultyId, waveNumber)?.enemyMultiplier ?? 1;
 const extremeRuleSetting = difficultyId => ALL_EXTREME_DIFFICULTIES.find(setting => setting.id === difficultyId) || null;
+// その難易度が極限側か。通常の9段階(DIFFICULTY_SETTINGS)に無いものを極限として扱う。
+// 難易度選択とランキングのタブを「通常 / 極限」で分けるのに使う(2026-09-19 ユーザー指示)。
+// ★難易度名で並べない。極限を足してもここは変えずに済む
+const isExtremeDifficultyId = difficultyId => !!difficultyId && !DIFFICULTY_SETTINGS[difficultyId];
+// 難易度の一覧を「通常 / 極限」の2つへ分ける。並びはもとの順のまま。
+// entries は [id, 設定] の組の配列(難易度選択がそのまま渡せる形)
+const splitDifficultyEntries = entries => {
+  const list = Array.isArray(entries) ? entries : [];
+  return {
+    normal: list.filter(([id]) => !isExtremeDifficultyId(id)),
+    extreme: list.filter(([id]) => isExtremeDifficultyId(id))
+  };
+};
+// 難易度選択・ランキングのタブid。保存はしないので、表示のためだけの値
+const DIFFICULTY_TAB_NORMAL = 'normal';
+const DIFFICULTY_TAB_EXTREME = 'extreme';
+const difficultyTabOf = difficultyId => isExtremeDifficultyId(difficultyId) ? DIFFICULTY_TAB_EXTREME : DIFFICULTY_TAB_NORMAL;
 // クイックの極限難易度は極限チャレンジ本体の報酬を変更せず、依頼された基準倍率だけを
 // クイック用に持つ。敵強度と表示色は既存の難易度定義を再利用する。
 const QUICK_ULTIMATE_SETTING = Object.freeze({
@@ -40336,6 +40353,10 @@ function MonsterHeroGame() {
   // 「バトル → バトルモード選択 → 難易度選択」の3画面と、そこから開くランキング。
   // まだデバッグ設定からだけ開ける。ふだんの「バトル」はこれまでどおり BATTLE_MENU のまま
   const [modeSelectTab, setModeSelectTab] = useState('mode'); // 'mode' | 'breeder' | 'bond' | 'power'
+  // 難易度選択の「通常 / 極限」タブ。クイックは15段階、種族チャレンジは14段階あり、
+  // 一続きに並べると探しにくいので分ける(2026-09-19 ユーザー指示)。
+  // 表示のためだけの値で保存はしない。極限を持たないモードではタブ自体を出さない
+  const [difficultySelectTab, setDifficultySelectTab] = useState(DIFFICULTY_TAB_NORMAL);
   // スコアランキングを「どのモードのぶんとして」見ているか。チャレンジとプロの2つだけ
   const [scoreRankingMode, setScoreRankingMode] = useState(BATTLE_MODE_CHALLENGE);
   // ランキングから戻る先。モード選択カードから開いたか、難易度カードから開いたかで変わる
@@ -45797,6 +45818,9 @@ function MonsterHeroGame() {
     // 練習中はいちばんやさしいビギナーから始める(そこしか押せないようにしているため)
     const start = battleTutorialStep != null ? 'Beginner' : BATTLE_DEFAULT_DIFFICULTY;
     setDifficulty(start);
+    // 難易度と同じく、タブもいつでも「通常」から始める。
+    // 極限タブのまま開くと、ノーマルを選んでいるのに極限の並びが見えることになる
+    setDifficultySelectTab(difficultyTabOf(start));
     const id = requestAnimationFrame(() => {
       const index = Object.keys(DIFFICULTY_SETTINGS).indexOf(start);
       centerCarouselChild(modeDifficultyCarouselRef.current, index);
@@ -58360,7 +58384,14 @@ function MonsterHeroGame() {
       const species = battleMode === BATTLE_MODE_SPECIES_CHALLENGE,
         quick = isQuickMode(battleMode);
       const speciesSetting = id => DIFFICULTY_SETTINGS[id] || EXTREME_DIFFICULTIES.find(setting => setting.id === id) || EXTREME_SETTING;
-      const difficulties = species ? SPECIES_CHALLENGE_DIFFICULTY_IDS.map(id => [id, speciesSetting(id)]) : Object.entries(quick ? QUICK_DIFFICULTY_SETTINGS : DIFFICULTY_SETTINGS);
+      const allDifficulties = species ? SPECIES_CHALLENGE_DIFFICULTY_IDS.map(id => [id, speciesSetting(id)]) : Object.entries(quick ? QUICK_DIFFICULTY_SETTINGS : DIFFICULTY_SETTINGS);
+      // 難易度は「通常 / 極限」のタブで分ける(2026-09-19 ユーザー指示)。
+      // クイックは15段階、種族チャレンジは14段階あり、一続きに並べると探しにくい。
+      // 極限を持たないモード(プロなど)では extreme が空になり、タブ自体を出さない
+      const difficultyGroups = splitDifficultyEntries(allDifficulties);
+      const hasExtremeTab = difficultyGroups.extreme.length > 0;
+      const activeDifficultyTab = hasExtremeTab ? difficultySelectTab : DIFFICULTY_TAB_NORMAL;
+      const difficulties = activeDifficultyTab === DIFFICULTY_TAB_EXTREME ? difficultyGroups.extreme : difficultyGroups.normal;
       const selectedDifficulty = species ? speciesChallengeSelection.difficultyId || difficulties[0]?.[0] : safeDifficulty;
       const selectedIndex = Math.max(0, difficulties.findIndex(([key]) => key === selectedDifficulty));
       const chooseDifficulty = id => species ? setSpeciesChallengeSelection(current => ({
@@ -58440,7 +58471,27 @@ function MonsterHeroGame() {
         }, detail));
       })), /*#__PURE__*/React.createElement("p", {
         className: "mt-1 text-center text-[8px] font-black text-slate-400"
-      }, "\u540C\u3058\u96E3\u6613\u5EA6\u3092\u30C1\u30E3\u30EC\u30F3\u30B8\u30FB\u30D7\u30ED\u30FB\u6975\u9650\u306E\u3069\u308C\u304B\u3067\u30AF\u30EA\u30A2\u3059\u308B\u3068\u89E3\u653E")), /*#__PURE__*/React.createElement("div", {
+      }, "\u540C\u3058\u96E3\u6613\u5EA6\u3092\u30C1\u30E3\u30EC\u30F3\u30B8\u30FB\u30D7\u30ED\u30FB\u6975\u9650\u306E\u3069\u308C\u304B\u3067\u30AF\u30EA\u30A2\u3059\u308B\u3068\u89E3\u653E")), hasExtremeTab && /*#__PURE__*/React.createElement("div", {
+        "data-difficulty-tabs": true,
+        className: "flex gap-1.5 w-full shrink-0 mb-1"
+      }, [[DIFFICULTY_TAB_NORMAL, '通常'], [DIFFICULTY_TAB_EXTREME, '極限']].map(([tabId, tabLabel]) => {
+        const on = activeDifficultyTab === tabId;
+        const group = tabId === DIFFICULTY_TAB_EXTREME ? difficultyGroups.extreme : difficultyGroups.normal;
+        return /*#__PURE__*/React.createElement("button", {
+          key: tabId,
+          "aria-pressed": on,
+          onClick: () => {
+            if (on) return;
+            setDifficultySelectTab(tabId);
+            // 切り替えた先の先頭を選ぶ。選びっぱなしにすると、見えていない難易度のまま
+            // 「この難易度で挑戦」を押せてしまう
+            if (group[0]) chooseDifficulty(group[0][0]);
+          },
+          className: `flex-1 min-h-[38px] rounded-2xl font-black text-[12px] border-2 active:scale-95 ${on ? tabId === DIFFICULTY_TAB_EXTREME ? 'bg-fuchsia-700 border-fuchsia-300 text-white' : 'bg-indigo-600 border-indigo-300 text-white' : 'bg-slate-900 border-slate-700 text-slate-400'}`
+        }, tabLabel, /*#__PURE__*/React.createElement("span", {
+          className: "ml-1 text-[9px] opacity-75"
+        }, group.length));
+      })), /*#__PURE__*/React.createElement("div", {
         className: `relative shrink-0${battleTutorialSpotClass('difficulty')}`
       }, /*#__PURE__*/React.createElement("button", {
         "aria-label": "\u524D\u306E\u96E3\u6613\u5EA6",

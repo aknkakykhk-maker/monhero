@@ -427,6 +427,23 @@ const extremeWaveStageLabel = (difficultyId) => extremeWaveStage(difficultyId)?.
 // 段階ぶんの敵倍率。段階を持たない難易度では1倍(既存の挙動のまま)。
 const extremeWaveEnemyMultiplier = (difficultyId,waveNumber=1) => extremeWaveStageRules(difficultyId,waveNumber)?.enemyMultiplier ?? 1;
 const extremeRuleSetting = (difficultyId) => ALL_EXTREME_DIFFICULTIES.find(setting=>setting.id===difficultyId)||null;
+// その難易度が極限側か。通常の9段階(DIFFICULTY_SETTINGS)に無いものを極限として扱う。
+// 難易度選択とランキングのタブを「通常 / 極限」で分けるのに使う(2026-09-19 ユーザー指示)。
+// ★難易度名で並べない。極限を足してもここは変えずに済む
+const isExtremeDifficultyId = (difficultyId) => !!difficultyId && !DIFFICULTY_SETTINGS[difficultyId];
+// 難易度の一覧を「通常 / 極限」の2つへ分ける。並びはもとの順のまま。
+// entries は [id, 設定] の組の配列(難易度選択がそのまま渡せる形)
+const splitDifficultyEntries = (entries) => {
+  const list = Array.isArray(entries) ? entries : [];
+  return {
+    normal: list.filter(([id]) => !isExtremeDifficultyId(id)),
+    extreme: list.filter(([id]) => isExtremeDifficultyId(id)),
+  };
+};
+// 難易度選択・ランキングのタブid。保存はしないので、表示のためだけの値
+const DIFFICULTY_TAB_NORMAL = 'normal';
+const DIFFICULTY_TAB_EXTREME = 'extreme';
+const difficultyTabOf = (difficultyId) => isExtremeDifficultyId(difficultyId) ? DIFFICULTY_TAB_EXTREME : DIFFICULTY_TAB_NORMAL;
 // クイックの極限難易度は極限チャレンジ本体の報酬を変更せず、依頼された基準倍率だけを
 // クイック用に持つ。敵強度と表示色は既存の難易度定義を再利用する。
 const QUICK_ULTIMATE_SETTING = Object.freeze({

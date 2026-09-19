@@ -47,6 +47,9 @@ const sandbox = {
   isProMode: () => false,
   PRO_RANKING_PREFIX: 'Pro',
   EXTREME_MODE: { id: 'extreme' },
+  // 新モードの判定は 10-core.jsx 側。ここでは切り出さないので補う
+  // (rankingDifficultyForMode が新モードかどうかを見るため)
+  isTacticsMode: (mode) => mode === 'tactics',
   console,
 };
 vm.createContext(sandbox);

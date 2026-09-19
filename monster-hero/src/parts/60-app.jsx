@@ -474,6 +474,10 @@ function MonsterHeroGame() {
   // 「バトル → バトルモード選択 → 難易度選択」の3画面と、そこから開くランキング。
   // まだデバッグ設定からだけ開ける。ふだんの「バトル」はこれまでどおり BATTLE_MENU のまま
   const [modeSelectTab, setModeSelectTab] = useState('mode'); // 'mode' | 'breeder' | 'bond' | 'power'
+  // 難易度選択の「通常 / 極限」タブ。クイックは15段階、種族チャレンジは14段階あり、
+  // 一続きに並べると探しにくいので分ける(2026-09-19 ユーザー指示)。
+  // 表示のためだけの値で保存はしない。極限を持たないモードではタブ自体を出さない
+  const [difficultySelectTab, setDifficultySelectTab] = useState(DIFFICULTY_TAB_NORMAL);
   // スコアランキングを「どのモードのぶんとして」見ているか。チャレンジとプロの2つだけ
   const [scoreRankingMode, setScoreRankingMode] = useState(BATTLE_MODE_CHALLENGE);
   // ランキングから戻る先。モード選択カードから開いたか、難易度カードから開いたかで変わる
@@ -4775,6 +4779,9 @@ function MonsterHeroGame() {
     // 練習中はいちばんやさしいビギナーから始める(そこしか押せないようにしているため)
     const start=battleTutorialStep!=null?'Beginner':BATTLE_DEFAULT_DIFFICULTY;
     setDifficulty(start);
+    // 難易度と同じく、タブもいつでも「通常」から始める。
+    // 極限タブのまま開くと、ノーマルを選んでいるのに極限の並びが見えることになる
+    setDifficultySelectTab(difficultyTabOf(start));
     const id=requestAnimationFrame(()=>{
       const index=Object.keys(DIFFICULTY_SETTINGS).indexOf(start);
       centerCarouselChild(modeDifficultyCarouselRef.current,index);
@@ -11988,7 +11995,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {gameState==='BATTLE_DIFFICULTY_SELECT'&&(()=>{
           const species=battleMode===BATTLE_MODE_SPECIES_CHALLENGE,quick=isQuickMode(battleMode);
           const speciesSetting=id=>DIFFICULTY_SETTINGS[id]||EXTREME_DIFFICULTIES.find(setting=>setting.id===id)||EXTREME_SETTING;
-          const difficulties=species?SPECIES_CHALLENGE_DIFFICULTY_IDS.map(id=>[id,speciesSetting(id)]):Object.entries(quick?QUICK_DIFFICULTY_SETTINGS:DIFFICULTY_SETTINGS);
+          const allDifficulties=species?SPECIES_CHALLENGE_DIFFICULTY_IDS.map(id=>[id,speciesSetting(id)]):Object.entries(quick?QUICK_DIFFICULTY_SETTINGS:DIFFICULTY_SETTINGS);
+          // 難易度は「通常 / 極限」のタブで分ける(2026-09-19 ユーザー指示)。
+          // クイックは15段階、種族チャレンジは14段階あり、一続きに並べると探しにくい。
+          // 極限を持たないモード(プロなど)では extreme が空になり、タブ自体を出さない
+          const difficultyGroups=splitDifficultyEntries(allDifficulties);
+          const hasExtremeTab=difficultyGroups.extreme.length>0;
+          const activeDifficultyTab=hasExtremeTab?difficultySelectTab:DIFFICULTY_TAB_NORMAL;
+          const difficulties=activeDifficultyTab===DIFFICULTY_TAB_EXTREME?difficultyGroups.extreme:difficultyGroups.normal;
           const selectedDifficulty=species?(speciesChallengeSelection.difficultyId||difficulties[0]?.[0]):safeDifficulty;
           const selectedIndex=Math.max(0,difficulties.findIndex(([key])=>key===selectedDifficulty));
           const chooseDifficulty=id=>species?setSpeciesChallengeSelection(current=>({...current,difficultyId:id,heroId:'',allyIds:[],run:null})):setDifficulty(id);
@@ -12023,6 +12037,22 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   </div>
                   <p className="mt-1 text-center text-[8px] font-black text-slate-400">同じ難易度をチャレンジ・プロ・極限のどれかでクリアすると解放</p>
                 </fieldset>}
+                {/* 難易度の「通常 / 極限」タブ。クイックは15段階、種族チャレンジは14段階あり、
+                    一続きに並べると目当ての難易度まで遠い(2026-09-19 ユーザー指示)。
+                    極限を持たないモードでは出さないので、これまでどおり1つの並びに見える */}
+                {hasExtremeTab&&<div data-difficulty-tabs className="flex gap-1.5 w-full shrink-0 mb-1">
+                  {[[DIFFICULTY_TAB_NORMAL,'通常'],[DIFFICULTY_TAB_EXTREME,'極限']].map(([tabId,tabLabel])=>{
+                    const on=activeDifficultyTab===tabId;
+                    const group=tabId===DIFFICULTY_TAB_EXTREME?difficultyGroups.extreme:difficultyGroups.normal;
+                    return <button key={tabId} aria-pressed={on} onClick={()=>{
+                      if(on)return;
+                      setDifficultySelectTab(tabId);
+                      // 切り替えた先の先頭を選ぶ。選びっぱなしにすると、見えていない難易度のまま
+                      // 「この難易度で挑戦」を押せてしまう
+                      if(group[0])chooseDifficulty(group[0][0]);
+                    }} className={`flex-1 min-h-[38px] rounded-2xl font-black text-[12px] border-2 active:scale-95 ${on?(tabId===DIFFICULTY_TAB_EXTREME?'bg-fuchsia-700 border-fuchsia-300 text-white':'bg-indigo-600 border-indigo-300 text-white'):'bg-slate-900 border-slate-700 text-slate-400'}`}>{tabLabel}<span className="ml-1 text-[9px] opacity-75">{group.length}</span></button>;
+                  })}
+                </div>}
                 <div className={`relative shrink-0${battleTutorialSpotClass('difficulty')}`}>
                   <button aria-label="前の難易度" disabled={selectedIndex===0} onClick={()=>selectDifficultyIndex(selectedIndex-1)} className="absolute left-0 top-[42%] z-20 w-9 h-12 rounded-r-xl bg-black/70 disabled:opacity-20"><ChevronLeft/></button>
                   <div ref={modeDifficultyCarouselRef} onScroll={e=>{const root=e.currentTarget,c=root.scrollLeft+root.clientWidth/2;let best=0,d=Infinity;[...root.children].forEach((card,i)=>{const n=Math.abs(card.offsetLeft+card.offsetWidth/2-c);if(n<d){d=n;best=i;}});if(difficulties[best]?.[0]!==selectedDifficulty)chooseDifficulty(difficulties[best][0]);}} className="flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll" style={{paddingLeft:'11%',paddingRight:'11%',touchAction:'pan-x pinch-zoom'}} data-difficulty-carousel>
