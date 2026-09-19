@@ -257,31 +257,6 @@ const recoverTacticsGutsBoard = (units, amount) => {
   shares.forEach(entry => { if (entry.value > 0) list[entry.index] = recoverTacticsGuts(list[entry.index], entry.value); });
   return list;
 };
-// トレーニングで伸びたガッツの上限を配る。ライフと同じ配り方(段階7で1体ずつ選ぶ形にする)
-const growTacticsMaxGuts = (units, delta, gutsPct = 0) => {
-  const list = (Array.isArray(units) ? units : []).slice();
-  const add = tacticsSafeInt(delta, 0);
-  if (add <= 0) return list;
-  const filled = tacticsFilledSlots(list)
-    .map(index => ({ index, base: normalizeTacticsUnit(list[index]).baseMaxGuts }));
-  const totalBase = filled.reduce((sum, entry) => sum + entry.base, 0);
-  if (!filled.length || totalBase <= 0) return list;
-  let handed = 0;
-  const shares = filled.map(entry => {
-    const value = Math.floor(add * entry.base / totalBase);
-    handed += value;
-    return { ...entry, value };
-  });
-  const order = [...shares].sort((a, b) => b.base - a.base);
-  for (let left = add - handed, i = 0; left > 0; i = (i + 1) % order.length, left--) order[i].value += 1;
-  shares.forEach(entry => {
-    if (entry.value <= 0) return;
-    const target = normalizeTacticsUnit(list[entry.index]);
-    list[entry.index] = scaleTacticsUnitMaxGuts({ ...target, baseMaxGuts: target.baseMaxGuts + entry.value }, gutsPct);
-  });
-  return list;
-};
-
 // 自分のカードによる自傷(みゅあの札など)。★これで倒れることはない。
 // いまのライフに比例して配り、1体ずつ最低1は残す(元の実装も合計が1を下回らない)
 const selfDamageTacticsBoard = (units, damage) => {
@@ -367,65 +342,34 @@ const tacticsPayerSlot = (units, slotIndex, cost, isHealCard = false) => {
   return null;
 };
 
-// トレーニングで伸びたライフ上限を盤面へ配る。
-// ★段階6で「1体ずつ選ぶ」形にする。それまでは素の上限に比例して配る(合算していた頃と同じ配分)。
-// ★いまのライフは増やさない(トレーニングは上限を上げるだけ、という既存の挙動に合わせる)。
-// ★配ったぶんの合計は必ず delta と一致させる。ずれるとパーティのライフと盤面が食い違う
-const growTacticsMaxHp = (units, delta, hpPct = 0) => {
+// トレーニングの結果を1体へ入れる。after は resolveTrainingStats が返した
+// {atk,def,hp,guts}(hp / guts は「素の上限」)。
+// ★1体ずつ選んだぶんを、その子だけへ入れる(段階11)
+const applyTacticsTraining = (units, slotIndex, after, hpPct = 0, gutsPct = 0) => {
   const list = (Array.isArray(units) ? units : []).slice();
-  const add = tacticsSafeInt(delta, 0);
-  if (add <= 0) return list;
-  const filled = tacticsFilledSlots(list)
-    .map(index => ({ index, base: normalizeTacticsUnit(list[index]).baseMaxHp }));
-  const totalBase = filled.reduce((sum, entry) => sum + entry.base, 0);
-  if (!filled.length || totalBase <= 0) return list;
-  let handed = 0;
-  const shares = filled.map(entry => {
-    const value = Math.floor(add * entry.base / totalBase);
-    handed += value;
-    return { ...entry, value };
-  });
-  // 端数は素の上限が大きい子から1ずつ。合計を delta にぴったり合わせる
-  const order = [...shares].sort((a, b) => b.base - a.base);
-  for (let left = add - handed, i = 0; left > 0; i = (i + 1) % order.length, left--) order[i].value += 1;
-  shares.forEach(entry => {
-    if (entry.value <= 0) return;
-    const target = normalizeTacticsUnit(list[entry.index]);
-    list[entry.index] = scaleTacticsUnitMaxHp({ ...target, baseMaxHp: target.baseMaxHp + entry.value }, hpPct);
-  });
+  const target = list[slotIndex] ? normalizeTacticsUnit(list[slotIndex]) : null;
+  if (!target || !after) return list;
+  const grown = {
+    ...target,
+    atk: Math.max(0, tacticsSafeInt(after.atk, target.atk)),
+    def: Math.max(0, tacticsSafeInt(after.def, target.def)),
+    baseMaxHp: Math.max(1, tacticsSafeInt(after.hp, target.baseMaxHp)),
+    baseMaxGuts: Math.max(0, tacticsSafeInt(after.guts, target.baseMaxGuts)),
+  };
+  list[slotIndex] = scaleTacticsUnitMaxGuts(scaleTacticsUnitMaxHp(grown, hpPct), gutsPct);
   return list;
 };
 
-// トレーニングで伸びたちから・丈夫さを盤面へ配る。
-// ★段階11で「1体ずつ選ぶ」形にする。それまでは、いまの値に比例して配る。
-// ★倒れた子にも配る(起き上がったときに置いていかれないように)
-const growTacticsAtkDef = (units, atkDelta, defDelta) => {
-  const list = (Array.isArray(units) ? units : []).slice();
-  const spread = (key, delta) => {
-    const add = tacticsSafeInt(delta, 0);
-    if (add <= 0) return;
-    const filled = tacticsFilledSlots(list)
-      .map(index => ({ index, base: Math.max(1, normalizeTacticsUnit(list[index])[key]) }));
-    const total = filled.reduce((sum, entry) => sum + entry.base, 0);
-    if (!filled.length || total <= 0) return;
-    let handed = 0;
-    const shares = filled.map(entry => {
-      const value = Math.floor(add * entry.base / total);
-      handed += value;
-      return { ...entry, value };
-    });
-    const order = [...shares].sort((a, b) => b.base - a.base);
-    for (let left = add - handed, i = 0; left > 0; i = (i + 1) % order.length, left--) order[i].value += 1;
-    shares.forEach(entry => {
-      if (entry.value <= 0) return;
-      const target = normalizeTacticsUnit(list[entry.index]);
-      list[entry.index] = normalizeTacticsUnit({ ...target, [key]: target[key] + entry.value });
-    });
-  };
-  spread('atk', atkDelta);
-  spread('def', defDelta);
-  return list;
+// パーティのちから・丈夫さ。★ダメージには使わない(それは1体ずつの値)。
+//   ガードの段階・攻撃段階(カードの枚数と威力)を決めるのに使う。
+// ★合計にすると、人数が増えただけでガードが跳ね上がる。平均にする
+const tacticsPartyStat = (units, key) => {
+  const filled = tacticsFilledSlots(units);
+  if (!filled.length) return 0;
+  return Math.floor(filled.reduce((sum, index) => sum + normalizeTacticsUnit(units[index])[key], 0) / filled.length);
 };
+const tacticsPartyAtk = (units) => tacticsPartyStat(units, 'atk');
+const tacticsPartyDef = (units) => tacticsPartyStat(units, 'def');
 
 // 立っている子を満タンへ(WAVEクリアの全回復)。★倒れた子はここでは戻らない
 const fullHealTacticsBoard = (units) => (Array.isArray(units) ? units : []).map(unit => {

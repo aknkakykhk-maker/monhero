@@ -876,6 +876,9 @@ function MonsterHeroGame() {
     // ガッツも盤面の合計。★カードを払えるかは「その子のガッツ」で決まる(canTacticsSlotPay)。
     //   合計はゲージと自動回復のために持つだけで、払える判定には使わない
     setMaxGuts(maxG); setGuts(totalG);
+    // パーティのちから・丈夫さは1体ずつの平均。★ダメージには使わない(それは1体ずつの値)。
+    //   ガードの段階・攻撃段階を決めるのに使うので、盤面から derive して持つ
+    setAtk(tacticsPartyAtk(next)); setDef(tacticsPartyDef(next));
     return total;
   };
   // 盤面を slots に合わせる。ここだけが tacticsUnits を作る場所。
@@ -895,6 +898,8 @@ function MonsterHeroGame() {
     return commitTacticsUnits(scaleTacticsUnits(next, getPermaBuff('muaHpPct'), getPermaBuff('muaGutsPct')), mode);
   };
   // 編成スロットを差し替える唯一の入口。盤面を必ず一緒に動かす。
+  // ★画面へ渡すのもこれ(setSlots={applySlots})。直に setSlots を渡すと、
+  //   そこだけ盤面(1体ずつのライフ・ガッツ)が古いまま残る。
   // ★mode を受け取れるようにしてあるのは、バトルを始める処理の中では
   //   runMode(state)がまだ前のモードのままだから(同じ処理の中で setRunMode しても反映されない)
   const applySlots = (nextSlots, mode = runMode) => {
@@ -10362,8 +10367,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       const nMaxHp=tacticsJoin?tacticsTotalBaseMaxHp(tacticsUnitsRef.current):maxHp+joinBonus('hp');
       const nMaxGuts=tacticsJoin?tacticsTotalBaseMaxGuts(tacticsUnitsRef.current):maxGuts+joinBonus('guts');
       const nAtk=atk+joinBonus('atk'), nDef=def+joinBonus('def');
-      if(!tacticsJoin){ setMaxHp(nMaxHp); setHp(p=>p+(nMaxHp-bHp)); setMaxGuts(nMaxGuts); }
-      setAtk(nAtk); setDef(nDef);
+      // 新モードはどれも盤面が正本。パーティの値は commitTacticsUnits が入れ直す
+      if(!tacticsJoin){ setMaxHp(nMaxHp); setHp(p=>p+(nMaxHp-bHp)); setMaxGuts(nMaxGuts); setAtk(nAtk); setDef(nDef); }
       // 合流ボーナスに間合い適性も加算する。合流したモンスターの4距離ぶんの補正値(%)を
       // 置いた距離に関係なくそのまま足す(零がMなら零距離の補正値が+25%される)
       const aptDelta=getMonsterAptPct(m,specialRuleDifficulty);
@@ -10463,23 +10468,34 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const handleTraining = (picks) => {
     if (effect) return;
     const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
-    const nextStats=resolveTrainingStats({atk,def,hp:maxHp,guts:maxGuts},picks,waveResult?.turn,specialRuleDifficulty);
-    const nMaxHp=nextStats.hp, nAtk=nextStats.atk, nDef=nextStats.def, nMaxGuts=nextStats.guts;
-    // 新モードのパーティのライフ上限は盤面の合計なので、直に書き換えない。
-    // 伸びたぶんを盤面へ配る(段階6で「1体ずつ選ぶ」形にする)
-    if(isTacticsMode(runMode)){
-      // ライフ・ガッツ・ちから・丈夫さのどれも盤面が正本。伸びたぶんを配る
-      // (段階11で「1体ずつ選ぶ」形にする)
-      const grown=growTacticsAtkDef(
-        growTacticsMaxGuts(
-          growTacticsMaxHp(tacticsUnitsRef.current,nMaxHp-maxHp,getPermaBuff('muaHpPct')),
-          nMaxGuts-maxGuts,getPermaBuff('muaGutsPct')),
-        nAtk-atk,nDef-def);
-      commitTacticsUnits(grown);
-    } else { setMaxHp(nMaxHp); setMaxGuts(nMaxGuts); }
-    // パーティのちから・丈夫さは、新モードでもガードの段階・攻撃段階(カードの枚数と威力)を
-    // 決めるのに使い続ける。ダメージそのものは1体ずつの値で出す
-    setAtk(nAtk); setDef(nDef);
+    const tacticsMode=isTacticsMode(runMode);
+    // 新モードは picks が {slot,id} の並び。倒れた子を起こすときは {revive:スロット} が来る。
+    // ★起こすとそのWAVEは誰も強化できない(2026-09-19 ユーザーが決めた形。設計 §4.5)
+    const revivePick=tacticsMode&&picks&&!Array.isArray(picks)&&Number.isInteger(picks.revive)?picks.revive:null;
+    let nMaxHp=maxHp, nAtk=atk, nDef=def, nMaxGuts=maxGuts;
+    if(revivePick!==null){
+      commitTacticsUnits(reviveTacticsAt(tacticsUnitsRef.current,revivePick,TACTICS_TRAINING_REVIVE_RATE));
+      nDef=tacticsPartyDef(tacticsUnitsRef.current);
+    } else if(tacticsMode){
+      // 1体ずつのトレーニング。選んだぶんをその子だけへ入れる
+      const entries=Array.isArray(picks)?picks.filter(entry=>entry&&Number.isInteger(entry.slot)):[];
+      let units=tacticsUnitsRef.current;
+      tacticsFilledSlots(units).forEach(slotIdx=>{
+        const ids=entries.filter(entry=>entry.slot===slotIdx).map(entry=>entry.id);
+        if(!ids.length) return;
+        const unit=normalizeTacticsUnit(units[slotIdx]);
+        const after=resolveTrainingStats({atk:unit.atk,def:unit.def,hp:unit.baseMaxHp,guts:unit.baseMaxGuts},
+          ids,waveResult?.turn,specialRuleDifficulty);
+        units=applyTacticsTraining(units,slotIdx,after,getPermaBuff('muaHpPct'),getPermaBuff('muaGutsPct'));
+      });
+      commitTacticsUnits(units);
+      nDef=tacticsPartyDef(units); nAtk=tacticsPartyAtk(units);
+      nMaxHp=tacticsTotalBaseMaxHp(units); nMaxGuts=tacticsTotalBaseMaxGuts(units);
+    } else {
+      const nextStats=resolveTrainingStats({atk,def,hp:maxHp,guts:maxGuts},picks,waveResult?.turn,specialRuleDifficulty);
+      nMaxHp=nextStats.hp; nAtk=nextStats.atk; nDef=nextStats.def; nMaxGuts=nextStats.guts;
+      setMaxHp(nMaxHp); setMaxGuts(nMaxGuts); setAtk(nAtk); setDef(nDef);
+    }
     const nGrdL=computeGuardLevel(nDef);
     const currentGuardLevel=computeGuardLevel(def);
     const guardLevelUp=nGrdL>currentGuardLevel;
@@ -14981,7 +14997,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           runMode={runMode} setCurrentPickingMon={setCurrentPickingMon} setMainHero={setMainHero}
           setProAllyDetail={setProAllyDetail} setProAllyPool={setProAllyPool}
           setProEditingAllyIndex={setProEditingAllyIndex} setProHeroPreset={setProHeroPreset}
-          setSlots={setSlots}
+          setSlots={applySlots}
         />
       )}
 
@@ -15532,7 +15548,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           atk={atk} battleTutorialSpotClass={battleTutorialSpotClass} def={def} difficulty={difficulty}
           effect={effect} extremeDifficulty={extremeDifficulty} extremeRun={extremeRun} guts={guts}
           handleTraining={handleTraining} maxGuts={maxGuts} maxHp={maxHp} runMode={runMode}
-          setTrainingPicks={setTrainingPicks} trainingPicks={trainingPicks} waveResult={waveResult}
+          setTrainingPicks={setTrainingPicks} slots={slots}
+          tacticsUnits={isTacticsMode(runMode)?tacticsUnits:null}
+          trainingPicks={trainingPicks} waveResult={waveResult}
         />
       )}
 
