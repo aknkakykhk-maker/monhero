@@ -147,7 +147,10 @@ check('咆哮・再生にも見出しとアイコンが付く',
 // --- ⑧ 実装側(バトル本体)に受け方が書かれているか ---
 // 定義だけ足して実処理を忘れると、技が出ても通常攻撃と同じ挙動になってしまう
 check('貫通撃はガードを無視する', has("intent.variant==='pierce' ? 0"));
-check('連撃はガードが手数ぶん効く', has("intent.variant==='rush' ? baseGuardValue*Math.max(1,Math.floor(Number(intent.hits)||1))"));
+// ★連撃のガードは1回ぶん(2026-09-20 ユーザー指示)。手数を掛ける書き方が戻っていないか見る
+check('連撃のガードは1回ぶんしか効かない',
+  has("const guardValue = intent.variant==='pierce' ? 0 : baseGuardValue;")
+    && !has("intent.variant==='rush' ? baseGuardValue"));
 check('薙ぎ払いは間合いをずらすと威力が落ちる',
   has("const sweptAway = intent.variant==='sweep'") && has('value:Math.max(0,Math.floor(Number(intent.missValue)||0))'));
 check('薙ぎ払いの判定は距離撃で動かした先を見る',

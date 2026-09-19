@@ -393,8 +393,11 @@ check('誰が構えたかをスロットごとに集める',
   has('const addGuardForSlot=(idx,flat,mult)=>{')
     && (source.match(/addGuardForSlot\(slotIdx,/g) || []).length === 3,
   `構えを数える場所 ${(source.match(/addGuardForSlot\(slotIdx,/g) || []).length}か所`);
-check('貫通撃はガードが効かず、連撃は手数ぶん効く',
-  has("const slotGuard=intent.variant==='pierce'?0:(intent.variant==='rush'?base*rushHits:base);"));
+// ★連撃のガードは1回ぶん(2026-09-20 ユーザー指示)。手数ぶん効かせると、
+//   ガード1枚で連撃を完全に止められてしまう
+check('貫通撃はガードが効かず、連撃も1回ぶんしか効かない',
+  has("const slotGuard=intent.variant==='pierce'?0:base;")
+    && !has('rushHits'));
 check('ガードの余りはその子のライフとガッツになる',
   has('units=recoverTacticsGutsAt(healTacticsAt(units,slotIdx,diff),slotIdx,gain);'));
 // ★薙ぎ払いの間合いに誰も立っていないターンがある。減っていないのに数字を出すと読めない

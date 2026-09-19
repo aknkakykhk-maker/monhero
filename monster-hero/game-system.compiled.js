@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: fd3bc8c1e9297df1
+// source-sha256: e1ff98d76db2132f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ef8e54ed92482475
+// generated-sha256: edbc3afcfb982183
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -161,7 +161,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-20 00:47"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-20 01:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15655,7 +15655,7 @@ const ENEMY_ACTION_DEFINITIONS = [{
 // ★「様子を見ている(WAIT)」は入れない。5回に1回、敵が何もしないターンを作らないため。
 // ★どの行動にも「こちらの対抗手段」を1つ用意する。読めば受けられる、が成り立たないと
 //   ただ強いだけの難易度と変わらなくなる。
-//     薙ぎ払い → 距離撃で敵をずらす / 連撃 → ガード /
+//     薙ぎ払い → 距離撃で敵をずらす / 連撃 → ガード(1回ぶんだけ効く)＋回復 /
 //     貫通撃 → 回避・反射・スタン / 咆哮・再生 → スタンで潰す・削り切る /
 //     単体狙い → 狙われた子を守る・回復する / 全体攻撃 → 全員のライフを見て回復を回す
 // ★type は既存の ATTACK / SPECIAL をそのまま使い、違いは variant で持つ。
@@ -15663,8 +15663,8 @@ const ENEMY_ACTION_DEFINITIONS = [{
 //   ここを新しい type にするとダメージ計算・演出・予告の経路を全部書き足すことになる。
 const TACTICS_SWEEP_MULT = 1.6; // 予告した間合いに敵がいるとき
 const TACTICS_SWEEP_MISS_MULT = 0.4; // 距離撃などでずらしたとき
-const TACTICS_RUSH_MULT = 1.8; // 0.6×3ヒットぶん。ガードが手数ぶん効く
-const TACTICS_RUSH_HITS = 3;
+const TACTICS_RUSH_MULT = 1.8; // 0.6×3ヒットぶん。ガードは1回ぶんしか効かない
+const TACTICS_RUSH_HITS = 3; // SCANへ出す見た目だけ。ガードの効き方には掛からない
 const TACTICS_PIERCE_MULT = 1.8; // ガードを無視する
 const TACTICS_ROAR_ATK_RATE = 1.5; // 次のターンから敵の攻撃が上がる
 const TACTICS_ROAR_MAX_STACKS = 2; // 重ねがけの上限
@@ -15741,7 +15741,7 @@ const TACTICS_ACTION_DEFINITIONS = [{
   multiplier: TACTICS_RUSH_MULT,
   hits: TACTICS_RUSH_HITS,
   range: '全間合い',
-  condition: 'ガードが手数ぶん効く',
+  condition: 'ガードは1回ぶんしか効かない',
   cooldown: 0,
   useLimit: null
 }, {
@@ -52376,7 +52376,7 @@ function MonsterHeroGame() {
         // 新モードの攻撃は variant で受け方が変わる。type は ATTACK のままなので、
         // ダメージ計算・演出・予告の経路は既存のものをそのまま通る。
         //   薙ぎ払い … 予告した間合いに敵がいなければ威力が落ちる(距離撃でずらせる)
-        //   連撃     … ガードが手数ぶん効く
+        //   連撃     … ガードは1回ぶんしか効かない(2026-09-20 ユーザー指示。もとは手数ぶん効いていた)
         //   貫通撃   … ガードが効かない
         // 距離撃で動かした先は setEnemyDist の反映を待たないため、呼び出し元が確定させた
         // 移動先(forcedMoveTarget)を優先して見る
@@ -52388,7 +52388,8 @@ function MonsterHeroGame() {
         } : intent;
         // 表示と同じ guardFlat / guardMult 集計を実効丈夫さへ適用する。
         const baseGuardValue = immediateEffects.guardFlat > 0 || immediateEffects.guardMult > 0 ? Math.floor(immediateEffects.guardFlat + effectiveDef * immediateEffects.guardMult) : 0;
-        const guardValue = intent.variant === 'pierce' ? 0 : intent.variant === 'rush' ? baseGuardValue * Math.max(1, Math.floor(Number(intent.hits) || 1)) : baseGuardValue;
+        // ★連撃も1回ぶん。手数(intent.hits)はSCANへ出す見た目だけで、受け方には効かせない
+        const guardValue = intent.variant === 'pierce' ? 0 : baseGuardValue;
         if (sweptAway) {
           addPopup('薙ぎ払いをかわした！', 'hero', 'text-cyan-300 font-black text-xl drop-shadow-md');
           await battleWait(600);
@@ -52467,7 +52468,6 @@ function MonsterHeroGame() {
             addPopup('当たらなかった！', 'hero', 'text-cyan-300 font-black text-xl drop-shadow-md');
             await battleWait(700);
           } else {
-            const rushHits = Math.max(1, Math.floor(Number(intent.hits) || 1));
             const slotGuards = immediateEffects.guardBySlot || {};
             let units = tacticsUnitsRef.current,
               dealt = 0,
@@ -52482,8 +52482,9 @@ function MonsterHeroGame() {
               // ガードの軽減量も「その子の丈夫さ」から出す
               const slotDef = tacticsUnitsRef.current[slotIdx] ? resolveEffectiveMaxStat(normalizeTacticsUnit(tacticsUnitsRef.current[slotIdx]).def, getPermaBuff('defPct')) : effectiveDef;
               const base = own.flat > 0 || own.mult > 0 ? Math.floor(own.flat + slotDef * own.mult) : 0;
-              // 貫通撃はガードが効かない。連撃は手数ぶんガードが効く(既存モードと同じ決まり)
-              const slotGuard = intent.variant === 'pierce' ? 0 : intent.variant === 'rush' ? base * rushHits : base;
+              // 貫通撃はガードが効かない。連撃も1回ぶんしか効かない
+              // (2026-09-20 ユーザー指示。もとは手数ぶん＝3回ぶん効いていた)
+              const slotGuard = intent.variant === 'pierce' ? 0 : base;
               // ★受けるダメージもその子の丈夫さで決まるので、狙われた子ごとに計算し直す
               const slotIncoming = getIncomingDamageBeforeTurnReduction(intent, slotIdx);
               const diff = slotGuard - slotIncoming;
