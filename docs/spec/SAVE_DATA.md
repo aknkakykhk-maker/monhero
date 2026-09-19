@@ -48,6 +48,9 @@
 | `mh_pro_hs_<難易度>` | number / `0` | 端末ハイスコア（プロ） |
 | `mh_pro_clears_<難易度>` | number / `0` | 完走回数（プロ） |
 | `mh_pro_highest_wave_<難易度>` | number / `0` | 最高到達WAVE（プロ） |
+| `mh_tactics_hs_<難易度>` | number / `0` | 端末ハイスコア（新モード。公開前） |
+| `mh_tactics_clears_<難易度>` | number / `0` | 完走回数（新モード。公開前） |
+| `mh_tactics_highest_wave_<難易度>` | number / `0` | 最高到達WAVE（新モード。公開前） |
 | `mh_species_challenge_progress_v1` | object / `{version:1,species:{}}` | 種族チャレンジの種族・難易度別クリアと初回報酬受取状況 |
 | `mh_rank_<難易度>` | object[] / `[]` | 全国送信失敗時の端末ランキング |
 
