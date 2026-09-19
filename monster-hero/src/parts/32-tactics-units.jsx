@@ -459,3 +459,32 @@ const tacticsIntentTargets = (intent, units, enemyDist = null) => {
   }
   return Number.isInteger(intent.targetSlot) && alive.includes(intent.targetSlot) ? [intent.targetSlot] : [];
 };
+
+// ===== 複数ヒットに分かれる攻撃(連撃)の、ガードが届くぶんと通るぶん =====
+// ★連撃は 0.6×3 の3ヒット。ガードが受け止められるのは **1ヒットぶんだけ** で、
+//   残りの2ヒットはそのまま通る(2026-09-20 ユーザー指示)。
+//   「合計から引く」に戻すと、厚いガード1枚で連撃を完全に止められてしまう。
+// ★端数は「通るぶん」へ寄せて、guarded + through が必ず元の合計と一致するようにする。
+// ★予告(予定ダメージ)と実行の両方がこの関数を通る。別々に数えると食い違う。
+const splitTacticsGuardedHit = (incoming, hits) => {
+  const total = Math.max(0, tacticsSafeInt(incoming, 0));
+  const count = Math.max(1, tacticsSafeInt(hits, 1));
+  const guarded = count > 1 ? Math.floor(total / count) : total;
+  return { guarded, through: total - guarded };
+};
+
+// 1体ぶんの受け方。ガードが届く1ヒットぶんを相殺し、残りのヒットはそのまま通す。
+// 返すのは**ターン軽減を掛ける前**の値(軽減は呼び出し側で掛ける)。
+// ★連撃で1ヒットを消しきっても、余ったガードは余らせない(ライフ・ガッツにしない)。
+//   余らせると「合計から引く」のと同じになり、厚いガード1枚で連撃が完全に止まってしまう。
+// ★1ヒットの攻撃(hits=1)では through が0なので、いままでどおり
+//   「余ったぶんがライフとガッツになる」が成り立つ。
+// ★blocked は「ガードが1ヒットぶんを受け止めきったか」。演出(ガード成功)の判定に使う。
+const resolveTacticsGuardedHit = (incoming, hits, guard) => {
+  const { guarded, through } = splitTacticsGuardedHit(incoming, hits);
+  const left = Math.max(0, tacticsSafeInt(guard, 0)) - guarded;
+  if (left < 0) return { taken: -left + through, saved: 0, guarded, through, blocked: false };
+  return through > 0
+    ? { taken: through, saved: 0, guarded, through, blocked: true }
+    : { taken: 0, saved: left, guarded, through, blocked: true };
+};

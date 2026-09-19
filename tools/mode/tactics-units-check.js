@@ -55,7 +55,8 @@ vm.runInContext(
     + 'healTacticsAt,recoverTacticsGutsAt,selfDamageTacticsAt,'
     + 'reviveTacticsAt,tacticsEnemyPowerMultiplier,'
     + 'TACTICS_ENEMY_POWER_MAX,applyTacticsTraining,tacticsPartyAtk,'
-    + 'tacticsPartyDef,shrinkTacticsScore,TACTICS_SCORE_DIVISOR};', sandbox);
+    + 'tacticsPartyDef,shrinkTacticsScore,TACTICS_SCORE_DIVISOR,'
+    + 'splitTacticsGuardedHit,resolveTacticsGuardedHit};', sandbox);
 const api = sandbox.api;
 
 // モンスター1体ぶんの入力。マスモンなら育成済みの値が baseHp などに入っている
@@ -393,13 +394,19 @@ check('誰が構えたかをスロットごとに集める',
   has('const addGuardForSlot=(idx,flat,mult)=>{')
     && (source.match(/addGuardForSlot\(slotIdx,/g) || []).length === 3,
   `構えを数える場所 ${(source.match(/addGuardForSlot\(slotIdx,/g) || []).length}か所`);
-// ★連撃のガードは1回ぶん(2026-09-20 ユーザー指示)。手数ぶん効かせると、
-//   ガード1枚で連撃を完全に止められてしまう
-check('貫通撃はガードが効かず、連撃も1回ぶんしか効かない',
-  has("const slotGuard=intent.variant==='pierce'?0:base;")
-    && !has('rushHits'));
+// ★連撃は 0.6×3 の3ヒットで、ガードが届くのは1ヒットぶんだけ(2026-09-20 ユーザー指示)
+check('貫通撃はガードが効かない',
+  has("const slotGuard=intent.variant==='pierce'?0:base;"));
+check('連撃は1ヒットぶんだけガードに当てる',
+  has("const rushHits=intent.variant==='rush'?Math.max(1,Math.floor(Number(intent.hits)||1)):1;")
+    && has('const hit=resolveTacticsGuardedHit(slotIncoming,rushHits,slotGuard);'));
+// ★受ける量の決め方を本体へ書き写さない。純関数1つに集めて、上の数字の検査で見る
+check('受ける量と余りは純関数が決める',
+  has('if(hit.taken>0){') && has('if(hit.saved>0){')
+    && has('units=recoverTacticsGutsAt(healTacticsAt(units,slotIdx,hit.saved),slotIdx,gain);'));
+check('連撃の決まりをその場に出す', has('連撃 ${rushHits}ヒット！ ガードは1ヒットぶん'));
 check('ガードの余りはその子のライフとガッツになる',
-  has('units=recoverTacticsGutsAt(healTacticsAt(units,slotIdx,diff),slotIdx,gain);'));
+  has('units=recoverTacticsGutsAt(healTacticsAt(units,slotIdx,hit.saved),slotIdx,gain);'));
 // ★薙ぎ払いの間合いに誰も立っていないターンがある。減っていないのに数字を出すと読めない
 check('誰にも当たらなかったターンはダメージの数字を出さない',
   has("addPopup('当たらなかった！','hero','text-cyan-300 font-black text-xl drop-shadow-md');")
@@ -413,7 +420,7 @@ check('回復カードは全体回復',
   has('const healedAll=tacticsHeal(cardHeal);')
     && has('★回復カードは「全体回復」。使う子を選ぶのはガッツを払うためで、効くのは盤面全体'));
 check('ガードの余りとドレインは単体回復',
-  has('units=recoverTacticsGutsAt(healTacticsAt(units,slotIdx,diff),slotIdx,gain);')
+  has('units=recoverTacticsGutsAt(healTacticsAt(units,slotIdx,hit.saved),slotIdx,gain);')
     && has('if(isTacticsMode(runMode)) hpBeforeEnemyAttack=commitTacticsUnits(healTacticsAt(tacticsUnitsRef.current,slotIdx,hRec));'));
 // ★どの回復から戻っても同じ扱いになるよう、立ち上がった瞬間は commitTacticsUnits が1か所で拾う
 check('全体回復は倒れた子にも入り、全快で立つ',
@@ -558,6 +565,46 @@ check('合流したときに「敵も強くなった」と出す', has('敵も�
 // --- ⑭ 画面(段階8) ---
 // ★盤面は既存モードでも作っている(モードで分けないほうが事故が少ない)。
 //   画面へ渡すときだけ新モード以外を null にしないと、ほかのモードにも帯が出てしまう
+// --- ⑳ 連撃は 0.6×3 の3ヒット。ガードが届くのは1ヒットぶんだけ(2026-09-20 ユーザー指示) ---
+// ★「合計から引く」に戻すと、厚いガード1枚で連撃を完全に止められてしまう
+{
+  const three = api.splitTacticsGuardedHit(180, 3);
+  check('連撃はガードが届く1ヒットぶんと、通る2ヒットぶんに分かれる',
+    three.guarded === 60 && three.through === 120, JSON.stringify(three));
+  check('分けても合計は変わらない(端数は通るぶんへ寄せる)',
+    [0, 1, 7, 100, 181, 1999, 20000].every(total => {
+      const part = api.splitTacticsGuardedHit(total, 3);
+      return part.guarded + part.through === total && part.guarded === Math.floor(total / 3);
+    }));
+  const one = api.splitTacticsGuardedHit(180, 1);
+  check('1ヒットの攻撃は全部がガードの対象', one.guarded === 180 && one.through === 0,
+    JSON.stringify(one));
+  check('ヒットの振り分けは壊れた値でも落ちない', (() => {
+    const a = api.splitTacticsGuardedHit(null, null);
+    const b = api.splitTacticsGuardedHit(-50, 0);
+    return a.guarded === 0 && a.through === 0 && b.guarded === 0 && b.through === 0;
+  })());
+
+  // 受ける量そのものを数字で確かめる(180ダメージ＝1ヒット60×3)
+  const rush = (guard) => api.resolveTacticsGuardedHit(180, 3, guard);
+  check('ガードが無ければ全部受ける', rush(0).taken === 180, JSON.stringify(rush(0)));
+  check('ガードが1ヒットに足りなければ、足りないぶんと残りのヒットを受ける',
+    rush(40).taken === 140 && rush(40).saved === 0, JSON.stringify(rush(40)));
+  check('1ヒットを消しきっても、残りの2ヒットは必ず通る',
+    rush(60).taken === 120 && rush(60).blocked === true, JSON.stringify(rush(60)));
+  // ★ここが今回の肝。厚いガードでも連撃は止まらないし、余りはライフ・ガッツにならない
+  check('厚いガードでも連撃は止まらず、余ったガードは余らない',
+    rush(100).taken === 120 && rush(100).saved === 0
+      && rush(999).taken === 120 && rush(999).saved === 0,
+    `${JSON.stringify(rush(100))} / ${JSON.stringify(rush(999))}`);
+  // 1ヒットの攻撃(通常攻撃・貫通撃・薙ぎ払い・単体狙い・全体攻撃)は今までどおり
+  const single = (guard) => api.resolveTacticsGuardedHit(180, 1, guard);
+  check('1ヒットの攻撃はいままでどおり(足りなければ差を受ける)',
+    single(60).taken === 120 && single(60).saved === 0, JSON.stringify(single(60)));
+  check('1ヒットの攻撃は余ったガードがライフ・ガッツになる',
+    single(300).taken === 0 && single(300).saved === 120, JSON.stringify(single(300)));
+}
+
 check('1体ずつの帯は新モードだけへ渡す',
   has('tacticsUnits={isTacticsMode(runMode)?tacticsUnits:null}'));
 check('置けるかの判定も画面へ渡す', has('tacticsCanAssign={tacticsCanAssign}')
@@ -588,6 +635,10 @@ check('置けるかの判定も画面へ渡す', has('tacticsCanAssign={tacticsC
     has('この枠の距離適性') && has("<div className=\"text-[8px] font-black text-red-400\">ちから</div>")
       && has("<div className=\"text-[8px] font-black text-emerald-400\">丈夫さ</div>"));
   // ★null のときだけ今までどおりの判定を使う。ここを間違えると既存モードの置き方が変わる
+  // ★予告と実行で数え方がずれると「ガードしたのに予定より減った」になる
+  check('予告の予定ダメージも同じ関数を通る',
+    hasScreen("const previewGuard=enemyIntent.variant==='pierce'?0:guardValueOf(previewGuardFlat,previewGuardMult);")
+      && hasScreen('applyTurnDamageReduction(resolveTacticsGuardedHit(rawDmg,previewHits,previewGuard).taken)'));
   check('置けるかの判定は新モードだけ差し替える',
     hasScreen('const tacticsAnswer=tacticsCanAssign?tacticsCanAssign(pendingCardObj,pendingIdx,i):null;')
       && hasScreen('if(tacticsAnswer===null||tacticsAnswer===undefined){'));
