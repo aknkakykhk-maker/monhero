@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7c43cae44a5fdedf
+// source-sha256: 055fa489bff4b2e1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6aa5f4a38105afa4
+// generated-sha256: cddbba47b20b0f1a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -161,7 +161,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-19 23:31"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-19 23:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -37676,7 +37676,61 @@ function BattleScreen({
     style: {
       backgroundColor: liteBattleView ? 'rgba(2,6,23,0.95)' : 'rgba(2,6,23,0.55)'
     }
-  }, p.text))), /*#__PURE__*/React.createElement("div", {
+  }, p.text))), Array.isArray(tacticsUnits) ? /*#__PURE__*/React.createElement("div", {
+    "data-tactics-party": true,
+    className: "w-full grid grid-cols-4 gap-1"
+  }, [0, 1, 2, 3].map(i => {
+    const u = tacticsUnits[i];
+    const mon = slots[i];
+    const hpPct = u && u.maxHp > 0 ? Math.max(0, Math.min(100, u.hp / u.maxHp * 100)) : 0;
+    const gutsPct = u && u.maxGuts > 0 ? Math.max(0, Math.min(100, u.guts / u.maxGuts * 100)) : 0;
+    return /*#__PURE__*/React.createElement("div", {
+      key: i,
+      "data-tactics-party-slot": i,
+      "data-tactics-hp": u ? `${u.hp}/${u.maxHp}` : undefined,
+      "data-tactics-guts": u ? `${u.guts}/${u.maxGuts}` : undefined,
+      "data-tactics-downed": u ? u.downed ? 'true' : 'false' : undefined,
+      className: `rounded-lg border px-1 py-0.5 ${u ? u.downed ? 'border-emerald-500/50 bg-emerald-950/40' : 'border-white/10 bg-black/45' : 'border-white/5 bg-black/20'}`
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center justify-between gap-0.5"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: `text-[9px] font-black leading-none truncate ${RANGE_STYLES[i].text || 'text-slate-300'}`
+    }, RANGE_LABELS[i]), u && u.downed && /*#__PURE__*/React.createElement("span", {
+      className: "text-[8px] font-black leading-none text-emerald-300 shrink-0"
+    }, "\u30C0\u30A6\u30F3")), u ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+      className: "mt-0.5 flex items-baseline justify-between gap-0.5"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-[9px] leading-none text-pink-400"
+    }, "\u2665"), /*#__PURE__*/React.createElement("span", {
+      className: "text-[11px] font-mono font-black leading-none text-pink-100"
+    }, u.hp), /*#__PURE__*/React.createElement("span", {
+      className: "text-[8px] font-mono leading-none text-slate-500"
+    }, "/", u.maxHp)), /*#__PURE__*/React.createElement("div", {
+      className: "mt-0.5 h-[5px] rounded-full bg-slate-900 overflow-hidden border border-white/10"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: `h-full ${u.downed ? 'bg-gradient-to-r from-emerald-600 to-teal-300' : 'bg-gradient-to-r from-pink-600 to-rose-400'}`,
+      style: {
+        width: `${hpPct}%`
+      }
+    })), /*#__PURE__*/React.createElement("div", {
+      className: "mt-0.5 flex items-baseline justify-between gap-0.5"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-[9px] leading-none text-amber-400"
+    }, "\u26A1"), /*#__PURE__*/React.createElement("span", {
+      className: "text-[11px] font-mono font-black leading-none text-amber-100"
+    }, u.guts), /*#__PURE__*/React.createElement("span", {
+      className: "text-[8px] font-mono leading-none text-slate-500"
+    }, "/", u.maxGuts)), /*#__PURE__*/React.createElement("div", {
+      className: "mt-0.5 h-[5px] rounded-full bg-slate-900 overflow-hidden border border-white/10"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "h-full bg-gradient-to-r from-amber-600 to-yellow-300",
+      style: {
+        width: `${gutsPct}%`
+      }
+    }))) : /*#__PURE__*/React.createElement("div", {
+      className: "py-2 text-center text-[9px] font-black leading-none text-slate-600"
+    }, "\u7A7A\u304D"));
+  })) : /*#__PURE__*/React.createElement("div", {
     className: "w-full space-y-0.5 px-2 py-0.5 bg-black/40 rounded-xl border border-white/5"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-2 relative"
@@ -38200,55 +38254,7 @@ function BattleScreen({
         fontSize: '40px'
       },
       className: "z-10 drop-shadow-md"
-    }, s?.emoji || ''), tacticsUnit && (() => {
-      const hpPct = tacticsUnit.maxHp > 0 ? Math.max(0, Math.min(100, tacticsUnit.hp / tacticsUnit.maxHp * 100)) : 0;
-      const gutsPct = tacticsUnit.maxGuts > 0 ? Math.max(0, Math.min(100, tacticsUnit.guts / tacticsUnit.maxGuts * 100)) : 0;
-      return /*#__PURE__*/React.createElement("div", {
-        "data-tactics-unit": i,
-        "data-tactics-hp": `${tacticsUnit.hp}/${tacticsUnit.maxHp}`,
-        "data-tactics-guts": `${tacticsUnit.guts}/${tacticsUnit.maxGuts}`,
-        "data-tactics-downed": tacticsUnit.downed ? 'true' : 'false',
-        className: "absolute bottom-0 left-0 right-0 z-[64] px-0.5 pb-0.5 pointer-events-none space-y-px"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex items-center gap-0.5"
-      }, /*#__PURE__*/React.createElement("span", {
-        style: {
-          fontSize: '7px'
-        },
-        className: `leading-none shrink-0 ${tacticsUnit.downed ? 'text-emerald-300' : 'text-pink-300'}`
-      }, tacticsUnit.downed ? '✚' : '❤'), /*#__PURE__*/React.createElement("div", {
-        className: "flex-1 h-[3px] rounded-full bg-black/75 overflow-hidden border border-white/10"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: `h-full ${tacticsUnit.downed ? 'bg-gradient-to-r from-emerald-600 to-teal-300' : 'bg-gradient-to-r from-pink-600 to-rose-400'}`,
-        style: {
-          width: `${hpPct}%`
-        }
-      })), /*#__PURE__*/React.createElement("span", {
-        style: {
-          fontSize: '7px'
-        },
-        className: `leading-none shrink-0 font-black font-mono ${tacticsUnit.downed ? 'text-emerald-100' : 'text-pink-100'}`
-      }, tacticsUnit.hp)), /*#__PURE__*/React.createElement("div", {
-        className: "flex items-center gap-0.5"
-      }, /*#__PURE__*/React.createElement("span", {
-        style: {
-          fontSize: '7px'
-        },
-        className: "leading-none shrink-0 text-amber-300"
-      }, "\u26A1"), /*#__PURE__*/React.createElement("div", {
-        className: "flex-1 h-[3px] rounded-full bg-black/75 overflow-hidden border border-white/10"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "h-full bg-gradient-to-r from-amber-600 to-yellow-300",
-        style: {
-          width: `${gutsPct}%`
-        }
-      })), /*#__PURE__*/React.createElement("span", {
-        style: {
-          fontSize: '7px'
-        },
-        className: "leading-none shrink-0 font-black font-mono text-amber-100"
-      }, tacticsUnit.guts)));
-    })(), tacticsUnit && tacticsUnit.downed && (() => {
+    }, s?.emoji || ''), tacticsUnit && tacticsUnit.downed && (() => {
       const revivePct = tacticsUnit.maxHp > 0 ? Math.floor(tacticsUnit.hp / tacticsUnit.maxHp * 100) : 0;
       return /*#__PURE__*/React.createElement("div", {
         "data-tactics-down-mark": i,
@@ -67137,7 +67143,53 @@ function MonsterHeroGame() {
       className: "text-2xl font-black italic mb-6 uppercase"
     }, mainHero.name), /*#__PURE__*/React.createElement("div", {
       className: "w-full max-w-sm space-y-4 bg-slate-900/50 p-6 rounded-3xl border border-white/5"
+    }, isTacticsMode(runMode) && /*#__PURE__*/React.createElement("div", {
+      "data-tactics-status": true,
+      className: "space-y-1.5 text-left"
     }, /*#__PURE__*/React.createElement("div", {
+      className: "text-[9px] font-black uppercase tracking-widest text-indigo-300"
+    }, "1\u4F53\u305A\u3064\u306E\u30B9\u30C6\u30FC\u30BF\u30B9"), slots.map((mon, i) => {
+      const u = tacticsUnits[i];
+      if (!mon || !u) return null;
+      const aptPct = (getMonsterAptPct(mon, specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty), wave)[i] || 0) * 100;
+      return /*#__PURE__*/React.createElement("div", {
+        key: i,
+        "data-tactics-status-slot": i,
+        className: `rounded-2xl border px-2.5 py-1.5 ${u.downed ? 'border-emerald-500/50 bg-emerald-950/40' : 'border-white/10 bg-black/40'}`
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex items-center justify-between gap-2"
+      }, /*#__PURE__*/React.createElement("b", {
+        className: "text-[12px] font-black truncate"
+      }, RANGE_LABELS[i], "\u8DDD\u96E2\u30FB", mon.masuName || mon.name), u.downed && /*#__PURE__*/React.createElement("span", {
+        className: "shrink-0 text-[10px] font-black text-emerald-300"
+      }, "\u30C0\u30A6\u30F3 \u5FA9\u6D3B\u307E\u3067 ", 100 - Math.floor(u.hp / Math.max(1, u.maxHp) * 100), "%")), /*#__PURE__*/React.createElement("div", {
+        className: "mt-1 grid grid-cols-4 gap-1 text-center"
+      }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+        className: "text-[8px] font-black text-pink-400"
+      }, "\u30E9\u30A4\u30D5"), /*#__PURE__*/React.createElement("div", {
+        className: "text-[12px] font-mono font-black"
+      }, u.hp, /*#__PURE__*/React.createElement("span", {
+        className: "text-[9px] text-slate-500"
+      }, "/", u.maxHp))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+        className: "text-[8px] font-black text-red-400"
+      }, "\u3061\u304B\u3089"), /*#__PURE__*/React.createElement("div", {
+        className: "text-[12px] font-mono font-black"
+      }, u.atk)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+        className: "text-[8px] font-black text-emerald-400"
+      }, "\u4E08\u592B\u3055"), /*#__PURE__*/React.createElement("div", {
+        className: "text-[12px] font-mono font-black"
+      }, u.def)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+        className: "text-[8px] font-black text-amber-400"
+      }, "\u30AC\u30C3\u30C4"), /*#__PURE__*/React.createElement("div", {
+        className: "text-[12px] font-mono font-black"
+      }, u.guts, /*#__PURE__*/React.createElement("span", {
+        className: "text-[9px] text-slate-500"
+      }, "/", u.maxGuts)))), /*#__PURE__*/React.createElement("div", {
+        className: "mt-0.5 text-[9px] font-black text-cyan-300"
+      }, "\u3053\u306E\u67A0\u306E\u8DDD\u96E2\u9069\u6027 ", aptPct >= 0 ? '+' : '', Math.round(aptPct * 10) / 10, "%"));
+    })), isTacticsMode(runMode) && /*#__PURE__*/React.createElement("div", {
+      className: "text-left text-[9px] font-black uppercase tracking-widest text-slate-400"
+    }, "\u30D1\u30FC\u30C6\u30A3\u5168\u4F53\uFF08\u30AB\u30FC\u30C9\u306E\u52B9\u304D\u3081\u3092\u6C7A\u3081\u308B\u5024\uFF09"), /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-2 gap-6 text-left"
     }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
       className: "text-[9px] text-pink-400 font-black uppercase"

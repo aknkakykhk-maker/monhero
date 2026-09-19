@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6aa5f4a38105afa4
+// generated-sha256: cddbba47b20b0f1a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -91,7 +91,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-19 23:31"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-19 23:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -20912,10 +20912,57 @@ function BattleScreen({
           </div>
         <div className="shrink-0 py-1.5 px-2 bg-slate-950 border-y border-white/5 flex flex-col items-center justify-center gap-1 z-10 relative">
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none gap-1" style={{zIndex:200}}>{popups.filter(p=>p.side==='hero').map((p)=>(<div key={p.id} data-lite-damage={liteBattleView?'true':undefined} className={`${p.color} font-black leading-tight px-2 py-0.5 rounded-lg ${liteBattleView?'border border-white/20 text-base':'drop-shadow-[0_2px_8px_rgba(0,0,0,1)]'}`} style={{backgroundColor:liteBattleView?'rgba(2,6,23,0.95)':'rgba(2,6,23,0.55)'}}>{p.text}</div>))}</div>
+          {/* 新モードは合計ではなく「1体ずつ」を出す(2026-09-19 ユーザー依頼)。
+              距離枠のすぐ上に、下の枠と同じ4列でそろえる。
+              ★合計のライフ・ガッツは出さない。個別と両方出すと読むものが増えるだけで、
+                どの子が瀕死かはこちらでしか分からない */}
+          {Array.isArray(tacticsUnits)?(
+            <div data-tactics-party className="w-full grid grid-cols-4 gap-1">
+              {[0,1,2,3].map(i=>{
+                const u=tacticsUnits[i];
+                const mon=slots[i];
+                const hpPct=u&&u.maxHp>0?Math.max(0,Math.min(100,(u.hp/u.maxHp)*100)):0;
+                const gutsPct=u&&u.maxGuts>0?Math.max(0,Math.min(100,(u.guts/u.maxGuts)*100)):0;
+                return(
+                  <div key={i} data-tactics-party-slot={i}
+                    data-tactics-hp={u?`${u.hp}/${u.maxHp}`:undefined}
+                    data-tactics-guts={u?`${u.guts}/${u.maxGuts}`:undefined}
+                    data-tactics-downed={u?(u.downed?'true':'false'):undefined}
+                    className={`rounded-lg border px-1 py-0.5 ${u?(u.downed?'border-emerald-500/50 bg-emerald-950/40':'border-white/10 bg-black/45'):'border-white/5 bg-black/20'}`}>
+                    <div className="flex items-center justify-between gap-0.5">
+                      <span className={`text-[9px] font-black leading-none truncate ${RANGE_STYLES[i].text||'text-slate-300'}`}>{RANGE_LABELS[i]}</span>
+                      {u&&u.downed&&<span className="text-[8px] font-black leading-none text-emerald-300 shrink-0">ダウン</span>}
+                    </div>
+                    {u?(<>
+                      <div className="mt-0.5 flex items-baseline justify-between gap-0.5">
+                        <span className="text-[9px] leading-none text-pink-400">♥</span>
+                        <span className="text-[11px] font-mono font-black leading-none text-pink-100">{u.hp}</span>
+                        <span className="text-[8px] font-mono leading-none text-slate-500">/{u.maxHp}</span>
+                      </div>
+                      <div className="mt-0.5 h-[5px] rounded-full bg-slate-900 overflow-hidden border border-white/10">
+                        <div className={`h-full ${u.downed?'bg-gradient-to-r from-emerald-600 to-teal-300':'bg-gradient-to-r from-pink-600 to-rose-400'}`} style={{width:`${hpPct}%`}}></div>
+                      </div>
+                      <div className="mt-0.5 flex items-baseline justify-between gap-0.5">
+                        <span className="text-[9px] leading-none text-amber-400">⚡</span>
+                        <span className="text-[11px] font-mono font-black leading-none text-amber-100">{u.guts}</span>
+                        <span className="text-[8px] font-mono leading-none text-slate-500">/{u.maxGuts}</span>
+                      </div>
+                      <div className="mt-0.5 h-[5px] rounded-full bg-slate-900 overflow-hidden border border-white/10">
+                        <div className="h-full bg-gradient-to-r from-amber-600 to-yellow-300" style={{width:`${gutsPct}%`}}></div>
+                      </div>
+                    </>):(
+                      <div className="py-2 text-center text-[9px] font-black leading-none text-slate-600">空き</div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ):(
           <div className="w-full space-y-0.5 px-2 py-0.5 bg-black/40 rounded-xl border border-white/5">
             <div className="flex items-center gap-2 relative"><Heart className="text-pink-500 shrink-0" size={12}/><div className="flex-1"><div className="flex items-end justify-between text-[9px] font-bold text-pink-400 uppercase tracking-wider"><span>Ally Life</span><span data-ally-life={`${hp}/${effectiveMaxHp}`} className="font-mono text-[11px] leading-none text-pink-200">{hp.toLocaleString()} / {effectiveMaxHp.toLocaleString()}</span></div><div className="h-2 bg-slate-900 rounded-full overflow-hidden border border-white/5 shadow-inner"><div className="h-full bg-gradient-to-r from-pink-700 to-rose-400 transition-all duration-1000" style={{width:`${(hp/effectiveMaxHp)*100}%`,backgroundImage:'linear-gradient(to right, #be185d, #fb7185)'}}></div></div></div><div className="absolute left-1/2 -translate-x-1/2 -top-2 flex flex-col items-center gap-0.5 pointer-events-none" style={{zIndex:210}}>{popups.filter(p=>p.side==='life').map((p)=>(<div key={p.id} className={`${p.color} text-base font-black drop-shadow-[0_2px_8px_rgba(0,0,0,1)] whitespace-nowrap px-2 py-0.5 rounded-lg animate-bounce`} style={{backgroundColor:'rgba(2,6,23,0.8)'}}>{p.text}</div>))}</div></div>
             <div className="flex items-center gap-2 relative"><Zap className="text-amber-500 shrink-0" size={10}/><div className="flex-1"><div className="flex items-end justify-between text-[9px] font-bold text-amber-400 uppercase tracking-wider"><span>Ally Guts</span><span data-ally-guts={`${Math.floor(guts)}/${effectiveMaxGuts}`} className="font-mono text-[11px] leading-none text-amber-200">{Math.floor(guts).toLocaleString()} / {effectiveMaxGuts.toLocaleString()}</span></div><div className="h-2 bg-slate-900 rounded-full overflow-hidden border border-white/5 shadow-inner"><div className="h-full bg-gradient-to-r from-amber-600 to-yellow-300 transition-all duration-500" style={{width:`${(guts/effectiveMaxGuts)*100}%`,backgroundImage:'linear-gradient(to right, #d97706, #fde047)'}}></div></div></div><div className="absolute left-1/2 -translate-x-1/2 -top-2 flex flex-col items-center gap-0.5 pointer-events-none" style={{zIndex:210}}>{popups.filter(p=>p.side==='guts').map((p)=>(<div key={p.id} className={`${p.color} text-base font-black drop-shadow-[0_2px_8px_rgba(0,0,0,1)] whitespace-nowrap px-2 py-0.5 rounded-lg animate-bounce`} style={{backgroundColor:'rgba(2,6,23,0.8)'}}>{p.text}</div>))}</div></div>
           </div>
+          )}
           {(()=>{
             // Overall total damage across ALL monster slots, matching processTurn's global attack order.
             // Existing total = sum of already-assigned attack cards.
@@ -21165,33 +21212,6 @@ function BattleScreen({
                         lunge={attackAnim.charge===false}
                         charging={attackAnim.charge===true}/>
                       :<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:'64px',height:'64px'}} className="z-10 object-contain drop-shadow-md"/>):(<span style={{fontSize:'40px'}} className="z-10 drop-shadow-md">{s?.emoji||''}</span>)}
-                  {/* 新モードは1体ずつのライフ・ガッツをここへ出す。誰が瀕死か・誰のガッツが尽きたかが
-                      分からないと、狙いを読んで守る/回復する判断が立たない(設計 §4.1) */}
-                  {tacticsUnit&&(()=>{
-                    const hpPct=tacticsUnit.maxHp>0?Math.max(0,Math.min(100,(tacticsUnit.hp/tacticsUnit.maxHp)*100)):0;
-                    const gutsPct=tacticsUnit.maxGuts>0?Math.max(0,Math.min(100,(tacticsUnit.guts/tacticsUnit.maxGuts)*100)):0;
-                    return(<div data-tactics-unit={i} data-tactics-hp={`${tacticsUnit.hp}/${tacticsUnit.maxHp}`}
-                      data-tactics-guts={`${tacticsUnit.guts}/${tacticsUnit.maxGuts}`}
-                      data-tactics-downed={tacticsUnit.downed?'true':'false'}
-                      className="absolute bottom-0 left-0 right-0 z-[64] px-0.5 pb-0.5 pointer-events-none space-y-px">
-                      {/* 倒れているあいだ、この帯は「復活まであとどれだけか」になる。
-                          全快になったところで立ち上がるので、色を変えて別物だと分かるようにする */}
-                      <div className="flex items-center gap-0.5">
-                        <span style={{fontSize:'7px'}} className={`leading-none shrink-0 ${tacticsUnit.downed?'text-emerald-300':'text-pink-300'}`}>{tacticsUnit.downed?'✚':'❤'}</span>
-                        <div className="flex-1 h-[3px] rounded-full bg-black/75 overflow-hidden border border-white/10">
-                          <div className={`h-full ${tacticsUnit.downed?'bg-gradient-to-r from-emerald-600 to-teal-300':'bg-gradient-to-r from-pink-600 to-rose-400'}`} style={{width:`${hpPct}%`}}></div>
-                        </div>
-                        <span style={{fontSize:'7px'}} className={`leading-none shrink-0 font-black font-mono ${tacticsUnit.downed?'text-emerald-100':'text-pink-100'}`}>{tacticsUnit.hp}</span>
-                      </div>
-                      <div className="flex items-center gap-0.5">
-                        <span style={{fontSize:'7px'}} className="leading-none shrink-0 text-amber-300">⚡</span>
-                        <div className="flex-1 h-[3px] rounded-full bg-black/75 overflow-hidden border border-white/10">
-                          <div className="h-full bg-gradient-to-r from-amber-600 to-yellow-300" style={{width:`${gutsPct}%`}}></div>
-                        </div>
-                        <span style={{fontSize:'7px'}} className="leading-none shrink-0 font-black font-mono text-amber-100">{tacticsUnit.guts}</span>
-                      </div>
-                    </div>);
-                  })()}
                   {/* 倒れた子。カードを置けないことが一目で分かるように覆う */}
                   {tacticsUnit&&tacticsUnit.downed&&(()=>{
                     const revivePct=tacticsUnit.maxHp>0?Math.floor((tacticsUnit.hp/tacticsUnit.maxHp)*100):0;
@@ -38473,7 +38493,29 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
         </div>
       )}
       {(showEnemyInfo&&enemy||waveScanPreview)&&(()=>{const scanEnemy=waveScanPreview?.enemy||enemy;const scanDist=waveScanPreview?2:enemyDist;const scanBeforeBattle=!!waveScanPreview;const scanState={...(scanBeforeBattle?{unannounced:true}:enemyActionStateFrom(enemyLastIntent)),definitions:enemyActionDefinitionsFor(runMode,scanEnemy?.id),roarStacks:tacticsRoarStacksRef.current};const actions=enemyActionProbabilities(scanEnemy,scanDist,scanState);return (<div className="fixed inset-0 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'#020617',zIndex:waveScanPreview?71000:40000,paddingTop:'env(safe-area-inset-top)',paddingBottom:'env(safe-area-inset-bottom)'}} role="dialog" aria-modal="true" aria-label="敵行動詳細"><header className="flex justify-between items-center px-5 py-3 border-b border-white/10 shrink-0 bg-slate-950/95 z-10"><div><h3 className="font-black italic uppercase text-red-500 text-lg">Enemy Scan</h3>{waveScanPreview&&<small className="text-indigo-300 font-black">WAVE {waveScanPreview.wave}・戦闘開始前</small>}</div><button onClick={()=>{if(waveScanPreview)setWaveScanPreview(null);else setShowEnemyInfo(false);}} className="min-h-[44px] px-6 bg-white/10 rounded-full text-[11px] text-white active:scale-90">戻る</button></header><div className="flex-1 min-h-0 overflow-y-auto mh-scroll"><div className="w-full max-w-md mx-auto flex flex-col items-center text-center px-4 pb-8">{scanEnemy.imgUrl?(<div className={`${scanEnemy.id==='Moo'?'w-[min(92vw,380px)] h-[clamp(250px,38vh,310px)]':'w-[140px] h-[160px]'} flex shrink-0 items-center justify-center overflow-hidden`}><img src={scanEnemy.imgUrl} alt={scanEnemy.name} style={enemyArtStyle(scanEnemy.id,'scan')} className={`${scanEnemy.id==='Moo'?'w-[140px] h-[140px]':'w-[140px] h-[140px]'} object-contain drop-shadow-[0_0_50px_rgba(239,68,68,0.4)]`}/></div>):(<div style={{fontSize:'112px'}} className="my-4">{scanEnemy.emoji}</div>)}<h4 className="text-2xl font-black italic mb-4 uppercase shrink-0">{scanEnemy.name}</h4><section className="w-full space-y-3"><div className="grid grid-cols-2 gap-4 text-left bg-slate-900/60 p-4 rounded-2xl border border-white/5"><div><div className="text-[9px] text-pink-400 font-black">ライフ</div><div className="text-xl font-mono font-black">{scanEnemy.hp.toLocaleString()}</div></div><div><div className="text-[9px] text-red-400 font-black">攻撃力</div><div className="text-xl font-mono font-black">{scanEnemy.atk.toLocaleString()}</div></div></div><div className="text-left bg-slate-900/60 p-4 rounded-2xl border border-cyan-500/20"><div className="text-[9px] text-cyan-400 font-black">{scanBeforeBattle?'戦闘状況':'現在の間合い'}</div><b>{scanBeforeBattle?'戦闘開始前':`${RANGE_LABELS[scanDist]}距離`}</b></div><div className="space-y-2 text-left">{actions.map((action,index)=>{const actionName=action.type==='MOVE'?'間合い移動':action.variant?action.category:enemyActionLabel(scanEnemy,action.type);const power=Math.floor(scanEnemy.atk*action.multiplier);return <details key={action.id} open={index<2} className={`rounded-2xl border p-3 ${action.available?'bg-slate-900/80 border-white/10':'bg-slate-950 border-red-500/30'}`}><summary className="cursor-pointer list-none flex items-center justify-between gap-2"><span><b className="block">{actionName}</b><small className="text-slate-400">{action.category}</small></span><span className="text-right"><b className="text-amber-300">{(action.probability*100).toFixed(action.probability*100%1?1:0)}%</b>{!scanBeforeBattle&&enemyIntent?.actionId===action.id&&<small className="block text-cyan-300">予告中</small>}</span></summary><div className="grid grid-cols-2 gap-x-3 gap-y-2 mt-3 pt-3 border-t border-white/10 text-[10px]"><span>威力倍率 <b>×{action.multiplier}</b></span><span>基準威力 <b>{power.toLocaleString()}</b></span><span>攻撃回数 <b>{action.hits}回</b></span><span>使用間合い <b>{action.range}</b></span><span className="col-span-2">発動条件 <b>{action.condition}</b></span><span className="col-span-2">移動効果 <b>{action.type==='MOVE'?`${RANGE_LABELS.filter((_,i)=>i!==scanDist).join('・')}距離のいずれかへ移動`:'なし'}</b></span><span className="col-span-2">バフ・デバフ・状態異常 <b>なし</b></span><span>クールダウン <b>{action.cooldown?`${action.cooldown}ターン`:'なし'}</b></span><span>回数制限 <b>{action.useLimit??'なし'}</b></span></div>{!action.available&&<div className="mt-2 text-[10px] text-red-300">現在は使用不可：{action.unavailableReason}</div>}</details>})}</div><aside className="text-left text-[10px] leading-relaxed text-slate-400 bg-black/30 rounded-xl p-3"><b className="block text-slate-200 mb-1">行動ルール</b>使用可能な行動の重みを合計100%に正規化して抽選します。移動が選ばれた場合は、現在以外の3間合いから同率で移動先を選びます。必殺技は「ためる」の次のターンに必ず発動し、ほかの行動では上書きされません。移動は必ず前のターンに吹き出しで予告してから行うため、戦闘開始の1ターン目と、移動した次のターンには選ばれません。SCAN表示では抽選しません。</aside></section></div></div></div>);})()}
-      {showHeroInfo&&mainHero&&(<div className="fixed inset-0 p-6 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'#020617',zIndex:40000,paddingTop:'calc(1.5rem + env(safe-area-inset-top))'}}><div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4"><h3 className="font-black italic uppercase text-indigo-400 text-lg">Hero Scan</h3><button onClick={()=>setShowHeroInfo(false)} className="px-6 py-2 bg-white/10 rounded-full text-[11px] text-white active:scale-90">戻る</button></div><div className="flex-1 flex flex-col items-center justify-center text-center overflow-y-auto mh-scroll">{mainHero.imgUrl?(<DyedMonsterImage baseId={mainHero.id} src={mainHero.imgUrl} alt={mainHero.name} masuColors={mainHero.colors} style={{width:'140px',height:'140px'}} className="mx-auto mb-6 object-contain drop-shadow-[0_0_50px_rgba(99,102,241,0.4)]"/>):(<div style={{fontSize:'112px'}} className="mb-6 drop-shadow-[0_0_50px_rgba(99,102,241,0.4)]">{mainHero.emoji}</div>)}<h4 className="text-2xl font-black italic mb-6 uppercase">{mainHero.name}</h4><div className="w-full max-w-sm space-y-4 bg-slate-900/50 p-6 rounded-3xl border border-white/5"><div className="grid grid-cols-2 gap-6 text-left"><div><div className="text-[9px] text-pink-400 font-black uppercase">ライフ</div><div className="text-xl font-mono font-black">{hp.toLocaleString()} / {effectiveMaxHp.toLocaleString()}</div></div><div><div className="text-[9px] text-red-400 font-black uppercase">攻撃力</div><div className="text-xl font-mono font-black">{atk}</div></div><div><div className="text-[9px] text-emerald-400 font-black uppercase">丈夫さ</div><div className="text-xl font-mono font-black">{effectiveDef}{getPermaBuff('defPct')>0&&<span className="text-[10px] text-emerald-400 ml-1">(基礎{def} DEF +{Math.round(getPermaBuff('defPct')*100)}%)</span>}{getPermaBuff('dmgCutPct')>0&&<span className="text-[10px] text-emerald-400 ml-1">(被ダメ -{Math.round(getPermaBuff('dmgCutPct')*100)}%)</span>}</div></div><div><div className="text-[9px] text-amber-400 font-black uppercase">ガッツ</div><div className="text-xl font-mono font-black">{guts} / {effectiveMaxGuts}</div></div></div><div className="bg-black/40 p-3 rounded-xl border border-indigo-500/30 text-left"><div className="text-[9px] text-indigo-400 uppercase font-black">勇者特性</div><div className="text-[11px] text-white font-bold leading-relaxed mt-1">{mainHero.traitDesc}</div></div><div className="text-left"><AssistantBubble scene="battleHelp" compact/></div></div></div></div>)}
+      {showHeroInfo&&mainHero&&(<div className="fixed inset-0 p-6 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'#020617',zIndex:40000,paddingTop:'calc(1.5rem + env(safe-area-inset-top))'}}><div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4"><h3 className="font-black italic uppercase text-indigo-400 text-lg">Hero Scan</h3><button onClick={()=>setShowHeroInfo(false)} className="px-6 py-2 bg-white/10 rounded-full text-[11px] text-white active:scale-90">戻る</button></div><div className="flex-1 flex flex-col items-center justify-center text-center overflow-y-auto mh-scroll">{mainHero.imgUrl?(<DyedMonsterImage baseId={mainHero.id} src={mainHero.imgUrl} alt={mainHero.name} masuColors={mainHero.colors} style={{width:'140px',height:'140px'}} className="mx-auto mb-6 object-contain drop-shadow-[0_0_50px_rgba(99,102,241,0.4)]"/>):(<div style={{fontSize:'112px'}} className="mb-6 drop-shadow-[0_0_50px_rgba(99,102,241,0.4)]">{mainHero.emoji}</div>)}<h4 className="text-2xl font-black italic mb-6 uppercase">{mainHero.name}</h4><div className="w-full max-w-sm space-y-4 bg-slate-900/50 p-6 rounded-3xl border border-white/5">{/* 新モードは1体ずつ値を持つので、ここで全員ぶんを出す(2026-09-19 ユーザーの質問)。
+  下のブロックはパーティ合計(ガードの段階などを決める値)なので、そのまま残す */}
+{isTacticsMode(runMode)&&(<div data-tactics-status className="space-y-1.5 text-left">
+  <div className="text-[9px] font-black uppercase tracking-widest text-indigo-300">1体ずつのステータス</div>
+  {slots.map((mon,i)=>{
+    const u=tacticsUnits[i];
+    if(!mon||!u) return null;
+    const aptPct=(getMonsterAptPct(mon,specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty),wave)[i]||0)*100;
+    return (<div key={i} data-tactics-status-slot={i} className={`rounded-2xl border px-2.5 py-1.5 ${u.downed?'border-emerald-500/50 bg-emerald-950/40':'border-white/10 bg-black/40'}`}>
+      <div className="flex items-center justify-between gap-2">
+        <b className="text-[12px] font-black truncate">{RANGE_LABELS[i]}距離・{mon.masuName||mon.name}</b>
+        {u.downed&&<span className="shrink-0 text-[10px] font-black text-emerald-300">ダウン 復活まで {100-Math.floor((u.hp/Math.max(1,u.maxHp))*100)}%</span>}
+      </div>
+      <div className="mt-1 grid grid-cols-4 gap-1 text-center">
+        <div><div className="text-[8px] font-black text-pink-400">ライフ</div><div className="text-[12px] font-mono font-black">{u.hp}<span className="text-[9px] text-slate-500">/{u.maxHp}</span></div></div>
+        <div><div className="text-[8px] font-black text-red-400">ちから</div><div className="text-[12px] font-mono font-black">{u.atk}</div></div>
+        <div><div className="text-[8px] font-black text-emerald-400">丈夫さ</div><div className="text-[12px] font-mono font-black">{u.def}</div></div>
+        <div><div className="text-[8px] font-black text-amber-400">ガッツ</div><div className="text-[12px] font-mono font-black">{u.guts}<span className="text-[9px] text-slate-500">/{u.maxGuts}</span></div></div>
+      </div>
+      <div className="mt-0.5 text-[9px] font-black text-cyan-300">この枠の距離適性 {aptPct>=0?'+':''}{Math.round(aptPct*10)/10}%</div>
+    </div>);
+  })}
+</div>)}{isTacticsMode(runMode)&&(<div className="text-left text-[9px] font-black uppercase tracking-widest text-slate-400">パーティ全体（カードの効きめを決める値）</div>)}<div className="grid grid-cols-2 gap-6 text-left"><div><div className="text-[9px] text-pink-400 font-black uppercase">ライフ</div><div className="text-xl font-mono font-black">{hp.toLocaleString()} / {effectiveMaxHp.toLocaleString()}</div></div><div><div className="text-[9px] text-red-400 font-black uppercase">攻撃力</div><div className="text-xl font-mono font-black">{atk}</div></div><div><div className="text-[9px] text-emerald-400 font-black uppercase">丈夫さ</div><div className="text-xl font-mono font-black">{effectiveDef}{getPermaBuff('defPct')>0&&<span className="text-[10px] text-emerald-400 ml-1">(基礎{def} DEF +{Math.round(getPermaBuff('defPct')*100)}%)</span>}{getPermaBuff('dmgCutPct')>0&&<span className="text-[10px] text-emerald-400 ml-1">(被ダメ -{Math.round(getPermaBuff('dmgCutPct')*100)}%)</span>}</div></div><div><div className="text-[9px] text-amber-400 font-black uppercase">ガッツ</div><div className="text-xl font-mono font-black">{guts} / {effectiveMaxGuts}</div></div></div><div className="bg-black/40 p-3 rounded-xl border border-indigo-500/30 text-left"><div className="text-[9px] text-indigo-400 uppercase font-black">勇者特性</div><div className="text-[11px] text-white font-bold leading-relaxed mt-1">{mainHero.traitDesc}</div></div><div className="text-left"><AssistantBubble scene="battleHelp" compact/></div></div></div></div>)}
 
       {showSoulBattleEffects&&gameState==='BATTLE'&&(
         <SoulBattleEffects

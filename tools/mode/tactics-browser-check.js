@@ -188,48 +188,61 @@ const check = (name, ok, detail = '') => {
     //   あるいは誰も倒れていないのに敗北画面が出る。どちらも例外は出ない
     // ★「読めなかった」を0と取り違えない。WAVEの結果やトレーニングの画面へ移ると
     //   この帯は消えるので、raw が読めたときだけ数える(取り違えて敗北扱いにしかけた)
-    const lifeOf = () => page.evaluate(() => {
-      const raw = document.querySelector('[data-ally-life]')?.getAttribute('data-ally-life') || '';
-      if (!/^\d+\/\d+$/.test(raw)) return { raw: '', ok: false };
-      const [hp, max] = raw.split('/').map(Number);
-      return { hp, max, raw, ok: true };
+    // ★ライフの合計は「1体ずつの帯」から数える(2026-09-19にユーザー依頼で合計の帯をやめた)。
+    //   倒れた子は合計へ数えない。数えると全員倒れても0にならず、敗北の判定と食い違う
+    await page.evaluate(() => {
+      window.__mhParty = () => [...document.querySelectorAll('[data-tactics-party-slot]')].map(el => ({
+        slot: Number(el.getAttribute('data-tactics-party-slot')),
+        hp: el.getAttribute('data-tactics-hp') || '',
+        guts: el.getAttribute('data-tactics-guts') || '',
+        downed: el.getAttribute('data-tactics-downed') || '',
+      })).filter(u => /^\d+\/\d+$/.test(u.hp));
+      // ★「読めなかった」を0と取り違えない。WAVEの結果やトレーニングの画面へ移ると
+      //   この帯ごと消えるので、1枠でも読めたときだけ数える(取り違えて敗北扱いにしかけた)
+      window.__mhPartyLife = () => {
+        const units = window.__mhParty();
+        if (!units.length) return { raw: '', ok: false };
+        const alive = units.filter(u => u.downed !== 'true');
+        const hp = alive.reduce((sum, u) => sum + Number(u.hp.split('/')[0]), 0);
+        const max = alive.reduce((sum, u) => sum + Number(u.hp.split('/')[1]), 0);
+        return { hp, max, raw: `${hp}/${max}`, ok: true };
+      };
     });
-    // --- 1体ずつのライフ・ガッツ(段階8) ---
-    const unitBars = await page.evaluate(() => [...document.querySelectorAll('[data-tactics-unit]')].map(el => ({
-      slot: Number(el.getAttribute('data-tactics-unit')),
-      hp: el.getAttribute('data-tactics-hp'),
-      guts: el.getAttribute('data-tactics-guts'),
-      downed: el.getAttribute('data-tactics-downed'),
-    })));
+    const lifeOf = () => page.evaluate(() => window.__mhPartyLife());
+    // --- 1体ずつのライフ・ガッツ(段階8 / 2026-09-19に距離枠の上へ移した) ---
+    const unitBars = await page.evaluate(() => window.__mhParty());
     check('1体ずつのライフ・ガッツが出る',
       unitBars.length >= 1 && unitBars.every(u => /^\d+\/\d+$/.test(u.hp) && /^\d+\/\d+$/.test(u.guts)),
       JSON.stringify(unitBars));
     check('倒れていない子は「ダウン」にならない', unitBars.every(u => u.downed === 'false'),
       unitBars.map(u => `${u.slot}:${u.downed}`).join(' '));
-    // ★盤面の合計と味方のライフ帯がずれていたら、盤面とパーティのライフが食い違っている
-    const barTotal = unitBars.reduce((sum, u) => sum + Number(String(u.hp).split('/')[0] || 0), 0);
-    const startLife = await lifeOf();
-    check('1体ずつの合計が味方のライフと一致する', barTotal === startLife.hp,
-      `盤面の合計 ${barTotal} / ライフ帯 ${startLife.raw}`);
+    // ★合計のライフ・ガッツの帯は新モードでは出さない(2026-09-19)。
+    //   合計だけでは「どの子が瀕死か」が分からず、個別と両方出すと読むものが増えるだけ
+    const allyBars = await page.evaluate(() => ({
+      life: !!document.querySelector('[data-ally-life]'),
+      guts: !!document.querySelector('[data-ally-guts]'),
+    }));
+    check('合計のライフ・ガッツの帯は出さない', !allyBars.life && !allyBars.guts,
+      `ライフ帯 ${allyBars.life} / ガッツ帯 ${allyBars.guts}`);
 
-    check('味方のライフを読める', startLife.ok && startLife.max > 0, startLife.raw || '見つからない');
-    check('はじめは満タン(盤面の合計＝ライフ)', startLife.hp === startLife.max, startLife.raw);
+    const startLife = await lifeOf();
+    check('盤面のライフを読める', startLife.ok && startLife.max > 0, startLife.raw || '見つからない');
+    check('はじめは満タン(立っている子の合計＝上限)', startLife.hp === startLife.max, startLife.raw);
     // ★1秒ごとに読むと、自動再生ですぐ戻るぶんを取りこぼして「減っていない」に見える。
     //   実際に減っているのに落ちた(2026-09-19)。ページの中で見張って、取りこぼさないようにする
     await page.evaluate(() => {
       window.__mhLifeLog = { drops: 0, min: Infinity, max: 0, last: null, overflow: 0, guts: '' };
       const read = () => {
-        // ガッツの帯はWAVEの結果やトレーニングの画面では消える。見えたときの値を覚えておく
-        const g = document.querySelector('[data-ally-guts]')?.getAttribute('data-ally-guts') || '';
-        if (/^\d+\/\d+$/.test(g)) window.__mhLifeLog.guts = g;
-        const raw = document.querySelector('[data-ally-life]')?.getAttribute('data-ally-life') || '';
-        if (!/^\d+\/\d+$/.test(raw)) return;
-        const [hp, max] = raw.split('/').map(Number);
+        const units = window.__mhParty();
+        // ガッツの帯もWAVEの結果やトレーニングの画面では消える。見えたときの値を覚えておく
+        if (units.length) window.__mhLifeLog.guts = units.map(u => u.guts).join(' ');
+        const life = window.__mhPartyLife();
+        if (!life.ok) return;
         const log = window.__mhLifeLog;
-        if (log.last !== null && hp < log.last) log.drops++;
-        if (hp < 0 || hp > max) log.overflow++;
-        log.last = hp; log.max = max;
-        log.min = Math.min(log.min, hp);
+        if (log.last !== null && life.hp < log.last) log.drops++;
+        if (life.hp < 0 || life.hp > life.max) log.overflow++;
+        log.last = life.hp; log.max = life.max;
+        log.min = Math.min(log.min, life.hp);
       };
       new MutationObserver(read).observe(document.body, { subtree: true, childList: true, attributes: true, characterData: true });
       setInterval(read, 50);
@@ -265,13 +278,14 @@ const check = (name, ok, detail = '') => {
       `減った回数 ${log.drops} / 最低 ${log.min} / 「緊急」を押せた回数 ${pressed}`);
     check('ライフが上限を超えたりマイナスにならない', log.overflow === 0,
       `はみ出した回数 ${log.overflow} / 最後 ${log.last}/${log.max}`);
-    // ★盤面の合計が0でないのに敗北画面が出ていたら、盤面とライフが食い違っている
+    // ★立っている子のライフが残っているのに敗北画面が出ていたら、盤面と敗北の判定が食い違っている
     check('ライフが残っているのに敗北画面が出ない', !gameOver || log.last === 0,
       `${log.last}/${log.max} / GAME OVER ${gameOver}`);
-    // 盤面のガッツも合計として出ている(段階6)。0からは始まらない
+    // 1体ずつのガッツも出ている(段階6 / 2026-09-19に個別へ)。上限が0のままなら盤面から拾えていない
     const gutsText = log.guts || '';
-    // 盤面のガッツの合計が出ていること。0/0 のままなら盤面から拾えていない
-    check('ガッツも盤面の合計として出ている', /^\d+\/\d+$/.test(gutsText) && !/^\d+\/0$/.test(gutsText),
+    const gutsList = gutsText ? gutsText.split(' ') : [];
+    check('1体ずつのガッツが出ている',
+      gutsList.length >= 1 && gutsList.every(g => /^\d+\/\d+$/.test(g) && Number(g.split('/')[1]) > 0),
       gutsText || '見つからない');
 
     check('実行時エラーが出ていない', errors.length === 0, errors.slice(0, 2).join(' / '));

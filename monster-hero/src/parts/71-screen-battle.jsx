@@ -431,10 +431,57 @@ function BattleScreen({
           </div>
         <div className="shrink-0 py-1.5 px-2 bg-slate-950 border-y border-white/5 flex flex-col items-center justify-center gap-1 z-10 relative">
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none gap-1" style={{zIndex:200}}>{popups.filter(p=>p.side==='hero').map((p)=>(<div key={p.id} data-lite-damage={liteBattleView?'true':undefined} className={`${p.color} font-black leading-tight px-2 py-0.5 rounded-lg ${liteBattleView?'border border-white/20 text-base':'drop-shadow-[0_2px_8px_rgba(0,0,0,1)]'}`} style={{backgroundColor:liteBattleView?'rgba(2,6,23,0.95)':'rgba(2,6,23,0.55)'}}>{p.text}</div>))}</div>
+          {/* 新モードは合計ではなく「1体ずつ」を出す(2026-09-19 ユーザー依頼)。
+              距離枠のすぐ上に、下の枠と同じ4列でそろえる。
+              ★合計のライフ・ガッツは出さない。個別と両方出すと読むものが増えるだけで、
+                どの子が瀕死かはこちらでしか分からない */}
+          {Array.isArray(tacticsUnits)?(
+            <div data-tactics-party className="w-full grid grid-cols-4 gap-1">
+              {[0,1,2,3].map(i=>{
+                const u=tacticsUnits[i];
+                const mon=slots[i];
+                const hpPct=u&&u.maxHp>0?Math.max(0,Math.min(100,(u.hp/u.maxHp)*100)):0;
+                const gutsPct=u&&u.maxGuts>0?Math.max(0,Math.min(100,(u.guts/u.maxGuts)*100)):0;
+                return(
+                  <div key={i} data-tactics-party-slot={i}
+                    data-tactics-hp={u?`${u.hp}/${u.maxHp}`:undefined}
+                    data-tactics-guts={u?`${u.guts}/${u.maxGuts}`:undefined}
+                    data-tactics-downed={u?(u.downed?'true':'false'):undefined}
+                    className={`rounded-lg border px-1 py-0.5 ${u?(u.downed?'border-emerald-500/50 bg-emerald-950/40':'border-white/10 bg-black/45'):'border-white/5 bg-black/20'}`}>
+                    <div className="flex items-center justify-between gap-0.5">
+                      <span className={`text-[9px] font-black leading-none truncate ${RANGE_STYLES[i].text||'text-slate-300'}`}>{RANGE_LABELS[i]}</span>
+                      {u&&u.downed&&<span className="text-[8px] font-black leading-none text-emerald-300 shrink-0">ダウン</span>}
+                    </div>
+                    {u?(<>
+                      <div className="mt-0.5 flex items-baseline justify-between gap-0.5">
+                        <span className="text-[9px] leading-none text-pink-400">♥</span>
+                        <span className="text-[11px] font-mono font-black leading-none text-pink-100">{u.hp}</span>
+                        <span className="text-[8px] font-mono leading-none text-slate-500">/{u.maxHp}</span>
+                      </div>
+                      <div className="mt-0.5 h-[5px] rounded-full bg-slate-900 overflow-hidden border border-white/10">
+                        <div className={`h-full ${u.downed?'bg-gradient-to-r from-emerald-600 to-teal-300':'bg-gradient-to-r from-pink-600 to-rose-400'}`} style={{width:`${hpPct}%`}}></div>
+                      </div>
+                      <div className="mt-0.5 flex items-baseline justify-between gap-0.5">
+                        <span className="text-[9px] leading-none text-amber-400">⚡</span>
+                        <span className="text-[11px] font-mono font-black leading-none text-amber-100">{u.guts}</span>
+                        <span className="text-[8px] font-mono leading-none text-slate-500">/{u.maxGuts}</span>
+                      </div>
+                      <div className="mt-0.5 h-[5px] rounded-full bg-slate-900 overflow-hidden border border-white/10">
+                        <div className="h-full bg-gradient-to-r from-amber-600 to-yellow-300" style={{width:`${gutsPct}%`}}></div>
+                      </div>
+                    </>):(
+                      <div className="py-2 text-center text-[9px] font-black leading-none text-slate-600">空き</div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ):(
           <div className="w-full space-y-0.5 px-2 py-0.5 bg-black/40 rounded-xl border border-white/5">
             <div className="flex items-center gap-2 relative"><Heart className="text-pink-500 shrink-0" size={12}/><div className="flex-1"><div className="flex items-end justify-between text-[9px] font-bold text-pink-400 uppercase tracking-wider"><span>Ally Life</span><span data-ally-life={`${hp}/${effectiveMaxHp}`} className="font-mono text-[11px] leading-none text-pink-200">{hp.toLocaleString()} / {effectiveMaxHp.toLocaleString()}</span></div><div className="h-2 bg-slate-900 rounded-full overflow-hidden border border-white/5 shadow-inner"><div className="h-full bg-gradient-to-r from-pink-700 to-rose-400 transition-all duration-1000" style={{width:`${(hp/effectiveMaxHp)*100}%`,backgroundImage:'linear-gradient(to right, #be185d, #fb7185)'}}></div></div></div><div className="absolute left-1/2 -translate-x-1/2 -top-2 flex flex-col items-center gap-0.5 pointer-events-none" style={{zIndex:210}}>{popups.filter(p=>p.side==='life').map((p)=>(<div key={p.id} className={`${p.color} text-base font-black drop-shadow-[0_2px_8px_rgba(0,0,0,1)] whitespace-nowrap px-2 py-0.5 rounded-lg animate-bounce`} style={{backgroundColor:'rgba(2,6,23,0.8)'}}>{p.text}</div>))}</div></div>
             <div className="flex items-center gap-2 relative"><Zap className="text-amber-500 shrink-0" size={10}/><div className="flex-1"><div className="flex items-end justify-between text-[9px] font-bold text-amber-400 uppercase tracking-wider"><span>Ally Guts</span><span data-ally-guts={`${Math.floor(guts)}/${effectiveMaxGuts}`} className="font-mono text-[11px] leading-none text-amber-200">{Math.floor(guts).toLocaleString()} / {effectiveMaxGuts.toLocaleString()}</span></div><div className="h-2 bg-slate-900 rounded-full overflow-hidden border border-white/5 shadow-inner"><div className="h-full bg-gradient-to-r from-amber-600 to-yellow-300 transition-all duration-500" style={{width:`${(guts/effectiveMaxGuts)*100}%`,backgroundImage:'linear-gradient(to right, #d97706, #fde047)'}}></div></div></div><div className="absolute left-1/2 -translate-x-1/2 -top-2 flex flex-col items-center gap-0.5 pointer-events-none" style={{zIndex:210}}>{popups.filter(p=>p.side==='guts').map((p)=>(<div key={p.id} className={`${p.color} text-base font-black drop-shadow-[0_2px_8px_rgba(0,0,0,1)] whitespace-nowrap px-2 py-0.5 rounded-lg animate-bounce`} style={{backgroundColor:'rgba(2,6,23,0.8)'}}>{p.text}</div>))}</div></div>
           </div>
+          )}
           {(()=>{
             // Overall total damage across ALL monster slots, matching processTurn's global attack order.
             // Existing total = sum of already-assigned attack cards.
@@ -684,33 +731,6 @@ function BattleScreen({
                         lunge={attackAnim.charge===false}
                         charging={attackAnim.charge===true}/>
                       :<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:'64px',height:'64px'}} className="z-10 object-contain drop-shadow-md"/>):(<span style={{fontSize:'40px'}} className="z-10 drop-shadow-md">{s?.emoji||''}</span>)}
-                  {/* 新モードは1体ずつのライフ・ガッツをここへ出す。誰が瀕死か・誰のガッツが尽きたかが
-                      分からないと、狙いを読んで守る/回復する判断が立たない(設計 §4.1) */}
-                  {tacticsUnit&&(()=>{
-                    const hpPct=tacticsUnit.maxHp>0?Math.max(0,Math.min(100,(tacticsUnit.hp/tacticsUnit.maxHp)*100)):0;
-                    const gutsPct=tacticsUnit.maxGuts>0?Math.max(0,Math.min(100,(tacticsUnit.guts/tacticsUnit.maxGuts)*100)):0;
-                    return(<div data-tactics-unit={i} data-tactics-hp={`${tacticsUnit.hp}/${tacticsUnit.maxHp}`}
-                      data-tactics-guts={`${tacticsUnit.guts}/${tacticsUnit.maxGuts}`}
-                      data-tactics-downed={tacticsUnit.downed?'true':'false'}
-                      className="absolute bottom-0 left-0 right-0 z-[64] px-0.5 pb-0.5 pointer-events-none space-y-px">
-                      {/* 倒れているあいだ、この帯は「復活まであとどれだけか」になる。
-                          全快になったところで立ち上がるので、色を変えて別物だと分かるようにする */}
-                      <div className="flex items-center gap-0.5">
-                        <span style={{fontSize:'7px'}} className={`leading-none shrink-0 ${tacticsUnit.downed?'text-emerald-300':'text-pink-300'}`}>{tacticsUnit.downed?'✚':'❤'}</span>
-                        <div className="flex-1 h-[3px] rounded-full bg-black/75 overflow-hidden border border-white/10">
-                          <div className={`h-full ${tacticsUnit.downed?'bg-gradient-to-r from-emerald-600 to-teal-300':'bg-gradient-to-r from-pink-600 to-rose-400'}`} style={{width:`${hpPct}%`}}></div>
-                        </div>
-                        <span style={{fontSize:'7px'}} className={`leading-none shrink-0 font-black font-mono ${tacticsUnit.downed?'text-emerald-100':'text-pink-100'}`}>{tacticsUnit.hp}</span>
-                      </div>
-                      <div className="flex items-center gap-0.5">
-                        <span style={{fontSize:'7px'}} className="leading-none shrink-0 text-amber-300">⚡</span>
-                        <div className="flex-1 h-[3px] rounded-full bg-black/75 overflow-hidden border border-white/10">
-                          <div className="h-full bg-gradient-to-r from-amber-600 to-yellow-300" style={{width:`${gutsPct}%`}}></div>
-                        </div>
-                        <span style={{fontSize:'7px'}} className="leading-none shrink-0 font-black font-mono text-amber-100">{tacticsUnit.guts}</span>
-                      </div>
-                    </div>);
-                  })()}
                   {/* 倒れた子。カードを置けないことが一目で分かるように覆う */}
                   {tacticsUnit&&tacticsUnit.downed&&(()=>{
                     const revivePct=tacticsUnit.maxHp>0?Math.floor((tacticsUnit.hp/tacticsUnit.maxHp)*100):0;
