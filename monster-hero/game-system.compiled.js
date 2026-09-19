@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8083e783cddce10a
+// source-sha256: cfa71a4d0ed06cc9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 301607a127818a51
+// generated-sha256: b44e96935405f5cc
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -161,7 +161,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-19 18:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-19 18:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -26490,6 +26490,45 @@ const growTacticsMaxHp = (units, delta, hpPct = 0) => {
   return list;
 };
 
+// トレーニングで伸びたちから・丈夫さを盤面へ配る。
+// ★段階11で「1体ずつ選ぶ」形にする。それまでは、いまの値に比例して配る。
+// ★倒れた子にも配る(起き上がったときに置いていかれないように)
+const growTacticsAtkDef = (units, atkDelta, defDelta) => {
+  const list = (Array.isArray(units) ? units : []).slice();
+  const spread = (key, delta) => {
+    const add = tacticsSafeInt(delta, 0);
+    if (add <= 0) return;
+    const filled = tacticsFilledSlots(list).map(index => ({
+      index,
+      base: Math.max(1, normalizeTacticsUnit(list[index])[key])
+    }));
+    const total = filled.reduce((sum, entry) => sum + entry.base, 0);
+    if (!filled.length || total <= 0) return;
+    let handed = 0;
+    const shares = filled.map(entry => {
+      const value = Math.floor(add * entry.base / total);
+      handed += value;
+      return {
+        ...entry,
+        value
+      };
+    });
+    const order = [...shares].sort((a, b) => b.base - a.base);
+    for (let left = add - handed, i = 0; left > 0; i = (i + 1) % order.length, left--) order[i].value += 1;
+    shares.forEach(entry => {
+      if (entry.value <= 0) return;
+      const target = normalizeTacticsUnit(list[entry.index]);
+      list[entry.index] = normalizeTacticsUnit({
+        ...target,
+        [key]: target[key] + entry.value
+      });
+    });
+  };
+  spread('atk', atkDelta);
+  spread('def', defDelta);
+  return list;
+};
+
 // 立っている子を満タンへ(WAVEクリアの全回復)。★倒れた子はここでは戻らない
 const fullHealTacticsBoard = units => (Array.isArray(units) ? units : []).map(unit => {
   if (!unit) return null;
@@ -37524,7 +37563,10 @@ function BattleScreen({
   })())), enemy && enemyIntent && !isBusy && (() => {
     // ためる・待機・移動はダメージが無いので「予測」を出さない。
     // 出すと必ず0になり、ガードを構える判断の邪魔になる
-    const rawDmg = getIncomingDamageBeforeTurnReduction(enemyIntent);
+    // 新モードは「狙われた子の丈夫さ」で受け、「その子が構えたガード」だけが効く。
+    // ★targetSlot が無いモードでは今までどおりパーティの値で出る
+    const aimedSlot = Number.isInteger(enemyIntent.targetSlot) ? enemyIntent.targetSlot : null;
+    const rawDmg = getIncomingDamageBeforeTurnReduction(enemyIntent, aimedSlot);
     let previewGuardFlat = 0,
       previewGuardMult = 0,
       previewPenaltyCnt = 0;
@@ -37533,7 +37575,8 @@ function BattleScreen({
       const isPenalty = !isAssistCard(card);
       const halved = isPenalty && previewPenaltyCnt > 0;
       const weight = guardCardWeight(card);
-      if (weight > 0) {
+      const guardsAimed = aimedSlot === null || cardAssignments[idx] === aimedSlot;
+      if (weight > 0 && guardsAimed) {
         const effect = cardEffectMultiplier(card, halved);
         previewGuardFlat += GUARD_EVOLUTION[guardLevel].flat * weight * effect;
         previewGuardMult += GUARD_EVOLUTION[guardLevel].mult * weight * effect;
@@ -51576,15 +51619,20 @@ function MonsterHeroGame() {
     };
   }).filter(row => row.traits.length > 0);
   const soulBattleSummaryParts = soulBattleHasEffects ? [soulBattleParty.damageReduction > 0 ? `被ダメ -${soulBattleParty.damageReduction.toFixed(1).replace(/\\.0$/, '')}%` : null, unifiedSpecialDefense.rate > 0 ? `特殊防御 ${unifiedSpecialDefense.rate.toFixed(1).replace(/\\.0$/, '')}%` : null, battleIntimidate > 0 ? `威圧 ${battleIntimidate.toFixed(1).replace(/\\.0$/, '')}%` : null, soulBattleParty.autoGutsMultiplier > 1 ? `自動G ×${soulBattleParty.autoGutsMultiplier.toFixed(3)}` : null, soulBattleParty.coordinationCardBonus > 0 ? `カード +${soulBattleParty.coordinationCardBonus}` : null].filter(Boolean) : [];
-  const getIncomingDamageBeforeTurnReduction = useCallback(intent => {
+
+  // targetSlot は新モード専用。★渡したときだけ「その子の丈夫さ」で受ける。
+  //   渡さなければ今までどおりパーティの丈夫さなので、既存モードの呼び出しは何も変わらない
+  const getIncomingDamageBeforeTurnReduction = useCallback((intent, targetSlot = null) => {
     // ためる(CHARGE)ターンはダメージが無い。必殺技のダメージは発動(SPECIAL)ターンに出る
     if (!intent || intent.type !== 'ATTACK' && intent.type !== 'SPECIAL') return 0;
     const atkVal = Math.floor(intent.value * (1.0 - getWaveBuff('enemyAtkDebuffPct')));
     const chuuniCutActive = (mainHero?.id === 'Ark' || mainHero?.id === 'Iblis') && getWaveBuff('chuuniDmgCutUses') < 2; // 中二病特性: WAVE毎2回まで被ダメ50%カット
+    const targetUnit = Number.isInteger(targetSlot) ? tacticsUnitsRef.current[targetSlot] : null;
+    const defVal = targetUnit ? resolveEffectiveMaxStat(normalizeTacticsUnit(targetUnit).def, getPermaBuff('defPct')) : effectiveDef;
     // 丈夫さは固定軽減(×0.5)のあと、0.015%/pt（上限50%）を乗算する。
     // 最低30はこの基本防御部分だけに適用し、後続の既存軽減順は変えない。
-    const defenseRate = Math.min(0.5, effectiveDef * 0.00015);
-    const dmgBase = Math.max(30, (atkVal - effectiveDef * 0.5) * (1 - defenseRate)) * (mainHero?.id === 'Mocchi' || mainHero?.id === 'Mitarashi' ? 0.8 : 1.0) * (chuuniCutActive ? 0.5 : 1.0);
+    const defenseRate = Math.min(0.5, defVal * 0.00015);
+    const dmgBase = Math.max(30, (atkVal - defVal * 0.5) * (1 - defenseRate)) * (mainHero?.id === 'Mocchi' || mainHero?.id === 'Mitarashi' ? 0.8 : 1.0) * (chuuniCutActive ? 0.5 : 1.0);
     const soulDamageRemaining = Math.max(0, 1 - soulBattleParty.damageReduction / 100);
     return Math.max(1, Math.floor(dmgBase * Math.max(0.01, 1.0 - getPermaBuff('dmgCutPct')) * iceLockEnemyDamageMult * soulDamageRemaining));
   }, [effectiveDef, mainHero, permaBuffs, waveBuffs, soulBattleParty.damageReduction]);
@@ -51949,7 +51997,9 @@ function MonsterHeroGame() {
     const distBonusMult = 1.0 + (distDmgBonus[slotIdx] || 0) + (distAptPct[slotIdx] || 0);
     const soulAttack = soulTraitAttackProfile(mon?.masuId ? getMasuMon(mon.masuId) : null, card, slotIdx);
     const totalBuffMult = traitMult * getTurnBuff('atkMult', 1.0) * (1.0 + getPermaBuff('atkPct') + getPermaBuff('muaAtkPct') + additionalOryo) * distBonusMult * soulAttack.damageMultiplier;
-    let finalDmg = Math.floor(atk * distMult * baseDmgMult * totalBuffMult * (1.0 + getWaveBuff('enemyTakenDmgBonus') + additionalDmgMod));
+    // 新モードは「攻撃したその子のちから」で殴る(設計 §4.1)。ほかのモードはパーティ共通のまま
+    const attackerAtk = isTacticsMode(runMode) && tacticsUnitsRef.current[slotIdx] ? Math.max(0, normalizeTacticsUnit(tacticsUnitsRef.current[slotIdx]).atk) : atk;
+    let finalDmg = Math.floor(attackerAtk * distMult * baseDmgMult * totalBuffMult * (1.0 + getWaveBuff('enemyTakenDmgBonus') + additionalDmgMod));
     if (isSecondOrLaterAtk) finalDmg = Math.floor(finalDmg * 0.5);
     const specialRuleDifficulty = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
     const elapsedTotalTurns = totalTurnCount + Math.max(0, turnCount - 1);
@@ -52344,10 +52394,14 @@ function MonsterHeroGame() {
                 flat: 0,
                 mult: 0
               };
-              const base = own.flat > 0 || own.mult > 0 ? Math.floor(own.flat + effectiveDef * own.mult) : 0;
+              // ガードの軽減量も「その子の丈夫さ」から出す
+              const slotDef = tacticsUnitsRef.current[slotIdx] ? resolveEffectiveMaxStat(normalizeTacticsUnit(tacticsUnitsRef.current[slotIdx]).def, getPermaBuff('defPct')) : effectiveDef;
+              const base = own.flat > 0 || own.mult > 0 ? Math.floor(own.flat + slotDef * own.mult) : 0;
               // 貫通撃はガードが効かない。連撃は手数ぶんガードが効く(既存モードと同じ決まり)
               const slotGuard = intent.variant === 'pierce' ? 0 : intent.variant === 'rush' ? base * rushHits : base;
-              const diff = slotGuard - incomingBeforeTurnReduction;
+              // ★受けるダメージもその子の丈夫さで決まるので、狙われた子ごとに計算し直す
+              const slotIncoming = getIncomingDamageBeforeTurnReduction(intent, slotIdx);
+              const diff = slotGuard - slotIncoming;
               if (diff < 0) {
                 const fd = applyTurnDamageReduction(Math.abs(diff));
                 units = damageTacticsTargets(units, [slotIdx], fd);
@@ -54818,12 +54872,16 @@ function MonsterHeroGame() {
     // 新モードのパーティのライフ上限は盤面の合計なので、直に書き換えない。
     // 伸びたぶんを盤面へ配る(段階6で「1体ずつ選ぶ」形にする)
     if (isTacticsMode(runMode)) {
-      const grown = growTacticsMaxGuts(growTacticsMaxHp(tacticsUnitsRef.current, nMaxHp - maxHp, getPermaBuff('muaHpPct')), nMaxGuts - maxGuts, getPermaBuff('muaGutsPct'));
+      // ライフ・ガッツ・ちから・丈夫さのどれも盤面が正本。伸びたぶんを配る
+      // (段階11で「1体ずつ選ぶ」形にする)
+      const grown = growTacticsAtkDef(growTacticsMaxGuts(growTacticsMaxHp(tacticsUnitsRef.current, nMaxHp - maxHp, getPermaBuff('muaHpPct')), nMaxGuts - maxGuts, getPermaBuff('muaGutsPct')), nAtk - atk, nDef - def);
       commitTacticsUnits(grown);
     } else {
       setMaxHp(nMaxHp);
       setMaxGuts(nMaxGuts);
     }
+    // パーティのちから・丈夫さは、新モードでもガードの段階・攻撃段階(カードの枚数と威力)を
+    // 決めるのに使い続ける。ダメージそのものは1体ずつの値で出す
     setAtk(nAtk);
     setDef(nDef);
     const nGrdL = computeGuardLevel(nDef);

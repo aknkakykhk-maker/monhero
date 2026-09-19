@@ -396,6 +396,37 @@ const growTacticsMaxHp = (units, delta, hpPct = 0) => {
   return list;
 };
 
+// トレーニングで伸びたちから・丈夫さを盤面へ配る。
+// ★段階11で「1体ずつ選ぶ」形にする。それまでは、いまの値に比例して配る。
+// ★倒れた子にも配る(起き上がったときに置いていかれないように)
+const growTacticsAtkDef = (units, atkDelta, defDelta) => {
+  const list = (Array.isArray(units) ? units : []).slice();
+  const spread = (key, delta) => {
+    const add = tacticsSafeInt(delta, 0);
+    if (add <= 0) return;
+    const filled = tacticsFilledSlots(list)
+      .map(index => ({ index, base: Math.max(1, normalizeTacticsUnit(list[index])[key]) }));
+    const total = filled.reduce((sum, entry) => sum + entry.base, 0);
+    if (!filled.length || total <= 0) return;
+    let handed = 0;
+    const shares = filled.map(entry => {
+      const value = Math.floor(add * entry.base / total);
+      handed += value;
+      return { ...entry, value };
+    });
+    const order = [...shares].sort((a, b) => b.base - a.base);
+    for (let left = add - handed, i = 0; left > 0; i = (i + 1) % order.length, left--) order[i].value += 1;
+    shares.forEach(entry => {
+      if (entry.value <= 0) return;
+      const target = normalizeTacticsUnit(list[entry.index]);
+      list[entry.index] = normalizeTacticsUnit({ ...target, [key]: target[key] + entry.value });
+    });
+  };
+  spread('atk', atkDelta);
+  spread('def', defDelta);
+  return list;
+};
+
 // 立っている子を満タンへ(WAVEクリアの全回復)。★倒れた子はここでは戻らない
 const fullHealTacticsBoard = (units) => (Array.isArray(units) ? units : []).map(unit => {
   if (!unit) return null;

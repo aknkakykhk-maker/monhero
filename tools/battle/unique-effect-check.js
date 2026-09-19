@@ -189,10 +189,13 @@ check('丈夫さバフを乗せた実効値がある',
 // バランス調整のたびにここが落ちるだけなので、「実効の丈夫さを使っているか」を見る。
 // 係数を変えたときは meloso-assist-check.js のモデルも直す必要があるため、
 // あちらのDRIFT GUARDが係数を見張っている
+// 丈夫さは defVal へ入れてから使う(新モードだけ「狙われた子の丈夫さ」が入る)。
+// 渡されなければ effectiveDef へ倒すので、既存モードの計算は変わらない
 check('被ダメージの固定軽減に実効の丈夫さを使う',
-  /Math\.max\(30,\(atkVal-effectiveDef\*[\d.]+\)\*\(1-defenseRate\)\)/.test(source));
+  /Math\.max\(30,\(atkVal-defVal\*[\d.]+\)\*\(1-defenseRate\)\)/.test(source)
+    && source.includes(': effectiveDef;'));
 check('被ダメージの割合軽減に実効の丈夫さを使う',
-  /const defenseRate = Math\.min\(0\.5,effectiveDef\*[\d.]+\);/.test(source));
+  /const defenseRate = Math\.min\(0\.5,defVal\*[\d.]+\);/.test(source));
 check('ガードの軽減量(表示)に実効の丈夫さを使う', /Math\.floor\(flat \+ effectiveDef \* mult\)/.test(source));
 check('ガードの軽減量(実処理)に実効の丈夫さを使う', /Math\.floor\(immediateEffects\.guardFlat \+ effectiveDef\*immediateEffects\.guardMult\)/.test(source));
 
