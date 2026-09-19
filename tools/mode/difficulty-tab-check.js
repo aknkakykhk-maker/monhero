@@ -9,6 +9,7 @@ const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分�
 //   ② 実ブラウザ: クイックにタブが出て、押すと極限の並びへ切り替わる
 //   ③ 実ブラウザ: 極限を持たないモードにはタブが出ない
 //   ④ 開くたびに「通常」から始まる(極限タブのままノーマルを選んでいる状態を作らない)
+//   ⑤ スコアランキングのタブは、チャレンジで16段階(通常9＋極限7)がひと続きに並ぶ
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -71,6 +72,22 @@ check('極限を持たないモードではタブを出さない', has('const ha
 check('チャレンジ判定は pro を先に参照しない', has('const challengeExtremeTab=!species&&!quick&&!isProMode(battleMode);'));
 check('タブを切り替えたらその並びの先頭を選ぶ', has('if(group[0])chooseDifficulty(group[0][0]);'),
   '見えていない難易度のまま開始できてしまうのを防ぐ');
+
+// --- ⑤ ランキングのタブ(16段階をまとめる / 2026-09-19 ユーザー指示) ---
+// 並べ方だけを変える。記録の保存先(mh_hs_* / mh_extreme_hs_*)も Supabase へ送る difficulty も
+// これまでどおりなので、過去の記録はそのまま並ぶ
+check('チャレンジのランキングは通常9段階に極限を続けて並べる',
+  has("const rankingTabs = isExtreme")
+    && has("...(mode === BATTLE_MODE_CHALLENGE ? PUBLIC_EXTREME_DIFFICULTIES.map(setting => [setting.id, setting]) : [])]"));
+check('極限チャレンジの入口から開いたときは極限だけ並べる',
+  has("? PUBLIC_EXTREME_DIFFICULTIES.map(setting => [setting.id, setting])"));
+// ★ここを mode だけで決めると、チャレンジのまま極限タブを押したとき
+//   normalizeBattleDifficulty が GOD を Normal へ落とし、通常の記録を見せてしまう
+check('極限のタブは極限のランキングキーを引く',
+  has("const keyOf = (diff) => rankingDifficultyKey(isExtremeDifficultyId(diff)")
+    && has("? rankingDifficultyForMode(EXTREME_MODE.id, diff)"));
+check('タブの描画は1か所にまとめる', has('data-score-ranking-tabs'));
+check('極限のタブはその段階の色で出す', has('style={extremeTab?{background'));
 
 // --- ②③④ 実ブラウザ ---
 const MIME = { '.html':'text/html', '.js':'text/javascript', '.json':'application/json', '.css':'text/css',
@@ -209,6 +226,33 @@ const serve = () => new Promise((resolve) => {
       const returned = await page.evaluate(() => [...document.querySelectorAll('article h3')].map(h => h.textContent.trim()));
       check('通常タブで9段階へ戻れる', returned.includes('Beginner'), returned.slice(0, 3).join(','));
     }
+    await back();
+
+    // --- ⑤ チャレンジのランキングに16段階のタブが並ぶ ---
+    await page.evaluate(() => {
+      const cards = [...document.querySelectorAll('article')].filter(a => a.textContent.includes('チャレンジモード'));
+      const card = cards[Math.floor(cards.length / 2)] || cards[0];
+      [...card.querySelectorAll('button')].find(b => b.textContent.includes('ランキング'))?.click();
+    });
+    await page.waitForTimeout(1800);
+    const rankTabs = await page.evaluate(() =>
+      [...document.querySelectorAll('[data-score-ranking-tabs] button')].map(b => b.textContent.trim()));
+    check('チャレンジのランキングに通常9段階が並ぶ',
+      ['Beginner', 'Normal', 'Grand Master'].every(label => rankTabs.includes(label)),
+      rankTabs.slice(0, 4).join(','));
+    check('同じ並びに極限の段階も続く',
+      ['EXTREME', 'GOD', 'RAGNAROK'].every(label => rankTabs.includes(label)),
+      rankTabs.slice(-4).join(','));
+    check('タブは16段階', rankTabs.length === 16, `${rankTabs.length}枚`);
+    // 極限のタブを押しても画面が落ちない(押した先で引くキーが ExtremeGOD などになる)
+    await page.evaluate(() => {
+      [...document.querySelectorAll('[data-score-ranking-tabs] button')].find(b => b.textContent.trim() === 'GOD')?.click();
+    });
+    await page.waitForTimeout(1200);
+    const afterExtremeTab = await page.evaluate(() => document.body.innerText.replace(/\s+/g, ' '));
+    check('極限のタブを押しても表示が壊れない',
+      !afterExtremeTab.includes('画面の表示でエラーが起きました') && afterExtremeTab.includes('GOD'),
+      afterExtremeTab.slice(0, 60));
     await back();
 
     check('実行時エラーが出ていない', errors.length === 0, errors.slice(0, 2).join(' / '));

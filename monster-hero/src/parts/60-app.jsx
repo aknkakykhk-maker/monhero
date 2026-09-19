@@ -11147,14 +11147,31 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // チャレンジは従来どおりの難易度キー、プロは Pro を付けたキーを読み書きする
   const renderScoreRankingBody = (mode = BATTLE_MODE_CHALLENGE) => {
     const isExtreme = mode === EXTREME_MODE.id;
-    const keyOf = (diff) => rankingDifficultyKey(rankingDifficultyForMode(mode, diff));
+    // 極限の段階は、どのモードのランキングから引いても極限のキー(ExtremeGOD など)を使う。
+    // チャレンジのタブへ極限を並べたので、ここを mode だけで決めると
+    // 極限を選んでいるのに normalizeBattleDifficulty が Normal へ落としてしまう
+    const keyOf = (diff) => rankingDifficultyKey(isExtremeDifficultyId(diff)
+      ? rankingDifficultyForMode(EXTREME_MODE.id, diff)
+      : rankingDifficultyForMode(mode, diff));
+    // タブに並べる難易度。チャレンジは通常9段階＋極限の段階、極限の入口からは極限だけ、
+    // それ以外(プロ)は通常9段階のまま
+    const rankingTabs = isExtreme
+      ? PUBLIC_EXTREME_DIFFICULTIES.map(setting => [setting.id, setting])
+      : [...Object.entries(DIFFICULTY_SETTINGS),
+         ...(mode === BATTLE_MODE_CHALLENGE ? PUBLIC_EXTREME_DIFFICULTIES.map(setting => [setting.id, setting]) : [])];
     const viewKey = keyOf(rankingViewDiff);
     const rows = localRankings[viewKey] || [], status = rankingStatus(`score:${viewKey}`);
     return <>
-      {/* 難易度のタブ。極限チャレンジだけは通常の9段階ではなく、遊べる極限の段階を並べる */}
-      {isExtreme
-        ? <div className="flex gap-1.5 overflow-x-auto pb-2 shrink-0">{PUBLIC_EXTREME_DIFFICULTIES.map(setting=><button key={setting.id} onClick={()=>{setRankingViewDiff(setting.id);loadRankings(keyOf(setting.id));}} className={`px-3 min-h-[30px] rounded-full text-[9px] font-black shrink-0 active:scale-95 ${rankingViewDiff===setting.id?'ring-2 ring-white':'border border-white/10'}`} style={{backgroundColor:EXTREME_MODE.color,color:'#0f172a'}}>{setting.label}</button>)}</div>
-        : <div className="flex gap-1.5 overflow-x-auto pb-2 shrink-0">{Object.entries(DIFFICULTY_SETTINGS).map(([d,st])=><button key={d} onClick={()=>{setRankingViewDiff(d);loadRankings(keyOf(d));}} className={`px-3 min-h-[30px] rounded-full text-[9px] font-black shrink-0 active:scale-95 ${rankingViewDiff===d?'ring-2 ring-white':'border border-white/10'}`} style={difficultyStyle(st,rankingViewDiff===d)}>{st.label}</button>)}</div>}
+      {/* 難易度のタブ。極限チャレンジをチャレンジへ入れ込んだので、チャレンジのランキングには
+          通常9段階に続けて極限の段階も並べる(2026-09-19 ユーザー指示「16段階をまとめる」)。
+          極限チャレンジの入口から開いたときは、これまでどおり極限の段階だけを並べる。
+          ★並べるだけで、記録の保存先もSupabaseへ送る値も今までどおり(ExtremeGOD など)。
+            過去の記録がそのまま並ぶ */}
+      <div data-score-ranking-tabs className="flex gap-1.5 overflow-x-auto pb-2 shrink-0">{rankingTabs.map(([d,st])=>{
+        const on=rankingViewDiff===d;
+        const extremeTab=isExtremeDifficultyId(d);
+        return <button key={d} onClick={()=>{setRankingViewDiff(d);loadRankings(keyOf(d));}} className={`px-3 min-h-[30px] rounded-full text-[9px] font-black shrink-0 active:scale-95 ${on?'ring-2 ring-white':'border border-white/10'}`} style={extremeTab?{backgroundColor:extremeDifficultyTheme(d).accent,color:'#0f172a'}:difficultyStyle(st,on)}>{st.label}</button>;
+      })}</div>
       <div className="flex-1 overflow-y-auto mh-scroll space-y-1.5">{status.refreshing&&<div className="text-center text-[9px] text-indigo-300">更新中…</div>}{status.error&&status.fetched&&<div className="text-center text-[9px] text-amber-300">{status.error}</div>}{rows.map(renderScoreRankingEntry)}{rows.length===0&&(status.loading?<div className="text-center text-slate-400 py-8">Loading...</div>:status.error&&!status.fetched?rankingRetryButton(()=>loadRankings(viewKey,false,true)):rankingEmptyText)}</div>
     </>;
   };
