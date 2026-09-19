@@ -4746,7 +4746,7 @@ function MonsterHeroGame() {
     if(gameState!=='BATTLE_MODE_SELECT'||modeSelectTab!=='mode')return;
     const id=requestAnimationFrame(()=>{
       // 極限チャレンジは未解放でもカードは出す(押せるかどうかだけを切り替える)
-      const modes=[...BATTLE_MODES,EXTREME_MODE,...((SPECIES_CHALLENGE_PUBLIC_RELEASE||debugBattle)?[SPECIES_CHALLENGE_MODE]:[])];
+      const modes=[...BATTLE_MODES,EXTREME_MODE,...((SPECIES_CHALLENGE_PUBLIC_RELEASE||debugBattle)?[SPECIES_CHALLENGE_MODE]:[]),...((TACTICS_MODE_PUBLIC_RELEASE||debugBattle)?[TACTICS_MODE]:[])];
       const index=modes.length+Math.max(0,modes.findIndex(m=>m.id===battleMode));
       centerCarouselChild(modeCarouselRef.current,index);
     });
@@ -11806,7 +11806,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             ランキングの一覧は renderScoreRankingBody などの共通の描画を呼ぶだけで、画面を複製していない */}
         {gameState==='BATTLE_MODE_SELECT'&&(()=>{
           // 極限チャレンジは未解放でもカードは出す(押せるかどうかだけを切り替える)
-      const modes=[...BATTLE_MODES,EXTREME_MODE,...((SPECIES_CHALLENGE_PUBLIC_RELEASE||debugBattle)?[SPECIES_CHALLENGE_MODE]:[])];
+      const modes=[...BATTLE_MODES,EXTREME_MODE,...((SPECIES_CHALLENGE_PUBLIC_RELEASE||debugBattle)?[SPECIES_CHALLENGE_MODE]:[]),...((TACTICS_MODE_PUBLIC_RELEASE||debugBattle)?[TACTICS_MODE]:[])];
           const current=modes.find(m=>m.id===battleMode)||modes[0];
           const selectedIndex=Math.max(0,modes.findIndex(m=>m.id===current.id));
           // 端で止まらず「ぐるぐる回る」ようにするため、同じ並びを3回くり返して置く。
