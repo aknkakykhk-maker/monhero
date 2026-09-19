@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: be597d3f79dec25c
+// generated-sha256: 1f8c24995e213c5e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -91,7 +91,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-19 12:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-19 12:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -26798,7 +26798,9 @@ function MonsterHeroGame() {
     if(gameState!=='BATTLE_MODE_SELECT'||modeSelectTab!=='mode')return;
     const id=requestAnimationFrame(()=>{
       // 極限チャレンジは未解放でもカードは出す(押せるかどうかだけを切り替える)
-      const modes=[...BATTLE_MODES,EXTREME_MODE,...((SPECIES_CHALLENGE_PUBLIC_RELEASE||debugBattle)?[SPECIES_CHALLENGE_MODE]:[]),...((TACTICS_MODE_PUBLIC_RELEASE||debugBattle)?[TACTICS_MODE]:[])];
+      // 極限チャレンジはチャレンジの「極限」タブへ入れ込んだので、モードのカードには並べない
+      // (2026-09-19 ユーザー指示)。EXTREME_MODE の定義そのものは説明・ランキングが参照するので残す
+      const modes=[...BATTLE_MODES,...((SPECIES_CHALLENGE_PUBLIC_RELEASE||debugBattle)?[SPECIES_CHALLENGE_MODE]:[]),...((TACTICS_MODE_PUBLIC_RELEASE||debugBattle)?[TACTICS_MODE]:[])];
       const index=modes.length+Math.max(0,modes.findIndex(m=>m.id===battleMode));
       centerCarouselChild(modeCarouselRef.current,index);
     });
@@ -33902,7 +33904,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             ランキングの一覧は renderScoreRankingBody などの共通の描画を呼ぶだけで、画面を複製していない */}
         {gameState==='BATTLE_MODE_SELECT'&&(()=>{
           // 極限チャレンジは未解放でもカードは出す(押せるかどうかだけを切り替える)
-      const modes=[...BATTLE_MODES,EXTREME_MODE,...((SPECIES_CHALLENGE_PUBLIC_RELEASE||debugBattle)?[SPECIES_CHALLENGE_MODE]:[]),...((TACTICS_MODE_PUBLIC_RELEASE||debugBattle)?[TACTICS_MODE]:[])];
+      // 極限チャレンジはチャレンジの「極限」タブへ入れ込んだので、モードのカードには並べない
+      // (2026-09-19 ユーザー指示)。EXTREME_MODE の定義そのものは説明・ランキングが参照するので残す
+      const modes=[...BATTLE_MODES,...((SPECIES_CHALLENGE_PUBLIC_RELEASE||debugBattle)?[SPECIES_CHALLENGE_MODE]:[]),...((TACTICS_MODE_PUBLIC_RELEASE||debugBattle)?[TACTICS_MODE]:[])];
           const current=modes.find(m=>m.id===battleMode)||modes[0];
           const selectedIndex=Math.max(0,modes.findIndex(m=>m.id===current.id));
           // 端で止まらず「ぐるぐる回る」ようにするため、同じ並びを3回くり返して置く。
@@ -33991,6 +33995,21 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div className="flex items-center gap-1 mb-1 shrink-0"><button aria-label="戻る" onClick={()=>setGameState('BATTLE_MODE_SELECT')} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-fuchsia-300 uppercase tracking-widest truncate">極限チャレンジ</h2></div>
             <div className="w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1">
               <div className="flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll">
+                {/* チャレンジの難易度選択と同じ「通常 / 極限」タブ。
+                    極限チャレンジはチャレンジの極限タブとして入れ込んだので、
+                    ここから通常の9段階へ戻れないと行き来できない(2026-09-19 ユーザー指示)。
+                    どちらの画面も同じ横カルーセルなので、遊ぶ側にはタブの切り替えに見える */}
+                <div data-difficulty-tabs className="flex gap-1.5 w-full shrink-0 mb-1">
+                  {[[DIFFICULTY_TAB_NORMAL,'通常'],[DIFFICULTY_TAB_EXTREME,'極限']].map(([tabId,tabLabel])=>{
+                    const on=tabId===DIFFICULTY_TAB_EXTREME;
+                    return <button key={tabId} aria-pressed={on} onClick={()=>{
+                      if(on)return;
+                      battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';
+                      setBattleMode(BATTLE_MODE_CHALLENGE);
+                      setGameState('BATTLE_DIFFICULTY_SELECT');
+                    }} className={`flex-1 min-h-[38px] rounded-2xl font-black text-[12px] border-2 active:scale-95 ${on?'bg-fuchsia-700 border-fuchsia-300 text-white':'bg-slate-900 border-slate-700 text-slate-400'}`}>{tabLabel}<span className="ml-1 text-[9px] opacity-75">{on?difficulties.length:Object.keys(DIFFICULTY_SETTINGS).length}</span></button>;
+                  })}
+                </div>
                 <div className="text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0">左右にスワイプして難易度を選択</div>
                 <div className="relative shrink-0">
                   <button aria-label="前の難易度" disabled={selectedIndex===0} onClick={()=>selectDifficultyIndex(selectedIndex-1)} className="absolute left-0 top-[42%] z-20 w-9 h-12 rounded-r-xl bg-black/70 disabled:opacity-20"><ChevronLeft/></button>
@@ -34044,8 +34063,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // クイックは15段階、種族チャレンジは14段階あり、一続きに並べると探しにくい。
           // 極限を持たないモード(プロなど)では extreme が空になり、タブ自体を出さない
           const difficultyGroups=splitDifficultyEntries(allDifficulties);
-          const hasExtremeTab=difficultyGroups.extreme.length>0;
-          const activeDifficultyTab=hasExtremeTab?difficultySelectTab:DIFFICULTY_TAB_NORMAL;
+          // チャレンジの極限は、極限チャレンジの7段階をそのまま「極限」タブとして見せる
+          // (2026-09-19 ユーザー指示「極限チャレンジの難易度を通常のチャレンジに入れ込みたい」)。
+          // ★カードの作りが通常とまったく違う(専用テーマ・ルール詳細・勇者の証・別の記録)ので、
+          //   カードを移植せず、タブを押したら専用画面へ移る。見た目は同じ横カルーセルなので、
+          //   遊ぶ側にはタブが切り替わったように見える
+          // ★pro / mode はこの下で定義しているので、ここでは使わない。
+          //   先に参照すると初期化前アクセスになり、難易度選択がまるごとエラー画面に落ちる(実際に落ちた)
+          const challengeExtremeTab=!species&&!quick&&!isProMode(battleMode);
+          const hasExtremeTab=difficultyGroups.extreme.length>0||challengeExtremeTab;
+          const activeDifficultyTab=hasExtremeTab&&!challengeExtremeTab?difficultySelectTab:DIFFICULTY_TAB_NORMAL;
           const difficulties=activeDifficultyTab===DIFFICULTY_TAB_EXTREME?difficultyGroups.extreme:difficultyGroups.normal;
           const selectedDifficulty=species?(speciesChallengeSelection.difficultyId||difficulties[0]?.[0]):safeDifficulty;
           const selectedIndex=Math.max(0,difficulties.findIndex(([key])=>key===selectedDifficulty));
@@ -34087,14 +34114,25 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 {hasExtremeTab&&<div data-difficulty-tabs className="flex gap-1.5 w-full shrink-0 mb-1">
                   {[[DIFFICULTY_TAB_NORMAL,'通常'],[DIFFICULTY_TAB_EXTREME,'極限']].map(([tabId,tabLabel])=>{
                     const on=activeDifficultyTab===tabId;
-                    const group=tabId===DIFFICULTY_TAB_EXTREME?difficultyGroups.extreme:difficultyGroups.normal;
-                    return <button key={tabId} aria-pressed={on} onClick={()=>{
+                    const toExtreme=tabId===DIFFICULTY_TAB_EXTREME;
+                    const group=toExtreme?difficultyGroups.extreme:difficultyGroups.normal;
+                    // チャレンジの極限は専用画面へ移る。解放前は押せないが、タブ自体は出す
+                    // (何があるのか分かるようにするため。モードのカードもそうしていた)
+                    const jumps=challengeExtremeTab&&toExtreme;
+                    const locked=jumps&&!extremeUnlocked&&!debugBattle;
+                    const count=jumps?PUBLIC_EXTREME_DIFFICULTIES.length:group.length;
+                    return <button key={tabId} aria-pressed={on} disabled={locked} onClick={()=>{
+                      if(jumps){
+                        battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';
+                        setGameState('EXTREME_DIFFICULTY_SELECT');
+                        return;
+                      }
                       if(on)return;
                       setDifficultySelectTab(tabId);
                       // 切り替えた先の先頭を選ぶ。選びっぱなしにすると、見えていない難易度のまま
                       // 「この難易度で挑戦」を押せてしまう
                       if(group[0])chooseDifficulty(group[0][0]);
-                    }} className={`flex-1 min-h-[38px] rounded-2xl font-black text-[12px] border-2 active:scale-95 ${on?(tabId===DIFFICULTY_TAB_EXTREME?'bg-fuchsia-700 border-fuchsia-300 text-white':'bg-indigo-600 border-indigo-300 text-white'):'bg-slate-900 border-slate-700 text-slate-400'}`}>{tabLabel}<span className="ml-1 text-[9px] opacity-75">{group.length}</span></button>;
+                    }} className={`flex-1 min-h-[38px] rounded-2xl font-black text-[12px] border-2 active:scale-95 disabled:opacity-40 ${on?(toExtreme?'bg-fuchsia-700 border-fuchsia-300 text-white':'bg-indigo-600 border-indigo-300 text-white'):'bg-slate-900 border-slate-700 text-slate-400'}`}>{tabLabel}<span className="ml-1 text-[9px] opacity-75">{locked?'🔒':count}</span></button>;
                   })}
                 </div>}
                 <div className={`relative shrink-0${battleTutorialSpotClass('difficulty')}`}>

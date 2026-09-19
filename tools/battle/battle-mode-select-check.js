@@ -93,7 +93,9 @@ const check = (name, ok, detail = '') => {
 
     // --- ② 公開中のモードがカードで並ぶ(ぐるぐる回すため同じ並びを3回置いている) ---
     // モードを足したらここへ1つ足す。並びは画面の順番と同じにする
-    const MODE_LABELS = ['チャレンジモード', 'クイックモード', 'プロモード', '極限チャレンジ', '種族チャレンジ'];
+    // 極限チャレンジはチャレンジの「極限」タブへ入れ込んだので、モードのカードには並ばない
+    // (2026-09-19 ユーザー指示)。難易度選択のタブは difficulty-tab-check.js が見る
+    const MODE_LABELS = ['チャレンジモード', 'クイックモード', 'プロモード', '種族チャレンジ'];
     const modeCards = page.locator('.snap-mandatory > article');
     check(`モードのカードが${MODE_LABELS.length}モード×3周ぶん並んでいる`, await modeCards.count() === MODE_LABELS.length * 3, `${await modeCards.count()}枚`);
     for (const label of MODE_LABELS) {
