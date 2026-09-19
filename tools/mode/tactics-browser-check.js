@@ -183,6 +183,40 @@ const check = (name, ok, detail = '') => {
     //   既存のチャレンジモードでも同じく開かないことを確かめてあるので、実装ではなく検査環境の都合。
     //   行動表が解析へ渡っていることは tactics-enemy-actions-check.js がソースで見る。
 
+    // --- ⑤ AUTOで何ターンか戦わせ、ライフが盤面ごしに減ることを見る(段階5) ---
+    // ★ここが繋がっていないと、敵の攻撃が当たってもライフが1も減らない、
+    //   あるいは誰も倒れていないのに敗北画面が出る。どちらも例外は出ない
+    // ★「読めなかった」を0と取り違えない。WAVEの結果やトレーニングの画面へ移ると
+    //   この帯は消えるので、raw が読めたときだけ数える(取り違えて敗北扱いにしかけた)
+    const lifeOf = () => page.evaluate(() => {
+      const raw = document.querySelector('[data-ally-life]')?.getAttribute('data-ally-life') || '';
+      if (!/^\d+\/\d+$/.test(raw)) return { raw: '', ok: false };
+      const [hp, max] = raw.split('/').map(Number);
+      return { hp, max, raw, ok: true };
+    });
+    const startLife = await lifeOf();
+    check('味方のライフを読める', startLife.ok && startLife.max > 0, startLife.raw || '見つからない');
+    check('はじめは満タン(盤面の合計＝ライフ)', startLife.hp === startLife.max, startLife.raw);
+    await page.evaluate(() => { document.querySelector('button[aria-label^="AUTO"]')?.click(); });
+    let hits = 0, lowest = startLife.hp, gameOver = false, lastLife = startLife;
+    for (let i = 0; i < 30; i++) {
+      await page.waitForTimeout(1000);
+      const now = await lifeOf();
+      if (now.ok) {
+        if (now.hp < lastLife.hp) hits++;
+        lowest = Math.min(lowest, now.hp);
+        lastLife = now;
+      }
+      gameOver = gameOver || await page.evaluate(() => /GAME OVER/i.test(document.body.innerText));
+      if (hits >= 2) break;
+    }
+    check('敵の攻撃でライフが減る', hits >= 1, `減った回数 ${hits} / 最低 ${lowest}`);
+    check('ライフが上限を超えたりマイナスにならない',
+      lastLife.hp >= 0 && lastLife.hp <= lastLife.max, lastLife.raw);
+    // ★盤面の合計が0でないのに敗北画面が出ていたら、盤面とライフが食い違っている
+    check('ライフが残っているのに敗北画面が出ない', !gameOver || lastLife.hp === 0,
+      `${lastLife.raw} / GAME OVER ${gameOver}`);
+
     check('実行時エラーが出ていない', errors.length === 0, errors.slice(0, 2).join(' / '));
   } catch (e) {
     check('最後まで確認できた', false, String(e && e.message ? e.message : e).slice(0, 160));

@@ -9,6 +9,7 @@ const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分�
 //   ⑤ 敵はライフの少ない子を狙いやすい。全体攻撃と薙ぎ払いは狙いを決めない
 //   ⑥ 壊れた値が来ても落ちない
 //   ⑦ バトル本体へ結線されている(盤面が slots と一緒に動き、予告へ狙いが乗る)
+//   ⑧ パーティのライフは盤面の合計。増減が正しく振り分けられる(段階5)
 //
 // 数式をこのファイルへ書き写すと、本体を変えたときに検査だけ古くなる。
 // 計算は必ず本体から切り出した実装をそのまま動かす。
@@ -39,7 +40,10 @@ vm.runInContext(
     + ';globalThis.api={TACTICS_REVIVE_HP_RATE,TACTICS_TRAINING_REVIVE_RATE,TACTICS_START_GUTS_RATE,'
     + 'createTacticsUnit,normalizeTacticsUnit,applyTacticsDamage,healTacticsUnit,reviveTacticsUnit,'
     + 'payTacticsGuts,recoverTacticsGuts,tacticsAliveSlots,tacticsDownedSlots,isTacticsWipedOut,'
-    + 'canTacticsSlotAct,chooseTacticsTarget,withTacticsTarget,tacticsIntentTargets};', sandbox);
+    + 'canTacticsSlotAct,chooseTacticsTarget,withTacticsTarget,tacticsIntentTargets,'
+    + 'tacticsTotalHp,tacticsTotalMaxHp,tacticsTotalBaseMaxHp,scaleTacticsUnits,scaleTacticsUnitMaxHp,'
+    + 'damageTacticsTargets,healTacticsBoard,selfDamageTacticsBoard,growTacticsMaxHp,'
+    + 'fullHealTacticsBoard,wipeTacticsBoard};', sandbox);
 const api = sandbox.api;
 
 // モンスター1体ぶんの入力。マスモンなら育成済みの値が baseHp などに入っている
@@ -164,12 +168,88 @@ check('unitでないものは null', api.normalizeTacticsUnit(null) === null && 
 check('盤面が配列でなくても落ちない',
   api.tacticsAliveSlots(null).length === 0 && api.isTacticsWipedOut(undefined) === false);
 
+// --- ⑧ 盤面の合計と、ライフの振り分け(段階5) ---
+// ★ここが崩れると「合計は残っているのに全員倒れている」「誰も倒れていないのに敗北」になる
+const makeBoard = (...mons) => {
+  const units = [null, null, null, null];
+  mons.forEach(([index, over]) => { units[index] = api.createTacticsUnit(mon(over)); });
+  return units;
+};
+const pair = makeBoard([0, {}], [2, { id: 'Golem', name: 'ゴーレム', baseHp: 400 }]);
+check('合計ライフは1体ずつの足し算', api.tacticsTotalHp(pair) === 1000, String(api.tacticsTotalHp(pair)));
+check('合計の上限も1体ずつの足し算', api.tacticsTotalMaxHp(pair) === 1000);
+check('素の上限の合計を別に取れる', api.tacticsTotalBaseMaxHp(pair) === 1000);
+check('空の盤面は合計0', api.tacticsTotalHp([null, null, null, null]) === 0 && api.tacticsTotalHp(null) === 0);
+
+// 狙われた子だけが減る
+const hitOne = api.damageTacticsTargets(pair, [0], 100);
+check('狙われた子だけが減る', api.tacticsTotalHp(hitOne) === 900 && hitOne[0].hp === 500 && hitOne[2].hp === 400,
+  `${hitOne[0].hp} / ${hitOne[2].hp}`);
+const hitAll = api.damageTacticsTargets(pair, [0, 2], 100);
+check('全体攻撃は立っている全員が減る', hitAll[0].hp === 500 && hitAll[2].hp === 300);
+check('誰にも当たらない行動では減らない', api.tacticsTotalHp(api.damageTacticsTargets(pair, [], 100)) === 1000);
+const downOne = api.damageTacticsTargets(pair, [2], 9999);
+check('0になった子だけが倒れる', downOne[2].downed === true && downOne[0].downed === false);
+check('1体倒れただけでは全滅ではない', api.isTacticsWipedOut(downOne) === false);
+check('倒れた子のぶんは合計から消える', api.tacticsTotalHp(downOne) === 600, String(api.tacticsTotalHp(downOne)));
+check('全員倒れたら合計0＝敗北', api.tacticsTotalHp(api.wipeTacticsBoard(pair)) === 0
+  && api.isTacticsWipedOut(api.wipeTacticsBoard(pair)) === true);
+
+// 回復は立っている子へ配る
+const damagedBoard = api.damageTacticsTargets(api.damageTacticsTargets(pair, [0], 300), [2], 100);
+const healedBoard = api.healTacticsBoard(damagedBoard, 200);
+check('回復は足りない量の多い子から配る', healedBoard[0].hp > damagedBoard[0].hp && api.tacticsTotalHp(healedBoard) === api.tacticsTotalHp(damagedBoard) + 200,
+  `${damagedBoard[0].hp}→${healedBoard[0].hp} / ${damagedBoard[2].hp}→${healedBoard[2].hp}`);
+check('上限を超えて回復しない', api.tacticsTotalHp(api.healTacticsBoard(damagedBoard, 99999)) === api.tacticsTotalMaxHp(damagedBoard));
+// ★倒れた子へ配ると「倒れたのにライフがある」状態になる。戻すのは回復カードかトレーニング
+check('倒れた子には配らない', (() => {
+  const board = api.damageTacticsTargets(pair, [2], 9999);
+  const after = api.healTacticsBoard(api.damageTacticsTargets(board, [0], 200), 200);
+  return after[2].hp === 0 && after[2].downed === true;
+})());
+check('満タンの盤面へ回復しても増えない', api.tacticsTotalHp(api.healTacticsBoard(pair, 500)) === 1000);
+check('立っている子がいなければ何も起きない',
+  api.tacticsTotalHp(api.healTacticsBoard(api.wipeTacticsBoard(pair), 500)) === 0);
+check('WAVEの全回復でも倒れた子は戻らない', (() => {
+  const board = api.fullHealTacticsBoard(api.damageTacticsTargets(damagedBoard, [2], 9999));
+  return board[0].hp === board[0].maxHp && board[2].downed === true && board[2].hp === 0;
+})());
+
+// 自傷では倒れない
+const selfHurt = api.selfDamageTacticsBoard(pair, 99999);
+check('自傷では誰も倒れない', selfHurt.filter(Boolean).every(u => u.hp >= 1 && u.downed === false),
+  selfHurt.filter(Boolean).map(u => u.hp).join(','));
+check('自傷は立っている子へ配る', api.tacticsTotalHp(api.selfDamageTacticsBoard(pair, 200)) === 800);
+
+// みゅあ補正は1体ずつの上限へ効かせる
+const scaledBoard = api.scaleTacticsUnits(pair, 0.1);
+check('上限の倍率は1体ずつへ効く', scaledBoard[0].maxHp === 660 && scaledBoard[2].maxHp === 440,
+  `${scaledBoard[0].maxHp} / ${scaledBoard[2].maxHp}`);
+check('素の上限は残る(倍率が戻れば元に戻る)',
+  api.scaleTacticsUnits(scaledBoard, 0).map(u => (u ? u.maxHp : 0)).join(',') === '600,0,400,0');
+check('倍率を上げても現在のライフは増えない', scaledBoard[0].hp === 600);
+
+// トレーニングで伸びた上限は、配ったぶんの合計が必ず一致する
+const grownBoard = api.growTacticsMaxHp(pair, 137);
+check('トレーニングの伸びは端数まで配り切る',
+  api.tacticsTotalBaseMaxHp(grownBoard) === api.tacticsTotalBaseMaxHp(pair) + 137,
+  `${api.tacticsTotalBaseMaxHp(pair)} → ${api.tacticsTotalBaseMaxHp(grownBoard)}`);
+check('トレーニングでは現在のライフは増えない', api.tacticsTotalHp(grownBoard) === api.tacticsTotalHp(pair));
+check('伸びを0にしても壊れない', api.tacticsTotalBaseMaxHp(api.growTacticsMaxHp(pair, 0)) === 1000);
+check('1体もいない盤面でも落ちない',
+  api.growTacticsMaxHp([null, null, null, null], 100).filter(Boolean).length === 0
+    && api.tacticsTotalHp(api.selfDamageTacticsBoard(null, 10)) === 0);
+
 // --- ⑦ バトル本体への結線 ---
 // 純関数だけ足して結線を忘れると、盤面がいつまでも空のまま「狙いなし」で予告が出る。
 // 例外は出ず画面も壊れないので、遊んで気付けない
 const has = (needle) => source.includes(needle);
 check('盤面は slots と同じ入口で動かす',
-  has('const applySlots = (nextSlots) => { setSlots(nextSlots); syncTacticsUnits(nextSlots); };'));
+  has('const applySlots = (nextSlots, mode = runMode) => { setSlots(nextSlots); syncTacticsUnits(nextSlots, mode); };'));
+// ★バトルを始める処理の中では runMode(state)がまだ前のモードのまま。
+//   ここでモードを渡し忘れると、1戦目だけ盤面がライフに反映されない
+check('バトル開始時は runMode ではなく決まったモードを渡す',
+  has('applySlots(initialSlots, resolved.runMode);'));
 check('編成スロットを applySlots 以外から書き換えていない',
   (source.match(/setSlots\(/g) || []).length === 2,
   `setSlots を呼ぶ場所 ${(source.match(/setSlots\(/g) || []).length}か所(useStateの宣言とapplySlotsの中だけ)`);
@@ -185,6 +265,52 @@ check('WAVEの最初の予告にも狙いが付く',
 // ★予約した時点で狙いを固定すると、そのあいだに倒れた子を狙ったまま予告してしまう
 check('狙いは予告を出す直前に決める',
   has('const upcoming = aimTacticsIntent(reserved || getNextEnemyAction(enemy, distAfterExecuted, effective, {unannounced:true,...actionState()}), runMode);'));
+// --- ⑨ ライフを盤面の合計にする結線(段階5) ---
+// ★盤面と hp が食い違うと敗北判定が壊れる。書き換えの入口が1つであることを見る
+check('盤面とパーティのライフを同じ場所で動かす',
+  has('const commitTacticsUnits = (nextUnits, mode = runMode) => {')
+    && has('const max = tacticsTotalBaseMaxHp(next), total = tacticsTotalHp(next);')
+    && has('setMaxHp(max); setHp(total);'));
+check('パーティのライフを書き換えるのは commitTacticsUnits だけ',
+  (source.match(/tacticsUnitsRef\.current = /g) || []).length === 1,
+  `盤面のrefを直に書く場所 ${(source.match(/tacticsUnitsRef\.current = /g) || []).length}か所`);
+// ★編成前の画面でライフを0にすると、いきなり敗北画面(hp<=0)が出てしまう
+check('1体もいない盤面ではライフに触らない', has("if (!next.some(Boolean)) return null;"));
+check('ターンの途中でも新しい上限を読めるようにする', has('maxHpRef.current = max;'));
+check('敵の攻撃は当たった子だけを減らす',
+  has('const targets = tacticsIntentTargets(intent, tacticsUnitsRef.current, actingDist);')
+    && has('return commitTacticsUnits(damageTacticsTargets(tacticsUnitsRef.current, targets, damage));'));
+check('ふだんの被弾もガード貫通も盤面へ通す',
+  has('const struck=tacticsDamage(incomingDmg,intent,actingEnemyDist);')
+    && has('const pierced=tacticsDamage(fd,intent,actingEnemyDist);'));
+// ★薙ぎ払いの間合いに誰も立っていないターンがある。減っていないのに数字を出すと読めない
+check('誰にも当たらなかったターンはダメージの数字を出さない',
+  (source.match(/addPopup\('当たらなかった！'/g) || []).length === 2
+    && has("const dealt=struck!==null?Math.max(0,currentHp-struck):incomingDmg;"));
+check('回復(吸収・ガード余剰・自動再生・カード)も盤面へ通す',
+  ['const absorbed=tacticsHeal(hpGain);', 'const guarded=tacticsHeal(diff);',
+   'if(tacticsHeal(autoHealVal)===null)', 'const cardHealed=tacticsHeal(cardHeal);',
+   'const drained=tacticsHeal(hRec);'].every(has));
+check('20ターン経過は全員を倒す', has('if(nextTurn>20){ if(tacticsWipe()===null) setHp(0); }'));
+check('自傷では誰も倒れない道を通す', has('selfDamageTacticsBoard(tacticsUnitsRef.current,selfDmgAmt)'));
+// ★合流のライフ合算をやめないと、合流した子のぶんが盤面とパーティで二重に入る
+check('供モン合流でライフを合算しない',
+  has('const tacticsJoin=isTacticsMode(runMode);')
+    && has("if(!tacticsJoin){ setMaxHp(nMaxHp); setHp(p=>p+(nMaxHp-bHp)); }"));
+check('トレーニングの伸びは盤面へ配る',
+  has('if(isTacticsMode(runMode)) commitTacticsUnits(growTacticsMaxHp(tacticsUnitsRef.current,nMaxHp-maxHp,getPermaBuff(\'muaHpPct\')));'));
+check('みゅあ補正が上がったら1体ずつの上限へ効かせ直す',
+  has('commitTacticsUnits(scaleTacticsUnits(tacticsUnitsRef.current, getPermaBuff(\'muaHpPct\')));'));
+// ★ライフを書き換える場所が増えたら、新モードの分岐を足したか必ず見直すこと。
+//   1か所でも素通りすると、盤面と合計が食い違って敗北判定が壊れる。
+//   数が変わったらこの検査が落ちるので、そこで棚卸しする
+const setHpSites = (source.match(/setHp\(/g) || []).length;
+check('ライフを書き換える場所は数えてある', setHpSites === 21,
+  `いま ${setHpSites}か所(数えたときは21か所)。増えたら新モードの分岐を足したか確かめる`);
+// 既存モードを巻き込んでいないこと
+check('既存モードの実効最大ライフはそのまま',
+  has("const effectiveMaxHp = useMemo(() => resolveEffectiveMaxStat(maxHp, getPermaBuff('muaHpPct')), [maxHp, permaBuffs]);"));
+
 check('予告の吹き出しに狙いを出す',
   fs.readFileSync(path.join(root, 'monster-hero/src/parts/71-screen-battle.jsx'), 'utf8')
     .includes("{enemyIntent.targetName?` 🎯${enemyIntent.targetName}`:''}"));
