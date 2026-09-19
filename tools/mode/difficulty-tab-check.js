@@ -66,7 +66,9 @@ check('難易度からタブを決められる',
 // --- 実装側の結線 ---
 check('開くたびにタブも通常から始まる', has('setDifficultySelectTab(difficultyTabOf(start));'),
   '極限タブのままノーマルを選んでいる状態を作らない');
-check('極限を持たないモードではタブを出さない', has('const hasExtremeTab=difficultyGroups.extreme.length>0;'));
+check('極限を持たないモードではタブを出さない', has('const hasExtremeTab=difficultyGroups.extreme.length>0||challengeExtremeTab;'));
+// ★pro を定義より前で参照すると難易度選択がまるごとエラー画面に落ちる(実際に落ちた)
+check('チャレンジ判定は pro を先に参照しない', has('const challengeExtremeTab=!species&&!quick&&!isProMode(battleMode);'));
 check('タブを切り替えたらその並びの先頭を選ぶ', has('if(group[0])chooseDifficulty(group[0][0]);'),
   '見えていない難易度のまま開始できてしまうのを防ぐ');
 
@@ -108,6 +110,8 @@ const serve = () => new Promise((resolve) => {
       localStorage.setItem('mh_battle_tutorial_guide_shown_v1', JSON.stringify(true));
       localStorage.setItem('mh_inherited_unique_level_compensation_v1', JSON.stringify(true));
       localStorage.setItem('mh_inherited_unique_level_compensation_pending_v1', JSON.stringify(false));
+      // 極限タブを実際に押せる状態にする(解放条件は Grand Master 以上のクリア)
+      localStorage.setItem('mh_clears_GrandMaster', JSON.stringify(1));
     });
     await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
     await page.addStyleTag({ content: `
@@ -141,11 +145,18 @@ const serve = () => new Promise((resolve) => {
     };
     const tabLabels = () => page.evaluate(() =>
       [...document.querySelectorAll('[data-difficulty-tabs] button')].map(b => b.textContent.trim()));
+    // ★「タブが出ない」は、画面がまるごとエラーで落ちていても真になってしまう。
+    //   実際にそれで見逃しかけたので、難易度選択が開けていること自体を先に確かめる
+    const difficultyScreenOk = async () => {
+      const text = await page.evaluate(() => document.body.innerText.replace(/\s+/g, ' '));
+      return !text.includes('画面の表示でエラーが起きました') && /BATTLE DIFFICULTY|難易度を選択/.test(text);
+    };
     const cardTitles = () => page.evaluate(() =>
       [...document.querySelectorAll('article h3')].map(h => h.textContent.trim()));
 
     // --- ② クイック: タブが出て、押すと極限へ切り替わる ---
     await openDifficulty('クイックモード');
+    check('クイックの難易度選択が開ける（エラー画面に落ちていない）', await difficultyScreenOk());
     const quickTabs = await tabLabels();
     check('クイックに「通常 / 極限」タブが出る', quickTabs.length === 2 && /通常/.test(quickTabs[0]) && /極限/.test(quickTabs[1]),
       quickTabs.join(' | '));
@@ -169,7 +180,35 @@ const serve = () => new Promise((resolve) => {
 
     // --- ③ 極限を持たないモードにはタブが出ない ---
     await openDifficulty('プロモード');
+    check('プロの難易度選択が開ける（エラー画面に落ちていない）', await difficultyScreenOk());
     check('プロにはタブが出ない', (await tabLabels()).length === 0);
+    await back();
+
+    // --- ④ チャレンジ: 極限タブから極限の難易度へ行き来できる ---
+    await openDifficulty('チャレンジモード');
+    check('チャレンジの難易度選択が開ける（エラー画面に落ちていない）', await difficultyScreenOk());
+    const challengeTabs = await tabLabels();
+    check('チャレンジにも「通常 / 極限」タブが出る', challengeTabs.length === 2, challengeTabs.join(' | '));
+    await page.evaluate(() => {
+      [...document.querySelectorAll('[data-difficulty-tabs] button')].find(b => b.textContent.includes('極限'))?.click();
+    });
+    await page.waitForTimeout(1500);
+    const jumped = await page.evaluate(() => !!document.querySelector('[data-extreme-difficulties]'));
+    // 解放していない端末では押せない。そのときはタブが無効になっていることを見る
+    const lockedTab = await page.evaluate(() =>
+      [...document.querySelectorAll('[data-difficulty-tabs] button')].some(b => b.textContent.includes('極限') && b.disabled));
+    check('極限タブから極限の難易度へ移れる（未解放なら押せない）', jumped || lockedTab,
+      jumped ? '移れた' : lockedTab ? '未解放なので押せない' : 'どちらでもない');
+    if (jumped) {
+      const backTabs = await tabLabels();
+      check('極限の画面にも同じタブが出る', backTabs.length === 2, backTabs.join(' | '));
+      await page.evaluate(() => {
+        [...document.querySelectorAll('[data-difficulty-tabs] button')].find(b => b.textContent.includes('通常'))?.click();
+      });
+      await page.waitForTimeout(1500);
+      const returned = await page.evaluate(() => [...document.querySelectorAll('article h3')].map(h => h.textContent.trim()));
+      check('通常タブで9段階へ戻れる', returned.includes('Beginner'), returned.slice(0, 3).join(','));
+    }
     await back();
 
     check('実行時エラーが出ていない', errors.length === 0, errors.slice(0, 2).join(' / '));
