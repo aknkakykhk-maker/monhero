@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 12a677f8f19494fb
+// generated-sha256: 27763ab920dc8af8
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -91,7 +91,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-20 02:01"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-20 04:31"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15329,13 +15329,12 @@ const damageTacticsTargets = (units, targetSlots, damage) => {
 
 // 回復を盤面へ配る。足りない量に比例して配り、端数は足りない量の大きい子から埋める。
 // 均等割りにすると、瀕死の子が置き去りのまま満タンの子へ回復が消える
-const healTacticsBoard = (units, amount) => {
+const healTacticsBoardTo = (units, amount, targetSlots) => {
   const list = (Array.isArray(units) ? units : []).slice();
   const give = Math.max(0, tacticsSafeInt(amount, 0));
   if (give <= 0) return list;
-  // ★倒れた子にも配る。自動再生・緊急回復・吸収も「復活までの貯め」に乗る
-  //   (2026-09-19 ユーザーが決めた形)。足りない量が多いぶん、倒れた子へ多く入る
-  const missing = tacticsFilledSlots(list)
+  // 足りない量が多いぶん、多く入る
+  const missing = (Array.isArray(targetSlots) ? targetSlots : [])
     .map(index => {
       const unit = normalizeTacticsUnit(list[index]);
       return { index, need: Math.max(0, unit.maxHp - unit.hp) };
@@ -15360,6 +15359,13 @@ const healTacticsBoard = (units, amount) => {
   shares.forEach(entry => { if (entry.value > 0) list[entry.index] = healTacticsUnit(list[entry.index], entry.value); });
   return list;
 };
+// ★倒れた子にも配る。緊急回復・吸収・回復カードは「復活までの貯め」に乗る
+//   (2026-09-19 ユーザーが決めた形)
+const healTacticsBoard = (units, amount) => healTacticsBoardTo(units, amount, tacticsFilledSlots(units));
+// ★自動再生だけは倒れた子へ入れない(2026-09-20 ユーザー指示)。
+//   毎ターン勝手に貯まって復活すると、何もしなくても誰も倒れたままにならない
+//   =「一生死ななくなる」。起こすのは 回復カード・緊急回復・吸収・トレーニング に限る
+const healTacticsAliveBoard = (units, amount) => healTacticsBoardTo(units, amount, tacticsAliveSlots(units));
 
 // ===== ガッツ(1体ずつ) =====
 //
@@ -20548,6 +20554,10 @@ function BattleScreen({
   teachingFx, totalTurnCount, turnCount, ultimateDistanceBreakLevels, ultraBattleView,
   unifiedSpecialDefense, useEmergency, wave,
 }) {
+  // 強化の札を「アイコン1行」と「数値つきの一覧」で切り替える(2026-09-20 ユーザー指摘)。
+  // ★いくつ付いても高さが変わらないようにするための状態。ここが無いと、
+  //   札が3行4行に伸びて敵の絵・緊急のボタン・与ダメの数字を押し出す
+  const [buffDetail, setBuffDetail] = useState(false);
   return (
 
       <div className="flex-1 flex flex-col h-full relative" data-battle-speed={battleSpeed} data-eco-view={ultraBattleView?'ultra':liteBattleView?'lite':'off'}>
@@ -20905,44 +20915,88 @@ function BattleScreen({
             もとは敵のいる main の中に置いていたが、main は overflow-y-auto なので、
             強化が増えて札が2行3行になると表示の外へ押し出され、下の味方バーに隠れて読めなくなっていた。
             main の外へ出し、味方バーのすぐ上に置く。これで札が何行になっても必ず見える。 */}
-          <div className={`flex flex-wrap justify-center gap-1 max-w-[340px] shrink-0 px-2 pt-1 pb-0.5 bg-slate-950 relative z-[40] ${focusedCard?'invisible':'visible'}`}>
-            {/* === 永続バフ === */}
-            {/* ★0のものは出さない(2026-09-18・ユーザー依頼「情報量をもっとよくしたい」)。
-                以前は8つが値に関わらず並び、始めたばかりの周回では「ATK +0%」「被ダメ -0%」…
-                と意味の無い札が3行(約100px)を占めていた。強化を取ったぶんだけ増えていく形にすると、
-                いま何が乗っているのかが一目で分かる。 */}
-            {(Math.floor((getPermaBuff('atkPct')+getPermaBuff('muaAtkPct'))*100))>0&&<div className="text-[11px] font-black text-red-500 bg-black/60 px-2 py-0.5 rounded border border-red-500/50 flex items-center gap-1 shadow-lg uppercase"><Sword size={9}/> ATK +{Math.floor((getPermaBuff('atkPct')+getPermaBuff('muaAtkPct'))*100)}%</div>}
-            {(Math.floor(getPermaBuff('dmgCutPct')*100))>0&&<div className="text-[11px] font-black text-emerald-500 bg-black/60 px-2 py-0.5 rounded border border-emerald-500/50 flex items-center gap-1 shadow-lg uppercase"><Shield size={9}/> 被ダメ -{Math.floor(getPermaBuff('dmgCutPct')*100)}%</div>}
-            {(Math.floor(getPermaBuff('defPct')*100))>0&&<div className="text-[11px] font-black text-emerald-500 bg-black/60 px-2 py-0.5 rounded border border-emerald-500/50 flex items-center gap-1 shadow-lg uppercase"><Shield size={9}/> DEF +{Math.floor(getPermaBuff('defPct')*100)}%</div>}
-            {(Math.floor(getPermaBuff('muaHpPct')*100))>0&&<div className="text-[11px] font-black text-pink-500 bg-black/60 px-2 py-0.5 rounded border border-pink-500/50 flex items-center gap-1 shadow-lg uppercase"><Heart size={9}/> ライフ +{Math.floor(getPermaBuff('muaHpPct')*100)}%</div>}
-            {(Math.floor(getPermaBuff('muaGutsPct')*100))>0&&<div className="text-[11px] font-black text-amber-500 bg-black/60 px-2 py-0.5 rounded border border-amber-500/50 flex items-center gap-1 shadow-lg uppercase"><Zap size={9}/> ガッツ +{Math.floor(getPermaBuff('muaGutsPct')*100)}%</div>}
-            {(Math.round(getPermaBuff('critRatePct')*100))>0&&<div className="text-[11px] font-black text-yellow-400 bg-black/60 px-2 py-0.5 rounded border border-yellow-400/50 flex items-center gap-1 shadow-lg uppercase"><Sparkles size={9}/> クリ率 +{Math.round(getPermaBuff('critRatePct')*100)}%</div>}
-            {(Math.round(getPermaBuff('critDmgPct')*100))>0&&<div className="text-[11px] font-black text-yellow-400 bg-black/60 px-2 py-0.5 rounded border border-yellow-400/50 flex items-center gap-1 shadow-lg uppercase"><Sparkles size={9}/> クリダメ +{Math.round(getPermaBuff('critDmgPct')*100)}%</div>}
-            {(Math.round(getPermaBuff('comboDmgPct')*100))>0&&<div className="text-[11px] font-black text-cyan-400 bg-black/60 px-2 py-0.5 rounded border border-cyan-400/50 flex items-center gap-1 shadow-lg uppercase"><Sword size={9}/> 連撃 +{Math.round(getPermaBuff('comboDmgPct')*100)}%</div>}
-            {getPermaBuff('globalComboDmgPct')>0&&<div className="text-[11px] font-black text-sky-300 bg-black/60 px-2 py-0.5 rounded border border-sky-300/50 flex items-center gap-1 shadow-lg"><Sword size={7}/> 全体連撃 +{Math.round(getPermaBuff('globalComboDmgPct')*100)}%</div>}
-            {kikiCardBonus>0&&<div className="text-[11px] font-black text-violet-300 bg-black/60 px-2 py-0.5 rounded border border-violet-300/50 flex items-center gap-1 shadow-lg"><PlusCircle size={7}/> カード上限 +1（残り{Math.ceil(getPermaBuff('kikiCardBonusTurns'))}T）</div>}
-            {/* ソードスキル(剣士モッチー)。既存の永続バフ表示と同じ帯へ並べる。
-                連撃パワーは3たまるごとに永久追加連撃へ変わるので、両方が見えないと進み具合が分からない */}
-            {(getPermaBuff('kenshiComboPower')>0||getPermaBuff('kenshiExtraCombo')>0)&&<div className="text-[11px] font-black text-violet-300 bg-black/60 px-2 py-0.5 rounded border border-violet-300/50 flex items-center gap-1 shadow-lg"><Sword size={7}/> 連撃パワー {getPermaBuff('kenshiComboPower')}/{KENSHI_COMBO_POWER_MAX}{getPermaBuff('kenshiExtraCombo')>0?`・追加連撃 +${getPermaBuff('kenshiExtraCombo')}`:''}</div>}
-            <div className={`text-[11px] font-black bg-black/60 px-2 py-0.5 rounded border flex items-center gap-1 shadow-lg uppercase ${getPermaBuff('autoHpRecovery',0.1)>=0.1?'text-rose-400 border-rose-400/50':'text-red-400 border-red-400/50'}`}><Heart size={7}/> ライフ回復 {Math.round(getPermaBuff('autoHpRecovery',0.1)*100)}%</div>
-            <div className="text-[11px] font-black text-amber-400 bg-black/60 px-2 py-0.5 rounded border border-amber-400/50 flex items-center gap-1 shadow-lg uppercase"><Zap size={7}/> ガッツ回復 {Math.round(applyIceRulerAutoGutsRecovery(Math.max(0,0.05+(getPermaBuff('autoHpRecovery',0.1)-0.1))+getPermaBuff('gutsRecoverPct'),mainHero?.id,iceLockActive,heroDist,enemyDist)*100)}%</div>
-            {/* ポルツの待機。あと何回ぶん敵の攻撃で発動するかを出す(0になったら消える。得た効果は残る) */}
-            {getPermaBuff('poltzCharges')>0&&<div className="text-[11px] font-black text-lime-300 bg-lime-950/60 px-2 py-1 rounded-full border border-lime-400/50 animate-pulse flex items-center gap-1"><Zap size={8}/> {BREEDER_EVO_NAMES.poltz[Math.max(0,Math.min(getPermaBuff('poltzTier'),2))]} ×{Math.floor(getPermaBuff('poltzCharges'))}</div>}
-            {/* === ターン限定バフ（都度表示） === */}
-            {getNextTurnBuff('melosoFullRecoveryMult',0)>0&&<div className="text-[11px] font-black text-rose-300 bg-rose-950/60 px-2 py-1 rounded-full border border-rose-400/50 animate-pulse flex items-center gap-1"><Heart size={8}/> 次ターン全回復</div>}
-            {getTurnBuff('atkMult',1.0)>1&&<div className="text-[11px] font-black text-red-500 bg-red-950/60 px-2 py-1 rounded-full border border-red-500/50 animate-pulse uppercase flex items-center gap-1"><Sparkles size={8}/> Boost x{getTurnBuff('atkMult',1.0).toFixed(1)}</div>}
-            {getTurnBuff('stunEnemy',false)&&<div className="text-[11px] font-black text-yellow-400 bg-yellow-950/60 px-2 py-1 rounded-full border border-yellow-500/50 animate-pulse uppercase flex items-center gap-1"><Zap size={8}/> スタン予約</div>}
-            {getTurnBuff('guaranteedCrit',false)&&<div className="text-[11px] font-black text-orange-400 bg-orange-950/60 px-2 py-1 rounded-full border border-orange-500/50 animate-pulse uppercase flex items-center gap-1"><Target size={8}/> 会心予約</div>}
-            {(getTurnBuff('zeroGuts',false)||getNextTurnBuff('zeroGuts',false))&&<div className="text-[11px] font-black text-blue-400 bg-blue-950/60 px-2 py-1 rounded-full border border-blue-500/50 animate-pulse uppercase flex items-center gap-1"><Star size={8}/> 0消費中</div>}
-            {getNextTurnBuff('reflect',false)&&<div className="text-[11px] font-black text-purple-400 bg-purple-950/60 px-2 py-1 rounded-full border border-purple-500/50 animate-pulse uppercase flex items-center gap-1"><RefreshCcw size={8}/> 次反射</div>}
-            {getTurnBuff('reflect',false)&&<div className="text-[11px] font-black text-purple-300 bg-purple-900/80 px-2 py-1 rounded-full border border-purple-400 animate-bounce uppercase flex items-center gap-1"><RefreshCcw size={8}/> 反射待機</div>}
-            {getWaveBuff('enemyAtkDebuffPct')>0&&<div className="text-[11px] font-black text-indigo-400 bg-indigo-950/60 px-2 py-1 rounded-full border border-indigo-500/50 animate-pulse uppercase flex items-center gap-1"><ArrowDownCircle size={8}/> 敵攻-{Math.round(getWaveBuff('enemyAtkDebuffPct')*100)}%</div>}
-            {getWaveBuff('enemyTakenDmgBonus')>0&&<div className="text-[11px] font-black text-orange-400 bg-orange-950/60 px-2 py-1 rounded-full border border-orange-500/50 animate-pulse uppercase flex items-center gap-1"><PlusCircle size={8}/> 敵被ダメ+{Math.round(getWaveBuff('enemyTakenDmgBonus')*100)}%</div>}
-            {getNextTurnBuff('takenDamageMult',1.0)<1&&<div className="text-[11px] font-black text-pink-400 bg-pink-950/60 px-2 py-1 rounded-full border border-pink-500/50 animate-pulse uppercase flex items-center gap-1"><Shield size={8}/> 次T被ダメ-{Math.round((1-getNextTurnBuff('takenDamageMult',1.0))*100)}%</div>}
-            {getTurnBuff('takenDamageMult',1.0)<1&&<div className="text-[11px] font-black text-pink-300 bg-pink-900/80 px-2 py-1 rounded-full border border-pink-400 animate-bounce uppercase flex items-center gap-1"><Shield size={8}/> 被ダメ-{Math.round((1-getTurnBuff('takenDamageMult',1.0))*100)}%</div>}
-            {getNextTurnBuff('gutsCostMult',1.0)>1&&<div className="text-[11px] font-black text-amber-400 bg-amber-950/60 px-2 py-1 rounded-full border border-amber-500/50 animate-pulse uppercase flex items-center gap-1"><Zap size={8}/> 次T消費G+{Math.round((getNextTurnBuff('gutsCostMult',1.0)-1)*100)}%</div>}
-            {getTurnBuff('gutsCostMult',1.0)>1&&<div className="text-[11px] font-black text-amber-300 bg-amber-900/80 px-2 py-1 rounded-full border border-amber-400 animate-bounce uppercase flex items-center gap-1"><Zap size={8}/> 消費G+{Math.round((getTurnBuff('gutsCostMult',1.0)-1)*100)}%</div>}
-          </div>
+          {(()=>{
+            // 強化の札(2026-09-20 ユーザー指摘「バフ欄が増えてくると敵や緊急回復等が見えなくなる」)。
+            // ★もとは flex-wrap で何行にも伸びていた。強化が10個を超えると札だけで3行4行になり、
+            //   敵の絵・「緊急」のボタン・与ダメの数字が押し出されて読めなくなっていた。
+            // ★ふだんは**アイコン1行**(横に溢れたら横スクロール)。数値は「詳細」を押したときだけ出す。
+            //   どちらの見た目でも周りの高さは変わらないので、下の画面が動かない。
+            // ★札を1つずつ書くのをやめ、いったん配列にしてから並べる。
+            //   文面と色をここ1か所に置くと、2つの見た目がずれない。
+            const chips=[];
+            // ★`icon` という名前は使わない。カードの絵は cardIconNode() を通す決まりがあり、
+            //   card-icon-check.js が `c.icon` をそのまま描く書き方を禁じている
+            const chip=(key,mark,label,value,tone,opts)=>{const o=opts||{};chips.push({key,mark,label,value,tone,short:o.short!=null?o.short:value,pulse:!!o.pulse});};
+            const atkPct=Math.floor((getPermaBuff('atkPct')+getPermaBuff('muaAtkPct'))*100);
+            if(atkPct>0) chip('atk',<Sword size={9}/>,'ATK',`+${atkPct}%`,'text-red-500 border-red-500/50');
+            const dmgCutPct=Math.floor(getPermaBuff('dmgCutPct')*100);
+            if(dmgCutPct>0) chip('dmgCut',<Shield size={9}/>,'被ダメ',`-${dmgCutPct}%`,'text-emerald-500 border-emerald-500/50');
+            const defPct=Math.floor(getPermaBuff('defPct')*100);
+            if(defPct>0) chip('def',<Shield size={9}/>,'DEF',`+${defPct}%`,'text-emerald-500 border-emerald-500/50');
+            const muaHpPct=Math.floor(getPermaBuff('muaHpPct')*100);
+            if(muaHpPct>0) chip('muaHp',<Heart size={9}/>,'ライフ',`+${muaHpPct}%`,'text-pink-500 border-pink-500/50');
+            const muaGutsPct=Math.floor(getPermaBuff('muaGutsPct')*100);
+            if(muaGutsPct>0) chip('muaGuts',<Zap size={9}/>,'ガッツ',`+${muaGutsPct}%`,'text-amber-500 border-amber-500/50');
+            const critRate=Math.round(getPermaBuff('critRatePct')*100);
+            if(critRate>0) chip('critRate',<Sparkles size={9}/>,'クリ率',`+${critRate}%`,'text-yellow-400 border-yellow-400/50');
+            const critDmg=Math.round(getPermaBuff('critDmgPct')*100);
+            if(critDmg>0) chip('critDmg',<Sparkles size={9}/>,'クリダメ',`+${critDmg}%`,'text-yellow-400 border-yellow-400/50');
+            const comboDmg=Math.round(getPermaBuff('comboDmgPct')*100);
+            if(comboDmg>0) chip('combo',<Sword size={9}/>,'連撃',`+${comboDmg}%`,'text-cyan-400 border-cyan-400/50');
+            if(getPermaBuff('globalComboDmgPct')>0) chip('globalCombo',<Sword size={9}/>,'全体連撃',`+${Math.round(getPermaBuff('globalComboDmgPct')*100)}%`,'text-sky-300 border-sky-300/50');
+            if(kikiCardBonus>0) chip('kikiCard',<PlusCircle size={9}/>,'カード上限',`+1（残り${Math.ceil(getPermaBuff('kikiCardBonusTurns'))}T）`,'text-violet-300 border-violet-300/50',{short:'+1'});
+            // ソードスキル(剣士モッチー)。連撃パワーは3たまるごとに永久追加連撃へ変わるので、
+            // 両方が見えないと進み具合が分からない
+            if(getPermaBuff('kenshiComboPower')>0||getPermaBuff('kenshiExtraCombo')>0){
+              const kenshiExtra=getPermaBuff('kenshiExtraCombo');
+              chip('kenshi',<Sword size={9}/>,'連撃パワー',
+                `${getPermaBuff('kenshiComboPower')}/${KENSHI_COMBO_POWER_MAX}${kenshiExtra>0?`・追加連撃 +${kenshiExtra}`:''}`,
+                'text-violet-300 border-violet-300/50',{short:`${getPermaBuff('kenshiComboPower')}/${KENSHI_COMBO_POWER_MAX}`});
+            }
+            chip('autoHp',<Heart size={9}/>,'ライフ回復',`${Math.round(getPermaBuff('autoHpRecovery',0.1)*100)}%`,
+              getPermaBuff('autoHpRecovery',0.1)>=0.1?'text-rose-400 border-rose-400/50':'text-red-400 border-red-400/50');
+            chip('autoGuts',<Zap size={9}/>,'ガッツ回復',
+              `${Math.round(applyIceRulerAutoGutsRecovery(Math.max(0,0.05+(getPermaBuff('autoHpRecovery',0.1)-0.1))+getPermaBuff('gutsRecoverPct'),mainHero?.id,iceLockActive,heroDist,enemyDist)*100)}%`,
+              'text-amber-400 border-amber-400/50');
+            // ポルツの待機。あと何回ぶん敵の攻撃で発動するかを出す(0になったら消える。得た効果は残る)
+            if(getPermaBuff('poltzCharges')>0) chip('poltz',<Zap size={9}/>,BREEDER_EVO_NAMES.poltz[Math.max(0,Math.min(getPermaBuff('poltzTier'),2))],`×${Math.floor(getPermaBuff('poltzCharges'))}`,'text-lime-300 border-lime-400/50',{pulse:true});
+            // === ターン限定バフ（都度表示） ===
+            if(getNextTurnBuff('melosoFullRecoveryMult',0)>0) chip('meloso',<Heart size={9}/>,'次ターン全回復','','text-rose-300 border-rose-400/50',{pulse:true});
+            if(getTurnBuff('atkMult',1.0)>1) chip('boost',<Sparkles size={9}/>,'Boost',`x${getTurnBuff('atkMult',1.0).toFixed(1)}`,'text-red-500 border-red-500/50',{pulse:true});
+            if(getTurnBuff('stunEnemy',false)) chip('stun',<Zap size={9}/>,'スタン予約','','text-yellow-400 border-yellow-500/50',{pulse:true});
+            if(getTurnBuff('guaranteedCrit',false)) chip('critFix',<Target size={9}/>,'会心予約','','text-orange-400 border-orange-500/50',{pulse:true});
+            if(getTurnBuff('zeroGuts',false)||getNextTurnBuff('zeroGuts',false)) chip('zeroGuts',<Star size={9}/>,'0消費中','','text-blue-400 border-blue-500/50',{pulse:true});
+            if(getNextTurnBuff('reflect',false)) chip('reflectNext',<RefreshCcw size={9}/>,'次反射','','text-purple-400 border-purple-500/50',{pulse:true});
+            if(getTurnBuff('reflect',false)) chip('reflectNow',<RefreshCcw size={9}/>,'反射待機','','text-purple-300 border-purple-400',{pulse:true});
+            if(getWaveBuff('enemyAtkDebuffPct')>0) chip('enemyAtkDown',<ArrowDownCircle size={9}/>,'敵攻',`-${Math.round(getWaveBuff('enemyAtkDebuffPct')*100)}%`,'text-indigo-400 border-indigo-500/50',{pulse:true});
+            if(getWaveBuff('enemyTakenDmgBonus')>0) chip('enemyTaken',<PlusCircle size={9}/>,'敵被ダメ',`+${Math.round(getWaveBuff('enemyTakenDmgBonus')*100)}%`,'text-orange-400 border-orange-500/50',{pulse:true});
+            if(getNextTurnBuff('takenDamageMult',1.0)<1) chip('takenNext',<Shield size={9}/>,'次T被ダメ',`-${Math.round((1-getNextTurnBuff('takenDamageMult',1.0))*100)}%`,'text-pink-400 border-pink-500/50',{pulse:true});
+            if(getTurnBuff('takenDamageMult',1.0)<1) chip('takenNow',<Shield size={9}/>,'被ダメ',`-${Math.round((1-getTurnBuff('takenDamageMult',1.0))*100)}%`,'text-pink-300 border-pink-400',{pulse:true});
+            if(getNextTurnBuff('gutsCostMult',1.0)>1) chip('costNext',<Zap size={9}/>,'次T消費G',`+${Math.round((getNextTurnBuff('gutsCostMult',1.0)-1)*100)}%`,'text-amber-400 border-amber-500/50',{pulse:true});
+            if(getTurnBuff('gutsCostMult',1.0)>1) chip('costNow',<Zap size={9}/>,'消費G',`+${Math.round((getTurnBuff('gutsCostMult',1.0)-1)*100)}%`,'text-amber-300 border-amber-400',{pulse:true});
+            if(!chips.length) return null;
+            return (
+              <div data-battle-buffs={chips.length} data-battle-buffs-mode={buffDetail?'detail':'icon'}
+                className={`shrink-0 w-full max-w-[360px] mx-auto px-2 pt-1 pb-0.5 bg-slate-950 relative z-[40] ${focusedCard?'invisible':'visible'}`}>
+                <div className="flex items-start gap-1">
+                  {buffDetail?(
+                    <div data-battle-buff-list className="flex-1 min-w-0 flex flex-wrap justify-center gap-1 overflow-y-auto mh-scroll" style={{maxHeight:'92px'}}>
+                      {chips.map(c=>(<div key={c.key} className={`text-[11px] font-black bg-black/60 px-2 py-0.5 rounded border flex items-center gap-1 shadow-lg ${c.tone}${c.pulse?' animate-pulse':''}`}>{c.mark} {c.label}{c.value?` ${c.value}`:''}</div>))}
+                    </div>
+                  ):(
+                    <div data-battle-buff-icons className="flex-1 min-w-0 flex items-center gap-1 overflow-x-auto scrollbar-hide">
+                      {chips.map(c=>(<div key={c.key} aria-label={`${c.label}${c.value?` ${c.value}`:''}`} title={`${c.label}${c.value?` ${c.value}`:''}`} className={`shrink-0 text-[10px] font-black bg-black/60 px-1.5 py-0.5 rounded-full border flex items-center gap-0.5 leading-none ${c.tone}${c.pulse?' animate-pulse':''}`}>{c.mark}{c.short?<span>{c.short}</span>:null}</div>))}
+                    </div>
+                  )}
+                  <button type="button" data-battle-buff-toggle={buffDetail?'close':'open'} onClick={()=>setBuffDetail(v=>!v)}
+                    aria-label={buffDetail?'強化の詳細を閉じる':`強化の詳細を見る（${chips.length}件）`}
+                    className="shrink-0 min-h-[20px] px-1.5 rounded-full border border-white/25 bg-black/60 text-[9px] font-black leading-none text-slate-200 active:scale-90 flex items-center">
+                    {buffDetail?'とじる':`詳細 ${chips.length}`}
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
         <div className="shrink-0 py-1.5 px-2 bg-slate-950 border-y border-white/5 flex flex-col items-center justify-center gap-1 z-10 relative">
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none gap-1" style={{zIndex:200}}>{popups.filter(p=>p.side==='hero').map((p)=>(<div key={p.id} data-lite-damage={liteBattleView?'true':undefined} className={`${p.color} font-black leading-tight px-2 py-0.5 rounded-lg ${liteBattleView?'border border-white/20 text-base':'drop-shadow-[0_2px_8px_rgba(0,0,0,1)]'}`} style={{backgroundColor:liteBattleView?'rgba(2,6,23,0.95)':'rgba(2,6,23,0.55)'}}>{p.text}</div>))}</div>
           {/* 新モードは合計ではなく「1体ずつ」を出す(2026-09-19 ユーザー依頼)。
@@ -23467,6 +23521,10 @@ function MonsterHeroGame() {
   };
   const tacticsHeal = (amount) => isTacticsMode(runMode)
     ? commitTacticsUnits(healTacticsBoard(tacticsUnitsRef.current, amount)) : null;
+  // 自動再生だけの入口。倒れた子には入れない(2026-09-20 ユーザー指示)。
+  // ★毎ターン勝手に貯まって復活すると、何もしなくても誰も倒れたままにならない
+  const tacticsHealAlive = (amount) => isTacticsMode(runMode)
+    ? commitTacticsUnits(healTacticsAliveBoard(tacticsUnitsRef.current, amount)) : null;
   // ガッツの回復も立っている子へ配る。戻り値は「新モードなら合計ライフ、ほかは null」で、
   // 呼び出し側は null のときだけ今までどおりの1行を通す(ライフの helper と同じ約束)
   const tacticsGutsRecover = (amount) => isTacticsMode(runMode)
@@ -31477,7 +31535,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     let didRegen=false;
     if (autoHpRecoveryRate>0) {
       const autoHealVal=Math.floor(liveEffectiveMaxHp()*autoHpRecoveryRate);
-      if (autoHealVal>0) { if(tacticsHeal(autoHealVal)===null) setHp(p=>Math.min(liveEffectiveMaxHp(),p+autoHealVal)); addPopup(`🌿 自動再生 +${autoHealVal}`,'life','text-teal-300 font-black text-lg italic drop-shadow-md'); didRegen=true; }
+      if (autoHealVal>0) { if(tacticsHealAlive(autoHealVal)===null) setHp(p=>Math.min(liveEffectiveMaxHp(),p+autoHealVal)); addPopup(`🌿 自動再生 +${autoHealVal}`,'life','text-teal-300 font-black text-lg italic drop-shadow-md'); didRegen=true; }
     }
     if (gutsRegen>0) { addPopup(`🌿 自動ガッツ +${gutsRegen}`,'guts','text-cyan-300 font-black text-lg italic drop-shadow-md'); didRegen=true; }
     if (didRegen) { await battleWait(500); }

@@ -244,9 +244,15 @@ check('ガードの軽減量(実処理)に実効の丈夫さを使う', /Math\.f
 
 // --- 画面の表示が意味と合っていること ---
 // 「被ダメージ軽減」を「DEF +3%」と出していたため、丈夫さが増えたように見えていた
-check('丈夫さバフが「DEF +◯%」として出る', /DEF \+\{Math\.floor\(getPermaBuff\('defPct'\)\*100\)\}%/.test(source));
-check('被ダメージ軽減は「被ダメ -◯%」として別に出る', /被ダメ -\{Math\.floor\(getPermaBuff\('dmgCutPct'\)\*100\)\}%/.test(source));
-check('被ダメージ軽減を「DEF +◯%」と表示していない', !/DEF \+\{Math\.floor\(getPermaBuff\('dmgCutPct'\)\*100\)\}%/.test(source));
+// 2026-09-20: 強化の札を1つずつ書くのをやめ、chip(...) で配列へ足す形にした(アイコン1行＋詳細)。
+// 見張りたいこと(丈夫さと被ダメ軽減を別の名前で出す)は変わっていない
+check('丈夫さバフが「DEF +◯%」として出る',
+  /const defPct=Math\.floor\(getPermaBuff\('defPct'\)\*100\);/.test(source)
+    && /chip\('def',[^\n]*'DEF',`\+\$\{defPct\}%`/.test(source));
+check('被ダメージ軽減は「被ダメ -◯%」として別に出る',
+  /const dmgCutPct=Math\.floor\(getPermaBuff\('dmgCutPct'\)\*100\);/.test(source)
+    && /chip\('dmgCut',[^\n]*'被ダメ',`-\$\{dmgCutPct\}%`/.test(source));
+check('被ダメージ軽減を「DEF +◯%」と表示していない', !/'DEF',`[+-]\$\{dmgCutPct\}%`/.test(source));
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exitCode = failed ? 1 : 0;

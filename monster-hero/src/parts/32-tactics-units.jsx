@@ -179,13 +179,12 @@ const damageTacticsTargets = (units, targetSlots, damage) => {
 
 // 回復を盤面へ配る。足りない量に比例して配り、端数は足りない量の大きい子から埋める。
 // 均等割りにすると、瀕死の子が置き去りのまま満タンの子へ回復が消える
-const healTacticsBoard = (units, amount) => {
+const healTacticsBoardTo = (units, amount, targetSlots) => {
   const list = (Array.isArray(units) ? units : []).slice();
   const give = Math.max(0, tacticsSafeInt(amount, 0));
   if (give <= 0) return list;
-  // ★倒れた子にも配る。自動再生・緊急回復・吸収も「復活までの貯め」に乗る
-  //   (2026-09-19 ユーザーが決めた形)。足りない量が多いぶん、倒れた子へ多く入る
-  const missing = tacticsFilledSlots(list)
+  // 足りない量が多いぶん、多く入る
+  const missing = (Array.isArray(targetSlots) ? targetSlots : [])
     .map(index => {
       const unit = normalizeTacticsUnit(list[index]);
       return { index, need: Math.max(0, unit.maxHp - unit.hp) };
@@ -210,6 +209,13 @@ const healTacticsBoard = (units, amount) => {
   shares.forEach(entry => { if (entry.value > 0) list[entry.index] = healTacticsUnit(list[entry.index], entry.value); });
   return list;
 };
+// ★倒れた子にも配る。緊急回復・吸収・回復カードは「復活までの貯め」に乗る
+//   (2026-09-19 ユーザーが決めた形)
+const healTacticsBoard = (units, amount) => healTacticsBoardTo(units, amount, tacticsFilledSlots(units));
+// ★自動再生だけは倒れた子へ入れない(2026-09-20 ユーザー指示)。
+//   毎ターン勝手に貯まって復活すると、何もしなくても誰も倒れたままにならない
+//   =「一生死ななくなる」。起こすのは 回復カード・緊急回復・吸収・トレーニング に限る
+const healTacticsAliveBoard = (units, amount) => healTacticsBoardTo(units, amount, tacticsAliveSlots(units));
 
 // ===== ガッツ(1体ずつ) =====
 //

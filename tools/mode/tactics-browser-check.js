@@ -238,6 +238,37 @@ const check = (name, ok, detail = '') => {
     check('ライフの帯がアニメーションする', barAnim.hp >= 0.9, `${barAnim.hp}秒`);
     check('ガッツの帯がアニメーションする', barAnim.guts >= 0.4, `${barAnim.guts}秒`);
 
+    // --- 強化の札(2026-09-20 ユーザー指摘「バフ欄が増えると敵や緊急回復等が見えなくなる」) ---
+    // ★この帯はどのモードでも同じものを使う。いくつ付いても高さが変わらないことを実寸で見る
+    const buffBox = await page.evaluate(() => {
+      const el = document.querySelector('[data-battle-buffs]');
+      if (!el) return null;
+      const icons = [...document.querySelectorAll('[data-battle-buff-icons] > div')];
+      const rows = new Set(icons.map(x => Math.round(x.getBoundingClientRect().top))).size;
+      return { mode: el.getAttribute('data-battle-buffs-mode'), n: Number(el.getAttribute('data-battle-buffs')),
+        h: Math.round(el.getBoundingClientRect().height), icons: icons.length, rows };
+    });
+    check('強化の札はアイコン1行で始まる',
+      !!buffBox && buffBox.mode === 'icon' && buffBox.icons === buffBox.n && buffBox.rows <= 1,
+      JSON.stringify(buffBox));
+    check('強化の札が画面を押し広げない', !!buffBox && buffBox.h <= 40, JSON.stringify(buffBox));
+    // 「詳細」を押すと数値つきの一覧になり、開いても高さは頭打ちになる
+    await page.evaluate(() => { document.querySelector('[data-battle-buff-toggle]')?.click(); });
+    await page.waitForTimeout(400);
+    const buffOpen = await page.evaluate(() => {
+      const el = document.querySelector('[data-battle-buffs]');
+      if (!el) return null;
+      return { mode: el.getAttribute('data-battle-buffs-mode'), h: Math.round(el.getBoundingClientRect().height),
+        list: document.querySelectorAll('[data-battle-buff-list] > div').length,
+        text: (document.querySelector('[data-battle-buff-list]')?.textContent || '').slice(0, 40) };
+    });
+    check('詳細を開くと数値つきの一覧になる',
+      !!buffOpen && buffOpen.mode === 'detail' && buffOpen.list === (buffBox ? buffBox.n : -1) && /%/.test(buffOpen.text),
+      JSON.stringify(buffOpen));
+    check('詳細を開いても高さは頭打ち', !!buffOpen && buffOpen.h <= 110, JSON.stringify(buffOpen));
+    await page.evaluate(() => { document.querySelector('[data-battle-buff-toggle]')?.click(); });
+    await page.waitForTimeout(300);
+
     const startLife = await lifeOf();
     check('盤面のライフを読める', startLife.ok && startLife.max > 0, startLife.raw || '見つからない');
     check('はじめは満タン(立っている子の合計＝上限)', startLife.hp === startLife.max, startLife.raw);
