@@ -10,6 +10,7 @@ const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分�
 //   ⑥ 壊れた値が来ても落ちない
 //   ⑦ バトル本体へ結線されている(盤面が slots と一緒に動き、予告へ狙いが乗る)
 //   ⑧ パーティのライフは盤面の合計。増減が正しく振り分けられる(段階5)
+//   ⑩⑪ ガッツも1体ずつ。カードは「使う子」を選び、その子のガッツで払う(段階6)
 //
 // 数式をこのファイルへ書き写すと、本体を変えたときに検査だけ古くなる。
 // 計算は必ず本体から切り出した実装をそのまま動かす。
@@ -43,7 +44,9 @@ vm.runInContext(
     + 'canTacticsSlotAct,chooseTacticsTarget,withTacticsTarget,tacticsIntentTargets,'
     + 'tacticsTotalHp,tacticsTotalMaxHp,tacticsTotalBaseMaxHp,scaleTacticsUnits,scaleTacticsUnitMaxHp,'
     + 'damageTacticsTargets,healTacticsBoard,selfDamageTacticsBoard,growTacticsMaxHp,'
-    + 'fullHealTacticsBoard,wipeTacticsBoard};', sandbox);
+    + 'fullHealTacticsBoard,wipeTacticsBoard,tacticsTotalGuts,tacticsTotalBaseMaxGuts,'
+    + 'scaleTacticsUnitMaxGuts,canTacticsSlotPay,payTacticsGutsAt,recoverTacticsGutsBoard,'
+    + 'growTacticsMaxGuts};', sandbox);
 const api = sandbox.api;
 
 // モンスター1体ぶんの入力。マスモンなら育成済みの値が baseHp などに入っている
@@ -240,10 +243,81 @@ check('1体もいない盤面でも落ちない',
   api.growTacticsMaxHp([null, null, null, null], 100).filter(Boolean).length === 0
     && api.tacticsTotalHp(api.selfDamageTacticsBoard(null, 10)) === 0);
 
+// 本体のソースを直に見る検査で使う
+const has = (needle) => source.includes(needle);
+
+// --- ⑩ ガッツを1体ずつ持つ(段階6) ---
+// ★カードを使うのは「選んだその子」で、払うのもその子のガッツ。
+//   合計で足りていても、その子が足りなければ使えない。ここが新モードの手ざわりの中心
+check('ガッツの合計も1体ずつの足し算', api.tacticsTotalGuts(pair) === 100 && api.tacticsTotalBaseMaxGuts(pair) === 200,
+  `いま${api.tacticsTotalGuts(pair)} / 上限${api.tacticsTotalBaseMaxGuts(pair)}`);
+check('ガッツは最大の半分から始まる', pair[0].guts === 50 && pair[0].maxGuts === 100);
+check('ガッツの上限の倍率も1体ずつへ効く', api.scaleTacticsUnitMaxGuts(pair[0], 0.2).maxGuts === 120);
+check('その子が払えるかで決まる',
+  api.canTacticsSlotPay(pair, 0, 50) === true && api.canTacticsSlotPay(pair, 0, 51) === false);
+// ★合計では足りていても、その子が足りなければ使えない
+check('合計で足りていても、その子が足りなければ払えない',
+  api.tacticsTotalGuts(pair) === 100 && api.canTacticsSlotPay(pair, 0, 80) === false);
+check('倒れた子は払えない',
+  api.canTacticsSlotPay(api.damageTacticsTargets(pair, [0], 9999), 0, 0) === false);
+check('空のスロットは払えない', api.canTacticsSlotPay(pair, 1, 0) === false);
+const gutsPaid = api.payTacticsGutsAt(pair, 0, 30);
+check('払うとその子のガッツだけ減る',
+  gutsPaid.payable === true && gutsPaid.units[0].guts === 20 && gutsPaid.units[2].guts === 50,
+  `${gutsPaid.units[0].guts} / ${gutsPaid.units[2].guts}`);
+check('払えないときは盤面を変えない', (() => {
+  const failed = api.payTacticsGutsAt(pair, 0, 999);
+  return failed.payable === false && api.tacticsTotalGuts(failed.units) === 100;
+})());
+const gutsHealed = api.recoverTacticsGutsBoard(gutsPaid.units, 20);
+check('ガッツの回復も立っている子へ配る',
+  api.tacticsTotalGuts(gutsHealed) === api.tacticsTotalGuts(gutsPaid.units) + 20 && gutsHealed[0].guts > gutsPaid.units[0].guts,
+  `${gutsPaid.units[0].guts}→${gutsHealed[0].guts}`);
+check('ガッツも上限を超えない', api.tacticsTotalGuts(api.recoverTacticsGutsBoard(pair, 9999)) === api.tacticsTotalMaxHp(pair) - api.tacticsTotalMaxHp(pair) + 200,
+  String(api.tacticsTotalGuts(api.recoverTacticsGutsBoard(pair, 9999))));
+check('倒れた子のガッツは回復しない', (() => {
+  const board = api.damageTacticsTargets(pair, [2], 9999);
+  const after = api.recoverTacticsGutsBoard(api.payTacticsGutsAt(board, 0, 40).units, 999);
+  return after[2].guts === 50 && after[0].guts === 100;
+})());
+const gutsBoardGrown = api.growTacticsMaxGuts(pair, 37);
+check('トレーニングのガッツの伸びも端数まで配り切る',
+  api.tacticsTotalBaseMaxGuts(gutsBoardGrown) === 237, String(api.tacticsTotalBaseMaxGuts(gutsBoardGrown)));
+
+// --- ⑪ カードの払い主を選ぶ結線(段階6) ---
+check('新モードはどのカードも使う子を選ぶ', has('if(isTacticsMode(runMode)) return true;')
+  && has('// 新モードはどのカードも「使う子」を選ぶ。その子のガッツで払い、効果もその子に乗る'));
+check('割り当てられる子は「その子が払えるか」で決まる',
+  has('const tacticsUsableSlots = (card, excludeHandIndex = null) => {')
+    && has('if(!canTacticsSlotPay(tacticsUnitsRef.current,slotIdx,(spent[slotIdx]||0)+getCardGuts(card,slotIdx))) return;'));
+// ★守り・回復まで「1体1枚」に数えると、供モンが居ないWAVE1で1ターン1枚しか使えなくなる
+check('枚数制限に数えるのは攻撃カードだけ',
+  has('if(isAttackCard(card)&&(attacks[slotIdx]||0)>=slotMaxUses(mon,slotIdx)) return;'));
+check('使える子が1体だけなら選ぶ手間を省く',
+  has('if(tacticsMode&&usable.length===1){ setCardAssignments(p=>({...p,[i]:usable[0]})); }'));
+check('ドラッグでの割り当ても同じ判定を通す',
+  has('if(tacticsMode && !tacticsUsableSlots(c,cardIndex).includes(slotIdx)){ setFocusedCard(null); return; }'));
+// ★ここを通さないと、払えない組み合わせでカードだけ切れてしまう
+check('実行の前に「使う子が払えるか」を見る',
+  has('return canTacticsSlotPay(tacticsUnitsRef.current,idx,spentBySlot[idx]);'));
+check('払うのは使う子',
+  has('if(tacticsPayGuts(slotIdx,getCardGuts(card,slotIdx))===null) setGuts(p=>Math.max(0,p-getCardGuts(card,slotIdx)));'));
+check('ガッツの回復は1か所(gainGuts)へまとめる',
+  has('const gainGuts = (amount) => {')
+    && (source.match(/gainGuts\(/g) || []).length >= 11,
+  `gainGuts を呼ぶ場所 ${(source.match(/gainGuts\(/g) || []).length}か所`);
+// AUTO。倒れた子を空スロットとして渡し、ガッツは1体ずつ見る
+check('オートは倒れた子を選ばない',
+  has('? slots.map((mon,idx)=>(canTacticsSlotAct(tacticsUnitsRef.current,idx)?mon:null))'));
+check('オートも1体ずつのガッツで選ぶ',
+  has('gutsForSlot:(slotIdx)=>(tacticsUnitsRef.current[slotIdx]?.guts||0),'));
+// ★新モードは cardNeedsMonster がどのカードでも true になる。
+//   isAttackCardFn を渡さないと「守りだけのターン」を防ぐ仕掛けが効かなくなる
+check('オートへ攻撃カードの見分け方を渡す', has('isAttackCardFn:isAttackCard,'));
+
 // --- ⑦ バトル本体への結線 ---
 // 純関数だけ足して結線を忘れると、盤面がいつまでも空のまま「狙いなし」で予告が出る。
 // 例外は出ず画面も壊れないので、遊んで気付けない
-const has = (needle) => source.includes(needle);
 check('盤面は slots と同じ入口で動かす',
   has('const applySlots = (nextSlots, mode = runMode) => { setSlots(nextSlots); syncTacticsUnits(nextSlots, mode); };'));
 // ★バトルを始める処理の中では runMode(state)がまだ前のモードのまま。
@@ -294,19 +368,23 @@ check('回復(吸収・ガード余剰・自動再生・カード)も盤面へ�
 check('20ターン経過は全員を倒す', has('if(nextTurn>20){ if(tacticsWipe()===null) setHp(0); }'));
 check('自傷では誰も倒れない道を通す', has('selfDamageTacticsBoard(tacticsUnitsRef.current,selfDmgAmt)'));
 // ★合流のライフ合算をやめないと、合流した子のぶんが盤面とパーティで二重に入る
-check('供モン合流でライフを合算しない',
+check('供モン合流でライフもガッツも合算しない',
   has('const tacticsJoin=isTacticsMode(runMode);')
-    && has("if(!tacticsJoin){ setMaxHp(nMaxHp); setHp(p=>p+(nMaxHp-bHp)); }"));
-check('トレーニングの伸びは盤面へ配る',
-  has('if(isTacticsMode(runMode)) commitTacticsUnits(growTacticsMaxHp(tacticsUnitsRef.current,nMaxHp-maxHp,getPermaBuff(\'muaHpPct\')));'));
+    && has("if(!tacticsJoin){ setMaxHp(nMaxHp); setHp(p=>p+(nMaxHp-bHp)); setMaxGuts(nMaxGuts); }"));
+check('トレーニングの伸びはライフもガッツも盤面へ配る',
+  has('growTacticsMaxHp(tacticsUnitsRef.current,nMaxHp-maxHp,getPermaBuff(\'muaHpPct\'))')
+    && has("nMaxGuts-maxGuts,getPermaBuff('muaGutsPct')"));
 check('みゅあ補正が上がったら1体ずつの上限へ効かせ直す',
-  has('commitTacticsUnits(scaleTacticsUnits(tacticsUnitsRef.current, getPermaBuff(\'muaHpPct\')));'));
+  has("commitTacticsUnits(scaleTacticsUnits(tacticsUnitsRef.current, getPermaBuff('muaHpPct'), getPermaBuff('muaGutsPct')));"));
 // ★ライフを書き換える場所が増えたら、新モードの分岐を足したか必ず見直すこと。
 //   1か所でも素通りすると、盤面と合計が食い違って敗北判定が壊れる。
 //   数が変わったらこの検査が落ちるので、そこで棚卸しする
 const setHpSites = (source.match(/setHp\(/g) || []).length;
 check('ライフを書き換える場所は数えてある', setHpSites === 21,
   `いま ${setHpSites}か所(数えたときは21か所)。増えたら新モードの分岐を足したか確かめる`);
+const setGutsSites = (source.match(/setGuts\(/g) || []).length;
+check('ガッツを書き換える場所は数えてある', setGutsSites === 12,
+  `いま ${setGutsSites}か所(数えたときは12か所)。増えたら gainGuts を通すか確かめる`);
 // 既存モードを巻き込んでいないこと
 check('既存モードの実効最大ライフはそのまま',
   has("const effectiveMaxHp = useMemo(() => resolveEffectiveMaxStat(maxHp, getPermaBuff('muaHpPct')), [maxHp, permaBuffs]);"));

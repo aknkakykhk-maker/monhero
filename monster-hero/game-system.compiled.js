@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d98e11e76d1f0c1a
+// source-sha256: a28a73d65812f25d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b77f29e698d4c196
+// generated-sha256: a8f0b16492a9397e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -161,7 +161,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-19 14:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-19 17:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -12714,6 +12714,11 @@ const autoQuickRunAutoStartEnabled = settings => {
 
 // AUTOの1ターンぶんの選択だけを組み立てる。実際の選択stateや戦闘進行には触れず、
 // 手動操作と同じ判定関数を呼び出し側から受け取ることで、カードルールを二重管理しない。
+// 後ろの3つは新モード(tactics)用の追加。渡さなければ今までどおりの動き。
+//   gutsForSlot(slotIdx)        … その子が払えるガッツ。合計で足りていても、その子が足りなければ選ばない
+//   countsTowardSlotLimit(card) … 「1体につき何枚まで」に数えるカードか(新モードは攻撃だけ)
+//   isAttackCardFn(card)        … 攻撃カードか。★新モードは cardNeedsMonster がどのカードでも true に
+//                                  なるので、これを渡さないと「守りだけのターン」を防ぐ仕掛けが効かない
 const chooseAutoTurn = ({
   hand = [],
   slots = [],
@@ -12722,7 +12727,10 @@ const chooseAutoTurn = ({
   strategy = 'random',
   getCardGuts,
   cardNeedsMonster,
-  slotMaxUses
+  slotMaxUses,
+  gutsForSlot = null,
+  countsTowardSlotLimit = null,
+  isAttackCardFn = null
 }, rng = Math.random) => {
   if (!Array.isArray(hand) || !Array.isArray(slots) || typeof getCardGuts !== 'function' || typeof cardNeedsMonster !== 'function' || typeof slotMaxUses !== 'function') return [];
   const limit = Math.max(0, Math.floor(Number(cardLimit) || 0));
@@ -12730,6 +12738,9 @@ const chooseAutoTurn = ({
   const picked = [];
   const usedHandIndexes = new Set();
   const slotUseCounts = Array(slots.length).fill(0);
+  const slotGutsUsed = Array(slots.length).fill(0);
+  const slotBudget = typeof gutsForSlot === 'function' ? slotIdx => Math.max(0, Number(gutsForSlot(slotIdx)) || 0) : null;
+  const countsSlotUse = typeof countsTowardSlotLimit === 'function' ? card => !!countsTowardSlotLimit(card) : () => true;
   let usedGuts = 0;
   const legalActions = () => {
     const actions = [];
@@ -12749,9 +12760,11 @@ const chooseAutoTurn = ({
         if (!monster) return;
         if (card.type === 'unique' && card.ownerSlotIdx !== slotIdx) return;
         const maxUses = Math.max(0, Math.floor(Number(slotMaxUses(monster, slotIdx)) || 0));
-        if (slotUseCounts[slotIdx] >= maxUses) return;
+        if (countsSlotUse(card) && slotUseCounts[slotIdx] >= maxUses) return;
         const cost = Math.max(0, Number(getCardGuts(card, slotIdx)) || 0);
         if (usedGuts + cost > availableGuts) return;
+        // その子が払えるか。合計で足りていても、1体に寄っていれば選ばない
+        if (slotBudget && slotGutsUsed[slotIdx] + cost > slotBudget(slotIdx)) return;
         actions.push({
           handIndex,
           card,
@@ -12762,7 +12775,7 @@ const chooseAutoTurn = ({
     });
     return actions;
   };
-  const attackCard = card => !!card && cardNeedsMonster(card);
+  const attackCard = card => !!card && (typeof isAttackCardFn === 'function' ? !!isAttackCardFn(card) : cardNeedsMonster(card));
   const priorityOf = card => {
     if (strategy === 'offense') {
       if (card.type === 'unique') return 0;
@@ -12811,7 +12824,10 @@ const chooseAutoTurn = ({
     });
     usedHandIndexes.add(action.handIndex);
     usedGuts += action.cost;
-    if (action.slotIdx != null) slotUseCounts[action.slotIdx]++;
+    if (action.slotIdx != null) {
+      if (countsSlotUse(action.card)) slotUseCounts[action.slotIdx]++;
+      slotGutsUsed[action.slotIdx] += action.cost;
+    }
     if (strategy === 'guts') break;
   }
   return picked;
@@ -12821,7 +12837,10 @@ const chooseAutoTurn = ({
 // 方針や合法判定はchooseAutoTurnへ一本化し、存在確認なので固定rngを使う。
 const hasAutoTurnWithEnoughGuts = options => chooseAutoTurn({
   ...options,
-  guts: Number.MAX_SAFE_INTEGER
+  guts: Number.MAX_SAFE_INTEGER,
+  // 1体ずつのガッツもここでは見ない。知りたいのは「ガッツさえあれば打てる手があるか」なので、
+  // 足りないのがガッツだけなら true にする(緊急回復へ回す判断に使う)
+  gutsForSlot: null
 }, () => 0).length > 0;
 
 // ---- part: 19-difficulties-and-rules.jsx ----
@@ -26066,6 +26085,8 @@ const createTacticsUnit = (mon, {
     def: Math.max(0, tacticsSafeInt(mon.baseDef, 0)),
     guts: fullGuts ? maxGuts : Math.floor(maxGuts * TACTICS_START_GUTS_RATE),
     maxGuts,
+    // ライフと同じく、素の上限を残す。みゅあ補正の倍率はここから計算し直す
+    baseMaxGuts: maxGuts,
     downed: false
   };
 };
@@ -26077,6 +26098,7 @@ const normalizeTacticsUnit = unit => {
   // 素の上限が無い(古い形)ときは、いまの上限をそのまま素の上限とみなす
   const baseMaxHp = Math.max(1, tacticsSafeInt(unit.baseMaxHp, maxHp));
   const maxGuts = Math.max(0, tacticsSafeInt(unit.maxGuts, 0));
+  const baseMaxGuts = Math.max(0, tacticsSafeInt(unit.baseMaxGuts, maxGuts));
   const hp = tacticsClamp(tacticsSafeInt(unit.hp, 0), 0, maxHp);
   return {
     ...unit,
@@ -26087,6 +26109,7 @@ const normalizeTacticsUnit = unit => {
     def: Math.max(0, tacticsSafeInt(unit.def, 0)),
     guts: tacticsClamp(tacticsSafeInt(unit.guts, 0), 0, maxGuts),
     maxGuts,
+    baseMaxGuts,
     // 「ライフ0なのに立っている」「ライフがあるのに倒れている」を作らない
     downed: hp <= 0
   };
@@ -26166,6 +26189,8 @@ const tacticsDownedSlots = units => (Array.isArray(units) ? units : []).map((uni
 //   書き換えの入口は 60-app.jsx の commitTacticsUnits ひとつだけにしてある。
 const tacticsTotalHp = units => (Array.isArray(units) ? units : []).reduce((sum, unit) => sum + (unit ? normalizeTacticsUnit(unit).hp : 0), 0);
 const tacticsTotalMaxHp = units => (Array.isArray(units) ? units : []).reduce((sum, unit) => sum + (unit ? normalizeTacticsUnit(unit).maxHp : 0), 0);
+const tacticsTotalGuts = units => (Array.isArray(units) ? units : []).reduce((sum, unit) => sum + (unit ? normalizeTacticsUnit(unit).guts : 0), 0);
+const tacticsTotalBaseMaxGuts = units => (Array.isArray(units) ? units : []).reduce((sum, unit) => sum + (unit ? normalizeTacticsUnit(unit).baseMaxGuts : 0), 0);
 // 素の上限の合計。パーティの maxHp はこちらを持つ。
 // ★みゅあ補正は既存モードと同じく effectiveMaxHp が掛ける。1体ずつの上限にも同じ倍率が
 //   入っているので、ゲージの満タンと盤面の合計はほぼ一致する(1体ごとの切り捨てぶんだけ下)
@@ -26184,7 +26209,18 @@ const scaleTacticsUnitMaxHp = (unit, hpPct = 0) => {
     maxHp
   });
 };
-const scaleTacticsUnits = (units, hpPct = 0) => (Array.isArray(units) ? units : []).map(unit => unit ? scaleTacticsUnitMaxHp(unit, hpPct) : null);
+// ガッツの上限も同じ考え方。みゅあ補正は合計ではなく1体ずつへ効かせる
+const scaleTacticsUnitMaxGuts = (unit, gutsPct = 0) => {
+  const target = normalizeTacticsUnit(unit);
+  if (!target) return null;
+  const pct = Number.isFinite(Number(gutsPct)) ? Math.max(0, Number(gutsPct)) : 0;
+  const maxGuts = Math.max(0, Math.floor(target.baseMaxGuts * (1 + pct)));
+  return normalizeTacticsUnit({
+    ...target,
+    maxGuts
+  });
+};
+const scaleTacticsUnits = (units, hpPct = 0, gutsPct = 0) => (Array.isArray(units) ? units : []).map(unit => unit ? scaleTacticsUnitMaxGuts(scaleTacticsUnitMaxHp(unit, hpPct), gutsPct) : null);
 
 // 敵の攻撃。当たった子だけが減り、0になったその子が倒れる
 const damageTacticsTargets = (units, targetSlots, damage) => {
@@ -26226,6 +26262,104 @@ const healTacticsBoard = (units, amount) => {
   }
   shares.forEach(entry => {
     if (entry.value > 0) list[entry.index] = healTacticsUnit(list[entry.index], entry.value);
+  });
+  return list;
+};
+
+// ===== ガッツ(1体ずつ) =====
+//
+// ★カードを使うのは「選んだその子」で、払うのもその子のガッツ。
+//   合計で足りていても、その子が足りなければ使えない。ここが新モードの手ざわりの中心。
+
+// そのスロットがそのカードを払えるか。倒れている子は払えない
+const canTacticsSlotPay = (units, slotIndex, cost) => {
+  const list = Array.isArray(units) ? units : [];
+  if (!canTacticsSlotAct(list, slotIndex)) return false;
+  return normalizeTacticsUnit(list[slotIndex]).guts >= Math.max(0, tacticsSafeInt(cost, 0));
+};
+// ガッツを払う。払えないときは盤面を変えずに payable:false を返す
+const payTacticsGutsAt = (units, slotIndex, cost) => {
+  const list = (Array.isArray(units) ? units : []).slice();
+  if (!canTacticsSlotPay(list, slotIndex, cost)) return {
+    units: list,
+    payable: false
+  };
+  const paid = payTacticsGuts(list[slotIndex], cost);
+  if (!paid.payable) return {
+    units: list,
+    payable: false
+  };
+  list[slotIndex] = paid.unit;
+  return {
+    units: list,
+    payable: true
+  };
+};
+// ガッツの回復。ライフと同じく、立っている子へ足りない量に比例して配る。
+// ★倒れた子には配らない(戻ってきたときに満タンで復帰してしまうため)
+const recoverTacticsGutsBoard = (units, amount) => {
+  const list = (Array.isArray(units) ? units : []).slice();
+  const give = Math.max(0, tacticsSafeInt(amount, 0));
+  if (give <= 0) return list;
+  const missing = tacticsAliveSlots(list).map(index => {
+    const unit = normalizeTacticsUnit(list[index]);
+    return {
+      index,
+      need: Math.max(0, unit.maxGuts - unit.guts)
+    };
+  }).filter(entry => entry.need > 0).sort((a, b) => b.need - a.need);
+  const totalNeed = missing.reduce((sum, entry) => sum + entry.need, 0);
+  if (totalNeed <= 0) return list;
+  const budget = Math.min(give, totalNeed);
+  let handed = 0;
+  const shares = missing.map(entry => {
+    const value = Math.floor(budget * entry.need / totalNeed);
+    handed += value;
+    return {
+      ...entry,
+      value
+    };
+  });
+  let left = budget - handed;
+  for (let i = 0; i < shares.length && left > 0; i++) {
+    const add = Math.min(left, shares[i].need - shares[i].value);
+    shares[i].value += add;
+    left -= add;
+  }
+  shares.forEach(entry => {
+    if (entry.value > 0) list[entry.index] = recoverTacticsGuts(list[entry.index], entry.value);
+  });
+  return list;
+};
+// トレーニングで伸びたガッツの上限を配る。ライフと同じ配り方(段階7で1体ずつ選ぶ形にする)
+const growTacticsMaxGuts = (units, delta, gutsPct = 0) => {
+  const list = (Array.isArray(units) ? units : []).slice();
+  const add = tacticsSafeInt(delta, 0);
+  if (add <= 0) return list;
+  const filled = tacticsFilledSlots(list).map(index => ({
+    index,
+    base: normalizeTacticsUnit(list[index]).baseMaxGuts
+  }));
+  const totalBase = filled.reduce((sum, entry) => sum + entry.base, 0);
+  if (!filled.length || totalBase <= 0) return list;
+  let handed = 0;
+  const shares = filled.map(entry => {
+    const value = Math.floor(add * entry.base / totalBase);
+    handed += value;
+    return {
+      ...entry,
+      value
+    };
+  });
+  const order = [...shares].sort((a, b) => b.base - a.base);
+  for (let left = add - handed, i = 0; left > 0; i = (i + 1) % order.length, left--) order[i].value += 1;
+  shares.forEach(entry => {
+    if (entry.value <= 0) return;
+    const target = normalizeTacticsUnit(list[entry.index]);
+    list[entry.index] = scaleTacticsUnitMaxGuts({
+      ...target,
+      baseMaxGuts: target.baseMaxGuts + entry.value
+    }, gutsPct);
   });
   return list;
 };
@@ -37511,6 +37645,7 @@ function BattleScreen({
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-end justify-between text-[9px] font-bold text-amber-400 uppercase tracking-wider"
   }, /*#__PURE__*/React.createElement("span", null, "Ally Guts"), /*#__PURE__*/React.createElement("span", {
+    "data-ally-guts": `${Math.floor(guts)}/${effectiveMaxGuts}`,
     className: "font-mono text-[11px] leading-none text-amber-200"
   }, Math.floor(guts).toLocaleString(), " / ", effectiveMaxGuts.toLocaleString())), /*#__PURE__*/React.createElement("div", {
     className: "h-2 bg-slate-900 rounded-full overflow-hidden border border-white/5 shadow-inner"
@@ -40982,11 +41117,18 @@ function MonsterHeroGame() {
     if (!next.some(Boolean)) return null;
     const max = tacticsTotalBaseMaxHp(next),
       total = tacticsTotalHp(next);
-    // liveEffectiveMaxHp() はターンの途中で maxHpRef を読み直す。
+    const maxG = tacticsTotalBaseMaxGuts(next),
+      totalG = tacticsTotalGuts(next);
+    // liveEffectiveMaxHp() / liveEffectiveMaxGuts() はターンの途中で ref を読み直す。
     // useEffect の反映を待つと、同じターンの回復が古い上限で頭打ちになる
     maxHpRef.current = max;
+    maxGutsRef.current = maxG;
     setMaxHp(max);
     setHp(total);
+    // ガッツも盤面の合計。★カードを払えるかは「その子のガッツ」で決まる(canTacticsSlotPay)。
+    //   合計はゲージと自動回復のために持つだけで、払える判定には使わない
+    setMaxGuts(maxG);
+    setGuts(totalG);
     return total;
   };
   // 盤面を slots に合わせる。ここだけが tacticsUnits を作る場所。
@@ -41003,7 +41145,7 @@ function MonsterHeroGame() {
       return same ? current : createTacticsUnit(mon);
     });
     // みゅあ補正は合計ではなく1体ずつの上限へ効かせる(合計へ掛けると二重になる)
-    return commitTacticsUnits(scaleTacticsUnits(next, getPermaBuff('muaHpPct')), mode);
+    return commitTacticsUnits(scaleTacticsUnits(next, getPermaBuff('muaHpPct'), getPermaBuff('muaGutsPct')), mode);
   };
   // 編成スロットを差し替える唯一の入口。盤面を必ず一緒に動かす。
   // ★mode を受け取れるようにしてあるのは、バトルを始める処理の中では
@@ -41024,6 +41166,22 @@ function MonsterHeroGame() {
     return commitTacticsUnits(damageTacticsTargets(tacticsUnitsRef.current, targets, damage));
   };
   const tacticsHeal = amount => isTacticsMode(runMode) ? commitTacticsUnits(healTacticsBoard(tacticsUnitsRef.current, amount)) : null;
+  // ガッツの回復も立っている子へ配る。戻り値は「新モードなら合計ライフ、ほかは null」で、
+  // 呼び出し側は null のときだけ今までどおりの1行を通す(ライフの helper と同じ約束)
+  const tacticsGutsRecover = amount => isTacticsMode(runMode) ? commitTacticsUnits(recoverTacticsGutsBoard(tacticsUnitsRef.current, amount)) : null;
+  // カード1枚ぶんのガッツを、使う子から払う。払えなければ false
+  const tacticsPayGuts = (slotIdx, cost) => {
+    if (!isTacticsMode(runMode)) return null;
+    const paid = payTacticsGutsAt(tacticsUnitsRef.current, slotIdx, cost);
+    if (paid.payable) commitTacticsUnits(paid.units);
+    return paid.payable;
+  };
+  // そのスロットがいまカードを使えるか(倒れていない・ガッツが足りる)
+  const tacticsSlotCanPay = (slotIdx, cost) => !isTacticsMode(runMode) || canTacticsSlotPay(tacticsUnitsRef.current, slotIdx, cost);
+  // ガッツを増やす共通の入口。新モードは立っている子へ配り、ほかのモードは今までどおり1本
+  const gainGuts = amount => {
+    if (tacticsGutsRecover(amount) === null) setGuts(p => Math.min(liveEffectiveMaxGuts(), p + amount));
+  };
   // WAVEクリアなどの全回復。★倒れた子はここでは戻らない
   const tacticsFullHeal = () => isTacticsMode(runMode) ? commitTacticsUnits(fullHealTacticsBoard(tacticsUnitsRef.current)) : null;
   // 20ターン経過。全員を倒して、敗北の見え方をそろえる
@@ -42328,7 +42486,7 @@ function MonsterHeroGame() {
   //   1体ずつの上限へ同じ倍率を入れておかないと、盤面の合計がゲージの満タンまで届かない
   useEffect(() => {
     if (!isTacticsMode(runMode)) return;
-    commitTacticsUnits(scaleTacticsUnits(tacticsUnitsRef.current, getPermaBuff('muaHpPct')));
+    commitTacticsUnits(scaleTacticsUnits(tacticsUnitsRef.current, getPermaBuff('muaHpPct'), getPermaBuff('muaGutsPct')));
   }, [permaBuffs, runMode]);
   const liveEffectiveMaxGuts = () => resolveEffectiveMaxStat(maxGutsRef.current, livePermaBuff('muaGutsPct'));
 
@@ -51293,6 +51451,9 @@ function MonsterHeroGame() {
   // Whether a card needs to be assigned to a monster (attack-type cards)
   const cardNeedsMonster = card => {
     if (!card) return false;
+    // 新モードはどのカードも「使う子」を選ぶ。その子のガッツで払い、効果もその子に乗る
+    // (2026-09-19 ユーザーが決めた形。設計 §4.4)
+    if (isTacticsMode(runMode)) return true;
     if (['atk', 'range_atk', 'unique'].includes(card.type)) return true;
     if (card.type === 'debuff' && card.subType === 'stun_atsu') return true;
     return false;
@@ -51325,6 +51486,31 @@ function MonsterHeroGame() {
     return item ? item.icon : null;
   };
 
+  // 新モードで、このカードを割り当てられるスロットの一覧。
+  // ★決めるのは「その子が払えるか」。合計のガッツでは決まらない。
+  //   すでに選んだカードのぶんを引いてから見るので、同じ子に2枚寄せても正しく弾ける。
+  // ★攻撃カードだけは「1体につき何枚まで」のこれまでの決まりを引き継ぐ。
+  //   守り・回復・アシストまで数えると、供モンが居ないWAVE1で1ターン1枚しか使えなくなる
+  const tacticsUsableSlots = (card, excludeHandIndex = null) => {
+    if (!isTacticsMode(runMode) || !card) return [];
+    const spent = {},
+      attacks = {};
+    Object.entries(cardAssignments).forEach(([key, slotIdx]) => {
+      const handIndex = Number(key);
+      if (handIndex === excludeHandIndex) return;
+      spent[slotIdx] = (spent[slotIdx] || 0) + getCardGuts(hand[handIndex], slotIdx);
+      if (isAttackCard(hand[handIndex])) attacks[slotIdx] = (attacks[slotIdx] || 0) + 1;
+    });
+    const usable = [];
+    slots.forEach((mon, slotIdx) => {
+      if (!mon) return;
+      if (card.type === 'unique' && card.ownerSlotIdx !== slotIdx) return;
+      if (isAttackCard(card) && (attacks[slotIdx] || 0) >= slotMaxUses(mon, slotIdx)) return;
+      if (!canTacticsSlotPay(tacticsUnitsRef.current, slotIdx, (spent[slotIdx] || 0) + getCardGuts(card, slotIdx))) return;
+      usable.push(slotIdx);
+    });
+    return usable;
+  };
   // カード選択(タップ/ドラッグ共通)。
   // showDetail=false はスワイプ(ドラッグ)で置いたとき。カード効果のパネルが出たままだと
   // 合計DMG・合計軽減の表示が隠れてしまうため、スワイプではパネルを出さない。
@@ -51350,14 +51536,24 @@ function MonsterHeroGame() {
       if (pendingCard === i) setPendingCard(null);
       setFocusedCard(null);
     } else {
+      const tacticsMode = isTacticsMode(runMode);
+      // 新モードは「合計で足りているか」ではなく「その子が払えるか」。
+      // 合計だけで見ると、ガッツの無い子しか残っていないのにカードを選べてしまう
+      const usable = tacticsMode ? tacticsUsableSlots(c) : [];
       const curGuts = pendingCardGuts(c);
       const remainingGuts = guts - selectedCards.reduce((acc, idx) => acc + selectedCardGuts(idx), 0);
-      const isSelectable = remainingGuts >= curGuts && selectedCards.length < cardLimit;
+      const isSelectable = (tacticsMode ? usable.length > 0 : remainingGuts >= curGuts) && selectedCards.length < cardLimit;
       if (isSelectable) {
         Audio_.se.card();
         setSelectedCards(p => [...p, i]);
         focus(c);
-        if (cardNeedsMonster(c)) {
+        // 使える子が1体しかいないときは選ぶ手間を省く(WAVE1は勇者モンだけなので毎回これになる)
+        if (tacticsMode && usable.length === 1) {
+          setCardAssignments(p => ({
+            ...p,
+            [i]: usable[0]
+          }));
+        } else if (cardNeedsMonster(c)) {
           setPendingCard(i);
         }
       } else {
@@ -51388,20 +51584,32 @@ function MonsterHeroGame() {
       }
       // 既存の割当数チェック(枚数+1の勇者特性を持つ勇者モン本人のカード・
       // ききのカード上限+1が効いているときは複数可)
+      // 新モードは「その子が倒れていないか・払えるか」だけで決まる(攻撃の枚数制限は中で見ている)
+      const tacticsMode = isTacticsMode(runMode);
+      if (tacticsMode && !tacticsUsableSlots(c, cardIndex).includes(slotIdx)) {
+        setFocusedCard(null);
+        return;
+      }
       const assignedCount = Object.values(cardAssignments).filter(v => v === slotIdx).length;
       const maxUses = slotMaxUses(targetMon, slotIdx);
       const alreadySelected = selectedCards.includes(cardIndex);
       // 未選択なら選択枠とガッツを確認
       if (!alreadySelected) {
-        const curGuts = getCardGuts(c, slotIdx);
-        const remainingGuts = guts - selectedCards.reduce((acc, idx) => acc + selectedCardGuts(idx), 0);
-        if (remainingGuts < curGuts || selectedCards.length >= cardLimit) {
+        if (selectedCards.length >= cardLimit) {
           setFocusedCard(null);
           return;
         }
-        if (assignedCount >= maxUses) {
-          setFocusedCard(null);
-          return;
+        if (!tacticsMode) {
+          const curGuts = getCardGuts(c, slotIdx);
+          const remainingGuts = guts - selectedCards.reduce((acc, idx) => acc + selectedCardGuts(idx), 0);
+          if (remainingGuts < curGuts) {
+            setFocusedCard(null);
+            return;
+          }
+          if (assignedCount >= maxUses) {
+            setFocusedCard(null);
+            return;
+          }
         }
         Audio_.se.card();
         setSelectedCards(p => [...p, cardIndex]);
@@ -51413,15 +51621,17 @@ function MonsterHeroGame() {
         setFocusedCard(null);
       } else {
         // 既に選択済み: 割当先を変更(別カードの占有を超えない範囲で)
-        const otherCount = Object.entries(cardAssignments).filter(([k, v]) => v === slotIdx && Number(k) !== cardIndex).length;
-        if (otherCount >= maxUses) {
-          setFocusedCard(null);
-          return;
-        }
-        const otherGuts = selectedCards.filter(idx => idx !== cardIndex).reduce((sum, idx) => sum + selectedCardGuts(idx), 0);
-        if (otherGuts + getCardGuts(c, slotIdx) > guts) {
-          setFocusedCard(null);
-          return;
+        if (!tacticsMode) {
+          const otherCount = Object.entries(cardAssignments).filter(([k, v]) => v === slotIdx && Number(k) !== cardIndex).length;
+          if (otherCount >= maxUses) {
+            setFocusedCard(null);
+            return;
+          }
+          const otherGuts = selectedCards.filter(idx => idx !== cardIndex).reduce((sum, idx) => sum + selectedCardGuts(idx), 0);
+          if (otherGuts + getCardGuts(c, slotIdx) > guts) {
+            setFocusedCard(null);
+            return;
+          }
         }
         Audio_.se.card();
         setCardAssignments(p => ({
@@ -51737,7 +51947,7 @@ function MonsterHeroGame() {
     }));
     const gutsGain = Math.floor(liveEffectiveMaxGuts() * tier.healGuts * effMul);
     if (gutsGain > 0) {
-      setGuts(p => Math.min(liveEffectiveMaxGuts(), p + gutsGain));
+      gainGuts(gutsGain);
       addPopup(`⚡ ガッツ +${gutsGain}`, 'guts', 'text-lime-300 font-black text-2xl drop-shadow-md');
     }
     if (tier.gutsRecover > 0) addPermaBuff('gutsRecoverPct', tier.gutsRecover * effMul);
@@ -51930,7 +52140,7 @@ function MonsterHeroGame() {
             currentHp = Math.min(liveEffectiveMaxHp(), currentHp + hpGain);
             setHp(currentHp);
           }
-          setGuts(p => Math.min(liveEffectiveMaxGuts(), p + gutsGain));
+          gainGuts(gutsGain);
           await battleWait(1000);
         } else if (isEvasion) {
           addPopup("回避！", 'hero', 'text-blue-400 font-black text-xl drop-shadow-lg');
@@ -51968,7 +52178,7 @@ function MonsterHeroGame() {
             addPopup(`🛡 ガード成功`, 'hero', 'text-emerald-400 text-2xl font-black drop-shadow-md');
             addPopup(`💚 ライフ +${diff}`, 'life', 'text-emerald-400 text-2xl font-black drop-shadow-md');
             addPopup(`⚡ ガッツ +${gGain}`, 'guts', 'text-amber-400 text-xl font-bold drop-shadow-md');
-            setGuts(p => Math.min(liveEffectiveMaxGuts(), p + gGain));
+            gainGuts(gGain);
             await battleWait(1000);
           }
         } else {
@@ -52013,7 +52223,7 @@ function MonsterHeroGame() {
     const gutsRecoveryRate = applyIceRulerAutoGutsRecovery(currentAutoGutsRecovery, mainHero?.id, iceLockActive, heroDist, enemyDist);
     const soulAdjustedGutsRecoveryRate = Math.max(0, gutsRecoveryRate) * soulBattleParty.autoGutsMultiplier;
     const gutsRegen = Math.floor(liveEffectiveMaxGuts() * soulAdjustedGutsRecoveryRate);
-    setGuts(p => Math.min(liveEffectiveMaxGuts(), p + gutsRegen));
+    gainGuts(gutsRegen);
     let didRegen = false;
     if (autoHpRecoveryRate > 0) {
       const autoHealVal = Math.floor(liveEffectiveMaxHp() * autoHpRecoveryRate);
@@ -52041,7 +52251,7 @@ function MonsterHeroGame() {
     if (recoveryMult > 0) {
       const melosoHeal = Math.floor(liveEffectiveMaxHp() * recoveryMult);
       if (tacticsHeal(melosoHeal) === null) setHp(p => Math.min(liveEffectiveMaxHp(), p + melosoHeal));
-      setGuts(p => Math.min(liveEffectiveMaxGuts(), p + Math.floor(liveEffectiveMaxGuts() * recoveryMult)));
+      gainGuts(Math.floor(liveEffectiveMaxGuts() * recoveryMult));
       addPopup(recoveryMult === 1 ? 'ライフ・ガッツ全回復!' : 'ライフ・ガッツ回復!', 'hero', 'text-rose-300 text-lg font-bold');
     }
     const {
@@ -52081,7 +52291,7 @@ function MonsterHeroGame() {
     addPopup(`⚡ ガッツ +${recoverGuts}`, 'guts', 'text-amber-400 text-2xl font-black drop-shadow-md');
     const emergencyHp = tacticsHeal(recoverHp);
     if (emergencyHp === null) setHp(p => Math.min(liveEffectiveMaxHp(), p + recoverHp));
-    setGuts(p => Math.min(liveEffectiveMaxGuts(), p + recoverGuts));
+    gainGuts(recoverGuts);
     await battleWait(1000);
     // 画面に予告済みの行動をそのまま実行する。ここで敵AIを再抽選すると、緊急回復で予告を
     // 別の技へ変えられてしまうため、技・対象・順番・予測値を保持した予約だけを参照する。
@@ -52118,6 +52328,18 @@ function MonsterHeroGame() {
     if (guts < totalGuts) return;
     // Fallback slot for cards without assignment (buffs etc.)
     const defaultSlot = slots.findIndex(s => s !== null);
+    // 新モードは「使う子が払えるか」も見る。合計で足りていても、1体に寄っていれば使えない。
+    // ★ここを通さないと、オートが払えない組み合わせを選んだときに
+    //   ガッツを払わずカードだけ切れてしまう
+    if (isTacticsMode(runMode)) {
+      const spentBySlot = {};
+      const payable = usedCardEntries.every(entry => {
+        const idx = entry.slotIdx != null ? entry.slotIdx : defaultSlot;
+        spentBySlot[idx] = (spentBySlot[idx] || 0) + getCardGuts(entry.card, idx);
+        return canTacticsSlotPay(tacticsUnitsRef.current, idx, spentBySlot[idx]);
+      });
+      if (!payable) return;
+    }
     setIsBusy(true);
     let lastType = 'none',
       guardTypeInTurn = 'none',
@@ -52174,7 +52396,8 @@ function MonsterHeroGame() {
         currentTurnGuardFlat += GUARD_EVOLUTION[guardLevel].flat * 0.5 * effMul;
         currentTurnGuardMult += GUARD_EVOLUTION[guardLevel].mult * 0.5 * effMul;
       }
-      setGuts(p => Math.max(0, p - getCardGuts(card, slotIdx)));
+      // 払うのは「使う子」。新モード以外は今までどおりパーティのガッツから引く
+      if (tacticsPayGuts(slotIdx, getCardGuts(card, slotIdx)) === null) setGuts(p => Math.max(0, p - getCardGuts(card, slotIdx)));
       // 消費と直後の回復を同じ描画へまとめず、カードを支払った値をゲージ・数値に先に出す。
       await battleWait(250);
       if (card.type === 'draw') continue;
@@ -52300,7 +52523,7 @@ function MonsterHeroGame() {
           const healVal = Math.floor(liveEffectiveMaxHp() * 0.3 * effMul);
           totalHeal += healVal;
           const gutsVal = Math.floor(liveEffectiveMaxGuts() * 0.3 * effMul);
-          setGuts(p => Math.min(liveEffectiveMaxGuts(), p + gutsVal));
+          gainGuts(gutsVal);
           currentTurnGuardFlat += GUARD_EVOLUTION[guardLevel].flat * effMul;
           currentTurnGuardMult += GUARD_EVOLUTION[guardLevel].mult * effMul;
           guardTypeInTurn = 'guard';
@@ -52329,7 +52552,7 @@ function MonsterHeroGame() {
           addPermaBuff('muaGutsPct', gutsB * effMul);
           if (gutsRecRate > 0) {
             const gv = Math.floor(liveEffectiveMaxGuts() * gutsRecRate * effMul);
-            setGuts(p => Math.min(liveEffectiveMaxGuts(), p + gv));
+            gainGuts(gv);
             addPopup(`⚡ ガッツ +${gv}`, 'guts', 'text-amber-400 font-black text-2xl drop-shadow-md');
           }
         } else {
@@ -52340,7 +52563,7 @@ function MonsterHeroGame() {
           addPermaBuff('muaGutsPct', 0.10 * effMul);
           if (level >= 1) {
             const gv = Math.floor(liveEffectiveMaxGuts() * (0.5 + level * 0.2) * effMul);
-            setGuts(p => Math.min(liveEffectiveMaxGuts(), p + gv));
+            gainGuts(gv);
             addPopup(`⚡ ガッツ +${gv}`, 'guts', 'text-amber-400 font-black text-2xl drop-shadow-md');
           }
         }
@@ -52462,7 +52685,7 @@ function MonsterHeroGame() {
             addPopup('スタン!', 'enemy', 'text-yellow-400 text-lg font-bold');
           } else if (card.monId === 'Suezo') {
             const gRec = Math.floor(liveEffectiveMaxGuts() * 0.5 * effMul);
-            setGuts(p => Math.min(liveEffectiveMaxGuts(), p + gRec));
+            gainGuts(gRec);
             addPopup(`⚡ ガッツ +${gRec}`, 'guts', 'text-amber-400 text-xl font-black drop-shadow-md');
           } else if (card.monId === 'Pixie' || card.monId === 'Mia') {
             setNextTurnBuff('zeroGuts', true);
@@ -52487,7 +52710,7 @@ function MonsterHeroGame() {
               hpBeforeEnemyAttack = Math.min(liveEffectiveMaxHp(), hpBeforeEnemyAttack + hRec);
               setHp(hpBeforeEnemyAttack);
             }
-            setGuts(p => Math.min(liveEffectiveMaxGuts(), p + gRec));
+            gainGuts(gRec);
             addPopup(`💚 ドレイン +${hRec}`, 'life', 'text-emerald-400 text-xl font-black drop-shadow-md');
             addPopup(`⚡ ガッツ +${gRec}`, 'guts', 'text-amber-400 text-base font-bold drop-shadow-md');
           } else if (card.monId === 'Ark' || card.monId === 'Iblis') {
@@ -52813,25 +53036,36 @@ function MonsterHeroGame() {
   // AUTOの判断結果をstateへ書き戻さず、同じターン処理へ明示的に渡す。
   // 今回はUIやeffectから呼ばず、1ターン接続用の内部処理だけを用意する。
   const runAutoTurnOnce = () => {
+    // 新モードは「倒れた子のスロットを空として渡す」だけで、倒れた子が選ばれなくなる。
+    // ガッツは1体ずつなので gutsForSlot で渡し、枚数制限は攻撃カードだけに効かせる
+    const tacticsMode = isTacticsMode(runMode);
+    const autoSlots = tacticsMode ? slots.map((mon, idx) => canTacticsSlotAct(tacticsUnitsRef.current, idx) ? mon : null) : slots;
+    const tacticsAutoOptions = tacticsMode ? {
+      gutsForSlot: slotIdx => tacticsUnitsRef.current[slotIdx]?.guts || 0,
+      countsTowardSlotLimit: isAttackCard,
+      isAttackCardFn: isAttackCard
+    } : {};
     const entries = chooseAutoTurn({
       hand,
-      slots,
+      slots: autoSlots,
       guts,
       cardLimit,
       strategy: autoSettings.strategy,
       getCardGuts,
       cardNeedsMonster,
-      slotMaxUses
+      slotMaxUses,
+      ...tacticsAutoOptions
     });
     if (entries.length > 0) return processTurn(entries);
     const lacksOnlyGuts = hasAutoTurnWithEnoughGuts({
       hand,
-      slots,
+      slots: autoSlots,
       cardLimit,
       strategy: autoSettings.strategy,
       getCardGuts,
       cardNeedsMonster,
-      slotMaxUses
+      slotMaxUses,
+      ...tacticsAutoOptions
     });
     if (lacksOnlyGuts && autoBattleRef.current && gameState === 'BATTLE' && enemy && enemy.hp > 0 && hp > 0 && !battleScenarioRef.current && battleTutorialStep == null) return useEmergency();
     return null;
@@ -54049,8 +54283,10 @@ function MonsterHeroGame() {
     }
     setAtk(debugAtk);
     setDef(debugDef);
-    setMaxGuts(debugMaxGuts);
-    setGuts(Math.floor(debugMaxGuts * 0.5));
+    if (!isTacticsMode(runMode)) {
+      setMaxGuts(debugMaxGuts);
+      setGuts(Math.floor(debugMaxGuts * 0.5));
+    }
     // 間合い適性は編成全員分(勇者モンを含む)を距離ごとに合計する。
     // setDistAptPctの反映はこの関数の後になるため、initBattleへ計算済みの値を渡す
     const specialRuleDifficulty = specialRuleDifficultyForRun(extreme ? EXTREME_MODE.id : runMode, difficulty, extreme, extremeDifficulty);
@@ -54128,16 +54364,16 @@ function MonsterHeroGame() {
       // ここで足すと、新しい子のぶんが二重に入る
       const tacticsJoin = isTacticsMode(runMode);
       const nMaxHp = tacticsJoin ? tacticsTotalBaseMaxHp(tacticsUnitsRef.current) : maxHp + joinBonus('hp');
+      const nMaxGuts = tacticsJoin ? tacticsTotalBaseMaxGuts(tacticsUnitsRef.current) : maxGuts + joinBonus('guts');
       const nAtk = atk + joinBonus('atk'),
-        nDef = def + joinBonus('def'),
-        nMaxGuts = maxGuts + joinBonus('guts');
+        nDef = def + joinBonus('def');
       if (!tacticsJoin) {
         setMaxHp(nMaxHp);
         setHp(p => p + (nMaxHp - bHp));
+        setMaxGuts(nMaxGuts);
       }
       setAtk(nAtk);
       setDef(nDef);
-      setMaxGuts(nMaxGuts);
       // 合流ボーナスに間合い適性も加算する。合流したモンスターの4距離ぶんの補正値(%)を
       // 置いた距離に関係なくそのまま足す(零がMなら零距離の補正値が+25%される)
       const aptDelta = getMonsterAptPct(m, specialRuleDifficulty);
@@ -54321,10 +54557,15 @@ function MonsterHeroGame() {
       nMaxGuts = nextStats.guts;
     // 新モードのパーティのライフ上限は盤面の合計なので、直に書き換えない。
     // 伸びたぶんを盤面へ配る(段階6で「1体ずつ選ぶ」形にする)
-    if (isTacticsMode(runMode)) commitTacticsUnits(growTacticsMaxHp(tacticsUnitsRef.current, nMaxHp - maxHp, getPermaBuff('muaHpPct')));else setMaxHp(nMaxHp);
+    if (isTacticsMode(runMode)) {
+      const grown = growTacticsMaxGuts(growTacticsMaxHp(tacticsUnitsRef.current, nMaxHp - maxHp, getPermaBuff('muaHpPct')), nMaxGuts - maxGuts, getPermaBuff('muaGutsPct'));
+      commitTacticsUnits(grown);
+    } else {
+      setMaxHp(nMaxHp);
+      setMaxGuts(nMaxGuts);
+    }
     setAtk(nAtk);
     setDef(nDef);
-    setMaxGuts(nMaxGuts);
     const nGrdL = computeGuardLevel(nDef);
     const currentGuardLevel = computeGuardLevel(def);
     const guardLevelUp = nGrdL > currentGuardLevel;
@@ -54549,7 +54790,8 @@ function MonsterHeroGame() {
     const next = Math.min(effectiveMaxGuts, guts + GUTS_RECOVERY_AMOUNT);
     if (next <= guts) return;
     gutsRecoveryLockRef.current = true;
-    setGuts(next);
+    // 新モードは立っている子へ配る(合計だけ増やすと、払える子が増えない)
+    if (isTacticsMode(runMode)) gainGuts(GUTS_RECOVERY_AMOUNT);else setGuts(next);
     setUpgradePoints(p => Math.max(0, p - GUTS_RECOVERY_POINT_COST));
     Audio_.se.heal();
   };
