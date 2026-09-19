@@ -157,11 +157,16 @@ const dealtUnique = (masu, { uChoice = {}, uLevelChoice = {}, extraUniques = [] 
 // --- 一時選択の後始末を実装から見る ---
 // 新しいランへ入るときに前の周回の一時選択が残っていると、保存した初期技が覆い隠される。
 // ラン開始の入口すべてで消していることを、実装の形として確かめる
+// ★このマーカーは「戻る先を覚える」ためにも使われる(チャレンジの極限タブから
+//   極限の難易度画面へ移るとき)。最初に見つかった1件だけを見ると、そちらを拾って
+//   「消していない」と誤判定する(2026-09-19に実際に落ちた)。すべての出どころを見る。
 const clearedAtRunStart = (marker) => {
-  const at = source.indexOf(marker);
-  if (at < 0) return false;
-  const body = source.slice(at, at + 1400);
-  return /clearSlotUniqueSelection\(\)/.test(body);
+  let at = source.indexOf(marker);
+  while (at >= 0) {
+    if (/clearSlotUniqueSelection\(\)/.test(source.slice(at, at + 1400))) return true;
+    at = source.indexOf(marker, at + 1);
+  }
+  return false;
 };
 check('ラン開始(難易度を選んで挑戦)で前の周回の一時選択を消している',
   clearedAtRunStart("battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';"));

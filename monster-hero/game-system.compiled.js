@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: cfa71a4d0ed06cc9
+// source-sha256: 70b0f96add8b702c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b44e96935405f5cc
+// generated-sha256: d2da5c3e1ed092fd
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -161,7 +161,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-19 18:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-19 19:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -26331,39 +26331,6 @@ const recoverTacticsGutsBoard = (units, amount) => {
   });
   return list;
 };
-// トレーニングで伸びたガッツの上限を配る。ライフと同じ配り方(段階7で1体ずつ選ぶ形にする)
-const growTacticsMaxGuts = (units, delta, gutsPct = 0) => {
-  const list = (Array.isArray(units) ? units : []).slice();
-  const add = tacticsSafeInt(delta, 0);
-  if (add <= 0) return list;
-  const filled = tacticsFilledSlots(list).map(index => ({
-    index,
-    base: normalizeTacticsUnit(list[index]).baseMaxGuts
-  }));
-  const totalBase = filled.reduce((sum, entry) => sum + entry.base, 0);
-  if (!filled.length || totalBase <= 0) return list;
-  let handed = 0;
-  const shares = filled.map(entry => {
-    const value = Math.floor(add * entry.base / totalBase);
-    handed += value;
-    return {
-      ...entry,
-      value
-    };
-  });
-  const order = [...shares].sort((a, b) => b.base - a.base);
-  for (let left = add - handed, i = 0; left > 0; i = (i + 1) % order.length, left--) order[i].value += 1;
-  shares.forEach(entry => {
-    if (entry.value <= 0) return;
-    const target = normalizeTacticsUnit(list[entry.index]);
-    list[entry.index] = scaleTacticsUnitMaxGuts({
-      ...target,
-      baseMaxGuts: target.baseMaxGuts + entry.value
-    }, gutsPct);
-  });
-  return list;
-};
-
 // 自分のカードによる自傷(みゅあの札など)。★これで倒れることはない。
 // いまのライフに比例して配り、1体ずつ最低1は残す(元の実装も合計が1を下回らない)
 const selfDamageTacticsBoard = (units, damage) => {
@@ -26453,81 +26420,34 @@ const tacticsPayerSlot = (units, slotIndex, cost, isHealCard = false) => {
   return null;
 };
 
-// トレーニングで伸びたライフ上限を盤面へ配る。
-// ★段階6で「1体ずつ選ぶ」形にする。それまでは素の上限に比例して配る(合算していた頃と同じ配分)。
-// ★いまのライフは増やさない(トレーニングは上限を上げるだけ、という既存の挙動に合わせる)。
-// ★配ったぶんの合計は必ず delta と一致させる。ずれるとパーティのライフと盤面が食い違う
-const growTacticsMaxHp = (units, delta, hpPct = 0) => {
+// トレーニングの結果を1体へ入れる。after は resolveTrainingStats が返した
+// {atk,def,hp,guts}(hp / guts は「素の上限」)。
+// ★1体ずつ選んだぶんを、その子だけへ入れる(段階11)
+const applyTacticsTraining = (units, slotIndex, after, hpPct = 0, gutsPct = 0) => {
   const list = (Array.isArray(units) ? units : []).slice();
-  const add = tacticsSafeInt(delta, 0);
-  if (add <= 0) return list;
-  const filled = tacticsFilledSlots(list).map(index => ({
-    index,
-    base: normalizeTacticsUnit(list[index]).baseMaxHp
-  }));
-  const totalBase = filled.reduce((sum, entry) => sum + entry.base, 0);
-  if (!filled.length || totalBase <= 0) return list;
-  let handed = 0;
-  const shares = filled.map(entry => {
-    const value = Math.floor(add * entry.base / totalBase);
-    handed += value;
-    return {
-      ...entry,
-      value
-    };
-  });
-  // 端数は素の上限が大きい子から1ずつ。合計を delta にぴったり合わせる
-  const order = [...shares].sort((a, b) => b.base - a.base);
-  for (let left = add - handed, i = 0; left > 0; i = (i + 1) % order.length, left--) order[i].value += 1;
-  shares.forEach(entry => {
-    if (entry.value <= 0) return;
-    const target = normalizeTacticsUnit(list[entry.index]);
-    list[entry.index] = scaleTacticsUnitMaxHp({
-      ...target,
-      baseMaxHp: target.baseMaxHp + entry.value
-    }, hpPct);
-  });
+  const target = list[slotIndex] ? normalizeTacticsUnit(list[slotIndex]) : null;
+  if (!target || !after) return list;
+  const grown = {
+    ...target,
+    atk: Math.max(0, tacticsSafeInt(after.atk, target.atk)),
+    def: Math.max(0, tacticsSafeInt(after.def, target.def)),
+    baseMaxHp: Math.max(1, tacticsSafeInt(after.hp, target.baseMaxHp)),
+    baseMaxGuts: Math.max(0, tacticsSafeInt(after.guts, target.baseMaxGuts))
+  };
+  list[slotIndex] = scaleTacticsUnitMaxGuts(scaleTacticsUnitMaxHp(grown, hpPct), gutsPct);
   return list;
 };
 
-// トレーニングで伸びたちから・丈夫さを盤面へ配る。
-// ★段階11で「1体ずつ選ぶ」形にする。それまでは、いまの値に比例して配る。
-// ★倒れた子にも配る(起き上がったときに置いていかれないように)
-const growTacticsAtkDef = (units, atkDelta, defDelta) => {
-  const list = (Array.isArray(units) ? units : []).slice();
-  const spread = (key, delta) => {
-    const add = tacticsSafeInt(delta, 0);
-    if (add <= 0) return;
-    const filled = tacticsFilledSlots(list).map(index => ({
-      index,
-      base: Math.max(1, normalizeTacticsUnit(list[index])[key])
-    }));
-    const total = filled.reduce((sum, entry) => sum + entry.base, 0);
-    if (!filled.length || total <= 0) return;
-    let handed = 0;
-    const shares = filled.map(entry => {
-      const value = Math.floor(add * entry.base / total);
-      handed += value;
-      return {
-        ...entry,
-        value
-      };
-    });
-    const order = [...shares].sort((a, b) => b.base - a.base);
-    for (let left = add - handed, i = 0; left > 0; i = (i + 1) % order.length, left--) order[i].value += 1;
-    shares.forEach(entry => {
-      if (entry.value <= 0) return;
-      const target = normalizeTacticsUnit(list[entry.index]);
-      list[entry.index] = normalizeTacticsUnit({
-        ...target,
-        [key]: target[key] + entry.value
-      });
-    });
-  };
-  spread('atk', atkDelta);
-  spread('def', defDelta);
-  return list;
+// パーティのちから・丈夫さ。★ダメージには使わない(それは1体ずつの値)。
+//   ガードの段階・攻撃段階(カードの枚数と威力)を決めるのに使う。
+// ★合計にすると、人数が増えただけでガードが跳ね上がる。平均にする
+const tacticsPartyStat = (units, key) => {
+  const filled = tacticsFilledSlots(units);
+  if (!filled.length) return 0;
+  return Math.floor(filled.reduce((sum, index) => sum + normalizeTacticsUnit(units[index])[key], 0) / filled.length);
 };
+const tacticsPartyAtk = units => tacticsPartyStat(units, 'atk');
+const tacticsPartyDef = units => tacticsPartyStat(units, 'def');
 
 // 立っている子を満タンへ(WAVEクリアの全回復)。★倒れた子はここでは戻らない
 const fullHealTacticsBoard = units => (Array.isArray(units) ? units : []).map(unit => {
@@ -35690,20 +35610,39 @@ function RewardPickScreen({
   maxHp,
   runMode,
   setTrainingPicks,
+  slots,
+  tacticsUnits,
   trainingPicks,
   waveResult
 }) {
   const specialRule = specialRuleDifficultyForRun(runMode, difficulty, extremeRun, extremeDifficulty);
-  const baseStats = {
+  // 新モードは「居るモンスター個別に」選ぶ(2026-09-19 ユーザーが決めた形。設計 §4.5)。
+  // trainingPicks は {slot,id} の並びになり、立っている子ごとに2回ずつ選ぶ。
+  // ★タブは作らず、まだ選び終わっていない子へ自動で進む。押す回数を増やさないため
+  const tacticsMode = Array.isArray(tacticsUnits);
+  const trainableSlots = tacticsMode ? tacticsUnits.map((unit, index) => unit && !unit.downed ? index : -1).filter(index => index >= 0) : [];
+  const downedSlots = tacticsMode ? tacticsUnits.map((unit, index) => unit && unit.downed ? index : -1).filter(index => index >= 0) : [];
+  const picksOf = slotIdx => trainingPicks.filter(entry => entry && entry.slot === slotIdx).map(entry => entry.id);
+  const currentSlot = tacticsMode ? trainableSlots.find(index => picksOf(index).length < TRAINING_PICK_COUNT) ?? null : null;
+  const currentUnit = currentSlot != null ? tacticsUnits[currentSlot] : null;
+  const currentName = currentSlot != null ? slots?.[currentSlot]?.masuName || slots?.[currentSlot]?.name || `${currentSlot + 1}番目の子` : '';
+  const activePicks = tacticsMode ? currentSlot != null ? picksOf(currentSlot) : [] : trainingPicks;
+  const baseStats = currentUnit ? {
+    atk: currentUnit.atk,
+    def: currentUnit.def,
+    hp: currentUnit.baseMaxHp,
+    guts: currentUnit.baseMaxGuts
+  } : {
     atk,
     def,
     hp: maxHp,
     guts: maxGuts
   };
   // いま選んでいるぶんまでを適用した値。次の1回はこの値からさらに伸びる
-  const current = resolveTrainingStats(baseStats, trainingPicks, waveResult?.turn, specialRule);
-  const remaining = TRAINING_PICK_COUNT - trainingPicks.length;
-  const ready = trainingPicks.length === TRAINING_PICK_COUNT;
+  const current = resolveTrainingStats(baseStats, activePicks, waveResult?.turn, specialRule);
+  const remaining = TRAINING_PICK_COUNT - activePicks.length;
+  const ready = tacticsMode ? trainableSlots.length > 0 && trainableSlots.every(index => picksOf(index).length === TRAINING_PICK_COUNT) : trainingPicks.length === TRAINING_PICK_COUNT;
+  const doneSlots = tacticsMode ? trainableSlots.filter(index => picksOf(index).length === TRAINING_PICK_COUNT).length : 0;
   const STYLES = {
     hp: {
       icon: /*#__PURE__*/React.createElement(Heart, {
@@ -35767,20 +35706,23 @@ function RewardPickScreen({
     className: "mt-1.5 flex items-center justify-center gap-2"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-[10px] font-black text-slate-300"
-  }, "4\u7A2E\u985E\u304B\u30892\u3064\u9078\u3076"), /*#__PURE__*/React.createElement("span", {
+  }, tacticsMode ? `${currentName || '全員'}のトレーニング` : '4種類から2つ選ぶ'), /*#__PURE__*/React.createElement("span", {
     className: "flex items-center gap-1"
   }, Array.from({
     length: TRAINING_PICK_COUNT
   }).map((_, i) => /*#__PURE__*/React.createElement("i", {
     key: i,
-    className: `block rounded-full ${i < trainingPicks.length ? 'bg-amber-400' : 'bg-slate-700'}`,
+    className: `block rounded-full ${i < activePicks.length ? 'bg-amber-400' : 'bg-slate-700'}`,
     style: {
       width: '9px',
       height: '9px'
     }
   }))), /*#__PURE__*/React.createElement("span", {
     className: "text-[11px] font-black font-mono text-amber-300"
-  }, trainingPicks.length, " / ", TRAINING_PICK_COUNT)), extremeRuleNumber(specialRule, 'awakeningZeroTurns') != null && (() => {
+  }, activePicks.length, " / ", TRAINING_PICK_COUNT)), tacticsMode && /*#__PURE__*/React.createElement("div", {
+    "data-tactics-training-progress": `${doneSlots}/${trainableSlots.length}`,
+    className: "mt-1 text-center text-[10px] font-black text-indigo-300"
+  }, doneSlots, " / ", trainableSlots.length, " \u4F53\u3076\u3093\u6C7A\u5B9A\u305A\u307F"), extremeRuleNumber(specialRule, 'awakeningZeroTurns') != null && (() => {
     const turns = waveResult?.turn || 0;
     // 低下は増加量へ掛かるので、率から引いた「-○pt」ではなく倍率で出す
     const gainRate = trainingGainRate(turns, specialRule);
@@ -35827,7 +35769,7 @@ function RewardPickScreen({
   }))), /*#__PURE__*/React.createElement("div", {
     className: `w-full max-w-sm grid grid-cols-2 grid-rows-2 gap-2 flex-1 min-h-0 overflow-y-auto mh-scroll${battleTutorialSpotClass('rewards')}`
   }, TRAINING_OPTIONS.map(option => {
-    const count = trainingPicks.filter(id => id === option.id).length;
+    const count = activePicks.filter(id => id === option.id).length;
     const st = STYLES[option.id] || STYLES.hp;
     const before = current[option.stat];
     const after = resolveTrainingStep(current, option.id, waveResult?.turn, specialRule)[option.stat];
@@ -35835,8 +35777,16 @@ function RewardPickScreen({
     return /*#__PURE__*/React.createElement("button", {
       key: option.id,
       type: "button",
-      disabled: full || !!effect,
-      onClick: () => setTrainingPicks(prev => prev.length >= TRAINING_PICK_COUNT ? prev : [...prev, option.id]),
+      disabled: full || !!effect || tacticsMode && currentSlot == null,
+      onClick: () => setTrainingPicks(prev => {
+        if (!tacticsMode) return prev.length >= TRAINING_PICK_COUNT ? prev : [...prev, option.id];
+        if (currentSlot == null) return prev;
+        if (prev.filter(entry => entry && entry.slot === currentSlot).length >= TRAINING_PICK_COUNT) return prev;
+        return [...prev, {
+          slot: currentSlot,
+          id: option.id
+        }];
+      }),
       "aria-label": `${option.name} ${option.effect}${count > 0 ? ` 選択中${count}回` : ''}`,
       className: `relative min-h-[112px] rounded-2xl border-2 p-2.5 flex flex-col items-start justify-center gap-2 text-left transition-all active:scale-95 disabled:opacity-40 ${count > 0 ? `${st.bg} ${st.ring}` : 'bg-slate-900/60 border-slate-800'}`
     }, count > 0 && /*#__PURE__*/React.createElement("span", {
@@ -35866,7 +35816,25 @@ function RewardPickScreen({
     }, "\u2192"), " ", /*#__PURE__*/React.createElement("b", {
       className: st.tint
     }, after))));
-  })), /*#__PURE__*/React.createElement("div", {
+  })), tacticsMode && downedSlots.length > 0 && /*#__PURE__*/React.createElement("div", {
+    "data-tactics-training-revive": true,
+    className: "shrink-0 w-full max-w-sm mt-2 space-y-1"
+  }, downedSlots.map(slotIdx => /*#__PURE__*/React.createElement("button", {
+    key: slotIdx,
+    type: "button",
+    disabled: !!effect,
+    onClick: () => {
+      setTrainingPicks([]);
+      handleTraining({
+        revive: slotIdx
+      });
+    },
+    className: "w-full min-h-[44px] rounded-2xl border-2 border-emerald-400/70 bg-emerald-950/60 px-3 text-left font-black text-emerald-200 active:scale-95 disabled:opacity-40"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "block text-[12px] leading-tight"
+  }, slots?.[slotIdx]?.masuName || slots?.[slotIdx]?.name || `${slotIdx + 1}番目の子`, "\u3092\u8D77\u3053\u3059"), /*#__PURE__*/React.createElement("span", {
+    className: "block text-[9px] font-black text-emerald-400/90 leading-tight"
+  }, "\u3053\u306EWAVE\u306E\u5F37\u5316\u306F\u306A\u3057")))), /*#__PURE__*/React.createElement("div", {
     className: "shrink-0 w-full max-w-sm mt-2 grid grid-cols-[auto_minmax(0,1fr)] gap-2",
     style: {
       paddingBottom: 'calc(.25rem + env(safe-area-inset-bottom))'
@@ -41315,6 +41283,10 @@ function MonsterHeroGame() {
     //   合計はゲージと自動回復のために持つだけで、払える判定には使わない
     setMaxGuts(maxG);
     setGuts(totalG);
+    // パーティのちから・丈夫さは1体ずつの平均。★ダメージには使わない(それは1体ずつの値)。
+    //   ガードの段階・攻撃段階を決めるのに使うので、盤面から derive して持つ
+    setAtk(tacticsPartyAtk(next));
+    setDef(tacticsPartyDef(next));
     return total;
   };
   // 盤面を slots に合わせる。ここだけが tacticsUnits を作る場所。
@@ -41334,6 +41306,8 @@ function MonsterHeroGame() {
     return commitTacticsUnits(scaleTacticsUnits(next, getPermaBuff('muaHpPct'), getPermaBuff('muaGutsPct')), mode);
   };
   // 編成スロットを差し替える唯一の入口。盤面を必ず一緒に動かす。
+  // ★画面へ渡すのもこれ(setSlots={applySlots})。直に setSlots を渡すと、
+  //   そこだけ盤面(1体ずつのライフ・ガッツ)が古いまま残る。
   // ★mode を受け取れるようにしてあるのは、バトルを始める処理の中では
   //   runMode(state)がまだ前のモードのままだから(同じ処理の中で setRunMode しても反映されない)
   const applySlots = (nextSlots, mode = runMode) => {
@@ -54676,13 +54650,14 @@ function MonsterHeroGame() {
       const nMaxGuts = tacticsJoin ? tacticsTotalBaseMaxGuts(tacticsUnitsRef.current) : maxGuts + joinBonus('guts');
       const nAtk = atk + joinBonus('atk'),
         nDef = def + joinBonus('def');
+      // 新モードはどれも盤面が正本。パーティの値は commitTacticsUnits が入れ直す
       if (!tacticsJoin) {
         setMaxHp(nMaxHp);
         setHp(p => p + (nMaxHp - bHp));
         setMaxGuts(nMaxGuts);
+        setAtk(nAtk);
+        setDef(nDef);
       }
-      setAtk(nAtk);
-      setDef(nDef);
       // 合流ボーナスに間合い適性も加算する。合流したモンスターの4距離ぶんの補正値(%)を
       // 置いた距離に関係なくそのまま足す(零がMなら零距離の補正値が+25%される)
       const aptDelta = getMonsterAptPct(m, specialRuleDifficulty);
@@ -54859,31 +54834,54 @@ function MonsterHeroGame() {
   const handleTraining = picks => {
     if (effect) return;
     const specialRuleDifficulty = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
-    const nextStats = resolveTrainingStats({
-      atk,
-      def,
-      hp: maxHp,
-      guts: maxGuts
-    }, picks, waveResult?.turn, specialRuleDifficulty);
-    const nMaxHp = nextStats.hp,
-      nAtk = nextStats.atk,
-      nDef = nextStats.def,
-      nMaxGuts = nextStats.guts;
-    // 新モードのパーティのライフ上限は盤面の合計なので、直に書き換えない。
-    // 伸びたぶんを盤面へ配る(段階6で「1体ずつ選ぶ」形にする)
-    if (isTacticsMode(runMode)) {
-      // ライフ・ガッツ・ちから・丈夫さのどれも盤面が正本。伸びたぶんを配る
-      // (段階11で「1体ずつ選ぶ」形にする)
-      const grown = growTacticsAtkDef(growTacticsMaxGuts(growTacticsMaxHp(tacticsUnitsRef.current, nMaxHp - maxHp, getPermaBuff('muaHpPct')), nMaxGuts - maxGuts, getPermaBuff('muaGutsPct')), nAtk - atk, nDef - def);
-      commitTacticsUnits(grown);
+    const tacticsMode = isTacticsMode(runMode);
+    // 新モードは picks が {slot,id} の並び。倒れた子を起こすときは {revive:スロット} が来る。
+    // ★起こすとそのWAVEは誰も強化できない(2026-09-19 ユーザーが決めた形。設計 §4.5)
+    const revivePick = tacticsMode && picks && !Array.isArray(picks) && Number.isInteger(picks.revive) ? picks.revive : null;
+    let nMaxHp = maxHp,
+      nAtk = atk,
+      nDef = def,
+      nMaxGuts = maxGuts;
+    if (revivePick !== null) {
+      commitTacticsUnits(reviveTacticsAt(tacticsUnitsRef.current, revivePick, TACTICS_TRAINING_REVIVE_RATE));
+      nDef = tacticsPartyDef(tacticsUnitsRef.current);
+    } else if (tacticsMode) {
+      // 1体ずつのトレーニング。選んだぶんをその子だけへ入れる
+      const entries = Array.isArray(picks) ? picks.filter(entry => entry && Number.isInteger(entry.slot)) : [];
+      let units = tacticsUnitsRef.current;
+      tacticsFilledSlots(units).forEach(slotIdx => {
+        const ids = entries.filter(entry => entry.slot === slotIdx).map(entry => entry.id);
+        if (!ids.length) return;
+        const unit = normalizeTacticsUnit(units[slotIdx]);
+        const after = resolveTrainingStats({
+          atk: unit.atk,
+          def: unit.def,
+          hp: unit.baseMaxHp,
+          guts: unit.baseMaxGuts
+        }, ids, waveResult?.turn, specialRuleDifficulty);
+        units = applyTacticsTraining(units, slotIdx, after, getPermaBuff('muaHpPct'), getPermaBuff('muaGutsPct'));
+      });
+      commitTacticsUnits(units);
+      nDef = tacticsPartyDef(units);
+      nAtk = tacticsPartyAtk(units);
+      nMaxHp = tacticsTotalBaseMaxHp(units);
+      nMaxGuts = tacticsTotalBaseMaxGuts(units);
     } else {
+      const nextStats = resolveTrainingStats({
+        atk,
+        def,
+        hp: maxHp,
+        guts: maxGuts
+      }, picks, waveResult?.turn, specialRuleDifficulty);
+      nMaxHp = nextStats.hp;
+      nAtk = nextStats.atk;
+      nDef = nextStats.def;
+      nMaxGuts = nextStats.guts;
       setMaxHp(nMaxHp);
       setMaxGuts(nMaxGuts);
+      setAtk(nAtk);
+      setDef(nDef);
     }
-    // パーティのちから・丈夫さは、新モードでもガードの段階・攻撃段階(カードの枚数と威力)を
-    // 決めるのに使い続ける。ダメージそのものは1体ずつの値で出す
-    setAtk(nAtk);
-    setDef(nDef);
     const nGrdL = computeGuardLevel(nDef);
     const currentGuardLevel = computeGuardLevel(def);
     const guardLevelUp = nGrdL > currentGuardLevel;
@@ -65251,7 +65249,7 @@ function MonsterHeroGame() {
       setProAllyPool: setProAllyPool,
       setProEditingAllyIndex: setProEditingAllyIndex,
       setProHeroPreset: setProHeroPreset,
-      setSlots: setSlots
+      setSlots: applySlots
     }), gameState === 'PICK_SLOT' && /*#__PURE__*/React.createElement(PickSlotScreen, {
       battleTutorial: battleTutorial,
       battleTutorialSpotClass: battleTutorialSpotClass,
@@ -66167,6 +66165,8 @@ function MonsterHeroGame() {
       maxHp: maxHp,
       runMode: runMode,
       setTrainingPicks: setTrainingPicks,
+      slots: slots,
+      tacticsUnits: isTacticsMode(runMode) ? tacticsUnits : null,
       trainingPicks: trainingPicks,
       waveResult: waveResult
     }), showHelp && (() => {

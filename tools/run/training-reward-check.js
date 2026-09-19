@@ -171,14 +171,16 @@ if (REWARD_PICK_HEAD.test(component)) {
     jsx.replace(REWARD_PICK_HEAD, 'const Screen = ({ gameState, trainingPicks, setTrainingPicks, atk, def, maxHp, maxGuts, waveResult, effect,\n'
     + '  runMode, difficulty, extremeRun, extremeDifficulty, specialRuleDifficultyForRun, resolveTrainingStats, resolveTrainingStep, ULTIMATE_SETTING, extremeRuleNumber, trainingGainRate, compactPercent, specialRulePercent, extremeSpecialRule, quickGrowthRateForRun, isQuickMode,\n'
     + '  TRAINING_PICK_COUNT, TRAINING_OPTIONS, handleTraining, AssistantBubble, battleTutorialSpotClass, cardIconNode,\n'
+    + '  slots, tacticsUnits,\n'
     + '  Trophy, Heart, Sword, ShieldCheck, Sparkles }) => {')
     + '\nmodule.exports = { Screen };',
     { presets: [[PRESET_REACT, { runtime: 'classic' }]], filename: 'training-reward-check.jsx' });
   const scope = { exports: {} };
   new Function('module', 'exports', 'React', transformed.code)(scope, scope.exports, React);
   const Icon = (name) => () => React.createElement('i', { 'data-icon': name });
-  const render = (picks) => ReactDOMServer.renderToStaticMarkup(React.createElement(scope.exports.Screen, {
-    gameState: 'REWARD_PICK', trainingPicks: picks, setTrainingPicks: () => {},
+  // extra は新モード(tactics)用。渡さなければ今までどおりのパーティ1本のトレーニング画面
+  const render = (picks, extra = {}) => ReactDOMServer.renderToStaticMarkup(React.createElement(scope.exports.Screen, {
+    gameState: 'REWARD_PICK', trainingPicks: picks, setTrainingPicks: () => {}, ...extra,
     atk: 100, def: 100, maxHp: 500, maxGuts: 100, waveResult: { turn: 0 }, effect: null,
     runMode: 'challenge', difficulty: 'Normal', extremeRun: false, extremeDifficulty: null,
     specialRuleDifficultyForRun: () => null, ULTIMATE_SETTING: { id: 'ULTIMATE' }, compactPercent: value => `${Number((value*100).toFixed(1))}%`,
@@ -193,6 +195,29 @@ if (REWARD_PICK_HEAD.test(component)) {
     Trophy: Icon('trophy'), Heart: Icon('heart'), Sword: Icon('sword'), ShieldCheck: Icon('shield'), Sparkles: Icon('sparkles'),
   }));
   const text = (html) => html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+
+  // --- 新モード(tactics): 居るモンスター個別に選ぶ(2026-09-19 ユーザーが決めた形) ---
+  const unit = (over = {}) => ({ hp: 500, maxHp: 500, baseMaxHp: 500, atk: 100, def: 100,
+    guts: 50, maxGuts: 100, baseMaxGuts: 100, downed: false, ...over });
+  const tacticsExtra = (units, slots) => ({ tacticsUnits: units, slots });
+  const twoAlive = [unit(), null, unit({ atk: 200 }), null];
+  const tacticsEmpty = render([], tacticsExtra(twoAlive, [{ name: 'モッチー' }, null, { name: 'ゴーレム' }, null]));
+  check('新モードは「誰のトレーニングか」を出す', tacticsEmpty.includes('モッチーのトレーニング'),
+    text(tacticsEmpty).slice(0, 60));
+  check('何体ぶん終わったかを出す', tacticsEmpty.includes('data-tactics-training-progress="0/2"'));
+  // 1体目を選び終えたら2体目へ自動で進む。タブを押させない
+  const tacticsHalf = render([{ slot: 0, id: 'hp' }, { slot: 0, id: 'atk' }],
+    tacticsExtra(twoAlive, [{ name: 'モッチー' }, null, { name: 'ゴーレム' }, null]));
+  check('1体目が終わると次の子へ進む', tacticsHalf.includes('ゴーレムのトレーニング')
+    && tacticsHalf.includes('data-tactics-training-progress="1/2"'));
+  // ★倒れた子はここで起こせる。起こすとそのWAVEは誰も強化できない
+  const withDowned = [unit(), null, unit({ hp: 0, downed: true }), null];
+  const tacticsDowned = render([], tacticsExtra(withDowned, [{ name: 'モッチー' }, null, { name: 'ゴーレム' }, null]));
+  check('倒れた子を起こす入口が出る', tacticsDowned.includes('data-tactics-training-revive')
+    && tacticsDowned.includes('ゴーレムを起こす'));
+  check('起こすと強化できないことを書いてある', tacticsDowned.includes('このWAVEの強化はなし'));
+  check('倒れた子はトレーニングの対象に数えない',
+    tacticsDowned.includes('data-tactics-training-progress="0/1"'));
 
   const empty = render([]);
   check('画面が落ちずに描ける', empty.length > 0);

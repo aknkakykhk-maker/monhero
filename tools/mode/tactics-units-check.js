@@ -14,6 +14,7 @@ const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分�
 //   ⑫⑬ ガードは使った子自身を守る。回復カードは使う子へ、倒れた子へ向けると起こす(段階7)
 //   ⑭⑮ 画面へ1体ずつの帯を出す(段階8)／合流すると総合力に応じて敵も強くなる(段階9)
 //   ⑯ ちから・丈夫さも1体ずつ。攻撃はその子のちから、被弾はその子の丈夫さ(段階10)
+//   ⑰ トレーニングを1体ずつ選ぶ。倒れた子はここで起こせる(段階11)
 //
 // 数式をこのファイルへ書き写すと、本体を変えたときに検査だけ古くなる。
 // 計算は必ず本体から切り出した実装をそのまま動かす。
@@ -46,12 +47,13 @@ vm.runInContext(
     + 'payTacticsGuts,recoverTacticsGuts,tacticsAliveSlots,tacticsDownedSlots,isTacticsWipedOut,'
     + 'canTacticsSlotAct,chooseTacticsTarget,withTacticsTarget,tacticsIntentTargets,'
     + 'tacticsTotalHp,tacticsTotalMaxHp,tacticsTotalBaseMaxHp,scaleTacticsUnits,scaleTacticsUnitMaxHp,'
-    + 'damageTacticsTargets,healTacticsBoard,selfDamageTacticsBoard,growTacticsMaxHp,'
+    + 'damageTacticsTargets,healTacticsBoard,selfDamageTacticsBoard,'
     + 'fullHealTacticsBoard,wipeTacticsBoard,tacticsTotalGuts,tacticsTotalBaseMaxGuts,'
     + 'scaleTacticsUnitMaxGuts,canTacticsSlotPay,payTacticsGutsAt,recoverTacticsGutsBoard,'
-    + 'growTacticsMaxGuts,healTacticsAt,recoverTacticsGutsAt,selfDamageTacticsAt,'
+    + 'healTacticsAt,recoverTacticsGutsAt,selfDamageTacticsAt,'
     + 'reviveTacticsAt,tacticsReviveHelper,tacticsPayerSlot,tacticsEnemyPowerMultiplier,'
-    + 'TACTICS_ENEMY_POWER_MAX,growTacticsAtkDef};', sandbox);
+    + 'TACTICS_ENEMY_POWER_MAX,applyTacticsTraining,tacticsPartyAtk,'
+    + 'tacticsPartyDef,TACTICS_TRAINING_REVIVE_RATE};', sandbox);
 const api = sandbox.api;
 
 // モンスター1体ぶんの入力。マスモンなら育成済みの値が baseHp などに入っている
@@ -238,15 +240,9 @@ check('素の上限は残る(倍率が戻れば元に戻る)',
 check('倍率を上げても現在のライフは増えない', scaledBoard[0].hp === 600);
 
 // トレーニングで伸びた上限は、配ったぶんの合計が必ず一致する
-const grownBoard = api.growTacticsMaxHp(pair, 137);
-check('トレーニングの伸びは端数まで配り切る',
-  api.tacticsTotalBaseMaxHp(grownBoard) === api.tacticsTotalBaseMaxHp(pair) + 137,
-  `${api.tacticsTotalBaseMaxHp(pair)} → ${api.tacticsTotalBaseMaxHp(grownBoard)}`);
-check('トレーニングでは現在のライフは増えない', api.tacticsTotalHp(grownBoard) === api.tacticsTotalHp(pair));
-check('伸びを0にしても壊れない', api.tacticsTotalBaseMaxHp(api.growTacticsMaxHp(pair, 0)) === 1000);
 check('1体もいない盤面でも落ちない',
-  api.growTacticsMaxHp([null, null, null, null], 100).filter(Boolean).length === 0
-    && api.tacticsTotalHp(api.selfDamageTacticsBoard(null, 10)) === 0);
+  api.tacticsTotalHp(api.selfDamageTacticsBoard(null, 10)) === 0
+    && api.tacticsPartyAtk(null) === 0);
 
 // 本体のソースを直に見る検査で使う
 const has = (needle) => source.includes(needle);
@@ -285,46 +281,6 @@ check('倒れた子のガッツは回復しない', (() => {
   const after = api.recoverTacticsGutsBoard(api.payTacticsGutsAt(board, 0, 40).units, 999);
   return after[2].guts === 50 && after[0].guts === 100;
 })());
-const gutsBoardGrown = api.growTacticsMaxGuts(pair, 37);
-check('トレーニングのガッツの伸びも端数まで配り切る',
-  api.tacticsTotalBaseMaxGuts(gutsBoardGrown) === 237, String(api.tacticsTotalBaseMaxGuts(gutsBoardGrown)));
-
-// --- ⑬ 「その子だけ」へ効かせる(段階7) ---
-const twoHurt = api.damageTacticsTargets(pair, [0], 200);
-check('回復は向けた子だけに入る', (() => {
-  const after = api.healTacticsAt(twoHurt, 0, 100);
-  return after[0].hp === twoHurt[0].hp + 100 && after[2].hp === twoHurt[2].hp;
-})());
-check('倒れた子へは回復が入らない(起こすのは別)', (() => {
-  const board = api.damageTacticsTargets(pair, [0], 9999);
-  return api.healTacticsAt(board, 0, 100)[0].hp === 0;
-})());
-check('ガッツも向けた子だけに入る', (() => {
-  const board = api.payTacticsGutsAt(pair, 0, 40).units;
-  const after = api.recoverTacticsGutsAt(board, 0, 20);
-  return after[0].guts === 30 && after[2].guts === 50;
-})());
-check('自傷は向けた子だけ・最低1は残る', (() => {
-  const after = api.selfDamageTacticsAt(pair, 0, 99999);
-  return after[0].hp === 1 && after[0].downed === false && after[2].hp === 400;
-})());
-// 倒れた子を起こす。★戻るライフは TACTICS_REVIVE_HP_RATE が正本
-const downedPair = api.damageTacticsTargets(pair, [0], 9999);
-check('倒れた子を起こせる', (() => {
-  const after = api.reviveTacticsAt(downedPair, 0);
-  return after[0].downed === false && after[0].hp === Math.floor(600 * api.TACTICS_REVIVE_HP_RATE);
-})(), `戻るライフ ${Math.floor(600 * api.TACTICS_REVIVE_HP_RATE)}`);
-check('立っている子へ向けても何も起きない', api.reviveTacticsAt(pair, 0)[0].hp === 600);
-// ★倒れた子自身のガッツで払う形にすると、使い切って倒れた子が永久に戻せなくなる
-check('起こすガッツは立っている子が出す',
-  api.tacticsReviveHelper(downedPair, 0, 20) === 2, String(api.tacticsReviveHelper(downedPair, 0, 20)));
-check('出せる子がいなければ起こせない',
-  api.tacticsReviveHelper(api.payTacticsGutsAt(downedPair, 2, 50).units, 0, 20) === null);
-check('立っている子を起こそうとしても手助けは出ない', api.tacticsReviveHelper(pair, 0, 20) === null);
-check('払う子は、ふだんは本人', api.tacticsPayerSlot(pair, 0, 30, false) === 0);
-check('倒れた子への回復カードだけ、手を貸す子が払う',
-  api.tacticsPayerSlot(downedPair, 0, 30, true) === 2 && api.tacticsPayerSlot(downedPair, 0, 30, false) === null);
-check('ガッツが足りなければ誰も払えない', api.tacticsPayerSlot(pair, 0, 999, false) === null);
 
 // --- ⑪ カードの払い主を選ぶ結線(段階6) ---
 check('新モードはどのカードも使う子を選ぶ', has('if(isTacticsMode(runMode)) return true;')
@@ -375,9 +331,13 @@ check('盤面は slots と同じ入口で動かす',
 //   ここでモードを渡し忘れると、1戦目だけ盤面がライフに反映されない
 check('バトル開始時は runMode ではなく決まったモードを渡す',
   has('applySlots(initialSlots, resolved.runMode);'));
+// ★画面へ setSlots を直に渡すと、そこだけ applySlots を通らず盤面が古いまま残る
+//   (勇者モンを選び直す画面で実際に通っていた。2026-09-19)
+check('画面へ渡すのも applySlots', has('setSlots={applySlots}'));
 check('編成スロットを applySlots 以外から書き換えていない',
   (source.match(/setSlots\(/g) || []).length === 2,
-  `setSlots を呼ぶ場所 ${(source.match(/setSlots\(/g) || []).length}か所(useStateの宣言とapplySlotsの中だけ)`);
+  `setSlots を呼ぶ場所 ${(source.match(/setSlots\(/g) || []).length}か所`
+  + '(applySlots の中と、applySlots を受け取った画面の1か所だけ)');
 // ★すでに居る子のライフを持ち越さないと、供モンが合流した瞬間に全員が満タンへ戻る
 check('合流しても、すでに居る子の現在値を作り直さない',
   has('const same = current && current.id === (mon.id || null) && current.masuId === (mon.masuId ?? null);')
@@ -439,12 +399,11 @@ check('20ターン経過は全員を倒す', has('if(nextTurn>20){ if(tacticsWip
 check('自傷は使った子だけが受け、誰も倒れない',
   has('selfDamageTacticsAt(tacticsUnitsRef.current,slotIdx,selfDmgAmt)'));
 // ★合流のライフ合算をやめないと、合流した子のぶんが盤面とパーティで二重に入る
-check('供モン合流でライフもガッツも合算しない',
+check('供モン合流でライフもガッツもちからも合算しない',
   has('const tacticsJoin=isTacticsMode(runMode);')
-    && has("if(!tacticsJoin){ setMaxHp(nMaxHp); setHp(p=>p+(nMaxHp-bHp)); setMaxGuts(nMaxGuts); }"));
-check('トレーニングの伸びはライフもガッツも盤面へ配る',
-  has('growTacticsMaxHp(tacticsUnitsRef.current,nMaxHp-maxHp,getPermaBuff(\'muaHpPct\'))')
-    && has("nMaxGuts-maxGuts,getPermaBuff('muaGutsPct')"));
+    && has("if(!tacticsJoin){ setMaxHp(nMaxHp); setHp(p=>p+(nMaxHp-bHp)); setMaxGuts(nMaxGuts); setAtk(nAtk); setDef(nDef); }"));
+check('トレーニングの伸びは1体ずつ入れる(段階11で作り直した)',
+  has('const after=resolveTrainingStats({atk:unit.atk,def:unit.def,hp:unit.baseMaxHp,guts:unit.baseMaxGuts},'));
 check('みゅあ補正が上がったら1体ずつの上限へ効かせ直す',
   has("commitTacticsUnits(scaleTacticsUnits(tacticsUnitsRef.current, getPermaBuff('muaHpPct'), getPermaBuff('muaGutsPct')));"));
 // ★ライフを書き換える場所が増えたら、新モードの分岐を足したか必ず見直すこと。
@@ -460,28 +419,39 @@ check('ガッツを書き換える場所は数えてある', setGutsSites === 12
 check('既存モードの実効最大ライフはそのまま',
   has("const effectiveMaxHp = useMemo(() => resolveEffectiveMaxStat(maxHp, getPermaBuff('muaHpPct')), [maxHp, permaBuffs]);"));
 
+// --- ⑰ トレーニングを1体ずつ選ぶ(段階11) ---
+check('選んだぶんはその子だけへ入る', (() => {
+  const after = api.applyTacticsTraining(pair, 0, { atk: 200, def: 150, hp: 700, guts: 130 });
+  return after[0].atk === 200 && after[0].def === 150 && after[0].baseMaxHp === 700 && after[0].baseMaxGuts === 130
+    && after[2].atk === 120 && after[2].baseMaxHp === 400;
+})());
+check('上限の倍率も一緒にかけ直す',
+  api.applyTacticsTraining(pair, 0, { atk: 120, def: 120, hp: 700, guts: 100 }, 0.1)[0].maxHp === 770);
+check('いないスロットへ入れても壊れない',
+  api.applyTacticsTraining(pair, 1, { atk: 1, def: 1, hp: 1, guts: 1 })[1] === null);
+// ★パーティのちから・丈夫さは平均。合計にすると人数が増えただけでガードが跳ね上がる
+check('パーティのちから・丈夫さは1体ずつの平均',
+  api.tacticsPartyAtk(pair) === 120 && api.tacticsPartyDef(pair) === 120);
+check('伸ばした子がいれば平均も上がる',
+  api.tacticsPartyAtk(api.applyTacticsTraining(pair, 0, { atk: 220, def: 120, hp: 600, guts: 100 })) === 170,
+  String(api.tacticsPartyAtk(api.applyTacticsTraining(pair, 0, { atk: 220, def: 120, hp: 600, guts: 100 }))));
+check('誰もいなければ0', api.tacticsPartyAtk([null, null, null, null]) === 0);
+// ★トレーニングで起こすときは満タンで戻る(回復カードの半分とは別の割合)
+check('トレーニングで起こすと満タンで戻る', api.TACTICS_TRAINING_REVIVE_RATE === 1
+  && api.TACTICS_TRAINING_REVIVE_RATE > api.TACTICS_REVIVE_HP_RATE);
+// 本体への結線
+check('新モードのトレーニングは1体ずつ入れる',
+  has('units=applyTacticsTraining(units,slotIdx,after,getPermaBuff(\'muaHpPct\'),getPermaBuff(\'muaGutsPct\'));')
+    && has('const ids=entries.filter(entry=>entry.slot===slotIdx).map(entry=>entry.id);'));
+check('起こすとそのWAVEは誰も強化できない',
+  has('commitTacticsUnits(reviveTacticsAt(tacticsUnitsRef.current,revivePick,TACTICS_TRAINING_REVIVE_RATE));')
+    && has('const revivePick=tacticsMode&&picks&&!Array.isArray(picks)&&Number.isInteger(picks.revive)?picks.revive:null;'));
+check('パーティのちから・丈夫さは盤面から入れ直す',
+  has('setAtk(tacticsPartyAtk(next)); setDef(tacticsPartyDef(next));'));
+
 // --- ⑯ ちから・丈夫さも1体ずつ(段階10) ---
 check('1体ずつのちから・丈夫さを持っている', pair[0].atk === 120 && pair[0].def === 120,
   `${pair[0].atk} / ${pair[0].def}`);
-const statGrown = api.growTacticsAtkDef(pair, 50, 30);
-check('トレーニングの伸びは配り切る', (() => {
-  const atkSum = statGrown.filter(Boolean).reduce((s, u) => s + u.atk, 0);
-  const defSum = statGrown.filter(Boolean).reduce((s, u) => s + u.def, 0);
-  const atkBefore = pair.filter(Boolean).reduce((s, u) => s + u.atk, 0);
-  const defBefore = pair.filter(Boolean).reduce((s, u) => s + u.def, 0);
-  return atkSum === atkBefore + 50 && defSum === defBefore + 30;
-})());
-check('ライフ・ガッツには触らない',
-  api.tacticsTotalHp(statGrown) === api.tacticsTotalHp(pair)
-    && api.tacticsTotalGuts(statGrown) === api.tacticsTotalGuts(pair));
-// ★倒れた子にも配る。起き上がったときに置いていかれないように
-check('倒れた子にも配る', (() => {
-  const board = api.damageTacticsTargets(pair, [0], 9999);
-  const after = api.growTacticsAtkDef(board, 40, 0);
-  return after[0].atk > board[0].atk;
-})());
-check('0を渡しても壊れない', api.growTacticsAtkDef(pair, 0, 0)[0].atk === 120
-  && api.growTacticsAtkDef(null, 10, 10).length === 0);
 // 本体への結線
 check('攻撃は「その子のちから」で出す',
   has('const attackerAtk=isTacticsMode(runMode)&&tacticsUnitsRef.current[slotIdx]'));
@@ -492,7 +462,8 @@ check('被弾は「狙われた子の丈夫さ」で受ける',
 check('新モードの受け方も1体ずつ計算し直す',
   has('const slotIncoming=getIncomingDamageBeforeTurnReduction(intent,slotIdx);')
     && has('const base=(own.flat>0||own.mult>0)?Math.floor(own.flat+slotDef*own.mult):0;'));
-check('トレーニングのちから・丈夫さも盤面へ配る', has('nAtk-atk,nDef-def);'));
+check('トレーニングのちから・丈夫さも盤面が正本',
+  has('nDef=tacticsPartyDef(units); nAtk=tacticsPartyAtk(units);'));
 {
   const screen = fs.readFileSync(path.join(root, 'monster-hero/src/parts/71-screen-battle.jsx'), 'utf8');
   check('予告の予測も狙われた子で出す',
