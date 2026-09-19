@@ -102,5 +102,8 @@ assert(game.includes('Math.max(30,(atkVal-defVal*0.5)*(1-defenseRate))'));
 assert(game.includes(': effectiveDef;'), '渡されなければパーティの実効丈夫さへ倒す');
 assert(game.includes('Math.floor(flat + effectiveDef * mult)'));
 assert(game.includes('Math.floor(immediateEffects.guardFlat + effectiveDef*immediateEffects.guardMult)'));
-assert(game.includes('applyTurnDamageReduction(Math.max(0,rawDmg-guardValueOf'));
+// 2026-09-20: 新モードの連撃を 0.6×3 の3ヒットにし、ガードが届くのは1ヒットぶんだけにした。
+// 予告も実処理と同じ resolveTacticsGuardedHit を通す(ガードを引いてからターン軽減、の順は変わらない)
+assert(game.includes("const previewGuard=enemyIntent.variant==='pierce'?0:guardValueOf(previewGuardFlat,previewGuardMult);"));
+assert(game.includes('applyTurnDamageReduction(resolveTacticsGuardedHit(rawDmg,previewHits,previewGuard).taken)'));
 console.log('guard defense balance checks passed');

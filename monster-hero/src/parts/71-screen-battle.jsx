@@ -375,7 +375,11 @@ function BattleScreen({
               if(weight>0&&guardsAimed){const effect=cardEffectMultiplier(card,halved); previewGuardFlat+=GUARD_EVOLUTION[guardLevel].flat*weight*effect; previewGuardMult+=GUARD_EVOLUTION[guardLevel].mult*weight*effect;}
               if(isPenalty) previewPenaltyCnt++;
             });
-            const plannedDmg=applyTurnDamageReduction(Math.max(0,rawDmg-guardValueOf(previewGuardFlat,previewGuardMult)));
+            // ★予告も本番と同じ数え方にする。ずれると「ガードしたのに予定より減った」になる。
+            //   貫通撃はガードが効かない。連撃は3ヒットに分かれ、ガードが届くのは1ヒットぶんだけ
+            const previewGuard=enemyIntent.variant==='pierce'?0:guardValueOf(previewGuardFlat,previewGuardMult);
+            const previewHits=enemyIntent.variant==='rush'?Math.max(1,Math.floor(Number(enemyIntent.hits)||1)):1;
+            const plannedDmg=applyTurnDamageReduction(resolveTacticsGuardedHit(rawDmg,previewHits,previewGuard).taken);
             const tone=enemyIntent.type==='SPECIAL'?'bg-fuchsia-950 border-fuchsia-500 text-fuchsia-300'
               :enemyIntent.type==='CHARGE'?'bg-amber-950 border-amber-500 text-amber-400'
               :enemyIntent.type==='MOVE'?'bg-cyan-950 border-cyan-500/60 text-cyan-300'

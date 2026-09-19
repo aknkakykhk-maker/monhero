@@ -38,7 +38,7 @@ const ENEMY_ACTION_DEFINITIONS = [
 // ★「様子を見ている(WAIT)」は入れない。5回に1回、敵が何もしないターンを作らないため。
 // ★どの行動にも「こちらの対抗手段」を1つ用意する。読めば受けられる、が成り立たないと
 //   ただ強いだけの難易度と変わらなくなる。
-//     薙ぎ払い → 距離撃で敵をずらす / 連撃 → ガード(1回ぶんだけ効く)＋回復 /
+//     薙ぎ払い → 距離撃で敵をずらす / 連撃 → ガード(1ヒットぶんだけ効く)＋回復 /
 //     貫通撃 → 回避・反射・スタン / 咆哮・再生 → スタンで潰す・削り切る /
 //     単体狙い → 狙われた子を守る・回復する / 全体攻撃 → 全員のライフを見て回復を回す
 // ★type は既存の ATTACK / SPECIAL をそのまま使い、違いは variant で持つ。
@@ -46,8 +46,8 @@ const ENEMY_ACTION_DEFINITIONS = [
 //   ここを新しい type にするとダメージ計算・演出・予告の経路を全部書き足すことになる。
 const TACTICS_SWEEP_MULT = 1.6;       // 予告した間合いに敵がいるとき
 const TACTICS_SWEEP_MISS_MULT = 0.4;  // 距離撃などでずらしたとき
-const TACTICS_RUSH_MULT = 1.8;        // 0.6×3ヒットぶん。ガードは1回ぶんしか効かない
-const TACTICS_RUSH_HITS = 3;         // SCANへ出す見た目だけ。ガードの効き方には掛からない
+const TACTICS_RUSH_MULT = 1.8;        // 0.6×3ヒット。ガードは1ヒットぶんしか効かない
+const TACTICS_RUSH_HITS = 3;          // 威力をこの数で割ってヒットに分ける。ガードが届くのは1ヒットだけ
 const TACTICS_PIERCE_MULT = 1.8;      // ガードを無視する
 const TACTICS_ROAR_ATK_RATE = 1.5;    // 次のターンから敵の攻撃が上がる
 const TACTICS_ROAR_MAX_STACKS = 2;    // 重ねがけの上限
@@ -64,7 +64,7 @@ const TACTICS_ACTION_DEFINITIONS = [
   {id:'special',type:'SPECIAL',category:'必殺技',weight:0,multiplier:2.5,hits:1,range:'全間合い',condition:'ためた次のターンに必ず発動',cooldown:0,useLimit:null},
   {id:'move',type:'MOVE',category:'移動',weight:10,multiplier:0,hits:0,range:'現在以外の3間合い',condition:'移動先がある・移動した次のターンは選ばない',cooldown:0,useLimit:null},
   {id:'sweep',type:'ATTACK',variant:'sweep',category:'薙ぎ払い',weight:14,multiplier:TACTICS_SWEEP_MULT,missMultiplier:TACTICS_SWEEP_MISS_MULT,hits:1,range:'予告した1間合い',condition:'予告した間合いに敵がいると大ダメージ。距離撃でずらせる',cooldown:0,useLimit:null},
-  {id:'rush',type:'ATTACK',variant:'rush',category:'連撃',weight:14,multiplier:TACTICS_RUSH_MULT,hits:TACTICS_RUSH_HITS,range:'全間合い',condition:'ガードは1回ぶんしか効かない',cooldown:0,useLimit:null},
+  {id:'rush',type:'ATTACK',variant:'rush',category:'連撃',weight:14,multiplier:TACTICS_RUSH_MULT,hits:TACTICS_RUSH_HITS,range:'全間合い',condition:'3ヒットに分かれ、ガードは1ヒットぶんしか効かない',cooldown:0,useLimit:null},
   {id:'pierce',type:'ATTACK',variant:'pierce',category:'貫通撃',weight:12,multiplier:TACTICS_PIERCE_MULT,hits:1,range:'全間合い',condition:'ガードが効かない',cooldown:0,useLimit:null},
   {id:'roar',type:'ROAR',category:'咆哮',weight:10,multiplier:0,hits:0,range:'全間合い',condition:`重ねがけは${TACTICS_ROAR_MAX_STACKS}回まで`,cooldown:0,useLimit:TACTICS_ROAR_MAX_STACKS},
   {id:'regen',type:'REGEN',category:'再生',weight:10,multiplier:0,hits:0,range:'全間合い',condition:'ライフが減っているときだけ',cooldown:0,useLimit:null},
