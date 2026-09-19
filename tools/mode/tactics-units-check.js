@@ -12,6 +12,7 @@ const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分�
 //   ⑧ パーティのライフは盤面の合計。増減が正しく振り分けられる(段階5)
 //   ⑩⑪ ガッツも1体ずつ。カードは「使う子」を選び、その子のガッツで払う(段階6)
 //   ⑫⑬ ガードは使った子自身を守る。回復カードは使う子へ、倒れた子へ向けると起こす(段階7)
+//   ⑭⑮ 画面へ1体ずつの帯を出す(段階8)／合流すると総合力に応じて敵も強くなる(段階9)
 //
 // 数式をこのファイルへ書き写すと、本体を変えたときに検査だけ古くなる。
 // 計算は必ず本体から切り出した実装をそのまま動かす。
@@ -48,7 +49,8 @@ vm.runInContext(
     + 'fullHealTacticsBoard,wipeTacticsBoard,tacticsTotalGuts,tacticsTotalBaseMaxGuts,'
     + 'scaleTacticsUnitMaxGuts,canTacticsSlotPay,payTacticsGutsAt,recoverTacticsGutsBoard,'
     + 'growTacticsMaxGuts,healTacticsAt,recoverTacticsGutsAt,selfDamageTacticsAt,'
-    + 'reviveTacticsAt,tacticsReviveHelper,tacticsPayerSlot};', sandbox);
+    + 'reviveTacticsAt,tacticsReviveHelper,tacticsPayerSlot,tacticsEnemyPowerMultiplier,'
+    + 'TACTICS_ENEMY_POWER_MAX};', sandbox);
 const api = sandbox.api;
 
 // モンスター1体ぶんの入力。マスモンなら育成済みの値が baseHp などに入っている
@@ -366,7 +368,8 @@ check('オートへ攻撃カードの見分け方を渡す', has('isAttackCardFn
 // 純関数だけ足して結線を忘れると、盤面がいつまでも空のまま「狙いなし」で予告が出る。
 // 例外は出ず画面も壊れないので、遊んで気付けない
 check('盤面は slots と同じ入口で動かす',
-  has('const applySlots = (nextSlots, mode = runMode) => { setSlots(nextSlots); syncTacticsUnits(nextSlots, mode); };'));
+  has('const applySlots = (nextSlots, mode = runMode) => {')
+    && has('    syncTacticsUnits(nextSlots, mode);'));
 // ★バトルを始める処理の中では runMode(state)がまだ前のモードのまま。
 //   ここでモードを渡し忘れると、1戦目だけ盤面がライフに反映されない
 check('バトル開始時は runMode ではなく決まったモードを渡す',
@@ -455,6 +458,31 @@ check('ガッツを書き換える場所は数えてある', setGutsSites === 12
 // 既存モードを巻き込んでいないこと
 check('既存モードの実効最大ライフはそのまま',
   has("const effectiveMaxHp = useMemo(() => resolveEffectiveMaxStat(maxHp, getPermaBuff('muaHpPct')), [maxHp, permaBuffs]);"));
+
+// --- ⑮ 供モンが合流すると敵も強くなる(段階9) ---
+// ★人数ごとの固定倍率にすると弱い編成ほど苦しくなるので、総合力で決める(ユーザーが選択)
+check('合流していなければ敵は強くならない',
+  api.tacticsEnemyPowerMultiplier(1000, 1000) === 1 && api.tacticsEnemyPowerMultiplier(1000, 500) === 1);
+check('総合力が増えたぶんだけ敵も強くなる',
+  api.tacticsEnemyPowerMultiplier(1000, 2000) > 1 && api.tacticsEnemyPowerMultiplier(1000, 4000) > api.tacticsEnemyPowerMultiplier(1000, 2000),
+  `2倍→×${api.tacticsEnemyPowerMultiplier(1000, 2000).toFixed(2)} / 4倍→×${api.tacticsEnemyPowerMultiplier(1000, 4000).toFixed(2)}`);
+// ★そのまま倍率にすると跳ね上がる。指数で緩めて「弱くても多少はやれる」を残す
+check('増えたぶんより緩やかに上がる',
+  api.tacticsEnemyPowerMultiplier(1000, 4000) < 4,
+  `4倍のとき ×${api.tacticsEnemyPowerMultiplier(1000, 4000).toFixed(2)}`);
+check('上限がある', api.tacticsEnemyPowerMultiplier(1, 1e9) === api.TACTICS_ENEMY_POWER_MAX,
+  `上限 ×${api.TACTICS_ENEMY_POWER_MAX}`);
+// ★同じ倍率になること。育ちきった人にも育っていない人にも同じ手ざわりにする
+check('絶対値ではなく「何倍になったか」で決まる',
+  api.tacticsEnemyPowerMultiplier(1000, 3000) === api.tacticsEnemyPowerMultiplier(100000, 300000));
+check('壊れた値でも1倍に倒す',
+  api.tacticsEnemyPowerMultiplier(0, 1000) === 1 && api.tacticsEnemyPowerMultiplier(null, undefined) === 1);
+check('敵の生成へ倍率を渡している',
+  has('const tacticsEnemyBoost=isTacticsMode(runMode)')
+    && has('enemyTurnMultiplier*stagedEnemyMultiplier*tacticsEnemyBoost'));
+check('総合力の控えは編成を動かすたびに数え直す',
+  has('tacticsPowerRef.current = power > 0'));
+check('合流したときに「敵も強くなった」と出す', has('敵も強くなった！ ×'));
 
 // --- ⑭ 画面(段階8) ---
 // ★盤面は既存モードでも作っている(モードで分けないほうが事故が少ない)。

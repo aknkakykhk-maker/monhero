@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9e25767733f003b7
+// source-sha256: 8083e783cddce10a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: bccc3e4e4c967ebc
+// generated-sha256: 301607a127818a51
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -161,7 +161,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-19 18:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-19 18:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -26508,6 +26508,26 @@ const isTacticsWipedOut = units => tacticsFilledSlots(units).length > 0 && tacti
 // そのスロットのカードを使えるか。倒れている子のカードは手札に残っていても選べない
 const canTacticsSlotAct = (units, slotIndex) => tacticsAliveSlots(units).includes(slotIndex);
 
+// ===== 供モンが合流すると敵も強くなる =====
+//
+// ★「何人増えたか」ではなく「連れてきた子の総合力」で決める(2026-09-19 ユーザーが選択)。
+//   人数ごとの固定倍率にすると、弱い編成ほど苦しくなる。
+// ★増えたぶんをそのまま倍率にすると跳ね上がるので、指数で緩める。
+//   強く育てた子を連れていくほど敵も手ごわいが、弱い編成でも「多少はやれる」を残す。
+// ★基準はバトルを始めた時点(勇者モン1体)の総合力。絶対値で決めないので、
+//   育ちきった人にも育っていない人にも同じ手ざわりになる。
+const TACTICS_ENEMY_POWER_EXPONENT = 0.7;
+const TACTICS_ENEMY_POWER_MAX = 6;
+const tacticsEnemyPowerMultiplier = (startPower, nowPower, exponent = TACTICS_ENEMY_POWER_EXPONENT) => {
+  const start = Math.max(0, Number(startPower) || 0);
+  const now = Math.max(0, Number(nowPower) || 0);
+  if (!(start > 0) || !(now > start)) return 1;
+  const safeExponent = Number.isFinite(Number(exponent)) ? Math.max(0, Number(exponent)) : TACTICS_ENEMY_POWER_EXPONENT;
+  const raw = Math.pow(now / start, safeExponent);
+  if (!Number.isFinite(raw)) return 1;
+  return Math.min(TACTICS_ENEMY_POWER_MAX, Math.max(1, raw));
+};
+
 // ===== 敵の狙い =====
 //
 // ★完全なランダムだと「誰を守るか」の判断が立たないので、ライフの少ない子を狙いやすくする。
@@ -40864,6 +40884,12 @@ function MonsterHeroGame() {
   // ★refも持つのは、敵の行動を抽選するのが再描画より先だから(咆哮の重ねがけと同じ理由)。
   const [tacticsUnits, setTacticsUnits] = useState([null, null, null, null]);
   const tacticsUnitsRef = useRef([null, null, null, null]);
+  // 新モードの敵強化に使う総合力。start はバトルを始めた時点(勇者モン1体)、now はいまの編成。
+  // 供モンが合流して総合力が増えたぶんだけ、次のWAVEから敵も強くなる(設計 §6)
+  const tacticsPowerRef = useRef({
+    start: 0,
+    now: 0
+  });
   const [mainHero, setMainHero] = useState(null);
   const [hand, setHand] = useState([]);
   const [deck, setDeck] = useState([]);
@@ -41270,6 +41296,15 @@ function MonsterHeroGame() {
   const applySlots = (nextSlots, mode = runMode) => {
     setSlots(nextSlots);
     syncTacticsUnits(nextSlots, mode);
+    // 敵強化の基準になる総合力を数え直す。編成が空になったら基準も忘れる(次のランのため)
+    const power = (Array.isArray(nextSlots) ? nextSlots : []).filter(Boolean).reduce((sum, mon) => sum + Math.max(0, Number(monsterPowerOf(mon)) || 0), 0);
+    tacticsPowerRef.current = power > 0 ? {
+      start: tacticsPowerRef.current.start || power,
+      now: power
+    } : {
+      start: 0,
+      now: 0
+    };
   };
   // 新モードのときだけ、敵の予告へ「誰を狙うか」を足す。ほかのモードでは intent をそのまま返す
   const aimTacticsIntent = (intent, mode) => isTacticsMode(mode) ? withTacticsTarget(intent, tacticsUnitsRef.current) : intent;
@@ -54042,7 +54077,10 @@ function MonsterHeroGame() {
     // 段階を持つ難易度(GODの神威 / RAGNAROKの黄昏)は、そのWAVEの段階ぶんを累計ターン倍率へ重ねる。
     // 段階を持たない難易度では1倍が返るので、これまでどおりの敵になる。
     const stagedEnemyMultiplier = extremeWaveEnemyMultiplier(specialRuleDifficulty, w);
-    const newEnemy = createBattleEnemy(w, difficulty, forcedEnemyKey, battleSetting?.power ?? null, enemyTurnMultiplier * stagedEnemyMultiplier);
+    // 新モードは「連れてきた供モンの総合力」に応じて敵も強くなる(設計 §6)。
+    // ★人数ごとの固定倍率にしないこと。弱い編成ほど苦しくなる
+    const tacticsEnemyBoost = isTacticsMode(runMode) ? tacticsEnemyPowerMultiplier(tacticsPowerRef.current.start, tacticsPowerRef.current.now) : 1;
+    const newEnemy = createBattleEnemy(w, difficulty, forcedEnemyKey, battleSetting?.power ?? null, enemyTurnMultiplier * stagedEnemyMultiplier * tacticsEnemyBoost);
     if (!newEnemy) return null;
     // 最高到達WAVEもモードごとに別々に記録する。
     // 極限チャレンジは難易度が別表(内部の difficulty は Normal のまま)なので、ここへ入れると
@@ -54656,6 +54694,11 @@ function MonsterHeroGame() {
         advanceRunStage('QUICK_JOIN');
         setCurrentPickingMon(null);
         return;
+      }
+      // 新モードは合流すると敵も強くなる。何が起きたのか分かるように出す
+      if (tacticsJoin) {
+        const boost = tacticsEnemyPowerMultiplier(tacticsPowerRef.current.start, tacticsPowerRef.current.now);
+        if (boost > 1) addPopup(`敵も強くなった！ ×${boost.toFixed(2)}`, 'enemy', 'text-orange-300 font-black text-xl drop-shadow-md');
       }
       setUpgradePoints(prev => prev + (Math.floor(Math.random() * 4) + 1));
       setEffect({
