@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 70b0f96add8b702c
+// source-sha256: 494d25cddd2dfddf
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d2da5c3e1ed092fd
+// generated-sha256: 92680dcb4fd9f105
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -161,7 +161,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-19 19:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-19 19:14"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -26467,6 +26467,20 @@ const isTacticsWipedOut = units => tacticsFilledSlots(units).length > 0 && tacti
 // そのスロットのカードを使えるか。倒れている子のカードは手札に残っていても選べない
 const canTacticsSlotAct = (units, slotIndex) => tacticsAliveSlots(units).includes(slotIndex);
 
+// ===== スコア =====
+//
+// ★式は今までどおり。桁だけ 1/1000 へ縮める(2026-09-19 ユーザーが選択)。
+//   いまの式は火力そのものなので、個別ステータスのままだと桁が大きくなりすぎて読めない。
+// ★0にしない。1点でも入ったWAVEは1点残す(「何もしていない」と区別が付かなくなる)。
+// ★記録もランキングも新モード専用の名前空間(mh_tactics_* / Tactics*)なので、
+//   ほかのモードのスコアとは混ざらない。
+const TACTICS_SCORE_DIVISOR = 1000;
+const shrinkTacticsScore = score => {
+  const raw = Math.floor(Number(score) || 0);
+  if (!(raw > 0)) return 0;
+  return Math.max(1, Math.floor(raw / TACTICS_SCORE_DIVISOR));
+};
+
 // ===== 供モンが合流すると敵も強くなる =====
 //
 // ★「何人増えたか」ではなく「連れてきた子の総合力」で決める(2026-09-19 ユーザーが選択)。
@@ -52067,7 +52081,9 @@ function MonsterHeroGame() {
       ultimateDistanceBreakPendingRef.current = distanceBreakThreshold;
       setUltimateDistanceBreakPending(distanceBreakThreshold);
     }
-    const finalRoundScore = Math.floor((totalWaveDamage * waveMult + totalWaveDamage * turnMult) * scoreMultiplier);
+    const rawRoundScore = (totalWaveDamage * waveMult + totalWaveDamage * turnMult) * scoreMultiplier;
+    // 新モードだけスコアを1/1000へ縮める。式そのものは変えない(2026-09-19 ユーザーが選択)
+    const finalRoundScore = isTacticsMode(runMode) ? shrinkTacticsScore(rawRoundScore) : Math.floor(rawRoundScore);
     setScore(s => s + finalRoundScore);
     const finalDistDamage = waveDistDamage.map((value, index) => (value || 0) + (distDamage[index] || 0));
     // WAVE後の距離強化はモンスター自身の距離適性とは別枠で、通常の獲得量を出してから半減する。

@@ -387,6 +387,20 @@ const isTacticsWipedOut = (units) => tacticsFilledSlots(units).length > 0 && tac
 // そのスロットのカードを使えるか。倒れている子のカードは手札に残っていても選べない
 const canTacticsSlotAct = (units, slotIndex) => tacticsAliveSlots(units).includes(slotIndex);
 
+// ===== スコア =====
+//
+// ★式は今までどおり。桁だけ 1/1000 へ縮める(2026-09-19 ユーザーが選択)。
+//   いまの式は火力そのものなので、個別ステータスのままだと桁が大きくなりすぎて読めない。
+// ★0にしない。1点でも入ったWAVEは1点残す(「何もしていない」と区別が付かなくなる)。
+// ★記録もランキングも新モード専用の名前空間(mh_tactics_* / Tactics*)なので、
+//   ほかのモードのスコアとは混ざらない。
+const TACTICS_SCORE_DIVISOR = 1000;
+const shrinkTacticsScore = (score) => {
+  const raw = Math.floor(Number(score) || 0);
+  if (!(raw > 0)) return 0;
+  return Math.max(1, Math.floor(raw / TACTICS_SCORE_DIVISOR));
+};
+
 // ===== 供モンが合流すると敵も強くなる =====
 //
 // ★「何人増えたか」ではなく「連れてきた子の総合力」で決める(2026-09-19 ユーザーが選択)。

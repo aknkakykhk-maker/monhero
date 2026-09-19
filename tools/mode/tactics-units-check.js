@@ -15,6 +15,7 @@ const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分�
 //   ⑭⑮ 画面へ1体ずつの帯を出す(段階8)／合流すると総合力に応じて敵も強くなる(段階9)
 //   ⑯ ちから・丈夫さも1体ずつ。攻撃はその子のちから、被弾はその子の丈夫さ(段階10)
 //   ⑰ トレーニングを1体ずつ選ぶ。倒れた子はここで起こせる(段階11)
+//   ⑱ スコアは式そのままで桁だけ 1/1000 へ縮める(段階12)
 //
 // 数式をこのファイルへ書き写すと、本体を変えたときに検査だけ古くなる。
 // 計算は必ず本体から切り出した実装をそのまま動かす。
@@ -53,7 +54,7 @@ vm.runInContext(
     + 'healTacticsAt,recoverTacticsGutsAt,selfDamageTacticsAt,'
     + 'reviveTacticsAt,tacticsReviveHelper,tacticsPayerSlot,tacticsEnemyPowerMultiplier,'
     + 'TACTICS_ENEMY_POWER_MAX,applyTacticsTraining,tacticsPartyAtk,'
-    + 'tacticsPartyDef,TACTICS_TRAINING_REVIVE_RATE};', sandbox);
+    + 'tacticsPartyDef,TACTICS_TRAINING_REVIVE_RATE,shrinkTacticsScore,TACTICS_SCORE_DIVISOR};', sandbox);
 const api = sandbox.api;
 
 // モンスター1体ぶんの入力。マスモンなら育成済みの値が baseHp などに入っている
@@ -418,6 +419,21 @@ check('ガッツを書き換える場所は数えてある', setGutsSites === 12
 // 既存モードを巻き込んでいないこと
 check('既存モードの実効最大ライフはそのまま',
   has("const effectiveMaxHp = useMemo(() => resolveEffectiveMaxStat(maxHp, getPermaBuff('muaHpPct')), [maxHp, permaBuffs]);"));
+
+// --- ⑱ スコアを縮める(段階12) ---
+// ★式は変えない。桁だけ縮める(2026-09-19 ユーザーが選択)
+check('1/1000へ縮める', api.TACTICS_SCORE_DIVISOR === 1000
+  && api.shrinkTacticsScore(1234567) === 1234, String(api.shrinkTacticsScore(1234567)));
+// ★1点でも入ったWAVEを0にしない。「何もしていない」と区別が付かなくなる
+check('入ったぶんは0にしない', api.shrinkTacticsScore(1) === 1 && api.shrinkTacticsScore(999) === 1);
+check('0は0のまま', api.shrinkTacticsScore(0) === 0);
+check('壊れた値でも落ちない',
+  api.shrinkTacticsScore(null) === 0 && api.shrinkTacticsScore(-50) === 0 && api.shrinkTacticsScore('x') === 0);
+check('縮めるのは新モードだけ',
+  has('const finalRoundScore=isTacticsMode(runMode)?shrinkTacticsScore(rawRoundScore):Math.floor(rawRoundScore);'));
+// ★式そのものは触っていない(既存モードのスコアが変わらないこと)
+check('スコアの式は今までどおり',
+  has('const rawRoundScore=((totalWaveDamage*waveMult)+(totalWaveDamage*turnMult))*scoreMultiplier;'));
 
 // --- ⑰ トレーニングを1体ずつ選ぶ(段階11) ---
 check('選んだぶんはその子だけへ入る', (() => {
