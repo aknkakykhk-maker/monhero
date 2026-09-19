@@ -225,6 +225,19 @@ const check = (name, ok, detail = '') => {
     check('合計のライフ・ガッツの帯は出さない', !allyBars.life && !allyBars.guts,
       `ライフ帯 ${allyBars.life} / ガッツ帯 ${allyBars.guts}`);
 
+    // ★帯が動かないと、回復もダメージも瞬間で増減して見える(2026-09-20 ユーザー指摘)。
+    //   クラス名だけでなく、実際に効いている時間をブラウザから読む
+    const barAnim = await page.evaluate(() => {
+      const sec = (sel) => {
+        const el = document.querySelector(sel);
+        if (!el) return null;
+        return parseFloat(getComputedStyle(el).transitionDuration) || 0;
+      };
+      return { hp: sec('[data-tactics-hp-bar]'), guts: sec('[data-tactics-guts-bar]') };
+    });
+    check('ライフの帯がアニメーションする', barAnim.hp >= 0.9, `${barAnim.hp}秒`);
+    check('ガッツの帯がアニメーションする', barAnim.guts >= 0.4, `${barAnim.guts}秒`);
+
     const startLife = await lifeOf();
     check('盤面のライフを読める', startLife.ok && startLife.max > 0, startLife.raw || '見つからない');
     check('はじめは満タン(立っている子の合計＝上限)', startLife.hp === startLife.max, startLife.raw);
