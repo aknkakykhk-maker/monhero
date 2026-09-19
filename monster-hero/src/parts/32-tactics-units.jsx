@@ -148,16 +148,25 @@ const chooseTacticsTarget = (units, random = Math.random, bias = TACTICS_TARGET_
   return weights[weights.length - 1].index;
 };
 
+// 予告の吹き出しへ出す「狙い」の呼び名。名前が無い子でも空欄にしない
+const TACTICS_ALL_TARGET_LABEL = '全員';
+const tacticsTargetName = (units, slotIndex) => {
+  const unit = Array.isArray(units) ? units[slotIndex] : null;
+  return (unit && String(unit.name || '').trim()) || `${slotIndex + 1}番目の子`;
+};
+
 // 敵の予告へ「誰を狙うか」を足す。
-// ★全体攻撃(targetsAll)は狙いを決めない。薙ぎ払いは間合いで当たる相手が決まるので、
-//   ここでは狙いを持たせず、実行時に「その間合いにいる子」を見る。
+// ★全体攻撃(targetsAll)は狙いを決めない。立っている全員に当たるので、抽選するものが無い。
+//   薙ぎ払いは間合いで当たる相手が決まるので、ここでは狙いを持たせず、
+//   実行時に「その間合いにいる子」を見る(予告には間合いが出ている)。
 // ★ダメージの無い行動(ためる・移動・咆哮・再生)にも狙いは要らない。
 const TACTICS_TARGETED_TYPES = ['ATTACK', 'SPECIAL'];
 const withTacticsTarget = (intent, units, random = Math.random, bias = TACTICS_TARGET_LOW_HP_BIAS) => {
   if (!intent || !TACTICS_TARGETED_TYPES.includes(intent.type)) return intent;
-  if (intent.targetsAll || intent.variant === 'sweep') return intent;
+  if (intent.targetsAll) return { ...intent, targetName: TACTICS_ALL_TARGET_LABEL };
+  if (intent.variant === 'sweep') return intent;
   const targetSlot = chooseTacticsTarget(units, random, bias);
-  return targetSlot == null ? intent : { ...intent, targetSlot };
+  return targetSlot == null ? intent : { ...intent, targetSlot, targetName: tacticsTargetName(units, targetSlot) };
 };
 // その行動が実際に当たるスロット。予告と実行で同じ関数を通すので食い違わない
 const tacticsIntentTargets = (intent, units, enemyDist = null) => {

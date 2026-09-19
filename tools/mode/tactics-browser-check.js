@@ -170,7 +170,14 @@ const check = (name, ok, detail = '') => {
     // --- ④ バトル画面がそのモードのものとして立ち上がっている ---
     check('バトル画面にモード名が出る', battleText.includes(`${MODE_LABEL.replace('モード', '')} / `), battleText.slice(0, 80));
     check('ターン制限は既存モードと同じ20ターン', /TURN 1\/20/.test(battleText), battleText.slice(0, 80));
-    check('敵の行動が予告されている', /予定:/.test(battleText), battleText.slice(0, 120));
+    // ★予告の中身は抽選なので、画面の文字から「予定:」を探すと
+    //   「今回はためるだった」ターンで落ちる。吹き出しそのものを見る
+    const intentText = await page.evaluate(() =>
+      (document.querySelector('[data-enemy-intent]')?.textContent || '').trim());
+    check('敵の行動が予告されている', intentText.length > 0, intentText || '吹き出しが見つからない');
+    // 狙いの予告(2026-09-19・設計 §5.1)。ダメージのある行動には「誰を狙うか」が出る。
+    // ためる・移動には狙いが無いので、予定ダメージが出ているときだけ見る
+    check('攻撃の予告には狙いが出る', !/予定:/.test(intentText) || /🎯/.test(intentText), intentText);
     // ★解析(SCAN)の中身はここでは見ない。
     //   このサンドボックスはTailwindへ出られず、解析ボタンを押しても画面が開かない。
     //   既存のチャレンジモードでも同じく開かないことを確かめてあるので、実装ではなく検査環境の都合。

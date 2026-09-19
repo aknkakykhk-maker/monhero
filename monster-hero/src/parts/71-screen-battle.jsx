@@ -378,7 +378,9 @@ function BattleScreen({
             // 敵の絵のすぐ下へ置く(2026-09-18・ユーザー依頼)。mt-auto で下端へ押しやっていたため、
             // 絵と「次に何をしてくるか」のあいだに200pxほどの空きができ、視線が大きく動いていた。
             // 余りの高さは、この下のバフ帯の mt-auto がまとめて吸う。
-            return <div className={`mt-1 mb-1 mx-auto w-fit max-w-full border p-1 px-4 rounded-full flex items-center gap-1.5 animate-pulse z-[45] shadow-lg shrink-0${battleTutorialSpotClass('enemyIntent')} ${focusedCard?'invisible':'visible'} ${tone}`}><Target size={12}/><div className="text-[10px] font-black uppercase tracking-tight">{enemyIntent.label}{rawDmg>0?` (予定: ${plannedDmg})`:''}</div></div>;
+            // data-enemy-intent は検査の手がかり。どの行動が予告されているかは抽選なので、
+            // 画面の文字から探すと「今回はためるだった」で落ちる
+            return <div data-enemy-intent className={`mt-1 mb-1 mx-auto w-fit max-w-full border p-1 px-4 rounded-full flex items-center gap-1.5 animate-pulse z-[45] shadow-lg shrink-0${battleTutorialSpotClass('enemyIntent')} ${focusedCard?'invisible':'visible'} ${tone}`}><Target size={12}/><div className="text-[10px] font-black uppercase tracking-tight">{enemyIntent.label}{enemyIntent.targetName?` 🎯${enemyIntent.targetName}`:''}{rawDmg>0?` (予定: ${plannedDmg})`:''}</div></div>;
           })()}
         {/* 強化の札(2026-09-19・ユーザー指摘「バフデバフ欄が見にくくなってる」)。
             もとは敵のいる main の中に置いていたが、main は overflow-y-auto なので、

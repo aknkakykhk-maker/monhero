@@ -24,7 +24,7 @@ vm.createContext(context);
 vm.runInContext(`${chunk};globalThis.api={ENEMY_ACTION_DEFINITIONS,TACTICS_ACTION_DEFINITIONS,TACTICS_ENEMY_ACTION_IDS,`
   + `TACTICS_BASE_ACTION_IDS,tacticsActionDefinitions,enemyActionProbabilities,chooseEnemyAction,`
   + `enemyActionStateFrom,enemyActionLabel,TACTICS_ROAR_MAX_STACKS,TACTICS_SWEEP_MULT,TACTICS_SWEEP_MISS_MULT,`
-  + `TACTICS_RUSH_HITS,TACTICS_REGEN_HP_THRESHOLD};`, context);
+  + `TACTICS_RUSH_HITS,TACTICS_REGEN_HP_THRESHOLD,TACTICS_FOCUS_MULT,TACTICS_ALLOUT_MULT};`, context);
 const api = context.api;
 
 let failed = 0;
@@ -66,7 +66,14 @@ check('後のWAVEの敵ほど技が多い(最初の敵より最後の敵)',
   api.TACTICS_ENEMY_ACTION_IDS.Moo.length > api.TACTICS_ENEMY_ACTION_IDS.Dino.length,
   `ディノ${api.TACTICS_ENEMY_ACTION_IDS.Dino.length} → ムー${api.TACTICS_ENEMY_ACTION_IDS.Moo.length}`);
 check('ムーは新モードの技をすべて持つ',
-  ['sweep', 'rush', 'pierce', 'roar', 'regen'].every(id => api.TACTICS_ENEMY_ACTION_IDS.Moo.includes(id)));
+  ['sweep', 'rush', 'pierce', 'roar', 'regen', 'focus', 'allout'].every(id => api.TACTICS_ENEMY_ACTION_IDS.Moo.includes(id)));
+// 狙いと全体攻撃は後半の敵から出す。最初のWAVEから全部来ると、受け方を1つずつ覚えられない
+check('単体狙い・全体攻撃は最初の敵には割り当てない',
+  !api.TACTICS_ENEMY_ACTION_IDS.Dino.includes('focus') && !api.TACTICS_ENEMY_ACTION_IDS.Dino.includes('allout')
+    && !api.TACTICS_ENEMY_ACTION_IDS.Gel.includes('allout'));
+check('後半の敵は単体狙いと全体攻撃を持つ',
+  ENEMY_ORDER.slice(4).some(id => api.TACTICS_ENEMY_ACTION_IDS[id].includes('focus'))
+    && ENEMY_ORDER.slice(4).some(id => api.TACTICS_ENEMY_ACTION_IDS[id].includes('allout')));
 check('知らない技idを割り当てていない',
   Object.values(api.TACTICS_ENEMY_ACTION_IDS).every(list =>
     list.every(id => api.TACTICS_ACTION_DEFINITIONS.some(def => def.id === id))));
@@ -116,6 +123,21 @@ const pierce = intentOf('Lilim', 'pierce');
 check('貫通撃は variant で見分けられる', !!pierce && pierce.variant === 'pierce');
 check('新モードの攻撃は type が ATTACK のまま(既存のダメージ計算を通すため)',
   [sweep, rush, pierce].every(intent => intent && intent.type === 'ATTACK'));
+// 単体狙いと全体攻撃(設計 §5.3)
+const focus = intentOf('Durahan', 'focus');
+const allout = intentOf('Durahan', 'allout');
+check('単体狙いは variant で見分けられ、威力が定義どおり',
+  !!focus && focus.variant === 'focus' && focus.value === Math.floor(100 * api.TACTICS_FOCUS_MULT),
+  focus ? `威力${focus.value}` : '出ませんでした');
+check('全体攻撃は targetsAll を持ち歩く', !!allout && allout.targetsAll === true,
+  allout ? '' : '出ませんでした');
+// ★ここが崩れると「全員を殴るほうが得」になり、狙いを読む意味が消える
+check('全体攻撃1体あたりの威力は単体狙いより低い',
+  api.TACTICS_ALLOUT_MULT < api.TACTICS_FOCUS_MULT,
+  `全体×${api.TACTICS_ALLOUT_MULT} / 単体×${api.TACTICS_FOCUS_MULT}`);
+check('単体狙い以外の技に targetsAll を付けていない',
+  api.TACTICS_ACTION_DEFINITIONS.filter(d => d.targetsAll).map(d => d.id).join(',') === 'allout',
+  api.TACTICS_ACTION_DEFINITIONS.filter(d => d.targetsAll).map(d => d.id).join(','));
 const roar = intentOf('Durahan', 'roar');
 const regen = intentOf('Lilim', 'regen');
 check('咆哮・再生はダメージを持たない', !!roar && roar.value === 0 && !!regen && regen.value === 0);

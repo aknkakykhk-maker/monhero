@@ -39,7 +39,8 @@ const ENEMY_ACTION_DEFINITIONS = [
 // ★どの行動にも「こちらの対抗手段」を1つ用意する。読めば受けられる、が成り立たないと
 //   ただ強いだけの難易度と変わらなくなる。
 //     薙ぎ払い → 距離撃で敵をずらす / 連撃 → ガード /
-//     貫通撃 → 回避・反射・スタン / 咆哮・再生 → スタンで潰す・削り切る
+//     貫通撃 → 回避・反射・スタン / 咆哮・再生 → スタンで潰す・削り切る /
+//     単体狙い → 狙われた子を守る・回復する / 全体攻撃 → 全員のライフを見て回復を回す
 // ★type は既存の ATTACK / SPECIAL をそのまま使い、違いは variant で持つ。
 //   getIncomingDamageBeforeTurnReduction は type でダメージの有無を判断しているので、
 //   ここを新しい type にするとダメージ計算・演出・予告の経路を全部書き足すことになる。
@@ -52,6 +53,11 @@ const TACTICS_ROAR_ATK_RATE = 1.5;    // 次のターンから敵の攻撃が上
 const TACTICS_ROAR_MAX_STACKS = 2;    // 重ねがけの上限
 const TACTICS_REGEN_RATE = 0.08;      // 最大ライフに対する回復量
 const TACTICS_REGEN_HP_THRESHOLD = 0.9; // ライフがこの割合を下回ったときだけ使う
+// 単体狙いと全体攻撃(2026-09-19・設計 §5.3)。
+// ★全体攻撃は1体あたりの威力を単体狙いより必ず低くする。同じにすると
+//   「全員を殴るほうが得」になり、狙いを読む意味が消える
+const TACTICS_FOCUS_MULT = 2.2;   // 予告した1体へ。読めば守れるぶん大きい
+const TACTICS_ALLOUT_MULT = 0.9;  // 全員へ。1体あたりは通常攻撃より少しだけ低い
 const TACTICS_ACTION_DEFINITIONS = [
   {id:'normal',type:'ATTACK',category:'通常攻撃',weight:30,multiplier:1,hits:1,range:'全間合い',condition:'常時',cooldown:0,useLimit:null},
   {id:'charge',type:'CHARGE',category:'ためる',weight:12,multiplier:0,hits:0,range:'全間合い',condition:'常時',cooldown:0,useLimit:null},
@@ -62,6 +68,8 @@ const TACTICS_ACTION_DEFINITIONS = [
   {id:'pierce',type:'ATTACK',variant:'pierce',category:'貫通撃',weight:12,multiplier:TACTICS_PIERCE_MULT,hits:1,range:'全間合い',condition:'ガードが効かない',cooldown:0,useLimit:null},
   {id:'roar',type:'ROAR',category:'咆哮',weight:10,multiplier:0,hits:0,range:'全間合い',condition:`重ねがけは${TACTICS_ROAR_MAX_STACKS}回まで`,cooldown:0,useLimit:TACTICS_ROAR_MAX_STACKS},
   {id:'regen',type:'REGEN',category:'再生',weight:10,multiplier:0,hits:0,range:'全間合い',condition:'ライフが減っているときだけ',cooldown:0,useLimit:null},
+  {id:'focus',type:'ATTACK',variant:'focus',category:'単体狙い',weight:12,multiplier:TACTICS_FOCUS_MULT,hits:1,range:'全間合い',condition:'予告した1体へ大ダメージ。その子を守るか回復する',cooldown:0,useLimit:null},
+  {id:'allout',type:'ATTACK',variant:'allout',targetsAll:true,category:'全体攻撃',weight:10,multiplier:TACTICS_ALLOUT_MULT,hits:1,range:'全員',condition:'立っている全員へ同時に当たる。狙いをかわせない',cooldown:0,useLimit:null},
 ];
 // どの敵も通常攻撃・ためる・必殺技・移動は持つ。ここへ足すのは「その敵だけの技」。
 // WAVEが進むほど読むことが増える並びにしてある(敵の順は ENEMY_SEQUENCE)。
@@ -71,12 +79,12 @@ const TACTICS_ENEMY_ACTION_IDS = Object.freeze({
   Gel:Object.freeze(['sweep']),
   BlackDino:Object.freeze(['rush','roar']),
   Jaakusou:Object.freeze(['sweep','regen']),
-  BlueMountain:Object.freeze(['pierce','sweep']),
-  Gali:Object.freeze(['roar','rush']),
-  Naga:Object.freeze(['sweep','pierce']),
-  Lilim:Object.freeze(['regen','pierce']),
-  Durahan:Object.freeze(['rush','roar','pierce']),
-  Moo:Object.freeze(['sweep','rush','pierce','roar','regen']),
+  BlueMountain:Object.freeze(['pierce','sweep','focus']),
+  Gali:Object.freeze(['roar','rush','allout']),
+  Naga:Object.freeze(['sweep','pierce','focus']),
+  Lilim:Object.freeze(['regen','pierce','allout']),
+  Durahan:Object.freeze(['rush','roar','pierce','focus','allout']),
+  Moo:Object.freeze(['sweep','rush','pierce','roar','regen','focus','allout']),
 });
 const tacticsActionDefinitions = (enemyId) => {
   const ids = [...TACTICS_BASE_ACTION_IDS, ...(TACTICS_ENEMY_ACTION_IDS[enemyId] || [])];
@@ -136,7 +144,7 @@ const enemyActionLabel = (ent,type) => type==='ATTACK' ? (ent?.normal||'通常�
   : '様子を見ている';
 const ENEMY_ACTION_ICONS = {ATTACK:'👊',CHARGE:'✨',SPECIAL:'🔥',WAIT:'⏳',MOVE:'🏃',ROAR:'📢',REGEN:'💚'};
 // 新モードの攻撃は type が ATTACK のままなので、見分けは variant で付ける
-const TACTICS_VARIANT_ICONS = {sweep:'🌪️',rush:'💥',pierce:'🗡️'};
+const TACTICS_VARIANT_ICONS = {sweep:'🌪️',rush:'💥',pierce:'🗡️',focus:'🎯',allout:'🌊'};
 const chooseEnemyAction = (ent,currentDist,random=Math.random,state={}) => {
   const actions=enemyActionProbabilities(ent,currentDist,state),roll=random(),available=actions.filter(a=>a.available);
   let cursor=roll;
@@ -158,7 +166,10 @@ const chooseEnemyAction = (ent,currentDist,random=Math.random,state={}) => {
       label:`${selected.category}: ${RANGE_LABELS[currentDist]}`,icon:TACTICS_VARIANT_ICONS.sweep,actionId:selected.id};
   }
   if(selected.variant){
+    // 全体攻撃だけは狙いを決めない。予告の時点で「立っている全員」と決まっているので、
+    // targetsAll を intent へ持ち歩き、当たる相手は tacticsIntentTargets が数え直す
     return {type:selected.type,variant:selected.variant,hits:Math.max(1,Math.floor(Number(selected.hits)||1)),
+      ...(selected.targetsAll?{targetsAll:true}:{}),
       value:Math.floor(ent.atk*selected.multiplier),label:selected.category,
       icon:TACTICS_VARIANT_ICONS[selected.variant]||ENEMY_ACTION_ICONS[selected.type]||'⏳',actionId:selected.id};
   }
