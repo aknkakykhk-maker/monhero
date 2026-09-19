@@ -129,7 +129,13 @@ check('作るテンプレートはクイックの通常難易度（極限を混�
   /repeatTemplateFromAutoSettings[\s\S]{0,1200}?runMode:BATTLE_MODE_QUICK[\s\S]{0,400}?extremeRun:false/.test(app));
 // 1周目に自分で組んだ編成のほうを優先する。設定で勝手に置き換えない
 check('周回テンプレートがあればそちらを優先する',
-  app.includes('const repeatTemplateForNewRun = () => repeatRunTemplateRef.current || repeatTemplateFromAutoSettings();'));
+  app.includes('const repeatTemplateForNewRun = () => (isQuickRepeatTemplate(repeatRunTemplateRef.current) ? repeatRunTemplateRef.current : repeatTemplateFromAutoSettings());'));
+// ★持ち越すのはクイックの編成だけ(2026-09-19・ユーザー報告「事前にチャレンジノーマルを
+//   やったからなのか、それを引き継いでるみたいで進まない…設定してるモンスターでも
+//   出発してない」)。repeatRunTemplateRef はモードを問わず作られるので、ここで絞らないと
+//   直前のチャレンジ・プロ・極限の編成でモンビーの裏周回が立ち上がる
+check('クイック以外の編成は持ち越さず、AUTO設定の事前設定へ倒す',
+  app.includes('const isQuickRepeatTemplate = (template) => !!template && !template.extremeRun && isQuickMode(template.runMode);'));
 check('∞周回の次の周もその入口を通る',
   app.includes('startRunFromRepeatTemplate(repeatTemplateForNewRun())'));
 // 見出しは正式名称「モンヒロビート」(2026-09-07・ユーザー指示)
