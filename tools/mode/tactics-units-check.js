@@ -11,6 +11,7 @@ const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分�
 //   ⑦ バトル本体へ結線されている(盤面が slots と一緒に動き、予告へ狙いが乗る)
 //   ⑧ パーティのライフは盤面の合計。増減が正しく振り分けられる(段階5)
 //   ⑩⑪ ガッツも1体ずつ。カードは「使う子」を選び、その子のガッツで払う(段階6)
+//   ⑫⑬ ガードは使った子自身を守る。回復カードは使う子へ、倒れた子へ向けると起こす(段階7)
 //
 // 数式をこのファイルへ書き写すと、本体を変えたときに検査だけ古くなる。
 // 計算は必ず本体から切り出した実装をそのまま動かす。
@@ -46,7 +47,8 @@ vm.runInContext(
     + 'damageTacticsTargets,healTacticsBoard,selfDamageTacticsBoard,growTacticsMaxHp,'
     + 'fullHealTacticsBoard,wipeTacticsBoard,tacticsTotalGuts,tacticsTotalBaseMaxGuts,'
     + 'scaleTacticsUnitMaxGuts,canTacticsSlotPay,payTacticsGutsAt,recoverTacticsGutsBoard,'
-    + 'growTacticsMaxGuts};', sandbox);
+    + 'growTacticsMaxGuts,healTacticsAt,recoverTacticsGutsAt,selfDamageTacticsAt,'
+    + 'reviveTacticsAt,tacticsReviveHelper,tacticsPayerSlot};', sandbox);
 const api = sandbox.api;
 
 // モンスター1体ぶんの入力。マスモンなら育成済みの値が baseHp などに入っている
@@ -284,12 +286,53 @@ const gutsBoardGrown = api.growTacticsMaxGuts(pair, 37);
 check('トレーニングのガッツの伸びも端数まで配り切る',
   api.tacticsTotalBaseMaxGuts(gutsBoardGrown) === 237, String(api.tacticsTotalBaseMaxGuts(gutsBoardGrown)));
 
+// --- ⑬ 「その子だけ」へ効かせる(段階7) ---
+const twoHurt = api.damageTacticsTargets(pair, [0], 200);
+check('回復は向けた子だけに入る', (() => {
+  const after = api.healTacticsAt(twoHurt, 0, 100);
+  return after[0].hp === twoHurt[0].hp + 100 && after[2].hp === twoHurt[2].hp;
+})());
+check('倒れた子へは回復が入らない(起こすのは別)', (() => {
+  const board = api.damageTacticsTargets(pair, [0], 9999);
+  return api.healTacticsAt(board, 0, 100)[0].hp === 0;
+})());
+check('ガッツも向けた子だけに入る', (() => {
+  const board = api.payTacticsGutsAt(pair, 0, 40).units;
+  const after = api.recoverTacticsGutsAt(board, 0, 20);
+  return after[0].guts === 30 && after[2].guts === 50;
+})());
+check('自傷は向けた子だけ・最低1は残る', (() => {
+  const after = api.selfDamageTacticsAt(pair, 0, 99999);
+  return after[0].hp === 1 && after[0].downed === false && after[2].hp === 400;
+})());
+// 倒れた子を起こす。★戻るライフは TACTICS_REVIVE_HP_RATE が正本
+const downedPair = api.damageTacticsTargets(pair, [0], 9999);
+check('倒れた子を起こせる', (() => {
+  const after = api.reviveTacticsAt(downedPair, 0);
+  return after[0].downed === false && after[0].hp === Math.floor(600 * api.TACTICS_REVIVE_HP_RATE);
+})(), `戻るライフ ${Math.floor(600 * api.TACTICS_REVIVE_HP_RATE)}`);
+check('立っている子へ向けても何も起きない', api.reviveTacticsAt(pair, 0)[0].hp === 600);
+// ★倒れた子自身のガッツで払う形にすると、使い切って倒れた子が永久に戻せなくなる
+check('起こすガッツは立っている子が出す',
+  api.tacticsReviveHelper(downedPair, 0, 20) === 2, String(api.tacticsReviveHelper(downedPair, 0, 20)));
+check('出せる子がいなければ起こせない',
+  api.tacticsReviveHelper(api.payTacticsGutsAt(downedPair, 2, 50).units, 0, 20) === null);
+check('立っている子を起こそうとしても手助けは出ない', api.tacticsReviveHelper(pair, 0, 20) === null);
+check('払う子は、ふだんは本人', api.tacticsPayerSlot(pair, 0, 30, false) === 0);
+check('倒れた子への回復カードだけ、手を貸す子が払う',
+  api.tacticsPayerSlot(downedPair, 0, 30, true) === 2 && api.tacticsPayerSlot(downedPair, 0, 30, false) === null);
+check('ガッツが足りなければ誰も払えない', api.tacticsPayerSlot(pair, 0, 999, false) === null);
+
 // --- ⑪ カードの払い主を選ぶ結線(段階6) ---
 check('新モードはどのカードも使う子を選ぶ', has('if(isTacticsMode(runMode)) return true;')
   && has('// 新モードはどのカードも「使う子」を選ぶ。その子のガッツで払い、効果もその子に乗る'));
 check('割り当てられる子は「その子が払えるか」で決まる',
   has('const tacticsUsableSlots = (card, excludeHandIndex = null) => {')
-    && has('if(!canTacticsSlotPay(tacticsUnitsRef.current,slotIdx,(spent[slotIdx]||0)+getCardGuts(card,slotIdx))) return;'));
+    && has('if(!canTacticsSlotPay(tacticsUnitsRef.current,payer,(spent[payer]||0)+cost)) return;'));
+// 回復カードだけは倒れた子へも向けられる(段階7)
+check('回復カードは倒れた子へも向けられる',
+  has("const payer=tacticsPayerSlot(tacticsUnitsRef.current,slotIdx,cost,card.type==='heal');")
+    && has('if(payer===null) return;'));
 // ★守り・回復まで「1体1枚」に数えると、供モンが居ないWAVE1で1ターン1枚しか使えなくなる
 check('枚数制限に数えるのは攻撃カードだけ',
   has('if(isAttackCard(card)&&(attacks[slotIdx]||0)>=slotMaxUses(mon,slotIdx)) return;'));
@@ -299,13 +342,17 @@ check('ドラッグでの割り当ても同じ判定を通す',
   has('if(tacticsMode && !tacticsUsableSlots(c,cardIndex).includes(slotIdx)){ setFocusedCard(null); return; }'));
 // ★ここを通さないと、払えない組み合わせでカードだけ切れてしまう
 check('実行の前に「使う子が払えるか」を見る',
-  has('return canTacticsSlotPay(tacticsUnitsRef.current,idx,spentBySlot[idx]);'));
+  has('return canTacticsSlotPay(tacticsUnitsRef.current,payer,spentByPayer[payer]);'));
 check('払うのは使う子',
-  has('if(tacticsPayGuts(slotIdx,getCardGuts(card,slotIdx))===null) setGuts(p=>Math.max(0,p-getCardGuts(card,slotIdx)));'));
+  has('if(isTacticsMode(runMode)){ const payer=tacticsCardPayer(slotIdx,card,cardCost); if(payer!==null) tacticsPayGuts(payer,cardCost); }'));
 check('ガッツの回復は1か所(gainGuts)へまとめる',
   has('const gainGuts = (amount) => {')
-    && (source.match(/gainGuts\(/g) || []).length >= 11,
-  `gainGuts を呼ぶ場所 ${(source.match(/gainGuts\(/g) || []).length}か所`);
+    && (source.match(/gainGuts(At)?\(/g) || []).length >= 11,
+  `gainGuts / gainGutsAt を呼ぶ場所 ${(source.match(/gainGuts(At)?\(/g) || []).length}か所`);
+// カードで増えるガッツは「使った子」へ入る(段階7)
+check('カードで増えるガッツは使った子へ', has('const gainGutsAt = (slotIdx, amount) => {')
+  && (source.match(/gainGutsAt\(slotIdx,/g) || []).length === 3,
+  `gainGutsAt を使う場所 ${(source.match(/gainGutsAt\(slotIdx,/g) || []).length}か所`);
 // AUTO。倒れた子を空スロットとして渡し、ガッツは1体ずつ見る
 check('オートは倒れた子を選ばない',
   has('? slots.map((mon,idx)=>(canTacticsSlotAct(tacticsUnitsRef.current,idx)?mon:null))'));
@@ -354,19 +401,39 @@ check('ターンの途中でも新しい上限を読めるようにする', has(
 check('敵の攻撃は当たった子だけを減らす',
   has('const targets = tacticsIntentTargets(intent, tacticsUnitsRef.current, actingDist);')
     && has('return commitTacticsUnits(damageTacticsTargets(tacticsUnitsRef.current, targets, damage));'));
-check('ふだんの被弾もガード貫通も盤面へ通す',
-  has('const struck=tacticsDamage(incomingDmg,intent,actingEnemyDist);')
-    && has('const pierced=tacticsDamage(fd,intent,actingEnemyDist);'));
+// --- ⑫ ガードは使った子自身を守る(段階7) ---
+// ★誰かが構えたガードが全員を守ってしまうと、狙いを読む意味が消える
+check('新モードの被弾は専用の経路を通る', has('} else if (isTacticsMode(runMode)) {')
+  && has('const targets=tacticsIntentTargets(intent,tacticsUnitsRef.current,actingEnemyDist);'));
+check('ガードは構えた子のぶんだけで受ける',
+  has('const own=slotGuards[slotIdx]||{flat:0,mult:0};')
+    && has('const base=(own.flat>0||own.mult>0)?Math.floor(own.flat+effectiveDef*own.mult):0;'));
+check('誰が構えたかをスロットごとに集める',
+  has('const addGuardForSlot=(idx,flat,mult)=>{')
+    && (source.match(/addGuardForSlot\(slotIdx,/g) || []).length === 3,
+  `構えを数える場所 ${(source.match(/addGuardForSlot\(slotIdx,/g) || []).length}か所`);
+check('貫通撃はガードが効かず、連撃は手数ぶん効く',
+  has("const slotGuard=intent.variant==='pierce'?0:(intent.variant==='rush'?base*rushHits:base);"));
+check('ガードの余りはその子のライフとガッツになる',
+  has('units=recoverTacticsGutsAt(healTacticsAt(units,slotIdx,diff),slotIdx,gain);'));
 // ★薙ぎ払いの間合いに誰も立っていないターンがある。減っていないのに数字を出すと読めない
 check('誰にも当たらなかったターンはダメージの数字を出さない',
-  (source.match(/addPopup\('当たらなかった！'/g) || []).length === 2
-    && has("const dealt=struck!==null?Math.max(0,currentHp-struck):incomingDmg;"));
-check('回復(吸収・ガード余剰・自動再生・カード)も盤面へ通す',
-  ['const absorbed=tacticsHeal(hpGain);', 'const guarded=tacticsHeal(diff);',
-   'if(tacticsHeal(autoHealVal)===null)', 'const cardHealed=tacticsHeal(cardHeal);',
-   'const drained=tacticsHeal(hRec);'].every(has));
+  has("addPopup('当たらなかった！','hero','text-cyan-300 font-black text-xl drop-shadow-md');")
+    && has('if(!targets.length){'));
+check('回復(吸収・自動再生・緊急)は立っている子へ配る',
+  ['const absorbed=tacticsHeal(hpGain);', 'if(tacticsHeal(autoHealVal)===null)',
+   'const emergencyHp=tacticsHeal(recoverHp);'].every(has));
+// 回復カードは使う子へ。倒れた子へ向けたときは起こす(段階7)
+check('回復カードは使う子に効く',
+  has('hpBeforeEnemyAttack=commitTacticsUnits(healTacticsAt(board,slotIdx,cardHeal));'));
+check('倒れた子へ回復カードを向けると起こす',
+  has('hpBeforeEnemyAttack=commitTacticsUnits(reviveTacticsAt(board,slotIdx));')
+    && has('が起き上がった！'));
+check('ドレインは殴った子が吸う',
+  has('if(isTacticsMode(runMode)) hpBeforeEnemyAttack=commitTacticsUnits(healTacticsAt(tacticsUnitsRef.current,slotIdx,hRec));'));
 check('20ターン経過は全員を倒す', has('if(nextTurn>20){ if(tacticsWipe()===null) setHp(0); }'));
-check('自傷では誰も倒れない道を通す', has('selfDamageTacticsBoard(tacticsUnitsRef.current,selfDmgAmt)'));
+check('自傷は使った子だけが受け、誰も倒れない',
+  has('selfDamageTacticsAt(tacticsUnitsRef.current,slotIdx,selfDmgAmt)'));
 // ★合流のライフ合算をやめないと、合流した子のぶんが盤面とパーティで二重に入る
 check('供モン合流でライフもガッツも合算しない',
   has('const tacticsJoin=isTacticsMode(runMode);')
