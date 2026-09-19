@@ -861,6 +861,19 @@ function MonsterHeroGame() {
   // (新モード以外は盤面を持つだけでライフに触らないので null を返す)
   const commitTacticsUnits = (nextUnits, mode = runMode) => {
     const next = Array.isArray(nextUnits) ? nextUnits : [null, null, null, null];
+    const before = tacticsUnitsRef.current || [];
+    // ★「ライフが全快になってはじめて復活」なので、どの回復から戻ったかは問わない。
+    //   回復カードでも緊急回復でも自動再生でも、立ち上がった瞬間をここ1か所で拾う
+    if (isTacticsMode(mode)) {
+      next.forEach((unit, index) => {
+        const was = before[index];
+        if (!unit || !was) return;
+        if (normalizeTacticsUnit(was).downed && !normalizeTacticsUnit(unit).downed) {
+          addPopup(`${slots[index]?.masuName || slots[index]?.name || '仲間'}が起き上がった！`,
+            'hero', 'text-emerald-300 font-black text-2xl drop-shadow-md');
+        }
+      });
+    }
     tacticsUnitsRef.current = next;
     setTacticsUnits(next);
     if (!isTacticsMode(mode)) return null;
@@ -956,9 +969,6 @@ function MonsterHeroGame() {
   // ★新モード以外では null を返す。画面側は null のときだけ今までどおりの判定を使う
   const tacticsCanAssign = (card, cardIndex, slotIdx) => (isTacticsMode(runMode)
     ? tacticsUsableSlots(card, cardIndex).includes(slotIdx) : null);
-  // WAVEクリアなどの全回復。★倒れた子はここでは戻らない
-  const tacticsFullHeal = () => isTacticsMode(runMode)
-    ? commitTacticsUnits(fullHealTacticsBoard(tacticsUnitsRef.current)) : null;
   // 20ターン経過。全員を倒して、敗北の見え方をそろえる
   const tacticsWipe = () => isTacticsMode(runMode)
     ? commitTacticsUnits(wipeTacticsBoard(tacticsUnitsRef.current)) : null;
@@ -9176,16 +9186,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       const cardHeal=totalHeal-totalHealBeforeCard;
       if(cardHeal>0){
         if(isTacticsMode(runMode)){
-          // 回復カードは「使う子」に効く。倒れた子へ向けたときは、起こす(設計 §4.3)
+          // 回復カードは「使う子」に効く。倒れた子へ向けても回復として貯まり、
+          // ライフが全快になったところで立ち上がる(2026-09-19 ユーザーが決めた形)
           const board=tacticsUnitsRef.current;
-          const downedTarget=board[slotIdx]&&normalizeTacticsUnit(board[slotIdx]).downed;
-          if(downedTarget){
-            addPopup(`${slots[slotIdx]?.masuName||slots[slotIdx]?.name||'仲間'}が起き上がった！`,'hero','text-emerald-300 font-black text-2xl drop-shadow-md');
-            hpBeforeEnemyAttack=commitTacticsUnits(reviveTacticsAt(board,slotIdx));
-          } else {
-            addPopup(`💚 回復 +${cardHeal}`,'life','text-emerald-400 text-4xl font-black drop-shadow-lg');
-            hpBeforeEnemyAttack=commitTacticsUnits(healTacticsAt(board,slotIdx,cardHeal));
-          }
+          // 「起き上がった！」は commitTacticsUnits が1か所で出す
+          addPopup(`💚 回復 +${cardHeal}`,'life','text-emerald-400 text-4xl font-black drop-shadow-lg');
+          hpBeforeEnemyAttack=commitTacticsUnits(healTacticsAt(board,slotIdx,cardHeal));
         } else {
           addPopup(`💚 回復 +${cardHeal}`,'life','text-emerald-400 text-4xl font-black drop-shadow-lg');
           hpBeforeEnemyAttack=Math.min(liveEffectiveMaxHp(),hpBeforeEnemyAttack+cardHeal); setHp(hpBeforeEnemyAttack);
@@ -10476,7 +10482,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const revivePick=tacticsMode&&picks&&!Array.isArray(picks)&&Number.isInteger(picks.revive)?picks.revive:null;
     let nMaxHp=maxHp, nAtk=atk, nDef=def, nMaxGuts=maxGuts;
     if(revivePick!==null){
-      commitTacticsUnits(reviveTacticsAt(tacticsUnitsRef.current,revivePick,TACTICS_TRAINING_REVIVE_RATE));
+      commitTacticsUnits(reviveTacticsAt(tacticsUnitsRef.current,revivePick));
       nDef=tacticsPartyDef(tacticsUnitsRef.current);
     } else if(tacticsMode){
       // 1体ずつのトレーニング。選んだぶんをその子だけへ入れる

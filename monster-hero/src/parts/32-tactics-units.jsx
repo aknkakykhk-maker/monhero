@@ -14,10 +14,11 @@
 // ★壊れた値(null・NaN・負数)が来ても落とさず、意味のある既定値へ倒す。
 //   ラン中の値はセーブデータから復元されることもあるため。
 
-// 倒れた子を戻したときのライフ。バトル中の回復カードと、WAVE後のトレーニングで払うものが違う
-// (docs の §4.3)。割合はここが正本で、画面や説明文へ数字を書き写さない
-const TACTICS_REVIVE_HP_RATE = 0.5;      // 回復カードで戻したとき
-const TACTICS_TRAINING_REVIVE_RATE = 1.0; // WAVE後のトレーニングで戻したとき(そのWAVEの強化を全部あきらめる)
+// 倒れた子の戻り方(2026-09-19 ユーザーが決めた形)。
+// ★「ライフが全快になってはじめて復活」。倒れたあともライフは回復で貯まっていき、
+//   上限まで届いたところで立ち上がる。回復カードでも緊急回復でも自動再生でも貯まる。
+// ★つまり downed は「ライフが0かどうか」では決まらない。0から上限未満のあいだは
+//   ライフを持ったまま倒れている。ここが以前の作り(0なら倒れている)との違い。
 // 勇者モンがバトルを始めるときのガッツ。いまの実装と同じく最大の半分から始める
 const TACTICS_START_GUTS_RATE = 0.5;
 
@@ -67,13 +68,14 @@ const normalizeTacticsUnit = (unit) => {
     hp,
     maxHp,
     baseMaxHp,
+    // 「ライフ0なのに立っている」は作らない。上限まで戻ったら必ず立ち上がる。
+    // そのあいだ(0 < hp < maxHp)は、倒れたままライフが貯まっている状態
+    downed: hp <= 0 ? true : (hp >= maxHp ? false : !!unit.downed),
     atk: Math.max(0, tacticsSafeInt(unit.atk, 0)),
     def: Math.max(0, tacticsSafeInt(unit.def, 0)),
     guts: tacticsClamp(tacticsSafeInt(unit.guts, 0), 0, maxGuts),
     maxGuts,
     baseMaxGuts,
-    // 「ライフ0なのに立っている」「ライフがあるのに倒れている」を作らない
-    downed: hp <= 0,
   };
 };
 
@@ -85,19 +87,19 @@ const applyTacticsDamage = (unit, damage) => {
   return { ...target, hp, downed: hp <= 0 };
 };
 
-// 回復。倒れている子は healTacticsUnit では戻らない(戻すのは reviveTacticsUnit)
+// 回復。★倒れている子にも入る。上限まで届いたところで立ち上がる(normalizeTacticsUnit が見る)
 const healTacticsUnit = (unit, amount) => {
   const target = normalizeTacticsUnit(unit);
-  if (!target || target.downed) return target;
-  return { ...target, hp: Math.min(target.maxHp, target.hp + Math.max(0, tacticsSafeInt(amount, 0))) };
+  if (!target) return target;
+  return normalizeTacticsUnit({ ...target, hp: Math.min(target.maxHp, target.hp + Math.max(0, tacticsSafeInt(amount, 0))) });
 };
 
-// 倒れた子を戻す。戻ったときのライフは払うものによって違う(§4.3)
-const reviveTacticsUnit = (unit, rate = TACTICS_REVIVE_HP_RATE) => {
+// 倒れた子を一気に立たせる(WAVE後のトレーニングで「起こす」を選んだとき)。
+// ★やっていることは「上限まで回復する」。全快になったら立ち上がる、という決まりは1つだけ
+const reviveTacticsUnit = (unit) => {
   const target = normalizeTacticsUnit(unit);
-  if (!target || !target.downed) return target;
-  const safeRate = Number.isFinite(Number(rate)) ? tacticsClamp(Number(rate), 0, 1) : TACTICS_REVIVE_HP_RATE;
-  return { ...target, hp: Math.max(1, Math.floor(target.maxHp * safeRate)), downed: false };
+  if (!target) return target;
+  return normalizeTacticsUnit({ ...target, hp: target.maxHp });
 };
 
 // ガッツ。足りなければ払えない(payable:false を返し、値は変えない)
@@ -131,8 +133,10 @@ const tacticsDownedSlots = (units) => (Array.isArray(units) ? units : [])
 // そのまま使える。
 // ★合計と盤面が食い違うと即座に壊れる(「合計は残っているのに全員倒れている」)。
 //   書き換えの入口は 60-app.jsx の commitTacticsUnits ひとつだけにしてある。
-const tacticsTotalHp = (units) => (Array.isArray(units) ? units : [])
-  .reduce((sum, unit) => sum + (unit ? normalizeTacticsUnit(unit).hp : 0), 0);
+// ★合計へ数えるのは「立っている子」だけ。倒れた子のライフは復活までの貯めなので、
+//   ここへ入れると「全員倒れているのに合計が残っている」=敗北にならない、が起きる
+const tacticsTotalHp = (units) => tacticsAliveSlots(units)
+  .reduce((sum, index) => sum + normalizeTacticsUnit(units[index]).hp, 0);
 const tacticsTotalMaxHp = (units) => (Array.isArray(units) ? units : [])
   .reduce((sum, unit) => sum + (unit ? normalizeTacticsUnit(unit).maxHp : 0), 0);
 const tacticsTotalGuts = (units) => (Array.isArray(units) ? units : [])
@@ -173,14 +177,15 @@ const damageTacticsTargets = (units, targetSlots, damage) => {
     .map((unit, index) => (unit && hit.has(index) ? applyTacticsDamage(unit, damage) : unit));
 };
 
-// 回復を盤面へ配る。★倒れた子には配らない(戻すのは回復カードかトレーニング)。
-// 足りない量に比例して配り、端数は足りない量の大きい子から埋める。
+// 回復を盤面へ配る。足りない量に比例して配り、端数は足りない量の大きい子から埋める。
 // 均等割りにすると、瀕死の子が置き去りのまま満タンの子へ回復が消える
 const healTacticsBoard = (units, amount) => {
   const list = (Array.isArray(units) ? units : []).slice();
   const give = Math.max(0, tacticsSafeInt(amount, 0));
   if (give <= 0) return list;
-  const missing = tacticsAliveSlots(list)
+  // ★倒れた子にも配る。自動再生・緊急回復・吸収も「復活までの貯め」に乗る
+  //   (2026-09-19 ユーザーが決めた形)。足りない量が多いぶん、倒れた子へ多く入る
+  const missing = tacticsFilledSlots(list)
     .map(index => {
       const unit = normalizeTacticsUnit(list[index]);
       return { index, need: Math.max(0, unit.maxHp - unit.hp) };
@@ -291,9 +296,10 @@ const selfDamageTacticsBoard = (units, damage) => {
 //   盤面全体へ配る healTacticsBoard とは使い分ける
 //   (自動再生・吸収のように「パーティ全体に起きること」だけが配るほう)。
 
+// ★倒れた子へも入る(復活までの貯めになる)。立っていることは条件にしない
 const healTacticsAt = (units, slotIndex, amount) => {
   const list = (Array.isArray(units) ? units : []).slice();
-  if (!canTacticsSlotAct(list, slotIndex)) return list;
+  if (!list[slotIndex]) return list;
   list[slotIndex] = healTacticsUnit(list[slotIndex], amount);
   return list;
 };
@@ -313,12 +319,11 @@ const selfDamageTacticsAt = (units, slotIndex, amount) => {
   list[slotIndex] = applyTacticsDamage(list[slotIndex], hurt);
   return list;
 };
-// 倒れた子を戻す(回復カード)。立っていれば何もしない
-const reviveTacticsAt = (units, slotIndex, rate = TACTICS_REVIVE_HP_RATE) => {
+// 倒れた子を一気に立たせる(トレーニングの「起こす」)。中身は「上限まで回復する」
+const reviveTacticsAt = (units, slotIndex) => {
   const list = (Array.isArray(units) ? units : []).slice();
-  const unit = list[slotIndex] ? normalizeTacticsUnit(list[slotIndex]) : null;
-  if (!unit || !unit.downed) return list;
-  list[slotIndex] = reviveTacticsUnit(unit, rate);
+  if (!list[slotIndex]) return list;
+  list[slotIndex] = reviveTacticsUnit(list[slotIndex]);
   return list;
 };
 // 倒れた子へ回復カードを向けたとき、代わりに払う子。いちばんガッツが多い立っている子。
@@ -370,13 +375,6 @@ const tacticsPartyStat = (units, key) => {
 };
 const tacticsPartyAtk = (units) => tacticsPartyStat(units, 'atk');
 const tacticsPartyDef = (units) => tacticsPartyStat(units, 'def');
-
-// 立っている子を満タンへ(WAVEクリアの全回復)。★倒れた子はここでは戻らない
-const fullHealTacticsBoard = (units) => (Array.isArray(units) ? units : []).map(unit => {
-  if (!unit) return null;
-  const target = normalizeTacticsUnit(unit);
-  return target.downed ? target : { ...target, hp: target.maxHp };
-});
 
 // 20ターン経過など、一斉に倒れる場面。敗北の見え方をそろえる
 const wipeTacticsBoard = (units) => (Array.isArray(units) ? units : [])

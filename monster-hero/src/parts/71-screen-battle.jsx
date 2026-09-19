@@ -692,13 +692,15 @@ function BattleScreen({
                     return(<div data-tactics-unit={i} data-tactics-hp={`${tacticsUnit.hp}/${tacticsUnit.maxHp}`}
                       data-tactics-guts={`${tacticsUnit.guts}/${tacticsUnit.maxGuts}`}
                       data-tactics-downed={tacticsUnit.downed?'true':'false'}
-                      className="absolute bottom-0 left-0 right-0 z-[58] px-0.5 pb-0.5 pointer-events-none space-y-px">
+                      className="absolute bottom-0 left-0 right-0 z-[64] px-0.5 pb-0.5 pointer-events-none space-y-px">
+                      {/* 倒れているあいだ、この帯は「復活まであとどれだけか」になる。
+                          全快になったところで立ち上がるので、色を変えて別物だと分かるようにする */}
                       <div className="flex items-center gap-0.5">
-                        <span style={{fontSize:'7px'}} className="leading-none shrink-0 text-pink-300">❤</span>
+                        <span style={{fontSize:'7px'}} className={`leading-none shrink-0 ${tacticsUnit.downed?'text-emerald-300':'text-pink-300'}`}>{tacticsUnit.downed?'✚':'❤'}</span>
                         <div className="flex-1 h-[3px] rounded-full bg-black/75 overflow-hidden border border-white/10">
-                          <div className="h-full bg-gradient-to-r from-pink-600 to-rose-400" style={{width:`${hpPct}%`}}></div>
+                          <div className={`h-full ${tacticsUnit.downed?'bg-gradient-to-r from-emerald-600 to-teal-300':'bg-gradient-to-r from-pink-600 to-rose-400'}`} style={{width:`${hpPct}%`}}></div>
                         </div>
-                        <span style={{fontSize:'7px'}} className="leading-none shrink-0 font-black font-mono text-pink-100">{tacticsUnit.hp}</span>
+                        <span style={{fontSize:'7px'}} className={`leading-none shrink-0 font-black font-mono ${tacticsUnit.downed?'text-emerald-100':'text-pink-100'}`}>{tacticsUnit.hp}</span>
                       </div>
                       <div className="flex items-center gap-0.5">
                         <span style={{fontSize:'7px'}} className="leading-none shrink-0 text-amber-300">⚡</span>
@@ -710,11 +712,15 @@ function BattleScreen({
                     </div>);
                   })()}
                   {/* 倒れた子。カードを置けないことが一目で分かるように覆う */}
-                  {tacticsUnit&&tacticsUnit.downed&&(
-                    <div data-tactics-down-mark={i} className="absolute inset-0 z-[62] flex items-center justify-center rounded-xl bg-black/70 pointer-events-none">
+                  {tacticsUnit&&tacticsUnit.downed&&(()=>{
+                    const revivePct=tacticsUnit.maxHp>0?Math.floor((tacticsUnit.hp/tacticsUnit.maxHp)*100):0;
+                    return(<div data-tactics-down-mark={i} data-tactics-revive={`${revivePct}`}
+                      className="absolute inset-0 z-[62] flex flex-col items-center justify-center rounded-xl bg-black/70 pointer-events-none">
                       <span className="text-[11px] font-black tracking-[.2em] text-slate-200">ダウン</span>
-                    </div>
-                  )}
+                      {/* 「全快になったら復活」なので、あとどれだけかを出さないと回復を回す判断が立たない */}
+                      <span className="text-[9px] font-black text-emerald-300 leading-tight">復活まで {100-revivePct}%</span>
+                    </div>);
+                  })()}
                   {/* 剣士モッチーの二刀流の軌跡。エイキの桜と同じく攻撃中だけ重ねる */}
                   {isAnimating&&attackAnim.twinBlade&&<KenshiTwinSlash/>}
                   {/* エイキの桜。攻撃モーションが出ているあいだだけ重ねる(常時アニメーションにしない) */}
