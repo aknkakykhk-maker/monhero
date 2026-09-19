@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 055fa489bff4b2e1
+// source-sha256: b5e5e83c6ccccac8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: cddbba47b20b0f1a
+// generated-sha256: 6919727acf192763
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -161,7 +161,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-19 23:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-20 00:29"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -36695,6 +36695,7 @@ function BattleScreen({
   soulCoordinationCardBonus,
   suppressCardClickRef,
   tacticsCanAssign,
+  tacticsCardBlock,
   tacticsUnits,
   teachingFx,
   totalTurnCount,
@@ -38374,7 +38375,10 @@ function BattleScreen({
     const curGuts = assignedSlot != null ? getCardGuts(c, assignedSlot) : getCardGuts(c, null);
     const requiredGuts = assignedSlot != null ? curGuts : pendingCardGuts(c);
     const remainingGuts = guts - selectedCards.reduce((acc, idx) => acc + (idx === i ? 0 : selectedCardGuts(idx)), 0);
-    const isSelectable = isSel || remainingGuts >= requiredGuts && selectedCards.length < cardLimit;
+    // 新モードは合計のガッツでは決まらない。「その子が払えるか」をアプリ側へ聞く。
+    // null が返るモード(いままでの5つ)では、今までどおり合計で見る
+    const cardBlock = tacticsCardBlock ? tacticsCardBlock(c, i) : null;
+    const isSelectable = isSel || (cardBlock ? cardBlock.ok : remainingGuts >= requiredGuts && selectedCards.length < cardLimit);
     const isPending = pendingCard === i;
     const assignedMon = assignedSlot != null ? slots[assignedSlot] : null;
     const isDragging = dragState?.active && dragState?.cardIndex === i;
@@ -38384,8 +38388,13 @@ function BattleScreen({
     const tutorialTargeted = !!battleTutorialCardTarget && battleTutorialCardKind(c) === battleTutorialCardTarget;
     return /*#__PURE__*/React.createElement("div", {
       key: c.uid,
-      className: "flex-1 min-w-0 max-w-[20%] flex"
+      className: "relative flex-1 min-w-0 max-w-[20%] flex"
     }, /*#__PURE__*/React.createElement("button", {
+      "data-hand-card": i,
+      "data-card-cost": requiredGuts,
+      "data-card-type": c.type,
+      "data-card-usable": isSelectable ? 'true' : 'false',
+      "data-card-block": cardBlock && !cardBlock.ok ? cardBlock.kind : undefined,
       onPointerDown: e => {
         if (isBusy || autoBattleRef.current || !tutorialAllowed) return;
         const pt = e.touches ? e.touches[0] : e;
@@ -38449,7 +38458,10 @@ function BattleScreen({
       className: "text-[10px] font-black bg-black/40 text-white rounded py-1 flex items-center justify-center gap-0.5"
     }, /*#__PURE__*/React.createElement(Zap, {
       size: 9
-    }), curGuts))));
+    }), curGuts))), cardBlock && !cardBlock.ok && cardBlock.short && !isDragging && /*#__PURE__*/React.createElement("div", {
+      "data-tactics-card-block": cardBlock.short,
+      className: "pointer-events-none absolute inset-x-0.5 top-1 z-30 rounded-md border border-rose-200 bg-rose-600 px-0.5 py-0.5 text-center text-[8px] font-black leading-tight text-white shadow-[0_2px_8px_rgba(0,0,0,.85)]"
+    }, cardBlock.short));
   })))));
 }
 function UltimateDistanceBreakReveal({
@@ -51718,6 +51730,89 @@ function MonsterHeroGame() {
     });
     return usable;
   };
+  // 画面から「このカードはいま使えるか・使えないなら何が足りないか」を聞くための入口。
+  // ★新モード以外では null を返す。画面側は null のときだけ今までどおりの判定(合計のガッツ)を使う
+  // ★合計では決まらない。⚡242 持っていても 125 と 117 に分かれていたら ⚡128 のカードは誰も使えない。
+  //   合計で灰色にしていたころは、枠に合わせてはじめて使えないと分かり、理由も出なかった
+  const tacticsCardBlock = (card, cardIndex = null) => {
+    if (!isTacticsMode(runMode) || !card) return null;
+    if (cardIndex != null && selectedCards.includes(cardIndex)) return {
+      ok: true,
+      kind: null,
+      short: null,
+      why: null
+    };
+    if (tacticsUsableSlots(card, cardIndex).length > 0) {
+      // ★1ターンに選べる枚数の上限は、いままでの5モードと同じ見え方(灰色だけ)にする。
+      //   全部のカードへ赤い帯が出るとうるさいので、理由はカード詳細でだけ出す
+      return selectedCards.length >= cardLimit ? {
+        ok: false,
+        kind: 'limit',
+        short: null,
+        why: `1ターンに選べるカードは ${cardLimit} 枚まで`
+      } : {
+        ok: true,
+        kind: null,
+        short: null,
+        why: null
+      };
+    }
+    // ここから下は「使えない理由」を探すためだけに回す(使える子がいないときしか通らない)
+    const spent = {},
+      attacks = {};
+    Object.entries(cardAssignments).forEach(([key, slotIdx]) => {
+      const handIndex = Number(key);
+      if (handIndex === cardIndex) return;
+      const assigned = hand[handIndex];
+      spent[slotIdx] = (spent[slotIdx] || 0) + getCardGuts(assigned, slotIdx);
+      if (isAttackCard(assigned)) attacks[slotIdx] = (attacks[slotIdx] || 0) + 1;
+    });
+    const units = tacticsUnitsRef.current;
+    let owner = null,
+      alive = 0,
+      best = null;
+    slots.forEach((mon, slotIdx) => {
+      if (!mon) return;
+      if (card.type === 'unique' && card.ownerSlotIdx !== slotIdx) return;
+      owner = owner || mon;
+      if (!canTacticsSlotAct(units, slotIdx)) return;
+      alive++;
+      if (isAttackCard(card) && (attacks[slotIdx] || 0) >= slotMaxUses(mon, slotIdx)) return;
+      const unit = normalizeTacticsUnit(Array.isArray(units) ? units[slotIdx] : null);
+      const need = getCardGuts(card, slotIdx);
+      const left = Math.max(0, (unit ? unit.guts : 0) - (spent[slotIdx] || 0));
+      // 「あといくら足りないか」がいちばん小さい子を、理由の文に出す
+      if (!best || left - need > best.left - best.need) best = {
+        name: mon.masuName || mon.name,
+        left,
+        need
+      };
+    });
+    if (!owner) return {
+      ok: false,
+      kind: 'none',
+      short: '使えない',
+      why: 'この技を使える子が編成にいない'
+    };
+    if (alive === 0) return {
+      ok: false,
+      kind: 'down',
+      short: 'ダウン',
+      why: card.type === 'unique' ? `この技を使う ${owner.masuName || owner.name} が倒れている` : 'カードを使える子が全員倒れている'
+    };
+    if (best) return {
+      ok: false,
+      kind: 'guts',
+      short: 'ガッツ不足',
+      why: `どの子もガッツが足りない（いちばん近いのは ${best.name} で ⚡${best.left}、必要なのは ⚡${best.need}）`
+    };
+    return {
+      ok: false,
+      kind: 'uses',
+      short: '枚数上限',
+      why: 'このターン、攻撃カードを出せる子がもう残っていない'
+    };
+  };
   // カード選択(タップ/ドラッグ共通)。
   // showDetail=false はスワイプ(ドラッグ)で置いたとき。カード効果のパネルが出たままだと
   // 合計DMG・合計軽減の表示が隠れてしまうため、スワイプではパネルを出さない。
@@ -64921,6 +65016,7 @@ function MonsterHeroGame() {
       slots: slots,
       tacticsUnits: isTacticsMode(runMode) ? tacticsUnits : null,
       tacticsCanAssign: tacticsCanAssign,
+      tacticsCardBlock: tacticsCardBlock,
       soulBattleParty: soulBattleParty,
       soulCoordinationCardBonus: soulCoordinationCardBonus,
       suppressCardClickRef: suppressCardClickRef,
@@ -66914,7 +67010,15 @@ function MonsterHeroGame() {
       size: 7
     }), " ", getCardGuts(focusedCard), " Guts"))), /*#__PURE__*/React.createElement("div", {
       className: "text-[8px] text-slate-200 font-medium leading-relaxed bg-black/50 p-1.5 rounded-lg border border-white/5 space-y-1"
-    }, ['atk', 'range_atk', 'unique'].includes(focusedCard.type) && /*#__PURE__*/React.createElement("div", {
+    }, (() => {
+      const b = tacticsCardBlock(focusedCard, hand.findIndex(c => c && c.uid === focusedCard.uid));
+      return b && !b.ok ? /*#__PURE__*/React.createElement("div", {
+        "data-tactics-card-why": true,
+        className: "rounded-lg border border-rose-400/70 bg-rose-950/70 px-1.5 py-1 text-[9px] font-black leading-snug text-rose-100"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-rose-300"
+      }, "\u3044\u307E\u4F7F\u3048\u306A\u3044:"), " ", b.why) : null;
+    })(), ['atk', 'range_atk', 'unique'].includes(focusedCard.type) && /*#__PURE__*/React.createElement("div", {
       className: "flex justify-between items-center text-xs"
     }, /*#__PURE__*/React.createElement("span", null, "\u6280\u5A01\u529B:"), /*#__PURE__*/React.createElement("span", {
       className: "text-red-400 font-black"

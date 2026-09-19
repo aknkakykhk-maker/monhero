@@ -588,6 +588,36 @@ check('置けるかの判定も画面へ渡す', has('tacticsCanAssign={tacticsC
   check('置けるかの判定は新モードだけ差し替える',
     hasScreen('const tacticsAnswer=tacticsCanAssign?tacticsCanAssign(pendingCardObj,pendingIdx,i):null;')
       && hasScreen('if(tacticsAnswer===null||tacticsAnswer===undefined){'));
+
+  // --- ⑳ 手札の灰色も1体ずつのガッツで決める(2026-09-19 ユーザー指摘) ---
+  // ★合計で見ていたころは、⚡242(125と117)持っていれば ⚡128 のカードが灰色にならず、
+  //   枠に合わせてはじめて使えないと分かった。しかも理由が出なかった
+  check('「使えるか・なぜ使えないか」を返す入口がある',
+    has('const tacticsCardBlock = (card, cardIndex = null) => {')
+      && has("if(!isTacticsMode(runMode)||!card) return null;"));
+  check('使える子がいるかで決める(合計では決めない)',
+    has('if(tacticsUsableSlots(card,cardIndex).length>0){'));
+  check('理由はガッツ不足・ダウン・枚数の上限を見分ける',
+    has("kind:'guts', short:'ガッツ不足'") && has("kind:'down', short:'ダウン'")
+      && has("kind:'uses', short:'枚数上限'") && has("kind:'limit', short:null"));
+  check('いちばん近い子の数字を理由に出す',
+    has('if(!best||left-need>best.left-best.need) best={name:mon.masuName||mon.name,left,need};'));
+  check('画面へ渡している', has('tacticsCardBlock={tacticsCardBlock}'));
+  // ★null のときだけ今までどおりの合計での判定を使う
+  check('手札の灰色は新モードだけ差し替える',
+    hasScreen('const cardBlock=tacticsCardBlock?tacticsCardBlock(c,i):null;')
+      && hasScreen('const isSelectable=isSel||(cardBlock?cardBlock.ok:(remainingGuts>=requiredGuts&&selectedCards.length<cardLimit));'));
+  // ★理由の帯は grayscale の中へ置くと赤も灰色になる。ボタンの外(枠のdiv)へ出す
+  check('使えないカードには理由の帯を出す',
+    hasScreen('{cardBlock&&!cardBlock.ok&&cardBlock.short&&!isDragging&&(<div data-tactics-card-block={cardBlock.short}')
+      && hasScreen('return(<div key={c.uid} className="relative flex-1 min-w-0 max-w-[20%] flex">'));
+  // ★1ターンに選べる枚数の上限は、いままでの5モードと同じ見え方(灰色だけ)にする
+  check('枚数の上限では帯を出さない(理由はカード詳細で出す)',
+    hasScreen('data-card-block={cardBlock&&!cardBlock.ok?cardBlock.kind:undefined}'));
+  check('カード詳細には理由の全文を出す', has('data-tactics-card-why'));
+  check('手札に検査の手がかりがある',
+    hasScreen('data-hand-card={i}') && hasScreen('data-card-cost={requiredGuts}')
+      && hasScreen("data-card-usable={isSelectable?'true':'false'}"));
 }
 
 check('予告の吹き出しに狙いを出す',

@@ -8365,6 +8365,52 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     });
     return usable;
   };
+  // 画面から「このカードはいま使えるか・使えないなら何が足りないか」を聞くための入口。
+  // ★新モード以外では null を返す。画面側は null のときだけ今までどおりの判定(合計のガッツ)を使う
+  // ★合計では決まらない。⚡242 持っていても 125 と 117 に分かれていたら ⚡128 のカードは誰も使えない。
+  //   合計で灰色にしていたころは、枠に合わせてはじめて使えないと分かり、理由も出なかった
+  const tacticsCardBlock = (card, cardIndex = null) => {
+    if(!isTacticsMode(runMode)||!card) return null;
+    if(cardIndex!=null&&selectedCards.includes(cardIndex)) return { ok:true, kind:null, short:null, why:null };
+    if(tacticsUsableSlots(card,cardIndex).length>0){
+      // ★1ターンに選べる枚数の上限は、いままでの5モードと同じ見え方(灰色だけ)にする。
+      //   全部のカードへ赤い帯が出るとうるさいので、理由はカード詳細でだけ出す
+      return selectedCards.length>=cardLimit
+        ? { ok:false, kind:'limit', short:null, why:`1ターンに選べるカードは ${cardLimit} 枚まで` }
+        : { ok:true, kind:null, short:null, why:null };
+    }
+    // ここから下は「使えない理由」を探すためだけに回す(使える子がいないときしか通らない)
+    const spent={}, attacks={};
+    Object.entries(cardAssignments).forEach(([key,slotIdx])=>{
+      const handIndex=Number(key);
+      if(handIndex===cardIndex) return;
+      const assigned=hand[handIndex];
+      spent[slotIdx]=(spent[slotIdx]||0)+getCardGuts(assigned,slotIdx);
+      if(isAttackCard(assigned)) attacks[slotIdx]=(attacks[slotIdx]||0)+1;
+    });
+    const units=tacticsUnitsRef.current;
+    let owner=null, alive=0, best=null;
+    slots.forEach((mon,slotIdx)=>{
+      if(!mon) return;
+      if(card.type==='unique'&&card.ownerSlotIdx!==slotIdx) return;
+      owner=owner||mon;
+      if(!canTacticsSlotAct(units,slotIdx)) return;
+      alive++;
+      if(isAttackCard(card)&&(attacks[slotIdx]||0)>=slotMaxUses(mon,slotIdx)) return;
+      const unit=normalizeTacticsUnit(Array.isArray(units)?units[slotIdx]:null);
+      const need=getCardGuts(card,slotIdx);
+      const left=Math.max(0,(unit?unit.guts:0)-(spent[slotIdx]||0));
+      // 「あといくら足りないか」がいちばん小さい子を、理由の文に出す
+      if(!best||left-need>best.left-best.need) best={name:mon.masuName||mon.name,left,need};
+    });
+    if(!owner) return { ok:false, kind:'none', short:'使えない', why:'この技を使える子が編成にいない' };
+    if(alive===0) return { ok:false, kind:'down', short:'ダウン', why:card.type==='unique'
+      ? `この技を使う ${owner.masuName||owner.name} が倒れている`
+      : 'カードを使える子が全員倒れている' };
+    if(best) return { ok:false, kind:'guts', short:'ガッツ不足',
+      why:`どの子もガッツが足りない（いちばん近いのは ${best.name} で ⚡${best.left}、必要なのは ⚡${best.need}）` };
+    return { ok:false, kind:'uses', short:'枚数上限', why:'このターン、攻撃カードを出せる子がもう残っていない' };
+  };
   // カード選択(タップ/ドラッグ共通)。
   // showDetail=false はスワイプ(ドラッグ)で置いたとき。カード効果のパネルが出たままだと
   // 合計DMG・合計軽減の表示が隠れてしまうため、スワイプではパネルを出さない。
@@ -14853,7 +14899,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             setShowQuitConfirm={setShowQuitConfirm} setShowSoulBattleEffects={setShowSoulBattleEffects}
             setSkillPicker={setSkillPicker} setSlotSettle={setSlotSettle} slotMaxUses={slotMaxUses}
             slotSettle={slotSettle} slotSkill={slotSkill} slotUniqueChoice={slotUniqueChoice} slots={slots}
-            tacticsUnits={isTacticsMode(runMode)?tacticsUnits:null} tacticsCanAssign={tacticsCanAssign}
+            tacticsUnits={isTacticsMode(runMode)?tacticsUnits:null} tacticsCanAssign={tacticsCanAssign} tacticsCardBlock={tacticsCardBlock}
             soulBattleParty={soulBattleParty} soulCoordinationCardBonus={soulCoordinationCardBonus}
             suppressCardClickRef={suppressCardClickRef} teachingFx={teachingFx} totalTurnCount={totalTurnCount}
             turnCount={turnCount} ultimateDistanceBreakLevels={ultimateDistanceBreakLevels}
@@ -15971,6 +16017,10 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
         <div className="fixed left-1/2 -translate-x-1/2 bg-slate-900/98 border-2 border-indigo-400 p-2.5 rounded-2xl w-[90%] max-w-[260px] shadow-[0_0_40px_rgba(0,0,0,0.9)] backdrop-blur-md" style={{bottom:'calc(34% + 80px)',zIndex:110000}} onClick={()=>setFocusedCard(null)}>
           <div className="flex items-center gap-2.5 mb-1 border-b border-white/10 pb-1"><span className="text-xl bg-indigo-500/20 p-1 rounded-xl">{cardIconNode(focusedCard.icon,22,focusedCard.id)}</span><div className="text-left flex-1 overflow-hidden"><div className="text-[9px] font-black text-white uppercase truncate">{focusedCard.name||focusedCard.baseName}</div><div className="text-[7px] font-bold text-indigo-400 flex items-center gap-1"><Zap size={7}/> {getCardGuts(focusedCard)} Guts</div></div></div>
           <div className="text-[8px] text-slate-200 font-medium leading-relaxed bg-black/50 p-1.5 rounded-lg border border-white/5 space-y-1">
+            {/* 新モードは合計のガッツでは払えない。使えないときは、ここで理由をはっきり出す */}
+            {(()=>{const b=tacticsCardBlock(focusedCard,hand.findIndex(c=>c&&c.uid===focusedCard.uid)); return b&&!b.ok?(
+              <div data-tactics-card-why className="rounded-lg border border-rose-400/70 bg-rose-950/70 px-1.5 py-1 text-[9px] font-black leading-snug text-rose-100"><span className="text-rose-300">いま使えない:</span> {b.why}</div>
+            ):null;})()}
             {['atk','range_atk','unique'].includes(focusedCard.type)&&(<div className="flex justify-between items-center text-xs"><span>技威力:</span><span className="text-red-400 font-black">{focusedCard.type==='range_atk'?`${Math.floor(focusedCard.mult*100)} / ${Math.floor(focusedCard.mult*0.4*100)}`:Math.floor((focusedCard.type==='unique'?(focusedCard.baseMult+(focusedCard.evoLevel||0)*0.5+((focusedCard.monId==='Ark'||focusedCard.monId==='Iblis')?0.1*getPermaBuff('chuuniUniqueStack'):0)):(focusedCard.mult||focusedCard.baseMult||1.0))*100)}</span></div>)}
             {['atk','range_atk','unique'].includes(focusedCard.type)&&(<div className="flex justify-between items-center text-xs"><span>会心率:</span><span className="text-yellow-400 font-black">{Math.round(((focusedCard.crit||0.1)+getPermaBuff('critRatePct'))*100)}%{getPermaBuff('critRatePct')>0&&<span className="text-yellow-200 text-[8px]"> (+{Math.round(getPermaBuff('critRatePct')*100)})</span>} <span className="text-yellow-200/70 text-[8px]">×{(1.5+getPermaBuff('critDmgPct')).toFixed(2)}</span></span></div>)}
             {focusedCard.type==='guard'&&(()=>{
