@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b444fc5d94edbc28
+// source-sha256: 427b67a1e307c4e0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: db73b65f601203ea
+// generated-sha256: 9901d2a60e4539ec
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -161,7 +161,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-19 02:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-19 09:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -192,6 +192,16 @@ const BATTLE_MODE_QUICK = 'quick';
 // 種族チャレンジはデバッグのバトルモード入口だけに合流させる。
 // 通常プレイの公開配列には含めず、固定計画2/4では結果も保存しない。
 const BATTLE_MODE_SPECIES_CHALLENGE = 'speciesChallenge';
+// 敵が技を持ち、1ターン前の予告を読んで受け方を決めるモード。
+// 設計の正本: docs/spec/BATTLE_NEW_MODE_PLAN.md
+//
+// ★idは保存キー(mh_tactics_*)と全国ランキング(Tactics<難易度>)へ焼き付くので、公開後に変えない。
+//   画面に出す名前はまだ決まっていないため label は仮のまま置く
+//   (idと表示名は一致していなくてよい。プロ=pro のように揃っているのは結果であって決まりではない)。
+// ★BATTLE_MODES へは入れない。極限チャレンジ・種族チャレンジと同じく外に置き、
+//   モード選択の一覧で公開フラグ付きに合流させる
+//   (既存3モードの「同じ見出しを同じ順で並べる」検査と、公開配列の作り方を壊さないため)。
+const BATTLE_MODE_TACTICS = 'tactics';
 // 種族チャレンジを一般公開するかどうかの1つのスイッチ。
 // false のあいだは
 //   ・通常プレイのBATTLE MODEへ出さない(デバッグのバトルモード入口からだけ見える)
@@ -201,6 +211,14 @@ const BATTLE_MODE_SPECIES_CHALLENGE = 'speciesChallenge';
 // 2026年8月にユーザーの指示で公開した。実装側から勝手に false へ戻さない
 // (戻すと、すでに遊んだ人の全国ランキングだけが止まる)。
 const SPECIES_CHALLENGE_PUBLIC_RELEASE = true;
+// 新モードを一般公開するかどうかの1つのスイッチ。種族チャレンジとまったく同じ作り。
+// false のあいだは
+//   ・モード選択へ出さない(デバッグのバトルモード入口からだけ見える)
+//   ・クリアしても全国ランキングへ送らない
+// 画面に出す名前が決まり、敵の行動と供モン加入の調整が入ってから true にする。
+// 一度 true にしたあとは、実装側から勝手に false へ戻さない
+// (戻すと、すでに遊んだ人の全国ランキングだけが止まる)。
+const TACTICS_MODE_PUBLIC_RELEASE = false;
 // 解放条件。チャレンジモードで Master / Grand Master / Hell / Legend のどれかを1回以上
 // クリアしていること。判定には既存の mh_clears_<難易度> をそのまま読むので、新しい解放フラグは
 // 作らない(旧セーブのプレイヤーもログインした時点で解放済みとして扱われる)。
@@ -219,6 +237,19 @@ const SPECIES_CHALLENGE_MODE = Object.freeze({
   tagline: 'ひとつの種族だけで挑む、しばりプレイのモード',
   highlights: [['🧬', 'ひとつの種族だけでWAVE1〜10'], ['🔓', '種族ごとに難易度を解放していく'], ['🏅', '記録は種族ごとに別々に残る']],
   points: [['🧬', 'どんなモード', '挑む前に種族(モッチー種・ピクシー種など)をひとつ選び、その種族だけでWAVE1〜10を戦い抜くモードです。使えるモンスターが限られるぶん、その種族をどこまで育てているかがそのまま結果に出ます。'], ['⚔️', '編成', '勇者モン1体と供モン最大3体で挑みます。選べるのは、その種族の解放済みベースモンと所持マスモンだけです。ふだんの編成と同じで同じモンスターは勇者・供モンを通して1体まで(重複不可)ですが、同じ種族の別のモンスターなら一緒に連れていけます(モッチー種ならモッチーとミタラシなど)。そのため実際に選べる供モンの数は、その種族のモンスターの種類によって0〜3体で変わります。供モン0体のまま挑むこともできます。'], ['🤝', '供モンの加入', '事前に選んだ供モンは、最初から全員いるわけではありません。WAVE2・4・6をクリアしたとき、まだ加入していない供モンから1体を選んで加えます。誰をいつ加えるかは、その場で決められます。'], ['👹', '難しさ', '難易度は14段階です。Beginner〜Expertは最初から挑めます。Master以降は、同じ種族で1つ前の難易度をクリアすると順に解放されます。ある種族で進めても、ほかの種族の解放には影響しません。'], ['🔥', '上位の難易度', 'EXTREME以上では、極限チャレンジと同じ特殊ルールがそのまま適用されます。敵の強さや報酬の倍率も極限チャレンジと同じ設定です。'], ['💎', 'もらえるもの', '経験値・ダイヤは難易度の設定どおりです。加えて、種族と難易度の組み合わせごとに初回クリア報酬があります。'], ['🏅', '記録', '自己ベストスコア・最短クリアターン・クリア回数は、種族と難易度の組み合わせごとに別々に残ります。同じ難易度でも種族が違えば別の記録です。チャレンジモードの自己ベストや最高到達WAVEは書き換わりません。'], ['⭐', 'マスモン登録', '勇者モンにした子は、プレイが終わったあとマスモンとして登録できます。チャレンジモードと同じです。'], ['⏩', 'スキップチケット', '使えません。スコアを競うモードなので、戦わずに報酬だけ取れないようにしています。'], ['🔁', 'AUTO', 'AUTOでの自動戦闘は使えます。ただしクリア後にそのまま次の周へ入る「AUTO∞」は使えません。挑むたびに種族・難易度・編成を選び直すモードのためです。'], ['🎯', 'こんな人におすすめ', '特定の種族を集中して育てている人、いつもの編成とは違う制限つきの戦いを試したい人、種族ごとにやり込みたい人向けです。']]
+});
+// 新モードの表示情報。見出しの並びは既存3モード(BATTLE_MODES)とそろえてある。
+// ★label は仮。画面に出す名前が決まったらここだけ差し替える(idと保存キーは変えない)。
+// ★本文は公開時にそのまま出るプレイヤー向けの文にする。開発の進み具合はここへ書かない。
+const TACTICS_MODE = Object.freeze({
+  id: BATTLE_MODE_TACTICS,
+  label: '戦術モード',
+  short: '戦術',
+  emoji: '🎯',
+  color: '#fb923c',
+  tagline: '敵の技を読んで受け方を決める、対応力のモード',
+  highlights: [['🎯', '敵が技を使い分ける。予告を読んで受ける'], ['💎', '経験値・ダイヤは難易度どおり'], ['📊', 'このモード専用のスコアランキング']],
+  points: [['⚔️', '編成', 'ベースモンもマスモンも自由に連れていけます。勇者モン1体と供モンで挑みます。'], ['📈', 'WAVEのあいだの強化', 'チャレンジモードと同じで、WAVEをクリアするたびに強化フェーズがあります。敵がどんな技を使ってくるかを見てから、どこを伸ばすかを決められます。'], ['👹', '難しさ', '9段階の難易度から選べます。敵は通常攻撃と必殺技だけでなく、薙ぎ払い・連撃・貫通撃・咆哮など、それぞれ違う技を使ってきます。どの技が来るかは1ターン前に予告されるので、ガードで受けるか、間合いを変えるか、動きを止めるかをその場で選びます。'], ['💎', 'もらえる経験値とダイヤ', 'ブリーダー経験値・絆経験値・ダイヤは、どれも難易度の設定どおりの倍率です。モードによる上乗せはありません。'], ['🏆', 'スコアと記録', 'スコアはこのモード専用の全国ランキングに反映されます。自己ベストスコア・最高到達WAVE・クリア回数も専用の場所に残り、ほかのモードの記録は書き換わりません。'], ['🤝', '供モンの加入', '決まったWAVEで供モンが加わります。ただしこのモードでは、供モンが加わると そのぶん敵も強くなります。強く育てた子を連れていくほど敵も手ごわくなるので、少ない人数のまま進むという選び方もできます。'], ['⭐', 'マスモン登録', '勇者モンにした子は、プレイが終わったあとマスモンとして登録できます。'], ['⏩', 'スキップチケット', '使えません。スコアを競うモードなので、戦わずに報酬だけ取れないようにしています。'], ['🎯', 'こんな人におすすめ', '育成の数字だけでなく、その場の判断で勝ちたい人、いつもの押し切りが通じない戦いを試したい人向けです。']]
 });
 // プロモード: ベースモンだけで挑み、新しいマスモンを育てる価値を高めたモード。
 // バトルの中身はチャレンジと同じで、違うのは「編成がベースモン限定」「経験値の倍率」
@@ -277,6 +308,9 @@ const isProMode = mode => normalizeBattleMode(mode) === BATTLE_MODE_PRO;
 // 種族チャレンジは normalizeBattleMode の対象外(未知の値はチャレンジへ落ちる)なので、
 // idそのものを見る。BGMのようにモードごとに分かれる設定はここを通す
 const isSpeciesChallengeMode = mode => mode === BATTLE_MODE_SPECIES_CHALLENGE;
+// 新モードも normalizeBattleMode の対象外(未知の値はチャレンジへ落ちる)なので、idそのものを見る。
+// ここを normalizeBattleMode 経由にすると、記録の置き場がチャレンジと同じ mh_ になってしまう
+const isTacticsMode = mode => mode === BATTLE_MODE_TACTICS;
 // クイックの報酬方針は画面内だけで選び、保存データには増やさない。
 // 周回開始時の選択をrefへ固定するため、途中の画面遷移や他モードへ影響しない。
 const QUICK_REWARD_POLICY_GROWTH = 'growth';
@@ -317,7 +351,9 @@ const bondXpForWavesClearedInMode = (wavesCleared, mult, mode) => {
 // 自己ベスト・最高到達WAVE・クリア回数の保存キー。チャレンジは従来のキーをそのまま使い、
 // クイックは別のキーへ保存して、チャレンジの記録を上書きしないようにする
 // プロは mh_pro_* へ分ける。チャレンジ(mh_*)・クイック(mh_quick_*)のキーには一切触らない
-const modeKeyPrefix = mode => isQuickMode(mode) ? 'mh_quick_' : isProMode(mode) ? 'mh_pro_' : 'mh_';
+// 新モードは mh_tactics_* へ分ける。チャレンジ(mh_*)・クイック(mh_quick_*)・プロ(mh_pro_*)の
+// キーには一切触らない。id と同じく、公開後はこの接頭辞も変えない
+const modeKeyPrefix = mode => isTacticsMode(mode) ? 'mh_tactics_' : isQuickMode(mode) ? 'mh_quick_' : isProMode(mode) ? 'mh_pro_' : 'mh_';
 const bestScoreKey = (mode, diff) => `${modeKeyPrefix(mode)}hs_${diff}`;
 const bestWaveKey = (mode, diff) => `${modeKeyPrefix(mode)}highest_wave_${diff}`;
 const clearCountKey = (mode, diff) => `${modeKeyPrefix(mode)}clears_${diff}`;
@@ -463,6 +499,7 @@ const BATTLE_MODES = [{
 const battleModeInfo = mode => {
   if (typeof EXTREME_MODE !== 'undefined' && EXTREME_MODE && mode === EXTREME_MODE.id) return EXTREME_MODE;
   if (mode === BATTLE_MODE_SPECIES_CHALLENGE) return SPECIES_CHALLENGE_MODE;
+  if (mode === BATTLE_MODE_TACTICS) return TACTICS_MODE;
   return BATTLE_MODES.find(m => m.id === normalizeBattleMode(mode)) || BATTLE_MODES[0];
 };
 // 本番のバトル画面へ出すモード。いまは3モードすべてを公開している。
@@ -472,7 +509,8 @@ const PUBLIC_BATTLE_MODES = BATTLE_MODES;
 // スコアランキングがあるモードかどうか。クイックだけ対象外
 // 種族チャレンジは一般公開するまで全国ランキングへ送らない。
 // デバッグの実戦から外部ランキングを汚さないための入口はここ1か所にまとめてある
-const modeHasRanking = mode => !isQuickMode(mode) && (mode !== BATTLE_MODE_SPECIES_CHALLENGE || SPECIES_CHALLENGE_PUBLIC_RELEASE);
+// 新モードも、公開するまでは全国ランキングへ送らない(デバッグから遊べるため、ここで止める)
+const modeHasRanking = mode => !isQuickMode(mode) && (mode !== BATTLE_MODE_SPECIES_CHALLENGE || SPECIES_CHALLENGE_PUBLIC_RELEASE) && (!isTacticsMode(mode) || TACTICS_MODE_PUBLIC_RELEASE);
 // そのモードで遊んだときに増える、みゅあの仲良し度の行動キー。
 // 既存の challenge / quick の獲得量と1日上限は変えず、プロぶんの pro を足しただけ
 const modeBondAction = mode => isQuickMode(mode) ? 'quick' : isProMode(mode) ? 'pro' : 'challenge';
@@ -10894,6 +10932,7 @@ const RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE = true;
 const RHYTHM_EVENT_POINTS_PUBLIC_RELEASE = true;
 const RELEASE_FLAGS = {
   speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE,
+  tactics: TACTICS_MODE_PUBLIC_RELEASE,
   rhythmMode: RHYTHM_MODE_PUBLIC_RELEASE,
   quickRhythmLink: QUICK_RHYTHM_LINK_PUBLIC_RELEASE,
   rhythmCanvasNotes: RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE,
@@ -17605,7 +17644,11 @@ const PRO_RANKING_PREFIX = 'Pro';
 // 極限チャレンジも同じやり方。難易度の並びが通常と別なので、極限の段階IDへ接頭辞を付ける
 // (例: ExtremeEXTREME)。チャレンジ・プロの行は読みも書きもしない
 const EXTREME_RANKING_PREFIX = 'Extreme';
-const RANKING_DIFFICULTY_KEYS = Object.freeze([...Object.keys(DIFFICULTY_SETTINGS), ...Object.keys(DIFFICULTY_SETTINGS).map(key => `${PRO_RANKING_PREFIX}${key}`),
+// 新モード(id: tactics)も同じやり方。通常の9段階を使うので、難易度キーの先頭へ Tactics を付ける
+// (例: TacticsHard)。Pro / Extreme とは先頭が違うので取り違えは起きない。
+// チャレンジ・プロ・極限の行は読みも書きもしない
+const TACTICS_RANKING_PREFIX = 'Tactics';
+const RANKING_DIFFICULTY_KEYS = Object.freeze([...Object.keys(DIFFICULTY_SETTINGS), ...Object.keys(DIFFICULTY_SETTINGS).map(key => `${PRO_RANKING_PREFIX}${key}`), ...Object.keys(DIFFICULTY_SETTINGS).map(key => `${TACTICS_RANKING_PREFIX}${key}`),
 // GOD以降も同じ表(ALL_EXTREME_DIFFICULTIES)から作る。難易度を足すたびにここへ1行書き足すと
 // 書き忘れでランキングだけ落ちるので、正本を1つにしておく
 ...ALL_EXTREME_DIFFICULTIES.map(setting => `${EXTREME_RANKING_PREFIX}${setting.id}`)]);
@@ -17684,6 +17727,7 @@ const rankingDifficultyForMode = (mode, diff, speciesId = null) => {
   if (typeof EXTREME_MODE !== 'undefined' && EXTREME_MODE && mode === EXTREME_MODE.id) {
     return `${EXTREME_RANKING_PREFIX}${normalizeExtremeDifficulty(diff)}`;
   }
+  if (isTacticsMode(mode)) return `${TACTICS_RANKING_PREFIX}${normalizeBattleDifficulty(diff)}`;
   return isProMode(mode) ? `${PRO_RANKING_PREFIX}${normalizeBattleDifficulty(diff)}` : normalizeBattleDifficulty(diff);
 };
 // ランキングの難易度キーから、表示に使う素の難易度へ戻す
@@ -17692,6 +17736,7 @@ const rankingDifficultyBase = key => {
   const species = parseSpeciesChallengeRankingDifficulty(text);
   if (species) return species.difficultyId;
   if (text.startsWith(EXTREME_RANKING_PREFIX)) return text.slice(EXTREME_RANKING_PREFIX.length);
+  if (text.startsWith(TACTICS_RANKING_PREFIX)) return text.slice(TACTICS_RANKING_PREFIX.length);
   return text.startsWith(PRO_RANKING_PREFIX) ? text.slice(PRO_RANKING_PREFIX.length) : text;
 };
 const normalizeRankingDifficulty = value => {
@@ -45317,7 +45362,7 @@ function MonsterHeroGame() {
     if (gameState !== 'BATTLE_MODE_SELECT' || modeSelectTab !== 'mode') return;
     const id = requestAnimationFrame(() => {
       // 極限チャレンジは未解放でもカードは出す(押せるかどうかだけを切り替える)
-      const modes = [...BATTLE_MODES, EXTREME_MODE, ...(SPECIES_CHALLENGE_PUBLIC_RELEASE || debugBattle ? [SPECIES_CHALLENGE_MODE] : [])];
+      const modes = [...BATTLE_MODES, EXTREME_MODE, ...(SPECIES_CHALLENGE_PUBLIC_RELEASE || debugBattle ? [SPECIES_CHALLENGE_MODE] : []), ...(TACTICS_MODE_PUBLIC_RELEASE || debugBattle ? [TACTICS_MODE] : [])];
       const index = modes.length + Math.max(0, modes.findIndex(m => m.id === battleMode));
       centerCarouselChild(modeCarouselRef.current, index);
     });
@@ -57376,7 +57421,7 @@ function MonsterHeroGame() {
       className: `min-h-[38px] rounded-xl text-[10px] font-black border-2 active:scale-95 ${rankingKind === t.k ? 'bg-indigo-600 border-indigo-300' : 'bg-slate-900 border-white/10 text-slate-400'}`
     }, t.label))), rankingKind === 'score' && renderScoreRankingBody(BATTLE_MODE_CHALLENGE), rankingKind === 'breeder' && renderBreederRankingBody(), rankingKind === 'bond' && renderBondRankingBody()))), gameState === 'BATTLE_MODE_SELECT' && (() => {
       // 極限チャレンジは未解放でもカードは出す(押せるかどうかだけを切り替える)
-      const modes = [...BATTLE_MODES, EXTREME_MODE, ...(SPECIES_CHALLENGE_PUBLIC_RELEASE || debugBattle ? [SPECIES_CHALLENGE_MODE] : [])];
+      const modes = [...BATTLE_MODES, EXTREME_MODE, ...(SPECIES_CHALLENGE_PUBLIC_RELEASE || debugBattle ? [SPECIES_CHALLENGE_MODE] : []), ...(TACTICS_MODE_PUBLIC_RELEASE || debugBattle ? [TACTICS_MODE] : [])];
       const current = modes.find(m => m.id === battleMode) || modes[0];
       const selectedIndex = Math.max(0, modes.findIndex(m => m.id === current.id));
       // 端で止まらず「ぐるぐる回る」ようにするため、同じ並びを3回くり返して置く。
