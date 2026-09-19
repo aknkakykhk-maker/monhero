@@ -112,8 +112,8 @@ function BattleScreen({
         })()}
         {(()=>{const rule=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);return [NIGHTMARE_SETTING.id,CHAOS_SETTING.id].includes(rule)&&<div data-extreme-battle-status={rule} className="shrink-0 grid grid-cols-4 items-center gap-1 border-b border-fuchsia-500/30 bg-purple-950/80 px-2 py-1 text-[10px] font-black leading-none text-purple-100"><span className="text-amber-300">{rule}</span>{extremeSpecialRuleLines(rule).map(([label,value])=><span key={label} className="text-center whitespace-nowrap">{label} {value}</span>)}</div>;})()}
         {enemy&&(
-          <div className={`shrink-0 bg-slate-950/95 border-b border-red-900/40 px-4 py-1.5 z-[6400] shadow-[0_4px_12px_rgba(0,0,0,0.6)]${battleTutorialSpotClass('enemyBar')}`}>
-            <div className="flex justify-between items-center text-[10px] font-black italic uppercase tracking-tighter mb-1">
+          <div className={`shrink-0 bg-slate-950/95 border-b border-red-900/40 px-4 py-1 z-[6400] shadow-[0_4px_12px_rgba(0,0,0,0.6)]${battleTutorialSpotClass('enemyBar')}`}>
+            <div className="flex justify-between items-center text-[10px] font-black italic uppercase tracking-tighter mb-0.5">
               <span className={`flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5 leading-none ${wave===10?'text-red-500 animate-pulse':'text-slate-200'}`}><Skull size={11} className="shrink-0"/><span className="max-w-[34vw] truncate">{enemy.name}</span><span className={`shrink-0 px-1.5 py-0.5 rounded-full text-[10px] text-white font-bold border ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border}`}>{RANGE_LABELS[enemyDist]}</span>{iceLockTurns>0&&<span data-ice-lock-status className="shrink-0 px-1 py-0.5 rounded-full border border-cyan-400/60 bg-cyan-950/80 text-[10px] not-italic tracking-tighter whitespace-nowrap text-cyan-100">❄️絶氷 {iceLockPreparing?'準備':<>{iceLockTurns}T　⬇30%</>}</span>}</span>
               <span className="text-red-500 flex items-center gap-1 font-mono drop-shadow-[0_1px_3px_rgba(0,0,0,1)]">{Math.max(0,enemy.hp).toLocaleString()} / {enemy.maxHp.toLocaleString()}</span>
             </div>
@@ -122,7 +122,11 @@ function BattleScreen({
             </div>
           </div>
         )}
-        <main className="flex-1 relative flex flex-col items-center justify-between pt-3 pb-1 px-2 overflow-x-visible overflow-y-auto min-h-0">
+        {/* 敵の舞台。中身は敵の絵ひとつだけなので真ん中に置く。
+            強化の札が増えて舞台が絵より低くなったときは、safe が上そろえへ戻してくれる
+            (中央のままだと上へスクロールできず、頭の「!」や技名が読めなくなる)。
+            safe を知らないブラウザは宣言ごと捨てるので、クラスの justify-start が残る */}
+        <main className="flex-1 relative flex flex-col items-center justify-start pt-3 pb-1 px-2 overflow-x-visible overflow-y-auto min-h-0" style={{justifyContent:'safe center'}}>
           {/* 移動の吹き出し(画面の上から22%)と重なるため、左の「緊急」と同じ高さまで下げている */}
           <button onClick={()=>setShowEnemyInfo(true)} className="absolute right-2 top-24 flex flex-col items-center justify-center p-2 rounded-2xl border border-red-500 bg-red-950/30 active:scale-90 z-20 shadow-lg"><Search className="text-red-400 mb-0.5" size={14}/><span className="text-[10px] font-black text-white">解析</span></button>
           <button onClick={()=>setShowHeroInfo(true)} className={`absolute left-2 top-10 flex flex-col items-center justify-center p-2 rounded-2xl border border-indigo-500 bg-indigo-950/30 active:scale-90 z-20 shadow-lg${battleTutorialSpotClass('heroStatus')}`}><Crown className="text-indigo-400 mb-0.5" size={14}/><span className="text-[10px] font-black text-white">ステータス</span></button>
@@ -220,8 +224,8 @@ function BattleScreen({
               </div>
             )}
             {/* 行動予測ラベルはmain下部に移動 */}
-            <div className={`rounded-full transition-all duration-500 border-4 relative ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border} ${RANGE_STYLES[enemyDist].shadow} ${RANGE_STYLES[enemyDist].glow} shadow-[0_0_50px]`} style={enemyAttackAnim&&!ecoBattleView?{padding:'clamp(8px,2.2dvh,28px)',animation:(enemyAttackFx?.kind==='move'?(enemy?.id==='Moo'?'enemyMoveSlideMoo 1000ms ease-in-out forwards':'enemyMoveSlide 1000ms ease-in-out forwards'):enemyAttackFx?.kind==='charge'?'enemyChargeShake 1100ms ease-in-out forwards':'enemyAttackFly 450ms ease-in forwards'), ...(enemy?.id==='Moo'&&enemyAttackFx?.kind!=='move'?{transform:'translateY(3dvh)'}:{}),...(enemy?.id!=='Moo'&&enemyAttackFx?.kind!=='move'?{zIndex:9999}:{})}:{padding:'clamp(8px,2.2dvh,28px)',...(enemy?.id==='Moo'?{transform:'translateY(3dvh)'}:{})}}>
-              {enemy?.imgUrl?(enemy?.id==='Moo'?<div style={{width:'clamp(70px,12dvh,120px)',height:'clamp(80px,16dvh,150px)'}}/>:<span className={extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?'mh-nightmare-enemy-aura-shell':'mh-extreme-enemy-aura-shell'):''} style={{width:'clamp(70px,12dvh,120px)',height:'clamp(80px,16dvh,150px)'}}><img src={enemy.imgUrl} alt={enemy?.name} className={`relative z-[1] w-full h-full object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]${extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?' mh-nightmare-enemy-image':' mh-extreme-enemy-image'):''}`}/></span>):(<span className={extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?'mh-nightmare-enemy-aura-shell':'mh-extreme-enemy-aura-shell'):''}><div style={{fontSize:'clamp(58px,11dvh,104px)',lineHeight:1}} className={`relative z-[1] drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]${extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?' mh-nightmare-enemy-image':' mh-extreme-enemy-image'):''}`}>{enemy?.emoji}</div></span>)}
+            <div className={`rounded-full transition-all duration-500 border-4 relative ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border} ${RANGE_STYLES[enemyDist].shadow} ${RANGE_STYLES[enemyDist].glow} shadow-[0_0_50px]`} style={enemyAttackAnim&&!ecoBattleView?{padding:'clamp(10px,2.6dvh,30px)',animation:(enemyAttackFx?.kind==='move'?(enemy?.id==='Moo'?'enemyMoveSlideMoo 1000ms ease-in-out forwards':'enemyMoveSlide 1000ms ease-in-out forwards'):enemyAttackFx?.kind==='charge'?'enemyChargeShake 1100ms ease-in-out forwards':'enemyAttackFly 450ms ease-in forwards'), ...(enemy?.id==='Moo'&&enemyAttackFx?.kind!=='move'?{transform:'translateY(3dvh)'}:{}),...(enemy?.id!=='Moo'&&enemyAttackFx?.kind!=='move'?{zIndex:9999}:{})}:{padding:'clamp(10px,2.6dvh,30px)',...(enemy?.id==='Moo'?{transform:'translateY(3dvh)'}:{})}}>
+              {enemy?.imgUrl?(enemy?.id==='Moo'?<div style={{width:'clamp(80px,14dvh,132px)',height:'clamp(92px,18.5dvh,166px)'}}/>:<span className={extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?'mh-nightmare-enemy-aura-shell':'mh-extreme-enemy-aura-shell'):''} style={{width:'clamp(80px,14dvh,132px)',height:'clamp(92px,18.5dvh,166px)'}}><img src={enemy.imgUrl} alt={enemy?.name} className={`relative z-[1] w-full h-full object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]${extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?' mh-nightmare-enemy-image':' mh-extreme-enemy-image'):''}`}/></span>):(<span className={extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?'mh-nightmare-enemy-aura-shell':'mh-extreme-enemy-aura-shell'):''}><div style={{fontSize:'clamp(66px,12.5dvh,116px)',lineHeight:1}} className={`relative z-[1] drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]${extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?' mh-nightmare-enemy-image':' mh-extreme-enemy-image'):''}`}>{enemy?.emoji}</div></span>)}
               {/* ラスボス・ムー: 丸枠内は台座オーラのみ（本体は枠外に巨大表示） */}
               {!ecoBattleView&&enemy?.id==='Moo'&&(
                 <div className="absolute inset-0 pointer-events-none flex items-center justify-center overflow-visible" style={{zIndex:1}}>
@@ -345,9 +349,6 @@ function BattleScreen({
     );
   })()}
           </div>
-          <div className="w-full max-w-[180px] mt-2 mb-1 shrink-0 relative z-[40]">
-            <div className="h-2"></div>
-          </div>
           {/* 技詳細パネルはmain外(画面直下)に移動して、ムー画像と同階層でz-index勝負させる */}
         </main>
         {/* 敵が次に何をしてくるかの札(2026-09-19・ユーザー指摘「敵の行動予測が見えない」)。
@@ -421,9 +422,9 @@ function BattleScreen({
             {getNextTurnBuff('gutsCostMult',1.0)>1&&<div className="text-[10px] font-black text-amber-400 bg-amber-950/60 px-2 py-1 rounded-full border border-amber-500/50 animate-pulse uppercase flex items-center gap-1"><Zap size={8}/> 次T消費G+{Math.round((getNextTurnBuff('gutsCostMult',1.0)-1)*100)}%</div>}
             {getTurnBuff('gutsCostMult',1.0)>1&&<div className="text-[10px] font-black text-amber-300 bg-amber-900/80 px-2 py-1 rounded-full border border-amber-400 animate-bounce uppercase flex items-center gap-1"><Zap size={8}/> 消費G+{Math.round((getTurnBuff('gutsCostMult',1.0)-1)*100)}%</div>}
           </div>
-        <div className="shrink-0 py-2 px-2 bg-slate-950 border-y border-white/5 flex flex-col items-center justify-center gap-1 z-10 relative">
+        <div className="shrink-0 py-1.5 px-2 bg-slate-950 border-y border-white/5 flex flex-col items-center justify-center gap-1 z-10 relative">
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none gap-1" style={{zIndex:200}}>{popups.filter(p=>p.side==='hero').map((p)=>(<div key={p.id} data-lite-damage={liteBattleView?'true':undefined} className={`${p.color} font-black leading-tight px-2 py-0.5 rounded-lg ${liteBattleView?'border border-white/20 text-base':'drop-shadow-[0_2px_8px_rgba(0,0,0,1)]'}`} style={{backgroundColor:liteBattleView?'rgba(2,6,23,0.95)':'rgba(2,6,23,0.55)'}}>{p.text}</div>))}</div>
-          <div className="w-full space-y-1 px-2 py-1 bg-black/40 rounded-xl border border-white/5">
+          <div className="w-full space-y-0.5 px-2 py-0.5 bg-black/40 rounded-xl border border-white/5">
             <div className="flex items-center gap-2 relative"><Heart className="text-pink-500 shrink-0" size={12}/><div className="flex-1"><div className="flex justify-between text-[10px] font-bold text-pink-400 mb-0.5 uppercase tracking-widest"><span>Ally Life</span><span className="font-mono">{hp.toLocaleString()} / {effectiveMaxHp.toLocaleString()}</span></div><div className="h-1.5 bg-slate-900 rounded-full overflow-hidden border border-white/5 shadow-inner"><div className="h-full bg-gradient-to-r from-pink-700 to-rose-400 transition-all duration-1000" style={{width:`${(hp/effectiveMaxHp)*100}%`,backgroundImage:'linear-gradient(to right, #be185d, #fb7185)'}}></div></div></div><div className="absolute left-1/2 -translate-x-1/2 -top-2 flex flex-col items-center gap-0.5 pointer-events-none" style={{zIndex:210}}>{popups.filter(p=>p.side==='life').map((p)=>(<div key={p.id} className={`${p.color} text-base font-black drop-shadow-[0_2px_8px_rgba(0,0,0,1)] whitespace-nowrap px-2 py-0.5 rounded-lg animate-bounce`} style={{backgroundColor:'rgba(2,6,23,0.8)'}}>{p.text}</div>))}</div></div>
             <div className="flex items-center gap-2 relative"><Zap className="text-amber-500 shrink-0" size={10}/><div className="flex-1"><div className="flex justify-between text-[10px] font-bold text-amber-400 mb-0.5 uppercase tracking-widest"><span>Ally Guts</span><span className="font-mono">{Math.floor(guts).toLocaleString()} / {effectiveMaxGuts.toLocaleString()}</span></div><div className="h-1.5 bg-slate-900 rounded-full overflow-hidden border border-white/5 shadow-inner"><div className="h-full bg-gradient-to-r from-amber-600 to-yellow-300 transition-all duration-500" style={{width:`${(guts/effectiveMaxGuts)*100}%`,backgroundImage:'linear-gradient(to right, #d97706, #fde047)'}}></div></div></div><div className="absolute left-1/2 -translate-x-1/2 -top-2 flex flex-col items-center gap-0.5 pointer-events-none" style={{zIndex:210}}>{popups.filter(p=>p.side==='guts').map((p)=>(<div key={p.id} className={`${p.color} text-base font-black drop-shadow-[0_2px_8px_rgba(0,0,0,1)] whitespace-nowrap px-2 py-0.5 rounded-lg animate-bounce`} style={{backgroundColor:'rgba(2,6,23,0.8)'}}>{p.text}</div>))}</div></div>
           </div>
@@ -518,7 +519,7 @@ function BattleScreen({
               </div>
             );
           })()}
-          <div className={`grid grid-cols-4 gap-2 w-full relative shrink-0${battleTutorialSpotClass('battleSlots')}`} style={{height:'100px'}}>
+          <div className={`grid grid-cols-4 gap-2 w-full relative shrink-0${battleTutorialSpotClass('battleSlots')}`} style={{height:'clamp(96px,13.5dvh,118px)'}}>
             {slots.map((s,i)=>{
               // Count how many cards already assigned to this slot
               const assignedCount=Object.values(cardAssignments).filter(v=>v===i).length;
@@ -686,7 +687,7 @@ function BattleScreen({
             <button type="button" onClick={dismissQuickRhythmIntro} aria-label="この案内を閉じる" className="min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black">×</button>
           </div>
         </div>}
-        <div className="h-[24%] shrink-0 bg-slate-900/95 p-1 flex flex-col relative border-t border-white/10">
+        <div className="shrink-0 bg-slate-900/95 p-1 flex flex-col relative border-t border-white/10" style={{height:'clamp(162px,23dvh,184px)'}}>
           <div className="text-[8px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-1 flex justify-between px-2 items-center gap-1">
             {/* 勇者モンの特性で枚数が増えているときは、その分を王冠付きで出す。
                 「勇者モンに選んだときだけ効く特性」が今効いていることを確かめられるようにする */}

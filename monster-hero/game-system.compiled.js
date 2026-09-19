@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 427b67a1e307c4e0
+// source-sha256: 0c9ed5235caff4e7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9901d2a60e4539ec
+// generated-sha256: cb3a80ef5f3b5699
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -161,7 +161,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-19 09:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-19 09:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -36135,9 +36135,9 @@ function BattleScreen({
       className: "text-center whitespace-nowrap"
     }, label, " ", value)));
   })(), enemy && /*#__PURE__*/React.createElement("div", {
-    className: `shrink-0 bg-slate-950/95 border-b border-red-900/40 px-4 py-1.5 z-[6400] shadow-[0_4px_12px_rgba(0,0,0,0.6)]${battleTutorialSpotClass('enemyBar')}`
+    className: `shrink-0 bg-slate-950/95 border-b border-red-900/40 px-4 py-1 z-[6400] shadow-[0_4px_12px_rgba(0,0,0,0.6)]${battleTutorialSpotClass('enemyBar')}`
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex justify-between items-center text-[10px] font-black italic uppercase tracking-tighter mb-1"
+    className: "flex justify-between items-center text-[10px] font-black italic uppercase tracking-tighter mb-0.5"
   }, /*#__PURE__*/React.createElement("span", {
     className: `flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5 leading-none ${wave === 10 ? 'text-red-500 animate-pulse' : 'text-slate-200'}`
   }, /*#__PURE__*/React.createElement(Skull, {
@@ -36161,7 +36161,10 @@ function BattleScreen({
       backgroundImage: 'linear-gradient(to right, #b91c1c, #ef4444, #fb923c)'
     }
   }))), /*#__PURE__*/React.createElement("main", {
-    className: "flex-1 relative flex flex-col items-center justify-between pt-3 pb-1 px-2 overflow-x-visible overflow-y-auto min-h-0"
+    className: "flex-1 relative flex flex-col items-center justify-start pt-3 pb-1 px-2 overflow-x-visible overflow-y-auto min-h-0",
+    style: {
+      justifyContent: 'safe center'
+    }
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => setShowEnemyInfo(true),
     className: "absolute right-2 top-24 flex flex-col items-center justify-center p-2 rounded-2xl border border-red-500 bg-red-950/30 active:scale-90 z-20 shadow-lg"
@@ -36404,7 +36407,7 @@ function BattleScreen({
   }))), /*#__PURE__*/React.createElement("div", {
     className: `rounded-full transition-all duration-500 border-4 relative ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border} ${RANGE_STYLES[enemyDist].shadow} ${RANGE_STYLES[enemyDist].glow} shadow-[0_0_50px]`,
     style: enemyAttackAnim && !ecoBattleView ? {
-      padding: 'clamp(8px,2.2dvh,28px)',
+      padding: 'clamp(10px,2.6dvh,30px)',
       animation: enemyAttackFx?.kind === 'move' ? enemy?.id === 'Moo' ? 'enemyMoveSlideMoo 1000ms ease-in-out forwards' : 'enemyMoveSlide 1000ms ease-in-out forwards' : enemyAttackFx?.kind === 'charge' ? 'enemyChargeShake 1100ms ease-in-out forwards' : 'enemyAttackFly 450ms ease-in forwards',
       ...(enemy?.id === 'Moo' && enemyAttackFx?.kind !== 'move' ? {
         transform: 'translateY(3dvh)'
@@ -36413,21 +36416,21 @@ function BattleScreen({
         zIndex: 9999
       } : {})
     } : {
-      padding: 'clamp(8px,2.2dvh,28px)',
+      padding: 'clamp(10px,2.6dvh,30px)',
       ...(enemy?.id === 'Moo' ? {
         transform: 'translateY(3dvh)'
       } : {})
     }
   }, enemy?.imgUrl ? enemy?.id === 'Moo' ? /*#__PURE__*/React.createElement("div", {
     style: {
-      width: 'clamp(70px,12dvh,120px)',
-      height: 'clamp(80px,16dvh,150px)'
+      width: 'clamp(80px,14dvh,132px)',
+      height: 'clamp(92px,18.5dvh,166px)'
     }
   }) : /*#__PURE__*/React.createElement("span", {
     className: extremeRun ? extremeDifficulty === NIGHTMARE_SETTING.id ? 'mh-nightmare-enemy-aura-shell' : 'mh-extreme-enemy-aura-shell' : '',
     style: {
-      width: 'clamp(70px,12dvh,120px)',
-      height: 'clamp(80px,16dvh,150px)'
+      width: 'clamp(80px,14dvh,132px)',
+      height: 'clamp(92px,18.5dvh,166px)'
     }
   }, /*#__PURE__*/React.createElement("img", {
     src: enemy.imgUrl,
@@ -36437,7 +36440,7 @@ function BattleScreen({
     className: extremeRun ? extremeDifficulty === NIGHTMARE_SETTING.id ? 'mh-nightmare-enemy-aura-shell' : 'mh-extreme-enemy-aura-shell' : ''
   }, /*#__PURE__*/React.createElement("div", {
     style: {
-      fontSize: 'clamp(58px,11dvh,104px)',
+      fontSize: 'clamp(66px,12.5dvh,116px)',
       lineHeight: 1
     },
     className: `relative z-[1] drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]${extremeRun ? extremeDifficulty === NIGHTMARE_SETTING.id ? ' mh-nightmare-enemy-image' : ' mh-extreme-enemy-image' : ''}`
@@ -36676,11 +36679,7 @@ function BattleScreen({
       style: compactPopupStyle,
       className: `text-center ${p.color} font-black whitespace-nowrap px-4 ${liteBattleView ? 'rounded-lg border border-white/20 bg-slate-950/95 py-1 text-base' : 'drop-shadow-[0_0_15px_rgba(0,0,0,1)]'}`
     }, p.text)));
-  })()), /*#__PURE__*/React.createElement("div", {
-    className: "w-full max-w-[180px] mt-2 mb-1 shrink-0 relative z-[40]"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "h-2"
-  }))), enemy && enemyIntent && !isBusy && (() => {
+  })())), enemy && enemyIntent && !isBusy && (() => {
     // ためる・待機・移動はダメージが無いので「予測」を出さない。
     // 出すと必ず0になり、ガードを構える判断の邪魔になる
     const rawDmg = getIncomingDamageBeforeTurnReduction(enemyIntent);
@@ -36822,7 +36821,7 @@ function BattleScreen({
   }, /*#__PURE__*/React.createElement(Zap, {
     size: 8
   }), " \u6D88\u8CBBG+", Math.round((getTurnBuff('gutsCostMult', 1.0) - 1) * 100), "%")), /*#__PURE__*/React.createElement("div", {
-    className: "shrink-0 py-2 px-2 bg-slate-950 border-y border-white/5 flex flex-col items-center justify-center gap-1 z-10 relative"
+    className: "shrink-0 py-1.5 px-2 bg-slate-950 border-y border-white/5 flex flex-col items-center justify-center gap-1 z-10 relative"
   }, /*#__PURE__*/React.createElement("div", {
     className: "absolute inset-0 flex flex-col items-center justify-center pointer-events-none gap-1",
     style: {
@@ -36836,7 +36835,7 @@ function BattleScreen({
       backgroundColor: liteBattleView ? 'rgba(2,6,23,0.95)' : 'rgba(2,6,23,0.55)'
     }
   }, p.text))), /*#__PURE__*/React.createElement("div", {
-    className: "w-full space-y-1 px-2 py-1 bg-black/40 rounded-xl border border-white/5"
+    className: "w-full space-y-0.5 px-2 py-0.5 bg-black/40 rounded-xl border border-white/5"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-2 relative"
   }, /*#__PURE__*/React.createElement(Heart, {
@@ -37019,7 +37018,7 @@ function BattleScreen({
   })(), /*#__PURE__*/React.createElement("div", {
     className: `grid grid-cols-4 gap-2 w-full relative shrink-0${battleTutorialSpotClass('battleSlots')}`,
     style: {
-      height: '100px'
+      height: 'clamp(96px,13.5dvh,118px)'
     }
   }, slots.map((s, i) => {
     // Count how many cards already assigned to this slot
@@ -37371,7 +37370,10 @@ function BattleScreen({
     "aria-label": "\u3053\u306E\u6848\u5185\u3092\u9589\u3058\u308B",
     className: "min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black"
   }, "\xD7"))), /*#__PURE__*/React.createElement("div", {
-    className: "h-[24%] shrink-0 bg-slate-900/95 p-1 flex flex-col relative border-t border-white/10"
+    className: "shrink-0 bg-slate-900/95 p-1 flex flex-col relative border-t border-white/10",
+    style: {
+      height: 'clamp(162px,23dvh,184px)'
+    }
   }, /*#__PURE__*/React.createElement("div", {
     className: "text-[8px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-1 flex justify-between px-2 items-center gap-1"
   }, /*#__PURE__*/React.createElement("span", {
@@ -49397,7 +49399,16 @@ function MonsterHeroGame() {
   // 「1周目に自分で組んだ編成」があればそれを優先し、無ければAUTO設定の事前設定を使う。
   // (設定 → テンプレート ではなく テンプレート → 設定 の順にするのは、
   //  いま回している編成を、設定のほうで勝手に置き換えないため)
-  const repeatTemplateForNewRun = () => repeatRunTemplateRef.current || repeatTemplateFromAutoSettings();
+  // ★持ち越してよいのはクイックの編成だけ。repeatRunTemplateRef は勇者モンを決めた時点で
+  //   モードを問わず作られる(アシストカードの記録にも使う)ため、そのまま優先すると
+  //   直前に遊んだチャレンジ・プロ・極限の編成で、モンビーの裏周回が立ち上がってしまう。
+  //   クイックでないランが始まると ∞ は「クイック限定」の判定ですぐ外れ、帯は出ているのに
+  //   進まず、「▶ 周回を再開する」も効かない。勇者モンもAUTO設定のものにならない
+  //   (2026-09-19・ユーザー報告「事前にチャレンジノーマルをやったからなのか、それを
+  //    引き継いでるみたいで進まないし止まったらうごかなくなるし
+  //    設定してるモンスターでも出発してない」)。
+  const isQuickRepeatTemplate = template => !!template && !template.extremeRun && isQuickMode(template.runMode);
+  const repeatTemplateForNewRun = () => isQuickRepeatTemplate(repeatRunTemplateRef.current) ? repeatRunTemplateRef.current : repeatTemplateFromAutoSettings();
 
   // 保存したIDを毎回いまのroster/マスモン正本へ引き直す。消失・利用不可・Pro制約違反は
   // 別個体で補完せず、5BがAUTO∞を停止できる失敗値として返す。
