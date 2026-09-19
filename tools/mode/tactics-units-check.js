@@ -615,6 +615,11 @@ check('置けるかの判定も画面へ渡す', has('tacticsCanAssign={tacticsC
   check('枚数の上限では帯を出さない(理由はカード詳細で出す)',
     hasScreen('data-card-block={cardBlock&&!cardBlock.ok?cardBlock.kind:undefined}'));
   check('カード詳細には理由の全文を出す', has('data-tactics-card-why'));
+  // ★帯のアニメーションを外すと、回復もダメージも瞬間で増減して見える(2026-09-20 ユーザー指摘)。
+  //   合計の帯と同じ速さ(ライフ1秒・ガッツ0.5秒)にそろえる
+  check('1体ずつの帯は合計の帯と同じ速さで動く',
+    hasScreen('data-tactics-hp-bar className={`h-full transition-all duration-1000 ')
+      && hasScreen('data-tactics-guts-bar className="h-full bg-gradient-to-r from-amber-600 to-yellow-300 transition-all duration-500"'));
   check('手札に検査の手がかりがある',
     hasScreen('data-hand-card={i}') && hasScreen('data-card-cost={requiredGuts}')
       && hasScreen("data-card-usable={isSelectable?'true':'false'}"));

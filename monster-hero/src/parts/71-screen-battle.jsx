@@ -434,7 +434,9 @@ function BattleScreen({
           {/* 新モードは合計ではなく「1体ずつ」を出す(2026-09-19 ユーザー依頼)。
               距離枠のすぐ上に、下の枠と同じ4列でそろえる。
               ★合計のライフ・ガッツは出さない。個別と両方出すと読むものが増えるだけで、
-                どの子が瀕死かはこちらでしか分からない */}
+                どの子が瀕死かはこちらでしか分からない
+              ★帯は必ずアニメーションさせる(ライフ duration-1000 / ガッツ duration-500)。
+                合計の帯と同じ動きにしないと、回復もダメージも瞬間で増減して見える */}
           {Array.isArray(tacticsUnits)?(
             <div data-tactics-party className="w-full grid grid-cols-4 gap-1">
               {[0,1,2,3].map(i=>{
@@ -459,7 +461,7 @@ function BattleScreen({
                         <span className="text-[8px] font-mono leading-none text-slate-500">/{u.maxHp}</span>
                       </div>
                       <div className="mt-0.5 h-[5px] rounded-full bg-slate-900 overflow-hidden border border-white/10">
-                        <div className={`h-full ${u.downed?'bg-gradient-to-r from-emerald-600 to-teal-300':'bg-gradient-to-r from-pink-600 to-rose-400'}`} style={{width:`${hpPct}%`}}></div>
+                        <div data-tactics-hp-bar className={`h-full transition-all duration-1000 ${u.downed?'bg-gradient-to-r from-emerald-600 to-teal-300':'bg-gradient-to-r from-pink-600 to-rose-400'}`} style={{width:`${hpPct}%`}}></div>
                       </div>
                       <div className="mt-0.5 flex items-baseline justify-between gap-0.5">
                         <span className="text-[9px] leading-none text-amber-400">⚡</span>
@@ -467,7 +469,7 @@ function BattleScreen({
                         <span className="text-[8px] font-mono leading-none text-slate-500">/{u.maxGuts}</span>
                       </div>
                       <div className="mt-0.5 h-[5px] rounded-full bg-slate-900 overflow-hidden border border-white/10">
-                        <div className="h-full bg-gradient-to-r from-amber-600 to-yellow-300" style={{width:`${gutsPct}%`}}></div>
+                        <div data-tactics-guts-bar className="h-full bg-gradient-to-r from-amber-600 to-yellow-300 transition-all duration-500" style={{width:`${gutsPct}%`}}></div>
                       </div>
                     </>):(
                       <div className="py-2 text-center text-[9px] font-black leading-none text-slate-600">空き</div>
