@@ -412,6 +412,26 @@ const isTacticsWipedOut = (units) => tacticsFilledSlots(units).length > 0 && tac
 // そのスロットのカードを使えるか。倒れている子のカードは手札に残っていても選べない
 const canTacticsSlotAct = (units, slotIndex) => tacticsAliveSlots(units).includes(slotIndex);
 
+// ===== 供モンが合流すると敵も強くなる =====
+//
+// ★「何人増えたか」ではなく「連れてきた子の総合力」で決める(2026-09-19 ユーザーが選択)。
+//   人数ごとの固定倍率にすると、弱い編成ほど苦しくなる。
+// ★増えたぶんをそのまま倍率にすると跳ね上がるので、指数で緩める。
+//   強く育てた子を連れていくほど敵も手ごわいが、弱い編成でも「多少はやれる」を残す。
+// ★基準はバトルを始めた時点(勇者モン1体)の総合力。絶対値で決めないので、
+//   育ちきった人にも育っていない人にも同じ手ざわりになる。
+const TACTICS_ENEMY_POWER_EXPONENT = 0.7;
+const TACTICS_ENEMY_POWER_MAX = 6;
+const tacticsEnemyPowerMultiplier = (startPower, nowPower, exponent = TACTICS_ENEMY_POWER_EXPONENT) => {
+  const start = Math.max(0, Number(startPower) || 0);
+  const now = Math.max(0, Number(nowPower) || 0);
+  if (!(start > 0) || !(now > start)) return 1;
+  const safeExponent = Number.isFinite(Number(exponent)) ? Math.max(0, Number(exponent)) : TACTICS_ENEMY_POWER_EXPONENT;
+  const raw = Math.pow(now / start, safeExponent);
+  if (!Number.isFinite(raw)) return 1;
+  return Math.min(TACTICS_ENEMY_POWER_MAX, Math.max(1, raw));
+};
+
 // ===== 敵の狙い =====
 //
 // ★完全なランダムだと「誰を守るか」の判断が立たないので、ライフの少ない子を狙いやすくする。
