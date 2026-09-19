@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a9bfcdcf98b46020
+// source-sha256: e4e94b92f65020c0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2c9f68156afa6fb4
+// generated-sha256: bf141f00907738fa
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -161,7 +161,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-20 04:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-20 04:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -26602,6 +26602,31 @@ const resolveTacticsGuardedHit = (incoming, hits, guard) => {
   };
 };
 
+// ===== 「2枚目以降は効果半減」の数え方 =====
+// ★どこで数えるかをモードで変えられるようにするための、器だけの関数。
+//   groupOf(slotIndex) が同じカードどうしで枚数を数える。
+//     既存5モード … いつも同じ箱（＝そのターンの2枚目以降が半減）
+//     新モード     … 枠ごとの箱（＝同じ子が2枚使ったときだけ半減。2026-09-20 ユーザー指示）
+// ★isExempt(card) が true のカード（アシストカード）は対象外で、枚数にも数えない。
+// ★実処理・カード選択中の予測・合計軽減の表示がすべてここを通る。
+//   別々に数えると「予測より実際が弱い」が起きる。
+//   peek は数えずに見るだけ、take は1枚使ったことにして、そのカードが半減だったかを返す。
+const makeCardHalveCounter = (groupOf, isExempt) => {
+  const used = {};
+  const counts = card => !!card && !(typeof isExempt === 'function' && isExempt(card));
+  const keyOf = slotIndex => String(typeof groupOf === 'function' ? groupOf(slotIndex) : 'turn');
+  return {
+    peek: (card, slotIndex) => counts(card) && (used[keyOf(slotIndex)] || 0) > 0,
+    take: (card, slotIndex) => {
+      if (!counts(card)) return false;
+      const key = keyOf(slotIndex);
+      const halved = (used[key] || 0) > 0;
+      used[key] = (used[key] || 0) + 1;
+      return halved;
+    }
+  };
+};
+
 // ---- part: 40-screen-effects.jsx ----
 // ==== 画面ライフサイクル: タイマー・リスナーの登録簿(useScreenEffects) ====
 //
@@ -36660,6 +36685,7 @@ function BattleScreen({
   cardDragActiveRef,
   cardEffectMultiplier,
   cardLimit,
+  makeCardHalveCounter,
   cardNeedsMonster,
   cycleActiveUniqueForSlot,
   cycleBattleAuto,
@@ -37584,12 +37610,13 @@ function BattleScreen({
     const aimedSlot = Number.isInteger(enemyIntent.targetSlot) ? enemyIntent.targetSlot : null;
     const rawDmg = getIncomingDamageBeforeTurnReduction(enemyIntent, aimedSlot);
     let previewGuardFlat = 0,
-      previewGuardMult = 0,
-      previewPenaltyCnt = 0;
+      previewGuardMult = 0;
+    // 何枚目かの数え方はアプリ側(makeCardHalveCounter)が持つ。
+    // 新モードは「同じ子の2枚目」だけ半減(2026-09-20 ユーザー指示)
+    const previewCounter = makeCardHalveCounter();
     selectedCards.forEach(idx => {
       const card = hand[idx];
-      const isPenalty = !isAssistCard(card);
-      const halved = isPenalty && previewPenaltyCnt > 0;
+      const halved = previewCounter.take(card, cardAssignments[idx] != null ? cardAssignments[idx] : null);
       const weight = guardCardWeight(card);
       const guardsAimed = aimedSlot === null || cardAssignments[idx] === aimedSlot;
       if (weight > 0 && guardsAimed) {
@@ -37597,7 +37624,6 @@ function BattleScreen({
         previewGuardFlat += GUARD_EVOLUTION[guardLevel].flat * weight * effect;
         previewGuardMult += GUARD_EVOLUTION[guardLevel].mult * weight * effect;
       }
-      if (isPenalty) previewPenaltyCnt++;
     });
     // ★予告も本番と同じ数え方にする。ずれると「ガードしたのに予定より減った」になる。
     //   貫通撃はガードが効かない。連撃は3ヒットに分かれ、ガードが届くのは1ヒットぶんだけ
@@ -37949,15 +37975,14 @@ function BattleScreen({
     // (processTurnの実行順序と同じ数え方。localBoostFromCard/previewLocalBoosts参照)。
     const boosts = previewLocalBoosts(pendingIdx);
     let committedTotal = 0;
-    let committedPenaltyCnt = 0;
     let guardFlat = 0;
     let guardMult = 0;
+    const committedCounter = makeCardHalveCounter();
     selectedCards.forEach(idx => {
       if (idx === pendingIdx) return;
       const card = hand[idx];
       const slotIdx = cardAssignments[idx];
-      const isPenalty = !isAssistCard(card);
-      const halved = isPenalty && committedPenaltyCnt > 0;
+      const halved = committedCounter.take(card, slotIdx != null ? slotIdx : null);
       const b = boosts.perCard[idx] || {
         oryo: 0,
         dmgMod: 0,
@@ -37973,12 +37998,11 @@ function BattleScreen({
         guardFlat += GUARD_EVOLUTION[guardLevel].flat * gw * e;
         guardMult += GUARD_EVOLUTION[guardLevel].mult * gw * e;
       }
-      if (isPenalty) committedPenaltyCnt++;
     });
     const committedGuard = guardValueOf(guardFlat, guardMult);
     // 保留カードがガードなら、置いたあとの合計軽減も出す
     const pendingGuardWeight = guardCardWeight(pendingCardObj);
-    const pendingGuardHalved = pendingGuardWeight > 0 && !isAssistCard(pendingCardObj) && committedPenaltyCnt > 0;
+    const pendingGuardHalved = pendingGuardWeight > 0 && committedCounter.peek(pendingCardObj, pendingIdx != null && cardAssignments[pendingIdx] != null ? cardAssignments[pendingIdx] : null);
     const pendingGuardEffect = cardEffectMultiplier(pendingCardObj, pendingGuardHalved);
     const projectedGuard = pendingGuardWeight > 0 ? guardValueOf(guardFlat + GUARD_EVOLUTION[guardLevel].flat * pendingGuardWeight * pendingGuardEffect, guardMult + GUARD_EVOLUTION[guardLevel].mult * pendingGuardWeight * pendingGuardEffect) : committedGuard;
     const pendingIsAtk = isAttackCard(pendingCardObj);
@@ -37995,7 +38019,7 @@ function BattleScreen({
         if (assignedCount >= maxUses) continue;
         if (pendingCardObj.type === 'unique' && pendingCardObj.ownerSlotIdx !== i) continue;
         pendingValidSlot = i;
-        const baseDmg = getDmg(pendingCardObj, i, s, boosts.forPending.oryo, boosts.forPending.dmgMod, !isAssistCard(pendingCardObj) && committedPenaltyCnt > 0);
+        const baseDmg = getDmg(pendingCardObj, i, s, boosts.forPending.oryo, boosts.forPending.dmgMod, committedCounter.peek(pendingCardObj, i));
         pendingAdd = getAttackPredictedDmg(pendingCardObj, s, baseDmg, boosts.forPending.combo);
         break;
       }
@@ -38087,15 +38111,14 @@ function BattleScreen({
     // (数えてしまうと1枚目でも半減、除外しっぱなしだと2枚目でも全開の表示になる)
     const halvedByIdx = {};
     {
-      let n = 0;
+      const counter = makeCardHalveCounter();
       selectedCards.forEach(idx => {
         if (idx === pendingIdx) return;
         const c = hand[idx];
-        const p = !isAssistCard(c);
-        halvedByIdx[idx] = p && n > 0;
-        if (p) n++;
+        const sl = cardAssignments[idx] != null ? cardAssignments[idx] : null;
+        halvedByIdx[idx] = counter.take(c, sl);
       });
-      if (pendingIdx != null && selectedCards.includes(pendingIdx)) halvedByIdx[pendingIdx] = !isAssistCard(hand[pendingIdx]) && n > 0;
+      if (pendingIdx != null && selectedCards.includes(pendingIdx)) halvedByIdx[pendingIdx] = counter.peek(hand[pendingIdx], cardAssignments[pendingIdx] != null ? cardAssignments[pendingIdx] : null);
     }
     // Preview damage:
     // - if a card is pending assignment, show what THIS card would do on this monster
@@ -38109,12 +38132,14 @@ function BattleScreen({
     let isPendingHalved = false;
     let previewSoulPct = 0;
     if (s && pendingCardObj && canAssign && isAttackCard(pendingCardObj)) {
-      // 既に選んだ「アシストカード以外」の枚数を数え、保留カードはその次の1枚として扱う
-      let committedPenalty = 0;
+      // 既に選んだぶんを数え、保留カードは「この枠へ置いた次の1枚」として扱う。
+      // ★新モードは同じ子の2枚目だけ半減なので、置き先(i)で数え方が変わる
+      const pendingCounter = makeCardHalveCounter();
       selectedCards.forEach(idx => {
-        if (idx !== pendingIdx && !isAssistCard(hand[idx])) committedPenalty++;
+        if (idx === pendingIdx) return;
+        pendingCounter.take(hand[idx], cardAssignments[idx] != null ? cardAssignments[idx] : null);
       });
-      const isSecondOrLater = committedPenalty >= 1 && !isAssistCard(pendingCardObj);
+      const isSecondOrLater = pendingCounter.peek(pendingCardObj, i);
       const baseDmg = getDmg(pendingCardObj, i, s, slotBoosts.forPending.oryo, slotBoosts.forPending.dmgMod, isSecondOrLater);
       previewDmg = getAttackPredictedDmg(pendingCardObj, s, baseDmg, slotBoosts.forPending.combo);
       previewSoulPct = soulTraitAttackProfile(s?.masuId ? getMasuMon(s.masuId) : null, pendingCardObj, i).damagePct;
@@ -38122,12 +38147,11 @@ function BattleScreen({
       isPendingHalved = isSecondOrLater;
     } else if (s) {
       // 選択順で「アシストカード以外」を数え、2枚目以降は半減として予測する
-      let globalPenaltyCnt = 0;
+      const slotCounter = makeCardHalveCounter();
       selectedCards.forEach(idx => {
         if (idx === pendingIdx) return;
         const card = hand[idx];
-        const isPenalty = !isAssistCard(card);
-        const halved = isPenalty && globalPenaltyCnt > 0;
+        const halved = slotCounter.take(card, cardAssignments[idx] != null ? cardAssignments[idx] : null);
         if (cardAssignments[idx] === i) {
           const b = slotBoosts.perCard[idx] || {
             oryo: 0,
@@ -38137,7 +38161,6 @@ function BattleScreen({
           const baseDmg = getDmg(card, i, s, b.oryo, b.dmgMod, halved);
           previewDmg += getAttackPredictedDmg(card, s, baseDmg, b.combo);
         }
-        if (isPenalty) globalPenaltyCnt++;
       });
     }
     const isAnimating = !ecoBattleView && attackAnim && attackAnim.slotIndex === i;
@@ -52101,6 +52124,15 @@ function MonsterHeroGame() {
     const specialRuleDifficulty = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
     return isAssistCard(card) && specialRuleDifficulty ? extremeSpecialRule(specialRuleDifficulty, 'assistCardEffect') : halved ? 0.5 : 1;
   };
+  // 「2枚目以降は効果半減」を、誰の2枚目として数えるか(2026-09-20 ユーザー指示)。
+  // ★新モードはステータスが1体ずつなので、パーティ全体で数えると
+  //   ほかの子が1枚使っただけで自分の1枚目が半分になってしまう。
+  //   **同じ子が2枚使うときだけ**半減させる(ハム・ききでカードの枚数が増えたときの調整)。
+  // ★既存5モードは今までどおり「そのターンの2枚目以降」。全部を同じ箱で数える
+  const cardHalveGroup = slotIdx => isTacticsMode(runMode) ? `slot${Number.isInteger(slotIdx) ? slotIdx : 'none'}` : 'turn';
+  // 使う順に半減かどうかを数える道具。器は純関数側(makeCardHalveCounter)にあり、
+  // ここでは「どこで数えるか(cardHalveGroup)」と「対象外(アシストカード)」を渡すだけ
+  const makeHalveCounter = () => makeCardHalveCounter(cardHalveGroup, isAssistCard);
   // flat は互換用（現行定義は0）。実質は「実効丈夫さ × 倍率の合計」。
   const guardValueOf = (flat, mult) => flat > 0 || mult > 0 ? Math.floor(flat + effectiveDef * mult) : 0;
   // このカードを使うと、同じターンの「あとに続くカード」へ即座に乗る補正の生値(effMul適用前)。
@@ -52153,13 +52185,13 @@ function MonsterHeroGame() {
   const previewLocalBoosts = (excludeIdx = null) => {
     let oryo = 0,
       dmgMod = 0,
-      combo = 0,
-      penaltyCnt = 0;
+      combo = 0;
+    const counter = makeHalveCounter();
     const perCard = {};
     selectedCards.forEach(idx => {
       const card = hand[idx];
-      const isPenalty = !isAssistCard(card);
-      const halved = isPenalty && penaltyCnt > 0;
+      const slotIdx = cardAssignments[idx] != null ? cardAssignments[idx] : null;
+      const halved = counter.peek(card, slotIdx);
       perCard[idx] = boostsForCardDamage({
         oryo,
         dmgMod,
@@ -52175,10 +52207,10 @@ function MonsterHeroGame() {
         dmgMod += (boost.dmgMod || 0) * effMul;
         combo += (boost.combo || 0) * effMul;
       }
-      if (isPenalty) penaltyCnt++;
+      counter.take(card, slotIdx);
     });
     const pendingCard = excludeIdx != null ? hand[excludeIdx] : null;
-    const pendingHalved = !!pendingCard && !isAssistCard(pendingCard) && penaltyCnt > 0;
+    const pendingHalved = counter.peek(pendingCard, excludeIdx != null && cardAssignments[excludeIdx] != null ? cardAssignments[excludeIdx] : null);
     return {
       perCard,
       final: {
@@ -52887,7 +52919,7 @@ function MonsterHeroGame() {
 
     // カットイン廃止: 技名はスロット上にインライン表示する（実行ループ内で行う）
 
-    let penaltyCardCount = 0; // アシストカード以外を何枚使ったか(2枚目以降は効果半減)
+    const halveCounter = makeHalveCounter(); // 何枚目かの数え方は cardHalveGroup が決める
     for (const entry of usedCardEntries) {
       const card = entry.card;
       const totalHealBeforeCard = totalHeal;
@@ -52903,12 +52935,11 @@ function MonsterHeroGame() {
         const cardAssistant = assistantIdOfAssistCard(card.id);
         if (cardAssistant) addAssistantBondFor(cardAssistant, 'assistantCardUse');
       }
-      const halved = !isBreeder && penaltyCardCount > 0;
+      const halved = halveCounter.take(card, entry.slotIdx);
       // EXTREMEでは消費量・枚数でなく、教えカードから発生する効果量だけを半減する。
       const specialRuleDifficulty = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
       const effMul = isBreeder && specialRuleDifficulty ? extremeSpecialRule(specialRuleDifficulty, 'assistCardEffect') : halved ? 0.5 : 1;
-      if (!isBreeder) penaltyCardCount++;
-      if (halved) addPopup('2枚目以降 効果半減', 'hero', 'text-slate-300 text-sm font-black');
+      if (halved) addPopup(isTacticsMode(runMode) ? '同じ子の2枚目 効果半減' : '2枚目以降 効果半減', 'hero', 'text-slate-300 text-sm font-black');
       const slotIdx = entry.slotIdx != null ? entry.slotIdx : defaultSlot;
       lastType = card.type;
       if (card.type === 'guard') {
@@ -65083,6 +65114,7 @@ function MonsterHeroGame() {
       cardDragActiveRef: cardDragActiveRef,
       cardEffectMultiplier: cardEffectMultiplier,
       cardLimit: cardLimit,
+      makeCardHalveCounter: makeHalveCounter,
       cardNeedsMonster: cardNeedsMonster,
       cycleActiveUniqueForSlot: cycleActiveUniqueForSlot,
       cycleBattleAuto: cycleBattleAuto,
@@ -67191,20 +67223,21 @@ function MonsterHeroGame() {
       // 2枚目以降で使うガードは軽減量が半分になる。実際に効く値をそのまま出す。
       const raw = (focusedCard.flat || 0) + def * (focusedCard.mult || 0);
       const fIdx = hand.findIndex(c => c && c.uid === focusedCard.uid);
-      let n = 0,
-        halved = false,
+      const counter = makeHalveCounter();
+      let halved = false,
         found = false;
       selectedCards.forEach(idx => {
         if (idx === pendingCard) return;
         const c = hand[idx];
-        const p = !isAssistCard(c);
+        const sl = cardAssignments[idx] != null ? cardAssignments[idx] : null;
         if (idx === fIdx) {
-          halved = p && n > 0;
+          halved = counter.peek(c, sl);
           found = true;
         }
-        if (p) n++;
+        counter.take(c, sl);
       });
-      if (!found) halved = n > 0; // まだ置いていないカードは「次に使う1枚」として判定する
+      // まだ置いていないカードは「次に使う1枚」として判定する
+      if (!found) halved = counter.peek(focusedCard, fIdx >= 0 && cardAssignments[fIdx] != null ? cardAssignments[fIdx] : null);
       return /*#__PURE__*/React.createElement("div", {
         className: "text-center font-bold"
       }, "\u6575\u306E\u653B\u6483\u3092\u6700\u5927 ", Math.floor(halved ? raw * 0.5 : raw), " \u8EFD\u6E1B", halved && /*#__PURE__*/React.createElement("span", {

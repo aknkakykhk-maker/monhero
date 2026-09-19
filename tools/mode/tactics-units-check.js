@@ -56,7 +56,7 @@ vm.runInContext(
     + 'reviveTacticsAt,tacticsEnemyPowerMultiplier,'
     + 'TACTICS_ENEMY_POWER_MAX,applyTacticsTraining,tacticsPartyAtk,'
     + 'tacticsPartyDef,shrinkTacticsScore,TACTICS_SCORE_DIVISOR,'
-    + 'splitTacticsGuardedHit,resolveTacticsGuardedHit};', sandbox);
+    + 'splitTacticsGuardedHit,resolveTacticsGuardedHit,makeCardHalveCounter};', sandbox);
 const api = sandbox.api;
 
 // モンスター1体ぶんの入力。マスモンなら育成済みの値が baseHp などに入っている
@@ -632,6 +632,52 @@ check('合流したときに「敵も強くなった」と出す', has('敵も�
   check('1ヒットの攻撃は余ったガードがライフ・ガッツになる',
     single(300).taken === 0 && single(300).saved === 120, JSON.stringify(single(300)));
 }
+
+// --- ㉑ 「2枚目以降は効果半減」は同じ子の2枚目だけ(2026-09-20 ユーザー指示) ---
+// ★ステータスが1体ずつになったので、パーティ全体で数えると
+//   ほかの子が1枚使っただけで自分の1枚目が半分になってしまう
+{
+  const assist = (card) => card && card.assist === true;
+  // 新モード: 枠ごとに数える
+  const bySlot = api.makeCardHalveCounter((slot) => `slot${slot}`, assist);
+  const atk = { id: 'atk' };
+  check('別の子が使っても自分の1枚目は半減しない',
+    bySlot.take(atk, 0) === false && bySlot.take(atk, 2) === false && bySlot.take(atk, 3) === false);
+  check('同じ子の2枚目は半減する', bySlot.take(atk, 0) === true);
+  check('同じ子の3枚目も半減のまま', bySlot.take(atk, 0) === true);
+  check('別の子はそのまま1枚目', bySlot.take(atk, 1) === false);
+  // 既存5モード: いつも同じ箱＝そのターンの2枚目以降
+  const byTurn = api.makeCardHalveCounter(() => 'turn', assist);
+  check('既存モードは誰が使っても2枚目から半減',
+    byTurn.take(atk, 0) === false && byTurn.take(atk, 1) === true && byTurn.take(atk, 2) === true);
+  // アシストカードは対象外で、枚数にも数えない
+  const withAssist = api.makeCardHalveCounter((slot) => `slot${slot}`, assist);
+  const card = { id: 'teach', assist: true };
+  check('アシストカードは半減せず、枚数にも数えない',
+    withAssist.take(card, 0) === false && withAssist.take(card, 0) === false
+      && withAssist.take(atk, 0) === false && withAssist.take(atk, 0) === true);
+  // peek は数えない
+  const peeking = api.makeCardHalveCounter((slot) => `slot${slot}`, assist);
+  check('peek は枚数を増やさない',
+    peeking.peek(atk, 0) === false && peeking.peek(atk, 0) === false && peeking.take(atk, 0) === false);
+  check('空のカードは半減にしない',
+    api.makeCardHalveCounter(() => 'turn', assist).peek(null, 0) === false);
+}
+// 本体への結線
+check('半減の数え方は1か所(cardHalveGroup)で決める',
+  has('const cardHalveGroup = (slotIdx) => (isTacticsMode(runMode)')
+    && has("? `slot${Number.isInteger(slotIdx)?slotIdx:'none'}` : 'turn');")
+    && has('const makeHalveCounter = () => makeCardHalveCounter(cardHalveGroup, isAssistCard);'));
+check('実処理も予測も同じ数え方を通る',
+  has('const halveCounter=makeHalveCounter(); // 何枚目かの数え方は cardHalveGroup が決める')
+    && has('const halved=halveCounter.take(card,entry.slotIdx);')
+    && has('makeCardHalveCounter={makeHalveCounter}'));
+// ★枚数を自前で数える書き方が戻っていないか(戻ると新モードだけ食い違う)
+check('自前で枚数を数える書き方が残っていない',
+  !has('penaltyCardCount') && !has('previewPenaltyCnt') && !has('committedPenaltyCnt')
+    && !has('globalPenaltyCnt'));
+check('半減の知らせは新モードだけ言い方を変える',
+  has("isTacticsMode(runMode)?'同じ子の2枚目 効果半減':'2枚目以降 効果半減'"));
 
 check('1体ずつの帯は新モードだけへ渡す',
   has('tacticsUnits={isTacticsMode(runMode)?tacticsUnits:null}'));

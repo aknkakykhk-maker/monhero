@@ -494,3 +494,28 @@ const resolveTacticsGuardedHit = (incoming, hits, guard) => {
     ? { taken: through, saved: 0, guarded, through, blocked: true }
     : { taken: 0, saved: left, guarded, through, blocked: true };
 };
+
+// ===== 「2枚目以降は効果半減」の数え方 =====
+// ★どこで数えるかをモードで変えられるようにするための、器だけの関数。
+//   groupOf(slotIndex) が同じカードどうしで枚数を数える。
+//     既存5モード … いつも同じ箱（＝そのターンの2枚目以降が半減）
+//     新モード     … 枠ごとの箱（＝同じ子が2枚使ったときだけ半減。2026-09-20 ユーザー指示）
+// ★isExempt(card) が true のカード（アシストカード）は対象外で、枚数にも数えない。
+// ★実処理・カード選択中の予測・合計軽減の表示がすべてここを通る。
+//   別々に数えると「予測より実際が弱い」が起きる。
+//   peek は数えずに見るだけ、take は1枚使ったことにして、そのカードが半減だったかを返す。
+const makeCardHalveCounter = (groupOf, isExempt) => {
+  const used = {};
+  const counts = (card) => !!card && !(typeof isExempt === 'function' && isExempt(card));
+  const keyOf = (slotIndex) => String(typeof groupOf === 'function' ? groupOf(slotIndex) : 'turn');
+  return {
+    peek: (card, slotIndex) => counts(card) && (used[keyOf(slotIndex)] || 0) > 0,
+    take: (card, slotIndex) => {
+      if (!counts(card)) return false;
+      const key = keyOf(slotIndex);
+      const halved = (used[key] || 0) > 0;
+      used[key] = (used[key] || 0) + 1;
+      return halved;
+    },
+  };
+};

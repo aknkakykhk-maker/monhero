@@ -17,7 +17,7 @@ function BattleScreen({
   battleScenarioRef, battleScreenActive, battleSoulMasus, battleSpeed, battleTutorial,
   battleTutorialAllowsEmergency, battleTutorialCardAllowed, battleTutorialCardKind,
   battleTutorialCardTarget, battleTutorialNeed, battleTutorialNeedCard, battleTutorialSpotClass,
-  battleTutorialStep, cardAssignments, cardDragActiveRef, cardEffectMultiplier, cardLimit,
+  battleTutorialStep, cardAssignments, cardDragActiveRef, cardEffectMultiplier, cardLimit, makeCardHalveCounter,
   cardNeedsMonster, cycleActiveUniqueForSlot, cycleBattleAuto, cycleBattleSpeed, cycleEcoMode,
   debugBattle, difficulty, dismissQuickRhythmIntro, distTotalBonus, dragOverSlot, dragState,
   ecoBattleView, ecoMode, effectiveMaxGuts, effectiveMaxHp, enemy, enemyAttackAnim,
@@ -369,15 +369,16 @@ function BattleScreen({
             // ★targetSlot が無いモードでは今までどおりパーティの値で出る
             const aimedSlot=Number.isInteger(enemyIntent.targetSlot)?enemyIntent.targetSlot:null;
             const rawDmg=getIncomingDamageBeforeTurnReduction(enemyIntent,aimedSlot);
-            let previewGuardFlat=0, previewGuardMult=0, previewPenaltyCnt=0;
+            let previewGuardFlat=0, previewGuardMult=0;
+            // 何枚目かの数え方はアプリ側(makeCardHalveCounter)が持つ。
+            // 新モードは「同じ子の2枚目」だけ半減(2026-09-20 ユーザー指示)
+            const previewCounter=makeCardHalveCounter();
             selectedCards.forEach(idx=>{
               const card=hand[idx];
-              const isPenalty=!isAssistCard(card);
-              const halved=isPenalty&&previewPenaltyCnt>0;
+              const halved=previewCounter.take(card,cardAssignments[idx]!=null?cardAssignments[idx]:null);
               const weight=guardCardWeight(card);
               const guardsAimed=aimedSlot===null||cardAssignments[idx]===aimedSlot;
               if(weight>0&&guardsAimed){const effect=cardEffectMultiplier(card,halved); previewGuardFlat+=GUARD_EVOLUTION[guardLevel].flat*weight*effect; previewGuardMult+=GUARD_EVOLUTION[guardLevel].mult*weight*effect;}
-              if(isPenalty) previewPenaltyCnt++;
             });
             // ★予告も本番と同じ数え方にする。ずれると「ガードしたのに予定より減った」になる。
             //   貫通撃はガードが効かない。連撃は3ヒットに分かれ、ガードが届くのは1ヒットぶんだけ
@@ -550,22 +551,21 @@ function BattleScreen({
             // 先に選んだカードぶんの補正を、あとに続くカードの予測へも反映する
             // (processTurnの実行順序と同じ数え方。localBoostFromCard/previewLocalBoosts参照)。
             const boosts=previewLocalBoosts(pendingIdx);
-            let committedTotal=0; let committedPenaltyCnt=0; let guardFlat=0; let guardMult=0;
+            let committedTotal=0; let guardFlat=0; let guardMult=0;
+            const committedCounter=makeCardHalveCounter();
             selectedCards.forEach(idx=>{
               if(idx===pendingIdx) return;
               const card=hand[idx]; const slotIdx=cardAssignments[idx];
-              const isPenalty=!isAssistCard(card);
-              const halved=isPenalty&&committedPenaltyCnt>0;
+              const halved=committedCounter.take(card,slotIdx!=null?slotIdx:null);
               const b=boosts.perCard[idx]||{oryo:0,dmgMod:0,combo:0};
               if(slotIdx!=null&&isAttackCard(card)){const baseDmg=getDmg(card,slotIdx,slots[slotIdx],b.oryo,b.dmgMod,halved); committedTotal+=getAttackPredictedDmg(card,slots[slotIdx],baseDmg,b.combo);}
               const gw=guardCardWeight(card);
               if(gw>0){ const e=cardEffectMultiplier(card,halved); guardFlat+=GUARD_EVOLUTION[guardLevel].flat*gw*e; guardMult+=GUARD_EVOLUTION[guardLevel].mult*gw*e; }
-              if(isPenalty) committedPenaltyCnt++;
             });
             const committedGuard=guardValueOf(guardFlat,guardMult);
             // 保留カードがガードなら、置いたあとの合計軽減も出す
             const pendingGuardWeight=guardCardWeight(pendingCardObj);
-            const pendingGuardHalved=pendingGuardWeight>0&&!isAssistCard(pendingCardObj)&&committedPenaltyCnt>0;
+            const pendingGuardHalved=pendingGuardWeight>0&&committedCounter.peek(pendingCardObj,pendingIdx!=null&&cardAssignments[pendingIdx]!=null?cardAssignments[pendingIdx]:null);
             const pendingGuardEffect=cardEffectMultiplier(pendingCardObj,pendingGuardHalved);
             const projectedGuard=pendingGuardWeight>0
               ? guardValueOf(guardFlat+GUARD_EVOLUTION[guardLevel].flat*pendingGuardWeight*pendingGuardEffect, guardMult+GUARD_EVOLUTION[guardLevel].mult*pendingGuardWeight*pendingGuardEffect)
@@ -580,7 +580,7 @@ function BattleScreen({
                 const assignedCount=Object.values(cardAssignments).filter(v=>v===i).length;
                 const maxUses=slotMaxUses(s,i); if(assignedCount>=maxUses) continue;
                 if(pendingCardObj.type==='unique'&&pendingCardObj.ownerSlotIdx!==i) continue;
-                pendingValidSlot=i; const baseDmg=getDmg(pendingCardObj,i,s,boosts.forPending.oryo,boosts.forPending.dmgMod,!isAssistCard(pendingCardObj)&&committedPenaltyCnt>0); pendingAdd=getAttackPredictedDmg(pendingCardObj,s,baseDmg,boosts.forPending.combo); break;
+                pendingValidSlot=i; const baseDmg=getDmg(pendingCardObj,i,s,boosts.forPending.oryo,boosts.forPending.dmgMod,committedCounter.peek(pendingCardObj,i)); pendingAdd=getAttackPredictedDmg(pendingCardObj,s,baseDmg,boosts.forPending.combo); break;
               }
             }
             const projectedTotal=committedTotal+pendingAdd;
@@ -656,9 +656,9 @@ function BattleScreen({
               // 保留中のカードは自分を数えず、「次に使う1枚」として半減かどうかを決める。
               // (数えてしまうと1枚目でも半減、除外しっぱなしだと2枚目でも全開の表示になる)
               const halvedByIdx={};
-              {let n=0;
-                selectedCards.forEach(idx=>{ if(idx===pendingIdx) return; const c=hand[idx]; const p=!isAssistCard(c); halvedByIdx[idx]=p&&n>0; if(p) n++; });
-                if(pendingIdx!=null&&selectedCards.includes(pendingIdx)) halvedByIdx[pendingIdx]=!isAssistCard(hand[pendingIdx])&&n>0;}
+              {const counter=makeCardHalveCounter();
+                selectedCards.forEach(idx=>{ if(idx===pendingIdx) return; const c=hand[idx]; const sl=cardAssignments[idx]!=null?cardAssignments[idx]:null; halvedByIdx[idx]=counter.take(c,sl); });
+                if(pendingIdx!=null&&selectedCards.includes(pendingIdx)) halvedByIdx[pendingIdx]=counter.peek(hand[pendingIdx],cardAssignments[pendingIdx]!=null?cardAssignments[pendingIdx]:null);}
               // Preview damage:
               // - if a card is pending assignment, show what THIS card would do on this monster
               // - otherwise show the sum of damage from cards already assigned to this slot,
@@ -668,28 +668,27 @@ function BattleScreen({
               const slotBoosts=previewLocalBoosts(pendingIdx);
               let previewDmg=0; let isPendingPreview=false; let isPendingHalved=false; let previewSoulPct=0;
               if(s && pendingCardObj && canAssign && isAttackCard(pendingCardObj)){
-                // 既に選んだ「アシストカード以外」の枚数を数え、保留カードはその次の1枚として扱う
-                let committedPenalty=0;
-                selectedCards.forEach(idx=>{if(idx!==pendingIdx&&!isAssistCard(hand[idx]))committedPenalty++;});
-                const isSecondOrLater = committedPenalty>=1 && !isAssistCard(pendingCardObj);
+                // 既に選んだぶんを数え、保留カードは「この枠へ置いた次の1枚」として扱う。
+                // ★新モードは同じ子の2枚目だけ半減なので、置き先(i)で数え方が変わる
+                const pendingCounter=makeCardHalveCounter();
+                selectedCards.forEach(idx=>{ if(idx===pendingIdx) return; pendingCounter.take(hand[idx],cardAssignments[idx]!=null?cardAssignments[idx]:null); });
+                const isSecondOrLater = pendingCounter.peek(pendingCardObj,i);
                 const baseDmg=getDmg(pendingCardObj,i,s,slotBoosts.forPending.oryo,slotBoosts.forPending.dmgMod,isSecondOrLater);
                 previewDmg=getAttackPredictedDmg(pendingCardObj,s,baseDmg,slotBoosts.forPending.combo);
                 previewSoulPct=soulTraitAttackProfile(s?.masuId?getMasuMon(s.masuId):null,pendingCardObj,i).damagePct;
                 isPendingPreview=true; isPendingHalved=isSecondOrLater;
               } else if(s){
                 // 選択順で「アシストカード以外」を数え、2枚目以降は半減として予測する
-                let globalPenaltyCnt=0;
+                const slotCounter=makeCardHalveCounter();
                 selectedCards.forEach(idx=>{
                   if(idx===pendingIdx) return;
                   const card=hand[idx];
-                  const isPenalty=!isAssistCard(card);
-                  const halved=isPenalty&&globalPenaltyCnt>0;
+                  const halved=slotCounter.take(card,cardAssignments[idx]!=null?cardAssignments[idx]:null);
                   if(cardAssignments[idx]===i){
                     const b=slotBoosts.perCard[idx]||{oryo:0,dmgMod:0,combo:0};
                     const baseDmg=getDmg(card,i,s,b.oryo,b.dmgMod,halved);
                     previewDmg+=getAttackPredictedDmg(card,s,baseDmg,b.combo);
                   }
-                  if(isPenalty)globalPenaltyCnt++;
                 });
               }
               const isAnimating = !ecoBattleView && attackAnim && attackAnim.slotIndex === i;
