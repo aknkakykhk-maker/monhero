@@ -197,25 +197,59 @@ const check = (name, ok, detail = '') => {
     const startLife = await lifeOf();
     check('味方のライフを読める', startLife.ok && startLife.max > 0, startLife.raw || '見つからない');
     check('はじめは満タン(盤面の合計＝ライフ)', startLife.hp === startLife.max, startLife.raw);
-    await page.evaluate(() => { document.querySelector('button[aria-label^="AUTO"]')?.click(); });
-    let hits = 0, lowest = startLife.hp, gameOver = false, lastLife = startLife;
-    for (let i = 0; i < 30; i++) {
-      await page.waitForTimeout(1000);
-      const now = await lifeOf();
-      if (now.ok) {
-        if (now.hp < lastLife.hp) hits++;
-        lowest = Math.min(lowest, now.hp);
-        lastLife = now;
-      }
+    // ★1秒ごとに読むと、自動再生ですぐ戻るぶんを取りこぼして「減っていない」に見える。
+    //   実際に減っているのに落ちた(2026-09-19)。ページの中で見張って、取りこぼさないようにする
+    await page.evaluate(() => {
+      window.__mhLifeLog = { drops: 0, min: Infinity, max: 0, last: null, overflow: 0, guts: '' };
+      const read = () => {
+        // ガッツの帯はWAVEの結果やトレーニングの画面では消える。見えたときの値を覚えておく
+        const g = document.querySelector('[data-ally-guts]')?.getAttribute('data-ally-guts') || '';
+        if (/^\d+\/\d+$/.test(g)) window.__mhLifeLog.guts = g;
+        const raw = document.querySelector('[data-ally-life]')?.getAttribute('data-ally-life') || '';
+        if (!/^\d+\/\d+$/.test(raw)) return;
+        const [hp, max] = raw.split('/').map(Number);
+        const log = window.__mhLifeLog;
+        if (log.last !== null && hp < log.last) log.drops++;
+        if (hp < 0 || hp > max) log.overflow++;
+        log.last = hp; log.max = max;
+        log.min = Math.min(log.min, hp);
+      };
+      new MutationObserver(read).observe(document.body, { subtree: true, childList: true, attributes: true, characterData: true });
+      setInterval(read, 50);
+    });
+    // ★AUTOに任せると、こちらが強い難易度では敵が殴る前に倒れてしまい、
+    //   「ライフが減る」を一度も観測できないことがある(実際に落ちた)。
+    //   「緊急」は攻撃せずに敵の番だけを進めるので、必ず殴られる。まずこれで被弾を見る
+    let gameOver = false;
+    for (let i = 0; i < 8; i++) {
+      await page.evaluate(() => {
+        const b = [...document.querySelectorAll('button')].find(x => !x.disabled && /緊急/.test(x.textContent));
+        b?.click();
+      });
+      await page.waitForTimeout(2500);
       gameOver = gameOver || await page.evaluate(() => /GAME OVER/i.test(document.body.innerText));
-      if (hits >= 2) break;
+      if (await page.evaluate(() => window.__mhLifeLog.drops) >= 1) break;
     }
-    check('敵の攻撃でライフが減る', hits >= 1, `減った回数 ${hits} / 最低 ${lowest}`);
-    check('ライフが上限を超えたりマイナスにならない',
-      lastLife.hp >= 0 && lastLife.hp <= lastLife.max, lastLife.raw);
+    // そのあとAUTOへ切り替えて、続けて遊んでも壊れないことを見る
+    await page.evaluate(() => { document.querySelector('button[aria-label^="AUTO"]')?.click(); });
+    for (let i = 0; i < 12; i++) {
+      await page.waitForTimeout(1000);
+      gameOver = gameOver || await page.evaluate(() => /GAME OVER/i.test(document.body.innerText));
+      const drops = await page.evaluate(() => window.__mhLifeLog.drops);
+      if (drops >= 2) break;
+    }
+    const log = await page.evaluate(() => ({ ...window.__mhLifeLog }));
+    check('敵の攻撃でライフが減る', log.drops >= 1, `減った回数 ${log.drops} / 最低 ${log.min}`);
+    check('ライフが上限を超えたりマイナスにならない', log.overflow === 0,
+      `はみ出した回数 ${log.overflow} / 最後 ${log.last}/${log.max}`);
     // ★盤面の合計が0でないのに敗北画面が出ていたら、盤面とライフが食い違っている
-    check('ライフが残っているのに敗北画面が出ない', !gameOver || lastLife.hp === 0,
-      `${lastLife.raw} / GAME OVER ${gameOver}`);
+    check('ライフが残っているのに敗北画面が出ない', !gameOver || log.last === 0,
+      `${log.last}/${log.max} / GAME OVER ${gameOver}`);
+    // 盤面のガッツも合計として出ている(段階6)。0からは始まらない
+    const gutsText = log.guts || '';
+    // 盤面のガッツの合計が出ていること。0/0 のままなら盤面から拾えていない
+    check('ガッツも盤面の合計として出ている', /^\d+\/\d+$/.test(gutsText) && !/^\d+\/0$/.test(gutsText),
+      gutsText || '見つからない');
 
     check('実行時エラーが出ていない', errors.length === 0, errors.slice(0, 2).join(' / '));
   } catch (e) {

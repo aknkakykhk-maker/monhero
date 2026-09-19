@@ -47,6 +47,8 @@ const createTacticsUnit = (mon, { fullGuts = false } = {}) => {
     def: Math.max(0, tacticsSafeInt(mon.baseDef, 0)),
     guts: fullGuts ? maxGuts : Math.floor(maxGuts * TACTICS_START_GUTS_RATE),
     maxGuts,
+    // ライフと同じく、素の上限を残す。みゅあ補正の倍率はここから計算し直す
+    baseMaxGuts: maxGuts,
     downed: false,
   };
 };
@@ -58,6 +60,7 @@ const normalizeTacticsUnit = (unit) => {
   // 素の上限が無い(古い形)ときは、いまの上限をそのまま素の上限とみなす
   const baseMaxHp = Math.max(1, tacticsSafeInt(unit.baseMaxHp, maxHp));
   const maxGuts = Math.max(0, tacticsSafeInt(unit.maxGuts, 0));
+  const baseMaxGuts = Math.max(0, tacticsSafeInt(unit.baseMaxGuts, maxGuts));
   const hp = tacticsClamp(tacticsSafeInt(unit.hp, 0), 0, maxHp);
   return {
     ...unit,
@@ -68,6 +71,7 @@ const normalizeTacticsUnit = (unit) => {
     def: Math.max(0, tacticsSafeInt(unit.def, 0)),
     guts: tacticsClamp(tacticsSafeInt(unit.guts, 0), 0, maxGuts),
     maxGuts,
+    baseMaxGuts,
     // 「ライフ0なのに立っている」「ライフがあるのに倒れている」を作らない
     downed: hp <= 0,
   };
@@ -131,6 +135,10 @@ const tacticsTotalHp = (units) => (Array.isArray(units) ? units : [])
   .reduce((sum, unit) => sum + (unit ? normalizeTacticsUnit(unit).hp : 0), 0);
 const tacticsTotalMaxHp = (units) => (Array.isArray(units) ? units : [])
   .reduce((sum, unit) => sum + (unit ? normalizeTacticsUnit(unit).maxHp : 0), 0);
+const tacticsTotalGuts = (units) => (Array.isArray(units) ? units : [])
+  .reduce((sum, unit) => sum + (unit ? normalizeTacticsUnit(unit).guts : 0), 0);
+const tacticsTotalBaseMaxGuts = (units) => (Array.isArray(units) ? units : [])
+  .reduce((sum, unit) => sum + (unit ? normalizeTacticsUnit(unit).baseMaxGuts : 0), 0);
 // 素の上限の合計。パーティの maxHp はこちらを持つ。
 // ★みゅあ補正は既存モードと同じく effectiveMaxHp が掛ける。1体ずつの上限にも同じ倍率が
 //   入っているので、ゲージの満タンと盤面の合計はほぼ一致する(1体ごとの切り捨てぶんだけ下)
@@ -147,8 +155,16 @@ const scaleTacticsUnitMaxHp = (unit, hpPct = 0) => {
   const maxHp = Math.max(1, Math.floor(target.baseMaxHp * (1 + pct)));
   return normalizeTacticsUnit({ ...target, maxHp });
 };
-const scaleTacticsUnits = (units, hpPct = 0) => (Array.isArray(units) ? units : [])
-  .map(unit => (unit ? scaleTacticsUnitMaxHp(unit, hpPct) : null));
+// ガッツの上限も同じ考え方。みゅあ補正は合計ではなく1体ずつへ効かせる
+const scaleTacticsUnitMaxGuts = (unit, gutsPct = 0) => {
+  const target = normalizeTacticsUnit(unit);
+  if (!target) return null;
+  const pct = Number.isFinite(Number(gutsPct)) ? Math.max(0, Number(gutsPct)) : 0;
+  const maxGuts = Math.max(0, Math.floor(target.baseMaxGuts * (1 + pct)));
+  return normalizeTacticsUnit({ ...target, maxGuts });
+};
+const scaleTacticsUnits = (units, hpPct = 0, gutsPct = 0) => (Array.isArray(units) ? units : [])
+  .map(unit => (unit ? scaleTacticsUnitMaxGuts(scaleTacticsUnitMaxHp(unit, hpPct), gutsPct) : null));
 
 // 敵の攻撃。当たった子だけが減り、0になったその子が倒れる
 const damageTacticsTargets = (units, targetSlots, damage) => {
@@ -187,6 +203,82 @@ const healTacticsBoard = (units, amount) => {
     left -= add;
   }
   shares.forEach(entry => { if (entry.value > 0) list[entry.index] = healTacticsUnit(list[entry.index], entry.value); });
+  return list;
+};
+
+// ===== ガッツ(1体ずつ) =====
+//
+// ★カードを使うのは「選んだその子」で、払うのもその子のガッツ。
+//   合計で足りていても、その子が足りなければ使えない。ここが新モードの手ざわりの中心。
+
+// そのスロットがそのカードを払えるか。倒れている子は払えない
+const canTacticsSlotPay = (units, slotIndex, cost) => {
+  const list = Array.isArray(units) ? units : [];
+  if (!canTacticsSlotAct(list, slotIndex)) return false;
+  return normalizeTacticsUnit(list[slotIndex]).guts >= Math.max(0, tacticsSafeInt(cost, 0));
+};
+// ガッツを払う。払えないときは盤面を変えずに payable:false を返す
+const payTacticsGutsAt = (units, slotIndex, cost) => {
+  const list = (Array.isArray(units) ? units : []).slice();
+  if (!canTacticsSlotPay(list, slotIndex, cost)) return { units: list, payable: false };
+  const paid = payTacticsGuts(list[slotIndex], cost);
+  if (!paid.payable) return { units: list, payable: false };
+  list[slotIndex] = paid.unit;
+  return { units: list, payable: true };
+};
+// ガッツの回復。ライフと同じく、立っている子へ足りない量に比例して配る。
+// ★倒れた子には配らない(戻ってきたときに満タンで復帰してしまうため)
+const recoverTacticsGutsBoard = (units, amount) => {
+  const list = (Array.isArray(units) ? units : []).slice();
+  const give = Math.max(0, tacticsSafeInt(amount, 0));
+  if (give <= 0) return list;
+  const missing = tacticsAliveSlots(list)
+    .map(index => {
+      const unit = normalizeTacticsUnit(list[index]);
+      return { index, need: Math.max(0, unit.maxGuts - unit.guts) };
+    })
+    .filter(entry => entry.need > 0)
+    .sort((a, b) => b.need - a.need);
+  const totalNeed = missing.reduce((sum, entry) => sum + entry.need, 0);
+  if (totalNeed <= 0) return list;
+  const budget = Math.min(give, totalNeed);
+  let handed = 0;
+  const shares = missing.map(entry => {
+    const value = Math.floor(budget * entry.need / totalNeed);
+    handed += value;
+    return { ...entry, value };
+  });
+  let left = budget - handed;
+  for (let i = 0; i < shares.length && left > 0; i++) {
+    const add = Math.min(left, shares[i].need - shares[i].value);
+    shares[i].value += add;
+    left -= add;
+  }
+  shares.forEach(entry => { if (entry.value > 0) list[entry.index] = recoverTacticsGuts(list[entry.index], entry.value); });
+  return list;
+};
+// トレーニングで伸びたガッツの上限を配る。ライフと同じ配り方(段階7で1体ずつ選ぶ形にする)
+const growTacticsMaxGuts = (units, delta, gutsPct = 0) => {
+  const list = (Array.isArray(units) ? units : []).slice();
+  const add = tacticsSafeInt(delta, 0);
+  if (add <= 0) return list;
+  const filled = tacticsFilledSlots(list)
+    .map(index => ({ index, base: normalizeTacticsUnit(list[index]).baseMaxGuts }));
+  const totalBase = filled.reduce((sum, entry) => sum + entry.base, 0);
+  if (!filled.length || totalBase <= 0) return list;
+  let handed = 0;
+  const shares = filled.map(entry => {
+    const value = Math.floor(add * entry.base / totalBase);
+    handed += value;
+    return { ...entry, value };
+  });
+  const order = [...shares].sort((a, b) => b.base - a.base);
+  for (let left = add - handed, i = 0; left > 0; i = (i + 1) % order.length, left--) order[i].value += 1;
+  shares.forEach(entry => {
+    if (entry.value <= 0) return;
+    const target = normalizeTacticsUnit(list[entry.index]);
+    list[entry.index] = scaleTacticsUnitMaxGuts({ ...target, baseMaxGuts: target.baseMaxGuts + entry.value }, gutsPct);
+  });
   return list;
 };
 
