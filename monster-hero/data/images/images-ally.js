@@ -103,8 +103,8 @@ const ARK_FACE_ICON = "images/monster-icons/face/ark.png?v=1ddd19baef6b";
 const IBLIS_FACE_ICON = "images/monster-icons/face/iblis.png?v=9663afec97f9";
 const SNEGUROCHKA_FACE_ICON = "images/monster-icons/face/snegurochka.png?v=b30d920ec35a";
 // 顔クロップ画像は作らず、立ち絵をそのまま使う(表示側で寄せる方針)
-const UNDINE_FACE_ICON = UNDINE_IMG;
-const YAOBIKUNI_FACE_ICON = YAOBIKUNI_IMG;
+const UNDINE_FACE_ICON = "images/monster-icons/face/undine.png?v=3fb105f14b0e";
+const YAOBIKUNI_FACE_ICON = "images/monster-icons/face/yaobikuni.png?v=fb564521d906";
 // 立ち絵から切り出した顔クロップ(tools/image/make-face-icons.js)
 const EIKI_FACE_ICON = "images/monster-icons/face/eiki.png?v=9605be0feb75";
 const KENSHI_MOCCHI_FACE_ICON = "images/monster-icons/face/kenshi-mocchi.png?v=fed887e4c278";
