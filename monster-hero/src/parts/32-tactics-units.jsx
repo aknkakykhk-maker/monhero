@@ -40,6 +40,9 @@ const createTacticsUnit = (mon, { fullGuts = false } = {}) => {
     name: mon.masuName || mon.name || '',
     hp: maxHp,
     maxHp,
+    // 素の上限。みゅあ補正などの倍率は「合計」ではなく1体ずつへ効かせるので、
+    // 倍率が変わるたびにここから maxHp を計算し直す(scaleTacticsUnitMaxHp)
+    baseMaxHp: maxHp,
     atk: Math.max(0, tacticsSafeInt(mon.baseAtk, 0)),
     def: Math.max(0, tacticsSafeInt(mon.baseDef, 0)),
     guts: fullGuts ? maxGuts : Math.floor(maxGuts * TACTICS_START_GUTS_RATE),
@@ -52,12 +55,15 @@ const createTacticsUnit = (mon, { fullGuts = false } = {}) => {
 const normalizeTacticsUnit = (unit) => {
   if (!unit || typeof unit !== 'object') return null;
   const maxHp = Math.max(1, tacticsSafeInt(unit.maxHp, 1));
+  // 素の上限が無い(古い形)ときは、いまの上限をそのまま素の上限とみなす
+  const baseMaxHp = Math.max(1, tacticsSafeInt(unit.baseMaxHp, maxHp));
   const maxGuts = Math.max(0, tacticsSafeInt(unit.maxGuts, 0));
   const hp = tacticsClamp(tacticsSafeInt(unit.hp, 0), 0, maxHp);
   return {
     ...unit,
     hp,
     maxHp,
+    baseMaxHp,
     atk: Math.max(0, tacticsSafeInt(unit.atk, 0)),
     def: Math.max(0, tacticsSafeInt(unit.def, 0)),
     guts: tacticsClamp(tacticsSafeInt(unit.guts, 0), 0, maxGuts),
@@ -114,6 +120,144 @@ const tacticsFilledSlots = (units) => (Array.isArray(units) ? units : [])
 const tacticsDownedSlots = (units) => (Array.isArray(units) ? units : [])
   .map((unit, index) => (unit && normalizeTacticsUnit(unit).downed ? index : -1))
   .filter(index => index >= 0);
+// ===== 盤面の合計 =====
+//
+// 新モードでは、パーティのライフ(hp / maxHp)を**盤面の合計**にする。こうすると
+// 全滅＝合計0 が自動的に成り立ち、いまある敗北判定・ライフバー・20ターン経過を
+// そのまま使える。
+// ★合計と盤面が食い違うと即座に壊れる(「合計は残っているのに全員倒れている」)。
+//   書き換えの入口は 60-app.jsx の commitTacticsUnits ひとつだけにしてある。
+const tacticsTotalHp = (units) => (Array.isArray(units) ? units : [])
+  .reduce((sum, unit) => sum + (unit ? normalizeTacticsUnit(unit).hp : 0), 0);
+const tacticsTotalMaxHp = (units) => (Array.isArray(units) ? units : [])
+  .reduce((sum, unit) => sum + (unit ? normalizeTacticsUnit(unit).maxHp : 0), 0);
+// 素の上限の合計。パーティの maxHp はこちらを持つ。
+// ★みゅあ補正は既存モードと同じく effectiveMaxHp が掛ける。1体ずつの上限にも同じ倍率が
+//   入っているので、ゲージの満タンと盤面の合計はほぼ一致する(1体ごとの切り捨てぶんだけ下)
+const tacticsTotalBaseMaxHp = (units) => (Array.isArray(units) ? units : [])
+  .reduce((sum, unit) => sum + (unit ? normalizeTacticsUnit(unit).baseMaxHp : 0), 0);
+
+// みゅあ・かどみうむ・回復カードで上がるライフ上限の倍率。
+// ★合計へ掛けると1体ずつの上限と基準が食い違うので、1体ずつの maxHp へ効かせる。
+//   素の上限(baseMaxHp)は残したまま計算し直すので、倍率が下がっても元へ戻せる
+const scaleTacticsUnitMaxHp = (unit, hpPct = 0) => {
+  const target = normalizeTacticsUnit(unit);
+  if (!target) return null;
+  const pct = Number.isFinite(Number(hpPct)) ? Math.max(0, Number(hpPct)) : 0;
+  const maxHp = Math.max(1, Math.floor(target.baseMaxHp * (1 + pct)));
+  return normalizeTacticsUnit({ ...target, maxHp });
+};
+const scaleTacticsUnits = (units, hpPct = 0) => (Array.isArray(units) ? units : [])
+  .map(unit => (unit ? scaleTacticsUnitMaxHp(unit, hpPct) : null));
+
+// 敵の攻撃。当たった子だけが減り、0になったその子が倒れる
+const damageTacticsTargets = (units, targetSlots, damage) => {
+  const hit = new Set((Array.isArray(targetSlots) ? targetSlots : []).filter(Number.isInteger));
+  return (Array.isArray(units) ? units : [])
+    .map((unit, index) => (unit && hit.has(index) ? applyTacticsDamage(unit, damage) : unit));
+};
+
+// 回復を盤面へ配る。★倒れた子には配らない(戻すのは回復カードかトレーニング)。
+// 足りない量に比例して配り、端数は足りない量の大きい子から埋める。
+// 均等割りにすると、瀕死の子が置き去りのまま満タンの子へ回復が消える
+const healTacticsBoard = (units, amount) => {
+  const list = (Array.isArray(units) ? units : []).slice();
+  const give = Math.max(0, tacticsSafeInt(amount, 0));
+  if (give <= 0) return list;
+  const missing = tacticsAliveSlots(list)
+    .map(index => {
+      const unit = normalizeTacticsUnit(list[index]);
+      return { index, need: Math.max(0, unit.maxHp - unit.hp) };
+    })
+    .filter(entry => entry.need > 0)
+    .sort((a, b) => b.need - a.need);
+  const totalNeed = missing.reduce((sum, entry) => sum + entry.need, 0);
+  if (totalNeed <= 0) return list;
+  const budget = Math.min(give, totalNeed);
+  let handed = 0;
+  const shares = missing.map(entry => {
+    const value = Math.floor(budget * entry.need / totalNeed);
+    handed += value;
+    return { ...entry, value };
+  });
+  let left = budget - handed;
+  for (let i = 0; i < shares.length && left > 0; i++) {
+    const add = Math.min(left, shares[i].need - shares[i].value);
+    shares[i].value += add;
+    left -= add;
+  }
+  shares.forEach(entry => { if (entry.value > 0) list[entry.index] = healTacticsUnit(list[entry.index], entry.value); });
+  return list;
+};
+
+// 自分のカードによる自傷(みゅあの札など)。★これで倒れることはない。
+// いまのライフに比例して配り、1体ずつ最低1は残す(元の実装も合計が1を下回らない)
+const selfDamageTacticsBoard = (units, damage) => {
+  const list = (Array.isArray(units) ? units : []).slice();
+  const total = Math.max(0, tacticsSafeInt(damage, 0));
+  if (total <= 0) return list;
+  const alive = tacticsAliveSlots(list)
+    .map(index => ({ index, room: Math.max(0, normalizeTacticsUnit(list[index]).hp - 1) }))
+    .filter(entry => entry.room > 0);
+  const room = alive.reduce((sum, entry) => sum + entry.room, 0);
+  if (room <= 0) return list;
+  const budget = Math.min(total, room);
+  let handed = 0;
+  const shares = alive.map(entry => {
+    const value = Math.floor(budget * entry.room / room);
+    handed += value;
+    return { ...entry, value };
+  });
+  let left = budget - handed;
+  for (let i = 0; i < shares.length && left > 0; i++) {
+    const add = Math.min(left, shares[i].room - shares[i].value);
+    shares[i].value += add;
+    left -= add;
+  }
+  shares.forEach(entry => { if (entry.value > 0) list[entry.index] = applyTacticsDamage(list[entry.index], entry.value); });
+  return list;
+};
+
+// トレーニングで伸びたライフ上限を盤面へ配る。
+// ★段階6で「1体ずつ選ぶ」形にする。それまでは素の上限に比例して配る(合算していた頃と同じ配分)。
+// ★いまのライフは増やさない(トレーニングは上限を上げるだけ、という既存の挙動に合わせる)。
+// ★配ったぶんの合計は必ず delta と一致させる。ずれるとパーティのライフと盤面が食い違う
+const growTacticsMaxHp = (units, delta, hpPct = 0) => {
+  const list = (Array.isArray(units) ? units : []).slice();
+  const add = tacticsSafeInt(delta, 0);
+  if (add <= 0) return list;
+  const filled = tacticsFilledSlots(list)
+    .map(index => ({ index, base: normalizeTacticsUnit(list[index]).baseMaxHp }));
+  const totalBase = filled.reduce((sum, entry) => sum + entry.base, 0);
+  if (!filled.length || totalBase <= 0) return list;
+  let handed = 0;
+  const shares = filled.map(entry => {
+    const value = Math.floor(add * entry.base / totalBase);
+    handed += value;
+    return { ...entry, value };
+  });
+  // 端数は素の上限が大きい子から1ずつ。合計を delta にぴったり合わせる
+  const order = [...shares].sort((a, b) => b.base - a.base);
+  for (let left = add - handed, i = 0; left > 0; i = (i + 1) % order.length, left--) order[i].value += 1;
+  shares.forEach(entry => {
+    if (entry.value <= 0) return;
+    const target = normalizeTacticsUnit(list[entry.index]);
+    list[entry.index] = scaleTacticsUnitMaxHp({ ...target, baseMaxHp: target.baseMaxHp + entry.value }, hpPct);
+  });
+  return list;
+};
+
+// 立っている子を満タンへ(WAVEクリアの全回復)。★倒れた子はここでは戻らない
+const fullHealTacticsBoard = (units) => (Array.isArray(units) ? units : []).map(unit => {
+  if (!unit) return null;
+  const target = normalizeTacticsUnit(unit);
+  return target.downed ? target : { ...target, hp: target.maxHp };
+});
+
+// 20ターン経過など、一斉に倒れる場面。敗北の見え方をそろえる
+const wipeTacticsBoard = (units) => (Array.isArray(units) ? units : [])
+  .map(unit => (unit ? applyTacticsDamage(unit, Number.MAX_SAFE_INTEGER) : null));
+
 // 全滅したか。★1体もいない盤面は「まだ始まっていない」ので全滅にしない
 const isTacticsWipedOut = (units) => tacticsFilledSlots(units).length > 0 && tacticsAliveSlots(units).length === 0;
 // そのスロットのカードを使えるか。倒れている子のカードは手札に残っていても選べない
