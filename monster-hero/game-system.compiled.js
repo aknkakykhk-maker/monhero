@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0c9ed5235caff4e7
+// source-sha256: 31da1f1ddf5b89f0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: cb3a80ef5f3b5699
+// generated-sha256: 456dbd548cd69963
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -161,7 +161,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-19 09:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-19 10:14"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15614,6 +15614,153 @@ const ENEMY_ACTION_DEFINITIONS = [{
   cooldown: 0,
   useLimit: null
 }];
+// ===== 新モード(id: tactics)の敵行動 =====
+// 設計の正本: docs/spec/BATTLE_NEW_MODE_PLAN.md
+//
+// ★上の ENEMY_ACTION_DEFINITIONS は書き換えない。別の表として持ち、
+//   state.definitions で渡す。既存モードの呼び出しは何も変わらない。
+// ★「様子を見ている(WAIT)」は入れない。5回に1回、敵が何もしないターンを作らないため。
+// ★どの行動にも「こちらの対抗手段」を1つ用意する。読めば受けられる、が成り立たないと
+//   ただ強いだけの難易度と変わらなくなる。
+//     薙ぎ払い → 距離撃で敵をずらす / 連撃 → ガード /
+//     貫通撃 → 回避・反射・スタン / 咆哮・再生 → スタンで潰す・削り切る
+// ★type は既存の ATTACK / SPECIAL をそのまま使い、違いは variant で持つ。
+//   getIncomingDamageBeforeTurnReduction は type でダメージの有無を判断しているので、
+//   ここを新しい type にするとダメージ計算・演出・予告の経路を全部書き足すことになる。
+const TACTICS_SWEEP_MULT = 1.6; // 予告した間合いに敵がいるとき
+const TACTICS_SWEEP_MISS_MULT = 0.4; // 距離撃などでずらしたとき
+const TACTICS_RUSH_MULT = 1.8; // 0.6×3ヒットぶん。ガードが手数ぶん効く
+const TACTICS_RUSH_HITS = 3;
+const TACTICS_PIERCE_MULT = 1.8; // ガードを無視する
+const TACTICS_ROAR_ATK_RATE = 1.5; // 次のターンから敵の攻撃が上がる
+const TACTICS_ROAR_MAX_STACKS = 2; // 重ねがけの上限
+const TACTICS_REGEN_RATE = 0.08; // 最大ライフに対する回復量
+const TACTICS_REGEN_HP_THRESHOLD = 0.9; // ライフがこの割合を下回ったときだけ使う
+const TACTICS_ACTION_DEFINITIONS = [{
+  id: 'normal',
+  type: 'ATTACK',
+  category: '通常攻撃',
+  weight: 30,
+  multiplier: 1,
+  hits: 1,
+  range: '全間合い',
+  condition: '常時',
+  cooldown: 0,
+  useLimit: null
+}, {
+  id: 'charge',
+  type: 'CHARGE',
+  category: 'ためる',
+  weight: 12,
+  multiplier: 0,
+  hits: 0,
+  range: '全間合い',
+  condition: '常時',
+  cooldown: 0,
+  useLimit: null
+}, {
+  id: 'special',
+  type: 'SPECIAL',
+  category: '必殺技',
+  weight: 0,
+  multiplier: 2.5,
+  hits: 1,
+  range: '全間合い',
+  condition: 'ためた次のターンに必ず発動',
+  cooldown: 0,
+  useLimit: null
+}, {
+  id: 'move',
+  type: 'MOVE',
+  category: '移動',
+  weight: 10,
+  multiplier: 0,
+  hits: 0,
+  range: '現在以外の3間合い',
+  condition: '移動先がある・移動した次のターンは選ばない',
+  cooldown: 0,
+  useLimit: null
+}, {
+  id: 'sweep',
+  type: 'ATTACK',
+  variant: 'sweep',
+  category: '薙ぎ払い',
+  weight: 14,
+  multiplier: TACTICS_SWEEP_MULT,
+  missMultiplier: TACTICS_SWEEP_MISS_MULT,
+  hits: 1,
+  range: '予告した1間合い',
+  condition: '予告した間合いに敵がいると大ダメージ。距離撃でずらせる',
+  cooldown: 0,
+  useLimit: null
+}, {
+  id: 'rush',
+  type: 'ATTACK',
+  variant: 'rush',
+  category: '連撃',
+  weight: 14,
+  multiplier: TACTICS_RUSH_MULT,
+  hits: TACTICS_RUSH_HITS,
+  range: '全間合い',
+  condition: 'ガードが手数ぶん効く',
+  cooldown: 0,
+  useLimit: null
+}, {
+  id: 'pierce',
+  type: 'ATTACK',
+  variant: 'pierce',
+  category: '貫通撃',
+  weight: 12,
+  multiplier: TACTICS_PIERCE_MULT,
+  hits: 1,
+  range: '全間合い',
+  condition: 'ガードが効かない',
+  cooldown: 0,
+  useLimit: null
+}, {
+  id: 'roar',
+  type: 'ROAR',
+  category: '咆哮',
+  weight: 10,
+  multiplier: 0,
+  hits: 0,
+  range: '全間合い',
+  condition: `重ねがけは${TACTICS_ROAR_MAX_STACKS}回まで`,
+  cooldown: 0,
+  useLimit: TACTICS_ROAR_MAX_STACKS
+}, {
+  id: 'regen',
+  type: 'REGEN',
+  category: '再生',
+  weight: 10,
+  multiplier: 0,
+  hits: 0,
+  range: '全間合い',
+  condition: 'ライフが減っているときだけ',
+  cooldown: 0,
+  useLimit: null
+}];
+// どの敵も通常攻撃・ためる・必殺技・移動は持つ。ここへ足すのは「その敵だけの技」。
+// WAVEが進むほど読むことが増える並びにしてある(敵の順は ENEMY_SEQUENCE)。
+const TACTICS_BASE_ACTION_IDS = Object.freeze(['normal', 'charge', 'special', 'move']);
+const TACTICS_ENEMY_ACTION_IDS = Object.freeze({
+  Dino: Object.freeze(['rush']),
+  Gel: Object.freeze(['sweep']),
+  BlackDino: Object.freeze(['rush', 'roar']),
+  Jaakusou: Object.freeze(['sweep', 'regen']),
+  BlueMountain: Object.freeze(['pierce', 'sweep']),
+  Gali: Object.freeze(['roar', 'rush']),
+  Naga: Object.freeze(['sweep', 'pierce']),
+  Lilim: Object.freeze(['regen', 'pierce']),
+  Durahan: Object.freeze(['rush', 'roar', 'pierce']),
+  Moo: Object.freeze(['sweep', 'rush', 'pierce', 'roar', 'regen'])
+});
+const tacticsActionDefinitions = enemyId => {
+  const ids = [...TACTICS_BASE_ACTION_IDS, ...(TACTICS_ENEMY_ACTION_IDS[enemyId] || [])];
+  return TACTICS_ACTION_DEFINITIONS.filter(def => ids.includes(def.id));
+};
+// そのモード・その敵が使う行動表。新モード以外は今までどおりの1つの表を返す
+const enemyActionDefinitionsFor = (mode, enemyId) => typeof isTacticsMode === 'function' && isTacticsMode(mode) ? tacticsActionDefinitions(enemyId) : ENEMY_ACTION_DEFINITIONS;
 // 直前の行動から、次に選べる行動を決めるための状態を作る
 const enemyActionStateFrom = lastIntent => ({
   charging: lastIntent?.type === 'CHARGE',
@@ -15622,7 +15769,9 @@ const enemyActionStateFrom = lastIntent => ({
 const evaluateEnemyActions = (ent, currentDist, state = {}) => {
   const charging = !!state.charging,
     movedLast = !!state.movedLast;
-  return ENEMY_ACTION_DEFINITIONS.map(def => {
+  // 行動表はモードごとに違う(新モードだけ別の表)。渡されなければ今までどおりの1つの表を使う
+  const definitions = Array.isArray(state.definitions) && state.definitions.length ? state.definitions : ENEMY_ACTION_DEFINITIONS;
+  return definitions.map(def => {
     let available = !!ent,
       reason = ent ? '' : '敵情報がありません';
     if (available) {
@@ -15633,6 +15782,20 @@ const evaluateEnemyActions = (ent, currentDist, state = {}) => {
       } else if (def.type === 'SPECIAL') {
         available = false;
         reason = 'ためた次のターンにだけ発動します';
+      } else if (def.type === 'REGEN') {
+        // 満タンに近いあいだは使わない。回復するものが無いターンを作らないため
+        const maxHp = Math.max(0, Number(ent.maxHp) || 0),
+          hp = Math.max(0, Number(ent.hp) || 0);
+        if (!(maxHp > 0 && hp < maxHp * TACTICS_REGEN_HP_THRESHOLD)) {
+          available = false;
+          reason = 'ライフが十分あるあいだは使いません';
+        }
+      } else if (def.type === 'ROAR') {
+        // 重ねがけの上限。すでに上限まで吼えていたら選ばない
+        if (Math.max(0, Number(state.roarStacks) || 0) >= TACTICS_ROAR_MAX_STACKS) {
+          available = false;
+          reason = `重ねがけは${TACTICS_ROAR_MAX_STACKS}回までです`;
+        }
       } else if (def.type === 'MOVE') {
         // 移動は必ず前のターンに吹き出しで予告してから行う。
         // 予告を出す機会が無かったターンの直後は、そもそも移動を選ばない。
@@ -15667,13 +15830,21 @@ const enemyActionProbabilities = (ent, currentDist, state = {}) => {
   }));
 };
 // 行動の見出しとアイコン。抽選と台本(練習モード)の両方から使う
-const enemyActionLabel = (ent, type) => type === 'ATTACK' ? ent?.normal || '通常攻撃' : type === 'CHARGE' ? '必殺技の準備をしている' : type === 'SPECIAL' ? ent?.special || '必殺技！' : '様子を見ている';
+const enemyActionLabel = (ent, type) => type === 'ATTACK' ? ent?.normal || '通常攻撃' : type === 'CHARGE' ? '必殺技の準備をしている' : type === 'SPECIAL' ? ent?.special || '必殺技！' : type === 'ROAR' ? '咆哮している' : type === 'REGEN' ? '傷を癒している' : '様子を見ている';
 const ENEMY_ACTION_ICONS = {
   ATTACK: '👊',
   CHARGE: '✨',
   SPECIAL: '🔥',
   WAIT: '⏳',
-  MOVE: '🏃'
+  MOVE: '🏃',
+  ROAR: '📢',
+  REGEN: '💚'
+};
+// 新モードの攻撃は type が ATTACK のままなので、見分けは variant で付ける
+const TACTICS_VARIANT_ICONS = {
+  sweep: '🌪️',
+  rush: '💥',
+  pierce: '🗡️'
 };
 const chooseEnemyAction = (ent, currentDist, random = Math.random, state = {}) => {
   const actions = enemyActionProbabilities(ent, currentDist, state),
@@ -15696,6 +15867,32 @@ const chooseEnemyAction = (ent, currentDist, random = Math.random, state = {}) =
       label: `移動: ${RANGE_LABELS[targetDist]}`,
       targetDist,
       icon: ENEMY_ACTION_ICONS.MOVE,
+      actionId: selected.id
+    };
+  }
+  // 薙ぎ払いは「いまいる間合い」を薙ぐと予告する。実行までに距離撃でずらせば威力が落ちるので、
+  // 予告を見てからガッツを距離撃へ回すかどうかの判断になる。
+  // 予告と実際に薙ぐ間合いが食い違わないよう、ここで決めた値だけを実行時に見る
+  if (selected.variant === 'sweep') {
+    return {
+      type: selected.type,
+      variant: selected.variant,
+      sweepDist: currentDist,
+      value: Math.floor(ent.atk * selected.multiplier),
+      missValue: Math.floor(ent.atk * (selected.missMultiplier ?? 1)),
+      label: `${selected.category}: ${RANGE_LABELS[currentDist]}`,
+      icon: TACTICS_VARIANT_ICONS.sweep,
+      actionId: selected.id
+    };
+  }
+  if (selected.variant) {
+    return {
+      type: selected.type,
+      variant: selected.variant,
+      hits: Math.max(1, Math.floor(Number(selected.hits) || 1)),
+      value: Math.floor(ent.atk * selected.multiplier),
+      label: selected.category,
+      icon: TACTICS_VARIANT_ICONS[selected.variant] || ENEMY_ACTION_ICONS[selected.type] || '⏳',
       actionId: selected.id
     };
   }
@@ -40317,6 +40514,10 @@ function MonsterHeroGame() {
   const [waveResult, setWaveResult] = useState(null);
   // 敵撃破に伴うスコア・報酬・画面遷移を、同じWAVEで二重に確定しないための同期ロック。
   const enemyDefeatResolvedRef = useRef(false);
+  // 新モードの咆哮を、このWAVEで何回重ねたか。次の行動を抽選するのは再描画より先なので、
+  // 表示用のstateではなくrefで持つ(上限に達したら咆哮そのものが候補から外れる)。
+  // WAVEが変わるたびに0へ戻す
+  const tacticsRoarStacksRef = useRef(0);
   // 不死(死者の再起)で、このWAVEに何回起き上がったか。撃破処理と同じ同期ロックの流れで判定するので
   // 表示用のstateとは別にrefでも持ち、再描画を待たずに次の撃破判定へ反映する。
   const enemyRevivalUsedRef = useRef(0);
@@ -50481,11 +50682,17 @@ function MonsterHeroGame() {
     if (reserved && reserved.type === 'MOVE' && reserved.targetDist === distAfterExecuted) reserved = null;
     // 引き直しになった行動は、次のターンにそのまま実行されるのに吹き出しを出していない。
     // ここで移動を引くと「予告なしでいきなり動く」ことになるので、移動は選ばせない
+    // 行動表はモードと敵で決まる。新モード以外では今までどおりの1つの表が返る
+    const actionState = () => ({
+      definitions: enemyActionDefinitionsFor(runMode, enemy?.id),
+      roarStacks: tacticsRoarStacksRef.current
+    });
     const upcoming = reserved || getNextEnemyAction(enemy, distAfterExecuted, effective, {
-      unannounced: true
+      unannounced: true,
+      ...actionState()
     });
     setEnemyIntent(upcoming);
-    reserveEnemyNextIntent(getNextEnemyAction(enemy, distAfterIntent(upcoming, distAfterExecuted), upcoming));
+    reserveEnemyNextIntent(getNextEnemyAction(enemy, distAfterIntent(upcoming, distAfterExecuted), upcoming, actionState()));
   };
 
   // 絶氷の楔の実効果と表示が別判定にならないよう、準備を除いた発動状態をここへ集約する。
@@ -51076,6 +51283,34 @@ function MonsterHeroGame() {
         setEnemyAttackAnim(false);
         setEnemyAttackFx(null);
         await battleWait(200);
+      } else if (intent.type === 'ROAR') {
+        // 新モードの咆哮。このターンはダメージが無く、次のターンから敵の攻撃が上がる。
+        // 重ねがけの上限は行動の抽選側(evaluateEnemyActions)が見るので、ここでは数えるだけ
+        Audio_.se.enemyCharge();
+        setEnemyAttackFx({
+          kind: 'charge'
+        });
+        setEnemyAttackAnim(true);
+        tacticsRoarStacksRef.current += 1;
+        setEnemy(prev => prev ? {
+          ...prev,
+          atk: Math.floor(Math.max(0, Number(prev.atk) || 0) * TACTICS_ROAR_ATK_RATE)
+        } : prev);
+        addPopup(`咆哮！ 敵の攻撃が上がった`, 'enemy', 'text-orange-300 font-black text-xl drop-shadow-md');
+        triggerShake(true);
+        await battleWait(1100);
+        setEnemyAttackAnim(false);
+        setEnemyAttackFx(null);
+        await battleWait(200);
+      } else if (intent.type === 'REGEN') {
+        // 新モードの再生。満タンに近いあいだは抽選に出ないので、ここでは必ず回復する
+        const healed = Math.max(1, Math.floor(Math.max(0, Number(enemy?.maxHp) || 0) * TACTICS_REGEN_RATE));
+        setEnemy(prev => prev ? {
+          ...prev,
+          hp: Math.min(Number(prev.maxHp) || 0, Math.max(0, Number(prev.hp) || 0) + healed)
+        } : prev);
+        addPopup(`再生 +${healed}`, 'enemy', 'text-emerald-300 font-black text-2xl drop-shadow-md');
+        await battleWait(1000);
       } else if (intent.type === 'WAIT') {
         addPopup("待機中...", 'enemy', 'text-slate-400 text-lg');
         await battleWait(500);
@@ -51094,9 +51329,30 @@ function MonsterHeroGame() {
         await battleWait(200);
         setEnemyAttackFx(null);
       } else if (intent.type === 'ATTACK' || intent.type === 'SPECIAL') {
+        // 新モードの攻撃は variant で受け方が変わる。type は ATTACK のままなので、
+        // ダメージ計算・演出・予告の経路は既存のものをそのまま通る。
+        //   薙ぎ払い … 予告した間合いに敵がいなければ威力が落ちる(距離撃でずらせる)
+        //   連撃     … ガードが手数ぶん効く
+        //   貫通撃   … ガードが効かない
+        // 距離撃で動かした先は setEnemyDist の反映を待たないため、呼び出し元が確定させた
+        // 移動先(forcedMoveTarget)を優先して見る
+        const actingEnemyDist = Number.isInteger(immediateEffects.forcedMoveTarget) ? immediateEffects.forcedMoveTarget : enemyDist;
+        const sweptAway = intent.variant === 'sweep' && Number.isInteger(intent.sweepDist) && actingEnemyDist !== intent.sweepDist;
+        const actingIntent = sweptAway ? {
+          ...intent,
+          value: Math.max(0, Math.floor(Number(intent.missValue) || 0))
+        } : intent;
         // 表示と同じ guardFlat / guardMult 集計を実効丈夫さへ適用する。
-        const guardValue = immediateEffects.guardFlat > 0 || immediateEffects.guardMult > 0 ? Math.floor(immediateEffects.guardFlat + effectiveDef * immediateEffects.guardMult) : 0;
-        const incomingBeforeTurnReduction = getIncomingDamageBeforeTurnReduction(intent);
+        const baseGuardValue = immediateEffects.guardFlat > 0 || immediateEffects.guardMult > 0 ? Math.floor(immediateEffects.guardFlat + effectiveDef * immediateEffects.guardMult) : 0;
+        const guardValue = intent.variant === 'pierce' ? 0 : intent.variant === 'rush' ? baseGuardValue * Math.max(1, Math.floor(Number(intent.hits) || 1)) : baseGuardValue;
+        if (sweptAway) {
+          addPopup('薙ぎ払いをかわした！', 'hero', 'text-cyan-300 font-black text-xl drop-shadow-md');
+          await battleWait(600);
+        } else if (intent.variant === 'pierce' && baseGuardValue > 0) {
+          addPopup('貫通！ ガードが効かない', 'enemy', 'text-rose-300 font-black text-xl drop-shadow-md');
+          await battleWait(600);
+        }
+        const incomingBeforeTurnReduction = getIncomingDamageBeforeTurnReduction(actingIntent);
         const incomingDmg = applyTurnDamageReduction(incomingBeforeTurnReduction);
         if ((mainHero?.id === 'Ark' || mainHero?.id === 'Iblis') && getWaveBuff('chuuniDmgCutUses') < 2) {
           addWaveBuff('chuuniDmgCutUses', 1);
@@ -51980,6 +52236,7 @@ function MonsterHeroGame() {
       guardFlat: currentTurnGuardFlat,
       guardMult: currentTurnGuardMult,
       distLocked: forcedMoveTarget != null,
+      forcedMoveTarget,
       iceLockRefreshed: activatedIceLockThisTurn
     }, executedIntent, hpBeforeEnemyAttack, enemyHpAfterOurAttacks);
     // 通常の距離変更を先に処理した後、最後の距離撃の指定距離を再適用して最終距離を確定する。
@@ -52830,14 +53087,22 @@ function MonsterHeroGame() {
     setEnemyRevivalUsed(0);
     enemyRevivedHpRef.current = null;
     setEnemyRevivalReveal(null);
+    // 咆哮の重ねがけもWAVEごとに数え直す
+    tacticsRoarStacksRef.current = 0;
     setEnemy(newEnemy);
     setEnemyDist(dist);
     setEnemyLastIntent(null);
+    // 行動表はモードと敵で決まる。新モード以外では今までどおりの1つの表が返る
+    const actionState = () => ({
+      definitions: enemyActionDefinitionsFor(runMode, newEnemy?.id),
+      roarStacks: tacticsRoarStacksRef.current
+    });
     const firstIntent = getNextEnemyAction(newEnemy, dist, null, {
-      unannounced: true
+      unannounced: true,
+      ...actionState()
     });
     setEnemyIntent(firstIntent);
-    reserveEnemyNextIntent(getNextEnemyAction(newEnemy, distAfterIntent(firstIntent, dist), firstIntent));
+    reserveEnemyNextIntent(getNextEnemyAction(newEnemy, distAfterIntent(firstIntent, dist), firstIntent, actionState()));
     setTurnCount(1);
     setSelectedCards([]);
     setLastActionSlot(null);
@@ -65536,9 +65801,13 @@ function MonsterHeroGame() {
       const scanEnemy = waveScanPreview?.enemy || enemy;
       const scanDist = waveScanPreview ? 2 : enemyDist;
       const scanBeforeBattle = !!waveScanPreview;
-      const scanState = scanBeforeBattle ? {
-        unannounced: true
-      } : enemyActionStateFrom(enemyLastIntent);
+      const scanState = {
+        ...(scanBeforeBattle ? {
+          unannounced: true
+        } : enemyActionStateFrom(enemyLastIntent)),
+        definitions: enemyActionDefinitionsFor(runMode, scanEnemy?.id),
+        roarStacks: tacticsRoarStacksRef.current
+      };
       const actions = enemyActionProbabilities(scanEnemy, scanDist, scanState);
       return /*#__PURE__*/React.createElement("div", {
         className: "fixed inset-0 flex flex-col",
@@ -65601,7 +65870,7 @@ function MonsterHeroGame() {
       }, scanBeforeBattle ? '戦闘状況' : '現在の間合い'), /*#__PURE__*/React.createElement("b", null, scanBeforeBattle ? '戦闘開始前' : `${RANGE_LABELS[scanDist]}距離`)), /*#__PURE__*/React.createElement("div", {
         className: "space-y-2 text-left"
       }, actions.map((action, index) => {
-        const actionName = action.type === 'MOVE' ? '間合い移動' : enemyActionLabel(scanEnemy, action.type);
+        const actionName = action.type === 'MOVE' ? '間合い移動' : action.variant ? action.category : enemyActionLabel(scanEnemy, action.type);
         const power = Math.floor(scanEnemy.atk * action.multiplier);
         return /*#__PURE__*/React.createElement("details", {
           key: action.id,
