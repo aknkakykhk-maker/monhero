@@ -42,19 +42,19 @@ const slice = (from, to) => {
 const sandbox = { Math, console };
 vm.createContext(sandbox);
 vm.runInContext(
-  slice('const TACTICS_REVIVE_HP_RATE', '// ==== 画面ライフサイクル')
-    + ';globalThis.api={TACTICS_REVIVE_HP_RATE,TACTICS_TRAINING_REVIVE_RATE,TACTICS_START_GUTS_RATE,'
+  slice('const TACTICS_START_GUTS_RATE', '// ==== 画面ライフサイクル')
+    + ';globalThis.api={TACTICS_START_GUTS_RATE,'
     + 'createTacticsUnit,normalizeTacticsUnit,applyTacticsDamage,healTacticsUnit,reviveTacticsUnit,'
     + 'payTacticsGuts,recoverTacticsGuts,tacticsAliveSlots,tacticsDownedSlots,isTacticsWipedOut,'
     + 'canTacticsSlotAct,chooseTacticsTarget,withTacticsTarget,tacticsIntentTargets,'
     + 'tacticsTotalHp,tacticsTotalMaxHp,tacticsTotalBaseMaxHp,scaleTacticsUnits,scaleTacticsUnitMaxHp,'
     + 'damageTacticsTargets,healTacticsBoard,selfDamageTacticsBoard,'
-    + 'fullHealTacticsBoard,wipeTacticsBoard,tacticsTotalGuts,tacticsTotalBaseMaxGuts,'
+    + 'wipeTacticsBoard,tacticsTotalGuts,tacticsTotalBaseMaxGuts,'
     + 'scaleTacticsUnitMaxGuts,canTacticsSlotPay,payTacticsGutsAt,recoverTacticsGutsBoard,'
     + 'healTacticsAt,recoverTacticsGutsAt,selfDamageTacticsAt,'
     + 'reviveTacticsAt,tacticsReviveHelper,tacticsPayerSlot,tacticsEnemyPowerMultiplier,'
     + 'TACTICS_ENEMY_POWER_MAX,applyTacticsTraining,tacticsPartyAtk,'
-    + 'tacticsPartyDef,TACTICS_TRAINING_REVIVE_RATE,shrinkTacticsScore,TACTICS_SCORE_DIVISOR};', sandbox);
+    + 'tacticsPartyDef,shrinkTacticsScore,TACTICS_SCORE_DIVISOR};', sandbox);
 const api = sandbox.api;
 
 // モンスター1体ぶんの入力。マスモンなら育成済みの値が baseHp などに入っている
@@ -84,18 +84,17 @@ check('ライフが0になったら倒れる', downed.hp === 0 && downed.downed 
 check('倒れた子へさらに当たっても何も起きない', api.applyTacticsDamage(downed, 100).hp === 0);
 check('元の値を書き換えない（新しい値を返す）', unit.hp === 600, `元のHP ${unit.hp}`);
 check('回復はライフを超えない', api.healTacticsUnit(hit, 9999).hp === 600);
-check('倒れた子は回復では戻らない', api.healTacticsUnit(downed, 500).downed === true);
-
-// --- ③ 戻す手段は2つ。払うものが違うので戻るライフも違う ---
-const revivedByCard = api.reviveTacticsUnit(downed, api.TACTICS_REVIVE_HP_RATE);
-const revivedByTraining = api.reviveTacticsUnit(downed, api.TACTICS_TRAINING_REVIVE_RATE);
-check('回復カードで戻すとライフは一部',
-  revivedByCard.downed === false && revivedByCard.hp === Math.floor(600 * api.TACTICS_REVIVE_HP_RATE),
-  `${revivedByCard.hp}/600`);
-check('トレーニングで戻すほうがライフは多い', revivedByTraining.hp >= revivedByCard.hp,
-  `カード${revivedByCard.hp} / トレーニング${revivedByTraining.hp}`);
-check('戻したライフは必ず1以上', api.reviveTacticsUnit(downed, 0).hp >= 1);
-check('倒れていない子に戻す操作をしても何も起きない', api.reviveTacticsUnit(unit, 1).hp === 600);
+// --- ③ 倒れた子は「ライフが全快になってはじめて復活」(2026-09-19 ユーザーが決めた形) ---
+// ★倒れたあともライフは回復で貯まる。途中では立たない
+const healingDowned = api.healTacticsUnit(downed, 500);
+check('倒れた子にも回復は入る', healingDowned.hp === 500, `${healingDowned.hp}/600`);
+check('全快の手前では立たない', healingDowned.downed === true);
+check('全快になったら立ち上がる', api.healTacticsUnit(healingDowned, 100).downed === false);
+check('全快を超えて回復しても上限どまり', api.healTacticsUnit(downed, 9999).hp === 600);
+// トレーニングの「起こす」は、中身は「上限まで回復する」
+check('起こすと全快で立ち上がる',
+  api.reviveTacticsUnit(downed).hp === 600 && api.reviveTacticsUnit(downed).downed === false);
+check('立っている子に起こす操作をしても何も起きない', api.reviveTacticsUnit(unit).hp === 600);
 
 // --- ガッツは個別。足りなければ払えない ---
 const paid = api.payTacticsGuts(unit, 20);
@@ -173,8 +172,11 @@ check('壊れた値を渡しても落ちない', (() => {
 })());
 check('ライフ0なのに立っている状態を作らない',
   api.normalizeTacticsUnit({ hp: 0, maxHp: 100, downed: false }).downed === true);
-check('ライフがあるのに倒れている状態を作らない',
-  api.normalizeTacticsUnit({ hp: 50, maxHp: 100, downed: true }).downed === false);
+// ★「ライフがあるのに倒れている」は**作ってよい**。全快までの貯めがその状態
+check('全快の手前ではライフがあっても倒れたまま',
+  api.normalizeTacticsUnit({ hp: 50, maxHp: 100, downed: true }).downed === true);
+check('全快なら必ず立っている',
+  api.normalizeTacticsUnit({ hp: 100, maxHp: 100, downed: true }).downed === false);
 check('unitでないものは null', api.normalizeTacticsUnit(null) === null && api.normalizeTacticsUnit('x') === null);
 check('盤面が配列でなくても落ちない',
   api.tacticsAliveSlots(null).length === 0 && api.isTacticsWipedOut(undefined) === false);
@@ -212,19 +214,33 @@ const healedBoard = api.healTacticsBoard(damagedBoard, 200);
 check('回復は足りない量の多い子から配る', healedBoard[0].hp > damagedBoard[0].hp && api.tacticsTotalHp(healedBoard) === api.tacticsTotalHp(damagedBoard) + 200,
   `${damagedBoard[0].hp}→${healedBoard[0].hp} / ${damagedBoard[2].hp}→${healedBoard[2].hp}`);
 check('上限を超えて回復しない', api.tacticsTotalHp(api.healTacticsBoard(damagedBoard, 99999)) === api.tacticsTotalMaxHp(damagedBoard));
-// ★倒れた子へ配ると「倒れたのにライフがある」状態になる。戻すのは回復カードかトレーニング
-check('倒れた子には配らない', (() => {
+// ★自動再生・緊急回復も「復活までの貯め」に乗る(2026-09-19 ユーザーが決めた形)
+check('倒れた子にも配る(オート回復も乗る)', (() => {
   const board = api.damageTacticsTargets(pair, [2], 9999);
   const after = api.healTacticsBoard(api.damageTacticsTargets(board, [0], 200), 200);
-  return after[2].hp === 0 && after[2].downed === true;
+  return after[2].hp > 0 && after[2].downed === true;
+})());
+check('配り切っても全快でなければ立たない', (() => {
+  const board = api.damageTacticsTargets(pair, [2], 9999);
+  return api.healTacticsBoard(board, 100)[2].downed === true;
+})());
+check('配ったぶんで全快になれば立ち上がる', (() => {
+  const board = api.damageTacticsTargets(pair, [2], 9999);
+  return api.healTacticsBoard(board, 9999)[2].downed === false;
+})());
+// ★合計ライフへ数えるのは立っている子だけ。数えると「全員倒れているのに敗北しない」が起きる
+check('倒れた子のライフは合計へ数えない', (() => {
+  const board = api.healTacticsBoard(api.damageTacticsTargets(pair, [2], 9999), 100);
+  return api.tacticsTotalHp(board) === 600 && board[2].hp > 0;
+})());
+check('全員倒れていれば合計は0', (() => {
+  const board = api.healTacticsBoard(api.wipeTacticsBoard(pair), 100);
+  return api.tacticsTotalHp(board) === 0 && api.isTacticsWipedOut(board) === true;
 })());
 check('満タンの盤面へ回復しても増えない', api.tacticsTotalHp(api.healTacticsBoard(pair, 500)) === 1000);
-check('立っている子がいなければ何も起きない',
+// 全員倒れていても、貯めには入る(ただし合計は0のままなので敗北は動かない)
+check('全員倒れていても合計は0のまま',
   api.tacticsTotalHp(api.healTacticsBoard(api.wipeTacticsBoard(pair), 500)) === 0);
-check('WAVEの全回復でも倒れた子は戻らない', (() => {
-  const board = api.fullHealTacticsBoard(api.damageTacticsTargets(damagedBoard, [2], 9999));
-  return board[0].hp === board[0].maxHp && board[2].downed === true && board[2].hp === 0;
-})());
 
 // 自傷では倒れない
 const selfHurt = api.selfDamageTacticsBoard(pair, 99999);
@@ -391,9 +407,14 @@ check('回復(吸収・自動再生・緊急)は立っている子へ配る',
 // 回復カードは使う子へ。倒れた子へ向けたときは起こす(段階7)
 check('回復カードは使う子に効く',
   has('hpBeforeEnemyAttack=commitTacticsUnits(healTacticsAt(board,slotIdx,cardHeal));'));
-check('倒れた子へ回復カードを向けると起こす',
-  has('hpBeforeEnemyAttack=commitTacticsUnits(reviveTacticsAt(board,slotIdx));')
-    && has('が起き上がった！'));
+// ★どの回復から戻っても同じ扱いになるよう、立ち上がった瞬間は commitTacticsUnits が1か所で拾う
+check('倒れた子へ回復カードを向けても、貯まって全快で立つ',
+  has('hpBeforeEnemyAttack=commitTacticsUnits(healTacticsAt(board,slotIdx,cardHeal));'));
+check('立ち上がった知らせは1か所で出す',
+  has('が起き上がった！')
+    && has('if (normalizeTacticsUnit(was).downed && !normalizeTacticsUnit(unit).downed) {')
+    && (source.match(/が起き上がった！/g) || []).length === 1,
+  `「起き上がった」を出す場所 ${(source.match(/が起き上がった！/g) || []).length}か所`);
 check('ドレインは殴った子が吸う',
   has('if(isTacticsMode(runMode)) hpBeforeEnemyAttack=commitTacticsUnits(healTacticsAt(tacticsUnitsRef.current,slotIdx,hRec));'));
 check('20ターン経過は全員を倒す', has('if(nextTurn>20){ if(tacticsWipe()===null) setHp(0); }'));
@@ -452,15 +473,17 @@ check('伸ばした子がいれば平均も上がる',
   api.tacticsPartyAtk(api.applyTacticsTraining(pair, 0, { atk: 220, def: 120, hp: 600, guts: 100 })) === 170,
   String(api.tacticsPartyAtk(api.applyTacticsTraining(pair, 0, { atk: 220, def: 120, hp: 600, guts: 100 }))));
 check('誰もいなければ0', api.tacticsPartyAtk([null, null, null, null]) === 0);
-// ★トレーニングで起こすときは満タンで戻る(回復カードの半分とは別の割合)
-check('トレーニングで起こすと満タンで戻る', api.TACTICS_TRAINING_REVIVE_RATE === 1
-  && api.TACTICS_TRAINING_REVIVE_RATE > api.TACTICS_REVIVE_HP_RATE);
+// ★トレーニングの「起こす」は、中身は「上限まで回復する」。決まりは1つだけにしてある
+check('トレーニングで起こすと満タンで立ち上がる', (() => {
+  const board = api.reviveTacticsAt(api.damageTacticsTargets(pair, [0], 9999), 0);
+  return board[0].hp === 600 && board[0].downed === false;
+})());
 // 本体への結線
 check('新モードのトレーニングは1体ずつ入れる',
   has('units=applyTacticsTraining(units,slotIdx,after,getPermaBuff(\'muaHpPct\'),getPermaBuff(\'muaGutsPct\'));')
     && has('const ids=entries.filter(entry=>entry.slot===slotIdx).map(entry=>entry.id);'));
 check('起こすとそのWAVEは誰も強化できない',
-  has('commitTacticsUnits(reviveTacticsAt(tacticsUnitsRef.current,revivePick,TACTICS_TRAINING_REVIVE_RATE));')
+  has('commitTacticsUnits(reviveTacticsAt(tacticsUnitsRef.current,revivePick));')
     && has('const revivePick=tacticsMode&&picks&&!Array.isArray(picks)&&Number.isInteger(picks.revive)?picks.revive:null;'));
 check('パーティのちから・丈夫さは盤面から入れ直す',
   has('setAtk(tacticsPartyAtk(next)); setDef(tacticsPartyDef(next));'));
@@ -526,6 +549,13 @@ check('置けるかの判定も画面へ渡す', has('tacticsCanAssign={tacticsC
     hasScreen('data-tactics-hp={`${tacticsUnit.hp}/${tacticsUnit.maxHp}`}')
       && hasScreen('data-tactics-guts={`${tacticsUnit.guts}/${tacticsUnit.maxGuts}`}'));
   check('倒れた子は覆って分かるようにする', hasScreen('data-tactics-down-mark={i}') && hasScreen('ダウン'));
+  // ★「全快になったら復活」なので、あとどれだけかを出さないと回復を回す判断が立たない
+  check('復活まであとどれだけかを出す',
+    hasScreen('data-tactics-revive={`${revivePct}`}') && hasScreen('復活まで {100-revivePct}%'));
+  check('ダウン中の帯は復活ゲージとして色を変える',
+    hasScreen("tacticsUnit.downed?'bg-gradient-to-r from-emerald-600 to-teal-300'"));
+  // ★覆いの上に帯を出す。隠れると、あとどれだけかが読めない
+  check('覆いより帯を前に出す', hasScreen('z-[64] px-0.5 pb-0.5 pointer-events-none') && hasScreen('z-[62] flex flex-col'));
   // ★null のときだけ今までどおりの判定を使う。ここを間違えると既存モードの置き方が変わる
   check('置けるかの判定は新モードだけ差し替える',
     hasScreen('const tacticsAnswer=tacticsCanAssign?tacticsCanAssign(pendingCardObj,pendingIdx,i):null;')

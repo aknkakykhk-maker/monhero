@@ -237,13 +237,18 @@ const check = (name, ok, detail = '') => {
     // ★AUTOに任せると、こちらが強い難易度では敵が殴る前に倒れてしまい、
     //   「ライフが減る」を一度も観測できないことがある(実際に落ちた)。
     //   「緊急」は攻撃せずに敵の番だけを進めるので、必ず殴られる。まずこれで被弾を見る
-    let gameOver = false;
-    for (let i = 0; i < 8; i++) {
-      await page.evaluate(() => {
+    // ★処理中(isBusy)は押せない。固定の待ち時間だと、ほかの検査と同時に動いて重いときに
+    //   押し損ねて「一度も殴られなかった」に見える(実際に落ちた)。押せたかどうかで待ちを変える
+    let gameOver = false, pressed = 0;
+    for (let i = 0; i < 16 && pressed < 8; i++) {
+      const hit = await page.evaluate(() => {
         const b = [...document.querySelectorAll('button')].find(x => !x.disabled && /緊急/.test(x.textContent));
-        b?.click();
+        if (!b) return false;
+        b.click();
+        return true;
       });
-      await page.waitForTimeout(2500);
+      if (hit) pressed++;
+      await page.waitForTimeout(hit ? 3000 : 1200);
       gameOver = gameOver || await page.evaluate(() => /GAME OVER/i.test(document.body.innerText));
       if (await page.evaluate(() => window.__mhLifeLog.drops) >= 1) break;
     }
@@ -256,7 +261,8 @@ const check = (name, ok, detail = '') => {
       if (drops >= 2) break;
     }
     const log = await page.evaluate(() => ({ ...window.__mhLifeLog }));
-    check('敵の攻撃でライフが減る', log.drops >= 1, `減った回数 ${log.drops} / 最低 ${log.min}`);
+    check('敵の攻撃でライフが減る', log.drops >= 1,
+      `減った回数 ${log.drops} / 最低 ${log.min} / 「緊急」を押せた回数 ${pressed}`);
     check('ライフが上限を超えたりマイナスにならない', log.overflow === 0,
       `はみ出した回数 ${log.overflow} / 最後 ${log.last}/${log.max}`);
     // ★盤面の合計が0でないのに敗北画面が出ていたら、盤面とライフが食い違っている
