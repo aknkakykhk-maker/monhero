@@ -456,6 +456,26 @@ check('ガッツを書き換える場所は数えてある', setGutsSites === 12
 check('既存モードの実効最大ライフはそのまま',
   has("const effectiveMaxHp = useMemo(() => resolveEffectiveMaxStat(maxHp, getPermaBuff('muaHpPct')), [maxHp, permaBuffs]);"));
 
+// --- ⑭ 画面(段階8) ---
+// ★盤面は既存モードでも作っている(モードで分けないほうが事故が少ない)。
+//   画面へ渡すときだけ新モード以外を null にしないと、ほかのモードにも帯が出てしまう
+check('1体ずつの帯は新モードだけへ渡す',
+  has('tacticsUnits={isTacticsMode(runMode)?tacticsUnits:null}'));
+check('置けるかの判定も画面へ渡す', has('tacticsCanAssign={tacticsCanAssign}')
+  && has('const tacticsCanAssign = (card, cardIndex, slotIdx) => (isTacticsMode(runMode)'));
+{
+  const screen = fs.readFileSync(path.join(root, 'monster-hero/src/parts/71-screen-battle.jsx'), 'utf8');
+  const hasScreen = (needle) => screen.includes(needle);
+  check('スロットへ1体ずつのライフ・ガッツを出す',
+    hasScreen('data-tactics-hp={`${tacticsUnit.hp}/${tacticsUnit.maxHp}`}')
+      && hasScreen('data-tactics-guts={`${tacticsUnit.guts}/${tacticsUnit.maxGuts}`}'));
+  check('倒れた子は覆って分かるようにする', hasScreen('data-tactics-down-mark={i}') && hasScreen('ダウン'));
+  // ★null のときだけ今までどおりの判定を使う。ここを間違えると既存モードの置き方が変わる
+  check('置けるかの判定は新モードだけ差し替える',
+    hasScreen('const tacticsAnswer=tacticsCanAssign?tacticsCanAssign(pendingCardObj,pendingIdx,i):null;')
+      && hasScreen('if(tacticsAnswer===null||tacticsAnswer===undefined){'));
+}
+
 check('予告の吹き出しに狙いを出す',
   fs.readFileSync(path.join(root, 'monster-hero/src/parts/71-screen-battle.jsx'), 'utf8')
     .includes("{enemyIntent.targetName?` 🎯${enemyIntent.targetName}`:''}"));

@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7c0c266479740816
+// source-sha256: 9e25767733f003b7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 527c222e3abe3a6f
+// generated-sha256: bccc3e4e4c967ebc
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -161,7 +161,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-19 17:49"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-19 18:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -36681,6 +36681,8 @@ function BattleScreen({
   soulBattleParty,
   soulCoordinationCardBonus,
   suppressCardClickRef,
+  tacticsCanAssign,
+  tacticsUnits,
   teachingFx,
   totalTurnCount,
   turnCount,
@@ -37856,10 +37858,17 @@ function BattleScreen({
     // 保留中のカードはまだ使っていないので、「何枚目か」の枚数には数えない
     const pendingIdx = pendingCard != null ? pendingCard : dragState && dragState.active ? dragState.cardIndex : null;
     // Can this slot accept the pending card?
+    // 新モードはこの子のライフ・ガッツ・倒れたかどうかを持つ(ほかのモードでは null)
+    const tacticsUnit = Array.isArray(tacticsUnits) ? tacticsUnits[i] || null : null;
     let canAssign = false;
     if (s && pendingCardObj) {
-      canAssign = assignedCount < maxUses;
-      if (pendingCardObj.type === 'unique') canAssign = canAssign && pendingCardObj.ownerSlotIdx === i;
+      // 新モードは「その子が払えるか」で決まる。倒れた子へは回復カードだけ置ける。
+      // ★null のときだけ今までどおりの判定を使う(既存モードはここを通る)
+      const tacticsAnswer = tacticsCanAssign ? tacticsCanAssign(pendingCardObj, pendingIdx, i) : null;
+      if (tacticsAnswer === null || tacticsAnswer === undefined) {
+        canAssign = assignedCount < maxUses;
+        if (pendingCardObj.type === 'unique') canAssign = canAssign && pendingCardObj.ownerSlotIdx === i;
+      } else canAssign = tacticsAnswer;
     }
     // 選択順に「アシストカード以外」を数え、どのカードが2枚目以降(効果半減)かを出す。
     // 保留中のカードはまだ使っていないので数えない。
@@ -38174,7 +38183,60 @@ function BattleScreen({
         fontSize: '40px'
       },
       className: "z-10 drop-shadow-md"
-    }, s?.emoji || ''), isAnimating && attackAnim.twinBlade && /*#__PURE__*/React.createElement(KenshiTwinSlash, null), isAnimating && attackAnim.sakura && /*#__PURE__*/React.createElement(EikiSakuraPetals, null)), /*#__PURE__*/React.createElement("div", {
+    }, s?.emoji || ''), tacticsUnit && (() => {
+      const hpPct = tacticsUnit.maxHp > 0 ? Math.max(0, Math.min(100, tacticsUnit.hp / tacticsUnit.maxHp * 100)) : 0;
+      const gutsPct = tacticsUnit.maxGuts > 0 ? Math.max(0, Math.min(100, tacticsUnit.guts / tacticsUnit.maxGuts * 100)) : 0;
+      return /*#__PURE__*/React.createElement("div", {
+        "data-tactics-unit": i,
+        "data-tactics-hp": `${tacticsUnit.hp}/${tacticsUnit.maxHp}`,
+        "data-tactics-guts": `${tacticsUnit.guts}/${tacticsUnit.maxGuts}`,
+        "data-tactics-downed": tacticsUnit.downed ? 'true' : 'false',
+        className: "absolute bottom-0 left-0 right-0 z-[58] px-0.5 pb-0.5 pointer-events-none space-y-px"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex items-center gap-0.5"
+      }, /*#__PURE__*/React.createElement("span", {
+        style: {
+          fontSize: '7px'
+        },
+        className: "leading-none shrink-0 text-pink-300"
+      }, "\u2764"), /*#__PURE__*/React.createElement("div", {
+        className: "flex-1 h-[3px] rounded-full bg-black/75 overflow-hidden border border-white/10"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "h-full bg-gradient-to-r from-pink-600 to-rose-400",
+        style: {
+          width: `${hpPct}%`
+        }
+      })), /*#__PURE__*/React.createElement("span", {
+        style: {
+          fontSize: '7px'
+        },
+        className: "leading-none shrink-0 font-black font-mono text-pink-100"
+      }, tacticsUnit.hp)), /*#__PURE__*/React.createElement("div", {
+        className: "flex items-center gap-0.5"
+      }, /*#__PURE__*/React.createElement("span", {
+        style: {
+          fontSize: '7px'
+        },
+        className: "leading-none shrink-0 text-amber-300"
+      }, "\u26A1"), /*#__PURE__*/React.createElement("div", {
+        className: "flex-1 h-[3px] rounded-full bg-black/75 overflow-hidden border border-white/10"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "h-full bg-gradient-to-r from-amber-600 to-yellow-300",
+        style: {
+          width: `${gutsPct}%`
+        }
+      })), /*#__PURE__*/React.createElement("span", {
+        style: {
+          fontSize: '7px'
+        },
+        className: "leading-none shrink-0 font-black font-mono text-amber-100"
+      }, tacticsUnit.guts)));
+    })(), tacticsUnit && tacticsUnit.downed && /*#__PURE__*/React.createElement("div", {
+      "data-tactics-down-mark": i,
+      className: "absolute inset-0 z-[62] flex items-center justify-center rounded-xl bg-black/70 pointer-events-none"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-[11px] font-black tracking-[.2em] text-slate-200"
+    }, "\u30C0\u30A6\u30F3")), isAnimating && attackAnim.twinBlade && /*#__PURE__*/React.createElement(KenshiTwinSlash, null), isAnimating && attackAnim.sakura && /*#__PURE__*/React.createElement(EikiSakuraPetals, null)), /*#__PURE__*/React.createElement("div", {
       className: `h-[20px] shrink-0 ${RANGE_STYLES[i].labelBg} flex items-center justify-center border-t border-white/20 z-20`
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-[10px] font-black uppercase tracking-tighter leading-none"
@@ -41249,6 +41311,9 @@ function MonsterHeroGame() {
   // ★倒れた子へ回復カードを向けたときだけ、立っている子のうちガッツが多い子が手を貸して払う
   //   (倒れた子自身のガッツで払う形にすると、使い切って倒れた子が永久に戻せなくなる)
   const tacticsCardPayer = (slotIdx, card, cost) => isTacticsMode(runMode) ? tacticsPayerSlot(tacticsUnitsRef.current, slotIdx, cost, card?.type === 'heal') : null;
+  // 画面から「このカードをこの子へ置けるか」を聞くための入口。
+  // ★新モード以外では null を返す。画面側は null のときだけ今までどおりの判定を使う
+  const tacticsCanAssign = (card, cardIndex, slotIdx) => isTacticsMode(runMode) ? tacticsUsableSlots(card, cardIndex).includes(slotIdx) : null;
   // WAVEクリアなどの全回復。★倒れた子はここでは戻らない
   const tacticsFullHeal = () => isTacticsMode(runMode) ? commitTacticsUnits(fullHealTacticsBoard(tacticsUnitsRef.current)) : null;
   // 20ターン経過。全員を倒して、敗北の見え方をそろえる
@@ -64750,6 +64815,8 @@ function MonsterHeroGame() {
       slotSkill: slotSkill,
       slotUniqueChoice: slotUniqueChoice,
       slots: slots,
+      tacticsUnits: isTacticsMode(runMode) ? tacticsUnits : null,
+      tacticsCanAssign: tacticsCanAssign,
       soulBattleParty: soulBattleParty,
       soulCoordinationCardBonus: soulCoordinationCardBonus,
       suppressCardClickRef: suppressCardClickRef,
