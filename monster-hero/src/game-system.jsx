@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ef8e54ed92482475
+// generated-sha256: edbc3afcfb982183
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -91,7 +91,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-20 00:47"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-20 01:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -9275,7 +9275,7 @@ const ENEMY_ACTION_DEFINITIONS = [
 // ★「様子を見ている(WAIT)」は入れない。5回に1回、敵が何もしないターンを作らないため。
 // ★どの行動にも「こちらの対抗手段」を1つ用意する。読めば受けられる、が成り立たないと
 //   ただ強いだけの難易度と変わらなくなる。
-//     薙ぎ払い → 距離撃で敵をずらす / 連撃 → ガード /
+//     薙ぎ払い → 距離撃で敵をずらす / 連撃 → ガード(1回ぶんだけ効く)＋回復 /
 //     貫通撃 → 回避・反射・スタン / 咆哮・再生 → スタンで潰す・削り切る /
 //     単体狙い → 狙われた子を守る・回復する / 全体攻撃 → 全員のライフを見て回復を回す
 // ★type は既存の ATTACK / SPECIAL をそのまま使い、違いは variant で持つ。
@@ -9283,8 +9283,8 @@ const ENEMY_ACTION_DEFINITIONS = [
 //   ここを新しい type にするとダメージ計算・演出・予告の経路を全部書き足すことになる。
 const TACTICS_SWEEP_MULT = 1.6;       // 予告した間合いに敵がいるとき
 const TACTICS_SWEEP_MISS_MULT = 0.4;  // 距離撃などでずらしたとき
-const TACTICS_RUSH_MULT = 1.8;        // 0.6×3ヒットぶん。ガードが手数ぶん効く
-const TACTICS_RUSH_HITS = 3;
+const TACTICS_RUSH_MULT = 1.8;        // 0.6×3ヒットぶん。ガードは1回ぶんしか効かない
+const TACTICS_RUSH_HITS = 3;         // SCANへ出す見た目だけ。ガードの効き方には掛からない
 const TACTICS_PIERCE_MULT = 1.8;      // ガードを無視する
 const TACTICS_ROAR_ATK_RATE = 1.5;    // 次のターンから敵の攻撃が上がる
 const TACTICS_ROAR_MAX_STACKS = 2;    // 重ねがけの上限
@@ -9301,7 +9301,7 @@ const TACTICS_ACTION_DEFINITIONS = [
   {id:'special',type:'SPECIAL',category:'必殺技',weight:0,multiplier:2.5,hits:1,range:'全間合い',condition:'ためた次のターンに必ず発動',cooldown:0,useLimit:null},
   {id:'move',type:'MOVE',category:'移動',weight:10,multiplier:0,hits:0,range:'現在以外の3間合い',condition:'移動先がある・移動した次のターンは選ばない',cooldown:0,useLimit:null},
   {id:'sweep',type:'ATTACK',variant:'sweep',category:'薙ぎ払い',weight:14,multiplier:TACTICS_SWEEP_MULT,missMultiplier:TACTICS_SWEEP_MISS_MULT,hits:1,range:'予告した1間合い',condition:'予告した間合いに敵がいると大ダメージ。距離撃でずらせる',cooldown:0,useLimit:null},
-  {id:'rush',type:'ATTACK',variant:'rush',category:'連撃',weight:14,multiplier:TACTICS_RUSH_MULT,hits:TACTICS_RUSH_HITS,range:'全間合い',condition:'ガードが手数ぶん効く',cooldown:0,useLimit:null},
+  {id:'rush',type:'ATTACK',variant:'rush',category:'連撃',weight:14,multiplier:TACTICS_RUSH_MULT,hits:TACTICS_RUSH_HITS,range:'全間合い',condition:'ガードは1回ぶんしか効かない',cooldown:0,useLimit:null},
   {id:'pierce',type:'ATTACK',variant:'pierce',category:'貫通撃',weight:12,multiplier:TACTICS_PIERCE_MULT,hits:1,range:'全間合い',condition:'ガードが効かない',cooldown:0,useLimit:null},
   {id:'roar',type:'ROAR',category:'咆哮',weight:10,multiplier:0,hits:0,range:'全間合い',condition:`重ねがけは${TACTICS_ROAR_MAX_STACKS}回まで`,cooldown:0,useLimit:TACTICS_ROAR_MAX_STACKS},
   {id:'regen',type:'REGEN',category:'再生',weight:10,multiplier:0,hits:0,range:'全間合い',condition:'ライフが減っているときだけ',cooldown:0,useLimit:null},
@@ -31289,7 +31289,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // 新モードの攻撃は variant で受け方が変わる。type は ATTACK のままなので、
         // ダメージ計算・演出・予告の経路は既存のものをそのまま通る。
         //   薙ぎ払い … 予告した間合いに敵がいなければ威力が落ちる(距離撃でずらせる)
-        //   連撃     … ガードが手数ぶん効く
+        //   連撃     … ガードは1回ぶんしか効かない(2026-09-20 ユーザー指示。もとは手数ぶん効いていた)
         //   貫通撃   … ガードが効かない
         // 距離撃で動かした先は setEnemyDist の反映を待たないため、呼び出し元が確定させた
         // 移動先(forcedMoveTarget)を優先して見る
@@ -31298,9 +31298,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const actingIntent = sweptAway ? {...intent,value:Math.max(0,Math.floor(Number(intent.missValue)||0))} : intent;
         // 表示と同じ guardFlat / guardMult 集計を実効丈夫さへ適用する。
         const baseGuardValue = (immediateEffects.guardFlat>0||immediateEffects.guardMult>0) ? Math.floor(immediateEffects.guardFlat + effectiveDef*immediateEffects.guardMult) : 0;
-        const guardValue = intent.variant==='pierce' ? 0
-          : intent.variant==='rush' ? baseGuardValue*Math.max(1,Math.floor(Number(intent.hits)||1))
-          : baseGuardValue;
+        // ★連撃も1回ぶん。手数(intent.hits)はSCANへ出す見た目だけで、受け方には効かせない
+        const guardValue = intent.variant==='pierce' ? 0 : baseGuardValue;
         if (sweptAway) { addPopup('薙ぎ払いをかわした！','hero','text-cyan-300 font-black text-xl drop-shadow-md'); await battleWait(600); }
         else if (intent.variant==='pierce' && baseGuardValue>0) { addPopup('貫通！ ガードが効かない','enemy','text-rose-300 font-black text-xl drop-shadow-md'); await battleWait(600); }
         const incomingBeforeTurnReduction = getIncomingDamageBeforeTurnReduction(actingIntent);
@@ -31361,7 +31360,6 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             addPopup('当たらなかった！','hero','text-cyan-300 font-black text-xl drop-shadow-md');
             await battleWait(700);
           } else {
-            const rushHits=Math.max(1,Math.floor(Number(intent.hits)||1));
             const slotGuards=immediateEffects.guardBySlot||{};
             let units=tacticsUnitsRef.current, dealt=0, saved=0, guardedCount=0, gutsBack=0;
             targets.forEach(slotIdx=>{
@@ -31370,8 +31368,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               const slotDef=tacticsUnitsRef.current[slotIdx]
                 ? resolveEffectiveMaxStat(normalizeTacticsUnit(tacticsUnitsRef.current[slotIdx]).def,getPermaBuff('defPct')) : effectiveDef;
               const base=(own.flat>0||own.mult>0)?Math.floor(own.flat+slotDef*own.mult):0;
-              // 貫通撃はガードが効かない。連撃は手数ぶんガードが効く(既存モードと同じ決まり)
-              const slotGuard=intent.variant==='pierce'?0:(intent.variant==='rush'?base*rushHits:base);
+              // 貫通撃はガードが効かない。連撃も1回ぶんしか効かない
+              // (2026-09-20 ユーザー指示。もとは手数ぶん＝3回ぶん効いていた)
+              const slotGuard=intent.variant==='pierce'?0:base;
               // ★受けるダメージもその子の丈夫さで決まるので、狙われた子ごとに計算し直す
               const slotIncoming=getIncomingDamageBeforeTurnReduction(intent,slotIdx);
               const diff=slotGuard-slotIncoming;
