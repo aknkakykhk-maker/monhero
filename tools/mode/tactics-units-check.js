@@ -16,6 +16,7 @@ const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分�
 //   ⑯ ちから・丈夫さも1体ずつ。攻撃はその子のちから、被弾はその子の丈夫さ(段階10)
 //   ⑰ トレーニングを1体ずつ選ぶ。倒れた子はここで起こせる(段階11)
 //   ⑱ スコアは式そのままで桁だけ 1/1000 へ縮める(段階12)
+//   ⑲ 距離適性も1体ずつ。その子の適性がその子の攻撃に効く
 //
 // 数式をこのファイルへ書き写すと、本体を変えたときに検査だけ古くなる。
 // 計算は必ず本体から切り出した実装をそのまま動かす。
@@ -505,6 +506,18 @@ check('被弾は「狙われた子の丈夫さ」で受ける',
 check('新モードの受け方も1体ずつ計算し直す',
   has('const slotIncoming=getIncomingDamageBeforeTurnReduction(intent,slotIdx);')
     && has('const base=(own.flat>0||own.mult>0)?Math.floor(own.flat+slotDef*own.mult):0;'));
+// --- ⑲ 距離適性も1体ずつ(設計 §7) ---
+// ★既存モードは「編成全員の適性を4距離すべてへ合算」。新モードだけ
+//   「その子の適性が、その子の攻撃に効く」。ここを共通にすると既存のダメージが変わる
+check('与ダメージはその子の適性で出す',
+  has('const aptForSlot=isTacticsMode(runMode)&&mon')
+    && has('const distBonusMult=1.0+(distDmgBonus[slotIdx]||0)+(aptForSlot[slotIdx]||0);'));
+check('枠ごとの表示もその子の適性にする',
+  has('const tacticsSlotApt = (slotIdx) => {')
+    && has('const apt = aptOverride || (isTacticsMode(runMode) ? tacticsSlotApt(dist) : distAptPct);'));
+check('合流しても適性を合算しない',
+  has('if (!tacticsJoin && aptDelta.some(d=>d!==0)) setDistAptPct(prev=>prev.map((v,i)=>v+aptDelta[i]));'));
+
 check('トレーニングのちから・丈夫さも盤面が正本',
   has('nDef=tacticsPartyDef(units); nAtk=tacticsPartyAtk(units);'));
 {

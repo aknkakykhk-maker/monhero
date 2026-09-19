@@ -74,7 +74,14 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
   // 配信用JSはBabelが空白を入れ直すため、空白を除いた形で照合する
   const flat = code.replace(/\s+/g, '');
   check(`${label}: 距離ごとの合計補正を1か所で出す`, flat.includes('distTotalBonus=(dist,aptOverride=null)'));
-  check(`${label}: ダメージ計算は距離枠の合計補正を使う`, flat.includes('distBonusMult=1.0+(distDmgBonus[slotIdx]||0)+(distAptPct[slotIdx]||0)'));
+  // 適性の出どころは aptForSlot / apt にまとめてある。
+  // ★新モード(tactics)だけ「その子の適性」が入り、既存モードは今までどおり
+  //   編成全員ぶんの合算(distAptPct)が入る
+  check(`${label}: ダメージ計算は距離枠の合計補正を使う`,
+    flat.includes('distBonusMult=1.0+(distDmgBonus[slotIdx]||0)+(aptForSlot[slotIdx]||0)')
+      && flat.includes(':distAptPct;'));
+  check(`${label}: 既存モードの適性は編成全員ぶんの合算のまま`,
+    flat.includes('aptOverride||(isTacticsMode(runMode)?tacticsSlotApt(dist):distAptPct)'));
   check(`${label}: 攻撃側モンスター自身のグレードだけを見ていない`, !flat.includes('aptBonus=DIST_APTITUDE_MULT[getDistAptitude(mon,slotIdx)]-1.0'));
   check(`${label}: グレードは段階シフトしない`, /getDistAptitude=\(mon,slotIdx\)=>\(?mon&&mon\.distAptitude&&mon\.distAptitude\[slotIdx\]\)?\|\|'C'/.test(flat));
   check(`${label}: 技レベルの判定も合計補正を使う`, flat.includes('pct=distTotalBonus(dist,aptOverride)*100'));
