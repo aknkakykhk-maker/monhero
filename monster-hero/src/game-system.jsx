@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f766eb38931649d2
+// generated-sha256: 926e31bb8cc5b67f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -91,7 +91,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-19 23:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-19 23:14"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -23302,7 +23302,18 @@ function MonsterHeroGame() {
   // 与ダメージ補正(小数)。置いた距離に関係なく、全員のぶんが4距離すべてに加算される。
   const [distAptPct, setDistAptPct] = useState([0,0,0,0]);
   // 距離ごとの合計補正 = ウェーブ報酬で伸びるdistDmgBonus + 編成全員の間合い適性
-  const distTotalBonus = (dist, aptOverride=null) => ((distDmgBonus[dist]||0) + ((aptOverride||distAptPct)[dist]||0));
+  // 新モードの距離適性は「その枠に立っている子のもの」だけが効く。
+  // ★既存モードは今までどおり編成全員ぶんの合算(distAptPct)。ここを共通にすると
+  //   既存モードのダメージが変わってしまう
+  const tacticsSlotApt = (slotIdx) => {
+    const mon = slots[slotIdx];
+    if (!mon) return [0,0,0,0];
+    return getMonsterAptPct(mon, specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty), wave);
+  };
+  const distTotalBonus = (dist, aptOverride=null) => {
+    const apt = aptOverride || (isTacticsMode(runMode) ? tacticsSlotApt(dist) : distAptPct);
+    return (distDmgBonus[dist]||0) + (apt[dist]||0);
+  };
   const [totalDistDamage, setTotalDistDamage] = useState([0,0,0,0]); // cumulative per-distance damage across all waves
   const [totalAllDamage, setTotalAllDamage] = useState(0); // cumulative damage across all waves
   const [totalRecoveryDelta, setTotalRecoveryDelta] = useState(0); // cumulative recovery-rate correction across all waves
@@ -30980,9 +30991,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // 禁忌解錠: パンドラ勇者が使う『引き継いだ』固有技だけを1.5倍にする。
     // 技の出自はcard.monIdで判定し、自身の固有技へは適用しない。
     if (mainHero?.id==='Pandora' && card.type==='unique' && card.monId!=='Pandora') traitMult*=1.5;
-    // 間合い適性は「その距離枠の補正値」。編成全員のぶんが合算済み(distAptPct)で、
-    // 攻撃したモンスター自身のグレードだけを見るのではない
-    const distBonusMult=1.0+(distDmgBonus[slotIdx]||0)+(distAptPct[slotIdx]||0);
+    // 間合い適性は「その距離枠の補正値」。既存モードは編成全員のぶんが合算済み(distAptPct)で、
+    // 攻撃したモンスター自身のグレードだけを見るのではない。
+    // ★新モードだけは「その子の適性が、その子の攻撃に効く」(設計 §7)
+    const aptForSlot=isTacticsMode(runMode)&&mon
+      ? getMonsterAptPct(mon,specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty),wave)
+      : distAptPct;
+    const distBonusMult=1.0+(distDmgBonus[slotIdx]||0)+(aptForSlot[slotIdx]||0);
     const soulAttack=soulTraitAttackProfile(mon?.masuId?getMasuMon(mon.masuId):null,card,slotIdx);
     const totalBuffMult=traitMult*getTurnBuff('atkMult',1.0)*(1.0+getPermaBuff('atkPct')+getPermaBuff('muaAtkPct')+additionalOryo)*distBonusMult*soulAttack.damageMultiplier;
     // 新モードは「攻撃したその子のちから」で殴る(設計 §4.1)。ほかのモードはパーティ共通のまま
@@ -32827,7 +32842,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       // 置いた距離に関係なくそのまま足す(零がMなら零距離の補正値が+25%される)
       const aptDelta=getMonsterAptPct(m,specialRuleDifficulty);
       if(extremeWaveStage(specialRuleDifficulty)){const effectiveApt=getMonsterAptPct(m,specialRuleDifficulty,wave);effectiveApt.forEach((value,index)=>{aptDelta[index]=value;});}
-      if (aptDelta.some(d=>d!==0)) setDistAptPct(prev=>prev.map((v,i)=>v+aptDelta[i]));
+      // 新モードは合算しない。距離適性もその子のものだけが効く
+      if (!tacticsJoin && aptDelta.some(d=>d!==0)) setDistAptPct(prev=>prev.map((v,i)=>v+aptDelta[i]));
       const aptLabel=aptDelta.map((d,i)=>d!==0?`${RANGE_LABELS[i]}${formatAptPct(d)}`:null).filter(Boolean).join(' ');
       const newAllyUnique={...m.unique,evoLevel:Math.max(0,m.unique.evoLevel||0)};
       const nextUniques=[...ownedUniques,newAllyUnique];
