@@ -231,11 +231,45 @@ const check = (name, ok, detail = '') => {
     // ★1秒ごとに読むと、自動再生ですぐ戻るぶんを取りこぼして「減っていない」に見える。
     //   実際に減っているのに落ちた(2026-09-19)。ページの中で見張って、取りこぼさないようにする
     await page.evaluate(() => {
-      window.__mhLifeLog = { drops: 0, min: Infinity, max: 0, last: null, overflow: 0, guts: '' };
+      window.__mhLifeLog = { drops: 0, min: Infinity, max: 0, last: null, overflow: 0, guts: '',
+        cards: 0, unusable: 0, badCards: 0, badSample: '', noReason: 0, noReasonSample: '', splitSeen: 0, splitSample: '' };
+      // ★手札の灰色は「合計のガッツ」では決まらない(2026-09-19 ユーザー指摘)。
+      //   ⚡242 を 125 と 117 で持っていても、⚡128 のカードは誰も払えない。
+      //   ここでは「使えることになっているのに、払える子が1人もいない」場面を数える
+      const readCards = () => {
+        const log = window.__mhLifeLog;
+        const cards = [...document.querySelectorAll('[data-hand-card]')];
+        if (!cards.length) return;
+        const alive = window.__mhParty().filter(u => u.downed !== 'true')
+          .map(u => Number(String(u.guts).split('/')[0]));
+        if (!alive.length) return;
+        const total = alive.reduce((sum, g) => sum + g, 0);
+        cards.forEach(el => {
+          const cost = Number(el.getAttribute('data-card-cost'));
+          if (!Number.isFinite(cost)) return;
+          log.cards++;
+          const usable = el.getAttribute('data-card-usable') === 'true';
+          const payer = alive.some(g => g >= cost);
+          const info = `${el.getAttribute('data-card-type')} ⚡${cost} / 1体ずつ ${alive.join(',')}`;
+          const kind = el.getAttribute('data-card-block') || '';
+          if (!usable) log.unusable++;
+          if (usable && !payer) { log.badCards++; log.badSample = info; }
+          // 使えないカードには必ず理由を持たせる(「使えないだけで、なぜかが分からない」を防ぐ)。
+          // 1ターンに選べる枚数の上限(limit)だけは、いままでの5モードと同じで灰色だけ。
+          // それ以外は赤い帯でその場に出す
+          const ribbon = !!(el.parentElement && el.parentElement.querySelector('[data-tactics-card-block]'));
+          if (!usable && (!kind || (kind !== 'limit' && !ribbon) || (kind === 'limit' && ribbon))) {
+            log.noReason++; log.noReasonSample = `${info} / 理由 ${kind || 'なし'} / 帯 ${ribbon}`;
+          }
+          // 合計では足りるのに1体ずつでは誰も払えない場面。この不具合そのものの形
+          if (!payer && total >= cost) { log.splitSeen++; log.splitSample = info; }
+        });
+      };
       const read = () => {
         const units = window.__mhParty();
         // ガッツの帯もWAVEの結果やトレーニングの画面では消える。見えたときの値を覚えておく
         if (units.length) window.__mhLifeLog.guts = units.map(u => u.guts).join(' ');
+        readCards();
         const life = window.__mhPartyLife();
         if (!life.ok) return;
         const log = window.__mhLifeLog;
@@ -287,6 +321,18 @@ const check = (name, ok, detail = '') => {
     check('1体ずつのガッツが出ている',
       gutsList.length >= 1 && gutsList.every(g => /^\d+\/\d+$/.test(g) && Number(g.split('/')[1]) > 0),
       gutsText || '見つからない');
+    // --- 手札の灰色と、その理由(2026-09-19 ユーザー指摘) ---
+    check('手札のコストと使えるかを読めている', log.cards > 0, `見た回数 ${log.cards}`);
+    // ★これが落ちるということは、合計のガッツで「使える」ことにしている
+    check('使えるカードには必ず払える子がいる', log.badCards === 0,
+      `ずれた回数 ${log.badCards}${log.badSample ? ` / 例: ${log.badSample}` : ''}`);
+    // ★「使えない」カードを一度も見ていないと、理由の検査が素通りになる
+    check('使えないカードにも出会っている(理由の検査が素通りしていない)', log.unusable > 0,
+      `灰色のカードを見た回数 ${log.unusable}`);
+    check('使えないカードには理由が出ている', log.noReason === 0,
+      `理由の無いカード ${log.noReason}${log.noReasonSample ? ` / 例: ${log.noReasonSample}` : ''}`);
+    // 合計では足りるのに1体ずつでは誰も払えない場面に出会えたか(出会えなくても落とさない)
+    console.log(`  -- 合計では足りるが1体ずつでは払えない場面: ${log.splitSeen}回${log.splitSample ? ` / 例: ${log.splitSample}` : ''}`);
 
     check('実行時エラーが出ていない', errors.length === 0, errors.slice(0, 2).join(' / '));
   } catch (e) {
