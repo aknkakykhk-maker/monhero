@@ -194,7 +194,24 @@ const check = (name, ok, detail = '') => {
       const [hp, max] = raw.split('/').map(Number);
       return { hp, max, raw, ok: true };
     });
+    // --- 1体ずつのライフ・ガッツ(段階8) ---
+    const unitBars = await page.evaluate(() => [...document.querySelectorAll('[data-tactics-unit]')].map(el => ({
+      slot: Number(el.getAttribute('data-tactics-unit')),
+      hp: el.getAttribute('data-tactics-hp'),
+      guts: el.getAttribute('data-tactics-guts'),
+      downed: el.getAttribute('data-tactics-downed'),
+    })));
+    check('1体ずつのライフ・ガッツが出る',
+      unitBars.length >= 1 && unitBars.every(u => /^\d+\/\d+$/.test(u.hp) && /^\d+\/\d+$/.test(u.guts)),
+      JSON.stringify(unitBars));
+    check('倒れていない子は「ダウン」にならない', unitBars.every(u => u.downed === 'false'),
+      unitBars.map(u => `${u.slot}:${u.downed}`).join(' '));
+    // ★盤面の合計と味方のライフ帯がずれていたら、盤面とパーティのライフが食い違っている
+    const barTotal = unitBars.reduce((sum, u) => sum + Number(String(u.hp).split('/')[0] || 0), 0);
     const startLife = await lifeOf();
+    check('1体ずつの合計が味方のライフと一致する', barTotal === startLife.hp,
+      `盤面の合計 ${barTotal} / ライフ帯 ${startLife.raw}`);
+
     check('味方のライフを読める', startLife.ok && startLife.max > 0, startLife.raw || '見つからない');
     check('はじめは満タン(盤面の合計＝ライフ)', startLife.hp === startLife.max, startLife.raw);
     // ★1秒ごとに読むと、自動再生ですぐ戻るぶんを取りこぼして「減っていない」に見える。

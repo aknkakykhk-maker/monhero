@@ -936,6 +936,10 @@ function MonsterHeroGame() {
   //   (倒れた子自身のガッツで払う形にすると、使い切って倒れた子が永久に戻せなくなる)
   const tacticsCardPayer = (slotIdx, card, cost) => (isTacticsMode(runMode)
     ? tacticsPayerSlot(tacticsUnitsRef.current, slotIdx, cost, card?.type === 'heal') : null);
+  // 画面から「このカードをこの子へ置けるか」を聞くための入口。
+  // ★新モード以外では null を返す。画面側は null のときだけ今までどおりの判定を使う
+  const tacticsCanAssign = (card, cardIndex, slotIdx) => (isTacticsMode(runMode)
+    ? tacticsUsableSlots(card, cardIndex).includes(slotIdx) : null);
   // WAVEクリアなどの全回復。★倒れた子はここでは戻らない
   const tacticsFullHeal = () => isTacticsMode(runMode)
     ? commitTacticsUnits(fullHealTacticsBoard(tacticsUnitsRef.current)) : null;
@@ -14783,6 +14787,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             setShowQuitConfirm={setShowQuitConfirm} setShowSoulBattleEffects={setShowSoulBattleEffects}
             setSkillPicker={setSkillPicker} setSlotSettle={setSlotSettle} slotMaxUses={slotMaxUses}
             slotSettle={slotSettle} slotSkill={slotSkill} slotUniqueChoice={slotUniqueChoice} slots={slots}
+            tacticsUnits={isTacticsMode(runMode)?tacticsUnits:null} tacticsCanAssign={tacticsCanAssign}
             soulBattleParty={soulBattleParty} soulCoordinationCardBonus={soulCoordinationCardBonus}
             suppressCardClickRef={suppressCardClickRef} teachingFx={teachingFx} totalTurnCount={totalTurnCount}
             turnCount={turnCount} ultimateDistanceBreakLevels={ultimateDistanceBreakLevels}

@@ -34,6 +34,7 @@ function BattleScreen({
   setShowDeckInfo, setShowEnemyInfo, setShowHeroInfo, setShowQuitConfirm,
   setShowSoulBattleEffects, setSkillPicker, setSlotSettle, slotMaxUses, slotSettle, slotSkill,
   slotUniqueChoice, slots, soulBattleParty, soulCoordinationCardBonus, suppressCardClickRef,
+  tacticsCanAssign, tacticsUnits,
   teachingFx, totalTurnCount, turnCount, ultimateDistanceBreakLevels, ultraBattleView,
   unifiedSpecialDefense, useEmergency, wave,
 }) {
@@ -533,10 +534,17 @@ function BattleScreen({
               // 保留中のカードはまだ使っていないので、「何枚目か」の枚数には数えない
               const pendingIdx=pendingCard!=null?pendingCard:((dragState&&dragState.active)?dragState.cardIndex:null);
               // Can this slot accept the pending card?
+              // 新モードはこの子のライフ・ガッツ・倒れたかどうかを持つ(ほかのモードでは null)
+              const tacticsUnit=Array.isArray(tacticsUnits)?(tacticsUnits[i]||null):null;
               let canAssign=false;
               if(s && pendingCardObj){
-                canAssign = assignedCount<maxUses;
-                if(pendingCardObj.type==='unique') canAssign = canAssign && (pendingCardObj.ownerSlotIdx===i);
+                // 新モードは「その子が払えるか」で決まる。倒れた子へは回復カードだけ置ける。
+                // ★null のときだけ今までどおりの判定を使う(既存モードはここを通る)
+                const tacticsAnswer=tacticsCanAssign?tacticsCanAssign(pendingCardObj,pendingIdx,i):null;
+                if(tacticsAnswer===null||tacticsAnswer===undefined){
+                  canAssign = assignedCount<maxUses;
+                  if(pendingCardObj.type==='unique') canAssign = canAssign && (pendingCardObj.ownerSlotIdx===i);
+                } else canAssign = tacticsAnswer;
               }
               // 選択順に「アシストカード以外」を数え、どのカードが2枚目以降(効果半減)かを出す。
               // 保留中のカードはまだ使っていないので数えない。
@@ -672,6 +680,37 @@ function BattleScreen({
                         lunge={attackAnim.charge===false}
                         charging={attackAnim.charge===true}/>
                       :<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:'64px',height:'64px'}} className="z-10 object-contain drop-shadow-md"/>):(<span style={{fontSize:'40px'}} className="z-10 drop-shadow-md">{s?.emoji||''}</span>)}
+                  {/* 新モードは1体ずつのライフ・ガッツをここへ出す。誰が瀕死か・誰のガッツが尽きたかが
+                      分からないと、狙いを読んで守る/回復する判断が立たない(設計 §4.1) */}
+                  {tacticsUnit&&(()=>{
+                    const hpPct=tacticsUnit.maxHp>0?Math.max(0,Math.min(100,(tacticsUnit.hp/tacticsUnit.maxHp)*100)):0;
+                    const gutsPct=tacticsUnit.maxGuts>0?Math.max(0,Math.min(100,(tacticsUnit.guts/tacticsUnit.maxGuts)*100)):0;
+                    return(<div data-tactics-unit={i} data-tactics-hp={`${tacticsUnit.hp}/${tacticsUnit.maxHp}`}
+                      data-tactics-guts={`${tacticsUnit.guts}/${tacticsUnit.maxGuts}`}
+                      data-tactics-downed={tacticsUnit.downed?'true':'false'}
+                      className="absolute bottom-0 left-0 right-0 z-[58] px-0.5 pb-0.5 pointer-events-none space-y-px">
+                      <div className="flex items-center gap-0.5">
+                        <span style={{fontSize:'7px'}} className="leading-none shrink-0 text-pink-300">❤</span>
+                        <div className="flex-1 h-[3px] rounded-full bg-black/75 overflow-hidden border border-white/10">
+                          <div className="h-full bg-gradient-to-r from-pink-600 to-rose-400" style={{width:`${hpPct}%`}}></div>
+                        </div>
+                        <span style={{fontSize:'7px'}} className="leading-none shrink-0 font-black font-mono text-pink-100">{tacticsUnit.hp}</span>
+                      </div>
+                      <div className="flex items-center gap-0.5">
+                        <span style={{fontSize:'7px'}} className="leading-none shrink-0 text-amber-300">⚡</span>
+                        <div className="flex-1 h-[3px] rounded-full bg-black/75 overflow-hidden border border-white/10">
+                          <div className="h-full bg-gradient-to-r from-amber-600 to-yellow-300" style={{width:`${gutsPct}%`}}></div>
+                        </div>
+                        <span style={{fontSize:'7px'}} className="leading-none shrink-0 font-black font-mono text-amber-100">{tacticsUnit.guts}</span>
+                      </div>
+                    </div>);
+                  })()}
+                  {/* 倒れた子。カードを置けないことが一目で分かるように覆う */}
+                  {tacticsUnit&&tacticsUnit.downed&&(
+                    <div data-tactics-down-mark={i} className="absolute inset-0 z-[62] flex items-center justify-center rounded-xl bg-black/70 pointer-events-none">
+                      <span className="text-[11px] font-black tracking-[.2em] text-slate-200">ダウン</span>
+                    </div>
+                  )}
                   {/* 剣士モッチーの二刀流の軌跡。エイキの桜と同じく攻撃中だけ重ねる */}
                   {isAnimating&&attackAnim.twinBlade&&<KenshiTwinSlash/>}
                   {/* エイキの桜。攻撃モーションが出ているあいだだけ重ねる(常時アニメーションにしない) */}
