@@ -218,11 +218,15 @@ const BREEDER_MARKET_ITEMS = [
   // ウンディーネ。本人アイコン・円盤石アイコン・解放用の円盤石の3商品。
   // アイコンは立ち絵/円盤石の絵をそのまま使い、丸い枠での見え方は
   // MARKET_PROFILE_ICON_STYLES の scale/x/y で寄せる(画像は複製しない)
-  { id:'undine_icon', name:"ウンディーネのアイコン", type:'icon', icon:UNDINE_IMG, cost:1 },
+  // 本人アイコンは立ち絵ではなく顔クロップ(UNDINE_FACE_ICON)を使う。立ち絵は尾ひれまで
+  // 入っていて頭が小さく写っており、丸枠でどう寄せても「顔が小さい」か「耳が切れる」の
+  // どちらかにしかならなかった(2026-09-19)。エイキ・剣士モッチーと同じ扱い。
+  { id:'undine_icon', name:"ウンディーネのアイコン", type:'icon', icon:UNDINE_FACE_ICON, cost:1 },
   { id:'undine_disc_icon', name:"ウンディーネの円盤石アイコン", type:'icon', icon:UNDINE_DISC_ICON, cost:1 },
   { id:'Undine', name:"ウンディーネの円盤石", type:'disc', icon:UNDINE_DISC_ICON, cost:1500 },
   // ヤオビクニ
-  { id:'yaobikuni_icon', name:"ヤオビクニのアイコン", type:'icon', icon:YAOBIKUNI_IMG, cost:1 },
+  // ウンディーネと同じ理由で顔クロップを使う
+  { id:'yaobikuni_icon', name:"ヤオビクニのアイコン", type:'icon', icon:YAOBIKUNI_FACE_ICON, cost:1 },
   { id:'yaobikuni_disc_icon', name:"ヤオビクニの円盤石アイコン", type:'icon', icon:YAOBIKUNI_DISC_ICON, cost:1 },
   { id:'Yaobikuni', name:"ヤオビクニの円盤石", type:'disc', icon:YAOBIKUNI_DISC_ICON, cost:1500 },
   // プラント。既存の本体画像と専用円盤石画像を、加工・複製せず各商品で共用する。
