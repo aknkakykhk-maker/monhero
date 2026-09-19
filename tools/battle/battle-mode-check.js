@@ -466,9 +466,11 @@ check('旧バトル画面はデバッグからだけ開ける',
     && (source.match(/setGameState\('BATTLE_MENU'\)/g) || []).length === 2,
   `BATTLE_MENUへ移る場所 ${(source.match(/setGameState\('BATTLE_MENU'\)/g) || []).length}か所(デバッグの見比べ用・旧チュートリアルの開始)`);
 // 種族チャレンジと新モードは、公開フラグかデバッグのときだけ末尾へ並ぶ。
-// 通常プレイのBATTLE MODEには出さないこと自体は species-challenge 系checkが見る
-const MODE_LIST_LINE = 'const modes=[...BATTLE_MODES,EXTREME_MODE,...((SPECIES_CHALLENGE_PUBLIC_RELEASE||debugBattle)?[SPECIES_CHALLENGE_MODE]:[]),...((TACTICS_MODE_PUBLIC_RELEASE||debugBattle)?[TACTICS_MODE]:[])];';
-check('モード選択は極限チャレンジを含む全モードを横スライドで並べる',
+// 通常プレイのBATTLE MODEには出さないこと自体は species-challenge 系checkが見る。
+// 極限チャレンジはモードカードを持たない(2026-09-19 ユーザー指示)。チャレンジの難易度選択に
+// 「極限」タブとして入ったので、ここへ EXTREME_MODE を戻してはいけない
+const MODE_LIST_LINE = 'const modes=[...BATTLE_MODES,...((SPECIES_CHALLENGE_PUBLIC_RELEASE||debugBattle)?[SPECIES_CHALLENGE_MODE]:[]),...((TACTICS_MODE_PUBLIC_RELEASE||debugBattle)?[TACTICS_MODE]:[])];';
+check('モード選択は極限チャレンジのカードを出さず、残りを横スライドで並べる',
   has(MODE_LIST_LINE) && count(MODE_LIST_LINE) === 2
     && has('aria-label="前のモード"') && has('aria-label="次のモード"')
     && has('snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2.5'),

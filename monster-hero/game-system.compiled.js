@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2ce764b50ae653ec
+// source-sha256: 2357fddbdba67d76
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1f8c24995e213c5e
+// generated-sha256: 04169718886bfc09
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -161,7 +161,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-19 12:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-19 13:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -55997,34 +55997,35 @@ function MonsterHeroGame() {
   // チャレンジは従来どおりの難易度キー、プロは Pro を付けたキーを読み書きする
   const renderScoreRankingBody = (mode = BATTLE_MODE_CHALLENGE) => {
     const isExtreme = mode === EXTREME_MODE.id;
-    const keyOf = diff => rankingDifficultyKey(rankingDifficultyForMode(mode, diff));
+    // 極限の段階は、どのモードのランキングから引いても極限のキー(ExtremeGOD など)を使う。
+    // チャレンジのタブへ極限を並べたので、ここを mode だけで決めると
+    // 極限を選んでいるのに normalizeBattleDifficulty が Normal へ落としてしまう
+    const keyOf = diff => rankingDifficultyKey(isExtremeDifficultyId(diff) ? rankingDifficultyForMode(EXTREME_MODE.id, diff) : rankingDifficultyForMode(mode, diff));
+    // タブに並べる難易度。チャレンジは通常9段階＋極限の段階、極限の入口からは極限だけ、
+    // それ以外(プロ)は通常9段階のまま
+    const rankingTabs = isExtreme ? PUBLIC_EXTREME_DIFFICULTIES.map(setting => [setting.id, setting]) : [...Object.entries(DIFFICULTY_SETTINGS), ...(mode === BATTLE_MODE_CHALLENGE ? PUBLIC_EXTREME_DIFFICULTIES.map(setting => [setting.id, setting]) : [])];
     const viewKey = keyOf(rankingViewDiff);
     const rows = localRankings[viewKey] || [],
       status = rankingStatus(`score:${viewKey}`);
-    return /*#__PURE__*/React.createElement(React.Fragment, null, isExtreme ? /*#__PURE__*/React.createElement("div", {
+    return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+      "data-score-ranking-tabs": true,
       className: "flex gap-1.5 overflow-x-auto pb-2 shrink-0"
-    }, PUBLIC_EXTREME_DIFFICULTIES.map(setting => /*#__PURE__*/React.createElement("button", {
-      key: setting.id,
-      onClick: () => {
-        setRankingViewDiff(setting.id);
-        loadRankings(keyOf(setting.id));
-      },
-      className: `px-3 min-h-[30px] rounded-full text-[9px] font-black shrink-0 active:scale-95 ${rankingViewDiff === setting.id ? 'ring-2 ring-white' : 'border border-white/10'}`,
-      style: {
-        backgroundColor: EXTREME_MODE.color,
-        color: '#0f172a'
-      }
-    }, setting.label))) : /*#__PURE__*/React.createElement("div", {
-      className: "flex gap-1.5 overflow-x-auto pb-2 shrink-0"
-    }, Object.entries(DIFFICULTY_SETTINGS).map(([d, st]) => /*#__PURE__*/React.createElement("button", {
-      key: d,
-      onClick: () => {
-        setRankingViewDiff(d);
-        loadRankings(keyOf(d));
-      },
-      className: `px-3 min-h-[30px] rounded-full text-[9px] font-black shrink-0 active:scale-95 ${rankingViewDiff === d ? 'ring-2 ring-white' : 'border border-white/10'}`,
-      style: difficultyStyle(st, rankingViewDiff === d)
-    }, st.label))), /*#__PURE__*/React.createElement("div", {
+    }, rankingTabs.map(([d, st]) => {
+      const on = rankingViewDiff === d;
+      const extremeTab = isExtremeDifficultyId(d);
+      return /*#__PURE__*/React.createElement("button", {
+        key: d,
+        onClick: () => {
+          setRankingViewDiff(d);
+          loadRankings(keyOf(d));
+        },
+        className: `px-3 min-h-[30px] rounded-full text-[9px] font-black shrink-0 active:scale-95 ${on ? 'ring-2 ring-white' : 'border border-white/10'}`,
+        style: extremeTab ? {
+          backgroundColor: extremeDifficultyTheme(d).accent,
+          color: '#0f172a'
+        } : difficultyStyle(st, on)
+      }, st.label);
+    })), /*#__PURE__*/React.createElement("div", {
       className: "flex-1 overflow-y-auto mh-scroll space-y-1.5"
     }, status.refreshing && /*#__PURE__*/React.createElement("div", {
       className: "text-center text-[9px] text-indigo-300"
