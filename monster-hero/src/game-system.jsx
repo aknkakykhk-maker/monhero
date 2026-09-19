@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 04169718886bfc09
+// generated-sha256: b19c52179ae0f736
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -91,7 +91,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-19 13:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-19 13:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -9252,7 +9252,8 @@ const ENEMY_ACTION_DEFINITIONS = [
 // ★どの行動にも「こちらの対抗手段」を1つ用意する。読めば受けられる、が成り立たないと
 //   ただ強いだけの難易度と変わらなくなる。
 //     薙ぎ払い → 距離撃で敵をずらす / 連撃 → ガード /
-//     貫通撃 → 回避・反射・スタン / 咆哮・再生 → スタンで潰す・削り切る
+//     貫通撃 → 回避・反射・スタン / 咆哮・再生 → スタンで潰す・削り切る /
+//     単体狙い → 狙われた子を守る・回復する / 全体攻撃 → 全員のライフを見て回復を回す
 // ★type は既存の ATTACK / SPECIAL をそのまま使い、違いは variant で持つ。
 //   getIncomingDamageBeforeTurnReduction は type でダメージの有無を判断しているので、
 //   ここを新しい type にするとダメージ計算・演出・予告の経路を全部書き足すことになる。
@@ -9265,6 +9266,11 @@ const TACTICS_ROAR_ATK_RATE = 1.5;    // 次のターンから敵の攻撃が上
 const TACTICS_ROAR_MAX_STACKS = 2;    // 重ねがけの上限
 const TACTICS_REGEN_RATE = 0.08;      // 最大ライフに対する回復量
 const TACTICS_REGEN_HP_THRESHOLD = 0.9; // ライフがこの割合を下回ったときだけ使う
+// 単体狙いと全体攻撃(2026-09-19・設計 §5.3)。
+// ★全体攻撃は1体あたりの威力を単体狙いより必ず低くする。同じにすると
+//   「全員を殴るほうが得」になり、狙いを読む意味が消える
+const TACTICS_FOCUS_MULT = 2.2;   // 予告した1体へ。読めば守れるぶん大きい
+const TACTICS_ALLOUT_MULT = 0.9;  // 全員へ。1体あたりは通常攻撃より少しだけ低い
 const TACTICS_ACTION_DEFINITIONS = [
   {id:'normal',type:'ATTACK',category:'通常攻撃',weight:30,multiplier:1,hits:1,range:'全間合い',condition:'常時',cooldown:0,useLimit:null},
   {id:'charge',type:'CHARGE',category:'ためる',weight:12,multiplier:0,hits:0,range:'全間合い',condition:'常時',cooldown:0,useLimit:null},
@@ -9275,6 +9281,8 @@ const TACTICS_ACTION_DEFINITIONS = [
   {id:'pierce',type:'ATTACK',variant:'pierce',category:'貫通撃',weight:12,multiplier:TACTICS_PIERCE_MULT,hits:1,range:'全間合い',condition:'ガードが効かない',cooldown:0,useLimit:null},
   {id:'roar',type:'ROAR',category:'咆哮',weight:10,multiplier:0,hits:0,range:'全間合い',condition:`重ねがけは${TACTICS_ROAR_MAX_STACKS}回まで`,cooldown:0,useLimit:TACTICS_ROAR_MAX_STACKS},
   {id:'regen',type:'REGEN',category:'再生',weight:10,multiplier:0,hits:0,range:'全間合い',condition:'ライフが減っているときだけ',cooldown:0,useLimit:null},
+  {id:'focus',type:'ATTACK',variant:'focus',category:'単体狙い',weight:12,multiplier:TACTICS_FOCUS_MULT,hits:1,range:'全間合い',condition:'予告した1体へ大ダメージ。その子を守るか回復する',cooldown:0,useLimit:null},
+  {id:'allout',type:'ATTACK',variant:'allout',targetsAll:true,category:'全体攻撃',weight:10,multiplier:TACTICS_ALLOUT_MULT,hits:1,range:'全員',condition:'立っている全員へ同時に当たる。狙いをかわせない',cooldown:0,useLimit:null},
 ];
 // どの敵も通常攻撃・ためる・必殺技・移動は持つ。ここへ足すのは「その敵だけの技」。
 // WAVEが進むほど読むことが増える並びにしてある(敵の順は ENEMY_SEQUENCE)。
@@ -9284,12 +9292,12 @@ const TACTICS_ENEMY_ACTION_IDS = Object.freeze({
   Gel:Object.freeze(['sweep']),
   BlackDino:Object.freeze(['rush','roar']),
   Jaakusou:Object.freeze(['sweep','regen']),
-  BlueMountain:Object.freeze(['pierce','sweep']),
-  Gali:Object.freeze(['roar','rush']),
-  Naga:Object.freeze(['sweep','pierce']),
-  Lilim:Object.freeze(['regen','pierce']),
-  Durahan:Object.freeze(['rush','roar','pierce']),
-  Moo:Object.freeze(['sweep','rush','pierce','roar','regen']),
+  BlueMountain:Object.freeze(['pierce','sweep','focus']),
+  Gali:Object.freeze(['roar','rush','allout']),
+  Naga:Object.freeze(['sweep','pierce','focus']),
+  Lilim:Object.freeze(['regen','pierce','allout']),
+  Durahan:Object.freeze(['rush','roar','pierce','focus','allout']),
+  Moo:Object.freeze(['sweep','rush','pierce','roar','regen','focus','allout']),
 });
 const tacticsActionDefinitions = (enemyId) => {
   const ids = [...TACTICS_BASE_ACTION_IDS, ...(TACTICS_ENEMY_ACTION_IDS[enemyId] || [])];
@@ -9349,7 +9357,7 @@ const enemyActionLabel = (ent,type) => type==='ATTACK' ? (ent?.normal||'通常�
   : '様子を見ている';
 const ENEMY_ACTION_ICONS = {ATTACK:'👊',CHARGE:'✨',SPECIAL:'🔥',WAIT:'⏳',MOVE:'🏃',ROAR:'📢',REGEN:'💚'};
 // 新モードの攻撃は type が ATTACK のままなので、見分けは variant で付ける
-const TACTICS_VARIANT_ICONS = {sweep:'🌪️',rush:'💥',pierce:'🗡️'};
+const TACTICS_VARIANT_ICONS = {sweep:'🌪️',rush:'💥',pierce:'🗡️',focus:'🎯',allout:'🌊'};
 const chooseEnemyAction = (ent,currentDist,random=Math.random,state={}) => {
   const actions=enemyActionProbabilities(ent,currentDist,state),roll=random(),available=actions.filter(a=>a.available);
   let cursor=roll;
@@ -9371,7 +9379,10 @@ const chooseEnemyAction = (ent,currentDist,random=Math.random,state={}) => {
       label:`${selected.category}: ${RANGE_LABELS[currentDist]}`,icon:TACTICS_VARIANT_ICONS.sweep,actionId:selected.id};
   }
   if(selected.variant){
+    // 全体攻撃だけは狙いを決めない。予告の時点で「立っている全員」と決まっているので、
+    // targetsAll を intent へ持ち歩き、当たる相手は tacticsIntentTargets が数え直す
     return {type:selected.type,variant:selected.variant,hits:Math.max(1,Math.floor(Number(selected.hits)||1)),
+      ...(selected.targetsAll?{targetsAll:true}:{}),
       value:Math.floor(ent.atk*selected.multiplier),label:selected.category,
       icon:TACTICS_VARIANT_ICONS[selected.variant]||ENEMY_ACTION_ICONS[selected.type]||'⏳',actionId:selected.id};
   }
@@ -15263,16 +15274,25 @@ const chooseTacticsTarget = (units, random = Math.random, bias = TACTICS_TARGET_
   return weights[weights.length - 1].index;
 };
 
+// 予告の吹き出しへ出す「狙い」の呼び名。名前が無い子でも空欄にしない
+const TACTICS_ALL_TARGET_LABEL = '全員';
+const tacticsTargetName = (units, slotIndex) => {
+  const unit = Array.isArray(units) ? units[slotIndex] : null;
+  return (unit && String(unit.name || '').trim()) || `${slotIndex + 1}番目の子`;
+};
+
 // 敵の予告へ「誰を狙うか」を足す。
-// ★全体攻撃(targetsAll)は狙いを決めない。薙ぎ払いは間合いで当たる相手が決まるので、
-//   ここでは狙いを持たせず、実行時に「その間合いにいる子」を見る。
+// ★全体攻撃(targetsAll)は狙いを決めない。立っている全員に当たるので、抽選するものが無い。
+//   薙ぎ払いは間合いで当たる相手が決まるので、ここでは狙いを持たせず、
+//   実行時に「その間合いにいる子」を見る(予告には間合いが出ている)。
 // ★ダメージの無い行動(ためる・移動・咆哮・再生)にも狙いは要らない。
 const TACTICS_TARGETED_TYPES = ['ATTACK', 'SPECIAL'];
 const withTacticsTarget = (intent, units, random = Math.random, bias = TACTICS_TARGET_LOW_HP_BIAS) => {
   if (!intent || !TACTICS_TARGETED_TYPES.includes(intent.type)) return intent;
-  if (intent.targetsAll || intent.variant === 'sweep') return intent;
+  if (intent.targetsAll) return { ...intent, targetName: TACTICS_ALL_TARGET_LABEL };
+  if (intent.variant === 'sweep') return intent;
   const targetSlot = chooseTacticsTarget(units, random, bias);
-  return targetSlot == null ? intent : { ...intent, targetSlot };
+  return targetSlot == null ? intent : { ...intent, targetSlot, targetName: tacticsTargetName(units, targetSlot) };
 };
 // その行動が実際に当たるスロット。予告と実行で同じ関数を通すので食い違わない
 const tacticsIntentTargets = (intent, units, enemyDist = null) => {
@@ -20493,7 +20513,9 @@ function BattleScreen({
             // 敵の絵のすぐ下へ置く(2026-09-18・ユーザー依頼)。mt-auto で下端へ押しやっていたため、
             // 絵と「次に何をしてくるか」のあいだに200pxほどの空きができ、視線が大きく動いていた。
             // 余りの高さは、この下のバフ帯の mt-auto がまとめて吸う。
-            return <div className={`mt-1 mb-1 mx-auto w-fit max-w-full border p-1 px-4 rounded-full flex items-center gap-1.5 animate-pulse z-[45] shadow-lg shrink-0${battleTutorialSpotClass('enemyIntent')} ${focusedCard?'invisible':'visible'} ${tone}`}><Target size={12}/><div className="text-[10px] font-black uppercase tracking-tight">{enemyIntent.label}{rawDmg>0?` (予定: ${plannedDmg})`:''}</div></div>;
+            // data-enemy-intent は検査の手がかり。どの行動が予告されているかは抽選なので、
+            // 画面の文字から探すと「今回はためるだった」で落ちる
+            return <div data-enemy-intent className={`mt-1 mb-1 mx-auto w-fit max-w-full border p-1 px-4 rounded-full flex items-center gap-1.5 animate-pulse z-[45] shadow-lg shrink-0${battleTutorialSpotClass('enemyIntent')} ${focusedCard?'invisible':'visible'} ${tone}`}><Target size={12}/><div className="text-[10px] font-black uppercase tracking-tight">{enemyIntent.label}{enemyIntent.targetName?` 🎯${enemyIntent.targetName}`:''}{rawDmg>0?` (予定: ${plannedDmg})`:''}</div></div>;
           })()}
         {/* 強化の札(2026-09-19・ユーザー指摘「バフデバフ欄が見にくくなってる」)。
             もとは敵のいる main の中に置いていたが、main は overflow-y-auto なので、
@@ -22552,6 +22574,13 @@ function MonsterHeroGame() {
   const [atk, setAtk] = useState(100);
   const [def, setDef] = useState(100);
   const [slots, setSlots] = useState([null,null,null,null]);
+  // 新モード(tactics)の盤面。1体ずつのライフ・ガッツ・倒れたかどうかを持つ。
+  // 設計の正本: docs/spec/BATTLE_NEW_MODE_PLAN.md。中身を作るのは 32-tactics-units.jsx の純関数。
+  // ★slots と必ず同じ並び。片方だけ動かすと「誰を狙ったか」がずれるので、
+  //   更新は applySlots ひとつに通す(下で定義)。
+  // ★refも持つのは、敵の行動を抽選するのが再描画より先だから(咆哮の重ねがけと同じ理由)。
+  const [tacticsUnits, setTacticsUnits] = useState([null,null,null,null]);
+  const tacticsUnitsRef = useRef([null,null,null,null]);
   const [mainHero, setMainHero] = useState(null);
   const [hand, setHand] = useState([]);
   const [deck, setDeck] = useState([]);
@@ -22888,6 +22917,26 @@ function MonsterHeroGame() {
   // 表示用のstateではなくrefで持つ(上限に達したら咆哮そのものが候補から外れる)。
   // WAVEが変わるたびに0へ戻す
   const tacticsRoarStacksRef = useRef(0);
+  // 盤面を slots に合わせる。ここだけが tacticsUnits を作る場所。
+  // ★すでに居る子の現在値(ライフ・ガッツ)は持ち越す。slots が変わるたびに作り直すと、
+  //   供モンが合流した瞬間に全員が満タンへ戻ってしまう。
+  // ★モードで分けない。新モード以外でも4体ぶんのオブジェクトを作るだけなので安く、
+  //   「runMode がまだ切り替わっていないタイミングで作り損ねる」事故を防げる。
+  const syncTacticsUnits = (nextSlots) => {
+    const before = tacticsUnitsRef.current || [];
+    const next = (Array.isArray(nextSlots) ? nextSlots : []).map((mon, index) => {
+      if (!mon) return null;
+      const current = before[index];
+      const same = current && current.id === (mon.id || null) && current.masuId === (mon.masuId ?? null);
+      return same ? current : createTacticsUnit(mon);
+    });
+    tacticsUnitsRef.current = next;
+    setTacticsUnits(next);
+  };
+  // 編成スロットを差し替える唯一の入口。盤面を必ず一緒に動かす
+  const applySlots = (nextSlots) => { setSlots(nextSlots); syncTacticsUnits(nextSlots); };
+  // 新モードのときだけ、敵の予告へ「誰を狙うか」を足す。ほかのモードでは intent をそのまま返す
+  const aimTacticsIntent = (intent, mode) => (isTacticsMode(mode) ? withTacticsTarget(intent, tacticsUnitsRef.current) : intent);
   // 不死(死者の再起)で、このWAVEに何回起き上がったか。撃破処理と同じ同期ロックの流れで判定するので
   // 表示用のstateとは別にrefでも持ち、再描画を待たずに次の撃破判定へ反映する。
   const enemyRevivalUsedRef = useRef(0);
@@ -29214,7 +29263,7 @@ function MonsterHeroGame() {
     autoRepeatBondAwardMasuIdsRef.current = [];
     const s = resetAllState();
     setScore(s.score); setWave(s.wave); setHp(s.hp); setMaxHp(s.maxHp); setGuts(s.guts); setMaxGuts(s.maxGuts);
-    setAtk(s.atk); setDef(s.def); setSlots(s.slots); setMainHero(s.mainHero); setHand(s.hand); setDeck(s.deck);
+    setAtk(s.atk); setDef(s.def); applySlots(s.slots); setMainHero(s.mainHero); setHand(s.hand); setDeck(s.deck);
     setGraveyard(s.graveyard); setEnemy(s.enemy); setEnemyDist(s.enemyDist); setSelectedCards(s.selectedCards); setCardAssignments({}); setPendingCard(null);
     setIsBusy(s.isBusy); setMonSelection(s.monSelection); setOwnedUniques(s.ownedUniques); setSlotUniqueChoice(s.slotUniqueChoice); setSlotUniqueLevelChoice(s.slotUniqueLevelChoice); setInheritedUniqueEvo(s.inheritedUniqueEvo);
     setOwnedTeachings(s.ownedTeachings); setAtkLevel(s.atkLevel); setGuardLevel(s.guardLevel); setGuardBonusCount(s.guardBonusCount); setUpgradePoints(s.upgradePoints); setTurnCount(s.turnCount); setTotalTurnCount(s.totalTurnCount);
@@ -29443,7 +29492,7 @@ function MonsterHeroGame() {
     initialBattleDistanceRef.current=resolved.initialDistance;
     const initialSlots=[null,null,null,null]; initialSlots[resolved.initialDistance]={...resolved.hero};
     const initialUnique={...resolved.hero.unique,evoLevel:Math.max(0,resolved.hero.unique?.evoLevel||0)};
-    setSlots(initialSlots); setMainHero(resolved.hero); setOwnedUniques([initialUnique]);
+    applySlots(initialSlots); setMainHero(resolved.hero); setOwnedUniques([initialUnique]);
     setMaxHp(resolved.hero.baseHp); setHp(resolved.hero.baseHp); setMaxGuts(resolved.hero.baseGuts); setGuts(Math.floor(resolved.hero.baseGuts*0.5)); setAtk(resolved.hero.baseAtk); setDef(resolved.hero.baseDef);
     setDistAptPct(getMonsterAptPct(resolved.hero,specialRuleDifficultyForRun(resolved.runMode,resolved.difficulty,resolved.extremeRun,resolved.extremeDifficulty)));
     setProAllyPool(resolved.proAllies);
@@ -29814,7 +29863,7 @@ function MonsterHeroGame() {
     setRunFinalizing(false);
     const s = resetAllState();
     setScore(s.score); setWave(s.wave); setHp(s.hp); setMaxHp(s.maxHp); setGuts(s.guts); setMaxGuts(s.maxGuts);
-    setAtk(s.atk); setDef(s.def); setSlots(s.slots); setMainHero(s.mainHero); setHand(s.hand); setDeck(s.deck);
+    setAtk(s.atk); setDef(s.def); applySlots(s.slots); setMainHero(s.mainHero); setHand(s.hand); setDeck(s.deck);
     setGraveyard(s.graveyard); setEnemy(s.enemy); setEnemyDist(s.enemyDist); setSelectedCards(s.selectedCards); setCardAssignments({}); setPendingCard(null);
     setIsBusy(s.isBusy); setMonSelection(s.monSelection); setOwnedUniques(s.ownedUniques); setSlotUniqueChoice(s.slotUniqueChoice||{}); setSlotUniqueLevelChoice(s.slotUniqueLevelChoice||{}); setInheritedUniqueEvo(s.inheritedUniqueEvo||{});
     setOwnedTeachings(s.ownedTeachings); setAtkLevel(s.atkLevel); setGuardLevel(s.guardLevel);
@@ -30118,7 +30167,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // ここで移動を引くと「予告なしでいきなり動く」ことになるので、移動は選ばせない
     // 行動表はモードと敵で決まる。新モード以外では今までどおりの1つの表が返る
     const actionState = () => ({definitions:enemyActionDefinitionsFor(runMode,enemy?.id),roarStacks:tacticsRoarStacksRef.current});
-    const upcoming = reserved || getNextEnemyAction(enemy, distAfterExecuted, effective, {unannounced:true,...actionState()});
+    // ★狙いは「予告として出す直前」に決める。抽選したときのまま持ち歩くと、
+    //   そのあいだに狙われていた子が倒れていても、その子を狙ったまま予告してしまう
+    const upcoming = aimTacticsIntent(reserved || getNextEnemyAction(enemy, distAfterExecuted, effective, {unannounced:true,...actionState()}), runMode);
     setEnemyIntent(upcoming);
     reserveEnemyNextIntent(getNextEnemyAction(enemy, distAfterIntent(upcoming, distAfterExecuted), upcoming, actionState()));
   };
@@ -31768,7 +31819,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setEnemy(newEnemy); setEnemyDist(dist); setEnemyLastIntent(null);
     // 行動表はモードと敵で決まる。新モード以外では今までどおりの1つの表が返る
     const actionState=()=>({definitions:enemyActionDefinitionsFor(runMode,newEnemy?.id),roarStacks:tacticsRoarStacksRef.current});
-    const firstIntent = getNextEnemyAction(newEnemy,dist,null,{unannounced:true,...actionState()});
+    const firstIntent = aimTacticsIntent(getNextEnemyAction(newEnemy,dist,null,{unannounced:true,...actionState()}),runMode);
     setEnemyIntent(firstIntent);
     reserveEnemyNextIntent(getNextEnemyAction(newEnemy,distAfterIntent(firstIntent,dist),firstIntent,actionState()));
     setTurnCount(1); setSelectedCards([]); setLastActionSlot(null); setCardAssignments({}); setPendingCard(null); setCurrentWaveDamage(0); setWaveDistDamage([0,0,0,0]); setWaveBuffs({}); // WAVE毎リセットのバフ・デバフ(waveEnemyAtkDebuff/chuuniDmgCutUses/enemyTakenDmgBonus等)を全てクリア
@@ -31866,7 +31917,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     writePermaBuffs({autoHpRecovery:0.1}); setWaveBuffs({}); setTurnBuffs({}); writeNextTurnBuffs({});
     setDistDmgBonus([0,0,0,0]); setTotalDistDamage([0,0,0,0]); setTotalAllDamage(0); setTotalRecoveryDelta(0);
     setUpgradePoints(0); setAtkLevel(0); setGuardLevel(0); setGuardBonusCount(0);
-    setMainHero(null); setSlots([null,null,null,null]); setOwnedUniques([]); setOwnedTeachings([]);
+    setMainHero(null); applySlots([null,null,null,null]); setOwnedUniques([]); setOwnedTeachings([]);
     setDistAptPct([0,0,0,0]);
     // いちばんやさしい難易度・チャレンジモードで固定する(練習なので勝ちやすくする)
     setDifficulty('Beginner'); setRunMode(BATTLE_MODE_CHALLENGE); setBattleMode(BATTLE_MODE_CHALLENGE);
@@ -32046,7 +32097,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setDistDmgBonus([0,0,0,0]); setTotalDistDamage([0,0,0,0]); setTotalAllDamage(0); setTotalRecoveryDelta(0);
     setUpgradePoints(0); setAtkLevel(0); setGuardLevel(0); setGuardBonusCount(0); setFinalRewardSummary(null);
     clearSlotUniqueSelection(); // デバッグ戦でも前の周回の一時選択を持ち込まない
-    setMainHero(hero); setSlots(debugSlots); setOwnedUniques(uniques); setOwnedTeachings(teachings);
+    setMainHero(hero); applySlots(debugSlots); setOwnedUniques(uniques); setOwnedTeachings(teachings);
     setMaxHp(debugMaxHp); setHp(debugMaxHp); setAtk(debugAtk); setDef(debugDef);
     setMaxGuts(debugMaxGuts); setGuts(Math.floor(debugMaxGuts*0.5));
     // 間合い適性は編成全員分(勇者モンを含む)を距離ごとに合計する。
@@ -32066,7 +32117,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       ?joinSpeciesChallengeAlly(speciesChallengeBattleRunRef.current,joinRosterEntry(m))
       :null;
     if(speciesJoin&&!speciesJoin.joinedAllyId)return;
-    const nextSlots=[...slots]; nextSlots[slotIdx]={...m}; setSlots(nextSlots);
+    const nextSlots=[...slots]; nextSlots[slotIdx]={...m}; applySlots(nextSlots);
     // 置いた瞬間に、そのスロットの古い一時選択を捨てる。
     // 未選択に戻すことで、そのマスモンに保存された初期技がそのまま初期選択になる
     clearSlotUniqueSelection(slotIdx);

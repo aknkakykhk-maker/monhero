@@ -508,6 +508,13 @@ function MonsterHeroGame() {
   const [atk, setAtk] = useState(100);
   const [def, setDef] = useState(100);
   const [slots, setSlots] = useState([null,null,null,null]);
+  // 新モード(tactics)の盤面。1体ずつのライフ・ガッツ・倒れたかどうかを持つ。
+  // 設計の正本: docs/spec/BATTLE_NEW_MODE_PLAN.md。中身を作るのは 32-tactics-units.jsx の純関数。
+  // ★slots と必ず同じ並び。片方だけ動かすと「誰を狙ったか」がずれるので、
+  //   更新は applySlots ひとつに通す(下で定義)。
+  // ★refも持つのは、敵の行動を抽選するのが再描画より先だから(咆哮の重ねがけと同じ理由)。
+  const [tacticsUnits, setTacticsUnits] = useState([null,null,null,null]);
+  const tacticsUnitsRef = useRef([null,null,null,null]);
   const [mainHero, setMainHero] = useState(null);
   const [hand, setHand] = useState([]);
   const [deck, setDeck] = useState([]);
@@ -844,6 +851,26 @@ function MonsterHeroGame() {
   // 表示用のstateではなくrefで持つ(上限に達したら咆哮そのものが候補から外れる)。
   // WAVEが変わるたびに0へ戻す
   const tacticsRoarStacksRef = useRef(0);
+  // 盤面を slots に合わせる。ここだけが tacticsUnits を作る場所。
+  // ★すでに居る子の現在値(ライフ・ガッツ)は持ち越す。slots が変わるたびに作り直すと、
+  //   供モンが合流した瞬間に全員が満タンへ戻ってしまう。
+  // ★モードで分けない。新モード以外でも4体ぶんのオブジェクトを作るだけなので安く、
+  //   「runMode がまだ切り替わっていないタイミングで作り損ねる」事故を防げる。
+  const syncTacticsUnits = (nextSlots) => {
+    const before = tacticsUnitsRef.current || [];
+    const next = (Array.isArray(nextSlots) ? nextSlots : []).map((mon, index) => {
+      if (!mon) return null;
+      const current = before[index];
+      const same = current && current.id === (mon.id || null) && current.masuId === (mon.masuId ?? null);
+      return same ? current : createTacticsUnit(mon);
+    });
+    tacticsUnitsRef.current = next;
+    setTacticsUnits(next);
+  };
+  // 編成スロットを差し替える唯一の入口。盤面を必ず一緒に動かす
+  const applySlots = (nextSlots) => { setSlots(nextSlots); syncTacticsUnits(nextSlots); };
+  // 新モードのときだけ、敵の予告へ「誰を狙うか」を足す。ほかのモードでは intent をそのまま返す
+  const aimTacticsIntent = (intent, mode) => (isTacticsMode(mode) ? withTacticsTarget(intent, tacticsUnitsRef.current) : intent);
   // 不死(死者の再起)で、このWAVEに何回起き上がったか。撃破処理と同じ同期ロックの流れで判定するので
   // 表示用のstateとは別にrefでも持ち、再描画を待たずに次の撃破判定へ反映する。
   const enemyRevivalUsedRef = useRef(0);
@@ -7170,7 +7197,7 @@ function MonsterHeroGame() {
     autoRepeatBondAwardMasuIdsRef.current = [];
     const s = resetAllState();
     setScore(s.score); setWave(s.wave); setHp(s.hp); setMaxHp(s.maxHp); setGuts(s.guts); setMaxGuts(s.maxGuts);
-    setAtk(s.atk); setDef(s.def); setSlots(s.slots); setMainHero(s.mainHero); setHand(s.hand); setDeck(s.deck);
+    setAtk(s.atk); setDef(s.def); applySlots(s.slots); setMainHero(s.mainHero); setHand(s.hand); setDeck(s.deck);
     setGraveyard(s.graveyard); setEnemy(s.enemy); setEnemyDist(s.enemyDist); setSelectedCards(s.selectedCards); setCardAssignments({}); setPendingCard(null);
     setIsBusy(s.isBusy); setMonSelection(s.monSelection); setOwnedUniques(s.ownedUniques); setSlotUniqueChoice(s.slotUniqueChoice); setSlotUniqueLevelChoice(s.slotUniqueLevelChoice); setInheritedUniqueEvo(s.inheritedUniqueEvo);
     setOwnedTeachings(s.ownedTeachings); setAtkLevel(s.atkLevel); setGuardLevel(s.guardLevel); setGuardBonusCount(s.guardBonusCount); setUpgradePoints(s.upgradePoints); setTurnCount(s.turnCount); setTotalTurnCount(s.totalTurnCount);
@@ -7399,7 +7426,7 @@ function MonsterHeroGame() {
     initialBattleDistanceRef.current=resolved.initialDistance;
     const initialSlots=[null,null,null,null]; initialSlots[resolved.initialDistance]={...resolved.hero};
     const initialUnique={...resolved.hero.unique,evoLevel:Math.max(0,resolved.hero.unique?.evoLevel||0)};
-    setSlots(initialSlots); setMainHero(resolved.hero); setOwnedUniques([initialUnique]);
+    applySlots(initialSlots); setMainHero(resolved.hero); setOwnedUniques([initialUnique]);
     setMaxHp(resolved.hero.baseHp); setHp(resolved.hero.baseHp); setMaxGuts(resolved.hero.baseGuts); setGuts(Math.floor(resolved.hero.baseGuts*0.5)); setAtk(resolved.hero.baseAtk); setDef(resolved.hero.baseDef);
     setDistAptPct(getMonsterAptPct(resolved.hero,specialRuleDifficultyForRun(resolved.runMode,resolved.difficulty,resolved.extremeRun,resolved.extremeDifficulty)));
     setProAllyPool(resolved.proAllies);
@@ -7770,7 +7797,7 @@ function MonsterHeroGame() {
     setRunFinalizing(false);
     const s = resetAllState();
     setScore(s.score); setWave(s.wave); setHp(s.hp); setMaxHp(s.maxHp); setGuts(s.guts); setMaxGuts(s.maxGuts);
-    setAtk(s.atk); setDef(s.def); setSlots(s.slots); setMainHero(s.mainHero); setHand(s.hand); setDeck(s.deck);
+    setAtk(s.atk); setDef(s.def); applySlots(s.slots); setMainHero(s.mainHero); setHand(s.hand); setDeck(s.deck);
     setGraveyard(s.graveyard); setEnemy(s.enemy); setEnemyDist(s.enemyDist); setSelectedCards(s.selectedCards); setCardAssignments({}); setPendingCard(null);
     setIsBusy(s.isBusy); setMonSelection(s.monSelection); setOwnedUniques(s.ownedUniques); setSlotUniqueChoice(s.slotUniqueChoice||{}); setSlotUniqueLevelChoice(s.slotUniqueLevelChoice||{}); setInheritedUniqueEvo(s.inheritedUniqueEvo||{});
     setOwnedTeachings(s.ownedTeachings); setAtkLevel(s.atkLevel); setGuardLevel(s.guardLevel);
@@ -8074,7 +8101,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // ここで移動を引くと「予告なしでいきなり動く」ことになるので、移動は選ばせない
     // 行動表はモードと敵で決まる。新モード以外では今までどおりの1つの表が返る
     const actionState = () => ({definitions:enemyActionDefinitionsFor(runMode,enemy?.id),roarStacks:tacticsRoarStacksRef.current});
-    const upcoming = reserved || getNextEnemyAction(enemy, distAfterExecuted, effective, {unannounced:true,...actionState()});
+    // ★狙いは「予告として出す直前」に決める。抽選したときのまま持ち歩くと、
+    //   そのあいだに狙われていた子が倒れていても、その子を狙ったまま予告してしまう
+    const upcoming = aimTacticsIntent(reserved || getNextEnemyAction(enemy, distAfterExecuted, effective, {unannounced:true,...actionState()}), runMode);
     setEnemyIntent(upcoming);
     reserveEnemyNextIntent(getNextEnemyAction(enemy, distAfterIntent(upcoming, distAfterExecuted), upcoming, actionState()));
   };
@@ -9724,7 +9753,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setEnemy(newEnemy); setEnemyDist(dist); setEnemyLastIntent(null);
     // 行動表はモードと敵で決まる。新モード以外では今までどおりの1つの表が返る
     const actionState=()=>({definitions:enemyActionDefinitionsFor(runMode,newEnemy?.id),roarStacks:tacticsRoarStacksRef.current});
-    const firstIntent = getNextEnemyAction(newEnemy,dist,null,{unannounced:true,...actionState()});
+    const firstIntent = aimTacticsIntent(getNextEnemyAction(newEnemy,dist,null,{unannounced:true,...actionState()}),runMode);
     setEnemyIntent(firstIntent);
     reserveEnemyNextIntent(getNextEnemyAction(newEnemy,distAfterIntent(firstIntent,dist),firstIntent,actionState()));
     setTurnCount(1); setSelectedCards([]); setLastActionSlot(null); setCardAssignments({}); setPendingCard(null); setCurrentWaveDamage(0); setWaveDistDamage([0,0,0,0]); setWaveBuffs({}); // WAVE毎リセットのバフ・デバフ(waveEnemyAtkDebuff/chuuniDmgCutUses/enemyTakenDmgBonus等)を全てクリア
@@ -9822,7 +9851,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     writePermaBuffs({autoHpRecovery:0.1}); setWaveBuffs({}); setTurnBuffs({}); writeNextTurnBuffs({});
     setDistDmgBonus([0,0,0,0]); setTotalDistDamage([0,0,0,0]); setTotalAllDamage(0); setTotalRecoveryDelta(0);
     setUpgradePoints(0); setAtkLevel(0); setGuardLevel(0); setGuardBonusCount(0);
-    setMainHero(null); setSlots([null,null,null,null]); setOwnedUniques([]); setOwnedTeachings([]);
+    setMainHero(null); applySlots([null,null,null,null]); setOwnedUniques([]); setOwnedTeachings([]);
     setDistAptPct([0,0,0,0]);
     // いちばんやさしい難易度・チャレンジモードで固定する(練習なので勝ちやすくする)
     setDifficulty('Beginner'); setRunMode(BATTLE_MODE_CHALLENGE); setBattleMode(BATTLE_MODE_CHALLENGE);
@@ -10002,7 +10031,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setDistDmgBonus([0,0,0,0]); setTotalDistDamage([0,0,0,0]); setTotalAllDamage(0); setTotalRecoveryDelta(0);
     setUpgradePoints(0); setAtkLevel(0); setGuardLevel(0); setGuardBonusCount(0); setFinalRewardSummary(null);
     clearSlotUniqueSelection(); // デバッグ戦でも前の周回の一時選択を持ち込まない
-    setMainHero(hero); setSlots(debugSlots); setOwnedUniques(uniques); setOwnedTeachings(teachings);
+    setMainHero(hero); applySlots(debugSlots); setOwnedUniques(uniques); setOwnedTeachings(teachings);
     setMaxHp(debugMaxHp); setHp(debugMaxHp); setAtk(debugAtk); setDef(debugDef);
     setMaxGuts(debugMaxGuts); setGuts(Math.floor(debugMaxGuts*0.5));
     // 間合い適性は編成全員分(勇者モンを含む)を距離ごとに合計する。
@@ -10022,7 +10051,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       ?joinSpeciesChallengeAlly(speciesChallengeBattleRunRef.current,joinRosterEntry(m))
       :null;
     if(speciesJoin&&!speciesJoin.joinedAllyId)return;
-    const nextSlots=[...slots]; nextSlots[slotIdx]={...m}; setSlots(nextSlots);
+    const nextSlots=[...slots]; nextSlots[slotIdx]={...m}; applySlots(nextSlots);
     // 置いた瞬間に、そのスロットの古い一時選択を捨てる。
     // 未選択に戻すことで、そのマスモンに保存された初期技がそのまま初期選択になる
     clearSlotUniqueSelection(slotIdx);

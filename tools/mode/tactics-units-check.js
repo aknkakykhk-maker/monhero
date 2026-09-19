@@ -8,6 +8,7 @@ const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分�
 //   ④ 全員倒れたときだけ全滅
 //   ⑤ 敵はライフの少ない子を狙いやすい。全体攻撃と薙ぎ払いは狙いを決めない
 //   ⑥ 壊れた値が来ても落ちない
+//   ⑦ バトル本体へ結線されている(盤面が slots と一緒に動き、予告へ狙いが乗る)
 //
 // 数式をこのファイルへ書き写すと、本体を変えたときに検査だけ古くなる。
 // 計算は必ず本体から切り出した実装をそのまま動かす。
@@ -126,6 +127,14 @@ check('ためる・移動には狙いを付けない',
   api.withTacticsTarget({ type: 'CHARGE' }, board, () => 0).targetSlot === undefined
     && api.withTacticsTarget({ type: 'MOVE', targetDist: 1 }, board, () => 0).targetSlot === undefined);
 check('全体攻撃は狙いを決めない', api.withTacticsTarget({ type: 'ATTACK', targetsAll: true }, board, () => 0).targetSlot === undefined);
+// 予告の吹き出しへ出す呼び名。ここが空だと「誰を狙うか」が画面に出ない
+check('狙った子の名前を予告へ持ち歩く',
+  api.withTacticsTarget(attack, board, () => 0).targetName === 'モッチー',
+  String(api.withTacticsTarget(attack, board, () => 0).targetName));
+check('全体攻撃は「全員」と出す',
+  api.withTacticsTarget({ type: 'ATTACK', targetsAll: true }, board, () => 0).targetName === '全員');
+check('名前が無い子でも呼び名が空にならない',
+  !!api.withTacticsTarget(attack, [api.createTacticsUnit({ id: 'X', baseHp: 10 }), null, null, null], () => 0).targetName);
 check('薙ぎ払いは狙いを決めない（間合いで当たる相手が決まる）',
   api.withTacticsTarget({ type: 'ATTACK', variant: 'sweep', sweepDist: 2 }, board, () => 0).targetSlot === undefined);
 
@@ -154,6 +163,31 @@ check('ライフがあるのに倒れている状態を作らない',
 check('unitでないものは null', api.normalizeTacticsUnit(null) === null && api.normalizeTacticsUnit('x') === null);
 check('盤面が配列でなくても落ちない',
   api.tacticsAliveSlots(null).length === 0 && api.isTacticsWipedOut(undefined) === false);
+
+// --- ⑦ バトル本体への結線 ---
+// 純関数だけ足して結線を忘れると、盤面がいつまでも空のまま「狙いなし」で予告が出る。
+// 例外は出ず画面も壊れないので、遊んで気付けない
+const has = (needle) => source.includes(needle);
+check('盤面は slots と同じ入口で動かす',
+  has('const applySlots = (nextSlots) => { setSlots(nextSlots); syncTacticsUnits(nextSlots); };'));
+check('編成スロットを applySlots 以外から書き換えていない',
+  (source.match(/setSlots\(/g) || []).length === 2,
+  `setSlots を呼ぶ場所 ${(source.match(/setSlots\(/g) || []).length}か所(useStateの宣言とapplySlotsの中だけ)`);
+// ★すでに居る子のライフを持ち越さないと、供モンが合流した瞬間に全員が満タンへ戻る
+check('合流しても、すでに居る子の現在値を作り直さない',
+  has('const same = current && current.id === (mon.id || null) && current.masuId === (mon.masuId ?? null);')
+    && has('return same ? current : createTacticsUnit(mon);'));
+check('盤面はrefでも持つ(抽選は再描画より先に走る)', has('tacticsUnitsRef.current = next;'));
+check('狙いを付けるのは新モードだけ',
+  has('const aimTacticsIntent = (intent, mode) => (isTacticsMode(mode) ? withTacticsTarget(intent, tacticsUnitsRef.current) : intent);'));
+check('WAVEの最初の予告にも狙いが付く',
+  has('const firstIntent = aimTacticsIntent(getNextEnemyAction(newEnemy,dist,null,{unannounced:true,...actionState()}),runMode);'));
+// ★予約した時点で狙いを固定すると、そのあいだに倒れた子を狙ったまま予告してしまう
+check('狙いは予告を出す直前に決める',
+  has('const upcoming = aimTacticsIntent(reserved || getNextEnemyAction(enemy, distAfterExecuted, effective, {unannounced:true,...actionState()}), runMode);'));
+check('予告の吹き出しに狙いを出す',
+  fs.readFileSync(path.join(root, 'monster-hero/src/parts/71-screen-battle.jsx'), 'utf8')
+    .includes("{enemyIntent.targetName?` 🎯${enemyIntent.targetName}`:''}"));
 
 console.log(failed ? `\nNG ${failed}件` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
