@@ -562,17 +562,28 @@ check('置けるかの判定も画面へ渡す', has('tacticsCanAssign={tacticsC
 {
   const screen = fs.readFileSync(path.join(root, 'monster-hero/src/parts/71-screen-battle.jsx'), 'utf8');
   const hasScreen = (needle) => screen.includes(needle);
-  check('スロットへ1体ずつのライフ・ガッツを出す',
-    hasScreen('data-tactics-hp={`${tacticsUnit.hp}/${tacticsUnit.maxHp}`}')
-      && hasScreen('data-tactics-guts={`${tacticsUnit.guts}/${tacticsUnit.maxGuts}`}'));
+  // ★距離枠の上へ、下の枠と同じ4列でそろえて出す(2026-09-19 ユーザー依頼)。
+  //   スロットの中の小さい帯は、小さすぎて読めないのでやめた
+  check('距離枠の上に1体ずつの帯を出す',
+    hasScreen('<div data-tactics-party className="w-full grid grid-cols-4 gap-1">')
+      && hasScreen('data-tactics-hp={u?`${u.hp}/${u.maxHp}`:undefined}')
+      && hasScreen('data-tactics-guts={u?`${u.guts}/${u.maxGuts}`:undefined}'));
+  // ★合計のライフ・ガッツは出さない。個別と両方出すと読むものが増えるだけ
+  check('新モードでは合計の帯を出さない', hasScreen('{Array.isArray(tacticsUnits)?(') && hasScreen('):('));
+  check('スロットの中の小さい帯はやめた', !hasScreen('data-tactics-unit={i}'));
   check('倒れた子は覆って分かるようにする', hasScreen('data-tactics-down-mark={i}') && hasScreen('ダウン'));
   // ★「全快になったら復活」なので、あとどれだけかを出さないと回復を回す判断が立たない
   check('復活まであとどれだけかを出す',
     hasScreen('data-tactics-revive={`${revivePct}`}') && hasScreen('復活まで {100-revivePct}%'));
   check('ダウン中の帯は復活ゲージとして色を変える',
-    hasScreen("tacticsUnit.downed?'bg-gradient-to-r from-emerald-600 to-teal-300'"));
-  // ★覆いの上に帯を出す。隠れると、あとどれだけかが読めない
-  check('覆いより帯を前に出す', hasScreen('z-[64] px-0.5 pb-0.5 pointer-events-none') && hasScreen('z-[62] flex flex-col'));
+    hasScreen("u.downed?'bg-gradient-to-r from-emerald-600 to-teal-300'"));
+  // 1体ずつのステータスは「ステータス」から見る(2026-09-19 ユーザーの質問)
+  check('ステータスに1体ずつの値を出す',
+    has('<div data-tactics-status className="space-y-1.5 text-left">')
+      && has('data-tactics-status-slot={i}'));
+  check('ちから・丈夫さ・距離適性まで出す',
+    has('この枠の距離適性') && has("<div className=\"text-[8px] font-black text-red-400\">ちから</div>")
+      && has("<div className=\"text-[8px] font-black text-emerald-400\">丈夫さ</div>"));
   // ★null のときだけ今までどおりの判定を使う。ここを間違えると既存モードの置き方が変わる
   check('置けるかの判定は新モードだけ差し替える',
     hasScreen('const tacticsAnswer=tacticsCanAssign?tacticsCanAssign(pendingCardObj,pendingIdx,i):null;')
