@@ -8601,7 +8601,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       ultimateDistanceBreakPendingRef.current=distanceBreakThreshold;
       setUltimateDistanceBreakPending(distanceBreakThreshold);
     }
-    const finalRoundScore=Math.floor(((totalWaveDamage*waveMult)+(totalWaveDamage*turnMult))*scoreMultiplier);
+    const rawRoundScore=((totalWaveDamage*waveMult)+(totalWaveDamage*turnMult))*scoreMultiplier;
+    // 新モードだけスコアを1/1000へ縮める。式そのものは変えない(2026-09-19 ユーザーが選択)
+    const finalRoundScore=isTacticsMode(runMode)?shrinkTacticsScore(rawRoundScore):Math.floor(rawRoundScore);
     setScore(s=>s+finalRoundScore);
     const finalDistDamage=waveDistDamage.map((value,index)=>(value||0)+(distDamage[index]||0));
     // WAVE後の距離強化はモンスター自身の距離適性とは別枠で、通常の獲得量を出してから半減する。
