@@ -177,16 +177,18 @@ check('ためを止めた次のターンはふだんの出やすさに戻る',
   JSON.stringify(pct(afterCancel)) === JSON.stringify({ normal: 50, charge: 15, special: 0, wait: 20, move: 15 }),
   JSON.stringify(pct(afterCancel)));
 
+// actionState() はモードごとの行動表(新モードだけ別の表)と咆哮の重ねがけ回数を渡すもの。
+// 既存モードでは今までどおりの1つの表が返る
 check('予告済みの行動は抽選し直さず繰り上げる',
-  has('const upcoming = reserved || getNextEnemyAction(enemy, distAfterExecuted, effective, {unannounced:true});')
+  has('const upcoming = reserved || getNextEnemyAction(enemy, distAfterExecuted, effective, {unannounced:true,...actionState()});')
     && has('setEnemyIntent(upcoming);'));
 check('戦闘開始時に2手ぶん用意する',
-  has('const firstIntent = getNextEnemyAction(newEnemy,dist,null,{unannounced:true});')
-    && has('reserveEnemyNextIntent(getNextEnemyAction(newEnemy,distAfterIntent(firstIntent,dist),firstIntent));'));
+  has('const firstIntent = getNextEnemyAction(newEnemy,dist,null,{unannounced:true,...actionState()});')
+    && has('reserveEnemyNextIntent(getNextEnemyAction(newEnemy,distAfterIntent(firstIntent,dist),firstIntent,actionState()));'));
 check('戦闘開始前のSCANも同じ条件で見せる', has('scanBeforeBattle?{unannounced:true}:enemyActionStateFrom(enemyLastIntent)'));
 // 予約を捨てて引き直した行動は、次のターンにそのまま実行されるのに吹き出しを出していない
 check('引き直した行動でも予告なしの移動にしない',
-  has('const upcoming = reserved || getNextEnemyAction(enemy, distAfterExecuted, effective, {unannounced:true});'));
+  has('const upcoming = reserved || getNextEnemyAction(enemy, distAfterExecuted, effective, {unannounced:true,...actionState()});'));
 check('次の行動を決めるとき直前の行動を渡している',
   /advanceEnemyIntents\(executedIntent,distForNextPredict[,)]/.test(src) && /advanceEnemyIntents\(acting,distForNextPredict[,)]/.test(src));
 
