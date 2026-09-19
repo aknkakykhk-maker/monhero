@@ -8512,6 +8512,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
     return isAssistCard(card)&&specialRuleDifficulty ? extremeSpecialRule(specialRuleDifficulty,'assistCardEffect') : (halved?0.5:1);
   };
+  // 「2枚目以降は効果半減」を、誰の2枚目として数えるか(2026-09-20 ユーザー指示)。
+  // ★新モードはステータスが1体ずつなので、パーティ全体で数えると
+  //   ほかの子が1枚使っただけで自分の1枚目が半分になってしまう。
+  //   **同じ子が2枚使うときだけ**半減させる(ハム・ききでカードの枚数が増えたときの調整)。
+  // ★既存5モードは今までどおり「そのターンの2枚目以降」。全部を同じ箱で数える
+  const cardHalveGroup = (slotIdx) => (isTacticsMode(runMode)
+    ? `slot${Number.isInteger(slotIdx)?slotIdx:'none'}` : 'turn');
+  // 使う順に半減かどうかを数える道具。器は純関数側(makeCardHalveCounter)にあり、
+  // ここでは「どこで数えるか(cardHalveGroup)」と「対象外(アシストカード)」を渡すだけ
+  const makeHalveCounter = () => makeCardHalveCounter(cardHalveGroup, isAssistCard);
   // flat は互換用（現行定義は0）。実質は「実効丈夫さ × 倍率の合計」。
   const guardValueOf = (flat, mult) => (flat > 0 || mult > 0) ? Math.floor(flat + effectiveDef * mult) : 0;
   // このカードを使うと、同じターンの「あとに続くカード」へ即座に乗る補正の生値(effMul適用前)。
@@ -8550,12 +8560,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // perCard[idx] は「そのカードのダメージを出すときに使う値」で、固有技は自分のぶんを含む。
   // forPending は保留中のカードぶん(同じく自分のぶんを含む)。
   const previewLocalBoosts = (excludeIdx=null) => {
-    let oryo=0, dmgMod=0, combo=0, penaltyCnt=0;
+    let oryo=0, dmgMod=0, combo=0;
+    const counter=makeHalveCounter();
     const perCard={};
     selectedCards.forEach(idx=>{
       const card=hand[idx];
-      const isPenalty=!isAssistCard(card);
-      const halved=isPenalty&&penaltyCnt>0;
+      const slotIdx=cardAssignments[idx]!=null?cardAssignments[idx]:null;
+      const halved=counter.peek(card,slotIdx);
       perCard[idx]=boostsForCardDamage({oryo,dmgMod,combo},card,halved);
       // 保留中(タップしただけでまだ置いていない)カードは、まだ使っていないので積み上げにも枚数にも数えない
       if(idx===excludeIdx) return;
@@ -8563,10 +8574,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       const effMul=cardEffectMultiplier(card,halved);
       const boost=localBoostFromCard(card);
       if(boost){ oryo+=(boost.oryo||0)*effMul; dmgMod+=(boost.dmgMod||0)*effMul; combo+=(boost.combo||0)*effMul; }
-      if(isPenalty) penaltyCnt++;
+      counter.take(card,slotIdx);
     });
     const pendingCard=excludeIdx!=null?hand[excludeIdx]:null;
-    const pendingHalved=!!pendingCard&&!isAssistCard(pendingCard)&&penaltyCnt>0;
+    const pendingHalved=counter.peek(pendingCard,excludeIdx!=null&&cardAssignments[excludeIdx]!=null?cardAssignments[excludeIdx]:null);
     return { perCard, final:{oryo,dmgMod,combo}, forPending:boostsForCardDamage({oryo,dmgMod,combo},pendingCard,pendingHalved) };
   };
   const getDmg = useCallback((card, slotIdx, mon, additionalOryo=0, additionalDmgMod=0, isSecondOrLaterAtk=false, attackStartDist=enemyDist) => {
@@ -9061,7 +9072,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
     // カットイン廃止: 技名はスロット上にインライン表示する（実行ループ内で行う）
 
-    let penaltyCardCount=0; // アシストカード以外を何枚使ったか(2枚目以降は効果半減)
+    const halveCounter=makeHalveCounter(); // 何枚目かの数え方は cardHalveGroup が決める
     for (const entry of usedCardEntries) {
       const card=entry.card;
       const totalHealBeforeCard=totalHeal;
@@ -9074,12 +9085,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       // 手札にあるだけ・編成しているだけでは増えず、使ったここでだけ数える。
       // 増えるのは、いま選んでいる助手ではなく「そのカード本人」の仲良し度
       if(isBreeder&&!debugBattleRef.current){ const cardAssistant=assistantIdOfAssistCard(card.id); if(cardAssistant) addAssistantBondFor(cardAssistant,'assistantCardUse'); }
-      const halved=!isBreeder&&penaltyCardCount>0;
+      const halved=halveCounter.take(card,entry.slotIdx);
       // EXTREMEでは消費量・枚数でなく、教えカードから発生する効果量だけを半減する。
       const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
       const effMul=isBreeder&&specialRuleDifficulty?extremeSpecialRule(specialRuleDifficulty,'assistCardEffect'):(halved?0.5:1);
-      if(!isBreeder) penaltyCardCount++;
-      if(halved) addPopup('2枚目以降 効果半減','hero','text-slate-300 text-sm font-black');
+      if(halved) addPopup(isTacticsMode(runMode)?'同じ子の2枚目 効果半減':'2枚目以降 効果半減','hero','text-slate-300 text-sm font-black');
       const slotIdx=entry.slotIdx!=null?entry.slotIdx:defaultSlot;
       lastType=card.type;
       if (card.type==='guard') { Audio_.se.guard(); guardTypeInTurn='guard'; currentTurnGuardFlat+=GUARD_EVOLUTION[guardLevel].flat*effMul; currentTurnGuardMult+=GUARD_EVOLUTION[guardLevel].mult*effMul; addGuardForSlot(slotIdx,GUARD_EVOLUTION[guardLevel].flat*effMul,GUARD_EVOLUTION[guardLevel].mult*effMul); }
@@ -14886,7 +14896,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             battleTutorialCardTarget={battleTutorialCardTarget} battleTutorialNeed={battleTutorialNeed}
             battleTutorialNeedCard={battleTutorialNeedCard} battleTutorialSpotClass={battleTutorialSpotClass}
             battleTutorialStep={battleTutorialStep} cardAssignments={cardAssignments}
-            cardDragActiveRef={cardDragActiveRef} cardEffectMultiplier={cardEffectMultiplier} cardLimit={cardLimit}
+            cardDragActiveRef={cardDragActiveRef} cardEffectMultiplier={cardEffectMultiplier} cardLimit={cardLimit} makeCardHalveCounter={makeHalveCounter}
             cardNeedsMonster={cardNeedsMonster} cycleActiveUniqueForSlot={cycleActiveUniqueForSlot}
             cycleBattleAuto={cycleBattleAuto} cycleBattleSpeed={cycleBattleSpeed} cycleEcoMode={cycleEcoMode}
             debugBattle={debugBattle} difficulty={difficulty} dismissQuickRhythmIntro={dismissQuickRhythmIntro}
@@ -16044,9 +16054,11 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
               // 2枚目以降で使うガードは軽減量が半分になる。実際に効く値をそのまま出す。
               const raw=(focusedCard.flat||0)+def*(focusedCard.mult||0);
               const fIdx=hand.findIndex(c=>c&&c.uid===focusedCard.uid);
-              let n=0, halved=false, found=false;
-              selectedCards.forEach(idx=>{ if(idx===pendingCard) return; const c=hand[idx]; const p=!isAssistCard(c); if(idx===fIdx){ halved=p&&n>0; found=true; } if(p) n++; });
-              if(!found) halved=n>0; // まだ置いていないカードは「次に使う1枚」として判定する
+              const counter=makeHalveCounter();
+              let halved=false, found=false;
+              selectedCards.forEach(idx=>{ if(idx===pendingCard) return; const c=hand[idx]; const sl=cardAssignments[idx]!=null?cardAssignments[idx]:null; if(idx===fIdx){ halved=counter.peek(c,sl); found=true; } counter.take(c,sl); });
+              // まだ置いていないカードは「次に使う1枚」として判定する
+              if(!found) halved=counter.peek(focusedCard,fIdx>=0&&cardAssignments[fIdx]!=null?cardAssignments[fIdx]:null);
               return(<div className="text-center font-bold">敵の攻撃を最大 {Math.floor(halved?raw*0.5:raw)} 軽減{halved&&<span className="text-amber-300 font-black">（2枚目以降のため半減）</span>}<span className="text-slate-400 font-normal">（{focusedCard.flat||0} ＋ 丈夫さ×{focusedCard.mult||0}{halved?' の半分':''}）</span></div>);
             })()}
             {focusedCard.type==='range_atk'&&focusedCard.rangeIdx!=null&&(<div className="border-t border-white/10 pt-1 mt-1 text-[7px] text-cyan-200 font-bold"><span className="text-cyan-400">距離効果:</span> {RANGE_LABELS[focusedCard.rangeIdx]}距離で威力アップ。攻撃後、{RANGE_LABELS[focusedCard.rangeIdx]}距離へ移動する</div>)}
