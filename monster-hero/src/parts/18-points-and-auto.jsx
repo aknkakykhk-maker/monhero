@@ -215,9 +215,15 @@ const autoQuickRunAutoStartEnabled = (settings) => {
 
 // AUTOの1ターンぶんの選択だけを組み立てる。実際の選択stateや戦闘進行には触れず、
 // 手動操作と同じ判定関数を呼び出し側から受け取ることで、カードルールを二重管理しない。
+// 後ろの3つは新モード(tactics)用の追加。渡さなければ今までどおりの動き。
+//   gutsForSlot(slotIdx)        … その子が払えるガッツ。合計で足りていても、その子が足りなければ選ばない
+//   countsTowardSlotLimit(card) … 「1体につき何枚まで」に数えるカードか(新モードは攻撃だけ)
+//   isAttackCardFn(card)        … 攻撃カードか。★新モードは cardNeedsMonster がどのカードでも true に
+//                                  なるので、これを渡さないと「守りだけのターン」を防ぐ仕掛けが効かない
 const chooseAutoTurn = ({
   hand = [], slots = [], guts = 0, cardLimit = 0, strategy = 'random',
   getCardGuts, cardNeedsMonster, slotMaxUses,
+  gutsForSlot = null, countsTowardSlotLimit = null, isAttackCardFn = null,
 }, rng = Math.random) => {
   if (!Array.isArray(hand) || !Array.isArray(slots) || typeof getCardGuts !== 'function'
       || typeof cardNeedsMonster !== 'function' || typeof slotMaxUses !== 'function') return [];
@@ -226,6 +232,11 @@ const chooseAutoTurn = ({
   const picked = [];
   const usedHandIndexes = new Set();
   const slotUseCounts = Array(slots.length).fill(0);
+  const slotGutsUsed = Array(slots.length).fill(0);
+  const slotBudget = typeof gutsForSlot === 'function'
+    ? slotIdx => Math.max(0, Number(gutsForSlot(slotIdx)) || 0) : null;
+  const countsSlotUse = typeof countsTowardSlotLimit === 'function'
+    ? card => !!countsTowardSlotLimit(card) : () => true;
   let usedGuts = 0;
 
   const legalActions = () => {
@@ -241,15 +252,17 @@ const chooseAutoTurn = ({
         if (!monster) return;
         if (card.type === 'unique' && card.ownerSlotIdx !== slotIdx) return;
         const maxUses = Math.max(0, Math.floor(Number(slotMaxUses(monster, slotIdx)) || 0));
-        if (slotUseCounts[slotIdx] >= maxUses) return;
+        if (countsSlotUse(card) && slotUseCounts[slotIdx] >= maxUses) return;
         const cost = Math.max(0, Number(getCardGuts(card, slotIdx)) || 0);
         if (usedGuts + cost > availableGuts) return;
+        // その子が払えるか。合計で足りていても、1体に寄っていれば選ばない
+        if (slotBudget && slotGutsUsed[slotIdx] + cost > slotBudget(slotIdx)) return;
         actions.push({ handIndex, card, slotIdx, cost });
       });
     });
     return actions;
   };
-  const attackCard = card => !!card && cardNeedsMonster(card);
+  const attackCard = card => !!card && (typeof isAttackCardFn === 'function' ? !!isAttackCardFn(card) : cardNeedsMonster(card));
   const priorityOf = card => {
     if (strategy === 'offense') {
       if (card.type === 'unique') return 0;
@@ -295,7 +308,10 @@ const chooseAutoTurn = ({
     picked.push({ handIndex:action.handIndex, card:action.card, slotIdx:action.slotIdx });
     usedHandIndexes.add(action.handIndex);
     usedGuts += action.cost;
-    if (action.slotIdx != null) slotUseCounts[action.slotIdx]++;
+    if (action.slotIdx != null) {
+      if (countsSlotUse(action.card)) slotUseCounts[action.slotIdx]++;
+      slotGutsUsed[action.slotIdx] += action.cost;
+    }
     if (strategy === 'guts') break;
   }
   return picked;
@@ -306,4 +322,7 @@ const chooseAutoTurn = ({
 const hasAutoTurnWithEnoughGuts = options => chooseAutoTurn({
   ...options,
   guts:Number.MAX_SAFE_INTEGER,
+  // 1体ずつのガッツもここでは見ない。知りたいのは「ガッツさえあれば打てる手があるか」なので、
+  // 足りないのがガッツだけなら true にする(緊急回復へ回す判断に使う)
+  gutsForSlot:null,
 }, () => 0).length > 0;

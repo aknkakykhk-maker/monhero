@@ -30,6 +30,69 @@ const ENEMY_ACTION_DEFINITIONS = [
   {id:'wait',type:'WAIT',category:'特殊行動',weight:20,multiplier:0,hits:0,range:'全間合い',condition:'常時',cooldown:0,useLimit:null},
   {id:'move',type:'MOVE',category:'移動',weight:15,multiplier:0,hits:0,range:'現在以外の3間合い',condition:'移動先がある・移動した次のターンは選ばない',cooldown:0,useLimit:null},
 ];
+// ===== 新モード(id: tactics)の敵行動 =====
+// 設計の正本: docs/spec/BATTLE_NEW_MODE_PLAN.md
+//
+// ★上の ENEMY_ACTION_DEFINITIONS は書き換えない。別の表として持ち、
+//   state.definitions で渡す。既存モードの呼び出しは何も変わらない。
+// ★「様子を見ている(WAIT)」は入れない。5回に1回、敵が何もしないターンを作らないため。
+// ★どの行動にも「こちらの対抗手段」を1つ用意する。読めば受けられる、が成り立たないと
+//   ただ強いだけの難易度と変わらなくなる。
+//     薙ぎ払い → 距離撃で敵をずらす / 連撃 → ガード /
+//     貫通撃 → 回避・反射・スタン / 咆哮・再生 → スタンで潰す・削り切る /
+//     単体狙い → 狙われた子を守る・回復する / 全体攻撃 → 全員のライフを見て回復を回す
+// ★type は既存の ATTACK / SPECIAL をそのまま使い、違いは variant で持つ。
+//   getIncomingDamageBeforeTurnReduction は type でダメージの有無を判断しているので、
+//   ここを新しい type にするとダメージ計算・演出・予告の経路を全部書き足すことになる。
+const TACTICS_SWEEP_MULT = 1.6;       // 予告した間合いに敵がいるとき
+const TACTICS_SWEEP_MISS_MULT = 0.4;  // 距離撃などでずらしたとき
+const TACTICS_RUSH_MULT = 1.8;        // 0.6×3ヒットぶん。ガードが手数ぶん効く
+const TACTICS_RUSH_HITS = 3;
+const TACTICS_PIERCE_MULT = 1.8;      // ガードを無視する
+const TACTICS_ROAR_ATK_RATE = 1.5;    // 次のターンから敵の攻撃が上がる
+const TACTICS_ROAR_MAX_STACKS = 2;    // 重ねがけの上限
+const TACTICS_REGEN_RATE = 0.08;      // 最大ライフに対する回復量
+const TACTICS_REGEN_HP_THRESHOLD = 0.9; // ライフがこの割合を下回ったときだけ使う
+// 単体狙いと全体攻撃(2026-09-19・設計 §5.3)。
+// ★全体攻撃は1体あたりの威力を単体狙いより必ず低くする。同じにすると
+//   「全員を殴るほうが得」になり、狙いを読む意味が消える
+const TACTICS_FOCUS_MULT = 2.2;   // 予告した1体へ。読めば守れるぶん大きい
+const TACTICS_ALLOUT_MULT = 0.9;  // 全員へ。1体あたりは通常攻撃より少しだけ低い
+const TACTICS_ACTION_DEFINITIONS = [
+  {id:'normal',type:'ATTACK',category:'通常攻撃',weight:30,multiplier:1,hits:1,range:'全間合い',condition:'常時',cooldown:0,useLimit:null},
+  {id:'charge',type:'CHARGE',category:'ためる',weight:12,multiplier:0,hits:0,range:'全間合い',condition:'常時',cooldown:0,useLimit:null},
+  {id:'special',type:'SPECIAL',category:'必殺技',weight:0,multiplier:2.5,hits:1,range:'全間合い',condition:'ためた次のターンに必ず発動',cooldown:0,useLimit:null},
+  {id:'move',type:'MOVE',category:'移動',weight:10,multiplier:0,hits:0,range:'現在以外の3間合い',condition:'移動先がある・移動した次のターンは選ばない',cooldown:0,useLimit:null},
+  {id:'sweep',type:'ATTACK',variant:'sweep',category:'薙ぎ払い',weight:14,multiplier:TACTICS_SWEEP_MULT,missMultiplier:TACTICS_SWEEP_MISS_MULT,hits:1,range:'予告した1間合い',condition:'予告した間合いに敵がいると大ダメージ。距離撃でずらせる',cooldown:0,useLimit:null},
+  {id:'rush',type:'ATTACK',variant:'rush',category:'連撃',weight:14,multiplier:TACTICS_RUSH_MULT,hits:TACTICS_RUSH_HITS,range:'全間合い',condition:'ガードが手数ぶん効く',cooldown:0,useLimit:null},
+  {id:'pierce',type:'ATTACK',variant:'pierce',category:'貫通撃',weight:12,multiplier:TACTICS_PIERCE_MULT,hits:1,range:'全間合い',condition:'ガードが効かない',cooldown:0,useLimit:null},
+  {id:'roar',type:'ROAR',category:'咆哮',weight:10,multiplier:0,hits:0,range:'全間合い',condition:`重ねがけは${TACTICS_ROAR_MAX_STACKS}回まで`,cooldown:0,useLimit:TACTICS_ROAR_MAX_STACKS},
+  {id:'regen',type:'REGEN',category:'再生',weight:10,multiplier:0,hits:0,range:'全間合い',condition:'ライフが減っているときだけ',cooldown:0,useLimit:null},
+  {id:'focus',type:'ATTACK',variant:'focus',category:'単体狙い',weight:12,multiplier:TACTICS_FOCUS_MULT,hits:1,range:'全間合い',condition:'予告した1体へ大ダメージ。その子を守るか回復する',cooldown:0,useLimit:null},
+  {id:'allout',type:'ATTACK',variant:'allout',targetsAll:true,category:'全体攻撃',weight:10,multiplier:TACTICS_ALLOUT_MULT,hits:1,range:'全員',condition:'立っている全員へ同時に当たる。狙いをかわせない',cooldown:0,useLimit:null},
+];
+// どの敵も通常攻撃・ためる・必殺技・移動は持つ。ここへ足すのは「その敵だけの技」。
+// WAVEが進むほど読むことが増える並びにしてある(敵の順は ENEMY_SEQUENCE)。
+const TACTICS_BASE_ACTION_IDS = Object.freeze(['normal','charge','special','move']);
+const TACTICS_ENEMY_ACTION_IDS = Object.freeze({
+  Dino:Object.freeze(['rush']),
+  Gel:Object.freeze(['sweep']),
+  BlackDino:Object.freeze(['rush','roar']),
+  Jaakusou:Object.freeze(['sweep','regen']),
+  BlueMountain:Object.freeze(['pierce','sweep','focus']),
+  Gali:Object.freeze(['roar','rush','allout']),
+  Naga:Object.freeze(['sweep','pierce','focus']),
+  Lilim:Object.freeze(['regen','pierce','allout']),
+  Durahan:Object.freeze(['rush','roar','pierce','focus','allout']),
+  Moo:Object.freeze(['sweep','rush','pierce','roar','regen','focus','allout']),
+});
+const tacticsActionDefinitions = (enemyId) => {
+  const ids = [...TACTICS_BASE_ACTION_IDS, ...(TACTICS_ENEMY_ACTION_IDS[enemyId] || [])];
+  return TACTICS_ACTION_DEFINITIONS.filter(def => ids.includes(def.id));
+};
+// そのモード・その敵が使う行動表。新モード以外は今までどおりの1つの表を返す
+const enemyActionDefinitionsFor = (mode, enemyId) => (typeof isTacticsMode === 'function' && isTacticsMode(mode))
+  ? tacticsActionDefinitions(enemyId) : ENEMY_ACTION_DEFINITIONS;
 // 直前の行動から、次に選べる行動を決めるための状態を作る
 const enemyActionStateFrom = (lastIntent) => ({
   charging: lastIntent?.type === 'CHARGE',
@@ -37,7 +100,9 @@ const enemyActionStateFrom = (lastIntent) => ({
 });
 const evaluateEnemyActions = (ent,currentDist,state={}) => {
   const charging=!!state.charging, movedLast=!!state.movedLast;
-  return ENEMY_ACTION_DEFINITIONS.map(def => {
+  // 行動表はモードごとに違う(新モードだけ別の表)。渡されなければ今までどおりの1つの表を使う
+  const definitions=Array.isArray(state.definitions)&&state.definitions.length?state.definitions:ENEMY_ACTION_DEFINITIONS;
+  return definitions.map(def => {
     let available=!!ent, reason=ent?'':'敵情報がありません';
     if (available) {
       if (charging) {
@@ -46,6 +111,13 @@ const evaluateEnemyActions = (ent,currentDist,state={}) => {
         if (!available) reason='ためているため、次は必殺技で確定しています';
       } else if (def.type==='SPECIAL') {
         available=false; reason='ためた次のターンにだけ発動します';
+      } else if (def.type==='REGEN') {
+        // 満タンに近いあいだは使わない。回復するものが無いターンを作らないため
+        const maxHp=Math.max(0,Number(ent.maxHp)||0), hp=Math.max(0,Number(ent.hp)||0);
+        if (!(maxHp>0 && hp<maxHp*TACTICS_REGEN_HP_THRESHOLD)) { available=false; reason='ライフが十分あるあいだは使いません'; }
+      } else if (def.type==='ROAR') {
+        // 重ねがけの上限。すでに上限まで吼えていたら選ばない
+        if (Math.max(0,Number(state.roarStacks)||0)>=TACTICS_ROAR_MAX_STACKS) { available=false; reason=`重ねがけは${TACTICS_ROAR_MAX_STACKS}回までです`; }
       } else if (def.type==='MOVE') {
         // 移動は必ず前のターンに吹き出しで予告してから行う。
         // 予告を出す機会が無かったターンの直後は、そもそも移動を選ばない。
@@ -67,8 +139,12 @@ const enemyActionProbabilities = (ent,currentDist,state={}) => {
 const enemyActionLabel = (ent,type) => type==='ATTACK' ? (ent?.normal||'通常攻撃')
   : type==='CHARGE' ? '必殺技の準備をしている'
   : type==='SPECIAL' ? (ent?.special||'必殺技！')
+  : type==='ROAR' ? '咆哮している'
+  : type==='REGEN' ? '傷を癒している'
   : '様子を見ている';
-const ENEMY_ACTION_ICONS = {ATTACK:'👊',CHARGE:'✨',SPECIAL:'🔥',WAIT:'⏳',MOVE:'🏃'};
+const ENEMY_ACTION_ICONS = {ATTACK:'👊',CHARGE:'✨',SPECIAL:'🔥',WAIT:'⏳',MOVE:'🏃',ROAR:'📢',REGEN:'💚'};
+// 新モードの攻撃は type が ATTACK のままなので、見分けは variant で付ける
+const TACTICS_VARIANT_ICONS = {sweep:'🌪️',rush:'💥',pierce:'🗡️',focus:'🎯',allout:'🌊'};
 const chooseEnemyAction = (ent,currentDist,random=Math.random,state={}) => {
   const actions=enemyActionProbabilities(ent,currentDist,state),roll=random(),available=actions.filter(a=>a.available);
   let cursor=roll;
@@ -80,6 +156,22 @@ const chooseEnemyAction = (ent,currentDist,random=Math.random,state={}) => {
     // 予告に出した移動先をそのまま持ち歩く。実行時はこの値だけを見るので、
     // 予告と実際の移動先が食い違うことはない
     return {type:selected.type,value:0,label:`移動: ${RANGE_LABELS[targetDist]}`,targetDist,icon:ENEMY_ACTION_ICONS.MOVE,actionId:selected.id};
+  }
+  // 薙ぎ払いは「いまいる間合い」を薙ぐと予告する。実行までに距離撃でずらせば威力が落ちるので、
+  // 予告を見てからガッツを距離撃へ回すかどうかの判断になる。
+  // 予告と実際に薙ぐ間合いが食い違わないよう、ここで決めた値だけを実行時に見る
+  if(selected.variant==='sweep'){
+    return {type:selected.type,variant:selected.variant,sweepDist:currentDist,
+      value:Math.floor(ent.atk*selected.multiplier),missValue:Math.floor(ent.atk*(selected.missMultiplier??1)),
+      label:`${selected.category}: ${RANGE_LABELS[currentDist]}`,icon:TACTICS_VARIANT_ICONS.sweep,actionId:selected.id};
+  }
+  if(selected.variant){
+    // 全体攻撃だけは狙いを決めない。予告の時点で「立っている全員」と決まっているので、
+    // targetsAll を intent へ持ち歩き、当たる相手は tacticsIntentTargets が数え直す
+    return {type:selected.type,variant:selected.variant,hits:Math.max(1,Math.floor(Number(selected.hits)||1)),
+      ...(selected.targetsAll?{targetsAll:true}:{}),
+      value:Math.floor(ent.atk*selected.multiplier),label:selected.category,
+      icon:TACTICS_VARIANT_ICONS[selected.variant]||ENEMY_ACTION_ICONS[selected.type]||'⏳',actionId:selected.id};
   }
   return {type:selected.type,value:Math.floor(ent.atk*selected.multiplier),label:enemyActionLabel(ent,selected.type),icon:ENEMY_ACTION_ICONS[selected.type]||'⏳',actionId:selected.id};
 };

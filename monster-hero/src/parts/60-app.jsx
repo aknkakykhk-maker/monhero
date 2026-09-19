@@ -474,6 +474,10 @@ function MonsterHeroGame() {
   // 「バトル → バトルモード選択 → 難易度選択」の3画面と、そこから開くランキング。
   // まだデバッグ設定からだけ開ける。ふだんの「バトル」はこれまでどおり BATTLE_MENU のまま
   const [modeSelectTab, setModeSelectTab] = useState('mode'); // 'mode' | 'breeder' | 'bond' | 'power'
+  // 難易度選択の「通常 / 極限」タブ。クイックは15段階、種族チャレンジは14段階あり、
+  // 一続きに並べると探しにくいので分ける(2026-09-19 ユーザー指示)。
+  // 表示のためだけの値で保存はしない。極限を持たないモードではタブ自体を出さない
+  const [difficultySelectTab, setDifficultySelectTab] = useState(DIFFICULTY_TAB_NORMAL);
   // スコアランキングを「どのモードのぶんとして」見ているか。チャレンジとプロの2つだけ
   const [scoreRankingMode, setScoreRankingMode] = useState(BATTLE_MODE_CHALLENGE);
   // ランキングから戻る先。モード選択カードから開いたか、難易度カードから開いたかで変わる
@@ -504,6 +508,16 @@ function MonsterHeroGame() {
   const [atk, setAtk] = useState(100);
   const [def, setDef] = useState(100);
   const [slots, setSlots] = useState([null,null,null,null]);
+  // 新モード(tactics)の盤面。1体ずつのライフ・ガッツ・倒れたかどうかを持つ。
+  // 設計の正本: docs/spec/BATTLE_NEW_MODE_PLAN.md。中身を作るのは 32-tactics-units.jsx の純関数。
+  // ★slots と必ず同じ並び。片方だけ動かすと「誰を狙ったか」がずれるので、
+  //   更新は applySlots ひとつに通す(下で定義)。
+  // ★refも持つのは、敵の行動を抽選するのが再描画より先だから(咆哮の重ねがけと同じ理由)。
+  const [tacticsUnits, setTacticsUnits] = useState([null,null,null,null]);
+  const tacticsUnitsRef = useRef([null,null,null,null]);
+  // 新モードの敵強化に使う総合力。start はバトルを始めた時点(勇者モン1体)、now はいまの編成。
+  // 供モンが合流して総合力が増えたぶんだけ、次のWAVEから敵も強くなる(設計 §6)
+  const tacticsPowerRef = useRef({ start: 0, now: 0 });
   const [mainHero, setMainHero] = useState(null);
   const [hand, setHand] = useState([]);
   const [deck, setDeck] = useState([]);
@@ -836,6 +850,123 @@ function MonsterHeroGame() {
   const [waveResult, setWaveResult] = useState(null);
   // 敵撃破に伴うスコア・報酬・画面遷移を、同じWAVEで二重に確定しないための同期ロック。
   const enemyDefeatResolvedRef = useRef(false);
+  // 新モードの咆哮を、このWAVEで何回重ねたか。次の行動を抽選するのは再描画より先なので、
+  // 表示用のstateではなくrefで持つ(上限に達したら咆哮そのものが候補から外れる)。
+  // WAVEが変わるたびに0へ戻す
+  const tacticsRoarStacksRef = useRef(0);
+  // 盤面を書き換える唯一の入口。ref・state・パーティのライフを必ず一緒に動かす。
+  // ★新モードのライフ(hp / maxHp)は盤面の合計。片方だけ動かすと
+  //   「合計は残っているのに全員倒れている」状態ができ、敗北判定が壊れる。
+  // 戻り値は新しい合計ライフ。ターン処理の currentHp をそのまま置き換えられる
+  // (新モード以外は盤面を持つだけでライフに触らないので null を返す)
+  const commitTacticsUnits = (nextUnits, mode = runMode) => {
+    const next = Array.isArray(nextUnits) ? nextUnits : [null, null, null, null];
+    const before = tacticsUnitsRef.current || [];
+    // ★「ライフが全快になってはじめて復活」なので、どの回復から戻ったかは問わない。
+    //   回復カードでも緊急回復でも自動再生でも、立ち上がった瞬間をここ1か所で拾う
+    if (isTacticsMode(mode)) {
+      next.forEach((unit, index) => {
+        const was = before[index];
+        if (!unit || !was) return;
+        if (normalizeTacticsUnit(was).downed && !normalizeTacticsUnit(unit).downed) {
+          addPopup(`${slots[index]?.masuName || slots[index]?.name || '仲間'}が起き上がった！`,
+            'hero', 'text-emerald-300 font-black text-2xl drop-shadow-md');
+        }
+      });
+    }
+    tacticsUnitsRef.current = next;
+    setTacticsUnits(next);
+    if (!isTacticsMode(mode)) return null;
+    // 1体もいない盤面は「まだ始まっていない」。ここでライフを0にすると、
+    // 編成前の画面がいきなり敗北扱いになってしまう
+    if (!next.some(Boolean)) return null;
+    const max = tacticsTotalBaseMaxHp(next), total = tacticsTotalHp(next);
+    const maxG = tacticsTotalBaseMaxGuts(next), totalG = tacticsTotalGuts(next);
+    // liveEffectiveMaxHp() / liveEffectiveMaxGuts() はターンの途中で ref を読み直す。
+    // useEffect の反映を待つと、同じターンの回復が古い上限で頭打ちになる
+    maxHpRef.current = max; maxGutsRef.current = maxG;
+    setMaxHp(max); setHp(total);
+    // ガッツも盤面の合計。★カードを払えるかは「その子のガッツ」で決まる(canTacticsSlotPay)。
+    //   合計はゲージと自動回復のために持つだけで、払える判定には使わない
+    setMaxGuts(maxG); setGuts(totalG);
+    // パーティのちから・丈夫さは1体ずつの平均。★ダメージには使わない(それは1体ずつの値)。
+    //   ガードの段階・攻撃段階を決めるのに使うので、盤面から derive して持つ
+    setAtk(tacticsPartyAtk(next)); setDef(tacticsPartyDef(next));
+    return total;
+  };
+  // 盤面を slots に合わせる。ここだけが tacticsUnits を作る場所。
+  // ★すでに居る子の現在値(ライフ・ガッツ)は持ち越す。slots が変わるたびに作り直すと、
+  //   供モンが合流した瞬間に全員が満タンへ戻ってしまう。
+  // ★モードで分けない。新モード以外でも4体ぶんのオブジェクトを作るだけなので安く、
+  //   「runMode がまだ切り替わっていないタイミングで作り損ねる」事故を防げる。
+  const syncTacticsUnits = (nextSlots, mode = runMode) => {
+    const before = tacticsUnitsRef.current || [];
+    const next = (Array.isArray(nextSlots) ? nextSlots : []).map((mon, index) => {
+      if (!mon) return null;
+      const current = before[index];
+      const same = current && current.id === (mon.id || null) && current.masuId === (mon.masuId ?? null);
+      return same ? current : createTacticsUnit(mon);
+    });
+    // みゅあ補正は合計ではなく1体ずつの上限へ効かせる(合計へ掛けると二重になる)
+    return commitTacticsUnits(scaleTacticsUnits(next, getPermaBuff('muaHpPct'), getPermaBuff('muaGutsPct')), mode);
+  };
+  // 編成スロットを差し替える唯一の入口。盤面を必ず一緒に動かす。
+  // ★画面へ渡すのもこれ(setSlots={applySlots})。直に setSlots を渡すと、
+  //   そこだけ盤面(1体ずつのライフ・ガッツ)が古いまま残る。
+  // ★mode を受け取れるようにしてあるのは、バトルを始める処理の中では
+  //   runMode(state)がまだ前のモードのままだから(同じ処理の中で setRunMode しても反映されない)
+  const applySlots = (nextSlots, mode = runMode) => {
+    setSlots(nextSlots);
+    syncTacticsUnits(nextSlots, mode);
+    // 敵強化の基準になる総合力を数え直す。編成が空になったら基準も忘れる(次のランのため)
+    const power = (Array.isArray(nextSlots) ? nextSlots : [])
+      .filter(Boolean).reduce((sum, mon) => sum + Math.max(0, Number(monsterPowerOf(mon)) || 0), 0);
+    tacticsPowerRef.current = power > 0
+      ? { start: tacticsPowerRef.current.start || power, now: power } : { start: 0, now: 0 };
+  };
+  // 新モードのときだけ、敵の予告へ「誰を狙うか」を足す。ほかのモードでは intent をそのまま返す
+  const aimTacticsIntent = (intent, mode) => (isTacticsMode(mode) ? withTacticsTarget(intent, tacticsUnitsRef.current) : intent);
+  // ===== ライフの増減(新モードだけ盤面へ) =====
+  // どれも「新モードなら増減後の合計ライフ、ほかのモードなら null」を返す。
+  // 呼び出し側は null のときだけ今までどおりの1行を通す。こうすると既存5モードの
+  // 挙動をまったく書き換えずに済む(ガード・反射・吸収の分岐もそのまま)
+  const tacticsDamage = (damage, intent, actingDist) => {
+    if (!isTacticsMode(runMode)) return null;
+    const targets = tacticsIntentTargets(intent, tacticsUnitsRef.current, actingDist);
+    return commitTacticsUnits(damageTacticsTargets(tacticsUnitsRef.current, targets, damage));
+  };
+  const tacticsHeal = (amount) => isTacticsMode(runMode)
+    ? commitTacticsUnits(healTacticsBoard(tacticsUnitsRef.current, amount)) : null;
+  // ガッツの回復も立っている子へ配る。戻り値は「新モードなら合計ライフ、ほかは null」で、
+  // 呼び出し側は null のときだけ今までどおりの1行を通す(ライフの helper と同じ約束)
+  const tacticsGutsRecover = (amount) => isTacticsMode(runMode)
+    ? commitTacticsUnits(recoverTacticsGutsBoard(tacticsUnitsRef.current, amount)) : null;
+  // カード1枚ぶんのガッツを、使う子から払う。払えなければ false
+  const tacticsPayGuts = (slotIdx, cost) => {
+    if (!isTacticsMode(runMode)) return null;
+    const paid = payTacticsGutsAt(tacticsUnitsRef.current, slotIdx, cost);
+    if (paid.payable) commitTacticsUnits(paid.units);
+    return paid.payable;
+  };
+  // そのスロットがいまカードを使えるか(倒れていない・ガッツが足りる)
+  const tacticsSlotCanPay = (slotIdx, cost) => !isTacticsMode(runMode)
+    || canTacticsSlotPay(tacticsUnitsRef.current, slotIdx, cost);
+  // ガッツを増やす共通の入口。新モードは立っている子へ配り、ほかのモードは今までどおり1本
+  const gainGuts = (amount) => {
+    if (tacticsGutsRecover(amount) === null) setGuts(p => Math.min(liveEffectiveMaxGuts(), p + amount));
+  };
+  // カードの効果で増えるガッツは「使った子」へ。新モード以外は今までどおり全体へ
+  const gainGutsAt = (slotIdx, amount) => {
+    if (!isTacticsMode(runMode)) { gainGuts(amount); return; }
+    commitTacticsUnits(recoverTacticsGutsAt(tacticsUnitsRef.current, slotIdx, amount));
+  };
+  // 画面から「このカードをこの子へ置けるか」を聞くための入口。
+  // ★新モード以外では null を返す。画面側は null のときだけ今までどおりの判定を使う
+  const tacticsCanAssign = (card, cardIndex, slotIdx) => (isTacticsMode(runMode)
+    ? tacticsUsableSlots(card, cardIndex).includes(slotIdx) : null);
+  // 20ターン経過。全員を倒して、敗北の見え方をそろえる
+  const tacticsWipe = () => isTacticsMode(runMode)
+    ? commitTacticsUnits(wipeTacticsBoard(tacticsUnitsRef.current)) : null;
   // 不死(死者の再起)で、このWAVEに何回起き上がったか。撃破処理と同じ同期ロックの流れで判定するので
   // 表示用のstateとは別にrefでも持ち、再描画を待たずに次の撃破判定へ反映する。
   const enemyRevivalUsedRef = useRef(0);
@@ -1799,6 +1930,13 @@ function MonsterHeroGame() {
   useEffect(() => { maxHpRef.current = maxHp; }, [maxHp]);
   useEffect(() => { maxGutsRef.current = maxGuts; }, [maxGuts]);
   const liveEffectiveMaxHp = () => resolveEffectiveMaxStat(maxHpRef.current, livePermaBuff('muaHpPct'));
+  // みゅあ・かどみうむ・回復カードでライフ上限の倍率が上がったら、1体ずつの上限にも効かせる。
+  // ★パーティの maxHp は「素の上限の合計」なので、既存モードと同じく effectiveMaxHp が倍率を掛ける。
+  //   1体ずつの上限へ同じ倍率を入れておかないと、盤面の合計がゲージの満タンまで届かない
+  useEffect(() => {
+    if (!isTacticsMode(runMode)) return;
+    commitTacticsUnits(scaleTacticsUnits(tacticsUnitsRef.current, getPermaBuff('muaHpPct'), getPermaBuff('muaGutsPct')));
+  }, [permaBuffs, runMode]);
   const liveEffectiveMaxGuts = () => resolveEffectiveMaxStat(maxGutsRef.current, livePermaBuff('muaGutsPct'));
 
   // 全国ランキングをSupabaseから取得。失敗時は端末内保存の値にフォールバック
@@ -4746,7 +4884,9 @@ function MonsterHeroGame() {
     if(gameState!=='BATTLE_MODE_SELECT'||modeSelectTab!=='mode')return;
     const id=requestAnimationFrame(()=>{
       // 極限チャレンジは未解放でもカードは出す(押せるかどうかだけを切り替える)
-      const modes=[...BATTLE_MODES,EXTREME_MODE,...((SPECIES_CHALLENGE_PUBLIC_RELEASE||debugBattle)?[SPECIES_CHALLENGE_MODE]:[])];
+      // 極限チャレンジはチャレンジの「極限」タブへ入れ込んだので、モードのカードには並べない
+      // (2026-09-19 ユーザー指示)。EXTREME_MODE の定義そのものは説明・ランキングが参照するので残す
+      const modes=[...BATTLE_MODES,...((SPECIES_CHALLENGE_PUBLIC_RELEASE||debugBattle)?[SPECIES_CHALLENGE_MODE]:[]),...((TACTICS_MODE_PUBLIC_RELEASE||debugBattle)?[TACTICS_MODE]:[])];
       const index=modes.length+Math.max(0,modes.findIndex(m=>m.id===battleMode));
       centerCarouselChild(modeCarouselRef.current,index);
     });
@@ -4771,6 +4911,9 @@ function MonsterHeroGame() {
     // 練習中はいちばんやさしいビギナーから始める(そこしか押せないようにしているため)
     const start=battleTutorialStep!=null?'Beginner':BATTLE_DEFAULT_DIFFICULTY;
     setDifficulty(start);
+    // 難易度と同じく、タブもいつでも「通常」から始める。
+    // 極限タブのまま開くと、ノーマルを選んでいるのに極限の並びが見えることになる
+    setDifficultySelectTab(difficultyTabOf(start));
     const id=requestAnimationFrame(()=>{
       const index=Object.keys(DIFFICULTY_SETTINGS).indexOf(start);
       centerCarouselChild(modeDifficultyCarouselRef.current,index);
@@ -7157,7 +7300,7 @@ function MonsterHeroGame() {
     autoRepeatBondAwardMasuIdsRef.current = [];
     const s = resetAllState();
     setScore(s.score); setWave(s.wave); setHp(s.hp); setMaxHp(s.maxHp); setGuts(s.guts); setMaxGuts(s.maxGuts);
-    setAtk(s.atk); setDef(s.def); setSlots(s.slots); setMainHero(s.mainHero); setHand(s.hand); setDeck(s.deck);
+    setAtk(s.atk); setDef(s.def); applySlots(s.slots); setMainHero(s.mainHero); setHand(s.hand); setDeck(s.deck);
     setGraveyard(s.graveyard); setEnemy(s.enemy); setEnemyDist(s.enemyDist); setSelectedCards(s.selectedCards); setCardAssignments({}); setPendingCard(null);
     setIsBusy(s.isBusy); setMonSelection(s.monSelection); setOwnedUniques(s.ownedUniques); setSlotUniqueChoice(s.slotUniqueChoice); setSlotUniqueLevelChoice(s.slotUniqueLevelChoice); setInheritedUniqueEvo(s.inheritedUniqueEvo);
     setOwnedTeachings(s.ownedTeachings); setAtkLevel(s.atkLevel); setGuardLevel(s.guardLevel); setGuardBonusCount(s.guardBonusCount); setUpgradePoints(s.upgradePoints); setTurnCount(s.turnCount); setTotalTurnCount(s.totalTurnCount);
@@ -7339,7 +7482,16 @@ function MonsterHeroGame() {
   // 「1周目に自分で組んだ編成」があればそれを優先し、無ければAUTO設定の事前設定を使う。
   // (設定 → テンプレート ではなく テンプレート → 設定 の順にするのは、
   //  いま回している編成を、設定のほうで勝手に置き換えないため)
-  const repeatTemplateForNewRun = () => repeatRunTemplateRef.current || repeatTemplateFromAutoSettings();
+  // ★持ち越してよいのはクイックの編成だけ。repeatRunTemplateRef は勇者モンを決めた時点で
+  //   モードを問わず作られる(アシストカードの記録にも使う)ため、そのまま優先すると
+  //   直前に遊んだチャレンジ・プロ・極限の編成で、モンビーの裏周回が立ち上がってしまう。
+  //   クイックでないランが始まると ∞ は「クイック限定」の判定ですぐ外れ、帯は出ているのに
+  //   進まず、「▶ 周回を再開する」も効かない。勇者モンもAUTO設定のものにならない
+  //   (2026-09-19・ユーザー報告「事前にチャレンジノーマルをやったからなのか、それを
+  //    引き継いでるみたいで進まないし止まったらうごかなくなるし
+  //    設定してるモンスターでも出発してない」)。
+  const isQuickRepeatTemplate = (template) => !!template && !template.extremeRun && isQuickMode(template.runMode);
+  const repeatTemplateForNewRun = () => (isQuickRepeatTemplate(repeatRunTemplateRef.current) ? repeatRunTemplateRef.current : repeatTemplateFromAutoSettings());
 
   // 保存したIDを毎回いまのroster/マスモン正本へ引き直す。消失・利用不可・Pro制約違反は
   // 別個体で補完せず、5BがAUTO∞を停止できる失敗値として返す。
@@ -7377,7 +7529,7 @@ function MonsterHeroGame() {
     initialBattleDistanceRef.current=resolved.initialDistance;
     const initialSlots=[null,null,null,null]; initialSlots[resolved.initialDistance]={...resolved.hero};
     const initialUnique={...resolved.hero.unique,evoLevel:Math.max(0,resolved.hero.unique?.evoLevel||0)};
-    setSlots(initialSlots); setMainHero(resolved.hero); setOwnedUniques([initialUnique]);
+    applySlots(initialSlots, resolved.runMode); setMainHero(resolved.hero); setOwnedUniques([initialUnique]);
     setMaxHp(resolved.hero.baseHp); setHp(resolved.hero.baseHp); setMaxGuts(resolved.hero.baseGuts); setGuts(Math.floor(resolved.hero.baseGuts*0.5)); setAtk(resolved.hero.baseAtk); setDef(resolved.hero.baseDef);
     setDistAptPct(getMonsterAptPct(resolved.hero,specialRuleDifficultyForRun(resolved.runMode,resolved.difficulty,resolved.extremeRun,resolved.extremeDifficulty)));
     setProAllyPool(resolved.proAllies);
@@ -7748,7 +7900,7 @@ function MonsterHeroGame() {
     setRunFinalizing(false);
     const s = resetAllState();
     setScore(s.score); setWave(s.wave); setHp(s.hp); setMaxHp(s.maxHp); setGuts(s.guts); setMaxGuts(s.maxGuts);
-    setAtk(s.atk); setDef(s.def); setSlots(s.slots); setMainHero(s.mainHero); setHand(s.hand); setDeck(s.deck);
+    setAtk(s.atk); setDef(s.def); applySlots(s.slots); setMainHero(s.mainHero); setHand(s.hand); setDeck(s.deck);
     setGraveyard(s.graveyard); setEnemy(s.enemy); setEnemyDist(s.enemyDist); setSelectedCards(s.selectedCards); setCardAssignments({}); setPendingCard(null);
     setIsBusy(s.isBusy); setMonSelection(s.monSelection); setOwnedUniques(s.ownedUniques); setSlotUniqueChoice(s.slotUniqueChoice||{}); setSlotUniqueLevelChoice(s.slotUniqueLevelChoice||{}); setInheritedUniqueEvo(s.inheritedUniqueEvo||{});
     setOwnedTeachings(s.ownedTeachings); setAtkLevel(s.atkLevel); setGuardLevel(s.guardLevel);
@@ -8050,9 +8202,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if (reserved && reserved.type === 'MOVE' && reserved.targetDist === distAfterExecuted) reserved = null;
     // 引き直しになった行動は、次のターンにそのまま実行されるのに吹き出しを出していない。
     // ここで移動を引くと「予告なしでいきなり動く」ことになるので、移動は選ばせない
-    const upcoming = reserved || getNextEnemyAction(enemy, distAfterExecuted, effective, {unannounced:true});
+    // 行動表はモードと敵で決まる。新モード以外では今までどおりの1つの表が返る
+    const actionState = () => ({definitions:enemyActionDefinitionsFor(runMode,enemy?.id),roarStacks:tacticsRoarStacksRef.current});
+    // ★狙いは「予告として出す直前」に決める。抽選したときのまま持ち歩くと、
+    //   そのあいだに狙われていた子が倒れていても、その子を狙ったまま予告してしまう
+    const upcoming = aimTacticsIntent(reserved || getNextEnemyAction(enemy, distAfterExecuted, effective, {unannounced:true,...actionState()}), runMode);
     setEnemyIntent(upcoming);
-    reserveEnemyNextIntent(getNextEnemyAction(enemy, distAfterIntent(upcoming, distAfterExecuted), upcoming));
+    reserveEnemyNextIntent(getNextEnemyAction(enemy, distAfterIntent(upcoming, distAfterExecuted), upcoming, actionState()));
   };
 
   // 絶氷の楔の実効果と表示が別判定にならないよう、準備を除いた発動状態をここへ集約する。
@@ -8092,15 +8248,20 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     soulBattleParty.coordinationCardBonus>0?`カード +${soulBattleParty.coordinationCardBonus}`:null,
   ].filter(Boolean) : [];
 
-  const getIncomingDamageBeforeTurnReduction = useCallback((intent) => {
+  // targetSlot は新モード専用。★渡したときだけ「その子の丈夫さ」で受ける。
+  //   渡さなければ今までどおりパーティの丈夫さなので、既存モードの呼び出しは何も変わらない
+  const getIncomingDamageBeforeTurnReduction = useCallback((intent, targetSlot=null) => {
     // ためる(CHARGE)ターンはダメージが無い。必殺技のダメージは発動(SPECIAL)ターンに出る
     if (!intent||(intent.type!=='ATTACK'&&intent.type!=='SPECIAL')) return 0;
     const atkVal = Math.floor(intent.value*(1.0-getWaveBuff('enemyAtkDebuffPct')));
     const chuuniCutActive = (mainHero?.id==='Ark'||mainHero?.id==='Iblis') && getWaveBuff('chuuniDmgCutUses')<2; // 中二病特性: WAVE毎2回まで被ダメ50%カット
+    const targetUnit = Number.isInteger(targetSlot) ? tacticsUnitsRef.current[targetSlot] : null;
+    const defVal = targetUnit
+      ? resolveEffectiveMaxStat(normalizeTacticsUnit(targetUnit).def, getPermaBuff('defPct')) : effectiveDef;
     // 丈夫さは固定軽減(×0.5)のあと、0.015%/pt（上限50%）を乗算する。
     // 最低30はこの基本防御部分だけに適用し、後続の既存軽減順は変えない。
-    const defenseRate = Math.min(0.5,effectiveDef*0.00015);
-    const dmgBase = Math.max(30,(atkVal-effectiveDef*0.5)*(1-defenseRate))*((mainHero?.id==='Mocchi'||mainHero?.id==='Mitarashi')?0.8:1.0)*(chuuniCutActive?0.5:1.0);
+    const defenseRate = Math.min(0.5,defVal*0.00015);
+    const dmgBase = Math.max(30,(atkVal-defVal*0.5)*(1-defenseRate))*((mainHero?.id==='Mocchi'||mainHero?.id==='Mitarashi')?0.8:1.0)*(chuuniCutActive?0.5:1.0);
     const soulDamageRemaining=Math.max(0,1-(soulBattleParty.damageReduction/100));
     return Math.max(1,Math.floor(dmgBase*Math.max(0.01,(1.0-getPermaBuff('dmgCutPct')))*iceLockEnemyDamageMult*soulDamageRemaining));
   }, [effectiveDef, mainHero, permaBuffs, waveBuffs, soulBattleParty.damageReduction]);
@@ -8131,6 +8292,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // Whether a card needs to be assigned to a monster (attack-type cards)
   const cardNeedsMonster = (card) => {
     if(!card) return false;
+    // 新モードはどのカードも「使う子」を選ぶ。その子のガッツで払い、効果もその子に乗る
+    // (2026-09-19 ユーザーが決めた形。設計 §4.4)
+    if(isTacticsMode(runMode)) return true;
     if(['atk','range_atk','unique'].includes(card.type)) return true;
     if(card.type==='debuff'&&card.subType==='stun_atsu') return true;
     return false;
@@ -8163,6 +8327,33 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     return item ? item.icon : null;
   };
 
+  // 新モードで、このカードを割り当てられるスロットの一覧。
+  // ★決めるのは「その子が払えるか」。合計のガッツでは決まらない。
+  //   すでに選んだカードのぶんを引いてから見るので、同じ子に2枚寄せても正しく弾ける。
+  // ★攻撃カードだけは「1体につき何枚まで」のこれまでの決まりを引き継ぐ。
+  //   守り・回復・アシストまで数えると、供モンが居ないWAVE1で1ターン1枚しか使えなくなる
+  const tacticsUsableSlots = (card, excludeHandIndex = null) => {
+    if(!isTacticsMode(runMode)||!card) return [];
+    const spent={}, attacks={};
+    Object.entries(cardAssignments).forEach(([key,slotIdx])=>{
+      const handIndex=Number(key);
+      if(handIndex===excludeHandIndex) return;
+      const assigned=hand[handIndex];
+      spent[slotIdx]=(spent[slotIdx]||0)+getCardGuts(assigned,slotIdx);
+      if(isAttackCard(assigned)) attacks[slotIdx]=(attacks[slotIdx]||0)+1;
+    });
+    const usable=[];
+    slots.forEach((mon,slotIdx)=>{
+      if(!mon) return;
+      if(card.type==='unique'&&card.ownerSlotIdx!==slotIdx) return;
+      if(isAttackCard(card)&&(attacks[slotIdx]||0)>=slotMaxUses(mon,slotIdx)) return;
+      // 回復カードも「全体回復」なので、倒れた子へ向ける必要はない。
+      // どのカードも「立っていて、その子が払えるか」だけで決まる
+      if(!canTacticsSlotPay(tacticsUnitsRef.current,slotIdx,(spent[slotIdx]||0)+getCardGuts(card,slotIdx))) return;
+      usable.push(slotIdx);
+    });
+    return usable;
+  };
   // カード選択(タップ/ドラッグ共通)。
   // showDetail=false はスワイプ(ドラッグ)で置いたとき。カード効果のパネルが出たままだと
   // 合計DMG・合計軽減の表示が隠れてしまうため、スワイプではパネルを出さない。
@@ -8178,14 +8369,20 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       if(pendingCard===i) setPendingCard(null);
       setFocusedCard(null);
     } else {
+      const tacticsMode=isTacticsMode(runMode);
+      // 新モードは「合計で足りているか」ではなく「その子が払えるか」。
+      // 合計だけで見ると、ガッツの無い子しか残っていないのにカードを選べてしまう
+      const usable=tacticsMode?tacticsUsableSlots(c):[];
       const curGuts=pendingCardGuts(c);
       const remainingGuts=guts-selectedCards.reduce((acc,idx)=>acc+selectedCardGuts(idx),0);
-      const isSelectable=remainingGuts>=curGuts && selectedCards.length<cardLimit;
+      const isSelectable=(tacticsMode?usable.length>0:remainingGuts>=curGuts) && selectedCards.length<cardLimit;
       if(isSelectable){
         Audio_.se.card();
         setSelectedCards(p=>[...p,i]);
         focus(c);
-        if(cardNeedsMonster(c)){ setPendingCard(i); }
+        // 使える子が1体しかいないときは選ぶ手間を省く(WAVE1は勇者モンだけなので毎回これになる)
+        if(tacticsMode&&usable.length===1){ setCardAssignments(p=>({...p,[i]:usable[0]})); }
+        else if(cardNeedsMonster(c)){ setPendingCard(i); }
       } else { focus(c); }
     }
   };
@@ -8205,15 +8402,21 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       if(c.type==='unique' && c.ownerSlotIdx!==slotIdx){ setFocusedCard(null); return; }
       // 既存の割当数チェック(枚数+1の勇者特性を持つ勇者モン本人のカード・
       // ききのカード上限+1が効いているときは複数可)
+      // 新モードは「その子が倒れていないか・払えるか」だけで決まる(攻撃の枚数制限は中で見ている)
+      const tacticsMode=isTacticsMode(runMode);
+      if(tacticsMode && !tacticsUsableSlots(c,cardIndex).includes(slotIdx)){ setFocusedCard(null); return; }
       const assignedCount=Object.values(cardAssignments).filter(v=>v===slotIdx).length;
       const maxUses=slotMaxUses(targetMon,slotIdx);
       const alreadySelected=selectedCards.includes(cardIndex);
       // 未選択なら選択枠とガッツを確認
       if(!alreadySelected){
-        const curGuts=getCardGuts(c,slotIdx);
-        const remainingGuts=guts-selectedCards.reduce((acc,idx)=>acc+selectedCardGuts(idx),0);
-        if(remainingGuts<curGuts || selectedCards.length>=cardLimit){ setFocusedCard(null); return; }
-        if(assignedCount>=maxUses){ setFocusedCard(null); return; }
+        if(selectedCards.length>=cardLimit){ setFocusedCard(null); return; }
+        if(!tacticsMode){
+          const curGuts=getCardGuts(c,slotIdx);
+          const remainingGuts=guts-selectedCards.reduce((acc,idx)=>acc+selectedCardGuts(idx),0);
+          if(remainingGuts<curGuts){ setFocusedCard(null); return; }
+          if(assignedCount>=maxUses){ setFocusedCard(null); return; }
+        }
         Audio_.se.card();
         setSelectedCards(p=>[...p,cardIndex]);
         setCardAssignments(p=>({...p,[cardIndex]:slotIdx}));
@@ -8221,10 +8424,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         setFocusedCard(null);
       } else {
         // 既に選択済み: 割当先を変更(別カードの占有を超えない範囲で)
-        const otherCount=Object.entries(cardAssignments).filter(([k,v])=>v===slotIdx&&Number(k)!==cardIndex).length;
-        if(otherCount>=maxUses){ setFocusedCard(null); return; }
-        const otherGuts=selectedCards.filter(idx=>idx!==cardIndex).reduce((sum,idx)=>sum+selectedCardGuts(idx),0);
-        if(otherGuts+getCardGuts(c,slotIdx)>guts){ setFocusedCard(null); return; }
+        if(!tacticsMode){
+          const otherCount=Object.entries(cardAssignments).filter(([k,v])=>v===slotIdx&&Number(k)!==cardIndex).length;
+          if(otherCount>=maxUses){ setFocusedCard(null); return; }
+          const otherGuts=selectedCards.filter(idx=>idx!==cardIndex).reduce((sum,idx)=>sum+selectedCardGuts(idx),0);
+          if(otherGuts+getCardGuts(c,slotIdx)>guts){ setFocusedCard(null); return; }
+        }
         Audio_.se.card();
         setCardAssignments(p=>({...p,[cardIndex]:slotIdx}));
         if(pendingCard===cardIndex) setPendingCard(null);
@@ -8321,7 +8526,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const distBonusMult=1.0+(distDmgBonus[slotIdx]||0)+(distAptPct[slotIdx]||0);
     const soulAttack=soulTraitAttackProfile(mon?.masuId?getMasuMon(mon.masuId):null,card,slotIdx);
     const totalBuffMult=traitMult*getTurnBuff('atkMult',1.0)*(1.0+getPermaBuff('atkPct')+getPermaBuff('muaAtkPct')+additionalOryo)*distBonusMult*soulAttack.damageMultiplier;
-    let finalDmg=Math.floor(atk*distMult*baseDmgMult*totalBuffMult*(1.0+getWaveBuff('enemyTakenDmgBonus')+additionalDmgMod));
+    // 新モードは「攻撃したその子のちから」で殴る(設計 §4.1)。ほかのモードはパーティ共通のまま
+    const attackerAtk=isTacticsMode(runMode)&&tacticsUnitsRef.current[slotIdx]
+      ? Math.max(0,normalizeTacticsUnit(tacticsUnitsRef.current[slotIdx]).atk) : atk;
+    let finalDmg=Math.floor(attackerAtk*distMult*baseDmgMult*totalBuffMult*(1.0+getWaveBuff('enemyTakenDmgBonus')+additionalDmgMod));
     if (isSecondOrLaterAtk) finalDmg=Math.floor(finalDmg*0.5);
     const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
     const elapsedTotalTurns=totalTurnCount+Math.max(0,turnCount-1);
@@ -8393,7 +8601,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       ultimateDistanceBreakPendingRef.current=distanceBreakThreshold;
       setUltimateDistanceBreakPending(distanceBreakThreshold);
     }
-    const finalRoundScore=Math.floor(((totalWaveDamage*waveMult)+(totalWaveDamage*turnMult))*scoreMultiplier);
+    const rawRoundScore=((totalWaveDamage*waveMult)+(totalWaveDamage*turnMult))*scoreMultiplier;
+    // 新モードだけスコアを1/1000へ縮める。式そのものは変えない(2026-09-19 ユーザーが選択)
+    const finalRoundScore=isTacticsMode(runMode)?shrinkTacticsScore(rawRoundScore):Math.floor(rawRoundScore);
     setScore(s=>s+finalRoundScore);
     const finalDistDamage=waveDistDamage.map((value,index)=>(value||0)+(distDamage[index]||0));
     // WAVE後の距離強化はモンスター自身の距離適性とは別枠で、通常の獲得量を出してから半減する。
@@ -8434,7 +8644,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const effMul=Number.isFinite(effMulRaw)&&effMulRaw>0?effMulRaw:1;
     writePermaBuffs(p=>({...p, poltzCharges:Math.max(0,charges-1)}));
     const gutsGain=Math.floor(liveEffectiveMaxGuts()*tier.healGuts*effMul);
-    if (gutsGain>0) { setGuts(p=>Math.min(liveEffectiveMaxGuts(),p+gutsGain)); addPopup(`⚡ ガッツ +${gutsGain}`,'guts','text-lime-300 font-black text-2xl drop-shadow-md'); }
+    if (gutsGain>0) { gainGuts(gutsGain); addPopup(`⚡ ガッツ +${gutsGain}`,'guts','text-lime-300 font-black text-2xl drop-shadow-md'); }
     if (tier.gutsRecover>0) addPermaBuff('gutsRecoverPct',tier.gutsRecover*effMul);
     if (tier.atk>0) addPermaBuff('atkPct',tier.atk*effMul);
     addPopup(`🍱 ${BREEDER_EVO_NAMES.poltz[tierIdx]}!`,'hero','text-lime-300 font-black text-xl drop-shadow-md');
@@ -8494,6 +8704,26 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         setEnemyAttackAnim(false);
         setEnemyAttackFx(null);
         await battleWait(200);
+      } else if (intent.type==='ROAR') {
+        // 新モードの咆哮。このターンはダメージが無く、次のターンから敵の攻撃が上がる。
+        // 重ねがけの上限は行動の抽選側(evaluateEnemyActions)が見るので、ここでは数えるだけ
+        Audio_.se.enemyCharge();
+        setEnemyAttackFx({kind:'charge'});
+        setEnemyAttackAnim(true);
+        tacticsRoarStacksRef.current += 1;
+        setEnemy(prev=>prev?{...prev,atk:Math.floor(Math.max(0,Number(prev.atk)||0)*TACTICS_ROAR_ATK_RATE)}:prev);
+        addPopup(`咆哮！ 敵の攻撃が上がった`,'enemy','text-orange-300 font-black text-xl drop-shadow-md');
+        triggerShake(true);
+        await battleWait(1100);
+        setEnemyAttackAnim(false);
+        setEnemyAttackFx(null);
+        await battleWait(200);
+      } else if (intent.type==='REGEN') {
+        // 新モードの再生。満タンに近いあいだは抽選に出ないので、ここでは必ず回復する
+        const healed=Math.max(1,Math.floor(Math.max(0,Number(enemy?.maxHp)||0)*TACTICS_REGEN_RATE));
+        setEnemy(prev=>prev?{...prev,hp:Math.min(Number(prev.maxHp)||0,Math.max(0,Number(prev.hp)||0)+healed)}:prev);
+        addPopup(`再生 +${healed}`,'enemy','text-emerald-300 font-black text-2xl drop-shadow-md');
+        await battleWait(1000);
       } else if (intent.type==='WAIT') {
         addPopup("待機中...",'enemy','text-slate-400 text-lg'); await battleWait(500);
       } else if (intent.type==='CHARGE') {
@@ -8509,9 +8739,24 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         await battleWait(200);
         setEnemyAttackFx(null);
       } else if (intent.type==='ATTACK'||intent.type==='SPECIAL') {
+        // 新モードの攻撃は variant で受け方が変わる。type は ATTACK のままなので、
+        // ダメージ計算・演出・予告の経路は既存のものをそのまま通る。
+        //   薙ぎ払い … 予告した間合いに敵がいなければ威力が落ちる(距離撃でずらせる)
+        //   連撃     … ガードが手数ぶん効く
+        //   貫通撃   … ガードが効かない
+        // 距離撃で動かした先は setEnemyDist の反映を待たないため、呼び出し元が確定させた
+        // 移動先(forcedMoveTarget)を優先して見る
+        const actingEnemyDist = Number.isInteger(immediateEffects.forcedMoveTarget) ? immediateEffects.forcedMoveTarget : enemyDist;
+        const sweptAway = intent.variant==='sweep' && Number.isInteger(intent.sweepDist) && actingEnemyDist!==intent.sweepDist;
+        const actingIntent = sweptAway ? {...intent,value:Math.max(0,Math.floor(Number(intent.missValue)||0))} : intent;
         // 表示と同じ guardFlat / guardMult 集計を実効丈夫さへ適用する。
-        const guardValue = (immediateEffects.guardFlat>0||immediateEffects.guardMult>0) ? Math.floor(immediateEffects.guardFlat + effectiveDef*immediateEffects.guardMult) : 0;
-        const incomingBeforeTurnReduction = getIncomingDamageBeforeTurnReduction(intent);
+        const baseGuardValue = (immediateEffects.guardFlat>0||immediateEffects.guardMult>0) ? Math.floor(immediateEffects.guardFlat + effectiveDef*immediateEffects.guardMult) : 0;
+        const guardValue = intent.variant==='pierce' ? 0
+          : intent.variant==='rush' ? baseGuardValue*Math.max(1,Math.floor(Number(intent.hits)||1))
+          : baseGuardValue;
+        if (sweptAway) { addPopup('薙ぎ払いをかわした！','hero','text-cyan-300 font-black text-xl drop-shadow-md'); await battleWait(600); }
+        else if (intent.variant==='pierce' && baseGuardValue>0) { addPopup('貫通！ ガードが効かない','enemy','text-rose-300 font-black text-xl drop-shadow-md'); await battleWait(600); }
+        const incomingBeforeTurnReduction = getIncomingDamageBeforeTurnReduction(actingIntent);
         const incomingDmg = applyTurnDamageReduction(incomingBeforeTurnReduction);
         if ((mainHero?.id==='Ark'||mainHero?.id==='Iblis') && getWaveBuff('chuuniDmgCutUses')<2) {
           addWaveBuff('chuuniDmgCutUses',1);
@@ -8551,10 +8796,59 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const hpGain=incomingDmg; const gutsGain=Math.floor(incomingDmg*0.1);
           addPopup(`💚 ライフ +${hpGain}`,'life','text-emerald-400 font-black text-2xl drop-shadow-md');
           addPopup(`⚡ ガッツ +${gutsGain}`,'guts','text-amber-400 font-black text-2xl drop-shadow-md');
-          currentHp=Math.min(liveEffectiveMaxHp(),currentHp+hpGain); setHp(currentHp);
-          setGuts(p=>Math.min(liveEffectiveMaxGuts(),p+gutsGain)); await battleWait(1000);
+          const absorbed=tacticsHeal(hpGain);
+          if(absorbed!==null) currentHp=absorbed;
+          else { currentHp=Math.min(liveEffectiveMaxHp(),currentHp+hpGain); setHp(currentHp); }
+          gainGuts(gutsGain); await battleWait(1000);
         } else if (isEvasion) {
           addPopup("回避！",'hero','text-blue-400 font-black text-xl drop-shadow-lg'); await battleWait(1000);
+        } else if (isTacticsMode(runMode)) {
+          // ===== 新モードの受け方 =====
+          // ★ガードは「カードを使った子自身」を守る(2026-09-19 ユーザーが決めた形)。
+          //   狙われた子ごとに、その子が構えたぶんだけで受ける。
+          //   誰かが構えたガードが全員を守ってしまうと、狙いを読む意味が消える。
+          // ★全体攻撃は狙われた全員が、それぞれ自分のガードで受ける。
+          tookEnemyAttack=true;
+          const targets=tacticsIntentTargets(intent,tacticsUnitsRef.current,actingEnemyDist);
+          if(!targets.length){
+            addPopup('当たらなかった！','hero','text-cyan-300 font-black text-xl drop-shadow-md');
+            await battleWait(700);
+          } else {
+            const rushHits=Math.max(1,Math.floor(Number(intent.hits)||1));
+            const slotGuards=immediateEffects.guardBySlot||{};
+            let units=tacticsUnitsRef.current, dealt=0, saved=0, guardedCount=0, gutsBack=0;
+            targets.forEach(slotIdx=>{
+              const own=slotGuards[slotIdx]||{flat:0,mult:0};
+              // ガードの軽減量も「その子の丈夫さ」から出す
+              const slotDef=tacticsUnitsRef.current[slotIdx]
+                ? resolveEffectiveMaxStat(normalizeTacticsUnit(tacticsUnitsRef.current[slotIdx]).def,getPermaBuff('defPct')) : effectiveDef;
+              const base=(own.flat>0||own.mult>0)?Math.floor(own.flat+slotDef*own.mult):0;
+              // 貫通撃はガードが効かない。連撃は手数ぶんガードが効く(既存モードと同じ決まり)
+              const slotGuard=intent.variant==='pierce'?0:(intent.variant==='rush'?base*rushHits:base);
+              // ★受けるダメージもその子の丈夫さで決まるので、狙われた子ごとに計算し直す
+              const slotIncoming=getIncomingDamageBeforeTurnReduction(intent,slotIdx);
+              const diff=slotGuard-slotIncoming;
+              if(diff<0){
+                const fd=applyTurnDamageReduction(Math.abs(diff));
+                units=damageTacticsTargets(units,[slotIdx],fd); dealt+=fd;
+                if(slotGuard>0) guardedCount++;
+              } else {
+                guardedCount++; saved+=diff;
+                const gain=Math.floor(diff*0.1); gutsBack+=gain;
+                units=recoverTacticsGutsAt(healTacticsAt(units,slotIdx,diff),slotIdx,gain);
+              }
+            });
+            if(guardedCount>0){ setGuardFx(true); Audio_.se.guard(); triggerShake(); await battleWait(450); setGuardFx(false); }
+            currentHp=commitTacticsUnits(units);
+            if(dealt>0){ addPopup(`-${dealt}`,'hero','text-pink-600 text-4xl font-black drop-shadow-lg animate-bounce'); triggerShake(); }
+            if(saved>0){
+              addPopup('🛡 ガード成功','hero','text-emerald-400 text-2xl font-black drop-shadow-md');
+              addPopup(`💚 ライフ +${saved}`,'life','text-emerald-400 text-2xl font-black drop-shadow-md');
+            }
+            if(gutsBack>0) addPopup(`⚡ ガッツ +${gutsBack}`,'guts','text-amber-400 text-xl font-bold drop-shadow-md');
+            if(dealt<=0&&saved<=0) addPopup('無傷！','hero','text-emerald-300 font-black text-xl drop-shadow-md');
+            await battleWait(1000);
+          }
         } else if (guardValue>0) {
           // ガードは最終ダメージが0でも(余剰でライフ・ガッツが増えても)「受け止めた」扱いにする
           tookEnemyAttack=true;
@@ -8563,7 +8857,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           setGuardFx(true); Audio_.se.guard(); triggerShake();
           await battleWait(550); setGuardFx(false);
           if (diff<0) { const fd=applyTurnDamageReduction(Math.abs(diff)); const remainingHp=calculateRemainingHp(currentHp,fd); currentHp=remainingHp; addPopup(`貫通! -${fd}`,'hero','text-pink-600 text-3xl font-black drop-shadow-lg'); setHp(remainingHp); await battleWait(1000); }
-          else { const gGain=Math.floor(diff*0.1); currentHp=Math.min(liveEffectiveMaxHp(),currentHp+diff); addPopup(`🛡 ガード成功`,'hero','text-emerald-400 text-2xl font-black drop-shadow-md'); addPopup(`💚 ライフ +${diff}`,'life','text-emerald-400 text-2xl font-black drop-shadow-md'); addPopup(`⚡ ガッツ +${gGain}`,'guts','text-amber-400 text-xl font-bold drop-shadow-md'); setHp(currentHp); setGuts(p=>Math.min(liveEffectiveMaxGuts(),p+gGain)); await battleWait(1000); }
+          else { const gGain=Math.floor(diff*0.1); currentHp=Math.min(liveEffectiveMaxHp(),currentHp+diff); setHp(currentHp);
+            addPopup(`🛡 ガード成功`,'hero','text-emerald-400 text-2xl font-black drop-shadow-md'); addPopup(`💚 ライフ +${diff}`,'life','text-emerald-400 text-2xl font-black drop-shadow-md'); addPopup(`⚡ ガッツ +${gGain}`,'guts','text-amber-400 text-xl font-bold drop-shadow-md'); gainGuts(gGain); await battleWait(1000); }
         } else {
           tookEnemyAttack=true;
           addPopup(`-${incomingDmg}`,'hero','text-pink-600 text-4xl font-black drop-shadow-lg animate-bounce'); triggerShake();
@@ -8585,11 +8880,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const gutsRecoveryRate=applyIceRulerAutoGutsRecovery(currentAutoGutsRecovery,mainHero?.id,iceLockActive,heroDist,enemyDist);
     const soulAdjustedGutsRecoveryRate=Math.max(0,gutsRecoveryRate)*soulBattleParty.autoGutsMultiplier;
     const gutsRegen=Math.floor(liveEffectiveMaxGuts()*soulAdjustedGutsRecoveryRate);
-    setGuts(p=>Math.min(liveEffectiveMaxGuts(),p+gutsRegen));
+    gainGuts(gutsRegen);
     let didRegen=false;
     if (autoHpRecoveryRate>0) {
       const autoHealVal=Math.floor(liveEffectiveMaxHp()*autoHpRecoveryRate);
-      if (autoHealVal>0) { setHp(p=>Math.min(liveEffectiveMaxHp(),p+autoHealVal)); addPopup(`🌿 自動再生 +${autoHealVal}`,'life','text-teal-300 font-black text-lg italic drop-shadow-md'); didRegen=true; }
+      if (autoHealVal>0) { if(tacticsHeal(autoHealVal)===null) setHp(p=>Math.min(liveEffectiveMaxHp(),p+autoHealVal)); addPopup(`🌿 自動再生 +${autoHealVal}`,'life','text-teal-300 font-black text-lg italic drop-shadow-md'); didRegen=true; }
     }
     if (gutsRegen>0) { addPopup(`🌿 自動ガッツ +${gutsRegen}`,'guts','text-cyan-300 font-black text-lg italic drop-shadow-md'); didRegen=true; }
     if (didRegen) { await battleWait(500); }
@@ -8602,8 +8897,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const pendingNextTurnBuffs = nextTurnBuffsRef.current;
     const recoveryMult = pendingNextTurnBuffs.melosoFullRecoveryMult || 0;
     if (recoveryMult>0) {
-      setHp(p=>Math.min(liveEffectiveMaxHp(),p+Math.floor(liveEffectiveMaxHp()*recoveryMult)));
-      setGuts(p=>Math.min(liveEffectiveMaxGuts(),p+Math.floor(liveEffectiveMaxGuts()*recoveryMult)));
+      const melosoHeal=Math.floor(liveEffectiveMaxHp()*recoveryMult);
+      if(tacticsHeal(melosoHeal)===null) setHp(p=>Math.min(liveEffectiveMaxHp(),p+melosoHeal));
+      gainGuts(Math.floor(liveEffectiveMaxGuts()*recoveryMult));
       addPopup(recoveryMult===1?'ライフ・ガッツ全回復!':'ライフ・ガッツ回復!','hero','text-rose-300 text-lg font-bold');
     }
     const {melosoFullRecoveryMult, ...activeTurnBuffs}=pendingNextTurnBuffs;
@@ -8612,7 +8908,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if (resonanceRefresh==null && resonanceCarry>0) activeTurnBuffs.pandoraResonanceTurns=resonanceCarry;
     setTurnBuffs(activeTurnBuffs);
     writeNextTurnBuffs({});
-    const nextTurn=turnCount+1; setTurnCount(nextTurn); if(nextTurn>20){setHp(0);} setIsBusy(false);
+    const nextTurn=turnCount+1; setTurnCount(nextTurn); if(nextTurn>20){ if(tacticsWipe()===null) setHp(0); } setIsBusy(false);
   };
 
   const useEmergency = async () => {
@@ -8624,12 +8920,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const recoverGuts=Math.floor(liveEffectiveMaxGuts()*0.3);
     addPopup(`💚 ライフ +${recoverHp}`,'life','text-emerald-400 text-2xl font-black drop-shadow-md');
     addPopup(`⚡ ガッツ +${recoverGuts}`,'guts','text-amber-400 text-2xl font-black drop-shadow-md');
-    setHp(p=>Math.min(liveEffectiveMaxHp(),p+recoverHp)); setGuts(p=>Math.min(liveEffectiveMaxGuts(),p+recoverGuts)); await battleWait(1000);
+    const emergencyHp=tacticsHeal(recoverHp);
+    if(emergencyHp===null) setHp(p=>Math.min(liveEffectiveMaxHp(),p+recoverHp));
+    gainGuts(recoverGuts); await battleWait(1000);
     // 画面に予告済みの行動をそのまま実行する。ここで敵AIを再抽選すると、緊急回復で予告を
     // 別の技へ変えられてしまうため、技・対象・順番・予測値を保持した予約だけを参照する。
     const scenario=battleScenarioRef.current;
     const acting=enemyIntent;
-    const hpAfterRecovery=Math.min(liveEffectiveMaxHp(),hp+recoverHp);
+    const hpAfterRecovery=emergencyHp!==null?emergencyHp:Math.min(liveEffectiveMaxHp(),hp+recoverHp);
     await handleEnemyTurn('none',{},acting,hpAfterRecovery);
     // 敵の行動後にだけ次ターン分を1回予約する。移動した場合は移動先を次の抽選基準にする。
     const moveWasFrozen=acting&&acting.type==='MOVE'&&getWaveBuff('iceLockTurns')>0;
@@ -8655,8 +8953,28 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if (guts<totalGuts) return;
     // Fallback slot for cards without assignment (buffs etc.)
     const defaultSlot=slots.findIndex(s=>s!==null);
+    // 新モードは「使う子が払えるか」も見る。合計で足りていても、1体に寄っていれば使えない。
+    // ★ここを通さないと、オートが払えない組み合わせを選んだときに
+    //   ガッツを払わずカードだけ切れてしまう
+    if(isTacticsMode(runMode)){
+      const spentBySlot={};
+      const payable=usedCardEntries.every(entry=>{
+        const idx=entry.slotIdx!=null?entry.slotIdx:defaultSlot;
+        spentBySlot[idx]=(spentBySlot[idx]||0)+getCardGuts(entry.card,idx);
+        return canTacticsSlotPay(tacticsUnitsRef.current,idx,spentBySlot[idx]);
+      });
+      if(!payable) return;
+    }
     setIsBusy(true);
     let lastType='none', guardTypeInTurn='none', totalDmg=0, totalHeal=0, localOryoAdd=0, localDmgModAdd=0, localGlobalComboAdd=0, attackCount=0, hasCrit=false, immediateInvincible=false, immediateStun=false, currentTurnGuardFlat=0, currentTurnGuardMult=0;
+    // 新モードは「ガードはカードを使った子自身を守る」。誰が構えたかをスロットごとに持つ。
+    // 既存モードは今までどおり currentTurnGuardFlat / Mult の合計だけを見る
+    const guardBySlot={};
+    const addGuardForSlot=(idx,flat,mult)=>{
+      if(!Number.isInteger(idx)) return;
+      const entry=guardBySlot[idx]||(guardBySlot[idx]={flat:0,mult:0});
+      entry.flat+=flat; entry.mult+=mult;
+    };
     let hpBeforeEnemyAttack=hp;
     let activatedIceLockThisTurn=false;
     let forcedMoveTarget=null; // 最後に使った距離撃の指定距離を、敵行動後にも最終距離として再適用する
@@ -8686,9 +9004,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       if(halved) addPopup('2枚目以降 効果半減','hero','text-slate-300 text-sm font-black');
       const slotIdx=entry.slotIdx!=null?entry.slotIdx:defaultSlot;
       lastType=card.type;
-      if (card.type==='guard') { Audio_.se.guard(); guardTypeInTurn='guard'; currentTurnGuardFlat+=GUARD_EVOLUTION[guardLevel].flat*effMul; currentTurnGuardMult+=GUARD_EVOLUTION[guardLevel].mult*effMul; }
-      else if (card.type==='weak_guard') { if(guardTypeInTurn!=='guard') guardTypeInTurn='weak_guard'; currentTurnGuardFlat+=(GUARD_EVOLUTION[guardLevel].flat*0.5*effMul); currentTurnGuardMult+=(GUARD_EVOLUTION[guardLevel].mult*0.5*effMul); }
-      setGuts(p=>Math.max(0,p-getCardGuts(card,slotIdx)));
+      if (card.type==='guard') { Audio_.se.guard(); guardTypeInTurn='guard'; currentTurnGuardFlat+=GUARD_EVOLUTION[guardLevel].flat*effMul; currentTurnGuardMult+=GUARD_EVOLUTION[guardLevel].mult*effMul; addGuardForSlot(slotIdx,GUARD_EVOLUTION[guardLevel].flat*effMul,GUARD_EVOLUTION[guardLevel].mult*effMul); }
+      else if (card.type==='weak_guard') { if(guardTypeInTurn!=='guard') guardTypeInTurn='weak_guard'; currentTurnGuardFlat+=(GUARD_EVOLUTION[guardLevel].flat*0.5*effMul); currentTurnGuardMult+=(GUARD_EVOLUTION[guardLevel].mult*0.5*effMul); addGuardForSlot(slotIdx,GUARD_EVOLUTION[guardLevel].flat*0.5*effMul,GUARD_EVOLUTION[guardLevel].mult*0.5*effMul); }
+      // 払うのは「使う子」。新モード以外は今までどおりパーティのガッツから引く
+      const cardCost=getCardGuts(card,slotIdx);
+      if(isTacticsMode(runMode)) tacticsPayGuts(slotIdx,cardCost);
+      else setGuts(p=>Math.max(0,p-cardCost));
       // 消費と直後の回復を同じ描画へまとめず、カードを支払った値をゲージ・数値に先に出す。
       await battleWait(250);
       if (card.type==='draw') continue;
@@ -8712,7 +9033,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           totalDmg+=d; attackCount++; attackHits.push({dmg:d, isCrit:false, slotIdx});
           for (const hit of stunHits.slice(1)) { if (hit.crit) hasCrit=true; totalDmg+=hit.dmg; attackHits.push({dmg:hit.dmg, isCrit:hit.crit, slotIdx, isSpecial:true, skillName:hit.skillName, isUnique:false, ...(hit.noAnim?{noAnim:true}:{})}); }
         }
-        else if (card.subType==='buff_myaru') { setNextTurnBuff('atkMult',1+(card.baseValue-1)*effMul); const selfDmgAmt=Math.floor(hpBeforeEnemyAttack*myaruSelfDamageRate(card)*effMul); addPopup(`自傷-${selfDmgAmt}`,'hero','text-red-600 text-2xl font-black'); hpBeforeEnemyAttack=Math.max(1,hpBeforeEnemyAttack-selfDmgAmt); setHp(hpBeforeEnemyAttack); }
+        else if (card.subType==='buff_myaru') { setNextTurnBuff('atkMult',1+(card.baseValue-1)*effMul); const selfDmgAmt=Math.floor(hpBeforeEnemyAttack*myaruSelfDamageRate(card)*effMul); addPopup(`自傷-${selfDmgAmt}`,'hero','text-red-600 text-2xl font-black');
+          // 新モードは立っている子へ配る。★自傷では誰も倒れない(1体ずつ最低1を残す)
+          const selfHurt=isTacticsMode(runMode)?commitTacticsUnits(selfDamageTacticsAt(tacticsUnitsRef.current,slotIdx,selfDmgAmt)):null;
+          if(selfHurt!==null) hpBeforeEnemyAttack=selfHurt;
+          else { hpBeforeEnemyAttack=Math.max(1,hpBeforeEnemyAttack-selfDmgAmt); setHp(hpBeforeEnemyAttack); } }
         // ポルツ: すぐには何も起きず、「有効な敵の攻撃を受けた回数」ぶんだけ待機する。
         // 発動時の効果量はレベル(POLTZ_TIERS)とEXTREME等の効果倍率(effMul)で決まるが、
         // 発動するのは敵ターン(handleEnemyTurn)でカードがもう手元に無いため、
@@ -8733,9 +9058,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         if (card.id==='meloso') {
           const healVal=Math.floor(liveEffectiveMaxHp()*0.3*effMul); totalHeal+=healVal;
           const gutsVal=Math.floor(liveEffectiveMaxGuts()*0.3*effMul);
-          setGuts(p=>Math.min(liveEffectiveMaxGuts(),p+gutsVal));
+          gainGutsAt(slotIdx,gutsVal);
           currentTurnGuardFlat+=GUARD_EVOLUTION[guardLevel].flat*effMul;
           currentTurnGuardMult+=GUARD_EVOLUTION[guardLevel].mult*effMul;
+          addGuardForSlot(slotIdx,GUARD_EVOLUTION[guardLevel].flat*effMul,GUARD_EVOLUTION[guardLevel].mult*effMul);
           guardTypeInTurn='guard';
           addPopup(`⚡ ガッツ +${gutsVal}`,'guts','text-amber-400 font-black text-2xl drop-shadow-md');
           if(level>=1 && usedCards.length>=2) {
@@ -8754,11 +9080,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           let hpB=level===1?0.05:(level>=2?0.08:0.03), atkB=level>=2?0.05:0.03, gutsB=level>=2?0.05:0.03;
           const healVal=Math.floor(liveEffectiveMaxHp()*hpRecRate*effMul); totalHeal+=healVal;
           addPermaBuff('muaHpPct',hpB*effMul); addPermaBuff('muaAtkPct',atkB*effMul); addPermaBuff('muaGutsPct',gutsB*effMul);
-          if(gutsRecRate>0){const gv=Math.floor(liveEffectiveMaxGuts()*gutsRecRate*effMul); setGuts(p=>Math.min(liveEffectiveMaxGuts(),p+gv)); addPopup(`⚡ ガッツ +${gv}`,'guts','text-amber-400 font-black text-2xl drop-shadow-md');}
+          if(gutsRecRate>0){const gv=Math.floor(liveEffectiveMaxGuts()*gutsRecRate*effMul); gainGutsAt(slotIdx,gv); addPopup(`⚡ ガッツ +${gv}`,'guts','text-amber-400 font-black text-2xl drop-shadow-md');}
         } else {
           const healVal=Math.floor(liveEffectiveMaxHp()*(0.5+level*0.2)*effMul); totalHeal+=healVal;
           addPermaBuff('muaHpPct',0.10*effMul); addPermaBuff('muaAtkPct',0.05*effMul); addPermaBuff('muaGutsPct',0.10*effMul);
-          if(level>=1){const gv=Math.floor(liveEffectiveMaxGuts()*(0.5+level*0.2)*effMul); setGuts(p=>Math.min(liveEffectiveMaxGuts(),p+gv)); addPopup(`⚡ ガッツ +${gv}`,'guts','text-amber-400 font-black text-2xl drop-shadow-md');}
+          if(level>=1){const gv=Math.floor(liveEffectiveMaxGuts()*(0.5+level*0.2)*effMul); gainGutsAt(slotIdx,gv); addPopup(`⚡ ガッツ +${gv}`,'guts','text-amber-400 font-black text-2xl drop-shadow-md');}
         }
       }
       else if (card.type!=='guard'&&card.type!=='weak_guard') {
@@ -8811,11 +9137,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         if (card.type==='unique') {
           // 固有技の効果は技の出自(card.monId)で判定する(activeMon.idではない)。理由は上のコメントと同じ
           if(card.monId==='Ham'){immediateStun=true; setImmediateTurnBuff('stunEnemy',true); addPopup('スタン!','enemy','text-yellow-400 text-lg font-bold');}
-          else if(card.monId==='Suezo'){const gRec=Math.floor(liveEffectiveMaxGuts()*0.5*effMul); setGuts(p=>Math.min(liveEffectiveMaxGuts(),p+gRec)); addPopup(`⚡ ガッツ +${gRec}`,'guts','text-amber-400 text-xl font-black drop-shadow-md');}
+          else if(card.monId==='Suezo'){const gRec=Math.floor(liveEffectiveMaxGuts()*0.5*effMul); gainGuts(gRec); addPopup(`⚡ ガッツ +${gRec}`,'guts','text-amber-400 text-xl font-black drop-shadow-md');}
           else if(card.monId==='Pixie'||card.monId==='Mia'){setNextTurnBuff('zeroGuts',true); addPopup('次ターン消費0!','hero','text-blue-400 text-lg font-bold');}
           else if(card.monId==='Tiger'){setNextTurnBuff('guaranteedCrit',true); addPermaBuff('critRatePct',0.02*effMul); addPermaBuff('critDmgPct',0.02*effMul); addPopup('次ターン会心確定!','hero','text-red-400 text-lg font-bold'); addPopup(`会心率+${(2*effMul).toFixed(effMul===1?0:1)}% 会心ダメ+${(2*effMul).toFixed(effMul===1?0:1)}%`,'hero','text-yellow-400 text-sm font-bold');}
           else if(card.monId==='Monol'){addPermaBuff('defPct',0.03*effMul); addWaveBuff('enemyAtkDebuffPct',0.10*effMul); setNextTurnBuff('reflect',true); addPopup('丈夫さUP!','hero','text-emerald-400 text-lg font-bold'); addPopup('次ターン反射！','hero','text-purple-400 text-lg font-bold');}
-          else if(card.monId==='Oboro'||card.monId==='Plant'){const hRec=Math.floor(finalD*0.5); const gRec=Math.floor(finalD*0.05); hpBeforeEnemyAttack=Math.min(liveEffectiveMaxHp(),hpBeforeEnemyAttack+hRec); setHp(hpBeforeEnemyAttack); setGuts(p=>Math.min(liveEffectiveMaxGuts(),p+gRec)); addPopup(`💚 ドレイン +${hRec}`,'life','text-emerald-400 text-xl font-black drop-shadow-md'); addPopup(`⚡ ガッツ +${gRec}`,'guts','text-amber-400 text-base font-bold drop-shadow-md');}
+          else if(card.monId==='Oboro'||card.monId==='Plant'){const hRec=Math.floor(finalD*0.5); const gRec=Math.floor(finalD*0.05);
+            if(isTacticsMode(runMode)) hpBeforeEnemyAttack=commitTacticsUnits(healTacticsAt(tacticsUnitsRef.current,slotIdx,hRec));
+            else { hpBeforeEnemyAttack=Math.min(liveEffectiveMaxHp(),hpBeforeEnemyAttack+hRec); setHp(hpBeforeEnemyAttack); } gainGuts(gRec); addPopup(`💚 ドレイン +${hRec}`,'life','text-emerald-400 text-xl font-black drop-shadow-md'); addPopup(`⚡ ガッツ +${gRec}`,'guts','text-amber-400 text-base font-bold drop-shadow-md');}
           else if(card.monId==='Ark'||card.monId==='Iblis'){
             // 贖罪: 与ダメの20%で追撃(ザンの「連撃」とは別名にして、ザン専用の連撃モーション判定と衝突しないようにする)
             // noAnim:true → 専用モーションを2回連続再生させず、直前のヒットに続けてダメージ数値だけ表示する
@@ -8843,9 +9171,18 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       }
       const cardHeal=totalHeal-totalHealBeforeCard;
       if(cardHeal>0){
-        addPopup(`💚 回復 +${cardHeal}`,'life','text-emerald-400 text-4xl font-black drop-shadow-lg');
-        hpBeforeEnemyAttack=Math.min(liveEffectiveMaxHp(),hpBeforeEnemyAttack+cardHeal);
-        setHp(hpBeforeEnemyAttack);
+        if(isTacticsMode(runMode)){
+          // ★回復カードは「全体回復」。使う子を選ぶのはガッツを払うためで、効くのは盤面全体
+          //   (2026-09-19 ユーザーの整理。単体に効くのはガードの余りとドレインだけ)。
+          //   倒れた子にも入り、ライフが全快になったところで立ち上がる。
+          //   「起き上がった！」は commitTacticsUnits が1か所で出す
+          addPopup(`💚 回復 +${cardHeal}`,'life','text-emerald-400 text-4xl font-black drop-shadow-lg');
+          const healedAll=tacticsHeal(cardHeal);
+          if(healedAll!==null) hpBeforeEnemyAttack=healedAll;
+        } else {
+          addPopup(`💚 回復 +${cardHeal}`,'life','text-emerald-400 text-4xl font-black drop-shadow-lg');
+          hpBeforeEnemyAttack=Math.min(liveEffectiveMaxHp(),hpBeforeEnemyAttack+cardHeal); setHp(hpBeforeEnemyAttack);
+        }
       }
       // 回復・自傷など、このカード自身の増減を次のカード消費より先に描画する。
       await battleWait(250);
@@ -9012,7 +9349,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const finalActionType=guardTypeInTurn!=='none'?guardTypeInTurn:lastType;
     const executedIntent=enemyIntent;
     // distLocked: このターン距離撃を撃ったか。敵の移動は距離撃で上書きされるため、行動しなかった扱いにする
-    await handleEnemyTurn(finalActionType,{invincible:immediateInvincible,stun:immediateStun,guardFlat:currentTurnGuardFlat,guardMult:currentTurnGuardMult,distLocked:forcedMoveTarget!=null,iceLockRefreshed:activatedIceLockThisTurn},executedIntent,hpBeforeEnemyAttack,enemyHpAfterOurAttacks);
+    await handleEnemyTurn(finalActionType,{invincible:immediateInvincible,stun:immediateStun,guardFlat:currentTurnGuardFlat,guardMult:currentTurnGuardMult,guardBySlot,distLocked:forcedMoveTarget!=null,forcedMoveTarget,iceLockRefreshed:activatedIceLockThisTurn},executedIntent,hpBeforeEnemyAttack,enemyHpAfterOurAttacks);
     // 通常の距離変更を先に処理した後、最後の距離撃の指定距離を再適用して最終距離を確定する。
     if (forcedMoveTarget!=null) {
       setEnemyDist(forcedMoveTarget);
@@ -9030,14 +9367,25 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // AUTOの判断結果をstateへ書き戻さず、同じターン処理へ明示的に渡す。
   // 今回はUIやeffectから呼ばず、1ターン接続用の内部処理だけを用意する。
   const runAutoTurnOnce = () => {
+    // 新モードは「倒れた子のスロットを空として渡す」だけで、倒れた子が選ばれなくなる。
+    // ガッツは1体ずつなので gutsForSlot で渡し、枚数制限は攻撃カードだけに効かせる
+    const tacticsMode=isTacticsMode(runMode);
+    const autoSlots=tacticsMode
+      ? slots.map((mon,idx)=>(canTacticsSlotAct(tacticsUnitsRef.current,idx)?mon:null))
+      : slots;
+    const tacticsAutoOptions=tacticsMode?{
+      gutsForSlot:(slotIdx)=>(tacticsUnitsRef.current[slotIdx]?.guts||0),
+      countsTowardSlotLimit:isAttackCard,
+      isAttackCardFn:isAttackCard,
+    }:{};
     const entries=chooseAutoTurn({
-      hand, slots, guts, cardLimit, strategy:autoSettings.strategy,
-      getCardGuts, cardNeedsMonster, slotMaxUses,
+      hand, slots:autoSlots, guts, cardLimit, strategy:autoSettings.strategy,
+      getCardGuts, cardNeedsMonster, slotMaxUses, ...tacticsAutoOptions,
     });
     if(entries.length>0)return processTurn(entries);
     const lacksOnlyGuts=hasAutoTurnWithEnoughGuts({
-      hand, slots, cardLimit, strategy:autoSettings.strategy,
-      getCardGuts, cardNeedsMonster, slotMaxUses,
+      hand, slots:autoSlots, cardLimit, strategy:autoSettings.strategy,
+      getCardGuts, cardNeedsMonster, slotMaxUses, ...tacticsAutoOptions,
     });
     if(lacksOnlyGuts&&autoBattleRef.current&&gameState==='BATTLE'&&enemy&&enemy.hp>0&&hp>0
         &&!battleScenarioRef.current&&battleTutorialStep==null)return useEmergency();
@@ -9622,7 +9970,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // 段階を持つ難易度(GODの神威 / RAGNAROKの黄昏)は、そのWAVEの段階ぶんを累計ターン倍率へ重ねる。
     // 段階を持たない難易度では1倍が返るので、これまでどおりの敵になる。
     const stagedEnemyMultiplier=extremeWaveEnemyMultiplier(specialRuleDifficulty,w);
-    const newEnemy=createBattleEnemy(w,difficulty,forcedEnemyKey,battleSetting?.power??null,enemyTurnMultiplier*stagedEnemyMultiplier);
+    // 新モードは「連れてきた供モンの総合力」に応じて敵も強くなる(設計 §6)。
+    // ★人数ごとの固定倍率にしないこと。弱い編成ほど苦しくなる
+    const tacticsEnemyBoost=isTacticsMode(runMode)
+      ? tacticsEnemyPowerMultiplier(tacticsPowerRef.current.start,tacticsPowerRef.current.now) : 1;
+    const newEnemy=createBattleEnemy(w,difficulty,forcedEnemyKey,battleSetting?.power??null,enemyTurnMultiplier*stagedEnemyMultiplier*tacticsEnemyBoost);
     if (!newEnemy) return null;
     // 最高到達WAVEもモードごとに別々に記録する。
     // 極限チャレンジは難易度が別表(内部の difficulty は Normal のまま)なので、ここへ入れると
@@ -9660,10 +10012,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     enemyDefeatResolvedRef.current=false;
     // 不死の回数はWAVEごとに数え直す(前のWAVEで使い切っていても、対象WAVEでは規定回数から始まる)
     enemyRevivalUsedRef.current=0; setEnemyRevivalUsed(0); enemyRevivedHpRef.current=null; setEnemyRevivalReveal(null);
+    // 咆哮の重ねがけもWAVEごとに数え直す
+    tacticsRoarStacksRef.current=0;
     setEnemy(newEnemy); setEnemyDist(dist); setEnemyLastIntent(null);
-    const firstIntent = getNextEnemyAction(newEnemy,dist,null,{unannounced:true});
+    // 行動表はモードと敵で決まる。新モード以外では今までどおりの1つの表が返る
+    const actionState=()=>({definitions:enemyActionDefinitionsFor(runMode,newEnemy?.id),roarStacks:tacticsRoarStacksRef.current});
+    const firstIntent = aimTacticsIntent(getNextEnemyAction(newEnemy,dist,null,{unannounced:true,...actionState()}),runMode);
     setEnemyIntent(firstIntent);
-    reserveEnemyNextIntent(getNextEnemyAction(newEnemy,distAfterIntent(firstIntent,dist),firstIntent));
+    reserveEnemyNextIntent(getNextEnemyAction(newEnemy,distAfterIntent(firstIntent,dist),firstIntent,actionState()));
     setTurnCount(1); setSelectedCards([]); setLastActionSlot(null); setCardAssignments({}); setPendingCard(null); setCurrentWaveDamage(0); setWaveDistDamage([0,0,0,0]); setWaveBuffs({}); // WAVE毎リセットのバフ・デバフ(waveEnemyAtkDebuff/chuuniDmgCutUses/enemyTakenDmgBonus等)を全てクリア
     return dist;
   }, [getNextEnemyAction, difficulty, extremeDifficulty, totalTurnCount, highestWaves, quickHighestWaves, proHighestWaves, runMode]);
@@ -9759,7 +10115,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     writePermaBuffs({autoHpRecovery:0.1}); setWaveBuffs({}); setTurnBuffs({}); writeNextTurnBuffs({});
     setDistDmgBonus([0,0,0,0]); setTotalDistDamage([0,0,0,0]); setTotalAllDamage(0); setTotalRecoveryDelta(0);
     setUpgradePoints(0); setAtkLevel(0); setGuardLevel(0); setGuardBonusCount(0);
-    setMainHero(null); setSlots([null,null,null,null]); setOwnedUniques([]); setOwnedTeachings([]);
+    setMainHero(null); applySlots([null,null,null,null]); setOwnedUniques([]); setOwnedTeachings([]);
     setDistAptPct([0,0,0,0]);
     // いちばんやさしい難易度・チャレンジモードで固定する(練習なので勝ちやすくする)
     setDifficulty('Beginner'); setRunMode(BATTLE_MODE_CHALLENGE); setBattleMode(BATTLE_MODE_CHALLENGE);
@@ -9939,9 +10295,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setDistDmgBonus([0,0,0,0]); setTotalDistDamage([0,0,0,0]); setTotalAllDamage(0); setTotalRecoveryDelta(0);
     setUpgradePoints(0); setAtkLevel(0); setGuardLevel(0); setGuardBonusCount(0); setFinalRewardSummary(null);
     clearSlotUniqueSelection(); // デバッグ戦でも前の周回の一時選択を持ち込まない
-    setMainHero(hero); setSlots(debugSlots); setOwnedUniques(uniques); setOwnedTeachings(teachings);
-    setMaxHp(debugMaxHp); setHp(debugMaxHp); setAtk(debugAtk); setDef(debugDef);
-    setMaxGuts(debugMaxGuts); setGuts(Math.floor(debugMaxGuts*0.5));
+    setMainHero(hero); applySlots(debugSlots); setOwnedUniques(uniques); setOwnedTeachings(teachings);
+    // 新モードのライフは盤面(applySlots が合わせた合計)が正本。ここで上書きしない
+    if(!isTacticsMode(runMode)){ setMaxHp(debugMaxHp); setHp(debugMaxHp); }
+    setAtk(debugAtk); setDef(debugDef);
+    if(!isTacticsMode(runMode)){ setMaxGuts(debugMaxGuts); setGuts(Math.floor(debugMaxGuts*0.5)); }
     // 間合い適性は編成全員分(勇者モンを含む)を距離ごとに合計する。
     // setDistAptPctの反映はこの関数の後になるため、initBattleへ計算済みの値を渡す
     const specialRuleDifficulty=specialRuleDifficultyForRun(extreme?EXTREME_MODE.id:runMode,difficulty,extreme,extremeDifficulty);
@@ -9959,7 +10317,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       ?joinSpeciesChallengeAlly(speciesChallengeBattleRunRef.current,joinRosterEntry(m))
       :null;
     if(speciesJoin&&!speciesJoin.joinedAllyId)return;
-    const nextSlots=[...slots]; nextSlots[slotIdx]={...m}; setSlots(nextSlots);
+    const nextSlots=[...slots]; nextSlots[slotIdx]={...m}; applySlots(nextSlots);
     // 置いた瞬間に、そのスロットの古い一時選択を捨てる。
     // 未選択に戻すことで、そのマスモンに保存された初期技がそのまま初期選択になる
     clearSlotUniqueSelection(slotIdx);
@@ -9997,8 +10355,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       const bHp=maxHp, bAtk=atk, bDef=def, bGuts=maxGuts;
       const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
       const joinBonus=(key)=>applyAllyJoinBonus(bonus[key]||0,specialRuleDifficulty,waveResult?.totalTurnCount);
-      const nMaxHp=maxHp+joinBonus('hp'), nAtk=atk+joinBonus('atk'), nDef=def+joinBonus('def'), nMaxGuts=maxGuts+joinBonus('guts');
-      setMaxHp(nMaxHp); setAtk(nAtk); setDef(nDef); setMaxGuts(nMaxGuts); setHp(p=>p+(nMaxHp-bHp));
+      // 新モードはライフを合算しない。合流した子は自分のライフを持って盤面へ加わるだけで、
+      // パーティのライフ(＝盤面の合計)は上の applySlots がすでに合わせてある。
+      // ここで足すと、新しい子のぶんが二重に入る
+      const tacticsJoin=isTacticsMode(runMode);
+      const nMaxHp=tacticsJoin?tacticsTotalBaseMaxHp(tacticsUnitsRef.current):maxHp+joinBonus('hp');
+      const nMaxGuts=tacticsJoin?tacticsTotalBaseMaxGuts(tacticsUnitsRef.current):maxGuts+joinBonus('guts');
+      const nAtk=atk+joinBonus('atk'), nDef=def+joinBonus('def');
+      // 新モードはどれも盤面が正本。パーティの値は commitTacticsUnits が入れ直す
+      if(!tacticsJoin){ setMaxHp(nMaxHp); setHp(p=>p+(nMaxHp-bHp)); setMaxGuts(nMaxGuts); setAtk(nAtk); setDef(nDef); }
       // 合流ボーナスに間合い適性も加算する。合流したモンスターの4距離ぶんの補正値(%)を
       // 置いた距離に関係なくそのまま足す(零がMなら零距離の補正値が+25%される)
       const aptDelta=getMonsterAptPct(m,specialRuleDifficulty);
@@ -10030,6 +10395,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         advanceRunStage('QUICK_JOIN');
         setCurrentPickingMon(null);
         return;
+      }
+      // 新モードは合流すると敵も強くなる。何が起きたのか分かるように出す
+      if(tacticsJoin){
+        const boost=tacticsEnemyPowerMultiplier(tacticsPowerRef.current.start,tacticsPowerRef.current.now);
+        if(boost>1) addPopup(`敵も強くなった！ ×${boost.toFixed(2)}`,'enemy','text-orange-300 font-black text-xl drop-shadow-md');
       }
       setUpgradePoints(prev=>prev+(Math.floor(Math.random()*4)+1));
       setEffect({type:'mega',label:`${m.name}合流！`,icon:"🤝",monEmoji:m.emoji,imgUrl:m.imgUrl,baseId:m.id,colors:m.colors,subLabel:`HP:${bHp}→${nMaxHp}  ちから:${bAtk}→${nAtk}\n丈夫さ:${bDef}→${nDef}  ガッツ:${bGuts}→${nMaxGuts}${aptLabel?`\n間合い適性:${aptLabel}`:''}`});
@@ -10093,9 +10463,34 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const handleTraining = (picks) => {
     if (effect) return;
     const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
-    const nextStats=resolveTrainingStats({atk,def,hp:maxHp,guts:maxGuts},picks,waveResult?.turn,specialRuleDifficulty);
-    const nMaxHp=nextStats.hp, nAtk=nextStats.atk, nDef=nextStats.def, nMaxGuts=nextStats.guts;
-    setMaxHp(nMaxHp); setAtk(nAtk); setDef(nDef); setMaxGuts(nMaxGuts);
+    const tacticsMode=isTacticsMode(runMode);
+    // 新モードは picks が {slot,id} の並び。倒れた子を起こすときは {revive:スロット} が来る。
+    // ★起こすとそのWAVEは誰も強化できない(2026-09-19 ユーザーが決めた形。設計 §4.5)
+    const revivePick=tacticsMode&&picks&&!Array.isArray(picks)&&Number.isInteger(picks.revive)?picks.revive:null;
+    let nMaxHp=maxHp, nAtk=atk, nDef=def, nMaxGuts=maxGuts;
+    if(revivePick!==null){
+      commitTacticsUnits(reviveTacticsAt(tacticsUnitsRef.current,revivePick));
+      nDef=tacticsPartyDef(tacticsUnitsRef.current);
+    } else if(tacticsMode){
+      // 1体ずつのトレーニング。選んだぶんをその子だけへ入れる
+      const entries=Array.isArray(picks)?picks.filter(entry=>entry&&Number.isInteger(entry.slot)):[];
+      let units=tacticsUnitsRef.current;
+      tacticsFilledSlots(units).forEach(slotIdx=>{
+        const ids=entries.filter(entry=>entry.slot===slotIdx).map(entry=>entry.id);
+        if(!ids.length) return;
+        const unit=normalizeTacticsUnit(units[slotIdx]);
+        const after=resolveTrainingStats({atk:unit.atk,def:unit.def,hp:unit.baseMaxHp,guts:unit.baseMaxGuts},
+          ids,waveResult?.turn,specialRuleDifficulty);
+        units=applyTacticsTraining(units,slotIdx,after,getPermaBuff('muaHpPct'),getPermaBuff('muaGutsPct'));
+      });
+      commitTacticsUnits(units);
+      nDef=tacticsPartyDef(units); nAtk=tacticsPartyAtk(units);
+      nMaxHp=tacticsTotalBaseMaxHp(units); nMaxGuts=tacticsTotalBaseMaxGuts(units);
+    } else {
+      const nextStats=resolveTrainingStats({atk,def,hp:maxHp,guts:maxGuts},picks,waveResult?.turn,specialRuleDifficulty);
+      nMaxHp=nextStats.hp; nAtk=nextStats.atk; nDef=nextStats.def; nMaxGuts=nextStats.guts;
+      setMaxHp(nMaxHp); setMaxGuts(nMaxGuts); setAtk(nAtk); setDef(nDef);
+    }
     const nGrdL=computeGuardLevel(nDef);
     const currentGuardLevel=computeGuardLevel(def);
     const guardLevelUp=nGrdL>currentGuardLevel;
@@ -10295,7 +10690,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const next = Math.min(effectiveMaxGuts, guts + GUTS_RECOVERY_AMOUNT);
     if (next <= guts) return;
     gutsRecoveryLockRef.current = true;
-    setGuts(next);
+    // 新モードは立っている子へ配る(合計だけ増やすと、払える子が増えない)
+    if(isTacticsMode(runMode)) gainGuts(GUTS_RECOVERY_AMOUNT); else setGuts(next);
     setUpgradePoints(p => Math.max(0, p - GUTS_RECOVERY_POINT_COST));
     Audio_.se.heal();
   };
@@ -11084,14 +11480,31 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // チャレンジは従来どおりの難易度キー、プロは Pro を付けたキーを読み書きする
   const renderScoreRankingBody = (mode = BATTLE_MODE_CHALLENGE) => {
     const isExtreme = mode === EXTREME_MODE.id;
-    const keyOf = (diff) => rankingDifficultyKey(rankingDifficultyForMode(mode, diff));
+    // 極限の段階は、どのモードのランキングから引いても極限のキー(ExtremeGOD など)を使う。
+    // チャレンジのタブへ極限を並べたので、ここを mode だけで決めると
+    // 極限を選んでいるのに normalizeBattleDifficulty が Normal へ落としてしまう
+    const keyOf = (diff) => rankingDifficultyKey(isExtremeDifficultyId(diff)
+      ? rankingDifficultyForMode(EXTREME_MODE.id, diff)
+      : rankingDifficultyForMode(mode, diff));
+    // タブに並べる難易度。チャレンジは通常9段階＋極限の段階、極限の入口からは極限だけ、
+    // それ以外(プロ)は通常9段階のまま
+    const rankingTabs = isExtreme
+      ? PUBLIC_EXTREME_DIFFICULTIES.map(setting => [setting.id, setting])
+      : [...Object.entries(DIFFICULTY_SETTINGS),
+         ...(mode === BATTLE_MODE_CHALLENGE ? PUBLIC_EXTREME_DIFFICULTIES.map(setting => [setting.id, setting]) : [])];
     const viewKey = keyOf(rankingViewDiff);
     const rows = localRankings[viewKey] || [], status = rankingStatus(`score:${viewKey}`);
     return <>
-      {/* 難易度のタブ。極限チャレンジだけは通常の9段階ではなく、遊べる極限の段階を並べる */}
-      {isExtreme
-        ? <div className="flex gap-1.5 overflow-x-auto pb-2 shrink-0">{PUBLIC_EXTREME_DIFFICULTIES.map(setting=><button key={setting.id} onClick={()=>{setRankingViewDiff(setting.id);loadRankings(keyOf(setting.id));}} className={`px-3 min-h-[30px] rounded-full text-[9px] font-black shrink-0 active:scale-95 ${rankingViewDiff===setting.id?'ring-2 ring-white':'border border-white/10'}`} style={{backgroundColor:EXTREME_MODE.color,color:'#0f172a'}}>{setting.label}</button>)}</div>
-        : <div className="flex gap-1.5 overflow-x-auto pb-2 shrink-0">{Object.entries(DIFFICULTY_SETTINGS).map(([d,st])=><button key={d} onClick={()=>{setRankingViewDiff(d);loadRankings(keyOf(d));}} className={`px-3 min-h-[30px] rounded-full text-[9px] font-black shrink-0 active:scale-95 ${rankingViewDiff===d?'ring-2 ring-white':'border border-white/10'}`} style={difficultyStyle(st,rankingViewDiff===d)}>{st.label}</button>)}</div>}
+      {/* 難易度のタブ。極限チャレンジをチャレンジへ入れ込んだので、チャレンジのランキングには
+          通常9段階に続けて極限の段階も並べる(2026-09-19 ユーザー指示「16段階をまとめる」)。
+          極限チャレンジの入口から開いたときは、これまでどおり極限の段階だけを並べる。
+          ★並べるだけで、記録の保存先もSupabaseへ送る値も今までどおり(ExtremeGOD など)。
+            過去の記録がそのまま並ぶ */}
+      <div data-score-ranking-tabs className="flex gap-1.5 overflow-x-auto pb-2 shrink-0">{rankingTabs.map(([d,st])=>{
+        const on=rankingViewDiff===d;
+        const extremeTab=isExtremeDifficultyId(d);
+        return <button key={d} onClick={()=>{setRankingViewDiff(d);loadRankings(keyOf(d));}} className={`px-3 min-h-[30px] rounded-full text-[9px] font-black shrink-0 active:scale-95 ${on?'ring-2 ring-white':'border border-white/10'}`} style={extremeTab?{backgroundColor:extremeDifficultyTheme(d).accent,color:'#0f172a'}:difficultyStyle(st,on)}>{st.label}</button>;
+      })}</div>
       <div className="flex-1 overflow-y-auto mh-scroll space-y-1.5">{status.refreshing&&<div className="text-center text-[9px] text-indigo-300">更新中…</div>}{status.error&&status.fetched&&<div className="text-center text-[9px] text-amber-300">{status.error}</div>}{rows.map(renderScoreRankingEntry)}{rows.length===0&&(status.loading?<div className="text-center text-slate-400 py-8">Loading...</div>:status.error&&!status.fetched?rankingRetryButton(()=>loadRankings(viewKey,false,true)):rankingEmptyText)}</div>
     </>;
   };
@@ -11797,7 +12210,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             ランキングの一覧は renderScoreRankingBody などの共通の描画を呼ぶだけで、画面を複製していない */}
         {gameState==='BATTLE_MODE_SELECT'&&(()=>{
           // 極限チャレンジは未解放でもカードは出す(押せるかどうかだけを切り替える)
-      const modes=[...BATTLE_MODES,EXTREME_MODE,...((SPECIES_CHALLENGE_PUBLIC_RELEASE||debugBattle)?[SPECIES_CHALLENGE_MODE]:[])];
+      // 極限チャレンジはチャレンジの「極限」タブへ入れ込んだので、モードのカードには並べない
+      // (2026-09-19 ユーザー指示)。EXTREME_MODE の定義そのものは説明・ランキングが参照するので残す
+      const modes=[...BATTLE_MODES,...((SPECIES_CHALLENGE_PUBLIC_RELEASE||debugBattle)?[SPECIES_CHALLENGE_MODE]:[]),...((TACTICS_MODE_PUBLIC_RELEASE||debugBattle)?[TACTICS_MODE]:[])];
           const current=modes.find(m=>m.id===battleMode)||modes[0];
           const selectedIndex=Math.max(0,modes.findIndex(m=>m.id===current.id));
           // 端で止まらず「ぐるぐる回る」ようにするため、同じ並びを3回くり返して置く。
@@ -11886,6 +12301,21 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div className="flex items-center gap-1 mb-1 shrink-0"><button aria-label="戻る" onClick={()=>setGameState('BATTLE_MODE_SELECT')} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-fuchsia-300 uppercase tracking-widest truncate">極限チャレンジ</h2></div>
             <div className="w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1">
               <div className="flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll">
+                {/* チャレンジの難易度選択と同じ「通常 / 極限」タブ。
+                    極限チャレンジはチャレンジの極限タブとして入れ込んだので、
+                    ここから通常の9段階へ戻れないと行き来できない(2026-09-19 ユーザー指示)。
+                    どちらの画面も同じ横カルーセルなので、遊ぶ側にはタブの切り替えに見える */}
+                <div data-difficulty-tabs className="flex gap-1.5 w-full shrink-0 mb-1">
+                  {[[DIFFICULTY_TAB_NORMAL,'通常'],[DIFFICULTY_TAB_EXTREME,'極限']].map(([tabId,tabLabel])=>{
+                    const on=tabId===DIFFICULTY_TAB_EXTREME;
+                    return <button key={tabId} aria-pressed={on} onClick={()=>{
+                      if(on)return;
+                      battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';
+                      setBattleMode(BATTLE_MODE_CHALLENGE);
+                      setGameState('BATTLE_DIFFICULTY_SELECT');
+                    }} className={`flex-1 min-h-[38px] rounded-2xl font-black text-[12px] border-2 active:scale-95 ${on?'bg-fuchsia-700 border-fuchsia-300 text-white':'bg-slate-900 border-slate-700 text-slate-400'}`}>{tabLabel}<span className="ml-1 text-[9px] opacity-75">{on?difficulties.length:Object.keys(DIFFICULTY_SETTINGS).length}</span></button>;
+                  })}
+                </div>
                 <div className="text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0">左右にスワイプして難易度を選択</div>
                 <div className="relative shrink-0">
                   <button aria-label="前の難易度" disabled={selectedIndex===0} onClick={()=>selectDifficultyIndex(selectedIndex-1)} className="absolute left-0 top-[42%] z-20 w-9 h-12 rounded-r-xl bg-black/70 disabled:opacity-20"><ChevronLeft/></button>
@@ -11934,7 +12364,22 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {gameState==='BATTLE_DIFFICULTY_SELECT'&&(()=>{
           const species=battleMode===BATTLE_MODE_SPECIES_CHALLENGE,quick=isQuickMode(battleMode);
           const speciesSetting=id=>DIFFICULTY_SETTINGS[id]||EXTREME_DIFFICULTIES.find(setting=>setting.id===id)||EXTREME_SETTING;
-          const difficulties=species?SPECIES_CHALLENGE_DIFFICULTY_IDS.map(id=>[id,speciesSetting(id)]):Object.entries(quick?QUICK_DIFFICULTY_SETTINGS:DIFFICULTY_SETTINGS);
+          const allDifficulties=species?SPECIES_CHALLENGE_DIFFICULTY_IDS.map(id=>[id,speciesSetting(id)]):Object.entries(quick?QUICK_DIFFICULTY_SETTINGS:DIFFICULTY_SETTINGS);
+          // 難易度は「通常 / 極限」のタブで分ける(2026-09-19 ユーザー指示)。
+          // クイックは15段階、種族チャレンジは14段階あり、一続きに並べると探しにくい。
+          // 極限を持たないモード(プロなど)では extreme が空になり、タブ自体を出さない
+          const difficultyGroups=splitDifficultyEntries(allDifficulties);
+          // チャレンジの極限は、極限チャレンジの7段階をそのまま「極限」タブとして見せる
+          // (2026-09-19 ユーザー指示「極限チャレンジの難易度を通常のチャレンジに入れ込みたい」)。
+          // ★カードの作りが通常とまったく違う(専用テーマ・ルール詳細・勇者の証・別の記録)ので、
+          //   カードを移植せず、タブを押したら専用画面へ移る。見た目は同じ横カルーセルなので、
+          //   遊ぶ側にはタブが切り替わったように見える
+          // ★pro / mode はこの下で定義しているので、ここでは使わない。
+          //   先に参照すると初期化前アクセスになり、難易度選択がまるごとエラー画面に落ちる(実際に落ちた)
+          const challengeExtremeTab=!species&&!quick&&!isProMode(battleMode);
+          const hasExtremeTab=difficultyGroups.extreme.length>0||challengeExtremeTab;
+          const activeDifficultyTab=hasExtremeTab&&!challengeExtremeTab?difficultySelectTab:DIFFICULTY_TAB_NORMAL;
+          const difficulties=activeDifficultyTab===DIFFICULTY_TAB_EXTREME?difficultyGroups.extreme:difficultyGroups.normal;
           const selectedDifficulty=species?(speciesChallengeSelection.difficultyId||difficulties[0]?.[0]):safeDifficulty;
           const selectedIndex=Math.max(0,difficulties.findIndex(([key])=>key===selectedDifficulty));
           const chooseDifficulty=id=>species?setSpeciesChallengeSelection(current=>({...current,difficultyId:id,heroId:'',allyIds:[],run:null})):setDifficulty(id);
@@ -11969,6 +12414,33 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   </div>
                   <p className="mt-1 text-center text-[8px] font-black text-slate-400">同じ難易度をチャレンジ・プロ・極限のどれかでクリアすると解放</p>
                 </fieldset>}
+                {/* 難易度の「通常 / 極限」タブ。クイックは15段階、種族チャレンジは14段階あり、
+                    一続きに並べると目当ての難易度まで遠い(2026-09-19 ユーザー指示)。
+                    極限を持たないモードでは出さないので、これまでどおり1つの並びに見える */}
+                {hasExtremeTab&&<div data-difficulty-tabs className="flex gap-1.5 w-full shrink-0 mb-1">
+                  {[[DIFFICULTY_TAB_NORMAL,'通常'],[DIFFICULTY_TAB_EXTREME,'極限']].map(([tabId,tabLabel])=>{
+                    const on=activeDifficultyTab===tabId;
+                    const toExtreme=tabId===DIFFICULTY_TAB_EXTREME;
+                    const group=toExtreme?difficultyGroups.extreme:difficultyGroups.normal;
+                    // チャレンジの極限は専用画面へ移る。解放前は押せないが、タブ自体は出す
+                    // (何があるのか分かるようにするため。モードのカードもそうしていた)
+                    const jumps=challengeExtremeTab&&toExtreme;
+                    const locked=jumps&&!extremeUnlocked&&!debugBattle;
+                    const count=jumps?PUBLIC_EXTREME_DIFFICULTIES.length:group.length;
+                    return <button key={tabId} aria-pressed={on} disabled={locked} onClick={()=>{
+                      if(jumps){
+                        battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';
+                        setGameState('EXTREME_DIFFICULTY_SELECT');
+                        return;
+                      }
+                      if(on)return;
+                      setDifficultySelectTab(tabId);
+                      // 切り替えた先の先頭を選ぶ。選びっぱなしにすると、見えていない難易度のまま
+                      // 「この難易度で挑戦」を押せてしまう
+                      if(group[0])chooseDifficulty(group[0][0]);
+                    }} className={`flex-1 min-h-[38px] rounded-2xl font-black text-[12px] border-2 active:scale-95 disabled:opacity-40 ${on?(toExtreme?'bg-fuchsia-700 border-fuchsia-300 text-white':'bg-indigo-600 border-indigo-300 text-white'):'bg-slate-900 border-slate-700 text-slate-400'}`}>{tabLabel}<span className="ml-1 text-[9px] opacity-75">{locked?'🔒':count}</span></button>;
+                  })}
+                </div>}
                 <div className={`relative shrink-0${battleTutorialSpotClass('difficulty')}`}>
                   <button aria-label="前の難易度" disabled={selectedIndex===0} onClick={()=>selectDifficultyIndex(selectedIndex-1)} className="absolute left-0 top-[42%] z-20 w-9 h-12 rounded-r-xl bg-black/70 disabled:opacity-20"><ChevronLeft/></button>
                   <div ref={modeDifficultyCarouselRef} onScroll={e=>{const root=e.currentTarget,c=root.scrollLeft+root.clientWidth/2;let best=0,d=Infinity;[...root.children].forEach((card,i)=>{const n=Math.abs(card.offsetLeft+card.offsetWidth/2-c);if(n<d){d=n;best=i;}});if(difficulties[best]?.[0]!==selectedDifficulty)chooseDifficulty(difficulties[best][0]);}} className="flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll" style={{paddingLeft:'11%',paddingRight:'11%',touchAction:'pan-x pinch-zoom'}} data-difficulty-carousel>
@@ -14365,6 +14837,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             setShowQuitConfirm={setShowQuitConfirm} setShowSoulBattleEffects={setShowSoulBattleEffects}
             setSkillPicker={setSkillPicker} setSlotSettle={setSlotSettle} slotMaxUses={slotMaxUses}
             slotSettle={slotSettle} slotSkill={slotSkill} slotUniqueChoice={slotUniqueChoice} slots={slots}
+            tacticsUnits={isTacticsMode(runMode)?tacticsUnits:null} tacticsCanAssign={tacticsCanAssign}
             soulBattleParty={soulBattleParty} soulCoordinationCardBonus={soulCoordinationCardBonus}
             suppressCardClickRef={suppressCardClickRef} teachingFx={teachingFx} totalTurnCount={totalTurnCount}
             turnCount={turnCount} ultimateDistanceBreakLevels={ultimateDistanceBreakLevels}
@@ -14519,7 +14992,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           runMode={runMode} setCurrentPickingMon={setCurrentPickingMon} setMainHero={setMainHero}
           setProAllyDetail={setProAllyDetail} setProAllyPool={setProAllyPool}
           setProEditingAllyIndex={setProEditingAllyIndex} setProHeroPreset={setProHeroPreset}
-          setSlots={setSlots}
+          setSlots={applySlots}
         />
       )}
 
@@ -15070,7 +15543,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           atk={atk} battleTutorialSpotClass={battleTutorialSpotClass} def={def} difficulty={difficulty}
           effect={effect} extremeDifficulty={extremeDifficulty} extremeRun={extremeRun} guts={guts}
           handleTraining={handleTraining} maxGuts={maxGuts} maxHp={maxHp} runMode={runMode}
-          setTrainingPicks={setTrainingPicks} trainingPicks={trainingPicks} waveResult={waveResult}
+          setTrainingPicks={setTrainingPicks} slots={slots}
+          tacticsUnits={isTacticsMode(runMode)?tacticsUnits:null}
+          trainingPicks={trainingPicks} waveResult={waveResult}
         />
       )}
 
@@ -15520,7 +15995,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
           </div>
         </div>
       )}
-      {(showEnemyInfo&&enemy||waveScanPreview)&&(()=>{const scanEnemy=waveScanPreview?.enemy||enemy;const scanDist=waveScanPreview?2:enemyDist;const scanBeforeBattle=!!waveScanPreview;const scanState=scanBeforeBattle?{unannounced:true}:enemyActionStateFrom(enemyLastIntent);const actions=enemyActionProbabilities(scanEnemy,scanDist,scanState);return (<div className="fixed inset-0 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'#020617',zIndex:waveScanPreview?71000:40000,paddingTop:'env(safe-area-inset-top)',paddingBottom:'env(safe-area-inset-bottom)'}} role="dialog" aria-modal="true" aria-label="敵行動詳細"><header className="flex justify-between items-center px-5 py-3 border-b border-white/10 shrink-0 bg-slate-950/95 z-10"><div><h3 className="font-black italic uppercase text-red-500 text-lg">Enemy Scan</h3>{waveScanPreview&&<small className="text-indigo-300 font-black">WAVE {waveScanPreview.wave}・戦闘開始前</small>}</div><button onClick={()=>{if(waveScanPreview)setWaveScanPreview(null);else setShowEnemyInfo(false);}} className="min-h-[44px] px-6 bg-white/10 rounded-full text-[11px] text-white active:scale-90">戻る</button></header><div className="flex-1 min-h-0 overflow-y-auto mh-scroll"><div className="w-full max-w-md mx-auto flex flex-col items-center text-center px-4 pb-8">{scanEnemy.imgUrl?(<div className={`${scanEnemy.id==='Moo'?'w-[min(92vw,380px)] h-[clamp(250px,38vh,310px)]':'w-[140px] h-[160px]'} flex shrink-0 items-center justify-center overflow-hidden`}><img src={scanEnemy.imgUrl} alt={scanEnemy.name} style={enemyArtStyle(scanEnemy.id,'scan')} className={`${scanEnemy.id==='Moo'?'w-[140px] h-[140px]':'w-[140px] h-[140px]'} object-contain drop-shadow-[0_0_50px_rgba(239,68,68,0.4)]`}/></div>):(<div style={{fontSize:'112px'}} className="my-4">{scanEnemy.emoji}</div>)}<h4 className="text-2xl font-black italic mb-4 uppercase shrink-0">{scanEnemy.name}</h4><section className="w-full space-y-3"><div className="grid grid-cols-2 gap-4 text-left bg-slate-900/60 p-4 rounded-2xl border border-white/5"><div><div className="text-[9px] text-pink-400 font-black">ライフ</div><div className="text-xl font-mono font-black">{scanEnemy.hp.toLocaleString()}</div></div><div><div className="text-[9px] text-red-400 font-black">攻撃力</div><div className="text-xl font-mono font-black">{scanEnemy.atk.toLocaleString()}</div></div></div><div className="text-left bg-slate-900/60 p-4 rounded-2xl border border-cyan-500/20"><div className="text-[9px] text-cyan-400 font-black">{scanBeforeBattle?'戦闘状況':'現在の間合い'}</div><b>{scanBeforeBattle?'戦闘開始前':`${RANGE_LABELS[scanDist]}距離`}</b></div><div className="space-y-2 text-left">{actions.map((action,index)=>{const actionName=action.type==='MOVE'?'間合い移動':enemyActionLabel(scanEnemy,action.type);const power=Math.floor(scanEnemy.atk*action.multiplier);return <details key={action.id} open={index<2} className={`rounded-2xl border p-3 ${action.available?'bg-slate-900/80 border-white/10':'bg-slate-950 border-red-500/30'}`}><summary className="cursor-pointer list-none flex items-center justify-between gap-2"><span><b className="block">{actionName}</b><small className="text-slate-400">{action.category}</small></span><span className="text-right"><b className="text-amber-300">{(action.probability*100).toFixed(action.probability*100%1?1:0)}%</b>{!scanBeforeBattle&&enemyIntent?.actionId===action.id&&<small className="block text-cyan-300">予告中</small>}</span></summary><div className="grid grid-cols-2 gap-x-3 gap-y-2 mt-3 pt-3 border-t border-white/10 text-[10px]"><span>威力倍率 <b>×{action.multiplier}</b></span><span>基準威力 <b>{power.toLocaleString()}</b></span><span>攻撃回数 <b>{action.hits}回</b></span><span>使用間合い <b>{action.range}</b></span><span className="col-span-2">発動条件 <b>{action.condition}</b></span><span className="col-span-2">移動効果 <b>{action.type==='MOVE'?`${RANGE_LABELS.filter((_,i)=>i!==scanDist).join('・')}距離のいずれかへ移動`:'なし'}</b></span><span className="col-span-2">バフ・デバフ・状態異常 <b>なし</b></span><span>クールダウン <b>{action.cooldown?`${action.cooldown}ターン`:'なし'}</b></span><span>回数制限 <b>{action.useLimit??'なし'}</b></span></div>{!action.available&&<div className="mt-2 text-[10px] text-red-300">現在は使用不可：{action.unavailableReason}</div>}</details>})}</div><aside className="text-left text-[10px] leading-relaxed text-slate-400 bg-black/30 rounded-xl p-3"><b className="block text-slate-200 mb-1">行動ルール</b>使用可能な行動の重みを合計100%に正規化して抽選します。移動が選ばれた場合は、現在以外の3間合いから同率で移動先を選びます。必殺技は「ためる」の次のターンに必ず発動し、ほかの行動では上書きされません。移動は必ず前のターンに吹き出しで予告してから行うため、戦闘開始の1ターン目と、移動した次のターンには選ばれません。SCAN表示では抽選しません。</aside></section></div></div></div>);})()}
+      {(showEnemyInfo&&enemy||waveScanPreview)&&(()=>{const scanEnemy=waveScanPreview?.enemy||enemy;const scanDist=waveScanPreview?2:enemyDist;const scanBeforeBattle=!!waveScanPreview;const scanState={...(scanBeforeBattle?{unannounced:true}:enemyActionStateFrom(enemyLastIntent)),definitions:enemyActionDefinitionsFor(runMode,scanEnemy?.id),roarStacks:tacticsRoarStacksRef.current};const actions=enemyActionProbabilities(scanEnemy,scanDist,scanState);return (<div className="fixed inset-0 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'#020617',zIndex:waveScanPreview?71000:40000,paddingTop:'env(safe-area-inset-top)',paddingBottom:'env(safe-area-inset-bottom)'}} role="dialog" aria-modal="true" aria-label="敵行動詳細"><header className="flex justify-between items-center px-5 py-3 border-b border-white/10 shrink-0 bg-slate-950/95 z-10"><div><h3 className="font-black italic uppercase text-red-500 text-lg">Enemy Scan</h3>{waveScanPreview&&<small className="text-indigo-300 font-black">WAVE {waveScanPreview.wave}・戦闘開始前</small>}</div><button onClick={()=>{if(waveScanPreview)setWaveScanPreview(null);else setShowEnemyInfo(false);}} className="min-h-[44px] px-6 bg-white/10 rounded-full text-[11px] text-white active:scale-90">戻る</button></header><div className="flex-1 min-h-0 overflow-y-auto mh-scroll"><div className="w-full max-w-md mx-auto flex flex-col items-center text-center px-4 pb-8">{scanEnemy.imgUrl?(<div className={`${scanEnemy.id==='Moo'?'w-[min(92vw,380px)] h-[clamp(250px,38vh,310px)]':'w-[140px] h-[160px]'} flex shrink-0 items-center justify-center overflow-hidden`}><img src={scanEnemy.imgUrl} alt={scanEnemy.name} style={enemyArtStyle(scanEnemy.id,'scan')} className={`${scanEnemy.id==='Moo'?'w-[140px] h-[140px]':'w-[140px] h-[140px]'} object-contain drop-shadow-[0_0_50px_rgba(239,68,68,0.4)]`}/></div>):(<div style={{fontSize:'112px'}} className="my-4">{scanEnemy.emoji}</div>)}<h4 className="text-2xl font-black italic mb-4 uppercase shrink-0">{scanEnemy.name}</h4><section className="w-full space-y-3"><div className="grid grid-cols-2 gap-4 text-left bg-slate-900/60 p-4 rounded-2xl border border-white/5"><div><div className="text-[9px] text-pink-400 font-black">ライフ</div><div className="text-xl font-mono font-black">{scanEnemy.hp.toLocaleString()}</div></div><div><div className="text-[9px] text-red-400 font-black">攻撃力</div><div className="text-xl font-mono font-black">{scanEnemy.atk.toLocaleString()}</div></div></div><div className="text-left bg-slate-900/60 p-4 rounded-2xl border border-cyan-500/20"><div className="text-[9px] text-cyan-400 font-black">{scanBeforeBattle?'戦闘状況':'現在の間合い'}</div><b>{scanBeforeBattle?'戦闘開始前':`${RANGE_LABELS[scanDist]}距離`}</b></div><div className="space-y-2 text-left">{actions.map((action,index)=>{const actionName=action.type==='MOVE'?'間合い移動':action.variant?action.category:enemyActionLabel(scanEnemy,action.type);const power=Math.floor(scanEnemy.atk*action.multiplier);return <details key={action.id} open={index<2} className={`rounded-2xl border p-3 ${action.available?'bg-slate-900/80 border-white/10':'bg-slate-950 border-red-500/30'}`}><summary className="cursor-pointer list-none flex items-center justify-between gap-2"><span><b className="block">{actionName}</b><small className="text-slate-400">{action.category}</small></span><span className="text-right"><b className="text-amber-300">{(action.probability*100).toFixed(action.probability*100%1?1:0)}%</b>{!scanBeforeBattle&&enemyIntent?.actionId===action.id&&<small className="block text-cyan-300">予告中</small>}</span></summary><div className="grid grid-cols-2 gap-x-3 gap-y-2 mt-3 pt-3 border-t border-white/10 text-[10px]"><span>威力倍率 <b>×{action.multiplier}</b></span><span>基準威力 <b>{power.toLocaleString()}</b></span><span>攻撃回数 <b>{action.hits}回</b></span><span>使用間合い <b>{action.range}</b></span><span className="col-span-2">発動条件 <b>{action.condition}</b></span><span className="col-span-2">移動効果 <b>{action.type==='MOVE'?`${RANGE_LABELS.filter((_,i)=>i!==scanDist).join('・')}距離のいずれかへ移動`:'なし'}</b></span><span className="col-span-2">バフ・デバフ・状態異常 <b>なし</b></span><span>クールダウン <b>{action.cooldown?`${action.cooldown}ターン`:'なし'}</b></span><span>回数制限 <b>{action.useLimit??'なし'}</b></span></div>{!action.available&&<div className="mt-2 text-[10px] text-red-300">現在は使用不可：{action.unavailableReason}</div>}</details>})}</div><aside className="text-left text-[10px] leading-relaxed text-slate-400 bg-black/30 rounded-xl p-3"><b className="block text-slate-200 mb-1">行動ルール</b>使用可能な行動の重みを合計100%に正規化して抽選します。移動が選ばれた場合は、現在以外の3間合いから同率で移動先を選びます。必殺技は「ためる」の次のターンに必ず発動し、ほかの行動では上書きされません。移動は必ず前のターンに吹き出しで予告してから行うため、戦闘開始の1ターン目と、移動した次のターンには選ばれません。SCAN表示では抽選しません。</aside></section></div></div></div>);})()}
       {showHeroInfo&&mainHero&&(<div className="fixed inset-0 p-6 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'#020617',zIndex:40000,paddingTop:'calc(1.5rem + env(safe-area-inset-top))'}}><div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4"><h3 className="font-black italic uppercase text-indigo-400 text-lg">Hero Scan</h3><button onClick={()=>setShowHeroInfo(false)} className="px-6 py-2 bg-white/10 rounded-full text-[11px] text-white active:scale-90">戻る</button></div><div className="flex-1 flex flex-col items-center justify-center text-center overflow-y-auto mh-scroll">{mainHero.imgUrl?(<DyedMonsterImage baseId={mainHero.id} src={mainHero.imgUrl} alt={mainHero.name} masuColors={mainHero.colors} style={{width:'140px',height:'140px'}} className="mx-auto mb-6 object-contain drop-shadow-[0_0_50px_rgba(99,102,241,0.4)]"/>):(<div style={{fontSize:'112px'}} className="mb-6 drop-shadow-[0_0_50px_rgba(99,102,241,0.4)]">{mainHero.emoji}</div>)}<h4 className="text-2xl font-black italic mb-6 uppercase">{mainHero.name}</h4><div className="w-full max-w-sm space-y-4 bg-slate-900/50 p-6 rounded-3xl border border-white/5"><div className="grid grid-cols-2 gap-6 text-left"><div><div className="text-[9px] text-pink-400 font-black uppercase">ライフ</div><div className="text-xl font-mono font-black">{hp.toLocaleString()} / {effectiveMaxHp.toLocaleString()}</div></div><div><div className="text-[9px] text-red-400 font-black uppercase">攻撃力</div><div className="text-xl font-mono font-black">{atk}</div></div><div><div className="text-[9px] text-emerald-400 font-black uppercase">丈夫さ</div><div className="text-xl font-mono font-black">{effectiveDef}{getPermaBuff('defPct')>0&&<span className="text-[10px] text-emerald-400 ml-1">(基礎{def} DEF +{Math.round(getPermaBuff('defPct')*100)}%)</span>}{getPermaBuff('dmgCutPct')>0&&<span className="text-[10px] text-emerald-400 ml-1">(被ダメ -{Math.round(getPermaBuff('dmgCutPct')*100)}%)</span>}</div></div><div><div className="text-[9px] text-amber-400 font-black uppercase">ガッツ</div><div className="text-xl font-mono font-black">{guts} / {effectiveMaxGuts}</div></div></div><div className="bg-black/40 p-3 rounded-xl border border-indigo-500/30 text-left"><div className="text-[9px] text-indigo-400 uppercase font-black">勇者特性</div><div className="text-[11px] text-white font-bold leading-relaxed mt-1">{mainHero.traitDesc}</div></div><div className="text-left"><AssistantBubble scene="battleHelp" compact/></div></div></div></div>)}
 
       {showSoulBattleEffects&&gameState==='BATTLE'&&(
