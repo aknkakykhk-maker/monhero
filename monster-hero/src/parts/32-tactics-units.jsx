@@ -310,6 +310,63 @@ const selfDamageTacticsBoard = (units, damage) => {
   return list;
 };
 
+// ===== 「その子だけ」へ効かせる =====
+//
+// ★カードは使う子を選ぶので、効果もその子に乗る(設計 §4.4)。
+//   盤面全体へ配る healTacticsBoard とは使い分ける
+//   (自動再生・吸収のように「パーティ全体に起きること」だけが配るほう)。
+
+const healTacticsAt = (units, slotIndex, amount) => {
+  const list = (Array.isArray(units) ? units : []).slice();
+  if (!canTacticsSlotAct(list, slotIndex)) return list;
+  list[slotIndex] = healTacticsUnit(list[slotIndex], amount);
+  return list;
+};
+const recoverTacticsGutsAt = (units, slotIndex, amount) => {
+  const list = (Array.isArray(units) ? units : []).slice();
+  if (!canTacticsSlotAct(list, slotIndex)) return list;
+  list[slotIndex] = recoverTacticsGuts(list[slotIndex], amount);
+  return list;
+};
+// 使う子の自傷。★これで倒れることはない(最低1を残す)
+const selfDamageTacticsAt = (units, slotIndex, amount) => {
+  const list = (Array.isArray(units) ? units : []).slice();
+  if (!canTacticsSlotAct(list, slotIndex)) return list;
+  const unit = normalizeTacticsUnit(list[slotIndex]);
+  const hurt = Math.min(Math.max(0, tacticsSafeInt(amount, 0)), Math.max(0, unit.hp - 1));
+  if (hurt <= 0) return list;
+  list[slotIndex] = applyTacticsDamage(list[slotIndex], hurt);
+  return list;
+};
+// 倒れた子を戻す(回復カード)。立っていれば何もしない
+const reviveTacticsAt = (units, slotIndex, rate = TACTICS_REVIVE_HP_RATE) => {
+  const list = (Array.isArray(units) ? units : []).slice();
+  const unit = list[slotIndex] ? normalizeTacticsUnit(list[slotIndex]) : null;
+  if (!unit || !unit.downed) return list;
+  list[slotIndex] = reviveTacticsUnit(unit, rate);
+  return list;
+};
+// 倒れた子へ回復カードを向けたとき、代わりに払う子。いちばんガッツが多い立っている子。
+// ★倒れた子自身のガッツで払う形にすると、ガッツを使い切って倒れた子が永久に戻せなくなる。
+//   立っている子が手を貸して起こす、という形にした
+const tacticsReviveHelper = (units, slotIndex, cost) => {
+  const list = Array.isArray(units) ? units : [];
+  if (!list[slotIndex] || !normalizeTacticsUnit(list[slotIndex]).downed) return null;
+  const need = Math.max(0, tacticsSafeInt(cost, 0));
+  const helpers = tacticsAliveSlots(list)
+    .filter(index => normalizeTacticsUnit(list[index]).guts >= need)
+    .sort((a, b) => normalizeTacticsUnit(list[b]).guts - normalizeTacticsUnit(list[a]).guts);
+  return helpers.length ? helpers[0] : null;
+};
+// そのカードを、そのスロットへ向けたときに実際に払う子。
+// ふだんは本人。倒れた子へ回復カードを向けたときだけ、手を貸す子が払う
+const tacticsPayerSlot = (units, slotIndex, cost, isHealCard = false) => {
+  const list = Array.isArray(units) ? units : [];
+  if (canTacticsSlotPay(list, slotIndex, cost)) return slotIndex;
+  if (isHealCard) return tacticsReviveHelper(list, slotIndex, cost);
+  return null;
+};
+
 // トレーニングで伸びたライフ上限を盤面へ配る。
 // ★段階6で「1体ずつ選ぶ」形にする。それまでは素の上限に比例して配る(合算していた頃と同じ配分)。
 // ★いまのライフは増やさない(トレーニングは上限を上げるだけ、という既存の挙動に合わせる)。

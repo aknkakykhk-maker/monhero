@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a28a73d65812f25d
+// source-sha256: 7c0c266479740816
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a8f0b16492a9397e
+// generated-sha256: 527c222e3abe3a6f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -161,7 +161,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-19 17:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-19 17:49"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -26398,6 +26398,61 @@ const selfDamageTacticsBoard = (units, damage) => {
   return list;
 };
 
+// ===== 「その子だけ」へ効かせる =====
+//
+// ★カードは使う子を選ぶので、効果もその子に乗る(設計 §4.4)。
+//   盤面全体へ配る healTacticsBoard とは使い分ける
+//   (自動再生・吸収のように「パーティ全体に起きること」だけが配るほう)。
+
+const healTacticsAt = (units, slotIndex, amount) => {
+  const list = (Array.isArray(units) ? units : []).slice();
+  if (!canTacticsSlotAct(list, slotIndex)) return list;
+  list[slotIndex] = healTacticsUnit(list[slotIndex], amount);
+  return list;
+};
+const recoverTacticsGutsAt = (units, slotIndex, amount) => {
+  const list = (Array.isArray(units) ? units : []).slice();
+  if (!canTacticsSlotAct(list, slotIndex)) return list;
+  list[slotIndex] = recoverTacticsGuts(list[slotIndex], amount);
+  return list;
+};
+// 使う子の自傷。★これで倒れることはない(最低1を残す)
+const selfDamageTacticsAt = (units, slotIndex, amount) => {
+  const list = (Array.isArray(units) ? units : []).slice();
+  if (!canTacticsSlotAct(list, slotIndex)) return list;
+  const unit = normalizeTacticsUnit(list[slotIndex]);
+  const hurt = Math.min(Math.max(0, tacticsSafeInt(amount, 0)), Math.max(0, unit.hp - 1));
+  if (hurt <= 0) return list;
+  list[slotIndex] = applyTacticsDamage(list[slotIndex], hurt);
+  return list;
+};
+// 倒れた子を戻す(回復カード)。立っていれば何もしない
+const reviveTacticsAt = (units, slotIndex, rate = TACTICS_REVIVE_HP_RATE) => {
+  const list = (Array.isArray(units) ? units : []).slice();
+  const unit = list[slotIndex] ? normalizeTacticsUnit(list[slotIndex]) : null;
+  if (!unit || !unit.downed) return list;
+  list[slotIndex] = reviveTacticsUnit(unit, rate);
+  return list;
+};
+// 倒れた子へ回復カードを向けたとき、代わりに払う子。いちばんガッツが多い立っている子。
+// ★倒れた子自身のガッツで払う形にすると、ガッツを使い切って倒れた子が永久に戻せなくなる。
+//   立っている子が手を貸して起こす、という形にした
+const tacticsReviveHelper = (units, slotIndex, cost) => {
+  const list = Array.isArray(units) ? units : [];
+  if (!list[slotIndex] || !normalizeTacticsUnit(list[slotIndex]).downed) return null;
+  const need = Math.max(0, tacticsSafeInt(cost, 0));
+  const helpers = tacticsAliveSlots(list).filter(index => normalizeTacticsUnit(list[index]).guts >= need).sort((a, b) => normalizeTacticsUnit(list[b]).guts - normalizeTacticsUnit(list[a]).guts);
+  return helpers.length ? helpers[0] : null;
+};
+// そのカードを、そのスロットへ向けたときに実際に払う子。
+// ふだんは本人。倒れた子へ回復カードを向けたときだけ、手を貸す子が払う
+const tacticsPayerSlot = (units, slotIndex, cost, isHealCard = false) => {
+  const list = Array.isArray(units) ? units : [];
+  if (canTacticsSlotPay(list, slotIndex, cost)) return slotIndex;
+  if (isHealCard) return tacticsReviveHelper(list, slotIndex, cost);
+  return null;
+};
+
 // トレーニングで伸びたライフ上限を盤面へ配る。
 // ★段階6で「1体ずつ選ぶ」形にする。それまでは素の上限に比例して配る(合算していた頃と同じ配分)。
 // ★いまのライフは増やさない(トレーニングは上限を上げるだけ、という既存の挙動に合わせる)。
@@ -41182,6 +41237,18 @@ function MonsterHeroGame() {
   const gainGuts = amount => {
     if (tacticsGutsRecover(amount) === null) setGuts(p => Math.min(liveEffectiveMaxGuts(), p + amount));
   };
+  // カードの効果で増えるガッツは「使った子」へ。新モード以外は今までどおり全体へ
+  const gainGutsAt = (slotIdx, amount) => {
+    if (!isTacticsMode(runMode)) {
+      gainGuts(amount);
+      return;
+    }
+    commitTacticsUnits(recoverTacticsGutsAt(tacticsUnitsRef.current, slotIdx, amount));
+  };
+  // 新モードで、そのカードを実際に払う子。ふだんは本人。
+  // ★倒れた子へ回復カードを向けたときだけ、立っている子のうちガッツが多い子が手を貸して払う
+  //   (倒れた子自身のガッツで払う形にすると、使い切って倒れた子が永久に戻せなくなる)
+  const tacticsCardPayer = (slotIdx, card, cost) => isTacticsMode(runMode) ? tacticsPayerSlot(tacticsUnitsRef.current, slotIdx, cost, card?.type === 'heal') : null;
   // WAVEクリアなどの全回復。★倒れた子はここでは戻らない
   const tacticsFullHeal = () => isTacticsMode(runMode) ? commitTacticsUnits(fullHealTacticsBoard(tacticsUnitsRef.current)) : null;
   // 20ターン経過。全員を倒して、敗北の見え方をそろえる
@@ -51498,15 +51565,23 @@ function MonsterHeroGame() {
     Object.entries(cardAssignments).forEach(([key, slotIdx]) => {
       const handIndex = Number(key);
       if (handIndex === excludeHandIndex) return;
-      spent[slotIdx] = (spent[slotIdx] || 0) + getCardGuts(hand[handIndex], slotIdx);
-      if (isAttackCard(hand[handIndex])) attacks[slotIdx] = (attacks[slotIdx] || 0) + 1;
+      const assigned = hand[handIndex];
+      const cost = getCardGuts(assigned, slotIdx);
+      // 消費は「実際に払う子」へ数える(倒れた子への回復カードは手を貸す子が払う)
+      const payer = tacticsPayerSlot(tacticsUnitsRef.current, slotIdx, cost, assigned?.type === 'heal');
+      if (payer !== null) spent[payer] = (spent[payer] || 0) + cost;
+      if (isAttackCard(assigned)) attacks[slotIdx] = (attacks[slotIdx] || 0) + 1;
     });
     const usable = [];
     slots.forEach((mon, slotIdx) => {
       if (!mon) return;
       if (card.type === 'unique' && card.ownerSlotIdx !== slotIdx) return;
       if (isAttackCard(card) && (attacks[slotIdx] || 0) >= slotMaxUses(mon, slotIdx)) return;
-      if (!canTacticsSlotPay(tacticsUnitsRef.current, slotIdx, (spent[slotIdx] || 0) + getCardGuts(card, slotIdx))) return;
+      const cost = getCardGuts(card, slotIdx);
+      // 回復カードは倒れた子へも向けられる。そのときは手を貸す子が払う
+      const payer = tacticsPayerSlot(tacticsUnitsRef.current, slotIdx, cost, card.type === 'heal');
+      if (payer === null) return;
+      if (!canTacticsSlotPay(tacticsUnitsRef.current, payer, (spent[payer] || 0) + cost)) return;
       usable.push(slotIdx);
     });
     return usable;
@@ -52145,6 +52220,67 @@ function MonsterHeroGame() {
         } else if (isEvasion) {
           addPopup("回避！", 'hero', 'text-blue-400 font-black text-xl drop-shadow-lg');
           await battleWait(1000);
+        } else if (isTacticsMode(runMode)) {
+          // ===== 新モードの受け方 =====
+          // ★ガードは「カードを使った子自身」を守る(2026-09-19 ユーザーが決めた形)。
+          //   狙われた子ごとに、その子が構えたぶんだけで受ける。
+          //   誰かが構えたガードが全員を守ってしまうと、狙いを読む意味が消える。
+          // ★全体攻撃は狙われた全員が、それぞれ自分のガードで受ける。
+          tookEnemyAttack = true;
+          const targets = tacticsIntentTargets(intent, tacticsUnitsRef.current, actingEnemyDist);
+          if (!targets.length) {
+            addPopup('当たらなかった！', 'hero', 'text-cyan-300 font-black text-xl drop-shadow-md');
+            await battleWait(700);
+          } else {
+            const rushHits = Math.max(1, Math.floor(Number(intent.hits) || 1));
+            const slotGuards = immediateEffects.guardBySlot || {};
+            let units = tacticsUnitsRef.current,
+              dealt = 0,
+              saved = 0,
+              guardedCount = 0,
+              gutsBack = 0;
+            targets.forEach(slotIdx => {
+              const own = slotGuards[slotIdx] || {
+                flat: 0,
+                mult: 0
+              };
+              const base = own.flat > 0 || own.mult > 0 ? Math.floor(own.flat + effectiveDef * own.mult) : 0;
+              // 貫通撃はガードが効かない。連撃は手数ぶんガードが効く(既存モードと同じ決まり)
+              const slotGuard = intent.variant === 'pierce' ? 0 : intent.variant === 'rush' ? base * rushHits : base;
+              const diff = slotGuard - incomingBeforeTurnReduction;
+              if (diff < 0) {
+                const fd = applyTurnDamageReduction(Math.abs(diff));
+                units = damageTacticsTargets(units, [slotIdx], fd);
+                dealt += fd;
+                if (slotGuard > 0) guardedCount++;
+              } else {
+                guardedCount++;
+                saved += diff;
+                const gain = Math.floor(diff * 0.1);
+                gutsBack += gain;
+                units = recoverTacticsGutsAt(healTacticsAt(units, slotIdx, diff), slotIdx, gain);
+              }
+            });
+            if (guardedCount > 0) {
+              setGuardFx(true);
+              Audio_.se.guard();
+              triggerShake();
+              await battleWait(450);
+              setGuardFx(false);
+            }
+            currentHp = commitTacticsUnits(units);
+            if (dealt > 0) {
+              addPopup(`-${dealt}`, 'hero', 'text-pink-600 text-4xl font-black drop-shadow-lg animate-bounce');
+              triggerShake();
+            }
+            if (saved > 0) {
+              addPopup('🛡 ガード成功', 'hero', 'text-emerald-400 text-2xl font-black drop-shadow-md');
+              addPopup(`💚 ライフ +${saved}`, 'life', 'text-emerald-400 text-2xl font-black drop-shadow-md');
+            }
+            if (gutsBack > 0) addPopup(`⚡ ガッツ +${gutsBack}`, 'guts', 'text-amber-400 text-xl font-bold drop-shadow-md');
+            if (dealt <= 0 && saved <= 0) addPopup('無傷！', 'hero', 'text-emerald-300 font-black text-xl drop-shadow-md');
+            await battleWait(1000);
+          }
         } else if (guardValue > 0) {
           // ガードは最終ダメージが0でも(余剰でライフ・ガッツが増えても)「受け止めた」扱いにする
           tookEnemyAttack = true;
@@ -52157,24 +52293,15 @@ function MonsterHeroGame() {
           setGuardFx(false);
           if (diff < 0) {
             const fd = applyTurnDamageReduction(Math.abs(diff));
-            const pierced = tacticsDamage(fd, intent, actingEnemyDist);
-            const piercedDealt = pierced !== null ? Math.max(0, currentHp - pierced) : fd;
-            if (pierced !== null) currentHp = pierced;else {
-              const remainingHp = calculateRemainingHp(currentHp, fd);
-              currentHp = remainingHp;
-              setHp(remainingHp);
-            }
-            // 新モードは「誰にも当たらない」ことがある(薙ぎ払いの間合いに誰も立っていない)。
-            // ★実際に減っていないのにダメージの数字を出すと、何が起きたのか読めなくなる
-            if (pierced !== null && piercedDealt <= 0) addPopup('当たらなかった！', 'hero', 'text-cyan-300 font-black text-xl drop-shadow-md');else addPopup(`貫通! -${piercedDealt}`, 'hero', 'text-pink-600 text-3xl font-black drop-shadow-lg');
+            const remainingHp = calculateRemainingHp(currentHp, fd);
+            currentHp = remainingHp;
+            addPopup(`貫通! -${fd}`, 'hero', 'text-pink-600 text-3xl font-black drop-shadow-lg');
+            setHp(remainingHp);
             await battleWait(1000);
           } else {
             const gGain = Math.floor(diff * 0.1);
-            const guarded = tacticsHeal(diff);
-            if (guarded !== null) currentHp = guarded;else {
-              currentHp = Math.min(liveEffectiveMaxHp(), currentHp + diff);
-              setHp(currentHp);
-            }
+            currentHp = Math.min(liveEffectiveMaxHp(), currentHp + diff);
+            setHp(currentHp);
             addPopup(`🛡 ガード成功`, 'hero', 'text-emerald-400 text-2xl font-black drop-shadow-md');
             addPopup(`💚 ライフ +${diff}`, 'life', 'text-emerald-400 text-2xl font-black drop-shadow-md');
             addPopup(`⚡ ガッツ +${gGain}`, 'guts', 'text-amber-400 text-xl font-bold drop-shadow-md');
@@ -52183,19 +52310,11 @@ function MonsterHeroGame() {
           }
         } else {
           tookEnemyAttack = true;
-          const struck = tacticsDamage(incomingDmg, intent, actingEnemyDist);
-          // 新モードは当たった子ぶんの合計を出す(全体攻撃なら人数ぶん)。
-          // 誰にも当たらなかったターンはダメージの数字を出さない
-          const dealt = struck !== null ? Math.max(0, currentHp - struck) : incomingDmg;
-          if (struck !== null && dealt <= 0) addPopup('当たらなかった！', 'hero', 'text-cyan-300 font-black text-xl drop-shadow-md');else {
-            addPopup(`-${dealt}`, 'hero', 'text-pink-600 text-4xl font-black drop-shadow-lg animate-bounce');
-            triggerShake();
-          }
-          if (struck !== null) currentHp = struck;else {
-            const remainingHp = calculateRemainingHp(currentHp, incomingDmg);
-            currentHp = remainingHp;
-            setHp(remainingHp);
-          }
+          addPopup(`-${incomingDmg}`, 'hero', 'text-pink-600 text-4xl font-black drop-shadow-lg animate-bounce');
+          triggerShake();
+          const remainingHp = calculateRemainingHp(currentHp, incomingDmg);
+          currentHp = remainingHp;
+          setHp(remainingHp);
           await battleWait(1000);
         }
         if (tookEnemyAttack) await consumePoltzCharge();
@@ -52332,11 +52451,14 @@ function MonsterHeroGame() {
     // ★ここを通さないと、オートが払えない組み合わせを選んだときに
     //   ガッツを払わずカードだけ切れてしまう
     if (isTacticsMode(runMode)) {
-      const spentBySlot = {};
+      const spentByPayer = {};
       const payable = usedCardEntries.every(entry => {
         const idx = entry.slotIdx != null ? entry.slotIdx : defaultSlot;
-        spentBySlot[idx] = (spentBySlot[idx] || 0) + getCardGuts(entry.card, idx);
-        return canTacticsSlotPay(tacticsUnitsRef.current, idx, spentBySlot[idx]);
+        const cost = getCardGuts(entry.card, idx);
+        const payer = tacticsPayerSlot(tacticsUnitsRef.current, idx, cost, entry.card?.type === 'heal');
+        if (payer === null) return false;
+        spentByPayer[payer] = (spentByPayer[payer] || 0) + cost;
+        return canTacticsSlotPay(tacticsUnitsRef.current, payer, spentByPayer[payer]);
       });
       if (!payable) return;
     }
@@ -52354,6 +52476,18 @@ function MonsterHeroGame() {
       immediateStun = false,
       currentTurnGuardFlat = 0,
       currentTurnGuardMult = 0;
+    // 新モードは「ガードはカードを使った子自身を守る」。誰が構えたかをスロットごとに持つ。
+    // 既存モードは今までどおり currentTurnGuardFlat / Mult の合計だけを見る
+    const guardBySlot = {};
+    const addGuardForSlot = (idx, flat, mult) => {
+      if (!Number.isInteger(idx)) return;
+      const entry = guardBySlot[idx] || (guardBySlot[idx] = {
+        flat: 0,
+        mult: 0
+      });
+      entry.flat += flat;
+      entry.mult += mult;
+    };
     let hpBeforeEnemyAttack = hp;
     let activatedIceLockThisTurn = false;
     let forcedMoveTarget = null; // 最後に使った距離撃の指定距離を、敵行動後にも最終距離として再適用する
@@ -52391,13 +52525,20 @@ function MonsterHeroGame() {
         guardTypeInTurn = 'guard';
         currentTurnGuardFlat += GUARD_EVOLUTION[guardLevel].flat * effMul;
         currentTurnGuardMult += GUARD_EVOLUTION[guardLevel].mult * effMul;
+        addGuardForSlot(slotIdx, GUARD_EVOLUTION[guardLevel].flat * effMul, GUARD_EVOLUTION[guardLevel].mult * effMul);
       } else if (card.type === 'weak_guard') {
         if (guardTypeInTurn !== 'guard') guardTypeInTurn = 'weak_guard';
         currentTurnGuardFlat += GUARD_EVOLUTION[guardLevel].flat * 0.5 * effMul;
         currentTurnGuardMult += GUARD_EVOLUTION[guardLevel].mult * 0.5 * effMul;
+        addGuardForSlot(slotIdx, GUARD_EVOLUTION[guardLevel].flat * 0.5 * effMul, GUARD_EVOLUTION[guardLevel].mult * 0.5 * effMul);
       }
-      // 払うのは「使う子」。新モード以外は今までどおりパーティのガッツから引く
-      if (tacticsPayGuts(slotIdx, getCardGuts(card, slotIdx)) === null) setGuts(p => Math.max(0, p - getCardGuts(card, slotIdx)));
+      // 払うのは「使う子」。倒れた子へ回復カードを向けたときだけ、手を貸す子が払う。
+      // 新モード以外は今までどおりパーティのガッツから引く
+      const cardCost = getCardGuts(card, slotIdx);
+      if (isTacticsMode(runMode)) {
+        const payer = tacticsCardPayer(slotIdx, card, cardCost);
+        if (payer !== null) tacticsPayGuts(payer, cardCost);
+      } else setGuts(p => Math.max(0, p - cardCost));
       // 消費と直後の回復を同じ描画へまとめず、カードを支払った値をゲージ・数値に先に出す。
       await battleWait(250);
       if (card.type === 'draw') continue;
@@ -52480,7 +52621,7 @@ function MonsterHeroGame() {
           const selfDmgAmt = Math.floor(hpBeforeEnemyAttack * myaruSelfDamageRate(card) * effMul);
           addPopup(`自傷-${selfDmgAmt}`, 'hero', 'text-red-600 text-2xl font-black');
           // 新モードは立っている子へ配る。★自傷では誰も倒れない(1体ずつ最低1を残す)
-          const selfHurt = isTacticsMode(runMode) ? commitTacticsUnits(selfDamageTacticsBoard(tacticsUnitsRef.current, selfDmgAmt)) : null;
+          const selfHurt = isTacticsMode(runMode) ? commitTacticsUnits(selfDamageTacticsAt(tacticsUnitsRef.current, slotIdx, selfDmgAmt)) : null;
           if (selfHurt !== null) hpBeforeEnemyAttack = selfHurt;else {
             hpBeforeEnemyAttack = Math.max(1, hpBeforeEnemyAttack - selfDmgAmt);
             setHp(hpBeforeEnemyAttack);
@@ -52523,9 +52664,10 @@ function MonsterHeroGame() {
           const healVal = Math.floor(liveEffectiveMaxHp() * 0.3 * effMul);
           totalHeal += healVal;
           const gutsVal = Math.floor(liveEffectiveMaxGuts() * 0.3 * effMul);
-          gainGuts(gutsVal);
+          gainGutsAt(slotIdx, gutsVal);
           currentTurnGuardFlat += GUARD_EVOLUTION[guardLevel].flat * effMul;
           currentTurnGuardMult += GUARD_EVOLUTION[guardLevel].mult * effMul;
+          addGuardForSlot(slotIdx, GUARD_EVOLUTION[guardLevel].flat * effMul, GUARD_EVOLUTION[guardLevel].mult * effMul);
           guardTypeInTurn = 'guard';
           addPopup(`⚡ ガッツ +${gutsVal}`, 'guts', 'text-amber-400 font-black text-2xl drop-shadow-md');
           if (level >= 1 && usedCards.length >= 2) {
@@ -52552,7 +52694,7 @@ function MonsterHeroGame() {
           addPermaBuff('muaGutsPct', gutsB * effMul);
           if (gutsRecRate > 0) {
             const gv = Math.floor(liveEffectiveMaxGuts() * gutsRecRate * effMul);
-            gainGuts(gv);
+            gainGutsAt(slotIdx, gv);
             addPopup(`⚡ ガッツ +${gv}`, 'guts', 'text-amber-400 font-black text-2xl drop-shadow-md');
           }
         } else {
@@ -52563,7 +52705,7 @@ function MonsterHeroGame() {
           addPermaBuff('muaGutsPct', 0.10 * effMul);
           if (level >= 1) {
             const gv = Math.floor(liveEffectiveMaxGuts() * (0.5 + level * 0.2) * effMul);
-            gainGuts(gv);
+            gainGutsAt(slotIdx, gv);
             addPopup(`⚡ ガッツ +${gv}`, 'guts', 'text-amber-400 font-black text-2xl drop-shadow-md');
           }
         }
@@ -52705,8 +52847,7 @@ function MonsterHeroGame() {
           } else if (card.monId === 'Oboro' || card.monId === 'Plant') {
             const hRec = Math.floor(finalD * 0.5);
             const gRec = Math.floor(finalD * 0.05);
-            const drained = tacticsHeal(hRec);
-            if (drained !== null) hpBeforeEnemyAttack = drained;else {
+            if (isTacticsMode(runMode)) hpBeforeEnemyAttack = commitTacticsUnits(healTacticsAt(tacticsUnitsRef.current, slotIdx, hRec));else {
               hpBeforeEnemyAttack = Math.min(liveEffectiveMaxHp(), hpBeforeEnemyAttack + hRec);
               setHp(hpBeforeEnemyAttack);
             }
@@ -52754,9 +52895,19 @@ function MonsterHeroGame() {
       }
       const cardHeal = totalHeal - totalHealBeforeCard;
       if (cardHeal > 0) {
-        addPopup(`💚 回復 +${cardHeal}`, 'life', 'text-emerald-400 text-4xl font-black drop-shadow-lg');
-        const cardHealed = tacticsHeal(cardHeal);
-        if (cardHealed !== null) hpBeforeEnemyAttack = cardHealed;else {
+        if (isTacticsMode(runMode)) {
+          // 回復カードは「使う子」に効く。倒れた子へ向けたときは、起こす(設計 §4.3)
+          const board = tacticsUnitsRef.current;
+          const downedTarget = board[slotIdx] && normalizeTacticsUnit(board[slotIdx]).downed;
+          if (downedTarget) {
+            addPopup(`${slots[slotIdx]?.masuName || slots[slotIdx]?.name || '仲間'}が起き上がった！`, 'hero', 'text-emerald-300 font-black text-2xl drop-shadow-md');
+            hpBeforeEnemyAttack = commitTacticsUnits(reviveTacticsAt(board, slotIdx));
+          } else {
+            addPopup(`💚 回復 +${cardHeal}`, 'life', 'text-emerald-400 text-4xl font-black drop-shadow-lg');
+            hpBeforeEnemyAttack = commitTacticsUnits(healTacticsAt(board, slotIdx, cardHeal));
+          }
+        } else {
+          addPopup(`💚 回復 +${cardHeal}`, 'life', 'text-emerald-400 text-4xl font-black drop-shadow-lg');
           hpBeforeEnemyAttack = Math.min(liveEffectiveMaxHp(), hpBeforeEnemyAttack + cardHeal);
           setHp(hpBeforeEnemyAttack);
         }
@@ -53014,6 +53165,7 @@ function MonsterHeroGame() {
       stun: immediateStun,
       guardFlat: currentTurnGuardFlat,
       guardMult: currentTurnGuardMult,
+      guardBySlot,
       distLocked: forcedMoveTarget != null,
       forcedMoveTarget,
       iceLockRefreshed: activatedIceLockThisTurn
