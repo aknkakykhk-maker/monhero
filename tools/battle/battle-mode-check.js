@@ -201,9 +201,15 @@ check('Pro付きのキーもランキングの難易度として通る',
 check('素の難易度へ戻せる',
   Object.keys(m.DIFFICULTY_SETTINGS).every(d => m.rankingDifficultyBase(`Pro${d}`) === d && m.rankingDifficultyBase(d) === d));
 check('知らない難易度は今までどおり弾く', (() => { try { m.normalizeRankingDifficulty('Pro'); return false; } catch { return true; } })());
-// チャレンジ9 + プロ9 + 極限の段階ぶん。重複が無いこと(同じ行を2モードで奪い合わない)を見る
+// チャレンジ9 + プロ9 + 新モード9 + 極限の段階ぶん。
+// 重複が無いこと(同じ行を2モードで奪い合わない)を見る
 check('難易度キーの一覧に重複が無い', new Set(m.RANKING_DIFFICULTY_KEYS).size === m.RANKING_DIFFICULTY_KEYS.length
-  && m.RANKING_DIFFICULTY_KEYS.length === Object.keys(m.DIFFICULTY_SETTINGS).length * 2 + m.ALL_EXTREME_DIFFICULTIES.length);
+  && m.RANKING_DIFFICULTY_KEYS.length === Object.keys(m.DIFFICULTY_SETTINGS).length * 3 + m.ALL_EXTREME_DIFFICULTIES.length);
+// 新モードのキーも、素の難易度へ戻せて、プロ・極限の行とは混ざらない
+check('新モードの難易度キーが独立している',
+  Object.keys(m.DIFFICULTY_SETTINGS).every(d => m.normalizeRankingDifficulty(`Tactics${d}`) === `Tactics${d}`
+    && m.rankingDifficultyBase(`Tactics${d}`) === d
+    && m.rankingDifficultyForMode('tactics', d) === `Tactics${d}`));
 // 既存のランキングデータは1行も書き換えない(移行・変換・削除をしない)
 check('既存のランキング行を書き換える処理を足していない',
   !/rankingDifficultyForMode\([^)]*\)\s*=>/.test(source) && !has('PATCH') && !has('DELETE FROM') && !has('migrateRanking'));
@@ -459,11 +465,11 @@ check('旧バトル画面はデバッグからだけ開ける',
   has('旧バトル画面を開く（見比べ用）')
     && (source.match(/setGameState\('BATTLE_MENU'\)/g) || []).length === 2,
   `BATTLE_MENUへ移る場所 ${(source.match(/setGameState\('BATTLE_MENU'\)/g) || []).length}か所(デバッグの見比べ用・旧チュートリアルの開始)`);
-// 種族チャレンジは一般公開前なので、公開フラグかデバッグのときだけ末尾へ並ぶ。
+// 種族チャレンジと新モードは、公開フラグかデバッグのときだけ末尾へ並ぶ。
 // 通常プレイのBATTLE MODEには出さないこと自体は species-challenge 系checkが見る
+const MODE_LIST_LINE = 'const modes=[...BATTLE_MODES,EXTREME_MODE,...((SPECIES_CHALLENGE_PUBLIC_RELEASE||debugBattle)?[SPECIES_CHALLENGE_MODE]:[]),...((TACTICS_MODE_PUBLIC_RELEASE||debugBattle)?[TACTICS_MODE]:[])];';
 check('モード選択は極限チャレンジを含む全モードを横スライドで並べる',
-  has('const modes=[...BATTLE_MODES,EXTREME_MODE,...((SPECIES_CHALLENGE_PUBLIC_RELEASE||debugBattle)?[SPECIES_CHALLENGE_MODE]:[])];')
-    && count('const modes=[...BATTLE_MODES,EXTREME_MODE,...((SPECIES_CHALLENGE_PUBLIC_RELEASE||debugBattle)?[SPECIES_CHALLENGE_MODE]:[])];') === 2
+  has(MODE_LIST_LINE) && count(MODE_LIST_LINE) === 2
     && has('aria-label="前のモード"') && has('aria-label="次のモード"')
     && has('snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2.5'),
   'モード一覧はモード選択と難易度選択の2か所とも同じ並べ方');

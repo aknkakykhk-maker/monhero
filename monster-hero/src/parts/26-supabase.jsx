@@ -14,9 +14,14 @@ const PRO_RANKING_PREFIX = 'Pro';
 // 極限チャレンジも同じやり方。難易度の並びが通常と別なので、極限の段階IDへ接頭辞を付ける
 // (例: ExtremeEXTREME)。チャレンジ・プロの行は読みも書きもしない
 const EXTREME_RANKING_PREFIX = 'Extreme';
+// 新モード(id: tactics)も同じやり方。通常の9段階を使うので、難易度キーの先頭へ Tactics を付ける
+// (例: TacticsHard)。Pro / Extreme とは先頭が違うので取り違えは起きない。
+// チャレンジ・プロ・極限の行は読みも書きもしない
+const TACTICS_RANKING_PREFIX = 'Tactics';
 const RANKING_DIFFICULTY_KEYS = Object.freeze([
   ...Object.keys(DIFFICULTY_SETTINGS),
   ...Object.keys(DIFFICULTY_SETTINGS).map(key => `${PRO_RANKING_PREFIX}${key}`),
+  ...Object.keys(DIFFICULTY_SETTINGS).map(key => `${TACTICS_RANKING_PREFIX}${key}`),
   // GOD以降も同じ表(ALL_EXTREME_DIFFICULTIES)から作る。難易度を足すたびにここへ1行書き足すと
   // 書き忘れでランキングだけ落ちるので、正本を1つにしておく
   ...ALL_EXTREME_DIFFICULTIES.map(setting => `${EXTREME_RANKING_PREFIX}${setting.id}`),
@@ -97,6 +102,7 @@ const rankingDifficultyForMode = (mode, diff, speciesId=null) => {
   if (typeof EXTREME_MODE !== 'undefined' && EXTREME_MODE && mode === EXTREME_MODE.id) {
     return `${EXTREME_RANKING_PREFIX}${normalizeExtremeDifficulty(diff)}`;
   }
+  if (isTacticsMode(mode)) return `${TACTICS_RANKING_PREFIX}${normalizeBattleDifficulty(diff)}`;
   return isProMode(mode) ? `${PRO_RANKING_PREFIX}${normalizeBattleDifficulty(diff)}` : normalizeBattleDifficulty(diff);
 };
 // ランキングの難易度キーから、表示に使う素の難易度へ戻す
@@ -105,6 +111,7 @@ const rankingDifficultyBase = (key) => {
   const species = parseSpeciesChallengeRankingDifficulty(text);
   if (species) return species.difficultyId;
   if (text.startsWith(EXTREME_RANKING_PREFIX)) return text.slice(EXTREME_RANKING_PREFIX.length);
+  if (text.startsWith(TACTICS_RANKING_PREFIX)) return text.slice(TACTICS_RANKING_PREFIX.length);
   return text.startsWith(PRO_RANKING_PREFIX) ? text.slice(PRO_RANKING_PREFIX.length) : text;
 };
 const normalizeRankingDifficulty = (value) => {
