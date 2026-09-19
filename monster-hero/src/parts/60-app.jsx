@@ -960,11 +960,6 @@ function MonsterHeroGame() {
     if (!isTacticsMode(runMode)) { gainGuts(amount); return; }
     commitTacticsUnits(recoverTacticsGutsAt(tacticsUnitsRef.current, slotIdx, amount));
   };
-  // 新モードで、そのカードを実際に払う子。ふだんは本人。
-  // ★倒れた子へ回復カードを向けたときだけ、立っている子のうちガッツが多い子が手を貸して払う
-  //   (倒れた子自身のガッツで払う形にすると、使い切って倒れた子が永久に戻せなくなる)
-  const tacticsCardPayer = (slotIdx, card, cost) => (isTacticsMode(runMode)
-    ? tacticsPayerSlot(tacticsUnitsRef.current, slotIdx, cost, card?.type === 'heal') : null);
   // 画面から「このカードをこの子へ置けるか」を聞くための入口。
   // ★新モード以外では null を返す。画面側は null のときだけ今までどおりの判定を使う
   const tacticsCanAssign = (card, cardIndex, slotIdx) => (isTacticsMode(runMode)
@@ -8344,10 +8339,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       const handIndex=Number(key);
       if(handIndex===excludeHandIndex) return;
       const assigned=hand[handIndex];
-      const cost=getCardGuts(assigned,slotIdx);
-      // 消費は「実際に払う子」へ数える(倒れた子への回復カードは手を貸す子が払う)
-      const payer=tacticsPayerSlot(tacticsUnitsRef.current,slotIdx,cost,assigned?.type==='heal');
-      if(payer!==null) spent[payer]=(spent[payer]||0)+cost;
+      spent[slotIdx]=(spent[slotIdx]||0)+getCardGuts(assigned,slotIdx);
       if(isAttackCard(assigned)) attacks[slotIdx]=(attacks[slotIdx]||0)+1;
     });
     const usable=[];
@@ -8355,11 +8347,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       if(!mon) return;
       if(card.type==='unique'&&card.ownerSlotIdx!==slotIdx) return;
       if(isAttackCard(card)&&(attacks[slotIdx]||0)>=slotMaxUses(mon,slotIdx)) return;
-      const cost=getCardGuts(card,slotIdx);
-      // 回復カードは倒れた子へも向けられる。そのときは手を貸す子が払う
-      const payer=tacticsPayerSlot(tacticsUnitsRef.current,slotIdx,cost,card.type==='heal');
-      if(payer===null) return;
-      if(!canTacticsSlotPay(tacticsUnitsRef.current,payer,(spent[payer]||0)+cost)) return;
+      // 回復カードも「全体回復」なので、倒れた子へ向ける必要はない。
+      // どのカードも「立っていて、その子が払えるか」だけで決まる
+      if(!canTacticsSlotPay(tacticsUnitsRef.current,slotIdx,(spent[slotIdx]||0)+getCardGuts(card,slotIdx))) return;
       usable.push(slotIdx);
     });
     return usable;
@@ -8967,14 +8957,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // ★ここを通さないと、オートが払えない組み合わせを選んだときに
     //   ガッツを払わずカードだけ切れてしまう
     if(isTacticsMode(runMode)){
-      const spentByPayer={};
+      const spentBySlot={};
       const payable=usedCardEntries.every(entry=>{
         const idx=entry.slotIdx!=null?entry.slotIdx:defaultSlot;
-        const cost=getCardGuts(entry.card,idx);
-        const payer=tacticsPayerSlot(tacticsUnitsRef.current,idx,cost,entry.card?.type==='heal');
-        if(payer===null) return false;
-        spentByPayer[payer]=(spentByPayer[payer]||0)+cost;
-        return canTacticsSlotPay(tacticsUnitsRef.current,payer,spentByPayer[payer]);
+        spentBySlot[idx]=(spentBySlot[idx]||0)+getCardGuts(entry.card,idx);
+        return canTacticsSlotPay(tacticsUnitsRef.current,idx,spentBySlot[idx]);
       });
       if(!payable) return;
     }
@@ -9019,10 +9006,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       lastType=card.type;
       if (card.type==='guard') { Audio_.se.guard(); guardTypeInTurn='guard'; currentTurnGuardFlat+=GUARD_EVOLUTION[guardLevel].flat*effMul; currentTurnGuardMult+=GUARD_EVOLUTION[guardLevel].mult*effMul; addGuardForSlot(slotIdx,GUARD_EVOLUTION[guardLevel].flat*effMul,GUARD_EVOLUTION[guardLevel].mult*effMul); }
       else if (card.type==='weak_guard') { if(guardTypeInTurn!=='guard') guardTypeInTurn='weak_guard'; currentTurnGuardFlat+=(GUARD_EVOLUTION[guardLevel].flat*0.5*effMul); currentTurnGuardMult+=(GUARD_EVOLUTION[guardLevel].mult*0.5*effMul); addGuardForSlot(slotIdx,GUARD_EVOLUTION[guardLevel].flat*0.5*effMul,GUARD_EVOLUTION[guardLevel].mult*0.5*effMul); }
-      // 払うのは「使う子」。倒れた子へ回復カードを向けたときだけ、手を貸す子が払う。
-      // 新モード以外は今までどおりパーティのガッツから引く
+      // 払うのは「使う子」。新モード以外は今までどおりパーティのガッツから引く
       const cardCost=getCardGuts(card,slotIdx);
-      if(isTacticsMode(runMode)){ const payer=tacticsCardPayer(slotIdx,card,cardCost); if(payer!==null) tacticsPayGuts(payer,cardCost); }
+      if(isTacticsMode(runMode)) tacticsPayGuts(slotIdx,cardCost);
       else setGuts(p=>Math.max(0,p-cardCost));
       // 消費と直後の回復を同じ描画へまとめず、カードを支払った値をゲージ・数値に先に出す。
       await battleWait(250);
@@ -9186,12 +9172,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       const cardHeal=totalHeal-totalHealBeforeCard;
       if(cardHeal>0){
         if(isTacticsMode(runMode)){
-          // 回復カードは「使う子」に効く。倒れた子へ向けても回復として貯まり、
-          // ライフが全快になったところで立ち上がる(2026-09-19 ユーザーが決めた形)
-          const board=tacticsUnitsRef.current;
-          // 「起き上がった！」は commitTacticsUnits が1か所で出す
+          // ★回復カードは「全体回復」。使う子を選ぶのはガッツを払うためで、効くのは盤面全体
+          //   (2026-09-19 ユーザーの整理。単体に効くのはガードの余りとドレインだけ)。
+          //   倒れた子にも入り、ライフが全快になったところで立ち上がる。
+          //   「起き上がった！」は commitTacticsUnits が1か所で出す
           addPopup(`💚 回復 +${cardHeal}`,'life','text-emerald-400 text-4xl font-black drop-shadow-lg');
-          hpBeforeEnemyAttack=commitTacticsUnits(healTacticsAt(board,slotIdx,cardHeal));
+          const healedAll=tacticsHeal(cardHeal);
+          if(healedAll!==null) hpBeforeEnemyAttack=healedAll;
         } else {
           addPopup(`💚 回復 +${cardHeal}`,'life','text-emerald-400 text-4xl font-black drop-shadow-lg');
           hpBeforeEnemyAttack=Math.min(liveEffectiveMaxHp(),hpBeforeEnemyAttack+cardHeal); setHp(hpBeforeEnemyAttack);
