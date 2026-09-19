@@ -52,7 +52,7 @@ vm.runInContext(
     + 'wipeTacticsBoard,tacticsTotalGuts,tacticsTotalBaseMaxGuts,'
     + 'scaleTacticsUnitMaxGuts,canTacticsSlotPay,payTacticsGutsAt,recoverTacticsGutsBoard,'
     + 'healTacticsAt,recoverTacticsGutsAt,selfDamageTacticsAt,'
-    + 'reviveTacticsAt,tacticsReviveHelper,tacticsPayerSlot,tacticsEnemyPowerMultiplier,'
+    + 'reviveTacticsAt,tacticsEnemyPowerMultiplier,'
     + 'TACTICS_ENEMY_POWER_MAX,applyTacticsTraining,tacticsPartyAtk,'
     + 'tacticsPartyDef,shrinkTacticsScore,TACTICS_SCORE_DIVISOR};', sandbox);
 const api = sandbox.api;
@@ -304,11 +304,10 @@ check('新モードはどのカードも使う子を選ぶ', has('if(isTacticsMo
   && has('// 新モードはどのカードも「使う子」を選ぶ。その子のガッツで払い、効果もその子に乗る'));
 check('割り当てられる子は「その子が払えるか」で決まる',
   has('const tacticsUsableSlots = (card, excludeHandIndex = null) => {')
-    && has('if(!canTacticsSlotPay(tacticsUnitsRef.current,payer,(spent[payer]||0)+cost)) return;'));
-// 回復カードだけは倒れた子へも向けられる(段階7)
-check('回復カードは倒れた子へも向けられる',
-  has("const payer=tacticsPayerSlot(tacticsUnitsRef.current,slotIdx,cost,card.type==='heal');")
-    && has('if(payer===null) return;'));
+    && has('if(!canTacticsSlotPay(tacticsUnitsRef.current,slotIdx,(spent[slotIdx]||0)+getCardGuts(card,slotIdx))) return;'));
+// ★回復カードも「全体回復」なので、倒れた子へ向ける必要はない。
+//   どのカードも「立っていて、その子が払えるか」だけで決まる
+check('払い主に特別扱いは無い', !has('tacticsPayerSlot') && !has('tacticsReviveHelper'));
 // ★守り・回復まで「1体1枚」に数えると、供モンが居ないWAVE1で1ターン1枚しか使えなくなる
 check('枚数制限に数えるのは攻撃カードだけ',
   has('if(isAttackCard(card)&&(attacks[slotIdx]||0)>=slotMaxUses(mon,slotIdx)) return;'));
@@ -318,9 +317,9 @@ check('ドラッグでの割り当ても同じ判定を通す',
   has('if(tacticsMode && !tacticsUsableSlots(c,cardIndex).includes(slotIdx)){ setFocusedCard(null); return; }'));
 // ★ここを通さないと、払えない組み合わせでカードだけ切れてしまう
 check('実行の前に「使う子が払えるか」を見る',
-  has('return canTacticsSlotPay(tacticsUnitsRef.current,payer,spentByPayer[payer]);'));
+  has('return canTacticsSlotPay(tacticsUnitsRef.current,idx,spentBySlot[idx]);'));
 check('払うのは使う子',
-  has('if(isTacticsMode(runMode)){ const payer=tacticsCardPayer(slotIdx,card,cardCost); if(payer!==null) tacticsPayGuts(payer,cardCost); }'));
+  has('if(isTacticsMode(runMode)) tacticsPayGuts(slotIdx,cardCost);'));
 check('ガッツの回復は1か所(gainGuts)へまとめる',
   has('const gainGuts = (amount) => {')
     && (source.match(/gainGuts(At)?\(/g) || []).length >= 11,
@@ -404,12 +403,17 @@ check('誰にも当たらなかったターンはダメージの数字を出さ�
 check('回復(吸収・自動再生・緊急)は立っている子へ配る',
   ['const absorbed=tacticsHeal(hpGain);', 'if(tacticsHeal(autoHealVal)===null)',
    'const emergencyHp=tacticsHeal(recoverHp);'].every(has));
-// 回復カードは使う子へ。倒れた子へ向けたときは起こす(段階7)
-check('回復カードは使う子に効く',
-  has('hpBeforeEnemyAttack=commitTacticsUnits(healTacticsAt(board,slotIdx,cardHeal));'));
+// ★回復は「全体回復」と「単体回復」で分かれる(2026-09-19 ユーザーの整理)。
+//   全体回復＝回復カード・自動再生・緊急回復・吸収、単体回復＝ガードの余り・ドレイン
+check('回復カードは全体回復',
+  has('const healedAll=tacticsHeal(cardHeal);')
+    && has('★回復カードは「全体回復」。使う子を選ぶのはガッツを払うためで、効くのは盤面全体'));
+check('ガードの余りとドレインは単体回復',
+  has('units=recoverTacticsGutsAt(healTacticsAt(units,slotIdx,diff),slotIdx,gain);')
+    && has('if(isTacticsMode(runMode)) hpBeforeEnemyAttack=commitTacticsUnits(healTacticsAt(tacticsUnitsRef.current,slotIdx,hRec));'));
 // ★どの回復から戻っても同じ扱いになるよう、立ち上がった瞬間は commitTacticsUnits が1か所で拾う
-check('倒れた子へ回復カードを向けても、貯まって全快で立つ',
-  has('hpBeforeEnemyAttack=commitTacticsUnits(healTacticsAt(board,slotIdx,cardHeal));'));
+check('全体回復は倒れた子にも入り、全快で立つ',
+  has('if(healedAll!==null) hpBeforeEnemyAttack=healedAll;'));
 check('立ち上がった知らせは1か所で出す',
   has('が起き上がった！')
     && has('if (normalizeTacticsUnit(was).downed && !normalizeTacticsUnit(unit).downed) {')

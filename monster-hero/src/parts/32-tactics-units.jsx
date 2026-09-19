@@ -292,10 +292,10 @@ const selfDamageTacticsBoard = (units, damage) => {
 
 // ===== 「その子だけ」へ効かせる =====
 //
-// ★カードは使う子を選ぶので、効果もその子に乗る(設計 §4.4)。
-//   盤面全体へ配る healTacticsBoard とは使い分ける
-//   (自動再生・吸収のように「パーティ全体に起きること」だけが配るほう)。
-
+// ★回復には**全体回復と単体回復**がある(2026-09-19 ユーザーの整理)。
+//     全体回復 … 回復カード・自動再生・緊急回復・吸収 → healTacticsBoard で盤面へ配る
+//     単体回復 … ガードの余り(構えた子)・ドレイン(殴った子) → ここの healTacticsAt
+//   「その効果が誰に起きたことか」で決まる。カードの持ち主では決まらない。
 // ★倒れた子へも入る(復活までの貯めになる)。立っていることは条件にしない
 const healTacticsAt = (units, slotIndex, amount) => {
   const list = (Array.isArray(units) ? units : []).slice();
@@ -326,27 +326,6 @@ const reviveTacticsAt = (units, slotIndex) => {
   list[slotIndex] = reviveTacticsUnit(list[slotIndex]);
   return list;
 };
-// 倒れた子へ回復カードを向けたとき、代わりに払う子。いちばんガッツが多い立っている子。
-// ★倒れた子自身のガッツで払う形にすると、ガッツを使い切って倒れた子が永久に戻せなくなる。
-//   立っている子が手を貸して起こす、という形にした
-const tacticsReviveHelper = (units, slotIndex, cost) => {
-  const list = Array.isArray(units) ? units : [];
-  if (!list[slotIndex] || !normalizeTacticsUnit(list[slotIndex]).downed) return null;
-  const need = Math.max(0, tacticsSafeInt(cost, 0));
-  const helpers = tacticsAliveSlots(list)
-    .filter(index => normalizeTacticsUnit(list[index]).guts >= need)
-    .sort((a, b) => normalizeTacticsUnit(list[b]).guts - normalizeTacticsUnit(list[a]).guts);
-  return helpers.length ? helpers[0] : null;
-};
-// そのカードを、そのスロットへ向けたときに実際に払う子。
-// ふだんは本人。倒れた子へ回復カードを向けたときだけ、手を貸す子が払う
-const tacticsPayerSlot = (units, slotIndex, cost, isHealCard = false) => {
-  const list = Array.isArray(units) ? units : [];
-  if (canTacticsSlotPay(list, slotIndex, cost)) return slotIndex;
-  if (isHealCard) return tacticsReviveHelper(list, slotIndex, cost);
-  return null;
-};
-
 // トレーニングの結果を1体へ入れる。after は resolveTrainingStats が返した
 // {atk,def,hp,guts}(hp / guts は「素の上限」)。
 // ★1体ずつ選んだぶんを、その子だけへ入れる(段階11)
