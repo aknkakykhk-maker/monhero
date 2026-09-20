@@ -123,7 +123,7 @@ const check = (name, ok, detail = '') => {
       return dialog ? dialog.innerText.replace(/\s+/g, ' ') : '';
     });
     check('入口のカードから詳しいルールを開ける',
-      ruleText.includes('とは？') && ruleText.includes('ライフの持ち方'), ruleText.slice(0, 60));
+      ruleText.includes('とは？') && ruleText.includes('ステータスの持ち方'), ruleText.slice(0, 60));
     await page.evaluate(() => {
       const b = [...document.querySelectorAll('button')].find(x => (x.getAttribute('aria-label') || '') === '説明を閉じる');
       if (b) b.click();
