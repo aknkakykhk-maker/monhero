@@ -7866,6 +7866,7 @@ function MonsterHeroGame() {
   // 中にモードが1つだけのもの(クイック)は、選んだらそのまま難易度選択へ進める
   const openBattleSystem = (systemId) => {
     const system = BATTLE_SYSTEMS.find(s => s.id === systemId) || BATTLE_SYSTEMS[0];
+    if (battleSystemComingSoon(system.id, { debugBattle })) return; // 準備中は枠だけ
     const modes = battleSystemModes(system.id, { debugBattle });
     if (!modes.length) return;
     setBattleSystem(system.id);
@@ -12589,21 +12590,30 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <h2 className="text-center text-xl font-black leading-tight shrink-0">モンヒロバトル</h2>
               <p className="text-center text-[10px] text-slate-400 mt-1 mb-3 shrink-0">どのバトルで遊ぶかを選びます</p>
               <div data-battle-systems={systems.length} className="flex flex-col gap-2 shrink-0">
-                {systems.map(sys=>(
-                  <button key={sys.id} data-battle-system={sys.id} onClick={()=>openBattleSystem(sys.id)}
-                    className="w-full rounded-2xl border-2 bg-slate-900/80 px-3 py-3 text-left active:scale-95 transition-transform"
-                    style={{borderColor:sys.color}}>
+                {systems.map(sys=>{
+                  // ★まだ遊べないものは、枠だけ出して押せなくする(2026-09-20 ユーザー指示)。
+                  //   モンヒロビートの「準備中」と同じ扱い。デバッグからは今までどおり遊べる
+                  const soon=battleSystemComingSoon(sys.id,{debugBattle});
+                  return (
+                  <button key={sys.id} data-battle-system={sys.id} data-battle-system-soon={soon?'1':undefined}
+                    disabled={soon} onClick={()=>openBattleSystem(sys.id)}
+                    aria-label={soon?`${sys.label}（準備中）`:sys.label}
+                    className={`w-full rounded-2xl border-2 px-3 py-3 text-left transition-transform ${soon?'bg-slate-900/40 opacity-60':'bg-slate-900/80 active:scale-95'}`}
+                    style={{borderColor:soon?'rgba(148,163,184,.45)':sys.color}}>
                     <div className="flex items-center gap-2">
                       <span className="text-2xl leading-none">{sys.emoji}</span>
-                      <span className="text-base font-black leading-tight" style={{color:sys.color}}>{sys.label}</span>
-                      {sys.id===BATTLE_SYSTEM_TACTICS&&!TACTICS_MODE_PUBLIC_RELEASE&&(
+                      <span className="text-base font-black leading-tight" style={{color:soon?'#94a3b8':sys.color}}>{sys.label}</span>
+                      {soon&&(
+                        <span className="ml-auto text-[9px] font-black text-slate-300 border border-slate-400/60 rounded px-1.5 py-0.5">準備中</span>
+                      )}
+                      {!soon&&sys.id===BATTLE_SYSTEM_TACTICS&&!TACTICS_MODE_PUBLIC_RELEASE&&(
                         <span className="ml-auto text-[8px] font-black text-amber-300 border border-amber-400/60 rounded px-1 py-0.5">DEBUG</span>
                       )}
                     </div>
                     <div className="text-[11px] text-slate-200 font-bold leading-snug mt-1.5">{sys.tagline}</div>
-                    <div className="text-[9px] text-slate-400 leading-snug mt-1">{sys.note}</div>
-                  </button>
-                ))}
+                    <div className="text-[9px] text-slate-400 leading-snug mt-1">{soon?'いま準備しています。遊べるようになったらお知らせします':sys.note}</div>
+                  </button>);
+                })}
               </div>
               <div className="mt-3 shrink-0"><AssistantBubble scene="battleSystemSelect" compact/></div>
             </div>

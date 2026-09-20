@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 42b7df2b6539251d
+// generated-sha256: fdd3b4a62c98e490
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -92,7 +92,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-20 17:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-20 17:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -183,10 +183,12 @@ const SPECIES_CHALLENGE_MODE = Object.freeze({
   ],
 });
 // 新モードの表示情報。見出しの並びは既存3モード(BATTLE_MODES)とそろえてある。
-// ★label は仮。画面に出す名前が決まったらここだけ差し替える(idと保存キーは変えない)。
+// ★2026-09-20 にユーザーが名前を決めた。仕組みが「タクティクスバトル」で、その中の
+//   ふつうのモードがこれ。クラシックバトル側の「チャレンジモード」と同じ位置づけだが、
+//   ランキングや記録で並んだときに見分けが付くよう「タクティクスチャレンジ」にしてある。
 // ★本文は公開時にそのまま出るプレイヤー向けの文にする。開発の進み具合はここへ書かない。
 const TACTICS_MODE = Object.freeze({
-  id:BATTLE_MODE_TACTICS, label:'戦術モード', short:'戦術', emoji:'🎯', color:'#fb923c',
+  id:BATTLE_MODE_TACTICS, label:'タクティクスチャレンジ', short:'タクティクス', emoji:'🎯', color:'#fb923c',
   tagline:'敵の技を読んで受け方を決める、対応力のモード',
   highlights:[
     ['🎯','敵が技を使い分ける。予告を読んで受ける'],
@@ -484,21 +486,22 @@ const BATTLE_MODES = [
 // ★ここで選ぶものは**保存しない**(画面を分けるためだけの値)。記録もランキングも今までどおり
 //   モードのid(mh_hs_* / mh_tactics_* など)で分かれるので、保存キーは1つも増えない。
 //   難易度選択の「通常/極限」タブ(difficultySelectTab)と同じ扱い
-// ★label は仮。新しいバトルの名前が決まったらここだけ差し替える(idも保存キーも変えない)
+// ★名前は2026-09-20にユーザーが決めた(クラシックバトル / タクティクスバトル)。
+//   idと保存キーは変えないので、名前だけあとから差し替えられる
 const BATTLE_SYSTEM_CLASSIC = 'systemClassic';
 const BATTLE_SYSTEM_TACTICS = 'systemTactics';
 const BATTLE_SYSTEM_QUICK = 'systemQuick';
 const BATTLE_SYSTEMS = Object.freeze([
   Object.freeze({
-    id: BATTLE_SYSTEM_CLASSIC, label: 'これまでのバトル', short: 'これまで', emoji: '⚔️', color: '#818cf8',
+    id: BATTLE_SYSTEM_CLASSIC, label: 'クラシックバトル', short: 'クラシック', emoji: '⚔️', color: '#818cf8',
     tagline: 'パーティでライフを分け合う、いままでの戦い方',
     note: 'チャレンジ・種族チャレンジ。難易度は通常と極限から選べます',
     modes: Object.freeze([BATTLE_MODE_CHALLENGE, BATTLE_MODE_SPECIES_CHALLENGE, BATTLE_MODE_PRO]),
   }),
   Object.freeze({
-    id: BATTLE_SYSTEM_TACTICS, label: '戦術モード', short: '戦術', emoji: '🎯', color: '#fb923c',
+    id: BATTLE_SYSTEM_TACTICS, label: 'タクティクスバトル', short: 'タクティクス', emoji: '🎯', color: '#fb923c',
     tagline: 'モンスターごとにライフを持つ、新しい戦い方',
-    note: '敵の技を読んで、誰を守るかを決める戦い方です',
+    note: '敵の予告を読んで、誰を守るかを決める戦い方です',
     modes: Object.freeze([BATTLE_MODE_TACTICS]),
   }),
   Object.freeze({
@@ -520,9 +523,15 @@ const battleSystemModes = (systemId, { debugBattle = false } = {}) => {
     return true;
   });
 };
-// 画面へ並べる仕組み。中に出せるモードが1つも無いものは出さない
+// まだ遊べないが、枠だけは見せる仕組み(2026-09-20 ユーザー指示
+// 「準備中の新モードもクイックの上に入れて」)。モンヒロビートの「準備中」と同じ作りで、
+// 公開フラグが立つまでは押せないカードを出す。デバッグからは今までどおり遊べる
+const battleSystemComingSoon = (systemId, { debugBattle = false } = {}) =>
+  systemId === BATTLE_SYSTEM_TACTICS && !TACTICS_MODE_PUBLIC_RELEASE && !debugBattle;
+// 画面へ並べる仕組み。中に出せるモードが1つも無いものは、準備中の枠としてだけ出す
 const visibleBattleSystems = ({ debugBattle = false } = {}) =>
-  BATTLE_SYSTEMS.filter(s => battleSystemModes(s.id, { debugBattle }).length > 0);
+  BATTLE_SYSTEMS.filter(s => battleSystemModes(s.id, { debugBattle }).length > 0
+    || battleSystemComingSoon(s.id, { debugBattle }));
 // 極限チャレンジは通常の3モードとは別に持っているので、説明・ランキング画面から引けるようにここで合流させる
 // (EXTREME_MODE はこの下で定義するため、呼ばれた時点で参照する)
 const battleModeInfo = (mode) => {
@@ -30630,6 +30639,7 @@ function MonsterHeroGame() {
   // 中にモードが1つだけのもの(クイック)は、選んだらそのまま難易度選択へ進める
   const openBattleSystem = (systemId) => {
     const system = BATTLE_SYSTEMS.find(s => s.id === systemId) || BATTLE_SYSTEMS[0];
+    if (battleSystemComingSoon(system.id, { debugBattle })) return; // 準備中は枠だけ
     const modes = battleSystemModes(system.id, { debugBattle });
     if (!modes.length) return;
     setBattleSystem(system.id);
@@ -35353,21 +35363,30 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <h2 className="text-center text-xl font-black leading-tight shrink-0">モンヒロバトル</h2>
               <p className="text-center text-[10px] text-slate-400 mt-1 mb-3 shrink-0">どのバトルで遊ぶかを選びます</p>
               <div data-battle-systems={systems.length} className="flex flex-col gap-2 shrink-0">
-                {systems.map(sys=>(
-                  <button key={sys.id} data-battle-system={sys.id} onClick={()=>openBattleSystem(sys.id)}
-                    className="w-full rounded-2xl border-2 bg-slate-900/80 px-3 py-3 text-left active:scale-95 transition-transform"
-                    style={{borderColor:sys.color}}>
+                {systems.map(sys=>{
+                  // ★まだ遊べないものは、枠だけ出して押せなくする(2026-09-20 ユーザー指示)。
+                  //   モンヒロビートの「準備中」と同じ扱い。デバッグからは今までどおり遊べる
+                  const soon=battleSystemComingSoon(sys.id,{debugBattle});
+                  return (
+                  <button key={sys.id} data-battle-system={sys.id} data-battle-system-soon={soon?'1':undefined}
+                    disabled={soon} onClick={()=>openBattleSystem(sys.id)}
+                    aria-label={soon?`${sys.label}（準備中）`:sys.label}
+                    className={`w-full rounded-2xl border-2 px-3 py-3 text-left transition-transform ${soon?'bg-slate-900/40 opacity-60':'bg-slate-900/80 active:scale-95'}`}
+                    style={{borderColor:soon?'rgba(148,163,184,.45)':sys.color}}>
                     <div className="flex items-center gap-2">
                       <span className="text-2xl leading-none">{sys.emoji}</span>
-                      <span className="text-base font-black leading-tight" style={{color:sys.color}}>{sys.label}</span>
-                      {sys.id===BATTLE_SYSTEM_TACTICS&&!TACTICS_MODE_PUBLIC_RELEASE&&(
+                      <span className="text-base font-black leading-tight" style={{color:soon?'#94a3b8':sys.color}}>{sys.label}</span>
+                      {soon&&(
+                        <span className="ml-auto text-[9px] font-black text-slate-300 border border-slate-400/60 rounded px-1.5 py-0.5">準備中</span>
+                      )}
+                      {!soon&&sys.id===BATTLE_SYSTEM_TACTICS&&!TACTICS_MODE_PUBLIC_RELEASE&&(
                         <span className="ml-auto text-[8px] font-black text-amber-300 border border-amber-400/60 rounded px-1 py-0.5">DEBUG</span>
                       )}
                     </div>
                     <div className="text-[11px] text-slate-200 font-bold leading-snug mt-1.5">{sys.tagline}</div>
-                    <div className="text-[9px] text-slate-400 leading-snug mt-1">{sys.note}</div>
-                  </button>
-                ))}
+                    <div className="text-[9px] text-slate-400 leading-snug mt-1">{soon?'いま準備しています。遊べるようになったらお知らせします':sys.note}</div>
+                  </button>);
+                })}
               </div>
               <div className="mt-3 shrink-0"><AssistantBubble scene="battleSystemSelect" compact/></div>
             </div>
