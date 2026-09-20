@@ -213,5 +213,30 @@ check('反射は返す量でスコアも撃破も決める',
     && !has('resolveEnemyDefeat({remainingHp:reflectedHp,damage:incomingDmg})'));
 check('誰にも当たらなければ反射しない', has("if(reflectDmg<=0){"));
 
+// --- 反射・回避・吸収の効く範囲(2026-09-20 ユーザー指示) ---
+// ★分け方は「確定バフ(固有技)は味方全体、確率で出るものは狙われた子だけ」の1本。
+//   同じ「反射」でも出どころで範囲が変わるので、枝を取り違えると
+//   「全体攻撃を全員が避けた」「固有技を使ったのに1体しか守れない」になる
+check('確定反射と確率反射を分けて持つ', has('const forcedReflect = getTurnBuff(\'reflect\',false);'));
+check('味方全体の反射は確定バフか既存モードのときだけ',
+  has('if (isReflect && (forcedReflect || !isTacticsMode(runMode))) {'));
+check('新モードは回避を「回避！」の枝へ落とさない',
+  has('} else if (isEvasion && !isTacticsMode(runMode)) {'));
+check('回避は狙われた子のうち1体',
+  has('const evadedSlot=isEvasion&&targets.length?targets[Math.floor(Math.random()*targets.length)]:null;'));
+check('確率で出た反射も狙われた子のうち1体',
+  has('const reflectedSlot=isReflect&&targets.length?targets[Math.floor(Math.random()*targets.length)]:null;'));
+check('避けた子・反射した子はダメージ処理を飛ばす',
+  has('if(slotIdx===evadedSlot){ evadedName=tacticsTargetName(units,slotIdx); return; }')
+    && has('if(slotIdx===reflectedSlot){'));
+check('確率で出た反射は、その子が受けるはずだった量を返す',
+  has('reflectBack+=applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(intent,slotIdx));'));
+check('返すのは味方の増減を確定させてから',
+  src.indexOf('currentHp=commitTacticsUnits(units);\n            if(dealt>0)') < src.indexOf('if(reflectBack>0){'));
+check('確率で出た反射でも撃破を確定できる',
+  has('if (await resolveEnemyDefeat({remainingHp:reflectedHp,damage:reflectBack})) return;'));
+check('避けた子・反射した子がいるときは「無傷！」を出さない',
+  has("if(dealt<=0&&saved<=0&&evadedSlot==null&&reflectedSlot==null) addPopup('無傷！'"));
+
 console.log(failed ? `\nNG ${failed}件` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
