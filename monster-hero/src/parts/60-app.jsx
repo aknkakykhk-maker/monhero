@@ -2929,6 +2929,8 @@ function MonsterHeroGame() {
     RHYTHM_HISTORY: 'home',     // モンヒロビート「これまでの記録」もHOMEの曲を続ける
                                 // (2026-09-14・ユーザー指摘「BGMがない / 設定してるホームのBGMを流して」)
     BATTLE_MENU: 'enhance',      // 難易度・ランキング(モンスター選択と同じ曲)
+    BATTLE_SYSTEM_SELECT: 'enhance',     // どのバトルで遊ぶかを選ぶ画面(この先と同じ曲を続ける)
+                                         // (2026-09-21・ユーザー報告「バトル選択画面でBGMがない」)
     BATTLE_MODE_SELECT: 'enhance',       // 新しいバトルモード選択(BATTLE_MENUと同じ曲を続ける)
     BATTLE_DIFFICULTY_SELECT: 'enhance', // 新しい難易度選択も同じ曲
     EXTREME_DIFFICULTY_SELECT: 'enhance', // 極限もチャレンジと同じ選択画面BGMを続ける
@@ -2955,9 +2957,27 @@ function MonsterHeroGame() {
     MASU_SOUL_TRAITS: 'management', // 魂格特性はマスモン詳細と同じ管理系BGM
     BREEDER_MARKET: 'market',   // マーケットページ
     TRAINING_SELECT: 'trainingMenu', TRAINING_DIFFICULTY: 'trainingMenu', TRAINING_CONFIRM: 'trainingMenu', TRAINING_RESULT: 'trainingMenu',
+    TRAINING_INFO: 'trainingMenu', // 説明だけここから抜けていた(ほかのトレーニング画面と同じ曲を続ける)
     TRAINING_BOARD: 'trainingBoard',
   };
   // プロフィール本体とアイテムはHOMEの曲を続ける。その他の詳細ページ群は従来のプロフィール曲を維持する。
+  // ★BGMを鳴らさない画面。ここに無い画面は、必ずどこかでBGMが決まること。
+  //   新しい画面を足したら「BGM_STATE_MAP へ載せる」か「ここへ理由つきで足す」かの
+  //   どちらかを必ず選ぶ。どちらもしないと、そのページだけ無音になる
+  //   (2026-09-14「モンヒロビートの記録でBGMがない」、2026-09-21「バトル選択画面でBGMがない」と
+  //    同じ壊れ方を2回している。tools/boot/bgm-screen-coverage-check.js が見張る)
+  const BGM_SILENT_STATES = Object.freeze([
+    // モンヒロビートは自分で音を管理する。ここでキーを持つと、譜面の曲と二重に鳴る
+    'RHYTHM_PLAY', 'RHYTHM_DEMO_HOME', 'RHYTHM_DEMO_HELP', 'RHYTHM_DEMO_MONSTERS',
+    'RHYTHM_INFO', 'RHYTHM_OPTIONS', 'RHYTHM_RANKING',
+    // オンボーディングのプレビューで開く助手えらび。タイトルからの流れの中なので鳴らさない
+    'ASSISTANT_SELECT',
+    // デバッグ画面。プレイヤーの通常プレイには出ない
+    'DEBUG_SETTINGS', 'DEBUG_BATTLE_SETUP', 'DEBUG_DATA_SETUP', 'RHYTHM_DEBUG',
+    'BREEDER_ICON_DEBUG', 'DYE_MASK_POSITION_DEBUG', 'MASU_PATTERN_DEBUG',
+    'MONSTER_CHECK_DEBUG', 'MONSTER_IMAGE_DEBUG', 'SPECIES_CHALLENGE_DEBUG', 'TRANSCEND_DEBUG',
+    'RPG_DEBUG_SETUP', 'RPG_DEBUG_BATTLE', 'RPG_DEBUG_RESULT',
+  ]);
   const PROFILE_BGM_STATES = ['ROSTER','OWNED_MONSTERS','MASU_MONS','MASU_ENHANCE','MASU_TRANSCEND_ENHANCE','MASU_AUTO_ENHANCE','MASU_SOUL_TRAITS'];
   // マスモンの専用育成画面。ここを開いているあいだは詳細モーダルを重ねない(詳細のほうが手前に出てしまうため)
   const MASU_ENHANCE_STATES = ['MASU_ENHANCE','MASU_TRANSCEND_ENHANCE','MASU_AUTO_ENHANCE','MASU_SOUL_TRAITS'];
@@ -3749,6 +3769,9 @@ function MonsterHeroGame() {
       if (allowKeep && autoRepeatRef.current && bgmArrangement.autoRepeatResultBgm !== 'on') return '__keep_battle_bgm__';
       return bgmArrangement.clear;
     }
+    // ★鳴らさないと決めた画面はここで終わり。下まで落ちて null になるのと結果は同じだが、
+    //   「決め忘れて無音」と「決めたうえで無音」をコードの上で見分けられるようにしておく
+    if (BGM_SILENT_STATES.includes(state)) return null;
     if (state === 'HOME' || state === 'PROFILE' || state === 'ITEM_INVENTORY') return bgmArrangement.home;
     if (BGM_STATE_MAP[state]) return bgmArrangement[BGM_STATE_MAP[state]] || BGM_STATE_MAP[state];
     if (PROFILE_BGM_STATES.includes(state)) return bgmArrangement.management;

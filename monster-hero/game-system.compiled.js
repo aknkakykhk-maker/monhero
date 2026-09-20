@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 080b8be66ee8e1cf
+// source-sha256: 78dae69494cf6122
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: eaab496c238aa60f
+// generated-sha256: c0fd4dfed908bf41
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-21 02:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-21 07:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -44637,6 +44637,9 @@ function MonsterHeroGame() {
     // (2026-09-14・ユーザー指摘「BGMがない / 設定してるホームのBGMを流して」)
     BATTLE_MENU: 'enhance',
     // 難易度・ランキング(モンスター選択と同じ曲)
+    BATTLE_SYSTEM_SELECT: 'enhance',
+    // どのバトルで遊ぶかを選ぶ画面(この先と同じ曲を続ける)
+    // (2026-09-21・ユーザー報告「バトル選択画面でBGMがない」)
     BATTLE_MODE_SELECT: 'enhance',
     // 新しいバトルモード選択(BATTLE_MENUと同じ曲を続ける)
     BATTLE_DIFFICULTY_SELECT: 'enhance',
@@ -44690,9 +44693,23 @@ function MonsterHeroGame() {
     TRAINING_DIFFICULTY: 'trainingMenu',
     TRAINING_CONFIRM: 'trainingMenu',
     TRAINING_RESULT: 'trainingMenu',
+    TRAINING_INFO: 'trainingMenu',
+    // 説明だけここから抜けていた(ほかのトレーニング画面と同じ曲を続ける)
     TRAINING_BOARD: 'trainingBoard'
   };
   // プロフィール本体とアイテムはHOMEの曲を続ける。その他の詳細ページ群は従来のプロフィール曲を維持する。
+  // ★BGMを鳴らさない画面。ここに無い画面は、必ずどこかでBGMが決まること。
+  //   新しい画面を足したら「BGM_STATE_MAP へ載せる」か「ここへ理由つきで足す」かの
+  //   どちらかを必ず選ぶ。どちらもしないと、そのページだけ無音になる
+  //   (2026-09-14「モンヒロビートの記録でBGMがない」、2026-09-21「バトル選択画面でBGMがない」と
+  //    同じ壊れ方を2回している。tools/boot/bgm-screen-coverage-check.js が見張る)
+  const BGM_SILENT_STATES = Object.freeze([
+  // モンヒロビートは自分で音を管理する。ここでキーを持つと、譜面の曲と二重に鳴る
+  'RHYTHM_PLAY', 'RHYTHM_DEMO_HOME', 'RHYTHM_DEMO_HELP', 'RHYTHM_DEMO_MONSTERS', 'RHYTHM_INFO', 'RHYTHM_OPTIONS', 'RHYTHM_RANKING',
+  // オンボーディングのプレビューで開く助手えらび。タイトルからの流れの中なので鳴らさない
+  'ASSISTANT_SELECT',
+  // デバッグ画面。プレイヤーの通常プレイには出ない
+  'DEBUG_SETTINGS', 'DEBUG_BATTLE_SETUP', 'DEBUG_DATA_SETUP', 'RHYTHM_DEBUG', 'BREEDER_ICON_DEBUG', 'DYE_MASK_POSITION_DEBUG', 'MASU_PATTERN_DEBUG', 'MONSTER_CHECK_DEBUG', 'MONSTER_IMAGE_DEBUG', 'SPECIES_CHALLENGE_DEBUG', 'TRANSCEND_DEBUG', 'RPG_DEBUG_SETUP', 'RPG_DEBUG_BATTLE', 'RPG_DEBUG_RESULT']);
   const PROFILE_BGM_STATES = ['ROSTER', 'OWNED_MONSTERS', 'MASU_MONS', 'MASU_ENHANCE', 'MASU_TRANSCEND_ENHANCE', 'MASU_AUTO_ENHANCE', 'MASU_SOUL_TRAITS'];
   // マスモンの専用育成画面。ここを開いているあいだは詳細モーダルを重ねない(詳細のほうが手前に出てしまうため)
   const MASU_ENHANCE_STATES = ['MASU_ENHANCE', 'MASU_TRANSCEND_ENHANCE', 'MASU_AUTO_ENHANCE', 'MASU_SOUL_TRAITS'];
@@ -45638,6 +45655,9 @@ function MonsterHeroGame() {
       if (allowKeep && autoRepeatRef.current && bgmArrangement.autoRepeatResultBgm !== 'on') return '__keep_battle_bgm__';
       return bgmArrangement.clear;
     }
+    // ★鳴らさないと決めた画面はここで終わり。下まで落ちて null になるのと結果は同じだが、
+    //   「決め忘れて無音」と「決めたうえで無音」をコードの上で見分けられるようにしておく
+    if (BGM_SILENT_STATES.includes(state)) return null;
     if (state === 'HOME' || state === 'PROFILE' || state === 'ITEM_INVENTORY') return bgmArrangement.home;
     if (BGM_STATE_MAP[state]) return bgmArrangement[BGM_STATE_MAP[state]] || BGM_STATE_MAP[state];
     if (PROFILE_BGM_STATES.includes(state)) return bgmArrangement.management;
