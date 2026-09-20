@@ -35,6 +35,7 @@ const check = (name, ok, detail = '') => {
 };
 const has = (needle) => src.includes(needle);
 const screen = fs.readFileSync(path.join(root, 'monster-hero/src/parts/71-screen-battle.jsx'), 'utf8');
+const entries = fs.readFileSync(path.join(root, 'monster-hero/src/parts/22-enemy-and-bond-entries.jsx'), 'utf8');
 const tacticsDef = (id) => api.TACTICS_ACTION_DEFINITIONS.find(d => d.id === id) || {};
 // 満タンでない敵(再生が選べる状態)。hp/maxHp を渡さないと再生は候補から外れる
 const enemyOf = (id, hpRate = 0.5) => ({ id, atk: 100, hp: Math.floor(1000 * hpRate), maxHp: 1000, normal: 'パンチ', special: '必殺' });
@@ -222,10 +223,6 @@ check('味方全体の反射は確定バフか既存モードのときだけ',
   has('if (isReflect && (forcedReflect || !isTacticsMode(runMode))) {'));
 check('新モードは回避を「回避！」の枝へ落とさない',
   has('} else if (isEvasion && !isTacticsMode(runMode)) {'));
-check('回避は狙われた子のうち1体',
-  has('const evadedSlot=isEvasion&&targets.length?targets[Math.floor(Math.random()*targets.length)]:null;'));
-check('確率で出た反射も狙われた子のうち1体',
-  has('const reflectedSlot=isReflect&&targets.length?targets[Math.floor(Math.random()*targets.length)]:null;'));
 check('避けた子・反射した子はダメージ処理を飛ばす',
   has('if(slotIdx===evadedSlot){ evadedName=tacticsTargetName(units,slotIdx); return; }')
     && has('if(slotIdx===reflectedSlot){'));
@@ -237,6 +234,47 @@ check('確率で出た反射でも撃破を確定できる',
   has('if (await resolveEnemyDefeat({remainingHp:reflectedHp,damage:reflectBack})) return;'));
 check('避けた子・反射した子がいるときは「無傷！」を出さない',
   has("if(dealt<=0&&saved<=0&&evadedSlot==null&&reflectedSlot==null) addPopup('無傷！'"));
+
+// --- 勇者特性は「その子の能力」(2026-09-20 ユーザー指示) ---
+// ★ザン・エイキ・パンドラ・剣士モッチーの連撃はもともと attackerId を見て本人限定だったのに、
+//   被弾側(もち肌・中二病・俊足・反射・吸収)と攻撃側(怪力・魔力開放・禁忌解錠)は
+//   mainHero を見るだけ＝誰が狙われても／誰が攻撃しても効く、とちぐはぐだった。
+//   既存5モードはステータスがパーティ共通なので変えない(仕様 8.触らないもの)
+check('連撃系はもともと本人限定のまま',
+  entries.includes("heroId === 'Zan' && attackerId === 'Zan'")
+    && entries.includes("heroId === 'Eiki' && attackerId === 'Eiki'")
+    && entries.includes("heroId === 'Pandora' && attackerId === 'Pandora'")
+    && entries.includes("heroId === 'KenshiMocchi' && attackerId === 'KenshiMocchi'"));
+check('被弾側は狙われた子が勇者モンのときだけ効かせる',
+  has('const heroTraitOn = !isTacticsMode(runMode) || !Number.isInteger(targetSlot) || targetSlot===heroDist;')
+    && has('const traitHeroId = heroTraitOn ? mainHero?.id : null;'));
+check('もち肌・中二病は traitHeroId で見る',
+  has("(traitHeroId==='Ark'||traitHeroId==='Iblis')")
+    && has("((traitHeroId==='Mocchi'||traitHeroId==='Mitarashi')?0.8:1.0)")
+    && !has("((mainHero?.id==='Mocchi'||mainHero?.id==='Mitarashi')?0.8:1.0)"));
+check('攻撃側は攻撃した子が勇者モンのときだけ効かせる',
+  has('const attackHeroId = (!isTacticsMode(runMode) || slotIdx===heroDist) ? mainHero?.id : null;')
+    && has("let traitMult=(attackHeroId==='Golem'?1.2:1.0)")
+    && has("if (attackHeroId==='Pandora' && card.type==='unique' && card.monId!=='Pandora') traitMult*=1.5;"));
+check('回避・反射・吸収の抽選は勇者特性ぶんを外した表も持つ',
+  has('const soulOnlySpecialDefense = buildUnifiedSpecialDefense({'));
+check('勇者モンが狙われていないときは勇者特性ぶんを乗せない',
+  has('const heroAimed = !aimedSlots || (heroDist>=0 && aimedSlots.includes(heroDist));')
+    && has('rollUnifiedSpecialDefense(heroAimed?unifiedSpecialDefense:soulOnlySpecialDefense,'));
+check('中二病の回数は効かないターンに減らさない',
+  has("if ((mainHero?.id==='Ark'||mainHero?.id==='Iblis') && heroAimed && getWaveBuff('chuuniDmgCutUses')<2) {"));
+check('避ける／返す／吸う子は勇者モンを優先して選ぶ',
+  has('const pickDefenseSlot = (targets) => {')
+    && has('if (heroDist>=0 && targets.includes(heroDist)) return heroDist;'));
+check('回避・反射・吸収がその選び方を通る',
+  has('const evadedSlot=isEvasion?pickDefenseSlot(targets):null;')
+    && has('const reflectedSlot=isReflect?pickDefenseSlot(targets):null;')
+    && has('const absorbSlot=isTacticsMode(runMode)?pickDefenseSlot(aimedSlots):null;'));
+check('氷海の支配者は勇者モン本人だけ回復が増える',
+  has('const iceExtraRate=soulAdjustedGutsRecoveryRate-baseGutsRecoveryRate;')
+    && has('if (iceExtraRate>0 && heroDist>=0) gutsRegen+=gainGutsByRate(heroDist,iceExtraRate);'));
+check('全員へ配る自動回復には氷海ぶんを混ぜない',
+  has('tacticsRegen(autoHpRecoveryRate,isTacticsMode(runMode)?baseGutsRecoveryRate:soulAdjustedGutsRecoveryRate)'));
 
 console.log(failed ? `\nNG ${failed}件` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
