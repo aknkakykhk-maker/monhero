@@ -571,3 +571,40 @@ const rateHealTacticsAt = (units, slotIndex, hpRate, gutsRate) => {
   list[slotIndex] = next;
   return { units: list, hp: after.hp - before.hp, guts: after.guts - before.guts };
 };
+
+// ===== あとから入った子の追いつき補正 =====
+// ★供モンは WAVE 2 / 4 / 6 で加わる。加入ボーナス(plusStats)は使わず
+//   **素のステータスをそのまま**盤面へ入れるが、勇者モンはそこまでにトレーニングを
+//   受けているので、遅く入るほど見劣りする(2026-09-20 ユーザー指示)。
+// ★そこで「クリアしたWAVE 1つにつき全ステ+10%」を基準に、加入する子へ積んで渡す。
+//   実際の率は**そのWAVEを何ターンで抜けたか**で決める。速いほど厚い。
+//     remainingTurns = 21 - そのWAVEに使ったターン数(スコア計算と同じ値)
+//     率 = remainingTurns × 1%
+//   1ターンで抜ければ +20%、11ターン(半分)で +10%、20ターンかかれば +1%、
+//   時間切れなら 0%。
+// ★WAVEごとに掛け算で積む(トレーニングと同じ複利)。5WAVEぶん10%なら ×1.61。
+const TACTICS_JOIN_RATE_PER_TURN = 0.01;
+const tacticsJoinWaveRate = (remainingTurns) => Math.max(0, tacticsSafeInt(remainingTurns, 0)) * TACTICS_JOIN_RATE_PER_TURN;
+// クリアしたWAVEぶんを積み上げた倍率。加入した子のステータスへそのまま掛ける
+const addTacticsJoinCatchUp = (multiplier, remainingTurns) => {
+  const base = Math.max(1, Number(multiplier) || 1);
+  return base * (1 + tacticsJoinWaveRate(remainingTurns));
+};
+// 加入した子へ積み上げた倍率を乗せる。
+// ★みゅあ補正は素の上限(baseMaxHp)から計算し直す側で掛かるので、ここでは触らない
+const applyTacticsJoinCatchUp = (unit, multiplier) => {
+  const target = normalizeTacticsUnit(unit);
+  if (!target) return unit;
+  const rate = Math.max(1, Number(multiplier) || 1);
+  const grow = (value) => Math.max(0, Math.floor(Math.max(0, tacticsSafeInt(value, 0)) * rate));
+  const baseMaxHp = Math.max(1, grow(target.baseMaxHp));
+  const baseMaxGuts = Math.max(0, grow(target.baseMaxGuts));
+  return normalizeTacticsUnit({
+    ...target,
+    baseMaxHp, maxHp: baseMaxHp, hp: baseMaxHp,
+    baseMaxGuts, maxGuts: baseMaxGuts,
+    guts: Math.floor(baseMaxGuts * TACTICS_START_GUTS_RATE),
+    atk: grow(target.atk),
+    def: grow(target.def),
+  });
+};
