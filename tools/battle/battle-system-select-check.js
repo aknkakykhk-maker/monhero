@@ -145,6 +145,32 @@ check('売りが説明文の繰り返しになっていない',
 // カード下の1行(note)とも重ならない
 check('売りがカード下の1行と重なっていない',
   api.BATTLE_SYSTEMS.every(s => s.highlights.every(([, text]) => !s.note.includes(text))));
+// ★どのバトルにもあることを、片方だけの売りとして書かない(2026-09-20 ユーザー指摘)。
+//   「敵の行動が1ターン前に予告される」「解析で確率が見られる」はどのバトルにもあるので、
+//   クラシック(＝基本)にだけ置く。タクティクス側は「誰を狙うかまで出る」が変わったところ
+{
+  const classic = api.BATTLE_SYSTEMS.find(s => s.id === api.BATTLE_SYSTEM_CLASSIC);
+  const tactics = api.BATTLE_SYSTEMS.find(s => s.id === api.BATTLE_SYSTEM_TACTICS);
+  const lineOf = (system) => system.highlights.map(([, text]) => text).join(' ');
+  check('基本にもあることをタクティクスの売りにしていない',
+    !/1ターン前|予告される|解析/.test(lineOf(tactics)), lineOf(tactics));
+  // ★「育てた数字より読みで勝てる」とは書かない。プロ以外はどのバトルでも育成の力が要る
+  check('育成が要らないと読める書き方をしていない',
+    api.BATTLE_SYSTEMS.every(s => !/育てた数字より|育成の数字より|数字より.*読み/.test(
+      `${s.tagline} ${lineOf(s)} ${s.points.map(p => p[2]).join(' ')}`)));
+  // クラシックは「いままでの通常のバトル」。基本の骨格(ライフ・カード・強化)を書く
+  check('クラシックには基本の骨格が書いてある',
+    /ライフ/.test(lineOf(classic)) && /カード/.test(lineOf(classic)) && /強化/.test(lineOf(classic)),
+    lineOf(classic));
+  // タクティクスは「基本から変わったところ」だけ。基本の説明を繰り返さない
+  check('タクティクスは基本との違いが書いてある',
+    /1体ずつ/.test(lineOf(tactics)) && /狙う/.test(lineOf(tactics)), lineOf(tactics));
+  // 詳しいルールでも、基本との関係が読めるようにしておく
+  check('タクティクスの詳しいルールが基本との関係を書いている',
+    tactics.points.some(([, , text]) => text.includes('基本のバトル'))
+      && tactics.points.some(([, title]) => title.includes('育成')),
+    tactics.points.map(p => p[1]).join(' / '));
+}
 check('仕組みとモードを同じ入口から引ける',
   has('const battleInfoById = (id) => BATTLE_SYSTEMS.find(s => s.id === id) || battleModeInfo(id);')
     && has('{modeInfoId&&(()=>{const mode=battleInfoById(modeInfoId);return('));
