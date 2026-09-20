@@ -85,7 +85,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-20 20:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-21 01:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -159,6 +159,19 @@ const SPECIES_CHALLENGE_PUBLIC_RELEASE = true;
 // 一度 true にしたあとは、実装側から勝手に false へ戻さない
 // (戻すと、すでに遊んだ人の全国ランキングだけが止まる)。
 const TACTICS_MODE_PUBLIC_RELEASE = false;
+// タクティクスバトルの公開は2段階。β版では**タクティクスプロだけ**遊べるようにする
+// (2026-09-20 ユーザー指示「公開の前にβ版としてプロモードだけ出来るようにして」)。
+// true のあいだは
+//   ・モンヒロバトルの入口にタクティクスバトルが出る(「β版」と分かるように出す)
+//   ・中に3つのカードが並び、遊べるのはタクティクスプロだけ。ほかの2つは「準備中」
+//   ・タクティクスプロのスコアは**β版専用の行**(TacticsProBeta<難易度>)へ送る
+// 本公開(TACTICS_MODE_PUBLIC_RELEASE)を立てると、3モードすべてが遊べるようになり、
+// ランキングも TacticsPro<難易度> へ切り替わるので、本番の順位は空から始まる。
+// ★β版の行は消さない。モンヒロビートの週間ランキングが週IDで区切るのと同じ考え方で、
+//   キーを変えるだけにしておく(消す作業はSupabaseの管理接続が要るうえ、戻せない)。
+// 一度 true にしたあとは、実装側から勝手に false へ戻さない
+// (戻すと、すでに遊んだ人の全国ランキングだけが止まる)。
+const TACTICS_BETA_PRO_RELEASE = false;
 // 解放条件。チャレンジモードで Master / Grand Master / Hell / Legend のどれかを1回以上
 // クリアしていること。判定には既存の mh_clears_<難易度> をそのまま読むので、新しい解放フラグは
 // 作らない(旧セーブのプレイヤーもログインした時点で解放済みとして扱われる)。
@@ -574,20 +587,38 @@ const BATTLE_SYSTEMS = Object.freeze([
 ]);
 // そのモードがどの仕組みに属するか。見つからなければ「これまでのバトル」に寄せる
 const battleSystemOf = (modeId) => BATTLE_SYSTEMS.find(s => s.modes.includes(modeId)) || BATTLE_SYSTEMS[0];
-// 仕組みの中で実際に画面へ並べるモード。公開フラグで出し入れするものはここで落とす
+// そのモードをいま遊べるか。公開フラグの見方はここ1か所にまとめる
+// (画面・ランキング・検査がばらばらにフラグを見ると、片方だけ出し忘れる)
+const battleModePlayable = (id, { debugBattle = false } = {}) => {
+  if (debugBattle) return true;
+  if (id === BATTLE_MODE_SPECIES_CHALLENGE) return SPECIES_CHALLENGE_PUBLIC_RELEASE;
+  // ★β版はタクティクスプロだけ遊べる(2026-09-20 ユーザー指示)
+  if (id === BATTLE_MODE_TACTICS_PRO) return TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE;
+  if (isTacticsMode(id)) return TACTICS_MODE_PUBLIC_RELEASE;
+  return true;
+};
+// まだ遊べないが、カードだけは並べるモード。β版のタクティクスバトルの中だけで起きる
+// (ユーザー指示「3つ並べてプロ以外は準備中」)。デバッグからは今までどおり全部遊べる
+const battleModeComingSoon = (id, { debugBattle = false } = {}) => !debugBattle
+  && TACTICS_BETA_PRO_RELEASE && !TACTICS_MODE_PUBLIC_RELEASE
+  && isTacticsMode(id) && !battleModePlayable(id, { debugBattle });
+// 仕組みの中で実際に画面へ並べるモード。遊べないものは落とすが、
+// 「準備中」として見せるものだけは残す
 const battleSystemModes = (systemId, { debugBattle = false } = {}) => {
   const system = BATTLE_SYSTEMS.find(s => s.id === systemId) || BATTLE_SYSTEMS[0];
-  return system.modes.filter(id => {
-    if (id === BATTLE_MODE_SPECIES_CHALLENGE) return SPECIES_CHALLENGE_PUBLIC_RELEASE || debugBattle;
-    if (isTacticsMode(id)) return TACTICS_MODE_PUBLIC_RELEASE || debugBattle;
-    return true;
-  });
+  return system.modes.filter(id => battleModePlayable(id, { debugBattle })
+    || battleModeComingSoon(id, { debugBattle }));
 };
 // まだ遊べないが、枠だけは見せる仕組み(2026-09-20 ユーザー指示
 // 「準備中の新モードもクイックの上に入れて」)。モンヒロビートの「準備中」と同じ作りで、
-// 公開フラグが立つまでは押せないカードを出す。デバッグからは今までどおり遊べる
+// 公開フラグが立つまでは押せないカードを出す。デバッグからは今までどおり遊べる。
+// ★β版が立つと中のプロが遊べるので、仕組みそのものは「準備中」ではなくなる
 const battleSystemComingSoon = (systemId, { debugBattle = false } = {}) =>
-  systemId === BATTLE_SYSTEM_TACTICS && !TACTICS_MODE_PUBLIC_RELEASE && !debugBattle;
+  systemId === BATTLE_SYSTEM_TACTICS && !TACTICS_MODE_PUBLIC_RELEASE
+    && !TACTICS_BETA_PRO_RELEASE && !debugBattle;
+// β版で開いている仕組み。中のモードが全部そろっていないことを入口で伝えるために使う
+const battleSystemBeta = (systemId, { debugBattle = false } = {}) => !debugBattle
+  && systemId === BATTLE_SYSTEM_TACTICS && TACTICS_BETA_PRO_RELEASE && !TACTICS_MODE_PUBLIC_RELEASE;
 // 画面へ並べる仕組み。中に出せるモードが1つも無いものは、準備中の枠としてだけ出す
 const visibleBattleSystems = ({ debugBattle = false } = {}) =>
   BATTLE_SYSTEMS.filter(s => battleSystemModes(s.id, { debugBattle }).length > 0
@@ -610,9 +641,11 @@ const PUBLIC_BATTLE_MODES = BATTLE_MODES;
 // 種族チャレンジは一般公開するまで全国ランキングへ送らない。
 // デバッグの実戦から外部ランキングを汚さないための入口はここ1か所にまとめてある
 // 新モードも、公開するまでは全国ランキングへ送らない(デバッグから遊べるため、ここで止める)
+// ★タクティクス側は battleModePlayable がフラグを1か所で見る。
+//   β版ではタクティクスプロだけが true になり、送り先もβ版専用の行になる
 const modeHasRanking = (mode) => !isQuickMode(mode)
   && (mode !== BATTLE_MODE_SPECIES_CHALLENGE || SPECIES_CHALLENGE_PUBLIC_RELEASE)
-  && (!isTacticsMode(mode) || TACTICS_MODE_PUBLIC_RELEASE);
+  && (!isTacticsMode(mode) || battleModePlayable(mode));
 // そのモードで遊んだときに増える、みゅあの仲良し度の行動キー。
 // 既存の challenge / quick の獲得量と1日上限は変えず、プロぶんの pro を足しただけ
 const modeBondAction = (mode) => isQuickMode(mode) ? 'quick' : isProMode(mode) ? 'pro' : 'challenge';

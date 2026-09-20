@@ -194,9 +194,10 @@ function ProfileScreen({
         {/* 保存済みの各モード記録を読むだけのプロフィール表示。新しい保存キーは作らない。 */}
         {(()=>{
           const difficultyIds=Object.keys(DIFFICULTY_SETTINGS);
-          // タクティクスバトルの3モードは、一般公開したときに同じ並びへ加わる
+          // タクティクスバトルのモードは、遊べるようになったものから同じ並びへ加わる
+          // (β版ではタクティクスプロだけ)。判定は battleModePlayable の1か所に任せる
           const modes=[...PUBLIC_BATTLE_MODES,EXTREME_MODE,SPECIES_CHALLENGE_MODE,
-            ...(TACTICS_MODE_PUBLIC_RELEASE?[TACTICS_MODE,TACTICS_SPECIES_MODE,TACTICS_PRO_MODE]:[])];
+            ...[TACTICS_MODE,TACTICS_SPECIES_MODE,TACTICS_PRO_MODE].filter(mode=>battleModePlayable(mode.id))];
           const selected=modes.find(mode=>mode.id===profileBattleMode)||null;
           const progressOf=(mode)=>(typeof speciesChallengeProgressOf==='function'
             ? speciesChallengeProgressOf(mode) : speciesChallengeProgress);

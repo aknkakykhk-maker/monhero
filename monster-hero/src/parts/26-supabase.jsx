@@ -18,13 +18,22 @@ const EXTREME_RANKING_PREFIX = 'Extreme';
 // (例: TacticsHard / TacticsEXTREME)。Pro / Extreme とは先頭が違うので取り違えは起きない。
 // チャレンジ・プロ・極限の行は読みも書きもしない
 const TACTICS_RANKING_PREFIX = 'Tactics';
+// ★タクティクスプロは、β版のあいだだけ別の行(TacticsProBeta<難易度>)へ送る。
+//   本公開でキーが TacticsPro<難易度> へ切り替わり、本番の順位は空から始まる。
+//   β版の行は消さない(モンヒロビートの週間ランキングが週IDで区切るのと同じ考え方)
+const TACTICS_PRO_RANKING_PREFIX = `${TACTICS_RANKING_PREFIX}${PRO_RANKING_PREFIX}`;
+const TACTICS_PRO_BETA_SUFFIX = 'Beta';
+const tacticsProRankingPrefix = () => (TACTICS_MODE_PUBLIC_RELEASE
+  ? TACTICS_PRO_RANKING_PREFIX : `${TACTICS_PRO_RANKING_PREFIX}${TACTICS_PRO_BETA_SUFFIX}`);
 const RANKING_DIFFICULTY_KEYS = Object.freeze([
   ...Object.keys(DIFFICULTY_SETTINGS),
   ...Object.keys(DIFFICULTY_SETTINGS).map(key => `${PRO_RANKING_PREFIX}${key}`),
   // タクティクスは通常9段階＋極限5段階(TACTICS_DIFFICULTY_IDS が正本)。
   // 極限もモードの中の難易度なので、極限チャレンジの Extreme* とは別の行になる
   ...TACTICS_DIFFICULTY_IDS.map(key => `${TACTICS_RANKING_PREFIX}${key}`),
-  ...TACTICS_DIFFICULTY_IDS.map(key => `${TACTICS_RANKING_PREFIX}${PRO_RANKING_PREFIX}${key}`),
+  // 本公開ぶんとβ版ぶんの両方を通す。公開の前後で、片方が「知らない難易度」にならないように
+  ...TACTICS_DIFFICULTY_IDS.map(key => `${TACTICS_PRO_RANKING_PREFIX}${key}`),
+  ...TACTICS_DIFFICULTY_IDS.map(key => `${TACTICS_PRO_RANKING_PREFIX}${TACTICS_PRO_BETA_SUFFIX}${key}`),
   // GOD以降も同じ表(ALL_EXTREME_DIFFICULTIES)から作る。難易度を足すたびにここへ1行書き足すと
   // 書き忘れでランキングだけ落ちるので、正本を1つにしておく
   ...ALL_EXTREME_DIFFICULTIES.map(setting => `${EXTREME_RANKING_PREFIX}${setting.id}`),
@@ -117,10 +126,10 @@ const rankingDifficultyForMode = (mode, diff, speciesId=null) => {
   if (typeof EXTREME_MODE !== 'undefined' && EXTREME_MODE && mode === EXTREME_MODE.id) {
     return `${EXTREME_RANKING_PREFIX}${normalizeExtremeDifficulty(diff)}`;
   }
-  // ★タクティクスプロは Tactics と Pro を重ねた TacticsPro<難易度>。
+  // ★タクティクスプロは Tactics と Pro を重ねた TacticsPro<難易度>(β版は末尾に Beta)。
   //   isTacticsMode より先に見る(あとに置くと Tactics<難易度> になってしまう)
   if (mode === BATTLE_MODE_TACTICS_PRO) {
-    return `${TACTICS_RANKING_PREFIX}${PRO_RANKING_PREFIX}${normalizeBattleDifficulty(diff)}`;
+    return `${tacticsProRankingPrefix()}${normalizeBattleDifficulty(diff)}`;
   }
   if (isTacticsMode(mode)) return `${TACTICS_RANKING_PREFIX}${normalizeBattleDifficulty(diff)}`;
   return isProMode(mode) ? `${PRO_RANKING_PREFIX}${normalizeBattleDifficulty(diff)}` : normalizeBattleDifficulty(diff);
@@ -131,10 +140,12 @@ const rankingDifficultyBase = (key) => {
   const species = parseSpeciesChallengeRankingDifficulty(text);
   if (species) return species.difficultyId;
   if (text.startsWith(EXTREME_RANKING_PREFIX)) return text.slice(EXTREME_RANKING_PREFIX.length);
-  // TacticsPro は Tactics より先に落とす(順番を逆にすると 'ProHard' が残る)
-  if (text.startsWith(`${TACTICS_RANKING_PREFIX}${PRO_RANKING_PREFIX}`)) {
-    return text.slice(TACTICS_RANKING_PREFIX.length + PRO_RANKING_PREFIX.length);
+  // TacticsProBeta → TacticsPro → Tactics の順で落とす
+  // (順番を逆にすると 'ProHard' や 'BetaHard' が残る)
+  if (text.startsWith(`${TACTICS_PRO_RANKING_PREFIX}${TACTICS_PRO_BETA_SUFFIX}`)) {
+    return text.slice(TACTICS_PRO_RANKING_PREFIX.length + TACTICS_PRO_BETA_SUFFIX.length);
   }
+  if (text.startsWith(TACTICS_PRO_RANKING_PREFIX)) return text.slice(TACTICS_PRO_RANKING_PREFIX.length);
   if (text.startsWith(TACTICS_RANKING_PREFIX)) return text.slice(TACTICS_RANKING_PREFIX.length);
   return text.startsWith(PRO_RANKING_PREFIX) ? text.slice(PRO_RANKING_PREFIX.length) : text;
 };

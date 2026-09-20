@@ -355,8 +355,9 @@ check('新しい台本のidも重複していない', new Set(stepsV2.map(s => s
 check('新しい台本の表情もすべて用意されているもの', stepsV2.every(s => ASSISTANT_EXPRESSIONS.includes(s.e)));
 // 初回でクイック・プロを実際に遊ばせない
 // 極限・種族チャレンジの解放条件と同じ disabled にまとまった
+// ★β版の「準備中」も同じ disabled にまとまっている(2026-09-20)
 check('練習中はチャレンジ以外の「難易度を選ぶ」を押せない',
-  has('disabled={extremeLocked||speciesLocked||(!!battleTutorial&&m.id!==BATTLE_MODE_CHALLENGE)}'));
+  has('disabled={extremeLocked||speciesLocked||modeSoon||(!!battleTutorial&&m.id!==BATTLE_MODE_CHALLENGE)}'));
 check('新しい難易度選択でも練習中はビギナーだけ',
   has("disabled={!!battleTutorial&&key!=='Beginner'}"));
 check('練習中の難易度選択はビギナーから始まる',

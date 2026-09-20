@@ -46,6 +46,10 @@ const sandbox = {
 vm.createContext(sandbox);
 vm.runInContext([
   slice('const BATTLE_MODE_CHALLENGE =', 'const isQuickDifficultyCleared'),
+  // 公開フラグの見方(battleModePlayable / battleModeComingSoon)と、
+  // ランキングへ送るかの判定(modeHasRanking)
+  slice('// ===== バトルの仕組み(モード選択の1つ上) =====', '// 極限チャレンジは通常の3モードとは別に'),
+  slice('const modeHasRanking =', 'const modeBondAction'),
   slice('const DIFFICULTY_SETTINGS = {', 'const normalizeBattleDifficulty'),
   slice('const normalizeBattleDifficulty = (value)', '// ヘルプの中に出す「実データから作る表」'),
   slice('const PRO_RANKING_PREFIX =', '// 通信、state、リクエスト管理、画面参照で共有する唯一のランキング内部キー'),
@@ -55,6 +59,8 @@ vm.runInContext([
   + 'isTacticsMode,isProMode,isQuickMode,isSpeciesChallengeMode,modeKeyPrefix,'
   + 'bestScoreKey,bestWaveKey,clearCountKey,isTacticsDifficultyUnlocked,isExtremeDifficultyId,'
   + 'rankingDifficultyForMode,rankingDifficultyBase,normalizeRankingDifficulty,RANKING_DIFFICULTY_KEYS,'
+  + 'TACTICS_PRO_RANKING_PREFIX,TACTICS_PRO_BETA_SUFFIX,tacticsProRankingPrefix,'
+  + 'battleModePlayable,battleModeComingSoon,battleSystemBeta,modeHasRanking,'
   + 'SPECIES_CHALLENGE_PROGRESS_KEY,TACTICS_SPECIES_CHALLENGE_PROGRESS_KEY,speciesChallengeProgressKeyOf,'
   + 'speciesChallengeRunMode,DIFFICULTY_SETTINGS};',
 ].join('\n'), sandbox);
@@ -113,9 +119,13 @@ check('モードを持たない古い周回はクラシックの種族チャレ�
     && api.speciesChallengeRunMode(null) === api.BATTLE_MODE_SPECIES_CHALLENGE
     && api.speciesChallengeRunMode({ mode: api.BATTLE_MODE_TACTICS_SPECIES }) === api.BATTLE_MODE_TACTICS_SPECIES);
 // ★TacticsPro は Tactics より先に判定しないと Tactics + 'ProHard' になる
+// ★タクティクスプロの送り先は公開の段階で変わる(β版は末尾に Beta)。
+//   ここでは「ほかのモードと混ざらないこと」だけを見る
 check('ランキングのキーが5モードで別々',
   api.TACTICS_DIFFICULTY_IDS.every(d => api.rankingDifficultyForMode(api.BATTLE_MODE_TACTICS, d) === `Tactics${d}`
-    && api.rankingDifficultyForMode(api.BATTLE_MODE_TACTICS_PRO, d) === `TacticsPro${d}`)
+    && api.rankingDifficultyForMode(api.BATTLE_MODE_TACTICS_PRO, d) === `${api.tacticsProRankingPrefix()}${d}`
+    && api.rankingDifficultyForMode(api.BATTLE_MODE_TACTICS_PRO, d)
+      !== api.rankingDifficultyForMode(api.BATTLE_MODE_TACTICS, d))
     && Object.keys(api.DIFFICULTY_SETTINGS).every(d => api.rankingDifficultyForMode(api.BATTLE_MODE_CHALLENGE, d) === d
       && api.rankingDifficultyForMode(api.BATTLE_MODE_PRO, d) === `Pro${d}`));
 check('ランキングのキーから素の難易度へ戻せる',
@@ -123,7 +133,35 @@ check('ランキングのキーから素の難易度へ戻せる',
     && api.rankingDifficultyBase(`TacticsPro${d}`) === d));
 check('タクティクスのキーがランキングの一覧に入っている',
   api.TACTICS_DIFFICULTY_IDS.every(d => api.normalizeRankingDifficulty(`Tactics${d}`) === `Tactics${d}`
-    && api.normalizeRankingDifficulty(`TacticsPro${d}`) === `TacticsPro${d}`));
+    && api.normalizeRankingDifficulty(`TacticsPro${d}`) === `TacticsPro${d}`
+    && api.normalizeRankingDifficulty(`TacticsProBeta${d}`) === `TacticsProBeta${d}`));
+
+// ===== ②-2 β版（タクティクスプロだけ先に出す） =====
+// 2026-09-20 ユーザー指示。β版のスコアは**別の行**へ送り、本公開でキーを切り替える。
+// 行は消さない(モンヒロビートの週間ランキングが週IDで区切るのと同じ考え方)ので、
+// 本番の順位は空から始まり、消す作業も要らない
+check('β版の送り先は本公開と別の行',
+  api.TACTICS_PRO_BETA_SUFFIX === 'Beta'
+    && api.tacticsProRankingPrefix() === `${api.TACTICS_PRO_RANKING_PREFIX}${api.TACTICS_PRO_BETA_SUFFIX}`,
+  api.tacticsProRankingPrefix());
+check('β版と本公開の行が重ならない',
+  api.TACTICS_DIFFICULTY_IDS.every(d => api.rankingDifficultyForMode(api.BATTLE_MODE_TACTICS_PRO, d)
+    === `${api.TACTICS_PRO_RANKING_PREFIX}${api.TACTICS_PRO_BETA_SUFFIX}${d}`));
+// ★TacticsProBeta → TacticsPro → Tactics の順で落とさないと 'BetaHard' や 'ProHard' が残る
+check('β版のキーからも素の難易度へ戻せる',
+  api.TACTICS_DIFFICULTY_IDS.every(d => api.rankingDifficultyBase(`TacticsProBeta${d}`) === d));
+// 公開の前後でどちらのキーも「知らない難易度」にならないこと(移行の途中で落ちない)
+check('本公開ぶんとβ版ぶんの両方が一覧にある',
+  api.TACTICS_DIFFICULTY_IDS.every(d => api.RANKING_DIFFICULTY_KEYS.includes(`TacticsPro${d}`)
+    && api.RANKING_DIFFICULTY_KEYS.includes(`TacticsProBeta${d}`)));
+// 公開フラグの見方は battleModePlayable の1か所。ランキングへ送るかもそこから決まる
+check('いまはβ版も本公開もOFF',
+  api.battleModePlayable(api.BATTLE_MODE_TACTICS_PRO) === false
+    && api.battleModePlayable(api.BATTLE_MODE_TACTICS) === false
+    && api.modeHasRanking(api.BATTLE_MODE_TACTICS_PRO) === false);
+check('デバッグからは遊べるが、ランキングへは送らない',
+  api.battleModePlayable(api.BATTLE_MODE_TACTICS_PRO, { debugBattle: true }) === true
+    && api.modeHasRanking(api.BATTLE_MODE_TACTICS_PRO) === false);
 
 // ===== ③ 記録を書く3か所が、必ずタクティクス用の枝を通る =====
 // 難易度は1か所(tacticsRecordDifficulty)で決める。極限で遊ぶと difficulty が 'Normal' に

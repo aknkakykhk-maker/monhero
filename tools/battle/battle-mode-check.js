@@ -47,7 +47,7 @@ vm.runInContext([
   + 'bondXpForWavesClearedInMode,waveBondXpGainInMode,'
   + 'waveXpGainInMode,waveGoldGainInMode,bestScoreKey,bestWaveKey,clearCountKey,highestModeScore,DIFFICULTY_SETTINGS,BATTLE_MODE_QUICK,BATTLE_MODE_CHALLENGE,BATTLE_MODE_PRO,'
   + 'PRO_RANKING_PREFIX,EXTREME_RANKING_PREFIX,EXTREME_DIFFICULTIES,ALL_EXTREME_DIFFICULTIES,RANKING_DIFFICULTY_KEYS,rankingDifficultyForMode,rankingDifficultyBase,normalizeRankingDifficulty,'
-  + 'TACTICS_DIFFICULTY_IDS,TACTICS_RANKING_PREFIX,BATTLE_MODE_TACTICS,BATTLE_MODE_TACTICS_PRO,BATTLE_MODE_TACTICS_SPECIES,isTacticsMode,isSpeciesChallengeMode,'
+  + 'TACTICS_DIFFICULTY_IDS,TACTICS_RANKING_PREFIX,tacticsProRankingPrefix,BATTLE_MODE_TACTICS,BATTLE_MODE_TACTICS_PRO,BATTLE_MODE_TACTICS_SPECIES,isTacticsMode,isSpeciesChallengeMode,'
   + 'pickJoinCandidates,battleModeAssistantScene,'
   + 'calculateRemainingHp,resolveEffectiveMaxStat,quickGrowStat,resolveQuickGrowthStats};',
 ].join('\n'), ctx);
@@ -223,20 +223,24 @@ check('素の難易度へ戻せる',
 check('知らない難易度は今までどおり弾く', (() => { try { m.normalizeRankingDifficulty('Pro'); return false; } catch { return true; } })());
 // チャレンジ9 + プロ9 + タクティクス14 + タクティクスプロ14 + 極限の段階ぶん。
 // 重複が無いこと(同じ行を2モードで奪い合わない)を見る。数は表から出して、検査へ書き写さない
+// ★タクティクスプロは本公開ぶんとβ版ぶんの2つを持つ(公開の前後でどちらも通るように)
 check('難易度キーの一覧に重複が無い', new Set(m.RANKING_DIFFICULTY_KEYS).size === m.RANKING_DIFFICULTY_KEYS.length
   && m.RANKING_DIFFICULTY_KEYS.length === Object.keys(m.DIFFICULTY_SETTINGS).length * 2
-    + m.TACTICS_DIFFICULTY_IDS.length * 2 + m.ALL_EXTREME_DIFFICULTIES.length);
+    + m.TACTICS_DIFFICULTY_IDS.length * 3 + m.ALL_EXTREME_DIFFICULTIES.length);
 // タクティクスのキーも、素の難易度へ戻せて、プロ・極限の行とは混ざらない
 check('新モードの難易度キーが独立している',
   m.TACTICS_DIFFICULTY_IDS.every(d => m.normalizeRankingDifficulty(`Tactics${d}`) === `Tactics${d}`
     && m.rankingDifficultyBase(`Tactics${d}`) === d
     && m.rankingDifficultyForMode('tactics', d) === `Tactics${d}`));
 // ★タクティクスプロは TacticsPro を重ねたキー。Tactics より先に判定しないと
-//   Tactics + 'ProHard' になってしまう(素の難易度へ戻すときも同じ順番が要る)
+//   Tactics + 'ProHard' になってしまう(素の難易度へ戻すときも同じ順番が要る)。
+//   β版のあいだは末尾に Beta が付き、本公開で外れる
 check('タクティクスプロの難易度キーが独立している',
   m.TACTICS_DIFFICULTY_IDS.every(d => m.normalizeRankingDifficulty(`TacticsPro${d}`) === `TacticsPro${d}`
+    && m.normalizeRankingDifficulty(`TacticsProBeta${d}`) === `TacticsProBeta${d}`
     && m.rankingDifficultyBase(`TacticsPro${d}`) === d
-    && m.rankingDifficultyForMode('tacticsPro', d) === `TacticsPro${d}`));
+    && m.rankingDifficultyBase(`TacticsProBeta${d}`) === d
+    && m.rankingDifficultyForMode('tacticsPro', d) === `${m.tacticsProRankingPrefix()}${d}`));
 // 記録の置き場も4つに分かれていること
 check('記録の置き場がモードごとに分かれている',
   m.modeKeyPrefix('challenge') === 'mh_' && m.modeKeyPrefix('quick') === 'mh_quick_'
