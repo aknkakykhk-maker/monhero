@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a7a8f37e219f55f5
+// source-sha256: 6951c00dba97f717
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c17ab4b6ab8bbe4e
+// generated-sha256: 42b7df2b6539251d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-20 15:44"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-20 17:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -496,6 +496,64 @@ const BATTLE_MODES = [{
   highlights: [['🔥', '育てたマスモンなしで挑む実力勝負'], ['💎', '絆経験値3倍・ブリーダー経験値1.5倍'], ['📊', 'プロ専用のスコアランキング']],
   points: [['⚔️', '編成', '育てたマスモンは1体も連れていけません。全員が素のベースモンです。これまで積み上げたステータス・強化ポイント・固有技レベル・限界突破は、このモードでは一切使えません。'], ['📈', 'WAVEのあいだの強化', 'チャレンジモードと同じで、WAVEをクリアするたびに強化フェーズがあります。素の状態から始まるぶん、どこを伸ばすかの判断がそのまま結果に出ます。'], ['👹', '難しさ', '育成済みの個体を使わない特殊な制約があります。同じ難易度でも、育てた個体を使えるチャレンジモードとは違う手ごたえです。敵の強さは難易度どおりなので、上の難易度へ行くほど制約の重みが増します。'], ['💎', 'もらえる経験値とダイヤ', '絆経験値が3倍、ブリーダー経験値が1.5倍になります（難易度の倍率にさらにかかります）。ダイヤとスコアの倍率は難易度の設定どおりで、上乗せはありません。'], ['🏆', 'スコアと記録', 'スコアはチャレンジモードとは別の「プロランキング」に反映されます。同じ条件で挑んだ人どうしで競う場所です。自己ベスト・最高到達WAVE・クリア回数もプロ専用の場所に残り、チャレンジモードの記録は書き換わりません。'], ['🤝', '供モンの加入', '始める前に供モンの候補を5体選びます。実際に加入候補として出るのは、その5体からランダムに選ばれた3体です。誰が来てもいいように候補を組むところまでが編成です。'], ['⭐', 'マスモン登録', '勇者モンにしたベースモンは、プレイが終わったあとマスモンとして登録できます。厳しい条件で戦ったぶん、絆経験値は3倍ぶん貯まっています。'], ['⏩', 'スキップチケット', '使えません。スコアを競うモードなので、戦わずに報酬だけ取れないようにしています。'], ['🎯', 'こんな人におすすめ', '育成の力を借りずに腕だけで勝ちたい人、チャレンジモードが物足りなくなった人向けです。']]
 }];
+// ===== バトルの仕組み(モード選択の1つ上) =====
+// 2026-09-20 ユーザー指示「モンヒロバトルに入ったらすぐモード選択ページにいかずに、
+// チャレンジモードと新バトルモードとクイックモードを選べるようにして、そこの中で各種モードがあるように」。
+// ★ここで選ぶものは**保存しない**(画面を分けるためだけの値)。記録もランキングも今までどおり
+//   モードのid(mh_hs_* / mh_tactics_* など)で分かれるので、保存キーは1つも増えない。
+//   難易度選択の「通常/極限」タブ(difficultySelectTab)と同じ扱い
+// ★label は仮。新しいバトルの名前が決まったらここだけ差し替える(idも保存キーも変えない)
+const BATTLE_SYSTEM_CLASSIC = 'systemClassic';
+const BATTLE_SYSTEM_TACTICS = 'systemTactics';
+const BATTLE_SYSTEM_QUICK = 'systemQuick';
+const BATTLE_SYSTEMS = Object.freeze([Object.freeze({
+  id: BATTLE_SYSTEM_CLASSIC,
+  label: 'これまでのバトル',
+  short: 'これまで',
+  emoji: '⚔️',
+  color: '#818cf8',
+  tagline: 'パーティでライフを分け合う、いままでの戦い方',
+  note: 'チャレンジ・種族チャレンジ。難易度は通常と極限から選べます',
+  modes: Object.freeze([BATTLE_MODE_CHALLENGE, BATTLE_MODE_SPECIES_CHALLENGE, BATTLE_MODE_PRO])
+}), Object.freeze({
+  id: BATTLE_SYSTEM_TACTICS,
+  label: '戦術モード',
+  short: '戦術',
+  emoji: '🎯',
+  color: '#fb923c',
+  tagline: 'モンスターごとにライフを持つ、新しい戦い方',
+  note: '敵の技を読んで、誰を守るかを決める戦い方です',
+  modes: Object.freeze([BATTLE_MODE_TACTICS])
+}), Object.freeze({
+  id: BATTLE_SYSTEM_QUICK,
+  label: 'クイックモード',
+  short: 'クイック',
+  emoji: '⚡',
+  color: '#fbbf24',
+  tagline: '数字だけで決まる、すぐ終わる腕試し',
+  note: '中のモードは1つだけなので、選ぶとそのまま難易度へ進みます',
+  modes: Object.freeze([BATTLE_MODE_QUICK]),
+  direct: true
+})]);
+// そのモードがどの仕組みに属するか。見つからなければ「これまでのバトル」に寄せる
+const battleSystemOf = modeId => BATTLE_SYSTEMS.find(s => s.modes.includes(modeId)) || BATTLE_SYSTEMS[0];
+// 仕組みの中で実際に画面へ並べるモード。公開フラグで出し入れするものはここで落とす
+const battleSystemModes = (systemId, {
+  debugBattle = false
+} = {}) => {
+  const system = BATTLE_SYSTEMS.find(s => s.id === systemId) || BATTLE_SYSTEMS[0];
+  return system.modes.filter(id => {
+    if (id === BATTLE_MODE_SPECIES_CHALLENGE) return SPECIES_CHALLENGE_PUBLIC_RELEASE || debugBattle;
+    if (id === BATTLE_MODE_TACTICS) return TACTICS_MODE_PUBLIC_RELEASE || debugBattle;
+    return true;
+  });
+};
+// 画面へ並べる仕組み。中に出せるモードが1つも無いものは出さない
+const visibleBattleSystems = ({
+  debugBattle = false
+} = {}) => BATTLE_SYSTEMS.filter(s => battleSystemModes(s.id, {
+  debugBattle
+}).length > 0);
 // 極限チャレンジは通常の3モードとは別に持っているので、説明・ランキング画面から引けるようにここで合流させる
 // (EXTREME_MODE はこの下で定義するため、呼ばれた時点で参照する)
 const battleModeInfo = mode => {
@@ -36493,10 +36551,10 @@ function HomeScreen({
   }, "\u2728\u958B\u50AC\u4E2D\u2728"))), /*#__PURE__*/React.createElement("button", {
     className: `mh-home-facility battle${spotClass('battle')}`,
     onClick: onOpenBattle,
-    "aria-label": "\u30D0\u30C8\u30EB"
+    "aria-label": "\u30E2\u30F3\u30D2\u30ED\u30D0\u30C8\u30EB"
   }, /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement(Sword, {
     size: 25
-  }), "\u30D0\u30C8\u30EB"))), /*#__PURE__*/React.createElement("button", {
+  }), "\u30E2\u30F3\u30D2\u30ED\u30D0\u30C8\u30EB"))), /*#__PURE__*/React.createElement("button", {
     onClick: openMissions,
     className: `mh-home-mission${spotClass('reward')}`
   }, /*#__PURE__*/React.createElement(List, {
@@ -41172,6 +41230,9 @@ function MonsterHeroGame() {
   // 「バトル → バトルモード選択 → 難易度選択」の3画面と、そこから開くランキング。
   // まだデバッグ設定からだけ開ける。ふだんの「バトル」はこれまでどおり BATTLE_MENU のまま
   const [modeSelectTab, setModeSelectTab] = useState('mode'); // 'mode' | 'breeder' | 'bond' | 'power'
+  // どのバトルの仕組みを選んだか(BATTLE_SYSTEM_SELECT → BATTLE_MODE_SELECT)。
+  // ★保存しない。画面を分けるためだけの値で、記録もランキングもモードのidで分かれる
+  const [battleSystem, setBattleSystem] = useState(BATTLE_SYSTEM_CLASSIC);
   // 難易度選択の「通常 / 極限」タブ。クイックは15段階、種族チャレンジは14段階あり、
   // 一続きに並べると探しにくいので分ける(2026-09-19 ユーザー指示)。
   // 表示のためだけの値で保存はしない。極限を持たないモードではタブ自体を出さない
@@ -46833,12 +46894,14 @@ function MonsterHeroGame() {
       // 極限チャレンジは未解放でもカードは出す(押せるかどうかだけを切り替える)
       // 極限チャレンジはチャレンジの「極限」タブへ入れ込んだので、モードのカードには並べない
       // (2026-09-19 ユーザー指示)。EXTREME_MODE の定義そのものは説明・ランキングが参照するので残す
-      const modes = [...BATTLE_MODES, ...(SPECIES_CHALLENGE_PUBLIC_RELEASE || debugBattle ? [SPECIES_CHALLENGE_MODE] : []), ...(TACTICS_MODE_PUBLIC_RELEASE || debugBattle ? [TACTICS_MODE] : [])];
+      const modes = battleSystemModes(battleSystem, {
+        debugBattle
+      }).map(id => battleModeInfo(id));
       const index = modes.length + Math.max(0, modes.findIndex(m => m.id === battleMode));
       centerCarouselChild(modeCarouselRef.current, index);
     });
     return () => cancelAnimationFrame(id);
-  }, [gameState, modeSelectTab]);
+  }, [gameState, modeSelectTab, battleSystem]);
   // 供モン合流の横スライドは、開くたびに先頭から見せる
   useEffect(() => {
     if (gameState !== 'PICK_ALLY') return;
@@ -51265,6 +51328,30 @@ function MonsterHeroGame() {
       cancelled = true;
     };
   }, [bootPhase, gameState, dataLoaded, onboarded, tutorialStep, updateGuideQueue.length, updateNoticeVisible, loginBonusPopup, levelCapCompensation, inheritedUniqueCompensation, dailyMasuAdvice, masuMons.length]);
+
+  // モンヒロバトルの入口で仕組みを選んだとき(2026-09-20 ユーザー指示)。
+  // 中にモードが1つだけのもの(クイック)は、選んだらそのまま難易度選択へ進める
+  const openBattleSystem = systemId => {
+    const system = BATTLE_SYSTEMS.find(s => s.id === systemId) || BATTLE_SYSTEMS[0];
+    const modes = battleSystemModes(system.id, {
+      debugBattle
+    });
+    if (!modes.length) return;
+    setBattleSystem(system.id);
+    setBattleMode(modes[0]);
+    if (system.direct) {
+      battleEntryStateRef.current = 'BATTLE_DIFFICULTY_SELECT';
+      setDifficultySelectTab(DIFFICULTY_TAB_NORMAL);
+      setGameState('BATTLE_DIFFICULTY_SELECT');
+      return;
+    }
+    setModeSelectTab('mode');
+    setGameState('BATTLE_MODE_SELECT');
+  };
+  const openBattleSystemSelect = () => {
+    setModeSelectTab('mode');
+    setGameState('BATTLE_SYSTEM_SELECT');
+  };
   const closeDailyMasuAdvice = () => setDailyMasuAdvice(null);
   const tryDailyMasuAdvice = () => {
     setDailyMasuAdvice(null);
@@ -57995,10 +58082,7 @@ function MonsterHeroGame() {
       homePastureMasumons: homePastureMasumons,
       masuMons: masuMons,
       missions: missions,
-      onOpenBattle: () => {
-        setModeSelectTab('mode');
-        setGameState('BATTLE_MODE_SELECT');
-      },
+      onOpenBattle: openBattleSystemSelect,
       onOpenManagement: () => {
         addAssistantBond('management');
         setManagementTab('monster');
@@ -59535,11 +59619,70 @@ function MonsterHeroGame() {
         }
       },
       className: `min-h-[38px] rounded-xl text-[10px] font-black border-2 active:scale-95 ${rankingKind === t.k ? 'bg-indigo-600 border-indigo-300' : 'bg-slate-900 border-white/10 text-slate-400'}`
-    }, t.label))), rankingKind === 'score' && renderScoreRankingBody(BATTLE_MODE_CHALLENGE), rankingKind === 'breeder' && renderBreederRankingBody(), rankingKind === 'bond' && renderBondRankingBody()))), gameState === 'BATTLE_MODE_SELECT' && (() => {
+    }, t.label))), rankingKind === 'score' && renderScoreRankingBody(BATTLE_MODE_CHALLENGE), rankingKind === 'breeder' && renderBreederRankingBody(), rankingKind === 'bond' && renderBondRankingBody()))), gameState === 'BATTLE_SYSTEM_SELECT' && (() => {
+      const systems = visibleBattleSystems({
+        debugBattle
+      });
+      return /*#__PURE__*/React.createElement("div", {
+        "data-mh-screen": true,
+        className: "flex-1 flex flex-col h-full min-h-0 px-4",
+        style: {
+          paddingTop: 'calc(.35rem + env(safe-area-inset-top))',
+          paddingBottom: 'calc(.35rem + env(safe-area-inset-bottom))'
+        }
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex items-center gap-1 mb-1 shrink-0"
+      }, /*#__PURE__*/React.createElement("button", {
+        "aria-label": "\u623B\u308B",
+        onClick: returnToHome,
+        className: "p-3 text-slate-400 active:scale-90 disabled:opacity-25"
+      }, /*#__PURE__*/React.createElement(ArrowLeft, null))), /*#__PURE__*/React.createElement("div", {
+        className: "w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "text-center text-[8px] tracking-[.2em] text-slate-400 font-black shrink-0"
+      }, "MONHERO BATTLE"), /*#__PURE__*/React.createElement("h2", {
+        className: "text-center text-xl font-black leading-tight shrink-0"
+      }, "\u30E2\u30F3\u30D2\u30ED\u30D0\u30C8\u30EB"), /*#__PURE__*/React.createElement("p", {
+        className: "text-center text-[10px] text-slate-400 mt-1 mb-3 shrink-0"
+      }, "\u3069\u306E\u30D0\u30C8\u30EB\u3067\u904A\u3076\u304B\u3092\u9078\u3073\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
+        "data-battle-systems": systems.length,
+        className: "flex flex-col gap-2 shrink-0"
+      }, systems.map(sys => /*#__PURE__*/React.createElement("button", {
+        key: sys.id,
+        "data-battle-system": sys.id,
+        onClick: () => openBattleSystem(sys.id),
+        className: "w-full rounded-2xl border-2 bg-slate-900/80 px-3 py-3 text-left active:scale-95 transition-transform",
+        style: {
+          borderColor: sys.color
+        }
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex items-center gap-2"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-2xl leading-none"
+      }, sys.emoji), /*#__PURE__*/React.createElement("span", {
+        className: "text-base font-black leading-tight",
+        style: {
+          color: sys.color
+        }
+      }, sys.label), sys.id === BATTLE_SYSTEM_TACTICS && !TACTICS_MODE_PUBLIC_RELEASE && /*#__PURE__*/React.createElement("span", {
+        className: "ml-auto text-[8px] font-black text-amber-300 border border-amber-400/60 rounded px-1 py-0.5"
+      }, "DEBUG")), /*#__PURE__*/React.createElement("div", {
+        className: "text-[11px] text-slate-200 font-bold leading-snug mt-1.5"
+      }, sys.tagline), /*#__PURE__*/React.createElement("div", {
+        className: "text-[9px] text-slate-400 leading-snug mt-1"
+      }, sys.note)))), /*#__PURE__*/React.createElement("div", {
+        className: "mt-3 shrink-0"
+      }, /*#__PURE__*/React.createElement(AssistantBubble, {
+        scene: "battleSystemSelect",
+        compact: true
+      }))));
+    })(), gameState === 'BATTLE_MODE_SELECT' && (() => {
       // 極限チャレンジは未解放でもカードは出す(押せるかどうかだけを切り替える)
       // 極限チャレンジはチャレンジの「極限」タブへ入れ込んだので、モードのカードには並べない
       // (2026-09-19 ユーザー指示)。EXTREME_MODE の定義そのものは説明・ランキングが参照するので残す
-      const modes = [...BATTLE_MODES, ...(SPECIES_CHALLENGE_PUBLIC_RELEASE || debugBattle ? [SPECIES_CHALLENGE_MODE] : []), ...(TACTICS_MODE_PUBLIC_RELEASE || debugBattle ? [TACTICS_MODE] : [])];
+      const modes = battleSystemModes(battleSystem, {
+        debugBattle
+      }).map(id => battleModeInfo(id));
       const current = modes.find(m => m.id === battleMode) || modes[0];
       const selectedIndex = Math.max(0, modes.findIndex(m => m.id === current.id));
       // 端で止まらず「ぐるぐる回る」ようにするため、同じ並びを3回くり返して置く。
@@ -59597,7 +59740,7 @@ function MonsterHeroGame() {
             setModeSelectTab('mode');
             return;
           }
-          returnToHome();
+          setGameState('BATTLE_SYSTEM_SELECT');
         },
         className: "p-3 text-slate-400 active:scale-90 disabled:opacity-25"
       }, /*#__PURE__*/React.createElement(ArrowLeft, {
@@ -60076,7 +60219,7 @@ function MonsterHeroGame() {
       }, /*#__PURE__*/React.createElement("button", {
         "aria-label": "\u623B\u308B",
         disabled: !!battleTutorial,
-        onClick: () => setGameState(species ? 'SPECIES_CHALLENGE_SELECT' : 'BATTLE_MODE_SELECT'),
+        onClick: () => setGameState(species ? 'SPECIES_CHALLENGE_SELECT' : battleSystemOf(battleMode).direct ? 'BATTLE_SYSTEM_SELECT' : 'BATTLE_MODE_SELECT'),
         className: "p-3 text-slate-400 active:scale-90 disabled:opacity-25"
       }, /*#__PURE__*/React.createElement(ArrowLeft, {
         size: 20
@@ -62493,8 +62636,9 @@ function MonsterHeroGame() {
         setDebugBattle(true);
         setExtremeRun(false);
         setBattleMode(BATTLE_MODE_CHALLENGE);
+        setBattleSystem(BATTLE_SYSTEM_CLASSIC);
         setModeSelectTab('mode');
-        setGameState('BATTLE_MODE_SELECT');
+        setGameState('BATTLE_SYSTEM_SELECT');
       },
       className: "w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
     }, "\u2694\uFE0F \u30D0\u30C8\u30EB\u30E2\u30FC\u30C9", /*#__PURE__*/React.createElement("small", {

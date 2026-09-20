@@ -99,6 +99,10 @@ const FORCE_CHECKS = [
   // 「isTacticsMode で締めたつもり」が既存5モードへ漏れると、遊んでいる人の記録に直に効く
   { re: /^monster-hero\/src\/parts\/(10-core|22-enemy-and-bond-entries|32-tactics-units|60-app|71-screen-battle)\.jsx$/,
     checks: ['battle/legacy-mode-parity-check.js'], why: '新モードの分岐が既存5モードへ漏れていないか' },
+  // モンヒロバトルの入口(仕組み → モード → 難易度)。導線を1本でも切ると遊べなくなるのに、
+  // ファイル名の語(app・home・core)では拾えないので名指しする
+  { re: /^monster-hero\/(src\/parts\/(10-core|60-app|69-screen-home)\.jsx|data\/(help|assistants)\.js)$/,
+    checks: ['battle/battle-system-select-check.js'], why: 'モンヒロバトルの入口と導線' },
   // 譜面(data/rhythm-mode.js)を触ったら、終点フリックの置き場所は必ず見る。
   // 語の当たりだけでは本数の上限で落ちることがあり、曲を足した回だけ静かに見逃す(2026-09-18)
   { re: /^monster-hero\/data\/rhythm-mode\.js$/, checks: ['mode/rhythm-end-flick-swing-check.js'], why: '譜面の終点フリックの置き場所' },

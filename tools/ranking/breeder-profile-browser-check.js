@@ -123,7 +123,9 @@ async function run() {
   await page.waitForTimeout(500);
   await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => x.querySelector('svg') && x.className.includes('text-slate-400')); if (b) b.click(); });
   await page.waitForTimeout(1200);
-  await page.evaluate(() => document.querySelector('button[aria-label="バトル"]')?.click());
+  await page.evaluate(() => document.querySelector('button[aria-label="モンヒロバトル"]')?.click());
+  await page.waitForTimeout(600);
+  await page.evaluate(() => document.querySelector('[data-battle-system="systemClassic"]')?.click());
   await page.waitForTimeout(1500);
   await page.evaluate(() => [...document.querySelectorAll('button')].find(x => /チャレンジモードのランキング/.test(x.textContent))?.click());
   await page.waitForTimeout(4500);

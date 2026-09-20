@@ -474,6 +474,9 @@ function MonsterHeroGame() {
   // 「バトル → バトルモード選択 → 難易度選択」の3画面と、そこから開くランキング。
   // まだデバッグ設定からだけ開ける。ふだんの「バトル」はこれまでどおり BATTLE_MENU のまま
   const [modeSelectTab, setModeSelectTab] = useState('mode'); // 'mode' | 'breeder' | 'bond' | 'power'
+  // どのバトルの仕組みを選んだか(BATTLE_SYSTEM_SELECT → BATTLE_MODE_SELECT)。
+  // ★保存しない。画面を分けるためだけの値で、記録もランキングもモードのidで分かれる
+  const [battleSystem, setBattleSystem] = useState(BATTLE_SYSTEM_CLASSIC);
   // 難易度選択の「通常 / 極限」タブ。クイックは15段階、種族チャレンジは14段階あり、
   // 一続きに並べると探しにくいので分ける(2026-09-19 ユーザー指示)。
   // 表示のためだけの値で保存はしない。極限を持たないモードではタブ自体を出さない
@@ -4962,12 +4965,12 @@ function MonsterHeroGame() {
       // 極限チャレンジは未解放でもカードは出す(押せるかどうかだけを切り替える)
       // 極限チャレンジはチャレンジの「極限」タブへ入れ込んだので、モードのカードには並べない
       // (2026-09-19 ユーザー指示)。EXTREME_MODE の定義そのものは説明・ランキングが参照するので残す
-      const modes=[...BATTLE_MODES,...((SPECIES_CHALLENGE_PUBLIC_RELEASE||debugBattle)?[SPECIES_CHALLENGE_MODE]:[]),...((TACTICS_MODE_PUBLIC_RELEASE||debugBattle)?[TACTICS_MODE]:[])];
+      const modes=battleSystemModes(battleSystem,{debugBattle}).map(id=>battleModeInfo(id));
       const index=modes.length+Math.max(0,modes.findIndex(m=>m.id===battleMode));
       centerCarouselChild(modeCarouselRef.current,index);
     });
     return()=>cancelAnimationFrame(id);
-  },[gameState,modeSelectTab]);
+  },[gameState,modeSelectTab,battleSystem]);
   // 供モン合流の横スライドは、開くたびに先頭から見せる
   useEffect(()=>{
     if(gameState!=='PICK_ALLY')return;
@@ -7858,6 +7861,25 @@ function MonsterHeroGame() {
     })();
     return () => { cancelled = true; };
   }, [bootPhase, gameState, dataLoaded, onboarded, tutorialStep, updateGuideQueue.length, updateNoticeVisible, loginBonusPopup, levelCapCompensation, inheritedUniqueCompensation, dailyMasuAdvice, masuMons.length]);
+
+  // モンヒロバトルの入口で仕組みを選んだとき(2026-09-20 ユーザー指示)。
+  // 中にモードが1つだけのもの(クイック)は、選んだらそのまま難易度選択へ進める
+  const openBattleSystem = (systemId) => {
+    const system = BATTLE_SYSTEMS.find(s => s.id === systemId) || BATTLE_SYSTEMS[0];
+    const modes = battleSystemModes(system.id, { debugBattle });
+    if (!modes.length) return;
+    setBattleSystem(system.id);
+    setBattleMode(modes[0]);
+    if (system.direct) {
+      battleEntryStateRef.current = 'BATTLE_DIFFICULTY_SELECT';
+      setDifficultySelectTab(DIFFICULTY_TAB_NORMAL);
+      setGameState('BATTLE_DIFFICULTY_SELECT');
+      return;
+    }
+    setModeSelectTab('mode');
+    setGameState('BATTLE_MODE_SELECT');
+  };
+  const openBattleSystemSelect = () => { setModeSelectTab('mode'); setGameState('BATTLE_SYSTEM_SELECT'); };
 
   const closeDailyMasuAdvice = () => setDailyMasuAdvice(null);
   const tryDailyMasuAdvice = () => {
@@ -11995,7 +12017,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             breederName={breederName} breederPoints={breederPoints} gifts={gifts} gold={gold}
             hasUnreadChangelog={hasUnreadChangelog} homeBackgroundReady={homeBackgroundReady}
             homePastureMasumons={homePastureMasumons} masuMons={masuMons} missions={missions}
-            onOpenBattle={()=>{setModeSelectTab('mode');setGameState('BATTLE_MODE_SELECT');}}
+            onOpenBattle={openBattleSystemSelect}
             onOpenManagement={()=>{addAssistantBond('management');setManagementTab('monster');setGameState('MB_MANAGEMENT');}}
             onOpenMarket={async()=>{addAssistantBond('market');setMarketExchangeError('');setRhythmEventPoints(await loadRhythmEventPoints());setGameState('BREEDER_MARKET');}}
             onOpenProfile={()=>setGameState('PROFILE')}
@@ -12551,6 +12573,43 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         )}
 
 
+        {/* ===== モンヒロバトルの入口(2026-09-20 ユーザー指示で1画面増やした) =====
+            「モンヒロバトル → どのバトルで遊ぶか → モード選択 → 難易度選択」。
+            ★ここで選ぶ「仕組み」は保存しない。記録もランキングも今までどおりモードのidで分かれる。
+            ★クイックは中のモードが1つだけなので、選んだらそのまま難易度選択へ進む(ユーザー指示) */}
+        {gameState==='BATTLE_SYSTEM_SELECT'&&(()=>{
+          const systems=visibleBattleSystems({debugBattle});
+          return (
+          <div data-mh-screen className="flex-1 flex flex-col h-full min-h-0 px-4" style={{paddingTop:'calc(.35rem + env(safe-area-inset-top))',paddingBottom:'calc(.35rem + env(safe-area-inset-bottom))'}}>
+            <div className="flex items-center gap-1 mb-1 shrink-0">
+              <button aria-label="戻る" onClick={returnToHome} className="p-3 text-slate-400 active:scale-90 disabled:opacity-25"><ArrowLeft/></button>
+            </div>
+            <div className="w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll">
+              <div className="text-center text-[8px] tracking-[.2em] text-slate-400 font-black shrink-0">MONHERO BATTLE</div>
+              <h2 className="text-center text-xl font-black leading-tight shrink-0">モンヒロバトル</h2>
+              <p className="text-center text-[10px] text-slate-400 mt-1 mb-3 shrink-0">どのバトルで遊ぶかを選びます</p>
+              <div data-battle-systems={systems.length} className="flex flex-col gap-2 shrink-0">
+                {systems.map(sys=>(
+                  <button key={sys.id} data-battle-system={sys.id} onClick={()=>openBattleSystem(sys.id)}
+                    className="w-full rounded-2xl border-2 bg-slate-900/80 px-3 py-3 text-left active:scale-95 transition-transform"
+                    style={{borderColor:sys.color}}>
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl leading-none">{sys.emoji}</span>
+                      <span className="text-base font-black leading-tight" style={{color:sys.color}}>{sys.label}</span>
+                      {sys.id===BATTLE_SYSTEM_TACTICS&&!TACTICS_MODE_PUBLIC_RELEASE&&(
+                        <span className="ml-auto text-[8px] font-black text-amber-300 border border-amber-400/60 rounded px-1 py-0.5">DEBUG</span>
+                      )}
+                    </div>
+                    <div className="text-[11px] text-slate-200 font-bold leading-snug mt-1.5">{sys.tagline}</div>
+                    <div className="text-[9px] text-slate-400 leading-snug mt-1">{sys.note}</div>
+                  </button>
+                ))}
+              </div>
+              <div className="mt-3 shrink-0"><AssistantBubble scene="battleSystemSelect" compact/></div>
+            </div>
+          </div>);
+        })()}
+
         {/* ===== 新しいバトルの入口(バトルモード再編・第2段階) =====
             「バトル → バトルモード選択 → 難易度選択」の3画面と、そこから開くスコアランキング。
             いまはデバッグ設定からだけ開ける。ふだんの「バトル」は上の BATTLE_MENU のまま変えていない。
@@ -12559,7 +12618,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 極限チャレンジは未解放でもカードは出す(押せるかどうかだけを切り替える)
       // 極限チャレンジはチャレンジの「極限」タブへ入れ込んだので、モードのカードには並べない
       // (2026-09-19 ユーザー指示)。EXTREME_MODE の定義そのものは説明・ランキングが参照するので残す
-      const modes=[...BATTLE_MODES,...((SPECIES_CHALLENGE_PUBLIC_RELEASE||debugBattle)?[SPECIES_CHALLENGE_MODE]:[]),...((TACTICS_MODE_PUBLIC_RELEASE||debugBattle)?[TACTICS_MODE]:[])];
+      const modes=battleSystemModes(battleSystem,{debugBattle}).map(id=>battleModeInfo(id));
           const current=modes.find(m=>m.id===battleMode)||modes[0];
           const selectedIndex=Math.max(0,modes.findIndex(m=>m.id===current.id));
           // 端で止まらず「ぐるぐる回る」ようにするため、同じ並びを3回くり返して置く。
@@ -12575,7 +12634,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           return (
           <div data-mh-screen className="flex-1 flex flex-col h-full min-h-0 px-4" style={{paddingTop:'calc(.35rem + env(safe-area-inset-top))',paddingBottom:'calc(.35rem + env(safe-area-inset-bottom))'}}>
             {/* ランキングのタブを見ているときは、いきなりホームへ帰らずまずモード選択へ戻す */}
-            <div className="flex items-center gap-1 mb-1 shrink-0"><button aria-label="戻る" disabled={!!battleTutorial} onClick={()=>{if(modeSelectTab!=='mode'){setModeSelectTab('mode');return;}returnToHome();}} className="p-3 text-slate-400 active:scale-90 disabled:opacity-25"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-indigo-400 uppercase tracking-widest">バトル</h2></div>
+            <div className="flex items-center gap-1 mb-1 shrink-0"><button aria-label="戻る" disabled={!!battleTutorial} onClick={()=>{if(modeSelectTab!=='mode'){setModeSelectTab('mode');return;}setGameState('BATTLE_SYSTEM_SELECT');}} className="p-3 text-slate-400 active:scale-90 disabled:opacity-25"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-indigo-400 uppercase tracking-widest">バトル</h2></div>
             <div className="w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1">
               {/* 上のタブ。スコアランキングはモードごとに分かれるのでここには置かず、
                   モードのカードと難易度のカードから開く。ここに並ぶのはモードで分かれない2つだけ */}
@@ -12750,7 +12809,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const speciesCleared=difficultyId=>isSpeciesChallengeCleared(speciesChallengeProgress,speciesChallengeSelection.speciesId,difficultyId);
           return (
           <div data-mh-screen className="flex-1 flex flex-col h-full min-h-0 px-4" style={{paddingTop:'calc(.35rem + env(safe-area-inset-top))',paddingBottom:'calc(.35rem + env(safe-area-inset-bottom))'}}>
-            <div className="flex items-center gap-1 mb-1 shrink-0"><button aria-label="戻る" disabled={!!battleTutorial} onClick={()=>setGameState(species?'SPECIES_CHALLENGE_SELECT':'BATTLE_MODE_SELECT')} className="p-3 text-slate-400 active:scale-90 disabled:opacity-25"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic uppercase tracking-widest truncate" style={{color:mode.color}}>{mode.label}</h2></div>
+            <div className="flex items-center gap-1 mb-1 shrink-0"><button aria-label="戻る" disabled={!!battleTutorial} onClick={()=>setGameState(species?'SPECIES_CHALLENGE_SELECT':(battleSystemOf(battleMode).direct?'BATTLE_SYSTEM_SELECT':'BATTLE_MODE_SELECT'))} className="p-3 text-slate-400 active:scale-90 disabled:opacity-25"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic uppercase tracking-widest truncate" style={{color:mode.color}}>{mode.label}</h2></div>
             <div className="w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1">
               <div className="flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll">
                 <div className="text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0">左右にスワイプして難易度を選択</div>
@@ -13663,7 +13722,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <details className="rounded-2xl border border-fuchsia-500/40 bg-fuchsia-950/20">
                 <summary className="cursor-pointer select-none px-3 py-3 text-[11px] font-black text-fuchsia-200">⚔️ バトル<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">モード選択・デバッグ戦・種族チャレンジ・ダンジョンRPG・チュートリアル</small></summary>
                 <div className="space-y-2 border-t border-fuchsia-500/30 p-3">
-                  <button data-debug-battle-mode onClick={()=>{debugBattleRef.current=true;debugMonsterPreviewRef.current=true;extremeRunRef.current=false;setDebugBattle(true);setExtremeRun(false);setBattleMode(BATTLE_MODE_CHALLENGE);setModeSelectTab('mode');setGameState('BATTLE_MODE_SELECT');}} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">⚔️ バトルモード<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">種族チャレンジ・極限チャレンジを含む試験用モード選択・結果は保存されません</small></button>
+                  <button data-debug-battle-mode onClick={()=>{debugBattleRef.current=true;debugMonsterPreviewRef.current=true;extremeRunRef.current=false;setDebugBattle(true);setExtremeRun(false);setBattleMode(BATTLE_MODE_CHALLENGE);setBattleSystem(BATTLE_SYSTEM_CLASSIC);setModeSelectTab('mode');setGameState('BATTLE_SYSTEM_SELECT');}} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">⚔️ バトルモード<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">種族チャレンジ・極限チャレンジを含む試験用モード選択・結果は保存されません</small></button>
                   {/* デバッグ戦の「難易度9個 → 敵10個 → 勇者モン → 開始」は、以前このメニューの中へ
                       そのまま埋まっていた。1500pxほど縦に伸びていて、次の欄へ行くのにそこを全部
                       スクロールする必要があった(2026-09-17・ユーザー指摘)。専用の画面へ移した。

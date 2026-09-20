@@ -69,7 +69,11 @@ async function openBattle(page, clears) {
       const overlay = [...document.querySelectorAll('button')]
         .find(x => /受け取|閉じる|あとで|スキップ/.test(x.textContent));
       if (overlay) { overlay.click(); return; }
-      const b = document.querySelector('button[aria-label="バトル"]');
+      // ★2026-09-20 にモード選択の1つ上へ「どのバトルで遊ぶか」の画面が増えた。
+      //   HOME → 入口 → モード選択 と1段ずつ降りる
+      const sys = document.querySelector('[data-battle-system="systemClassic"]');
+      if (sys) { sys.click(); return; }
+      const b = document.querySelector('button[aria-label="モンヒロバトル"]');
       b && b.click();
     });
     await page.waitForTimeout(1200);

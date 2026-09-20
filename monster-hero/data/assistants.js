@@ -689,6 +689,12 @@ const assistantLineMatchesBond = (line, level) => {
 // バトル中・クイックの成長演出・供モンの加入演出には常設しない(テンポを止めないため)。
 // バトル中の案内は「ステータス」やヘルプを開いたときだけ出す。
 const ASSISTANT_SCENES = {
+  // モンヒロバトルの入口(2026-09-20 ユーザー指示で、モード選択の1つ上に画面を増やした)。
+  // 本文は下の addAssistantLinePack から合流する
+  battleSystemSelect: {
+    help: 'basics/battle-modes',
+    lines: [],
+  },
   // クイック∞周回 × モンビーの連携(docs/spec/QUICK_RHYTHM_LINK.md PR8)。
   // 「別の画面へ移っても裏で進む」「演奏中だけ止まる」は遊んでいるだけでは気づけないので、
   // 公開と同時に画面のなかでも伝える。本文は下の addAssistantLinePack から合流する。
@@ -1446,6 +1452,65 @@ addAssistantLinePack({
       { e:'wink', t:'ここはEXTREME！ 準備できてるなら、思いっきりいこ！' },
       { e:'normal', t:'厳しそうなら無理しなくてOK。もうひと育成してから挑むのもアリだよ。' },
       { e:'happy', t:'EXTREMEへの挑戦、あたしも応援してる(●゚ｪ゚))ｺｸｺｸ' },
+    ],
+  },
+});
+
+// モンヒロバトルの入口(2026-09-20 ユーザー指示で、モード選択の1つ上に画面を増やした)。
+// どのバトルで遊ぶかをここで選ぶので、選び方の手がかりをひとこと出す。
+// ★助手は4人いるので、4人ぶん束を足す(1人でも欠けると assistant-check が落ちる)
+addAssistantLinePack({
+  id: 'battleSystemSelectGuideKiki',
+  assistantId: 'kiki',
+  label: 'モンヒロバトルの入口案内(きき)',
+  lines: {
+    battleSystemSelect: [
+      { e:'normal', t:'ここで、どのバトルで遊ぶか決めるよ。' },
+      { e:'happy',  t:'選んだバトルの中に、チャレンジや種族チャレンジが入ってる。' },
+      { e:'wink',   t:'クイックはそのまま難易度えらびに行くよ ( ˘ω˘)9グッ!' },
+      { e:'normal', t:'記録はバトルごとに別。好きなほうを伸ばしていいよ。' },
+      { e:'happy',  t:'{name}、迷ったら「これまでのバトル」でいいと思う。' },
+    ],
+  },
+});
+addAssistantLinePack({
+  id: 'battleSystemSelectGuideMomosuke',
+  assistantId: 'momosuke',
+  label: 'モンヒロバトルの入口案内(ももすけ)',
+  lines: {
+    battleSystemSelect: [
+      { e:'wink',    t:'まずはどのバトルで遊ぶか選んでw' },
+      { e:'happy',   t:'中にチャレンジとか種族チャレンジが入ってるからね。' },
+      { e:'excited', t:'クイックはそのまま難易度えらび！ さくっと行きたいときはこれ♪' },
+      { e:'normal',  t:'記録もランキングもバトルごとに別々だよ。' },
+      { e:'wink',    t:'{name}、迷ったら「これまでのバトル」でいいんじゃない？w' },
+    ],
+  },
+});
+addAssistantLinePack({
+  id: 'battleSystemSelectGuideDra',
+  assistantId: 'dra',
+  label: 'モンヒロバトルの入口案内(どらごん)',
+  lines: {
+    battleSystemSelect: [
+      { e:'normal', t:'まずはどのバトルでやるか決めるとこだな' },
+      { e:'happy',  t:'選んだやつの中に、チャレンジとか種族チャレンジが入っとるわ' },
+      { e:'normal', t:'クイックはそのまま難易度えらびや。さっと遊びたいときにええで' },
+      { e:'normal', t:'記録はバトルごとに別々やから、好きなほうやったらええ' },
+      { e:'happy',  t:'{name}、迷ったら「これまでのバトル」からでええと思うで' },
+    ],
+  },
+});
+addAssistantLinePack({
+  id: 'battleSystemSelectGuide',
+  label: 'モンヒロバトルの入口案内',
+  lines: {
+    battleSystemSelect: [
+      { e:'happy', t:'モンヒロバトルへようこそ♪ まずはどのバトルで遊ぶか選んでね(●゚ｪ゚))ｺｸｺｸ' },
+      { e:'normal', t:'選んだバトルの中に、チャレンジや種族チャレンジが並んでるよ。' },
+      { e:'wink', t:'クイックモードは選んだらすぐ難易度えらびだよ。さくっと遊びたいときにどうぞ♪' },
+      { e:'excited', t:'記録もランキングもバトルごとに別々だから、好きなほうを伸ばしていいよ！' },
+      { e:'normal', t:'{name}、迷ったら「これまでのバトル」からで大丈夫だよ( \'ω\')' },
     ],
   },
 });

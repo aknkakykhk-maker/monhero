@@ -85,7 +85,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-20 15:44"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-20 17:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -471,6 +471,51 @@ const BATTLE_MODES = [
     ],
   },
 ];
+// ===== バトルの仕組み(モード選択の1つ上) =====
+// 2026-09-20 ユーザー指示「モンヒロバトルに入ったらすぐモード選択ページにいかずに、
+// チャレンジモードと新バトルモードとクイックモードを選べるようにして、そこの中で各種モードがあるように」。
+// ★ここで選ぶものは**保存しない**(画面を分けるためだけの値)。記録もランキングも今までどおり
+//   モードのid(mh_hs_* / mh_tactics_* など)で分かれるので、保存キーは1つも増えない。
+//   難易度選択の「通常/極限」タブ(difficultySelectTab)と同じ扱い
+// ★label は仮。新しいバトルの名前が決まったらここだけ差し替える(idも保存キーも変えない)
+const BATTLE_SYSTEM_CLASSIC = 'systemClassic';
+const BATTLE_SYSTEM_TACTICS = 'systemTactics';
+const BATTLE_SYSTEM_QUICK = 'systemQuick';
+const BATTLE_SYSTEMS = Object.freeze([
+  Object.freeze({
+    id: BATTLE_SYSTEM_CLASSIC, label: 'これまでのバトル', short: 'これまで', emoji: '⚔️', color: '#818cf8',
+    tagline: 'パーティでライフを分け合う、いままでの戦い方',
+    note: 'チャレンジ・種族チャレンジ。難易度は通常と極限から選べます',
+    modes: Object.freeze([BATTLE_MODE_CHALLENGE, BATTLE_MODE_SPECIES_CHALLENGE, BATTLE_MODE_PRO]),
+  }),
+  Object.freeze({
+    id: BATTLE_SYSTEM_TACTICS, label: '戦術モード', short: '戦術', emoji: '🎯', color: '#fb923c',
+    tagline: 'モンスターごとにライフを持つ、新しい戦い方',
+    note: '敵の技を読んで、誰を守るかを決める戦い方です',
+    modes: Object.freeze([BATTLE_MODE_TACTICS]),
+  }),
+  Object.freeze({
+    id: BATTLE_SYSTEM_QUICK, label: 'クイックモード', short: 'クイック', emoji: '⚡', color: '#fbbf24',
+    tagline: '数字だけで決まる、すぐ終わる腕試し',
+    note: '中のモードは1つだけなので、選ぶとそのまま難易度へ進みます',
+    modes: Object.freeze([BATTLE_MODE_QUICK]),
+    direct: true,
+  }),
+]);
+// そのモードがどの仕組みに属するか。見つからなければ「これまでのバトル」に寄せる
+const battleSystemOf = (modeId) => BATTLE_SYSTEMS.find(s => s.modes.includes(modeId)) || BATTLE_SYSTEMS[0];
+// 仕組みの中で実際に画面へ並べるモード。公開フラグで出し入れするものはここで落とす
+const battleSystemModes = (systemId, { debugBattle = false } = {}) => {
+  const system = BATTLE_SYSTEMS.find(s => s.id === systemId) || BATTLE_SYSTEMS[0];
+  return system.modes.filter(id => {
+    if (id === BATTLE_MODE_SPECIES_CHALLENGE) return SPECIES_CHALLENGE_PUBLIC_RELEASE || debugBattle;
+    if (id === BATTLE_MODE_TACTICS) return TACTICS_MODE_PUBLIC_RELEASE || debugBattle;
+    return true;
+  });
+};
+// 画面へ並べる仕組み。中に出せるモードが1つも無いものは出さない
+const visibleBattleSystems = ({ debugBattle = false } = {}) =>
+  BATTLE_SYSTEMS.filter(s => battleSystemModes(s.id, { debugBattle }).length > 0);
 // 極限チャレンジは通常の3モードとは別に持っているので、説明・ランキング画面から引けるようにここで合流させる
 // (EXTREME_MODE はこの下で定義するため、呼ばれた時点で参照する)
 const battleModeInfo = (mode) => {
