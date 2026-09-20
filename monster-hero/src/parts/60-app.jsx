@@ -8343,7 +8343,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const heroTraitOn = !isTacticsMode(runMode) || !Number.isInteger(targetSlot) || targetSlot===heroDist;
     const traitHeroId = heroTraitOn ? mainHero?.id : null;
     const chuuniCutActive = (traitHeroId==='Ark'||traitHeroId==='Iblis') && getWaveBuff('chuuniDmgCutUses')<2; // 中二病特性: WAVE毎2回まで被ダメ50%カット
-    const targetUnit = Number.isInteger(targetSlot) ? tacticsUnitsRef.current[targetSlot] : null;
+    // ★盤面(tacticsUnits)はどのモードでも作るので、モードを見ずに targetSlot を使うと
+    //   既存モードでも1体ずつの丈夫さを拾ってしまう。いまは既存モードから枠を渡す
+    //   呼び出しが無いので実害は出ていないが、増えた瞬間に既存モードの被ダメが変わる。
+    //   isTacticsMode で締めて、既存モードは必ず effectiveDef(パーティの丈夫さ)を通す
+    const targetUnit = isTacticsMode(runMode) && Number.isInteger(targetSlot)
+      ? tacticsUnitsRef.current[targetSlot] : null;
     const defVal = targetUnit
       ? resolveEffectiveMaxStat(normalizeTacticsUnit(targetUnit).def, getPermaBuff('defPct')) : effectiveDef;
     // 丈夫さは固定軽減(×0.5)のあと、0.015%/pt（上限50%）を乗算する。
