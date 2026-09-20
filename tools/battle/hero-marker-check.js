@@ -40,8 +40,13 @@ check('配信用JSにも王冠が入っている', compiled.includes('isHeroSlot
   compiled.includes('isHeroSlotMon') ? '' : 'ビルドし直してください');
 
 // --- ③ 同時使用枚数の加算 ---
+// 2026-09-20: タクティクスバトルは「持っているモンスター本人」が1枚多く使う(仕様 4.9)ので、
+// 盤面にいる持ち主の人数を数える。既存5モードは今までどおり勇者モンのぶんだけ。
+// 見張りたいのは「+1 を決める場所が1つ」なので、どちらも heroCardBonusOf を通ること
 check('勇者特性の加算を1か所で決めている',
-  has("const heroCardBonus = useMemo(() => heroCardBonusOf(mainHero?.id), [mainHero]);"));
+  has("const heroCardBonus = useMemo(() => (isTacticsMode(runMode)")
+    && has("    ? tacticsAliveSlots(tacticsUnits).filter(i => heroCardBonusOf(tacticsUnits[i]?.id) > 0).length")
+    && has("    : heroCardBonusOf(mainHero?.id)), [mainHero, runMode, tacticsUnits]);"));
 // 対象の種は一覧で持つ。同じ効果(ハムの「連続攻撃」・剣士モッチーの「二刀流」)を
 // 種ごとの分岐でコピーすると、増えるたびに手動とAUTOで食い違う元になる
 check('加算する種を一覧で持っている(種ごとの分岐にしていない)',

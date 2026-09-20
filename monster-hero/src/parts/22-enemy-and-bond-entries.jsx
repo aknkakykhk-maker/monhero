@@ -65,6 +65,9 @@ const TACTICS_REGEN_HP_THRESHOLD = 0.9; // ライフがこの割合を下回っ�
 //   (2026-09-20 ユーザー指示)。通常攻撃も連撃も貫通撃も「狙った1体」へ当たるので、
 //   誰が狙われるかを読む遊びはそのまま残る
 const TACTICS_ALLOUT_MULT = 0.4;  // 全員へ。1体あたりは通常攻撃より低い
+// スエゾーの「眼力」。タクティクスバトルでは**その子が攻撃したターン**に引く(2026-09-20 ユーザー指示)。
+// 既存5モードは今までどおり編成から決まる確率で、敵のターンの頭に引く
+const TACTICS_INTIMIDATE_RATE = 0.4;
 const TACTICS_ACTION_DEFINITIONS = [
   {id:'normal',type:'ATTACK',category:'通常攻撃',weight:30,multiplier:1,hits:1,range:'全間合い',condition:'常時',cooldown:0,useLimit:null},
   {id:'charge',type:'CHARGE',category:'ためる',weight:12,multiplier:0,hits:0,range:'全間合い',condition:'常時',cooldown:0,useLimit:null},

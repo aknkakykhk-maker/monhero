@@ -50,7 +50,9 @@ const openDifficultySelect = async (page, extremeClears) => {
     if (!closed) break;
     await page.waitForTimeout(450);
   }
-  await page.evaluate(() => document.querySelector('button[aria-label="バトル"]')?.click());
+  await page.evaluate(() => document.querySelector('button[aria-label="モンヒロバトル"]')?.click());
+  await page.waitForTimeout(600);
+  await page.evaluate(() => document.querySelector('[data-battle-system="systemClassic"]')?.click());
   await page.waitForTimeout(1200);
   await page.evaluate(() => {
     const card = [...document.querySelectorAll('article')].find(a => a.textContent.includes('極限チャレンジ'));

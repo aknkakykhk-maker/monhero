@@ -235,46 +235,71 @@ check('確率で出た反射でも撃破を確定できる',
 check('避けた子・反射した子がいるときは「無傷！」を出さない',
   has("if(dealt<=0&&saved<=0&&evadedSlot==null&&reflectedSlot==null) addPopup('無傷！'"));
 
-// --- 勇者特性は「その子の能力」(2026-09-20 ユーザー指示) ---
+// --- 勇者特性は「その札を出した／狙われた、その子の能力」(2026-09-20 ユーザー提案) ---
 // ★ザン・エイキ・パンドラ・剣士モッチーの連撃はもともと attackerId を見て本人限定だったのに、
 //   被弾側(もち肌・中二病・俊足・反射・吸収)と攻撃側(怪力・魔力開放・禁忌解錠)は
 //   mainHero を見るだけ＝誰が狙われても／誰が攻撃しても効く、とちぐはぐだった。
-//   既存5モードはステータスがパーティ共通なので変えない(仕様 8.触らないもの)
+//   タクティクスバトルは1体ずつライフを持つので、特性も**その子のもの**にそろえる。
+//   効き目は勇者モンと同じ等倍。既存5モードはステータスがパーティ共通なので変えない(仕様 8.触らないもの)
 check('連撃系はもともと本人限定のまま',
   entries.includes("heroId === 'Zan' && attackerId === 'Zan'")
     && entries.includes("heroId === 'Eiki' && attackerId === 'Eiki'")
     && entries.includes("heroId === 'Pandora' && attackerId === 'Pandora'")
     && entries.includes("heroId === 'KenshiMocchi' && attackerId === 'KenshiMocchi'"));
-check('被弾側は狙われた子が勇者モンのときだけ効かせる',
-  has('const heroTraitOn = !isTacticsMode(runMode) || !Number.isInteger(targetSlot) || targetSlot===heroDist;')
-    && has('const traitHeroId = heroTraitOn ? mainHero?.id : null;'));
+check('被弾側は狙われた子自身の特性で効かせる',
+  has('const traitHeroId = !isTacticsMode(runMode) ? mainHero?.id')
+    && has('      : (Number.isInteger(targetSlot) ? (tacticsUnitsRef.current[targetSlot]?.id || null) : mainHero?.id);'));
 check('もち肌・中二病は traitHeroId で見る',
   has("(traitHeroId==='Ark'||traitHeroId==='Iblis')")
     && has("((traitHeroId==='Mocchi'||traitHeroId==='Mitarashi')?0.8:1.0)")
     && !has("((mainHero?.id==='Mocchi'||mainHero?.id==='Mitarashi')?0.8:1.0)"));
-check('攻撃側は攻撃した子が勇者モンのときだけ効かせる',
-  has('const attackHeroId = (!isTacticsMode(runMode) || slotIdx===heroDist) ? mainHero?.id : null;')
+check('攻撃側は札を出した子自身の特性が乗る',
+  has('const attackHeroId = !isTacticsMode(runMode) ? mainHero?.id : (mon?.id || null);')
     && has("let traitMult=(attackHeroId==='Golem'?1.2:1.0)")
     && has("if (attackHeroId==='Pandora' && card.type==='unique' && card.monId!=='Pandora') traitMult*=1.5;"));
-check('回避・反射・吸収の抽選は勇者特性ぶんを外した表も持つ',
-  has('const soulOnlySpecialDefense = buildUnifiedSpecialDefense({'));
-check('勇者モンが狙われていないときは勇者特性ぶんを乗せない',
-  has('const heroAimed = !aimedSlots || (heroDist>=0 && aimedSlots.includes(heroDist));')
-    && has('rollUnifiedSpecialDefense(heroAimed?unifiedSpecialDefense:soulOnlySpecialDefense,'));
-check('中二病の回数は効かないターンに減らさない',
-  has("if ((mainHero?.id==='Ark'||mainHero?.id==='Iblis') && heroAimed && getWaveBuff('chuuniDmgCutUses')<2) {"));
-check('避ける／返す／吸う子は勇者モンを優先して選ぶ',
-  has('const pickDefenseSlot = (targets) => {')
-    && has('if (heroDist>=0 && targets.includes(heroDist)) return heroDist;'));
-check('回避・反射・吸収がその選び方を通る',
-  has('const evadedSlot=isEvasion?pickDefenseSlot(targets):null;')
-    && has('const reflectedSlot=isReflect?pickDefenseSlot(targets):null;')
-    && has('const absorbSlot=isTacticsMode(runMode)?pickDefenseSlot(aimedSlots):null;'));
-check('氷海の支配者は勇者モン本人だけ回復が増える',
-  has('const iceExtraRate=soulAdjustedGutsRecoveryRate-baseGutsRecoveryRate;')
-    && has('if (iceExtraRate>0 && heroDist>=0) gutsRegen+=gainGutsByRate(heroDist,iceExtraRate);'));
+// ★回避・反射・吸収は「先に受ける子を1体決めて、その子の特性で表を作る」。
+//   表を引いてから避ける子を選ぶと、俊足を持っていない子が俊足ぶんの確率で避けてしまう
+check('先に受ける子を1体決めてから抽選する',
+  has('const defenseSlot = aimedSlots && aimedSlots.length')
+    && has('          ? aimedSlots[Math.floor(Math.random()*aimedSlots.length)] : null;')
+    && has('const pickDefenseSlot = () => defenseSlot;'));
+check('抽選の表はその子の特性だけで作る',
+  has('const defenseTable = !isTacticsMode(runMode) ? unifiedSpecialDefense : buildUnifiedSpecialDefense({')
+    && has("existingEvasion:defenseHeroId==='Tiger'?50:0,")
+    && has("existingReflect:defenseHeroId==='Monol'?30:0,")
+    && has("existingAbsorb:(defenseHeroId==='Oboro'||defenseHeroId==='Plant')?30:0,"));
+check('その表にも魂格由来のぶんは今までどおり渡す',
+  /defenseTable = !isTacticsMode\(runMode\) \? unifiedSpecialDefense : buildUnifiedSpecialDefense\(\{\s*soulEvasion:soulBattleParty\.evasion,\s*soulReflect:soulBattleParty\.reflect,\s*soulAbsorb:soulBattleParty\.absorb,/.test(src));
+check('抽選は1回だけ・その表を引く',
+  has('rollUnifiedSpecialDefense(defenseTable,Math.random(),Math.random());')
+    && (src.match(/rollUnifiedSpecialDefense\(/g) || []).length === 1);
+check('中二病の回数は、持っている子が狙われたときだけ減らす',
+  has("const chuuniAimed = !isTacticsMode(runMode) ? (mainHero?.id==='Ark'||mainHero?.id==='Iblis')")
+    && has("      : (aimedSlots||[]).some(i=>{const id=tacticsUnitsRef.current[i]?.id;return id==='Ark'||id==='Iblis';});")
+    && has("if (chuuniAimed && getWaveBuff('chuuniDmgCutUses')<2) {"));
+check('避ける／返す／吸うのは表を引いた本人',
+  has('const evadedSlot=isEvasion?pickDefenseSlot():null;')
+    && has('const reflectedSlot=isReflect?pickDefenseSlot():null;')
+    && has('const absorbSlot=isTacticsMode(runMode)?pickDefenseSlot():null;'));
+check('氷海の支配者は、持っている子ごとに敵と同じ距離かを見る',
+  has('const iceExtraRateAt=(slotIdx)=>{')
+    && has('const withIce=applyIceRulerAutoGutsRecovery(currentAutoGutsRecovery,id,iceLockActive,slotIdx,enemyDist);')
+    && has('const extra=iceExtraRateAt(slotIdx);'));
 check('全員へ配る自動回復には氷海ぶんを混ぜない',
   has('tacticsRegen(autoHpRecoveryRate,isTacticsMode(runMode)?baseGutsRecoveryRate:soulAdjustedGutsRecoveryRate)'));
+// ★ハムの「同時使用可能枚数+1」とスエゾーの「眼力」は、狙われた／攻撃した の枠に収まらないので別に見る
+check('札の枚数ボーナスは持っている子だけが1枚多く使える',
+  has('const bonusOwner=isTacticsMode(runMode)')
+    && has('      ? heroCardBonusOf(mon?.id)>0')
+    && has('      : (heroCardBonusOf(mainHero?.id)>0&&mon?.id===mainHero?.id);'));
+check('盤面にいる持ち主の人数ぶんを heroCardBonus に数える',
+  has('? tacticsAliveSlots(tacticsUnits).filter(i => heroCardBonusOf(tacticsUnits[i]?.id) > 0).length'));
+check('スエゾーの眼力は、その子が攻撃したターンに1回だけ引く',
+  has('usedCardEntries.some(e=>isAttackCard(e.card)&&Number.isInteger(e.slotIdx)')
+    && has("        && tacticsUnitsRef.current[e.slotIdx]?.id==='Suezo')")
+    && has('&& Math.random()<TACTICS_INTIMIDATE_RATE) {'));
+check('新モードは敵ターン頭の威圧にスエゾーぶんを混ぜない',
+  has("(!isTacticsMode(runMode)&&mainHero?.id==='Suezo')?40:0,"));
 
 console.log(failed ? `\nNG ${failed}件` : '\nすべてOK');
 process.exit(failed ? 1 : 0);

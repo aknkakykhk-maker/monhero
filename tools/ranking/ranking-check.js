@@ -127,10 +127,13 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
   //   ブリーダーLv・絆Lvはモード選択画面のタブで見る。
   //   以前は英字の「Ranking」ボタンを探していたが、そのボタンはもう無い
   const openedBattle = await page.evaluate(() => {
-    const b = document.querySelector('button[aria-label="バトル"]');
+    const b = document.querySelector('button[aria-label="モンヒロバトル"]');
     if (b) b.click();
     return !!b;
   });
+  await page.waitForTimeout(700);
+  // ★2026-09-20 にモード選択の1つ上へ「どのバトルで遊ぶか」の画面が増えた
+  await page.evaluate(() => { document.querySelector('[data-battle-system="systemClassic"]')?.click(); });
   if (!openedBattle) { check('バトルモード選択を開ける', false, 'トップ画面の「バトル」が見つからない'); await browser.close(); process.exit(1); }
   await page.waitForTimeout(1500);
   const openedScore = await page.evaluate(() => {

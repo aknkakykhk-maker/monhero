@@ -212,7 +212,9 @@ async function run() {
     (await frameInfo(page)).some(f => f.cls === 'mh-profile-frame-gold'));
 
   // ⑤ ランキング(ブリーダーLv)。他の人のフレームが出る
-  await page.evaluate(() => { const b = document.querySelector('button[aria-label="バトル"]'); if (b) b.click(); });
+  await page.evaluate(() => { const b = document.querySelector('button[aria-label="モンヒロバトル"]'); if (b) b.click(); });
+  await page.waitForTimeout(600);
+  await page.evaluate(() => { const b = document.querySelector('[data-battle-system="systemClassic"]'); if (b) b.click(); });
   await page.waitForTimeout(1500);
   await page.evaluate(() => {
     const b = [...document.querySelectorAll('button')].find(x => x.textContent.trim() === 'ブリーダーLv');

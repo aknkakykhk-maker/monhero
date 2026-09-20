@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 132aeaed537a5977
+// generated-sha256: df5ed5b35ce37060
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -92,7 +92,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-20 18:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-20 18:56"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -183,10 +183,12 @@ const SPECIES_CHALLENGE_MODE = Object.freeze({
   ],
 });
 // 新モードの表示情報。見出しの並びは既存3モード(BATTLE_MODES)とそろえてある。
-// ★label は仮。画面に出す名前が決まったらここだけ差し替える(idと保存キーは変えない)。
+// ★2026-09-20 にユーザーが名前を決めた。仕組みが「タクティクスバトル」で、その中の
+//   ふつうのモードがこれ。クラシックバトル側の「チャレンジモード」と同じ位置づけだが、
+//   ランキングや記録で並んだときに見分けが付くよう「タクティクスチャレンジ」にしてある。
 // ★本文は公開時にそのまま出るプレイヤー向けの文にする。開発の進み具合はここへ書かない。
 const TACTICS_MODE = Object.freeze({
-  id:BATTLE_MODE_TACTICS, label:'戦術モード', short:'戦術', emoji:'🎯', color:'#fb923c',
+  id:BATTLE_MODE_TACTICS, label:'タクティクスチャレンジ', short:'タクティクス', emoji:'🎯', color:'#fb923c',
   tagline:'敵の技を読んで受け方を決める、対応力のモード',
   highlights:[
     ['🎯','敵が技を使い分ける。予告を読んで受ける'],
@@ -478,6 +480,58 @@ const BATTLE_MODES = [
     ],
   },
 ];
+// ===== バトルの仕組み(モード選択の1つ上) =====
+// 2026-09-20 ユーザー指示「モンヒロバトルに入ったらすぐモード選択ページにいかずに、
+// チャレンジモードと新バトルモードとクイックモードを選べるようにして、そこの中で各種モードがあるように」。
+// ★ここで選ぶものは**保存しない**(画面を分けるためだけの値)。記録もランキングも今までどおり
+//   モードのid(mh_hs_* / mh_tactics_* など)で分かれるので、保存キーは1つも増えない。
+//   難易度選択の「通常/極限」タブ(difficultySelectTab)と同じ扱い
+// ★名前は2026-09-20にユーザーが決めた(クラシックバトル / タクティクスバトル)。
+//   idと保存キーは変えないので、名前だけあとから差し替えられる
+const BATTLE_SYSTEM_CLASSIC = 'systemClassic';
+const BATTLE_SYSTEM_TACTICS = 'systemTactics';
+const BATTLE_SYSTEM_QUICK = 'systemQuick';
+const BATTLE_SYSTEMS = Object.freeze([
+  Object.freeze({
+    id: BATTLE_SYSTEM_CLASSIC, label: 'クラシックバトル', short: 'クラシック', emoji: '⚔️', color: '#818cf8',
+    tagline: 'パーティでライフを分け合う、いままでの戦い方',
+    note: 'チャレンジ・種族チャレンジ。難易度は通常と極限から選べます',
+    modes: Object.freeze([BATTLE_MODE_CHALLENGE, BATTLE_MODE_SPECIES_CHALLENGE, BATTLE_MODE_PRO]),
+  }),
+  Object.freeze({
+    id: BATTLE_SYSTEM_TACTICS, label: 'タクティクスバトル', short: 'タクティクス', emoji: '🎯', color: '#fb923c',
+    tagline: 'モンスターごとにライフを持つ、新しい戦い方',
+    note: '敵の予告を読んで、誰を守るかを決める戦い方です',
+    modes: Object.freeze([BATTLE_MODE_TACTICS]),
+  }),
+  Object.freeze({
+    id: BATTLE_SYSTEM_QUICK, label: 'クイックモード', short: 'クイック', emoji: '⚡', color: '#fbbf24',
+    tagline: '数字だけで決まる、すぐ終わる腕試し',
+    note: '中のモードは1つだけなので、選ぶとそのまま難易度へ進みます',
+    modes: Object.freeze([BATTLE_MODE_QUICK]),
+    direct: true,
+  }),
+]);
+// そのモードがどの仕組みに属するか。見つからなければ「これまでのバトル」に寄せる
+const battleSystemOf = (modeId) => BATTLE_SYSTEMS.find(s => s.modes.includes(modeId)) || BATTLE_SYSTEMS[0];
+// 仕組みの中で実際に画面へ並べるモード。公開フラグで出し入れするものはここで落とす
+const battleSystemModes = (systemId, { debugBattle = false } = {}) => {
+  const system = BATTLE_SYSTEMS.find(s => s.id === systemId) || BATTLE_SYSTEMS[0];
+  return system.modes.filter(id => {
+    if (id === BATTLE_MODE_SPECIES_CHALLENGE) return SPECIES_CHALLENGE_PUBLIC_RELEASE || debugBattle;
+    if (id === BATTLE_MODE_TACTICS) return TACTICS_MODE_PUBLIC_RELEASE || debugBattle;
+    return true;
+  });
+};
+// まだ遊べないが、枠だけは見せる仕組み(2026-09-20 ユーザー指示
+// 「準備中の新モードもクイックの上に入れて」)。モンヒロビートの「準備中」と同じ作りで、
+// 公開フラグが立つまでは押せないカードを出す。デバッグからは今までどおり遊べる
+const battleSystemComingSoon = (systemId, { debugBattle = false } = {}) =>
+  systemId === BATTLE_SYSTEM_TACTICS && !TACTICS_MODE_PUBLIC_RELEASE && !debugBattle;
+// 画面へ並べる仕組み。中に出せるモードが1つも無いものは、準備中の枠としてだけ出す
+const visibleBattleSystems = ({ debugBattle = false } = {}) =>
+  BATTLE_SYSTEMS.filter(s => battleSystemModes(s.id, { debugBattle }).length > 0
+    || battleSystemComingSoon(s.id, { debugBattle }));
 // 極限チャレンジは通常の3モードとは別に持っているので、説明・ランキング画面から引けるようにここで合流させる
 // (EXTREME_MODE はこの下で定義するため、呼ばれた時点で参照する)
 const battleModeInfo = (mode) => {
@@ -9303,6 +9357,9 @@ const TACTICS_REGEN_HP_THRESHOLD = 0.9; // ライフがこの割合を下回っ�
 //   (2026-09-20 ユーザー指示)。通常攻撃も連撃も貫通撃も「狙った1体」へ当たるので、
 //   誰が狙われるかを読む遊びはそのまま残る
 const TACTICS_ALLOUT_MULT = 0.4;  // 全員へ。1体あたりは通常攻撃より低い
+// スエゾーの「眼力」。タクティクスバトルでは**その子が攻撃したターン**に引く(2026-09-20 ユーザー指示)。
+// 既存5モードは今までどおり編成から決まる確率で、敵のターンの頭に引く
+const TACTICS_INTIMIDATE_RATE = 0.4;
 const TACTICS_ACTION_DEFINITIONS = [
   {id:'normal',type:'ATTACK',category:'通常攻撃',weight:30,multiplier:1,hits:1,range:'全間合い',condition:'常時',cooldown:0,useLimit:null},
   {id:'charge',type:'CHARGE',category:'ためる',weight:12,multiplier:0,hits:0,range:'全間合い',condition:'常時',cooldown:0,useLimit:null},
@@ -20513,7 +20570,9 @@ function HomeScreen({
               ★いまのイベントはモンヒロビートの曲だけを対象にするので、札もここだけ。
                 ほかの遊びを対象にするイベントを作るときは、そのボタンにも同じ em を足す */}
           <button className="mh-home-facility rhythm" onClick={onOpenRhythm} aria-label={RHYTHM_MODE_PUBLIC_RELEASE?"モンヒロビート":"モンヒロビート（準備中）"}><span>🎵 モンヒロビート{!RHYTHM_MODE_PUBLIC_RELEASE&&<small>準備中</small>}{homeRhythmEventOpen&&<em data-home-event-badge className="mh-home-event-badge" style={HOME_EVENT_BADGE_STYLE}>✨開催中✨</em>}</span></button>
-          <button className={`mh-home-facility battle${spotClass('battle')}`} onClick={onOpenBattle} aria-label="バトル"><span><Sword size={25}/>バトル</span></button>
+          {/* 2026-09-20 ユーザー指示で正式名称を「モンヒロバトル」にした。
+              モンヒロビートと同じく、字が長くても略さずそのまま入れる(CLAUDE.md ⑤) */}
+          <button className={`mh-home-facility battle${spotClass('battle')}`} onClick={onOpenBattle} aria-label="モンヒロバトル"><span><Sword size={25}/>モンヒロバトル</span></button>
         </nav>
         <button onClick={openMissions} className={`mh-home-mission${spotClass('reward')}`}><List size={16}/>ミッション
           {missionClaimableCount(normalizeMissions(missions))>0&&<em>{missionClaimableCount(normalizeMissions(missions))}</em>}
@@ -23191,6 +23250,9 @@ function MonsterHeroGame() {
   // 「バトル → バトルモード選択 → 難易度選択」の3画面と、そこから開くランキング。
   // まだデバッグ設定からだけ開ける。ふだんの「バトル」はこれまでどおり BATTLE_MENU のまま
   const [modeSelectTab, setModeSelectTab] = useState('mode'); // 'mode' | 'breeder' | 'bond' | 'power'
+  // どのバトルの仕組みを選んだか(BATTLE_SYSTEM_SELECT → BATTLE_MODE_SELECT)。
+  // ★保存しない。画面を分けるためだけの値で、記録もランキングもモードのidで分かれる
+  const [battleSystem, setBattleSystem] = useState(BATTLE_SYSTEM_CLASSIC);
   // 難易度選択の「通常 / 極限」タブ。クイックは15段階、種族チャレンジは14段階あり、
   // 一続きに並べると探しにくいので分ける(2026-09-19 ユーザー指示)。
   // 表示のためだけの値で保存はしない。極限を持たないモードではタブ自体を出さない
@@ -27698,12 +27760,12 @@ function MonsterHeroGame() {
       // 極限チャレンジは未解放でもカードは出す(押せるかどうかだけを切り替える)
       // 極限チャレンジはチャレンジの「極限」タブへ入れ込んだので、モードのカードには並べない
       // (2026-09-19 ユーザー指示)。EXTREME_MODE の定義そのものは説明・ランキングが参照するので残す
-      const modes=[...BATTLE_MODES,...((SPECIES_CHALLENGE_PUBLIC_RELEASE||debugBattle)?[SPECIES_CHALLENGE_MODE]:[]),...((TACTICS_MODE_PUBLIC_RELEASE||debugBattle)?[TACTICS_MODE]:[])];
+      const modes=battleSystemModes(battleSystem,{debugBattle}).map(id=>battleModeInfo(id));
       const index=modes.length+Math.max(0,modes.findIndex(m=>m.id===battleMode));
       centerCarouselChild(modeCarouselRef.current,index);
     });
     return()=>cancelAnimationFrame(id);
-  },[gameState,modeSelectTab]);
+  },[gameState,modeSelectTab,battleSystem]);
   // 供モン合流の横スライドは、開くたびに先頭から見せる
   useEffect(()=>{
     if(gameState!=='PICK_ALLY')return;
@@ -30045,7 +30107,11 @@ function MonsterHeroGame() {
   // 「勇者モンに選んだときだけ効く」特性なので、効いていることが画面から分かるように
   // 枚数表示の横にも出す。計算と表示で食い違わないよう、ここを唯一の出どころにする。
   // 対象の種は HERO_CARD_BONUS_MONSTER_IDS の一覧が持つ(種ごとの分岐をここへ書かない)
-  const heroCardBonus = useMemo(() => heroCardBonusOf(mainHero?.id), [mainHero]);
+  // ★タクティクスバトルは「持っている子が盤面にいれば、その子のぶんだけ総数が増える」
+  //   (2026-09-20 ユーザー指示)。1枚多く使えるようにしても、総数の上限が同じままだと出せない
+  const heroCardBonus = useMemo(() => (isTacticsMode(runMode)
+    ? tacticsAliveSlots(tacticsUnits).filter(i => heroCardBonusOf(tacticsUnits[i]?.id) > 0).length
+    : heroCardBonusOf(mainHero?.id)), [mainHero, runMode, tacticsUnits]);
   const kikiCardBonus = getPermaBuff('kikiCardBonusTurns')>0 ? 1 : 0;
   // 連携は参加中の魂格持ちが1体以上いればパーティ全体の同時使用上限+1。
   // 複数人が持っていても+1だけで、既存の勇者特性・ききとは別枠。最終上限は5枚。
@@ -30078,7 +30144,12 @@ function MonsterHeroGame() {
   // 既存の勇者特性/ききで許される枚数を土台にし、連携で増えた「追加の1枚」だけは
   // 連携を持つ本人へしか割り当てられない。全体cardLimitが1枚増えるだけなので複数所持でも重複しない。
   const slotMaxUses = (mon, slotIdx=null) => {
-    const base=((heroCardBonusOf(mainHero?.id)>0&&mon?.id===mainHero?.id)||kikiCardBonus>0) ? baseCardLimit : 1;
+    // ★タクティクスバトルは「持っている子が自分だけ1枚多く使える」(2026-09-20 ユーザー指示)。
+    //   勇者モンにしていなくても、盤面にいればその子の枚数が増える
+    const bonusOwner=isTacticsMode(runMode)
+      ? heroCardBonusOf(mon?.id)>0
+      : (heroCardBonusOf(mainHero?.id)>0&&mon?.id===mainHero?.id);
+    const base=(bonusOwner||kikiCardBonus>0) ? baseCardLimit : 1;
     const coordinationHolder=Number.isInteger(slotIdx)&&soulCoordinationSlots.includes(slotIdx);
     return Math.min(cardLimit,base+(coordinationHolder?soulCoordinationCardBonus:0));
   };
@@ -30595,6 +30666,26 @@ function MonsterHeroGame() {
     return () => { cancelled = true; };
   }, [bootPhase, gameState, dataLoaded, onboarded, tutorialStep, updateGuideQueue.length, updateNoticeVisible, loginBonusPopup, levelCapCompensation, inheritedUniqueCompensation, dailyMasuAdvice, masuMons.length]);
 
+  // モンヒロバトルの入口で仕組みを選んだとき(2026-09-20 ユーザー指示)。
+  // 中にモードが1つだけのもの(クイック)は、選んだらそのまま難易度選択へ進める
+  const openBattleSystem = (systemId) => {
+    const system = BATTLE_SYSTEMS.find(s => s.id === systemId) || BATTLE_SYSTEMS[0];
+    if (battleSystemComingSoon(system.id, { debugBattle })) return; // 準備中は枠だけ
+    const modes = battleSystemModes(system.id, { debugBattle });
+    if (!modes.length) return;
+    setBattleSystem(system.id);
+    setBattleMode(modes[0]);
+    if (system.direct) {
+      battleEntryStateRef.current = 'BATTLE_DIFFICULTY_SELECT';
+      setDifficultySelectTab(DIFFICULTY_TAB_NORMAL);
+      setGameState('BATTLE_DIFFICULTY_SELECT');
+      return;
+    }
+    setModeSelectTab('mode');
+    setGameState('BATTLE_MODE_SELECT');
+  };
+  const openBattleSystemSelect = () => { setModeSelectTab('mode'); setGameState('BATTLE_SYSTEM_SELECT'); };
+
   const closeDailyMasuAdvice = () => setDailyMasuAdvice(null);
   const tryDailyMasuAdvice = () => {
     setDailyMasuAdvice(null);
@@ -31058,16 +31149,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     existingReflect:mainHero?.id==='Monol'?30:0,
     existingAbsorb:(mainHero?.id==='Oboro'||mainHero?.id==='Plant')?30:0,
   });
-  // ★勇者特性ぶん(俊足50・反射30・吸収30)を外した表。新モードで**勇者モン以外**が
-  //   狙われたときに使う(2026-09-20 ユーザー指示「勇者モン特有のものだから決められたモンスターのみ」)。
-  //   魂格由来のぶんは編成全体のものなので、誰が狙われても今までどおり乗る
-  const soulOnlySpecialDefense = buildUnifiedSpecialDefense({
-    soulEvasion:soulBattleParty.evasion,
-    soulReflect:soulBattleParty.reflect,
-    soulAbsorb:soulBattleParty.absorb,
-  });
+  // ★タクティクスバトルでは、スエゾーのぶんをここへ入れない(攻撃したターンに引くため)。
+  //   魂格由来の威圧は編成全体のものなので今までどおり
   const battleIntimidate = combineSoulProbabilityPoints([
-    mainHero?.id==='Suezo'?40:0,
+    (!isTacticsMode(runMode)&&mainHero?.id==='Suezo')?40:0,
     soulBattleParty.intimidate,
   ]);
   const soulBattleHasEffects = battleSoulMasus.some(masu=>soulTraitSpentPoints(masu)>0);
@@ -31092,15 +31177,22 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // ためる(CHARGE)ターンはダメージが無い。必殺技のダメージは発動(SPECIAL)ターンに出る
     if (!intent||(intent.type!=='ATTACK'&&intent.type!=='SPECIAL')) return 0;
     const atkVal = Math.floor(intent.value*(1.0-getWaveBuff('enemyAtkDebuffPct')));
-    // ★勇者特性は「その子の能力」なので、新モードでは**勇者モン本人が狙われたとき**だけ効く
-    //   (2026-09-20 ユーザー指示「勇者モン特有のものだから決められたモンスターのみ」)。
-    //   ザン・エイキ・パンドラの連撃はもともと attackerId を見て本人限定になっていて、
-    //   被弾側だけ mainHero を見るだけ＝誰が狙われても効く、とちぐはぐだった。
-    //   既存5モードはステータスがパーティ共通なので今までどおり全体へ効かせる(仕様 8.触らないもの)
-    const heroTraitOn = !isTacticsMode(runMode) || !Number.isInteger(targetSlot) || targetSlot===heroDist;
-    const traitHeroId = heroTraitOn ? mainHero?.id : null;
+    // ★特性は「その子の能力」。タクティクスバトルでは**狙われた子自身の特性**が効く
+    //   (2026-09-20 ユーザー提案「とももんも勇者特性がかかるようにしてもいいかと思う」)。
+    //   もとは勇者モンだけだったが、ステータスを1体ずつ持つのに特性だけ勇者モンのもの、
+    //   というのがちぐはぐだった。供モンを選ぶ意味も「ステータスの足し算」から
+    //   「どの特性を連れていくか」に変わる。効き目は勇者モンと同じ等倍(ユーザーが選択)。
+    //   ★4体いても発動するのは狙われた子の1体ぶんなので、重ねがけにはならない。
+    //   既存5モードはステータスがパーティ共通なので今までどおり勇者モンのもの(仕様 8.触らないもの)
+    const traitHeroId = !isTacticsMode(runMode) ? mainHero?.id
+      : (Number.isInteger(targetSlot) ? (tacticsUnitsRef.current[targetSlot]?.id || null) : mainHero?.id);
     const chuuniCutActive = (traitHeroId==='Ark'||traitHeroId==='Iblis') && getWaveBuff('chuuniDmgCutUses')<2; // 中二病特性: WAVE毎2回まで被ダメ50%カット
-    const targetUnit = Number.isInteger(targetSlot) ? tacticsUnitsRef.current[targetSlot] : null;
+    // ★盤面(tacticsUnits)はどのモードでも作るので、モードを見ずに targetSlot を使うと
+    //   既存モードでも1体ずつの丈夫さを拾ってしまう。いまは既存モードから枠を渡す
+    //   呼び出しが無いので実害は出ていないが、増えた瞬間に既存モードの被ダメが変わる。
+    //   isTacticsMode で締めて、既存モードは必ず effectiveDef(パーティの丈夫さ)を通す
+    const targetUnit = isTacticsMode(runMode) && Number.isInteger(targetSlot)
+      ? tacticsUnitsRef.current[targetSlot] : null;
     const defVal = targetUnit
       ? resolveEffectiveMaxStat(normalizeTacticsUnit(targetUnit).def, getPermaBuff('defPct')) : effectiveDef;
     // 丈夫さは固定軽減(×0.5)のあと、0.015%/pt（上限50%）を乗算する。
@@ -31109,7 +31201,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const dmgBase = Math.max(30,(atkVal-defVal*0.5)*(1-defenseRate))*((traitHeroId==='Mocchi'||traitHeroId==='Mitarashi')?0.8:1.0)*(chuuniCutActive?0.5:1.0);
     const soulDamageRemaining=Math.max(0,1-(soulBattleParty.damageReduction/100));
     return Math.max(1,Math.floor(dmgBase*Math.max(0.01,(1.0-getPermaBuff('dmgCutPct')))*iceLockEnemyDamageMult*soulDamageRemaining));
-  }, [effectiveDef, mainHero, permaBuffs, waveBuffs, soulBattleParty.damageReduction, runMode, heroDist]);
+  }, [effectiveDef, mainHero, permaBuffs, waveBuffs, soulBattleParty.damageReduction, runMode]);
   // 次ターン被ダメージ倍率は、丈夫さ・勇者特性・永続軽減・氷結・ガードをすべて
   // 適用したあとの実ダメージへ最後に掛ける。敵攻撃力へ途中適用すると丈夫さやガードとの
   // 順序で50%にならないため、実処理と予測表示の双方がこの入口を使う。
@@ -31419,10 +31511,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     else if (card.type==='unique') { const level=card.evoLevel||0; const chuuniBonus=(card.monId==='Ark'||card.monId==='Iblis')?0.1*getPermaBuff('chuuniUniqueStack'):0; baseDmgMult=card.baseMult+(level*0.5)+chuuniBonus; }
     else if (card.type==='range_atk') { baseDmgMult=rangeAttackDamageMultiplier(card,attackStartDist); }
     else { baseDmgMult=card.mult||card.baseMult||1.0; }
-    // ★新モードは勇者特性も「勇者モン本人が攻撃したとき」だけ(2026-09-20 ユーザー指示)。
-    //   ザン・エイキ・パンドラの連撃はもともと attackerId を見て本人限定になっている。
-    //   既存5モードは今までどおり、誰が攻撃しても乗る(仕様 8.触らないもの)
-    const attackHeroId = (!isTacticsMode(runMode) || slotIdx===heroDist) ? mainHero?.id : null;
+    // ★タクティクスバトルは**攻撃した子自身の特性**が乗る(2026-09-20 ユーザー提案)。
+    //   ザン・エイキ・パンドラの連撃はもともと attackerId を見て本人のものになっている。
+    //   既存5モードは今までどおり、勇者モンの特性が誰の攻撃にも乗る(仕様 8.触らないもの)
+    const attackHeroId = !isTacticsMode(runMode) ? mainHero?.id : (mon?.id || null);
     let traitMult=(attackHeroId==='Golem'?1.2:1.0)*((attackHeroId==='Pixie'||attackHeroId==='Mia')&&card.type==='unique'?2.0:1.0);
     // 禁忌解錠: パンドラ勇者が使う『引き継いだ』固有技だけを1.5倍にする。
     // 技の出自はcard.monIdで判定し、自身の固有技へは適用しない。
@@ -31682,19 +31774,30 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         else if (intent.variant==='pierce' && baseGuardValue>0) { addPopup('貫通！ ガードが効かない','enemy','text-rose-300 font-black text-xl drop-shadow-md'); await battleWait(600); }
         const incomingBeforeTurnReduction = getIncomingDamageBeforeTurnReduction(actingIntent);
         const incomingDmg = applyTurnDamageReduction(incomingBeforeTurnReduction);
-        // ★勇者特性は勇者モン本人が狙われたときだけ(2026-09-20 ユーザー指示)。
-        //   中二病の回数も、効かないターンに減らしてはいけない
+        // ★タクティクスバトルは**狙われた子自身の特性**で決まる(2026-09-20 ユーザー提案)。
+        //   先に「誰が受けるか」を1体決めて、その子の特性で回避／反射／吸収を引く。
+        //   こうすると「表を引いた子」と「避けた子」が必ず同じになる。
+        //   魂格由来のぶんは編成全体のものなので、誰が受けても乗る
         const aimedSlots = isTacticsMode(runMode)
           ? tacticsIntentTargets(intent,tacticsUnitsRef.current,actingEnemyDist) : null;
-        const heroAimed = !aimedSlots || (heroDist>=0 && aimedSlots.includes(heroDist));
-        // 狙われた子のうち誰が避ける／返す／吸うか。勇者モンが狙われていればその子
-        // (勇者特性ぶんが乗っているのはその子なので)。そうでなければ魂格由来なので1体を抽選
-        const pickDefenseSlot = (targets) => {
-          if (!targets || !targets.length) return null;
-          if (heroDist>=0 && targets.includes(heroDist)) return heroDist;
-          return targets[Math.floor(Math.random()*targets.length)];
-        };
-        if ((mainHero?.id==='Ark'||mainHero?.id==='Iblis') && heroAimed && getWaveBuff('chuuniDmgCutUses')<2) {
+        const defenseSlot = aimedSlots && aimedSlots.length
+          ? aimedSlots[Math.floor(Math.random()*aimedSlots.length)] : null;
+        const defenseHeroId = !isTacticsMode(runMode) ? mainHero?.id
+          : (defenseSlot!=null ? (tacticsUnitsRef.current[defenseSlot]?.id || null) : null);
+        const defenseTable = !isTacticsMode(runMode) ? unifiedSpecialDefense : buildUnifiedSpecialDefense({
+          soulEvasion:soulBattleParty.evasion,
+          soulReflect:soulBattleParty.reflect,
+          soulAbsorb:soulBattleParty.absorb,
+          existingEvasion:defenseHeroId==='Tiger'?50:0,
+          existingReflect:defenseHeroId==='Monol'?30:0,
+          existingAbsorb:(defenseHeroId==='Oboro'||defenseHeroId==='Plant')?30:0,
+        });
+        // 避ける／返す／吸うのは、表を引いた本人
+        const pickDefenseSlot = () => defenseSlot;
+        // 中二病の回数は、効かないターン(持っている子が狙われていない)に減らしてはいけない
+        const chuuniAimed = !isTacticsMode(runMode) ? (mainHero?.id==='Ark'||mainHero?.id==='Iblis')
+          : (aimedSlots||[]).some(i=>{const id=tacticsUnitsRef.current[i]?.id;return id==='Ark'||id==='Iblis';});
+        if (chuuniAimed && getWaveBuff('chuuniDmgCutUses')<2) {
           addWaveBuff('chuuniDmgCutUses',1);
           addPopup('中二病発動!被ダメ50%カット','hero','text-pink-400 text-sm font-bold');
         }
@@ -31705,7 +31808,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const forcedReflect = getTurnBuff('reflect',false);
         const soulDefenseResult = forcedReflect
           ? 'reflect'
-          : rollUnifiedSpecialDefense(heroAimed?unifiedSpecialDefense:soulOnlySpecialDefense,Math.random(),Math.random());
+          : rollUnifiedSpecialDefense(defenseTable,Math.random(),Math.random());
         const isReflect = soulDefenseResult==='reflect';
         const isAbsorb = soulDefenseResult==='absorb';
         const isEvasion = soulDefenseResult==='evasion';
@@ -31754,7 +31857,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           //   狙いは立っている子にしか向かないので、吸収で起き上がることは起きない。
           // ★吸う子は1体だけ。勇者特性(オボロ・プラントの30)は勇者モン本人のものなので、
           //   勇者モンが狙われていればその子が吸う(2026-09-20 ユーザー指示)
-          const absorbSlot=isTacticsMode(runMode)?pickDefenseSlot(aimedSlots):null;
+          const absorbSlot=isTacticsMode(runMode)?pickDefenseSlot():null;
           if(isTacticsMode(runMode)){
             let units=tacticsUnitsRef.current, hpGain=0, gutsGain=0;
             if(absorbSlot!=null){
@@ -31800,11 +31903,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             //   反射は味方全体のバフ(発動したターンは誰も受けない)のに対し、回避は吸収と同じ個別扱い。
             //   全体攻撃で狙われた全員が避けると、回避が全体バフと変わらなくなる。
             //   狙われた子が1体なら今までどおりその子が避ける
-            const evadedSlot=isEvasion?pickDefenseSlot(targets):null;
+            const evadedSlot=isEvasion?pickDefenseSlot():null;
             // ★確率で出た反射(勇者モンがモノリス・魂格)も狙われた子だけ。
             //   その子は受けずに、受けるはずだった量を敵へ返す。ほかの子は普通に受ける。
             //   固有技の確定反射は上の枝(味方全体)で処理しているのでここへは来ない
-            const reflectedSlot=isReflect?pickDefenseSlot(targets):null;
+            const reflectedSlot=isReflect?pickDefenseSlot():null;
             let evadedName='', reflectedName='', reflectBack=0;
             let units=tacticsUnitsRef.current, dealt=0, saved=0, guardedCount=0, gutsBack=0, throughTotal=0;
             targets.forEach(slotIdx=>{
@@ -31899,10 +32002,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // 氷海の支配者は、絶氷の楔発動中かつ勇者と敵が同じ距離の場合だけ50パーセントポイントを足す。
     const gutsRecoveryRate=applyIceRulerAutoGutsRecovery(currentAutoGutsRecovery,mainHero?.id,iceLockActive,heroDist,enemyDist);
     const soulAdjustedGutsRecoveryRate=Math.max(0,gutsRecoveryRate)*soulBattleParty.autoGutsMultiplier;
-    // ★氷海の支配者は勇者モン本人だけ(2026-09-20 ユーザー指示)。新モードは1体ずつ回すので、
-    //   全員へは氷海ぶんを含まない率で配り、勇者モンにだけ差分を足す。
-    //   「勇者モンが敵と同じ距離なら全員の回復が上がる」のままだと、勇者特性が全体バフになる
+    // ★氷海の支配者は「持っている子が、敵と同じ距離にいるとき」だけ効く(2026-09-20 ユーザー提案で
+    //   供モンにも広げた)。新モードは1体ずつ回すので、全員へは氷海ぶんを含まない率で配り、
+    //   条件を満たした子にだけ差分を足す。「誰かが同じ距離なら全員の回復が上がる」にはしない
     const baseGutsRecoveryRate=Math.max(0,currentAutoGutsRecovery)*soulBattleParty.autoGutsMultiplier;
+    // その子が氷海持ちで敵と同じ距離なら、素の率との差(＝+50%ぶん)を返す
+    const iceExtraRateAt=(slotIdx)=>{
+      const id=tacticsUnitsRef.current[slotIdx]?.id;
+      const withIce=applyIceRulerAutoGutsRecovery(currentAutoGutsRecovery,id,iceLockActive,slotIdx,enemyDist);
+      return Math.max(0,withIce-Math.max(0,currentAutoGutsRecovery))*soulBattleParty.autoGutsMultiplier;
+    };
     // ★新モードは1体ずつ「その子の上限 × 率」で回す(2026-09-20 ユーザー指摘)。
     //   合計の上限から量を出して配ると、1体だけ傷ついているときにパーティ全員ぶんが
     //   その子へ入り、倒れている子が多いほど残った子がよけいに回復する(逆になっている)
@@ -31910,8 +32019,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     let gutsRegen=0, autoHealVal=0;
     if (regen) {
       currentHp=regen.total; autoHealVal=regen.hp; gutsRegen=regen.guts;
-      const iceExtraRate=soulAdjustedGutsRecoveryRate-baseGutsRecoveryRate;
-      if (iceExtraRate>0 && heroDist>=0) gutsRegen+=gainGutsByRate(heroDist,iceExtraRate);
+      tacticsAliveSlots(tacticsUnitsRef.current).forEach(slotIdx=>{
+        const extra=iceExtraRateAt(slotIdx);
+        if (extra>0) gutsRegen+=gainGutsByRate(slotIdx,extra);
+      });
     }
     else {
       gutsRegen=Math.floor(liveEffectiveMaxGuts()*soulAdjustedGutsRecoveryRate);
@@ -31993,6 +32104,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         .map(entry=>({card:entry.card,handIndex:entry.handIndex,slotIdx:entry.slotIdx!=null?entry.slotIdx:null}))
       : selectedCards.map(i=>({card:hand[i],handIndex:i,slotIdx:cardAssignments[i]!=null?cardAssignments[i]:null}));
     if (isBusy||!enemy||usedCardEntries.length===0) return;
+    // ★タクティクスバトルの「眼力」は、スエゾーが攻撃したターンに引く(2026-09-20 ユーザー指示)。
+    //   本人の能力なので勇者モンにしていなくても効く。1ターンに何枚使っても判定は1回
+    //   (枚数で確率が上がらないように)。既存5モードは今までどおり敵のターンの頭に引く
+    if (isTacticsMode(runMode)
+      && usedCardEntries.some(e=>isAttackCard(e.card)&&Number.isInteger(e.slotIdx)
+        && tacticsUnitsRef.current[e.slotIdx]?.id==='Suezo')
+      && Math.random()<TACTICS_INTIMIDATE_RATE) {
+      setImmediateTurnBuff('stunEnemy',true);
+    }
     setFocusedCard(null); setPendingCard(null);
     const usedCards=usedCardEntries.map(e=>e.card);
     // 練習中は「何をしたか」を覚えておく。ガードを使ったら次へ、のように操作で進めるために使う。
@@ -34726,7 +34846,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             breederName={breederName} breederPoints={breederPoints} gifts={gifts} gold={gold}
             hasUnreadChangelog={hasUnreadChangelog} homeBackgroundReady={homeBackgroundReady}
             homePastureMasumons={homePastureMasumons} masuMons={masuMons} missions={missions}
-            onOpenBattle={()=>{setModeSelectTab('mode');setGameState('BATTLE_MODE_SELECT');}}
+            onOpenBattle={openBattleSystemSelect}
             onOpenManagement={()=>{addAssistantBond('management');setManagementTab('monster');setGameState('MB_MANAGEMENT');}}
             onOpenMarket={async()=>{addAssistantBond('market');setMarketExchangeError('');setRhythmEventPoints(await loadRhythmEventPoints());setGameState('BREEDER_MARKET');}}
             onOpenProfile={()=>setGameState('PROFILE')}
@@ -35282,6 +35402,52 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         )}
 
 
+        {/* ===== モンヒロバトルの入口(2026-09-20 ユーザー指示で1画面増やした) =====
+            「モンヒロバトル → どのバトルで遊ぶか → モード選択 → 難易度選択」。
+            ★ここで選ぶ「仕組み」は保存しない。記録もランキングも今までどおりモードのidで分かれる。
+            ★クイックは中のモードが1つだけなので、選んだらそのまま難易度選択へ進む(ユーザー指示) */}
+        {gameState==='BATTLE_SYSTEM_SELECT'&&(()=>{
+          const systems=visibleBattleSystems({debugBattle});
+          return (
+          <div data-mh-screen className="flex-1 flex flex-col h-full min-h-0 px-4" style={{paddingTop:'calc(.35rem + env(safe-area-inset-top))',paddingBottom:'calc(.35rem + env(safe-area-inset-bottom))'}}>
+            <div className="flex items-center gap-1 mb-1 shrink-0">
+              <button aria-label="戻る" onClick={returnToHome} className="p-3 text-slate-400 active:scale-90 disabled:opacity-25"><ArrowLeft/></button>
+            </div>
+            <div className="w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll">
+              <div className="text-center text-[8px] tracking-[.2em] text-slate-400 font-black shrink-0">MONHERO BATTLE</div>
+              <h2 className="text-center text-xl font-black leading-tight shrink-0">モンヒロバトル</h2>
+              <p className="text-center text-[10px] text-slate-400 mt-1 mb-3 shrink-0">どのバトルで遊ぶかを選びます</p>
+              <div data-battle-systems={systems.length} className="flex flex-col gap-2 shrink-0">
+                {systems.map(sys=>{
+                  // ★まだ遊べないものは、枠だけ出して押せなくする(2026-09-20 ユーザー指示)。
+                  //   モンヒロビートの「準備中」と同じ扱い。デバッグからは今までどおり遊べる
+                  const soon=battleSystemComingSoon(sys.id,{debugBattle});
+                  return (
+                  <button key={sys.id} data-battle-system={sys.id} data-battle-system-soon={soon?'1':undefined}
+                    disabled={soon} onClick={()=>openBattleSystem(sys.id)}
+                    aria-label={soon?`${sys.label}（準備中）`:sys.label}
+                    className={`w-full rounded-2xl border-2 px-3 py-3 text-left transition-transform ${soon?'bg-slate-900/40 opacity-60':'bg-slate-900/80 active:scale-95'}`}
+                    style={{borderColor:soon?'rgba(148,163,184,.45)':sys.color}}>
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl leading-none">{sys.emoji}</span>
+                      <span className="text-base font-black leading-tight" style={{color:soon?'#94a3b8':sys.color}}>{sys.label}</span>
+                      {soon&&(
+                        <span className="ml-auto text-[9px] font-black text-slate-300 border border-slate-400/60 rounded px-1.5 py-0.5">準備中</span>
+                      )}
+                      {!soon&&sys.id===BATTLE_SYSTEM_TACTICS&&!TACTICS_MODE_PUBLIC_RELEASE&&(
+                        <span className="ml-auto text-[8px] font-black text-amber-300 border border-amber-400/60 rounded px-1 py-0.5">DEBUG</span>
+                      )}
+                    </div>
+                    <div className="text-[11px] text-slate-200 font-bold leading-snug mt-1.5">{sys.tagline}</div>
+                    <div className="text-[9px] text-slate-400 leading-snug mt-1">{soon?'いま準備しています。遊べるようになったらお知らせします':sys.note}</div>
+                  </button>);
+                })}
+              </div>
+              <div className="mt-3 shrink-0"><AssistantBubble scene="battleSystemSelect" compact/></div>
+            </div>
+          </div>);
+        })()}
+
         {/* ===== 新しいバトルの入口(バトルモード再編・第2段階) =====
             「バトル → バトルモード選択 → 難易度選択」の3画面と、そこから開くスコアランキング。
             いまはデバッグ設定からだけ開ける。ふだんの「バトル」は上の BATTLE_MENU のまま変えていない。
@@ -35290,7 +35456,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 極限チャレンジは未解放でもカードは出す(押せるかどうかだけを切り替える)
       // 極限チャレンジはチャレンジの「極限」タブへ入れ込んだので、モードのカードには並べない
       // (2026-09-19 ユーザー指示)。EXTREME_MODE の定義そのものは説明・ランキングが参照するので残す
-      const modes=[...BATTLE_MODES,...((SPECIES_CHALLENGE_PUBLIC_RELEASE||debugBattle)?[SPECIES_CHALLENGE_MODE]:[]),...((TACTICS_MODE_PUBLIC_RELEASE||debugBattle)?[TACTICS_MODE]:[])];
+      const modes=battleSystemModes(battleSystem,{debugBattle}).map(id=>battleModeInfo(id));
           const current=modes.find(m=>m.id===battleMode)||modes[0];
           const selectedIndex=Math.max(0,modes.findIndex(m=>m.id===current.id));
           // 端で止まらず「ぐるぐる回る」ようにするため、同じ並びを3回くり返して置く。
@@ -35306,7 +35472,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           return (
           <div data-mh-screen className="flex-1 flex flex-col h-full min-h-0 px-4" style={{paddingTop:'calc(.35rem + env(safe-area-inset-top))',paddingBottom:'calc(.35rem + env(safe-area-inset-bottom))'}}>
             {/* ランキングのタブを見ているときは、いきなりホームへ帰らずまずモード選択へ戻す */}
-            <div className="flex items-center gap-1 mb-1 shrink-0"><button aria-label="戻る" disabled={!!battleTutorial} onClick={()=>{if(modeSelectTab!=='mode'){setModeSelectTab('mode');return;}returnToHome();}} className="p-3 text-slate-400 active:scale-90 disabled:opacity-25"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-indigo-400 uppercase tracking-widest">バトル</h2></div>
+            <div className="flex items-center gap-1 mb-1 shrink-0"><button aria-label="戻る" disabled={!!battleTutorial} onClick={()=>{if(modeSelectTab!=='mode'){setModeSelectTab('mode');return;}setGameState('BATTLE_SYSTEM_SELECT');}} className="p-3 text-slate-400 active:scale-90 disabled:opacity-25"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-indigo-400 uppercase tracking-widest">バトル</h2></div>
             <div className="w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1">
               {/* 上のタブ。スコアランキングはモードごとに分かれるのでここには置かず、
                   モードのカードと難易度のカードから開く。ここに並ぶのはモードで分かれない2つだけ */}
@@ -35481,7 +35647,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const speciesCleared=difficultyId=>isSpeciesChallengeCleared(speciesChallengeProgress,speciesChallengeSelection.speciesId,difficultyId);
           return (
           <div data-mh-screen className="flex-1 flex flex-col h-full min-h-0 px-4" style={{paddingTop:'calc(.35rem + env(safe-area-inset-top))',paddingBottom:'calc(.35rem + env(safe-area-inset-bottom))'}}>
-            <div className="flex items-center gap-1 mb-1 shrink-0"><button aria-label="戻る" disabled={!!battleTutorial} onClick={()=>setGameState(species?'SPECIES_CHALLENGE_SELECT':'BATTLE_MODE_SELECT')} className="p-3 text-slate-400 active:scale-90 disabled:opacity-25"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic uppercase tracking-widest truncate" style={{color:mode.color}}>{mode.label}</h2></div>
+            <div className="flex items-center gap-1 mb-1 shrink-0"><button aria-label="戻る" disabled={!!battleTutorial} onClick={()=>setGameState(species?'SPECIES_CHALLENGE_SELECT':(battleSystemOf(battleMode).direct?'BATTLE_SYSTEM_SELECT':'BATTLE_MODE_SELECT'))} className="p-3 text-slate-400 active:scale-90 disabled:opacity-25"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic uppercase tracking-widest truncate" style={{color:mode.color}}>{mode.label}</h2></div>
             <div className="w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1">
               <div className="flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll">
                 <div className="text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0">左右にスワイプして難易度を選択</div>
@@ -36394,7 +36560,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <details className="rounded-2xl border border-fuchsia-500/40 bg-fuchsia-950/20">
                 <summary className="cursor-pointer select-none px-3 py-3 text-[11px] font-black text-fuchsia-200">⚔️ バトル<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">モード選択・デバッグ戦・種族チャレンジ・ダンジョンRPG・チュートリアル</small></summary>
                 <div className="space-y-2 border-t border-fuchsia-500/30 p-3">
-                  <button data-debug-battle-mode onClick={()=>{debugBattleRef.current=true;debugMonsterPreviewRef.current=true;extremeRunRef.current=false;setDebugBattle(true);setExtremeRun(false);setBattleMode(BATTLE_MODE_CHALLENGE);setModeSelectTab('mode');setGameState('BATTLE_MODE_SELECT');}} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">⚔️ バトルモード<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">種族チャレンジ・極限チャレンジを含む試験用モード選択・結果は保存されません</small></button>
+                  <button data-debug-battle-mode onClick={()=>{debugBattleRef.current=true;debugMonsterPreviewRef.current=true;extremeRunRef.current=false;setDebugBattle(true);setExtremeRun(false);setBattleMode(BATTLE_MODE_CHALLENGE);setBattleSystem(BATTLE_SYSTEM_CLASSIC);setModeSelectTab('mode');setGameState('BATTLE_SYSTEM_SELECT');}} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">⚔️ バトルモード<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">種族チャレンジ・極限チャレンジを含む試験用モード選択・結果は保存されません</small></button>
                   {/* デバッグ戦の「難易度9個 → 敵10個 → 勇者モン → 開始」は、以前このメニューの中へ
                       そのまま埋まっていた。1500pxほど縦に伸びていて、次の欄へ行くのにそこを全部
                       スクロールする必要があった(2026-09-17・ユーザー指摘)。専用の画面へ移した。

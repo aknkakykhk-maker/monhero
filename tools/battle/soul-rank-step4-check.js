@@ -69,18 +69,20 @@ check('鉄壁は既存被ダメ軽減と乗算して実ダメ/予測共通入口
 check('回避・反射・吸収は統一特殊防御を1回だけ抽選',
   app.includes('const unifiedSpecialDefense = buildUnifiedSpecialDefense({')
   && (app.match(/rollUnifiedSpecialDefense\(/g) || []).length === 1);
-// ★新モードは勇者特性ぶん(俊足50・反射30・吸収30)を外した表も持ち、
-//   勇者モンが狙われているかで使い分ける(2026-09-20)。魂格由来のぶんは誰が狙われても乗る
-check('新モードは勇者特性ぶんを外した表で引き分ける',
-  app.includes('const soulOnlySpecialDefense = buildUnifiedSpecialDefense({')
-  && app.includes("rollUnifiedSpecialDefense(heroAimed?unifiedSpecialDefense:soulOnlySpecialDefense,Math.random(),Math.random())"));
-check('勇者特性ぶんを外した表にも魂格の3つを渡す',
-  /soulOnlySpecialDefense = buildUnifiedSpecialDefense\(\{\s*soulEvasion:soulBattleParty\.evasion,\s*soulReflect:soulBattleParty\.reflect,\s*soulAbsorb:soulBattleParty\.absorb,\s*\}\)/.test(app));
+// ★新モードは、先に受ける子を1体決めて**その子の特性**で表を作る(2026-09-20)。
+//   俊足50・反射30・吸収30はその子が持っているときだけ乗り、魂格由来のぶんは誰が受けても乗る
+check('新モードは受ける子の特性で表を作る',
+  app.includes('const defenseTable = !isTacticsMode(runMode) ? unifiedSpecialDefense : buildUnifiedSpecialDefense({')
+  && app.includes("existingEvasion:defenseHeroId==='Tiger'?50:0,")
+  && app.includes("rollUnifiedSpecialDefense(defenseTable,Math.random(),Math.random())"));
+check('その子の特性で作る表にも魂格の3つを渡す',
+  /defenseTable = !isTacticsMode\(runMode\) \? unifiedSpecialDefense : buildUnifiedSpecialDefense\(\{\s*soulEvasion:soulBattleParty\.evasion,\s*soulReflect:soulBattleParty\.reflect,\s*soulAbsorb:soulBattleParty\.absorb,/.test(app));
 check('既存確定反射バフは従来どおり確定で優先',
   app.includes("getTurnBuff('reflect',false)")&&app.includes("? 'reflect'"));
+// ★新モードのスエゾーは「攻撃したターンに引く」へ移したので、敵ターン頭のこの表から外す
 check('威圧はSuezo既存40%と同種乗算して特殊防御と分離',
   app.includes("const battleIntimidate = combineSoulProbabilityPoints([")
-  && app.includes("mainHero?.id==='Suezo'?40:0"));
+  && app.includes("(!isTacticsMode(runMode)&&mainHero?.id==='Suezo')?40:0"));
 check('自動ガッツ回復は既存最終率を0でクランプしてから魂格倍率',
   app.includes('Math.max(0,gutsRecoveryRate)*soulBattleParty.autoGutsMultiplier'));
 
