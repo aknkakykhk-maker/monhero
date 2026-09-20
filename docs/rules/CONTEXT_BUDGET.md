@@ -20,11 +20,11 @@
 
 | ファイル | 大きさ | 代わりにすること |
 | --- | --- | --- |
-| `monster-hero/src/game-system.jsx` | 2.7MB | 自動生成物。**読む必要がない**。直すのは `src/parts/*.jsx` |
-| `monster-hero/game-system.compiled.js` | 3.0MB | 同上。`node tools/build.js` が作る |
-| `monster-hero/src/parts/60-app.jsx` | 1.5MB | `node tools/ctx.js read 60-app.jsx <名前>` で定義だけ切り出す |
-| `monster-hero/data/rhythm-mode.js` | 0.9MB | 譜面データ。曲IDで `node tools/ctx.js text <曲ID>` |
-| `monster-hero/data/changelog.js` | 0.5MB | 新しい項目は**先頭に足す**規則なので `head -80` で足りる |
+| `monster-hero/src/game-system.jsx` | 3.5MB | 自動生成物。**読む必要がない**。直すのは `src/parts/*.jsx` |
+| `monster-hero/game-system.compiled.js` | 3.8MB | 同上。`node tools/build.js` が作る |
+| `monster-hero/src/parts/60-app.jsx` | 1.4MB | `node tools/ctx.js read 60-app.jsx <名前>` で定義だけ切り出す |
+| `monster-hero/data/rhythm-mode.js` | 1.3MB | 譜面データ。曲IDで `node tools/ctx.js text <曲ID>` |
+| `monster-hero/data/changelog.js` | 0.7MB | 新しい項目は**先頭に足す**規則なので `head -80` で足りる |
 | `docs/spec/RHYTHM_MODE.md` | 0.5MB | `node tools/ctx.js toc` で見出し → `doc` で節だけ |
 | `tools/mode/authoring/*.json` | 0.4MB〜 | 中身を読まず、ツール経由で扱う |
 
