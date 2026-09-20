@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 247c1bc8b256e552
+// generated-sha256: 896bc83b540e0c05
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -92,7 +92,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-21 01:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-21 01:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -571,23 +571,68 @@ const BATTLE_MODES = [
 const BATTLE_SYSTEM_CLASSIC = 'systemClassic';
 const BATTLE_SYSTEM_TACTICS = 'systemTactics';
 const BATTLE_SYSTEM_QUICK = 'systemQuick';
+// ★カードの3行は、どの仕組みも【ライフの持ち方】→【遊び方の特徴】→【記録】の順でそろえる。
+//   並びをそろえると、3つを見比べて選べる(モードのカードと同じ作り)。
+// ★points は「詳しいルール」で開く本文。モードの説明モーダルと同じ形なので、
+//   画面はモードと仕組みを区別せずに出せる(battleInfoById)。
 const BATTLE_SYSTEMS = Object.freeze([
   Object.freeze({
     id: BATTLE_SYSTEM_CLASSIC, label: 'クラシックバトル', short: 'クラシック', emoji: '⚔️', color: '#818cf8',
-    tagline: 'パーティでライフを分け合う、いままでの戦い方',
-    note: 'チャレンジ・種族チャレンジ。難易度は通常と極限から選べます',
+    tagline: '育てたモンスターで、じっくり攻略する王道のバトル',
+    highlights: Object.freeze([
+      Object.freeze(['🛡️', 'パーティ全員で1本のライフを分け合う']),
+      Object.freeze(['📈', 'WAVEごとに強化を選んで組み立てる']),
+      Object.freeze(['🏆', 'スコアが全国ランキングに載る']),
+    ]),
+    note: 'チャレンジ／種族チャレンジ／プロ。難易度は通常と極限から選べます',
+    points: Object.freeze([
+      Object.freeze(['🛡️', 'ライフの持ち方', 'パーティ全員で1本のライフを分け合います。誰が狙われても同じライフが減り、0になったら負けです。']),
+      Object.freeze(['📈', 'WAVEのあいだの強化', 'WAVEをクリアするたびに強化フェーズがあります。ちから・丈夫さ・ライフ・ガッツのどれを伸ばすかを自分で選び、ブリーダーの教えもここで選びます。編成のかみ合わせを考えながら組み立てられます。']),
+      Object.freeze(['👹', '難しさ', '通常の9段階に加えて、その上に極限の段があります。難易度えらびの「極限」タブから挑め、段ごとに特殊ルールが付きます。']),
+      Object.freeze(['🎮', '中にあるモード', 'チャレンジモード（基本）、種族チャレンジ（ひとつの種族だけで挑む）、プロモード（ベースモンだけで挑む）の3つです。']),
+      Object.freeze(['🏆', 'スコアと記録', 'スコアは難易度ごとの全国ランキングに反映されます。自己ベスト・最高到達WAVE・クリア回数はモードごとに別々に残ります。']),
+      Object.freeze(['🎯', 'こんな人におすすめ', 'じっくり考えて攻略したい人、ランキング上位や自己ベスト更新を狙いたい人向けです。']),
+    ]),
     modes: Object.freeze([BATTLE_MODE_CHALLENGE, BATTLE_MODE_SPECIES_CHALLENGE, BATTLE_MODE_PRO]),
   }),
   Object.freeze({
     id: BATTLE_SYSTEM_TACTICS, label: 'タクティクスバトル', short: 'タクティクス', emoji: '🎯', color: '#fb923c',
-    tagline: 'モンスターごとにライフを持つ、新しい戦い方',
-    note: 'タクティクスチャレンジ・種族チャレンジ・プロ。難易度は通常と極限から選べます',
+    tagline: '敵の技を読んで、誰を守るかを決める駆け引きのバトル',
+    highlights: Object.freeze([
+      Object.freeze(['❤️', 'モンスター1体ずつがライフを持つ']),
+      Object.freeze(['🔮', '敵の技は1ターン前に予告される']),
+      Object.freeze(['🎯', '育成の数字より、その場の判断で決まる']),
+    ]),
+    note: 'タクティクスチャレンジ／種族チャレンジ／プロ。難易度は通常と極限から選べます',
+    points: Object.freeze([
+      Object.freeze(['❤️', 'ライフの持ち方', 'モンスター1体ずつがライフを持ちます。狙われた子だけがダメージを受け、倒れた子はその場では戦えなくなります。全員が倒れたときだけ負けです。']),
+      Object.freeze(['🔮', '敵の予告', '敵は1ターン前に「次に何をするか」を知らせます。薙ぎ払い・連撃・貫通撃・咆哮など、技ごとに当たり方も避け方も違います。']),
+      Object.freeze(['🎯', 'こちらの選びかた', '予告を読んで、ガードで受けるか、間合いを変えるか、動きを止めるかをその場で決めます。誰を守るかの判断が、そのまま結果に出ます。']),
+      Object.freeze(['🤝', '供モンの加入', '供モンが加わると、そのぶん敵も強くなります。強く育てた子を連れていくほど手ごわくなるので、少ない人数のまま進むという選び方もできます。']),
+      Object.freeze(['🎮', '中にあるモード', 'タクティクスチャレンジ（基本）、種族チャレンジ、プロの3つです。難易度は通常と極限から選べます。']),
+      Object.freeze(['🏆', 'スコアと記録', 'クラシックバトルとは別の全国ランキングに載ります。クラシックバトルの記録は書き換わりません。']),
+      Object.freeze(['🎯', 'こんな人におすすめ', '育成の数字だけでなく、その場の判断で勝ちたい人、いつもの押し切りが通じない戦いを試したい人向けです。']),
+    ]),
     modes: Object.freeze([BATTLE_MODE_TACTICS, BATTLE_MODE_TACTICS_SPECIES, BATTLE_MODE_TACTICS_PRO]),
   }),
   Object.freeze({
     id: BATTLE_SYSTEM_QUICK, label: 'クイックモード', short: 'クイック', emoji: '⚡', color: '#fbbf24',
-    tagline: '数字だけで決まる、すぐ終わる腕試し',
-    note: '中のモードは1つだけなので、選ぶとそのまま難易度へ進みます',
+    tagline: '短い時間でモンスターを育てる、周回向けのバトル',
+    highlights: Object.freeze([
+      Object.freeze(['💎', '経験値・ダイヤが1.5倍']),
+      Object.freeze(['🔁', 'AUTO∞で放置したまま周回できる']),
+      Object.freeze(['⏩', 'スキップチケットで一気にクリア']),
+    ]),
+    note: '中のモードは1つだけなので、選ぶとそのまま難易度えらびへ進みます',
+    points: Object.freeze([
+      Object.freeze(['💎', 'もらえるもの', 'ブリーダー経験値・絆経験値・ダイヤが、難易度の倍率にさらに1.5倍かかります。同じ時間でいちばん多く育つのがこのモードです。']),
+      Object.freeze(['📈', '強化のかわり', '強化を選ぶ画面は出ません。かわりにWAVEをクリアするたび、味方全員のライフ・ちから・丈夫さ・ガッツがそのときの値から10%上がり、ライフとガッツが満タンまで回復します。']),
+      Object.freeze(['🔁', '放置で周回する', 'AUTO∞を使うと、10WAVEをクリアしたあとそのまま次の周へ入ります。置いておくだけで育つので、育成の周回と相性がいい遊び方です。']),
+      Object.freeze(['⏩', 'スキップチケット', 'このモードでだけ使えます。チケットのある難易度は、戦わずに一気にクリアぶんの報酬を受け取れます。']),
+      Object.freeze(['🎁', '報酬の方針を選べる', '難易度えらびで「育成／プシュケー優先／ダイヤ優先」を選べます。いま欲しいものに合わせて、もらえるものの内訳を変えられます。']),
+      Object.freeze(['🏆', 'スコアと記録', 'スコアは競いません。ランキングには載らず、ほかのモードの自己ベストも書き換わりません。記録はクイック専用の場所に、最高到達WAVEとクリア回数として残ります。']),
+      Object.freeze(['🎯', 'こんな人におすすめ', '新しい子を早く育てたい人、絆レベルや強化ポイントをまとめて稼ぎたい人向けです。']),
+    ]),
     modes: Object.freeze([BATTLE_MODE_QUICK]),
     direct: true,
   }),
@@ -630,6 +675,10 @@ const battleSystemBeta = (systemId, { debugBattle = false } = {}) => !debugBattl
 const visibleBattleSystems = ({ debugBattle = false } = {}) =>
   BATTLE_SYSTEMS.filter(s => battleSystemModes(s.id, { debugBattle }).length > 0
     || battleSystemComingSoon(s.id, { debugBattle }));
+// 「詳しいルール」で開くもの。仕組み(BATTLE_SYSTEMS)とモード(BATTLE_MODES など)を
+// 同じ入口から引く。どちらも {emoji,label,color,tagline,points} を持っているので、
+// 説明の画面はモードと仕組みを区別しなくてよい
+const battleInfoById = (id) => BATTLE_SYSTEMS.find(s => s.id === id) || battleModeInfo(id);
 // 極限チャレンジは通常の3モードとは別に持っているので、説明・ランキング画面から引けるようにここで合流させる
 // (EXTREME_MODE はこの下で定義するため、呼ばれた時点で参照する)
 const battleModeInfo = (mode) => {
@@ -35736,28 +35785,44 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   // ★β版は「中のモードがまだ全部そろっていない」。遊べるけれど、
                   //   入口でそのことが分かるようにしておく(2026-09-20 ユーザー指示)
                   const beta=battleSystemBeta(sys.id,{debugBattle});
+                  // ★カードは「選ぶ」と「詳しいルール」の2つのボタンでできている。
+                  //   準備中でも中身は読めるようにしておく(何が来るのか分かるように)
                   return (
-                  <button key={sys.id} data-battle-system={sys.id} data-battle-system-soon={soon?'1':undefined}
-                    disabled={soon} onClick={()=>openBattleSystem(sys.id)}
-                    aria-label={soon?`${sys.label}（準備中）`:sys.label}
-                    className={`w-full rounded-2xl border-2 px-3 py-3 text-left transition-transform ${soon?'bg-slate-900/40 opacity-60':'bg-slate-900/80 active:scale-95'}`}
+                  <div key={sys.id} data-battle-system-card={sys.id}
+                    className={`w-full rounded-2xl border-2 overflow-hidden ${soon?'bg-slate-900/40':'bg-slate-900/80'}`}
                     style={{borderColor:soon?'rgba(148,163,184,.45)':sys.color}}>
-                    <div className="flex items-center gap-2">
-                      <span className="text-2xl leading-none">{sys.emoji}</span>
-                      <span className="text-base font-black leading-tight" style={{color:soon?'#94a3b8':sys.color}}>{sys.label}</span>
-                      {soon&&(
-                        <span className="ml-auto text-[9px] font-black text-slate-300 border border-slate-400/60 rounded px-1.5 py-0.5">準備中</span>
-                      )}
-                      {beta&&(
-                        <span data-battle-system-beta className="ml-auto text-[9px] font-black text-amber-200 border border-amber-400/60 rounded px-1.5 py-0.5">β版</span>
-                      )}
-                      {!soon&&!beta&&sys.id===BATTLE_SYSTEM_TACTICS&&!TACTICS_MODE_PUBLIC_RELEASE&&(
-                        <span className="ml-auto text-[8px] font-black text-amber-300 border border-amber-400/60 rounded px-1 py-0.5">DEBUG</span>
-                      )}
-                    </div>
-                    <div className="text-[11px] text-slate-200 font-bold leading-snug mt-1.5">{sys.tagline}</div>
-                    <div className="text-[9px] text-slate-400 leading-snug mt-1">{soon?'いま準備しています。遊べるようになったらお知らせします':beta?'いまはタクティクスプロだけ遊べます。ほかのモードは準備中です':sys.note}</div>
-                  </button>);
+                    <button data-battle-system={sys.id} data-battle-system-soon={soon?'1':undefined}
+                      disabled={soon} onClick={()=>openBattleSystem(sys.id)}
+                      aria-label={soon?`${sys.label}（準備中）`:sys.label}
+                      className={`w-full px-3 pt-3 pb-2 text-left transition-transform ${soon?'opacity-60':'active:scale-[.98]'}`}>
+                      <div className="flex items-center gap-2">
+                        <span className="text-2xl leading-none">{sys.emoji}</span>
+                        <span className="text-base font-black leading-tight" style={{color:soon?'#94a3b8':sys.color}}>{sys.label}</span>
+                        {soon&&(
+                          <span className="ml-auto text-[9px] font-black text-slate-300 border border-slate-400/60 rounded px-1.5 py-0.5">準備中</span>
+                        )}
+                        {beta&&(
+                          <span data-battle-system-beta className="ml-auto text-[9px] font-black text-amber-200 border border-amber-400/60 rounded px-1.5 py-0.5">β版</span>
+                        )}
+                        {!soon&&!beta&&sys.id===BATTLE_SYSTEM_TACTICS&&!TACTICS_MODE_PUBLIC_RELEASE&&(
+                          <span className="ml-auto text-[8px] font-black text-amber-300 border border-amber-400/60 rounded px-1 py-0.5">DEBUG</span>
+                        )}
+                      </div>
+                      <div className="text-[11px] text-slate-200 font-bold leading-snug mt-1.5">{sys.tagline}</div>
+                      {/* 売りを3行。どの仕組みも同じ数・同じ並びなので、見比べて選べる */}
+                      <ul className="mt-1.5 space-y-1">{sys.highlights.map(([icon,text])=>(
+                        <li key={text} className="flex items-center gap-1.5 rounded-lg bg-black/35 px-2 py-1 text-[10px] font-black text-slate-200">
+                          <span className="shrink-0">{icon}</span><span className="min-w-0 flex-1 leading-snug">{text}</span>
+                        </li>
+                      ))}</ul>
+                      <div className="text-[9px] text-slate-400 leading-snug mt-1.5">{soon?'いま準備しています。遊べるようになったらお知らせします':beta?'いまはタクティクスプロだけ遊べます。ほかのモードは準備中です':sys.note}</div>
+                    </button>
+                    <button data-battle-system-info={sys.id} onClick={()=>setModeInfoId(sys.id)}
+                      aria-label={`${sys.label}の詳しいルール`}
+                      className="w-full min-h-[34px] border-t border-white/10 bg-black/30 text-[10px] font-black text-slate-300 active:scale-[.98] flex items-center justify-center gap-1">
+                      詳しいルール<ChevronRight size={12} className="shrink-0"/>
+                    </button>
+                  </div>);
                 })}
               </div>
               <div className="mt-3 shrink-0"><AssistantBubble scene="battleSystemSelect" compact/></div>
@@ -39078,7 +39143,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       })()}
 
       {/* モードの説明(タブ横の「？」) */}
-      {modeInfoId&&(()=>{const mode=battleModeInfo(modeInfoId);return(
+      {modeInfoId&&(()=>{const mode=battleInfoById(modeInfoId);return(
         <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.94)',zIndex:60000}} role="dialog" aria-modal="true" aria-label={`${mode.label}の説明`}>
           <div className="w-full max-w-sm rounded-3xl border-2 bg-slate-950 flex flex-col" style={{borderColor:mode.color,maxHeight:'86vh'}}>
             <div className="shrink-0 flex items-center gap-2 p-4 border-b border-white/10">

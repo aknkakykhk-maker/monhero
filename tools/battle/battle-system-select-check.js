@@ -111,6 +111,40 @@ check('種族チャレンジは公開前だと中身から外れる', (() => {
 check('プロモードは今までどおり本番のモード選択に並ぶ',
   api.battleSystemModes(api.BATTLE_SYSTEM_CLASSIC).includes('pro'));
 
+// ===== ①-2 カードの説明と「詳しいルール」 =====
+// 2026-09-20 ユーザー指示「説明がいまいち。もうちょい見た目がいい説明文に／
+// 詳細ルールも見れるように」。3つを見比べて選べるよう、書き方をそろえる
+check('どの仕組みにも売りが3行ある',
+  api.BATTLE_SYSTEMS.every(s => Array.isArray(s.highlights) && s.highlights.length === 3
+    && s.highlights.every(row => Array.isArray(row) && row.length === 2 && row[0] && row[1])),
+  api.BATTLE_SYSTEMS.map(s => `${s.short}:${s.highlights?.length}`).join(' / '));
+check('どの仕組みにも詳しいルールがある',
+  api.BATTLE_SYSTEMS.every(s => Array.isArray(s.points) && s.points.length >= 5
+    && s.points.every(row => Array.isArray(row) && row.length === 3 && row.every(Boolean))),
+  api.BATTLE_SYSTEMS.map(s => `${s.short}:${s.points?.length}`).join(' / '));
+// 説明モーダルは {emoji,label,color,tagline,points} をそのまま読む。
+// 1つでも欠けると、開いた瞬間に真っ白になる
+check('詳しいルールを出すのに要るものがそろっている',
+  api.BATTLE_SYSTEMS.every(s => s.emoji && s.label && s.color && s.tagline && s.points));
+// 売りの1行が長いと、カードの中で2行に折り返して高さがそろわなくなる
+check('売りの1行は短くまとめてある',
+  api.BATTLE_SYSTEMS.every(s => s.highlights.every(([, text]) => text.length <= 20)),
+  api.BATTLE_SYSTEMS.flatMap(s => s.highlights).map(([, t]) => t.length).join(','));
+check('仕組みとモードを同じ入口から引ける',
+  has('const battleInfoById = (id) => BATTLE_SYSTEMS.find(s => s.id === id) || battleModeInfo(id);')
+    && has('{modeInfoId&&(()=>{const mode=battleInfoById(modeInfoId);return('));
+check('カードから「詳しいルール」を開ける',
+  has('<button data-battle-system-info={sys.id} onClick={()=>setModeInfoId(sys.id)}')
+    && has('詳しいルール<ChevronRight size={12}'));
+// 準備中でも中身は読めるようにしておく(何が来るのか分かるように)
+check('準備中の仕組みでも詳しいルールは読める', (() => {
+  const info = source.slice(source.indexOf('<button data-battle-system-info={sys.id}'),
+    source.indexOf('</button>', source.indexOf('<button data-battle-system-info={sys.id}')));
+  return !info.includes('disabled');
+})());
+check('売りの3行を画面へ出している',
+  has('<ul className="mt-1.5 space-y-1">{sys.highlights.map(([icon,text])=>('));
+
 // ===== ②-2 β版（タクティクスプロだけ先に出す） =====
 // 2026-09-20 ユーザー指示「公開の前にβ版としてプロモードだけ出来るようにして」。
 // ★フラグは2つ。β版が立つと仕組みの準備中が外れ、中はプロだけが遊べる。
