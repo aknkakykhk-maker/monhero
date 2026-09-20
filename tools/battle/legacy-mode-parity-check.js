@@ -48,11 +48,11 @@ const makeIncoming = (deps) => new Function('d', `
 
 // (2) 与ダメージの勇者特性ぶん
 const traitBody = slice(
-  '    // ★新モードは勇者特性も「勇者モン本人が攻撃したとき」だけ(2026-09-20 ユーザー指示)。',
+  '    // ★タクティクスバトルは**攻撃した子自身の特性**が乗る(2026-09-20 ユーザー提案)。',
   '    // 間合い適性は');
 const makeTrait = (deps) => new Function('d', `
-  const {isTacticsMode,runMode,heroDist,mainHero} = d;
-  return (card, slotIdx) => {${traitBody} return traitMult; };
+  const {isTacticsMode,runMode,mainHero} = d;
+  return (card, slotIdx, mon) => {${traitBody} return traitMult; };
 `)(deps);
 
 // (3) 1ターンに選べる枚数
@@ -118,19 +118,20 @@ check('既存モードでは勇者特性が誰にでも効く（中二病）',
   `素${plain} / 中二病${incomingOf({ mainHero: { id: 'Ark' } }, null)}`);
 
 // ===== ② 与ダメージの勇者特性: 既存モードでは攻撃した枠に反応しない =====
+// ★既存モードは「攻撃したのが誰か」に関係なく、勇者モンの特性が乗る
 for (const hero of HEROES) for (const card of CARDS) {
   const fn = makeTrait(baseDeps({ mainHero: hero }));
-  const want = fn(card, 0);
+  const want = fn(card, 0, { id: 'Mocchi' });
   let same = true, detail = '';
-  for (const slotIdx of [0, 1, 2, 3]) {
-    const got = makeTrait(baseDeps({ mainHero: hero, heroDist: 2 }))(card, slotIdx);
-    if (got !== want) { same = false; detail = `枠${slotIdx} で ${want}→${got}`; break; }
+  for (const slotIdx of [0, 1, 2, 3]) for (const mon of [null, { id: 'Golem' }, { id: 'Pixie' }, { id: 'Suezo' }]) {
+    const got = makeTrait(baseDeps({ mainHero: hero, heroDist: 2 }))(card, slotIdx, mon);
+    if (got !== want) { same = false; detail = `枠${slotIdx}/攻撃 ${mon ? mon.id : 'なし'} で ${want}→${got}`; break; }
   }
-  check(`与ダメ倍率は既存モードだと攻撃した枠で動かない（${hero ? hero.id : 'なし'} / ${card.type}${card.monId ? `:${card.monId}` : ''}）`,
+  check(`与ダメ倍率は既存モードだと攻撃した子で動かない（${hero ? hero.id : 'なし'} / ${card.type}${card.monId ? `:${card.monId}` : ''}）`,
     same, detail || `×${want}`);
 }
 check('既存モードでは怪力が誰の攻撃にも乗る',
-  makeTrait(baseDeps({ mainHero: { id: 'Golem' } }))(CARDS[0], 3) === 1.2);
+  makeTrait(baseDeps({ mainHero: { id: 'Golem' } }))(CARDS[0], 3, { id: 'Suezo' }) === 1.2);
 
 // ===== ③ 1ターンに選べる枚数: 既存モードでは盤面に反応しない =====
 for (const [maxGuts, label] of [[100, 'ガッツ100'], [130, 'ガッツ130'], [200, 'ガッツ200']]) {
@@ -149,13 +150,16 @@ check('既存モードの枚数はガッツのしきいで決まる（2体編成
 
 // ===== ④ 新モードでは実際に変わる（分岐が死んでいないこと） =====
 const tactics = (over) => baseDeps({ runMode: 'tactics', ...over });
-check('新モードは狙われた枠で被ダメが変わる', (() => {
-  const fn = makeIncoming(tactics({ mainHero: { id: 'Mocchi' }, heroDist: 0, tacticsUnitsRef: { current: BOARD } }));
-  return fn(INTENT, 0) !== fn(INTENT, 1);
+check('新モードは狙われた子で被ダメが変わる', (() => {
+  // 0番はもち肌持ち、1番は持っていない
+  const board = [{ id: 'Mocchi', def: 200 }, { id: 'Suezo', def: 200 }, null, null];
+  const fn = makeIncoming(tactics({ mainHero: null, tacticsUnitsRef: { current: board } }));
+  return fn(INTENT, 0) < fn(INTENT, 1);
 })());
-check('新モードは攻撃した枠で与ダメ倍率が変わる', (() => {
-  const fn = makeTrait(tactics({ mainHero: { id: 'Golem' }, heroDist: 0 }));
-  return fn(CARDS[0], 0) === 1.2 && fn(CARDS[0], 1) === 1.0;
+check('新モードは攻撃した子で与ダメ倍率が変わる', (() => {
+  // 勇者モンにしていなくても、怪力持ちが攻撃すれば乗る
+  const fn = makeTrait(tactics({ mainHero: null }));
+  return fn(CARDS[0], 1, { id: 'Golem' }) === 1.2 && fn(CARDS[0], 1, { id: 'Suezo' }) === 1.0;
 })());
 check('新モードの枚数は盤面の人数で決まる', (() => {
   const two = makeLimit(tactics({ effectiveMaxGuts: 1, tacticsUnits: [BOARD[0], BOARD[1], null, null] }))();
@@ -167,10 +171,14 @@ check('新モードの枚数は盤面の人数で決まる', (() => {
 // ★新モード用の値を、isTacticsMode の外で使っていないか
 const has = (needle) => source.includes(needle);
 check('特殊防御の抽選は既存モードだと従来の表を通る',
-  has('const heroAimed = !aimedSlots || (heroDist>=0 && aimedSlots.includes(heroDist));')
+  has('const defenseTable = !isTacticsMode(runMode) ? unifiedSpecialDefense : buildUnifiedSpecialDefense({')
     && has('const aimedSlots = isTacticsMode(runMode)'));
 check('自動回復の率は既存モードだと従来のまま',
   has('tacticsRegen(autoHpRecoveryRate,isTacticsMode(runMode)?baseGutsRecoveryRate:soulAdjustedGutsRecoveryRate)'));
+check('威圧は既存モードだと編成から決まる',
+  has("(!isTacticsMode(runMode)&&mainHero?.id==='Suezo')?40:0,"));
+check('1枚多く使えるのは既存モードだと勇者モン本人だけ',
+  has('const bonusOwner=isTacticsMode(runMode)') && has('(heroCardBonusOf(mainHero?.id)>0&&mon?.id===mainHero?.id);'));
 check('ガッツ回復のボタンは既存モードだと合計で見る',
   has('(isTacticsMode(runMode) ? tacticsHasGutsRoom(tacticsUnits) : guts < effectiveMaxGuts)'));
 check('味方全体の反射は既存モードだと今までどおり通る',

@@ -413,11 +413,17 @@ check('ガッツの回復は1か所(gainGuts)へまとめる',
   `gainGuts / gainGutsAt / gainGutsByRate を呼ぶ場所 ${(source.match(/gainGuts(At|ByRate)?\(/g) || []).length}か所`);
 // カードで増えるガッツは「使った子」へ入る(段階7)。
 // ★2026-09-20: 量も「その子の上限 × 率」にしたので、率で入れるものは gainGutsByRate を通る
-check('カードで増えるガッツは使った子へ', has('const gainGutsAt = (slotIdx, amount) => {')
+// ★率で入れる5か所のうち4つが札(会心・ガッツ回復・絆・スエゾー)、1つが氷海の支配者。
+//   氷海も「持っている子だけ」へ入れるので同じ入口を通る(仕様 4.9)
+check('ガッツを増やすものは、増える子を名指しで渡す', has('const gainGutsAt = (slotIdx, amount) => {')
   && has('const gainGutsByRate = (slotIdx, rate) => {')
-  && (source.match(/gainGutsByRate\(slotIdx,/g) || []).length === 4
+  && (source.match(/gainGutsByRate\(slotIdx,/g) || []).length === 5
   && (source.match(/gainGutsAt\(slotIdx,/g) || []).length === 2,
   `率 ${(source.match(/gainGutsByRate\(slotIdx,/g) || []).length}か所 / 固定量 ${(source.match(/gainGutsAt\(slotIdx,/g) || []).length}か所`);
+// 氷海ぶんは全員へ配る率に混ぜず、持っている子へだけ足す(混ぜると誰か1人の特性で全員が得をする)
+check('氷海ぶんは持っている子へだけ足す',
+  has('const extra=iceExtraRateAt(slotIdx);')
+    && has('if (extra>0) gutsRegen+=gainGutsByRate(slotIdx,extra);'));
 // AUTO。倒れた子を空スロットとして渡し、ガッツは1体ずつ見る
 check('オートは倒れた子を選ばない',
   has('? slots.map((mon,idx)=>(canTacticsSlotAct(tacticsUnitsRef.current,idx)?mon:null))'));
