@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b2c01be637f7ba7d
+// generated-sha256: 247c1bc8b256e552
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -92,7 +92,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-20 20:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-21 01:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -166,6 +166,19 @@ const SPECIES_CHALLENGE_PUBLIC_RELEASE = true;
 // 一度 true にしたあとは、実装側から勝手に false へ戻さない
 // (戻すと、すでに遊んだ人の全国ランキングだけが止まる)。
 const TACTICS_MODE_PUBLIC_RELEASE = false;
+// タクティクスバトルの公開は2段階。β版では**タクティクスプロだけ**遊べるようにする
+// (2026-09-20 ユーザー指示「公開の前にβ版としてプロモードだけ出来るようにして」)。
+// true のあいだは
+//   ・モンヒロバトルの入口にタクティクスバトルが出る(「β版」と分かるように出す)
+//   ・中に3つのカードが並び、遊べるのはタクティクスプロだけ。ほかの2つは「準備中」
+//   ・タクティクスプロのスコアは**β版専用の行**(TacticsProBeta<難易度>)へ送る
+// 本公開(TACTICS_MODE_PUBLIC_RELEASE)を立てると、3モードすべてが遊べるようになり、
+// ランキングも TacticsPro<難易度> へ切り替わるので、本番の順位は空から始まる。
+// ★β版の行は消さない。モンヒロビートの週間ランキングが週IDで区切るのと同じ考え方で、
+//   キーを変えるだけにしておく(消す作業はSupabaseの管理接続が要るうえ、戻せない)。
+// 一度 true にしたあとは、実装側から勝手に false へ戻さない
+// (戻すと、すでに遊んだ人の全国ランキングだけが止まる)。
+const TACTICS_BETA_PRO_RELEASE = false;
 // 解放条件。チャレンジモードで Master / Grand Master / Hell / Legend のどれかを1回以上
 // クリアしていること。判定には既存の mh_clears_<難易度> をそのまま読むので、新しい解放フラグは
 // 作らない(旧セーブのプレイヤーもログインした時点で解放済みとして扱われる)。
@@ -581,20 +594,38 @@ const BATTLE_SYSTEMS = Object.freeze([
 ]);
 // そのモードがどの仕組みに属するか。見つからなければ「これまでのバトル」に寄せる
 const battleSystemOf = (modeId) => BATTLE_SYSTEMS.find(s => s.modes.includes(modeId)) || BATTLE_SYSTEMS[0];
-// 仕組みの中で実際に画面へ並べるモード。公開フラグで出し入れするものはここで落とす
+// そのモードをいま遊べるか。公開フラグの見方はここ1か所にまとめる
+// (画面・ランキング・検査がばらばらにフラグを見ると、片方だけ出し忘れる)
+const battleModePlayable = (id, { debugBattle = false } = {}) => {
+  if (debugBattle) return true;
+  if (id === BATTLE_MODE_SPECIES_CHALLENGE) return SPECIES_CHALLENGE_PUBLIC_RELEASE;
+  // ★β版はタクティクスプロだけ遊べる(2026-09-20 ユーザー指示)
+  if (id === BATTLE_MODE_TACTICS_PRO) return TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE;
+  if (isTacticsMode(id)) return TACTICS_MODE_PUBLIC_RELEASE;
+  return true;
+};
+// まだ遊べないが、カードだけは並べるモード。β版のタクティクスバトルの中だけで起きる
+// (ユーザー指示「3つ並べてプロ以外は準備中」)。デバッグからは今までどおり全部遊べる
+const battleModeComingSoon = (id, { debugBattle = false } = {}) => !debugBattle
+  && TACTICS_BETA_PRO_RELEASE && !TACTICS_MODE_PUBLIC_RELEASE
+  && isTacticsMode(id) && !battleModePlayable(id, { debugBattle });
+// 仕組みの中で実際に画面へ並べるモード。遊べないものは落とすが、
+// 「準備中」として見せるものだけは残す
 const battleSystemModes = (systemId, { debugBattle = false } = {}) => {
   const system = BATTLE_SYSTEMS.find(s => s.id === systemId) || BATTLE_SYSTEMS[0];
-  return system.modes.filter(id => {
-    if (id === BATTLE_MODE_SPECIES_CHALLENGE) return SPECIES_CHALLENGE_PUBLIC_RELEASE || debugBattle;
-    if (isTacticsMode(id)) return TACTICS_MODE_PUBLIC_RELEASE || debugBattle;
-    return true;
-  });
+  return system.modes.filter(id => battleModePlayable(id, { debugBattle })
+    || battleModeComingSoon(id, { debugBattle }));
 };
 // まだ遊べないが、枠だけは見せる仕組み(2026-09-20 ユーザー指示
 // 「準備中の新モードもクイックの上に入れて」)。モンヒロビートの「準備中」と同じ作りで、
-// 公開フラグが立つまでは押せないカードを出す。デバッグからは今までどおり遊べる
+// 公開フラグが立つまでは押せないカードを出す。デバッグからは今までどおり遊べる。
+// ★β版が立つと中のプロが遊べるので、仕組みそのものは「準備中」ではなくなる
 const battleSystemComingSoon = (systemId, { debugBattle = false } = {}) =>
-  systemId === BATTLE_SYSTEM_TACTICS && !TACTICS_MODE_PUBLIC_RELEASE && !debugBattle;
+  systemId === BATTLE_SYSTEM_TACTICS && !TACTICS_MODE_PUBLIC_RELEASE
+    && !TACTICS_BETA_PRO_RELEASE && !debugBattle;
+// β版で開いている仕組み。中のモードが全部そろっていないことを入口で伝えるために使う
+const battleSystemBeta = (systemId, { debugBattle = false } = {}) => !debugBattle
+  && systemId === BATTLE_SYSTEM_TACTICS && TACTICS_BETA_PRO_RELEASE && !TACTICS_MODE_PUBLIC_RELEASE;
 // 画面へ並べる仕組み。中に出せるモードが1つも無いものは、準備中の枠としてだけ出す
 const visibleBattleSystems = ({ debugBattle = false } = {}) =>
   BATTLE_SYSTEMS.filter(s => battleSystemModes(s.id, { debugBattle }).length > 0
@@ -617,9 +648,11 @@ const PUBLIC_BATTLE_MODES = BATTLE_MODES;
 // 種族チャレンジは一般公開するまで全国ランキングへ送らない。
 // デバッグの実戦から外部ランキングを汚さないための入口はここ1か所にまとめてある
 // 新モードも、公開するまでは全国ランキングへ送らない(デバッグから遊べるため、ここで止める)
+// ★タクティクス側は battleModePlayable がフラグを1か所で見る。
+//   β版ではタクティクスプロだけが true になり、送り先もβ版専用の行になる
 const modeHasRanking = (mode) => !isQuickMode(mode)
   && (mode !== BATTLE_MODE_SPECIES_CHALLENGE || SPECIES_CHALLENGE_PUBLIC_RELEASE)
-  && (!isTacticsMode(mode) || TACTICS_MODE_PUBLIC_RELEASE);
+  && (!isTacticsMode(mode) || battleModePlayable(mode));
 // そのモードで遊んだときに増える、みゅあの仲良し度の行動キー。
 // 既存の challenge / quick の獲得量と1日上限は変えず、プロぶんの pro を足しただけ
 const modeBondAction = (mode) => isQuickMode(mode) ? 'quick' : isProMode(mode) ? 'pro' : 'challenge';
@@ -10746,13 +10779,22 @@ const EXTREME_RANKING_PREFIX = 'Extreme';
 // (例: TacticsHard / TacticsEXTREME)。Pro / Extreme とは先頭が違うので取り違えは起きない。
 // チャレンジ・プロ・極限の行は読みも書きもしない
 const TACTICS_RANKING_PREFIX = 'Tactics';
+// ★タクティクスプロは、β版のあいだだけ別の行(TacticsProBeta<難易度>)へ送る。
+//   本公開でキーが TacticsPro<難易度> へ切り替わり、本番の順位は空から始まる。
+//   β版の行は消さない(モンヒロビートの週間ランキングが週IDで区切るのと同じ考え方)
+const TACTICS_PRO_RANKING_PREFIX = `${TACTICS_RANKING_PREFIX}${PRO_RANKING_PREFIX}`;
+const TACTICS_PRO_BETA_SUFFIX = 'Beta';
+const tacticsProRankingPrefix = () => (TACTICS_MODE_PUBLIC_RELEASE
+  ? TACTICS_PRO_RANKING_PREFIX : `${TACTICS_PRO_RANKING_PREFIX}${TACTICS_PRO_BETA_SUFFIX}`);
 const RANKING_DIFFICULTY_KEYS = Object.freeze([
   ...Object.keys(DIFFICULTY_SETTINGS),
   ...Object.keys(DIFFICULTY_SETTINGS).map(key => `${PRO_RANKING_PREFIX}${key}`),
   // タクティクスは通常9段階＋極限5段階(TACTICS_DIFFICULTY_IDS が正本)。
   // 極限もモードの中の難易度なので、極限チャレンジの Extreme* とは別の行になる
   ...TACTICS_DIFFICULTY_IDS.map(key => `${TACTICS_RANKING_PREFIX}${key}`),
-  ...TACTICS_DIFFICULTY_IDS.map(key => `${TACTICS_RANKING_PREFIX}${PRO_RANKING_PREFIX}${key}`),
+  // 本公開ぶんとβ版ぶんの両方を通す。公開の前後で、片方が「知らない難易度」にならないように
+  ...TACTICS_DIFFICULTY_IDS.map(key => `${TACTICS_PRO_RANKING_PREFIX}${key}`),
+  ...TACTICS_DIFFICULTY_IDS.map(key => `${TACTICS_PRO_RANKING_PREFIX}${TACTICS_PRO_BETA_SUFFIX}${key}`),
   // GOD以降も同じ表(ALL_EXTREME_DIFFICULTIES)から作る。難易度を足すたびにここへ1行書き足すと
   // 書き忘れでランキングだけ落ちるので、正本を1つにしておく
   ...ALL_EXTREME_DIFFICULTIES.map(setting => `${EXTREME_RANKING_PREFIX}${setting.id}`),
@@ -10845,10 +10887,10 @@ const rankingDifficultyForMode = (mode, diff, speciesId=null) => {
   if (typeof EXTREME_MODE !== 'undefined' && EXTREME_MODE && mode === EXTREME_MODE.id) {
     return `${EXTREME_RANKING_PREFIX}${normalizeExtremeDifficulty(diff)}`;
   }
-  // ★タクティクスプロは Tactics と Pro を重ねた TacticsPro<難易度>。
+  // ★タクティクスプロは Tactics と Pro を重ねた TacticsPro<難易度>(β版は末尾に Beta)。
   //   isTacticsMode より先に見る(あとに置くと Tactics<難易度> になってしまう)
   if (mode === BATTLE_MODE_TACTICS_PRO) {
-    return `${TACTICS_RANKING_PREFIX}${PRO_RANKING_PREFIX}${normalizeBattleDifficulty(diff)}`;
+    return `${tacticsProRankingPrefix()}${normalizeBattleDifficulty(diff)}`;
   }
   if (isTacticsMode(mode)) return `${TACTICS_RANKING_PREFIX}${normalizeBattleDifficulty(diff)}`;
   return isProMode(mode) ? `${PRO_RANKING_PREFIX}${normalizeBattleDifficulty(diff)}` : normalizeBattleDifficulty(diff);
@@ -10859,10 +10901,12 @@ const rankingDifficultyBase = (key) => {
   const species = parseSpeciesChallengeRankingDifficulty(text);
   if (species) return species.difficultyId;
   if (text.startsWith(EXTREME_RANKING_PREFIX)) return text.slice(EXTREME_RANKING_PREFIX.length);
-  // TacticsPro は Tactics より先に落とす(順番を逆にすると 'ProHard' が残る)
-  if (text.startsWith(`${TACTICS_RANKING_PREFIX}${PRO_RANKING_PREFIX}`)) {
-    return text.slice(TACTICS_RANKING_PREFIX.length + PRO_RANKING_PREFIX.length);
+  // TacticsProBeta → TacticsPro → Tactics の順で落とす
+  // (順番を逆にすると 'ProHard' や 'BetaHard' が残る)
+  if (text.startsWith(`${TACTICS_PRO_RANKING_PREFIX}${TACTICS_PRO_BETA_SUFFIX}`)) {
+    return text.slice(TACTICS_PRO_RANKING_PREFIX.length + TACTICS_PRO_BETA_SUFFIX.length);
   }
+  if (text.startsWith(TACTICS_PRO_RANKING_PREFIX)) return text.slice(TACTICS_PRO_RANKING_PREFIX.length);
   if (text.startsWith(TACTICS_RANKING_PREFIX)) return text.slice(TACTICS_RANKING_PREFIX.length);
   return text.startsWith(PRO_RANKING_PREFIX) ? text.slice(PRO_RANKING_PREFIX.length) : text;
 };
@@ -17003,9 +17047,10 @@ function ProfileScreen({
         {/* 保存済みの各モード記録を読むだけのプロフィール表示。新しい保存キーは作らない。 */}
         {(()=>{
           const difficultyIds=Object.keys(DIFFICULTY_SETTINGS);
-          // タクティクスバトルの3モードは、一般公開したときに同じ並びへ加わる
+          // タクティクスバトルのモードは、遊べるようになったものから同じ並びへ加わる
+          // (β版ではタクティクスプロだけ)。判定は battleModePlayable の1か所に任せる
           const modes=[...PUBLIC_BATTLE_MODES,EXTREME_MODE,SPECIES_CHALLENGE_MODE,
-            ...(TACTICS_MODE_PUBLIC_RELEASE?[TACTICS_MODE,TACTICS_SPECIES_MODE,TACTICS_PRO_MODE]:[])];
+            ...[TACTICS_MODE,TACTICS_SPECIES_MODE,TACTICS_PRO_MODE].filter(mode=>battleModePlayable(mode.id))];
           const selected=modes.find(mode=>mode.id===profileBattleMode)||null;
           const progressOf=(mode)=>(typeof speciesChallengeProgressOf==='function'
             ? speciesChallengeProgressOf(mode) : speciesChallengeProgress);
@@ -35688,6 +35733,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   // ★まだ遊べないものは、枠だけ出して押せなくする(2026-09-20 ユーザー指示)。
                   //   モンヒロビートの「準備中」と同じ扱い。デバッグからは今までどおり遊べる
                   const soon=battleSystemComingSoon(sys.id,{debugBattle});
+                  // ★β版は「中のモードがまだ全部そろっていない」。遊べるけれど、
+                  //   入口でそのことが分かるようにしておく(2026-09-20 ユーザー指示)
+                  const beta=battleSystemBeta(sys.id,{debugBattle});
                   return (
                   <button key={sys.id} data-battle-system={sys.id} data-battle-system-soon={soon?'1':undefined}
                     disabled={soon} onClick={()=>openBattleSystem(sys.id)}
@@ -35700,12 +35748,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       {soon&&(
                         <span className="ml-auto text-[9px] font-black text-slate-300 border border-slate-400/60 rounded px-1.5 py-0.5">準備中</span>
                       )}
-                      {!soon&&sys.id===BATTLE_SYSTEM_TACTICS&&!TACTICS_MODE_PUBLIC_RELEASE&&(
+                      {beta&&(
+                        <span data-battle-system-beta className="ml-auto text-[9px] font-black text-amber-200 border border-amber-400/60 rounded px-1.5 py-0.5">β版</span>
+                      )}
+                      {!soon&&!beta&&sys.id===BATTLE_SYSTEM_TACTICS&&!TACTICS_MODE_PUBLIC_RELEASE&&(
                         <span className="ml-auto text-[8px] font-black text-amber-300 border border-amber-400/60 rounded px-1 py-0.5">DEBUG</span>
                       )}
                     </div>
                     <div className="text-[11px] text-slate-200 font-bold leading-snug mt-1.5">{sys.tagline}</div>
-                    <div className="text-[9px] text-slate-400 leading-snug mt-1">{soon?'いま準備しています。遊べるようになったらお知らせします':sys.note}</div>
+                    <div className="text-[9px] text-slate-400 leading-snug mt-1">{soon?'いま準備しています。遊べるようになったらお知らせします':beta?'いまはタクティクスプロだけ遊べます。ほかのモードは準備中です':sys.note}</div>
                   </button>);
                 })}
               </div>
@@ -35756,17 +35807,25 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <div className={`relative shrink-0${battleTutorialSpotClass('modeCards')}`}>
                   <button aria-label="前のモード" onClick={()=>stepMode(-1)} className="absolute left-0 top-[42%] z-20 w-9 h-12 rounded-r-xl bg-black/70"><ChevronLeft/></button>
                   <div ref={modeCarouselRef} onScroll={()=>{const index=centeredLoopIndex();const picked=loopModes[index];if(picked&&picked.id!==current.id)setBattleMode(picked.id);if(modeLoopTimerRef.current)clearTimeout(modeLoopTimerRef.current);modeLoopTimerRef.current=setTimeout(recenterModeLoop,180);}} className="flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll" style={{paddingLeft:'11%',paddingRight:'11%',touchAction:'pan-x pinch-zoom'}}>
-                    {loopModes.map((m,loopIndex)=>{const active=m.id===current.id,isExtreme=m.id===EXTREME_MODE.id,isSpecies=isSpeciesChallengeMode(m.id),extremeLocked=isExtreme&&!extremeUnlocked&&!debugBattle,speciesLocked=isSpecies&&!speciesChallengeUnlocked&&!debugBattle,rec=isExtreme?{score:highestModeScore(extremeBestScores,PUBLIC_EXTREME_DIFFICULTIES.map(setting=>setting.id)),wave:0,clears:extremeClearCount}:modeRecordFor(m.id,safeDifficulty),ranked=!isExtreme&&!isSpecies&&modeHasRanking(m.id),modeBestScore=ranked?highestModeScore(isTacticsMode(m.id)?tacticsRecordsOf(m.id).hs:isProMode(m.id)?proHighScores:highScores,isTacticsMode(m.id)?TACTICS_DIFFICULTY_IDS:Object.keys(DIFFICULTY_SETTINGS)):rec.score;return (
+                    {loopModes.map((m,loopIndex)=>{const active=m.id===current.id,isExtreme=m.id===EXTREME_MODE.id,isSpecies=isSpeciesChallengeMode(m.id),modeSoon=battleModeComingSoon(m.id,{debugBattle}),extremeLocked=isExtreme&&!extremeUnlocked&&!debugBattle,speciesLocked=isSpecies&&!speciesChallengeUnlocked&&!debugBattle,rec=isExtreme?{score:highestModeScore(extremeBestScores,PUBLIC_EXTREME_DIFFICULTIES.map(setting=>setting.id)),wave:0,clears:extremeClearCount}:modeRecordFor(m.id,safeDifficulty),ranked=!isExtreme&&!isSpecies&&modeHasRanking(m.id),modeBestScore=ranked?highestModeScore(isTacticsMode(m.id)?tacticsRecordsOf(m.id).hs:isProMode(m.id)?proHighScores:highScores,isTacticsMode(m.id)?TACTICS_DIFFICULTY_IDS:Object.keys(DIFFICULTY_SETTINGS)):rec.score;return (
                       <article key={`${m.id}-${loopIndex}`} className={`snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2.5 h-[366px] overflow-hidden transition-all flex flex-col ${active?'scale-100 opacity-100':'scale-[.92] opacity-55'}`} style={{borderColor:active?m.color:'rgba(255,255,255,.12)',background:'linear-gradient(180deg,#152044,#0d142b)',boxShadow:active?`0 0 30px ${m.color}55`:'none'}}>
                         <div className="text-center text-[7px] tracking-[.2em] text-slate-400 font-black">BATTLE MODE</div>
                         <h3 className="text-center text-lg font-black leading-tight" style={{color:m.color}}>{m.emoji} {m.label}</h3>
                         <p className="text-center text-[9px] text-slate-300 leading-snug mt-0.5 min-h-[26px]">{m.tagline}</p>
                         {/* スコア対象モードは全難易度の自己ベスト最大値、クイックは従来どおり選択中難易度のWAVE記録を出す */}
+                        {/* ★β版の「準備中」カードは、記録の代わりに何を待っているかを出す */}
+                        {modeSoon?(
+                        <div className="mt-1.5 rounded-xl bg-black/45 px-2.5 py-1.5">
+                          <small className="block text-[8px] text-slate-400 font-black">準備中</small>
+                          <b className="block text-right text-base leading-tight text-slate-300">遊べません</b>
+                          <span className="block text-right text-[9px] text-amber-300">遊べるようになったらお知らせします</span>
+                        </div>
+                        ):(
                         <div className="mt-1.5 rounded-xl bg-black/45 px-2.5 py-1.5">
                           <small className="block text-[8px] text-slate-400 font-black">{isSpecies?(speciesLocked?'解放条件':'クリアした種族×難易度'):isExtreme?(extremeLocked?'解放条件':'最高スコア'):ranked?'最高スコア':`${DIFFICULTY_SETTINGS[safeDifficulty]?.label||safeDifficulty}の記録`}</small>
                           <b className="block text-right text-base leading-tight" style={{color:m.color}}>{isSpecies?(speciesLocked?'🔒 未解放':`${speciesChallengeTotalClearedCount(speciesChallengeProgressOf(m.id))} 組`):isExtreme?(extremeLocked?'🔒 未解放':`${modeBestScore.toLocaleString()} pt`):ranked?`${modeBestScore.toLocaleString()} pt`:`WAVE ${rec.wave}`}</b>
                           <span className="block text-right text-[9px] text-amber-300">{isSpecies?(speciesLocked?SPECIES_CHALLENGE_UNLOCK_TEXT:modeHasRanking(m.id)?`全${speciesChallengeLineages().length*SPECIES_CHALLENGE_DIFFICULTY_IDS.length}組中`:'🧪 DEBUG・一般公開前'):isExtreme?(extremeLocked?EXTREME_UNLOCK_TEXT:`クリア ${rec.clears}回`):ranked?`最高到達 WAVE ${rec.wave}`:`クリア ${rec.clears}回`}</span>
-                        </div>
+                        </div>)}
                         {/* カードへ出す3行。どのモードも【売り】→【報酬】→【記録】の順でそろえてある。
                             細かい説明は「このモードの説明」で全部読める */}
                         <ul className="mt-1.5 space-y-0.5">{m.highlights.map(([icon,text])=>(
@@ -35777,12 +35836,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                           {/* 練習中はチャレンジだけ進めるようにする。初回からクイックやプロを遊ばせない */}
                           {/* 種族チャレンジは、通常のバトル入口から始めた周回だけが本番(記録・報酬を保存する)。
                               デバッグのバトルモード入口(debugBattle)から来たときは、これまでどおり保存しない */}
-                          <button disabled={extremeLocked||speciesLocked||(!!battleTutorial&&m.id!==BATTLE_MODE_CHALLENGE)} onClick={()=>{setBattleMode(m.id);if(isSpecies){openSpeciesChallengeSelection({saveProgress:!debugBattle,fromDebug:debugBattle,mode:m.id});return;}setGameState(isExtreme?'EXTREME_DIFFICULTY_SELECT':'BATTLE_DIFFICULTY_SELECT');}} className={`min-h-[44px] rounded-xl font-black text-sm disabled:opacity-30${m.id===BATTLE_MODE_CHALLENGE?battleTutorialSpotClass('modeStart'):''}`} style={{backgroundColor:m.color,color:'#0f172a'}}>{extremeLocked||speciesLocked?'まだ挑戦できません':isSpecies?'種族を選ぶ':'難易度を選ぶ'}</button>
+                          <button data-battle-mode-soon={modeSoon?'1':undefined} disabled={extremeLocked||speciesLocked||modeSoon||(!!battleTutorial&&m.id!==BATTLE_MODE_CHALLENGE)} onClick={()=>{setBattleMode(m.id);if(isSpecies){openSpeciesChallengeSelection({saveProgress:!debugBattle,fromDebug:debugBattle,mode:m.id});return;}setGameState(isExtreme?'EXTREME_DIFFICULTY_SELECT':'BATTLE_DIFFICULTY_SELECT');}} className={`min-h-[44px] rounded-xl font-black text-sm disabled:opacity-30${m.id===BATTLE_MODE_CHALLENGE?battleTutorialSpotClass('modeStart'):''}`} style={{backgroundColor:m.color,color:'#0f172a'}}>{modeSoon?'準備中':extremeLocked||speciesLocked?'まだ挑戦できません':isSpecies?'種族を選ぶ':'難易度を選ぶ'}</button>
                           {/* スコアランキングの導線。クイックはランキングが無いので、高さ合わせの空枠も置かない */}
                           {isExtreme&&<button disabled={extremeLocked||!!battleTutorial} onClick={()=>openModeScoreRanking(m.id,EXTREME_SETTING.id,'BATTLE_MODE_SELECT')} className="min-h-[40px] rounded-xl bg-slate-800 border border-fuchsia-400/40 text-fuchsia-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"><span className="flex-1 text-center whitespace-nowrap">🏆 {m.label}のランキング</span><ChevronRight size={14}/></button>}
                           {/* 種族チャレンジも他モードと同じ位置に記録への導線を置く。
                               公開前は全国ランキングを持たないので、種族ごとの自己記録を出す */}
-                          {isSpecies&&<button data-species-record-link disabled={speciesLocked||!!battleTutorial} onClick={()=>openSpeciesChallengeRecords('BATTLE_MODE_SELECT',{mode:m.id})} className="min-h-[40px] rounded-xl bg-slate-800 border border-cyan-400/40 text-cyan-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"><span className="flex-1 text-center whitespace-nowrap">🏆 {m.label}のランキング</span><ChevronRight size={14}/></button>}
+                          {isSpecies&&!modeSoon&&<button data-species-record-link disabled={speciesLocked||!!battleTutorial} onClick={()=>openSpeciesChallengeRecords('BATTLE_MODE_SELECT',{mode:m.id})} className="min-h-[40px] rounded-xl bg-slate-800 border border-cyan-400/40 text-cyan-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"><span className="flex-1 text-center whitespace-nowrap">🏆 {m.label}のランキング</span><ChevronRight size={14}/></button>}
                           {ranked&&<button disabled={!!battleTutorial} onClick={()=>openModeScoreRanking(m.id,safeDifficulty,'BATTLE_MODE_SELECT')} className="min-h-[40px] rounded-xl bg-slate-800 border border-indigo-400/40 text-indigo-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"><span className="flex-1 text-center whitespace-nowrap">🏆 {m.label}のランキング</span><ChevronRight size={16} className="shrink-0"/></button>}
 
                         </div>

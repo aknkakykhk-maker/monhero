@@ -39,10 +39,12 @@ const slice = (from, to) => {
 // ===== 定義を本体から切り出して動かす =====
 // 公開フラグは差し替えて試すので、定数はサンドボックスへ与える側で持つ
 const body = slice('const BATTLE_SYSTEM_CLASSIC =', '// 極限チャレンジは通常の3モードとは別に');
+// β版フラグは指定が無ければ false(＝今までどおり)
 const run = (flags) => {
-  const sandbox = { Object, ...flags };
+  const sandbox = { Object, TACTICS_BETA_PRO_RELEASE: false, ...flags };
   vm.createContext(sandbox);
   vm.runInContext(`${body};globalThis.api={BATTLE_SYSTEMS,battleSystemOf,battleSystemModes,visibleBattleSystems,battleSystemComingSoon,`
+    + 'battleSystemBeta,battleModePlayable,battleModeComingSoon,'
     + 'BATTLE_SYSTEM_CLASSIC,BATTLE_SYSTEM_TACTICS,BATTLE_SYSTEM_QUICK};', sandbox);
   return sandbox.api;
 };
@@ -108,6 +110,63 @@ check('種族チャレンジは公開前だと中身から外れる', (() => {
 // ★仕組みを足しただけで、モードの出し入れは変えていない。プロは今までどおり本番にも並ぶ
 check('プロモードは今までどおり本番のモード選択に並ぶ',
   api.battleSystemModes(api.BATTLE_SYSTEM_CLASSIC).includes('pro'));
+
+// ===== ②-2 β版（タクティクスプロだけ先に出す） =====
+// 2026-09-20 ユーザー指示「公開の前にβ版としてプロモードだけ出来るようにして」。
+// ★フラグは2つ。β版が立つと仕組みの準備中が外れ、中はプロだけが遊べる。
+//   本公開が立つと3モードすべてが遊べる(β版フラグの状態に関係なく)
+const beta = run({ ...MODE_IDS, SPECIES_CHALLENGE_PUBLIC_RELEASE: true,
+  TACTICS_MODE_PUBLIC_RELEASE: false, TACTICS_BETA_PRO_RELEASE: true });
+check('β版では仕組みの「準備中」が外れる',
+  beta.battleSystemComingSoon(beta.BATTLE_SYSTEM_TACTICS) === false
+    && beta.battleSystemBeta(beta.BATTLE_SYSTEM_TACTICS) === true);
+check('β版で遊べるのはタクティクスプロだけ',
+  beta.battleModePlayable('tacticsPro') === true
+    && beta.battleModePlayable('tactics') === false
+    && beta.battleModePlayable('tacticsSpecies') === false);
+// カードは3枚とも並べる(ユーザー指示「3つ並べてプロ以外は準備中」)
+check('β版でも中のカードは3枚とも並ぶ',
+  beta.battleSystemModes(beta.BATTLE_SYSTEM_TACTICS).length === 3,
+  beta.battleSystemModes(beta.BATTLE_SYSTEM_TACTICS).join(' / '));
+check('β版のプロ以外は「準備中」の印が付く',
+  beta.battleModeComingSoon('tactics') === true
+    && beta.battleModeComingSoon('tacticsSpecies') === true
+    && beta.battleModeComingSoon('tacticsPro') === false);
+check('β版の準備中はタクティクス側だけ',
+  beta.battleModeComingSoon('challenge') === false
+    && beta.battleModeComingSoon('pro') === false
+    && beta.battleModeComingSoon('speciesChallenge') === false);
+check('デバッグからはβ版でも3つとも遊べる',
+  beta.battleSystemModes(beta.BATTLE_SYSTEM_TACTICS, { debugBattle: true }).length === 3
+    && ['tactics', 'tacticsSpecies', 'tacticsPro']
+      .every(id => beta.battleModeComingSoon(id, { debugBattle: true }) === false));
+// 公開前(β版も立っていない)は、これまでどおり中のカードを1枚も出さない
+check('β版が立つまでは中のカードを出さない',
+  beforeRelease.battleSystemModes(beforeRelease.BATTLE_SYSTEM_TACTICS).length === 0
+    && ['tactics', 'tacticsSpecies', 'tacticsPro']
+      .every(id => beforeRelease.battleModeComingSoon(id) === false));
+check('本公開が立てばβ版の印は消え、3つとも遊べる',
+  afterRelease.battleSystemBeta(afterRelease.BATTLE_SYSTEM_TACTICS) === false
+    && afterRelease.battleSystemModes(afterRelease.BATTLE_SYSTEM_TACTICS).length === 3
+    && ['tactics', 'tacticsSpecies', 'tacticsPro']
+      .every(id => afterRelease.battleModePlayable(id) === true
+        && afterRelease.battleModeComingSoon(id) === false));
+// 画面側の結線。押せないだけでなく、目印と文言もそろっていること
+check('β版の印を画面へ出している',
+  has('const beta=battleSystemBeta(sys.id,{debugBattle});')
+    && has('<span data-battle-system-beta')
+    && has('いまはタクティクスプロだけ遊べます。ほかのモードは準備中です'));
+check('準備中のモードは押せない',
+  has('modeSoon=battleModeComingSoon(m.id,{debugBattle}),')
+    && has("data-battle-mode-soon={modeSoon?'1':undefined}")
+    && has('disabled={extremeLocked||speciesLocked||modeSoon||')
+    && has("{modeSoon?'準備中':extremeLocked||speciesLocked?'まだ挑戦できません'"));
+check('準備中のモードからランキングへ行けない',
+  has('{isSpecies&&!modeSoon&&<button data-species-record-link'));
+// 公開フラグは実装側から勝手に戻さない。いまはどちらもOFF
+check('いまはβ版も本公開もOFF',
+  /const TACTICS_BETA_PRO_RELEASE = false;/.test(source)
+    && /const TACTICS_MODE_PUBLIC_RELEASE = false;/.test(source));
 
 // ===== ③ 画面と導線の結線 =====
 check('仕組みを選ぶ画面がある', has("{gameState==='BATTLE_SYSTEM_SELECT'&&(()=>{"));

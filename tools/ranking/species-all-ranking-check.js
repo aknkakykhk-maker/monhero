@@ -47,7 +47,7 @@ vm.runInContext([
   // タクティクスバトル側の種族チャレンジは、同じ3つ組のまま先頭が TacticsSpecies になる。
   // モードidと接頭辞は本体から持ってくる(検査へ書き写さない)
   grab("const BATTLE_MODE_SPECIES_CHALLENGE = 'speciesChallenge';", '// 種族チャレンジを一般公開するかどうか'),
-  grab('const TACTICS_RANKING_PREFIX =', 'const RANKING_DIFFICULTY_KEYS'),
+  grab('const PRO_RANKING_PREFIX =', 'const RANKING_DIFFICULTY_KEYS'),
   grab('const SPECIES_RANKING_PREFIX =', 'const normalizeExtremeDifficulty'),
   `globalThis.__x = { SPECIES_CHALLENGE_DIFFICULTY_IDS, speciesChallengeLineages,
      speciesChallengeRankingDifficulty, parseSpeciesChallengeRankingDifficulty,
