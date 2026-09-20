@@ -765,6 +765,18 @@ check('自前で枚数を数える書き方が残っていない',
 check('半減の知らせは新モードだけ言い方を変える',
   has("isTacticsMode(runMode)?'同じ子の2枚目 効果半減':'2枚目以降 効果半減'"));
 
+// --- ㉒ 1ターンに選べる枚数は、倒れた子を数えない(2026-09-20 ユーザー指示) ---
+// ★4体編成なら1体倒れても3体残るので枚数は変わらないが、2体まで減れば2枚になる
+check('選べる枚数は倒れた子を数えない',
+  has('const allyCount = isTacticsMode(runMode)\n      ? tacticsAliveSlots(tacticsUnits).length\n      : slots.filter(s => s !== null).length;')
+    && has('}, [effectiveMaxGuts, slots, heroCardBonus, kikiCardBonus, runMode, tacticsUnits]);'));
+// ★勇者特性(ハム)・ききの「+1」は人数と関係なく足す。倒れても減らない
+check('勇者特性・ききの+1は倒れても減らない',
+  has('return Math.min(5,limit + heroCardBonus + kikiCardBonus);'));
+// ★1体が出せる攻撃カードの枚数は今までどおり(ふつう1枚。ハム・きき・連携でその子だけ増える)
+check('1体が出せる攻撃カードの枚数は変えていない',
+  has("const base=((heroCardBonusOf(mainHero?.id)>0&&mon?.id===mainHero?.id)||kikiCardBonus>0) ? baseCardLimit : 1;"));
+
 check('1体ずつの帯は新モードだけへ渡す',
   has('tacticsUnits={isTacticsMode(runMode)?tacticsUnits:null}'));
 check('置けるかの判定も画面へ渡す', has('tacticsCanAssign={tacticsCanAssign}')

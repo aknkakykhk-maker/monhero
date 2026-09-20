@@ -7293,12 +7293,17 @@ function MonsterHeroGame() {
   },[]);
   const soulCoordinationCardBonus = soulCoordinationSlots.length>0 ? 1 : 0;
   const baseCardLimit = useMemo(() => {
-    const allyCount = slots.filter(s => s !== null).length;
+    // ★新モードは倒れた子を数えない(2026-09-20 ユーザー指示)。
+    //   4体編成なら1体倒れても3体残るので枚数は変わらないが、2体まで減れば2枚になる。
+    //   勇者特性・ききの「+1」はここと関係なく足されるので、倒れても減らない
+    const allyCount = isTacticsMode(runMode)
+      ? tacticsAliveSlots(tacticsUnits).length
+      : slots.filter(s => s !== null).length;
     let limit = 1;
     if (effectiveMaxGuts >= 180 && allyCount >= 3) limit = 3;
     else if (effectiveMaxGuts >= 120 && allyCount >= 2) limit = 2;
     return Math.min(5,limit + heroCardBonus + kikiCardBonus);
-  }, [effectiveMaxGuts, slots, heroCardBonus, kikiCardBonus]);
+  }, [effectiveMaxGuts, slots, heroCardBonus, kikiCardBonus, runMode, tacticsUnits]);
   const cardLimit = Math.min(5,baseCardLimit+soulCoordinationCardBonus);
   // 1つのスロットへ同じターンに割り当てられる枚数の上限。
   // 既存の勇者特性/ききで許される枚数を土台にし、連携で増えた「追加の1枚」だけは

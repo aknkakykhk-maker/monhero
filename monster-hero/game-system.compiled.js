@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 26416e1ba210fa58
+// source-sha256: c62c453a0e41479a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2f1af647e8c51d62
+// generated-sha256: dea8143052c46532
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -161,7 +161,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-20 10:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-20 11:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -50379,11 +50379,14 @@ function MonsterHeroGame() {
   }, []);
   const soulCoordinationCardBonus = soulCoordinationSlots.length > 0 ? 1 : 0;
   const baseCardLimit = useMemo(() => {
-    const allyCount = slots.filter(s => s !== null).length;
+    // ★新モードは倒れた子を数えない(2026-09-20 ユーザー指示)。
+    //   4体編成なら1体倒れても3体残るので枚数は変わらないが、2体まで減れば2枚になる。
+    //   勇者特性・ききの「+1」はここと関係なく足されるので、倒れても減らない
+    const allyCount = isTacticsMode(runMode) ? tacticsAliveSlots(tacticsUnits).length : slots.filter(s => s !== null).length;
     let limit = 1;
     if (effectiveMaxGuts >= 180 && allyCount >= 3) limit = 3;else if (effectiveMaxGuts >= 120 && allyCount >= 2) limit = 2;
     return Math.min(5, limit + heroCardBonus + kikiCardBonus);
-  }, [effectiveMaxGuts, slots, heroCardBonus, kikiCardBonus]);
+  }, [effectiveMaxGuts, slots, heroCardBonus, kikiCardBonus, runMode, tacticsUnits]);
   const cardLimit = Math.min(5, baseCardLimit + soulCoordinationCardBonus);
   // 1つのスロットへ同じターンに割り当てられる枚数の上限。
   // 既存の勇者特性/ききで許される枚数を土台にし、連携で増えた「追加の1枚」だけは
