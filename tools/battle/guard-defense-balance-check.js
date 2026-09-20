@@ -95,9 +95,15 @@ for (const [def,attack,expectedBase,expectedGuard,expected] of cases) {
 }
 
 // 本番の表示と実処理が同じ実効丈夫さ・集計値を参照する結線も固定する。
-assert(game.includes('const defenseRate = Math.min(0.5,effectiveDef*0.00015);'));
-assert(game.includes('Math.max(30,(atkVal-effectiveDef*0.5)*(1-defenseRate))'));
+// 丈夫さは defVal へ入れてから使う。新モード(tactics)だけ「狙われた子の丈夫さ」が入り、
+// targetSlot を渡さない既存モードはこれまでどおり effectiveDef が入る
+assert(game.includes('const defenseRate = Math.min(0.5,defVal*0.00015);'));
+assert(game.includes('Math.max(30,(atkVal-defVal*0.5)*(1-defenseRate))'));
+assert(game.includes(': effectiveDef;'), '渡されなければパーティの実効丈夫さへ倒す');
 assert(game.includes('Math.floor(flat + effectiveDef * mult)'));
 assert(game.includes('Math.floor(immediateEffects.guardFlat + effectiveDef*immediateEffects.guardMult)'));
-assert(game.includes('applyTurnDamageReduction(Math.max(0,rawDmg-guardValueOf'));
+// 2026-09-20: 新モードの連撃を 0.6×3 の3ヒットにし、ガードが届くのは1ヒットぶんだけにした。
+// 予告も実処理と同じ resolveTacticsGuardedHit を通す(ガードを引いてからターン軽減、の順は変わらない)
+assert(game.includes("const previewGuard=enemyIntent.variant==='pierce'?0:guardValueOf(previewGuardFlat,previewGuardMult);"));
+assert(game.includes('applyTurnDamageReduction(resolveTacticsGuardedHit(rawDmg,previewHits,previewGuard).taken)'));
 console.log('guard defense balance checks passed');

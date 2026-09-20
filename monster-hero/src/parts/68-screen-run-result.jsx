@@ -114,15 +114,35 @@ function WaveResultScreen({
 
 function RewardPickScreen({
   atk, battleTutorialSpotClass, def, difficulty, effect, extremeDifficulty, extremeRun, guts,
-  handleTraining, maxGuts, maxHp, runMode, setTrainingPicks, trainingPicks, waveResult,
+  handleTraining, maxGuts, maxHp, runMode, setTrainingPicks, slots, tacticsUnits, trainingPicks, waveResult,
 }) {
 
     const specialRule=specialRuleDifficultyForRun(runMode,difficulty,extremeRun,extremeDifficulty);
-    const baseStats={atk,def,hp:maxHp,guts:maxGuts};
+    // 新モードは「居るモンスター個別に」選ぶ(2026-09-19 ユーザーが決めた形。設計 §4.5)。
+    // trainingPicks は {slot,id} の並びになり、立っている子ごとに2回ずつ選ぶ。
+    // ★タブは作らず、まだ選び終わっていない子へ自動で進む。押す回数を増やさないため
+    const tacticsMode=Array.isArray(tacticsUnits);
+    const trainableSlots=tacticsMode
+      ? tacticsUnits.map((unit,index)=>(unit&&!unit.downed?index:-1)).filter(index=>index>=0) : [];
+    const downedSlots=tacticsMode
+      ? tacticsUnits.map((unit,index)=>(unit&&unit.downed?index:-1)).filter(index=>index>=0) : [];
+    const picksOf=(slotIdx)=>trainingPicks.filter(entry=>entry&&entry.slot===slotIdx).map(entry=>entry.id);
+    const currentSlot=tacticsMode
+      ? (trainableSlots.find(index=>picksOf(index).length<TRAINING_PICK_COUNT)??null) : null;
+    const currentUnit=currentSlot!=null?tacticsUnits[currentSlot]:null;
+    const currentName=currentSlot!=null
+      ? (slots?.[currentSlot]?.masuName||slots?.[currentSlot]?.name||`${currentSlot+1}番目の子`) : '';
+    const activePicks=tacticsMode?(currentSlot!=null?picksOf(currentSlot):[]):trainingPicks;
+    const baseStats=currentUnit
+      ? {atk:currentUnit.atk,def:currentUnit.def,hp:currentUnit.baseMaxHp,guts:currentUnit.baseMaxGuts}
+      : {atk,def,hp:maxHp,guts:maxGuts};
     // いま選んでいるぶんまでを適用した値。次の1回はこの値からさらに伸びる
-    const current=resolveTrainingStats(baseStats,trainingPicks,waveResult?.turn,specialRule);
-    const remaining=TRAINING_PICK_COUNT-trainingPicks.length;
-    const ready=trainingPicks.length===TRAINING_PICK_COUNT;
+    const current=resolveTrainingStats(baseStats,activePicks,waveResult?.turn,specialRule);
+    const remaining=TRAINING_PICK_COUNT-activePicks.length;
+    const ready=tacticsMode
+      ? (trainableSlots.length>0&&trainableSlots.every(index=>picksOf(index).length===TRAINING_PICK_COUNT))
+      : trainingPicks.length===TRAINING_PICK_COUNT;
+    const doneSlots=tacticsMode?trainableSlots.filter(index=>picksOf(index).length===TRAINING_PICK_COUNT).length:0;
     const STYLES={
       hp:  {icon:<Heart size={16}/>,      ring:'border-pink-400',    bg:'bg-pink-900/40',    tint:'text-pink-300',    chip:'bg-pink-500'},
       atk: {icon:<Sword size={16}/>,      ring:'border-red-400',     bg:'bg-red-900/40',     tint:'text-red-300',     chip:'bg-red-500'},
@@ -138,14 +158,19 @@ function RewardPickScreen({
         </div>
         {/* 「4種類から2つ選ぶ」ことと、いま何回選んだかを一目で分かるようにする */}
         <div className="mt-1.5 flex items-center justify-center gap-2">
-          <span className="text-[10px] font-black text-slate-300">4種類から2つ選ぶ</span>
+          <span className="text-[10px] font-black text-slate-300">{tacticsMode?`${currentName||'全員'}のトレーニング`:'4種類から2つ選ぶ'}</span>
           <span className="flex items-center gap-1">
             {Array.from({length:TRAINING_PICK_COUNT}).map((_,i)=>(
-              <i key={i} className={`block rounded-full ${i<trainingPicks.length?'bg-amber-400':'bg-slate-700'}`} style={{width:'9px',height:'9px'}}/>
+              <i key={i} className={`block rounded-full ${i<activePicks.length?'bg-amber-400':'bg-slate-700'}`} style={{width:'9px',height:'9px'}}/>
             ))}
           </span>
-          <span className="text-[11px] font-black font-mono text-amber-300">{trainingPicks.length} / {TRAINING_PICK_COUNT}</span>
+          <span className="text-[11px] font-black font-mono text-amber-300">{activePicks.length} / {TRAINING_PICK_COUNT}</span>
         </div>
+        {/* 何体ぶん終わったか。1体ずつ選ぶので、どこまで進んだのかが分からないと迷子になる */}
+        {tacticsMode&&<div data-tactics-training-progress={`${doneSlots}/${trainableSlots.length}`}
+          className="mt-1 text-center text-[10px] font-black text-indigo-300">
+          {doneSlots} / {trainableSlots.length} 体ぶん決定ずみ
+        </div>}
         {extremeRuleNumber(specialRule,'awakeningZeroTurns')!=null&&(()=>{
           const turns=waveResult?.turn||0;
           // 低下は増加量へ掛かるので、率から引いた「-○pt」ではなく倍率で出す
@@ -179,14 +204,19 @@ function RewardPickScreen({
           同じ項目をもう一度タップすると2回目として積める */}
       <div className={`w-full max-w-sm grid grid-cols-2 grid-rows-2 gap-2 flex-1 min-h-0 overflow-y-auto mh-scroll${battleTutorialSpotClass('rewards')}`}>
         {TRAINING_OPTIONS.map(option=>{
-          const count=trainingPicks.filter(id=>id===option.id).length;
+          const count=activePicks.filter(id=>id===option.id).length;
           const st=STYLES[option.id]||STYLES.hp;
           const before=current[option.stat];
           const after=resolveTrainingStep(current,option.id,waveResult?.turn,specialRule)[option.stat];
           const full=remaining<=0;
           return (
-            <button key={option.id} type="button" disabled={full||!!effect}
-              onClick={()=>setTrainingPicks(prev=>prev.length>=TRAINING_PICK_COUNT?prev:[...prev,option.id])}
+            <button key={option.id} type="button" disabled={full||!!effect||(tacticsMode&&currentSlot==null)}
+              onClick={()=>setTrainingPicks(prev=>{
+                if(!tacticsMode) return prev.length>=TRAINING_PICK_COUNT?prev:[...prev,option.id];
+                if(currentSlot==null) return prev;
+                if(prev.filter(entry=>entry&&entry.slot===currentSlot).length>=TRAINING_PICK_COUNT) return prev;
+                return [...prev,{slot:currentSlot,id:option.id}];
+              })}
               aria-label={`${option.name} ${option.effect}${count>0?` 選択中${count}回`:''}`}
               className={`relative min-h-[112px] rounded-2xl border-2 p-2.5 flex flex-col items-start justify-center gap-2 text-left transition-all active:scale-95 disabled:opacity-40 ${count>0?`${st.bg} ${st.ring}`:'bg-slate-900/60 border-slate-800'}`}>
               {/* 何回選んだかを ×1 / ×2 で明確に出す */}
@@ -206,6 +236,19 @@ function RewardPickScreen({
           );
         })}
       </div>
+      {/* 倒れた子はここで起こせる。★起こすとそのWAVEは誰も強化できない(ユーザーが決めた形) */}
+      {tacticsMode&&downedSlots.length>0&&(
+        <div data-tactics-training-revive className="shrink-0 w-full max-w-sm mt-2 space-y-1">
+          {downedSlots.map(slotIdx=>(
+            <button key={slotIdx} type="button" disabled={!!effect}
+              onClick={()=>{setTrainingPicks([]); handleTraining({revive:slotIdx});}}
+              className="w-full min-h-[44px] rounded-2xl border-2 border-emerald-400/70 bg-emerald-950/60 px-3 text-left font-black text-emerald-200 active:scale-95 disabled:opacity-40">
+              <span className="block text-[12px] leading-tight">{slots?.[slotIdx]?.masuName||slots?.[slotIdx]?.name||`${slotIdx+1}番目の子`}を起こす</span>
+              <span className="block text-[9px] font-black text-emerald-400/90 leading-tight">このWAVEの強化はなし</span>
+            </button>
+          ))}
+        </div>
+      )}
       {/* 決定は2回そろうまで押せない。確定前ならいつでも選び直せる */}
       <div className="shrink-0 w-full max-w-sm mt-2 grid grid-cols-[auto_minmax(0,1fr)] gap-2" style={{paddingBottom:'calc(.25rem + env(safe-area-inset-bottom))'}}>
         <button type="button" disabled={trainingPicks.length===0||!!effect} onClick={()=>setTrainingPicks([])}

@@ -5666,7 +5666,7 @@ const ASSISTANT_BATTLE_TUTORIAL_BODY = [
   { id:'chargeDo',     at:'BATTLE',        e:'excited', title:'受け止めよう！', t:'ガードカードを選んでACTIONだよ♪', spot:['cards','action'], wait:'do', need:'guard' },
   { id:'chargeSeen',   at:'BATTLE',        e:'surprise',title:'さすがに痛い！', t:'ガードしてもこれだけ減るんだ。必殺技の予告が出たら気をつけてね。', wait:'next' },
   // ③ アシストカードでバフ
-  { id:'breederTalk',  at:'BATTLE',        e:'happy',   title:'アシストカード', t:'次はアシストカード。おりょうの力で、こっちの攻撃力が上がるよ！', spot:['cards','action'], wait:'next' },
+  { id:'breederTalk',  at:'BATTLE',        e:'happy',   title:'アシストカード', t:'次はアシストカード。ニコラオの力で、こっちの攻撃力が上がるよ！', spot:['cards','action'], wait:'next' },
   { id:'breederDo',    at:'BATTLE',        e:'wink',    title:'使ってみよう', t:'アシストカードを選んでACTION！ 攻撃UPの表示が出るよ♪', spot:['cards','action'], wait:'do', need:'teaching' },
   { id:'breederSeen',  at:'BATTLE',        e:'happy',   title:'攻撃アップ！', t:'「攻撃UP!」って出たでしょ？ この効果はバトルの最後まで続くよ♪', wait:'next' },
   // ④ 緊急回復と敵の移動
@@ -5840,7 +5840,7 @@ const findAssistantScene = (key) => (key && ASSISTANT_SCENES[key]) || null;
 const BATTLE_TUTORIAL_SCENARIO = {
   heroId: 'Mocchi',
   slotIndex: 1,          // 近距離。敵の初期位置と同じにして距離補正の効きを見せる
-  teachingId: 'oryo',    // おりょうの力(攻撃アップ)。バフの変化が数値で見える
+  teachingId: 'oryo',    // ニコラオの力(攻撃アップ)。バフの変化が数値で見える
   enemyKey: 'Dino',
   enemyDist: 1,
   enemyHp: 500,          // 距離技＋攻撃では落ちず、固有技で必ず落ちる量

@@ -29,15 +29,17 @@ check('アシストカード判定の定義がある', !!isBreederSrc);
 vm.runInContext(`${isBreederSrc[0]}\nglobalThis.__f = isAssistCard;`, ctx);
 const isAssistCard = ctx.__f;
 
-// 実処理と同じ数え方を再現し、どのカードが半減になるかを確かめる
+// 数え方は本体から切り出してそのまま動かす(ここへ書き写すと、本体を変えたとき検査だけ古くなる)。
+// 2026-09-20: 新モードだけ「同じ子の2枚目」で数えるようになったので、器へ渡す groupOf が増えた。
+// ここが見ているのは既存5モードのぶん＝いつも同じ箱('turn')
+const counterSrc = source.match(/const makeCardHalveCounter = \(groupOf, isExempt\) => \{[\s\S]*?\n\};/);
+check('半減を数える器の定義がある', !!counterSrc);
+if (!counterSrc) { console.log('\n1件のNGがあります'); process.exit(1); }
+vm.runInContext(`${counterSrc[0]}\nglobalThis.__c = makeCardHalveCounter;`, ctx);
+const makeCardHalveCounter = ctx.__c;
 const halveFlags = (cards) => {
-  let n = 0;
-  return cards.map(c => {
-    const breeder = isAssistCard(c);
-    const halved = !breeder && n > 0;
-    if (!breeder) n++;
-    return halved;
-  });
+  const counter = makeCardHalveCounter(() => 'turn', isAssistCard);
+  return cards.map(c => counter.take(c, null));
 };
 const atk = { type: 'atk' }, guard = { type: 'guard' }, uniq = { type: 'unique' }, oryo = { id: 'oryo', type: 'buff' };
 
@@ -53,9 +55,13 @@ check('アシストカードを挟んでも攻撃の順番は変わらない', h
 
 // 画面側の結線
 check('processTurnで2枚目以降を判定している',
-  has('const halved=!isBreeder&&penaltyCardCount>0;')
+  has('const halveCounter=makeHalveCounter();')
+    && has('const halved=halveCounter.take(card,entry.slotIdx);')
     && has("const effMul=isBreeder&&specialRuleDifficulty?extremeSpecialRule(specialRuleDifficulty,'assistCardEffect'):(halved?0.5:1);"));
-check('アシストカードは枚数に数えない(実処理)', has('if(!isBreeder) penaltyCardCount++;'));
+// アシストカードを枚数に数えないのは器(makeCardHalveCounter)の中。上の halveFlags が実際に確かめる
+check('数え方は1か所(cardHalveGroup)で決めている',
+  has('const makeHalveCounter = () => makeCardHalveCounter(cardHalveGroup, isAssistCard);')
+    && has('const cardHalveGroup = (slotIdx) => (isTacticsMode(runMode)'));
 check('ガードの軽減量を半減する',
   has('currentTurnGuardFlat+=GUARD_EVOLUTION[guardLevel].flat*effMul') && has('currentTurnGuardMult+=GUARD_EVOLUTION[guardLevel].mult*effMul'));
 check('弱ガードも同じ扱い', has('GUARD_EVOLUTION[guardLevel].flat*0.5*effMul'));
@@ -73,20 +79,30 @@ check('あつの挑発(アシストカード)の攻撃は半減しない', has('
 const buffHalved = (fn, key) => new RegExp(`${fn}\\('${key}',[^)]*\\*effMul\\)`).test(source);
 check('固有技の数値効果も半減する',
   buffHalved('addPermaBuff', 'dmgCutPct') && buffHalved('addPermaBuff', 'atkPct')
-    // ガッツ回復は現在値ではなく「そのときの上限」から出すので liveEffectiveMaxGuts() を通る
-    && buffHalved('addPermaBuff', 'comboDmgPct') && has('liveEffectiveMaxGuts()*0.5*effMul')
+    // ガッツ回復は現在値ではなく「そのときの上限」から出す。
+    // 2026-09-20: 新モードは「使った子の上限 × 率」なので gainGutsByRate を通る(半減は率へ掛かる)
+    && buffHalved('addPermaBuff', 'comboDmgPct') && has('gainGutsByRate(slotIdx,0.5*effMul)')
     && buffHalved('addPermaBuff', 'critRatePct') && buffHalved('addWaveBuff', 'enemyAtkDebuffPct'));
-check('半減したことを画面に出す', has("addPopup('2枚目以降 効果半減'"));
+// 2026-09-20: 新モードは「同じ子の2枚目」なので言い方を変えている
+check('半減したことを画面に出す',
+  has("'2枚目以降 効果半減'") && has("isTacticsMode(runMode)?'同じ子の2枚目 効果半減'"));
+// ★予測も実処理と同じ器を通す。別々に数えると「予測より実際が弱い」が起きる
 check('ダメージ予測も同じ数え方を使う',
-  has('let committedTotal=0; let committedPenaltyCnt=0;') && has('const isPenalty=!isAssistCard(card);')
-    && has('let globalPenaltyCnt=0;'));
+  has('const committedCounter=makeCardHalveCounter();')
+    && has('const previewCounter=makeCardHalveCounter();')
+    && has('const slotCounter=makeCardHalveCounter();')
+    && has('const pendingCounter=makeCardHalveCounter();'));
 check('攻撃だけを数える古い判定が残っていない',
   !has('committedAtkCnt') && !has('globalAtkCnt') && !has('let committedAtk=0;') && !has('assignedAttackCount'));
+// ★自前で枚数を数える書き方が戻っていないか(戻ると新モードだけ食い違う)
+check('自前で枚数を数える書き方が残っていない',
+  !has('penaltyCardCount') && !has('previewPenaltyCnt') && !has('committedPenaltyCnt')
+    && !has('globalPenaltyCnt') && !has('committedPenalty++'));
 
 // 保留中(タップしただけでまだ置いていない)カードを自分自身で数えると、1枚目なのに半減表示になる
 const pendingGuards = (source.match(/if\(idx===pendingIdx\) return;/g) || []).length;
 check('予測は保留中のカードを枚数に数えない', pendingGuards >= 2, `${pendingGuards}か所`);
-check('スロット予測も保留中のカードを除く', has('selectedCards.forEach(idx=>{if(idx!==pendingIdx&&!isAssistCard(hand[idx]))committedPenalty++;});'));
+check('スロット予測も保留中のカードを除く', has('selectedCards.forEach(idx=>{ if(idx===pendingIdx) return; pendingCounter.take(hand[idx],cardAssignments[idx]!=null?cardAssignments[idx]:null); });'));
 check('保留カードの判定にドラッグ中の手札位置も使う', has('dragState.cardIndex:null'));
 check('半減マークは保留カード自身の判定で出す', has("{isPendingPreview&&isPendingHalved?'½ ':''}DMG:"));
 
@@ -106,7 +122,7 @@ check('スロットのガード表示に軽減量を出す', has('{gv>0&&<span')
 check('半減するカードには½を付ける', has("{halvedByIdx[idx]?'½':''}{card.name}"));
 check('ガードのカード詳細も半減後の値を出す', has('（2枚目以降のため半減）') && has('Math.floor(halved?raw*0.5:raw)'));
 check('ドラッグ中のカードも「次の1枚」として半減判定する',
-  has('if(pendingIdx!=null&&selectedCards.includes(pendingIdx)) halvedByIdx[pendingIdx]=!isAssistCard(hand[pendingIdx])&&n>0;'));
+  has('if(pendingIdx!=null&&selectedCards.includes(pendingIdx)) halvedByIdx[pendingIdx]=counter.peek(hand[pendingIdx],cardAssignments[pendingIdx]!=null?cardAssignments[pendingIdx]:null);'));
 
 // スワイプではカード効果のパネルを出さない(出したままだと合計表示が隠れる)
 check('タップとスワイプでカード効果の表示を切り替えられる', has('const selectCardAt = (i, showDetail = true)') && has('const focus=(card)=>setFocusedCard(showDetail?card:null);'));

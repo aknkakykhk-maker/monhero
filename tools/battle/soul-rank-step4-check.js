@@ -68,7 +68,14 @@ check('鉄壁は既存被ダメ軽減と乗算して実ダメ/予測共通入口
   && app.includes('getIncomingDamageBeforeTurnReduction'));
 check('回避・反射・吸収は統一特殊防御を1回だけ抽選',
   app.includes('const unifiedSpecialDefense = buildUnifiedSpecialDefense({')
-  && app.includes("rollUnifiedSpecialDefense(unifiedSpecialDefense,Math.random(),Math.random())"));
+  && (app.match(/rollUnifiedSpecialDefense\(/g) || []).length === 1);
+// ★新モードは勇者特性ぶん(俊足50・反射30・吸収30)を外した表も持ち、
+//   勇者モンが狙われているかで使い分ける(2026-09-20)。魂格由来のぶんは誰が狙われても乗る
+check('新モードは勇者特性ぶんを外した表で引き分ける',
+  app.includes('const soulOnlySpecialDefense = buildUnifiedSpecialDefense({')
+  && app.includes("rollUnifiedSpecialDefense(heroAimed?unifiedSpecialDefense:soulOnlySpecialDefense,Math.random(),Math.random())"));
+check('勇者特性ぶんを外した表にも魂格の3つを渡す',
+  /soulOnlySpecialDefense = buildUnifiedSpecialDefense\(\{\s*soulEvasion:soulBattleParty\.evasion,\s*soulReflect:soulBattleParty\.reflect,\s*soulAbsorb:soulBattleParty\.absorb,\s*\}\)/.test(app));
 check('既存確定反射バフは従来どおり確定で優先',
   app.includes("getTurnBuff('reflect',false)")&&app.includes("? 'reflect'"));
 check('威圧はSuezo既存40%と同種乗算して特殊防御と分離',

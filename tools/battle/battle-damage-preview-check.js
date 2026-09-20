@@ -38,7 +38,11 @@ assert(source.includes("if (!(card.type === 'unique' && (card.monId === 'Ark' ||
   && source.includes('const base = Math.floor(mainDmg * ATTACK_COMBO_RULES.atonement);')
   && source.includes('attackAtonementDmg(card, hits[0].dmg, soulAttack.comboFinalMultiplier)'), '贖罪の追撃を予測する');
 assert((source.match(/getAttackPredictedDmg\(/g)||[]).length >= 4, '合計と個別表示が共通予測関数を使う');
-assert(source.includes('const plannedDmg=applyTurnDamageReduction(Math.max(0,rawDmg-guardValueOf'), '敵の予定ダメージへガードとターン軽減を実処理と同じ順で反映する');
+// 2026-09-20: 新モードの連撃を 0.6×3 の3ヒットにし、ガードが届くのは1ヒットぶんだけにした。
+// 予告も実処理と同じ splitTacticsGuardedHit を通す。「ガードを引いてからターン軽減」の順は変わらない
+assert(source.includes("const previewGuard=enemyIntent.variant==='pierce'?0:guardValueOf(previewGuardFlat,previewGuardMult);")
+  && source.includes('const plannedDmg=applyTurnDamageReduction(resolveTacticsGuardedHit(rawDmg,previewHits,previewGuard).taken);'),
+  '敵の予定ダメージへガードとターン軽減を実処理と同じ順で反映する');
 assert(source.includes('(予定: ${plannedDmg})'), '敵予告は軽減後の予定値を表示する');
 
 const pandoraPredictedDmg=(baseDmg,comboDmgBonus=0)=>

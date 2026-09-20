@@ -269,5 +269,17 @@ check('HOMEは小さい端末向けの調整がある', has('@media(max-width:35
 check('難易度タブは背の低い端末で縦スクロールできる',
   has('return <div className="flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll"><div className="text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0">左右にスワイプして難易度を選択</div>'));
 
+// --- ⑤ バトルの強化の札は、いくつ付いても高さが変わらない(2026-09-20 ユーザー指摘) ---
+// ★もとは flex-wrap で何行にも伸び、強化が増えると敵の絵・「緊急」のボタン・与ダメの数字を
+//   押し出していた。ふだんはアイコン1行、数値は「詳細」を押したときだけ出す
+check('強化の札はふだんアイコン1行で出す',
+  has('data-battle-buff-icons className="flex-1 min-w-0 flex items-center gap-1 overflow-x-auto scrollbar-hide"')
+    && !has('flex flex-wrap justify-center gap-1 max-w-[340px] shrink-0 px-2 pt-1 pb-0.5 bg-slate-950'));
+check('強化の詳細は中でスクロールして高さが伸びない',
+  has('data-battle-buff-list className="flex-1 min-w-0 flex flex-wrap justify-center gap-1 overflow-y-auto mh-scroll" style={{maxHeight:\'92px\'}}'));
+check('強化の札は「詳細」で開け閉めできる',
+  has('data-battle-buff-toggle={buffDetail?\'close\':\'open\'}')
+    && has('const [buffDetail, setBuffDetail] = useState(false);'));
+
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
