@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 64a66dbdf3af270b
+// source-sha256: 8ac4366b73e90a4f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 98a7d5a54696396d
+// generated-sha256: c2be28fee3ea4f71
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-21 08:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-21 08:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -60273,6 +60273,7 @@ function MonsterHeroGame() {
           modeBestScore = ranked ? highestModeScore(isTacticsMode(m.id) ? tacticsRecordsOf(m.id).hs : isProMode(m.id) ? proHighScores : highScores, isTacticsMode(m.id) ? TACTICS_DIFFICULTY_IDS : Object.keys(DIFFICULTY_SETTINGS)) : rec.score;
         return /*#__PURE__*/React.createElement("article", {
           key: `${m.id}-${loopIndex}`,
+          "data-battle-mode": m.id,
           className: `snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2.5 h-[366px] overflow-hidden transition-all flex flex-col ${active ? 'scale-100 opacity-100' : 'scale-[.92] opacity-55'}`,
           style: {
             borderColor: active ? m.color : 'rgba(255,255,255,.12)',
@@ -60437,8 +60438,13 @@ function MonsterHeroGame() {
       }, /*#__PURE__*/React.createElement(ArrowLeft, {
         size: 20
       })), /*#__PURE__*/React.createElement("h2", {
-        className: "text-xl font-black italic text-fuchsia-300 uppercase tracking-widest truncate"
-      }, "\u6975\u9650\u30C1\u30E3\u30EC\u30F3\u30B8")), /*#__PURE__*/React.createElement("div", {
+        className: "flex-1 min-w-0 text-xl font-black italic text-fuchsia-300 uppercase tracking-widest truncate"
+      }, "\u6975\u9650\u30C1\u30E3\u30EC\u30F3\u30B8"), /*#__PURE__*/React.createElement("button", {
+        "data-extreme-mode-info": true,
+        "aria-label": "\u6975\u9650\u30C1\u30E3\u30EC\u30F3\u30B8\u306E\u8AAC\u660E\u3092\u958B\u304F",
+        onClick: () => setModeInfoId(EXTREME_MODE.id),
+        className: "shrink-0 min-h-[38px] px-3 rounded-xl bg-slate-800 border border-fuchsia-400/40 text-fuchsia-200 font-black text-[11px] active:scale-95"
+      }, "\u3053\u306E\u30E2\u30FC\u30C9\u306E\u8AAC\u660E")), /*#__PURE__*/React.createElement("div", {
         className: "w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1"
       }, /*#__PURE__*/React.createElement("div", {
         className: "flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll"
@@ -60774,7 +60780,10 @@ function MonsterHeroGame() {
         }, tabLabel, /*#__PURE__*/React.createElement("span", {
           className: "ml-1 text-[9px] opacity-75"
         }, locked ? '🔒' : count));
-      })), /*#__PURE__*/React.createElement("div", {
+      })), challengeExtremeTab && !extremeUnlocked && !debugBattle && /*#__PURE__*/React.createElement("p", {
+        "data-extreme-tab-locked": true,
+        className: "shrink-0 mb-1 text-center text-[9px] font-black text-fuchsia-200/80"
+      }, "\uD83D\uDD12 \u6975\u9650\u306F", EXTREME_UNLOCK_TEXT), /*#__PURE__*/React.createElement("div", {
         className: `relative shrink-0${battleTutorialSpotClass('difficulty')}`
       }, /*#__PURE__*/React.createElement("button", {
         "aria-label": "\u524D\u306E\u96E3\u6613\u5EA6",

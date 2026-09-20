@@ -67,8 +67,10 @@ check('本編を待たずに見られるイベントを作れる',
 // --- プロフィール画面の入口 ---
 // 2026-09-10(STEP 6-7)にプロフィールを ProfileScreen へ切り出したので、
 // 「画面のボタンが伝える」→「本体が一覧を開く」の2段で見る
+// ★見出しの字の大きさまで固定すると、見た目を整えるたびにここだけが落ちる
+//   (text-[11px] → text-[13px] にしたときに落ちた)。ここで見るのは「入口があるか」だけ
 check('プロフィールに「イベント回想」の入口がある',
-  has("<b className=\"block text-[11px] font-black text-fuchsia-100\">イベント回想</b>")
+  /<b className="[^"]*">イベント回想<\/b>/.test(source)
     && has('onClick={onOpenEventReplayList}')
     && has('onOpenEventReplayList={()=>setShowEventReplayList(true)}'));
 
