@@ -49,8 +49,12 @@ const run = (flags) => {
 const MODE_IDS = {
   BATTLE_MODE_CHALLENGE: 'challenge', BATTLE_MODE_QUICK: 'quick',
   BATTLE_MODE_SPECIES_CHALLENGE: 'speciesChallenge', BATTLE_MODE_TACTICS: 'tactics',
+  BATTLE_MODE_TACTICS_SPECIES: 'tacticsSpecies', BATTLE_MODE_TACTICS_PRO: 'tacticsPro',
   BATTLE_MODE_PRO: 'pro',
 };
+// 盤面がタクティクス側のモードかどうか。本体と同じ並びを検査からも渡す
+MODE_IDS.isTacticsMode = (mode) => [MODE_IDS.BATTLE_MODE_TACTICS,
+  MODE_IDS.BATTLE_MODE_TACTICS_SPECIES, MODE_IDS.BATTLE_MODE_TACTICS_PRO].includes(mode);
 const api = run({ ...MODE_IDS, SPECIES_CHALLENGE_PUBLIC_RELEASE: true, TACTICS_MODE_PUBLIC_RELEASE: false });
 
 // ===== ① 仕組みの定義 =====

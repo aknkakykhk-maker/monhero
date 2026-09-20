@@ -120,6 +120,57 @@ const check = (name, ok, detail = '') => {
       [...document.querySelectorAll('article')].filter(a => a.textContent.includes(label)).length, MODE_LABEL);
     // ぐるぐる回すため同じ並びを3回置いているので、1モードにつき3枚出る
     check('デバッグの入口には新モードのカードが出る', cardCount === 3, `${cardCount}枚`);
+    // ★タクティクスバトルの中にも、クラシックと同じ3つのモードが並ぶ(2026-09-20)。
+    //   点(ページ送りの丸)は1モードにつき1つなので、そのまま数えればモードの数になる
+    const dots = await page.evaluate(() =>
+      document.querySelectorAll('[aria-label$="ページ目"]').length);
+    check('タクティクスの中にモードが3つ並ぶ', dots === 3, `${dots}個`);
+    const innerModes = await page.evaluate(() => [...document.querySelectorAll('article')]
+      .map(a => (a.querySelector('h3') || {}).textContent || '')
+      .filter(Boolean).map(t => t.replace(/^\S+\s*/, '')));
+    check('種族チャレンジとプロもタクティクス側にある',
+      innerModes.some(t => t.includes('種族')) && innerModes.some(t => t.includes('プロ')),
+      [...new Set(innerModes)].join(' / '));
+    // ★中のモードの入口を実際に踏む。種族チャレンジは専用の選択画面、プロは難易度えらびへ。
+    //   ここが白くなる壊れ方は、静的な検査では拾えない
+    const openInner = async (label, buttonText) => {
+      const result = await page.evaluate(([l, b]) => {
+        const cards = [...document.querySelectorAll('article')]
+          .filter(a => ((a.querySelector('h3') || {}).textContent || '').includes(l));
+        const card = cards[Math.floor(cards.length / 2)] || cards[0];
+        if (!card) return 'カードが無い';
+        const button = [...card.querySelectorAll('button')].find(x => x.textContent.includes(b));
+        if (!button) return 'ボタンが無い';
+        if (button.disabled) return '押せない';
+        button.click();
+        return 'ok';
+      }, [label, buttonText]);
+      await page.waitForTimeout(1800);
+      return { result, text: await page.evaluate(() => document.body.innerText.replace(/\s+/g, ' ')) };
+    };
+    // 戻るボタンの名前は画面ごとに違う(「戻る」「1つ前へ戻る」)。
+    // 回数を決め打ちにせず、モード選択が出るまで押す
+    const backToModes = async () => {
+      for (let i = 0; i < 4; i += 1) {
+        const done = await page.evaluate(() => document.body.innerText.includes('BATTLE MODE'));
+        if (done) return true;
+        await page.evaluate(() => {
+          const b = [...document.querySelectorAll('button')]
+            .find(x => /戻る/.test(x.getAttribute('aria-label') || ''));
+          if (b) b.click();
+        });
+        await page.waitForTimeout(1200);
+      }
+      return page.evaluate(() => document.body.innerText.includes('BATTLE MODE'));
+    };
+    const species = await openInner('種族', '種族を選ぶ');
+    check('タクティクスの種族チャレンジは種族えらびへ進む',
+      species.result === 'ok' && /種 限定|種族/.test(species.text), `${species.result} / ${species.text.slice(0, 50)}`);
+    check('種族えらびからモード選択へ戻れる', await backToModes());
+    const proMode = await openInner('タクティクスプロ', '難易度を選ぶ');
+    check('タクティクスプロは難易度えらびへ進む',
+      proMode.result === 'ok' && /Beginner|Normal/.test(proMode.text), `${proMode.result} / ${proMode.text.slice(0, 50)}`);
+    check('タクティクスプロの難易度えらびからモード選択へ戻れる', await backToModes());
 
     // --- ③ 難易度を選んでバトルを始める ---
     const opened = await page.evaluate((label) => {
@@ -133,6 +184,28 @@ const check = (name, ok, detail = '') => {
     await page.waitForTimeout(1500);
     const diffText = await page.evaluate(() => document.body.innerText.replace(/\s+/g, ' '));
     check('難易度を選ぶ画面へ進める', opened && /Normal|ノーマル/.test(diffText), diffText.slice(0, 70));
+    // ★極限は「同じ画面のタブ」。押すと専用画面へ移らず、その場で極限の段が並ぶ
+    const extremeTab = await page.evaluate(() => {
+      const tabs = document.querySelector('[data-difficulty-tabs]');
+      if (!tabs) return { there: false };
+      const b = [...tabs.querySelectorAll('button')].find(x => x.textContent.includes('極限'));
+      if (!b) return { there: false };
+      b.click();
+      return { there: true, locked: b.disabled };
+    });
+    await page.waitForTimeout(800);
+    const extremeText = await page.evaluate(() => document.body.innerText.replace(/\s+/g, ' '));
+    check('難易度えらびに「極限」タブがある', extremeTab.there === true);
+    check('極限タブはその場で極限の段を並べる(専用画面へ移らない)',
+      extremeTab.there && /EXTREME/.test(extremeText) && !/極限チャレンジ/.test(extremeText),
+      extremeText.slice(0, 70));
+    // 通常タブへ戻してから、このあとの流れを続ける
+    await page.evaluate(() => {
+      const tabs = document.querySelector('[data-difficulty-tabs]');
+      const b = tabs && [...tabs.querySelectorAll('button')].find(x => x.textContent.includes('通常'));
+      if (b) b.click();
+    });
+    await page.waitForTimeout(800);
 
     const started = await page.evaluate(() => {
       const b = [...document.querySelectorAll('button')].find(x => x.textContent.includes('この難易度で挑戦') && !x.disabled);

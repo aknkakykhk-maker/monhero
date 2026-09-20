@@ -54,6 +54,19 @@ function MonsterHeroGame() {
   const [proHighScores, setProHighScores] = useState({});
   const [proHighestWaves, setProHighestWaves] = useState({});
   const [proClearCounts, setProClearCounts] = useState({});
+  // ★タクティクスバトルの記録も別枠(mh_tactics_* / mh_tactics_pro_*)。ここを用意するまで、
+  //   タクティクスで遊んだ結果がチャレンジの mh_hs_* / mh_clears_* / mh_highest_wave_* を
+  //   書き換え、全国ランキングもチャレンジの行へ送られていた(2026-09-20 に見つけて直した)。
+  //   難易度は通常9段階＋極限5段階(TACTICS_DIFFICULTY_IDS)。
+  //   中のモードが増えても入れ物を増やさなくていいよう、モードidをキーにしてまとめて持つ
+  //   (種族チャレンジだけは種族×難易度なので、専用の進行データのほうへ残す)
+  const [tacticsRecords, setTacticsRecords] = useState({});
+  const tacticsRecordsOf = (mode) => tacticsRecords[mode] || EMPTY_TACTICS_RECORD;
+  // 記録を1つ書き換える。モードごとの入れ物を壊さずに、その難易度だけを差し替える
+  const bumpTacticsRecord = (mode, field, diff, value) => setTacticsRecords(prev => {
+    const current = prev[mode] || EMPTY_TACTICS_RECORD;
+    return { ...prev, [mode]: { ...current, [field]: { ...current[field], [diff]: value } } };
+  });
   // このランで「自己ベストを更新したか」「その難易度を初めてクリアしたか」。
   // リザルトで助手に特別なセリフを言わせるためだけに使う(保存はしない)
   // rankingFailed … 全国ランキングへ送れなかった周回。リザルトでその旨を知らせる
@@ -165,7 +178,24 @@ function MonsterHeroGame() {
   // 選択中の種族・難易度だけがデバッグ専用で、保存先は既存の進行キー1つに限る。
   const [speciesChallengeDebugSpeciesId, setSpeciesChallengeDebugSpeciesId] = useState(()=>speciesChallengeLineages()[0]?.id||'');
   const [speciesChallengeDebugDifficultyId, setSpeciesChallengeDebugDifficultyId] = useState('Expert');
-  const [speciesChallengeProgress, setSpeciesChallengeProgress] = useState(()=>normalizeSpeciesChallengeProgress(null));
+  // ★クラシックとタクティクス、どちらの種族チャレンジの進み具合も同時に持つ。
+  //   保存先は speciesChallengeProgressKeyOf(mode) が決める別々のキーで、片方の解放や
+  //   自己ベストがもう片方へ移ることはない
+  const [speciesProgressByMode, setSpeciesProgressByMode] = useState(()=>({
+    [BATTLE_MODE_SPECIES_CHALLENGE]:normalizeSpeciesChallengeProgress(null),
+    [BATTLE_MODE_TACTICS_SPECIES]:normalizeSpeciesChallengeProgress(null),
+  }));
+  // いま扱っている種族チャレンジのモード。画面で選んでいるモードが優先で、
+  // バトル中(モード選択から離れているとき)は runMode を見る
+  const speciesChallengeMode = isSpeciesChallengeMode(battleMode) ? battleMode
+    : isSpeciesChallengeMode(runMode) ? runMode : BATTLE_MODE_SPECIES_CHALLENGE;
+  const speciesChallengeProgressOf = (mode) => speciesProgressByMode[mode]
+    || speciesProgressByMode[BATTLE_MODE_SPECIES_CHALLENGE];
+  const speciesChallengeProgress = speciesChallengeProgressOf(speciesChallengeMode);
+  const setSpeciesChallengeProgress = (next, mode=speciesChallengeMode) => setSpeciesProgressByMode(prev => ({
+    ...prev,
+    [mode]:normalizeSpeciesChallengeProgress(typeof next==='function' ? next(prev[mode]) : next),
+  }));
   const [speciesChallengeDebugHeroId, setSpeciesChallengeDebugHeroId] = useState('');
   const [speciesChallengeDebugAllyIds, setSpeciesChallengeDebugAllyIds] = useState([]);
   const [speciesChallengeDebugRun, setSpeciesChallengeDebugRun] = useState(null);
@@ -189,17 +219,18 @@ function MonsterHeroGame() {
   // WAVE10クリアの確定を1ランにつき1回だけにする。連打・再描画で clears が二重に増えるのを防ぐ
   const speciesChallengeClearHandledRef = useRef(false);
   const [speciesChallengeClearResult, setSpeciesChallengeClearResult] = useState(null);
-  const loadSpeciesChallengeProgress = async() => {
-    const progress=normalizeSpeciesChallengeProgress(await storeGet(SPECIES_CHALLENGE_PROGRESS_KEY,null,false));
-    setSpeciesChallengeProgress(progress);
+  const loadSpeciesChallengeProgress = async(mode=speciesChallengeMode) => {
+    const progress=normalizeSpeciesChallengeProgress(await storeGet(speciesChallengeProgressKeyOf(mode),null,false));
+    setSpeciesChallengeProgress(progress,mode);
     return progress;
   };
   // saveProgress=true は本番のバトル入口と、デバッグ設定の「実進行保存で実戦確認」から渡す。
   // デバッグの ⚔️バトルモード → 種族チャレンジ と「実戦フロー確認」は false のままで、保存なし。
   // fromDebug は「デバッグから入ったか」だけを表す。本番の入口と見分けて、
   // 画面のDEBUGバッジを通常プレイへ出さないために持つ(保存する/しないとは別の話)
-  const openSpeciesChallengeSelection = async({ saveProgress=false, fromDebug=false }={}) => {
-    await loadSpeciesChallengeProgress();
+  const openSpeciesChallengeSelection = async({ saveProgress=false, fromDebug=false, mode=BATTLE_MODE_SPECIES_CHALLENGE }={}) => {
+    setBattleMode(mode);
+    await loadSpeciesChallengeProgress(mode);
     speciesChallengeFromDebugRef.current=!!fromDebug;
     setSpeciesChallengeSelection({step:'species',speciesId:'',difficultyId:'',heroId:'',allyIds:[],run:null,saveProgress:!!saveProgress,fromDebug:!!fromDebug});
     setGameState('SPECIES_CHALLENGE_SELECT');
@@ -1807,6 +1838,11 @@ function MonsterHeroGame() {
   const extremeRunRef = useRef(false);
   const [extremeRuleOpen, setExtremeRuleOpen] = useState(false);
   const [extremeDifficulty, setExtremeDifficulty] = useState('EXTREME');
+  // ★タクティクスバトルの記録を分ける難易度。極限で遊ぶと difficulty は 'Normal' へ
+  //   置き換わる(極限チャレンジ・種族チャレンジと同じ作り)ので、そのときだけ
+  //   extremeDifficulty を使う。自己ベスト・クリア回数・最高到達WAVE・ランキングの
+  //   どれもこの1か所から難易度を取る(取り違えると別の難易度の記録を書き換えてしまう)
+  const tacticsRecordDifficulty = () => (extremeRunRef.current ? extremeDifficulty : difficulty);
   const [debugEnemyKey, setDebugEnemyKey] = useState(null);
   const [debugStrongestHero, setDebugStrongestHero] = useState(false);
   const [debugOutcome, setDebugOutcome] = useState(null);
@@ -4553,6 +4589,9 @@ function MonsterHeroGame() {
       const quickScores = {}; const quickClears = {}; const quickWaves = {};
       // プロモードもさらに別のキー(mh_pro_*)。まだ遊んだことがなければ既定値の0で埋まる
       const proScores = {}; const proClears = {}; const proWaves = {};
+      // タクティクスバトルも別枠(mh_tactics_* / mh_tactics_pro_*)。難易度は通常9＋極限5なので、
+      // クイックの表とは別に TACTICS_DIFFICULTY_IDS を回す
+      const tacticsLoaded = {};
       // 極限側にも同じ難易度IDの既存記録がある場合は、クイックの解放判定へそのまま利用する。
       const extremeDifficultyClears = {};
       await Promise.all(Object.keys(QUICK_DIFFICULTY_SETTINGS).map(async d => {
@@ -4568,6 +4607,15 @@ function MonsterHeroGame() {
         proWaves[d] = await storeGet(bestWaveKey(BATTLE_MODE_PRO, d), 0, false);
         extremeDifficultyClears[d] = await storeGet(extremeClearCountKey(d), 0, false);
       }));
+      await Promise.all(TACTICS_SCORE_MODES.map(async mode => {
+        const hs = {}; const clears = {}; const waves = {};
+        await Promise.all(TACTICS_DIFFICULTY_IDS.map(async d => {
+          hs[d] = await storeGet(bestScoreKey(mode, d), 0, false);
+          clears[d] = await storeGet(clearCountKey(mode, d), 0, false);
+          waves[d] = await storeGet(bestWaveKey(mode, d), 0, false);
+        }));
+        tacticsLoaded[mode] = { hs, clears, waves };
+      }));
       // 極限チャレンジの記録は難易度定義から共通生成する。未公開段階も先に読み込むが、
       // ランキングとプロフィールの表示対象は available の難易度だけに限定する。
       const loadedExtremeScores = {};
@@ -4578,7 +4626,10 @@ function MonsterHeroGame() {
       }));
       setExtremeBestScores(loadedExtremeScores);
       setExtremeClearCounts(loadedExtremeClears);
-      setSpeciesChallengeProgress(normalizeSpeciesChallengeProgress(await storeGet(SPECIES_CHALLENGE_PROGRESS_KEY,null,false)));
+      setSpeciesProgressByMode({
+        [BATTLE_MODE_SPECIES_CHALLENGE]:normalizeSpeciesChallengeProgress(await storeGet(SPECIES_CHALLENGE_PROGRESS_KEY,null,false)),
+        [BATTLE_MODE_TACTICS_SPECIES]:normalizeSpeciesChallengeProgress(await storeGet(TACTICS_SPECIES_CHALLENGE_PROGRESS_KEY,null,false)),
+      });
       setHighScores(scores);
       highScoresRef.current = scores;
       setAttemptCounts(attempts);
@@ -4590,6 +4641,7 @@ function MonsterHeroGame() {
       setProHighScores(proScores);
       setProClearCounts(proClears);
       setProHighestWaves(proWaves);
+      setTacticsRecords(tacticsLoaded);
       setExtremeDifficultyClearCounts(extremeDifficultyClears);
       let wasOnboarded = await storeGet('mh_onboarded', null, false);
       const hasSavedName = typeof savedName==='string' && savedName.trim() && savedName!=='名無しのブリーダー';
@@ -4820,6 +4872,10 @@ function MonsterHeroGame() {
     // (落とすと最後の分岐でチャレンジの mh_hs_<難易度> を上書きしてしまう)。
     // scoreSubmittedRef は委譲先で立てるので、ここでは立てずに渡す
     if (speciesChallengeBattleRunRef.current) return submitSpeciesChallengeScoreOnce();
+    // ★タクティクスバトルも専用の送信処理だけを通す。ここから下のどの分岐へも落とさない。
+    //   落とすと、極限ぶんは極限チャレンジの mh_extreme_hs_* を、それ以外は
+    //   チャレンジの mh_hs_<難易度> を上書きしてしまう(実際にそうなっていた)
+    if (isTacticsMode(runMode)) return submitTacticsScoreOnce();
     scoreSubmittedRef.current = true;
     // クイックモードはランキング対象外。送信も、チャレンジの自己ベスト更新も行わず、
     // 記録は専用のキーへだけ残す
@@ -4905,10 +4961,10 @@ function MonsterHeroGame() {
     const run = speciesChallengeBattleRunRef.current;
     if (!run || score <= 0 || scoreSubmittedRef.current) return;
     scoreSubmittedRef.current = true;
-    if (!SPECIES_CHALLENGE_PUBLIC_RELEASE) return;
+    if (!modeHasRanking(speciesChallengeRunMode(run))) return;
     if (debugBattleRef.current) return;
     try {
-      const diff = rankingDifficultyForMode(BATTLE_MODE_SPECIES_CHALLENGE, run.difficultyId, run.speciesId);
+      const diff = rankingDifficultyForMode(speciesChallengeRunMode(run), run.difficultyId, run.speciesId);
       const result = await submitLocalScore(diff, score, runIdRef.current);
       if (!result?.nationalSaved) {
         console.error('[result] species challenge score save failed:', result?.error?.message || 'unknown ranking error');
@@ -4917,6 +4973,37 @@ function MonsterHeroGame() {
       return result;
     } catch (e) {
       console.error('[result] species challenge score submit failed:', e && e.message ? e.message : e);
+    }
+  };
+
+  // タクティクスバトルのスコア送信。難易度は tacticsRecordDifficulty() が決める
+  // (極限で遊ぶと difficulty は 'Normal' に置き換わるため、そこだけ extremeDifficulty を使う)。
+  // 自己ベストは mh_tactics_hs_<難易度>、全国ランキングは Tactics<難易度> の行だけを触る。
+  // チャレンジ(mh_hs_*)・プロ(mh_pro_hs_*)・極限チャレンジ(mh_extreme_hs_*)は読みも書きもしない。
+  // 一般公開までは全国ランキングへ送らない(modeHasRanking が公開フラグを見る)が、
+  // 端末の自己ベストは公開前から残す。あとから消えると「記録が無くなった」に見えるため
+  const submitTacticsScoreOnce = async () => {
+    if (score <= 0 || scoreSubmittedRef.current) return;
+    scoreSubmittedRef.current = true;
+    const diff = tacticsRecordDifficulty();
+    const saveBest = async () => {
+      if (score > (Number(tacticsRecordsOf(runMode).hs[diff]) || 0)) {
+        await storeSet(bestScoreKey(runMode, diff), score, false);
+        bumpTacticsRecord(runMode, 'hs', diff, score);
+        setRunHighlights(prev => ({ ...prev, newRecord: true }));
+      }
+    };
+    if (!modeHasRanking(runMode)) { await saveBest(); return; }
+    try {
+      const result = await submitLocalScore(rankingDifficultyForMode(runMode, diff), score, runIdRef.current);
+      if (!result?.nationalSaved) {
+        console.error('[result] tactics score save failed:', result?.error?.message || 'unknown ranking error');
+        setRunHighlights(prev => ({ ...prev, rankingFailed: true }));
+      }
+      await saveBest();
+      return result;
+    } catch (e) {
+      console.error('[result] tactics score submit failed:', e && e.message ? e.message : e);
     }
   };
 
@@ -7241,6 +7328,17 @@ function MonsterHeroGame() {
       addAssistantBond('clear');
       return;
     }
+    // ★タクティクスバトルも専用キーへ。極限ぶんも同じ mh_tactics_clears_<極限難易度> に入れる
+    //   ので、極限チャレンジの判定より先に置く(あとに置くと mh_extreme_clears_* を増やす)。
+    //   チャレンジの通算クリア数は動かさない(動かすと極限・種族の解放条件まで進んでしまう)
+    if (isTacticsMode(runMode)) {
+      const tacticsDiff = tacticsRecordDifficulty();
+      const nextTactics = (Number(tacticsRecordsOf(runMode).clears[tacticsDiff]) || 0) + 1;
+      bumpTacticsRecord(runMode, 'clears', tacticsDiff, nextTactics);
+      await storeSet(clearCountKey(runMode, tacticsDiff), nextTactics, false);
+      addAssistantBond('clear');
+      return;
+    }
     // 極限チャレンジは専用キーへ。チャレンジの通算クリア数(初勝利判定・解放判定に使う)は動かさない
     if (extremeRunRef.current) {
       const currentCount = extremeClearCounts[extremeDifficulty] || 0;
@@ -7465,7 +7563,8 @@ function MonsterHeroGame() {
     // isQuickMode / isProMode はどちらも false になり、記録キーの接頭辞(modeKeyPrefix)は
     // チャレンジと同じ 'mh_' に落ちるが、そのキーへ書き込む処理はすべて
     // speciesChallengeBattleRunRef で除外してあるので、チャレンジの記録には一切触れない
-    setRunMode(BATTLE_MODE_SPECIES_CHALLENGE);
+    // ★クラシックとタクティクス、どちらの種族チャレンジかは run が持つ
+    setRunMode(speciesChallengeRunMode(run));
     setDifficulty(extremeSetting?'Normal':run.difficultyId);
     if (extremeSetting) setExtremeDifficulty(extremeSetting.id);
     // 勇者モンの配置距離は、他モードとまったく同じ PICK_SLOT で選んでもらう。
@@ -7514,11 +7613,13 @@ function MonsterHeroGame() {
       console.error('[speciesChallenge] clear rewards failed:',e&&e.message?e.message:e);
     }
     try{
+      const speciesMode=speciesChallengeRunMode(speciesChallengeBattleRunRef.current);
       const result=await persistSpeciesChallengeClearReward({
-        progress:speciesChallengeProgress,ownedItems:ownedItemsRef.current,speciesId,difficultyId,storeSet,storeGet,
+        progress:speciesChallengeProgressOf(speciesMode),ownedItems:ownedItemsRef.current,speciesId,difficultyId,storeSet,storeGet,
         record:{ score,turns:clearTurns },
+        progressKey:speciesChallengeProgressKeyOf(speciesMode),
       });
-      setSpeciesChallengeProgress(result.nextProgress);
+      setSpeciesChallengeProgress(result.nextProgress,speciesMode);
       if(result.nextOwnedItems&&result.nextOwnedItems!==ownedItemsRef.current){
         ownedItemsRef.current=result.nextOwnedItems;
         setOwnedItems(result.nextOwnedItems);
@@ -8295,7 +8396,7 @@ function MonsterHeroGame() {
       const keepSaving = speciesChallengeSaveRunRef.current;
       const keepDebug = speciesChallengeFromDebugRef.current;
       returnToHome();
-      openSpeciesChallengeSelection({ saveProgress: keepSaving, fromDebug: keepDebug });
+      openSpeciesChallengeSelection({ saveProgress: keepSaving, fromDebug: keepDebug, mode: speciesChallengeRunMode(speciesChallengeBattleRunRef.current) });
       return;
     }
     beginNewRankingRun({ runIdRef, scoreSubmittedRef, runFinalizingRef, rewardsAwardedRef, clearRecordedRef });
@@ -10378,8 +10479,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // チャレンジのNormalの記録を書き換えてしまう。デバッグ戦・練習と同じく記録しない
     // 種族チャレンジも同じ理由で除外する。記録は種族×難易度ごとに
     // mh_species_challenge_progress_v1 側だけへ残し、mh_highest_wave_* には一切触れない
-    if (!forcedEnemyKey && !extremeRunRef.current && !debugBattleRef.current && !speciesChallengeBattleRunRef.current) {
-      if (isQuickMode(runMode)) {
+    // ★タクティクスバトルは極限で遊んでも記録する。極限ぶんは mh_tactics_highest_wave_<極限難易度>
+    //   へ入るので、極限チャレンジの記録とも、チャレンジの記録とも混ざらない
+    if (!forcedEnemyKey && !debugBattleRef.current && !speciesChallengeBattleRunRef.current
+        && (!extremeRunRef.current || isTacticsMode(runMode))) {
+      if (isTacticsMode(runMode)) {
+        const tacticsDiff = tacticsRecordDifficulty();
+        if (w>(Number(tacticsRecordsOf(runMode).waves[tacticsDiff])||0)) {
+          bumpTacticsRecord(runMode,'waves',tacticsDiff,w);
+          storeSet(bestWaveKey(runMode,tacticsDiff),w,false);
+        }
+      } else if (isQuickMode(runMode)) {
         if (w>(quickHighestWaves[difficulty]||0)) {
           setQuickHighestWaves(prev=>({...prev,[difficulty]:w}));
           storeSet(bestWaveKey(BATTLE_MODE_QUICK,difficulty),w,false);
@@ -10419,7 +10529,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     reserveEnemyNextIntent(getNextEnemyAction(newEnemy,distAfterIntent(firstIntent,dist),firstIntent,actionState()));
     setTurnCount(1); setSelectedCards([]); setLastActionSlot(null); setCardAssignments({}); setPendingCard(null); setCurrentWaveDamage(0); setWaveDistDamage([0,0,0,0]); setWaveBuffs({}); // WAVE毎リセットのバフ・デバフ(waveEnemyAtkDebuff/chuuniDmgCutUses/enemyTakenDmgBonus等)を全てクリア
     return dist;
-  }, [getNextEnemyAction, difficulty, extremeDifficulty, totalTurnCount, highestWaves, quickHighestWaves, proHighestWaves, runMode]);
+  }, [getNextEnemyAction, difficulty, extremeDifficulty, totalTurnCount, highestWaves, quickHighestWaves, proHighestWaves, tacticsRecords, runMode]);
 
   // defValは呼び出し元が直前に算出したばかりの丈夫さ(setDefで更新中の値)を明示的に渡すための引数。
   // handleTraining等のsetTimeout内からdef(state)を直接読むと、同じ関数呼び出し内で行ったsetDefの
@@ -10439,7 +10549,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // 1周のはじめだけ、みゅあとの仲良し度を増やす(WAVEごとには数えない)
     if (w === 1 && !forcedEnemyKey && !debugBattleRef.current) {
       addAssistantBond('battle');
-      addAssistantBond(extremeRunRef.current ? 'extreme' : modeBondAction(runMode));
+      // ★タクティクスバトルの極限は「極限チャレンジで遊んだ」ではないので、'extreme' を渡さない
+      addAssistantBond(extremeRunRef.current && !isTacticsMode(runMode) ? 'extreme' : modeBondAction(runMode));
       // 助手のアシストカードを編成して挑んだぶん。編成を保存しただけでは増えず、
       // 実際にバトルを始めたここでだけ数える(付け外しをくり返して稼げないようにするため)。
       // デバッグ戦は報酬も記録も残さないので、ここでも数えない
@@ -11852,33 +11963,36 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   };
   // そのモード・難易度の端末記録。画面のあちこちで if を並べないための小さな入口。
   // 保存先はモードごとに分かれている(mh_ / mh_quick_ / mh_pro_)
-  const modeRecordFor = (mode, diff) => isQuickMode(mode)
-    ? { score: quickHighScores[diff]||0, wave: quickHighestWaves[diff]||0, clears: quickClearCounts[diff]||0 }
-    : isProMode(mode)
-      ? { score: proHighScores[diff]||0, wave: proHighestWaves[diff]||0, clears: proClearCounts[diff]||0 }
-      : { score: highScores[diff]||0, wave: highestWaves[diff]||0, clears: clearCounts[diff]||0 };
+  const modeRecordFor = (mode, diff) => isTacticsMode(mode)
+    ? { score: tacticsRecordsOf(mode).hs[diff]||0, wave: tacticsRecordsOf(mode).waves[diff]||0, clears: tacticsRecordsOf(mode).clears[diff]||0 }
+    : isQuickMode(mode)
+      ? { score: quickHighScores[diff]||0, wave: quickHighestWaves[diff]||0, clears: quickClearCounts[diff]||0 }
+      : isProMode(mode)
+        ? { score: proHighScores[diff]||0, wave: proHighestWaves[diff]||0, clears: proClearCounts[diff]||0 }
+        : { score: highScores[diff]||0, wave: highestWaves[diff]||0, clears: clearCounts[diff]||0 };
   // 新しい入口からスコアランキングを開く。難易度カードから来たときは、その難易度のタブを最初に選ぶ
   // 種族チャレンジの記録一覧。ランキング画面と同じ入れ物をそのまま使う
   // 種族チャレンジのランキング。難易度カードから開いたときは、その種族と難易度を最初に選んでおく
-  const openSpeciesChallengeRecords = async (backTo, { speciesId=null, difficultyId=null }={}) => {
-    await loadSpeciesChallengeProgress();
+  const openSpeciesChallengeRecords = async (backTo, { speciesId=null, difficultyId=null, mode=BATTLE_MODE_SPECIES_CHALLENGE }={}) => {
+    await loadSpeciesChallengeProgress(mode);
     addAssistantBond('ranking');
-    setScoreRankingMode(BATTLE_MODE_SPECIES_CHALLENGE);
+    setScoreRankingMode(mode);
     setScoreRankingBack(backTo);
     // 種族を指定せずに開いたとき(モード選択の「🏆 種族チャレンジのランキング」)は、
     // 他モードと同じく種族を問わない「全種族」の全国ランキングから見せる。
     // 難易度カードから種族を指定して開いたときは、その種族のランキングを最初に出す
+    const ranked=modeHasRanking(mode);
     const speciesTab=speciesChallengeLineages().some(lineage=>lineage.id===speciesId)
       ? speciesId
-      : (SPECIES_CHALLENGE_PUBLIC_RELEASE ? SPECIES_RANK_TAB_ALL : SPECIES_RANK_TAB_SELF_BEST);
+      : (ranked ? SPECIES_RANK_TAB_ALL : SPECIES_RANK_TAB_SELF_BEST);
     const viewDiff=SPECIES_CHALLENGE_DIFFICULTY_IDS.includes(difficultyId)?difficultyId:SPECIES_CHALLENGE_DIFFICULTY_IDS[0];
     setSpeciesRankFilter(speciesTab);
     setRankingViewDiff(viewDiff);
     // 公開後だけ全国ランキングを取りにいく。公開前は自分の記録だけなので通信しない
-    if(SPECIES_CHALLENGE_PUBLIC_RELEASE&&speciesTab!==SPECIES_RANK_TAB_SELF_BEST){
+    if(ranked&&speciesTab!==SPECIES_RANK_TAB_SELF_BEST){
       loadRankings(rankingDifficultyKey(speciesTab===SPECIES_RANK_TAB_ALL
-        ? speciesChallengeAllRankingDifficulty(viewDiff)
-        : rankingDifficultyForMode(BATTLE_MODE_SPECIES_CHALLENGE,viewDiff,speciesTab)));
+        ? speciesChallengeAllRankingDifficulty(viewDiff,mode)
+        : rankingDifficultyForMode(mode,viewDiff,speciesTab)));
     }
     setGameState('BATTLE_SCORE_RANKING');
   };
@@ -11905,15 +12019,20 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // 極限の段階は、どのモードのランキングから引いても極限のキー(ExtremeGOD など)を使う。
     // チャレンジのタブへ極限を並べたので、ここを mode だけで決めると
     // 極限を選んでいるのに normalizeBattleDifficulty が Normal へ落としてしまう
-    const keyOf = (diff) => rankingDifficultyKey(isExtremeDifficultyId(diff)
+    // ★タクティクスバトルの極限は「そのモードの中の難易度」なので、Extreme* ではなく
+    //   Tactics* の行を読む(2026-09-20)。ここを直さないと、タクティクスの極限を開いたときに
+    //   極限チャレンジの記録が並んでしまう
+    const keyOf = (diff) => rankingDifficultyKey(isExtremeDifficultyId(diff) && !isTacticsMode(mode)
       ? rankingDifficultyForMode(EXTREME_MODE.id, diff)
       : rankingDifficultyForMode(mode, diff));
     // タブに並べる難易度。チャレンジは通常9段階＋極限の段階、極限の入口からは極限だけ、
     // それ以外(プロ)は通常9段階のまま
     const rankingTabs = isExtreme
       ? PUBLIC_EXTREME_DIFFICULTIES.map(setting => [setting.id, setting])
-      : [...Object.entries(DIFFICULTY_SETTINGS),
-         ...(mode === BATTLE_MODE_CHALLENGE ? PUBLIC_EXTREME_DIFFICULTIES.map(setting => [setting.id, setting]) : [])];
+      : isTacticsMode(mode)
+        ? TACTICS_DIFFICULTY_IDS.map(id => [id, DIFFICULTY_SETTINGS[id] || EXTREME_DIFFICULTIES.find(setting => setting.id === id) || EXTREME_SETTING])
+        : [...Object.entries(DIFFICULTY_SETTINGS),
+           ...(mode === BATTLE_MODE_CHALLENGE ? PUBLIC_EXTREME_DIFFICULTIES.map(setting => [setting.id, setting]) : [])];
     const viewKey = keyOf(rankingViewDiff);
     const rows = localRankings[viewKey] || [], status = rankingStatus(`score:${viewKey}`);
     return <>
@@ -11933,7 +12052,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 種族チャレンジの記録。一般公開まで全国ランキングへ送らないので、同じ画面の作り
   // (難易度タブ + 一覧)のまま、自分の種族×難易度の記録を出す。
   // 公開後は modeHasRanking が true になり、通常のスコアランキングへ切り替わる
-  const renderSpeciesChallengeRecordBody = () => {
+  const renderSpeciesChallengeRecordBody = (mode = BATTLE_MODE_SPECIES_CHALLENGE) => {
+    const ranked = modeHasRanking(mode);
     const diffId = SPECIES_CHALLENGE_DIFFICULTY_IDS.includes(rankingViewDiff) ? rankingViewDiff : SPECIES_CHALLENGE_DIFFICULTY_IDS[0];
     const settingOf = (id) => DIFFICULTY_SETTINGS[id] || EXTREME_DIFFICULTIES.find(setting => setting.id === id) || EXTREME_SETTING;
     const lineages = speciesChallengeLineages();
@@ -11962,7 +12082,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       </div>
     );
     // 「自己ベスト」タブの中身。自分の種族別ベストをその難易度で並べて比べる(通信しない)
-    const rows = lineages.map(lineage => ({ lineage, record: speciesChallengeRecord(speciesChallengeProgress, lineage.id, diffId) }))
+    const rows = lineages.map(lineage => ({ lineage, record: speciesChallengeRecord(speciesChallengeProgressOf(mode), lineage.id, diffId) }))
       .filter(row => row.record.clears > 0)
       .sort((a, b) => (b.record.bestScore - a.record.bestScore) || (b.record.clears - a.record.clears))
       .map((row, index) => recordRow(row.lineage.id, lineageIcon(row.lineage), `${row.lineage.name}種`,
@@ -11975,12 +12095,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // タブと難易度から取りにいくキーを1か所で決める。タブを押したときと難易度を押したときで
     // 別々に組み立てると、片方だけ「全種族」に対応し忘れる
     const nationalKeyFor = (tabId, difficultyId) => (
-      !SPECIES_CHALLENGE_PUBLIC_RELEASE || tabId === SPECIES_RANK_TAB_SELF_BEST ? null
+      !ranked || tabId === SPECIES_RANK_TAB_SELF_BEST ? null
         : rankingDifficultyKey(tabId === SPECIES_RANK_TAB_ALL
-          ? speciesChallengeAllRankingDifficulty(difficultyId)
-          : rankingDifficultyForMode(BATTLE_MODE_SPECIES_CHALLENGE, difficultyId, tabId))
+          ? speciesChallengeAllRankingDifficulty(difficultyId, mode)
+          : rankingDifficultyForMode(mode, difficultyId, tabId))
     );
-    const nationalMode = SPECIES_CHALLENGE_PUBLIC_RELEASE && speciesFilter !== SPECIES_RANK_TAB_SELF_BEST;
+    const nationalMode = ranked && speciesFilter !== SPECIES_RANK_TAB_SELF_BEST;
     const nationalKey = nationalKeyFor(speciesFilter, diffId);
     const nationalRows = nationalKey ? (localRankings[nationalKey] || []) : [];
     const nationalStatus = rankingStatus(`score:${nationalKey}`);
@@ -12005,9 +12125,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           : rows.length === 0
             ? <p className="rounded-2xl border border-white/10 bg-slate-900 p-6 text-center text-[10px] leading-relaxed text-slate-400">{emptyText}</p>
             : rows}
-        {!SPECIES_CHALLENGE_PUBLIC_RELEASE && <p className="rounded-xl border border-amber-400/30 bg-amber-950/25 p-3 text-center text-[9px] leading-relaxed text-amber-200">いまは自分の記録だけを表示しています。全国ランキングはモードの公開後に始まります。</p>}
+        {!ranked && <p className="rounded-xl border border-amber-400/30 bg-amber-950/25 p-3 text-center text-[9px] leading-relaxed text-amber-200">いまは自分の記録だけを表示しています。全国ランキングはモードの公開後に始まります。</p>}
         {/* 「自己ベスト」は全国ランキングではないので、そのことを画面にも書いておく */}
-        {SPECIES_CHALLENGE_PUBLIC_RELEASE && !nationalMode && <p data-species-self-best-note className="rounded-xl border border-white/10 bg-slate-900/60 p-3 text-center text-[9px] leading-relaxed text-slate-400">ここは自分の種族別ベストの比較です。全国ランキングは種族のタブから見られます。</p>}
+        {ranked && !nationalMode && <p data-species-self-best-note className="rounded-xl border border-white/10 bg-slate-900/60 p-3 text-center text-[9px] leading-relaxed text-slate-400">ここは自分の種族別ベストの比較です。全国ランキングは種族のタブから見られます。</p>}
       </div>
     </>;
   };
@@ -12714,7 +12834,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <div className={`relative shrink-0${battleTutorialSpotClass('modeCards')}`}>
                   <button aria-label="前のモード" onClick={()=>stepMode(-1)} className="absolute left-0 top-[42%] z-20 w-9 h-12 rounded-r-xl bg-black/70"><ChevronLeft/></button>
                   <div ref={modeCarouselRef} onScroll={()=>{const index=centeredLoopIndex();const picked=loopModes[index];if(picked&&picked.id!==current.id)setBattleMode(picked.id);if(modeLoopTimerRef.current)clearTimeout(modeLoopTimerRef.current);modeLoopTimerRef.current=setTimeout(recenterModeLoop,180);}} className="flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll" style={{paddingLeft:'11%',paddingRight:'11%',touchAction:'pan-x pinch-zoom'}}>
-                    {loopModes.map((m,loopIndex)=>{const active=m.id===current.id,isExtreme=m.id===EXTREME_MODE.id,isSpecies=m.id===BATTLE_MODE_SPECIES_CHALLENGE,extremeLocked=isExtreme&&!extremeUnlocked&&!debugBattle,speciesLocked=isSpecies&&!speciesChallengeUnlocked&&!debugBattle,rec=isExtreme?{score:highestModeScore(extremeBestScores,PUBLIC_EXTREME_DIFFICULTIES.map(setting=>setting.id)),wave:0,clears:extremeClearCount}:modeRecordFor(m.id,safeDifficulty),ranked=!isExtreme&&!isSpecies&&modeHasRanking(m.id),modeBestScore=ranked?highestModeScore(isProMode(m.id)?proHighScores:highScores,Object.keys(DIFFICULTY_SETTINGS)):rec.score;return (
+                    {loopModes.map((m,loopIndex)=>{const active=m.id===current.id,isExtreme=m.id===EXTREME_MODE.id,isSpecies=isSpeciesChallengeMode(m.id),extremeLocked=isExtreme&&!extremeUnlocked&&!debugBattle,speciesLocked=isSpecies&&!speciesChallengeUnlocked&&!debugBattle,rec=isExtreme?{score:highestModeScore(extremeBestScores,PUBLIC_EXTREME_DIFFICULTIES.map(setting=>setting.id)),wave:0,clears:extremeClearCount}:modeRecordFor(m.id,safeDifficulty),ranked=!isExtreme&&!isSpecies&&modeHasRanking(m.id),modeBestScore=ranked?highestModeScore(isTacticsMode(m.id)?tacticsRecordsOf(m.id).hs:isProMode(m.id)?proHighScores:highScores,isTacticsMode(m.id)?TACTICS_DIFFICULTY_IDS:Object.keys(DIFFICULTY_SETTINGS)):rec.score;return (
                       <article key={`${m.id}-${loopIndex}`} className={`snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2.5 h-[366px] overflow-hidden transition-all flex flex-col ${active?'scale-100 opacity-100':'scale-[.92] opacity-55'}`} style={{borderColor:active?m.color:'rgba(255,255,255,.12)',background:'linear-gradient(180deg,#152044,#0d142b)',boxShadow:active?`0 0 30px ${m.color}55`:'none'}}>
                         <div className="text-center text-[7px] tracking-[.2em] text-slate-400 font-black">BATTLE MODE</div>
                         <h3 className="text-center text-lg font-black leading-tight" style={{color:m.color}}>{m.emoji} {m.label}</h3>
@@ -12722,8 +12842,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         {/* スコア対象モードは全難易度の自己ベスト最大値、クイックは従来どおり選択中難易度のWAVE記録を出す */}
                         <div className="mt-1.5 rounded-xl bg-black/45 px-2.5 py-1.5">
                           <small className="block text-[8px] text-slate-400 font-black">{isSpecies?(speciesLocked?'解放条件':'クリアした種族×難易度'):isExtreme?(extremeLocked?'解放条件':'最高スコア'):ranked?'最高スコア':`${DIFFICULTY_SETTINGS[safeDifficulty]?.label||safeDifficulty}の記録`}</small>
-                          <b className="block text-right text-base leading-tight" style={{color:m.color}}>{isSpecies?(speciesLocked?'🔒 未解放':`${speciesChallengeTotalClearedCount(speciesChallengeProgress)} 組`):isExtreme?(extremeLocked?'🔒 未解放':`${modeBestScore.toLocaleString()} pt`):ranked?`${modeBestScore.toLocaleString()} pt`:`WAVE ${rec.wave}`}</b>
-                          <span className="block text-right text-[9px] text-amber-300">{isSpecies?(speciesLocked?SPECIES_CHALLENGE_UNLOCK_TEXT:SPECIES_CHALLENGE_PUBLIC_RELEASE?`全${speciesChallengeLineages().length*SPECIES_CHALLENGE_DIFFICULTY_IDS.length}組中`:'🧪 DEBUG・一般公開前'):isExtreme?(extremeLocked?EXTREME_UNLOCK_TEXT:`クリア ${rec.clears}回`):ranked?`最高到達 WAVE ${rec.wave}`:`クリア ${rec.clears}回`}</span>
+                          <b className="block text-right text-base leading-tight" style={{color:m.color}}>{isSpecies?(speciesLocked?'🔒 未解放':`${speciesChallengeTotalClearedCount(speciesChallengeProgressOf(m.id))} 組`):isExtreme?(extremeLocked?'🔒 未解放':`${modeBestScore.toLocaleString()} pt`):ranked?`${modeBestScore.toLocaleString()} pt`:`WAVE ${rec.wave}`}</b>
+                          <span className="block text-right text-[9px] text-amber-300">{isSpecies?(speciesLocked?SPECIES_CHALLENGE_UNLOCK_TEXT:modeHasRanking(m.id)?`全${speciesChallengeLineages().length*SPECIES_CHALLENGE_DIFFICULTY_IDS.length}組中`:'🧪 DEBUG・一般公開前'):isExtreme?(extremeLocked?EXTREME_UNLOCK_TEXT:`クリア ${rec.clears}回`):ranked?`最高到達 WAVE ${rec.wave}`:`クリア ${rec.clears}回`}</span>
                         </div>
                         {/* カードへ出す3行。どのモードも【売り】→【報酬】→【記録】の順でそろえてある。
                             細かい説明は「このモードの説明」で全部読める */}
@@ -12735,12 +12855,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                           {/* 練習中はチャレンジだけ進めるようにする。初回からクイックやプロを遊ばせない */}
                           {/* 種族チャレンジは、通常のバトル入口から始めた周回だけが本番(記録・報酬を保存する)。
                               デバッグのバトルモード入口(debugBattle)から来たときは、これまでどおり保存しない */}
-                          <button disabled={extremeLocked||speciesLocked||(!!battleTutorial&&m.id!==BATTLE_MODE_CHALLENGE)} onClick={()=>{setBattleMode(m.id);if(isSpecies){openSpeciesChallengeSelection({saveProgress:!debugBattle,fromDebug:debugBattle});return;}setGameState(isExtreme?'EXTREME_DIFFICULTY_SELECT':'BATTLE_DIFFICULTY_SELECT');}} className={`min-h-[44px] rounded-xl font-black text-sm disabled:opacity-30${m.id===BATTLE_MODE_CHALLENGE?battleTutorialSpotClass('modeStart'):''}`} style={{backgroundColor:m.color,color:'#0f172a'}}>{extremeLocked||speciesLocked?'まだ挑戦できません':isSpecies?'種族を選ぶ':'難易度を選ぶ'}</button>
+                          <button disabled={extremeLocked||speciesLocked||(!!battleTutorial&&m.id!==BATTLE_MODE_CHALLENGE)} onClick={()=>{setBattleMode(m.id);if(isSpecies){openSpeciesChallengeSelection({saveProgress:!debugBattle,fromDebug:debugBattle,mode:m.id});return;}setGameState(isExtreme?'EXTREME_DIFFICULTY_SELECT':'BATTLE_DIFFICULTY_SELECT');}} className={`min-h-[44px] rounded-xl font-black text-sm disabled:opacity-30${m.id===BATTLE_MODE_CHALLENGE?battleTutorialSpotClass('modeStart'):''}`} style={{backgroundColor:m.color,color:'#0f172a'}}>{extremeLocked||speciesLocked?'まだ挑戦できません':isSpecies?'種族を選ぶ':'難易度を選ぶ'}</button>
                           {/* スコアランキングの導線。クイックはランキングが無いので、高さ合わせの空枠も置かない */}
                           {isExtreme&&<button disabled={extremeLocked||!!battleTutorial} onClick={()=>openModeScoreRanking(m.id,EXTREME_SETTING.id,'BATTLE_MODE_SELECT')} className="min-h-[40px] rounded-xl bg-slate-800 border border-fuchsia-400/40 text-fuchsia-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"><span className="flex-1 text-center whitespace-nowrap">🏆 {m.label}のランキング</span><ChevronRight size={14}/></button>}
                           {/* 種族チャレンジも他モードと同じ位置に記録への導線を置く。
                               公開前は全国ランキングを持たないので、種族ごとの自己記録を出す */}
-                          {isSpecies&&<button data-species-record-link disabled={speciesLocked||!!battleTutorial} onClick={()=>openSpeciesChallengeRecords('BATTLE_MODE_SELECT')} className="min-h-[40px] rounded-xl bg-slate-800 border border-cyan-400/40 text-cyan-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"><span className="flex-1 text-center whitespace-nowrap">🏆 {m.label}のランキング</span><ChevronRight size={14}/></button>}
+                          {isSpecies&&<button data-species-record-link disabled={speciesLocked||!!battleTutorial} onClick={()=>openSpeciesChallengeRecords('BATTLE_MODE_SELECT',{mode:m.id})} className="min-h-[40px] rounded-xl bg-slate-800 border border-cyan-400/40 text-cyan-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"><span className="flex-1 text-center whitespace-nowrap">🏆 {m.label}のランキング</span><ChevronRight size={14}/></button>}
                           {ranked&&<button disabled={!!battleTutorial} onClick={()=>openModeScoreRanking(m.id,safeDifficulty,'BATTLE_MODE_SELECT')} className="min-h-[40px] rounded-xl bg-slate-800 border border-indigo-400/40 text-indigo-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"><span className="flex-1 text-center whitespace-nowrap">🏆 {m.label}のランキング</span><ChevronRight size={16} className="shrink-0"/></button>}
 
                         </div>
@@ -12830,9 +12950,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         })()}
 
         {gameState==='BATTLE_DIFFICULTY_SELECT'&&(()=>{
-          const species=battleMode===BATTLE_MODE_SPECIES_CHALLENGE,quick=isQuickMode(battleMode);
+          const species=isSpeciesChallengeMode(battleMode),quick=isQuickMode(battleMode);
+          // ★タクティクスバトルも通常9＋極限5の14段階(2026-09-20 ユーザー指示
+          //   「通常/極限、種族とかはどっちのモードにもあるように」)。難易度の中身は
+          //   種族チャレンジとまったく同じ引き方で、極限は極限チャレンジの設定をそのまま使う
+          const tacticsDiff=isTacticsMode(battleMode);
           const speciesSetting=id=>DIFFICULTY_SETTINGS[id]||EXTREME_DIFFICULTIES.find(setting=>setting.id===id)||EXTREME_SETTING;
-          const allDifficulties=species?SPECIES_CHALLENGE_DIFFICULTY_IDS.map(id=>[id,speciesSetting(id)]):Object.entries(quick?QUICK_DIFFICULTY_SETTINGS:DIFFICULTY_SETTINGS);
+          const allDifficulties=species||tacticsDiff
+            ?(species?SPECIES_CHALLENGE_DIFFICULTY_IDS:TACTICS_DIFFICULTY_IDS).map(id=>[id,speciesSetting(id)])
+            :Object.entries(quick?QUICK_DIFFICULTY_SETTINGS:DIFFICULTY_SETTINGS);
           // 難易度は「通常 / 極限」のタブで分ける(2026-09-19 ユーザー指示)。
           // クイックは15段階、種族チャレンジは14段階あり、一続きに並べると探しにくい。
           // 極限を持たないモード(プロなど)では extreme が空になり、タブ自体を出さない
@@ -12844,7 +12970,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           //   遊ぶ側にはタブが切り替わったように見える
           // ★pro / mode はこの下で定義しているので、ここでは使わない。
           //   先に参照すると初期化前アクセスになり、難易度選択がまるごとエラー画面に落ちる(実際に落ちた)
-          const challengeExtremeTab=!species&&!quick&&!isProMode(battleMode);
+          // ★タクティクスバトルの極限は、同じ画面のタブにそのまま並べる(専用画面へ移らない)。
+          //   移してしまうと、押した先がクラシックバトルの極限チャレンジになってしまう
+          const challengeExtremeTab=!species&&!quick&&!tacticsDiff&&!isProMode(battleMode);
           const hasExtremeTab=difficultyGroups.extreme.length>0||challengeExtremeTab;
           const activeDifficultyTab=hasExtremeTab&&!challengeExtremeTab?difficultySelectTab:DIFFICULTY_TAB_NORMAL;
           const difficulties=activeDifficultyTab===DIFFICULTY_TAB_EXTREME?difficultyGroups.extreme:difficultyGroups.normal;
@@ -12912,7 +13040,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <div className={`relative shrink-0${battleTutorialSpotClass('difficulty')}`}>
                   <button aria-label="前の難易度" disabled={selectedIndex===0} onClick={()=>selectDifficultyIndex(selectedIndex-1)} className="absolute left-0 top-[42%] z-20 w-9 h-12 rounded-r-xl bg-black/70 disabled:opacity-20"><ChevronLeft/></button>
                   <div ref={modeDifficultyCarouselRef} onScroll={e=>{const root=e.currentTarget,c=root.scrollLeft+root.clientWidth/2;let best=0,d=Infinity;[...root.children].forEach((card,i)=>{const n=Math.abs(card.offsetLeft+card.offsetWidth/2-c);if(n<d){d=n;best=i;}});if(difficulties[best]?.[0]!==selectedDifficulty)chooseDifficulty(difficulties[best][0]);}} className="flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll" style={{paddingLeft:'11%',paddingRight:'11%',touchAction:'pan-x pinch-zoom'}} data-difficulty-carousel>
-                    {difficulties.map(([key,setting])=>{const active=key===selectedDifficulty,rec=modeRecordFor(battleMode,key);const quickUnlocked=species?isSpeciesChallengeDifficultyUnlocked(key,speciesChallengeClearedDifficultyIds(speciesChallengeProgress,speciesChallengeSelection.speciesId)):(!quick||debugBattle||isQuickDifficultyUnlocked(key,clearCounts,proClearCounts,extremeDifficultyClearCounts));const heroProofReward=heroProofClearReward({runMode:battleMode,difficulty:key,debug:debugBattle});const heroProofShardReward=heroProofShardClearReward({runMode:battleMode,difficulty:key,debug:debugBattle});return (
+                    {difficulties.map(([key,setting])=>{const active=key===selectedDifficulty,rec=modeRecordFor(battleMode,key);const quickUnlocked=species?isSpeciesChallengeDifficultyUnlocked(key,speciesChallengeClearedDifficultyIds(speciesChallengeProgress,speciesChallengeSelection.speciesId)):tacticsDiff?(debugBattle||isTacticsDifficultyUnlocked(key,tacticsRecordsOf(battleMode).clears)):(!quick||debugBattle||isQuickDifficultyUnlocked(key,clearCounts,proClearCounts,extremeDifficultyClearCounts));// ★タクティクスバトルの極限は、極限チャレンジ・種族チャレンジとまったく同じ作りで走らせる。
+                      //   difficulty は 'Normal' に置き換え、選んだ段階は extremeDifficulty が持つ。
+                      //   記録は tacticsRecordDifficulty() がこの2つから選ぶので、混ざらない
+                      const tacticsExtreme=tacticsDiff&&isExtremeDifficultyId(key);
+                      const lockText=species?'🔒 前の難易度クリアで解放'
+                        :tacticsDiff?(isExtremeDifficultyId(TACTICS_DIFFICULTY_IDS[TACTICS_DIFFICULTY_IDS.indexOf(key)-1])?'🔒 前の難易度クリアで解放':`🔒 ${TACTICS_EXTREME_UNLOCK_TEXT}`)
+                        :'🔒 同じ難易度クリアで解放';
+                      const heroProofReward=heroProofClearReward({runMode:battleMode,difficulty:key,debug:debugBattle});const heroProofShardReward=heroProofShardClearReward({runMode:battleMode,difficulty:key,debug:debugBattle});return (
                       <article key={key} aria-disabled={!quickUnlocked} data-difficulty-card={key} className={`snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${quick?'h-[366px] flex flex-col':''} ${active?'scale-100 opacity-100':'scale-[.92] opacity-55'} ${quickUnlocked?'':'grayscale'}`} style={{borderColor:active?setting.text:'rgba(255,255,255,.12)',background:'linear-gradient(180deg,#152044,#0d142b)',boxShadow:active?`0 0 30px ${setting.bg}55`:'none'}}>
                         <div className={`text-center text-[7px] tracking-[.2em] font-black ${key==='EXTREME'?'text-fuchsia-300':'text-slate-400'}`}>{key==='EXTREME'?'―― 極限難易度 ――':'BATTLE DIFFICULTY'}</div>
                         {/* 14難易度を横に送るので、どこまでクリアしたかが見出しだけで分かるようにする */}
@@ -12944,12 +13079,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                             // debugBattle が false へ戻り、保存なしのはずの確認が記録を残してしまう。
                             // 難易度を確定したら、そのまま種族チャレンジの勇者選択へ戻す
                             if(species){Audio_.se.tap();setSpeciesChallengeSelection(current=>({...current,difficultyId:key,heroId:'',allyIds:[],run:null,step:'hero'}));setGameState('SPECIES_CHALLENGE_SELECT');return;}
-                            battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';clearSlotUniqueSelection();setDifficulty(key);setRunMode(battleMode);quickRewardPolicyRunRef.current=quick?normalizeQuickRewardPolicy(quickRewardPolicy):QUICK_REWARD_POLICY_GROWTH;battleScenarioRef.current=null;battleScenarioIntentIndexRef.current=0;debugBattleRef.current=false;extremeRunRef.current=false;setDebugBattle(false);setExtremeRun(false);setDebugOutcome(null);const baseMons=pro?getUnlockedBaseMonsterList():[];const savedHero=pro?baseMons.find(mon=>mon.id===lastProParty.heroBaseId):null;setProHeroPreset(savedHero&&lastProParty.heroDistance!==null?{heroBaseId:savedHero.id,heroDistance:lastProParty.heroDistance}:null);setProAllyPool(pro?lastProParty.allyBaseIds.map(id=>baseMons.find(mon=>mon.id===id)).filter(mon=>mon&&mon.id!==savedHero?.id):[]);setMonSelection(pro?baseMons:getActiveMonsterList());setHeroPickTab(pro?'base':'roster');advanceRunStage('PICK_HERO');}} className={`min-h-[44px] rounded-xl font-black text-sm disabled:opacity-30${key==='Beginner'?battleTutorialSpotClass('battleStart'):''}`} style={{backgroundColor:setting.bg,color:setting.darkText?'#0f172a':'#ffffff'}}>{!quickUnlocked?(species?'🔒 前の難易度クリアで解放':'🔒 同じ難易度クリアで解放'):pro&&!proReady?`ベースモンが${PRO_ALLY_POOL_SIZE+1}種必要です`:'この難易度で挑戦'}</button>
+                            battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';clearSlotUniqueSelection();setDifficulty(tacticsExtreme?'Normal':key);if(tacticsExtreme)setExtremeDifficulty(key);setRunMode(battleMode);quickRewardPolicyRunRef.current=quick?normalizeQuickRewardPolicy(quickRewardPolicy):QUICK_REWARD_POLICY_GROWTH;battleScenarioRef.current=null;battleScenarioIntentIndexRef.current=0;debugBattleRef.current=false;extremeRunRef.current=tacticsExtreme;setDebugBattle(false);setExtremeRun(tacticsExtreme);setDebugOutcome(null);const baseMons=pro?getUnlockedBaseMonsterList():[];const savedHero=pro?baseMons.find(mon=>mon.id===lastProParty.heroBaseId):null;setProHeroPreset(savedHero&&lastProParty.heroDistance!==null?{heroBaseId:savedHero.id,heroDistance:lastProParty.heroDistance}:null);setProAllyPool(pro?lastProParty.allyBaseIds.map(id=>baseMons.find(mon=>mon.id===id)).filter(mon=>mon&&mon.id!==savedHero?.id):[]);setMonSelection(pro?baseMons:getActiveMonsterList());setHeroPickTab(pro?'base':'roster');advanceRunStage('PICK_HERO');}} className={`min-h-[44px] rounded-xl font-black text-sm disabled:opacity-30${key==='Beginner'?battleTutorialSpotClass('battleStart'):''}`} style={{backgroundColor:setting.bg,color:setting.darkText?'#0f172a':'#ffffff'}}>{!quickUnlocked?lockText:pro&&!proReady?`ベースモンが${PRO_ALLY_POOL_SIZE+1}種必要です`:'この難易度で挑戦'}</button>
                           {/* 難易度カードからもランキングへ入れる。ここから開いたときは、この難易度のタブが最初に選ばれる */}
                           {ranked&&<button disabled={!!battleTutorial} onClick={()=>openModeScoreRanking(battleMode,key,'BATTLE_DIFFICULTY_SELECT')} className="min-h-[40px] rounded-xl bg-slate-800 border border-indigo-400/40 text-indigo-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"><span className="flex-1 text-center whitespace-nowrap">🏆 {setting.label}のランキング</span><ChevronRight size={16} className="shrink-0"/></button>}
                           {/* 種族チャレンジは全国ランキング前(ranked=false)でも、この種族の記録へ入れるようにする。
                               開いたときは、いま選んでいる種族と難易度が最初から選ばれている */}
-                          {species&&<button data-species-difficulty-record-link disabled={!!battleTutorial} onClick={()=>openSpeciesChallengeRecords('BATTLE_DIFFICULTY_SELECT',{speciesId:speciesChallengeSelection.speciesId,difficultyId:key})} className="min-h-[40px] rounded-xl bg-slate-800 border border-cyan-400/40 text-cyan-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"><span className="flex-1 text-center whitespace-nowrap">🏆 {lineageById(speciesChallengeSelection.speciesId).name}種のランキング</span><ChevronRight size={16} className="shrink-0"/></button>}
+                          {species&&<button data-species-difficulty-record-link disabled={!!battleTutorial} onClick={()=>openSpeciesChallengeRecords('BATTLE_DIFFICULTY_SELECT',{speciesId:speciesChallengeSelection.speciesId,difficultyId:key,mode:battleMode})} className="min-h-[40px] rounded-xl bg-slate-800 border border-cyan-400/40 text-cyan-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"><span className="flex-1 text-center whitespace-nowrap">🏆 {lineageById(speciesChallengeSelection.speciesId).name}種のランキング</span><ChevronRight size={16} className="shrink-0"/></button>}
                           {/* スキップはクイックモード専用。チケットが無い難易度では出さない */}
                           {quick&&(()=>{const tid=SKIP_TICKETS[key];if(!tid)return null;const have=ownedItems[tid]||0;const policyOk=skipAllowedByPolicy(quickRewardPolicy);if(!policyOk)return(<div className="min-h-[40px] rounded-xl bg-black/25 border border-white/5 flex items-center justify-center px-2 text-[10px] font-black text-slate-500 text-center leading-tight">スキップは「育成」方針のときだけ使えます</div>);return(
                             <div className="flex gap-1.5"><button disabled={!quickUnlocked||have<=0||!!battleTutorial} onClick={()=>{battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';setDifficulty(key);openBattleSkip(key);}} className={`flex-1 min-h-[40px] rounded-xl font-black text-sm flex items-center justify-center gap-1.5 whitespace-nowrap ${quickUnlocked&&have>0?'bg-teal-600 text-white active:scale-95':'bg-slate-800 text-slate-500'}`}><span>スキップ</span><span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${quickUnlocked&&have>0?'bg-black/30 text-teal-100':'bg-black/40 text-slate-500'}`}>{have}枚</span></button><button onClick={()=>setSkipInfoItemId(tid)} aria-label="スキップの説明" className="shrink-0 w-11 min-h-[40px] rounded-xl bg-slate-700 text-white font-black active:scale-95">？</button></div>
@@ -12967,7 +13102,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </div>);
         })()}
 
-        {gameState==='BATTLE_SCORE_RANKING'&&(()=>{const mode=battleModeInfo(scoreRankingMode);const species=scoreRankingMode===BATTLE_MODE_SPECIES_CHALLENGE;return (
+        {gameState==='BATTLE_SCORE_RANKING'&&(()=>{const mode=battleModeInfo(scoreRankingMode);const species=isSpeciesChallengeMode(scoreRankingMode);return (
           <div data-mh-screen className="flex-1 flex flex-col h-full min-h-0 px-4" style={{paddingTop:'calc(.35rem + env(safe-area-inset-top))',paddingBottom:'calc(.35rem + env(safe-area-inset-bottom))'}}>
             <div className="flex items-center gap-1 mb-1 shrink-0"><button aria-label="戻る" onClick={()=>setGameState(scoreRankingBack)} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic uppercase tracking-widest truncate" style={{color:mode.color}}>{`${mode.label}ランキング`}</h2></div>
             <div className="w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1">
@@ -12975,7 +13110,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {/* 一覧はモード選択画面・既存のバトル画面と同じ描画を呼ぶ(画面を複製しない)。
                   種族チャレンジは一般公開まで全国ランキングへ送らないので、同じ画面の作りのまま
                   自分の種族×難易度の記録を出す */}
-              {species?renderSpeciesChallengeRecordBody():renderScoreRankingBody(scoreRankingMode)}
+              {species?renderSpeciesChallengeRecordBody(scoreRankingMode):renderScoreRankingBody(scoreRankingMode)}
             </div>
           </div>);
         })()}
@@ -13883,7 +14018,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const speciesEntries=speciesChallengeLineages();
           const speciesId=speciesEntries.some(l=>l.id===speciesChallengeDebugSpeciesId)?speciesChallengeDebugSpeciesId:(speciesEntries[0]?.id||'');
           const clearedIds=speciesChallengeClearedDifficultyIds(speciesChallengeProgress,speciesId);
-          const saveProgress=async(next)=>{const normalized=normalizeSpeciesChallengeProgress(next);setSpeciesChallengeProgress(normalized);await storeSet(SPECIES_CHALLENGE_PROGRESS_KEY,normalized,false);};
+          const saveProgress=async(next)=>{const normalized=normalizeSpeciesChallengeProgress(next);setSpeciesChallengeProgress(normalized,BATTLE_MODE_SPECIES_CHALLENGE);await storeSet(SPECIES_CHALLENGE_PROGRESS_KEY,normalized,false);};
           const difficultyLabel=id=>DIFFICULTY_SETTINGS[id]?.label||EXTREME_DIFFICULTIES.find(setting=>setting.id===id)?.label||id;
           const resetSpecies=async()=>{if(!window.confirm(`${speciesChallengeSpeciesName(speciesId)}の種族チャレンジ進行だけをリセットしますか？`))return;const next=normalizeSpeciesChallengeProgress(speciesChallengeProgress);delete next.species[speciesId];await saveProgress(next);};
           const challengeEntries=buildUnifiedMonsterEntries(unlockedMonsterIds,masuMons,[]);
@@ -13964,7 +14099,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const chooseSpecies=speciesId=>{selectSe();patchSelection({speciesId,difficultyId:'',heroId:'',allyIds:[],run:null});};
           const chooseHero=heroId=>{selectSe();patchSelection({heroId,allyIds:selectedAllies.filter(id=>id!==heroId),run:null});};
           const toggleAlly=entryId=>{const next=selectedAllies.includes(entryId)?selectedAllies.filter(id=>id!==entryId):[...selectedAllies,entryId];if(!validateSpeciesChallengeAllySelection({speciesId:selection.speciesId,heroId:selection.heroId,allyIds:next,unlockedBaseIds:unlockedMonsterIds,masuMons}).valid)return;selectSe();patchSelection({allyIds:next,run:null});};
-          const makeRun=()=>{const run=createSpeciesChallengeRunState({speciesId:selection.speciesId,difficultyId:selection.difficultyId,heroId:selection.heroId,allyIds:selectedAllies,unlockedBaseIds:unlockedMonsterIds,masuMons});if(!run)return;selectSe();patchSelection({run});startSpeciesChallengeBattle(run,{saveProgress:speciesChallengeSelection.saveProgress===true});};
+          const makeRun=()=>{const run=createSpeciesChallengeRunState({speciesId:selection.speciesId,difficultyId:selection.difficultyId,heroId:selection.heroId,allyIds:selectedAllies,unlockedBaseIds:unlockedMonsterIds,masuMons,mode:battleMode});if(!run)return;selectSe();patchSelection({run});startSpeciesChallengeBattle(run,{saveProgress:speciesChallengeSelection.saveProgress===true});};
           const titles={species:'種族選択',hero:'勇者モン選択',allies:'供モン選択',confirm:'出撃確認'};
           // Base も Masu も同じ共通枠で描く。ここを分けるとモンスターごとに切れ方が変わるので、
           // 渡すのは baseId と画像と（マスモンなら）染色色だけにする
@@ -14116,6 +14251,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             resolveIconUrl={resolveIconUrl}
             selectedAssistantId={selectedAssistantId}
             speciesChallengeProgress={speciesChallengeProgress}
+            speciesChallengeProgressOf={speciesChallengeProgressOf}
+            tacticsRecordsOf={tacticsRecordsOf}
             onBack={returnToHome}
             onOpenNameEdit={(name)=>{setTempName(name);setShowNameEdit(true);}}
             onOpenIconPicker={()=>setShowIconPicker(true)}
@@ -14125,7 +14262,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onOpenAssistantPicker={()=>setShowAssistantPicker(true)}
             onSelectBattleMode={setProfileBattleMode}
             onOpenEventReplayList={()=>setShowEventReplayList(true)}
-            onOpenSpeciesRecords={()=>openSpeciesChallengeRecords('PROFILE')}
+            onOpenSpeciesRecords={(mode)=>openSpeciesChallengeRecords('PROFILE',{mode:mode||BATTLE_MODE_SPECIES_CHALLENGE})}
             rhythmHistoryCount={rhythmHistoryCount}
             unlockedAssistants={assistantsUnlockedFrom(rhythmEventStorySeen)}
             onOpenRhythmHistory={openRhythmHistory}
@@ -16547,7 +16684,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
           {/* 種族チャレンジのクリア結果。デバッグ表示と本番のCHAMPIONで同じカードを使う */}
           {speciesChallengeClearCardNode()}
           <div className="w-full max-w-xs space-y-3">
-            {speciesChallengeBattleRun?<button onClick={()=>{const keepSaving=speciesChallengeSaveRunRef.current;const keepDebug=speciesChallengeFromDebugRef.current;runResultActionOnce(()=>{returnToHome();openSpeciesChallengeSelection({saveProgress:keepSaving,fromDebug:keepDebug});});}} disabled={resultActionPending} className="w-full bg-cyan-700 text-white py-3.5 rounded-2xl font-black disabled:opacity-50">種族チャレンジ選択へ戻る</button>:<>
+            {speciesChallengeBattleRun?<button onClick={()=>{const keepSaving=speciesChallengeSaveRunRef.current;const keepDebug=speciesChallengeFromDebugRef.current;const keepMode=speciesChallengeRunMode(speciesChallengeBattleRunRef.current);runResultActionOnce(()=>{returnToHome();openSpeciesChallengeSelection({saveProgress:keepSaving,fromDebug:keepDebug,mode:keepMode});});}} disabled={resultActionPending} className="w-full bg-cyan-700 text-white py-3.5 rounded-2xl font-black disabled:opacity-50">種族チャレンジ選択へ戻る</button>:<>
               <button onClick={()=>runResultActionOnce(()=>startDebugBattle(extremeRun))} disabled={resultActionPending} className="w-full bg-fuchsia-700 text-white py-3.5 rounded-2xl font-black disabled:opacity-50">同じ条件でもう一度</button>
               <button onClick={()=>runResultActionOnce(()=>{returnToHome();setGameState('DEBUG_SETTINGS');})} disabled={resultActionPending} className="w-full bg-slate-800 text-slate-200 py-3.5 rounded-2xl font-black disabled:opacity-50">デバッグ設定へ戻る</button>
               <button onClick={()=>runResultActionOnce(()=>{returnToHome();setGameState('SETTINGS');openHelp();})} disabled={resultActionPending} className="w-full bg-slate-900 border border-white/10 text-slate-400 py-3.5 rounded-2xl font-black disabled:opacity-50">ヘルプへ戻る</button>
@@ -16571,6 +16708,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
           speciesChallengeClearCardNode={speciesChallengeClearCardNode}
           speciesChallengeFromDebugRef={speciesChallengeFromDebugRef}
           speciesChallengeSaveRunRef={speciesChallengeSaveRunRef}
+          speciesChallengeBattleRunRef={speciesChallengeBattleRunRef}
         />
       )}
 

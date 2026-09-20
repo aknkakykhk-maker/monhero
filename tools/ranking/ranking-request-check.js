@@ -55,6 +55,8 @@ vm.createContext(context);
   const extraSettingLines = (source.slice(extremeEnd, source.indexOf('const ALL_EXTREME_DIFFICULTIES'))
     .match(/^const [A-Z_]+_SETTING = Object\.freeze\(\{.*\}\);$/gm) || []).join('\n');
   vm.runInContext(source.slice(extremeStart, extremeEnd) + '\n' + extraSettingLines + '\n' + source.match(/const ALL_EXTREME_DIFFICULTIES = [^\n]+\n/)[0], context);
+  // タクティクスバトルの難易度(通常9＋極限5)もキーに入る。正本を切り出して動かす
+  vm.runInContext(source.match(/const TACTICS_DIFFICULTY_IDS = Object\.freeze\(\[[\s\S]*?\]\);/)[0], context);
 }
 vm.runInContext(source.slice(start, end) + '\nthis.api={normalizeRankingDifficulty,sbFetchRankings,sbInsertScore,beginNewRankingRun};', context);
 

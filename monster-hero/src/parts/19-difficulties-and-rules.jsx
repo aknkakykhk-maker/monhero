@@ -54,7 +54,37 @@ const SPECIES_CHALLENGE_DIFFICULTY_IDS = Object.freeze([
   ...Object.keys(DIFFICULTY_SETTINGS),
   ...EXTREME_DIFFICULTIES.map(setting=>setting.id),
 ]);
+// タクティクスバトルも、難易度の定義を複製せずIDの順序だけを参照する(種族チャレンジと同じ)。
+// 通常9段階＋極限5段階の14段階。GOD / RAGNAROK は極限チャレンジ専用なので入れない
+// (2026-09-20 ユーザー指示「通常/極限、種族とかはどっちのモードにもあるように」)
+const TACTICS_DIFFICULTY_IDS = Object.freeze([
+  ...Object.keys(DIFFICULTY_SETTINGS),
+  ...EXTREME_DIFFICULTIES.map(setting=>setting.id),
+]);
+// タクティクスバトルの極限は、そのモードの中だけで順に開ける。
+// ・通常の9段階は今までどおり最初から挑める
+// ・極限の入口(EXTREME)は「タクティクスで Master 以上を1回クリア」で開く
+// ・そこから先は「1つ前の極限をクリアすると次が開く」(極限チャレンジと同じ考え方)
+// 見るのは mh_tactics_clears_* だけ。クラシックバトルの進み具合は一切混ぜない
+// (混ぜると、片方で進めたぶんがもう片方の解放に化ける)
+const TACTICS_EXTREME_UNLOCK_DIFFICULTIES = Object.freeze(['Master', 'GrandMaster', 'Hell', 'Legend']);
+const TACTICS_EXTREME_UNLOCK_TEXT = 'タクティクス Master以上クリアで解放';
+const isTacticsDifficultyUnlocked = (difficultyId, tacticsClearCounts = {}) => {
+  const index = TACTICS_DIFFICULTY_IDS.indexOf(difficultyId);
+  if (index < 0) return false;
+  if (!isExtremeDifficultyId(difficultyId)) return true;
+  const counts = tacticsClearCounts && typeof tacticsClearCounts === 'object' ? tacticsClearCounts : {};
+  const cleared = (id) => (Number(counts[id]) || 0) > 0;
+  const previous = TACTICS_DIFFICULTY_IDS[index - 1];
+  return isExtremeDifficultyId(previous) ? cleared(previous) : TACTICS_EXTREME_UNLOCK_DIFFICULTIES.some(cleared);
+};
 const SPECIES_CHALLENGE_PROGRESS_KEY = 'mh_species_challenge_progress_v1';
+// ★タクティクスバトルの種族チャレンジは、進み具合も記録も別のキーへ持つ。
+//   同じ入れ物にすると、クラシックで解放した難易度がタクティクスでも開いてしまい、
+//   自己ベストスコアも桁の違うもの同士(タクティクスは 1/1000 に縮める)が混ざる
+const TACTICS_SPECIES_CHALLENGE_PROGRESS_KEY = 'mh_tactics_species_challenge_progress_v1';
+const speciesChallengeProgressKeyOf = (mode) => (mode === BATTLE_MODE_TACTICS_SPECIES
+  ? TACTICS_SPECIES_CHALLENGE_PROGRESS_KEY : SPECIES_CHALLENGE_PROGRESS_KEY);
 const emptySpeciesChallengeProgress = () => ({ version:1, species:{}, pendingRewards:{} });
 const validSpeciesChallengeId = (speciesId) => typeof speciesId === 'string' && speciesId.length > 0;
 const normalizeSpeciesChallengeDifficultyFlags = (value) => Object.fromEntries(
@@ -225,12 +255,17 @@ const validateSpeciesChallengeAllySelection = ({speciesId,heroId,allyIds,unlocke
   }
   return { valid:true,reason:null };
 };
-const createSpeciesChallengeRunState = ({speciesId,difficultyId,heroId,allyIds,unlockedBaseIds=[],masuMons=[]}={}) => {
+// mode は「クラシックの種族チャレンジ」か「タクティクスの種族チャレンジ」か。
+// 記録の保存先・ランキングのキー・盤面の作りがここで分かれる。
+// 古い形(mode を持たない run)が来ても、これまでどおりクラシックとして扱う
+const createSpeciesChallengeRunState = ({speciesId,difficultyId,heroId,allyIds,unlockedBaseIds=[],masuMons=[],mode=BATTLE_MODE_SPECIES_CHALLENGE}={}) => {
   const validation=validateSpeciesChallengeAllySelection({speciesId,heroId,allyIds,unlockedBaseIds,masuMons});
   if(!validation.valid)return null;
-  const run={ speciesId,difficultyId,heroId,allyIds:[...allyIds],joinedAllyIds:[] };
+  const run={ speciesId,difficultyId,heroId,allyIds:[...allyIds],joinedAllyIds:[],mode:speciesChallengeRunMode({mode}) };
   return run;
 };
+const speciesChallengeRunMode = (run) => (run?.mode === BATTLE_MODE_TACTICS_SPECIES
+  ? BATTLE_MODE_TACTICS_SPECIES : BATTLE_MODE_SPECIES_CHALLENGE);
 const speciesChallengeSelectedAllies = (runState) => Array.isArray(runState?.allyIds) ? [...runState.allyIds] : [];
 const speciesChallengeUnjoinedAllies = (runState) => {
   const joined=new Set(Array.isArray(runState?.joinedAllyIds)?runState.joinedAllyIds:[]);
@@ -298,8 +333,8 @@ const finalizeSpeciesChallengeClearReward = ({ progress,ownedItems,speciesId,dif
 };
 // 2キーを一括保存できないlocal storageでも安全にする4段階確定。
 // pendingを先に残し、実はtargetCountまで、claimed後にpendingを消す。
-const persistSpeciesChallengeClearRewardTransaction = async ({ progress,ownedItems,speciesId,difficultyId,storeSet,storeGet,record=null }={}) => {
-  const savedProgress=await storeGet(SPECIES_CHALLENGE_PROGRESS_KEY,progress,false);
+const persistSpeciesChallengeClearRewardTransaction = async ({ progress,ownedItems,speciesId,difficultyId,storeSet,storeGet,record=null,progressKey=SPECIES_CHALLENGE_PROGRESS_KEY }={}) => {
+  const savedProgress=await storeGet(progressKey,progress,false);
   const savedItems=await storeGet('mh_owned_items',ownedItems,false);
   let currentProgress=normalizeSpeciesChallengeProgress(savedProgress);
   const currentItems=savedItems && typeof savedItems==='object' && !Array.isArray(savedItems) ? savedItems : {};
@@ -308,20 +343,20 @@ const persistSpeciesChallengeClearRewardTransaction = async ({ progress,ownedIte
   // clears を二重に増やさないよう、呼び出し側は1ランにつき1回だけ呼ぶこと。
   if(record){
     currentProgress=updateSpeciesChallengeRecord(currentProgress,speciesId,difficultyId,record);
-    await storeSet(SPECIES_CHALLENGE_PROGRESS_KEY,currentProgress,false);
+    await storeSet(progressKey,currentProgress,false);
   }
   const rewardAmount=speciesChallengeFirstClearReward(difficultyId);
   const itemId=speciesTranscendFruitItemId(speciesId);
   if(!itemId || rewardAmount<=0){
     // 報酬が無くてもクリア済みは保存する。ここを保存し忘れると次の難易度が解放されない
     const result=finalizeSpeciesChallengeClearReward({progress:currentProgress,ownedItems:currentItems,speciesId,difficultyId});
-    await storeSet(SPECIES_CHALLENGE_PROGRESS_KEY,result.nextProgress,false);
+    await storeSet(progressKey,result.nextProgress,false);
     return result;
   }
   const pendingKey=speciesChallengeRewardPendingKey(speciesId,difficultyId);
   if(isSpeciesChallengeFirstRewardClaimed(currentProgress,speciesId,difficultyId)){
     const result=finalizeSpeciesChallengeClearReward({progress:currentProgress,ownedItems:currentItems,speciesId,difficultyId});
-    if(currentProgress.pendingRewards[pendingKey])await storeSet(SPECIES_CHALLENGE_PROGRESS_KEY,result.nextProgress,false);
+    if(currentProgress.pendingRewards[pendingKey])await storeSet(progressKey,result.nextProgress,false);
     return result;
   }
   const savedPending=currentProgress.pendingRewards[pendingKey];
@@ -330,16 +365,16 @@ const persistSpeciesChallengeClearRewardTransaction = async ({ progress,ownedIte
     : { speciesId,difficultyId,itemId,rewardAmount,targetCount:ownedItemCount(currentItems,itemId)+rewardAmount };
   const pendingProgress=markSpeciesChallengeCleared(currentProgress,speciesId,difficultyId);
   pendingProgress.pendingRewards[pendingKey]=pending;
-  await storeSet(SPECIES_CHALLENGE_PROGRESS_KEY,pendingProgress,false);
+  await storeSet(progressKey,pendingProgress,false);
   const latestItems=await storeGet('mh_owned_items',currentItems,false);
   const safeLatestItems=latestItems && typeof latestItems==='object' && !Array.isArray(latestItems)?latestItems:currentItems;
   const nextOwnedItems={ ...safeLatestItems,[itemId]:Math.max(ownedItemCount(safeLatestItems,itemId),pending.targetCount) };
   await storeSet('mh_owned_items',nextOwnedItems,false);
   const claimedProgress=markSpeciesChallengeFirstRewardClaimed(pendingProgress,speciesId,difficultyId);
-  await storeSet(SPECIES_CHALLENGE_PROGRESS_KEY,claimedProgress,false);
+  await storeSet(progressKey,claimedProgress,false);
   const nextProgress=normalizeSpeciesChallengeProgress(claimedProgress);
   delete nextProgress.pendingRewards[pendingKey];
-  await storeSet(SPECIES_CHALLENGE_PROGRESS_KEY,nextProgress,false);
+  await storeSet(progressKey,nextProgress,false);
   return { nextProgress,nextOwnedItems,rewardGranted:true,rewardAmount };
 };
 // 同一タブ内の別クリアが同時に走ってprogressを上書きし合わないよう、保存処理は直列化する。

@@ -26,6 +26,10 @@ vm.runInContext(source.slice(extremeStart, extremeEnd), context);
 const extraSettingLines = (source.slice(extremeEnd, source.indexOf('const ALL_EXTREME_DIFFICULTIES'))
   .match(/^const [A-Z_]+_SETTING = Object\.freeze\(\{.*\}\);$/gm) || []).join('\n');
 vm.runInContext(extraSettingLines + '\n' + source.match(/const ALL_EXTREME_DIFFICULTIES = [^\n]+\n/)[0], context);
+// タクティクスバトルの難易度(通常9＋極限5)もランキングのキーに入るので、本体の定義をそのまま渡す。
+// 難易度が増えても検査側へ書き写さなくていいよう、正本を切り出して動かす
+vm.runInContext(source.match(/const TACTICS_DIFFICULTY_IDS = Object\.freeze\(\[[\s\S]*?\]\);/)[0], context);
+
 vm.runInContext(`${source.slice(normalizeStart, normalizeEnd)}\n${source.slice(stateKeyStart, stateKeyEnd)}\nthis.key=rankingDifficultyKey;`, context);
 
 const checks = [];

@@ -262,7 +262,8 @@ check('画面側はこれまでどおり scene を渡すだけ',
 for (const [key, wired] of Object.entries({
   login: "gainAssistantBond(loadedBonds[activeAssistant], 'login')",
   battle: "addAssistantBond('battle')",
-  challenge: "addAssistantBond(extremeRunRef.current ? 'extreme' : modeBondAction(runMode))",
+  // ★タクティクスバトルの極限は「極限チャレンジで遊んだ」ではないので 'extreme' を渡さない
+  challenge: "addAssistantBond(extremeRunRef.current && !isTacticsMode(runMode) ? 'extreme' : modeBondAction(runMode))",
   ranking: "addAssistantBond('ranking')",
   temple: "addAssistantBond('temple')",
   market: "addAssistantBond('market')",
@@ -278,7 +279,7 @@ for (const [key, wired] of Object.entries({
   enhance: "addAssistantBond('enhance')",
   dye: "addAssistantBond('dye')",
   partySet: "addAssistantBond('partySet')",
-  extreme: "addAssistantBond(extremeRunRef.current ? 'extreme' : modeBondAction(runMode))",
+  extreme: "addAssistantBond(extremeRunRef.current && !isTacticsMode(runMode) ? 'extreme' : modeBondAction(runMode))",
   clear: "addAssistantBond('clear')",
   quickClear: "addAssistantBond('quickClear')",
   proClear: "addAssistantBond('proClear')",
@@ -625,7 +626,7 @@ check('デバッグ戦では、カード分を数えない',
 // 通常の加算はこれまでどおり選択中の助手へ入る(カード分を足したせいで壊れていないこと)
 check('通常のバトル・モード・クリア分は、これまでどおり選択中の助手へ入る',
   has("addAssistantBond('battle');")
-    && has("addAssistantBond(extremeRunRef.current ? 'extreme' : modeBondAction(runMode));")
+    && has("addAssistantBond(extremeRunRef.current && !isTacticsMode(runMode) ? 'extreme' : modeBondAction(runMode));")
     && has("addAssistantBond('clear');"));
 
 // --- ヘルプ・更新履歴 ---

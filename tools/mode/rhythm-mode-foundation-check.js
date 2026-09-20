@@ -29,10 +29,16 @@ check('全難易度に正式譜面フィールド',D.RHYTHM_SONGS.every(song=>D.
 
 const logic=game.match(/const RHYTHM_SETTINGS_KEY = [\s\S]*?const rhythmBestRecord = \(records,songId,difficultyId\) => normalizeRhythmBestRecord\(records\?\.\[songId\]\?\.\[difficultyId\]\);/)?.[0];
 check('normalizeロジックを抽出できる',!!logic);
-if(logic){const c={RHYTHM_SONGS:D.RHYTHM_SONGS,RHYTHM_DIFFICULTIES:D.RHYTHM_DIFFICULTIES,
+// 音量の上限は data/rhythm-mode.js が持つ(0〜200)。切り出したnormalizeが参照するので、
+// 実データからそのまま渡す(検査へ数値を書き写さない)
+if(logic){const c={RHYTHM_VOLUME_MAX:D.RHYTHM_VOLUME_MAX,RHYTHM_SONGS:D.RHYTHM_SONGS,RHYTHM_DIFFICULTIES:D.RHYTHM_DIFFICULTIES,
   RHYTHM_SIDE_MONSTER_OPACITIES:D.RHYTHM_SIDE_MONSTER_OPACITIES,RHYTHM_SIDE_MONSTER_MOTIONS:D.RHYTHM_SIDE_MONSTER_MOTIONS};vm.runInNewContext(`${logic}\nthis.out={DEFAULT_RHYTHM_SETTINGS,normalizeRhythmSettings,normalizeRhythmBestRecord,normalizeRhythmBestRecords};`,c);const L=c.out;
   const settings=L.normalizeRhythmSettings({noteSpeed:'bad',noteSize:999,fastSlowDisplay:'yes',effectAmount:'MAX'});
-  check('設定normalizeが欠損・不正値を既定値へ戻す',JSON.stringify(settings)===JSON.stringify(L.DEFAULT_RHYTHM_SETTINGS));
+  // ★並び順ではなく中身で比べる。normalize は項目を足した順に組み直すので、
+  //   JSON.stringify をそのまま突き合わせると、値は同じなのに落ちる
+  const sameSettings=(a,b)=>{const keys=new Set([...Object.keys(a||{}),...Object.keys(b||{})]);
+    return [...keys].every(key=>JSON.stringify(a?.[key])===JSON.stringify(b?.[key]));};
+  check('設定normalizeが欠損・不正値を既定値へ戻す',sameSettings(settings,L.DEFAULT_RHYTHM_SETTINGS));
   const record=L.normalizeRhythmBestRecord({bestScore:-1,maxCombo:'12.9',clear:1,MARVELOUS:'7',judgments:{MISS:-3}});
   check('BEST normalizeが型・負数を安全化',record.bestScore===0&&record.maxCombo===12&&record.clear===false&&record.judgments.MARVELOUS===7&&record.judgments.MISS===0);
   const all=L.normalizeRhythmBestRecords(null);
