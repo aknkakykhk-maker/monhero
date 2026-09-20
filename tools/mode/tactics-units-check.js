@@ -49,7 +49,7 @@ vm.runInContext(
     + 'payTacticsGuts,recoverTacticsGuts,tacticsAliveSlots,tacticsDownedSlots,isTacticsWipedOut,'
     + 'canTacticsSlotAct,chooseTacticsTarget,withTacticsTarget,tacticsIntentTargets,'
     + 'tacticsTotalHp,tacticsTotalMaxHp,tacticsTotalBaseMaxHp,scaleTacticsUnits,scaleTacticsUnitMaxHp,'
-    + 'damageTacticsTargets,healTacticsBoard,healTacticsAliveBoard,selfDamageTacticsBoard,'
+    + 'damageTacticsTargets,healTacticsBoard,regenTacticsAliveBoard,selfDamageTacticsBoard,'
     + 'wipeTacticsBoard,tacticsTotalGuts,tacticsTotalBaseMaxGuts,'
     + 'scaleTacticsUnitMaxGuts,canTacticsSlotPay,payTacticsGutsAt,recoverTacticsGutsBoard,'
     + 'healTacticsAt,recoverTacticsGutsAt,selfDamageTacticsAt,'
@@ -239,22 +239,42 @@ check('全員倒れていれば合計は0', (() => {
   const board = api.healTacticsBoard(api.wipeTacticsBoard(pair), 100);
   return api.tacticsTotalHp(board) === 0 && api.isTacticsWipedOut(board) === true;
 })());
-// --- 自動再生は倒れた子へ入れない(2026-09-20 ユーザー指示) ---
+// --- 自動再生は「その子の上限 × 率」で1体ずつ(2026-09-20 ユーザー指摘) ---
+// ★合計の上限から量を出して配る形だと、1体だけ傷ついているときに
+//   パーティ全員ぶんがその子へ丸ごと入り、倒れている子が多いほど残った子がよけいに回復する
+// pair は 0番が600(ガッツ100)・2番が400(ガッツ100)
+check('自動再生はその子の上限の率だけ回復する', (() => {
+  const board = api.damageTacticsTargets(api.damageTacticsTargets(pair, [0], 300), [2], 300);
+  const res = api.regenTacticsAliveBoard(board, 0.1, 0);
+  // 0番は600の10%＝60、2番は400の10%＝40。合計の10%(100)を配るのとは違う
+  return res.units[0].hp === 360 && res.units[2].hp === 140 && res.hp === 100;
+})(), JSON.stringify(api.regenTacticsAliveBoard(api.damageTacticsTargets(api.damageTacticsTargets(pair, [0], 300), [2], 300), 0.1, 0).units.map(u => u && u.hp)));
+check('倒れている子がいても、残った子の回復量は変わらない', (() => {
+  // 2番を倒しても、0番が受け取るのは自分の上限の10%(60)のまま
+  const board = api.damageTacticsTargets(api.damageTacticsTargets(pair, [2], 9999), [0], 300);
+  const res = api.regenTacticsAliveBoard(board, 0.1, 0);
+  return res.units[0].hp === 360 && res.hp === 60;
+})(), JSON.stringify(api.regenTacticsAliveBoard(api.damageTacticsTargets(api.damageTacticsTargets(pair, [2], 9999), [0], 300), 0.1, 0).hp));
 check('自動再生は倒れた子のライフを貯めない', (() => {
-  const board = api.damageTacticsTargets(pair, [2], 9999);   // 3枠目を倒す
-  const after = api.healTacticsAliveBoard(board, 9999);
-  return after[2].hp === 0 && after[2].downed === true;
+  const board = api.damageTacticsTargets(pair, [2], 9999);
+  const res = api.regenTacticsAliveBoard(board, 1, 1);
+  return res.units[2].hp === 0 && res.units[2].downed === true;
 })());
-check('自動再生でも立っている子は回復する', (() => {
-  // pair は 0番が600・2番が400。2番を倒し、0番を200削ってから自動再生を回す
-  const board = api.damageTacticsTargets(api.damageTacticsTargets(pair, [2], 9999), [0], 200);
-  const after = api.healTacticsAliveBoard(board, 200);
-  return after[0].hp === 600 && after[2].hp === 0 && after[2].downed === true;
-})(), JSON.stringify(api.healTacticsAliveBoard(api.damageTacticsTargets(api.damageTacticsTargets(pair, [2], 9999), [0], 200), 200).map(u => u && u.hp)));
 check('全員倒れていれば自動再生では誰も起きない', (() => {
-  const after = api.healTacticsAliveBoard(api.wipeTacticsBoard(pair), 99999);
-  return api.isTacticsWipedOut(after) === true;
+  const res = api.regenTacticsAliveBoard(api.wipeTacticsBoard(pair), 1, 1);
+  return api.isTacticsWipedOut(res.units) === true && res.hp === 0;
 })());
+check('上限で頭打ちになったぶんは数えない', (() => {
+  // 満タンの盤面へ回しても、入った量は0
+  const res = api.regenTacticsAliveBoard(pair, 0.5, 0);
+  return res.hp === 0 && api.tacticsTotalHp(res.units) === 1000;
+})());
+check('ガッツも1体ずつその子の上限の率で戻る', (() => {
+  const board = api.payTacticsGutsAt(api.payTacticsGutsAt(pair, 0, 40).units, 2, 40).units;
+  const res = api.regenTacticsAliveBoard(board, 0, 0.1);
+  // どちらもガッツ上限100なので10ずつ
+  return res.units[0].guts === 20 && res.units[2].guts === 20 && res.guts === 20;
+})(), JSON.stringify(api.regenTacticsAliveBoard(api.payTacticsGutsAt(api.payTacticsGutsAt(pair, 0, 40).units, 2, 40).units, 0, 0.1).units.map(u => u && u.guts)));
 // ★回復カード・緊急回復・吸収は今までどおり倒れた子にも入る
 check('全体回復は倒れた子にも入ったまま', (() => {
   const board = api.damageTacticsTargets(pair, [2], 9999);
@@ -443,10 +463,15 @@ check('吸収する量もその子の丈夫さで決まる',
   has('const gain=applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(intent,slotIdx));'));
 // ★自動再生だけは倒れた子へ入れない(2026-09-20 ユーザー指示)。
 //   入れてしまうと、何もしなくても毎ターン貯まって勝手に復活し「一生死ななくなる」
-check('自動再生は倒れた子へ入れない',
-  has('if(tacticsHealAlive(autoHealVal)===null)')
-    && has('const tacticsHealAlive = (amount) => isTacticsMode(runMode)')
-    && has('commitTacticsUnits(healTacticsAliveBoard(tacticsUnitsRef.current, amount))'));
+check('自動再生は1体ずつその子の上限の率で回す',
+  has('const tacticsRegen = (hpRate, gutsRate) => {')
+    && has('const result = regenTacticsAliveBoard(tacticsUnitsRef.current, hpRate, gutsRate);')
+    && has('const regen=tacticsRegen(autoHpRecoveryRate,soulAdjustedGutsRecoveryRate);'));
+// ★合計の上限から量を出す書き方が戻っていないか
+check('自動再生を合計の上限から出していない',
+  !has('const autoHealVal=Math.floor(liveEffectiveMaxHp()*autoHpRecoveryRate);\n      if (autoHealVal>0) { if(tactics'));
+check('画面に出す数字は実際に入ったぶん',
+  has('if (regen) { currentHp=regen.total; autoHealVal=regen.hp; gutsRegen=regen.guts; }'));
 // ★回復は「全体回復」と「単体回復」で分かれる(2026-09-19 ユーザーの整理)。
 //   全体回復＝回復カード・緊急回復、単体回復＝ガードの余り・ドレイン・吸収。
 //   自動再生は全体だが、倒れた子には入らない(2026-09-20)
