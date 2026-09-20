@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c0fd4dfed908bf41
+// generated-sha256: 9a93dd1d15d61e45
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -92,7 +92,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-21 07:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-21 07:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -35809,10 +35809,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <button aria-label="戻る" onClick={returnToHome} className="p-3 text-slate-400 active:scale-90 disabled:opacity-25"><ArrowLeft/></button>
             </div>
             <div className="w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll">
-              <div className="text-center text-[8px] tracking-[.2em] text-slate-400 font-black shrink-0">MONHERO BATTLE</div>
-              <h2 className="text-center text-xl font-black leading-tight shrink-0">モンヒロバトル</h2>
-              <p className="text-center text-[10px] text-slate-400 mt-1 mb-3 shrink-0">どのバトルで遊ぶかを選びます</p>
-              <div data-battle-systems={systems.length} className="flex flex-col gap-2 shrink-0">
+              <h2 className="text-center text-lg font-black leading-tight shrink-0 mt-0.5">モンヒロバトル</h2>
+              <p className="text-center text-[10px] text-slate-400 mt-0.5 mb-1.5 shrink-0">どのバトルで遊ぶかを選びます</p>
+              {/* ★カード3枚＋助手のひとことが、いちばん小さい端末(375×667)でも1画面へ収まる高さにしてある。
+                  行を足す・余白を広げるときは tools/battle/battle-system-fit-check.js を通すこと */}
+              <div data-battle-systems={systems.length} className="flex flex-col gap-0.5 shrink-0">
                 {systems.map(sys=>{
                   // ★まだ遊べないものは、枠だけ出して押せなくする(2026-09-20 ユーザー指示)。
                   //   モンヒロビートの「準備中」と同じ扱い。デバッグからは今までどおり遊べる
@@ -35829,10 +35830,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     <button data-battle-system={sys.id} data-battle-system-soon={soon?'1':undefined}
                       disabled={soon} onClick={()=>openBattleSystem(sys.id)}
                       aria-label={soon?`${sys.label}（準備中）`:sys.label}
-                      className={`w-full px-3 pt-3 pb-2 text-left transition-transform ${soon?'opacity-60':'active:scale-[.98]'}`}>
+                      className={`w-full px-3 pt-2 pb-1 text-left transition-transform ${soon?'opacity-60':'active:scale-[.98]'}`}>
                       <div className="flex items-center gap-2">
-                        <span className="text-2xl leading-none">{sys.emoji}</span>
-                        <span className="text-base font-black leading-tight" style={{color:soon?'#94a3b8':sys.color}}>{sys.label}</span>
+                        <span className="text-lg leading-none">{sys.emoji}</span>
+                        <span className="text-[15px] font-black leading-tight" style={{color:soon?'#94a3b8':sys.color}}>{sys.label}</span>
                         {soon&&(
                           <span className="ml-auto text-[9px] font-black text-slate-300 border border-slate-400/60 rounded px-1.5 py-0.5">準備中</span>
                         )}
@@ -35843,24 +35844,24 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                           <span className="ml-auto text-[8px] font-black text-amber-300 border border-amber-400/60 rounded px-1 py-0.5">DEBUG</span>
                         )}
                       </div>
-                      <div className="text-[11px] text-slate-200 font-bold leading-snug mt-1.5">{sys.tagline}</div>
+                      <div className="text-[11px] text-slate-200 font-bold leading-snug mt-1">{sys.tagline}</div>
                       {/* 売りを3行。どの仕組みも同じ数・同じ並びなので、見比べて選べる */}
-                      <ul className="mt-1.5 space-y-1">{sys.highlights.map(([icon,text])=>(
-                        <li key={text} className="flex items-center gap-1.5 rounded-lg bg-black/35 px-2 py-1 text-[10px] font-black text-slate-200">
-                          <span className="shrink-0">{icon}</span><span className="min-w-0 flex-1 leading-snug">{text}</span>
+                      <ul className="mt-1 space-y-0.5">{sys.highlights.map(([icon,text])=>(
+                        <li key={text} className="flex items-center gap-1.5 rounded-lg bg-black/35 px-2 py-px text-[10px] font-black text-slate-200">
+                          <span className="shrink-0">{icon}</span><span className="min-w-0 flex-1 leading-tight">{text}</span>
                         </li>
                       ))}</ul>
-                      <div className="text-[9px] text-slate-400 leading-snug mt-1.5">{soon?'いま準備しています。遊べるようになったらお知らせします':beta?'いまはタクティクスプロだけ遊べます。ほかのモードは準備中です':sys.note}</div>
+                      <div className="text-[9px] text-slate-400 leading-snug mt-1">{soon?'いま準備しています。遊べるようになったらお知らせします':beta?'いまはタクティクスプロだけ遊べます。ほかのモードは準備中です':sys.note}</div>
                     </button>
                     <button data-battle-system-info={sys.id} onClick={()=>setModeInfoId(sys.id)}
                       aria-label={`${sys.label}の詳しいルール`}
-                      className="w-full min-h-[34px] border-t border-white/10 bg-black/30 text-[10px] font-black text-slate-300 active:scale-[.98] flex items-center justify-center gap-1">
+                      className="w-full min-h-[28px] border-t border-white/10 bg-black/30 text-[10px] font-black text-slate-300 active:scale-[.98] flex items-center justify-center gap-1">
                       詳しいルール<ChevronRight size={12} className="shrink-0"/>
                     </button>
                   </div>);
                 })}
               </div>
-              <div className="mt-3 shrink-0"><AssistantBubble scene="battleSystemSelect" compact/></div>
+              <div className="mt-1 shrink-0"><AssistantBubble scene="battleSystemSelect" compact/></div>
             </div>
           </div>);
         })()}

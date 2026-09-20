@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 78dae69494cf6122
+// source-sha256: 2c9f02c6740db48e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c0fd4dfed908bf41
+// generated-sha256: 9a93dd1d15d61e45
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-21 07:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-21 07:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -60060,15 +60060,13 @@ function MonsterHeroGame() {
         className: "p-3 text-slate-400 active:scale-90 disabled:opacity-25"
       }, /*#__PURE__*/React.createElement(ArrowLeft, null))), /*#__PURE__*/React.createElement("div", {
         className: "w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "text-center text-[8px] tracking-[.2em] text-slate-400 font-black shrink-0"
-      }, "MONHERO BATTLE"), /*#__PURE__*/React.createElement("h2", {
-        className: "text-center text-xl font-black leading-tight shrink-0"
+      }, /*#__PURE__*/React.createElement("h2", {
+        className: "text-center text-lg font-black leading-tight shrink-0 mt-0.5"
       }, "\u30E2\u30F3\u30D2\u30ED\u30D0\u30C8\u30EB"), /*#__PURE__*/React.createElement("p", {
-        className: "text-center text-[10px] text-slate-400 mt-1 mb-3 shrink-0"
+        className: "text-center text-[10px] text-slate-400 mt-0.5 mb-1.5 shrink-0"
       }, "\u3069\u306E\u30D0\u30C8\u30EB\u3067\u904A\u3076\u304B\u3092\u9078\u3073\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
         "data-battle-systems": systems.length,
-        className: "flex flex-col gap-2 shrink-0"
+        className: "flex flex-col gap-0.5 shrink-0"
       }, systems.map(sys => {
         // ★まだ遊べないものは、枠だけ出して押せなくする(2026-09-20 ユーザー指示)。
         //   モンヒロビートの「準備中」と同じ扱い。デバッグからは今までどおり遊べる
@@ -60095,13 +60093,13 @@ function MonsterHeroGame() {
           disabled: soon,
           onClick: () => openBattleSystem(sys.id),
           "aria-label": soon ? `${sys.label}（準備中）` : sys.label,
-          className: `w-full px-3 pt-3 pb-2 text-left transition-transform ${soon ? 'opacity-60' : 'active:scale-[.98]'}`
+          className: `w-full px-3 pt-2 pb-1 text-left transition-transform ${soon ? 'opacity-60' : 'active:scale-[.98]'}`
         }, /*#__PURE__*/React.createElement("div", {
           className: "flex items-center gap-2"
         }, /*#__PURE__*/React.createElement("span", {
-          className: "text-2xl leading-none"
+          className: "text-lg leading-none"
         }, sys.emoji), /*#__PURE__*/React.createElement("span", {
-          className: "text-base font-black leading-tight",
+          className: "text-[15px] font-black leading-tight",
           style: {
             color: soon ? '#94a3b8' : sys.color
           }
@@ -60113,29 +60111,29 @@ function MonsterHeroGame() {
         }, "\u03B2\u7248"), !soon && !beta && sys.id === BATTLE_SYSTEM_TACTICS && !TACTICS_MODE_PUBLIC_RELEASE && /*#__PURE__*/React.createElement("span", {
           className: "ml-auto text-[8px] font-black text-amber-300 border border-amber-400/60 rounded px-1 py-0.5"
         }, "DEBUG")), /*#__PURE__*/React.createElement("div", {
-          className: "text-[11px] text-slate-200 font-bold leading-snug mt-1.5"
+          className: "text-[11px] text-slate-200 font-bold leading-snug mt-1"
         }, sys.tagline), /*#__PURE__*/React.createElement("ul", {
-          className: "mt-1.5 space-y-1"
+          className: "mt-1 space-y-0.5"
         }, sys.highlights.map(([icon, text]) => /*#__PURE__*/React.createElement("li", {
           key: text,
-          className: "flex items-center gap-1.5 rounded-lg bg-black/35 px-2 py-1 text-[10px] font-black text-slate-200"
+          className: "flex items-center gap-1.5 rounded-lg bg-black/35 px-2 py-px text-[10px] font-black text-slate-200"
         }, /*#__PURE__*/React.createElement("span", {
           className: "shrink-0"
         }, icon), /*#__PURE__*/React.createElement("span", {
-          className: "min-w-0 flex-1 leading-snug"
+          className: "min-w-0 flex-1 leading-tight"
         }, text)))), /*#__PURE__*/React.createElement("div", {
-          className: "text-[9px] text-slate-400 leading-snug mt-1.5"
+          className: "text-[9px] text-slate-400 leading-snug mt-1"
         }, soon ? 'いま準備しています。遊べるようになったらお知らせします' : beta ? 'いまはタクティクスプロだけ遊べます。ほかのモードは準備中です' : sys.note)), /*#__PURE__*/React.createElement("button", {
           "data-battle-system-info": sys.id,
           onClick: () => setModeInfoId(sys.id),
           "aria-label": `${sys.label}の詳しいルール`,
-          className: "w-full min-h-[34px] border-t border-white/10 bg-black/30 text-[10px] font-black text-slate-300 active:scale-[.98] flex items-center justify-center gap-1"
+          className: "w-full min-h-[28px] border-t border-white/10 bg-black/30 text-[10px] font-black text-slate-300 active:scale-[.98] flex items-center justify-center gap-1"
         }, "\u8A73\u3057\u3044\u30EB\u30FC\u30EB", /*#__PURE__*/React.createElement(ChevronRight, {
           size: 12,
           className: "shrink-0"
         })));
       })), /*#__PURE__*/React.createElement("div", {
-        className: "mt-3 shrink-0"
+        className: "mt-1 shrink-0"
       }, /*#__PURE__*/React.createElement(AssistantBubble, {
         scene: "battleSystemSelect",
         compact: true

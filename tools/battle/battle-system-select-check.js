@@ -184,7 +184,12 @@ check('準備中の仕組みでも詳しいルールは読める', (() => {
   return !info.includes('disabled');
 })());
 check('売りの3行を画面へ出している',
-  has('<ul className="mt-1.5 space-y-1">{sys.highlights.map(([icon,text])=>('));
+  has('{sys.highlights.map(([icon,text])=>(') && has('<li key={text}'));
+// ★1画面に収まる高さは tools/battle/battle-system-fit-check.js が実際に測る。
+//   ここでは「収まる作りを崩していないか」の目印だけを見る
+check('1画面に収める作りが残っている',
+  has('data-battle-system-card={sys.id}')
+    && source.includes('tools/battle/battle-system-fit-check.js を通すこと'));
 
 // ===== ②-2 β版（タクティクスプロだけ先に出す） =====
 // 2026-09-20 ユーザー指示「公開の前にβ版としてプロモードだけ出来るようにして」。

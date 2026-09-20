@@ -103,6 +103,10 @@ const FORCE_CHECKS = [
   // ファイル名の語(app・home・core)では拾えないので名指しする
   { re: /^monster-hero\/(src\/parts\/(10-core|60-app|69-screen-home)\.jsx|data\/(help|assistants)\.js)$/,
     checks: ['battle/battle-system-select-check.js'], why: 'モンヒロバトルの入口と導線' },
+  // 入口のカードは、行を1つ足すだけで小さい端末から簡単にあふれる。
+  // あふれてもエラーは出ず、大きい端末では気づけない(2026-09-21・ユーザー報告)
+  { re: /^monster-hero\/src\/parts\/(10-core|60-app)\.jsx$/,
+    checks: ['battle/battle-system-fit-check.js'], why: 'バトルの入口が1画面に収まるか' },
   // 画面を足したときのBGMの決め忘れ。対応表へ載せ忘れてもエラーは出ず、
   // その画面だけ静かに無音になるので、遊んだ人が言うまで気づけない(2回やっている)
   { re: /^monster-hero\/src\/parts\/60-app\.jsx$/,
