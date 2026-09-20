@@ -77,7 +77,7 @@ const check = (name, ok, detail = '') => {
 
     await page.getByRole('button', { name: 'TAP TO START' }).click({ timeout: 60000 });
     await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
-    await page.getByRole('button', { name: 'バトル' }).waitFor({ timeout: 30000 });
+    await page.getByRole('button', { name: 'モンヒロバトル' }).waitFor({ timeout: 30000 });
     for (let i = 0; i < 6; i++) {
       const btn = page.getByRole('button', { name: /受け取る|閉じる|はじめる|OK/ }).first();
       if (await btn.count() === 0 || !(await btn.isVisible().catch(() => false))) break;
@@ -86,10 +86,20 @@ const check = (name, ok, detail = '') => {
     }
 
     // --- ① 公開前なので、ふだんの入口には出ない ---
-    await page.getByRole('button', { name: 'バトル' }).dispatchEvent('click', {}, { timeout: 15000 });
+    await page.getByRole('button', { name: 'モンヒロバトル' }).dispatchEvent('click', {}, { timeout: 15000 });
+    await page.waitForTimeout(600);
+    await page.locator('[data-battle-system="systemClassic"]').dispatchEvent('click', {}, { timeout: 15000 });
     await page.getByText('BATTLE MODE').first().waitFor({ timeout: 15000 });
     const publicModes = await page.evaluate(() => document.body.innerText.replace(/\s+/g, ' '));
     check('公開フラグOFFのあいだは、ふだんの入口に出ない', !publicModes.includes(MODE_LABEL), MODE_LABEL);
+    await page.evaluate(() => { document.querySelector('button[aria-label="戻る"]')?.click(); });
+    await page.waitForTimeout(800);
+    // 入口そのものにも仕組みごと出ない(2026-09-20 に1画面増えた)
+    const publicSystems = await page.evaluate(() =>
+      [...document.querySelectorAll('[data-battle-system]')].map(b => b.getAttribute('data-battle-system')));
+    check('公開フラグOFFのあいだは、入口にも新モードの仕組みが出ない',
+      !publicSystems.includes('systemTactics'), publicSystems.join(','));
+    // 入口からもう一度戻ってHOMEへ(画面が1段増えたぶん、戻るも1回多い)
     await page.evaluate(() => { document.querySelector('button[aria-label="戻る"]')?.click(); });
     await page.waitForTimeout(800);
 
@@ -98,6 +108,10 @@ const check = (name, ok, detail = '') => {
     await page.getByRole('button', { name: 'ヘルプ' }).dispatchEvent('click', {}, { timeout: 15000 });
     await page.locator('button', { hasText: /^💊$/ }).dispatchEvent('click', {}, { timeout: 15000 });
     await page.locator('[data-debug-battle-mode]').dispatchEvent('click', {}, { timeout: 15000 });
+    await page.locator('[data-battle-systems]').first().waitFor({ timeout: 15000 });
+    check('デバッグの入口には新モードの仕組みが出る',
+      await page.locator('[data-battle-system="systemTactics"]').count() > 0);
+    await page.locator('[data-battle-system="systemTactics"]').dispatchEvent('click', {}, { timeout: 15000 });
     await page.getByText('BATTLE MODE').first().waitFor({ timeout: 15000 });
     const cardCount = await page.evaluate((label) =>
       [...document.querySelectorAll('article')].filter(a => a.textContent.includes(label)).length, MODE_LABEL);

@@ -81,7 +81,9 @@ const seed = () => {
     if (!closed) break;
   }
 
-  await page.evaluate(() => { const b = document.querySelector('button[aria-label="バトル"]'); if (b) b.click(); });
+  await page.evaluate(() => { const b = document.querySelector('button[aria-label="モンヒロバトル"]'); if (b) b.click(); });
+  await page.waitForTimeout(600);
+  await page.evaluate(() => { const b = document.querySelector('[data-battle-system="systemClassic"]'); if (b) b.click(); });
   await page.waitForTimeout(1500);
   await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => x.textContent.trim() === 'ブリーダーLv'); if (b) b.click(); });
   await page.waitForTimeout(4000);

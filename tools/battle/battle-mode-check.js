@@ -467,9 +467,12 @@ check('新しい3画面がある',
 // HOMEの「バトル」は新しいモード選択へ入る(本番の入口)
 // HOME は 69-screen-home.jsx へ切り出した。行き先の指定は本体に残り、画面へは
 // onOpenBattle だけを渡している。本体の中身と画面の結線を2段で見る
-check('ふだんの「バトル」はモード選択へ入る',
-  has("onOpenBattle={()=>{setModeSelectTab('mode');setGameState('BATTLE_MODE_SELECT');}}")
-    && has("onClick={onOpenBattle} aria-label=\"バトル\""));
+// 2026-09-20 ユーザー指示で、モード選択の1つ上に「どのバトルで遊ぶか」の画面を増やした。
+// HOMEの名前も正式名称の「モンヒロバトル」にした(CLAUDE.md ⑤)
+check('ふだんの「モンヒロバトル」は仕組みの選択へ入る',
+  has('onOpenBattle={openBattleSystemSelect}')
+    && has("const openBattleSystemSelect = () => { setModeSelectTab('mode'); setGameState('BATTLE_SYSTEM_SELECT'); };")
+    && has('onClick={onOpenBattle} aria-label="モンヒロバトル"'));
 check('旧バトル画面はデバッグからだけ開ける',
   has('旧バトル画面を開く（見比べ用）')
     && (source.match(/setGameState\('BATTLE_MENU'\)/g) || []).length === 2,
@@ -478,8 +481,9 @@ check('旧バトル画面はデバッグからだけ開ける',
 // 通常プレイのBATTLE MODEには出さないこと自体は species-challenge 系checkが見る。
 // 極限チャレンジはモードカードを持たない(2026-09-19 ユーザー指示)。チャレンジの難易度選択に
 // 「極限」タブとして入ったので、ここへ EXTREME_MODE を戻してはいけない
-const MODE_LIST_LINE = 'const modes=[...BATTLE_MODES,...((SPECIES_CHALLENGE_PUBLIC_RELEASE||debugBattle)?[SPECIES_CHALLENGE_MODE]:[]),...((TACTICS_MODE_PUBLIC_RELEASE||debugBattle)?[TACTICS_MODE]:[])];';
-check('モード選択は極限チャレンジのカードを出さず、残りを横スライドで並べる',
+const MODE_LIST_LINE = 'const modes=battleSystemModes(battleSystem,{debugBattle}).map(id=>battleModeInfo(id));';
+// ★クイックはここへ並べない(仕組みの画面から直に難易度選択へ入る・2026-09-20)
+check('モード選択は極限チャレンジもクイックも出さず、残りを横スライドで並べる',
   has(MODE_LIST_LINE) && count(MODE_LIST_LINE) === 2
     && has('aria-label="前のモード"') && has('aria-label="次のモード"')
     && has('snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2.5'),

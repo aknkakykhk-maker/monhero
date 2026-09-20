@@ -58,7 +58,9 @@ const openDifficultySelect = async (page, extremeClears) => {
     if (!closed) break;
     await page.waitForTimeout(450);
   }
-  await page.evaluate(() => document.querySelector('button[aria-label="バトル"]')?.click());
+  await page.evaluate(() => document.querySelector('button[aria-label="モンヒロバトル"]')?.click());
+  await page.waitForTimeout(600);
+  await page.evaluate(() => document.querySelector('[data-battle-system="systemClassic"]')?.click());
   await page.waitForTimeout(1200);
   // モード選択のカルーセルから極限チャレンジへ入る
   await page.evaluate(() => {

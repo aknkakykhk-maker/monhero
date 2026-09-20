@@ -137,15 +137,18 @@ const serve = () => new Promise((resolve) => {
     ` });
     await page.getByRole('button', { name: 'TAP TO START' }).click({ timeout: 60000 });
     await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
-    await page.getByRole('button', { name: 'バトル' }).waitFor({ timeout: 30000 });
+    await page.getByRole('button', { name: 'モンヒロバトル' }).waitFor({ timeout: 30000 });
     for (let i = 0; i < 6; i++) {
       const btn = page.getByRole('button', { name: /受け取る|閉じる|はじめる|OK/ }).first();
       if (await btn.count() === 0 || !(await btn.isVisible().catch(() => false))) break;
       await btn.dispatchEvent('click').catch(() => {});
       await page.waitForTimeout(250);
     }
-    await page.getByRole('button', { name: 'バトル' }).dispatchEvent('click', {}, { timeout: 15000 });
-    await page.getByText('BATTLE MODE').first().waitFor({ timeout: 15000 });
+    await page.getByRole('button', { name: 'モンヒロバトル' }).dispatchEvent('click', {}, { timeout: 15000 });
+    await page.waitForTimeout(600);
+    // クイックは中のモードが1つなので、入口で選ぶとモード選択を飛ばして難易度選択へ進む
+    await page.locator('[data-battle-system="systemQuick"]').dispatchEvent('click', {}, { timeout: 15000 });
+    await page.locator('[data-difficulty-tabs]').first().waitFor({ timeout: 15000 });
 
     // モードのカードから難易度選択を開く
     const openDifficulty = async (label) => {
@@ -155,6 +158,15 @@ const serve = () => new Promise((resolve) => {
         [...card.querySelectorAll('button')].find(b => b.textContent.includes('難易度を選ぶ'))?.click();
       }, label);
       await page.waitForTimeout(1500);
+    };
+    // ★2026-09-20 ユーザー指示で、モード選択の1つ上に「どのバトルで遊ぶか」の画面が増えた。
+    //   クイックは中のモードが1つなので、入口で選ぶとそのまま難易度選択へ進む。
+    //   ほかのモードは「これまでのバトル」を選んでから、モード選択のカードで開く
+    const openSystem = async (systemId) => {
+      await page.evaluate(() => { document.querySelector('button[aria-label="モンヒロバトル"]')?.click(); });
+      await page.waitForTimeout(700);
+      await page.evaluate((id) => { document.querySelector(`[data-battle-system="${id}"]`)?.click(); }, systemId);
+      await page.waitForTimeout(1300);
     };
     const back = async () => {
       await page.evaluate(() => { document.querySelector('button[aria-label="戻る"]')?.click(); });
@@ -172,7 +184,7 @@ const serve = () => new Promise((resolve) => {
       [...document.querySelectorAll('article h3')].map(h => h.textContent.trim()));
 
     // --- ② クイック: タブが出て、押すと極限へ切り替わる ---
-    await openDifficulty('クイックモード');
+    // 冒頭で入口の「クイックモード」を選んでいるので、もう難易度選択に立っている
     check('クイックの難易度選択が開ける（エラー画面に落ちていない）', await difficultyScreenOk());
     const quickTabs = await tabLabels();
     check('クイックに「通常 / 極限」タブが出る', quickTabs.length === 2 && /通常/.test(quickTabs[0]) && /極限/.test(quickTabs[1]),
@@ -190,18 +202,20 @@ const serve = () => new Promise((resolve) => {
     check('極限タブにクイックの極限が並ぶ', extremeTitles.includes('GOD'), extremeTitles.join(','));
     // 開き直すと通常から
     await back();
-    await openDifficulty('クイックモード');
+    await openSystem('systemQuick');
     const reopened = await cardTitles();
     check('開き直すと通常から始まる', reopened.includes('Beginner'), reopened.slice(0, 3).join(','));
     await back();
 
     // --- ③ 極限を持たないモードにはタブが出ない ---
+    await openSystem('systemClassic');
     await openDifficulty('プロモード');
     check('プロの難易度選択が開ける（エラー画面に落ちていない）', await difficultyScreenOk());
     check('プロにはタブが出ない', (await tabLabels()).length === 0);
     await back();
 
     // --- ④ チャレンジ: 極限タブから極限の難易度へ行き来できる ---
+    await openSystem('systemClassic');
     await openDifficulty('チャレンジモード');
     check('チャレンジの難易度選択が開ける（エラー画面に落ちていない）', await difficultyScreenOk());
     const challengeTabs = await tabLabels();

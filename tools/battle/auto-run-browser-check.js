@@ -80,17 +80,18 @@ const seed = () => {
     await page.waitForTimeout(2200);
     await dismissOverlays();
 
-    // HOME → バトル → クイックモードの難易度選択
-    await page.evaluate(() => document.querySelector('button[aria-label="バトル"]')?.click());
+    // HOME → モンヒロバトル → クイックモードの難易度選択
+    // ★2026-09-20 ユーザー指示でモード選択の1つ上に画面が増えた。クイックは
+    //   中のモードが1つだけなので、入口で選ぶとそのまま難易度選択へ進む
+    await page.evaluate(() => document.querySelector('button[aria-label="モンヒロバトル"]')?.click());
     await page.waitForTimeout(1200);
     const openedQuick = await page.evaluate(() => {
-      const card = [...document.querySelectorAll('article')].find((a) => a.textContent.includes('クイックモード'));
-      const b = card && [...card.querySelectorAll('button')].find((x) => /難易度を選ぶ/.test(x.textContent));
+      const b = document.querySelector('[data-battle-system="systemQuick"]');
       if (b) { b.click(); return true; }
       return false;
     });
     await page.waitForTimeout(1300);
-    check('クイックモードの難易度選択を開ける', openedQuick);
+    check('入口のクイックモードから難易度選択を開ける', openedQuick);
 
     await clickMatching('この難易度で挑戦');
     await page.waitForTimeout(1500);

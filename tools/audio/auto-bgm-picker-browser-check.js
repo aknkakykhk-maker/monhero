@@ -67,12 +67,12 @@ const seed = () => {
     await pointerDown({ text:'TAP TO START' }); await page.waitForTimeout(2200);
     await pointerDown({ aria:'トップ画面へ進む' }); await page.waitForTimeout(2200);
     await dismiss();
-    await page.evaluate(() => document.querySelector('button[aria-label="バトル"]')?.click());
+    await page.evaluate(() => document.querySelector('button[aria-label="モンヒロバトル"]')?.click());
+    await page.waitForTimeout(600);
+    await page.evaluate(() => document.querySelector('[data-battle-system="systemQuick"]')?.click());
     await page.waitForTimeout(1200);
-    await page.evaluate(() => {
-      const c = [...document.querySelectorAll('article')].find(a => a.textContent.includes('クイックモード'));
-      const b = c && [...c.querySelectorAll('button')].find(x => /難易度を選ぶ/.test(x.textContent)); b?.click();
-    });
+    // ★クイックは1つ上の入口で選んだ時点で難易度選択へ進んでいる(2026-09-20)。
+    //   モード選択のカルーセルには並ばないので、ここでカードを探す必要はない
     await page.waitForTimeout(1300);
     await clickMatching('この難易度で挑戦'); await page.waitForTimeout(1500);
     await page.evaluate(() => { [...document.querySelectorAll('article,button')].find(x => /スエゾー/.test(x.textContent))?.click(); });
