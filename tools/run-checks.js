@@ -106,6 +106,9 @@ const FORCE_CHECKS = [
   // 譜面(data/rhythm-mode.js)を触ったら、終点フリックの置き場所は必ず見る。
   // 語の当たりだけでは本数の上限で落ちることがあり、曲を足した回だけ静かに見逃す(2026-09-18)
   { re: /^monster-hero\/data\/rhythm-mode\.js$/, checks: ['mode/rhythm-end-flick-swing-check.js'], why: '譜面の終点フリックの置き場所' },
+  // バトルの演出は「出す→待つ→消す」。ランを片付けると**消すほうへ到達しない**ので、
+  // 片付けで捨て忘れると次のランの画面に残る(2026-09-20・誰もいない間合いに技名が出た)
+  { re: /^monster-hero\/src\/parts\/60-app\.jsx$/, checks: ['battle/run-abandon-fx-check.js'], why: 'ランを片付けたときの演出' },
   // 入力の割り当て(rhythmMatchInputBatch)は、片側を直すともう片側が静かに壊れる。
   // 2026-09-18、持ち替えの直しが「押さえている上に重なるノーツを叩けない」を生んだ
   { re: /^monster-hero\/data\/rhythm-mode\.js$/, checks: ['mode/rhythm-tap-during-hold-check.js', 'mode/rhythm-finger-swap-check.js'], why: '押さえながら叩く・指の持ち替え' },
