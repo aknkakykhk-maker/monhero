@@ -433,8 +433,14 @@ check('ガードの余りはその子のライフとガッツになる',
 check('誰にも当たらなかったターンはダメージの数字を出さない',
   has("addPopup('当たらなかった！','hero','text-cyan-300 font-black text-xl drop-shadow-md');")
     && has('if(!targets.length){'));
-check('吸収・緊急回復は盤面へ配る',
-  ['const absorbed=tacticsHeal(hpGain);', 'const emergencyHp=tacticsHeal(recoverHp);'].every(has));
+check('緊急回復は盤面へ配る', has('const emergencyHp=tacticsHeal(recoverHp);'));
+// ★吸収は「狙われた子に起きたこと」(2026-09-20 ユーザー指示)。
+//   盤面へ配ると、殴られるたびに全員が回復して倒れた子まで勝手に起き上がる
+check('吸収は狙われた子だけに入る',
+  has("const absorbSlots=isTacticsMode(runMode)\n            ? tacticsIntentTargets(intent,tacticsUnitsRef.current,actingEnemyDist) : null;")
+    && has('units=recoverTacticsGutsAt(healTacticsAt(units,slotIdx,gain),slotIdx,guts);'));
+check('吸収する量もその子の丈夫さで決まる',
+  has('const gain=applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(intent,slotIdx));'));
 // ★自動再生だけは倒れた子へ入れない(2026-09-20 ユーザー指示)。
 //   入れてしまうと、何もしなくても毎ターン貯まって勝手に復活し「一生死ななくなる」
 check('自動再生は倒れた子へ入れない',
@@ -442,7 +448,7 @@ check('自動再生は倒れた子へ入れない',
     && has('const tacticsHealAlive = (amount) => isTacticsMode(runMode)')
     && has('commitTacticsUnits(healTacticsAliveBoard(tacticsUnitsRef.current, amount))'));
 // ★回復は「全体回復」と「単体回復」で分かれる(2026-09-19 ユーザーの整理)。
-//   全体回復＝回復カード・緊急回復・吸収、単体回復＝ガードの余り・ドレイン。
+//   全体回復＝回復カード・緊急回復、単体回復＝ガードの余り・ドレイン・吸収。
 //   自動再生は全体だが、倒れた子には入らない(2026-09-20)
 check('回復カードは全体回復',
   has('const healedAll=tacticsHeal(cardHeal);')
@@ -689,9 +695,14 @@ check('置けるかの判定も画面へ渡す', has('tacticsCanAssign={tacticsC
   // ★距離枠の上へ、下の枠と同じ4列でそろえて出す(2026-09-19 ユーザー依頼)。
   //   スロットの中の小さい帯は、小さすぎて読めないのでやめた
   check('距離枠の上に1体ずつの帯を出す',
-    hasScreen('<div data-tactics-party className="w-full grid grid-cols-4 gap-1">')
+    hasScreen('<div data-tactics-party className="relative w-full grid grid-cols-4 gap-1">')
       && hasScreen('data-tactics-hp={u?`${u.hp}/${u.maxHp}`:undefined}')
       && hasScreen('data-tactics-guts={u?`${u.guts}/${u.maxGuts}`:undefined}'));
+  // ★ライフ・ガッツのポップアップ(吸収・ガードの余り・回復カード)は、合計の帯に重ねて出していた。
+  //   その帯をやめたときに出す場所ごと消えていたので、1体ずつの帯の上へ置き直した(2026-09-20)
+  check('ライフ・ガッツの数字が出る場所がある',
+    hasScreen('<div data-tactics-party-popups className="absolute inset-x-0 -top-1 flex flex-col items-center gap-0.5 pointer-events-none" style={{zIndex:210}}>')
+      && hasScreen("popups.filter(p=>p.side==='life'||p.side==='guts')"));
   // ★合計のライフ・ガッツは出さない。個別と両方出すと読むものが増えるだけ
   check('新モードでは合計の帯を出さない', hasScreen('{Array.isArray(tacticsUnits)?(') && hasScreen('):('));
   check('スロットの中の小さい帯はやめた', !hasScreen('data-tactics-unit={i}'));
