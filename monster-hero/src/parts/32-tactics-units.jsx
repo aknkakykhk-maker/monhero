@@ -139,10 +139,23 @@ const tacticsTotalHp = (units) => tacticsAliveSlots(units)
   .reduce((sum, index) => sum + normalizeTacticsUnit(units[index]).hp, 0);
 const tacticsTotalMaxHp = (units) => (Array.isArray(units) ? units : [])
   .reduce((sum, unit) => sum + (unit ? normalizeTacticsUnit(unit).maxHp : 0), 0);
-const tacticsTotalGuts = (units) => (Array.isArray(units) ? units : [])
-  .reduce((sum, unit) => sum + (unit ? normalizeTacticsUnit(unit).guts : 0), 0);
-const tacticsTotalBaseMaxGuts = (units) => (Array.isArray(units) ? units : [])
-  .reduce((sum, unit) => sum + (unit ? normalizeTacticsUnit(unit).baseMaxGuts : 0), 0);
+// ★ガッツもライフと同じく「立っている子だけ」を数える(2026-09-20 ユーザー指示)。
+//   倒れた子のガッツを合計へ入れると、立っている子が全員満タンでも合計が上限に届かず、
+//   リザルトの「強化ポイントでガッツ回復」が押せてしまう(押してもその子には入らないので
+//   ポイントだけ減る)。現在値と上限の両方を外さないと、合計だけがちぐはぐになる
+const tacticsTotalGuts = (units) => tacticsAliveSlots(units)
+  .reduce((sum, index) => sum + normalizeTacticsUnit(units[index]).guts, 0);
+const tacticsTotalBaseMaxGuts = (units) => tacticsAliveSlots(units)
+  .reduce((sum, index) => sum + normalizeTacticsUnit(units[index]).baseMaxGuts, 0);
+// ガッツを入れる余地が残っている子がいるか。★合計で見ない。
+//   1体ずつは floor(素の上限×みゅあ補正)、合計は floor(素の上限の合計×補正) なので、
+//   全員満タンでも切り捨ての差ぶん「合計 < 上限」になることがある(65が3人・+10%で 213 対 214)。
+//   実際に配れるかは1体ずつでしか分からない
+const tacticsHasGutsRoom = (units) => tacticsAliveSlots(units)
+  .some(index => {
+    const unit = normalizeTacticsUnit(units[index]);
+    return unit.guts < unit.maxGuts;
+  });
 // 素の上限の合計。パーティの maxHp はこちらを持つ。
 // ★みゅあ補正は既存モードと同じく effectiveMaxHp が掛ける。1体ずつの上限にも同じ倍率が
 //   入っているので、ゲージの満タンと盤面の合計はほぼ一致する(1体ごとの切り捨てぶんだけ下)

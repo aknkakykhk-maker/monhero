@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6f8006966daa392e
+// generated-sha256: 6a8230b281170ff8
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -91,7 +91,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-20 11:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-20 12:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15289,10 +15289,23 @@ const tacticsTotalHp = (units) => tacticsAliveSlots(units)
   .reduce((sum, index) => sum + normalizeTacticsUnit(units[index]).hp, 0);
 const tacticsTotalMaxHp = (units) => (Array.isArray(units) ? units : [])
   .reduce((sum, unit) => sum + (unit ? normalizeTacticsUnit(unit).maxHp : 0), 0);
-const tacticsTotalGuts = (units) => (Array.isArray(units) ? units : [])
-  .reduce((sum, unit) => sum + (unit ? normalizeTacticsUnit(unit).guts : 0), 0);
-const tacticsTotalBaseMaxGuts = (units) => (Array.isArray(units) ? units : [])
-  .reduce((sum, unit) => sum + (unit ? normalizeTacticsUnit(unit).baseMaxGuts : 0), 0);
+// ★ガッツもライフと同じく「立っている子だけ」を数える(2026-09-20 ユーザー指示)。
+//   倒れた子のガッツを合計へ入れると、立っている子が全員満タンでも合計が上限に届かず、
+//   リザルトの「強化ポイントでガッツ回復」が押せてしまう(押してもその子には入らないので
+//   ポイントだけ減る)。現在値と上限の両方を外さないと、合計だけがちぐはぐになる
+const tacticsTotalGuts = (units) => tacticsAliveSlots(units)
+  .reduce((sum, index) => sum + normalizeTacticsUnit(units[index]).guts, 0);
+const tacticsTotalBaseMaxGuts = (units) => tacticsAliveSlots(units)
+  .reduce((sum, index) => sum + normalizeTacticsUnit(units[index]).baseMaxGuts, 0);
+// ガッツを入れる余地が残っている子がいるか。★合計で見ない。
+//   1体ずつは floor(素の上限×みゅあ補正)、合計は floor(素の上限の合計×補正) なので、
+//   全員満タンでも切り捨ての差ぶん「合計 < 上限」になることがある(65が3人・+10%で 213 対 214)。
+//   実際に配れるかは1体ずつでしか分からない
+const tacticsHasGutsRoom = (units) => tacticsAliveSlots(units)
+  .some(index => {
+    const unit = normalizeTacticsUnit(units[index]);
+    return unit.guts < unit.maxGuts;
+  });
 // 素の上限の合計。パーティの maxHp はこちらを持つ。
 // ★みゅあ補正は既存モードと同じく effectiveMaxHp が掛ける。1体ずつの上限にも同じ倍率が
 //   入っているので、ゲージの満タンと盤面の合計はほぼ一致する(1体ごとの切り捨てぶんだけ下)
@@ -30000,12 +30013,18 @@ function MonsterHeroGame() {
     // ★新モードは倒れた子を数えない(2026-09-20 ユーザー指示)。
     //   4体編成なら1体倒れても3体残るので枚数は変わらないが、2体まで減れば2枚になる。
     //   勇者特性・ききの「+1」はここと関係なく足されるので、倒れても減らない
-    const allyCount = isTacticsMode(runMode)
+    // ★新モードはガッツのしきい(120/180)を見ない(2026-09-20 ユーザー指示)。
+    //   effectiveMaxGuts は盤面全員の上限の「合計」なので、人数の条件とほとんど二重になっていた。
+    //   そのうえガッツ上限の低い子だけで組むと、人数がそろっても枚数が増えなかった
+    //   (素の上限は最小40・中央70なので、40が2人だと合計80で120に届かない)。
+    //   払えるかどうかは canTacticsSlotPay が1体ずつ見るので、ここで合計を見る必要がない
+    const tactics = isTacticsMode(runMode);
+    const allyCount = tactics
       ? tacticsAliveSlots(tacticsUnits).length
       : slots.filter(s => s !== null).length;
     let limit = 1;
-    if (effectiveMaxGuts >= 180 && allyCount >= 3) limit = 3;
-    else if (effectiveMaxGuts >= 120 && allyCount >= 2) limit = 2;
+    if ((tactics || effectiveMaxGuts >= 180) && allyCount >= 3) limit = 3;
+    else if ((tactics || effectiveMaxGuts >= 120) && allyCount >= 2) limit = 2;
     return Math.min(5,limit + heroCardBonus + kikiCardBonus);
   }, [effectiveMaxGuts, slots, heroCardBonus, kikiCardBonus, runMode, tacticsUnits]);
   const cardLimit = Math.min(5,baseCardLimit+soulCoordinationCardBonus);
@@ -33580,15 +33599,26 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 錠は描画が追いついた時点で開ける。押した瞬間から次の描画までの間だけ止めればよく、
   // ここが無いと素早く2回押したときに、1ポイントで2回ぶん回復できてしまう
   useEffect(() => { gutsRecoveryLockRef.current = false; });
-  const canRecoverGutsWithPoint = upgradePoints >= GUTS_RECOVERY_POINT_COST && guts < effectiveMaxGuts;
+  // ★新モードは合計で「満タンか」を見ない(2026-09-20 ユーザー指示)。配るのは立っている子だけ
+  //   (recoverTacticsGuts が倒れた子を弾く)なのに、押せるかを合計で見ていたため、
+  //   立っている子が全員満タンでもボタンが押せてポイントだけ減っていた。
+  //   倒れた子を合計から外しても、1体ずつと合計で切り捨ての差が出るぶんは残るので、
+  //   判定そのものを tacticsHasGutsRoom(1体ずつ)へ移す
+  const canRecoverGutsWithPoint = upgradePoints >= GUTS_RECOVERY_POINT_COST
+    && (isTacticsMode(runMode) ? tacticsHasGutsRoom(tacticsUnits) : guts < effectiveMaxGuts);
   const recoverGutsWithPoint = () => {
     if (gutsRecoveryLockRef.current) return;
     if (!canRecoverGutsWithPoint) return;
-    const next = Math.min(effectiveMaxGuts, guts + GUTS_RECOVERY_AMOUNT);
-    if (next <= guts) return;
-    gutsRecoveryLockRef.current = true;
-    // 新モードは立っている子へ配る(合計だけ増やすと、払える子が増えない)
-    if(isTacticsMode(runMode)) gainGuts(GUTS_RECOVERY_AMOUNT); else setGuts(next);
+    if (isTacticsMode(runMode)) {
+      gutsRecoveryLockRef.current = true;
+      // 新モードは立っている子へ配る(合計だけ増やすと、払える子が増えない)
+      gainGuts(GUTS_RECOVERY_AMOUNT);
+    } else {
+      const next = Math.min(effectiveMaxGuts, guts + GUTS_RECOVERY_AMOUNT);
+      if (next <= guts) return;
+      gutsRecoveryLockRef.current = true;
+      setGuts(next);
+    }
     setUpgradePoints(p => Math.max(0, p - GUTS_RECOVERY_POINT_COST));
     Audio_.se.heal();
   };

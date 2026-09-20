@@ -40,7 +40,7 @@ const slice = (from, to) => {
 };
 
 // このファイルは純関数だけなので、そのまま切り出して動かせる
-const sandbox = { Math, console };
+const sandbox = { Math, Number, console };
 vm.createContext(sandbox);
 vm.runInContext(
   slice('const TACTICS_START_GUTS_RATE', '// ==== 画面ライフサイクル')
@@ -51,7 +51,7 @@ vm.runInContext(
     + 'tacticsTotalHp,tacticsTotalMaxHp,tacticsTotalBaseMaxHp,scaleTacticsUnits,scaleTacticsUnitMaxHp,'
     + 'damageTacticsTargets,healTacticsBoard,rateHealTacticsBoard,rateHealTacticsAt,'
     + 'tacticsMaxDef,selfDamageTacticsBoard,'
-    + 'wipeTacticsBoard,tacticsTotalGuts,tacticsTotalBaseMaxGuts,'
+    + 'wipeTacticsBoard,tacticsTotalGuts,tacticsTotalBaseMaxGuts,tacticsHasGutsRoom,'
     + 'scaleTacticsUnitMaxGuts,canTacticsSlotPay,payTacticsGutsAt,recoverTacticsGutsBoard,'
     + 'healTacticsAt,recoverTacticsGutsAt,selfDamageTacticsAt,'
     + 'reviveTacticsAt,tacticsEnemyPowerMultiplier,'
@@ -60,6 +60,11 @@ vm.runInContext(
     + 'splitTacticsGuardedHit,resolveTacticsGuardedHit,makeCardHalveCounter,'
     + 'tacticsJoinWaveRate,addTacticsJoinCatchUp,applyTacticsJoinCatchUp};', sandbox);
 const api = sandbox.api;
+// ★合計へみゅあ補正を掛ける式は本体から切り出して動かす(検査へ書き写さない)。
+//   1体ずつは floor(素の上限×補正)、合計は floor(素の上限の合計×補正) なので、
+//   全員満タンでも「合計 < 上限」になることがある。㉔でそれを実際に出す
+vm.runInContext(slice('const resolveEffectiveMaxStat', '\n')
+  + ';globalThis.resolveEffectiveMaxStat=resolveEffectiveMaxStat;', sandbox);
 
 // モンスター1体ぶんの入力。マスモンなら育成済みの値が baseHp などに入っている
 const mon = (over = {}) => ({ id: 'Mocchi', name: 'モッチー', baseHp: 600, baseAtk: 120, baseDef: 120, baseGuts: 100, ...over });
@@ -584,6 +589,48 @@ check('置けるかの判定も画面へ渡す', has('tacticsCanAssign={tacticsC
 check('予告の吹き出しに狙いを出す',
   fs.readFileSync(path.join(root, 'monster-hero/src/parts/71-screen-battle.jsx'), 'utf8')
     .includes("{enemyIntent.targetName?` 🎯${enemyIntent.targetName}`:''}"));
+
+// --- ㉔ ガッツの合計と、1ターンに選べる枚数(2026-09-20 ユーザー指示) ---
+// ★ユーザーの問い「行動回数ってガッツも見るようにしてるんだっけ？」から2つ決まった。
+//   (1) 枚数はガッツのしきい(120/180)を見ず、立っている人数だけで決める
+//   (2) ガッツの合計はライフと同じく「立っている子だけ」にする
+// ★もとは「立っている子が全員満タンでも、倒れた子のぶんで合計が上限に届かず、
+//   リザルトの『強化ポイントでガッツ回復』が押せてポイントだけ減る」が起きていた
+const downedPair = api.damageTacticsTargets(pair, [2], 9999);
+check('倒れた子はガッツの合計に数えない',
+  api.tacticsTotalGuts(downedPair) === 50 && api.tacticsTotalBaseMaxGuts(downedPair) === 100,
+  `いま${api.tacticsTotalGuts(downedPair)} / 上限${api.tacticsTotalBaseMaxGuts(downedPair)}`);
+check('ガッツを入れる余地は1体ずつで見る',
+  api.tacticsHasGutsRoom(pair) === true
+  && api.tacticsHasGutsRoom(api.recoverTacticsGutsBoard(pair, 9999)) === false);
+check('倒れた子のガッツが減っていても、立っている子が満タンなら余地なし', (() => {
+  const filled = api.recoverTacticsGutsBoard(downedPair, 9999);
+  return api.tacticsHasGutsRoom(filled) === false
+    && api.tacticsTotalGuts(filled) === api.tacticsTotalBaseMaxGuts(filled);
+})());
+check('空の盤面でも落ちない',
+  api.tacticsHasGutsRoom([null, null, null, null]) === false
+  && api.tacticsHasGutsRoom(null) === false
+  && api.tacticsTotalGuts(undefined) === 0);
+// ★切り捨ての差。ここがもう1つの原因で、倒れた子を外すだけでは直らない
+const oddFull = api.recoverTacticsGutsBoard(
+  api.scaleTacticsUnits(makeBoard([0, { baseGuts: 65 }], [1, { baseGuts: 65 }], [2, { baseGuts: 65 }]), 0, 0.1),
+  9999);
+const oddTotalMax = sandbox.resolveEffectiveMaxStat(api.tacticsTotalBaseMaxGuts(oddFull), 0.1);
+check('全員満タンでも、合計で見ると上限に届かないことがある',
+  api.tacticsTotalGuts(oddFull) < oddTotalMax,
+  `1体ずつの合計${api.tacticsTotalGuts(oddFull)} / 合計に掛けた上限${oddTotalMax}`);
+check('それでも1体ずつなら「余地なし」と分かる', api.tacticsHasGutsRoom(oddFull) === false);
+// 本体への結線
+check('枚数は新モードだとガッツのしきいを見ない',
+  has('if ((tactics || effectiveMaxGuts >= 180) && allyCount >= 3) limit = 3;')
+  && has('else if ((tactics || effectiveMaxGuts >= 120) && allyCount >= 2) limit = 2;'));
+check('枚数は立っている人数で数える',
+  has('const allyCount = tactics') && has('? tacticsAliveSlots(tacticsUnits).length'));
+check('ガッツ回復のボタンは1体ずつで出し分ける',
+  has('&& (isTacticsMode(runMode) ? tacticsHasGutsRoom(tacticsUnits) : guts < effectiveMaxGuts);'));
+check('ガッツ回復は新モードだと合計を足さずに配る',
+  has('      gutsRecoveryLockRef.current = true;\n      // 新モードは立っている子へ配る(合計だけ増やすと、払える子が増えない)\n      gainGuts(GUTS_RECOVERY_AMOUNT);'));
 
 console.log(failed ? `\nNG ${failed}件` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
