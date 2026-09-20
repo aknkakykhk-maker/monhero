@@ -249,9 +249,9 @@ node tools/render-error-check.js         # 実際に開いて真っ白になら�
 乗り続け、作業が途中で頭打ちになる。**依頼の大小に関係なく**次を守る。
 道具の使い方・ファイルごとの大きさ・経緯: [`docs/rules/CONTEXT_BUDGET.md`](docs/rules/CONTEXT_BUDGET.md)
 
-**開かない**: `src/game-system.jsx`(2.7MB) / `game-system.compiled.js`(3.0MB) — どちらも生成物で
-読む必要がない。`src/parts/60-app.jsx`(1.5MB) / `data/rhythm-mode.js`(0.9MB) /
-`data/changelog.js`(0.5MB) / `docs/spec/RHYTHM_MODE.md`(0.5MB) / `tools/mode/authoring/*.json` —
+**開かない**: `src/game-system.jsx`(3.5MB) / `game-system.compiled.js`(3.8MB) — どちらも生成物で
+読む必要がない。`src/parts/60-app.jsx`(1.4MB) / `data/rhythm-mode.js`(1.3MB) /
+`data/changelog.js`(0.7MB) / `docs/spec/RHYTHM_MODE.md`(0.5MB) / `tools/mode/authoring/*.json` —
 必要な範囲だけ切り出す。
 
 **打たない**: 素の `git diff` / `git show`(生成物で数MB流れ込む) / 除外なしの `grep -r` /
