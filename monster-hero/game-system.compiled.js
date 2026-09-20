@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9a0d2368a539878b
+// source-sha256: 4fdbbb03704fb288
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 21149778d2b39631
+// generated-sha256: 7f5460b57dc4b555
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-20 14:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-20 15:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -51980,6 +51980,14 @@ function MonsterHeroGame() {
     existingReflect: mainHero?.id === 'Monol' ? 30 : 0,
     existingAbsorb: mainHero?.id === 'Oboro' || mainHero?.id === 'Plant' ? 30 : 0
   });
+  // ★勇者特性ぶん(俊足50・反射30・吸収30)を外した表。新モードで**勇者モン以外**が
+  //   狙われたときに使う(2026-09-20 ユーザー指示「勇者モン特有のものだから決められたモンスターのみ」)。
+  //   魂格由来のぶんは編成全体のものなので、誰が狙われても今までどおり乗る
+  const soulOnlySpecialDefense = buildUnifiedSpecialDefense({
+    soulEvasion: soulBattleParty.evasion,
+    soulReflect: soulBattleParty.reflect,
+    soulAbsorb: soulBattleParty.absorb
+  });
   const battleIntimidate = combineSoulProbabilityPoints([mainHero?.id === 'Suezo' ? 40 : 0, soulBattleParty.intimidate]);
   const soulBattleHasEffects = battleSoulMasus.some(masu => soulTraitSpentPoints(masu) > 0);
   const soulBattleSourceRows = battleSoulMasus.map(masu => {
@@ -52002,16 +52010,23 @@ function MonsterHeroGame() {
     // ためる(CHARGE)ターンはダメージが無い。必殺技のダメージは発動(SPECIAL)ターンに出る
     if (!intent || intent.type !== 'ATTACK' && intent.type !== 'SPECIAL') return 0;
     const atkVal = Math.floor(intent.value * (1.0 - getWaveBuff('enemyAtkDebuffPct')));
-    const chuuniCutActive = (mainHero?.id === 'Ark' || mainHero?.id === 'Iblis') && getWaveBuff('chuuniDmgCutUses') < 2; // 中二病特性: WAVE毎2回まで被ダメ50%カット
+    // ★勇者特性は「その子の能力」なので、新モードでは**勇者モン本人が狙われたとき**だけ効く
+    //   (2026-09-20 ユーザー指示「勇者モン特有のものだから決められたモンスターのみ」)。
+    //   ザン・エイキ・パンドラの連撃はもともと attackerId を見て本人限定になっていて、
+    //   被弾側だけ mainHero を見るだけ＝誰が狙われても効く、とちぐはぐだった。
+    //   既存5モードはステータスがパーティ共通なので今までどおり全体へ効かせる(仕様 8.触らないもの)
+    const heroTraitOn = !isTacticsMode(runMode) || !Number.isInteger(targetSlot) || targetSlot === heroDist;
+    const traitHeroId = heroTraitOn ? mainHero?.id : null;
+    const chuuniCutActive = (traitHeroId === 'Ark' || traitHeroId === 'Iblis') && getWaveBuff('chuuniDmgCutUses') < 2; // 中二病特性: WAVE毎2回まで被ダメ50%カット
     const targetUnit = Number.isInteger(targetSlot) ? tacticsUnitsRef.current[targetSlot] : null;
     const defVal = targetUnit ? resolveEffectiveMaxStat(normalizeTacticsUnit(targetUnit).def, getPermaBuff('defPct')) : effectiveDef;
     // 丈夫さは固定軽減(×0.5)のあと、0.015%/pt（上限50%）を乗算する。
     // 最低30はこの基本防御部分だけに適用し、後続の既存軽減順は変えない。
     const defenseRate = Math.min(0.5, defVal * 0.00015);
-    const dmgBase = Math.max(30, (atkVal - defVal * 0.5) * (1 - defenseRate)) * (mainHero?.id === 'Mocchi' || mainHero?.id === 'Mitarashi' ? 0.8 : 1.0) * (chuuniCutActive ? 0.5 : 1.0);
+    const dmgBase = Math.max(30, (atkVal - defVal * 0.5) * (1 - defenseRate)) * (traitHeroId === 'Mocchi' || traitHeroId === 'Mitarashi' ? 0.8 : 1.0) * (chuuniCutActive ? 0.5 : 1.0);
     const soulDamageRemaining = Math.max(0, 1 - soulBattleParty.damageReduction / 100);
     return Math.max(1, Math.floor(dmgBase * Math.max(0.01, 1.0 - getPermaBuff('dmgCutPct')) * iceLockEnemyDamageMult * soulDamageRemaining));
-  }, [effectiveDef, mainHero, permaBuffs, waveBuffs, soulBattleParty.damageReduction]);
+  }, [effectiveDef, mainHero, permaBuffs, waveBuffs, soulBattleParty.damageReduction, runMode, heroDist]);
   // 次ターン被ダメージ倍率は、丈夫さ・勇者特性・永続軽減・氷結・ガードをすべて
   // 適用したあとの実ダメージへ最後に掛ける。敵攻撃力へ途中適用すると丈夫さやガードとの
   // 順序で50%にならないため、実処理と予測表示の双方がこの入口を使う。
@@ -52451,10 +52466,14 @@ function MonsterHeroGame() {
     } else {
       baseDmgMult = card.mult || card.baseMult || 1.0;
     }
-    let traitMult = (mainHero?.id === 'Golem' ? 1.2 : 1.0) * ((mainHero?.id === 'Pixie' || mainHero?.id === 'Mia') && card.type === 'unique' ? 2.0 : 1.0);
+    // ★新モードは勇者特性も「勇者モン本人が攻撃したとき」だけ(2026-09-20 ユーザー指示)。
+    //   ザン・エイキ・パンドラの連撃はもともと attackerId を見て本人限定になっている。
+    //   既存5モードは今までどおり、誰が攻撃しても乗る(仕様 8.触らないもの)
+    const attackHeroId = !isTacticsMode(runMode) || slotIdx === heroDist ? mainHero?.id : null;
+    let traitMult = (attackHeroId === 'Golem' ? 1.2 : 1.0) * ((attackHeroId === 'Pixie' || attackHeroId === 'Mia') && card.type === 'unique' ? 2.0 : 1.0);
     // 禁忌解錠: パンドラ勇者が使う『引き継いだ』固有技だけを1.5倍にする。
     // 技の出自はcard.monIdで判定し、自身の固有技へは適用しない。
-    if (mainHero?.id === 'Pandora' && card.type === 'unique' && card.monId !== 'Pandora') traitMult *= 1.5;
+    if (attackHeroId === 'Pandora' && card.type === 'unique' && card.monId !== 'Pandora') traitMult *= 1.5;
     // 間合い適性は「その距離枠の補正値」。既存モードは編成全員のぶんが合算済み(distAptPct)で、
     // 攻撃したモンスター自身のグレードだけを見るのではない。
     // ★新モードだけは「その子の適性が、その子の攻撃に効く」(設計 §7)
@@ -52796,7 +52815,18 @@ function MonsterHeroGame() {
         }
         const incomingBeforeTurnReduction = getIncomingDamageBeforeTurnReduction(actingIntent);
         const incomingDmg = applyTurnDamageReduction(incomingBeforeTurnReduction);
-        if ((mainHero?.id === 'Ark' || mainHero?.id === 'Iblis') && getWaveBuff('chuuniDmgCutUses') < 2) {
+        // ★勇者特性は勇者モン本人が狙われたときだけ(2026-09-20 ユーザー指示)。
+        //   中二病の回数も、効かないターンに減らしてはいけない
+        const aimedSlots = isTacticsMode(runMode) ? tacticsIntentTargets(intent, tacticsUnitsRef.current, actingEnemyDist) : null;
+        const heroAimed = !aimedSlots || heroDist >= 0 && aimedSlots.includes(heroDist);
+        // 狙われた子のうち誰が避ける／返す／吸うか。勇者モンが狙われていればその子
+        // (勇者特性ぶんが乗っているのはその子なので)。そうでなければ魂格由来なので1体を抽選
+        const pickDefenseSlot = targets => {
+          if (!targets || !targets.length) return null;
+          if (heroDist >= 0 && targets.includes(heroDist)) return heroDist;
+          return targets[Math.floor(Math.random() * targets.length)];
+        };
+        if ((mainHero?.id === 'Ark' || mainHero?.id === 'Iblis') && heroAimed && getWaveBuff('chuuniDmgCutUses') < 2) {
           addWaveBuff('chuuniDmgCutUses', 1);
           addPopup('中二病発動!被ダメ50%カット', 'hero', 'text-pink-400 text-sm font-bold');
         }
@@ -52805,7 +52835,7 @@ function MonsterHeroGame() {
         //   確定反射(モノリスの固有技)＝**味方全体**。発動したターンは誰も受けない。
         //   確率で出る反射・回避・吸収＝**狙われた子だけ**。抽選で出るものは個別にそろえる
         const forcedReflect = getTurnBuff('reflect', false);
-        const soulDefenseResult = forcedReflect ? 'reflect' : rollUnifiedSpecialDefense(unifiedSpecialDefense, Math.random(), Math.random());
+        const soulDefenseResult = forcedReflect ? 'reflect' : rollUnifiedSpecialDefense(heroAimed ? unifiedSpecialDefense : soulOnlySpecialDefense, Math.random(), Math.random());
         const isReflect = soulDefenseResult === 'reflect';
         const isAbsorb = soulDefenseResult === 'absorb';
         const isEvasion = soulDefenseResult === 'evasion';
@@ -52859,19 +52889,21 @@ function MonsterHeroGame() {
           //   盤面へ配る全体回復にすると、殴られるたびに全員が回復して、
           //   倒れた子まで勝手に起き上がる(＝誰も倒れたままにならない)。
           //   狙いは立っている子にしか向かないので、吸収で起き上がることは起きない。
-          const absorbSlots = isTacticsMode(runMode) ? tacticsIntentTargets(intent, tacticsUnitsRef.current, actingEnemyDist) : null;
-          if (absorbSlots) {
+          // ★吸う子は1体だけ。勇者特性(オボロ・プラントの30)は勇者モン本人のものなので、
+          //   勇者モンが狙われていればその子が吸う(2026-09-20 ユーザー指示)
+          const absorbSlot = isTacticsMode(runMode) ? pickDefenseSlot(aimedSlots) : null;
+          if (isTacticsMode(runMode)) {
             let units = tacticsUnitsRef.current,
               hpGain = 0,
               gutsGain = 0;
-            absorbSlots.forEach(slotIdx => {
+            if (absorbSlot != null) {
               // 受けるはずだったダメージも「その子の丈夫さ」で決まる
-              const gain = applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(intent, slotIdx));
+              const gain = applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(intent, absorbSlot));
               const guts = Math.floor(gain * 0.1);
-              hpGain += gain;
-              gutsGain += guts;
-              units = recoverTacticsGutsAt(healTacticsAt(units, slotIdx, gain), slotIdx, guts);
-            });
+              hpGain = gain;
+              gutsGain = guts;
+              units = recoverTacticsGutsAt(healTacticsAt(units, absorbSlot, gain), absorbSlot, guts);
+            }
             currentHp = commitTacticsUnits(units);
             if (hpGain > 0) addPopup(`💚 ライフ +${hpGain}`, 'life', 'text-emerald-400 font-black text-2xl drop-shadow-md');
             if (gutsGain > 0) addPopup(`⚡ ガッツ +${gutsGain}`, 'guts', 'text-amber-400 font-black text-2xl drop-shadow-md');
@@ -52911,11 +52943,11 @@ function MonsterHeroGame() {
             //   反射は味方全体のバフ(発動したターンは誰も受けない)のに対し、回避は吸収と同じ個別扱い。
             //   全体攻撃で狙われた全員が避けると、回避が全体バフと変わらなくなる。
             //   狙われた子が1体なら今までどおりその子が避ける
-            const evadedSlot = isEvasion && targets.length ? targets[Math.floor(Math.random() * targets.length)] : null;
+            const evadedSlot = isEvasion ? pickDefenseSlot(targets) : null;
             // ★確率で出た反射(勇者モンがモノリス・魂格)も狙われた子だけ。
             //   その子は受けずに、受けるはずだった量を敵へ返す。ほかの子は普通に受ける。
             //   固有技の確定反射は上の枝(味方全体)で処理しているのでここへは来ない
-            const reflectedSlot = isReflect && targets.length ? targets[Math.floor(Math.random() * targets.length)] : null;
+            const reflectedSlot = isReflect ? pickDefenseSlot(targets) : null;
             let evadedName = '',
               reflectedName = '',
               reflectBack = 0;
@@ -53070,16 +53102,22 @@ function MonsterHeroGame() {
     // 氷海の支配者は、絶氷の楔発動中かつ勇者と敵が同じ距離の場合だけ50パーセントポイントを足す。
     const gutsRecoveryRate = applyIceRulerAutoGutsRecovery(currentAutoGutsRecovery, mainHero?.id, iceLockActive, heroDist, enemyDist);
     const soulAdjustedGutsRecoveryRate = Math.max(0, gutsRecoveryRate) * soulBattleParty.autoGutsMultiplier;
+    // ★氷海の支配者は勇者モン本人だけ(2026-09-20 ユーザー指示)。新モードは1体ずつ回すので、
+    //   全員へは氷海ぶんを含まない率で配り、勇者モンにだけ差分を足す。
+    //   「勇者モンが敵と同じ距離なら全員の回復が上がる」のままだと、勇者特性が全体バフになる
+    const baseGutsRecoveryRate = Math.max(0, currentAutoGutsRecovery) * soulBattleParty.autoGutsMultiplier;
     // ★新モードは1体ずつ「その子の上限 × 率」で回す(2026-09-20 ユーザー指摘)。
     //   合計の上限から量を出して配ると、1体だけ傷ついているときにパーティ全員ぶんが
     //   その子へ入り、倒れている子が多いほど残った子がよけいに回復する(逆になっている)
-    const regen = tacticsRegen(autoHpRecoveryRate, soulAdjustedGutsRecoveryRate);
+    const regen = tacticsRegen(autoHpRecoveryRate, isTacticsMode(runMode) ? baseGutsRecoveryRate : soulAdjustedGutsRecoveryRate);
     let gutsRegen = 0,
       autoHealVal = 0;
     if (regen) {
       currentHp = regen.total;
       autoHealVal = regen.hp;
       gutsRegen = regen.guts;
+      const iceExtraRate = soulAdjustedGutsRecoveryRate - baseGutsRecoveryRate;
+      if (iceExtraRate > 0 && heroDist >= 0) gutsRegen += gainGutsByRate(heroDist, iceExtraRate);
     } else {
       gutsRegen = Math.floor(liveEffectiveMaxGuts() * soulAdjustedGutsRecoveryRate);
       gainGuts(gutsRegen);

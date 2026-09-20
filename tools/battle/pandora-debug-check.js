@@ -17,7 +17,11 @@ assert.strictEqual((ally.match(/Pandora: \{ id:'Pandora'/g)||[]).length,1);
 assert(!/STARTER_MONSTER_IDS[^;]*Pandora/.test(ally));
 assert(breeder.includes("id:'pandora_icon'")&&breeder.includes("id:'pandora_disc_icon'")&&/id:'Pandora'.*cost:3000/.test(breeder));
 assert(lineage.includes("Pandora:     { main:'pixie',  sub:'unknown' }"));
-assert(source.includes("mainHero?.id==='Pandora' && card.type==='unique' && card.monId!=='Pandora'"));
+// 新モードは勇者特性を「勇者モン本人が攻撃したとき」だけに効かせるため、
+// mainHero を直に見ず attackHeroId(＝本人でなければ null)を通す(2026-09-20)。
+// 「引き継いだ固有技だけ1.5倍」という判定そのものは変えていない
+assert(source.includes("const attackHeroId = (!isTacticsMode(runMode) || slotIdx===heroDist) ? mainHero?.id : null;"));
+assert(source.includes("attackHeroId==='Pandora' && card.type==='unique' && card.monId!=='Pandora'"));
 // 禁忌解錠のヒット列は予測・実処理とも共通の正本 buildAttackHits(ATTACK_COMBO_RULES)が作る
 assert(source.includes("const pandoraSplitNormal = heroId === 'Pandora' && attackerId === 'Pandora' && ['atk', 'range_atk'].includes(card.type);"));
 assert(source.includes("if (pandoraSplitNormal) combo(ATTACK_COMBO_RULES.pandoraSplitNormal + comboDmgBonus, '連撃', true);") && source.includes('pandoraSplitNormal: 0.5,'));
