@@ -79,8 +79,9 @@ check('あつの挑発(アシストカード)の攻撃は半減しない', has('
 const buffHalved = (fn, key) => new RegExp(`${fn}\\('${key}',[^)]*\\*effMul\\)`).test(source);
 check('固有技の数値効果も半減する',
   buffHalved('addPermaBuff', 'dmgCutPct') && buffHalved('addPermaBuff', 'atkPct')
-    // ガッツ回復は現在値ではなく「そのときの上限」から出すので liveEffectiveMaxGuts() を通る
-    && buffHalved('addPermaBuff', 'comboDmgPct') && has('liveEffectiveMaxGuts()*0.5*effMul')
+    // ガッツ回復は現在値ではなく「そのときの上限」から出す。
+    // 2026-09-20: 新モードは「使った子の上限 × 率」なので gainGutsByRate を通る(半減は率へ掛かる)
+    && buffHalved('addPermaBuff', 'comboDmgPct') && has('gainGutsByRate(slotIdx,0.5*effMul)')
     && buffHalved('addPermaBuff', 'critRatePct') && buffHalved('addWaveBuff', 'enemyAtkDebuffPct'));
 // 2026-09-20: 新モードは「同じ子の2枚目」なので言い方を変えている
 check('半減したことを画面に出す',
