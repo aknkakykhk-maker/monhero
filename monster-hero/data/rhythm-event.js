@@ -423,6 +423,22 @@ const rhythmLimitedEventJustEnded = (nowMs) => {
     return endMs !== null && now >= endMs && now < endMs + RHYTHM_EVENT_REWARD_CLAIM_MS;
   }) || null;
 };
+// 「終わった直後の期間限定イベント」を**全部**、新しく終わったものから順に。閉幕の会話に使う。
+// ★単数の rhythmLimitedEventJustEnded は「最初に見つかった1件」なので、受取期限(2週間)が
+//   重なっていると**前の回**が返り続ける。第2回が終わる 2026-09-21 04:00 の時点では
+//   第1回(9/14終了)もまだ期限内で、そのままでは第2回の閉幕の会話が8日間も出てこなかった
+//   (2026-09-20に見つけた)。閉幕の会話は回ごとに1本あるので、終わった回を全部見て、
+//   まだ見ていないものを流す。
+// ★ここも見るたびに数え直す(読み込みのときに1回だけ決まる値を使わない・CLAUDE.md ⑥-4)。
+const rhythmLimitedEventsJustEnded = (nowMs) => {
+  const now = Number.isFinite(Number(nowMs)) ? Number(nowMs) : 0;
+  const list = Array.isArray(RHYTHM_EVENTS) ? RHYTHM_EVENTS : [];
+  return list.filter(event => {
+    if (!event || event.kind !== 'limited') return false;
+    const endMs = rhythmEventTimeMs(event.endAt);
+    return endMs !== null && now >= endMs && now < endMs + RHYTHM_EVENT_REWARD_CLAIM_MS;
+  }).sort((a, b) => (rhythmEventTimeMs(b.endAt) || 0) - (rhythmEventTimeMs(a.endAt) || 0));
+};
 const rhythmLimitedEventAt = (nowMs) => {
   const now = Number.isFinite(Number(nowMs)) ? Number(nowMs) : 0;
   const list = Array.isArray(RHYTHM_EVENTS) ? RHYTHM_EVENTS : [];

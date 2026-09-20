@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 41cd76c61bd665dc
+// source-sha256: c5522c8c238413b8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 094b5565154e4f90
+// generated-sha256: e966349e135ffecf
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -161,7 +161,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-18 19:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-20 15:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5537,7 +5537,8 @@ const EVENT_BGM_SCENES = Object.freeze({
   momosuke_intro: 'momosukeIntro',
   monbeat_cup_2026_09: 'monbeatCupEvent',
   monbeat_cup_2026_09_thanks: 'monbeatCupEvent',
-  symphony_2026_09_17: 'symphonyEvent'
+  symphony_2026_09_17: 'symphonyEvent',
+  symphony_2026_09_17_thanks: 'symphonyEvent'
 });
 const BGM_PRO_DEFAULT_MIGRATION_KEY = 'mh_bgm_pro_default_migrated_v1';
 const BGM_PRO_PREVIOUS_DEFAULTS = Object.freeze({
@@ -43310,6 +43311,7 @@ function MonsterHeroGame() {
   const MONBEAT_CUP_THANKS_STORY_ID = 'monbeat_cup_2026_09_thanks';
   // 閉幕の会話が受け持つイベント(週末ゲリラ杯)。ほかのイベントの受け取りは待たせない
   const MONBEAT_CUP_EVENT_ID = 'weekend_2026_09_11';
+  const SYMPHONY_EVENT_ID = 'symphony_2026_09_17';
   // ★本編で流す会話の一覧。最後まで見た(または飛ばした)ら、ここにあるIDだけを
   //   「見た」として記録する。会話を足したらここへ1行足すこと。
   //   書き忘れると、その会話は**永久に既読にならず**、起動のたびに流れ続ける
@@ -43317,18 +43319,22 @@ function MonsterHeroGame() {
   //   tools/mode/rhythm-event-thanks-check.js が見張る
   // 第2回イベント「異世界交響祭」の会話(2026-09-17)。最後まで見ると助手ドラが解放される
   const SYMPHONY_STORY_ID = 'symphony_2026_09_17';
-  const RHYTHM_EVENT_STORY_IDS = [MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID];
+  // 第2回の閉幕の会話(2026-09-20)。第1回と同じく、終了の時刻に自動で流れる。
+  // 報酬の上乗せは無いので、知らせるのは終わったことと受け取りのしかただけ
+  const SYMPHONY_THANKS_STORY_ID = 'symphony_2026_09_17_thanks';
+  const RHYTHM_EVENT_STORY_IDS = [MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID];
   // ★イベントid → そのイベントの会話id。**イベントを足したらここへ1行足す。**
   //   以前はここが第1回のidの直書きで、第2回が始まっても第1回の会話が流れる形になっていた
   //   (2026-09-17に第2回を足したときに直した)。書かなかったイベントでは会話は流れない。
   const RHYTHM_EVENT_STORY_BY_EVENT = {
     [MONBEAT_CUP_EVENT_ID]: MONBEAT_CUP_STORY_ID,
-    symphony_2026_09_17: SYMPHONY_STORY_ID
+    [SYMPHONY_EVENT_ID]: SYMPHONY_STORY_ID
   };
   // イベントid → 閉幕の会話id。用意していないイベントでは閉幕の会話は流れない
-  // (第2回には閉幕の会話が無いので、終わっても第1回の「閉幕とお礼」は流さない)
+  // (別の回の「閉幕とお礼」を代わりに流してしまわないよう、必ずここから引く)
   const RHYTHM_EVENT_THANKS_STORY_BY_EVENT = {
-    [MONBEAT_CUP_EVENT_ID]: MONBEAT_CUP_THANKS_STORY_ID
+    [MONBEAT_CUP_EVENT_ID]: MONBEAT_CUP_THANKS_STORY_ID,
+    [SYMPHONY_EVENT_ID]: SYMPHONY_THANKS_STORY_ID
   };
   // いま開催中／いま終わったばかりのイベントに対応する会話id(無ければ null)
   const rhythmEventStoryIdFor = event => event && RHYTHM_EVENT_STORY_BY_EVENT[event.id] || null;
@@ -43388,10 +43394,11 @@ function MonsterHeroGame() {
       //   ★読んでいる最中にここが回っても並べ直さない(rhythmEventStoryStartedRef)。
       //     そうしないと会話が終わった瞬間に2回目が流れる
       const notPlayedYet = storyId => !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(storyId) && !rhythmEventStoryStartedRef.current.includes(storyId);
-      const endedThanksId = rhythmEventThanksStoryIdFor(rhythmLimitedEventJustEnded(Date.now()));
-      if (endedThanksId && notPlayedYet(endedThanksId)) {
-        setRhythmEventStoryPending(prev => prev || endedThanksId);
-      }
+      // ★終わった直後の回を**新しいほうから全部**見て、まだ見ていない閉幕の会話を1本流す。
+      //   単数の rhythmLimitedEventJustEnded だと、受取期限(2週間)が重なっているあいだ
+      //   前の回が返り続け、新しい回の閉幕の会話が何日も出てこない(2026-09-20)
+      const endedThanksId = rhythmLimitedEventsJustEnded(Date.now()).map(rhythmEventThanksStoryIdFor).find(id => id && notPlayedYet(id)) || null;
+      if (endedThanksId) setRhythmEventStoryPending(prev => prev || endedThanksId);
       const liveEvent = rhythmLimitedEventAt(Date.now());
       if (!liveEvent) return;
       // ① 会話。まだ見ていなければ、HOMEに着いたところで流す
@@ -43463,7 +43470,11 @@ function MonsterHeroGame() {
     // ★閉幕の会話がまだなら、受け取り画面はあとに回す(2026-09-13)。
     //   会話で「参加賞に勇者の証を10個足した」と言ってから受け取りを出さないと、
     //   先に画面が出て話の順番が逆になる。会話を見終えたら下の useEffect が呼び直す
-    if (!weekly && event.id === MONBEAT_CUP_EVENT_ID && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(MONBEAT_CUP_THANKS_STORY_ID)) return;
+    // ★どの回かを直書きしない(2026-09-20)。閉幕の会話を持つ回が増えたら、
+    //   その回でも同じように「会話が先、受け取りはあと」になる。
+    //   会話を用意していない回は null なので、これまでどおり素通りする
+    const pendingThanksId = rhythmEventThanksStoryIdFor(weekly ? null : event);
+    if (pendingThanksId && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(pendingThanksId)) return;
     const range = weekly ? {
       startMs: event.startMs,
       endMs: event.endMs
@@ -43561,7 +43572,9 @@ function MonsterHeroGame() {
   // (見ていないあいだは上の checkRhythmEventRewards が何もせずに戻っている)
   useEffect(() => {
     if (!Array.isArray(rhythmEventStorySeen)) return;
-    if (!rhythmEventStorySeen.includes(MONBEAT_CUP_THANKS_STORY_ID)) return;
+    // 閉幕の会話のどれかを見終えていれば確かめ直す(回ごとに書き足さなくてよいように)
+    const thanksIds = Object.values(RHYTHM_EVENT_THANKS_STORY_BY_EVENT);
+    if (!thanksIds.some(id => rhythmEventStorySeen.includes(id))) return;
     rhythmEventRewardCheckedRef.current = false;
     void checkRhythmEventRewards();
   }, [rhythmEventStorySeen, checkRhythmEventRewards]);
@@ -44851,8 +44864,9 @@ function MonsterHeroGame() {
       }
       // 終わったあとに初めて開いた人へは、閉幕とお礼の会話を流す(受け取り画面より先)。
       // 閉幕の会話を用意していないイベントでは何も流さない
-      const bootThanksId = rhythmEventThanksStoryIdFor(rhythmLimitedEventJustEnded(Date.now()));
-      if (RELEASE_FLAGS.rhythmWeeklyRanking === true && wasOnboarded && bootThanksId && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(bootThanksId)) {
+      const bootSeenThanks = normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current);
+      const bootThanksId = rhythmLimitedEventsJustEnded(Date.now()).map(rhythmEventThanksStoryIdFor).find(id => id && !bootSeenThanks.includes(id)) || null;
+      if (RELEASE_FLAGS.rhythmWeeklyRanking === true && wasOnboarded && bootThanksId) {
         setRhythmEventStoryPending(bootThanksId);
       }
       const seenUpdateIds = normalizeSeenUpdateNoticeIds(await storeGet(UPDATE_NOTICE_SEEN_KEY, [], false));
@@ -46097,6 +46111,7 @@ function MonsterHeroGame() {
     momosukeIntroSeen: momosukeIntroSeenFlag,
     monbeatCupEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONBEAT_CUP_STORY_ID),
     monbeatCupThanksSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONBEAT_CUP_THANKS_STORY_ID),
+    symphonyThanksSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_THANKS_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID)
   };
   // alwaysUnlocked のイベントは、本編でまだ見ていなくても回想から見られる
@@ -49788,6 +49803,18 @@ function MonsterHeroGame() {
     returnToHome();
     setEventReplay({
       id: MONBEAT_CUP_THANKS_STORY_ID,
+      step: 0,
+      live: true,
+      debug: true
+    });
+  };
+  // 第2回の閉幕とお礼(2026-09-20)。こちらも debug:true なので既読にはならない
+  const debugPlayRhythmEventThanksSymphony = () => {
+    setDailyMasuAdvice(null);
+    setUpdateGuideQueue([]);
+    returnToHome();
+    setEventReplay({
+      id: SYMPHONY_THANKS_STORY_ID,
       step: 0,
       live: true,
       debug: true
@@ -60362,6 +60389,10 @@ function MonsterHeroGame() {
       onClick: debugPlayRhythmEventThanks,
       className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
     }, "\u9589\u5E55\u3068\u304A\u793C\u306E\u4F1A\u8A71\u3092\u518D\u751F"), /*#__PURE__*/React.createElement("button", {
+      "data-debug-rhythm-event-thanks-symphony": true,
+      onClick: debugPlayRhythmEventThanksSymphony,
+      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
+    }, "\u9589\u5E55\u3068\u304A\u793C(\u7B2C2\u56DE)\u3092\u518D\u751F"), /*#__PURE__*/React.createElement("button", {
       "data-debug-rhythm-event-notice": true,
       onClick: debugPlayRhythmEventNotice,
       className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
