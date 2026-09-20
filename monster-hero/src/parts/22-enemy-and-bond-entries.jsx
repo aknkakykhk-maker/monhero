@@ -44,47 +44,54 @@ const ENEMY_ACTION_DEFINITIONS = [
 // ★type は既存の ATTACK / SPECIAL をそのまま使い、違いは variant で持つ。
 //   getIncomingDamageBeforeTurnReduction は type でダメージの有無を判断しているので、
 //   ここを新しい type にするとダメージ計算・演出・予告の経路を全部書き足すことになる。
-const TACTICS_SWEEP_MULT = 1.6;       // 予告した間合いに敵がいるとき
+// ★倍率は2026-09-20にユーザーが1つずつ決め直した。それまでは受けるダメージが重く、
+//   とくに「人数が増えるほど全体攻撃だけが強い」「同じ×1.8なのに連撃が貫通撃を
+//   絶対に上回れない」という歪みがあった。攻める側(敵)を全体に下げて、
+//   そのぶん敵を落としにくく(再生を厚く)し、休めるターン(行動なし)を戻してある。
+const TACTICS_SWEEP_MULT = 1.2;       // 予告した間合いに敵がいるとき
 const TACTICS_SWEEP_MISS_MULT = 0.4;  // 距離撃などでずらしたとき
-const TACTICS_RUSH_MULT = 1.8;        // 0.6×3ヒット。ガードは1ヒットぶんしか効かない
+const TACTICS_RUSH_MULT = 1.2;        // 0.4×3ヒット。ガードは1ヒットぶんしか効かない
 const TACTICS_RUSH_HITS = 3;          // 威力をこの数で割ってヒットに分ける。ガードが届くのは1ヒットだけ
-const TACTICS_PIERCE_MULT = 1.8;      // ガードを無視する
+const TACTICS_PIERCE_MULT = 0.8;      // ガードを無視する。効かないぶん倍率で加減する
 const TACTICS_ROAR_ATK_RATE = 1.5;    // 次のターンから敵の攻撃が上がる
 const TACTICS_ROAR_MAX_STACKS = 2;    // 重ねがけの上限
-const TACTICS_REGEN_RATE = 0.08;      // 最大ライフに対する回復量
+const TACTICS_REGEN_RATE = 0.5;       // 最大ライフに対する回復量。★与ダメを下げたぶん敵を落としにくくする
 const TACTICS_REGEN_HP_THRESHOLD = 0.9; // ライフがこの割合を下回ったときだけ使う
-// 単体狙いと全体攻撃(2026-09-19・設計 §5.3)。
-// ★全体攻撃は1体あたりの威力を単体狙いより必ず低くする。同じにすると
-//   「全員を殴るほうが得」になり、狙いを読む意味が消える
-const TACTICS_FOCUS_MULT = 2.2;   // 予告した1体へ。読めば守れるぶん大きい
-const TACTICS_ALLOUT_MULT = 0.9;  // 全員へ。1体あたりは通常攻撃より少しだけ低い
+// 全体攻撃(2026-09-19・設計 5.3)。
+// ★1体あたりの威力は通常攻撃より必ず低くする。同じか上にすると人数が増えるほど
+//   「全員を殴るほうが得」になり、狙いを読む意味も、供モンを連れる意味も消える。
+//   もとは0.9で、4体そろうと合計×3.6と最も重い技になっていた(2026-09-20 に0.4へ)
+// ★単体狙い(focus)は廃止した。必殺技(ためる→×2.5)と役割がかぶるため
+//   (2026-09-20 ユーザー指示)。通常攻撃も連撃も貫通撃も「狙った1体」へ当たるので、
+//   誰が狙われるかを読む遊びはそのまま残る
+const TACTICS_ALLOUT_MULT = 0.4;  // 全員へ。1体あたりは通常攻撃より低い
 const TACTICS_ACTION_DEFINITIONS = [
   {id:'normal',type:'ATTACK',category:'通常攻撃',weight:30,multiplier:1,hits:1,range:'全間合い',condition:'常時',cooldown:0,useLimit:null},
   {id:'charge',type:'CHARGE',category:'ためる',weight:12,multiplier:0,hits:0,range:'全間合い',condition:'常時',cooldown:0,useLimit:null},
   {id:'special',type:'SPECIAL',category:'必殺技',weight:0,multiplier:2.5,hits:1,range:'全間合い',condition:'ためた次のターンに必ず発動',cooldown:0,useLimit:null},
+  {id:'wait',type:'WAIT',category:'特殊行動',weight:10,multiplier:0,hits:0,range:'全間合い',condition:'常時',cooldown:0,useLimit:null},
   {id:'move',type:'MOVE',category:'移動',weight:10,multiplier:0,hits:0,range:'現在以外の3間合い',condition:'移動先がある・移動した次のターンは選ばない',cooldown:0,useLimit:null},
   {id:'sweep',type:'ATTACK',variant:'sweep',category:'薙ぎ払い',weight:14,multiplier:TACTICS_SWEEP_MULT,missMultiplier:TACTICS_SWEEP_MISS_MULT,hits:1,range:'予告した1間合い',condition:'予告した間合いに敵がいると大ダメージ。距離撃でずらせる',cooldown:0,useLimit:null},
   {id:'rush',type:'ATTACK',variant:'rush',category:'連撃',weight:14,multiplier:TACTICS_RUSH_MULT,hits:TACTICS_RUSH_HITS,range:'全間合い',condition:'3ヒットに分かれ、ガードは1ヒットぶんしか効かない',cooldown:0,useLimit:null},
   {id:'pierce',type:'ATTACK',variant:'pierce',category:'貫通撃',weight:12,multiplier:TACTICS_PIERCE_MULT,hits:1,range:'全間合い',condition:'ガードが効かない',cooldown:0,useLimit:null},
-  {id:'roar',type:'ROAR',category:'咆哮',weight:10,multiplier:0,hits:0,range:'全間合い',condition:`重ねがけは${TACTICS_ROAR_MAX_STACKS}回まで`,cooldown:0,useLimit:TACTICS_ROAR_MAX_STACKS},
-  {id:'regen',type:'REGEN',category:'再生',weight:10,multiplier:0,hits:0,range:'全間合い',condition:'ライフが減っているときだけ',cooldown:0,useLimit:null},
-  {id:'focus',type:'ATTACK',variant:'focus',category:'単体狙い',weight:12,multiplier:TACTICS_FOCUS_MULT,hits:1,range:'全間合い',condition:'予告した1体へ大ダメージ。その子を守るか回復する',cooldown:0,useLimit:null},
+  {id:'roar',type:'ROAR',category:'咆哮',weight:10,multiplier:0,hits:0,range:'全間合い',condition:`重ねがけは${TACTICS_ROAR_MAX_STACKS}回まで`,effectText:`次のターンから敵の攻撃 ×${TACTICS_ROAR_ATK_RATE}（このWAVEのあいだ続く。${TACTICS_ROAR_MAX_STACKS}回重ねると最大 ×${(TACTICS_ROAR_ATK_RATE**TACTICS_ROAR_MAX_STACKS).toFixed(2)}）`,cooldown:0,useLimit:TACTICS_ROAR_MAX_STACKS},
+  {id:'regen',type:'REGEN',category:'再生',weight:10,multiplier:0,hits:0,range:'全間合い',condition:'ライフが減っているときだけ',effectText:`敵が自分の最大ライフの${Math.round(TACTICS_REGEN_RATE*100)}%を回復する`,cooldown:0,useLimit:null},
   {id:'allout',type:'ATTACK',variant:'allout',targetsAll:true,category:'全体攻撃',weight:10,multiplier:TACTICS_ALLOUT_MULT,hits:1,range:'全員',condition:'立っている全員へ同時に当たる。狙いをかわせない',cooldown:0,useLimit:null},
 ];
 // どの敵も通常攻撃・ためる・必殺技・移動は持つ。ここへ足すのは「その敵だけの技」。
 // WAVEが進むほど読むことが増える並びにしてある(敵の順は ENEMY_SEQUENCE)。
-const TACTICS_BASE_ACTION_IDS = Object.freeze(['normal','charge','special','move']);
+const TACTICS_BASE_ACTION_IDS = Object.freeze(['normal','charge','special','wait','move']);
 const TACTICS_ENEMY_ACTION_IDS = Object.freeze({
   Dino:Object.freeze(['rush']),
   Gel:Object.freeze(['sweep']),
   BlackDino:Object.freeze(['rush','roar']),
   Jaakusou:Object.freeze(['sweep','regen']),
-  BlueMountain:Object.freeze(['pierce','sweep','focus']),
+  BlueMountain:Object.freeze(['pierce','sweep']),
   Gali:Object.freeze(['roar','rush','allout']),
-  Naga:Object.freeze(['sweep','pierce','focus']),
+  Naga:Object.freeze(['sweep','pierce']),
   Lilim:Object.freeze(['regen','pierce','allout']),
-  Durahan:Object.freeze(['rush','roar','pierce','focus','allout']),
-  Moo:Object.freeze(['sweep','rush','pierce','roar','regen','focus','allout']),
+  Durahan:Object.freeze(['rush','roar','pierce','allout']),
+  Moo:Object.freeze(['sweep','rush','pierce','roar','regen','allout']),
 });
 const tacticsActionDefinitions = (enemyId) => {
   const ids = [...TACTICS_BASE_ACTION_IDS, ...(TACTICS_ENEMY_ACTION_IDS[enemyId] || [])];
@@ -144,7 +151,7 @@ const enemyActionLabel = (ent,type) => type==='ATTACK' ? (ent?.normal||'通常�
   : '様子を見ている';
 const ENEMY_ACTION_ICONS = {ATTACK:'👊',CHARGE:'✨',SPECIAL:'🔥',WAIT:'⏳',MOVE:'🏃',ROAR:'📢',REGEN:'💚'};
 // 新モードの攻撃は type が ATTACK のままなので、見分けは variant で付ける
-const TACTICS_VARIANT_ICONS = {sweep:'🌪️',rush:'💥',pierce:'🗡️',focus:'🎯',allout:'🌊'};
+const TACTICS_VARIANT_ICONS = {sweep:'🌪️',rush:'💥',pierce:'🗡️',allout:'🌊'};
 const chooseEnemyAction = (ent,currentDist,random=Math.random,state={}) => {
   const actions=enemyActionProbabilities(ent,currentDist,state),roll=random(),available=actions.filter(a=>a.available);
   let cursor=roll;

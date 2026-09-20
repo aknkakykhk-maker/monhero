@@ -24,7 +24,8 @@ vm.createContext(context);
 vm.runInContext(`${chunk};globalThis.api={ENEMY_ACTION_DEFINITIONS,TACTICS_ACTION_DEFINITIONS,TACTICS_ENEMY_ACTION_IDS,`
   + `TACTICS_BASE_ACTION_IDS,tacticsActionDefinitions,enemyActionProbabilities,chooseEnemyAction,`
   + `enemyActionStateFrom,enemyActionLabel,TACTICS_ROAR_MAX_STACKS,TACTICS_SWEEP_MULT,TACTICS_SWEEP_MISS_MULT,`
-  + `TACTICS_RUSH_HITS,TACTICS_REGEN_HP_THRESHOLD,TACTICS_FOCUS_MULT,TACTICS_ALLOUT_MULT};`, context);
+  + `TACTICS_RUSH_HITS,TACTICS_REGEN_HP_THRESHOLD,TACTICS_ALLOUT_MULT,TACTICS_PIERCE_MULT,TACTICS_RUSH_MULT,TACTICS_SWEEP_MULT,`
+  + `TACTICS_ROAR_ATK_RATE,TACTICS_REGEN_RATE};`, context);
 const api = context.api;
 
 let failed = 0;
@@ -33,6 +34,8 @@ const check = (name, ok, detail = '') => {
   if (!ok) failed++;
 };
 const has = (needle) => src.includes(needle);
+const screen = fs.readFileSync(path.join(root, 'monster-hero/src/parts/71-screen-battle.jsx'), 'utf8');
+const tacticsDef = (id) => api.TACTICS_ACTION_DEFINITIONS.find(d => d.id === id) || {};
 // 満タンでない敵(再生が選べる状態)。hp/maxHp を渡さないと再生は候補から外れる
 const enemyOf = (id, hpRate = 0.5) => ({ id, atk: 100, hp: Math.floor(1000 * hpRate), maxHp: 1000, normal: 'パンチ', special: '必殺' });
 const idsOf = (actions) => actions.map(a => a.id);
@@ -48,11 +51,16 @@ check('既存モードの重みも変わっていない',
 check('既存モードの行動表に新モードの技が混ざっていない',
   api.ENEMY_ACTION_DEFINITIONS.every(d => !d.variant && d.type !== 'ROAR' && d.type !== 'REGEN'));
 
-// --- ② 新モードは「何もしないターン」を作らない ---
-check('新モードの行動表に「様子を見ている」が無い',
-  api.TACTICS_ACTION_DEFINITIONS.every(d => d.type !== 'WAIT' && d.id !== 'wait'));
-check('どの敵の行動表にも「様子を見ている」が無い',
-  Object.keys(api.TACTICS_ENEMY_ACTION_IDS).every(id => api.tacticsActionDefinitions(id).every(d => d.type !== 'WAIT')));
+// --- ② 「何もしないターン」は戻した(2026-09-20 ユーザー指示) ---
+// ★作り始めた当初は「新モードに何もしないターンは作らない」だった。
+//   倍率を下げて敵を落としにくくしたぶん、回復や立て直しに使える休みが要るので戻した。
+//   既存5モードは重み20、新モードは重み10(出すぎると間延びする)
+const waitDef = api.TACTICS_ACTION_DEFINITIONS.find(d => d.id === 'wait') || {};
+check('新モードにも「様子を見ている」がある', waitDef.type === 'WAIT' && waitDef.weight === 10,
+  `重み${waitDef.weight}`);
+check('「様子を見ている」はどの敵も持つ', api.TACTICS_BASE_ACTION_IDS.includes('wait')
+  && Object.keys(api.TACTICS_ENEMY_ACTION_IDS).every(id => api.tacticsActionDefinitions(id).some(d => d.id === 'wait')));
+check('「様子を見ている」はダメージを持たない', waitDef.multiplier === 0 && waitDef.hits === 0);
 
 // --- ③ 敵ごとの行動表 ---
 // 敵の順は ENEMY_SEQUENCE。WAVEが進むほど読むことが増える並びにしてある
@@ -66,14 +74,17 @@ check('後のWAVEの敵ほど技が多い(最初の敵より最後の敵)',
   api.TACTICS_ENEMY_ACTION_IDS.Moo.length > api.TACTICS_ENEMY_ACTION_IDS.Dino.length,
   `ディノ${api.TACTICS_ENEMY_ACTION_IDS.Dino.length} → ムー${api.TACTICS_ENEMY_ACTION_IDS.Moo.length}`);
 check('ムーは新モードの技をすべて持つ',
-  ['sweep', 'rush', 'pierce', 'roar', 'regen', 'focus', 'allout'].every(id => api.TACTICS_ENEMY_ACTION_IDS.Moo.includes(id)));
-// 狙いと全体攻撃は後半の敵から出す。最初のWAVEから全部来ると、受け方を1つずつ覚えられない
-check('単体狙い・全体攻撃は最初の敵には割り当てない',
-  !api.TACTICS_ENEMY_ACTION_IDS.Dino.includes('focus') && !api.TACTICS_ENEMY_ACTION_IDS.Dino.includes('allout')
+  ['sweep', 'rush', 'pierce', 'roar', 'regen', 'allout'].every(id => api.TACTICS_ENEMY_ACTION_IDS.Moo.includes(id)));
+// ★単体狙い(focus)は廃止した(2026-09-20)。必殺技と役割がかぶるため
+check('単体狙いはどこにも残っていない',
+  api.TACTICS_ACTION_DEFINITIONS.every(d => d.id !== 'focus' && d.variant !== 'focus')
+    && Object.values(api.TACTICS_ENEMY_ACTION_IDS).every(list => !list.includes('focus')));
+// 全体攻撃は後半の敵から出す。最初のWAVEから全部来ると、受け方を1つずつ覚えられない
+check('全体攻撃は最初の敵には割り当てない',
+  !api.TACTICS_ENEMY_ACTION_IDS.Dino.includes('allout')
     && !api.TACTICS_ENEMY_ACTION_IDS.Gel.includes('allout'));
-check('後半の敵は単体狙いと全体攻撃を持つ',
-  ENEMY_ORDER.slice(4).some(id => api.TACTICS_ENEMY_ACTION_IDS[id].includes('focus'))
-    && ENEMY_ORDER.slice(4).some(id => api.TACTICS_ENEMY_ACTION_IDS[id].includes('allout')));
+check('後半の敵は全体攻撃を持つ',
+  ENEMY_ORDER.slice(4).some(id => api.TACTICS_ENEMY_ACTION_IDS[id].includes('allout')));
 check('知らない技idを割り当てていない',
   Object.values(api.TACTICS_ENEMY_ACTION_IDS).every(list =>
     list.every(id => api.TACTICS_ACTION_DEFINITIONS.some(def => def.id === id))));
@@ -123,19 +134,20 @@ const pierce = intentOf('Lilim', 'pierce');
 check('貫通撃は variant で見分けられる', !!pierce && pierce.variant === 'pierce');
 check('新モードの攻撃は type が ATTACK のまま(既存のダメージ計算を通すため)',
   [sweep, rush, pierce].every(intent => intent && intent.type === 'ATTACK'));
-// 単体狙いと全体攻撃(設計 §5.3)
-const focus = intentOf('Durahan', 'focus');
+// 全体攻撃(設計 5.3)
 const allout = intentOf('Durahan', 'allout');
-check('単体狙いは variant で見分けられ、威力が定義どおり',
-  !!focus && focus.variant === 'focus' && focus.value === Math.floor(100 * api.TACTICS_FOCUS_MULT),
-  focus ? `威力${focus.value}` : '出ませんでした');
 check('全体攻撃は targetsAll を持ち歩く', !!allout && allout.targetsAll === true,
   allout ? '' : '出ませんでした');
-// ★ここが崩れると「全員を殴るほうが得」になり、狙いを読む意味が消える
-check('全体攻撃1体あたりの威力は単体狙いより低い',
-  api.TACTICS_ALLOUT_MULT < api.TACTICS_FOCUS_MULT,
-  `全体×${api.TACTICS_ALLOUT_MULT} / 単体×${api.TACTICS_FOCUS_MULT}`);
-check('単体狙い以外の技に targetsAll を付けていない',
+// ★ここが崩れると「全員を殴るほうが得」になり、狙いを読む意味も供モンを連れる意味も消える。
+//   もとは0.9で、4体そろうと合計×3.6と最も重い技になっていた(2026-09-20 に0.4へ)
+const normalMult = (api.TACTICS_ACTION_DEFINITIONS.find(d => d.id === 'normal') || {}).multiplier;
+check('全体攻撃1体あたりの威力は通常攻撃より低い',
+  api.TACTICS_ALLOUT_MULT < normalMult,
+  `全体×${api.TACTICS_ALLOUT_MULT} / 通常×${normalMult}`);
+check('全体攻撃を4体へ撒いても、ためて撃つ必殺技より軽い',
+  api.TACTICS_ALLOUT_MULT * 4 < (api.TACTICS_ACTION_DEFINITIONS.find(d => d.id === 'special') || {}).multiplier,
+  `4体で合計×${(api.TACTICS_ALLOUT_MULT * 4).toFixed(1)}`);
+check('全体攻撃以外の技に targetsAll を付けていない',
   api.TACTICS_ACTION_DEFINITIONS.filter(d => d.targetsAll).map(d => d.id).join(',') === 'allout',
   api.TACTICS_ACTION_DEFINITIONS.filter(d => d.targetsAll).map(d => d.id).join(','));
 const roar = intentOf('Durahan', 'roar');
@@ -165,6 +177,41 @@ check('再生は敵のライフを最大値まででとどめる',
 check('咆哮の重ねがけはWAVEごとに数え直す', has('tacticsRoarStacksRef.current=0'));
 check('SCANも新モードの行動表を見る', has('definitions:enemyActionDefinitionsFor(runMode,scanEnemy?.id)'));
 check('SCANは新モードの技を技名で並べる', has("action.variant?action.category:enemyActionLabel(scanEnemy,action.type)"));
+
+// --- 咆哮の効き目を画面へ出す(2026-09-20 ユーザー指摘「咆哮の効果が分からない」) ---
+// ★敵の攻撃そのものを上げて元に戻らないのに、一瞬のポップアップしか出ていなかった。
+//   SCANの「バフ・デバフ・状態異常」は"なし"で固定されていて、咆哮でも嘘になっていた
+check('SCANの効果欄は技の定義から出す(なしで固定しない)',
+  has("バフ・デバフ・状態異常 <b>{action.effectText||'なし'}</b>")
+    && !has('バフ・デバフ・状態異常 <b>なし</b>'));
+const roarDef = tacticsDef('roar'), regenDef = tacticsDef('regen');
+check('咆哮に効果の説明がある', !!roarDef.effectText && roarDef.effectText.includes('×'), roarDef.effectText || '(なし)');
+check('咆哮の説明は実データから作る(数字を書き写さない)',
+  roarDef.effectText.includes(String(api.TACTICS_ROAR_ATK_RATE))
+    && roarDef.effectText.includes(String(api.TACTICS_ROAR_MAX_STACKS)),
+  roarDef.effectText);
+check('再生に効果の説明がある', !!regenDef.effectText, regenDef.effectText || '(なし)');
+check('ダメージだけの技に効果の説明は足さない',
+  ['normal','sweep','rush','pierce','allout','wait'].every(id => !tacticsDef(id).effectText));
+check('いま何回咆哮したかを敵にも持たせる(refは画面から見えない)',
+  has('const roarStacks = tacticsRoarStacksRef.current;')
+    && has('*TACTICS_ROAR_ATK_RATE),roarStacks}:prev)'));
+check('強化の札に敵の咆哮を出す',
+  screen.includes("if(enemy?.roarStacks>0) chip('roarUp'")
+    && screen.includes('`×${enemy.roarStacks}`'));
+
+// --- 反射も狙われた子の丈夫さで返す(2026-09-20) ---
+// ★incomingDmg はパーティの丈夫さから出した値。1体ずつにした今は実際に受ける量とずれる
+check('反射は狙われた子ごとに数え直す',
+  has('const reflectSlots=isTacticsMode(runMode)')
+    && has('? tacticsIntentTargets(intent,tacticsUnitsRef.current,actingEnemyDist) : null;\n          const reflectDmg=reflectSlots'));
+check('反射は狙われた全員ぶんを足して返す',
+  has('reflectSlots.reduce((sum,slotIdx)=>sum+applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(intent,slotIdx)),0)'));
+check('反射は返す量でスコアも撃破も決める',
+  has('setCurrentWaveDamage(p=>p+reflectDmg);')
+    && has('resolveEnemyDefeat({remainingHp:reflectedHp,damage:reflectDmg})')
+    && !has('resolveEnemyDefeat({remainingHp:reflectedHp,damage:incomingDmg})'));
+check('誰にも当たらなければ反射しない', has("if(reflectDmg<=0){"));
 
 console.log(failed ? `\nNG ${failed}件` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
