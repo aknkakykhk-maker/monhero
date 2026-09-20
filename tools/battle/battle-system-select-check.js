@@ -130,6 +130,21 @@ check('詳しいルールを出すのに要るものがそろっている',
 check('売りの1行は短くまとめてある',
   api.BATTLE_SYSTEMS.every(s => s.highlights.every(([, text]) => text.length <= 20)),
   api.BATTLE_SYSTEMS.flatMap(s => s.highlights).map(([, t]) => t.length).join(','));
+// ★同じ売りを2枚のカードへ書かない。書くと見比べても違いが分からない
+// (「スコアが全国ランキングに載る」はクラシックもタクティクスも当てはまり、実際に外した)
+{
+  const texts = api.BATTLE_SYSTEMS.flatMap(s => s.highlights.map(([, text]) => text));
+  check('同じ売りを2枚のカードへ書いていない', new Set(texts).size === texts.length,
+    texts.filter((t, i) => texts.indexOf(t) !== i).join(' / ') || 'なし');
+  const icons = api.BATTLE_SYSTEMS.flatMap(s => s.highlights.map(([icon]) => icon));
+  check('売りの絵文字も重ならない', new Set(icons).size === icons.length, icons.join(''));
+}
+// 1行目の説明(tagline)をそのまま繰り返さない。同じことが2回書いてあるだけになる
+check('売りが説明文の繰り返しになっていない',
+  api.BATTLE_SYSTEMS.every(s => s.highlights.every(([, text]) => !s.tagline.includes(text))));
+// カード下の1行(note)とも重ならない
+check('売りがカード下の1行と重なっていない',
+  api.BATTLE_SYSTEMS.every(s => s.highlights.every(([, text]) => !s.note.includes(text))));
 check('仕組みとモードを同じ入口から引ける',
   has('const battleInfoById = (id) => BATTLE_SYSTEMS.find(s => s.id === id) || battleModeInfo(id);')
     && has('{modeInfoId&&(()=>{const mode=battleInfoById(modeInfoId);return('));

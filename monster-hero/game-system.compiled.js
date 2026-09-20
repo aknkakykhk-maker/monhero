@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 23fb2649ea0eeb5e
+// source-sha256: 0cac86ce1b24752a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 896bc83b540e0c05
+// generated-sha256: 9b4966a09b634909
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-21 01:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-21 02:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -567,8 +567,13 @@ const BATTLE_MODES = [{
 const BATTLE_SYSTEM_CLASSIC = 'systemClassic';
 const BATTLE_SYSTEM_TACTICS = 'systemTactics';
 const BATTLE_SYSTEM_QUICK = 'systemQuick';
-// ★カードの3行は、どの仕組みも【ライフの持ち方】→【遊び方の特徴】→【記録】の順でそろえる。
-//   並びをそろえると、3つを見比べて選べる(モードのカードと同じ作り)。
+// ★カードの3行は「選ぶ理由」になることだけを書く(2026-09-20 ユーザー指摘で書き直し)。
+//   仕様の説明(「ライフを分け合う」)や、ほかのバトルでもできること(「ランキングに載る」)、
+//   持っているときだけの話(「スキップチケット」)は、ここへ置かない。詳しいルールで読める。
+//   3行は上から読むと1つの流れになるように並べる。
+//     クラシック … 育てた強さが出る → 強化を積む → 上を目指す
+//     タクティクス … 1体ずつ持つ   → 予告を読む → 読みで勝つ
+//     クイック     … 1.5倍もらえる  → 1周が速い → 放置で回せる
 // ★points は「詳しいルール」で開く本文。モードの説明モーダルと同じ形なので、
 //   画面はモードと仕組みを区別せずに出せる(battleInfoById)。
 const BATTLE_SYSTEMS = Object.freeze([Object.freeze({
@@ -578,7 +583,7 @@ const BATTLE_SYSTEMS = Object.freeze([Object.freeze({
   emoji: '⚔️',
   color: '#818cf8',
   tagline: '育てたモンスターで、じっくり攻略する王道のバトル',
-  highlights: Object.freeze([Object.freeze(['🛡️', 'パーティ全員で1本のライフを分け合う']), Object.freeze(['📈', 'WAVEごとに強化を選んで組み立てる']), Object.freeze(['🏆', 'スコアが全国ランキングに載る'])]),
+  highlights: Object.freeze([Object.freeze(['⚔️', '育てた強さが、そのまま結果に出る']), Object.freeze(['📈', 'WAVEごとに強化を選んで積み上げる']), Object.freeze(['🔥', '極限の高難度まで、上を目指せる'])]),
   note: 'チャレンジ／種族チャレンジ／プロ。難易度は通常と極限から選べます',
   points: Object.freeze([Object.freeze(['🛡️', 'ライフの持ち方', 'パーティ全員で1本のライフを分け合います。誰が狙われても同じライフが減り、0になったら負けです。']), Object.freeze(['📈', 'WAVEのあいだの強化', 'WAVEをクリアするたびに強化フェーズがあります。ちから・丈夫さ・ライフ・ガッツのどれを伸ばすかを自分で選び、ブリーダーの教えもここで選びます。編成のかみ合わせを考えながら組み立てられます。']), Object.freeze(['👹', '難しさ', '通常の9段階に加えて、その上に極限の段があります。難易度えらびの「極限」タブから挑め、段ごとに特殊ルールが付きます。']), Object.freeze(['🎮', '中にあるモード', 'チャレンジモード（基本）、種族チャレンジ（ひとつの種族だけで挑む）、プロモード（ベースモンだけで挑む）の3つです。']), Object.freeze(['🏆', 'スコアと記録', 'スコアは難易度ごとの全国ランキングに反映されます。自己ベスト・最高到達WAVE・クリア回数はモードごとに別々に残ります。']), Object.freeze(['🎯', 'こんな人におすすめ', 'じっくり考えて攻略したい人、ランキング上位や自己ベスト更新を狙いたい人向けです。'])]),
   modes: Object.freeze([BATTLE_MODE_CHALLENGE, BATTLE_MODE_SPECIES_CHALLENGE, BATTLE_MODE_PRO])
@@ -589,7 +594,7 @@ const BATTLE_SYSTEMS = Object.freeze([Object.freeze({
   emoji: '🎯',
   color: '#fb923c',
   tagline: '敵の技を読んで、誰を守るかを決める駆け引きのバトル',
-  highlights: Object.freeze([Object.freeze(['❤️', 'モンスター1体ずつがライフを持つ']), Object.freeze(['🔮', '敵の技は1ターン前に予告される']), Object.freeze(['🎯', '育成の数字より、その場の判断で決まる'])]),
+  highlights: Object.freeze([Object.freeze(['❤️', 'モンスター1体ずつがライフを持つ']), Object.freeze(['🔮', '敵の技は1ターン前に予告される']), Object.freeze(['💪', '育てた数字より、読みで勝てる'])]),
   note: 'タクティクスチャレンジ／種族チャレンジ／プロ。難易度は通常と極限から選べます',
   points: Object.freeze([Object.freeze(['❤️', 'ライフの持ち方', 'モンスター1体ずつがライフを持ちます。狙われた子だけがダメージを受け、倒れた子はその場では戦えなくなります。全員が倒れたときだけ負けです。']), Object.freeze(['🔮', '敵の予告', '敵は1ターン前に「次に何をするか」を知らせます。薙ぎ払い・連撃・貫通撃・咆哮など、技ごとに当たり方も避け方も違います。']), Object.freeze(['🎯', 'こちらの選びかた', '予告を読んで、ガードで受けるか、間合いを変えるか、動きを止めるかをその場で決めます。誰を守るかの判断が、そのまま結果に出ます。']), Object.freeze(['🤝', '供モンの加入', '供モンが加わると、そのぶん敵も強くなります。強く育てた子を連れていくほど手ごわくなるので、少ない人数のまま進むという選び方もできます。']), Object.freeze(['🎮', '中にあるモード', 'タクティクスチャレンジ（基本）、種族チャレンジ、プロの3つです。難易度は通常と極限から選べます。']), Object.freeze(['🏆', 'スコアと記録', 'クラシックバトルとは別の全国ランキングに載ります。クラシックバトルの記録は書き換わりません。']), Object.freeze(['🎯', 'こんな人におすすめ', '育成の数字だけでなく、その場の判断で勝ちたい人、いつもの押し切りが通じない戦いを試したい人向けです。'])]),
   modes: Object.freeze([BATTLE_MODE_TACTICS, BATTLE_MODE_TACTICS_SPECIES, BATTLE_MODE_TACTICS_PRO])
@@ -600,7 +605,7 @@ const BATTLE_SYSTEMS = Object.freeze([Object.freeze({
   emoji: '⚡',
   color: '#fbbf24',
   tagline: '短い時間でモンスターを育てる、周回向けのバトル',
-  highlights: Object.freeze([Object.freeze(['💎', '経験値・ダイヤが1.5倍']), Object.freeze(['🔁', 'AUTO∞で放置したまま周回できる']), Object.freeze(['⏩', 'スキップチケットで一気にクリア'])]),
+  highlights: Object.freeze([Object.freeze(['💎', '経験値・ダイヤが1.5倍もらえる']), Object.freeze(['⚡', '強化を選ばないから1周が速い']), Object.freeze(['🔁', 'AUTO∞で放置したまま何周でも'])]),
   note: '中のモードは1つだけなので、選ぶとそのまま難易度えらびへ進みます',
   points: Object.freeze([Object.freeze(['💎', 'もらえるもの', 'ブリーダー経験値・絆経験値・ダイヤが、難易度の倍率にさらに1.5倍かかります。同じ時間でいちばん多く育つのがこのモードです。']), Object.freeze(['📈', '強化のかわり', '強化を選ぶ画面は出ません。かわりにWAVEをクリアするたび、味方全員のライフ・ちから・丈夫さ・ガッツがそのときの値から10%上がり、ライフとガッツが満タンまで回復します。']), Object.freeze(['🔁', '放置で周回する', 'AUTO∞を使うと、10WAVEをクリアしたあとそのまま次の周へ入ります。置いておくだけで育つので、育成の周回と相性がいい遊び方です。']), Object.freeze(['⏩', 'スキップチケット', 'このモードでだけ使えます。チケットのある難易度は、戦わずに一気にクリアぶんの報酬を受け取れます。']), Object.freeze(['🎁', '報酬の方針を選べる', '難易度えらびで「育成／プシュケー優先／ダイヤ優先」を選べます。いま欲しいものに合わせて、もらえるものの内訳を変えられます。']), Object.freeze(['🏆', 'スコアと記録', 'スコアは競いません。ランキングには載らず、ほかのモードの自己ベストも書き換わりません。記録はクイック専用の場所に、最高到達WAVEとクリア回数として残ります。']), Object.freeze(['🎯', 'こんな人におすすめ', '新しい子を早く育てたい人、絆レベルや強化ポイントをまとめて稼ぎたい人向けです。'])]),
   modes: Object.freeze([BATTLE_MODE_QUICK]),
