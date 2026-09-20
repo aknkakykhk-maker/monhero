@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 069d12147d8b898e
+// source-sha256: a7a8f37e219f55f5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ed5b5a505eeb04ca
+// generated-sha256: c17ab4b6ab8bbe4e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-20 15:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-20 15:44"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -52045,7 +52045,11 @@ function MonsterHeroGame() {
     const heroTraitOn = !isTacticsMode(runMode) || !Number.isInteger(targetSlot) || targetSlot === heroDist;
     const traitHeroId = heroTraitOn ? mainHero?.id : null;
     const chuuniCutActive = (traitHeroId === 'Ark' || traitHeroId === 'Iblis') && getWaveBuff('chuuniDmgCutUses') < 2; // 中二病特性: WAVE毎2回まで被ダメ50%カット
-    const targetUnit = Number.isInteger(targetSlot) ? tacticsUnitsRef.current[targetSlot] : null;
+    // ★盤面(tacticsUnits)はどのモードでも作るので、モードを見ずに targetSlot を使うと
+    //   既存モードでも1体ずつの丈夫さを拾ってしまう。いまは既存モードから枠を渡す
+    //   呼び出しが無いので実害は出ていないが、増えた瞬間に既存モードの被ダメが変わる。
+    //   isTacticsMode で締めて、既存モードは必ず effectiveDef(パーティの丈夫さ)を通す
+    const targetUnit = isTacticsMode(runMode) && Number.isInteger(targetSlot) ? tacticsUnitsRef.current[targetSlot] : null;
     const defVal = targetUnit ? resolveEffectiveMaxStat(normalizeTacticsUnit(targetUnit).def, getPermaBuff('defPct')) : effectiveDef;
     // 丈夫さは固定軽減(×0.5)のあと、0.015%/pt（上限50%）を乗算する。
     // 最低30はこの基本防御部分だけに適用し、後続の既存軽減順は変えない。
