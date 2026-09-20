@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f3533e8485e96c47
+// source-sha256: 9a0d2368a539878b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 349143e8c1530380
+// generated-sha256: 21149778d2b39631
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-20 13:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-20 14:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -52801,7 +52801,11 @@ function MonsterHeroGame() {
           addPopup('中二病発動!被ダメ50%カット', 'hero', 'text-pink-400 text-sm font-bold');
         }
         // 確定反射バフは従来どおり100%発動。確率型の回避/反射/吸収だけを統一抽選する。
-        const soulDefenseResult = getTurnBuff('reflect', false) ? 'reflect' : rollUnifiedSpecialDefense(unifiedSpecialDefense, Math.random(), Math.random());
+        // ★新モードは効く範囲が違う(2026-09-20 ユーザー指示)。
+        //   確定反射(モノリスの固有技)＝**味方全体**。発動したターンは誰も受けない。
+        //   確率で出る反射・回避・吸収＝**狙われた子だけ**。抽選で出るものは個別にそろえる
+        const forcedReflect = getTurnBuff('reflect', false);
+        const soulDefenseResult = forcedReflect ? 'reflect' : rollUnifiedSpecialDefense(unifiedSpecialDefense, Math.random(), Math.random());
         const isReflect = soulDefenseResult === 'reflect';
         const isAbsorb = soulDefenseResult === 'absorb';
         const isEvasion = soulDefenseResult === 'evasion';
@@ -52820,7 +52824,7 @@ function MonsterHeroGame() {
         setEnemyAttackAnim(false);
         await battleWait(fxKind === 'moo' ? 250 : intent.type === 'SPECIAL' ? 300 : 100);
         setEnemyAttackFx(null);
-        if (isReflect) {
+        if (isReflect && (forcedReflect || !isTacticsMode(runMode))) {
           // ★新モードは返す量も「狙われた子が受けるはずだったダメージ」(2026-09-20)。
           //   incomingDmg はパーティの丈夫さから出した値なので、1体ずつにした今は
           //   実際に受ける量とずれる。吸収と同じ数え方にそろえる。
@@ -52882,7 +52886,7 @@ function MonsterHeroGame() {
             gainGuts(gutsGain);
           }
           await battleWait(1000);
-        } else if (isEvasion) {
+        } else if (isEvasion && !isTacticsMode(runMode)) {
           addPopup("回避！", 'hero', 'text-blue-400 font-black text-xl drop-shadow-lg');
           await battleWait(1000);
         } else if (isTacticsMode(runMode)) {
@@ -52903,6 +52907,18 @@ function MonsterHeroGame() {
             //   1ヒットに使い切れなかったぶんは余らない(ライフ・ガッツにもならない)。
             //   ここを「合計から引く」に戻すと、厚いガード1枚で連撃を完全に止められてしまう
             const rushHits = intent.variant === 'rush' ? Math.max(1, Math.floor(Number(intent.hits) || 1)) : 1;
+            // ★回避は「狙われた子だけ」が避ける(2026-09-20 ユーザー指示)。
+            //   反射は味方全体のバフ(発動したターンは誰も受けない)のに対し、回避は吸収と同じ個別扱い。
+            //   全体攻撃で狙われた全員が避けると、回避が全体バフと変わらなくなる。
+            //   狙われた子が1体なら今までどおりその子が避ける
+            const evadedSlot = isEvasion && targets.length ? targets[Math.floor(Math.random() * targets.length)] : null;
+            // ★確率で出た反射(勇者モンがモノリス・魂格)も狙われた子だけ。
+            //   その子は受けずに、受けるはずだった量を敵へ返す。ほかの子は普通に受ける。
+            //   固有技の確定反射は上の枝(味方全体)で処理しているのでここへは来ない
+            const reflectedSlot = isReflect && targets.length ? targets[Math.floor(Math.random() * targets.length)] : null;
+            let evadedName = '',
+              reflectedName = '',
+              reflectBack = 0;
             let units = tacticsUnitsRef.current,
               dealt = 0,
               saved = 0,
@@ -52910,6 +52926,15 @@ function MonsterHeroGame() {
               gutsBack = 0,
               throughTotal = 0;
             targets.forEach(slotIdx => {
+              if (slotIdx === evadedSlot) {
+                evadedName = tacticsTargetName(units, slotIdx);
+                return;
+              }
+              if (slotIdx === reflectedSlot) {
+                reflectedName = tacticsTargetName(units, slotIdx);
+                reflectBack += applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(intent, slotIdx));
+                return;
+              }
               const own = slotGuards[slotIdx] || {
                 flat: 0,
                 mult: 0
@@ -52937,6 +52962,14 @@ function MonsterHeroGame() {
                 units = recoverTacticsGutsAt(healTacticsAt(units, slotIdx, hit.saved), slotIdx, gain);
               }
             });
+            if (evadedSlot != null) {
+              addPopup(`回避！ ${evadedName}`, 'hero', 'text-blue-400 font-black text-xl drop-shadow-lg');
+              await battleWait(600);
+            }
+            if (reflectedSlot != null) {
+              addPopup(`反射！ ${reflectedName}`, 'hero', 'text-purple-400 font-black text-xl drop-shadow-lg');
+              await battleWait(600);
+            }
             // 「ガードしたのに減った」を不具合に見せないため、決まりをその場に出す
             if (rushHits > 1 && guardedCount > 0 && throughTotal > 0) {
               addPopup(`連撃 ${rushHits}ヒット！ ガードは1ヒットぶん`, 'enemy', 'text-orange-300 font-black text-lg drop-shadow-md');
@@ -52959,8 +52992,23 @@ function MonsterHeroGame() {
               addPopup(`💚 ライフ +${saved}`, 'life', 'text-emerald-400 text-2xl font-black drop-shadow-md');
             }
             if (gutsBack > 0) addPopup(`⚡ ガッツ +${gutsBack}`, 'guts', 'text-amber-400 text-xl font-bold drop-shadow-md');
-            if (dealt <= 0 && saved <= 0) addPopup('無傷！', 'hero', 'text-emerald-300 font-black text-xl drop-shadow-md');
+            if (dealt <= 0 && saved <= 0 && evadedSlot == null && reflectedSlot == null) addPopup('無傷！', 'hero', 'text-emerald-300 font-black text-xl drop-shadow-md');
             await battleWait(1000);
+            // 味方の増減を確定させてから敵へ返す。撃破したらここで止める(回復・次ターンへ進ませない)
+            if (reflectBack > 0) {
+              addPopup(`反射 ${reflectBack}!!`, 'enemy', 'text-purple-400 font-black text-4xl drop-shadow-lg');
+              const reflectedHp = Math.max(0, enemyHpAtAttackStart - reflectBack);
+              setCurrentWaveDamage(p => p + reflectBack);
+              setEnemy(prev => prev ? {
+                ...prev,
+                hp: reflectedHp
+              } : prev);
+              await battleWait(1000);
+              if (await resolveEnemyDefeat({
+                remainingHp: reflectedHp,
+                damage: reflectBack
+              })) return;
+            }
           }
         } else if (guardValue > 0) {
           // ガードは最終ダメージが0でも(余剰でライフ・ガッツが増えても)「受け止めた」扱いにする
