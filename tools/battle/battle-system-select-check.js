@@ -179,6 +179,20 @@ check('売りがカード下の1行と重なっていない',
   // タクティクス側は「合算されない」ことが読めること。作り直しの中心なので落とさない
   check('供モンが合算されないことが書いてある',
     /合算されず/.test(tactics.points[0][2]));
+  // ★勇者特性の効き方も、ステータスと並ぶ大きな違い(2026-09-21 ユーザー指摘)。
+  //   クラシックは勇者モンの特性だけがパーティ全体へ、タクティクスは連れてきた全員ぶんが
+  //   それぞれの子に効く。供モンを選ぶ意味が変わるので、入口で読めるようにしておく
+  const traitPointOf = (system) => system.points.find(([, title]) => title.includes('勇者特性'));
+  check('どちらにも勇者特性の説明がある',
+    !!traitPointOf(classic) && !!traitPointOf(tactics),
+    [classic, tactics].map(s => (traitPointOf(s) || ['', 'なし'])[1]).join(' / '));
+  check('クラシックは勇者モンの特性だけと書いてある',
+    /勇者モン(にした子)?の特性だけ/.test(traitPointOf(classic)[2]));
+  check('タクティクスは供モンの特性も効くと書いてある',
+    /供モンの勇者特性も/.test(traitPointOf(tactics)[2])
+      && /どの特性を連れていくか/.test(traitPointOf(tactics)[2]));
+  check('タクティクスの売りに勇者特性が出ている',
+    /勇者特性/.test(lineOf(tactics)), lineOf(tactics));
   // 詳しいルールでも、基本との関係が読めるようにしておく
   check('タクティクスの詳しいルールが基本との関係を書いている',
     tactics.points.some(([, , text]) => text.includes('基本のバトル'))
