@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 741cf4dbaa2fa05d
+// source-sha256: 26416e1ba210fa58
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 889b9b4efe206e29
+// generated-sha256: 2f1af647e8c51d62
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -161,7 +161,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-20 10:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-20 10:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -26430,6 +26430,10 @@ const tacticsPartyStat = (units, key) => {
 };
 const tacticsPartyAtk = units => tacticsPartyStat(units, 'atk');
 const tacticsPartyDef = units => tacticsPartyStat(units, 'def');
+// ガード段階(手札に出るガードカードの段階と枚数)だけは「いちばん硬い子」で決める
+// (2026-09-20 ユーザー指示)。平均だと、1体だけ壁役を育てても段階が上がらない。
+// ★軽減量そのものは「構えた子の丈夫さ」で1体ずつ出している(ここは段階だけの話)
+const tacticsMaxDef = units => tacticsFilledSlots(units).reduce((best, index) => Math.max(best, normalizeTacticsUnit(units[index]).def), 0);
 
 // 20ターン経過など、一斉に倒れる場面。敗北の見え方をそろえる
 const wipeTacticsBoard = units => (Array.isArray(units) ? units : []).map(unit => unit ? applyTacticsDamage(unit, Number.MAX_SAFE_INTEGER) : null);
@@ -26621,29 +26625,37 @@ const makeCardHalveCounter = (groupOf, isExempt) => {
   };
 };
 
-// ===== 自動再生(毎ターンのライフ・ガッツ回復%) =====
-// ★1体ずつ「その子の上限 × 率」で回す(2026-09-20 ユーザー指摘)。
+// ===== 「その子の上限 × 率」で回復する =====
+// ★1体ずつ自分の率で回す(2026-09-20 ユーザー指摘)。
 //   合計の上限から量を出して配る形だと、
 //     ・1体だけ傷ついているとき、パーティ全員ぶんの回復がその子へ丸ごと入る
 //     ・倒れている子の上限も量の計算に入るので、倒れている子が多いほど
 //       残った子がよけいに回復する(逆になっている)
 //   の2つが起きる。個別のステータスに合わせて、1体ずつ自分の率で回す。
-// ★倒れた子には入れない(勝手に復活させない)。
+// ★ライフは includeDowned のときだけ倒れた子にも入れる(復活までの貯め)。
+//   自動再生は false(勝手に復活させない)、回復カード・緊急回復は true。
+// ★ガッツはいつも立っている子だけ(倒れた子はカードを使えない)。
 // ★返す hp / guts は「実際に入ったぶん」。上限で頭打ちになったぶんは数えないので、
 //   画面に出す数字と盤面の増え方が食い違わない。
-const regenTacticsAliveBoard = (units, hpRate, gutsRate) => {
+const rateHealTacticsBoard = (units, hpRate, gutsRate, includeDowned = false) => {
   const list = (Array.isArray(units) ? units : []).slice();
   const hpPct = Math.max(0, Number(hpRate) || 0);
   const gutsPct = Math.max(0, Number(gutsRate) || 0);
+  const hpSlots = includeDowned ? tacticsFilledSlots(list) : tacticsAliveSlots(list);
+  const gutsSlots = tacticsAliveSlots(list);
   let hp = 0,
     guts = 0;
-  tacticsAliveSlots(list).forEach(index => {
+  tacticsFilledSlots(list).forEach(index => {
     const before = normalizeTacticsUnit(list[index]);
     let next = list[index];
-    const hpGain = Math.floor(before.maxHp * hpPct);
-    if (hpGain > 0) next = healTacticsUnit(next, hpGain);
-    const gutsGain = Math.floor(before.maxGuts * gutsPct);
-    if (gutsGain > 0) next = recoverTacticsGuts(next, gutsGain);
+    if (hpPct > 0 && hpSlots.includes(index)) {
+      const gain = Math.floor(before.maxHp * hpPct);
+      if (gain > 0) next = healTacticsUnit(next, gain);
+    }
+    if (gutsPct > 0 && gutsSlots.includes(index)) {
+      const gain = Math.floor(before.maxGuts * gutsPct);
+      if (gain > 0) next = recoverTacticsGuts(next, gain);
+    }
     const after = normalizeTacticsUnit(next);
     hp += after.hp - before.hp;
     guts += after.guts - before.guts;
@@ -26653,6 +26665,29 @@ const regenTacticsAliveBoard = (units, hpRate, gutsRate) => {
     units: list,
     hp,
     guts
+  };
+};
+// 1体だけを「その子の上限 × 率」で回復する。
+// 固有技・アシストカードの効果が「使った子」へ入るときに通る
+const rateHealTacticsAt = (units, slotIndex, hpRate, gutsRate) => {
+  const list = (Array.isArray(units) ? units : []).slice();
+  const before = normalizeTacticsUnit(list[slotIndex]);
+  if (!before) return {
+    units: list,
+    hp: 0,
+    guts: 0
+  };
+  let next = list[slotIndex];
+  const hpGain = Math.floor(before.maxHp * Math.max(0, Number(hpRate) || 0));
+  if (hpGain > 0) next = healTacticsUnit(next, hpGain);
+  const gutsGain = Math.floor(before.maxGuts * Math.max(0, Number(gutsRate) || 0));
+  if (gutsGain > 0 && !before.downed) next = recoverTacticsGuts(next, gutsGain);
+  const after = normalizeTacticsUnit(next);
+  list[slotIndex] = next;
+  return {
+    units: list,
+    hp: after.hp - before.hp,
+    guts: after.guts - before.guts
   };
 };
 
@@ -41571,19 +41606,52 @@ function MonsterHeroGame() {
     return commitTacticsUnits(damageTacticsTargets(tacticsUnitsRef.current, targets, damage));
   };
   const tacticsHeal = amount => isTacticsMode(runMode) ? commitTacticsUnits(healTacticsBoard(tacticsUnitsRef.current, amount)) : null;
-  // 自動再生の入口。倒れた子には入れない(2026-09-20 ユーザー指示)。
-  // ★毎ターン勝手に貯まって復活すると、何もしなくても誰も倒れたままにならない。
-  // ★量は1体ずつ「その子の上限 × 率」。合計の上限から出して配ると、1体だけ傷ついている
-  //   ときにパーティ全員ぶんがその子へ入ってしまう(2026-09-20 ユーザー指摘)
-  const tacticsRegen = (hpRate, gutsRate) => {
+  // 「その子の上限 × 率」で回復する入口。★新モード以外は null を返し、呼び出し側は
+  //   null のときだけ今までどおり「合計の上限 × 率」を通す。
+  // ★合計から量を出して配ると、1体だけ傷ついているときにパーティ全員ぶんがその子へ入る
+  //   (2026-09-20 ユーザー指摘)。1体ずつ自分の率で回す。
+  //   includeDowned … 倒れた子にも入れるか。回復カード・緊急回復は true(復活までの貯め)、
+  //   自動再生は false(勝手に復活させない)
+  const tacticsRateHeal = (hpRate, gutsRate, includeDowned = true) => {
     if (!isTacticsMode(runMode)) return null;
-    const result = regenTacticsAliveBoard(tacticsUnitsRef.current, hpRate, gutsRate);
+    const result = rateHealTacticsBoard(tacticsUnitsRef.current, hpRate, gutsRate, includeDowned);
     const total = commitTacticsUnits(result.units);
     return {
       hp: result.hp,
       guts: result.guts,
       total
     };
+  };
+  // 自動再生。倒れた子には入れない(勝手に復活させない)
+  const tacticsRegen = (hpRate, gutsRate) => tacticsRateHeal(hpRate, gutsRate, false);
+  // 固有技・アシストカードの効果が「使った子」へ入るとき。量もその子の上限の率
+  const tacticsRateHealAt = (slotIdx, hpRate, gutsRate) => {
+    if (!isTacticsMode(runMode)) return null;
+    const result = rateHealTacticsAt(tacticsUnitsRef.current, slotIdx, hpRate, gutsRate);
+    const total = commitTacticsUnits(result.units);
+    return {
+      hp: result.hp,
+      guts: result.guts,
+      total
+    };
+  };
+  // カードのガッツ回復。新モードは「使った子の上限 × 率」、ほかは今までどおり合計の率。
+  // 返すのは実際に入ったぶん(画面に出す数字と食い違わせない)
+  const gainGutsByRate = (slotIdx, rate) => {
+    const result = tacticsRateHealAt(slotIdx, 0, rate);
+    if (result) return result.guts;
+    const gain = Math.floor(liveEffectiveMaxGuts() * Math.max(0, rate));
+    if (gain > 0) gainGutsAt(slotIdx, gain);
+    return gain;
+  };
+  // ガード段階は「いちばん硬い子」で決める(2026-09-20 ユーザー指示)。
+  // ★手札に出るガードカードの段階と枚数は編成で1組ぶんなので全体の決めごとだが、
+  //   平均だと1体だけ壁役を育てても段階が上がらない。軽減量そのものは1体ずつのまま
+  const guardLevelDef = fallback => {
+    const base = fallback !== undefined ? fallback : def;
+    if (!isTacticsMode(runMode)) return base;
+    const maxDef = tacticsMaxDef(tacticsUnitsRef.current);
+    return maxDef > 0 ? maxDef : base;
   };
   // ガッツの回復も立っている子へ配る。戻り値は「新モードなら合計ライフ、ほかは null」で、
   // 呼び出し側は null のときだけ今までどおりの1行を通す(ライフの helper と同じ約束)
@@ -52479,11 +52547,15 @@ function MonsterHeroGame() {
       ...p,
       poltzCharges: Math.max(0, charges - 1)
     }));
-    const gutsGain = Math.floor(liveEffectiveMaxGuts() * tier.healGuts * effMul);
-    if (gutsGain > 0) {
-      gainGuts(gutsGain);
-      addPopup(`⚡ ガッツ +${gutsGain}`, 'guts', 'text-lime-300 font-black text-2xl drop-shadow-md');
+    // ★新モードは1体ずつ「その子の上限 × 率」(2026-09-20 ユーザー指示)
+    const poltzRate = tier.healGuts * effMul;
+    const poltzRes = tacticsRateHeal(0, poltzRate);
+    let gutsGain = 0;
+    if (poltzRes) gutsGain = poltzRes.guts;else {
+      gutsGain = Math.floor(liveEffectiveMaxGuts() * poltzRate);
+      if (gutsGain > 0) gainGuts(gutsGain);
     }
+    if (gutsGain > 0) addPopup(`⚡ ガッツ +${gutsGain}`, 'guts', 'text-lime-300 font-black text-2xl drop-shadow-md');
     if (tier.gutsRecover > 0) addPermaBuff('gutsRecoverPct', tier.gutsRecover * effMul);
     if (tier.atk > 0) addPermaBuff('atkPct', tier.atk * effMul);
     addPopup(`🍱 ${BREEDER_EVO_NAMES.poltz[tierIdx]}!`, 'hero', 'text-lime-300 font-black text-xl drop-shadow-md');
@@ -52879,9 +52951,13 @@ function MonsterHeroGame() {
     const pendingNextTurnBuffs = nextTurnBuffsRef.current;
     const recoveryMult = pendingNextTurnBuffs.melosoFullRecoveryMult || 0;
     if (recoveryMult > 0) {
-      const melosoHeal = Math.floor(liveEffectiveMaxHp() * recoveryMult);
-      if (tacticsHeal(melosoHeal) === null) setHp(p => Math.min(liveEffectiveMaxHp(), p + melosoHeal));
-      gainGuts(Math.floor(liveEffectiveMaxGuts() * recoveryMult));
+      // ★新モードは1体ずつ「その子の上限 × 率」。倍率1なら全員が満タンになる
+      const melosoRes = tacticsRateHeal(recoveryMult, recoveryMult);
+      if (melosoRes) currentHp = melosoRes.total;else {
+        const melosoHeal = Math.floor(liveEffectiveMaxHp() * recoveryMult);
+        setHp(p => Math.min(liveEffectiveMaxHp(), p + melosoHeal));
+        gainGuts(Math.floor(liveEffectiveMaxGuts() * recoveryMult));
+      }
       addPopup(recoveryMult === 1 ? 'ライフ・ガッツ全回復!' : 'ライフ・ガッツ回復!', 'hero', 'text-rose-300 text-lg font-bold');
     }
     const {
@@ -52904,7 +52980,6 @@ function MonsterHeroGame() {
     if (isBusy || hp <= 0) return;
     setIsBusy(true);
     Audio_.se.heal();
-    const recoverHp = Math.floor(liveEffectiveMaxHp() * 0.3);
     setEffect({
       type: 'heal',
       label: "緊急回復",
@@ -52916,12 +52991,25 @@ function MonsterHeroGame() {
     });
     await battleWait(500);
     setEffect(null);
-    const recoverGuts = Math.floor(liveEffectiveMaxGuts() * 0.3);
-    addPopup(`💚 ライフ +${recoverHp}`, 'life', 'text-emerald-400 text-2xl font-black drop-shadow-md');
-    addPopup(`⚡ ガッツ +${recoverGuts}`, 'guts', 'text-amber-400 text-2xl font-black drop-shadow-md');
-    const emergencyHp = tacticsHeal(recoverHp);
-    if (emergencyHp === null) setHp(p => Math.min(liveEffectiveMaxHp(), p + recoverHp));
-    gainGuts(recoverGuts);
+    // ★新モードは1体ずつ「その子の上限の30%」(2026-09-20 ユーザー指示)。
+    //   合計から出すと、1体だけ傷ついているときパーティ全員ぶんがその子へ入る。
+    //   倒れた子にも入る(ターンを1回捨てる重い選択なので、復活までの貯めには乗る)
+    const emergency = tacticsRateHeal(0.3, 0.3);
+    let recoverHp = 0,
+      recoverGuts = 0,
+      emergencyHp = null;
+    if (emergency) {
+      recoverHp = emergency.hp;
+      recoverGuts = emergency.guts;
+      emergencyHp = emergency.total;
+    } else {
+      recoverHp = Math.floor(liveEffectiveMaxHp() * 0.3);
+      recoverGuts = Math.floor(liveEffectiveMaxGuts() * 0.3);
+      setHp(p => Math.min(liveEffectiveMaxHp(), p + recoverHp));
+      gainGuts(recoverGuts);
+    }
+    if (recoverHp > 0) addPopup(`💚 ライフ +${recoverHp}`, 'life', 'text-emerald-400 text-2xl font-black drop-shadow-md');
+    if (recoverGuts > 0) addPopup(`⚡ ガッツ +${recoverGuts}`, 'guts', 'text-amber-400 text-2xl font-black drop-shadow-md');
     await battleWait(1000);
     // 画面に予告済みの行動をそのまま実行する。ここで敵AIを再抽選すると、緊急回復で予告を
     // 別の技へ変えられてしまうため、技・対象・順番・予測値を保持した予約だけを参照する。
@@ -52975,6 +53063,7 @@ function MonsterHeroGame() {
       guardTypeInTurn = 'none',
       totalDmg = 0,
       totalHeal = 0,
+      totalHealRate = 0,
       localOryoAdd = 0,
       localDmgModAdd = 0,
       localGlobalComboAdd = 0,
@@ -53007,7 +53096,8 @@ function MonsterHeroGame() {
     const halveCounter = makeHalveCounter(); // 何枚目かの数え方は cardHalveGroup が決める
     for (const entry of usedCardEntries) {
       const card = entry.card;
-      const totalHealBeforeCard = totalHeal;
+      const totalHealBeforeCard = totalHeal,
+        totalHealRateBeforeCard = totalHealRate;
       // 2枚目以降のカードは効果が半減する。アシストカードは対象外で、枚数にも数えない。
       const isBreeder = isAssistCard(card);
       // 助手のアシストカード(みゅあ・きき・ドラ)を実際に切ったぶん。
@@ -53164,15 +53254,14 @@ function MonsterHeroGame() {
         const owned = ownedTeachings.find(t => t.id === card.id);
         const level = owned ? owned.evoLevel : 0;
         if (card.id === 'meloso') {
-          const healVal = Math.floor(liveEffectiveMaxHp() * 0.3 * effMul);
-          totalHeal += healVal;
-          const gutsVal = Math.floor(liveEffectiveMaxGuts() * 0.3 * effMul);
-          gainGutsAt(slotIdx, gutsVal);
+          totalHeal += Math.floor(liveEffectiveMaxHp() * 0.3 * effMul);
+          totalHealRate += 0.3 * effMul;
+          const gutsVal = gainGutsByRate(slotIdx, 0.3 * effMul);
           currentTurnGuardFlat += GUARD_EVOLUTION[guardLevel].flat * effMul;
           currentTurnGuardMult += GUARD_EVOLUTION[guardLevel].mult * effMul;
           addGuardForSlot(slotIdx, GUARD_EVOLUTION[guardLevel].flat * effMul, GUARD_EVOLUTION[guardLevel].mult * effMul);
           guardTypeInTurn = 'guard';
-          addPopup(`⚡ ガッツ +${gutsVal}`, 'guts', 'text-amber-400 font-black text-2xl drop-shadow-md');
+          if (gutsVal > 0) addPopup(`⚡ ガッツ +${gutsVal}`, 'guts', 'text-amber-400 font-black text-2xl drop-shadow-md');
           if (level >= 1 && usedCards.length >= 2) {
             setNextTurnBuff('takenDamageMult', 1 - 0.5 * effMul);
             addPopup('次ターン被ダメ50%減 予約!', 'hero', 'text-cyan-300 text-lg font-bold');
@@ -53190,26 +53279,24 @@ function MonsterHeroGame() {
           let hpB = level === 1 ? 0.05 : level >= 2 ? 0.08 : 0.03,
             atkB = level >= 2 ? 0.05 : 0.03,
             gutsB = level >= 2 ? 0.05 : 0.03;
-          const healVal = Math.floor(liveEffectiveMaxHp() * hpRecRate * effMul);
-          totalHeal += healVal;
+          totalHeal += Math.floor(liveEffectiveMaxHp() * hpRecRate * effMul);
+          totalHealRate += hpRecRate * effMul;
           addPermaBuff('muaHpPct', hpB * effMul);
           addPermaBuff('muaAtkPct', atkB * effMul);
           addPermaBuff('muaGutsPct', gutsB * effMul);
           if (gutsRecRate > 0) {
-            const gv = Math.floor(liveEffectiveMaxGuts() * gutsRecRate * effMul);
-            gainGutsAt(slotIdx, gv);
-            addPopup(`⚡ ガッツ +${gv}`, 'guts', 'text-amber-400 font-black text-2xl drop-shadow-md');
+            const gv = gainGutsByRate(slotIdx, gutsRecRate * effMul);
+            if (gv > 0) addPopup(`⚡ ガッツ +${gv}`, 'guts', 'text-amber-400 font-black text-2xl drop-shadow-md');
           }
         } else {
-          const healVal = Math.floor(liveEffectiveMaxHp() * (0.5 + level * 0.2) * effMul);
-          totalHeal += healVal;
+          totalHeal += Math.floor(liveEffectiveMaxHp() * (0.5 + level * 0.2) * effMul);
+          totalHealRate += (0.5 + level * 0.2) * effMul;
           addPermaBuff('muaHpPct', 0.10 * effMul);
           addPermaBuff('muaAtkPct', 0.05 * effMul);
           addPermaBuff('muaGutsPct', 0.10 * effMul);
           if (level >= 1) {
-            const gv = Math.floor(liveEffectiveMaxGuts() * (0.5 + level * 0.2) * effMul);
-            gainGutsAt(slotIdx, gv);
-            addPopup(`⚡ ガッツ +${gv}`, 'guts', 'text-amber-400 font-black text-2xl drop-shadow-md');
+            const gv = gainGutsByRate(slotIdx, (0.5 + level * 0.2) * effMul);
+            if (gv > 0) addPopup(`⚡ ガッツ +${gv}`, 'guts', 'text-amber-400 font-black text-2xl drop-shadow-md');
           }
         }
       } else if (card.type !== 'guard' && card.type !== 'weak_guard') {
@@ -53329,9 +53416,8 @@ function MonsterHeroGame() {
             setImmediateTurnBuff('stunEnemy', true);
             addPopup('スタン!', 'enemy', 'text-yellow-400 text-lg font-bold');
           } else if (card.monId === 'Suezo') {
-            const gRec = Math.floor(liveEffectiveMaxGuts() * 0.5 * effMul);
-            gainGuts(gRec);
-            addPopup(`⚡ ガッツ +${gRec}`, 'guts', 'text-amber-400 text-xl font-black drop-shadow-md');
+            const gRec = gainGutsByRate(slotIdx, 0.5 * effMul);
+            if (gRec > 0) addPopup(`⚡ ガッツ +${gRec}`, 'guts', 'text-amber-400 text-xl font-black drop-shadow-md');
           } else if (card.monId === 'Pixie' || card.monId === 'Mia') {
             setNextTurnBuff('zeroGuts', true);
             addPopup('次ターン消費0!', 'hero', 'text-blue-400 text-lg font-bold');
@@ -53354,7 +53440,7 @@ function MonsterHeroGame() {
               hpBeforeEnemyAttack = Math.min(liveEffectiveMaxHp(), hpBeforeEnemyAttack + hRec);
               setHp(hpBeforeEnemyAttack);
             }
-            gainGuts(gRec);
+            gainGutsAt(slotIdx, gRec);
             addPopup(`💚 ドレイン +${hRec}`, 'life', 'text-emerald-400 text-xl font-black drop-shadow-md');
             addPopup(`⚡ ガッツ +${gRec}`, 'guts', 'text-amber-400 text-base font-bold drop-shadow-md');
           } else if (card.monId === 'Ark' || card.monId === 'Iblis') {
@@ -53397,15 +53483,20 @@ function MonsterHeroGame() {
         }
       }
       const cardHeal = totalHeal - totalHealBeforeCard;
-      if (cardHeal > 0) {
+      const cardHealRate = totalHealRate - totalHealRateBeforeCard;
+      if (cardHeal > 0 || cardHealRate > 0) {
         if (isTacticsMode(runMode)) {
           // ★回復カードは「全体回復」。使う子を選ぶのはガッツを払うためで、効くのは盤面全体
-          //   (2026-09-19 ユーザーの整理。単体に効くのはガードの余りとドレインだけ)。
+          //   (2026-09-19 ユーザーの整理。単体に効くのはガードの余りとドレインと吸収だけ)。
           //   倒れた子にも入り、ライフが全快になったところで立ち上がる。
           //   「起き上がった！」は commitTacticsUnits が1か所で出す
-          addPopup(`💚 回復 +${cardHeal}`, 'life', 'text-emerald-400 text-4xl font-black drop-shadow-lg');
-          const healedAll = tacticsHeal(cardHeal);
-          if (healedAll !== null) hpBeforeEnemyAttack = healedAll;
+          // ★量は1体ずつ「その子の上限 × 率」(2026-09-20 ユーザー指示)。
+          //   合計から出すと、1体だけ傷ついているときパーティ全員ぶんがその子へ入る
+          const healedAll = tacticsRateHeal(cardHealRate, 0);
+          if (healedAll) {
+            if (healedAll.hp > 0) addPopup(`💚 回復 +${healedAll.hp}`, 'life', 'text-emerald-400 text-4xl font-black drop-shadow-lg');
+            hpBeforeEnemyAttack = healedAll.total;
+          }
         } else {
           addPopup(`💚 回復 +${cardHeal}`, 'life', 'text-emerald-400 text-4xl font-black drop-shadow-lg');
           hpBeforeEnemyAttack = Math.min(liveEffectiveMaxHp(), hpBeforeEnemyAttack + cardHeal);
@@ -54606,7 +54697,7 @@ function MonsterHeroGame() {
     const dist = spawnEnemy(w, forcedEnemyKey, selectedInitialDistance);
     if (dist === null) return;
     const nAtkL = computeAtkTier(currentSlots, dist, aptPctOverride);
-    const nGrdL = computeGuardLevel(defVal !== undefined ? defVal : def);
+    const nGrdL = computeGuardLevel(guardLevelDef(defVal));
     const nGB = nGrdL;
     setAtkLevel(nAtkL);
     setGuardLevel(nGrdL);
@@ -55215,9 +55306,14 @@ function MonsterHeroGame() {
       nAtk = atk,
       nDef = def,
       nMaxGuts = maxGuts;
+    // ★ガード段階は「いちばん硬い子」で決める(2026-09-20 ユーザー指示)。
+    //   盤面を書き換える前の値を控えておかないと、段階が上がったかどうかを比べられない
+    const prevGuardDef = tacticsMode ? guardLevelDef() : def;
+    let nGuardDef = prevGuardDef;
     if (revivePick !== null) {
       commitTacticsUnits(reviveTacticsAt(tacticsUnitsRef.current, revivePick));
       nDef = tacticsPartyDef(tacticsUnitsRef.current);
+      nGuardDef = tacticsMaxDef(tacticsUnitsRef.current);
     } else if (tacticsMode) {
       // 1体ずつのトレーニング。選んだぶんをその子だけへ入れる
       const entries = Array.isArray(picks) ? picks.filter(entry => entry && Number.isInteger(entry.slot)) : [];
@@ -55237,6 +55333,7 @@ function MonsterHeroGame() {
       commitTacticsUnits(units);
       nDef = tacticsPartyDef(units);
       nAtk = tacticsPartyAtk(units);
+      nGuardDef = tacticsMaxDef(units);
       nMaxHp = tacticsTotalBaseMaxHp(units);
       nMaxGuts = tacticsTotalBaseMaxGuts(units);
     } else {
@@ -55254,9 +55351,10 @@ function MonsterHeroGame() {
       setMaxGuts(nMaxGuts);
       setAtk(nAtk);
       setDef(nDef);
+      nGuardDef = nDef;
     }
-    const nGrdL = computeGuardLevel(nDef);
-    const currentGuardLevel = computeGuardLevel(def);
+    const nGrdL = computeGuardLevel(nGuardDef);
+    const currentGuardLevel = computeGuardLevel(prevGuardDef);
     const guardLevelUp = nGrdL > currentGuardLevel;
     const guardCountUp = guardLevelUp && guardCardCount(nGrdL) > guardCardCount(currentGuardLevel);
     const guardName = GUARD_EVOLUTION[nGrdL].name;

@@ -354,6 +354,11 @@ const tacticsPartyStat = (units, key) => {
 };
 const tacticsPartyAtk = (units) => tacticsPartyStat(units, 'atk');
 const tacticsPartyDef = (units) => tacticsPartyStat(units, 'def');
+// ガード段階(手札に出るガードカードの段階と枚数)だけは「いちばん硬い子」で決める
+// (2026-09-20 ユーザー指示)。平均だと、1体だけ壁役を育てても段階が上がらない。
+// ★軽減量そのものは「構えた子の丈夫さ」で1体ずつ出している(ここは段階だけの話)
+const tacticsMaxDef = (units) => tacticsFilledSlots(units)
+  .reduce((best, index) => Math.max(best, normalizeTacticsUnit(units[index]).def), 0);
 
 // 20ターン経過など、一斉に倒れる場面。敗北の見え方をそろえる
 const wipeTacticsBoard = (units) => (Array.isArray(units) ? units : [])
@@ -514,32 +519,55 @@ const makeCardHalveCounter = (groupOf, isExempt) => {
   };
 };
 
-// ===== 自動再生(毎ターンのライフ・ガッツ回復%) =====
-// ★1体ずつ「その子の上限 × 率」で回す(2026-09-20 ユーザー指摘)。
+// ===== 「その子の上限 × 率」で回復する =====
+// ★1体ずつ自分の率で回す(2026-09-20 ユーザー指摘)。
 //   合計の上限から量を出して配る形だと、
 //     ・1体だけ傷ついているとき、パーティ全員ぶんの回復がその子へ丸ごと入る
 //     ・倒れている子の上限も量の計算に入るので、倒れている子が多いほど
 //       残った子がよけいに回復する(逆になっている)
 //   の2つが起きる。個別のステータスに合わせて、1体ずつ自分の率で回す。
-// ★倒れた子には入れない(勝手に復活させない)。
+// ★ライフは includeDowned のときだけ倒れた子にも入れる(復活までの貯め)。
+//   自動再生は false(勝手に復活させない)、回復カード・緊急回復は true。
+// ★ガッツはいつも立っている子だけ(倒れた子はカードを使えない)。
 // ★返す hp / guts は「実際に入ったぶん」。上限で頭打ちになったぶんは数えないので、
 //   画面に出す数字と盤面の増え方が食い違わない。
-const regenTacticsAliveBoard = (units, hpRate, gutsRate) => {
+const rateHealTacticsBoard = (units, hpRate, gutsRate, includeDowned = false) => {
   const list = (Array.isArray(units) ? units : []).slice();
   const hpPct = Math.max(0, Number(hpRate) || 0);
   const gutsPct = Math.max(0, Number(gutsRate) || 0);
+  const hpSlots = includeDowned ? tacticsFilledSlots(list) : tacticsAliveSlots(list);
+  const gutsSlots = tacticsAliveSlots(list);
   let hp = 0, guts = 0;
-  tacticsAliveSlots(list).forEach(index => {
+  tacticsFilledSlots(list).forEach(index => {
     const before = normalizeTacticsUnit(list[index]);
     let next = list[index];
-    const hpGain = Math.floor(before.maxHp * hpPct);
-    if (hpGain > 0) next = healTacticsUnit(next, hpGain);
-    const gutsGain = Math.floor(before.maxGuts * gutsPct);
-    if (gutsGain > 0) next = recoverTacticsGuts(next, gutsGain);
+    if (hpPct > 0 && hpSlots.includes(index)) {
+      const gain = Math.floor(before.maxHp * hpPct);
+      if (gain > 0) next = healTacticsUnit(next, gain);
+    }
+    if (gutsPct > 0 && gutsSlots.includes(index)) {
+      const gain = Math.floor(before.maxGuts * gutsPct);
+      if (gain > 0) next = recoverTacticsGuts(next, gain);
+    }
     const after = normalizeTacticsUnit(next);
     hp += after.hp - before.hp;
     guts += after.guts - before.guts;
     list[index] = next;
   });
   return { units: list, hp, guts };
+};
+// 1体だけを「その子の上限 × 率」で回復する。
+// 固有技・アシストカードの効果が「使った子」へ入るときに通る
+const rateHealTacticsAt = (units, slotIndex, hpRate, gutsRate) => {
+  const list = (Array.isArray(units) ? units : []).slice();
+  const before = normalizeTacticsUnit(list[slotIndex]);
+  if (!before) return { units: list, hp: 0, guts: 0 };
+  let next = list[slotIndex];
+  const hpGain = Math.floor(before.maxHp * Math.max(0, Number(hpRate) || 0));
+  if (hpGain > 0) next = healTacticsUnit(next, hpGain);
+  const gutsGain = Math.floor(before.maxGuts * Math.max(0, Number(gutsRate) || 0));
+  if (gutsGain > 0 && !before.downed) next = recoverTacticsGuts(next, gutsGain);
+  const after = normalizeTacticsUnit(next);
+  list[slotIndex] = next;
+  return { units: list, hp: after.hp - before.hp, guts: after.guts - before.guts };
 };
