@@ -21,6 +21,7 @@ const PORT = 8987;
 const src = fs.readFileSync(path.join(root, 'monster-hero/src/game-system.jsx'), 'utf8');
 // 画面に出す名前はあとから変わる可能性があるので、定義から読む(idと表示名は一致していなくてよい)
 const MODE_LABEL = (src.match(/id:BATTLE_MODE_TACTICS, label:'([^']+)'/) || [])[1] || '';
+const MODE_SHORT = (src.match(/id:BATTLE_MODE_TACTICS, label:'[^']+', short:'([^']+)'/) || [])[1] || '';
 
 const MIME = { '.html':'text/html', '.js':'text/javascript', '.json':'application/json',
   '.css':'text/css', '.png':'image/png', '.jpg':'image/jpeg', '.webp':'image/webp',
@@ -46,7 +47,7 @@ const check = (name, ok, detail = '') => {
 };
 
 (async () => {
-  check('モードの表示名を定義から読めた', !!MODE_LABEL, MODE_LABEL);
+  check('モードの表示名を定義から読めた', !!MODE_LABEL && !!MODE_SHORT, `${MODE_LABEL} / ${MODE_SHORT}`);
   let playwright;
   try { playwright = require('playwright'); }
   catch { console.log('SKIP: playwright が入っていないので確認できません'); process.exit(0); }
@@ -94,11 +95,13 @@ const check = (name, ok, detail = '') => {
     check('公開フラグOFFのあいだは、ふだんの入口に出ない', !publicModes.includes(MODE_LABEL), MODE_LABEL);
     await page.evaluate(() => { document.querySelector('button[aria-label="戻る"]')?.click(); });
     await page.waitForTimeout(800);
-    // 入口そのものにも仕組みごと出ない(2026-09-20 に1画面増えた)
-    const publicSystems = await page.evaluate(() =>
-      [...document.querySelectorAll('[data-battle-system]')].map(b => b.getAttribute('data-battle-system')));
-    check('公開フラグOFFのあいだは、入口にも新モードの仕組みが出ない',
-      !publicSystems.includes('systemTactics'), publicSystems.join(','));
+    // 入口には「準備中」の枠として並ぶが、押せない(2026-09-20 ユーザー指示)
+    const soonState = await page.evaluate(() => {
+      const b = document.querySelector('[data-battle-system="systemTactics"]');
+      return b ? { there: true, soon: b.getAttribute('data-battle-system-soon') === '1', disabled: b.disabled } : { there: false };
+    });
+    check('公開フラグOFFでも、入口には「準備中」の枠が並ぶ', soonState.there && soonState.soon, JSON.stringify(soonState));
+    check('準備中の枠は押せない', soonState.disabled === true);
     // 入口からもう一度戻ってHOMEへ(画面が1段増えたぶん、戻るも1回多い)
     await page.evaluate(() => { document.querySelector('button[aria-label="戻る"]')?.click(); });
     await page.waitForTimeout(800);
@@ -182,7 +185,9 @@ const check = (name, ok, detail = '') => {
       /WAVE 1\/10/.test(battleText) ? '' : `最後に進めたところ: ${lastStep} / 画面: ${battleText.slice(0, 90)}`);
 
     // --- ④ バトル画面がそのモードのものとして立ち上がっている ---
-    check('バトル画面にモード名が出る', battleText.includes(`${MODE_LABEL.replace('モード', '')} / `), battleText.slice(0, 80));
+    // ★バトル画面に出るのは short(短い名前)。label をそのまま探すと、
+    //   名前を変えたときに落ちる(2026-09-20 に「戦術モード」→「タクティクスチャレンジ」へ変えた)
+    check('バトル画面にモード名が出る', battleText.includes(`${MODE_SHORT} / `), battleText.slice(0, 80));
     check('ターン制限は既存モードと同じ20ターン', /TURN 1\/20/.test(battleText), battleText.slice(0, 80));
     // ★予告の中身は抽選なので、画面の文字から「予定:」を探すと
     //   「今回はためるだった」ターンで落ちる。吹き出しそのものを見る

@@ -42,7 +42,7 @@ const body = slice('const BATTLE_SYSTEM_CLASSIC =', '// 極限チャレンジは
 const run = (flags) => {
   const sandbox = { Object, ...flags };
   vm.createContext(sandbox);
-  vm.runInContext(`${body};globalThis.api={BATTLE_SYSTEMS,battleSystemOf,battleSystemModes,visibleBattleSystems,`
+  vm.runInContext(`${body};globalThis.api={BATTLE_SYSTEMS,battleSystemOf,battleSystemModes,visibleBattleSystems,battleSystemComingSoon,`
     + 'BATTLE_SYSTEM_CLASSIC,BATTLE_SYSTEM_TACTICS,BATTLE_SYSTEM_QUICK};', sandbox);
   return sandbox.api;
 };
@@ -54,7 +54,7 @@ const MODE_IDS = {
 const api = run({ ...MODE_IDS, SPECIES_CHALLENGE_PUBLIC_RELEASE: true, TACTICS_MODE_PUBLIC_RELEASE: false });
 
 // ===== ① 仕組みの定義 =====
-check('仕組みは3つ', api.BATTLE_SYSTEMS.length === 3,
+check('仕組みは3つ（クラシック / タクティクス / クイック）', api.BATTLE_SYSTEMS.length === 3,
   api.BATTLE_SYSTEMS.map(s => s.label).join(' / '));
 check('どの仕組みにも中身のモードがある',
   api.BATTLE_SYSTEMS.every(s => Array.isArray(s.modes) && s.modes.length > 0));
@@ -76,14 +76,27 @@ check('知らないモードは「これまでのバトル」へ寄せる',
 
 // ===== ② 公開フラグで出し入れできる =====
 const beforeRelease = run({ ...MODE_IDS, SPECIES_CHALLENGE_PUBLIC_RELEASE: true, TACTICS_MODE_PUBLIC_RELEASE: false });
-check('新モードは公開前だと仕組みごと出ない',
-  !beforeRelease.visibleBattleSystems().some(s => s.id === beforeRelease.BATTLE_SYSTEM_TACTICS),
+// ★2026-09-20 ユーザー指示で、公開前でも「準備中」の枠として並べるようにした
+//   (モンヒロビートの準備中と同じ扱い。押せないだけで、場所は取っておく)
+check('新モードは公開前でも「準備中」の枠として並ぶ',
+  beforeRelease.visibleBattleSystems().some(s => s.id === beforeRelease.BATTLE_SYSTEM_TACTICS),
   beforeRelease.visibleBattleSystems().map(s => s.label).join(' / '));
-check('新モードはデバッグからだと出る',
-  beforeRelease.visibleBattleSystems({ debugBattle: true }).some(s => s.id === beforeRelease.BATTLE_SYSTEM_TACTICS));
+check('公開前は「準備中」の印が付く',
+  beforeRelease.battleSystemComingSoon(beforeRelease.BATTLE_SYSTEM_TACTICS) === true);
+check('デバッグからは準備中にならない(遊べる)',
+  beforeRelease.battleSystemComingSoon(beforeRelease.BATTLE_SYSTEM_TACTICS, { debugBattle: true }) === false
+    && beforeRelease.battleSystemModes(beforeRelease.BATTLE_SYSTEM_TACTICS, { debugBattle: true }).length > 0);
+check('準備中になるのは新モードだけ',
+  !beforeRelease.battleSystemComingSoon(beforeRelease.BATTLE_SYSTEM_CLASSIC)
+    && !beforeRelease.battleSystemComingSoon(beforeRelease.BATTLE_SYSTEM_QUICK));
+check('クイックの上に並ぶ', (() => {
+  const ids = beforeRelease.visibleBattleSystems().map(s => s.id);
+  return ids.indexOf(beforeRelease.BATTLE_SYSTEM_TACTICS) < ids.indexOf(beforeRelease.BATTLE_SYSTEM_QUICK);
+})(), beforeRelease.visibleBattleSystems().map(s => s.label).join(' → '));
 const afterRelease = run({ ...MODE_IDS, SPECIES_CHALLENGE_PUBLIC_RELEASE: true, TACTICS_MODE_PUBLIC_RELEASE: true });
-check('公開フラグを立てると、それだけで出るようになる',
-  afterRelease.visibleBattleSystems().some(s => s.id === afterRelease.BATTLE_SYSTEM_TACTICS));
+check('公開フラグを立てると、準備中が外れて遊べるようになる',
+  afterRelease.visibleBattleSystems().some(s => s.id === afterRelease.BATTLE_SYSTEM_TACTICS)
+    && afterRelease.battleSystemComingSoon(afterRelease.BATTLE_SYSTEM_TACTICS) === false);
 check('種族チャレンジは公開前だと中身から外れる', (() => {
   const hidden = run({ ...MODE_IDS, SPECIES_CHALLENGE_PUBLIC_RELEASE: false, TACTICS_MODE_PUBLIC_RELEASE: false });
   return !hidden.battleSystemModes(hidden.BATTLE_SYSTEM_CLASSIC).includes('speciesChallenge');
@@ -97,6 +110,13 @@ check('仕組みを選ぶ画面がある', has("{gameState==='BATTLE_SYSTEM_SELE
 check('HOMEの入口は仕組みの画面へ入る', has('onOpenBattle={openBattleSystemSelect}'));
 check('HOMEのボタンは正式名称', home.includes('aria-label="モンヒロバトル"') && home.includes('モンヒロバトル</span>'));
 check('カードに検査の手がかりがある', has('data-battle-system={sys.id}') && has('data-battle-systems={systems.length}'));
+check('準備中のカードは押せない',
+  has("const soon=battleSystemComingSoon(sys.id,{debugBattle});")
+    && has('disabled={soon}')
+    && has("data-battle-system-soon={soon?'1':undefined}")
+    && has('if (battleSystemComingSoon(system.id, { debugBattle })) return; // 準備中は枠だけ'));
+check('準備中と分かる書き方をしている',
+  has('準備中</span>') && has("aria-label={soon?`${sys.label}（準備中）`:sys.label}"));
 check('「そのまま難易度へ」の仕組みは難易度選択へ飛ぶ',
   has('if (system.direct) {') && has("setGameState('BATTLE_DIFFICULTY_SELECT');"));
 check('モード選択は「選んだ仕組みのモードだけ」を並べる',
@@ -119,6 +139,16 @@ check('助手4人ぶんのセリフがある',
     .every(id => assistants.includes(`id: '${id}'`)));
 check('ヘルプの本文が新しい入口を説明している',
   help.includes('HOMEの「モンヒロバトル」を開くと、まず「どのバトルで遊ぶか」を選びます'));
+// ★名前は定義が正本。ヘルプや更新履歴へ書き写した名前が古くなっていないか見る
+const labelOf = (id) => (api.BATTLE_SYSTEMS.find(s => s.id === id) || {}).label || '';
+check('ヘルプがいまの名前で書いてある', help.includes(labelOf(api.BATTLE_SYSTEM_CLASSIC)),
+  labelOf(api.BATTLE_SYSTEM_CLASSIC));
+const changelog = fs.readFileSync(path.join(root, 'monster-hero/data/changelog.js'), 'utf8');
+check('更新履歴がいまの名前で書いてある',
+  changelog.includes(labelOf(api.BATTLE_SYSTEM_CLASSIC)) && changelog.includes(labelOf(api.BATTLE_SYSTEM_TACTICS)),
+  `${labelOf(api.BATTLE_SYSTEM_CLASSIC)} / ${labelOf(api.BATTLE_SYSTEM_TACTICS)}`);
+check('仮の名前が残っていない',
+  !source.includes("label: 'これまでのバトル'") && !source.includes("label:'戦術モード'"));
 
 console.log(failed ? `\nNG ${failed}件` : '\nすべてOK');
 process.exit(failed ? 1 : 0);

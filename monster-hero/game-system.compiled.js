@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6951c00dba97f717
+// source-sha256: 8577728ff8046cbf
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 42b7df2b6539251d
+// generated-sha256: fdd3b4a62c98e490
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-20 17:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-20 17:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -241,12 +241,14 @@ const SPECIES_CHALLENGE_MODE = Object.freeze({
   points: [['🧬', 'どんなモード', '挑む前に種族(モッチー種・ピクシー種など)をひとつ選び、その種族だけでWAVE1〜10を戦い抜くモードです。使えるモンスターが限られるぶん、その種族をどこまで育てているかがそのまま結果に出ます。'], ['⚔️', '編成', '勇者モン1体と供モン最大3体で挑みます。選べるのは、その種族の解放済みベースモンと所持マスモンだけです。ふだんの編成と同じで同じモンスターは勇者・供モンを通して1体まで(重複不可)ですが、同じ種族の別のモンスターなら一緒に連れていけます(モッチー種ならモッチーとミタラシなど)。そのため実際に選べる供モンの数は、その種族のモンスターの種類によって0〜3体で変わります。供モン0体のまま挑むこともできます。'], ['🤝', '供モンの加入', '事前に選んだ供モンは、最初から全員いるわけではありません。WAVE2・4・6をクリアしたとき、まだ加入していない供モンから1体を選んで加えます。誰をいつ加えるかは、その場で決められます。'], ['👹', '難しさ', '難易度は14段階です。Beginner〜Expertは最初から挑めます。Master以降は、同じ種族で1つ前の難易度をクリアすると順に解放されます。ある種族で進めても、ほかの種族の解放には影響しません。'], ['🔥', '上位の難易度', 'EXTREME以上では、極限チャレンジと同じ特殊ルールがそのまま適用されます。敵の強さや報酬の倍率も極限チャレンジと同じ設定です。'], ['💎', 'もらえるもの', '経験値・ダイヤは難易度の設定どおりです。加えて、種族と難易度の組み合わせごとに初回クリア報酬があります。'], ['🏅', '記録', '自己ベストスコア・最短クリアターン・クリア回数は、種族と難易度の組み合わせごとに別々に残ります。同じ難易度でも種族が違えば別の記録です。チャレンジモードの自己ベストや最高到達WAVEは書き換わりません。'], ['⭐', 'マスモン登録', '勇者モンにした子は、プレイが終わったあとマスモンとして登録できます。チャレンジモードと同じです。'], ['⏩', 'スキップチケット', '使えません。スコアを競うモードなので、戦わずに報酬だけ取れないようにしています。'], ['🔁', 'AUTO', 'AUTOでの自動戦闘は使えます。ただしクリア後にそのまま次の周へ入る「AUTO∞」は使えません。挑むたびに種族・難易度・編成を選び直すモードのためです。'], ['🎯', 'こんな人におすすめ', '特定の種族を集中して育てている人、いつもの編成とは違う制限つきの戦いを試したい人、種族ごとにやり込みたい人向けです。']]
 });
 // 新モードの表示情報。見出しの並びは既存3モード(BATTLE_MODES)とそろえてある。
-// ★label は仮。画面に出す名前が決まったらここだけ差し替える(idと保存キーは変えない)。
+// ★2026-09-20 にユーザーが名前を決めた。仕組みが「タクティクスバトル」で、その中の
+//   ふつうのモードがこれ。クラシックバトル側の「チャレンジモード」と同じ位置づけだが、
+//   ランキングや記録で並んだときに見分けが付くよう「タクティクスチャレンジ」にしてある。
 // ★本文は公開時にそのまま出るプレイヤー向けの文にする。開発の進み具合はここへ書かない。
 const TACTICS_MODE = Object.freeze({
   id: BATTLE_MODE_TACTICS,
-  label: '戦術モード',
-  short: '戦術',
+  label: 'タクティクスチャレンジ',
+  short: 'タクティクス',
   emoji: '🎯',
   color: '#fb923c',
   tagline: '敵の技を読んで受け方を決める、対応力のモード',
@@ -502,14 +504,15 @@ const BATTLE_MODES = [{
 // ★ここで選ぶものは**保存しない**(画面を分けるためだけの値)。記録もランキングも今までどおり
 //   モードのid(mh_hs_* / mh_tactics_* など)で分かれるので、保存キーは1つも増えない。
 //   難易度選択の「通常/極限」タブ(difficultySelectTab)と同じ扱い
-// ★label は仮。新しいバトルの名前が決まったらここだけ差し替える(idも保存キーも変えない)
+// ★名前は2026-09-20にユーザーが決めた(クラシックバトル / タクティクスバトル)。
+//   idと保存キーは変えないので、名前だけあとから差し替えられる
 const BATTLE_SYSTEM_CLASSIC = 'systemClassic';
 const BATTLE_SYSTEM_TACTICS = 'systemTactics';
 const BATTLE_SYSTEM_QUICK = 'systemQuick';
 const BATTLE_SYSTEMS = Object.freeze([Object.freeze({
   id: BATTLE_SYSTEM_CLASSIC,
-  label: 'これまでのバトル',
-  short: 'これまで',
+  label: 'クラシックバトル',
+  short: 'クラシック',
   emoji: '⚔️',
   color: '#818cf8',
   tagline: 'パーティでライフを分け合う、いままでの戦い方',
@@ -517,12 +520,12 @@ const BATTLE_SYSTEMS = Object.freeze([Object.freeze({
   modes: Object.freeze([BATTLE_MODE_CHALLENGE, BATTLE_MODE_SPECIES_CHALLENGE, BATTLE_MODE_PRO])
 }), Object.freeze({
   id: BATTLE_SYSTEM_TACTICS,
-  label: '戦術モード',
-  short: '戦術',
+  label: 'タクティクスバトル',
+  short: 'タクティクス',
   emoji: '🎯',
   color: '#fb923c',
   tagline: 'モンスターごとにライフを持つ、新しい戦い方',
-  note: '敵の技を読んで、誰を守るかを決める戦い方です',
+  note: '敵の予告を読んで、誰を守るかを決める戦い方です',
   modes: Object.freeze([BATTLE_MODE_TACTICS])
 }), Object.freeze({
   id: BATTLE_SYSTEM_QUICK,
@@ -548,12 +551,20 @@ const battleSystemModes = (systemId, {
     return true;
   });
 };
-// 画面へ並べる仕組み。中に出せるモードが1つも無いものは出さない
+// まだ遊べないが、枠だけは見せる仕組み(2026-09-20 ユーザー指示
+// 「準備中の新モードもクイックの上に入れて」)。モンヒロビートの「準備中」と同じ作りで、
+// 公開フラグが立つまでは押せないカードを出す。デバッグからは今までどおり遊べる
+const battleSystemComingSoon = (systemId, {
+  debugBattle = false
+} = {}) => systemId === BATTLE_SYSTEM_TACTICS && !TACTICS_MODE_PUBLIC_RELEASE && !debugBattle;
+// 画面へ並べる仕組み。中に出せるモードが1つも無いものは、準備中の枠としてだけ出す
 const visibleBattleSystems = ({
   debugBattle = false
 } = {}) => BATTLE_SYSTEMS.filter(s => battleSystemModes(s.id, {
   debugBattle
-}).length > 0);
+}).length > 0 || battleSystemComingSoon(s.id, {
+  debugBattle
+}));
 // 極限チャレンジは通常の3モードとは別に持っているので、説明・ランキング画面から引けるようにここで合流させる
 // (EXTREME_MODE はこの下で定義するため、呼ばれた時点で参照する)
 const battleModeInfo = mode => {
@@ -51333,6 +51344,9 @@ function MonsterHeroGame() {
   // 中にモードが1つだけのもの(クイック)は、選んだらそのまま難易度選択へ進める
   const openBattleSystem = systemId => {
     const system = BATTLE_SYSTEMS.find(s => s.id === systemId) || BATTLE_SYSTEMS[0];
+    if (battleSystemComingSoon(system.id, {
+      debugBattle
+    })) return; // 準備中は枠だけ
     const modes = battleSystemModes(system.id, {
       debugBattle
     });
@@ -59647,30 +59661,42 @@ function MonsterHeroGame() {
       }, "\u3069\u306E\u30D0\u30C8\u30EB\u3067\u904A\u3076\u304B\u3092\u9078\u3073\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
         "data-battle-systems": systems.length,
         className: "flex flex-col gap-2 shrink-0"
-      }, systems.map(sys => /*#__PURE__*/React.createElement("button", {
-        key: sys.id,
-        "data-battle-system": sys.id,
-        onClick: () => openBattleSystem(sys.id),
-        className: "w-full rounded-2xl border-2 bg-slate-900/80 px-3 py-3 text-left active:scale-95 transition-transform",
-        style: {
-          borderColor: sys.color
-        }
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex items-center gap-2"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-2xl leading-none"
-      }, sys.emoji), /*#__PURE__*/React.createElement("span", {
-        className: "text-base font-black leading-tight",
-        style: {
-          color: sys.color
-        }
-      }, sys.label), sys.id === BATTLE_SYSTEM_TACTICS && !TACTICS_MODE_PUBLIC_RELEASE && /*#__PURE__*/React.createElement("span", {
-        className: "ml-auto text-[8px] font-black text-amber-300 border border-amber-400/60 rounded px-1 py-0.5"
-      }, "DEBUG")), /*#__PURE__*/React.createElement("div", {
-        className: "text-[11px] text-slate-200 font-bold leading-snug mt-1.5"
-      }, sys.tagline), /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] text-slate-400 leading-snug mt-1"
-      }, sys.note)))), /*#__PURE__*/React.createElement("div", {
+      }, systems.map(sys => {
+        // ★まだ遊べないものは、枠だけ出して押せなくする(2026-09-20 ユーザー指示)。
+        //   モンヒロビートの「準備中」と同じ扱い。デバッグからは今までどおり遊べる
+        const soon = battleSystemComingSoon(sys.id, {
+          debugBattle
+        });
+        return /*#__PURE__*/React.createElement("button", {
+          key: sys.id,
+          "data-battle-system": sys.id,
+          "data-battle-system-soon": soon ? '1' : undefined,
+          disabled: soon,
+          onClick: () => openBattleSystem(sys.id),
+          "aria-label": soon ? `${sys.label}（準備中）` : sys.label,
+          className: `w-full rounded-2xl border-2 px-3 py-3 text-left transition-transform ${soon ? 'bg-slate-900/40 opacity-60' : 'bg-slate-900/80 active:scale-95'}`,
+          style: {
+            borderColor: soon ? 'rgba(148,163,184,.45)' : sys.color
+          }
+        }, /*#__PURE__*/React.createElement("div", {
+          className: "flex items-center gap-2"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "text-2xl leading-none"
+        }, sys.emoji), /*#__PURE__*/React.createElement("span", {
+          className: "text-base font-black leading-tight",
+          style: {
+            color: soon ? '#94a3b8' : sys.color
+          }
+        }, sys.label), soon && /*#__PURE__*/React.createElement("span", {
+          className: "ml-auto text-[9px] font-black text-slate-300 border border-slate-400/60 rounded px-1.5 py-0.5"
+        }, "\u6E96\u5099\u4E2D"), !soon && sys.id === BATTLE_SYSTEM_TACTICS && !TACTICS_MODE_PUBLIC_RELEASE && /*#__PURE__*/React.createElement("span", {
+          className: "ml-auto text-[8px] font-black text-amber-300 border border-amber-400/60 rounded px-1 py-0.5"
+        }, "DEBUG")), /*#__PURE__*/React.createElement("div", {
+          className: "text-[11px] text-slate-200 font-bold leading-snug mt-1.5"
+        }, sys.tagline), /*#__PURE__*/React.createElement("div", {
+          className: "text-[9px] text-slate-400 leading-snug mt-1"
+        }, soon ? 'いま準備しています。遊べるようになったらお知らせします' : sys.note));
+      })), /*#__PURE__*/React.createElement("div", {
         className: "mt-3 shrink-0"
       }, /*#__PURE__*/React.createElement(AssistantBubble, {
         scene: "battleSystemSelect",
