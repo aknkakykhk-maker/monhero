@@ -81,13 +81,28 @@ async function openBattle(page, clears) {
   }
 }
 
-// モードカルーセルの中から極限チャレンジのカード(真ん中のコピー)を1枚取り出す
-const extremeCardInfo = () => {
-  const cards = [...document.querySelectorAll('article')].filter(a => a.textContent.includes('極限チャレンジ'));
-  const card = cards[Math.floor(cards.length / 2)] || cards[0];
-  if (!card) return null;
-  const start = [...card.querySelectorAll('button')].find(b => /難易度を選ぶ|まだ挑戦できません/.test(b.textContent));
-  return { text: card.textContent.replace(/\s+/g, ' '), label: start?.textContent.trim() || '', disabled: !!start?.disabled };
+// ★極限チャレンジの入口は「モードのカード」から「チャレンジの極限タブ」へ移った
+//   (2026-09-19・PR #1517「極限チャレンジをチャレンジの『極限』タブへ入れ込む」)。
+//   HOME → 入口 → モード選択 → チャレンジの難易度選択 → 「極限」タブ、と降りる
+const openChallengeDifficulty = async (page) => {
+  await page.evaluate(() => {
+    const cards = [...document.querySelectorAll('[data-battle-mode="challenge"]')];
+    const card = cards[Math.floor(cards.length / 2)] || cards[0];
+    [...(card ? card.querySelectorAll('button') : [])].find(b => b.textContent.includes('難易度を選ぶ'))?.click();
+  });
+  await page.waitForFunction(() => !!document.querySelector('[data-difficulty-tabs]'), { timeout: 20000 });
+};
+
+// 「極限」タブの状態。押せるか・押せないときに理由が出ているか
+const extremeTabInfo = () => {
+  const tab = [...document.querySelectorAll('[data-difficulty-tabs] button')].find(b => b.textContent.includes('極限'));
+  if (!tab) return null;
+  const note = document.querySelector('[data-extreme-tab-locked]');
+  return {
+    text: tab.textContent.replace(/\s+/g, ' '),
+    disabled: !!tab.disabled,
+    note: note ? note.textContent.replace(/\s+/g, ' ') : '',
+  };
 };
 
 (async () => {
@@ -97,10 +112,12 @@ const extremeCardInfo = () => {
   {
     const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
     await openBattle(page, { Master: 3 });
-    const info = await page.evaluate(extremeCardInfo);
-    check('未解放でも極限チャレンジのカードは出る', !!info, info ? '' : 'カードが見つからない');
-    check('未解放は解放条件を表示する', !!info && info.text.includes('チャレンジ Grand Master以上クリアで解放'), info?.text.slice(0, 90));
-    check('未解放は難易度へ進めない', !!info && info.disabled === true && info.label === 'まだ挑戦できません', info?.label);
+    await openChallengeDifficulty(page);
+    const info = await page.evaluate(extremeTabInfo);
+    check('未解放でも極限のタブは出る', !!info, info ? '' : 'タブが見つからない');
+    check('未解放のタブは鍵が付く', !!info && info.text.includes('🔒'), info?.text);
+    check('未解放は解放条件を表示する', !!info && info.note.includes('チャレンジ Grand Master以上クリアで解放'), info?.note);
+    check('未解放は極限へ進めない', !!info && info.disabled === true, String(info?.disabled));
     await page.close();
   }
 
@@ -110,15 +127,21 @@ const extremeCardInfo = () => {
     const fatal = [];
     page.on('pageerror', e => fatal.push(e.message));
     await openBattle(page, { GrandMaster: 1 });
-    const card2 = await page.evaluate(extremeCardInfo);
-    check('Grand Masterクリア済みで解放される', !!card2 && card2.disabled === false && card2.label === '難易度を選ぶ', card2?.label);
+    await openChallengeDifficulty(page);
+    const tab2 = await page.evaluate(extremeTabInfo);
+    check('Grand Masterクリア済みで解放される', !!tab2 && tab2.disabled === false, String(tab2?.disabled));
+    check('解放されたら理由書きは消える', !!tab2 && tab2.note === '', tab2?.note);
 
-    // モード説明が開く(他モードと同じ見出しで並ぶ)
+    // 極限の難易度画面へ(タブを押すと専用画面へ移る)
     await page.evaluate(() => {
-      const cards = [...document.querySelectorAll('article')].filter(a => a.textContent.includes('極限チャレンジ'));
-      const card = cards[Math.floor(cards.length / 2)] || cards[0];
-      [...card.querySelectorAll('button')].find(b => b.textContent.includes('このモードの説明'))?.click();
+      [...document.querySelectorAll('[data-difficulty-tabs] button')].find(b => b.textContent.includes('極限'))?.click();
     });
+    await page.waitForTimeout(1500);
+
+    // モード説明が開く(他モードと同じ見出しで並ぶ)。
+    // ★極限チャレンジがモードのカードだった頃はカードから開けた。タブへ入れ込んだときに
+    //   入口ごと無くなっていたので、いまは極限の難易度画面の見出しの横から開く
+    await page.evaluate(() => { document.querySelector('[data-extreme-mode-info]')?.click(); });
     await page.waitForTimeout(900);
     const info = await page.evaluate(() => document.querySelector('[role="dialog"][aria-label="極限チャレンジの説明"]')?.innerText.replace(/\s+/g, ' ') || '');
     check('モード説明が開く', info.includes('極限チャレンジとは？'), info.slice(0, 60));
@@ -129,30 +152,12 @@ const extremeCardInfo = () => {
     check('モード説明にEXTREME固有の50%ルールを書かない', !info.includes('アシストカード'), info.slice(0, 60));
     await page.evaluate(() => { document.querySelector('[aria-label="説明を閉じる"]')?.click(); });
     await page.waitForTimeout(700);
-
-    // モードカードからランキングを開ける
-    await page.evaluate(() => {
-      const cards = [...document.querySelectorAll('article')].filter(a => a.textContent.includes('極限チャレンジ'));
-      const card = cards[Math.floor(cards.length / 2)] || cards[0];
-      [...card.querySelectorAll('button')].find(b => b.textContent.includes('のランキング'))?.click();
-    });
-    await page.waitForTimeout(2000);
-    const rank = await page.evaluate(() => document.body.innerText.replace(/\s+/g, ' '));
-    check('モードカードからランキングを開ける', rank.includes('極限チャレンジランキング'), rank.slice(0, 70));
-    check('ランキングの難易度タブが極限の段階になっている', rank.includes('EXTREME') && !/Grand Master|Legend/.test(rank), rank.slice(0, 90));
-    await page.evaluate(() => { document.querySelector('button[aria-label="戻る"]')?.click(); });
-    await page.waitForTimeout(1200);
-
-    // 極限の難易度画面へ
-    await page.evaluate(() => {
-      const cards = [...document.querySelectorAll('article')].filter(a => a.textContent.includes('極限チャレンジ'));
-      const card = cards[Math.floor(cards.length / 2)] || cards[0];
-      [...card.querySelectorAll('button')].find(b => b.textContent.includes('難易度を選ぶ'))?.click();
-    });
-    await page.waitForTimeout(1500);
     const diff = await page.evaluate(() => document.body.innerText.replace(/\s+/g, ' '));
     check('極限専用の難易度画面が開く', !!(await page.$('[data-extreme-difficulties]')));
-    check('EXTREMEの倍率と報酬が出ている', ['×13', '×20', '×25', '×7.5', '虹のプシュケー30'].every(v => diff.includes(v)), diff.slice(0, 110));
+    // 報酬は「虹のプシュケー」と個数が別の行に出ることがあるので、間の空白は問わない
+    check('EXTREMEの倍率と報酬が出ている',
+      ['×13', '×20', '×25', '×7.5'].every(v => diff.includes(v)) && /虹のプシュケー\s*30/.test(diff),
+      diff.slice(0, 110));
     // 特殊ルールの中身はカードへ並べず「特殊ルールあり」とだけ出し、詳しくは専用の画面で見せる
     // (中身の正本は extreme-rule-detail-browser-check.js)
     check('EXTREME特殊ルールがあることを難易度側で示す', diff.includes('特殊ルールあり'), diff.slice(0, 140));
@@ -187,6 +192,7 @@ const extremeCardInfo = () => {
     await page.waitForTimeout(2000);
     const rank2 = await page.evaluate(() => document.body.innerText.replace(/\s+/g, ' '));
     check('難易度カードからランキングを開ける', rank2.includes('極限チャレンジランキング'), rank2.slice(0, 70));
+    check('ランキングの難易度タブが極限の段階になっている', rank2.includes('EXTREME') && !/Grand Master|Legend/.test(rank2), rank2.slice(0, 90));
     await page.evaluate(() => { document.querySelector('button[aria-label="戻る"]')?.click(); });
     await page.waitForTimeout(1200);
     check('ランキングから難易度画面へ戻れる', !!(await page.$('[data-extreme-difficulties]')));

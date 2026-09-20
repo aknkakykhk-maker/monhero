@@ -9,6 +9,8 @@ const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分�
 // 通信が塞がれた環境では見た目が崩れる/ランキングが空になるが、動作確認には支障がない。
 const path = require('path');
 const { chromium } = require('playwright');
+// イベントの「閉幕とお礼」は終了の時刻に自動で流れる。既読にしておかないと会話で止まる
+const { eventStorySeed } = require(require('path').resolve(__dirname, '..', 'boot/event-story-seed'));
 
 const URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/index.html';
 const results = [];
@@ -44,13 +46,13 @@ const check = (name, ok, detail = '') => { results.push({ name, ok, detail }); c
     put('mh_masu_level_cap_compensation_notice_seen_v1', true);
     // ★イベントの回想(週末ゲリラ杯)はHOMEへ着いた直後に全画面で流れる。
     //   見たことにしておかないと、以降の操作がすべてこの会話に吸われる
-    put('mh_rhythm_event_story_v1', ['monbeat_cup_2026_09']);
     // 助手からの更新のお知らせ(絵つきで全画面に重なる)も見たことにしておく。
     // 一覧は data/changelog.js の assistantNotice.id なので、増えても拾えるよう
     // ページ側の availableUpdateNotices() から取れる全部を入れる
     put('mh_update_notice_seen_v1', true);
     put('mh_seen_update_notices_v1', []);
   });
+  await page.addInitScript(eventStorySeed());
   // ★告知のIDは data/changelog.js が持っていて、検査からは名前を決め打ちできない。
   //   ページが読めた時点で availableUpdateNotices() に聞いて、全部を既読にしておく
   //   (助手の告知そのものは tools/assistant/assistant-update-notice-check.js の担当)

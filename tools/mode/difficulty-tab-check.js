@@ -68,8 +68,13 @@ check('難易度からタブを決められる',
 check('開くたびにタブも通常から始まる', has('setDifficultySelectTab(difficultyTabOf(start));'),
   '極限タブのままノーマルを選んでいる状態を作らない');
 check('極限を持たないモードではタブを出さない', has('const hasExtremeTab=difficultyGroups.extreme.length>0||challengeExtremeTab;'));
-// ★pro を定義より前で参照すると難易度選択がまるごとエラー画面に落ちる(実際に落ちた)
-check('チャレンジ判定は pro を先に参照しない', has('const challengeExtremeTab=!species&&!quick&&!isProMode(battleMode);'));
+// ★pro を定義より前で参照すると難易度選択がまるごとエラー画面に落ちる(実際に落ちた)。
+//   行の全文で見ると、条件が1つ増えるたびに検査だけが古くなる(タクティクスを足したときに落ちた)。
+//   見るのは「pro という変数ではなく isProMode(battleMode) を直接呼んでいるか」だけにする
+const challengeExtremeTabLine = (source.match(/const challengeExtremeTab=[^\n]*/) || [''])[0];
+check('チャレンジ判定は pro を先に参照しない',
+  /isProMode\(battleMode\)/.test(challengeExtremeTabLine) && !/[^A-Za-z]pro[^A-Za-z(]/.test(challengeExtremeTabLine),
+  challengeExtremeTabLine);
 check('タブを切り替えたらその並びの先頭を選ぶ', has('if(group[0])chooseDifficulty(group[0][0]);'),
   '見えていない難易度のまま開始できてしまうのを防ぐ');
 

@@ -19,6 +19,9 @@ const http = require('http');
 const path = require('path');
 const fs = require('fs');
 
+// イベントの「閉幕とお礼」は終了の時刻に自動で流れる。既読にしておかないと会話で止まる
+const { eventStorySeed } = require(path.resolve(__dirname, '..', 'boot/event-story-seed'));
+
 const root = path.resolve(__dirname, '..', '..');
 const PORT = 8982;
 const MIME = { '.html':'text/html', '.js':'text/javascript', '.json':'application/json',
@@ -64,6 +67,9 @@ const check = (name, ok, detail = '') => {
       localStorage.setItem('mh_tutorial_seen_v1', JSON.stringify(true));
       localStorage.setItem('mh_battle_tutorial_seen_v1', JSON.stringify(true));
       localStorage.setItem('mh_battle_tutorial_guide_shown_v1', JSON.stringify(true));
+      // お詫びの配布は画面全体を覆う。配布済みの印を先に入れて出さない
+      localStorage.setItem('mh_inherited_unique_level_compensation_v1', JSON.stringify(true));
+      localStorage.setItem('mh_inherited_unique_level_compensation_pending_v1', JSON.stringify(false));
       // ピクシー種(ピクシー・ミーア・パンドラ)をそろえて、供モンを実際に選べる状態にする。
       // マスモンのピクシーも1体入れて、「勇者と同じモンスターは供モンに出ない」ところまで見る
       localStorage.setItem('mh_unlocked_monsters', JSON.stringify(['Mocchi', 'Mitarashi', 'Pixie', 'Mia', 'Pandora', 'Suezo']));
@@ -72,6 +78,7 @@ const check = (name, ok, detail = '') => {
         createdAt: 1, plusStats: { hp: 0, atk: 0, def: 0, guts: 0 },
       }]));
     });
+    await page.addInitScript(eventStorySeed());
     await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
     await page.addStyleTag({ content: `
       .snap-mandatory { display:flex; overflow-x:auto; width:100%; scroll-snap-type:x mandatory; }
@@ -107,7 +114,12 @@ const check = (name, ok, detail = '') => {
     await page.locator('footer button[aria-label=""]').dispatchEvent('click');
     await page.getByText('DEBUG MENU').first().waitFor({ timeout: 20000 });
     check('デバッグ設定を開ける', true);
-    await page.getByRole('button', { name: '⚔️ バトルモード' }).dispatchEvent('click');
+    // DEBUG MENU は節ごとに畳んであるアコーディオン。「⚔️ バトル」を開いてから押す
+    await page.locator('summary').filter({ hasText: '⚔️ バトル' }).first().click();
+    await page.locator('[data-debug-battle-mode]').dispatchEvent('click');
+    // ★2026-09-20 にモード選択の1つ上へ「どのバトルで遊ぶか」の画面が増えた。
+    //   デバッグのバトルモードもそこから始まるので、クラシックを選んで1段降りる
+    await page.locator('[data-battle-system="systemClassic"]').click({ timeout: 20000 });
     await page.getByText('BATTLE MODE').first().waitFor({ timeout: 20000 });
     check('本番と同じBATTLE MODEカルーセルへ入る', true);
 
@@ -158,8 +170,18 @@ const check = (name, ok, detail = '') => {
 
     // --- 難易度選択 ---
     await page.getByText('BATTLE DIFFICULTY').first().waitFor({ timeout: 20000 });
+    // ★難易度は「通常 / 極限」のタブに分かれた(2026-09-19)。1つの画面には片方しか並ばないので、
+    //   両方を数えて14段階そろっているかを見る(種族チャレンジの極限は同じ画面のタブ)
     const difficultyCards = page.locator('.snap-mandatory > article');
-    check('14難易度が並ぶ', await difficultyCards.count() === 14, `${await difficultyCards.count()}枚`);
+    const difficultyTabs = page.locator('[data-difficulty-tabs] button');
+    check('難易度が通常と極限のタブに分かれる', await difficultyTabs.count() === 2, `${await difficultyTabs.count()}タブ`);
+    const normalCount = await difficultyCards.count();
+    await difficultyTabs.nth(1).click();
+    await page.waitForTimeout(400);
+    const extremeCount = await difficultyCards.count();
+    check('14難易度が並ぶ', normalCount + extremeCount === 14, `通常 ${normalCount} + 極限 ${extremeCount}`);
+    await difficultyTabs.nth(0).click();
+    await page.waitForTimeout(400);
     check('種族ランキングへの導線がある', await page.locator('[data-species-difficulty-record-link]').count() >= 1);
     await checkNoSideScroll('難易度選択');
     const beginner = difficultyCards.filter({ hasText: 'Beginner' }).first();
