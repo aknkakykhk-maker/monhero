@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6a8230b281170ff8
+// generated-sha256: 349143e8c1530380
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -35,6 +35,7 @@ const _ICON_PATHS = {
   Edit3: '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
   ArrowLeft: '<line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>',
   ArrowDownCircle: '<circle cx="12" cy="12" r="10"/><polyline points="8 12 12 16 16 12"/><line x1="12" y1="8" x2="12" y2="16"/>',
+  ArrowUpCircle: '<circle cx="12" cy="12" r="10"/><polyline points="16 12 12 8 8 12"/><line x1="12" y1="16" x2="12" y2="8"/>',
   Search: '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
   Layers: '<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>',
   AlertCircle: '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>',
@@ -68,7 +69,7 @@ const _icon = (name) => (props) => {
     dangerouslySetInnerHTML:{ __html: inner }
   });
 };
-const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon('Shield'), X=_icon('X'), Award=_icon('Award'), Skull=_icon('Skull'), PlusCircle=_icon('PlusCircle'), Target=_icon('Target'), ShieldCheck=_icon('ShieldCheck'), Trophy=_icon('Trophy'), Timer=_icon('Timer'), Play=_icon('Play'), Sparkles=_icon('Sparkles'), Activity=_icon('Activity'), ChevronLeft=_icon('ChevronLeft'), ChevronRight=_icon('ChevronRight'), Crown=_icon('Crown'), Edit3=_icon('Edit3'), ArrowLeft=_icon('ArrowLeft'), Search=_icon('Search'), Layers=_icon('Layers'), AlertCircle=_icon('AlertCircle'), Flag=_icon('Flag'), RotateCcw=_icon('RotateCcw'), MinusCircle=_icon('MinusCircle'), Star=_icon('Star'), Users=_icon('Users'), User=_icon('User'), Check=_icon('Check'), HelpCircle=_icon('HelpCircle'), BookOpen=_icon('BookOpen'), Info=_icon('Info'), RefreshCcw=_icon('RefreshCcw'), ArrowDownCircle=_icon('ArrowDownCircle'), Coins=_icon('Coins'), ShoppingBag=_icon('ShoppingBag'), Gem=_icon('Gem'), Package=_icon('Package'), Settings=_icon('Settings'), List=_icon('List'), Lock=_icon('Lock');
+const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon('Shield'), X=_icon('X'), Award=_icon('Award'), Skull=_icon('Skull'), PlusCircle=_icon('PlusCircle'), Target=_icon('Target'), ShieldCheck=_icon('ShieldCheck'), Trophy=_icon('Trophy'), Timer=_icon('Timer'), Play=_icon('Play'), Sparkles=_icon('Sparkles'), Activity=_icon('Activity'), ChevronLeft=_icon('ChevronLeft'), ChevronRight=_icon('ChevronRight'), Crown=_icon('Crown'), Edit3=_icon('Edit3'), ArrowLeft=_icon('ArrowLeft'), Search=_icon('Search'), Layers=_icon('Layers'), AlertCircle=_icon('AlertCircle'), Flag=_icon('Flag'), RotateCcw=_icon('RotateCcw'), MinusCircle=_icon('MinusCircle'), Star=_icon('Star'), Users=_icon('Users'), User=_icon('User'), Check=_icon('Check'), HelpCircle=_icon('HelpCircle'), BookOpen=_icon('BookOpen'), Info=_icon('Info'), RefreshCcw=_icon('RefreshCcw'), ArrowDownCircle=_icon('ArrowDownCircle'), ArrowUpCircle=_icon('ArrowUpCircle'), Coins=_icon('Coins'), ShoppingBag=_icon('ShoppingBag'), Gem=_icon('Gem'), Package=_icon('Package'), Settings=_icon('Settings'), List=_icon('List'), Lock=_icon('Lock');
 
 
 // --- Helpers ---
@@ -91,7 +92,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-20 12:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-20 13:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -9281,47 +9282,54 @@ const ENEMY_ACTION_DEFINITIONS = [
 // ★type は既存の ATTACK / SPECIAL をそのまま使い、違いは variant で持つ。
 //   getIncomingDamageBeforeTurnReduction は type でダメージの有無を判断しているので、
 //   ここを新しい type にするとダメージ計算・演出・予告の経路を全部書き足すことになる。
-const TACTICS_SWEEP_MULT = 1.6;       // 予告した間合いに敵がいるとき
+// ★倍率は2026-09-20にユーザーが1つずつ決め直した。それまでは受けるダメージが重く、
+//   とくに「人数が増えるほど全体攻撃だけが強い」「同じ×1.8なのに連撃が貫通撃を
+//   絶対に上回れない」という歪みがあった。攻める側(敵)を全体に下げて、
+//   そのぶん敵を落としにくく(再生を厚く)し、休めるターン(行動なし)を戻してある。
+const TACTICS_SWEEP_MULT = 1.2;       // 予告した間合いに敵がいるとき
 const TACTICS_SWEEP_MISS_MULT = 0.4;  // 距離撃などでずらしたとき
-const TACTICS_RUSH_MULT = 1.8;        // 0.6×3ヒット。ガードは1ヒットぶんしか効かない
+const TACTICS_RUSH_MULT = 1.2;        // 0.4×3ヒット。ガードは1ヒットぶんしか効かない
 const TACTICS_RUSH_HITS = 3;          // 威力をこの数で割ってヒットに分ける。ガードが届くのは1ヒットだけ
-const TACTICS_PIERCE_MULT = 1.8;      // ガードを無視する
+const TACTICS_PIERCE_MULT = 0.8;      // ガードを無視する。効かないぶん倍率で加減する
 const TACTICS_ROAR_ATK_RATE = 1.5;    // 次のターンから敵の攻撃が上がる
 const TACTICS_ROAR_MAX_STACKS = 2;    // 重ねがけの上限
-const TACTICS_REGEN_RATE = 0.08;      // 最大ライフに対する回復量
+const TACTICS_REGEN_RATE = 0.5;       // 最大ライフに対する回復量。★与ダメを下げたぶん敵を落としにくくする
 const TACTICS_REGEN_HP_THRESHOLD = 0.9; // ライフがこの割合を下回ったときだけ使う
-// 単体狙いと全体攻撃(2026-09-19・設計 §5.3)。
-// ★全体攻撃は1体あたりの威力を単体狙いより必ず低くする。同じにすると
-//   「全員を殴るほうが得」になり、狙いを読む意味が消える
-const TACTICS_FOCUS_MULT = 2.2;   // 予告した1体へ。読めば守れるぶん大きい
-const TACTICS_ALLOUT_MULT = 0.9;  // 全員へ。1体あたりは通常攻撃より少しだけ低い
+// 全体攻撃(2026-09-19・設計 5.3)。
+// ★1体あたりの威力は通常攻撃より必ず低くする。同じか上にすると人数が増えるほど
+//   「全員を殴るほうが得」になり、狙いを読む意味も、供モンを連れる意味も消える。
+//   もとは0.9で、4体そろうと合計×3.6と最も重い技になっていた(2026-09-20 に0.4へ)
+// ★単体狙い(focus)は廃止した。必殺技(ためる→×2.5)と役割がかぶるため
+//   (2026-09-20 ユーザー指示)。通常攻撃も連撃も貫通撃も「狙った1体」へ当たるので、
+//   誰が狙われるかを読む遊びはそのまま残る
+const TACTICS_ALLOUT_MULT = 0.4;  // 全員へ。1体あたりは通常攻撃より低い
 const TACTICS_ACTION_DEFINITIONS = [
   {id:'normal',type:'ATTACK',category:'通常攻撃',weight:30,multiplier:1,hits:1,range:'全間合い',condition:'常時',cooldown:0,useLimit:null},
   {id:'charge',type:'CHARGE',category:'ためる',weight:12,multiplier:0,hits:0,range:'全間合い',condition:'常時',cooldown:0,useLimit:null},
   {id:'special',type:'SPECIAL',category:'必殺技',weight:0,multiplier:2.5,hits:1,range:'全間合い',condition:'ためた次のターンに必ず発動',cooldown:0,useLimit:null},
+  {id:'wait',type:'WAIT',category:'特殊行動',weight:10,multiplier:0,hits:0,range:'全間合い',condition:'常時',cooldown:0,useLimit:null},
   {id:'move',type:'MOVE',category:'移動',weight:10,multiplier:0,hits:0,range:'現在以外の3間合い',condition:'移動先がある・移動した次のターンは選ばない',cooldown:0,useLimit:null},
   {id:'sweep',type:'ATTACK',variant:'sweep',category:'薙ぎ払い',weight:14,multiplier:TACTICS_SWEEP_MULT,missMultiplier:TACTICS_SWEEP_MISS_MULT,hits:1,range:'予告した1間合い',condition:'予告した間合いに敵がいると大ダメージ。距離撃でずらせる',cooldown:0,useLimit:null},
   {id:'rush',type:'ATTACK',variant:'rush',category:'連撃',weight:14,multiplier:TACTICS_RUSH_MULT,hits:TACTICS_RUSH_HITS,range:'全間合い',condition:'3ヒットに分かれ、ガードは1ヒットぶんしか効かない',cooldown:0,useLimit:null},
   {id:'pierce',type:'ATTACK',variant:'pierce',category:'貫通撃',weight:12,multiplier:TACTICS_PIERCE_MULT,hits:1,range:'全間合い',condition:'ガードが効かない',cooldown:0,useLimit:null},
-  {id:'roar',type:'ROAR',category:'咆哮',weight:10,multiplier:0,hits:0,range:'全間合い',condition:`重ねがけは${TACTICS_ROAR_MAX_STACKS}回まで`,cooldown:0,useLimit:TACTICS_ROAR_MAX_STACKS},
-  {id:'regen',type:'REGEN',category:'再生',weight:10,multiplier:0,hits:0,range:'全間合い',condition:'ライフが減っているときだけ',cooldown:0,useLimit:null},
-  {id:'focus',type:'ATTACK',variant:'focus',category:'単体狙い',weight:12,multiplier:TACTICS_FOCUS_MULT,hits:1,range:'全間合い',condition:'予告した1体へ大ダメージ。その子を守るか回復する',cooldown:0,useLimit:null},
+  {id:'roar',type:'ROAR',category:'咆哮',weight:10,multiplier:0,hits:0,range:'全間合い',condition:`重ねがけは${TACTICS_ROAR_MAX_STACKS}回まで`,effectText:`次のターンから敵の攻撃 ×${TACTICS_ROAR_ATK_RATE}（このWAVEのあいだ続く。${TACTICS_ROAR_MAX_STACKS}回重ねると最大 ×${(TACTICS_ROAR_ATK_RATE**TACTICS_ROAR_MAX_STACKS).toFixed(2)}）`,cooldown:0,useLimit:TACTICS_ROAR_MAX_STACKS},
+  {id:'regen',type:'REGEN',category:'再生',weight:10,multiplier:0,hits:0,range:'全間合い',condition:'ライフが減っているときだけ',effectText:`敵が自分の最大ライフの${Math.round(TACTICS_REGEN_RATE*100)}%を回復する`,cooldown:0,useLimit:null},
   {id:'allout',type:'ATTACK',variant:'allout',targetsAll:true,category:'全体攻撃',weight:10,multiplier:TACTICS_ALLOUT_MULT,hits:1,range:'全員',condition:'立っている全員へ同時に当たる。狙いをかわせない',cooldown:0,useLimit:null},
 ];
 // どの敵も通常攻撃・ためる・必殺技・移動は持つ。ここへ足すのは「その敵だけの技」。
 // WAVEが進むほど読むことが増える並びにしてある(敵の順は ENEMY_SEQUENCE)。
-const TACTICS_BASE_ACTION_IDS = Object.freeze(['normal','charge','special','move']);
+const TACTICS_BASE_ACTION_IDS = Object.freeze(['normal','charge','special','wait','move']);
 const TACTICS_ENEMY_ACTION_IDS = Object.freeze({
   Dino:Object.freeze(['rush']),
   Gel:Object.freeze(['sweep']),
   BlackDino:Object.freeze(['rush','roar']),
   Jaakusou:Object.freeze(['sweep','regen']),
-  BlueMountain:Object.freeze(['pierce','sweep','focus']),
+  BlueMountain:Object.freeze(['pierce','sweep']),
   Gali:Object.freeze(['roar','rush','allout']),
-  Naga:Object.freeze(['sweep','pierce','focus']),
+  Naga:Object.freeze(['sweep','pierce']),
   Lilim:Object.freeze(['regen','pierce','allout']),
-  Durahan:Object.freeze(['rush','roar','pierce','focus','allout']),
-  Moo:Object.freeze(['sweep','rush','pierce','roar','regen','focus','allout']),
+  Durahan:Object.freeze(['rush','roar','pierce','allout']),
+  Moo:Object.freeze(['sweep','rush','pierce','roar','regen','allout']),
 });
 const tacticsActionDefinitions = (enemyId) => {
   const ids = [...TACTICS_BASE_ACTION_IDS, ...(TACTICS_ENEMY_ACTION_IDS[enemyId] || [])];
@@ -9381,7 +9389,7 @@ const enemyActionLabel = (ent,type) => type==='ATTACK' ? (ent?.normal||'通常�
   : '様子を見ている';
 const ENEMY_ACTION_ICONS = {ATTACK:'👊',CHARGE:'✨',SPECIAL:'🔥',WAIT:'⏳',MOVE:'🏃',ROAR:'📢',REGEN:'💚'};
 // 新モードの攻撃は type が ATTACK のままなので、見分けは variant で付ける
-const TACTICS_VARIANT_ICONS = {sweep:'🌪️',rush:'💥',pierce:'🗡️',focus:'🎯',allout:'🌊'};
+const TACTICS_VARIANT_ICONS = {sweep:'🌪️',rush:'💥',pierce:'🗡️',allout:'🌊'};
 const chooseEnemyAction = (ent,currentDist,random=Math.random,state={}) => {
   const actions=enemyActionProbabilities(ent,currentDist,state),roll=random(),available=actions.filter(a=>a.available);
   let cursor=roll;
@@ -21096,6 +21104,10 @@ function BattleScreen({
             if(getTurnBuff('zeroGuts',false)||getNextTurnBuff('zeroGuts',false)) chip('zeroGuts',<Star size={9}/>,'0消費中','','text-blue-400 border-blue-500/50',{pulse:true});
             if(getNextTurnBuff('reflect',false)) chip('reflectNext',<RefreshCcw size={9}/>,'次反射','','text-purple-400 border-purple-500/50',{pulse:true});
             if(getTurnBuff('reflect',false)) chip('reflectNow',<RefreshCcw size={9}/>,'反射待機','','text-purple-300 border-purple-400',{pulse:true});
+            // 敵の咆哮(2026-09-20 ユーザー指摘「咆哮の効果が分からない」)。
+            // ★ポップアップは一瞬で消えるので、いま何回かかっているかがどこにも出ていなかった。
+            //   敵の攻撃そのものを上げる(元に戻らない)ので、札に出し続ける
+            if(enemy?.roarStacks>0) chip('roarUp',<ArrowUpCircle size={9}/>,'敵の咆哮',`×${enemy.roarStacks}`,'text-orange-400 border-orange-500/50',{pulse:true});
             if(getWaveBuff('enemyAtkDebuffPct')>0) chip('enemyAtkDown',<ArrowDownCircle size={9}/>,'敵攻',`-${Math.round(getWaveBuff('enemyAtkDebuffPct')*100)}%`,'text-indigo-400 border-indigo-500/50',{pulse:true});
             if(getWaveBuff('enemyTakenDmgBonus')>0) chip('enemyTaken',<PlusCircle size={9}/>,'敵被ダメ',`+${Math.round(getWaveBuff('enemyTakenDmgBonus')*100)}%`,'text-orange-400 border-orange-500/50',{pulse:true});
             if(getNextTurnBuff('takenDamageMult',1.0)<1) chip('takenNext',<Shield size={9}/>,'次T被ダメ',`-${Math.round((1-getNextTurnBuff('takenDamageMult',1.0))*100)}%`,'text-pink-400 border-pink-500/50',{pulse:true});
@@ -31558,8 +31570,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         setEnemyAttackFx({kind:'charge'});
         setEnemyAttackAnim(true);
         tacticsRoarStacksRef.current += 1;
-        setEnemy(prev=>prev?{...prev,atk:Math.floor(Math.max(0,Number(prev.atk)||0)*TACTICS_ROAR_ATK_RATE)}:prev);
-        addPopup(`咆哮！ 敵の攻撃が上がった`,'enemy','text-orange-300 font-black text-xl drop-shadow-md');
+        // ★段数は敵にも持たせる(2026-09-20 ユーザー指摘「咆哮の効果が分からない」)。
+        //   ref は抽選が再描画より先に読むための正本で、画面からは見えない。
+        //   ポップアップは一瞬で消えるので、いま何回かかっているかが分からなかった。
+        //   ここで一緒に入れておけば、強化の札とSCANが同じ値を出せる
+        const roarStacks = tacticsRoarStacksRef.current;
+        setEnemy(prev=>prev?{...prev,atk:Math.floor(Math.max(0,Number(prev.atk)||0)*TACTICS_ROAR_ATK_RATE),roarStacks}:prev);
+        addPopup(`咆哮！ 敵の攻撃が上がった（${roarStacks}回目）`,'enemy','text-orange-300 font-black text-xl drop-shadow-md');
         triggerShake(true);
         await battleWait(1100);
         setEnemyAttackAnim(false);
@@ -31632,13 +31649,27 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         setEnemyAttackFx(null);
 
         if (isReflect) {
+          // ★新モードは返す量も「狙われた子が受けるはずだったダメージ」(2026-09-20)。
+          //   incomingDmg はパーティの丈夫さから出した値なので、1体ずつにした今は
+          //   実際に受ける量とずれる。吸収と同じ数え方にそろえる。
+          //   全体攻撃なら狙われた全員ぶんを足して返す(誰にも当たらなければ0)
+          const reflectSlots=isTacticsMode(runMode)
+            ? tacticsIntentTargets(intent,tacticsUnitsRef.current,actingEnemyDist) : null;
+          const reflectDmg=reflectSlots
+            ? reflectSlots.reduce((sum,slotIdx)=>sum+applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(intent,slotIdx)),0)
+            : incomingDmg;
           addPopup("反射！",'hero','text-purple-400 font-black text-2xl drop-shadow-lg'); await battleWait(600);
-          addPopup(`反射 ${incomingDmg}!!`,'enemy','text-purple-400 font-black text-4xl drop-shadow-lg');
-          const reflectedHp=Math.max(0,enemyHpAtAttackStart-incomingDmg);
-          setCurrentWaveDamage(p=>p+incomingDmg);
-          setEnemy(prev=>prev?{...prev,hp:reflectedHp}:prev); await battleWait(1000);
-          // 反射演出が終わってから撃破を確定し、回復・次ターン処理へは進ませない。
-          if (await resolveEnemyDefeat({remainingHp:reflectedHp,damage:incomingDmg})) return;
+          if(reflectDmg<=0){
+            addPopup('当たらなかった！','hero','text-cyan-300 font-black text-xl drop-shadow-md');
+            await battleWait(600);
+          } else {
+            addPopup(`反射 ${reflectDmg}!!`,'enemy','text-purple-400 font-black text-4xl drop-shadow-lg');
+            const reflectedHp=Math.max(0,enemyHpAtAttackStart-reflectDmg);
+            setCurrentWaveDamage(p=>p+reflectDmg);
+            setEnemy(prev=>prev?{...prev,hp:reflectedHp}:prev); await battleWait(1000);
+            // 反射演出が終わってから撃破を確定し、回復・次ターン処理へは進ませない。
+            if (await resolveEnemyDefeat({remainingHp:reflectedHp,damage:reflectDmg})) return;
+          }
         } else if (isAbsorb) {
           addPopup("吸収！",'hero','text-emerald-400 font-black text-2xl drop-shadow-lg'); await battleWait(600);
           // ★新モードの吸収は「狙われた子に起きたこと」(2026-09-20 ユーザー指示)。
@@ -38932,7 +38963,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
           </div>
         </div>
       )}
-      {(showEnemyInfo&&enemy||waveScanPreview)&&(()=>{const scanEnemy=waveScanPreview?.enemy||enemy;const scanDist=waveScanPreview?2:enemyDist;const scanBeforeBattle=!!waveScanPreview;const scanState={...(scanBeforeBattle?{unannounced:true}:enemyActionStateFrom(enemyLastIntent)),definitions:enemyActionDefinitionsFor(runMode,scanEnemy?.id),roarStacks:tacticsRoarStacksRef.current};const actions=enemyActionProbabilities(scanEnemy,scanDist,scanState);return (<div className="fixed inset-0 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'#020617',zIndex:waveScanPreview?71000:40000,paddingTop:'env(safe-area-inset-top)',paddingBottom:'env(safe-area-inset-bottom)'}} role="dialog" aria-modal="true" aria-label="敵行動詳細"><header className="flex justify-between items-center px-5 py-3 border-b border-white/10 shrink-0 bg-slate-950/95 z-10"><div><h3 className="font-black italic uppercase text-red-500 text-lg">Enemy Scan</h3>{waveScanPreview&&<small className="text-indigo-300 font-black">WAVE {waveScanPreview.wave}・戦闘開始前</small>}</div><button onClick={()=>{if(waveScanPreview)setWaveScanPreview(null);else setShowEnemyInfo(false);}} className="min-h-[44px] px-6 bg-white/10 rounded-full text-[11px] text-white active:scale-90">戻る</button></header><div className="flex-1 min-h-0 overflow-y-auto mh-scroll"><div className="w-full max-w-md mx-auto flex flex-col items-center text-center px-4 pb-8">{scanEnemy.imgUrl?(<div className={`${scanEnemy.id==='Moo'?'w-[min(92vw,380px)] h-[clamp(250px,38vh,310px)]':'w-[140px] h-[160px]'} flex shrink-0 items-center justify-center overflow-hidden`}><img src={scanEnemy.imgUrl} alt={scanEnemy.name} style={enemyArtStyle(scanEnemy.id,'scan')} className={`${scanEnemy.id==='Moo'?'w-[140px] h-[140px]':'w-[140px] h-[140px]'} object-contain drop-shadow-[0_0_50px_rgba(239,68,68,0.4)]`}/></div>):(<div style={{fontSize:'112px'}} className="my-4">{scanEnemy.emoji}</div>)}<h4 className="text-2xl font-black italic mb-4 uppercase shrink-0">{scanEnemy.name}</h4><section className="w-full space-y-3"><div className="grid grid-cols-2 gap-4 text-left bg-slate-900/60 p-4 rounded-2xl border border-white/5"><div><div className="text-[9px] text-pink-400 font-black">ライフ</div><div className="text-xl font-mono font-black">{scanEnemy.hp.toLocaleString()}</div></div><div><div className="text-[9px] text-red-400 font-black">攻撃力</div><div className="text-xl font-mono font-black">{scanEnemy.atk.toLocaleString()}</div></div></div><div className="text-left bg-slate-900/60 p-4 rounded-2xl border border-cyan-500/20"><div className="text-[9px] text-cyan-400 font-black">{scanBeforeBattle?'戦闘状況':'現在の間合い'}</div><b>{scanBeforeBattle?'戦闘開始前':`${RANGE_LABELS[scanDist]}距離`}</b></div><div className="space-y-2 text-left">{actions.map((action,index)=>{const actionName=action.type==='MOVE'?'間合い移動':action.variant?action.category:enemyActionLabel(scanEnemy,action.type);const power=Math.floor(scanEnemy.atk*action.multiplier);return <details key={action.id} open={index<2} className={`rounded-2xl border p-3 ${action.available?'bg-slate-900/80 border-white/10':'bg-slate-950 border-red-500/30'}`}><summary className="cursor-pointer list-none flex items-center justify-between gap-2"><span><b className="block">{actionName}</b><small className="text-slate-400">{action.category}</small></span><span className="text-right"><b className="text-amber-300">{(action.probability*100).toFixed(action.probability*100%1?1:0)}%</b>{!scanBeforeBattle&&enemyIntent?.actionId===action.id&&<small className="block text-cyan-300">予告中</small>}</span></summary><div className="grid grid-cols-2 gap-x-3 gap-y-2 mt-3 pt-3 border-t border-white/10 text-[10px]"><span>威力倍率 <b>×{action.multiplier}</b></span><span>基準威力 <b>{power.toLocaleString()}</b></span><span>攻撃回数 <b>{action.hits}回</b></span><span>使用間合い <b>{action.range}</b></span><span className="col-span-2">発動条件 <b>{action.condition}</b></span><span className="col-span-2">移動効果 <b>{action.type==='MOVE'?`${RANGE_LABELS.filter((_,i)=>i!==scanDist).join('・')}距離のいずれかへ移動`:'なし'}</b></span><span className="col-span-2">バフ・デバフ・状態異常 <b>なし</b></span><span>クールダウン <b>{action.cooldown?`${action.cooldown}ターン`:'なし'}</b></span><span>回数制限 <b>{action.useLimit??'なし'}</b></span></div>{!action.available&&<div className="mt-2 text-[10px] text-red-300">現在は使用不可：{action.unavailableReason}</div>}</details>})}</div><aside className="text-left text-[10px] leading-relaxed text-slate-400 bg-black/30 rounded-xl p-3"><b className="block text-slate-200 mb-1">行動ルール</b>使用可能な行動の重みを合計100%に正規化して抽選します。移動が選ばれた場合は、現在以外の3間合いから同率で移動先を選びます。必殺技は「ためる」の次のターンに必ず発動し、ほかの行動では上書きされません。移動は必ず前のターンに吹き出しで予告してから行うため、戦闘開始の1ターン目と、移動した次のターンには選ばれません。SCAN表示では抽選しません。</aside></section></div></div></div>);})()}
+      {(showEnemyInfo&&enemy||waveScanPreview)&&(()=>{const scanEnemy=waveScanPreview?.enemy||enemy;const scanDist=waveScanPreview?2:enemyDist;const scanBeforeBattle=!!waveScanPreview;const scanState={...(scanBeforeBattle?{unannounced:true}:enemyActionStateFrom(enemyLastIntent)),definitions:enemyActionDefinitionsFor(runMode,scanEnemy?.id),roarStacks:tacticsRoarStacksRef.current};const actions=enemyActionProbabilities(scanEnemy,scanDist,scanState);return (<div className="fixed inset-0 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'#020617',zIndex:waveScanPreview?71000:40000,paddingTop:'env(safe-area-inset-top)',paddingBottom:'env(safe-area-inset-bottom)'}} role="dialog" aria-modal="true" aria-label="敵行動詳細"><header className="flex justify-between items-center px-5 py-3 border-b border-white/10 shrink-0 bg-slate-950/95 z-10"><div><h3 className="font-black italic uppercase text-red-500 text-lg">Enemy Scan</h3>{waveScanPreview&&<small className="text-indigo-300 font-black">WAVE {waveScanPreview.wave}・戦闘開始前</small>}</div><button onClick={()=>{if(waveScanPreview)setWaveScanPreview(null);else setShowEnemyInfo(false);}} className="min-h-[44px] px-6 bg-white/10 rounded-full text-[11px] text-white active:scale-90">戻る</button></header><div className="flex-1 min-h-0 overflow-y-auto mh-scroll"><div className="w-full max-w-md mx-auto flex flex-col items-center text-center px-4 pb-8">{scanEnemy.imgUrl?(<div className={`${scanEnemy.id==='Moo'?'w-[min(92vw,380px)] h-[clamp(250px,38vh,310px)]':'w-[140px] h-[160px]'} flex shrink-0 items-center justify-center overflow-hidden`}><img src={scanEnemy.imgUrl} alt={scanEnemy.name} style={enemyArtStyle(scanEnemy.id,'scan')} className={`${scanEnemy.id==='Moo'?'w-[140px] h-[140px]':'w-[140px] h-[140px]'} object-contain drop-shadow-[0_0_50px_rgba(239,68,68,0.4)]`}/></div>):(<div style={{fontSize:'112px'}} className="my-4">{scanEnemy.emoji}</div>)}<h4 className="text-2xl font-black italic mb-4 uppercase shrink-0">{scanEnemy.name}</h4><section className="w-full space-y-3"><div className="grid grid-cols-2 gap-4 text-left bg-slate-900/60 p-4 rounded-2xl border border-white/5"><div><div className="text-[9px] text-pink-400 font-black">ライフ</div><div className="text-xl font-mono font-black">{scanEnemy.hp.toLocaleString()}</div></div><div><div className="text-[9px] text-red-400 font-black">攻撃力</div><div className="text-xl font-mono font-black">{scanEnemy.atk.toLocaleString()}</div></div></div><div className="text-left bg-slate-900/60 p-4 rounded-2xl border border-cyan-500/20"><div className="text-[9px] text-cyan-400 font-black">{scanBeforeBattle?'戦闘状況':'現在の間合い'}</div><b>{scanBeforeBattle?'戦闘開始前':`${RANGE_LABELS[scanDist]}距離`}</b></div><div className="space-y-2 text-left">{actions.map((action,index)=>{const actionName=action.type==='MOVE'?'間合い移動':action.variant?action.category:enemyActionLabel(scanEnemy,action.type);const power=Math.floor(scanEnemy.atk*action.multiplier);return <details key={action.id} open={index<2} className={`rounded-2xl border p-3 ${action.available?'bg-slate-900/80 border-white/10':'bg-slate-950 border-red-500/30'}`}><summary className="cursor-pointer list-none flex items-center justify-between gap-2"><span><b className="block">{actionName}</b><small className="text-slate-400">{action.category}</small></span><span className="text-right"><b className="text-amber-300">{(action.probability*100).toFixed(action.probability*100%1?1:0)}%</b>{!scanBeforeBattle&&enemyIntent?.actionId===action.id&&<small className="block text-cyan-300">予告中</small>}</span></summary><div className="grid grid-cols-2 gap-x-3 gap-y-2 mt-3 pt-3 border-t border-white/10 text-[10px]"><span>威力倍率 <b>×{action.multiplier}</b></span><span>基準威力 <b>{power.toLocaleString()}</b></span><span>攻撃回数 <b>{action.hits}回</b></span><span>使用間合い <b>{action.range}</b></span><span className="col-span-2">発動条件 <b>{action.condition}</b></span><span className="col-span-2">移動効果 <b>{action.type==='MOVE'?`${RANGE_LABELS.filter((_,i)=>i!==scanDist).join('・')}距離のいずれかへ移動`:'なし'}</b></span><span className="col-span-2">バフ・デバフ・状態異常 <b>{action.effectText||'なし'}</b></span><span>クールダウン <b>{action.cooldown?`${action.cooldown}ターン`:'なし'}</b></span><span>回数制限 <b>{action.useLimit??'なし'}</b></span></div>{!action.available&&<div className="mt-2 text-[10px] text-red-300">現在は使用不可：{action.unavailableReason}</div>}</details>})}</div><aside className="text-left text-[10px] leading-relaxed text-slate-400 bg-black/30 rounded-xl p-3"><b className="block text-slate-200 mb-1">行動ルール</b>使用可能な行動の重みを合計100%に正規化して抽選します。移動が選ばれた場合は、現在以外の3間合いから同率で移動先を選びます。必殺技は「ためる」の次のターンに必ず発動し、ほかの行動では上書きされません。移動は必ず前のターンに吹き出しで予告してから行うため、戦闘開始の1ターン目と、移動した次のターンには選ばれません。SCAN表示では抽選しません。</aside></section></div></div></div>);})()}
       {showHeroInfo&&mainHero&&(<div className="fixed inset-0 p-6 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'#020617',zIndex:40000,paddingTop:'calc(1.5rem + env(safe-area-inset-top))'}}><div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4"><h3 className="font-black italic uppercase text-indigo-400 text-lg">Hero Scan</h3><button onClick={()=>setShowHeroInfo(false)} className="px-6 py-2 bg-white/10 rounded-full text-[11px] text-white active:scale-90">戻る</button></div><div className="flex-1 flex flex-col items-center justify-center text-center overflow-y-auto mh-scroll">{mainHero.imgUrl?(<DyedMonsterImage baseId={mainHero.id} src={mainHero.imgUrl} alt={mainHero.name} masuColors={mainHero.colors} style={{width:'140px',height:'140px'}} className="mx-auto mb-6 object-contain drop-shadow-[0_0_50px_rgba(99,102,241,0.4)]"/>):(<div style={{fontSize:'112px'}} className="mb-6 drop-shadow-[0_0_50px_rgba(99,102,241,0.4)]">{mainHero.emoji}</div>)}<h4 className="text-2xl font-black italic mb-6 uppercase">{mainHero.name}</h4><div className="w-full max-w-sm space-y-4 bg-slate-900/50 p-6 rounded-3xl border border-white/5">{/* 新モードは1体ずつ値を持つので、ここで全員ぶんを出す(2026-09-19 ユーザーの質問)。
   下のブロックはパーティ合計(ガードの段階などを決める値)なので、そのまま残す */}
 {isTacticsMode(runMode)&&(<div data-tactics-status className="space-y-1.5 text-left">

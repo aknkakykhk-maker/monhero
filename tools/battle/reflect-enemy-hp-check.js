@@ -35,7 +35,11 @@ const slice = (from, to) => {
 check('敵のライフも呼び出し側から受け取る',
   has('const handleEnemyTurn = async (lastActionType, immediateEffects={}, overrideIntent=null, hpAtAttackStart=hp, enemyHpAtAttackStart=enemy?.hp??0) => {'));
 check('反射は渡された最新のライフから引く(ターン開始時の値を使わない)',
-  has('const reflectedHp=Math.max(0,enemyHpAtAttackStart-incomingDmg);'));
+  has('const reflectedHp=Math.max(0,enemyHpAtAttackStart-reflectDmg);'));
+// ★新モードは返す量を「狙われた子が受けるはずだったダメージ」で数え直す(2026-09-20)。
+//   incomingDmg はパーティの丈夫さから出した値なので、1体ずつにした今はずれる
+check('返す量は新モードだけ数え直す(既存モードは incomingDmg のまま)',
+  has('const reflectDmg=reflectSlots') && has(': incomingDmg;'));
 // ★ここが戻ると不具合も戻る
 const enemyTurnFn = slice('const handleEnemyTurn = async (lastActionType', '  const useEmergency = async () => {');
 check('敵の行動中に、古い enemy.hp を読んでいる箇所が無い',

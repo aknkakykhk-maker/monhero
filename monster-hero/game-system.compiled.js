@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a477d86f6d9dd103
+// source-sha256: f3533e8485e96c47
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6a8230b281170ff8
+// generated-sha256: 349143e8c1530380
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -49,6 +49,7 @@ const _ICON_PATHS = {
   Edit3: '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
   ArrowLeft: '<line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>',
   ArrowDownCircle: '<circle cx="12" cy="12" r="10"/><polyline points="8 12 12 16 16 12"/><line x1="12" y1="8" x2="12" y2="16"/>',
+  ArrowUpCircle: '<circle cx="12" cy="12" r="10"/><polyline points="16 12 12 8 8 12"/><line x1="12" y1="16" x2="12" y2="8"/>',
   Search: '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
   Layers: '<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>',
   AlertCircle: '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>',
@@ -126,6 +127,7 @@ const Heart = _icon('Heart'),
   Info = _icon('Info'),
   RefreshCcw = _icon('RefreshCcw'),
   ArrowDownCircle = _icon('ArrowDownCircle'),
+  ArrowUpCircle = _icon('ArrowUpCircle'),
   Coins = _icon('Coins'),
   ShoppingBag = _icon('ShoppingBag'),
   Gem = _icon('Gem'),
@@ -161,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-20 12:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-20 13:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15661,20 +15663,27 @@ const ENEMY_ACTION_DEFINITIONS = [{
 // ★type は既存の ATTACK / SPECIAL をそのまま使い、違いは variant で持つ。
 //   getIncomingDamageBeforeTurnReduction は type でダメージの有無を判断しているので、
 //   ここを新しい type にするとダメージ計算・演出・予告の経路を全部書き足すことになる。
-const TACTICS_SWEEP_MULT = 1.6; // 予告した間合いに敵がいるとき
+// ★倍率は2026-09-20にユーザーが1つずつ決め直した。それまでは受けるダメージが重く、
+//   とくに「人数が増えるほど全体攻撃だけが強い」「同じ×1.8なのに連撃が貫通撃を
+//   絶対に上回れない」という歪みがあった。攻める側(敵)を全体に下げて、
+//   そのぶん敵を落としにくく(再生を厚く)し、休めるターン(行動なし)を戻してある。
+const TACTICS_SWEEP_MULT = 1.2; // 予告した間合いに敵がいるとき
 const TACTICS_SWEEP_MISS_MULT = 0.4; // 距離撃などでずらしたとき
-const TACTICS_RUSH_MULT = 1.8; // 0.6×3ヒット。ガードは1ヒットぶんしか効かない
+const TACTICS_RUSH_MULT = 1.2; // 0.4×3ヒット。ガードは1ヒットぶんしか効かない
 const TACTICS_RUSH_HITS = 3; // 威力をこの数で割ってヒットに分ける。ガードが届くのは1ヒットだけ
-const TACTICS_PIERCE_MULT = 1.8; // ガードを無視する
+const TACTICS_PIERCE_MULT = 0.8; // ガードを無視する。効かないぶん倍率で加減する
 const TACTICS_ROAR_ATK_RATE = 1.5; // 次のターンから敵の攻撃が上がる
 const TACTICS_ROAR_MAX_STACKS = 2; // 重ねがけの上限
-const TACTICS_REGEN_RATE = 0.08; // 最大ライフに対する回復量
+const TACTICS_REGEN_RATE = 0.5; // 最大ライフに対する回復量。★与ダメを下げたぶん敵を落としにくくする
 const TACTICS_REGEN_HP_THRESHOLD = 0.9; // ライフがこの割合を下回ったときだけ使う
-// 単体狙いと全体攻撃(2026-09-19・設計 §5.3)。
-// ★全体攻撃は1体あたりの威力を単体狙いより必ず低くする。同じにすると
-//   「全員を殴るほうが得」になり、狙いを読む意味が消える
-const TACTICS_FOCUS_MULT = 2.2; // 予告した1体へ。読めば守れるぶん大きい
-const TACTICS_ALLOUT_MULT = 0.9; // 全員へ。1体あたりは通常攻撃より少しだけ低い
+// 全体攻撃(2026-09-19・設計 5.3)。
+// ★1体あたりの威力は通常攻撃より必ず低くする。同じか上にすると人数が増えるほど
+//   「全員を殴るほうが得」になり、狙いを読む意味も、供モンを連れる意味も消える。
+//   もとは0.9で、4体そろうと合計×3.6と最も重い技になっていた(2026-09-20 に0.4へ)
+// ★単体狙い(focus)は廃止した。必殺技(ためる→×2.5)と役割がかぶるため
+//   (2026-09-20 ユーザー指示)。通常攻撃も連撃も貫通撃も「狙った1体」へ当たるので、
+//   誰が狙われるかを読む遊びはそのまま残る
+const TACTICS_ALLOUT_MULT = 0.4; // 全員へ。1体あたりは通常攻撃より低い
 const TACTICS_ACTION_DEFINITIONS = [{
   id: 'normal',
   type: 'ATTACK',
@@ -15706,6 +15715,17 @@ const TACTICS_ACTION_DEFINITIONS = [{
   hits: 1,
   range: '全間合い',
   condition: 'ためた次のターンに必ず発動',
+  cooldown: 0,
+  useLimit: null
+}, {
+  id: 'wait',
+  type: 'WAIT',
+  category: '特殊行動',
+  weight: 10,
+  multiplier: 0,
+  hits: 0,
+  range: '全間合い',
+  condition: '常時',
   cooldown: 0,
   useLimit: null
 }, {
@@ -15765,6 +15785,7 @@ const TACTICS_ACTION_DEFINITIONS = [{
   hits: 0,
   range: '全間合い',
   condition: `重ねがけは${TACTICS_ROAR_MAX_STACKS}回まで`,
+  effectText: `次のターンから敵の攻撃 ×${TACTICS_ROAR_ATK_RATE}（このWAVEのあいだ続く。${TACTICS_ROAR_MAX_STACKS}回重ねると最大 ×${(TACTICS_ROAR_ATK_RATE ** TACTICS_ROAR_MAX_STACKS).toFixed(2)}）`,
   cooldown: 0,
   useLimit: TACTICS_ROAR_MAX_STACKS
 }, {
@@ -15776,18 +15797,7 @@ const TACTICS_ACTION_DEFINITIONS = [{
   hits: 0,
   range: '全間合い',
   condition: 'ライフが減っているときだけ',
-  cooldown: 0,
-  useLimit: null
-}, {
-  id: 'focus',
-  type: 'ATTACK',
-  variant: 'focus',
-  category: '単体狙い',
-  weight: 12,
-  multiplier: TACTICS_FOCUS_MULT,
-  hits: 1,
-  range: '全間合い',
-  condition: '予告した1体へ大ダメージ。その子を守るか回復する',
+  effectText: `敵が自分の最大ライフの${Math.round(TACTICS_REGEN_RATE * 100)}%を回復する`,
   cooldown: 0,
   useLimit: null
 }, {
@@ -15806,18 +15816,18 @@ const TACTICS_ACTION_DEFINITIONS = [{
 }];
 // どの敵も通常攻撃・ためる・必殺技・移動は持つ。ここへ足すのは「その敵だけの技」。
 // WAVEが進むほど読むことが増える並びにしてある(敵の順は ENEMY_SEQUENCE)。
-const TACTICS_BASE_ACTION_IDS = Object.freeze(['normal', 'charge', 'special', 'move']);
+const TACTICS_BASE_ACTION_IDS = Object.freeze(['normal', 'charge', 'special', 'wait', 'move']);
 const TACTICS_ENEMY_ACTION_IDS = Object.freeze({
   Dino: Object.freeze(['rush']),
   Gel: Object.freeze(['sweep']),
   BlackDino: Object.freeze(['rush', 'roar']),
   Jaakusou: Object.freeze(['sweep', 'regen']),
-  BlueMountain: Object.freeze(['pierce', 'sweep', 'focus']),
+  BlueMountain: Object.freeze(['pierce', 'sweep']),
   Gali: Object.freeze(['roar', 'rush', 'allout']),
-  Naga: Object.freeze(['sweep', 'pierce', 'focus']),
+  Naga: Object.freeze(['sweep', 'pierce']),
   Lilim: Object.freeze(['regen', 'pierce', 'allout']),
-  Durahan: Object.freeze(['rush', 'roar', 'pierce', 'focus', 'allout']),
-  Moo: Object.freeze(['sweep', 'rush', 'pierce', 'roar', 'regen', 'focus', 'allout'])
+  Durahan: Object.freeze(['rush', 'roar', 'pierce', 'allout']),
+  Moo: Object.freeze(['sweep', 'rush', 'pierce', 'roar', 'regen', 'allout'])
 });
 const tacticsActionDefinitions = enemyId => {
   const ids = [...TACTICS_BASE_ACTION_IDS, ...(TACTICS_ENEMY_ACTION_IDS[enemyId] || [])];
@@ -15909,7 +15919,6 @@ const TACTICS_VARIANT_ICONS = {
   sweep: '🌪️',
   rush: '💥',
   pierce: '🗡️',
-  focus: '🎯',
   allout: '🌊'
 };
 const chooseEnemyAction = (ent, currentDist, random = Math.random, state = {}) => {
@@ -37881,6 +37890,14 @@ function BattleScreen({
     }), '反射待機', '', 'text-purple-300 border-purple-400', {
       pulse: true
     });
+    // 敵の咆哮(2026-09-20 ユーザー指摘「咆哮の効果が分からない」)。
+    // ★ポップアップは一瞬で消えるので、いま何回かかっているかがどこにも出ていなかった。
+    //   敵の攻撃そのものを上げる(元に戻らない)ので、札に出し続ける
+    if (enemy?.roarStacks > 0) chip('roarUp', /*#__PURE__*/React.createElement(ArrowUpCircle, {
+      size: 9
+    }), '敵の咆哮', `×${enemy.roarStacks}`, 'text-orange-400 border-orange-500/50', {
+      pulse: true
+    });
     if (getWaveBuff('enemyAtkDebuffPct') > 0) chip('enemyAtkDown', /*#__PURE__*/React.createElement(ArrowDownCircle, {
       size: 9
     }), '敵攻', `-${Math.round(getWaveBuff('enemyAtkDebuffPct') * 100)}%`, 'text-indigo-400 border-indigo-500/50', {
@@ -52708,11 +52725,17 @@ function MonsterHeroGame() {
         });
         setEnemyAttackAnim(true);
         tacticsRoarStacksRef.current += 1;
+        // ★段数は敵にも持たせる(2026-09-20 ユーザー指摘「咆哮の効果が分からない」)。
+        //   ref は抽選が再描画より先に読むための正本で、画面からは見えない。
+        //   ポップアップは一瞬で消えるので、いま何回かかっているかが分からなかった。
+        //   ここで一緒に入れておけば、強化の札とSCANが同じ値を出せる
+        const roarStacks = tacticsRoarStacksRef.current;
         setEnemy(prev => prev ? {
           ...prev,
-          atk: Math.floor(Math.max(0, Number(prev.atk) || 0) * TACTICS_ROAR_ATK_RATE)
+          atk: Math.floor(Math.max(0, Number(prev.atk) || 0) * TACTICS_ROAR_ATK_RATE),
+          roarStacks
         } : prev);
-        addPopup(`咆哮！ 敵の攻撃が上がった`, 'enemy', 'text-orange-300 font-black text-xl drop-shadow-md');
+        addPopup(`咆哮！ 敵の攻撃が上がった（${roarStacks}回目）`, 'enemy', 'text-orange-300 font-black text-xl drop-shadow-md');
         triggerShake(true);
         await battleWait(1100);
         setEnemyAttackAnim(false);
@@ -52798,21 +52821,32 @@ function MonsterHeroGame() {
         await battleWait(fxKind === 'moo' ? 250 : intent.type === 'SPECIAL' ? 300 : 100);
         setEnemyAttackFx(null);
         if (isReflect) {
+          // ★新モードは返す量も「狙われた子が受けるはずだったダメージ」(2026-09-20)。
+          //   incomingDmg はパーティの丈夫さから出した値なので、1体ずつにした今は
+          //   実際に受ける量とずれる。吸収と同じ数え方にそろえる。
+          //   全体攻撃なら狙われた全員ぶんを足して返す(誰にも当たらなければ0)
+          const reflectSlots = isTacticsMode(runMode) ? tacticsIntentTargets(intent, tacticsUnitsRef.current, actingEnemyDist) : null;
+          const reflectDmg = reflectSlots ? reflectSlots.reduce((sum, slotIdx) => sum + applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(intent, slotIdx)), 0) : incomingDmg;
           addPopup("反射！", 'hero', 'text-purple-400 font-black text-2xl drop-shadow-lg');
           await battleWait(600);
-          addPopup(`反射 ${incomingDmg}!!`, 'enemy', 'text-purple-400 font-black text-4xl drop-shadow-lg');
-          const reflectedHp = Math.max(0, enemyHpAtAttackStart - incomingDmg);
-          setCurrentWaveDamage(p => p + incomingDmg);
-          setEnemy(prev => prev ? {
-            ...prev,
-            hp: reflectedHp
-          } : prev);
-          await battleWait(1000);
-          // 反射演出が終わってから撃破を確定し、回復・次ターン処理へは進ませない。
-          if (await resolveEnemyDefeat({
-            remainingHp: reflectedHp,
-            damage: incomingDmg
-          })) return;
+          if (reflectDmg <= 0) {
+            addPopup('当たらなかった！', 'hero', 'text-cyan-300 font-black text-xl drop-shadow-md');
+            await battleWait(600);
+          } else {
+            addPopup(`反射 ${reflectDmg}!!`, 'enemy', 'text-purple-400 font-black text-4xl drop-shadow-lg');
+            const reflectedHp = Math.max(0, enemyHpAtAttackStart - reflectDmg);
+            setCurrentWaveDamage(p => p + reflectDmg);
+            setEnemy(prev => prev ? {
+              ...prev,
+              hp: reflectedHp
+            } : prev);
+            await battleWait(1000);
+            // 反射演出が終わってから撃破を確定し、回復・次ターン処理へは進ませない。
+            if (await resolveEnemyDefeat({
+              remainingHp: reflectedHp,
+              damage: reflectDmg
+            })) return;
+          }
         } else if (isAbsorb) {
           addPopup("吸収！", 'hero', 'text-emerald-400 font-black text-2xl drop-shadow-lg');
           await battleWait(600);
@@ -67667,7 +67701,7 @@ function MonsterHeroGame() {
           className: "col-span-2"
         }, "\u79FB\u52D5\u52B9\u679C ", /*#__PURE__*/React.createElement("b", null, action.type === 'MOVE' ? `${RANGE_LABELS.filter((_, i) => i !== scanDist).join('・')}距離のいずれかへ移動` : 'なし')), /*#__PURE__*/React.createElement("span", {
           className: "col-span-2"
-        }, "\u30D0\u30D5\u30FB\u30C7\u30D0\u30D5\u30FB\u72B6\u614B\u7570\u5E38 ", /*#__PURE__*/React.createElement("b", null, "\u306A\u3057")), /*#__PURE__*/React.createElement("span", null, "\u30AF\u30FC\u30EB\u30C0\u30A6\u30F3 ", /*#__PURE__*/React.createElement("b", null, action.cooldown ? `${action.cooldown}ターン` : 'なし')), /*#__PURE__*/React.createElement("span", null, "\u56DE\u6570\u5236\u9650 ", /*#__PURE__*/React.createElement("b", null, action.useLimit ?? 'なし'))), !action.available && /*#__PURE__*/React.createElement("div", {
+        }, "\u30D0\u30D5\u30FB\u30C7\u30D0\u30D5\u30FB\u72B6\u614B\u7570\u5E38 ", /*#__PURE__*/React.createElement("b", null, action.effectText || 'なし')), /*#__PURE__*/React.createElement("span", null, "\u30AF\u30FC\u30EB\u30C0\u30A6\u30F3 ", /*#__PURE__*/React.createElement("b", null, action.cooldown ? `${action.cooldown}ターン` : 'なし')), /*#__PURE__*/React.createElement("span", null, "\u56DE\u6570\u5236\u9650 ", /*#__PURE__*/React.createElement("b", null, action.useLimit ?? 'なし'))), !action.available && /*#__PURE__*/React.createElement("div", {
           className: "mt-2 text-[10px] text-red-300"
         }, "\u73FE\u5728\u306F\u4F7F\u7528\u4E0D\u53EF\uFF1A", action.unavailableReason));
       })), /*#__PURE__*/React.createElement("aside", {
