@@ -158,13 +158,27 @@ check('売りがカード下の1行と重なっていない',
   check('育成が要らないと読める書き方をしていない',
     api.BATTLE_SYSTEMS.every(s => !/育てた数字より|育成の数字より|数字より.*読み/.test(
       `${s.tagline} ${lineOf(s)} ${s.points.map(p => p[2]).join(' ')}`)));
-  // クラシックは「いままでの通常のバトル」。基本の骨格(ライフ・カード・強化)を書く
+  // クラシックは「いままでの通常のバトル」。基本の骨格(ステータス・カード・強化)を書く
   check('クラシックには基本の骨格が書いてある',
-    /ライフ/.test(lineOf(classic)) && /カード/.test(lineOf(classic)) && /強化/.test(lineOf(classic)),
+    /ステータス/.test(lineOf(classic)) && /カード/.test(lineOf(classic)) && /強化/.test(lineOf(classic)),
     lineOf(classic));
   // タクティクスは「基本から変わったところ」だけ。基本の説明を繰り返さない
   check('タクティクスは基本との違いが書いてある',
     /1体ずつ/.test(lineOf(tactics)) && /狙う/.test(lineOf(tactics)), lineOf(tactics));
+  // ★合算か1体ずつかが分かれるのは**ライフだけではない**(2026-09-21 ユーザー指摘)。
+  //   ちから・丈夫さ・ガッツも同じなので、「ライフ」ではなく「ステータス」で書く
+  //   (仕様 4.1「合流した供モンは、合算されず自分の値のまま盤面に加わる」)
+  check('合算か1体ずつかを「ライフ」だけで書いていない',
+    [classic, tactics].every(s => /ステータス/.test(lineOf(s)) && !/^.{0,12}ライフ/.test(lineOf(s))),
+    `${lineOf(classic).split(' ')[0]} / ${lineOf(tactics).split(' ')[0]}`);
+  // 詳しいルールの1つ目も「ステータスの持ち方」でそろえ、4つとも名前を挙げる
+  check('詳しいルールがステータス4つを名前で挙げている',
+    [classic, tactics].every(s => s.points[0][1] === 'ステータスの持ち方'
+      && ['ライフ', 'ちから', '丈夫さ', 'ガッツ'].every(word => s.points[0][2].includes(word))),
+    [classic, tactics].map(s => s.points[0][1]).join(' / '));
+  // タクティクス側は「合算されない」ことが読めること。作り直しの中心なので落とさない
+  check('供モンが合算されないことが書いてある',
+    /合算されず/.test(tactics.points[0][2]));
   // 詳しいルールでも、基本との関係が読めるようにしておく
   check('タクティクスの詳しいルールが基本との関係を書いている',
     tactics.points.some(([, , text]) => text.includes('基本のバトル'))
