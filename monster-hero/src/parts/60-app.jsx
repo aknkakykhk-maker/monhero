@@ -948,10 +948,16 @@ function MonsterHeroGame() {
   };
   const tacticsHeal = (amount) => isTacticsMode(runMode)
     ? commitTacticsUnits(healTacticsBoard(tacticsUnitsRef.current, amount)) : null;
-  // 自動再生だけの入口。倒れた子には入れない(2026-09-20 ユーザー指示)。
-  // ★毎ターン勝手に貯まって復活すると、何もしなくても誰も倒れたままにならない
-  const tacticsHealAlive = (amount) => isTacticsMode(runMode)
-    ? commitTacticsUnits(healTacticsAliveBoard(tacticsUnitsRef.current, amount)) : null;
+  // 自動再生の入口。倒れた子には入れない(2026-09-20 ユーザー指示)。
+  // ★毎ターン勝手に貯まって復活すると、何もしなくても誰も倒れたままにならない。
+  // ★量は1体ずつ「その子の上限 × 率」。合計の上限から出して配ると、1体だけ傷ついている
+  //   ときにパーティ全員ぶんがその子へ入ってしまう(2026-09-20 ユーザー指摘)
+  const tacticsRegen = (hpRate, gutsRate) => {
+    if (!isTacticsMode(runMode)) return null;
+    const result = regenTacticsAliveBoard(tacticsUnitsRef.current, hpRate, gutsRate);
+    const total = commitTacticsUnits(result.units);
+    return { hp: result.hp, guts: result.guts, total };
+  };
   // ガッツの回復も立っている子へ配る。戻り値は「新モードなら合計ライフ、ほかは null」で、
   // 呼び出し側は null のときだけ今までどおりの1行を通す(ライフの helper と同じ約束)
   const tacticsGutsRecover = (amount) => isTacticsMode(runMode)
@@ -8989,13 +8995,22 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // 氷海の支配者は、絶氷の楔発動中かつ勇者と敵が同じ距離の場合だけ50パーセントポイントを足す。
     const gutsRecoveryRate=applyIceRulerAutoGutsRecovery(currentAutoGutsRecovery,mainHero?.id,iceLockActive,heroDist,enemyDist);
     const soulAdjustedGutsRecoveryRate=Math.max(0,gutsRecoveryRate)*soulBattleParty.autoGutsMultiplier;
-    const gutsRegen=Math.floor(liveEffectiveMaxGuts()*soulAdjustedGutsRecoveryRate);
-    gainGuts(gutsRegen);
-    let didRegen=false;
-    if (autoHpRecoveryRate>0) {
-      const autoHealVal=Math.floor(liveEffectiveMaxHp()*autoHpRecoveryRate);
-      if (autoHealVal>0) { if(tacticsHealAlive(autoHealVal)===null) setHp(p=>Math.min(liveEffectiveMaxHp(),p+autoHealVal)); addPopup(`🌿 自動再生 +${autoHealVal}`,'life','text-teal-300 font-black text-lg italic drop-shadow-md'); didRegen=true; }
+    // ★新モードは1体ずつ「その子の上限 × 率」で回す(2026-09-20 ユーザー指摘)。
+    //   合計の上限から量を出して配ると、1体だけ傷ついているときにパーティ全員ぶんが
+    //   その子へ入り、倒れている子が多いほど残った子がよけいに回復する(逆になっている)
+    const regen=tacticsRegen(autoHpRecoveryRate,soulAdjustedGutsRecoveryRate);
+    let gutsRegen=0, autoHealVal=0;
+    if (regen) { currentHp=regen.total; autoHealVal=regen.hp; gutsRegen=regen.guts; }
+    else {
+      gutsRegen=Math.floor(liveEffectiveMaxGuts()*soulAdjustedGutsRecoveryRate);
+      gainGuts(gutsRegen);
+      if (autoHpRecoveryRate>0) {
+        autoHealVal=Math.floor(liveEffectiveMaxHp()*autoHpRecoveryRate);
+        if (autoHealVal>0) setHp(p=>Math.min(liveEffectiveMaxHp(),p+autoHealVal));
+      }
     }
+    let didRegen=false;
+    if (autoHealVal>0) { addPopup(`🌿 自動再生 +${autoHealVal}`,'life','text-teal-300 font-black text-lg italic drop-shadow-md'); didRegen=true; }
     if (gutsRegen>0) { addPopup(`🌿 自動ガッツ +${gutsRegen}`,'guts','text-cyan-300 font-black text-lg italic drop-shadow-md'); didRegen=true; }
     if (didRegen) { await battleWait(500); }
     // 次ターン予約分(nextTurnBuffs)をそのまま今ターンの一時バフ(turnBuffs)へ入れ替える(新しい一時効果を追加してもここは変更不要)
