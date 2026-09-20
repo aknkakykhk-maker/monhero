@@ -103,6 +103,10 @@ const FORCE_CHECKS = [
   // ファイル名の語(app・home・core)では拾えないので名指しする
   { re: /^monster-hero\/(src\/parts\/(10-core|60-app|69-screen-home)\.jsx|data\/(help|assistants)\.js)$/,
     checks: ['battle/battle-system-select-check.js'], why: 'モンヒロバトルの入口と導線' },
+  // 画面を足したときのBGMの決め忘れ。対応表へ載せ忘れてもエラーは出ず、
+  // その画面だけ静かに無音になるので、遊んだ人が言うまで気づけない(2回やっている)
+  { re: /^monster-hero\/src\/parts\/60-app\.jsx$/,
+    checks: ['boot/bgm-screen-coverage-check.js'], why: '画面ごとのBGMの決め忘れ' },
   // タクティクスバトルの中のモード(記録・ランキング・極限タブ)。
   // まちがえるとチャレンジの自己ベストとクリア回数を上書きするのに、
   // ファイル名の語(core・app・difficulties・supabase)では拾えないので名指しする
