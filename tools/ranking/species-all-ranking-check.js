@@ -44,6 +44,10 @@ vm.runInContext([
   grab('const DIFFICULTY_SETTINGS = {', 'const SPECIES_CHALLENGE_PROGRESS_KEY'),
   // speciesChallengeLineages は dexMainLineages 経由なので、ここでは血統の正本から直接作る
   `const speciesChallengeLineages = () => Object.values(MONSTER_LINEAGES).filter(l => l && l.id);`,
+  // タクティクスバトル側の種族チャレンジは、同じ3つ組のまま先頭が TacticsSpecies になる。
+  // モードidと接頭辞は本体から持ってくる(検査へ書き写さない)
+  grab("const BATTLE_MODE_SPECIES_CHALLENGE = 'speciesChallenge';", '// 種族チャレンジを一般公開するかどうか'),
+  grab('const TACTICS_RANKING_PREFIX =', 'const RANKING_DIFFICULTY_KEYS'),
   grab('const SPECIES_RANKING_PREFIX =', 'const normalizeExtremeDifficulty'),
   `globalThis.__x = { SPECIES_CHALLENGE_DIFFICULTY_IDS, speciesChallengeLineages,
      speciesChallengeRankingDifficulty, parseSpeciesChallengeRankingDifficulty,
@@ -115,9 +119,10 @@ check('値は二重引用符で囲まれている', String(inValue).includes('%2
 
 // --- ④ 保存(送信)側は一切変えていない ---
 // 全種族キーを書き込む場所があってはいけない。送信は種族別キーのみ
-const submitFn = grab('const submitSpeciesChallengeScoreOnce = async () => {', 'const handleSaveName');
+const submitFn = grab('const submitSpeciesChallengeScoreOnce = async () => {', 'const submitTacticsScoreOnce');
 check('送信は種族別キーのままで、全種族キーへ書き込まない',
-  submitFn.includes('rankingDifficultyForMode(BATTLE_MODE_SPECIES_CHALLENGE, run.difficultyId, run.speciesId)')
+  // ★クラシックかタクティクスかは run が持つ(speciesChallengeRunMode)
+  submitFn.includes('rankingDifficultyForMode(speciesChallengeRunMode(run), run.difficultyId, run.speciesId)')
   && !submitFn.includes('speciesChallengeAllRankingDifficulty'));
 check('全種族キーを組み立てるのは取得と画面だけ',
   !/storeSet\([^)]*speciesChallengeAllRankingDifficulty/.test(source)
@@ -130,7 +135,7 @@ check('rankingsテーブルの列は増やしていない',
   && !/RANKING_SELECT_FULL = '[^']*species/i.test(source));
 
 // --- ⑤ 画面 ---
-const rankBody = grab('const renderSpeciesChallengeRecordBody = () => {', 'const renderBreederRankingBody =');
+const rankBody = grab('const renderSpeciesChallengeRecordBody = (mode = BATTLE_MODE_SPECIES_CHALLENGE) => {', 'const renderBreederRankingBody =');
 check('タブは 全種族 → 種族別 → 自己ベスト の順に並ぶ',
   rankBody.includes("{ id:SPECIES_RANK_TAB_ALL, label:'全種族' }")
   && rankBody.includes("{ id:SPECIES_RANK_TAB_SELF_BEST, label:'自己ベスト' }")
@@ -144,7 +149,7 @@ check('自己ベストのときだけ通信しない',
   rankBody.includes('tabId === SPECIES_RANK_TAB_SELF_BEST ? null'));
 const openRecords = grab('const openSpeciesChallengeRecords =', 'const openModeScoreRanking =');
 check('種族を指定せずに開くと全種族から始まる',
-  openRecords.includes('SPECIES_CHALLENGE_PUBLIC_RELEASE ? SPECIES_RANK_TAB_ALL : SPECIES_RANK_TAB_SELF_BEST'));
+  openRecords.includes('ranked ? SPECIES_RANK_TAB_ALL : SPECIES_RANK_TAB_SELF_BEST'));
 check('難易度カードから開いたときはその種族のまま',
   openRecords.includes('speciesChallengeLineages().some(lineage=>lineage.id===speciesId)'));
 

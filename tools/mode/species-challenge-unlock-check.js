@@ -140,8 +140,10 @@ check('スコア送信は種族チャレンジ専用の処理だけを通る',
 const submitFn = source.slice(source.indexOf('const submitRunScoreOnce = async () => {'), source.indexOf('const submitSpeciesChallengeScoreOnce'));
 check('種族チャレンジの判定は自己ベストを書く分岐より前にある',
   submitFn.indexOf('submitSpeciesChallengeScoreOnce()') < submitFn.indexOf('mh_hs_${difficulty}'));
+// ★タクティクスバトルは極限で遊んでも自分のキーへ記録するので、極限の条件だけ緩めてある。
+//   ここで見たいのは「種族チャレンジが外れていること」
 check('最高到達WAVEへ入れない',
-  source.includes('if (!forcedEnemyKey && !extremeRunRef.current && !debugBattleRef.current && !speciesChallengeBattleRunRef.current) {'));
+  source.includes('if (!forcedEnemyKey && !debugBattleRef.current && !speciesChallengeBattleRunRef.current'));
 // 条件はあとから増える(正式実装前のモンスターを連れた周回など)ので、
 // 「種族チャレンジを外していること」だけを見る
 check('挑戦回数へ入れない',
@@ -149,14 +151,19 @@ check('挑戦回数へ入れない',
 const recordFn = source.slice(source.indexOf('const recordClearOnce = async () => {'), source.indexOf('// はじめての敗北かどうか'));
 check('クリア回数はチャレンジのキーへ入れない',
   recordFn.indexOf('if (speciesChallengeBattleRunRef.current) {') < recordFn.indexOf('mh_clears_${difficulty}'));
+// 公開フラグの判定は modeHasRanking が1か所で持つ。タクティクス側の種族チャレンジは
+// タクティクスの公開フラグで止まる
 check('公開フラグが立つまで全国ランキングへ送らない',
   source.includes('mode !== BATTLE_MODE_SPECIES_CHALLENGE || SPECIES_CHALLENGE_PUBLIC_RELEASE')
-    && source.includes('if (!SPECIES_CHALLENGE_PUBLIC_RELEASE) return;'));
-// 保存キーは1つも増やしていない(進行は既存の mh_species_challenge_progress_v1 だけ)
+    && source.includes('if (!modeHasRanking(speciesChallengeRunMode(run))) return;'));
+// 保存キーはモードごとに1つずつ。クラシックの進行キーは名前も中身も変えない。
+// タクティクス側は別の器(mh_tactics_species_challenge_progress_v1)へ分ける
 const newKeys = [...new Set((source.match(/'mh_[a-z0-9_]+'/g) || []))]
   .filter(key => key.includes('species'));
-check('種族チャレンジが使う保存キーは進行の1つだけ',
-  newKeys.length === 1 && newKeys[0] === "'mh_species_challenge_progress_v1'", newKeys.join(', '));
+check('種族チャレンジが使う保存キーはモードごとに1つだけ',
+  newKeys.length === 2
+    && newKeys.includes("'mh_species_challenge_progress_v1'")
+    && newKeys.includes("'mh_tactics_species_challenge_progress_v1'"), newKeys.join(', '));
 
 console.log(failed === 0 ? '\n種族チャレンジ 解放条件・公開連動の確認: PASS' : `\n${failed}件NG`);
 process.exit(failed === 0 ? 0 : 1);

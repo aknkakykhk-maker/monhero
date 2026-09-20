@@ -54,12 +54,19 @@ assert(setup.indexOf('joinSpeciesChallengeAlly') < setup.indexOf("const bonus=m.
 assert(source.includes('if (w === 1 && !forcedEnemyKey && !debugBattleRef.current)'), 'デバッグ実戦では助手・ミッションを含む保存進行を抑止する');
 // 保存なし確認のデバッグ表示・本番のCHAMPION・敗北/リタイアの「再挑戦」の3つとも、
 // 通常のPICK_HEROではなく種族チャレンジの選択画面へ戻す(保存する/しないも引き継ぐ)
-assert(source.includes('speciesChallengeBattleRun?<button') && source.includes('openSpeciesChallengeSelection({saveProgress:keepSaving,fromDebug:keepDebug});'), '保存なし確認のリザルトから種族チャレンジ選択へ戻る');
-assert(source.includes('data-species-champion-back') && source.includes('openSpeciesChallengeSelection({saveProgress:keepSaving,fromDebug:keepDebug});'), '本番のCHAMPIONからも種族チャレンジ選択へ戻れる');
+// ★どちらの種族チャレンジ(クラシック/タクティクス)から来たかを引き継いで戻る
+assert(source.includes('speciesChallengeBattleRun?<button') && source.includes('openSpeciesChallengeSelection({saveProgress:keepSaving,fromDebug:keepDebug,mode:keepMode});'), '保存なし確認のリザルトから種族チャレンジ選択へ戻る');
+assert(source.includes('data-species-champion-back') && source.includes('openSpeciesChallengeSelection({saveProgress:keepSaving,fromDebug:keepDebug,mode:keepMode});'), '本番のCHAMPIONからも種族チャレンジ選択へ戻れる');
 const retryFn = source.slice(source.indexOf('const handleRetry = () => {'), source.indexOf('const runResultActionOnce ='));
 assert(retryFn.includes('if (speciesChallengeBattleRunRef.current) {')
-  && retryFn.indexOf('openSpeciesChallengeSelection({ saveProgress: keepSaving, fromDebug: keepDebug });') < retryFn.indexOf("advanceRunStage('PICK_HERO')"), '敗北・リタイアの再挑戦は通常のPICK_HEROへ落ちない');
-assert(source.includes('...((SPECIES_CHALLENGE_PUBLIC_RELEASE||debugBattle)?[SPECIES_CHALLENGE_MODE]:[])') && !source.slice(source.indexOf('const BATTLE_MODES = ['), source.indexOf('// 極限チャレンジは通常')).includes('BATTLE_MODE_SPECIES_CHALLENGE'), '共通BATTLE MODEへ入口を出す(公開前はデバッグのときだけ)');
+  && retryFn.indexOf('openSpeciesChallengeSelection({ saveProgress: keepSaving, fromDebug: keepDebug, mode: speciesChallengeRunMode(speciesChallengeBattleRunRef.current) });') < retryFn.indexOf("advanceRunStage('PICK_HERO')"), '敗北・リタイアの再挑戦は通常のPICK_HEROへ落ちない');
+// ★モード選択の並びは battleSystemModes が作る(2026-09-20 に「バトルの仕組み」を1段足した)。
+//   種族チャレンジは公開フラグが立つまで出さず、デバッグからだけ見える。
+//   BATTLE_MODES(既存3モードの表)へは今までどおり入れない
+assert(source.includes("if (id === BATTLE_MODE_SPECIES_CHALLENGE) return SPECIES_CHALLENGE_PUBLIC_RELEASE || debugBattle;")
+  && source.includes('const modes=battleSystemModes(battleSystem,{debugBattle}).map(id=>battleModeInfo(id));')
+  && !source.slice(source.indexOf('const BATTLE_MODES = ['), source.indexOf('// ===== バトルの仕組み(モード選択の1つ上) =====')).includes('BATTLE_MODE_SPECIES_CHALLENGE'),
+  '共通BATTLE MODEへ入口を出す(公開前はデバッグのときだけ)');
 // 公開の切り替えは1か所だけ。公開後は true のまま(false へ戻すと、
 // すでに遊んだ人の全国ランキングだけが止まる)
 assert(/const SPECIES_CHALLENGE_PUBLIC_RELEASE = true;/.test(source), '一般公開フラグはtrue(公開済み)');

@@ -108,7 +108,9 @@ assert(debugScreen.includes("storeSet('mh_masu_mons',nextMasuMons,false)") && de
 assert(!debugScreen.includes('storeSet(\'mh_species_challenge_run') && !debugScreen.includes('storeSet("mh_species_challenge_run'), '供モンのラン状態を保存しない');
 for (const legacyKey of ['mh_species_challenge_progress_v1','mh_owned_items','mh_masu_mons']) assert(source.includes(legacyKey), `${legacyKey}を維持する`);
 
-const battleModes = source.slice(source.indexOf('const BATTLE_MODES = ['), source.indexOf('// 極限チャレンジは通常の3モードとは別に持っている'));
+// ★見るのは BATTLE_MODES の配列だけ。うしろの「バトルの仕組み(BATTLE_SYSTEMS)」には
+//   種族チャレンジのidが入っている(公開フラグで出し入れする器)ので、そこまで含めない
+const battleModes = source.slice(source.indexOf('const BATTLE_MODES = ['), source.indexOf('// ===== バトルの仕組み(モード選択の1つ上) ====='));
 assert(!battleModes.includes('BATTLE_MODE_SPECIES_CHALLENGE'), '本番BATTLE MODEへ表示しない');
 assert(!source.includes('SPECIES_CHALLENGE_RANKING') && !source.includes('species_challenge_ranking'), '種族チャレンジのランキング接続を作らない');
 assert(!source.includes('SPECIES_CHALLENGE_MARKET') && !source.includes('species_challenge_market'), '種族チャレンジのMARKET接続を作らない');

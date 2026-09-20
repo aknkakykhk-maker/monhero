@@ -21,6 +21,14 @@ const installLineageHelpers = (vm, context, { source = null } = {}) => {
   // data/images/images-ally.js を実物のまま先に読み込んでおく
   const imagesAlly = fs.readFileSync(path.join(REPO_ROOT, 'monster-hero/data/images/images-ally.js'), 'utf8');
   vm.runInContext('var window=undefined;', context);
+  // 種族チャレンジのモードid。createSpeciesChallengeRunState / speciesChallengeRunMode が
+  // 「クラシックかタクティクスか」を既定値として見るので、本体から実物を持ってくる
+  // (検査へ書き写すと、idを変えたときにここだけ古くなる)
+  const modeStart = jsx.indexOf("const BATTLE_MODE_SPECIES_CHALLENGE = 'speciesChallenge';");
+  const modeEnd = jsx.indexOf('// 種族チャレンジを一般公開するかどうか', modeStart);
+  if (modeStart < 0 || modeEnd < 0) throw new Error('種族チャレンジのモードidが見つかりません');
+  vm.runInContext(jsx.slice(modeStart, modeEnd).replace(/^const /gm, 'var '),
+    context, { filename: 'battle-mode-ids' });
   vm.runInContext(
     [imagesAlly, allyMonsters, lineages, jsx.slice(helperStart, helperEnd)]
       .map(part => part.replace(/^const /gm, 'var ')).join('\n'),

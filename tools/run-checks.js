@@ -103,6 +103,11 @@ const FORCE_CHECKS = [
   // ファイル名の語(app・home・core)では拾えないので名指しする
   { re: /^monster-hero\/(src\/parts\/(10-core|60-app|69-screen-home)\.jsx|data\/(help|assistants)\.js)$/,
     checks: ['battle/battle-system-select-check.js'], why: 'モンヒロバトルの入口と導線' },
+  // タクティクスバトルの中のモード(記録・ランキング・極限タブ)。
+  // まちがえるとチャレンジの自己ベストとクリア回数を上書きするのに、
+  // ファイル名の語(core・app・difficulties・supabase)では拾えないので名指しする
+  { re: /^monster-hero\/src\/parts\/(10-core|19-difficulties-and-rules|26-supabase|56-screen-profile|60-app)\.jsx$/,
+    checks: ['mode/tactics-modes-check.js'], why: 'タクティクスの記録・ランキング・極限タブ' },
   // 譜面(data/rhythm-mode.js)を触ったら、終点フリックの置き場所は必ず見る。
   // 語の当たりだけでは本数の上限で落ちることがあり、曲を足した回だけ静かに見逃す(2026-09-18)
   { re: /^monster-hero\/data\/rhythm-mode\.js$/, checks: ['mode/rhythm-end-flick-swing-check.js'], why: '譜面の終点フリックの置き場所' },

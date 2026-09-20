@@ -48,8 +48,11 @@ const sandbox = {
   PRO_RANKING_PREFIX: 'Pro',
   EXTREME_MODE: { id: 'extreme' },
   // 新モードの判定は 10-core.jsx 側。ここでは切り出さないので補う
-  // (rankingDifficultyForMode が新モードかどうかを見るため)
-  isTacticsMode: (mode) => mode === 'tactics',
+  // (rankingDifficultyForMode が新モードかどうかを見るため)。
+  // ★モードの並びは本体の定数をそのまま読む。検査へ書き写すと、モードが増えたときに古くなる
+  isTacticsMode: (mode) => vm.runInContext('TACTICS_BATTLE_MODES', sandbox).includes(mode),
+  isSpeciesChallengeMode: (mode) => vm.runInContext(
+    '[BATTLE_MODE_SPECIES_CHALLENGE,BATTLE_MODE_TACTICS_SPECIES]', sandbox).includes(mode),
   console,
 };
 vm.createContext(sandbox);
