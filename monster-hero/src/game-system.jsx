@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: cf448e840fb3735d
+// generated-sha256: b2c01be637f7ba7d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -92,7 +92,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-20 20:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-20 20:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -23529,6 +23529,25 @@ function MonsterHeroGame() {
     autoTurnScheduledRef.current = false;
     autoPostWaveRunningRef.current = false;
     autoPostWaveScheduledRef.current = false;
+    // ★演出の state も、ここで必ず捨てる
+    //   (2026-09-20・ユーザー報告「デバッグモードでバトル確認しようとしたら
+    //    近距離に誰もいないのに攻撃アクションが起きる」)。
+    //   理由は上とまったく同じ。ターンの演出は「出す → await battleWait → 消す」の形なので、
+    //   世代を進めると**消すほうへ二度と到達しない**。state は applyResetAllState でも
+    //   戻らないため、次のランの画面へ前のランの演出がそのまま残って出る。
+    //   実際に出ていたのは技名(slotSkill)で、誰もいない間合いに「トリオビーム∞」が浮いていた。
+    //   技名は slotIndex で左右の位置が決まるだけで、そこに誰かいるかは見ていない。
+    //   ★ここで消してよいのは**そのターンの見た目だけ**。敵・盤面・ダメージなどの
+    //   進行データには触らない(片付けは applyResetAllState と各画面の受け持ち)。
+    //   ポップアップ(addPopup)と教えカードの演出(fireTeachingFx)は自前の setTimeout で
+    //   消えるので、ここには要らない(世代を見ていない)。
+    setAttackAnim(null);
+    setSlotSkill(null);
+    setSlotSettle(null);
+    setEnemySkillName(null);
+    setGuardFx(false);
+    setEnemyAttackAnim(false);
+    setEnemyAttackFx(null);
   };
   const [autoTurnCycle, setAutoTurnCycle] = useState(0);
   // AUTO∞もラン中だけの一時状態。リロード後は必ずOFFに戻す。
