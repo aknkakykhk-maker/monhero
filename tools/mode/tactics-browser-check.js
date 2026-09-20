@@ -114,6 +114,23 @@ const check = (name, ok, detail = '') => {
     await page.locator('[data-battle-systems]').first().waitFor({ timeout: 15000 });
     check('デバッグの入口には新モードの仕組みが出る',
       await page.locator('[data-battle-system="systemTactics"]').count() > 0);
+    // ★入口のカードから「詳しいルール」を開けること(2026-09-20 ユーザー指示)。
+    //   説明モーダルはモードと仕組みで同じものを使うので、片方だけ壊れると真っ白になる
+    await page.locator('[data-battle-system-info="systemTactics"]').dispatchEvent('click', {}, { timeout: 15000 });
+    await page.waitForTimeout(800);
+    const ruleText = await page.evaluate(() => {
+      const dialog = document.querySelector('[role="dialog"]');
+      return dialog ? dialog.innerText.replace(/\s+/g, ' ') : '';
+    });
+    check('入口のカードから詳しいルールを開ける',
+      ruleText.includes('とは？') && ruleText.includes('ライフの持ち方'), ruleText.slice(0, 60));
+    await page.evaluate(() => {
+      const b = [...document.querySelectorAll('button')].find(x => (x.getAttribute('aria-label') || '') === '説明を閉じる');
+      if (b) b.click();
+    });
+    await page.waitForTimeout(600);
+    check('詳しいルールを閉じると入口へ戻る',
+      await page.locator('[data-battle-system="systemTactics"]').count() > 0);
     await page.locator('[data-battle-system="systemTactics"]').dispatchEvent('click', {}, { timeout: 15000 });
     await page.getByText('BATTLE MODE').first().waitFor({ timeout: 15000 });
     const cardCount = await page.evaluate((label) =>

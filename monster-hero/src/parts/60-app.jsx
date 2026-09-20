@@ -12769,28 +12769,44 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   // ★β版は「中のモードがまだ全部そろっていない」。遊べるけれど、
                   //   入口でそのことが分かるようにしておく(2026-09-20 ユーザー指示)
                   const beta=battleSystemBeta(sys.id,{debugBattle});
+                  // ★カードは「選ぶ」と「詳しいルール」の2つのボタンでできている。
+                  //   準備中でも中身は読めるようにしておく(何が来るのか分かるように)
                   return (
-                  <button key={sys.id} data-battle-system={sys.id} data-battle-system-soon={soon?'1':undefined}
-                    disabled={soon} onClick={()=>openBattleSystem(sys.id)}
-                    aria-label={soon?`${sys.label}（準備中）`:sys.label}
-                    className={`w-full rounded-2xl border-2 px-3 py-3 text-left transition-transform ${soon?'bg-slate-900/40 opacity-60':'bg-slate-900/80 active:scale-95'}`}
+                  <div key={sys.id} data-battle-system-card={sys.id}
+                    className={`w-full rounded-2xl border-2 overflow-hidden ${soon?'bg-slate-900/40':'bg-slate-900/80'}`}
                     style={{borderColor:soon?'rgba(148,163,184,.45)':sys.color}}>
-                    <div className="flex items-center gap-2">
-                      <span className="text-2xl leading-none">{sys.emoji}</span>
-                      <span className="text-base font-black leading-tight" style={{color:soon?'#94a3b8':sys.color}}>{sys.label}</span>
-                      {soon&&(
-                        <span className="ml-auto text-[9px] font-black text-slate-300 border border-slate-400/60 rounded px-1.5 py-0.5">準備中</span>
-                      )}
-                      {beta&&(
-                        <span data-battle-system-beta className="ml-auto text-[9px] font-black text-amber-200 border border-amber-400/60 rounded px-1.5 py-0.5">β版</span>
-                      )}
-                      {!soon&&!beta&&sys.id===BATTLE_SYSTEM_TACTICS&&!TACTICS_MODE_PUBLIC_RELEASE&&(
-                        <span className="ml-auto text-[8px] font-black text-amber-300 border border-amber-400/60 rounded px-1 py-0.5">DEBUG</span>
-                      )}
-                    </div>
-                    <div className="text-[11px] text-slate-200 font-bold leading-snug mt-1.5">{sys.tagline}</div>
-                    <div className="text-[9px] text-slate-400 leading-snug mt-1">{soon?'いま準備しています。遊べるようになったらお知らせします':beta?'いまはタクティクスプロだけ遊べます。ほかのモードは準備中です':sys.note}</div>
-                  </button>);
+                    <button data-battle-system={sys.id} data-battle-system-soon={soon?'1':undefined}
+                      disabled={soon} onClick={()=>openBattleSystem(sys.id)}
+                      aria-label={soon?`${sys.label}（準備中）`:sys.label}
+                      className={`w-full px-3 pt-3 pb-2 text-left transition-transform ${soon?'opacity-60':'active:scale-[.98]'}`}>
+                      <div className="flex items-center gap-2">
+                        <span className="text-2xl leading-none">{sys.emoji}</span>
+                        <span className="text-base font-black leading-tight" style={{color:soon?'#94a3b8':sys.color}}>{sys.label}</span>
+                        {soon&&(
+                          <span className="ml-auto text-[9px] font-black text-slate-300 border border-slate-400/60 rounded px-1.5 py-0.5">準備中</span>
+                        )}
+                        {beta&&(
+                          <span data-battle-system-beta className="ml-auto text-[9px] font-black text-amber-200 border border-amber-400/60 rounded px-1.5 py-0.5">β版</span>
+                        )}
+                        {!soon&&!beta&&sys.id===BATTLE_SYSTEM_TACTICS&&!TACTICS_MODE_PUBLIC_RELEASE&&(
+                          <span className="ml-auto text-[8px] font-black text-amber-300 border border-amber-400/60 rounded px-1 py-0.5">DEBUG</span>
+                        )}
+                      </div>
+                      <div className="text-[11px] text-slate-200 font-bold leading-snug mt-1.5">{sys.tagline}</div>
+                      {/* 売りを3行。どの仕組みも同じ数・同じ並びなので、見比べて選べる */}
+                      <ul className="mt-1.5 space-y-1">{sys.highlights.map(([icon,text])=>(
+                        <li key={text} className="flex items-center gap-1.5 rounded-lg bg-black/35 px-2 py-1 text-[10px] font-black text-slate-200">
+                          <span className="shrink-0">{icon}</span><span className="min-w-0 flex-1 leading-snug">{text}</span>
+                        </li>
+                      ))}</ul>
+                      <div className="text-[9px] text-slate-400 leading-snug mt-1.5">{soon?'いま準備しています。遊べるようになったらお知らせします':beta?'いまはタクティクスプロだけ遊べます。ほかのモードは準備中です':sys.note}</div>
+                    </button>
+                    <button data-battle-system-info={sys.id} onClick={()=>setModeInfoId(sys.id)}
+                      aria-label={`${sys.label}の詳しいルール`}
+                      className="w-full min-h-[34px] border-t border-white/10 bg-black/30 text-[10px] font-black text-slate-300 active:scale-[.98] flex items-center justify-center gap-1">
+                      詳しいルール<ChevronRight size={12} className="shrink-0"/>
+                    </button>
+                  </div>);
                 })}
               </div>
               <div className="mt-3 shrink-0"><AssistantBubble scene="battleSystemSelect" compact/></div>
@@ -16111,7 +16127,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       })()}
 
       {/* モードの説明(タブ横の「？」) */}
-      {modeInfoId&&(()=>{const mode=battleModeInfo(modeInfoId);return(
+      {modeInfoId&&(()=>{const mode=battleInfoById(modeInfoId);return(
         <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.94)',zIndex:60000}} role="dialog" aria-modal="true" aria-label={`${mode.label}の説明`}>
           <div className="w-full max-w-sm rounded-3xl border-2 bg-slate-950 flex flex-col" style={{borderColor:mode.color,maxHeight:'86vh'}}>
             <div className="shrink-0 flex items-center gap-2 p-4 border-b border-white/10">
