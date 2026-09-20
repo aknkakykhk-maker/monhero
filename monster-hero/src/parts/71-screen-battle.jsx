@@ -491,7 +491,13 @@ function BattleScreen({
               ★帯は必ずアニメーションさせる(ライフ duration-1000 / ガッツ duration-500)。
                 合計の帯と同じ動きにしないと、回復もダメージも瞬間で増減して見える */}
           {Array.isArray(tacticsUnits)?(
-            <div data-tactics-party className="w-full grid grid-cols-4 gap-1">
+            <div data-tactics-party className="relative w-full grid grid-cols-4 gap-1">
+              {/* ★ライフ・ガッツのポップアップ(吸収・ガードの余り・回復カードなど)は、
+                  合計の帯に重ねて出していた。その帯をやめたときに出す場所ごと消えていたので、
+                  1体ずつの帯の上へ置き直す(2026-09-20) */}
+              <div data-tactics-party-popups className="absolute inset-x-0 -top-1 flex flex-col items-center gap-0.5 pointer-events-none" style={{zIndex:210}}>
+                {popups.filter(p=>p.side==='life'||p.side==='guts').map((p)=>(<div key={p.id} className={`${p.color} text-base font-black drop-shadow-[0_2px_8px_rgba(0,0,0,1)] whitespace-nowrap px-2 py-0.5 rounded-lg animate-bounce`} style={{backgroundColor:'rgba(2,6,23,0.8)'}}>{p.text}</div>))}
+              </div>
               {[0,1,2,3].map(i=>{
                 const u=tacticsUnits[i];
                 const mon=slots[i];

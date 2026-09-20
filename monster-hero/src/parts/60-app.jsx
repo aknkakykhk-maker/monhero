@@ -8870,13 +8870,34 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           if (await resolveEnemyDefeat({remainingHp:reflectedHp,damage:incomingDmg})) return;
         } else if (isAbsorb) {
           addPopup("吸収！",'hero','text-emerald-400 font-black text-2xl drop-shadow-lg'); await battleWait(600);
-          const hpGain=incomingDmg; const gutsGain=Math.floor(incomingDmg*0.1);
-          addPopup(`💚 ライフ +${hpGain}`,'life','text-emerald-400 font-black text-2xl drop-shadow-md');
-          addPopup(`⚡ ガッツ +${gutsGain}`,'guts','text-amber-400 font-black text-2xl drop-shadow-md');
-          const absorbed=tacticsHeal(hpGain);
-          if(absorbed!==null) currentHp=absorbed;
-          else { currentHp=Math.min(liveEffectiveMaxHp(),currentHp+hpGain); setHp(currentHp); }
-          gainGuts(gutsGain); await battleWait(1000);
+          // ★新モードの吸収は「狙われた子に起きたこと」(2026-09-20 ユーザー指示)。
+          //   その子が受けるはずだったダメージぶんだけ、その子のライフとガッツへ入る。
+          //   盤面へ配る全体回復にすると、殴られるたびに全員が回復して、
+          //   倒れた子まで勝手に起き上がる(＝誰も倒れたままにならない)。
+          //   狙いは立っている子にしか向かないので、吸収で起き上がることは起きない。
+          const absorbSlots=isTacticsMode(runMode)
+            ? tacticsIntentTargets(intent,tacticsUnitsRef.current,actingEnemyDist) : null;
+          if(absorbSlots){
+            let units=tacticsUnitsRef.current, hpGain=0, gutsGain=0;
+            absorbSlots.forEach(slotIdx=>{
+              // 受けるはずだったダメージも「その子の丈夫さ」で決まる
+              const gain=applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(intent,slotIdx));
+              const guts=Math.floor(gain*0.1);
+              hpGain+=gain; gutsGain+=guts;
+              units=recoverTacticsGutsAt(healTacticsAt(units,slotIdx,gain),slotIdx,guts);
+            });
+            currentHp=commitTacticsUnits(units);
+            if(hpGain>0) addPopup(`💚 ライフ +${hpGain}`,'life','text-emerald-400 font-black text-2xl drop-shadow-md');
+            if(gutsGain>0) addPopup(`⚡ ガッツ +${gutsGain}`,'guts','text-amber-400 font-black text-2xl drop-shadow-md');
+            if(hpGain<=0) addPopup('当たらなかった！','hero','text-cyan-300 font-black text-xl drop-shadow-md');
+          } else {
+            const hpGain=incomingDmg; const gutsGain=Math.floor(incomingDmg*0.1);
+            addPopup(`💚 ライフ +${hpGain}`,'life','text-emerald-400 font-black text-2xl drop-shadow-md');
+            addPopup(`⚡ ガッツ +${gutsGain}`,'guts','text-amber-400 font-black text-2xl drop-shadow-md');
+            currentHp=Math.min(liveEffectiveMaxHp(),currentHp+hpGain); setHp(currentHp);
+            gainGuts(gutsGain);
+          }
+          await battleWait(1000);
         } else if (isEvasion) {
           addPopup("回避！",'hero','text-blue-400 font-black text-xl drop-shadow-lg'); await battleWait(1000);
         } else if (isTacticsMode(runMode)) {

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: bf141f00907738fa
+// generated-sha256: 3e1c780c416775d8
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -91,7 +91,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-20 04:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-20 10:07"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -21032,7 +21032,13 @@ function BattleScreen({
               ★帯は必ずアニメーションさせる(ライフ duration-1000 / ガッツ duration-500)。
                 合計の帯と同じ動きにしないと、回復もダメージも瞬間で増減して見える */}
           {Array.isArray(tacticsUnits)?(
-            <div data-tactics-party className="w-full grid grid-cols-4 gap-1">
+            <div data-tactics-party className="relative w-full grid grid-cols-4 gap-1">
+              {/* ★ライフ・ガッツのポップアップ(吸収・ガードの余り・回復カードなど)は、
+                  合計の帯に重ねて出していた。その帯をやめたときに出す場所ごと消えていたので、
+                  1体ずつの帯の上へ置き直す(2026-09-20) */}
+              <div data-tactics-party-popups className="absolute inset-x-0 -top-1 flex flex-col items-center gap-0.5 pointer-events-none" style={{zIndex:210}}>
+                {popups.filter(p=>p.side==='life'||p.side==='guts').map((p)=>(<div key={p.id} className={`${p.color} text-base font-black drop-shadow-[0_2px_8px_rgba(0,0,0,1)] whitespace-nowrap px-2 py-0.5 rounded-lg animate-bounce`} style={{backgroundColor:'rgba(2,6,23,0.8)'}}>{p.text}</div>))}
+              </div>
               {[0,1,2,3].map(i=>{
                 const u=tacticsUnits[i];
                 const mon=slots[i];
@@ -31467,13 +31473,34 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           if (await resolveEnemyDefeat({remainingHp:reflectedHp,damage:incomingDmg})) return;
         } else if (isAbsorb) {
           addPopup("吸収！",'hero','text-emerald-400 font-black text-2xl drop-shadow-lg'); await battleWait(600);
-          const hpGain=incomingDmg; const gutsGain=Math.floor(incomingDmg*0.1);
-          addPopup(`💚 ライフ +${hpGain}`,'life','text-emerald-400 font-black text-2xl drop-shadow-md');
-          addPopup(`⚡ ガッツ +${gutsGain}`,'guts','text-amber-400 font-black text-2xl drop-shadow-md');
-          const absorbed=tacticsHeal(hpGain);
-          if(absorbed!==null) currentHp=absorbed;
-          else { currentHp=Math.min(liveEffectiveMaxHp(),currentHp+hpGain); setHp(currentHp); }
-          gainGuts(gutsGain); await battleWait(1000);
+          // ★新モードの吸収は「狙われた子に起きたこと」(2026-09-20 ユーザー指示)。
+          //   その子が受けるはずだったダメージぶんだけ、その子のライフとガッツへ入る。
+          //   盤面へ配る全体回復にすると、殴られるたびに全員が回復して、
+          //   倒れた子まで勝手に起き上がる(＝誰も倒れたままにならない)。
+          //   狙いは立っている子にしか向かないので、吸収で起き上がることは起きない。
+          const absorbSlots=isTacticsMode(runMode)
+            ? tacticsIntentTargets(intent,tacticsUnitsRef.current,actingEnemyDist) : null;
+          if(absorbSlots){
+            let units=tacticsUnitsRef.current, hpGain=0, gutsGain=0;
+            absorbSlots.forEach(slotIdx=>{
+              // 受けるはずだったダメージも「その子の丈夫さ」で決まる
+              const gain=applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(intent,slotIdx));
+              const guts=Math.floor(gain*0.1);
+              hpGain+=gain; gutsGain+=guts;
+              units=recoverTacticsGutsAt(healTacticsAt(units,slotIdx,gain),slotIdx,guts);
+            });
+            currentHp=commitTacticsUnits(units);
+            if(hpGain>0) addPopup(`💚 ライフ +${hpGain}`,'life','text-emerald-400 font-black text-2xl drop-shadow-md');
+            if(gutsGain>0) addPopup(`⚡ ガッツ +${gutsGain}`,'guts','text-amber-400 font-black text-2xl drop-shadow-md');
+            if(hpGain<=0) addPopup('当たらなかった！','hero','text-cyan-300 font-black text-xl drop-shadow-md');
+          } else {
+            const hpGain=incomingDmg; const gutsGain=Math.floor(incomingDmg*0.1);
+            addPopup(`💚 ライフ +${hpGain}`,'life','text-emerald-400 font-black text-2xl drop-shadow-md');
+            addPopup(`⚡ ガッツ +${gutsGain}`,'guts','text-amber-400 font-black text-2xl drop-shadow-md');
+            currentHp=Math.min(liveEffectiveMaxHp(),currentHp+hpGain); setHp(currentHp);
+            gainGuts(gutsGain);
+          }
+          await battleWait(1000);
         } else if (isEvasion) {
           addPopup("回避！",'hero','text-blue-400 font-black text-xl drop-shadow-lg'); await battleWait(1000);
         } else if (isTacticsMode(runMode)) {
