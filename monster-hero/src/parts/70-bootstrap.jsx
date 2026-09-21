@@ -1010,6 +1010,30 @@ const createAnimationStyle = () => {
       0%,100% { transform: scale(0.95) translateY(0) rotate(-4deg); opacity: 0.85; }
       50% { transform: scale(1.18) translateY(-3px) rotate(4deg); opacity: 1; }
     }
+    /* 敵の右上に出す「何をする技か」の札。効果ごとに動きを変えて、
+       色と文字を読む前に「攻めてくるのか・回復するのか」が分かるようにする
+       (2026-09-22 ユーザー指示「吹き出しを効果によって変えると見た目がいい」) */
+    @keyframes noticeHit {
+      0%,100% { transform: scale(1) rotate(-2deg); }
+      45% { transform: scale(1.1) rotate(2deg); }
+      60% { transform: scale(1.04) rotate(-1deg); }
+    }
+    @keyframes noticeCharge {
+      0%,100% { transform: scale(0.96); filter: brightness(0.95); }
+      50% { transform: scale(1.12); filter: brightness(1.25); }
+    }
+    @keyframes noticeHeal {
+      0%,100% { transform: translateY(2px) scale(1); }
+      50% { transform: translateY(-4px) scale(1.05); }
+    }
+    @keyframes noticeShout {
+      0%,100% { transform: translateX(-3px) scale(1.02); }
+      50% { transform: translateX(3px) scale(1.08); }
+    }
+    @keyframes noticeCalm {
+      0%,100% { opacity: 0.75; transform: scale(0.98); }
+      50% { opacity: 1; transform: scale(1.03); }
+    }
     @keyframes idleAuraPulse {
       0%,100% { transform: scale(0.92); opacity: 0.5; }
       50% { transform: scale(1.08); opacity: 0.85; }

@@ -335,19 +335,32 @@ function BattleScreen({
                   付いているので、名前だけでは連撃なのか回復なのか覚えられない。
                   予告が出ているあいだずっと見えるようにする(❗はこの札に置き換える) */}
               {!ecoBattleView&&enemy&&enemyIntent&&!isBusy&&!enemyAttackFx&&Array.isArray(tacticsUnits)&&enemyIntent.notice&&enemyIntent.type!=='PIERCE_CHARGE'&&(()=>{
-                const noticeTone=enemyIntent.type==='SPECIAL'?'bg-fuchsia-600 border-fuchsia-200 text-white'
-                  :enemyIntent.type==='CHARGE'?'bg-amber-500 border-amber-100 text-black'
-                  :enemyIntent.type==='PIERCE_CHARGE'?'bg-rose-600 border-rose-200 text-white'
-                  :enemyIntent.type==='MOVE'?'bg-cyan-600 border-cyan-100 text-white'
-                  :enemyIntent.type==='ROAR'?'bg-orange-600 border-orange-100 text-white'
-                  :enemyIntent.type==='REGEN'?'bg-emerald-600 border-emerald-100 text-white'
-                  :enemyIntent.type==='WAIT'?'bg-slate-600 border-slate-200 text-white'
-                  :'bg-red-600 border-red-100 text-white';
+                // ★色・動き・光り方を効果で変える(2026-09-22 ユーザー指示「吹き出しを
+                //   効果によって変えると見た目がいい」)。文字を読む前に、攻めてくるのか
+                //   回復するのかが見分けられるようにする
+                const noticeTone=enemyIntent.type==='SPECIAL'?'bg-fuchsia-600 border-fuchsia-200 text-white shadow-[0_0_14px_rgba(217,70,239,0.85)]'
+                  :enemyIntent.type==='CHARGE'?'bg-amber-500 border-amber-100 text-black shadow-[0_0_14px_rgba(251,191,36,0.85)]'
+                  :enemyIntent.type==='PIERCE_CHARGE'?'bg-rose-600 border-rose-200 text-white shadow-[0_0_14px_rgba(244,63,94,0.85)]'
+                  :enemyIntent.type==='MOVE'?'bg-cyan-600 border-cyan-100 text-white shadow-[0_0_12px_rgba(6,182,212,0.7)]'
+                  :enemyIntent.type==='ROAR'?'bg-orange-600 border-orange-100 text-white shadow-[0_0_14px_rgba(249,115,22,0.85)]'
+                  :enemyIntent.type==='REGEN'?'bg-emerald-600 border-emerald-100 text-white shadow-[0_0_14px_rgba(16,185,129,0.85)]'
+                  :enemyIntent.type==='WAIT'?'bg-slate-600 border-slate-200 text-white shadow-[0_2px_10px_rgba(0,0,0,0.9)]'
+                  :'bg-red-600 border-red-100 text-white shadow-[0_0_14px_rgba(239,68,68,0.85)]';
+                // 動きも効果ごと。殴ってくる技は小刻みに震え、回復はふわっと浮き、
+                // 攻撃力アップは左右に揺れ、ためるは膨らみ、様子見と移動は静かに明滅する
+                const noticeAnim=enemyIntent.type==='REGEN'?'noticeHeal 1400ms ease-in-out infinite'
+                  :enemyIntent.type==='ROAR'?'noticeShout 900ms ease-in-out infinite'
+                  :enemyIntent.type==='CHARGE'?'noticeCharge 1100ms ease-in-out infinite'
+                  :(enemyIntent.type==='MOVE'||enemyIntent.type==='WAIT')?'noticeCalm 1600ms ease-in-out infinite'
+                  :'noticeHit 800ms ease-in-out infinite';
                 return (
                 <div className="absolute inset-0 pointer-events-none z-[9000]">
-                  <div data-enemy-notice={enemyIntent.notice}
-                    className={`absolute -top-3 -right-2 max-w-[160px] truncate rounded-2xl border-2 px-2 py-0.5 font-black leading-tight shadow-[0_2px_10px_rgba(0,0,0,0.9)] ${noticeTone}`}
-                    style={{fontSize:'11px',animation:'idleExclaim 1100ms ease-in-out infinite'}}>{enemyIntent.notice}！</div>
+                  <div data-enemy-notice={enemyIntent.notice} data-enemy-notice-anim={noticeAnim.split(' ')[0]}
+                    className={`absolute -top-3 -right-2 max-w-[170px] truncate rounded-2xl border-2 px-2 py-0.5 font-black leading-tight flex items-center gap-1 ${noticeTone}`}
+                    style={{fontSize:'11px',animation:noticeAnim}}>
+                    <span style={{fontSize:'12px'}} className="leading-none shrink-0">{enemyIntent.icon}</span>
+                    <span className="truncate">{enemyIntent.notice}！</span>
+                  </div>
                 </div>);
               })()}
               {/* ためている最中は、敵の周りにオーラが集まる */}
