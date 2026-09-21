@@ -125,6 +125,11 @@ const FORCE_CHECKS = [
   // ファイル名の語(app・settings)では拾えないので名指しする
   { re: /^monster-hero\/(src\/parts\/(13-bgm-and-rhythm-settings|60-app)\.jsx|audio\/bgm-(senjou-no-shippuu|makutsu-no-senritsu)\.mp3)$/,
     checks: ['audio/tactics-bgm-check.js'], why: 'タクティクスのWAVEごとのBGM' },
+  // 「次に鳴る曲を、鳴り出す前に読んでおく」導線。外れても画面はふつうに動くし、
+  // 手元の速い回線では鳴り出しの差が分からない。曲を入れ替えたときにだけ表に出る
+  // (2026-09-21・ユーザー報告「通常バトル曲のBGMの入りが遅い」)
+  { re: /^monster-hero\/src\/parts\/60-app\.jsx$/,
+    checks: ['audio/bgm-preload-check.js'], why: '次に鳴る曲を先に読んでおく導線' },
   // 画面を足したときのBGMの決め忘れ。対応表へ載せ忘れてもエラーは出ず、
   // その画面だけ静かに無音になるので、遊んだ人が言うまで気づけない(2回やっている)
   { re: /^monster-hero\/src\/parts\/60-app\.jsx$/,

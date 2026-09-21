@@ -63,6 +63,17 @@ for (const { audio, label, own } of SLOTS) {
   check(`${label}は 44100Hz ステレオ`, /44100 Hz/.test(stream) && /stereo/.test(stream), stream.slice(0, 50));
   // ★ジャケット画像が残っていると、音しか使わないのに数百KB余分に配る
   check(`${label}にジャケット画像が残っていない`, !/Video:/.test(info));
+  // ★曲の頭に無音があると、そのぶん鳴り出しが遅れて聞こえる
+  //   (2026-09-21・ユーザー報告「通常バトル曲のBGMの入りが遅い」。頭に0.4秒の無音があった)
+  //   バトルは押した瞬間に始まるので、0.1秒の間でも「入りが遅い」と分かる
+  // ★ここは正常終了するので、上の -i だけのときと違って catch には入らない。stderr を直接受け取る
+  const { spawnSync } = require('child_process');
+  const head = String(spawnSync(ffmpeg,
+    ['-hide_banner', '-i', audioPath, '-t', '0.05', '-af', 'astats=metadata=1:reset=1', '-f', 'null', '-'],
+    { encoding: 'utf8' }).stderr || '');
+  const peaks = (head.match(/Peak level dB: (?:-?[\d.]+|-?inf)/g) || []).map(m => Number(m.replace(/[^\d.-]/g, '')) || -999);
+  const headPeak = peaks.length ? peaks[peaks.length - 1] : -999;
+  check(`${label}の頭に無音がない`, headPeak > -50, `頭0.05秒のピーク ${headPeak}dB`);
 }
 
 // --- ② 起動時に読み込まない（開いたときに初めて読む側が正しい） ---
