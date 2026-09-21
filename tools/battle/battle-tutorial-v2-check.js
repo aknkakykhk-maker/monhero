@@ -16,6 +16,8 @@ const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分�
 const http = require('http');
 const path = require('path');
 const fs = require('fs');
+// イベントの「閉幕とお礼」は終了の時刻に自動で流れる。既読にしておかないと会話で止まる
+const { eventStorySeed } = require(path.join(TOOLS_DIR, 'boot/quiet-boot-seed'));
 
 const root = path.resolve(TOOLS_DIR, '..');
 const PORT = 8983;
@@ -63,7 +65,11 @@ const check = (name, ok, detail = '') => {
       // わざと「まだ見ていない」状態にしておき、お試し再生で書き換わらないことを確かめる
       localStorage.setItem('mh_battle_tutorial_seen_v1', JSON.stringify(false));
       localStorage.setItem('mh_battle_tutorial_guide_shown_v1', JSON.stringify(true));
+      // お詫びの配布は画面全体を覆う。配布済みの印を先に入れて出さない
+      localStorage.setItem('mh_inherited_unique_level_compensation_v1', JSON.stringify(true));
+      localStorage.setItem('mh_inherited_unique_level_compensation_pending_v1', JSON.stringify(false));
     });
+    await page.addInitScript(eventStorySeed());
     await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
     await page.addStyleTag({ content: `
       .snap-mandatory { display:flex; overflow-x:auto; width:100%; scroll-snap-type:x mandatory; }
@@ -84,6 +90,10 @@ const check = (name, ok, detail = '') => {
     await page.getByRole('button', { name: '設定' }).dispatchEvent('click', {}, { timeout: 15000 });
     await page.getByRole('button', { name: 'ヘルプ' }).dispatchEvent('click', {}, { timeout: 15000 });
     await page.locator('button', { hasText: /^💊$/ }).dispatchEvent('click', {}, { timeout: 15000 });
+    // DEBUG MENU は節ごとに畳んであるアコーディオン。「⚔️ バトル」→「📖 チュートリアル」の順に開く
+    await page.getByText('DEBUG MENU').first().waitFor({ timeout: 20000 });
+    await page.locator('summary').filter({ hasText: '⚔️ バトル' }).first().click();
+    await page.locator('summary').filter({ hasText: '📖 チュートリアル' }).first().click();
     const startButton = page.getByRole('button', { name: 'バトルチュートリアル開始（記録は残りません）' });
     check('デバッグ設定にチュートリアルの入口がある', await startButton.count() === 1);
     await startButton.dispatchEvent('click');
@@ -132,9 +142,11 @@ const check = (name, ok, detail = '') => {
       await page.getByRole('button', { name: /チャレンジモードのランキング/ }).first().isDisabled());
 
     // --- ④ チャレンジだけ進める ---
-    const startOf = (label) => page.locator('article').filter({ hasText: label }).first().getByRole('button', { name: '難易度を選ぶ' });
+    // ★2026-09-20 に「どのバトルで遊ぶか」の画面が1段増え、クイックは別の仕組みへ移った。
+    //   クラシックの並びは チャレンジ・種族チャレンジ・プロ の3枚になっている
+    const startOf = (label, name = '難易度を選ぶ') => page.locator('article').filter({ hasText: label }).first().getByRole('button', { name });
     check('チャレンジの「難易度を選ぶ」は押せる', await startOf('チャレンジモード').isEnabled());
-    check('クイックの「難易度を選ぶ」は押せない', await startOf('クイックモード').isDisabled());
+    check('種族チャレンジの「種族を選ぶ」は押せない', await startOf('種族チャレンジ', '種族を選ぶ').isDisabled());
     check('プロの「難易度を選ぶ」は押せない', await startOf('プロモード').isDisabled());
 
     await startOf('チャレンジモード').dispatchEvent('click');
@@ -176,20 +188,26 @@ const check = (name, ok, detail = '') => {
     // セリフでは「ACTIONを押して」と言うのに、押す先のボタンは一度も光っていなかった
     // (2026-09-12・ユーザー指摘)。台本と画面の結びつきは静的な検査でも見ているが、
     // 実際に光るのは実物を動かさないと分からないので、ここで確かめる
+    // ★ACTIONボタンは押せない理由を文字で出す(「カードを選ぶ」「置き場所を選ぶ」)ので、
+    //   文字ではなく data-battle-action で見分ける
     const spots = () => page.evaluate(() => [...document.querySelectorAll('.is-battle-tutorial-spot')]
-      .map(el => (el.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 20)));
+      .map(el => ({
+        text: (el.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 20),
+        action: !!el.closest('[data-battle-action]') || !!el.querySelector('[data-battle-action]'),
+      })));
     await page.locator('button').filter({ hasText: 'モッチー' }).first().dispatchEvent('click');
     await page.waitForTimeout(400);
     await page.locator('button').filter({ hasText: /^勇者モンに選ぶ$/ }).first().dispatchEvent('click');
     await page.waitForTimeout(500);
     await page.locator('button').filter({ hasText: /^近距離/ }).first().dispatchEvent('click');
     await page.waitForTimeout(500);
-    await page.locator('button').filter({ hasText: /^おりょうの力/ }).first().dispatchEvent('click');
+    // アシストカードは2026-09-18に「おりょうの力」から「ニコラオの力」へ名前が変わった
+    await page.locator('button').filter({ hasText: /^ニコラオの力/ }).first().dispatchEvent('click');
     await page.waitForTimeout(400);
     await page.locator('button').filter({ hasText: /^習得する$/ }).first().dispatchEvent('click');
     await page.waitForTimeout(1200);
     check('練習のままバトル画面まで進む',
-      await page.getByRole('button', { name: /Action/i }).count() >= 1);
+      await page.locator('[data-battle-action]').count() >= 1);
     // 画面の見かたの説明を順に進め、ACTIONボタンの説明まで来たら光っているものを見る
     let actionSpots = null;
     for (let i = 0; i < 30; i++) {
@@ -198,17 +216,21 @@ const check = (name, ok, detail = '') => {
       if (!(await tapNext())) break;
     }
     check('ACTIONの説明でACTIONボタンが光る',
-      Array.isArray(actionSpots) && actionSpots.length === 1 && /Action/i.test(actionSpots[0]),
+      Array.isArray(actionSpots) && actionSpots.length === 1 && actionSpots[0].action === true,
       JSON.stringify(actionSpots));
     // ガードを使う番(操作待ち)まで進める。吹き出しが消えて「つぎへ」も無くなる
     for (let i = 0; i < 12; i++) if (!(await tapNext())) break;
     const doSpots = await spots();
     check('カードを使う番はACTIONも光る',
-      doSpots.some(t => /Action/i.test(t)) && doSpots.some(t => /ガード/.test(t)),
+      doSpots.some(s => s.action) && doSpots.some(s => /ガード/.test(s.text)),
       JSON.stringify(doSpots));
 
     // --- ⑦ やめると始めた場所へ帰り、既読は書き換わらない ---
     await page.locator('button').filter({ hasText: /^やめる$/ }).first().dispatchEvent('click');
+    // 帰ってきた DEBUG MENU は節が畳まれた状態なので、開き直して入口があることを確かめる
+    await page.getByText('DEBUG MENU').first().waitFor({ timeout: 15000 });
+    await page.locator('summary').filter({ hasText: '⚔️ バトル' }).first().click();
+    await page.locator('summary').filter({ hasText: '📖 チュートリアル' }).first().click();
     await page.getByRole('button', { name: 'バトルチュートリアル開始（記録は残りません）' }).waitFor({ timeout: 15000 });
     check('やめると始めた場所(デバッグ設定)へ帰る', true);
     const seen = await page.evaluate(() => localStorage.getItem('mh_battle_tutorial_seen_v1'));

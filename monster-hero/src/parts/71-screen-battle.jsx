@@ -842,7 +842,7 @@ function BattleScreen({
                 // カードを選んだのに置き場所を決めていない、という取りこぼしに気づけなかった。
                 // 押せるときの字は Action のまま(検査がこの字でボタンを押している)。
                 const actionHint=canAct?null:(autoBattle||isBusy?null:(selectedCards.length===0?'カードを選ぶ':(!allAttackAssigned?'置き場所を選ぶ':null)));
-                return(<button onClick={()=>processTurn()} disabled={!canAct} className={`min-h-[44px] min-w-[96px] shrink-0 px-2 sm:px-5 rounded-full font-black text-[11px] sm:text-[13px] whitespace-nowrap active:scale-90 flex items-center justify-center gap-1 border-2 border-black tracking-wide transition-all${actionHint?'':' uppercase'}${battleTutorialSpotClass('action')} ${canAct?'bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.4)]':(actionHint?'bg-slate-800 text-slate-300 border-white/20':'bg-slate-700 text-slate-500 opacity-50')}`}><Play fill="currentColor" size={12}/> {actionHint||'Action'}</button>);})()}
+                return(<button data-battle-action onClick={()=>processTurn()} disabled={!canAct} className={`min-h-[44px] min-w-[96px] shrink-0 px-2 sm:px-5 rounded-full font-black text-[11px] sm:text-[13px] whitespace-nowrap active:scale-90 flex items-center justify-center gap-1 border-2 border-black tracking-wide transition-all${actionHint?'':' uppercase'}${battleTutorialSpotClass('action')} ${canAct?'bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.4)]':(actionHint?'bg-slate-800 text-slate-300 border-white/20':'bg-slate-700 text-slate-500 opacity-50')}`}><Play fill="currentColor" size={12}/> {actionHint||'Action'}</button>);})()}
             </div>
           </div>
           {/* 使うカードが決まっている番は、その種類だけを光らせる(枠全体は光らせない) */}

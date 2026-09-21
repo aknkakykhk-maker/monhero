@@ -100,14 +100,25 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
     /RebirthStars[^A-Za-z][\s\S]{0,80}masu\.rebirthCount/.test(cardBody)
       && /SoulRankAura[^A-Za-z][\s\S]{0,120}normalizeMasuProgression\(masu\)\.soulRankStage/.test(cardBody)
       && /TranscendenceBadge[^A-Za-z][\s\S]{0,100}normalizeMasuProgression\(masu\)\.transcended/.test(cardBody));
+  // ★強化Pは呼び出し側から sub として渡す形になった(カード本体は置き場所だけを持つ)。
+  //   本体に「強化P」の字は無いので、置き場所(monsterCardSub)があることで見る。
+  //   実際に数が出ているかは上の「マスモンの強化ポイント表示が残っている」が見ている
   check(`${label}: 共通カードに名前・絆Lv・総合力・強化P・状態がある`,
     cardBody.includes('monsterCardName(') && cardBody.includes('monsterCardBond(') && cardBody.includes('monsterCardPower(')
-    && cardBody.includes('強化P') && cardBody.includes('monsterCardStatus('));
+    && cardBody.includes('monsterCardSub(') && cardBody.includes('monsterCardStatus('));
   check(`${label}: マスモンだけふちと名前の色を変える`,
     cardBody.includes('border-pink-400/40') && cardBody.includes('text-pink-200'));
   // カードの行を組む部品は共通実装の中だけで使う(画面ごとに書き写すと今回の食い違いが再発する)
   for (const part of ['monsterCardName(', 'monsterCardInfo(', 'monsterCardPower(', 'monsterCardSub(', 'monsterCardStatus(', 'monsterCardBond(']) {
     const times = (code.split(part).length - 1);
+    if (part === 'monsterCardName(') {
+      // ★ブリーダーの教えのカードだけは、モンスターではないが「同じ形にそろえる」ために
+      //   名前の部品を借りている。借り先がそこであることまで確かめる
+      const borrowed = /toggleDraftTeaching\(t\.id\)[\s\S]{0,1500}monsterCardName\(t\.baseName\)/.test(code);
+      check(`${label}: ${part.replace('(', '')} を使うのは共通実装とブリーダーの教えだけ`,
+        times === 2 && borrowed, `${times}か所`);
+      continue;
+    }
     check(`${label}: ${part.replace('(', '')} を使うのは共通実装だけ`, times === 1, `${times}か所`);
   }
   // 呼び出し側: 一覧を出すすべての画面が共通実装を通ること

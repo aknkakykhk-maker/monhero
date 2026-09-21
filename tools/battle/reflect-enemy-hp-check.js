@@ -56,9 +56,12 @@ check('不死で起き上がったら、その値へ復活後のライフを入�
 // 何もしなかったターン(緊急回復)は、こちらのダメージが無いので既定値のままでよい
 check('緊急回復から敵が動くときは既定値のまま(こちらの与ダメが無いため)',
   has("await handleEnemyTurn('none',{},acting,hpAfterRecovery);"));
-// こちらの攻撃は関数型更新のまま(絶対値で書き戻すと同じ不具合が起きる)
+// こちらの攻撃は関数型更新のまま(絶対値で書き戻すと同じ不具合が起きる)。
+// ★敵がいない瞬間に prev を掘ると画面が落ちるので prev? の番をしている。
+//   数だけでなく「絶対値で書き戻していないか」も見る
 check('こちらの攻撃は関数型更新でライフを減らす',
-  (source.match(/setEnemy\(prev=>\(\{\.\.\.prev,hp:Math\.max\(0,prev\.hp-/g) || []).length === 2);
+  (source.match(/setEnemy\(prev=>prev\?\{\.\.\.prev,hp:Math\.max\(0,prev\.hp-/g) || []).length === 2
+    && !/setEnemy\(\{\.\.\.enemy,hp:/.test(source));
 
 // ---- 実際に動かして、敵が回復しないことを確かめる ----
 // Reactのstateと同じ振る舞い(クロージャのenemyは更新されない)を再現する
