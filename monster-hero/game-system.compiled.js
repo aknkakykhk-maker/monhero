@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f11d9ecee900b4af
+// source-sha256: 1d42d97ac826a815
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c461654aca74c767
+// generated-sha256: a9c0c2c40bc423c6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-21 20:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-21 20:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -38693,7 +38693,7 @@ function BattleScreen({
     }
   }, p.text))), Array.isArray(tacticsUnits) ? /*#__PURE__*/React.createElement("div", {
     "data-tactics-party": true,
-    className: "relative w-full grid grid-cols-4 gap-1"
+    className: `relative w-full grid grid-cols-4 gap-1${battleTutorialSpotClass('tacticsParty')}`
   }, /*#__PURE__*/React.createElement("div", {
     "data-tactics-party-popups": true,
     className: "absolute inset-x-0 -top-1 flex flex-col items-center gap-0.5 pointer-events-none",
@@ -56209,8 +56209,15 @@ function MonsterHeroGame() {
   // ランキング・クリア回数・ミッションのどれにも影響しない)。
   // 入口は3つ。デバッグ設定・はじめての案内の最後・ヘルプの「バトルのれんしゅう」。
   // どこから始めても終わったら元の場所へ帰れるよう、戻り先を覚えておく。
-  // variant は 'v2'(いまの本番。新しいモード選択から始まる)と
-  // 'v1'(旧バトル画面から始まる。見比べ用にデバッグからだけ開ける)
+  // variant は 'v2'(いまの本番。仕組みえらびから始まる)、
+  // 'v1'(旧バトル画面から始まる。見比べ用にデバッグからだけ開ける)、
+  // 'tactics'(タクティクスバトルのれんしゅう。公開前なのでデバッグからだけ)。
+  // ★どの台本かで「どのモードで走らせるか」「どの台本データを使うか」が決まる。
+  //   3つの対応をここ1か所にまとめて、入口が増えても取り違えないようにする
+  const BATTLE_TUTORIAL_VARIANTS = ['v1', 'v2', 'tactics'];
+  const battleTutorialVariantOf = variant => BATTLE_TUTORIAL_VARIANTS.includes(variant) ? variant : 'v2';
+  const battleTutorialModeOf = variant => battleTutorialVariantOf(variant) === 'tactics' ? BATTLE_MODE_TACTICS : BATTLE_MODE_CHALLENGE;
+  const battleTutorialScenarioOf = variant => battleTutorialVariantOf(variant) === 'tactics' ? typeof BATTLE_TUTORIAL_SCENARIO_TACTICS !== 'undefined' && BATTLE_TUTORIAL_SCENARIO_TACTICS || null : typeof BATTLE_TUTORIAL_SCENARIO !== 'undefined' && BATTLE_TUTORIAL_SCENARIO || null;
   const startBattleTutorial = (returnTo = 'DEBUG_SETTINGS', variant = 'v2') => {
     stopAllAuto();
     // 説明を読みやすく保つため、練習中だけ1倍へ固定する（保存済み設定は上書きしない）。
@@ -56246,10 +56253,11 @@ function MonsterHeroGame() {
     setOwnedUniques([]);
     setOwnedTeachings([]);
     setDistAptPct([0, 0, 0, 0]);
-    // いちばんやさしい難易度・チャレンジモードで固定する(練習なので勝ちやすくする)
+    // いちばんやさしい難易度・その台本のモードで固定する(練習なので勝ちやすくする)
+    const tutorialMode = battleTutorialModeOf(variant);
     setDifficulty('Beginner');
-    setRunMode(BATTLE_MODE_CHALLENGE);
-    setBattleMode(BATTLE_MODE_CHALLENGE);
+    setRunMode(tutorialMode);
+    setBattleMode(tutorialMode);
     // 編成が空でも始められるよう、解放済みのベースモンから選んでもらう
     setMonSelection(getUnlockedBaseMonsterList());
     setHeroPickTab('base');
@@ -56257,18 +56265,18 @@ function MonsterHeroGame() {
     setShowHelp(false);
     setBattleMenuTab('difficulty');
     // 台本を有効にする。ここから終わるまで、敵の行動・手札・敵の強さが台本どおりになる
-    battleScenarioRef.current = typeof BATTLE_TUTORIAL_SCENARIO !== 'undefined' && BATTLE_TUTORIAL_SCENARIO || null;
+    battleScenarioRef.current = battleTutorialScenarioOf(variant);
     battleScenarioIntentIndexRef.current = 0;
     setBattleTutorialLastAction(null);
     setBattleTutorialReturn(returnTo);
-    setBattleTutorialVariant(variant === 'v1' ? 'v1' : 'v2');
+    setBattleTutorialVariant(battleTutorialVariantOf(variant));
     setBattleTutorialStep(0);
     // モード・ランキング・難易度もここで説明したいので、バトルの入口から始める。
-    // ★v2は「バトルの仕組みえらび」から始める(2026-09-21)。ふだん HOME の
+    // ★v2とタクティクスは「バトルの仕組みえらび」から始める(2026-09-21)。ふだん HOME の
     //   モンヒロバトルを押すと最初に出るのはこの画面なので、ここを飛ばして
     //   モードえらびから教えると、練習のあとで知らない画面に出迎えられてしまう
     if (variant !== 'v1') {
-      setBattleSystem(BATTLE_SYSTEM_CLASSIC);
+      setBattleSystem(isTacticsMode(tutorialMode) ? BATTLE_SYSTEM_TACTICS : BATTLE_SYSTEM_CLASSIC);
       setModeSelectTab('mode');
       setGameState('BATTLE_SYSTEM_SELECT');
       return;
@@ -56276,16 +56284,17 @@ function MonsterHeroGame() {
     setGameState('BATTLE_MENU');
   };
   // 「この難易度で挑戦」を練習として押したとき。ふだんのボタンは記録を残す状態(debugBattleRef=false)に
-  // 戻してしまうので、練習中は必ずこちらを通してビギナー・チャレンジ・保存なしを保つ
+  // 戻してしまうので、練習中は必ずこちらを通してビギナー・その台本のモード・保存なしを保つ
   const beginBattleTutorialRun = () => {
     stopAllAuto();
     debugBattleRef.current = true;
     debugResultRef.current = false;
     setDebugBattle(true);
     setDebugOutcome(null);
+    const tutorialMode = battleTutorialModeOf(battleTutorialVariant);
     setDifficulty('Beginner');
-    setRunMode(BATTLE_MODE_CHALLENGE);
-    setBattleMode(BATTLE_MODE_CHALLENGE);
+    setRunMode(tutorialMode);
+    setBattleMode(tutorialMode);
     setMonSelection(getUnlockedBaseMonsterList());
     setHeroPickTab('base');
     setCurrentPickingMon(null);
@@ -56336,8 +56345,11 @@ function MonsterHeroGame() {
     }
     setGameState(back || 'DEBUG_SETTINGS');
   };
-  const battleTutorialSteps = (battleTutorialVariant === 'v1' ? typeof ASSISTANT_BATTLE_TUTORIAL !== 'undefined' && ASSISTANT_BATTLE_TUTORIAL : typeof ASSISTANT_BATTLE_TUTORIAL_V2 !== 'undefined' && ASSISTANT_BATTLE_TUTORIAL_V2) || [];
+  const battleTutorialSteps = (battleTutorialVariant === 'v1' ? typeof ASSISTANT_BATTLE_TUTORIAL !== 'undefined' && ASSISTANT_BATTLE_TUTORIAL : battleTutorialVariant === 'tactics' ? typeof ASSISTANT_BATTLE_TUTORIAL_TACTICS !== 'undefined' && ASSISTANT_BATTLE_TUTORIAL_TACTICS : typeof ASSISTANT_BATTLE_TUTORIAL_V2 !== 'undefined' && ASSISTANT_BATTLE_TUTORIAL_V2) || [];
   const battleTutorial = battleTutorialStep != null ? battleTutorialSteps[battleTutorialStep] || null : null;
+  // れんしゅう中に選べる仕組み・モード。台本のモードから決める(取り違えないように1か所で持つ)
+  const battleTutorialMode = battleTutorialModeOf(battleTutorialVariant);
+  const battleTutorialSystem = isTacticsMode(battleTutorialMode) ? BATTLE_SYSTEM_TACTICS : BATTLE_SYSTEM_CLASSIC;
   // いま光らせる場所。画面側は battleTutorialSpotClass('キー') を付けておく。
   // spot は配列でも書けるので、1つの操作で「一覧」と「その決定ボタン」を同時に光らせられる
   const battleTutorialSpotClass = name => {
@@ -60850,8 +60862,13 @@ function MonsterHeroGame() {
     }, t.label))), rankingKind === 'score' && renderScoreRankingBody(BATTLE_MODE_CHALLENGE), rankingKind === 'breeder' && renderBreederRankingBody(), rankingKind === 'bond' && renderBondRankingBody()))), gameState === 'BATTLE_SYSTEM_SELECT' && (() => {
       // ★バトルのれんしゅう(チュートリアル)は記録を残さないために debugBattle を立てるが、
       //   その副作用でこの入口だけ「ふだん遊ぶときと違う並び」になってしまう。
-      //   れんしゅうは通常プレイの入口を覚えてもらう場なので、並びは公開状態のまま見せる
-      const systemDebug = debugBattle && !battleTutorial;
+      //   れんしゅうは通常プレイの入口を覚えてもらう場なので、並びは公開状態のまま見せる。
+      //   ただし、まだ公開していない仕組みのれんしゅう(タクティクス)は、その仕組みが
+      //   「準備中」のままだと選べないので、そのときだけデバッグの見え方を残す
+      const tutorialNeedsDebugSystems = !!battleTutorial && battleSystemComingSoon(battleTutorialSystem, {
+        debugBattle: false
+      });
+      const systemDebug = debugBattle && (!battleTutorial || tutorialNeedsDebugSystems);
       const systems = visibleBattleSystems({
         debugBattle: systemDebug
       });
@@ -60889,8 +60906,8 @@ function MonsterHeroGame() {
         const beta = battleSystemBeta(sys.id, {
           debugBattle: systemDebug
         });
-        // れんしゅう中はクラシックだけを押せるようにして、台本どおりの流れを保つ
-        const tutorialLocked = !!battleTutorial && sys.id !== BATTLE_SYSTEM_CLASSIC;
+        // れんしゅう中は、その台本の仕組みだけを押せるようにして流れを保つ
+        const tutorialLocked = !!battleTutorial && sys.id !== battleTutorialSystem;
         // 台本から光らせる場所。カードそのものを1枚ずつ光らせる
         // (spotのキーは仕組みのidと同じ綴りだが、台本から引くのは
         //  このキーなので、検査が追えるよう文字で書いておく)
@@ -61139,7 +61156,7 @@ function MonsterHeroGame() {
           className: "min-h-[38px] rounded-xl bg-slate-700 font-black text-xs disabled:opacity-50"
         }, "\u3053\u306E\u30E2\u30FC\u30C9\u306E\u8AAC\u660E"), /*#__PURE__*/React.createElement("button", {
           "data-battle-mode-soon": modeSoon ? '1' : undefined,
-          disabled: extremeLocked || speciesLocked || modeSoon || !!battleTutorial && m.id !== BATTLE_MODE_CHALLENGE,
+          disabled: extremeLocked || speciesLocked || modeSoon || !!battleTutorial && m.id !== battleTutorialMode,
           onClick: () => {
             setBattleMode(m.id);
             if (isSpecies) {
@@ -61152,7 +61169,7 @@ function MonsterHeroGame() {
             }
             setGameState(isExtreme ? 'EXTREME_DIFFICULTY_SELECT' : 'BATTLE_DIFFICULTY_SELECT');
           },
-          className: `min-h-[44px] rounded-xl font-black text-sm disabled:opacity-30${m.id === BATTLE_MODE_CHALLENGE ? battleTutorialSpotClass('modeStart') : ''}`,
+          className: `min-h-[44px] rounded-xl font-black text-sm disabled:opacity-30${m.id === battleTutorialMode ? battleTutorialSpotClass('modeStart') : ''}`,
           style: {
             backgroundColor: m.color,
             color: '#0f172a'
@@ -64027,7 +64044,10 @@ function MonsterHeroGame() {
     }, "\u65E7\u30D0\u30C8\u30EB\u753B\u9762\u3092\u958B\u304F\uFF08\u898B\u6BD4\u3079\u7528\uFF09"), /*#__PURE__*/React.createElement("button", {
       onClick: () => startBattleTutorial('DEBUG_SETTINGS', 'v1'),
       className: "min-h-[50px] rounded-xl border border-cyan-400/50 bg-cyan-950/40 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
-    }, "\u65E7\u30D0\u30C8\u30EB\u30C1\u30E5\u30FC\u30C8\u30EA\u30A2\u30EB\u3092\u898B\u308B\uFF08\u65E7\u30D0\u30C8\u30EB\u753B\u9762\u30FB\u8A18\u9332\u306F\u6B8B\u308A\u307E\u305B\u3093\uFF09"))))), /*#__PURE__*/React.createElement("details", {
+    }, "\u65E7\u30D0\u30C8\u30EB\u30C1\u30E5\u30FC\u30C8\u30EA\u30A2\u30EB\u3092\u898B\u308B\uFF08\u65E7\u30D0\u30C8\u30EB\u753B\u9762\u30FB\u8A18\u9332\u306F\u6B8B\u308A\u307E\u305B\u3093\uFF09"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => startBattleTutorial('DEBUG_SETTINGS', 'tactics'),
+      className: "min-h-[50px] rounded-xl border border-orange-400/50 bg-orange-950/40 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
+    }, "\u30BF\u30AF\u30C6\u30A3\u30AF\u30B9\u306E\u308C\u3093\u3057\u3085\u3046\u3092\u898B\u308B\uFF08\u516C\u958B\u524D\u30FB\u8A18\u9332\u306F\u6B8B\u308A\u307E\u305B\u3093\uFF09"))))), /*#__PURE__*/React.createElement("details", {
       className: "rounded-2xl border border-indigo-400/40 bg-indigo-950/30"
     }, /*#__PURE__*/React.createElement("summary", {
       className: "cursor-pointer select-none px-3 py-3 text-[11px] font-black text-cyan-200"

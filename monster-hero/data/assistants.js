@@ -5855,6 +5855,115 @@ const ASSISTANT_BATTLE_TUTORIAL_V2 = [
   ...ASSISTANT_BATTLE_TUTORIAL_BODY,
   ...ASSISTANT_BATTLE_TUTORIAL_OUTRO_V2,
 ];
+
+// ---------- タクティクスバトルのれんしゅう(2026-09-21 ユーザー依頼・デバッグからだけ) ----------
+// タクティクスは公開前なので、この台本はデバッグ設定からしか開けない。
+// クラシックの本体(BODY)は使い回さず、専用に書いてある。盤面の持ち方が違うので、
+// 「ライフは1本」「ガッツは全員ぶん」を前提にした言い回しがそのままでは嘘になるため。
+//
+// 教える順(クラシックの練習と同じ骨格に、このモードならではのものを足した):
+//   1体ずつのライフとガッツ → 画面の見かた → 敵の狙いの予告 → ガード →
+//   連撃(ガードは1ヒットぶん) → アシストカード → 緊急回復と敵の移動 →
+//   距離技 → 攻撃 → 技変更 → 固有技
+const ASSISTANT_BATTLE_TUTORIAL_TACTICS_INTRO = [
+  { id:'tIntro',       at:'BATTLE_SYSTEM_SELECT',     e:'excited', title:'タクティクスのれんしゅう', t:'{name}、今日はタクティクスバトルを動かして覚えよ！ 横で見てるからね♪', wait:'next' },
+  { id:'tSystemTalk',  at:'BATTLE_SYSTEM_SELECT',     e:'normal',  title:'ここから選ぶよ', t:'モンヒロバトルは、ルールのちがうバトルから1つ選んで始めるよ。', spot:'systemCards', wait:'next' },
+  { id:'tSystemDiff',  at:'BATTLE_SYSTEM_SELECT',     e:'surprise',title:'どこがちがうの？', t:'クラシックは全員の力を合わせて1本のライフで戦うけど、タクティクスは1体ずつライフを持つんだ。', spot:'systemTactics', wait:'next' },
+  { id:'tSystemAim',   at:'BATTLE_SYSTEM_SELECT',     e:'normal',  title:'狙いが出る', t:'だから敵の予告に「誰を狙うか」まで出るよ。誰に受けさせるかを決めるバトルなの。', spot:'systemTactics', wait:'next' },
+  { id:'tSystemReady', at:'BATTLE_SYSTEM_SELECT',     e:'happy',   title:'今日はこっちで', t:'カードと間合い、育てた強さの効きかたはクラシックと同じ。そこに読み合いが足されるんだ♪', spot:'systemTactics', wait:'next' },
+  { id:'tSystemPick',  at:'BATTLE_SYSTEM_SELECT',     e:'wink',    title:'押してみて！', t:'タクティクスバトルのカードを押してね♪', spot:'systemTactics', wait:'act' },
+  { id:'tModeTalk',    at:'BATTLE_MODE_SELECT',       e:'normal',  title:'タクティクスの中身', t:'中は3つ。タクティクスチャレンジ・種族チャレンジ・プロだよ。', spot:'modeCards', wait:'next' },
+  { id:'tModeReady',   at:'BATTLE_MODE_SELECT',       e:'happy',   title:'今日はチャレンジで', t:'いちばん基本のタクティクスチャレンジで練習しよ！', spot:'modeStart', wait:'next' },
+  { id:'tModePick',    at:'BATTLE_MODE_SELECT',       e:'wink',    title:'押してみて！', t:'タクティクスチャレンジの「難易度を選ぶ」を押してね♪', spot:'modeStart', wait:'act' },
+  { id:'tDiffTalk',    at:'BATTLE_DIFFICULTY_SELECT', e:'normal',  title:'難易度を選ぶ', t:'左右にスワイプして選ぶよ。難しいほど、敵が使ってくる技の数も増えるんだ。', spot:'difficulty', wait:'next' },
+  { id:'tStartTalk',   at:'BATTLE_DIFFICULTY_SELECT', e:'wink',    title:'ビギナーで挑戦', t:'今回は練習だから、いちばんやさしいビギナーをやってみよ！', spot:'battleStart', wait:'next' },
+  { id:'tStart',       at:'BATTLE_DIFFICULTY_SELECT', e:'excited', title:'押してみて！', t:'「この難易度で挑戦」を押すとバトルが始まるよ♪', spot:'battleStart', wait:'act' },
+];
+const ASSISTANT_BATTLE_TUTORIAL_TACTICS_BODY = [
+  // 勇者モンを選ぶ
+  { id:'tHeroTalk',    at:'PICK_HERO',     e:'happy',   title:'まずは勇者モン', t:'主役になる子が勇者モン。この中から1体えらぶよ！', spot:['monCards','monDecide'], wait:'next' },
+  { id:'tHero',        at:'PICK_HERO',     e:'wink',    title:'えらんでみよう', t:'好きな子を押して、出てきた画面で「決定」だよ♪', spot:['monCards','monDecide'], wait:'act' },
+  // 置く距離を決める
+  { id:'tSlotTalk',    at:'PICK_SLOT',     e:'normal',  title:'置く距離を決めよう', t:'次は立ち位置。敵と同じ距離だと大ダメージなんだ！', spot:'slots', wait:'next' },
+  { id:'tSlot',        at:'PICK_SLOT',     e:'wink',    title:'枠を押してね', t:'好きな距離の枠をタップしてみて♪', spot:'slots', wait:'act' },
+  // ブリーダーの教えを持ち込む
+  { id:'tTeachTalk',   at:'PICK_TEACHING', e:'normal',  title:'ブリーダーの教え', t:'バトル中に使える助っ人カードだよ。ここで持ち込むの。', spot:'teachings', wait:'next' },
+  { id:'tTeach',       at:'PICK_TEACHING', e:'happy',   title:'1つ選ぼう', t:'好きな教えを1つ押してね♪', spot:'teachings', wait:'act' },
+  // バトル。まずこのモードならではの「1体ずつ」から見せる
+  { id:'tBattle',      at:'BATTLE',        e:'excited', title:'バトル開始！', t:'いよいよ本番！ まずタクティクスならではのところから教えるね♪', wait:'next' },
+  { id:'tParty',       at:'BATTLE',        e:'surprise',title:'1体ずつのライフ', t:'ここが仲間ひとりずつのライフとガッツ。合計じゃなくて、1体ごとに別々に持つんだ！', spot:'tacticsParty', wait:'next' },
+  { id:'tPartyDown',   at:'BATTLE',        e:'normal',  title:'倒れても負けじゃない', t:'ライフが0になった子はお休みになるよ。全員が倒れたときだけ負けなの。', spot:'tacticsParty', wait:'next' },
+  { id:'tPartyAbility',at:'BATTLE',        e:'happy',   title:'勇者特性は全員ぶん', t:'クラシックは勇者モンの特性だけだけど、こっちは連れてきた子の特性もそれぞれに効くよ♪', spot:'tacticsParty', wait:'next' },
+  { id:'tWaveTalk',    at:'BATTLE',        e:'normal',  title:'上のバー', t:'今のWAVEとターン数だよ。20ターン以内に敵を倒せないと負けちゃう。', spot:'waveInfo', wait:'next' },
+  { id:'tEnemyTalk',   at:'BATTLE',        e:'normal',  title:'相手の情報', t:'敵の名前・いる距離・HPバー。距離はこまめに変わるから要チェック！', spot:'enemyBar', wait:'next' },
+  { id:'tScanTalk',    at:'BATTLE',        e:'happy',   title:'敵をくわしく', t:'右上の「解析」を押すと、敵の技や次に何をしてくるかまで見られるよ。', spot:'enemyBar', wait:'next' },
+  { id:'tSkillsMore',  at:'BATTLE',        e:'surprise',title:'技が多いよ', t:'タクティクスの敵は、連撃や貫通撃みたいな技も使ってくるの。解析で確かめる癖をつけてね。', spot:'enemyBar', wait:'next' },
+  { id:'tSlotTalk2',   at:'BATTLE',        e:'wink',    title:'4つの距離枠', t:'仲間が並んでる枠が距離。敵と同じ距離の子ほど大ダメージを出せるよ！', spot:'battleSlots', wait:'next' },
+  { id:'tCards',       at:'BATTLE',        e:'normal',  title:'手札のカード', t:'下にあるのが今つかえるカード。攻めの攻撃、ダメージを減らすガード、力を上げるアシストがあるよ。', spot:'cards', wait:'next' },
+  { id:'tCardWho',     at:'BATTLE',        e:'surprise',title:'使う子を選ぶ', t:'タクティクスはカードを選んだあと、使う子の枠もタップするよ。ガッツはその子のぶんから払うの。', spot:['cards','battleSlots'], wait:'next' },
+  { id:'tActionTalk',  at:'BATTLE',        e:'happy',   title:'ACTIONで実行', t:'カードと使う子が決まったら、右下の「ACTION」でその1ターンぶんが進むよ♪', spot:'action', wait:'next' },
+  { id:'tLimitTalk',   at:'BATTLE',        e:'normal',  title:'使える枚数', t:'1ターンに出せる枚数はここ。勇者モンの特性で増えることもあるんだ♪', spot:'cardCount', wait:'next' },
+  { id:'tCardOrder',   at:'BATTLE',        e:'surprise',title:'2枚目からは半減', t:'同じターンに攻撃やガードを重ねると2枚目から効果が半分。アシストカードは半減しないよ。', spot:'cards', wait:'next' },
+  { id:'tDeckTalk',    at:'BATTLE',        e:'happy',   title:'山札のこと', t:'「VIEW」で山札と使い終わったカードを確認できるよ。無くなったら混ぜ直すの。', spot:'deckView', wait:'next' },
+  // ① 敵の攻撃予告(狙い付き) → ガードで受ける
+  { id:'tIntentTalk',  at:'BATTLE',        e:'surprise',title:'敵の攻撃予告！', t:'敵の下に次の行動と予測ダメージ、それに狙われている子まで出てるよ！', spot:'enemyIntent', wait:'next' },
+  { id:'tGuardTalk',   at:'BATTLE',        e:'normal',  title:'ガードで受けよう', t:'ガードカードを選んで、受ける子の枠をタップ → ACTION。ダメージがぐっと減るよ！', spot:['cards','action'], wait:'next' },
+  { id:'tGuardDo',     at:'BATTLE',        e:'wink',    title:'ガードを使ってみて', t:'ガードカード → 枠をタップ → ACTION の順だよ♪', spot:['cards','action'], wait:'do', need:'guard' },
+  { id:'tGuardSeen',   at:'BATTLE',        e:'happy',   title:'ほぼ無傷！', t:'狙われた子のライフがほとんど減ってないでしょ？ これがガードの力だよ♪', spot:'tacticsParty', wait:'next' },
+  // ② 連撃(ガードは1ヒットぶんしか効かない)
+  { id:'tRushTalk',    at:'BATTLE',        e:'surprise',title:'連撃が来る！', t:'次の技は3回に分かれて当たる連撃だよ！ ガードで減らせるのは1回ぶんだけなの。', spot:'enemyIntent', wait:'next' },
+  { id:'tRushReady',   at:'BATTLE',        e:'normal',  title:'それでも受ける', t:'1回ぶんでも減らしたほうがいいよ。もう一度ガードを使ってみて！', spot:['cards','action'], wait:'next' },
+  { id:'tRushDo',      at:'BATTLE',        e:'excited', title:'受け止めよう！', t:'ガードカード → 枠をタップ → ACTION だよ♪', spot:['cards','action'], wait:'do', need:'guard' },
+  { id:'tRushSeen',    at:'BATTLE',        e:'surprise',title:'けっこう痛い！', t:'ガードしてもこれだけ減るんだ。技によって受け方を変えるのがこのモードのコツだよ。', spot:'tacticsParty', wait:'next' },
+  // ③ アシストカードでバフ
+  { id:'tBreederTalk', at:'BATTLE',        e:'happy',   title:'アシストカード', t:'次はアシストカード。ニコラオの力で、こっちの攻撃力が上がるよ！', spot:['cards','action'], wait:'next' },
+  { id:'tBreederDo',   at:'BATTLE',        e:'wink',    title:'使ってみよう', t:'アシストカードを選んで枠をタップ → ACTION！ 攻撃UPの表示が出るよ♪', spot:['cards','action'], wait:'do', need:'teaching' },
+  { id:'tBreederSeen', at:'BATTLE',        e:'happy',   title:'攻撃アップ！', t:'「攻撃UP!」って出たでしょ？ この効果はバトルの最後まで続くよ♪', wait:'next' },
+  // ④ 緊急回復と敵の移動
+  { id:'tEmergTalk',   at:'BATTLE',        e:'normal',  title:'緊急回復', t:'左の「緊急」は、みんなのライフとガッツが1体ずつ3割もどるよ。そのターンは攻撃できないの。', spot:'emergency', wait:'next' },
+  { id:'tEmergDo',     at:'BATTLE',        e:'wink',    title:'押してみて', t:'「緊急」を押してみて！ 敵も動くから、そこも見ててね♪', spot:'emergency', wait:'do', need:'emergency' },
+  { id:'tMoveTalk',    at:'BATTLE',        e:'surprise',title:'敵が動いた！', t:'敵は距離を変えてくるよ。離れられると攻撃が当たりにくくなるの。', spot:'enemyBar', wait:'next' },
+  // ⑤ 距離技で引き戻す
+  { id:'tRangeTalk',   at:'BATTLE',        e:'excited', title:'距離技で引き戻す', t:'距離技は、当てたあと敵をその距離まで引っぱってこられるんだ！', spot:['cards','action'], wait:'next' },
+  { id:'tRangeDo',     at:'BATTLE',        e:'wink',    title:'使ってみよう', t:'距離技を選んで、モッチーの枠をタップ → ACTION だよ♪', spot:['cards','action'], wait:'do', need:'range_atk' },
+  { id:'tRangeSeen',   at:'BATTLE',        e:'excited', title:'引き戻せた！', t:'敵の距離が変わったでしょ？ 離されても距離技で連れ戻せるんだ♪', spot:'enemyBar', wait:'next' },
+  // ⑥ 通常攻撃
+  { id:'tAtkTalk',     at:'BATTLE',        e:'happy',   title:'距離がそろった！', t:'敵と同じ距離になったね。この状態の攻撃がいちばん強いよ！', spot:'battleSlots', wait:'next' },
+  { id:'tAtkReady',    at:'BATTLE',        e:'normal',  title:'攻撃カード', t:'手札の攻撃カードを使ってみよう。距離が合ってるとよく効くよ！', spot:['cards','action'], wait:'next' },
+  { id:'tAtkDo',       at:'BATTLE',        e:'wink',    title:'攻撃してみて', t:'攻撃カード → 枠をタップ → ACTION！', spot:['cards','action'], wait:'do', need:'atk' },
+  { id:'tAtkSeen',     at:'BATTLE',        e:'happy',   title:'よく入った！', t:'敵のHPがぐっと減ったね。距離がそろってると威力が全然ちがうんだ♪', spot:'enemyBar', wait:'next' },
+  // ⑦ 技変更
+  { id:'tSkillTalk',   at:'BATTLE',        e:'normal',  title:'技は変えられる', t:'カードの名前は点線になってるでしょ？ そこをタップすると技を選び直せるの。', spot:'cards', wait:'next' },
+  { id:'tSkillPoint',  at:'BATTLE',        e:'wink',    title:'ここが技の名前', t:'光ってる攻撃カードの、絵の下・ガッツの上にある文字のところだよ♪', spot:'cards', wait:'next', needCard:'atk' },
+  { id:'tSkillTwice',  at:'BATTLE',        e:'normal',  title:'2回タップするよ', t:'1回目でカードを選んで、もう1回おなじ名前を押すと一覧が開くの。', spot:'cards', wait:'next', needCard:'atk' },
+  { id:'tSkillDo',     at:'BATTLE',        e:'excited', title:'名前を2回タップ', t:'光ってる名前をトントンって押してみて！ 技の一覧が出てくるよ。', spot:'cards', wait:'do', need:'skillPicker', needCard:'atk' },
+  { id:'tSkillSeen',   at:'BATTLE',        e:'happy',   title:'これが技の一覧', t:'威力・消費ガッツ・会心率が並んでたでしょ？ 使う技はここで選び直せるよ♪', wait:'next' },
+  { id:'tSkillLock',   at:'BATTLE',        e:'normal',  title:'暗い技があったよね', t:'通常技と距離技は、その距離の補正値が高いほど強いものまで使えるようになるの。', wait:'next' },
+  // ⑧ 固有技でトドメ
+  { id:'tUniqueTalk',  at:'BATTLE',        e:'excited', title:'最後は固有技！', t:'固有技はその子だけの必殺技。ガッツは重いけど、とにかく強いよ！', spot:'cards', wait:'next' },
+  { id:'tUniqueGuts',  at:'BATTLE',        e:'normal',  title:'ガッツはその子のぶん', t:'重い技ほど、使う子のガッツが足りてるかが大事。足りない子には出せないんだ。', spot:['cards','tacticsParty'], wait:'next' },
+  { id:'tActReady',    at:'BATTLE',        e:'happy',   title:'モッチーなら出せるよ', t:'いまのモッチーはガッツが足りてるから、固有技をそのまま撃てるよ！', spot:['cards','action'], wait:'next' },
+  { id:'tAct',         at:'BATTLE',        e:'excited', title:'トドメだ！', t:'固有技を選んで枠をタップ → ACTIONで倒しちゃお♪', spot:['cards','action'], wait:'act', need:'unique' },
+  // WAVEクリア
+  { id:'tClear',       at:'WAVE_RESULT',   e:'excited', title:'WAVEクリア！', t:'ナイス{name}！ 敵を倒しきるとWAVEクリアだよ♪', spot:'waveNext', wait:'next' },
+  { id:'tClearNext',   at:'WAVE_RESULT',   e:'happy',   title:'次へ進もう', t:'「次へ進む」を押すと強化フェーズだよ！', spot:'waveNext', wait:'act' },
+  // 強化フェーズ
+  { id:'tRewardTalk',  at:'REWARD_PICK',   e:'happy',   title:'能力アップ', t:'クリアのたびに強くなれる！ 3つから1つ選べるんだ。', spot:'rewards', wait:'next' },
+  { id:'tReward',      at:'REWARD_PICK',   e:'wink',    title:'選んでみて', t:'好きな強化を1つ押してね♪', spot:'rewards', wait:'act' },
+];
+const ASSISTANT_BATTLE_TUTORIAL_TACTICS_OUTRO = [
+  { id:'tAlly',        at:'*',             e:'normal',  title:'このあとは', t:'WAVE2・4・6では供モンが合流するよ。ライフもガッツも、その子のぶんが増えるんだ。', wait:'next' },
+  { id:'tAllyAim',     at:'*',             e:'surprise',title:'仲間が増えると', t:'狙われる子も選ばれるようになるよ。誰に受けさせて、誰で殴るかを考えるのが楽しいの♪', wait:'next' },
+  { id:'tAllyStrong',  at:'*',             e:'normal',  title:'強い子ほど手ごわい', t:'供モンが加わると、そのぶん敵も強くなるよ。少ない人数のまま進む選び方もあるんだ。', wait:'next' },
+  { id:'tRecord',      at:'*',             e:'happy',   title:'記録は別々', t:'タクティクスのスコアはクラシックとは別のランキングに載るよ。記録を奪い合わないから安心してね♪', wait:'next' },
+  { id:'tWrapUp',      at:'*',             e:'excited', title:'おつかれさま！', t:'これでタクティクスのれんしゅうは終わり！ 一連の流れはバッチリだね♪', wait:'next' },
+  { id:'tEnd',         at:'*',             e:'happy',   title:'いってらっしゃい！', t:'困ったらヘルプからいつでもこの練習をやり直せるよ。がんばってね{name}！', wait:'end' },
+];
+const ASSISTANT_BATTLE_TUTORIAL_TACTICS = [
+  ...ASSISTANT_BATTLE_TUTORIAL_TACTICS_INTRO,
+  ...ASSISTANT_BATTLE_TUTORIAL_TACTICS_BODY,
+  ...ASSISTANT_BATTLE_TUTORIAL_TACTICS_OUTRO,
+];
 // いまの画面に合うステップを探す(画面が変わったときに呼ぶ)。
 // どちらの台本を使っているかは呼ぶ側が渡す
 const findBattleTutorialStep = (fromIndex, screen, steps) => {
@@ -5983,6 +6092,30 @@ const BATTLE_TUTORIAL_SCENARIO = {
     { type:'WAIT' },                // 8ターン目以降 … 技変更 → 固有技でトドメ
   ],
 };
+// タクティクスバトルのれんしゅう用の台本(2026-09-21・デバッグからだけ)。
+// 敵はモードとWAVEで決まるので enemyKey は持たない(タクティクスのWAVE1はカワズモー)。
+// 連撃を1回見せるので、そのぶん必殺技の「ためる → 撃つ」は入れていない
+// (1回の練習が長くなりすぎる。必殺技は解析の説明で触れている)
+const BATTLE_TUTORIAL_SCENARIO_TACTICS = {
+  mode: 'tactics',
+  heroId: 'Mocchi',
+  slotIndex: 1,          // 近距離。敵の初期位置と同じにして距離補正の効きを見せる
+  teachingId: 'oryo',    // ニコラオの力(攻撃アップ)。バフの変化が数値で見える
+  enemyDist: 1,
+  enemyHp: 500,          // 距離技＋攻撃では落ちず、固有技で必ず落ちる量
+  enemyAtk: 260,         // 1体ぶんのライフで受けるので、クラシックの台本より控えめ
+  hand: ['guard', 'guard', 'teaching', 'range_atk', 'atk'],
+  draw: ['unique', 'guard', 'atk'],
+  intents: [
+    { type:'ATTACK' },                     // 1ターン目 … 狙いつきの攻撃予告 → ガードで受ける
+    { type:'ATTACK', actionId:'rush' },    // 2ターン目 … 連撃(ガードは1ヒットぶんしか効かない)
+    { type:'WAIT' },                       // 3ターン目 … アシストカードでバフ
+    { type:'MOVE', targetDist:3 },         // 4ターン目 … 緊急回復のあいだに遠距離へ移動
+    { type:'WAIT' },                       // 5ターン目 … 距離技で引き戻す
+    { type:'WAIT' },                       // 6ターン目 … 通常攻撃
+    { type:'WAIT' },                       // 7ターン目以降 … 技変更 → 固有技でトドメ
+  ],
+};
 // 台本の敵の行動を順に返す。呼ばれるたびに1つ進む(画面側がindexを持つ)
 const battleScenarioIntent = (scenario, index, enemy, currentDist) => {
   if (!scenario || !Array.isArray(scenario.intents) || !enemy) return null;
@@ -5993,6 +6126,28 @@ const battleScenarioIntent = (scenario, index, enemy, currentDist) => {
   if (step.type === 'MOVE') {
     const target = Number.isInteger(step.targetDist) ? step.targetDist : currentDist;
     return { type:'MOVE', value:0, label:`移動: ${labels[target]}`, targetDist:target, icon:'🏃', actionId:'move' };
+  }
+  // ★タクティクスの台本は、技のid(連撃=rush・間合い攻撃=sweep など)で1手を書ける。
+  //   倍率・見出し・アイコン・ヒット数は本番の抽選(chooseEnemyAction)と同じ定義から作るので、
+  //   台本だけ古い表記や違う威力になることがない
+  const tacticsDef = step.actionId && typeof TACTICS_ACTION_DEFINITIONS !== 'undefined'
+    ? TACTICS_ACTION_DEFINITIONS.find(d => d.id === step.actionId) : null;
+  if (tacticsDef) {
+    const tacticsLabel = typeof enemyActionDisplayName === 'function'
+      ? enemyActionDisplayName(enemy, tacticsDef) : (tacticsDef.category || '');
+    const tacticsIcon = (typeof TACTICS_VARIANT_ICONS !== 'undefined' && TACTICS_VARIANT_ICONS[tacticsDef.variant])
+      || (typeof ENEMY_ACTION_ICONS !== 'undefined' && ENEMY_ACTION_ICONS[tacticsDef.type]) || '⏳';
+    // 間合い攻撃だけは「どの間合いを薙ぐか」を予告に持たせる(本番と同じく、いまいる間合い)
+    if (tacticsDef.variant === 'sweep') {
+      return { type:tacticsDef.type, variant:'sweep', sweepDist:currentDist,
+        value:Math.floor(enemy.atk * tacticsDef.multiplier),
+        missValue:Math.floor(enemy.atk * (tacticsDef.missMultiplier ?? 1)),
+        label:`${tacticsLabel}: ${labels[currentDist]}`, icon:tacticsIcon, actionId:tacticsDef.id };
+    }
+    return { type:tacticsDef.type,
+      ...(tacticsDef.variant ? { variant:tacticsDef.variant, hits:Math.max(1, Math.floor(Number(tacticsDef.hits) || 1)) } : {}),
+      ...(tacticsDef.targetsAll ? { targetsAll:true } : {}),
+      value:Math.floor(enemy.atk * tacticsDef.multiplier), label:tacticsLabel, icon:tacticsIcon, actionId:tacticsDef.id };
   }
   const def = (typeof ENEMY_ACTION_DEFINITIONS !== 'undefined' ? ENEMY_ACTION_DEFINITIONS : [])
     .find(d => d.type === step.type) || { multiplier: 0, id:'wait' };
