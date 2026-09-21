@@ -371,29 +371,40 @@
 > `tactics-enemy-actions-check.js` の「行動表のキーが、タクティクスの敵の並びと過不足なく一致する」が
 > 実データの `TACTICS_ENEMY_SEQUENCE` と突き合わせて見張っている。
 
-## 5.5 BGM はボス戦だけ専用（2026-09-21 ユーザー指示）
+## 5.5 BGM は中ボス戦とボス戦だけ専用（2026-09-21 ユーザー指示）
 
-ユーザーの言葉は「**曲数が足りないからボス戦だけいれよう**」。受け取ったのは1曲だけ。
+ユーザーの言葉は「**曲数が足りないからボス戦だけいれよう**」（ボス戦用に1曲受け取った）、
+続けて「**中ボス戦は一旦これで**」（すでに入っている The City Beneath the Comets を指定）。
 
-- 専用曲は **`tactics_boss`**（`audio/bgm-tactics-boss.mp3`）。WAVE10 の覚醒ムー戦で鳴る
-- **通常戦とデュラハン戦はチャレンジと同じ枠**（`battle` / `dullahan`）を使う。
-  専用の枠を作ると「選べるのに同じ曲しかない」ことになる
-- BGMアレンジの枠は **`tacticsBoss` の1つだけ**。タブはモードを公開するまで出さない
+| WAVE | 場面 | 枠 | 曲 |
+| --- | --- | --- | --- |
+| 1〜8 | 通常戦 | `battle`（チャレンジと共通） | チャレンジの設定そのまま |
+| 9 | **中ボス戦** | `tacticsMidBoss` | `melo_the_city_beneath_the_comets`（**すでにある曲を指すだけ**） |
+| 10 | **ボス戦** | `tacticsBoss` | `tactics_boss`（`audio/bgm-tactics-boss.mp3`） |
+
+- **通常戦だけチャレンジと同じ枠**を使う。通常戦の曲がまだ無いので、専用の枠を作ると
+  「選べるのに同じ曲しかない」ことになる
+- **中ボス戦は音源を増やさない。** すでに入っている曲の id を指すだけにする
+  （CLAUDE.md ⑥-2「すでにゲームに入っている音源が使えるなら、コピーを作らない」）
+- BGMアレンジのタブはモードを公開するまで出さない
   （`TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE`。種族チャレンジと同じ扱い）
+- **枠の呼び名は「中ボス戦」。** WAVE9はデュラハンではなくスプラッターなので、
+  画面に「デュラハン戦」と出すと敵と食い違う（内部の `modeBgm.dullahan` はそのまま）
 
 **判定はタクティクスをいちばん先に見る。**
 
 ```js
 const modeBgm = isTacticsMode(runMode)
-  ? { normal:'battle', dullahan:'dullahan', moo:'tacticsBoss' }
+  ? { normal:'battle', dullahan:'tacticsMidBoss', moo:'tacticsBoss' }
   : isSpeciesChallengeMode(runMode) ? …
 ```
 
 > ⚠️ タクティクスの種族チャレンジ・プロは `isSpeciesChallengeMode` / `isProMode` にも当たる。
 > **後ろに置くとそちらの枠へ落ちて、専用曲が一度も鳴らない。**
 
-> ⚠️ **`tacticsBoss` を `BGM_ARRANGEMENT_LEGACY_FALLBACK` へ入れない。**
-> 入れると、チャレンジのボス曲を自分で選んでいる人にはその曲が引き継がれ、専用曲が鳴らない。
+> ⚠️ **`tacticsBoss` / `tacticsMidBoss` を `BGM_ARRANGEMENT_LEGACY_FALLBACK` へ入れない。**
+> 入れると、チャレンジのボス曲・デュラハン曲を自分で選んでいる人にはその曲が引き継がれ、
+> 決めた曲が鳴らない。
 > 入れなければ `normalizeBgmArrangement` が既定値（専用曲）で埋めるので、
 > 既存プレイヤーにもそのまま届く（CLAUDE.md ⑦ の「新しいキーを足す」に沿う）。
 
@@ -406,7 +417,19 @@ const modeBgm = isTacticsMode(runMode)
 `-map_metadata -1 -vn` で落とし、`-0.5dB` かけて **-14.4 LUFS / -2.1 dBFS** にした。
 起動時の読み込み（`index.html` の `SIZES`）には入れない（開いたときに初めて読む側が正しい）。
 
-検査は `tools/audio/tactics-boss-bgm-check.js`。
+### 公開するとBGMアレンジのタブが6つになる
+
+チャレンジ・クイック・プロ・極限・種族・**タクティクス**。5つまでは1行（5列）に収まっていたが、
+6つを1行に押し込むと375pxで「チャレン**/**ジ」「タクティ**/**クス」と割れて読めない。
+**6つ以上は3列×2行**にする（`battleModes.length>=6?'grid-cols-3':…`）。
+
+> ⚠️ 検査(`bgm-arrangement-layout-check.js`)は、**列数の決め方を本体の式から読む**。
+> 検査へ書き写していたため、タブが6つになったのに5列のまま測って落ちていた（2026-09-21）。
+> あわせて「**文字が折り返されない**」も見るようにした。はみ出しの検査だけでは、
+> 6列に押し込んで文字が2行に割れた状態を拾えなかった。
+
+検査は `tools/audio/tactics-boss-bgm-check.js`（曲と結線）と
+`tools/audio/bgm-arrangement-layout-check.js`（タブの並び）。
 
 ## 6. 供モンの加入
 
@@ -490,7 +513,7 @@ const modeBgm = isTacticsMode(runMode)
 | 34 | **敵10体の技名を1体ずつ決めて入れた**（10体×8技。あわせて、行動表のキーがクラシックの敵idのまま残っていて追加6技が丸ごと出ていなかったのを直した） | — |
 | 35 | **敵10体の絵を、ユーザーが透過し直したものへ差し替えた**（面積が28〜63%にそろい、拡大率は覚醒ムー以外すべて不要になった） | — |
 | 36 | **貫通撃に「構え」を挟み、難易度が上がると使える技が増えるようにした** | — |
-| 37 | **ボス戦だけ専用BGMを入れた**（受け取った1曲。通常戦とデュラハン戦はチャレンジと同じ） | — |
+| 37 | **中ボス戦とボス戦のBGMを決めた**（ボス戦は受け取った1曲、中ボス戦はすでにある曲を指すだけ。通常戦はチャレンジと同じ） | — |
 
 検査: `tools/mode/tactics-enemy-actions-check.js`（定義と実装の対応）、
 `tools/mode/tactics-units-check.js`（1体ぶんの値・盤面・合計・ライフの振り分け・本体への結線）、

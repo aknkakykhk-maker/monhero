@@ -423,7 +423,7 @@ const eikiBossBgmForBattle = (heroId, currentWave, enemyId) =>
   heroId === 'Eiki' && (enemyId === 'Moo' || currentWave === 10) ? 'eiki_boss' : null;
 // 既存の battle / dullahan / boss はチャレンジ用として維持し、保存済み設定との互換性を守る。
 // 追加したモード別専用戦キーは、旧セーブでは従来その場面で使っていた dullahan / boss の選択を継承する。
-const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ title:'monster_hero_theme_alt', home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', trainingMenu:'original_home', trainingBoard:'original_home', battle:'original_battle', dullahan:'original_dullahan', boss:'original_boss', quickBattle:'original_battle', quickDullahan:'original_dullahan', quickMoo:'original_boss', proBattle:'original_pro_battle_01', proDullahan:'melo_dullahan_steel_ghost', proMoo:'original_pro_battle_02', extremeBattle:'ichika_battle', extremeDullahan:'melo_dullahan_clockwork', extremeMoo:'ichika_boss', speciesBattle:'original_battle', speciesDullahan:'original_dullahan', speciesMoo:'original_boss', tacticsBoss:'tactics_boss', autoBattle:'monster_hero_theme', autoVictoryJingle:'off', autoPostWaveBgm:'off', autoRepeatResultBgm:'off', clear:'ichika_clear', enhance:'original_enhance', result:'original_result', gameOver:'original_game_over', kikiIntro:'original_event_01', momosukeIntro:'six_eternel_remix', monbeatCupEvent:'kaze_ga_soyogu', symphonyEvent:'melo_mou_hitotsu_no_sekai_e' });
+const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ title:'monster_hero_theme_alt', home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', trainingMenu:'original_home', trainingBoard:'original_home', battle:'original_battle', dullahan:'original_dullahan', boss:'original_boss', quickBattle:'original_battle', quickDullahan:'original_dullahan', quickMoo:'original_boss', proBattle:'original_pro_battle_01', proDullahan:'melo_dullahan_steel_ghost', proMoo:'original_pro_battle_02', extremeBattle:'ichika_battle', extremeDullahan:'melo_dullahan_clockwork', extremeMoo:'ichika_boss', speciesBattle:'original_battle', speciesDullahan:'original_dullahan', speciesMoo:'original_boss', tacticsMidBoss:'melo_the_city_beneath_the_comets', tacticsBoss:'tactics_boss', autoBattle:'monster_hero_theme', autoVictoryJingle:'off', autoPostWaveBgm:'off', autoRepeatResultBgm:'off', clear:'ichika_clear', enhance:'original_enhance', result:'original_result', gameOver:'original_game_over', kikiIntro:'original_event_01', momosukeIntro:'six_eternel_remix', monbeatCupEvent:'kaze_ga_soyogu', symphonyEvent:'melo_mou_hitotsu_no_sekai_e' });
 // 設定欄を足したときに「前からある近い設定」を引き継ぐための対応表。
 // 種族チャレンジの3枠はチャレンジと同じ曲から始めるので、まだ自分で選んでいない人には
 // そのときのチャレンジの設定(自分で変えていればその曲)がそのまま入る
@@ -438,10 +438,11 @@ const BGM_BATTLE_MODE_TABS = Object.freeze([
   ...(SPECIES_CHALLENGE_PUBLIC_RELEASE
     ? [{ id:'species', label:'種族', items:[['speciesBattle','通常戦 BGM'],['speciesDullahan','デュラハン戦 BGM'],['speciesMoo','ムー戦 BGM']] }]
     : []),
-  // タクティクスは**ボス戦だけ**専用の枠。通常戦とデュラハン戦はチャレンジの設定をそのまま使う
-  // (曲数が足りないため。枠だけ作ると「選べるのに同じ曲しかない」ことになる)
+  // タクティクスは**中ボス戦とボス戦**に専用の枠を持つ。通常戦だけチャレンジの設定をそのまま使う
+  // (通常戦の曲がまだ無いため。枠だけ作ると「選べるのに同じ曲しかない」ことになる)。
+  // ★WAVE9はデュラハンではなくスプラッターなので、呼び名は「中ボス戦」にする
   ...((TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE)
-    ? [{ id:'tactics', label:'タクティクス', items:[['tacticsBoss','ボス戦 BGM']] }]
+    ? [{ id:'tactics', label:'タクティクス', items:[['tacticsMidBoss','中ボス戦 BGM'],['tacticsBoss','ボス戦 BGM']] }]
     : []),
 ]);
 const BGM_ARRANGEMENT_LEGACY_FALLBACK = Object.freeze({ quickMoo:'boss', proDullahan:'dullahan', proMoo:'boss', extremeDullahan:'dullahan', extremeMoo:'boss', speciesBattle:'battle', speciesDullahan:'dullahan', speciesMoo:'boss' });

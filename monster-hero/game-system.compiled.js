@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 999933957ee25d55
+// source-sha256: 777c5bc90ad6eb0d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8498b9cb354ab99c
+// generated-sha256: 2d7f887144df4883
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-21 16:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-21 16:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5728,6 +5728,7 @@ const DEFAULT_BGM_ARRANGEMENT = Object.freeze({
   speciesBattle: 'original_battle',
   speciesDullahan: 'original_dullahan',
   speciesMoo: 'original_boss',
+  tacticsMidBoss: 'melo_the_city_beneath_the_comets',
   tacticsBoss: 'tactics_boss',
   autoBattle: 'monster_hero_theme',
   autoVictoryJingle: 'off',
@@ -5769,12 +5770,13 @@ const BGM_BATTLE_MODE_TABS = Object.freeze([{
   label: '種族',
   items: [['speciesBattle', '通常戦 BGM'], ['speciesDullahan', 'デュラハン戦 BGM'], ['speciesMoo', 'ムー戦 BGM']]
 }] : []),
-// タクティクスは**ボス戦だけ**専用の枠。通常戦とデュラハン戦はチャレンジの設定をそのまま使う
-// (曲数が足りないため。枠だけ作ると「選べるのに同じ曲しかない」ことになる)
+// タクティクスは**中ボス戦とボス戦**に専用の枠を持つ。通常戦だけチャレンジの設定をそのまま使う
+// (通常戦の曲がまだ無いため。枠だけ作ると「選べるのに同じ曲しかない」ことになる)。
+// ★WAVE9はデュラハンではなくスプラッターなので、呼び名は「中ボス戦」にする
 ...(TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE ? [{
   id: 'tactics',
   label: 'タクティクス',
-  items: [['tacticsBoss', 'ボス戦 BGM']]
+  items: [['tacticsMidBoss', '中ボス戦 BGM'], ['tacticsBoss', 'ボス戦 BGM']]
 }] : [])]);
 const BGM_ARRANGEMENT_LEGACY_FALLBACK = Object.freeze({
   quickMoo: 'boss',
@@ -46148,11 +46150,11 @@ function MonsterHeroGame() {
       // BGMアレンジの「種族」タブで選んだ曲がそのまま鳴る(設定したのに効かない枠を作らない)
       // ★タクティクスをいちばん先に見る。タクティクスの種族チャレンジ・プロは
       //   isSpeciesChallengeMode / isProMode にも当たるので、後ろに置くとそちらへ落ちる。
-      //   ボス戦だけ専用曲で、通常戦とデュラハン戦はチャレンジと同じものを鳴らす
-      //   (2026-09-21 ユーザー指示「曲数が足りないからボス戦だけいれよう」)
+      //   中ボス戦(WAVE9)とボス戦(WAVE10)は専用の枠で、通常戦だけチャレンジと同じものを鳴らす
+      //   (2026-09-21 ユーザー指示「曲数が足りないからボス戦だけいれよう」→ 同日「中ボス戦は一旦これで」)
       const modeBgm = isTacticsMode(runMode) ? {
         normal: 'battle',
-        dullahan: 'dullahan',
+        dullahan: 'tacticsMidBoss',
         moo: 'tacticsBoss'
       } : isSpeciesChallengeMode(runMode) ? {
         normal: 'speciesBattle',
@@ -58254,7 +58256,7 @@ function MonsterHeroGame() {
     }, category.label))), selected.id === 'battle' && /*#__PURE__*/React.createElement("div", {
       role: "tablist",
       "aria-label": "\u30D0\u30C8\u30EB\u30E2\u30FC\u30C9",
-      className: `grid ${battleModes.length >= 5 ? 'grid-cols-5' : 'grid-cols-4'} gap-1 mb-4`
+      className: `grid ${battleModes.length >= 6 ? 'grid-cols-3' : battleModes.length >= 5 ? 'grid-cols-5' : 'grid-cols-4'} gap-1 mb-4`
     }, battleModes.map(mode => /*#__PURE__*/React.createElement("button", {
       key: mode.id,
       type: "button",
