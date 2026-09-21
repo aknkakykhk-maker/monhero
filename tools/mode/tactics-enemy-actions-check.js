@@ -110,6 +110,13 @@ check('後半の敵は全体攻撃を持つ',
 check('知らない技idを割り当てていない',
   Object.values(api.TACTICS_ENEMY_ACTION_IDS).every(list =>
     list.every(id => api.TACTICS_ACTION_DEFINITIONS.some(def => def.id === id))));
+// ★種別の呼び名は「何をする技か」が分かる言い方にする(2026-09-21 ユーザー指示
+//   「薙ぎ払いじゃなんのことか分からない」「薙ぎ払いは間合い攻撃に」「咆哮は攻撃力アップに」)。
+//   画面に出る技名は敵ごとのもので、ここはその種別名。SCANとヘルプにも出る
+const OLD_CATEGORY_NAMES = ['薙ぎ払い', '咆哮'];
+check('種別の呼び名に、分かりにくい古い言い方が残っていない',
+  api.TACTICS_ACTION_DEFINITIONS.every(d => !OLD_CATEGORY_NAMES.includes(d.category)),
+  api.TACTICS_ACTION_DEFINITIONS.filter(d => OLD_CATEGORY_NAMES.includes(d.category)).map(d => d.category).join(','));
 check('どの技にも発動条件の説明がある(SCANへ出す)',
   api.TACTICS_ACTION_DEFINITIONS.every(d => typeof d.condition === 'string' && d.condition.length > 0));
 
@@ -130,8 +137,8 @@ check('再生のしきい値は1未満(満タンでは使わない)',
 const roarEnemy = firstWith('roar');
 const roarFresh = api.enemyActionProbabilities(enemyOf(roarEnemy), 1, { definitions: api.tacticsActionDefinitions(roarEnemy), roarStacks: 0 });
 const roarMaxed = api.enemyActionProbabilities(enemyOf(roarEnemy), 1, { definitions: api.tacticsActionDefinitions(roarEnemy), roarStacks: api.TACTICS_ROAR_MAX_STACKS });
-check('咆哮は重ねていなければ選べる', availableIds(roarFresh).includes('roar'));
-check('咆哮は上限まで重ねたら選ばれない', !availableIds(roarMaxed).includes('roar'),
+check('攻撃力アップは重ねていなければ選べる', availableIds(roarFresh).includes('roar'));
+check('攻撃力アップは上限まで重ねたら選ばれない', !availableIds(roarMaxed).includes('roar'),
   `上限${api.TACTICS_ROAR_MAX_STACKS}回`);
 
 // --- ⑦ 抽選が実際に作る intent の形 ---
@@ -146,11 +153,11 @@ const intentOf = (enemyId, actionId, state = {}) => {
   return null;
 };
 const sweep = intentOf(firstWith('sweep'), 'sweep');
-check('薙ぎ払いは「いまの間合い」を予告する', !!sweep && sweep.sweepDist === 1, sweep ? `間合い${sweep.sweepDist}` : '出ませんでした');
-check('薙ぎ払いは外したときの威力も持ち歩く',
+check('間合い攻撃は「いまの間合い」を予告する', !!sweep && sweep.sweepDist === 1, sweep ? `間合い${sweep.sweepDist}` : '出ませんでした');
+check('間合い攻撃は外したときの威力も持ち歩く',
   !!sweep && Number.isFinite(sweep.missValue) && sweep.missValue < sweep.value,
   sweep ? `当たり${sweep.value} / 外れ${sweep.missValue}` : '');
-check('薙ぎ払いの威力は定義どおり',
+check('間合い攻撃の威力は定義どおり',
   !!sweep && sweep.value === Math.floor(100 * api.TACTICS_SWEEP_MULT) && sweep.missValue === Math.floor(100 * api.TACTICS_SWEEP_MISS_MULT));
 const rush = intentOf(firstWith('rush'), 'rush');
 check('連撃は手数を持ち歩く', !!rush && rush.hits === api.TACTICS_RUSH_HITS, rush ? `${rush.hits}ヒット` : '出ませんでした');
@@ -178,8 +185,8 @@ check('全体攻撃以外の技に targetsAll を付けていない',
   api.TACTICS_ACTION_DEFINITIONS.filter(d => d.targetsAll).map(d => d.id).join(','));
 const roar = intentOf(roarEnemy, 'roar');
 const regen = intentOf(regenEnemy, 'regen');
-check('咆哮・再生はダメージを持たない', !!roar && roar.value === 0 && !!regen && regen.value === 0);
-check('咆哮・再生にも見出しとアイコンが付く',
+check('攻撃力アップ・再生はダメージを持たない', !!roar && roar.value === 0 && !!regen && regen.value === 0);
+check('攻撃力アップ・再生にも見出しとアイコンが付く',
   !!roar && !!roar.label && !!roar.icon && !!regen && !!regen.label && !!regen.icon);
 
 // --- ⑧ 実装側(バトル本体)に受け方が書かれているか ---
@@ -191,16 +198,16 @@ check('連撃のガードは1ヒットぶんしか効かない',
   has("const guardValue = intent.variant==='pierce' ? 0 : baseGuardValue;")
     && has('resolveTacticsGuardedHit(slotIncoming,rushHits,slotGuard)')
     && !has("intent.variant==='rush' ? baseGuardValue"));
-check('薙ぎ払いは間合いをずらすと威力が落ちる',
+check('間合い攻撃は間合いをずらすと威力が落ちる',
   has("const sweptAway = intent.variant==='sweep'") && has('value:Math.max(0,Math.floor(Number(intent.missValue)||0))'));
-check('薙ぎ払いの判定は距離撃で動かした先を見る',
+check('間合い攻撃の判定は距離撃で動かした先を見る',
   has('Number.isInteger(immediateEffects.forcedMoveTarget) ? immediateEffects.forcedMoveTarget : enemyDist')
     && has('distLocked:forcedMoveTarget!=null,forcedMoveTarget,'));
-check('咆哮は敵の攻撃を上げ、重ねた回数を数える',
+check('攻撃力アップは敵の攻撃を上げ、重ねた回数を数える',
   has('tacticsRoarStacksRef.current += 1') && has('atk:Math.floor(Math.max(0,Number(prev.atk)||0)*TACTICS_ROAR_ATK_RATE)'));
 check('再生は敵のライフを最大値まででとどめる',
   has('hp:Math.min(Number(prev.maxHp)||0,Math.max(0,Number(prev.hp)||0)+healed)'));
-check('咆哮の重ねがけはWAVEごとに数え直す', has('tacticsRoarStacksRef.current=0'));
+check('攻撃力アップの重ねがけはWAVEごとに数え直す', has('tacticsRoarStacksRef.current=0'));
 check('SCANも新モードの行動表を見る（難易度つき）',
   has('definitions:enemyActionDefinitionsFor(runMode,scanEnemy?.id,scanEnemy?.difficulty)'));
 check('SCANは新モードの技を敵ごとの技名で並べる', has('const actionName=enemyActionDisplayName(scanEnemy,action);'));
@@ -212,8 +219,8 @@ check('SCANの効果欄は技の定義から出す(なしで固定しない)',
   has("バフ・デバフ・状態異常 <b>{action.effectText||'なし'}</b>")
     && !has('バフ・デバフ・状態異常 <b>なし</b>'));
 const roarDef = tacticsDef('roar'), regenDef = tacticsDef('regen');
-check('咆哮に効果の説明がある', !!roarDef.effectText && roarDef.effectText.includes('×'), roarDef.effectText || '(なし)');
-check('咆哮の説明は実データから作る(数字を書き写さない)',
+check('攻撃力アップに効果の説明がある', !!roarDef.effectText && roarDef.effectText.includes('×'), roarDef.effectText || '(なし)');
+check('攻撃力アップの説明は実データから作る(数字を書き写さない)',
   roarDef.effectText.includes(String(api.TACTICS_ROAR_ATK_RATE))
     && roarDef.effectText.includes(String(api.TACTICS_ROAR_MAX_STACKS)),
   roarDef.effectText);
@@ -328,7 +335,7 @@ check('新モードは敵ターン頭の威圧にスエゾーぶんを混ぜな�
   has("(!isTacticsMode(runMode)&&mainHero?.id==='Suezo')?40:0,"));
 
 // --- ⑩ 技名は敵ごとに違う(2026-09-21 ユーザーが10体ぶんを1体ずつ決めた) ---
-// ★ここが崩れると、どの敵も「薙ぎ払い」「連撃」としか名乗らなくなる。
+// ★ここが崩れると、どの敵も「間合い攻撃」「連撃」としか名乗らなくなる。
 //   吹き出しもSCANもふつうに動くので、遊んでも壊れたことに気付けない
 const VARIANT_IDS = ['sweep', 'rush', 'pierce', 'roar', 'regen', 'allout'];
 check('10体とも通常攻撃・必殺技の名前を持つ',
@@ -342,7 +349,7 @@ check('10体とも追加6技ぶんの名前を持つ',
 const namelessUsed = ENEMY_ORDER.flatMap(id => (api.TACTICS_ENEMY_ACTION_IDS[id] || [])
   .filter(a => !((TACTICS_ENEMY_DATA[id] || {}).actions || {})[a]).map(a => `${id}:${a}`));
 check('その敵が実際に使う技は、すべて名前を持っている', namelessUsed.length === 0, namelessUsed.join(' ') || '');
-// 共通の見出し(薙ぎ払い・連撃…)のままの敵が残っていないか。1体でも残ると名前を決めた意味が消える
+// 共通の見出し(間合い攻撃・連撃…)のままの敵が残っていないか。1体でも残ると名前を決めた意味が消える
 // ★咆哮・再生は variant を持たないので、category ではなく「咆哮している」「傷を癒している」へ落ちる。
 //   category だけを見ると、この2つの落ちを取りこぼす
 const stillCategory = ENEMY_ORDER.flatMap(id => {

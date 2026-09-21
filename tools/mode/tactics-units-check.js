@@ -6,7 +6,7 @@ const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分�
 //   ② 狙われた子だけがライフを減らし、0になったその子だけが倒れる
 //   ③ 倒れた子はカードを使えない。戻す手段は2つあり、戻るライフが違う
 //   ④ 全員倒れたときだけ全滅
-//   ⑤ 敵はライフの少ない子を狙いやすい。全体攻撃と薙ぎ払いは狙いを決めない
+//   ⑤ 敵はライフの少ない子を狙いやすい。全体攻撃と間合い攻撃は狙いを決めない
 //   ⑥ 壊れた値が来ても落ちない
 //   ⑦ バトル本体へ結線されている(盤面が slots と一緒に動き、予告へ狙いが乗る)
 //   ⑧ パーティのライフは盤面の合計。増減が正しく振り分けられる(段階5)
@@ -158,7 +158,7 @@ check('全体攻撃は「全員」と出す',
   api.withTacticsTarget({ type: 'ATTACK', targetsAll: true }, board, () => 0).targetName === '全員');
 check('名前が無い子でも呼び名が空にならない',
   !!api.withTacticsTarget(attack, [api.createTacticsUnit({ id: 'X', baseHp: 10 }), null, null, null], () => 0).targetName);
-check('薙ぎ払いは狙いを決めない（間合いで当たる相手が決まる）',
+check('間合い攻撃は狙いを決めない（間合いで当たる相手が決まる）',
   api.withTacticsTarget({ type: 'ATTACK', variant: 'sweep', sweepDist: 2 }, board, () => 0).targetSlot === undefined);
 
 // --- 実際に当たる相手 ---
@@ -166,9 +166,9 @@ check('単体狙いは1体だけに当たる',
   api.tacticsIntentTargets({ type: 'ATTACK', targetSlot: 2 }, board).join(',') === '2');
 check('全体攻撃は生きている全員に当たる',
   api.tacticsIntentTargets({ type: 'ATTACK', targetsAll: true }, boardOneDown).join(',') === '2');
-check('薙ぎ払いはその間合いにいる子へ当たる',
+check('間合い攻撃はその間合いにいる子へ当たる',
   api.tacticsIntentTargets({ type: 'ATTACK', variant: 'sweep', sweepDist: 2 }, board, 2).join(',') === '2');
-check('薙ぎ払いは間合いをずらせば誰にも当たらない',
+check('間合い攻撃は間合いをずらせば誰にも当たらない',
   api.tacticsIntentTargets({ type: 'ATTACK', variant: 'sweep', sweepDist: 2 }, board, 1).length === 0);
 check('倒れた子は狙いに残っていても当たらない',
   api.tacticsIntentTargets({ type: 'ATTACK', targetSlot: 0 }, boardOneDown).length === 0);
