@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3d519f5607c8d3ae
+// source-sha256: 0a0c88dbf91fa07c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a3e73b332d85bfe0
+// generated-sha256: c7edf516bc38a14b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-22 07:31"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-22 07:44"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -16153,10 +16153,14 @@ const TACTICS_ALLOUT_MULT = 0.4; // 全員へ。1体あたりは通常攻撃よ�
 // スエゾーの「眼力」。タクティクスバトルでは**その子が攻撃したターン**に引く(2026-09-20 ユーザー指示)。
 // 既存5モードは今までどおり編成から決まる確率で、敵のターンの頭に引く
 const TACTICS_INTIMIDATE_RATE = 0.4;
+// ★noticeLabel … 敵の絵の右上へ出す「何をする技か」の吹き出し(2026-09-22 ユーザー指示
+//   「右上に必殺技！みたいに吹き出し出せばいい。3連撃！とか」)。技名だけでは何が起きるか
+//   覚えられないので、予告のあいだ出しっぱなしにする。書かなければ category を使う
 const TACTICS_ACTION_DEFINITIONS = [{
   id: 'normal',
   type: 'ATTACK',
   category: '通常攻撃',
+  noticeLabel: '通常攻撃',
   weight: 30,
   multiplier: 1,
   hits: 1,
@@ -16168,6 +16172,7 @@ const TACTICS_ACTION_DEFINITIONS = [{
   id: 'charge',
   type: 'CHARGE',
   category: 'ためる',
+  noticeLabel: '必殺技をためる',
   weight: 12,
   multiplier: 0,
   hits: 0,
@@ -16179,6 +16184,7 @@ const TACTICS_ACTION_DEFINITIONS = [{
   id: 'special',
   type: 'SPECIAL',
   category: '必殺技',
+  noticeLabel: '必殺技',
   weight: 0,
   multiplier: 2.5,
   hits: 1,
@@ -16190,6 +16196,7 @@ const TACTICS_ACTION_DEFINITIONS = [{
   id: 'wait',
   type: 'WAIT',
   category: '特殊行動',
+  noticeLabel: '様子見',
   weight: 10,
   multiplier: 0,
   hits: 0,
@@ -16201,6 +16208,7 @@ const TACTICS_ACTION_DEFINITIONS = [{
   id: 'move',
   type: 'MOVE',
   category: '移動',
+  noticeLabel: '間合い移動',
   weight: 10,
   multiplier: 0,
   hits: 0,
@@ -16213,6 +16221,7 @@ const TACTICS_ACTION_DEFINITIONS = [{
   type: 'ATTACK',
   variant: 'sweep',
   category: '間合い攻撃',
+  noticeLabel: '間合い攻撃',
   weight: 14,
   multiplier: TACTICS_SWEEP_MULT,
   missMultiplier: TACTICS_SWEEP_MISS_MULT,
@@ -16226,6 +16235,7 @@ const TACTICS_ACTION_DEFINITIONS = [{
   type: 'ATTACK',
   variant: 'rush',
   category: '連撃',
+  noticeLabel: `${TACTICS_RUSH_HITS}連撃`,
   weight: 14,
   multiplier: TACTICS_RUSH_MULT,
   hits: TACTICS_RUSH_HITS,
@@ -16241,7 +16251,8 @@ const TACTICS_ACTION_DEFINITIONS = [{
 {
   id: 'pierceCharge',
   type: 'PIERCE_CHARGE',
-  category: '貫通の構え',
+  category: '貫通技準備',
+  noticeLabel: '貫通技準備',
   weight: 12,
   multiplier: 0,
   hits: 0,
@@ -16255,6 +16266,7 @@ const TACTICS_ACTION_DEFINITIONS = [{
   type: 'ATTACK',
   variant: 'pierce',
   category: '貫通撃',
+  noticeLabel: '貫通撃',
   weight: 0,
   multiplier: TACTICS_PIERCE_MULT,
   hits: 1,
@@ -16266,6 +16278,7 @@ const TACTICS_ACTION_DEFINITIONS = [{
   id: 'roar',
   type: 'ROAR',
   category: '攻撃力アップ',
+  noticeLabel: '攻撃力アップ',
   weight: 10,
   multiplier: 0,
   hits: 0,
@@ -16278,6 +16291,7 @@ const TACTICS_ACTION_DEFINITIONS = [{
   id: 'regen',
   type: 'REGEN',
   category: '再生',
+  noticeLabel: '回復',
   weight: 10,
   multiplier: 0,
   hits: 0,
@@ -16292,6 +16306,7 @@ const TACTICS_ACTION_DEFINITIONS = [{
   variant: 'allout',
   targetsAll: true,
   category: '全体攻撃',
+  noticeLabel: '全体攻撃',
   weight: 10,
   multiplier: TACTICS_ALLOUT_MULT,
   hits: 1,
@@ -16465,6 +16480,10 @@ const enemyActionDisplayName = (ent, def) => {
   }
   return def.type === 'MOVE' ? '間合い移動' : def.variant ? def.category : enemyActionLabel(ent, def.type);
 };
+// 敵の絵の右上へ出す「何をする技か」。技名(◯◯の構え・かえるのうた)だけでは
+// 何が起きるか覚えられないので、予告のあいだ添える(2026-09-22 ユーザー指示)。
+// 書いていない技(既存5モードの定義)は category がそのまま出る
+const enemyActionNoticeLabel = def => def && (def.noticeLabel || def.category) || '';
 const ENEMY_ACTION_ICONS = {
   ATTACK: '👊',
   CHARGE: '✨',
@@ -16503,6 +16522,7 @@ const chooseEnemyAction = (ent, currentDist, random = Math.random, state = {}) =
       label: `移動: ${RANGE_LABELS[targetDist]}`,
       targetDist,
       icon: ENEMY_ACTION_ICONS.MOVE,
+      notice: enemyActionNoticeLabel(selected),
       actionId: selected.id
     };
   }
@@ -16518,6 +16538,7 @@ const chooseEnemyAction = (ent, currentDist, random = Math.random, state = {}) =
       missValue: Math.floor(ent.atk * (selected.missMultiplier ?? 1)),
       label: `${enemyActionDisplayName(ent, selected)}: ${RANGE_LABELS[currentDist]}`,
       icon: TACTICS_VARIANT_ICONS.sweep,
+      notice: enemyActionNoticeLabel(selected),
       actionId: selected.id
     };
   }
@@ -16534,6 +16555,7 @@ const chooseEnemyAction = (ent, currentDist, random = Math.random, state = {}) =
       value: Math.floor(ent.atk * selected.multiplier),
       label: enemyActionDisplayName(ent, selected),
       icon: TACTICS_VARIANT_ICONS[selected.variant] || ENEMY_ACTION_ICONS[selected.type] || '⏳',
+      notice: enemyActionNoticeLabel(selected),
       actionId: selected.id
     };
   }
@@ -16542,6 +16564,7 @@ const chooseEnemyAction = (ent, currentDist, random = Math.random, state = {}) =
     value: Math.floor(ent.atk * selected.multiplier),
     label: enemyActionDisplayName(ent, selected),
     icon: ENEMY_ACTION_ICONS[selected.type] || '⏳',
+    notice: enemyActionNoticeLabel(selected),
     actionId: selected.id
   };
 };
@@ -38304,7 +38327,7 @@ function BattleScreen({
     className: "text-5xl drop-shadow-[0_0_20px_rgba(244,63,94,1)]"
   }, "\u2694\uFE0F"), /*#__PURE__*/React.createElement("div", {
     className: "px-3 py-1 rounded-lg bg-gradient-to-r from-rose-900 via-rose-600 to-rose-900 border-2 border-rose-200 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(244,63,94,0.9)]"
-  }, "\u8CAB \u901A \u306E \u69CB \u3048")), enemy && enemyNextIntent && !isBusy && !enemyAttackFx && enemyNextIntent.type === 'MOVE' &&
+  }, "\u8CAB \u901A \u6280 \u6E96 \u5099")), enemy && enemyNextIntent && !isBusy && !enemyAttackFx && enemyNextIntent.type === 'MOVE' &&
   /*#__PURE__*/
   // 画面ではなく遊ぶ列(最大600px)の右端に寄せる。left:50%から
   // 「列の半分ぶん右へ、自分の幅だけ左へ」動かすと、広い画面でも列の中に収まる
@@ -38610,14 +38633,26 @@ function BattleScreen({
       animation: 'specialFlash 600ms ease-out infinite',
       background: 'radial-gradient(circle, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 60%)'
     }
-  })), !ecoBattleView && enemy && enemyIntent && !isBusy && !enemyAttackFx && enemyIntent.type === 'ATTACK' && /*#__PURE__*/React.createElement("div", {
+  })), !ecoBattleView && enemy && enemyIntent && !isBusy && !enemyAttackFx && enemyIntent.type === 'ATTACK' && !Array.isArray(tacticsUnits) && /*#__PURE__*/React.createElement("div", {
     className: "absolute inset-0 pointer-events-none z-[9000] flex items-center justify-center"
   }, /*#__PURE__*/React.createElement("div", {
     className: "absolute -top-2 -right-1 text-4xl font-black text-yellow-300 drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]",
     style: {
       animation: 'idleExclaim 1100ms ease-in-out infinite'
     }
-  }, "\u2757")), !ecoBattleView && enemy && enemyAttackFx?.kind === 'charge' && /*#__PURE__*/React.createElement("div", {
+  }, "\u2757")), !ecoBattleView && enemy && enemyIntent && !isBusy && !enemyAttackFx && Array.isArray(tacticsUnits) && enemyIntent.notice && enemyIntent.type !== 'PIERCE_CHARGE' && (() => {
+    const noticeTone = enemyIntent.type === 'SPECIAL' ? 'bg-fuchsia-600 border-fuchsia-200 text-white' : enemyIntent.type === 'CHARGE' ? 'bg-amber-500 border-amber-100 text-black' : enemyIntent.type === 'PIERCE_CHARGE' ? 'bg-rose-600 border-rose-200 text-white' : enemyIntent.type === 'MOVE' ? 'bg-cyan-600 border-cyan-100 text-white' : enemyIntent.type === 'ROAR' ? 'bg-orange-600 border-orange-100 text-white' : enemyIntent.type === 'REGEN' ? 'bg-emerald-600 border-emerald-100 text-white' : enemyIntent.type === 'WAIT' ? 'bg-slate-600 border-slate-200 text-white' : 'bg-red-600 border-red-100 text-white';
+    return /*#__PURE__*/React.createElement("div", {
+      className: "absolute inset-0 pointer-events-none z-[9000]"
+    }, /*#__PURE__*/React.createElement("div", {
+      "data-enemy-notice": enemyIntent.notice,
+      className: `absolute -top-3 -right-2 max-w-[160px] truncate rounded-2xl border-2 px-2 py-0.5 font-black leading-tight shadow-[0_2px_10px_rgba(0,0,0,0.9)] ${noticeTone}`,
+      style: {
+        fontSize: '11px',
+        animation: 'idleExclaim 1100ms ease-in-out infinite'
+      }
+    }, enemyIntent.notice, "\uFF01"));
+  })(), !ecoBattleView && enemy && enemyAttackFx?.kind === 'charge' && /*#__PURE__*/React.createElement("div", {
     className: "absolute inset-0 pointer-events-none z-[9000] flex items-center justify-center overflow-visible"
   }, /*#__PURE__*/React.createElement("div", {
     className: "absolute -inset-6 rounded-full",

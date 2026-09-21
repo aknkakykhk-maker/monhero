@@ -395,7 +395,7 @@ check('最後のWAVEの敵は、6技とも技名で予告する',
 // ★ガードが効かない＝受け方が無い技なので、来ると分かってから距離や回避で備えられるようにした。
 //   構えを飛ばして直に出るようになると、その読み合いが丸ごと消える
 const pierceDef = tacticsDef('pierce'), pierceChargeDef = tacticsDef('pierceCharge');
-check('貫通の構えが行動表にある', pierceChargeDef.type === 'PIERCE_CHARGE', pierceChargeDef.category || 'なし');
+check('貫通技準備が行動表にある', pierceChargeDef.type === 'PIERCE_CHARGE', pierceChargeDef.category || 'なし');
 check('抽選に出るのは構えのほうで、貫通撃そのものは出ない',
   pierceChargeDef.weight > 0 && pierceDef.weight === 0,
   `構え${pierceChargeDef.weight} / 貫通撃${pierceDef.weight}`);
@@ -506,6 +506,41 @@ check('難易度は敵そのものが持ち歩く(実戦とSCANでずれない�
 check('実戦の行動表も難易度つきで引く',
   has('definitions:enemyActionDefinitionsFor(runMode,enemy?.id,enemy?.difficulty)')
     && has('definitions:enemyActionDefinitionsFor(runMode,newEnemy?.id,newEnemy?.difficulty)'));
+
+// --- 何をする技かを、敵の右上へ出す(2026-09-22 ユーザー指示) ---
+// 「他の技も効果が名前だけだと覚えられないから全部吹き出しで効果出しても良さそう」
+//   タクティクスの敵は技に固有の名前が付いている(「かえるのうた」「しこ踏み」)ので、
+//   名前だけでは連撃なのか回復なのか分からない。予告のあいだ効果を添える
+{
+  const defs = api.TACTICS_ACTION_DEFINITIONS;
+  const battleScreen = fs.readFileSync(path.join(root, 'monster-hero/src/parts/71-screen-battle.jsx'), 'utf8');
+  const missing = defs.filter(def => !def.noticeLabel);
+  check('タクティクスの全技に、何をする技かの言葉がある', missing.length === 0,
+    missing.map(def => def.id).join(',') || `${defs.length}技すべて`);
+  // ★ここはプレイヤーが覚えるための言葉。分類名(category)をそのまま出すと
+  //   「再生」「特殊行動」のように、何が起きるのか分からない言い方になる
+  const noticeOf = (id) => (defs.find(def => def.id === id) || {}).noticeLabel;
+  check('再生は「回復」と出す', noticeOf('regen') === '回復', String(noticeOf('regen')));
+  check('連撃はヒット数まで出す', noticeOf('rush') === `${api.TACTICS_RUSH_HITS}連撃`, String(noticeOf('rush')));
+  check('様子見は分かる言い方にする', noticeOf('wait') === '様子見', String(noticeOf('wait')));
+  // ★貫通は「構え」と「貫通技準備」の2つの言い方が混ざっていた(2026-09-22 ユーザー指摘
+  //   「予告は固有技で出て吹き出しで貫通の構えって出る…矛盾が感じる」)
+  check('貫通の予告は「貫通技準備」でそろえる',
+    noticeOf('pierceCharge') === '貫通技準備'
+      && (defs.find(def => def.id === 'pierceCharge') || {}).category === '貫通技準備',
+    String(noticeOf('pierceCharge')));
+  check('画面の大きな警告も同じ言葉にする',
+    battleScreen.includes('>貫 通 技 準 備</div>') && !battleScreen.includes('貫 通 の 構 え'));
+  // 予告へ持ち歩いて、画面が敵の右上へ出す
+  check('予告へ「何をする技か」を持たせる', has('notice:enemyActionNoticeLabel(selected)'));
+  check('敵の絵の右上へ出す',
+    battleScreen.includes('data-enemy-notice={enemyIntent.notice}')
+      && battleScreen.includes('absolute -top-3 -right-2'));
+  check('出すのはタクティクスだけ(既存5モードは今までどおり❗)',
+    battleScreen.includes("enemyIntent.type==='ATTACK'&&!Array.isArray(tacticsUnits)&&"));
+  check('中央に大きく出ているときは、右上へ重ねない',
+    battleScreen.includes("enemyIntent.notice&&enemyIntent.type!=='PIERCE_CHARGE'&&"));
+}
 
 console.log(failed ? `\nNG ${failed}件` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
