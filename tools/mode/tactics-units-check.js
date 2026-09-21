@@ -523,7 +523,8 @@ check('置けるかの判定も画面へ渡す', has('tacticsCanAssign={tacticsC
   // ★距離枠の上へ、下の枠と同じ4列でそろえて出す(2026-09-19 ユーザー依頼)。
   //   スロットの中の小さい帯は、小さすぎて読めないのでやめた
   check('距離枠の上に1体ずつの帯を出す',
-    hasScreen('<div data-tactics-party className="relative w-full grid grid-cols-4 gap-1">')
+    // ★末尾の ${...} は、タクティクスのれんしゅうで光らせるための印(2026-09-21)
+    hasScreen('<div data-tactics-party className={`relative w-full grid grid-cols-4 gap-1${battleTutorialSpotClass(\'tacticsParty\')}`}>')
       && hasScreen('data-tactics-hp={u?`${u.hp}/${u.maxHp}`:undefined}')
       && hasScreen('data-tactics-guts={u?`${u.guts}/${u.maxGuts}`:undefined}'));
   // ★ライフ・ガッツのポップアップ(吸収・ガードの余り・回復カード)は、合計の帯に重ねて出していた。

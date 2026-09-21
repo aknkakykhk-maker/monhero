@@ -505,7 +505,7 @@ function BattleScreen({
               ★帯は必ずアニメーションさせる(ライフ duration-1000 / ガッツ duration-500)。
                 合計の帯と同じ動きにしないと、回復もダメージも瞬間で増減して見える */}
           {Array.isArray(tacticsUnits)?(
-            <div data-tactics-party className="relative w-full grid grid-cols-4 gap-1">
+            <div data-tactics-party className={`relative w-full grid grid-cols-4 gap-1${battleTutorialSpotClass('tacticsParty')}`}>
               {/* ★ライフ・ガッツのポップアップ(吸収・ガードの余り・回復カードなど)は、
                   合計の帯に重ねて出していた。その帯をやめたときに出す場所ごと消えていたので、
                   1体ずつの帯の上へ置き直す(2026-09-20) */}
