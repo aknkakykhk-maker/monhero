@@ -9307,7 +9307,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       } else if (intent.type==='ATTACK'||intent.type==='SPECIAL') {
         // 新モードの攻撃は variant で受け方が変わる。type は ATTACK のままなので、
         // ダメージ計算・演出・予告の経路は既存のものをそのまま通る。
-        //   薙ぎ払い … 予告した間合いに敵がいなければ威力が落ちる(距離撃でずらせる)
+        //   間合い攻撃 … 予告した間合いに敵がいなければ威力が落ちる(距離撃でずらせる)
         //   連撃     … 0.6×3ヒット。ガードが受け止められるのは1ヒットぶんだけ
         //                (2026-09-20 ユーザー指示。もとはガードが手数ぶん＝3回ぶん効いていた)
         //   貫通撃   … ガードが効かない
@@ -9321,7 +9321,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // ★連撃は新モードの行動表にしかないので、ここ(既存モードの経路)には来ない。
         //   1ヒットぶんだけ受け止める数え方は、下の新モードの分岐が持つ
         const guardValue = intent.variant==='pierce' ? 0 : baseGuardValue;
-        if (sweptAway) { addPopup('薙ぎ払いをかわした！','hero','text-cyan-300 font-black text-xl drop-shadow-md'); await battleWait(600); }
+        if (sweptAway) { addPopup('間合い攻撃をかわした！','hero','text-cyan-300 font-black text-xl drop-shadow-md'); await battleWait(600); }
         else if (intent.variant==='pierce' && baseGuardValue>0) { addPopup('貫通！ ガードが効かない','enemy','text-rose-300 font-black text-xl drop-shadow-md'); await battleWait(600); }
         const incomingBeforeTurnReduction = getIncomingDamageBeforeTurnReduction(actingIntent);
         const incomingDmg = applyTurnDamageReduction(incomingBeforeTurnReduction);

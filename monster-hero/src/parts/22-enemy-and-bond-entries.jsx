@@ -50,7 +50,7 @@ const ENEMY_ACTION_DEFINITIONS = [
 // ★「様子を見ている(WAIT)」は入れない。5回に1回、敵が何もしないターンを作らないため。
 // ★どの行動にも「こちらの対抗手段」を1つ用意する。読めば受けられる、が成り立たないと
 //   ただ強いだけの難易度と変わらなくなる。
-//     薙ぎ払い → 距離撃で敵をずらす / 連撃 → ガード(1ヒットぶんだけ効く)＋回復 /
+//     間合い攻撃 → 距離撃で敵をずらす / 連撃 → ガード(1ヒットぶんだけ効く)＋回復 /
 //     貫通撃 → 回避・反射・スタン / 咆哮・再生 → スタンで潰す・削り切る /
 //     単体狙い → 狙われた子を守る・回復する / 全体攻撃 → 全員のライフを見て回復を回す
 // ★type は既存の ATTACK / SPECIAL をそのまま使い、違いは variant で持つ。
@@ -86,7 +86,7 @@ const TACTICS_ACTION_DEFINITIONS = [
   {id:'special',type:'SPECIAL',category:'必殺技',weight:0,multiplier:2.5,hits:1,range:'全間合い',condition:'ためた次のターンに必ず発動',cooldown:0,useLimit:null},
   {id:'wait',type:'WAIT',category:'特殊行動',weight:10,multiplier:0,hits:0,range:'全間合い',condition:'常時',cooldown:0,useLimit:null},
   {id:'move',type:'MOVE',category:'移動',weight:10,multiplier:0,hits:0,range:'現在以外の3間合い',condition:'移動先がある・移動した次のターンは選ばない',cooldown:0,useLimit:null},
-  {id:'sweep',type:'ATTACK',variant:'sweep',category:'薙ぎ払い',weight:14,multiplier:TACTICS_SWEEP_MULT,missMultiplier:TACTICS_SWEEP_MISS_MULT,hits:1,range:'予告した1間合い',condition:'予告した間合いに敵がいると大ダメージ。距離撃でずらせる',cooldown:0,useLimit:null},
+  {id:'sweep',type:'ATTACK',variant:'sweep',category:'間合い攻撃',weight:14,multiplier:TACTICS_SWEEP_MULT,missMultiplier:TACTICS_SWEEP_MISS_MULT,hits:1,range:'予告した1間合い',condition:'予告した間合いに敵がいると大ダメージ。距離撃でずらせる',cooldown:0,useLimit:null},
   {id:'rush',type:'ATTACK',variant:'rush',category:'連撃',weight:14,multiplier:TACTICS_RUSH_MULT,hits:TACTICS_RUSH_HITS,range:'全間合い',condition:'3ヒットに分かれ、ガードは1ヒットぶんしか効かない',cooldown:0,useLimit:null},
   // ★貫通撃は「ためる → 必殺技」と同じ形にしてある(2026-09-21 ユーザー指示
   //   「貫通は必殺級の技だからこれもためると同じように1ターン経由したほうがいい」)。
@@ -94,7 +94,7 @@ const TACTICS_ACTION_DEFINITIONS = [
   //   抽選に出るのは構えのほうで、貫通撃そのものは構えた次のターンに必ず出る(weight 0)
   {id:'pierceCharge',type:'PIERCE_CHARGE',category:'貫通の構え',weight:12,multiplier:0,hits:0,range:'全間合い',condition:'常時',effectText:'次のターンに貫通撃が確定で出る',cooldown:0,useLimit:null},
   {id:'pierce',type:'ATTACK',variant:'pierce',category:'貫通撃',weight:0,multiplier:TACTICS_PIERCE_MULT,hits:1,range:'全間合い',condition:'構えた次のターンに必ず発動。ガードが効かない',cooldown:0,useLimit:null},
-  {id:'roar',type:'ROAR',category:'咆哮',weight:10,multiplier:0,hits:0,range:'全間合い',condition:`重ねがけは${TACTICS_ROAR_MAX_STACKS}回まで`,effectText:`次のターンから敵の攻撃 ×${TACTICS_ROAR_ATK_RATE}（このWAVEのあいだ続く。${TACTICS_ROAR_MAX_STACKS}回重ねると最大 ×${(TACTICS_ROAR_ATK_RATE**TACTICS_ROAR_MAX_STACKS).toFixed(2)}）`,cooldown:0,useLimit:TACTICS_ROAR_MAX_STACKS},
+  {id:'roar',type:'ROAR',category:'攻撃力アップ',weight:10,multiplier:0,hits:0,range:'全間合い',condition:`重ねがけは${TACTICS_ROAR_MAX_STACKS}回まで`,effectText:`次のターンから敵の攻撃 ×${TACTICS_ROAR_ATK_RATE}（このWAVEのあいだ続く。${TACTICS_ROAR_MAX_STACKS}回重ねると最大 ×${(TACTICS_ROAR_ATK_RATE**TACTICS_ROAR_MAX_STACKS).toFixed(2)}）`,cooldown:0,useLimit:TACTICS_ROAR_MAX_STACKS},
   {id:'regen',type:'REGEN',category:'再生',weight:10,multiplier:0,hits:0,range:'全間合い',condition:'ライフが減っているときだけ',effectText:`敵が自分の最大ライフの${Math.round(TACTICS_REGEN_RATE*100)}%を回復する`,cooldown:0,useLimit:null},
   {id:'allout',type:'ATTACK',variant:'allout',targetsAll:true,category:'全体攻撃',weight:10,multiplier:TACTICS_ALLOUT_MULT,hits:1,range:'全員',condition:'立っている全員へ同時に当たる。狙いをかわせない',cooldown:0,useLimit:null},
 ];
@@ -215,7 +215,7 @@ const enemyActionLabel = (ent,type) => type==='ATTACK' ? (ent?.normal||'通常�
   : type==='CHARGE' ? '必殺技の準備をしている'
   : type==='PIERCE_CHARGE' ? '貫通撃の構えをとっている'
   : type==='SPECIAL' ? (ent?.special||'必殺技！')
-  : type==='ROAR' ? '咆哮している'
+  : type==='ROAR' ? '攻撃力を上げている'
   : type==='REGEN' ? '傷を癒している'
   : '様子を見ている';
 // その敵のその行動を、画面へ出すときの名前。タクティクスの敵は追加6技の名前を actions に持つ
@@ -246,7 +246,7 @@ const chooseEnemyAction = (ent,currentDist,random=Math.random,state={}) => {
     // 予告と実際の移動先が食い違うことはない
     return {type:selected.type,value:0,label:`移動: ${RANGE_LABELS[targetDist]}`,targetDist,icon:ENEMY_ACTION_ICONS.MOVE,actionId:selected.id};
   }
-  // 薙ぎ払いは「いまいる間合い」を薙ぐと予告する。実行までに距離撃でずらせば威力が落ちるので、
+  // 間合い攻撃は「いまいる間合い」を狙うと予告する。実行までに距離撃でずらせば威力が落ちるので、
   // 予告を見てからガッツを距離撃へ回すかどうかの判断になる。
   // 予告と実際に薙ぐ間合いが食い違わないよう、ここで決めた値だけを実行時に見る
   if(selected.variant==='sweep'){

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8b82f21a32febcb4
+// generated-sha256: 5d841c4c1256a287
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -92,7 +92,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-21 18:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-21 19:01"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -247,7 +247,7 @@ const TACTICS_MODE = Object.freeze({
     ['⚔️','編成','ベースモンもマスモンも自由に連れていけます。勇者モン1体と供モンで挑みます。'],
     ['❤️','ステータスの持ち方','ライフ・ちから・丈夫さ・ガッツを1体ずつ持ちます(クラシックバトルはパーティ全員ぶんの合計)。倒れた子はその場では戦えなくなり、ライフが満タンまで戻ると立ち上がります。全員が倒れたときだけ負けです。'],
     ['📈','WAVEのあいだの強化','クラシックバトルのチャレンジモードと同じで、WAVEをクリアするたびに強化フェーズがあります。敵がどんな技を使ってくるかを見てから、どこを伸ばすかを決められます。'],
-    ['👹','難しさ','難易度は通常9段階と極限5段階です。敵は通常攻撃と必殺技だけでなく、薙ぎ払い・連撃・貫通撃・咆哮など、それぞれ違う技を使ってきます。どの技が来るかは1ターン前に予告されるので、ガードで受けるか、間合いを変えるか、動きを止めるかをその場で選びます。'],
+    ['👹','難しさ','難易度は通常9段階と極限5段階です。敵は通常攻撃と必殺技だけでなく、間合い攻撃・連撃・貫通撃・攻撃力アップなど、それぞれ違う技を使ってきます。どの技が来るかは1ターン前に予告されるので、ガードで受けるか、間合いを変えるか、動きを止めるかをその場で選びます。'],
     ['💎','もらえる経験値とダイヤ','ブリーダー経験値・絆経験値・ダイヤは、どれも難易度の設定どおりの倍率です。モードによる上乗せはありません。'],
     ['🏆','スコアと記録','スコアはこのモード専用の全国ランキングに反映されます。自己ベストスコア・最高到達WAVE・クリア回数も専用の場所に残り、ほかのモードの記録は書き換わりません。'],
     ['🤝','供モンの加入','決まったWAVEで供モンが加わります。ただしタクティクスバトルでは、供モンが加わるとそのぶん敵も強くなります。強く育てた子を連れていくほど敵も手ごわくなるので、少ない人数のまま進むという選び方もできます。'],
@@ -295,7 +295,7 @@ const TACTICS_PRO_MODE = Object.freeze({
     ['⚔️','編成','育てたマスモンは1体も連れていけません。全員が素のベースモンです。積み上げたステータス・強化ポイント・固有技レベル・限界突破は、このモードでは一切使えません。'],
     ['❤️','ステータスの持ち方','ライフ・ちから・丈夫さ・ガッツを1体ずつ持ちます(クラシックバトルはパーティ全員ぶんの合計)。倒れた子はその場では戦えなくなり、ライフが満タンまで戻ると立ち上がります。全員が倒れたときだけ負けです。'],
     ['📈','WAVEのあいだの強化','WAVEをクリアするたびに強化フェーズがあります。素の状態から始まるぶん、誰をどこまで伸ばすかの判断がそのまま結果に出ます。'],
-    ['👹','難しさ','難易度は通常9段階と極限5段階です。敵は薙ぎ払い・連撃・貫通撃・咆哮などを使い分け、どの技が来るかは1ターン前に予告されます。育てた個体に頼れないぶん、読み合いの比重がいちばん大きいモードです。'],
+    ['👹','難しさ','難易度は通常9段階と極限5段階です。敵は間合い攻撃・連撃・貫通撃・攻撃力アップなどを使い分け、どの技が来るかは1ターン前に予告されます。育てた個体に頼れないぶん、読み合いの比重がいちばん大きいモードです。'],
     ['💎','もらえる経験値とダイヤ','絆経験値が3倍、ブリーダー経験値が1.5倍になります（難易度の倍率にさらにかかります）。ダイヤとスコアの倍率は難易度の設定どおりです。'],
     ['🏆','スコアと記録','スコアはこのモード専用の全国ランキングに反映されます。自己ベスト・最高到達WAVE・クリア回数も専用の場所に残り、ほかのモードの記録は書き換わりません。'],
     ['🤝','供モンの加入','始める前に供モンの候補を5体選びます。実際に加入候補として出るのは、その5体からランダムに選ばれた3体です。加わるとそのぶん敵も強くなります。'],
@@ -672,7 +672,7 @@ const BATTLE_SYSTEMS = Object.freeze([
     points: Object.freeze([
       Object.freeze(['❤️', 'ステータスの持ち方', '基本のバトルは全員ぶんを合わせた1組ですが、こちらはライフ・ちから・丈夫さ・ガッツを1体ずつ持ちます。供モンが加わっても合算されず、自分の値のまま並びます。攻撃はその子のちから、受けるダメージはその子の丈夫さで決まり、狙われた子だけが減ります。倒れた子はその場では戦えなくなり、全員が倒れたときだけ負けです。']),
       Object.freeze(['🎯', '敵の狙い', '敵の予告に「誰を狙うか」まで出ます。基本のバトルはライフが1本なので狙いという考え方がありませんが、こちらは1体ずつ持つので、誰が受けるかで結果が変わります。']),
-      Object.freeze(['🌀', '敵の技が増える', '薙ぎ払い・連撃・貫通撃・咆哮など、基本のバトルには無い技を使い分けます。ガードが効かない技もあるので、予告を見てから受け方を決めます。']),
+      Object.freeze(['🌀', '敵の技が増える', '間合い攻撃・連撃・貫通撃・攻撃力アップなど、基本のバトルには無い技を使い分けます。ガードが効かない技もあるので、予告を見てから受け方を決めます。']),
       Object.freeze(['✨', '勇者特性は持っている子のもの', '基本のバトルは勇者モンの特性だけが効きますが、こちらは連れてきた供モンの勇者特性も、それぞれの子に効きます（効き目は勇者モンと同じ）。ライガーの「俊足」ならライガーが狙われたときに避け、ゴーレムの「怪力」ならゴーレムが攻撃したときに乗ります。供モンを選ぶ意味が「ステータスの足し算」から「どの特性を連れていくか」に変わります。']),
       Object.freeze(['🃏', 'カードを使う子を選ぶ', 'カードは「誰が使うか」を選んでから出します。ガッツもその子のぶんから払うので、1体に任せきりにはできません。']),
       Object.freeze(['🤝', '供モンの加入', '供モンが加わると、そのぶん敵も強くなります。強く育てた子を連れていくほど手ごわくなるので、少ない人数のまま進むという選び方もできます。']),
@@ -9709,7 +9709,7 @@ const ENEMY_ACTION_DEFINITIONS = [
 // ★「様子を見ている(WAIT)」は入れない。5回に1回、敵が何もしないターンを作らないため。
 // ★どの行動にも「こちらの対抗手段」を1つ用意する。読めば受けられる、が成り立たないと
 //   ただ強いだけの難易度と変わらなくなる。
-//     薙ぎ払い → 距離撃で敵をずらす / 連撃 → ガード(1ヒットぶんだけ効く)＋回復 /
+//     間合い攻撃 → 距離撃で敵をずらす / 連撃 → ガード(1ヒットぶんだけ効く)＋回復 /
 //     貫通撃 → 回避・反射・スタン / 咆哮・再生 → スタンで潰す・削り切る /
 //     単体狙い → 狙われた子を守る・回復する / 全体攻撃 → 全員のライフを見て回復を回す
 // ★type は既存の ATTACK / SPECIAL をそのまま使い、違いは variant で持つ。
@@ -9745,7 +9745,7 @@ const TACTICS_ACTION_DEFINITIONS = [
   {id:'special',type:'SPECIAL',category:'必殺技',weight:0,multiplier:2.5,hits:1,range:'全間合い',condition:'ためた次のターンに必ず発動',cooldown:0,useLimit:null},
   {id:'wait',type:'WAIT',category:'特殊行動',weight:10,multiplier:0,hits:0,range:'全間合い',condition:'常時',cooldown:0,useLimit:null},
   {id:'move',type:'MOVE',category:'移動',weight:10,multiplier:0,hits:0,range:'現在以外の3間合い',condition:'移動先がある・移動した次のターンは選ばない',cooldown:0,useLimit:null},
-  {id:'sweep',type:'ATTACK',variant:'sweep',category:'薙ぎ払い',weight:14,multiplier:TACTICS_SWEEP_MULT,missMultiplier:TACTICS_SWEEP_MISS_MULT,hits:1,range:'予告した1間合い',condition:'予告した間合いに敵がいると大ダメージ。距離撃でずらせる',cooldown:0,useLimit:null},
+  {id:'sweep',type:'ATTACK',variant:'sweep',category:'間合い攻撃',weight:14,multiplier:TACTICS_SWEEP_MULT,missMultiplier:TACTICS_SWEEP_MISS_MULT,hits:1,range:'予告した1間合い',condition:'予告した間合いに敵がいると大ダメージ。距離撃でずらせる',cooldown:0,useLimit:null},
   {id:'rush',type:'ATTACK',variant:'rush',category:'連撃',weight:14,multiplier:TACTICS_RUSH_MULT,hits:TACTICS_RUSH_HITS,range:'全間合い',condition:'3ヒットに分かれ、ガードは1ヒットぶんしか効かない',cooldown:0,useLimit:null},
   // ★貫通撃は「ためる → 必殺技」と同じ形にしてある(2026-09-21 ユーザー指示
   //   「貫通は必殺級の技だからこれもためると同じように1ターン経由したほうがいい」)。
@@ -9753,7 +9753,7 @@ const TACTICS_ACTION_DEFINITIONS = [
   //   抽選に出るのは構えのほうで、貫通撃そのものは構えた次のターンに必ず出る(weight 0)
   {id:'pierceCharge',type:'PIERCE_CHARGE',category:'貫通の構え',weight:12,multiplier:0,hits:0,range:'全間合い',condition:'常時',effectText:'次のターンに貫通撃が確定で出る',cooldown:0,useLimit:null},
   {id:'pierce',type:'ATTACK',variant:'pierce',category:'貫通撃',weight:0,multiplier:TACTICS_PIERCE_MULT,hits:1,range:'全間合い',condition:'構えた次のターンに必ず発動。ガードが効かない',cooldown:0,useLimit:null},
-  {id:'roar',type:'ROAR',category:'咆哮',weight:10,multiplier:0,hits:0,range:'全間合い',condition:`重ねがけは${TACTICS_ROAR_MAX_STACKS}回まで`,effectText:`次のターンから敵の攻撃 ×${TACTICS_ROAR_ATK_RATE}（このWAVEのあいだ続く。${TACTICS_ROAR_MAX_STACKS}回重ねると最大 ×${(TACTICS_ROAR_ATK_RATE**TACTICS_ROAR_MAX_STACKS).toFixed(2)}）`,cooldown:0,useLimit:TACTICS_ROAR_MAX_STACKS},
+  {id:'roar',type:'ROAR',category:'攻撃力アップ',weight:10,multiplier:0,hits:0,range:'全間合い',condition:`重ねがけは${TACTICS_ROAR_MAX_STACKS}回まで`,effectText:`次のターンから敵の攻撃 ×${TACTICS_ROAR_ATK_RATE}（このWAVEのあいだ続く。${TACTICS_ROAR_MAX_STACKS}回重ねると最大 ×${(TACTICS_ROAR_ATK_RATE**TACTICS_ROAR_MAX_STACKS).toFixed(2)}）`,cooldown:0,useLimit:TACTICS_ROAR_MAX_STACKS},
   {id:'regen',type:'REGEN',category:'再生',weight:10,multiplier:0,hits:0,range:'全間合い',condition:'ライフが減っているときだけ',effectText:`敵が自分の最大ライフの${Math.round(TACTICS_REGEN_RATE*100)}%を回復する`,cooldown:0,useLimit:null},
   {id:'allout',type:'ATTACK',variant:'allout',targetsAll:true,category:'全体攻撃',weight:10,multiplier:TACTICS_ALLOUT_MULT,hits:1,range:'全員',condition:'立っている全員へ同時に当たる。狙いをかわせない',cooldown:0,useLimit:null},
 ];
@@ -9874,7 +9874,7 @@ const enemyActionLabel = (ent,type) => type==='ATTACK' ? (ent?.normal||'通常�
   : type==='CHARGE' ? '必殺技の準備をしている'
   : type==='PIERCE_CHARGE' ? '貫通撃の構えをとっている'
   : type==='SPECIAL' ? (ent?.special||'必殺技！')
-  : type==='ROAR' ? '咆哮している'
+  : type==='ROAR' ? '攻撃力を上げている'
   : type==='REGEN' ? '傷を癒している'
   : '様子を見ている';
 // その敵のその行動を、画面へ出すときの名前。タクティクスの敵は追加6技の名前を actions に持つ
@@ -9905,7 +9905,7 @@ const chooseEnemyAction = (ent,currentDist,random=Math.random,state={}) => {
     // 予告と実際の移動先が食い違うことはない
     return {type:selected.type,value:0,label:`移動: ${RANGE_LABELS[targetDist]}`,targetDist,icon:ENEMY_ACTION_ICONS.MOVE,actionId:selected.id};
   }
-  // 薙ぎ払いは「いまいる間合い」を薙ぐと予告する。実行までに距離撃でずらせば威力が落ちるので、
+  // 間合い攻撃は「いまいる間合い」を狙うと予告する。実行までに距離撃でずらせば威力が落ちるので、
   // 予告を見てからガッツを距離撃へ回すかどうかの判断になる。
   // 予告と実際に薙ぐ間合いが食い違わないよう、ここで決めた値だけを実行時に見る
   if(selected.variant==='sweep'){
@@ -32692,7 +32692,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       } else if (intent.type==='ATTACK'||intent.type==='SPECIAL') {
         // 新モードの攻撃は variant で受け方が変わる。type は ATTACK のままなので、
         // ダメージ計算・演出・予告の経路は既存のものをそのまま通る。
-        //   薙ぎ払い … 予告した間合いに敵がいなければ威力が落ちる(距離撃でずらせる)
+        //   間合い攻撃 … 予告した間合いに敵がいなければ威力が落ちる(距離撃でずらせる)
         //   連撃     … 0.6×3ヒット。ガードが受け止められるのは1ヒットぶんだけ
         //                (2026-09-20 ユーザー指示。もとはガードが手数ぶん＝3回ぶん効いていた)
         //   貫通撃   … ガードが効かない
@@ -32706,7 +32706,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // ★連撃は新モードの行動表にしかないので、ここ(既存モードの経路)には来ない。
         //   1ヒットぶんだけ受け止める数え方は、下の新モードの分岐が持つ
         const guardValue = intent.variant==='pierce' ? 0 : baseGuardValue;
-        if (sweptAway) { addPopup('薙ぎ払いをかわした！','hero','text-cyan-300 font-black text-xl drop-shadow-md'); await battleWait(600); }
+        if (sweptAway) { addPopup('間合い攻撃をかわした！','hero','text-cyan-300 font-black text-xl drop-shadow-md'); await battleWait(600); }
         else if (intent.variant==='pierce' && baseGuardValue>0) { addPopup('貫通！ ガードが効かない','enemy','text-rose-300 font-black text-xl drop-shadow-md'); await battleWait(600); }
         const incomingBeforeTurnReduction = getIncomingDamageBeforeTurnReduction(actingIntent);
         const incomingDmg = applyTurnDamageReduction(incomingBeforeTurnReduction);
