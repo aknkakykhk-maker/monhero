@@ -42,6 +42,16 @@ function BattleScreen({
   // ★いくつ付いても高さが変わらないようにするための状態。ここが無いと、
   //   札が3行4行に伸びて敵の絵・緊急のボタン・与ダメの数字を押し出す
   const [buffDetail, setBuffDetail] = useState(false);
+  // ★いま狙われている枠(2026-09-21 ユーザー指摘「誰に攻撃か分からない」)。
+  //   間合い攻撃は相手を1体決めず「予告した間合いに立っている子」へ当たるので、
+  //   ほかの技と違って targetName を持たない。予告を見ても間合いしか分からなかった。
+  // ★数え方は本番と同じ tacticsIntentTargets を通す。別に書くと、距離撃でずらしたときに
+  //   予告と実際がずれる(「当たらないはずの枠が光る」)
+  const aimedSlots = Array.isArray(tacticsUnits) && enemyIntent
+    ? tacticsIntentTargets(enemyIntent, tacticsUnits, enemyDist) : [];
+  const aimedName = enemyIntent?.targetName
+    || (aimedSlots.length ? aimedSlots.map(idx => tacticsTargetName(tacticsUnits, idx)).join('・')
+      : (enemyIntent?.variant === 'sweep' ? 'だれもいない' : ''));
   return (
 
       <div className="flex-1 flex flex-col h-full relative" data-battle-speed={battleSpeed} data-eco-view={ultraBattleView?'ultra':liteBattleView?'lite':'off'}>
@@ -405,7 +415,7 @@ function BattleScreen({
             // 余りの高さは、この下のバフ帯の mt-auto がまとめて吸う。
             // data-enemy-intent は検査の手がかり。どの行動が予告されているかは抽選なので、
             // 画面の文字から探すと「今回はためるだった」で落ちる
-            return <div data-enemy-intent className={`mt-1 mb-1 mx-auto w-fit max-w-full border p-1 px-4 rounded-full flex items-center gap-1.5 animate-pulse z-[45] shadow-lg shrink-0${battleTutorialSpotClass('enemyIntent')} ${focusedCard?'invisible':'visible'} ${tone}`}><Target size={12}/><div className="text-[10px] font-black uppercase tracking-tight">{enemyIntent.label}{previewHits>1?` ${previewHits}連撃`:''}{enemyIntent.targetName?` 🎯${enemyIntent.targetName}`:''}{rawDmg>0?` (予定: ${plannedDmg})`:''}</div></div>;
+            return <div data-enemy-intent className={`mt-1 mb-1 mx-auto w-fit max-w-full border p-1 px-4 rounded-full flex items-center gap-1.5 animate-pulse z-[45] shadow-lg shrink-0${battleTutorialSpotClass('enemyIntent')} ${focusedCard?'invisible':'visible'} ${tone}`}><Target size={12}/><div className="text-[10px] font-black uppercase tracking-tight">{enemyIntent.label}{previewHits>1?` ${previewHits}連撃`:''}{aimedName?` 🎯${aimedName}`:''}{rawDmg>0?` (予定: ${plannedDmg})`:''}</div></div>;
           })()}
         {/* 強化の札(2026-09-19・ユーザー指摘「バフデバフ欄が見にくくなってる」)。
             もとは敵のいる main の中に置いていたが、main は overflow-y-auto なので、
@@ -725,7 +735,10 @@ function BattleScreen({
               const distanceBroken=distanceBreakLevel>0;
               const distanceBreakPercent=100*(0.5**distanceBreakLevel);
               const distanceBreakRoman=['','I','II','III','IV'][distanceBreakLevel]||String(distanceBreakLevel);
-              return(<button key={i} data-slot-index={i} data-distance-broken={distanceBroken?'true':undefined} data-distance-break-level={distanceBroken?distanceBreakLevel:undefined} aria-label={`${RANGE_LABELS[i]}距離${distanceBroken?`（BREAK Lv${distanceBreakLevel}・与ダメージ${distanceBreakPercent}%）`:''}`} onClick={()=>{
+              // ★この枠が狙われているか(2026-09-21 ユーザー指摘「誰に攻撃か分からない」)。
+              //   名前だけでは4つの枠から自分で探すことになるので、枠のほうにも印を出す
+              const slotAimed=aimedSlots.includes(i);
+              return(<button key={i} data-slot-index={i} data-tactics-aimed={slotAimed?'true':undefined} data-distance-broken={distanceBroken?'true':undefined} data-distance-break-level={distanceBroken?distanceBreakLevel:undefined} aria-label={`${RANGE_LABELS[i]}距離${distanceBroken?`（BREAK Lv${distanceBreakLevel}・与ダメージ${distanceBreakPercent}%）`:''}`} onClick={()=>{
                 if(isBusy||autoBattleRef.current)return;
                 if(pendingCard!=null && canAssign){
                   setCardAssignments(p=>({...p,[pendingCard]:i}));
@@ -736,6 +749,12 @@ function BattleScreen({
                   setTimeout(()=>{ setSlotSettle(null); }, 500);
                 }
               }} disabled={isBusy||autoBattle} className={`relative rounded-xl border-2 flex flex-col items-stretch overflow-visible transition-all ${RANGE_STYLES[i].bg} ${distanceBroken?'border-red-400':' '+RANGE_STYLES[i].border} ${(canAssign||(dragState?.active&&dragOverSlot===i))?'ring-2 ring-yellow-400 scale-105 z-10 shadow-lg animate-pulse':'opacity-100'} ${assignedCount>0?'ring-2 ring-indigo-500':''} ${dragState?.active&&dragOverSlot===i?'ring-4 ring-green-400 scale-110':''} ${slotSettle===i?'ring-4 ring-white':''}`} style={isAnimating?{zIndex:9999, animation:attackMotionAnimation(attackAnim)}:(distanceBroken?{backgroundColor:distanceBreakLevel>=2?'rgb(12,2,5)':'rgb(24,5,25)',boxShadow:`inset 0 0 0 ${Math.min(4,distanceBreakLevel+1)}px rgba(248,113,113,.95), inset 0 0 ${28+distanceBreakLevel*8}px rgba(76,5,25,.98), 0 0 ${9+distanceBreakLevel*4}px rgba(220,38,38,.65)`}:(slotSettle===i?{animation:'slotSettle 400ms ease-out'}:undefined))}>
+                {/* ★狙われている枠。カードを置ける黄色の輪・ドラッグ中の緑の輪と重ならないよう、
+                    輪ではなく枠の内側の線で出す(BREAKと同じ出し方)。全体攻撃なら全員に付く */}
+                {slotAimed&&<>
+                  <div data-tactics-aimed-ring className="absolute inset-[2px] rounded-lg border-2 border-red-400/80 pointer-events-none z-[44] animate-pulse" style={{boxShadow:'inset 0 0 10px rgba(239,68,68,.55)'}}></div>
+                  <div className="absolute -top-1.5 -right-1 z-[66] rounded-full border border-red-300 bg-red-950 px-1 py-0.5 text-[9px] font-black leading-none text-red-100 shadow-[0_0_8px_rgba(239,68,68,.85)] animate-pulse">🎯</div>
+                </>}
                 {distanceBroken&&<>
                   <div className="absolute inset-0 rounded-lg pointer-events-none z-[15]" style={{background:`repeating-linear-gradient(${135+distanceBreakLevel*12}deg,rgba(0,0,0,.12) 0 ${Math.max(3,8-distanceBreakLevel)}px,rgba(127,29,29,${Math.min(.8,.28+distanceBreakLevel*.14)}) ${Math.max(4,9-distanceBreakLevel)}px ${Math.max(5,10-distanceBreakLevel)}px),radial-gradient(circle at 50% 40%,rgba(${distanceBreakLevel>=2?'69,10,10':'88,28,135'},.55),rgba(5,0,2,.9))`}}></div>
                   <div className="absolute inset-[2px] rounded-lg border border-red-300/80 pointer-events-none z-[45]" style={{boxShadow:'inset 0 0 12px rgba(239,68,68,.7)'}}></div>

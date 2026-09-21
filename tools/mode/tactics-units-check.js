@@ -599,9 +599,28 @@ check('置けるかの判定も画面へ渡す', has('tacticsCanAssign={tacticsC
       && hasScreen("data-card-usable={isSelectable?'true':'false'}"));
 }
 
-check('予告の吹き出しに狙いを出す',
-  fs.readFileSync(path.join(root, 'monster-hero/src/parts/71-screen-battle.jsx'), 'utf8')
-    .includes("{enemyIntent.targetName?` 🎯${enemyIntent.targetName}`:''}"));
+// --- 誰が狙われているか(2026-09-21 ユーザー指摘「誰に攻撃か分からない」) ---
+// ★間合い攻撃(sweep)だけは相手を1体決めず「予告した間合いに立っている子」へ当たるので、
+//   ほかの技と違って targetName を持たない。targetName だけを見ていたころは、
+//   間合い攻撃の予告が「突進: 中 (予定: 186)」で終わり、誰に来るのか読めなかった
+{
+  const battleScreen = fs.readFileSync(path.join(root, 'monster-hero/src/parts/71-screen-battle.jsx'), 'utf8');
+  const inScreen = (needle) => battleScreen.includes(needle);
+  check('予告の吹き出しに狙いを出す', inScreen("{aimedName?` 🎯${aimedName}`:''}"));
+  // ★数え方は本番と同じ関数を通す。別に書くと、距離撃でずらしたときに予告と実際がずれる
+  check('狙いの数え方は本番と同じ関数を通す',
+    inScreen('tacticsIntentTargets(enemyIntent, tacticsUnits, enemyDist)'));
+  check('間合い攻撃で誰もいないときは、それが分かる',
+    inScreen("(enemyIntent?.variant === 'sweep' ? 'だれもいない' : '')"));
+  // ★名前だけでは4つの枠から自分で探すことになる。枠のほうにも印を出す
+  check('狙われている枠に印を出す',
+    inScreen("data-tactics-aimed={slotAimed?'true':undefined}")
+      && inScreen('const slotAimed=aimedSlots.includes(i);')
+      && inScreen('data-tactics-aimed-ring'));
+  // ★輪(ring)で出すと、カードを置ける黄色の輪・ドラッグ中の緑の輪と重なって読めなくなる
+  check('狙われている印は輪ではなく枠の内側の線で出す',
+    !inScreen("${slotAimed?'ring-2 ring-red-500':''}"));
+}
 
 // --- ㉔ ガッツの合計と、1ターンに選べる枚数(2026-09-20 ユーザー指示) ---
 // ★ユーザーの問い「行動回数ってガッツも見るようにしてるんだっけ？」から2つ決まった。
