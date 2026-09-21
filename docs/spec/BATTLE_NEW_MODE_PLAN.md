@@ -463,13 +463,25 @@ const modeBgm = isTacticsMode(runMode)
 - 画面は **`eventReplayList()` を通して**一覧を取る。3か所（回想の一覧・再生・プロフィール）
   すべてがここを通る。**生の `EVENT_REPLAYS` を直接見ない**（1か所でも直接見ると、そこだけ素通りする）
 
+### 会話中のBGM（2026-09-21 ユーザー指示「イベントBGMはこれにしよう」）
+
+**Close To Your Heart -BGM-**（`close_to_your_heart_alt`）。すでに入っている
+Close To Your Heart の**別テイク**で、長さも違う（2分04秒 / もとは2分00秒）。
+
+- `EVENT_BGM_SCENES` へ `tactics_intro:'tacticsIntroEvent'`
+- `DEFAULT_BGM_ARRANGEMENT` へ `tacticsIntroEvent:'close_to_your_heart_alt'`
+- **BGMアレンジの設定欄へは出さない。** 項目名から、まだ見せていないモードの名前が見える。
+  `symphonyEvent` も同じで、枠だけ持って設定欄には並べていない。
+  公開後に並べるかは、そのとき決める
+
+> ⚠️ 既定曲が `BGM_TRACKS` に無いと、会話のあいだ**無音になる**（見つからない曲は鳴らせない）。
+> `tactics-intro-story-check.js` が、枠・既定曲・音源の3つがそろっているかを見る。
+
 ### まだやっていないこと（β版を出すときに足す）
 
 - **本編で1度だけ流す導線。** いまは `alwaysUnlocked: true` で「公開したら回想から
   いつでも見られる」だけ。どの画面で流すか（仕組み選択でタクティクスを初めて開いたとき等）は
   公開のしかたが決まってから
-- **イベントBGMの枠。** `EVENT_BGM_SCENES` へは足していないので、会話中は画面のBGMが鳴り続ける。
-  専用の曲を当てるなら枠を1つ足す（`DEFAULT_BGM_ARRANGEMENT` にも既定曲が要る）
 - 更新履歴・助手の告知（`assistantNotice:{type:'mode'}`）
 
 ## 6. 供モンの加入
@@ -557,7 +569,7 @@ const modeBgm = isTacticsMode(runMode)
 | 37 | **中ボス戦とボス戦のBGMを決めた**（ボス戦は受け取った1曲、中ボス戦はすでにある曲を指すだけ。通常戦はチャレンジと同じ） | — |
 | 38 | **Expert 以上に解放条件を付けた**（1つ前をクリアで次が開く。タクティクスの3モードだけで、クラシックは据え置き） | — |
 | 39 | **通常戦とボス戦のBGMを差し替えた**（戦場の疾風／魔窟の旋律。ジャケットは今後モンヒロビートへ入れるとき用に預かった） | — |
-| 40 | **β公開の導入会話を作った**（助手4人・15行。公開するまでは回想の一覧にも出さない） | — |
+| 40 | **β公開の導入会話を作った**（助手4人・15行。会話中のBGMも決めた。公開するまでは回想の一覧にも出さない） | — |
 
 検査: `tools/mode/tactics-enemy-actions-check.js`（定義と実装の対応）、
 `tools/mode/tactics-units-check.js`（1体ぶんの値・盤面・合計・ライフの振り分け・本体への結線）、

@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c6842602b9fe4098
+// source-sha256: 63ee2f664bb14f6d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: bc063fa2997c3a57
+// generated-sha256: 9bdcdd4911b5cf71
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-21 18:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-21 18:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5318,6 +5318,16 @@ const BGM_TRACKS = [{
   gain: 1,
   loop: true
 },
+// 同じ曲のBGM版(2026-09-21 ユーザー指示「イベントBGMはこれにしよう」)。別テイクなので
+// 長さも違う(2分04秒 / もとは2分00秒)。タクティクスの導入会話でかける
+{
+  id: 'close_to_your_heart_alt',
+  name: 'Close To Your Heart -BGM-',
+  creator: 'オリジナル',
+  src: 'audio/bgm-close-to-your-heart-alt.mp3',
+  gain: 1,
+  loop: true
+},
 // ボス戦2曲のリミックス(2026-09-05・ユーザー提供)。モンビー用の別の曲として足す。
 // 元の曲・ショート版はそのまま残すので、バトルのBGMも今までの譜面も変わらない。
 {
@@ -5772,6 +5782,7 @@ const DEFAULT_BGM_ARRANGEMENT = Object.freeze({
   speciesBattle: 'original_battle',
   speciesDullahan: 'original_dullahan',
   speciesMoo: 'original_boss',
+  tacticsIntroEvent: 'close_to_your_heart_alt',
   tacticsBattle: 'senjou_no_shippuu',
   tacticsMidBoss: 'melo_the_city_beneath_the_comets',
   tacticsBoss: 'makutsu_no_senritsu',
@@ -5848,7 +5859,8 @@ const EVENT_BGM_SCENES = Object.freeze({
   monbeat_cup_2026_09: 'monbeatCupEvent',
   monbeat_cup_2026_09_thanks: 'monbeatCupEvent',
   symphony_2026_09_17: 'symphonyEvent',
-  symphony_2026_09_17_thanks: 'symphonyEvent'
+  symphony_2026_09_17_thanks: 'symphonyEvent',
+  tactics_intro: 'tacticsIntroEvent'
 });
 const BGM_PRO_DEFAULT_MIGRATION_KEY = 'mh_bgm_pro_default_migrated_v1';
 const BGM_PRO_PREVIOUS_DEFAULTS = Object.freeze({
@@ -6029,6 +6041,7 @@ const Audio_ = (() => {
     "audio/bgm-boss-ichika.mp3": "9c8bda857de7",
     "audio/bgm-boss.mp3": "a11bc8056d79",
     "audio/bgm-clear-ichika.mp3": "cf8bc41a228c",
+    "audio/bgm-close-to-your-heart-alt.mp3": "86bbdc8872f1",
     "audio/bgm-close-to-your-heart.mp3": "990493074a91",
     "audio/bgm-crossing-field.mp3": "1e2e7cc1d3d5",
     "audio/bgm-dullahan-clockwork-alt.mp3": "9e934451770b",

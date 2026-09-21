@@ -80,6 +80,24 @@ check('一覧・再生・プロフィールの3か所とも同じ入口を使う
   (compact.match(/eventReplayList\(\)/g) || []).length === 3,
   `${(compact.match(/eventReplayList\(\)/g) || []).length} か所`);
 
+// --- ③-2 会話中に鳴るBGM ---
+// 枠を作らないと、会話のあいだ画面のBGMがそのまま鳴り続ける
+const EVENT_BGM_SLOT = 'tacticsIntroEvent';
+const EVENT_BGM_TRACK = 'close_to_your_heart_alt';
+check('会話にBGMの枠が割り当ててある',
+  new RegExp(`${EVENT_ID}:'${EVENT_BGM_SLOT}'`).test(compact));
+check('枠の既定曲が決まっている', compact.includes(`${EVENT_BGM_SLOT}:'${EVENT_BGM_TRACK}'`));
+// ★既定曲が BGM_TRACKS に無いと、会話のあいだ無音になる（見つからない曲は鳴らせない）
+const bgmEntry = (compact.match(new RegExp(`\\{id:'${EVENT_BGM_TRACK}'[^}]*\\}`)) || [''])[0];
+check('既定曲が曲の一覧に登録されている', bgmEntry.includes(`id:'${EVENT_BGM_TRACK}'`), bgmEntry.slice(0, 80));
+const bgmSrc = (bgmEntry.match(/src:'([^']*)'/) || [])[1] || '';
+check('既定曲の音源がある', !!bgmSrc && fs.existsSync(path.join(ROOT, 'monster-hero', bgmSrc)), bgmSrc);
+// ★BGMアレンジの設定欄へは出さない。項目名から、まだ見せていないモードの名前が見える
+const eventTabItems = (compact.match(/id:'event',label:'イベント',items:\[([^\]]*(?:\][^\]]*)*?)\]\}/) || [])[1] || '';
+check('BGMアレンジの設定欄には、まだ出していない',
+  !eventTabItems.includes(EVENT_BGM_SLOT),
+  eventTabItems.includes(EVENT_BGM_SLOT) ? '出ています' : '');
+
 // --- ④ いまは公開していない ---
 const released = /const TACTICS_MODE_PUBLIC_RELEASE = true/.test(source)
   || /const TACTICS_BETA_PRO_RELEASE = true/.test(source);
