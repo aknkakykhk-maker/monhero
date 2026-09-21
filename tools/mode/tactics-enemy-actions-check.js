@@ -413,6 +413,15 @@ check('実装側が構えを受け止めている(ダメージを出さず、演
 check('構えを止めたら、予約していた貫通撃を捨てる',
   has("if (reserved && reserved.variant === 'pierce' && !(performed && executedIntent?.type === 'PIERCE_CHARGE')) reserved = null;"));
 check('画面にも構えの警告を出す', screen.includes("enemyIntent.type==='PIERCE_CHARGE'"));
+// ★貫通撃の倍率は通常攻撃より低いままにする(2026-09-21 ユーザー判断)。
+//   「基本相手の攻撃はガードで防げるけど貫通はおならとか反射で対策しないとだから強くするのはない」。
+//   ガードも距離も効かない技なので、備え(スタン・回避・反射)を持たない編成には手の打ちようがない。
+//   構えを挟むぶん1ターンあたりが軽くなるが、それを理由に上げ直さないための歯止め
+check('貫通撃の倍率は通常攻撃より低い（備えが要る技なので上げない）',
+  api.TACTICS_PIERCE_MULT < normalMult,
+  `貫通×${api.TACTICS_PIERCE_MULT} / 通常×${normalMult}`);
+check('貫通撃は全間合いから来る（間合いで外せないので、なおさら上げない）',
+  pierceDef.range === '全間合い', pierceDef.range);
 
 // --- ⑫ 難易度が上がると使える技が増える(2026-09-21 ユーザー指示) ---
 const DELTA = api.TACTICS_DIFFICULTY_ACTION_DELTA;
