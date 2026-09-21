@@ -63,7 +63,7 @@ const ENEMY_ACTION_DEFINITIONS = [
 const TACTICS_SWEEP_MULT = 1.2;       // 予告した間合いに敵がいるとき
 const TACTICS_SWEEP_MISS_MULT = 0.4;  // 距離撃などでずらしたとき
 const TACTICS_RUSH_MULT = 1.2;        // 0.4×3ヒット。ガードは1ヒットぶんしか効かない
-const TACTICS_RUSH_HITS = 3;          // 威力をこの数で割ってヒットに分ける。ガードが届くのは1ヒットだけ
+const TACTICS_RUSH_HITS = 3;          // 威力をこの数で割ってヒットに分ける。ガードは1枚につき1ヒットを受け止める
 const TACTICS_PIERCE_MULT = 0.8;      // ガードを無視する。効かないぶん倍率で加減する
 const TACTICS_ROAR_ATK_RATE = 1.5;    // 次のターンから敵の攻撃が上がる
 const TACTICS_ROAR_MAX_STACKS = 2;    // 重ねがけの上限
@@ -87,7 +87,7 @@ const TACTICS_ACTION_DEFINITIONS = [
   {id:'wait',type:'WAIT',category:'特殊行動',weight:10,multiplier:0,hits:0,range:'全間合い',condition:'常時',cooldown:0,useLimit:null},
   {id:'move',type:'MOVE',category:'移動',weight:10,multiplier:0,hits:0,range:'現在以外の3間合い',condition:'移動先がある・移動した次のターンは選ばない',cooldown:0,useLimit:null},
   {id:'sweep',type:'ATTACK',variant:'sweep',category:'間合い攻撃',weight:14,multiplier:TACTICS_SWEEP_MULT,missMultiplier:TACTICS_SWEEP_MISS_MULT,hits:1,range:'予告した1間合い',condition:'予告した間合いに敵がいると大ダメージ。距離撃でずらせる',cooldown:0,useLimit:null},
-  {id:'rush',type:'ATTACK',variant:'rush',category:'連撃',weight:14,multiplier:TACTICS_RUSH_MULT,hits:TACTICS_RUSH_HITS,range:'全間合い',condition:'3ヒットに分かれ、ガードは1ヒットぶんしか効かない',cooldown:0,useLimit:null},
+  {id:'rush',type:'ATTACK',variant:'rush',category:'連撃',weight:14,multiplier:TACTICS_RUSH_MULT,hits:TACTICS_RUSH_HITS,range:'全間合い',condition:`${TACTICS_RUSH_HITS}ヒットに分かれる。ガードは1枚につき1ヒットを受け止める`,cooldown:0,useLimit:null},
   // ★貫通撃は「ためる → 必殺技」と同じ形にしてある(2026-09-21 ユーザー指示
   //   「貫通は必殺級の技だからこれもためると同じように1ターン経由したほうがいい」)。
   //   ガードが効かない＝受け方が無い技なので、来ると分かってから距離や回避で備えられるようにする。

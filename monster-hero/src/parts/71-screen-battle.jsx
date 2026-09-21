@@ -378,7 +378,8 @@ function BattleScreen({
             // ★targetSlot が無いモードでは今までどおりパーティの値で出る
             const aimedSlot=Number.isInteger(enemyIntent.targetSlot)?enemyIntent.targetSlot:null;
             const rawDmg=getIncomingDamageBeforeTurnReduction(enemyIntent,aimedSlot);
-            let previewGuardFlat=0, previewGuardMult=0;
+            // ★厚さだけでなく枚数も数える。連撃はガード1枚につき1ヒットを受け止める
+            let previewGuardFlat=0, previewGuardMult=0, previewGuardWeight=0;
             // 何枚目かの数え方はアプリ側(makeCardHalveCounter)が持つ。
             // 新モードは「同じ子の2枚目」だけ半減(2026-09-20 ユーザー指示)
             const previewCounter=makeCardHalveCounter();
@@ -387,13 +388,13 @@ function BattleScreen({
               const halved=previewCounter.take(card,cardAssignments[idx]!=null?cardAssignments[idx]:null);
               const weight=guardCardWeight(card);
               const guardsAimed=aimedSlot===null||cardAssignments[idx]===aimedSlot;
-              if(weight>0&&guardsAimed){const effect=cardEffectMultiplier(card,halved); previewGuardFlat+=GUARD_EVOLUTION[guardLevel].flat*weight*effect; previewGuardMult+=GUARD_EVOLUTION[guardLevel].mult*weight*effect;}
+              if(weight>0&&guardsAimed){const effect=cardEffectMultiplier(card,halved); previewGuardFlat+=GUARD_EVOLUTION[guardLevel].flat*weight*effect; previewGuardMult+=GUARD_EVOLUTION[guardLevel].mult*weight*effect; previewGuardWeight+=weight;}
             });
             // ★予告も本番と同じ数え方にする。ずれると「ガードしたのに予定より減った」になる。
-            //   貫通撃はガードが効かない。連撃は3ヒットに分かれ、ガードが届くのは1ヒットぶんだけ
+            //   貫通撃はガードが効かない。連撃はヒットに分かれ、ガード1枚につき1ヒットを受け止める
             const previewGuard=enemyIntent.variant==='pierce'?0:guardValueOf(previewGuardFlat,previewGuardMult);
             const previewHits=enemyIntent.variant==='rush'?Math.max(1,Math.floor(Number(enemyIntent.hits)||1)):1;
-            const plannedDmg=applyTurnDamageReduction(resolveTacticsGuardedHit(rawDmg,previewHits,previewGuard).taken);
+            const plannedDmg=applyTurnDamageReduction(resolveTacticsGuardedHit(rawDmg,previewHits,previewGuard,tacticsGuardHits(previewGuardWeight)).taken);
             const tone=enemyIntent.type==='SPECIAL'?'bg-fuchsia-950 border-fuchsia-500 text-fuchsia-300'
               :enemyIntent.type==='CHARGE'?'bg-amber-950 border-amber-500 text-amber-400'
               :enemyIntent.type==='PIERCE_CHARGE'?'bg-rose-950 border-rose-500 text-rose-300'
@@ -404,7 +405,7 @@ function BattleScreen({
             // 余りの高さは、この下のバフ帯の mt-auto がまとめて吸う。
             // data-enemy-intent は検査の手がかり。どの行動が予告されているかは抽選なので、
             // 画面の文字から探すと「今回はためるだった」で落ちる
-            return <div data-enemy-intent className={`mt-1 mb-1 mx-auto w-fit max-w-full border p-1 px-4 rounded-full flex items-center gap-1.5 animate-pulse z-[45] shadow-lg shrink-0${battleTutorialSpotClass('enemyIntent')} ${focusedCard?'invisible':'visible'} ${tone}`}><Target size={12}/><div className="text-[10px] font-black uppercase tracking-tight">{enemyIntent.label}{enemyIntent.targetName?` 🎯${enemyIntent.targetName}`:''}{rawDmg>0?` (予定: ${plannedDmg})`:''}</div></div>;
+            return <div data-enemy-intent className={`mt-1 mb-1 mx-auto w-fit max-w-full border p-1 px-4 rounded-full flex items-center gap-1.5 animate-pulse z-[45] shadow-lg shrink-0${battleTutorialSpotClass('enemyIntent')} ${focusedCard?'invisible':'visible'} ${tone}`}><Target size={12}/><div className="text-[10px] font-black uppercase tracking-tight">{enemyIntent.label}{previewHits>1?` ${previewHits}連撃`:''}{enemyIntent.targetName?` 🎯${enemyIntent.targetName}`:''}{rawDmg>0?` (予定: ${plannedDmg})`:''}</div></div>;
           })()}
         {/* 強化の札(2026-09-19・ユーザー指摘「バフデバフ欄が見にくくなってる」)。
             もとは敵のいる main の中に置いていたが、main は overflow-y-auto なので、
