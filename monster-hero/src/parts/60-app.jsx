@@ -13076,7 +13076,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                           {/* 種族チャレンジも他モードと同じ位置に記録への導線を置く。
                               公開前は全国ランキングを持たないので、種族ごとの自己記録を出す */}
                           {isSpecies&&!modeSoon&&<button data-species-record-link disabled={speciesLocked||!!battleTutorial} onClick={()=>openSpeciesChallengeRecords('BATTLE_MODE_SELECT',{mode:m.id})} className="min-h-[40px] rounded-xl bg-slate-800 border border-cyan-400/40 text-cyan-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"><span className="flex-1 text-center whitespace-nowrap">🏆 このモードのランキング</span><ChevronRight size={14}/></button>}
-                          {ranked&&<button disabled={!!battleTutorial} onClick={()=>openModeScoreRanking(m.id,safeDifficulty,'BATTLE_MODE_SELECT')} className="min-h-[40px] rounded-xl bg-slate-800 border border-indigo-400/40 text-indigo-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"><span className="flex-1 text-center whitespace-nowrap">🏆 このモードのランキング</span><ChevronRight size={16} className="shrink-0"/></button>}
+                          {ranked&&<button data-mode-ranking-link={m.id} disabled={!!battleTutorial} onClick={()=>openModeScoreRanking(m.id,safeDifficulty,'BATTLE_MODE_SELECT')} className="min-h-[40px] rounded-xl bg-slate-800 border border-indigo-400/40 text-indigo-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"><span className="flex-1 text-center whitespace-nowrap">🏆 このモードのランキング</span><ChevronRight size={16} className="shrink-0"/></button>}
 
                         </div>
                       </article>
