@@ -85,7 +85,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-21 18:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-21 18:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -478,6 +478,34 @@ const isAutoQuickRunDifficultyAllowed = (difficulty, quickClears) =>
 //   0へ直した(2026-09-12・ユーザー指示「失敗しても入るようにすると放置で稼げるように
 //   なるから失敗は0にして」)。周回クリア扱いにするのは、ちゃんと弾ききったときだけ。
 // ★クリアかどうかを渡さない古い呼び出し(undefined)は、これまでどおり全額入る。
+// ===== プロモードを遊んだぶんを、クイック周回の報酬にする =====
+// (2026-09-21・ユーザー提案「プロモードをクリアしたときに限り、クイック何周分の報酬が
+//  もらえるなら可能？ 演奏と同じ仕組み」)。
+//
+// ★バトルを2つ動かすのではない。プロのランが終わったときに「クイック何周ぶんか」を
+//   数えて、その報酬だけを配る。モンヒロビートの演奏とまったく同じ立て付けで、
+//   スコアもランキングも1ポイントも動かさない。
+// ★決め方は「進んだWAVE数」と「プロの難易度の重さ(DIFFICULTY_SETTINGS の power)」。
+//   演奏は曲の長さで決めるが、プロは難易度で1回の重さがまるで違うため
+//   (2026-09-21・ユーザー選択「難易度とWAVE数で決める」)。
+// ★負けても、クリアしたWAVEの段階まで入る(同・ユーザー選択)。
+//   1WAVEも越えられなかったときだけ0。
+//
+//   周回数 = 切り捨て( 進んだWAVE数 ÷ 10 × 難易度のpower × 係数 )   ※1WAVE以上なら最低1周
+//
+//   係数5のとき(10WAVE完走): Normal 5周 / Expert 15周 / Master 25周 / Legend 50周
+const PRO_RUN_QUICK_LOOP_SCALE = 5;
+const PRO_RUN_QUICK_LOOP_MIN = 1;
+const proRunQuickLoops = (wavesCleared, difficultyPower, scale = PRO_RUN_QUICK_LOOP_SCALE) => {
+  const waves = Math.max(0, Math.trunc(Number(wavesCleared) || 0));
+  if (waves <= 0) return 0;
+  const power = Number(difficultyPower);
+  if (!Number.isFinite(power) || power <= 0) return 0;
+  const mult = Number(scale);
+  const safeScale = Number.isFinite(mult) && mult > 0 ? mult : PRO_RUN_QUICK_LOOP_SCALE;
+  return Math.max(PRO_RUN_QUICK_LOOP_MIN, Math.floor((waves / 10) * power * safeScale));
+};
+
 const rhythmPlayRunLoopsForResult = (loops, cleared) => {
   const base = Math.max(0, Math.trunc(Number(loops) || 0));
   if (base <= 0) return 0;

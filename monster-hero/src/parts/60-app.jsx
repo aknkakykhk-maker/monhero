@@ -3298,14 +3298,37 @@ function MonsterHeroGame() {
   // cleared / baseLoops … クリアか失敗か(2026-09-12・ユーザー指示「それによって経験値も変わるから」)と、
   //   失敗していなければ入っていた周回数。どちらも曲リザルトの表示用で、配る量そのものは
   //   すでに loops へ織り込まれている(ここで掛け直さない)。
-  const awardRhythmPlayRunLoops = async (loops, loopScale = RHYTHM_PLAY_RUN_LOOP_SCALE, { cleared = true, baseLoops = null } = {}) => {
+  // クイック周回ぶんの報酬に使う倍率を、難易度を指定して取る。
+  // ★いま走っているランではなく「配りたいクイックの難易度」で計算するために要る
+  //   (プロのランぶんを配るときに使う・2026-09-21)。取り方は runRewardMultipliers と同じ。
+  const quickLoopRewardMultipliers = (quickDifficulty) => {
+    const setting = quickDifficultySetting(quickDifficulty);
+    const xpMult = Number(setting?.xp) || Number(setting?.score) || 1.0;
+    const goldMult = Number(setting?.gold) || 1.0;
+    return { xpMult, goldMult };
+  };
+  // ★rewardMode / rewardDifficulty / rewardPolicy から下は「プロのランぶんを配る」ときだけ渡す
+  //   (2026-09-21・ユーザー提案「プロモードをクリアしたときに限り、クイック何周分の報酬が
+  //    もらえるなら可能？ 演奏と同じ仕組み」)。
+  //   既定は今までどおり「裏で回しているクイックのラン」を見るので、モンビーの連携は何も変わらない。
+  //   プロから呼ぶときは、報酬の基準をAUTO設定のクイック難易度へ差し替えたうえで、
+  //   モンビーの進捗の帯(countLoopProgress)と、クイックのクリア記録・ミッション・助手の絆
+  //   (recordQuickClear)には触らせない。プロを遊んだのにクイックを遊んだことにはしない。
+  const awardRhythmPlayRunLoops = async (loops, loopScale = RHYTHM_PLAY_RUN_LOOP_SCALE, {
+    cleared = true, baseLoops = null,
+    rewardMode = null, rewardDifficulty = null, rewardPolicy = null,
+    countLoopProgress = true, recordQuickClear = true,
+    bondHeroMasuId = null, bondParticipantMasuIds = null,
+  } = {}) => {
     const count = Math.max(0, Math.trunc(Number(loops) || 0));
     if (count <= 0) return null;
     const scale = Number.isFinite(Number(loopScale)) && Number(loopScale) > 0 ? Number(loopScale) : RHYTHM_PLAY_RUN_LOOP_SCALE;
-    const { goldMult, xpMult } = runRewardMultipliers();
-    const policy = quickRewardPolicyRunRef.current;
+    const awardMode = rewardMode || runMode;
+    const awardDifficulty = rewardDifficulty || difficulty;
+    const { goldMult, xpMult } = rewardDifficulty ? quickLoopRewardMultipliers(awardDifficulty) : runRewardMultipliers();
+    const policy = rewardPolicy || quickRewardPolicyRunRef.current;
     // ---- ブリーダー経験値 ----
-    const oneXp = applyQuickXpPolicy(xpForWavesClearedInMode(10, xpMult, runMode), runMode, policy);
+    const oneXp = applyQuickXpPolicy(xpForWavesClearedInMode(10, xpMult, awardMode), awardMode, policy);
     const xpGain = Math.floor(oneXp * count);
     if (xpGain > 0) {
       const before = levelInfo(breederXp);
@@ -3320,7 +3343,7 @@ function MonsterHeroGame() {
       }
     }
     // ---- ダイヤ ----
-    const oneGold = applyQuickDiamondPolicy(goldForWavesClearedInMode(10, goldMult, runMode), runMode, policy);
+    const oneGold = applyQuickDiamondPolicy(goldForWavesClearedInMode(10, goldMult, awardMode), awardMode, policy);
     const goldGain = Math.floor(oneGold * count);
     if (goldGain > 0) {
       const nextGold = gold + goldGain;
@@ -3330,12 +3353,16 @@ function MonsterHeroGame() {
     // ---- マスモンの絆経験値 ----
     // 配る相手の決め方(勇者=1 / 参加した供モン=1/2 / 控え=1/4)も、
     // AUTO∞のときの上限(ブリーダーLv)も、1周クリアとまったく同じものを通す
-    const oneBond = applyQuickXpPolicy(bondXpForWavesClearedInMode(10, xpMult, runMode), runMode, policy);
+    const oneBond = applyQuickXpPolicy(bondXpForWavesClearedInMode(10, xpMult, awardMode), awardMode, policy);
     const bondGain = Math.floor(oneBond * count);
+    // ★配り先は、渡されなければ「いま戦っている編成」。プロのランぶんを配るときは、
+    //   裏でクイックを回していたときと同じ顔ぶれ(AUTO設定の勇者モン・供モン)を渡す
+    //   (2026-09-21・ユーザー指示「オート設定のモンスター達と編成に入ってるモンスター。
+    //    モンビーと同じ仕様」)。控えのマスモン(monsterRosterIds)はどちらも同じ。
     const bondAwards = bondGain > 0 ? buildRunBondAwards({
       gain: bondGain,
-      heroMasuId: mainHero?.masuId,
-      participantMasuIds: slots.filter(s => s?.masuId).map(s => s.masuId),
+      heroMasuId: bondHeroMasuId !== null ? bondHeroMasuId : mainHero?.masuId,
+      participantMasuIds: bondParticipantMasuIds !== null ? bondParticipantMasuIds : slots.filter(s => s?.masuId).map(s => s.masuId),
       monsterRosterIds,
       masuMons,
     }) : [];
@@ -3355,7 +3382,7 @@ function MonsterHeroGame() {
     }
     // ---- 虹のプシュケー ----
     // 難易度ごとの個数(CLEAR_PSYCHE_REWARD)と報酬方針は awardClearPsyche と同じものを通す
-    const onePsyche = applyQuickPsychePolicy(clearPsycheReward(difficulty), runMode, policy);
+    const onePsyche = applyQuickPsychePolicy(clearPsycheReward(awardDifficulty), awardMode, policy);
     const psycheGain = Math.max(0, Math.floor(onePsyche * count));
     if (psycheGain > 0) {
       const nextItems = { ...ownedItemsRef.current, [BREAKTHROUGH_ITEM_ID]: ownedItemCount(ownedItemsRef.current, BREAKTHROUGH_ITEM_ID) + psycheGain };
@@ -3365,7 +3392,7 @@ function MonsterHeroGame() {
     }
     // ---- 勇者の証片 ----
     // 1周につきの個数は heroProofShardClearReward が正本(実バトルのクリアと同じ関数を通す)
-    const oneShard = heroProofShardClearReward({ runMode, difficulty });
+    const oneShard = heroProofShardClearReward({ runMode: awardMode, difficulty: awardDifficulty });
     const shardGain = Math.max(0, Math.floor(oneShard * count));
     if (shardGain > 0) {
       const nextItems = { ...ownedItemsRef.current, [HERO_PROOF_SHARD_ITEM_ID]: ownedItemCount(ownedItemsRef.current, HERO_PROOF_SHARD_ITEM_ID) + shardGain };
@@ -3375,16 +3402,20 @@ function MonsterHeroGame() {
     }
     // ---- クリア回数・ミッション・助手の絆 ----
     // 記録(最高スコア・最高WAVE)は触らない。演奏にはスコアが無いため
-    const nextQuick = (quickClearCounts[difficulty] || 0) + count;
-    setQuickClearCounts(prev => ({ ...prev, [difficulty]: Math.max(prev[difficulty] || 0, nextQuick) }));
-    await storeSet(clearCountKey(BATTLE_MODE_QUICK, difficulty), nextQuick, false);
-    for (let i = 0; i < count; i++) { await saveMissionProgress('quickClear'); addAssistantBond('quickClear'); }
+    // ★プロのランぶんを配るときは、ここを通さない。遊んだのはプロなので、
+    //   クイックのクリア回数・クイックのミッション・助手の絆を進めるのは筋が違う
+    if (recordQuickClear) {
+      const nextQuick = (quickClearCounts[awardDifficulty] || 0) + count;
+      setQuickClearCounts(prev => ({ ...prev, [awardDifficulty]: Math.max(prev[awardDifficulty] || 0, nextQuick) }));
+      await storeSet(clearCountKey(BATTLE_MODE_QUICK, awardDifficulty), nextQuick, false);
+      for (let i = 0; i < count; i++) { await saveMissionProgress('quickClear'); addAssistantBond('quickClear'); }
+    }
     // 帯の数字も、実際に配った値をそのまま足す(2か所で数えない)
-    addQuickRunProgressRewards(xpGain, goldGain);
+    if (countLoopProgress) addQuickRunProgressRewards(xpGain, goldGain);
     // 曲リザルトで「◯周目 → ◯周目」と出すため、足す前と後を控える
     // (2026-09-07・ユーザー提案「何周分からプラスでいくつ入って何周分になったとかを出すほうがいい」)
     const fromLoop = quickRunProgressRef.current ? quickRunProgressRef.current.loops : 0;
-    for (let i = 0; i < count; i++) countQuickRunLoop();
+    if (countLoopProgress) { for (let i = 0; i < count; i++) countQuickRunLoop(); }
     const toLoop = quickRunProgressRef.current ? quickRunProgressRef.current.loops : fromLoop;
     return { loops: count, xp: xpGain, gold: goldGain, bond: bondGain, psyche: psycheGain, shard: shardGain, fromLoop, toLoop,
       scale, eventBoosted: scale > RHYTHM_PLAY_RUN_LOOP_SCALE,
@@ -7114,6 +7145,46 @@ function MonsterHeroGame() {
     const xpMult = extreme ? selectedExtremeSetting.xp : scoreMult;
     return { scoreMult, goldMult, xpMult };
   };
+  // ===== プロのランぶんを、クイック周回の報酬にする =====
+  // (2026-09-21・ユーザー提案「プロモードをクリアしたときに限り、クイック何周分の報酬が
+  //  もらえるなら可能？ 演奏と同じ仕組み」)。
+  //
+  // ★バトルは2つ動かさない。プロのランが終わったときに「クイック何周ぶんか」を数えて、
+  //   その報酬だけを配る。スコアもランキングも1ポイントも動かさないので、
+  //   プロが全国ランキング対象であることと衝突しない(モンヒロビートの演奏と同じ立て付け)。
+  // ★対象は各バトルの**プロモードだけ**(クラシックのプロ／タクティクスのプロ)。
+  //   ユーザー選択(2026-09-21)。チャレンジや極限にも付けると、クイックを直接回す意味が薄くなる。
+  // ★配る報酬の基準は「AUTO設定のモンヒロビート中に回すクイック周回」の難易度。
+  //   モンビー連携と同じ設定を使うので、プレイヤーから見ても一貫している。
+  //   その難易度をクイックでクリアしていなければ配らない(勝てない難易度のタダ取りを止める。
+  //   演奏の rhythmPlayRunLoopsAllowed と同じ考え方)。
+  // ★絆経験値は「プロで戦った編成」へ入る。遊んだ子が育つのが自然なため。
+  const awardProRunQuickLoops = async (wavesCleared) => {
+    if (!(isProMode(runMode) || runMode === BATTLE_MODE_TACTICS_PRO)) return null;
+    if (!autoQuickRunConfigured(autoSettings)) return null;
+    const quickDifficulty = autoSettings.quickRun.difficulty;
+    if (!isAutoQuickRunDifficultyAllowed(quickDifficulty, quickClearCounts)) return null;
+    const loops = proRunQuickLoops(wavesCleared, DIFFICULTY_SETTINGS[difficulty]?.power);
+    if (loops <= 0) return null;
+    // 絆経験値の行き先は、裏でクイックを回していたときとそろえる
+    // (AUTO設定の勇者モン＝1倍 / AUTO設定の供モン①②③＝1/2 / モンスター編成の控え＝1/4)。
+    // プロで戦った編成ではなく、**クイックを回していたら育っていたはずの顔ぶれ**へ入れる
+    const quickHeroMon = resolveRosterEntryToMon(autoSettings.quickRun.heroRosterEntry);
+    const quickAllyMasuIds = (Array.isArray(autoSettings.allies) ? autoSettings.allies : [])
+      .map(ally => resolveRosterEntryToMon(ally?.rosterEntry))
+      .filter(mon => mon && mon.masuId != null)
+      .map(mon => mon.masuId);
+    const awarded = await awardRhythmPlayRunLoops(loops, RHYTHM_PLAY_RUN_LOOP_SCALE, {
+      rewardMode: BATTLE_MODE_QUICK,
+      rewardDifficulty: quickDifficulty,
+      rewardPolicy: normalizeQuickRewardPolicy(quickRewardPolicy),
+      countLoopProgress: false,   // モンビーの進捗の帯は、裏で回している周回のためのもの
+      recordQuickClear: false,    // クイックのクリア回数・ミッション・助手の絆は進めない
+      bondHeroMasuId: quickHeroMon?.masuId ?? undefined,
+      bondParticipantMasuIds: quickAllyMasuIds,
+    });
+    return awarded ? { ...awarded, quickDifficulty, wavesCleared } : null;
+  };
   const awardRunRewards = async (wavesCleared) => {
     // awaitより前に同期ロックする。敗北effectとボタン連打が同時に到達しても報酬は一度だけ。
     if (rewardsAwardedRef.current) return;
@@ -7229,7 +7300,9 @@ function MonsterHeroGame() {
 
     const rewardWaveHistory = applyQuickXpPolicy(1, runMode, quickRewardPolicyRunRef.current) === 0
       ? waveHistory.map(entry => ({ ...entry, xpGain: 0 })) : waveHistory;
-    setFinalRewardSummary({ quickMode: isQuickMode(runMode), breederXpGain, breederLevelBefore, breederLevelAfter, goldBefore, goldAfter, heroBondGain, allyBondGains, waveHistory: rewardWaveHistory });
+    // プロのランぶんのクイック周回報酬。ここまでで通常の報酬は配り終えている
+    const proQuickAward = await awardProRunQuickLoops(wavesCleared);
+    setFinalRewardSummary({ quickMode: isQuickMode(runMode), breederXpGain, breederLevelBefore, breederLevelAfter, goldBefore, goldAfter, heroBondGain, allyBondGains, waveHistory: rewardWaveHistory, proQuickAward });
     // ここまでで、この周ぶんの報酬はすべて書き終えている。
     // 端末へ書けていなければ、次の周へ行かずにここで止める(∞周回のとき)
     checkStorageTrouble();

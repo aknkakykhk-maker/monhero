@@ -64,6 +64,8 @@ const dataTablePrelude = [
   (source.match(/^const HERO_PROOF_SHARD_ITEM_ID = .*$/m) || [''])[0],
   (source.match(/^const HERO_PROOF_SHARD_PER_PROOF = .*$/m) || [''])[0],
   grab(source, 'const HERO_PROOF_SHARD_ITEM = Object.freeze({', 'const HERO_PROOF_CLEAR_REWARDS'),
+  // プロモードで入るクイック周回数の表は、この換算をそのまま使う(2026-09-21)
+  grab(source, 'const PRO_RUN_QUICK_LOOP_SCALE =', 'const rhythmPlayRunLoopsForResult ='),
   // 曲一覧が使う曲名の組み立て。helpDataRows より前にあるので、別に持ち込む
   grab(source, 'const rhythmSongFullName =', 'const helpDataRows = (id)'),
   grab(source, 'const helpDataRows = (id)', '// ===== 助手(ナビゲーター) ここから ====='),

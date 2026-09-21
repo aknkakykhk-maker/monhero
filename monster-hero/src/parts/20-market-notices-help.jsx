@@ -356,6 +356,12 @@ const helpDataRows = (id) => {
   switch (id) {
     case 'difficulties':
       return Object.values(DIFFICULTY_SETTINGS).map(s => [s.label, `敵×${s.power} ／ スコア×${s.score} ／ ダイヤ×${s.gold}`]);
+    // プロモードのランぶんに入るクイック周回数(2026-09-21)。
+    // 難易度ごとの重さ(power)と同じ式から作るので、難易度を調整したときも自動で追随する
+    // (ヘルプへ9行書き写すと、必ずどこかが古いままになる)
+    case 'proQuickLoops':
+      return Object.values(DIFFICULTY_SETTINGS).map(s => [s.label,
+        `10WAVE完走 ${proRunQuickLoops(10, s.power)}周 ／ WAVE5まで ${proRunQuickLoops(5, s.power)}周`]);
     // モンスターの血統一覧。ヘルプへ手で書き写すと、モンスターを足したときに古いままになる
     case 'monsterLineages':
       return dexMonsterList().map(mon => {
@@ -576,6 +582,7 @@ const helpDataRows = (id) => {
 // 表の上に出す見出し(何の表かを分かるようにする)
 const HELP_DATA_TITLES = {
   difficulties: '難易度と倍率',
+  proQuickLoops: 'プロモードで入るクイック周回数',
   extremeDifficulties: '極限チャレンジの難易度',
   rhythmEventPlayBonus: 'イベントの回数ボーナス（1回あたり）',
   rhythmWeeklyRewards: '週間ランキングの順位報酬',
