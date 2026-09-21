@@ -48,6 +48,8 @@ vm.runInContext([
   slice('const BATTLE_MODE_CHALLENGE =', 'const isQuickDifficultyCleared'),
   // 公開フラグの見方(battleModePlayable / battleModeComingSoon)と、
   // ランキングへ送るかの判定(modeHasRanking)
+  // カードに出す文言を見るので、既存5モードの定義も持ち込む
+  slice('const BATTLE_MODES = [', '// ===== バトルの仕組み(モード選択の1つ上) ====='),
   slice('// ===== バトルの仕組み(モード選択の1つ上) =====', '// 極限チャレンジは通常の3モードとは別に'),
   slice('const modeHasRanking =', 'const modeBondAction'),
   slice('const DIFFICULTY_SETTINGS = {', 'const normalizeBattleDifficulty'),
@@ -62,7 +64,8 @@ vm.runInContext([
   + 'TACTICS_PRO_RANKING_PREFIX,TACTICS_PRO_BETA_SUFFIX,tacticsProRankingPrefix,'
   + 'battleModePlayable,battleModeComingSoon,battleSystemBeta,modeHasRanking,'
   + 'SPECIES_CHALLENGE_PROGRESS_KEY,TACTICS_SPECIES_CHALLENGE_PROGRESS_KEY,speciesChallengeProgressKeyOf,'
-  + 'speciesChallengeRunMode,DIFFICULTY_SETTINGS};',
+  + 'speciesChallengeRunMode,DIFFICULTY_SETTINGS,'
+  + 'TACTICS_MODE,TACTICS_SPECIES_MODE,TACTICS_PRO_MODE,BATTLE_MODES,SPECIES_CHALLENGE_MODE};',
 ].join('\n'), sandbox);
 const api = sandbox.api;
 
@@ -229,6 +232,38 @@ check('壊れた記録が来ても落ちない',
   api.isTacticsDifficultyUnlocked('Normal', null) === true
     && api.isTacticsDifficultyUnlocked('EXTREME', 'x') === false
     && api.isTacticsDifficultyUnlocked('EXTREME', { Master: 'x' }) === false);
+
+// ---- ⑤ モード選択のカードに出す文字 ----
+// ★売りの3行は「同じ仕組みの中の3モードを見比べる」ためのもの。3モードすべてにあること
+//   (敵の予告・技の使い分け・ステータスの持ち方)は、仕組みの入口カードと「詳しいルール」の担当。
+//   2026-09-21 にユーザーから写真つきで「文字列が悪い」と指摘された。
+//   そのとき並んでいたのは「敵が技を使い分ける。予告を読んで受ける」「敵の予告を読んで、誰を守るかを決める」で、
+//   どちらもタクティクスの3モードすべてに当てはまる＝見比べる役に立たない行だった。
+const TACTICS_CARDS = [api.TACTICS_MODE, api.TACTICS_SPECIES_MODE, api.TACTICS_PRO_MODE];
+const SHARED_WORDS = ['予告', '技を使い分け', '1体ずつライフ', '誰を守る'];
+for (const mode of TACTICS_CARDS) {
+  const text = [mode.tagline, ...mode.highlights.map(h => h[1])].join(' / ');
+  const hit = SHARED_WORDS.filter(w => text.includes(w));
+  check(`${mode.label}: 売りに仕組み全体の話を書かない`, hit.length === 0, hit.join('・'));
+  check(`${mode.label}: 売りは3行`, Array.isArray(mode.highlights) && mode.highlights.length === 3,
+    String(mode.highlights && mode.highlights.length));
+}
+// ★カードの見出しは短い名前(cardLabel)。長い名前のままだとカードの中(内幅約176px)で2行に折り返す。
+//   クラシック側と同じ名前にそろえて、上から見比べられるようにする
+check('カードの名前はクラシック側とそろえる',
+  api.TACTICS_MODE.cardLabel === api.BATTLE_MODES.find(m => m.id === api.BATTLE_MODE_CHALLENGE).label
+    && api.TACTICS_SPECIES_MODE.cardLabel === api.SPECIES_CHALLENGE_MODE.label
+    && api.TACTICS_PRO_MODE.cardLabel === api.BATTLE_MODES.find(m => m.id === api.BATTLE_MODE_PRO).label,
+  TACTICS_CARDS.map(m => m.cardLabel || 'なし').join(' / '));
+check('カードの見出しは短い名前のほうを出す', has('{m.emoji} {m.cardLabel||m.label}'));
+// ★合算か1体ずつかが分かれるのはライフだけではない(ちから・丈夫さ・ガッツも同じ)。
+//   2026-09-21 ユーザー指摘「ステータスがそもそも合算か単体じゃない？」
+for (const mode of TACTICS_CARDS) {
+  const point = (mode.points || []).find(p => /ステータス|ライフ/.test(p[1]));
+  check(`${mode.label}: ステータスの持ち方を「ライフ」だけで説明しない`,
+    !!point && point[1].includes('ステータス') && point[2].includes('ちから') && point[2].includes('丈夫さ'),
+    point ? point[1] : 'その節が無い');
+}
 
 console.log(failed ? `\nNG ${failed}件` : '\nすべてOK');
 process.exit(failed ? 1 : 0);

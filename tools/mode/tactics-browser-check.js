@@ -20,8 +20,13 @@ const root = path.resolve(TOOLS_DIR, '..');
 const PORT = 8987;
 const src = fs.readFileSync(path.join(root, 'monster-hero/src/game-system.jsx'), 'utf8');
 // 画面に出す名前はあとから変わる可能性があるので、定義から読む(idと表示名は一致していなくてよい)
-const MODE_LABEL = (src.match(/id:BATTLE_MODE_TACTICS, label:'([^']+)'/) || [])[1] || '';
-const MODE_SHORT = (src.match(/id:BATTLE_MODE_TACTICS, label:'[^']+', short:'([^']+)'/) || [])[1] || '';
+// ★定義の1行から拾う。並びを決め打ちすると、あいだに項目を足したときに取れなくなる
+//   (2026-09-21 に cardLabel を足したとき、short が取れなくなって落ちた)
+const TACTICS_DEF = (src.match(/id:BATTLE_MODE_TACTICS,[^\n]*/) || [''])[0];
+const MODE_LABEL = (TACTICS_DEF.match(/ label:'([^']+)'/) || [])[1] || '';
+const MODE_SHORT = (TACTICS_DEF.match(/ short:'([^']+)'/) || [])[1] || '';
+// モード選択のカードに出るのは短い名前(cardLabel)。無ければ label
+const MODE_CARD_LABEL = (TACTICS_DEF.match(/ cardLabel:'([^']+)'/) || [])[1] || MODE_LABEL;
 
 const MIME = { '.html':'text/html', '.js':'text/javascript', '.json':'application/json',
   '.css':'text/css', '.png':'image/png', '.jpg':'image/jpeg', '.webp':'image/webp',
@@ -134,7 +139,7 @@ const check = (name, ok, detail = '') => {
     await page.locator('[data-battle-system="systemTactics"]').dispatchEvent('click', {}, { timeout: 15000 });
     await page.getByText('BATTLE MODE').first().waitFor({ timeout: 15000 });
     const cardCount = await page.evaluate((label) =>
-      [...document.querySelectorAll('article')].filter(a => a.textContent.includes(label)).length, MODE_LABEL);
+      [...document.querySelectorAll('article')].filter(a => a.textContent.includes(label)).length, MODE_CARD_LABEL);
     // ぐるぐる回すため同じ並びを3回置いているので、1モードにつき3枚出る
     check('デバッグの入口には新モードのカードが出る', cardCount === 3, `${cardCount}枚`);
     // ★タクティクスバトルの中にも、クラシックと同じ3つのモードが並ぶ(2026-09-20)。
@@ -150,10 +155,10 @@ const check = (name, ok, detail = '') => {
       [...new Set(innerModes)].join(' / '));
     // ★中のモードの入口を実際に踏む。種族チャレンジは専用の選択画面、プロは難易度えらびへ。
     //   ここが白くなる壊れ方は、静的な検査では拾えない
-    const openInner = async (label, buttonText) => {
+    // ★カードはモードidで名指しする。見出しの字面(cardLabel)は読みやすさのために変わる
+    const openInner = async (modeId, buttonText) => {
       const result = await page.evaluate(([l, b]) => {
-        const cards = [...document.querySelectorAll('article')]
-          .filter(a => ((a.querySelector('h3') || {}).textContent || '').includes(l));
+        const cards = [...document.querySelectorAll(`[data-battle-mode="${l}"]`)];
         const card = cards[Math.floor(cards.length / 2)] || cards[0];
         if (!card) return 'カードが無い';
         const button = [...card.querySelectorAll('button')].find(x => x.textContent.includes(b));
@@ -161,7 +166,7 @@ const check = (name, ok, detail = '') => {
         if (button.disabled) return '押せない';
         button.click();
         return 'ok';
-      }, [label, buttonText]);
+      }, [modeId, buttonText]);
       await page.waitForTimeout(1800);
       return { result, text: await page.evaluate(() => document.body.innerText.replace(/\s+/g, ' ')) };
     };
@@ -180,11 +185,11 @@ const check = (name, ok, detail = '') => {
       }
       return page.evaluate(() => document.body.innerText.includes('BATTLE MODE'));
     };
-    const species = await openInner('種族', '種族を選ぶ');
+    const species = await openInner('tacticsSpecies', '種族を選ぶ');
     check('タクティクスの種族チャレンジは種族えらびへ進む',
       species.result === 'ok' && /種 限定|種族/.test(species.text), `${species.result} / ${species.text.slice(0, 50)}`);
     check('種族えらびからモード選択へ戻れる', await backToModes());
-    const proMode = await openInner('タクティクスプロ', '難易度を選ぶ');
+    const proMode = await openInner('tacticsPro', '難易度を選ぶ');
     check('タクティクスプロは難易度えらびへ進む',
       proMode.result === 'ok' && /Beginner|Normal/.test(proMode.text), `${proMode.result} / ${proMode.text.slice(0, 50)}`);
     check('タクティクスプロの難易度えらびからモード選択へ戻れる', await backToModes());
@@ -197,7 +202,7 @@ const check = (name, ok, detail = '') => {
       if (!b || b.disabled) return false;
       b.click();
       return true;
-    }, MODE_LABEL);
+    }, MODE_CARD_LABEL);
     await page.waitForTimeout(1500);
     const diffText = await page.evaluate(() => document.body.innerText.replace(/\s+/g, ' '));
     check('難易度を選ぶ画面へ進める', opened && /Normal|ノーマル/.test(diffText), diffText.slice(0, 70));

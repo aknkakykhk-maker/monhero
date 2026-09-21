@@ -107,6 +107,10 @@ const FORCE_CHECKS = [
   // あふれてもエラーは出ず、大きい端末では気づけない(2026-09-21・ユーザー報告)
   { re: /^monster-hero\/src\/parts\/(10-core|60-app)\.jsx$/,
     checks: ['battle/battle-system-fit-check.js'], why: 'バトルの入口が1画面に収まるか' },
+  // モード選択のカードも同じ。名前を1つ長くするだけで見出しが2行になり、
+  // カードの中のボタンの文字が横にあふれて切れる(2026-09-21・ユーザー報告)
+  { re: /^monster-hero\/src\/parts\/(10-core|60-app)\.jsx$/,
+    checks: ['battle/battle-mode-card-fit-check.js'], why: 'モード選択のカードが崩れていないか' },
   // 画面を足したときのBGMの決め忘れ。対応表へ載せ忘れてもエラーは出ず、
   // その画面だけ静かに無音になるので、遊んだ人が言うまで気づけない(2回やっている)
   { re: /^monster-hero\/src\/parts\/60-app\.jsx$/,

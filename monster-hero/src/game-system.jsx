@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 159acaf39d126c69
+// generated-sha256: 4afa464ccdfc665f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -92,7 +92,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-21 10:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-21 11:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -216,21 +216,31 @@ const SPECIES_CHALLENGE_MODE = Object.freeze({
 //   ふつうのモードがこれ。クラシックバトル側の「チャレンジモード」と同じ位置づけだが、
 //   ランキングや記録で並んだときに見分けが付くよう「タクティクスチャレンジ」にしてある。
 // ★本文は公開時にそのまま出るプレイヤー向けの文にする。開発の進み具合はここへ書かない。
+// ★cardLabel … モード選択のカードに出す短い名前(無ければ label)。
+//   入口(BATTLE_SYSTEM_SELECT)で「タクティクスバトル」を選んでいるので、その中のカードで
+//   「タクティクス〜」と繰り返すと名前が長くなり、カードの中(内幅約176px)で2行に折り返す。
+//   label は正式名称のまま残し(記録の一覧・ランキング・説明の見出しはこちらを使う)、
+//   カードの見出しだけクラシック側と同じ短い名前にそろえる(2026-09-21 ユーザー指摘)。
 const TACTICS_MODE = Object.freeze({
-  id:BATTLE_MODE_TACTICS, label:'タクティクスチャレンジ', short:'タクティクス', emoji:'🎯', color:'#fb923c',
-  tagline:'敵の技を読んで受け方を決める、対応力のモード',
+  id:BATTLE_MODE_TACTICS, label:'タクティクスチャレンジ', cardLabel:'チャレンジモード', short:'タクティクス', emoji:'🎯', color:'#fb923c',
+  // ★売りの3行は、同じ仕組みの中の3モードを**見比べる**ためのもの。
+  //   「敵が技を使い分ける」「予告を読んで受ける」はタクティクスの3モードすべてにあるので、
+  //   ここには書かない(仕組みの入口カードと「詳しいルール」の担当)。
+  //   クラシック側と同じ ①遊び方 ②もらえるもの ③記録 の順でそろえる(2026-09-21 ユーザー指摘)。
+  tagline:'強化を選んでじっくり攻略する、基本のモード',
   highlights:[
-    ['🎯','敵が技を使い分ける。予告を読んで受ける'],
+    ['🏆','強化を選んでスコアを伸ばす王道'],
     ['💎','経験値・ダイヤは難易度どおり'],
     ['📊','このモード専用のスコアランキング'],
   ],
   points:[
     ['⚔️','編成','ベースモンもマスモンも自由に連れていけます。勇者モン1体と供モンで挑みます。'],
-    ['📈','WAVEのあいだの強化','チャレンジモードと同じで、WAVEをクリアするたびに強化フェーズがあります。敵がどんな技を使ってくるかを見てから、どこを伸ばすかを決められます。'],
-    ['👹','難しさ','9段階の難易度から選べます。敵は通常攻撃と必殺技だけでなく、薙ぎ払い・連撃・貫通撃・咆哮など、それぞれ違う技を使ってきます。どの技が来るかは1ターン前に予告されるので、ガードで受けるか、間合いを変えるか、動きを止めるかをその場で選びます。'],
+    ['❤️','ステータスの持ち方','ライフ・ちから・丈夫さ・ガッツを1体ずつ持ちます(クラシックバトルはパーティ全員ぶんの合計)。倒れた子はその場では戦えなくなり、ライフが満タンまで戻ると立ち上がります。全員が倒れたときだけ負けです。'],
+    ['📈','WAVEのあいだの強化','クラシックバトルのチャレンジモードと同じで、WAVEをクリアするたびに強化フェーズがあります。敵がどんな技を使ってくるかを見てから、どこを伸ばすかを決められます。'],
+    ['👹','難しさ','難易度は通常9段階と極限5段階です。敵は通常攻撃と必殺技だけでなく、薙ぎ払い・連撃・貫通撃・咆哮など、それぞれ違う技を使ってきます。どの技が来るかは1ターン前に予告されるので、ガードで受けるか、間合いを変えるか、動きを止めるかをその場で選びます。'],
     ['💎','もらえる経験値とダイヤ','ブリーダー経験値・絆経験値・ダイヤは、どれも難易度の設定どおりの倍率です。モードによる上乗せはありません。'],
     ['🏆','スコアと記録','スコアはこのモード専用の全国ランキングに反映されます。自己ベストスコア・最高到達WAVE・クリア回数も専用の場所に残り、ほかのモードの記録は書き換わりません。'],
-    ['🤝','供モンの加入','決まったWAVEで供モンが加わります。ただしこのモードでは、供モンが加わると そのぶん敵も強くなります。強く育てた子を連れていくほど敵も手ごわくなるので、少ない人数のまま進むという選び方もできます。'],
+    ['🤝','供モンの加入','決まったWAVEで供モンが加わります。ただしタクティクスバトルでは、供モンが加わるとそのぶん敵も強くなります。強く育てた子を連れていくほど敵も手ごわくなるので、少ない人数のまま進むという選び方もできます。'],
     ['⭐','マスモン登録','勇者モンにした子は、プレイが終わったあとマスモンとして登録できます。'],
     ['⏩','スキップチケット','使えません。スコアを競うモードなので、戦わずに報酬だけ取れないようにしています。'],
     ['🎯','こんな人におすすめ','育成の数字だけでなく、その場の判断で勝ちたい人、いつもの押し切りが通じない戦いを試したい人向けです。'],
@@ -239,17 +249,19 @@ const TACTICS_MODE = Object.freeze({
 // タクティクスバトルの種族チャレンジ。しばりの中身はクラシックの種族チャレンジと同じで、
 // 違うのは盤面が「1体ずつライフを持つ」ことと、記録・ランキングが別枠になることだけ。
 const TACTICS_SPECIES_MODE = Object.freeze({
-  id:BATTLE_MODE_TACTICS_SPECIES, label:'タクティクス種族チャレンジ', short:'種族', emoji:'🧬', color:'#67e8f9',
-  tagline:'ひとつの種族だけで、1体ずつライフを持って挑む',
+  id:BATTLE_MODE_TACTICS_SPECIES, label:'タクティクス種族チャレンジ', cardLabel:'種族チャレンジ', short:'種族', emoji:'🧬', color:'#67e8f9',
+  // ★「敵の予告を読んで誰を守るか」はタクティクスの3モードすべてにあるので売りに書かない。
+  //   クラシックの種族チャレンジと同じ3行にそろえる(見比べる列をそろえるため)
+  tagline:'ひとつの種族だけで挑む、しばりプレイのモード',
   highlights:[
     ['🧬','ひとつの種族だけでWAVE1〜10'],
-    ['🎯','敵の予告を読んで、誰を守るかを決める'],
+    ['🔓','種族ごとに難易度を解放していく'],
     ['🏅','記録は種族ごとに別々に残る'],
   ],
   points:[
     ['🧬','どんなモード','挑む前に種族をひとつ選び、その種族だけでWAVE1〜10を戦い抜くモードです。クラシックバトルの種族チャレンジと同じしばりで、戦い方だけがタクティクスバトルになります。'],
     ['⚔️','編成','勇者モン1体と供モン最大3体で挑みます。選べるのは、その種族の解放済みベースモンと所持マスモンだけです。同じモンスターは1体までですが、同じ種族の別のモンスターなら一緒に連れていけます。'],
-    ['❤️','ライフ','モンスターごとにライフを持ちます。倒れた子はその場では戦えなくなり、ライフが満タンまで戻ると立ち上がります。全員が倒れたときだけ負けです。'],
+    ['❤️','ステータスの持ち方','ライフ・ちから・丈夫さ・ガッツを1体ずつ持ちます(クラシックバトルはパーティ全員ぶんの合計)。倒れた子はその場では戦えなくなり、ライフが満タンまで戻ると立ち上がります。全員が倒れたときだけ負けです。'],
     ['🤝','供モンの加入','事前に選んだ供モンは、WAVE2・4・6をクリアしたときに1体ずつ加わります。加わるとそのぶん敵も強くなります。'],
     ['👹','難しさ','難易度は14段階です。最初の5段階は最初から挑めます。その先は、同じ種族で1つ前の難易度をクリアすると順に解放されます。'],
     ['💎','もらえるもの','経験値・ダイヤは難易度の設定どおりです。加えて、種族と難易度の組み合わせごとに初回クリア報酬があります。'],
@@ -262,8 +274,8 @@ const TACTICS_SPECIES_MODE = Object.freeze({
 // タクティクスバトルのプロモード。制約(ベースモンだけ)と倍率はクラシックのプロと同じで、
 // 戦い方と記録の置き場だけが違う。
 const TACTICS_PRO_MODE = Object.freeze({
-  id:BATTLE_MODE_TACTICS_PRO, label:'タクティクスプロ', short:'プロ', emoji:'🎓', color:'#f472b6',
-  tagline:'ベースモンだけで、1体ずつライフを持って挑む',
+  id:BATTLE_MODE_TACTICS_PRO, label:'タクティクスプロ', cardLabel:'プロモード', short:'プロ', emoji:'🎓', color:'#f472b6',
+  tagline:'ベースモンだけで挑む、育成に頼れない特殊モード',
   highlights:[
     ['🔥','育てたマスモンなしで挑む実力勝負'],
     ['💎','絆経験値3倍・ブリーダー経験値1.5倍'],
@@ -271,7 +283,7 @@ const TACTICS_PRO_MODE = Object.freeze({
   ],
   points:[
     ['⚔️','編成','育てたマスモンは1体も連れていけません。全員が素のベースモンです。積み上げたステータス・強化ポイント・固有技レベル・限界突破は、このモードでは一切使えません。'],
-    ['❤️','ライフ','モンスターごとにライフを持ちます。倒れた子はその場では戦えなくなり、ライフが満タンまで戻ると立ち上がります。全員が倒れたときだけ負けです。'],
+    ['❤️','ステータスの持ち方','ライフ・ちから・丈夫さ・ガッツを1体ずつ持ちます(クラシックバトルはパーティ全員ぶんの合計)。倒れた子はその場では戦えなくなり、ライフが満タンまで戻ると立ち上がります。全員が倒れたときだけ負けです。'],
     ['📈','WAVEのあいだの強化','WAVEをクリアするたびに強化フェーズがあります。素の状態から始まるぶん、誰をどこまで伸ばすかの判断がそのまま結果に出ます。'],
     ['👹','難しさ','難易度は通常9段階と極限5段階です。敵は薙ぎ払い・連撃・貫通撃・咆哮などを使い分け、どの技が来るかは1ターン前に予告されます。育てた個体に頼れないぶん、読み合いの比重がいちばん大きいモードです。'],
     ['💎','もらえる経験値とダイヤ','絆経験値が3倍、ブリーダー経験値が1.5倍になります（難易度の倍率にさらにかかります）。ダイヤとスコアの倍率は難易度の設定どおりです。'],
@@ -35917,7 +35929,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     {loopModes.map((m,loopIndex)=>{const active=m.id===current.id,isExtreme=m.id===EXTREME_MODE.id,isSpecies=isSpeciesChallengeMode(m.id),modeSoon=battleModeComingSoon(m.id,{debugBattle}),extremeLocked=isExtreme&&!extremeUnlocked&&!debugBattle,speciesLocked=isSpecies&&!speciesChallengeUnlocked&&!debugBattle,rec=isExtreme?{score:highestModeScore(extremeBestScores,PUBLIC_EXTREME_DIFFICULTIES.map(setting=>setting.id)),wave:0,clears:extremeClearCount}:modeRecordFor(m.id,safeDifficulty),ranked=!isExtreme&&!isSpecies&&modeHasRanking(m.id),modeBestScore=ranked?highestModeScore(isTacticsMode(m.id)?tacticsRecordsOf(m.id).hs:isProMode(m.id)?proHighScores:highScores,isTacticsMode(m.id)?TACTICS_DIFFICULTY_IDS:Object.keys(DIFFICULTY_SETTINGS)):rec.score;return (
                       <article key={`${m.id}-${loopIndex}`} data-battle-mode={m.id} className={`snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2.5 h-[366px] overflow-hidden transition-all flex flex-col ${active?'scale-100 opacity-100':'scale-[.92] opacity-55'}`} style={{borderColor:active?m.color:'rgba(255,255,255,.12)',background:'linear-gradient(180deg,#152044,#0d142b)',boxShadow:active?`0 0 30px ${m.color}55`:'none'}}>
                         <div className="text-center text-[7px] tracking-[.2em] text-slate-400 font-black">BATTLE MODE</div>
-                        <h3 className="text-center text-lg font-black leading-tight" style={{color:m.color}}>{m.emoji} {m.label}</h3>
+                        {/* ★名前の長いモード(タクティクス種族チャレンジ など)は、そのままだと2行に折り返して読みにくい。
+                              字を落として1行に収める(名前は正式名称のまま。CLAUDE.md ⑤) */}
+                          <h3 className={`text-center font-black leading-tight ${(m.cardLabel||m.label).length>=10?'text-[15px]':'text-lg'}`} style={{color:m.color}}>{m.emoji} {m.cardLabel||m.label}</h3>
                         <p className="text-center text-[9px] text-slate-300 leading-snug mt-0.5 min-h-[26px]">{m.tagline}</p>
                         {/* スコア対象モードは全難易度の自己ベスト最大値、クイックは従来どおり選択中難易度のWAVE記録を出す */}
                         {/* ★β版の「準備中」カードは、記録の代わりに何を待っているかを出す */}
@@ -35945,11 +35959,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                               デバッグのバトルモード入口(debugBattle)から来たときは、これまでどおり保存しない */}
                           <button data-battle-mode-soon={modeSoon?'1':undefined} disabled={extremeLocked||speciesLocked||modeSoon||(!!battleTutorial&&m.id!==BATTLE_MODE_CHALLENGE)} onClick={()=>{setBattleMode(m.id);if(isSpecies){openSpeciesChallengeSelection({saveProgress:!debugBattle,fromDebug:debugBattle,mode:m.id});return;}setGameState(isExtreme?'EXTREME_DIFFICULTY_SELECT':'BATTLE_DIFFICULTY_SELECT');}} className={`min-h-[44px] rounded-xl font-black text-sm disabled:opacity-30${m.id===BATTLE_MODE_CHALLENGE?battleTutorialSpotClass('modeStart'):''}`} style={{backgroundColor:m.color,color:'#0f172a'}}>{modeSoon?'準備中':extremeLocked||speciesLocked?'まだ挑戦できません':isSpecies?'種族を選ぶ':'難易度を選ぶ'}</button>
                           {/* スコアランキングの導線。クイックはランキングが無いので、高さ合わせの空枠も置かない */}
-                          {isExtreme&&<button disabled={extremeLocked||!!battleTutorial} onClick={()=>openModeScoreRanking(m.id,EXTREME_SETTING.id,'BATTLE_MODE_SELECT')} className="min-h-[40px] rounded-xl bg-slate-800 border border-fuchsia-400/40 text-fuchsia-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"><span className="flex-1 text-center whitespace-nowrap">🏆 {m.label}のランキング</span><ChevronRight size={14}/></button>}
+                          {isExtreme&&<button disabled={extremeLocked||!!battleTutorial} onClick={()=>openModeScoreRanking(m.id,EXTREME_SETTING.id,'BATTLE_MODE_SELECT')} className="min-h-[40px] rounded-xl bg-slate-800 border border-fuchsia-400/40 text-fuchsia-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"><span className="flex-1 text-center whitespace-nowrap">🏆 このモードのランキング</span><ChevronRight size={14}/></button>}
                           {/* 種族チャレンジも他モードと同じ位置に記録への導線を置く。
                               公開前は全国ランキングを持たないので、種族ごとの自己記録を出す */}
-                          {isSpecies&&!modeSoon&&<button data-species-record-link disabled={speciesLocked||!!battleTutorial} onClick={()=>openSpeciesChallengeRecords('BATTLE_MODE_SELECT',{mode:m.id})} className="min-h-[40px] rounded-xl bg-slate-800 border border-cyan-400/40 text-cyan-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"><span className="flex-1 text-center whitespace-nowrap">🏆 {m.label}のランキング</span><ChevronRight size={14}/></button>}
-                          {ranked&&<button disabled={!!battleTutorial} onClick={()=>openModeScoreRanking(m.id,safeDifficulty,'BATTLE_MODE_SELECT')} className="min-h-[40px] rounded-xl bg-slate-800 border border-indigo-400/40 text-indigo-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"><span className="flex-1 text-center whitespace-nowrap">🏆 {m.label}のランキング</span><ChevronRight size={16} className="shrink-0"/></button>}
+                          {isSpecies&&!modeSoon&&<button data-species-record-link disabled={speciesLocked||!!battleTutorial} onClick={()=>openSpeciesChallengeRecords('BATTLE_MODE_SELECT',{mode:m.id})} className="min-h-[40px] rounded-xl bg-slate-800 border border-cyan-400/40 text-cyan-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"><span className="flex-1 text-center whitespace-nowrap">🏆 このモードのランキング</span><ChevronRight size={14}/></button>}
+                          {ranked&&<button disabled={!!battleTutorial} onClick={()=>openModeScoreRanking(m.id,safeDifficulty,'BATTLE_MODE_SELECT')} className="min-h-[40px] rounded-xl bg-slate-800 border border-indigo-400/40 text-indigo-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"><span className="flex-1 text-center whitespace-nowrap">🏆 このモードのランキング</span><ChevronRight size={16} className="shrink-0"/></button>}
 
                         </div>
                       </article>
@@ -36199,7 +36213,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
         {gameState==='BATTLE_SCORE_RANKING'&&(()=>{const mode=battleModeInfo(scoreRankingMode);const species=isSpeciesChallengeMode(scoreRankingMode);return (
           <div data-mh-screen className="flex-1 flex flex-col h-full min-h-0 px-4" style={{paddingTop:'calc(.35rem + env(safe-area-inset-top))',paddingBottom:'calc(.35rem + env(safe-area-inset-bottom))'}}>
-            <div className="flex items-center gap-1 mb-1 shrink-0"><button aria-label="戻る" onClick={()=>setGameState(scoreRankingBack)} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic uppercase tracking-widest truncate" style={{color:mode.color}}>{`${mode.label}ランキング`}</h2></div>
+            <div className="flex items-center gap-1 mb-1 shrink-0"><button aria-label="戻る" onClick={()=>setGameState(scoreRankingBack)} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>{/* ★名前の長いモードでは「◯◯ランキング」が1行に入らず、モード名のほうが切れていた。
+                  モード名を主にして、「ランキング」は小さく下へ置く(2026-09-21) */}
+              <div className="min-w-0 flex-1"><h2 className="text-xl font-black italic uppercase tracking-widest truncate leading-tight" style={{color:mode.color}}>{mode.label}</h2><div className="text-[9px] font-black tracking-[.2em] text-slate-400 leading-none">ランキング</div></div></div>
             <div className="w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1">
               <div className="shrink-0 w-full mb-2.5"><AssistantBubble scene="ranking" compact/></div>
               {/* 一覧はモード選択画面・既存のバトル画面と同じ描画を呼ぶ(画面を複製しない)。
