@@ -85,7 +85,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-21 18:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-21 18:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -172,6 +172,16 @@ const TACTICS_MODE_PUBLIC_RELEASE = false;
 // 一度 true にしたあとは、実装側から勝手に false へ戻さない
 // (戻すと、すでに遊んだ人の全国ランキングだけが止まる)。
 const TACTICS_BETA_PRO_RELEASE = false;
+// イベント回想の出し分け。公開前の機能の会話は、一覧にも出さない
+// (モードが見えていないのに会話だけ並ぶと、何の話か分からないうえに中身が見えてしまう)。
+// EVENT_REPLAYS(data/assistants.js)は releaseFlag という「呼び名」しか持たないので、
+// その名前→公開しているか の対応をここで持つ。イベントを増やすときはここへ1行足す
+const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
+  tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
+});
+const eventReplayReleased = (event) => !event?.releaseFlag || EVENT_REPLAY_RELEASE_FLAGS[event.releaseFlag] === true;
+// 画面に並べるイベント回想。3か所(プロフィール・回想一覧・再生)が同じ並びを見るための唯一の入口
+const eventReplayList = () => ((typeof EVENT_REPLAYS !== 'undefined' && EVENT_REPLAYS) || []).filter(eventReplayReleased);
 // 解放条件。チャレンジモードで Master / Grand Master / Hell / Legend のどれかを1回以上
 // クリアしていること。判定には既存の mh_clears_<難易度> をそのまま読むので、新しい解放フラグは
 // 作らない(旧セーブのプレイヤーもログインした時点で解放済みとして扱われる)。

@@ -116,6 +116,10 @@ const FORCE_CHECKS = [
   { re: /^monster-hero\/(data\/(enemy-monsters|images\/images-enemy)\.js|src\/parts\/(22-enemy-and-bond-entries|60-app)\.jsx)$/,
     checks: ['mode/tactics-enemies-check.js', 'mode/tactics-enemy-actions-check.js'],
     why: 'タクティクス専用の敵が既存の並びと混ざっていないか／敵ごとの技名と行動表' },
+  // タクティクスの導入会話。公開前に回想の一覧へ出てしまうと、まだ見せていないモードの
+  // 名前と中身がそこから丸ごと見える。一覧に並ぶだけなのでエラーは出ず、気づけない
+  { re: /^monster-hero\/(data\/assistants\.js|src\/parts\/(10-core|56-screen-profile|60-app)\.jsx)$/,
+    checks: ['assistant/tactics-intro-story-check.js'], why: 'タクティクスの導入会話と、回想の出し分け' },
   // タクティクスのWAVEごとのBGM(通常戦・中ボス戦・ボス戦)を鳴らし分ける結線。
   // 判定の順番を1つ動かすだけでプロや種族の枠へ落ちるのに、
   // ファイル名の語(app・settings)では拾えないので名指しする
