@@ -50,6 +50,8 @@ assert(source.includes('const activeDifficultySetting = quickDifficultySetting(s
 assert(/const quickDifficultySetting = \(difficultyId\) => difficultyId===ULTIMATE_SETTING\.id[\s\S]{0,120}QUICK_DIFFICULTY_SETTINGS\[difficultyId\]/.test(source), 'クイック対応表の解決はULTIMATEも含めて1か所にまとまっている');
 assert(!source.includes('DIFFICULTY_SETTINGS[safeDifficulty].score') && !source.includes('DIFFICULTY_SETTINGS[safeDifficulty].gold'), '再描画経路に通常難易度表の危険な直接参照がない');
 assert(source.includes("const label=extreme?extremePreviewSetting.label:QUICK_DIFFICULTY_SETTINGS[safeDifficulty].label"), '全WAVE詳細がクイック極限難易度のラベルを解決');
-assert(source.includes('createBattleEnemy(index+1,waveDifficulty,null,powerOverride)'), '全WAVE詳細が共通の敵生成経路を使う');
+// 2026-09-21 にタクティクス専用の敵(TACTICS_ENEMY_SEQUENCE)が入り、どちらの並びを使うかを
+// options.mode で渡すようになった。クラシック・クイックの敵は1体も変えていない
+assert(source.includes('createBattleEnemy(index+1,waveDifficulty,null,powerOverride,1,{mode:battleMode})'), '全WAVE詳細が共通の敵生成経路を使う');
 
 if (!process.exitCode) console.log('\nquick extreme render checks passed');
