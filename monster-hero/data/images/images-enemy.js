@@ -41,4 +41,4 @@ const DOKUDOKU_IMG = "images/enemies/dokudoku.png?v=726ce32b496f";
 const LAMIA_IMG = "images/enemies/lamia.png?v=020567f78d11";
 const NYARLATHOTEP_IMG = "images/enemies/nyarlathotep.png?v=1c06ecec5d28";
 const SPLATTER_IMG = "images/enemies/splatter.png?v=d06aa3857300";
-const AWAKENED_MOO_IMG = "images/enemies/awakened-moo.png?v=42ea203a5ec7";
+const AWAKENED_MOO_IMG = "images/enemies/awakened-moo.png?v=d54b0b0eb47b";

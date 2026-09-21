@@ -4,6 +4,7 @@ const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分�
 //
 //   node tools/image/cutout-enemy-art.js <入力> <出力> [<入力> <出力> …]
 //   FILL_ALL=1 node tools/image/cutout-enemy-art.js …   体のあいだに背景が見えていない絵のとき
+//   LONG=1024 node tools/image/cutout-enemy-art.js …     ボスなど、大きく拡大して出す絵のとき
 //
 // 原本は tools/art-sources/enemies-tactics/ に置いてある。
 //
@@ -36,7 +37,10 @@ const TINT = Number(process.env.TINT || 10);     // 色みの差(R-B)。白い�
 // 体のあいだに背景が見えていない絵(イナリのように顔と体がくっついている)では、
 // 囲まれた抜けを色を問わず全部埋める
 const FILL_ALL = process.env.FILL_ALL === '1';
-const LONG_SIDE = 160;
+// 長辺の大きさ。ふだんは160px(配信中の敵と同じ)。
+// ボスだけは大きく拡大して表示するので、粗くならないよう高い解像度のまま置く
+// (クラシックのムーが 1536x971 で入っているのと同じ考え方)。
+const LONG_SIDE = Number(process.env.LONG || 160);
 
 const cutout = async (src, dest) => {
   const img = sharp(src);
