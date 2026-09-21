@@ -107,6 +107,27 @@ const RewardSummaryCard = ({ summary, onPresentationComplete }) => {
           <span className="text-white font-mono font-bold">×{summary.heroProofGain.toLocaleString()}</span>
         </div>
       )}
+      {/* プロのランぶんのクイック周回報酬(2026-09-21・ユーザー提案「プロモードをクリアした
+          ときに限り、クイック何周分の報酬がもらえるなら可能？ 演奏と同じ仕組み」)。
+          ★上の行はプロ本体の報酬。ここは「クイックを回していたぶん」として別に足したもの。
+            混ぜると何がどこから来たのか分からなくなるので、線で区切って別のまとまりにする */}
+      {summary.proQuickAward && summary.proQuickAward.loops > 0 && (
+        <div data-pro-quick-award className="pt-2 border-t border-white/10">
+          <div className="flex items-center justify-between text-[11px] mb-1">
+            <span className="text-cyan-300 font-black flex items-center gap-1"><span aria-hidden="true">⚔</span>クイック周回ぶん</span>
+            <span className="text-white font-mono font-bold">{summary.proQuickAward.loops.toLocaleString()}周</span>
+          </div>
+          <p className="text-[9px] leading-relaxed text-slate-400">
+            {[
+              summary.proQuickAward.xp > 0 ? `経験値 +${summary.proQuickAward.xp.toLocaleString()}` : null,
+              summary.proQuickAward.gold > 0 ? `ダイヤ +${summary.proQuickAward.gold.toLocaleString()}` : null,
+              summary.proQuickAward.bond > 0 ? `絆 +${summary.proQuickAward.bond.toLocaleString()}` : null,
+              summary.proQuickAward.psyche > 0 ? `虹のプシュケー ×${summary.proQuickAward.psyche.toLocaleString()}` : null,
+              summary.proQuickAward.shard > 0 ? `勇者の証片 ×${summary.proQuickAward.shard.toLocaleString()}` : null,
+            ].filter(Boolean).join(' ／ ')}
+          </p>
+        </div>
+      )}
       {summary.heroProofShardGain > 0 && (
         <div className="pt-2 border-t border-white/10 flex items-center justify-between text-[11px]">
           <span className="text-amber-200 font-black flex items-center gap-1"><span aria-hidden="true">🎖️</span>勇者の証片</span>
