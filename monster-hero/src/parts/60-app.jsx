@@ -1241,6 +1241,7 @@ function MonsterHeroGame() {
   const [growthAptOpen, setGrowthAptOpen] = useState(null);
   const [showNameEdit, setShowNameEdit] = useState(false);
   const [tempName, setTempName] = useState('');
+  const [backupUsageTick, setBackupUsageTick] = useState(0); // 保存量の表示を数え直すための目印
   const [showBackup, setShowBackup] = useState(false); // データバックアップ/復元モーダル
   const [backupTab, setBackupTab] = useState('export'); // 'export'|'import'
   const [backupCode, setBackupCode] = useState('');
@@ -1848,13 +1849,64 @@ function MonsterHeroGame() {
   ), [powerRankingAll, powerRankMonFilter, bondEntryLineageId]);
   const emptyRankingStatus = { loading:false, refreshing:false, error:null, fetched:false };
   const rankingStatus = (key) => rankingStatusByKey[key] || emptyRankingStatus;
+  // ===== 端末へ控えるランキングは「軽い形」にする =====
+  // ★控えるのは「通信を待たずに一覧を出す」ためだけなのに、サーバーから来た行をそのまま
+  //   積んでいた。1件3,420文字のうち3,156文字が party[].detail(他人のモンスターの
+  //   絆XP・継承技・超越値までの詳細)で、さらに難易度ごとに積むだけで捨てないため、
+  //   mh_ranking_cache だけで1,448,151文字＝保存データ全体の86%を占めていた
+  //   (2026-09-21・ユーザー報告で書き出したセーブを実測)。
+  // ★これが localStorage の上限(iPhoneのSafariでおよそ5MB)を圧迫すると、
+  //   hasLocalStorage() のためし書きが落ちて storeSet が何も書かずに素通りし、
+  //   **ダイヤ1つの保存すら効かなくなる**。しかも失敗は握りつぶされ、メモリの控えには
+  //   書かれるので画面は正常に見え、落ちて読み込み直した瞬間に全部が数時間前へ戻る
+  //   (ユーザー報告「転生100回分戻るとかダイヤやプシュケーも戻ってるみたい」)。
+  // ★画面が使う rankingCacheRef は今までどおり detail を持ったまま。**保存する形だけ**削るので、
+  //   遊んでいるあいだの見た目は何も変わらない。detail は詳細を開けば取り直せる。
+  const RANKING_CACHE_DIFFICULTY_LIMIT = 6;   // 端末へ控える難易度の数(新しく見たものから)
+  const compactRankingRowsForSave = (rows) => (Array.isArray(rows) ? rows : []).map(row => {
+    if (!row || typeof row !== 'object' || !Array.isArray(row.party)) return row;
+    return { ...row, party: row.party.map(mon => {
+      if (!mon || typeof mon !== 'object' || mon.detail === undefined) return mon;
+      const { detail, ...rest } = mon;
+      return rest;
+    }) };
+  });
+  const compactRankingCacheForSave = (cache) => {
+    const score = {};
+    const keys = Object.keys(cache?.score || {});
+    keys.slice(Math.max(0, keys.length - RANKING_CACHE_DIFFICULTY_LIMIT)).forEach(key => {
+      score[key] = compactRankingRowsForSave(cache.score[key]);
+    });
+    return {
+      score,
+      breeder: Array.isArray(cache?.breeder) ? compactRankingRowsForSave(cache.breeder) : (cache?.breeder ?? null),
+      bond: Array.isArray(cache?.bond) ? compactRankingRowsForSave(cache.bond) : (cache?.bond ?? null),
+    };
+  };
+  // 控えが「重い形」のままかどうか。起動時に一度だけ軽くして書き戻すために見る
+  const rankingCacheNeedsCompaction = (cache) => {
+    if (!cache || typeof cache !== 'object') return false;
+    if (Object.keys(cache.score || {}).length > RANKING_CACHE_DIFFICULTY_LIMIT) return true;
+    const hasDetail = (rows) => Array.isArray(rows) && rows.some(row =>
+      Array.isArray(row?.party) && row.party.some(mon => mon && typeof mon === 'object' && mon.detail !== undefined));
+    if (Object.values(cache.score || {}).some(hasDetail)) return true;
+    return hasDetail(cache.breeder) || hasDetail(cache.bond);
+  };
+  // 新しく見た難易度をうしろへ回す。前へ足すだけだと、上限で切るときに
+  // 「いちばん最近見た難易度」から捨ててしまう
+  const mergeRankingScoreForCache = (current, patch) => {
+    const next = { ...(current || {}) };
+    Object.keys(patch).forEach(key => { delete next[key]; });
+    Object.keys(patch).forEach(key => { next[key] = patch[key]; });
+    return next;
+  };
   const saveRankingCache = (patch) => {
     const current = rankingCacheRef.current || { score: {}, breeder: null, bond: null };
     const next = { ...current, ...patch };
-    if (patch.score) next.score = { ...(current.score || {}), ...patch.score };
+    if (patch.score) next.score = mergeRankingScoreForCache(current.score, patch.score);
     rankingCacheRef.current = next;
     // 保存の失敗(容量超過など)は表示に影響しないので握りつぶす
-    try { storeSet(RANKING_CACHE_KEY, { ...next, at: Date.now() }, false); } catch {}
+    try { storeSet(RANKING_CACHE_KEY, { ...compactRankingCacheForSave(next), at: Date.now() }, false); } catch {}
   };
   // 端末に残っている前回の内容を、通信を待たずに画面へ出す
   const hydrateRankingCache = (cached) => {
@@ -1863,6 +1915,11 @@ function MonsterHeroGame() {
     const breeder = Array.isArray(cached.breeder) ? cached.breeder : null;
     const bond = Array.isArray(cached.bond) ? cached.bond : null;
     rankingCacheRef.current = { score, breeder, bond };
+    // 前のつくりで溜まった重い控えは、ここで一度だけ軽くして書き戻す。
+    // そのままにすると、次にランキングを見るまで場所を占め続ける
+    if (rankingCacheNeedsCompaction(rankingCacheRef.current)) {
+      try { storeSet(RANKING_CACHE_KEY, { ...compactRankingCacheForSave(rankingCacheRef.current), at: cached.at || Date.now() }, false); } catch {}
+    }
     const cachedStatus = { loading:false, refreshing:false, error:null, fetched:true };
     const statusPatch = {};
     Object.entries(score).forEach(([diff, rows]) => { if (Array.isArray(rows) && rows.length) statusPatch[`score:${diff}`] = cachedStatus; });
@@ -2804,6 +2861,23 @@ function MonsterHeroGame() {
   // ===== モンビーで見せる周回の進捗(docs/spec/QUICK_RHYTHM_LINK.md PR6) =====
   // ★保存しない。リロードで消えてよい値だけをここに置く(設計書 §6「新しい保存キーを作らない」)。
   //   周回そのものの記録は、今までどおり既存の mh_quick_* が正本。
+  // ===== 端末に保存できなくなったことに気づけるようにする =====
+  // ★storeSet は書き込みの失敗を握りつぶすうえ、失敗してもメモリの控えには書くので、
+  //   保存できなくなっても画面はそのまま動き続ける。落ちて読み込み直した瞬間に、
+  //   最後に書けたところまで全部が戻る
+  //   (2026-09-21・ユーザー報告「転生100回分戻るとかダイヤやプシュケーも戻ってるみたい」。
+  //    書き出したセーブを測ったところ、ランキングの控えだけで保存データの86%を占めていた)。
+  // ★AUTO∞は放置して回すものなので、出すだけでは気づけない。周回は止めるところまでやる
+  //   (ユーザー指示「そうなる前に自動で止めてそのぶんまではちゃんと経験値とか入るように」)。
+  //   止めた時点までの報酬は、1周ごとに配り終えているので端末に残っている。
+  const [storageTrouble, setStorageTrouble] = useState(null);   // { text, detail, at }
+  const storageTroubleRef = useRef(null);
+  storageTroubleRef.current = storageTrouble;
+  const storageTroubleTextFor = (health) => {
+    const error = String(health?.lastError || '');
+    if (/quota|exceeded|full/i.test(error)) return '端末の保存領域がいっぱいで、進行を保存できていません';
+    return '端末に進行を保存できていません';
+  };
   const [quickRunProgress, setQuickRunProgress] = useState(null);
   // 直前の演奏で何周ぶん入ったか。帯へ1回だけ出す(保存しない)。
   // 演奏から抜けた直後の effect からも見るので、同期の控え(ref)も持つ
@@ -2848,6 +2922,28 @@ function MonsterHeroGame() {
     if (!current || current.finished) return;
     writeQuickRunProgress({ ...current, finished:true, reason:String(reason || '') });
   };
+  // 保存が効いているかを確かめ、だめなら知らせる(AUTO∞が回っていれば止める)。
+  // 呼ぶのは「1周ぶんの報酬を配り終えたところ(awardRunRewards)」と、下の見回り。
+  // ★止めるのは報酬を配り終えたあとなので、止まった時点までのぶんは端末に入っている
+  const checkStorageTrouble = () => {
+    const health = getStorageHealth();
+    if (health.failures <= 0) return false;
+    if (!storageTroubleRef.current) {
+      setStorageTrouble({ text: storageTroubleTextFor(health), detail: String(health.lastError || ''), at: Date.now() });
+    }
+    if (autoRepeatRef.current) stopAllAuto('storage');
+    return true;
+  };
+  // 見回り。★手で長いランを遊んでいるあいだも気づけるようにするために要る。
+  //   AUTO∞は1周ごとに上を通るが、手動のチャレンジは何時間も終わらないので、
+  //   報酬を配るところまで一度も来ない(2026-09-21・ユーザー報告はチャレンジを3時間遊んだとき)。
+  //   WAVEを倒すたびにミッションの進捗を保存しているので、そこが落ちれば数分以内に気づける
+  const checkStorageTroubleRef = useRef(null);
+  checkStorageTroubleRef.current = checkStorageTrouble;
+  useEffect(() => {
+    const timer = setInterval(() => { if (checkStorageTroubleRef.current) checkStorageTroubleRef.current(); }, 30000);
+    return () => clearInterval(timer);
+  }, []);
   // 帯に出す「なぜ終わったか」。分からないときは今までどおりの言い方に戻す
   const quickRunFinishReasonText = (reason) => ({
     defeat:'負けたので周回が終わりました（ここまでのぶんは入ります）',
@@ -2855,6 +2951,7 @@ function MonsterHeroGame() {
     hidden:'アプリが裏に回ったので周回が止まりました（ふだんは戻ると自動で続きます）',
     manual:'AUTO∞を切ったので周回が終わりました',
     error:'続けられなくなったので周回が止まりました',
+    storage:'端末に保存できなくなったので周回を止めました（ここまでのぶんは入っています）',
   }[String(reason || '')] || '周回が終わりました');
   // いまの周でここまでにクリアしたWAVEぶんの見込み。
   // 報酬は「その周が終わったときに、そこまでクリアしたWAVEのぶん」を配る
@@ -4254,11 +4351,14 @@ function MonsterHeroGame() {
       const loginGrant = grantLoginBonus(savedLoginBonus, savedGifts);
       // 不具合のお詫びも同じギフトボックスへ入れる。既に届いていれば何もしない
       const compensationGrant = grantCompensationGifts(loginGrant.gifts);
-      setGifts(compensationGrant.gifts);
+      // 受け取り済みのギフトは消えずに積もるので、起動のたびに古いぶんを落としておく
+      // (pruneGiftHistory。ログインボーナスと補償は数え直しに使うので残す)
+      const prunedGifts = pruneGiftHistory(compensationGrant.gifts);
+      setGifts(prunedGifts);
       await storeSet('mh_login_bonus', loginGrant.loginBonus, false);
       setLoginBonusState(loginGrant.loginBonus);
-      if (loginGrant.granted || compensationGrant.granted) {
-        await storeSet('mh_gifts', compensationGrant.gifts, false);
+      if (loginGrant.granted || compensationGrant.granted || prunedGifts.length !== compensationGrant.gifts.length) {
+        await storeSet('mh_gifts', prunedGifts, false);
       }
       if (loginGrant.granted) setLoginBonusPopup({ day:loginGrant.day, rewards:loginGrant.gift.rewards });
       // ログインボーナスでptとして配ってしまったぶんを、経験値へ付け替える(一度きり)。
@@ -6767,6 +6867,9 @@ function MonsterHeroGame() {
     const rewardWaveHistory = applyQuickXpPolicy(1, runMode, quickRewardPolicyRunRef.current) === 0
       ? waveHistory.map(entry => ({ ...entry, xpGain: 0 })) : waveHistory;
     setFinalRewardSummary({ quickMode: isQuickMode(runMode), breederXpGain, breederLevelBefore, breederLevelAfter, goldBefore, goldAfter, heroBondGain, allyBondGains, waveHistory: rewardWaveHistory });
+    // ここまでで、この周ぶんの報酬はすべて書き終えている。
+    // 端末へ書けていなければ、次の周へ行かずにここで止める(∞周回のとき)
+    checkStorageTrouble();
   };
 
   // スキップ: チケットを1枚使い、その難易度をボスまで倒したのと同じ経験値・ダイヤを受け取る。
@@ -7814,12 +7917,14 @@ function MonsterHeroGame() {
       entries.push({ key:'mh_gold', before:gold, next:balances.gold });
       entries.push({ key:'mh_breeder_points', before:breederPoints, next:balances.breederPoints });
       entries.push({ key:'mh_owned_items', before:ownedItems, next:balances.ownedItems });
-      entries.push({ key:'mh_gifts', before:gifts, next:nextGifts });
+      // 受け取ったぶんだけ「受取済み」が増えるので、ここでも古い控えを落とす
+      const keptGifts = pruneGiftHistory(nextGifts);
+      entries.push({ key:'mh_gifts', before:gifts, next:keptGifts });
       const saved = await saveStoredValuesOrRollback(entries, storeGet, storeSet);
       // 成立しなかったときは巻き戻し済み。画面も動かさず「まだ受け取っていない」ままにする
       if (!saved) { console.error('[gift] claim persistence failed'); return; }
       if (balances.breederXp !== breederXp) setBreederXp(balances.breederXp);
-      setGold(balances.gold); setBreederPoints(balances.breederPoints); setOwnedItems(balances.ownedItems); setGifts(nextGifts);
+      setGold(balances.gold); setBreederPoints(balances.breederPoints); setOwnedItems(balances.ownedItems); setGifts(keptGifts);
     } finally { giftClaimingRef.current = false; }
   };
   // タブに出す赤い丸バッジ。0件なら何も出さない。
@@ -9104,10 +9209,19 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   runResultFinishedRef.current = runResultFinished;
   // 止まった周回を「続きから」再開してよいのは、挑戦がまだ生きているときだけ
   const quickRunResumable = runStage !== null && !runResultFinished;
+  // 端末へ書ける状態か。書けないまま回しても報酬は残らない(落ちたら全部消える)ので、
+  // 周回は始めないし、続けもしない(2026-09-21・ユーザー指示「そうなる前に自動で止めて」)
+  const storageReadyForRun = () => {
+    if (checkStorageTrouble()) return false;
+    if (probeStorageWritable()) return true;
+    checkStorageTrouble();   // ためし書きで分かった失敗を、そのまま知らせへ回す
+    return false;
+  };
   const startQuickRunFromRhythm = () => {
     // 段階が残っていても、勝負がついている(負けた・リタイアした)なら畳んで始め直せる。
     // まだ生きている挑戦の上へ新しいランを重ねるのだけを止める
     if (runStageRef.current && !runResultFinishedRef.current) return false;
+    if (!storageReadyForRun()) return false;
     const template = repeatTemplateForNewRun();
     if (!template) return false;
     // 終わったランの数えかけを持ち越さない(1周目から数え直す)
@@ -9137,6 +9251,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if (!runStageRef.current) return false;              // ランが残っていない
     if (runResultFinishedRef.current) return false;      // 勝負がついている(続きが無い)
     if (!isQuickMode(runMode)) return false;
+    if (!storageReadyForRun()) return false;             // 端末へ書けないなら続けない
     // 止まったときに「次周を始めている最中」の印が残っていることがある。
     // 残ったままだと CHAMPION から次の周へ入れないので、必ず戻す
     autoRepeatStartingRef.current = false;
@@ -10850,6 +10965,45 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const updateNoticeMode = normalizeUpdateNoticeStyle(updateNoticeStyle);
   const updateNoticeOnPlay = gameState === 'RHYTHM_PLAY';
   const updateNoticeSmall = updateNoticeMode === 'MINI';
+  // ためこんだ控えをその場で軽くして、書けるようになったか確かめる。
+  // 開き直せば起動時にも同じ整理が走るが、遊んでいる途中でも直せるようにボタンから呼ぶ
+  const compactStoredDataNow = async () => {
+    try {
+      if (rankingCacheRef.current) {
+        await storeSet(RANKING_CACHE_KEY, { ...compactRankingCacheForSave(rankingCacheRef.current), at: Date.now() }, false);
+      }
+    } catch {}
+    try {
+      const pruned = pruneGiftHistory(gifts);
+      if (pruned.length !== (Array.isArray(gifts) ? gifts.length : 0)) { await storeSet('mh_gifts', pruned, false); setGifts(pruned); }
+    } catch {}
+    if (probeStorageWritable()) { setStorageTrouble(null); return true; }
+    const health = getStorageHealth();
+    setStorageTrouble({ text: storageTroubleTextFor(health), detail: String(health.lastError || ''), at: Date.now() });
+    return false;
+  };
+  // 保存できていないことの知らせ。どの画面にいても出す。
+  // ★超省エネの暗幕(zIndex 2147483646)より上へ出す。暗幕の下だと、
+  //   いちばん気づいてほしい「AUTO∞で放置していたとき」に見えない
+  const storageTroubleNotice = storageTrouble ? ReactDOM.createPortal(
+    <div aria-live="assertive" role="alert" data-storage-trouble
+      className="fixed left-3 right-3 rounded-2xl border border-red-300/80 bg-red-950/95 p-3 shadow-[0_8px_28px_rgba(0,0,0,0.6)]"
+      style={{ top:'calc(8px + env(safe-area-inset-top))', zIndex:2147483647 }}>
+      <div className="flex items-start gap-2">
+        <span className="shrink-0 text-base" aria-hidden="true">⚠️</span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[12px] font-black leading-snug text-red-100">{storageTrouble.text}</p>
+          <p className="mt-1 text-[10px] leading-relaxed text-red-200">このまま遊んでも、経験値やダイヤが端末に残りません。下のボタンで空きを作るか、ゲームを開き直してください。心配なときは設定の「データバックアップ」で書き出しておくと安心です。</p>
+          {storageTrouble.detail ? <p className="mt-1 text-[9px] leading-relaxed text-red-300/80">{storageTrouble.detail}</p> : null}
+          <button type="button" data-storage-trouble-compact onClick={()=>{void compactStoredDataNow();}}
+            className="mt-2 min-h-[44px] w-full rounded-xl border border-red-200/70 bg-red-700 text-[11px] font-black text-red-50 active:scale-[.98]">古い記録を整理して空きを作る</button>
+        </div>
+        <button type="button" aria-label="この知らせを閉じる" onClick={()=>setStorageTrouble(null)}
+          className="shrink-0 w-11 min-h-[44px] flex items-center justify-center rounded-xl bg-red-800 text-red-50 font-black">×</button>
+      </div>
+    </div>,
+    document.body
+  ) : null;
   const updateNotice = (updateNoticeVisible && updateNoticeMode !== 'OFF' && !updateNoticeOnPlay) ? ReactDOM.createPortal(
     updateNoticeSmall ? (
       <div aria-live="assertive" data-update-notice="mini" data-update-notice-place="top"
@@ -10964,7 +11118,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       <div className="mh-boot-stars" aria-hidden="true"></div><div className="mh-mocchi-wrap"><img src={MOCCHI_IMG} alt="モッチー"/><span></span><i>✦</i><i>✧</i></div>
       <section className="mh-boot-copy">{bootPhase==='LOADING'?<><h1>NOW LOADING</h1><h2>冒険の準備をしています</h2><div className="mh-progress"><span style={{width:`${pct}%`}}></span></div><strong>{pct}%</strong><p>{bootProgress.label}</p></>:<><h1>READY</h1><button disabled={entryAnimating} onPointerDown={unlockBootSound}>TAP TO START</button><h2>― 冒険の扉を開く ―</h2><p>追加データはバックグラウンドで読み込みを続けます</p></>}</section>
       <footer>VERSION {BUILD_DATE}</footer><div className="mh-entry-flash"></div>
-    </main>{updateNotice}</>
+    </main>{updateNotice}{storageTroubleNotice}</>
   );
   const rankingPlace = index => <div className={`w-7 h-7 rounded-full flex items-center justify-center font-black text-[9px] shrink-0 ${index===0?'bg-amber-500 text-black':index===1?'bg-slate-300 text-black':index===2?'bg-orange-600 text-white':'bg-slate-800 text-slate-400'}`}>{index+1}</div>;
   // ランキングのブリーダーアイコン。全ランキング画面(スコア・ブリーダーLv・絆Lv・総合力・
@@ -11204,9 +11358,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       <img className="mh-title-visual" src="data/images/title-screen-clean.jpg" alt="モンスターヒーロー グランドチャンピオンクエスト"/>
       <header className="mh-title-header"><div className="mh-title-build"><b>VERSION</b><span>{BUILD_DATE}</span><b>PLAYER ID</b><span>{titlePlayerId}</span></div><div className="mh-title-actions"><button onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();openChangelog()}}><Sparkles size={19}/><span>お知らせ</span>{hasUnreadChangelog&&<em>NEW</em>}</button><button onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();setShowTitleSettings(true)}}><Settings size={19}/><span>設定</span></button></div></header>
       <button type="button" className="mh-title-start" disabled={!!titleModal || titleStarting} onPointerDown={startGame} aria-label="トップ画面へ進む"></button>{titleModal}
-    </main>{updateNotice}</>
+    </main>{updateNotice}{storageTroubleNotice}</>
   );
-  if (bootPhase === 'ENTERING_GAME') return <><main className="mh-entering"><img src="data/images/title-screen-clean.jpg" alt=""/><div className="mh-gate-core"></div><div className="mh-gate-particles"></div><div className="mh-gate-flash"></div>{enteringSlow&&<p>世界を構築しています…</p>}</main>{updateNotice}</>;
+  if (bootPhase === 'ENTERING_GAME') return <><main className="mh-entering"><img src="data/images/title-screen-clean.jpg" alt=""/><div className="mh-gate-core"></div><div className="mh-gate-particles"></div><div className="mh-gate-flash"></div>{enteringSlow&&<p>世界を構築しています…</p>}</main>{updateNotice}{storageTroubleNotice}</>;
 
   return (
     // みゅあとの仲良し度をここから配る。各画面は <AssistantBubble scene="…"/> を置くだけでよい
@@ -11224,7 +11378,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <span key={r.id} style={{position:'absolute',left:r.x,top:r.y,width:'48px',height:'48px',marginLeft:'-24px',marginTop:'-24px',borderRadius:'9999px',border:'2px solid rgba(255,255,255,0.9)',boxShadow:'0 0 10px rgba(255,255,255,0.6)',transformOrigin:'center',animation:'mhRipple 550ms ease-out forwards'}}/>
         ))}
       </div>
-      {updateNotice}
+      {updateNotice}{storageTroubleNotice}
       {/* ランの途中ならどの画面でも出し続ける。gameState==='BATTLE' に限っていたため、
           敵を倒してWAVE_RESULTへ移った瞬間に消えて、曲を選べなくなっていた */}
       {showAutoBgmPicker&&isRunStage(gameState)&&<div data-auto-bgm-picker className="fixed inset-0 flex items-end justify-center bg-black/55 p-3" style={{zIndex:2147483647}} onClick={()=>setShowAutoBgmPicker(false)}><div className="w-full max-w-sm rounded-2xl border border-indigo-300/40 bg-slate-950 p-4 text-left shadow-2xl" onClick={e=>e.stopPropagation()}><div className="flex items-center justify-between gap-2 mb-3"><div><div className="text-sm font-black text-white">BGM / 音量</div><div className="text-[10px] text-slate-400">{ultraEcoSession?'超省エネ中：SEはOFF固定':(autoBattle||autoRepeat)?'AUTO中のBGMを一時変更':'このバトル中のBGMを一時変更'}</div></div><button type="button" onClick={()=>setShowAutoBgmPicker(false)} className="min-w-[44px] min-h-[44px] rounded-xl bg-slate-800 text-slate-200 font-black">×</button></div><div className="mb-2">{ultraEcoSession?<div className="rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-xs font-black text-slate-400">🔕 SE 0　超省エネ中はOFF固定</div>:<VolumeSlider label="SE" icon="🔔" value={seVolume} onChange={changeSeVolume} gradient="from-cyan-500 to-indigo-500" thumbRing="border-indigo-400"/>}</div><div className="mb-3"><VolumeSlider label="BGM" icon="🎵" value={bgmVolume} onChange={changeBgmVolume} gradient="from-fuchsia-500 to-pink-500" thumbRing="border-fuchsia-400"/></div><label className="block"><span className="text-xs font-black text-slate-300">再生するBGM</span><select aria-label="バトル中に再生するBGM" value={autoBgmOverride||(autoBattle||autoRepeat?bgmArrangement.autoBattle:bgmKeyForState(gameState,wave,enemy?.id,(waveHistory||[]).length>0,hp<=0||gaveUp))} onChange={e=>selectAutoRuntimeBgm(e.target.value)} className="mt-1 w-full min-h-[48px] rounded-xl border border-white/15 bg-slate-900 px-3 text-sm text-white"><option value="__none__">BGMなし</option>{BGM_TRACKS.map(track=><option key={track.id} value={track.id}>{track.name}</option>)}</select></label><p className="mt-2 text-[10px] leading-relaxed text-slate-400">BGMの一時選択は保存済みBGMアレンジを変更しません。SE/BGM音量はHOMEの音量設定と共通です。</p></div></div>}
@@ -14305,6 +14459,35 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div className="bg-slate-900 border border-indigo-500 rounded-3xl p-5 w-full max-w-sm shadow-2xl max-h-full overflow-y-auto mh-scroll">
               <h3 className="text-lg font-black text-white mb-1 text-center flex items-center justify-center gap-2"><ShieldCheck size={18} className="text-emerald-400"/>データのバックアップ</h3>
               <p className="text-[9px] text-slate-500 text-center mb-4 leading-tight">ホーム画面のアイコンを作り直すとデータが引き継がれないことがあります。バックアップコードを控えておけば、新しいアイコンから復元できます。</p>
+              {/* いまどれだけ使っているか。★保存できなくなると、経験値もダイヤも端末に残らないまま
+                  遊び続けることになる(落ちて開き直した瞬間に戻る)ので、自分で見て確かめられるようにする
+                  (2026-09-21・ユーザー報告で、ランキングの控えが保存データの86%を占めていた) */}
+              {(()=>{
+                const usage = storageUsageReport();
+                if (!usage) return null;
+                const mb = (usage.total * 2) / 1024 / 1024;          // localStorage は1文字2バイトで数える
+                const pct = Math.min(100, Math.round((mb / 5) * 100)); // 上限はiPhoneのSafariでおよそ5MB
+                const tone = pct >= 80 ? 'text-red-300' : pct >= 60 ? 'text-amber-300' : 'text-emerald-300';
+                return (
+                  <div data-storage-usage key={backupUsageTick} className="mb-4 rounded-2xl border border-white/10 bg-black/40 p-3 text-left">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="text-[10px] font-black text-slate-300">保存データの大きさ</span>
+                      <b className={`text-[11px] font-black ${tone}`}>{mb.toFixed(2)} MB／およそ5MB（{pct}%）</b>
+                    </div>
+                    <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
+                      <div className={`h-full rounded-full ${pct>=80?'bg-red-400':pct>=60?'bg-amber-400':'bg-emerald-400'}`} style={{width:`${Math.max(2,pct)}%`}}/>
+                    </div>
+                    <ul className="mt-2 space-y-0.5 text-[9px] leading-relaxed text-slate-400">
+                      {usage.items.slice(0,3).map(item=>(
+                        <li key={item.key} className="flex justify-between gap-2"><span className="truncate">{item.key}</span><span className="shrink-0">{Math.round(item.chars*2/1024)} KB</span></li>
+                      ))}
+                    </ul>
+                    <p className="mt-2 text-[9px] leading-relaxed text-slate-500">いっぱいになると、経験値やダイヤが端末に残らなくなります。大きいときは下のボタンで古い記録を整理してください。</p>
+                    <button type="button" data-storage-usage-compact onClick={()=>{void compactStoredDataNow().then(()=>setBackupUsageTick(n=>n+1));}}
+                      className="mt-2 min-h-[44px] w-full rounded-xl border border-indigo-300/50 bg-slate-800 text-[10px] font-black text-indigo-200 active:scale-[.98]">古い記録を整理して空きを作る</button>
+                  </div>
+                );
+              })()}
               <div className="flex gap-1.5 mb-4">
                 <button onClick={()=>setBackupTab('export')} className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase ${backupTab==='export'?'bg-indigo-500 text-white':'bg-slate-800 text-slate-500'}`}>バックアップ作成</button>
                 <button onClick={()=>setBackupTab('import')} className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase ${backupTab==='import'?'bg-indigo-500 text-white':'bg-slate-800 text-slate-500'}`}>復元する</button>

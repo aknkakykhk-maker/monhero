@@ -56,6 +56,7 @@ const addDye=grantCompensationGifts(onlyOld,at('2026-08-07T00:00:00Z'));
 check('過去のお詫びを受け取り済みでも染色のぶんは届く',addDye.granted&&addDye.gifts.filter(g=>g.id===dyeId).length===1);
 check('過去のお詫びを重ねて配らない',addDye.gifts.filter(g=>g.id!==dyeId).length===onlyOld.length);
 check('染色のお詫びも2回目は配らない',grantCompensationGifts(addDye.gifts,at('2026-08-08T00:00:00Z')).granted===false);
-check('起動時にお詫びも配る',source.includes('const compensationGrant = grantCompensationGifts(loginGrant.gifts);')&&source.includes('if (loginGrant.granted || compensationGrant.granted)'));
+check('起動時にお詫びも配る',source.includes('const compensationGrant = grantCompensationGifts(loginGrant.gifts);')
+  &&/if \(loginGrant\.granted \|\| compensationGrant\.granted[^)]*\) \{[\s\S]{0,200}?storeSet\('mh_gifts'/.test(source));
 
 process.exit(failed?1:0);

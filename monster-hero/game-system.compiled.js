@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 45f8e26e1f23f207
+// source-sha256: 2983b3c234139595
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6b61390638c615a7
+// generated-sha256: f8601b6ca9c16038
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -161,7 +161,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-19 09:42"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-21 10:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11552,6 +11552,27 @@ const applyLoginPointFix = (points, xp, gifts) => {
     granted: wrong
   };
 };
+
+// ===== 受け取り済みのギフトを積もらせない =====
+// ★受け取り済みは消す仕組みが無く、8月からの全部が残っていた
+//   (2026-09-21・書き出したセーブの実測で mh_gifts は331件122,271文字。
+//    うち328件・129,500文字が受け取り済みで、ミッション報酬が274件を占めていた)。
+//   保存データが localStorage の上限へ近づくと、**ダイヤ1つの保存すら効かなくなる**ため、
+//   受け取り済みの控えは新しいものだけ残す。報酬はすでに配り終えているので、
+//   消えるのは「受取済み」タブに並ぶ記録だけ。
+// ★ログインボーナスと補償は消さない。一度きりの付け替え(mistakenLoginPoints)が
+//   受け取り済みのログインボーナスを数えており、消すと数え直せなくなる。
+const GIFT_HISTORY_LIMIT = 50;
+const GIFT_HISTORY_KEEP_SOURCES = Object.freeze(['loginBonus', 'compensation']);
+const giftHistoryPrunable = gift => !!gift?.claimedAt && !GIFT_HISTORY_KEEP_SOURCES.includes(gift?.source);
+const pruneGiftHistory = (gifts, limit = GIFT_HISTORY_LIMIT) => {
+  const list = Array.isArray(gifts) ? gifts : [];
+  const prunable = list.filter(giftHistoryPrunable);
+  if (prunable.length <= limit) return list;
+  const claimedAtOf = gift => Date.parse(gift?.claimedAt || '') || 0;
+  const keep = new Set(prunable.slice().sort((a, b) => claimedAtOf(b) - claimedAtOf(a)).slice(0, limit));
+  return list.filter(gift => !giftHistoryPrunable(gift) || keep.has(gift));
+};
 const grantCompensationGifts = (gifts, now = Date.now()) => {
   const list = Array.isArray(gifts) ? gifts : [];
   const missing = COMPENSATION_GIFTS.filter(def => !list.some(item => item?.id === def.id));
@@ -17505,21 +17526,120 @@ const setStorageWriteBlocked = blocked => {
   _storageWriteBlocked = !!blocked;
 };
 const isStorageWriteBlocked = () => _storageWriteBlocked;
+// ===== 保存が効いているかの見張り =====
+// ★storeSet は書き込みの失敗を握りつぶすうえ、失敗しても _memStore には必ず書く。
+//   そのため保存できなくなっても、そのセッションのあいだは読み戻せて画面は正常に見え、
+//   落ちて読み込み直した瞬間に「最後に書けたところ」まで一斉に戻る
+//   (2026-09-21・ユーザー報告「転生100回分戻るとかダイヤやプシュケーも戻ってるみたい」)。
+//   ここで結果を控えておき、画面の側が気づいて止められるようにする。
+//   ★控えるだけで、保存の中身も経路も変えない(storeSet の戻り値を見ていない呼び出しは今までどおり)。
+let _storageWriteFailures = 0; // 最後に成功してからの連続失敗数
+let _storageLastError = ''; // 失敗したときの手がかり(QuotaExceededError など)
+let _storageLastFailedKey = ''; // どのキーで失敗したか
+let _storageLastOkAt = 0; // 最後に書けた時刻
+let _storageLargestWriteChars = 0; // これまでに書けた1件の最大の長さ(次が書けるかを試す目安)
+const noteStorageWriteOk = chars => {
+  _storageWriteFailures = 0;
+  _storageLastError = '';
+  _storageLastFailedKey = '';
+  _storageLastOkAt = Date.now();
+  if (chars > _storageLargestWriteChars) _storageLargestWriteChars = chars;
+};
+const noteStorageWriteFailure = (key, error) => {
+  _storageWriteFailures += 1;
+  _storageLastFailedKey = String(key || '');
+  _storageLastError = String(error && (error.name || error.message) || error || '');
+};
+const getStorageHealth = () => ({
+  failures: _storageWriteFailures,
+  lastError: _storageLastError,
+  lastFailedKey: _storageLastFailedKey,
+  lastOkAt: _storageLastOkAt,
+  largestWriteChars: _storageLargestWriteChars
+});
 const storeSet = async (key, val, shared = false) => {
   // メモリの控えにも書かない。ここへ残すと、プレビューを終えたあとも古い値が読めてしまう
-  if (_storageWriteBlocked) return;
+  // (プレビュー中は「保存しないのが正しい」ので、失敗としては数えない)
+  if (_storageWriteBlocked) return true;
   _memStore[key] = val;
+  let raw = '';
+  try {
+    raw = JSON.stringify(val);
+  } catch (e) {
+    noteStorageWriteFailure(key, e);
+    return false;
+  }
   try {
     if (hasWinStorage()) {
-      await window.storage.set(key, JSON.stringify(val), shared);
-      return;
+      await window.storage.set(key, raw, shared);
+      noteStorageWriteOk(raw.length);
+      return true;
     }
-  } catch {}
+  } catch (e) {
+    noteStorageWriteFailure(key, e);
+  }
   try {
+    // ★hasLocalStorage() は毎回ためし書きをするので、いっぱいになるとここが false になる。
+    //   そのときも「書けなかった」として数える(黙って通り過ぎない)
     if (hasLocalStorage()) {
-      window.localStorage.setItem(key, JSON.stringify(val));
+      window.localStorage.setItem(key, raw);
+      noteStorageWriteOk(raw.length);
+      return true;
     }
-  } catch {}
+    noteStorageWriteFailure(key, 'localStorage が使えません');
+    return false;
+  } catch (e) {
+    noteStorageWriteFailure(key, e);
+    return false;
+  }
+};
+// 「次の1件が書けるか」を先に試す。書いてすぐ消すので、保存データは汚さない。
+// ★mh_ で始めないのは、バックアップ(mh_ の全キーを書き出す)へ混ぜないため。
+const STORAGE_PROBE_KEY = '__mh_ls_probe__';
+const probeStorageWritable = () => {
+  if (hasWinStorage()) return true; // window.storage 側は実際の書き込みの成否で見る
+  if (!hasLocalStorage()) return false;
+  // ★上限を置く。1度でも大きいものを書けた端末だと、その2倍を試すことになり、
+  //   整理したあとでも「書けない」と判定してしまう。見たいのは「次の1件が入る余裕」なので
+  //   64KBで十分(いちばん大きいランキングの控えでも、整理後はこの範囲に収まる)
+  const chars = Math.min(65536, Math.max(4096, _storageLargestWriteChars * 2));
+  try {
+    window.localStorage.setItem(STORAGE_PROBE_KEY, 'x'.repeat(chars));
+    return true;
+  } catch (e) {
+    noteStorageWriteFailure(STORAGE_PROBE_KEY, e);
+    return false;
+  } finally {
+    try {
+      window.localStorage.removeItem(STORAGE_PROBE_KEY);
+    } catch {}
+  }
+};
+// いま保存データがどれだけの大きさかを数える(このゲームの mh_ で始まるキーだけ)。
+// 上限はブラウザによって違い、iOSのSafariはおおよそ5MBで頭打ちになる。
+const storageUsageReport = () => {
+  if (!hasLocalStorage()) return null;
+  const items = [];
+  let total = 0;
+  try {
+    for (let i = 0; i < window.localStorage.length; i += 1) {
+      const key = window.localStorage.key(i);
+      if (!key || key.indexOf('mh_') !== 0) continue;
+      const chars = (window.localStorage.getItem(key) || '').length + key.length;
+      total += chars;
+      items.push({
+        key,
+        chars
+      });
+    }
+  } catch {
+    return null;
+  }
+  items.sort((a, b) => b.chars - a.chars);
+  return {
+    total,
+    items
+  };
 };
 const saveRhythmSettings = async value => {
   const normalized = normalizeRhythmSettings(value);
@@ -40728,6 +40848,7 @@ function MonsterHeroGame() {
   const [growthAptOpen, setGrowthAptOpen] = useState(null);
   const [showNameEdit, setShowNameEdit] = useState(false);
   const [tempName, setTempName] = useState('');
+  const [backupUsageTick, setBackupUsageTick] = useState(0); // 保存量の表示を数え直すための目印
   const [showBackup, setShowBackup] = useState(false); // データバックアップ/復元モーダル
   const [backupTab, setBackupTab] = useState('export'); // 'export'|'import'
   const [backupCode, setBackupCode] = useState('');
@@ -41607,6 +41728,68 @@ function MonsterHeroGame() {
     fetched: false
   };
   const rankingStatus = key => rankingStatusByKey[key] || emptyRankingStatus;
+  // ===== 端末へ控えるランキングは「軽い形」にする =====
+  // ★控えるのは「通信を待たずに一覧を出す」ためだけなのに、サーバーから来た行をそのまま
+  //   積んでいた。1件3,420文字のうち3,156文字が party[].detail(他人のモンスターの
+  //   絆XP・継承技・超越値までの詳細)で、さらに難易度ごとに積むだけで捨てないため、
+  //   mh_ranking_cache だけで1,448,151文字＝保存データ全体の86%を占めていた
+  //   (2026-09-21・ユーザー報告で書き出したセーブを実測)。
+  // ★これが localStorage の上限(iPhoneのSafariでおよそ5MB)を圧迫すると、
+  //   hasLocalStorage() のためし書きが落ちて storeSet が何も書かずに素通りし、
+  //   **ダイヤ1つの保存すら効かなくなる**。しかも失敗は握りつぶされ、メモリの控えには
+  //   書かれるので画面は正常に見え、落ちて読み込み直した瞬間に全部が数時間前へ戻る
+  //   (ユーザー報告「転生100回分戻るとかダイヤやプシュケーも戻ってるみたい」)。
+  // ★画面が使う rankingCacheRef は今までどおり detail を持ったまま。**保存する形だけ**削るので、
+  //   遊んでいるあいだの見た目は何も変わらない。detail は詳細を開けば取り直せる。
+  const RANKING_CACHE_DIFFICULTY_LIMIT = 6; // 端末へ控える難易度の数(新しく見たものから)
+  const compactRankingRowsForSave = rows => (Array.isArray(rows) ? rows : []).map(row => {
+    if (!row || typeof row !== 'object' || !Array.isArray(row.party)) return row;
+    return {
+      ...row,
+      party: row.party.map(mon => {
+        if (!mon || typeof mon !== 'object' || mon.detail === undefined) return mon;
+        const {
+          detail,
+          ...rest
+        } = mon;
+        return rest;
+      })
+    };
+  });
+  const compactRankingCacheForSave = cache => {
+    const score = {};
+    const keys = Object.keys(cache?.score || {});
+    keys.slice(Math.max(0, keys.length - RANKING_CACHE_DIFFICULTY_LIMIT)).forEach(key => {
+      score[key] = compactRankingRowsForSave(cache.score[key]);
+    });
+    return {
+      score,
+      breeder: Array.isArray(cache?.breeder) ? compactRankingRowsForSave(cache.breeder) : cache?.breeder ?? null,
+      bond: Array.isArray(cache?.bond) ? compactRankingRowsForSave(cache.bond) : cache?.bond ?? null
+    };
+  };
+  // 控えが「重い形」のままかどうか。起動時に一度だけ軽くして書き戻すために見る
+  const rankingCacheNeedsCompaction = cache => {
+    if (!cache || typeof cache !== 'object') return false;
+    if (Object.keys(cache.score || {}).length > RANKING_CACHE_DIFFICULTY_LIMIT) return true;
+    const hasDetail = rows => Array.isArray(rows) && rows.some(row => Array.isArray(row?.party) && row.party.some(mon => mon && typeof mon === 'object' && mon.detail !== undefined));
+    if (Object.values(cache.score || {}).some(hasDetail)) return true;
+    return hasDetail(cache.breeder) || hasDetail(cache.bond);
+  };
+  // 新しく見た難易度をうしろへ回す。前へ足すだけだと、上限で切るときに
+  // 「いちばん最近見た難易度」から捨ててしまう
+  const mergeRankingScoreForCache = (current, patch) => {
+    const next = {
+      ...(current || {})
+    };
+    Object.keys(patch).forEach(key => {
+      delete next[key];
+    });
+    Object.keys(patch).forEach(key => {
+      next[key] = patch[key];
+    });
+    return next;
+  };
   const saveRankingCache = patch => {
     const current = rankingCacheRef.current || {
       score: {},
@@ -41617,15 +41800,12 @@ function MonsterHeroGame() {
       ...current,
       ...patch
     };
-    if (patch.score) next.score = {
-      ...(current.score || {}),
-      ...patch.score
-    };
+    if (patch.score) next.score = mergeRankingScoreForCache(current.score, patch.score);
     rankingCacheRef.current = next;
     // 保存の失敗(容量超過など)は表示に影響しないので握りつぶす
     try {
       storeSet(RANKING_CACHE_KEY, {
-        ...next,
+        ...compactRankingCacheForSave(next),
         at: Date.now()
       }, false);
     } catch {}
@@ -41641,6 +41821,16 @@ function MonsterHeroGame() {
       breeder,
       bond
     };
+    // 前のつくりで溜まった重い控えは、ここで一度だけ軽くして書き戻す。
+    // そのままにすると、次にランキングを見るまで場所を占め続ける
+    if (rankingCacheNeedsCompaction(rankingCacheRef.current)) {
+      try {
+        storeSet(RANKING_CACHE_KEY, {
+          ...compactRankingCacheForSave(rankingCacheRef.current),
+          at: cached.at || Date.now()
+        }, false);
+      } catch {}
+    }
     const cachedStatus = {
       loading: false,
       refreshing: false,
@@ -42963,6 +43153,23 @@ function MonsterHeroGame() {
   // ===== モンビーで見せる周回の進捗(docs/spec/QUICK_RHYTHM_LINK.md PR6) =====
   // ★保存しない。リロードで消えてよい値だけをここに置く(設計書 §6「新しい保存キーを作らない」)。
   //   周回そのものの記録は、今までどおり既存の mh_quick_* が正本。
+  // ===== 端末に保存できなくなったことに気づけるようにする =====
+  // ★storeSet は書き込みの失敗を握りつぶすうえ、失敗してもメモリの控えには書くので、
+  //   保存できなくなっても画面はそのまま動き続ける。落ちて読み込み直した瞬間に、
+  //   最後に書けたところまで全部が戻る
+  //   (2026-09-21・ユーザー報告「転生100回分戻るとかダイヤやプシュケーも戻ってるみたい」。
+  //    書き出したセーブを測ったところ、ランキングの控えだけで保存データの86%を占めていた)。
+  // ★AUTO∞は放置して回すものなので、出すだけでは気づけない。周回は止めるところまでやる
+  //   (ユーザー指示「そうなる前に自動で止めてそのぶんまではちゃんと経験値とか入るように」)。
+  //   止めた時点までの報酬は、1周ごとに配り終えているので端末に残っている。
+  const [storageTrouble, setStorageTrouble] = useState(null); // { text, detail, at }
+  const storageTroubleRef = useRef(null);
+  storageTroubleRef.current = storageTrouble;
+  const storageTroubleTextFor = health => {
+    const error = String(health?.lastError || '');
+    if (/quota|exceeded|full/i.test(error)) return '端末の保存領域がいっぱいで、進行を保存できていません';
+    return '端末に進行を保存できていません';
+  };
   const [quickRunProgress, setQuickRunProgress] = useState(null);
   // 直前の演奏で何周ぶん入ったか。帯へ1回だけ出す(保存しない)。
   // 演奏から抜けた直後の effect からも見るので、同期の控え(ref)も持つ
@@ -43027,13 +43234,42 @@ function MonsterHeroGame() {
       reason: String(reason || '')
     });
   };
+  // 保存が効いているかを確かめ、だめなら知らせる(AUTO∞が回っていれば止める)。
+  // 呼ぶのは「1周ぶんの報酬を配り終えたところ(awardRunRewards)」と、下の見回り。
+  // ★止めるのは報酬を配り終えたあとなので、止まった時点までのぶんは端末に入っている
+  const checkStorageTrouble = () => {
+    const health = getStorageHealth();
+    if (health.failures <= 0) return false;
+    if (!storageTroubleRef.current) {
+      setStorageTrouble({
+        text: storageTroubleTextFor(health),
+        detail: String(health.lastError || ''),
+        at: Date.now()
+      });
+    }
+    if (autoRepeatRef.current) stopAllAuto('storage');
+    return true;
+  };
+  // 見回り。★手で長いランを遊んでいるあいだも気づけるようにするために要る。
+  //   AUTO∞は1周ごとに上を通るが、手動のチャレンジは何時間も終わらないので、
+  //   報酬を配るところまで一度も来ない(2026-09-21・ユーザー報告はチャレンジを3時間遊んだとき)。
+  //   WAVEを倒すたびにミッションの進捗を保存しているので、そこが落ちれば数分以内に気づける
+  const checkStorageTroubleRef = useRef(null);
+  checkStorageTroubleRef.current = checkStorageTrouble;
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (checkStorageTroubleRef.current) checkStorageTroubleRef.current();
+    }, 30000);
+    return () => clearInterval(timer);
+  }, []);
   // 帯に出す「なぜ終わったか」。分からないときは今までどおりの言い方に戻す
   const quickRunFinishReasonText = reason => ({
     defeat: '負けたので周回が終わりました（ここまでのぶんは入ります）',
     retire: '途中でやめたので周回が終わりました（ここまでのぶんは入ります）',
     hidden: 'アプリが裏に回ったので周回が止まりました（ふだんは戻ると自動で続きます）',
     manual: 'AUTO∞を切ったので周回が終わりました',
-    error: '続けられなくなったので周回が止まりました'
+    error: '続けられなくなったので周回が止まりました',
+    storage: '端末に保存できなくなったので周回を止めました（ここまでのぶんは入っています）'
   })[String(reason || '')] || '周回が終わりました';
   // いまの周でここまでにクリアしたWAVEぶんの見込み。
   // 報酬は「その周が終わったときに、そこまでクリアしたWAVEのぶん」を配る
@@ -44694,11 +44930,14 @@ function MonsterHeroGame() {
       const loginGrant = grantLoginBonus(savedLoginBonus, savedGifts);
       // 不具合のお詫びも同じギフトボックスへ入れる。既に届いていれば何もしない
       const compensationGrant = grantCompensationGifts(loginGrant.gifts);
-      setGifts(compensationGrant.gifts);
+      // 受け取り済みのギフトは消えずに積もるので、起動のたびに古いぶんを落としておく
+      // (pruneGiftHistory。ログインボーナスと補償は数え直しに使うので残す)
+      const prunedGifts = pruneGiftHistory(compensationGrant.gifts);
+      setGifts(prunedGifts);
       await storeSet('mh_login_bonus', loginGrant.loginBonus, false);
       setLoginBonusState(loginGrant.loginBonus);
-      if (loginGrant.granted || compensationGrant.granted) {
-        await storeSet('mh_gifts', compensationGrant.gifts, false);
+      if (loginGrant.granted || compensationGrant.granted || prunedGifts.length !== compensationGrant.gifts.length) {
+        await storeSet('mh_gifts', prunedGifts, false);
       }
       if (loginGrant.granted) setLoginBonusPopup({
         day: loginGrant.day,
@@ -48538,6 +48777,9 @@ function MonsterHeroGame() {
       allyBondGains,
       waveHistory: rewardWaveHistory
     });
+    // ここまでで、この周ぶんの報酬はすべて書き終えている。
+    // 端末へ書けていなければ、次の周へ行かずにここで止める(∞周回のとき)
+    checkStorageTrouble();
   };
 
   // スキップ: チケットを1枚使い、その難易度をボスまで倒したのと同じ経験値・ダイヤを受け取る。
@@ -50053,10 +50295,12 @@ function MonsterHeroGame() {
         before: ownedItems,
         next: balances.ownedItems
       });
+      // 受け取ったぶんだけ「受取済み」が増えるので、ここでも古い控えを落とす
+      const keptGifts = pruneGiftHistory(nextGifts);
       entries.push({
         key: 'mh_gifts',
         before: gifts,
-        next: nextGifts
+        next: keptGifts
       });
       const saved = await saveStoredValuesOrRollback(entries, storeGet, storeSet);
       // 成立しなかったときは巻き戻し済み。画面も動かさず「まだ受け取っていない」ままにする
@@ -50068,7 +50312,7 @@ function MonsterHeroGame() {
       setGold(balances.gold);
       setBreederPoints(balances.breederPoints);
       setOwnedItems(balances.ownedItems);
-      setGifts(nextGifts);
+      setGifts(keptGifts);
     } finally {
       giftClaimingRef.current = false;
     }
@@ -52035,10 +52279,19 @@ function MonsterHeroGame() {
   runResultFinishedRef.current = runResultFinished;
   // 止まった周回を「続きから」再開してよいのは、挑戦がまだ生きているときだけ
   const quickRunResumable = runStage !== null && !runResultFinished;
+  // 端末へ書ける状態か。書けないまま回しても報酬は残らない(落ちたら全部消える)ので、
+  // 周回は始めないし、続けもしない(2026-09-21・ユーザー指示「そうなる前に自動で止めて」)
+  const storageReadyForRun = () => {
+    if (checkStorageTrouble()) return false;
+    if (probeStorageWritable()) return true;
+    checkStorageTrouble(); // ためし書きで分かった失敗を、そのまま知らせへ回す
+    return false;
+  };
   const startQuickRunFromRhythm = () => {
     // 段階が残っていても、勝負がついている(負けた・リタイアした)なら畳んで始め直せる。
     // まだ生きている挑戦の上へ新しいランを重ねるのだけを止める
     if (runStageRef.current && !runResultFinishedRef.current) return false;
+    if (!storageReadyForRun()) return false;
     const template = repeatTemplateForNewRun();
     if (!template) return false;
     // 終わったランの数えかけを持ち越さない(1周目から数え直す)
@@ -52072,6 +52325,7 @@ function MonsterHeroGame() {
     if (!runStageRef.current) return false; // ランが残っていない
     if (runResultFinishedRef.current) return false; // 勝負がついている(続きが無い)
     if (!isQuickMode(runMode)) return false;
+    if (!storageReadyForRun()) return false; // 端末へ書けないなら続けない
     // 止まったときに「次周を始めている最中」の印が残っていることがある。
     // 残ったままだと CHAMPION から次の周へ入れないので、必ず戻す
     autoRepeatStartingRef.current = false;
@@ -54722,6 +54976,74 @@ function MonsterHeroGame() {
   const updateNoticeMode = normalizeUpdateNoticeStyle(updateNoticeStyle);
   const updateNoticeOnPlay = gameState === 'RHYTHM_PLAY';
   const updateNoticeSmall = updateNoticeMode === 'MINI';
+  // ためこんだ控えをその場で軽くして、書けるようになったか確かめる。
+  // 開き直せば起動時にも同じ整理が走るが、遊んでいる途中でも直せるようにボタンから呼ぶ
+  const compactStoredDataNow = async () => {
+    try {
+      if (rankingCacheRef.current) {
+        await storeSet(RANKING_CACHE_KEY, {
+          ...compactRankingCacheForSave(rankingCacheRef.current),
+          at: Date.now()
+        }, false);
+      }
+    } catch {}
+    try {
+      const pruned = pruneGiftHistory(gifts);
+      if (pruned.length !== (Array.isArray(gifts) ? gifts.length : 0)) {
+        await storeSet('mh_gifts', pruned, false);
+        setGifts(pruned);
+      }
+    } catch {}
+    if (probeStorageWritable()) {
+      setStorageTrouble(null);
+      return true;
+    }
+    const health = getStorageHealth();
+    setStorageTrouble({
+      text: storageTroubleTextFor(health),
+      detail: String(health.lastError || ''),
+      at: Date.now()
+    });
+    return false;
+  };
+  // 保存できていないことの知らせ。どの画面にいても出す。
+  // ★超省エネの暗幕(zIndex 2147483646)より上へ出す。暗幕の下だと、
+  //   いちばん気づいてほしい「AUTO∞で放置していたとき」に見えない
+  const storageTroubleNotice = storageTrouble ? ReactDOM.createPortal(/*#__PURE__*/React.createElement("div", {
+    "aria-live": "assertive",
+    role: "alert",
+    "data-storage-trouble": true,
+    className: "fixed left-3 right-3 rounded-2xl border border-red-300/80 bg-red-950/95 p-3 shadow-[0_8px_28px_rgba(0,0,0,0.6)]",
+    style: {
+      top: 'calc(8px + env(safe-area-inset-top))',
+      zIndex: 2147483647
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-start gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "shrink-0 text-base",
+    "aria-hidden": "true"
+  }, "\u26A0\uFE0F"), /*#__PURE__*/React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-[12px] font-black leading-snug text-red-100"
+  }, storageTrouble.text), /*#__PURE__*/React.createElement("p", {
+    className: "mt-1 text-[10px] leading-relaxed text-red-200"
+  }, "\u3053\u306E\u307E\u307E\u904A\u3093\u3067\u3082\u3001\u7D4C\u9A13\u5024\u3084\u30C0\u30A4\u30E4\u304C\u7AEF\u672B\u306B\u6B8B\u308A\u307E\u305B\u3093\u3002\u4E0B\u306E\u30DC\u30BF\u30F3\u3067\u7A7A\u304D\u3092\u4F5C\u308B\u304B\u3001\u30B2\u30FC\u30E0\u3092\u958B\u304D\u76F4\u3057\u3066\u304F\u3060\u3055\u3044\u3002\u5FC3\u914D\u306A\u3068\u304D\u306F\u8A2D\u5B9A\u306E\u300C\u30C7\u30FC\u30BF\u30D0\u30C3\u30AF\u30A2\u30C3\u30D7\u300D\u3067\u66F8\u304D\u51FA\u3057\u3066\u304A\u304F\u3068\u5B89\u5FC3\u3067\u3059\u3002"), storageTrouble.detail ? /*#__PURE__*/React.createElement("p", {
+    className: "mt-1 text-[9px] leading-relaxed text-red-300/80"
+  }, storageTrouble.detail) : null, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "data-storage-trouble-compact": true,
+    onClick: () => {
+      void compactStoredDataNow();
+    },
+    className: "mt-2 min-h-[44px] w-full rounded-xl border border-red-200/70 bg-red-700 text-[11px] font-black text-red-50 active:scale-[.98]"
+  }, "\u53E4\u3044\u8A18\u9332\u3092\u6574\u7406\u3057\u3066\u7A7A\u304D\u3092\u4F5C\u308B")), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "aria-label": "\u3053\u306E\u77E5\u3089\u305B\u3092\u9589\u3058\u308B",
+    onClick: () => setStorageTrouble(null),
+    className: "shrink-0 w-11 min-h-[44px] flex items-center justify-center rounded-xl bg-red-800 text-red-50 font-black"
+  }, "\xD7"))), document.body) : null;
   const updateNotice = updateNoticeVisible && updateNoticeMode !== 'OFF' && !updateNoticeOnPlay ? ReactDOM.createPortal(updateNoticeSmall ? /*#__PURE__*/React.createElement("div", {
     "aria-live": "assertive",
     "data-update-notice": "mini",
@@ -55195,7 +55517,7 @@ function MonsterHeroGame() {
     onPointerDown: unlockBootSound
   }, "TAP TO START"), /*#__PURE__*/React.createElement("h2", null, "\u2015 \u5192\u967A\u306E\u6249\u3092\u958B\u304F \u2015"), /*#__PURE__*/React.createElement("p", null, "\u8FFD\u52A0\u30C7\u30FC\u30BF\u306F\u30D0\u30C3\u30AF\u30B0\u30E9\u30A6\u30F3\u30C9\u3067\u8AAD\u307F\u8FBC\u307F\u3092\u7D9A\u3051\u307E\u3059"))), /*#__PURE__*/React.createElement("footer", null, "VERSION ", BUILD_DATE), /*#__PURE__*/React.createElement("div", {
     className: "mh-entry-flash"
-  })), updateNotice);
+  })), updateNotice, storageTroubleNotice);
   const rankingPlace = index => /*#__PURE__*/React.createElement("div", {
     className: `w-7 h-7 rounded-full flex items-center justify-center font-black text-[9px] shrink-0 ${index === 0 ? 'bg-amber-500 text-black' : index === 1 ? 'bg-slate-300 text-black' : index === 2 ? 'bg-orange-600 text-white' : 'bg-slate-800 text-slate-400'}`
   }, index + 1);
@@ -55699,7 +56021,7 @@ function MonsterHeroGame() {
     disabled: !!titleModal || titleStarting,
     onPointerDown: startGame,
     "aria-label": "\u30C8\u30C3\u30D7\u753B\u9762\u3078\u9032\u3080"
-  }), titleModal), updateNotice);
+  }), titleModal), updateNotice, storageTroubleNotice);
   if (bootPhase === 'ENTERING_GAME') return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("main", {
     className: "mh-entering"
   }, /*#__PURE__*/React.createElement("img", {
@@ -55711,7 +56033,7 @@ function MonsterHeroGame() {
     className: "mh-gate-particles"
   }), /*#__PURE__*/React.createElement("div", {
     className: "mh-gate-flash"
-  }), enteringSlow && /*#__PURE__*/React.createElement("p", null, "\u4E16\u754C\u3092\u69CB\u7BC9\u3057\u3066\u3044\u307E\u3059\u2026")), updateNotice);
+  }), enteringSlow && /*#__PURE__*/React.createElement("p", null, "\u4E16\u754C\u3092\u69CB\u7BC9\u3057\u3066\u3044\u307E\u3059\u2026")), updateNotice, storageTroubleNotice);
   return (
     /*#__PURE__*/
     // みゅあとの仲良し度をここから配る。各画面は <AssistantBubble scene="…"/> を置くだけでよい
@@ -55762,7 +56084,7 @@ function MonsterHeroGame() {
         transformOrigin: 'center',
         animation: 'mhRipple 550ms ease-out forwards'
       }
-    }))), updateNotice, showAutoBgmPicker && isRunStage(gameState) && /*#__PURE__*/React.createElement("div", {
+    }))), updateNotice, storageTroubleNotice, showAutoBgmPicker && isRunStage(gameState) && /*#__PURE__*/React.createElement("div", {
       "data-auto-bgm-picker": true,
       className: "fixed inset-0 flex items-end justify-center bg-black/55 p-3",
       style: {
@@ -63260,7 +63582,49 @@ function MonsterHeroGame() {
       className: "text-emerald-400"
     }), "\u30C7\u30FC\u30BF\u306E\u30D0\u30C3\u30AF\u30A2\u30C3\u30D7"), /*#__PURE__*/React.createElement("p", {
       className: "text-[9px] text-slate-500 text-center mb-4 leading-tight"
-    }, "\u30DB\u30FC\u30E0\u753B\u9762\u306E\u30A2\u30A4\u30B3\u30F3\u3092\u4F5C\u308A\u76F4\u3059\u3068\u30C7\u30FC\u30BF\u304C\u5F15\u304D\u7D99\u304C\u308C\u306A\u3044\u3053\u3068\u304C\u3042\u308A\u307E\u3059\u3002\u30D0\u30C3\u30AF\u30A2\u30C3\u30D7\u30B3\u30FC\u30C9\u3092\u63A7\u3048\u3066\u304A\u3051\u3070\u3001\u65B0\u3057\u3044\u30A2\u30A4\u30B3\u30F3\u304B\u3089\u5FA9\u5143\u3067\u304D\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
+    }, "\u30DB\u30FC\u30E0\u753B\u9762\u306E\u30A2\u30A4\u30B3\u30F3\u3092\u4F5C\u308A\u76F4\u3059\u3068\u30C7\u30FC\u30BF\u304C\u5F15\u304D\u7D99\u304C\u308C\u306A\u3044\u3053\u3068\u304C\u3042\u308A\u307E\u3059\u3002\u30D0\u30C3\u30AF\u30A2\u30C3\u30D7\u30B3\u30FC\u30C9\u3092\u63A7\u3048\u3066\u304A\u3051\u3070\u3001\u65B0\u3057\u3044\u30A2\u30A4\u30B3\u30F3\u304B\u3089\u5FA9\u5143\u3067\u304D\u307E\u3059\u3002"), (() => {
+      const usage = storageUsageReport();
+      if (!usage) return null;
+      const mb = usage.total * 2 / 1024 / 1024; // localStorage は1文字2バイトで数える
+      const pct = Math.min(100, Math.round(mb / 5 * 100)); // 上限はiPhoneのSafariでおよそ5MB
+      const tone = pct >= 80 ? 'text-red-300' : pct >= 60 ? 'text-amber-300' : 'text-emerald-300';
+      return /*#__PURE__*/React.createElement("div", {
+        "data-storage-usage": true,
+        key: backupUsageTick,
+        className: "mb-4 rounded-2xl border border-white/10 bg-black/40 p-3 text-left"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex items-baseline justify-between gap-2"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-[10px] font-black text-slate-300"
+      }, "\u4FDD\u5B58\u30C7\u30FC\u30BF\u306E\u5927\u304D\u3055"), /*#__PURE__*/React.createElement("b", {
+        className: `text-[11px] font-black ${tone}`
+      }, mb.toFixed(2), " MB\uFF0F\u304A\u3088\u305D5MB\uFF08", pct, "%\uFF09")), /*#__PURE__*/React.createElement("div", {
+        className: "mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-800"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: `h-full rounded-full ${pct >= 80 ? 'bg-red-400' : pct >= 60 ? 'bg-amber-400' : 'bg-emerald-400'}`,
+        style: {
+          width: `${Math.max(2, pct)}%`
+        }
+      })), /*#__PURE__*/React.createElement("ul", {
+        className: "mt-2 space-y-0.5 text-[9px] leading-relaxed text-slate-400"
+      }, usage.items.slice(0, 3).map(item => /*#__PURE__*/React.createElement("li", {
+        key: item.key,
+        className: "flex justify-between gap-2"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "truncate"
+      }, item.key), /*#__PURE__*/React.createElement("span", {
+        className: "shrink-0"
+      }, Math.round(item.chars * 2 / 1024), " KB")))), /*#__PURE__*/React.createElement("p", {
+        className: "mt-2 text-[9px] leading-relaxed text-slate-500"
+      }, "\u3044\u3063\u3071\u3044\u306B\u306A\u308B\u3068\u3001\u7D4C\u9A13\u5024\u3084\u30C0\u30A4\u30E4\u304C\u7AEF\u672B\u306B\u6B8B\u3089\u306A\u304F\u306A\u308A\u307E\u3059\u3002\u5927\u304D\u3044\u3068\u304D\u306F\u4E0B\u306E\u30DC\u30BF\u30F3\u3067\u53E4\u3044\u8A18\u9332\u3092\u6574\u7406\u3057\u3066\u304F\u3060\u3055\u3044\u3002"), /*#__PURE__*/React.createElement("button", {
+        type: "button",
+        "data-storage-usage-compact": true,
+        onClick: () => {
+          void compactStoredDataNow().then(() => setBackupUsageTick(n => n + 1));
+        },
+        className: "mt-2 min-h-[44px] w-full rounded-xl border border-indigo-300/50 bg-slate-800 text-[10px] font-black text-indigo-200 active:scale-[.98]"
+      }, "\u53E4\u3044\u8A18\u9332\u3092\u6574\u7406\u3057\u3066\u7A7A\u304D\u3092\u4F5C\u308B"));
+    })(), /*#__PURE__*/React.createElement("div", {
       className: "flex gap-1.5 mb-4"
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => setBackupTab('export'),

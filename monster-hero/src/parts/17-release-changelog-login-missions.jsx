@@ -469,6 +469,27 @@ const applyLoginPointFix = (points, xp, gifts) => {
   return { changed:true, points:nowPoints - moved, xp:nowXp + wrong, moved, granted:wrong };
 };
 
+// ===== 受け取り済みのギフトを積もらせない =====
+// ★受け取り済みは消す仕組みが無く、8月からの全部が残っていた
+//   (2026-09-21・書き出したセーブの実測で mh_gifts は331件122,271文字。
+//    うち328件・129,500文字が受け取り済みで、ミッション報酬が274件を占めていた)。
+//   保存データが localStorage の上限へ近づくと、**ダイヤ1つの保存すら効かなくなる**ため、
+//   受け取り済みの控えは新しいものだけ残す。報酬はすでに配り終えているので、
+//   消えるのは「受取済み」タブに並ぶ記録だけ。
+// ★ログインボーナスと補償は消さない。一度きりの付け替え(mistakenLoginPoints)が
+//   受け取り済みのログインボーナスを数えており、消すと数え直せなくなる。
+const GIFT_HISTORY_LIMIT = 50;
+const GIFT_HISTORY_KEEP_SOURCES = Object.freeze(['loginBonus', 'compensation']);
+const giftHistoryPrunable = (gift) => !!gift?.claimedAt && !GIFT_HISTORY_KEEP_SOURCES.includes(gift?.source);
+const pruneGiftHistory = (gifts, limit = GIFT_HISTORY_LIMIT) => {
+  const list = Array.isArray(gifts) ? gifts : [];
+  const prunable = list.filter(giftHistoryPrunable);
+  if (prunable.length <= limit) return list;
+  const claimedAtOf = (gift) => Date.parse(gift?.claimedAt || '') || 0;
+  const keep = new Set(prunable.slice().sort((a, b) => claimedAtOf(b) - claimedAtOf(a)).slice(0, limit));
+  return list.filter(gift => !giftHistoryPrunable(gift) || keep.has(gift));
+};
+
 const grantCompensationGifts = (gifts, now=Date.now()) => {
   const list = Array.isArray(gifts) ? gifts : [];
   const missing = COMPENSATION_GIFTS.filter(def => !list.some(item => item?.id === def.id));
