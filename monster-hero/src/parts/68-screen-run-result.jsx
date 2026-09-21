@@ -14,7 +14,7 @@
 //   置き去りにせずまとめて持ってくる
 function UpgradeSkillScreen({
   canRecoverGutsWithPoint, continueAfterUniqueUpgrade, effectiveMaxGuts, guts,
-  recoverGutsWithPoint, uniqueUpgradeEntries, uniqueUpgradeRow, upgradePoints,
+  recoverGutsWithPoint, slots, tacticsUnits, uniqueUpgradeEntries, uniqueUpgradeRow, upgradePoints,
 }) {
   return (
 
@@ -23,14 +23,36 @@ function UpgradeSkillScreen({
       {/* 強化ポイントのもう一つの使い道。技がすべてMAXでもポイントが無駄にならないよう、
           いまのガッツを戻せる。最大ガッツは増やさない。技の＋／－と違って取り消せないので、
           1回押すごとに確定する。技一覧を圧迫しないよう1行に収めている */}
-      {(()=>{const gutsFull=guts>=effectiveMaxGuts; const noPoint=upgradePoints<GUTS_RECOVERY_POINT_COST; return (
+      {(()=>{
+        // ★タクティクスは1体ずつガッツを持つ(設計 4.4)。合計を出しても何の数字か読み取れないので、
+        //   立っている子ごとに出す(2026-09-22 ユーザー指摘「クラシックをベースにしてるから
+        //   そのへんごっちゃになってる」)。押せるかどうかは前から1体ずつで見ている
+        const tacticsMode=Array.isArray(tacticsUnits);
+        const gutsSlots=tacticsMode
+          ? tacticsUnits.map((unit,index)=>(unit&&!unit.downed?index:-1)).filter(index=>index>=0) : [];
+        const gutsFull=tacticsMode?!canRecoverGutsWithPoint&&upgradePoints>=GUTS_RECOVERY_POINT_COST:guts>=effectiveMaxGuts;
+        const noPoint=upgradePoints<GUTS_RECOVERY_POINT_COST; return (
       <div data-guts-recovery className="w-full max-w-sm shrink-0 mb-2 rounded-2xl border border-amber-500/40 bg-amber-950/25 px-3 py-2 flex items-center gap-2">
         <div className="flex-1 min-w-0 text-left">
           <span className="block text-[8px] font-black tracking-widest text-amber-300/80 leading-none">現在ガッツ</span>
-          <span className="block font-mono font-black leading-tight">
-            <b className={gutsFull?'text-amber-300':'text-white'} style={{fontSize:'17px'}}>{guts}</b>
-            <span className="text-slate-500" style={{fontSize:'12px'}}> / {effectiveMaxGuts}</span>
-          </span>
+          {tacticsMode
+            ? <span data-tactics-guts-recovery className="block font-mono font-black leading-tight">
+                {gutsSlots.length===0
+                  ? <b className="text-slate-500" style={{fontSize:'12px'}}>立っている子がいません</b>
+                  : gutsSlots.map(index=>{
+                      const unit=tacticsUnits[index];
+                      const full=unit.guts>=unit.maxGuts;
+                      return (<span key={index} data-tactics-guts-slot={index} className="mr-2 inline-block whitespace-nowrap">
+                        <span className="text-slate-500" style={{fontSize:'9px'}}>{slots?.[index]?.masuName||slots?.[index]?.name||RANGE_LABELS[index]} </span>
+                        <b className={full?'text-amber-300':'text-white'} style={{fontSize:'13px'}}>{unit.guts}</b>
+                        <span className="text-slate-500" style={{fontSize:'10px'}}>/{unit.maxGuts}</span>
+                      </span>);
+                    })}
+              </span>
+            : <span className="block font-mono font-black leading-tight">
+                <b className={gutsFull?'text-amber-300':'text-white'} style={{fontSize:'17px'}}>{guts}</b>
+                <span className="text-slate-500" style={{fontSize:'12px'}}> / {effectiveMaxGuts}</span>
+              </span>}
         </div>
         <button type="button" data-guts-recovery-button
           disabled={!canRecoverGutsWithPoint}

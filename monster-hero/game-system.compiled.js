@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 96ffc7098f48adac
+// source-sha256: 3d519f5607c8d3ae
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 38efe79c0545de6c
+// generated-sha256: a3e73b332d85bfe0
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-22 07:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-22 07:31"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -36428,6 +36428,8 @@ function UpgradeSkillScreen({
   effectiveMaxGuts,
   guts,
   recoverGutsWithPoint,
+  slots,
+  tacticsUnits,
   uniqueUpgradeEntries,
   uniqueUpgradeRow,
   upgradePoints
@@ -36449,7 +36451,12 @@ function UpgradeSkillScreen({
   }, "Remaining Points: ", /*#__PURE__*/React.createElement("span", {
     className: "text-white bg-amber-600 px-2 rounded-full font-mono"
   }, upgradePoints))), (() => {
-    const gutsFull = guts >= effectiveMaxGuts;
+    // ★タクティクスは1体ずつガッツを持つ(設計 4.4)。合計を出しても何の数字か読み取れないので、
+    //   立っている子ごとに出す(2026-09-22 ユーザー指摘「クラシックをベースにしてるから
+    //   そのへんごっちゃになってる」)。押せるかどうかは前から1体ずつで見ている
+    const tacticsMode = Array.isArray(tacticsUnits);
+    const gutsSlots = tacticsMode ? tacticsUnits.map((unit, index) => unit && !unit.downed ? index : -1).filter(index => index >= 0) : [];
+    const gutsFull = tacticsMode ? !canRecoverGutsWithPoint && upgradePoints >= GUTS_RECOVERY_POINT_COST : guts >= effectiveMaxGuts;
     const noPoint = upgradePoints < GUTS_RECOVERY_POINT_COST;
     return /*#__PURE__*/React.createElement("div", {
       "data-guts-recovery": true,
@@ -36458,7 +36465,38 @@ function UpgradeSkillScreen({
       className: "flex-1 min-w-0 text-left"
     }, /*#__PURE__*/React.createElement("span", {
       className: "block text-[8px] font-black tracking-widest text-amber-300/80 leading-none"
-    }, "\u73FE\u5728\u30AC\u30C3\u30C4"), /*#__PURE__*/React.createElement("span", {
+    }, "\u73FE\u5728\u30AC\u30C3\u30C4"), tacticsMode ? /*#__PURE__*/React.createElement("span", {
+      "data-tactics-guts-recovery": true,
+      className: "block font-mono font-black leading-tight"
+    }, gutsSlots.length === 0 ? /*#__PURE__*/React.createElement("b", {
+      className: "text-slate-500",
+      style: {
+        fontSize: '12px'
+      }
+    }, "\u7ACB\u3063\u3066\u3044\u308B\u5B50\u304C\u3044\u307E\u305B\u3093") : gutsSlots.map(index => {
+      const unit = tacticsUnits[index];
+      const full = unit.guts >= unit.maxGuts;
+      return /*#__PURE__*/React.createElement("span", {
+        key: index,
+        "data-tactics-guts-slot": index,
+        className: "mr-2 inline-block whitespace-nowrap"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-slate-500",
+        style: {
+          fontSize: '9px'
+        }
+      }, slots?.[index]?.masuName || slots?.[index]?.name || RANGE_LABELS[index], " "), /*#__PURE__*/React.createElement("b", {
+        className: full ? 'text-amber-300' : 'text-white',
+        style: {
+          fontSize: '13px'
+        }
+      }, unit.guts), /*#__PURE__*/React.createElement("span", {
+        className: "text-slate-500",
+        style: {
+          fontSize: '10px'
+        }
+      }, "/", unit.maxGuts));
+    })) : /*#__PURE__*/React.createElement("span", {
       className: "block font-mono font-black leading-tight"
     }, /*#__PURE__*/React.createElement("b", {
       className: gutsFull ? 'text-amber-300' : 'text-white',
@@ -37888,7 +37926,7 @@ function BattleScreen({
       weight += w;
     });
     // 貫通撃はガードが効かない。連撃はヒットに分かれ、ガード1枚につき1ヒットを受け止める
-    const guard = enemyIntent.variant === 'pierce' ? 0 : guardValueOf(flat, mult);
+    const guard = enemyIntent.variant === 'pierce' ? 0 : guardValueOf(flat, mult, slotIdx);
     const hits = enemyIntent.variant === 'rush' ? Math.max(1, Math.floor(Number(enemyIntent.hits) || 1)) : 1;
     return applyTurnDamageReduction(resolveTacticsGuardedHit(raw, hits, guard, tacticsGuardHits(weight)).taken);
   };
@@ -39093,6 +39131,7 @@ function BattleScreen({
     let committedTotal = 0;
     let guardFlat = 0;
     let guardMult = 0;
+    const guardBySlot = {};
     const committedCounter = makeCardHalveCounter();
     selectedCards.forEach(idx => {
       if (idx === pendingIdx) return;
@@ -39111,16 +39150,52 @@ function BattleScreen({
       const gw = guardCardWeight(card);
       if (gw > 0) {
         const e = cardEffectMultiplier(card, halved);
-        guardFlat += GUARD_EVOLUTION[guardLevel].flat * gw * e;
-        guardMult += GUARD_EVOLUTION[guardLevel].mult * gw * e;
+        const gf = GUARD_EVOLUTION[guardLevel].flat * gw * e,
+          gm = GUARD_EVOLUTION[guardLevel].mult * gw * e;
+        guardFlat += gf;
+        guardMult += gm;
+        // ★タクティクスは構えた子ごとに丈夫さが違う。枠ごとに分けて持っておき、
+        //   合計は「枠ごとに出した軽減量の足し算」にする(平均で1回出すとずれる)
+        if (slotIdx != null) {
+          const cur = guardBySlot[slotIdx] || {
+            flat: 0,
+            mult: 0
+          };
+          guardBySlot[slotIdx] = {
+            flat: cur.flat + gf,
+            mult: cur.mult + gm
+          };
+        }
       }
     });
-    const committedGuard = guardValueOf(guardFlat, guardMult);
+    const sumGuardBySlot = (extra = null) => {
+      const merged = {
+        ...guardBySlot
+      };
+      if (extra && extra.slot != null) {
+        const cur = merged[extra.slot] || {
+          flat: 0,
+          mult: 0
+        };
+        merged[extra.slot] = {
+          flat: cur.flat + extra.flat,
+          mult: cur.mult + extra.mult
+        };
+      }
+      return Object.entries(merged).reduce((sum, [slot, g]) => sum + guardValueOf(g.flat, g.mult, Number(slot)), 0);
+    };
+    const committedGuard = Array.isArray(tacticsUnits) ? sumGuardBySlot() : guardValueOf(guardFlat, guardMult);
     // 保留カードがガードなら、置いたあとの合計軽減も出す
     const pendingGuardWeight = guardCardWeight(pendingCardObj);
     const pendingGuardHalved = pendingGuardWeight > 0 && committedCounter.peek(pendingCardObj, pendingIdx != null && cardAssignments[pendingIdx] != null ? cardAssignments[pendingIdx] : null);
     const pendingGuardEffect = cardEffectMultiplier(pendingCardObj, pendingGuardHalved);
-    const projectedGuard = pendingGuardWeight > 0 ? guardValueOf(guardFlat + GUARD_EVOLUTION[guardLevel].flat * pendingGuardWeight * pendingGuardEffect, guardMult + GUARD_EVOLUTION[guardLevel].mult * pendingGuardWeight * pendingGuardEffect) : committedGuard;
+    // 置く先が決まっている保留カードは、その子の丈夫さで足す(タクティクス)
+    const pendingGuardSlot = pendingIdx != null && cardAssignments[pendingIdx] != null ? cardAssignments[pendingIdx] : null;
+    const projectedGuard = pendingGuardWeight > 0 ? Array.isArray(tacticsUnits) ? sumGuardBySlot({
+      slot: pendingGuardSlot,
+      flat: GUARD_EVOLUTION[guardLevel].flat * pendingGuardWeight * pendingGuardEffect,
+      mult: GUARD_EVOLUTION[guardLevel].mult * pendingGuardWeight * pendingGuardEffect
+    }) : guardValueOf(guardFlat + GUARD_EVOLUTION[guardLevel].flat * pendingGuardWeight * pendingGuardEffect, guardMult + GUARD_EVOLUTION[guardLevel].mult * pendingGuardWeight * pendingGuardEffect) : committedGuard;
     const pendingIsAtk = isAttackCard(pendingCardObj);
     // projected damage the pending card would add (as the next attack in order)
     let pendingAdd = 0;
@@ -39452,7 +39527,7 @@ function BattleScreen({
       // ガードは軽減量をその場で出す。2枚目以降なら半分になった値をそのまま表示する
       const gw = guardCardWeight(card),
         ge = cardEffectMultiplier(card, halvedByIdx[idx]);
-      const gv = gw > 0 ? guardValueOf(GUARD_EVOLUTION[guardLevel].flat * gw * ge, GUARD_EVOLUTION[guardLevel].mult * gw * ge) : 0;
+      const gv = gw > 0 ? guardValueOf(GUARD_EVOLUTION[guardLevel].flat * gw * ge, GUARD_EVOLUTION[guardLevel].mult * gw * ge, i) : 0;
       return /*#__PURE__*/React.createElement("div", {
         key: idx,
         className: `flex items-center gap-0.5 px-1 rounded w-full justify-center min-w-0 ${cardNeedsMonster(card) ? 'bg-red-600/85' : 'bg-emerald-600/85'}`
@@ -54100,7 +54175,16 @@ function MonsterHeroGame() {
   // ここでは「どこで数えるか(cardHalveGroup)」と「対象外(アシストカード)」を渡すだけ
   const makeHalveCounter = () => makeCardHalveCounter(cardHalveGroup, isAssistCard);
   // flat は互換用（現行定義は0）。実質は「実効丈夫さ × 倍率の合計」。
-  const guardValueOf = (flat, mult) => flat > 0 || mult > 0 ? Math.floor(flat + effectiveDef * mult) : 0;
+  // ★ガードの軽減量は「構えた子の丈夫さ」で決まる(タクティクス)。paramのslotIdxがnullなら
+  //   今までどおりパーティの値(既存5モード)。2026-09-22 ユーザー指摘で分かったとおり、
+  //   実際の計算(processTurnの新モード分岐)はその子の丈夫さを使っているのに、画面だけが
+  //   パーティの平均で出していた。硬い子が構えれば実際はもっと受け止めるので、数字が合わない
+  const guardDefFor = (slotIdx = null) => {
+    if (slotIdx == null || !isTacticsMode(runMode)) return effectiveDef;
+    const unit = tacticsUnitsRef.current?.[slotIdx];
+    return unit ? resolveEffectiveMaxStat(normalizeTacticsUnit(unit).def, getPermaBuff('defPct')) : effectiveDef;
+  };
+  const guardValueOf = (flat, mult, slotIdx = null) => flat > 0 || mult > 0 ? Math.floor(flat + guardDefFor(slotIdx) * mult) : 0;
   // このカードを使うと、同じターンの「あとに続くカード」へ即座に乗る補正の生値(effMul適用前)。
   // ニコラオの力・ゴーレム・モッチー/ミタラシ・ききの応援は、説明どおり使ったターンから効く
   // (他の永続バフは次のターンから効く。詳細はヘルプ「ずっと続く効果は次のターンから」を参照)。
@@ -54758,8 +54842,8 @@ function MonsterHeroGame() {
                 weight: 0
               };
               // ガードの軽減量も「その子の丈夫さ」から出す
-              const slotDef = tacticsUnitsRef.current[slotIdx] ? resolveEffectiveMaxStat(normalizeTacticsUnit(tacticsUnitsRef.current[slotIdx]).def, getPermaBuff('defPct')) : effectiveDef;
-              const base = own.flat > 0 || own.mult > 0 ? Math.floor(own.flat + slotDef * own.mult) : 0;
+              // 画面へ出すのと同じ guardValueOf を通す(別々に書くと予告と実際がずれる)
+              const base = guardValueOf(own.flat, own.mult, slotIdx);
               // 貫通撃はガードが効かない
               const slotGuard = intent.variant === 'pierce' ? 0 : base;
               // ★受けるダメージもその子の丈夫さで決まるので、狙われた子ごとに計算し直す
@@ -69010,6 +69094,8 @@ function MonsterHeroGame() {
       effectiveMaxGuts: effectiveMaxGuts,
       guts: guts,
       recoverGutsWithPoint: recoverGutsWithPoint,
+      slots: slots,
+      tacticsUnits: isTacticsMode(runMode) ? tacticsUnits : null,
       uniqueUpgradeEntries: uniqueUpgradeEntries,
       uniqueUpgradeRow: uniqueUpgradeRow,
       upgradePoints: upgradePoints
@@ -70065,9 +70151,7 @@ function MonsterHeroGame() {
       }, "/", u.maxGuts)))), /*#__PURE__*/React.createElement("div", {
         className: "mt-0.5 text-[9px] font-black text-cyan-300"
       }, "\u3053\u306E\u67A0\u306E\u8DDD\u96E2\u9069\u6027 ", aptPct >= 0 ? '+' : '', Math.round(aptPct * 10) / 10, "%"));
-    })), isTacticsMode(runMode) && /*#__PURE__*/React.createElement("div", {
-      className: "text-left text-[9px] font-black uppercase tracking-widest text-slate-400"
-    }, "\u30D1\u30FC\u30C6\u30A3\u5168\u4F53\uFF08\u30AB\u30FC\u30C9\u306E\u52B9\u304D\u3081\u3092\u6C7A\u3081\u308B\u5024\uFF09"), /*#__PURE__*/React.createElement("div", {
+    })), !isTacticsMode(runMode) && /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-2 gap-6 text-left"
     }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
       className: "text-[9px] text-pink-400 font-black uppercase"

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 38efe79c0545de6c
+// generated-sha256: a3e73b332d85bfe0
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -92,7 +92,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-22 07:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-22 07:31"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -20954,7 +20954,7 @@ function PickTeachingScreen({
 //   置き去りにせずまとめて持ってくる
 function UpgradeSkillScreen({
   canRecoverGutsWithPoint, continueAfterUniqueUpgrade, effectiveMaxGuts, guts,
-  recoverGutsWithPoint, uniqueUpgradeEntries, uniqueUpgradeRow, upgradePoints,
+  recoverGutsWithPoint, slots, tacticsUnits, uniqueUpgradeEntries, uniqueUpgradeRow, upgradePoints,
 }) {
   return (
 
@@ -20963,14 +20963,36 @@ function UpgradeSkillScreen({
       {/* 強化ポイントのもう一つの使い道。技がすべてMAXでもポイントが無駄にならないよう、
           いまのガッツを戻せる。最大ガッツは増やさない。技の＋／－と違って取り消せないので、
           1回押すごとに確定する。技一覧を圧迫しないよう1行に収めている */}
-      {(()=>{const gutsFull=guts>=effectiveMaxGuts; const noPoint=upgradePoints<GUTS_RECOVERY_POINT_COST; return (
+      {(()=>{
+        // ★タクティクスは1体ずつガッツを持つ(設計 4.4)。合計を出しても何の数字か読み取れないので、
+        //   立っている子ごとに出す(2026-09-22 ユーザー指摘「クラシックをベースにしてるから
+        //   そのへんごっちゃになってる」)。押せるかどうかは前から1体ずつで見ている
+        const tacticsMode=Array.isArray(tacticsUnits);
+        const gutsSlots=tacticsMode
+          ? tacticsUnits.map((unit,index)=>(unit&&!unit.downed?index:-1)).filter(index=>index>=0) : [];
+        const gutsFull=tacticsMode?!canRecoverGutsWithPoint&&upgradePoints>=GUTS_RECOVERY_POINT_COST:guts>=effectiveMaxGuts;
+        const noPoint=upgradePoints<GUTS_RECOVERY_POINT_COST; return (
       <div data-guts-recovery className="w-full max-w-sm shrink-0 mb-2 rounded-2xl border border-amber-500/40 bg-amber-950/25 px-3 py-2 flex items-center gap-2">
         <div className="flex-1 min-w-0 text-left">
           <span className="block text-[8px] font-black tracking-widest text-amber-300/80 leading-none">現在ガッツ</span>
-          <span className="block font-mono font-black leading-tight">
-            <b className={gutsFull?'text-amber-300':'text-white'} style={{fontSize:'17px'}}>{guts}</b>
-            <span className="text-slate-500" style={{fontSize:'12px'}}> / {effectiveMaxGuts}</span>
-          </span>
+          {tacticsMode
+            ? <span data-tactics-guts-recovery className="block font-mono font-black leading-tight">
+                {gutsSlots.length===0
+                  ? <b className="text-slate-500" style={{fontSize:'12px'}}>立っている子がいません</b>
+                  : gutsSlots.map(index=>{
+                      const unit=tacticsUnits[index];
+                      const full=unit.guts>=unit.maxGuts;
+                      return (<span key={index} data-tactics-guts-slot={index} className="mr-2 inline-block whitespace-nowrap">
+                        <span className="text-slate-500" style={{fontSize:'9px'}}>{slots?.[index]?.masuName||slots?.[index]?.name||RANGE_LABELS[index]} </span>
+                        <b className={full?'text-amber-300':'text-white'} style={{fontSize:'13px'}}>{unit.guts}</b>
+                        <span className="text-slate-500" style={{fontSize:'10px'}}>/{unit.maxGuts}</span>
+                      </span>);
+                    })}
+              </span>
+            : <span className="block font-mono font-black leading-tight">
+                <b className={gutsFull?'text-amber-300':'text-white'} style={{fontSize:'17px'}}>{guts}</b>
+                <span className="text-slate-500" style={{fontSize:'12px'}}> / {effectiveMaxGuts}</span>
+              </span>}
         </div>
         <button type="button" data-guts-recovery-button
           disabled={!canRecoverGutsWithPoint}
@@ -21607,7 +21629,7 @@ function BattleScreen({
       weight += w;
     });
     // 貫通撃はガードが効かない。連撃はヒットに分かれ、ガード1枚につき1ヒットを受け止める
-    const guard = enemyIntent.variant === 'pierce' ? 0 : guardValueOf(flat, mult);
+    const guard = enemyIntent.variant === 'pierce' ? 0 : guardValueOf(flat, mult, slotIdx);
     const hits = enemyIntent.variant === 'rush' ? Math.max(1, Math.floor(Number(enemyIntent.hits) || 1)) : 1;
     return applyTurnDamageReduction(resolveTacticsGuardedHit(raw, hits, guard, tacticsGuardHits(weight)).taken);
   };
@@ -22131,7 +22153,7 @@ function BattleScreen({
             // 先に選んだカードぶんの補正を、あとに続くカードの予測へも反映する
             // (processTurnの実行順序と同じ数え方。localBoostFromCard/previewLocalBoosts参照)。
             const boosts=previewLocalBoosts(pendingIdx);
-            let committedTotal=0; let guardFlat=0; let guardMult=0;
+            let committedTotal=0; let guardFlat=0; let guardMult=0; const guardBySlot={};
             const committedCounter=makeCardHalveCounter();
             selectedCards.forEach(idx=>{
               if(idx===pendingIdx) return;
@@ -22140,15 +22162,34 @@ function BattleScreen({
               const b=boosts.perCard[idx]||{oryo:0,dmgMod:0,combo:0};
               if(slotIdx!=null&&isAttackCard(card)){const baseDmg=getDmg(card,slotIdx,slots[slotIdx],b.oryo,b.dmgMod,halved); committedTotal+=getAttackPredictedDmg(card,slots[slotIdx],baseDmg,b.combo);}
               const gw=guardCardWeight(card);
-              if(gw>0){ const e=cardEffectMultiplier(card,halved); guardFlat+=GUARD_EVOLUTION[guardLevel].flat*gw*e; guardMult+=GUARD_EVOLUTION[guardLevel].mult*gw*e; }
+              if(gw>0){ const e=cardEffectMultiplier(card,halved);
+                const gf=GUARD_EVOLUTION[guardLevel].flat*gw*e, gm=GUARD_EVOLUTION[guardLevel].mult*gw*e;
+                guardFlat+=gf; guardMult+=gm;
+                // ★タクティクスは構えた子ごとに丈夫さが違う。枠ごとに分けて持っておき、
+                //   合計は「枠ごとに出した軽減量の足し算」にする(平均で1回出すとずれる)
+                if(slotIdx!=null){ const cur=guardBySlot[slotIdx]||{flat:0,mult:0};
+                  guardBySlot[slotIdx]={flat:cur.flat+gf,mult:cur.mult+gm}; } }
             });
-            const committedGuard=guardValueOf(guardFlat,guardMult);
+            const sumGuardBySlot=(extra=null)=>{
+              const merged={...guardBySlot};
+              if(extra&&extra.slot!=null){ const cur=merged[extra.slot]||{flat:0,mult:0};
+                merged[extra.slot]={flat:cur.flat+extra.flat,mult:cur.mult+extra.mult}; }
+              return Object.entries(merged)
+                .reduce((sum,[slot,g])=>sum+guardValueOf(g.flat,g.mult,Number(slot)),0);
+            };
+            const committedGuard=Array.isArray(tacticsUnits)?sumGuardBySlot():guardValueOf(guardFlat,guardMult);
             // 保留カードがガードなら、置いたあとの合計軽減も出す
             const pendingGuardWeight=guardCardWeight(pendingCardObj);
             const pendingGuardHalved=pendingGuardWeight>0&&committedCounter.peek(pendingCardObj,pendingIdx!=null&&cardAssignments[pendingIdx]!=null?cardAssignments[pendingIdx]:null);
             const pendingGuardEffect=cardEffectMultiplier(pendingCardObj,pendingGuardHalved);
+            // 置く先が決まっている保留カードは、その子の丈夫さで足す(タクティクス)
+            const pendingGuardSlot=pendingIdx!=null&&cardAssignments[pendingIdx]!=null?cardAssignments[pendingIdx]:null;
             const projectedGuard=pendingGuardWeight>0
-              ? guardValueOf(guardFlat+GUARD_EVOLUTION[guardLevel].flat*pendingGuardWeight*pendingGuardEffect, guardMult+GUARD_EVOLUTION[guardLevel].mult*pendingGuardWeight*pendingGuardEffect)
+              ? (Array.isArray(tacticsUnits)
+                ? sumGuardBySlot({slot:pendingGuardSlot,
+                    flat:GUARD_EVOLUTION[guardLevel].flat*pendingGuardWeight*pendingGuardEffect,
+                    mult:GUARD_EVOLUTION[guardLevel].mult*pendingGuardWeight*pendingGuardEffect})
+                : guardValueOf(guardFlat+GUARD_EVOLUTION[guardLevel].flat*pendingGuardWeight*pendingGuardEffect, guardMult+GUARD_EVOLUTION[guardLevel].mult*pendingGuardWeight*pendingGuardEffect))
               : committedGuard;
             const pendingIsAtk=isAttackCard(pendingCardObj);
             // projected damage the pending card would add (as the next attack in order)
@@ -22359,7 +22400,7 @@ function BattleScreen({
                       {slotAssignedCards.map(({idx,card})=>{
                         // ガードは軽減量をその場で出す。2枚目以降なら半分になった値をそのまま表示する
                         const gw=guardCardWeight(card), ge=cardEffectMultiplier(card,halvedByIdx[idx]);
-                        const gv=gw>0?guardValueOf(GUARD_EVOLUTION[guardLevel].flat*gw*ge,GUARD_EVOLUTION[guardLevel].mult*gw*ge):0;
+                        const gv=gw>0?guardValueOf(GUARD_EVOLUTION[guardLevel].flat*gw*ge,GUARD_EVOLUTION[guardLevel].mult*gw*ge,i):0;
                         return(
                         <div key={idx} className={`flex items-center gap-0.5 px-1 rounded w-full justify-center min-w-0 ${cardNeedsMonster(card)?'bg-red-600/85':'bg-emerald-600/85'}`}>
                           <span style={{fontSize:'7px'}} className="leading-none shrink-0">{cardIconNode(card.icon,9,card.id)}</span>
@@ -32852,7 +32893,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // ここでは「どこで数えるか(cardHalveGroup)」と「対象外(アシストカード)」を渡すだけ
   const makeHalveCounter = () => makeCardHalveCounter(cardHalveGroup, isAssistCard);
   // flat は互換用（現行定義は0）。実質は「実効丈夫さ × 倍率の合計」。
-  const guardValueOf = (flat, mult) => (flat > 0 || mult > 0) ? Math.floor(flat + effectiveDef * mult) : 0;
+  // ★ガードの軽減量は「構えた子の丈夫さ」で決まる(タクティクス)。paramのslotIdxがnullなら
+  //   今までどおりパーティの値(既存5モード)。2026-09-22 ユーザー指摘で分かったとおり、
+  //   実際の計算(processTurnの新モード分岐)はその子の丈夫さを使っているのに、画面だけが
+  //   パーティの平均で出していた。硬い子が構えれば実際はもっと受け止めるので、数字が合わない
+  const guardDefFor = (slotIdx = null) => {
+    if (slotIdx == null || !isTacticsMode(runMode)) return effectiveDef;
+    const unit = tacticsUnitsRef.current?.[slotIdx];
+    return unit ? resolveEffectiveMaxStat(normalizeTacticsUnit(unit).def, getPermaBuff('defPct')) : effectiveDef;
+  };
+  const guardValueOf = (flat, mult, slotIdx = null) =>
+    (flat > 0 || mult > 0) ? Math.floor(flat + guardDefFor(slotIdx) * mult) : 0;
   // このカードを使うと、同じターンの「あとに続くカード」へ即座に乗る補正の生値(effMul適用前)。
   // ニコラオの力・ゴーレム・モッチー/ミタラシ・ききの応援は、説明どおり使ったターンから効く
   // (他の永続バフは次のターンから効く。詳細はヘルプ「ずっと続く効果は次のターンから」を参照)。
@@ -33348,9 +33399,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               }
               const own=slotGuards[slotIdx]||{flat:0,mult:0,weight:0};
               // ガードの軽減量も「その子の丈夫さ」から出す
-              const slotDef=tacticsUnitsRef.current[slotIdx]
-                ? resolveEffectiveMaxStat(normalizeTacticsUnit(tacticsUnitsRef.current[slotIdx]).def,getPermaBuff('defPct')) : effectiveDef;
-              const base=(own.flat>0||own.mult>0)?Math.floor(own.flat+slotDef*own.mult):0;
+              // 画面へ出すのと同じ guardValueOf を通す(別々に書くと予告と実際がずれる)
+              const base=guardValueOf(own.flat,own.mult,slotIdx);
               // 貫通撃はガードが効かない
               const slotGuard=intent.variant==='pierce'?0:base;
               // ★受けるダメージもその子の丈夫さで決まるので、狙われた子ごとに計算し直す
@@ -40450,6 +40500,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         <UpgradeSkillScreen
           canRecoverGutsWithPoint={canRecoverGutsWithPoint} continueAfterUniqueUpgrade={continueAfterUniqueUpgrade}
           effectiveMaxGuts={effectiveMaxGuts} guts={guts} recoverGutsWithPoint={recoverGutsWithPoint}
+          slots={slots} tacticsUnits={isTacticsMode(runMode)?tacticsUnits:null}
           uniqueUpgradeEntries={uniqueUpgradeEntries} uniqueUpgradeRow={uniqueUpgradeRow}
           upgradePoints={upgradePoints}
         />
@@ -40955,7 +41006,9 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
       <div className="mt-0.5 text-[9px] font-black text-cyan-300">この枠の距離適性 {aptPct>=0?'+':''}{Math.round(aptPct*10)/10}%</div>
     </div>);
   })}
-</div>)}{isTacticsMode(runMode)&&(<div className="text-left text-[9px] font-black uppercase tracking-widest text-slate-400">パーティ全体（カードの効きめを決める値）</div>)}<div className="grid grid-cols-2 gap-6 text-left"><div><div className="text-[9px] text-pink-400 font-black uppercase">ライフ</div><div className="text-xl font-mono font-black">{hp.toLocaleString()} / {effectiveMaxHp.toLocaleString()}</div></div><div><div className="text-[9px] text-red-400 font-black uppercase">攻撃力</div><div className="text-xl font-mono font-black">{atk}</div></div><div><div className="text-[9px] text-emerald-400 font-black uppercase">丈夫さ</div><div className="text-xl font-mono font-black">{effectiveDef}{getPermaBuff('defPct')>0&&<span className="text-[10px] text-emerald-400 ml-1">(基礎{def} DEF +{Math.round(getPermaBuff('defPct')*100)}%)</span>}{getPermaBuff('dmgCutPct')>0&&<span className="text-[10px] text-emerald-400 ml-1">(被ダメ -{Math.round(getPermaBuff('dmgCutPct')*100)}%)</span>}</div></div><div><div className="text-[9px] text-amber-400 font-black uppercase">ガッツ</div><div className="text-xl font-mono font-black">{guts} / {effectiveMaxGuts}</div></div></div><div className="bg-black/40 p-3 rounded-xl border border-indigo-500/30 text-left"><div className="text-[9px] text-indigo-400 uppercase font-black">勇者特性</div><div className="text-[11px] text-white font-bold leading-relaxed mt-1">{mainHero.traitDesc}</div></div><div className="text-left"><AssistantBubble scene="battleHelp" compact/></div></div></div></div>)}
+</div>)}{/* ★タクティクスは1体ずつなので、パーティの合計・平均の欄そのものを出さない
+                  (2026-09-22 ユーザー選択「消す」)。ちから・丈夫さは平均でしかなく、
+                  ダメージも被弾もガードも、いまは全部その子の値で決まる */}{!isTacticsMode(runMode)&&<div className="grid grid-cols-2 gap-6 text-left"><div><div className="text-[9px] text-pink-400 font-black uppercase">ライフ</div><div className="text-xl font-mono font-black">{hp.toLocaleString()} / {effectiveMaxHp.toLocaleString()}</div></div><div><div className="text-[9px] text-red-400 font-black uppercase">攻撃力</div><div className="text-xl font-mono font-black">{atk}</div></div><div><div className="text-[9px] text-emerald-400 font-black uppercase">丈夫さ</div><div className="text-xl font-mono font-black">{effectiveDef}{getPermaBuff('defPct')>0&&<span className="text-[10px] text-emerald-400 ml-1">(基礎{def} DEF +{Math.round(getPermaBuff('defPct')*100)}%)</span>}{getPermaBuff('dmgCutPct')>0&&<span className="text-[10px] text-emerald-400 ml-1">(被ダメ -{Math.round(getPermaBuff('dmgCutPct')*100)}%)</span>}</div></div><div><div className="text-[9px] text-amber-400 font-black uppercase">ガッツ</div><div className="text-xl font-mono font-black">{guts} / {effectiveMaxGuts}</div></div></div>}<div className="bg-black/40 p-3 rounded-xl border border-indigo-500/30 text-left"><div className="text-[9px] text-indigo-400 uppercase font-black">勇者特性</div><div className="text-[11px] text-white font-bold leading-relaxed mt-1">{mainHero.traitDesc}</div></div><div className="text-left"><AssistantBubble scene="battleHelp" compact/></div></div></div></div>)}
 
       {showSoulBattleEffects&&gameState==='BATTLE'&&(
         <SoulBattleEffects
