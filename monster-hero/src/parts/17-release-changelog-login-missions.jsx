@@ -469,6 +469,27 @@ const applyLoginPointFix = (points, xp, gifts) => {
   return { changed:true, points:nowPoints - moved, xp:nowXp + wrong, moved, granted:wrong };
 };
 
+// ===== 受け取り済みのギフトを積もらせない =====
+// ★受け取り済みは消す仕組みが無く、8月からの全部が残っていた
+//   (2026-09-21・書き出したセーブの実測で mh_gifts は331件122,271文字。
+//    うち328件・129,500文字が受け取り済みで、ミッション報酬が274件を占めていた)。
+//   保存データが localStorage の上限へ近づくと、**ダイヤ1つの保存すら効かなくなる**ため、
+//   受け取り済みの控えは新しいものだけ残す。報酬はすでに配り終えているので、
+//   消えるのは「受取済み」タブに並ぶ記録だけ。
+// ★ログインボーナスと補償は消さない。一度きりの付け替え(mistakenLoginPoints)が
+//   受け取り済みのログインボーナスを数えており、消すと数え直せなくなる。
+const GIFT_HISTORY_LIMIT = 50;
+const GIFT_HISTORY_KEEP_SOURCES = Object.freeze(['loginBonus', 'compensation']);
+const giftHistoryPrunable = (gift) => !!gift?.claimedAt && !GIFT_HISTORY_KEEP_SOURCES.includes(gift?.source);
+const pruneGiftHistory = (gifts, limit = GIFT_HISTORY_LIMIT) => {
+  const list = Array.isArray(gifts) ? gifts : [];
+  const prunable = list.filter(giftHistoryPrunable);
+  if (prunable.length <= limit) return list;
+  const claimedAtOf = (gift) => Date.parse(gift?.claimedAt || '') || 0;
+  const keep = new Set(prunable.slice().sort((a, b) => claimedAtOf(b) - claimedAtOf(a)).slice(0, limit));
+  return list.filter(gift => !giftHistoryPrunable(gift) || keep.has(gift));
+};
+
 const grantCompensationGifts = (gifts, now=Date.now()) => {
   const list = Array.isArray(gifts) ? gifts : [];
   const missing = COMPENSATION_GIFTS.filter(def => !list.some(item => item?.id === def.id));
@@ -476,6 +497,48 @@ const grantCompensationGifts = (gifts, now=Date.now()) => {
   const createdAt = new Date(now).toISOString();
   const expiresAt = new Date(Number(now) + 30*24*60*60*1000).toISOString();
   const added = missing.map(def => ({ ...def, source:'compensation', rewards:def.rewards.map(r=>({...r})), createdAt, expiresAt, claimedAt:null }));
+  return { granted:true, gifts:[...added, ...list] };
+};
+
+// ===== その人だけに届くお詫び(2026-09-21) =====
+//
+// 不具合の影響が特定の人にだけ出たときのための配布。全員へ配る COMPENSATION_GIFTS とは
+// 別に、タイトル画面に出している PLAYER ID(mh_player_id)が一致した端末にだけ届ける。
+//
+// 【なぜIDを見て配るか】セーブデータは端末の中にしかなく、こちらから送り込む手段がない。
+// ゲーム側で「自分が対象か」を確かめて、自分のギフトボックスへ入れてもらう形にする。
+// 【限界】対象IDはソースに書くので、端末の保存値を書き換えれば対象外の人でも受け取れる。
+// 金額が大きいものを配るときは承知のうえで使うこと(2026-09-21・ユーザー了解済み)。
+// 【期限は付けない】受け取りそこねると取り返しがつかないので expiresAt を書かない。
+// 【項目は消さない】消すと、まだ受け取っていない端末へ再び配られてしまう。
+// 【IDは端末ごと】機種変すると別IDになり届かなくなる。届いたかは本人に確かめる。
+const PLAYER_COMPENSATION_GIFTS = [
+  {
+    id: 'gift_player_compensation_20260921_rebirth_xp',
+    playerIds: ['MH-065J-BWBP'],
+    title: 'お詫びのしるし',
+    description: '転生200回ぶんの経験値が失われる不具合のお詫びです。ご迷惑をおかけしました。',
+    rewards: [
+      { type:'diamond', amount:200000000 },
+    ],
+  },
+];
+// PLAYER ID は大文字の決まった形で作っているが、読み違いを避けるため前後の空白と
+// 大小の違いは吸収して見比べる。値が無い・文字列でないときは空文字にする(=対象外)。
+const normalizePlayerIdForGift = (value) => (typeof value === 'string' ? value.trim().toUpperCase() : '');
+// 対象のPLAYER IDと一致したときだけ、まだ届いていないお詫びをギフト一覧の先頭へ足す。
+// idが既にあれば足さないので、受取済み・未受取のどちらでも二重には届かない。
+const grantPlayerCompensationGifts = (gifts, playerId, now=Date.now()) => {
+  const list = Array.isArray(gifts) ? gifts : [];
+  const id = normalizePlayerIdForGift(playerId);
+  if (!id) return { granted:false, gifts:list };
+  const missing = PLAYER_COMPENSATION_GIFTS.filter(def =>
+    (Array.isArray(def.playerIds) ? def.playerIds : []).some(target => normalizePlayerIdForGift(target) === id)
+    && !list.some(item => item?.id === def.id));
+  if (missing.length === 0) return { granted:false, gifts:list };
+  const createdAt = new Date(now).toISOString();
+  // playerIds は配る相手を決めるためだけのもの。保存するギフトには持たせない
+  const added = missing.map(({ playerIds, ...def }) => ({ ...def, source:'compensation', rewards:def.rewards.map(r=>({...r})), createdAt, claimedAt:null }));
   return { granted:true, gifts:[...added, ...list] };
 };
 // ---------- モンヒロビート プレオープン記念 新規プレイヤーキャンペーン ----------

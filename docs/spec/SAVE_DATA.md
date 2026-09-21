@@ -8,7 +8,23 @@
 2. なければブラウザ `localStorage` を使う。
 3. どちらも使えなければ `_memStore` に保存する。この場合は再読み込みで消える。
 
-全呼び出しは `shared=false` であり、共有ストレージ利用は現行コードにない。書き込み失敗は基本的に握りつぶされ、利用者へ永続化失敗を通知する仕組みは**未確認**。
+全呼び出しは `shared=false` である。共有ストレージ利用は現行コードにない。
+
+**書き込みの成否は `storeSet` の戻り値と `getStorageHealth()` で分かる**（2026-09-21）。それまでは失敗を握りつぶすうえ、失敗しても `_memStore` へは書いていたため、保存できなくなっても同じセッション中は読み戻せて画面は正常に見え、落ちて読み込み直した瞬間に最後に書けた時点まで全キーが一斉に戻っていた。実測では保存データ1,678,420文字のうち86%が `mh_ranking_cache` で、`localStorage` の上限（iPhoneのSafariでおよそ5MB。1文字2バイトで数える）へ迫っていた。上限に達すると `hasLocalStorage()` のためし書きが落ち、**どのキーの保存も素通りする**。
+
+- `getStorageHealth()` … 連続失敗数・最後のエラー名・失敗したキー・最後に書けた時刻・書けた最大の長さ
+- `probeStorageWritable()` … 「次の1件（最大64KB）が入るか」を書いて消して試す
+- `storageUsageReport()` … `mh_` で始まるキーごとの大きさと合計
+- 画面側は30秒ごとに見回り、失敗していれば知らせを出し、クイックの∞周回は `stopAllAuto('storage')` で止める。報酬を配り終えたあとに判定するので、**止まった時点までのぶんは端末に入っている**
+
+### 積もり続けるデータの上限（2026-09-21）
+
+| データ | 上限 | 備考 |
+| --- | --- | --- |
+| `mh_ranking_cache` | 難易度は直近6つまで。行の `party[].detail` は保存しない | 画面が使う控え（`rankingCacheRef`）は `detail` を持ったまま。**保存する形だけ**削る。詳細は開けば取り直せる |
+| `mh_gifts` の受け取り済み | 新しい50件まで（`pruneGiftHistory`） | `loginBonus` と `compensation` は消さない（一度きりの付け替え `mistakenLoginPoints` が受け取り済みを数えるため） |
+
+どちらも起動時に一度だけ整理し、設定の「データバックアップ」からも手で整理できる。育成データ（`mh_masu_mons`・`mh_gold`・`mh_breeder_xp`・`mh_owned_items`）には触れない。実データでの効果は 3.20MB → 0.59MB。検査は `tools/boot/storage-quota-guard-check.js`。
 
 ## 2. キー一覧
 
@@ -90,7 +106,7 @@
 | `mh_login_bonus` | object / `LOGIN_BONUS_DEFAULT` | ログインボーナスの受取状況(期間キーと日数) |
 | `mh_playtime_v1` | object | プレイ時間の累計と日別(`normalizePlaytime`) |
 | `mh_player_id` | string | ランキング送信に使う端末ID。`localStorage` 直接アクセス(`storeGet` を通さない) |
-| `mh_ranking_cache` | object | 全国ランキングの取得結果の控え(表示用。無くても取り直す) |
+| `mh_ranking_cache` | object | 全国ランキングの取得結果の控え(表示用。無くても取り直す)。**保存する形は軽くする**(下記) |
 | `mh_pro_last_party` | object / `EMPTY_PRO_LAST_PARTY` | プロモードで最後に使った編成(`normalizeProLastParty`) |
 | `mh_home_pasture_ids` | string[] / `[]` | HOME の牧場に出すマスモンの個体ID(`normalizeHomePastureIds`) |
 | `mh_monster_roster_sets_v1` | object | 編成セット(`normalizeMonsterPartySets`)。`mh_monster_roster` は現在のセットの写し |
@@ -178,6 +194,20 @@
 二重配布は2段構えで防ぐ。配布済みフラグに加えて、`mh_gifts` に同じギフトid（`monhiro_beat_preopen_new_player_v1`、固定）が既にあれば追加しない。これによりギフト追加後・フラグ保存前に終了しても増えない。受け取りは既存のギフト基盤（`buildGiftClaim`）を通すので、ダイヤは `gold` へ、虹のプシュケーは `ownedItems.rainbow_psyche` へ**加算**される（上書きではない）。受取期限は指定がないため付けない（`expiresAt` を書かない＝期限なし）。
 
 キャンペーン自体は `NEW_PLAYER_CAMPAIGN_ENABLED` で後からOFFにできる。終了日時は設定していない。
+
+### その人だけに届くお詫び（2026-09-21）
+
+不具合の影響が特定の人にだけ出たときは、全員へ配る `COMPENSATION_GIFTS` とは別の `PLAYER_COMPENSATION_GIFTS` へ1件足す。項目は `playerIds` を持ち、タイトル画面に出している PLAYER ID（`mh_player_id`）が一致した端末でだけ `grantPlayerCompensationGifts` がギフトボックスへ入れる。受け取りは通常のギフトと同じ `buildGiftClaim` を通るので、ダイヤは `gold` へ**加算**される。
+
+- PLAYER ID は `window.localStorage` へ直接書いているため、読むときも同じ経路で読む（`storeGet` ではない）。判定するだけで、ここでは作らない
+- 新しい保存キーは作らない。二重配布はギフトidで防ぐ（固定id。既に `mh_gifts` にあれば足さない。受取済みでも再配布しない）
+- 受取期限は付けない（`expiresAt` を書かない）。受け取りそこねると取り返しがつかないため
+- 項目は消さない。消すと、まだ受け取っていない端末へ再び配られてしまう
+- `playerIds` は配る相手を決めるためだけのもので、保存するギフトには残さない
+- 限界: 対象IDは公開リポジトリのソースに載るので、保存値を書き換えれば対象外の人でも受け取れる。金額の大きいものはそれを承知で使う
+- 限界: IDは端末ごと。機種変すると別IDになり届かなくなる
+
+検査は `tools/boot/gift-login-check.js`。
 
 ### ミッション
 
