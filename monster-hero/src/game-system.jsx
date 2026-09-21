@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c7edf516bc38a14b
+// generated-sha256: e95240601d8792b7
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -92,7 +92,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-22 07:44"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-22 07:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -9776,7 +9776,7 @@ const TACTICS_INTIMIDATE_RATE = 0.4;
 //   覚えられないので、予告のあいだ出しっぱなしにする。書かなければ category を使う
 const TACTICS_ACTION_DEFINITIONS = [
   {id:'normal',type:'ATTACK',category:'通常攻撃',noticeLabel:'通常攻撃',weight:30,multiplier:1,hits:1,range:'全間合い',condition:'常時',cooldown:0,useLimit:null},
-  {id:'charge',type:'CHARGE',category:'ためる',noticeLabel:'必殺技をためる',weight:12,multiplier:0,hits:0,range:'全間合い',condition:'常時',cooldown:0,useLimit:null},
+  {id:'charge',type:'CHARGE',category:'ためる',noticeLabel:'必殺技準備',weight:12,multiplier:0,hits:0,range:'全間合い',condition:'常時',cooldown:0,useLimit:null},
   {id:'special',type:'SPECIAL',category:'必殺技',noticeLabel:'必殺技',weight:0,multiplier:2.5,hits:1,range:'全間合い',condition:'ためた次のターンに必ず発動',cooldown:0,useLimit:null},
   {id:'wait',type:'WAIT',category:'特殊行動',noticeLabel:'様子見',weight:10,multiplier:0,hits:0,range:'全間合い',condition:'常時',cooldown:0,useLimit:null},
   {id:'move',type:'MOVE',category:'移動',noticeLabel:'間合い移動',weight:10,multiplier:0,hits:0,range:'現在以外の3間合い',condition:'移動先がある・移動した次のターンは選ばない',cooldown:0,useLimit:null},
@@ -21890,19 +21890,32 @@ function BattleScreen({
                   付いているので、名前だけでは連撃なのか回復なのか覚えられない。
                   予告が出ているあいだずっと見えるようにする(❗はこの札に置き換える) */}
               {!ecoBattleView&&enemy&&enemyIntent&&!isBusy&&!enemyAttackFx&&Array.isArray(tacticsUnits)&&enemyIntent.notice&&enemyIntent.type!=='PIERCE_CHARGE'&&(()=>{
-                const noticeTone=enemyIntent.type==='SPECIAL'?'bg-fuchsia-600 border-fuchsia-200 text-white'
-                  :enemyIntent.type==='CHARGE'?'bg-amber-500 border-amber-100 text-black'
-                  :enemyIntent.type==='PIERCE_CHARGE'?'bg-rose-600 border-rose-200 text-white'
-                  :enemyIntent.type==='MOVE'?'bg-cyan-600 border-cyan-100 text-white'
-                  :enemyIntent.type==='ROAR'?'bg-orange-600 border-orange-100 text-white'
-                  :enemyIntent.type==='REGEN'?'bg-emerald-600 border-emerald-100 text-white'
-                  :enemyIntent.type==='WAIT'?'bg-slate-600 border-slate-200 text-white'
-                  :'bg-red-600 border-red-100 text-white';
+                // ★色・動き・光り方を効果で変える(2026-09-22 ユーザー指示「吹き出しを
+                //   効果によって変えると見た目がいい」)。文字を読む前に、攻めてくるのか
+                //   回復するのかが見分けられるようにする
+                const noticeTone=enemyIntent.type==='SPECIAL'?'bg-fuchsia-600 border-fuchsia-200 text-white shadow-[0_0_14px_rgba(217,70,239,0.85)]'
+                  :enemyIntent.type==='CHARGE'?'bg-amber-500 border-amber-100 text-black shadow-[0_0_14px_rgba(251,191,36,0.85)]'
+                  :enemyIntent.type==='PIERCE_CHARGE'?'bg-rose-600 border-rose-200 text-white shadow-[0_0_14px_rgba(244,63,94,0.85)]'
+                  :enemyIntent.type==='MOVE'?'bg-cyan-600 border-cyan-100 text-white shadow-[0_0_12px_rgba(6,182,212,0.7)]'
+                  :enemyIntent.type==='ROAR'?'bg-orange-600 border-orange-100 text-white shadow-[0_0_14px_rgba(249,115,22,0.85)]'
+                  :enemyIntent.type==='REGEN'?'bg-emerald-600 border-emerald-100 text-white shadow-[0_0_14px_rgba(16,185,129,0.85)]'
+                  :enemyIntent.type==='WAIT'?'bg-slate-600 border-slate-200 text-white shadow-[0_2px_10px_rgba(0,0,0,0.9)]'
+                  :'bg-red-600 border-red-100 text-white shadow-[0_0_14px_rgba(239,68,68,0.85)]';
+                // 動きも効果ごと。殴ってくる技は小刻みに震え、回復はふわっと浮き、
+                // 攻撃力アップは左右に揺れ、ためるは膨らみ、様子見と移動は静かに明滅する
+                const noticeAnim=enemyIntent.type==='REGEN'?'noticeHeal 1400ms ease-in-out infinite'
+                  :enemyIntent.type==='ROAR'?'noticeShout 900ms ease-in-out infinite'
+                  :enemyIntent.type==='CHARGE'?'noticeCharge 1100ms ease-in-out infinite'
+                  :(enemyIntent.type==='MOVE'||enemyIntent.type==='WAIT')?'noticeCalm 1600ms ease-in-out infinite'
+                  :'noticeHit 800ms ease-in-out infinite';
                 return (
                 <div className="absolute inset-0 pointer-events-none z-[9000]">
-                  <div data-enemy-notice={enemyIntent.notice}
-                    className={`absolute -top-3 -right-2 max-w-[160px] truncate rounded-2xl border-2 px-2 py-0.5 font-black leading-tight shadow-[0_2px_10px_rgba(0,0,0,0.9)] ${noticeTone}`}
-                    style={{fontSize:'11px',animation:'idleExclaim 1100ms ease-in-out infinite'}}>{enemyIntent.notice}！</div>
+                  <div data-enemy-notice={enemyIntent.notice} data-enemy-notice-anim={noticeAnim.split(' ')[0]}
+                    className={`absolute -top-3 -right-2 max-w-[170px] truncate rounded-2xl border-2 px-2 py-0.5 font-black leading-tight flex items-center gap-1 ${noticeTone}`}
+                    style={{fontSize:'11px',animation:noticeAnim}}>
+                    <span style={{fontSize:'12px'}} className="leading-none shrink-0">{enemyIntent.icon}</span>
+                    <span className="truncate">{enemyIntent.notice}！</span>
+                  </div>
                 </div>);
               })()}
               {/* ためている最中は、敵の周りにオーラが集まる */}
@@ -42235,6 +42248,30 @@ const createAnimationStyle = () => {
     @keyframes idleExclaim {
       0%,100% { transform: scale(0.95) translateY(0) rotate(-4deg); opacity: 0.85; }
       50% { transform: scale(1.18) translateY(-3px) rotate(4deg); opacity: 1; }
+    }
+    /* 敵の右上に出す「何をする技か」の札。効果ごとに動きを変えて、
+       色と文字を読む前に「攻めてくるのか・回復するのか」が分かるようにする
+       (2026-09-22 ユーザー指示「吹き出しを効果によって変えると見た目がいい」) */
+    @keyframes noticeHit {
+      0%,100% { transform: scale(1) rotate(-2deg); }
+      45% { transform: scale(1.1) rotate(2deg); }
+      60% { transform: scale(1.04) rotate(-1deg); }
+    }
+    @keyframes noticeCharge {
+      0%,100% { transform: scale(0.96); filter: brightness(0.95); }
+      50% { transform: scale(1.12); filter: brightness(1.25); }
+    }
+    @keyframes noticeHeal {
+      0%,100% { transform: translateY(2px) scale(1); }
+      50% { transform: translateY(-4px) scale(1.05); }
+    }
+    @keyframes noticeShout {
+      0%,100% { transform: translateX(-3px) scale(1.02); }
+      50% { transform: translateX(3px) scale(1.08); }
+    }
+    @keyframes noticeCalm {
+      0%,100% { opacity: 0.75; transform: scale(0.98); }
+      50% { opacity: 1; transform: scale(1.03); }
     }
     @keyframes idleAuraPulse {
       0%,100% { transform: scale(0.92); opacity: 0.5; }

@@ -523,6 +523,16 @@ check('実戦の行動表も難易度つきで引く',
   check('再生は「回復」と出す', noticeOf('regen') === '回復', String(noticeOf('regen')));
   check('連撃はヒット数まで出す', noticeOf('rush') === `${api.TACTICS_RUSH_HITS}連撃`, String(noticeOf('rush')));
   check('様子見は分かる言い方にする', noticeOf('wait') === '様子見', String(noticeOf('wait')));
+  // ★「ためる」も準備の技なので、貫通技準備と対になる言い方にする(2026-09-22 ユーザー指示)
+  check('ためるは「必殺技準備」と出す', noticeOf('charge') === '必殺技準備', String(noticeOf('charge')));
+  // ★色・動き・光り方を効果ごとに変える(2026-09-22 ユーザー指示「吹き出しを効果によって
+  //   変えると見た目がいい」)。書いた動きの名前が実在しないと、札が止まったままになる
+  const bootSource = fs.readFileSync(path.join(root, 'monster-hero/src/parts/70-bootstrap.jsx'), 'utf8');
+  const animNames = [...battleScreen.matchAll(/'(notice[A-Za-z]+) \d+ms/g)].map(m => m[1]);
+  check('効果ごとに動きを変えている', new Set(animNames).size >= 5, animNames.join(','));
+  const missingAnim = [...new Set(animNames)].filter(name => !bootSource.includes(`@keyframes ${name} {`));
+  check('書いた動きがすべて定義されている', missingAnim.length === 0, missingAnim.join(',') || 'すべてある');
+  check('札にその技のアイコンも出す', battleScreen.includes('{enemyIntent.icon}</span>'));
   // ★貫通は「構え」と「貫通技準備」の2つの言い方が混ざっていた(2026-09-22 ユーザー指摘
   //   「予告は固有技で出て吹き出しで貫通の構えって出る…矛盾が感じる」)
   check('貫通の予告は「貫通技準備」でそろえる',

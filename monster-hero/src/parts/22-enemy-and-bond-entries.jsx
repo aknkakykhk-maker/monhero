@@ -94,7 +94,7 @@ const TACTICS_INTIMIDATE_RATE = 0.4;
 //   覚えられないので、予告のあいだ出しっぱなしにする。書かなければ category を使う
 const TACTICS_ACTION_DEFINITIONS = [
   {id:'normal',type:'ATTACK',category:'通常攻撃',noticeLabel:'通常攻撃',weight:30,multiplier:1,hits:1,range:'全間合い',condition:'常時',cooldown:0,useLimit:null},
-  {id:'charge',type:'CHARGE',category:'ためる',noticeLabel:'必殺技をためる',weight:12,multiplier:0,hits:0,range:'全間合い',condition:'常時',cooldown:0,useLimit:null},
+  {id:'charge',type:'CHARGE',category:'ためる',noticeLabel:'必殺技準備',weight:12,multiplier:0,hits:0,range:'全間合い',condition:'常時',cooldown:0,useLimit:null},
   {id:'special',type:'SPECIAL',category:'必殺技',noticeLabel:'必殺技',weight:0,multiplier:2.5,hits:1,range:'全間合い',condition:'ためた次のターンに必ず発動',cooldown:0,useLimit:null},
   {id:'wait',type:'WAIT',category:'特殊行動',noticeLabel:'様子見',weight:10,multiplier:0,hits:0,range:'全間合い',condition:'常時',cooldown:0,useLimit:null},
   {id:'move',type:'MOVE',category:'移動',noticeLabel:'間合い移動',weight:10,multiplier:0,hits:0,range:'現在以外の3間合い',condition:'移動先がある・移動した次のターンは選ばない',cooldown:0,useLimit:null},
