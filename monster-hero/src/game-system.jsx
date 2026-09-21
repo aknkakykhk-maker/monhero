@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 776548280ec0b719
+// generated-sha256: c49ac3bdb6a8fa1a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -92,7 +92,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-21 15:02"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-21 15:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -9589,8 +9589,9 @@ const ENEMY_ART_LAYOUT = {
   //   細長いものが付いていると長辺をそこに取られ、本体が小さく見える。
   //   どれくらい小さく見えるかは node tools/image/enemy-art-size-report.js で測れる
   //   (56pxの枠に色が乗る面積。配信中の敵は13%〜68%・まんなか31%)。
-  Metalner:    { scanScale:1.1,  waveDetailScale:1.1,  objectPosition:'center' },      // 33%
-  Delpiero:    { scanScale:1.4,  waveDetailScale:1.4,  objectPosition:'center 60%' },  // 17%。鎌が上へ伸びるので本体を下寄りに
+  //   2026-09-21にユーザーが絵を出し直したぶん(カワズモー42% / メタルナー32% / イナリ30% /
+  //   コイノボリ63% / デルピエロ28%)は、どれもその幅のまんなか寄りに入ったので**倍率を入れない**。
+  //   古い絵に合わせた倍率(メタルナー1.1 / デルピエロ1.4)をそのまま残すと、今度は大きすぎる
   Splatter:    { scanScale:1.2,  waveDetailScale:1.2,  objectPosition:'center 58%' },  // 30%。斧が上へ伸びる
   // ★覚醒ムーはクラシックのムーと同じ扱い。ボスだけは絵を高い解像度のまま置き(1024x598)、
   //   表示のときに大きく拡大する。拡大率もムーとそろえてある

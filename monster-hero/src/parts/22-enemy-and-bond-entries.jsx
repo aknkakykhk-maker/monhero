@@ -12,8 +12,9 @@ const ENEMY_ART_LAYOUT = {
   //   細長いものが付いていると長辺をそこに取られ、本体が小さく見える。
   //   どれくらい小さく見えるかは node tools/image/enemy-art-size-report.js で測れる
   //   (56pxの枠に色が乗る面積。配信中の敵は13%〜68%・まんなか31%)。
-  Metalner:    { scanScale:1.1,  waveDetailScale:1.1,  objectPosition:'center' },      // 33%
-  Delpiero:    { scanScale:1.4,  waveDetailScale:1.4,  objectPosition:'center 60%' },  // 17%。鎌が上へ伸びるので本体を下寄りに
+  //   2026-09-21にユーザーが絵を出し直したぶん(カワズモー42% / メタルナー32% / イナリ30% /
+  //   コイノボリ63% / デルピエロ28%)は、どれもその幅のまんなか寄りに入ったので**倍率を入れない**。
+  //   古い絵に合わせた倍率(メタルナー1.1 / デルピエロ1.4)をそのまま残すと、今度は大きすぎる
   Splatter:    { scanScale:1.2,  waveDetailScale:1.2,  objectPosition:'center 58%' },  // 30%。斧が上へ伸びる
   // ★覚醒ムーはクラシックのムーと同じ扱い。ボスだけは絵を高い解像度のまま置き(1024x598)、
   //   表示のときに大きく拡大する。拡大率もムーとそろえてある
