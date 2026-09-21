@@ -35,6 +35,12 @@
   **必ず実際の画面に並べて目で確かめる**
 - 手順と落とし穴: [`tools/art-sources/enemies-tactics/README.md`](../../tools/art-sources/enemies-tactics/README.md)
 
+**ジャケットは「使うときまで配信しない」**。モンヒロビートへ入れる曲が決まる前に受け取った
+ジャケットは [`tools/art-sources/song-art/`](../../tools/art-sources/song-art/README.md) に預け、
+`monster-hero/images/song-art/` へは置かない。先に置くと `tools/image-asset-check.js` が
+「どこからも参照されていない絵」として落とす（2026-09-21にユーザーから
+「今後モンビー実装用にジャケットも送っとく」として2枚届いた）。
+
 **曲の音量は全部そろえる**(2026年9月にユーザーがそう指示した。「禁断のレジスタンスの音だけ小さく感じる /
 他と合わせて / 今後実装するときに音量を全部同じにするように覚えといて」)。
 

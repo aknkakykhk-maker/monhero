@@ -116,10 +116,11 @@ const FORCE_CHECKS = [
   { re: /^monster-hero\/(data\/(enemy-monsters|images\/images-enemy)\.js|src\/parts\/(22-enemy-and-bond-entries|60-app)\.jsx)$/,
     checks: ['mode/tactics-enemies-check.js', 'mode/tactics-enemy-actions-check.js'],
     why: 'タクティクス専用の敵が既存の並びと混ざっていないか／敵ごとの技名と行動表' },
-  // タクティクスのボス戦だけに専用BGMを鳴らす結線。判定の順番を1つ動かすだけで
-  // プロや種族の枠へ落ちるのに、ファイル名の語(app・settings)では拾えないので名指しする
-  { re: /^monster-hero\/(src\/parts\/(13-bgm-and-rhythm-settings|60-app)\.jsx|audio\/bgm-tactics-boss\.mp3)$/,
-    checks: ['audio/tactics-boss-bgm-check.js'], why: 'タクティクスのボス戦BGM' },
+  // タクティクスのWAVEごとのBGM(通常戦・中ボス戦・ボス戦)を鳴らし分ける結線。
+  // 判定の順番を1つ動かすだけでプロや種族の枠へ落ちるのに、
+  // ファイル名の語(app・settings)では拾えないので名指しする
+  { re: /^monster-hero\/(src\/parts\/(13-bgm-and-rhythm-settings|60-app)\.jsx|audio\/bgm-(senjou-no-shippuu|makutsu-no-senritsu)\.mp3)$/,
+    checks: ['audio/tactics-bgm-check.js'], why: 'タクティクスのWAVEごとのBGM' },
   // 画面を足したときのBGMの決め忘れ。対応表へ載せ忘れてもエラーは出ず、
   // その画面だけ静かに無音になるので、遊んだ人が言うまで気づけない(2回やっている)
   { re: /^monster-hero\/src\/parts\/60-app\.jsx$/,

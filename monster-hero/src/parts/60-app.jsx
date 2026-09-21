@@ -3892,10 +3892,10 @@ function MonsterHeroGame() {
       // BGMアレンジの「種族」タブで選んだ曲がそのまま鳴る(設定したのに効かない枠を作らない)
       // ★タクティクスをいちばん先に見る。タクティクスの種族チャレンジ・プロは
       //   isSpeciesChallengeMode / isProMode にも当たるので、後ろに置くとそちらへ落ちる。
-      //   中ボス戦(WAVE9)とボス戦(WAVE10)は専用の枠で、通常戦だけチャレンジと同じものを鳴らす
-      //   (2026-09-21 ユーザー指示「曲数が足りないからボス戦だけいれよう」→ 同日「中ボス戦は一旦これで」)
+      //   通常戦・中ボス戦(WAVE9)・ボス戦(WAVE10)の3枠とも専用。ほかのモードと同じ並び
+      //   (2026-09-21 ユーザー指示。ボス戦→中ボス戦→通常戦の順に曲が決まっていった)
       const modeBgm = isTacticsMode(runMode)
-        ? { normal:'battle', dullahan:'tacticsMidBoss', moo:'tacticsBoss' }
+        ? { normal:'tacticsBattle', dullahan:'tacticsMidBoss', moo:'tacticsBoss' }
         : isSpeciesChallengeMode(runMode)
         ? { normal:'speciesBattle', dullahan:'speciesDullahan', moo:'speciesMoo' }
         : extremeRunRef.current

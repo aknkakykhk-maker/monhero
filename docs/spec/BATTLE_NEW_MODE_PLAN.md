@@ -371,21 +371,23 @@
 > `tactics-enemy-actions-check.js` の「行動表のキーが、タクティクスの敵の並びと過不足なく一致する」が
 > 実データの `TACTICS_ENEMY_SEQUENCE` と突き合わせて見張っている。
 
-## 5.5 BGM は中ボス戦とボス戦だけ専用（2026-09-21 ユーザー指示）
+## 5.5 BGM は3枠とも専用（2026-09-21 ユーザー指示）
 
-ユーザーの言葉は「**曲数が足りないからボス戦だけいれよう**」（ボス戦用に1曲受け取った）、
-続けて「**中ボス戦は一旦これで**」（すでに入っている The City Beneath the Comets を指定）。
+曲は3回に分けて決まった。
+「**曲数が足りないからボス戦だけいれよう**」→「**中ボス戦は一旦これで**」→
+「**通常曲とボス曲の変更 / 戦場→通常曲 / 魔窟→ボス曲**」。
 
 | WAVE | 場面 | 枠 | 曲 |
 | --- | --- | --- | --- |
-| 1〜8 | 通常戦 | `battle`（チャレンジと共通） | チャレンジの設定そのまま |
-| 9 | **中ボス戦** | `tacticsMidBoss` | `melo_the_city_beneath_the_comets`（**すでにある曲を指すだけ**） |
-| 10 | **ボス戦** | `tacticsBoss` | `tactics_boss`（`audio/bgm-tactics-boss.mp3`） |
+| 1〜8 | 通常戦 | `tacticsBattle` | **戦場の疾風**（`senjou_no_shippuu`） |
+| 9 | 中ボス戦 | `tacticsMidBoss` | **The City Beneath the Comets**（**すでにある曲を指すだけ**） |
+| 10 | ボス戦 | `tacticsBoss` | **魔窟の旋律**（`makutsu_no_senritsu`） |
 
-- **通常戦だけチャレンジと同じ枠**を使う。通常戦の曲がまだ無いので、専用の枠を作ると
-  「選べるのに同じ曲しかない」ことになる
 - **中ボス戦は音源を増やさない。** すでに入っている曲の id を指すだけにする
   （CLAUDE.md ⑥-2「すでにゲームに入っている音源が使えるなら、コピーを作らない」）
+- **ジャケットは預かっているだけ。** 2枚とも `tools/art-sources/song-art/` にあり、
+  `monster-hero/images/song-art/` へは置かない（「今後モンビー実装用にジャケットも送っとく」）。
+  先に置くと `image-asset-check` が「どこからも参照されていない絵」として落とす
 - BGMアレンジのタブはモードを公開するまで出さない
   （`TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE`。種族チャレンジと同じ扱い）
 - **枠の呼び名は「中ボス戦」。** WAVE9はデュラハンではなくスプラッターなので、
@@ -395,7 +397,7 @@
 
 ```js
 const modeBgm = isTacticsMode(runMode)
-  ? { normal:'battle', dullahan:'tacticsMidBoss', moo:'tacticsBoss' }
+  ? { normal:'tacticsBattle', dullahan:'tacticsMidBoss', moo:'tacticsBoss' }
   : isSpeciesChallengeMode(runMode) ? …
 ```
 
@@ -412,9 +414,14 @@ const modeBgm = isTacticsMode(runMode)
 > 「タクティクス ボステーマ」にすると、まだ見せていないモードの名前がそこから見えてしまう。
 > いまは仮に「決戦テーマ」。ユーザーから正式な曲名をもらったら差し替える。
 
-音源の形はBGMの流儀にそろえてある（**96kbps / 44100Hz ステレオ / 2.86MB / 4分09秒**）。
-受け取った原本は 183kbps・48kHz でジャケット画像が埋まっていたので、
-`-map_metadata -1 -vn` で落とし、`-0.5dB` かけて **-14.4 LUFS / -2.1 dBFS** にした。
+音源の形はBGMの流儀（**96kbps / 44100Hz ステレオ**）にそろえてある。
+受け取った原本はどれも 180〜192kbps・48kHz でジャケット画像が埋まっていたので、
+`-map_metadata -1 -vn` で落とし、倍率をかけて **-14.4 LUFS** にそろえた
+（戦場の疾風 +1.6dB / 2.22MB・3分14秒、魔窟の旋律 +1.8dB / 1.70MB・2分29秒）。
+
+> ⚠️ **中ボス戦の曲だけ 32kHz。** モンヒロビートの曲を流用しているため（あちらの流儀は
+> 32kHz / 96kbps）。すでに配信している曲なので作り直さない。
+> 検査も、**このモードのために入れた曲だけ**形を見る。
 起動時の読み込み（`index.html` の `SIZES`）には入れない（開いたときに初めて読む側が正しい）。
 
 ### 公開するとBGMアレンジのタブが6つになる
@@ -428,7 +435,7 @@ const modeBgm = isTacticsMode(runMode)
 > あわせて「**文字が折り返されない**」も見るようにした。はみ出しの検査だけでは、
 > 6列に押し込んで文字が2行に割れた状態を拾えなかった。
 
-検査は `tools/audio/tactics-boss-bgm-check.js`（曲と結線）と
+検査は `tools/audio/tactics-bgm-check.js`（曲と結線）と
 `tools/audio/bgm-arrangement-layout-check.js`（タブの並び）。
 
 ## 6. 供モンの加入
@@ -515,6 +522,7 @@ const modeBgm = isTacticsMode(runMode)
 | 36 | **貫通撃に「構え」を挟み、難易度が上がると使える技が増えるようにした** | — |
 | 37 | **中ボス戦とボス戦のBGMを決めた**（ボス戦は受け取った1曲、中ボス戦はすでにある曲を指すだけ。通常戦はチャレンジと同じ） | — |
 | 38 | **Expert 以上に解放条件を付けた**（1つ前をクリアで次が開く。タクティクスの3モードだけで、クラシックは据え置き） | — |
+| 39 | **通常戦とボス戦のBGMを差し替えた**（戦場の疾風／魔窟の旋律。ジャケットは今後モンヒロビートへ入れるとき用に預かった） | — |
 
 検査: `tools/mode/tactics-enemy-actions-check.js`（定義と実装の対応）、
 `tools/mode/tactics-units-check.js`（1体ぶんの値・盤面・合計・ライフの振り分け・本体への結線）、
