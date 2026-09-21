@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9564340f596c0f2b
+// generated-sha256: 3f40dc08657c471f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -92,7 +92,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-21 20:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-21 20:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -34293,8 +34293,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setBattleTutorialVariant(variant === 'v1' ? 'v1' : 'v2');
     setBattleTutorialStep(0);
     // モード・ランキング・難易度もここで説明したいので、バトルの入口から始める。
-    // 新しい台本(v2)は、新しいモード選択の画面から始める
-    if (variant !== 'v1') { setModeSelectTab('mode'); setGameState('BATTLE_MODE_SELECT'); return; }
+    // ★v2は「バトルの仕組みえらび」から始める(2026-09-21)。ふだん HOME の
+    //   モンヒロバトルを押すと最初に出るのはこの画面なので、ここを飛ばして
+    //   モードえらびから教えると、練習のあとで知らない画面に出迎えられてしまう
+    if (variant !== 'v1') {
+      setBattleSystem(BATTLE_SYSTEM_CLASSIC);
+      setModeSelectTab('mode');
+      setGameState('BATTLE_SYSTEM_SELECT');
+      return;
+    }
     setGameState('BATTLE_MENU');
   };
   // 「この難易度で挑戦」を練習として押したとき。ふだんのボタンは記録を残す状態(debugBattleRef=false)に
@@ -36443,33 +36450,45 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             ★ここで選ぶ「仕組み」は保存しない。記録もランキングも今までどおりモードのidで分かれる。
             ★クイックは中のモードが1つだけなので、選んだらそのまま難易度選択へ進む(ユーザー指示) */}
         {gameState==='BATTLE_SYSTEM_SELECT'&&(()=>{
-          const systems=visibleBattleSystems({debugBattle});
+          // ★バトルのれんしゅう(チュートリアル)は記録を残さないために debugBattle を立てるが、
+          //   その副作用でこの入口だけ「ふだん遊ぶときと違う並び」になってしまう。
+          //   れんしゅうは通常プレイの入口を覚えてもらう場なので、並びは公開状態のまま見せる
+          const systemDebug=debugBattle&&!battleTutorial;
+          const systems=visibleBattleSystems({debugBattle:systemDebug});
           return (
           <div data-mh-screen className="flex-1 flex flex-col h-full min-h-0 px-4" style={{paddingTop:'calc(.35rem + env(safe-area-inset-top))',paddingBottom:'calc(.35rem + env(safe-area-inset-bottom))'}}>
             <div className="flex items-center gap-1 mb-1 shrink-0">
-              <button aria-label="戻る" onClick={returnToHome} className="p-3 text-slate-400 active:scale-90 disabled:opacity-25"><ArrowLeft/></button>
+              <button aria-label="戻る" disabled={!!battleTutorial} onClick={returnToHome} className="p-3 text-slate-400 active:scale-90 disabled:opacity-25"><ArrowLeft/></button>
             </div>
             <div className="w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll">
               <h2 className="text-center text-lg font-black leading-tight shrink-0 mt-0.5">モンヒロバトル</h2>
               <p className="text-center text-[10px] text-slate-400 mt-0.5 mb-1.5 shrink-0">どのバトルで遊ぶかを選びます</p>
               {/* ★カード3枚＋助手のひとことが、いちばん小さい端末(375×667)でも1画面へ収まる高さにしてある。
                   行を足す・余白を広げるときは tools/battle/battle-system-fit-check.js を通すこと */}
-              <div data-battle-systems={systems.length} className="flex flex-col gap-0.5 shrink-0">
+              <div data-battle-systems={systems.length} className={`flex flex-col gap-0.5 shrink-0${battleTutorialSpotClass('systemCards')}`}>
                 {systems.map(sys=>{
                   // ★まだ遊べないものは、枠だけ出して押せなくする(2026-09-20 ユーザー指示)。
                   //   モンヒロビートの「準備中」と同じ扱い。デバッグからは今までどおり遊べる
-                  const soon=battleSystemComingSoon(sys.id,{debugBattle});
+                  const soon=battleSystemComingSoon(sys.id,{debugBattle:systemDebug});
                   // ★β版は「中のモードがまだ全部そろっていない」。遊べるけれど、
                   //   入口でそのことが分かるようにしておく(2026-09-20 ユーザー指示)
-                  const beta=battleSystemBeta(sys.id,{debugBattle});
+                  const beta=battleSystemBeta(sys.id,{debugBattle:systemDebug});
+                  // れんしゅう中はクラシックだけを押せるようにして、台本どおりの流れを保つ
+                  const tutorialLocked=!!battleTutorial&&sys.id!==BATTLE_SYSTEM_CLASSIC;
+                  // 台本から光らせる場所。カードそのものを1枚ずつ光らせる
+                  // (spotのキーは仕組みのidと同じ綴りだが、台本から引くのは
+                  //  このキーなので、検査が追えるよう文字で書いておく)
+                  const sysSpot=sys.id===BATTLE_SYSTEM_CLASSIC?battleTutorialSpotClass('systemClassic')
+                    :sys.id===BATTLE_SYSTEM_TACTICS?battleTutorialSpotClass('systemTactics')
+                    :sys.id===BATTLE_SYSTEM_QUICK?battleTutorialSpotClass('systemQuick'):'';
                   // ★カードは「選ぶ」と「詳しいルール」の2つのボタンでできている。
                   //   準備中でも中身は読めるようにしておく(何が来るのか分かるように)
                   return (
                   <div key={sys.id} data-battle-system-card={sys.id}
-                    className={`w-full rounded-2xl border-2 overflow-hidden ${soon?'bg-slate-900/40':'bg-slate-900/80'}`}
+                    className={`w-full rounded-2xl border-2 overflow-hidden ${soon?'bg-slate-900/40':'bg-slate-900/80'}${sysSpot}`}
                     style={{borderColor:soon?'rgba(148,163,184,.45)':sys.color}}>
                     <button data-battle-system={sys.id} data-battle-system-soon={soon?'1':undefined}
-                      disabled={soon} onClick={()=>openBattleSystem(sys.id)}
+                      disabled={soon||tutorialLocked} onClick={()=>openBattleSystem(sys.id)}
                       aria-label={soon?`${sys.label}（準備中）`:sys.label}
                       className={`w-full px-3 pt-2 pb-1 text-left transition-transform ${soon?'opacity-60':'active:scale-[.98]'}`}>
                       <div className="flex items-center gap-2">
@@ -36494,9 +36513,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       ))}</ul>
                       <div className="text-[9px] text-slate-400 leading-snug mt-1">{soon?'いま準備しています。遊べるようになったらお知らせします':beta?'いまはタクティクスプロだけ遊べます。ほかのモードは準備中です':sys.note}</div>
                     </button>
-                    <button data-battle-system-info={sys.id} onClick={()=>setModeInfoId(sys.id)}
+                    <button data-battle-system-info={sys.id} disabled={!!battleTutorial} onClick={()=>setModeInfoId(sys.id)}
                       aria-label={`${sys.label}の詳しいルール`}
-                      className="w-full min-h-[28px] border-t border-white/10 bg-black/30 text-[10px] font-black text-slate-300 active:scale-[.98] flex items-center justify-center gap-1">
+                      className="w-full min-h-[28px] border-t border-white/10 bg-black/30 text-[10px] font-black text-slate-300 active:scale-[.98] disabled:opacity-50 flex items-center justify-center gap-1">
                       詳しいルール<ChevronRight size={12} className="shrink-0"/>
                     </button>
                   </div>);

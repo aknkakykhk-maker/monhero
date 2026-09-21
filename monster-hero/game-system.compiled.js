@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e0f3c4d725422564
+// source-sha256: 54996db79bfd8e19
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9564340f596c0f2b
+// generated-sha256: 3f40dc08657c471f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-21 20:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-21 20:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -56264,10 +56264,13 @@ function MonsterHeroGame() {
     setBattleTutorialVariant(variant === 'v1' ? 'v1' : 'v2');
     setBattleTutorialStep(0);
     // モード・ランキング・難易度もここで説明したいので、バトルの入口から始める。
-    // 新しい台本(v2)は、新しいモード選択の画面から始める
+    // ★v2は「バトルの仕組みえらび」から始める(2026-09-21)。ふだん HOME の
+    //   モンヒロバトルを押すと最初に出るのはこの画面なので、ここを飛ばして
+    //   モードえらびから教えると、練習のあとで知らない画面に出迎えられてしまう
     if (variant !== 'v1') {
+      setBattleSystem(BATTLE_SYSTEM_CLASSIC);
       setModeSelectTab('mode');
-      setGameState('BATTLE_MODE_SELECT');
+      setGameState('BATTLE_SYSTEM_SELECT');
       return;
     }
     setGameState('BATTLE_MENU');
@@ -60845,8 +60848,12 @@ function MonsterHeroGame() {
       },
       className: `min-h-[38px] rounded-xl text-[10px] font-black border-2 active:scale-95 ${rankingKind === t.k ? 'bg-indigo-600 border-indigo-300' : 'bg-slate-900 border-white/10 text-slate-400'}`
     }, t.label))), rankingKind === 'score' && renderScoreRankingBody(BATTLE_MODE_CHALLENGE), rankingKind === 'breeder' && renderBreederRankingBody(), rankingKind === 'bond' && renderBondRankingBody()))), gameState === 'BATTLE_SYSTEM_SELECT' && (() => {
+      // ★バトルのれんしゅう(チュートリアル)は記録を残さないために debugBattle を立てるが、
+      //   その副作用でこの入口だけ「ふだん遊ぶときと違う並び」になってしまう。
+      //   れんしゅうは通常プレイの入口を覚えてもらう場なので、並びは公開状態のまま見せる
+      const systemDebug = debugBattle && !battleTutorial;
       const systems = visibleBattleSystems({
-        debugBattle
+        debugBattle: systemDebug
       });
       return /*#__PURE__*/React.createElement("div", {
         "data-mh-screen": true,
@@ -60859,6 +60866,7 @@ function MonsterHeroGame() {
         className: "flex items-center gap-1 mb-1 shrink-0"
       }, /*#__PURE__*/React.createElement("button", {
         "aria-label": "\u623B\u308B",
+        disabled: !!battleTutorial,
         onClick: returnToHome,
         className: "p-3 text-slate-400 active:scale-90 disabled:opacity-25"
       }, /*#__PURE__*/React.createElement(ArrowLeft, null))), /*#__PURE__*/React.createElement("div", {
@@ -60869,31 +60877,37 @@ function MonsterHeroGame() {
         className: "text-center text-[10px] text-slate-400 mt-0.5 mb-1.5 shrink-0"
       }, "\u3069\u306E\u30D0\u30C8\u30EB\u3067\u904A\u3076\u304B\u3092\u9078\u3073\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
         "data-battle-systems": systems.length,
-        className: "flex flex-col gap-0.5 shrink-0"
+        className: `flex flex-col gap-0.5 shrink-0${battleTutorialSpotClass('systemCards')}`
       }, systems.map(sys => {
         // ★まだ遊べないものは、枠だけ出して押せなくする(2026-09-20 ユーザー指示)。
         //   モンヒロビートの「準備中」と同じ扱い。デバッグからは今までどおり遊べる
         const soon = battleSystemComingSoon(sys.id, {
-          debugBattle
+          debugBattle: systemDebug
         });
         // ★β版は「中のモードがまだ全部そろっていない」。遊べるけれど、
         //   入口でそのことが分かるようにしておく(2026-09-20 ユーザー指示)
         const beta = battleSystemBeta(sys.id, {
-          debugBattle
+          debugBattle: systemDebug
         });
+        // れんしゅう中はクラシックだけを押せるようにして、台本どおりの流れを保つ
+        const tutorialLocked = !!battleTutorial && sys.id !== BATTLE_SYSTEM_CLASSIC;
+        // 台本から光らせる場所。カードそのものを1枚ずつ光らせる
+        // (spotのキーは仕組みのidと同じ綴りだが、台本から引くのは
+        //  このキーなので、検査が追えるよう文字で書いておく)
+        const sysSpot = sys.id === BATTLE_SYSTEM_CLASSIC ? battleTutorialSpotClass('systemClassic') : sys.id === BATTLE_SYSTEM_TACTICS ? battleTutorialSpotClass('systemTactics') : sys.id === BATTLE_SYSTEM_QUICK ? battleTutorialSpotClass('systemQuick') : '';
         // ★カードは「選ぶ」と「詳しいルール」の2つのボタンでできている。
         //   準備中でも中身は読めるようにしておく(何が来るのか分かるように)
         return /*#__PURE__*/React.createElement("div", {
           key: sys.id,
           "data-battle-system-card": sys.id,
-          className: `w-full rounded-2xl border-2 overflow-hidden ${soon ? 'bg-slate-900/40' : 'bg-slate-900/80'}`,
+          className: `w-full rounded-2xl border-2 overflow-hidden ${soon ? 'bg-slate-900/40' : 'bg-slate-900/80'}${sysSpot}`,
           style: {
             borderColor: soon ? 'rgba(148,163,184,.45)' : sys.color
           }
         }, /*#__PURE__*/React.createElement("button", {
           "data-battle-system": sys.id,
           "data-battle-system-soon": soon ? '1' : undefined,
-          disabled: soon,
+          disabled: soon || tutorialLocked,
           onClick: () => openBattleSystem(sys.id),
           "aria-label": soon ? `${sys.label}（準備中）` : sys.label,
           className: `w-full px-3 pt-2 pb-1 text-left transition-transform ${soon ? 'opacity-60' : 'active:scale-[.98]'}`
@@ -60928,9 +60942,10 @@ function MonsterHeroGame() {
           className: "text-[9px] text-slate-400 leading-snug mt-1"
         }, soon ? 'いま準備しています。遊べるようになったらお知らせします' : beta ? 'いまはタクティクスプロだけ遊べます。ほかのモードは準備中です' : sys.note)), /*#__PURE__*/React.createElement("button", {
           "data-battle-system-info": sys.id,
+          disabled: !!battleTutorial,
           onClick: () => setModeInfoId(sys.id),
           "aria-label": `${sys.label}の詳しいルール`,
-          className: "w-full min-h-[28px] border-t border-white/10 bg-black/30 text-[10px] font-black text-slate-300 active:scale-[.98] flex items-center justify-center gap-1"
+          className: "w-full min-h-[28px] border-t border-white/10 bg-black/30 text-[10px] font-black text-slate-300 active:scale-[.98] disabled:opacity-50 flex items-center justify-center gap-1"
         }, "\u8A73\u3057\u3044\u30EB\u30FC\u30EB", /*#__PURE__*/React.createElement(ChevronRight, {
           size: 12,
           className: "shrink-0"
