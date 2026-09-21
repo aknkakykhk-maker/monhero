@@ -695,6 +695,10 @@ const applyNightmareWaveEnhancement = (value, specialDifficulty=null) => value *
   ? extremeSpecialRule(specialDifficulty, 'waveEnhancement') : 1);
 const applyNightmareStatGain = (before, normalAfter, specialDifficulty=null) => before
   + Math.floor(applyNightmareWaveEnhancement(normalAfter - before, specialDifficulty));
+// 与えたダメージ1につき伸びる「間合いのボーナス」。
+// WAVE後に距離ごとのダメージへ掛けて距離ボーナスを伸ばすのも、あとから入る子の
+// 追いつき補正でベース値を出すのも、ここを通す(2か所で別々に書くとずれる)。
+const DIST_BONUS_PER_DAMAGE = 0.001 / 100;
 // WAVE後に増える「距離強化」だけへ掛ける倍率。
 // NIGHTMAREは waveEnhancement でWAVE後強化そのものが50%になるのでそれをそのまま使う。
 // INFINITYは距離強化だけを50%にし、通常トレーニングへは重ねないので専用ルールを持つ

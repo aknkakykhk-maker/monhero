@@ -59,13 +59,19 @@ vm.runInContext(
     + 'tacticsPartyDef,shrinkTacticsScore,TACTICS_SCORE_DIVISOR,'
     + 'splitTacticsGuardedHit,resolveTacticsGuardedHit,tacticsGuardHits,makeCardHalveCounter,'
     + 'regenDownedTacticsBoard,TACTICS_DOWNED_REGEN_RATE,rateHealTacticsBoard,splitTacticsHitAmounts,'
-    + 'tacticsJoinWaveRate,addTacticsJoinCatchUp,applyTacticsJoinCatchUp};', sandbox);
+    + 'tacticsJoinWaveRate,addTacticsJoinCatchUp,applyTacticsJoinCatchUp,'
+    + 'TACTICS_JOIN_RATE_PER_TURN,TACTICS_JOIN_DIST_BASE_TURNS,tacticsJoinDistWaveRate,'
+    + 'addTacticsJoinDistCatchUp,tacticsJoinDistBonus,applyTacticsJoinDistBonus,'
+    + 'isSameTacticsUnit,tacticsJoinedSlots};', sandbox);
 const api = sandbox.api;
 // ★合計へみゅあ補正を掛ける式は本体から切り出して動かす(検査へ書き写さない)。
 //   1体ずつは floor(素の上限×補正)、合計は floor(素の上限の合計×補正) なので、
 //   全員満タンでも「合計 < 上限」になることがある。㉔でそれを実際に出す
 vm.runInContext(slice('const resolveEffectiveMaxStat', '\n')
   + ';globalThis.resolveEffectiveMaxStat=resolveEffectiveMaxStat;', sandbox);
+// 間合いのボーナスの換算率も本体から切り出す(検査へ 0.001/100 を書き写さない)
+vm.runInContext(slice('const DIST_BONUS_PER_DAMAGE', '\n')
+  + ';globalThis.DIST_BONUS_PER_DAMAGE=DIST_BONUS_PER_DAMAGE;', sandbox);
 
 // モンスター1体ぶんの入力。マスモンなら育成済みの値が baseHp などに入っている
 const mon = (over = {}) => ({ id: 'Mocchi', name: 'モッチー', baseHp: 600, baseAtk: 120, baseDef: 120, baseGuts: 100, ...over });
@@ -469,8 +475,10 @@ check('編成スロットを applySlots 以外から書き換えていない',
   `setSlots を呼ぶ場所 ${(source.match(/setSlots\(/g) || []).length}か所`
   + '(applySlots の中と、applySlots を受け取った画面の1か所だけ)');
 // ★すでに居る子のライフを持ち越さないと、供モンが合流した瞬間に全員が満タンへ戻る
+// ★同じかどうかの判定は isSameTacticsUnit ひとつだけ(㉚)。盤面を作り直す側と、
+//   あとから入った枠を数える側が別々の判定を持つと「入れ替えたのに追いつかない」になる
 check('合流しても、すでに居る子の現在値を作り直さない',
-  has("return !!(current && current.id === (mon.id || null) && current.masuId === (mon.masuId ?? null));")
+  has('const isSame = (mon, index) => isSameTacticsUnit(before[index], mon);')
     && has('if (isSame(mon, index)) return before[index];'));
 // --- ㉓ あとから入った子の追いつき補正(2026-09-20 ユーザー指示) ---
 // ★加入ボーナス(plusStats)は使わず素のステータスをそのまま入れるが、
@@ -891,6 +899,84 @@ check('ガッツ回復は新モードだと合計を足さずに配る',
   check('ガッツの内訳も枠ごとに返す',
     res.gutsHealed && res.gutsHealed[0] === 30 && res.gutsHealed[1] === 30,
     JSON.stringify(res.gutsHealed || {}));
+}
+
+// --- ㉚ 追いつき補正を間合いのボーナスへも乗せる(2026-09-21 ユーザー指示) ---
+// 「そうしたら追いつき補正で距離ボーナスも乗せないとだね」
+//   ・ベース値は「これまでの合計ダメージ」で見る
+//   ・残りターン10がベース値どおりになる基準で、そこより速いか遅いかで上下する
+// ★上下するのは**ベース値を基準にした位置**であって、もらえるボーナスがマイナスへ
+//   なるわけではない(2026-09-21 ユーザー指摘「ボーナスがマイナスになるわけじゃなくて、
+//   ベースボーナスが基準値より上か下かっていう意味」)。手間取っても引き上げ幅は残る。
+// 数字は本体の定数から出す(検査へ 1% や 10ターンを書き写さない)
+{
+  const perTurn = api.TACTICS_JOIN_RATE_PER_TURN;
+  const baseTurns = api.TACTICS_JOIN_DIST_BASE_TURNS;
+  const near = (a, b) => Math.abs(a - b) < 1e-9;
+  check('基準のターン数ならベース値どおり', near(api.addTacticsJoinDistCatchUp(1, baseTurns), 1),
+    `${api.addTacticsJoinDistCatchUp(1, baseTurns)}`);
+  check('基準より速く抜ければベース値より上',
+    api.addTacticsJoinDistCatchUp(1, baseTurns + 5) > 1
+      && near(api.tacticsJoinDistWaveRate(baseTurns + 5), 5 * perTurn));
+  check('基準より遅ければベース値より下',
+    api.addTacticsJoinDistCatchUp(1, 0) < 1 && near(api.tacticsJoinDistWaveRate(0), -baseTurns * perTurn));
+  // ★ここが読み違えやすいところ。**引き上げる値そのものはマイナスにならない**
+  const slowBonus = api.tacticsJoinDistBonus(2000000, sandbox.DIST_BONUS_PER_DAMAGE,
+    api.addTacticsJoinDistCatchUp(1, 0));
+  check('いちばん遅い抜け方でも、引き上げる値はマイナスにならない', slowBonus > 0, `${slowBonus}`);
+  check('遅く抜けたぶんはベース値より下に収まる',
+    slowBonus < api.tacticsJoinDistBonus(2000000, sandbox.DIST_BONUS_PER_DAMAGE, 1), `${slowBonus}`);
+  // ステータス側は基準を持たない。ここが2つの補正の違いなので、実際に並べて確かめる
+  check('ステータス側は基準を持たない（残りターンのぶんだけ上がる）',
+    api.tacticsJoinWaveRate(0) === 0 && api.tacticsJoinWaveRate(baseTurns) > 0);
+  // WAVEごとに掛け算で積む
+  const oneWave = api.addTacticsJoinDistCatchUp(1, baseTurns + 10);
+  const twoWaves = api.addTacticsJoinDistCatchUp(oneWave, baseTurns + 10);
+  check('WAVEごとに掛け算で積む', near(twoWaves, oneWave * oneWave), `${oneWave} → ${twoWaves}`);
+  check('倍率がマイナスへ落ちない', api.addTacticsJoinDistCatchUp(0, 0) >= 0 && api.addTacticsJoinDistCatchUp(-5, 0) >= 0);
+  // ベース値は合計ダメージ。実際に計算して確かめる
+  const bonus = api.tacticsJoinDistBonus(2000000, sandbox.DIST_BONUS_PER_DAMAGE, oneWave);
+  check('ベース値は合計ダメージから出す',
+    near(bonus, 2000000 * sandbox.DIST_BONUS_PER_DAMAGE * oneWave), `${bonus}`);
+  check('ダメージを与えていなければ引き上げもない',
+    api.tacticsJoinDistBonus(0, sandbox.DIST_BONUS_PER_DAMAGE, oneWave) === 0);
+  // 加入した枠だけ引き上げる。ほかの枠は1つも動かさない
+  const before = [0.5, 0, 0.1, 0];
+  const after = api.applyTacticsJoinDistBonus(before, [1, 3], 0.2);
+  check('あとから入った枠だけ引き上げる',
+    near(after[1], 0.2) && near(after[3], 0.2), JSON.stringify(after));
+  check('入っていない枠はそのまま', near(after[0], 0.5) && near(after[2], 0.1), JSON.stringify(after));
+  // ★すでに積み上がっている枠を下げない。間合いのボーナスは枠ごとの配列をパーティで
+  //   共有しているので、下げるとそこへ立っていた子のぶんまで削れる
+  const kept = api.applyTacticsJoinDistBonus([0.9, 0, 0, 0], [0], 0.2);
+  check('すでに上へ積み上がっている枠は下げない', near(kept[0], 0.9), JSON.stringify(kept));
+  check('加入した枠が無ければ何も変えない',
+    JSON.stringify(api.applyTacticsJoinDistBonus(before, [], 0.2)) === JSON.stringify(before));
+  // 「あとから入った枠」の数え方
+  const board = [api.createTacticsUnit(mon()), null, api.createTacticsUnit(mon({ id: 'Golem' })), null];
+  const next = [{ id: 'Mocchi' }, { id: 'Pixie' }, { id: 'Golem' }, null];
+  check('入れ替わった枠と空いていた枠だけを拾う',
+    JSON.stringify(api.tacticsJoinedSlots(board, next)) === '[1]',
+    JSON.stringify(api.tacticsJoinedSlots(board, next)));
+  check('同じ枠の別の子は「入った」とみなす',
+    JSON.stringify(api.tacticsJoinedSlots(board, [{ id: 'Pixie' }, null, { id: 'Golem' }, null])) === '[0]');
+  check('マスモンは個体(masuId)まで見て同じかを決める',
+    api.isSameTacticsUnit(api.createTacticsUnit(mon({ masuId: 'm1' })), { id: 'Mocchi', masuId: 'm1' })
+      && !api.isSameTacticsUnit(api.createTacticsUnit(mon({ masuId: 'm1' })), { id: 'Mocchi', masuId: 'm2' }));
+  // 本体への結線。合計ダメージは ref から読む(周回のはじめに前周ぶんを配らないため)
+  check('加入した枠を、盤面を作り直す前に数えている',
+    has('const joinedSlots = isTacticsMode(mode) ? tacticsJoinedSlots(tacticsUnitsRef.current, nextSlots) : [];'));
+  check('加入した枠があるときだけ引き上げる',
+    has('if (joinedSlots.length) catchUpTacticsDistBonus(joinedSlots, mode);'));
+  check('合計ダメージは ref から読む（周回のはじめに前周ぶんを配らない）',
+    has('tacticsJoinDistBonus(totalAllDamageRef.current, DIST_BONUS_PER_DAMAGE, tacticsJoinDistCatchUpRef.current)'));
+  check('難易度の距離強化も既存の子と同じように通す',
+    has('return Math.max(0, applyDistanceEnhancement(base, specialRuleDifficulty, wave));'));
+  check('WAVEを抜けるたびに積む',
+    has('tacticsJoinDistCatchUpRef.current=addTacticsJoinDistCatchUp(tacticsJoinDistCatchUpRef.current,remainingTurns);'));
+  check('周回のはじめに数え直す',
+    has('tacticsJoinCatchUpRef.current = 1;\n    tacticsJoinCatchUpTurnsRef.current = 0;\n    tacticsJoinDistCatchUpRef.current = 1;'));
+  check('供モン選びの画面にも同じ値を出す', has('distCatchUp: tacticsJoinDistCatchUpBonus()'));
 }
 
 console.log(failed ? `\nNG ${failed}件` : '\nすべてOK');

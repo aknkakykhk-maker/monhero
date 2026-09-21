@@ -131,7 +131,9 @@ ${slice('const applyExtremeIntegerRule', '// 極限チャレンジの説明に�
 const RANGE_LABELS = ${JSON.stringify(['零','近','中','遠'])};
 ${slice('const TACTICS_START_GUTS_RATE', '// ダメージ。0になったらその子は倒れる')}
 ${slice('const applyTacticsJoinCatchUp', '\n};')}\n};
-module.exports={specialRuleDifficultyForRun,ultimateAllyJoinMultiplier,applyAllyJoinBonus,getMonsterAptPct,formatAptPct,RANGE_LABELS,createTacticsUnit,applyTacticsJoinCatchUp};`;
+${slice('const DIST_BONUS_PER_DAMAGE', '\n')}
+${slice('const tacticsJoinDistBonus', '\n};')}\n};
+module.exports={specialRuleDifficultyForRun,ultimateAllyJoinMultiplier,applyAllyJoinBonus,getMonsterAptPct,formatAptPct,RANGE_LABELS,createTacticsUnit,applyTacticsJoinCatchUp,DIST_BONUS_PER_DAMAGE,tacticsJoinDistBonus};`;
 const mod = { exports: {} };
 try {
   new Function('module', 'exports', calcSrc)(mod, mod.exports);
@@ -147,7 +149,10 @@ if (typeof C.applyAllyJoinBonus === 'function') {
       && Math.abs(C.ultimateAllyJoinMultiplier(40) - 0.70) < 1e-9);
   // 本体の allyJoinPreview をそのまま持ってきて、状態だけ差し替えて動かす
   const previewSrc = slice('const allyJoinPreview = (mon) => {', '// 極限チャレンジの解放判定');
-  const makePreview = new Function('ctx', `with(ctx){${previewSrc}\nreturn allyJoinPreview;}`);
+  // ★間合いのボーナスの追いつきも本体の計算をそのまま動かす(2026-09-21 ユーザー指示)。
+  //   allyJoinPreview と同じスコープへ置く(本体でも同じ関数の並びから呼んでいる)
+  const distCatchUpSrc = slice('const tacticsJoinDistCatchUpBonus = (mode = runMode) => {', '\n  const catchUpTacticsDistBonus');
+  const makePreview = new Function('ctx', `with(ctx){${distCatchUpSrc}\n${previewSrc}\nreturn allyJoinPreview;}`);
 
   const build = ({ difficulty = 'Normal', extremeRun = false, extremeDifficulty = null, totalTurns = 0 }) => makePreview({
     specialRuleDifficultyForRun: C.specialRuleDifficultyForRun,
@@ -165,13 +170,18 @@ if (typeof C.applyAllyJoinBonus === 'function') {
     applyTacticsJoinCatchUp: C.applyTacticsJoinCatchUp,
     tacticsJoinCatchUpRef: { current: 1 },
     tacticsJoinCatchUpTurnsRef: { current: 0 },
+    tacticsJoinDistBonus: C.tacticsJoinDistBonus,
+    DIST_BONUS_PER_DAMAGE: C.DIST_BONUS_PER_DAMAGE,
+    tacticsJoinDistCatchUpRef: { current: 1 },
+    totalAllDamageRef: { current: 0 },
+    applyDistanceEnhancement: (value) => value,
     wave: 1,
   });
 
   // ★タクティクスは「その子の素のステータスがそのまま盤面へ入る」ので、
   //   合流ボーナス(plusStats)の増分ではなく **素の値 → 盤面に入る値** を出す
   //   (2026-09-21 ユーザー指示)。追いつき補正の率は tacticsJoinCatchUpRef が持つ
-  const buildTactics = (catchUp = 1, catchUpTurns = 0) => makePreview({
+  const buildTactics = (catchUp = 1, catchUpTurns = 0, distCatchUp = 1, totalAllDamage = 0) => makePreview({
     specialRuleDifficultyForRun: C.specialRuleDifficultyForRun,
     applyAllyJoinBonus: C.applyAllyJoinBonus,
     getMonsterAptPct: C.getMonsterAptPct,
@@ -186,6 +196,12 @@ if (typeof C.applyAllyJoinBonus === 'function') {
     applyTacticsJoinCatchUp: C.applyTacticsJoinCatchUp,
     tacticsJoinCatchUpRef: { current: catchUp },
     tacticsJoinCatchUpTurnsRef: { current: catchUpTurns },
+    tacticsJoinDistBonus: C.tacticsJoinDistBonus,
+    DIST_BONUS_PER_DAMAGE: C.DIST_BONUS_PER_DAMAGE,
+    tacticsJoinDistCatchUpRef: { current: distCatchUp },
+    totalAllDamageRef: { current: totalAllDamage },
+    // 難易度の距離強化は Normal なら等倍。かかり方そのものは tools/mode/tactics-units-check.js が見る
+    applyDistanceEnhancement: (value) => value,
     wave: 1,
   });
 
@@ -238,6 +254,15 @@ if (typeof C.applyAllyJoinBonus === 'function') {
   check('タクティクス: 残して抜けたターン数も画面へ渡す', withTurns.catchUpTurns === 57, `${withTurns.catchUpTurns}`);
   check('タクティクス: 抜けていなければ0', flat.catchUpTurns === 0, `${flat.catchUpTurns}`);
   check('タクティクス: タクティクスの印を持つ', caught.tactics === true && plain.tactics !== true);
+  // ★間合いのボーナスの追いつきも画面へ渡す(2026-09-21 ユーザー指示)。
+  //   ベース値は合計ダメージ。**実際に計算して**画面の値と突き合わせる
+  const distCaught = buildTactics(1.2, 30, 1.1, 2000000)(tacticsMon);
+  check('タクティクス: 間合いのボーナスの引き上げ先を画面へ渡す',
+    Math.abs(distCaught.distCatchUp - 2000000 * C.DIST_BONUS_PER_DAMAGE * 1.1) < 1e-9,
+    `${distCaught.distCatchUp}`);
+  check('タクティクス: ダメージを与えていなければ引き上げもない', flat.distCatchUp === 0, `${flat.distCatchUp}`);
+  check('タクティクス: 引き上げ先は画面へ数値として出す',
+    has('data-tactics-join-dist-catchup=') && has('立つ間合いのボーナスを +${((preview.distCatchUp||0)*100).toFixed(1)}% まで引き上げ'));
   // ★距離適性も合算しない(その子の適性が、その子の攻撃に効く)
   check('タクティクス: 距離補正は0から始まる(合算しない)', caught.apt.every(range => range.before === 0));
   check('タクティクス: 距離補正はその子のぶんだけ',
