@@ -89,7 +89,9 @@ check('複合特殊ルールありと出す',G('extremeRuleSummaryText')('RAGNAR
 check('敵生成は段階倍率を掛けて1つの経路で作る',source.includes('const stagedEnemyMultiplier=extremeWaveEnemyMultiplier(specialRuleDifficulty,w);')
   // ★タクティクスバトルは供モンの総合力ぶんの倍率も同じ1か所で掛ける(2026-09-20)。
   //   既存モードでは tacticsEnemyBoost が 1 になるので、敵の強さは変わらない
-  &&source.includes('createBattleEnemy(w,difficulty,forcedEnemyKey,battleSetting?.power??null,enemyTurnMultiplier*stagedEnemyMultiplier*tacticsEnemyBoost)')
+// 2026-09-21 にタクティクス専用の敵(TACTICS_ENEMY_SEQUENCE)が入り、どちらの並びを使うかを
+// options.mode で渡すようになった。クラシック・クイックの敵は1体も変えていない
+  &&source.includes('createBattleEnemy(w,difficulty,forcedEnemyKey,battleSetting?.power??null,enemyTurnMultiplier*stagedEnemyMultiplier*tacticsEnemyBoost,{mode:runMode})')
   &&(source.match(/createBattleEnemy\(w,difficulty,forcedEnemyKey/g)||[]).length===1);
 check('消費ガッツ・与ダメ・適性は段階の有無で分岐する',source.includes("if(extremeWaveStage(specialRuleDifficulty))return Math.floor(cost*effectiveExtremeSpecialRule(specialRuleDifficulty,'gutsCost',wave)*soulGutsMultiplier);")
   &&source.includes('distanceBrokenDmg=applyExtremeStagedDamage(finalDmg,elapsedTotalTurns,slotIdx,ultimateDistanceBreakLevels,specialRuleDifficulty,wave,card.type);')
