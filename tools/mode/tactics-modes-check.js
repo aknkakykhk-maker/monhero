@@ -60,6 +60,8 @@ vm.runInContext([
   + 'TACTICS_BATTLE_MODES,TACTICS_SCORE_MODES,TACTICS_DIFFICULTY_IDS,'
   + 'isTacticsMode,isProMode,isQuickMode,isSpeciesChallengeMode,modeKeyPrefix,'
   + 'bestScoreKey,bestWaveKey,clearCountKey,isTacticsDifficultyUnlocked,isExtremeDifficultyId,'
+  + 'TACTICS_DIFFICULTY_INITIAL_UNLOCK_COUNT,SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT,'
+  + 'TACTICS_SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT,isSpeciesChallengeDifficultyUnlocked,'
   + 'rankingDifficultyForMode,rankingDifficultyBase,normalizeRankingDifficulty,RANKING_DIFFICULTY_KEYS,'
   + 'TACTICS_PRO_RANKING_PREFIX,TACTICS_PRO_BETA_SUFFIX,tacticsProRankingPrefix,'
   + 'battleModePlayable,battleModeComingSoon,battleSystemBeta,modeHasRanking,'
@@ -213,8 +215,33 @@ check('極限を選んだら極限ランとして始める',
 check('ランキング画面もタクティクスの極限を Tactics* の行から読む',
   has('const keyOf = (diff) => rankingDifficultyKey(isExtremeDifficultyId(diff) && !isTacticsMode(mode)'));
 // 解放はタクティクスの記録だけで決める。クラシックの進み具合を混ぜない
-check('通常の9段階は最初から挑める',
-  Object.keys(api.DIFFICULTY_SETTINGS).every(d => api.isTacticsDifficultyUnlocked(d, {})));
+// ★2026-09-21から、通常の9段階も Expert 以上は1つ前のクリアが要る
+//   (ユーザー指示「エキスパート以上は解放条件ありにしたい」。クラシックの5モードは据え置き)
+const NORMAL_DIFFS = Object.keys(api.DIFFICULTY_SETTINGS);
+const INITIAL = api.TACTICS_DIFFICULTY_INITIAL_UNLOCK_COUNT;
+check('最初から挑めるのは Hard まで', INITIAL === 4 && NORMAL_DIFFS[INITIAL - 1] === 'Hard',
+  `${INITIAL}段 / ${NORMAL_DIFFS.slice(0, INITIAL).join(',')}`);
+check('Hard までは何もクリアしていなくても挑める',
+  NORMAL_DIFFS.slice(0, INITIAL).every(d => api.isTacticsDifficultyUnlocked(d, {})));
+check('Expert 以上は、何もクリアしていなければ挑めない',
+  NORMAL_DIFFS.slice(INITIAL).every(d => !api.isTacticsDifficultyUnlocked(d, {})),
+  NORMAL_DIFFS.slice(INITIAL).filter(d => api.isTacticsDifficultyUnlocked(d, {})).join(','));
+// ★1つ前をクリアすると次が開く。ここが崩れると、Hard をクリアしただけで Legend まで開く
+const notChained = [];
+for (let i = INITIAL; i < NORMAL_DIFFS.length; i += 1) {
+  const prev = NORMAL_DIFFS[i - 1], now = NORMAL_DIFFS[i];
+  if (!api.isTacticsDifficultyUnlocked(now, { [prev]: 1 })) notChained.push(`${prev}→${now}が開かない`);
+  // 1つ前をクリアしただけで、その先まで開いてはいけない
+  const next = NORMAL_DIFFS[i + 1];
+  if (next && api.isTacticsDifficultyUnlocked(next, { [prev]: 1 })) notChained.push(`${prev}で${next}まで開く`);
+}
+check('通常の9段階も1つ前をクリアすると次が開く', notChained.length === 0, notChained.slice(0, 3).join(' '));
+// クラシックの5モードは据え置き。タクティクスの種族チャレンジだけ Hard までにする
+check('種族チャレンジは、クラシックが Expert まで・タクティクスが Hard まで最初から開く',
+  api.SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT === 5 && api.TACTICS_SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT === 4,
+  `クラシック${api.SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT}段 / タクティクス${api.TACTICS_SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT}段`);
+check('種族チャレンジの解放は、モードで段数を出し分ける',
+  has('speciesChallengeInitialUnlockCountOf(battleMode)'));
 check('極限の入口はタクティクスで Master 以上を1回クリアで開く',
   !api.isTacticsDifficultyUnlocked('EXTREME', {})
     && !api.isTacticsDifficultyUnlocked('EXTREME', { Expert: 3 })

@@ -8,6 +8,18 @@ const difficultyStyle = (setting, selected) => (selected
 const ENEMY_ART_LAYOUT = {
   default: { scanScale:1, waveDetailScale:1, objectPosition:'center' },
   Moo: { scanScale:2.75, waveDetailScale:2, objectPosition:'center 48%' },
+  // ★タクティクスバトルの敵。絵は長辺160pxにそろえてあるが、鎌・斧・翼のように
+  //   細長いものが付いていると長辺をそこに取られ、本体が小さく見える。
+  //   どれくらい小さく見えるかは node tools/image/enemy-art-size-report.js で測れる
+  //   (56pxの枠に色が乗る面積。配信中の敵は13%〜68%・まんなか31%)。
+  //   2026-09-21にユーザーが10体とも絵を出し直した。面積は コイノボリ63% / ドクドク48% /
+  //   ニャルラトホテプ46% / カワズモー42% / スプラッター33% / メタルナー32% / 覚醒ムー30% /
+  //   イナリ30% / ラミア29% / デルピエロ28% で、**10体ともその幅のまんなか寄り**に入ったので、
+  //   覚醒ムー以外は倍率を入れない。古い絵に合わせた倍率(メタルナー1.1 / デルピエロ1.4 /
+  //   スプラッター1.2)をそのまま残すと、今度は大きすぎる
+  // ★覚醒ムーはクラシックのムーと同じ扱い。ボスだけは絵を高い解像度のまま置き(1024x598)、
+  //   表示のときに大きく拡大する。拡大率もムーとそろえてある
+  AwakenedMoo: { scanScale:2.75, waveDetailScale:2,    objectPosition:'center 48%' },
 };
 const enemyArtStyle = (enemyId, context='scan') => {
   const layout=ENEMY_ART_LAYOUT[enemyId]||ENEMY_ART_LAYOUT.default;
@@ -76,40 +88,84 @@ const TACTICS_ACTION_DEFINITIONS = [
   {id:'move',type:'MOVE',category:'移動',weight:10,multiplier:0,hits:0,range:'現在以外の3間合い',condition:'移動先がある・移動した次のターンは選ばない',cooldown:0,useLimit:null},
   {id:'sweep',type:'ATTACK',variant:'sweep',category:'薙ぎ払い',weight:14,multiplier:TACTICS_SWEEP_MULT,missMultiplier:TACTICS_SWEEP_MISS_MULT,hits:1,range:'予告した1間合い',condition:'予告した間合いに敵がいると大ダメージ。距離撃でずらせる',cooldown:0,useLimit:null},
   {id:'rush',type:'ATTACK',variant:'rush',category:'連撃',weight:14,multiplier:TACTICS_RUSH_MULT,hits:TACTICS_RUSH_HITS,range:'全間合い',condition:'3ヒットに分かれ、ガードは1ヒットぶんしか効かない',cooldown:0,useLimit:null},
-  {id:'pierce',type:'ATTACK',variant:'pierce',category:'貫通撃',weight:12,multiplier:TACTICS_PIERCE_MULT,hits:1,range:'全間合い',condition:'ガードが効かない',cooldown:0,useLimit:null},
+  // ★貫通撃は「ためる → 必殺技」と同じ形にしてある(2026-09-21 ユーザー指示
+  //   「貫通は必殺級の技だからこれもためると同じように1ターン経由したほうがいい」)。
+  //   ガードが効かない＝受け方が無い技なので、来ると分かってから距離や回避で備えられるようにする。
+  //   抽選に出るのは構えのほうで、貫通撃そのものは構えた次のターンに必ず出る(weight 0)
+  {id:'pierceCharge',type:'PIERCE_CHARGE',category:'貫通の構え',weight:12,multiplier:0,hits:0,range:'全間合い',condition:'常時',effectText:'次のターンに貫通撃が確定で出る',cooldown:0,useLimit:null},
+  {id:'pierce',type:'ATTACK',variant:'pierce',category:'貫通撃',weight:0,multiplier:TACTICS_PIERCE_MULT,hits:1,range:'全間合い',condition:'構えた次のターンに必ず発動。ガードが効かない',cooldown:0,useLimit:null},
   {id:'roar',type:'ROAR',category:'咆哮',weight:10,multiplier:0,hits:0,range:'全間合い',condition:`重ねがけは${TACTICS_ROAR_MAX_STACKS}回まで`,effectText:`次のターンから敵の攻撃 ×${TACTICS_ROAR_ATK_RATE}（このWAVEのあいだ続く。${TACTICS_ROAR_MAX_STACKS}回重ねると最大 ×${(TACTICS_ROAR_ATK_RATE**TACTICS_ROAR_MAX_STACKS).toFixed(2)}）`,cooldown:0,useLimit:TACTICS_ROAR_MAX_STACKS},
   {id:'regen',type:'REGEN',category:'再生',weight:10,multiplier:0,hits:0,range:'全間合い',condition:'ライフが減っているときだけ',effectText:`敵が自分の最大ライフの${Math.round(TACTICS_REGEN_RATE*100)}%を回復する`,cooldown:0,useLimit:null},
   {id:'allout',type:'ATTACK',variant:'allout',targetsAll:true,category:'全体攻撃',weight:10,multiplier:TACTICS_ALLOUT_MULT,hits:1,range:'全員',condition:'立っている全員へ同時に当たる。狙いをかわせない',cooldown:0,useLimit:null},
 ];
 // どの敵も通常攻撃・ためる・必殺技・移動は持つ。ここへ足すのは「その敵だけの技」。
-// WAVEが進むほど読むことが増える並びにしてある(敵の順は ENEMY_SEQUENCE)。
+// WAVEが進むほど読むことが増える並びにしてある(敵の順は TACTICS_ENEMY_SEQUENCE)。
+// ★ここのキーは「タクティクス専用の敵」のid。クラシックの敵idを書くと、
+//   タクティクスの敵が追加6技を1つも持たない状態になる(2026-09-21にそれで丸ごと出ていなかった)。
 const TACTICS_BASE_ACTION_IDS = Object.freeze(['normal','charge','special','wait','move']);
 const TACTICS_ENEMY_ACTION_IDS = Object.freeze({
-  Dino:Object.freeze(['rush']),
-  Gel:Object.freeze(['sweep']),
-  BlackDino:Object.freeze(['rush','roar']),
-  Jaakusou:Object.freeze(['sweep','regen']),
-  BlueMountain:Object.freeze(['pierce','sweep']),
-  Gali:Object.freeze(['roar','rush','allout']),
-  Naga:Object.freeze(['sweep','pierce']),
-  Lilim:Object.freeze(['regen','pierce','allout']),
-  Durahan:Object.freeze(['rush','roar','pierce','allout']),
-  Moo:Object.freeze(['sweep','rush','pierce','roar','regen','allout']),
+  Kawazumo:Object.freeze(['rush']),
+  Metalner:Object.freeze(['sweep']),
+  Inari:Object.freeze(['rush','roar']),
+  Koinobori:Object.freeze(['sweep','regen']),
+  Delpiero:Object.freeze(['pierce','sweep']),
+  Dokudoku:Object.freeze(['roar','rush','allout']),
+  Lamia:Object.freeze(['sweep','pierce']),
+  Nyarlathotep:Object.freeze(['regen','pierce','allout']),
+  Splatter:Object.freeze(['rush','roar','pierce','allout']),
+  AwakenedMoo:Object.freeze(['sweep','rush','pierce','roar','regen','allout']),
 });
-const tacticsActionDefinitions = (enemyId) => {
-  const ids = [...TACTICS_BASE_ACTION_IDS, ...(TACTICS_ENEMY_ACTION_IDS[enemyId] || [])];
+// 難易度が上がると、基本構成に無い技も順に使えるようになる(2026-09-21 ユーザー指示
+// 「難易度が上がるにつれて使える技も増やそうか」)。足す順はこれ。
+// ★allout(全体攻撃)は最後。低いWAVEの敵が早くから全員攻撃を撒くと、受け方を1つずつ覚えられない。
+//   pierce(貫通撃)はその手前。構えを挟むぶん読めるとはいえ、ガードが効かない技なので後ろに置く
+const TACTICS_EXTRA_ACTION_ORDER = Object.freeze(['rush','sweep','roar','regen','pierce','allout']);
+// 基本構成(Normal)を0として、難易度ごとに何本増減するか。
+// ★最低1本は残す。0にすると通常攻撃とためるだけになり、このモードの読み合いが消える
+const TACTICS_DIFFICULTY_ACTION_DELTA = Object.freeze({
+  Beginner:-2, Easy:-1, Normal:0, Hard:0, Expert:1, Master:1,
+  GrandMaster:2, Hell:2, Legend:3,
+  EXTREME:4, NIGHTMARE:4, CHAOS:5, ULTIMATE:6, INFINITY:6, GOD:6,
+});
+// 減らすときに先に落とす技。殴ってこないものから外す。
+// ★前から順に切ると、ニャルラトホテプが再生だけ・ドクドクが咆哮だけになり、
+//   易しい難易度ほど「敵が何もしてこない」ように見えてしまう
+const TACTICS_SUPPORT_ACTION_IDS = Object.freeze(['roar','regen']);
+// その敵がその難易度で使う技のid。難易度を渡さなければ基本構成のまま(既存の呼び出しはそのまま動く)
+const tacticsEnemyActionIds = (enemyId, difficulty) => {
+  const base = TACTICS_ENEMY_ACTION_IDS[enemyId] || [];
+  const delta = Number.isFinite(TACTICS_DIFFICULTY_ACTION_DELTA[difficulty]) ? TACTICS_DIFFICULTY_ACTION_DELTA[difficulty] : 0;
+  const want = Math.max(1, base.length + delta);
+  if (want === base.length) return base;
+  if (want < base.length) {
+    // 落とすのは「補助をうしろから → それでも足りなければうしろから」。残ったものは base の並びを保つ
+    const drop = base.length - want, dropped = new Set();
+    for (let i = base.length - 1; i >= 0 && dropped.size < drop; i -= 1) {
+      if (TACTICS_SUPPORT_ACTION_IDS.includes(base[i])) dropped.add(i);
+    }
+    for (let i = base.length - 1; i >= 0 && dropped.size < drop; i -= 1) dropped.add(i);
+    return base.filter((_, i) => !dropped.has(i));
+  }
+  const extra = TACTICS_EXTRA_ACTION_ORDER.filter(id => !base.includes(id));
+  return [...base, ...extra.slice(0, want - base.length)];
+};
+const tacticsActionDefinitions = (enemyId, difficulty) => {
+  const own = tacticsEnemyActionIds(enemyId, difficulty);
+  // 貫通撃は構えとセットで持たせる。構えが無いと、貫通撃は一生出てこない(weight 0 のため)
+  const ids = [...TACTICS_BASE_ACTION_IDS, ...own, ...(own.includes('pierce') ? ['pierceCharge'] : [])];
   return TACTICS_ACTION_DEFINITIONS.filter(def => ids.includes(def.id));
 };
 // そのモード・その敵が使う行動表。新モード以外は今までどおりの1つの表を返す
-const enemyActionDefinitionsFor = (mode, enemyId) => (typeof isTacticsMode === 'function' && isTacticsMode(mode))
-  ? tacticsActionDefinitions(enemyId) : ENEMY_ACTION_DEFINITIONS;
+const enemyActionDefinitionsFor = (mode, enemyId, difficulty) => (typeof isTacticsMode === 'function' && isTacticsMode(mode))
+  ? tacticsActionDefinitions(enemyId, difficulty) : ENEMY_ACTION_DEFINITIONS;
 // 直前の行動から、次に選べる行動を決めるための状態を作る
 const enemyActionStateFrom = (lastIntent) => ({
   charging: lastIntent?.type === 'CHARGE',
+  piercing: lastIntent?.type === 'PIERCE_CHARGE',
   movedLast: lastIntent?.type === 'MOVE',
 });
 const evaluateEnemyActions = (ent,currentDist,state={}) => {
-  const charging=!!state.charging, movedLast=!!state.movedLast;
+  const charging=!!state.charging, piercing=!!state.piercing, movedLast=!!state.movedLast;
   // 行動表はモードごとに違う(新モードだけ別の表)。渡されなければ今までどおりの1つの表を使う
   const definitions=Array.isArray(state.definitions)&&state.definitions.length?state.definitions:ENEMY_ACTION_DEFINITIONS;
   return definitions.map(def => {
@@ -119,8 +175,14 @@ const evaluateEnemyActions = (ent,currentDist,state={}) => {
         // ためた次のターンは必殺技で確定。ほかの行動では上書きしない
         available = def.type==='SPECIAL';
         if (!available) reason='ためているため、次は必殺技で確定しています';
+      } else if (piercing) {
+        // 構えた次のターンは貫通撃で確定。ためる→必殺技とまったく同じ形
+        available = def.id==='pierce';
+        if (!available) reason='構えているため、次は貫通撃で確定しています';
       } else if (def.type==='SPECIAL') {
         available=false; reason='ためた次のターンにだけ発動します';
+      } else if (def.id==='pierce') {
+        available=false; reason='構えた次のターンにだけ発動します';
       } else if (def.type==='REGEN') {
         // 満タンに近いあいだは使わない。回復するものが無いターンを作らないため
         const maxHp=Math.max(0,Number(ent.maxHp)||0), hp=Math.max(0,Number(ent.hp)||0);
@@ -138,7 +200,10 @@ const evaluateEnemyActions = (ent,currentDist,state={}) => {
         else if (!RANGE_LABELS.some((_,i)=>i!==currentDist)) { available=false; reason='移動先がありません'; }
       }
     }
-    return {...def,weight:charging?(def.type==='SPECIAL'?1:0):def.weight,available,unavailableReason:available?'':reason};
+    const weight = charging ? (def.type==='SPECIAL'?1:0)
+      : piercing ? (def.id==='pierce'?1:0)
+      : def.weight;
+    return {...def,weight,available,unavailableReason:available?'':reason};
   });
 };
 const enemyActionProbabilities = (ent,currentDist,state={}) => {
@@ -148,11 +213,25 @@ const enemyActionProbabilities = (ent,currentDist,state={}) => {
 // 行動の見出しとアイコン。抽選と台本(練習モード)の両方から使う
 const enemyActionLabel = (ent,type) => type==='ATTACK' ? (ent?.normal||'通常攻撃')
   : type==='CHARGE' ? '必殺技の準備をしている'
+  : type==='PIERCE_CHARGE' ? '貫通撃の構えをとっている'
   : type==='SPECIAL' ? (ent?.special||'必殺技！')
   : type==='ROAR' ? '咆哮している'
   : type==='REGEN' ? '傷を癒している'
   : '様子を見ている';
-const ENEMY_ACTION_ICONS = {ATTACK:'👊',CHARGE:'✨',SPECIAL:'🔥',WAIT:'⏳',MOVE:'🏃',ROAR:'📢',REGEN:'💚'};
+// その敵のその行動を、画面へ出すときの名前。タクティクスの敵は追加6技の名前を actions に持つ
+// (TACTICS_ENEMY_DATA)。名前を持たない敵は1文字も変わらず、今までどおりの見出しへ落ちる。
+const enemyActionDisplayName = (ent,def) => {
+  if(!def) return '';
+  const named = ent && ent.actions && typeof ent.actions[def.id]==='string' ? ent.actions[def.id].trim() : '';
+  if(named) return named;
+  // 貫通の構えは、その敵の貫通撃の名前から作る(「◯◯の構え」)。何が来るかを名前で分かるようにする
+  if(def.id==='pierceCharge'){
+    const pierceName = ent && ent.actions && typeof ent.actions.pierce==='string' ? ent.actions.pierce.trim() : '';
+    if(pierceName) return `${pierceName}の構え`;
+  }
+  return def.type==='MOVE' ? '間合い移動' : def.variant ? def.category : enemyActionLabel(ent,def.type);
+};
+const ENEMY_ACTION_ICONS = {ATTACK:'👊',CHARGE:'✨',SPECIAL:'🔥',WAIT:'⏳',MOVE:'🏃',ROAR:'📢',REGEN:'💚',PIERCE_CHARGE:'⚔️'};
 // 新モードの攻撃は type が ATTACK のままなので、見分けは variant で付ける
 const TACTICS_VARIANT_ICONS = {sweep:'🌪️',rush:'💥',pierce:'🗡️',allout:'🌊'};
 const chooseEnemyAction = (ent,currentDist,random=Math.random,state={}) => {
@@ -173,17 +252,17 @@ const chooseEnemyAction = (ent,currentDist,random=Math.random,state={}) => {
   if(selected.variant==='sweep'){
     return {type:selected.type,variant:selected.variant,sweepDist:currentDist,
       value:Math.floor(ent.atk*selected.multiplier),missValue:Math.floor(ent.atk*(selected.missMultiplier??1)),
-      label:`${selected.category}: ${RANGE_LABELS[currentDist]}`,icon:TACTICS_VARIANT_ICONS.sweep,actionId:selected.id};
+      label:`${enemyActionDisplayName(ent,selected)}: ${RANGE_LABELS[currentDist]}`,icon:TACTICS_VARIANT_ICONS.sweep,actionId:selected.id};
   }
   if(selected.variant){
     // 全体攻撃だけは狙いを決めない。予告の時点で「立っている全員」と決まっているので、
     // targetsAll を intent へ持ち歩き、当たる相手は tacticsIntentTargets が数え直す
     return {type:selected.type,variant:selected.variant,hits:Math.max(1,Math.floor(Number(selected.hits)||1)),
       ...(selected.targetsAll?{targetsAll:true}:{}),
-      value:Math.floor(ent.atk*selected.multiplier),label:selected.category,
+      value:Math.floor(ent.atk*selected.multiplier),label:enemyActionDisplayName(ent,selected),
       icon:TACTICS_VARIANT_ICONS[selected.variant]||ENEMY_ACTION_ICONS[selected.type]||'⏳',actionId:selected.id};
   }
-  return {type:selected.type,value:Math.floor(ent.atk*selected.multiplier),label:enemyActionLabel(ent,selected.type),icon:ENEMY_ACTION_ICONS[selected.type]||'⏳',actionId:selected.id};
+  return {type:selected.type,value:Math.floor(ent.atk*selected.multiplier),label:enemyActionDisplayName(ent,selected),icon:ENEMY_ACTION_ICONS[selected.type]||'⏳',actionId:selected.id};
 };
 
 // 難易度選択プレビューと本番の敵生成が必ず同じ値になるための唯一の生成ヘルパー。
@@ -196,9 +275,18 @@ const applyIceRulerAutoGutsRecovery = (currentRate, heroId, iceLockActive, heroD
   && heroDist===enemyDist
   ? Math.min(1, currentRate + 0.5)
   : currentRate;
-const createBattleEnemy = (wave, difficulty, forcedEnemyKey=null, powerOverride=null, enemyTurnMultiplier=1) => {
-  const enemyKey = forcedEnemyKey || ENEMY_SEQUENCE[wave - 1];
-  const base = ENEMY_DATA[enemyKey];
+// ★タクティクスバトルは敵の並びが別(TACTICS_ENEMY_SEQUENCE)。
+//   options.mode にそのランのモードを渡すと、そちらの10体が出る。
+//   クラシック・クイックの並び(ENEMY_SEQUENCE)は1つも変えない——あちらを差し替えると、
+//   いま遊んでいる人のチャレンジ・プロの手ごたえが同時に変わってしまう。
+//   forcedEnemyKey(デバッグの敵指定)は、どちらの表からでも引けるようにしておく。
+const createBattleEnemy = (wave, difficulty, forcedEnemyKey=null, powerOverride=null, enemyTurnMultiplier=1, options={}) => {
+  const tacticsEnemies = typeof isTacticsMode === 'function' && isTacticsMode(options && options.mode)
+    && typeof TACTICS_ENEMY_SEQUENCE !== 'undefined';
+  const sequence = tacticsEnemies ? TACTICS_ENEMY_SEQUENCE : ENEMY_SEQUENCE;
+  const enemyKey = forcedEnemyKey || sequence[wave - 1];
+  const base = (tacticsEnemies ? TACTICS_ENEMY_DATA[enemyKey] : null) || ENEMY_DATA[enemyKey]
+    || (typeof TACTICS_ENEMY_DATA !== 'undefined' ? TACTICS_ENEMY_DATA[enemyKey] : null);
   const safeDifficulty = normalizeBattleDifficulty(difficulty);
   const hasPowerOverride = powerOverride !== null && powerOverride !== undefined && Number.isFinite(Number(powerOverride));
   const mod = hasPowerOverride ? Number(powerOverride) : QUICK_DIFFICULTY_SETTINGS[safeDifficulty].power;
@@ -207,6 +295,9 @@ const createBattleEnemy = (wave, difficulty, forcedEnemyKey=null, powerOverride=
   return {
     ...(base || {}),
     id:enemyKey || `missing-wave-${wave}`,
+    // ★難易度を敵そのものに持たせる。タクティクスは難易度で使える技の本数が変わるので、
+    //   行動表を引くたびに「いまの難易度」を別経路で探すと、実戦とSCANでずれる
+    difficulty:safeDifficulty,
     name:base?.name || '敵データ未設定',
     imgUrl:base?.imgUrl || '',
     emoji:base?.emoji || '❓',

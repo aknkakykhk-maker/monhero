@@ -2,8 +2,15 @@ const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分�
 // 届いたスクリーンショットから背景を抜いて、既存の敵の絵と同じ形
 // (長辺160pxの透過PNG・数KB)にそろえる道具。
 //
+// ⚠ **まずこれを使わない。** 2026-09-21にユーザーから「透過精度が悪すぎる」と言われ、
+//   モンスターの絵は**透過済みで受け取る**ことにした。下の4段を重ねても、白い体・薄い色・
+//   淡い縁はまだ背景とまちがえる。透過済みで届いたものは
+//   `tools/image/prepare-enemy-art.js`(大きさをそろえるだけ)を使う。
+//   この道具を出すのは、透過済みが手に入らず、こちらで抜くほかにないときだけ。
+//
 //   node tools/image/cutout-enemy-art.js <入力> <出力> [<入力> <出力> …]
 //   FILL_ALL=1 node tools/image/cutout-enemy-art.js …   体のあいだに背景が見えていない絵のとき
+//   LONG=1024 node tools/image/cutout-enemy-art.js …     ボスなど、大きく拡大して出す絵のとき
 //
 // 原本は tools/art-sources/enemies-tactics/ に置いてある。
 //
@@ -36,7 +43,10 @@ const TINT = Number(process.env.TINT || 10);     // 色みの差(R-B)。白い�
 // 体のあいだに背景が見えていない絵(イナリのように顔と体がくっついている)では、
 // 囲まれた抜けを色を問わず全部埋める
 const FILL_ALL = process.env.FILL_ALL === '1';
-const LONG_SIDE = 160;
+// 長辺の大きさ。ふだんは160px(配信中の敵と同じ)。
+// ボスだけは大きく拡大して表示するので、粗くならないよう高い解像度のまま置く
+// (クラシックのムーが 1536x971 で入っているのと同じ考え方)。
+const LONG_SIDE = Number(process.env.LONG || 160);
 
 const cutout = async (src, dest) => {
   const img = sharp(src);

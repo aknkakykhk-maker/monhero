@@ -28,3 +28,17 @@ const MOO_IMG_DATA = "images/enemies/moo.png?v=7a627d848865";
 // ムーは立ち絵とフル表示で同じ絵を使うため、パスを2度書かず参照にしている。
 // 同じ絵を使い回す場合は必ずこの書き方にすること(同じPNGを2枚置かないため)
 const MOO_FULL = MOO_IMG_DATA;
+
+// ==================== タクティクスバトル専用の敵 ====================
+// クラシック・クイックの敵(上の10体)とは**別の並び**。絵の原本は
+// tools/art-sources/enemies-tactics/ にあり、切り抜きは tools/image/cutout-enemy-art.js が行う。
+const KAWAZUMO_IMG = "images/enemies/kawazumo.png?v=08c8b262b58f";
+const METALNER_IMG = "images/enemies/metalner.png?v=38cc7430f2c9";
+const INARI_IMG = "images/enemies/inari.png?v=ea15b3514b74";
+const KOINOBORI_IMG = "images/enemies/koinobori.png?v=7bb85f621400";
+const DELPIERO_IMG = "images/enemies/delpiero.png?v=da77811b0ed6";
+const DOKUDOKU_IMG = "images/enemies/dokudoku.png?v=81405aab6bc2";
+const LAMIA_IMG = "images/enemies/lamia.png?v=a38c03a55af1";
+const NYARLATHOTEP_IMG = "images/enemies/nyarlathotep.png?v=784ba273ad33";
+const SPLATTER_IMG = "images/enemies/splatter.png?v=fc268b0fd810";
+const AWAKENED_MOO_IMG = "images/enemies/awakened-moo.png?v=59ab671d8033";

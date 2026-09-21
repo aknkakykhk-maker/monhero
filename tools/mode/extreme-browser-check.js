@@ -191,7 +191,9 @@ const extremeTabInfo = () => {
     });
     await page.waitForTimeout(2000);
     const rank2 = await page.evaluate(() => document.body.innerText.replace(/\s+/g, ' '));
-    check('難易度カードからランキングを開ける', rank2.includes('極限チャレンジランキング'), rank2.slice(0, 70));
+    // ★ランキングの見出しは「極限チャレンジ」と、その下に小さく「ランキング」の2段になった
+    //   (名前の長いモードでは1行に入らず、モード名のほうが切れていたため)。あいだの空白は問わない
+    check('難易度カードからランキングを開ける', /極限チャレンジ\s*ランキング/.test(rank2), rank2.slice(0, 70));
     check('ランキングの難易度タブが極限の段階になっている', rank2.includes('EXTREME') && !/Grand Master|Legend/.test(rank2), rank2.slice(0, 90));
     await page.evaluate(() => { document.querySelector('button[aria-label="戻る"]')?.click(); });
     await page.waitForTimeout(1200);

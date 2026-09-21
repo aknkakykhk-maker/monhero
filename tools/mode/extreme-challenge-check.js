@@ -30,11 +30,19 @@ assert(config.includes("const EXTREME_UNLOCK_DIFFICULTIES = Object.freeze(['Gran
 assert(config.includes("const EXTREME_UNLOCK_TEXT = 'チャレンジ Grand Master以上クリアで解放'"), 'locked card must explain the unlock condition');
 assert(/const isExtremeUnlocked = \(clearCounts\) => EXTREME_UNLOCK_DIFFICULTIES[\s\S]{0,160}\(Number\(clearCounts\?\.\[key\]\) \|\| 0\) > 0\)/.test(config), 'unlock must read the existing challenge clear counts');
 assert(source.includes('const extremeUnlocked = useMemo(() => isExtremeUnlocked(clearCounts), [clearCounts]);'), 'unlock state must derive from the loaded clear counts');
-// 極限チャレンジは解放していなくても必ず並ぶ(鍵つきで見える)。
-// 末尾の種族チャレンジは一般公開前なので、公開フラグかデバッグのときだけ足される
-assert(source.includes('const modes=[...BATTLE_MODES,EXTREME_MODE,...((SPECIES_CHALLENGE_PUBLIC_RELEASE||debugBattle)?[SPECIES_CHALLENGE_MODE]:[])];'), 'the extreme card must always be listed, locked or not');
+// 極限チャレンジは解放していなくても必ず入口が見える(鍵つき)。
+// ★2026-09-19(PR #1517)に、入口が「モードのカード」から「チャレンジの極限タブ」へ移った。
+//   さらに 2026-09-20(PR #1555)でモードの並びは battleSystemModes が作るようになった。
+//   約束(未解放でも入口が見えて、押せなくて、条件が分かる)は変わっていないので、そこを見る。
+//   タブが実際に出ること・押せないこと・解放条件が出ることは
+//   tools/mode/extreme-browser-check.js が実ブラウザで確かめている
+assert(source.includes('const challengeExtremeTab=') && source.includes('const jumps=challengeExtremeTab&&toExtreme;')
+  && source.includes('const locked=jumps&&!extremeUnlocked&&!debugBattle;')
+  && source.includes('data-extreme-tab-locked'),
+  'the extreme tab must be shown even when locked, with the unlock condition');
 // 種族チャレンジにも同じ形の解放条件が付いたため、開始ボタンは2つのロックを見る
-assert(source.includes('extremeLocked=isExtreme&&!extremeUnlocked&&!debugBattle') && source.includes("disabled={extremeLocked||speciesLocked||(!!battleTutorial") && source.includes("disabled={!previewable}"), 'official locked extreme tiers must remain unselectable while debug may enter');
+// ★2026-09-20 に「準備中」のカード(modeSoon)が増えたので、押せない理由が1つ増えた
+assert(source.includes('extremeLocked=isExtreme&&!extremeUnlocked&&!debugBattle') && source.includes("disabled={extremeLocked||speciesLocked||modeSoon||(!!battleTutorial") && source.includes("disabled={!previewable}"), 'official locked extreme tiers must remain unselectable while debug may enter');
 assert(source.includes("const nightmareUnlocked = useMemo(() => isNightmareUnlocked(extremeClearCount), [extremeClearCount]);") && source.includes("setting.id==='NIGHTMARE'?nightmareUnlocked:setting.id==='CHAOS'?chaosUnlocked:"), 'NIGHTMARE details must unlock from the loaded EXTREME clear count');
 assert(source.includes("const unlocked=debugBattle||(setting.id==='EXTREME'?extremeUnlocked:setting.id==='NIGHTMARE'?nightmareUnlocked:setting.id==='CHAOS'?chaosUnlocked:setting.id==='ULTIMATE'?ultimateUnlocked:setting.id==='INFINITY'?infinityUnlocked:setting.id==='GOD'?godUnlocked:setting.id==='RAGNAROK'?ragnarokUnlocked:false)"), 'debug mode must unlock every EXTREME difficulty regardless of official progress');
 assert(source.includes('const infinityUnlocked = useMemo(() => isInfinityUnlocked(ultimateClearCount), [ultimateClearCount]);'), 'INFINITY details must unlock from the loaded ULTIMATE clear count');
@@ -43,7 +51,8 @@ assert(source.includes("setting.id==='CHAOS'?'NIGHTMAREクリアで解放'"), 'C
 assert(source.includes("disabled={!previewable} onClick={()=>setShowWaveDetails(true)}")
   && source.includes("const extreme=gameState==='EXTREME_DIFFICULTY_SELECT'")
   && source.includes("const powerOverride=extreme?extremePreviewSetting.power:null")
-  && source.includes('createBattleEnemy(index+1,waveDifficulty,null,powerOverride)'), 'EXTREME must open the shared WAVE details with its battle power override');
+  // 2026-09-21 にタクティクス専用の敵が入り、どちらの並びを使うかを options.mode で渡すようになった
+  && source.includes('createBattleEnemy(index+1,waveDifficulty,null,powerOverride,1,{mode:battleMode})'), 'EXTREME must open the shared WAVE details with its battle power override');
 assert(source.includes("{previewable?'全WAVE詳細':'詳細 ？？？'}"), 'only unlocked previewable tiers may open WAVE details');
 
 // --- ③ EXTREME固有ルール ---
@@ -72,11 +81,18 @@ assert(source.includes('await storeSet(extremeClearCountKey(extremeDifficulty), 
 // 極限は内部の difficulty が Normal のままなので、挑戦回数・最高到達WAVEへ入れるとチャレンジの記録が壊れる
 // 種族チャレンジも難易度idがチャレンジと同名なので、同じ2か所で除外している
 // 条件はあとから増える(正式実装前のモンスターを連れた周回など)ので、極限を外していることだけを見る
-assert(/if \(!forcedEnemyKey && !extremeRunRef\.current && !debugBattleRef\.current && !speciesChallengeBattleRunRef\.current[^{]*\{/.test(source)
+// ★2026-09-20 にタクティクスバトルの極限が入り、最高到達WAVEの条件が
+//   「極限なら記録しない」から「クラシックの極限なら記録しない(タクティクスの極限は記録する)」
+//   へ変わった。タクティクスは記録の置き場そのものが別(mh_tactics_*)なので混ざらない。
+//   ここで見るのは「クラシックの極限がチャレンジの記録へ入らないこと」
+assert(/if \(!forcedEnemyKey && !debugBattleRef\.current && !speciesChallengeBattleRunRef\.current[\s\S]{0,120}!extremeRunRef\.current[^{]*\{/.test(source)
   && /if \(!enemy && !extremeRunRef\.current && !debugBattleRef\.current && !speciesChallengeBattleRunRef\.current[^{]*\{/.test(source), 'EXTREME must not touch the challenge attempt / highest-wave records');
 // 敵の強さ: 極限だけ×13を渡し、それ以外は null(=難易度の倍率)のまま。null が 0 扱いされないこと
 assert(source.includes('const battleSetting=extremeRunRef.current?extremeRuleSetting(extremeDifficulty):null;')
-  && source.includes('createBattleEnemy(w,difficulty,forcedEnemyKey,battleSetting?.power??null,enemyTurnMultiplier*stagedEnemyMultiplier)'), 'only an extreme run may override enemy power and apply its turn multiplier');
+  // 2026-09-20 にタクティクスの敵の強さ(供モンの総合力に応じた倍率)が、
+  // 2026-09-21 にタクティクス専用の敵の並び(options.mode)が足された。
+  // どちらもクラシックでは1倍・既存の並びのままなので、極限の×13の渡し方は変わっていない
+  && source.includes('createBattleEnemy(w,difficulty,forcedEnemyKey,battleSetting?.power??null,enemyTurnMultiplier*stagedEnemyMultiplier*tacticsEnemyBoost,{mode:runMode})'), 'only an extreme run may override enemy power and apply its turn multiplier');
 assert(source.includes('const hasPowerOverride = powerOverride !== null && powerOverride !== undefined && Number.isFinite(Number(powerOverride));')
   && source.includes('const mod = hasPowerOverride ? Number(powerOverride) : QUICK_DIFFICULTY_SETTINGS[safeDifficulty].power;'), 'a null override must fall back to the difficulty power');
 // デバッグから入った周回は debugBattleRef が true のままなので、報酬・記録・ランキングをすべて通らない
@@ -102,9 +118,13 @@ assert(source.includes("if (text.startsWith(EXTREME_RANKING_PREFIX)) return text
 // 送信できるのは「共通のキー生成を通った難易度」だけ。ここを緩めると rankings テーブルへ
 // 勝手な文字列が混ざる。種族チャレンジも rankingDifficultyForMode で作ったキーを渡している
 const submitArgs = [...source.matchAll(/submitLocalScore\(([^,]+),/g)].map(match => match[1].trim());
-assert(submitArgs.length === 4, `submitLocalScore call sites: ${submitArgs.length}`);
+// 5つ目は 2026-09-20 に足したタクティクスバトルのスコア送信(submitTacticsScoreOnce)。
+// ここを増やすときは、必ず rankingDifficultyForMode を通したキーであることを確かめること
+assert(submitArgs.length === 5, `submitLocalScore call sites: ${submitArgs.length}`);
 assert(submitArgs.every(arg => arg === 'difficulty' || arg === 'diff' || arg.startsWith('rankingDifficultyForMode(')), 'no other ranking submission path may be introduced');
-assert(source.includes('const diff = rankingDifficultyForMode(BATTLE_MODE_SPECIES_CHALLENGE, run.difficultyId, run.speciesId);'), 'species challenge must build its ranking key through the shared path');
+// ★種族チャレンジは2つある(クラシック / タクティクス)ので、どちらのランかを
+//   speciesChallengeRunMode(run) が決めて、そこからキーを作る(2026-09-20)
+assert(source.includes('const diff = rankingDifficultyForMode(speciesChallengeRunMode(run), run.difficultyId, run.speciesId);'), 'species challenge must build its ranking key through the shared path');
 
 // --- ⑥ 画面・演出・助手 ---
 // モードの共通説明とランキングの導線(チャレンジ・プロと同じ2つのボタン)
@@ -115,7 +135,12 @@ assert(source.includes("if (typeof EXTREME_MODE !== 'undefined' && EXTREME_MODE 
 assert(source.includes('<button disabled={!!battleTutorial} onClick={()=>setModeInfoId(m.id)}') && !source.includes("isExtreme?'チャレンジモード最高難度'"), 'the description button must be enabled for every mode');
 assert(source.includes("openModeScoreRanking(m.id,EXTREME_SETTING.id,'BATTLE_MODE_SELECT')")
   && source.includes("openModeScoreRanking(EXTREME_MODE.id,setting.id,'EXTREME_DIFFICULTY_SELECT')"), 'the extreme ranking must be reachable from both the mode card and the difficulty card');
-assert(source.includes('const isExtreme = mode === EXTREME_MODE.id;') && source.includes('PUBLIC_EXTREME_DIFFICULTIES.map(setting=><button'), 'the ranking screen must list all published extreme tiers instead of the nine challenge difficulties');
+// ★難易度タブの作り方が変わった(2026-09-19 にランキングのタブを16段階ひと続きへ、
+//   2026-09-20 にタクティクスの14段階を追加)。極限のランキングは公開中の極限だけを並べる、
+//   という約束はそのままなので、そこを見る
+assert(source.includes('const isExtreme = mode === EXTREME_MODE.id;')
+  && /const rankingTabs = isExtreme\s*\?\s*PUBLIC_EXTREME_DIFFICULTIES\.map\(setting => \[setting\.id, setting\]\)/.test(source),
+  'the ranking screen must list all published extreme tiers instead of the nine challenge difficulties');
 assert(source.includes("Object.prototype.hasOwnProperty.call(DIFFICULTY_SETTINGS, rankingViewDiff) ? rankingViewDiff : BATTLE_DEFAULT_DIFFICULTY"), 'the legacy ranking screen must not crash on an extreme tier id');
 assert(source.includes('data-extreme-difficulties'), 'dedicated EXTREME difficulty screen must be rendered');
 assert(source.includes("isExtreme?'EXTREME_DIFFICULTY_SELECT':'BATTLE_DIFFICULTY_SELECT'"), 'EXTREME mode must lead to its dedicated difficulty screen');

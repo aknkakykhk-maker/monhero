@@ -31,7 +31,9 @@ for (const difficulty of ['GrandMaster', 'Hell', 'Legend']) {
 // 新モード(tactics)は、連れてきた供モンの総合力に応じた倍率(tacticsEnemyBoost)も掛ける。
 // ほかのモードでは1倍が返るので、これまでどおりの敵になる
 assert(source.includes('const stagedEnemyMultiplier=extremeWaveEnemyMultiplier(specialRuleDifficulty,w);')
-  && source.includes('createBattleEnemy(w,difficulty,forcedEnemyKey,battleSetting?.power??null,enemyTurnMultiplier*stagedEnemyMultiplier*tacticsEnemyBoost)'), 'battle must use shared enemy creation and override power for the selected extreme difficulty');
+// 2026-09-21 にタクティクス専用の敵(TACTICS_ENEMY_SEQUENCE)が入り、どちらの並びを使うかを
+// options.mode で渡すようになった。クラシック・クイックの敵は1体も変えていない
+  && source.includes('createBattleEnemy(w,difficulty,forcedEnemyKey,battleSetting?.power??null,enemyTurnMultiplier*stagedEnemyMultiplier*tacticsEnemyBoost,{mode:runMode})'), 'battle must use shared enemy creation and override power for the selected extreme difficulty');
 const enemyFactoryBlock = source.slice(source.indexOf('const createBattleEnemy ='), source.indexOf('\n};', source.indexOf('const createBattleEnemy =')) + 3);
 // 敵の生成はクイック・極限を含む QUICK_DIFFICULTY_SETTINGS(通常難易度は DIFFICULTY_SETTINGS と同じ値)を見るようになった
 const powerTable = Object.fromEntries(Object.entries(expectedPower).map(([difficulty, power]) => [difficulty, { power }]));
@@ -52,7 +54,7 @@ assert.strictEqual(extremeEnemy.maxHp, 1300, 'EXTREME HP must use power override
 assert.strictEqual(extremeEnemy.atk, 260, 'EXTREME attack must use power override 13');
 // 難易度カードのWAVE1プレビューは廃止し、敵の情報は「全WAVE詳細」だけで見せる
 assert(!source.includes('createBattleEnemy(1,key)'), '難易度カードにWAVE1の敵情報を戻していないこと');
-assert(source.includes('createBattleEnemy(index+1,waveDifficulty,null,powerOverride)'), '全WAVE詳細が共通の敵生成を使う');
+assert(source.includes('createBattleEnemy(index+1,waveDifficulty,null,powerOverride,1,{mode:battleMode})'), '全WAVE詳細が共通の敵生成を使う');
 assert(source.includes("Moo: { scanScale:2.75, waveDetailScale:2"), 'Moo must have context-specific scan and wave scales');
 assert(source.includes("enemyArtStyle(scanEnemy.id,'scan')"), 'scan must request scan art context');
 assert(source.includes("enemyArtStyle(enemy.id,'waveDetail')"), 'wave detail must request its own art context');
