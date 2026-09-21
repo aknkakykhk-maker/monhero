@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 62761abc00a96601
+// source-sha256: c37f8483a57847b5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1dfe03afe1a1c6a4
+// generated-sha256: a52a820c5eed0ad9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-21 21:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-21 21:47"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -35808,16 +35808,24 @@ function PickHeroAllyScreen({
             className: "min-w-0 block"
           }, /*#__PURE__*/React.createElement("span", {
             className: "block text-slate-500 font-black leading-none"
-          }, stat.short), [ULTIMATE_SETTING.id, CHAOS_SETTING.id, INFINITY_SETTING.id].includes(specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty)) && stat.normalDiff !== stat.diff ? /*#__PURE__*/React.createElement("span", {
+          }, stat.short), preview.tactics ? stat.diff > 0 ? /*#__PURE__*/React.createElement("span", {
+            className: "block leading-none text-slate-500"
+          }, stat.before, " \u2192") : null : [ULTIMATE_SETTING.id, CHAOS_SETTING.id, INFINITY_SETTING.id].includes(specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty)) && stat.normalDiff !== stat.diff ? /*#__PURE__*/React.createElement("span", {
             className: "block leading-none text-slate-500"
           }, "\u672C\u6765 +", stat.normalDiff) : null, /*#__PURE__*/React.createElement("b", {
             className: `block leading-tight ${stat.diff > 0 ? stat.tint : 'text-slate-400'}`,
             style: {
               fontSize: '9px'
             }
-          }, stat.after), /*#__PURE__*/React.createElement("span", {
+          }, stat.after), preview.tactics ? null : /*#__PURE__*/React.createElement("span", {
             className: `block leading-none ${stat.diff > 0 ? 'text-emerald-400' : 'text-slate-700'}`
-          }, stat.diff > 0 ? `実際 +${stat.diff}` : '実際 ±0')))), /*#__PURE__*/React.createElement("div", {
+          }, stat.diff > 0 ? `実際 +${stat.diff}` : '実際 ±0')))), preview.tactics && /*#__PURE__*/React.createElement("div", {
+            "data-tactics-join-catchup": Math.round((preview.catchUp - 1) * 100),
+            className: `w-full text-center leading-none font-black ${preview.catchUp > 1 ? 'text-emerald-300' : 'text-slate-500'}`,
+            style: {
+              fontSize: '8px'
+            }
+          }, preview.catchUp > 1 ? `追いつき +${Math.round((preview.catchUp - 1) * 100)}%（速く抜けたぶん）` : '追いつき なし'), /*#__PURE__*/React.createElement("div", {
             className: "w-full rounded-lg bg-black/40 px-1 py-1 grid grid-cols-4 gap-0.5 text-center font-mono",
             style: {
               fontSize: '8px'
@@ -35831,7 +35839,7 @@ function PickHeroAllyScreen({
             className: "block leading-none text-slate-500"
           }, "\u901A\u5E38 ", formatAptPct(range.normalDiff), " \u2192") : null, /*#__PURE__*/React.createElement("b", {
             className: `block leading-tight ${range.diff > 0 ? 'text-cyan-300' : range.diff < 0 ? 'text-red-300' : 'text-slate-400'}`
-          }, formatAptPct(range.after)), /*#__PURE__*/React.createElement("span", {
+          }, formatAptPct(range.after)), preview.tactics ? null : /*#__PURE__*/React.createElement("span", {
             className: `block leading-none ${range.diff > 0 ? 'text-emerald-400' : range.diff < 0 ? 'text-red-400' : 'text-slate-700'}`
           }, range.diff !== 0 ? `${range.normalDiff !== range.diff ? '実際 ' : ''}${formatAptPct(range.diff)}` : '±0')))));
         })(), /*#__PURE__*/React.createElement("div", {
@@ -35851,71 +35859,79 @@ function PickHeroAllyScreen({
       onClick: () => stepAlly(i - allyCardIndex),
       className: `w-1.5 h-1.5 rounded-full ${i === allyCardIndex ? 'bg-indigo-300 scale-125' : 'bg-slate-700'}`
     }))));
-  })())), currentPickingMon && renderMonsterDetailModal({
-    mon: currentPickingMon,
-    masu: currentPickingMon.masuId ? getMasuMon(currentPickingMon.masuId) : null,
-    onClose: () => setCurrentPickingMon(null),
-    zIndex: 31000,
-    // 練習中は上にみゅあの帯が出るので、その高さぶん下げて名前と重ならないようにする
-    paddingTop: battleTutorial ? 'calc(4.25rem + env(safe-area-inset-top))' : undefined,
-    detailOpts: {
-      // 一覧カードと同じ allyJoinPreview を通す。以前はここだけ plusStats をそのまま足していたため、
-      // ULTIMATE(累計ターンで加算が下がる)では詳細の数値と実際に増える量が食い違っていた
-      statValues: pickMode === 'hero' ? null : allyJoinPreview(currentPickingMon).stats.map(stat => [stat.label, `${stat.before} → ${stat.after}${stat.diff > 0 ? `（+${stat.diff}）` : ''}`, stat.diff > 0 ? stat.tint : 'text-slate-400']),
-      statTitle: pickMode === 'hero' ? '基本ステータス' : '基本ステータス(現在 → 合流後)',
-      // 距離補正は「いまの値 → このモンスターを加えた後の値」で見せる
-      aptCurrentPct: [0, 1, 2, 3].map(i => distTotalBonus(i)),
-      // 加算量も実際に足される値(NIGHTMAREの半減込み)で出す
-      aptDeltaPct: pickMode === 'hero' ? null : allyJoinPreview(currentPickingMon).apt.map(range => range.diff),
-      aptPointsLabel: currentPickingMon.masuId ? /*#__PURE__*/React.createElement("div", {
-        className: "text-[8px] text-amber-300 font-black flex items-center gap-1"
-      }, /*#__PURE__*/React.createElement(Sparkles, {
-        size: 9
-      }), "\u5F37\u5316P: ", getMasuMon(currentPickingMon.masuId)?.distAptPoints || 0) : null,
-      aptExtra: (idx, grade) => {
-        const pts = currentPickingMon.masuId ? getMasuMon(currentPickingMon.masuId)?.distAptPoints || 0 : 0;
-        const canUp = pts > 0 && DIST_APTITUDE_GRADES.indexOf(grade) < DIST_APTITUDE_GRADES.length - 1;
-        return canUp ? /*#__PURE__*/React.createElement("button", {
+  })())), currentPickingMon && (() => {
+    // ★合流の見せ方は allyJoinPreview に1か所だけ置く。ここで何度も呼ぶと、
+    //   タクティクスかどうかの分岐が増えて食い違う
+    const joinPreview = pickMode === 'hero' ? null : allyJoinPreview(currentPickingMon);
+    return renderMonsterDetailModal({
+      mon: currentPickingMon,
+      masu: currentPickingMon.masuId ? getMasuMon(currentPickingMon.masuId) : null,
+      onClose: () => setCurrentPickingMon(null),
+      zIndex: 31000,
+      // 練習中は上にみゅあの帯が出るので、その高さぶん下げて名前と重ならないようにする
+      paddingTop: battleTutorial ? 'calc(4.25rem + env(safe-area-inset-top))' : undefined,
+      detailOpts: {
+        // 一覧カードと同じ allyJoinPreview を通す。以前はここだけ plusStats をそのまま足していたため、
+        // ULTIMATE(累計ターンで加算が下がる)では詳細の数値と実際に増える量が食い違っていた
+        // ★タクティクスは「その子の素のステータスがそのまま盤面へ入る」ので、
+        //   before は素の値・after は盤面に入る値(追いつき補正込み)。見出しもそう書く
+        statValues: joinPreview ? joinPreview.stats.map(stat => [stat.label, `${stat.before} → ${stat.after}${stat.diff > 0 ? `（+${stat.diff}）` : ''}`, stat.diff > 0 ? stat.tint : 'text-slate-400']) : null,
+        statTitle: pickMode === 'hero' ? '基本ステータス' : joinPreview?.tactics ? '基本ステータス(素の値 → 盤面に入る値)' : '基本ステータス(現在 → 合流後)',
+        // 距離補正は「いまの値 → このモンスターを加えた後の値」で見せる。
+        // ★タクティクスは合算しないので、いまの値は 0 から始めて「その子のぶん」を出す
+        aptCurrentPct: joinPreview?.tactics ? [0, 0, 0, 0] : [0, 1, 2, 3].map(i => distTotalBonus(i)),
+        // 加算量も実際に足される値(NIGHTMAREの半減込み)で出す
+        aptDeltaPct: joinPreview ? joinPreview.apt.map(range => range.diff) : null,
+        aptPointsLabel: currentPickingMon.masuId ? /*#__PURE__*/React.createElement("div", {
+          className: "text-[8px] text-amber-300 font-black flex items-center gap-1"
+        }, /*#__PURE__*/React.createElement(Sparkles, {
+          size: 9
+        }), "\u5F37\u5316P: ", getMasuMon(currentPickingMon.masuId)?.distAptPoints || 0) : null,
+        aptExtra: (idx, grade) => {
+          const pts = currentPickingMon.masuId ? getMasuMon(currentPickingMon.masuId)?.distAptPoints || 0 : 0;
+          const canUp = pts > 0 && DIST_APTITUDE_GRADES.indexOf(grade) < DIST_APTITUDE_GRADES.length - 1;
+          return canUp ? /*#__PURE__*/React.createElement("button", {
+            onClick: () => {
+              const updated = spendAptPoint(currentPickingMon.masuId, idx);
+              if (updated) setCurrentPickingMon(mergeMasuIntoMon(updated));
+            },
+            className: "w-full text-[8px] font-black bg-amber-600 text-white rounded py-0.5 active:scale-95"
+          }, "+1") : null;
+        },
+        extraAfterApt: /*#__PURE__*/React.createElement(React.Fragment, null, currentPickingMon.masuId && (getMasuMon(currentPickingMon.masuId)?.distAptPoints || 0) > 0 && /*#__PURE__*/React.createElement("div", {
+          className: "bg-black/40 p-2 rounded-xl border border-emerald-500/30"
+        }, /*#__PURE__*/React.createElement("div", {
+          className: "text-[7px] text-emerald-400 uppercase font-bold mb-1"
+        }, "\u30B9\u30C6\u30FC\u30BF\u30B9\u5F37\u5316(\u5F37\u5316P 1\u3064\u306B\u3064\u304D\u4F7F\u7528\u30FB\u8ABF\u6574\u4E2D)"), /*#__PURE__*/React.createElement("div", {
+          className: "grid grid-cols-4 gap-1"
+        }, Object.entries(STAT_POINT_KEYS).map(([key, label]) => /*#__PURE__*/React.createElement("button", {
+          key: key,
           onClick: () => {
-            const updated = spendAptPoint(currentPickingMon.masuId, idx);
+            const updated = spendStatPoint(currentPickingMon.masuId, key);
             if (updated) setCurrentPickingMon(mergeMasuIntoMon(updated));
           },
-          className: "w-full text-[8px] font-black bg-amber-600 text-white rounded py-0.5 active:scale-95"
-        }, "+1") : null;
+          className: "flex flex-col items-center gap-0.5 bg-emerald-950/50 border border-emerald-500/30 rounded-lg py-1.5 active:scale-95"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "text-[7px] text-emerald-300 font-black"
+        }, label), /*#__PURE__*/React.createElement("span", {
+          className: "text-[10px] text-white font-black"
+        }, "+", STAT_POINT_GAIN[key] || 1))))), !currentPickingMon.masuId && !currentPickingMon.debugOnly && /*#__PURE__*/React.createElement("div", {
+          className: "bg-black/30 p-2 rounded-xl border border-white/5 text-[8px] text-slate-500 font-bold text-center"
+        }, pickMode === 'hero' ? '勇者モンとして選び、ラン終了時に登録すると「マスモン」として絆レベル・ステータスを強化できます' : '絆レベルの強化は勇者モン(マスモン)のみ対象です'), currentPickingMon.debugOnly && /*#__PURE__*/React.createElement("div", {
+          className: "rounded-xl border border-fuchsia-400/50 bg-fuchsia-950/50 p-2 text-center text-[9px] font-black text-fuchsia-200"
+        }, "DEBUG\u5C02\u7528\u30FB\u4FDD\u5B58\u3001\u80B2\u6210\u3001\u30DE\u30B9\u30E2\u30F3\u767B\u9332\u306E\u5BFE\u8C61\u5916"))
       },
-      extraAfterApt: /*#__PURE__*/React.createElement(React.Fragment, null, currentPickingMon.masuId && (getMasuMon(currentPickingMon.masuId)?.distAptPoints || 0) > 0 && /*#__PURE__*/React.createElement("div", {
-        className: "bg-black/40 p-2 rounded-xl border border-emerald-500/30"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "text-[7px] text-emerald-400 uppercase font-bold mb-1"
-      }, "\u30B9\u30C6\u30FC\u30BF\u30B9\u5F37\u5316(\u5F37\u5316P 1\u3064\u306B\u3064\u304D\u4F7F\u7528\u30FB\u8ABF\u6574\u4E2D)"), /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-4 gap-1"
-      }, Object.entries(STAT_POINT_KEYS).map(([key, label]) => /*#__PURE__*/React.createElement("button", {
-        key: key,
-        onClick: () => {
-          const updated = spendStatPoint(currentPickingMon.masuId, key);
-          if (updated) setCurrentPickingMon(mergeMasuIntoMon(updated));
-        },
-        className: "flex flex-col items-center gap-0.5 bg-emerald-950/50 border border-emerald-500/30 rounded-lg py-1.5 active:scale-95"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-[7px] text-emerald-300 font-black"
-      }, label), /*#__PURE__*/React.createElement("span", {
-        className: "text-[10px] text-white font-black"
-      }, "+", STAT_POINT_GAIN[key] || 1))))), !currentPickingMon.masuId && !currentPickingMon.debugOnly && /*#__PURE__*/React.createElement("div", {
-        className: "bg-black/30 p-2 rounded-xl border border-white/5 text-[8px] text-slate-500 font-bold text-center"
-      }, pickMode === 'hero' ? '勇者モンとして選び、ラン終了時に登録すると「マスモン」として絆レベル・ステータスを強化できます' : '絆レベルの強化は勇者モン(マスモン)のみ対象です'), currentPickingMon.debugOnly && /*#__PURE__*/React.createElement("div", {
-        className: "rounded-xl border border-fuchsia-400/50 bg-fuchsia-950/50 p-2 text-center text-[9px] font-black text-fuchsia-200"
-      }, "DEBUG\u5C02\u7528\u30FB\u4FDD\u5B58\u3001\u80B2\u6210\u3001\u30DE\u30B9\u30E2\u30F3\u767B\u9332\u306E\u5BFE\u8C61\u5916"))
-    },
-    footer: /*#__PURE__*/React.createElement("div", {
-      className: "flex gap-2 shrink-0"
-    }, /*#__PURE__*/React.createElement("button", {
-      onClick: () => setCurrentPickingMon(null),
-      className: "w-2/5 min-h-[48px] bg-slate-800 text-slate-400 rounded-2xl font-black text-sm uppercase active:scale-95"
-    }, "\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => advanceRunStage('PICK_SLOT'),
-      className: `flex-1 min-h-[48px] bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase shadow-lg active:scale-95${battleTutorialSpotClass('monDecide')}`
-    }, pickMode === 'hero' ? '勇者モンに選ぶ' : 'この供モンを選ぶ'))
-  }));
+      footer: /*#__PURE__*/React.createElement("div", {
+        className: "flex gap-2 shrink-0"
+      }, /*#__PURE__*/React.createElement("button", {
+        onClick: () => setCurrentPickingMon(null),
+        className: "w-2/5 min-h-[48px] bg-slate-800 text-slate-400 rounded-2xl font-black text-sm uppercase active:scale-95"
+      }, "\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
+        onClick: () => advanceRunStage('PICK_SLOT'),
+        className: `flex-1 min-h-[48px] bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase shadow-lg active:scale-95${battleTutorialSpotClass('monDecide')}`
+      }, pickMode === 'hero' ? '勇者モンに選ぶ' : 'この供モンを選ぶ'))
+    });
+  })());
 }
 function PickProAlliesScreen({
   advanceRunStage,
@@ -43876,6 +43892,76 @@ function MonsterHeroGame() {
   // 以前はここだけ plusStats をそのまま足していたため、これらの難易度では
   // 画面に出ていた数値と実際に増える量が食い違っていた。
   const allyJoinPreview = mon => {
+    // ★タクティクスは「その子の素のステータスがそのまま盤面へ入る」(設計 4.5)。
+    //   パーティの合計が増えるわけではないので、合流ボーナス(plusStats)の増分を出すと嘘になる
+    //   (2026-09-21 ユーザー指摘「タクティクスは個別のステータスだから
+    //   そもそも増えるって言うのがおかしい」)。
+    //   素の値と、追いつき補正が乗ったあとの値を分けて出す(ユーザー選択)。
+    // ★盤面へ入れるときと同じ applyTacticsJoinCatchUp を通す。別に計算すると、
+    //   画面の数字と実際に入る値が食い違う
+    if (isTacticsMode(runMode)) {
+      const base = createTacticsUnit(mon);
+      if (!base) return {
+        stats: [],
+        apt: [],
+        changed: false,
+        tactics: true,
+        catchUp: 1
+      };
+      const rate = Math.max(1, Number(tacticsJoinCatchUpRef.current) || 1);
+      const joined = applyTacticsJoinCatchUp(base, rate);
+      const stats = [{
+        key: 'hp',
+        label: 'ライフ',
+        short: 'HP',
+        before: base.baseMaxHp,
+        after: joined.baseMaxHp,
+        tint: 'text-pink-300'
+      }, {
+        key: 'atk',
+        label: 'ちから',
+        short: '力',
+        before: base.atk,
+        after: joined.atk,
+        tint: 'text-red-300'
+      }, {
+        key: 'def',
+        label: '丈夫さ',
+        short: '防',
+        before: base.def,
+        after: joined.def,
+        tint: 'text-emerald-300'
+      }, {
+        key: 'guts',
+        label: 'ガッツ',
+        short: 'G',
+        before: base.baseMaxGuts,
+        after: joined.baseMaxGuts,
+        tint: 'text-amber-300'
+      }].map(stat => ({
+        ...stat,
+        diff: stat.after - stat.before,
+        normalDiff: stat.after - stat.before
+      }));
+      // 距離適性も「その子のぶんだけ」。合算しない(設計 §7)
+      const own = getMonsterAptPct(mon, specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty), typeof wave === 'undefined' ? 1 : wave);
+      const normalOwn = getMonsterAptPct(mon, null);
+      const apt = RANGE_LABELS.map((label, idx) => ({
+        label,
+        idx,
+        before: 0,
+        after: own[idx] || 0,
+        diff: own[idx] || 0,
+        normalDiff: normalOwn[idx] || 0
+      }));
+      return {
+        stats,
+        apt,
+        changed: true,
+        tactics: true,
+        catchUp: rate
+      };
+    }
     const bonus = mon && mon.plusStats || {};
     const rule = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
     const add = key => applyAllyJoinBonus(bonus[key] || 0, rule, waveResult?.totalTurnCount);

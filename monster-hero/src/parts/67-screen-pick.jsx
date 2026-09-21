@@ -269,23 +269,36 @@ function PickHeroAllyScreen({
                 {/* 上の「現在のステータス」が今の値を出しているので、カードは合流後の値と
                     変化量だけを4列で並べる。「1480→1600」のように両方を1つの枠へ入れると
                     iPhone SEの幅では数字が切れてしまう */}
+                {/* ★タクティクスは「その子の素のステータスがそのまま盤面へ入る」ので、
+                    パーティが増えるわけではない。増分(+130)を出すと嘘になるため、
+                    **素の値 → 盤面に入る値** を出す(2026-09-21 ユーザー指示) */}
                 <div className="w-full rounded-lg bg-black/40 px-1 py-1 grid grid-cols-4 gap-0.5 text-center font-mono" style={{fontSize:'8px'}}>
                   {preview.stats.map(stat=>(
                     <span key={stat.key} className="min-w-0 block">
                       <span className="block text-slate-500 font-black leading-none">{stat.short}</span>
-                      {[ULTIMATE_SETTING.id,CHAOS_SETTING.id,INFINITY_SETTING.id].includes(specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty))&&stat.normalDiff!==stat.diff?<span className="block leading-none text-slate-500">本来 +{stat.normalDiff}</span>:null}
+                      {preview.tactics
+                        ?(stat.diff>0?<span className="block leading-none text-slate-500">{stat.before} →</span>:null)
+                        :([ULTIMATE_SETTING.id,CHAOS_SETTING.id,INFINITY_SETTING.id].includes(specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty))&&stat.normalDiff!==stat.diff?<span className="block leading-none text-slate-500">本来 +{stat.normalDiff}</span>:null)}
                       <b className={`block leading-tight ${stat.diff>0?stat.tint:'text-slate-400'}`} style={{fontSize:'9px'}}>{stat.after}</b>
-                      <span className={`block leading-none ${stat.diff>0?'text-emerald-400':'text-slate-700'}`}>{stat.diff>0?`実際 +${stat.diff}`:'実際 ±0'}</span>
+                      {preview.tactics
+                        ?null
+                        :<span className={`block leading-none ${stat.diff>0?'text-emerald-400':'text-slate-700'}`}>{stat.diff>0?`実際 +${stat.diff}`:'実際 ±0'}</span>}
                     </span>
                   ))}
                 </div>
+                {/* ★追いつき補正。WAVEを速く抜けるほど厚くなるぶんを、素の値との差として出す */}
+                {preview.tactics&&<div data-tactics-join-catchup={Math.round((preview.catchUp-1)*100)} className={`w-full text-center leading-none font-black ${preview.catchUp>1?'text-emerald-300':'text-slate-500'}`} style={{fontSize:'8px'}}>{preview.catchUp>1?`追いつき +${Math.round((preview.catchUp-1)*100)}%（速く抜けたぶん）`:'追いつき なし'}</div>}
                 <div className="w-full rounded-lg bg-black/40 px-1 py-1 grid grid-cols-4 gap-0.5 text-center font-mono" style={{fontSize:'8px'}}>
                   {preview.apt.map(range=>(
                     <span key={range.idx} className="min-w-0 block">
                       <span className="block text-slate-500 font-black leading-none">{range.label}</span>
                       {specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty)===NIGHTMARE_SETTING.id&&range.normalDiff!==range.diff?<span className="block leading-none text-slate-500">通常 {formatAptPct(range.normalDiff)} →</span>:null}
                       <b className={`block leading-tight ${range.diff>0?'text-cyan-300':range.diff<0?'text-red-300':'text-slate-400'}`}>{formatAptPct(range.after)}</b>
-                      <span className={`block leading-none ${range.diff>0?'text-emerald-400':range.diff<0?'text-red-400':'text-slate-700'}`}>{range.diff!==0?`${range.normalDiff!==range.diff?'実際 ':''}${formatAptPct(range.diff)}`:'±0'}</span>
+                      {/* ★タクティクスは合算しない(その子の適性がその子の攻撃に効く)ので、
+                          上の数字がそのままその子のぶん。増分の行は出さない */}
+                      {preview.tactics
+                        ?null
+                        :<span className={`block leading-none ${range.diff>0?'text-emerald-400':range.diff<0?'text-red-400':'text-slate-700'}`}>{range.diff!==0?`${range.normalDiff!==range.diff?'実際 ':''}${formatAptPct(range.diff)}`:'±0'}</span>}
                     </span>
                   ))}
                 </div>
@@ -301,7 +314,11 @@ function PickHeroAllyScreen({
       </div>
       {/* 勇者モン選択・供モン合流の詳細。外枠と上部サマリーは他の画面と同じマスターUIで、
           この画面だけの違いは「現在値 → 合流後」のステータス表記と強化Pの割り振りボタン */}
-      {currentPickingMon&&renderMonsterDetailModal({
+      {currentPickingMon&&(()=>{
+      // ★合流の見せ方は allyJoinPreview に1か所だけ置く。ここで何度も呼ぶと、
+      //   タクティクスかどうかの分岐が増えて食い違う
+      const joinPreview = pickMode==='hero' ? null : allyJoinPreview(currentPickingMon);
+      return renderMonsterDetailModal({
         mon: currentPickingMon,
         masu: currentPickingMon.masuId ? getMasuMon(currentPickingMon.masuId) : null,
         onClose: ()=>setCurrentPickingMon(null),
@@ -311,14 +328,18 @@ function PickHeroAllyScreen({
         detailOpts: {
   // 一覧カードと同じ allyJoinPreview を通す。以前はここだけ plusStats をそのまま足していたため、
   // ULTIMATE(累計ターンで加算が下がる)では詳細の数値と実際に増える量が食い違っていた
-  statValues: pickMode==='hero' ? null : allyJoinPreview(currentPickingMon).stats.map(stat=>[
+  // ★タクティクスは「その子の素のステータスがそのまま盤面へ入る」ので、
+  //   before は素の値・after は盤面に入る値(追いつき補正込み)。見出しもそう書く
+  statValues: joinPreview ? joinPreview.stats.map(stat=>[
 stat.label, `${stat.before} → ${stat.after}${stat.diff>0?`（+${stat.diff}）`:''}`, stat.diff>0?stat.tint:'text-slate-400',
-  ]),
-  statTitle: pickMode==='hero' ? '基本ステータス' : '基本ステータス(現在 → 合流後)',
-  // 距離補正は「いまの値 → このモンスターを加えた後の値」で見せる
-  aptCurrentPct: [0,1,2,3].map(i=>distTotalBonus(i)),
+  ]) : null,
+  statTitle: pickMode==='hero' ? '基本ステータス'
+    : (joinPreview?.tactics ? '基本ステータス(素の値 → 盤面に入る値)' : '基本ステータス(現在 → 合流後)'),
+  // 距離補正は「いまの値 → このモンスターを加えた後の値」で見せる。
+  // ★タクティクスは合算しないので、いまの値は 0 から始めて「その子のぶん」を出す
+  aptCurrentPct: joinPreview?.tactics ? [0,0,0,0] : [0,1,2,3].map(i=>distTotalBonus(i)),
   // 加算量も実際に足される値(NIGHTMAREの半減込み)で出す
-  aptDeltaPct: pickMode==='hero' ? null : allyJoinPreview(currentPickingMon).apt.map(range=>range.diff),
+  aptDeltaPct: joinPreview ? joinPreview.apt.map(range=>range.diff) : null,
   aptPointsLabel: currentPickingMon.masuId?<div className="text-[8px] text-amber-300 font-black flex items-center gap-1"><Sparkles size={9}/>強化P: {getMasuMon(currentPickingMon.masuId)?.distAptPoints||0}</div>:null,
   aptExtra: (idx,grade)=>{const pts=currentPickingMon.masuId?(getMasuMon(currentPickingMon.masuId)?.distAptPoints||0):0; const canUp=pts>0 && DIST_APTITUDE_GRADES.indexOf(grade)<DIST_APTITUDE_GRADES.length-1; return canUp?<button onClick={()=>{const updated=spendAptPoint(currentPickingMon.masuId,idx); if(updated) setCurrentPickingMon(mergeMasuIntoMon(updated));}} className="w-full text-[8px] font-black bg-amber-600 text-white rounded py-0.5 active:scale-95">+1</button>:null;},
   extraAfterApt: (<>
@@ -346,7 +367,8 @@ stat.label, `${stat.before} → ${stat.after}${stat.diff>0?`（+${stat.diff}）`
         footer: (
           <div className="flex gap-2 shrink-0"><button onClick={()=>setCurrentPickingMon(null)} className="w-2/5 min-h-[48px] bg-slate-800 text-slate-400 rounded-2xl font-black text-sm uppercase active:scale-95">戻る</button><button onClick={()=>advanceRunStage('PICK_SLOT')} className={`flex-1 min-h-[48px] bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase shadow-lg active:scale-95${battleTutorialSpotClass('monDecide')}`}>{pickMode==='hero'?'勇者モンに選ぶ':'この供モンを選ぶ'}</button></div>
         ),
-      })}
+      });
+      })()}
     </div>
   
   );

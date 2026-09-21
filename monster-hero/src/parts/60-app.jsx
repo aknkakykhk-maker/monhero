@@ -2002,6 +2002,33 @@ function MonsterHeroGame() {
   // 以前はここだけ plusStats をそのまま足していたため、これらの難易度では
   // 画面に出ていた数値と実際に増える量が食い違っていた。
   const allyJoinPreview = (mon) => {
+    // ★タクティクスは「その子の素のステータスがそのまま盤面へ入る」(設計 4.5)。
+    //   パーティの合計が増えるわけではないので、合流ボーナス(plusStats)の増分を出すと嘘になる
+    //   (2026-09-21 ユーザー指摘「タクティクスは個別のステータスだから
+    //   そもそも増えるって言うのがおかしい」)。
+    //   素の値と、追いつき補正が乗ったあとの値を分けて出す(ユーザー選択)。
+    // ★盤面へ入れるときと同じ applyTacticsJoinCatchUp を通す。別に計算すると、
+    //   画面の数字と実際に入る値が食い違う
+    if (isTacticsMode(runMode)) {
+      const base = createTacticsUnit(mon);
+      if (!base) return { stats: [], apt: [], changed: false, tactics: true, catchUp: 1 };
+      const rate = Math.max(1, Number(tacticsJoinCatchUpRef.current) || 1);
+      const joined = applyTacticsJoinCatchUp(base, rate);
+      const stats = [
+        { key:'hp',   label:'ライフ', short:'HP', before:base.baseMaxHp,   after:joined.baseMaxHp,   tint:'text-pink-300' },
+        { key:'atk',  label:'ちから', short:'力', before:base.atk,         after:joined.atk,         tint:'text-red-300' },
+        { key:'def',  label:'丈夫さ', short:'防', before:base.def,         after:joined.def,         tint:'text-emerald-300' },
+        { key:'guts', label:'ガッツ', short:'G',  before:base.baseMaxGuts, after:joined.baseMaxGuts, tint:'text-amber-300' },
+      ].map(stat => ({ ...stat, diff: stat.after - stat.before, normalDiff: stat.after - stat.before }));
+      // 距離適性も「その子のぶんだけ」。合算しない(設計 §7)
+      const own = getMonsterAptPct(mon, specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty),
+        typeof wave==='undefined'?1:wave);
+      const normalOwn = getMonsterAptPct(mon, null);
+      const apt = RANGE_LABELS.map((label, idx) => ({
+        label, idx, before:0, after:own[idx]||0, diff:own[idx]||0, normalDiff:normalOwn[idx]||0,
+      }));
+      return { stats, apt, changed: true, tactics: true, catchUp: rate };
+    }
     const bonus = (mon && mon.plusStats) || {};
     const rule = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
     const add = (key) => applyAllyJoinBonus(bonus[key]||0, rule, waveResult?.totalTurnCount);
