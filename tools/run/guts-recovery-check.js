@@ -43,10 +43,15 @@ check('押せる条件を本体から取り出せる', condLine.length > 0, cond
 check('回復後の値の式を本体から取り出せる', nextLine.length > 0, nextLine);
 
 // モードの判定も本体から取り出す(検査へ書き写さない)
-const modeConst = slice('const BATTLE_MODE_TACTICS', '\n');
+// ★2026-09-21: isTacticsMode が「盤面モードの一覧(TACTICS_BATTLE_MODES)」を見るように
+//   なったので、モードの定数1つだけでは足りない。一覧の定義ごと持ってくる
+//   (それまでは const BATTLE_MODE_TACTICS だけを渡していて、検査が動かなくなっていた)
+const modeConst = ['const BATTLE_MODE_TACTICS =', 'const BATTLE_MODE_TACTICS_SPECIES =', 'const BATTLE_MODE_TACTICS_PRO =']
+  .map(mark => slice(mark, '\n')).join('\n');
+const modeList = slice('const TACTICS_BATTLE_MODES = Object.freeze([', ']);') + ']);';
 const modeFn = slice('const isTacticsMode = (mode)', '\n');
-check('モードの判定を本体から取り出せる', modeConst.length > 0 && modeFn.length > 0, modeFn.trim());
-const isTacticsMode = new Function(`${modeConst}\n${modeFn}\nreturn isTacticsMode;`)();
+check('モードの判定を本体から取り出せる', modeConst.length > 0 && modeList.length > 6 && modeFn.length > 0, modeFn.trim());
+const isTacticsMode = new Function(`${modeConst}\n${modeList}\n${modeFn}\nreturn isTacticsMode;`)();
 // 新モードは「立っている子にガッツを入れる余地があるか」で押せるかを決める。
 // ★中身(tacticsHasGutsRoom)は tools/mode/tactics-units-check.js が見るので、ここでは
 //   答えを差し込めるだけの替え玉にして、「条件式がその答えをそのまま使うか」を見る。

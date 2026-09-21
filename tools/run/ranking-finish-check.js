@@ -84,7 +84,19 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
   check(`${label}: 先読みと画面表示の通信を共有`, code.includes('rankingRequestsRef.current.has(requestKey)') && code.includes('rankingRequestsRef.current.set(requestKey, request)'));
   check(`${label}: 30秒以内の取得済みデータを再利用`, code.includes('Date.now() - fetchedAt < 30000'));
   check(`${label}: ランキング通信に8秒の上限`, code.includes('setTimeout(() => controller.abort(), 8000)'));
-  check(`${label}: ランキング取得列を必要項目に限定`, code.includes("RANKING_SELECT_FULL = 'user_name,hero,party,score,level,icon'") && code.includes("RANKING_SELECT_NO_PARTY = 'user_name,hero,score,level,icon'"));
+  // ★列の並びを書き写さない。必要になって列が増えるたびにここが落ちていた
+  //   (2026-09-21。created_at が足されたときに実際に落ちた)。
+  //   見たいのは「* で全部取っていないか」「party を抜いた軽い版があるか」の2つ
+  const selectFull = (/RANKING_SELECT_FULL = '([^']*)'/.exec(code) || [])[1] || '';
+  const selectNoParty = (/RANKING_SELECT_NO_PARTY = '([^']*)'/.exec(code) || [])[1] || '';
+  const fullColumns = selectFull.split(',').map(s => s.trim());
+  const noPartyColumns = selectNoParty.split(',').map(s => s.trim());
+  check(`${label}: ランキング取得列を必要項目に限定`,
+    fullColumns.length > 0 && noPartyColumns.length > 0
+    && !selectFull.includes('*') && !selectNoParty.includes('*')
+    && ['user_name', 'hero', 'party', 'score', 'level', 'icon'].every(column => fullColumns.includes(column))
+    && !noPartyColumns.includes('party'),
+    `full=${selectFull || '(見つからない)'} / noParty=${selectNoParty || '(見つからない)'}`);
   check(`${label}: 起動時はNormalとMasterを優先`, code.includes("['Normal', 'Master', ...allDiffs.filter"));
   check(`${label}: スコアは同時取得し一部失敗も完了扱い`, code.includes('Promise.allSettled(diffs.map(loadOne))'));
   check(`${label}: 絆Lvは難易度で絞らず1回で取得`,
