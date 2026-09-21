@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 47824272c3d3cd34
+// source-sha256: 09061b7ccb77f120
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3dc61882c7279da6
+// generated-sha256: 678ca96af9d02927
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-21 15:33"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-21 15:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -16103,16 +16103,33 @@ const TACTICS_ACTION_DEFINITIONS = [{
   condition: '3ヒットに分かれ、ガードは1ヒットぶんしか効かない',
   cooldown: 0,
   useLimit: null
+},
+// ★貫通撃は「ためる → 必殺技」と同じ形にしてある(2026-09-21 ユーザー指示
+//   「貫通は必殺級の技だからこれもためると同じように1ターン経由したほうがいい」)。
+//   ガードが効かない＝受け方が無い技なので、来ると分かってから距離や回避で備えられるようにする。
+//   抽選に出るのは構えのほうで、貫通撃そのものは構えた次のターンに必ず出る(weight 0)
+{
+  id: 'pierceCharge',
+  type: 'PIERCE_CHARGE',
+  category: '貫通の構え',
+  weight: 12,
+  multiplier: 0,
+  hits: 0,
+  range: '全間合い',
+  condition: '常時',
+  effectText: '次のターンに貫通撃が確定で出る',
+  cooldown: 0,
+  useLimit: null
 }, {
   id: 'pierce',
   type: 'ATTACK',
   variant: 'pierce',
   category: '貫通撃',
-  weight: 12,
+  weight: 0,
   multiplier: TACTICS_PIERCE_MULT,
   hits: 1,
   range: '全間合い',
-  condition: 'ガードが効かない',
+  condition: '構えた次のターンに必ず発動。ガードが効かない',
   cooldown: 0,
   useLimit: null
 }, {
@@ -16170,19 +16187,70 @@ const TACTICS_ENEMY_ACTION_IDS = Object.freeze({
   Splatter: Object.freeze(['rush', 'roar', 'pierce', 'allout']),
   AwakenedMoo: Object.freeze(['sweep', 'rush', 'pierce', 'roar', 'regen', 'allout'])
 });
-const tacticsActionDefinitions = enemyId => {
-  const ids = [...TACTICS_BASE_ACTION_IDS, ...(TACTICS_ENEMY_ACTION_IDS[enemyId] || [])];
+// 難易度が上がると、基本構成に無い技も順に使えるようになる(2026-09-21 ユーザー指示
+// 「難易度が上がるにつれて使える技も増やそうか」)。足す順はこれ。
+// ★allout(全体攻撃)は最後。低いWAVEの敵が早くから全員攻撃を撒くと、受け方を1つずつ覚えられない。
+//   pierce(貫通撃)はその手前。構えを挟むぶん読めるとはいえ、ガードが効かない技なので後ろに置く
+const TACTICS_EXTRA_ACTION_ORDER = Object.freeze(['rush', 'sweep', 'roar', 'regen', 'pierce', 'allout']);
+// 基本構成(Normal)を0として、難易度ごとに何本増減するか。
+// ★最低1本は残す。0にすると通常攻撃とためるだけになり、このモードの読み合いが消える
+const TACTICS_DIFFICULTY_ACTION_DELTA = Object.freeze({
+  Beginner: -2,
+  Easy: -1,
+  Normal: 0,
+  Hard: 0,
+  Expert: 1,
+  Master: 1,
+  GrandMaster: 2,
+  Hell: 2,
+  Legend: 3,
+  EXTREME: 4,
+  NIGHTMARE: 4,
+  CHAOS: 5,
+  ULTIMATE: 6,
+  INFINITY: 6,
+  GOD: 6
+});
+// 減らすときに先に落とす技。殴ってこないものから外す。
+// ★前から順に切ると、ニャルラトホテプが再生だけ・ドクドクが咆哮だけになり、
+//   易しい難易度ほど「敵が何もしてこない」ように見えてしまう
+const TACTICS_SUPPORT_ACTION_IDS = Object.freeze(['roar', 'regen']);
+// その敵がその難易度で使う技のid。難易度を渡さなければ基本構成のまま(既存の呼び出しはそのまま動く)
+const tacticsEnemyActionIds = (enemyId, difficulty) => {
+  const base = TACTICS_ENEMY_ACTION_IDS[enemyId] || [];
+  const delta = Number.isFinite(TACTICS_DIFFICULTY_ACTION_DELTA[difficulty]) ? TACTICS_DIFFICULTY_ACTION_DELTA[difficulty] : 0;
+  const want = Math.max(1, base.length + delta);
+  if (want === base.length) return base;
+  if (want < base.length) {
+    // 落とすのは「補助をうしろから → それでも足りなければうしろから」。残ったものは base の並びを保つ
+    const drop = base.length - want,
+      dropped = new Set();
+    for (let i = base.length - 1; i >= 0 && dropped.size < drop; i -= 1) {
+      if (TACTICS_SUPPORT_ACTION_IDS.includes(base[i])) dropped.add(i);
+    }
+    for (let i = base.length - 1; i >= 0 && dropped.size < drop; i -= 1) dropped.add(i);
+    return base.filter((_, i) => !dropped.has(i));
+  }
+  const extra = TACTICS_EXTRA_ACTION_ORDER.filter(id => !base.includes(id));
+  return [...base, ...extra.slice(0, want - base.length)];
+};
+const tacticsActionDefinitions = (enemyId, difficulty) => {
+  const own = tacticsEnemyActionIds(enemyId, difficulty);
+  // 貫通撃は構えとセットで持たせる。構えが無いと、貫通撃は一生出てこない(weight 0 のため)
+  const ids = [...TACTICS_BASE_ACTION_IDS, ...own, ...(own.includes('pierce') ? ['pierceCharge'] : [])];
   return TACTICS_ACTION_DEFINITIONS.filter(def => ids.includes(def.id));
 };
 // そのモード・その敵が使う行動表。新モード以外は今までどおりの1つの表を返す
-const enemyActionDefinitionsFor = (mode, enemyId) => typeof isTacticsMode === 'function' && isTacticsMode(mode) ? tacticsActionDefinitions(enemyId) : ENEMY_ACTION_DEFINITIONS;
+const enemyActionDefinitionsFor = (mode, enemyId, difficulty) => typeof isTacticsMode === 'function' && isTacticsMode(mode) ? tacticsActionDefinitions(enemyId, difficulty) : ENEMY_ACTION_DEFINITIONS;
 // 直前の行動から、次に選べる行動を決めるための状態を作る
 const enemyActionStateFrom = lastIntent => ({
   charging: lastIntent?.type === 'CHARGE',
+  piercing: lastIntent?.type === 'PIERCE_CHARGE',
   movedLast: lastIntent?.type === 'MOVE'
 });
 const evaluateEnemyActions = (ent, currentDist, state = {}) => {
   const charging = !!state.charging,
+    piercing = !!state.piercing,
     movedLast = !!state.movedLast;
   // 行動表はモードごとに違う(新モードだけ別の表)。渡されなければ今までどおりの1つの表を使う
   const definitions = Array.isArray(state.definitions) && state.definitions.length ? state.definitions : ENEMY_ACTION_DEFINITIONS;
@@ -16194,9 +16262,16 @@ const evaluateEnemyActions = (ent, currentDist, state = {}) => {
         // ためた次のターンは必殺技で確定。ほかの行動では上書きしない
         available = def.type === 'SPECIAL';
         if (!available) reason = 'ためているため、次は必殺技で確定しています';
+      } else if (piercing) {
+        // 構えた次のターンは貫通撃で確定。ためる→必殺技とまったく同じ形
+        available = def.id === 'pierce';
+        if (!available) reason = '構えているため、次は貫通撃で確定しています';
       } else if (def.type === 'SPECIAL') {
         available = false;
         reason = 'ためた次のターンにだけ発動します';
+      } else if (def.id === 'pierce') {
+        available = false;
+        reason = '構えた次のターンにだけ発動します';
       } else if (def.type === 'REGEN') {
         // 満タンに近いあいだは使わない。回復するものが無いターンを作らないため
         const maxHp = Math.max(0, Number(ent.maxHp) || 0),
@@ -16228,9 +16303,10 @@ const evaluateEnemyActions = (ent, currentDist, state = {}) => {
         }
       }
     }
+    const weight = charging ? def.type === 'SPECIAL' ? 1 : 0 : piercing ? def.id === 'pierce' ? 1 : 0 : def.weight;
     return {
       ...def,
-      weight: charging ? def.type === 'SPECIAL' ? 1 : 0 : def.weight,
+      weight,
       available,
       unavailableReason: available ? '' : reason
     };
@@ -16245,13 +16321,18 @@ const enemyActionProbabilities = (ent, currentDist, state = {}) => {
   }));
 };
 // 行動の見出しとアイコン。抽選と台本(練習モード)の両方から使う
-const enemyActionLabel = (ent, type) => type === 'ATTACK' ? ent?.normal || '通常攻撃' : type === 'CHARGE' ? '必殺技の準備をしている' : type === 'SPECIAL' ? ent?.special || '必殺技！' : type === 'ROAR' ? '咆哮している' : type === 'REGEN' ? '傷を癒している' : '様子を見ている';
+const enemyActionLabel = (ent, type) => type === 'ATTACK' ? ent?.normal || '通常攻撃' : type === 'CHARGE' ? '必殺技の準備をしている' : type === 'PIERCE_CHARGE' ? '貫通撃の構えをとっている' : type === 'SPECIAL' ? ent?.special || '必殺技！' : type === 'ROAR' ? '咆哮している' : type === 'REGEN' ? '傷を癒している' : '様子を見ている';
 // その敵のその行動を、画面へ出すときの名前。タクティクスの敵は追加6技の名前を actions に持つ
 // (TACTICS_ENEMY_DATA)。名前を持たない敵は1文字も変わらず、今までどおりの見出しへ落ちる。
 const enemyActionDisplayName = (ent, def) => {
   if (!def) return '';
   const named = ent && ent.actions && typeof ent.actions[def.id] === 'string' ? ent.actions[def.id].trim() : '';
   if (named) return named;
+  // 貫通の構えは、その敵の貫通撃の名前から作る(「◯◯の構え」)。何が来るかを名前で分かるようにする
+  if (def.id === 'pierceCharge') {
+    const pierceName = ent && ent.actions && typeof ent.actions.pierce === 'string' ? ent.actions.pierce.trim() : '';
+    if (pierceName) return `${pierceName}の構え`;
+  }
   return def.type === 'MOVE' ? '間合い移動' : def.variant ? def.category : enemyActionLabel(ent, def.type);
 };
 const ENEMY_ACTION_ICONS = {
@@ -16261,7 +16342,8 @@ const ENEMY_ACTION_ICONS = {
   WAIT: '⏳',
   MOVE: '🏃',
   ROAR: '📢',
-  REGEN: '💚'
+  REGEN: '💚',
+  PIERCE_CHARGE: '⚔️'
 };
 // 新モードの攻撃は type が ATTACK のままなので、見分けは variant で付ける
 const TACTICS_VARIANT_ICONS = {
@@ -16358,6 +16440,9 @@ const createBattleEnemy = (wave, difficulty, forcedEnemyKey = null, powerOverrid
   return {
     ...(base || {}),
     id: enemyKey || `missing-wave-${wave}`,
+    // ★難易度を敵そのものに持たせる。タクティクスは難易度で使える技の本数が変わるので、
+    //   行動表を引くたびに「いまの難易度」を別経路で探すと、実戦とSCANでずれる
+    difficulty: safeDifficulty,
     name: base?.name || '敵データ未設定',
     imgUrl: base?.imgUrl || '',
     emoji: base?.emoji || '❓',
@@ -37783,7 +37868,18 @@ function BattleScreen({
     className: "text-5xl drop-shadow-[0_0_20px_rgba(251,191,36,1)]"
   }, "\u2728"), /*#__PURE__*/React.createElement("div", {
     className: "px-3 py-1 rounded-lg bg-gradient-to-r from-amber-900 via-amber-600 to-amber-900 border-2 border-amber-200 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(251,191,36,0.9)]"
-  }, "\u305F \u3081 \u308B")), enemy && enemyNextIntent && !isBusy && !enemyAttackFx && enemyNextIntent.type === 'MOVE' &&
+  }, "\u305F \u3081 \u308B")), enemy && enemyIntent && !isBusy && !enemyAttackFx && enemyIntent.type === 'PIERCE_CHARGE' && /*#__PURE__*/React.createElement("div", {
+    className: "fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1",
+    style: {
+      top: '11%',
+      zIndex: 65000,
+      animation: 'specialWarnFlash 700ms ease-in-out infinite'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-5xl drop-shadow-[0_0_20px_rgba(244,63,94,1)]"
+  }, "\u2694\uFE0F"), /*#__PURE__*/React.createElement("div", {
+    className: "px-3 py-1 rounded-lg bg-gradient-to-r from-rose-900 via-rose-600 to-rose-900 border-2 border-rose-200 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(244,63,94,0.9)]"
+  }, "\u8CAB \u901A \u306E \u69CB \u3048")), enemy && enemyNextIntent && !isBusy && !enemyAttackFx && enemyNextIntent.type === 'MOVE' &&
   /*#__PURE__*/
   // 画面ではなく遊ぶ列(最大600px)の右端に寄せる。left:50%から
   // 「列の半分ぶん右へ、自分の幅だけ左へ」動かすと、広い画面でも列の中に収まる
@@ -38257,7 +38353,7 @@ function BattleScreen({
     const previewGuard = enemyIntent.variant === 'pierce' ? 0 : guardValueOf(previewGuardFlat, previewGuardMult);
     const previewHits = enemyIntent.variant === 'rush' ? Math.max(1, Math.floor(Number(enemyIntent.hits) || 1)) : 1;
     const plannedDmg = applyTurnDamageReduction(resolveTacticsGuardedHit(rawDmg, previewHits, previewGuard).taken);
-    const tone = enemyIntent.type === 'SPECIAL' ? 'bg-fuchsia-950 border-fuchsia-500 text-fuchsia-300' : enemyIntent.type === 'CHARGE' ? 'bg-amber-950 border-amber-500 text-amber-400' : enemyIntent.type === 'MOVE' ? 'bg-cyan-950 border-cyan-500/60 text-cyan-300' : 'bg-red-950 border-red-600/50 text-red-400';
+    const tone = enemyIntent.type === 'SPECIAL' ? 'bg-fuchsia-950 border-fuchsia-500 text-fuchsia-300' : enemyIntent.type === 'CHARGE' ? 'bg-amber-950 border-amber-500 text-amber-400' : enemyIntent.type === 'PIERCE_CHARGE' ? 'bg-rose-950 border-rose-500 text-rose-300' : enemyIntent.type === 'MOVE' ? 'bg-cyan-950 border-cyan-500/60 text-cyan-300' : 'bg-red-950 border-red-600/50 text-red-400';
     // 敵の絵のすぐ下へ置く(2026-09-18・ユーザー依頼)。mt-auto で下端へ押しやっていたため、
     // 絵と「次に何をしてくるか」のあいだに200pxほどの空きができ、視線が大きく動いていた。
     // 余りの高さは、この下のバフ帯の mt-auto がまとめて吸う。
@@ -52806,12 +52902,14 @@ function MonsterHeroGame() {
     //   ・ためを止めたのに必殺技が予約されている
     //   ・いま居る間合いへ移動する予約になっている(移動を封じられて間合いが変わらなかった等)
     if (reserved && reserved.type === 'SPECIAL' && !(performed && executedIntent?.type === 'CHARGE')) reserved = null;
+    //   ・構えを止めたのに貫通撃が予約されている(貫通撃は type が ATTACK のままなので variant で見る)
+    if (reserved && reserved.variant === 'pierce' && !(performed && executedIntent?.type === 'PIERCE_CHARGE')) reserved = null;
     if (reserved && reserved.type === 'MOVE' && reserved.targetDist === distAfterExecuted) reserved = null;
     // 引き直しになった行動は、次のターンにそのまま実行されるのに吹き出しを出していない。
     // ここで移動を引くと「予告なしでいきなり動く」ことになるので、移動は選ばせない
     // 行動表はモードと敵で決まる。新モード以外では今までどおりの1つの表が返る
     const actionState = () => ({
-      definitions: enemyActionDefinitionsFor(runMode, enemy?.id),
+      definitions: enemyActionDefinitionsFor(runMode, enemy?.id, enemy?.difficulty),
       roarStacks: tacticsRoarStacksRef.current
     });
     // ★狙いは「予告として出す直前」に決める。抽選したときのまま持ち歩くと、
@@ -53642,6 +53740,20 @@ function MonsterHeroGame() {
         });
         setEnemyAttackAnim(true);
         addPopup("必殺技の準備をしている…！", 'enemy', 'text-amber-300 font-black text-xl drop-shadow-md');
+        await battleWait(1100);
+        setEnemyAttackAnim(false);
+        await battleWait(200);
+        setEnemyAttackFx(null);
+      } else if (intent.type === 'PIERCE_CHARGE') {
+        // 貫通撃の構え。ダメージは無く、次のターンに貫通撃が確定で来る(ためる→必殺技と同じ形)。
+        // ガードが効かない技なので、この1ターンで「距離を取る」「回避を用意する」を決めてもらう
+        // (2026-09-21 ユーザー指示「貫通は必殺級の技だからこれもためると同じように1ターン経由」)
+        Audio_.se.enemyCharge();
+        setEnemyAttackFx({
+          kind: 'charge'
+        });
+        setEnemyAttackAnim(true);
+        addPopup("貫通撃の構え…！ ガードは効かない", 'enemy', 'text-rose-300 font-black text-xl drop-shadow-md');
         await battleWait(1100);
         setEnemyAttackAnim(false);
         await battleWait(200);
@@ -55732,7 +55844,7 @@ function MonsterHeroGame() {
     setEnemyLastIntent(null);
     // 行動表はモードと敵で決まる。新モード以外では今までどおりの1つの表が返る
     const actionState = () => ({
-      definitions: enemyActionDefinitionsFor(runMode, newEnemy?.id),
+      definitions: enemyActionDefinitionsFor(runMode, newEnemy?.id, newEnemy?.difficulty),
       roarStacks: tacticsRoarStacksRef.current
     });
     const firstIntent = aimTacticsIntent(getNextEnemyAction(newEnemy, dist, null, {
@@ -68872,7 +68984,7 @@ function MonsterHeroGame() {
         ...(scanBeforeBattle ? {
           unannounced: true
         } : enemyActionStateFrom(enemyLastIntent)),
-        definitions: enemyActionDefinitionsFor(runMode, scanEnemy?.id),
+        definitions: enemyActionDefinitionsFor(runMode, scanEnemy?.id, scanEnemy?.difficulty),
         roarStacks: tacticsRoarStacksRef.current
       };
       const actions = enemyActionProbabilities(scanEnemy, scanDist, scanState);

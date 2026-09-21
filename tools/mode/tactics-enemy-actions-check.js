@@ -31,7 +31,8 @@ const context = { RANGE_LABELS: ['零', '近', '中', '遠'], Math };
 vm.createContext(context);
 vm.runInContext(`${chunk};globalThis.api={ENEMY_ACTION_DEFINITIONS,TACTICS_ACTION_DEFINITIONS,TACTICS_ENEMY_ACTION_IDS,`
   + `TACTICS_BASE_ACTION_IDS,tacticsActionDefinitions,enemyActionProbabilities,chooseEnemyAction,`
-  + `enemyActionStateFrom,enemyActionLabel,enemyActionDisplayName,TACTICS_ROAR_MAX_STACKS,TACTICS_SWEEP_MULT,TACTICS_SWEEP_MISS_MULT,`
+  + `enemyActionStateFrom,enemyActionLabel,enemyActionDisplayName,tacticsEnemyActionIds,`
+  + `TACTICS_DIFFICULTY_ACTION_DELTA,TACTICS_EXTRA_ACTION_ORDER,TACTICS_SUPPORT_ACTION_IDS,TACTICS_ROAR_MAX_STACKS,TACTICS_SWEEP_MULT,TACTICS_SWEEP_MISS_MULT,`
   + `TACTICS_RUSH_HITS,TACTICS_REGEN_HP_THRESHOLD,TACTICS_ALLOUT_MULT,TACTICS_PIERCE_MULT,TACTICS_RUSH_MULT,TACTICS_SWEEP_MULT,`
   + `TACTICS_ROAR_ATK_RATE,TACTICS_REGEN_RATE};`, context);
 const api = context.api;
@@ -135,11 +136,11 @@ check('咆哮は上限まで重ねたら選ばれない', !availableIds(roarMaxe
 
 // --- ⑦ 抽選が実際に作る intent の形 ---
 // 抽選は乱数を渡して固定する。狙った技が出るまで乱数を振り、その技の intent を取り出す
-const intentOf = (enemyId, actionId) => {
+const intentOf = (enemyId, actionId, state = {}) => {
   const definitions = api.tacticsActionDefinitions(enemyId);
   for (let i = 0; i < 400; i++) {
     const roll = i / 400;
-    const intent = api.chooseEnemyAction(enemyOf(enemyId), 1, () => roll, { definitions });
+    const intent = api.chooseEnemyAction(enemyOf(enemyId), 1, () => roll, { definitions, ...state });
     if (intent && intent.actionId === actionId) return intent;
   }
   return null;
@@ -153,7 +154,9 @@ check('薙ぎ払いの威力は定義どおり',
   !!sweep && sweep.value === Math.floor(100 * api.TACTICS_SWEEP_MULT) && sweep.missValue === Math.floor(100 * api.TACTICS_SWEEP_MISS_MULT));
 const rush = intentOf(firstWith('rush'), 'rush');
 check('連撃は手数を持ち歩く', !!rush && rush.hits === api.TACTICS_RUSH_HITS, rush ? `${rush.hits}ヒット` : '出ませんでした');
-const pierce = intentOf(firstWith('pierce'), 'pierce');
+// ★貫通撃は構えた次のターンにしか出ない(2026-09-21)。構えなしで引こうとすると出ない
+const pierceState = api.enemyActionStateFrom({ type: 'PIERCE_CHARGE' });
+const pierce = intentOf(firstWith('pierce'), 'pierce', pierceState);
 check('貫通撃は variant で見分けられる', !!pierce && pierce.variant === 'pierce');
 check('新モードの攻撃は type が ATTACK のまま(既存のダメージ計算を通すため)',
   [sweep, rush, pierce].every(intent => intent && intent.type === 'ATTACK'));
@@ -198,7 +201,8 @@ check('咆哮は敵の攻撃を上げ、重ねた回数を数える',
 check('再生は敵のライフを最大値まででとどめる',
   has('hp:Math.min(Number(prev.maxHp)||0,Math.max(0,Number(prev.hp)||0)+healed)'));
 check('咆哮の重ねがけはWAVEごとに数え直す', has('tacticsRoarStacksRef.current=0'));
-check('SCANも新モードの行動表を見る', has('definitions:enemyActionDefinitionsFor(runMode,scanEnemy?.id)'));
+check('SCANも新モードの行動表を見る（難易度つき）',
+  has('definitions:enemyActionDefinitionsFor(runMode,scanEnemy?.id,scanEnemy?.difficulty)'));
 check('SCANは新モードの技を敵ごとの技名で並べる', has('const actionName=enemyActionDisplayName(scanEnemy,action);'));
 
 // --- 咆哮の効き目を画面へ出す(2026-09-20 ユーザー指摘「咆哮の効果が分からない」) ---
@@ -361,12 +365,119 @@ const dupNames = allNames.filter((n, i) => allNames.indexOf(n) !== i);
 check('同じ技名を2体で使っていない', dupNames.length === 0, [...new Set(dupNames)].join(',') || '');
 // 抽選が作る intent の見出しも、共通の見出しではなく技名になっているか(実物で確かめる)
 const bossLabels = VARIANT_IDS.map(a => {
-  const intent = intentOf(BOSS, a);
+  const intent = intentOf(BOSS, a, a === 'pierce' ? pierceState : {});
   return { a, label: intent ? String(intent.label) : '' };
 });
 check('最後のWAVEの敵は、6技とも技名で予告する',
   bossLabels.every(({ a, label }) => label && label.startsWith(((TACTICS_ENEMY_DATA[BOSS] || {}).actions || {})[a] || '\u0000')),
   bossLabels.map(({ a, label }) => `${a}=${label || '出ませんでした'}`).join(' / '));
+
+// --- ⑪ 貫通撃は「構え → 次のターンに確定」(2026-09-21 ユーザー指示) ---
+// ★ガードが効かない＝受け方が無い技なので、来ると分かってから距離や回避で備えられるようにした。
+//   構えを飛ばして直に出るようになると、その読み合いが丸ごと消える
+const pierceDef = tacticsDef('pierce'), pierceChargeDef = tacticsDef('pierceCharge');
+check('貫通の構えが行動表にある', pierceChargeDef.type === 'PIERCE_CHARGE', pierceChargeDef.category || 'なし');
+check('抽選に出るのは構えのほうで、貫通撃そのものは出ない',
+  pierceChargeDef.weight > 0 && pierceDef.weight === 0,
+  `構え${pierceChargeDef.weight} / 貫通撃${pierceDef.weight}`);
+check('構えはダメージを持たない', pierceChargeDef.multiplier === 0 && pierceChargeDef.hits === 0);
+check('貫通撃を持つ敵は、必ず構えも持つ',
+  ENEMY_ORDER.every(id => {
+    const ids = idsOf(api.tacticsActionDefinitions(id));
+    return ids.includes('pierce') === ids.includes('pierceCharge');
+  }));
+const pierceOwner = firstWith('pierce');
+const beforeCharge = api.enemyActionProbabilities(enemyOf(pierceOwner), 1, { definitions: api.tacticsActionDefinitions(pierceOwner) });
+check('ふつうのターンに貫通撃は選ばれない', !availableIds(beforeCharge).includes('pierce'));
+check('ふつうのターンに構えは選べる', availableIds(beforeCharge).includes('pierceCharge'));
+const afterCharge = api.enemyActionProbabilities(enemyOf(pierceOwner), 1,
+  { definitions: api.tacticsActionDefinitions(pierceOwner), ...pierceState });
+check('構えた次のターンは貫通撃だけ', availableIds(afterCharge).join(',') === 'pierce');
+check('構えた次のターンの貫通撃は100%',
+  (afterCharge.find(a => a.id === 'pierce') || {}).probability === 1);
+// ためると構えは別物。片方の状態がもう片方を発動させてはいけない
+const afterNormalCharge = api.enemyActionProbabilities(enemyOf(pierceOwner), 1,
+  { definitions: api.tacticsActionDefinitions(pierceOwner), ...api.enemyActionStateFrom({ type: 'CHARGE' }) });
+check('ためた次のターンに貫通撃は出ない', availableIds(afterNormalCharge).join(',') === 'special');
+const pierceChargeIntent = intentOf(pierceOwner, 'pierceCharge');
+check('構えの intent はダメージ0で、アイコンが付く',
+  !!pierceChargeIntent && pierceChargeIntent.value === 0 && !!pierceChargeIntent.icon,
+  pierceChargeIntent ? `${pierceChargeIntent.label} ${pierceChargeIntent.icon}` : '出ませんでした');
+// 構えの見出しは、その敵の貫通撃の名前から作る(「◯◯の構え」)。何が来るかを名前で分かるようにした
+check('構えの見出しは、その敵の貫通撃の名前から作る',
+  !!pierceChargeIntent
+    && pierceChargeIntent.label === `${((TACTICS_ENEMY_DATA[pierceOwner] || {}).actions || {}).pierce}の構え`,
+  pierceChargeIntent ? pierceChargeIntent.label : '');
+check('実装側が構えを受け止めている(ダメージを出さず、演出だけ)',
+  has("} else if (intent.type==='PIERCE_CHARGE') {"));
+check('構えを止めたら、予約していた貫通撃を捨てる',
+  has("if (reserved && reserved.variant === 'pierce' && !(performed && executedIntent?.type === 'PIERCE_CHARGE')) reserved = null;"));
+check('画面にも構えの警告を出す', screen.includes("enemyIntent.type==='PIERCE_CHARGE'"));
+
+// --- ⑫ 難易度が上がると使える技が増える(2026-09-21 ユーザー指示) ---
+const DELTA = api.TACTICS_DIFFICULTY_ACTION_DELTA;
+const ATTACK_ACTION_IDS = ['sweep', 'rush', 'pierce', 'allout'];
+check('難易度ごとの増減が決まっている', Object.keys(DELTA).length >= 9, `${Object.keys(DELTA).length}段階`);
+check('難易度を渡さなければ基本構成のまま',
+  ENEMY_ORDER.every(id => api.tacticsEnemyActionIds(id).join(',') === (api.TACTICS_ENEMY_ACTION_IDS[id] || []).join(',')));
+check('知らない難易度を渡しても基本構成のまま(落ちない)',
+  ENEMY_ORDER.every(id => api.tacticsEnemyActionIds(id, 'この難易度は無い').join(',') === (api.TACTICS_ENEMY_ACTION_IDS[id] || []).join(',')));
+// ★難易度の並びは**本体の定義順から読む**。検査へ書き写さないのはもちろん、
+//   増減の値でソートしてもいけない(値を並べ替えてしまうので、どんな値でも単調に見えて
+//   「難易度が上がると減る」を素通りさせる。2026-09-21に実際そうなっていた)
+const difficultyOrderFrom = (name) => {
+  const i = src.indexOf(`const ${name} = `);
+  if (i < 0) return [];
+  const block = src.slice(i, src.indexOf('\n};', i));
+  return [...block.matchAll(/^ {2}(\w+):/gm)].map(m => m[1]);
+};
+const sortedDiffs = [...difficultyOrderFrom('DIFFICULTY_SETTINGS'), ...difficultyOrderFrom('QUICK_EXTREME_SETTINGS')]
+  .filter(d => DELTA[d] !== undefined);
+check('難易度の並びを本体から読めた', sortedDiffs.length >= 9, sortedDiffs.join(','));
+check('増減の表に、本体の難易度がすべて載っている',
+  [...difficultyOrderFrom('DIFFICULTY_SETTINGS'), ...difficultyOrderFrom('QUICK_EXTREME_SETTINGS')]
+    .every(d => DELTA[d] !== undefined),
+  [...difficultyOrderFrom('DIFFICULTY_SETTINGS'), ...difficultyOrderFrom('QUICK_EXTREME_SETTINGS')]
+    .filter(d => DELTA[d] === undefined).join(',') || '');
+const notMonotonic = [];
+for (const id of ENEMY_ORDER) {
+  for (let i = 1; i < sortedDiffs.length; i += 1) {
+    const prev = api.tacticsEnemyActionIds(id, sortedDiffs[i - 1]).length;
+    const now = api.tacticsEnemyActionIds(id, sortedDiffs[i]).length;
+    if (now < prev) notMonotonic.push(`${id}:${sortedDiffs[i - 1]}(${prev})→${sortedDiffs[i]}(${now})`);
+  }
+}
+check('難易度が上がって技が減ることはない', notMonotonic.length === 0, notMonotonic.slice(0, 3).join(' '));
+const easiest = sortedDiffs[0], hardest = sortedDiffs[sortedDiffs.length - 1];
+check('いちばん易しい難易度より、いちばん難しい難易度のほうが技が多い敵がいる',
+  ENEMY_ORDER.some(id => api.tacticsEnemyActionIds(id, hardest).length > api.tacticsEnemyActionIds(id, easiest).length),
+  `${easiest} → ${hardest}`);
+// ★1本も無いと、通常攻撃とためるだけになってこのモードの読み合いが消える
+const emptyOnes = ENEMY_ORDER.flatMap(id => sortedDiffs
+  .filter(d => api.tacticsEnemyActionIds(id, d).length < 1).map(d => `${id}:${d}`));
+check('どの難易度でも、その敵の技が最低1本は残る', emptyOnes.length === 0, emptyOnes.slice(0, 3).join(' '));
+// ★減らすときに咆哮・再生だけが残ると、易しい難易度ほど「敵が何もしてこない」ように見える
+const noAttack = ENEMY_ORDER.flatMap(id => sortedDiffs
+  .filter(d => !api.tacticsEnemyActionIds(id, d).some(a => ATTACK_ACTION_IDS.includes(a))).map(d => `${id}:${d}`));
+check('どの難易度でも、殴ってくる技が1つは残る', noAttack.length === 0, noAttack.slice(0, 3).join(' '));
+check('減らすときに先に落とすのは、殴ってこない技',
+  api.TACTICS_SUPPORT_ACTION_IDS.every(a => !ATTACK_ACTION_IDS.includes(a)),
+  api.TACTICS_SUPPORT_ACTION_IDS.join(','));
+// 増やす順には6技すべてが入っていること(抜けがあると、その技は一生増えない)
+check('増やす順に6技すべてが入っている',
+  VARIANT_IDS.every(a => api.TACTICS_EXTRA_ACTION_ORDER.includes(a)),
+  api.TACTICS_EXTRA_ACTION_ORDER.join(','));
+// ★全体攻撃は増やす順のいちばん後ろ。早い段階で全員攻撃が来ると、受け方を1つずつ覚えられない
+check('全体攻撃は増やす順のいちばん後ろ',
+  api.TACTICS_EXTRA_ACTION_ORDER[api.TACTICS_EXTRA_ACTION_ORDER.length - 1] === 'allout');
+check('いちばん難しい難易度では、どの敵も6技すべてを使う',
+  ENEMY_ORDER.every(id => VARIANT_IDS.every(a => api.tacticsEnemyActionIds(id, hardest).includes(a))),
+  ENEMY_ORDER.filter(id => api.tacticsEnemyActionIds(id, hardest).length < VARIANT_IDS.length).join(','));
+check('難易度は敵そのものが持ち歩く(実戦とSCANでずれないため)',
+  has('    difficulty:safeDifficulty,'));
+check('実戦の行動表も難易度つきで引く',
+  has('definitions:enemyActionDefinitionsFor(runMode,enemy?.id,enemy?.difficulty)')
+    && has('definitions:enemyActionDefinitionsFor(runMode,newEnemy?.id,newEnemy?.difficulty)'));
 
 console.log(failed ? `\nNG ${failed}件` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
