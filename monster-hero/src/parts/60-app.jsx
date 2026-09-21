@@ -3890,7 +3890,13 @@ function MonsterHeroGame() {
       if (autoBattleRef.current) return bgmArrangement.autoBattle;
       // 種族チャレンジはモードで1つに決める。EXTREME以上の難易度で遊んでも、
       // BGMアレンジの「種族」タブで選んだ曲がそのまま鳴る(設定したのに効かない枠を作らない)
-      const modeBgm = isSpeciesChallengeMode(runMode)
+      // ★タクティクスをいちばん先に見る。タクティクスの種族チャレンジ・プロは
+      //   isSpeciesChallengeMode / isProMode にも当たるので、後ろに置くとそちらへ落ちる。
+      //   ボス戦だけ専用曲で、通常戦とデュラハン戦はチャレンジと同じものを鳴らす
+      //   (2026-09-21 ユーザー指示「曲数が足りないからボス戦だけいれよう」)
+      const modeBgm = isTacticsMode(runMode)
+        ? { normal:'battle', dullahan:'dullahan', moo:'tacticsBoss' }
+        : isSpeciesChallengeMode(runMode)
         ? { normal:'speciesBattle', dullahan:'speciesDullahan', moo:'speciesMoo' }
         : extremeRunRef.current
         ? { normal:'extremeBattle', dullahan:'extremeDullahan', moo:'extremeMoo' }

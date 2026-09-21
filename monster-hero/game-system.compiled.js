@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 09061b7ccb77f120
+// source-sha256: 999933957ee25d55
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 678ca96af9d02927
+// generated-sha256: 8498b9cb354ab99c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-21 15:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-21 16:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5057,6 +5057,19 @@ const BGM_TRACKS = [{
   gain: 1,
   loop: true
 },
+// タクティクスバトルのボス戦用。ユーザーから受け取った1曲で、通常戦とデュラハン戦は
+// 曲数が足りないのでチャレンジと同じものを鳴らす(2026-09-21 ユーザー指示
+// 「曲数が足りないからボス戦だけいれよう」)。
+// ★曲の一覧(BGMアレンジの選択肢)は公開前でも全部出るので、**名前にモード名を入れない**。
+//   「タクティクス ボステーマ」にすると、まだ見せていないモードの名前がそこから見えてしまう
+{
+  id: 'tactics_boss',
+  name: '決戦テーマ',
+  creator: 'オリジナル',
+  src: 'audio/bgm-tactics-boss.mp3',
+  gain: 1,
+  loop: true
+},
 // プロモードの戦闘用
 {
   id: 'original_pro_battle_01',
@@ -5715,6 +5728,7 @@ const DEFAULT_BGM_ARRANGEMENT = Object.freeze({
   speciesBattle: 'original_battle',
   speciesDullahan: 'original_dullahan',
   speciesMoo: 'original_boss',
+  tacticsBoss: 'tactics_boss',
   autoBattle: 'monster_hero_theme',
   autoVictoryJingle: 'off',
   autoPostWaveBgm: 'off',
@@ -5754,6 +5768,13 @@ const BGM_BATTLE_MODE_TABS = Object.freeze([{
   id: 'species',
   label: '種族',
   items: [['speciesBattle', '通常戦 BGM'], ['speciesDullahan', 'デュラハン戦 BGM'], ['speciesMoo', 'ムー戦 BGM']]
+}] : []),
+// タクティクスは**ボス戦だけ**専用の枠。通常戦とデュラハン戦はチャレンジの設定をそのまま使う
+// (曲数が足りないため。枠だけ作ると「選べるのに同じ曲しかない」ことになる)
+...(TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE ? [{
+  id: 'tactics',
+  label: 'タクティクス',
+  items: [['tacticsBoss', 'ボス戦 BGM']]
 }] : [])]);
 const BGM_ARRANGEMENT_LEGACY_FALLBACK = Object.freeze({
   quickMoo: 'boss',
@@ -5996,6 +6017,7 @@ const Audio_ = (() => {
     "audio/bgm-six-eternel-remix-beat.mp3": "b1a024d5b16f",
     "audio/bgm-six-eternel-remix.mp3": "5f56c89739f8",
     "audio/bgm-six-eternel.mp3": "e26412179f3a",
+    "audio/bgm-tactics-boss.mp3": "1379eda5d8b0",
     "audio/bgm-the-city-beneath-the-comets.mp3": "900fda0dc05e",
     "audio/bgm-title-theme.mp3": "8af0684e79e7",
     "audio/bgm-title.mp3": "b7bdc68bb0c0",
@@ -46124,7 +46146,15 @@ function MonsterHeroGame() {
       if (autoBattleRef.current) return bgmArrangement.autoBattle;
       // 種族チャレンジはモードで1つに決める。EXTREME以上の難易度で遊んでも、
       // BGMアレンジの「種族」タブで選んだ曲がそのまま鳴る(設定したのに効かない枠を作らない)
-      const modeBgm = isSpeciesChallengeMode(runMode) ? {
+      // ★タクティクスをいちばん先に見る。タクティクスの種族チャレンジ・プロは
+      //   isSpeciesChallengeMode / isProMode にも当たるので、後ろに置くとそちらへ落ちる。
+      //   ボス戦だけ専用曲で、通常戦とデュラハン戦はチャレンジと同じものを鳴らす
+      //   (2026-09-21 ユーザー指示「曲数が足りないからボス戦だけいれよう」)
+      const modeBgm = isTacticsMode(runMode) ? {
+        normal: 'battle',
+        dullahan: 'dullahan',
+        moo: 'tacticsBoss'
+      } : isSpeciesChallengeMode(runMode) ? {
         normal: 'speciesBattle',
         dullahan: 'speciesDullahan',
         moo: 'speciesMoo'
