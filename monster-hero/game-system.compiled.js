@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 96f9e8f928ad7b9d
+// source-sha256: 2c7d0776eb76b159
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e3b4fad5b5563b47
+// generated-sha256: eecdf836dcb3dff3
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-21 13:07"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-21 13:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15914,11 +15914,13 @@ const ENEMY_ART_LAYOUT = {
     objectPosition: 'center 58%'
   },
   // 30%。斧が上へ伸びる
+  // ★覚醒ムーはクラシックのムーと同じ扱い。ボスだけは絵を高い解像度のまま置き(1024x598)、
+  //   表示のときに大きく拡大する。拡大率もムーとそろえてある
   AwakenedMoo: {
-    scanScale: 1.9,
-    waveDetailScale: 1.6,
-    objectPosition: 'center'
-  } // 21%。ボスなので大きく見せる
+    scanScale: 2.75,
+    waveDetailScale: 2,
+    objectPosition: 'center 48%'
+  }
 };
 const enemyArtStyle = (enemyId, context = 'scan') => {
   const layout = ENEMY_ART_LAYOUT[enemyId] || ENEMY_ART_LAYOUT.default;

@@ -28,6 +28,18 @@ FILL_ALL=1 node tools/image/cutout-enemy-art.js tools/art-sources/enemies-tactic
 | 4 | コイノボリ | `4-koinobori.jpg` | 160×153 | 58% |
 | 5 | デルピエロ | `5-delpiero.jpg` | 77×160 | 17% |
 | 6 | ドクドク | `6-dokudoku.jpg` | 160×121 | 54% |
+| 7 | ラミア | `7-lamia.jpg` | 118×160 | 27% |
+| 8 | ニャルラトホテプ | `8-nyarlathotep.jpg` | 160×157 | 44% |
+| 9 | スプラッター | `9-splatter.jpg` | 103×160 | 30% |
+| 10 | 覚醒ムー | `10-awakened-moo.jpg` | **1024×598** | ボス扱い |
+
+**覚醒ムーだけ長辺1024pxで置く。** クラシックのムー(1536×971)と同じ扱いで、
+表示のときに大きく拡大する(`ENEMY_ART_LAYOUT` の scanScale 2.75 / waveDetailScale 2)。
+160pxで置くと拡大したときに粗くなる。
+
+```
+LONG=1024 node tools/image/cutout-enemy-art.js tools/art-sources/enemies-tactics/10-awakened-moo.jpg monster-hero/images/enemies/awakened-moo.png
+```
 
 ## 大きさのそろえ方
 

@@ -15,7 +15,9 @@ const ENEMY_ART_LAYOUT = {
   Metalner:    { scanScale:1.1,  waveDetailScale:1.1,  objectPosition:'center' },      // 33%
   Delpiero:    { scanScale:1.4,  waveDetailScale:1.4,  objectPosition:'center 60%' },  // 17%。鎌が上へ伸びるので本体を下寄りに
   Splatter:    { scanScale:1.2,  waveDetailScale:1.2,  objectPosition:'center 58%' },  // 30%。斧が上へ伸びる
-  AwakenedMoo: { scanScale:1.9,  waveDetailScale:1.6,  objectPosition:'center' },      // 21%。ボスなので大きく見せる
+  // ★覚醒ムーはクラシックのムーと同じ扱い。ボスだけは絵を高い解像度のまま置き(1024x598)、
+  //   表示のときに大きく拡大する。拡大率もムーとそろえてある
+  AwakenedMoo: { scanScale:2.75, waveDetailScale:2,    objectPosition:'center 48%' },
 };
 const enemyArtStyle = (enemyId, context='scan') => {
   const layout=ENEMY_ART_LAYOUT[enemyId]||ENEMY_ART_LAYOUT.default;
