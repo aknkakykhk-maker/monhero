@@ -200,6 +200,17 @@ const seed = () => {
     // ---- ⑤ 超省エネでもモンビーへ行ける ----
     // 超省エネは画面ごと簡易表示へ差し替わる。入口を通常のバトル画面にしか置いていなかったため
     // 「超省エネではまだいけない」状態だった(2026-09-06・ユーザー報告)
+    //
+    // ★ここへ来た時点では、直前の往復チェックでモンビーにいる。
+    //   省エネボタンはバトル画面にしかないので、先にバトルへ戻す。
+    //   戻さずに探していたため「ボタンが見つからない」で2本とも落ち続けていた
+    //   (往復チェックを足したときに戻す手順を入れ忘れた。本体は壊れていない)
+    await page.evaluate(() => document.querySelector('[data-quick-run-progress-header] button, [data-quick-run-progress] button')?.click());
+    await page.waitForTimeout(400);
+    await clickSelector('[data-quick-run-progress-back]');
+    await page.waitForTimeout(2000);
+    check('超省エネを試す前に、バトル画面へ戻れている',
+      await page.evaluate(() => !!document.querySelector('button[aria-label^="AUTO"]')));
     const ecoLabel = () => page.evaluate(() => document.querySelector('button[aria-label^="省エネ"]')?.getAttribute('aria-label'));
     for (let i = 0; i < 4 && (await ecoLabel()) !== '省エネ 超'; i++) {
       await page.evaluate(() => document.querySelector('button[aria-label^="省エネ"]')?.click());
