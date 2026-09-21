@@ -32,11 +32,11 @@ const MOO_FULL = MOO_IMG_DATA;
 // ==================== タクティクスバトル専用の敵 ====================
 // クラシック・クイックの敵(上の10体)とは**別の並び**。絵の原本は
 // tools/art-sources/enemies-tactics/ にあり、切り抜きは tools/image/cutout-enemy-art.js が行う。
-const KAWAZUMO_IMG = "images/enemies/kawazumo.png?v=4213d0fa1e16";
-const METALNER_IMG = "images/enemies/metalner.png?v=7cc1833a311d";
-const INARI_IMG = "images/enemies/inari.png?v=cf0be14b7668";
-const KOINOBORI_IMG = "images/enemies/koinobori.png?v=eb880915278e";
-const DELPIERO_IMG = "images/enemies/delpiero.png?v=bd6c97d80d9d";
+const KAWAZUMO_IMG = "images/enemies/kawazumo.png?v=08c8b262b58f";
+const METALNER_IMG = "images/enemies/metalner.png?v=38cc7430f2c9";
+const INARI_IMG = "images/enemies/inari.png?v=ea15b3514b74";
+const KOINOBORI_IMG = "images/enemies/koinobori.png?v=7bb85f621400";
+const DELPIERO_IMG = "images/enemies/delpiero.png?v=da77811b0ed6";
 const DOKUDOKU_IMG = "images/enemies/dokudoku.png?v=726ce32b496f";
 const LAMIA_IMG = "images/enemies/lamia.png?v=020567f78d11";
 const NYARLATHOTEP_IMG = "images/enemies/nyarlathotep.png?v=1c06ecec5d28";

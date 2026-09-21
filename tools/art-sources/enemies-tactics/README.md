@@ -1,45 +1,45 @@
 # タクティクスバトル専用の敵 原本
 
-ユーザーから届いた**加工前のスクリーンショット**を置く。ここはゲームから読み込まない。
+ユーザーから届いた絵を置く。ここはゲームから読み込まない。
 
-切り抜き(背景を抜いて長辺160pxの透過PNGにする)は、次の道具が行う。
+**`.png` が正本**（ユーザーが透過して出し直したもの。2026-09-21〜）。
+**`.jpg` は透過前のスクリーンショット**で、それまで使っていた古い原本。
 
-```
-node tools/image/cutout-enemy-art.js tools/art-sources/enemies-tactics/1-kawazumo.jpg monster-hero/images/enemies/kawazumo.png
-```
-
-**イナリだけ `FILL_ALL=1` を付ける。** 顔と体がくっついていて、そのあいだに背景が見えていないため。
-付けないと、顎の下の白い毛が背景とまちがえられて横線が入る。
+入れ方は、正本のほうだけ覚えればよい。**背景は抜かない。大きさをそろえるだけ。**
 
 ```
-FILL_ALL=1 node tools/image/cutout-enemy-art.js tools/art-sources/enemies-tactics/3-inari.jpg monster-hero/images/enemies/inari.png
+node tools/image/prepare-enemy-art.js tools/art-sources/enemies-tactics/1-kawazumo.png monster-hero/images/enemies/kawazumo.png
 ```
 
 - ファイル名の先頭の数字は**WAVEの順番**。届いた順に増やす
-- 切り抜いた結果を `monster-hero/images/enemies/` へ置くのは、**データ(`TACTICS_ENEMY_DATA`)へ
+- 出した結果を `monster-hero/images/enemies/` へ置くのは、**データ(`TACTICS_ENEMY_DATA`)へ
   組み込むときだけ**。先に置くと `tools/image-asset-check.js` が「どこからも参照されていない絵」
   として落とす
+- 絵の実体を差し替えたら **`node tools/build.js` を通す**（キャッシュキーが変わらないと古い絵のまま出る）
 
-| WAVE | 名前 | 原本 | 切り抜き後 | 56px枠での面積 |
-| ---: | --- | --- | --- | ---: |
-| 1 | カワズモー | `1-kawazumo.jpg` | 160×142 | 40% |
-| 2 | メタルナー | `2-metalner.jpg` | 112×160 | 33% |
-| 3 | イナリ | `3-inari.jpg` | 66×160 | 29% |
-| 4 | コイノボリ | `4-koinobori.jpg` | 160×153 | 58% |
-| 5 | デルピエロ | `5-delpiero.jpg` | 77×160 | 17% |
-| 6 | ドクドク | `6-dokudoku.jpg` | 160×121 | 54% |
-| 7 | ラミア | `7-lamia.jpg` | 118×160 | 27% |
-| 8 | ニャルラトホテプ | `8-nyarlathotep.jpg` | 160×157 | 44% |
-| 9 | スプラッター | `9-splatter.jpg` | 103×160 | 30% |
-| 10 | 覚醒ムー | `10-awakened-moo.jpg` | **1024×598** | ボス扱い |
+| WAVE | 名前 | 原本 | 出したあと | 56px枠での面積 | 透過 |
+| ---: | --- | --- | --- | ---: | --- |
+| 1 | カワズモー | `1-kawazumo.png` | 160×144 | 42% | 済(ユーザー) |
+| 2 | メタルナー | `2-metalner.png` | 114×160 | 32% | 済(ユーザー) |
+| 3 | イナリ | `3-inari.png` | 68×160 | 30% | 済(ユーザー) |
+| 4 | コイノボリ | `4-koinobori.png` | 160×159 | 63% | 済(ユーザー) |
+| 5 | デルピエロ | `5-delpiero.png` | 111×160 | 28% | 済(ユーザー) |
+| 6 | ドクドク | `6-dokudoku.jpg` | 160×121 | 54% | こちらで抜いた(要差し替え) |
+| 7 | ラミア | `7-lamia.jpg` | 118×160 | 27% | こちらで抜いた(要差し替え) |
+| 8 | ニャルラトホテプ | `8-nyarlathotep.jpg` | 160×157 | 44% | こちらで抜いた(要差し替え) |
+| 9 | スプラッター | `9-splatter.jpg` | 103×160 | 30% | こちらで抜いた(要差し替え) |
+| 10 | 覚醒ムー | `10-awakened-moo.jpg` | **1024×598** | ボス扱い | こちらで抜いた(要差し替え) |
 
 **覚醒ムーだけ長辺1024pxで置く。** クラシックのムー(1536×971)と同じ扱いで、
 表示のときに大きく拡大する(`ENEMY_ART_LAYOUT` の scanScale 2.75 / waveDetailScale 2)。
 160pxで置くと拡大したときに粗くなる。
 
 ```
-LONG=1024 node tools/image/cutout-enemy-art.js tools/art-sources/enemies-tactics/10-awakened-moo.jpg monster-hero/images/enemies/awakened-moo.png
+LONG=1024 node tools/image/prepare-enemy-art.js tools/art-sources/enemies-tactics/10-awakened-moo.png monster-hero/images/enemies/awakened-moo.png
 ```
+
+> 覚醒ムーを出し直してもらうときは、**長辺1024px以上で**お願いする。160pxで受け取ると
+> 2.75倍に拡大したときに粗くなる。ほかの9体は大きさを問わない（こちらで160pxへそろえる）。
 
 ## ⚠ 透過はこちらでやらない（2026-09-21 ユーザー指摘「透過精度が悪すぎる」）
 
@@ -85,5 +85,11 @@ node tools/image/enemy-art-size-report.js <切り抜いたPNG> …
 外れたものだけ `ENEMY_ART_LAYOUT`（`22-enemy-and-bond-entries.jsx`）の `scanScale` /
 `waveDetailScale` で持ち上げる。ムーが 2.75 倍で入っているのと同じ仕組み。
 
-> 10体そろったら、実際のバトル画面に並べて見比べてから値を決める。
-> 数字だけで決めると、枠からはみ出して隣と重なることがある。
+**数字だけで決めない。** 10体を並べた画面を1枚に撮る道具がある。
+
+```
+node tools/mode/tactics-enemy-art-shot.js       # tools/out/tactics-enemy-art.png
+```
+
+絵を差し替えたら必ずこれで見る。数字だけで決めると、枠からはみ出して隣と重なることがある。
+「1体だけ小さい／大きい」「輪郭が白く光っている」「体の一部が欠けている」は、ここで見つける。
