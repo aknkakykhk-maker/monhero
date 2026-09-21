@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1d42d97ac826a815
+// source-sha256: 0a29e371f4f68898
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a9c0c2c40bc423c6
+// generated-sha256: 732ad6552af76617
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-21 20:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-21 20:44"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6060,7 +6060,7 @@ const Audio_ = (() => {
     "audio/bgm-home-ichika.mp3": "29295336d1af",
     "audio/bgm-kaze-ga-soyogu-basho.mp3": "9cc789151e7e",
     "audio/bgm-kindan-no-resistance.mp3": "efca5c01d0b7",
-    "audio/bgm-makutsu-no-senritsu.mp3": "a265e67e72d4",
+    "audio/bgm-makutsu-no-senritsu.mp3": "8db199451f0b",
     "audio/bgm-market.mp3": "a85ba65f90e7",
     "audio/bgm-menu.mp3": "a6aef603fd6a",
     "audio/bgm-monster-hero-theme-alt.mp3": "6b4eb065c2e2",
@@ -6074,7 +6074,7 @@ const Audio_ = (() => {
     "audio/bgm-pro-battle-02.mp3": "f572c81a9ef6",
     "audio/bgm-profile.mp3": "523789845ff1",
     "audio/bgm-result.mp3": "c4dc9d2fb8a5",
-    "audio/bgm-senjou-no-shippuu.mp3": "d1daba984e8e",
+    "audio/bgm-senjou-no-shippuu.mp3": "dfcd5d833fec",
     "audio/bgm-six-eternel-beat.mp3": "151f94091a34",
     "audio/bgm-six-eternel-remix-beat.mp3": "b1a024d5b16f",
     "audio/bgm-six-eternel-remix.mp3": "5f56c89739f8",
@@ -45240,6 +45240,11 @@ function MonsterHeroGame() {
   //  ・WAVEを終えたあと(リザルト〜次のバトルの直前)   … リザルトの曲をそのまま続ける
   // 敵撃破のファンファーレのあと、リザルトの曲が強化フェーズまで途切れず流れるようにするための切り分け
   const RUN_PHASE_STATES = ['PICK_HERO', 'PICK_ALLY', 'PICK_SLOT', 'PICK_TEACHING', 'PICK_PRO_ALLIES', 'REWARD_PICK', 'UPGRADE_SKILL', 'WAVE_RESULT', 'CHAMPION', 'QUICK_GROWTH', 'QUICK_JOIN'];
+  // ★バトルへ向かう画面。ここにいるあいだに、これから鳴る通常戦の曲を読んでおく。
+  //   曲は「開いたときに初めて読む」ので、押してから読み始めると、その曲が大きいほど
+  //   鳴り出しが遅れる(2026-09-21・ユーザー報告「通常バトル曲のBGMの入りが遅い」)。
+  //   クラシックのバトルテーマは0.5MBで気づかなかったが、タクティクスの通常戦は2.3MBある。
+  const BGM_PRELOAD_BATTLE_STATES = ['BATTLE_MENU', 'BATTLE_MODE_SELECT', 'BATTLE_DIFFICULTY_SELECT', 'EXTREME_DIFFICULTY_SELECT', 'SPECIES_CHALLENGE_SELECT', 'SKIP_PICK', 'PICK_HERO', 'PICK_ALLY', 'PICK_SLOT', 'PICK_TEACHING', 'PICK_PRO_ALLIES', 'QUICK_GROWTH', 'QUICK_JOIN', 'REWARD_PICK', 'UPGRADE_SKILL', 'WAVE_RESULT'];
   // ===== 縦向きでしか作っていない画面 =====
   // 横画面での作りは、いまのところ3通りある。
   //   ① 一覧を持つ画面 … data-mh-screen の骨組みに乗っていて、
@@ -46339,6 +46344,23 @@ function MonsterHeroGame() {
     }
     return null;
   };
+  // 【次に鳴る曲を、鳴り出す前に読んでおく】
+  // 曲は開いたときに初めて読むので、押してから読み始めると、その曲が大きいほど鳴り出しが遅れる。
+  // バトルへ向かう画面にいるあいだ(編成・難易度えらび)と、曲が変わるWAVEのひとつ手前で読んでおく。
+  // ★返すのは「読んでおく曲」だけ。鳴らす曲を決めるのは今までどおり bgmKeyForState。
+  // ★allowKeep を false で呼ぶ(「直前の曲を続ける」は読む対象にならない)。
+  //   __silence_bgm__ のような合図も、曲ではないのでここで落とす
+  const bgmPreloadKeys = (state, currentWave) => {
+    const keys = [];
+    const add = key => {
+      if (typeof key === 'string' && key && !key.startsWith('__') && !keys.includes(key)) keys.push(key);
+    };
+    if (BGM_PRELOAD_BATTLE_STATES.includes(state)) add(bgmKeyForState('BATTLE', 1, null, false, false, false));
+    // WAVE9は中ボス戦、WAVE10はボス戦で曲が変わる。そのひとつ手前のWAVEで読んでおく
+    const w = Number(currentWave);
+    if (state === 'BATTLE' && Number.isFinite(w) && w >= 8 && w < 10) add(bgmKeyForState('BATTLE', w + 1, null, false, false, false));
+    return keys;
+  };
   // BGM: 画面遷移に応じて自動切替(曲はaudio/のmp3。画面に応じて必要な曲だけ読み込む)
   useEffect(() => {
     // 専用sourceの開始・停止はRhythmTapTestが管理する。通常BGM effectから触ると二重再生や途中停止になる。
@@ -46351,6 +46373,9 @@ function MonsterHeroGame() {
       key = bgmKeyForState(gameState, wave, enemy?.id, (waveHistory || []).length > 0, hp <= 0 || gaveUp, false);
     }
     bgmSuspendedByRhythmRef.current = rhythmScreenOpen;
+    // ★次に鳴る曲も読んでおく。AUTO中の「直前の曲を続ける」で下のreturnへ入る場面でも
+    //   読んでおきたいので、鳴らす処理より先に呼ぶ
+    bgmPreloadKeys(gameState, wave).forEach(next => Audio_.preloadBGM(next));
     // AUTO中のWAVE後は曲を止めたり差し替えたりせず、直前の戦闘BGMをそのまま継続する。
     if (key === '__keep_battle_bgm__') {
       if (!audioOn) Audio_.stopBGM();

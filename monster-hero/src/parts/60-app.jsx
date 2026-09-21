@@ -3046,6 +3046,11 @@ function MonsterHeroGame() {
   //  ・WAVEを終えたあと(リザルト〜次のバトルの直前)   … リザルトの曲をそのまま続ける
   // 敵撃破のファンファーレのあと、リザルトの曲が強化フェーズまで途切れず流れるようにするための切り分け
   const RUN_PHASE_STATES = ['PICK_HERO','PICK_ALLY','PICK_SLOT','PICK_TEACHING','PICK_PRO_ALLIES','REWARD_PICK','UPGRADE_SKILL','WAVE_RESULT','CHAMPION','QUICK_GROWTH','QUICK_JOIN'];
+  // ★バトルへ向かう画面。ここにいるあいだに、これから鳴る通常戦の曲を読んでおく。
+  //   曲は「開いたときに初めて読む」ので、押してから読み始めると、その曲が大きいほど
+  //   鳴り出しが遅れる(2026-09-21・ユーザー報告「通常バトル曲のBGMの入りが遅い」)。
+  //   クラシックのバトルテーマは0.5MBで気づかなかったが、タクティクスの通常戦は2.3MBある。
+  const BGM_PRELOAD_BATTLE_STATES = ['BATTLE_MENU','BATTLE_MODE_SELECT','BATTLE_DIFFICULTY_SELECT','EXTREME_DIFFICULTY_SELECT','SPECIES_CHALLENGE_SELECT','SKIP_PICK','PICK_HERO','PICK_ALLY','PICK_SLOT','PICK_TEACHING','PICK_PRO_ALLIES','QUICK_GROWTH','QUICK_JOIN','REWARD_PICK','UPGRADE_SKILL','WAVE_RESULT'];
   // ===== 縦向きでしか作っていない画面 =====
   // 横画面での作りは、いまのところ3通りある。
   //   ① 一覧を持つ画面 … data-mh-screen の骨組みに乗っていて、
@@ -3962,6 +3967,21 @@ function MonsterHeroGame() {
     }
     return null;
   };
+  // 【次に鳴る曲を、鳴り出す前に読んでおく】
+  // 曲は開いたときに初めて読むので、押してから読み始めると、その曲が大きいほど鳴り出しが遅れる。
+  // バトルへ向かう画面にいるあいだ(編成・難易度えらび)と、曲が変わるWAVEのひとつ手前で読んでおく。
+  // ★返すのは「読んでおく曲」だけ。鳴らす曲を決めるのは今までどおり bgmKeyForState。
+  // ★allowKeep を false で呼ぶ(「直前の曲を続ける」は読む対象にならない)。
+  //   __silence_bgm__ のような合図も、曲ではないのでここで落とす
+  const bgmPreloadKeys = (state, currentWave) => {
+    const keys = [];
+    const add = (key) => { if (typeof key === 'string' && key && !key.startsWith('__') && !keys.includes(key)) keys.push(key); };
+    if (BGM_PRELOAD_BATTLE_STATES.includes(state)) add(bgmKeyForState('BATTLE', 1, null, false, false, false));
+    // WAVE9は中ボス戦、WAVE10はボス戦で曲が変わる。そのひとつ手前のWAVEで読んでおく
+    const w = Number(currentWave);
+    if (state === 'BATTLE' && Number.isFinite(w) && w >= 8 && w < 10) add(bgmKeyForState('BATTLE', w + 1, null, false, false, false));
+    return keys;
+  };
   // BGM: 画面遷移に応じて自動切替(曲はaudio/のmp3。画面に応じて必要な曲だけ読み込む)
   useEffect(() => {
     // 専用sourceの開始・停止はRhythmTapTestが管理する。通常BGM effectから触ると二重再生や途中停止になる。
@@ -3974,6 +3994,9 @@ function MonsterHeroGame() {
       key = bgmKeyForState(gameState, wave, enemy?.id, (waveHistory||[]).length > 0, hp <= 0 || gaveUp, false);
     }
     bgmSuspendedByRhythmRef.current = rhythmScreenOpen;
+    // ★次に鳴る曲も読んでおく。AUTO中の「直前の曲を続ける」で下のreturnへ入る場面でも
+    //   読んでおきたいので、鳴らす処理より先に呼ぶ
+    bgmPreloadKeys(gameState, wave).forEach((next) => Audio_.preloadBGM(next));
     // AUTO中のWAVE後は曲を止めたり差し替えたりせず、直前の戦闘BGMをそのまま継続する。
     if (key === '__keep_battle_bgm__') {
       if (!audioOn) Audio_.stopBGM();
