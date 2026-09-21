@@ -127,8 +127,18 @@ function RewardPickScreen({
     const downedSlots=tacticsMode
       ? tacticsUnits.map((unit,index)=>(unit&&unit.downed?index:-1)).filter(index=>index>=0) : [];
     const picksOf=(slotIdx)=>trainingPicks.filter(entry=>entry&&entry.slot===slotIdx).map(entry=>entry.id);
+    // ★まだ選び終わっていない子を指す。全員ぶん終わったら **最後の子を指したまま** 留まる。
+    //   null へ落とすと、決定を押すまでのあいだ下の欄が baseStats のフォールバック
+    //   (パーティ合計のライフ・ガッツ)へ戻り、選んだぶんの変化も消えてしまう
+    //   (2026-09-22 ユーザー指摘「トレーニングを2回め選ぶとステがもとに戻る」)
+    const pendingSlot=tacticsMode
+      ? trainableSlots.find(index=>picksOf(index).length<TRAINING_PICK_COUNT) : undefined;
     const currentSlot=tacticsMode
-      ? (trainableSlots.find(index=>picksOf(index).length<TRAINING_PICK_COUNT)??null) : null;
+      ? (pendingSlot!==undefined ? pendingSlot
+        : (trainableSlots.length ? trainableSlots[trainableSlots.length-1] : null)) : null;
+    // カードを押せるのは「まだ選び終わっていない子」がいるときだけ。指す先を残しても、
+    // 選び終わった子へ3つ目を積めてしまってはいけない
+    const pickable=!tacticsMode||pendingSlot!==undefined;
     const currentUnit=currentSlot!=null?tacticsUnits[currentSlot]:null;
     const currentName=currentSlot!=null
       ? (slots?.[currentSlot]?.masuName||slots?.[currentSlot]?.name||`${currentSlot+1}番目の子`) : '';
@@ -158,7 +168,7 @@ function RewardPickScreen({
         </div>
         {/* 「4種類から2つ選ぶ」ことと、いま何回選んだかを一目で分かるようにする */}
         <div className="mt-1.5 flex items-center justify-center gap-2">
-          <span className="text-[10px] font-black text-slate-300">{tacticsMode?`${currentName||'全員'}のトレーニング`:'4種類から2つ選ぶ'}</span>
+          <span className="text-[10px] font-black text-slate-300">{tacticsMode?(pickable?`${currentName||'全員'}のトレーニング`:'全員ぶん決まりました'):'4種類から2つ選ぶ'}</span>
           <span className="flex items-center gap-1">
             {Array.from({length:TRAINING_PICK_COUNT}).map((_,i)=>(
               <i key={i} className={`block rounded-full ${i<activePicks.length?'bg-amber-400':'bg-slate-700'}`} style={{width:'9px',height:'9px'}}/>
@@ -182,7 +192,7 @@ function RewardPickScreen({
       <div className="shrink-0 w-full max-w-sm my-2 text-left"><AssistantBubble scene="rewardPick" compact/></div>
       {/* いま選んでいるぶんを反映した4ステータス。選ぶ前は現在値だけ、選ぶと増える量も出る。
           各項目のカードは自分のステータスしか出さないので、ここで全体を見比べられるようにする */}
-      <div className="shrink-0 w-full max-w-sm rounded-2xl border border-white/10 bg-slate-900/60 px-2 py-1.5 mb-2" data-training-status>
+      {(!tacticsMode||currentUnit)&&<div className="shrink-0 w-full max-w-sm rounded-2xl border border-white/10 bg-slate-900/60 px-2 py-1.5 mb-2" data-training-status>
         <div className="text-[8px] font-black tracking-widest text-slate-500 text-left mb-1">現在のステータス{trainingPicks.length>0&&<span className="text-amber-300">（選択中の変化）</span>}</div>
         <div className="grid grid-cols-4 gap-1">
           {TRAINING_OPTIONS.map(option=>{
@@ -199,7 +209,7 @@ function RewardPickScreen({
             );
           })}
         </div>
-      </div>
+      </div>}
       {/* 4項目。1画面に収めるため2列2行。空きがあればカードが伸びて画面を埋める。
           同じ項目をもう一度タップすると2回目として積める */}
       <div className={`w-full max-w-sm grid grid-cols-2 grid-rows-2 gap-2 flex-1 min-h-0 overflow-y-auto mh-scroll${battleTutorialSpotClass('rewards')}`}>
@@ -210,10 +220,10 @@ function RewardPickScreen({
           const after=resolveTrainingStep(current,option.id,waveResult?.turn,specialRule)[option.stat];
           const full=remaining<=0;
           return (
-            <button key={option.id} type="button" disabled={full||!!effect||(tacticsMode&&currentSlot==null)}
+            <button key={option.id} type="button" disabled={full||!!effect||!pickable}
               onClick={()=>setTrainingPicks(prev=>{
                 if(!tacticsMode) return prev.length>=TRAINING_PICK_COUNT?prev:[...prev,option.id];
-                if(currentSlot==null) return prev;
+                if(!pickable||currentSlot==null) return prev;
                 if(prev.filter(entry=>entry&&entry.slot===currentSlot).length>=TRAINING_PICK_COUNT) return prev;
                 return [...prev,{slot:currentSlot,id:option.id}];
               })}
