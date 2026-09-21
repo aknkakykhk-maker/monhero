@@ -14,7 +14,10 @@ const slice=(from,to)=>{const a=source.indexOf(from),b=source.indexOf(to,a);if(a
 const sandbox={DIFFICULTY_SETTINGS:{},RANGE_LABELS:['零','近','中','遠'],QUICK_GROWTH_MULT:1.1,isQuickMode:()=>false,isProMode:()=>false,PRO_RANKING_PREFIX:'Pro',EXTREME_MODE:{id:'extreme'},console};
 vm.createContext(sandbox);
 vm.runInContext([
-  "const BATTLE_MODE_CHALLENGE='challenge',BATTLE_MODE_QUICK='quick',BATTLE_MODE_PRO='pro',BATTLE_MODE_SPECIES_CHALLENGE='speciesChallenge';",
+  "const BATTLE_MODE_CHALLENGE='challenge',BATTLE_MODE_QUICK='quick',BATTLE_MODE_PRO='pro',BATTLE_MODE_SPECIES_CHALLENGE='speciesChallenge',"
+  + "BATTLE_MODE_TACTICS='tactics',BATTLE_MODE_TACTICS_SPECIES='tacticsSpecies',BATTLE_MODE_TACTICS_PRO='tacticsPro';"
+  // この検査は極限チャレンジのぶんだけを見る。タクティクス側の分岐は通らない
+  + "const isTacticsMode=()=>false,isSpeciesChallengeMode=(m)=>m===BATTLE_MODE_SPECIES_CHALLENGE;",
   slice('const EXTREME_DIFFICULTIES = Object.freeze([','// ===== トレーニング'),
   slice('const TRAINING_PICK_COUNT','// 極限チャレンジの説明には'),
   slice('const EXTREME_RANKING_PREFIX','// ランキングの難易度キーから'),
@@ -84,7 +87,10 @@ check('複合特殊ルールありと出す',G('extremeRuleSummaryText')('RAGNAR
 
 // 本体側の接続。難易度名ではなく「段階/不死を持っているか」で分岐していること
 check('敵生成は段階倍率を掛けて1つの経路で作る',source.includes('const stagedEnemyMultiplier=extremeWaveEnemyMultiplier(specialRuleDifficulty,w);')
-  &&source.includes('createBattleEnemy(w,difficulty,forcedEnemyKey,battleSetting?.power??null,enemyTurnMultiplier*stagedEnemyMultiplier)'));
+  // ★タクティクスバトルは供モンの総合力ぶんの倍率も同じ1か所で掛ける(2026-09-20)。
+  //   既存モードでは tacticsEnemyBoost が 1 になるので、敵の強さは変わらない
+  &&source.includes('createBattleEnemy(w,difficulty,forcedEnemyKey,battleSetting?.power??null,enemyTurnMultiplier*stagedEnemyMultiplier*tacticsEnemyBoost)')
+  &&(source.match(/createBattleEnemy\(w,difficulty,forcedEnemyKey/g)||[]).length===1);
 check('消費ガッツ・与ダメ・適性は段階の有無で分岐する',source.includes("if(extremeWaveStage(specialRuleDifficulty))return Math.floor(cost*effectiveExtremeSpecialRule(specialRuleDifficulty,'gutsCost',wave)*soulGutsMultiplier);")
   &&source.includes('distanceBrokenDmg=applyExtremeStagedDamage(finalDmg,elapsedTotalTurns,slotIdx,ultimateDistanceBreakLevels,specialRuleDifficulty,wave,card.type);')
   &&source.includes('if(extremeWaveStage(specialRuleDifficulty)){const effectiveApt=getMonsterAptPct(m,specialRuleDifficulty,wave);'));

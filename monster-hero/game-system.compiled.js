@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2983b3c234139595
+// source-sha256: b8787b6d21133560
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f8601b6ca9c16038
+// generated-sha256: 43f2cb38d2050c0a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -49,6 +49,7 @@ const _ICON_PATHS = {
   Edit3: '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
   ArrowLeft: '<line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>',
   ArrowDownCircle: '<circle cx="12" cy="12" r="10"/><polyline points="8 12 12 16 16 12"/><line x1="12" y1="8" x2="12" y2="16"/>',
+  ArrowUpCircle: '<circle cx="12" cy="12" r="10"/><polyline points="16 12 12 8 8 12"/><line x1="12" y1="16" x2="12" y2="8"/>',
   Search: '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
   Layers: '<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>',
   AlertCircle: '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>',
@@ -126,6 +127,7 @@ const Heart = _icon('Heart'),
   Info = _icon('Info'),
   RefreshCcw = _icon('RefreshCcw'),
   ArrowDownCircle = _icon('ArrowDownCircle'),
+  ArrowUpCircle = _icon('ArrowUpCircle'),
   Coins = _icon('Coins'),
   ShoppingBag = _icon('ShoppingBag'),
   Gem = _icon('Gem'),
@@ -161,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-21 10:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-21 10:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -192,6 +194,34 @@ const BATTLE_MODE_QUICK = 'quick';
 // 種族チャレンジはデバッグのバトルモード入口だけに合流させる。
 // 通常プレイの公開配列には含めず、固定計画2/4では結果も保存しない。
 const BATTLE_MODE_SPECIES_CHALLENGE = 'speciesChallenge';
+// 敵が技を持ち、1ターン前の予告を読んで受け方を決めるモード。
+// 設計の正本: docs/spec/BATTLE_NEW_MODE_PLAN.md
+//
+// ★idは保存キー(mh_tactics_*)と全国ランキング(Tactics<難易度>)へ焼き付くので、公開後に変えない。
+//   画面に出す名前はまだ決まっていないため label は仮のまま置く
+//   (idと表示名は一致していなくてよい。プロ=pro のように揃っているのは結果であって決まりではない)。
+// ★BATTLE_MODES へは入れない。極限チャレンジ・種族チャレンジと同じく外に置き、
+//   モード選択の一覧で公開フラグ付きに合流させる
+//   (既存3モードの「同じ見出しを同じ順で並べる」検査と、公開配列の作り方を壊さないため)。
+const BATTLE_MODE_TACTICS = 'tactics';
+// タクティクスバトルの中のモード。クラシックバトルの「チャレンジ／種族チャレンジ／プロ」と
+// 同じ並びを、盤面がタクティクスの側にも用意する(2026-09-20 ユーザー指示
+// 「通常/極限、種族とかはどっちのモードにもあるように」)。
+// ★idはどちらも保存キーとランキングへ焼き付く。公開後に変えない
+//   tacticsSpecies … mh_tactics_species_challenge_progress_v1 / TacticsSpecies-<血統>-<難易度>
+//   tacticsPro     … mh_tactics_pro_*                          / TacticsPro<難易度>
+const BATTLE_MODE_TACTICS_SPECIES = 'tacticsSpecies';
+const BATTLE_MODE_TACTICS_PRO = 'tacticsPro';
+// 盤面が「1体ずつライフを持つ」側のモード。バトルの中身の分岐(isTacticsMode)はこの3つ共通
+const TACTICS_BATTLE_MODES = Object.freeze([BATTLE_MODE_TACTICS, BATTLE_MODE_TACTICS_SPECIES, BATTLE_MODE_TACTICS_PRO]);
+// 難易度ごとの自己ベスト・クリア回数・最高到達WAVEを持つモード。
+// 種族チャレンジは「種族×難易度」で持つので、ここには入れない
+const TACTICS_SCORE_MODES = Object.freeze([BATTLE_MODE_TACTICS, BATTLE_MODE_TACTICS_PRO]);
+const EMPTY_TACTICS_RECORD = Object.freeze({
+  hs: Object.freeze({}),
+  clears: Object.freeze({}),
+  waves: Object.freeze({})
+});
 // 種族チャレンジを一般公開するかどうかの1つのスイッチ。
 // false のあいだは
 //   ・通常プレイのBATTLE MODEへ出さない(デバッグのバトルモード入口からだけ見える)
@@ -201,6 +231,27 @@ const BATTLE_MODE_SPECIES_CHALLENGE = 'speciesChallenge';
 // 2026年8月にユーザーの指示で公開した。実装側から勝手に false へ戻さない
 // (戻すと、すでに遊んだ人の全国ランキングだけが止まる)。
 const SPECIES_CHALLENGE_PUBLIC_RELEASE = true;
+// 新モードを一般公開するかどうかの1つのスイッチ。種族チャレンジとまったく同じ作り。
+// false のあいだは
+//   ・モード選択へ出さない(デバッグのバトルモード入口からだけ見える)
+//   ・クリアしても全国ランキングへ送らない
+// 画面に出す名前が決まり、敵の行動と供モン加入の調整が入ってから true にする。
+// 一度 true にしたあとは、実装側から勝手に false へ戻さない
+// (戻すと、すでに遊んだ人の全国ランキングだけが止まる)。
+const TACTICS_MODE_PUBLIC_RELEASE = false;
+// タクティクスバトルの公開は2段階。β版では**タクティクスプロだけ**遊べるようにする
+// (2026-09-20 ユーザー指示「公開の前にβ版としてプロモードだけ出来るようにして」)。
+// true のあいだは
+//   ・モンヒロバトルの入口にタクティクスバトルが出る(「β版」と分かるように出す)
+//   ・中に3つのカードが並び、遊べるのはタクティクスプロだけ。ほかの2つは「準備中」
+//   ・タクティクスプロのスコアは**β版専用の行**(TacticsProBeta<難易度>)へ送る
+// 本公開(TACTICS_MODE_PUBLIC_RELEASE)を立てると、3モードすべてが遊べるようになり、
+// ランキングも TacticsPro<難易度> へ切り替わるので、本番の順位は空から始まる。
+// ★β版の行は消さない。モンヒロビートの週間ランキングが週IDで区切るのと同じ考え方で、
+//   キーを変えるだけにしておく(消す作業はSupabaseの管理接続が要るうえ、戻せない)。
+// 一度 true にしたあとは、実装側から勝手に false へ戻さない
+// (戻すと、すでに遊んだ人の全国ランキングだけが止まる)。
+const TACTICS_BETA_PRO_RELEASE = false;
 // 解放条件。チャレンジモードで Master / Grand Master / Hell / Legend のどれかを1回以上
 // クリアしていること。判定には既存の mh_clears_<難易度> をそのまま読むので、新しい解放フラグは
 // 作らない(旧セーブのプレイヤーもログインした時点で解放済みとして扱われる)。
@@ -219,6 +270,45 @@ const SPECIES_CHALLENGE_MODE = Object.freeze({
   tagline: 'ひとつの種族だけで挑む、しばりプレイのモード',
   highlights: [['🧬', 'ひとつの種族だけでWAVE1〜10'], ['🔓', '種族ごとに難易度を解放していく'], ['🏅', '記録は種族ごとに別々に残る']],
   points: [['🧬', 'どんなモード', '挑む前に種族(モッチー種・ピクシー種など)をひとつ選び、その種族だけでWAVE1〜10を戦い抜くモードです。使えるモンスターが限られるぶん、その種族をどこまで育てているかがそのまま結果に出ます。'], ['⚔️', '編成', '勇者モン1体と供モン最大3体で挑みます。選べるのは、その種族の解放済みベースモンと所持マスモンだけです。ふだんの編成と同じで同じモンスターは勇者・供モンを通して1体まで(重複不可)ですが、同じ種族の別のモンスターなら一緒に連れていけます(モッチー種ならモッチーとミタラシなど)。そのため実際に選べる供モンの数は、その種族のモンスターの種類によって0〜3体で変わります。供モン0体のまま挑むこともできます。'], ['🤝', '供モンの加入', '事前に選んだ供モンは、最初から全員いるわけではありません。WAVE2・4・6をクリアしたとき、まだ加入していない供モンから1体を選んで加えます。誰をいつ加えるかは、その場で決められます。'], ['👹', '難しさ', '難易度は14段階です。Beginner〜Expertは最初から挑めます。Master以降は、同じ種族で1つ前の難易度をクリアすると順に解放されます。ある種族で進めても、ほかの種族の解放には影響しません。'], ['🔥', '上位の難易度', 'EXTREME以上では、極限チャレンジと同じ特殊ルールがそのまま適用されます。敵の強さや報酬の倍率も極限チャレンジと同じ設定です。'], ['💎', 'もらえるもの', '経験値・ダイヤは難易度の設定どおりです。加えて、種族と難易度の組み合わせごとに初回クリア報酬があります。'], ['🏅', '記録', '自己ベストスコア・最短クリアターン・クリア回数は、種族と難易度の組み合わせごとに別々に残ります。同じ難易度でも種族が違えば別の記録です。チャレンジモードの自己ベストや最高到達WAVEは書き換わりません。'], ['⭐', 'マスモン登録', '勇者モンにした子は、プレイが終わったあとマスモンとして登録できます。チャレンジモードと同じです。'], ['⏩', 'スキップチケット', '使えません。スコアを競うモードなので、戦わずに報酬だけ取れないようにしています。'], ['🔁', 'AUTO', 'AUTOでの自動戦闘は使えます。ただしクリア後にそのまま次の周へ入る「AUTO∞」は使えません。挑むたびに種族・難易度・編成を選び直すモードのためです。'], ['🎯', 'こんな人におすすめ', '特定の種族を集中して育てている人、いつもの編成とは違う制限つきの戦いを試したい人、種族ごとにやり込みたい人向けです。']]
+});
+// 新モードの表示情報。見出しの並びは既存3モード(BATTLE_MODES)とそろえてある。
+// ★2026-09-20 にユーザーが名前を決めた。仕組みが「タクティクスバトル」で、その中の
+//   ふつうのモードがこれ。クラシックバトル側の「チャレンジモード」と同じ位置づけだが、
+//   ランキングや記録で並んだときに見分けが付くよう「タクティクスチャレンジ」にしてある。
+// ★本文は公開時にそのまま出るプレイヤー向けの文にする。開発の進み具合はここへ書かない。
+const TACTICS_MODE = Object.freeze({
+  id: BATTLE_MODE_TACTICS,
+  label: 'タクティクスチャレンジ',
+  short: 'タクティクス',
+  emoji: '🎯',
+  color: '#fb923c',
+  tagline: '敵の技を読んで受け方を決める、対応力のモード',
+  highlights: [['🎯', '敵が技を使い分ける。予告を読んで受ける'], ['💎', '経験値・ダイヤは難易度どおり'], ['📊', 'このモード専用のスコアランキング']],
+  points: [['⚔️', '編成', 'ベースモンもマスモンも自由に連れていけます。勇者モン1体と供モンで挑みます。'], ['📈', 'WAVEのあいだの強化', 'チャレンジモードと同じで、WAVEをクリアするたびに強化フェーズがあります。敵がどんな技を使ってくるかを見てから、どこを伸ばすかを決められます。'], ['👹', '難しさ', '9段階の難易度から選べます。敵は通常攻撃と必殺技だけでなく、薙ぎ払い・連撃・貫通撃・咆哮など、それぞれ違う技を使ってきます。どの技が来るかは1ターン前に予告されるので、ガードで受けるか、間合いを変えるか、動きを止めるかをその場で選びます。'], ['💎', 'もらえる経験値とダイヤ', 'ブリーダー経験値・絆経験値・ダイヤは、どれも難易度の設定どおりの倍率です。モードによる上乗せはありません。'], ['🏆', 'スコアと記録', 'スコアはこのモード専用の全国ランキングに反映されます。自己ベストスコア・最高到達WAVE・クリア回数も専用の場所に残り、ほかのモードの記録は書き換わりません。'], ['🤝', '供モンの加入', '決まったWAVEで供モンが加わります。ただしこのモードでは、供モンが加わると そのぶん敵も強くなります。強く育てた子を連れていくほど敵も手ごわくなるので、少ない人数のまま進むという選び方もできます。'], ['⭐', 'マスモン登録', '勇者モンにした子は、プレイが終わったあとマスモンとして登録できます。'], ['⏩', 'スキップチケット', '使えません。スコアを競うモードなので、戦わずに報酬だけ取れないようにしています。'], ['🎯', 'こんな人におすすめ', '育成の数字だけでなく、その場の判断で勝ちたい人、いつもの押し切りが通じない戦いを試したい人向けです。']]
+});
+// タクティクスバトルの種族チャレンジ。しばりの中身はクラシックの種族チャレンジと同じで、
+// 違うのは盤面が「1体ずつライフを持つ」ことと、記録・ランキングが別枠になることだけ。
+const TACTICS_SPECIES_MODE = Object.freeze({
+  id: BATTLE_MODE_TACTICS_SPECIES,
+  label: 'タクティクス種族チャレンジ',
+  short: '種族',
+  emoji: '🧬',
+  color: '#67e8f9',
+  tagline: 'ひとつの種族だけで、1体ずつライフを持って挑む',
+  highlights: [['🧬', 'ひとつの種族だけでWAVE1〜10'], ['🎯', '敵の予告を読んで、誰を守るかを決める'], ['🏅', '記録は種族ごとに別々に残る']],
+  points: [['🧬', 'どんなモード', '挑む前に種族をひとつ選び、その種族だけでWAVE1〜10を戦い抜くモードです。クラシックバトルの種族チャレンジと同じしばりで、戦い方だけがタクティクスバトルになります。'], ['⚔️', '編成', '勇者モン1体と供モン最大3体で挑みます。選べるのは、その種族の解放済みベースモンと所持マスモンだけです。同じモンスターは1体までですが、同じ種族の別のモンスターなら一緒に連れていけます。'], ['❤️', 'ライフ', 'モンスターごとにライフを持ちます。倒れた子はその場では戦えなくなり、ライフが満タンまで戻ると立ち上がります。全員が倒れたときだけ負けです。'], ['🤝', '供モンの加入', '事前に選んだ供モンは、WAVE2・4・6をクリアしたときに1体ずつ加わります。加わるとそのぶん敵も強くなります。'], ['👹', '難しさ', '難易度は14段階です。最初の5段階は最初から挑めます。その先は、同じ種族で1つ前の難易度をクリアすると順に解放されます。'], ['💎', 'もらえるもの', '経験値・ダイヤは難易度の設定どおりです。加えて、種族と難易度の組み合わせごとに初回クリア報酬があります。'], ['🏅', '記録', '自己ベストスコア・最短クリアターン・クリア回数は、種族と難易度の組み合わせごとに別々に残ります。クラシックバトルの種族チャレンジの記録は書き換わりません。'], ['⭐', 'マスモン登録', '勇者モンにした子は、プレイが終わったあとマスモンとして登録できます。'], ['⏩', 'スキップチケット', '使えません。スコアを競うモードなので、戦わずに報酬だけ取れないようにしています。'], ['🎯', 'こんな人におすすめ', '特定の種族を育てている人で、押し切りではなく読み合いで勝ちたい人向けです。']]
+});
+// タクティクスバトルのプロモード。制約(ベースモンだけ)と倍率はクラシックのプロと同じで、
+// 戦い方と記録の置き場だけが違う。
+const TACTICS_PRO_MODE = Object.freeze({
+  id: BATTLE_MODE_TACTICS_PRO,
+  label: 'タクティクスプロ',
+  short: 'プロ',
+  emoji: '🎓',
+  color: '#f472b6',
+  tagline: 'ベースモンだけで、1体ずつライフを持って挑む',
+  highlights: [['🔥', '育てたマスモンなしで挑む実力勝負'], ['💎', '絆経験値3倍・ブリーダー経験値1.5倍'], ['📊', 'このモード専用のスコアランキング']],
+  points: [['⚔️', '編成', '育てたマスモンは1体も連れていけません。全員が素のベースモンです。積み上げたステータス・強化ポイント・固有技レベル・限界突破は、このモードでは一切使えません。'], ['❤️', 'ライフ', 'モンスターごとにライフを持ちます。倒れた子はその場では戦えなくなり、ライフが満タンまで戻ると立ち上がります。全員が倒れたときだけ負けです。'], ['📈', 'WAVEのあいだの強化', 'WAVEをクリアするたびに強化フェーズがあります。素の状態から始まるぶん、誰をどこまで伸ばすかの判断がそのまま結果に出ます。'], ['👹', '難しさ', '難易度は通常9段階と極限5段階です。敵は薙ぎ払い・連撃・貫通撃・咆哮などを使い分け、どの技が来るかは1ターン前に予告されます。育てた個体に頼れないぶん、読み合いの比重がいちばん大きいモードです。'], ['💎', 'もらえる経験値とダイヤ', '絆経験値が3倍、ブリーダー経験値が1.5倍になります（難易度の倍率にさらにかかります）。ダイヤとスコアの倍率は難易度の設定どおりです。'], ['🏆', 'スコアと記録', 'スコアはこのモード専用の全国ランキングに反映されます。自己ベスト・最高到達WAVE・クリア回数も専用の場所に残り、ほかのモードの記録は書き換わりません。'], ['🤝', '供モンの加入', '始める前に供モンの候補を5体選びます。実際に加入候補として出るのは、その5体からランダムに選ばれた3体です。加わるとそのぶん敵も強くなります。'], ['⭐', 'マスモン登録', '勇者モンにしたベースモンは、プレイが終わったあとマスモンとして登録できます。'], ['⏩', 'スキップチケット', '使えません。スコアを競うモードなので、戦わずに報酬だけ取れないようにしています。'], ['🎯', 'こんな人におすすめ', '育成の力を借りずに、その場の判断だけで勝ちたい人向けです。']]
 });
 // プロモード: ベースモンだけで挑み、新しいマスモンを育てる価値を高めたモード。
 // バトルの中身はチャレンジと同じで、違うのは「編成がベースモン限定」「経験値の倍率」
@@ -273,10 +363,16 @@ const resolveQuickGrowthStats = ({
   guts: Math.floor((Number(guts) || 0) * (1 + growthRate))
 });
 const isQuickMode = mode => normalizeBattleMode(mode) === BATTLE_MODE_QUICK;
-const isProMode = mode => normalizeBattleMode(mode) === BATTLE_MODE_PRO;
+// ★タクティクスプロも「ベースモンだけで挑む」モードなので、編成・倍率・記録の分かれ方は
+//   プロとまったく同じ扱いにする。normalizeBattleMode は tacticsPro を知らない(チャレンジへ落ちる)
+//   ので、idそのものを先に見る
+const isProMode = mode => mode === BATTLE_MODE_TACTICS_PRO || normalizeBattleMode(mode) === BATTLE_MODE_PRO;
 // 種族チャレンジは normalizeBattleMode の対象外(未知の値はチャレンジへ落ちる)なので、
 // idそのものを見る。BGMのようにモードごとに分かれる設定はここを通す
-const isSpeciesChallengeMode = mode => mode === BATTLE_MODE_SPECIES_CHALLENGE;
+const isSpeciesChallengeMode = mode => mode === BATTLE_MODE_SPECIES_CHALLENGE || mode === BATTLE_MODE_TACTICS_SPECIES;
+// 新モードも normalizeBattleMode の対象外(未知の値はチャレンジへ落ちる)なので、idそのものを見る。
+// ここを normalizeBattleMode 経由にすると、記録の置き場がチャレンジと同じ mh_ になってしまう
+const isTacticsMode = mode => TACTICS_BATTLE_MODES.includes(mode);
 // クイックの報酬方針は画面内だけで選び、保存データには増やさない。
 // 周回開始時の選択をrefへ固定するため、途中の画面遷移や他モードへ影響しない。
 const QUICK_REWARD_POLICY_GROWTH = 'growth';
@@ -317,7 +413,9 @@ const bondXpForWavesClearedInMode = (wavesCleared, mult, mode) => {
 // 自己ベスト・最高到達WAVE・クリア回数の保存キー。チャレンジは従来のキーをそのまま使い、
 // クイックは別のキーへ保存して、チャレンジの記録を上書きしないようにする
 // プロは mh_pro_* へ分ける。チャレンジ(mh_*)・クイック(mh_quick_*)のキーには一切触らない
-const modeKeyPrefix = mode => isQuickMode(mode) ? 'mh_quick_' : isProMode(mode) ? 'mh_pro_' : 'mh_';
+// 新モードは mh_tactics_* へ分ける。チャレンジ(mh_*)・クイック(mh_quick_*)・プロ(mh_pro_*)の
+// キーには一切触らない。id と同じく、公開後はこの接頭辞も変えない
+const modeKeyPrefix = mode => mode === BATTLE_MODE_TACTICS_PRO ? 'mh_tactics_pro_' : isTacticsMode(mode) ? 'mh_tactics_' : isQuickMode(mode) ? 'mh_quick_' : isProMode(mode) ? 'mh_pro_' : 'mh_';
 const bestScoreKey = (mode, diff) => `${modeKeyPrefix(mode)}hs_${diff}`;
 const bestWaveKey = (mode, diff) => `${modeKeyPrefix(mode)}highest_wave_${diff}`;
 const clearCountKey = (mode, diff) => `${modeKeyPrefix(mode)}clears_${diff}`;
@@ -458,11 +556,132 @@ const BATTLE_MODES = [{
   highlights: [['🔥', '育てたマスモンなしで挑む実力勝負'], ['💎', '絆経験値3倍・ブリーダー経験値1.5倍'], ['📊', 'プロ専用のスコアランキング']],
   points: [['⚔️', '編成', '育てたマスモンは1体も連れていけません。全員が素のベースモンです。これまで積み上げたステータス・強化ポイント・固有技レベル・限界突破は、このモードでは一切使えません。'], ['📈', 'WAVEのあいだの強化', 'チャレンジモードと同じで、WAVEをクリアするたびに強化フェーズがあります。素の状態から始まるぶん、どこを伸ばすかの判断がそのまま結果に出ます。'], ['👹', '難しさ', '育成済みの個体を使わない特殊な制約があります。同じ難易度でも、育てた個体を使えるチャレンジモードとは違う手ごたえです。敵の強さは難易度どおりなので、上の難易度へ行くほど制約の重みが増します。'], ['💎', 'もらえる経験値とダイヤ', '絆経験値が3倍、ブリーダー経験値が1.5倍になります（難易度の倍率にさらにかかります）。ダイヤとスコアの倍率は難易度の設定どおりで、上乗せはありません。'], ['🏆', 'スコアと記録', 'スコアはチャレンジモードとは別の「プロランキング」に反映されます。同じ条件で挑んだ人どうしで競う場所です。自己ベスト・最高到達WAVE・クリア回数もプロ専用の場所に残り、チャレンジモードの記録は書き換わりません。'], ['🤝', '供モンの加入', '始める前に供モンの候補を5体選びます。実際に加入候補として出るのは、その5体からランダムに選ばれた3体です。誰が来てもいいように候補を組むところまでが編成です。'], ['⭐', 'マスモン登録', '勇者モンにしたベースモンは、プレイが終わったあとマスモンとして登録できます。厳しい条件で戦ったぶん、絆経験値は3倍ぶん貯まっています。'], ['⏩', 'スキップチケット', '使えません。スコアを競うモードなので、戦わずに報酬だけ取れないようにしています。'], ['🎯', 'こんな人におすすめ', '育成の力を借りずに腕だけで勝ちたい人、チャレンジモードが物足りなくなった人向けです。']]
 }];
+// ===== バトルの仕組み(モード選択の1つ上) =====
+// 2026-09-20 ユーザー指示「モンヒロバトルに入ったらすぐモード選択ページにいかずに、
+// チャレンジモードと新バトルモードとクイックモードを選べるようにして、そこの中で各種モードがあるように」。
+// ★ここで選ぶものは**保存しない**(画面を分けるためだけの値)。記録もランキングも今までどおり
+//   モードのid(mh_hs_* / mh_tactics_* など)で分かれるので、保存キーは1つも増えない。
+//   難易度選択の「通常/極限」タブ(difficultySelectTab)と同じ扱い
+// ★名前は2026-09-20にユーザーが決めた(クラシックバトル / タクティクスバトル)。
+//   idと保存キーは変えないので、名前だけあとから差し替えられる
+const BATTLE_SYSTEM_CLASSIC = 'systemClassic';
+const BATTLE_SYSTEM_TACTICS = 'systemTactics';
+const BATTLE_SYSTEM_QUICK = 'systemQuick';
+// ★書き方の決めごと(2026-09-20 ユーザー指摘で整理)。
+//   クラシック   … 「いままでの通常のバトル」なので、**このゲームのバトルの基本**を書く
+//   タクティクス … その基本から**変わったところだけ**を書く(基本の説明を繰り返さない)
+//   クイック     … 基本から強化フェーズを外したぶん、何が得かを書く
+// ★ほかのバトルにもあることを売りにしない。
+//   「敵の行動が1ターン前に予告される」「解析で確率が見られる」は**どのバトルにもある**ので、
+//   クラシック側(＝基本)に書く。タクティクス側は「誰を狙うかまで出る」が変わったところ。
+// ★違いは「ライフ」ではなく「ステータス」で書く(2026-09-21 ユーザー指摘)。
+//   合算か1体ずつかが分かれるのはライフだけではない。ちから・丈夫さ・ガッツも同じで、
+//   供モンが合算されずに自分の値のまま加わることが、タクティクス側の作り直しの中心
+//   (仕様 4.1「合流した供モンは、合算されず自分の値のまま盤面に加わる」)。
+// ★「育てた数字より読みで勝てる」とは書かない。プロ以外はどのバトルでも育成の力が要る
+//   (タクティクスは基本の上に読み合いが**足された**もので、育成が要らなくなるわけではない)。
+// ★持っているときだけの話(スキップチケット)や、仕様の言い換えだけの行も置かない。
+// ★points は「詳しいルール」で開く本文。モードの説明モーダルと同じ形なので、
+//   画面はモードと仕組みを区別せずに出せる(battleInfoById)。
+const BATTLE_SYSTEMS = Object.freeze([Object.freeze({
+  id: BATTLE_SYSTEM_CLASSIC,
+  label: 'クラシックバトル',
+  short: 'クラシック',
+  emoji: '⚔️',
+  color: '#818cf8',
+  tagline: 'モンヒロバトルの基本。育てたモンスターで10WAVEに挑む',
+  highlights: Object.freeze([Object.freeze(['🛡️', 'ステータスは全員ぶんの合計']), Object.freeze(['🃏', 'カードと間合いを選んで戦う']), Object.freeze(['📈', 'WAVEごとに強化を選んで積み上げる'])]),
+  note: 'チャレンジ／種族チャレンジ／プロ。難易度は通常と極限から選べます',
+  points: Object.freeze([Object.freeze(['🛡️', 'ステータスの持ち方', 'ライフ・ちから・丈夫さ・ガッツは、パーティ全員ぶんを合わせた1組です。供モンが加わるとその子のぶんが足されて、パーティがまとめて強くなります。ライフも1本なので、誰が狙われても同じライフが減り、0になったら負けです。']), Object.freeze(['🃏', 'カードと間合い', '手札のカードをガッツで払って使います。攻撃・ガード・回復・間合いの移動などがあり、モンスターには間合いごとの得意・不得意（間合い適性）があります。']), Object.freeze(['🔮', '敵の予告', '敵が次のターンに何をするかは、そのターンのうちに予告されます。「解析」を押すと、それぞれの行動が選ばれる確率と威力まで確かめられます。受けるか、攻めるか、間合いを変えるかをここで決めます。']), Object.freeze(['✨', '勇者特性', '勇者モンにした子の特性だけが、パーティ全体へ効きます。供モンが同じ特性を持っていても効かないので、誰を勇者モンにするかが編成の要になります。']), Object.freeze(['📈', 'WAVEのあいだの強化', 'WAVEをクリアするたびに強化フェーズがあります。ちから・丈夫さ・ライフ・ガッツのどれを伸ばすかを自分で選び、ブリーダーの教えもここで選びます。編成のかみ合わせを考えながら組み立てられます。']), Object.freeze(['👹', '難しさ', '通常の9段階に加えて、その上に極限の段があります。難易度えらびの「極限」タブから挑め、段ごとに特殊ルールが付きます。']), Object.freeze(['🎮', '中にあるモード', 'チャレンジモード（基本）、種族チャレンジ（ひとつの種族だけで挑む）、プロモード（ベースモンだけで挑む）の3つです。']), Object.freeze(['🏆', 'スコアと記録', 'スコアは難易度ごとの全国ランキングに反映されます。自己ベスト・最高到達WAVE・クリア回数はモードごとに別々に残ります。']), Object.freeze(['🎯', 'こんな人におすすめ', 'じっくり考えて攻略したい人、ランキング上位や自己ベスト更新を狙いたい人向けです。'])]),
+  modes: Object.freeze([BATTLE_MODE_CHALLENGE, BATTLE_MODE_SPECIES_CHALLENGE, BATTLE_MODE_PRO])
+}), Object.freeze({
+  id: BATTLE_SYSTEM_TACTICS,
+  label: 'タクティクスバトル',
+  short: 'タクティクス',
+  emoji: '🎯',
+  color: '#fb923c',
+  tagline: '基本のルールに、誰を守るかの読み合いを足したバトル',
+  highlights: Object.freeze([Object.freeze(['❤️', 'ステータスは1体ずつ別々']), Object.freeze(['🎯', '敵の予告に「誰を狙うか」まで出る']), Object.freeze(['✨', '連れてきた全員の勇者特性が効く'])]),
+  note: 'タクティクスチャレンジ／種族チャレンジ／プロ。難易度は通常と極限から選べます',
+  points: Object.freeze([Object.freeze(['❤️', 'ステータスの持ち方', '基本のバトルは全員ぶんを合わせた1組ですが、こちらはライフ・ちから・丈夫さ・ガッツを1体ずつ持ちます。供モンが加わっても合算されず、自分の値のまま並びます。攻撃はその子のちから、受けるダメージはその子の丈夫さで決まり、狙われた子だけが減ります。倒れた子はその場では戦えなくなり、全員が倒れたときだけ負けです。']), Object.freeze(['🎯', '敵の狙い', '敵の予告に「誰を狙うか」まで出ます。基本のバトルはライフが1本なので狙いという考え方がありませんが、こちらは1体ずつ持つので、誰が受けるかで結果が変わります。']), Object.freeze(['🌀', '敵の技が増える', '薙ぎ払い・連撃・貫通撃・咆哮など、基本のバトルには無い技を使い分けます。ガードが効かない技もあるので、予告を見てから受け方を決めます。']), Object.freeze(['✨', '勇者特性は持っている子のもの', '基本のバトルは勇者モンの特性だけが効きますが、こちらは連れてきた供モンの勇者特性も、それぞれの子に効きます（効き目は勇者モンと同じ）。ライガーの「俊足」ならライガーが狙われたときに避け、ゴーレムの「怪力」ならゴーレムが攻撃したときに乗ります。供モンを選ぶ意味が「ステータスの足し算」から「どの特性を連れていくか」に変わります。']), Object.freeze(['🃏', 'カードを使う子を選ぶ', 'カードは「誰が使うか」を選んでから出します。ガッツもその子のぶんから払うので、1体に任せきりにはできません。']), Object.freeze(['🤝', '供モンの加入', '供モンが加わると、そのぶん敵も強くなります。強く育てた子を連れていくほど手ごわくなるので、少ない人数のまま進むという選び方もできます。']), Object.freeze(['🎮', '中にあるモード', 'タクティクスチャレンジ（基本）、種族チャレンジ、プロの3つです。難易度は通常と極限から選べます。']), Object.freeze(['🏆', 'スコアと記録', 'クラシックバトルとは別の全国ランキングに載ります。クラシックバトルの記録は書き換わりません。']), Object.freeze(['💪', '育成はここでも効く', '編成・カード・間合い・強化フェーズは基本のバトルと同じで、育てた強さはそのまま効きます。そのうえに「誰が受けるか」の判断が足される、という関係です。']), Object.freeze(['🎯', 'こんな人におすすめ', '基本のバトルに慣れて、もう一段の読み合いがほしい人向けです。同じ編成でも、受け方の判断で結果が変わります。'])]),
+  modes: Object.freeze([BATTLE_MODE_TACTICS, BATTLE_MODE_TACTICS_SPECIES, BATTLE_MODE_TACTICS_PRO])
+}), Object.freeze({
+  id: BATTLE_SYSTEM_QUICK,
+  label: 'クイックモード',
+  short: 'クイック',
+  emoji: '⚡',
+  color: '#fbbf24',
+  tagline: '短い時間でモンスターを育てる、周回向けのバトル',
+  highlights: Object.freeze([Object.freeze(['💎', '経験値・ダイヤが1.5倍もらえる']), Object.freeze(['⚡', '強化を選ばないから1周が速い']), Object.freeze(['🔁', 'AUTO∞で放置したまま何周でも'])]),
+  note: '中のモードは1つだけなので、選ぶとそのまま難易度えらびへ進みます',
+  points: Object.freeze([Object.freeze(['💎', 'もらえるもの', 'ブリーダー経験値・絆経験値・ダイヤが、難易度の倍率にさらに1.5倍かかります。同じ時間でいちばん多く育つのがこのモードです。']), Object.freeze(['📈', '強化のかわり', '強化を選ぶ画面は出ません。かわりにWAVEをクリアするたび、味方全員のライフ・ちから・丈夫さ・ガッツがそのときの値から10%上がり、ライフとガッツが満タンまで回復します。']), Object.freeze(['🔁', '放置で周回する', 'AUTO∞を使うと、10WAVEをクリアしたあとそのまま次の周へ入ります。置いておくだけで育つので、育成の周回と相性がいい遊び方です。']), Object.freeze(['⏩', 'スキップチケット', 'このモードでだけ使えます。チケットのある難易度は、戦わずに一気にクリアぶんの報酬を受け取れます。']), Object.freeze(['🎁', '報酬の方針を選べる', '難易度えらびで「育成／プシュケー優先／ダイヤ優先」を選べます。いま欲しいものに合わせて、もらえるものの内訳を変えられます。']), Object.freeze(['🏆', 'スコアと記録', 'スコアは競いません。ランキングには載らず、ほかのモードの自己ベストも書き換わりません。記録はクイック専用の場所に、最高到達WAVEとクリア回数として残ります。']), Object.freeze(['🎯', 'こんな人におすすめ', '新しい子を早く育てたい人、絆レベルや強化ポイントをまとめて稼ぎたい人向けです。'])]),
+  modes: Object.freeze([BATTLE_MODE_QUICK]),
+  direct: true
+})]);
+// そのモードがどの仕組みに属するか。見つからなければ「これまでのバトル」に寄せる
+const battleSystemOf = modeId => BATTLE_SYSTEMS.find(s => s.modes.includes(modeId)) || BATTLE_SYSTEMS[0];
+// そのモードをいま遊べるか。公開フラグの見方はここ1か所にまとめる
+// (画面・ランキング・検査がばらばらにフラグを見ると、片方だけ出し忘れる)
+const battleModePlayable = (id, {
+  debugBattle = false
+} = {}) => {
+  if (debugBattle) return true;
+  if (id === BATTLE_MODE_SPECIES_CHALLENGE) return SPECIES_CHALLENGE_PUBLIC_RELEASE;
+  // ★β版はタクティクスプロだけ遊べる(2026-09-20 ユーザー指示)
+  if (id === BATTLE_MODE_TACTICS_PRO) return TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE;
+  if (isTacticsMode(id)) return TACTICS_MODE_PUBLIC_RELEASE;
+  return true;
+};
+// まだ遊べないが、カードだけは並べるモード。β版のタクティクスバトルの中だけで起きる
+// (ユーザー指示「3つ並べてプロ以外は準備中」)。デバッグからは今までどおり全部遊べる
+const battleModeComingSoon = (id, {
+  debugBattle = false
+} = {}) => !debugBattle && TACTICS_BETA_PRO_RELEASE && !TACTICS_MODE_PUBLIC_RELEASE && isTacticsMode(id) && !battleModePlayable(id, {
+  debugBattle
+});
+// 仕組みの中で実際に画面へ並べるモード。遊べないものは落とすが、
+// 「準備中」として見せるものだけは残す
+const battleSystemModes = (systemId, {
+  debugBattle = false
+} = {}) => {
+  const system = BATTLE_SYSTEMS.find(s => s.id === systemId) || BATTLE_SYSTEMS[0];
+  return system.modes.filter(id => battleModePlayable(id, {
+    debugBattle
+  }) || battleModeComingSoon(id, {
+    debugBattle
+  }));
+};
+// まだ遊べないが、枠だけは見せる仕組み(2026-09-20 ユーザー指示
+// 「準備中の新モードもクイックの上に入れて」)。モンヒロビートの「準備中」と同じ作りで、
+// 公開フラグが立つまでは押せないカードを出す。デバッグからは今までどおり遊べる。
+// ★β版が立つと中のプロが遊べるので、仕組みそのものは「準備中」ではなくなる
+const battleSystemComingSoon = (systemId, {
+  debugBattle = false
+} = {}) => systemId === BATTLE_SYSTEM_TACTICS && !TACTICS_MODE_PUBLIC_RELEASE && !TACTICS_BETA_PRO_RELEASE && !debugBattle;
+// β版で開いている仕組み。中のモードが全部そろっていないことを入口で伝えるために使う
+const battleSystemBeta = (systemId, {
+  debugBattle = false
+} = {}) => !debugBattle && systemId === BATTLE_SYSTEM_TACTICS && TACTICS_BETA_PRO_RELEASE && !TACTICS_MODE_PUBLIC_RELEASE;
+// 画面へ並べる仕組み。中に出せるモードが1つも無いものは、準備中の枠としてだけ出す
+const visibleBattleSystems = ({
+  debugBattle = false
+} = {}) => BATTLE_SYSTEMS.filter(s => battleSystemModes(s.id, {
+  debugBattle
+}).length > 0 || battleSystemComingSoon(s.id, {
+  debugBattle
+}));
+// 「詳しいルール」で開くもの。仕組み(BATTLE_SYSTEMS)とモード(BATTLE_MODES など)を
+// 同じ入口から引く。どちらも {emoji,label,color,tagline,points} を持っているので、
+// 説明の画面はモードと仕組みを区別しなくてよい
+const battleInfoById = id => BATTLE_SYSTEMS.find(s => s.id === id) || battleModeInfo(id);
 // 極限チャレンジは通常の3モードとは別に持っているので、説明・ランキング画面から引けるようにここで合流させる
 // (EXTREME_MODE はこの下で定義するため、呼ばれた時点で参照する)
 const battleModeInfo = mode => {
   if (typeof EXTREME_MODE !== 'undefined' && EXTREME_MODE && mode === EXTREME_MODE.id) return EXTREME_MODE;
   if (mode === BATTLE_MODE_SPECIES_CHALLENGE) return SPECIES_CHALLENGE_MODE;
+  if (mode === BATTLE_MODE_TACTICS) return TACTICS_MODE;
+  if (mode === BATTLE_MODE_TACTICS_SPECIES) return TACTICS_SPECIES_MODE;
+  if (mode === BATTLE_MODE_TACTICS_PRO) return TACTICS_PRO_MODE;
   return BATTLE_MODES.find(m => m.id === normalizeBattleMode(mode)) || BATTLE_MODES[0];
 };
 // 本番のバトル画面へ出すモード。いまは3モードすべてを公開している。
@@ -472,12 +691,19 @@ const PUBLIC_BATTLE_MODES = BATTLE_MODES;
 // スコアランキングがあるモードかどうか。クイックだけ対象外
 // 種族チャレンジは一般公開するまで全国ランキングへ送らない。
 // デバッグの実戦から外部ランキングを汚さないための入口はここ1か所にまとめてある
-const modeHasRanking = mode => !isQuickMode(mode) && (mode !== BATTLE_MODE_SPECIES_CHALLENGE || SPECIES_CHALLENGE_PUBLIC_RELEASE);
+// 新モードも、公開するまでは全国ランキングへ送らない(デバッグから遊べるため、ここで止める)
+// ★タクティクス側は battleModePlayable がフラグを1か所で見る。
+//   β版ではタクティクスプロだけが true になり、送り先もβ版専用の行になる
+const modeHasRanking = mode => !isQuickMode(mode) && (mode !== BATTLE_MODE_SPECIES_CHALLENGE || SPECIES_CHALLENGE_PUBLIC_RELEASE) && (!isTacticsMode(mode) || battleModePlayable(mode));
 // そのモードで遊んだときに増える、みゅあの仲良し度の行動キー。
 // 既存の challenge / quick の獲得量と1日上限は変えず、プロぶんの pro を足しただけ
 const modeBondAction = mode => isQuickMode(mode) ? 'quick' : isProMode(mode) ? 'pro' : 'challenge';
 // そのモードの画面で助手(みゅあ)に話させる場面。セリフは data/assistants.js にある
 const battleModeAssistantScene = mode => mode === EXTREME_MODE.id ? 'extremeChallenge' : isQuickMode(mode) ? 'battleQuick' : isProMode(mode) ? 'battlePro' : 'battleChallenge';
+// クラシックバトルの種族チャレンジか(タクティクス側は別のidを持つ)。
+// 「種族を選ぶ画面」「種族ごとの記録」はどちらのモードでも同じ入口を通すので、
+// 見分けが要るのは記録の置き場とランキングのキーだけ
+const isClassicSpeciesChallengeMode = mode => mode === BATTLE_MODE_SPECIES_CHALLENGE;
 // ラン中に供モンが合流するとき、画面へ出す候補を作る。
 // 「すでに編成にいる子」と「勇者モン」は必ず外す。勇者モンは編成にいるので普通は
 // activeIds で外れるが、そこに頼ると取りこぼしたときに自分自身が候補として出てしまうため、
@@ -1953,10 +2179,12 @@ const heroProofClearReward = ({
   debug = false
 } = {}) => {
   if (debug || runMode === BATTLE_MODE_QUICK) return 0;
-  if (runMode === BATTLE_MODE_SPECIES_CHALLENGE) {
+  // ★タクティクスバトル側の種族チャレンジ・プロも、同じ難易度なら同じ報酬にする
+  //   (盤面の作りが違うだけで、しばりと難しさの段はそろえてある)
+  if (isSpeciesChallengeMode(runMode)) {
     return speciesSave ? HERO_PROOF_CLEAR_REWARDS.speciesChallenge[speciesDifficulty] || 0 : 0;
   }
-  if (runMode === BATTLE_MODE_PRO) return HERO_PROOF_CLEAR_REWARDS.pro[difficulty] || 0;
+  if (isProMode(runMode)) return HERO_PROOF_CLEAR_REWARDS.pro[difficulty] || 0;
   if (extremeDifficulty) return HERO_PROOF_CLEAR_REWARDS.extreme[extremeDifficulty] || 0;
   return 0;
 };
@@ -5537,7 +5765,8 @@ const EVENT_BGM_SCENES = Object.freeze({
   momosuke_intro: 'momosukeIntro',
   monbeat_cup_2026_09: 'monbeatCupEvent',
   monbeat_cup_2026_09_thanks: 'monbeatCupEvent',
-  symphony_2026_09_17: 'symphonyEvent'
+  symphony_2026_09_17: 'symphonyEvent',
+  symphony_2026_09_17_thanks: 'symphonyEvent'
 });
 const BGM_PRO_DEFAULT_MIGRATION_KEY = 'mh_bgm_pro_default_migrated_v1';
 const BGM_PRO_PREVIOUS_DEFAULTS = Object.freeze({
@@ -10894,6 +11123,7 @@ const RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE = true;
 const RHYTHM_EVENT_POINTS_PUBLIC_RELEASE = true;
 const RELEASE_FLAGS = {
   speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE,
+  tactics: TACTICS_MODE_PUBLIC_RELEASE,
   rhythmMode: RHYTHM_MODE_PUBLIC_RELEASE,
   quickRhythmLink: QUICK_RHYTHM_LINK_PUBLIC_RELEASE,
   rhythmCanvasNotes: RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE,
@@ -12696,6 +12926,11 @@ const autoQuickRunAutoStartEnabled = settings => {
 
 // AUTOの1ターンぶんの選択だけを組み立てる。実際の選択stateや戦闘進行には触れず、
 // 手動操作と同じ判定関数を呼び出し側から受け取ることで、カードルールを二重管理しない。
+// 後ろの3つは新モード(tactics)用の追加。渡さなければ今までどおりの動き。
+//   gutsForSlot(slotIdx)        … その子が払えるガッツ。合計で足りていても、その子が足りなければ選ばない
+//   countsTowardSlotLimit(card) … 「1体につき何枚まで」に数えるカードか(新モードは攻撃だけ)
+//   isAttackCardFn(card)        … 攻撃カードか。★新モードは cardNeedsMonster がどのカードでも true に
+//                                  なるので、これを渡さないと「守りだけのターン」を防ぐ仕掛けが効かない
 const chooseAutoTurn = ({
   hand = [],
   slots = [],
@@ -12704,7 +12939,10 @@ const chooseAutoTurn = ({
   strategy = 'random',
   getCardGuts,
   cardNeedsMonster,
-  slotMaxUses
+  slotMaxUses,
+  gutsForSlot = null,
+  countsTowardSlotLimit = null,
+  isAttackCardFn = null
 }, rng = Math.random) => {
   if (!Array.isArray(hand) || !Array.isArray(slots) || typeof getCardGuts !== 'function' || typeof cardNeedsMonster !== 'function' || typeof slotMaxUses !== 'function') return [];
   const limit = Math.max(0, Math.floor(Number(cardLimit) || 0));
@@ -12712,6 +12950,9 @@ const chooseAutoTurn = ({
   const picked = [];
   const usedHandIndexes = new Set();
   const slotUseCounts = Array(slots.length).fill(0);
+  const slotGutsUsed = Array(slots.length).fill(0);
+  const slotBudget = typeof gutsForSlot === 'function' ? slotIdx => Math.max(0, Number(gutsForSlot(slotIdx)) || 0) : null;
+  const countsSlotUse = typeof countsTowardSlotLimit === 'function' ? card => !!countsTowardSlotLimit(card) : () => true;
   let usedGuts = 0;
   const legalActions = () => {
     const actions = [];
@@ -12731,9 +12972,11 @@ const chooseAutoTurn = ({
         if (!monster) return;
         if (card.type === 'unique' && card.ownerSlotIdx !== slotIdx) return;
         const maxUses = Math.max(0, Math.floor(Number(slotMaxUses(monster, slotIdx)) || 0));
-        if (slotUseCounts[slotIdx] >= maxUses) return;
+        if (countsSlotUse(card) && slotUseCounts[slotIdx] >= maxUses) return;
         const cost = Math.max(0, Number(getCardGuts(card, slotIdx)) || 0);
         if (usedGuts + cost > availableGuts) return;
+        // その子が払えるか。合計で足りていても、1体に寄っていれば選ばない
+        if (slotBudget && slotGutsUsed[slotIdx] + cost > slotBudget(slotIdx)) return;
         actions.push({
           handIndex,
           card,
@@ -12744,7 +12987,7 @@ const chooseAutoTurn = ({
     });
     return actions;
   };
-  const attackCard = card => !!card && cardNeedsMonster(card);
+  const attackCard = card => !!card && (typeof isAttackCardFn === 'function' ? !!isAttackCardFn(card) : cardNeedsMonster(card));
   const priorityOf = card => {
     if (strategy === 'offense') {
       if (card.type === 'unique') return 0;
@@ -12793,7 +13036,10 @@ const chooseAutoTurn = ({
     });
     usedHandIndexes.add(action.handIndex);
     usedGuts += action.cost;
-    if (action.slotIdx != null) slotUseCounts[action.slotIdx]++;
+    if (action.slotIdx != null) {
+      if (countsSlotUse(action.card)) slotUseCounts[action.slotIdx]++;
+      slotGutsUsed[action.slotIdx] += action.cost;
+    }
     if (strategy === 'guts') break;
   }
   return picked;
@@ -12803,7 +13049,10 @@ const chooseAutoTurn = ({
 // 方針や合法判定はchooseAutoTurnへ一本化し、存在確認なので固定rngを使う。
 const hasAutoTurnWithEnoughGuts = options => chooseAutoTurn({
   ...options,
-  guts: Number.MAX_SAFE_INTEGER
+  guts: Number.MAX_SAFE_INTEGER,
+  // 1体ずつのガッツもここでは見ない。知りたいのは「ガッツさえあれば打てる手があるか」なので、
+  // 足りないのがガッツだけなら true にする(緊急回復へ回す判断に使う)
+  gutsForSlot: null
 }, () => 0).length > 0;
 
 // ---- part: 19-difficulties-and-rules.jsx ----
@@ -13044,7 +13293,33 @@ const EXTREME_DIFFICULTIES = Object.freeze([{
 }]);
 // 種族チャレンジは既存の通常・極限難易度定義を複製せず、IDの順序だけを参照する。
 const SPECIES_CHALLENGE_DIFFICULTY_IDS = Object.freeze([...Object.keys(DIFFICULTY_SETTINGS), ...EXTREME_DIFFICULTIES.map(setting => setting.id)]);
+// タクティクスバトルも、難易度の定義を複製せずIDの順序だけを参照する(種族チャレンジと同じ)。
+// 通常9段階＋極限5段階の14段階。GOD / RAGNAROK は極限チャレンジ専用なので入れない
+// (2026-09-20 ユーザー指示「通常/極限、種族とかはどっちのモードにもあるように」)
+const TACTICS_DIFFICULTY_IDS = Object.freeze([...Object.keys(DIFFICULTY_SETTINGS), ...EXTREME_DIFFICULTIES.map(setting => setting.id)]);
+// タクティクスバトルの極限は、そのモードの中だけで順に開ける。
+// ・通常の9段階は今までどおり最初から挑める
+// ・極限の入口(EXTREME)は「タクティクスで Master 以上を1回クリア」で開く
+// ・そこから先は「1つ前の極限をクリアすると次が開く」(極限チャレンジと同じ考え方)
+// 見るのは mh_tactics_clears_* だけ。クラシックバトルの進み具合は一切混ぜない
+// (混ぜると、片方で進めたぶんがもう片方の解放に化ける)
+const TACTICS_EXTREME_UNLOCK_DIFFICULTIES = Object.freeze(['Master', 'GrandMaster', 'Hell', 'Legend']);
+const TACTICS_EXTREME_UNLOCK_TEXT = 'タクティクス Master以上クリアで解放';
+const isTacticsDifficultyUnlocked = (difficultyId, tacticsClearCounts = {}) => {
+  const index = TACTICS_DIFFICULTY_IDS.indexOf(difficultyId);
+  if (index < 0) return false;
+  if (!isExtremeDifficultyId(difficultyId)) return true;
+  const counts = tacticsClearCounts && typeof tacticsClearCounts === 'object' ? tacticsClearCounts : {};
+  const cleared = id => (Number(counts[id]) || 0) > 0;
+  const previous = TACTICS_DIFFICULTY_IDS[index - 1];
+  return isExtremeDifficultyId(previous) ? cleared(previous) : TACTICS_EXTREME_UNLOCK_DIFFICULTIES.some(cleared);
+};
 const SPECIES_CHALLENGE_PROGRESS_KEY = 'mh_species_challenge_progress_v1';
+// ★タクティクスバトルの種族チャレンジは、進み具合も記録も別のキーへ持つ。
+//   同じ入れ物にすると、クラシックで解放した難易度がタクティクスでも開いてしまい、
+//   自己ベストスコアも桁の違うもの同士(タクティクスは 1/1000 に縮める)が混ざる
+const TACTICS_SPECIES_CHALLENGE_PROGRESS_KEY = 'mh_tactics_species_challenge_progress_v1';
+const speciesChallengeProgressKeyOf = mode => mode === BATTLE_MODE_TACTICS_SPECIES ? TACTICS_SPECIES_CHALLENGE_PROGRESS_KEY : SPECIES_CHALLENGE_PROGRESS_KEY;
 const emptySpeciesChallengeProgress = () => ({
   version: 1,
   species: {},
@@ -13258,13 +13533,17 @@ const validateSpeciesChallengeAllySelection = ({
     reason: null
   };
 };
+// mode は「クラシックの種族チャレンジ」か「タクティクスの種族チャレンジ」か。
+// 記録の保存先・ランキングのキー・盤面の作りがここで分かれる。
+// 古い形(mode を持たない run)が来ても、これまでどおりクラシックとして扱う
 const createSpeciesChallengeRunState = ({
   speciesId,
   difficultyId,
   heroId,
   allyIds,
   unlockedBaseIds = [],
-  masuMons = []
+  masuMons = [],
+  mode = BATTLE_MODE_SPECIES_CHALLENGE
 } = {}) => {
   const validation = validateSpeciesChallengeAllySelection({
     speciesId,
@@ -13279,10 +13558,14 @@ const createSpeciesChallengeRunState = ({
     difficultyId,
     heroId,
     allyIds: [...allyIds],
-    joinedAllyIds: []
+    joinedAllyIds: [],
+    mode: speciesChallengeRunMode({
+      mode
+    })
   };
   return run;
 };
+const speciesChallengeRunMode = run => run?.mode === BATTLE_MODE_TACTICS_SPECIES ? BATTLE_MODE_TACTICS_SPECIES : BATTLE_MODE_SPECIES_CHALLENGE;
 const speciesChallengeSelectedAllies = runState => Array.isArray(runState?.allyIds) ? [...runState.allyIds] : [];
 const speciesChallengeUnjoinedAllies = runState => {
   const joined = new Set(Array.isArray(runState?.joinedAllyIds) ? runState.joinedAllyIds : []);
@@ -13405,9 +13688,10 @@ const persistSpeciesChallengeClearRewardTransaction = async ({
   difficultyId,
   storeSet,
   storeGet,
-  record = null
+  record = null,
+  progressKey = SPECIES_CHALLENGE_PROGRESS_KEY
 } = {}) => {
-  const savedProgress = await storeGet(SPECIES_CHALLENGE_PROGRESS_KEY, progress, false);
+  const savedProgress = await storeGet(progressKey, progress, false);
   const savedItems = await storeGet('mh_owned_items', ownedItems, false);
   let currentProgress = normalizeSpeciesChallengeProgress(savedProgress);
   const currentItems = savedItems && typeof savedItems === 'object' && !Array.isArray(savedItems) ? savedItems : {};
@@ -13416,7 +13700,7 @@ const persistSpeciesChallengeClearRewardTransaction = async ({
   // clears を二重に増やさないよう、呼び出し側は1ランにつき1回だけ呼ぶこと。
   if (record) {
     currentProgress = updateSpeciesChallengeRecord(currentProgress, speciesId, difficultyId, record);
-    await storeSet(SPECIES_CHALLENGE_PROGRESS_KEY, currentProgress, false);
+    await storeSet(progressKey, currentProgress, false);
   }
   const rewardAmount = speciesChallengeFirstClearReward(difficultyId);
   const itemId = speciesTranscendFruitItemId(speciesId);
@@ -13428,7 +13712,7 @@ const persistSpeciesChallengeClearRewardTransaction = async ({
       speciesId,
       difficultyId
     });
-    await storeSet(SPECIES_CHALLENGE_PROGRESS_KEY, result.nextProgress, false);
+    await storeSet(progressKey, result.nextProgress, false);
     return result;
   }
   const pendingKey = speciesChallengeRewardPendingKey(speciesId, difficultyId);
@@ -13439,7 +13723,7 @@ const persistSpeciesChallengeClearRewardTransaction = async ({
       speciesId,
       difficultyId
     });
-    if (currentProgress.pendingRewards[pendingKey]) await storeSet(SPECIES_CHALLENGE_PROGRESS_KEY, result.nextProgress, false);
+    if (currentProgress.pendingRewards[pendingKey]) await storeSet(progressKey, result.nextProgress, false);
     return result;
   }
   const savedPending = currentProgress.pendingRewards[pendingKey];
@@ -13452,7 +13736,7 @@ const persistSpeciesChallengeClearRewardTransaction = async ({
   };
   const pendingProgress = markSpeciesChallengeCleared(currentProgress, speciesId, difficultyId);
   pendingProgress.pendingRewards[pendingKey] = pending;
-  await storeSet(SPECIES_CHALLENGE_PROGRESS_KEY, pendingProgress, false);
+  await storeSet(progressKey, pendingProgress, false);
   const latestItems = await storeGet('mh_owned_items', currentItems, false);
   const safeLatestItems = latestItems && typeof latestItems === 'object' && !Array.isArray(latestItems) ? latestItems : currentItems;
   const nextOwnedItems = {
@@ -13461,10 +13745,10 @@ const persistSpeciesChallengeClearRewardTransaction = async ({
   };
   await storeSet('mh_owned_items', nextOwnedItems, false);
   const claimedProgress = markSpeciesChallengeFirstRewardClaimed(pendingProgress, speciesId, difficultyId);
-  await storeSet(SPECIES_CHALLENGE_PROGRESS_KEY, claimedProgress, false);
+  await storeSet(progressKey, claimedProgress, false);
   const nextProgress = normalizeSpeciesChallengeProgress(claimedProgress);
   delete nextProgress.pendingRewards[pendingKey];
-  await storeSet(SPECIES_CHALLENGE_PROGRESS_KEY, nextProgress, false);
+  await storeSet(progressKey, nextProgress, false);
   return {
     nextProgress,
     nextOwnedItems,
@@ -13717,6 +14001,23 @@ const extremeWaveStageLabel = difficultyId => extremeWaveStage(difficultyId)?.la
 // 段階ぶんの敵倍率。段階を持たない難易度では1倍(既存の挙動のまま)。
 const extremeWaveEnemyMultiplier = (difficultyId, waveNumber = 1) => extremeWaveStageRules(difficultyId, waveNumber)?.enemyMultiplier ?? 1;
 const extremeRuleSetting = difficultyId => ALL_EXTREME_DIFFICULTIES.find(setting => setting.id === difficultyId) || null;
+// その難易度が極限側か。通常の9段階(DIFFICULTY_SETTINGS)に無いものを極限として扱う。
+// 難易度選択とランキングのタブを「通常 / 極限」で分けるのに使う(2026-09-19 ユーザー指示)。
+// ★難易度名で並べない。極限を足してもここは変えずに済む
+const isExtremeDifficultyId = difficultyId => !!difficultyId && !DIFFICULTY_SETTINGS[difficultyId];
+// 難易度の一覧を「通常 / 極限」の2つへ分ける。並びはもとの順のまま。
+// entries は [id, 設定] の組の配列(難易度選択がそのまま渡せる形)
+const splitDifficultyEntries = entries => {
+  const list = Array.isArray(entries) ? entries : [];
+  return {
+    normal: list.filter(([id]) => !isExtremeDifficultyId(id)),
+    extreme: list.filter(([id]) => isExtremeDifficultyId(id))
+  };
+};
+// 難易度選択・ランキングのタブid。保存はしないので、表示のためだけの値
+const DIFFICULTY_TAB_NORMAL = 'normal';
+const DIFFICULTY_TAB_EXTREME = 'extreme';
+const difficultyTabOf = difficultyId => isExtremeDifficultyId(difficultyId) ? DIFFICULTY_TAB_EXTREME : DIFFICULTY_TAB_NORMAL;
 // クイックの極限難易度は極限チャレンジ本体の報酬を変更せず、依頼された基準倍率だけを
 // クイック用に持つ。敵強度と表示色は既存の難易度定義を再利用する。
 const QUICK_ULTIMATE_SETTING = Object.freeze({
@@ -14236,20 +14537,17 @@ const MARKET_PROFILE_ICON_STYLES = {
     x: 0,
     y: -11
   },
-  // 人魚2体。本人アイコンは顔が丸の中央で大きく見える位置、円盤石アイコンは
-  // 円盤が丸へぴったり収まる位置。どちらも画像は加工せず、ここの倍率と位置だけで合わせる。
-  // 立ち絵が縦長(1024x1536)で顔が小さく写っているため、スネグーラチカ(正方形)と
-  // 同じ「顔の高さが丸の約4割」になるよう倍率を上げ、顔の中心が絵の中央より左にある分を横へ寄せている
-  undine_icon: {
-    scale: 3.67,
-    x: 7.7,
-    y: 118
-  },
-  yaobikuni_icon: {
-    scale: 3.70,
-    x: 6.8,
-    y: 122
-  },
+  // ウンディーネ・ヤオビクニの本人アイコンは、エイキ・剣士モッチーと同じく専用の顔クロップ
+  // (UNDINE_FACE_ICON / YAOBIKUNI_FACE_ICON)を使うので、ここでの拡大・位置調整は要らない
+  // (元から丸枠向けに切り出してある)。
+  //
+  // ⚠️ 2026-09-19、ここの倍率を 3.67→4.76 まで上げて顔を大きくしようとしたが実機で悪化した。
+  // 立ち絵は尾ひれまで入っていて頭が小さく写っているので、倍率をいくら上げても
+  // 「顔が小さい」か「耳が切れて何のキャラか分からない」のどちらかにしかならない。
+  // 同じ人魚のスネグーラチカが良く見えていたのは、最初から顔クロップを持っていたから。
+  // 倍率で解こうとせず、顔クロップを作るのが正解だった(tools/image/make-face-icons.js)。
+  // なお見た目を変えるときは **実機と同じ40pxで描いて確かめる**こと。
+  // 190pxの大きな丸で見ると、40pxでは潰れて消える耳や髪が「入っている」ように見える。
   mia_icon: {
     scale: 3.2,
     x: 0,
@@ -15596,6 +15894,195 @@ const ENEMY_ACTION_DEFINITIONS = [{
   cooldown: 0,
   useLimit: null
 }];
+// ===== 新モード(id: tactics)の敵行動 =====
+// 設計の正本: docs/spec/BATTLE_NEW_MODE_PLAN.md
+//
+// ★上の ENEMY_ACTION_DEFINITIONS は書き換えない。別の表として持ち、
+//   state.definitions で渡す。既存モードの呼び出しは何も変わらない。
+// ★「様子を見ている(WAIT)」は入れない。5回に1回、敵が何もしないターンを作らないため。
+// ★どの行動にも「こちらの対抗手段」を1つ用意する。読めば受けられる、が成り立たないと
+//   ただ強いだけの難易度と変わらなくなる。
+//     薙ぎ払い → 距離撃で敵をずらす / 連撃 → ガード(1ヒットぶんだけ効く)＋回復 /
+//     貫通撃 → 回避・反射・スタン / 咆哮・再生 → スタンで潰す・削り切る /
+//     単体狙い → 狙われた子を守る・回復する / 全体攻撃 → 全員のライフを見て回復を回す
+// ★type は既存の ATTACK / SPECIAL をそのまま使い、違いは variant で持つ。
+//   getIncomingDamageBeforeTurnReduction は type でダメージの有無を判断しているので、
+//   ここを新しい type にするとダメージ計算・演出・予告の経路を全部書き足すことになる。
+// ★倍率は2026-09-20にユーザーが1つずつ決め直した。それまでは受けるダメージが重く、
+//   とくに「人数が増えるほど全体攻撃だけが強い」「同じ×1.8なのに連撃が貫通撃を
+//   絶対に上回れない」という歪みがあった。攻める側(敵)を全体に下げて、
+//   そのぶん敵を落としにくく(再生を厚く)し、休めるターン(行動なし)を戻してある。
+const TACTICS_SWEEP_MULT = 1.2; // 予告した間合いに敵がいるとき
+const TACTICS_SWEEP_MISS_MULT = 0.4; // 距離撃などでずらしたとき
+const TACTICS_RUSH_MULT = 1.2; // 0.4×3ヒット。ガードは1ヒットぶんしか効かない
+const TACTICS_RUSH_HITS = 3; // 威力をこの数で割ってヒットに分ける。ガードが届くのは1ヒットだけ
+const TACTICS_PIERCE_MULT = 0.8; // ガードを無視する。効かないぶん倍率で加減する
+const TACTICS_ROAR_ATK_RATE = 1.5; // 次のターンから敵の攻撃が上がる
+const TACTICS_ROAR_MAX_STACKS = 2; // 重ねがけの上限
+const TACTICS_REGEN_RATE = 0.5; // 最大ライフに対する回復量。★与ダメを下げたぶん敵を落としにくくする
+const TACTICS_REGEN_HP_THRESHOLD = 0.9; // ライフがこの割合を下回ったときだけ使う
+// 全体攻撃(2026-09-19・設計 5.3)。
+// ★1体あたりの威力は通常攻撃より必ず低くする。同じか上にすると人数が増えるほど
+//   「全員を殴るほうが得」になり、狙いを読む意味も、供モンを連れる意味も消える。
+//   もとは0.9で、4体そろうと合計×3.6と最も重い技になっていた(2026-09-20 に0.4へ)
+// ★単体狙い(focus)は廃止した。必殺技(ためる→×2.5)と役割がかぶるため
+//   (2026-09-20 ユーザー指示)。通常攻撃も連撃も貫通撃も「狙った1体」へ当たるので、
+//   誰が狙われるかを読む遊びはそのまま残る
+const TACTICS_ALLOUT_MULT = 0.4; // 全員へ。1体あたりは通常攻撃より低い
+// スエゾーの「眼力」。タクティクスバトルでは**その子が攻撃したターン**に引く(2026-09-20 ユーザー指示)。
+// 既存5モードは今までどおり編成から決まる確率で、敵のターンの頭に引く
+const TACTICS_INTIMIDATE_RATE = 0.4;
+const TACTICS_ACTION_DEFINITIONS = [{
+  id: 'normal',
+  type: 'ATTACK',
+  category: '通常攻撃',
+  weight: 30,
+  multiplier: 1,
+  hits: 1,
+  range: '全間合い',
+  condition: '常時',
+  cooldown: 0,
+  useLimit: null
+}, {
+  id: 'charge',
+  type: 'CHARGE',
+  category: 'ためる',
+  weight: 12,
+  multiplier: 0,
+  hits: 0,
+  range: '全間合い',
+  condition: '常時',
+  cooldown: 0,
+  useLimit: null
+}, {
+  id: 'special',
+  type: 'SPECIAL',
+  category: '必殺技',
+  weight: 0,
+  multiplier: 2.5,
+  hits: 1,
+  range: '全間合い',
+  condition: 'ためた次のターンに必ず発動',
+  cooldown: 0,
+  useLimit: null
+}, {
+  id: 'wait',
+  type: 'WAIT',
+  category: '特殊行動',
+  weight: 10,
+  multiplier: 0,
+  hits: 0,
+  range: '全間合い',
+  condition: '常時',
+  cooldown: 0,
+  useLimit: null
+}, {
+  id: 'move',
+  type: 'MOVE',
+  category: '移動',
+  weight: 10,
+  multiplier: 0,
+  hits: 0,
+  range: '現在以外の3間合い',
+  condition: '移動先がある・移動した次のターンは選ばない',
+  cooldown: 0,
+  useLimit: null
+}, {
+  id: 'sweep',
+  type: 'ATTACK',
+  variant: 'sweep',
+  category: '薙ぎ払い',
+  weight: 14,
+  multiplier: TACTICS_SWEEP_MULT,
+  missMultiplier: TACTICS_SWEEP_MISS_MULT,
+  hits: 1,
+  range: '予告した1間合い',
+  condition: '予告した間合いに敵がいると大ダメージ。距離撃でずらせる',
+  cooldown: 0,
+  useLimit: null
+}, {
+  id: 'rush',
+  type: 'ATTACK',
+  variant: 'rush',
+  category: '連撃',
+  weight: 14,
+  multiplier: TACTICS_RUSH_MULT,
+  hits: TACTICS_RUSH_HITS,
+  range: '全間合い',
+  condition: '3ヒットに分かれ、ガードは1ヒットぶんしか効かない',
+  cooldown: 0,
+  useLimit: null
+}, {
+  id: 'pierce',
+  type: 'ATTACK',
+  variant: 'pierce',
+  category: '貫通撃',
+  weight: 12,
+  multiplier: TACTICS_PIERCE_MULT,
+  hits: 1,
+  range: '全間合い',
+  condition: 'ガードが効かない',
+  cooldown: 0,
+  useLimit: null
+}, {
+  id: 'roar',
+  type: 'ROAR',
+  category: '咆哮',
+  weight: 10,
+  multiplier: 0,
+  hits: 0,
+  range: '全間合い',
+  condition: `重ねがけは${TACTICS_ROAR_MAX_STACKS}回まで`,
+  effectText: `次のターンから敵の攻撃 ×${TACTICS_ROAR_ATK_RATE}（このWAVEのあいだ続く。${TACTICS_ROAR_MAX_STACKS}回重ねると最大 ×${(TACTICS_ROAR_ATK_RATE ** TACTICS_ROAR_MAX_STACKS).toFixed(2)}）`,
+  cooldown: 0,
+  useLimit: TACTICS_ROAR_MAX_STACKS
+}, {
+  id: 'regen',
+  type: 'REGEN',
+  category: '再生',
+  weight: 10,
+  multiplier: 0,
+  hits: 0,
+  range: '全間合い',
+  condition: 'ライフが減っているときだけ',
+  effectText: `敵が自分の最大ライフの${Math.round(TACTICS_REGEN_RATE * 100)}%を回復する`,
+  cooldown: 0,
+  useLimit: null
+}, {
+  id: 'allout',
+  type: 'ATTACK',
+  variant: 'allout',
+  targetsAll: true,
+  category: '全体攻撃',
+  weight: 10,
+  multiplier: TACTICS_ALLOUT_MULT,
+  hits: 1,
+  range: '全員',
+  condition: '立っている全員へ同時に当たる。狙いをかわせない',
+  cooldown: 0,
+  useLimit: null
+}];
+// どの敵も通常攻撃・ためる・必殺技・移動は持つ。ここへ足すのは「その敵だけの技」。
+// WAVEが進むほど読むことが増える並びにしてある(敵の順は ENEMY_SEQUENCE)。
+const TACTICS_BASE_ACTION_IDS = Object.freeze(['normal', 'charge', 'special', 'wait', 'move']);
+const TACTICS_ENEMY_ACTION_IDS = Object.freeze({
+  Dino: Object.freeze(['rush']),
+  Gel: Object.freeze(['sweep']),
+  BlackDino: Object.freeze(['rush', 'roar']),
+  Jaakusou: Object.freeze(['sweep', 'regen']),
+  BlueMountain: Object.freeze(['pierce', 'sweep']),
+  Gali: Object.freeze(['roar', 'rush', 'allout']),
+  Naga: Object.freeze(['sweep', 'pierce']),
+  Lilim: Object.freeze(['regen', 'pierce', 'allout']),
+  Durahan: Object.freeze(['rush', 'roar', 'pierce', 'allout']),
+  Moo: Object.freeze(['sweep', 'rush', 'pierce', 'roar', 'regen', 'allout'])
+});
+const tacticsActionDefinitions = enemyId => {
+  const ids = [...TACTICS_BASE_ACTION_IDS, ...(TACTICS_ENEMY_ACTION_IDS[enemyId] || [])];
+  return TACTICS_ACTION_DEFINITIONS.filter(def => ids.includes(def.id));
+};
+// そのモード・その敵が使う行動表。新モード以外は今までどおりの1つの表を返す
+const enemyActionDefinitionsFor = (mode, enemyId) => typeof isTacticsMode === 'function' && isTacticsMode(mode) ? tacticsActionDefinitions(enemyId) : ENEMY_ACTION_DEFINITIONS;
 // 直前の行動から、次に選べる行動を決めるための状態を作る
 const enemyActionStateFrom = lastIntent => ({
   charging: lastIntent?.type === 'CHARGE',
@@ -15604,7 +16091,9 @@ const enemyActionStateFrom = lastIntent => ({
 const evaluateEnemyActions = (ent, currentDist, state = {}) => {
   const charging = !!state.charging,
     movedLast = !!state.movedLast;
-  return ENEMY_ACTION_DEFINITIONS.map(def => {
+  // 行動表はモードごとに違う(新モードだけ別の表)。渡されなければ今までどおりの1つの表を使う
+  const definitions = Array.isArray(state.definitions) && state.definitions.length ? state.definitions : ENEMY_ACTION_DEFINITIONS;
+  return definitions.map(def => {
     let available = !!ent,
       reason = ent ? '' : '敵情報がありません';
     if (available) {
@@ -15615,6 +16104,20 @@ const evaluateEnemyActions = (ent, currentDist, state = {}) => {
       } else if (def.type === 'SPECIAL') {
         available = false;
         reason = 'ためた次のターンにだけ発動します';
+      } else if (def.type === 'REGEN') {
+        // 満タンに近いあいだは使わない。回復するものが無いターンを作らないため
+        const maxHp = Math.max(0, Number(ent.maxHp) || 0),
+          hp = Math.max(0, Number(ent.hp) || 0);
+        if (!(maxHp > 0 && hp < maxHp * TACTICS_REGEN_HP_THRESHOLD)) {
+          available = false;
+          reason = 'ライフが十分あるあいだは使いません';
+        }
+      } else if (def.type === 'ROAR') {
+        // 重ねがけの上限。すでに上限まで吼えていたら選ばない
+        if (Math.max(0, Number(state.roarStacks) || 0) >= TACTICS_ROAR_MAX_STACKS) {
+          available = false;
+          reason = `重ねがけは${TACTICS_ROAR_MAX_STACKS}回までです`;
+        }
       } else if (def.type === 'MOVE') {
         // 移動は必ず前のターンに吹き出しで予告してから行う。
         // 予告を出す機会が無かったターンの直後は、そもそも移動を選ばない。
@@ -15649,13 +16152,22 @@ const enemyActionProbabilities = (ent, currentDist, state = {}) => {
   }));
 };
 // 行動の見出しとアイコン。抽選と台本(練習モード)の両方から使う
-const enemyActionLabel = (ent, type) => type === 'ATTACK' ? ent?.normal || '通常攻撃' : type === 'CHARGE' ? '必殺技の準備をしている' : type === 'SPECIAL' ? ent?.special || '必殺技！' : '様子を見ている';
+const enemyActionLabel = (ent, type) => type === 'ATTACK' ? ent?.normal || '通常攻撃' : type === 'CHARGE' ? '必殺技の準備をしている' : type === 'SPECIAL' ? ent?.special || '必殺技！' : type === 'ROAR' ? '咆哮している' : type === 'REGEN' ? '傷を癒している' : '様子を見ている';
 const ENEMY_ACTION_ICONS = {
   ATTACK: '👊',
   CHARGE: '✨',
   SPECIAL: '🔥',
   WAIT: '⏳',
-  MOVE: '🏃'
+  MOVE: '🏃',
+  ROAR: '📢',
+  REGEN: '💚'
+};
+// 新モードの攻撃は type が ATTACK のままなので、見分けは variant で付ける
+const TACTICS_VARIANT_ICONS = {
+  sweep: '🌪️',
+  rush: '💥',
+  pierce: '🗡️',
+  allout: '🌊'
 };
 const chooseEnemyAction = (ent, currentDist, random = Math.random, state = {}) => {
   const actions = enemyActionProbabilities(ent, currentDist, state),
@@ -15678,6 +16190,37 @@ const chooseEnemyAction = (ent, currentDist, random = Math.random, state = {}) =
       label: `移動: ${RANGE_LABELS[targetDist]}`,
       targetDist,
       icon: ENEMY_ACTION_ICONS.MOVE,
+      actionId: selected.id
+    };
+  }
+  // 薙ぎ払いは「いまいる間合い」を薙ぐと予告する。実行までに距離撃でずらせば威力が落ちるので、
+  // 予告を見てからガッツを距離撃へ回すかどうかの判断になる。
+  // 予告と実際に薙ぐ間合いが食い違わないよう、ここで決めた値だけを実行時に見る
+  if (selected.variant === 'sweep') {
+    return {
+      type: selected.type,
+      variant: selected.variant,
+      sweepDist: currentDist,
+      value: Math.floor(ent.atk * selected.multiplier),
+      missValue: Math.floor(ent.atk * (selected.missMultiplier ?? 1)),
+      label: `${selected.category}: ${RANGE_LABELS[currentDist]}`,
+      icon: TACTICS_VARIANT_ICONS.sweep,
+      actionId: selected.id
+    };
+  }
+  if (selected.variant) {
+    // 全体攻撃だけは狙いを決めない。予告の時点で「立っている全員」と決まっているので、
+    // targetsAll を intent へ持ち歩き、当たる相手は tacticsIntentTargets が数え直す
+    return {
+      type: selected.type,
+      variant: selected.variant,
+      hits: Math.max(1, Math.floor(Number(selected.hits) || 1)),
+      ...(selected.targetsAll ? {
+        targetsAll: true
+      } : {}),
+      value: Math.floor(ent.atk * selected.multiplier),
+      label: selected.category,
+      icon: TACTICS_VARIANT_ICONS[selected.variant] || ENEMY_ACTION_ICONS[selected.type] || '⏳',
       actionId: selected.id
     };
   }
@@ -17725,7 +18268,22 @@ const PRO_RANKING_PREFIX = 'Pro';
 // 極限チャレンジも同じやり方。難易度の並びが通常と別なので、極限の段階IDへ接頭辞を付ける
 // (例: ExtremeEXTREME)。チャレンジ・プロの行は読みも書きもしない
 const EXTREME_RANKING_PREFIX = 'Extreme';
+// タクティクスバトル(id: tactics)も同じやり方。難易度キーの先頭へ Tactics を付ける
+// (例: TacticsHard / TacticsEXTREME)。Pro / Extreme とは先頭が違うので取り違えは起きない。
+// チャレンジ・プロ・極限の行は読みも書きもしない
+const TACTICS_RANKING_PREFIX = 'Tactics';
+// ★タクティクスプロは、β版のあいだだけ別の行(TacticsProBeta<難易度>)へ送る。
+//   本公開でキーが TacticsPro<難易度> へ切り替わり、本番の順位は空から始まる。
+//   β版の行は消さない(モンヒロビートの週間ランキングが週IDで区切るのと同じ考え方)
+const TACTICS_PRO_RANKING_PREFIX = `${TACTICS_RANKING_PREFIX}${PRO_RANKING_PREFIX}`;
+const TACTICS_PRO_BETA_SUFFIX = 'Beta';
+const tacticsProRankingPrefix = () => TACTICS_MODE_PUBLIC_RELEASE ? TACTICS_PRO_RANKING_PREFIX : `${TACTICS_PRO_RANKING_PREFIX}${TACTICS_PRO_BETA_SUFFIX}`;
 const RANKING_DIFFICULTY_KEYS = Object.freeze([...Object.keys(DIFFICULTY_SETTINGS), ...Object.keys(DIFFICULTY_SETTINGS).map(key => `${PRO_RANKING_PREFIX}${key}`),
+// タクティクスは通常9段階＋極限5段階(TACTICS_DIFFICULTY_IDS が正本)。
+// 極限もモードの中の難易度なので、極限チャレンジの Extreme* とは別の行になる
+...TACTICS_DIFFICULTY_IDS.map(key => `${TACTICS_RANKING_PREFIX}${key}`),
+// 本公開ぶんとβ版ぶんの両方を通す。公開の前後で、片方が「知らない難易度」にならないように
+...TACTICS_DIFFICULTY_IDS.map(key => `${TACTICS_PRO_RANKING_PREFIX}${key}`), ...TACTICS_DIFFICULTY_IDS.map(key => `${TACTICS_PRO_RANKING_PREFIX}${TACTICS_PRO_BETA_SUFFIX}${key}`),
 // GOD以降も同じ表(ALL_EXTREME_DIFFICULTIES)から作る。難易度を足すたびにここへ1行書き足すと
 // 書き忘れでランキングだけ落ちるので、正本を1つにしておく
 ...ALL_EXTREME_DIFFICULTIES.map(setting => `${EXTREME_RANKING_PREFIX}${setting.id}`)]);
@@ -17735,20 +18293,30 @@ const RANKING_DIFFICULTY_KEYS = Object.freeze([...Object.keys(DIFFICULTY_SETTING
 // 一切現れないため、チャレンジ・プロ・極限の行と混ざることが構造上起きない。
 const SPECIES_RANKING_PREFIX = 'Species';
 const SPECIES_RANKING_SEPARATOR = '-';
-const speciesChallengeRankingDifficulty = (speciesId, difficultyId) => {
+// タクティクスバトルの種族チャレンジは、同じ3つ組のまま先頭だけを TacticsSpecies にする。
+// 形が同じなので、読み書き・「全種族」の展開・種族名バッジはすべて同じ道を通る
+const TACTICS_SPECIES_RANKING_PREFIX = `${TACTICS_RANKING_PREFIX}${SPECIES_RANKING_PREFIX}`;
+const speciesRankingPrefixOf = mode => mode === BATTLE_MODE_TACTICS_SPECIES ? TACTICS_SPECIES_RANKING_PREFIX : SPECIES_RANKING_PREFIX;
+const speciesRankingModeOf = prefix => String(prefix).toLowerCase() === TACTICS_SPECIES_RANKING_PREFIX.toLowerCase() ? BATTLE_MODE_TACTICS_SPECIES : BATTLE_MODE_SPECIES_CHALLENGE;
+const isSpeciesRankingPrefix = prefix => {
+  const lower = String(prefix).toLowerCase();
+  return lower === SPECIES_RANKING_PREFIX.toLowerCase() || lower === TACTICS_SPECIES_RANKING_PREFIX.toLowerCase();
+};
+const speciesChallengeRankingDifficulty = (speciesId, difficultyId, mode = BATTLE_MODE_SPECIES_CHALLENGE) => {
   const lineage = speciesChallengeLineages().find(item => item.id === speciesId);
   if (!lineage || !SPECIES_CHALLENGE_DIFFICULTY_IDS.includes(difficultyId)) return null;
-  return `${SPECIES_RANKING_PREFIX}${SPECIES_RANKING_SEPARATOR}${lineage.id}${SPECIES_RANKING_SEPARATOR}${difficultyId}`;
+  return `${speciesRankingPrefixOf(mode)}${SPECIES_RANKING_SEPARATOR}${lineage.id}${SPECIES_RANKING_SEPARATOR}${difficultyId}`;
 };
 // ランキングキーから種族と難易度へ戻す。知らない組み合わせはnull(既存キーとして扱う)
 const parseSpeciesChallengeRankingDifficulty = key => {
   const parts = String(key ?? '').trim().split(SPECIES_RANKING_SEPARATOR);
-  if (parts.length !== 3 || parts[0].toLowerCase() !== SPECIES_RANKING_PREFIX.toLowerCase()) return null;
+  if (parts.length !== 3 || !isSpeciesRankingPrefix(parts[0])) return null;
   const lineage = speciesChallengeLineages().find(item => item.id.toLowerCase() === parts[1].toLowerCase());
   const difficultyId = SPECIES_CHALLENGE_DIFFICULTY_IDS.find(id => id.toLowerCase() === parts[2].toLowerCase());
   return lineage && difficultyId ? {
     speciesId: lineage.id,
-    difficultyId
+    difficultyId,
+    mode: speciesRankingModeOf(parts[0])
   } : null;
 };
 // 種族をまたいだ「全種族」の全国ランキング。
@@ -17765,20 +18333,21 @@ const SPECIES_RANKING_ALL_ID = 'all';
 // ランキング画面の種族タブのid。血統idとぶつからない名前にする
 const SPECIES_RANK_TAB_ALL = 'allSpecies';
 const SPECIES_RANK_TAB_SELF_BEST = 'selfBest';
-const speciesChallengeAllRankingDifficulty = difficultyId => SPECIES_CHALLENGE_DIFFICULTY_IDS.includes(difficultyId) ? `${SPECIES_RANKING_PREFIX}${SPECIES_RANKING_SEPARATOR}${SPECIES_RANKING_ALL_ID}${SPECIES_RANKING_SEPARATOR}${difficultyId}` : null;
+const speciesChallengeAllRankingDifficulty = (difficultyId, mode = BATTLE_MODE_SPECIES_CHALLENGE) => SPECIES_CHALLENGE_DIFFICULTY_IDS.includes(difficultyId) ? `${speciesRankingPrefixOf(mode)}${SPECIES_RANKING_SEPARATOR}${SPECIES_RANKING_ALL_ID}${SPECIES_RANKING_SEPARATOR}${difficultyId}` : null;
 const parseSpeciesChallengeAllRankingDifficulty = key => {
   const parts = String(key ?? '').trim().split(SPECIES_RANKING_SEPARATOR);
-  if (parts.length !== 3 || parts[0].toLowerCase() !== SPECIES_RANKING_PREFIX.toLowerCase()) return null;
+  if (parts.length !== 3 || !isSpeciesRankingPrefix(parts[0])) return null;
   if (parts[1].toLowerCase() !== SPECIES_RANKING_ALL_ID) return null;
   // 実在する血統と同じidなら、そちらの解釈を優先する(取り違えを構造的に防ぐ)
   if (speciesChallengeLineages().some(item => item.id.toLowerCase() === SPECIES_RANKING_ALL_ID)) return null;
   const difficultyId = SPECIES_CHALLENGE_DIFFICULTY_IDS.find(id => id.toLowerCase() === parts[2].toLowerCase());
   return difficultyId ? {
-    difficultyId
+    difficultyId,
+    mode: speciesRankingModeOf(parts[0])
   } : null;
 };
 // 「全種族」を、実際にDBへ入っている種族別キーの一覧へ展開する
-const speciesChallengeAllRankingMembers = difficultyId => speciesChallengeLineages().map(lineage => speciesChallengeRankingDifficulty(lineage.id, difficultyId)).filter(Boolean);
+const speciesChallengeAllRankingMembers = (difficultyId, mode = BATTLE_MODE_SPECIES_CHALLENGE) => speciesChallengeLineages().map(lineage => speciesChallengeRankingDifficulty(lineage.id, difficultyId, mode)).filter(Boolean);
 // 「全種族」の一覧で、1件ごとの記録がどの種族のものかを表示するための短いラベル。
 // difficulty列(Species-<血統id>-<難易度id>)から血統名を戻すだけで、既存キーの意味は変えない。
 // 知らないキーや列が来ていない古い記録ではnullを返し、呼び出し側でバッジごと出さない
@@ -17796,14 +18365,20 @@ const normalizeExtremeDifficulty = value => ALL_EXTREME_DIFFICULTIES.find(settin
 // 極限チャレンジは diff に極限の段階ID(EXTREMEなど)を渡す
 // 種族チャレンジだけは種族(主血統)も要るので、第3引数で受け取る
 const rankingDifficultyForMode = (mode, diff, speciesId = null) => {
-  if (mode === BATTLE_MODE_SPECIES_CHALLENGE) {
-    const key = speciesChallengeRankingDifficulty(speciesId, diff);
+  if (isSpeciesChallengeMode(mode)) {
+    const key = speciesChallengeRankingDifficulty(speciesId, diff, mode);
     if (!key) throw new Error(`unknown species challenge ranking: ${String(speciesId)}/${String(diff)}`);
     return key;
   }
   if (typeof EXTREME_MODE !== 'undefined' && EXTREME_MODE && mode === EXTREME_MODE.id) {
     return `${EXTREME_RANKING_PREFIX}${normalizeExtremeDifficulty(diff)}`;
   }
+  // ★タクティクスプロは Tactics と Pro を重ねた TacticsPro<難易度>(β版は末尾に Beta)。
+  //   isTacticsMode より先に見る(あとに置くと Tactics<難易度> になってしまう)
+  if (mode === BATTLE_MODE_TACTICS_PRO) {
+    return `${tacticsProRankingPrefix()}${normalizeBattleDifficulty(diff)}`;
+  }
+  if (isTacticsMode(mode)) return `${TACTICS_RANKING_PREFIX}${normalizeBattleDifficulty(diff)}`;
   return isProMode(mode) ? `${PRO_RANKING_PREFIX}${normalizeBattleDifficulty(diff)}` : normalizeBattleDifficulty(diff);
 };
 // ランキングの難易度キーから、表示に使う素の難易度へ戻す
@@ -17812,15 +18387,22 @@ const rankingDifficultyBase = key => {
   const species = parseSpeciesChallengeRankingDifficulty(text);
   if (species) return species.difficultyId;
   if (text.startsWith(EXTREME_RANKING_PREFIX)) return text.slice(EXTREME_RANKING_PREFIX.length);
+  // TacticsProBeta → TacticsPro → Tactics の順で落とす
+  // (順番を逆にすると 'ProHard' や 'BetaHard' が残る)
+  if (text.startsWith(`${TACTICS_PRO_RANKING_PREFIX}${TACTICS_PRO_BETA_SUFFIX}`)) {
+    return text.slice(TACTICS_PRO_RANKING_PREFIX.length + TACTICS_PRO_BETA_SUFFIX.length);
+  }
+  if (text.startsWith(TACTICS_PRO_RANKING_PREFIX)) return text.slice(TACTICS_PRO_RANKING_PREFIX.length);
+  if (text.startsWith(TACTICS_RANKING_PREFIX)) return text.slice(TACTICS_RANKING_PREFIX.length);
   return text.startsWith(PRO_RANKING_PREFIX) ? text.slice(PRO_RANKING_PREFIX.length) : text;
 };
 const normalizeRankingDifficulty = value => {
   // 種族チャレンジのキーは種族×難易度の組で決まるので、固定リストではなく組み合わせで確かめる
   const species = parseSpeciesChallengeRankingDifficulty(value);
-  if (species) return speciesChallengeRankingDifficulty(species.speciesId, species.difficultyId);
+  if (species) return speciesChallengeRankingDifficulty(species.speciesId, species.difficultyId, species.mode);
   // 「全種族」は保存には使わない読み取り専用の合成キー。取得のときだけ種族別キーへ展開する
   const speciesAll = parseSpeciesChallengeAllRankingDifficulty(value);
-  if (speciesAll) return speciesChallengeAllRankingDifficulty(speciesAll.difficultyId);
+  if (speciesAll) return speciesChallengeAllRankingDifficulty(speciesAll.difficultyId, speciesAll.mode);
   const compact = String(value ?? '').trim().replace(/\s+/g, '').toLowerCase();
   const canonical = RANKING_DIFFICULTY_KEYS.find(key => key.toLowerCase() === compact);
   if (!canonical) throw new Error(`unknown ranking difficulty: ${String(value)}`);
@@ -18225,7 +18807,7 @@ const sbFetchRankings = async (diff, limit = RANKING_SCORE_LIMIT, order = 'score
   // 他モードの行(Normal / ProNormal / ExtremeEXTREME)が紛れ込むことは構造上ない。
   // 並べ替えと件数の絞り込みはDB側で効くので、通信は他のタブと同じ1回で済む。
   const speciesAllDifficulty = normalizedDifficulty == null ? null : parseSpeciesChallengeAllRankingDifficulty(normalizedDifficulty);
-  const speciesAllMembers = speciesAllDifficulty ? speciesChallengeAllRankingMembers(speciesAllDifficulty.difficultyId) : [];
+  const speciesAllMembers = speciesAllDifficulty ? speciesChallengeAllRankingMembers(speciesAllDifficulty.difficultyId, speciesAllDifficulty.mode) : [];
   const difficultyFilter = normalizedDifficulty == null ? '' : speciesAllDifficulty
   // 値ごとに符号化し、区切りのカンマだけを生のまま残す(値に「-」以外の記号は入らない)
   ? `&difficulty=in.(${speciesAllMembers.map(key => encodeURIComponent(`"${key}"`)).join(',')})` : `&difficulty=eq.${encodeURIComponent(normalizedDifficulty)}`;
@@ -25838,6 +26420,718 @@ const DebugMenuRow = ({
   className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
 }, desc));
 
+// ---- part: 32-tactics-units.jsx ----
+// ==== 新モード(id: tactics)の「1体ぶん」の値と盤面 ====
+//
+// 設計の正本: docs/spec/BATTLE_NEW_MODE_PLAN.md
+//
+// いまのバトルは ライフ・ちから・丈夫さ・ガッツ を**パーティで1セット**持ち、
+// 供モンが合流すると plusStats を合算する。新モードはこれをやめて、
+// **モンスターごとに自分の値を持つ**。狙われた子のライフが減り、0になったその子だけが倒れる。
+//
+// ここに置くのは**純粋関数だけ**。state も画面も触らないので、検査から本体をそのまま動かせる。
+// 実際の盤面(どの state に持つか・いつ更新するか)は 60-app.jsx 側の仕事。
+//
+// ★どの関数も「新しいオブジェクトを返す」。渡された unit を書き換えないので、
+//   setState(prev => ...) の中からそのまま呼べる。
+// ★壊れた値(null・NaN・負数)が来ても落とさず、意味のある既定値へ倒す。
+//   ラン中の値はセーブデータから復元されることもあるため。
+
+// 倒れた子の戻り方(2026-09-19 ユーザーが決めた形)。
+// ★「ライフが全快になってはじめて復活」。倒れたあともライフは回復で貯まっていき、
+//   上限まで届いたところで立ち上がる。回復カードでも緊急回復でも自動再生でも貯まる。
+// ★つまり downed は「ライフが0かどうか」では決まらない。0から上限未満のあいだは
+//   ライフを持ったまま倒れている。ここが以前の作り(0なら倒れている)との違い。
+// 勇者モンがバトルを始めるときのガッツ。いまの実装と同じく最大の半分から始める
+const TACTICS_START_GUTS_RATE = 0.5;
+const tacticsSafeInt = (value, fallback = 0) => {
+  const n = Math.floor(Number(value));
+  return Number.isFinite(n) ? n : fallback;
+};
+const tacticsClamp = (value, min, max) => Math.max(min, Math.min(max, value));
+
+// モンスター1体から、ラン中の現在値を作る。
+// mon は slots へ入るのと同じ形(マスモンなら育成済みの値が baseHp などに入っている)。
+// ★ちから・丈夫さは「いまの値」をそのまま持つ。トレーニングで伸びるのもこの値
+const createTacticsUnit = (mon, {
+  fullGuts = false
+} = {}) => {
+  if (!mon) return null;
+  const maxHp = Math.max(1, tacticsSafeInt(mon.baseHp, 1));
+  const maxGuts = Math.max(0, tacticsSafeInt(mon.baseGuts, 0));
+  return {
+    id: mon.id || null,
+    masuId: mon.masuId ?? null,
+    name: mon.masuName || mon.name || '',
+    hp: maxHp,
+    maxHp,
+    // 素の上限。みゅあ補正などの倍率は「合計」ではなく1体ずつへ効かせるので、
+    // 倍率が変わるたびにここから maxHp を計算し直す(scaleTacticsUnitMaxHp)
+    baseMaxHp: maxHp,
+    atk: Math.max(0, tacticsSafeInt(mon.baseAtk, 0)),
+    def: Math.max(0, tacticsSafeInt(mon.baseDef, 0)),
+    guts: fullGuts ? maxGuts : Math.floor(maxGuts * TACTICS_START_GUTS_RATE),
+    maxGuts,
+    // ライフと同じく、素の上限を残す。みゅあ補正の倍率はここから計算し直す
+    baseMaxGuts: maxGuts,
+    downed: false
+  };
+};
+
+// 壊れた値を含む unit を安全な形へ戻す。ライフが0なら倒れている扱いに揃える
+const normalizeTacticsUnit = unit => {
+  if (!unit || typeof unit !== 'object') return null;
+  const maxHp = Math.max(1, tacticsSafeInt(unit.maxHp, 1));
+  // 素の上限が無い(古い形)ときは、いまの上限をそのまま素の上限とみなす
+  const baseMaxHp = Math.max(1, tacticsSafeInt(unit.baseMaxHp, maxHp));
+  const maxGuts = Math.max(0, tacticsSafeInt(unit.maxGuts, 0));
+  const baseMaxGuts = Math.max(0, tacticsSafeInt(unit.baseMaxGuts, maxGuts));
+  const hp = tacticsClamp(tacticsSafeInt(unit.hp, 0), 0, maxHp);
+  return {
+    ...unit,
+    hp,
+    maxHp,
+    baseMaxHp,
+    // 「ライフ0なのに立っている」は作らない。上限まで戻ったら必ず立ち上がる。
+    // そのあいだ(0 < hp < maxHp)は、倒れたままライフが貯まっている状態
+    downed: hp <= 0 ? true : hp >= maxHp ? false : !!unit.downed,
+    atk: Math.max(0, tacticsSafeInt(unit.atk, 0)),
+    def: Math.max(0, tacticsSafeInt(unit.def, 0)),
+    guts: tacticsClamp(tacticsSafeInt(unit.guts, 0), 0, maxGuts),
+    maxGuts,
+    baseMaxGuts
+  };
+};
+
+// ダメージ。0になったらその子は倒れる
+const applyTacticsDamage = (unit, damage) => {
+  const target = normalizeTacticsUnit(unit);
+  if (!target || target.downed) return target;
+  const hp = Math.max(0, target.hp - Math.max(0, tacticsSafeInt(damage, 0)));
+  return {
+    ...target,
+    hp,
+    downed: hp <= 0
+  };
+};
+
+// 回復。★倒れている子にも入る。上限まで届いたところで立ち上がる(normalizeTacticsUnit が見る)
+const healTacticsUnit = (unit, amount) => {
+  const target = normalizeTacticsUnit(unit);
+  if (!target) return target;
+  return normalizeTacticsUnit({
+    ...target,
+    hp: Math.min(target.maxHp, target.hp + Math.max(0, tacticsSafeInt(amount, 0)))
+  });
+};
+
+// 倒れた子を一気に立たせる(WAVE後のトレーニングで「起こす」を選んだとき)。
+// ★やっていることは「上限まで回復する」。全快になったら立ち上がる、という決まりは1つだけ
+const reviveTacticsUnit = unit => {
+  const target = normalizeTacticsUnit(unit);
+  if (!target) return target;
+  return normalizeTacticsUnit({
+    ...target,
+    hp: target.maxHp
+  });
+};
+
+// ガッツ。足りなければ払えない(payable:false を返し、値は変えない)
+const payTacticsGuts = (unit, cost) => {
+  const target = normalizeTacticsUnit(unit);
+  const need = Math.max(0, tacticsSafeInt(cost, 0));
+  if (!target || target.downed || target.guts < need) return {
+    unit: target,
+    payable: false
+  };
+  return {
+    unit: {
+      ...target,
+      guts: target.guts - need
+    },
+    payable: true
+  };
+};
+const recoverTacticsGuts = (unit, amount) => {
+  const target = normalizeTacticsUnit(unit);
+  if (!target || target.downed) return target;
+  return {
+    ...target,
+    guts: Math.min(target.maxGuts, target.guts + Math.max(0, tacticsSafeInt(amount, 0)))
+  };
+};
+
+// ===== 盤面(4スロット) =====
+// 空きスロットは null。倒れた子は残り続ける(スロットは空かない)
+
+const tacticsAliveSlots = units => (Array.isArray(units) ? units : []).map((unit, index) => unit && !normalizeTacticsUnit(unit).downed ? index : -1).filter(index => index >= 0);
+const tacticsFilledSlots = units => (Array.isArray(units) ? units : []).map((unit, index) => unit ? index : -1).filter(index => index >= 0);
+const tacticsDownedSlots = units => (Array.isArray(units) ? units : []).map((unit, index) => unit && normalizeTacticsUnit(unit).downed ? index : -1).filter(index => index >= 0);
+// ===== 盤面の合計 =====
+//
+// 新モードでは、パーティのライフ(hp / maxHp)を**盤面の合計**にする。こうすると
+// 全滅＝合計0 が自動的に成り立ち、いまある敗北判定・ライフバー・20ターン経過を
+// そのまま使える。
+// ★合計と盤面が食い違うと即座に壊れる(「合計は残っているのに全員倒れている」)。
+//   書き換えの入口は 60-app.jsx の commitTacticsUnits ひとつだけにしてある。
+// ★合計へ数えるのは「立っている子」だけ。倒れた子のライフは復活までの貯めなので、
+//   ここへ入れると「全員倒れているのに合計が残っている」=敗北にならない、が起きる
+const tacticsTotalHp = units => tacticsAliveSlots(units).reduce((sum, index) => sum + normalizeTacticsUnit(units[index]).hp, 0);
+const tacticsTotalMaxHp = units => (Array.isArray(units) ? units : []).reduce((sum, unit) => sum + (unit ? normalizeTacticsUnit(unit).maxHp : 0), 0);
+// ★ガッツもライフと同じく「立っている子だけ」を数える(2026-09-20 ユーザー指示)。
+//   倒れた子のガッツを合計へ入れると、立っている子が全員満タンでも合計が上限に届かず、
+//   リザルトの「強化ポイントでガッツ回復」が押せてしまう(押してもその子には入らないので
+//   ポイントだけ減る)。現在値と上限の両方を外さないと、合計だけがちぐはぐになる
+const tacticsTotalGuts = units => tacticsAliveSlots(units).reduce((sum, index) => sum + normalizeTacticsUnit(units[index]).guts, 0);
+const tacticsTotalBaseMaxGuts = units => tacticsAliveSlots(units).reduce((sum, index) => sum + normalizeTacticsUnit(units[index]).baseMaxGuts, 0);
+// ガッツを入れる余地が残っている子がいるか。★合計で見ない。
+//   1体ずつは floor(素の上限×みゅあ補正)、合計は floor(素の上限の合計×補正) なので、
+//   全員満タンでも切り捨ての差ぶん「合計 < 上限」になることがある(65が3人・+10%で 213 対 214)。
+//   実際に配れるかは1体ずつでしか分からない
+const tacticsHasGutsRoom = units => tacticsAliveSlots(units).some(index => {
+  const unit = normalizeTacticsUnit(units[index]);
+  return unit.guts < unit.maxGuts;
+});
+// 素の上限の合計。パーティの maxHp はこちらを持つ。
+// ★みゅあ補正は既存モードと同じく effectiveMaxHp が掛ける。1体ずつの上限にも同じ倍率が
+//   入っているので、ゲージの満タンと盤面の合計はほぼ一致する(1体ごとの切り捨てぶんだけ下)
+const tacticsTotalBaseMaxHp = units => (Array.isArray(units) ? units : []).reduce((sum, unit) => sum + (unit ? normalizeTacticsUnit(unit).baseMaxHp : 0), 0);
+
+// みゅあ・かどみうむ・回復カードで上がるライフ上限の倍率。
+// ★合計へ掛けると1体ずつの上限と基準が食い違うので、1体ずつの maxHp へ効かせる。
+//   素の上限(baseMaxHp)は残したまま計算し直すので、倍率が下がっても元へ戻せる
+const scaleTacticsUnitMaxHp = (unit, hpPct = 0) => {
+  const target = normalizeTacticsUnit(unit);
+  if (!target) return null;
+  const pct = Number.isFinite(Number(hpPct)) ? Math.max(0, Number(hpPct)) : 0;
+  const maxHp = Math.max(1, Math.floor(target.baseMaxHp * (1 + pct)));
+  return normalizeTacticsUnit({
+    ...target,
+    maxHp
+  });
+};
+// ガッツの上限も同じ考え方。みゅあ補正は合計ではなく1体ずつへ効かせる
+const scaleTacticsUnitMaxGuts = (unit, gutsPct = 0) => {
+  const target = normalizeTacticsUnit(unit);
+  if (!target) return null;
+  const pct = Number.isFinite(Number(gutsPct)) ? Math.max(0, Number(gutsPct)) : 0;
+  const maxGuts = Math.max(0, Math.floor(target.baseMaxGuts * (1 + pct)));
+  return normalizeTacticsUnit({
+    ...target,
+    maxGuts
+  });
+};
+const scaleTacticsUnits = (units, hpPct = 0, gutsPct = 0) => (Array.isArray(units) ? units : []).map(unit => unit ? scaleTacticsUnitMaxGuts(scaleTacticsUnitMaxHp(unit, hpPct), gutsPct) : null);
+
+// 敵の攻撃。当たった子だけが減り、0になったその子が倒れる
+const damageTacticsTargets = (units, targetSlots, damage) => {
+  const hit = new Set((Array.isArray(targetSlots) ? targetSlots : []).filter(Number.isInteger));
+  return (Array.isArray(units) ? units : []).map((unit, index) => unit && hit.has(index) ? applyTacticsDamage(unit, damage) : unit);
+};
+
+// 回復を盤面へ配る。足りない量に比例して配り、端数は足りない量の大きい子から埋める。
+// 均等割りにすると、瀕死の子が置き去りのまま満タンの子へ回復が消える
+// ★倒れた子にも配る。回復カード・緊急回復は「復活までの貯め」に乗る
+//   (2026-09-19 ユーザーが決めた形)。足りない量が多いぶん、倒れた子へ多く入る
+const healTacticsBoard = (units, amount) => {
+  const list = (Array.isArray(units) ? units : []).slice();
+  const give = Math.max(0, tacticsSafeInt(amount, 0));
+  if (give <= 0) return list;
+  const missing = tacticsFilledSlots(list).map(index => {
+    const unit = normalizeTacticsUnit(list[index]);
+    return {
+      index,
+      need: Math.max(0, unit.maxHp - unit.hp)
+    };
+  }).filter(entry => entry.need > 0).sort((a, b) => b.need - a.need);
+  const totalNeed = missing.reduce((sum, entry) => sum + entry.need, 0);
+  if (totalNeed <= 0) return list;
+  const budget = Math.min(give, totalNeed);
+  let handed = 0;
+  const shares = missing.map(entry => {
+    const value = Math.floor(budget * entry.need / totalNeed);
+    handed += value;
+    return {
+      ...entry,
+      value
+    };
+  });
+  let left = budget - handed;
+  for (let i = 0; i < shares.length && left > 0; i++) {
+    const add = Math.min(left, shares[i].need - shares[i].value);
+    shares[i].value += add;
+    left -= add;
+  }
+  shares.forEach(entry => {
+    if (entry.value > 0) list[entry.index] = healTacticsUnit(list[entry.index], entry.value);
+  });
+  return list;
+};
+
+// ===== ガッツ(1体ずつ) =====
+//
+// ★カードを使うのは「選んだその子」で、払うのもその子のガッツ。
+//   合計で足りていても、その子が足りなければ使えない。ここが新モードの手ざわりの中心。
+
+// そのスロットがそのカードを払えるか。倒れている子は払えない
+const canTacticsSlotPay = (units, slotIndex, cost) => {
+  const list = Array.isArray(units) ? units : [];
+  if (!canTacticsSlotAct(list, slotIndex)) return false;
+  return normalizeTacticsUnit(list[slotIndex]).guts >= Math.max(0, tacticsSafeInt(cost, 0));
+};
+// ガッツを払う。払えないときは盤面を変えずに payable:false を返す
+const payTacticsGutsAt = (units, slotIndex, cost) => {
+  const list = (Array.isArray(units) ? units : []).slice();
+  if (!canTacticsSlotPay(list, slotIndex, cost)) return {
+    units: list,
+    payable: false
+  };
+  const paid = payTacticsGuts(list[slotIndex], cost);
+  if (!paid.payable) return {
+    units: list,
+    payable: false
+  };
+  list[slotIndex] = paid.unit;
+  return {
+    units: list,
+    payable: true
+  };
+};
+// ガッツの回復。ライフと同じく、立っている子へ足りない量に比例して配る。
+// ★倒れた子には配らない(戻ってきたときに満タンで復帰してしまうため)
+const recoverTacticsGutsBoard = (units, amount) => {
+  const list = (Array.isArray(units) ? units : []).slice();
+  const give = Math.max(0, tacticsSafeInt(amount, 0));
+  if (give <= 0) return list;
+  const missing = tacticsAliveSlots(list).map(index => {
+    const unit = normalizeTacticsUnit(list[index]);
+    return {
+      index,
+      need: Math.max(0, unit.maxGuts - unit.guts)
+    };
+  }).filter(entry => entry.need > 0).sort((a, b) => b.need - a.need);
+  const totalNeed = missing.reduce((sum, entry) => sum + entry.need, 0);
+  if (totalNeed <= 0) return list;
+  const budget = Math.min(give, totalNeed);
+  let handed = 0;
+  const shares = missing.map(entry => {
+    const value = Math.floor(budget * entry.need / totalNeed);
+    handed += value;
+    return {
+      ...entry,
+      value
+    };
+  });
+  let left = budget - handed;
+  for (let i = 0; i < shares.length && left > 0; i++) {
+    const add = Math.min(left, shares[i].need - shares[i].value);
+    shares[i].value += add;
+    left -= add;
+  }
+  shares.forEach(entry => {
+    if (entry.value > 0) list[entry.index] = recoverTacticsGuts(list[entry.index], entry.value);
+  });
+  return list;
+};
+// 自分のカードによる自傷(みゅあの札など)。★これで倒れることはない。
+// いまのライフに比例して配り、1体ずつ最低1は残す(元の実装も合計が1を下回らない)
+const selfDamageTacticsBoard = (units, damage) => {
+  const list = (Array.isArray(units) ? units : []).slice();
+  const total = Math.max(0, tacticsSafeInt(damage, 0));
+  if (total <= 0) return list;
+  const alive = tacticsAliveSlots(list).map(index => ({
+    index,
+    room: Math.max(0, normalizeTacticsUnit(list[index]).hp - 1)
+  })).filter(entry => entry.room > 0);
+  const room = alive.reduce((sum, entry) => sum + entry.room, 0);
+  if (room <= 0) return list;
+  const budget = Math.min(total, room);
+  let handed = 0;
+  const shares = alive.map(entry => {
+    const value = Math.floor(budget * entry.room / room);
+    handed += value;
+    return {
+      ...entry,
+      value
+    };
+  });
+  let left = budget - handed;
+  for (let i = 0; i < shares.length && left > 0; i++) {
+    const add = Math.min(left, shares[i].room - shares[i].value);
+    shares[i].value += add;
+    left -= add;
+  }
+  shares.forEach(entry => {
+    if (entry.value > 0) list[entry.index] = applyTacticsDamage(list[entry.index], entry.value);
+  });
+  return list;
+};
+
+// ===== 「その子だけ」へ効かせる =====
+//
+// ★回復には**全体回復と単体回復**がある(2026-09-19 ユーザーの整理)。
+//     全体回復 … 回復カード・自動再生・緊急回復・吸収 → healTacticsBoard で盤面へ配る
+//     単体回復 … ガードの余り(構えた子)・ドレイン(殴った子) → ここの healTacticsAt
+//   「その効果が誰に起きたことか」で決まる。カードの持ち主では決まらない。
+// ★倒れた子へも入る(復活までの貯めになる)。立っていることは条件にしない
+const healTacticsAt = (units, slotIndex, amount) => {
+  const list = (Array.isArray(units) ? units : []).slice();
+  if (!list[slotIndex]) return list;
+  list[slotIndex] = healTacticsUnit(list[slotIndex], amount);
+  return list;
+};
+const recoverTacticsGutsAt = (units, slotIndex, amount) => {
+  const list = (Array.isArray(units) ? units : []).slice();
+  if (!canTacticsSlotAct(list, slotIndex)) return list;
+  list[slotIndex] = recoverTacticsGuts(list[slotIndex], amount);
+  return list;
+};
+// 使う子の自傷。★これで倒れることはない(最低1を残す)
+const selfDamageTacticsAt = (units, slotIndex, amount) => {
+  const list = (Array.isArray(units) ? units : []).slice();
+  if (!canTacticsSlotAct(list, slotIndex)) return list;
+  const unit = normalizeTacticsUnit(list[slotIndex]);
+  const hurt = Math.min(Math.max(0, tacticsSafeInt(amount, 0)), Math.max(0, unit.hp - 1));
+  if (hurt <= 0) return list;
+  list[slotIndex] = applyTacticsDamage(list[slotIndex], hurt);
+  return list;
+};
+// 倒れた子を一気に立たせる(トレーニングの「起こす」)。中身は「上限まで回復する」
+const reviveTacticsAt = (units, slotIndex) => {
+  const list = (Array.isArray(units) ? units : []).slice();
+  if (!list[slotIndex]) return list;
+  list[slotIndex] = reviveTacticsUnit(list[slotIndex]);
+  return list;
+};
+// トレーニングの結果を1体へ入れる。after は resolveTrainingStats が返した
+// {atk,def,hp,guts}(hp / guts は「素の上限」)。
+// ★1体ずつ選んだぶんを、その子だけへ入れる(段階11)
+const applyTacticsTraining = (units, slotIndex, after, hpPct = 0, gutsPct = 0) => {
+  const list = (Array.isArray(units) ? units : []).slice();
+  const target = list[slotIndex] ? normalizeTacticsUnit(list[slotIndex]) : null;
+  if (!target || !after) return list;
+  const grown = {
+    ...target,
+    atk: Math.max(0, tacticsSafeInt(after.atk, target.atk)),
+    def: Math.max(0, tacticsSafeInt(after.def, target.def)),
+    baseMaxHp: Math.max(1, tacticsSafeInt(after.hp, target.baseMaxHp)),
+    baseMaxGuts: Math.max(0, tacticsSafeInt(after.guts, target.baseMaxGuts))
+  };
+  list[slotIndex] = scaleTacticsUnitMaxGuts(scaleTacticsUnitMaxHp(grown, hpPct), gutsPct);
+  return list;
+};
+
+// パーティのちから・丈夫さ。★ダメージには使わない(それは1体ずつの値)。
+//   ガードの段階・攻撃段階(カードの枚数と威力)を決めるのに使う。
+// ★合計にすると、人数が増えただけでガードが跳ね上がる。平均にする
+const tacticsPartyStat = (units, key) => {
+  const filled = tacticsFilledSlots(units);
+  if (!filled.length) return 0;
+  return Math.floor(filled.reduce((sum, index) => sum + normalizeTacticsUnit(units[index])[key], 0) / filled.length);
+};
+const tacticsPartyAtk = units => tacticsPartyStat(units, 'atk');
+const tacticsPartyDef = units => tacticsPartyStat(units, 'def');
+// ガード段階(手札に出るガードカードの段階と枚数)だけは「いちばん硬い子」で決める
+// (2026-09-20 ユーザー指示)。平均だと、1体だけ壁役を育てても段階が上がらない。
+// ★軽減量そのものは「構えた子の丈夫さ」で1体ずつ出している(ここは段階だけの話)
+const tacticsMaxDef = units => tacticsFilledSlots(units).reduce((best, index) => Math.max(best, normalizeTacticsUnit(units[index]).def), 0);
+
+// 20ターン経過など、一斉に倒れる場面。敗北の見え方をそろえる
+const wipeTacticsBoard = units => (Array.isArray(units) ? units : []).map(unit => unit ? applyTacticsDamage(unit, Number.MAX_SAFE_INTEGER) : null);
+
+// 全滅したか。★1体もいない盤面は「まだ始まっていない」ので全滅にしない
+const isTacticsWipedOut = units => tacticsFilledSlots(units).length > 0 && tacticsAliveSlots(units).length === 0;
+// そのスロットのカードを使えるか。倒れている子のカードは手札に残っていても選べない
+const canTacticsSlotAct = (units, slotIndex) => tacticsAliveSlots(units).includes(slotIndex);
+
+// ===== スコア =====
+//
+// ★式は今までどおり。桁だけ 1/1000 へ縮める(2026-09-19 ユーザーが選択)。
+//   いまの式は火力そのものなので、個別ステータスのままだと桁が大きくなりすぎて読めない。
+// ★0にしない。1点でも入ったWAVEは1点残す(「何もしていない」と区別が付かなくなる)。
+// ★記録もランキングも新モード専用の名前空間(mh_tactics_* / Tactics*)なので、
+//   ほかのモードのスコアとは混ざらない。
+const TACTICS_SCORE_DIVISOR = 1000;
+const shrinkTacticsScore = score => {
+  const raw = Math.floor(Number(score) || 0);
+  if (!(raw > 0)) return 0;
+  return Math.max(1, Math.floor(raw / TACTICS_SCORE_DIVISOR));
+};
+
+// ===== 供モンが合流すると敵も強くなる =====
+//
+// ★「何人増えたか」ではなく「連れてきた子の総合力」で決める(2026-09-19 ユーザーが選択)。
+//   人数ごとの固定倍率にすると、弱い編成ほど苦しくなる。
+// ★増えたぶんをそのまま倍率にすると跳ね上がるので、指数で緩める。
+//   強く育てた子を連れていくほど敵も手ごわいが、弱い編成でも「多少はやれる」を残す。
+// ★基準はバトルを始めた時点(勇者モン1体)の総合力。絶対値で決めないので、
+//   育ちきった人にも育っていない人にも同じ手ざわりになる。
+const TACTICS_ENEMY_POWER_EXPONENT = 0.7;
+const TACTICS_ENEMY_POWER_MAX = 6;
+const tacticsEnemyPowerMultiplier = (startPower, nowPower, exponent = TACTICS_ENEMY_POWER_EXPONENT) => {
+  const start = Math.max(0, Number(startPower) || 0);
+  const now = Math.max(0, Number(nowPower) || 0);
+  if (!(start > 0) || !(now > start)) return 1;
+  const safeExponent = Number.isFinite(Number(exponent)) ? Math.max(0, Number(exponent)) : TACTICS_ENEMY_POWER_EXPONENT;
+  const raw = Math.pow(now / start, safeExponent);
+  if (!Number.isFinite(raw)) return 1;
+  return Math.min(TACTICS_ENEMY_POWER_MAX, Math.max(1, raw));
+};
+
+// ===== 敵の狙い =====
+//
+// ★完全なランダムだと「誰を守るか」の判断が立たないので、ライフの少ない子を狙いやすくする。
+//   重みは「残りライフの割合が低いほど大きい」。倒れている子は狙わない。
+//   weightBias を0にすると一様ランダムになる(検査で確かめる)。
+const TACTICS_TARGET_LOW_HP_BIAS = 2;
+const tacticsTargetWeights = (units, bias = TACTICS_TARGET_LOW_HP_BIAS) => {
+  const safeBias = Number.isFinite(Number(bias)) ? Math.max(0, Number(bias)) : TACTICS_TARGET_LOW_HP_BIAS;
+  return tacticsAliveSlots(units).map(index => {
+    const unit = normalizeTacticsUnit(units[index]);
+    const remain = unit.maxHp > 0 ? tacticsClamp(unit.hp / unit.maxHp, 0, 1) : 1;
+    return {
+      index,
+      weight: 1 + safeBias * (1 - remain)
+    };
+  });
+};
+// 狙うスロットを1つ選ぶ。生きている子がいなければ null
+const chooseTacticsTarget = (units, random = Math.random, bias = TACTICS_TARGET_LOW_HP_BIAS) => {
+  const weights = tacticsTargetWeights(units, bias);
+  if (!weights.length) return null;
+  const total = weights.reduce((sum, entry) => sum + entry.weight, 0);
+  if (!(total > 0)) return weights[0].index;
+  const roll = tacticsClamp(Number(random()) || 0, 0, 0.999999999999) * total;
+  let cursor = roll;
+  for (const entry of weights) {
+    cursor -= entry.weight;
+    if (cursor < 0) return entry.index;
+  }
+  return weights[weights.length - 1].index;
+};
+
+// 予告の吹き出しへ出す「狙い」の呼び名。名前が無い子でも空欄にしない
+const TACTICS_ALL_TARGET_LABEL = '全員';
+const tacticsTargetName = (units, slotIndex) => {
+  const unit = Array.isArray(units) ? units[slotIndex] : null;
+  return unit && String(unit.name || '').trim() || `${slotIndex + 1}番目の子`;
+};
+
+// 敵の予告へ「誰を狙うか」を足す。
+// ★全体攻撃(targetsAll)は狙いを決めない。立っている全員に当たるので、抽選するものが無い。
+//   薙ぎ払いは間合いで当たる相手が決まるので、ここでは狙いを持たせず、
+//   実行時に「その間合いにいる子」を見る(予告には間合いが出ている)。
+// ★ダメージの無い行動(ためる・移動・咆哮・再生)にも狙いは要らない。
+const TACTICS_TARGETED_TYPES = ['ATTACK', 'SPECIAL'];
+const withTacticsTarget = (intent, units, random = Math.random, bias = TACTICS_TARGET_LOW_HP_BIAS) => {
+  if (!intent || !TACTICS_TARGETED_TYPES.includes(intent.type)) return intent;
+  if (intent.targetsAll) return {
+    ...intent,
+    targetName: TACTICS_ALL_TARGET_LABEL
+  };
+  if (intent.variant === 'sweep') return intent;
+  const targetSlot = chooseTacticsTarget(units, random, bias);
+  return targetSlot == null ? intent : {
+    ...intent,
+    targetSlot,
+    targetName: tacticsTargetName(units, targetSlot)
+  };
+};
+// その行動が実際に当たるスロット。予告と実行で同じ関数を通すので食い違わない
+const tacticsIntentTargets = (intent, units, enemyDist = null) => {
+  const alive = tacticsAliveSlots(units);
+  if (!intent || !alive.length) return [];
+  if (intent.targetsAll) return alive;
+  // 薙ぎ払いは「予告した間合いにいる子」。距離撃でずらせば誰にも当たらないこともある
+  if (intent.variant === 'sweep') {
+    const dist = Number.isInteger(enemyDist) ? enemyDist : intent.sweepDist;
+    return alive.filter(index => index === dist);
+  }
+  return Number.isInteger(intent.targetSlot) && alive.includes(intent.targetSlot) ? [intent.targetSlot] : [];
+};
+
+// ===== 複数ヒットに分かれる攻撃(連撃)の、ガードが届くぶんと通るぶん =====
+// ★連撃は 0.6×3 の3ヒット。ガードが受け止められるのは **1ヒットぶんだけ** で、
+//   残りの2ヒットはそのまま通る(2026-09-20 ユーザー指示)。
+//   「合計から引く」に戻すと、厚いガード1枚で連撃を完全に止められてしまう。
+// ★端数は「通るぶん」へ寄せて、guarded + through が必ず元の合計と一致するようにする。
+// ★予告(予定ダメージ)と実行の両方がこの関数を通る。別々に数えると食い違う。
+const splitTacticsGuardedHit = (incoming, hits) => {
+  const total = Math.max(0, tacticsSafeInt(incoming, 0));
+  const count = Math.max(1, tacticsSafeInt(hits, 1));
+  const guarded = count > 1 ? Math.floor(total / count) : total;
+  return {
+    guarded,
+    through: total - guarded
+  };
+};
+
+// 1体ぶんの受け方。ガードが届く1ヒットぶんを相殺し、残りのヒットはそのまま通す。
+// 返すのは**ターン軽減を掛ける前**の値(軽減は呼び出し側で掛ける)。
+// ★連撃で1ヒットを消しきっても、余ったガードは余らせない(ライフ・ガッツにしない)。
+//   余らせると「合計から引く」のと同じになり、厚いガード1枚で連撃が完全に止まってしまう。
+// ★1ヒットの攻撃(hits=1)では through が0なので、いままでどおり
+//   「余ったぶんがライフとガッツになる」が成り立つ。
+// ★blocked は「ガードが1ヒットぶんを受け止めきったか」。演出(ガード成功)の判定に使う。
+const resolveTacticsGuardedHit = (incoming, hits, guard) => {
+  const {
+    guarded,
+    through
+  } = splitTacticsGuardedHit(incoming, hits);
+  const left = Math.max(0, tacticsSafeInt(guard, 0)) - guarded;
+  if (left < 0) return {
+    taken: -left + through,
+    saved: 0,
+    guarded,
+    through,
+    blocked: false
+  };
+  return through > 0 ? {
+    taken: through,
+    saved: 0,
+    guarded,
+    through,
+    blocked: true
+  } : {
+    taken: 0,
+    saved: left,
+    guarded,
+    through,
+    blocked: true
+  };
+};
+
+// ===== 「2枚目以降は効果半減」の数え方 =====
+// ★どこで数えるかをモードで変えられるようにするための、器だけの関数。
+//   groupOf(slotIndex) が同じカードどうしで枚数を数える。
+//     既存5モード … いつも同じ箱（＝そのターンの2枚目以降が半減）
+//     新モード     … 枠ごとの箱（＝同じ子が2枚使ったときだけ半減。2026-09-20 ユーザー指示）
+// ★isExempt(card) が true のカード（アシストカード）は対象外で、枚数にも数えない。
+// ★実処理・カード選択中の予測・合計軽減の表示がすべてここを通る。
+//   別々に数えると「予測より実際が弱い」が起きる。
+//   peek は数えずに見るだけ、take は1枚使ったことにして、そのカードが半減だったかを返す。
+const makeCardHalveCounter = (groupOf, isExempt) => {
+  const used = {};
+  const counts = card => !!card && !(typeof isExempt === 'function' && isExempt(card));
+  const keyOf = slotIndex => String(typeof groupOf === 'function' ? groupOf(slotIndex) : 'turn');
+  return {
+    peek: (card, slotIndex) => counts(card) && (used[keyOf(slotIndex)] || 0) > 0,
+    take: (card, slotIndex) => {
+      if (!counts(card)) return false;
+      const key = keyOf(slotIndex);
+      const halved = (used[key] || 0) > 0;
+      used[key] = (used[key] || 0) + 1;
+      return halved;
+    }
+  };
+};
+
+// ===== 「その子の上限 × 率」で回復する =====
+// ★1体ずつ自分の率で回す(2026-09-20 ユーザー指摘)。
+//   合計の上限から量を出して配る形だと、
+//     ・1体だけ傷ついているとき、パーティ全員ぶんの回復がその子へ丸ごと入る
+//     ・倒れている子の上限も量の計算に入るので、倒れている子が多いほど
+//       残った子がよけいに回復する(逆になっている)
+//   の2つが起きる。個別のステータスに合わせて、1体ずつ自分の率で回す。
+// ★ライフは includeDowned のときだけ倒れた子にも入れる(復活までの貯め)。
+//   自動再生は false(勝手に復活させない)、回復カード・緊急回復は true。
+// ★ガッツはいつも立っている子だけ(倒れた子はカードを使えない)。
+// ★返す hp / guts は「実際に入ったぶん」。上限で頭打ちになったぶんは数えないので、
+//   画面に出す数字と盤面の増え方が食い違わない。
+const rateHealTacticsBoard = (units, hpRate, gutsRate, includeDowned = false) => {
+  const list = (Array.isArray(units) ? units : []).slice();
+  const hpPct = Math.max(0, Number(hpRate) || 0);
+  const gutsPct = Math.max(0, Number(gutsRate) || 0);
+  const hpSlots = includeDowned ? tacticsFilledSlots(list) : tacticsAliveSlots(list);
+  const gutsSlots = tacticsAliveSlots(list);
+  let hp = 0,
+    guts = 0;
+  tacticsFilledSlots(list).forEach(index => {
+    const before = normalizeTacticsUnit(list[index]);
+    let next = list[index];
+    if (hpPct > 0 && hpSlots.includes(index)) {
+      const gain = Math.floor(before.maxHp * hpPct);
+      if (gain > 0) next = healTacticsUnit(next, gain);
+    }
+    if (gutsPct > 0 && gutsSlots.includes(index)) {
+      const gain = Math.floor(before.maxGuts * gutsPct);
+      if (gain > 0) next = recoverTacticsGuts(next, gain);
+    }
+    const after = normalizeTacticsUnit(next);
+    hp += after.hp - before.hp;
+    guts += after.guts - before.guts;
+    list[index] = next;
+  });
+  return {
+    units: list,
+    hp,
+    guts
+  };
+};
+// 1体だけを「その子の上限 × 率」で回復する。
+// 固有技・アシストカードの効果が「使った子」へ入るときに通る
+const rateHealTacticsAt = (units, slotIndex, hpRate, gutsRate) => {
+  const list = (Array.isArray(units) ? units : []).slice();
+  const before = normalizeTacticsUnit(list[slotIndex]);
+  if (!before) return {
+    units: list,
+    hp: 0,
+    guts: 0
+  };
+  let next = list[slotIndex];
+  const hpGain = Math.floor(before.maxHp * Math.max(0, Number(hpRate) || 0));
+  if (hpGain > 0) next = healTacticsUnit(next, hpGain);
+  const gutsGain = Math.floor(before.maxGuts * Math.max(0, Number(gutsRate) || 0));
+  if (gutsGain > 0 && !before.downed) next = recoverTacticsGuts(next, gutsGain);
+  const after = normalizeTacticsUnit(next);
+  list[slotIndex] = next;
+  return {
+    units: list,
+    hp: after.hp - before.hp,
+    guts: after.guts - before.guts
+  };
+};
+
+// ===== あとから入った子の追いつき補正 =====
+// ★供モンは WAVE 2 / 4 / 6 で加わる。加入ボーナス(plusStats)は使わず
+//   **素のステータスをそのまま**盤面へ入れるが、勇者モンはそこまでにトレーニングを
+//   受けているので、遅く入るほど見劣りする(2026-09-20 ユーザー指示)。
+// ★そこで「クリアしたWAVE 1つにつき全ステ+10%」を基準に、加入する子へ積んで渡す。
+//   実際の率は**そのWAVEを何ターンで抜けたか**で決める。速いほど厚い。
+//     remainingTurns = 21 - そのWAVEに使ったターン数(スコア計算と同じ値)
+//     率 = remainingTurns × 1%
+//   1ターンで抜ければ +20%、11ターン(半分)で +10%、20ターンかかれば +1%、
+//   時間切れなら 0%。
+// ★WAVEごとに掛け算で積む(トレーニングと同じ複利)。5WAVEぶん10%なら ×1.61。
+const TACTICS_JOIN_RATE_PER_TURN = 0.01;
+const tacticsJoinWaveRate = remainingTurns => Math.max(0, tacticsSafeInt(remainingTurns, 0)) * TACTICS_JOIN_RATE_PER_TURN;
+// クリアしたWAVEぶんを積み上げた倍率。加入した子のステータスへそのまま掛ける
+const addTacticsJoinCatchUp = (multiplier, remainingTurns) => {
+  const base = Math.max(1, Number(multiplier) || 1);
+  return base * (1 + tacticsJoinWaveRate(remainingTurns));
+};
+// 加入した子へ積み上げた倍率を乗せる。
+// ★みゅあ補正は素の上限(baseMaxHp)から計算し直す側で掛かるので、ここでは触らない
+const applyTacticsJoinCatchUp = (unit, multiplier) => {
+  const target = normalizeTacticsUnit(unit);
+  if (!target) return unit;
+  const rate = Math.max(1, Number(multiplier) || 1);
+  const grow = value => Math.max(0, Math.floor(Math.max(0, tacticsSafeInt(value, 0)) * rate));
+  const baseMaxHp = Math.max(1, grow(target.baseMaxHp));
+  const baseMaxGuts = Math.max(0, grow(target.baseMaxGuts));
+  return normalizeTacticsUnit({
+    ...target,
+    baseMaxHp,
+    maxHp: baseMaxHp,
+    hp: baseMaxHp,
+    baseMaxGuts,
+    maxGuts: baseMaxGuts,
+    guts: Math.floor(baseMaxGuts * TACTICS_START_GUTS_RATE),
+    atk: grow(target.atk),
+    def: grow(target.def)
+  });
+};
+
 // ---- part: 40-screen-effects.jsx ----
 // ==== 画面ライフサイクル: タイマー・リスナーの登録簿(useScreenEffects) ====
 //
@@ -27330,6 +28624,9 @@ function ProfileScreen({
   resolveIconUrl,
   selectedAssistantId,
   speciesChallengeProgress,
+  // タクティクスバトルの記録(モードidごとに {hs,clears,waves})と、その種族チャレンジの進み具合
+  tacticsRecordsOf,
+  speciesChallengeProgressOf,
   onBack,
   onOpenNameEdit,
   onOpenIconPicker,
@@ -27630,19 +28927,27 @@ function ProfileScreen({
     }, "\u4EF2\u826F\u3057\u5EA6\u306F\u52A9\u624B\u3054\u3068\u306B\u5225\u3005\u306B\u8CAF\u307E\u308A\u307E\u3059\u3002\u5207\u308A\u66FF\u3048\u3066\u3082\u6D88\u3048\u307E\u305B\u3093\u3002")));
   })(), (() => {
     const difficultyIds = Object.keys(DIFFICULTY_SETTINGS);
-    const modes = [...PUBLIC_BATTLE_MODES, EXTREME_MODE, SPECIES_CHALLENGE_MODE];
+    // タクティクスバトルのモードは、遊べるようになったものから同じ並びへ加わる
+    // (β版ではタクティクスプロだけ)。判定は battleModePlayable の1か所に任せる
+    const modes = [...PUBLIC_BATTLE_MODES, EXTREME_MODE, SPECIES_CHALLENGE_MODE, ...[TACTICS_MODE, TACTICS_SPECIES_MODE, TACTICS_PRO_MODE].filter(mode => battleModePlayable(mode.id))];
     const selected = modes.find(mode => mode.id === profileBattleMode) || null;
-    const speciesSummary = speciesChallengeProfileSummary(speciesChallengeProgress);
+    const progressOf = mode => typeof speciesChallengeProgressOf === 'function' ? speciesChallengeProgressOf(mode) : speciesChallengeProgress;
+    const speciesSummaryOf = mode => speciesChallengeProfileSummary(progressOf(mode));
+    const speciesSummary = speciesSummaryOf(BATTLE_MODE_SPECIES_CHALLENGE);
     const speciesDifficultyLabel = id => DIFFICULTY_SETTINGS[id]?.label || EXTREME_DIFFICULTIES.find(setting => setting.id === id)?.label || id;
-    const scoreMapFor = mode => isProMode(mode.id) ? proHighScores : highScores;
+    const tacticsHsOf = modeId => typeof tacticsRecordsOf === 'function' ? tacticsRecordsOf(modeId).hs : {};
+    const scoreMapFor = mode => isTacticsMode(mode.id) ? tacticsHsOf(mode.id) : isProMode(mode.id) ? proHighScores : highScores;
     const representativeFor = mode => {
-      if (mode.id === BATTLE_MODE_SPECIES_CHALLENGE) return speciesSummary.bestScore > 0 ? `最高スコア: ${speciesSummary.bestScore.toLocaleString()} pt` : '最高スコア: 記録なし';
+      if (isSpeciesChallengeMode(mode.id)) {
+        const summary = speciesSummaryOf(mode.id);
+        return summary.bestScore > 0 ? `最高スコア: ${summary.bestScore.toLocaleString()} pt` : '最高スコア: 記録なし';
+      }
       if (isQuickMode(mode.id)) {
         const wave = highestModeWave(quickHighestWaves, difficultyIds);
         return wave > 0 ? `最高到達 WAVE ${wave}` : '未記録';
       }
       const scores = mode.id === EXTREME_MODE.id ? extremeBestScores : scoreMapFor(mode);
-      const ids = mode.id === EXTREME_MODE.id ? PUBLIC_EXTREME_DIFFICULTIES.map(item => item.id) : difficultyIds;
+      const ids = mode.id === EXTREME_MODE.id ? PUBLIC_EXTREME_DIFFICULTIES.map(item => item.id) : isTacticsMode(mode.id) ? TACTICS_DIFFICULTY_IDS : difficultyIds;
       const best = highestModeScore(scores, ids);
       return best > 0 ? `最高スコア ${best.toLocaleString()} pt` : '未記録';
     };
@@ -27652,12 +28957,12 @@ function ProfileScreen({
     }, /*#__PURE__*/React.createElement(ScreenSectionLabel, null, "\u30D0\u30C8\u30EB\u8A18\u9332"), /*#__PURE__*/React.createElement(ScreenLead, null, "\u30E2\u30FC\u30C9\u3092\u30BF\u30C3\u30D7\u3059\u308B\u3068\u8A73\u3057\u3044\u8A18\u9332\u3092\u78BA\u8A8D\u3067\u304D\u307E\u3059"), !selected ? /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-1 gap-2"
     }, modes.map(mode => {
-      const species = mode.id === BATTLE_MODE_SPECIES_CHALLENGE;
+      const species = isSpeciesChallengeMode(mode.id);
       return /*#__PURE__*/React.createElement("button", {
         key: mode.id,
         type: "button",
         "data-profile-mode": mode.id,
-        onClick: () => species ? onOpenSpeciesRecords() : onSelectBattleMode(mode.id),
+        onClick: () => species ? onOpenSpeciesRecords(mode.id) : onSelectBattleMode(mode.id),
         className: "w-full min-h-[64px] rounded-2xl border bg-slate-900/70 px-3 py-2.5 text-left active:scale-[.98]",
         style: {
           borderColor: `${mode.color}66`
@@ -27725,7 +29030,7 @@ function ProfileScreen({
       }, clears, "\u56DE"))) : /*#__PURE__*/React.createElement("div", {
         className: "mt-2 text-center text-[11px] font-black text-slate-400"
       }, "\u672A\u8A18\u9332"));
-    }) : Object.entries(DIFFICULTY_SETTINGS).map(([key, setting]) => {
+    }) : (isTacticsMode(selected.id) ? TACTICS_DIFFICULTY_IDS.map(id => [id, DIFFICULTY_SETTINGS[id] || EXTREME_DIFFICULTIES.find(setting => setting.id === id) || EXTREME_SETTING]) : Object.entries(DIFFICULTY_SETTINGS)).map(([key, setting]) => {
       const record = modeRecordFor(selected.id, key);
       const quick = isQuickMode(selected.id);
       const challenge = selected.id === BATTLE_MODE_CHALLENGE;
@@ -34889,20 +36194,39 @@ function RewardPickScreen({
   maxHp,
   runMode,
   setTrainingPicks,
+  slots,
+  tacticsUnits,
   trainingPicks,
   waveResult
 }) {
   const specialRule = specialRuleDifficultyForRun(runMode, difficulty, extremeRun, extremeDifficulty);
-  const baseStats = {
+  // 新モードは「居るモンスター個別に」選ぶ(2026-09-19 ユーザーが決めた形。設計 §4.5)。
+  // trainingPicks は {slot,id} の並びになり、立っている子ごとに2回ずつ選ぶ。
+  // ★タブは作らず、まだ選び終わっていない子へ自動で進む。押す回数を増やさないため
+  const tacticsMode = Array.isArray(tacticsUnits);
+  const trainableSlots = tacticsMode ? tacticsUnits.map((unit, index) => unit && !unit.downed ? index : -1).filter(index => index >= 0) : [];
+  const downedSlots = tacticsMode ? tacticsUnits.map((unit, index) => unit && unit.downed ? index : -1).filter(index => index >= 0) : [];
+  const picksOf = slotIdx => trainingPicks.filter(entry => entry && entry.slot === slotIdx).map(entry => entry.id);
+  const currentSlot = tacticsMode ? trainableSlots.find(index => picksOf(index).length < TRAINING_PICK_COUNT) ?? null : null;
+  const currentUnit = currentSlot != null ? tacticsUnits[currentSlot] : null;
+  const currentName = currentSlot != null ? slots?.[currentSlot]?.masuName || slots?.[currentSlot]?.name || `${currentSlot + 1}番目の子` : '';
+  const activePicks = tacticsMode ? currentSlot != null ? picksOf(currentSlot) : [] : trainingPicks;
+  const baseStats = currentUnit ? {
+    atk: currentUnit.atk,
+    def: currentUnit.def,
+    hp: currentUnit.baseMaxHp,
+    guts: currentUnit.baseMaxGuts
+  } : {
     atk,
     def,
     hp: maxHp,
     guts: maxGuts
   };
   // いま選んでいるぶんまでを適用した値。次の1回はこの値からさらに伸びる
-  const current = resolveTrainingStats(baseStats, trainingPicks, waveResult?.turn, specialRule);
-  const remaining = TRAINING_PICK_COUNT - trainingPicks.length;
-  const ready = trainingPicks.length === TRAINING_PICK_COUNT;
+  const current = resolveTrainingStats(baseStats, activePicks, waveResult?.turn, specialRule);
+  const remaining = TRAINING_PICK_COUNT - activePicks.length;
+  const ready = tacticsMode ? trainableSlots.length > 0 && trainableSlots.every(index => picksOf(index).length === TRAINING_PICK_COUNT) : trainingPicks.length === TRAINING_PICK_COUNT;
+  const doneSlots = tacticsMode ? trainableSlots.filter(index => picksOf(index).length === TRAINING_PICK_COUNT).length : 0;
   const STYLES = {
     hp: {
       icon: /*#__PURE__*/React.createElement(Heart, {
@@ -34966,20 +36290,23 @@ function RewardPickScreen({
     className: "mt-1.5 flex items-center justify-center gap-2"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-[10px] font-black text-slate-300"
-  }, "4\u7A2E\u985E\u304B\u30892\u3064\u9078\u3076"), /*#__PURE__*/React.createElement("span", {
+  }, tacticsMode ? `${currentName || '全員'}のトレーニング` : '4種類から2つ選ぶ'), /*#__PURE__*/React.createElement("span", {
     className: "flex items-center gap-1"
   }, Array.from({
     length: TRAINING_PICK_COUNT
   }).map((_, i) => /*#__PURE__*/React.createElement("i", {
     key: i,
-    className: `block rounded-full ${i < trainingPicks.length ? 'bg-amber-400' : 'bg-slate-700'}`,
+    className: `block rounded-full ${i < activePicks.length ? 'bg-amber-400' : 'bg-slate-700'}`,
     style: {
       width: '9px',
       height: '9px'
     }
   }))), /*#__PURE__*/React.createElement("span", {
     className: "text-[11px] font-black font-mono text-amber-300"
-  }, trainingPicks.length, " / ", TRAINING_PICK_COUNT)), extremeRuleNumber(specialRule, 'awakeningZeroTurns') != null && (() => {
+  }, activePicks.length, " / ", TRAINING_PICK_COUNT)), tacticsMode && /*#__PURE__*/React.createElement("div", {
+    "data-tactics-training-progress": `${doneSlots}/${trainableSlots.length}`,
+    className: "mt-1 text-center text-[10px] font-black text-indigo-300"
+  }, doneSlots, " / ", trainableSlots.length, " \u4F53\u3076\u3093\u6C7A\u5B9A\u305A\u307F"), extremeRuleNumber(specialRule, 'awakeningZeroTurns') != null && (() => {
     const turns = waveResult?.turn || 0;
     // 低下は増加量へ掛かるので、率から引いた「-○pt」ではなく倍率で出す
     const gainRate = trainingGainRate(turns, specialRule);
@@ -35026,7 +36353,7 @@ function RewardPickScreen({
   }))), /*#__PURE__*/React.createElement("div", {
     className: `w-full max-w-sm grid grid-cols-2 grid-rows-2 gap-2 flex-1 min-h-0 overflow-y-auto mh-scroll${battleTutorialSpotClass('rewards')}`
   }, TRAINING_OPTIONS.map(option => {
-    const count = trainingPicks.filter(id => id === option.id).length;
+    const count = activePicks.filter(id => id === option.id).length;
     const st = STYLES[option.id] || STYLES.hp;
     const before = current[option.stat];
     const after = resolveTrainingStep(current, option.id, waveResult?.turn, specialRule)[option.stat];
@@ -35034,8 +36361,16 @@ function RewardPickScreen({
     return /*#__PURE__*/React.createElement("button", {
       key: option.id,
       type: "button",
-      disabled: full || !!effect,
-      onClick: () => setTrainingPicks(prev => prev.length >= TRAINING_PICK_COUNT ? prev : [...prev, option.id]),
+      disabled: full || !!effect || tacticsMode && currentSlot == null,
+      onClick: () => setTrainingPicks(prev => {
+        if (!tacticsMode) return prev.length >= TRAINING_PICK_COUNT ? prev : [...prev, option.id];
+        if (currentSlot == null) return prev;
+        if (prev.filter(entry => entry && entry.slot === currentSlot).length >= TRAINING_PICK_COUNT) return prev;
+        return [...prev, {
+          slot: currentSlot,
+          id: option.id
+        }];
+      }),
       "aria-label": `${option.name} ${option.effect}${count > 0 ? ` 選択中${count}回` : ''}`,
       className: `relative min-h-[112px] rounded-2xl border-2 p-2.5 flex flex-col items-start justify-center gap-2 text-left transition-all active:scale-95 disabled:opacity-40 ${count > 0 ? `${st.bg} ${st.ring}` : 'bg-slate-900/60 border-slate-800'}`
     }, count > 0 && /*#__PURE__*/React.createElement("span", {
@@ -35065,7 +36400,25 @@ function RewardPickScreen({
     }, "\u2192"), " ", /*#__PURE__*/React.createElement("b", {
       className: st.tint
     }, after))));
-  })), /*#__PURE__*/React.createElement("div", {
+  })), tacticsMode && downedSlots.length > 0 && /*#__PURE__*/React.createElement("div", {
+    "data-tactics-training-revive": true,
+    className: "shrink-0 w-full max-w-sm mt-2 space-y-1"
+  }, downedSlots.map(slotIdx => /*#__PURE__*/React.createElement("button", {
+    key: slotIdx,
+    type: "button",
+    disabled: !!effect,
+    onClick: () => {
+      setTrainingPicks([]);
+      handleTraining({
+        revive: slotIdx
+      });
+    },
+    className: "w-full min-h-[44px] rounded-2xl border-2 border-emerald-400/70 bg-emerald-950/60 px-3 text-left font-black text-emerald-200 active:scale-95 disabled:opacity-40"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "block text-[12px] leading-tight"
+  }, slots?.[slotIdx]?.masuName || slots?.[slotIdx]?.name || `${slotIdx + 1}番目の子`, "\u3092\u8D77\u3053\u3059"), /*#__PURE__*/React.createElement("span", {
+    className: "block text-[9px] font-black text-emerald-400/90 leading-tight"
+  }, "\u3053\u306EWAVE\u306E\u5F37\u5316\u306F\u306A\u3057")))), /*#__PURE__*/React.createElement("div", {
     className: "shrink-0 w-full max-w-sm mt-2 grid grid-cols-[auto_minmax(0,1fr)] gap-2",
     style: {
       paddingBottom: 'calc(.25rem + env(safe-area-inset-bottom))'
@@ -35118,7 +36471,8 @@ function ChampionScreen({
   speciesChallengeBattleRun,
   speciesChallengeClearCardNode,
   speciesChallengeFromDebugRef,
-  speciesChallengeSaveRunRef
+  speciesChallengeSaveRunRef,
+  speciesChallengeBattleRunRef
 }) {
   return /*#__PURE__*/React.createElement("div", {
     className: "fixed inset-0 flex flex-col items-center p-6 text-center",
@@ -35166,11 +36520,13 @@ function ChampionScreen({
     onClick: () => {
       const keepSaving = speciesChallengeSaveRunRef.current;
       const keepDebug = speciesChallengeFromDebugRef.current;
+      const keepMode = speciesChallengeRunMode(speciesChallengeBattleRunRef.current);
       runResultActionOnce(() => {
         returnToHome();
         openSpeciesChallengeSelection({
           saveProgress: keepSaving,
-          fromDebug: keepDebug
+          fromDebug: keepDebug,
+          mode: keepMode
         });
       });
     },
@@ -35530,10 +36886,10 @@ function HomeScreen({
   }, "\u2728\u958B\u50AC\u4E2D\u2728"))), /*#__PURE__*/React.createElement("button", {
     className: `mh-home-facility battle${spotClass('battle')}`,
     onClick: onOpenBattle,
-    "aria-label": "\u30D0\u30C8\u30EB"
+    "aria-label": "\u30E2\u30F3\u30D2\u30ED\u30D0\u30C8\u30EB"
   }, /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement(Sword, {
     size: 25
-  }), "\u30D0\u30C8\u30EB"))), /*#__PURE__*/React.createElement("button", {
+  }), "\u30E2\u30F3\u30D2\u30ED\u30D0\u30C8\u30EB"))), /*#__PURE__*/React.createElement("button", {
     onClick: openMissions,
     className: `mh-home-mission${spotClass('reward')}`
   }, /*#__PURE__*/React.createElement(List, {
@@ -35848,6 +37204,7 @@ function BattleScreen({
   cardDragActiveRef,
   cardEffectMultiplier,
   cardLimit,
+  makeCardHalveCounter,
   cardNeedsMonster,
   cycleActiveUniqueForSlot,
   cycleBattleAuto,
@@ -35939,6 +37296,9 @@ function BattleScreen({
   soulBattleParty,
   soulCoordinationCardBonus,
   suppressCardClickRef,
+  tacticsCanAssign,
+  tacticsCardBlock,
+  tacticsUnits,
   teachingFx,
   totalTurnCount,
   turnCount,
@@ -35948,6 +37308,10 @@ function BattleScreen({
   useEmergency,
   wave
 }) {
+  // 強化の札を「アイコン1行」と「数値つきの一覧」で切り替える(2026-09-20 ユーザー指摘)。
+  // ★いくつ付いても高さが変わらないようにするための状態。ここが無いと、
+  //   札が3行4行に伸びて敵の絵・緊急のボタン・与ダメの数字を押し出す
+  const [buffDetail, setBuffDetail] = useState(false);
   return /*#__PURE__*/React.createElement("div", {
     className: "flex-1 flex flex-col h-full relative",
     "data-battle-speed": battleSpeed,
@@ -36210,9 +37574,9 @@ function BattleScreen({
       className: "text-center whitespace-nowrap"
     }, label, " ", value)));
   })(), enemy && /*#__PURE__*/React.createElement("div", {
-    className: `shrink-0 bg-slate-950/95 border-b border-red-900/40 px-4 py-1.5 z-[6400] shadow-[0_4px_12px_rgba(0,0,0,0.6)]${battleTutorialSpotClass('enemyBar')}`
+    className: `shrink-0 bg-slate-950/95 border-b border-red-900/40 px-4 py-1 z-[6400] shadow-[0_4px_12px_rgba(0,0,0,0.6)]${battleTutorialSpotClass('enemyBar')}`
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex justify-between items-center text-[10px] font-black italic uppercase tracking-tighter mb-1"
+    className: "flex justify-between items-center text-[11px] font-black italic uppercase tracking-tighter mb-0.5"
   }, /*#__PURE__*/React.createElement("span", {
     className: `flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5 leading-none ${wave === 10 ? 'text-red-500 animate-pulse' : 'text-slate-200'}`
   }, /*#__PURE__*/React.createElement(Skull, {
@@ -36236,7 +37600,10 @@ function BattleScreen({
       backgroundImage: 'linear-gradient(to right, #b91c1c, #ef4444, #fb923c)'
     }
   }))), /*#__PURE__*/React.createElement("main", {
-    className: "flex-1 relative flex flex-col items-center justify-between pt-3 pb-1 px-2 overflow-x-visible overflow-y-auto min-h-0"
+    className: "flex-1 relative flex flex-col items-center justify-start pt-3 pb-1 px-2 overflow-x-visible overflow-y-auto min-h-0",
+    style: {
+      justifyContent: 'safe center'
+    }
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => setShowEnemyInfo(true),
     className: "absolute right-2 top-24 flex flex-col items-center justify-center p-2 rounded-2xl border border-red-500 bg-red-950/30 active:scale-90 z-20 shadow-lg"
@@ -36479,7 +37846,7 @@ function BattleScreen({
   }))), /*#__PURE__*/React.createElement("div", {
     className: `rounded-full transition-all duration-500 border-4 relative ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border} ${RANGE_STYLES[enemyDist].shadow} ${RANGE_STYLES[enemyDist].glow} shadow-[0_0_50px]`,
     style: enemyAttackAnim && !ecoBattleView ? {
-      padding: 'clamp(8px,2.2dvh,28px)',
+      padding: 'clamp(6px,1.5dvh,16px)',
       animation: enemyAttackFx?.kind === 'move' ? enemy?.id === 'Moo' ? 'enemyMoveSlideMoo 1000ms ease-in-out forwards' : 'enemyMoveSlide 1000ms ease-in-out forwards' : enemyAttackFx?.kind === 'charge' ? 'enemyChargeShake 1100ms ease-in-out forwards' : 'enemyAttackFly 450ms ease-in forwards',
       ...(enemy?.id === 'Moo' && enemyAttackFx?.kind !== 'move' ? {
         transform: 'translateY(3dvh)'
@@ -36488,21 +37855,24 @@ function BattleScreen({
         zIndex: 9999
       } : {})
     } : {
-      padding: 'clamp(8px,2.2dvh,28px)',
+      padding: 'clamp(6px,1.5dvh,16px)',
       ...(enemy?.id === 'Moo' ? {
         transform: 'translateY(3dvh)'
       } : {})
     }
   }, enemy?.imgUrl ? enemy?.id === 'Moo' ? /*#__PURE__*/React.createElement("div", {
     style: {
-      width: 'clamp(70px,12dvh,120px)',
-      height: 'clamp(80px,16dvh,150px)'
+      width: 'clamp(92px,16dvh,142px)',
+      height: 'clamp(86px,15dvh,132px)'
     }
   }) : /*#__PURE__*/React.createElement("span", {
     className: extremeRun ? extremeDifficulty === NIGHTMARE_SETTING.id ? 'mh-nightmare-enemy-aura-shell' : 'mh-extreme-enemy-aura-shell' : '',
     style: {
-      width: 'clamp(70px,12dvh,120px)',
-      height: 'clamp(80px,16dvh,150px)'
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: 'clamp(92px,16dvh,142px)',
+      height: 'clamp(86px,15dvh,132px)'
     }
   }, /*#__PURE__*/React.createElement("img", {
     src: enemy.imgUrl,
@@ -36512,7 +37882,7 @@ function BattleScreen({
     className: extremeRun ? extremeDifficulty === NIGHTMARE_SETTING.id ? 'mh-nightmare-enemy-aura-shell' : 'mh-extreme-enemy-aura-shell' : ''
   }, /*#__PURE__*/React.createElement("div", {
     style: {
-      fontSize: 'clamp(58px,11dvh,104px)',
+      fontSize: 'clamp(58px,10.5dvh,96px)',
       lineHeight: 1
     },
     className: `relative z-[1] drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]${extremeRun ? extremeDifficulty === NIGHTMARE_SETTING.id ? ' mh-nightmare-enemy-image' : ' mh-extreme-enemy-image' : ''}`
@@ -36751,153 +38121,240 @@ function BattleScreen({
       style: compactPopupStyle,
       className: `text-center ${p.color} font-black whitespace-nowrap px-4 ${liteBattleView ? 'rounded-lg border border-white/20 bg-slate-950/95 py-1 text-base' : 'drop-shadow-[0_0_15px_rgba(0,0,0,1)]'}`
     }, p.text)));
-  })()), /*#__PURE__*/React.createElement("div", {
-    className: "w-full max-w-[180px] mt-2 mb-1 shrink-0 relative z-[40]"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "h-2"
-  }))), enemy && enemyIntent && !isBusy && (() => {
+  })())), enemy && enemyIntent && !isBusy && (() => {
     // ためる・待機・移動はダメージが無いので「予測」を出さない。
     // 出すと必ず0になり、ガードを構える判断の邪魔になる
-    const rawDmg = getIncomingDamageBeforeTurnReduction(enemyIntent);
+    // 新モードは「狙われた子の丈夫さ」で受け、「その子が構えたガード」だけが効く。
+    // ★targetSlot が無いモードでは今までどおりパーティの値で出る
+    const aimedSlot = Number.isInteger(enemyIntent.targetSlot) ? enemyIntent.targetSlot : null;
+    const rawDmg = getIncomingDamageBeforeTurnReduction(enemyIntent, aimedSlot);
     let previewGuardFlat = 0,
-      previewGuardMult = 0,
-      previewPenaltyCnt = 0;
+      previewGuardMult = 0;
+    // 何枚目かの数え方はアプリ側(makeCardHalveCounter)が持つ。
+    // 新モードは「同じ子の2枚目」だけ半減(2026-09-20 ユーザー指示)
+    const previewCounter = makeCardHalveCounter();
     selectedCards.forEach(idx => {
       const card = hand[idx];
-      const isPenalty = !isAssistCard(card);
-      const halved = isPenalty && previewPenaltyCnt > 0;
+      const halved = previewCounter.take(card, cardAssignments[idx] != null ? cardAssignments[idx] : null);
       const weight = guardCardWeight(card);
-      if (weight > 0) {
+      const guardsAimed = aimedSlot === null || cardAssignments[idx] === aimedSlot;
+      if (weight > 0 && guardsAimed) {
         const effect = cardEffectMultiplier(card, halved);
         previewGuardFlat += GUARD_EVOLUTION[guardLevel].flat * weight * effect;
         previewGuardMult += GUARD_EVOLUTION[guardLevel].mult * weight * effect;
       }
-      if (isPenalty) previewPenaltyCnt++;
     });
-    const plannedDmg = applyTurnDamageReduction(Math.max(0, rawDmg - guardValueOf(previewGuardFlat, previewGuardMult)));
+    // ★予告も本番と同じ数え方にする。ずれると「ガードしたのに予定より減った」になる。
+    //   貫通撃はガードが効かない。連撃は3ヒットに分かれ、ガードが届くのは1ヒットぶんだけ
+    const previewGuard = enemyIntent.variant === 'pierce' ? 0 : guardValueOf(previewGuardFlat, previewGuardMult);
+    const previewHits = enemyIntent.variant === 'rush' ? Math.max(1, Math.floor(Number(enemyIntent.hits) || 1)) : 1;
+    const plannedDmg = applyTurnDamageReduction(resolveTacticsGuardedHit(rawDmg, previewHits, previewGuard).taken);
     const tone = enemyIntent.type === 'SPECIAL' ? 'bg-fuchsia-950 border-fuchsia-500 text-fuchsia-300' : enemyIntent.type === 'CHARGE' ? 'bg-amber-950 border-amber-500 text-amber-400' : enemyIntent.type === 'MOVE' ? 'bg-cyan-950 border-cyan-500/60 text-cyan-300' : 'bg-red-950 border-red-600/50 text-red-400';
     // 敵の絵のすぐ下へ置く(2026-09-18・ユーザー依頼)。mt-auto で下端へ押しやっていたため、
     // 絵と「次に何をしてくるか」のあいだに200pxほどの空きができ、視線が大きく動いていた。
     // 余りの高さは、この下のバフ帯の mt-auto がまとめて吸う。
+    // data-enemy-intent は検査の手がかり。どの行動が予告されているかは抽選なので、
+    // 画面の文字から探すと「今回はためるだった」で落ちる
     return /*#__PURE__*/React.createElement("div", {
+      "data-enemy-intent": true,
       className: `mt-1 mb-1 mx-auto w-fit max-w-full border p-1 px-4 rounded-full flex items-center gap-1.5 animate-pulse z-[45] shadow-lg shrink-0${battleTutorialSpotClass('enemyIntent')} ${focusedCard ? 'invisible' : 'visible'} ${tone}`
     }, /*#__PURE__*/React.createElement(Target, {
       size: 12
     }), /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] font-black uppercase tracking-tight"
-    }, enemyIntent.label, rawDmg > 0 ? ` (予定: ${plannedDmg})` : ''));
+    }, enemyIntent.label, enemyIntent.targetName ? ` 🎯${enemyIntent.targetName}` : '', rawDmg > 0 ? ` (予定: ${plannedDmg})` : ''));
+  })(), (() => {
+    // 強化の札(2026-09-20 ユーザー指摘「バフ欄が増えてくると敵や緊急回復等が見えなくなる」)。
+    // ★もとは flex-wrap で何行にも伸びていた。強化が10個を超えると札だけで3行4行になり、
+    //   敵の絵・「緊急」のボタン・与ダメの数字が押し出されて読めなくなっていた。
+    // ★ふだんは**アイコン1行**(横に溢れたら横スクロール)。数値は「詳細」を押したときだけ出す。
+    //   どちらの見た目でも周りの高さは変わらないので、下の画面が動かない。
+    // ★札を1つずつ書くのをやめ、いったん配列にしてから並べる。
+    //   文面と色をここ1か所に置くと、2つの見た目がずれない。
+    const chips = [];
+    // ★`icon` という名前は使わない。カードの絵は cardIconNode() を通す決まりがあり、
+    //   card-icon-check.js が `c.icon` をそのまま描く書き方を禁じている
+    const chip = (key, mark, label, value, tone, opts) => {
+      const o = opts || {};
+      chips.push({
+        key,
+        mark,
+        label,
+        value,
+        tone,
+        short: o.short != null ? o.short : value,
+        pulse: !!o.pulse
+      });
+    };
+    const atkPct = Math.floor((getPermaBuff('atkPct') + getPermaBuff('muaAtkPct')) * 100);
+    if (atkPct > 0) chip('atk', /*#__PURE__*/React.createElement(Sword, {
+      size: 9
+    }), 'ATK', `+${atkPct}%`, 'text-red-500 border-red-500/50');
+    const dmgCutPct = Math.floor(getPermaBuff('dmgCutPct') * 100);
+    if (dmgCutPct > 0) chip('dmgCut', /*#__PURE__*/React.createElement(Shield, {
+      size: 9
+    }), '被ダメ', `-${dmgCutPct}%`, 'text-emerald-500 border-emerald-500/50');
+    const defPct = Math.floor(getPermaBuff('defPct') * 100);
+    if (defPct > 0) chip('def', /*#__PURE__*/React.createElement(Shield, {
+      size: 9
+    }), 'DEF', `+${defPct}%`, 'text-emerald-500 border-emerald-500/50');
+    const muaHpPct = Math.floor(getPermaBuff('muaHpPct') * 100);
+    if (muaHpPct > 0) chip('muaHp', /*#__PURE__*/React.createElement(Heart, {
+      size: 9
+    }), 'ライフ', `+${muaHpPct}%`, 'text-pink-500 border-pink-500/50');
+    const muaGutsPct = Math.floor(getPermaBuff('muaGutsPct') * 100);
+    if (muaGutsPct > 0) chip('muaGuts', /*#__PURE__*/React.createElement(Zap, {
+      size: 9
+    }), 'ガッツ', `+${muaGutsPct}%`, 'text-amber-500 border-amber-500/50');
+    const critRate = Math.round(getPermaBuff('critRatePct') * 100);
+    if (critRate > 0) chip('critRate', /*#__PURE__*/React.createElement(Sparkles, {
+      size: 9
+    }), 'クリ率', `+${critRate}%`, 'text-yellow-400 border-yellow-400/50');
+    const critDmg = Math.round(getPermaBuff('critDmgPct') * 100);
+    if (critDmg > 0) chip('critDmg', /*#__PURE__*/React.createElement(Sparkles, {
+      size: 9
+    }), 'クリダメ', `+${critDmg}%`, 'text-yellow-400 border-yellow-400/50');
+    const comboDmg = Math.round(getPermaBuff('comboDmgPct') * 100);
+    if (comboDmg > 0) chip('combo', /*#__PURE__*/React.createElement(Sword, {
+      size: 9
+    }), '連撃', `+${comboDmg}%`, 'text-cyan-400 border-cyan-400/50');
+    if (getPermaBuff('globalComboDmgPct') > 0) chip('globalCombo', /*#__PURE__*/React.createElement(Sword, {
+      size: 9
+    }), '全体連撃', `+${Math.round(getPermaBuff('globalComboDmgPct') * 100)}%`, 'text-sky-300 border-sky-300/50');
+    if (kikiCardBonus > 0) chip('kikiCard', /*#__PURE__*/React.createElement(PlusCircle, {
+      size: 9
+    }), 'カード上限', `+1（残り${Math.ceil(getPermaBuff('kikiCardBonusTurns'))}T）`, 'text-violet-300 border-violet-300/50', {
+      short: '+1'
+    });
+    // ソードスキル(剣士モッチー)。連撃パワーは3たまるごとに永久追加連撃へ変わるので、
+    // 両方が見えないと進み具合が分からない
+    if (getPermaBuff('kenshiComboPower') > 0 || getPermaBuff('kenshiExtraCombo') > 0) {
+      const kenshiExtra = getPermaBuff('kenshiExtraCombo');
+      chip('kenshi', /*#__PURE__*/React.createElement(Sword, {
+        size: 9
+      }), '連撃パワー', `${getPermaBuff('kenshiComboPower')}/${KENSHI_COMBO_POWER_MAX}${kenshiExtra > 0 ? `・追加連撃 +${kenshiExtra}` : ''}`, 'text-violet-300 border-violet-300/50', {
+        short: `${getPermaBuff('kenshiComboPower')}/${KENSHI_COMBO_POWER_MAX}`
+      });
+    }
+    chip('autoHp', /*#__PURE__*/React.createElement(Heart, {
+      size: 9
+    }), 'ライフ回復', `${Math.round(getPermaBuff('autoHpRecovery', 0.1) * 100)}%`, getPermaBuff('autoHpRecovery', 0.1) >= 0.1 ? 'text-rose-400 border-rose-400/50' : 'text-red-400 border-red-400/50');
+    chip('autoGuts', /*#__PURE__*/React.createElement(Zap, {
+      size: 9
+    }), 'ガッツ回復', `${Math.round(applyIceRulerAutoGutsRecovery(Math.max(0, 0.05 + (getPermaBuff('autoHpRecovery', 0.1) - 0.1)) + getPermaBuff('gutsRecoverPct'), mainHero?.id, iceLockActive, heroDist, enemyDist) * 100)}%`, 'text-amber-400 border-amber-400/50');
+    // ポルツの待機。あと何回ぶん敵の攻撃で発動するかを出す(0になったら消える。得た効果は残る)
+    if (getPermaBuff('poltzCharges') > 0) chip('poltz', /*#__PURE__*/React.createElement(Zap, {
+      size: 9
+    }), BREEDER_EVO_NAMES.poltz[Math.max(0, Math.min(getPermaBuff('poltzTier'), 2))], `×${Math.floor(getPermaBuff('poltzCharges'))}`, 'text-lime-300 border-lime-400/50', {
+      pulse: true
+    });
+    // === ターン限定バフ（都度表示） ===
+    if (getNextTurnBuff('melosoFullRecoveryMult', 0) > 0) chip('meloso', /*#__PURE__*/React.createElement(Heart, {
+      size: 9
+    }), '次ターン全回復', '', 'text-rose-300 border-rose-400/50', {
+      pulse: true
+    });
+    if (getTurnBuff('atkMult', 1.0) > 1) chip('boost', /*#__PURE__*/React.createElement(Sparkles, {
+      size: 9
+    }), 'Boost', `x${getTurnBuff('atkMult', 1.0).toFixed(1)}`, 'text-red-500 border-red-500/50', {
+      pulse: true
+    });
+    if (getTurnBuff('stunEnemy', false)) chip('stun', /*#__PURE__*/React.createElement(Zap, {
+      size: 9
+    }), 'スタン予約', '', 'text-yellow-400 border-yellow-500/50', {
+      pulse: true
+    });
+    if (getTurnBuff('guaranteedCrit', false)) chip('critFix', /*#__PURE__*/React.createElement(Target, {
+      size: 9
+    }), '会心予約', '', 'text-orange-400 border-orange-500/50', {
+      pulse: true
+    });
+    if (getTurnBuff('zeroGuts', false) || getNextTurnBuff('zeroGuts', false)) chip('zeroGuts', /*#__PURE__*/React.createElement(Star, {
+      size: 9
+    }), '0消費中', '', 'text-blue-400 border-blue-500/50', {
+      pulse: true
+    });
+    if (getNextTurnBuff('reflect', false)) chip('reflectNext', /*#__PURE__*/React.createElement(RefreshCcw, {
+      size: 9
+    }), '次反射', '', 'text-purple-400 border-purple-500/50', {
+      pulse: true
+    });
+    if (getTurnBuff('reflect', false)) chip('reflectNow', /*#__PURE__*/React.createElement(RefreshCcw, {
+      size: 9
+    }), '反射待機', '', 'text-purple-300 border-purple-400', {
+      pulse: true
+    });
+    // 敵の咆哮(2026-09-20 ユーザー指摘「咆哮の効果が分からない」)。
+    // ★ポップアップは一瞬で消えるので、いま何回かかっているかがどこにも出ていなかった。
+    //   敵の攻撃そのものを上げる(元に戻らない)ので、札に出し続ける
+    if (enemy?.roarStacks > 0) chip('roarUp', /*#__PURE__*/React.createElement(ArrowUpCircle, {
+      size: 9
+    }), '敵の咆哮', `×${enemy.roarStacks}`, 'text-orange-400 border-orange-500/50', {
+      pulse: true
+    });
+    if (getWaveBuff('enemyAtkDebuffPct') > 0) chip('enemyAtkDown', /*#__PURE__*/React.createElement(ArrowDownCircle, {
+      size: 9
+    }), '敵攻', `-${Math.round(getWaveBuff('enemyAtkDebuffPct') * 100)}%`, 'text-indigo-400 border-indigo-500/50', {
+      pulse: true
+    });
+    if (getWaveBuff('enemyTakenDmgBonus') > 0) chip('enemyTaken', /*#__PURE__*/React.createElement(PlusCircle, {
+      size: 9
+    }), '敵被ダメ', `+${Math.round(getWaveBuff('enemyTakenDmgBonus') * 100)}%`, 'text-orange-400 border-orange-500/50', {
+      pulse: true
+    });
+    if (getNextTurnBuff('takenDamageMult', 1.0) < 1) chip('takenNext', /*#__PURE__*/React.createElement(Shield, {
+      size: 9
+    }), '次T被ダメ', `-${Math.round((1 - getNextTurnBuff('takenDamageMult', 1.0)) * 100)}%`, 'text-pink-400 border-pink-500/50', {
+      pulse: true
+    });
+    if (getTurnBuff('takenDamageMult', 1.0) < 1) chip('takenNow', /*#__PURE__*/React.createElement(Shield, {
+      size: 9
+    }), '被ダメ', `-${Math.round((1 - getTurnBuff('takenDamageMult', 1.0)) * 100)}%`, 'text-pink-300 border-pink-400', {
+      pulse: true
+    });
+    if (getNextTurnBuff('gutsCostMult', 1.0) > 1) chip('costNext', /*#__PURE__*/React.createElement(Zap, {
+      size: 9
+    }), '次T消費G', `+${Math.round((getNextTurnBuff('gutsCostMult', 1.0) - 1) * 100)}%`, 'text-amber-400 border-amber-500/50', {
+      pulse: true
+    });
+    if (getTurnBuff('gutsCostMult', 1.0) > 1) chip('costNow', /*#__PURE__*/React.createElement(Zap, {
+      size: 9
+    }), '消費G', `+${Math.round((getTurnBuff('gutsCostMult', 1.0) - 1) * 100)}%`, 'text-amber-300 border-amber-400', {
+      pulse: true
+    });
+    if (!chips.length) return null;
+    return /*#__PURE__*/React.createElement("div", {
+      "data-battle-buffs": chips.length,
+      "data-battle-buffs-mode": buffDetail ? 'detail' : 'icon',
+      className: `shrink-0 w-full max-w-[360px] mx-auto px-2 pt-1 pb-0.5 bg-slate-950 relative z-[40] ${focusedCard ? 'invisible' : 'visible'}`
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-start gap-1"
+    }, buffDetail ? /*#__PURE__*/React.createElement("div", {
+      "data-battle-buff-list": true,
+      className: "flex-1 min-w-0 flex flex-wrap justify-center gap-1 overflow-y-auto mh-scroll",
+      style: {
+        maxHeight: '92px'
+      }
+    }, chips.map(c => /*#__PURE__*/React.createElement("div", {
+      key: c.key,
+      className: `text-[11px] font-black bg-black/60 px-2 py-0.5 rounded border flex items-center gap-1 shadow-lg ${c.tone}${c.pulse ? ' animate-pulse' : ''}`
+    }, c.mark, " ", c.label, c.value ? ` ${c.value}` : ''))) : /*#__PURE__*/React.createElement("div", {
+      "data-battle-buff-icons": true,
+      className: "flex-1 min-w-0 flex items-center gap-1 overflow-x-auto scrollbar-hide"
+    }, chips.map(c => /*#__PURE__*/React.createElement("div", {
+      key: c.key,
+      "aria-label": `${c.label}${c.value ? ` ${c.value}` : ''}`,
+      title: `${c.label}${c.value ? ` ${c.value}` : ''}`,
+      className: `shrink-0 text-[10px] font-black bg-black/60 px-1.5 py-0.5 rounded-full border flex items-center gap-0.5 leading-none ${c.tone}${c.pulse ? ' animate-pulse' : ''}`
+    }, c.mark, c.short ? /*#__PURE__*/React.createElement("span", null, c.short) : null))), /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      "data-battle-buff-toggle": buffDetail ? 'close' : 'open',
+      onClick: () => setBuffDetail(v => !v),
+      "aria-label": buffDetail ? '強化の詳細を閉じる' : `強化の詳細を見る（${chips.length}件）`,
+      className: "shrink-0 min-h-[20px] px-1.5 rounded-full border border-white/25 bg-black/60 text-[9px] font-black leading-none text-slate-200 active:scale-90 flex items-center"
+    }, buffDetail ? 'とじる' : `詳細 ${chips.length}`)));
   })(), /*#__PURE__*/React.createElement("div", {
-    className: `flex flex-wrap justify-center gap-1 max-w-[340px] shrink-0 px-2 pt-1 pb-0.5 bg-slate-950 relative z-[40] ${focusedCard ? 'invisible' : 'visible'}`
-  }, Math.floor((getPermaBuff('atkPct') + getPermaBuff('muaAtkPct')) * 100) > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] font-black text-red-500 bg-black/60 px-2 py-0.5 rounded border border-red-500/50 flex items-center gap-1 shadow-lg uppercase"
-  }, /*#__PURE__*/React.createElement(Sword, {
-    size: 9
-  }), " ATK +", Math.floor((getPermaBuff('atkPct') + getPermaBuff('muaAtkPct')) * 100), "%"), Math.floor(getPermaBuff('dmgCutPct') * 100) > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] font-black text-emerald-500 bg-black/60 px-2 py-0.5 rounded border border-emerald-500/50 flex items-center gap-1 shadow-lg uppercase"
-  }, /*#__PURE__*/React.createElement(Shield, {
-    size: 9
-  }), " \u88AB\u30C0\u30E1 -", Math.floor(getPermaBuff('dmgCutPct') * 100), "%"), Math.floor(getPermaBuff('defPct') * 100) > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] font-black text-emerald-500 bg-black/60 px-2 py-0.5 rounded border border-emerald-500/50 flex items-center gap-1 shadow-lg uppercase"
-  }, /*#__PURE__*/React.createElement(Shield, {
-    size: 9
-  }), " DEF +", Math.floor(getPermaBuff('defPct') * 100), "%"), Math.floor(getPermaBuff('muaHpPct') * 100) > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] font-black text-pink-500 bg-black/60 px-2 py-0.5 rounded border border-pink-500/50 flex items-center gap-1 shadow-lg uppercase"
-  }, /*#__PURE__*/React.createElement(Heart, {
-    size: 9
-  }), " \u30E9\u30A4\u30D5 +", Math.floor(getPermaBuff('muaHpPct') * 100), "%"), Math.floor(getPermaBuff('muaGutsPct') * 100) > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] font-black text-amber-500 bg-black/60 px-2 py-0.5 rounded border border-amber-500/50 flex items-center gap-1 shadow-lg uppercase"
-  }, /*#__PURE__*/React.createElement(Zap, {
-    size: 9
-  }), " \u30AC\u30C3\u30C4 +", Math.floor(getPermaBuff('muaGutsPct') * 100), "%"), Math.round(getPermaBuff('critRatePct') * 100) > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] font-black text-yellow-400 bg-black/60 px-2 py-0.5 rounded border border-yellow-400/50 flex items-center gap-1 shadow-lg uppercase"
-  }, /*#__PURE__*/React.createElement(Sparkles, {
-    size: 9
-  }), " \u30AF\u30EA\u7387 +", Math.round(getPermaBuff('critRatePct') * 100), "%"), Math.round(getPermaBuff('critDmgPct') * 100) > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] font-black text-yellow-400 bg-black/60 px-2 py-0.5 rounded border border-yellow-400/50 flex items-center gap-1 shadow-lg uppercase"
-  }, /*#__PURE__*/React.createElement(Sparkles, {
-    size: 9
-  }), " \u30AF\u30EA\u30C0\u30E1 +", Math.round(getPermaBuff('critDmgPct') * 100), "%"), Math.round(getPermaBuff('comboDmgPct') * 100) > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] font-black text-cyan-400 bg-black/60 px-2 py-0.5 rounded border border-cyan-400/50 flex items-center gap-1 shadow-lg uppercase"
-  }, /*#__PURE__*/React.createElement(Sword, {
-    size: 9
-  }), " \u9023\u6483 +", Math.round(getPermaBuff('comboDmgPct') * 100), "%"), getPermaBuff('globalComboDmgPct') > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] font-black text-sky-300 bg-black/60 px-2 py-0.5 rounded border border-sky-300/50 flex items-center gap-1 shadow-lg"
-  }, /*#__PURE__*/React.createElement(Sword, {
-    size: 7
-  }), " \u5168\u4F53\u9023\u6483 +", Math.round(getPermaBuff('globalComboDmgPct') * 100), "%"), kikiCardBonus > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] font-black text-violet-300 bg-black/60 px-2 py-0.5 rounded border border-violet-300/50 flex items-center gap-1 shadow-lg"
-  }, /*#__PURE__*/React.createElement(PlusCircle, {
-    size: 7
-  }), " \u30AB\u30FC\u30C9\u4E0A\u9650 +1\uFF08\u6B8B\u308A", Math.ceil(getPermaBuff('kikiCardBonusTurns')), "T\uFF09"), (getPermaBuff('kenshiComboPower') > 0 || getPermaBuff('kenshiExtraCombo') > 0) && /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] font-black text-violet-300 bg-black/60 px-2 py-0.5 rounded border border-violet-300/50 flex items-center gap-1 shadow-lg"
-  }, /*#__PURE__*/React.createElement(Sword, {
-    size: 7
-  }), " \u9023\u6483\u30D1\u30EF\u30FC ", getPermaBuff('kenshiComboPower'), "/", KENSHI_COMBO_POWER_MAX, getPermaBuff('kenshiExtraCombo') > 0 ? `・追加連撃 +${getPermaBuff('kenshiExtraCombo')}` : ''), /*#__PURE__*/React.createElement("div", {
-    className: `text-[10px] font-black bg-black/60 px-2 py-0.5 rounded border flex items-center gap-1 shadow-lg uppercase ${getPermaBuff('autoHpRecovery', 0.1) >= 0.1 ? 'text-rose-400 border-rose-400/50' : 'text-red-400 border-red-400/50'}`
-  }, /*#__PURE__*/React.createElement(Heart, {
-    size: 7
-  }), " \u30E9\u30A4\u30D5\u56DE\u5FA9 ", Math.round(getPermaBuff('autoHpRecovery', 0.1) * 100), "%"), /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] font-black text-amber-400 bg-black/60 px-2 py-0.5 rounded border border-amber-400/50 flex items-center gap-1 shadow-lg uppercase"
-  }, /*#__PURE__*/React.createElement(Zap, {
-    size: 7
-  }), " \u30AC\u30C3\u30C4\u56DE\u5FA9 ", Math.round(applyIceRulerAutoGutsRecovery(Math.max(0, 0.05 + (getPermaBuff('autoHpRecovery', 0.1) - 0.1)) + getPermaBuff('gutsRecoverPct'), mainHero?.id, iceLockActive, heroDist, enemyDist) * 100), "%"), getPermaBuff('poltzCharges') > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] font-black text-lime-300 bg-lime-950/60 px-2 py-1 rounded-full border border-lime-400/50 animate-pulse flex items-center gap-1"
-  }, /*#__PURE__*/React.createElement(Zap, {
-    size: 8
-  }), " ", BREEDER_EVO_NAMES.poltz[Math.max(0, Math.min(getPermaBuff('poltzTier'), 2))], " \xD7", Math.floor(getPermaBuff('poltzCharges'))), getNextTurnBuff('melosoFullRecoveryMult', 0) > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] font-black text-rose-300 bg-rose-950/60 px-2 py-1 rounded-full border border-rose-400/50 animate-pulse flex items-center gap-1"
-  }, /*#__PURE__*/React.createElement(Heart, {
-    size: 8
-  }), " \u6B21\u30BF\u30FC\u30F3\u5168\u56DE\u5FA9"), getTurnBuff('atkMult', 1.0) > 1 && /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] font-black text-red-500 bg-red-950/60 px-2 py-1 rounded-full border border-red-500/50 animate-pulse uppercase flex items-center gap-1"
-  }, /*#__PURE__*/React.createElement(Sparkles, {
-    size: 8
-  }), " Boost x", getTurnBuff('atkMult', 1.0).toFixed(1)), getTurnBuff('stunEnemy', false) && /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] font-black text-yellow-400 bg-yellow-950/60 px-2 py-1 rounded-full border border-yellow-500/50 animate-pulse uppercase flex items-center gap-1"
-  }, /*#__PURE__*/React.createElement(Zap, {
-    size: 8
-  }), " \u30B9\u30BF\u30F3\u4E88\u7D04"), getTurnBuff('guaranteedCrit', false) && /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] font-black text-orange-400 bg-orange-950/60 px-2 py-1 rounded-full border border-orange-500/50 animate-pulse uppercase flex items-center gap-1"
-  }, /*#__PURE__*/React.createElement(Target, {
-    size: 8
-  }), " \u4F1A\u5FC3\u4E88\u7D04"), (getTurnBuff('zeroGuts', false) || getNextTurnBuff('zeroGuts', false)) && /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] font-black text-blue-400 bg-blue-950/60 px-2 py-1 rounded-full border border-blue-500/50 animate-pulse uppercase flex items-center gap-1"
-  }, /*#__PURE__*/React.createElement(Star, {
-    size: 8
-  }), " 0\u6D88\u8CBB\u4E2D"), getNextTurnBuff('reflect', false) && /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] font-black text-purple-400 bg-purple-950/60 px-2 py-1 rounded-full border border-purple-500/50 animate-pulse uppercase flex items-center gap-1"
-  }, /*#__PURE__*/React.createElement(RefreshCcw, {
-    size: 8
-  }), " \u6B21\u53CD\u5C04"), getTurnBuff('reflect', false) && /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] font-black text-purple-300 bg-purple-900/80 px-2 py-1 rounded-full border border-purple-400 animate-bounce uppercase flex items-center gap-1"
-  }, /*#__PURE__*/React.createElement(RefreshCcw, {
-    size: 8
-  }), " \u53CD\u5C04\u5F85\u6A5F"), getWaveBuff('enemyAtkDebuffPct') > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] font-black text-indigo-400 bg-indigo-950/60 px-2 py-1 rounded-full border border-indigo-500/50 animate-pulse uppercase flex items-center gap-1"
-  }, /*#__PURE__*/React.createElement(ArrowDownCircle, {
-    size: 8
-  }), " \u6575\u653B-", Math.round(getWaveBuff('enemyAtkDebuffPct') * 100), "%"), getWaveBuff('enemyTakenDmgBonus') > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] font-black text-orange-400 bg-orange-950/60 px-2 py-1 rounded-full border border-orange-500/50 animate-pulse uppercase flex items-center gap-1"
-  }, /*#__PURE__*/React.createElement(PlusCircle, {
-    size: 8
-  }), " \u6575\u88AB\u30C0\u30E1+", Math.round(getWaveBuff('enemyTakenDmgBonus') * 100), "%"), getNextTurnBuff('takenDamageMult', 1.0) < 1 && /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] font-black text-pink-400 bg-pink-950/60 px-2 py-1 rounded-full border border-pink-500/50 animate-pulse uppercase flex items-center gap-1"
-  }, /*#__PURE__*/React.createElement(Shield, {
-    size: 8
-  }), " \u6B21T\u88AB\u30C0\u30E1-", Math.round((1 - getNextTurnBuff('takenDamageMult', 1.0)) * 100), "%"), getTurnBuff('takenDamageMult', 1.0) < 1 && /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] font-black text-pink-300 bg-pink-900/80 px-2 py-1 rounded-full border border-pink-400 animate-bounce uppercase flex items-center gap-1"
-  }, /*#__PURE__*/React.createElement(Shield, {
-    size: 8
-  }), " \u88AB\u30C0\u30E1-", Math.round((1 - getTurnBuff('takenDamageMult', 1.0)) * 100), "%"), getNextTurnBuff('gutsCostMult', 1.0) > 1 && /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] font-black text-amber-400 bg-amber-950/60 px-2 py-1 rounded-full border border-amber-500/50 animate-pulse uppercase flex items-center gap-1"
-  }, /*#__PURE__*/React.createElement(Zap, {
-    size: 8
-  }), " \u6B21T\u6D88\u8CBBG+", Math.round((getNextTurnBuff('gutsCostMult', 1.0) - 1) * 100), "%"), getTurnBuff('gutsCostMult', 1.0) > 1 && /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] font-black text-amber-300 bg-amber-900/80 px-2 py-1 rounded-full border border-amber-400 animate-bounce uppercase flex items-center gap-1"
-  }, /*#__PURE__*/React.createElement(Zap, {
-    size: 8
-  }), " \u6D88\u8CBBG+", Math.round((getTurnBuff('gutsCostMult', 1.0) - 1) * 100), "%")), /*#__PURE__*/React.createElement("div", {
-    className: "shrink-0 py-2 px-2 bg-slate-950 border-y border-white/5 flex flex-col items-center justify-center gap-1 z-10 relative"
+    className: "shrink-0 py-1.5 px-2 bg-slate-950 border-y border-white/5 flex flex-col items-center justify-center gap-1 z-10 relative"
   }, /*#__PURE__*/React.createElement("div", {
     className: "absolute inset-0 flex flex-col items-center justify-center pointer-events-none gap-1",
     style: {
@@ -36910,8 +38367,76 @@ function BattleScreen({
     style: {
       backgroundColor: liteBattleView ? 'rgba(2,6,23,0.95)' : 'rgba(2,6,23,0.55)'
     }
-  }, p.text))), /*#__PURE__*/React.createElement("div", {
-    className: "w-full space-y-1 px-2 py-1 bg-black/40 rounded-xl border border-white/5"
+  }, p.text))), Array.isArray(tacticsUnits) ? /*#__PURE__*/React.createElement("div", {
+    "data-tactics-party": true,
+    className: "relative w-full grid grid-cols-4 gap-1"
+  }, /*#__PURE__*/React.createElement("div", {
+    "data-tactics-party-popups": true,
+    className: "absolute inset-x-0 -top-1 flex flex-col items-center gap-0.5 pointer-events-none",
+    style: {
+      zIndex: 210
+    }
+  }, popups.filter(p => p.side === 'life' || p.side === 'guts').map(p => /*#__PURE__*/React.createElement("div", {
+    key: p.id,
+    className: `${p.color} text-base font-black drop-shadow-[0_2px_8px_rgba(0,0,0,1)] whitespace-nowrap px-2 py-0.5 rounded-lg animate-bounce`,
+    style: {
+      backgroundColor: 'rgba(2,6,23,0.8)'
+    }
+  }, p.text))), [0, 1, 2, 3].map(i => {
+    const u = tacticsUnits[i];
+    const mon = slots[i];
+    const hpPct = u && u.maxHp > 0 ? Math.max(0, Math.min(100, u.hp / u.maxHp * 100)) : 0;
+    const gutsPct = u && u.maxGuts > 0 ? Math.max(0, Math.min(100, u.guts / u.maxGuts * 100)) : 0;
+    return /*#__PURE__*/React.createElement("div", {
+      key: i,
+      "data-tactics-party-slot": i,
+      "data-tactics-hp": u ? `${u.hp}/${u.maxHp}` : undefined,
+      "data-tactics-guts": u ? `${u.guts}/${u.maxGuts}` : undefined,
+      "data-tactics-downed": u ? u.downed ? 'true' : 'false' : undefined,
+      className: `rounded-lg border px-1 py-0.5 ${u ? u.downed ? 'border-emerald-500/50 bg-emerald-950/40' : 'border-white/10 bg-black/45' : 'border-white/5 bg-black/20'}`
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center justify-between gap-0.5"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: `text-[9px] font-black leading-none truncate ${RANGE_STYLES[i].text || 'text-slate-300'}`
+    }, RANGE_LABELS[i]), u && u.downed && /*#__PURE__*/React.createElement("span", {
+      className: "text-[8px] font-black leading-none text-emerald-300 shrink-0"
+    }, "\u30C0\u30A6\u30F3")), u ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+      className: "mt-0.5 flex items-baseline justify-between gap-0.5"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-[9px] leading-none text-pink-400"
+    }, "\u2665"), /*#__PURE__*/React.createElement("span", {
+      className: "text-[11px] font-mono font-black leading-none text-pink-100"
+    }, u.hp), /*#__PURE__*/React.createElement("span", {
+      className: "text-[8px] font-mono leading-none text-slate-500"
+    }, "/", u.maxHp)), /*#__PURE__*/React.createElement("div", {
+      className: "mt-0.5 h-[5px] rounded-full bg-slate-900 overflow-hidden border border-white/10"
+    }, /*#__PURE__*/React.createElement("div", {
+      "data-tactics-hp-bar": true,
+      className: `h-full transition-all duration-1000 ${u.downed ? 'bg-gradient-to-r from-emerald-600 to-teal-300' : 'bg-gradient-to-r from-pink-600 to-rose-400'}`,
+      style: {
+        width: `${hpPct}%`
+      }
+    })), /*#__PURE__*/React.createElement("div", {
+      className: "mt-0.5 flex items-baseline justify-between gap-0.5"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-[9px] leading-none text-amber-400"
+    }, "\u26A1"), /*#__PURE__*/React.createElement("span", {
+      className: "text-[11px] font-mono font-black leading-none text-amber-100"
+    }, u.guts), /*#__PURE__*/React.createElement("span", {
+      className: "text-[8px] font-mono leading-none text-slate-500"
+    }, "/", u.maxGuts)), /*#__PURE__*/React.createElement("div", {
+      className: "mt-0.5 h-[5px] rounded-full bg-slate-900 overflow-hidden border border-white/10"
+    }, /*#__PURE__*/React.createElement("div", {
+      "data-tactics-guts-bar": true,
+      className: "h-full bg-gradient-to-r from-amber-600 to-yellow-300 transition-all duration-500",
+      style: {
+        width: `${gutsPct}%`
+      }
+    }))) : /*#__PURE__*/React.createElement("div", {
+      className: "py-2 text-center text-[9px] font-black leading-none text-slate-600"
+    }, "\u7A7A\u304D"));
+  })) : /*#__PURE__*/React.createElement("div", {
+    className: "w-full space-y-0.5 px-2 py-0.5 bg-black/40 rounded-xl border border-white/5"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-2 relative"
   }, /*#__PURE__*/React.createElement(Heart, {
@@ -36920,11 +38445,12 @@ function BattleScreen({
   }), /*#__PURE__*/React.createElement("div", {
     className: "flex-1"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex justify-between text-[10px] font-bold text-pink-400 mb-0.5 uppercase tracking-widest"
+    className: "flex items-end justify-between text-[9px] font-bold text-pink-400 uppercase tracking-wider"
   }, /*#__PURE__*/React.createElement("span", null, "Ally Life"), /*#__PURE__*/React.createElement("span", {
-    className: "font-mono"
+    "data-ally-life": `${hp}/${effectiveMaxHp}`,
+    className: "font-mono text-[11px] leading-none text-pink-200"
   }, hp.toLocaleString(), " / ", effectiveMaxHp.toLocaleString())), /*#__PURE__*/React.createElement("div", {
-    className: "h-1.5 bg-slate-900 rounded-full overflow-hidden border border-white/5 shadow-inner"
+    className: "h-2 bg-slate-900 rounded-full overflow-hidden border border-white/5 shadow-inner"
   }, /*#__PURE__*/React.createElement("div", {
     className: "h-full bg-gradient-to-r from-pink-700 to-rose-400 transition-all duration-1000",
     style: {
@@ -36950,11 +38476,12 @@ function BattleScreen({
   }), /*#__PURE__*/React.createElement("div", {
     className: "flex-1"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex justify-between text-[10px] font-bold text-amber-400 mb-0.5 uppercase tracking-widest"
+    className: "flex items-end justify-between text-[9px] font-bold text-amber-400 uppercase tracking-wider"
   }, /*#__PURE__*/React.createElement("span", null, "Ally Guts"), /*#__PURE__*/React.createElement("span", {
-    className: "font-mono"
+    "data-ally-guts": `${Math.floor(guts)}/${effectiveMaxGuts}`,
+    className: "font-mono text-[11px] leading-none text-amber-200"
   }, Math.floor(guts).toLocaleString(), " / ", effectiveMaxGuts.toLocaleString())), /*#__PURE__*/React.createElement("div", {
-    className: "h-1.5 bg-slate-900 rounded-full overflow-hidden border border-white/5 shadow-inner"
+    className: "h-2 bg-slate-900 rounded-full overflow-hidden border border-white/5 shadow-inner"
   }, /*#__PURE__*/React.createElement("div", {
     className: "h-full bg-gradient-to-r from-amber-600 to-yellow-300 transition-all duration-500",
     style: {
@@ -36987,15 +38514,14 @@ function BattleScreen({
     // (processTurnの実行順序と同じ数え方。localBoostFromCard/previewLocalBoosts参照)。
     const boosts = previewLocalBoosts(pendingIdx);
     let committedTotal = 0;
-    let committedPenaltyCnt = 0;
     let guardFlat = 0;
     let guardMult = 0;
+    const committedCounter = makeCardHalveCounter();
     selectedCards.forEach(idx => {
       if (idx === pendingIdx) return;
       const card = hand[idx];
       const slotIdx = cardAssignments[idx];
-      const isPenalty = !isAssistCard(card);
-      const halved = isPenalty && committedPenaltyCnt > 0;
+      const halved = committedCounter.take(card, slotIdx != null ? slotIdx : null);
       const b = boosts.perCard[idx] || {
         oryo: 0,
         dmgMod: 0,
@@ -37011,12 +38537,11 @@ function BattleScreen({
         guardFlat += GUARD_EVOLUTION[guardLevel].flat * gw * e;
         guardMult += GUARD_EVOLUTION[guardLevel].mult * gw * e;
       }
-      if (isPenalty) committedPenaltyCnt++;
     });
     const committedGuard = guardValueOf(guardFlat, guardMult);
     // 保留カードがガードなら、置いたあとの合計軽減も出す
     const pendingGuardWeight = guardCardWeight(pendingCardObj);
-    const pendingGuardHalved = pendingGuardWeight > 0 && !isAssistCard(pendingCardObj) && committedPenaltyCnt > 0;
+    const pendingGuardHalved = pendingGuardWeight > 0 && committedCounter.peek(pendingCardObj, pendingIdx != null && cardAssignments[pendingIdx] != null ? cardAssignments[pendingIdx] : null);
     const pendingGuardEffect = cardEffectMultiplier(pendingCardObj, pendingGuardHalved);
     const projectedGuard = pendingGuardWeight > 0 ? guardValueOf(guardFlat + GUARD_EVOLUTION[guardLevel].flat * pendingGuardWeight * pendingGuardEffect, guardMult + GUARD_EVOLUTION[guardLevel].mult * pendingGuardWeight * pendingGuardEffect) : committedGuard;
     const pendingIsAtk = isAttackCard(pendingCardObj);
@@ -37033,7 +38558,7 @@ function BattleScreen({
         if (assignedCount >= maxUses) continue;
         if (pendingCardObj.type === 'unique' && pendingCardObj.ownerSlotIdx !== i) continue;
         pendingValidSlot = i;
-        const baseDmg = getDmg(pendingCardObj, i, s, boosts.forPending.oryo, boosts.forPending.dmgMod, !isAssistCard(pendingCardObj) && committedPenaltyCnt > 0);
+        const baseDmg = getDmg(pendingCardObj, i, s, boosts.forPending.oryo, boosts.forPending.dmgMod, committedCounter.peek(pendingCardObj, i));
         pendingAdd = getAttackPredictedDmg(pendingCardObj, s, baseDmg, boosts.forPending.combo);
         break;
       }
@@ -37094,7 +38619,7 @@ function BattleScreen({
   })(), /*#__PURE__*/React.createElement("div", {
     className: `grid grid-cols-4 gap-2 w-full relative shrink-0${battleTutorialSpotClass('battleSlots')}`,
     style: {
-      height: '100px'
+      height: 'clamp(112px,15dvh,132px)'
     }
   }, slots.map((s, i) => {
     // Count how many cards already assigned to this slot
@@ -37107,10 +38632,17 @@ function BattleScreen({
     // 保留中のカードはまだ使っていないので、「何枚目か」の枚数には数えない
     const pendingIdx = pendingCard != null ? pendingCard : dragState && dragState.active ? dragState.cardIndex : null;
     // Can this slot accept the pending card?
+    // 新モードはこの子のライフ・ガッツ・倒れたかどうかを持つ(ほかのモードでは null)
+    const tacticsUnit = Array.isArray(tacticsUnits) ? tacticsUnits[i] || null : null;
     let canAssign = false;
     if (s && pendingCardObj) {
-      canAssign = assignedCount < maxUses;
-      if (pendingCardObj.type === 'unique') canAssign = canAssign && pendingCardObj.ownerSlotIdx === i;
+      // 新モードは「その子が払えるか」で決まる。倒れた子へは回復カードだけ置ける。
+      // ★null のときだけ今までどおりの判定を使う(既存モードはここを通る)
+      const tacticsAnswer = tacticsCanAssign ? tacticsCanAssign(pendingCardObj, pendingIdx, i) : null;
+      if (tacticsAnswer === null || tacticsAnswer === undefined) {
+        canAssign = assignedCount < maxUses;
+        if (pendingCardObj.type === 'unique') canAssign = canAssign && pendingCardObj.ownerSlotIdx === i;
+      } else canAssign = tacticsAnswer;
     }
     // 選択順に「アシストカード以外」を数え、どのカードが2枚目以降(効果半減)かを出す。
     // 保留中のカードはまだ使っていないので数えない。
@@ -37118,15 +38650,14 @@ function BattleScreen({
     // (数えてしまうと1枚目でも半減、除外しっぱなしだと2枚目でも全開の表示になる)
     const halvedByIdx = {};
     {
-      let n = 0;
+      const counter = makeCardHalveCounter();
       selectedCards.forEach(idx => {
         if (idx === pendingIdx) return;
         const c = hand[idx];
-        const p = !isAssistCard(c);
-        halvedByIdx[idx] = p && n > 0;
-        if (p) n++;
+        const sl = cardAssignments[idx] != null ? cardAssignments[idx] : null;
+        halvedByIdx[idx] = counter.take(c, sl);
       });
-      if (pendingIdx != null && selectedCards.includes(pendingIdx)) halvedByIdx[pendingIdx] = !isAssistCard(hand[pendingIdx]) && n > 0;
+      if (pendingIdx != null && selectedCards.includes(pendingIdx)) halvedByIdx[pendingIdx] = counter.peek(hand[pendingIdx], cardAssignments[pendingIdx] != null ? cardAssignments[pendingIdx] : null);
     }
     // Preview damage:
     // - if a card is pending assignment, show what THIS card would do on this monster
@@ -37140,12 +38671,14 @@ function BattleScreen({
     let isPendingHalved = false;
     let previewSoulPct = 0;
     if (s && pendingCardObj && canAssign && isAttackCard(pendingCardObj)) {
-      // 既に選んだ「アシストカード以外」の枚数を数え、保留カードはその次の1枚として扱う
-      let committedPenalty = 0;
+      // 既に選んだぶんを数え、保留カードは「この枠へ置いた次の1枚」として扱う。
+      // ★新モードは同じ子の2枚目だけ半減なので、置き先(i)で数え方が変わる
+      const pendingCounter = makeCardHalveCounter();
       selectedCards.forEach(idx => {
-        if (idx !== pendingIdx && !isAssistCard(hand[idx])) committedPenalty++;
+        if (idx === pendingIdx) return;
+        pendingCounter.take(hand[idx], cardAssignments[idx] != null ? cardAssignments[idx] : null);
       });
-      const isSecondOrLater = committedPenalty >= 1 && !isAssistCard(pendingCardObj);
+      const isSecondOrLater = pendingCounter.peek(pendingCardObj, i);
       const baseDmg = getDmg(pendingCardObj, i, s, slotBoosts.forPending.oryo, slotBoosts.forPending.dmgMod, isSecondOrLater);
       previewDmg = getAttackPredictedDmg(pendingCardObj, s, baseDmg, slotBoosts.forPending.combo);
       previewSoulPct = soulTraitAttackProfile(s?.masuId ? getMasuMon(s.masuId) : null, pendingCardObj, i).damagePct;
@@ -37153,12 +38686,11 @@ function BattleScreen({
       isPendingHalved = isSecondOrLater;
     } else if (s) {
       // 選択順で「アシストカード以外」を数え、2枚目以降は半減として予測する
-      let globalPenaltyCnt = 0;
+      const slotCounter = makeCardHalveCounter();
       selectedCards.forEach(idx => {
         if (idx === pendingIdx) return;
         const card = hand[idx];
-        const isPenalty = !isAssistCard(card);
-        const halved = isPenalty && globalPenaltyCnt > 0;
+        const halved = slotCounter.take(card, cardAssignments[idx] != null ? cardAssignments[idx] : null);
         if (cardAssignments[idx] === i) {
           const b = slotBoosts.perCard[idx] || {
             oryo: 0,
@@ -37168,7 +38700,6 @@ function BattleScreen({
           const baseDmg = getDmg(card, i, s, b.oryo, b.dmgMod, halved);
           previewDmg += getAttackPredictedDmg(card, s, baseDmg, b.combo);
         }
-        if (isPenalty) globalPenaltyCnt++;
       });
     }
     const isAnimating = !ecoBattleView && attackAnim && attackAnim.slotIndex === i;
@@ -37238,7 +38769,7 @@ function BattleScreen({
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-2xl font-black"
     }, "\u26A0"))), /*#__PURE__*/React.createElement("div", {
-      className: `h-[25%] flex items-center justify-center px-1 border-b z-20 ${isHeroSlotMon(s) ? 'bg-amber-500/25 border-amber-300/50' : 'bg-black/60 border-white/10'}`
+      className: `h-[18px] shrink-0 flex items-center justify-center px-1 border-b z-20 ${isHeroSlotMon(s) ? 'bg-amber-500/25 border-amber-300/50' : 'bg-black/60 border-white/10'}`
     }, isHeroSlotMon(s) && /*#__PURE__*/React.createElement(Crown, {
       size: 8,
       className: "shrink-0 mr-0.5 text-amber-300"
@@ -37347,7 +38878,7 @@ function BattleScreen({
     }, "\u26A1"))), (() => {
       const totalBonus = distTotalBonus(i);
       return /*#__PURE__*/React.createElement("div", {
-        className: `absolute bottom-0.5 right-0.5 text-[10px] font-black leading-none flex items-center gap-0.5 bg-black/50 px-1 py-0.5 rounded border z-30 ${totalBonus > 0 ? 'text-cyan-300 border-cyan-400/30' : totalBonus < 0 ? 'text-red-300 border-red-400/30' : 'text-slate-300 border-white/20'}`
+        className: `absolute bottom-0.5 right-0.5 text-[11px] font-black leading-none flex items-center gap-0.5 bg-black/50 px-1 py-0.5 rounded border z-30 ${totalBonus > 0 ? 'text-cyan-300 border-cyan-400/30' : totalBonus < 0 ? 'text-red-300 border-red-400/30' : 'text-slate-300 border-white/20'}`
       }, /*#__PURE__*/React.createElement(Sword, {
         size: 5
       }), totalBonus > 0 ? '+' : '', (totalBonus * 100).toFixed(1), "%");
@@ -37425,8 +38956,19 @@ function BattleScreen({
         fontSize: '40px'
       },
       className: "z-10 drop-shadow-md"
-    }, s?.emoji || ''), isAnimating && attackAnim.twinBlade && /*#__PURE__*/React.createElement(KenshiTwinSlash, null), isAnimating && attackAnim.sakura && /*#__PURE__*/React.createElement(EikiSakuraPetals, null)), /*#__PURE__*/React.createElement("div", {
-      className: `h-[28%] ${RANGE_STYLES[i].labelBg} flex items-center justify-center border-t border-white/20 z-20`
+    }, s?.emoji || ''), tacticsUnit && tacticsUnit.downed && (() => {
+      const revivePct = tacticsUnit.maxHp > 0 ? Math.floor(tacticsUnit.hp / tacticsUnit.maxHp * 100) : 0;
+      return /*#__PURE__*/React.createElement("div", {
+        "data-tactics-down-mark": i,
+        "data-tactics-revive": `${revivePct}`,
+        className: "absolute inset-0 z-[62] flex flex-col items-center justify-center rounded-xl bg-black/70 pointer-events-none"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-[11px] font-black tracking-[.2em] text-slate-200"
+      }, "\u30C0\u30A6\u30F3"), /*#__PURE__*/React.createElement("span", {
+        className: "text-[9px] font-black text-emerald-300 leading-tight"
+      }, "\u5FA9\u6D3B\u307E\u3067 ", 100 - revivePct, "%"));
+    })(), isAnimating && attackAnim.twinBlade && /*#__PURE__*/React.createElement(KenshiTwinSlash, null), isAnimating && attackAnim.sakura && /*#__PURE__*/React.createElement(EikiSakuraPetals, null)), /*#__PURE__*/React.createElement("div", {
+      className: `h-[20px] shrink-0 ${RANGE_STYLES[i].labelBg} flex items-center justify-center border-t border-white/20 z-20`
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-[10px] font-black uppercase tracking-tighter leading-none"
     }, RANGE_LABELS[i], "\u8DDD\u96E2")));
@@ -37446,7 +38988,10 @@ function BattleScreen({
     "aria-label": "\u3053\u306E\u6848\u5185\u3092\u9589\u3058\u308B",
     className: "min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black"
   }, "\xD7"))), /*#__PURE__*/React.createElement("div", {
-    className: "h-[24%] shrink-0 bg-slate-900/95 p-1 flex flex-col relative border-t border-white/10"
+    className: "shrink-0 bg-slate-900/95 p-1 flex flex-col relative border-t border-white/10",
+    style: {
+      height: 'clamp(172px,23dvh,196px)'
+    }
   }, /*#__PURE__*/React.createElement("div", {
     className: "text-[8px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-1 flex justify-between px-2 items-center gap-1"
   }, /*#__PURE__*/React.createElement("span", {
@@ -37516,9 +39061,10 @@ function BattleScreen({
     // 押せるときの字は Action のまま(検査がこの字でボタンを押している)。
     const actionHint = canAct ? null : autoBattle || isBusy ? null : selectedCards.length === 0 ? 'カードを選ぶ' : !allAttackAssigned ? '置き場所を選ぶ' : null;
     return /*#__PURE__*/React.createElement("button", {
+      "data-battle-action": true,
       onClick: () => processTurn(),
       disabled: !canAct,
-      className: `min-h-[48px] min-w-[96px] shrink-0 px-2 sm:px-5 rounded-full font-black text-[11px] sm:text-[13px] whitespace-nowrap active:scale-90 flex items-center justify-center gap-1 border-2 border-black tracking-wide transition-all${actionHint ? '' : ' uppercase'}${battleTutorialSpotClass('action')} ${canAct ? 'bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.4)]' : actionHint ? 'bg-slate-800 text-slate-300 border-white/20' : 'bg-slate-700 text-slate-500 opacity-50'}`
+      className: `min-h-[44px] min-w-[96px] shrink-0 px-2 sm:px-5 rounded-full font-black text-[11px] sm:text-[13px] whitespace-nowrap active:scale-90 flex items-center justify-center gap-1 border-2 border-black tracking-wide transition-all${actionHint ? '' : ' uppercase'}${battleTutorialSpotClass('action')} ${canAct ? 'bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.4)]' : actionHint ? 'bg-slate-800 text-slate-300 border-white/20' : 'bg-slate-700 text-slate-500 opacity-50'}`
     }, /*#__PURE__*/React.createElement(Play, {
       fill: "currentColor",
       size: 12
@@ -37531,7 +39077,10 @@ function BattleScreen({
     const curGuts = assignedSlot != null ? getCardGuts(c, assignedSlot) : getCardGuts(c, null);
     const requiredGuts = assignedSlot != null ? curGuts : pendingCardGuts(c);
     const remainingGuts = guts - selectedCards.reduce((acc, idx) => acc + (idx === i ? 0 : selectedCardGuts(idx)), 0);
-    const isSelectable = isSel || remainingGuts >= requiredGuts && selectedCards.length < cardLimit;
+    // 新モードは合計のガッツでは決まらない。「その子が払えるか」をアプリ側へ聞く。
+    // null が返るモード(いままでの5つ)では、今までどおり合計で見る
+    const cardBlock = tacticsCardBlock ? tacticsCardBlock(c, i) : null;
+    const isSelectable = isSel || (cardBlock ? cardBlock.ok : remainingGuts >= requiredGuts && selectedCards.length < cardLimit);
     const isPending = pendingCard === i;
     const assignedMon = assignedSlot != null ? slots[assignedSlot] : null;
     const isDragging = dragState?.active && dragState?.cardIndex === i;
@@ -37541,8 +39090,13 @@ function BattleScreen({
     const tutorialTargeted = !!battleTutorialCardTarget && battleTutorialCardKind(c) === battleTutorialCardTarget;
     return /*#__PURE__*/React.createElement("div", {
       key: c.uid,
-      className: "flex-1 min-w-0 max-w-[20%] flex"
+      className: "relative flex-1 min-w-0 max-w-[20%] flex"
     }, /*#__PURE__*/React.createElement("button", {
+      "data-hand-card": i,
+      "data-card-cost": requiredGuts,
+      "data-card-type": c.type,
+      "data-card-usable": isSelectable ? 'true' : 'false',
+      "data-card-block": cardBlock && !cardBlock.ok ? cardBlock.kind : undefined,
       onPointerDown: e => {
         if (isBusy || autoBattleRef.current || !tutorialAllowed) return;
         const pt = e.touches ? e.touches[0] : e;
@@ -37599,14 +39153,17 @@ function BattleScreen({
           handIndex: i
         });
       },
-      className: `text-[10px] font-black leading-[12px] w-full whitespace-normal h-8 flex items-center justify-center overflow-hidden px-0.5 underline decoration-dotted decoration-white/60 underline-offset-2 active:opacity-60${battleTutorialNeedCard && tutorialTargeted ? ' is-battle-tutorial-spot' : ''}`
+      className: `text-[11px] font-black leading-[13px] w-full whitespace-normal h-[39px] flex items-center justify-center overflow-hidden px-0.5 underline decoration-dotted decoration-white/60 underline-offset-2 active:opacity-60${battleTutorialNeedCard && tutorialTargeted ? ' is-battle-tutorial-spot' : ''}`
     }, c.name) : /*#__PURE__*/React.createElement("div", {
-      className: "text-[10px] font-black leading-[12px] w-full whitespace-normal h-8 flex items-center justify-center overflow-hidden px-0.5"
+      className: "text-[11px] font-black leading-[13px] w-full whitespace-normal h-[39px] flex items-center justify-center overflow-hidden px-0.5"
     }, c.name), /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] font-black bg-black/40 text-white rounded py-1 flex items-center justify-center gap-0.5"
     }, /*#__PURE__*/React.createElement(Zap, {
       size: 9
-    }), curGuts))));
+    }), curGuts))), cardBlock && !cardBlock.ok && cardBlock.short && !isDragging && /*#__PURE__*/React.createElement("div", {
+      "data-tactics-card-block": cardBlock.short,
+      className: "pointer-events-none absolute inset-x-0.5 top-1 z-30 rounded-md border border-rose-200 bg-rose-600 px-0.5 py-0.5 text-center text-[8px] font-black leading-tight text-white shadow-[0_2px_8px_rgba(0,0,0,.85)]"
+    }, cardBlock.short));
   })))));
 }
 function UltimateDistanceBreakReveal({
@@ -39481,6 +41038,28 @@ function MonsterHeroGame() {
   const [proHighScores, setProHighScores] = useState({});
   const [proHighestWaves, setProHighestWaves] = useState({});
   const [proClearCounts, setProClearCounts] = useState({});
+  // ★タクティクスバトルの記録も別枠(mh_tactics_* / mh_tactics_pro_*)。ここを用意するまで、
+  //   タクティクスで遊んだ結果がチャレンジの mh_hs_* / mh_clears_* / mh_highest_wave_* を
+  //   書き換え、全国ランキングもチャレンジの行へ送られていた(2026-09-20 に見つけて直した)。
+  //   難易度は通常9段階＋極限5段階(TACTICS_DIFFICULTY_IDS)。
+  //   中のモードが増えても入れ物を増やさなくていいよう、モードidをキーにしてまとめて持つ
+  //   (種族チャレンジだけは種族×難易度なので、専用の進行データのほうへ残す)
+  const [tacticsRecords, setTacticsRecords] = useState({});
+  const tacticsRecordsOf = mode => tacticsRecords[mode] || EMPTY_TACTICS_RECORD;
+  // 記録を1つ書き換える。モードごとの入れ物を壊さずに、その難易度だけを差し替える
+  const bumpTacticsRecord = (mode, field, diff, value) => setTacticsRecords(prev => {
+    const current = prev[mode] || EMPTY_TACTICS_RECORD;
+    return {
+      ...prev,
+      [mode]: {
+        ...current,
+        [field]: {
+          ...current[field],
+          [diff]: value
+        }
+      }
+    };
+  });
   // このランで「自己ベストを更新したか」「その難易度を初めてクリアしたか」。
   // リザルトで助手に特別なセリフを言わせるためだけに使う(保存はしない)
   // rankingFailed … 全国ランキングへ送れなかった周回。リザルトでその旨を知らせる
@@ -39609,7 +41188,22 @@ function MonsterHeroGame() {
   // 選択中の種族・難易度だけがデバッグ専用で、保存先は既存の進行キー1つに限る。
   const [speciesChallengeDebugSpeciesId, setSpeciesChallengeDebugSpeciesId] = useState(() => speciesChallengeLineages()[0]?.id || '');
   const [speciesChallengeDebugDifficultyId, setSpeciesChallengeDebugDifficultyId] = useState('Expert');
-  const [speciesChallengeProgress, setSpeciesChallengeProgress] = useState(() => normalizeSpeciesChallengeProgress(null));
+  // ★クラシックとタクティクス、どちらの種族チャレンジの進み具合も同時に持つ。
+  //   保存先は speciesChallengeProgressKeyOf(mode) が決める別々のキーで、片方の解放や
+  //   自己ベストがもう片方へ移ることはない
+  const [speciesProgressByMode, setSpeciesProgressByMode] = useState(() => ({
+    [BATTLE_MODE_SPECIES_CHALLENGE]: normalizeSpeciesChallengeProgress(null),
+    [BATTLE_MODE_TACTICS_SPECIES]: normalizeSpeciesChallengeProgress(null)
+  }));
+  // いま扱っている種族チャレンジのモード。画面で選んでいるモードが優先で、
+  // バトル中(モード選択から離れているとき)は runMode を見る
+  const speciesChallengeMode = isSpeciesChallengeMode(battleMode) ? battleMode : isSpeciesChallengeMode(runMode) ? runMode : BATTLE_MODE_SPECIES_CHALLENGE;
+  const speciesChallengeProgressOf = mode => speciesProgressByMode[mode] || speciesProgressByMode[BATTLE_MODE_SPECIES_CHALLENGE];
+  const speciesChallengeProgress = speciesChallengeProgressOf(speciesChallengeMode);
+  const setSpeciesChallengeProgress = (next, mode = speciesChallengeMode) => setSpeciesProgressByMode(prev => ({
+    ...prev,
+    [mode]: normalizeSpeciesChallengeProgress(typeof next === 'function' ? next(prev[mode]) : next)
+  }));
   const [speciesChallengeDebugHeroId, setSpeciesChallengeDebugHeroId] = useState('');
   const [speciesChallengeDebugAllyIds, setSpeciesChallengeDebugAllyIds] = useState([]);
   const [speciesChallengeDebugRun, setSpeciesChallengeDebugRun] = useState(null);
@@ -39642,9 +41236,9 @@ function MonsterHeroGame() {
   // WAVE10クリアの確定を1ランにつき1回だけにする。連打・再描画で clears が二重に増えるのを防ぐ
   const speciesChallengeClearHandledRef = useRef(false);
   const [speciesChallengeClearResult, setSpeciesChallengeClearResult] = useState(null);
-  const loadSpeciesChallengeProgress = async () => {
-    const progress = normalizeSpeciesChallengeProgress(await storeGet(SPECIES_CHALLENGE_PROGRESS_KEY, null, false));
-    setSpeciesChallengeProgress(progress);
+  const loadSpeciesChallengeProgress = async (mode = speciesChallengeMode) => {
+    const progress = normalizeSpeciesChallengeProgress(await storeGet(speciesChallengeProgressKeyOf(mode), null, false));
+    setSpeciesChallengeProgress(progress, mode);
     return progress;
   };
   // saveProgress=true は本番のバトル入口と、デバッグ設定の「実進行保存で実戦確認」から渡す。
@@ -39653,9 +41247,11 @@ function MonsterHeroGame() {
   // 画面のDEBUGバッジを通常プレイへ出さないために持つ(保存する/しないとは別の話)
   const openSpeciesChallengeSelection = async ({
     saveProgress = false,
-    fromDebug = false
+    fromDebug = false,
+    mode = BATTLE_MODE_SPECIES_CHALLENGE
   } = {}) => {
-    await loadSpeciesChallengeProgress();
+    setBattleMode(mode);
+    await loadSpeciesChallengeProgress(mode);
     speciesChallengeFromDebugRef.current = !!fromDebug;
     setSpeciesChallengeSelection({
       step: 'species',
@@ -40009,6 +41605,13 @@ function MonsterHeroGame() {
   // 「バトル → バトルモード選択 → 難易度選択」の3画面と、そこから開くランキング。
   // まだデバッグ設定からだけ開ける。ふだんの「バトル」はこれまでどおり BATTLE_MENU のまま
   const [modeSelectTab, setModeSelectTab] = useState('mode'); // 'mode' | 'breeder' | 'bond' | 'power'
+  // どのバトルの仕組みを選んだか(BATTLE_SYSTEM_SELECT → BATTLE_MODE_SELECT)。
+  // ★保存しない。画面を分けるためだけの値で、記録もランキングもモードのidで分かれる
+  const [battleSystem, setBattleSystem] = useState(BATTLE_SYSTEM_CLASSIC);
+  // 難易度選択の「通常 / 極限」タブ。クイックは15段階、種族チャレンジは14段階あり、
+  // 一続きに並べると探しにくいので分ける(2026-09-19 ユーザー指示)。
+  // 表示のためだけの値で保存はしない。極限を持たないモードではタブ自体を出さない
+  const [difficultySelectTab, setDifficultySelectTab] = useState(DIFFICULTY_TAB_NORMAL);
   // スコアランキングを「どのモードのぶんとして」見ているか。チャレンジとプロの2つだけ
   const [scoreRankingMode, setScoreRankingMode] = useState(BATTLE_MODE_CHALLENGE);
   // ランキングから戻る先。モード選択カードから開いたか、難易度カードから開いたかで変わる
@@ -40039,6 +41642,19 @@ function MonsterHeroGame() {
   const [atk, setAtk] = useState(100);
   const [def, setDef] = useState(100);
   const [slots, setSlots] = useState([null, null, null, null]);
+  // 新モード(tactics)の盤面。1体ずつのライフ・ガッツ・倒れたかどうかを持つ。
+  // 設計の正本: docs/spec/BATTLE_NEW_MODE_PLAN.md。中身を作るのは 32-tactics-units.jsx の純関数。
+  // ★slots と必ず同じ並び。片方だけ動かすと「誰を狙ったか」がずれるので、
+  //   更新は applySlots ひとつに通す(下で定義)。
+  // ★refも持つのは、敵の行動を抽選するのが再描画より先だから(咆哮の重ねがけと同じ理由)。
+  const [tacticsUnits, setTacticsUnits] = useState([null, null, null, null]);
+  const tacticsUnitsRef = useRef([null, null, null, null]);
+  // 新モードの敵強化に使う総合力。start はバトルを始めた時点(勇者モン1体)、now はいまの編成。
+  // 供モンが合流して総合力が増えたぶんだけ、次のWAVEから敵も強くなる(設計 §6)
+  const tacticsPowerRef = useRef({
+    start: 0,
+    now: 0
+  });
   const [mainHero, setMainHero] = useState(null);
   const [hand, setHand] = useState([]);
   const [deck, setDeck] = useState([]);
@@ -40094,6 +41710,25 @@ function MonsterHeroGame() {
     autoTurnScheduledRef.current = false;
     autoPostWaveRunningRef.current = false;
     autoPostWaveScheduledRef.current = false;
+    // ★演出の state も、ここで必ず捨てる
+    //   (2026-09-20・ユーザー報告「デバッグモードでバトル確認しようとしたら
+    //    近距離に誰もいないのに攻撃アクションが起きる」)。
+    //   理由は上とまったく同じ。ターンの演出は「出す → await battleWait → 消す」の形なので、
+    //   世代を進めると**消すほうへ二度と到達しない**。state は applyResetAllState でも
+    //   戻らないため、次のランの画面へ前のランの演出がそのまま残って出る。
+    //   実際に出ていたのは技名(slotSkill)で、誰もいない間合いに「トリオビーム∞」が浮いていた。
+    //   技名は slotIndex で左右の位置が決まるだけで、そこに誰かいるかは見ていない。
+    //   ★ここで消してよいのは**そのターンの見た目だけ**。敵・盤面・ダメージなどの
+    //   進行データには触らない(片付けは applyResetAllState と各画面の受け持ち)。
+    //   ポップアップ(addPopup)と教えカードの演出(fireTeachingFx)は自前の setTimeout で
+    //   消えるので、ここには要らない(世代を見ていない)。
+    setAttackAnim(null);
+    setSlotSkill(null);
+    setSlotSettle(null);
+    setEnemySkillName(null);
+    setGuardFx(false);
+    setEnemyAttackAnim(false);
+    setEnemyAttackFx(null);
   };
   const [autoTurnCycle, setAutoTurnCycle] = useState(0);
   // AUTO∞もラン中だけの一時状態。リロード後は必ずOFFに戻す。
@@ -40226,6 +41861,9 @@ function MonsterHeroGame() {
   const [turnCount, setTurnCount] = useState(1);
   // WAVEごとのturnCountを撃破確定時にだけ足す、現在のラン内の累計。永続保存はしない。
   const [totalTurnCount, setTotalTurnCount] = useState(0);
+  // 新モードの「あとから入った子の追いつき補正」。クリアしたWAVEぶんを掛け算で積む
+  // (2026-09-20 ユーザー指示)。1周のはじめに1へ戻す
+  const tacticsJoinCatchUpRef = useRef(1);
   // ULTIMATEのラン内だけで持つ永久弱体と、次WAVE開始時に一度だけ消費する発動予約。
   const [ultimateDistanceBreakLevels, setUltimateDistanceBreakLevels] = useState([0, 0, 0, 0]);
   const ultimateDistanceBreakLevelsRef = useRef([0, 0, 0, 0]);
@@ -40383,13 +42021,204 @@ function MonsterHeroGame() {
   // 与ダメージ補正(小数)。置いた距離に関係なく、全員のぶんが4距離すべてに加算される。
   const [distAptPct, setDistAptPct] = useState([0, 0, 0, 0]);
   // 距離ごとの合計補正 = ウェーブ報酬で伸びるdistDmgBonus + 編成全員の間合い適性
-  const distTotalBonus = (dist, aptOverride = null) => (distDmgBonus[dist] || 0) + ((aptOverride || distAptPct)[dist] || 0);
+  // 新モードの距離適性は「その枠に立っている子のもの」だけが効く。
+  // ★既存モードは今までどおり編成全員ぶんの合算(distAptPct)。ここを共通にすると
+  //   既存モードのダメージが変わってしまう
+  const tacticsSlotApt = slotIdx => {
+    const mon = slots[slotIdx];
+    if (!mon) return [0, 0, 0, 0];
+    return getMonsterAptPct(mon, specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty), wave);
+  };
+  const distTotalBonus = (dist, aptOverride = null) => {
+    const apt = aptOverride || (isTacticsMode(runMode) ? tacticsSlotApt(dist) : distAptPct);
+    return (distDmgBonus[dist] || 0) + (apt[dist] || 0);
+  };
   const [totalDistDamage, setTotalDistDamage] = useState([0, 0, 0, 0]); // cumulative per-distance damage across all waves
   const [totalAllDamage, setTotalAllDamage] = useState(0); // cumulative damage across all waves
   const [totalRecoveryDelta, setTotalRecoveryDelta] = useState(0); // cumulative recovery-rate correction across all waves
   const [waveResult, setWaveResult] = useState(null);
   // 敵撃破に伴うスコア・報酬・画面遷移を、同じWAVEで二重に確定しないための同期ロック。
   const enemyDefeatResolvedRef = useRef(false);
+  // 新モードの咆哮を、このWAVEで何回重ねたか。次の行動を抽選するのは再描画より先なので、
+  // 表示用のstateではなくrefで持つ(上限に達したら咆哮そのものが候補から外れる)。
+  // WAVEが変わるたびに0へ戻す
+  const tacticsRoarStacksRef = useRef(0);
+  // 盤面を書き換える唯一の入口。ref・state・パーティのライフを必ず一緒に動かす。
+  // ★新モードのライフ(hp / maxHp)は盤面の合計。片方だけ動かすと
+  //   「合計は残っているのに全員倒れている」状態ができ、敗北判定が壊れる。
+  // 戻り値は新しい合計ライフ。ターン処理の currentHp をそのまま置き換えられる
+  // (新モード以外は盤面を持つだけでライフに触らないので null を返す)
+  const commitTacticsUnits = (nextUnits, mode = runMode) => {
+    const next = Array.isArray(nextUnits) ? nextUnits : [null, null, null, null];
+    const before = tacticsUnitsRef.current || [];
+    // ★「ライフが全快になってはじめて復活」なので、どの回復から戻ったかは問わない。
+    //   回復カードでも緊急回復でも自動再生でも、立ち上がった瞬間をここ1か所で拾う
+    if (isTacticsMode(mode)) {
+      next.forEach((unit, index) => {
+        const was = before[index];
+        if (!unit || !was) return;
+        if (normalizeTacticsUnit(was).downed && !normalizeTacticsUnit(unit).downed) {
+          addPopup(`${slots[index]?.masuName || slots[index]?.name || '仲間'}が起き上がった！`, 'hero', 'text-emerald-300 font-black text-2xl drop-shadow-md');
+        }
+      });
+    }
+    tacticsUnitsRef.current = next;
+    setTacticsUnits(next);
+    if (!isTacticsMode(mode)) return null;
+    // 1体もいない盤面は「まだ始まっていない」。ここでライフを0にすると、
+    // 編成前の画面がいきなり敗北扱いになってしまう
+    if (!next.some(Boolean)) return null;
+    const max = tacticsTotalBaseMaxHp(next),
+      total = tacticsTotalHp(next);
+    const maxG = tacticsTotalBaseMaxGuts(next),
+      totalG = tacticsTotalGuts(next);
+    // liveEffectiveMaxHp() / liveEffectiveMaxGuts() はターンの途中で ref を読み直す。
+    // useEffect の反映を待つと、同じターンの回復が古い上限で頭打ちになる
+    maxHpRef.current = max;
+    maxGutsRef.current = maxG;
+    setMaxHp(max);
+    setHp(total);
+    // ガッツも盤面の合計。★カードを払えるかは「その子のガッツ」で決まる(canTacticsSlotPay)。
+    //   合計はゲージと自動回復のために持つだけで、払える判定には使わない
+    setMaxGuts(maxG);
+    setGuts(totalG);
+    // パーティのちから・丈夫さは1体ずつの平均。★ダメージには使わない(それは1体ずつの値)。
+    //   ガードの段階・攻撃段階を決めるのに使うので、盤面から derive して持つ
+    setAtk(tacticsPartyAtk(next));
+    setDef(tacticsPartyDef(next));
+    return total;
+  };
+  // 盤面を slots に合わせる。ここだけが tacticsUnits を作る場所。
+  // ★すでに居る子の現在値(ライフ・ガッツ)は持ち越す。slots が変わるたびに作り直すと、
+  //   供モンが合流した瞬間に全員が満タンへ戻ってしまう。
+  // ★モードで分けない。新モード以外でも4体ぶんのオブジェクトを作るだけなので安く、
+  //   「runMode がまだ切り替わっていないタイミングで作り損ねる」事故を防げる。
+  const syncTacticsUnits = (nextSlots, mode = runMode) => {
+    const before = tacticsUnitsRef.current || [];
+    const list = Array.isArray(nextSlots) ? nextSlots : [];
+    const isSame = (mon, index) => {
+      const current = before[index];
+      return !!(current && current.id === (mon.id || null) && current.masuId === (mon.masuId ?? null));
+    };
+    // ★あとから入った子は、勇者モンが受けてきたトレーニングのぶんだけ見劣りする
+    //   (2026-09-20 ユーザー指示)。クリアしたWAVE1つにつき全ステ+10%を基準に積んで渡す。
+    //   実際の率はそのWAVEを何ターンで抜けたかで決まる(速いほど厚い)。
+    //   積み上げは tacticsJoinCatchUpRef が持つ(WAVEを倒しきった瞬間に1回だけ足す)
+    const next = list.map((mon, index) => {
+      if (!mon) return null;
+      if (isSame(mon, index)) return before[index];
+      const fresh = createTacticsUnit(mon);
+      return isTacticsMode(mode) ? applyTacticsJoinCatchUp(fresh, tacticsJoinCatchUpRef.current) : fresh;
+    });
+    // みゅあ補正は合計ではなく1体ずつの上限へ効かせる(合計へ掛けると二重になる)
+    return commitTacticsUnits(scaleTacticsUnits(next, getPermaBuff('muaHpPct'), getPermaBuff('muaGutsPct')), mode);
+  };
+  // 編成スロットを差し替える唯一の入口。盤面を必ず一緒に動かす。
+  // ★画面へ渡すのもこれ(setSlots={applySlots})。直に setSlots を渡すと、
+  //   そこだけ盤面(1体ずつのライフ・ガッツ)が古いまま残る。
+  // ★mode を受け取れるようにしてあるのは、バトルを始める処理の中では
+  //   runMode(state)がまだ前のモードのままだから(同じ処理の中で setRunMode しても反映されない)
+  const applySlots = (nextSlots, mode = runMode) => {
+    setSlots(nextSlots);
+    syncTacticsUnits(nextSlots, mode);
+    // 敵強化の基準になる総合力を数え直す。編成が空になったら基準も忘れる(次のランのため)
+    const power = (Array.isArray(nextSlots) ? nextSlots : []).filter(Boolean).reduce((sum, mon) => sum + Math.max(0, Number(monsterPowerOf(mon)) || 0), 0);
+    tacticsPowerRef.current = power > 0 ? {
+      start: tacticsPowerRef.current.start || power,
+      now: power
+    } : {
+      start: 0,
+      now: 0
+    };
+  };
+  // 新モードのときだけ、敵の予告へ「誰を狙うか」を足す。ほかのモードでは intent をそのまま返す
+  const aimTacticsIntent = (intent, mode) => isTacticsMode(mode) ? withTacticsTarget(intent, tacticsUnitsRef.current) : intent;
+  // ===== ライフの増減(新モードだけ盤面へ) =====
+  // どれも「新モードなら増減後の合計ライフ、ほかのモードなら null」を返す。
+  // 呼び出し側は null のときだけ今までどおりの1行を通す。こうすると既存5モードの
+  // 挙動をまったく書き換えずに済む(ガード・反射・吸収の分岐もそのまま)
+  const tacticsDamage = (damage, intent, actingDist) => {
+    if (!isTacticsMode(runMode)) return null;
+    const targets = tacticsIntentTargets(intent, tacticsUnitsRef.current, actingDist);
+    return commitTacticsUnits(damageTacticsTargets(tacticsUnitsRef.current, targets, damage));
+  };
+  const tacticsHeal = amount => isTacticsMode(runMode) ? commitTacticsUnits(healTacticsBoard(tacticsUnitsRef.current, amount)) : null;
+  // 「その子の上限 × 率」で回復する入口。★新モード以外は null を返し、呼び出し側は
+  //   null のときだけ今までどおり「合計の上限 × 率」を通す。
+  // ★合計から量を出して配ると、1体だけ傷ついているときにパーティ全員ぶんがその子へ入る
+  //   (2026-09-20 ユーザー指摘)。1体ずつ自分の率で回す。
+  //   includeDowned … 倒れた子にも入れるか。回復カード・緊急回復は true(復活までの貯め)、
+  //   自動再生は false(勝手に復活させない)
+  const tacticsRateHeal = (hpRate, gutsRate, includeDowned = true) => {
+    if (!isTacticsMode(runMode)) return null;
+    const result = rateHealTacticsBoard(tacticsUnitsRef.current, hpRate, gutsRate, includeDowned);
+    const total = commitTacticsUnits(result.units);
+    return {
+      hp: result.hp,
+      guts: result.guts,
+      total
+    };
+  };
+  // 自動再生。倒れた子には入れない(勝手に復活させない)
+  const tacticsRegen = (hpRate, gutsRate) => tacticsRateHeal(hpRate, gutsRate, false);
+  // 固有技・アシストカードの効果が「使った子」へ入るとき。量もその子の上限の率
+  const tacticsRateHealAt = (slotIdx, hpRate, gutsRate) => {
+    if (!isTacticsMode(runMode)) return null;
+    const result = rateHealTacticsAt(tacticsUnitsRef.current, slotIdx, hpRate, gutsRate);
+    const total = commitTacticsUnits(result.units);
+    return {
+      hp: result.hp,
+      guts: result.guts,
+      total
+    };
+  };
+  // カードのガッツ回復。新モードは「使った子の上限 × 率」、ほかは今までどおり合計の率。
+  // 返すのは実際に入ったぶん(画面に出す数字と食い違わせない)
+  const gainGutsByRate = (slotIdx, rate) => {
+    const result = tacticsRateHealAt(slotIdx, 0, rate);
+    if (result) return result.guts;
+    const gain = Math.floor(liveEffectiveMaxGuts() * Math.max(0, rate));
+    if (gain > 0) gainGutsAt(slotIdx, gain);
+    return gain;
+  };
+  // ガード段階は「いちばん硬い子」で決める(2026-09-20 ユーザー指示)。
+  // ★手札に出るガードカードの段階と枚数は編成で1組ぶんなので全体の決めごとだが、
+  //   平均だと1体だけ壁役を育てても段階が上がらない。軽減量そのものは1体ずつのまま
+  const guardLevelDef = fallback => {
+    const base = fallback !== undefined ? fallback : def;
+    if (!isTacticsMode(runMode)) return base;
+    const maxDef = tacticsMaxDef(tacticsUnitsRef.current);
+    return maxDef > 0 ? maxDef : base;
+  };
+  // ガッツの回復も立っている子へ配る。戻り値は「新モードなら合計ライフ、ほかは null」で、
+  // 呼び出し側は null のときだけ今までどおりの1行を通す(ライフの helper と同じ約束)
+  const tacticsGutsRecover = amount => isTacticsMode(runMode) ? commitTacticsUnits(recoverTacticsGutsBoard(tacticsUnitsRef.current, amount)) : null;
+  // カード1枚ぶんのガッツを、使う子から払う。払えなければ false
+  const tacticsPayGuts = (slotIdx, cost) => {
+    if (!isTacticsMode(runMode)) return null;
+    const paid = payTacticsGutsAt(tacticsUnitsRef.current, slotIdx, cost);
+    if (paid.payable) commitTacticsUnits(paid.units);
+    return paid.payable;
+  };
+  // そのスロットがいまカードを使えるか(倒れていない・ガッツが足りる)
+  const tacticsSlotCanPay = (slotIdx, cost) => !isTacticsMode(runMode) || canTacticsSlotPay(tacticsUnitsRef.current, slotIdx, cost);
+  // ガッツを増やす共通の入口。新モードは立っている子へ配り、ほかのモードは今までどおり1本
+  const gainGuts = amount => {
+    if (tacticsGutsRecover(amount) === null) setGuts(p => Math.min(liveEffectiveMaxGuts(), p + amount));
+  };
+  // カードの効果で増えるガッツは「使った子」へ。新モード以外は今までどおり全体へ
+  const gainGutsAt = (slotIdx, amount) => {
+    if (!isTacticsMode(runMode)) {
+      gainGuts(amount);
+      return;
+    }
+    commitTacticsUnits(recoverTacticsGutsAt(tacticsUnitsRef.current, slotIdx, amount));
+  };
+  // 画面から「このカードをこの子へ置けるか」を聞くための入口。
+  // ★新モード以外では null を返す。画面側は null のときだけ今までどおりの判定を使う
+  const tacticsCanAssign = (card, cardIndex, slotIdx) => isTacticsMode(runMode) ? tacticsUsableSlots(card, cardIndex).includes(slotIdx) : null;
+  // 20ターン経過。全員を倒して、敗北の見え方をそろえる
+  const tacticsWipe = () => isTacticsMode(runMode) ? commitTacticsUnits(wipeTacticsBoard(tacticsUnitsRef.current)) : null;
   // 不死(死者の再起)で、このWAVEに何回起き上がったか。撃破処理と同じ同期ロックの流れで判定するので
   // 表示用のstateとは別にrefでも持ち、再描画を待たずに次の撃破判定へ反映する。
   const enemyRevivalUsedRef = useRef(0);
@@ -41376,6 +43205,11 @@ function MonsterHeroGame() {
   const extremeRunRef = useRef(false);
   const [extremeRuleOpen, setExtremeRuleOpen] = useState(false);
   const [extremeDifficulty, setExtremeDifficulty] = useState('EXTREME');
+  // ★タクティクスバトルの記録を分ける難易度。極限で遊ぶと difficulty は 'Normal' へ
+  //   置き換わる(極限チャレンジ・種族チャレンジと同じ作り)ので、そのときだけ
+  //   extremeDifficulty を使う。自己ベスト・クリア回数・最高到達WAVE・ランキングの
+  //   どれもこの1か所から難易度を取る(取り違えると別の難易度の記録を書き換えてしまう)
+  const tacticsRecordDifficulty = () => extremeRunRef.current ? extremeDifficulty : difficulty;
   const [debugEnemyKey, setDebugEnemyKey] = useState(null);
   const [debugStrongestHero, setDebugStrongestHero] = useState(false);
   const [debugOutcome, setDebugOutcome] = useState(null);
@@ -41686,6 +43520,13 @@ function MonsterHeroGame() {
     maxGutsRef.current = maxGuts;
   }, [maxGuts]);
   const liveEffectiveMaxHp = () => resolveEffectiveMaxStat(maxHpRef.current, livePermaBuff('muaHpPct'));
+  // みゅあ・かどみうむ・回復カードでライフ上限の倍率が上がったら、1体ずつの上限にも効かせる。
+  // ★パーティの maxHp は「素の上限の合計」なので、既存モードと同じく effectiveMaxHp が倍率を掛ける。
+  //   1体ずつの上限へ同じ倍率を入れておかないと、盤面の合計がゲージの満タンまで届かない
+  useEffect(() => {
+    if (!isTacticsMode(runMode)) return;
+    commitTacticsUnits(scaleTacticsUnits(tacticsUnitsRef.current, getPermaBuff('muaHpPct'), getPermaBuff('muaGutsPct')));
+  }, [permaBuffs, runMode]);
   const liveEffectiveMaxGuts = () => resolveEffectiveMaxStat(maxGutsRef.current, livePermaBuff('muaGutsPct'));
 
   // 全国ランキングをSupabaseから取得。失敗時は端末内保存の値にフォールバック
@@ -42991,6 +44832,9 @@ function MonsterHeroGame() {
     // (2026-09-14・ユーザー指摘「BGMがない / 設定してるホームのBGMを流して」)
     BATTLE_MENU: 'enhance',
     // 難易度・ランキング(モンスター選択と同じ曲)
+    BATTLE_SYSTEM_SELECT: 'enhance',
+    // どのバトルで遊ぶかを選ぶ画面(この先と同じ曲を続ける)
+    // (2026-09-21・ユーザー報告「バトル選択画面でBGMがない」)
     BATTLE_MODE_SELECT: 'enhance',
     // 新しいバトルモード選択(BATTLE_MENUと同じ曲を続ける)
     BATTLE_DIFFICULTY_SELECT: 'enhance',
@@ -43044,9 +44888,23 @@ function MonsterHeroGame() {
     TRAINING_DIFFICULTY: 'trainingMenu',
     TRAINING_CONFIRM: 'trainingMenu',
     TRAINING_RESULT: 'trainingMenu',
+    TRAINING_INFO: 'trainingMenu',
+    // 説明だけここから抜けていた(ほかのトレーニング画面と同じ曲を続ける)
     TRAINING_BOARD: 'trainingBoard'
   };
   // プロフィール本体とアイテムはHOMEの曲を続ける。その他の詳細ページ群は従来のプロフィール曲を維持する。
+  // ★BGMを鳴らさない画面。ここに無い画面は、必ずどこかでBGMが決まること。
+  //   新しい画面を足したら「BGM_STATE_MAP へ載せる」か「ここへ理由つきで足す」かの
+  //   どちらかを必ず選ぶ。どちらもしないと、そのページだけ無音になる
+  //   (2026-09-14「モンヒロビートの記録でBGMがない」、2026-09-21「バトル選択画面でBGMがない」と
+  //    同じ壊れ方を2回している。tools/boot/bgm-screen-coverage-check.js が見張る)
+  const BGM_SILENT_STATES = Object.freeze([
+  // モンヒロビートは自分で音を管理する。ここでキーを持つと、譜面の曲と二重に鳴る
+  'RHYTHM_PLAY', 'RHYTHM_DEMO_HOME', 'RHYTHM_DEMO_HELP', 'RHYTHM_DEMO_MONSTERS', 'RHYTHM_INFO', 'RHYTHM_OPTIONS', 'RHYTHM_RANKING',
+  // オンボーディングのプレビューで開く助手えらび。タイトルからの流れの中なので鳴らさない
+  'ASSISTANT_SELECT',
+  // デバッグ画面。プレイヤーの通常プレイには出ない
+  'DEBUG_SETTINGS', 'DEBUG_BATTLE_SETUP', 'DEBUG_DATA_SETUP', 'RHYTHM_DEBUG', 'BREEDER_ICON_DEBUG', 'DYE_MASK_POSITION_DEBUG', 'MASU_PATTERN_DEBUG', 'MONSTER_CHECK_DEBUG', 'MONSTER_IMAGE_DEBUG', 'SPECIES_CHALLENGE_DEBUG', 'TRANSCEND_DEBUG', 'RPG_DEBUG_SETUP', 'RPG_DEBUG_BATTLE', 'RPG_DEBUG_RESULT']);
   const PROFILE_BGM_STATES = ['ROSTER', 'OWNED_MONSTERS', 'MASU_MONS', 'MASU_ENHANCE', 'MASU_TRANSCEND_ENHANCE', 'MASU_AUTO_ENHANCE', 'MASU_SOUL_TRAITS'];
   // マスモンの専用育成画面。ここを開いているあいだは詳細モーダルを重ねない(詳細のほうが手前に出てしまうため)
   const MASU_ENHANCE_STATES = ['MASU_ENHANCE', 'MASU_TRANSCEND_ENHANCE', 'MASU_AUTO_ENHANCE', 'MASU_SOUL_TRAITS'];
@@ -43553,6 +45411,7 @@ function MonsterHeroGame() {
   const MONBEAT_CUP_THANKS_STORY_ID = 'monbeat_cup_2026_09_thanks';
   // 閉幕の会話が受け持つイベント(週末ゲリラ杯)。ほかのイベントの受け取りは待たせない
   const MONBEAT_CUP_EVENT_ID = 'weekend_2026_09_11';
+  const SYMPHONY_EVENT_ID = 'symphony_2026_09_17';
   // ★本編で流す会話の一覧。最後まで見た(または飛ばした)ら、ここにあるIDだけを
   //   「見た」として記録する。会話を足したらここへ1行足すこと。
   //   書き忘れると、その会話は**永久に既読にならず**、起動のたびに流れ続ける
@@ -43560,18 +45419,22 @@ function MonsterHeroGame() {
   //   tools/mode/rhythm-event-thanks-check.js が見張る
   // 第2回イベント「異世界交響祭」の会話(2026-09-17)。最後まで見ると助手ドラが解放される
   const SYMPHONY_STORY_ID = 'symphony_2026_09_17';
-  const RHYTHM_EVENT_STORY_IDS = [MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID];
+  // 第2回の閉幕の会話(2026-09-20)。第1回と同じく、終了の時刻に自動で流れる。
+  // 報酬の上乗せは無いので、知らせるのは終わったことと受け取りのしかただけ
+  const SYMPHONY_THANKS_STORY_ID = 'symphony_2026_09_17_thanks';
+  const RHYTHM_EVENT_STORY_IDS = [MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID];
   // ★イベントid → そのイベントの会話id。**イベントを足したらここへ1行足す。**
   //   以前はここが第1回のidの直書きで、第2回が始まっても第1回の会話が流れる形になっていた
   //   (2026-09-17に第2回を足したときに直した)。書かなかったイベントでは会話は流れない。
   const RHYTHM_EVENT_STORY_BY_EVENT = {
     [MONBEAT_CUP_EVENT_ID]: MONBEAT_CUP_STORY_ID,
-    symphony_2026_09_17: SYMPHONY_STORY_ID
+    [SYMPHONY_EVENT_ID]: SYMPHONY_STORY_ID
   };
   // イベントid → 閉幕の会話id。用意していないイベントでは閉幕の会話は流れない
-  // (第2回には閉幕の会話が無いので、終わっても第1回の「閉幕とお礼」は流さない)
+  // (別の回の「閉幕とお礼」を代わりに流してしまわないよう、必ずここから引く)
   const RHYTHM_EVENT_THANKS_STORY_BY_EVENT = {
-    [MONBEAT_CUP_EVENT_ID]: MONBEAT_CUP_THANKS_STORY_ID
+    [MONBEAT_CUP_EVENT_ID]: MONBEAT_CUP_THANKS_STORY_ID,
+    [SYMPHONY_EVENT_ID]: SYMPHONY_THANKS_STORY_ID
   };
   // いま開催中／いま終わったばかりのイベントに対応する会話id(無ければ null)
   const rhythmEventStoryIdFor = event => event && RHYTHM_EVENT_STORY_BY_EVENT[event.id] || null;
@@ -43631,10 +45494,11 @@ function MonsterHeroGame() {
       //   ★読んでいる最中にここが回っても並べ直さない(rhythmEventStoryStartedRef)。
       //     そうしないと会話が終わった瞬間に2回目が流れる
       const notPlayedYet = storyId => !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(storyId) && !rhythmEventStoryStartedRef.current.includes(storyId);
-      const endedThanksId = rhythmEventThanksStoryIdFor(rhythmLimitedEventJustEnded(Date.now()));
-      if (endedThanksId && notPlayedYet(endedThanksId)) {
-        setRhythmEventStoryPending(prev => prev || endedThanksId);
-      }
+      // ★終わった直後の回を**新しいほうから全部**見て、まだ見ていない閉幕の会話を1本流す。
+      //   単数の rhythmLimitedEventJustEnded だと、受取期限(2週間)が重なっているあいだ
+      //   前の回が返り続け、新しい回の閉幕の会話が何日も出てこない(2026-09-20)
+      const endedThanksId = rhythmLimitedEventsJustEnded(Date.now()).map(rhythmEventThanksStoryIdFor).find(id => id && notPlayedYet(id)) || null;
+      if (endedThanksId) setRhythmEventStoryPending(prev => prev || endedThanksId);
       const liveEvent = rhythmLimitedEventAt(Date.now());
       if (!liveEvent) return;
       // ① 会話。まだ見ていなければ、HOMEに着いたところで流す
@@ -43706,7 +45570,11 @@ function MonsterHeroGame() {
     // ★閉幕の会話がまだなら、受け取り画面はあとに回す(2026-09-13)。
     //   会話で「参加賞に勇者の証を10個足した」と言ってから受け取りを出さないと、
     //   先に画面が出て話の順番が逆になる。会話を見終えたら下の useEffect が呼び直す
-    if (!weekly && event.id === MONBEAT_CUP_EVENT_ID && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(MONBEAT_CUP_THANKS_STORY_ID)) return;
+    // ★どの回かを直書きしない(2026-09-20)。閉幕の会話を持つ回が増えたら、
+    //   その回でも同じように「会話が先、受け取りはあと」になる。
+    //   会話を用意していない回は null なので、これまでどおり素通りする
+    const pendingThanksId = rhythmEventThanksStoryIdFor(weekly ? null : event);
+    if (pendingThanksId && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(pendingThanksId)) return;
     const range = weekly ? {
       startMs: event.startMs,
       endMs: event.endMs
@@ -43804,7 +45672,9 @@ function MonsterHeroGame() {
   // (見ていないあいだは上の checkRhythmEventRewards が何もせずに戻っている)
   useEffect(() => {
     if (!Array.isArray(rhythmEventStorySeen)) return;
-    if (!rhythmEventStorySeen.includes(MONBEAT_CUP_THANKS_STORY_ID)) return;
+    // 閉幕の会話のどれかを見終えていれば確かめ直す(回ごとに書き足さなくてよいように)
+    const thanksIds = Object.values(RHYTHM_EVENT_THANKS_STORY_BY_EVENT);
+    if (!thanksIds.some(id => rhythmEventStorySeen.includes(id))) return;
     rhythmEventRewardCheckedRef.current = false;
     void checkRhythmEventRewards();
   }, [rhythmEventStorySeen, checkRhythmEventRewards]);
@@ -44026,6 +45896,9 @@ function MonsterHeroGame() {
       if (allowKeep && autoRepeatRef.current && bgmArrangement.autoRepeatResultBgm !== 'on') return '__keep_battle_bgm__';
       return bgmArrangement.clear;
     }
+    // ★鳴らさないと決めた画面はここで終わり。下まで落ちて null になるのと結果は同じだが、
+    //   「決め忘れて無音」と「決めたうえで無音」をコードの上で見分けられるようにしておく
+    if (BGM_SILENT_STATES.includes(state)) return null;
     if (state === 'HOME' || state === 'PROFILE' || state === 'ITEM_INVENTORY') return bgmArrangement.home;
     if (BGM_STATE_MAP[state]) return bgmArrangement[BGM_STATE_MAP[state]] || BGM_STATE_MAP[state];
     if (PROFILE_BGM_STATES.includes(state)) return bgmArrangement.management;
@@ -45006,6 +46879,9 @@ function MonsterHeroGame() {
       const proScores = {};
       const proClears = {};
       const proWaves = {};
+      // タクティクスバトルも別枠(mh_tactics_* / mh_tactics_pro_*)。難易度は通常9＋極限5なので、
+      // クイックの表とは別に TACTICS_DIFFICULTY_IDS を回す
+      const tacticsLoaded = {};
       // 極限側にも同じ難易度IDの既存記録がある場合は、クイックの解放判定へそのまま利用する。
       const extremeDifficultyClears = {};
       await Promise.all(Object.keys(QUICK_DIFFICULTY_SETTINGS).map(async d => {
@@ -45021,6 +46897,21 @@ function MonsterHeroGame() {
         proWaves[d] = await storeGet(bestWaveKey(BATTLE_MODE_PRO, d), 0, false);
         extremeDifficultyClears[d] = await storeGet(extremeClearCountKey(d), 0, false);
       }));
+      await Promise.all(TACTICS_SCORE_MODES.map(async mode => {
+        const hs = {};
+        const clears = {};
+        const waves = {};
+        await Promise.all(TACTICS_DIFFICULTY_IDS.map(async d => {
+          hs[d] = await storeGet(bestScoreKey(mode, d), 0, false);
+          clears[d] = await storeGet(clearCountKey(mode, d), 0, false);
+          waves[d] = await storeGet(bestWaveKey(mode, d), 0, false);
+        }));
+        tacticsLoaded[mode] = {
+          hs,
+          clears,
+          waves
+        };
+      }));
       // 極限チャレンジの記録は難易度定義から共通生成する。未公開段階も先に読み込むが、
       // ランキングとプロフィールの表示対象は available の難易度だけに限定する。
       const loadedExtremeScores = {};
@@ -45031,7 +46922,10 @@ function MonsterHeroGame() {
       }));
       setExtremeBestScores(loadedExtremeScores);
       setExtremeClearCounts(loadedExtremeClears);
-      setSpeciesChallengeProgress(normalizeSpeciesChallengeProgress(await storeGet(SPECIES_CHALLENGE_PROGRESS_KEY, null, false)));
+      setSpeciesProgressByMode({
+        [BATTLE_MODE_SPECIES_CHALLENGE]: normalizeSpeciesChallengeProgress(await storeGet(SPECIES_CHALLENGE_PROGRESS_KEY, null, false)),
+        [BATTLE_MODE_TACTICS_SPECIES]: normalizeSpeciesChallengeProgress(await storeGet(TACTICS_SPECIES_CHALLENGE_PROGRESS_KEY, null, false))
+      });
       setHighScores(scores);
       highScoresRef.current = scores;
       setAttemptCounts(attempts);
@@ -45043,6 +46937,7 @@ function MonsterHeroGame() {
       setProHighScores(proScores);
       setProClearCounts(proClears);
       setProHighestWaves(proWaves);
+      setTacticsRecords(tacticsLoaded);
       setExtremeDifficultyClearCounts(extremeDifficultyClears);
       let wasOnboarded = await storeGet('mh_onboarded', null, false);
       const hasSavedName = typeof savedName === 'string' && savedName.trim() && savedName !== '名無しのブリーダー';
@@ -45097,8 +46992,9 @@ function MonsterHeroGame() {
       }
       // 終わったあとに初めて開いた人へは、閉幕とお礼の会話を流す(受け取り画面より先)。
       // 閉幕の会話を用意していないイベントでは何も流さない
-      const bootThanksId = rhythmEventThanksStoryIdFor(rhythmLimitedEventJustEnded(Date.now()));
-      if (RELEASE_FLAGS.rhythmWeeklyRanking === true && wasOnboarded && bootThanksId && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(bootThanksId)) {
+      const bootSeenThanks = normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current);
+      const bootThanksId = rhythmLimitedEventsJustEnded(Date.now()).map(rhythmEventThanksStoryIdFor).find(id => id && !bootSeenThanks.includes(id)) || null;
+      if (RELEASE_FLAGS.rhythmWeeklyRanking === true && wasOnboarded && bootThanksId) {
         setRhythmEventStoryPending(bootThanksId);
       }
       const seenUpdateIds = normalizeSeenUpdateNoticeIds(await storeGet(UPDATE_NOTICE_SEEN_KEY, [], false));
@@ -45348,6 +47244,10 @@ function MonsterHeroGame() {
     // (落とすと最後の分岐でチャレンジの mh_hs_<難易度> を上書きしてしまう)。
     // scoreSubmittedRef は委譲先で立てるので、ここでは立てずに渡す
     if (speciesChallengeBattleRunRef.current) return submitSpeciesChallengeScoreOnce();
+    // ★タクティクスバトルも専用の送信処理だけを通す。ここから下のどの分岐へも落とさない。
+    //   落とすと、極限ぶんは極限チャレンジの mh_extreme_hs_* を、それ以外は
+    //   チャレンジの mh_hs_<難易度> を上書きしてしまう(実際にそうなっていた)
+    if (isTacticsMode(runMode)) return submitTacticsScoreOnce();
     scoreSubmittedRef.current = true;
     // クイックモードはランキング対象外。送信も、チャレンジの自己ベスト更新も行わず、
     // 記録は専用のキーへだけ残す
@@ -45466,10 +47366,10 @@ function MonsterHeroGame() {
     const run = speciesChallengeBattleRunRef.current;
     if (!run || score <= 0 || scoreSubmittedRef.current) return;
     scoreSubmittedRef.current = true;
-    if (!SPECIES_CHALLENGE_PUBLIC_RELEASE) return;
+    if (!modeHasRanking(speciesChallengeRunMode(run))) return;
     if (debugBattleRef.current) return;
     try {
-      const diff = rankingDifficultyForMode(BATTLE_MODE_SPECIES_CHALLENGE, run.difficultyId, run.speciesId);
+      const diff = rankingDifficultyForMode(speciesChallengeRunMode(run), run.difficultyId, run.speciesId);
       const result = await submitLocalScore(diff, score, runIdRef.current);
       if (!result?.nationalSaved) {
         console.error('[result] species challenge score save failed:', result?.error?.message || 'unknown ranking error');
@@ -45481,6 +47381,46 @@ function MonsterHeroGame() {
       return result;
     } catch (e) {
       console.error('[result] species challenge score submit failed:', e && e.message ? e.message : e);
+    }
+  };
+
+  // タクティクスバトルのスコア送信。難易度は tacticsRecordDifficulty() が決める
+  // (極限で遊ぶと difficulty は 'Normal' に置き換わるため、そこだけ extremeDifficulty を使う)。
+  // 自己ベストは mh_tactics_hs_<難易度>、全国ランキングは Tactics<難易度> の行だけを触る。
+  // チャレンジ(mh_hs_*)・プロ(mh_pro_hs_*)・極限チャレンジ(mh_extreme_hs_*)は読みも書きもしない。
+  // 一般公開までは全国ランキングへ送らない(modeHasRanking が公開フラグを見る)が、
+  // 端末の自己ベストは公開前から残す。あとから消えると「記録が無くなった」に見えるため
+  const submitTacticsScoreOnce = async () => {
+    if (score <= 0 || scoreSubmittedRef.current) return;
+    scoreSubmittedRef.current = true;
+    const diff = tacticsRecordDifficulty();
+    const saveBest = async () => {
+      if (score > (Number(tacticsRecordsOf(runMode).hs[diff]) || 0)) {
+        await storeSet(bestScoreKey(runMode, diff), score, false);
+        bumpTacticsRecord(runMode, 'hs', diff, score);
+        setRunHighlights(prev => ({
+          ...prev,
+          newRecord: true
+        }));
+      }
+    };
+    if (!modeHasRanking(runMode)) {
+      await saveBest();
+      return;
+    }
+    try {
+      const result = await submitLocalScore(rankingDifficultyForMode(runMode, diff), score, runIdRef.current);
+      if (!result?.nationalSaved) {
+        console.error('[result] tactics score save failed:', result?.error?.message || 'unknown ranking error');
+        setRunHighlights(prev => ({
+          ...prev,
+          rankingFailed: true
+        }));
+      }
+      await saveBest();
+      return result;
+    } catch (e) {
+      console.error('[result] tactics score submit failed:', e && e.message ? e.message : e);
     }
   };
   const handleSaveName = async () => {
@@ -45556,12 +47496,16 @@ function MonsterHeroGame() {
     if (gameState !== 'BATTLE_MODE_SELECT' || modeSelectTab !== 'mode') return;
     const id = requestAnimationFrame(() => {
       // 極限チャレンジは未解放でもカードは出す(押せるかどうかだけを切り替える)
-      const modes = [...BATTLE_MODES, EXTREME_MODE, ...(SPECIES_CHALLENGE_PUBLIC_RELEASE || debugBattle ? [SPECIES_CHALLENGE_MODE] : [])];
+      // 極限チャレンジはチャレンジの「極限」タブへ入れ込んだので、モードのカードには並べない
+      // (2026-09-19 ユーザー指示)。EXTREME_MODE の定義そのものは説明・ランキングが参照するので残す
+      const modes = battleSystemModes(battleSystem, {
+        debugBattle
+      }).map(id => battleModeInfo(id));
       const index = modes.length + Math.max(0, modes.findIndex(m => m.id === battleMode));
       centerCarouselChild(modeCarouselRef.current, index);
     });
     return () => cancelAnimationFrame(id);
-  }, [gameState, modeSelectTab]);
+  }, [gameState, modeSelectTab, battleSystem]);
   // 供モン合流の横スライドは、開くたびに先頭から見せる
   useEffect(() => {
     if (gameState !== 'PICK_ALLY') return;
@@ -45585,6 +47529,9 @@ function MonsterHeroGame() {
     // 練習中はいちばんやさしいビギナーから始める(そこしか押せないようにしているため)
     const start = battleTutorialStep != null ? 'Beginner' : BATTLE_DEFAULT_DIFFICULTY;
     setDifficulty(start);
+    // 難易度と同じく、タブもいつでも「通常」から始める。
+    // 極限タブのまま開くと、ノーマルを選んでいるのに極限の並びが見えることになる
+    setDifficultySelectTab(difficultyTabOf(start));
     const id = requestAnimationFrame(() => {
       const index = Object.keys(DIFFICULTY_SETTINGS).indexOf(start);
       centerCarouselChild(modeDifficultyCarouselRef.current, index);
@@ -46343,6 +48290,7 @@ function MonsterHeroGame() {
     momosukeIntroSeen: momosukeIntroSeenFlag,
     monbeatCupEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONBEAT_CUP_STORY_ID),
     monbeatCupThanksSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONBEAT_CUP_THANKS_STORY_ID),
+    symphonyThanksSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_THANKS_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID)
   };
   // alwaysUnlocked のイベントは、本編でまだ見ていなくても回想から見られる
@@ -49071,6 +51019,17 @@ function MonsterHeroGame() {
       addAssistantBond('clear');
       return;
     }
+    // ★タクティクスバトルも専用キーへ。極限ぶんも同じ mh_tactics_clears_<極限難易度> に入れる
+    //   ので、極限チャレンジの判定より先に置く(あとに置くと mh_extreme_clears_* を増やす)。
+    //   チャレンジの通算クリア数は動かさない(動かすと極限・種族の解放条件まで進んでしまう)
+    if (isTacticsMode(runMode)) {
+      const tacticsDiff = tacticsRecordDifficulty();
+      const nextTactics = (Number(tacticsRecordsOf(runMode).clears[tacticsDiff]) || 0) + 1;
+      bumpTacticsRecord(runMode, 'clears', tacticsDiff, nextTactics);
+      await storeSet(clearCountKey(runMode, tacticsDiff), nextTactics, false);
+      addAssistantBond('clear');
+      return;
+    }
     // 極限チャレンジは専用キーへ。チャレンジの通算クリア数(初勝利判定・解放判定に使う)は動かさない
     if (extremeRunRef.current) {
       const currentCount = extremeClearCounts[extremeDifficulty] || 0;
@@ -49186,7 +51145,9 @@ function MonsterHeroGame() {
   // 「勇者モンに選んだときだけ効く」特性なので、効いていることが画面から分かるように
   // 枚数表示の横にも出す。計算と表示で食い違わないよう、ここを唯一の出どころにする。
   // 対象の種は HERO_CARD_BONUS_MONSTER_IDS の一覧が持つ(種ごとの分岐をここへ書かない)
-  const heroCardBonus = useMemo(() => heroCardBonusOf(mainHero?.id), [mainHero]);
+  // ★タクティクスバトルは「持っている子が盤面にいれば、その子のぶんだけ総数が増える」
+  //   (2026-09-20 ユーザー指示)。1枚多く使えるようにしても、総数の上限が同じままだと出せない
+  const heroCardBonus = useMemo(() => isTacticsMode(runMode) ? tacticsAliveSlots(tacticsUnits).filter(i => heroCardBonusOf(tacticsUnits[i]?.id) > 0).length : heroCardBonusOf(mainHero?.id), [mainHero, runMode, tacticsUnits]);
   const kikiCardBonus = getPermaBuff('kikiCardBonusTurns') > 0 ? 1 : 0;
   // 連携は参加中の魂格持ちが1体以上いればパーティ全体の同時使用上限+1。
   // 複数人が持っていても+1だけで、既存の勇者特性・ききとは別枠。最終上限は5枚。
@@ -49197,17 +51158,29 @@ function MonsterHeroGame() {
   }, []);
   const soulCoordinationCardBonus = soulCoordinationSlots.length > 0 ? 1 : 0;
   const baseCardLimit = useMemo(() => {
-    const allyCount = slots.filter(s => s !== null).length;
+    // ★新モードは倒れた子を数えない(2026-09-20 ユーザー指示)。
+    //   4体編成なら1体倒れても3体残るので枚数は変わらないが、2体まで減れば2枚になる。
+    //   勇者特性・ききの「+1」はここと関係なく足されるので、倒れても減らない
+    // ★新モードはガッツのしきい(120/180)を見ない(2026-09-20 ユーザー指示)。
+    //   effectiveMaxGuts は盤面全員の上限の「合計」なので、人数の条件とほとんど二重になっていた。
+    //   そのうえガッツ上限の低い子だけで組むと、人数がそろっても枚数が増えなかった
+    //   (素の上限は最小40・中央70なので、40が2人だと合計80で120に届かない)。
+    //   払えるかどうかは canTacticsSlotPay が1体ずつ見るので、ここで合計を見る必要がない
+    const tactics = isTacticsMode(runMode);
+    const allyCount = tactics ? tacticsAliveSlots(tacticsUnits).length : slots.filter(s => s !== null).length;
     let limit = 1;
-    if (effectiveMaxGuts >= 180 && allyCount >= 3) limit = 3;else if (effectiveMaxGuts >= 120 && allyCount >= 2) limit = 2;
+    if ((tactics || effectiveMaxGuts >= 180) && allyCount >= 3) limit = 3;else if ((tactics || effectiveMaxGuts >= 120) && allyCount >= 2) limit = 2;
     return Math.min(5, limit + heroCardBonus + kikiCardBonus);
-  }, [effectiveMaxGuts, slots, heroCardBonus, kikiCardBonus]);
+  }, [effectiveMaxGuts, slots, heroCardBonus, kikiCardBonus, runMode, tacticsUnits]);
   const cardLimit = Math.min(5, baseCardLimit + soulCoordinationCardBonus);
   // 1つのスロットへ同じターンに割り当てられる枚数の上限。
   // 既存の勇者特性/ききで許される枚数を土台にし、連携で増えた「追加の1枚」だけは
   // 連携を持つ本人へしか割り当てられない。全体cardLimitが1枚増えるだけなので複数所持でも重複しない。
   const slotMaxUses = (mon, slotIdx = null) => {
-    const base = heroCardBonusOf(mainHero?.id) > 0 && mon?.id === mainHero?.id || kikiCardBonus > 0 ? baseCardLimit : 1;
+    // ★タクティクスバトルは「持っている子が自分だけ1枚多く使える」(2026-09-20 ユーザー指示)。
+    //   勇者モンにしていなくても、盤面にいればその子の枚数が増える
+    const bonusOwner = isTacticsMode(runMode) ? heroCardBonusOf(mon?.id) > 0 : heroCardBonusOf(mainHero?.id) > 0 && mon?.id === mainHero?.id;
+    const base = bonusOwner || kikiCardBonus > 0 ? baseCardLimit : 1;
     const coordinationHolder = Number.isInteger(slotIdx) && soulCoordinationSlots.includes(slotIdx);
     return Math.min(cardLimit, base + (coordinationHolder ? soulCoordinationCardBonus : 0));
   };
@@ -49314,7 +51287,7 @@ function MonsterHeroGame() {
     setMaxGuts(s.maxGuts);
     setAtk(s.atk);
     setDef(s.def);
-    setSlots(s.slots);
+    applySlots(s.slots);
     setMainHero(s.mainHero);
     setHand(s.hand);
     setDeck(s.deck);
@@ -49417,7 +51390,8 @@ function MonsterHeroGame() {
     // isQuickMode / isProMode はどちらも false になり、記録キーの接頭辞(modeKeyPrefix)は
     // チャレンジと同じ 'mh_' に落ちるが、そのキーへ書き込む処理はすべて
     // speciesChallengeBattleRunRef で除外してあるので、チャレンジの記録には一切触れない
-    setRunMode(BATTLE_MODE_SPECIES_CHALLENGE);
+    // ★クラシックとタクティクス、どちらの種族チャレンジかは run が持つ
+    setRunMode(speciesChallengeRunMode(run));
     setDifficulty(extremeSetting ? 'Normal' : run.difficultyId);
     if (extremeSetting) setExtremeDifficulty(extremeSetting.id);
     // 勇者モンの配置距離は、他モードとまったく同じ PICK_SLOT で選んでもらう。
@@ -49479,8 +51453,9 @@ function MonsterHeroGame() {
       console.error('[speciesChallenge] clear rewards failed:', e && e.message ? e.message : e);
     }
     try {
+      const speciesMode = speciesChallengeRunMode(speciesChallengeBattleRunRef.current);
       const result = await persistSpeciesChallengeClearReward({
-        progress: speciesChallengeProgress,
+        progress: speciesChallengeProgressOf(speciesMode),
         ownedItems: ownedItemsRef.current,
         speciesId,
         difficultyId,
@@ -49489,9 +51464,10 @@ function MonsterHeroGame() {
         record: {
           score,
           turns: clearTurns
-        }
+        },
+        progressKey: speciesChallengeProgressKeyOf(speciesMode)
       });
-      setSpeciesChallengeProgress(result.nextProgress);
+      setSpeciesChallengeProgress(result.nextProgress, speciesMode);
       if (result.nextOwnedItems && result.nextOwnedItems !== ownedItemsRef.current) {
         ownedItemsRef.current = result.nextOwnedItems;
         setOwnedItems(result.nextOwnedItems);
@@ -49678,7 +51654,7 @@ function MonsterHeroGame() {
       ...resolved.hero.unique,
       evoLevel: Math.max(0, resolved.hero.unique?.evoLevel || 0)
     };
-    setSlots(initialSlots);
+    applySlots(initialSlots, resolved.runMode);
     setMainHero(resolved.hero);
     setOwnedUniques([initialUnique]);
     setMaxHp(resolved.hero.baseHp);
@@ -49978,6 +51954,33 @@ function MonsterHeroGame() {
       cancelled = true;
     };
   }, [bootPhase, gameState, dataLoaded, onboarded, tutorialStep, updateGuideQueue.length, updateNoticeVisible, loginBonusPopup, levelCapCompensation, inheritedUniqueCompensation, dailyMasuAdvice, masuMons.length]);
+
+  // モンヒロバトルの入口で仕組みを選んだとき(2026-09-20 ユーザー指示)。
+  // 中にモードが1つだけのもの(クイック)は、選んだらそのまま難易度選択へ進める
+  const openBattleSystem = systemId => {
+    const system = BATTLE_SYSTEMS.find(s => s.id === systemId) || BATTLE_SYSTEMS[0];
+    if (battleSystemComingSoon(system.id, {
+      debugBattle
+    })) return; // 準備中は枠だけ
+    const modes = battleSystemModes(system.id, {
+      debugBattle
+    });
+    if (!modes.length) return;
+    setBattleSystem(system.id);
+    setBattleMode(modes[0]);
+    if (system.direct) {
+      battleEntryStateRef.current = 'BATTLE_DIFFICULTY_SELECT';
+      setDifficultySelectTab(DIFFICULTY_TAB_NORMAL);
+      setGameState('BATTLE_DIFFICULTY_SELECT');
+      return;
+    }
+    setModeSelectTab('mode');
+    setGameState('BATTLE_MODE_SELECT');
+  };
+  const openBattleSystemSelect = () => {
+    setModeSelectTab('mode');
+    setGameState('BATTLE_SYSTEM_SELECT');
+  };
   const closeDailyMasuAdvice = () => setDailyMasuAdvice(null);
   const tryDailyMasuAdvice = () => {
     setDailyMasuAdvice(null);
@@ -50046,6 +52049,18 @@ function MonsterHeroGame() {
     returnToHome();
     setEventReplay({
       id: MONBEAT_CUP_THANKS_STORY_ID,
+      step: 0,
+      live: true,
+      debug: true
+    });
+  };
+  // 第2回の閉幕とお礼(2026-09-20)。こちらも debug:true なので既読にはならない
+  const debugPlayRhythmEventThanksSymphony = () => {
+    setDailyMasuAdvice(null);
+    setUpdateGuideQueue([]);
+    returnToHome();
+    setEventReplay({
+      id: SYMPHONY_THANKS_STORY_ID,
       step: 0,
       live: true,
       debug: true
@@ -50162,7 +52177,7 @@ function MonsterHeroGame() {
     setMaxGuts(s.maxGuts);
     setAtk(s.atk);
     setDef(s.def);
-    setSlots(s.slots);
+    applySlots(s.slots);
     setMainHero(s.mainHero);
     setHand(s.hand);
     setDeck(s.deck);
@@ -50614,7 +52629,8 @@ function MonsterHeroGame() {
       returnToHome();
       openSpeciesChallengeSelection({
         saveProgress: keepSaving,
-        fromDebug: keepDebug
+        fromDebug: keepDebug,
+        mode: speciesChallengeRunMode(speciesChallengeBattleRunRef.current)
       });
       return;
     }
@@ -50678,11 +52694,19 @@ function MonsterHeroGame() {
     if (reserved && reserved.type === 'MOVE' && reserved.targetDist === distAfterExecuted) reserved = null;
     // 引き直しになった行動は、次のターンにそのまま実行されるのに吹き出しを出していない。
     // ここで移動を引くと「予告なしでいきなり動く」ことになるので、移動は選ばせない
-    const upcoming = reserved || getNextEnemyAction(enemy, distAfterExecuted, effective, {
-      unannounced: true
+    // 行動表はモードと敵で決まる。新モード以外では今までどおりの1つの表が返る
+    const actionState = () => ({
+      definitions: enemyActionDefinitionsFor(runMode, enemy?.id),
+      roarStacks: tacticsRoarStacksRef.current
     });
+    // ★狙いは「予告として出す直前」に決める。抽選したときのまま持ち歩くと、
+    //   そのあいだに狙われていた子が倒れていても、その子を狙ったまま予告してしまう
+    const upcoming = aimTacticsIntent(reserved || getNextEnemyAction(enemy, distAfterExecuted, effective, {
+      unannounced: true,
+      ...actionState()
+    }), runMode);
     setEnemyIntent(upcoming);
-    reserveEnemyNextIntent(getNextEnemyAction(enemy, distAfterIntent(upcoming, distAfterExecuted), upcoming));
+    reserveEnemyNextIntent(getNextEnemyAction(enemy, distAfterIntent(upcoming, distAfterExecuted), upcoming, actionState()));
   };
 
   // 絶氷の楔の実効果と表示が別判定にならないよう、準備を除いた発動状態をここへ集約する。
@@ -50702,7 +52726,9 @@ function MonsterHeroGame() {
     existingReflect: mainHero?.id === 'Monol' ? 30 : 0,
     existingAbsorb: mainHero?.id === 'Oboro' || mainHero?.id === 'Plant' ? 30 : 0
   });
-  const battleIntimidate = combineSoulProbabilityPoints([mainHero?.id === 'Suezo' ? 40 : 0, soulBattleParty.intimidate]);
+  // ★タクティクスバトルでは、スエゾーのぶんをここへ入れない(攻撃したターンに引くため)。
+  //   魂格由来の威圧は編成全体のものなので今までどおり
+  const battleIntimidate = combineSoulProbabilityPoints([!isTacticsMode(runMode) && mainHero?.id === 'Suezo' ? 40 : 0, soulBattleParty.intimidate]);
   const soulBattleHasEffects = battleSoulMasus.some(masu => soulTraitSpentPoints(masu) > 0);
   const soulBattleSourceRows = battleSoulMasus.map(masu => {
     const normalized = normalizeMasuProgression(masu);
@@ -50717,18 +52743,35 @@ function MonsterHeroGame() {
     };
   }).filter(row => row.traits.length > 0);
   const soulBattleSummaryParts = soulBattleHasEffects ? [soulBattleParty.damageReduction > 0 ? `被ダメ -${soulBattleParty.damageReduction.toFixed(1).replace(/\\.0$/, '')}%` : null, unifiedSpecialDefense.rate > 0 ? `特殊防御 ${unifiedSpecialDefense.rate.toFixed(1).replace(/\\.0$/, '')}%` : null, battleIntimidate > 0 ? `威圧 ${battleIntimidate.toFixed(1).replace(/\\.0$/, '')}%` : null, soulBattleParty.autoGutsMultiplier > 1 ? `自動G ×${soulBattleParty.autoGutsMultiplier.toFixed(3)}` : null, soulBattleParty.coordinationCardBonus > 0 ? `カード +${soulBattleParty.coordinationCardBonus}` : null].filter(Boolean) : [];
-  const getIncomingDamageBeforeTurnReduction = useCallback(intent => {
+
+  // targetSlot は新モード専用。★渡したときだけ「その子の丈夫さ」で受ける。
+  //   渡さなければ今までどおりパーティの丈夫さなので、既存モードの呼び出しは何も変わらない
+  const getIncomingDamageBeforeTurnReduction = useCallback((intent, targetSlot = null) => {
     // ためる(CHARGE)ターンはダメージが無い。必殺技のダメージは発動(SPECIAL)ターンに出る
     if (!intent || intent.type !== 'ATTACK' && intent.type !== 'SPECIAL') return 0;
     const atkVal = Math.floor(intent.value * (1.0 - getWaveBuff('enemyAtkDebuffPct')));
-    const chuuniCutActive = (mainHero?.id === 'Ark' || mainHero?.id === 'Iblis') && getWaveBuff('chuuniDmgCutUses') < 2; // 中二病特性: WAVE毎2回まで被ダメ50%カット
+    // ★特性は「その子の能力」。タクティクスバトルでは**狙われた子自身の特性**が効く
+    //   (2026-09-20 ユーザー提案「とももんも勇者特性がかかるようにしてもいいかと思う」)。
+    //   もとは勇者モンだけだったが、ステータスを1体ずつ持つのに特性だけ勇者モンのもの、
+    //   というのがちぐはぐだった。供モンを選ぶ意味も「ステータスの足し算」から
+    //   「どの特性を連れていくか」に変わる。効き目は勇者モンと同じ等倍(ユーザーが選択)。
+    //   ★4体いても発動するのは狙われた子の1体ぶんなので、重ねがけにはならない。
+    //   既存5モードはステータスがパーティ共通なので今までどおり勇者モンのもの(仕様 8.触らないもの)
+    const traitHeroId = !isTacticsMode(runMode) ? mainHero?.id : Number.isInteger(targetSlot) ? tacticsUnitsRef.current[targetSlot]?.id || null : mainHero?.id;
+    const chuuniCutActive = (traitHeroId === 'Ark' || traitHeroId === 'Iblis') && getWaveBuff('chuuniDmgCutUses') < 2; // 中二病特性: WAVE毎2回まで被ダメ50%カット
+    // ★盤面(tacticsUnits)はどのモードでも作るので、モードを見ずに targetSlot を使うと
+    //   既存モードでも1体ずつの丈夫さを拾ってしまう。いまは既存モードから枠を渡す
+    //   呼び出しが無いので実害は出ていないが、増えた瞬間に既存モードの被ダメが変わる。
+    //   isTacticsMode で締めて、既存モードは必ず effectiveDef(パーティの丈夫さ)を通す
+    const targetUnit = isTacticsMode(runMode) && Number.isInteger(targetSlot) ? tacticsUnitsRef.current[targetSlot] : null;
+    const defVal = targetUnit ? resolveEffectiveMaxStat(normalizeTacticsUnit(targetUnit).def, getPermaBuff('defPct')) : effectiveDef;
     // 丈夫さは固定軽減(×0.5)のあと、0.015%/pt（上限50%）を乗算する。
     // 最低30はこの基本防御部分だけに適用し、後続の既存軽減順は変えない。
-    const defenseRate = Math.min(0.5, effectiveDef * 0.00015);
-    const dmgBase = Math.max(30, (atkVal - effectiveDef * 0.5) * (1 - defenseRate)) * (mainHero?.id === 'Mocchi' || mainHero?.id === 'Mitarashi' ? 0.8 : 1.0) * (chuuniCutActive ? 0.5 : 1.0);
+    const defenseRate = Math.min(0.5, defVal * 0.00015);
+    const dmgBase = Math.max(30, (atkVal - defVal * 0.5) * (1 - defenseRate)) * (traitHeroId === 'Mocchi' || traitHeroId === 'Mitarashi' ? 0.8 : 1.0) * (chuuniCutActive ? 0.5 : 1.0);
     const soulDamageRemaining = Math.max(0, 1 - soulBattleParty.damageReduction / 100);
     return Math.max(1, Math.floor(dmgBase * Math.max(0.01, 1.0 - getPermaBuff('dmgCutPct')) * iceLockEnemyDamageMult * soulDamageRemaining));
-  }, [effectiveDef, mainHero, permaBuffs, waveBuffs, soulBattleParty.damageReduction]);
+  }, [effectiveDef, mainHero, permaBuffs, waveBuffs, soulBattleParty.damageReduction, runMode]);
   // 次ターン被ダメージ倍率は、丈夫さ・勇者特性・永続軽減・氷結・ガードをすべて
   // 適用したあとの実ダメージへ最後に掛ける。敵攻撃力へ途中適用すると丈夫さやガードとの
   // 順序で50%にならないため、実処理と予測表示の双方がこの入口を使う。
@@ -50759,6 +52802,9 @@ function MonsterHeroGame() {
   // Whether a card needs to be assigned to a monster (attack-type cards)
   const cardNeedsMonster = card => {
     if (!card) return false;
+    // 新モードはどのカードも「使う子」を選ぶ。その子のガッツで払い、効果もその子に乗る
+    // (2026-09-19 ユーザーが決めた形。設計 §4.4)
+    if (isTacticsMode(runMode)) return true;
     if (['atk', 'range_atk', 'unique'].includes(card.type)) return true;
     if (card.type === 'debuff' && card.subType === 'stun_atsu') return true;
     return false;
@@ -50791,6 +52837,117 @@ function MonsterHeroGame() {
     return item ? item.icon : null;
   };
 
+  // 新モードで、このカードを割り当てられるスロットの一覧。
+  // ★決めるのは「その子が払えるか」。合計のガッツでは決まらない。
+  //   すでに選んだカードのぶんを引いてから見るので、同じ子に2枚寄せても正しく弾ける。
+  // ★攻撃カードだけは「1体につき何枚まで」のこれまでの決まりを引き継ぐ。
+  //   守り・回復・アシストまで数えると、供モンが居ないWAVE1で1ターン1枚しか使えなくなる
+  const tacticsUsableSlots = (card, excludeHandIndex = null) => {
+    if (!isTacticsMode(runMode) || !card) return [];
+    const spent = {},
+      attacks = {};
+    Object.entries(cardAssignments).forEach(([key, slotIdx]) => {
+      const handIndex = Number(key);
+      if (handIndex === excludeHandIndex) return;
+      const assigned = hand[handIndex];
+      spent[slotIdx] = (spent[slotIdx] || 0) + getCardGuts(assigned, slotIdx);
+      if (isAttackCard(assigned)) attacks[slotIdx] = (attacks[slotIdx] || 0) + 1;
+    });
+    const usable = [];
+    slots.forEach((mon, slotIdx) => {
+      if (!mon) return;
+      if (card.type === 'unique' && card.ownerSlotIdx !== slotIdx) return;
+      if (isAttackCard(card) && (attacks[slotIdx] || 0) >= slotMaxUses(mon, slotIdx)) return;
+      // 回復カードも「全体回復」なので、倒れた子へ向ける必要はない。
+      // どのカードも「立っていて、その子が払えるか」だけで決まる
+      if (!canTacticsSlotPay(tacticsUnitsRef.current, slotIdx, (spent[slotIdx] || 0) + getCardGuts(card, slotIdx))) return;
+      usable.push(slotIdx);
+    });
+    return usable;
+  };
+  // 画面から「このカードはいま使えるか・使えないなら何が足りないか」を聞くための入口。
+  // ★新モード以外では null を返す。画面側は null のときだけ今までどおりの判定(合計のガッツ)を使う
+  // ★合計では決まらない。⚡242 持っていても 125 と 117 に分かれていたら ⚡128 のカードは誰も使えない。
+  //   合計で灰色にしていたころは、枠に合わせてはじめて使えないと分かり、理由も出なかった
+  const tacticsCardBlock = (card, cardIndex = null) => {
+    if (!isTacticsMode(runMode) || !card) return null;
+    if (cardIndex != null && selectedCards.includes(cardIndex)) return {
+      ok: true,
+      kind: null,
+      short: null,
+      why: null
+    };
+    if (tacticsUsableSlots(card, cardIndex).length > 0) {
+      // ★1ターンに選べる枚数の上限は、いままでの5モードと同じ見え方(灰色だけ)にする。
+      //   全部のカードへ赤い帯が出るとうるさいので、理由はカード詳細でだけ出す
+      return selectedCards.length >= cardLimit ? {
+        ok: false,
+        kind: 'limit',
+        short: null,
+        why: `1ターンに選べるカードは ${cardLimit} 枚まで`
+      } : {
+        ok: true,
+        kind: null,
+        short: null,
+        why: null
+      };
+    }
+    // ここから下は「使えない理由」を探すためだけに回す(使える子がいないときしか通らない)
+    const spent = {},
+      attacks = {};
+    Object.entries(cardAssignments).forEach(([key, slotIdx]) => {
+      const handIndex = Number(key);
+      if (handIndex === cardIndex) return;
+      const assigned = hand[handIndex];
+      spent[slotIdx] = (spent[slotIdx] || 0) + getCardGuts(assigned, slotIdx);
+      if (isAttackCard(assigned)) attacks[slotIdx] = (attacks[slotIdx] || 0) + 1;
+    });
+    const units = tacticsUnitsRef.current;
+    let owner = null,
+      alive = 0,
+      best = null;
+    slots.forEach((mon, slotIdx) => {
+      if (!mon) return;
+      if (card.type === 'unique' && card.ownerSlotIdx !== slotIdx) return;
+      owner = owner || mon;
+      if (!canTacticsSlotAct(units, slotIdx)) return;
+      alive++;
+      if (isAttackCard(card) && (attacks[slotIdx] || 0) >= slotMaxUses(mon, slotIdx)) return;
+      const unit = normalizeTacticsUnit(Array.isArray(units) ? units[slotIdx] : null);
+      const need = getCardGuts(card, slotIdx);
+      const left = Math.max(0, (unit ? unit.guts : 0) - (spent[slotIdx] || 0));
+      // 「あといくら足りないか」がいちばん小さい子を、理由の文に出す
+      if (!best || left - need > best.left - best.need) best = {
+        name: mon.masuName || mon.name,
+        left,
+        need
+      };
+    });
+    if (!owner) return {
+      ok: false,
+      kind: 'none',
+      short: '使えない',
+      why: 'この技を使える子が編成にいない'
+    };
+    if (alive === 0) return {
+      ok: false,
+      kind: 'down',
+      short: 'ダウン',
+      why: card.type === 'unique' ? `この技を使う ${owner.masuName || owner.name} が倒れている` : 'カードを使える子が全員倒れている'
+    };
+    if (best) return {
+      ok: false,
+      kind: 'guts',
+      short: 'ガッツ不足',
+      why: `どの子もガッツが足りない（いちばん近いのは ${best.name} で ⚡${best.left}、必要なのは ⚡${best.need}）`
+    };
+    return {
+      ok: false,
+      kind: 'uses',
+      short: '枚数上限',
+      why: 'このターン、攻撃カードを出せる子がもう残っていない'
+    };
+  };
   // カード選択(タップ/ドラッグ共通)。
   // showDetail=false はスワイプ(ドラッグ)で置いたとき。カード効果のパネルが出たままだと
   // 合計DMG・合計軽減の表示が隠れてしまうため、スワイプではパネルを出さない。
@@ -50816,14 +52973,24 @@ function MonsterHeroGame() {
       if (pendingCard === i) setPendingCard(null);
       setFocusedCard(null);
     } else {
+      const tacticsMode = isTacticsMode(runMode);
+      // 新モードは「合計で足りているか」ではなく「その子が払えるか」。
+      // 合計だけで見ると、ガッツの無い子しか残っていないのにカードを選べてしまう
+      const usable = tacticsMode ? tacticsUsableSlots(c) : [];
       const curGuts = pendingCardGuts(c);
       const remainingGuts = guts - selectedCards.reduce((acc, idx) => acc + selectedCardGuts(idx), 0);
-      const isSelectable = remainingGuts >= curGuts && selectedCards.length < cardLimit;
+      const isSelectable = (tacticsMode ? usable.length > 0 : remainingGuts >= curGuts) && selectedCards.length < cardLimit;
       if (isSelectable) {
         Audio_.se.card();
         setSelectedCards(p => [...p, i]);
         focus(c);
-        if (cardNeedsMonster(c)) {
+        // 使える子が1体しかいないときは選ぶ手間を省く(WAVE1は勇者モンだけなので毎回これになる)
+        if (tacticsMode && usable.length === 1) {
+          setCardAssignments(p => ({
+            ...p,
+            [i]: usable[0]
+          }));
+        } else if (cardNeedsMonster(c)) {
           setPendingCard(i);
         }
       } else {
@@ -50854,20 +53021,32 @@ function MonsterHeroGame() {
       }
       // 既存の割当数チェック(枚数+1の勇者特性を持つ勇者モン本人のカード・
       // ききのカード上限+1が効いているときは複数可)
+      // 新モードは「その子が倒れていないか・払えるか」だけで決まる(攻撃の枚数制限は中で見ている)
+      const tacticsMode = isTacticsMode(runMode);
+      if (tacticsMode && !tacticsUsableSlots(c, cardIndex).includes(slotIdx)) {
+        setFocusedCard(null);
+        return;
+      }
       const assignedCount = Object.values(cardAssignments).filter(v => v === slotIdx).length;
       const maxUses = slotMaxUses(targetMon, slotIdx);
       const alreadySelected = selectedCards.includes(cardIndex);
       // 未選択なら選択枠とガッツを確認
       if (!alreadySelected) {
-        const curGuts = getCardGuts(c, slotIdx);
-        const remainingGuts = guts - selectedCards.reduce((acc, idx) => acc + selectedCardGuts(idx), 0);
-        if (remainingGuts < curGuts || selectedCards.length >= cardLimit) {
+        if (selectedCards.length >= cardLimit) {
           setFocusedCard(null);
           return;
         }
-        if (assignedCount >= maxUses) {
-          setFocusedCard(null);
-          return;
+        if (!tacticsMode) {
+          const curGuts = getCardGuts(c, slotIdx);
+          const remainingGuts = guts - selectedCards.reduce((acc, idx) => acc + selectedCardGuts(idx), 0);
+          if (remainingGuts < curGuts) {
+            setFocusedCard(null);
+            return;
+          }
+          if (assignedCount >= maxUses) {
+            setFocusedCard(null);
+            return;
+          }
         }
         Audio_.se.card();
         setSelectedCards(p => [...p, cardIndex]);
@@ -50879,15 +53058,17 @@ function MonsterHeroGame() {
         setFocusedCard(null);
       } else {
         // 既に選択済み: 割当先を変更(別カードの占有を超えない範囲で)
-        const otherCount = Object.entries(cardAssignments).filter(([k, v]) => v === slotIdx && Number(k) !== cardIndex).length;
-        if (otherCount >= maxUses) {
-          setFocusedCard(null);
-          return;
-        }
-        const otherGuts = selectedCards.filter(idx => idx !== cardIndex).reduce((sum, idx) => sum + selectedCardGuts(idx), 0);
-        if (otherGuts + getCardGuts(c, slotIdx) > guts) {
-          setFocusedCard(null);
-          return;
+        if (!tacticsMode) {
+          const otherCount = Object.entries(cardAssignments).filter(([k, v]) => v === slotIdx && Number(k) !== cardIndex).length;
+          if (otherCount >= maxUses) {
+            setFocusedCard(null);
+            return;
+          }
+          const otherGuts = selectedCards.filter(idx => idx !== cardIndex).reduce((sum, idx) => sum + selectedCardGuts(idx), 0);
+          if (otherGuts + getCardGuts(c, slotIdx) > guts) {
+            setFocusedCard(null);
+            return;
+          }
         }
         Audio_.se.card();
         setCardAssignments(p => ({
@@ -50913,6 +53094,15 @@ function MonsterHeroGame() {
     const specialRuleDifficulty = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
     return isAssistCard(card) && specialRuleDifficulty ? extremeSpecialRule(specialRuleDifficulty, 'assistCardEffect') : halved ? 0.5 : 1;
   };
+  // 「2枚目以降は効果半減」を、誰の2枚目として数えるか(2026-09-20 ユーザー指示)。
+  // ★新モードはステータスが1体ずつなので、パーティ全体で数えると
+  //   ほかの子が1枚使っただけで自分の1枚目が半分になってしまう。
+  //   **同じ子が2枚使うときだけ**半減させる(ハム・ききでカードの枚数が増えたときの調整)。
+  // ★既存5モードは今までどおり「そのターンの2枚目以降」。全部を同じ箱で数える
+  const cardHalveGroup = slotIdx => isTacticsMode(runMode) ? `slot${Number.isInteger(slotIdx) ? slotIdx : 'none'}` : 'turn';
+  // 使う順に半減かどうかを数える道具。器は純関数側(makeCardHalveCounter)にあり、
+  // ここでは「どこで数えるか(cardHalveGroup)」と「対象外(アシストカード)」を渡すだけ
+  const makeHalveCounter = () => makeCardHalveCounter(cardHalveGroup, isAssistCard);
   // flat は互換用（現行定義は0）。実質は「実効丈夫さ × 倍率の合計」。
   const guardValueOf = (flat, mult) => flat > 0 || mult > 0 ? Math.floor(flat + effectiveDef * mult) : 0;
   // このカードを使うと、同じターンの「あとに続くカード」へ即座に乗る補正の生値(effMul適用前)。
@@ -50965,13 +53155,13 @@ function MonsterHeroGame() {
   const previewLocalBoosts = (excludeIdx = null) => {
     let oryo = 0,
       dmgMod = 0,
-      combo = 0,
-      penaltyCnt = 0;
+      combo = 0;
+    const counter = makeHalveCounter();
     const perCard = {};
     selectedCards.forEach(idx => {
       const card = hand[idx];
-      const isPenalty = !isAssistCard(card);
-      const halved = isPenalty && penaltyCnt > 0;
+      const slotIdx = cardAssignments[idx] != null ? cardAssignments[idx] : null;
+      const halved = counter.peek(card, slotIdx);
       perCard[idx] = boostsForCardDamage({
         oryo,
         dmgMod,
@@ -50987,10 +53177,10 @@ function MonsterHeroGame() {
         dmgMod += (boost.dmgMod || 0) * effMul;
         combo += (boost.combo || 0) * effMul;
       }
-      if (isPenalty) penaltyCnt++;
+      counter.take(card, slotIdx);
     });
     const pendingCard = excludeIdx != null ? hand[excludeIdx] : null;
-    const pendingHalved = !!pendingCard && !isAssistCard(pendingCard) && penaltyCnt > 0;
+    const pendingHalved = counter.peek(pendingCard, excludeIdx != null && cardAssignments[excludeIdx] != null ? cardAssignments[excludeIdx] : null);
     return {
       perCard,
       final: {
@@ -51021,16 +53211,24 @@ function MonsterHeroGame() {
     } else {
       baseDmgMult = card.mult || card.baseMult || 1.0;
     }
-    let traitMult = (mainHero?.id === 'Golem' ? 1.2 : 1.0) * ((mainHero?.id === 'Pixie' || mainHero?.id === 'Mia') && card.type === 'unique' ? 2.0 : 1.0);
+    // ★タクティクスバトルは**攻撃した子自身の特性**が乗る(2026-09-20 ユーザー提案)。
+    //   ザン・エイキ・パンドラの連撃はもともと attackerId を見て本人のものになっている。
+    //   既存5モードは今までどおり、勇者モンの特性が誰の攻撃にも乗る(仕様 8.触らないもの)
+    const attackHeroId = !isTacticsMode(runMode) ? mainHero?.id : mon?.id || null;
+    let traitMult = (attackHeroId === 'Golem' ? 1.2 : 1.0) * ((attackHeroId === 'Pixie' || attackHeroId === 'Mia') && card.type === 'unique' ? 2.0 : 1.0);
     // 禁忌解錠: パンドラ勇者が使う『引き継いだ』固有技だけを1.5倍にする。
     // 技の出自はcard.monIdで判定し、自身の固有技へは適用しない。
-    if (mainHero?.id === 'Pandora' && card.type === 'unique' && card.monId !== 'Pandora') traitMult *= 1.5;
-    // 間合い適性は「その距離枠の補正値」。編成全員のぶんが合算済み(distAptPct)で、
-    // 攻撃したモンスター自身のグレードだけを見るのではない
-    const distBonusMult = 1.0 + (distDmgBonus[slotIdx] || 0) + (distAptPct[slotIdx] || 0);
+    if (attackHeroId === 'Pandora' && card.type === 'unique' && card.monId !== 'Pandora') traitMult *= 1.5;
+    // 間合い適性は「その距離枠の補正値」。既存モードは編成全員のぶんが合算済み(distAptPct)で、
+    // 攻撃したモンスター自身のグレードだけを見るのではない。
+    // ★新モードだけは「その子の適性が、その子の攻撃に効く」(設計 §7)
+    const aptForSlot = isTacticsMode(runMode) && mon ? getMonsterAptPct(mon, specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty), wave) : distAptPct;
+    const distBonusMult = 1.0 + (distDmgBonus[slotIdx] || 0) + (aptForSlot[slotIdx] || 0);
     const soulAttack = soulTraitAttackProfile(mon?.masuId ? getMasuMon(mon.masuId) : null, card, slotIdx);
     const totalBuffMult = traitMult * getTurnBuff('atkMult', 1.0) * (1.0 + getPermaBuff('atkPct') + getPermaBuff('muaAtkPct') + additionalOryo) * distBonusMult * soulAttack.damageMultiplier;
-    let finalDmg = Math.floor(atk * distMult * baseDmgMult * totalBuffMult * (1.0 + getWaveBuff('enemyTakenDmgBonus') + additionalDmgMod));
+    // 新モードは「攻撃したその子のちから」で殴る(設計 §4.1)。ほかのモードはパーティ共通のまま
+    const attackerAtk = isTacticsMode(runMode) && tacticsUnitsRef.current[slotIdx] ? Math.max(0, normalizeTacticsUnit(tacticsUnitsRef.current[slotIdx]).atk) : atk;
+    let finalDmg = Math.floor(attackerAtk * distMult * baseDmgMult * totalBuffMult * (1.0 + getWaveBuff('enemyTakenDmgBonus') + additionalDmgMod));
     if (isSecondOrLaterAtk) finalDmg = Math.floor(finalDmg * 0.5);
     const specialRuleDifficulty = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
     const elapsedTotalTurns = totalTurnCount + Math.max(0, turnCount - 1);
@@ -51118,13 +53316,18 @@ function MonsterHeroGame() {
     const newTotalTurnCount = totalTurnCount + turnCount;
     setTotalTurnCount(newTotalTurnCount);
     totalTurnCountRef.current = newTotalTurnCount;
+    // ★あとから入る子の追いつき補正を、このWAVEぶん積む(2026-09-20 ユーザー指示)。
+    //   率は残りターン×1%。1ターンで抜ければ+20%、11ターン(半分)で+10%、20ターンで+1%
+    tacticsJoinCatchUpRef.current = addTacticsJoinCatchUp(tacticsJoinCatchUpRef.current, remainingTurns);
     const specialRuleDifficulty = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
     const distanceBreakThreshold = pendingUltimateDistanceBreak(newTotalTurnCount, ultimateDistanceBreakLevelsRef.current, wave, specialRuleDifficulty);
     if (distanceBreakThreshold) {
       ultimateDistanceBreakPendingRef.current = distanceBreakThreshold;
       setUltimateDistanceBreakPending(distanceBreakThreshold);
     }
-    const finalRoundScore = Math.floor((totalWaveDamage * waveMult + totalWaveDamage * turnMult) * scoreMultiplier);
+    const rawRoundScore = (totalWaveDamage * waveMult + totalWaveDamage * turnMult) * scoreMultiplier;
+    // 新モードだけスコアを1/1000へ縮める。式そのものは変えない(2026-09-19 ユーザーが選択)
+    const finalRoundScore = isTacticsMode(runMode) ? shrinkTacticsScore(rawRoundScore) : Math.floor(rawRoundScore);
     setScore(s => s + finalRoundScore);
     const finalDistDamage = waveDistDamage.map((value, index) => (value || 0) + (distDamage[index] || 0));
     // WAVE後の距離強化はモンスター自身の距離適性とは別枠で、通常の獲得量を出してから半減する。
@@ -51201,11 +53404,15 @@ function MonsterHeroGame() {
       ...p,
       poltzCharges: Math.max(0, charges - 1)
     }));
-    const gutsGain = Math.floor(liveEffectiveMaxGuts() * tier.healGuts * effMul);
-    if (gutsGain > 0) {
-      setGuts(p => Math.min(liveEffectiveMaxGuts(), p + gutsGain));
-      addPopup(`⚡ ガッツ +${gutsGain}`, 'guts', 'text-lime-300 font-black text-2xl drop-shadow-md');
+    // ★新モードは1体ずつ「その子の上限 × 率」(2026-09-20 ユーザー指示)
+    const poltzRate = tier.healGuts * effMul;
+    const poltzRes = tacticsRateHeal(0, poltzRate);
+    let gutsGain = 0;
+    if (poltzRes) gutsGain = poltzRes.guts;else {
+      gutsGain = Math.floor(liveEffectiveMaxGuts() * poltzRate);
+      if (gutsGain > 0) gainGuts(gutsGain);
     }
+    if (gutsGain > 0) addPopup(`⚡ ガッツ +${gutsGain}`, 'guts', 'text-lime-300 font-black text-2xl drop-shadow-md');
     if (tier.gutsRecover > 0) addPermaBuff('gutsRecoverPct', tier.gutsRecover * effMul);
     if (tier.atk > 0) addPermaBuff('atkPct', tier.atk * effMul);
     addPopup(`🍱 ${BREEDER_EVO_NAMES.poltz[tierIdx]}!`, 'hero', 'text-lime-300 font-black text-xl drop-shadow-md');
@@ -51273,6 +53480,40 @@ function MonsterHeroGame() {
         setEnemyAttackAnim(false);
         setEnemyAttackFx(null);
         await battleWait(200);
+      } else if (intent.type === 'ROAR') {
+        // 新モードの咆哮。このターンはダメージが無く、次のターンから敵の攻撃が上がる。
+        // 重ねがけの上限は行動の抽選側(evaluateEnemyActions)が見るので、ここでは数えるだけ
+        Audio_.se.enemyCharge();
+        setEnemyAttackFx({
+          kind: 'charge'
+        });
+        setEnemyAttackAnim(true);
+        tacticsRoarStacksRef.current += 1;
+        // ★段数は敵にも持たせる(2026-09-20 ユーザー指摘「咆哮の効果が分からない」)。
+        //   ref は抽選が再描画より先に読むための正本で、画面からは見えない。
+        //   ポップアップは一瞬で消えるので、いま何回かかっているかが分からなかった。
+        //   ここで一緒に入れておけば、強化の札とSCANが同じ値を出せる
+        const roarStacks = tacticsRoarStacksRef.current;
+        setEnemy(prev => prev ? {
+          ...prev,
+          atk: Math.floor(Math.max(0, Number(prev.atk) || 0) * TACTICS_ROAR_ATK_RATE),
+          roarStacks
+        } : prev);
+        addPopup(`咆哮！ 敵の攻撃が上がった（${roarStacks}回目）`, 'enemy', 'text-orange-300 font-black text-xl drop-shadow-md');
+        triggerShake(true);
+        await battleWait(1100);
+        setEnemyAttackAnim(false);
+        setEnemyAttackFx(null);
+        await battleWait(200);
+      } else if (intent.type === 'REGEN') {
+        // 新モードの再生。満タンに近いあいだは抽選に出ないので、ここでは必ず回復する
+        const healed = Math.max(1, Math.floor(Math.max(0, Number(enemy?.maxHp) || 0) * TACTICS_REGEN_RATE));
+        setEnemy(prev => prev ? {
+          ...prev,
+          hp: Math.min(Number(prev.maxHp) || 0, Math.max(0, Number(prev.hp) || 0) + healed)
+        } : prev);
+        addPopup(`再生 +${healed}`, 'enemy', 'text-emerald-300 font-black text-2xl drop-shadow-md');
+        await battleWait(1000);
       } else if (intent.type === 'WAIT') {
         addPopup("待機中...", 'enemy', 'text-slate-400 text-lg');
         await battleWait(500);
@@ -51291,16 +53532,66 @@ function MonsterHeroGame() {
         await battleWait(200);
         setEnemyAttackFx(null);
       } else if (intent.type === 'ATTACK' || intent.type === 'SPECIAL') {
+        // 新モードの攻撃は variant で受け方が変わる。type は ATTACK のままなので、
+        // ダメージ計算・演出・予告の経路は既存のものをそのまま通る。
+        //   薙ぎ払い … 予告した間合いに敵がいなければ威力が落ちる(距離撃でずらせる)
+        //   連撃     … 0.6×3ヒット。ガードが受け止められるのは1ヒットぶんだけ
+        //                (2026-09-20 ユーザー指示。もとはガードが手数ぶん＝3回ぶん効いていた)
+        //   貫通撃   … ガードが効かない
+        // 距離撃で動かした先は setEnemyDist の反映を待たないため、呼び出し元が確定させた
+        // 移動先(forcedMoveTarget)を優先して見る
+        const actingEnemyDist = Number.isInteger(immediateEffects.forcedMoveTarget) ? immediateEffects.forcedMoveTarget : enemyDist;
+        const sweptAway = intent.variant === 'sweep' && Number.isInteger(intent.sweepDist) && actingEnemyDist !== intent.sweepDist;
+        const actingIntent = sweptAway ? {
+          ...intent,
+          value: Math.max(0, Math.floor(Number(intent.missValue) || 0))
+        } : intent;
         // 表示と同じ guardFlat / guardMult 集計を実効丈夫さへ適用する。
-        const guardValue = immediateEffects.guardFlat > 0 || immediateEffects.guardMult > 0 ? Math.floor(immediateEffects.guardFlat + effectiveDef * immediateEffects.guardMult) : 0;
-        const incomingBeforeTurnReduction = getIncomingDamageBeforeTurnReduction(intent);
+        const baseGuardValue = immediateEffects.guardFlat > 0 || immediateEffects.guardMult > 0 ? Math.floor(immediateEffects.guardFlat + effectiveDef * immediateEffects.guardMult) : 0;
+        // ★連撃は新モードの行動表にしかないので、ここ(既存モードの経路)には来ない。
+        //   1ヒットぶんだけ受け止める数え方は、下の新モードの分岐が持つ
+        const guardValue = intent.variant === 'pierce' ? 0 : baseGuardValue;
+        if (sweptAway) {
+          addPopup('薙ぎ払いをかわした！', 'hero', 'text-cyan-300 font-black text-xl drop-shadow-md');
+          await battleWait(600);
+        } else if (intent.variant === 'pierce' && baseGuardValue > 0) {
+          addPopup('貫通！ ガードが効かない', 'enemy', 'text-rose-300 font-black text-xl drop-shadow-md');
+          await battleWait(600);
+        }
+        const incomingBeforeTurnReduction = getIncomingDamageBeforeTurnReduction(actingIntent);
         const incomingDmg = applyTurnDamageReduction(incomingBeforeTurnReduction);
-        if ((mainHero?.id === 'Ark' || mainHero?.id === 'Iblis') && getWaveBuff('chuuniDmgCutUses') < 2) {
+        // ★タクティクスバトルは**狙われた子自身の特性**で決まる(2026-09-20 ユーザー提案)。
+        //   先に「誰が受けるか」を1体決めて、その子の特性で回避／反射／吸収を引く。
+        //   こうすると「表を引いた子」と「避けた子」が必ず同じになる。
+        //   魂格由来のぶんは編成全体のものなので、誰が受けても乗る
+        const aimedSlots = isTacticsMode(runMode) ? tacticsIntentTargets(intent, tacticsUnitsRef.current, actingEnemyDist) : null;
+        const defenseSlot = aimedSlots && aimedSlots.length ? aimedSlots[Math.floor(Math.random() * aimedSlots.length)] : null;
+        const defenseHeroId = !isTacticsMode(runMode) ? mainHero?.id : defenseSlot != null ? tacticsUnitsRef.current[defenseSlot]?.id || null : null;
+        const defenseTable = !isTacticsMode(runMode) ? unifiedSpecialDefense : buildUnifiedSpecialDefense({
+          soulEvasion: soulBattleParty.evasion,
+          soulReflect: soulBattleParty.reflect,
+          soulAbsorb: soulBattleParty.absorb,
+          existingEvasion: defenseHeroId === 'Tiger' ? 50 : 0,
+          existingReflect: defenseHeroId === 'Monol' ? 30 : 0,
+          existingAbsorb: defenseHeroId === 'Oboro' || defenseHeroId === 'Plant' ? 30 : 0
+        });
+        // 避ける／返す／吸うのは、表を引いた本人
+        const pickDefenseSlot = () => defenseSlot;
+        // 中二病の回数は、効かないターン(持っている子が狙われていない)に減らしてはいけない
+        const chuuniAimed = !isTacticsMode(runMode) ? mainHero?.id === 'Ark' || mainHero?.id === 'Iblis' : (aimedSlots || []).some(i => {
+          const id = tacticsUnitsRef.current[i]?.id;
+          return id === 'Ark' || id === 'Iblis';
+        });
+        if (chuuniAimed && getWaveBuff('chuuniDmgCutUses') < 2) {
           addWaveBuff('chuuniDmgCutUses', 1);
           addPopup('中二病発動!被ダメ50%カット', 'hero', 'text-pink-400 text-sm font-bold');
         }
         // 確定反射バフは従来どおり100%発動。確率型の回避/反射/吸収だけを統一抽選する。
-        const soulDefenseResult = getTurnBuff('reflect', false) ? 'reflect' : rollUnifiedSpecialDefense(unifiedSpecialDefense, Math.random(), Math.random());
+        // ★新モードは効く範囲が違う(2026-09-20 ユーザー指示)。
+        //   確定反射(モノリスの固有技)＝**味方全体**。発動したターンは誰も受けない。
+        //   確率で出る反射・回避・吸収＝**狙われた子だけ**。抽選で出るものは個別にそろえる
+        const forcedReflect = getTurnBuff('reflect', false);
+        const soulDefenseResult = forcedReflect ? 'reflect' : rollUnifiedSpecialDefense(defenseTable, Math.random(), Math.random());
         const isReflect = soulDefenseResult === 'reflect';
         const isAbsorb = soulDefenseResult === 'absorb';
         const isEvasion = soulDefenseResult === 'evasion';
@@ -51319,36 +53610,194 @@ function MonsterHeroGame() {
         setEnemyAttackAnim(false);
         await battleWait(fxKind === 'moo' ? 250 : intent.type === 'SPECIAL' ? 300 : 100);
         setEnemyAttackFx(null);
-        if (isReflect) {
+        if (isReflect && (forcedReflect || !isTacticsMode(runMode))) {
+          // ★新モードは返す量も「狙われた子が受けるはずだったダメージ」(2026-09-20)。
+          //   incomingDmg はパーティの丈夫さから出した値なので、1体ずつにした今は
+          //   実際に受ける量とずれる。吸収と同じ数え方にそろえる。
+          //   全体攻撃なら狙われた全員ぶんを足して返す(誰にも当たらなければ0)
+          const reflectSlots = isTacticsMode(runMode) ? tacticsIntentTargets(intent, tacticsUnitsRef.current, actingEnemyDist) : null;
+          const reflectDmg = reflectSlots ? reflectSlots.reduce((sum, slotIdx) => sum + applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(intent, slotIdx)), 0) : incomingDmg;
           addPopup("反射！", 'hero', 'text-purple-400 font-black text-2xl drop-shadow-lg');
           await battleWait(600);
-          addPopup(`反射 ${incomingDmg}!!`, 'enemy', 'text-purple-400 font-black text-4xl drop-shadow-lg');
-          const reflectedHp = Math.max(0, enemyHpAtAttackStart - incomingDmg);
-          setCurrentWaveDamage(p => p + incomingDmg);
-          setEnemy(prev => prev ? {
-            ...prev,
-            hp: reflectedHp
-          } : prev);
-          await battleWait(1000);
-          // 反射演出が終わってから撃破を確定し、回復・次ターン処理へは進ませない。
-          if (await resolveEnemyDefeat({
-            remainingHp: reflectedHp,
-            damage: incomingDmg
-          })) return;
+          if (reflectDmg <= 0) {
+            addPopup('当たらなかった！', 'hero', 'text-cyan-300 font-black text-xl drop-shadow-md');
+            await battleWait(600);
+          } else {
+            addPopup(`反射 ${reflectDmg}!!`, 'enemy', 'text-purple-400 font-black text-4xl drop-shadow-lg');
+            const reflectedHp = Math.max(0, enemyHpAtAttackStart - reflectDmg);
+            setCurrentWaveDamage(p => p + reflectDmg);
+            setEnemy(prev => prev ? {
+              ...prev,
+              hp: reflectedHp
+            } : prev);
+            await battleWait(1000);
+            // 反射演出が終わってから撃破を確定し、回復・次ターン処理へは進ませない。
+            if (await resolveEnemyDefeat({
+              remainingHp: reflectedHp,
+              damage: reflectDmg
+            })) return;
+          }
         } else if (isAbsorb) {
           addPopup("吸収！", 'hero', 'text-emerald-400 font-black text-2xl drop-shadow-lg');
           await battleWait(600);
-          const hpGain = incomingDmg;
-          const gutsGain = Math.floor(incomingDmg * 0.1);
-          addPopup(`💚 ライフ +${hpGain}`, 'life', 'text-emerald-400 font-black text-2xl drop-shadow-md');
-          addPopup(`⚡ ガッツ +${gutsGain}`, 'guts', 'text-amber-400 font-black text-2xl drop-shadow-md');
-          currentHp = Math.min(liveEffectiveMaxHp(), currentHp + hpGain);
-          setHp(currentHp);
-          setGuts(p => Math.min(liveEffectiveMaxGuts(), p + gutsGain));
+          // ★新モードの吸収は「狙われた子に起きたこと」(2026-09-20 ユーザー指示)。
+          //   その子が受けるはずだったダメージぶんだけ、その子のライフとガッツへ入る。
+          //   盤面へ配る全体回復にすると、殴られるたびに全員が回復して、
+          //   倒れた子まで勝手に起き上がる(＝誰も倒れたままにならない)。
+          //   狙いは立っている子にしか向かないので、吸収で起き上がることは起きない。
+          // ★吸う子は1体だけ。勇者特性(オボロ・プラントの30)は勇者モン本人のものなので、
+          //   勇者モンが狙われていればその子が吸う(2026-09-20 ユーザー指示)
+          const absorbSlot = isTacticsMode(runMode) ? pickDefenseSlot() : null;
+          if (isTacticsMode(runMode)) {
+            let units = tacticsUnitsRef.current,
+              hpGain = 0,
+              gutsGain = 0;
+            if (absorbSlot != null) {
+              // 受けるはずだったダメージも「その子の丈夫さ」で決まる
+              const gain = applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(intent, absorbSlot));
+              const guts = Math.floor(gain * 0.1);
+              hpGain = gain;
+              gutsGain = guts;
+              units = recoverTacticsGutsAt(healTacticsAt(units, absorbSlot, gain), absorbSlot, guts);
+            }
+            currentHp = commitTacticsUnits(units);
+            if (hpGain > 0) addPopup(`💚 ライフ +${hpGain}`, 'life', 'text-emerald-400 font-black text-2xl drop-shadow-md');
+            if (gutsGain > 0) addPopup(`⚡ ガッツ +${gutsGain}`, 'guts', 'text-amber-400 font-black text-2xl drop-shadow-md');
+            if (hpGain <= 0) addPopup('当たらなかった！', 'hero', 'text-cyan-300 font-black text-xl drop-shadow-md');
+          } else {
+            const hpGain = incomingDmg;
+            const gutsGain = Math.floor(incomingDmg * 0.1);
+            addPopup(`💚 ライフ +${hpGain}`, 'life', 'text-emerald-400 font-black text-2xl drop-shadow-md');
+            addPopup(`⚡ ガッツ +${gutsGain}`, 'guts', 'text-amber-400 font-black text-2xl drop-shadow-md');
+            currentHp = Math.min(liveEffectiveMaxHp(), currentHp + hpGain);
+            setHp(currentHp);
+            gainGuts(gutsGain);
+          }
           await battleWait(1000);
-        } else if (isEvasion) {
+        } else if (isEvasion && !isTacticsMode(runMode)) {
           addPopup("回避！", 'hero', 'text-blue-400 font-black text-xl drop-shadow-lg');
           await battleWait(1000);
+        } else if (isTacticsMode(runMode)) {
+          // ===== 新モードの受け方 =====
+          // ★ガードは「カードを使った子自身」を守る(2026-09-19 ユーザーが決めた形)。
+          //   狙われた子ごとに、その子が構えたぶんだけで受ける。
+          //   誰かが構えたガードが全員を守ってしまうと、狙いを読む意味が消える。
+          // ★全体攻撃は狙われた全員が、それぞれ自分のガードで受ける。
+          tookEnemyAttack = true;
+          const targets = tacticsIntentTargets(intent, tacticsUnitsRef.current, actingEnemyDist);
+          if (!targets.length) {
+            addPopup('当たらなかった！', 'hero', 'text-cyan-300 font-black text-xl drop-shadow-md');
+            await battleWait(700);
+          } else {
+            const slotGuards = immediateEffects.guardBySlot || {};
+            // ★連撃は 0.6×3 の3ヒット(2026-09-20 ユーザー指示)。
+            //   ガードが受け止められるのは**1ヒットぶんだけ**で、残りの2ヒットはそのまま通る。
+            //   1ヒットに使い切れなかったぶんは余らない(ライフ・ガッツにもならない)。
+            //   ここを「合計から引く」に戻すと、厚いガード1枚で連撃を完全に止められてしまう
+            const rushHits = intent.variant === 'rush' ? Math.max(1, Math.floor(Number(intent.hits) || 1)) : 1;
+            // ★回避は「狙われた子だけ」が避ける(2026-09-20 ユーザー指示)。
+            //   反射は味方全体のバフ(発動したターンは誰も受けない)のに対し、回避は吸収と同じ個別扱い。
+            //   全体攻撃で狙われた全員が避けると、回避が全体バフと変わらなくなる。
+            //   狙われた子が1体なら今までどおりその子が避ける
+            const evadedSlot = isEvasion ? pickDefenseSlot() : null;
+            // ★確率で出た反射(勇者モンがモノリス・魂格)も狙われた子だけ。
+            //   その子は受けずに、受けるはずだった量を敵へ返す。ほかの子は普通に受ける。
+            //   固有技の確定反射は上の枝(味方全体)で処理しているのでここへは来ない
+            const reflectedSlot = isReflect ? pickDefenseSlot() : null;
+            let evadedName = '',
+              reflectedName = '',
+              reflectBack = 0;
+            let units = tacticsUnitsRef.current,
+              dealt = 0,
+              saved = 0,
+              guardedCount = 0,
+              gutsBack = 0,
+              throughTotal = 0;
+            targets.forEach(slotIdx => {
+              if (slotIdx === evadedSlot) {
+                evadedName = tacticsTargetName(units, slotIdx);
+                return;
+              }
+              if (slotIdx === reflectedSlot) {
+                reflectedName = tacticsTargetName(units, slotIdx);
+                reflectBack += applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(intent, slotIdx));
+                return;
+              }
+              const own = slotGuards[slotIdx] || {
+                flat: 0,
+                mult: 0
+              };
+              // ガードの軽減量も「その子の丈夫さ」から出す
+              const slotDef = tacticsUnitsRef.current[slotIdx] ? resolveEffectiveMaxStat(normalizeTacticsUnit(tacticsUnitsRef.current[slotIdx]).def, getPermaBuff('defPct')) : effectiveDef;
+              const base = own.flat > 0 || own.mult > 0 ? Math.floor(own.flat + slotDef * own.mult) : 0;
+              // 貫通撃はガードが効かない
+              const slotGuard = intent.variant === 'pierce' ? 0 : base;
+              // ★受けるダメージもその子の丈夫さで決まるので、狙われた子ごとに計算し直す
+              const slotIncoming = getIncomingDamageBeforeTurnReduction(intent, slotIdx);
+              // ガードに当てるのは1ヒットぶん。数え方は予告と同じ関数を通す
+              const hit = resolveTacticsGuardedHit(slotIncoming, rushHits, slotGuard);
+              throughTotal += hit.through;
+              if (hit.blocked || slotGuard > 0) guardedCount++;
+              if (hit.taken > 0) {
+                const fd = applyTurnDamageReduction(hit.taken);
+                units = damageTacticsTargets(units, [slotIdx], fd);
+                dealt += fd;
+              }
+              if (hit.saved > 0) {
+                saved += hit.saved;
+                const gain = Math.floor(hit.saved * 0.1);
+                gutsBack += gain;
+                units = recoverTacticsGutsAt(healTacticsAt(units, slotIdx, hit.saved), slotIdx, gain);
+              }
+            });
+            if (evadedSlot != null) {
+              addPopup(`回避！ ${evadedName}`, 'hero', 'text-blue-400 font-black text-xl drop-shadow-lg');
+              await battleWait(600);
+            }
+            if (reflectedSlot != null) {
+              addPopup(`反射！ ${reflectedName}`, 'hero', 'text-purple-400 font-black text-xl drop-shadow-lg');
+              await battleWait(600);
+            }
+            // 「ガードしたのに減った」を不具合に見せないため、決まりをその場に出す
+            if (rushHits > 1 && guardedCount > 0 && throughTotal > 0) {
+              addPopup(`連撃 ${rushHits}ヒット！ ガードは1ヒットぶん`, 'enemy', 'text-orange-300 font-black text-lg drop-shadow-md');
+              await battleWait(700);
+            }
+            if (guardedCount > 0) {
+              setGuardFx(true);
+              Audio_.se.guard();
+              triggerShake();
+              await battleWait(450);
+              setGuardFx(false);
+            }
+            currentHp = commitTacticsUnits(units);
+            if (dealt > 0) {
+              addPopup(`-${dealt}`, 'hero', 'text-pink-600 text-4xl font-black drop-shadow-lg animate-bounce');
+              triggerShake();
+            }
+            if (saved > 0) {
+              addPopup('🛡 ガード成功', 'hero', 'text-emerald-400 text-2xl font-black drop-shadow-md');
+              addPopup(`💚 ライフ +${saved}`, 'life', 'text-emerald-400 text-2xl font-black drop-shadow-md');
+            }
+            if (gutsBack > 0) addPopup(`⚡ ガッツ +${gutsBack}`, 'guts', 'text-amber-400 text-xl font-bold drop-shadow-md');
+            if (dealt <= 0 && saved <= 0 && evadedSlot == null && reflectedSlot == null) addPopup('無傷！', 'hero', 'text-emerald-300 font-black text-xl drop-shadow-md');
+            await battleWait(1000);
+            // 味方の増減を確定させてから敵へ返す。撃破したらここで止める(回復・次ターンへ進ませない)
+            if (reflectBack > 0) {
+              addPopup(`反射 ${reflectBack}!!`, 'enemy', 'text-purple-400 font-black text-4xl drop-shadow-lg');
+              const reflectedHp = Math.max(0, enemyHpAtAttackStart - reflectBack);
+              setCurrentWaveDamage(p => p + reflectBack);
+              setEnemy(prev => prev ? {
+                ...prev,
+                hp: reflectedHp
+              } : prev);
+              await battleWait(1000);
+              if (await resolveEnemyDefeat({
+                remainingHp: reflectedHp,
+                damage: reflectBack
+              })) return;
+            }
+          }
         } else if (guardValue > 0) {
           // ガードは最終ダメージが0でも(余剰でライフ・ガッツが増えても)「受け止めた」扱いにする
           tookEnemyAttack = true;
@@ -51369,11 +53818,11 @@ function MonsterHeroGame() {
           } else {
             const gGain = Math.floor(diff * 0.1);
             currentHp = Math.min(liveEffectiveMaxHp(), currentHp + diff);
+            setHp(currentHp);
             addPopup(`🛡 ガード成功`, 'hero', 'text-emerald-400 text-2xl font-black drop-shadow-md');
             addPopup(`💚 ライフ +${diff}`, 'life', 'text-emerald-400 text-2xl font-black drop-shadow-md');
             addPopup(`⚡ ガッツ +${gGain}`, 'guts', 'text-amber-400 text-xl font-bold drop-shadow-md');
-            setHp(currentHp);
-            setGuts(p => Math.min(liveEffectiveMaxGuts(), p + gGain));
+            gainGuts(gGain);
             await battleWait(1000);
           }
         } else {
@@ -51409,16 +53858,42 @@ function MonsterHeroGame() {
     // 氷海の支配者は、絶氷の楔発動中かつ勇者と敵が同じ距離の場合だけ50パーセントポイントを足す。
     const gutsRecoveryRate = applyIceRulerAutoGutsRecovery(currentAutoGutsRecovery, mainHero?.id, iceLockActive, heroDist, enemyDist);
     const soulAdjustedGutsRecoveryRate = Math.max(0, gutsRecoveryRate) * soulBattleParty.autoGutsMultiplier;
-    const gutsRegen = Math.floor(liveEffectiveMaxGuts() * soulAdjustedGutsRecoveryRate);
-    setGuts(p => Math.min(liveEffectiveMaxGuts(), p + gutsRegen));
-    let didRegen = false;
-    if (autoHpRecoveryRate > 0) {
-      const autoHealVal = Math.floor(liveEffectiveMaxHp() * autoHpRecoveryRate);
-      if (autoHealVal > 0) {
-        setHp(p => Math.min(liveEffectiveMaxHp(), p + autoHealVal));
-        addPopup(`🌿 自動再生 +${autoHealVal}`, 'life', 'text-teal-300 font-black text-lg italic drop-shadow-md');
-        didRegen = true;
+    // ★氷海の支配者は「持っている子が、敵と同じ距離にいるとき」だけ効く(2026-09-20 ユーザー提案で
+    //   供モンにも広げた)。新モードは1体ずつ回すので、全員へは氷海ぶんを含まない率で配り、
+    //   条件を満たした子にだけ差分を足す。「誰かが同じ距離なら全員の回復が上がる」にはしない
+    const baseGutsRecoveryRate = Math.max(0, currentAutoGutsRecovery) * soulBattleParty.autoGutsMultiplier;
+    // その子が氷海持ちで敵と同じ距離なら、素の率との差(＝+50%ぶん)を返す
+    const iceExtraRateAt = slotIdx => {
+      const id = tacticsUnitsRef.current[slotIdx]?.id;
+      const withIce = applyIceRulerAutoGutsRecovery(currentAutoGutsRecovery, id, iceLockActive, slotIdx, enemyDist);
+      return Math.max(0, withIce - Math.max(0, currentAutoGutsRecovery)) * soulBattleParty.autoGutsMultiplier;
+    };
+    // ★新モードは1体ずつ「その子の上限 × 率」で回す(2026-09-20 ユーザー指摘)。
+    //   合計の上限から量を出して配ると、1体だけ傷ついているときにパーティ全員ぶんが
+    //   その子へ入り、倒れている子が多いほど残った子がよけいに回復する(逆になっている)
+    const regen = tacticsRegen(autoHpRecoveryRate, isTacticsMode(runMode) ? baseGutsRecoveryRate : soulAdjustedGutsRecoveryRate);
+    let gutsRegen = 0,
+      autoHealVal = 0;
+    if (regen) {
+      currentHp = regen.total;
+      autoHealVal = regen.hp;
+      gutsRegen = regen.guts;
+      tacticsAliveSlots(tacticsUnitsRef.current).forEach(slotIdx => {
+        const extra = iceExtraRateAt(slotIdx);
+        if (extra > 0) gutsRegen += gainGutsByRate(slotIdx, extra);
+      });
+    } else {
+      gutsRegen = Math.floor(liveEffectiveMaxGuts() * soulAdjustedGutsRecoveryRate);
+      gainGuts(gutsRegen);
+      if (autoHpRecoveryRate > 0) {
+        autoHealVal = Math.floor(liveEffectiveMaxHp() * autoHpRecoveryRate);
+        if (autoHealVal > 0) setHp(p => Math.min(liveEffectiveMaxHp(), p + autoHealVal));
       }
+    }
+    let didRegen = false;
+    if (autoHealVal > 0) {
+      addPopup(`🌿 自動再生 +${autoHealVal}`, 'life', 'text-teal-300 font-black text-lg italic drop-shadow-md');
+      didRegen = true;
     }
     if (gutsRegen > 0) {
       addPopup(`🌿 自動ガッツ +${gutsRegen}`, 'guts', 'text-cyan-300 font-black text-lg italic drop-shadow-md');
@@ -51436,8 +53911,13 @@ function MonsterHeroGame() {
     const pendingNextTurnBuffs = nextTurnBuffsRef.current;
     const recoveryMult = pendingNextTurnBuffs.melosoFullRecoveryMult || 0;
     if (recoveryMult > 0) {
-      setHp(p => Math.min(liveEffectiveMaxHp(), p + Math.floor(liveEffectiveMaxHp() * recoveryMult)));
-      setGuts(p => Math.min(liveEffectiveMaxGuts(), p + Math.floor(liveEffectiveMaxGuts() * recoveryMult)));
+      // ★新モードは1体ずつ「その子の上限 × 率」。倍率1なら全員が満タンになる
+      const melosoRes = tacticsRateHeal(recoveryMult, recoveryMult);
+      if (melosoRes) currentHp = melosoRes.total;else {
+        const melosoHeal = Math.floor(liveEffectiveMaxHp() * recoveryMult);
+        setHp(p => Math.min(liveEffectiveMaxHp(), p + melosoHeal));
+        gainGuts(Math.floor(liveEffectiveMaxGuts() * recoveryMult));
+      }
       addPopup(recoveryMult === 1 ? 'ライフ・ガッツ全回復!' : 'ライフ・ガッツ回復!', 'hero', 'text-rose-300 text-lg font-bold');
     }
     const {
@@ -51452,7 +53932,7 @@ function MonsterHeroGame() {
     const nextTurn = turnCount + 1;
     setTurnCount(nextTurn);
     if (nextTurn > 20) {
-      setHp(0);
+      if (tacticsWipe() === null) setHp(0);
     }
     setIsBusy(false);
   };
@@ -51460,7 +53940,6 @@ function MonsterHeroGame() {
     if (isBusy || hp <= 0) return;
     setIsBusy(true);
     Audio_.se.heal();
-    const recoverHp = Math.floor(liveEffectiveMaxHp() * 0.3);
     setEffect({
       type: 'heal',
       label: "緊急回復",
@@ -51472,17 +53951,31 @@ function MonsterHeroGame() {
     });
     await battleWait(500);
     setEffect(null);
-    const recoverGuts = Math.floor(liveEffectiveMaxGuts() * 0.3);
-    addPopup(`💚 ライフ +${recoverHp}`, 'life', 'text-emerald-400 text-2xl font-black drop-shadow-md');
-    addPopup(`⚡ ガッツ +${recoverGuts}`, 'guts', 'text-amber-400 text-2xl font-black drop-shadow-md');
-    setHp(p => Math.min(liveEffectiveMaxHp(), p + recoverHp));
-    setGuts(p => Math.min(liveEffectiveMaxGuts(), p + recoverGuts));
+    // ★新モードは1体ずつ「その子の上限の30%」(2026-09-20 ユーザー指示)。
+    //   合計から出すと、1体だけ傷ついているときパーティ全員ぶんがその子へ入る。
+    //   倒れた子にも入る(ターンを1回捨てる重い選択なので、復活までの貯めには乗る)
+    const emergency = tacticsRateHeal(0.3, 0.3);
+    let recoverHp = 0,
+      recoverGuts = 0,
+      emergencyHp = null;
+    if (emergency) {
+      recoverHp = emergency.hp;
+      recoverGuts = emergency.guts;
+      emergencyHp = emergency.total;
+    } else {
+      recoverHp = Math.floor(liveEffectiveMaxHp() * 0.3);
+      recoverGuts = Math.floor(liveEffectiveMaxGuts() * 0.3);
+      setHp(p => Math.min(liveEffectiveMaxHp(), p + recoverHp));
+      gainGuts(recoverGuts);
+    }
+    if (recoverHp > 0) addPopup(`💚 ライフ +${recoverHp}`, 'life', 'text-emerald-400 text-2xl font-black drop-shadow-md');
+    if (recoverGuts > 0) addPopup(`⚡ ガッツ +${recoverGuts}`, 'guts', 'text-amber-400 text-2xl font-black drop-shadow-md');
     await battleWait(1000);
     // 画面に予告済みの行動をそのまま実行する。ここで敵AIを再抽選すると、緊急回復で予告を
     // 別の技へ変えられてしまうため、技・対象・順番・予測値を保持した予約だけを参照する。
     const scenario = battleScenarioRef.current;
     const acting = enemyIntent;
-    const hpAfterRecovery = Math.min(liveEffectiveMaxHp(), hp + recoverHp);
+    const hpAfterRecovery = emergencyHp !== null ? emergencyHp : Math.min(liveEffectiveMaxHp(), hp + recoverHp);
     await handleEnemyTurn('none', {}, acting, hpAfterRecovery);
     // 敵の行動後にだけ次ターン分を1回予約する。移動した場合は移動先を次の抽選基準にする。
     const moveWasFrozen = acting && acting.type === 'MOVE' && getWaveBuff('iceLockTurns') > 0;
@@ -51503,6 +53996,12 @@ function MonsterHeroGame() {
       slotIdx: cardAssignments[i] != null ? cardAssignments[i] : null
     }));
     if (isBusy || !enemy || usedCardEntries.length === 0) return;
+    // ★タクティクスバトルの「眼力」は、スエゾーが攻撃したターンに引く(2026-09-20 ユーザー指示)。
+    //   本人の能力なので勇者モンにしていなくても効く。1ターンに何枚使っても判定は1回
+    //   (枚数で確率が上がらないように)。既存5モードは今までどおり敵のターンの頭に引く
+    if (isTacticsMode(runMode) && usedCardEntries.some(e => isAttackCard(e.card) && Number.isInteger(e.slotIdx) && tacticsUnitsRef.current[e.slotIdx]?.id === 'Suezo') && Math.random() < TACTICS_INTIMIDATE_RATE) {
+      setImmediateTurnBuff('stunEnemy', true);
+    }
     setFocusedCard(null);
     setPendingCard(null);
     const usedCards = usedCardEntries.map(e => e.card);
@@ -51513,11 +54012,24 @@ function MonsterHeroGame() {
     if (guts < totalGuts) return;
     // Fallback slot for cards without assignment (buffs etc.)
     const defaultSlot = slots.findIndex(s => s !== null);
+    // 新モードは「使う子が払えるか」も見る。合計で足りていても、1体に寄っていれば使えない。
+    // ★ここを通さないと、オートが払えない組み合わせを選んだときに
+    //   ガッツを払わずカードだけ切れてしまう
+    if (isTacticsMode(runMode)) {
+      const spentBySlot = {};
+      const payable = usedCardEntries.every(entry => {
+        const idx = entry.slotIdx != null ? entry.slotIdx : defaultSlot;
+        spentBySlot[idx] = (spentBySlot[idx] || 0) + getCardGuts(entry.card, idx);
+        return canTacticsSlotPay(tacticsUnitsRef.current, idx, spentBySlot[idx]);
+      });
+      if (!payable) return;
+    }
     setIsBusy(true);
     let lastType = 'none',
       guardTypeInTurn = 'none',
       totalDmg = 0,
       totalHeal = 0,
+      totalHealRate = 0,
       localOryoAdd = 0,
       localDmgModAdd = 0,
       localGlobalComboAdd = 0,
@@ -51527,6 +54039,18 @@ function MonsterHeroGame() {
       immediateStun = false,
       currentTurnGuardFlat = 0,
       currentTurnGuardMult = 0;
+    // 新モードは「ガードはカードを使った子自身を守る」。誰が構えたかをスロットごとに持つ。
+    // 既存モードは今までどおり currentTurnGuardFlat / Mult の合計だけを見る
+    const guardBySlot = {};
+    const addGuardForSlot = (idx, flat, mult) => {
+      if (!Number.isInteger(idx)) return;
+      const entry = guardBySlot[idx] || (guardBySlot[idx] = {
+        flat: 0,
+        mult: 0
+      });
+      entry.flat += flat;
+      entry.mult += mult;
+    };
     let hpBeforeEnemyAttack = hp;
     let activatedIceLockThisTurn = false;
     let forcedMoveTarget = null; // 最後に使った距離撃の指定距離を、敵行動後にも最終距離として再適用する
@@ -51535,10 +54059,11 @@ function MonsterHeroGame() {
 
     // カットイン廃止: 技名はスロット上にインライン表示する（実行ループ内で行う）
 
-    let penaltyCardCount = 0; // アシストカード以外を何枚使ったか(2枚目以降は効果半減)
+    const halveCounter = makeHalveCounter(); // 何枚目かの数え方は cardHalveGroup が決める
     for (const entry of usedCardEntries) {
       const card = entry.card;
-      const totalHealBeforeCard = totalHeal;
+      const totalHealBeforeCard = totalHeal,
+        totalHealRateBeforeCard = totalHealRate;
       // 2枚目以降のカードは効果が半減する。アシストカードは対象外で、枚数にも数えない。
       const isBreeder = isAssistCard(card);
       // 助手のアシストカード(みゅあ・きき・ドラ)を実際に切ったぶん。
@@ -51551,12 +54076,11 @@ function MonsterHeroGame() {
         const cardAssistant = assistantIdOfAssistCard(card.id);
         if (cardAssistant) addAssistantBondFor(cardAssistant, 'assistantCardUse');
       }
-      const halved = !isBreeder && penaltyCardCount > 0;
+      const halved = halveCounter.take(card, entry.slotIdx);
       // EXTREMEでは消費量・枚数でなく、教えカードから発生する効果量だけを半減する。
       const specialRuleDifficulty = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
       const effMul = isBreeder && specialRuleDifficulty ? extremeSpecialRule(specialRuleDifficulty, 'assistCardEffect') : halved ? 0.5 : 1;
-      if (!isBreeder) penaltyCardCount++;
-      if (halved) addPopup('2枚目以降 効果半減', 'hero', 'text-slate-300 text-sm font-black');
+      if (halved) addPopup(isTacticsMode(runMode) ? '同じ子の2枚目 効果半減' : '2枚目以降 効果半減', 'hero', 'text-slate-300 text-sm font-black');
       const slotIdx = entry.slotIdx != null ? entry.slotIdx : defaultSlot;
       lastType = card.type;
       if (card.type === 'guard') {
@@ -51564,12 +54088,16 @@ function MonsterHeroGame() {
         guardTypeInTurn = 'guard';
         currentTurnGuardFlat += GUARD_EVOLUTION[guardLevel].flat * effMul;
         currentTurnGuardMult += GUARD_EVOLUTION[guardLevel].mult * effMul;
+        addGuardForSlot(slotIdx, GUARD_EVOLUTION[guardLevel].flat * effMul, GUARD_EVOLUTION[guardLevel].mult * effMul);
       } else if (card.type === 'weak_guard') {
         if (guardTypeInTurn !== 'guard') guardTypeInTurn = 'weak_guard';
         currentTurnGuardFlat += GUARD_EVOLUTION[guardLevel].flat * 0.5 * effMul;
         currentTurnGuardMult += GUARD_EVOLUTION[guardLevel].mult * 0.5 * effMul;
+        addGuardForSlot(slotIdx, GUARD_EVOLUTION[guardLevel].flat * 0.5 * effMul, GUARD_EVOLUTION[guardLevel].mult * 0.5 * effMul);
       }
-      setGuts(p => Math.max(0, p - getCardGuts(card, slotIdx)));
+      // 払うのは「使う子」。新モード以外は今までどおりパーティのガッツから引く
+      const cardCost = getCardGuts(card, slotIdx);
+      if (isTacticsMode(runMode)) tacticsPayGuts(slotIdx, cardCost);else setGuts(p => Math.max(0, p - cardCost));
       // 消費と直後の回復を同じ描画へまとめず、カードを支払った値をゲージ・数値に先に出す。
       await battleWait(250);
       if (card.type === 'draw') continue;
@@ -51651,8 +54179,12 @@ function MonsterHeroGame() {
           setNextTurnBuff('atkMult', 1 + (card.baseValue - 1) * effMul);
           const selfDmgAmt = Math.floor(hpBeforeEnemyAttack * myaruSelfDamageRate(card) * effMul);
           addPopup(`自傷-${selfDmgAmt}`, 'hero', 'text-red-600 text-2xl font-black');
-          hpBeforeEnemyAttack = Math.max(1, hpBeforeEnemyAttack - selfDmgAmt);
-          setHp(hpBeforeEnemyAttack);
+          // 新モードは立っている子へ配る。★自傷では誰も倒れない(1体ずつ最低1を残す)
+          const selfHurt = isTacticsMode(runMode) ? commitTacticsUnits(selfDamageTacticsAt(tacticsUnitsRef.current, slotIdx, selfDmgAmt)) : null;
+          if (selfHurt !== null) hpBeforeEnemyAttack = selfHurt;else {
+            hpBeforeEnemyAttack = Math.max(1, hpBeforeEnemyAttack - selfDmgAmt);
+            setHp(hpBeforeEnemyAttack);
+          }
         }
         // ポルツ: すぐには何も起きず、「有効な敵の攻撃を受けた回数」ぶんだけ待機する。
         // 発動時の効果量はレベル(POLTZ_TIERS)とEXTREME等の効果倍率(effMul)で決まるが、
@@ -51688,14 +54220,14 @@ function MonsterHeroGame() {
         const owned = ownedTeachings.find(t => t.id === card.id);
         const level = owned ? owned.evoLevel : 0;
         if (card.id === 'meloso') {
-          const healVal = Math.floor(liveEffectiveMaxHp() * 0.3 * effMul);
-          totalHeal += healVal;
-          const gutsVal = Math.floor(liveEffectiveMaxGuts() * 0.3 * effMul);
-          setGuts(p => Math.min(liveEffectiveMaxGuts(), p + gutsVal));
+          totalHeal += Math.floor(liveEffectiveMaxHp() * 0.3 * effMul);
+          totalHealRate += 0.3 * effMul;
+          const gutsVal = gainGutsByRate(slotIdx, 0.3 * effMul);
           currentTurnGuardFlat += GUARD_EVOLUTION[guardLevel].flat * effMul;
           currentTurnGuardMult += GUARD_EVOLUTION[guardLevel].mult * effMul;
+          addGuardForSlot(slotIdx, GUARD_EVOLUTION[guardLevel].flat * effMul, GUARD_EVOLUTION[guardLevel].mult * effMul);
           guardTypeInTurn = 'guard';
-          addPopup(`⚡ ガッツ +${gutsVal}`, 'guts', 'text-amber-400 font-black text-2xl drop-shadow-md');
+          if (gutsVal > 0) addPopup(`⚡ ガッツ +${gutsVal}`, 'guts', 'text-amber-400 font-black text-2xl drop-shadow-md');
           if (level >= 1 && usedCards.length >= 2) {
             setNextTurnBuff('takenDamageMult', 1 - 0.5 * effMul);
             addPopup('次ターン被ダメ50%減 予約!', 'hero', 'text-cyan-300 text-lg font-bold');
@@ -51713,26 +54245,24 @@ function MonsterHeroGame() {
           let hpB = level === 1 ? 0.05 : level >= 2 ? 0.08 : 0.03,
             atkB = level >= 2 ? 0.05 : 0.03,
             gutsB = level >= 2 ? 0.05 : 0.03;
-          const healVal = Math.floor(liveEffectiveMaxHp() * hpRecRate * effMul);
-          totalHeal += healVal;
+          totalHeal += Math.floor(liveEffectiveMaxHp() * hpRecRate * effMul);
+          totalHealRate += hpRecRate * effMul;
           addPermaBuff('muaHpPct', hpB * effMul);
           addPermaBuff('muaAtkPct', atkB * effMul);
           addPermaBuff('muaGutsPct', gutsB * effMul);
           if (gutsRecRate > 0) {
-            const gv = Math.floor(liveEffectiveMaxGuts() * gutsRecRate * effMul);
-            setGuts(p => Math.min(liveEffectiveMaxGuts(), p + gv));
-            addPopup(`⚡ ガッツ +${gv}`, 'guts', 'text-amber-400 font-black text-2xl drop-shadow-md');
+            const gv = gainGutsByRate(slotIdx, gutsRecRate * effMul);
+            if (gv > 0) addPopup(`⚡ ガッツ +${gv}`, 'guts', 'text-amber-400 font-black text-2xl drop-shadow-md');
           }
         } else {
-          const healVal = Math.floor(liveEffectiveMaxHp() * (0.5 + level * 0.2) * effMul);
-          totalHeal += healVal;
+          totalHeal += Math.floor(liveEffectiveMaxHp() * (0.5 + level * 0.2) * effMul);
+          totalHealRate += (0.5 + level * 0.2) * effMul;
           addPermaBuff('muaHpPct', 0.10 * effMul);
           addPermaBuff('muaAtkPct', 0.05 * effMul);
           addPermaBuff('muaGutsPct', 0.10 * effMul);
           if (level >= 1) {
-            const gv = Math.floor(liveEffectiveMaxGuts() * (0.5 + level * 0.2) * effMul);
-            setGuts(p => Math.min(liveEffectiveMaxGuts(), p + gv));
-            addPopup(`⚡ ガッツ +${gv}`, 'guts', 'text-amber-400 font-black text-2xl drop-shadow-md');
+            const gv = gainGutsByRate(slotIdx, (0.5 + level * 0.2) * effMul);
+            if (gv > 0) addPopup(`⚡ ガッツ +${gv}`, 'guts', 'text-amber-400 font-black text-2xl drop-shadow-md');
           }
         }
       } else if (card.type !== 'guard' && card.type !== 'weak_guard') {
@@ -51852,9 +54382,8 @@ function MonsterHeroGame() {
             setImmediateTurnBuff('stunEnemy', true);
             addPopup('スタン!', 'enemy', 'text-yellow-400 text-lg font-bold');
           } else if (card.monId === 'Suezo') {
-            const gRec = Math.floor(liveEffectiveMaxGuts() * 0.5 * effMul);
-            setGuts(p => Math.min(liveEffectiveMaxGuts(), p + gRec));
-            addPopup(`⚡ ガッツ +${gRec}`, 'guts', 'text-amber-400 text-xl font-black drop-shadow-md');
+            const gRec = gainGutsByRate(slotIdx, 0.5 * effMul);
+            if (gRec > 0) addPopup(`⚡ ガッツ +${gRec}`, 'guts', 'text-amber-400 text-xl font-black drop-shadow-md');
           } else if (card.monId === 'Pixie' || card.monId === 'Mia') {
             setNextTurnBuff('zeroGuts', true);
             addPopup('次ターン消費0!', 'hero', 'text-blue-400 text-lg font-bold');
@@ -51873,9 +54402,11 @@ function MonsterHeroGame() {
           } else if (card.monId === 'Oboro' || card.monId === 'Plant') {
             const hRec = Math.floor(finalD * 0.5);
             const gRec = Math.floor(finalD * 0.05);
-            hpBeforeEnemyAttack = Math.min(liveEffectiveMaxHp(), hpBeforeEnemyAttack + hRec);
-            setHp(hpBeforeEnemyAttack);
-            setGuts(p => Math.min(liveEffectiveMaxGuts(), p + gRec));
+            if (isTacticsMode(runMode)) hpBeforeEnemyAttack = commitTacticsUnits(healTacticsAt(tacticsUnitsRef.current, slotIdx, hRec));else {
+              hpBeforeEnemyAttack = Math.min(liveEffectiveMaxHp(), hpBeforeEnemyAttack + hRec);
+              setHp(hpBeforeEnemyAttack);
+            }
+            gainGutsAt(slotIdx, gRec);
             addPopup(`💚 ドレイン +${hRec}`, 'life', 'text-emerald-400 text-xl font-black drop-shadow-md');
             addPopup(`⚡ ガッツ +${gRec}`, 'guts', 'text-amber-400 text-base font-bold drop-shadow-md');
           } else if (card.monId === 'Ark' || card.monId === 'Iblis') {
@@ -51918,10 +54449,25 @@ function MonsterHeroGame() {
         }
       }
       const cardHeal = totalHeal - totalHealBeforeCard;
-      if (cardHeal > 0) {
-        addPopup(`💚 回復 +${cardHeal}`, 'life', 'text-emerald-400 text-4xl font-black drop-shadow-lg');
-        hpBeforeEnemyAttack = Math.min(liveEffectiveMaxHp(), hpBeforeEnemyAttack + cardHeal);
-        setHp(hpBeforeEnemyAttack);
+      const cardHealRate = totalHealRate - totalHealRateBeforeCard;
+      if (cardHeal > 0 || cardHealRate > 0) {
+        if (isTacticsMode(runMode)) {
+          // ★回復カードは「全体回復」。使う子を選ぶのはガッツを払うためで、効くのは盤面全体
+          //   (2026-09-19 ユーザーの整理。単体に効くのはガードの余りとドレインと吸収だけ)。
+          //   倒れた子にも入り、ライフが全快になったところで立ち上がる。
+          //   「起き上がった！」は commitTacticsUnits が1か所で出す
+          // ★量は1体ずつ「その子の上限 × 率」(2026-09-20 ユーザー指示)。
+          //   合計から出すと、1体だけ傷ついているときパーティ全員ぶんがその子へ入る
+          const healedAll = tacticsRateHeal(cardHealRate, 0);
+          if (healedAll) {
+            if (healedAll.hp > 0) addPopup(`💚 回復 +${healedAll.hp}`, 'life', 'text-emerald-400 text-4xl font-black drop-shadow-lg');
+            hpBeforeEnemyAttack = healedAll.total;
+          }
+        } else {
+          addPopup(`💚 回復 +${cardHeal}`, 'life', 'text-emerald-400 text-4xl font-black drop-shadow-lg');
+          hpBeforeEnemyAttack = Math.min(liveEffectiveMaxHp(), hpBeforeEnemyAttack + cardHeal);
+          setHp(hpBeforeEnemyAttack);
+        }
       }
       // 回復・自傷など、このカード自身の増減を次のカード消費より先に描画する。
       await battleWait(250);
@@ -52176,7 +54722,9 @@ function MonsterHeroGame() {
       stun: immediateStun,
       guardFlat: currentTurnGuardFlat,
       guardMult: currentTurnGuardMult,
+      guardBySlot,
       distLocked: forcedMoveTarget != null,
+      forcedMoveTarget,
       iceLockRefreshed: activatedIceLockThisTurn
     }, executedIntent, hpBeforeEnemyAttack, enemyHpAfterOurAttacks);
     // 通常の距離変更を先に処理した後、最後の距離撃の指定距離を再適用して最終距離を確定する。
@@ -52197,25 +54745,36 @@ function MonsterHeroGame() {
   // AUTOの判断結果をstateへ書き戻さず、同じターン処理へ明示的に渡す。
   // 今回はUIやeffectから呼ばず、1ターン接続用の内部処理だけを用意する。
   const runAutoTurnOnce = () => {
+    // 新モードは「倒れた子のスロットを空として渡す」だけで、倒れた子が選ばれなくなる。
+    // ガッツは1体ずつなので gutsForSlot で渡し、枚数制限は攻撃カードだけに効かせる
+    const tacticsMode = isTacticsMode(runMode);
+    const autoSlots = tacticsMode ? slots.map((mon, idx) => canTacticsSlotAct(tacticsUnitsRef.current, idx) ? mon : null) : slots;
+    const tacticsAutoOptions = tacticsMode ? {
+      gutsForSlot: slotIdx => tacticsUnitsRef.current[slotIdx]?.guts || 0,
+      countsTowardSlotLimit: isAttackCard,
+      isAttackCardFn: isAttackCard
+    } : {};
     const entries = chooseAutoTurn({
       hand,
-      slots,
+      slots: autoSlots,
       guts,
       cardLimit,
       strategy: autoSettings.strategy,
       getCardGuts,
       cardNeedsMonster,
-      slotMaxUses
+      slotMaxUses,
+      ...tacticsAutoOptions
     });
     if (entries.length > 0) return processTurn(entries);
     const lacksOnlyGuts = hasAutoTurnWithEnoughGuts({
       hand,
-      slots,
+      slots: autoSlots,
       cardLimit,
       strategy: autoSettings.strategy,
       getCardGuts,
       cardNeedsMonster,
-      slotMaxUses
+      slotMaxUses,
+      ...tacticsAutoOptions
     });
     if (lacksOnlyGuts && autoBattleRef.current && gameState === 'BATTLE' && enemy && enemy.hp > 0 && hp > 0 && !battleScenarioRef.current && battleTutorialStep == null) return useEmergency();
     return null;
@@ -52985,15 +55544,26 @@ function MonsterHeroGame() {
     // 段階を持つ難易度(GODの神威 / RAGNAROKの黄昏)は、そのWAVEの段階ぶんを累計ターン倍率へ重ねる。
     // 段階を持たない難易度では1倍が返るので、これまでどおりの敵になる。
     const stagedEnemyMultiplier = extremeWaveEnemyMultiplier(specialRuleDifficulty, w);
-    const newEnemy = createBattleEnemy(w, difficulty, forcedEnemyKey, battleSetting?.power ?? null, enemyTurnMultiplier * stagedEnemyMultiplier);
+    // 新モードは「連れてきた供モンの総合力」に応じて敵も強くなる(設計 §6)。
+    // ★人数ごとの固定倍率にしないこと。弱い編成ほど苦しくなる
+    const tacticsEnemyBoost = isTacticsMode(runMode) ? tacticsEnemyPowerMultiplier(tacticsPowerRef.current.start, tacticsPowerRef.current.now) : 1;
+    const newEnemy = createBattleEnemy(w, difficulty, forcedEnemyKey, battleSetting?.power ?? null, enemyTurnMultiplier * stagedEnemyMultiplier * tacticsEnemyBoost);
     if (!newEnemy) return null;
     // 最高到達WAVEもモードごとに別々に記録する。
     // 極限チャレンジは難易度が別表(内部の difficulty は Normal のまま)なので、ここへ入れると
     // チャレンジのNormalの記録を書き換えてしまう。デバッグ戦・練習と同じく記録しない
     // 種族チャレンジも同じ理由で除外する。記録は種族×難易度ごとに
     // mh_species_challenge_progress_v1 側だけへ残し、mh_highest_wave_* には一切触れない
-    if (!forcedEnemyKey && !extremeRunRef.current && !debugBattleRef.current && !speciesChallengeBattleRunRef.current) {
-      if (isQuickMode(runMode)) {
+    // ★タクティクスバトルは極限で遊んでも記録する。極限ぶんは mh_tactics_highest_wave_<極限難易度>
+    //   へ入るので、極限チャレンジの記録とも、チャレンジの記録とも混ざらない
+    if (!forcedEnemyKey && !debugBattleRef.current && !speciesChallengeBattleRunRef.current && (!extremeRunRef.current || isTacticsMode(runMode))) {
+      if (isTacticsMode(runMode)) {
+        const tacticsDiff = tacticsRecordDifficulty();
+        if (w > (Number(tacticsRecordsOf(runMode).waves[tacticsDiff]) || 0)) {
+          bumpTacticsRecord(runMode, 'waves', tacticsDiff, w);
+          storeSet(bestWaveKey(runMode, tacticsDiff), w, false);
+        }
+      } else if (isQuickMode(runMode)) {
         if (w > (quickHighestWaves[difficulty] || 0)) {
           setQuickHighestWaves(prev => ({
             ...prev,
@@ -53037,14 +55607,22 @@ function MonsterHeroGame() {
     setEnemyRevivalUsed(0);
     enemyRevivedHpRef.current = null;
     setEnemyRevivalReveal(null);
+    // 咆哮の重ねがけもWAVEごとに数え直す
+    tacticsRoarStacksRef.current = 0;
     setEnemy(newEnemy);
     setEnemyDist(dist);
     setEnemyLastIntent(null);
-    const firstIntent = getNextEnemyAction(newEnemy, dist, null, {
-      unannounced: true
+    // 行動表はモードと敵で決まる。新モード以外では今までどおりの1つの表が返る
+    const actionState = () => ({
+      definitions: enemyActionDefinitionsFor(runMode, newEnemy?.id),
+      roarStacks: tacticsRoarStacksRef.current
     });
+    const firstIntent = aimTacticsIntent(getNextEnemyAction(newEnemy, dist, null, {
+      unannounced: true,
+      ...actionState()
+    }), runMode);
     setEnemyIntent(firstIntent);
-    reserveEnemyNextIntent(getNextEnemyAction(newEnemy, distAfterIntent(firstIntent, dist), firstIntent));
+    reserveEnemyNextIntent(getNextEnemyAction(newEnemy, distAfterIntent(firstIntent, dist), firstIntent, actionState()));
     setTurnCount(1);
     setSelectedCards([]);
     setLastActionSlot(null);
@@ -53054,7 +55632,7 @@ function MonsterHeroGame() {
     setWaveDistDamage([0, 0, 0, 0]);
     setWaveBuffs({}); // WAVE毎リセットのバフ・デバフ(waveEnemyAtkDebuff/chuuniDmgCutUses/enemyTakenDmgBonus等)を全てクリア
     return dist;
-  }, [getNextEnemyAction, difficulty, extremeDifficulty, totalTurnCount, highestWaves, quickHighestWaves, proHighestWaves, runMode]);
+  }, [getNextEnemyAction, difficulty, extremeDifficulty, totalTurnCount, highestWaves, quickHighestWaves, proHighestWaves, tacticsRecords, runMode]);
 
   // defValは呼び出し元が直前に算出したばかりの丈夫さ(setDefで更新中の値)を明示的に渡すための引数。
   // handleTraining等のsetTimeout内からdef(state)を直接読むと、同じ関数呼び出し内で行ったsetDefの
@@ -53077,7 +55655,8 @@ function MonsterHeroGame() {
     // 1周のはじめだけ、みゅあとの仲良し度を増やす(WAVEごとには数えない)
     if (w === 1 && !forcedEnemyKey && !debugBattleRef.current) {
       addAssistantBond('battle');
-      addAssistantBond(extremeRunRef.current ? 'extreme' : modeBondAction(runMode));
+      // ★タクティクスバトルの極限は「極限チャレンジで遊んだ」ではないので、'extreme' を渡さない
+      addAssistantBond(extremeRunRef.current && !isTacticsMode(runMode) ? 'extreme' : modeBondAction(runMode));
       // 助手のアシストカードを編成して挑んだぶん。編成を保存しただけでは増えず、
       // 実際にバトルを始めたここでだけ数える(付け外しをくり返して稼げないようにするため)。
       // デバッグ戦は報酬も記録も残さないので、ここでも数えない
@@ -53103,7 +55682,7 @@ function MonsterHeroGame() {
     const dist = spawnEnemy(w, forcedEnemyKey, selectedInitialDistance);
     if (dist === null) return;
     const nAtkL = computeAtkTier(currentSlots, dist, aptPctOverride);
-    const nGrdL = computeGuardLevel(defVal !== undefined ? defVal : def);
+    const nGrdL = computeGuardLevel(guardLevelDef(defVal));
     const nGB = nGrdL;
     setAtkLevel(nAtkL);
     setGuardLevel(nGrdL);
@@ -53173,6 +55752,7 @@ function MonsterHeroGame() {
     setScore(0);
     setWaveHistory([]);
     setFinalRewardSummary(null);
+    tacticsJoinCatchUpRef.current = 1; // あとから入る子の追いつき補正は1周ごとに数え直す
     writePermaBuffs({
       autoHpRecovery: 0.1
     });
@@ -53188,7 +55768,7 @@ function MonsterHeroGame() {
     setGuardLevel(0);
     setGuardBonusCount(0);
     setMainHero(null);
-    setSlots([null, null, null, null]);
+    applySlots([null, null, null, null]);
     setOwnedUniques([]);
     setOwnedTeachings([]);
     setDistAptPct([0, 0, 0, 0]);
@@ -53408,6 +55988,7 @@ function MonsterHeroGame() {
     setGaveUp(false);
     setScore(0);
     setWaveHistory([]);
+    tacticsJoinCatchUpRef.current = 1;
     writePermaBuffs({
       autoHpRecovery: 0.1
     });
@@ -53425,15 +56006,20 @@ function MonsterHeroGame() {
     setFinalRewardSummary(null);
     clearSlotUniqueSelection(); // デバッグ戦でも前の周回の一時選択を持ち込まない
     setMainHero(hero);
-    setSlots(debugSlots);
+    applySlots(debugSlots);
     setOwnedUniques(uniques);
     setOwnedTeachings(teachings);
-    setMaxHp(debugMaxHp);
-    setHp(debugMaxHp);
+    // 新モードのライフは盤面(applySlots が合わせた合計)が正本。ここで上書きしない
+    if (!isTacticsMode(runMode)) {
+      setMaxHp(debugMaxHp);
+      setHp(debugMaxHp);
+    }
     setAtk(debugAtk);
     setDef(debugDef);
-    setMaxGuts(debugMaxGuts);
-    setGuts(Math.floor(debugMaxGuts * 0.5));
+    if (!isTacticsMode(runMode)) {
+      setMaxGuts(debugMaxGuts);
+      setGuts(Math.floor(debugMaxGuts * 0.5));
+    }
     // 間合い適性は編成全員分(勇者モンを含む)を距離ごとに合計する。
     // setDistAptPctの反映はこの関数の後になるため、initBattleへ計算済みの値を渡す
     const specialRuleDifficulty = specialRuleDifficultyForRun(extreme ? EXTREME_MODE.id : runMode, difficulty, extreme, extremeDifficulty);
@@ -53452,7 +56038,7 @@ function MonsterHeroGame() {
     nextSlots[slotIdx] = {
       ...m
     };
-    setSlots(nextSlots);
+    applySlots(nextSlots);
     // 置いた瞬間に、そのスロットの古い一時選択を捨てる。
     // 未選択に戻すことで、そのマスモンに保存された初期技がそのまま初期選択になる
     clearSlotUniqueSelection(slotIdx);
@@ -53506,15 +56092,22 @@ function MonsterHeroGame() {
         bGuts = maxGuts;
       const specialRuleDifficulty = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
       const joinBonus = key => applyAllyJoinBonus(bonus[key] || 0, specialRuleDifficulty, waveResult?.totalTurnCount);
-      const nMaxHp = maxHp + joinBonus('hp'),
-        nAtk = atk + joinBonus('atk'),
-        nDef = def + joinBonus('def'),
-        nMaxGuts = maxGuts + joinBonus('guts');
-      setMaxHp(nMaxHp);
-      setAtk(nAtk);
-      setDef(nDef);
-      setMaxGuts(nMaxGuts);
-      setHp(p => p + (nMaxHp - bHp));
+      // 新モードはライフを合算しない。合流した子は自分のライフを持って盤面へ加わるだけで、
+      // パーティのライフ(＝盤面の合計)は上の applySlots がすでに合わせてある。
+      // ここで足すと、新しい子のぶんが二重に入る
+      const tacticsJoin = isTacticsMode(runMode);
+      const nMaxHp = tacticsJoin ? tacticsTotalBaseMaxHp(tacticsUnitsRef.current) : maxHp + joinBonus('hp');
+      const nMaxGuts = tacticsJoin ? tacticsTotalBaseMaxGuts(tacticsUnitsRef.current) : maxGuts + joinBonus('guts');
+      const nAtk = atk + joinBonus('atk'),
+        nDef = def + joinBonus('def');
+      // 新モードはどれも盤面が正本。パーティの値は commitTacticsUnits が入れ直す
+      if (!tacticsJoin) {
+        setMaxHp(nMaxHp);
+        setHp(p => p + (nMaxHp - bHp));
+        setMaxGuts(nMaxGuts);
+        setAtk(nAtk);
+        setDef(nDef);
+      }
       // 合流ボーナスに間合い適性も加算する。合流したモンスターの4距離ぶんの補正値(%)を
       // 置いた距離に関係なくそのまま足す(零がMなら零距離の補正値が+25%される)
       const aptDelta = getMonsterAptPct(m, specialRuleDifficulty);
@@ -53524,7 +56117,8 @@ function MonsterHeroGame() {
           aptDelta[index] = value;
         });
       }
-      if (aptDelta.some(d => d !== 0)) setDistAptPct(prev => prev.map((v, i) => v + aptDelta[i]));
+      // 新モードは合算しない。距離適性もその子のものだけが効く
+      if (!tacticsJoin && aptDelta.some(d => d !== 0)) setDistAptPct(prev => prev.map((v, i) => v + aptDelta[i]));
       const aptLabel = aptDelta.map((d, i) => d !== 0 ? `${RANGE_LABELS[i]}${formatAptPct(d)}` : null).filter(Boolean).join(' ');
       const newAllyUnique = {
         ...m.unique,
@@ -53580,6 +56174,11 @@ function MonsterHeroGame() {
         advanceRunStage('QUICK_JOIN');
         setCurrentPickingMon(null);
         return;
+      }
+      // 新モードは合流すると敵も強くなる。何が起きたのか分かるように出す
+      if (tacticsJoin) {
+        const boost = tacticsEnemyPowerMultiplier(tacticsPowerRef.current.start, tacticsPowerRef.current.now);
+        if (boost > 1) addPopup(`敵も強くなった！ ×${boost.toFixed(2)}`, 'enemy', 'text-orange-300 font-black text-xl drop-shadow-md');
       }
       setUpgradePoints(prev => prev + (Math.floor(Math.random() * 4) + 1));
       setEffect({
@@ -53686,22 +56285,63 @@ function MonsterHeroGame() {
   const handleTraining = picks => {
     if (effect) return;
     const specialRuleDifficulty = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
-    const nextStats = resolveTrainingStats({
-      atk,
-      def,
-      hp: maxHp,
-      guts: maxGuts
-    }, picks, waveResult?.turn, specialRuleDifficulty);
-    const nMaxHp = nextStats.hp,
-      nAtk = nextStats.atk,
-      nDef = nextStats.def,
+    const tacticsMode = isTacticsMode(runMode);
+    // 新モードは picks が {slot,id} の並び。倒れた子を起こすときは {revive:スロット} が来る。
+    // ★起こすとそのWAVEは誰も強化できない(2026-09-19 ユーザーが決めた形。設計 §4.5)
+    const revivePick = tacticsMode && picks && !Array.isArray(picks) && Number.isInteger(picks.revive) ? picks.revive : null;
+    let nMaxHp = maxHp,
+      nAtk = atk,
+      nDef = def,
+      nMaxGuts = maxGuts;
+    // ★ガード段階は「いちばん硬い子」で決める(2026-09-20 ユーザー指示)。
+    //   盤面を書き換える前の値を控えておかないと、段階が上がったかどうかを比べられない
+    const prevGuardDef = tacticsMode ? guardLevelDef() : def;
+    let nGuardDef = prevGuardDef;
+    if (revivePick !== null) {
+      commitTacticsUnits(reviveTacticsAt(tacticsUnitsRef.current, revivePick));
+      nDef = tacticsPartyDef(tacticsUnitsRef.current);
+      nGuardDef = tacticsMaxDef(tacticsUnitsRef.current);
+    } else if (tacticsMode) {
+      // 1体ずつのトレーニング。選んだぶんをその子だけへ入れる
+      const entries = Array.isArray(picks) ? picks.filter(entry => entry && Number.isInteger(entry.slot)) : [];
+      let units = tacticsUnitsRef.current;
+      tacticsFilledSlots(units).forEach(slotIdx => {
+        const ids = entries.filter(entry => entry.slot === slotIdx).map(entry => entry.id);
+        if (!ids.length) return;
+        const unit = normalizeTacticsUnit(units[slotIdx]);
+        const after = resolveTrainingStats({
+          atk: unit.atk,
+          def: unit.def,
+          hp: unit.baseMaxHp,
+          guts: unit.baseMaxGuts
+        }, ids, waveResult?.turn, specialRuleDifficulty);
+        units = applyTacticsTraining(units, slotIdx, after, getPermaBuff('muaHpPct'), getPermaBuff('muaGutsPct'));
+      });
+      commitTacticsUnits(units);
+      nDef = tacticsPartyDef(units);
+      nAtk = tacticsPartyAtk(units);
+      nGuardDef = tacticsMaxDef(units);
+      nMaxHp = tacticsTotalBaseMaxHp(units);
+      nMaxGuts = tacticsTotalBaseMaxGuts(units);
+    } else {
+      const nextStats = resolveTrainingStats({
+        atk,
+        def,
+        hp: maxHp,
+        guts: maxGuts
+      }, picks, waveResult?.turn, specialRuleDifficulty);
+      nMaxHp = nextStats.hp;
+      nAtk = nextStats.atk;
+      nDef = nextStats.def;
       nMaxGuts = nextStats.guts;
-    setMaxHp(nMaxHp);
-    setAtk(nAtk);
-    setDef(nDef);
-    setMaxGuts(nMaxGuts);
-    const nGrdL = computeGuardLevel(nDef);
-    const currentGuardLevel = computeGuardLevel(def);
+      setMaxHp(nMaxHp);
+      setMaxGuts(nMaxGuts);
+      setAtk(nAtk);
+      setDef(nDef);
+      nGuardDef = nDef;
+    }
+    const nGrdL = computeGuardLevel(nGuardDef);
+    const currentGuardLevel = computeGuardLevel(prevGuardDef);
     const guardLevelUp = nGrdL > currentGuardLevel;
     const guardCountUp = guardLevelUp && guardCardCount(nGrdL) > guardCardCount(currentGuardLevel);
     const guardName = GUARD_EVOLUTION[nGrdL].name;
@@ -53917,14 +56557,25 @@ function MonsterHeroGame() {
   useEffect(() => {
     gutsRecoveryLockRef.current = false;
   });
-  const canRecoverGutsWithPoint = upgradePoints >= GUTS_RECOVERY_POINT_COST && guts < effectiveMaxGuts;
+  // ★新モードは合計で「満タンか」を見ない(2026-09-20 ユーザー指示)。配るのは立っている子だけ
+  //   (recoverTacticsGuts が倒れた子を弾く)なのに、押せるかを合計で見ていたため、
+  //   立っている子が全員満タンでもボタンが押せてポイントだけ減っていた。
+  //   倒れた子を合計から外しても、1体ずつと合計で切り捨ての差が出るぶんは残るので、
+  //   判定そのものを tacticsHasGutsRoom(1体ずつ)へ移す
+  const canRecoverGutsWithPoint = upgradePoints >= GUTS_RECOVERY_POINT_COST && (isTacticsMode(runMode) ? tacticsHasGutsRoom(tacticsUnits) : guts < effectiveMaxGuts);
   const recoverGutsWithPoint = () => {
     if (gutsRecoveryLockRef.current) return;
     if (!canRecoverGutsWithPoint) return;
-    const next = Math.min(effectiveMaxGuts, guts + GUTS_RECOVERY_AMOUNT);
-    if (next <= guts) return;
-    gutsRecoveryLockRef.current = true;
-    setGuts(next);
+    if (isTacticsMode(runMode)) {
+      gutsRecoveryLockRef.current = true;
+      // 新モードは立っている子へ配る(合計だけ増やすと、払える子が増えない)
+      gainGuts(GUTS_RECOVERY_AMOUNT);
+    } else {
+      const next = Math.min(effectiveMaxGuts, guts + GUTS_RECOVERY_AMOUNT);
+      if (next <= guts) return;
+      gutsRecoveryLockRef.current = true;
+      setGuts(next);
+    }
     setUpgradePoints(p => Math.max(0, p - GUTS_RECOVERY_POINT_COST));
     Audio_.se.heal();
   };
@@ -54365,7 +57016,11 @@ function MonsterHeroGame() {
       className: "text-[10px] text-pink-400 uppercase font-bold"
     }, "\u5408\u6D41\u30DC\u30FC\u30CA\u30B9"), /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] text-slate-500 font-bold"
-    }, "\u4F9B\u30E2\u30F3\u3068\u3057\u3066\u5408\u6D41\u3057\u305F\u3068\u304D"), /*#__PURE__*/React.createElement("div", {
+    }, "\u4F9B\u30E2\u30F3\u3068\u3057\u3066\u5408\u6D41\u3057\u305F\u3068\u304D"), isTacticsMode(runMode) ? /*#__PURE__*/React.createElement("div", {
+      className: "text-[10px] text-white font-bold mt-1"
+    }, "\u7D20\u306E\u30B9\u30C6\u30FC\u30BF\u30B9\u304C\u305D\u306E\u307E\u307E\u5165\u308A\u307E\u3059", /*#__PURE__*/React.createElement("span", {
+      className: "block text-[9px] font-bold text-cyan-300"
+    }, "\u3042\u3068\u304B\u3089\u5165\u308B\u307B\u3069\u3001\u5148\u306B\u80B2\u3063\u305F\u5B50\u306B\u8FFD\u3044\u3064\u304F\u88DC\u6B63\u304C\u304B\u304B\u308A\u307E\u3059")) : /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] text-white font-bold mt-1"
     }, joinBonus || 'なし'), aptBonus && /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] text-cyan-300 font-bold mt-0.5"
@@ -55716,7 +58371,11 @@ function MonsterHeroGame() {
   };
   // そのモード・難易度の端末記録。画面のあちこちで if を並べないための小さな入口。
   // 保存先はモードごとに分かれている(mh_ / mh_quick_ / mh_pro_)
-  const modeRecordFor = (mode, diff) => isQuickMode(mode) ? {
+  const modeRecordFor = (mode, diff) => isTacticsMode(mode) ? {
+    score: tacticsRecordsOf(mode).hs[diff] || 0,
+    wave: tacticsRecordsOf(mode).waves[diff] || 0,
+    clears: tacticsRecordsOf(mode).clears[diff] || 0
+  } : isQuickMode(mode) ? {
     score: quickHighScores[diff] || 0,
     wave: quickHighestWaves[diff] || 0,
     clears: quickClearCounts[diff] || 0
@@ -55734,22 +58393,24 @@ function MonsterHeroGame() {
   // 種族チャレンジのランキング。難易度カードから開いたときは、その種族と難易度を最初に選んでおく
   const openSpeciesChallengeRecords = async (backTo, {
     speciesId = null,
-    difficultyId = null
+    difficultyId = null,
+    mode = BATTLE_MODE_SPECIES_CHALLENGE
   } = {}) => {
-    await loadSpeciesChallengeProgress();
+    await loadSpeciesChallengeProgress(mode);
     addAssistantBond('ranking');
-    setScoreRankingMode(BATTLE_MODE_SPECIES_CHALLENGE);
+    setScoreRankingMode(mode);
     setScoreRankingBack(backTo);
     // 種族を指定せずに開いたとき(モード選択の「🏆 種族チャレンジのランキング」)は、
     // 他モードと同じく種族を問わない「全種族」の全国ランキングから見せる。
     // 難易度カードから種族を指定して開いたときは、その種族のランキングを最初に出す
-    const speciesTab = speciesChallengeLineages().some(lineage => lineage.id === speciesId) ? speciesId : SPECIES_CHALLENGE_PUBLIC_RELEASE ? SPECIES_RANK_TAB_ALL : SPECIES_RANK_TAB_SELF_BEST;
+    const ranked = modeHasRanking(mode);
+    const speciesTab = speciesChallengeLineages().some(lineage => lineage.id === speciesId) ? speciesId : ranked ? SPECIES_RANK_TAB_ALL : SPECIES_RANK_TAB_SELF_BEST;
     const viewDiff = SPECIES_CHALLENGE_DIFFICULTY_IDS.includes(difficultyId) ? difficultyId : SPECIES_CHALLENGE_DIFFICULTY_IDS[0];
     setSpeciesRankFilter(speciesTab);
     setRankingViewDiff(viewDiff);
     // 公開後だけ全国ランキングを取りにいく。公開前は自分の記録だけなので通信しない
-    if (SPECIES_CHALLENGE_PUBLIC_RELEASE && speciesTab !== SPECIES_RANK_TAB_SELF_BEST) {
-      loadRankings(rankingDifficultyKey(speciesTab === SPECIES_RANK_TAB_ALL ? speciesChallengeAllRankingDifficulty(viewDiff) : rankingDifficultyForMode(BATTLE_MODE_SPECIES_CHALLENGE, viewDiff, speciesTab)));
+    if (ranked && speciesTab !== SPECIES_RANK_TAB_SELF_BEST) {
+      loadRankings(rankingDifficultyKey(speciesTab === SPECIES_RANK_TAB_ALL ? speciesChallengeAllRankingDifficulty(viewDiff, mode) : rankingDifficultyForMode(mode, viewDiff, speciesTab)));
     }
     setGameState('BATTLE_SCORE_RANKING');
   };
@@ -55778,34 +58439,38 @@ function MonsterHeroGame() {
   // チャレンジは従来どおりの難易度キー、プロは Pro を付けたキーを読み書きする
   const renderScoreRankingBody = (mode = BATTLE_MODE_CHALLENGE) => {
     const isExtreme = mode === EXTREME_MODE.id;
-    const keyOf = diff => rankingDifficultyKey(rankingDifficultyForMode(mode, diff));
+    // 極限の段階は、どのモードのランキングから引いても極限のキー(ExtremeGOD など)を使う。
+    // チャレンジのタブへ極限を並べたので、ここを mode だけで決めると
+    // 極限を選んでいるのに normalizeBattleDifficulty が Normal へ落としてしまう
+    // ★タクティクスバトルの極限は「そのモードの中の難易度」なので、Extreme* ではなく
+    //   Tactics* の行を読む(2026-09-20)。ここを直さないと、タクティクスの極限を開いたときに
+    //   極限チャレンジの記録が並んでしまう
+    const keyOf = diff => rankingDifficultyKey(isExtremeDifficultyId(diff) && !isTacticsMode(mode) ? rankingDifficultyForMode(EXTREME_MODE.id, diff) : rankingDifficultyForMode(mode, diff));
+    // タブに並べる難易度。チャレンジは通常9段階＋極限の段階、極限の入口からは極限だけ、
+    // それ以外(プロ)は通常9段階のまま
+    const rankingTabs = isExtreme ? PUBLIC_EXTREME_DIFFICULTIES.map(setting => [setting.id, setting]) : isTacticsMode(mode) ? TACTICS_DIFFICULTY_IDS.map(id => [id, DIFFICULTY_SETTINGS[id] || EXTREME_DIFFICULTIES.find(setting => setting.id === id) || EXTREME_SETTING]) : [...Object.entries(DIFFICULTY_SETTINGS), ...(mode === BATTLE_MODE_CHALLENGE ? PUBLIC_EXTREME_DIFFICULTIES.map(setting => [setting.id, setting]) : [])];
     const viewKey = keyOf(rankingViewDiff);
     const rows = localRankings[viewKey] || [],
       status = rankingStatus(`score:${viewKey}`);
-    return /*#__PURE__*/React.createElement(React.Fragment, null, isExtreme ? /*#__PURE__*/React.createElement("div", {
+    return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+      "data-score-ranking-tabs": true,
       className: "flex gap-1.5 overflow-x-auto pb-2 shrink-0"
-    }, PUBLIC_EXTREME_DIFFICULTIES.map(setting => /*#__PURE__*/React.createElement("button", {
-      key: setting.id,
-      onClick: () => {
-        setRankingViewDiff(setting.id);
-        loadRankings(keyOf(setting.id));
-      },
-      className: `px-3 min-h-[30px] rounded-full text-[9px] font-black shrink-0 active:scale-95 ${rankingViewDiff === setting.id ? 'ring-2 ring-white' : 'border border-white/10'}`,
-      style: {
-        backgroundColor: EXTREME_MODE.color,
-        color: '#0f172a'
-      }
-    }, setting.label))) : /*#__PURE__*/React.createElement("div", {
-      className: "flex gap-1.5 overflow-x-auto pb-2 shrink-0"
-    }, Object.entries(DIFFICULTY_SETTINGS).map(([d, st]) => /*#__PURE__*/React.createElement("button", {
-      key: d,
-      onClick: () => {
-        setRankingViewDiff(d);
-        loadRankings(keyOf(d));
-      },
-      className: `px-3 min-h-[30px] rounded-full text-[9px] font-black shrink-0 active:scale-95 ${rankingViewDiff === d ? 'ring-2 ring-white' : 'border border-white/10'}`,
-      style: difficultyStyle(st, rankingViewDiff === d)
-    }, st.label))), /*#__PURE__*/React.createElement("div", {
+    }, rankingTabs.map(([d, st]) => {
+      const on = rankingViewDiff === d;
+      const extremeTab = isExtremeDifficultyId(d);
+      return /*#__PURE__*/React.createElement("button", {
+        key: d,
+        onClick: () => {
+          setRankingViewDiff(d);
+          loadRankings(keyOf(d));
+        },
+        className: `px-3 min-h-[30px] rounded-full text-[9px] font-black shrink-0 active:scale-95 ${on ? 'ring-2 ring-white' : 'border border-white/10'}`,
+        style: extremeTab ? {
+          backgroundColor: extremeDifficultyTheme(d).accent,
+          color: '#0f172a'
+        } : difficultyStyle(st, on)
+      }, st.label);
+    })), /*#__PURE__*/React.createElement("div", {
       className: "flex-1 overflow-y-auto mh-scroll space-y-1.5"
     }, status.refreshing && /*#__PURE__*/React.createElement("div", {
       className: "text-center text-[9px] text-indigo-300"
@@ -55818,7 +58483,8 @@ function MonsterHeroGame() {
   // 種族チャレンジの記録。一般公開まで全国ランキングへ送らないので、同じ画面の作り
   // (難易度タブ + 一覧)のまま、自分の種族×難易度の記録を出す。
   // 公開後は modeHasRanking が true になり、通常のスコアランキングへ切り替わる
-  const renderSpeciesChallengeRecordBody = () => {
+  const renderSpeciesChallengeRecordBody = (mode = BATTLE_MODE_SPECIES_CHALLENGE) => {
+    const ranked = modeHasRanking(mode);
     const diffId = SPECIES_CHALLENGE_DIFFICULTY_IDS.includes(rankingViewDiff) ? rankingViewDiff : SPECIES_CHALLENGE_DIFFICULTY_IDS[0];
     const settingOf = id => DIFFICULTY_SETTINGS[id] || EXTREME_DIFFICULTIES.find(setting => setting.id === id) || EXTREME_SETTING;
     const lineages = speciesChallengeLineages();
@@ -55858,7 +58524,7 @@ function MonsterHeroGame() {
     // 「自己ベスト」タブの中身。自分の種族別ベストをその難易度で並べて比べる(通信しない)
     const rows = lineages.map(lineage => ({
       lineage,
-      record: speciesChallengeRecord(speciesChallengeProgress, lineage.id, diffId)
+      record: speciesChallengeRecord(speciesChallengeProgressOf(mode), lineage.id, diffId)
     })).filter(row => row.record.clears > 0).sort((a, b) => b.record.bestScore - a.record.bestScore || b.record.clears - a.record.clears).map((row, index) => recordRow(row.lineage.id, lineageIcon(row.lineage), `${row.lineage.name}種`, `クリア ${row.record.clears}回${row.record.bestTurns !== null ? ` ／ 最短 ${row.record.bestTurns}T` : ''}`, row.record.bestScore, index + 1));
     const emptyText = /*#__PURE__*/React.createElement(React.Fragment, null, settingOf(diffId).label, "\u3092\u30AF\u30EA\u30A2\u3057\u305F\u7A2E\u65CF\u306F\u307E\u3060\u3042\u308A\u307E\u305B\u3093\u3002", /*#__PURE__*/React.createElement("br", null), "\u30AF\u30EA\u30A2\u3059\u308B\u3068\u3001\u7A2E\u65CF\u3054\u3068\u306B\u81EA\u5DF1\u30D9\u30B9\u30C8\u304C\u6B8B\u308A\u307E\u3059\u3002");
     // 取得も表示も既存のスコアランキングと同じ仕組みで、難易度キーだけを差し替える。
@@ -55867,8 +58533,8 @@ function MonsterHeroGame() {
     // どちらも rankings テーブルはそのままで、新しい行も列も作らない
     // タブと難易度から取りにいくキーを1か所で決める。タブを押したときと難易度を押したときで
     // 別々に組み立てると、片方だけ「全種族」に対応し忘れる
-    const nationalKeyFor = (tabId, difficultyId) => !SPECIES_CHALLENGE_PUBLIC_RELEASE || tabId === SPECIES_RANK_TAB_SELF_BEST ? null : rankingDifficultyKey(tabId === SPECIES_RANK_TAB_ALL ? speciesChallengeAllRankingDifficulty(difficultyId) : rankingDifficultyForMode(BATTLE_MODE_SPECIES_CHALLENGE, difficultyId, tabId));
-    const nationalMode = SPECIES_CHALLENGE_PUBLIC_RELEASE && speciesFilter !== SPECIES_RANK_TAB_SELF_BEST;
+    const nationalKeyFor = (tabId, difficultyId) => !ranked || tabId === SPECIES_RANK_TAB_SELF_BEST ? null : rankingDifficultyKey(tabId === SPECIES_RANK_TAB_ALL ? speciesChallengeAllRankingDifficulty(difficultyId, mode) : rankingDifficultyForMode(mode, difficultyId, tabId));
+    const nationalMode = ranked && speciesFilter !== SPECIES_RANK_TAB_SELF_BEST;
     const nationalKey = nationalKeyFor(speciesFilter, diffId);
     const nationalRows = nationalKey ? localRankings[nationalKey] || [] : [];
     const nationalStatus = rankingStatus(`score:${nationalKey}`);
@@ -55919,9 +58585,9 @@ function MonsterHeroGame() {
       className: "text-center text-slate-400 py-8"
     }, "Loading...") : nationalStatus.error && !nationalStatus.fetched ? rankingRetryButton(() => loadRankings(nationalKey, false, true)) : rankingEmptyText)) : rows.length === 0 ? /*#__PURE__*/React.createElement("p", {
       className: "rounded-2xl border border-white/10 bg-slate-900 p-6 text-center text-[10px] leading-relaxed text-slate-400"
-    }, emptyText) : rows, !SPECIES_CHALLENGE_PUBLIC_RELEASE && /*#__PURE__*/React.createElement("p", {
+    }, emptyText) : rows, !ranked && /*#__PURE__*/React.createElement("p", {
       className: "rounded-xl border border-amber-400/30 bg-amber-950/25 p-3 text-center text-[9px] leading-relaxed text-amber-200"
-    }, "\u3044\u307E\u306F\u81EA\u5206\u306E\u8A18\u9332\u3060\u3051\u3092\u8868\u793A\u3057\u3066\u3044\u307E\u3059\u3002\u5168\u56FD\u30E9\u30F3\u30AD\u30F3\u30B0\u306F\u30E2\u30FC\u30C9\u306E\u516C\u958B\u5F8C\u306B\u59CB\u307E\u308A\u307E\u3059\u3002"), SPECIES_CHALLENGE_PUBLIC_RELEASE && !nationalMode && /*#__PURE__*/React.createElement("p", {
+    }, "\u3044\u307E\u306F\u81EA\u5206\u306E\u8A18\u9332\u3060\u3051\u3092\u8868\u793A\u3057\u3066\u3044\u307E\u3059\u3002\u5168\u56FD\u30E9\u30F3\u30AD\u30F3\u30B0\u306F\u30E2\u30FC\u30C9\u306E\u516C\u958B\u5F8C\u306B\u59CB\u307E\u308A\u307E\u3059\u3002"), ranked && !nationalMode && /*#__PURE__*/React.createElement("p", {
       "data-species-self-best-note": true,
       className: "rounded-xl border border-white/10 bg-slate-900/60 p-3 text-center text-[9px] leading-relaxed text-slate-400"
     }, "\u3053\u3053\u306F\u81EA\u5206\u306E\u7A2E\u65CF\u5225\u30D9\u30B9\u30C8\u306E\u6BD4\u8F03\u3067\u3059\u3002\u5168\u56FD\u30E9\u30F3\u30AD\u30F3\u30B0\u306F\u7A2E\u65CF\u306E\u30BF\u30D6\u304B\u3089\u898B\u3089\u308C\u307E\u3059\u3002")));
@@ -56165,10 +58831,7 @@ function MonsterHeroGame() {
       homePastureMasumons: homePastureMasumons,
       masuMons: masuMons,
       missions: missions,
-      onOpenBattle: () => {
-        setModeSelectTab('mode');
-        setGameState('BATTLE_MODE_SELECT');
-      },
+      onOpenBattle: openBattleSystemSelect,
       onOpenManagement: () => {
         addAssistantBond('management');
         setManagementTab('monster');
@@ -57705,9 +60368,110 @@ function MonsterHeroGame() {
         }
       },
       className: `min-h-[38px] rounded-xl text-[10px] font-black border-2 active:scale-95 ${rankingKind === t.k ? 'bg-indigo-600 border-indigo-300' : 'bg-slate-900 border-white/10 text-slate-400'}`
-    }, t.label))), rankingKind === 'score' && renderScoreRankingBody(BATTLE_MODE_CHALLENGE), rankingKind === 'breeder' && renderBreederRankingBody(), rankingKind === 'bond' && renderBondRankingBody()))), gameState === 'BATTLE_MODE_SELECT' && (() => {
+    }, t.label))), rankingKind === 'score' && renderScoreRankingBody(BATTLE_MODE_CHALLENGE), rankingKind === 'breeder' && renderBreederRankingBody(), rankingKind === 'bond' && renderBondRankingBody()))), gameState === 'BATTLE_SYSTEM_SELECT' && (() => {
+      const systems = visibleBattleSystems({
+        debugBattle
+      });
+      return /*#__PURE__*/React.createElement("div", {
+        "data-mh-screen": true,
+        className: "flex-1 flex flex-col h-full min-h-0 px-4",
+        style: {
+          paddingTop: 'calc(.35rem + env(safe-area-inset-top))',
+          paddingBottom: 'calc(.35rem + env(safe-area-inset-bottom))'
+        }
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex items-center gap-1 mb-1 shrink-0"
+      }, /*#__PURE__*/React.createElement("button", {
+        "aria-label": "\u623B\u308B",
+        onClick: returnToHome,
+        className: "p-3 text-slate-400 active:scale-90 disabled:opacity-25"
+      }, /*#__PURE__*/React.createElement(ArrowLeft, null))), /*#__PURE__*/React.createElement("div", {
+        className: "w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll"
+      }, /*#__PURE__*/React.createElement("h2", {
+        className: "text-center text-lg font-black leading-tight shrink-0 mt-0.5"
+      }, "\u30E2\u30F3\u30D2\u30ED\u30D0\u30C8\u30EB"), /*#__PURE__*/React.createElement("p", {
+        className: "text-center text-[10px] text-slate-400 mt-0.5 mb-1.5 shrink-0"
+      }, "\u3069\u306E\u30D0\u30C8\u30EB\u3067\u904A\u3076\u304B\u3092\u9078\u3073\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
+        "data-battle-systems": systems.length,
+        className: "flex flex-col gap-0.5 shrink-0"
+      }, systems.map(sys => {
+        // ★まだ遊べないものは、枠だけ出して押せなくする(2026-09-20 ユーザー指示)。
+        //   モンヒロビートの「準備中」と同じ扱い。デバッグからは今までどおり遊べる
+        const soon = battleSystemComingSoon(sys.id, {
+          debugBattle
+        });
+        // ★β版は「中のモードがまだ全部そろっていない」。遊べるけれど、
+        //   入口でそのことが分かるようにしておく(2026-09-20 ユーザー指示)
+        const beta = battleSystemBeta(sys.id, {
+          debugBattle
+        });
+        // ★カードは「選ぶ」と「詳しいルール」の2つのボタンでできている。
+        //   準備中でも中身は読めるようにしておく(何が来るのか分かるように)
+        return /*#__PURE__*/React.createElement("div", {
+          key: sys.id,
+          "data-battle-system-card": sys.id,
+          className: `w-full rounded-2xl border-2 overflow-hidden ${soon ? 'bg-slate-900/40' : 'bg-slate-900/80'}`,
+          style: {
+            borderColor: soon ? 'rgba(148,163,184,.45)' : sys.color
+          }
+        }, /*#__PURE__*/React.createElement("button", {
+          "data-battle-system": sys.id,
+          "data-battle-system-soon": soon ? '1' : undefined,
+          disabled: soon,
+          onClick: () => openBattleSystem(sys.id),
+          "aria-label": soon ? `${sys.label}（準備中）` : sys.label,
+          className: `w-full px-3 pt-2 pb-1 text-left transition-transform ${soon ? 'opacity-60' : 'active:scale-[.98]'}`
+        }, /*#__PURE__*/React.createElement("div", {
+          className: "flex items-center gap-2"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "text-lg leading-none"
+        }, sys.emoji), /*#__PURE__*/React.createElement("span", {
+          className: "text-[15px] font-black leading-tight",
+          style: {
+            color: soon ? '#94a3b8' : sys.color
+          }
+        }, sys.label), soon && /*#__PURE__*/React.createElement("span", {
+          className: "ml-auto text-[9px] font-black text-slate-300 border border-slate-400/60 rounded px-1.5 py-0.5"
+        }, "\u6E96\u5099\u4E2D"), beta && /*#__PURE__*/React.createElement("span", {
+          "data-battle-system-beta": true,
+          className: "ml-auto text-[9px] font-black text-amber-200 border border-amber-400/60 rounded px-1.5 py-0.5"
+        }, "\u03B2\u7248"), !soon && !beta && sys.id === BATTLE_SYSTEM_TACTICS && !TACTICS_MODE_PUBLIC_RELEASE && /*#__PURE__*/React.createElement("span", {
+          className: "ml-auto text-[8px] font-black text-amber-300 border border-amber-400/60 rounded px-1 py-0.5"
+        }, "DEBUG")), /*#__PURE__*/React.createElement("div", {
+          className: "text-[11px] text-slate-200 font-bold leading-snug mt-1"
+        }, sys.tagline), /*#__PURE__*/React.createElement("ul", {
+          className: "mt-1 space-y-0.5"
+        }, sys.highlights.map(([icon, text]) => /*#__PURE__*/React.createElement("li", {
+          key: text,
+          className: "flex items-center gap-1.5 rounded-lg bg-black/35 px-2 py-px text-[10px] font-black text-slate-200"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "shrink-0"
+        }, icon), /*#__PURE__*/React.createElement("span", {
+          className: "min-w-0 flex-1 leading-tight"
+        }, text)))), /*#__PURE__*/React.createElement("div", {
+          className: "text-[9px] text-slate-400 leading-snug mt-1"
+        }, soon ? 'いま準備しています。遊べるようになったらお知らせします' : beta ? 'いまはタクティクスプロだけ遊べます。ほかのモードは準備中です' : sys.note)), /*#__PURE__*/React.createElement("button", {
+          "data-battle-system-info": sys.id,
+          onClick: () => setModeInfoId(sys.id),
+          "aria-label": `${sys.label}の詳しいルール`,
+          className: "w-full min-h-[28px] border-t border-white/10 bg-black/30 text-[10px] font-black text-slate-300 active:scale-[.98] flex items-center justify-center gap-1"
+        }, "\u8A73\u3057\u3044\u30EB\u30FC\u30EB", /*#__PURE__*/React.createElement(ChevronRight, {
+          size: 12,
+          className: "shrink-0"
+        })));
+      })), /*#__PURE__*/React.createElement("div", {
+        className: "mt-1 shrink-0"
+      }, /*#__PURE__*/React.createElement(AssistantBubble, {
+        scene: "battleSystemSelect",
+        compact: true
+      }))));
+    })(), gameState === 'BATTLE_MODE_SELECT' && (() => {
       // 極限チャレンジは未解放でもカードは出す(押せるかどうかだけを切り替える)
-      const modes = [...BATTLE_MODES, EXTREME_MODE, ...(SPECIES_CHALLENGE_PUBLIC_RELEASE || debugBattle ? [SPECIES_CHALLENGE_MODE] : [])];
+      // 極限チャレンジはチャレンジの「極限」タブへ入れ込んだので、モードのカードには並べない
+      // (2026-09-19 ユーザー指示)。EXTREME_MODE の定義そのものは説明・ランキングが参照するので残す
+      const modes = battleSystemModes(battleSystem, {
+        debugBattle
+      }).map(id => battleModeInfo(id));
       const current = modes.find(m => m.id === battleMode) || modes[0];
       const selectedIndex = Math.max(0, modes.findIndex(m => m.id === current.id));
       // 端で止まらず「ぐるぐる回る」ようにするため、同じ並びを3回くり返して置く。
@@ -57765,7 +60529,7 @@ function MonsterHeroGame() {
             setModeSelectTab('mode');
             return;
           }
-          returnToHome();
+          setGameState('BATTLE_SYSTEM_SELECT');
         },
         className: "p-3 text-slate-400 active:scale-90 disabled:opacity-25"
       }, /*#__PURE__*/React.createElement(ArrowLeft, {
@@ -57817,7 +60581,10 @@ function MonsterHeroGame() {
       }, loopModes.map((m, loopIndex) => {
         const active = m.id === current.id,
           isExtreme = m.id === EXTREME_MODE.id,
-          isSpecies = m.id === BATTLE_MODE_SPECIES_CHALLENGE,
+          isSpecies = isSpeciesChallengeMode(m.id),
+          modeSoon = battleModeComingSoon(m.id, {
+            debugBattle
+          }),
           extremeLocked = isExtreme && !extremeUnlocked && !debugBattle,
           speciesLocked = isSpecies && !speciesChallengeUnlocked && !debugBattle,
           rec = isExtreme ? {
@@ -57826,9 +60593,10 @@ function MonsterHeroGame() {
             clears: extremeClearCount
           } : modeRecordFor(m.id, safeDifficulty),
           ranked = !isExtreme && !isSpecies && modeHasRanking(m.id),
-          modeBestScore = ranked ? highestModeScore(isProMode(m.id) ? proHighScores : highScores, Object.keys(DIFFICULTY_SETTINGS)) : rec.score;
+          modeBestScore = ranked ? highestModeScore(isTacticsMode(m.id) ? tacticsRecordsOf(m.id).hs : isProMode(m.id) ? proHighScores : highScores, isTacticsMode(m.id) ? TACTICS_DIFFICULTY_IDS : Object.keys(DIFFICULTY_SETTINGS)) : rec.score;
         return /*#__PURE__*/React.createElement("article", {
           key: `${m.id}-${loopIndex}`,
+          "data-battle-mode": m.id,
           className: `snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2.5 h-[366px] overflow-hidden transition-all flex flex-col ${active ? 'scale-100 opacity-100' : 'scale-[.92] opacity-55'}`,
           style: {
             borderColor: active ? m.color : 'rgba(255,255,255,.12)',
@@ -57844,7 +60612,15 @@ function MonsterHeroGame() {
           }
         }, m.emoji, " ", m.label), /*#__PURE__*/React.createElement("p", {
           className: "text-center text-[9px] text-slate-300 leading-snug mt-0.5 min-h-[26px]"
-        }, m.tagline), /*#__PURE__*/React.createElement("div", {
+        }, m.tagline), modeSoon ? /*#__PURE__*/React.createElement("div", {
+          className: "mt-1.5 rounded-xl bg-black/45 px-2.5 py-1.5"
+        }, /*#__PURE__*/React.createElement("small", {
+          className: "block text-[8px] text-slate-400 font-black"
+        }, "\u6E96\u5099\u4E2D"), /*#__PURE__*/React.createElement("b", {
+          className: "block text-right text-base leading-tight text-slate-300"
+        }, "\u904A\u3079\u307E\u305B\u3093"), /*#__PURE__*/React.createElement("span", {
+          className: "block text-right text-[9px] text-amber-300"
+        }, "\u904A\u3079\u308B\u3088\u3046\u306B\u306A\u3063\u305F\u3089\u304A\u77E5\u3089\u305B\u3057\u307E\u3059")) : /*#__PURE__*/React.createElement("div", {
           className: "mt-1.5 rounded-xl bg-black/45 px-2.5 py-1.5"
         }, /*#__PURE__*/React.createElement("small", {
           className: "block text-[8px] text-slate-400 font-black"
@@ -57853,9 +60629,9 @@ function MonsterHeroGame() {
           style: {
             color: m.color
           }
-        }, isSpecies ? speciesLocked ? '🔒 未解放' : `${speciesChallengeTotalClearedCount(speciesChallengeProgress)} 組` : isExtreme ? extremeLocked ? '🔒 未解放' : `${modeBestScore.toLocaleString()} pt` : ranked ? `${modeBestScore.toLocaleString()} pt` : `WAVE ${rec.wave}`), /*#__PURE__*/React.createElement("span", {
+        }, isSpecies ? speciesLocked ? '🔒 未解放' : `${speciesChallengeTotalClearedCount(speciesChallengeProgressOf(m.id))} 組` : isExtreme ? extremeLocked ? '🔒 未解放' : `${modeBestScore.toLocaleString()} pt` : ranked ? `${modeBestScore.toLocaleString()} pt` : `WAVE ${rec.wave}`), /*#__PURE__*/React.createElement("span", {
           className: "block text-right text-[9px] text-amber-300"
-        }, isSpecies ? speciesLocked ? SPECIES_CHALLENGE_UNLOCK_TEXT : SPECIES_CHALLENGE_PUBLIC_RELEASE ? `全${speciesChallengeLineages().length * SPECIES_CHALLENGE_DIFFICULTY_IDS.length}組中` : '🧪 DEBUG・一般公開前' : isExtreme ? extremeLocked ? EXTREME_UNLOCK_TEXT : `クリア ${rec.clears}回` : ranked ? `最高到達 WAVE ${rec.wave}` : `クリア ${rec.clears}回`)), /*#__PURE__*/React.createElement("ul", {
+        }, isSpecies ? speciesLocked ? SPECIES_CHALLENGE_UNLOCK_TEXT : modeHasRanking(m.id) ? `全${speciesChallengeLineages().length * SPECIES_CHALLENGE_DIFFICULTY_IDS.length}組中` : '🧪 DEBUG・一般公開前' : isExtreme ? extremeLocked ? EXTREME_UNLOCK_TEXT : `クリア ${rec.clears}回` : ranked ? `最高到達 WAVE ${rec.wave}` : `クリア ${rec.clears}回`)), /*#__PURE__*/React.createElement("ul", {
           className: "mt-1.5 space-y-0.5"
         }, m.highlights.map(([icon, text]) => /*#__PURE__*/React.createElement("li", {
           key: text,
@@ -57871,13 +60647,15 @@ function MonsterHeroGame() {
           onClick: () => setModeInfoId(m.id),
           className: "min-h-[38px] rounded-xl bg-slate-700 font-black text-xs disabled:opacity-50"
         }, "\u3053\u306E\u30E2\u30FC\u30C9\u306E\u8AAC\u660E"), /*#__PURE__*/React.createElement("button", {
-          disabled: extremeLocked || speciesLocked || !!battleTutorial && m.id !== BATTLE_MODE_CHALLENGE,
+          "data-battle-mode-soon": modeSoon ? '1' : undefined,
+          disabled: extremeLocked || speciesLocked || modeSoon || !!battleTutorial && m.id !== BATTLE_MODE_CHALLENGE,
           onClick: () => {
             setBattleMode(m.id);
             if (isSpecies) {
               openSpeciesChallengeSelection({
                 saveProgress: !debugBattle,
-                fromDebug: debugBattle
+                fromDebug: debugBattle,
+                mode: m.id
               });
               return;
             }
@@ -57888,7 +60666,7 @@ function MonsterHeroGame() {
             backgroundColor: m.color,
             color: '#0f172a'
           }
-        }, extremeLocked || speciesLocked ? 'まだ挑戦できません' : isSpecies ? '種族を選ぶ' : '難易度を選ぶ'), isExtreme && /*#__PURE__*/React.createElement("button", {
+        }, modeSoon ? '準備中' : extremeLocked || speciesLocked ? 'まだ挑戦できません' : isSpecies ? '種族を選ぶ' : '難易度を選ぶ'), isExtreme && /*#__PURE__*/React.createElement("button", {
           disabled: extremeLocked || !!battleTutorial,
           onClick: () => openModeScoreRanking(m.id, EXTREME_SETTING.id, 'BATTLE_MODE_SELECT'),
           className: "min-h-[40px] rounded-xl bg-slate-800 border border-fuchsia-400/40 text-fuchsia-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"
@@ -57896,10 +60674,12 @@ function MonsterHeroGame() {
           className: "flex-1 text-center whitespace-nowrap"
         }, "\uD83C\uDFC6 ", m.label, "\u306E\u30E9\u30F3\u30AD\u30F3\u30B0"), /*#__PURE__*/React.createElement(ChevronRight, {
           size: 14
-        })), isSpecies && /*#__PURE__*/React.createElement("button", {
+        })), isSpecies && !modeSoon && /*#__PURE__*/React.createElement("button", {
           "data-species-record-link": true,
           disabled: speciesLocked || !!battleTutorial,
-          onClick: () => openSpeciesChallengeRecords('BATTLE_MODE_SELECT'),
+          onClick: () => openSpeciesChallengeRecords('BATTLE_MODE_SELECT', {
+            mode: m.id
+          }),
           className: "min-h-[40px] rounded-xl bg-slate-800 border border-cyan-400/40 text-cyan-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"
         }, /*#__PURE__*/React.createElement("span", {
           className: "flex-1 text-center whitespace-nowrap"
@@ -57981,12 +60761,35 @@ function MonsterHeroGame() {
       }, /*#__PURE__*/React.createElement(ArrowLeft, {
         size: 20
       })), /*#__PURE__*/React.createElement("h2", {
-        className: "text-xl font-black italic text-fuchsia-300 uppercase tracking-widest truncate"
-      }, "\u6975\u9650\u30C1\u30E3\u30EC\u30F3\u30B8")), /*#__PURE__*/React.createElement("div", {
+        className: "flex-1 min-w-0 text-xl font-black italic text-fuchsia-300 uppercase tracking-widest truncate"
+      }, "\u6975\u9650\u30C1\u30E3\u30EC\u30F3\u30B8"), /*#__PURE__*/React.createElement("button", {
+        "data-extreme-mode-info": true,
+        "aria-label": "\u6975\u9650\u30C1\u30E3\u30EC\u30F3\u30B8\u306E\u8AAC\u660E\u3092\u958B\u304F",
+        onClick: () => setModeInfoId(EXTREME_MODE.id),
+        className: "shrink-0 min-h-[38px] px-3 rounded-xl bg-slate-800 border border-fuchsia-400/40 text-fuchsia-200 font-black text-[11px] active:scale-95"
+      }, "\u3053\u306E\u30E2\u30FC\u30C9\u306E\u8AAC\u660E")), /*#__PURE__*/React.createElement("div", {
         className: "w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1"
       }, /*#__PURE__*/React.createElement("div", {
         className: "flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll"
       }, /*#__PURE__*/React.createElement("div", {
+        "data-difficulty-tabs": true,
+        className: "flex gap-1.5 w-full shrink-0 mb-1"
+      }, [[DIFFICULTY_TAB_NORMAL, '通常'], [DIFFICULTY_TAB_EXTREME, '極限']].map(([tabId, tabLabel]) => {
+        const on = tabId === DIFFICULTY_TAB_EXTREME;
+        return /*#__PURE__*/React.createElement("button", {
+          key: tabId,
+          "aria-pressed": on,
+          onClick: () => {
+            if (on) return;
+            battleEntryStateRef.current = 'BATTLE_DIFFICULTY_SELECT';
+            setBattleMode(BATTLE_MODE_CHALLENGE);
+            setGameState('BATTLE_DIFFICULTY_SELECT');
+          },
+          className: `flex-1 min-h-[38px] rounded-2xl font-black text-[12px] border-2 active:scale-95 ${on ? 'bg-fuchsia-700 border-fuchsia-300 text-white' : 'bg-slate-900 border-slate-700 text-slate-400'}`
+        }, tabLabel, /*#__PURE__*/React.createElement("span", {
+          className: "ml-1 text-[9px] opacity-75"
+        }, on ? difficulties.length : Object.keys(DIFFICULTY_SETTINGS).length));
+      })), /*#__PURE__*/React.createElement("div", {
         className: "text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0"
       }, "\u5DE6\u53F3\u306B\u30B9\u30EF\u30A4\u30D7\u3057\u3066\u96E3\u6613\u5EA6\u3092\u9078\u629E"), /*#__PURE__*/React.createElement("div", {
         className: "relative shrink-0"
@@ -58164,10 +60967,31 @@ function MonsterHeroGame() {
         className: "shrink-0 pt-1.5 pb-1 text-center text-[9px] text-slate-500"
       }, "\u30B9\u30B3\u30A2\u306F\u6975\u9650\u30C1\u30E3\u30EC\u30F3\u30B8\u5C02\u7528\u306E\u30E9\u30F3\u30AD\u30F3\u30B0\u3078\u8F09\u308A\u3001\u30C1\u30E3\u30EC\u30F3\u30B8\u306E\u8A18\u9332\u306F\u5909\u308F\u308A\u307E\u305B\u3093"))));
     })(), gameState === 'BATTLE_DIFFICULTY_SELECT' && (() => {
-      const species = battleMode === BATTLE_MODE_SPECIES_CHALLENGE,
+      const species = isSpeciesChallengeMode(battleMode),
         quick = isQuickMode(battleMode);
+      // ★タクティクスバトルも通常9＋極限5の14段階(2026-09-20 ユーザー指示
+      //   「通常/極限、種族とかはどっちのモードにもあるように」)。難易度の中身は
+      //   種族チャレンジとまったく同じ引き方で、極限は極限チャレンジの設定をそのまま使う
+      const tacticsDiff = isTacticsMode(battleMode);
       const speciesSetting = id => DIFFICULTY_SETTINGS[id] || EXTREME_DIFFICULTIES.find(setting => setting.id === id) || EXTREME_SETTING;
-      const difficulties = species ? SPECIES_CHALLENGE_DIFFICULTY_IDS.map(id => [id, speciesSetting(id)]) : Object.entries(quick ? QUICK_DIFFICULTY_SETTINGS : DIFFICULTY_SETTINGS);
+      const allDifficulties = species || tacticsDiff ? (species ? SPECIES_CHALLENGE_DIFFICULTY_IDS : TACTICS_DIFFICULTY_IDS).map(id => [id, speciesSetting(id)]) : Object.entries(quick ? QUICK_DIFFICULTY_SETTINGS : DIFFICULTY_SETTINGS);
+      // 難易度は「通常 / 極限」のタブで分ける(2026-09-19 ユーザー指示)。
+      // クイックは15段階、種族チャレンジは14段階あり、一続きに並べると探しにくい。
+      // 極限を持たないモード(プロなど)では extreme が空になり、タブ自体を出さない
+      const difficultyGroups = splitDifficultyEntries(allDifficulties);
+      // チャレンジの極限は、極限チャレンジの7段階をそのまま「極限」タブとして見せる
+      // (2026-09-19 ユーザー指示「極限チャレンジの難易度を通常のチャレンジに入れ込みたい」)。
+      // ★カードの作りが通常とまったく違う(専用テーマ・ルール詳細・勇者の証・別の記録)ので、
+      //   カードを移植せず、タブを押したら専用画面へ移る。見た目は同じ横カルーセルなので、
+      //   遊ぶ側にはタブが切り替わったように見える
+      // ★pro / mode はこの下で定義しているので、ここでは使わない。
+      //   先に参照すると初期化前アクセスになり、難易度選択がまるごとエラー画面に落ちる(実際に落ちた)
+      // ★タクティクスバトルの極限は、同じ画面のタブにそのまま並べる(専用画面へ移らない)。
+      //   移してしまうと、押した先がクラシックバトルの極限チャレンジになってしまう
+      const challengeExtremeTab = !species && !quick && !tacticsDiff && !isProMode(battleMode);
+      const hasExtremeTab = difficultyGroups.extreme.length > 0 || challengeExtremeTab;
+      const activeDifficultyTab = hasExtremeTab && !challengeExtremeTab ? difficultySelectTab : DIFFICULTY_TAB_NORMAL;
+      const difficulties = activeDifficultyTab === DIFFICULTY_TAB_EXTREME ? difficultyGroups.extreme : difficultyGroups.normal;
       const selectedDifficulty = species ? speciesChallengeSelection.difficultyId || difficulties[0]?.[0] : safeDifficulty;
       const selectedIndex = Math.max(0, difficulties.findIndex(([key]) => key === selectedDifficulty));
       const chooseDifficulty = id => species ? setSpeciesChallengeSelection(current => ({
@@ -58211,7 +61035,7 @@ function MonsterHeroGame() {
       }, /*#__PURE__*/React.createElement("button", {
         "aria-label": "\u623B\u308B",
         disabled: !!battleTutorial,
-        onClick: () => setGameState(species ? 'SPECIES_CHALLENGE_SELECT' : 'BATTLE_MODE_SELECT'),
+        onClick: () => setGameState(species ? 'SPECIES_CHALLENGE_SELECT' : battleSystemOf(battleMode).direct ? 'BATTLE_SYSTEM_SELECT' : 'BATTLE_MODE_SELECT'),
         className: "p-3 text-slate-400 active:scale-90 disabled:opacity-25"
       }, /*#__PURE__*/React.createElement(ArrowLeft, {
         size: 20
@@ -58247,7 +61071,42 @@ function MonsterHeroGame() {
         }, detail));
       })), /*#__PURE__*/React.createElement("p", {
         className: "mt-1 text-center text-[8px] font-black text-slate-400"
-      }, "\u540C\u3058\u96E3\u6613\u5EA6\u3092\u30C1\u30E3\u30EC\u30F3\u30B8\u30FB\u30D7\u30ED\u30FB\u6975\u9650\u306E\u3069\u308C\u304B\u3067\u30AF\u30EA\u30A2\u3059\u308B\u3068\u89E3\u653E")), /*#__PURE__*/React.createElement("div", {
+      }, "\u540C\u3058\u96E3\u6613\u5EA6\u3092\u30C1\u30E3\u30EC\u30F3\u30B8\u30FB\u30D7\u30ED\u30FB\u6975\u9650\u306E\u3069\u308C\u304B\u3067\u30AF\u30EA\u30A2\u3059\u308B\u3068\u89E3\u653E")), hasExtremeTab && /*#__PURE__*/React.createElement("div", {
+        "data-difficulty-tabs": true,
+        className: "flex gap-1.5 w-full shrink-0 mb-1"
+      }, [[DIFFICULTY_TAB_NORMAL, '通常'], [DIFFICULTY_TAB_EXTREME, '極限']].map(([tabId, tabLabel]) => {
+        const on = activeDifficultyTab === tabId;
+        const toExtreme = tabId === DIFFICULTY_TAB_EXTREME;
+        const group = toExtreme ? difficultyGroups.extreme : difficultyGroups.normal;
+        // チャレンジの極限は専用画面へ移る。解放前は押せないが、タブ自体は出す
+        // (何があるのか分かるようにするため。モードのカードもそうしていた)
+        const jumps = challengeExtremeTab && toExtreme;
+        const locked = jumps && !extremeUnlocked && !debugBattle;
+        const count = jumps ? PUBLIC_EXTREME_DIFFICULTIES.length : group.length;
+        return /*#__PURE__*/React.createElement("button", {
+          key: tabId,
+          "aria-pressed": on,
+          disabled: locked,
+          onClick: () => {
+            if (jumps) {
+              battleEntryStateRef.current = 'BATTLE_DIFFICULTY_SELECT';
+              setGameState('EXTREME_DIFFICULTY_SELECT');
+              return;
+            }
+            if (on) return;
+            setDifficultySelectTab(tabId);
+            // 切り替えた先の先頭を選ぶ。選びっぱなしにすると、見えていない難易度のまま
+            // 「この難易度で挑戦」を押せてしまう
+            if (group[0]) chooseDifficulty(group[0][0]);
+          },
+          className: `flex-1 min-h-[38px] rounded-2xl font-black text-[12px] border-2 active:scale-95 disabled:opacity-40 ${on ? toExtreme ? 'bg-fuchsia-700 border-fuchsia-300 text-white' : 'bg-indigo-600 border-indigo-300 text-white' : 'bg-slate-900 border-slate-700 text-slate-400'}`
+        }, tabLabel, /*#__PURE__*/React.createElement("span", {
+          className: "ml-1 text-[9px] opacity-75"
+        }, locked ? '🔒' : count));
+      })), challengeExtremeTab && !extremeUnlocked && !debugBattle && /*#__PURE__*/React.createElement("p", {
+        "data-extreme-tab-locked": true,
+        className: "shrink-0 mb-1 text-center text-[9px] font-black text-fuchsia-200/80"
+      }, "\uD83D\uDD12 \u6975\u9650\u306F", EXTREME_UNLOCK_TEXT), /*#__PURE__*/React.createElement("div", {
         className: `relative shrink-0${battleTutorialSpotClass('difficulty')}`
       }, /*#__PURE__*/React.createElement("button", {
         "aria-label": "\u524D\u306E\u96E3\u6613\u5EA6",
@@ -58280,7 +61139,11 @@ function MonsterHeroGame() {
       }, difficulties.map(([key, setting]) => {
         const active = key === selectedDifficulty,
           rec = modeRecordFor(battleMode, key);
-        const quickUnlocked = species ? isSpeciesChallengeDifficultyUnlocked(key, speciesChallengeClearedDifficultyIds(speciesChallengeProgress, speciesChallengeSelection.speciesId)) : !quick || debugBattle || isQuickDifficultyUnlocked(key, clearCounts, proClearCounts, extremeDifficultyClearCounts);
+        const quickUnlocked = species ? isSpeciesChallengeDifficultyUnlocked(key, speciesChallengeClearedDifficultyIds(speciesChallengeProgress, speciesChallengeSelection.speciesId)) : tacticsDiff ? debugBattle || isTacticsDifficultyUnlocked(key, tacticsRecordsOf(battleMode).clears) : !quick || debugBattle || isQuickDifficultyUnlocked(key, clearCounts, proClearCounts, extremeDifficultyClearCounts); // ★タクティクスバトルの極限は、極限チャレンジ・種族チャレンジとまったく同じ作りで走らせる。
+        //   difficulty は 'Normal' に置き換え、選んだ段階は extremeDifficulty が持つ。
+        //   記録は tacticsRecordDifficulty() がこの2つから選ぶので、混ざらない
+        const tacticsExtreme = tacticsDiff && isExtremeDifficultyId(key);
+        const lockText = species ? '🔒 前の難易度クリアで解放' : tacticsDiff ? isExtremeDifficultyId(TACTICS_DIFFICULTY_IDS[TACTICS_DIFFICULTY_IDS.indexOf(key) - 1]) ? '🔒 前の難易度クリアで解放' : `🔒 ${TACTICS_EXTREME_UNLOCK_TEXT}` : '🔒 同じ難易度クリアで解放';
         const heroProofReward = heroProofClearReward({
           runMode: battleMode,
           difficulty: key,
@@ -58407,15 +61270,16 @@ function MonsterHeroGame() {
             }
             battleEntryStateRef.current = 'BATTLE_DIFFICULTY_SELECT';
             clearSlotUniqueSelection();
-            setDifficulty(key);
+            setDifficulty(tacticsExtreme ? 'Normal' : key);
+            if (tacticsExtreme) setExtremeDifficulty(key);
             setRunMode(battleMode);
             quickRewardPolicyRunRef.current = quick ? normalizeQuickRewardPolicy(quickRewardPolicy) : QUICK_REWARD_POLICY_GROWTH;
             battleScenarioRef.current = null;
             battleScenarioIntentIndexRef.current = 0;
             debugBattleRef.current = false;
-            extremeRunRef.current = false;
+            extremeRunRef.current = tacticsExtreme;
             setDebugBattle(false);
-            setExtremeRun(false);
+            setExtremeRun(tacticsExtreme);
             setDebugOutcome(null);
             const baseMons = pro ? getUnlockedBaseMonsterList() : [];
             const savedHero = pro ? baseMons.find(mon => mon.id === lastProParty.heroBaseId) : null;
@@ -58433,7 +61297,7 @@ function MonsterHeroGame() {
             backgroundColor: setting.bg,
             color: setting.darkText ? '#0f172a' : '#ffffff'
           }
-        }, !quickUnlocked ? species ? '🔒 前の難易度クリアで解放' : '🔒 同じ難易度クリアで解放' : pro && !proReady ? `ベースモンが${PRO_ALLY_POOL_SIZE + 1}種必要です` : 'この難易度で挑戦'), ranked && /*#__PURE__*/React.createElement("button", {
+        }, !quickUnlocked ? lockText : pro && !proReady ? `ベースモンが${PRO_ALLY_POOL_SIZE + 1}種必要です` : 'この難易度で挑戦'), ranked && /*#__PURE__*/React.createElement("button", {
           disabled: !!battleTutorial,
           onClick: () => openModeScoreRanking(battleMode, key, 'BATTLE_DIFFICULTY_SELECT'),
           className: "min-h-[40px] rounded-xl bg-slate-800 border border-indigo-400/40 text-indigo-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"
@@ -58447,7 +61311,8 @@ function MonsterHeroGame() {
           disabled: !!battleTutorial,
           onClick: () => openSpeciesChallengeRecords('BATTLE_DIFFICULTY_SELECT', {
             speciesId: speciesChallengeSelection.speciesId,
-            difficultyId: key
+            difficultyId: key,
+            mode: battleMode
           }),
           className: "min-h-[40px] rounded-xl bg-slate-800 border border-cyan-400/40 text-cyan-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"
         }, /*#__PURE__*/React.createElement("span", {
@@ -58505,7 +61370,7 @@ function MonsterHeroGame() {
       })))));
     })(), gameState === 'BATTLE_SCORE_RANKING' && (() => {
       const mode = battleModeInfo(scoreRankingMode);
-      const species = scoreRankingMode === BATTLE_MODE_SPECIES_CHALLENGE;
+      const species = isSpeciesChallengeMode(scoreRankingMode);
       return /*#__PURE__*/React.createElement("div", {
         "data-mh-screen": true,
         className: "flex-1 flex flex-col h-full min-h-0 px-4",
@@ -58533,7 +61398,7 @@ function MonsterHeroGame() {
       }, /*#__PURE__*/React.createElement(AssistantBubble, {
         scene: "ranking",
         compact: true
-      })), species ? renderSpeciesChallengeRecordBody() : renderScoreRankingBody(scoreRankingMode)));
+      })), species ? renderSpeciesChallengeRecordBody(scoreRankingMode) : renderScoreRankingBody(scoreRankingMode)));
     })(), gameState === 'MONSTER_LIST_MENU' && /*#__PURE__*/React.createElement("div", {
       className: "flex-1 flex flex-col h-full p-4",
       style: {
@@ -60596,8 +63461,9 @@ function MonsterHeroGame() {
         setDebugBattle(true);
         setExtremeRun(false);
         setBattleMode(BATTLE_MODE_CHALLENGE);
+        setBattleSystem(BATTLE_SYSTEM_CLASSIC);
         setModeSelectTab('mode');
-        setGameState('BATTLE_MODE_SELECT');
+        setGameState('BATTLE_SYSTEM_SELECT');
       },
       className: "w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
     }, "\u2694\uFE0F \u30D0\u30C8\u30EB\u30E2\u30FC\u30C9", /*#__PURE__*/React.createElement("small", {
@@ -60700,6 +63566,10 @@ function MonsterHeroGame() {
       onClick: debugPlayRhythmEventThanks,
       className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
     }, "\u9589\u5E55\u3068\u304A\u793C\u306E\u4F1A\u8A71\u3092\u518D\u751F"), /*#__PURE__*/React.createElement("button", {
+      "data-debug-rhythm-event-thanks-symphony": true,
+      onClick: debugPlayRhythmEventThanksSymphony,
+      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
+    }, "\u9589\u5E55\u3068\u304A\u793C(\u7B2C2\u56DE)\u3092\u518D\u751F"), /*#__PURE__*/React.createElement("button", {
       "data-debug-rhythm-event-notice": true,
       onClick: debugPlayRhythmEventNotice,
       className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
@@ -60822,7 +63692,7 @@ function MonsterHeroGame() {
       const clearedIds = speciesChallengeClearedDifficultyIds(speciesChallengeProgress, speciesId);
       const saveProgress = async next => {
         const normalized = normalizeSpeciesChallengeProgress(next);
-        setSpeciesChallengeProgress(normalized);
+        setSpeciesChallengeProgress(normalized, BATTLE_MODE_SPECIES_CHALLENGE);
         await storeSet(SPECIES_CHALLENGE_PROGRESS_KEY, normalized, false);
       };
       const difficultyLabel = id => DIFFICULTY_SETTINGS[id]?.label || EXTREME_DIFFICULTIES.find(setting => setting.id === id)?.label || id;
@@ -61254,7 +64124,8 @@ function MonsterHeroGame() {
           heroId: selection.heroId,
           allyIds: selectedAllies,
           unlockedBaseIds: unlockedMonsterIds,
-          masuMons
+          masuMons,
+          mode: battleMode
         });
         if (!run) return;
         selectSe();
@@ -61578,6 +64449,8 @@ function MonsterHeroGame() {
       resolveIconUrl: resolveIconUrl,
       selectedAssistantId: selectedAssistantId,
       speciesChallengeProgress: speciesChallengeProgress,
+      speciesChallengeProgressOf: speciesChallengeProgressOf,
+      tacticsRecordsOf: tacticsRecordsOf,
       onBack: returnToHome,
       onOpenNameEdit: name => {
         setTempName(name);
@@ -61593,7 +64466,9 @@ function MonsterHeroGame() {
       onOpenAssistantPicker: () => setShowAssistantPicker(true),
       onSelectBattleMode: setProfileBattleMode,
       onOpenEventReplayList: () => setShowEventReplayList(true),
-      onOpenSpeciesRecords: () => openSpeciesChallengeRecords('PROFILE'),
+      onOpenSpeciesRecords: mode => openSpeciesChallengeRecords('PROFILE', {
+        mode: mode || BATTLE_MODE_SPECIES_CHALLENGE
+      }),
       rhythmHistoryCount: rhythmHistoryCount,
       unlockedAssistants: assistantsUnlockedFrom(rhythmEventStorySeen),
       onOpenRhythmHistory: openRhythmHistory
@@ -63685,6 +66560,7 @@ function MonsterHeroGame() {
       cardDragActiveRef: cardDragActiveRef,
       cardEffectMultiplier: cardEffectMultiplier,
       cardLimit: cardLimit,
+      makeCardHalveCounter: makeHalveCounter,
       cardNeedsMonster: cardNeedsMonster,
       cycleActiveUniqueForSlot: cycleActiveUniqueForSlot,
       cycleBattleAuto: cycleBattleAuto,
@@ -63773,6 +66649,9 @@ function MonsterHeroGame() {
       slotSkill: slotSkill,
       slotUniqueChoice: slotUniqueChoice,
       slots: slots,
+      tacticsUnits: isTacticsMode(runMode) ? tacticsUnits : null,
+      tacticsCanAssign: tacticsCanAssign,
+      tacticsCardBlock: tacticsCardBlock,
       soulBattleParty: soulBattleParty,
       soulCoordinationCardBonus: soulCoordinationCardBonus,
       suppressCardClickRef: suppressCardClickRef,
@@ -64106,7 +66985,7 @@ function MonsterHeroGame() {
       setProAllyPool: setProAllyPool,
       setProEditingAllyIndex: setProEditingAllyIndex,
       setProHeroPreset: setProHeroPreset,
-      setSlots: setSlots
+      setSlots: applySlots
     }), gameState === 'PICK_SLOT' && /*#__PURE__*/React.createElement(PickSlotScreen, {
       battleTutorial: battleTutorial,
       battleTutorialSpotClass: battleTutorialSpotClass,
@@ -64916,7 +67795,7 @@ function MonsterHeroGame() {
         }
       }, "\u3064\u304E\u3078")));
     })(), modeInfoId && (() => {
-      const mode = battleModeInfo(modeInfoId);
+      const mode = battleInfoById(modeInfoId);
       return /*#__PURE__*/React.createElement("div", {
         className: "fixed inset-0 flex items-center justify-center p-4",
         style: {
@@ -65022,6 +67901,8 @@ function MonsterHeroGame() {
       maxHp: maxHp,
       runMode: runMode,
       setTrainingPicks: setTrainingPicks,
+      slots: slots,
+      tacticsUnits: isTacticsMode(runMode) ? tacticsUnits : null,
       trainingPicks: trainingPicks,
       waveResult: waveResult
     }), showHelp && (() => {
@@ -65764,7 +68645,15 @@ function MonsterHeroGame() {
       size: 7
     }), " ", getCardGuts(focusedCard), " Guts"))), /*#__PURE__*/React.createElement("div", {
       className: "text-[8px] text-slate-200 font-medium leading-relaxed bg-black/50 p-1.5 rounded-lg border border-white/5 space-y-1"
-    }, ['atk', 'range_atk', 'unique'].includes(focusedCard.type) && /*#__PURE__*/React.createElement("div", {
+    }, (() => {
+      const b = tacticsCardBlock(focusedCard, hand.findIndex(c => c && c.uid === focusedCard.uid));
+      return b && !b.ok ? /*#__PURE__*/React.createElement("div", {
+        "data-tactics-card-why": true,
+        className: "rounded-lg border border-rose-400/70 bg-rose-950/70 px-1.5 py-1 text-[9px] font-black leading-snug text-rose-100"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-rose-300"
+      }, "\u3044\u307E\u4F7F\u3048\u306A\u3044:"), " ", b.why) : null;
+    })(), ['atk', 'range_atk', 'unique'].includes(focusedCard.type) && /*#__PURE__*/React.createElement("div", {
       className: "flex justify-between items-center text-xs"
     }, /*#__PURE__*/React.createElement("span", null, "\u6280\u5A01\u529B:"), /*#__PURE__*/React.createElement("span", {
       className: "text-red-400 font-black"
@@ -65780,20 +68669,21 @@ function MonsterHeroGame() {
       // 2枚目以降で使うガードは軽減量が半分になる。実際に効く値をそのまま出す。
       const raw = (focusedCard.flat || 0) + def * (focusedCard.mult || 0);
       const fIdx = hand.findIndex(c => c && c.uid === focusedCard.uid);
-      let n = 0,
-        halved = false,
+      const counter = makeHalveCounter();
+      let halved = false,
         found = false;
       selectedCards.forEach(idx => {
         if (idx === pendingCard) return;
         const c = hand[idx];
-        const p = !isAssistCard(c);
+        const sl = cardAssignments[idx] != null ? cardAssignments[idx] : null;
         if (idx === fIdx) {
-          halved = p && n > 0;
+          halved = counter.peek(c, sl);
           found = true;
         }
-        if (p) n++;
+        counter.take(c, sl);
       });
-      if (!found) halved = n > 0; // まだ置いていないカードは「次に使う1枚」として判定する
+      // まだ置いていないカードは「次に使う1枚」として判定する
+      if (!found) halved = counter.peek(focusedCard, fIdx >= 0 && cardAssignments[fIdx] != null ? cardAssignments[fIdx] : null);
       return /*#__PURE__*/React.createElement("div", {
         className: "text-center font-bold"
       }, "\u6575\u306E\u653B\u6483\u3092\u6700\u5927 ", Math.floor(halved ? raw * 0.5 : raw), " \u8EFD\u6E1B", halved && /*#__PURE__*/React.createElement("span", {
@@ -65853,9 +68743,13 @@ function MonsterHeroGame() {
       const scanEnemy = waveScanPreview?.enemy || enemy;
       const scanDist = waveScanPreview ? 2 : enemyDist;
       const scanBeforeBattle = !!waveScanPreview;
-      const scanState = scanBeforeBattle ? {
-        unannounced: true
-      } : enemyActionStateFrom(enemyLastIntent);
+      const scanState = {
+        ...(scanBeforeBattle ? {
+          unannounced: true
+        } : enemyActionStateFrom(enemyLastIntent)),
+        definitions: enemyActionDefinitionsFor(runMode, scanEnemy?.id),
+        roarStacks: tacticsRoarStacksRef.current
+      };
       const actions = enemyActionProbabilities(scanEnemy, scanDist, scanState);
       return /*#__PURE__*/React.createElement("div", {
         className: "fixed inset-0 flex flex-col",
@@ -65918,7 +68812,7 @@ function MonsterHeroGame() {
       }, scanBeforeBattle ? '戦闘状況' : '現在の間合い'), /*#__PURE__*/React.createElement("b", null, scanBeforeBattle ? '戦闘開始前' : `${RANGE_LABELS[scanDist]}距離`)), /*#__PURE__*/React.createElement("div", {
         className: "space-y-2 text-left"
       }, actions.map((action, index) => {
-        const actionName = action.type === 'MOVE' ? '間合い移動' : enemyActionLabel(scanEnemy, action.type);
+        const actionName = action.type === 'MOVE' ? '間合い移動' : action.variant ? action.category : enemyActionLabel(scanEnemy, action.type);
         const power = Math.floor(scanEnemy.atk * action.multiplier);
         return /*#__PURE__*/React.createElement("details", {
           key: action.id,
@@ -65944,7 +68838,7 @@ function MonsterHeroGame() {
           className: "col-span-2"
         }, "\u79FB\u52D5\u52B9\u679C ", /*#__PURE__*/React.createElement("b", null, action.type === 'MOVE' ? `${RANGE_LABELS.filter((_, i) => i !== scanDist).join('・')}距離のいずれかへ移動` : 'なし')), /*#__PURE__*/React.createElement("span", {
           className: "col-span-2"
-        }, "\u30D0\u30D5\u30FB\u30C7\u30D0\u30D5\u30FB\u72B6\u614B\u7570\u5E38 ", /*#__PURE__*/React.createElement("b", null, "\u306A\u3057")), /*#__PURE__*/React.createElement("span", null, "\u30AF\u30FC\u30EB\u30C0\u30A6\u30F3 ", /*#__PURE__*/React.createElement("b", null, action.cooldown ? `${action.cooldown}ターン` : 'なし')), /*#__PURE__*/React.createElement("span", null, "\u56DE\u6570\u5236\u9650 ", /*#__PURE__*/React.createElement("b", null, action.useLimit ?? 'なし'))), !action.available && /*#__PURE__*/React.createElement("div", {
+        }, "\u30D0\u30D5\u30FB\u30C7\u30D0\u30D5\u30FB\u72B6\u614B\u7570\u5E38 ", /*#__PURE__*/React.createElement("b", null, action.effectText || 'なし')), /*#__PURE__*/React.createElement("span", null, "\u30AF\u30FC\u30EB\u30C0\u30A6\u30F3 ", /*#__PURE__*/React.createElement("b", null, action.cooldown ? `${action.cooldown}ターン` : 'なし')), /*#__PURE__*/React.createElement("span", null, "\u56DE\u6570\u5236\u9650 ", /*#__PURE__*/React.createElement("b", null, action.useLimit ?? 'なし'))), !action.available && /*#__PURE__*/React.createElement("div", {
           className: "mt-2 text-[10px] text-red-300"
         }, "\u73FE\u5728\u306F\u4F7F\u7528\u4E0D\u53EF\uFF1A", action.unavailableReason));
       })), /*#__PURE__*/React.createElement("aside", {
@@ -65989,7 +68883,53 @@ function MonsterHeroGame() {
       className: "text-2xl font-black italic mb-6 uppercase"
     }, mainHero.name), /*#__PURE__*/React.createElement("div", {
       className: "w-full max-w-sm space-y-4 bg-slate-900/50 p-6 rounded-3xl border border-white/5"
+    }, isTacticsMode(runMode) && /*#__PURE__*/React.createElement("div", {
+      "data-tactics-status": true,
+      className: "space-y-1.5 text-left"
     }, /*#__PURE__*/React.createElement("div", {
+      className: "text-[9px] font-black uppercase tracking-widest text-indigo-300"
+    }, "1\u4F53\u305A\u3064\u306E\u30B9\u30C6\u30FC\u30BF\u30B9"), slots.map((mon, i) => {
+      const u = tacticsUnits[i];
+      if (!mon || !u) return null;
+      const aptPct = (getMonsterAptPct(mon, specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty), wave)[i] || 0) * 100;
+      return /*#__PURE__*/React.createElement("div", {
+        key: i,
+        "data-tactics-status-slot": i,
+        className: `rounded-2xl border px-2.5 py-1.5 ${u.downed ? 'border-emerald-500/50 bg-emerald-950/40' : 'border-white/10 bg-black/40'}`
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex items-center justify-between gap-2"
+      }, /*#__PURE__*/React.createElement("b", {
+        className: "text-[12px] font-black truncate"
+      }, RANGE_LABELS[i], "\u8DDD\u96E2\u30FB", mon.masuName || mon.name), u.downed && /*#__PURE__*/React.createElement("span", {
+        className: "shrink-0 text-[10px] font-black text-emerald-300"
+      }, "\u30C0\u30A6\u30F3 \u5FA9\u6D3B\u307E\u3067 ", 100 - Math.floor(u.hp / Math.max(1, u.maxHp) * 100), "%")), /*#__PURE__*/React.createElement("div", {
+        className: "mt-1 grid grid-cols-4 gap-1 text-center"
+      }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+        className: "text-[8px] font-black text-pink-400"
+      }, "\u30E9\u30A4\u30D5"), /*#__PURE__*/React.createElement("div", {
+        className: "text-[12px] font-mono font-black"
+      }, u.hp, /*#__PURE__*/React.createElement("span", {
+        className: "text-[9px] text-slate-500"
+      }, "/", u.maxHp))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+        className: "text-[8px] font-black text-red-400"
+      }, "\u3061\u304B\u3089"), /*#__PURE__*/React.createElement("div", {
+        className: "text-[12px] font-mono font-black"
+      }, u.atk)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+        className: "text-[8px] font-black text-emerald-400"
+      }, "\u4E08\u592B\u3055"), /*#__PURE__*/React.createElement("div", {
+        className: "text-[12px] font-mono font-black"
+      }, u.def)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+        className: "text-[8px] font-black text-amber-400"
+      }, "\u30AC\u30C3\u30C4"), /*#__PURE__*/React.createElement("div", {
+        className: "text-[12px] font-mono font-black"
+      }, u.guts, /*#__PURE__*/React.createElement("span", {
+        className: "text-[9px] text-slate-500"
+      }, "/", u.maxGuts)))), /*#__PURE__*/React.createElement("div", {
+        className: "mt-0.5 text-[9px] font-black text-cyan-300"
+      }, "\u3053\u306E\u67A0\u306E\u8DDD\u96E2\u9069\u6027 ", aptPct >= 0 ? '+' : '', Math.round(aptPct * 10) / 10, "%"));
+    })), isTacticsMode(runMode) && /*#__PURE__*/React.createElement("div", {
+      className: "text-left text-[9px] font-black uppercase tracking-widest text-slate-400"
+    }, "\u30D1\u30FC\u30C6\u30A3\u5168\u4F53\uFF08\u30AB\u30FC\u30C9\u306E\u52B9\u304D\u3081\u3092\u6C7A\u3081\u308B\u5024\uFF09"), /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-2 gap-6 text-left"
     }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
       className: "text-[9px] text-pink-400 font-black uppercase"
@@ -66134,11 +69074,13 @@ function MonsterHeroGame() {
       onClick: () => {
         const keepSaving = speciesChallengeSaveRunRef.current;
         const keepDebug = speciesChallengeFromDebugRef.current;
+        const keepMode = speciesChallengeRunMode(speciesChallengeBattleRunRef.current);
         runResultActionOnce(() => {
           returnToHome();
           openSpeciesChallengeSelection({
             saveProgress: keepSaving,
-            fromDebug: keepDebug
+            fromDebug: keepDebug,
+            mode: keepMode
           });
         });
       },
@@ -66181,7 +69123,8 @@ function MonsterHeroGame() {
       speciesChallengeBattleRun: speciesChallengeBattleRun,
       speciesChallengeClearCardNode: speciesChallengeClearCardNode,
       speciesChallengeFromDebugRef: speciesChallengeFromDebugRef,
-      speciesChallengeSaveRunRef: speciesChallengeSaveRunRef
+      speciesChallengeSaveRunRef: speciesChallengeSaveRunRef,
+      speciesChallengeBattleRunRef: speciesChallengeBattleRunRef
     }), hp <= 0 && !debugBattle && !rhythmScreenOpen && /*#__PURE__*/React.createElement(GameOverScreen, {
       finalRewardSummary: finalRewardSummary,
       handleRetry: handleRetry,

@@ -97,14 +97,29 @@ check('円盤石のidは解放するモンスターのidと同じ', !!mons[item(
 check('立ち絵はいただいた画像をそのまま使う',
   /const UNDINE_IMG = "images\/monsters\/undine\.PNG(\?v=[a-f0-9]{12})?"/.test(imagesSrc)
     && /const YAOBIKUNI_IMG = "images\/monsters\/yaobikuni\.PNG(\?v=[a-f0-9]{12})?"/.test(imagesSrc));
-check('一覧・顔アイコンも同じ画像を使い回す(用途別に複製しない)',
-  imagesSrc.includes('const UNDINE_ICON = UNDINE_IMG;') && imagesSrc.includes('const UNDINE_FACE_ICON = UNDINE_IMG;')
-    && imagesSrc.includes('const YAOBIKUNI_ICON = YAOBIKUNI_IMG;') && imagesSrc.includes('const YAOBIKUNI_FACE_ICON = YAOBIKUNI_IMG;'));
+check('一覧のアイコンは立ち絵を使い回す(用途別に複製しない)',
+  imagesSrc.includes('const UNDINE_ICON = UNDINE_IMG;') && imagesSrc.includes('const YAOBIKUNI_ICON = YAOBIKUNI_IMG;'));
+// 顔アイコンだけは専用に切り出す。当初は「複製しない」を通して立ち絵を顔アイコンにも
+// 使い回し、丸枠での見え方は scale/x/y で寄せていたが、それでは解けなかった
+// (2026-09-19・ユーザー指摘「アイコンのサイズ感が悪い 特にウンディーネ、ヤオビクニ」)。
+// 立ち絵は尾ひれまで入っていて頭が小さく写っているため、倍率を上げると耳が枠で切れ、
+// 下げると顔が小さいままになる。実機のアイコンは40pxしかなく、耳が切れた時点で
+// 何のキャラか分からなくなる。同じ人魚のスネグーラチカが良く見えていたのは、
+// 最初から顔クロップ(images/monster-icons/face/snegurochka.png)を持っていたから。
+// エイキ・剣士モッチーと同じ扱いにそろえ、tools/image/make-face-icons.js で切り出す。
+check('顔アイコンは専用の顔クロップを使う(スネグーラチカ・エイキと同じ扱い)',
+  /const UNDINE_FACE_ICON = "images\/monster-icons\/face\/undine\.png(\?v=[a-f0-9]{12})?"/.test(imagesSrc)
+    && /const YAOBIKUNI_FACE_ICON = "images\/monster-icons\/face\/yaobikuni\.png(\?v=[a-f0-9]{12})?"/.test(imagesSrc));
 check('円盤石の画像はいただいたものをそのまま使う',
   /const UNDINE_DISC_ICON = "images\/disc-icons\/undine-disc\.PNG(\?v=[a-f0-9]{12})?"/.test(breederSrc)
     && /const YAOBIKUNI_DISC_ICON = "images\/disc-icons\/yaobikuni-disc\.PNG(\?v=[a-f0-9]{12})?"/.test(breederSrc));
-for (const id of ['undine_icon', 'undine_disc_icon', 'yaobikuni_icon', 'yaobikuni_disc_icon']) {
+// 円盤石アイコンは円盤の絵そのものなので、これまでどおり scale/x/y で丸へ収める。
+// 本人アイコンは顔クロップが元から丸枠向けなので、調整値を持たない(持つと二重に寄る)。
+for (const id of ['undine_disc_icon', 'yaobikuni_disc_icon']) {
   check(`${id} は丸い枠での見え方を scale/x/y で合わせている`, new RegExp(`${id}: \\{ scale: [\\d.]+, x: -?[\\d.]+, y: -?[\\d.]+ \\}`).test(source));
+}
+for (const id of ['undine_icon', 'yaobikuni_icon']) {
+  check(`${id} は顔クロップなので scale/x/y の調整を持たない`, !new RegExp(`${id}: \\{ scale:`).test(source));
 }
 // 立ち絵が縦長なので、丸枠(正方形)では object-cover のままだと頭と尾びれが切れる
 check('縦長の立ち絵は丸枠で object-contain にして全身を収める',

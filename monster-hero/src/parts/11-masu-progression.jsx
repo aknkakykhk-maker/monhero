@@ -1063,10 +1063,12 @@ const heroProofClearReward = ({
   speciesSave=true, debug=false,
 } = {}) => {
   if (debug || runMode === BATTLE_MODE_QUICK) return 0;
-  if (runMode === BATTLE_MODE_SPECIES_CHALLENGE) {
+  // ★タクティクスバトル側の種族チャレンジ・プロも、同じ難易度なら同じ報酬にする
+  //   (盤面の作りが違うだけで、しばりと難しさの段はそろえてある)
+  if (isSpeciesChallengeMode(runMode)) {
     return speciesSave ? (HERO_PROOF_CLEAR_REWARDS.speciesChallenge[speciesDifficulty] || 0) : 0;
   }
-  if (runMode === BATTLE_MODE_PRO) return HERO_PROOF_CLEAR_REWARDS.pro[difficulty] || 0;
+  if (isProMode(runMode)) return HERO_PROOF_CLEAR_REWARDS.pro[difficulty] || 0;
   if (extremeDifficulty) return HERO_PROOF_CLEAR_REWARDS.extreme[extremeDifficulty] || 0;
   return 0;
 };

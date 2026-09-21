@@ -3,6 +3,8 @@ const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分�
 // 実行前に `python3 tools/serve.py` でリポジトリルートを配信する。
 const path = require('path');
 const { chromium } = require('playwright');
+// イベントの「閉幕とお礼」は終了の時刻に自動で流れる。既読にしておかないと会話で止まる
+const { eventStorySeed } = require(path.join(TOOLS_DIR, 'boot/quiet-boot-seed'));
 
 const URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/index.html';
 
@@ -23,6 +25,7 @@ const URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/index.h
     put('mh_onboarded', true);
     put('mh_tutorial_seen_v1', true);
   });
+  await page.addInitScript(eventStorySeed());
   await page.goto(URL, { waitUntil:'load', timeout:60000 });
   const pointerDown = (find) => page.evaluate((f) => {
     const b = f.aria ? document.querySelector(`button[aria-label="${f.aria}"]`)
@@ -75,15 +78,26 @@ const URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/index.h
     await browser.close();
     process.exit(0);
   }
-  await page.getByRole('button', { name:'バトル' }).waitFor();
+  await page.getByRole('button', { name:'モンヒロバトル' }).waitFor();
 
-  const openBattleMenu = async () => {
-    await page.getByRole('button', { name:'バトル' }).click();
-    await page.getByRole('heading', { name:'バトル' }).waitFor();
+  // ★2026-09-20 にモード選択の1つ上へ「どのバトルで遊ぶか」の画面が増えた。
+  //   HOME → 入口(クラシック) → モード選択 → 難易度 と1段ずつ降りる
+  const openModeSelect = async () => {
+    await page.getByRole('button', { name:'モンヒロバトル' }).click();
+    await page.locator('[data-battle-system="systemClassic"]').click();
+    await page.getByText('BATTLE MODE').first().waitFor();
+  };
+  // モード選択のカルーセルは同じ並びを3組つないでいる。真ん中の組が画面に出ている
+  const openDifficultyFromModeSelect = async () => {
+    const cards = page.locator('[data-battle-mode="challenge"]');
+    await cards.first().waitFor();
+    const middle = cards.nth(Math.floor((await cards.count()) / 2));
+    await middle.getByRole('button', { name:'難易度を選ぶ' }).click();
     await page.getByRole('button', { name:'前の難易度' }).waitFor();
     await page.getByRole('button', { name:'次の難易度' }).waitFor();
     await page.getByText('BATTLE DIFFICULTY').first().waitFor();
   };
+  const openBattleMenu = async () => { await openModeSelect(); await openDifficultyFromModeSelect(); };
   await openBattleMenu();
 
   const activeCard = page.locator('.snap-mandatory > article').filter({ hasText:'Normal' });
@@ -149,9 +163,10 @@ const URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/index.h
   await dialog.getByRole('button', { name:'閉じる' }).click();
   await dialog.waitFor({ state:'hidden' });
 
-  await page.getByRole('heading', { name:'バトル' }).locator('..').getByRole('button').click();
-  await page.getByRole('button', { name:'バトル' }).waitFor();
-  await openBattleMenu();
+  // 難易度画面の「戻る」で1段だけ上がる(モード選択へ戻る)
+  await page.getByRole('button', { name:'戻る' }).first().click();
+  await page.getByText('BATTLE MODE').first().waitFor();
+  await openDifficultyFromModeSelect();
   await page.getByRole('button', { name:'この難易度で挑戦' }).first().click();
   await page.getByRole('heading', { name:'勇者モンを選択' }).waitFor();
   if (exceptions.length) throw new Error(`JavaScript例外: ${exceptions.join(' / ')}`);

@@ -30,10 +30,19 @@ check('撃破処理に同期ロックがあり二重確定を防ぐ', !!resolver
 check('撃破ファンファーレとWAVEリザルト遷移は共通処理にある',
   !!resolver && /playJingle\('victory'\)/.test(resolver[0]) && /advanceRunStage\('WAVE_RESULT'\)/.test(resolver[0]));
 check('通常攻撃・固有技・連撃・追撃の合計が共通撃破処理へ進む', /resolveEnemyDefeat\(\{remainingHp:enemyHpAfterOurAttacks,damage:totalDmg,distDamage:attackDistDamage\}\)/.test(source));
-check('反射は演出待機後に確定ライフを渡して共通撃破処理へ進む', /setEnemy\(prev=>\(\{\.\.\.prev,hp:reflectedHp\}\)\); await battleWait\(1000\);[\s\S]{0,220}resolveEnemyDefeat\(\{remainingHp:reflectedHp,damage:incomingDmg\}\)/.test(source));
-check('反射撃破後は回復・次ターンへ進まずreturnする', /if \(await resolveEnemyDefeat\(\{remainingHp:reflectedHp,damage:incomingDmg\}\)\) return;/.test(source));
-check('反射ダメージはWAVE合計へ一度だけ加算する', (source.match(/setCurrentWaveDamage\(p=>p\+incomingDmg\)/g) || []).length === 1);
-check('反射ダメージは距離別ダメージを渡さない', /resolveEnemyDefeat\(\{remainingHp:reflectedHp,damage:incomingDmg\}\)/.test(source));
+// ★反射は2か所ある(1体で受けるバトルと、1体ずつが受けるバトル)。返す量の変数名も
+//   reflectDmg / reflectBack と違うので、行の全文ではなく「形」で見る。
+//   後方参照(\1)で「ライフを引いた変数と、撃破処理へ渡す量が同じ」ことまで確かめる
+//   (違う変数を渡すと、画面のライフと記録のダメージがずれる)
+const reflectBlocks = source.match(/const reflectedHp=Math\.max\(0,enemyHpAtAttackStart-(\w+)\);[\s\S]{0,400}?if \(await resolveEnemyDefeat\(\{remainingHp:reflectedHp,damage:\1\}\)\) return;/g) || [];
+const everyReflect = (test) => reflectBlocks.length >= 1 && reflectBlocks.every(test);
+check(`反射は演出待機後に確定ライフを渡して共通撃破処理へ進む(${reflectBlocks.length}か所)`,
+  everyReflect(block => /setEnemy\(prev=>prev\?\{\.\.\.prev,hp:reflectedHp\}:prev\); await battleWait\(1000\);/.test(block)));
+check('反射撃破後は回復・次ターンへ進まずreturnする',
+  everyReflect(block => /if \(await resolveEnemyDefeat\([^\n]*\)\) return;/.test(block)));
+check('反射ダメージはWAVE合計へ一度だけ加算する',
+  everyReflect(block => (block.match(/setCurrentWaveDamage\(/g) || []).length === 1));
+check('反射ダメージは距離別ダメージを渡さない', everyReflect(block => !/distDamage/.test(block)));
 check('通常WAVE・最終WAVEとチャレンジ・クイックは共通WAVEリザルト後の既存分岐を使う', /if \(wave === 10\)[\s\S]*?else if \(isQuickMode\(runMode\)\)/.test(source));
 
 const failed = results.filter(r => !r.ok);

@@ -77,7 +77,7 @@ const check = (name, ok, detail = '') => {
     // LOADING → TITLE → GAME
     await page.getByRole('button', { name: 'TAP TO START' }).click({ timeout: 60000 });
     await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
-    await page.getByRole('button', { name: 'バトル' }).waitFor({ timeout: 30000 });
+    await page.getByRole('button', { name: 'モンヒロバトル' }).waitFor({ timeout: 30000 });
     // 起動直後のモーダル(補償・案内)は片付けてから進む
     for (let i = 0; i < 6; i++) {
       const btn = page.getByRole('button', { name: /受け取る|閉じる|はじめる|OK/ }).first();
@@ -86,14 +86,30 @@ const check = (name, ok, detail = '') => {
       await page.waitForTimeout(250);
     }
 
-    // --- ① HOMEの「バトル」からモード選択を開く(本番の入口) ---
-    await page.getByRole('button', { name: 'バトル' }).dispatchEvent('click', {}, { timeout: 15000 });
+    // --- ① HOMEの「モンヒロバトル」から、まず「どのバトルで遊ぶか」を開く ---
+    // 2026-09-20 ユーザー指示で、モード選択の1つ上に画面を増やした
+    await page.getByRole('button', { name: 'モンヒロバトル' }).dispatchEvent('click', {}, { timeout: 15000 });
+    await page.locator('[data-battle-systems]').first().waitFor({ timeout: 15000 });
+    const systemCount = await page.locator('[data-battle-system]').count();
+    check('HOMEの「モンヒロバトル」から仕組みの選択が開く', systemCount >= 2, `${systemCount}件`);
+    // クイックは中のモードが1つなので、ここへは並ぶが選ぶと難易度選択へ直に進む
+    check('クイックモードも入口に並ぶ',
+      await page.locator('[data-battle-system="systemQuick"]').count() > 0);
+    check('モード選択にはクイックを並べない(入口で選ぶため)',
+      await page.getByRole('heading', { name: /クイックモード/ }).count() === 0);
+
+    // --- ①-2 「これまでのバトル」を選ぶとモード選択が開く ---
+    await page.locator('[data-battle-system="systemClassic"]').dispatchEvent('click', {}, { timeout: 15000 });
     await page.getByText('BATTLE MODE').first().waitFor({ timeout: 15000 });
-    check('HOMEの「バトル」からモード選択が開く', true);
+    check('「これまでのバトル」からモード選択が開く', true);
 
     // --- ② 公開中のモードがカードで並ぶ(ぐるぐる回すため同じ並びを3回置いている) ---
     // モードを足したらここへ1つ足す。並びは画面の順番と同じにする
-    const MODE_LABELS = ['チャレンジモード', 'クイックモード', 'プロモード', '極限チャレンジ', '種族チャレンジ'];
+    // 極限チャレンジはチャレンジの「極限」タブへ入れ込んだので、モードのカードには並ばない
+    // (2026-09-19 ユーザー指示)。難易度選択のタブは difficulty-tab-check.js が見る
+    // ★クイックもここへは並ばない。1つ上の「どのバトルで遊ぶか」で選ぶと、
+    //   中のモードが1つだけなのでそのまま難易度選択へ進む(2026-09-20 ユーザー指示)
+    const MODE_LABELS = ['チャレンジモード', 'プロモード', '種族チャレンジ'];
     const modeCards = page.locator('.snap-mandatory > article');
     check(`モードのカードが${MODE_LABELS.length}モード×3周ぶん並んでいる`, await modeCards.count() === MODE_LABELS.length * 3, `${await modeCards.count()}枚`);
     for (const label of MODE_LABELS) {

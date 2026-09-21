@@ -15,6 +15,7 @@
 // 検査側で計算式を持たない。桁あふれの確認のため、わざと大きな値の個体も入れてある。
 const http = require('http');
 const path = require('path');
+const { quietBootSeed } = require(path.resolve(__dirname, '..', 'boot/quiet-boot-seed'));
 const fs = require('fs');
 
 const root = path.resolve(__dirname, '..', '..');
@@ -89,6 +90,8 @@ const MASU_FIXTURES = [
         put('mh_inherited_unique_level_compensation_pending_v1', false);
         put('mh_masu_mons', fixtures.map((m, i) => ({ ...m, bondXp: 500000, createdAt: i + 1 })));
       }, MASU_FIXTURES);
+      // お詫びの配布・今日のアドバイス・イベントの会話は画面いっぱいに出て先へ進めなくする
+      await page.addInitScript(quietBootSeed());
       await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
       // Tailwind は 2026-09-12 に静的CSS(monster-hero/tailwind.css)へ切り替えたので、
       // ここで配っている index.html がそのまま本物のCSSを読む。効いていないと flex も w-full も無く、
@@ -99,7 +102,7 @@ const MASU_FIXTURES = [
 
       await page.getByRole('button', { name: 'TAP TO START' }).click({ timeout: 60000 });
       await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
-      await page.getByRole('button', { name: 'バトル' }).waitFor({ timeout: 30000 });
+      await page.getByRole('button', { name: 'モンヒロバトル' }).waitFor({ timeout: 30000 });
       for (let i = 0; i < 6; i++) {
         const btn = page.getByRole('button', { name: /受け取る|閉じる|はじめる|OK/ }).first();
         if (await btn.count() === 0 || !(await btn.isVisible().catch(() => false))) break;
@@ -108,9 +111,10 @@ const MASU_FIXTURES = [
       }
 
       // HOME → M/B管理 → モンスター一覧 → マスモン
+      // ★M/B管理の並びは「ベースモン一覧／マスモン一覧／モンスター図鑑／…」になった。
+      //   「モンスター」で探すと図鑑や編成に当たるので、行き先の名前で押す
       await page.getByRole('button', { name: 'M/B管理' }).first().dispatchEvent('click');
-      await page.getByRole('button', { name: /モンスター/ }).first().dispatchEvent('click');
-      await page.getByRole('button', { name: 'マスモン' }).first().dispatchEvent('click');
+      await page.getByRole('button', { name: 'マスモン一覧' }).first().dispatchEvent('click');
       await page.getByText('内訳検証ふつう').first().waitFor({ timeout: 20000 });
 
       const openDetail = async (name) => {

@@ -42,7 +42,11 @@ check('虹のプシュケーは他モードと同じ共通処理で配る', reco
 check('極限・クイック・プロ・チャレンジのクリア数より先に分岐する',
   speciesBranch < recordFn.indexOf('if (extremeRunRef.current) {')
   && speciesBranch < recordFn.indexOf('storeSet(`mh_clears_'));
-const speciesBranchBody = recordFn.slice(speciesBranch, recordFn.indexOf('if (extremeRunRef.current) {'));
+// 種族チャレンジの枝は、次の枝(タクティクス or 極限チャレンジ)が始まるまで。
+// あとから枝が増えても、種族チャレンジの中身だけを見るようにしておく
+const speciesBranchEnd = Math.min(...['if (isTacticsMode(runMode)) {', 'if (extremeRunRef.current) {']
+  .map(mark => recordFn.indexOf(mark)).filter(index => index > speciesBranch));
+const speciesBranchBody = recordFn.slice(speciesBranch, speciesBranchEnd);
 check('チャレンジ・極限の通算クリア数を書き換えない',
   !speciesBranchBody.includes('mh_clears_') && !speciesBranchBody.includes('extremeClearCountKey') && !speciesBranchBody.includes('storeSet('));
 
@@ -86,11 +90,15 @@ check('Supabaseのテーブル・列を増やしていない',
 // ===== ③ 公開フラグと送信 =====
 check('一般公開フラグはtrue(公開済み)', api.SPECIES_CHALLENGE_PUBLIC_RELEASE === true);
 check('本番のBATTLE MODEへ出す', source.includes('const SPECIES_CHALLENGE_PUBLIC_RELEASE = true;'));
-const submitFn = source.slice(source.indexOf('const submitSpeciesChallengeScoreOnce ='), source.indexOf('const handleSaveName ='));
+// ★コメント行は落としてから見る。次の関数の説明文に 'mh_hs_*' のような
+//   「触らない」と書いた語が入っていると、本文を読まずに落ちてしまう
+const submitFn = source.slice(source.indexOf('const submitSpeciesChallengeScoreOnce ='), source.indexOf('const submitTacticsScoreOnce ='))
+  .split('\n').filter(line => !/^\s*\/\//.test(line)).join('\n');
 check('種族チャレンジ専用のスコア送信がある', submitFn.length > 0);
 check('1ランにつき1回だけ送る', submitFn.includes('if (!run || score <= 0 || scoreSubmittedRef.current) return;') && submitFn.includes('scoreSubmittedRef.current = true;'));
 // 公開前へ戻したときに送信も止まる仕掛けは、そのまま残しておく
-check('公開フラグを見てから全国ランキングへ送る', submitFn.includes('if (!SPECIES_CHALLENGE_PUBLIC_RELEASE) return;'));
+// 公開フラグの判定は modeHasRanking が1か所で持つ(タクティクス側はタクティクスのフラグで止まる)
+check('公開フラグを見てから全国ランキングへ送る', submitFn.includes('if (!modeHasRanking(speciesChallengeRunMode(run))) return;'));
 check('デバッグ実戦からも送らない', submitFn.includes('if (debugBattleRef.current) return;'));
 check('送信は既存のsubmitLocalScoreを使う', submitFn.includes('await submitLocalScore(diff, score, runIdRef.current)'));
 check('チャレンジの自己ベスト(mh_hs_*)を書き換えない', !submitFn.includes('mh_hs_') && !submitFn.includes('setHighScores'));

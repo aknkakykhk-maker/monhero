@@ -19,6 +19,8 @@ function ProfileScreen({
   finishOnboarding, gold, highScores, isEventReplayUnlocked, modeRecordFor, onboarded,
   onboardingIcon, onboardingName, onboardingPreview, ownedItems, playtimeView, proHighScores,
   profileBattleMode, profileFrameId, ownedProfileFrames, quickHighestWaves, resolveIconUrl, selectedAssistantId, speciesChallengeProgress,
+  // タクティクスバトルの記録(モードidごとに {hs,clears,waves})と、その種族チャレンジの進み具合
+  tacticsRecordsOf, speciesChallengeProgressOf,
   onBack, onOpenNameEdit, onOpenIconPicker, onOpenFramePicker, onOpenItems, onOpenCallStylePicker, onOpenAssistantPicker,
   onSelectBattleMode, onOpenEventReplayList, onOpenSpeciesRecords,
   rhythmHistoryCount, onOpenRhythmHistory,
@@ -192,13 +194,23 @@ function ProfileScreen({
         {/* 保存済みの各モード記録を読むだけのプロフィール表示。新しい保存キーは作らない。 */}
         {(()=>{
           const difficultyIds=Object.keys(DIFFICULTY_SETTINGS);
-          const modes=[...PUBLIC_BATTLE_MODES,EXTREME_MODE,SPECIES_CHALLENGE_MODE];
+          // タクティクスバトルのモードは、遊べるようになったものから同じ並びへ加わる
+          // (β版ではタクティクスプロだけ)。判定は battleModePlayable の1か所に任せる
+          const modes=[...PUBLIC_BATTLE_MODES,EXTREME_MODE,SPECIES_CHALLENGE_MODE,
+            ...[TACTICS_MODE,TACTICS_SPECIES_MODE,TACTICS_PRO_MODE].filter(mode=>battleModePlayable(mode.id))];
           const selected=modes.find(mode=>mode.id===profileBattleMode)||null;
-          const speciesSummary=speciesChallengeProfileSummary(speciesChallengeProgress);
+          const progressOf=(mode)=>(typeof speciesChallengeProgressOf==='function'
+            ? speciesChallengeProgressOf(mode) : speciesChallengeProgress);
+          const speciesSummaryOf=(mode)=>speciesChallengeProfileSummary(progressOf(mode));
+          const speciesSummary=speciesSummaryOf(BATTLE_MODE_SPECIES_CHALLENGE);
           const speciesDifficultyLabel=(id)=>DIFFICULTY_SETTINGS[id]?.label||EXTREME_DIFFICULTIES.find(setting=>setting.id===id)?.label||id;
-          const scoreMapFor=(mode)=>isProMode(mode.id)?proHighScores:highScores;
+          const tacticsHsOf=(modeId)=>(typeof tacticsRecordsOf==='function'?tacticsRecordsOf(modeId).hs:{});
+          const scoreMapFor=(mode)=>isTacticsMode(mode.id)?tacticsHsOf(mode.id):isProMode(mode.id)?proHighScores:highScores;
           const representativeFor=(mode)=>{
-            if(mode.id===BATTLE_MODE_SPECIES_CHALLENGE)return speciesSummary.bestScore>0?`最高スコア: ${speciesSummary.bestScore.toLocaleString()} pt`:'最高スコア: 記録なし';
+            if(isSpeciesChallengeMode(mode.id)){
+              const summary=speciesSummaryOf(mode.id);
+              return summary.bestScore>0?`最高スコア: ${summary.bestScore.toLocaleString()} pt`:'最高スコア: 記録なし';
+            }
             if(isQuickMode(mode.id)){
               const wave=highestModeWave(quickHighestWaves,difficultyIds);
               return wave>0?`最高到達 WAVE ${wave}`:'未記録';
@@ -206,7 +218,8 @@ function ProfileScreen({
             const scores=mode.id===EXTREME_MODE.id
               ? extremeBestScores
               : scoreMapFor(mode);
-            const ids=mode.id===EXTREME_MODE.id?PUBLIC_EXTREME_DIFFICULTIES.map(item=>item.id):difficultyIds;
+            const ids=mode.id===EXTREME_MODE.id?PUBLIC_EXTREME_DIFFICULTIES.map(item=>item.id)
+              :isTacticsMode(mode.id)?TACTICS_DIFFICULTY_IDS:difficultyIds;
             const best=highestModeScore(scores,ids);
             return best>0?`最高スコア ${best.toLocaleString()} pt`:'未記録';
           };
@@ -215,7 +228,7 @@ function ProfileScreen({
             <ScreenLead>モードをタップすると詳しい記録を確認できます</ScreenLead>
             {!selected?(
               <div className="grid grid-cols-1 gap-2">
-                {modes.map(mode=>{const species=mode.id===BATTLE_MODE_SPECIES_CHALLENGE;return <button key={mode.id} type="button" data-profile-mode={mode.id} onClick={()=>species?onOpenSpeciesRecords():onSelectBattleMode(mode.id)} className="w-full min-h-[64px] rounded-2xl border bg-slate-900/70 px-3 py-2.5 text-left active:scale-[.98]" style={{borderColor:`${mode.color}66`}}>
+                {modes.map(mode=>{const species=isSpeciesChallengeMode(mode.id);return <button key={mode.id} type="button" data-profile-mode={mode.id} onClick={()=>species?onOpenSpeciesRecords(mode.id):onSelectBattleMode(mode.id)} className="w-full min-h-[64px] rounded-2xl border bg-slate-900/70 px-3 py-2.5 text-left active:scale-[.98]" style={{borderColor:`${mode.color}66`}}>
                   <span className="flex items-center gap-2"><span className="text-xl" aria-hidden="true">{mode.emoji}</span><span className="min-w-0 flex-1"><b className="block text-[13px] text-white">{mode.label}</b><small className="block text-[11px] font-black" style={{color:mode.color}}>{representativeFor(mode)}</small>{species&&<><small className="block truncate text-[10px] font-black text-cyan-100">最高記録: {speciesSummary.bestScore>0?`${speciesChallengeSpeciesName(speciesSummary.bestSpeciesId)} / ${speciesDifficultyLabel(speciesSummary.bestDifficultyId)}`:'記録なし'}</small><small className="block text-[10px] font-black text-emerald-300">クリア: {speciesSummary.clearedCount} / {speciesSummary.totalCount}</small></>}</span><ChevronRight size={16} className="shrink-0 text-slate-400"/></span>
                 </button>})}
               </div>
@@ -225,7 +238,7 @@ function ProfileScreen({
                 <div className="flex flex-col gap-2">
                   {selected.id===EXTREME_MODE.id
                     ? PUBLIC_EXTREME_DIFFICULTIES.map(setting=>{const score=extremeBestScores[setting.id]||0;const clears=extremeClearCounts[setting.id]||0;const played=score>0||clears>0;return <div key={setting.id} className="rounded-xl border border-white/10 bg-black/30 p-3"><b className="block text-[13px] text-fuchsia-200">{setting.label}</b>{played?<div className="mt-2 grid grid-cols-2 gap-2 text-center"><div><small className="block text-[10px] text-slate-400">最高スコア</small><strong className="text-[12px] text-amber-300">{score.toLocaleString()} pt</strong></div><div><small className="block text-[10px] text-slate-400">クリア回数</small><strong className="text-[12px] text-emerald-300">{clears}回</strong></div></div>:<div className="mt-2 text-center text-[11px] font-black text-slate-400">未記録</div>}</div>})
-                    : Object.entries(DIFFICULTY_SETTINGS).map(([key,setting])=>{const record=modeRecordFor(selected.id,key);const quick=isQuickMode(selected.id);const challenge=selected.id===BATTLE_MODE_CHALLENGE;const attempts=challenge?(attemptCounts[key]||0):0;const played=record.score>0||record.wave>0||record.clears>0||attempts>0;return <div key={key} className="rounded-xl border border-white/10 bg-black/30 p-3"><div className="px-2 py-1 rounded-xl text-[11px] font-black text-center" style={difficultyStyle(setting,true)}>{setting.label}</div>{played?<div className={`mt-2 grid gap-2 text-center ${quick?'grid-cols-2':challenge?'grid-cols-2':'grid-cols-3'}`}>{challenge&&<div><small className="block text-[10px] text-slate-400">挑戦回数</small><strong className="text-[12px] text-white">{attempts}回</strong></div>}{!quick&&<div><small className="block text-[10px] text-slate-400">最高スコア</small><strong className="text-[12px] text-amber-300">{record.score.toLocaleString()} pt</strong></div>}<div><small className="block text-[10px] text-slate-400">最高到達WAVE</small><strong className="text-[12px] text-indigo-200">WAVE {record.wave}</strong></div><div><small className="block text-[10px] text-slate-400">クリア回数</small><strong className="text-[12px] text-emerald-300">{record.clears}回</strong></div></div>:<div className="mt-2 text-center text-[11px] font-black text-slate-400">未記録</div>}</div>})}
+                    : (isTacticsMode(selected.id)?TACTICS_DIFFICULTY_IDS.map(id=>[id,DIFFICULTY_SETTINGS[id]||EXTREME_DIFFICULTIES.find(setting=>setting.id===id)||EXTREME_SETTING]):Object.entries(DIFFICULTY_SETTINGS)).map(([key,setting])=>{const record=modeRecordFor(selected.id,key);const quick=isQuickMode(selected.id);const challenge=selected.id===BATTLE_MODE_CHALLENGE;const attempts=challenge?(attemptCounts[key]||0):0;const played=record.score>0||record.wave>0||record.clears>0||attempts>0;return <div key={key} className="rounded-xl border border-white/10 bg-black/30 p-3"><div className="px-2 py-1 rounded-xl text-[11px] font-black text-center" style={difficultyStyle(setting,true)}>{setting.label}</div>{played?<div className={`mt-2 grid gap-2 text-center ${quick?'grid-cols-2':challenge?'grid-cols-2':'grid-cols-3'}`}>{challenge&&<div><small className="block text-[10px] text-slate-400">挑戦回数</small><strong className="text-[12px] text-white">{attempts}回</strong></div>}{!quick&&<div><small className="block text-[10px] text-slate-400">最高スコア</small><strong className="text-[12px] text-amber-300">{record.score.toLocaleString()} pt</strong></div>}<div><small className="block text-[10px] text-slate-400">最高到達WAVE</small><strong className="text-[12px] text-indigo-200">WAVE {record.wave}</strong></div><div><small className="block text-[10px] text-slate-400">クリア回数</small><strong className="text-[12px] text-emerald-300">{record.clears}回</strong></div></div>:<div className="mt-2 text-center text-[11px] font-black text-slate-400">未記録</div>}</div>})}
                 </div>
               </div>
             )}

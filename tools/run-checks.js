@@ -95,9 +95,33 @@ const EXTRA_TOKENS = [
 // ファイル名の語では拾えないので、検査そのものを名指しするもの
 const FORCE_CHECKS = [
   { re: /^(CLAUDE|AGENTS|README)\.md$|^docs\/|^\.claude\/skills\//, checks: ['rules-index-check.js'], why: 'ルールと資料' },
+  // 新モード(tactics)の分岐が入っているファイル。ファイル名の語(app・parts)では拾えないので名指しする。
+  // 「isTacticsMode で締めたつもり」が既存5モードへ漏れると、遊んでいる人の記録に直に効く
+  { re: /^monster-hero\/src\/parts\/(10-core|22-enemy-and-bond-entries|32-tactics-units|60-app|71-screen-battle)\.jsx$/,
+    checks: ['battle/legacy-mode-parity-check.js'], why: '新モードの分岐が既存5モードへ漏れていないか' },
+  // モンヒロバトルの入口(仕組み → モード → 難易度)。導線を1本でも切ると遊べなくなるのに、
+  // ファイル名の語(app・home・core)では拾えないので名指しする
+  { re: /^monster-hero\/(src\/parts\/(10-core|60-app|69-screen-home)\.jsx|data\/(help|assistants)\.js)$/,
+    checks: ['battle/battle-system-select-check.js'], why: 'モンヒロバトルの入口と導線' },
+  // 入口のカードは、行を1つ足すだけで小さい端末から簡単にあふれる。
+  // あふれてもエラーは出ず、大きい端末では気づけない(2026-09-21・ユーザー報告)
+  { re: /^monster-hero\/src\/parts\/(10-core|60-app)\.jsx$/,
+    checks: ['battle/battle-system-fit-check.js'], why: 'バトルの入口が1画面に収まるか' },
+  // 画面を足したときのBGMの決め忘れ。対応表へ載せ忘れてもエラーは出ず、
+  // その画面だけ静かに無音になるので、遊んだ人が言うまで気づけない(2回やっている)
+  { re: /^monster-hero\/src\/parts\/60-app\.jsx$/,
+    checks: ['boot/bgm-screen-coverage-check.js'], why: '画面ごとのBGMの決め忘れ' },
+  // タクティクスバトルの中のモード(記録・ランキング・極限タブ)。
+  // まちがえるとチャレンジの自己ベストとクリア回数を上書きするのに、
+  // ファイル名の語(core・app・difficulties・supabase)では拾えないので名指しする
+  { re: /^monster-hero\/src\/parts\/(10-core|19-difficulties-and-rules|26-supabase|56-screen-profile|60-app)\.jsx$/,
+    checks: ['mode/tactics-modes-check.js'], why: 'タクティクスの記録・ランキング・極限タブ' },
   // 譜面(data/rhythm-mode.js)を触ったら、終点フリックの置き場所は必ず見る。
   // 語の当たりだけでは本数の上限で落ちることがあり、曲を足した回だけ静かに見逃す(2026-09-18)
   { re: /^monster-hero\/data\/rhythm-mode\.js$/, checks: ['mode/rhythm-end-flick-swing-check.js'], why: '譜面の終点フリックの置き場所' },
+  // バトルの演出は「出す→待つ→消す」。ランを片付けると**消すほうへ到達しない**ので、
+  // 片付けで捨て忘れると次のランの画面に残る(2026-09-20・誰もいない間合いに技名が出た)
+  { re: /^monster-hero\/src\/parts\/60-app\.jsx$/, checks: ['battle/run-abandon-fx-check.js'], why: 'ランを片付けたときの演出' },
   // 入力の割り当て(rhythmMatchInputBatch)は、片側を直すともう片側が静かに壊れる。
   // 2026-09-18、持ち替えの直しが「押さえている上に重なるノーツを叩けない」を生んだ
   { re: /^monster-hero\/data\/rhythm-mode\.js$/, checks: ['mode/rhythm-tap-during-hold-check.js', 'mode/rhythm-finger-swap-check.js'], why: '押さえながら叩く・指の持ち替え' },

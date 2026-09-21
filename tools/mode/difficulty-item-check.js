@@ -56,7 +56,7 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
   await page.waitForFunction(() => !!document.body && document.body.innerText.includes('TAP TO START'), { timeout: 40000 });
   await page.getByRole('button', { name: 'TAP TO START' }).click({ force: true });
   await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
-  await page.getByRole('button', { name: 'バトル' }).waitFor({ timeout: 30000 });
+  await page.getByRole('button', { name: 'モンヒロバトル' }).waitFor({ timeout: 30000 });
   // ログインボーナスなどの重なりを閉じてHOMEを出す
   for (let i = 0; i < 6; i++) {
     const btn = page.getByRole('button', { name: /受け取る|閉じる|はじめる|OK/ }).first();
@@ -67,7 +67,9 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
 
   // --- 新難易度 ---
   // 難易度は HOME → バトル → BATTLE MODE → チャレンジモード → 難易度を選ぶ の先にある
-  await page.getByRole('button', { name: 'バトル' }).dispatchEvent('click');
+  await page.getByRole('button', { name: 'モンヒロバトル' }).dispatchEvent('click');
+  await page.waitForTimeout(600);
+  await page.locator('[data-battle-system="systemClassic"]').dispatchEvent('click');
   await page.getByText('BATTLE MODE').first().waitFor({ timeout: 20000 });
   await page.locator('article').filter({ hasText: 'チャレンジモード' }).first()
     .getByRole('button', { name: '難易度を選ぶ' }).dispatchEvent('click');
@@ -101,10 +103,14 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
 
   // --- 絆経験値チケット ---
   // アイテムは HOME → プロフィール の先にある
-  await page.locator('button[aria-label="戻る"]').first().dispatchEvent('click');
-  await page.waitForTimeout(600);
-  await page.locator('button[aria-label="戻る"]').first().dispatchEvent('click').catch(() => {});
-  await page.getByRole('button', { name: 'バトル' }).waitFor({ timeout: 20000 });
+  // ★2026-09-20 に画面が1段増えたので、HOMEへ着くまで「戻る」を押す。
+  //   回数を決め打ちにすると、画面をまた増やしたときに黙って落ちる
+  for (let i = 0; i < 4; i++) {
+    if (await page.getByRole('button', { name: 'モンヒロバトル' }).count() > 0) break;
+    await page.locator('button[aria-label="戻る"]').first().dispatchEvent('click').catch(() => {});
+    await page.waitForTimeout(600);
+  }
+  await page.getByRole('button', { name: 'モンヒロバトル' }).waitFor({ timeout: 20000 });
   await page.getByRole('button', { name: 'プロフィール' }).first().dispatchEvent('click');
   await page.waitForTimeout(1200);
   await page.getByRole('button', { name: /アイテム/ }).first().dispatchEvent('click');

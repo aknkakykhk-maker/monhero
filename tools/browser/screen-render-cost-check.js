@@ -19,6 +19,8 @@ const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分�
 // 絶対値を実機の目安にはできない。**改修の前後で比べる**ために使う。
 const path = require('path');
 const { chromium } = require('playwright');
+// イベントの「閉幕とお礼」は終了の時刻に自動で流れる。既読にしておかないと会話で止まる
+const { eventStorySeed } = require(path.join(TOOLS_DIR, 'boot/quiet-boot-seed'));
 
 const URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/index.html';
 // 1画面あたりの上限(ms)。2026-09-12 の実測は 21〜62ms だったので、
@@ -51,11 +53,11 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
     put('mh_assistant_selected_v1', 'mua');
     put('mh_assistant_unlock_seen_v1', true);
     put('mh_update_notice_seen_v1', true);
-    put('mh_rhythm_event_story_v1', ['monbeat_cup_2026_09']);
     put('mh_inherited_unique_level_compensation_v1', true);
     put('mh_inherited_unique_level_compensation_pending_v1', false);
     put('mh_masu_level_cap_compensation_notice_seen_v1', true);
   });
+  await page.addInitScript(eventStorySeed());
   // ランキングは50件返す。一覧の重さを測るのが目的なので、中身より件数をそろえる
   await page.addInitScript(() => {
     const orig = window.fetch.bind(window);
@@ -140,8 +142,15 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
   };
 
   const rows = [];
-  const m1 = await measure('バトルモード選択', () => clickAria('バトル'),
-    () => !!document.querySelector('button[aria-label="ブリーダーLvランキング"]'));
+  // ★2026-09-20 にモード選択の1つ上へ「どのバトルで遊ぶか」の画面が増えた。
+  //   入口そのものは軽いので測らず、これまでどおり「モード選択の描画」だけを測る
+  await clickAria('モンヒロバトル');
+  await page.waitForFunction(() => !!document.querySelector('[data-battle-system="systemClassic"]'), { timeout: 20000 });
+  const m1 = await measure('バトルモード選択', () => page.evaluate(() => {
+    const b = document.querySelector('[data-battle-system="systemClassic"]');
+    if (b) b.click();
+    return !!b;
+  }), () => !!document.querySelector('button[aria-label="ブリーダーLvランキング"]'));
   if (m1) rows.push(m1);
   const m2 = await measure('ランキング50件(ブリーダーLv)', () => page.evaluate(() => {
     const b = document.querySelector('button[aria-label="ブリーダーLvランキング"]');
@@ -155,11 +164,13 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
     return !!b;
   }), () => document.querySelectorAll('[data-ranking-kind="bond"]').length >= 10);
   if (m3) rows.push(m3);
-  // トップ画面へ戻ってからマスモン一覧
-  await page.evaluate(() => { const b = document.querySelector('button[aria-label="戻る"]'); if (b) b.click(); });
-  await page.waitForTimeout(600);
-  await page.evaluate(() => { const b = document.querySelector('button[aria-label="戻る"]'); if (b) b.click(); });
-  await page.waitForTimeout(900);
+  // トップ画面へ戻ってからマスモン一覧。
+  // 戻る段数は画面が増えると変わるので、M/B管理のボタンが出るまで押し続ける
+  for (let i = 0; i < 6; i++) {
+    if (await page.evaluate(() => [...document.querySelectorAll('button')].some((x) => (x.innerText || '').trim() === 'M/B管理'))) break;
+    await page.evaluate(() => { const b = document.querySelector('button[aria-label="戻る"]'); if (b) b.click(); });
+    await page.waitForTimeout(700);
+  }
   const m4 = await measure('M/B管理', () => clickText('M/B管理'),
     () => (document.body.innerText || '').includes('マスモン') || (document.body.innerText || '').includes('ベースモン'));
   if (m4) rows.push(m4);

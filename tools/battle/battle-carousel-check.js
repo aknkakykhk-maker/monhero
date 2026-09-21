@@ -16,7 +16,9 @@ assert(src.includes('const createBattleEnemy ='));
 // (以前は extremeRunRef を直接見て EXTREME_SETTING.power を渡していたが、
 //  極限の段階ごとに倍率が違うため battleSetting から渡す形になっている)
 // GOD 追加後は三項演算子で分岐するため、通常側の呼び出しを見る
-assert(src.includes('createBattleEnemy(w,difficulty,forcedEnemyKey,battleSetting?.power??null,enemyTurnMultiplier*stagedEnemyMultiplier)'),'敵の生成は共通処理へ難易度設定の強さを渡す');
+// 新モード(tactics)は、連れてきた供モンの総合力に応じた倍率(tacticsEnemyBoost)も掛ける。
+// ほかのモードでは1倍が返るので、これまでどおりの敵になる
+assert(src.includes('createBattleEnemy(w,difficulty,forcedEnemyKey,battleSetting?.power??null,enemyTurnMultiplier*stagedEnemyMultiplier*tacticsEnemyBoost)'),'敵の生成は共通処理へ難易度設定の強さを渡す');
 // 実バトル(GOD とそれ以外の2分岐)と全WAVE詳細の、合わせて3か所だけ
 // 段階の有無で分岐しなくなったので、実バトルの生成は1か所＋全WAVE詳細の1か所
 assert((src.match(/createBattleEnemy\(w,difficulty,forcedEnemyKey,|=createBattleEnemy\(/g)||[]).length===2,`createBattleEnemyの呼び出しは実バトルと全WAVE詳細の2か所 (${(src.match(/createBattleEnemy\(w,difficulty,forcedEnemyKey,|=createBattleEnemy\(/g)||[]).length}か所)`);

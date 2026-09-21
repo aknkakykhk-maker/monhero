@@ -689,6 +689,12 @@ const assistantLineMatchesBond = (line, level) => {
 // バトル中・クイックの成長演出・供モンの加入演出には常設しない(テンポを止めないため)。
 // バトル中の案内は「ステータス」やヘルプを開いたときだけ出す。
 const ASSISTANT_SCENES = {
+  // モンヒロバトルの入口(2026-09-20 ユーザー指示で、モード選択の1つ上に画面を増やした)。
+  // 本文は下の addAssistantLinePack から合流する
+  battleSystemSelect: {
+    help: 'basics/battle-modes',
+    lines: [],
+  },
   // クイック∞周回 × モンビーの連携(docs/spec/QUICK_RHYTHM_LINK.md PR8)。
   // 「別の画面へ移っても裏で進む」「演奏中だけ止まる」は遊んでいるだけでは気づけないので、
   // 公開と同時に画面のなかでも伝える。本文は下の addAssistantLinePack から合流する。
@@ -1446,6 +1452,65 @@ addAssistantLinePack({
       { e:'wink', t:'ここはEXTREME！ 準備できてるなら、思いっきりいこ！' },
       { e:'normal', t:'厳しそうなら無理しなくてOK。もうひと育成してから挑むのもアリだよ。' },
       { e:'happy', t:'EXTREMEへの挑戦、あたしも応援してる(●゚ｪ゚))ｺｸｺｸ' },
+    ],
+  },
+});
+
+// モンヒロバトルの入口(2026-09-20 ユーザー指示で、モード選択の1つ上に画面を増やした)。
+// どのバトルで遊ぶかをここで選ぶので、選び方の手がかりをひとこと出す。
+// ★助手は4人いるので、4人ぶん束を足す(1人でも欠けると assistant-check が落ちる)
+addAssistantLinePack({
+  id: 'battleSystemSelectGuideKiki',
+  assistantId: 'kiki',
+  label: 'モンヒロバトルの入口案内(きき)',
+  lines: {
+    battleSystemSelect: [
+      { e:'normal', t:'ここで、どのバトルで遊ぶか決めるよ。' },
+      { e:'happy',  t:'選んだバトルの中に、チャレンジや種族チャレンジが入ってる。' },
+      { e:'wink',   t:'クイックはそのまま難易度えらびに行くよ ( ˘ω˘)9グッ!' },
+      { e:'normal', t:'記録はバトルごとに別。好きなほうを伸ばしていいよ。' },
+      { e:'happy',  t:'{name}、迷ったら「これまでのバトル」でいいと思う。' },
+    ],
+  },
+});
+addAssistantLinePack({
+  id: 'battleSystemSelectGuideMomosuke',
+  assistantId: 'momosuke',
+  label: 'モンヒロバトルの入口案内(ももすけ)',
+  lines: {
+    battleSystemSelect: [
+      { e:'wink',    t:'まずはどのバトルで遊ぶか選んでw' },
+      { e:'happy',   t:'中にチャレンジとか種族チャレンジが入ってるからね。' },
+      { e:'excited', t:'クイックはそのまま難易度えらび！ さくっと行きたいときはこれ♪' },
+      { e:'normal',  t:'記録もランキングもバトルごとに別々だよ。' },
+      { e:'wink',    t:'{name}、迷ったら「これまでのバトル」でいいんじゃない？w' },
+    ],
+  },
+});
+addAssistantLinePack({
+  id: 'battleSystemSelectGuideDra',
+  assistantId: 'dra',
+  label: 'モンヒロバトルの入口案内(どらごん)',
+  lines: {
+    battleSystemSelect: [
+      { e:'normal', t:'まずはどのバトルでやるか決めるとこだな' },
+      { e:'happy',  t:'選んだやつの中に、チャレンジとか種族チャレンジが入っとるわ' },
+      { e:'normal', t:'クイックはそのまま難易度えらびや。さっと遊びたいときにええで' },
+      { e:'normal', t:'記録はバトルごとに別々やから、好きなほうやったらええ' },
+      { e:'happy',  t:'{name}、迷ったら「これまでのバトル」からでええと思うで' },
+    ],
+  },
+});
+addAssistantLinePack({
+  id: 'battleSystemSelectGuide',
+  label: 'モンヒロバトルの入口案内',
+  lines: {
+    battleSystemSelect: [
+      { e:'happy', t:'モンヒロバトルへようこそ♪ まずはどのバトルで遊ぶか選んでね(●゚ｪ゚))ｺｸｺｸ' },
+      { e:'normal', t:'選んだバトルの中に、チャレンジや種族チャレンジが並んでるよ。' },
+      { e:'wink', t:'クイックモードは選んだらすぐ難易度えらびだよ。さくっと遊びたいときにどうぞ♪' },
+      { e:'excited', t:'記録もランキングもバトルごとに別々だから、好きなほうを伸ばしていいよ！' },
+      { e:'normal', t:'{name}、迷ったら「これまでのバトル」からで大丈夫だよ( \'ω\')' },
     ],
   },
 });
@@ -5351,6 +5416,54 @@ const ASSISTANT_SYMPHONY_EVENT = [
 ];
 const ASSISTANT_SYMPHONY_EVENT_CALLS = { mua: 'ドラケン', kiki: 'ドラさん', momosuke: 'ドラちゃん', dra: 'みゅあ／靴下さん／もも' };
 
+// 第2回「異世界交響祭」の閉幕の会話(2026-09-20)。**イベントが終わった時刻に自動で流れる**。
+// ★週末ゲリラ杯のときのような報酬の上乗せは無い。あれは「初開催のお礼」として
+//   その回かぎりで決めたもので、毎回やると付いていない回が不満になる。
+//   ここで知らせるのは「終わったこと」と「受け取りのしかた」の2つだけ。
+// ★開幕(ASSISTANT_SYMPHONY_EVENT)で助手になったばかりのドラが、はじめて締めをやる。
+const ASSISTANT_SYMPHONY_THANKS = [
+  // 閉幕
+  { who:'dra',      e:'normal',   t:'……よし。異世界交響祭、これにて閉幕だ' },
+  { who:'mua',      e:'happy',    t:'おつかれー、ドラケン。ちゃんと締まってたじゃん' },
+  { who:'dra',      e:'happy',    t:'おでだって助手だからな。締めるとこは締めるわ' },
+  { who:'kiki',     e:'normal',   t:'はじめてのお仕事にしては、上出来だと思います' },
+  { who:'dra',      e:'troubled', t:'靴下さん、それ褒めてるのか？' },
+  { who:'kiki',     e:'angry',    t:'褒めてます！' },
+  // 振り返り
+  { who:'momosuke', e:'happy',    t:'3曲とも、ずいぶん賑やかだったねぇ♡' },
+  { who:'mua',      e:'excited',  t:'ランキング、最後の日にめちゃくちゃ動いてたよね！' },
+  { who:'kiki',     e:'happy',    t:'終わりぎわに記録を伸ばした方が、たくさんいました' },
+  { who:'dra',      e:'excited',  t:'そうそう！ おで、ずっと見てたんだけど最後の追い上げがすごくてな' },
+  { who:'dra',      e:'happy',    t:'何回も何回も叩き直してる人がいてさ。ああいうの、見てて胸が熱くなるわ' },
+  { who:'momosuke', e:'wink',     t:'ドラちゃん、すっかり主催者の顔してる♡' },
+  { who:'dra',      e:'surprise', t:'えっ。そ、そうか？ ……えへへ' },
+  { who:'mua',      e:'normal',   t:'チョロい' },
+  { who:'dra',      e:'angry',    t:'うるさいぞみゅあ！' },
+  // 受け取り
+  { who:'kiki',     e:'normal',   t:'では、受け取りのご案内をしましょう' },
+  { who:'dra',      e:'normal',   t:'おう。対象の3曲ぜんぶを遊んだ人には参加賞だ。順位に関係なくもらえる' },
+  { who:'mua',      e:'normal',   t:'入賞したぶんは別だよね？' },
+  { who:'dra',      e:'happy',    t:'別だな。どっちも当てはまるなら両方もらえる' },
+  { who:'kiki',     e:'happy',    t:'受け取りは、このあと出る画面の「受け取る」からです' },
+  { who:'momosuke', e:'normal',   t:'受け取れるのは2週間だからね。そこだけ忘れないで〜' },
+  { who:'mua',      e:'troubled', t:'……もし何も出なかったら？' },
+  { who:'kiki',     e:'normal',   t:'条件に届かなかったときは出ません。順位は終わった時点で決まっています' },
+  { who:'dra',      e:'normal',   t:'記録のほうは消えないから、あとから見返せるぞ' },
+  // 次回へ
+  { who:'mua',      e:'excited',  t:'ねえドラケン、次もやるの？' },
+  { who:'dra',      e:'troubled', t:'おでに聞かれてもな……そこはももの管轄だろ' },
+  { who:'momosuke', e:'wink',     t:'ふふ。ドラちゃんが手伝ってくれるなら、考えてもいいかも♡' },
+  { who:'dra',      e:'excited',  t:'やる！ おでやる！ なんでもやる！' },
+  { who:'kiki',     e:'troubled', t:'……即答でしたね' },
+  { who:'mua',      e:'happy',    t:'ドラケンって分かりやすくていいよね' },
+  // 締め
+  { who:'dra',      e:'happy',    t:'{name}、遊んでくれてありがとうな。おでの初仕事、付き合ってくれて助かった' },
+  { who:'kiki',     e:'happy',    t:'{name}、おつかれさまでした。記録はぜんぶ残っていますよ' },
+  { who:'momosuke', e:'happy',    t:'{name}、またモンヒロビートで会おうね♡' },
+  { who:'mua',      e:'excited',  t:'次もぜったい叩きに来てよ！ 待ってるからね！' },
+];
+const ASSISTANT_SYMPHONY_THANKS_CALLS = { mua: 'ドラケン', kiki: 'ドラさん', momosuke: 'ドラちゃん', dra: 'みゅあ／靴下さん／もも' };
+
 // ---------- イベント回想 ----------
 // 一度見た会話イベントを、プロフィール画面から何度でも見返せるようにするための一覧。
 // 台本(script)は既存のシーン定義をそのまま参照し、ここで二重に持たない。
@@ -5381,6 +5494,9 @@ const EVENT_REPLAYS = [
   // 第2回イベントの開催会話(2026-09-17)。最後まで見ると助手ドラが解放される
   // (ASSISTANT_UNLOCK_STORIES)。期間が終わっても回想からいつでも見返せる
   { id: 'symphony_2026_09_17', title: '異世界交響祭 ～ドラ登場～', script: ASSISTANT_SYMPHONY_EVENT, calls: ASSISTANT_SYMPHONY_EVENT_CALLS, unlockedKey: 'symphonyEventSeen' },
+  // 第2回の閉幕の会話(2026-09-20)。**イベントが終わった時刻に自動で流れる**。
+  // 報酬の上乗せは無いので、知らせるのは終わったことと受け取りのしかただけ
+  { id: 'symphony_2026_09_17_thanks', title: '異世界交響祭 ～閉幕とお礼～', script: ASSISTANT_SYMPHONY_THANKS, calls: ASSISTANT_SYMPHONY_THANKS_CALLS, unlockedKey: 'symphonyThanksSeen' },
 ];
 
 // ---------- 助手ごとのあいさつ・村の案内 ----------
