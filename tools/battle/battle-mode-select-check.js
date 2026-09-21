@@ -148,19 +148,31 @@ const check = (name, ok, detail = '') => {
     check('左へも回せる', back !== null && back !== before, `${before} → ${back}`);
 
     // --- ③ ランキングの導線はチャレンジとプロだけ ---
-    check('チャレンジのカードにランキングの導線がある',
-      await page.getByRole('button', { name: /チャレンジモードのランキング/ }).count() === 3);
-    check('プロのカードにランキングの導線がある',
-      await page.getByRole('button', { name: /プロモードのランキング/ }).count() === 3);
+    // ★ボタンの字は「🏆 このモードのランキング」に変わった(2026-09-21)。
+    //   モード名を繰り返すと、名前の長いモードで文字が横にあふれて切れるため。
+    //   どのモードのものかは、カード(data-battle-mode)の中を見て判断する
+    const rankLinksIn = async (modeId) => {
+      const cards = page.locator(`[data-battle-mode="${modeId}"]`);
+      let found = 0;
+      for (let i = 0; i < await cards.count(); i += 1) {
+        found += await cards.nth(i).getByRole('button', { name: /このモードのランキング/ }).count();
+      }
+      return found;
+    };
+    check('チャレンジのカードにランキングの導線がある', await rankLinksIn('challenge') === 3);
+    check('プロのカードにランキングの導線がある', await rankLinksIn('pro') === 3);
     // 「ランキング対象外」はクイックのカードの特徴として1行出るが、
     // 既存画面にあった高さ合わせだけの空枠(押せない案内ボックス)は新UIには置かない
     check('クイックにはランキングの導線も高さ合わせの空枠も出さない',
-      await page.getByRole('button', { name: /クイックモードのランキング/ }).count() === 0
+      await rankLinksIn('quick') === 0
         && await page.getByText('クイックモードはランキング対象外です').count() === 0);
 
     // --- ④ プロ専用ランキングへ入れる ---
-    await page.getByRole('button', { name: /プロモードのランキング/ }).first().dispatchEvent('click');
-    await page.getByRole('heading', { name: 'プロモードランキング' }).waitFor({ timeout: 15000 });
+    await page.locator('[data-battle-mode="pro"]').first()
+      .getByRole('button', { name: /このモードのランキング/ }).dispatchEvent('click');
+    // ★見出しは「プロモード」と、その下に小さく「ランキング」の2段になった
+    //   (名前の長いモードでは1行に入らず、モード名のほうが切れていたため)
+    await page.getByRole('heading', { name: 'プロモード' }).waitFor({ timeout: 15000 });
     check('プロモードのランキング画面へ入れる', true);
     await page.getByRole('button', { name: '戻る' }).dispatchEvent('click');
     await page.getByText('BATTLE MODE').first().waitFor({ timeout: 15000 });
@@ -214,7 +226,7 @@ const check = (name, ok, detail = '') => {
     const hardCard = page.locator('.snap-mandatory > article').filter({ hasText: 'Hard' }).first();
     await hardCard.scrollIntoViewIfNeeded();
     await hardCard.getByRole('button', { name: /Hardのランキング/ }).dispatchEvent('click');
-    await page.getByRole('heading', { name: 'プロモードランキング' }).waitFor({ timeout: 15000 });
+    await page.getByRole('heading', { name: 'プロモード' }).waitFor({ timeout: 15000 });
     const selected = await page.evaluate(() => {
       const btn = [...document.querySelectorAll('button')].find(b => b.className.includes('ring-2 ring-white'));
       return btn ? btn.textContent.trim() : null;

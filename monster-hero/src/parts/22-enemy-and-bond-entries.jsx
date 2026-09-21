@@ -8,6 +8,14 @@ const difficultyStyle = (setting, selected) => (selected
 const ENEMY_ART_LAYOUT = {
   default: { scanScale:1, waveDetailScale:1, objectPosition:'center' },
   Moo: { scanScale:2.75, waveDetailScale:2, objectPosition:'center 48%' },
+  // ★タクティクスバトルの敵。絵は長辺160pxにそろえてあるが、鎌・斧・翼のように
+  //   細長いものが付いていると長辺をそこに取られ、本体が小さく見える。
+  //   どれくらい小さく見えるかは node tools/image/enemy-art-size-report.js で測れる
+  //   (56pxの枠に色が乗る面積。配信中の敵は13%〜68%・まんなか31%)。
+  Metalner:    { scanScale:1.1,  waveDetailScale:1.1,  objectPosition:'center' },      // 33%
+  Delpiero:    { scanScale:1.4,  waveDetailScale:1.4,  objectPosition:'center 60%' },  // 17%。鎌が上へ伸びるので本体を下寄りに
+  Splatter:    { scanScale:1.2,  waveDetailScale:1.2,  objectPosition:'center 58%' },  // 30%。斧が上へ伸びる
+  AwakenedMoo: { scanScale:1.9,  waveDetailScale:1.6,  objectPosition:'center' },      // 21%。ボスなので大きく見せる
 };
 const enemyArtStyle = (enemyId, context='scan') => {
   const layout=ENEMY_ART_LAYOUT[enemyId]||ENEMY_ART_LAYOUT.default;
@@ -196,9 +204,18 @@ const applyIceRulerAutoGutsRecovery = (currentRate, heroId, iceLockActive, heroD
   && heroDist===enemyDist
   ? Math.min(1, currentRate + 0.5)
   : currentRate;
-const createBattleEnemy = (wave, difficulty, forcedEnemyKey=null, powerOverride=null, enemyTurnMultiplier=1) => {
-  const enemyKey = forcedEnemyKey || ENEMY_SEQUENCE[wave - 1];
-  const base = ENEMY_DATA[enemyKey];
+// ★タクティクスバトルは敵の並びが別(TACTICS_ENEMY_SEQUENCE)。
+//   options.mode にそのランのモードを渡すと、そちらの10体が出る。
+//   クラシック・クイックの並び(ENEMY_SEQUENCE)は1つも変えない——あちらを差し替えると、
+//   いま遊んでいる人のチャレンジ・プロの手ごたえが同時に変わってしまう。
+//   forcedEnemyKey(デバッグの敵指定)は、どちらの表からでも引けるようにしておく。
+const createBattleEnemy = (wave, difficulty, forcedEnemyKey=null, powerOverride=null, enemyTurnMultiplier=1, options={}) => {
+  const tacticsEnemies = typeof isTacticsMode === 'function' && isTacticsMode(options && options.mode)
+    && typeof TACTICS_ENEMY_SEQUENCE !== 'undefined';
+  const sequence = tacticsEnemies ? TACTICS_ENEMY_SEQUENCE : ENEMY_SEQUENCE;
+  const enemyKey = forcedEnemyKey || sequence[wave - 1];
+  const base = (tacticsEnemies ? TACTICS_ENEMY_DATA[enemyKey] : null) || ENEMY_DATA[enemyKey]
+    || (typeof TACTICS_ENEMY_DATA !== 'undefined' ? TACTICS_ENEMY_DATA[enemyKey] : null);
   const safeDifficulty = normalizeBattleDifficulty(difficulty);
   const hasPowerOverride = powerOverride !== null && powerOverride !== undefined && Number.isFinite(Number(powerOverride));
   const mod = hasPowerOverride ? Number(powerOverride) : QUICK_DIFFICULTY_SETTINGS[safeDifficulty].power;

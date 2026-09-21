@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 02a94008aed61134
+// source-sha256: 96f9e8f928ad7b9d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 708a96065c819684
+// generated-sha256: e3b4fad5b5563b47
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-21 12:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-21 13:07"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15891,7 +15891,34 @@ const ENEMY_ART_LAYOUT = {
     scanScale: 2.75,
     waveDetailScale: 2,
     objectPosition: 'center 48%'
-  }
+  },
+  // ★タクティクスバトルの敵。絵は長辺160pxにそろえてあるが、鎌・斧・翼のように
+  //   細長いものが付いていると長辺をそこに取られ、本体が小さく見える。
+  //   どれくらい小さく見えるかは node tools/image/enemy-art-size-report.js で測れる
+  //   (56pxの枠に色が乗る面積。配信中の敵は13%〜68%・まんなか31%)。
+  Metalner: {
+    scanScale: 1.1,
+    waveDetailScale: 1.1,
+    objectPosition: 'center'
+  },
+  // 33%
+  Delpiero: {
+    scanScale: 1.4,
+    waveDetailScale: 1.4,
+    objectPosition: 'center 60%'
+  },
+  // 17%。鎌が上へ伸びるので本体を下寄りに
+  Splatter: {
+    scanScale: 1.2,
+    waveDetailScale: 1.2,
+    objectPosition: 'center 58%'
+  },
+  // 30%。斧が上へ伸びる
+  AwakenedMoo: {
+    scanScale: 1.9,
+    waveDetailScale: 1.6,
+    objectPosition: 'center'
+  } // 21%。ボスなので大きく見せる
 };
 const enemyArtStyle = (enemyId, context = 'scan') => {
   const layout = ENEMY_ART_LAYOUT[enemyId] || ENEMY_ART_LAYOUT.default;
@@ -16312,9 +16339,16 @@ const chooseEnemyAction = (ent, currentDist, random = Math.random, state = {}) =
 const ICE_LOCK_MONSTER_IDS = Object.freeze(['Snegurochka', 'Undine', 'Yaobikuni']);
 const isIceLockMonster = id => ICE_LOCK_MONSTER_IDS.includes(id);
 const applyIceRulerAutoGutsRecovery = (currentRate, heroId, iceLockActive, heroDist, enemyDist) => isIceLockMonster(heroId) && iceLockActive && heroDist === enemyDist ? Math.min(1, currentRate + 0.5) : currentRate;
-const createBattleEnemy = (wave, difficulty, forcedEnemyKey = null, powerOverride = null, enemyTurnMultiplier = 1) => {
-  const enemyKey = forcedEnemyKey || ENEMY_SEQUENCE[wave - 1];
-  const base = ENEMY_DATA[enemyKey];
+// ★タクティクスバトルは敵の並びが別(TACTICS_ENEMY_SEQUENCE)。
+//   options.mode にそのランのモードを渡すと、そちらの10体が出る。
+//   クラシック・クイックの並び(ENEMY_SEQUENCE)は1つも変えない——あちらを差し替えると、
+//   いま遊んでいる人のチャレンジ・プロの手ごたえが同時に変わってしまう。
+//   forcedEnemyKey(デバッグの敵指定)は、どちらの表からでも引けるようにしておく。
+const createBattleEnemy = (wave, difficulty, forcedEnemyKey = null, powerOverride = null, enemyTurnMultiplier = 1, options = {}) => {
+  const tacticsEnemies = typeof isTacticsMode === 'function' && isTacticsMode(options && options.mode) && typeof TACTICS_ENEMY_SEQUENCE !== 'undefined';
+  const sequence = tacticsEnemies ? TACTICS_ENEMY_SEQUENCE : ENEMY_SEQUENCE;
+  const enemyKey = forcedEnemyKey || sequence[wave - 1];
+  const base = (tacticsEnemies ? TACTICS_ENEMY_DATA[enemyKey] : null) || ENEMY_DATA[enemyKey] || (typeof TACTICS_ENEMY_DATA !== 'undefined' ? TACTICS_ENEMY_DATA[enemyKey] : null);
   const safeDifficulty = normalizeBattleDifficulty(difficulty);
   const hasPowerOverride = powerOverride !== null && powerOverride !== undefined && Number.isFinite(Number(powerOverride));
   const mod = hasPowerOverride ? Number(powerOverride) : QUICK_DIFFICULTY_SETTINGS[safeDifficulty].power;
@@ -55627,7 +55661,10 @@ function MonsterHeroGame() {
     // 新モードは「連れてきた供モンの総合力」に応じて敵も強くなる(設計 §6)。
     // ★人数ごとの固定倍率にしないこと。弱い編成ほど苦しくなる
     const tacticsEnemyBoost = isTacticsMode(runMode) ? tacticsEnemyPowerMultiplier(tacticsPowerRef.current.start, tacticsPowerRef.current.now) : 1;
-    const newEnemy = createBattleEnemy(w, difficulty, forcedEnemyKey, battleSetting?.power ?? null, enemyTurnMultiplier * stagedEnemyMultiplier * tacticsEnemyBoost);
+    // ★タクティクスバトルは敵の並びが別(TACTICS_ENEMY_SEQUENCE)。モードを渡して選ばせる
+    const newEnemy = createBattleEnemy(w, difficulty, forcedEnemyKey, battleSetting?.power ?? null, enemyTurnMultiplier * stagedEnemyMultiplier * tacticsEnemyBoost, {
+      mode: runMode
+    });
     if (!newEnemy) return null;
     // 最高到達WAVEもモードごとに別々に記録する。
     // 極限チャレンジは難易度が別表(内部の difficulty は Normal のまま)なので、ここへ入れると
@@ -60074,7 +60111,9 @@ function MonsterHeroGame() {
       }, /*#__PURE__*/React.createElement(X, null))), /*#__PURE__*/React.createElement("div", {
         className: "flex-1 min-h-0 overflow-y-auto mh-scroll space-y-2"
       }, ENEMY_SEQUENCE.map((enemyKey, index) => {
-        const enemy = createBattleEnemy(index + 1, waveDifficulty, null, powerOverride);
+        const enemy = createBattleEnemy(index + 1, waveDifficulty, null, powerOverride, 1, {
+          mode: battleMode
+        });
         const boss = index === ENEMY_SEQUENCE.length - 1;
         return /*#__PURE__*/React.createElement("article", {
           key: `${enemyKey}-${index}`,

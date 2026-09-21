@@ -139,7 +139,8 @@ const check = (name, ok, detail = '') => {
     check('練習中はモードの説明が押せない',
       await page.getByRole('button', { name: 'このモードの説明' }).first().isDisabled());
     check('練習中はスコアランキングへ入れない',
-      await page.getByRole('button', { name: /チャレンジモードのランキング/ }).first().isDisabled());
+      await page.locator('[data-battle-mode="challenge"]').first()
+        .getByRole('button', { name: /このモードのランキング/ }).isDisabled());
 
     // --- ④ チャレンジだけ進める ---
     // ★2026-09-20 に「どのバトルで遊ぶか」の画面が1段増え、クイックは別の仕組みへ移った。
