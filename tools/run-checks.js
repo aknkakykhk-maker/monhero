@@ -114,7 +114,8 @@ const FORCE_CHECKS = [
   // 敵の並びは2本ある(クラシック・クイック / タクティクス)。混ざると、いま遊んでいる人の
   // チャレンジ・プロの手ごたえが静かに変わる。ファイル名の語では拾えないので名指しする
   { re: /^monster-hero\/(data\/(enemy-monsters|images\/images-enemy)\.js|src\/parts\/(22-enemy-and-bond-entries|60-app)\.jsx)$/,
-    checks: ['mode/tactics-enemies-check.js'], why: 'タクティクス専用の敵が既存の並びと混ざっていないか' },
+    checks: ['mode/tactics-enemies-check.js', 'mode/tactics-enemy-actions-check.js'],
+    why: 'タクティクス専用の敵が既存の並びと混ざっていないか／敵ごとの技名と行動表' },
   // 画面を足したときのBGMの決め忘れ。対応表へ載せ忘れてもエラーは出ず、
   // その画面だけ静かに無音になるので、遊んだ人が言うまで気づけない(2回やっている)
   { re: /^monster-hero\/src\/parts\/60-app\.jsx$/,

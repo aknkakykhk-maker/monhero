@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2c7d0776eb76b159
+// source-sha256: 493ba00a815168ef
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: eecdf836dcb3dff3
+// generated-sha256: 84b5c21bcc179e06
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-21 13:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-21 14:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -16165,19 +16165,21 @@ const TACTICS_ACTION_DEFINITIONS = [{
   useLimit: null
 }];
 // どの敵も通常攻撃・ためる・必殺技・移動は持つ。ここへ足すのは「その敵だけの技」。
-// WAVEが進むほど読むことが増える並びにしてある(敵の順は ENEMY_SEQUENCE)。
+// WAVEが進むほど読むことが増える並びにしてある(敵の順は TACTICS_ENEMY_SEQUENCE)。
+// ★ここのキーは「タクティクス専用の敵」のid。クラシックの敵idを書くと、
+//   タクティクスの敵が追加6技を1つも持たない状態になる(2026-09-21にそれで丸ごと出ていなかった)。
 const TACTICS_BASE_ACTION_IDS = Object.freeze(['normal', 'charge', 'special', 'wait', 'move']);
 const TACTICS_ENEMY_ACTION_IDS = Object.freeze({
-  Dino: Object.freeze(['rush']),
-  Gel: Object.freeze(['sweep']),
-  BlackDino: Object.freeze(['rush', 'roar']),
-  Jaakusou: Object.freeze(['sweep', 'regen']),
-  BlueMountain: Object.freeze(['pierce', 'sweep']),
-  Gali: Object.freeze(['roar', 'rush', 'allout']),
-  Naga: Object.freeze(['sweep', 'pierce']),
-  Lilim: Object.freeze(['regen', 'pierce', 'allout']),
-  Durahan: Object.freeze(['rush', 'roar', 'pierce', 'allout']),
-  Moo: Object.freeze(['sweep', 'rush', 'pierce', 'roar', 'regen', 'allout'])
+  Kawazumo: Object.freeze(['rush']),
+  Metalner: Object.freeze(['sweep']),
+  Inari: Object.freeze(['rush', 'roar']),
+  Koinobori: Object.freeze(['sweep', 'regen']),
+  Delpiero: Object.freeze(['pierce', 'sweep']),
+  Dokudoku: Object.freeze(['roar', 'rush', 'allout']),
+  Lamia: Object.freeze(['sweep', 'pierce']),
+  Nyarlathotep: Object.freeze(['regen', 'pierce', 'allout']),
+  Splatter: Object.freeze(['rush', 'roar', 'pierce', 'allout']),
+  AwakenedMoo: Object.freeze(['sweep', 'rush', 'pierce', 'roar', 'regen', 'allout'])
 });
 const tacticsActionDefinitions = enemyId => {
   const ids = [...TACTICS_BASE_ACTION_IDS, ...(TACTICS_ENEMY_ACTION_IDS[enemyId] || [])];
@@ -16255,6 +16257,14 @@ const enemyActionProbabilities = (ent, currentDist, state = {}) => {
 };
 // 行動の見出しとアイコン。抽選と台本(練習モード)の両方から使う
 const enemyActionLabel = (ent, type) => type === 'ATTACK' ? ent?.normal || '通常攻撃' : type === 'CHARGE' ? '必殺技の準備をしている' : type === 'SPECIAL' ? ent?.special || '必殺技！' : type === 'ROAR' ? '咆哮している' : type === 'REGEN' ? '傷を癒している' : '様子を見ている';
+// その敵のその行動を、画面へ出すときの名前。タクティクスの敵は追加6技の名前を actions に持つ
+// (TACTICS_ENEMY_DATA)。名前を持たない敵は1文字も変わらず、今までどおりの見出しへ落ちる。
+const enemyActionDisplayName = (ent, def) => {
+  if (!def) return '';
+  const named = ent && ent.actions && typeof ent.actions[def.id] === 'string' ? ent.actions[def.id].trim() : '';
+  if (named) return named;
+  return def.type === 'MOVE' ? '間合い移動' : def.variant ? def.category : enemyActionLabel(ent, def.type);
+};
 const ENEMY_ACTION_ICONS = {
   ATTACK: '👊',
   CHARGE: '✨',
@@ -16305,7 +16315,7 @@ const chooseEnemyAction = (ent, currentDist, random = Math.random, state = {}) =
       sweepDist: currentDist,
       value: Math.floor(ent.atk * selected.multiplier),
       missValue: Math.floor(ent.atk * (selected.missMultiplier ?? 1)),
-      label: `${selected.category}: ${RANGE_LABELS[currentDist]}`,
+      label: `${enemyActionDisplayName(ent, selected)}: ${RANGE_LABELS[currentDist]}`,
       icon: TACTICS_VARIANT_ICONS.sweep,
       actionId: selected.id
     };
@@ -16321,7 +16331,7 @@ const chooseEnemyAction = (ent, currentDist, random = Math.random, state = {}) =
         targetsAll: true
       } : {}),
       value: Math.floor(ent.atk * selected.multiplier),
-      label: selected.category,
+      label: enemyActionDisplayName(ent, selected),
       icon: TACTICS_VARIANT_ICONS[selected.variant] || ENEMY_ACTION_ICONS[selected.type] || '⏳',
       actionId: selected.id
     };
@@ -16329,7 +16339,7 @@ const chooseEnemyAction = (ent, currentDist, random = Math.random, state = {}) =
   return {
     type: selected.type,
     value: Math.floor(ent.atk * selected.multiplier),
-    label: enemyActionLabel(ent, selected.type),
+    label: enemyActionDisplayName(ent, selected),
     icon: ENEMY_ACTION_ICONS[selected.type] || '⏳',
     actionId: selected.id
   };
@@ -68938,7 +68948,7 @@ function MonsterHeroGame() {
       }, scanBeforeBattle ? '戦闘状況' : '現在の間合い'), /*#__PURE__*/React.createElement("b", null, scanBeforeBattle ? '戦闘開始前' : `${RANGE_LABELS[scanDist]}距離`)), /*#__PURE__*/React.createElement("div", {
         className: "space-y-2 text-left"
       }, actions.map((action, index) => {
-        const actionName = action.type === 'MOVE' ? '間合い移動' : action.variant ? action.category : enemyActionLabel(scanEnemy, action.type);
+        const actionName = enemyActionDisplayName(scanEnemy, action);
         const power = Math.floor(scanEnemy.atk * action.multiplier);
         return /*#__PURE__*/React.createElement("details", {
           key: action.id,

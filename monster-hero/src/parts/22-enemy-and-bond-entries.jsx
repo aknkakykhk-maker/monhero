@@ -92,19 +92,21 @@ const TACTICS_ACTION_DEFINITIONS = [
   {id:'allout',type:'ATTACK',variant:'allout',targetsAll:true,category:'全体攻撃',weight:10,multiplier:TACTICS_ALLOUT_MULT,hits:1,range:'全員',condition:'立っている全員へ同時に当たる。狙いをかわせない',cooldown:0,useLimit:null},
 ];
 // どの敵も通常攻撃・ためる・必殺技・移動は持つ。ここへ足すのは「その敵だけの技」。
-// WAVEが進むほど読むことが増える並びにしてある(敵の順は ENEMY_SEQUENCE)。
+// WAVEが進むほど読むことが増える並びにしてある(敵の順は TACTICS_ENEMY_SEQUENCE)。
+// ★ここのキーは「タクティクス専用の敵」のid。クラシックの敵idを書くと、
+//   タクティクスの敵が追加6技を1つも持たない状態になる(2026-09-21にそれで丸ごと出ていなかった)。
 const TACTICS_BASE_ACTION_IDS = Object.freeze(['normal','charge','special','wait','move']);
 const TACTICS_ENEMY_ACTION_IDS = Object.freeze({
-  Dino:Object.freeze(['rush']),
-  Gel:Object.freeze(['sweep']),
-  BlackDino:Object.freeze(['rush','roar']),
-  Jaakusou:Object.freeze(['sweep','regen']),
-  BlueMountain:Object.freeze(['pierce','sweep']),
-  Gali:Object.freeze(['roar','rush','allout']),
-  Naga:Object.freeze(['sweep','pierce']),
-  Lilim:Object.freeze(['regen','pierce','allout']),
-  Durahan:Object.freeze(['rush','roar','pierce','allout']),
-  Moo:Object.freeze(['sweep','rush','pierce','roar','regen','allout']),
+  Kawazumo:Object.freeze(['rush']),
+  Metalner:Object.freeze(['sweep']),
+  Inari:Object.freeze(['rush','roar']),
+  Koinobori:Object.freeze(['sweep','regen']),
+  Delpiero:Object.freeze(['pierce','sweep']),
+  Dokudoku:Object.freeze(['roar','rush','allout']),
+  Lamia:Object.freeze(['sweep','pierce']),
+  Nyarlathotep:Object.freeze(['regen','pierce','allout']),
+  Splatter:Object.freeze(['rush','roar','pierce','allout']),
+  AwakenedMoo:Object.freeze(['sweep','rush','pierce','roar','regen','allout']),
 });
 const tacticsActionDefinitions = (enemyId) => {
   const ids = [...TACTICS_BASE_ACTION_IDS, ...(TACTICS_ENEMY_ACTION_IDS[enemyId] || [])];
@@ -162,6 +164,14 @@ const enemyActionLabel = (ent,type) => type==='ATTACK' ? (ent?.normal||'通常�
   : type==='ROAR' ? '咆哮している'
   : type==='REGEN' ? '傷を癒している'
   : '様子を見ている';
+// その敵のその行動を、画面へ出すときの名前。タクティクスの敵は追加6技の名前を actions に持つ
+// (TACTICS_ENEMY_DATA)。名前を持たない敵は1文字も変わらず、今までどおりの見出しへ落ちる。
+const enemyActionDisplayName = (ent,def) => {
+  if(!def) return '';
+  const named = ent && ent.actions && typeof ent.actions[def.id]==='string' ? ent.actions[def.id].trim() : '';
+  if(named) return named;
+  return def.type==='MOVE' ? '間合い移動' : def.variant ? def.category : enemyActionLabel(ent,def.type);
+};
 const ENEMY_ACTION_ICONS = {ATTACK:'👊',CHARGE:'✨',SPECIAL:'🔥',WAIT:'⏳',MOVE:'🏃',ROAR:'📢',REGEN:'💚'};
 // 新モードの攻撃は type が ATTACK のままなので、見分けは variant で付ける
 const TACTICS_VARIANT_ICONS = {sweep:'🌪️',rush:'💥',pierce:'🗡️',allout:'🌊'};
@@ -183,17 +193,17 @@ const chooseEnemyAction = (ent,currentDist,random=Math.random,state={}) => {
   if(selected.variant==='sweep'){
     return {type:selected.type,variant:selected.variant,sweepDist:currentDist,
       value:Math.floor(ent.atk*selected.multiplier),missValue:Math.floor(ent.atk*(selected.missMultiplier??1)),
-      label:`${selected.category}: ${RANGE_LABELS[currentDist]}`,icon:TACTICS_VARIANT_ICONS.sweep,actionId:selected.id};
+      label:`${enemyActionDisplayName(ent,selected)}: ${RANGE_LABELS[currentDist]}`,icon:TACTICS_VARIANT_ICONS.sweep,actionId:selected.id};
   }
   if(selected.variant){
     // 全体攻撃だけは狙いを決めない。予告の時点で「立っている全員」と決まっているので、
     // targetsAll を intent へ持ち歩き、当たる相手は tacticsIntentTargets が数え直す
     return {type:selected.type,variant:selected.variant,hits:Math.max(1,Math.floor(Number(selected.hits)||1)),
       ...(selected.targetsAll?{targetsAll:true}:{}),
-      value:Math.floor(ent.atk*selected.multiplier),label:selected.category,
+      value:Math.floor(ent.atk*selected.multiplier),label:enemyActionDisplayName(ent,selected),
       icon:TACTICS_VARIANT_ICONS[selected.variant]||ENEMY_ACTION_ICONS[selected.type]||'⏳',actionId:selected.id};
   }
-  return {type:selected.type,value:Math.floor(ent.atk*selected.multiplier),label:enemyActionLabel(ent,selected.type),icon:ENEMY_ACTION_ICONS[selected.type]||'⏳',actionId:selected.id};
+  return {type:selected.type,value:Math.floor(ent.atk*selected.multiplier),label:enemyActionDisplayName(ent,selected),icon:ENEMY_ACTION_ICONS[selected.type]||'⏳',actionId:selected.id};
 };
 
 // 難易度選択プレビューと本番の敵生成が必ず同じ値になるための唯一の生成ヘルパー。
