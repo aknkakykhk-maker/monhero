@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ec6421dd73117872
+// source-sha256: 6391df951019599c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: de682e2371f767c6
+// generated-sha256: 5655aac1886cfa4c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-22 00:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-22 00:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11218,9 +11218,12 @@ const RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE = true;
 // ビートPはSTEP4で正式公開。獲得はこのフラグに加えて期間限定イベント開催中だけに限定し、
 // 常設の交換所・ヘルプ・更新履歴・助手告知を同じタイミングで公開する。
 const RHYTHM_EVENT_POINTS_PUBLIC_RELEASE = true;
+// ★tacticsBattle は「β公開のあいだも開く枠」。ヘルプは、β版で遊べる人にも要る
+//   (tactics は本公開だけ。両方を1つのフラグにすると、本公開前の告知まで出てしまう)
 const RELEASE_FLAGS = {
   speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE,
   tactics: TACTICS_MODE_PUBLIC_RELEASE,
+  tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
   rhythmMode: RHYTHM_MODE_PUBLIC_RELEASE,
   quickRhythmLink: QUICK_RHYTHM_LINK_PUBLIC_RELEASE,
   rhythmCanvasNotes: RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE,
@@ -15333,6 +15336,13 @@ const helpDataRows = id => {
   switch (id) {
     case 'difficulties':
       return Object.values(DIFFICULTY_SETTINGS).map(s => [s.label, `敵×${s.power} ／ スコア×${s.score} ／ ダイヤ×${s.gold}`]);
+    // タクティクスバトルの敵の技(2026-09-21)。種別と倍率と受け方を実データから作る。
+    // ★技の名前は敵ごとに違う(10体×8技)ので、ここに出すのは**種別**。
+    //   倍率を調整したときにヘルプが古いままにならないよう、行を書き写さない
+    // ★2列目は短くする。長い説明(condition)をそのまま入れると画面で省略され、
+    //   「表のとおりに描けているか」を見る help-render-check が落ちる
+    case 'tacticsEnemyActions':
+      return (typeof TACTICS_ACTION_DEFINITIONS !== 'undefined' ? TACTICS_ACTION_DEFINITIONS : []).filter(action => action.type !== 'WAIT' && action.type !== 'MOVE').map(action => [action.category, action.multiplier > 0 ? `威力 ×${action.multiplier}${action.hits > 1 ? `（${action.hits}ヒット）` : ''}` : 'ダメージなし']);
     // プロモードのランぶんに入るクイック周回数(2026-09-21)。
     // 難易度ごとの重さ(power)と同じ式から作るので、難易度を調整したときも自動で追随する
     // (ヘルプへ9行書き写すと、必ずどこかが古いままになる)
@@ -15536,6 +15546,7 @@ const helpDataRows = id => {
 // 表の上に出す見出し(何の表かを分かるようにする)
 const HELP_DATA_TITLES = {
   difficulties: '難易度と倍率',
+  tacticsEnemyActions: 'タクティクスバトルの敵が使う技',
   proQuickLoops: 'プロモードで入るクイック周回数',
   extremeDifficulties: '極限チャレンジの難易度',
   rhythmEventPlayBonus: 'イベントの回数ボーナス（1回あたり）',
@@ -35583,6 +35594,7 @@ function PickHeroAllyScreen({
   slots,
   spendAptPoint,
   spendStatPoint,
+  tacticsUnits,
   waveResult
 }) {
   return /*#__PURE__*/React.createElement("div", {
@@ -35641,7 +35653,45 @@ function PickHeroAllyScreen({
       className: "text-amber-300"
     }, "CHAOS\u88DC\u6B63"), "\u3000\u52A0\u5165\u30DC\u30FC\u30CA\u30B9 ", specialRulePercent(extremeSpecialRule(rule, 'allyJoinBonus')));
     return null;
-  })(), /*#__PURE__*/React.createElement("div", {
+  })(), Array.isArray(tacticsUnits) ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    className: "text-[8px] font-black tracking-widest text-slate-500 text-left mb-1"
+  }, "\u3044\u307E\u306E\u76E4\u9762\uFF081\u4F53\u305A\u3064\uFF09"), /*#__PURE__*/React.createElement("div", {
+    "data-tactics-board-status": true,
+    className: "grid grid-cols-4 gap-1"
+  }, RANGE_LABELS.map((label, idx) => {
+    const mon = slots[idx];
+    const unit = tacticsUnits[idx];
+    const apt = distTotalBonus(idx);
+    return /*#__PURE__*/React.createElement("div", {
+      key: label,
+      "data-tactics-board-slot": idx,
+      className: `rounded-lg px-1 py-1 text-center ${mon && unit ? 'bg-black/40' : 'bg-black/20'}`
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "block text-[8px] font-black text-slate-500 leading-none"
+    }, label), mon && unit ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
+      className: "block truncate text-[8px] font-black text-white leading-tight"
+    }, mon.masuName || mon.name), /*#__PURE__*/React.createElement("span", {
+      className: "block text-[10px] font-black font-mono leading-tight text-pink-300"
+    }, unit.hp, /*#__PURE__*/React.createElement("span", {
+      className: "text-slate-500"
+    }, "/", unit.maxHp)), /*#__PURE__*/React.createElement("span", {
+      className: "block text-[9px] font-black font-mono leading-tight text-red-300"
+    }, "\u529B ", unit.atk), /*#__PURE__*/React.createElement("span", {
+      className: "block text-[9px] font-black font-mono leading-tight text-emerald-300"
+    }, "\u9632 ", unit.def), /*#__PURE__*/React.createElement("span", {
+      className: "block text-[9px] font-black font-mono leading-tight text-amber-300"
+    }, "G ", unit.guts, /*#__PURE__*/React.createElement("span", {
+      className: "text-slate-500"
+    }, "/", unit.maxGuts)), /*#__PURE__*/React.createElement("span", {
+      className: `block text-[9px] font-black font-mono leading-tight ${apt > 0 ? 'text-cyan-300' : apt < 0 ? 'text-red-300' : 'text-slate-500'}`
+    }, formatAptPct(apt))) :
+    /*#__PURE__*/
+    /* ★空いている間合いを 0% と出すと「適性が0なのか、誰もいないのか」が
+       見分けられない(2026-09-21 ユーザー指示) */
+    React.createElement("span", {
+      className: "block py-2 text-[9px] font-black leading-tight text-slate-600"
+    }, "\u7A7A\u304D"));
+  }))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "text-[8px] font-black tracking-widest text-slate-500 text-left mb-1"
   }, "\u73FE\u5728\u306E\u30B9\u30C6\u30FC\u30BF\u30B9"), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-4 gap-1"
@@ -35666,7 +35716,7 @@ function PickHeroAllyScreen({
     }, label), /*#__PURE__*/React.createElement("span", {
       className: `block text-[12px] font-black font-mono leading-tight ${cur > 0 ? 'text-cyan-300' : cur < 0 ? 'text-red-300' : 'text-slate-400'}`
     }, formatAptPct(cur)));
-  }))), pickMode === 'hero' && /*#__PURE__*/React.createElement("div", {
+  })))), pickMode === 'hero' && /*#__PURE__*/React.createElement("div", {
     className: "shrink-0 w-full max-w-md mx-auto mb-2"
   }, !isProMode(runMode) && /*#__PURE__*/React.createElement("div", {
     className: "flex gap-1.5"
@@ -67905,6 +67955,7 @@ function MonsterHeroGame() {
       maxGuts: maxGuts,
       maxHp: maxHp,
       monSelection: monSelection,
+      tacticsUnits: isTacticsMode(runMode) ? tacticsUnits : null,
       onBack: () => {
         if (gameState === 'PICK_HERO') {
           setCurrentPickingMon(null);

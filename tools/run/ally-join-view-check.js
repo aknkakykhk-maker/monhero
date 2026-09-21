@@ -46,6 +46,17 @@ check('カードに合流後の値と変化量を出す',
   has('{stat.after}</b>') && has("{stat.diff>0?`実際 +${stat.diff}`:'実際 ±0'}"));
 check('カードに距離補正の変動を出す',
   has('{preview.apt.map(range=>(') && has('{formatAptPct(range.after)}') && has("${formatAptPct(range.diff)}`:'±0'}"));
+// ★タクティクスはステータスを1体ずつ持つ(設計 4.4)。合計(ライフ・ガッツ)と
+//   平均(ちから・丈夫さ)が混ざった4つを並べても読み取れないので、
+//   **立っている子ごと**に出す(2026-09-21 ユーザー指示)
+check('タクティクスは盤面を1体ずつ出す',
+  has('data-tactics-board-status') && has('data-tactics-board-slot={idx}')
+    && has('{mon.masuName||mon.name}') && has('力 {unit.atk}') && has('防 {unit.def}'));
+// ★空いている間合いを 0% と出すと「適性が0なのか、誰もいないのか」が見分けられない
+check('空いている間合いは「空き」と出す', has('>空き</span>'));
+// ★既存5モードは今までどおり合計の4つを出す(1体ずつのステータスを持たないため)
+check('既存モードは今までどおり「現在のステータス」',
+  has('現在のステータス') && has('{Array.isArray(tacticsUnits)?(<>'));
 check('勇者モン選択は今までどおりその子の基礎値を出す',
   has('<span className="text-pink-400 font-bold">{m.baseHp}</span>'));
 check('詳細ポップアップも同じ allyJoinPreview を通す',

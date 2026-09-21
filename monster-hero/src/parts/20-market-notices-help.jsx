@@ -356,6 +356,18 @@ const helpDataRows = (id) => {
   switch (id) {
     case 'difficulties':
       return Object.values(DIFFICULTY_SETTINGS).map(s => [s.label, `敵×${s.power} ／ スコア×${s.score} ／ ダイヤ×${s.gold}`]);
+    // タクティクスバトルの敵の技(2026-09-21)。種別と倍率と受け方を実データから作る。
+    // ★技の名前は敵ごとに違う(10体×8技)ので、ここに出すのは**種別**。
+    //   倍率を調整したときにヘルプが古いままにならないよう、行を書き写さない
+    // ★2列目は短くする。長い説明(condition)をそのまま入れると画面で省略され、
+    //   「表のとおりに描けているか」を見る help-render-check が落ちる
+    case 'tacticsEnemyActions':
+      return (typeof TACTICS_ACTION_DEFINITIONS !== 'undefined' ? TACTICS_ACTION_DEFINITIONS : [])
+        .filter(action => action.type !== 'WAIT' && action.type !== 'MOVE')
+        .map(action => [action.category,
+          action.multiplier > 0
+            ? `威力 ×${action.multiplier}${action.hits > 1 ? `（${action.hits}ヒット）` : ''}`
+            : 'ダメージなし']);
     // プロモードのランぶんに入るクイック周回数(2026-09-21)。
     // 難易度ごとの重さ(power)と同じ式から作るので、難易度を調整したときも自動で追随する
     // (ヘルプへ9行書き写すと、必ずどこかが古いままになる)
@@ -582,6 +594,7 @@ const helpDataRows = (id) => {
 // 表の上に出す見出し(何の表かを分かるようにする)
 const HELP_DATA_TITLES = {
   difficulties: '難易度と倍率',
+  tacticsEnemyActions: 'タクティクスバトルの敵が使う技',
   proQuickLoops: 'プロモードで入るクイック周回数',
   extremeDifficulties: '極限チャレンジの難易度',
   rhythmEventPlayBonus: 'イベントの回数ボーナス（1回あたり）',

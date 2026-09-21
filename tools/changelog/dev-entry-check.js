@@ -43,8 +43,10 @@ const grab = (from, to) => {
 // (あいだを丸ごと切り取るとJSXまで混ざって読めなくなる)
 // 公開フラグは増えるので、名前を書き並べず RELEASE_FLAGS が参照しているものを拾う
 // (足したときにこの検査だけ落ちる、という手戻りを防ぐ)
+// ★末尾は _PUBLIC_RELEASE とは限らない。β公開の枠(TACTICS_BETA_PRO_RELEASE)のように
+//   「本公開の前に開くフラグ」もここから参照される(2026-09-21)
 const gate = grab('const RELEASE_FLAGS = {', '\n// 一覧の並べかえに使えるキー');
-const flagLines = [...new Set(gate.match(/[A-Z0-9_]+_PUBLIC_RELEASE/g) || [])]
+const flagLines = [...new Set(gate.match(/[A-Z0-9_]+_RELEASE\b/g) || [])]
   .map(name => (game.match(new RegExp(`^const ${name} = .*$`, 'm')) || [])[0]);
 const flags = flagLines.join('\n');
 const context = {};
