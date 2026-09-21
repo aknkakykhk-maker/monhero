@@ -125,6 +125,11 @@ const FORCE_CHECKS = [
   // ファイル名の語(app・settings)では拾えないので名指しする
   { re: /^monster-hero\/(src\/parts\/(13-bgm-and-rhythm-settings|60-app)\.jsx|audio\/bgm-(senjou-no-shippuu|makutsu-no-senritsu)\.mp3)$/,
     checks: ['audio/tactics-bgm-check.js'], why: 'タクティクスのWAVEごとのBGM' },
+  // ラスボスの見せ方(丸枠の外の巨大な立ち絵・専用の演出)。id を画面のあちこちへ
+  // 直に書いて出し分けていたため、覚醒ムーが演出の分岐から丸ごと漏れていた。
+  // 絵は出るしバトルも終わるので、WAVE10まで進めて目で見るまで気づけない
+  { re: /^monster-hero\/src\/parts\/(22-enemy-and-bond-entries|60-app|71-screen-battle)\.jsx$/,
+    checks: ['battle/moo-boss-presentation-check.js'], why: 'ラスボスの見せ方(ムー・覚醒ムー)' },
   // 「次に鳴る曲を、鳴り出す前に読んでおく」導線。外れても画面はふつうに動くし、
   // 手元の速い回線では鳴り出しの差が分からない。曲を入れ替えたときにだけ表に出る
   // (2026-09-21・ユーザー報告「通常バトル曲のBGMの入りが遅い」)

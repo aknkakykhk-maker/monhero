@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 02abebe68e55b6d8
+// source-sha256: b0f6965253e60643
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a724d5c6f62ed42a
+// generated-sha256: 8837b6ada10a0166
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-21 21:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-21 21:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15990,6 +15990,14 @@ const difficultyStyle = (setting, selected) => selected ? {
 
 // 透明余白を含む画像キャンバスではなく、画面ごとの見た目を基準に調整する。
 // contextを必須にすることで、SCANの調整が全WAVE詳細へ波及しないようにする。
+// ラスボスのムーと、タクティクスの覚醒ムー。どちらも「最後に出てくる特別な敵」なので、
+// 丸枠の外に巨大な立ち絵を置き、浮遊・突進・ためこみ・全画面オーラまで専用の演出を出す。
+// ★id を画面のあちこちへ直に書くと、敵を足したとき片方だけ抜ける。実際、覚醒ムーは
+//   ENEMY_ART_LAYOUT だけムーとそろえてあったのに、演出の分岐(8か所)から漏れていて、
+//   丸枠の中に小さく出るだけだった(2026-09-21 ユーザー指摘「覚醒ムーがしょぼすぎる
+//   クラシックのムーの描写を参照してって言ったじゃん」)
+const MOO_BOSS_IDS = ['Moo', 'AwakenedMoo'];
+const isMooBoss = id => MOO_BOSS_IDS.includes(String(id || ''));
 const ENEMY_ART_LAYOUT = {
   default: {
     scanScale: 1,
@@ -38159,7 +38167,7 @@ function BattleScreen({
         animation: 'guardFlash 400ms ease-out forwards'
       }
     }));
-  })(), enemy?.id === 'Moo' && enemy?.imgUrl && /*#__PURE__*/React.createElement("div", {
+  })(), isMooBoss(enemy?.id) && enemy?.imgUrl && /*#__PURE__*/React.createElement("div", {
     className: "fixed left-1/2 pointer-events-none flex items-center justify-center",
     style: {
       top: '30%',
@@ -38170,7 +38178,7 @@ function BattleScreen({
     }
   }, /*#__PURE__*/React.createElement("img", {
     src: enemy.imgUrl,
-    alt: "\u30E0\u30FC",
+    alt: enemy?.name || "ムー",
     style: {
       width: '100%',
       height: '100%',
@@ -38180,7 +38188,7 @@ function BattleScreen({
       maskImage: 'radial-gradient(circle at 50% 42%, #000 60%, transparent 92%)'
     },
     className: `relative z-[1] object-contain drop-shadow-[0_0_55px_rgba(168,85,247,0.95)]${extremeRun ? extremeDifficulty === NIGHTMARE_SETTING.id ? ' mh-nightmare-enemy-image' : ' mh-extreme-enemy-image' : ''}`
-  })), !ecoBattleView && enemy?.id === 'Moo' && enemyAttackFx?.kind === 'moo' && /*#__PURE__*/React.createElement("div", {
+  })), !ecoBattleView && isMooBoss(enemy?.id) && enemyAttackFx?.kind === 'moo' && /*#__PURE__*/React.createElement("div", {
     className: "fixed inset-0 pointer-events-none flex items-center justify-center overflow-hidden",
     style: {
       zIndex: 25
@@ -38228,20 +38236,20 @@ function BattleScreen({
     className: `rounded-full transition-all duration-500 border-4 relative ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border} ${RANGE_STYLES[enemyDist].shadow} ${RANGE_STYLES[enemyDist].glow} shadow-[0_0_50px]`,
     style: enemyAttackAnim && !ecoBattleView ? {
       padding: 'clamp(6px,1.5dvh,16px)',
-      animation: enemyAttackFx?.kind === 'move' ? enemy?.id === 'Moo' ? 'enemyMoveSlideMoo 1000ms ease-in-out forwards' : 'enemyMoveSlide 1000ms ease-in-out forwards' : enemyAttackFx?.kind === 'charge' ? 'enemyChargeShake 1100ms ease-in-out forwards' : 'enemyAttackFly 450ms ease-in forwards',
-      ...(enemy?.id === 'Moo' && enemyAttackFx?.kind !== 'move' ? {
+      animation: enemyAttackFx?.kind === 'move' ? isMooBoss(enemy?.id) ? 'enemyMoveSlideMoo 1000ms ease-in-out forwards' : 'enemyMoveSlide 1000ms ease-in-out forwards' : enemyAttackFx?.kind === 'charge' ? 'enemyChargeShake 1100ms ease-in-out forwards' : 'enemyAttackFly 450ms ease-in forwards',
+      ...(isMooBoss(enemy?.id) && enemyAttackFx?.kind !== 'move' ? {
         transform: 'translateY(3dvh)'
       } : {}),
-      ...(enemy?.id !== 'Moo' && enemyAttackFx?.kind !== 'move' ? {
+      ...(!isMooBoss(enemy?.id) && enemyAttackFx?.kind !== 'move' ? {
         zIndex: 9999
       } : {})
     } : {
       padding: 'clamp(6px,1.5dvh,16px)',
-      ...(enemy?.id === 'Moo' ? {
+      ...(isMooBoss(enemy?.id) ? {
         transform: 'translateY(3dvh)'
       } : {})
     }
-  }, enemy?.imgUrl ? enemy?.id === 'Moo' ? /*#__PURE__*/React.createElement("div", {
+  }, enemy?.imgUrl ? isMooBoss(enemy?.id) ? /*#__PURE__*/React.createElement("div", {
     style: {
       width: 'clamp(92px,16dvh,142px)',
       height: 'clamp(86px,15dvh,132px)'
@@ -38267,7 +38275,7 @@ function BattleScreen({
       lineHeight: 1
     },
     className: `relative z-[1] drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]${extremeRun ? extremeDifficulty === NIGHTMARE_SETTING.id ? ' mh-nightmare-enemy-image' : ' mh-extreme-enemy-image' : ''}`
-  }, enemy?.emoji)), !ecoBattleView && enemy?.id === 'Moo' && /*#__PURE__*/React.createElement("div", {
+  }, enemy?.emoji)), !ecoBattleView && isMooBoss(enemy?.id) && /*#__PURE__*/React.createElement("div", {
     className: "absolute inset-0 pointer-events-none flex items-center justify-center overflow-visible",
     style: {
       zIndex: 1
@@ -38389,7 +38397,7 @@ function BattleScreen({
     style: {
       animation: 'auraRing 700ms ease-out infinite'
     }
-  })), !ecoBattleView && enemy && enemyIntent && !isBusy && !enemyAttackFx && (enemyIntent.type === 'SPECIAL' || enemy?.id === 'Moo' && enemyIntent.type === 'ATTACK') && (() => {
+  })), !ecoBattleView && enemy && enemyIntent && !isBusy && !enemyAttackFx && (enemyIntent.type === 'SPECIAL' || isMooBoss(enemy?.id) && enemyIntent.type === 'ATTACK') && (() => {
     // ためる(CHARGE)の予告にはこのオーラを出さない。必殺技の予告と同じ見た目になり、
     // 「準備なのか、いま撃たれるのか」が見分けられなくなるため
     const isSpecial = enemyIntent.type === 'SPECIAL';
@@ -54162,7 +54170,7 @@ function MonsterHeroGame() {
         let tookEnemyAttack = false;
 
         // Enemy lunge animation + attack effect (normal = ! mark, special = aura burst)
-        const fxKind = enemy?.id === 'Moo' ? 'moo' : intent.type === 'SPECIAL' ? 'special' : 'normal';
+        const fxKind = isMooBoss(enemy?.id) ? 'moo' : intent.type === 'SPECIAL' ? 'special' : 'normal';
         setEnemyAttackFx({
           kind: fxKind
         });
@@ -69400,12 +69408,12 @@ function MonsterHeroGame() {
       }, /*#__PURE__*/React.createElement("div", {
         className: "w-full max-w-md mx-auto flex flex-col items-center text-center px-4 pb-8"
       }, scanEnemy.imgUrl ? /*#__PURE__*/React.createElement("div", {
-        className: `${scanEnemy.id === 'Moo' ? 'w-[min(92vw,380px)] h-[clamp(250px,38vh,310px)]' : 'w-[140px] h-[160px]'} flex shrink-0 items-center justify-center overflow-hidden`
+        className: `${isMooBoss(scanEnemy.id) ? 'w-[min(92vw,380px)] h-[clamp(250px,38vh,310px)]' : 'w-[140px] h-[160px]'} flex shrink-0 items-center justify-center overflow-hidden`
       }, /*#__PURE__*/React.createElement("img", {
         src: scanEnemy.imgUrl,
         alt: scanEnemy.name,
         style: enemyArtStyle(scanEnemy.id, 'scan'),
-        className: `${scanEnemy.id === 'Moo' ? 'w-[140px] h-[140px]' : 'w-[140px] h-[140px]'} object-contain drop-shadow-[0_0_50px_rgba(239,68,68,0.4)]`
+        className: `${isMooBoss(scanEnemy.id) ? 'w-[140px] h-[140px]' : 'w-[140px] h-[140px]'} object-contain drop-shadow-[0_0_50px_rgba(239,68,68,0.4)]`
       })) : /*#__PURE__*/React.createElement("div", {
         style: {
           fontSize: '112px'
