@@ -332,7 +332,7 @@ check('初回プレイを最初から通しで見られる',
 // 画面ごとに書き分けると必ず書き忘れが出るため、鍵ひとつに集約した
 // (詳しい動作確認は tools/boot/onboarding-preview-check.js が実際に storeSet を動かして行う)
 check('見るだけの表示では何も保存しない',
-  has('  if (_storageWriteBlocked) return;')
+  has('  if (_storageWriteBlocked) return true;')
     && /const startOnboardingPreview = \(\) => \{[\s\S]{0,900}setStorageWriteBlocked\(true\)/.test(source)
     && /const endOnboardingPreview = \(\) => \{[\s\S]{0,900}setStorageWriteBlocked\(false\)/.test(source));
 check('見るだけをやめたら、名前も助手も元へ戻す',
