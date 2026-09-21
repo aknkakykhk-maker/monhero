@@ -20,7 +20,7 @@ const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分�
 const path = require('path');
 const { chromium } = require('playwright');
 // イベントの「閉幕とお礼」は終了の時刻に自動で流れる。既読にしておかないと会話で止まる
-const { eventStorySeed } = require(path.join(TOOLS_DIR, 'boot/event-story-seed'));
+const { eventStorySeed } = require(path.join(TOOLS_DIR, 'boot/quiet-boot-seed'));
 
 const URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/index.html';
 // 1画面あたりの上限(ms)。2026-09-12 の実測は 21〜62ms だったので、

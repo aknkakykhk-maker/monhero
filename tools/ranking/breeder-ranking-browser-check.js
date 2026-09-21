@@ -1,7 +1,7 @@
 // Supabaseをスタブし、複数ブリーダーLv記録が実際のDOMへ描画・保持されることを確認する。
 const { chromium } = require('playwright');
 // イベントの「閉幕とお礼」は終了の時刻に自動で流れる。既読にしておかないと会話で止まる
-const { eventStorySeed } = require(require('path').resolve(__dirname, '..', 'boot/event-story-seed'));
+const { eventStorySeed } = require(require('path').resolve(__dirname, '..', 'boot/quiet-boot-seed'));
 const URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/index.html';
 (async()=>{
   // ★この1本だけ「環境変数があればそれを使い、無ければPlaywright既定のパス」になっていて、

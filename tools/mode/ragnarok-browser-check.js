@@ -9,7 +9,7 @@
 const { chromium } = require('playwright');
 const path = require('path');
 // イベントの「閉幕とお礼」は終了の時刻に自動で流れる。既読にしておかないと会話で止まる
-const { eventStorySeed } = require(path.resolve(__dirname, '..', 'boot/event-story-seed'));
+const { eventStorySeed } = require(path.resolve(__dirname, '..', 'boot/quiet-boot-seed'));
 
 const PAGE_URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/index.html';
 const results = [];
