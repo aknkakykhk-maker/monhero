@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ed1d93f902bbafcf
+// source-sha256: d19ee299207ab957
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 281feade06ca3d3d
+// generated-sha256: 4ac09dcc95f866af
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-21 20:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-21 20:58"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -37640,6 +37640,13 @@ function BattleScreen({
   // ★いくつ付いても高さが変わらないようにするための状態。ここが無いと、
   //   札が3行4行に伸びて敵の絵・緊急のボタン・与ダメの数字を押し出す
   const [buffDetail, setBuffDetail] = useState(false);
+  // ★いま狙われている枠(2026-09-21 ユーザー指摘「誰に攻撃か分からない」)。
+  //   間合い攻撃は相手を1体決めず「予告した間合いに立っている子」へ当たるので、
+  //   ほかの技と違って targetName を持たない。予告を見ても間合いしか分からなかった。
+  // ★数え方は本番と同じ tacticsIntentTargets を通す。別に書くと、距離撃でずらしたときに
+  //   予告と実際がずれる(「当たらないはずの枠が光る」)
+  const aimedSlots = Array.isArray(tacticsUnits) && enemyIntent ? tacticsIntentTargets(enemyIntent, tacticsUnits, enemyDist) : [];
+  const aimedName = enemyIntent?.targetName || (aimedSlots.length ? aimedSlots.map(idx => tacticsTargetName(tacticsUnits, idx)).join('・') : enemyIntent?.variant === 'sweep' ? 'だれもいない' : '');
   return /*#__PURE__*/React.createElement("div", {
     className: "flex-1 flex flex-col h-full relative",
     "data-battle-speed": battleSpeed,
@@ -38504,7 +38511,7 @@ function BattleScreen({
       size: 12
     }), /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] font-black uppercase tracking-tight"
-    }, enemyIntent.label, previewHits > 1 ? ` ${previewHits}連撃` : '', enemyIntent.targetName ? ` 🎯${enemyIntent.targetName}` : '', rawDmg > 0 ? ` (予定: ${plannedDmg})` : ''));
+    }, enemyIntent.label, previewHits > 1 ? ` ${previewHits}連撃` : '', aimedName ? ` 🎯${aimedName}` : '', rawDmg > 0 ? ` (予定: ${plannedDmg})` : ''));
   })(), (() => {
     // 強化の札(2026-09-20 ユーザー指摘「バフ欄が増えてくると敵や緊急回復等が見えなくなる」)。
     // ★もとは flex-wrap で何行にも伸びていた。強化が10個を超えると札だけで3行4行になり、
@@ -39061,9 +39068,13 @@ function BattleScreen({
     const distanceBroken = distanceBreakLevel > 0;
     const distanceBreakPercent = 100 * 0.5 ** distanceBreakLevel;
     const distanceBreakRoman = ['', 'I', 'II', 'III', 'IV'][distanceBreakLevel] || String(distanceBreakLevel);
+    // ★この枠が狙われているか(2026-09-21 ユーザー指摘「誰に攻撃か分からない」)。
+    //   名前だけでは4つの枠から自分で探すことになるので、枠のほうにも印を出す
+    const slotAimed = aimedSlots.includes(i);
     return /*#__PURE__*/React.createElement("button", {
       key: i,
       "data-slot-index": i,
+      "data-tactics-aimed": slotAimed ? 'true' : undefined,
       "data-distance-broken": distanceBroken ? 'true' : undefined,
       "data-distance-break-level": distanceBroken ? distanceBreakLevel : undefined,
       "aria-label": `${RANGE_LABELS[i]}距離${distanceBroken ? `（BREAK Lv${distanceBreakLevel}・与ダメージ${distanceBreakPercent}%）` : ''}`,
@@ -39094,7 +39105,15 @@ function BattleScreen({
       } : slotSettle === i ? {
         animation: 'slotSettle 400ms ease-out'
       } : undefined
-    }, distanceBroken && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    }, slotAimed && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+      "data-tactics-aimed-ring": true,
+      className: "absolute inset-[2px] rounded-lg border-2 border-red-400/80 pointer-events-none z-[44] animate-pulse",
+      style: {
+        boxShadow: 'inset 0 0 10px rgba(239,68,68,.55)'
+      }
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "absolute -top-1.5 -right-1 z-[66] rounded-full border border-red-300 bg-red-950 px-1 py-0.5 text-[9px] font-black leading-none text-red-100 shadow-[0_0_8px_rgba(239,68,68,.85)] animate-pulse"
+    }, "\uD83C\uDFAF")), distanceBroken && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
       className: "absolute inset-0 rounded-lg pointer-events-none z-[15]",
       style: {
         background: `repeating-linear-gradient(${135 + distanceBreakLevel * 12}deg,rgba(0,0,0,.12) 0 ${Math.max(3, 8 - distanceBreakLevel)}px,rgba(127,29,29,${Math.min(.8, .28 + distanceBreakLevel * .14)}) ${Math.max(4, 9 - distanceBreakLevel)}px ${Math.max(5, 10 - distanceBreakLevel)}px),radial-gradient(circle at 50% 40%,rgba(${distanceBreakLevel >= 2 ? '69,10,10' : '88,28,135'},.55),rgba(5,0,2,.9))`
