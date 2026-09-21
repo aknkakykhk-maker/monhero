@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2ed5d1213b891de0
+// generated-sha256: 68ac9446a5335e88
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -92,7 +92,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-21 12:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-21 12:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -9585,6 +9585,14 @@ const difficultyStyle = (setting, selected) => (selected
 const ENEMY_ART_LAYOUT = {
   default: { scanScale:1, waveDetailScale:1, objectPosition:'center' },
   Moo: { scanScale:2.75, waveDetailScale:2, objectPosition:'center 48%' },
+  // ★タクティクスバトルの敵。絵は長辺160pxにそろえてあるが、鎌・斧・翼のように
+  //   細長いものが付いていると長辺をそこに取られ、本体が小さく見える。
+  //   どれくらい小さく見えるかは node tools/image/enemy-art-size-report.js で測れる
+  //   (56pxの枠に色が乗る面積。配信中の敵は13%〜68%・まんなか31%)。
+  Metalner:    { scanScale:1.1,  waveDetailScale:1.1,  objectPosition:'center' },      // 33%
+  Delpiero:    { scanScale:1.4,  waveDetailScale:1.4,  objectPosition:'center 60%' },  // 17%。鎌が上へ伸びるので本体を下寄りに
+  Splatter:    { scanScale:1.2,  waveDetailScale:1.2,  objectPosition:'center 58%' },  // 30%。斧が上へ伸びる
+  AwakenedMoo: { scanScale:1.9,  waveDetailScale:1.6,  objectPosition:'center' },      // 21%。ボスなので大きく見せる
 };
 const enemyArtStyle = (enemyId, context='scan') => {
   const layout=ENEMY_ART_LAYOUT[enemyId]||ENEMY_ART_LAYOUT.default;
@@ -9773,9 +9781,18 @@ const applyIceRulerAutoGutsRecovery = (currentRate, heroId, iceLockActive, heroD
   && heroDist===enemyDist
   ? Math.min(1, currentRate + 0.5)
   : currentRate;
-const createBattleEnemy = (wave, difficulty, forcedEnemyKey=null, powerOverride=null, enemyTurnMultiplier=1) => {
-  const enemyKey = forcedEnemyKey || ENEMY_SEQUENCE[wave - 1];
-  const base = ENEMY_DATA[enemyKey];
+// ★タクティクスバトルは敵の並びが別(TACTICS_ENEMY_SEQUENCE)。
+//   options.mode にそのランのモードを渡すと、そちらの10体が出る。
+//   クラシック・クイックの並び(ENEMY_SEQUENCE)は1つも変えない——あちらを差し替えると、
+//   いま遊んでいる人のチャレンジ・プロの手ごたえが同時に変わってしまう。
+//   forcedEnemyKey(デバッグの敵指定)は、どちらの表からでも引けるようにしておく。
+const createBattleEnemy = (wave, difficulty, forcedEnemyKey=null, powerOverride=null, enemyTurnMultiplier=1, options={}) => {
+  const tacticsEnemies = typeof isTacticsMode === 'function' && isTacticsMode(options && options.mode)
+    && typeof TACTICS_ENEMY_SEQUENCE !== 'undefined';
+  const sequence = tacticsEnemies ? TACTICS_ENEMY_SEQUENCE : ENEMY_SEQUENCE;
+  const enemyKey = forcedEnemyKey || sequence[wave - 1];
+  const base = (tacticsEnemies ? TACTICS_ENEMY_DATA[enemyKey] : null) || ENEMY_DATA[enemyKey]
+    || (typeof TACTICS_ENEMY_DATA !== 'undefined' ? TACTICS_ENEMY_DATA[enemyKey] : null);
   const safeDifficulty = normalizeBattleDifficulty(difficulty);
   const hasPowerOverride = powerOverride !== null && powerOverride !== undefined && Number.isFinite(Number(powerOverride));
   const mod = hasPowerOverride ? Number(powerOverride) : QUICK_DIFFICULTY_SETTINGS[safeDifficulty].power;
@@ -33796,7 +33813,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // ★人数ごとの固定倍率にしないこと。弱い編成ほど苦しくなる
     const tacticsEnemyBoost=isTacticsMode(runMode)
       ? tacticsEnemyPowerMultiplier(tacticsPowerRef.current.start,tacticsPowerRef.current.now) : 1;
-    const newEnemy=createBattleEnemy(w,difficulty,forcedEnemyKey,battleSetting?.power??null,enemyTurnMultiplier*stagedEnemyMultiplier*tacticsEnemyBoost);
+    // ★タクティクスバトルは敵の並びが別(TACTICS_ENEMY_SEQUENCE)。モードを渡して選ばせる
+    const newEnemy=createBattleEnemy(w,difficulty,forcedEnemyKey,battleSetting?.power??null,enemyTurnMultiplier*stagedEnemyMultiplier*tacticsEnemyBoost,{mode:runMode});
     if (!newEnemy) return null;
     // 最高到達WAVEもモードごとに別々に記録する。
     // 極限チャレンジは難易度が別表(内部の difficulty は Normal のまま)なので、ここへ入れると
@@ -36021,7 +36039,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </div>;
         })()}
 
-        {showWaveDetails&&(()=>{const extreme=gameState==='EXTREME_DIFFICULTY_SELECT';const extremePreviewSetting=ALL_EXTREME_DIFFICULTIES.find(setting=>setting.id===extremeDifficulty)||EXTREME_SETTING;const waveDifficulty=extreme?'Normal':safeDifficulty;const powerOverride=extreme?extremePreviewSetting.power:null;const label=extreme?extremePreviewSetting.label:QUICK_DIFFICULTY_SETTINGS[safeDifficulty].label;return <div className="fixed inset-0 flex items-center justify-center p-3" style={{zIndex:70000,backgroundColor:'rgba(2,6,23,.96)',paddingTop:'calc(.75rem + env(safe-area-inset-top))',paddingBottom:'calc(.75rem + env(safe-area-inset-bottom))'}} role="dialog" aria-modal="true"><section className="w-full max-w-md max-h-full flex flex-col rounded-3xl border-2 border-indigo-400 bg-slate-950 p-4"><header className="flex items-center justify-between mb-3"><div><small className="text-indigo-300 font-black">{label}</small><h2 className="text-xl font-black">全WAVE詳細</h2></div><button aria-label="閉じる" onClick={()=>{setWaveScanPreview(null);setShowWaveDetails(false);}} className="p-3 rounded-full bg-white/10"><X/></button></header><div className="flex-1 min-h-0 overflow-y-auto mh-scroll space-y-2">{ENEMY_SEQUENCE.map((enemyKey,index)=>{const enemy=createBattleEnemy(index+1,waveDifficulty,null,powerOverride);const boss=index===ENEMY_SEQUENCE.length-1;return <article key={`${enemyKey}-${index}`} data-wave={index+1} role="button" tabIndex={0} aria-label={`WAVE ${index+1} ${enemy.name}を解析`} onClick={()=>setWaveScanPreview({enemy,wave:index+1,difficulty:waveDifficulty})} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setWaveScanPreview({enemy,wave:index+1,difficulty:waveDifficulty});}}} className={`grid grid-cols-[34px_104px_minmax(0,1fr)_72px] items-center gap-2 rounded-2xl border bg-slate-900 px-2 cursor-pointer active:scale-[.99] ${boss?'border-amber-400/40 min-h-[120px]':'border-white/10 min-h-[64px]'}`}><b className={`${boss?'text-amber-300':'text-indigo-300'} whitespace-nowrap`}>W{index+1}</b><div data-wave-art className="relative w-[104px] h-full min-h-[60px] flex items-center justify-center overflow-hidden">{enemy.imgUrl?<img src={enemy.imgUrl} alt={enemy.name} style={enemyArtStyle(enemy.id,'waveDetail')} className="w-14 h-14 object-contain"/>:<span className="text-3xl">{enemy.emoji}</span>}</div><div className="min-w-0"><b className={`block truncate whitespace-nowrap ${boss?'text-amber-300':''}`} title={enemy.name}>{enemy.name}</b>{boss&&<span className="block text-[9px] leading-tight font-black text-amber-400">BOSS</span>}</div><div data-wave-stats className="w-[72px] text-right text-[10px] whitespace-nowrap"><div>HP <b>{enemy.maxHp.toLocaleString()}</b></div><div>攻撃 <b>{enemy.atk.toLocaleString()}</b></div></div></article>})}</div></section></div>})()}
+        {showWaveDetails&&(()=>{const extreme=gameState==='EXTREME_DIFFICULTY_SELECT';const extremePreviewSetting=ALL_EXTREME_DIFFICULTIES.find(setting=>setting.id===extremeDifficulty)||EXTREME_SETTING;const waveDifficulty=extreme?'Normal':safeDifficulty;const powerOverride=extreme?extremePreviewSetting.power:null;const label=extreme?extremePreviewSetting.label:QUICK_DIFFICULTY_SETTINGS[safeDifficulty].label;return <div className="fixed inset-0 flex items-center justify-center p-3" style={{zIndex:70000,backgroundColor:'rgba(2,6,23,.96)',paddingTop:'calc(.75rem + env(safe-area-inset-top))',paddingBottom:'calc(.75rem + env(safe-area-inset-bottom))'}} role="dialog" aria-modal="true"><section className="w-full max-w-md max-h-full flex flex-col rounded-3xl border-2 border-indigo-400 bg-slate-950 p-4"><header className="flex items-center justify-between mb-3"><div><small className="text-indigo-300 font-black">{label}</small><h2 className="text-xl font-black">全WAVE詳細</h2></div><button aria-label="閉じる" onClick={()=>{setWaveScanPreview(null);setShowWaveDetails(false);}} className="p-3 rounded-full bg-white/10"><X/></button></header><div className="flex-1 min-h-0 overflow-y-auto mh-scroll space-y-2">{ENEMY_SEQUENCE.map((enemyKey,index)=>{const enemy=createBattleEnemy(index+1,waveDifficulty,null,powerOverride,1,{mode:battleMode});const boss=index===ENEMY_SEQUENCE.length-1;return <article key={`${enemyKey}-${index}`} data-wave={index+1} role="button" tabIndex={0} aria-label={`WAVE ${index+1} ${enemy.name}を解析`} onClick={()=>setWaveScanPreview({enemy,wave:index+1,difficulty:waveDifficulty})} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setWaveScanPreview({enemy,wave:index+1,difficulty:waveDifficulty});}}} className={`grid grid-cols-[34px_104px_minmax(0,1fr)_72px] items-center gap-2 rounded-2xl border bg-slate-900 px-2 cursor-pointer active:scale-[.99] ${boss?'border-amber-400/40 min-h-[120px]':'border-white/10 min-h-[64px]'}`}><b className={`${boss?'text-amber-300':'text-indigo-300'} whitespace-nowrap`}>W{index+1}</b><div data-wave-art className="relative w-[104px] h-full min-h-[60px] flex items-center justify-center overflow-hidden">{enemy.imgUrl?<img src={enemy.imgUrl} alt={enemy.name} style={enemyArtStyle(enemy.id,'waveDetail')} className="w-14 h-14 object-contain"/>:<span className="text-3xl">{enemy.emoji}</span>}</div><div className="min-w-0"><b className={`block truncate whitespace-nowrap ${boss?'text-amber-300':''}`} title={enemy.name}>{enemy.name}</b>{boss&&<span className="block text-[9px] leading-tight font-black text-amber-400">BOSS</span>}</div><div data-wave-stats className="w-[72px] text-right text-[10px] whitespace-nowrap"><div>HP <b>{enemy.maxHp.toLocaleString()}</b></div><div>攻撃 <b>{enemy.atk.toLocaleString()}</b></div></div></article>})}</div></section></div>})()}
         {gameState==='BATTLE_MENU'&&(
           <div data-mh-screen className="flex-1 flex flex-col h-full min-h-0 px-4" style={{paddingTop:'calc(.35rem + env(safe-area-inset-top))',paddingBottom:'calc(.35rem + env(safe-area-inset-bottom))'}}>
             {/* 戻るボタン。ランキングを見ているときは、いきなりホームへ帰らず
