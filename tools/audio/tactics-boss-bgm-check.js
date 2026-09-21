@@ -1,14 +1,16 @@
 #!/usr/bin/env node
-// タクティクスバトルのボス戦だけに専用BGMが鳴ることを確認する。
+// タクティクスバトルの中ボス戦・ボス戦に、それぞれ決めたBGMが鳴ることを確認する。
 //
 //   node tools/audio/tactics-boss-bgm-check.js
 //
 // 【なぜ道具にするか】
-// 2026-09-21にユーザーから1曲だけ受け取った。「曲数が足りないからボス戦だけいれよう」。
-// つまり通常戦とデュラハン戦は**チャレンジと同じ曲**を鳴らす。この「ボス戦だけ」が崩れると、
-//   ・タクティクスの全WAVEで専用曲が鳴る（1曲しかないので、ずっと同じ曲になる）
+// 2026-09-21にユーザーからボス戦用の曲を1つ受け取った（「曲数が足りないからボス戦だけいれよう」）。
+// 同じ日に中ボス戦（WAVE9）も決まった（「中ボス戦は一旦これで」＝すでに入っている
+// The City Beneath the Comets）。**通常戦だけ**チャレンジと同じ曲を鳴らす。
+// ここが崩れると、
+//   ・タクティクスの全WAVEで同じ曲が鳴る
 //   ・逆に専用曲が一度も鳴らない（結線の順番を間違えると、プロや種族の枠へ落ちる）
-// のどちらかになるが、どちらもエラーは出ず、WAVE10まで進めないと気づけない。
+// のどちらかになるが、どちらもエラーは出ず、WAVE9〜10まで進めないと気づけない。
 //
 // 結線の順番がとくに危ない。タクティクスの種族チャレンジ・プロは isSpeciesChallengeMode /
 // isProMode にも当たるので、isTacticsMode を後ろに置くと**そちらの枠へ落ちる**。
@@ -22,6 +24,8 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '..', '..');
 const TRACK_ID = 'tactics_boss';
 const AUDIO_REL = 'audio/bgm-tactics-boss.mp3';
+// 中ボス戦はすでに入っている曲を指すだけ（音源のコピーを作らない。CLAUDE.md ⑥-2）
+const MID_BOSS_TRACK_ID = 'melo_the_city_beneath_the_comets';
 const files = ['monster-hero/src/game-system.jsx', 'monster-hero/game-system.compiled.js'];
 let failed = 0;
 const check = (name, ok, detail = '') => {
@@ -78,21 +82,33 @@ for (const file of files) {
 
   check(`${label}: 既定の枠 tacticsBoss が専用曲を指す`,
     compact.includes(`tacticsBoss:'${TRACK_ID}'`));
+  check(`${label}: 既定の枠 tacticsMidBoss がすでにある曲を指す`,
+    compact.includes(`tacticsMidBoss:'${MID_BOSS_TRACK_ID}'`));
+  // ★中ボス戦は音源を増やさない。同じ曲のコピーを作ると、配信サイズがそのぶん増える
+  const midBossEntry = (compact.match(new RegExp(`\\{id:'${MID_BOSS_TRACK_ID}'[^}]*\\}`)) || [''])[0];
+  check(`${label}: 中ボス戦の曲は、すでに登録されているものをそのまま使う`,
+    midBossEntry.includes(`id:'${MID_BOSS_TRACK_ID}'`) && !midBossEntry.includes('tactics'),
+    midBossEntry.slice(0, 80));
   // ★ここへ入れると、チャレンジのボス曲を自分で選んでいる人には専用曲が一度も鳴らない
   const legacy = (source.match(/const BGM_ARRANGEMENT_LEGACY_FALLBACK = Object\.freeze\(\{([^}]*)\}/) || [])[1] || '';
-  check(`${label}: tacticsBoss を引き継ぎの表へ入れていない`, !legacy.includes('tacticsBoss'), legacy.includes('tacticsBoss') ? '入っています' : '');
+  check(`${label}: タクティクスの枠を引き継ぎの表へ入れていない`,
+    !legacy.includes('tacticsBoss') && !legacy.includes('tacticsMidBoss'),
+    /tactics\w*/.test(legacy) ? '入っています' : '');
 
   // ★順番。タクティクスの種族・プロは isSpeciesChallengeMode / isProMode にも当たる
-  check(`${label}: ボス戦のBGMを選ぶとき、タクティクスをいちばん先に見る`,
-    compact.includes("constmodeBgm=isTacticsMode(runMode)?{normal:'battle',dullahan:'dullahan',moo:'tacticsBoss'}:isSpeciesChallengeMode(runMode)"));
-  // 通常戦とデュラハン戦はチャレンジと同じ枠（曲数が足りないので専用曲を作らない）
-  check(`${label}: 通常戦とデュラハン戦はチャレンジと同じ枠を使う`,
-    compact.includes("moo:'tacticsBoss'") && !compact.includes("tacticsBattle") && !compact.includes("tacticsDullahan:'"));
+  check(`${label}: BGMを選ぶとき、タクティクスをいちばん先に見る`,
+    compact.includes("constmodeBgm=isTacticsMode(runMode)?{normal:'battle',dullahan:'tacticsMidBoss',moo:'tacticsBoss'}:isSpeciesChallengeMode(runMode)"));
+  // 通常戦だけチャレンジと同じ枠（通常戦の曲がまだ無いので専用の枠を作らない）
+  check(`${label}: 通常戦はチャレンジと同じ枠を使う`,
+    compact.includes("{normal:'battle',dullahan:'tacticsMidBoss',moo:'tacticsBoss'}") && !compact.includes("tacticsBattle"));
 
   // アレンジのタブは、モードを公開するまで出さない（種族チャレンジと同じ扱い）
   // ★括弧の数は書き方しだいで変わる（compiled は外側の括弧を外す）。中身だけを見る
   check(`${label}: アレンジのタブは公開フラグで出し分ける`,
-    /\.\.\.\(+TACTICS_MODE_PUBLIC_RELEASE\|\|TACTICS_BETA_PRO_RELEASE\)?\?\[\{id:'tactics',label:'タクティクス',items:\[\['tacticsBoss','ボス戦BGM'\]\]\}\]:\[\]\)/.test(compact));
+    /\.\.\.\(+TACTICS_MODE_PUBLIC_RELEASE\|\|TACTICS_BETA_PRO_RELEASE\)?\?\[\{id:'tactics',label:'タクティクス',items:\[\['tacticsMidBoss','中ボス戦BGM'\],\['tacticsBoss','ボス戦BGM'\]\]\}\]:\[\]\)/.test(compact));
+  // ★WAVE9はデュラハンではなくスプラッター。画面に出す呼び名を「デュラハン戦」にしない
+  check(`${label}: 中ボス戦の枠を「デュラハン戦」と呼んでいない`,
+    !/\['tacticsMidBoss','デュラハン戦/.test(compact));
 
   // --- ④ 既存5モードのBGM選択を巻き込んで変えていない（回帰） ---
   for (const [name, needle] of [

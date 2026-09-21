@@ -44,7 +44,17 @@ check('カテゴリの列数がタブの数と合っている',
   categoryCols && Number(categoryCols[1]) === categoryLabels.length, `${categoryCols?.[1]}列 / ${categoryLabels.length}個`);
 check('バトルモードの列数はタブの数で切り替える',
   dialog.includes("battleModes.length>=5?'grid-cols-5':'grid-cols-4'"));
-const modeColsFor = (labels) => (labels.length >= 5 ? 5 : 4);
+// ★列数の決め方は**本体の式をそのまま読む**。検査へ書き写すと、本体だけ変えたときに
+//   「検査だけが古い列数で測る」ことになる(2026-09-21、タブが6つになったのに検査は5列のままだった)
+const modeColsSource = (dialog.match(/(battleModes\.length>=\d+\?'grid-cols-\d+'(?::battleModes\.length>=\d+\?'grid-cols-\d+')*:'grid-cols-\d+')/) || [])[1] || '';
+check('モードのタブの列数の決め方を本体から読めた', !!modeColsSource, modeColsSource);
+const modeColsFor = (labels) => {
+  if (!modeColsSource) return 4;
+  const cls = Function('battleModes', `return ${modeColsSource}`)(labels);
+  return Number(String(cls).replace('grid-cols-', '')) || 4;
+};
+// タブの数と列数から決まる行数。1行に押し込めない数になったら、素直に折り返す
+const expectedRows = (labels) => Math.max(1, Math.ceil(labels.length / modeColsFor(labels)));
 
 // 配信しているCSSをそのまま使う(2026-09-12にTailwindを静的CSSへ切り替えた)。
 // 以前はここで毎回 tailwindcss を走らせて作り直していたが、
@@ -80,18 +90,34 @@ const tabsHtml = (labels, active) => labels.map((label, i) => `<button type="but
         const row = document.getElementById(rowId);
         const buttons = [...row.children];
         const rows = new Set(buttons.map(b => Math.round(b.getBoundingClientRect().top)));
+        // ★文字が折り返されていないか。はみ出さなくても「タクティ/クス」と割れると読めない
+        //   (2026-09-21、6列に押し込んだときがそうだった。はみ出しの検査だけでは拾えなかった)
+        const wrapped = buttons.filter(b => {
+          const range = document.createRange();
+          range.selectNodeContents(b);
+          return range.getClientRects().length > 1;
+        }).map(b => b.textContent);
         return {
           rowCount: rows.size,
+          wrapped,
           overflow: buttons.filter(b => b.scrollWidth > b.clientWidth + 1).map(b => b.textContent),
           minHeight: Math.min(...buttons.map(b => b.getBoundingClientRect().height)),
           rowWidth: row.scrollWidth,
           clientWidth: row.clientWidth,
         };
       }, id);
-      for (const [id, label] of [['cat', 'カテゴリ'], ['mode', 'バトルモード(公開前)'], ['modeOpen', 'バトルモード(公開後)']]) {
+      for (const [id, label, labels] of [
+        ['cat', 'カテゴリ', categoryLabels],
+        ['mode', 'バトルモード(公開前)', beforeRelease],
+        ['modeOpen', 'バトルモード(公開後)', allModeLabels],
+      ]) {
         const m = await measure(id);
-        check(`${width}px: ${label}のタブが1行に収まる`, m.rowCount === 1, `${m.rowCount}行`);
+        const want = id === 'cat' ? 1 : expectedRows(labels);
+        check(`${width}px: ${label}のタブが${want}行に収まる`, m.rowCount === want, `${m.rowCount}行`);
+        // ★2行までにする。3行になるとダイアログの中でタブだけが場所を取りすぎる
+        check(`${width}px: ${label}のタブが2行を超えない`, m.rowCount <= 2, `${m.rowCount}行`);
         check(`${width}px: ${label}のタブの文字がはみ出さない`, m.overflow.length === 0, m.overflow.join(' / '));
+        check(`${width}px: ${label}のタブの文字が折り返されない`, m.wrapped.length === 0, m.wrapped.join(' / '));
         check(`${width}px: ${label}のタブが指で押せる高さ(44px以上)`, m.minHeight >= 44, `${Math.round(m.minHeight)}px`);
         check(`${width}px: ${label}の行が横スクロールしない`, m.rowWidth <= m.clientWidth + 1, `${m.rowWidth} / ${m.clientWidth}`);
       }
