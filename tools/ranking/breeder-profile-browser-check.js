@@ -127,7 +127,10 @@ async function run() {
   await page.waitForTimeout(600);
   await page.evaluate(() => document.querySelector('[data-battle-system="systemClassic"]')?.click());
   await page.waitForTimeout(1500);
-  await page.evaluate(() => [...document.querySelectorAll('button')].find(x => /チャレンジモードのランキング/.test(x.textContent))?.click());
+  // ★ボタンは字面ではなくモードidで名指しする。文字は画面の都合で変わり
+  //   (2026-09-21に「チャレンジモードのランキング」→「このモードのランキング」)、
+  //   そのたびに押せないまま「一覧が0件」として落ちていた
+  await page.evaluate(() => document.querySelector('[data-mode-ranking-link="challenge"]')?.click());
   await page.waitForTimeout(4500);
 
   const cards = await page.evaluate(() => [...document.querySelectorAll('[data-ranking-kind="score"]')].map(el => ({
