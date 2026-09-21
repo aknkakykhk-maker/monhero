@@ -160,13 +160,30 @@ check('本公開ぶんとβ版ぶんの両方が一覧にある',
   api.TACTICS_DIFFICULTY_IDS.every(d => api.RANKING_DIFFICULTY_KEYS.includes(`TacticsPro${d}`)
     && api.RANKING_DIFFICULTY_KEYS.includes(`TacticsProBeta${d}`)));
 // 公開フラグの見方は battleModePlayable の1か所。ランキングへ送るかもそこから決まる
-check('いまはβ版も本公開もOFF',
-  api.battleModePlayable(api.BATTLE_MODE_TACTICS_PRO) === false
-    && api.battleModePlayable(api.BATTLE_MODE_TACTICS) === false
-    && api.modeHasRanking(api.BATTLE_MODE_TACTICS_PRO) === false);
-check('デバッグからは遊べるが、ランキングへは送らない',
-  api.battleModePlayable(api.BATTLE_MODE_TACTICS_PRO, { debugBattle: true }) === true
-    && api.modeHasRanking(api.BATTLE_MODE_TACTICS_PRO) === false);
+const betaOn = api.battleModePlayable(api.BATTLE_MODE_TACTICS_PRO) === true;
+console.log(`（いまの公開状態: ${betaOn ? 'β公開中（プロだけ）' : '未公開'}）`);
+if (!betaOn) {
+  check('β版も本公開もOFF',
+    api.battleModePlayable(api.BATTLE_MODE_TACTICS) === false
+      && api.modeHasRanking(api.BATTLE_MODE_TACTICS_PRO) === false);
+  check('デバッグからは遊べるが、ランキングへは送らない',
+    api.battleModePlayable(api.BATTLE_MODE_TACTICS_PRO, { debugBattle: true }) === true
+      && api.modeHasRanking(api.BATTLE_MODE_TACTICS_PRO) === false);
+} else {
+  // ★β版で開くのは**プロだけ**。ほかの2モードまで開くと、決めた出し方と食い違う
+  check('β公開で遊べるのはプロだけ',
+    api.battleModePlayable(api.BATTLE_MODE_TACTICS) === false
+      && api.battleModePlayable(api.BATTLE_MODE_TACTICS_SPECIES) === false,
+    `tactics:${api.battleModePlayable(api.BATTLE_MODE_TACTICS)} / species:${api.battleModePlayable(api.BATTLE_MODE_TACTICS_SPECIES)}`);
+  check('遊べない2モードは「準備中」として並ぶ',
+    api.battleModeComingSoon(api.BATTLE_MODE_TACTICS) === true
+      && api.battleModeComingSoon(api.BATTLE_MODE_TACTICS_SPECIES) === true);
+  // ★β版のスコアは本公開とは別の行へ。本公開でキーを切り替えると、本番の順位は空から始まる
+  check('β版のスコアは、本公開とは別の行へ送る',
+    api.modeHasRanking(api.BATTLE_MODE_TACTICS_PRO) === true
+      && api.tacticsProRankingPrefix() === `${api.TACTICS_PRO_RANKING_PREFIX}${api.TACTICS_PRO_BETA_SUFFIX}`,
+    api.tacticsProRankingPrefix());
+}
 
 // ===== ③ 記録を書く3か所が、必ずタクティクス用の枝を通る =====
 // 難易度は1か所(tacticsRecordDifficulty)で決める。極限で遊ぶと difficulty が 'Normal' に

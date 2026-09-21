@@ -97,16 +97,27 @@ const check = (name, ok, detail = '') => {
     await page.locator('[data-battle-system="systemClassic"]').dispatchEvent('click', {}, { timeout: 15000 });
     await page.getByText('BATTLE MODE').first().waitFor({ timeout: 15000 });
     const publicModes = await page.evaluate(() => document.body.innerText.replace(/\s+/g, ' '));
-    check('公開フラグOFFのあいだは、ふだんの入口に出ない', !publicModes.includes(MODE_LABEL), MODE_LABEL);
+    // ★β公開で開くのはプロだけ。タクティクスチャレンジの名前はまだどこにも出さない
+    check('本公開まで、クラシック側の入口にタクティクスの名前を出さない', !publicModes.includes(MODE_LABEL), MODE_LABEL);
     await page.evaluate(() => { document.querySelector('button[aria-label="戻る"]')?.click(); });
     await page.waitForTimeout(800);
-    // 入口には「準備中」の枠として並ぶが、押せない(2026-09-20 ユーザー指示)
+    // 入口の枠。公開前は「準備中」として並ぶが押せない(2026-09-20 ユーザー指示)。
+    // β公開後は押せるようになる(中のモードは、プロだけ遊べてほかは準備中)
     const soonState = await page.evaluate(() => {
       const b = document.querySelector('[data-battle-system="systemTactics"]');
       return b ? { there: true, soon: b.getAttribute('data-battle-system-soon') === '1', disabled: b.disabled } : { there: false };
     });
-    check('公開フラグOFFでも、入口には「準備中」の枠が並ぶ', soonState.there && soonState.soon, JSON.stringify(soonState));
-    check('準備中の枠は押せない', soonState.disabled === true);
+    const tacticsOpen = /const TACTICS_MODE_PUBLIC_RELEASE = true/.test(src)
+      || /const TACTICS_BETA_PRO_RELEASE = true/.test(src);
+    check('入口に枠が並ぶ', soonState.there, JSON.stringify(soonState));
+    if (tacticsOpen) {
+      // ★公開したのに押せないままだと、誰もたどり着けない
+      check('公開しているので、入口の枠が押せる', soonState.soon === false && soonState.disabled === false,
+        JSON.stringify(soonState));
+    } else {
+      check('公開フラグOFFのあいだは「準備中」の枠', soonState.soon === true, JSON.stringify(soonState));
+      check('準備中の枠は押せない', soonState.disabled === true);
+    }
     // 入口からもう一度戻ってHOMEへ(画面が1段増えたぶん、戻るも1回多い)
     await page.evaluate(() => { document.querySelector('button[aria-label="戻る"]')?.click(); });
     await page.waitForTimeout(800);
