@@ -156,6 +156,15 @@ function BattleScreen({
                 <div className="px-3 py-1 rounded-lg bg-gradient-to-r from-amber-900 via-amber-600 to-amber-900 border-2 border-amber-200 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(251,191,36,0.9)]">た め る</div>
               </div>
             )}
+            {/* 貫通の構え。ためると同じ大きさで出す。ガードが効かない技が次に確定で来るので、
+                「ガードを固めても無駄」と1ターン早く分かるようにする(2026-09-21 ユーザー指示)。
+                色はためる(琥珀)と分けて、貫通撃と同じ赤系にする */}
+            {enemy&&enemyIntent&&!isBusy&&!enemyAttackFx&&enemyIntent.type==='PIERCE_CHARGE'&&(
+              <div className="fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1" style={{top:'11%',zIndex:65000,animation:'specialWarnFlash 700ms ease-in-out infinite'}}>
+                <div className="text-5xl drop-shadow-[0_0_20px_rgba(244,63,94,1)]">⚔️</div>
+                <div className="px-3 py-1 rounded-lg bg-gradient-to-r from-rose-900 via-rose-600 to-rose-900 border-2 border-rose-200 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(244,63,94,0.9)]">貫 通 の 構 え</div>
+              </div>
+            )}
             {/* 移動の予告。いま出ている行動予告(通常攻撃など)と同時に、
                 「その次のターンに間合いを変える」ことを敵のつぶやきとして見せる。
                 出す間合いは enemyNextIntent.targetDist そのもので、繰り上げても抽選し直さないため、
@@ -387,6 +396,7 @@ function BattleScreen({
             const plannedDmg=applyTurnDamageReduction(resolveTacticsGuardedHit(rawDmg,previewHits,previewGuard).taken);
             const tone=enemyIntent.type==='SPECIAL'?'bg-fuchsia-950 border-fuchsia-500 text-fuchsia-300'
               :enemyIntent.type==='CHARGE'?'bg-amber-950 border-amber-500 text-amber-400'
+              :enemyIntent.type==='PIERCE_CHARGE'?'bg-rose-950 border-rose-500 text-rose-300'
               :enemyIntent.type==='MOVE'?'bg-cyan-950 border-cyan-500/60 text-cyan-300'
               :'bg-red-950 border-red-600/50 text-red-400';
             // 敵の絵のすぐ下へ置く(2026-09-18・ユーザー依頼)。mt-auto で下端へ押しやっていたため、
