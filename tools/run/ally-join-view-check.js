@@ -49,7 +49,19 @@ check('カードに距離補正の変動を出す',
 check('勇者モン選択は今までどおりその子の基礎値を出す',
   has('<span className="text-pink-400 font-bold">{m.baseHp}</span>'));
 check('詳細ポップアップも同じ allyJoinPreview を通す',
-  has('allyJoinPreview(currentPickingMon).stats.map(') && has('allyJoinPreview(currentPickingMon).apt.map(range=>range.diff)'));
+  has('const joinPreview = pickMode===\'hero\' ? null : allyJoinPreview(currentPickingMon);')
+    && has('joinPreview.stats.map(') && has('joinPreview.apt.map(range=>range.diff)'));
+// ★タクティクスは「素の値 → 盤面に入る値」。見出しもそう書く(合流で増えるわけではない)
+check('タクティクスの詳細は「素の値 → 盤面に入る値」と書く',
+  has("joinPreview?.tactics ? '基本ステータス(素の値 → 盤面に入る値)' : '基本ステータス(現在 → 合流後)'"));
+check('タクティクスの距離補正は0から始める(合算しない)',
+  has('aptCurrentPct: joinPreview?.tactics ? [0,0,0,0] : [0,1,2,3].map(i=>distTotalBonus(i)),'));
+// ★カードは増分(実際 +130)を出さない。パーティが増えるわけではないので嘘になる
+check('タクティクスのカードは増分を出さない',
+  has("{preview.tactics\n                        ?null\n                        :<span className={`block leading-none ${stat.diff>0?'text-emerald-400':'text-slate-700'}`}>"));
+check('タクティクスのカードは素の値も並べる',
+  has("?(stat.diff>0?<span className=\"block leading-none text-slate-500\">{stat.before} →</span>:null)"));
+check('追いつき補正を出す', has('data-tactics-join-catchup='));
 check('NIGHTMAREの適性半減を詳細側にも反映できる(aptDeltaPct)',
   has('aptDeltaPct = null, growth = null } = opts;') && has('const pct=aptDeltaPct?(aptDeltaPct[idx]||0):aptGradeToPct(grade);'));
 check('マスモンの合流値は種族値＋通常強化＋超越基礎UPを4能力へ各1回加算する',
@@ -94,7 +106,9 @@ ${slice('const aptGradeToPct', '// 補正値の表示用文字列')}
 ${slice('const formatAptPct', '// 合流ボーナス欄に出す間合い適性')}
 ${slice('const applyExtremeIntegerRule', '// 極限チャレンジの説明にはモード全体に共通する')}
 const RANGE_LABELS = ${JSON.stringify(['零','近','中','遠'])};
-module.exports={specialRuleDifficultyForRun,ultimateAllyJoinMultiplier,applyAllyJoinBonus,getMonsterAptPct,formatAptPct,RANGE_LABELS};`;
+${slice('const TACTICS_START_GUTS_RATE', '// ダメージ。0になったらその子は倒れる')}
+${slice('const applyTacticsJoinCatchUp', '\n};')}\n};
+module.exports={specialRuleDifficultyForRun,ultimateAllyJoinMultiplier,applyAllyJoinBonus,getMonsterAptPct,formatAptPct,RANGE_LABELS,createTacticsUnit,applyTacticsJoinCatchUp};`;
 const mod = { exports: {} };
 try {
   new Function('module', 'exports', calcSrc)(mod, mod.exports);
@@ -122,6 +136,32 @@ if (typeof C.applyAllyJoinBonus === 'function') {
     waveResult: { totalTurnCount: totalTurns },
     maxHp: 500, atk: 100, def: 100, maxGuts: 100,
     distTotalBonus: () => 0,
+    // ★タクティクスの分岐が見るもの。既存モードの計算を確かめるときは false で通す
+    isTacticsMode: () => false,
+    createTacticsUnit: C.createTacticsUnit,
+    applyTacticsJoinCatchUp: C.applyTacticsJoinCatchUp,
+    tacticsJoinCatchUpRef: { current: 1 },
+    wave: 1,
+  });
+
+  // ★タクティクスは「その子の素のステータスがそのまま盤面へ入る」ので、
+  //   合流ボーナス(plusStats)の増分ではなく **素の値 → 盤面に入る値** を出す
+  //   (2026-09-21 ユーザー指示)。追いつき補正の率は tacticsJoinCatchUpRef が持つ
+  const buildTactics = (catchUp = 1) => makePreview({
+    specialRuleDifficultyForRun: C.specialRuleDifficultyForRun,
+    applyAllyJoinBonus: C.applyAllyJoinBonus,
+    getMonsterAptPct: C.getMonsterAptPct,
+    RANGE_LABELS: C.RANGE_LABELS,
+    runMode: 'tactics', difficulty: 'Normal',
+    extremeRunRef: { current: false }, extremeDifficulty: null,
+    waveResult: { totalTurnCount: 0 },
+    maxHp: 500, atk: 100, def: 100, maxGuts: 100,
+    distTotalBonus: () => 0,
+    isTacticsMode: () => true,
+    createTacticsUnit: C.createTacticsUnit,
+    applyTacticsJoinCatchUp: C.applyTacticsJoinCatchUp,
+    tacticsJoinCatchUpRef: { current: catchUp },
+    wave: 1,
   });
 
   // 種族値＋通常強化＋超越基礎UPを合成済みの供モン。
@@ -150,6 +190,29 @@ if (typeof C.applyAllyJoinBonus === 'function') {
   const plain = build({})({ plusStats: null, distAptitude: null });
   check('合流ボーナスの無い候補でも落ちず ±0 になる',
     plain.stats.every(stat => stat.diff === 0) && plain.apt.every(range => range.diff === 0) && plain.changed === false);
+
+  // ---- タクティクスは「素の値がそのまま盤面へ入る」(2026-09-21 ユーザー指示) ----
+  // 「タクティクスは個別のステータスだからそもそも増えるって言うのがおかしい」。
+  // ★合流ボーナス(plusStats)を持っている候補でも、そちらは見ない
+  const tacticsMon = { baseHp: 600, baseAtk: 120, baseDef: 100, baseGuts: 80,
+    plusStats: { hp: 450, atk: 60, def: 50, guts: 40 }, distAptitude: ['M', 'C', 'C', 'G'] };
+  const flat = buildTactics(1)(tacticsMon);
+  check('タクティクス: 素の値がそのまま盤面へ入る',
+    flat.stats[0].before === 600 && flat.stats[0].after === 600, `${flat.stats[0].before} → ${flat.stats[0].after}`);
+  check('タクティクス: 合流ボーナス(plusStats)は足さない',
+    flat.stats[0].after !== 1050 && flat.stats[1].after === 120, `ちから ${flat.stats[1].after}`);
+  check('タクティクス: 追いつきが無ければ素の値のまま', flat.stats.every(stat => stat.diff === 0) && flat.catchUp === 1);
+  // ★追いつき補正はWAVEを速く抜けるほど厚くなる。盤面へ入れるときと同じ関数を通す
+  const caught = buildTactics(1.2)(tacticsMon);
+  check('タクティクス: 追いつき補正が乗る',
+    caught.stats[0].before === 600 && caught.stats[0].after === 720, `${caught.stats[0].before} → ${caught.stats[0].after}`);
+  check('タクティクス: 追いつきの率を画面へ渡す', caught.catchUp === 1.2, `${caught.catchUp}`);
+  check('タクティクス: タクティクスの印を持つ', caught.tactics === true && plain.tactics !== true);
+  // ★距離適性も合算しない(その子の適性が、その子の攻撃に効く)
+  check('タクティクス: 距離補正は0から始まる(合算しない)', caught.apt.every(range => range.before === 0));
+  check('タクティクス: 距離補正はその子のぶんだけ',
+    Math.abs(caught.apt[0].diff - 0.25) < 1e-9 && Math.abs(caught.apt[3].diff + 0.20) < 1e-9,
+    `${C.formatAptPct(caught.apt[0].diff)} / ${C.formatAptPct(caught.apt[3].diff)}`);
 }
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
