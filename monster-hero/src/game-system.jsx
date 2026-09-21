@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a3e73b332d85bfe0
+// generated-sha256: c7edf516bc38a14b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -92,7 +92,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-22 07:31"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-22 07:44"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -9771,23 +9771,26 @@ const TACTICS_ALLOUT_MULT = 0.4;  // 全員へ。1体あたりは通常攻撃よ
 // スエゾーの「眼力」。タクティクスバトルでは**その子が攻撃したターン**に引く(2026-09-20 ユーザー指示)。
 // 既存5モードは今までどおり編成から決まる確率で、敵のターンの頭に引く
 const TACTICS_INTIMIDATE_RATE = 0.4;
+// ★noticeLabel … 敵の絵の右上へ出す「何をする技か」の吹き出し(2026-09-22 ユーザー指示
+//   「右上に必殺技！みたいに吹き出し出せばいい。3連撃！とか」)。技名だけでは何が起きるか
+//   覚えられないので、予告のあいだ出しっぱなしにする。書かなければ category を使う
 const TACTICS_ACTION_DEFINITIONS = [
-  {id:'normal',type:'ATTACK',category:'通常攻撃',weight:30,multiplier:1,hits:1,range:'全間合い',condition:'常時',cooldown:0,useLimit:null},
-  {id:'charge',type:'CHARGE',category:'ためる',weight:12,multiplier:0,hits:0,range:'全間合い',condition:'常時',cooldown:0,useLimit:null},
-  {id:'special',type:'SPECIAL',category:'必殺技',weight:0,multiplier:2.5,hits:1,range:'全間合い',condition:'ためた次のターンに必ず発動',cooldown:0,useLimit:null},
-  {id:'wait',type:'WAIT',category:'特殊行動',weight:10,multiplier:0,hits:0,range:'全間合い',condition:'常時',cooldown:0,useLimit:null},
-  {id:'move',type:'MOVE',category:'移動',weight:10,multiplier:0,hits:0,range:'現在以外の3間合い',condition:'移動先がある・移動した次のターンは選ばない',cooldown:0,useLimit:null},
-  {id:'sweep',type:'ATTACK',variant:'sweep',category:'間合い攻撃',weight:14,multiplier:TACTICS_SWEEP_MULT,missMultiplier:TACTICS_SWEEP_MISS_MULT,hits:1,range:'予告した1間合い',condition:'予告した間合いに敵がいると大ダメージ。距離撃でずらせる',cooldown:0,useLimit:null},
-  {id:'rush',type:'ATTACK',variant:'rush',category:'連撃',weight:14,multiplier:TACTICS_RUSH_MULT,hits:TACTICS_RUSH_HITS,range:'全間合い',condition:`${TACTICS_RUSH_HITS}ヒットに分かれる。ガードは1枚につき1ヒットを受け止める`,cooldown:0,useLimit:null},
+  {id:'normal',type:'ATTACK',category:'通常攻撃',noticeLabel:'通常攻撃',weight:30,multiplier:1,hits:1,range:'全間合い',condition:'常時',cooldown:0,useLimit:null},
+  {id:'charge',type:'CHARGE',category:'ためる',noticeLabel:'必殺技をためる',weight:12,multiplier:0,hits:0,range:'全間合い',condition:'常時',cooldown:0,useLimit:null},
+  {id:'special',type:'SPECIAL',category:'必殺技',noticeLabel:'必殺技',weight:0,multiplier:2.5,hits:1,range:'全間合い',condition:'ためた次のターンに必ず発動',cooldown:0,useLimit:null},
+  {id:'wait',type:'WAIT',category:'特殊行動',noticeLabel:'様子見',weight:10,multiplier:0,hits:0,range:'全間合い',condition:'常時',cooldown:0,useLimit:null},
+  {id:'move',type:'MOVE',category:'移動',noticeLabel:'間合い移動',weight:10,multiplier:0,hits:0,range:'現在以外の3間合い',condition:'移動先がある・移動した次のターンは選ばない',cooldown:0,useLimit:null},
+  {id:'sweep',type:'ATTACK',variant:'sweep',category:'間合い攻撃',noticeLabel:'間合い攻撃',weight:14,multiplier:TACTICS_SWEEP_MULT,missMultiplier:TACTICS_SWEEP_MISS_MULT,hits:1,range:'予告した1間合い',condition:'予告した間合いに敵がいると大ダメージ。距離撃でずらせる',cooldown:0,useLimit:null},
+  {id:'rush',type:'ATTACK',variant:'rush',category:'連撃',noticeLabel:`${TACTICS_RUSH_HITS}連撃`,weight:14,multiplier:TACTICS_RUSH_MULT,hits:TACTICS_RUSH_HITS,range:'全間合い',condition:`${TACTICS_RUSH_HITS}ヒットに分かれる。ガードは1枚につき1ヒットを受け止める`,cooldown:0,useLimit:null},
   // ★貫通撃は「ためる → 必殺技」と同じ形にしてある(2026-09-21 ユーザー指示
   //   「貫通は必殺級の技だからこれもためると同じように1ターン経由したほうがいい」)。
   //   ガードが効かない＝受け方が無い技なので、来ると分かってから距離や回避で備えられるようにする。
   //   抽選に出るのは構えのほうで、貫通撃そのものは構えた次のターンに必ず出る(weight 0)
-  {id:'pierceCharge',type:'PIERCE_CHARGE',category:'貫通の構え',weight:12,multiplier:0,hits:0,range:'全間合い',condition:'常時',effectText:'次のターンに貫通撃が確定で出る',cooldown:0,useLimit:null},
-  {id:'pierce',type:'ATTACK',variant:'pierce',category:'貫通撃',weight:0,multiplier:TACTICS_PIERCE_MULT,hits:1,range:'全間合い',condition:'構えた次のターンに必ず発動。ガードが効かない',cooldown:0,useLimit:null},
-  {id:'roar',type:'ROAR',category:'攻撃力アップ',weight:10,multiplier:0,hits:0,range:'全間合い',condition:`重ねがけは${TACTICS_ROAR_MAX_STACKS}回まで`,effectText:`次のターンから敵の攻撃 ×${TACTICS_ROAR_ATK_RATE}（このWAVEのあいだ続く。${TACTICS_ROAR_MAX_STACKS}回重ねると最大 ×${(TACTICS_ROAR_ATK_RATE**TACTICS_ROAR_MAX_STACKS).toFixed(2)}）`,cooldown:0,useLimit:TACTICS_ROAR_MAX_STACKS},
-  {id:'regen',type:'REGEN',category:'再生',weight:10,multiplier:0,hits:0,range:'全間合い',condition:'ライフが減っているときだけ',effectText:`敵が自分の最大ライフの${Math.round(TACTICS_REGEN_RATE*100)}%を回復する`,cooldown:0,useLimit:null},
-  {id:'allout',type:'ATTACK',variant:'allout',targetsAll:true,category:'全体攻撃',weight:10,multiplier:TACTICS_ALLOUT_MULT,hits:1,range:'全員',condition:'立っている全員へ同時に当たる。狙いをかわせない',cooldown:0,useLimit:null},
+  {id:'pierceCharge',type:'PIERCE_CHARGE',category:'貫通技準備',noticeLabel:'貫通技準備',weight:12,multiplier:0,hits:0,range:'全間合い',condition:'常時',effectText:'次のターンに貫通撃が確定で出る',cooldown:0,useLimit:null},
+  {id:'pierce',type:'ATTACK',variant:'pierce',category:'貫通撃',noticeLabel:'貫通撃',weight:0,multiplier:TACTICS_PIERCE_MULT,hits:1,range:'全間合い',condition:'構えた次のターンに必ず発動。ガードが効かない',cooldown:0,useLimit:null},
+  {id:'roar',type:'ROAR',category:'攻撃力アップ',noticeLabel:'攻撃力アップ',weight:10,multiplier:0,hits:0,range:'全間合い',condition:`重ねがけは${TACTICS_ROAR_MAX_STACKS}回まで`,effectText:`次のターンから敵の攻撃 ×${TACTICS_ROAR_ATK_RATE}（このWAVEのあいだ続く。${TACTICS_ROAR_MAX_STACKS}回重ねると最大 ×${(TACTICS_ROAR_ATK_RATE**TACTICS_ROAR_MAX_STACKS).toFixed(2)}）`,cooldown:0,useLimit:TACTICS_ROAR_MAX_STACKS},
+  {id:'regen',type:'REGEN',category:'再生',noticeLabel:'回復',weight:10,multiplier:0,hits:0,range:'全間合い',condition:'ライフが減っているときだけ',effectText:`敵が自分の最大ライフの${Math.round(TACTICS_REGEN_RATE*100)}%を回復する`,cooldown:0,useLimit:null},
+  {id:'allout',type:'ATTACK',variant:'allout',targetsAll:true,category:'全体攻撃',noticeLabel:'全体攻撃',weight:10,multiplier:TACTICS_ALLOUT_MULT,hits:1,range:'全員',condition:'立っている全員へ同時に当たる。狙いをかわせない',cooldown:0,useLimit:null},
 ];
 // どの敵も通常攻撃・ためる・必殺技・移動は持つ。ここへ足すのは「その敵だけの技」。
 // WAVEが進むほど読むことが増える並びにしてある(敵の順は TACTICS_ENEMY_SEQUENCE)。
@@ -9922,6 +9925,10 @@ const enemyActionDisplayName = (ent,def) => {
   }
   return def.type==='MOVE' ? '間合い移動' : def.variant ? def.category : enemyActionLabel(ent,def.type);
 };
+// 敵の絵の右上へ出す「何をする技か」。技名(◯◯の構え・かえるのうた)だけでは
+// 何が起きるか覚えられないので、予告のあいだ添える(2026-09-22 ユーザー指示)。
+// 書いていない技(既存5モードの定義)は category がそのまま出る
+const enemyActionNoticeLabel = (def) => (def && (def.noticeLabel || def.category)) || '';
 const ENEMY_ACTION_ICONS = {ATTACK:'👊',CHARGE:'✨',SPECIAL:'🔥',WAIT:'⏳',MOVE:'🏃',ROAR:'📢',REGEN:'💚',PIERCE_CHARGE:'⚔️'};
 // 新モードの攻撃は type が ATTACK のままなので、見分けは variant で付ける
 const TACTICS_VARIANT_ICONS = {sweep:'🌪️',rush:'💥',pierce:'🗡️',allout:'🌊'};
@@ -9935,7 +9942,7 @@ const chooseEnemyAction = (ent,currentDist,random=Math.random,state={}) => {
     const targetDist=targets[Math.min(targets.length-1,Math.floor(random()*targets.length))];
     // 予告に出した移動先をそのまま持ち歩く。実行時はこの値だけを見るので、
     // 予告と実際の移動先が食い違うことはない
-    return {type:selected.type,value:0,label:`移動: ${RANGE_LABELS[targetDist]}`,targetDist,icon:ENEMY_ACTION_ICONS.MOVE,actionId:selected.id};
+    return {type:selected.type,value:0,label:`移動: ${RANGE_LABELS[targetDist]}`,targetDist,icon:ENEMY_ACTION_ICONS.MOVE,notice:enemyActionNoticeLabel(selected),actionId:selected.id};
   }
   // 間合い攻撃は「いまいる間合い」を狙うと予告する。実行までに距離撃でずらせば威力が落ちるので、
   // 予告を見てからガッツを距離撃へ回すかどうかの判断になる。
@@ -9943,7 +9950,7 @@ const chooseEnemyAction = (ent,currentDist,random=Math.random,state={}) => {
   if(selected.variant==='sweep'){
     return {type:selected.type,variant:selected.variant,sweepDist:currentDist,
       value:Math.floor(ent.atk*selected.multiplier),missValue:Math.floor(ent.atk*(selected.missMultiplier??1)),
-      label:`${enemyActionDisplayName(ent,selected)}: ${RANGE_LABELS[currentDist]}`,icon:TACTICS_VARIANT_ICONS.sweep,actionId:selected.id};
+      label:`${enemyActionDisplayName(ent,selected)}: ${RANGE_LABELS[currentDist]}`,icon:TACTICS_VARIANT_ICONS.sweep,notice:enemyActionNoticeLabel(selected),actionId:selected.id};
   }
   if(selected.variant){
     // 全体攻撃だけは狙いを決めない。予告の時点で「立っている全員」と決まっているので、
@@ -9951,9 +9958,9 @@ const chooseEnemyAction = (ent,currentDist,random=Math.random,state={}) => {
     return {type:selected.type,variant:selected.variant,hits:Math.max(1,Math.floor(Number(selected.hits)||1)),
       ...(selected.targetsAll?{targetsAll:true}:{}),
       value:Math.floor(ent.atk*selected.multiplier),label:enemyActionDisplayName(ent,selected),
-      icon:TACTICS_VARIANT_ICONS[selected.variant]||ENEMY_ACTION_ICONS[selected.type]||'⏳',actionId:selected.id};
+      icon:TACTICS_VARIANT_ICONS[selected.variant]||ENEMY_ACTION_ICONS[selected.type]||'⏳',notice:enemyActionNoticeLabel(selected),actionId:selected.id};
   }
-  return {type:selected.type,value:Math.floor(ent.atk*selected.multiplier),label:enemyActionDisplayName(ent,selected),icon:ENEMY_ACTION_ICONS[selected.type]||'⏳',actionId:selected.id};
+  return {type:selected.type,value:Math.floor(ent.atk*selected.multiplier),label:enemyActionDisplayName(ent,selected),icon:ENEMY_ACTION_ICONS[selected.type]||'⏳',notice:enemyActionNoticeLabel(selected),actionId:selected.id};
 };
 
 // 難易度選択プレビューと本番の敵生成が必ず同じ値になるための唯一の生成ヘルパー。
@@ -21747,13 +21754,16 @@ function BattleScreen({
                 <div className="px-3 py-1 rounded-lg bg-gradient-to-r from-amber-900 via-amber-600 to-amber-900 border-2 border-amber-200 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(251,191,36,0.9)]">た め る</div>
               </div>
             )}
-            {/* 貫通の構え。ためると同じ大きさで出す。ガードが効かない技が次に確定で来るので、
+            {/* 貫通技準備。ためると同じ大きさで出す。ガードが効かない技が次に確定で来るので、
                 「ガードを固めても無駄」と1ターン早く分かるようにする(2026-09-21 ユーザー指示)。
-                色はためる(琥珀)と分けて、貫通撃と同じ赤系にする */}
+                色はためる(琥珀)と分けて、貫通撃と同じ赤系にする。
+                ★呼び名は「貫通の構え」から変えた(2026-09-22 ユーザー指示「吹き出しは
+                貫通技準備とかがいいかな？」)。予告の帯には敵ごとの技名(「◯◯の構え」)が
+                出るので、そこへ種別の「構え」を重ねると同じ言葉が2つ並んで読みにくかった */}
             {enemy&&enemyIntent&&!isBusy&&!enemyAttackFx&&enemyIntent.type==='PIERCE_CHARGE'&&(
               <div className="fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1" style={{top:'11%',zIndex:65000,animation:'specialWarnFlash 700ms ease-in-out infinite'}}>
                 <div className="text-5xl drop-shadow-[0_0_20px_rgba(244,63,94,1)]">⚔️</div>
-                <div className="px-3 py-1 rounded-lg bg-gradient-to-r from-rose-900 via-rose-600 to-rose-900 border-2 border-rose-200 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(244,63,94,0.9)]">貫 通 の 構 え</div>
+                <div className="px-3 py-1 rounded-lg bg-gradient-to-r from-rose-900 via-rose-600 to-rose-900 border-2 border-rose-200 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(244,63,94,0.9)]">貫 通 技 準 備</div>
               </div>
             )}
             {/* 移動の予告。いま出ている行動予告(通常攻撃など)と同時に、
@@ -21870,11 +21880,31 @@ function BattleScreen({
               )}
               {/* MOO (last boss): catastrophic aura + lightning storm */}
               {/* IDLE telegraph (player's turn): show what the enemy is about to do. Hidden while an attack is actually firing. */}
-              {!ecoBattleView&&enemy&&enemyIntent&&!isBusy&&!enemyAttackFx&&enemyIntent.type==='ATTACK'&&(
+              {!ecoBattleView&&enemy&&enemyIntent&&!isBusy&&!enemyAttackFx&&enemyIntent.type==='ATTACK'&&!Array.isArray(tacticsUnits)&&(
                 <div className="absolute inset-0 pointer-events-none z-[9000] flex items-center justify-center">
                   <div className="absolute -top-2 -right-1 text-4xl font-black text-yellow-300 drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]" style={{animation:'idleExclaim 1100ms ease-in-out infinite'}}>❗</div>
                 </div>
               )}
+              {/* ★何をする技かを、敵の絵の右上へ出す(2026-09-22 ユーザー指示「右上に必殺技！
+                  みたいに吹き出し出せばいい。3連撃！とか」)。タクティクスの敵は技に固有の名前が
+                  付いているので、名前だけでは連撃なのか回復なのか覚えられない。
+                  予告が出ているあいだずっと見えるようにする(❗はこの札に置き換える) */}
+              {!ecoBattleView&&enemy&&enemyIntent&&!isBusy&&!enemyAttackFx&&Array.isArray(tacticsUnits)&&enemyIntent.notice&&enemyIntent.type!=='PIERCE_CHARGE'&&(()=>{
+                const noticeTone=enemyIntent.type==='SPECIAL'?'bg-fuchsia-600 border-fuchsia-200 text-white'
+                  :enemyIntent.type==='CHARGE'?'bg-amber-500 border-amber-100 text-black'
+                  :enemyIntent.type==='PIERCE_CHARGE'?'bg-rose-600 border-rose-200 text-white'
+                  :enemyIntent.type==='MOVE'?'bg-cyan-600 border-cyan-100 text-white'
+                  :enemyIntent.type==='ROAR'?'bg-orange-600 border-orange-100 text-white'
+                  :enemyIntent.type==='REGEN'?'bg-emerald-600 border-emerald-100 text-white'
+                  :enemyIntent.type==='WAIT'?'bg-slate-600 border-slate-200 text-white'
+                  :'bg-red-600 border-red-100 text-white';
+                return (
+                <div className="absolute inset-0 pointer-events-none z-[9000]">
+                  <div data-enemy-notice={enemyIntent.notice}
+                    className={`absolute -top-3 -right-2 max-w-[160px] truncate rounded-2xl border-2 px-2 py-0.5 font-black leading-tight shadow-[0_2px_10px_rgba(0,0,0,0.9)] ${noticeTone}`}
+                    style={{fontSize:'11px',animation:'idleExclaim 1100ms ease-in-out infinite'}}>{enemyIntent.notice}！</div>
+                </div>);
+              })()}
               {/* ためている最中は、敵の周りにオーラが集まる */}
               {!ecoBattleView&&enemy&&enemyAttackFx?.kind==='charge'&&(
                 <div className="absolute inset-0 pointer-events-none z-[9000] flex items-center justify-center overflow-visible">

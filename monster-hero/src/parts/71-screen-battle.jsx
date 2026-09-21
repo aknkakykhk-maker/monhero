@@ -199,13 +199,16 @@ function BattleScreen({
                 <div className="px-3 py-1 rounded-lg bg-gradient-to-r from-amber-900 via-amber-600 to-amber-900 border-2 border-amber-200 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(251,191,36,0.9)]">た め る</div>
               </div>
             )}
-            {/* 貫通の構え。ためると同じ大きさで出す。ガードが効かない技が次に確定で来るので、
+            {/* 貫通技準備。ためると同じ大きさで出す。ガードが効かない技が次に確定で来るので、
                 「ガードを固めても無駄」と1ターン早く分かるようにする(2026-09-21 ユーザー指示)。
-                色はためる(琥珀)と分けて、貫通撃と同じ赤系にする */}
+                色はためる(琥珀)と分けて、貫通撃と同じ赤系にする。
+                ★呼び名は「貫通の構え」から変えた(2026-09-22 ユーザー指示「吹き出しは
+                貫通技準備とかがいいかな？」)。予告の帯には敵ごとの技名(「◯◯の構え」)が
+                出るので、そこへ種別の「構え」を重ねると同じ言葉が2つ並んで読みにくかった */}
             {enemy&&enemyIntent&&!isBusy&&!enemyAttackFx&&enemyIntent.type==='PIERCE_CHARGE'&&(
               <div className="fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1" style={{top:'11%',zIndex:65000,animation:'specialWarnFlash 700ms ease-in-out infinite'}}>
                 <div className="text-5xl drop-shadow-[0_0_20px_rgba(244,63,94,1)]">⚔️</div>
-                <div className="px-3 py-1 rounded-lg bg-gradient-to-r from-rose-900 via-rose-600 to-rose-900 border-2 border-rose-200 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(244,63,94,0.9)]">貫 通 の 構 え</div>
+                <div className="px-3 py-1 rounded-lg bg-gradient-to-r from-rose-900 via-rose-600 to-rose-900 border-2 border-rose-200 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(244,63,94,0.9)]">貫 通 技 準 備</div>
               </div>
             )}
             {/* 移動の予告。いま出ている行動予告(通常攻撃など)と同時に、
@@ -322,11 +325,31 @@ function BattleScreen({
               )}
               {/* MOO (last boss): catastrophic aura + lightning storm */}
               {/* IDLE telegraph (player's turn): show what the enemy is about to do. Hidden while an attack is actually firing. */}
-              {!ecoBattleView&&enemy&&enemyIntent&&!isBusy&&!enemyAttackFx&&enemyIntent.type==='ATTACK'&&(
+              {!ecoBattleView&&enemy&&enemyIntent&&!isBusy&&!enemyAttackFx&&enemyIntent.type==='ATTACK'&&!Array.isArray(tacticsUnits)&&(
                 <div className="absolute inset-0 pointer-events-none z-[9000] flex items-center justify-center">
                   <div className="absolute -top-2 -right-1 text-4xl font-black text-yellow-300 drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]" style={{animation:'idleExclaim 1100ms ease-in-out infinite'}}>❗</div>
                 </div>
               )}
+              {/* ★何をする技かを、敵の絵の右上へ出す(2026-09-22 ユーザー指示「右上に必殺技！
+                  みたいに吹き出し出せばいい。3連撃！とか」)。タクティクスの敵は技に固有の名前が
+                  付いているので、名前だけでは連撃なのか回復なのか覚えられない。
+                  予告が出ているあいだずっと見えるようにする(❗はこの札に置き換える) */}
+              {!ecoBattleView&&enemy&&enemyIntent&&!isBusy&&!enemyAttackFx&&Array.isArray(tacticsUnits)&&enemyIntent.notice&&enemyIntent.type!=='PIERCE_CHARGE'&&(()=>{
+                const noticeTone=enemyIntent.type==='SPECIAL'?'bg-fuchsia-600 border-fuchsia-200 text-white'
+                  :enemyIntent.type==='CHARGE'?'bg-amber-500 border-amber-100 text-black'
+                  :enemyIntent.type==='PIERCE_CHARGE'?'bg-rose-600 border-rose-200 text-white'
+                  :enemyIntent.type==='MOVE'?'bg-cyan-600 border-cyan-100 text-white'
+                  :enemyIntent.type==='ROAR'?'bg-orange-600 border-orange-100 text-white'
+                  :enemyIntent.type==='REGEN'?'bg-emerald-600 border-emerald-100 text-white'
+                  :enemyIntent.type==='WAIT'?'bg-slate-600 border-slate-200 text-white'
+                  :'bg-red-600 border-red-100 text-white';
+                return (
+                <div className="absolute inset-0 pointer-events-none z-[9000]">
+                  <div data-enemy-notice={enemyIntent.notice}
+                    className={`absolute -top-3 -right-2 max-w-[160px] truncate rounded-2xl border-2 px-2 py-0.5 font-black leading-tight shadow-[0_2px_10px_rgba(0,0,0,0.9)] ${noticeTone}`}
+                    style={{fontSize:'11px',animation:'idleExclaim 1100ms ease-in-out infinite'}}>{enemyIntent.notice}！</div>
+                </div>);
+              })()}
               {/* ためている最中は、敵の周りにオーラが集まる */}
               {!ecoBattleView&&enemy&&enemyAttackFx?.kind==='charge'&&(
                 <div className="absolute inset-0 pointer-events-none z-[9000] flex items-center justify-center overflow-visible">
