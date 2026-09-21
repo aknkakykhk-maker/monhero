@@ -10845,8 +10845,18 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // ランキング・クリア回数・ミッションのどれにも影響しない)。
   // 入口は3つ。デバッグ設定・はじめての案内の最後・ヘルプの「バトルのれんしゅう」。
   // どこから始めても終わったら元の場所へ帰れるよう、戻り先を覚えておく。
-  // variant は 'v2'(いまの本番。新しいモード選択から始まる)と
-  // 'v1'(旧バトル画面から始まる。見比べ用にデバッグからだけ開ける)
+  // variant は 'v2'(いまの本番。仕組みえらびから始まる)、
+  // 'v1'(旧バトル画面から始まる。見比べ用にデバッグからだけ開ける)、
+  // 'tactics'(タクティクスバトルのれんしゅう。公開前なのでデバッグからだけ)。
+  // ★どの台本かで「どのモードで走らせるか」「どの台本データを使うか」が決まる。
+  //   3つの対応をここ1か所にまとめて、入口が増えても取り違えないようにする
+  const BATTLE_TUTORIAL_VARIANTS = ['v1', 'v2', 'tactics'];
+  const battleTutorialVariantOf = (variant) => (BATTLE_TUTORIAL_VARIANTS.includes(variant) ? variant : 'v2');
+  const battleTutorialModeOf = (variant) => (battleTutorialVariantOf(variant) === 'tactics'
+    ? BATTLE_MODE_TACTICS : BATTLE_MODE_CHALLENGE);
+  const battleTutorialScenarioOf = (variant) => (battleTutorialVariantOf(variant) === 'tactics'
+    ? ((typeof BATTLE_TUTORIAL_SCENARIO_TACTICS !== 'undefined' && BATTLE_TUTORIAL_SCENARIO_TACTICS) || null)
+    : ((typeof BATTLE_TUTORIAL_SCENARIO !== 'undefined' && BATTLE_TUTORIAL_SCENARIO) || null));
   const startBattleTutorial = (returnTo = 'DEBUG_SETTINGS', variant = 'v2') => {
     stopAllAuto();
     // 説明を読みやすく保つため、練習中だけ1倍へ固定する（保存済み設定は上書きしない）。
@@ -10863,25 +10873,26 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setUpgradePoints(0); setAtkLevel(0); setGuardLevel(0); setGuardBonusCount(0);
     setMainHero(null); applySlots([null,null,null,null]); setOwnedUniques([]); setOwnedTeachings([]);
     setDistAptPct([0,0,0,0]);
-    // いちばんやさしい難易度・チャレンジモードで固定する(練習なので勝ちやすくする)
-    setDifficulty('Beginner'); setRunMode(BATTLE_MODE_CHALLENGE); setBattleMode(BATTLE_MODE_CHALLENGE);
+    // いちばんやさしい難易度・その台本のモードで固定する(練習なので勝ちやすくする)
+    const tutorialMode = battleTutorialModeOf(variant);
+    setDifficulty('Beginner'); setRunMode(tutorialMode); setBattleMode(tutorialMode);
     // 編成が空でも始められるよう、解放済みのベースモンから選んでもらう
     setMonSelection(getUnlockedBaseMonsterList());
     setHeroPickTab('base'); setCurrentPickingMon(null);
     setShowHelp(false); setBattleMenuTab('difficulty');
     // 台本を有効にする。ここから終わるまで、敵の行動・手札・敵の強さが台本どおりになる
-    battleScenarioRef.current = (typeof BATTLE_TUTORIAL_SCENARIO !== 'undefined' && BATTLE_TUTORIAL_SCENARIO) || null;
+    battleScenarioRef.current = battleTutorialScenarioOf(variant);
     battleScenarioIntentIndexRef.current = 0;
     setBattleTutorialLastAction(null);
     setBattleTutorialReturn(returnTo);
-    setBattleTutorialVariant(variant === 'v1' ? 'v1' : 'v2');
+    setBattleTutorialVariant(battleTutorialVariantOf(variant));
     setBattleTutorialStep(0);
     // モード・ランキング・難易度もここで説明したいので、バトルの入口から始める。
-    // ★v2は「バトルの仕組みえらび」から始める(2026-09-21)。ふだん HOME の
+    // ★v2とタクティクスは「バトルの仕組みえらび」から始める(2026-09-21)。ふだん HOME の
     //   モンヒロバトルを押すと最初に出るのはこの画面なので、ここを飛ばして
     //   モードえらびから教えると、練習のあとで知らない画面に出迎えられてしまう
     if (variant !== 'v1') {
-      setBattleSystem(BATTLE_SYSTEM_CLASSIC);
+      setBattleSystem(isTacticsMode(tutorialMode) ? BATTLE_SYSTEM_TACTICS : BATTLE_SYSTEM_CLASSIC);
       setModeSelectTab('mode');
       setGameState('BATTLE_SYSTEM_SELECT');
       return;
@@ -10889,13 +10900,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setGameState('BATTLE_MENU');
   };
   // 「この難易度で挑戦」を練習として押したとき。ふだんのボタンは記録を残す状態(debugBattleRef=false)に
-  // 戻してしまうので、練習中は必ずこちらを通してビギナー・チャレンジ・保存なしを保つ
+  // 戻してしまうので、練習中は必ずこちらを通してビギナー・その台本のモード・保存なしを保つ
   const beginBattleTutorialRun = () => {
     stopAllAuto();
     debugBattleRef.current = true;
     debugResultRef.current = false;
     setDebugBattle(true); setDebugOutcome(null);
-    setDifficulty('Beginner'); setRunMode(BATTLE_MODE_CHALLENGE); setBattleMode(BATTLE_MODE_CHALLENGE);
+    const tutorialMode = battleTutorialModeOf(battleTutorialVariant);
+    setDifficulty('Beginner'); setRunMode(tutorialMode); setBattleMode(tutorialMode);
     setMonSelection(getUnlockedBaseMonsterList());
     setHeroPickTab('base'); setCurrentPickingMon(null);
     battleScenarioIntentIndexRef.current = 0;
@@ -10937,8 +10949,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   };
   const battleTutorialSteps = (battleTutorialVariant === 'v1'
     ? (typeof ASSISTANT_BATTLE_TUTORIAL !== 'undefined' && ASSISTANT_BATTLE_TUTORIAL)
-    : (typeof ASSISTANT_BATTLE_TUTORIAL_V2 !== 'undefined' && ASSISTANT_BATTLE_TUTORIAL_V2)) || [];
+    : battleTutorialVariant === 'tactics'
+      ? (typeof ASSISTANT_BATTLE_TUTORIAL_TACTICS !== 'undefined' && ASSISTANT_BATTLE_TUTORIAL_TACTICS)
+      : (typeof ASSISTANT_BATTLE_TUTORIAL_V2 !== 'undefined' && ASSISTANT_BATTLE_TUTORIAL_V2)) || [];
   const battleTutorial = battleTutorialStep != null ? (battleTutorialSteps[battleTutorialStep] || null) : null;
+  // れんしゅう中に選べる仕組み・モード。台本のモードから決める(取り違えないように1か所で持つ)
+  const battleTutorialMode = battleTutorialModeOf(battleTutorialVariant);
+  const battleTutorialSystem = isTacticsMode(battleTutorialMode) ? BATTLE_SYSTEM_TACTICS : BATTLE_SYSTEM_CLASSIC;
   // いま光らせる場所。画面側は battleTutorialSpotClass('キー') を付けておく。
   // spot は配列でも書けるので、1つの操作で「一覧」と「その決定ボタン」を同時に光らせられる
   const battleTutorialSpotClass = (name) => {
@@ -13036,8 +13053,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {gameState==='BATTLE_SYSTEM_SELECT'&&(()=>{
           // ★バトルのれんしゅう(チュートリアル)は記録を残さないために debugBattle を立てるが、
           //   その副作用でこの入口だけ「ふだん遊ぶときと違う並び」になってしまう。
-          //   れんしゅうは通常プレイの入口を覚えてもらう場なので、並びは公開状態のまま見せる
-          const systemDebug=debugBattle&&!battleTutorial;
+          //   れんしゅうは通常プレイの入口を覚えてもらう場なので、並びは公開状態のまま見せる。
+          //   ただし、まだ公開していない仕組みのれんしゅう(タクティクス)は、その仕組みが
+          //   「準備中」のままだと選べないので、そのときだけデバッグの見え方を残す
+          const tutorialNeedsDebugSystems=!!battleTutorial&&battleSystemComingSoon(battleTutorialSystem,{debugBattle:false});
+          const systemDebug=debugBattle&&(!battleTutorial||tutorialNeedsDebugSystems);
           const systems=visibleBattleSystems({debugBattle:systemDebug});
           return (
           <div data-mh-screen className="flex-1 flex flex-col h-full min-h-0 px-4" style={{paddingTop:'calc(.35rem + env(safe-area-inset-top))',paddingBottom:'calc(.35rem + env(safe-area-inset-bottom))'}}>
@@ -13057,8 +13077,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   // ★β版は「中のモードがまだ全部そろっていない」。遊べるけれど、
                   //   入口でそのことが分かるようにしておく(2026-09-20 ユーザー指示)
                   const beta=battleSystemBeta(sys.id,{debugBattle:systemDebug});
-                  // れんしゅう中はクラシックだけを押せるようにして、台本どおりの流れを保つ
-                  const tutorialLocked=!!battleTutorial&&sys.id!==BATTLE_SYSTEM_CLASSIC;
+                  // れんしゅう中は、その台本の仕組みだけを押せるようにして流れを保つ
+                  const tutorialLocked=!!battleTutorial&&sys.id!==battleTutorialSystem;
                   // 台本から光らせる場所。カードそのものを1枚ずつ光らせる
                   // (spotのキーは仕組みのidと同じ綴りだが、台本から引くのは
                   //  このキーなので、検査が追えるよう文字で書いておく)
@@ -13183,7 +13203,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                           {/* 練習中はチャレンジだけ進めるようにする。初回からクイックやプロを遊ばせない */}
                           {/* 種族チャレンジは、通常のバトル入口から始めた周回だけが本番(記録・報酬を保存する)。
                               デバッグのバトルモード入口(debugBattle)から来たときは、これまでどおり保存しない */}
-                          <button data-battle-mode-soon={modeSoon?'1':undefined} disabled={extremeLocked||speciesLocked||modeSoon||(!!battleTutorial&&m.id!==BATTLE_MODE_CHALLENGE)} onClick={()=>{setBattleMode(m.id);if(isSpecies){openSpeciesChallengeSelection({saveProgress:!debugBattle,fromDebug:debugBattle,mode:m.id});return;}setGameState(isExtreme?'EXTREME_DIFFICULTY_SELECT':'BATTLE_DIFFICULTY_SELECT');}} className={`min-h-[44px] rounded-xl font-black text-sm disabled:opacity-30${m.id===BATTLE_MODE_CHALLENGE?battleTutorialSpotClass('modeStart'):''}`} style={{backgroundColor:m.color,color:'#0f172a'}}>{modeSoon?'準備中':extremeLocked||speciesLocked?'まだ挑戦できません':isSpecies?'種族を選ぶ':'難易度を選ぶ'}</button>
+                          <button data-battle-mode-soon={modeSoon?'1':undefined} disabled={extremeLocked||speciesLocked||modeSoon||(!!battleTutorial&&m.id!==battleTutorialMode)} onClick={()=>{setBattleMode(m.id);if(isSpecies){openSpeciesChallengeSelection({saveProgress:!debugBattle,fromDebug:debugBattle,mode:m.id});return;}setGameState(isExtreme?'EXTREME_DIFFICULTY_SELECT':'BATTLE_DIFFICULTY_SELECT');}} className={`min-h-[44px] rounded-xl font-black text-sm disabled:opacity-30${m.id===battleTutorialMode?battleTutorialSpotClass('modeStart'):''}`} style={{backgroundColor:m.color,color:'#0f172a'}}>{modeSoon?'準備中':extremeLocked||speciesLocked?'まだ挑戦できません':isSpecies?'種族を選ぶ':'難易度を選ぶ'}</button>
                           {/* スコアランキングの導線。クイックはランキングが無いので、高さ合わせの空枠も置かない */}
                           {isExtreme&&<button disabled={extremeLocked||!!battleTutorial} onClick={()=>openModeScoreRanking(m.id,EXTREME_SETTING.id,'BATTLE_MODE_SELECT')} className="min-h-[40px] rounded-xl bg-slate-800 border border-fuchsia-400/40 text-fuchsia-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"><span className="flex-1 text-center whitespace-nowrap">🏆 このモードのランキング</span><ChevronRight size={14}/></button>}
                           {/* 種族チャレンジも他モードと同じ位置に記録への導線を置く。
@@ -14276,6 +14296,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       <button onClick={async()=>{await storeSet(BATTLE_TUTORIAL_GUIDE_SHOWN_KEY,false,false);battleTutorialGuideCheckedRef.current=false;window.alert('初回案内を未表示に戻しました。');}} className="min-h-[50px] rounded-xl border border-rose-400/60 bg-rose-950/50 px-2 text-center text-[11px] font-black leading-tight active:scale-95">初回案内を未表示へ戻す</button>
                       <button onClick={()=>{setBattleMenuTab('difficulty');setGameState('BATTLE_MENU');}} className="min-h-[50px] rounded-xl border border-cyan-400/50 bg-cyan-950/40 px-2 text-center text-[11px] font-black leading-tight active:scale-95">旧バトル画面を開く（見比べ用）</button>
                       <button onClick={()=>startBattleTutorial('DEBUG_SETTINGS','v1')} className="min-h-[50px] rounded-xl border border-cyan-400/50 bg-cyan-950/40 px-2 text-center text-[11px] font-black leading-tight active:scale-95">旧バトルチュートリアルを見る（旧バトル画面・記録は残りません）</button>
+                      {/* ★タクティクスバトルは公開前なので、練習もここからだけ開ける。
+                          本公開のときに、ふだんの入口(初回案内・ヘルプ)へ移す */}
+                      <button onClick={()=>startBattleTutorial('DEBUG_SETTINGS','tactics')} className="min-h-[50px] rounded-xl border border-orange-400/50 bg-orange-950/40 px-2 text-center text-[11px] font-black leading-tight active:scale-95">タクティクスのれんしゅうを見る（公開前・記録は残りません）</button>
                     </div>
                   </details>
                 </div>

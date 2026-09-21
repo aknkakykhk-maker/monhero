@@ -292,8 +292,11 @@ check('準備中のカードは押せない',
 // ★バトルのれんしゅう中は記録を残さないために debugBattle が立つ。その副作用で
 //   入口の並び(準備中・β版・DEBUGの出し分け)まで変わると、練習で覚えた画面と
 //   ふだんの画面が食い違ってしまう(2026-09-21 ユーザー指摘)
+// ★ただし、まだ公開していない仕組みのれんしゅう(タクティクス)は、その仕組みが「準備中」の
+//   ままだと選べないので、そのときだけデバッグの見え方を残す(2026-09-21)
 check('れんしゅう中の入口はふだんと同じ並びで見せる',
-  has('const systemDebug=debugBattle&&!battleTutorial;')
+  has('const tutorialNeedsDebugSystems=!!battleTutorial&&battleSystemComingSoon(battleTutorialSystem,{debugBattle:false});')
+    && has('const systemDebug=debugBattle&&(!battleTutorial||tutorialNeedsDebugSystems);')
     && has('visibleBattleSystems({debugBattle:systemDebug})'));
 check('準備中と分かる書き方をしている',
   has('準備中</span>') && has("aria-label={soon?`${sys.label}（準備中）`:sys.label}"));
