@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: bd00d52aa6a53e80
+// generated-sha256: de682e2371f767c6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -92,7 +92,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-21 22:49"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-22 00:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -16321,6 +16321,21 @@ const splitTacticsGuardedHit = (incoming, hits, guardHits = 1) => {
 //   「余ったぶんがライフとガッツになる」が成り立つ。
 // ★blocked は「ガードが届いたヒットを受け止めきったか」。演出(ガード成功)の判定に使う。
 // ★covered は「ガードが受け止めたヒット数」。画面に「ガードは◯ヒットぶん」と出すのに使う。
+// ★通ったぶんを「1ヒットずつ」に割る。60が3ヒットなら 20 / 20 / 20。
+//   端数はいちばん最後のヒットへ寄せて、足すと必ず元の合計に戻るようにする
+//   (2026-09-21 ユーザー指示「敵の3連撃なら3回ダメージ表記が出るようにして
+//    60なら20、20，20みたいな」)
+const splitTacticsHitAmounts = (total, count) => {
+  const amount = Math.max(0, tacticsSafeInt(total, 0));
+  const times = Math.max(1, tacticsSafeInt(count, 1));
+  if (amount <= 0) return [];
+  if (times <= 1) return [amount];
+  const per = Math.floor(amount / times);
+  const parts = new Array(times - 1).fill(per);
+  parts.push(amount - per * (times - 1));
+  return parts;
+};
+
 const resolveTacticsGuardedHit = (incoming, hits, guard, guardHits = 1) => {
   const { guarded, through, covered } = splitTacticsGuardedHit(incoming, hits, guardHits);
   const left = Math.max(0, tacticsSafeInt(guard, 0)) - guarded;
@@ -20592,7 +20607,7 @@ function PickHeroAllyScreen({
                   ))}
                 </div>
                 {/* ★追いつき補正。WAVEを速く抜けるほど厚くなるぶんを、素の値との差として出す */}
-                {preview.tactics&&<div data-tactics-join-catchup={Math.round((preview.catchUp-1)*100)} className={`w-full text-center leading-none font-black ${preview.catchUp>1?'text-emerald-300':'text-slate-500'}`} style={{fontSize:'8px'}}>{preview.catchUp>1?`追いつき +${Math.round((preview.catchUp-1)*100)}%（速く抜けたぶん）`:'追いつき なし'}</div>}
+                {preview.tactics&&<div data-tactics-join-catchup={Math.round((preview.catchUp-1)*100)} data-tactics-join-turns={preview.catchUpTurns} className={`w-full text-center leading-none font-black ${preview.catchUp>1?'text-emerald-300':'text-slate-500'}`} style={{fontSize:'8px'}}>{preview.catchUp>1?`追いつき +${Math.round((preview.catchUp-1)*100)}%（${preview.catchUpTurns}ターン残して勝ったぶん）`:'追いつき なし（まだWAVEを抜けていません）'}</div>}
                 <div className="w-full rounded-lg bg-black/40 px-1 py-1 grid grid-cols-4 gap-0.5 text-center font-mono" style={{fontSize:'8px'}}>
                   {preview.apt.map(range=>(
                     <span key={range.idx} className="min-w-0 block">
@@ -22174,7 +22189,11 @@ function BattleScreen({
                       :f.reflect?<span className="text-[11px] font-black text-purple-300 drop-shadow-[0_0_6px_rgba(0,0,0,.9)]">反射！</span>
                       :<>
                         {f.guard&&<span className="text-[11px] font-black text-emerald-300 drop-shadow-[0_0_6px_rgba(0,0,0,.9)]">🛡</span>}
-                        {f.dmg>0&&<span className="text-[17px] font-black text-pink-400 drop-shadow-[0_0_6px_rgba(0,0,0,.95)]">-{f.dmg}</span>}
+                        {/* ★連撃は1ヒットずつ並べる(60が3ヒットなら 20/20/20)。
+                            まとめて1つの数字にすると、3回殴られたことが読めない */}
+                        {Array.isArray(f.hits)&&f.hits.length>1
+                          ? f.hits.map((value,hitIndex)=><span key={hitIndex} className="text-[15px] font-black text-pink-400 leading-none drop-shadow-[0_0_6px_rgba(0,0,0,.95)]">-{value}</span>)
+                          : (f.dmg>0&&<span className="text-[17px] font-black text-pink-400 drop-shadow-[0_0_6px_rgba(0,0,0,.95)]">-{f.dmg}</span>)}
                         {f.heal>0&&<span className="text-[11px] font-black text-emerald-300 drop-shadow-[0_0_6px_rgba(0,0,0,.9)]">💚 +{f.heal}</span>}
                         {f.guts>0&&<span className="text-[10px] font-black text-amber-300 drop-shadow-[0_0_6px_rgba(0,0,0,.9)]">⚡ +{f.guts}</span>}
                         {f.revive>0&&<span className="text-[12px] font-black text-teal-300 drop-shadow-[0_0_6px_rgba(0,0,0,.9)]">💤 +{f.revive}</span>}
@@ -24289,6 +24308,10 @@ function MonsterHeroGame() {
   // 新モードの「あとから入った子の追いつき補正」。クリアしたWAVEぶんを掛け算で積む
   // (2026-09-20 ユーザー指示)。1周のはじめに1へ戻す
   const tacticsJoinCatchUpRef = useRef(1);
+  // ★追いつき補正が「何ターン残して抜けたぶん」なのかも数える(2026-09-21 ユーザー指示
+  //   「速く抜けた分とか言う表示ダサすぎる ターン数でボーナス値決まってるんだからそれで
+  //   わかるようにして」)。率は残りターン×1%なので、残りターンを見せれば決まり方が分かる
+  const tacticsJoinCatchUpTurnsRef = useRef(0);
   // ULTIMATEのラン内だけで持つ永久弱体と、次WAVE開始時に一度だけ消費する発動予約。
   const [ultimateDistanceBreakLevels,setUltimateDistanceBreakLevels]=useState([0,0,0,0]);
   const ultimateDistanceBreakLevelsRef=useRef([0,0,0,0]);
@@ -24424,6 +24447,26 @@ function MonsterHeroGame() {
   //   誰がガードで受け止めたのかが分からなかった。
   //   形は { [枠]: { dmg, heal, guard, evade, reflect, revive } }
   const [tacticsSlotFx, setTacticsSlotFx] = useState(null);
+  // ★出した枠の数字は**時間で消す**(2026-09-21 ユーザー指摘「前ターンのダメージとか
+  //   アイコンみたいのが残ってる」)。もとは「次に自分がカードを切るまで残す」だったが、
+  //   敵が何もしないターン(様子を見ている)を挟むと、前のターンの数字が居座っていた。
+  //   いま起きたことと見分けられなくなるので、読める長さだけ出してから消す
+  const tacticsSlotFxTimerRef = useRef(null);
+  const TACTICS_SLOT_FX_MS = 2600;
+  const showTacticsSlotFx = (updater) => {
+    if (tacticsSlotFxTimerRef.current) { clearTimeout(tacticsSlotFxTimerRef.current); tacticsSlotFxTimerRef.current = null; }
+    setTacticsSlotFx(updater);
+    tacticsSlotFxTimerRef.current = setTimeout(() => {
+      tacticsSlotFxTimerRef.current = null;
+      setTacticsSlotFx(null);
+    }, TACTICS_SLOT_FX_MS);
+  };
+  const clearTacticsSlotFx = () => {
+    if (tacticsSlotFxTimerRef.current) { clearTimeout(tacticsSlotFxTimerRef.current); tacticsSlotFxTimerRef.current = null; }
+    setTacticsSlotFx(null);
+  };
+  // 画面を離れるときにタイマーを片づける(消し忘れた時計が残らないように)
+  useEffect(() => () => { if (tacticsSlotFxTimerRef.current) clearTimeout(tacticsSlotFxTimerRef.current); }, []);
   const [enemySkillName, setEnemySkillName] = useState(null); // 敵アクションの技名インライン表示
   const [guardFx, setGuardFx] = useState(false); // ガード成功のキーン演出
   const [teachingFx, setTeachingFx] = useState(null); // {id} ブリーダー教えカード使用時の専用演出
@@ -24574,7 +24617,7 @@ function MonsterHeroGame() {
     Object.entries(healed || {}).forEach(([slotIdx, got]) => { if (got > 0) add[slotIdx] = { ...(add[slotIdx] || {}), heal: got }; });
     Object.entries(gutsHealed || {}).forEach(([slotIdx, got]) => { if (got > 0) add[slotIdx] = { ...(add[slotIdx] || {}), guts: got }; });
     if (!Object.keys(add).length) return;
-    setTacticsSlotFx(prev => {
+    showTacticsSlotFx(prev => {
       const next = { ...(prev || {}) };
       Object.entries(add).forEach(([slotIdx, value]) => { next[slotIdx] = { ...(next[slotIdx] || {}), ...value }; });
       return next;
@@ -24606,6 +24649,19 @@ function MonsterHeroGame() {
     if (result) return result.guts;
     const gain = Math.floor(liveEffectiveMaxGuts() * Math.max(0, rate));
     if (gain > 0) gainGutsAt(slotIdx, gain);
+    return gain;
+  };
+  // 回復カード(助手の教え)のガッツ回復。★**盤面ぜんぶ**へ、1体ずつ「その子の上限 × 率」で入る。
+  // ★回復カードは全体回復で、使う子を選ぶのはガッツを払うためだけ(2026-09-19 ユーザーの整理)。
+  //   ライフはそのとおり tacticsRateHeal で全体へ入っていたのに、**ガッツだけ
+  //   「使った子」へ入れる側の入口を通していた**
+  //   (2026-09-21 ユーザー指摘「みゅあの回復は全体なのに1体にしかきいてなかった」)。
+  // ★既存5モードはガッツをパーティ共通で持つので、今までどおり合計へ足す
+  const gainGutsByRateAll = (rate) => {
+    const result = tacticsRateHeal(0, rate);
+    if (result) return result.guts;
+    const gain = Math.floor(liveEffectiveMaxGuts() * Math.max(0, rate));
+    if (gain > 0) gainGuts(gain);
     return gain;
   };
   // ガード段階は「いちばん硬い子」で決める(2026-09-20 ユーザー指示)。
@@ -25576,7 +25632,8 @@ function MonsterHeroGame() {
       const apt = RANGE_LABELS.map((label, idx) => ({
         label, idx, before:0, after:own[idx]||0, diff:own[idx]||0, normalDiff:normalOwn[idx]||0,
       }));
-      return { stats, apt, changed: true, tactics: true, catchUp: rate };
+      return { stats, apt, changed: true, tactics: true, catchUp: rate,
+        catchUpTurns: Math.max(0, Number(tacticsJoinCatchUpTurnsRef.current) || 0) };
     }
     const bonus = (mon && mon.plusStats) || {};
     const rule = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
@@ -32788,6 +32845,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // ★あとから入る子の追いつき補正を、このWAVEぶん積む(2026-09-20 ユーザー指示)。
     //   率は残りターン×1%。1ターンで抜ければ+20%、11ターン(半分)で+10%、20ターンで+1%
     tacticsJoinCatchUpRef.current=addTacticsJoinCatchUp(tacticsJoinCatchUpRef.current,remainingTurns);
+    tacticsJoinCatchUpTurnsRef.current+=Math.max(0,Number(remainingTurns)||0);
     const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
     const distanceBreakThreshold=pendingUltimateDistanceBreak(newTotalTurnCount,ultimateDistanceBreakLevelsRef.current,wave,specialRuleDifficulty);
     if(distanceBreakThreshold){
@@ -33068,10 +33126,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               units=recoverTacticsGutsAt(healTacticsAt(units,absorbSlot,gain),absorbSlot,guts);
             }
             currentHp=commitTacticsUnits(units);
-            // ★吸ったのは狙われた子ひとり。誰が吸ったのかを枠へ出す
+            // ★吸ったのは狙われた子ひとり。誰が吸ったのかを枠へ出す。
+            //   枠に出るので、まんなかへ同じ数字を重ねない(2026-09-21 ユーザー指示)
             if(absorbSlot!=null&&(hpGain>0||gutsGain>0)) mergeTacticsSlotFx({[absorbSlot]:hpGain},{[absorbSlot]:gutsGain});
-            if(hpGain>0) addPopup(`💚 ライフ +${hpGain}`,'life','text-emerald-400 font-black text-2xl drop-shadow-md');
-            if(gutsGain>0) addPopup(`⚡ ガッツ +${gutsGain}`,'guts','text-amber-400 font-black text-2xl drop-shadow-md');
             if(hpGain<=0) addPopup('当たらなかった！','hero','text-cyan-300 font-black text-xl drop-shadow-md');
           } else {
             const hpGain=incomingDmg; const gutsGain=Math.floor(incomingDmg*0.1);
@@ -33144,6 +33201,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 const fd=applyTurnDamageReduction(hit.taken);
                 units=damageTacticsTargets(units,[slotIdx],fd); dealt+=fd;
                 fx.dmg=(fx.dmg||0)+fd;
+                // ★連撃は「通ったヒットの数」だけ数字を出す(60が3ヒットなら 20/20/20)。
+                //   ガードで受け止めたヒットは通っていないので数えない
+                const stoppedHits=hit.blocked?hit.covered:0;
+                const throughHits=Math.max(1,rushHits-stoppedHits);
+                if(rushHits>1) fx.hits=splitTacticsHitAmounts(fd,throughHits);
               }
               if(hit.saved>0){
                 saved+=hit.saved;
@@ -33155,7 +33217,20 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             // ★枠へ出すのは、ライフを確定させる前でよい(見せるだけ)。
             //   合計の数字(下の addPopup)は今までどおり出す。どちらか片方では、
             //   「全体で何点減ったか」と「誰が減ったか」のどちらかが分からなくなる
-            setTacticsSlotFx(Object.keys(slotFx).length?slotFx:null);
+            // ★連撃は「1ヒットずつ」順に出す(2026-09-21 ユーザー指示)。
+            //   まとめて1つの数字にすると、3回殴られたことが画面から読めない。
+            //   出し終えた形は下の showTacticsSlotFx と同じなので、あとの処理は変わらない
+            const rushSlot=rushHits>1?Object.keys(slotFx).find(key=>Array.isArray(slotFx[key]?.hits)&&slotFx[key].hits.length>1):null;
+            if(rushSlot!=null){
+              const allHits=slotFx[rushSlot].hits;
+              for(let shown=1; shown<=allHits.length; shown+=1){
+                const step={...slotFx, [rushSlot]:{...slotFx[rushSlot], hits:allHits.slice(0,shown), dmg:allHits.slice(0,shown).reduce((sum,value)=>sum+value,0)}};
+                showTacticsSlotFx(step);
+                if(shown>1) Audio_.se.enemyAttack();   // 1発目は攻撃の音が鳴っているので重ねない
+                await battleWait(shown<allHits.length?240:0);
+              }
+            }
+            showTacticsSlotFx(Object.keys(slotFx).length?slotFx:null);
             if(evadedSlot!=null){
               addPopup(`回避！ ${evadedName}`,'hero','text-blue-400 font-black text-xl drop-shadow-lg');
               await battleWait(600);
@@ -33175,12 +33250,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             }
             if(guardedCount>0){ setGuardFx(true); Audio_.se.guard(); triggerShake(); await battleWait(450); setGuardFx(false); }
             currentHp=commitTacticsUnits(units);
-            if(dealt>0){ addPopup(`-${dealt}`,'hero','text-pink-600 text-4xl font-black drop-shadow-lg animate-bounce'); triggerShake(); }
-            if(saved>0){
-              addPopup('🛡 ガード成功','hero','text-emerald-400 text-2xl font-black drop-shadow-md');
-              addPopup(`💚 ライフ +${saved}`,'life','text-emerald-400 text-2xl font-black drop-shadow-md');
+            // ★減ったぶん・受け止めたぶん・戻ったぶんは、**枠ごとに出している**ので
+            //   まんなかへ合計を重ねて出さない(2026-09-21 ユーザー指示「個別をみんなに
+            //   出してるならただ見にくいだけだから出さないで」)。画面が揺れる演出だけ残す
+            if(dealt>0) triggerShake();
+            // ★連撃だけは最後に合計を出す。1ヒットずつ見せたあとで「何点もらったか」が要る
+            //   (味方が敵へ連撃したときと同じ見せ方)
+            if(rushSlot!=null&&dealt>0){
+              await battleWait(150);
+              addPopup(`合計 ${dealt}`,'hero','text-white text-3xl font-black drop-shadow-[0_0_20px_rgba(255,255,255,0.6)]');
+              await battleWait(400);
             }
-            if(gutsBack>0) addPopup(`⚡ ガッツ +${gutsBack}`,'guts','text-amber-400 text-xl font-bold drop-shadow-md');
             if(dealt<=0&&saved<=0&&evadedSlot==null&&reflectedSlot==null) addPopup('無傷！','hero','text-emerald-300 font-black text-xl drop-shadow-md');
             await battleWait(1000);
             // 味方の増減を確定させてから敵へ返す。撃破したらここで止める(回復・次ターンへ進ませない)
@@ -33243,7 +33323,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       //   立っている子が回復したのか、倒れた子が復活へ近づいたのかが分からない
       const downedHealed=regen.downedHealed||{};
       if(Object.keys(downedHealed).length){
-        setTacticsSlotFx(prev=>({...(prev||{}),
+        showTacticsSlotFx(prev=>({...(prev||{}),
           ...Object.fromEntries(Object.entries(downedHealed).map(([slotIdx,got])=>[slotIdx,{revive:got}]))}));
       }
       tacticsAliveSlots(tacticsUnitsRef.current).forEach(slotIdx=>{
@@ -33260,8 +33340,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       }
     }
     let didRegen=false;
-    if (autoHealVal>0) { addPopup(`🌿 自動再生 +${autoHealVal}`,'life','text-teal-300 font-black text-lg italic drop-shadow-md'); didRegen=true; }
-    if (gutsRegen>0) { addPopup(`🌿 自動ガッツ +${gutsRegen}`,'guts','text-cyan-300 font-black text-lg italic drop-shadow-md'); didRegen=true; }
+    // ★タクティクスは誰にいくつ入ったかを枠ごとに出しているので、まんなかへ合計を重ねない
+    //   (2026-09-21 ユーザー指示「個別をみんなに出してるならただ見にくいだけだから出さないで」)。
+    //   待ち時間(didRegen)は残す。回復が起きたことは枠の数字で分かる
+    const showRegenTotal=!isTacticsMode(runMode);
+    if (autoHealVal>0) { if(showRegenTotal) addPopup(`🌿 自動再生 +${autoHealVal}`,'life','text-teal-300 font-black text-lg italic drop-shadow-md'); didRegen=true; }
+    if (gutsRegen>0) { if(showRegenTotal) addPopup(`🌿 自動ガッツ +${gutsRegen}`,'guts','text-cyan-300 font-black text-lg italic drop-shadow-md'); didRegen=true; }
     if (didRegen) { await battleWait(500); }
     // 次ターン予約分(nextTurnBuffs)をそのまま今ターンの一時バフ(turnBuffs)へ入れ替える(新しい一時効果を追加してもここは変更不要)
     // refから読むことで、このターン中に予約された最新の値を確実に反映する(古いクロージャ値を使わない)。
@@ -33308,8 +33392,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       setHp(p=>Math.min(liveEffectiveMaxHp(),p+recoverHp));
       gainGuts(recoverGuts);
     }
-    if(recoverHp>0) addPopup(`💚 ライフ +${recoverHp}`,'life','text-emerald-400 text-2xl font-black drop-shadow-md');
-    if(recoverGuts>0) addPopup(`⚡ ガッツ +${recoverGuts}`,'guts','text-amber-400 text-2xl font-black drop-shadow-md');
+    // ★タクティクスは入った子の枠に出るので、まんなかへ合計を重ねない
+    if(!isTacticsMode(runMode)){
+      if(recoverHp>0) addPopup(`💚 ライフ +${recoverHp}`,'life','text-emerald-400 text-2xl font-black drop-shadow-md');
+      if(recoverGuts>0) addPopup(`⚡ ガッツ +${recoverGuts}`,'guts','text-amber-400 text-2xl font-black drop-shadow-md');
+    }
     await battleWait(1000);
     // 画面に予告済みの行動をそのまま実行する。ここで敵AIを再抽選すると、緊急回復で予告を
     // 別の技へ変えられてしまうため、技・対象・順番・予測値を保持した予約だけを参照する。
@@ -33363,9 +33450,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       if(!payable) return;
     }
     setIsBusy(true);
-    // ★前のターンに敵から受けたぶんの表示は、自分が動くまで枠に残しておく
-    //   (すぐ消すと、何が起きたのか読む前に消える)
-    setTacticsSlotFx(null);
+    // ★自分が動いたら、前に出ていたぶんはその場で消す(時間切れを待たない)
+    clearTacticsSlotFx();
     let lastType='none', guardTypeInTurn='none', totalDmg=0, totalHeal=0, totalHealRate=0, localOryoAdd=0, localDmgModAdd=0, localGlobalComboAdd=0, attackCount=0, hasCrit=false, immediateInvincible=false, immediateStun=false, currentTurnGuardFlat=0, currentTurnGuardMult=0;
     // 新モードは「ガードはカードを使った子自身を守る」。誰が構えたかをスロットごとに持つ。
     // 既存モードは今までどおり currentTurnGuardFlat / Mult の合計だけを見る
@@ -33458,12 +33544,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const owned=ownedTeachings.find(t=>t.id===card.id); const level=owned?owned.evoLevel:0;
         if (card.id==='meloso') {
           totalHeal+=Math.floor(liveEffectiveMaxHp()*0.3*effMul); totalHealRate+=0.3*effMul;
-          const gutsVal=gainGutsByRate(slotIdx,0.3*effMul);
+          const gutsVal=gainGutsByRateAll(0.3*effMul);
           currentTurnGuardFlat+=GUARD_EVOLUTION[guardLevel].flat*effMul;
           currentTurnGuardMult+=GUARD_EVOLUTION[guardLevel].mult*effMul;
           addGuardForSlot(slotIdx,GUARD_EVOLUTION[guardLevel].flat*effMul,GUARD_EVOLUTION[guardLevel].mult*effMul,guardCardWeight(card));
           guardTypeInTurn='guard';
-          if(gutsVal>0) addPopup(`⚡ ガッツ +${gutsVal}`,'guts','text-amber-400 font-black text-2xl drop-shadow-md');
           if(level>=1 && usedCards.length>=2) {
             setNextTurnBuff('takenDamageMult',1-0.5*effMul);
             addPopup('次ターン被ダメ50%減 予約!','hero','text-cyan-300 text-lg font-bold');
@@ -33480,11 +33565,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           let hpB=level===1?0.05:(level>=2?0.08:0.03), atkB=level>=2?0.05:0.03, gutsB=level>=2?0.05:0.03;
           totalHeal+=Math.floor(liveEffectiveMaxHp()*hpRecRate*effMul); totalHealRate+=hpRecRate*effMul;
           addPermaBuff('muaHpPct',hpB*effMul); addPermaBuff('muaAtkPct',atkB*effMul); addPermaBuff('muaGutsPct',gutsB*effMul);
-          if(gutsRecRate>0){const gv=gainGutsByRate(slotIdx,gutsRecRate*effMul); if(gv>0) addPopup(`⚡ ガッツ +${gv}`,'guts','text-amber-400 font-black text-2xl drop-shadow-md');}
+          if(gutsRecRate>0) gainGutsByRateAll(gutsRecRate*effMul);   // 入った子の枠に出るので、まんなかへは出さない
         } else {
           totalHeal+=Math.floor(liveEffectiveMaxHp()*(0.5+level*0.2)*effMul); totalHealRate+=(0.5+level*0.2)*effMul;
           addPermaBuff('muaHpPct',0.10*effMul); addPermaBuff('muaAtkPct',0.05*effMul); addPermaBuff('muaGutsPct',0.10*effMul);
-          if(level>=1){const gv=gainGutsByRate(slotIdx,(0.5+level*0.2)*effMul); if(gv>0) addPopup(`⚡ ガッツ +${gv}`,'guts','text-amber-400 font-black text-2xl drop-shadow-md');}
+          if(level>=1) gainGutsByRateAll((0.5+level*0.2)*effMul);   // 同上
         }
       }
       else if (card.type!=='guard'&&card.type!=='weak_guard') {
@@ -33580,10 +33665,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // ★量は1体ずつ「その子の上限 × 率」(2026-09-20 ユーザー指示)。
           //   合計から出すと、1体だけ傷ついているときパーティ全員ぶんがその子へ入る
           const healedAll=tacticsRateHeal(cardHealRate,0);
-          if(healedAll){
-            if(healedAll.hp>0) addPopup(`💚 回復 +${healedAll.hp}`,'life','text-emerald-400 text-4xl font-black drop-shadow-lg');
-            hpBeforeEnemyAttack=healedAll.total;
-          }
+          // ★誰にいくつ入ったかは枠ごとに出る。まんなかへ合計を重ねない(2026-09-21 ユーザー指示)
+          if(healedAll) hpBeforeEnemyAttack=healedAll.total;
         } else {
           addPopup(`💚 回復 +${cardHeal}`,'life','text-emerald-400 text-4xl font-black drop-shadow-lg');
           hpBeforeEnemyAttack=Math.min(liveEffectiveMaxHp(),hpBeforeEnemyAttack+cardHeal); setHp(hpBeforeEnemyAttack);
@@ -34549,6 +34632,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setDebugBattle(true); setExtremeRun(false); setDebugOutcome(null); setGaveUp(false);
     setScore(0); setWaveHistory([]); setFinalRewardSummary(null);
     tacticsJoinCatchUpRef.current=1; // あとから入る子の追いつき補正は1周ごとに数え直す
+    tacticsJoinCatchUpTurnsRef.current=0;
     writePermaBuffs({autoHpRecovery:0.1}); setWaveBuffs({}); setTurnBuffs({}); writeNextTurnBuffs({});
     setDistDmgBonus([0,0,0,0]); setTotalDistDamage([0,0,0,0]); setTotalAllDamage(0); setTotalRecoveryDelta(0);
     setUpgradePoints(0); setAtkLevel(0); setGuardLevel(0); setGuardBonusCount(0);

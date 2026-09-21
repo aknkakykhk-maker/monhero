@@ -508,6 +508,21 @@ const splitTacticsGuardedHit = (incoming, hits, guardHits = 1) => {
 //   「余ったぶんがライフとガッツになる」が成り立つ。
 // ★blocked は「ガードが届いたヒットを受け止めきったか」。演出(ガード成功)の判定に使う。
 // ★covered は「ガードが受け止めたヒット数」。画面に「ガードは◯ヒットぶん」と出すのに使う。
+// ★通ったぶんを「1ヒットずつ」に割る。60が3ヒットなら 20 / 20 / 20。
+//   端数はいちばん最後のヒットへ寄せて、足すと必ず元の合計に戻るようにする
+//   (2026-09-21 ユーザー指示「敵の3連撃なら3回ダメージ表記が出るようにして
+//    60なら20、20，20みたいな」)
+const splitTacticsHitAmounts = (total, count) => {
+  const amount = Math.max(0, tacticsSafeInt(total, 0));
+  const times = Math.max(1, tacticsSafeInt(count, 1));
+  if (amount <= 0) return [];
+  if (times <= 1) return [amount];
+  const per = Math.floor(amount / times);
+  const parts = new Array(times - 1).fill(per);
+  parts.push(amount - per * (times - 1));
+  return parts;
+};
+
 const resolveTacticsGuardedHit = (incoming, hits, guard, guardHits = 1) => {
   const { guarded, through, covered } = splitTacticsGuardedHit(incoming, hits, guardHits);
   const left = Math.max(0, tacticsSafeInt(guard, 0)) - guarded;
