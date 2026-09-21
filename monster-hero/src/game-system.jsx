@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2d7f887144df4883
+// generated-sha256: cf89ef6898a6715f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -92,7 +92,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-21 16:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-21 17:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7941,21 +7941,30 @@ const TACTICS_DIFFICULTY_IDS = Object.freeze([
   ...Object.keys(DIFFICULTY_SETTINGS),
   ...EXTREME_DIFFICULTIES.map(setting=>setting.id),
 ]);
-// タクティクスバトルの極限は、そのモードの中だけで順に開ける。
-// ・通常の9段階は今までどおり最初から挑める
+// タクティクスバトルの難易度は、そのモードの中だけで順に開ける。
+// ・Beginner / Easy / Normal / Hard は最初から挑める
+// ・**Expert 以上は「1つ前の難易度を1回クリア」で開く**
+//   (2026-09-21 ユーザー指示「エキスパート以上は解放条件ありにしたい」。
+//    クラシックの5モードは据え置き＝いま遊んでいる人の解放状況を変えない)
 // ・極限の入口(EXTREME)は「タクティクスで Master 以上を1回クリア」で開く
 // ・そこから先は「1つ前の極限をクリアすると次が開く」(極限チャレンジと同じ考え方)
 // 見るのは mh_tactics_clears_* だけ。クラシックバトルの進み具合は一切混ぜない
 // (混ぜると、片方で進めたぶんがもう片方の解放に化ける)
 const TACTICS_EXTREME_UNLOCK_DIFFICULTIES = Object.freeze(['Master', 'GrandMaster', 'Hell', 'Legend']);
 const TACTICS_EXTREME_UNLOCK_TEXT = 'タクティクス Master以上クリアで解放';
+// 最初から挑める段数。4 = Beginner / Easy / Normal / Hard
+const TACTICS_DIFFICULTY_INITIAL_UNLOCK_COUNT = 4;
 const isTacticsDifficultyUnlocked = (difficultyId, tacticsClearCounts = {}) => {
   const index = TACTICS_DIFFICULTY_IDS.indexOf(difficultyId);
   if (index < 0) return false;
-  if (!isExtremeDifficultyId(difficultyId)) return true;
   const counts = tacticsClearCounts && typeof tacticsClearCounts === 'object' ? tacticsClearCounts : {};
   const cleared = (id) => (Number(counts[id]) || 0) > 0;
   const previous = TACTICS_DIFFICULTY_IDS[index - 1];
+  if (!isExtremeDifficultyId(difficultyId)) {
+    // 通常の9段階。Hard までは最初から、Expert 以上は1つ前をクリアすると開く
+    if (index < TACTICS_DIFFICULTY_INITIAL_UNLOCK_COUNT) return true;
+    return cleared(previous);
+  }
   return isExtremeDifficultyId(previous) ? cleared(previous) : TACTICS_EXTREME_UNLOCK_DIFFICULTIES.some(cleared);
 };
 const SPECIES_CHALLENGE_PROGRESS_KEY = 'mh_species_challenge_progress_v1';
@@ -8169,10 +8178,17 @@ const simulateSpeciesChallengeJoinWave = (runState,entryId=null) => {
   return { ...result,hadJoinCandidates:remaining.length>0,gutsRecoveryRequired:true };
 };
 const SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT = 5;
-const isSpeciesChallengeDifficultyUnlocked = (difficultyId, clearedDifficultyIds=[]) => {
+// ★タクティクスの種族チャレンジは Expert から条件を付ける(4 = Hard まで最初から)。
+//   クラシックの種族チャレンジは 5 のまま据え置き＝いま遊んでいる人の解放状況を変えない
+//   (2026-09-21 ユーザー指示「エキスパート以上は解放条件ありにしたい / クラシックは据え置き」)
+const TACTICS_SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT = TACTICS_DIFFICULTY_INITIAL_UNLOCK_COUNT;
+const speciesChallengeInitialUnlockCountOf = (mode) => (typeof isTacticsMode === 'function' && isTacticsMode(mode)
+  ? TACTICS_SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT : SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT);
+const isSpeciesChallengeDifficultyUnlocked = (difficultyId, clearedDifficultyIds=[], initialUnlockCount=SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT) => {
   const index=SPECIES_CHALLENGE_DIFFICULTY_IDS.indexOf(difficultyId);
   if(index<0)return false;
-  if(index<SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT)return true;
+  const initial=Number.isFinite(initialUnlockCount)?initialUnlockCount:SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT;
+  if(index<initial)return true;
   const cleared=new Set(Array.isArray(clearedDifficultyIds)?clearedDifficultyIds:[]);
   return cleared.has(SPECIES_CHALLENGE_DIFFICULTY_IDS[index-1]);
 };
@@ -36580,7 +36596,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <div className={`relative shrink-0${battleTutorialSpotClass('difficulty')}`}>
                   <button aria-label="前の難易度" disabled={selectedIndex===0} onClick={()=>selectDifficultyIndex(selectedIndex-1)} className="absolute left-0 top-[42%] z-20 w-9 h-12 rounded-r-xl bg-black/70 disabled:opacity-20"><ChevronLeft/></button>
                   <div ref={modeDifficultyCarouselRef} onScroll={e=>{const root=e.currentTarget,c=root.scrollLeft+root.clientWidth/2;let best=0,d=Infinity;[...root.children].forEach((card,i)=>{const n=Math.abs(card.offsetLeft+card.offsetWidth/2-c);if(n<d){d=n;best=i;}});if(difficulties[best]?.[0]!==selectedDifficulty)chooseDifficulty(difficulties[best][0]);}} className="flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll" style={{paddingLeft:'11%',paddingRight:'11%',touchAction:'pan-x pinch-zoom'}} data-difficulty-carousel>
-                    {difficulties.map(([key,setting])=>{const active=key===selectedDifficulty,rec=modeRecordFor(battleMode,key);const quickUnlocked=species?isSpeciesChallengeDifficultyUnlocked(key,speciesChallengeClearedDifficultyIds(speciesChallengeProgress,speciesChallengeSelection.speciesId)):tacticsDiff?(debugBattle||isTacticsDifficultyUnlocked(key,tacticsRecordsOf(battleMode).clears)):(!quick||debugBattle||isQuickDifficultyUnlocked(key,clearCounts,proClearCounts,extremeDifficultyClearCounts));// ★タクティクスバトルの極限は、極限チャレンジ・種族チャレンジとまったく同じ作りで走らせる。
+                    {difficulties.map(([key,setting])=>{const active=key===selectedDifficulty,rec=modeRecordFor(battleMode,key);const quickUnlocked=species?isSpeciesChallengeDifficultyUnlocked(key,speciesChallengeClearedDifficultyIds(speciesChallengeProgress,speciesChallengeSelection.speciesId),speciesChallengeInitialUnlockCountOf(battleMode)):tacticsDiff?(debugBattle||isTacticsDifficultyUnlocked(key,tacticsRecordsOf(battleMode).clears)):(!quick||debugBattle||isQuickDifficultyUnlocked(key,clearCounts,proClearCounts,extremeDifficultyClearCounts));// ★タクティクスバトルの極限は、極限チャレンジ・種族チャレンジとまったく同じ作りで走らせる。
                       //   difficulty は 'Normal' に置き換え、選んだ段階は extremeDifficulty が持つ。
                       //   記録は tacticsRecordDifficulty() がこの2つから選ぶので、混ざらない
                       const tacticsExtreme=tacticsDiff&&isExtremeDifficultyId(key);
