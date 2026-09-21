@@ -146,8 +146,11 @@ const runFlow = async () => { for (const k of KEYS_IN_FLOW) await S.storeSet(k, 
   // 帯と画面の見出しが重ならないよう、再生中だけ上を空ける
   check('助手選択の見出しが帯に隠れない',
     has("style={{paddingTop:onboardingPreview?'calc(2.75rem + env(safe-area-inset-top))':'env(safe-area-inset-top)'}}"));
-  check('プロフィールの見出しが帯に隠れない',
-    has("style={onboardingPreview?{paddingTop:'calc(2.25rem + env(safe-area-inset-top))'}:undefined}"));
+  // ★空ける量の書き方は画面の作りで変わる(共通の枠へ切り出したときに calc を外した)。
+  //   見るのは「再生中だけ上を空けていて、帯(32px=2rem)より広いか」だけ
+  const profilePad = (source.match(/onboardingPreview\?\{paddingTop:'([^']+)'\}:undefined/) || [])[1] || '';
+  const profilePadRem = Number((profilePad.match(/([\d.]+)rem/) || [])[1] || 0);
+  check('プロフィールの見出しが帯に隠れない', profilePadRem >= 2, profilePad || '指定なし');
 
   // ---- 既存の作りを壊していないか ----
   check('保存キーの名前を変えていない',

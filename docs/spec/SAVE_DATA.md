@@ -51,12 +51,16 @@
 | `mh_tactics_hs_<難易度>` | number / `0` | 端末ハイスコア（新モード。公開前） |
 | `mh_tactics_clears_<難易度>` | number / `0` | 完走回数（新モード。公開前） |
 | `mh_tactics_highest_wave_<難易度>` | number / `0` | 最高到達WAVE（新モード。公開前） |
+| `mh_tactics_pro_hs_<難易度>` | number / `0` | 端末ハイスコア（タクティクスプロ。公開前） |
+| `mh_tactics_pro_clears_<難易度>` | number / `0` | 完走回数（タクティクスプロ。公開前） |
+| `mh_tactics_pro_highest_wave_<難易度>` | number / `0` | 最高到達WAVE（タクティクスプロ。公開前） |
 | `mh_species_challenge_progress_v1` | object / `{version:1,species:{}}` | 種族チャレンジの種族・難易度別クリアと初回報酬受取状況 |
+| `mh_tactics_species_challenge_progress_v1` | object / `{version:1,species:{}}` | タクティクスの種族チャレンジの進行。クラシック側(`mh_species_challenge_progress_v1`)とは**別のキー**にして、どちらの記録も混ざらないようにしている（公開前） |
 | `mh_rank_<難易度>` | object[] / `[]` | 全国送信失敗時の端末ランキング |
 
 難易度部分は `Beginner`, `Easy`, `Normal`, `Hard`, `Expert`, `Master`, `GrandMaster`, `Hell`, `Legend`。難易度キーは保存・ランキング識別子なので既存名を変更しない。
 
-バトルモードごとの記録は接頭辞で分ける（`modeKeyPrefix`：チャレンジ `mh_`／クイック `mh_quick_`／プロ `mh_pro_`）。モードを増やしても既存キーの意味は変えず、新しい接頭辞のキーを足すだけにする。未プレイのモードのキーは存在しないので、読み込みは既定値 `0` に落ちる。
+バトルモードごとの記録は接頭辞で分ける（`modeKeyPrefix`：チャレンジ `mh_`／クイック `mh_quick_`／プロ `mh_pro_`／タクティクス `mh_tactics_`／タクティクスプロ `mh_tactics_pro_`）。モードを増やしても既存キーの意味は変えず、新しい接頭辞のキーを足すだけにする。未プレイのモードのキーは存在しないので、読み込みは既定値 `0` に落ちる。
 
 全国ランキング（Supabase）はテーブルの列を増やさず、`difficulty` へ入れる値でモードを分ける。プロは `ProHard` のように先頭へ `Pro` を付けた値（`rankingDifficultyForMode`）。既存のチャレンジの行（`Hard` など）は書き換えも変換もしない。
 
@@ -124,6 +128,11 @@
 | `mh_quick_rhythm_bg_seen_v1` | boolean / `false` | 裏で周回したままモンビーを開いたときの案内を見たか |
 | `mh_screen_note_open_v1` | object / `{}` | 画面ごとの「詳しく」を開いているか(画面idごとの真偽値) |
 | `mh_ranking_debug` | `'1'` のとき有効 | ランキングの詳細ログ(手で `localStorage` に入れるデバッグ用。ゲームは書かない) |
+| `mh_masu_auto_enhance_intro_seen_v1` | boolean / `true` | マスモンの自動強化の案内を見たか。**既定値は `true`**(保存が無いときに「見た」扱いにすると案内が誰にも出ないため、読み込み側で未保存を判別してから出す) |
+| `mh_profile_frame_owned_v1` | string[] / `[]` | 手に入れたプロフィールフレームのid。**一度もらったら外さない**(条件を変えても取り上げにならないよう、「いまのLv」ではなく「もらった記録」を持つ)。`normalizeOwnedProfileFrames` を通す |
+| `mh_profile_frame_notice_v1` | string[] / `[]` | フレームをもらったことを知らせ終えたid。枠ごとに覚える(1つのidで既読にすると2枚目以降が知らされない) |
+| `mh_update_notice_style_v1` | `'FULL'` / `'MINI'` / `'OFF'` / 既定 `'FULL'` | 更新のお知らせの出し方(`normalizeUpdateNoticeStyle` で既定へ倒す) |
+| `mh_rhythm_strip_v1` | object / `{}` | モンヒロビートの見た目をデバッグ画面で間引く設定。ふだんは空で、通常プレイでは何も起きない(既存の音ゲー設定・BESTには触らない別キー) |
 
 移行・補償のフラグ(第3章の表に載っていないもの):
 

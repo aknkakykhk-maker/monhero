@@ -1,7 +1,10 @@
-// 起動したとたんに流れる「イベントの会話」を、検査では見終わったことにする。
+// 起動したとたんに画面を覆うもの(イベントの会話・お詫びの配布・今日のアドバイス)を、
+// 検査では「もう見た」ことにして出さないための種。
 //
-//   const { eventStorySeed } = require('../boot/event-story-seed');
-//   await page.addInitScript(eventStorySeed());   // ← 起動前に入れる
+//   const { quietBootSeed } = require('../boot/quiet-boot-seed');
+//   await page.addInitScript(quietBootSeed());   // ← 起動前に入れる
+//
+// 会話だけでよければ eventStorySeed() を使う。
 //
 // モンヒロビートのイベントには「開幕」と「閉幕とお礼」の会話があり、**閉幕は終了の時刻に
 // 自動で流れる**(60-app.jsx の rhythmEventThanksStoryIdFor)。34ステップの会話が
@@ -46,4 +49,21 @@ const eventStorySeed = () => ({
   content: `(() => { try { localStorage.setItem(${JSON.stringify(eventStoryKey())}, ${JSON.stringify(JSON.stringify(eventStoryIds()))}); } catch (e) {} })();`,
 });
 
-module.exports = { eventStoryIds, eventStoryKey, eventStorySeed };
+// 起動直後に画面いっぱいへ出る「一度きりの案内」。押さずに進めないので、検査では出さない。
+//   ・お詫びの配布(継承固有技Lvの不具合の補償)
+//   ・みゅあの「今日のマスモン」アドバイス(1日1回。日付が入っていれば出ない)
+// ★日付の形は本体の localCalendarDate と同じ(YYYY-MM-DD)。ページの中で今日を作る
+const ONE_TIME_NOTICE_SCRIPT = `(() => { try {
+  const put = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+  put('mh_inherited_unique_level_compensation_v1', true);
+  put('mh_inherited_unique_level_compensation_pending_v1', false);
+  const d = new Date(), pad = (n) => String(n).padStart(2, '0');
+  put('mh_daily_masu_advice_date_v1', d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()));
+} catch (e) {} })();`;
+
+const oneTimeNoticeSeed = () => ({ content: ONE_TIME_NOTICE_SCRIPT });
+
+// 会話も案内もまとめて黙らせる(ふつうはこれを使う)
+const quietBootSeed = () => ({ content: `${eventStorySeed().content}\n${ONE_TIME_NOTICE_SCRIPT}` });
+
+module.exports = { eventStoryIds, eventStoryKey, eventStorySeed, oneTimeNoticeSeed, quietBootSeed };

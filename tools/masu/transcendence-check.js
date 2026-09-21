@@ -547,8 +547,9 @@ check('プシュケーの変換は専用のシートで行う',
   source.includes('data-transcend-exchange-open') && source.includes('data-transcend-exchange-sheet')
   && source.includes('data-transcend-exchange-commit')
   && source.indexOf('data-transcend-exchange-sheet') > source.indexOf('data-transcend-commit'));
+// ★属性の並び(type="button" を足した など)で落ちないよう、条件とdata属性の組み合わせで見る
 check('超越の実の本番導線は所持時だけ超越強化内に表示する',
-  source.includes('{hasTranscendFruit&&<button data-transcend-fruit-open')
+  /\{hasTranscendFruit&&<button[^>]*data-transcend-fruit-open/.test(source)
   && source.includes('data-transcend-fruit-sheet') && source.includes('data-transcend-fruit-select={itemId}'));
 check('超越の実は種類を明示選択して1・10・MAXを使う',
   source.includes("setTranscendFruitItemId('')")

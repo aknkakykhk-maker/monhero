@@ -20,7 +20,7 @@ const path = require('path');
 const fs = require('fs');
 
 // イベントの「閉幕とお礼」は終了の時刻に自動で流れる。既読にしておかないと会話で止まる
-const { eventStorySeed } = require(path.resolve(__dirname, '..', 'boot/event-story-seed'));
+const { eventStorySeed } = require(path.resolve(__dirname, '..', 'boot/quiet-boot-seed'));
 
 const root = path.resolve(__dirname, '..', '..');
 const PORT = 8982;
