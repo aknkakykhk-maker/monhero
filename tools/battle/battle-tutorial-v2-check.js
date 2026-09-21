@@ -1,9 +1,9 @@
 const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分類フォルダから見た1つ上
-// いま本番で使っているバトルチュートリアル(新しいモード選択から始まる版)を
+// いま本番で使っているバトルチュートリアル(バトルの仕組みえらびから始まる版)を
 // 実際のブラウザで通してみる。
 //
-//   ① デバッグ設定から「新バトルチュートリアルを見る（お試し）」で始まる
-//   ② 新しいモード選択の画面から始まり、3モードの説明が順に出る
+//   ① デバッグ設定から「バトルチュートリアル開始」で始まる
+//   ② ふだんの入口(仕組みえらび)から始まり、3つの仕組み → クラシックの3モードの順に説明が出る
 //   ③ 練習中は戻る・ランキング・モードの説明が押せない(台本から外れない)
 //   ④ チャレンジ以外の「難易度を選ぶ」は押せない(初回にクイック・プロを遊ばせない)
 //   ⑤ 難易度選択はビギナーから始まり、ビギナー以外は押せない
@@ -97,8 +97,10 @@ const check = (name, ok, detail = '') => {
     const startButton = page.getByRole('button', { name: 'バトルチュートリアル開始（記録は残りません）' });
     check('デバッグ設定にチュートリアルの入口がある', await startButton.count() === 1);
     await startButton.dispatchEvent('click');
-    await page.getByText('BATTLE MODE').first().waitFor({ timeout: 15000 });
-    check('新しいモード選択の画面から始まる', true);
+    // ★2026-09-21: ふだん HOME の「モンヒロバトル」を押すと最初に出るのは
+    //   バトルの仕組みえらび。練習もここから始める
+    await page.getByText('どのバトルで遊ぶかを選びます').first().waitFor({ timeout: 15000 });
+    check('ふだんの入口(バトルの仕組みえらび)から始まる', true);
 
     // 吹き出しの見出しを読みながら「つぎへ」で進める
     // 吹き出しの中身。枠は role="dialog" aria-label="バトルチュートリアル" で出ている
@@ -114,22 +116,56 @@ const check = (name, ok, detail = '') => {
       return true;
     };
 
-    // --- ② 3モードの説明が順に出る ---
+    // --- ②-1 入口の3つの仕組みの説明が順に出る ---
     check('チュートリアルの吹き出しが出ている', (await bubbleText() || '').includes('れんしゅう'), String(await bubbleText()).slice(0, 40));
-    const said = [];
-    for (let i = 0; i < 8; i++) {
+    const saidSystem = [];
+    for (let i = 0; i < 10; i++) {
       const t = await bubbleText();
-      if (t) said.push(t);
+      if (t) saidSystem.push(t);
       if (!(await tapNext())) break;
     }
-    const allSaid = said.join(' | ');
-    check('チャレンジ・クイック・プロの3つを説明する',
-      ['チャレンジ', 'クイック', 'プロ'].every(w => allSaid.includes(w)),
-      `${said.length}ステップぶん読んだ`);
-    // ★モードごとの「何がうれしいか」に触れているか。プロの説明は
-    //   「難しい」から「ベースモンだけで挑む」という言い方へ変わった
+    const allSystem = saidSystem.join(' | ');
+    check('クラシック・タクティクス・クイックの3つを説明する',
+      ['クラシック', 'タクティクス', 'クイック'].every(w => allSystem.includes(w)),
+      `${saidSystem.length}ステップぶん読んだ`);
+    check('それぞれの中身にも触れる',
+      allSystem.includes('力を合わせて') && allSystem.includes('1体ずつライフ') && allSystem.includes('1.5倍'));
+
+    // --- ②-2 仕組みえらびでも台本から外れる操作を止める ---
+    check('練習中は戻るが押せない(仕組みえらび)', await page.getByRole('button', { name: '戻る' }).isDisabled());
+    // ★練習は記録を残さないために debugBattle を立てるが、その副作用で入口の並びが
+    //   「ふだん遊ぶときと違う見え方」になってはいけない(準備中・β版・DEBUGの出し分け)
+    check('練習中もふだんと同じ枚数のカードが並ぶ',
+      await page.locator('[data-battle-system-card]').count() === 3,
+      `${await page.locator('[data-battle-system-card]').count()}枚`);
+    check('練習中はクラシック以外の仕組みを選べない',
+      await page.locator('[data-battle-system="systemQuick"]').isDisabled()
+        && await page.locator('[data-battle-system="systemTactics"]').isDisabled());
+    check('練習中は「詳しいルール」が押せない',
+      await page.locator('[data-battle-system-info]').first().isDisabled());
+    check('クラシックのカードは押せる',
+      await page.locator('[data-battle-system="systemClassic"]').isEnabled());
+
+    // --- ②-3 クラシックを選ぶとモードえらびへ進む ---
+    await page.locator('[data-battle-system="systemClassic"]').dispatchEvent('click');
+    await page.getByText('BATTLE MODE').first().waitFor({ timeout: 15000 });
+    check('クラシックを選ぶとモード選択へ進む', true);
+    const saidMode = [];
+    for (let i = 0; i < 10; i++) {
+      const t = await bubbleText();
+      if (t) saidMode.push(t);
+      if (!(await tapNext())) break;
+    }
+    const allMode = saidMode.join(' | ');
+    check('クラシックの中の3モードを説明する',
+      ['チャレンジ', '種族チャレンジ', 'プロ'].every(w => allMode.includes(w)),
+      `${saidMode.length}ステップぶん読んだ`);
+    // ★クイックはモードではなく仕組みの側にある。ここで「となりはクイック」と
+    //   説明すると、実際に並んでいる種族チャレンジのカードと食い違う
+    //   (2026-09-21 ユーザー指摘)
+    check('モード選択でクイックの話をしない', !allMode.includes('クイック'), allMode.slice(0, 60));
     check('3つのモードの中身にも触れる',
-      allSaid.includes('スコア') && allSaid.includes('1.5倍') && allSaid.includes('ベースモンだけ'));
+      allMode.includes('スコア') && allMode.includes('ひとつの種族') && allMode.includes('ベースモンだけ'));
 
     // --- ③ 練習中は台本から外れる操作を止める ---
     check('練習中は戻るが押せない', await page.getByRole('button', { name: '戻る' }).isDisabled());

@@ -5721,18 +5721,34 @@ const ASSISTANT_BATTLE_TUTORIAL_INTRO_V1 = [
   { id:'startTalk',    at:'BATTLE_MENU',   e:'wink',    title:'ビギナーで挑戦', t:'今回は練習だから、ビギナーのチャレンジをやってみよ！', spot:'battleStart', wait:'next' },
   { id:'start',        at:'BATTLE_MENU',   e:'excited', title:'押してみて！', t:'「この難易度で挑戦」を押すとバトルが始まるよ♪', spot:'battleStart', wait:'act' },
 ];
-// 新しい入口の導入。モード選択でチャレンジ・クイック・プロの3つを見せてから、
-// チャレンジを選んで難易度選択へ進み、ビギナーで始める。
-// クイックとプロは「こういうモードがあるよ」と見せるだけで、初回には遊ばせない
+// 新しい入口の導入。ふだん HOME の「モンヒロバトル」を押すと最初に出るのは
+// バトルの仕組みえらび(BATTLE_SYSTEM_SELECT)なので、そこから順に見せる。
+//
+//   仕組みえらび(クラシック/タクティクス/クイック)
+//     → クラシックの中のモードえらび(チャレンジ/種族チャレンジ/プロ)
+//     → 難易度えらび(ビギナー)
+//
+// ★ここを飛ばしてモードえらびから始めていた頃は、練習を終えた人が自分でバトルを
+//   押したときに、習っていない画面が最初に出ていた(2026-09-21 ユーザー指摘)。
+//   同じ指摘で「となりはクイック」も直している。クイックはモードではなく
+//   仕組みの側へ移っていて、クラシックのとなりに並ぶのは種族チャレンジ
 const ASSISTANT_BATTLE_TUTORIAL_INTRO_V2 = [
-  { id:'intro',        at:'BATTLE_MODE_SELECT',       e:'excited', title:'バトルのれんしゅう', t:'{name}、ここからは実際に動かして覚えよ！ あたしが横で見てるからね♪', wait:'next' },
-  { id:'modeTalk',     at:'BATTLE_MODE_SELECT',       e:'normal',  title:'まずはモード選び', t:'バトルは3つのモードから選ぶよ。左右にスワイプすると、ぐるぐる回せるんだ♪', spot:'modeCards', wait:'next' },
+  { id:'intro',        at:'BATTLE_SYSTEM_SELECT',     e:'excited', title:'バトルのれんしゅう', t:'{name}、ここからは実際に動かして覚えよ！ あたしが横で見てるからね♪', wait:'next' },
+  { id:'systemTalk',   at:'BATTLE_SYSTEM_SELECT',     e:'normal',  title:'まずはバトル選び', t:'モンヒロバトルは、ルールのちがうバトルから1つ選んで始めるよ。', spot:'systemCards', wait:'next' },
+  { id:'systemClassic',at:'BATTLE_SYSTEM_SELECT',     e:'happy',   title:'クラシックバトル', t:'いちばん上がクラシック。連れていった子の力を合わせて10WAVEに挑む、基本のバトルだよ。', spot:'systemClassic', wait:'next' },
+  { id:'systemTactics',at:'BATTLE_SYSTEM_SELECT',     e:'surprise',title:'タクティクスバトル', t:'まん中はタクティクス。1体ずつライフを持って、誰を守るかを読み合うバトルなんだ。', spot:'systemTactics', wait:'next' },
+  { id:'systemQuick',  at:'BATTLE_SYSTEM_SELECT',     e:'wink',    title:'クイックモード', t:'いちばん下はクイック。1周が速くて経験値が1.5倍もらえる、育成むけのバトルだよ♪', spot:'systemQuick', wait:'next' },
+  { id:'systemInfo',   at:'BATTLE_SYSTEM_SELECT',     e:'normal',  title:'くわしく知りたいとき', t:'どのカードも「詳しいルール」を押すと、同じ並びで細かく読めるよ。', spot:'systemCards', wait:'next' },
+  { id:'systemReady',  at:'BATTLE_SYSTEM_SELECT',     e:'happy',   title:'今日はクラシックで', t:'最初はクラシックがおすすめ！ 基本の遊びかたはここで全部おぼえられるよ。', spot:'systemClassic', wait:'next' },
+  { id:'systemPick',   at:'BATTLE_SYSTEM_SELECT',     e:'wink',    title:'押してみて！', t:'いちばん上のクラシックバトルのカードを押してね♪', spot:'systemClassic', wait:'act' },
+  { id:'modeTalk',     at:'BATTLE_MODE_SELECT',       e:'normal',  title:'クラシックの中身', t:'クラシックの中は3つ。左右にスワイプすると、ぐるぐる回せるんだ♪', spot:'modeCards', wait:'next' },
   { id:'modeChallenge',at:'BATTLE_MODE_SELECT',       e:'happy',   title:'チャレンジモード', t:'いま出てるのがチャレンジ。強化を自分で選んでスコアを伸ばす、いちばん基本のモードだよ。', spot:'modeCards', wait:'next' },
-  { id:'modeQuick',    at:'BATTLE_MODE_SELECT',       e:'wink',    title:'クイックモード', t:'となりはクイック。育成用のモードで、短い時間で何周も回せて経験値が1.5倍もらえるの。', spot:'modeCards', wait:'next' },
+  { id:'modeSpecies',  at:'BATTLE_MODE_SELECT',       e:'wink',    title:'種族チャレンジ', t:'となりは種族チャレンジ。ひとつの種族の子だけを連れて挑む、腕だめし用のモードなんだ。', spot:'modeCards', wait:'next' },
   { id:'modePro',      at:'BATTLE_MODE_SELECT',       e:'surprise',title:'プロモード', t:'その先はプロ。育てた子に頼らず、ベースモンだけで挑む特殊モードだよ…！', spot:'modeCards', wait:'next' },
   { id:'modeDetail',   at:'BATTLE_MODE_SELECT',       e:'normal',  title:'くわしく知りたいとき', t:'カードの「このモードの説明」を押すと、どのモードも同じ並びで細かく読めるよ。', spot:'modeCards', wait:'next' },
   { id:'rankTalk',     at:'BATTLE_MODE_SELECT',       e:'happy',   title:'ランキング', t:'上のタブでブリーダーLvと絆Lvのランキング、カードのボタンでモードごとのスコアランキングが見られるよ♪', spot:'modeRankTabs', wait:'next' },
-  { id:'modePick',     at:'BATTLE_MODE_SELECT',       e:'wink',    title:'今日はチャレンジで', t:'最初はチャレンジがおすすめ！ 「難易度を選ぶ」を押してみて♪', spot:'modeStart', wait:'act' },
+  { id:'modeReady',    at:'BATTLE_MODE_SELECT',       e:'normal',  title:'今日はチャレンジで', t:'最初はチャレンジがおすすめ！ ここから難易度をえらんで始めるよ。', spot:'modeStart', wait:'next' },
+  { id:'modePick',     at:'BATTLE_MODE_SELECT',       e:'wink',    title:'押してみて！', t:'チャレンジの「難易度を選ぶ」を押してみて♪', spot:'modeStart', wait:'act' },
   { id:'diffTalk',     at:'BATTLE_DIFFICULTY_SELECT', e:'normal',  title:'難易度を選ぶ', t:'左右にスワイプして選ぶよ。難しいほど報酬の倍率も上がるの。', spot:'difficulty', wait:'next' },
   { id:'diffDefault',  at:'BATTLE_DIFFICULTY_SELECT', e:'happy',   title:'まん中はノーマル', t:'開いたときはいつもノーマルから。今日は左へ寄せてビギナーにしてあるよ♪', spot:'difficulty', wait:'next' },
   { id:'startTalk',    at:'BATTLE_DIFFICULTY_SELECT', e:'wink',    title:'ビギナーで挑戦', t:'今回は練習だから、いちばんやさしいビギナーをやってみよ！', spot:'battleStart', wait:'next' },
@@ -5823,8 +5839,8 @@ const ASSISTANT_BATTLE_TUTORIAL_OUTRO_V2 = [
   // 覚えておいてほしいこと
   { id:'ally',         at:'*',             e:'normal',  title:'このあとは', t:'WAVE2・4・6では供モンが合流するよ。ステータスがそのまま足されるんだ！', wait:'next' },
   { id:'unique',       at:'*',             e:'happy',   title:'固有技のこと', t:'勇者モンの固有技は、レベルが上がるほど強くなるよ。育てるほど頼りになる♪', wait:'next' },
-  { id:'modeAfter',    at:'*',             e:'normal',  title:'モードの使い分け', t:'スコアに挑むならチャレンジ、育てたいならクイック。腕だめしがしたくなったらプロだよ♪', wait:'next' },
-  { id:'modeLater',    at:'*',             e:'wink',    title:'あわてなくて大丈夫', t:'クイックもプロも、いつでも選べるからね。まずはチャレンジで慣れていこ！', wait:'next' },
+  { id:'modeAfter',    at:'*',             e:'normal',  title:'モードの使い分け', t:'クラシックの中は、スコアに挑むチャレンジ、腕だめしの種族チャレンジ、しばりのプロだよ。', wait:'next' },
+  { id:'modeLater',    at:'*',             e:'wink',    title:'早く育てたいときは', t:'入口でクイックを選ぶと、さくさく回せて経験値も1.5倍。いつでも選べるからね♪', wait:'next' },
   { id:'wrapUp',       at:'*',             e:'excited', title:'おつかれさま！', t:'これでバトルのれんしゅうは終わり！ 一連の流れはバッチリだね♪', wait:'next' },
   { id:'end',          at:'*',             e:'happy',   title:'いってらっしゃい！', t:'困ったらヘルプからいつでもこの練習をやり直せるよ。がんばってね{name}！', wait:'end' },
 ];
