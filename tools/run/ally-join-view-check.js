@@ -62,6 +62,18 @@ check('タクティクスのカードは増分を出さない',
 check('タクティクスのカードは素の値も並べる',
   has("?(stat.diff>0?<span className=\"block leading-none text-slate-500\">{stat.before} →</span>:null)"));
 check('追いつき補正を出す', has('data-tactics-join-catchup='));
+// ★「速く抜けたぶん」のような曖昧な言い方をやめ、**何ターン残したか**を出す
+//   (2026-09-21 ユーザー指示「速く抜けた分とか言う表示ダサすぎる」)
+check('追いつきは残したターン数で説明する',
+  has('data-tactics-join-turns={preview.catchUpTurns}')
+    && has('（${preview.catchUpTurns}ターン残して勝ったぶん）')
+    && !has('（速く抜けたぶん）'));
+// ★率(残りターン×1%)を積むときに、残りターンも一緒に積む。片方だけだと画面の説明が合わなくなる
+check('WAVEを抜けるたび、残したターン数も積む',
+  has('tacticsJoinCatchUpRef.current=addTacticsJoinCatchUp(tacticsJoinCatchUpRef.current,remainingTurns);')
+    && has('tacticsJoinCatchUpTurnsRef.current+=Math.max(0,Number(remainingTurns)||0);'));
+check('1周ごとに、率もターン数も数え直す',
+  has('tacticsJoinCatchUpRef.current=1;') && has('tacticsJoinCatchUpTurnsRef.current=0;'));
 check('NIGHTMAREの適性半減を詳細側にも反映できる(aptDeltaPct)',
   has('aptDeltaPct = null, growth = null } = opts;') && has('const pct=aptDeltaPct?(aptDeltaPct[idx]||0):aptGradeToPct(grade);'));
 check('マスモンの合流値は種族値＋通常強化＋超越基礎UPを4能力へ各1回加算する',
@@ -141,13 +153,14 @@ if (typeof C.applyAllyJoinBonus === 'function') {
     createTacticsUnit: C.createTacticsUnit,
     applyTacticsJoinCatchUp: C.applyTacticsJoinCatchUp,
     tacticsJoinCatchUpRef: { current: 1 },
+    tacticsJoinCatchUpTurnsRef: { current: 0 },
     wave: 1,
   });
 
   // ★タクティクスは「その子の素のステータスがそのまま盤面へ入る」ので、
   //   合流ボーナス(plusStats)の増分ではなく **素の値 → 盤面に入る値** を出す
   //   (2026-09-21 ユーザー指示)。追いつき補正の率は tacticsJoinCatchUpRef が持つ
-  const buildTactics = (catchUp = 1) => makePreview({
+  const buildTactics = (catchUp = 1, catchUpTurns = 0) => makePreview({
     specialRuleDifficultyForRun: C.specialRuleDifficultyForRun,
     applyAllyJoinBonus: C.applyAllyJoinBonus,
     getMonsterAptPct: C.getMonsterAptPct,
@@ -161,6 +174,7 @@ if (typeof C.applyAllyJoinBonus === 'function') {
     createTacticsUnit: C.createTacticsUnit,
     applyTacticsJoinCatchUp: C.applyTacticsJoinCatchUp,
     tacticsJoinCatchUpRef: { current: catchUp },
+    tacticsJoinCatchUpTurnsRef: { current: catchUpTurns },
     wave: 1,
   });
 
@@ -207,6 +221,11 @@ if (typeof C.applyAllyJoinBonus === 'function') {
   check('タクティクス: 追いつき補正が乗る',
     caught.stats[0].before === 600 && caught.stats[0].after === 720, `${caught.stats[0].before} → ${caught.stats[0].after}`);
   check('タクティクス: 追いつきの率を画面へ渡す', caught.catchUp === 1.2, `${caught.catchUp}`);
+  // ★率は「残りターン×1%」で決まるので、**何ターン残して抜けたか**も画面へ渡す
+  //   (2026-09-21 ユーザー指示「ターン数でボーナス値決まってるんだからそれでわかるようにして」)
+  const withTurns = buildTactics(1.87, 57)(tacticsMon);
+  check('タクティクス: 残して抜けたターン数も画面へ渡す', withTurns.catchUpTurns === 57, `${withTurns.catchUpTurns}`);
+  check('タクティクス: 抜けていなければ0', flat.catchUpTurns === 0, `${flat.catchUpTurns}`);
   check('タクティクス: タクティクスの印を持つ', caught.tactics === true && plain.tactics !== true);
   // ★距離適性も合算しない(その子の適性が、その子の攻撃に効く)
   check('タクティクス: 距離補正は0から始まる(合算しない)', caught.apt.every(range => range.before === 0));

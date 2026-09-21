@@ -287,7 +287,7 @@ function PickHeroAllyScreen({
                   ))}
                 </div>
                 {/* ★追いつき補正。WAVEを速く抜けるほど厚くなるぶんを、素の値との差として出す */}
-                {preview.tactics&&<div data-tactics-join-catchup={Math.round((preview.catchUp-1)*100)} className={`w-full text-center leading-none font-black ${preview.catchUp>1?'text-emerald-300':'text-slate-500'}`} style={{fontSize:'8px'}}>{preview.catchUp>1?`追いつき +${Math.round((preview.catchUp-1)*100)}%（速く抜けたぶん）`:'追いつき なし'}</div>}
+                {preview.tactics&&<div data-tactics-join-catchup={Math.round((preview.catchUp-1)*100)} data-tactics-join-turns={preview.catchUpTurns} className={`w-full text-center leading-none font-black ${preview.catchUp>1?'text-emerald-300':'text-slate-500'}`} style={{fontSize:'8px'}}>{preview.catchUp>1?`追いつき +${Math.round((preview.catchUp-1)*100)}%（${preview.catchUpTurns}ターン残して勝ったぶん）`:'追いつき なし（まだWAVEを抜けていません）'}</div>}
                 <div className="w-full rounded-lg bg-black/40 px-1 py-1 grid grid-cols-4 gap-0.5 text-center font-mono" style={{fontSize:'8px'}}>
                   {preview.apt.map(range=>(
                     <span key={range.idx} className="min-w-0 block">

@@ -58,7 +58,7 @@ vm.runInContext(
     + 'TACTICS_ENEMY_POWER_MAX,applyTacticsTraining,tacticsPartyAtk,'
     + 'tacticsPartyDef,shrinkTacticsScore,TACTICS_SCORE_DIVISOR,'
     + 'splitTacticsGuardedHit,resolveTacticsGuardedHit,tacticsGuardHits,makeCardHalveCounter,'
-    + 'regenDownedTacticsBoard,TACTICS_DOWNED_REGEN_RATE,rateHealTacticsBoard,'
+    + 'regenDownedTacticsBoard,TACTICS_DOWNED_REGEN_RATE,rateHealTacticsBoard,splitTacticsHitAmounts,'
     + 'tacticsJoinWaveRate,addTacticsJoinCatchUp,applyTacticsJoinCatchUp};', sandbox);
 const api = sandbox.api;
 // ★合計へみゅあ補正を掛ける式は本体から切り出して動かす(検査へ書き写さない)。
@@ -423,15 +423,21 @@ check('ガッツの回復は1か所(gainGuts)へまとめる',
   has('const gainGuts = (amount) => {')
     && (source.match(/gainGuts(At|ByRate)?\(/g) || []).length >= 11,
   `gainGuts / gainGutsAt / gainGutsByRate を呼ぶ場所 ${(source.match(/gainGuts(At|ByRate)?\(/g) || []).length}か所`);
-// カードで増えるガッツは「使った子」へ入る(段階7)。
-// ★2026-09-20: 量も「その子の上限 × 率」にしたので、率で入れるものは gainGutsByRate を通る
-// ★率で入れる5か所のうち4つが札(会心・ガッツ回復・絆・スエゾー)、1つが氷海の支配者。
-//   氷海も「持っている子だけ」へ入れるので同じ入口を通る(仕様 4.9)
-check('ガッツを増やすものは、増える子を名指しで渡す', has('const gainGutsAt = (slotIdx, amount) => {')
+// カードで増えるガッツの行き先(段階7 → 2026-09-21に整理し直した)。
+// ★量はどちらも「その子の上限 × 率」。違うのは**誰に入るか**。
+// ★**回復カード(助手の教え)は全体へ**。使う子を選ぶのはガッツを払うためだけで、
+//   効くのは盤面ぜんぶ(2026-09-19 ユーザーの整理)。ライフはそうなっていたのに
+//   ガッツだけ「使った子」へ入れていた
+//   (2026-09-21 ユーザー指摘「みゅあの回復は全体なのに1体にしかきいてなかった」)。
+// ★「その子だけ」へ入るのは2つ。固有技(スエゾー＝そのモンスターの技)と、
+//   氷海の支配者(持っている子だけ・仕様 4.9)
+check('ガッツを増やすものは、行き先を名指しで渡す', has('const gainGutsAt = (slotIdx, amount) => {')
   && has('const gainGutsByRate = (slotIdx, rate) => {')
-  && (source.match(/gainGutsByRate\(slotIdx,/g) || []).length === 5
+  && has('const gainGutsByRateAll = (rate) => {')
+  && (source.match(/gainGutsByRate\(slotIdx,/g) || []).length === 2
+  && (source.match(/gainGutsByRateAll\(/g) || []).length === 3
   && (source.match(/gainGutsAt\(slotIdx,/g) || []).length === 2,
-  `率 ${(source.match(/gainGutsByRate\(slotIdx,/g) || []).length}か所 / 固定量 ${(source.match(/gainGutsAt\(slotIdx,/g) || []).length}か所`);
+  `その子だけ ${(source.match(/gainGutsByRate\(slotIdx,/g) || []).length}か所 / 全体 ${(source.match(/gainGutsByRateAll\(/g) || []).length}か所 / 固定量 ${(source.match(/gainGutsAt\(slotIdx,/g) || []).length}か所`);
 // 氷海ぶんは全員へ配る率に混ぜず、持っている子へだけ足す(混ぜると誰か1人の特性で全員が得をする)
 check('氷海ぶんは持っている子へだけ足す',
   has('const extra=iceExtraRateAt(slotIdx);')
@@ -764,14 +770,48 @@ check('ガッツ回復は新モードだと合計を足さずに配る',
   const inScreen = (needle) => battleScreen.includes(needle);
   check('枠ごとに何が起きたかを出す',
     inScreen('data-tactics-slot-fx={i}') && inScreen('tacticsSlotFx&&tacticsSlotFx[i]'));
+  // ★連撃のときは1ヒットずつ並べるので、まとめた数字は連撃でないときだけ出る
   check('減った・受け止めた・戻ったを出し分ける',
-    inScreen('{f.dmg>0&&') && inScreen('{f.guard&&') && inScreen('{f.heal>0&&')
+    inScreen('f.dmg>0&&') && inScreen('{f.guard&&') && inScreen('{f.heal>0&&')
       && inScreen('{f.revive>0&&') && inScreen('f.evade?') && inScreen('f.reflect?'));
-  // ★合計の数字も残す。片方だけでは「全体で何点減ったか」と「誰が減ったか」の
-  //   どちらかが分からなくなる
-  check('合計の数字も今までどおり出す', has("addPopup(`-${dealt}`,'hero'"));
-  // ★すぐ消すと読む前に消える。自分が動くまで枠に残す
-  check('自分が動いたら消す', has('setTacticsSlotFx(null);'));
+  // --- 合計の重ね出しをやめる(2026-09-21 ユーザー指示) ---
+  // 「個別をみんなに出してるならただ見にくいだけだから出さないで
+  //  ただし連撃は最後に合計を出すようにして」
+  // ★枠ごとに出しているものは、まんなかへ同じ数字を重ねない
+  check('減ったぶんの合計をまんなかへ重ねない', !has("addPopup(`-${dealt}`,'hero'"));
+  check('ガードで戻ったぶんの合計も重ねない',
+    !has("addPopup(`💚 ライフ +${saved}`") && !has("addPopup(`⚡ ガッツ +${gutsBack}`"));
+  check('回復カードの合計も重ねない', !has('addPopup(`💚 回復 +${healedAll.hp}`'));
+  // ★既存5モードは今までどおり合計で出す。消すのはタクティクスの枝だけ
+  check('吸収の合計は既存モードだけ',
+    (source.match(/addPopup\(`💚 ライフ \+\$\{hpGain\}`/g) || []).length === 1,
+    `${(source.match(/addPopup\(`💚 ライフ \+\$\{hpGain\}`/g) || []).length}か所`);
+  check('自動再生・緊急回復の合計は既存モードだけ',
+    has('const showRegenTotal=!isTacticsMode(runMode);')
+      && has('if(showRegenTotal) addPopup(`🌿 自動再生 +${autoHealVal}`')
+      && has('if(!isTacticsMode(runMode)){\n      if(recoverHp>0) addPopup('));
+  // ★連撃だけは最後に合計を出す(味方が敵へ連撃したときと同じ見せ方)
+  check('連撃だけは最後に合計を出す',
+    has('if(rushSlot!=null&&dealt>0){') && has('addPopup(`合計 ${dealt}`,\'hero\''));
+  check('味方が敵へ連撃したときも最後に合計を出す(今までどおり)',
+    has('addPopup(`合計 ${totalDmg}`,\'enemy\''));
+  // ★何も起きなかったことは、枠に数字が出ないだけでは分からないので残す
+  check('無傷のときは今までどおり知らせる', has("addPopup('無傷！','hero'"));
+  // ★出した数字は時間で消す(2026-09-21 ユーザー指摘「前ターンのダメージとか
+  //   アイコンみたいのが残ってる」)。もとは「次に自分がカードを切るまで残す」だったが、
+  //   敵が何もしないターン(様子を見ている)を挟むと前のターンの数字が居座っていた
+  check('出した数字は時間で消す',
+    has('const showTacticsSlotFx = (updater) => {')
+      && has('tacticsSlotFxTimerRef.current = setTimeout(() => {')
+      && has('const TACTICS_SLOT_FX_MS = 2600;'));
+  check('自分が動いたら、その場で消す', has('clearTacticsSlotFx();'));
+  // ★出すときは必ず showTacticsSlotFx を通す。直に setTacticsSlotFx を呼ぶと
+  //   時計が張られず、その表示だけ消えずに残る
+  check('出すのは必ず時計つきの入口を通す',
+    has('showTacticsSlotFx(Object.keys(slotFx).length?slotFx:null);')
+      && !has('setTacticsSlotFx(Object.keys(slotFx)'));
+  check('画面を離れるときに時計を片づける',
+    has('useEffect(() => () => { if (tacticsSlotFxTimerRef.current) clearTimeout(tacticsSlotFxTimerRef.current); }, []);'));
   check('倒れた子が戻ったぶんもその枠へ出す', has('slotIdx,{revive:got}'));
   // ★回復カード・緊急回復・メロソ・ポルツはすべて tacticsRateHeal を通る。
   //   ここ1か所で枠へ出せば、足すたびに書き足さなくてよい
@@ -781,10 +821,57 @@ check('ガッツ回復は新モードだと合計を足さずに配る',
   // ★置き換えではなく重ねる。同じターンのガードぶんと回復カードぶんが両方残る
   check('枠ごとの表示は重ねて足す',
     has('next[slotIdx] = { ...(next[slotIdx] || {}), ...value };'));
+  // --- 回復カードのガッツも全体へ(2026-09-21 ユーザー指摘) ---
+  // 「みゅあの回復は全体なのに1体にしかきいてなかった」。ライフは tacticsRateHeal で
+  // 全体へ入っていたのに、**ガッツだけ gainGutsByRate(slotIdx,…) で使った子にしか
+  // 入っていなかった**。回復カードは全体回復で、使う子を選ぶのはガッツを払うためだけ
+  check('回復カードのガッツは全体へ入る入口がある',
+    has('const gainGutsByRateAll = (rate) => {') && has('const result = tacticsRateHeal(0, rate);'));
+  check('みゅあ・メロソ・助手カードのガッツが全体へ入る',
+    has('const gutsVal=gainGutsByRateAll(0.3*effMul);')
+      && has('if(gutsRecRate>0) gainGutsByRateAll(gutsRecRate*effMul);')
+      && has('if(level>=1) gainGutsByRateAll((0.5+level*0.2)*effMul);'));
+  // ★固有技は「そのモンスターの技」なので、使った子だけに入る(スエゾー)。
+  //   ここまで全体にすると、単体へ効く技が1つも無くなる
+  check('固有技のガッツは使った子だけのまま',
+    has("else if(card.monId==='Suezo'){const gRec=gainGutsByRate(slotIdx,0.5*effMul);"));
+  // ★絶氷の楔は立っている子を1体ずつ回すループなので、そのまま
+  check('絶氷の楔は1体ずつ回す形のまま',
+    has('if (extra>0) gutsRegen+=gainGutsByRate(slotIdx,extra);'));
   // ★吸ったのは狙われた子ひとり。誰が吸ったのかを出す
   check('吸収も誰が吸ったかを出す',
     has('if(absorbSlot!=null&&(hpGain>0||gutsGain>0)) mergeTacticsSlotFx({[absorbSlot]:hpGain},{[absorbSlot]:gutsGain});'));
   check('ガッツの増えたぶんも枠へ出す', inScreen('{f.guts>0&&'));
+  // --- 連撃は1ヒットずつ出す(2026-09-21 ユーザー指示) ---
+  // 「連撃の表示が1回だけだった 敵の3連撃なら3回ダメージ表記が出るようにして
+  //  60なら20、20，20みたいな」
+  check('連撃は1ヒットずつ並べて出す',
+    inScreen('Array.isArray(f.hits)&&f.hits.length>1')
+      && inScreen('f.hits.map((value,hitIndex)=>'));
+  check('連撃は1ヒットずつ順に出す(まとめて出さない)',
+    has('for(let shown=1; shown<=allHits.length; shown+=1){')
+      && has('hits:allHits.slice(0,shown)'));
+  check('通ったヒットの数だけ数字を出す(受け止めたぶんは数えない)',
+    has('const stoppedHits=hit.blocked?hit.covered:0;')
+      && has('const throughHits=Math.max(1,rushHits-stoppedHits);')
+      && has('if(rushHits>1) fx.hits=splitTacticsHitAmounts(fd,throughHits);'));
+}
+
+// --- ㉙ 連撃を1ヒットずつに割る(2026-09-21 ユーザー指示) ---
+// 「60なら20、20，20みたいな」。**実際に割って**、足すと元の合計へ戻ることまで見る
+{
+  check('60を3ヒットに割ると 20/20/20',
+    JSON.stringify(api.splitTacticsHitAmounts(60, 3)) === '[20,20,20]',
+    JSON.stringify(api.splitTacticsHitAmounts(60, 3)));
+  // ★端数はいちばん最後のヒットへ寄せる。足して元へ戻らないと、枠の数字と実際の減り方が食い違う
+  check('割り切れないときも足すと元の合計に戻る',
+    [61, 100, 7, 1].every(total => api.splitTacticsHitAmounts(total, 3).reduce((sum, value) => sum + value, 0) === total),
+    JSON.stringify(api.splitTacticsHitAmounts(61, 3)));
+  check('端数は最後のヒットへ寄せる',
+    JSON.stringify(api.splitTacticsHitAmounts(61, 3)) === '[20,20,21]',
+    JSON.stringify(api.splitTacticsHitAmounts(61, 3)));
+  check('1ヒットならそのまま1つ', JSON.stringify(api.splitTacticsHitAmounts(60, 1)) === '[60]');
+  check('0なら何も出さない', JSON.stringify(api.splitTacticsHitAmounts(0, 3)) === '[]');
 }
 
 // --- ㉘ 回復の内訳を枠ごとに返す(2026-09-21 ユーザー指摘) ---
