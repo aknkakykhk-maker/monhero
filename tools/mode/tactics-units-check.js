@@ -58,6 +58,7 @@ vm.runInContext(
     + 'TACTICS_ENEMY_POWER_MAX,applyTacticsTraining,tacticsPartyAtk,'
     + 'tacticsPartyDef,shrinkTacticsScore,TACTICS_SCORE_DIVISOR,'
     + 'splitTacticsGuardedHit,resolveTacticsGuardedHit,tacticsGuardHits,makeCardHalveCounter,'
+    + 'regenDownedTacticsBoard,TACTICS_DOWNED_REGEN_RATE,'
     + 'tacticsJoinWaveRate,addTacticsJoinCatchUp,applyTacticsJoinCatchUp};', sandbox);
 const api = sandbox.api;
 // ★合計へみゅあ補正を掛ける式は本体から切り出して動かす(検査へ書き写さない)。
@@ -395,9 +396,20 @@ check('割り当てられる子は「その子が払えるか」で決まる',
 // ★回復カードも「全体回復」なので、倒れた子へ向ける必要はない。
 //   どのカードも「立っていて、その子が払えるか」だけで決まる
 check('払い主に特別扱いは無い', !has('tacticsPayerSlot') && !has('tacticsReviveHelper'));
-// ★守り・回復まで「1体1枚」に数えると、供モンが居ないWAVE1で1ターン1枚しか使えなくなる
-check('枚数制限に数えるのは攻撃カードだけ',
-  has('if(isAttackCard(card)&&(attacks[slotIdx]||0)>=slotMaxUses(mon,slotIdx)) return;'));
+// ★「1体につき何枚まで」(slotMaxUses)は**アシストカード以外のすべて**に効く
+//   (2026-09-21 ユーザー指摘「パンドラに2枚カード使えるのはおかしい」)。
+//   攻撃カードだけ数えていたころは、守り・回復を何枚でも同じ子へ置けてしまい、
+//   👑(ハム・剣士モッチー)を持たない子にも2枚目が乗っていた。
+// ★全体の枚数(baseCardLimit)は「立っている人数＋👑」で決まるので、1体1枚に絞っても
+//   配り切れる。WAVE1で使える枚数も減らない(盤面1体なら全体も1枚)
+check('枚数制限はアシスト以外のすべてに効く',
+  has('if(!isAssistCard(card)&&(used[slotIdx]||0)>=slotMaxUses(mon,slotIdx)) return;')
+    && has('if(!isAssistCard(assigned)) used[slotIdx]=(used[slotIdx]||0)+1;'));
+// ★攻撃だけ数える書き方が戻っていないか。戻ると、守りと回復がまた数え落ちる
+check('攻撃カードだけ数える書き方が残っていない', !has('attacks[slotIdx]'));
+// ★「なぜ使えないか」を出すほうも同じ数え方にする。ずれると、置けないのに理由が出ない
+check('使えない理由も同じ数え方で出す',
+  (s => (s.match(/if\(!isAssistCard\(assigned\)\) used\[slotIdx\]=\(used\[slotIdx\]\|\|0\)\+1;/g) || []).length >= 2)(source));
 check('使える子が1体だけなら選ぶ手間を省く',
   has('if(tacticsMode&&usable.length===1){ setCardAssignments(p=>({...p,[i]:usable[0]})); }'));
 check('ドラッグでの割り当ても同じ判定を通す',
@@ -550,13 +562,27 @@ check('置けるかの判定も画面へ渡す', has('tacticsCanAssign={tacticsC
       && has("<div className=\"text-[8px] font-black text-emerald-400\">丈夫さ</div>"));
   // ★null のときだけ今までどおりの判定を使う。ここを間違えると既存モードの置き方が変わる
   // ★予告と実行で数え方がずれると「ガードしたのに予定より減った」になる
-  check('予告の予定ダメージも同じ関数を通る',
-    hasScreen("const previewGuard=enemyIntent.variant==='pierce'?0:guardValueOf(previewGuardFlat,previewGuardMult);")
-      && hasScreen('applyTurnDamageReduction(resolveTacticsGuardedHit(rawDmg,previewHits,previewGuard,tacticsGuardHits(previewGuardWeight)).taken)'));
-  // ★予告もガードの**枚数**を数える。厚さだけ数えていたころへ戻ると、2枚構えても予定が減らない
-  check('予告もガードの枚数を数える',
-    hasScreen('let previewGuardFlat=0, previewGuardMult=0, previewGuardWeight=0;')
-      && hasScreen('previewGuardWeight+=weight;'));
+  // ★数え方は1か所(plannedDamageFor)にまとめる。吹き出しと枠で別々に書くと、
+  //   ガードの数え方を直したときに片方だけ古くなる
+  check('予定ダメージの数え方は1か所にまとまっている',
+    hasScreen('const plannedDamageFor = (slotIdx) => {')
+      && hasScreen('const plannedDmg=plannedDamageFor(aimedSlot);')
+      && hasScreen('const slotPlanned=plannedDamageFor(i);'));
+  check('予定ダメージは本番と同じ受け方を通る',
+    hasScreen('return applyTurnDamageReduction(resolveTacticsGuardedHit(raw, hits, guard, tacticsGuardHits(weight)).taken);'));
+  // ★ガードの枚数を数えないと、2枚構えても予定が減らない
+  check('予定ダメージもガードの枚数を数える', hasScreen('weight += w;'));
+  // ★全体攻撃は立っている全員に当たり、受ける量は**その子の丈夫さ**で1体ずつ変わる。
+  //   ガードも枠ごとなので、その枠へ置いたぶんだけを数える
+  check('枠ごとに、その子へ置いたガードだけを数える',
+    hasScreen('if (!(slotIdx === null || cardAssignments[idx] === slotIdx)) return;'));
+  check('狙われている枠にその子の予定ダメージを出す',
+    hasScreen('data-tactics-aimed-damage={slotPlanned}')
+      && hasScreen('🎯{slotPlanned>0?` -${slotPlanned}`:\'\'}'));
+  // ★1つの数字にまとめると、どの子がどれだけ減るのか分からなくなる
+  check('全体攻撃は吹き出しに1つの数字を出さない',
+    hasScreen('const showPlannedInBubble=!enemyIntent.targetsAll;')
+      && hasScreen('{rawDmg>0&&showPlannedInBubble?` (予定: ${plannedDmg})`:\'\'}'));
   // ★連撃だと予告の時点で分かる(2026-09-21 ユーザー指摘「敵の連撃技が連撃表示になってない」)
   check('予告に何連撃かを出す', hasScreen('{previewHits>1?` ${previewHits}連撃`:\'\'}'));
   check('置けるかの判定は新モードだけ差し替える',
@@ -692,6 +718,61 @@ check('ガッツ回復は新モードだと合計を足さずに配る',
     api.resolveTacticsGuardedHit(100, 1, 150, api.tacticsGuardHits(3)).saved === 50);
   check('ガードが足りなければ足りないぶんだけ通る',
     api.resolveTacticsGuardedHit(100, 1, 40, api.tacticsGuardHits(1)).taken === 60);
+}
+
+// --- ㉖ 倒れた子は毎ターン戻る(2026-09-21 ユーザー指示) ---
+// 「死んだら毎ターン10%は回復する仕様に変更 何もしなくても10ターンで生き返れる」。
+// ★2026-09-20 の「勝手に起きる回復では復活しない」をここで覆した。
+//   何ターンで起きるかは遊びの手ざわりそのものなので、**実際に回して数える**
+{
+  const downedMon = { id: 'Mocchi', name: 'モッチー', baseHp: 600, baseAtk: 120, baseDef: 120, baseGuts: 100 };
+  check('戻る率は本体が持つ', api.TACTICS_DOWNED_REGEN_RATE === 0.1, `${api.TACTICS_DOWNED_REGEN_RATE}`);
+  let units = api.damageTacticsTargets([api.createTacticsUnit(downedMon)], [0], 9999);
+  check('倒れた直後は0から始まる',
+    api.normalizeTacticsUnit(units[0]).hp === 0 && api.normalizeTacticsUnit(units[0]).downed === true);
+  let turns = 0;
+  while (api.normalizeTacticsUnit(units[0]).downed && turns < 30) {
+    units = api.regenDownedTacticsBoard(units).units;
+    turns += 1;
+  }
+  check('何もしなくても10ターンで立ち上がる', turns === 10, `${turns}ターン`);
+  check('立ち上がったときは満タン',
+    api.normalizeTacticsUnit(units[0]).hp === api.normalizeTacticsUnit(units[0]).maxHp);
+  // ★立っている子には入れない(そちらは自動再生がバフの率で別に回す)。
+  //   ここへ入れると、強い編成ほど早く起き上がることになる
+  let alive = api.damageTacticsTargets([api.createTacticsUnit(downedMon)], [0], 300);
+  const aliveBefore = api.normalizeTacticsUnit(alive[0]).hp;
+  alive = api.regenDownedTacticsBoard(alive).units;
+  check('立っている子には入れない', api.normalizeTacticsUnit(alive[0]).hp === aliveBefore,
+    `${aliveBefore} → ${api.normalizeTacticsUnit(alive[0]).hp}`);
+  // ★ガッツは戻さない(倒れている子はカードを使えないので、戻しても行き場がない)
+  let downedGuts = api.damageTacticsTargets([api.createTacticsUnit(downedMon)], [0], 9999);
+  const gutsBefore = api.normalizeTacticsUnit(downedGuts[0]).guts;
+  downedGuts = api.regenDownedTacticsBoard(downedGuts).units;
+  check('倒れている子のガッツは戻さない', api.normalizeTacticsUnit(downedGuts[0]).guts === gutsBefore);
+  // ★戻したぶんは枠ごとに返す(画面がその枠へ出す)
+  let one = api.damageTacticsTargets([api.createTacticsUnit(downedMon)], [0], 9999);
+  const got = api.regenDownedTacticsBoard(one);
+  check('戻したぶんを枠ごとに返す', got.healed && got.healed[0] === 60 && got.hp === 60,
+    JSON.stringify(got.healed || {}));
+}
+
+// --- ㉗ 誰に何が起きたかを枠ごとに出す(2026-09-21 ユーザー指摘) ---
+// 「個別ダメージと全体ダメージで誰に何が起きてるか分かりにくいからそこはちゃんと仕上げて」
+{
+  const battleScreen = fs.readFileSync(path.join(root, 'monster-hero/src/parts/71-screen-battle.jsx'), 'utf8');
+  const inScreen = (needle) => battleScreen.includes(needle);
+  check('枠ごとに何が起きたかを出す',
+    inScreen('data-tactics-slot-fx={i}') && inScreen('tacticsSlotFx&&tacticsSlotFx[i]'));
+  check('減った・受け止めた・戻ったを出し分ける',
+    inScreen('{f.dmg>0&&') && inScreen('{f.guard&&') && inScreen('{f.heal>0&&')
+      && inScreen('{f.revive>0&&') && inScreen('f.evade?') && inScreen('f.reflect?'));
+  // ★合計の数字も残す。片方だけでは「全体で何点減ったか」と「誰が減ったか」の
+  //   どちらかが分からなくなる
+  check('合計の数字も今までどおり出す', has("addPopup(`-${dealt}`,'hero'"));
+  // ★すぐ消すと読む前に消える。自分が動くまで枠に残す
+  check('自分が動いたら消す', has('setTacticsSlotFx(null);'));
+  check('倒れた子が戻ったぶんもその枠へ出す', has('slotIdx,{revive:got}'));
 }
 
 console.log(failed ? `\nNG ${failed}件` : '\nすべてOK');

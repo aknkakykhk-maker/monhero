@@ -5,6 +5,15 @@ const difficultyStyle = (setting, selected) => (selected
 
 // 透明余白を含む画像キャンバスではなく、画面ごとの見た目を基準に調整する。
 // contextを必須にすることで、SCANの調整が全WAVE詳細へ波及しないようにする。
+// ラスボスのムーと、タクティクスの覚醒ムー。どちらも「最後に出てくる特別な敵」なので、
+// 丸枠の外に巨大な立ち絵を置き、浮遊・突進・ためこみ・全画面オーラまで専用の演出を出す。
+// ★id を画面のあちこちへ直に書くと、敵を足したとき片方だけ抜ける。実際、覚醒ムーは
+//   ENEMY_ART_LAYOUT だけムーとそろえてあったのに、演出の分岐(8か所)から漏れていて、
+//   丸枠の中に小さく出るだけだった(2026-09-21 ユーザー指摘「覚醒ムーがしょぼすぎる
+//   クラシックのムーの描写を参照してって言ったじゃん」)
+const MOO_BOSS_IDS = ['Moo', 'AwakenedMoo'];
+const isMooBoss = (id) => MOO_BOSS_IDS.includes(String(id || ''));
+
 const ENEMY_ART_LAYOUT = {
   default: { scanScale:1, waveDetailScale:1, objectPosition:'center' },
   Moo: { scanScale:2.75, waveDetailScale:2, objectPosition:'center 48%' },

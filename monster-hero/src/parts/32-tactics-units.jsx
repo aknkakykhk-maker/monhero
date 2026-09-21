@@ -554,6 +554,36 @@ const makeCardHalveCounter = (groupOf, isExempt) => {
 // ★ガッツはいつも立っている子だけ(倒れた子はカードを使えない)。
 // ★返す hp / guts は「実際に入ったぶん」。上限で頭打ちになったぶんは数えないので、
 //   画面に出す数字と盤面の増え方が食い違わない。
+// 倒れた子が毎ターン戻るぶん(2026-09-21 ユーザー指示「死んだら毎ターン10%は回復する仕様に
+// 変更 何もしなくても10ターンで生き返れる」)。その子の上限の10%なので、何もしなくても
+// 10ターンで満タンに戻り、そこで立ち上がる(復活の決まりは「上限まで届くこと」ひとつだけ)。
+// ★2026-09-20 の「勝手に起きる回復では復活しない」をここで覆した。当時の心配
+//   (何もしなくても毎ターン貯まって、誰も倒れたままにならない)は10ターンという長さで受け止める。
+//   回復カード・緊急回復で早められるのは今までどおり
+const TACTICS_DOWNED_REGEN_RATE = 0.1;
+
+// 倒れている子だけを、その子の上限の率で戻す。
+// ★立っている子には入れない(そちらは rateHealTacticsBoard がバフの率で別に回す)。
+// ★ガッツは戻さない。倒れている子はカードを使えないので、戻しても行き場がない
+const regenDownedTacticsBoard = (units, rate = TACTICS_DOWNED_REGEN_RATE) => {
+  const list = (Array.isArray(units) ? units : []).slice();
+  const pct = Math.max(0, Number(rate) || 0);
+  const healed = {};
+  let hp = 0;
+  if (pct > 0) {
+    tacticsDownedSlots(list).forEach(index => {
+      const before = normalizeTacticsUnit(list[index]);
+      const gain = Math.floor(before.maxHp * pct);
+      if (gain <= 0) return;
+      const next = healTacticsUnit(list[index], gain);
+      const got = normalizeTacticsUnit(next).hp - before.hp;
+      if (got > 0) { healed[index] = got; hp += got; }
+      list[index] = next;
+    });
+  }
+  return { units: list, hp, healed };
+};
+
 const rateHealTacticsBoard = (units, hpRate, gutsRate, includeDowned = false) => {
   const list = (Array.isArray(units) ? units : []).slice();
   const hpPct = Math.max(0, Number(hpRate) || 0);

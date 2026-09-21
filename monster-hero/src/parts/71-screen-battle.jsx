@@ -34,7 +34,7 @@ function BattleScreen({
   setShowDeckInfo, setShowEnemyInfo, setShowHeroInfo, setShowQuitConfirm,
   setShowSoulBattleEffects, setSkillPicker, setSlotSettle, slotMaxUses, slotSettle, slotSkill,
   slotUniqueChoice, slots, soulBattleParty, soulCoordinationCardBonus, suppressCardClickRef,
-  tacticsCanAssign, tacticsCardBlock, tacticsUnits,
+  tacticsCanAssign, tacticsCardBlock, tacticsSlotFx, tacticsUnits,
   teachingFx, totalTurnCount, turnCount, ultimateDistanceBreakLevels, ultraBattleView,
   unifiedSpecialDefense, useEmergency, wave,
 }) {
@@ -52,6 +52,39 @@ function BattleScreen({
   const aimedName = enemyIntent?.targetName
     || (aimedSlots.length ? aimedSlots.map(idx => tacticsTargetName(tacticsUnits, idx)).join('・')
       : (enemyIntent?.variant === 'sweep' ? 'だれもいない' : ''));
+  // 1体ぶんの「このターン減る量」。予告の吹き出しと、枠ごとの表示の両方がここを通る。
+  // ★slotIdx を渡すと**その子の丈夫さ**と**その子へ置いたガード**で数える。
+  //   全体攻撃は立っている全員に当たり、受ける量は丈夫さで1体ずつ変わるのに、
+  //   吹き出しの1つの数字では誰がどれだけ減るのか分からなかった
+  //   (2026-09-21 ユーザー依頼「全体攻撃はモンスターごとにダメージが変わるはずだから
+  //   それを分かるようにして」)。ガードも枠ごとなのに全部まとめて数えていた。
+  // ★slotIdx が null のときは今までどおりパーティの値(既存5モード)
+  // ★予告と実行で数え方がずれると「ガードしたのに予定より減った」になるので、
+  //   受け方は本番と同じ resolveTacticsGuardedHit を通す
+  const plannedDamageFor = (slotIdx) => {
+    if (!enemyIntent) return 0;
+    const raw = getIncomingDamageBeforeTurnReduction(enemyIntent, slotIdx);
+    if (!(raw > 0)) return 0;
+    let flat = 0, mult = 0, weight = 0;
+    // 何枚目かの数え方はアプリ側(makeCardHalveCounter)が持つ。
+    // 枠を絞るのは集計のときだけで、半減の数えは全カードを順に通す
+    const counter = makeCardHalveCounter();
+    selectedCards.forEach(idx => {
+      const card = hand[idx];
+      const halved = counter.take(card, cardAssignments[idx] != null ? cardAssignments[idx] : null);
+      const w = guardCardWeight(card);
+      if (!(w > 0)) return;
+      if (!(slotIdx === null || cardAssignments[idx] === slotIdx)) return;
+      const effect = cardEffectMultiplier(card, halved);
+      flat += GUARD_EVOLUTION[guardLevel].flat * w * effect;
+      mult += GUARD_EVOLUTION[guardLevel].mult * w * effect;
+      weight += w;
+    });
+    // 貫通撃はガードが効かない。連撃はヒットに分かれ、ガード1枚につき1ヒットを受け止める
+    const guard = enemyIntent.variant === 'pierce' ? 0 : guardValueOf(flat, mult);
+    const hits = enemyIntent.variant === 'rush' ? Math.max(1, Math.floor(Number(enemyIntent.hits) || 1)) : 1;
+    return applyTurnDamageReduction(resolveTacticsGuardedHit(raw, hits, guard, tacticsGuardHits(weight)).taken);
+  };
   return (
 
       <div className="flex-1 flex flex-col h-full relative" data-battle-speed={battleSpeed} data-eco-view={ultraBattleView?'ultra':liteBattleView?'lite':'off'}>
@@ -228,13 +261,13 @@ function BattleScreen({
                 </div>
               );
             })()}
-            {enemy?.id==='Moo'&&enemy?.imgUrl&&(
+            {isMooBoss(enemy?.id)&&enemy?.imgUrl&&(
               <div className="fixed left-1/2 pointer-events-none flex items-center justify-center" style={{top:'30%',transform:'translate(-50%,-50%)',zIndex:focusedCard?5:30,width:'min(108vw,560px)',height:'min(108vw,560px)'}}>
-                <img src={enemy.imgUrl} alt="ムー" style={{width:'100%',height:'100%',animation:liteBattleView?undefined:(enemyAttackAnim?(enemyAttackFx?.kind==='move'?'mooMoveSlide 1000ms ease-in-out forwards':enemyAttackFx?.kind==='charge'?'mooChargeGather 1100ms ease-in-out forwards':'mooAttackLunge 900ms ease-in-out forwards'):'mooFloat 3000ms ease-in-out infinite'),imageRendering:'auto',WebkitMaskImage:'radial-gradient(circle at 50% 42%, #000 60%, transparent 92%)',maskImage:'radial-gradient(circle at 50% 42%, #000 60%, transparent 92%)'}} className={`relative z-[1] object-contain drop-shadow-[0_0_55px_rgba(168,85,247,0.95)]${extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?' mh-nightmare-enemy-image':' mh-extreme-enemy-image'):''}`}/>
+                <img src={enemy.imgUrl} alt={enemy?.name||"ムー"} style={{width:'100%',height:'100%',animation:liteBattleView?undefined:(enemyAttackAnim?(enemyAttackFx?.kind==='move'?'mooMoveSlide 1000ms ease-in-out forwards':enemyAttackFx?.kind==='charge'?'mooChargeGather 1100ms ease-in-out forwards':'mooAttackLunge 900ms ease-in-out forwards'):'mooFloat 3000ms ease-in-out infinite'),imageRendering:'auto',WebkitMaskImage:'radial-gradient(circle at 50% 42%, #000 60%, transparent 92%)',maskImage:'radial-gradient(circle at 50% 42%, #000 60%, transparent 92%)'}} className={`relative z-[1] object-contain drop-shadow-[0_0_55px_rgba(168,85,247,0.95)]${extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?' mh-nightmare-enemy-image':' mh-extreme-enemy-image'):''}`}/>
               </div>
             )}
             {/* ムー攻撃時: 全画面の破壊的演出 */}
-            {!ecoBattleView&&enemy?.id==='Moo'&&enemyAttackFx?.kind==='moo'&&(
+            {!ecoBattleView&&isMooBoss(enemy?.id)&&enemyAttackFx?.kind==='moo'&&(
               <div className="fixed inset-0 pointer-events-none flex items-center justify-center overflow-hidden" style={{zIndex:25}}>
                 <div className="absolute inset-0" style={{background:'radial-gradient(circle at 50% 34%, rgba(168,85,247,0.55) 0%, rgba(239,68,68,0.4) 30%, rgba(251,191,36,0.25) 48%, rgba(0,0,0,0) 70%)', animation:'auraPulse 450ms ease-out infinite'}}></div>
                 <div className="absolute inset-0" style={{animation:'specialFlash 400ms ease-out infinite', background:'radial-gradient(circle at 50% 34%, rgba(255,255,255,0.45) 0%, rgba(168,85,247,0.15) 35%, rgba(255,255,255,0) 60%)'}}></div>
@@ -248,10 +281,10 @@ function BattleScreen({
               </div>
             )}
             {/* 行動予測ラベルはmain下部に移動 */}
-            <div className={`rounded-full transition-all duration-500 border-4 relative ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border} ${RANGE_STYLES[enemyDist].shadow} ${RANGE_STYLES[enemyDist].glow} shadow-[0_0_50px]`} style={enemyAttackAnim&&!ecoBattleView?{padding:'clamp(6px,1.5dvh,16px)',animation:(enemyAttackFx?.kind==='move'?(enemy?.id==='Moo'?'enemyMoveSlideMoo 1000ms ease-in-out forwards':'enemyMoveSlide 1000ms ease-in-out forwards'):enemyAttackFx?.kind==='charge'?'enemyChargeShake 1100ms ease-in-out forwards':'enemyAttackFly 450ms ease-in forwards'), ...(enemy?.id==='Moo'&&enemyAttackFx?.kind!=='move'?{transform:'translateY(3dvh)'}:{}),...(enemy?.id!=='Moo'&&enemyAttackFx?.kind!=='move'?{zIndex:9999}:{})}:{padding:'clamp(6px,1.5dvh,16px)',...(enemy?.id==='Moo'?{transform:'translateY(3dvh)'}:{})}}>
-              {enemy?.imgUrl?(enemy?.id==='Moo'?<div style={{width:'clamp(92px,16dvh,142px)',height:'clamp(86px,15dvh,132px)'}}/>:<span className={extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?'mh-nightmare-enemy-aura-shell':'mh-extreme-enemy-aura-shell'):''} style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'clamp(92px,16dvh,142px)',height:'clamp(86px,15dvh,132px)'}}><img src={enemy.imgUrl} alt={enemy?.name} className={`relative z-[1] w-full h-full object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]${extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?' mh-nightmare-enemy-image':' mh-extreme-enemy-image'):''}`}/></span>):(<span className={extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?'mh-nightmare-enemy-aura-shell':'mh-extreme-enemy-aura-shell'):''}><div style={{fontSize:'clamp(58px,10.5dvh,96px)',lineHeight:1}} className={`relative z-[1] drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]${extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?' mh-nightmare-enemy-image':' mh-extreme-enemy-image'):''}`}>{enemy?.emoji}</div></span>)}
+            <div className={`rounded-full transition-all duration-500 border-4 relative ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border} ${RANGE_STYLES[enemyDist].shadow} ${RANGE_STYLES[enemyDist].glow} shadow-[0_0_50px]`} style={enemyAttackAnim&&!ecoBattleView?{padding:'clamp(6px,1.5dvh,16px)',animation:(enemyAttackFx?.kind==='move'?(isMooBoss(enemy?.id)?'enemyMoveSlideMoo 1000ms ease-in-out forwards':'enemyMoveSlide 1000ms ease-in-out forwards'):enemyAttackFx?.kind==='charge'?'enemyChargeShake 1100ms ease-in-out forwards':'enemyAttackFly 450ms ease-in forwards'), ...(isMooBoss(enemy?.id)&&enemyAttackFx?.kind!=='move'?{transform:'translateY(3dvh)'}:{}),...(!isMooBoss(enemy?.id)&&enemyAttackFx?.kind!=='move'?{zIndex:9999}:{})}:{padding:'clamp(6px,1.5dvh,16px)',...(isMooBoss(enemy?.id)?{transform:'translateY(3dvh)'}:{})}}>
+              {enemy?.imgUrl?(isMooBoss(enemy?.id)?<div style={{width:'clamp(92px,16dvh,142px)',height:'clamp(86px,15dvh,132px)'}}/>:<span className={extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?'mh-nightmare-enemy-aura-shell':'mh-extreme-enemy-aura-shell'):''} style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'clamp(92px,16dvh,142px)',height:'clamp(86px,15dvh,132px)'}}><img src={enemy.imgUrl} alt={enemy?.name} className={`relative z-[1] w-full h-full object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]${extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?' mh-nightmare-enemy-image':' mh-extreme-enemy-image'):''}`}/></span>):(<span className={extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?'mh-nightmare-enemy-aura-shell':'mh-extreme-enemy-aura-shell'):''}><div style={{fontSize:'clamp(58px,10.5dvh,96px)',lineHeight:1}} className={`relative z-[1] drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]${extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?' mh-nightmare-enemy-image':' mh-extreme-enemy-image'):''}`}>{enemy?.emoji}</div></span>)}
               {/* ラスボス・ムー: 丸枠内は台座オーラのみ（本体は枠外に巨大表示） */}
-              {!ecoBattleView&&enemy?.id==='Moo'&&(
+              {!ecoBattleView&&isMooBoss(enemy?.id)&&(
                 <div className="absolute inset-0 pointer-events-none flex items-center justify-center overflow-visible" style={{zIndex:1}}>
                   <div className="absolute -inset-8 rounded-full" style={{background:'radial-gradient(circle, rgba(168,85,247,0.45) 0%, rgba(139,0,139,0.32) 45%, rgba(0,0,0,0) 72%)', animation:'auraPulse 1500ms ease-in-out infinite'}}></div>
                   <div className="absolute -inset-3 rounded-full border-2 border-purple-500/60" style={{animation:'idleAuraPulse 1700ms ease-in-out infinite'}}></div>
@@ -304,7 +337,7 @@ function BattleScreen({
                   <div className="absolute inset-0 rounded-full border-4 border-amber-300/80" style={{animation:'auraRing 700ms ease-out infinite'}}></div>
                 </div>
               )}
-              {!ecoBattleView&&enemy&&enemyIntent&&!isBusy&&!enemyAttackFx&&(enemyIntent.type==='SPECIAL'||(enemy?.id==='Moo'&&enemyIntent.type==='ATTACK'))&&(()=>{
+              {!ecoBattleView&&enemy&&enemyIntent&&!isBusy&&!enemyAttackFx&&(enemyIntent.type==='SPECIAL'||(isMooBoss(enemy?.id)&&enemyIntent.type==='ATTACK'))&&(()=>{
                 // ためる(CHARGE)の予告にはこのオーラを出さない。必殺技の予告と同じ見た目になり、
                 // 「準備なのか、いま撃たれるのか」が見分けられなくなるため
                 const isSpecial = enemyIntent.type==='SPECIAL';
@@ -388,23 +421,13 @@ function BattleScreen({
             // ★targetSlot が無いモードでは今までどおりパーティの値で出る
             const aimedSlot=Number.isInteger(enemyIntent.targetSlot)?enemyIntent.targetSlot:null;
             const rawDmg=getIncomingDamageBeforeTurnReduction(enemyIntent,aimedSlot);
-            // ★厚さだけでなく枚数も数える。連撃はガード1枚につき1ヒットを受け止める
-            let previewGuardFlat=0, previewGuardMult=0, previewGuardWeight=0;
-            // 何枚目かの数え方はアプリ側(makeCardHalveCounter)が持つ。
-            // 新モードは「同じ子の2枚目」だけ半減(2026-09-20 ユーザー指示)
-            const previewCounter=makeCardHalveCounter();
-            selectedCards.forEach(idx=>{
-              const card=hand[idx];
-              const halved=previewCounter.take(card,cardAssignments[idx]!=null?cardAssignments[idx]:null);
-              const weight=guardCardWeight(card);
-              const guardsAimed=aimedSlot===null||cardAssignments[idx]===aimedSlot;
-              if(weight>0&&guardsAimed){const effect=cardEffectMultiplier(card,halved); previewGuardFlat+=GUARD_EVOLUTION[guardLevel].flat*weight*effect; previewGuardMult+=GUARD_EVOLUTION[guardLevel].mult*weight*effect; previewGuardWeight+=weight;}
-            });
-            // ★予告も本番と同じ数え方にする。ずれると「ガードしたのに予定より減った」になる。
-            //   貫通撃はガードが効かない。連撃はヒットに分かれ、ガード1枚につき1ヒットを受け止める
-            const previewGuard=enemyIntent.variant==='pierce'?0:guardValueOf(previewGuardFlat,previewGuardMult);
+            // ★数え方は plannedDamageFor に1か所だけ置く(枠ごとの表示と同じ関数を通す)。
+            //   2か所に書くと、ガードの数え方を直したときに片方だけ古くなる
+            const plannedDmg=plannedDamageFor(aimedSlot);
             const previewHits=enemyIntent.variant==='rush'?Math.max(1,Math.floor(Number(enemyIntent.hits)||1)):1;
-            const plannedDmg=applyTurnDamageReduction(resolveTacticsGuardedHit(rawDmg,previewHits,previewGuard,tacticsGuardHits(previewGuardWeight)).taken);
+            // ★全体攻撃は受ける量が1体ずつ違う。1つの数字にまとめると、
+            //   どの子がどれだけ減るのか分からなくなるので、吹き出しには出さず枠ごとに出す
+            const showPlannedInBubble=!enemyIntent.targetsAll;
             const tone=enemyIntent.type==='SPECIAL'?'bg-fuchsia-950 border-fuchsia-500 text-fuchsia-300'
               :enemyIntent.type==='CHARGE'?'bg-amber-950 border-amber-500 text-amber-400'
               :enemyIntent.type==='PIERCE_CHARGE'?'bg-rose-950 border-rose-500 text-rose-300'
@@ -415,7 +438,7 @@ function BattleScreen({
             // 余りの高さは、この下のバフ帯の mt-auto がまとめて吸う。
             // data-enemy-intent は検査の手がかり。どの行動が予告されているかは抽選なので、
             // 画面の文字から探すと「今回はためるだった」で落ちる
-            return <div data-enemy-intent className={`mt-1 mb-1 mx-auto w-fit max-w-full border p-1 px-4 rounded-full flex items-center gap-1.5 animate-pulse z-[45] shadow-lg shrink-0${battleTutorialSpotClass('enemyIntent')} ${focusedCard?'invisible':'visible'} ${tone}`}><Target size={12}/><div className="text-[10px] font-black uppercase tracking-tight">{enemyIntent.label}{previewHits>1?` ${previewHits}連撃`:''}{aimedName?` 🎯${aimedName}`:''}{rawDmg>0?` (予定: ${plannedDmg})`:''}</div></div>;
+            return <div data-enemy-intent className={`mt-1 mb-1 mx-auto w-fit max-w-full border p-1 px-4 rounded-full flex items-center gap-1.5 animate-pulse z-[45] shadow-lg shrink-0${battleTutorialSpotClass('enemyIntent')} ${focusedCard?'invisible':'visible'} ${tone}`}><Target size={12}/><div className="text-[10px] font-black uppercase tracking-tight">{enemyIntent.label}{previewHits>1?` ${previewHits}連撃`:''}{aimedName?` 🎯${aimedName}`:''}{rawDmg>0&&showPlannedInBubble?` (予定: ${plannedDmg})`:''}</div></div>;
           })()}
         {/* 強化の札(2026-09-19・ユーザー指摘「バフデバフ欄が見にくくなってる」)。
             もとは敵のいる main の中に置いていたが、main は overflow-y-auto なので、
@@ -751,10 +774,32 @@ function BattleScreen({
               }} disabled={isBusy||autoBattle} className={`relative rounded-xl border-2 flex flex-col items-stretch overflow-visible transition-all ${RANGE_STYLES[i].bg} ${distanceBroken?'border-red-400':' '+RANGE_STYLES[i].border} ${(canAssign||(dragState?.active&&dragOverSlot===i))?'ring-2 ring-yellow-400 scale-105 z-10 shadow-lg animate-pulse':'opacity-100'} ${assignedCount>0?'ring-2 ring-indigo-500':''} ${dragState?.active&&dragOverSlot===i?'ring-4 ring-green-400 scale-110':''} ${slotSettle===i?'ring-4 ring-white':''}`} style={isAnimating?{zIndex:9999, animation:attackMotionAnimation(attackAnim)}:(distanceBroken?{backgroundColor:distanceBreakLevel>=2?'rgb(12,2,5)':'rgb(24,5,25)',boxShadow:`inset 0 0 0 ${Math.min(4,distanceBreakLevel+1)}px rgba(248,113,113,.95), inset 0 0 ${28+distanceBreakLevel*8}px rgba(76,5,25,.98), 0 0 ${9+distanceBreakLevel*4}px rgba(220,38,38,.65)`}:(slotSettle===i?{animation:'slotSettle 400ms ease-out'}:undefined))}>
                 {/* ★狙われている枠。カードを置ける黄色の輪・ドラッグ中の緑の輪と重ならないよう、
                     輪ではなく枠の内側の線で出す(BREAKと同じ出し方)。全体攻撃なら全員に付く */}
-                {slotAimed&&<>
-                  <div data-tactics-aimed-ring className="absolute inset-[2px] rounded-lg border-2 border-red-400/80 pointer-events-none z-[44] animate-pulse" style={{boxShadow:'inset 0 0 10px rgba(239,68,68,.55)'}}></div>
-                  <div className="absolute -top-1.5 -right-1 z-[66] rounded-full border border-red-300 bg-red-950 px-1 py-0.5 text-[9px] font-black leading-none text-red-100 shadow-[0_0_8px_rgba(239,68,68,.85)] animate-pulse">🎯</div>
-                </>}
+                {/* ★このターン、この子に何が起きたか(2026-09-21 ユーザー指摘
+                    「個別ダメージと全体ダメージで誰に何が起きてるか分かりにくい」)。
+                    合計の数字は画面のまんなかに出したままなので、
+                    「全体で何点減ったか」と「誰が減ったか」の両方が読める */}
+                {tacticsSlotFx&&tacticsSlotFx[i]&&(()=>{
+                  const f=tacticsSlotFx[i];
+                  return (<div data-tactics-slot-fx={i} className="absolute inset-x-0 top-1/2 -translate-y-1/2 z-[70] pointer-events-none flex flex-col items-center gap-0.5">
+                    {f.evade?<span className="text-[11px] font-black text-blue-300 drop-shadow-[0_0_6px_rgba(0,0,0,.9)]">回避！</span>
+                      :f.reflect?<span className="text-[11px] font-black text-purple-300 drop-shadow-[0_0_6px_rgba(0,0,0,.9)]">反射！</span>
+                      :<>
+                        {f.guard&&<span className="text-[11px] font-black text-emerald-300 drop-shadow-[0_0_6px_rgba(0,0,0,.9)]">🛡</span>}
+                        {f.dmg>0&&<span className="text-[17px] font-black text-pink-400 drop-shadow-[0_0_6px_rgba(0,0,0,.95)]">-{f.dmg}</span>}
+                        {f.heal>0&&<span className="text-[11px] font-black text-emerald-300 drop-shadow-[0_0_6px_rgba(0,0,0,.9)]">+{f.heal}</span>}
+                        {f.revive>0&&<span className="text-[12px] font-black text-teal-300 drop-shadow-[0_0_6px_rgba(0,0,0,.9)]">💤 +{f.revive}</span>}
+                      </>}
+                  </div>);
+                })()}
+                {slotAimed&&(()=>{
+                  // ★その子の予定ダメージ。全体攻撃は丈夫さで1体ずつ変わるので、枠ごとに出す
+                  //   (2026-09-21 ユーザー依頼)。ガードを置けばその枠の数字だけが減る
+                  const slotPlanned=plannedDamageFor(i);
+                  return (<>
+                    <div data-tactics-aimed-ring className="absolute inset-[2px] rounded-lg border-2 border-red-400/80 pointer-events-none z-[44] animate-pulse" style={{boxShadow:'inset 0 0 10px rgba(239,68,68,.55)'}}></div>
+                    <div data-tactics-aimed-damage={slotPlanned} className="absolute -top-1.5 -right-1 z-[66] rounded-full border border-red-300 bg-red-950 px-1 py-0.5 text-[9px] font-black leading-none text-red-100 shadow-[0_0_8px_rgba(239,68,68,.85)] animate-pulse">🎯{slotPlanned>0?` -${slotPlanned}`:''}</div>
+                  </>);
+                })()}
                 {distanceBroken&&<>
                   <div className="absolute inset-0 rounded-lg pointer-events-none z-[15]" style={{background:`repeating-linear-gradient(${135+distanceBreakLevel*12}deg,rgba(0,0,0,.12) 0 ${Math.max(3,8-distanceBreakLevel)}px,rgba(127,29,29,${Math.min(.8,.28+distanceBreakLevel*.14)}) ${Math.max(4,9-distanceBreakLevel)}px ${Math.max(5,10-distanceBreakLevel)}px),radial-gradient(circle at 50% 40%,rgba(${distanceBreakLevel>=2?'69,10,10':'88,28,135'},.55),rgba(5,0,2,.9))`}}></div>
                   <div className="absolute inset-[2px] rounded-lg border border-red-300/80 pointer-events-none z-[45]" style={{boxShadow:'inset 0 0 12px rgba(239,68,68,.7)'}}></div>

@@ -267,9 +267,10 @@ check('味方全体の反射は確定バフか既存モードのときだけ',
   has('if (isReflect && (forcedReflect || !isTacticsMode(runMode))) {'));
 check('新モードは回避を「回避！」の枝へ落とさない',
   has('} else if (isEvasion && !isTacticsMode(runMode)) {'));
+// ★避けた子・反射した子は、受ける計算へ進まずそこで抜ける(枠へ出す印だけ控える)
 check('避けた子・反射した子はダメージ処理を飛ばす',
-  has('if(slotIdx===evadedSlot){ evadedName=tacticsTargetName(units,slotIdx); return; }')
-    && has('if(slotIdx===reflectedSlot){'));
+  has('if(slotIdx===evadedSlot){ evadedName=tacticsTargetName(units,slotIdx); slotFx[slotIdx]={evade:true}; return; }')
+    && has('if(slotIdx===reflectedSlot){') && has('slotFx[slotIdx]={reflect:true};'));
 check('確率で出た反射は、その子が受けるはずだった量を返す',
   has('reflectBack+=applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(intent,slotIdx));'));
 check('返すのは味方の増減を確定させてから',
