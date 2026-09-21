@@ -135,11 +135,34 @@ check('BGMアレンジの設定欄には、まだ出していない',
   !eventTabItems.includes(EVENT_BGM_SLOT),
   eventTabItems.includes(EVENT_BGM_SLOT) ? '出ています' : '');
 
-// --- ④ いまは公開していない ---
+// --- ④ 公開の状態で、見るものが変わる ---
 const released = /const TACTICS_MODE_PUBLIC_RELEASE = true/.test(source)
   || /const TACTICS_BETA_PRO_RELEASE = true/.test(source);
-check('公開フラグが立つまで、この会話は一覧に出ない（いまの状態）', !released,
-  released ? '公開済み。回想に出ます' : '未公開');
+console.log(`（いまの公開状態: ${released ? '公開中' : '未公開'}）`);
+if (!released) {
+  // 公開前は、回想の一覧にも出さない。releaseFlag の結線は③で見ているので、ここでは念のため
+  check('公開前なので、この会話はどこにも出ない', !released);
+} else {
+  // ★公開したら、本編で1度だけ流す導線がそろっていること。
+  //   どれか欠けると「公開したのに誰も会話を見ないまま」か「起動のたびに何度も出る」になる
+  check('HOMEで1度だけ流す導線がある',
+    compact.includes("setEventReplay({id:'tactics_intro',step:0,live:true})"));
+  check('公開しているあいだだけ「見たか」を読みに行く',
+    compact.includes('EVENT_REPLAY_RELEASE_FLAGS.tacticsBattle){'));
+  check('最後まで見たら「見た」にする',
+    compact.includes("if(event&&event.id==='tactics_intro')markTacticsIntroSeen();"));
+  // ★飛ばしたときも記録しないと、起動のたびに同じ会話が出る
+  check('飛ばしても「見た」にする',
+    compact.includes("event.id==='tactics_intro')markTacticsIntroSeen();setEventReplay(null)"));
+  // ★保存キーは新しく足す。既存の mh_*_intro_seen_v1 は触らない(CLAUDE.md ⑦)
+  check('「見た」を覚える保存キーを新しく足している',
+    source.includes("TACTICS_INTRO_SEEN_KEY = 'mh_tactics_intro_seen_v1'"));
+  check('回想の解放判定にもつながっている',
+    compact.includes('tacticsIntroSeen:tacticsIntroSeenFlag'));
+  // ★ほかの会話と重ねない。重ねるとどちらも読めない
+  check('ほかの会話が出ているあいだは待つ',
+    compact.includes('&&!rhythmEventStoryPending&&!eventReplay))return;setTacticsIntroPending(false)'));
+}
 
 console.log(failed ? `\nNG ${failed}件` : '\nすべてOK');
 process.exit(failed ? 1 : 0);

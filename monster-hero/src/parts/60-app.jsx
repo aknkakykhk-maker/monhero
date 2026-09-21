@@ -1170,6 +1170,9 @@ function MonsterHeroGame() {
   const [kikiIntroStep, setKikiIntroStep] = useState(null);
   // ももすけ登場の会話。きき加入と同じ形。両方まだの人でも同時には出さない(きき→もも の順)
   const [momosukeIntroStep, setMomosukeIntroStep] = useState(null);
+  // タクティクスバトルの導入会話。公開してから、HOMEで1度だけ流す
+  const [tacticsIntroSeenFlag, setTacticsIntroSeenFlag] = useState(false);
+  const [tacticsIntroPending, setTacticsIntroPending] = useState(false);
   // 助手との仲良し度。遊ぶほど増えて、呼び方と話す内容が変わる。
   // 助手ごとに完全に分けて持つので、切り替えてももう片方の進捗は消えない
   const [assistantBonds, setAssistantBonds] = useState({});
@@ -3552,6 +3555,16 @@ function MonsterHeroGame() {
     }
     setEventReplay({ id: storyId, step: 0, live: true });
   }, [rhythmEventStoryPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay]);
+  // タクティクスバトルの導入も同じ置き方で、HOMEで1度だけ流す。
+  // ★ほかの会話が出ているあいだは待つ(重ねて出すと、どちらも読めない)
+  useEffect(() => {
+    if (!tacticsIntroPending) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME' && onboarded && !onboardingPreview
+      && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null
+      && !rhythmEventStoryPending && !eventReplay)) return;
+    setTacticsIntroPending(false);
+    setEventReplay({ id: 'tactics_intro', step: 0, live: true });
+  }, [tacticsIntroPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, rhythmEventStoryPending, eventReplay]);
   // ★開催の時刻になった瞬間に遊んでいた人にも届ける。
   //   「開催中か」を見ていたのは起動したときの1回だけだったので、15:00より前から
   //   ゲームを開いたままだった人には、会話も助手の告知も出なかった
@@ -4843,6 +4856,13 @@ function MonsterHeroGame() {
       setMomosukeIntroSeenFlag(momosukeIntroSeen === true);
       if (wasOnboarded && momosukeIntroSeen !== true && kikiIntroSeen === true) setMomosukeIntroStep(0);
       else if (!wasOnboarded && momosukeIntroSeen !== true) { try { await storeSet(MOMOSUKE_INTRO_SEEN_KEY, true, false); setMomosukeIntroSeenFlag(true); } catch {} }
+      // タクティクスバトルの導入。**公開しているときだけ**見に行く。
+      // 公開前に読むと、まだ見せていないモードの会話を「未読」として抱えることになる
+      if (EVENT_REPLAY_RELEASE_FLAGS.tacticsBattle) {
+        const tacticsIntroSeen = await storeGet(TACTICS_INTRO_SEEN_KEY, false, false);
+        setTacticsIntroSeenFlag(tacticsIntroSeen === true);
+        if (tacticsIntroSeen !== true) setTacticsIntroPending(true);
+      }
       // モンヒロビートのイベント会話。開催中で、まだ見ていなければHOMEで1度だけ流す。
       // ★ここに置くのは wasOnboarded が決まったあとだから。前に置くと
       //   「Cannot access 'wasOnboarded' before initialization」で画面が真っ白になる
@@ -5849,10 +5869,18 @@ function MonsterHeroGame() {
     setMomosukeIntroSeenFlag(true);
     try { storeSet(MOMOSUKE_INTRO_SEEN_KEY, true, false); } catch {}
   }, []);
+  // タクティクスの導入も同じ。最後まで見ても飛ばしても「見た」にする
+  // (そうしないと起動のたびに同じ会話が出る。飛ばしたぶんは回想からいつでも見られる)
+  const markTacticsIntroSeen = useCallback(() => {
+    setTacticsIntroPending(false);
+    setTacticsIntroSeenFlag(true);
+    try { storeSet(TACTICS_INTRO_SEEN_KEY, true, false); } catch {}
+  }, []);
   // イベント回想の解放判定。EVENT_REPLAYS側はunlockedKeyという「呼び名」しか持たないので、
   // その名前→実際のstateの対応をここで持つ(データファイルはgame-system.jsxの状態を見られないため)。
   // 今後イベントを増やすときは、そのイベントの既読フラグをここへ1行足すだけでよい
   const EVENT_REPLAY_UNLOCK_FLAGS = { kikiIntroSeen: kikiIntroSeenFlag, momosukeIntroSeen: momosukeIntroSeenFlag,
+    tacticsIntroSeen: tacticsIntroSeenFlag,
     monbeatCupEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONBEAT_CUP_STORY_ID),
     monbeatCupThanksSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONBEAT_CUP_THANKS_STORY_ID),
     symphonyThanksSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_THANKS_STORY_ID),
@@ -16093,6 +16121,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const next=()=>{
           if(!last){ setEventReplay(r=>r&&({...r,step:r.step+1})); return; }
           if(event&&event.id==='momosuke_intro') markMomosukeIntroSeen();
+          if(event&&event.id==='tactics_intro') markTacticsIntroSeen();
           // イベントの会話も、最後まで見たら「見た」にする(次の起動で重ねて流さない)
           if(event&&RHYTHM_EVENT_STORY_IDS.includes(event.id)&&!eventReplay.debug) void markRhythmEventStorySeen(event.id);
           setEventReplay(null);
@@ -16105,6 +16134,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
              飛ばしたぶんはプロフィールの「イベント回想」からいつでも見られる */
         const skip=()=>{
           if(eventReplay.live&&!eventReplay.debug&&event&&RHYTHM_EVENT_STORY_IDS.includes(event.id)) void markRhythmEventStorySeen(event.id);
+          if(eventReplay.live&&!eventReplay.debug&&event&&event.id==='tactics_intro') markTacticsIntroSeen();
           setEventReplay(null);
         };
         return(
