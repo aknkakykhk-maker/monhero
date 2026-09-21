@@ -887,6 +887,12 @@ function MonsterHeroGame() {
   const suppressCardClickRef = useRef(0); // pointerup後にブラウザが合成するclickを捕捉して捨てる期限
   const [dragOverSlot, setDragOverSlot] = useState(null); // ドラッグ中にホバーしているスロット
   const [slotSettle, setSlotSettle] = useState(null); // はめ込み成功したスロットindex
+  // ★枠ごとに「このターン何が起きたか」(2026-09-21 ユーザー指摘「個別ダメージと全体ダメージで
+  //   誰に何が起きてるか分かりにくいからそこはちゃんと仕上げて」)。
+  //   合計の数字だけを画面のまんなかへ出していたので、全体攻撃のときに誰がどれだけ減ったのか、
+  //   誰がガードで受け止めたのかが分からなかった。
+  //   形は { [枠]: { dmg, heal, guard, evade, reflect, revive } }
+  const [tacticsSlotFx, setTacticsSlotFx] = useState(null);
   const [enemySkillName, setEnemySkillName] = useState(null); // 敵アクションの技名インライン表示
   const [guardFx, setGuardFx] = useState(false); // ガード成功のキーン演出
   const [teachingFx, setTeachingFx] = useState(null); // {id} ブリーダー教えカード使用時の専用演出
@@ -1025,8 +1031,18 @@ function MonsterHeroGame() {
     const total = commitTacticsUnits(result.units);
     return { hp: result.hp, guts: result.guts, total };
   };
-  // 自動再生。倒れた子には入れない(勝手に復活させない)
-  const tacticsRegen = (hpRate, gutsRate) => tacticsRateHeal(hpRate, gutsRate, false);
+  // 自動再生。立っている子はバフの率で回し、**倒れている子はその子の上限の10%ずつ戻す**
+  // (2026-09-21 ユーザー指示「死んだら毎ターン10%は回復する仕様に変更
+  //  何もしなくても10ターンで生き返れる」)。
+  // ★立っている子の率(autoHpRecovery)とは別に数える。倒れている子は行動していないので、
+  //   バフの乗り方で戻る速さが変わると「強い編成ほど早く起きる」になってしまう
+  const tacticsRegen = (hpRate, gutsRate) => {
+    if (!isTacticsMode(runMode)) return null;
+    const alive = rateHealTacticsBoard(tacticsUnitsRef.current, hpRate, gutsRate, false);
+    const downed = regenDownedTacticsBoard(alive.units);
+    const total = commitTacticsUnits(downed.units);
+    return { hp: alive.hp, guts: alive.guts, downedHp: downed.hp, downedHealed: downed.healed, total };
+  };
   // 固有技・アシストカードの効果が「使った子」へ入るとき。量もその子の上限の率
   const tacticsRateHealAt = (slotIdx, hpRate, gutsRate) => {
     if (!isTacticsMode(runMode)) return null;
@@ -9519,11 +9535,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             const reflectedSlot=isReflect?pickDefenseSlot():null;
             let evadedName='', reflectedName='', reflectBack=0;
             let units=tacticsUnitsRef.current, dealt=0, saved=0, guardedCount=0, gutsBack=0, throughTotal=0;
+            // ★枠ごとに「何が起きたか」を控える。合計の数字だけでは、全体攻撃のときに
+            //   誰がどれだけ減って、誰が受け止めたのかが分からない
+            const slotFx={};
             targets.forEach(slotIdx=>{
-              if(slotIdx===evadedSlot){ evadedName=tacticsTargetName(units,slotIdx); return; }
+              if(slotIdx===evadedSlot){ evadedName=tacticsTargetName(units,slotIdx); slotFx[slotIdx]={evade:true}; return; }
               if(slotIdx===reflectedSlot){
                 reflectedName=tacticsTargetName(units,slotIdx);
                 reflectBack+=applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(intent,slotIdx));
+                slotFx[slotIdx]={reflect:true};
                 return;
               }
               const own=slotGuards[slotIdx]||{flat:0,mult:0,weight:0};
@@ -9540,16 +9560,24 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               throughTotal+=hit.through;
               if(slotGuard>0) coveredHits=Math.max(coveredHits,hit.covered);
               if(hit.blocked||slotGuard>0) guardedCount++;
+              const fx=slotFx[slotIdx]||(slotFx[slotIdx]={});
+              if(slotGuard>0) fx.guard=true;
               if(hit.taken>0){
                 const fd=applyTurnDamageReduction(hit.taken);
                 units=damageTacticsTargets(units,[slotIdx],fd); dealt+=fd;
+                fx.dmg=(fx.dmg||0)+fd;
               }
               if(hit.saved>0){
                 saved+=hit.saved;
                 const gain=Math.floor(hit.saved*0.1); gutsBack+=gain;
                 units=recoverTacticsGutsAt(healTacticsAt(units,slotIdx,hit.saved),slotIdx,gain);
+                fx.heal=(fx.heal||0)+hit.saved; fx.guts=(fx.guts||0)+gain;
               }
             });
+            // ★枠へ出すのは、ライフを確定させる前でよい(見せるだけ)。
+            //   合計の数字(下の addPopup)は今までどおり出す。どちらか片方では、
+            //   「全体で何点減ったか」と「誰が減ったか」のどちらかが分からなくなる
+            setTacticsSlotFx(Object.keys(slotFx).length?slotFx:null);
             if(evadedSlot!=null){
               addPopup(`回避！ ${evadedName}`,'hero','text-blue-400 font-black text-xl drop-shadow-lg');
               await battleWait(600);
@@ -9633,6 +9661,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     let gutsRegen=0, autoHealVal=0;
     if (regen) {
       currentHp=regen.total; autoHealVal=regen.hp; gutsRegen=regen.guts;
+      // ★倒れている子が毎ターン戻るぶんは、その枠へ出す。合計の「自動再生 +◯」に混ぜると、
+      //   立っている子が回復したのか、倒れた子が復活へ近づいたのかが分からない
+      const downedHealed=regen.downedHealed||{};
+      if(Object.keys(downedHealed).length){
+        setTacticsSlotFx(prev=>({...(prev||{}),
+          ...Object.fromEntries(Object.entries(downedHealed).map(([slotIdx,got])=>[slotIdx,{revive:got}]))}));
+      }
       tacticsAliveSlots(tacticsUnitsRef.current).forEach(slotIdx=>{
         const extra=iceExtraRateAt(slotIdx);
         if (extra>0) gutsRegen+=gainGutsByRate(slotIdx,extra);
@@ -9750,6 +9785,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       if(!payable) return;
     }
     setIsBusy(true);
+    // ★前のターンに敵から受けたぶんの表示は、自分が動くまで枠に残しておく
+    //   (すぐ消すと、何が起きたのか読む前に消える)
+    setTacticsSlotFx(null);
     let lastType='none', guardTypeInTurn='none', totalDmg=0, totalHeal=0, totalHealRate=0, localOryoAdd=0, localDmgModAdd=0, localGlobalComboAdd=0, attackCount=0, hasCrit=false, immediateInvincible=false, immediateStun=false, currentTurnGuardFlat=0, currentTurnGuardMult=0;
     // 新モードは「ガードはカードを使った子自身を守る」。誰が構えたかをスロットごとに持つ。
     // 既存モードは今までどおり currentTurnGuardFlat / Mult の合計だけを見る
@@ -15897,7 +15935,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             setShowQuitConfirm={setShowQuitConfirm} setShowSoulBattleEffects={setShowSoulBattleEffects}
             setSkillPicker={setSkillPicker} setSlotSettle={setSlotSettle} slotMaxUses={slotMaxUses}
             slotSettle={slotSettle} slotSkill={slotSkill} slotUniqueChoice={slotUniqueChoice} slots={slots}
-            tacticsUnits={isTacticsMode(runMode)?tacticsUnits:null} tacticsCanAssign={tacticsCanAssign} tacticsCardBlock={tacticsCardBlock}
+            tacticsUnits={isTacticsMode(runMode)?tacticsUnits:null} tacticsCanAssign={tacticsCanAssign} tacticsCardBlock={tacticsCardBlock} tacticsSlotFx={tacticsSlotFx}
             soulBattleParty={soulBattleParty} soulCoordinationCardBonus={soulCoordinationCardBonus}
             suppressCardClickRef={suppressCardClickRef} teachingFx={teachingFx} totalTurnCount={totalTurnCount}
             turnCount={turnCount} ultimateDistanceBreakLevels={ultimateDistanceBreakLevels}

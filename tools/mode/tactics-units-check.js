@@ -58,6 +58,7 @@ vm.runInContext(
     + 'TACTICS_ENEMY_POWER_MAX,applyTacticsTraining,tacticsPartyAtk,'
     + 'tacticsPartyDef,shrinkTacticsScore,TACTICS_SCORE_DIVISOR,'
     + 'splitTacticsGuardedHit,resolveTacticsGuardedHit,tacticsGuardHits,makeCardHalveCounter,'
+    + 'regenDownedTacticsBoard,TACTICS_DOWNED_REGEN_RATE,'
     + 'tacticsJoinWaveRate,addTacticsJoinCatchUp,applyTacticsJoinCatchUp};', sandbox);
 const api = sandbox.api;
 // ★合計へみゅあ補正を掛ける式は本体から切り出して動かす(検査へ書き写さない)。
@@ -717,6 +718,61 @@ check('ガッツ回復は新モードだと合計を足さずに配る',
     api.resolveTacticsGuardedHit(100, 1, 150, api.tacticsGuardHits(3)).saved === 50);
   check('ガードが足りなければ足りないぶんだけ通る',
     api.resolveTacticsGuardedHit(100, 1, 40, api.tacticsGuardHits(1)).taken === 60);
+}
+
+// --- ㉖ 倒れた子は毎ターン戻る(2026-09-21 ユーザー指示) ---
+// 「死んだら毎ターン10%は回復する仕様に変更 何もしなくても10ターンで生き返れる」。
+// ★2026-09-20 の「勝手に起きる回復では復活しない」をここで覆した。
+//   何ターンで起きるかは遊びの手ざわりそのものなので、**実際に回して数える**
+{
+  const downedMon = { id: 'Mocchi', name: 'モッチー', baseHp: 600, baseAtk: 120, baseDef: 120, baseGuts: 100 };
+  check('戻る率は本体が持つ', api.TACTICS_DOWNED_REGEN_RATE === 0.1, `${api.TACTICS_DOWNED_REGEN_RATE}`);
+  let units = api.damageTacticsTargets([api.createTacticsUnit(downedMon)], [0], 9999);
+  check('倒れた直後は0から始まる',
+    api.normalizeTacticsUnit(units[0]).hp === 0 && api.normalizeTacticsUnit(units[0]).downed === true);
+  let turns = 0;
+  while (api.normalizeTacticsUnit(units[0]).downed && turns < 30) {
+    units = api.regenDownedTacticsBoard(units).units;
+    turns += 1;
+  }
+  check('何もしなくても10ターンで立ち上がる', turns === 10, `${turns}ターン`);
+  check('立ち上がったときは満タン',
+    api.normalizeTacticsUnit(units[0]).hp === api.normalizeTacticsUnit(units[0]).maxHp);
+  // ★立っている子には入れない(そちらは自動再生がバフの率で別に回す)。
+  //   ここへ入れると、強い編成ほど早く起き上がることになる
+  let alive = api.damageTacticsTargets([api.createTacticsUnit(downedMon)], [0], 300);
+  const aliveBefore = api.normalizeTacticsUnit(alive[0]).hp;
+  alive = api.regenDownedTacticsBoard(alive).units;
+  check('立っている子には入れない', api.normalizeTacticsUnit(alive[0]).hp === aliveBefore,
+    `${aliveBefore} → ${api.normalizeTacticsUnit(alive[0]).hp}`);
+  // ★ガッツは戻さない(倒れている子はカードを使えないので、戻しても行き場がない)
+  let downedGuts = api.damageTacticsTargets([api.createTacticsUnit(downedMon)], [0], 9999);
+  const gutsBefore = api.normalizeTacticsUnit(downedGuts[0]).guts;
+  downedGuts = api.regenDownedTacticsBoard(downedGuts).units;
+  check('倒れている子のガッツは戻さない', api.normalizeTacticsUnit(downedGuts[0]).guts === gutsBefore);
+  // ★戻したぶんは枠ごとに返す(画面がその枠へ出す)
+  let one = api.damageTacticsTargets([api.createTacticsUnit(downedMon)], [0], 9999);
+  const got = api.regenDownedTacticsBoard(one);
+  check('戻したぶんを枠ごとに返す', got.healed && got.healed[0] === 60 && got.hp === 60,
+    JSON.stringify(got.healed || {}));
+}
+
+// --- ㉗ 誰に何が起きたかを枠ごとに出す(2026-09-21 ユーザー指摘) ---
+// 「個別ダメージと全体ダメージで誰に何が起きてるか分かりにくいからそこはちゃんと仕上げて」
+{
+  const battleScreen = fs.readFileSync(path.join(root, 'monster-hero/src/parts/71-screen-battle.jsx'), 'utf8');
+  const inScreen = (needle) => battleScreen.includes(needle);
+  check('枠ごとに何が起きたかを出す',
+    inScreen('data-tactics-slot-fx={i}') && inScreen('tacticsSlotFx&&tacticsSlotFx[i]'));
+  check('減った・受け止めた・戻ったを出し分ける',
+    inScreen('{f.dmg>0&&') && inScreen('{f.guard&&') && inScreen('{f.heal>0&&')
+      && inScreen('{f.revive>0&&') && inScreen('f.evade?') && inScreen('f.reflect?'));
+  // ★合計の数字も残す。片方だけでは「全体で何点減ったか」と「誰が減ったか」の
+  //   どちらかが分からなくなる
+  check('合計の数字も今までどおり出す', has("addPopup(`-${dealt}`,'hero'"));
+  // ★すぐ消すと読む前に消える。自分が動くまで枠に残す
+  check('自分が動いたら消す', has('setTacticsSlotFx(null);'));
+  check('倒れた子が戻ったぶんもその枠へ出す', has('slotIdx,{revive:got}'));
 }
 
 console.log(failed ? `\nNG ${failed}件` : '\nすべてOK');

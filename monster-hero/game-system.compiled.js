@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b0f6965253e60643
+// source-sha256: 62761abc00a96601
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8837b6ada10a0166
+// generated-sha256: 1dfe03afe1a1c6a4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-21 21:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-21 21:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -27374,6 +27374,42 @@ const makeCardHalveCounter = (groupOf, isExempt) => {
 // ★ガッツはいつも立っている子だけ(倒れた子はカードを使えない)。
 // ★返す hp / guts は「実際に入ったぶん」。上限で頭打ちになったぶんは数えないので、
 //   画面に出す数字と盤面の増え方が食い違わない。
+// 倒れた子が毎ターン戻るぶん(2026-09-21 ユーザー指示「死んだら毎ターン10%は回復する仕様に
+// 変更 何もしなくても10ターンで生き返れる」)。その子の上限の10%なので、何もしなくても
+// 10ターンで満タンに戻り、そこで立ち上がる(復活の決まりは「上限まで届くこと」ひとつだけ)。
+// ★2026-09-20 の「勝手に起きる回復では復活しない」をここで覆した。当時の心配
+//   (何もしなくても毎ターン貯まって、誰も倒れたままにならない)は10ターンという長さで受け止める。
+//   回復カード・緊急回復で早められるのは今までどおり
+const TACTICS_DOWNED_REGEN_RATE = 0.1;
+
+// 倒れている子だけを、その子の上限の率で戻す。
+// ★立っている子には入れない(そちらは rateHealTacticsBoard がバフの率で別に回す)。
+// ★ガッツは戻さない。倒れている子はカードを使えないので、戻しても行き場がない
+const regenDownedTacticsBoard = (units, rate = TACTICS_DOWNED_REGEN_RATE) => {
+  const list = (Array.isArray(units) ? units : []).slice();
+  const pct = Math.max(0, Number(rate) || 0);
+  const healed = {};
+  let hp = 0;
+  if (pct > 0) {
+    tacticsDownedSlots(list).forEach(index => {
+      const before = normalizeTacticsUnit(list[index]);
+      const gain = Math.floor(before.maxHp * pct);
+      if (gain <= 0) return;
+      const next = healTacticsUnit(list[index], gain);
+      const got = normalizeTacticsUnit(next).hp - before.hp;
+      if (got > 0) {
+        healed[index] = got;
+        hp += got;
+      }
+      list[index] = next;
+    });
+  }
+  return {
+    units: list,
+    hp,
+    healed
+  };
+};
 const rateHealTacticsBoard = (units, hpRate, gutsRate, includeDowned = false) => {
   const list = (Array.isArray(units) ? units : []).slice();
   const hpPct = Math.max(0, Number(hpRate) || 0);
@@ -37634,6 +37670,7 @@ function BattleScreen({
   suppressCardClickRef,
   tacticsCanAssign,
   tacticsCardBlock,
+  tacticsSlotFx,
   tacticsUnits,
   teachingFx,
   totalTurnCount,
@@ -39131,7 +39168,25 @@ function BattleScreen({
       } : slotSettle === i ? {
         animation: 'slotSettle 400ms ease-out'
       } : undefined
-    }, slotAimed && (() => {
+    }, tacticsSlotFx && tacticsSlotFx[i] && (() => {
+      const f = tacticsSlotFx[i];
+      return /*#__PURE__*/React.createElement("div", {
+        "data-tactics-slot-fx": i,
+        className: "absolute inset-x-0 top-1/2 -translate-y-1/2 z-[70] pointer-events-none flex flex-col items-center gap-0.5"
+      }, f.evade ? /*#__PURE__*/React.createElement("span", {
+        className: "text-[11px] font-black text-blue-300 drop-shadow-[0_0_6px_rgba(0,0,0,.9)]"
+      }, "\u56DE\u907F\uFF01") : f.reflect ? /*#__PURE__*/React.createElement("span", {
+        className: "text-[11px] font-black text-purple-300 drop-shadow-[0_0_6px_rgba(0,0,0,.9)]"
+      }, "\u53CD\u5C04\uFF01") : /*#__PURE__*/React.createElement(React.Fragment, null, f.guard && /*#__PURE__*/React.createElement("span", {
+        className: "text-[11px] font-black text-emerald-300 drop-shadow-[0_0_6px_rgba(0,0,0,.9)]"
+      }, "\uD83D\uDEE1"), f.dmg > 0 && /*#__PURE__*/React.createElement("span", {
+        className: "text-[17px] font-black text-pink-400 drop-shadow-[0_0_6px_rgba(0,0,0,.95)]"
+      }, "-", f.dmg), f.heal > 0 && /*#__PURE__*/React.createElement("span", {
+        className: "text-[11px] font-black text-emerald-300 drop-shadow-[0_0_6px_rgba(0,0,0,.9)]"
+      }, "+", f.heal), f.revive > 0 && /*#__PURE__*/React.createElement("span", {
+        className: "text-[12px] font-black text-teal-300 drop-shadow-[0_0_6px_rgba(0,0,0,.9)]"
+      }, "\uD83D\uDCA4 +", f.revive)));
+    })(), slotAimed && (() => {
       // ★その子の予定ダメージ。全体攻撃は丈夫さで1体ずつ変わるので、枠ごとに出す
       //   (2026-09-21 ユーザー依頼)。ガードを置けばその枠の数字だけが減る
       const slotPlanned = plannedDamageFor(i);
@@ -42402,6 +42457,12 @@ function MonsterHeroGame() {
   const suppressCardClickRef = useRef(0); // pointerup後にブラウザが合成するclickを捕捉して捨てる期限
   const [dragOverSlot, setDragOverSlot] = useState(null); // ドラッグ中にホバーしているスロット
   const [slotSettle, setSlotSettle] = useState(null); // はめ込み成功したスロットindex
+  // ★枠ごとに「このターン何が起きたか」(2026-09-21 ユーザー指摘「個別ダメージと全体ダメージで
+  //   誰に何が起きてるか分かりにくいからそこはちゃんと仕上げて」)。
+  //   合計の数字だけを画面のまんなかへ出していたので、全体攻撃のときに誰がどれだけ減ったのか、
+  //   誰がガードで受け止めたのかが分からなかった。
+  //   形は { [枠]: { dmg, heal, guard, evade, reflect, revive } }
+  const [tacticsSlotFx, setTacticsSlotFx] = useState(null);
   const [enemySkillName, setEnemySkillName] = useState(null); // 敵アクションの技名インライン表示
   const [guardFx, setGuardFx] = useState(false); // ガード成功のキーン演出
   const [teachingFx, setTeachingFx] = useState(null); // {id} ブリーダー教えカード使用時の専用演出
@@ -42552,8 +42613,24 @@ function MonsterHeroGame() {
       total
     };
   };
-  // 自動再生。倒れた子には入れない(勝手に復活させない)
-  const tacticsRegen = (hpRate, gutsRate) => tacticsRateHeal(hpRate, gutsRate, false);
+  // 自動再生。立っている子はバフの率で回し、**倒れている子はその子の上限の10%ずつ戻す**
+  // (2026-09-21 ユーザー指示「死んだら毎ターン10%は回復する仕様に変更
+  //  何もしなくても10ターンで生き返れる」)。
+  // ★立っている子の率(autoHpRecovery)とは別に数える。倒れている子は行動していないので、
+  //   バフの乗り方で戻る速さが変わると「強い編成ほど早く起きる」になってしまう
+  const tacticsRegen = (hpRate, gutsRate) => {
+    if (!isTacticsMode(runMode)) return null;
+    const alive = rateHealTacticsBoard(tacticsUnitsRef.current, hpRate, gutsRate, false);
+    const downed = regenDownedTacticsBoard(alive.units);
+    const total = commitTacticsUnits(downed.units);
+    return {
+      hp: alive.hp,
+      guts: alive.guts,
+      downedHp: downed.hp,
+      downedHealed: downed.healed,
+      total
+    };
+  };
   // 固有技・アシストカードの効果が「使った子」へ入るとき。量もその子の上限の率
   const tacticsRateHealAt = (slotIdx, hpRate, gutsRate) => {
     if (!isTacticsMode(runMode)) return null;
@@ -54285,14 +54362,23 @@ function MonsterHeroGame() {
               guardedCount = 0,
               gutsBack = 0,
               throughTotal = 0;
+            // ★枠ごとに「何が起きたか」を控える。合計の数字だけでは、全体攻撃のときに
+            //   誰がどれだけ減って、誰が受け止めたのかが分からない
+            const slotFx = {};
             targets.forEach(slotIdx => {
               if (slotIdx === evadedSlot) {
                 evadedName = tacticsTargetName(units, slotIdx);
+                slotFx[slotIdx] = {
+                  evade: true
+                };
                 return;
               }
               if (slotIdx === reflectedSlot) {
                 reflectedName = tacticsTargetName(units, slotIdx);
                 reflectBack += applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(intent, slotIdx));
+                slotFx[slotIdx] = {
+                  reflect: true
+                };
                 return;
               }
               const own = slotGuards[slotIdx] || {
@@ -54312,18 +54398,27 @@ function MonsterHeroGame() {
               throughTotal += hit.through;
               if (slotGuard > 0) coveredHits = Math.max(coveredHits, hit.covered);
               if (hit.blocked || slotGuard > 0) guardedCount++;
+              const fx = slotFx[slotIdx] || (slotFx[slotIdx] = {});
+              if (slotGuard > 0) fx.guard = true;
               if (hit.taken > 0) {
                 const fd = applyTurnDamageReduction(hit.taken);
                 units = damageTacticsTargets(units, [slotIdx], fd);
                 dealt += fd;
+                fx.dmg = (fx.dmg || 0) + fd;
               }
               if (hit.saved > 0) {
                 saved += hit.saved;
                 const gain = Math.floor(hit.saved * 0.1);
                 gutsBack += gain;
                 units = recoverTacticsGutsAt(healTacticsAt(units, slotIdx, hit.saved), slotIdx, gain);
+                fx.heal = (fx.heal || 0) + hit.saved;
+                fx.guts = (fx.guts || 0) + gain;
               }
             });
+            // ★枠へ出すのは、ライフを確定させる前でよい(見せるだけ)。
+            //   合計の数字(下の addPopup)は今までどおり出す。どちらか片方では、
+            //   「全体で何点減ったか」と「誰が減ったか」のどちらかが分からなくなる
+            setTacticsSlotFx(Object.keys(slotFx).length ? slotFx : null);
             if (evadedSlot != null) {
               addPopup(`回避！ ${evadedName}`, 'hero', 'text-blue-400 font-black text-xl drop-shadow-lg');
               await battleWait(600);
@@ -54455,6 +54550,17 @@ function MonsterHeroGame() {
       currentHp = regen.total;
       autoHealVal = regen.hp;
       gutsRegen = regen.guts;
+      // ★倒れている子が毎ターン戻るぶんは、その枠へ出す。合計の「自動再生 +◯」に混ぜると、
+      //   立っている子が回復したのか、倒れた子が復活へ近づいたのかが分からない
+      const downedHealed = regen.downedHealed || {};
+      if (Object.keys(downedHealed).length) {
+        setTacticsSlotFx(prev => ({
+          ...(prev || {}),
+          ...Object.fromEntries(Object.entries(downedHealed).map(([slotIdx, got]) => [slotIdx, {
+            revive: got
+          }]))
+        }));
+      }
       tacticsAliveSlots(tacticsUnitsRef.current).forEach(slotIdx => {
         const extra = iceExtraRateAt(slotIdx);
         if (extra > 0) gutsRegen += gainGutsByRate(slotIdx, extra);
@@ -54602,6 +54708,9 @@ function MonsterHeroGame() {
       if (!payable) return;
     }
     setIsBusy(true);
+    // ★前のターンに敵から受けたぶんの表示は、自分が動くまで枠に残しておく
+    //   (すぐ消すと、何が起きたのか読む前に消える)
+    setTacticsSlotFx(null);
     let lastType = 'none',
       guardTypeInTurn = 'none',
       totalDmg = 0,
@@ -67278,6 +67387,7 @@ function MonsterHeroGame() {
       tacticsUnits: isTacticsMode(runMode) ? tacticsUnits : null,
       tacticsCanAssign: tacticsCanAssign,
       tacticsCardBlock: tacticsCardBlock,
+      tacticsSlotFx: tacticsSlotFx,
       soulBattleParty: soulBattleParty,
       soulCoordinationCardBonus: soulCoordinationCardBonus,
       suppressCardClickRef: suppressCardClickRef,
