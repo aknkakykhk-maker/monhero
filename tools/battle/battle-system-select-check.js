@@ -203,13 +203,16 @@ check('仕組みとモードを同じ入口から引ける',
   has('const battleInfoById = (id) => BATTLE_SYSTEMS.find(s => s.id === id) || battleModeInfo(id);')
     && has('{modeInfoId&&(()=>{const mode=battleInfoById(modeInfoId);return('));
 check('カードから「詳しいルール」を開ける',
-  has('<button data-battle-system-info={sys.id} onClick={()=>setModeInfoId(sys.id)}')
+  has('<button data-battle-system-info={sys.id} disabled={!!battleTutorial} onClick={()=>setModeInfoId(sys.id)}')
     && has('詳しいルール<ChevronRight size={12}'));
-// 準備中でも中身は読めるようにしておく(何が来るのか分かるように)
+// 準備中でも中身は読めるようにしておく(何が来るのか分かるように)。
+// ★止めてよいのはバトルのれんしゅう中だけ(台本から外れないように)。
+//   準備中(soon)やβ版を理由に読めなくしない
 check('準備中の仕組みでも詳しいルールは読める', (() => {
   const info = source.slice(source.indexOf('<button data-battle-system-info={sys.id}'),
     source.indexOf('</button>', source.indexOf('<button data-battle-system-info={sys.id}')));
-  return !info.includes('disabled');
+  return (info.match(/disabled=\{[^}]*\}/g) || []).every(d => d === 'disabled={!!battleTutorial}')
+    && !/soon|beta/.test(info);
 })());
 check('売りの3行を画面へ出している',
   has('{sys.highlights.map(([icon,text])=>(') && has('<li key={text}'));
@@ -261,7 +264,7 @@ check('本公開が立てばβ版の印は消え、3つとも遊べる',
         && afterRelease.battleModeComingSoon(id) === false));
 // 画面側の結線。押せないだけでなく、目印と文言もそろっていること
 check('β版の印を画面へ出している',
-  has('const beta=battleSystemBeta(sys.id,{debugBattle});')
+  has('const beta=battleSystemBeta(sys.id,{debugBattle:systemDebug});')
     && has('<span data-battle-system-beta')
     && has('いまはタクティクスプロだけ遊べます。ほかのモードは準備中です'));
 check('準備中のモードは押せない',
@@ -282,10 +285,16 @@ check('HOMEの入口は仕組みの画面へ入る', has('onOpenBattle={openBatt
 check('HOMEのボタンは正式名称', home.includes('aria-label="モンヒロバトル"') && home.includes('モンヒロバトル</span>'));
 check('カードに検査の手がかりがある', has('data-battle-system={sys.id}') && has('data-battle-systems={systems.length}'));
 check('準備中のカードは押せない',
-  has("const soon=battleSystemComingSoon(sys.id,{debugBattle});")
-    && has('disabled={soon}')
+  has("const soon=battleSystemComingSoon(sys.id,{debugBattle:systemDebug});")
+    && has('disabled={soon||tutorialLocked}')
     && has("data-battle-system-soon={soon?'1':undefined}")
     && has('if (battleSystemComingSoon(system.id, { debugBattle })) return; // 準備中は枠だけ'));
+// ★バトルのれんしゅう中は記録を残さないために debugBattle が立つ。その副作用で
+//   入口の並び(準備中・β版・DEBUGの出し分け)まで変わると、練習で覚えた画面と
+//   ふだんの画面が食い違ってしまう(2026-09-21 ユーザー指摘)
+check('れんしゅう中の入口はふだんと同じ並びで見せる',
+  has('const systemDebug=debugBattle&&!battleTutorial;')
+    && has('visibleBattleSystems({debugBattle:systemDebug})'));
 check('準備中と分かる書き方をしている',
   has('準備中</span>') && has("aria-label={soon?`${sys.label}（準備中）`:sys.label}"));
 check('「そのまま難易度へ」の仕組みは難易度選択へ飛ぶ',
