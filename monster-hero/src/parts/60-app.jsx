@@ -762,6 +762,11 @@ function MonsterHeroGame() {
   //   「速く抜けた分とか言う表示ダサすぎる ターン数でボーナス値決まってるんだからそれで
   //   わかるようにして」)。率は残りターン×1%なので、残りターンを見せれば決まり方が分かる
   const tacticsJoinCatchUpTurnsRef = useRef(0);
+  // ★間合いのボーナス側の追いつき補正(2026-09-21 ユーザー指示)。ステータスと同じく
+  //   WAVEごとに掛け算で積むが、こちらは残りターン10でベース値どおりになり、
+  //   そこより速いか遅いかでベース値より上下する(ボーナスがマイナスになるのではない)。
+  //   ベース値は「これまでの合計ダメージ」なので、掛ける相手はこの倍率だけ
+  const tacticsJoinDistCatchUpRef = useRef(1);
   // ULTIMATEのラン内だけで持つ永久弱体と、次WAVE開始時に一度だけ消費する発動予約。
   const [ultimateDistanceBreakLevels,setUltimateDistanceBreakLevels]=useState([0,0,0,0]);
   const ultimateDistanceBreakLevelsRef=useRef([0,0,0,0]);
@@ -943,6 +948,15 @@ function MonsterHeroGame() {
   };
   const [totalDistDamage, setTotalDistDamage] = useState([0,0,0,0]); // cumulative per-distance damage across all waves
   const [totalAllDamage, setTotalAllDamage] = useState(0); // cumulative damage across all waves
+  // ★合計ダメージは ref にも持つ。あとから入った子の間合いのボーナスを追いつかせる計算で
+  //   使うが、周回の始まりは「0へ戻す」のと「編成を入れる」のが同じ処理の中で続くため、
+  //   state を読むと前の周回の合計が残ってしまう(前周ぶんのボーナスを配ってしまう)
+  const totalAllDamageRef = useRef(0);
+  const writeTotalAllDamage = (value) => {
+    const next = Math.max(0, Number(value) || 0);
+    totalAllDamageRef.current = next;
+    setTotalAllDamage(next);
+  };
   const [totalRecoveryDelta, setTotalRecoveryDelta] = useState(0); // cumulative recovery-rate correction across all waves
   const [waveResult, setWaveResult] = useState(null);
   // 敵撃破に伴うスコア・報酬・画面遷移を、同じWAVEで二重に確定しないための同期ロック。
@@ -999,10 +1013,7 @@ function MonsterHeroGame() {
   const syncTacticsUnits = (nextSlots, mode = runMode) => {
     const before = tacticsUnitsRef.current || [];
     const list = Array.isArray(nextSlots) ? nextSlots : [];
-    const isSame = (mon, index) => {
-      const current = before[index];
-      return !!(current && current.id === (mon.id || null) && current.masuId === (mon.masuId ?? null));
-    };
+    const isSame = (mon, index) => isSameTacticsUnit(before[index], mon);
     // ★あとから入った子は、勇者モンが受けてきたトレーニングのぶんだけ見劣りする
     //   (2026-09-20 ユーザー指示)。クリアしたWAVE1つにつき全ステ+10%を基準に積んで渡す。
     //   実際の率はそのWAVEを何ターンで抜けたかで決まる(速いほど厚い)。
@@ -1016,6 +1027,25 @@ function MonsterHeroGame() {
     // みゅあ補正は合計ではなく1体ずつの上限へ効かせる(合計へ掛けると二重になる)
     return commitTacticsUnits(scaleTacticsUnits(next, getPermaBuff('muaHpPct'), getPermaBuff('muaGutsPct')), mode);
   };
+  // ★あとから入った子の間合いのボーナスを追いつかせる(2026-09-21 ユーザー指示
+  //   「そうしたら追いつき補正で距離ボーナスも乗せないとだね」)。
+  //   間合いのボーナスはその間合いで与えたダメージで伸びるので、あとから埋まった間合いは
+  //   0から始まり、WAVE1から立っている勇者モンの間合いに永久に追いつけない。
+  // ★ベース値は「これまでの合計ダメージ」で見る。そこへ WAVE ごとに積んだ倍率を掛ける。
+  //   難易度の距離強化も既存の子と同じように通す(通さないと追いつきだけが厚くなる)。
+  // ★すでに積み上がっている値は下げない(applyTacticsJoinDistBonus)。
+  // 供モン選択の画面にも同じ値を出すので、計算だけを分けておく(別々に書くと食い違う)
+  const tacticsJoinDistCatchUpBonus = (mode = runMode) => {
+    if (!isTacticsMode(mode)) return 0;
+    const base = tacticsJoinDistBonus(totalAllDamageRef.current, DIST_BONUS_PER_DAMAGE, tacticsJoinDistCatchUpRef.current);
+    const specialRuleDifficulty = specialRuleDifficultyForRun(mode, difficulty, extremeRunRef.current, extremeDifficulty);
+    return Math.max(0, applyDistanceEnhancement(base, specialRuleDifficulty, wave));
+  };
+  const catchUpTacticsDistBonus = (joinedSlots, mode = runMode) => {
+    const bonus = tacticsJoinDistCatchUpBonus(mode);
+    if (!(bonus > 0)) return;
+    setDistDmgBonus(prev => applyTacticsJoinDistBonus(prev, joinedSlots, bonus));
+  };
   // 編成スロットを差し替える唯一の入口。盤面を必ず一緒に動かす。
   // ★画面へ渡すのもこれ(setSlots={applySlots})。直に setSlots を渡すと、
   //   そこだけ盤面(1体ずつのライフ・ガッツ)が古いまま残る。
@@ -1023,7 +1053,11 @@ function MonsterHeroGame() {
   //   runMode(state)がまだ前のモードのままだから(同じ処理の中で setRunMode しても反映されない)
   const applySlots = (nextSlots, mode = runMode) => {
     setSlots(nextSlots);
+    // ★盤面を作り直す前に「今回あたらしく入った枠」を数える。syncTacticsUnits が
+    //   tacticsUnitsRef を上書きしてしまうと、もう前の顔ぶれが分からない
+    const joinedSlots = isTacticsMode(mode) ? tacticsJoinedSlots(tacticsUnitsRef.current, nextSlots) : [];
     syncTacticsUnits(nextSlots, mode);
+    if (joinedSlots.length) catchUpTacticsDistBonus(joinedSlots, mode);
     // 敵強化の基準になる総合力を数え直す。編成が空になったら基準も忘れる(次のランのため)
     const power = (Array.isArray(nextSlots) ? nextSlots : [])
       .filter(Boolean).reduce((sum, mon) => sum + Math.max(0, Number(monsterPowerOf(mon)) || 0), 0);
@@ -2066,7 +2100,7 @@ function MonsterHeroGame() {
     //   画面の数字と実際に入る値が食い違う
     if (isTacticsMode(runMode)) {
       const base = createTacticsUnit(mon);
-      if (!base) return { stats: [], apt: [], changed: false, tactics: true, catchUp: 1 };
+      if (!base) return { stats: [], apt: [], changed: false, tactics: true, catchUp: 1, distCatchUp: 0 };
       const rate = Math.max(1, Number(tacticsJoinCatchUpRef.current) || 1);
       const joined = applyTacticsJoinCatchUp(base, rate);
       const stats = [
@@ -2083,7 +2117,9 @@ function MonsterHeroGame() {
         label, idx, before:0, after:own[idx]||0, diff:own[idx]||0, normalDiff:normalOwn[idx]||0,
       }));
       return { stats, apt, changed: true, tactics: true, catchUp: rate,
-        catchUpTurns: Math.max(0, Number(tacticsJoinCatchUpTurnsRef.current) || 0) };
+        catchUpTurns: Math.max(0, Number(tacticsJoinCatchUpTurnsRef.current) || 0),
+        // 立つ間合いのボーナスを、ここまでで引き上げる(すでにこれより上なら据え置き)
+        distCatchUp: tacticsJoinDistCatchUpBonus() };
     }
     const bonus = (mon && mon.plusStats) || {};
     const rule = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
@@ -7875,6 +7911,10 @@ function MonsterHeroGame() {
   const applyResetAllState = () => {
     // 新しいrunへ前周の絆報酬対象を持ち越さない。
     autoRepeatBondAwardMasuIdsRef.current = [];
+    // あとから入る子の追いつき補正は1周ごとに数え直す(ステータスも間合いのボーナスも)
+    tacticsJoinCatchUpRef.current = 1;
+    tacticsJoinCatchUpTurnsRef.current = 0;
+    tacticsJoinDistCatchUpRef.current = 1;
     const s = resetAllState();
     setScore(s.score); setWave(s.wave); setHp(s.hp); setMaxHp(s.maxHp); setGuts(s.guts); setMaxGuts(s.maxGuts);
     setAtk(s.atk); setDef(s.def); applySlots(s.slots); setMainHero(s.mainHero); setHand(s.hand); setDeck(s.deck);
@@ -7884,7 +7924,7 @@ function MonsterHeroGame() {
     ultimateDistanceBreakLevelsRef.current=s.ultimateDistanceBreakLevels; setUltimateDistanceBreakLevels(s.ultimateDistanceBreakLevels);
     ultimateDistanceBreakPendingRef.current=s.ultimateDistanceBreakPending; setUltimateDistanceBreakPending(s.ultimateDistanceBreakPending); setUltimateDistanceBreakReveal(null);
     writePermaBuffs(s.permaBuffs); setWaveBuffs(s.waveBuffs); setTurnBuffs(s.turnBuffs); writeNextTurnBuffs(s.nextTurnBuffs);
-    setCurrentWaveDamage(s.currentWaveDamage); setWaveDistDamage(s.waveDistDamage); setDistDmgBonus(s.distDmgBonus); setDistAptPct(s.distAptPct); setTotalDistDamage(s.totalDistDamage); setTotalAllDamage(s.totalAllDamage); setTotalRecoveryDelta(s.totalRecoveryDelta);
+    setCurrentWaveDamage(s.currentWaveDamage); setWaveDistDamage(s.waveDistDamage); setDistDmgBonus(s.distDmgBonus); setDistAptPct(s.distAptPct); setTotalDistDamage(s.totalDistDamage); writeTotalAllDamage(s.totalAllDamage); setTotalRecoveryDelta(s.totalRecoveryDelta);
     setWaveResult(s.waveResult); setFocusedCard(s.focusedCard); setSkillPicker(null); setEnemyIntent(s.enemyIntent); setEnemyLastIntent(s.enemyLastIntent); reserveEnemyNextIntent(s.enemyNextIntent); setEffect(s.effect); setTrainingPicks([]); setFinalRewardSummary(s.finalRewardSummary); setWaveHistory(s.waveHistory); setGaveUp(s.gaveUp);
     setMasuRegisteredThisRun(false); setShowMasuRegisterModal(false); setMasuNameInput('');
     setRunHighlights({ newRecord:false, firstClear:false, firstWin:false, firstLose:false, rankingFailed:false });
@@ -8514,7 +8554,7 @@ function MonsterHeroGame() {
     ultimateDistanceBreakLevelsRef.current=s.ultimateDistanceBreakLevels; setUltimateDistanceBreakLevels(s.ultimateDistanceBreakLevels);
     ultimateDistanceBreakPendingRef.current=s.ultimateDistanceBreakPending; setUltimateDistanceBreakPending(s.ultimateDistanceBreakPending); setUltimateDistanceBreakReveal(null);
     writePermaBuffs(s.permaBuffs); setWaveBuffs(s.waveBuffs); setTurnBuffs(s.turnBuffs); writeNextTurnBuffs(s.nextTurnBuffs);
-    setCurrentWaveDamage(s.currentWaveDamage); setWaveDistDamage(s.waveDistDamage||[0,0,0,0]); setDistDmgBonus(s.distDmgBonus||[0,0,0,0]); setDistAptPct(s.distAptPct||[0,0,0,0]); setTotalDistDamage(s.totalDistDamage||[0,0,0,0]); setTotalAllDamage(s.totalAllDamage||0); setTotalRecoveryDelta(s.totalRecoveryDelta||0);
+    setCurrentWaveDamage(s.currentWaveDamage); setWaveDistDamage(s.waveDistDamage||[0,0,0,0]); setDistDmgBonus(s.distDmgBonus||[0,0,0,0]); setDistAptPct(s.distAptPct||[0,0,0,0]); setTotalDistDamage(s.totalDistDamage||[0,0,0,0]); writeTotalAllDamage(s.totalAllDamage||0); setTotalRecoveryDelta(s.totalRecoveryDelta||0);
     setWaveResult(s.waveResult);
     setTrainingPicks([]); setFocusedCard(s.focusedCard); setSkillPicker(null); setShowQuitConfirm(false); setEnemyIntent(s.enemyIntent); setEnemyLastIntent(s.enemyLastIntent||null); reserveEnemyNextIntent(s.enemyNextIntent||null); setEffect(s.effect); setFinalRewardSummary(s.finalRewardSummary); setWaveHistory(s.waveHistory||[]); setGaveUp(s.gaveUp);
     setMasuRegisteredThisRun(false); setShowMasuRegisterModal(false); setMasuNameInput('');
@@ -9296,6 +9336,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     //   率は残りターン×1%。1ターンで抜ければ+20%、11ターン(半分)で+10%、20ターンで+1%
     tacticsJoinCatchUpRef.current=addTacticsJoinCatchUp(tacticsJoinCatchUpRef.current,remainingTurns);
     tacticsJoinCatchUpTurnsRef.current+=Math.max(0,Number(remainingTurns)||0);
+    // ★間合いのボーナス側も同じように積む。こちらは残りターン10でベース値どおりになり、
+    //   速く抜ければベース値より上、手間取ればベース値より下になる(2026-09-21 ユーザー指示)
+    tacticsJoinDistCatchUpRef.current=addTacticsJoinDistCatchUp(tacticsJoinDistCatchUpRef.current,remainingTurns);
     const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
     const distanceBreakThreshold=pendingUltimateDistanceBreak(newTotalTurnCount,ultimateDistanceBreakLevelsRef.current,wave,specialRuleDifficulty);
     if(distanceBreakThreshold){
@@ -9308,13 +9351,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setScore(s=>s+finalRoundScore);
     const finalDistDamage=waveDistDamage.map((value,index)=>(value||0)+(distDamage[index]||0));
     // WAVE後の距離強化はモンスター自身の距離適性とは別枠で、通常の獲得量を出してから半減する。
-    const normalGainedDistBonus=finalDistDamage.map(d=>d*0.001/100);
-    const gainedDistBonus=finalDistDamage.map(d=>applyDistanceEnhancement(d*0.001/100,specialRuleDifficulty,wave));
+    const normalGainedDistBonus=finalDistDamage.map(d=>d*DIST_BONUS_PER_DAMAGE);
+    const gainedDistBonus=finalDistDamage.map(d=>applyDistanceEnhancement(d*DIST_BONUS_PER_DAMAGE,specialRuleDifficulty,wave));
     const newDistBonus=distDmgBonus.map((b,i)=>b+gainedDistBonus[i]);
     setDistDmgBonus(newDistBonus);
     const newTotalDistDamage=totalDistDamage.map((d,i)=>d+finalDistDamage[i]);
     const newTotalAllDamage=totalAllDamage+totalWaveDamage;
-    setTotalDistDamage(newTotalDistDamage); setTotalAllDamage(newTotalAllDamage);
+    setTotalDistDamage(newTotalDistDamage); writeTotalAllDamage(newTotalAllDamage);
     const baseRecoveryDelta=Math.max(-0.05,Math.min(0.05,(remainingTurns-10)*0.005));
     // 既存式と上限・下限を適用した後、符号に応じたNIGHTMARE倍率を掛ける。
     const recoveryDelta=applyNightmareSignedModifier(baseRecoveryDelta,specialRuleDifficulty,wave);
@@ -11083,8 +11126,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setScore(0); setWaveHistory([]); setFinalRewardSummary(null);
     tacticsJoinCatchUpRef.current=1; // あとから入る子の追いつき補正は1周ごとに数え直す
     tacticsJoinCatchUpTurnsRef.current=0;
+    tacticsJoinDistCatchUpRef.current=1;
     writePermaBuffs({autoHpRecovery:0.1}); setWaveBuffs({}); setTurnBuffs({}); writeNextTurnBuffs({});
-    setDistDmgBonus([0,0,0,0]); setTotalDistDamage([0,0,0,0]); setTotalAllDamage(0); setTotalRecoveryDelta(0);
+    setDistDmgBonus([0,0,0,0]); setTotalDistDamage([0,0,0,0]); writeTotalAllDamage(0); setTotalRecoveryDelta(0);
     setUpgradePoints(0); setAtkLevel(0); setGuardLevel(0); setGuardBonusCount(0);
     setMainHero(null); applySlots([null,null,null,null]); setOwnedUniques([]); setOwnedTeachings([]);
     setDistAptPct([0,0,0,0]);
@@ -11277,8 +11321,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     debugResultRef.current = false;
     setDebugBattle(true); setExtremeRun(extreme); setDebugOutcome(null); setGaveUp(false); setScore(0); setWaveHistory([]);
     tacticsJoinCatchUpRef.current=1;
+    tacticsJoinCatchUpTurnsRef.current=0;
+    tacticsJoinDistCatchUpRef.current=1;
     writePermaBuffs({autoHpRecovery:0.1}); setWaveBuffs({}); setTurnBuffs({}); writeNextTurnBuffs({});
-    setDistDmgBonus([0,0,0,0]); setTotalDistDamage([0,0,0,0]); setTotalAllDamage(0); setTotalRecoveryDelta(0);
+    setDistDmgBonus([0,0,0,0]); setTotalDistDamage([0,0,0,0]); writeTotalAllDamage(0); setTotalRecoveryDelta(0);
     setUpgradePoints(0); setAtkLevel(0); setGuardLevel(0); setGuardBonusCount(0); setFinalRewardSummary(null);
     clearSlotUniqueSelection(); // デバッグ戦でも前の周回の一時選択を持ち込まない
     setMainHero(hero); applySlots(debugSlots); setOwnedUniques(uniques); setOwnedTeachings(teachings);

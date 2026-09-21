@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5655aac1886cfa4c
+// generated-sha256: f7e201ef2e4c3dd4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -92,7 +92,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-22 00:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-22 01:05"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8625,6 +8625,10 @@ const applyNightmareWaveEnhancement = (value, specialDifficulty=null) => value *
   ? extremeSpecialRule(specialDifficulty, 'waveEnhancement') : 1);
 const applyNightmareStatGain = (before, normalAfter, specialDifficulty=null) => before
   + Math.floor(applyNightmareWaveEnhancement(normalAfter - before, specialDifficulty));
+// 与えたダメージ1につき伸びる「間合いのボーナス」。
+// WAVE後に距離ごとのダメージへ掛けて距離ボーナスを伸ばすのも、あとから入る子の
+// 追いつき補正でベース値を出すのも、ここを通す(2か所で別々に書くとずれる)。
+const DIST_BONUS_PER_DAMAGE = 0.001 / 100;
 // WAVE後に増える「距離強化」だけへ掛ける倍率。
 // NIGHTMAREは waveEnhancement でWAVE後強化そのものが50%になるのでそれをそのまま使う。
 // INFINITYは距離強化だけを50%にし、通常トレーニングへは重ねないので専用ルールを持つ
@@ -16512,6 +16516,64 @@ const applyTacticsJoinCatchUp = (unit, multiplier) => {
   });
 };
 
+// ===== 追いつき補正・間合いのボーナス側 =====
+// ★間合いのボーナス(distDmgBonus)は「その間合いで与えたダメージ」で伸びるので、
+//   あとから埋まった間合いは0から始まってしまう。勇者モンの間合いにはWAVE1から
+//   積み上がっているため、ステータスをそろえても火力だけが置いていかれる
+//   (2026-09-21 ユーザー指示「追いつき補正で距離ボーナスも乗せないとだね」)。
+// ★考え方はステータス側と同じで、クリアしたWAVEごとに残りターンで倍率を積む。
+//   違うのは2つだけ。
+//     ・ベース値はその子の素の値ではなく「これまでの合計ダメージ」で見る
+//     ・残りターン10がベース値どおりになる基準で、そこより速いか遅いかで上下する
+// ★ここで言う上下は「ベース値より上か下か」であって、**もらえるボーナスが
+//   マイナスになるわけではない**(2026-09-21 ユーザー指摘)。倍率が1を割るだけで、
+//   引き上げる値そのものは必ず0以上。
+//   残り20ターン(1ターンで抜けた)ならベース値の1.1倍、残り10ターンならベース値どおり、
+//   残り0ターン(時間切れ)でもベース値の0.9倍は残る。
+const TACTICS_JOIN_DIST_BASE_TURNS = 10;
+const tacticsJoinDistWaveRate = (remainingTurns) =>
+  (Math.max(0, tacticsSafeInt(remainingTurns, 0)) - TACTICS_JOIN_DIST_BASE_TURNS) * TACTICS_JOIN_RATE_PER_TURN;
+// クリアしたWAVEぶんを積み上げた倍率。合計ダメージから出したベース値へ掛ける
+const addTacticsJoinDistCatchUp = (multiplier, remainingTurns) => {
+  const base = Math.max(0, Number(multiplier) || 0);
+  return Math.max(0, base * (1 + tacticsJoinDistWaveRate(remainingTurns)));
+};
+// 合計ダメージと積み上げた倍率から、加入する子の間合いへ渡すボーナスを出す
+const tacticsJoinDistBonus = (totalDamage, perDamage, multiplier) => {
+  const damage = Math.max(0, Number(totalDamage) || 0);
+  const rate = Math.max(0, Number(perDamage) || 0);
+  const mult = Math.max(0, Number(multiplier) || 0);
+  return damage * rate * mult;
+};
+// 今回あたらしく入った枠だけ、間合いのボーナスを追いつかせる。
+// ★すでに積み上がっている値より低いときは下げない。間合いのボーナスは枠ごとの配列を
+//   パーティで共有しているので、下げるとそこへ立っていた子のぶんまで削れてしまう
+const applyTacticsJoinDistBonus = (bonusList, joinedSlots, bonus) => {
+  const list = Array.isArray(bonusList) ? bonusList : [];
+  const joined = Array.isArray(joinedSlots) ? joinedSlots : [];
+  const gained = Math.max(0, Number(bonus) || 0);
+  if (!joined.length || !(gained > 0)) return list;
+  return list.map((value, index) => {
+    const now = Math.max(0, Number(value) || 0);
+    return joined.includes(index) ? Math.max(now, gained) : now;
+  });
+};
+// 盤面の子と編成の子が同じかどうか。盤面を作り直す側と、加入した枠を数える側で
+// 同じ判定を使う(別々に書くと「入れ替えたのに追いつかない」事故になる)
+const isSameTacticsUnit = (unit, mon) =>
+  !!(unit && mon && unit.id === (mon.id || null) && unit.masuId === (mon.masuId ?? null));
+// 前の盤面と新しい編成を突き合わせて、今回あたらしく入った枠の番号を返す
+const tacticsJoinedSlots = (units, nextSlots) => {
+  const before = Array.isArray(units) ? units : [];
+  const list = Array.isArray(nextSlots) ? nextSlots : [];
+  const joined = [];
+  list.forEach((mon, index) => {
+    if (!mon) return;
+    if (!isSameTacticsUnit(before[index], mon)) joined.push(index);
+  });
+  return joined;
+};
+
 // ---- part: 40-screen-effects.jsx ----
 // ==== 画面ライフサイクル: タイマー・リスナーの登録簿(useScreenEffects) ====
 //
@@ -20655,6 +20717,9 @@ function PickHeroAllyScreen({
                 </div>
                 {/* ★追いつき補正。WAVEを速く抜けるほど厚くなるぶんを、素の値との差として出す */}
                 {preview.tactics&&<div data-tactics-join-catchup={Math.round((preview.catchUp-1)*100)} data-tactics-join-turns={preview.catchUpTurns} className={`w-full text-center leading-none font-black ${preview.catchUp>1?'text-emerald-300':'text-slate-500'}`} style={{fontSize:'8px'}}>{preview.catchUp>1?`追いつき +${Math.round((preview.catchUp-1)*100)}%（${preview.catchUpTurns}ターン残して勝ったぶん）`:'追いつき なし（まだWAVEを抜けていません）'}</div>}
+                {/* ★間合いのボーナスの追いつき。あとから埋まった間合いは0から始まるので、
+                    合計ダメージから出した値まで引き上げる(すでに上ならそのまま) */}
+                {preview.tactics&&<div data-tactics-join-dist-catchup={Math.round((preview.distCatchUp||0)*1000)/10} className={`w-full text-center leading-none font-black ${preview.distCatchUp>0?'text-cyan-300':'text-slate-500'}`} style={{fontSize:'8px'}}>{preview.distCatchUp>0?`立つ間合いのボーナスを +${((preview.distCatchUp||0)*100).toFixed(1)}% まで引き上げ`:'間合いのボーナスの引き上げ なし'}</div>}
                 <div className="w-full rounded-lg bg-black/40 px-1 py-1 grid grid-cols-4 gap-0.5 text-center font-mono" style={{fontSize:'8px'}}>
                   {preview.apt.map(range=>(
                     <span key={range.idx} className="min-w-0 block">
@@ -24359,6 +24424,11 @@ function MonsterHeroGame() {
   //   「速く抜けた分とか言う表示ダサすぎる ターン数でボーナス値決まってるんだからそれで
   //   わかるようにして」)。率は残りターン×1%なので、残りターンを見せれば決まり方が分かる
   const tacticsJoinCatchUpTurnsRef = useRef(0);
+  // ★間合いのボーナス側の追いつき補正(2026-09-21 ユーザー指示)。ステータスと同じく
+  //   WAVEごとに掛け算で積むが、こちらは残りターン10でベース値どおりになり、
+  //   そこより速いか遅いかでベース値より上下する(ボーナスがマイナスになるのではない)。
+  //   ベース値は「これまでの合計ダメージ」なので、掛ける相手はこの倍率だけ
+  const tacticsJoinDistCatchUpRef = useRef(1);
   // ULTIMATEのラン内だけで持つ永久弱体と、次WAVE開始時に一度だけ消費する発動予約。
   const [ultimateDistanceBreakLevels,setUltimateDistanceBreakLevels]=useState([0,0,0,0]);
   const ultimateDistanceBreakLevelsRef=useRef([0,0,0,0]);
@@ -24540,6 +24610,15 @@ function MonsterHeroGame() {
   };
   const [totalDistDamage, setTotalDistDamage] = useState([0,0,0,0]); // cumulative per-distance damage across all waves
   const [totalAllDamage, setTotalAllDamage] = useState(0); // cumulative damage across all waves
+  // ★合計ダメージは ref にも持つ。あとから入った子の間合いのボーナスを追いつかせる計算で
+  //   使うが、周回の始まりは「0へ戻す」のと「編成を入れる」のが同じ処理の中で続くため、
+  //   state を読むと前の周回の合計が残ってしまう(前周ぶんのボーナスを配ってしまう)
+  const totalAllDamageRef = useRef(0);
+  const writeTotalAllDamage = (value) => {
+    const next = Math.max(0, Number(value) || 0);
+    totalAllDamageRef.current = next;
+    setTotalAllDamage(next);
+  };
   const [totalRecoveryDelta, setTotalRecoveryDelta] = useState(0); // cumulative recovery-rate correction across all waves
   const [waveResult, setWaveResult] = useState(null);
   // 敵撃破に伴うスコア・報酬・画面遷移を、同じWAVEで二重に確定しないための同期ロック。
@@ -24596,10 +24675,7 @@ function MonsterHeroGame() {
   const syncTacticsUnits = (nextSlots, mode = runMode) => {
     const before = tacticsUnitsRef.current || [];
     const list = Array.isArray(nextSlots) ? nextSlots : [];
-    const isSame = (mon, index) => {
-      const current = before[index];
-      return !!(current && current.id === (mon.id || null) && current.masuId === (mon.masuId ?? null));
-    };
+    const isSame = (mon, index) => isSameTacticsUnit(before[index], mon);
     // ★あとから入った子は、勇者モンが受けてきたトレーニングのぶんだけ見劣りする
     //   (2026-09-20 ユーザー指示)。クリアしたWAVE1つにつき全ステ+10%を基準に積んで渡す。
     //   実際の率はそのWAVEを何ターンで抜けたかで決まる(速いほど厚い)。
@@ -24613,6 +24689,25 @@ function MonsterHeroGame() {
     // みゅあ補正は合計ではなく1体ずつの上限へ効かせる(合計へ掛けると二重になる)
     return commitTacticsUnits(scaleTacticsUnits(next, getPermaBuff('muaHpPct'), getPermaBuff('muaGutsPct')), mode);
   };
+  // ★あとから入った子の間合いのボーナスを追いつかせる(2026-09-21 ユーザー指示
+  //   「そうしたら追いつき補正で距離ボーナスも乗せないとだね」)。
+  //   間合いのボーナスはその間合いで与えたダメージで伸びるので、あとから埋まった間合いは
+  //   0から始まり、WAVE1から立っている勇者モンの間合いに永久に追いつけない。
+  // ★ベース値は「これまでの合計ダメージ」で見る。そこへ WAVE ごとに積んだ倍率を掛ける。
+  //   難易度の距離強化も既存の子と同じように通す(通さないと追いつきだけが厚くなる)。
+  // ★すでに積み上がっている値は下げない(applyTacticsJoinDistBonus)。
+  // 供モン選択の画面にも同じ値を出すので、計算だけを分けておく(別々に書くと食い違う)
+  const tacticsJoinDistCatchUpBonus = (mode = runMode) => {
+    if (!isTacticsMode(mode)) return 0;
+    const base = tacticsJoinDistBonus(totalAllDamageRef.current, DIST_BONUS_PER_DAMAGE, tacticsJoinDistCatchUpRef.current);
+    const specialRuleDifficulty = specialRuleDifficultyForRun(mode, difficulty, extremeRunRef.current, extremeDifficulty);
+    return Math.max(0, applyDistanceEnhancement(base, specialRuleDifficulty, wave));
+  };
+  const catchUpTacticsDistBonus = (joinedSlots, mode = runMode) => {
+    const bonus = tacticsJoinDistCatchUpBonus(mode);
+    if (!(bonus > 0)) return;
+    setDistDmgBonus(prev => applyTacticsJoinDistBonus(prev, joinedSlots, bonus));
+  };
   // 編成スロットを差し替える唯一の入口。盤面を必ず一緒に動かす。
   // ★画面へ渡すのもこれ(setSlots={applySlots})。直に setSlots を渡すと、
   //   そこだけ盤面(1体ずつのライフ・ガッツ)が古いまま残る。
@@ -24620,7 +24715,11 @@ function MonsterHeroGame() {
   //   runMode(state)がまだ前のモードのままだから(同じ処理の中で setRunMode しても反映されない)
   const applySlots = (nextSlots, mode = runMode) => {
     setSlots(nextSlots);
+    // ★盤面を作り直す前に「今回あたらしく入った枠」を数える。syncTacticsUnits が
+    //   tacticsUnitsRef を上書きしてしまうと、もう前の顔ぶれが分からない
+    const joinedSlots = isTacticsMode(mode) ? tacticsJoinedSlots(tacticsUnitsRef.current, nextSlots) : [];
     syncTacticsUnits(nextSlots, mode);
+    if (joinedSlots.length) catchUpTacticsDistBonus(joinedSlots, mode);
     // 敵強化の基準になる総合力を数え直す。編成が空になったら基準も忘れる(次のランのため)
     const power = (Array.isArray(nextSlots) ? nextSlots : [])
       .filter(Boolean).reduce((sum, mon) => sum + Math.max(0, Number(monsterPowerOf(mon)) || 0), 0);
@@ -25663,7 +25762,7 @@ function MonsterHeroGame() {
     //   画面の数字と実際に入る値が食い違う
     if (isTacticsMode(runMode)) {
       const base = createTacticsUnit(mon);
-      if (!base) return { stats: [], apt: [], changed: false, tactics: true, catchUp: 1 };
+      if (!base) return { stats: [], apt: [], changed: false, tactics: true, catchUp: 1, distCatchUp: 0 };
       const rate = Math.max(1, Number(tacticsJoinCatchUpRef.current) || 1);
       const joined = applyTacticsJoinCatchUp(base, rate);
       const stats = [
@@ -25680,7 +25779,9 @@ function MonsterHeroGame() {
         label, idx, before:0, after:own[idx]||0, diff:own[idx]||0, normalDiff:normalOwn[idx]||0,
       }));
       return { stats, apt, changed: true, tactics: true, catchUp: rate,
-        catchUpTurns: Math.max(0, Number(tacticsJoinCatchUpTurnsRef.current) || 0) };
+        catchUpTurns: Math.max(0, Number(tacticsJoinCatchUpTurnsRef.current) || 0),
+        // 立つ間合いのボーナスを、ここまでで引き上げる(すでにこれより上なら据え置き)
+        distCatchUp: tacticsJoinDistCatchUpBonus() };
     }
     const bonus = (mon && mon.plusStats) || {};
     const rule = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
@@ -31472,6 +31573,10 @@ function MonsterHeroGame() {
   const applyResetAllState = () => {
     // 新しいrunへ前周の絆報酬対象を持ち越さない。
     autoRepeatBondAwardMasuIdsRef.current = [];
+    // あとから入る子の追いつき補正は1周ごとに数え直す(ステータスも間合いのボーナスも)
+    tacticsJoinCatchUpRef.current = 1;
+    tacticsJoinCatchUpTurnsRef.current = 0;
+    tacticsJoinDistCatchUpRef.current = 1;
     const s = resetAllState();
     setScore(s.score); setWave(s.wave); setHp(s.hp); setMaxHp(s.maxHp); setGuts(s.guts); setMaxGuts(s.maxGuts);
     setAtk(s.atk); setDef(s.def); applySlots(s.slots); setMainHero(s.mainHero); setHand(s.hand); setDeck(s.deck);
@@ -31481,7 +31586,7 @@ function MonsterHeroGame() {
     ultimateDistanceBreakLevelsRef.current=s.ultimateDistanceBreakLevels; setUltimateDistanceBreakLevels(s.ultimateDistanceBreakLevels);
     ultimateDistanceBreakPendingRef.current=s.ultimateDistanceBreakPending; setUltimateDistanceBreakPending(s.ultimateDistanceBreakPending); setUltimateDistanceBreakReveal(null);
     writePermaBuffs(s.permaBuffs); setWaveBuffs(s.waveBuffs); setTurnBuffs(s.turnBuffs); writeNextTurnBuffs(s.nextTurnBuffs);
-    setCurrentWaveDamage(s.currentWaveDamage); setWaveDistDamage(s.waveDistDamage); setDistDmgBonus(s.distDmgBonus); setDistAptPct(s.distAptPct); setTotalDistDamage(s.totalDistDamage); setTotalAllDamage(s.totalAllDamage); setTotalRecoveryDelta(s.totalRecoveryDelta);
+    setCurrentWaveDamage(s.currentWaveDamage); setWaveDistDamage(s.waveDistDamage); setDistDmgBonus(s.distDmgBonus); setDistAptPct(s.distAptPct); setTotalDistDamage(s.totalDistDamage); writeTotalAllDamage(s.totalAllDamage); setTotalRecoveryDelta(s.totalRecoveryDelta);
     setWaveResult(s.waveResult); setFocusedCard(s.focusedCard); setSkillPicker(null); setEnemyIntent(s.enemyIntent); setEnemyLastIntent(s.enemyLastIntent); reserveEnemyNextIntent(s.enemyNextIntent); setEffect(s.effect); setTrainingPicks([]); setFinalRewardSummary(s.finalRewardSummary); setWaveHistory(s.waveHistory); setGaveUp(s.gaveUp);
     setMasuRegisteredThisRun(false); setShowMasuRegisterModal(false); setMasuNameInput('');
     setRunHighlights({ newRecord:false, firstClear:false, firstWin:false, firstLose:false, rankingFailed:false });
@@ -32111,7 +32216,7 @@ function MonsterHeroGame() {
     ultimateDistanceBreakLevelsRef.current=s.ultimateDistanceBreakLevels; setUltimateDistanceBreakLevels(s.ultimateDistanceBreakLevels);
     ultimateDistanceBreakPendingRef.current=s.ultimateDistanceBreakPending; setUltimateDistanceBreakPending(s.ultimateDistanceBreakPending); setUltimateDistanceBreakReveal(null);
     writePermaBuffs(s.permaBuffs); setWaveBuffs(s.waveBuffs); setTurnBuffs(s.turnBuffs); writeNextTurnBuffs(s.nextTurnBuffs);
-    setCurrentWaveDamage(s.currentWaveDamage); setWaveDistDamage(s.waveDistDamage||[0,0,0,0]); setDistDmgBonus(s.distDmgBonus||[0,0,0,0]); setDistAptPct(s.distAptPct||[0,0,0,0]); setTotalDistDamage(s.totalDistDamage||[0,0,0,0]); setTotalAllDamage(s.totalAllDamage||0); setTotalRecoveryDelta(s.totalRecoveryDelta||0);
+    setCurrentWaveDamage(s.currentWaveDamage); setWaveDistDamage(s.waveDistDamage||[0,0,0,0]); setDistDmgBonus(s.distDmgBonus||[0,0,0,0]); setDistAptPct(s.distAptPct||[0,0,0,0]); setTotalDistDamage(s.totalDistDamage||[0,0,0,0]); writeTotalAllDamage(s.totalAllDamage||0); setTotalRecoveryDelta(s.totalRecoveryDelta||0);
     setWaveResult(s.waveResult);
     setTrainingPicks([]); setFocusedCard(s.focusedCard); setSkillPicker(null); setShowQuitConfirm(false); setEnemyIntent(s.enemyIntent); setEnemyLastIntent(s.enemyLastIntent||null); reserveEnemyNextIntent(s.enemyNextIntent||null); setEffect(s.effect); setFinalRewardSummary(s.finalRewardSummary); setWaveHistory(s.waveHistory||[]); setGaveUp(s.gaveUp);
     setMasuRegisteredThisRun(false); setShowMasuRegisterModal(false); setMasuNameInput('');
@@ -32893,6 +32998,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     //   率は残りターン×1%。1ターンで抜ければ+20%、11ターン(半分)で+10%、20ターンで+1%
     tacticsJoinCatchUpRef.current=addTacticsJoinCatchUp(tacticsJoinCatchUpRef.current,remainingTurns);
     tacticsJoinCatchUpTurnsRef.current+=Math.max(0,Number(remainingTurns)||0);
+    // ★間合いのボーナス側も同じように積む。こちらは残りターン10でベース値どおりになり、
+    //   速く抜ければベース値より上、手間取ればベース値より下になる(2026-09-21 ユーザー指示)
+    tacticsJoinDistCatchUpRef.current=addTacticsJoinDistCatchUp(tacticsJoinDistCatchUpRef.current,remainingTurns);
     const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
     const distanceBreakThreshold=pendingUltimateDistanceBreak(newTotalTurnCount,ultimateDistanceBreakLevelsRef.current,wave,specialRuleDifficulty);
     if(distanceBreakThreshold){
@@ -32905,13 +33013,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setScore(s=>s+finalRoundScore);
     const finalDistDamage=waveDistDamage.map((value,index)=>(value||0)+(distDamage[index]||0));
     // WAVE後の距離強化はモンスター自身の距離適性とは別枠で、通常の獲得量を出してから半減する。
-    const normalGainedDistBonus=finalDistDamage.map(d=>d*0.001/100);
-    const gainedDistBonus=finalDistDamage.map(d=>applyDistanceEnhancement(d*0.001/100,specialRuleDifficulty,wave));
+    const normalGainedDistBonus=finalDistDamage.map(d=>d*DIST_BONUS_PER_DAMAGE);
+    const gainedDistBonus=finalDistDamage.map(d=>applyDistanceEnhancement(d*DIST_BONUS_PER_DAMAGE,specialRuleDifficulty,wave));
     const newDistBonus=distDmgBonus.map((b,i)=>b+gainedDistBonus[i]);
     setDistDmgBonus(newDistBonus);
     const newTotalDistDamage=totalDistDamage.map((d,i)=>d+finalDistDamage[i]);
     const newTotalAllDamage=totalAllDamage+totalWaveDamage;
-    setTotalDistDamage(newTotalDistDamage); setTotalAllDamage(newTotalAllDamage);
+    setTotalDistDamage(newTotalDistDamage); writeTotalAllDamage(newTotalAllDamage);
     const baseRecoveryDelta=Math.max(-0.05,Math.min(0.05,(remainingTurns-10)*0.005));
     // 既存式と上限・下限を適用した後、符号に応じたNIGHTMARE倍率を掛ける。
     const recoveryDelta=applyNightmareSignedModifier(baseRecoveryDelta,specialRuleDifficulty,wave);
@@ -34680,8 +34788,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setScore(0); setWaveHistory([]); setFinalRewardSummary(null);
     tacticsJoinCatchUpRef.current=1; // あとから入る子の追いつき補正は1周ごとに数え直す
     tacticsJoinCatchUpTurnsRef.current=0;
+    tacticsJoinDistCatchUpRef.current=1;
     writePermaBuffs({autoHpRecovery:0.1}); setWaveBuffs({}); setTurnBuffs({}); writeNextTurnBuffs({});
-    setDistDmgBonus([0,0,0,0]); setTotalDistDamage([0,0,0,0]); setTotalAllDamage(0); setTotalRecoveryDelta(0);
+    setDistDmgBonus([0,0,0,0]); setTotalDistDamage([0,0,0,0]); writeTotalAllDamage(0); setTotalRecoveryDelta(0);
     setUpgradePoints(0); setAtkLevel(0); setGuardLevel(0); setGuardBonusCount(0);
     setMainHero(null); applySlots([null,null,null,null]); setOwnedUniques([]); setOwnedTeachings([]);
     setDistAptPct([0,0,0,0]);
@@ -34874,8 +34983,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     debugResultRef.current = false;
     setDebugBattle(true); setExtremeRun(extreme); setDebugOutcome(null); setGaveUp(false); setScore(0); setWaveHistory([]);
     tacticsJoinCatchUpRef.current=1;
+    tacticsJoinCatchUpTurnsRef.current=0;
+    tacticsJoinDistCatchUpRef.current=1;
     writePermaBuffs({autoHpRecovery:0.1}); setWaveBuffs({}); setTurnBuffs({}); writeNextTurnBuffs({});
-    setDistDmgBonus([0,0,0,0]); setTotalDistDamage([0,0,0,0]); setTotalAllDamage(0); setTotalRecoveryDelta(0);
+    setDistDmgBonus([0,0,0,0]); setTotalDistDamage([0,0,0,0]); writeTotalAllDamage(0); setTotalRecoveryDelta(0);
     setUpgradePoints(0); setAtkLevel(0); setGuardLevel(0); setGuardBonusCount(0); setFinalRewardSummary(null);
     clearSlotUniqueSelection(); // デバッグ戦でも前の周回の一時選択を持ち込まない
     setMainHero(hero); applySlots(debugSlots); setOwnedUniques(uniques); setOwnedTeachings(teachings);

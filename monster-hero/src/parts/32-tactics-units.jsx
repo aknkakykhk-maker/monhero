@@ -682,3 +682,61 @@ const applyTacticsJoinCatchUp = (unit, multiplier) => {
     def: grow(target.def),
   });
 };
+
+// ===== 追いつき補正・間合いのボーナス側 =====
+// ★間合いのボーナス(distDmgBonus)は「その間合いで与えたダメージ」で伸びるので、
+//   あとから埋まった間合いは0から始まってしまう。勇者モンの間合いにはWAVE1から
+//   積み上がっているため、ステータスをそろえても火力だけが置いていかれる
+//   (2026-09-21 ユーザー指示「追いつき補正で距離ボーナスも乗せないとだね」)。
+// ★考え方はステータス側と同じで、クリアしたWAVEごとに残りターンで倍率を積む。
+//   違うのは2つだけ。
+//     ・ベース値はその子の素の値ではなく「これまでの合計ダメージ」で見る
+//     ・残りターン10がベース値どおりになる基準で、そこより速いか遅いかで上下する
+// ★ここで言う上下は「ベース値より上か下か」であって、**もらえるボーナスが
+//   マイナスになるわけではない**(2026-09-21 ユーザー指摘)。倍率が1を割るだけで、
+//   引き上げる値そのものは必ず0以上。
+//   残り20ターン(1ターンで抜けた)ならベース値の1.1倍、残り10ターンならベース値どおり、
+//   残り0ターン(時間切れ)でもベース値の0.9倍は残る。
+const TACTICS_JOIN_DIST_BASE_TURNS = 10;
+const tacticsJoinDistWaveRate = (remainingTurns) =>
+  (Math.max(0, tacticsSafeInt(remainingTurns, 0)) - TACTICS_JOIN_DIST_BASE_TURNS) * TACTICS_JOIN_RATE_PER_TURN;
+// クリアしたWAVEぶんを積み上げた倍率。合計ダメージから出したベース値へ掛ける
+const addTacticsJoinDistCatchUp = (multiplier, remainingTurns) => {
+  const base = Math.max(0, Number(multiplier) || 0);
+  return Math.max(0, base * (1 + tacticsJoinDistWaveRate(remainingTurns)));
+};
+// 合計ダメージと積み上げた倍率から、加入する子の間合いへ渡すボーナスを出す
+const tacticsJoinDistBonus = (totalDamage, perDamage, multiplier) => {
+  const damage = Math.max(0, Number(totalDamage) || 0);
+  const rate = Math.max(0, Number(perDamage) || 0);
+  const mult = Math.max(0, Number(multiplier) || 0);
+  return damage * rate * mult;
+};
+// 今回あたらしく入った枠だけ、間合いのボーナスを追いつかせる。
+// ★すでに積み上がっている値より低いときは下げない。間合いのボーナスは枠ごとの配列を
+//   パーティで共有しているので、下げるとそこへ立っていた子のぶんまで削れてしまう
+const applyTacticsJoinDistBonus = (bonusList, joinedSlots, bonus) => {
+  const list = Array.isArray(bonusList) ? bonusList : [];
+  const joined = Array.isArray(joinedSlots) ? joinedSlots : [];
+  const gained = Math.max(0, Number(bonus) || 0);
+  if (!joined.length || !(gained > 0)) return list;
+  return list.map((value, index) => {
+    const now = Math.max(0, Number(value) || 0);
+    return joined.includes(index) ? Math.max(now, gained) : now;
+  });
+};
+// 盤面の子と編成の子が同じかどうか。盤面を作り直す側と、加入した枠を数える側で
+// 同じ判定を使う(別々に書くと「入れ替えたのに追いつかない」事故になる)
+const isSameTacticsUnit = (unit, mon) =>
+  !!(unit && mon && unit.id === (mon.id || null) && unit.masuId === (mon.masuId ?? null));
+// 前の盤面と新しい編成を突き合わせて、今回あたらしく入った枠の番号を返す
+const tacticsJoinedSlots = (units, nextSlots) => {
+  const before = Array.isArray(units) ? units : [];
+  const list = Array.isArray(nextSlots) ? nextSlots : [];
+  const joined = [];
+  list.forEach((mon, index) => {
+    if (!mon) return;
+    if (!isSameTacticsUnit(before[index], mon)) joined.push(index);
+  });
+  return joined;
+};
