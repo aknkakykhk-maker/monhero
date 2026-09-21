@@ -72,11 +72,20 @@ check('③-1 報酬はAUTO設定のクイック難易度で計算する',
   /rewardMode: BATTLE_MODE_QUICK/.test(body) && /rewardDifficulty: quickDifficulty/.test(body));
 check('③-2 モンビーの進捗の帯には触らない', /countLoopProgress: false/.test(body));
 check('③-3 クイックのクリア記録・ミッション・助手の絆は進めない', /recordQuickClear: false/.test(body));
+// ★絆経験値の行き先は「裏でクイックを回していたときと同じ顔ぶれ」にそろえる
+//   (2026-09-21・ユーザー指示「オート設定のモンスター達と編成に入ってるモンスター。
+//    モンビーと同じ仕様」)。プロで戦った編成ではない
+check('③-4 絆はAUTO設定の勇者モンへ入れる',
+  /bondHeroMasuId: quickHeroMon\?\.masuId/.test(body)
+  && /resolveRosterEntryToMon\(autoSettings\.quickRun\.heroRosterEntry\)/.test(body));
+check('③-5 絆はAUTO設定の供モン①②③へも入れる',
+  /autoSettings\.allies[\s\S]{0,260}?resolveRosterEntryToMon\(ally\?\.rosterEntry\)/.test(body)
+  && /bondParticipantMasuIds: quickAllyMasuIds/.test(body));
 // ★報酬を配り終えてから呼ぶ。先に呼ぶと、プロ本体の報酬が入る前に画面へ出てしまう
-check('③-4 プロ本体の報酬を配り終えてから呼ぶ',
+check('③-6 プロ本体の報酬を配り終えてから呼ぶ',
   /const proQuickAward = await awardProRunQuickLoops\(wavesCleared\);\n\s*setFinalRewardSummary\(/.test(app));
-check('③-5 結果画面へ渡している', /setFinalRewardSummary\(\{[^}]*proQuickAward \}\)/.test(app));
-check('③-6 結果画面に出している',
+check('③-7 結果画面へ渡している', /setFinalRewardSummary\(\{[^}]*proQuickAward \}\)/.test(app));
+check('③-8 結果画面に出している',
   part('27-result-widgets.jsx').includes('data-pro-quick-award')
   && part('27-result-widgets.jsx').includes('summary.proQuickAward.loops'));
 
@@ -88,7 +97,8 @@ const award = (() => {
 })();
 check('④-1 追加した引数は、渡さなければ今までどおり',
   /rewardMode = null, rewardDifficulty = null, rewardPolicy = null,/.test(award)
-  && /countLoopProgress = true, recordQuickClear = true,/.test(award));
+  && /countLoopProgress = true, recordQuickClear = true,/.test(award)
+  && /bondHeroMasuId = null, bondParticipantMasuIds = null,/.test(award));
 check('④-2 既定では、いま走っているランのモードと難易度を見る',
   award.includes('const awardMode = rewardMode || runMode;')
   && award.includes('const awardDifficulty = rewardDifficulty || difficulty;'));
@@ -97,6 +107,9 @@ check('④-3 難易度を渡されたときだけ、クイックの倍率表で�
 check('④-4 演奏からの呼び出しは、引数を足していない(今までどおり全部通る)',
   /await awardRhythmPlayRunLoops\(loops,loopScale,\{cleared,baseLoops\}\)/.test(app.replace(/\s+/g, '')
     .replace('awaitawardRhythmPlayRunLoops(loops,loopScale,{cleared,baseLoops})', 'await awardRhythmPlayRunLoops(loops,loopScale,{cleared,baseLoops})')));
+check('④-5 絆の行き先も、渡さなければ今までどおり戦っている編成',
+  award.includes('bondHeroMasuId !== null ? bondHeroMasuId : mainHero?.masuId')
+  && award.includes('bondParticipantMasuIds !== null ? bondParticipantMasuIds : slots.filter(s => s?.masuId).map(s => s.masuId)'));
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
