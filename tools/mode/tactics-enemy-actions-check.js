@@ -18,12 +18,20 @@ const path = require('path');
 
 const root = path.resolve(TOOLS_DIR, '..');
 const src = fs.readFileSync(path.join(root, 'monster-hero/src/game-system.jsx'), 'utf8');
+// 敵のidと技名は実データから取る。検査へ書き写すと、敵を入れ替えたときに見落とす
+// (2026-09-21、行動表のキーがクラシックの敵idのまま残り、追加6技が丸ごと出ていなかった)
+const enemySrc = fs.readFileSync(path.join(root, 'monster-hero/data/enemy-monsters.js'), 'utf8');
+const imageSrc = fs.readFileSync(path.join(root, 'monster-hero/data/images/images-enemy.js'), 'utf8');
+const dataCtx = {};
+vm.createContext(dataCtx);
+vm.runInContext(`${imageSrc}\n${enemySrc}\nglobalThis.out={TACTICS_ENEMY_DATA,TACTICS_ENEMY_SEQUENCE};`, dataCtx);
+const { TACTICS_ENEMY_DATA, TACTICS_ENEMY_SEQUENCE } = dataCtx.out;
 const chunk = src.slice(src.indexOf('const ENEMY_ACTION_DEFINITIONS'), src.indexOf('// 難易度選択プレビュー'));
 const context = { RANGE_LABELS: ['零', '近', '中', '遠'], Math };
 vm.createContext(context);
 vm.runInContext(`${chunk};globalThis.api={ENEMY_ACTION_DEFINITIONS,TACTICS_ACTION_DEFINITIONS,TACTICS_ENEMY_ACTION_IDS,`
   + `TACTICS_BASE_ACTION_IDS,tacticsActionDefinitions,enemyActionProbabilities,chooseEnemyAction,`
-  + `enemyActionStateFrom,enemyActionLabel,TACTICS_ROAR_MAX_STACKS,TACTICS_SWEEP_MULT,TACTICS_SWEEP_MISS_MULT,`
+  + `enemyActionStateFrom,enemyActionLabel,enemyActionDisplayName,TACTICS_ROAR_MAX_STACKS,TACTICS_SWEEP_MULT,TACTICS_SWEEP_MISS_MULT,`
   + `TACTICS_RUSH_HITS,TACTICS_REGEN_HP_THRESHOLD,TACTICS_ALLOUT_MULT,TACTICS_PIERCE_MULT,TACTICS_RUSH_MULT,TACTICS_SWEEP_MULT,`
   + `TACTICS_ROAR_ATK_RATE,TACTICS_REGEN_RATE};`, context);
 const api = context.api;
@@ -38,7 +46,10 @@ const screen = fs.readFileSync(path.join(root, 'monster-hero/src/parts/71-screen
 const entries = fs.readFileSync(path.join(root, 'monster-hero/src/parts/22-enemy-and-bond-entries.jsx'), 'utf8');
 const tacticsDef = (id) => api.TACTICS_ACTION_DEFINITIONS.find(d => d.id === id) || {};
 // 満タンでない敵(再生が選べる状態)。hp/maxHp を渡さないと再生は候補から外れる
-const enemyOf = (id, hpRate = 0.5) => ({ id, atk: 100, hp: Math.floor(1000 * hpRate), maxHp: 1000, normal: 'パンチ', special: '必殺' });
+const enemyOf = (id, hpRate = 0.5) => ({
+  ...(TACTICS_ENEMY_DATA[id] || { normal: 'パンチ', special: '必殺' }),
+  id, atk: 100, hp: Math.floor(1000 * hpRate), maxHp: 1000,
+});
 const idsOf = (actions) => actions.map(a => a.id);
 const availableIds = (actions) => actions.filter(a => a.available).map(a => a.id);
 
@@ -64,26 +75,35 @@ check('「様子を見ている」はどの敵も持つ', api.TACTICS_BASE_ACTIO
 check('「様子を見ている」はダメージを持たない', waitDef.multiplier === 0 && waitDef.hits === 0);
 
 // --- ③ 敵ごとの行動表 ---
-// 敵の順は ENEMY_SEQUENCE。WAVEが進むほど読むことが増える並びにしてある
-const ENEMY_ORDER = ['Dino', 'Gel', 'BlackDino', 'Jaakusou', 'BlueMountain', 'Gali', 'Naga', 'Lilim', 'Durahan', 'Moo'];
+// 敵の順は TACTICS_ENEMY_SEQUENCE。WAVEが進むほど読むことが増える並びにしてある
+const ENEMY_ORDER = TACTICS_ENEMY_SEQUENCE;
+const FIRST = ENEMY_ORDER[0], SECOND = ENEMY_ORDER[1], BOSS = ENEMY_ORDER[ENEMY_ORDER.length - 1];
+// その技を持つ敵をWAVE順に探す。敵を入れ替えても検査が追随するよう、idを直に書かない
+const firstWith = (actionId) => ENEMY_ORDER.find(id => (api.TACTICS_ENEMY_ACTION_IDS[id] || []).includes(actionId));
+// ★この一致が崩れると、敵は追加6技を1つも持たなくなる。例外も画面の乱れも出ないので、ここでしか気付けない
+check('行動表のキーが、タクティクスの敵の並びと過不足なく一致する',
+  ENEMY_ORDER.every(id => api.TACTICS_ENEMY_ACTION_IDS[id])
+    && Object.keys(api.TACTICS_ENEMY_ACTION_IDS).every(id => ENEMY_ORDER.includes(id)),
+  `行動表に無い敵:${ENEMY_ORDER.filter(id => !api.TACTICS_ENEMY_ACTION_IDS[id]).join(',') || 'なし'}`
+  + ` / 並びに無いキー:${Object.keys(api.TACTICS_ENEMY_ACTION_IDS).filter(id => !ENEMY_ORDER.includes(id)).join(',') || 'なし'}`);
 check('10体ぶんの敵に行動が割り当てられている',
   ENEMY_ORDER.every(id => Array.isArray(api.TACTICS_ENEMY_ACTION_IDS[id]) && api.TACTICS_ENEMY_ACTION_IDS[id].length >= 1),
   ENEMY_ORDER.map(id => `${id}:${(api.TACTICS_ENEMY_ACTION_IDS[id] || []).length}`).join(' '));
 check('どの敵も通常攻撃・ためる・必殺技・移動は持つ',
   ENEMY_ORDER.every(id => api.TACTICS_BASE_ACTION_IDS.every(base => idsOf(api.tacticsActionDefinitions(id)).includes(base))));
 check('後のWAVEの敵ほど技が多い(最初の敵より最後の敵)',
-  api.TACTICS_ENEMY_ACTION_IDS.Moo.length > api.TACTICS_ENEMY_ACTION_IDS.Dino.length,
-  `ディノ${api.TACTICS_ENEMY_ACTION_IDS.Dino.length} → ムー${api.TACTICS_ENEMY_ACTION_IDS.Moo.length}`);
-check('ムーは新モードの技をすべて持つ',
-  ['sweep', 'rush', 'pierce', 'roar', 'regen', 'allout'].every(id => api.TACTICS_ENEMY_ACTION_IDS.Moo.includes(id)));
+  api.TACTICS_ENEMY_ACTION_IDS[BOSS].length > api.TACTICS_ENEMY_ACTION_IDS[FIRST].length,
+  `${FIRST}${api.TACTICS_ENEMY_ACTION_IDS[FIRST].length} → ${BOSS}${api.TACTICS_ENEMY_ACTION_IDS[BOSS].length}`);
+check('最後のWAVEの敵は新モードの技をすべて持つ',
+  ['sweep', 'rush', 'pierce', 'roar', 'regen', 'allout'].every(id => api.TACTICS_ENEMY_ACTION_IDS[BOSS].includes(id)), BOSS);
 // ★単体狙い(focus)は廃止した(2026-09-20)。必殺技と役割がかぶるため
 check('単体狙いはどこにも残っていない',
   api.TACTICS_ACTION_DEFINITIONS.every(d => d.id !== 'focus' && d.variant !== 'focus')
     && Object.values(api.TACTICS_ENEMY_ACTION_IDS).every(list => !list.includes('focus')));
 // 全体攻撃は後半の敵から出す。最初のWAVEから全部来ると、受け方を1つずつ覚えられない
 check('全体攻撃は最初の敵には割り当てない',
-  !api.TACTICS_ENEMY_ACTION_IDS.Dino.includes('allout')
-    && !api.TACTICS_ENEMY_ACTION_IDS.Gel.includes('allout'));
+  !api.TACTICS_ENEMY_ACTION_IDS[FIRST].includes('allout')
+    && !api.TACTICS_ENEMY_ACTION_IDS[SECOND].includes('allout'));
 check('後半の敵は全体攻撃を持つ',
   ENEMY_ORDER.slice(4).some(id => api.TACTICS_ENEMY_ACTION_IDS[id].includes('allout')));
 check('知らない技idを割り当てていない',
@@ -93,20 +113,22 @@ check('どの技にも発動条件の説明がある(SCANへ出す)',
   api.TACTICS_ACTION_DEFINITIONS.every(d => typeof d.condition === 'string' && d.condition.length > 0));
 
 // --- ④ ためる → 必殺技の決まりは新モードでも同じ ---
-const charging = api.enemyActionProbabilities(enemyOf('Moo'), 1, { ...api.enemyActionStateFrom({ type: 'CHARGE' }), definitions: api.tacticsActionDefinitions('Moo') });
+const charging = api.enemyActionProbabilities(enemyOf(BOSS), 1, { ...api.enemyActionStateFrom({ type: 'CHARGE' }), definitions: api.tacticsActionDefinitions(BOSS) });
 check('ためた次のターンは必殺技だけ', availableIds(charging).join(',') === 'special');
 
 // --- ⑤ 再生はライフが減っているときだけ ---
-const fullHp = api.enemyActionProbabilities(enemyOf('Lilim', 1.0), 1, { definitions: api.tacticsActionDefinitions('Lilim') });
-const lowHp = api.enemyActionProbabilities(enemyOf('Lilim', 0.5), 1, { definitions: api.tacticsActionDefinitions('Lilim') });
+const regenEnemy = firstWith('regen');
+const fullHp = api.enemyActionProbabilities(enemyOf(regenEnemy, 1.0), 1, { definitions: api.tacticsActionDefinitions(regenEnemy) });
+const lowHp = api.enemyActionProbabilities(enemyOf(regenEnemy, 0.5), 1, { definitions: api.tacticsActionDefinitions(regenEnemy) });
 check('ライフが満タンなら再生は選ばれない', !availableIds(fullHp).includes('regen'));
 check('ライフが減っていれば再生を選べる', availableIds(lowHp).includes('regen'));
 check('再生のしきい値は1未満(満タンでは使わない)',
   api.TACTICS_REGEN_HP_THRESHOLD > 0 && api.TACTICS_REGEN_HP_THRESHOLD <= 1, String(api.TACTICS_REGEN_HP_THRESHOLD));
 
 // --- ⑥ 咆哮の重ねがけには上限がある ---
-const roarFresh = api.enemyActionProbabilities(enemyOf('Durahan'), 1, { definitions: api.tacticsActionDefinitions('Durahan'), roarStacks: 0 });
-const roarMaxed = api.enemyActionProbabilities(enemyOf('Durahan'), 1, { definitions: api.tacticsActionDefinitions('Durahan'), roarStacks: api.TACTICS_ROAR_MAX_STACKS });
+const roarEnemy = firstWith('roar');
+const roarFresh = api.enemyActionProbabilities(enemyOf(roarEnemy), 1, { definitions: api.tacticsActionDefinitions(roarEnemy), roarStacks: 0 });
+const roarMaxed = api.enemyActionProbabilities(enemyOf(roarEnemy), 1, { definitions: api.tacticsActionDefinitions(roarEnemy), roarStacks: api.TACTICS_ROAR_MAX_STACKS });
 check('咆哮は重ねていなければ選べる', availableIds(roarFresh).includes('roar'));
 check('咆哮は上限まで重ねたら選ばれない', !availableIds(roarMaxed).includes('roar'),
   `上限${api.TACTICS_ROAR_MAX_STACKS}回`);
@@ -122,21 +144,21 @@ const intentOf = (enemyId, actionId) => {
   }
   return null;
 };
-const sweep = intentOf('Moo', 'sweep');
+const sweep = intentOf(firstWith('sweep'), 'sweep');
 check('薙ぎ払いは「いまの間合い」を予告する', !!sweep && sweep.sweepDist === 1, sweep ? `間合い${sweep.sweepDist}` : '出ませんでした');
 check('薙ぎ払いは外したときの威力も持ち歩く',
   !!sweep && Number.isFinite(sweep.missValue) && sweep.missValue < sweep.value,
   sweep ? `当たり${sweep.value} / 外れ${sweep.missValue}` : '');
 check('薙ぎ払いの威力は定義どおり',
   !!sweep && sweep.value === Math.floor(100 * api.TACTICS_SWEEP_MULT) && sweep.missValue === Math.floor(100 * api.TACTICS_SWEEP_MISS_MULT));
-const rush = intentOf('Dino', 'rush');
+const rush = intentOf(firstWith('rush'), 'rush');
 check('連撃は手数を持ち歩く', !!rush && rush.hits === api.TACTICS_RUSH_HITS, rush ? `${rush.hits}ヒット` : '出ませんでした');
-const pierce = intentOf('Lilim', 'pierce');
+const pierce = intentOf(firstWith('pierce'), 'pierce');
 check('貫通撃は variant で見分けられる', !!pierce && pierce.variant === 'pierce');
 check('新モードの攻撃は type が ATTACK のまま(既存のダメージ計算を通すため)',
   [sweep, rush, pierce].every(intent => intent && intent.type === 'ATTACK'));
 // 全体攻撃(設計 5.3)
-const allout = intentOf('Durahan', 'allout');
+const allout = intentOf(firstWith('allout'), 'allout');
 check('全体攻撃は targetsAll を持ち歩く', !!allout && allout.targetsAll === true,
   allout ? '' : '出ませんでした');
 // ★ここが崩れると「全員を殴るほうが得」になり、狙いを読む意味も供モンを連れる意味も消える。
@@ -151,8 +173,8 @@ check('全体攻撃を4体へ撒いても、ためて撃つ必殺技より軽い
 check('全体攻撃以外の技に targetsAll を付けていない',
   api.TACTICS_ACTION_DEFINITIONS.filter(d => d.targetsAll).map(d => d.id).join(',') === 'allout',
   api.TACTICS_ACTION_DEFINITIONS.filter(d => d.targetsAll).map(d => d.id).join(','));
-const roar = intentOf('Durahan', 'roar');
-const regen = intentOf('Lilim', 'regen');
+const roar = intentOf(roarEnemy, 'roar');
+const regen = intentOf(regenEnemy, 'regen');
 check('咆哮・再生はダメージを持たない', !!roar && roar.value === 0 && !!regen && regen.value === 0);
 check('咆哮・再生にも見出しとアイコンが付く',
   !!roar && !!roar.label && !!roar.icon && !!regen && !!regen.label && !!regen.icon);
@@ -177,7 +199,7 @@ check('再生は敵のライフを最大値まででとどめる',
   has('hp:Math.min(Number(prev.maxHp)||0,Math.max(0,Number(prev.hp)||0)+healed)'));
 check('咆哮の重ねがけはWAVEごとに数え直す', has('tacticsRoarStacksRef.current=0'));
 check('SCANも新モードの行動表を見る', has('definitions:enemyActionDefinitionsFor(runMode,scanEnemy?.id)'));
-check('SCANは新モードの技を技名で並べる', has("action.variant?action.category:enemyActionLabel(scanEnemy,action.type)"));
+check('SCANは新モードの技を敵ごとの技名で並べる', has('const actionName=enemyActionDisplayName(scanEnemy,action);'));
 
 // --- 咆哮の効き目を画面へ出す(2026-09-20 ユーザー指摘「咆哮の効果が分からない」) ---
 // ★敵の攻撃そのものを上げて元に戻らないのに、一瞬のポップアップしか出ていなかった。
@@ -300,6 +322,51 @@ check('スエゾーの眼力は、その子が攻撃したターンに1回だけ
     && has('&& Math.random()<TACTICS_INTIMIDATE_RATE) {'));
 check('新モードは敵ターン頭の威圧にスエゾーぶんを混ぜない',
   has("(!isTacticsMode(runMode)&&mainHero?.id==='Suezo')?40:0,"));
+
+// --- ⑩ 技名は敵ごとに違う(2026-09-21 ユーザーが10体ぶんを1体ずつ決めた) ---
+// ★ここが崩れると、どの敵も「薙ぎ払い」「連撃」としか名乗らなくなる。
+//   吹き出しもSCANもふつうに動くので、遊んでも壊れたことに気付けない
+const VARIANT_IDS = ['sweep', 'rush', 'pierce', 'roar', 'regen', 'allout'];
+check('10体とも通常攻撃・必殺技の名前を持つ',
+  ENEMY_ORDER.every(id => (TACTICS_ENEMY_DATA[id] || {}).normal && (TACTICS_ENEMY_DATA[id] || {}).special),
+  ENEMY_ORDER.filter(id => !((TACTICS_ENEMY_DATA[id] || {}).normal && (TACTICS_ENEMY_DATA[id] || {}).special)).join(',') || '');
+check('10体とも追加6技ぶんの名前を持つ',
+  ENEMY_ORDER.every(id => VARIANT_IDS.every(a => typeof ((TACTICS_ENEMY_DATA[id] || {}).actions || {})[a] === 'string'
+    && ((TACTICS_ENEMY_DATA[id] || {}).actions || {})[a].trim().length > 0)),
+  ENEMY_ORDER.filter(id => !VARIANT_IDS.every(a => ((TACTICS_ENEMY_DATA[id] || {}).actions || {})[a])).join(',') || '');
+// 実際に使う技に名前が無いと、その敵だけ共通の見出しに戻る
+const namelessUsed = ENEMY_ORDER.flatMap(id => (api.TACTICS_ENEMY_ACTION_IDS[id] || [])
+  .filter(a => !((TACTICS_ENEMY_DATA[id] || {}).actions || {})[a]).map(a => `${id}:${a}`));
+check('その敵が実際に使う技は、すべて名前を持っている', namelessUsed.length === 0, namelessUsed.join(' ') || '');
+// 共通の見出し(薙ぎ払い・連撃…)のままの敵が残っていないか。1体でも残ると名前を決めた意味が消える
+// ★咆哮・再生は variant を持たないので、category ではなく「咆哮している」「傷を癒している」へ落ちる。
+//   category だけを見ると、この2つの落ちを取りこぼす
+const stillCategory = ENEMY_ORDER.flatMap(id => {
+  const ent = enemyOf(id);
+  return api.tacticsActionDefinitions(id)
+    .filter(def => VARIANT_IDS.includes(def.id))
+    .filter(def => {
+      const shown = api.enemyActionDisplayName(ent, def);
+      return shown === def.category || shown === api.enemyActionLabel(ent, def.type);
+    })
+    .map(def => `${id}:${def.id}`);
+});
+check('共通の見出しのままの技が1つも残っていない', stillCategory.length === 0, stillCategory.join(' ') || '');
+// 通常攻撃・必殺技も含めて、同じ名前を2体で使っていないか(どの敵の技か分からなくなる)
+const allNames = ENEMY_ORDER.flatMap(id => {
+  const e = TACTICS_ENEMY_DATA[id] || {};
+  return [e.normal, e.special, ...VARIANT_IDS.map(a => (e.actions || {})[a])].filter(Boolean).map(n => `${n}`);
+});
+const dupNames = allNames.filter((n, i) => allNames.indexOf(n) !== i);
+check('同じ技名を2体で使っていない', dupNames.length === 0, [...new Set(dupNames)].join(',') || '');
+// 抽選が作る intent の見出しも、共通の見出しではなく技名になっているか(実物で確かめる)
+const bossLabels = VARIANT_IDS.map(a => {
+  const intent = intentOf(BOSS, a);
+  return { a, label: intent ? String(intent.label) : '' };
+});
+check('最後のWAVEの敵は、6技とも技名で予告する',
+  bossLabels.every(({ a, label }) => label && label.startsWith(((TACTICS_ENEMY_DATA[BOSS] || {}).actions || {})[a] || '\u0000')),
+  bossLabels.map(({ a, label }) => `${a}=${label || '出ませんでした'}`).join(' / '));
 
 console.log(failed ? `\nNG ${failed}件` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
