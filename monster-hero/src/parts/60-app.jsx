@@ -1029,7 +1029,25 @@ function MonsterHeroGame() {
     if (!isTacticsMode(runMode)) return null;
     const result = rateHealTacticsBoard(tacticsUnitsRef.current, hpRate, gutsRate, includeDowned);
     const total = commitTacticsUnits(result.units);
+    // ★誰にいくつ入ったかを枠へ出す。合計の「💚 ライフ +480」だけでは、
+    //   4体のうち誰が戻ったのか分からない(2026-09-21 ユーザー指摘)。
+    //   回復カード・緊急回復・メロソ・ポルツの弁当はすべてここを通る
+    mergeTacticsSlotFx(result.healed, result.gutsHealed);
     return { hp: result.hp, guts: result.guts, total };
+  };
+  // 枠ごとの「何が起きたか」へ、回復のぶんを足す。
+  // ★置き換えではなく重ねる。同じターンにガードで戻ったぶんと回復カードのぶんが
+  //   両方あるときに、どちらかが消えないようにする
+  const mergeTacticsSlotFx = (healed, gutsHealed) => {
+    const add = {};
+    Object.entries(healed || {}).forEach(([slotIdx, got]) => { if (got > 0) add[slotIdx] = { ...(add[slotIdx] || {}), heal: got }; });
+    Object.entries(gutsHealed || {}).forEach(([slotIdx, got]) => { if (got > 0) add[slotIdx] = { ...(add[slotIdx] || {}), guts: got }; });
+    if (!Object.keys(add).length) return;
+    setTacticsSlotFx(prev => {
+      const next = { ...(prev || {}) };
+      Object.entries(add).forEach(([slotIdx, value]) => { next[slotIdx] = { ...(next[slotIdx] || {}), ...value }; });
+      return next;
+    });
   };
   // 自動再生。立っている子はバフの率で回し、**倒れている子はその子の上限の10%ずつ戻す**
   // (2026-09-21 ユーザー指示「死んだら毎ターン10%は回復する仕様に変更
@@ -9519,6 +9537,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               units=recoverTacticsGutsAt(healTacticsAt(units,absorbSlot,gain),absorbSlot,guts);
             }
             currentHp=commitTacticsUnits(units);
+            // ★吸ったのは狙われた子ひとり。誰が吸ったのかを枠へ出す
+            if(absorbSlot!=null&&(hpGain>0||gutsGain>0)) mergeTacticsSlotFx({[absorbSlot]:hpGain},{[absorbSlot]:gutsGain});
             if(hpGain>0) addPopup(`💚 ライフ +${hpGain}`,'life','text-emerald-400 font-black text-2xl drop-shadow-md');
             if(gutsGain>0) addPopup(`⚡ ガッツ +${gutsGain}`,'guts','text-amber-400 font-black text-2xl drop-shadow-md');
             if(hpGain<=0) addPopup('当たらなかった！','hero','text-cyan-300 font-black text-xl drop-shadow-md');
