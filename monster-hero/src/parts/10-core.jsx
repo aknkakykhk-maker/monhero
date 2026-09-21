@@ -85,7 +85,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-21 20:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-21 20:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -171,7 +171,7 @@ const TACTICS_MODE_PUBLIC_RELEASE = false;
 //   キーを変えるだけにしておく(消す作業はSupabaseの管理接続が要るうえ、戻せない)。
 // 一度 true にしたあとは、実装側から勝手に false へ戻さない
 // (戻すと、すでに遊んだ人の全国ランキングだけが止まる)。
-const TACTICS_BETA_PRO_RELEASE = false;
+const TACTICS_BETA_PRO_RELEASE = true;
 // イベント回想の出し分け。公開前の機能の会話は、一覧にも出さない
 // (モードが見えていないのに会話だけ並ぶと、何の話か分からないうえに中身が見えてしまう)。
 // EVENT_REPLAYS(data/assistants.js)は releaseFlag という「呼び名」しか持たないので、

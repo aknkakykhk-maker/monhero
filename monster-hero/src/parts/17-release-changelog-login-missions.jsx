@@ -303,6 +303,9 @@ const KIKI_INTRO_SEEN_KEY = 'mh_kiki_intro_seen_v1';
 // 本編を待たずにプロフィールの回想から見た場合も、最後まで見たらこのキーを立てる
 // (＝解放され、あとから本編で重ねて流れない)。
 const MOMOSUKE_INTRO_SEEN_KEY = 'mh_momosuke_intro_seen_v1';
+// タクティクスバトルの導入会話を見たか。β公開してから1度だけ流すための判定に使う。
+// ★新しいキーを足すだけ。既存の mh_*_intro_seen_v1 は一切触らない(CLAUDE.md ⑦)
+const TACTICS_INTRO_SEEN_KEY = 'mh_tactics_intro_seen_v1';
 const normalizeAssistantId = (value) => (typeof assistantIdOrDefault === 'function')
   ? assistantIdOrDefault(typeof value === 'string' ? value : null)
   : ((typeof DEFAULT_ASSISTANT_ID !== 'undefined' && DEFAULT_ASSISTANT_ID) || 'mua');

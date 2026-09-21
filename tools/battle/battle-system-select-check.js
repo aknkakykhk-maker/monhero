@@ -274,10 +274,12 @@ check('準備中のモードは押せない',
     && has("{modeSoon?'準備中':extremeLocked||speciesLocked?'まだ挑戦できません'"));
 check('準備中のモードからランキングへ行けない',
   has('{isSpecies&&!modeSoon&&<button data-species-record-link'));
-// 公開フラグは実装側から勝手に戻さない。いまはどちらもOFF
-check('いまはβ版も本公開もOFF',
-  /const TACTICS_BETA_PRO_RELEASE = false;/.test(source)
-    && /const TACTICS_MODE_PUBLIC_RELEASE = false;/.test(source));
+// 公開フラグは実装側から勝手に動かさない。ユーザーが決めたときだけ変える。
+// 2026-09-21「じゃあβ版実装しようか」でβ版をON。本公開はまだOFF
+check('β版はON、本公開はまだOFF',
+  /const TACTICS_BETA_PRO_RELEASE = true;/.test(source)
+    && /const TACTICS_MODE_PUBLIC_RELEASE = false;/.test(source),
+  `beta:${/const TACTICS_BETA_PRO_RELEASE = (\w+);/.exec(source)?.[1]} / public:${/const TACTICS_MODE_PUBLIC_RELEASE = (\w+);/.exec(source)?.[1]}`);
 
 // ===== ③ 画面と導線の結線 =====
 check('仕組みを選ぶ画面がある', has("{gameState==='BATTLE_SYSTEM_SELECT'&&(()=>{"));

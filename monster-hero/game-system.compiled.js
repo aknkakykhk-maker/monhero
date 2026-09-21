@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: eff24feb4fd89860
+// source-sha256: 1d42d97ac826a815
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b59438ce42a468d8
+// generated-sha256: a9c0c2c40bc423c6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-21 20:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-21 20:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -251,7 +251,7 @@ const TACTICS_MODE_PUBLIC_RELEASE = false;
 //   キーを変えるだけにしておく(消す作業はSupabaseの管理接続が要るうえ、戻せない)。
 // 一度 true にしたあとは、実装側から勝手に false へ戻さない
 // (戻すと、すでに遊んだ人の全国ランキングだけが止まる)。
-const TACTICS_BETA_PRO_RELEASE = false;
+const TACTICS_BETA_PRO_RELEASE = true;
 // イベント回想の出し分け。公開前の機能の会話は、一覧にも出さない
 // (モードが見えていないのに会話だけ並ぶと、何の話か分からないうえに中身が見えてしまう)。
 // EVENT_REPLAYS(data/assistants.js)は releaseFlag という「呼び名」しか持たないので、
@@ -11641,6 +11641,9 @@ const KIKI_INTRO_SEEN_KEY = 'mh_kiki_intro_seen_v1';
 // 本編を待たずにプロフィールの回想から見た場合も、最後まで見たらこのキーを立てる
 // (＝解放され、あとから本編で重ねて流れない)。
 const MOMOSUKE_INTRO_SEEN_KEY = 'mh_momosuke_intro_seen_v1';
+// タクティクスバトルの導入会話を見たか。β公開してから1度だけ流すための判定に使う。
+// ★新しいキーを足すだけ。既存の mh_*_intro_seen_v1 は一切触らない(CLAUDE.md ⑦)
+const TACTICS_INTRO_SEEN_KEY = 'mh_tactics_intro_seen_v1';
 const normalizeAssistantId = value => typeof assistantIdOrDefault === 'function' ? assistantIdOrDefault(typeof value === 'string' ? value : null) : typeof DEFAULT_ASSISTANT_ID !== 'undefined' && DEFAULT_ASSISTANT_ID || 'mua';
 
 // ---------- 助手との仲良し度(親密度) ----------
@@ -42665,6 +42668,9 @@ function MonsterHeroGame() {
   const [kikiIntroStep, setKikiIntroStep] = useState(null);
   // ももすけ登場の会話。きき加入と同じ形。両方まだの人でも同時には出さない(きき→もも の順)
   const [momosukeIntroStep, setMomosukeIntroStep] = useState(null);
+  // タクティクスバトルの導入会話。公開してから、HOMEで1度だけ流す
+  const [tacticsIntroSeenFlag, setTacticsIntroSeenFlag] = useState(false);
+  const [tacticsIntroPending, setTacticsIntroPending] = useState(false);
   // 助手との仲良し度。遊ぶほど増えて、呼び方と話す内容が変わる。
   // 助手ごとに完全に分けて持つので、切り替えてももう片方の進捗は消えない
   const [assistantBonds, setAssistantBonds] = useState({});
@@ -45832,6 +45838,18 @@ function MonsterHeroGame() {
       live: true
     });
   }, [rhythmEventStoryPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay]);
+  // タクティクスバトルの導入も同じ置き方で、HOMEで1度だけ流す。
+  // ★ほかの会話が出ているあいだは待つ(重ねて出すと、どちらも読めない)
+  useEffect(() => {
+    if (!tacticsIntroPending) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME' && onboarded && !onboardingPreview && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && !rhythmEventStoryPending && !eventReplay)) return;
+    setTacticsIntroPending(false);
+    setEventReplay({
+      id: 'tactics_intro',
+      step: 0,
+      live: true
+    });
+  }, [tacticsIntroPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, rhythmEventStoryPending, eventReplay]);
   // ★開催の時刻になった瞬間に遊んでいた人にも届ける。
   //   「開催中か」を見ていたのは起動したときの1回だけだったので、15:00より前から
   //   ゲームを開いたままだった人には、会話も助手の告知も出なかった
@@ -47357,6 +47375,13 @@ function MonsterHeroGame() {
           setMomosukeIntroSeenFlag(true);
         } catch {}
       }
+      // タクティクスバトルの導入。**公開しているときだけ**見に行く。
+      // 公開前に読むと、まだ見せていないモードの会話を「未読」として抱えることになる
+      if (EVENT_REPLAY_RELEASE_FLAGS.tacticsBattle) {
+        const tacticsIntroSeen = await storeGet(TACTICS_INTRO_SEEN_KEY, false, false);
+        setTacticsIntroSeenFlag(tacticsIntroSeen === true);
+        if (tacticsIntroSeen !== true) setTacticsIntroPending(true);
+      }
       // モンヒロビートのイベント会話。開催中で、まだ見ていなければHOMEで1度だけ流す。
       // ★ここに置くのは wasOnboarded が決まったあとだから。前に置くと
       //   「Cannot access 'wasOnboarded' before initialization」で画面が真っ白になる
@@ -48656,12 +48681,22 @@ function MonsterHeroGame() {
       storeSet(MOMOSUKE_INTRO_SEEN_KEY, true, false);
     } catch {}
   }, []);
+  // タクティクスの導入も同じ。最後まで見ても飛ばしても「見た」にする
+  // (そうしないと起動のたびに同じ会話が出る。飛ばしたぶんは回想からいつでも見られる)
+  const markTacticsIntroSeen = useCallback(() => {
+    setTacticsIntroPending(false);
+    setTacticsIntroSeenFlag(true);
+    try {
+      storeSet(TACTICS_INTRO_SEEN_KEY, true, false);
+    } catch {}
+  }, []);
   // イベント回想の解放判定。EVENT_REPLAYS側はunlockedKeyという「呼び名」しか持たないので、
   // その名前→実際のstateの対応をここで持つ(データファイルはgame-system.jsxの状態を見られないため)。
   // 今後イベントを増やすときは、そのイベントの既読フラグをここへ1行足すだけでよい
   const EVENT_REPLAY_UNLOCK_FLAGS = {
     kikiIntroSeen: kikiIntroSeenFlag,
     momosukeIntroSeen: momosukeIntroSeenFlag,
+    tacticsIntroSeen: tacticsIntroSeenFlag,
     monbeatCupEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONBEAT_CUP_STORY_ID),
     monbeatCupThanksSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONBEAT_CUP_THANKS_STORY_ID),
     symphonyThanksSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_THANKS_STORY_ID),
@@ -67631,6 +67666,7 @@ function MonsterHeroGame() {
           return;
         }
         if (event && event.id === 'momosuke_intro') markMomosukeIntroSeen();
+        if (event && event.id === 'tactics_intro') markTacticsIntroSeen();
         // イベントの会話も、最後まで見たら「見た」にする(次の起動で重ねて流さない)
         if (event && RHYTHM_EVENT_STORY_IDS.includes(event.id) && !eventReplay.debug) void markRhythmEventStorySeen(event.id);
         setEventReplay(null);
@@ -67643,6 +67679,7 @@ function MonsterHeroGame() {
            飛ばしたぶんはプロフィールの「イベント回想」からいつでも見られる */
       const skip = () => {
         if (eventReplay.live && !eventReplay.debug && event && RHYTHM_EVENT_STORY_IDS.includes(event.id)) void markRhythmEventStorySeen(event.id);
+        if (eventReplay.live && !eventReplay.debug && event && event.id === 'tactics_intro') markTacticsIntroSeen();
         setEventReplay(null);
       };
       return /*#__PURE__*/React.createElement("div", {
