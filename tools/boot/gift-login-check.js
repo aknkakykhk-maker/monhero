@@ -4,8 +4,8 @@ const fs=require('fs'),vm=require('vm'),path=require('path');
 const source=fs.readFileSync(path.join(TOOLS_DIR,'..','monster-hero','src','game-system.jsx'),'utf8');
 const prefix=source.slice(source.indexOf('const LOGIN_BONUS_REWARDS'),source.indexOf('const STAT_POINT_GAIN'));
 const context={React:{ Component: class { setState() {} }, PureComponent: class { setState() {} },createElement(){},useState(){},useEffect(){},useCallback(){},useMemo(){},useRef(){}}};vm.createContext(context);
-vm.runInContext(`${prefix}\nglobalThis.x={loginBonusPeriodKey,grantLoginBonus,buildGiftClaim,giftIsExpired,grantCompensationGifts,COMPENSATION_GIFTS,giftTitleDisplay,normalizeGiftRewards};`,context);
-const {loginBonusPeriodKey,grantLoginBonus,buildGiftClaim,giftIsExpired,grantCompensationGifts,COMPENSATION_GIFTS,giftTitleDisplay,normalizeGiftRewards}=context.x;let failed=0;
+vm.runInContext(`${prefix}\nglobalThis.x={loginBonusPeriodKey,grantLoginBonus,buildGiftClaim,giftIsExpired,grantCompensationGifts,COMPENSATION_GIFTS,grantPlayerCompensationGifts,PLAYER_COMPENSATION_GIFTS,giftTitleDisplay,normalizeGiftRewards};`,context);
+const {loginBonusPeriodKey,grantLoginBonus,buildGiftClaim,giftIsExpired,grantCompensationGifts,COMPENSATION_GIFTS,grantPlayerCompensationGifts,PLAYER_COMPENSATION_GIFTS,giftTitleDisplay,normalizeGiftRewards}=context.x;let failed=0;
 const check=(name,ok)=>{console.log(`${ok?'OK':'NG'}: ${name}`);if(!ok)failed++;};
 const at=s=>Date.parse(s);
 check('JST 03:59と04:00で期間が切り替わる',loginBonusPeriodKey(at('2026-07-28T18:59:00Z'))==='2026-07-28'&&loginBonusPeriodKey(at('2026-07-28T19:00:00Z'))==='2026-07-29');
@@ -58,5 +58,23 @@ check('過去のお詫びを重ねて配らない',addDye.gifts.filter(g=>g.id!=
 check('染色のお詫びも2回目は配らない',grantCompensationGifts(addDye.gifts,at('2026-08-08T00:00:00Z')).granted===false);
 check('起動時にお詫びも配る',source.includes('const compensationGrant = grantCompensationGifts(loginGrant.gifts);')
   &&/if \(loginGrant\.granted \|\| compensationGrant\.granted[^)]*\) \{[\s\S]{0,200}?storeSet\('mh_gifts'/.test(source));
+
+// その人だけに届くお詫び(PLAYER ID が一致した端末にだけ配る)
+const target=PLAYER_COMPENSATION_GIFTS[0];
+const targetId=target.playerIds[0];
+const mine=grantPlayerCompensationGifts([],targetId,at('2026-09-21T00:00:00Z'));
+check('対象のPLAYER IDには届く',mine.granted&&mine.gifts.some(g=>g.id===target.id));
+check('対象外のPLAYER IDには届かない',grantPlayerCompensationGifts([],'MH-0000-0000',at('2026-09-21T00:00:00Z')).granted===false);
+check('PLAYER IDが無い端末には届かない',grantPlayerCompensationGifts([],'',at('2026-09-21T00:00:00Z')).granted===false&&grantPlayerCompensationGifts([],null,at('2026-09-21T00:00:00Z')).granted===false);
+check('大小と前後の空白は同じIDとみなす',grantPlayerCompensationGifts([],` ${targetId.toLowerCase()} `,at('2026-09-21T00:00:00Z')).granted===true);
+check('2回目は配らない',grantPlayerCompensationGifts(mine.gifts,targetId,at('2026-09-22T00:00:00Z')).granted===false);
+check('受取済みでも再配布しない',grantPlayerCompensationGifts(mine.gifts.map(g=>({...g,claimedAt:'2026-09-22T00:00:00.000Z'})),targetId,at('2026-09-23T00:00:00Z')).granted===false);
+check('既存のギフトは消さない',grantPlayerCompensationGifts([{id:'other'}],targetId,at('2026-09-21T00:00:00Z')).gifts.some(g=>g.id==='other'));
+const mineGift=mine.gifts.find(g=>g.id===target.id);
+check('受取期限は付けない',!('expiresAt' in mineGift)&&!giftIsExpired(mineGift,at('2099-01-01T00:00:00Z')));
+check('配る相手のIDはギフトへ残さない',!('playerIds' in mineGift));
+check('報酬の形が通常のギフトとして成り立つ',!!normalizeGiftRewards(mineGift));
+check('ダイヤ2億が入っている',buildGiftClaim(mineGift,{gold:0},at('2026-09-21T00:00:00Z')).balances.gold===200000000);
+check('起動時にPLAYER IDを見て配る',source.includes('grantPlayerCompensationGifts(compensationGrant.gifts, currentPlayerId)')&&source.includes("window.localStorage.getItem('mh_player_id')"));
 
 process.exit(failed?1:0);
