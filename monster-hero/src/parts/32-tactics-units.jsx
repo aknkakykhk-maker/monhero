@@ -590,7 +590,10 @@ const rateHealTacticsBoard = (units, hpRate, gutsRate, includeDowned = false) =>
   const gutsPct = Math.max(0, Number(gutsRate) || 0);
   const hpSlots = includeDowned ? tacticsFilledSlots(list) : tacticsAliveSlots(list);
   const gutsSlots = tacticsAliveSlots(list);
+  // ★誰にいくつ入ったかも返す(healed / gutsHealed)。合計だけでは、4体のうち
+  //   誰が戻ったのか画面から分からない(2026-09-21 ユーザー指摘)
   let hp = 0, guts = 0;
+  const healed = {}, gutsHealed = {};
   tacticsFilledSlots(list).forEach(index => {
     const before = normalizeTacticsUnit(list[index]);
     let next = list[index];
@@ -603,11 +606,14 @@ const rateHealTacticsBoard = (units, hpRate, gutsRate, includeDowned = false) =>
       if (gain > 0) next = recoverTacticsGuts(next, gain);
     }
     const after = normalizeTacticsUnit(next);
-    hp += after.hp - before.hp;
-    guts += after.guts - before.guts;
+    const gotHp = after.hp - before.hp, gotGuts = after.guts - before.guts;
+    if (gotHp > 0) healed[index] = gotHp;
+    if (gotGuts > 0) gutsHealed[index] = gotGuts;
+    hp += gotHp;
+    guts += gotGuts;
     list[index] = next;
   });
-  return { units: list, hp, guts };
+  return { units: list, hp, guts, healed, gutsHealed };
 };
 // 1体だけを「その子の上限 × 率」で回復する。
 // 固有技・アシストカードの効果が「使った子」へ入るときに通る

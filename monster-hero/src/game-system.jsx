@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a52a820c5eed0ad9
+// generated-sha256: bd00d52aa6a53e80
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -92,7 +92,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-21 21:47"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-21 22:49"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -16403,7 +16403,10 @@ const rateHealTacticsBoard = (units, hpRate, gutsRate, includeDowned = false) =>
   const gutsPct = Math.max(0, Number(gutsRate) || 0);
   const hpSlots = includeDowned ? tacticsFilledSlots(list) : tacticsAliveSlots(list);
   const gutsSlots = tacticsAliveSlots(list);
+  // ★誰にいくつ入ったかも返す(healed / gutsHealed)。合計だけでは、4体のうち
+  //   誰が戻ったのか画面から分からない(2026-09-21 ユーザー指摘)
   let hp = 0, guts = 0;
+  const healed = {}, gutsHealed = {};
   tacticsFilledSlots(list).forEach(index => {
     const before = normalizeTacticsUnit(list[index]);
     let next = list[index];
@@ -16416,11 +16419,14 @@ const rateHealTacticsBoard = (units, hpRate, gutsRate, includeDowned = false) =>
       if (gain > 0) next = recoverTacticsGuts(next, gain);
     }
     const after = normalizeTacticsUnit(next);
-    hp += after.hp - before.hp;
-    guts += after.guts - before.guts;
+    const gotHp = after.hp - before.hp, gotGuts = after.guts - before.guts;
+    if (gotHp > 0) healed[index] = gotHp;
+    if (gotGuts > 0) gutsHealed[index] = gotGuts;
+    hp += gotHp;
+    guts += gotGuts;
     list[index] = next;
   });
-  return { units: list, hp, guts };
+  return { units: list, hp, guts, healed, gutsHealed };
 };
 // 1体だけを「その子の上限 × 率」で回復する。
 // 固有技・アシストカードの効果が「使った子」へ入るときに通る
@@ -22169,7 +22175,8 @@ function BattleScreen({
                       :<>
                         {f.guard&&<span className="text-[11px] font-black text-emerald-300 drop-shadow-[0_0_6px_rgba(0,0,0,.9)]">🛡</span>}
                         {f.dmg>0&&<span className="text-[17px] font-black text-pink-400 drop-shadow-[0_0_6px_rgba(0,0,0,.95)]">-{f.dmg}</span>}
-                        {f.heal>0&&<span className="text-[11px] font-black text-emerald-300 drop-shadow-[0_0_6px_rgba(0,0,0,.9)]">+{f.heal}</span>}
+                        {f.heal>0&&<span className="text-[11px] font-black text-emerald-300 drop-shadow-[0_0_6px_rgba(0,0,0,.9)]">💚 +{f.heal}</span>}
+                        {f.guts>0&&<span className="text-[10px] font-black text-amber-300 drop-shadow-[0_0_6px_rgba(0,0,0,.9)]">⚡ +{f.guts}</span>}
                         {f.revive>0&&<span className="text-[12px] font-black text-teal-300 drop-shadow-[0_0_6px_rgba(0,0,0,.9)]">💤 +{f.revive}</span>}
                       </>}
                   </div>);
@@ -24553,7 +24560,25 @@ function MonsterHeroGame() {
     if (!isTacticsMode(runMode)) return null;
     const result = rateHealTacticsBoard(tacticsUnitsRef.current, hpRate, gutsRate, includeDowned);
     const total = commitTacticsUnits(result.units);
+    // ★誰にいくつ入ったかを枠へ出す。合計の「💚 ライフ +480」だけでは、
+    //   4体のうち誰が戻ったのか分からない(2026-09-21 ユーザー指摘)。
+    //   回復カード・緊急回復・メロソ・ポルツの弁当はすべてここを通る
+    mergeTacticsSlotFx(result.healed, result.gutsHealed);
     return { hp: result.hp, guts: result.guts, total };
+  };
+  // 枠ごとの「何が起きたか」へ、回復のぶんを足す。
+  // ★置き換えではなく重ねる。同じターンにガードで戻ったぶんと回復カードのぶんが
+  //   両方あるときに、どちらかが消えないようにする
+  const mergeTacticsSlotFx = (healed, gutsHealed) => {
+    const add = {};
+    Object.entries(healed || {}).forEach(([slotIdx, got]) => { if (got > 0) add[slotIdx] = { ...(add[slotIdx] || {}), heal: got }; });
+    Object.entries(gutsHealed || {}).forEach(([slotIdx, got]) => { if (got > 0) add[slotIdx] = { ...(add[slotIdx] || {}), guts: got }; });
+    if (!Object.keys(add).length) return;
+    setTacticsSlotFx(prev => {
+      const next = { ...(prev || {}) };
+      Object.entries(add).forEach(([slotIdx, value]) => { next[slotIdx] = { ...(next[slotIdx] || {}), ...value }; });
+      return next;
+    });
   };
   // 自動再生。立っている子はバフの率で回し、**倒れている子はその子の上限の10%ずつ戻す**
   // (2026-09-21 ユーザー指示「死んだら毎ターン10%は回復する仕様に変更
@@ -33043,6 +33068,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               units=recoverTacticsGutsAt(healTacticsAt(units,absorbSlot,gain),absorbSlot,guts);
             }
             currentHp=commitTacticsUnits(units);
+            // ★吸ったのは狙われた子ひとり。誰が吸ったのかを枠へ出す
+            if(absorbSlot!=null&&(hpGain>0||gutsGain>0)) mergeTacticsSlotFx({[absorbSlot]:hpGain},{[absorbSlot]:gutsGain});
             if(hpGain>0) addPopup(`💚 ライフ +${hpGain}`,'life','text-emerald-400 font-black text-2xl drop-shadow-md');
             if(gutsGain>0) addPopup(`⚡ ガッツ +${gutsGain}`,'guts','text-amber-400 font-black text-2xl drop-shadow-md');
             if(hpGain<=0) addPopup('当たらなかった！','hero','text-cyan-300 font-black text-xl drop-shadow-md');

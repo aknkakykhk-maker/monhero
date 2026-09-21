@@ -58,7 +58,7 @@ vm.runInContext(
     + 'TACTICS_ENEMY_POWER_MAX,applyTacticsTraining,tacticsPartyAtk,'
     + 'tacticsPartyDef,shrinkTacticsScore,TACTICS_SCORE_DIVISOR,'
     + 'splitTacticsGuardedHit,resolveTacticsGuardedHit,tacticsGuardHits,makeCardHalveCounter,'
-    + 'regenDownedTacticsBoard,TACTICS_DOWNED_REGEN_RATE,'
+    + 'regenDownedTacticsBoard,TACTICS_DOWNED_REGEN_RATE,rateHealTacticsBoard,'
     + 'tacticsJoinWaveRate,addTacticsJoinCatchUp,applyTacticsJoinCatchUp};', sandbox);
 const api = sandbox.api;
 // ★合計へみゅあ補正を掛ける式は本体から切り出して動かす(検査へ書き写さない)。
@@ -773,6 +773,37 @@ check('ガッツ回復は新モードだと合計を足さずに配る',
   // ★すぐ消すと読む前に消える。自分が動くまで枠に残す
   check('自分が動いたら消す', has('setTacticsSlotFx(null);'));
   check('倒れた子が戻ったぶんもその枠へ出す', has('slotIdx,{revive:got}'));
+  // ★回復カード・緊急回復・メロソ・ポルツはすべて tacticsRateHeal を通る。
+  //   ここ1か所で枠へ出せば、足すたびに書き足さなくてよい
+  check('回復も枠ごとに出す',
+    has('mergeTacticsSlotFx(result.healed, result.gutsHealed);')
+      && has('const mergeTacticsSlotFx = (healed, gutsHealed) => {'));
+  // ★置き換えではなく重ねる。同じターンのガードぶんと回復カードぶんが両方残る
+  check('枠ごとの表示は重ねて足す',
+    has('next[slotIdx] = { ...(next[slotIdx] || {}), ...value };'));
+  // ★吸ったのは狙われた子ひとり。誰が吸ったのかを出す
+  check('吸収も誰が吸ったかを出す',
+    has('if(absorbSlot!=null&&(hpGain>0||gutsGain>0)) mergeTacticsSlotFx({[absorbSlot]:hpGain},{[absorbSlot]:gutsGain});'));
+  check('ガッツの増えたぶんも枠へ出す', inScreen('{f.guts>0&&'));
+}
+
+// --- ㉘ 回復の内訳を枠ごとに返す(2026-09-21 ユーザー指摘) ---
+// 「ダメージや回復表示は個別で分かるようになった？」。合計だけでは、4体のうち
+// 誰が戻ったのかが分からない。**実際に動かして**内訳が合うことを確かめる
+{
+  const healMon = { id: 'Mocchi', name: 'モッチー', baseHp: 600, baseAtk: 120, baseDef: 120, baseGuts: 100 };
+  let board = [api.createTacticsUnit(healMon), api.createTacticsUnit(healMon)];
+  board = api.applyTacticsDamage ? board : board;
+  board = api.damageTacticsTargets(board, [0], 300);   // 1体目だけ300減らす
+  const res = api.rateHealTacticsBoard(board, 0.3, 0.3, false);
+  check('回復の内訳を枠ごとに返す',
+    res.healed && res.healed[0] === 180 && res.healed[1] === undefined,
+    JSON.stringify(res.healed || {}));
+  check('内訳の合計が、返す合計と合う',
+    Object.values(res.healed || {}).reduce((sum, value) => sum + value, 0) === res.hp, `${res.hp}`);
+  check('ガッツの内訳も枠ごとに返す',
+    res.gutsHealed && res.gutsHealed[0] === 30 && res.gutsHealed[1] === 30,
+    JSON.stringify(res.gutsHealed || {}));
 }
 
 console.log(failed ? `\nNG ${failed}件` : '\nすべてOK');
