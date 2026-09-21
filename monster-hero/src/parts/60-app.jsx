@@ -3318,6 +3318,7 @@ function MonsterHeroGame() {
     cleared = true, baseLoops = null,
     rewardMode = null, rewardDifficulty = null, rewardPolicy = null,
     countLoopProgress = true, recordQuickClear = true,
+    bondHeroMasuId = null, bondParticipantMasuIds = null,
   } = {}) => {
     const count = Math.max(0, Math.trunc(Number(loops) || 0));
     if (count <= 0) return null;
@@ -3354,10 +3355,14 @@ function MonsterHeroGame() {
     // AUTO∞のときの上限(ブリーダーLv)も、1周クリアとまったく同じものを通す
     const oneBond = applyQuickXpPolicy(bondXpForWavesClearedInMode(10, xpMult, awardMode), awardMode, policy);
     const bondGain = Math.floor(oneBond * count);
+    // ★配り先は、渡されなければ「いま戦っている編成」。プロのランぶんを配るときは、
+    //   裏でクイックを回していたときと同じ顔ぶれ(AUTO設定の勇者モン・供モン)を渡す
+    //   (2026-09-21・ユーザー指示「オート設定のモンスター達と編成に入ってるモンスター。
+    //    モンビーと同じ仕様」)。控えのマスモン(monsterRosterIds)はどちらも同じ。
     const bondAwards = bondGain > 0 ? buildRunBondAwards({
       gain: bondGain,
-      heroMasuId: mainHero?.masuId,
-      participantMasuIds: slots.filter(s => s?.masuId).map(s => s.masuId),
+      heroMasuId: bondHeroMasuId !== null ? bondHeroMasuId : mainHero?.masuId,
+      participantMasuIds: bondParticipantMasuIds !== null ? bondParticipantMasuIds : slots.filter(s => s?.masuId).map(s => s.masuId),
       monsterRosterIds,
       masuMons,
     }) : [];
@@ -7161,12 +7166,22 @@ function MonsterHeroGame() {
     if (!isAutoQuickRunDifficultyAllowed(quickDifficulty, quickClearCounts)) return null;
     const loops = proRunQuickLoops(wavesCleared, DIFFICULTY_SETTINGS[difficulty]?.power);
     if (loops <= 0) return null;
+    // 絆経験値の行き先は、裏でクイックを回していたときとそろえる
+    // (AUTO設定の勇者モン＝1倍 / AUTO設定の供モン①②③＝1/2 / モンスター編成の控え＝1/4)。
+    // プロで戦った編成ではなく、**クイックを回していたら育っていたはずの顔ぶれ**へ入れる
+    const quickHeroMon = resolveRosterEntryToMon(autoSettings.quickRun.heroRosterEntry);
+    const quickAllyMasuIds = (Array.isArray(autoSettings.allies) ? autoSettings.allies : [])
+      .map(ally => resolveRosterEntryToMon(ally?.rosterEntry))
+      .filter(mon => mon && mon.masuId != null)
+      .map(mon => mon.masuId);
     const awarded = await awardRhythmPlayRunLoops(loops, RHYTHM_PLAY_RUN_LOOP_SCALE, {
       rewardMode: BATTLE_MODE_QUICK,
       rewardDifficulty: quickDifficulty,
       rewardPolicy: normalizeQuickRewardPolicy(quickRewardPolicy),
       countLoopProgress: false,   // モンビーの進捗の帯は、裏で回している周回のためのもの
       recordQuickClear: false,    // クイックのクリア回数・ミッション・助手の絆は進めない
+      bondHeroMasuId: quickHeroMon?.masuId ?? undefined,
+      bondParticipantMasuIds: quickAllyMasuIds,
     });
     return awarded ? { ...awarded, quickDifficulty, wavesCleared } : null;
   };
