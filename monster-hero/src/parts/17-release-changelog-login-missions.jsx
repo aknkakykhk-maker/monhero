@@ -515,7 +515,9 @@ const grantCompensationGifts = (gifts, now=Date.now()) => {
 const PLAYER_COMPENSATION_GIFTS = [
   {
     id: 'gift_player_compensation_20260921_rebirth_xp',
-    playerIds: ['MH-065J-BWBP'],
+    // 【読み違いに注意】3文字目は 0(ゼロ)ではなく O(大文字のオー)。タイトル画面の
+    // 等幅フォントはゼロに斜線が入るので、その有無で見分ける(2026-09-21に取り違えて配れなかった)
+    playerIds: ['MH-O65J-BWBP'],
     title: 'お詫びのしるし',
     description: '転生200回ぶんの経験値が失われる不具合のお詫びです。ご迷惑をおかけしました。',
     rewards: [

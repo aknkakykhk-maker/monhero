@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: dc79a843abdcccc2
+// source-sha256: 47824272c3d3cd34
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 0b995a712eba89a2
+// generated-sha256: 3dc61882c7279da6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-21 15:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-21 15:33"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11856,7 +11856,9 @@ const grantCompensationGifts = (gifts, now = Date.now()) => {
 // 【IDは端末ごと】機種変すると別IDになり届かなくなる。届いたかは本人に確かめる。
 const PLAYER_COMPENSATION_GIFTS = [{
   id: 'gift_player_compensation_20260921_rebirth_xp',
-  playerIds: ['MH-065J-BWBP'],
+  // 【読み違いに注意】3文字目は 0(ゼロ)ではなく O(大文字のオー)。タイトル画面の
+  // 等幅フォントはゼロに斜線が入るので、その有無で見分ける(2026-09-21に取り違えて配れなかった)
+  playerIds: ['MH-O65J-BWBP'],
   title: 'お詫びのしるし',
   description: '転生200回ぶんの経験値が失われる不具合のお詫びです。ご迷惑をおかけしました。',
   rewards: [{
