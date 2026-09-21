@@ -210,6 +210,28 @@ if (REWARD_PICK_HEAD.test(component)) {
     tacticsExtra(twoAlive, [{ name: 'モッチー' }, null, { name: 'ゴーレム' }, null]));
   check('1体目が終わると次の子へ進む', tacticsHalf.includes('ゴーレムのトレーニング')
     && tacticsHalf.includes('data-tactics-training-progress="1/2"'));
+  // ★全員ぶん選び終わったあと、ステータスの欄がパーティ合計へ戻らないこと
+  //   (2026-09-22 ユーザー指摘「トレーニングを2回め選ぶとステがもとに戻る」)。
+  //   ライフを2回選んだので 500 → 600 → 720。戻っていれば 720 が消えて 500 だけになる
+  const tacticsDone = render(
+    [{ slot: 0, id: 'hp' }, { slot: 0, id: 'hp' }, { slot: 2, id: 'hp' }, { slot: 2, id: 'hp' }],
+    tacticsExtra(twoAlive, [{ name: 'モッチー' }, null, { name: 'ゴーレム' }, null]));
+  check('全員ぶん選び終わってもステータスが戻らない',
+    text(tacticsDone).includes('720') && tacticsDone.includes('data-tactics-training-progress="2/2"'),
+    text(tacticsDone).slice(0, 80));
+  check('全員ぶん決まったことが分かる', text(tacticsDone).includes('全員ぶん決まりました'));
+  check('全員ぶん決まったら決定できる', text(tacticsDone).includes('決定する'));
+  // 3つ目を積めてはいけない。カードは押せない状態で出す
+  check('選び終わった子へ3つ目を積ませない',
+    (tacticsDone.match(/<button[^>]*disabled=""/g) || []).length >= 4,
+    `押せないカード ${(tacticsDone.match(/<button[^>]*disabled=""/g) || []).length}個`);
+  // ★1体ずつのときも同じ。スクリーンショットの状況(遠距離に1体だけ)を再現する
+  const oneAlive = [null, null, null, unit()];
+  const oneDone = render([{ slot: 3, id: 'hp' }, { slot: 3, id: 'hp' }],
+    tacticsExtra(oneAlive, [null, null, null, { name: 'スネグーラチカ' }]));
+  check('1体だけのときも選び終わったあと戻らない',
+    text(oneDone).includes('720') && oneDone.includes('data-tactics-training-progress="1/1"'),
+    text(oneDone).slice(0, 80));
   // ★倒れた子はここで起こせる。起こすとそのWAVEは誰も強化できない
   const withDowned = [unit(), null, unit({ hp: 0, downed: true }), null];
   const tacticsDowned = render([], tacticsExtra(withDowned, [{ name: 'モッチー' }, null, { name: 'ゴーレム' }, null]));
@@ -218,6 +240,14 @@ if (REWARD_PICK_HEAD.test(component)) {
   check('起こすと強化できないことを書いてある', tacticsDowned.includes('このWAVEの強化はなし'));
   check('倒れた子はトレーニングの対象に数えない',
     tacticsDowned.includes('data-tactics-training-progress="0/1"'));
+  // ★全員倒れているときは、パーティ合計のステータス欄を出さない(起こすだけの画面)。
+  //   1体ずつのモードで合計を出すと、何の数字なのか読み取れない
+  const allDowned = [unit({ hp: 0, downed: true }), null, unit({ hp: 0, downed: true }), null];
+  const tacticsAllDowned = render([], tacticsExtra(allDowned, [{ name: 'モッチー' }, null, { name: 'ゴーレム' }, null]));
+  check('全員倒れているときは合計のステータス欄を出さない',
+    !tacticsAllDowned.includes('data-training-status'));
+  check('既存5モードでは今までどおりステータス欄を出す',
+    render([]).includes('data-training-status'));
 
   const empty = render([]);
   check('画面が落ちずに描ける', empty.length > 0);
