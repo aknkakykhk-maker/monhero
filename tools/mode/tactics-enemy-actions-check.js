@@ -192,12 +192,23 @@ check('攻撃力アップ・再生にも見出しとアイコンが付く',
 // --- ⑧ 実装側(バトル本体)に受け方が書かれているか ---
 // 定義だけ足して実処理を忘れると、技が出ても通常攻撃と同じ挙動になってしまう
 check('貫通撃はガードを無視する', has("intent.variant==='pierce' ? 0"));
-// ★連撃は 0.6×3 の3ヒットで、ガードが届くのは1ヒットぶんだけ(2026-09-20 ユーザー指示)。
-//   ガードを手数ぶん掛ける書き方が戻っていないか見る
-check('連撃のガードは1ヒットぶんしか効かない',
+// ★連撃は 0.4×3 の3ヒット。**ガード1枚につき1ヒット**を受け止める(2026-09-21 ユーザー指示
+//   「連撃はガード1個で1個めのガードが出来て、2個使えば2個目までも出来る」)。
+//   ガードの厚さを手数ぶん掛ける書き方(＝厚い1枚で全部止まる)が戻っていないか見る。
+//   受け止める枚数の数え方そのものは tactics-units-check.js が実際に計算して確かめている
+check('連撃のガードは構えた枚数ぶんのヒットを受け止める',
   has("const guardValue = intent.variant==='pierce' ? 0 : baseGuardValue;")
-    && has('resolveTacticsGuardedHit(slotIncoming,rushHits,slotGuard)')
+    && has('resolveTacticsGuardedHit(slotIncoming,rushHits,slotGuard,tacticsGuardHits(own.weight))')
     && !has("intent.variant==='rush' ? baseGuardValue"));
+// ★ガードの枚数はスロットごとに持つ。厚さ(flat/mult)だけに戻ると、2枚構えても1ヒットしか止まらない
+check('ガードは厚さだけでなく枚数も数える',
+  has('const addGuardForSlot=(idx,flat,mult,weight)=>{')
+    && has('entry.flat+=flat; entry.mult+=mult; entry.weight+=Math.max(0,Number(weight)||0);')
+    && has('addGuardForSlot(slotIdx,GUARD_EVOLUTION[guardLevel].flat*effMul,GUARD_EVOLUTION[guardLevel].mult*effMul,guardCardWeight(card));'));
+// ★連撃と分かるように出す(2026-09-21 ユーザー指摘「敵の連撃技が連撃表示になってない」)。
+//   ガードしていないときも出す(前はガードして貫通したときだけ出ていた)
+check('連撃は何ヒットかを画面に出す',
+  has('if(rushHits>1){') && has('addPopup(`連撃 ${rushHits}ヒット！${coverText}`'));
 check('間合い攻撃は間合いをずらすと威力が落ちる',
   has("const sweptAway = intent.variant==='sweep'") && has('value:Math.max(0,Math.floor(Number(intent.missValue)||0))'));
 check('間合い攻撃の判定は距離撃で動かした先を見る',

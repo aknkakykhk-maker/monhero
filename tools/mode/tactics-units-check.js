@@ -57,7 +57,7 @@ vm.runInContext(
     + 'reviveTacticsAt,tacticsEnemyPowerMultiplier,'
     + 'TACTICS_ENEMY_POWER_MAX,applyTacticsTraining,tacticsPartyAtk,'
     + 'tacticsPartyDef,shrinkTacticsScore,TACTICS_SCORE_DIVISOR,'
-    + 'splitTacticsGuardedHit,resolveTacticsGuardedHit,makeCardHalveCounter,'
+    + 'splitTacticsGuardedHit,resolveTacticsGuardedHit,tacticsGuardHits,makeCardHalveCounter,'
     + 'tacticsJoinWaveRate,addTacticsJoinCatchUp,applyTacticsJoinCatchUp};', sandbox);
 const api = sandbox.api;
 // ★合計へみゅあ補正を掛ける式は本体から切り出して動かす(検査へ書き写さない)。
@@ -552,7 +552,13 @@ check('置けるかの判定も画面へ渡す', has('tacticsCanAssign={tacticsC
   // ★予告と実行で数え方がずれると「ガードしたのに予定より減った」になる
   check('予告の予定ダメージも同じ関数を通る',
     hasScreen("const previewGuard=enemyIntent.variant==='pierce'?0:guardValueOf(previewGuardFlat,previewGuardMult);")
-      && hasScreen('applyTurnDamageReduction(resolveTacticsGuardedHit(rawDmg,previewHits,previewGuard).taken)'));
+      && hasScreen('applyTurnDamageReduction(resolveTacticsGuardedHit(rawDmg,previewHits,previewGuard,tacticsGuardHits(previewGuardWeight)).taken)'));
+  // ★予告もガードの**枚数**を数える。厚さだけ数えていたころへ戻ると、2枚構えても予定が減らない
+  check('予告もガードの枚数を数える',
+    hasScreen('let previewGuardFlat=0, previewGuardMult=0, previewGuardWeight=0;')
+      && hasScreen('previewGuardWeight+=weight;'));
+  // ★連撃だと予告の時点で分かる(2026-09-21 ユーザー指摘「敵の連撃技が連撃表示になってない」)
+  check('予告に何連撃かを出す', hasScreen('{previewHits>1?` ${previewHits}連撃`:\'\'}'));
   check('置けるかの判定は新モードだけ差し替える',
     hasScreen('const tacticsAnswer=tacticsCanAssign?tacticsCanAssign(pendingCardObj,pendingIdx,i):null;')
       && hasScreen('if(tacticsAnswer===null||tacticsAnswer===undefined){'));
@@ -638,6 +644,36 @@ check('ガッツ回復のボタンは1体ずつで出し分ける',
   has('&& (isTacticsMode(runMode) ? tacticsHasGutsRoom(tacticsUnits) : guts < effectiveMaxGuts);'));
 check('ガッツ回復は新モードだと合計を足さずに配る',
   has('      gutsRecoveryLockRef.current = true;\n      // 新モードは立っている子へ配る(合計だけ増やすと、払える子が増えない)\n      gainGuts(GUTS_RECOVERY_AMOUNT);'));
+
+// --- ㉕ 連撃の受け方(2026-09-21 ユーザー指示) ---
+// 「連撃はガード1個で1個めのガードが出来て、2個使えば2個目までも出来る とかそういう感じだよ」
+// ★ここは**実際に計算して**確かめる。文字列で見るだけだと、式を1つ書き換えただけで
+//   受け方が変わったことに気づけない。予告と実行が同じ関数を通ることは上で見ている
+{
+  const HITS = 3, INCOMING = 300;              // 1ヒット = 100
+  const rush = (guard, weight) => api.resolveTacticsGuardedHit(INCOMING, HITS, guard, api.tacticsGuardHits(weight));
+  check('ガードが無ければ連撃は全部通る', rush(0, 0).taken === INCOMING, `${rush(0, 0).taken}`);
+  check('ガード1枚で1ヒットぶんを受け止める',
+    rush(150, 1).taken === 200 && rush(150, 1).covered === 1, `通ったぶん ${rush(150, 1).taken}`);
+  check('ガード2枚で2ヒットぶんまで受け止める',
+    rush(300, 2).taken === 100 && rush(300, 2).covered === 2, `通ったぶん ${rush(300, 2).taken}`);
+  check('ガード3枚で連撃を受け止めきる',
+    rush(450, 3).taken === 0 && rush(450, 3).covered === HITS, `通ったぶん ${rush(450, 3).taken}`);
+  // ★ここが肝。厚さをいくら積んでも、1枚では1ヒットしか止まらない
+  //   (「合計から引く」に戻すと、厚いガード1枚で連撃が完全に止まってしまう)
+  check('厚いガード1枚では連撃は止まらない', rush(100000, 1).taken === 200, `通ったぶん ${rush(100000, 1).taken}`);
+  check('弱ガードは2枚でようやく1ヒットぶん',
+    api.tacticsGuardHits(0.5) === 1 && api.tacticsGuardHits(1.5) === 1 && api.tacticsGuardHits(2) === 2,
+    `0.5→${api.tacticsGuardHits(0.5)} / 1.5→${api.tacticsGuardHits(1.5)} / 2→${api.tacticsGuardHits(2)}`);
+  check('ヒット数を超えては数えない', rush(100000, 9).covered === HITS);
+  check('受け止めたぶんと通ったぶんを足すと元の値に戻る',
+    [0, 1, 2, 3, 9].every(w => { const r = rush(100000, w); return r.guarded + r.through === INCOMING; }));
+  // ★1ヒットの攻撃(通常攻撃・必殺技・貫通撃)は今までどおり
+  check('1ヒットの攻撃は余ったガードがライフになる',
+    api.resolveTacticsGuardedHit(100, 1, 150, api.tacticsGuardHits(3)).saved === 50);
+  check('ガードが足りなければ足りないぶんだけ通る',
+    api.resolveTacticsGuardedHit(100, 1, 40, api.tacticsGuardHits(1)).taken === 60);
+}
 
 console.log(failed ? `\nNG ${failed}件` : '\nすべてOK');
 process.exit(failed ? 1 : 0);

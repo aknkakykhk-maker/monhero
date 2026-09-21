@@ -9501,6 +9501,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             //   1ヒットに使い切れなかったぶんは余らない(ライフ・ガッツにもならない)。
             //   ここを「合計から引く」に戻すと、厚いガード1枚で連撃を完全に止められてしまう
             const rushHits=intent.variant==='rush'?Math.max(1,Math.floor(Number(intent.hits)||1)):1;
+            let coveredHits=0; // ガードが受け止めたヒット数(画面に出すため。狙われた子ぶんの最大)
             // ★回避は「狙われた子だけ」が避ける(2026-09-20 ユーザー指示)。
             //   反射は味方全体のバフ(発動したターンは誰も受けない)のに対し、回避は吸収と同じ個別扱い。
             //   全体攻撃で狙われた全員が避けると、回避が全体バフと変わらなくなる。
@@ -9519,7 +9520,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 reflectBack+=applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(intent,slotIdx));
                 return;
               }
-              const own=slotGuards[slotIdx]||{flat:0,mult:0};
+              const own=slotGuards[slotIdx]||{flat:0,mult:0,weight:0};
               // ガードの軽減量も「その子の丈夫さ」から出す
               const slotDef=tacticsUnitsRef.current[slotIdx]
                 ? resolveEffectiveMaxStat(normalizeTacticsUnit(tacticsUnitsRef.current[slotIdx]).def,getPermaBuff('defPct')) : effectiveDef;
@@ -9528,9 +9529,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               const slotGuard=intent.variant==='pierce'?0:base;
               // ★受けるダメージもその子の丈夫さで決まるので、狙われた子ごとに計算し直す
               const slotIncoming=getIncomingDamageBeforeTurnReduction(intent,slotIdx);
-              // ガードに当てるのは1ヒットぶん。数え方は予告と同じ関数を通す
-              const hit=resolveTacticsGuardedHit(slotIncoming,rushHits,slotGuard);
+              // ガードに当てるのは**構えた枚数ぶんのヒット**。数え方は予告と同じ関数を通す
+              const hit=resolveTacticsGuardedHit(slotIncoming,rushHits,slotGuard,tacticsGuardHits(own.weight));
               throughTotal+=hit.through;
+              if(slotGuard>0) coveredHits=Math.max(coveredHits,hit.covered);
               if(hit.blocked||slotGuard>0) guardedCount++;
               if(hit.taken>0){
                 const fd=applyTurnDamageReduction(hit.taken);
@@ -9550,9 +9552,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               addPopup(`反射！ ${reflectedName}`,'hero','text-purple-400 font-black text-xl drop-shadow-lg');
               await battleWait(600);
             }
-            // 「ガードしたのに減った」を不具合に見せないため、決まりをその場に出す
-            if(rushHits>1&&guardedCount>0&&throughTotal>0){
-              addPopup(`連撃 ${rushHits}ヒット！ ガードは1ヒットぶん`,'enemy','text-orange-300 font-black text-lg drop-shadow-md');
+            // 連撃だと分かるように、受け方もその場に出す(2026-09-21 ユーザー指摘
+            // 「敵の連撃技が連撃表示になってない」)。ガードしていないときも出す。
+            // ★「ガードしたのに減った」を不具合に見せないため、何ヒットぶん受け止めたかまで書く
+            if(rushHits>1){
+              const coverText=coveredHits>0&&throughTotal>0?` ガードは${coveredHits}ヒットぶん`
+                :coveredHits>0?` ガード ${coveredHits}ヒットぶんで受け止めた`:'';
+              addPopup(`連撃 ${rushHits}ヒット！${coverText}`,'enemy','text-orange-300 font-black text-lg drop-shadow-md');
               await battleWait(700);
             }
             if(guardedCount>0){ setGuardFx(true); Audio_.se.guard(); triggerShake(); await battleWait(450); setGuardFx(false); }
@@ -9742,10 +9748,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // 新モードは「ガードはカードを使った子自身を守る」。誰が構えたかをスロットごとに持つ。
     // 既存モードは今までどおり currentTurnGuardFlat / Mult の合計だけを見る
     const guardBySlot={};
-    const addGuardForSlot=(idx,flat,mult)=>{
+    // ★厚さ(flat/mult)だけでなく**枚数**も数える。連撃はガード1枚につき1ヒットを受け止める
+    //   (2026-09-21 ユーザー指示)。数え方は予告と同じ guardCardWeight を通す
+    const addGuardForSlot=(idx,flat,mult,weight)=>{
       if(!Number.isInteger(idx)) return;
-      const entry=guardBySlot[idx]||(guardBySlot[idx]={flat:0,mult:0});
-      entry.flat+=flat; entry.mult+=mult;
+      const entry=guardBySlot[idx]||(guardBySlot[idx]={flat:0,mult:0,weight:0});
+      entry.flat+=flat; entry.mult+=mult; entry.weight+=Math.max(0,Number(weight)||0);
     };
     let hpBeforeEnemyAttack=hp;
     let activatedIceLockThisTurn=false;
@@ -9775,8 +9783,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       if(halved) addPopup(isTacticsMode(runMode)?'同じ子の2枚目 効果半減':'2枚目以降 効果半減','hero','text-slate-300 text-sm font-black');
       const slotIdx=entry.slotIdx!=null?entry.slotIdx:defaultSlot;
       lastType=card.type;
-      if (card.type==='guard') { Audio_.se.guard(); guardTypeInTurn='guard'; currentTurnGuardFlat+=GUARD_EVOLUTION[guardLevel].flat*effMul; currentTurnGuardMult+=GUARD_EVOLUTION[guardLevel].mult*effMul; addGuardForSlot(slotIdx,GUARD_EVOLUTION[guardLevel].flat*effMul,GUARD_EVOLUTION[guardLevel].mult*effMul); }
-      else if (card.type==='weak_guard') { if(guardTypeInTurn!=='guard') guardTypeInTurn='weak_guard'; currentTurnGuardFlat+=(GUARD_EVOLUTION[guardLevel].flat*0.5*effMul); currentTurnGuardMult+=(GUARD_EVOLUTION[guardLevel].mult*0.5*effMul); addGuardForSlot(slotIdx,GUARD_EVOLUTION[guardLevel].flat*0.5*effMul,GUARD_EVOLUTION[guardLevel].mult*0.5*effMul); }
+      if (card.type==='guard') { Audio_.se.guard(); guardTypeInTurn='guard'; currentTurnGuardFlat+=GUARD_EVOLUTION[guardLevel].flat*effMul; currentTurnGuardMult+=GUARD_EVOLUTION[guardLevel].mult*effMul; addGuardForSlot(slotIdx,GUARD_EVOLUTION[guardLevel].flat*effMul,GUARD_EVOLUTION[guardLevel].mult*effMul,guardCardWeight(card)); }
+      else if (card.type==='weak_guard') { if(guardTypeInTurn!=='guard') guardTypeInTurn='weak_guard'; currentTurnGuardFlat+=(GUARD_EVOLUTION[guardLevel].flat*0.5*effMul); currentTurnGuardMult+=(GUARD_EVOLUTION[guardLevel].mult*0.5*effMul); addGuardForSlot(slotIdx,GUARD_EVOLUTION[guardLevel].flat*0.5*effMul,GUARD_EVOLUTION[guardLevel].mult*0.5*effMul,guardCardWeight(card)); }
       // 払うのは「使う子」。新モード以外は今までどおりパーティのガッツから引く
       const cardCost=getCardGuts(card,slotIdx);
       if(isTacticsMode(runMode)) tacticsPayGuts(slotIdx,cardCost);
@@ -9831,7 +9839,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const gutsVal=gainGutsByRate(slotIdx,0.3*effMul);
           currentTurnGuardFlat+=GUARD_EVOLUTION[guardLevel].flat*effMul;
           currentTurnGuardMult+=GUARD_EVOLUTION[guardLevel].mult*effMul;
-          addGuardForSlot(slotIdx,GUARD_EVOLUTION[guardLevel].flat*effMul,GUARD_EVOLUTION[guardLevel].mult*effMul);
+          addGuardForSlot(slotIdx,GUARD_EVOLUTION[guardLevel].flat*effMul,GUARD_EVOLUTION[guardLevel].mult*effMul,guardCardWeight(card));
           guardTypeInTurn='guard';
           if(gutsVal>0) addPopup(`⚡ ガッツ +${gutsVal}`,'guts','text-amber-400 font-black text-2xl drop-shadow-md');
           if(level>=1 && usedCards.length>=2) {

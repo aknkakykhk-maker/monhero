@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0a29e371f4f68898
+// source-sha256: ed1d93f902bbafcf
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 732ad6552af76617
+// generated-sha256: 281feade06ca3d3d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-21 20:44"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-21 20:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -16113,7 +16113,7 @@ const ENEMY_ACTION_DEFINITIONS = [{
 const TACTICS_SWEEP_MULT = 1.2; // 予告した間合いに敵がいるとき
 const TACTICS_SWEEP_MISS_MULT = 0.4; // 距離撃などでずらしたとき
 const TACTICS_RUSH_MULT = 1.2; // 0.4×3ヒット。ガードは1ヒットぶんしか効かない
-const TACTICS_RUSH_HITS = 3; // 威力をこの数で割ってヒットに分ける。ガードが届くのは1ヒットだけ
+const TACTICS_RUSH_HITS = 3; // 威力をこの数で割ってヒットに分ける。ガードは1枚につき1ヒットを受け止める
 const TACTICS_PIERCE_MULT = 0.8; // ガードを無視する。効かないぶん倍率で加減する
 const TACTICS_ROAR_ATK_RATE = 1.5; // 次のターンから敵の攻撃が上がる
 const TACTICS_ROAR_MAX_STACKS = 2; // 重ねがけの上限
@@ -16207,7 +16207,7 @@ const TACTICS_ACTION_DEFINITIONS = [{
   multiplier: TACTICS_RUSH_MULT,
   hits: TACTICS_RUSH_HITS,
   range: '全間合い',
-  condition: '3ヒットに分かれ、ガードは1ヒットぶんしか効かない',
+  condition: `${TACTICS_RUSH_HITS}ヒットに分かれる。ガードは1枚につき1ヒットを受け止める`,
   cooldown: 0,
   useLimit: null
 },
@@ -27264,39 +27264,52 @@ const tacticsIntentTargets = (intent, units, enemyDist = null) => {
 };
 
 // ===== 複数ヒットに分かれる攻撃(連撃)の、ガードが届くぶんと通るぶん =====
-// ★連撃は 0.6×3 の3ヒット。ガードが受け止められるのは **1ヒットぶんだけ** で、
-//   残りの2ヒットはそのまま通る(2026-09-20 ユーザー指示)。
-//   「合計から引く」に戻すと、厚いガード1枚で連撃を完全に止められてしまう。
+// ★連撃は 0.4×3 の3ヒット。**ガードは1枚につき1ヒットを受け止める**
+//   (2026-09-21 ユーザー指示「連撃はガード1個で1個めのガードが出来て、
+//   2個使えば2個目までも出来る」)。3ヒット全部を止めるにはガード3枚が要るので、
+//   そのターンは攻めに回せる手が無くなる。止めるかどうかがそのまま読み合いになる。
+// ★厚さでは止まらない。1枚のガードをどれだけ厚くしても受け止められるのは1ヒットぶん。
+//   ここを「合計から引く」に戻すと、厚いガード1枚で連撃が完全に止まってしまう。
 // ★端数は「通るぶん」へ寄せて、guarded + through が必ず元の合計と一致するようにする。
 // ★予告(予定ダメージ)と実行の両方がこの関数を通る。別々に数えると食い違う。
-const splitTacticsGuardedHit = (incoming, hits) => {
+// ガードが受け止められるヒット数。ガード1枚で1ヒット、弱ガードは0.5枚ぶんなので2枚で1ヒット。
+// ★ガードが無い(weight 0)ときも1を返すが、そのときは厚さが0なので結果は変わらない
+const tacticsGuardHits = weight => Math.max(1, Math.floor(Math.max(0, Number(weight) || 0)));
+const splitTacticsGuardedHit = (incoming, hits, guardHits = 1) => {
   const total = Math.max(0, tacticsSafeInt(incoming, 0));
   const count = Math.max(1, tacticsSafeInt(hits, 1));
-  const guarded = count > 1 ? Math.floor(total / count) : total;
+  // 受け止められるのは、構えた枚数ぶんのヒットまで(ヒット数を超えては数えない)
+  const covered = Math.min(count, Math.max(1, tacticsSafeInt(guardHits, 1)));
+  const guarded = count > 1 ? Math.floor(total / count) * covered : total;
   return {
     guarded,
-    through: total - guarded
+    through: total - guarded,
+    covered,
+    hits: count
   };
 };
 
-// 1体ぶんの受け方。ガードが届く1ヒットぶんを相殺し、残りのヒットはそのまま通す。
+// 1体ぶんの受け方。ガードが届くヒットぶんを相殺し、残りのヒットはそのまま通す。
 // 返すのは**ターン軽減を掛ける前**の値(軽減は呼び出し側で掛ける)。
-// ★連撃で1ヒットを消しきっても、余ったガードは余らせない(ライフ・ガッツにしない)。
+// ★連撃でヒットを消しきっても、余ったガードは余らせない(ライフ・ガッツにしない)。
 //   余らせると「合計から引く」のと同じになり、厚いガード1枚で連撃が完全に止まってしまう。
 // ★1ヒットの攻撃(hits=1)では through が0なので、いままでどおり
 //   「余ったぶんがライフとガッツになる」が成り立つ。
-// ★blocked は「ガードが1ヒットぶんを受け止めきったか」。演出(ガード成功)の判定に使う。
-const resolveTacticsGuardedHit = (incoming, hits, guard) => {
+// ★blocked は「ガードが届いたヒットを受け止めきったか」。演出(ガード成功)の判定に使う。
+// ★covered は「ガードが受け止めたヒット数」。画面に「ガードは◯ヒットぶん」と出すのに使う。
+const resolveTacticsGuardedHit = (incoming, hits, guard, guardHits = 1) => {
   const {
     guarded,
-    through
-  } = splitTacticsGuardedHit(incoming, hits);
+    through,
+    covered
+  } = splitTacticsGuardedHit(incoming, hits, guardHits);
   const left = Math.max(0, tacticsSafeInt(guard, 0)) - guarded;
   if (left < 0) return {
     taken: -left + through,
     saved: 0,
     guarded,
     through,
+    covered,
     blocked: false
   };
   return through > 0 ? {
@@ -27304,12 +27317,14 @@ const resolveTacticsGuardedHit = (incoming, hits, guard) => {
     saved: 0,
     guarded,
     through,
+    covered,
     blocked: true
   } : {
     taken: 0,
     saved: left,
     guarded,
     through,
+    covered,
     blocked: true
   };
 };
@@ -38452,8 +38467,10 @@ function BattleScreen({
     // ★targetSlot が無いモードでは今までどおりパーティの値で出る
     const aimedSlot = Number.isInteger(enemyIntent.targetSlot) ? enemyIntent.targetSlot : null;
     const rawDmg = getIncomingDamageBeforeTurnReduction(enemyIntent, aimedSlot);
+    // ★厚さだけでなく枚数も数える。連撃はガード1枚につき1ヒットを受け止める
     let previewGuardFlat = 0,
-      previewGuardMult = 0;
+      previewGuardMult = 0,
+      previewGuardWeight = 0;
     // 何枚目かの数え方はアプリ側(makeCardHalveCounter)が持つ。
     // 新モードは「同じ子の2枚目」だけ半減(2026-09-20 ユーザー指示)
     const previewCounter = makeCardHalveCounter();
@@ -38466,13 +38483,14 @@ function BattleScreen({
         const effect = cardEffectMultiplier(card, halved);
         previewGuardFlat += GUARD_EVOLUTION[guardLevel].flat * weight * effect;
         previewGuardMult += GUARD_EVOLUTION[guardLevel].mult * weight * effect;
+        previewGuardWeight += weight;
       }
     });
     // ★予告も本番と同じ数え方にする。ずれると「ガードしたのに予定より減った」になる。
-    //   貫通撃はガードが効かない。連撃は3ヒットに分かれ、ガードが届くのは1ヒットぶんだけ
+    //   貫通撃はガードが効かない。連撃はヒットに分かれ、ガード1枚につき1ヒットを受け止める
     const previewGuard = enemyIntent.variant === 'pierce' ? 0 : guardValueOf(previewGuardFlat, previewGuardMult);
     const previewHits = enemyIntent.variant === 'rush' ? Math.max(1, Math.floor(Number(enemyIntent.hits) || 1)) : 1;
-    const plannedDmg = applyTurnDamageReduction(resolveTacticsGuardedHit(rawDmg, previewHits, previewGuard).taken);
+    const plannedDmg = applyTurnDamageReduction(resolveTacticsGuardedHit(rawDmg, previewHits, previewGuard, tacticsGuardHits(previewGuardWeight)).taken);
     const tone = enemyIntent.type === 'SPECIAL' ? 'bg-fuchsia-950 border-fuchsia-500 text-fuchsia-300' : enemyIntent.type === 'CHARGE' ? 'bg-amber-950 border-amber-500 text-amber-400' : enemyIntent.type === 'PIERCE_CHARGE' ? 'bg-rose-950 border-rose-500 text-rose-300' : enemyIntent.type === 'MOVE' ? 'bg-cyan-950 border-cyan-500/60 text-cyan-300' : 'bg-red-950 border-red-600/50 text-red-400';
     // 敵の絵のすぐ下へ置く(2026-09-18・ユーザー依頼)。mt-auto で下端へ押しやっていたため、
     // 絵と「次に何をしてくるか」のあいだに200pxほどの空きができ、視線が大きく動いていた。
@@ -38486,7 +38504,7 @@ function BattleScreen({
       size: 12
     }), /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] font-black uppercase tracking-tight"
-    }, enemyIntent.label, enemyIntent.targetName ? ` 🎯${enemyIntent.targetName}` : '', rawDmg > 0 ? ` (予定: ${plannedDmg})` : ''));
+    }, enemyIntent.label, previewHits > 1 ? ` ${previewHits}連撃` : '', enemyIntent.targetName ? ` 🎯${enemyIntent.targetName}` : '', rawDmg > 0 ? ` (予定: ${plannedDmg})` : ''));
   })(), (() => {
     // 強化の札(2026-09-20 ユーザー指摘「バフ欄が増えてくると敵や緊急回復等が見えなくなる」)。
     // ★もとは flex-wrap で何行にも伸びていた。強化が10個を超えると札だけで3行4行になり、
@@ -54191,6 +54209,7 @@ function MonsterHeroGame() {
             //   1ヒットに使い切れなかったぶんは余らない(ライフ・ガッツにもならない)。
             //   ここを「合計から引く」に戻すと、厚いガード1枚で連撃を完全に止められてしまう
             const rushHits = intent.variant === 'rush' ? Math.max(1, Math.floor(Number(intent.hits) || 1)) : 1;
+            let coveredHits = 0; // ガードが受け止めたヒット数(画面に出すため。狙われた子ぶんの最大)
             // ★回避は「狙われた子だけ」が避ける(2026-09-20 ユーザー指示)。
             //   反射は味方全体のバフ(発動したターンは誰も受けない)のに対し、回避は吸収と同じ個別扱い。
             //   全体攻撃で狙われた全員が避けると、回避が全体バフと変わらなくなる。
@@ -54221,7 +54240,8 @@ function MonsterHeroGame() {
               }
               const own = slotGuards[slotIdx] || {
                 flat: 0,
-                mult: 0
+                mult: 0,
+                weight: 0
               };
               // ガードの軽減量も「その子の丈夫さ」から出す
               const slotDef = tacticsUnitsRef.current[slotIdx] ? resolveEffectiveMaxStat(normalizeTacticsUnit(tacticsUnitsRef.current[slotIdx]).def, getPermaBuff('defPct')) : effectiveDef;
@@ -54230,9 +54250,10 @@ function MonsterHeroGame() {
               const slotGuard = intent.variant === 'pierce' ? 0 : base;
               // ★受けるダメージもその子の丈夫さで決まるので、狙われた子ごとに計算し直す
               const slotIncoming = getIncomingDamageBeforeTurnReduction(intent, slotIdx);
-              // ガードに当てるのは1ヒットぶん。数え方は予告と同じ関数を通す
-              const hit = resolveTacticsGuardedHit(slotIncoming, rushHits, slotGuard);
+              // ガードに当てるのは**構えた枚数ぶんのヒット**。数え方は予告と同じ関数を通す
+              const hit = resolveTacticsGuardedHit(slotIncoming, rushHits, slotGuard, tacticsGuardHits(own.weight));
               throughTotal += hit.through;
+              if (slotGuard > 0) coveredHits = Math.max(coveredHits, hit.covered);
               if (hit.blocked || slotGuard > 0) guardedCount++;
               if (hit.taken > 0) {
                 const fd = applyTurnDamageReduction(hit.taken);
@@ -54254,9 +54275,12 @@ function MonsterHeroGame() {
               addPopup(`反射！ ${reflectedName}`, 'hero', 'text-purple-400 font-black text-xl drop-shadow-lg');
               await battleWait(600);
             }
-            // 「ガードしたのに減った」を不具合に見せないため、決まりをその場に出す
-            if (rushHits > 1 && guardedCount > 0 && throughTotal > 0) {
-              addPopup(`連撃 ${rushHits}ヒット！ ガードは1ヒットぶん`, 'enemy', 'text-orange-300 font-black text-lg drop-shadow-md');
+            // 連撃だと分かるように、受け方もその場に出す(2026-09-21 ユーザー指摘
+            // 「敵の連撃技が連撃表示になってない」)。ガードしていないときも出す。
+            // ★「ガードしたのに減った」を不具合に見せないため、何ヒットぶん受け止めたかまで書く
+            if (rushHits > 1) {
+              const coverText = coveredHits > 0 && throughTotal > 0 ? ` ガードは${coveredHits}ヒットぶん` : coveredHits > 0 ? ` ガード ${coveredHits}ヒットぶんで受け止めた` : '';
+              addPopup(`連撃 ${rushHits}ヒット！${coverText}`, 'enemy', 'text-orange-300 font-black text-lg drop-shadow-md');
               await battleWait(700);
             }
             if (guardedCount > 0) {
@@ -54538,14 +54562,18 @@ function MonsterHeroGame() {
     // 新モードは「ガードはカードを使った子自身を守る」。誰が構えたかをスロットごとに持つ。
     // 既存モードは今までどおり currentTurnGuardFlat / Mult の合計だけを見る
     const guardBySlot = {};
-    const addGuardForSlot = (idx, flat, mult) => {
+    // ★厚さ(flat/mult)だけでなく**枚数**も数える。連撃はガード1枚につき1ヒットを受け止める
+    //   (2026-09-21 ユーザー指示)。数え方は予告と同じ guardCardWeight を通す
+    const addGuardForSlot = (idx, flat, mult, weight) => {
       if (!Number.isInteger(idx)) return;
       const entry = guardBySlot[idx] || (guardBySlot[idx] = {
         flat: 0,
-        mult: 0
+        mult: 0,
+        weight: 0
       });
       entry.flat += flat;
       entry.mult += mult;
+      entry.weight += Math.max(0, Number(weight) || 0);
     };
     let hpBeforeEnemyAttack = hp;
     let activatedIceLockThisTurn = false;
@@ -54584,12 +54612,12 @@ function MonsterHeroGame() {
         guardTypeInTurn = 'guard';
         currentTurnGuardFlat += GUARD_EVOLUTION[guardLevel].flat * effMul;
         currentTurnGuardMult += GUARD_EVOLUTION[guardLevel].mult * effMul;
-        addGuardForSlot(slotIdx, GUARD_EVOLUTION[guardLevel].flat * effMul, GUARD_EVOLUTION[guardLevel].mult * effMul);
+        addGuardForSlot(slotIdx, GUARD_EVOLUTION[guardLevel].flat * effMul, GUARD_EVOLUTION[guardLevel].mult * effMul, guardCardWeight(card));
       } else if (card.type === 'weak_guard') {
         if (guardTypeInTurn !== 'guard') guardTypeInTurn = 'weak_guard';
         currentTurnGuardFlat += GUARD_EVOLUTION[guardLevel].flat * 0.5 * effMul;
         currentTurnGuardMult += GUARD_EVOLUTION[guardLevel].mult * 0.5 * effMul;
-        addGuardForSlot(slotIdx, GUARD_EVOLUTION[guardLevel].flat * 0.5 * effMul, GUARD_EVOLUTION[guardLevel].mult * 0.5 * effMul);
+        addGuardForSlot(slotIdx, GUARD_EVOLUTION[guardLevel].flat * 0.5 * effMul, GUARD_EVOLUTION[guardLevel].mult * 0.5 * effMul, guardCardWeight(card));
       }
       // 払うのは「使う子」。新モード以外は今までどおりパーティのガッツから引く
       const cardCost = getCardGuts(card, slotIdx);
@@ -54721,7 +54749,7 @@ function MonsterHeroGame() {
           const gutsVal = gainGutsByRate(slotIdx, 0.3 * effMul);
           currentTurnGuardFlat += GUARD_EVOLUTION[guardLevel].flat * effMul;
           currentTurnGuardMult += GUARD_EVOLUTION[guardLevel].mult * effMul;
-          addGuardForSlot(slotIdx, GUARD_EVOLUTION[guardLevel].flat * effMul, GUARD_EVOLUTION[guardLevel].mult * effMul);
+          addGuardForSlot(slotIdx, GUARD_EVOLUTION[guardLevel].flat * effMul, GUARD_EVOLUTION[guardLevel].mult * effMul, guardCardWeight(card));
           guardTypeInTurn = 'guard';
           if (gutsVal > 0) addPopup(`⚡ ガッツ +${gutsVal}`, 'guts', 'text-amber-400 font-black text-2xl drop-shadow-md');
           if (level >= 1 && usedCards.length >= 2) {
