@@ -14,7 +14,7 @@ const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分�
 // 【そのうえで、届いた絵の透過を数字で出す】
 // 見たまま「きれい」かどうかは、開かないと分からない。次の3つで機械的に測って、
 // 手を入れる必要があるかどうかをその場で判断できるようにする。
-//   ・縁のなめらかさ … アルファが0でも255でもない画素の割合。0%に近いとギザギザに見える
+//   ・縁のなめらかさ … 塗りつぶしでも背景でもない、中間のアルファを持つ画素の割合。0%に近いとギザギザ
 //   ・切れ端         … 本体から離れた小さな島の数。背景の消し残り・UIの写り込み
 //   ・縁の明るさ     … 本体のまわり1周の明るさ。白い背景の消し残り(ハロー)があると高くなる
 //
@@ -31,6 +31,12 @@ const PAD = Number(process.env.PAD || 0);          // トリムのあとに残�
 const BOX = 56;          // バトル画面・全WAVE詳細で敵の絵を収めている枠(w-14 h-14)
 const ON = 40;           // ここより濃ければ「絵がある」とみなす(enemy-art-size-report.js と同じ)
 const SOLID = 200;       // ここより濃ければ「本体」とみなす(縁の明るさを測るときの基準)
+// ★「完全に不透明(255)」「完全に透明(0)」の厳密一致で数えない。
+//   描画ソフトから出てくる絵は本体が251〜253・背景が0〜2になっていることがあり
+//   (2026-09-21に届いた5体がそうだった)、厳密一致だと本体まで「縁」に数えて
+//   「縁のなめらかさ 99.9%」のような、意味のない数字が出る
+const OPAQUE_AT = 250;   // これ以上は塗りつぶし
+const CLEAR_AT = 5;      // これ以下は背景
 const CHIP_RATE = 0.02;  // いちばん大きい塊のこの割合に満たない島は「切れ端」
 
 // アルファの通った画素の外接矩形。sharp の trim は色で切るので、透過はこちらで数える
@@ -78,12 +84,14 @@ const islands = (raw, width, height) => {
 };
 
 // 透過の質。縁のなめらかさ・切れ端の数・縁の明るさ
+// ★切れ端は「縮小したあとに残るもの」だけ数える。長辺160pxへ縮めるので元の1pxは消えてしまい、
+//   そこまで拾うと実害のない孤立点に警告が出る(2026-09-21、スプラッターと覚醒ムーがそうだった)
 const quality = (raw, width, height) => {
   let opaque = 0, clear = 0, soft = 0;
   for (let i = 0; i < width * height; i += 1) {
     const a = raw[i * 4 + 3];
-    if (a === 255) opaque += 1;
-    else if (a === 0) clear += 1;
+    if (a >= OPAQUE_AT) opaque += 1;
+    else if (a <= CLEAR_AT) clear += 1;
     else soft += 1;
   }
   // 本体のうち、隣が透明になっているところ(＝輪郭の1周)の明るさ
@@ -102,11 +110,15 @@ const quality = (raw, width, height) => {
     }
   }
   const sizes = islands(raw, width, height);
-  const chips = sizes.filter((s, i) => i > 0 && s < sizes[0] * CHIP_RATE).length;
+  // 縮小率の2乗が、縮めたあとに残る面積の割合。1px未満になるものは数えない
+  const shrink = LONG_SIDE / Math.max(width, height);
+  const minVisible = Math.max(1, Math.ceil(1 / Math.max(1e-9, shrink * shrink)));
+  const small = sizes.filter((s, i) => i > 0 && s < sizes[0] * CHIP_RATE);
+  const chips = small.filter(s => s >= minVisible).length;
   return {
     opaque, clear,
     softRate: (opaque + soft) > 0 ? soft / (opaque + soft) : 0,
-    chips, islandCount: sizes.length,
+    chips, vanishing: small.length - chips, islandCount: sizes.length,
     edgeBrightness: edgeCount ? edgeSum / edgeCount : 0,
   };
 };
@@ -156,7 +168,9 @@ const prepare = async (src, dest) => {
   const kb = (fs.statSync(dest).size / 1024).toFixed(1);
   console.log(`OK: ${path.basename(dest)}  ←  ${path.basename(src)}`);
   console.log(`    もとの大きさ ${meta.width}x${meta.height} → 余白を切って ${cropW}x${cropH} → ${out.width}x${out.height}（${kb}KB）`);
-  console.log(`    透過: 縁のなめらかさ ${(q.softRate * 100).toFixed(1)}% / 切れ端 ${q.chips}個（塊は全部で${q.islandCount}個）/ 縁の明るさ ${Math.round(q.edgeBrightness)}`);
+  console.log(`    透過: 縁のなめらかさ ${(q.softRate * 100).toFixed(1)}% / 切れ端 ${q.chips}個`
+    + `${q.vanishing ? `（ほかに縮小で消える点が${q.vanishing}個）` : ''}`
+    + ` / 縁の明るさ ${Math.round(q.edgeBrightness)}`);
   console.log(`    ${BOX}px の枠での面積: ${Math.round(box.rate * 100)}%（配信中の敵は13〜68%。外れたら ENEMY_ART_LAYOUT の scale で持ち上げる）`);
   // 気になるところだけ、その場で言う。数字を並べるだけだと見落とす
   if (q.softRate < 0.005) console.log('    ⚠ 縁がほぼ硬い（アンチエイリアスが無い）。拡大するとギザギザが見えます');
