@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8ac4366b73e90a4f
+// source-sha256: b7354dc736777129
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c2be28fee3ea4f71
+// generated-sha256: 9e71f0cb93a91054
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-21 08:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-21 10:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11799,6 +11799,65 @@ const grantCompensationGifts = (gifts, now = Date.now()) => {
     })),
     createdAt,
     expiresAt,
+    claimedAt: null
+  }));
+  return {
+    granted: true,
+    gifts: [...added, ...list]
+  };
+};
+
+// ===== その人だけに届くお詫び(2026-09-21) =====
+//
+// 不具合の影響が特定の人にだけ出たときのための配布。全員へ配る COMPENSATION_GIFTS とは
+// 別に、タイトル画面に出している PLAYER ID(mh_player_id)が一致した端末にだけ届ける。
+//
+// 【なぜIDを見て配るか】セーブデータは端末の中にしかなく、こちらから送り込む手段がない。
+// ゲーム側で「自分が対象か」を確かめて、自分のギフトボックスへ入れてもらう形にする。
+// 【限界】対象IDはソースに書くので、端末の保存値を書き換えれば対象外の人でも受け取れる。
+// 金額が大きいものを配るときは承知のうえで使うこと(2026-09-21・ユーザー了解済み)。
+// 【期限は付けない】受け取りそこねると取り返しがつかないので expiresAt を書かない。
+// 【項目は消さない】消すと、まだ受け取っていない端末へ再び配られてしまう。
+// 【IDは端末ごと】機種変すると別IDになり届かなくなる。届いたかは本人に確かめる。
+const PLAYER_COMPENSATION_GIFTS = [{
+  id: 'gift_player_compensation_20260921_rebirth_xp',
+  playerIds: ['MH-065J-BWBP'],
+  title: 'お詫びのしるし',
+  description: '転生200回ぶんの経験値が失われる不具合のお詫びです。ご迷惑をおかけしました。',
+  rewards: [{
+    type: 'diamond',
+    amount: 200000000
+  }]
+}];
+// PLAYER ID は大文字の決まった形で作っているが、読み違いを避けるため前後の空白と
+// 大小の違いは吸収して見比べる。値が無い・文字列でないときは空文字にする(=対象外)。
+const normalizePlayerIdForGift = value => typeof value === 'string' ? value.trim().toUpperCase() : '';
+// 対象のPLAYER IDと一致したときだけ、まだ届いていないお詫びをギフト一覧の先頭へ足す。
+// idが既にあれば足さないので、受取済み・未受取のどちらでも二重には届かない。
+const grantPlayerCompensationGifts = (gifts, playerId, now = Date.now()) => {
+  const list = Array.isArray(gifts) ? gifts : [];
+  const id = normalizePlayerIdForGift(playerId);
+  if (!id) return {
+    granted: false,
+    gifts: list
+  };
+  const missing = PLAYER_COMPENSATION_GIFTS.filter(def => (Array.isArray(def.playerIds) ? def.playerIds : []).some(target => normalizePlayerIdForGift(target) === id) && !list.some(item => item?.id === def.id));
+  if (missing.length === 0) return {
+    granted: false,
+    gifts: list
+  };
+  const createdAt = new Date(now).toISOString();
+  // playerIds は配る相手を決めるためだけのもの。保存するギフトには持たせない
+  const added = missing.map(({
+    playerIds,
+    ...def
+  }) => ({
+    ...def,
+    source: 'compensation',
+    rewards: def.rewards.map(r => ({
+      ...r
+    })),
+    createdAt,
     claimedAt: null
   }));
   return {
@@ -46566,11 +46625,18 @@ function MonsterHeroGame() {
       const loginGrant = grantLoginBonus(savedLoginBonus, savedGifts);
       // 不具合のお詫びも同じギフトボックスへ入れる。既に届いていれば何もしない
       const compensationGrant = grantCompensationGifts(loginGrant.gifts);
-      setGifts(compensationGrant.gifts);
+      // その人だけに届くお詫び。PLAYER ID はタイトル画面に出しているものと同じ経路
+      // (localStorage直)で読む。ここでは作らない(まだ無い端末は対象外のまま素通りする)
+      let currentPlayerId = '';
+      try {
+        currentPlayerId = window.localStorage.getItem('mh_player_id') || '';
+      } catch {}
+      const playerCompensationGrant = grantPlayerCompensationGifts(compensationGrant.gifts, currentPlayerId);
+      setGifts(playerCompensationGrant.gifts);
       await storeSet('mh_login_bonus', loginGrant.loginBonus, false);
       setLoginBonusState(loginGrant.loginBonus);
-      if (loginGrant.granted || compensationGrant.granted) {
-        await storeSet('mh_gifts', compensationGrant.gifts, false);
+      if (loginGrant.granted || compensationGrant.granted || playerCompensationGrant.granted) {
+        await storeSet('mh_gifts', playerCompensationGrant.gifts, false);
       }
       if (loginGrant.granted) setLoginBonusPopup({
         day: loginGrant.day,

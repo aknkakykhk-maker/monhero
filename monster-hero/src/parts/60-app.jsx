@@ -4548,11 +4548,16 @@ function MonsterHeroGame() {
       const loginGrant = grantLoginBonus(savedLoginBonus, savedGifts);
       // 不具合のお詫びも同じギフトボックスへ入れる。既に届いていれば何もしない
       const compensationGrant = grantCompensationGifts(loginGrant.gifts);
-      setGifts(compensationGrant.gifts);
+      // その人だけに届くお詫び。PLAYER ID はタイトル画面に出しているものと同じ経路
+      // (localStorage直)で読む。ここでは作らない(まだ無い端末は対象外のまま素通りする)
+      let currentPlayerId = '';
+      try { currentPlayerId = window.localStorage.getItem('mh_player_id') || ''; } catch {}
+      const playerCompensationGrant = grantPlayerCompensationGifts(compensationGrant.gifts, currentPlayerId);
+      setGifts(playerCompensationGrant.gifts);
       await storeSet('mh_login_bonus', loginGrant.loginBonus, false);
       setLoginBonusState(loginGrant.loginBonus);
-      if (loginGrant.granted || compensationGrant.granted) {
-        await storeSet('mh_gifts', compensationGrant.gifts, false);
+      if (loginGrant.granted || compensationGrant.granted || playerCompensationGrant.granted) {
+        await storeSet('mh_gifts', playerCompensationGrant.gifts, false);
       }
       if (loginGrant.granted) setLoginBonusPopup({ day:loginGrant.day, rewards:loginGrant.gift.rewards });
       // ログインボーナスでptとして配ってしまったぶんを、経験値へ付け替える(一度きり)。
