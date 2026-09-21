@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d386945f143507ba
+// source-sha256: 15e044202c29a361
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b5e7cc161a5fc0c0
+// generated-sha256: 25f0177d63ffb789
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-21 17:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-21 18:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5084,16 +5084,23 @@ const BGM_TRACKS = [{
   gain: 1,
   loop: true
 },
-// タクティクスバトルのボス戦用。ユーザーから受け取った1曲で、通常戦とデュラハン戦は
-// 曲数が足りないのでチャレンジと同じものを鳴らす(2026-09-21 ユーザー指示
-// 「曲数が足りないからボス戦だけいれよう」)。
+// タクティクスバトル用に受け取った曲(2026-09-21 ユーザー指示「通常曲とボス曲の変更 /
+// 戦場→通常曲 / 魔窟→ボス戦」)。ジャケットは tools/art-sources/song-art/ に預けてあり、
+// 今後モンヒロビートへ入れるときに使う。
 // ★曲の一覧(BGMアレンジの選択肢)は公開前でも全部出るので、**名前にモード名を入れない**。
-//   「タクティクス ボステーマ」にすると、まだ見せていないモードの名前がそこから見えてしまう
+//   「タクティクス ボステーマ」のような名前にすると、まだ見せていないモードの名前が見えてしまう
 {
-  id: 'tactics_boss',
-  name: '決戦テーマ',
+  id: 'senjou_no_shippuu',
+  name: '戦場の疾風',
   creator: 'オリジナル',
-  src: 'audio/bgm-tactics-boss.mp3',
+  src: 'audio/bgm-senjou-no-shippuu.mp3',
+  gain: 1,
+  loop: true
+}, {
+  id: 'makutsu_no_senritsu',
+  name: '魔窟の旋律',
+  creator: 'オリジナル',
+  src: 'audio/bgm-makutsu-no-senritsu.mp3',
   gain: 1,
   loop: true
 },
@@ -5755,8 +5762,9 @@ const DEFAULT_BGM_ARRANGEMENT = Object.freeze({
   speciesBattle: 'original_battle',
   speciesDullahan: 'original_dullahan',
   speciesMoo: 'original_boss',
+  tacticsBattle: 'senjou_no_shippuu',
   tacticsMidBoss: 'melo_the_city_beneath_the_comets',
-  tacticsBoss: 'tactics_boss',
+  tacticsBoss: 'makutsu_no_senritsu',
   autoBattle: 'monster_hero_theme',
   autoVictoryJingle: 'off',
   autoPostWaveBgm: 'off',
@@ -5797,13 +5805,13 @@ const BGM_BATTLE_MODE_TABS = Object.freeze([{
   label: '種族',
   items: [['speciesBattle', '通常戦 BGM'], ['speciesDullahan', 'デュラハン戦 BGM'], ['speciesMoo', 'ムー戦 BGM']]
 }] : []),
-// タクティクスは**中ボス戦とボス戦**に専用の枠を持つ。通常戦だけチャレンジの設定をそのまま使う
-// (通常戦の曲がまだ無いため。枠だけ作ると「選べるのに同じ曲しかない」ことになる)。
+// タクティクスは通常戦・中ボス戦・ボス戦の3枠。ほかのモードと同じ並びになった
+// (2026-09-21、通常戦の曲「戦場の疾風」を受け取ったため)。
 // ★WAVE9はデュラハンではなくスプラッターなので、呼び名は「中ボス戦」にする
 ...(TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE ? [{
   id: 'tactics',
   label: 'タクティクス',
-  items: [['tacticsMidBoss', '中ボス戦 BGM'], ['tacticsBoss', 'ボス戦 BGM']]
+  items: [['tacticsBattle', '通常戦 BGM'], ['tacticsMidBoss', '中ボス戦 BGM'], ['tacticsBoss', 'ボス戦 BGM']]
 }] : [])]);
 const BGM_ARRANGEMENT_LEGACY_FALLBACK = Object.freeze({
   quickMoo: 'boss',
@@ -6029,6 +6037,7 @@ const Audio_ = (() => {
     "audio/bgm-home-ichika.mp3": "29295336d1af",
     "audio/bgm-kaze-ga-soyogu-basho.mp3": "9cc789151e7e",
     "audio/bgm-kindan-no-resistance.mp3": "efca5c01d0b7",
+    "audio/bgm-makutsu-no-senritsu.mp3": "a265e67e72d4",
     "audio/bgm-market.mp3": "a85ba65f90e7",
     "audio/bgm-menu.mp3": "a6aef603fd6a",
     "audio/bgm-monster-hero-theme-alt.mp3": "6b4eb065c2e2",
@@ -6042,11 +6051,11 @@ const Audio_ = (() => {
     "audio/bgm-pro-battle-02.mp3": "f572c81a9ef6",
     "audio/bgm-profile.mp3": "523789845ff1",
     "audio/bgm-result.mp3": "c4dc9d2fb8a5",
+    "audio/bgm-senjou-no-shippuu.mp3": "d1daba984e8e",
     "audio/bgm-six-eternel-beat.mp3": "151f94091a34",
     "audio/bgm-six-eternel-remix-beat.mp3": "b1a024d5b16f",
     "audio/bgm-six-eternel-remix.mp3": "5f56c89739f8",
     "audio/bgm-six-eternel.mp3": "e26412179f3a",
-    "audio/bgm-tactics-boss.mp3": "1379eda5d8b0",
     "audio/bgm-the-city-beneath-the-comets.mp3": "900fda0dc05e",
     "audio/bgm-title-theme.mp3": "8af0684e79e7",
     "audio/bgm-title.mp3": "b7bdc68bb0c0",
@@ -46249,10 +46258,10 @@ function MonsterHeroGame() {
       // BGMアレンジの「種族」タブで選んだ曲がそのまま鳴る(設定したのに効かない枠を作らない)
       // ★タクティクスをいちばん先に見る。タクティクスの種族チャレンジ・プロは
       //   isSpeciesChallengeMode / isProMode にも当たるので、後ろに置くとそちらへ落ちる。
-      //   中ボス戦(WAVE9)とボス戦(WAVE10)は専用の枠で、通常戦だけチャレンジと同じものを鳴らす
-      //   (2026-09-21 ユーザー指示「曲数が足りないからボス戦だけいれよう」→ 同日「中ボス戦は一旦これで」)
+      //   通常戦・中ボス戦(WAVE9)・ボス戦(WAVE10)の3枠とも専用。ほかのモードと同じ並び
+      //   (2026-09-21 ユーザー指示。ボス戦→中ボス戦→通常戦の順に曲が決まっていった)
       const modeBgm = isTacticsMode(runMode) ? {
-        normal: 'battle',
+        normal: 'tacticsBattle',
         dullahan: 'tacticsMidBoss',
         moo: 'tacticsBoss'
       } : isSpeciesChallengeMode(runMode) ? {
