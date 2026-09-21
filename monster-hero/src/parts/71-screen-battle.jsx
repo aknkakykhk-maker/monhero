@@ -81,7 +81,7 @@ function BattleScreen({
       weight += w;
     });
     // 貫通撃はガードが効かない。連撃はヒットに分かれ、ガード1枚につき1ヒットを受け止める
-    const guard = enemyIntent.variant === 'pierce' ? 0 : guardValueOf(flat, mult);
+    const guard = enemyIntent.variant === 'pierce' ? 0 : guardValueOf(flat, mult, slotIdx);
     const hits = enemyIntent.variant === 'rush' ? Math.max(1, Math.floor(Number(enemyIntent.hits) || 1)) : 1;
     return applyTurnDamageReduction(resolveTacticsGuardedHit(raw, hits, guard, tacticsGuardHits(weight)).taken);
   };
@@ -605,7 +605,7 @@ function BattleScreen({
             // 先に選んだカードぶんの補正を、あとに続くカードの予測へも反映する
             // (processTurnの実行順序と同じ数え方。localBoostFromCard/previewLocalBoosts参照)。
             const boosts=previewLocalBoosts(pendingIdx);
-            let committedTotal=0; let guardFlat=0; let guardMult=0;
+            let committedTotal=0; let guardFlat=0; let guardMult=0; const guardBySlot={};
             const committedCounter=makeCardHalveCounter();
             selectedCards.forEach(idx=>{
               if(idx===pendingIdx) return;
@@ -614,15 +614,34 @@ function BattleScreen({
               const b=boosts.perCard[idx]||{oryo:0,dmgMod:0,combo:0};
               if(slotIdx!=null&&isAttackCard(card)){const baseDmg=getDmg(card,slotIdx,slots[slotIdx],b.oryo,b.dmgMod,halved); committedTotal+=getAttackPredictedDmg(card,slots[slotIdx],baseDmg,b.combo);}
               const gw=guardCardWeight(card);
-              if(gw>0){ const e=cardEffectMultiplier(card,halved); guardFlat+=GUARD_EVOLUTION[guardLevel].flat*gw*e; guardMult+=GUARD_EVOLUTION[guardLevel].mult*gw*e; }
+              if(gw>0){ const e=cardEffectMultiplier(card,halved);
+                const gf=GUARD_EVOLUTION[guardLevel].flat*gw*e, gm=GUARD_EVOLUTION[guardLevel].mult*gw*e;
+                guardFlat+=gf; guardMult+=gm;
+                // ★タクティクスは構えた子ごとに丈夫さが違う。枠ごとに分けて持っておき、
+                //   合計は「枠ごとに出した軽減量の足し算」にする(平均で1回出すとずれる)
+                if(slotIdx!=null){ const cur=guardBySlot[slotIdx]||{flat:0,mult:0};
+                  guardBySlot[slotIdx]={flat:cur.flat+gf,mult:cur.mult+gm}; } }
             });
-            const committedGuard=guardValueOf(guardFlat,guardMult);
+            const sumGuardBySlot=(extra=null)=>{
+              const merged={...guardBySlot};
+              if(extra&&extra.slot!=null){ const cur=merged[extra.slot]||{flat:0,mult:0};
+                merged[extra.slot]={flat:cur.flat+extra.flat,mult:cur.mult+extra.mult}; }
+              return Object.entries(merged)
+                .reduce((sum,[slot,g])=>sum+guardValueOf(g.flat,g.mult,Number(slot)),0);
+            };
+            const committedGuard=Array.isArray(tacticsUnits)?sumGuardBySlot():guardValueOf(guardFlat,guardMult);
             // 保留カードがガードなら、置いたあとの合計軽減も出す
             const pendingGuardWeight=guardCardWeight(pendingCardObj);
             const pendingGuardHalved=pendingGuardWeight>0&&committedCounter.peek(pendingCardObj,pendingIdx!=null&&cardAssignments[pendingIdx]!=null?cardAssignments[pendingIdx]:null);
             const pendingGuardEffect=cardEffectMultiplier(pendingCardObj,pendingGuardHalved);
+            // 置く先が決まっている保留カードは、その子の丈夫さで足す(タクティクス)
+            const pendingGuardSlot=pendingIdx!=null&&cardAssignments[pendingIdx]!=null?cardAssignments[pendingIdx]:null;
             const projectedGuard=pendingGuardWeight>0
-              ? guardValueOf(guardFlat+GUARD_EVOLUTION[guardLevel].flat*pendingGuardWeight*pendingGuardEffect, guardMult+GUARD_EVOLUTION[guardLevel].mult*pendingGuardWeight*pendingGuardEffect)
+              ? (Array.isArray(tacticsUnits)
+                ? sumGuardBySlot({slot:pendingGuardSlot,
+                    flat:GUARD_EVOLUTION[guardLevel].flat*pendingGuardWeight*pendingGuardEffect,
+                    mult:GUARD_EVOLUTION[guardLevel].mult*pendingGuardWeight*pendingGuardEffect})
+                : guardValueOf(guardFlat+GUARD_EVOLUTION[guardLevel].flat*pendingGuardWeight*pendingGuardEffect, guardMult+GUARD_EVOLUTION[guardLevel].mult*pendingGuardWeight*pendingGuardEffect))
               : committedGuard;
             const pendingIsAtk=isAttackCard(pendingCardObj);
             // projected damage the pending card would add (as the next attack in order)
@@ -833,7 +852,7 @@ function BattleScreen({
                       {slotAssignedCards.map(({idx,card})=>{
                         // ガードは軽減量をその場で出す。2枚目以降なら半分になった値をそのまま表示する
                         const gw=guardCardWeight(card), ge=cardEffectMultiplier(card,halvedByIdx[idx]);
-                        const gv=gw>0?guardValueOf(GUARD_EVOLUTION[guardLevel].flat*gw*ge,GUARD_EVOLUTION[guardLevel].mult*gw*ge):0;
+                        const gv=gw>0?guardValueOf(GUARD_EVOLUTION[guardLevel].flat*gw*ge,GUARD_EVOLUTION[guardLevel].mult*gw*ge,i):0;
                         return(
                         <div key={idx} className={`flex items-center gap-0.5 px-1 rounded w-full justify-center min-w-0 ${cardNeedsMonster(card)?'bg-red-600/85':'bg-emerald-600/85'}`}>
                           <span style={{fontSize:'7px'}} className="leading-none shrink-0">{cardIconNode(card.icon,9,card.id)}</span>

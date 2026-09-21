@@ -979,5 +979,49 @@ check('ガッツ回復は新モードだと合計を足さずに配る',
   check('供モン選びの画面にも同じ値を出す', has('distCatchUp: tacticsJoinDistCatchUpBonus()'));
 }
 
+// --- ㉛ 合計・平均をタクティクスの画面へ出さない(2026-09-22 ユーザー指摘) ---
+// 「クラシックをベースにしてるからそのへんごっちゃになってる」
+//   タクティクスで足し算に意味があるのは「敗北判定(全員倒れた)」と「スコア・合計ダメージ」だけ。
+//   ちから・丈夫さは**平均**、ガードの段階は**いちばん硬い子**、攻撃段階は**その枠の子だけ**。
+//   合計や平均を画面へ出すと「これ何の数字？」になる(トレーニング画面で実際に起きた)
+{
+  // ★ガードの軽減量は構えた子の丈夫さで決まる。画面と実際で別々に書くと必ずずれる
+  //   (2026-09-22 まで、実際はその子・画面はパーティの平均になっていた)
+  check('ガードの軽減量は1か所(guardValueOf)で出す',
+    has('const guardValueOf = (flat, mult, slotIdx = null) =>')
+      && has('(flat > 0 || mult > 0) ? Math.floor(flat + guardDefFor(slotIdx) * mult) : 0;'));
+  check('枠を渡さなければ今までどおりパーティの値(既存5モード)',
+    has('if (slotIdx == null || !isTacticsMode(runMode)) return effectiveDef;'));
+  check('枠を渡せばその子の丈夫さで出す',
+    has('return unit ? resolveEffectiveMaxStat(normalizeTacticsUnit(unit).def, getPermaBuff(\'defPct\')) : effectiveDef;'));
+  check('実際に受け止める計算も同じ guardValueOf を通す',
+    has('const base=guardValueOf(own.flat,own.mult,slotIdx);'));
+  // ★実際の計算だけが「その子」で、画面が平均のままだと、硬い子が構えたときに
+  //   予定ダメージより実際が少なくなる(数字が合わない)
+  const battleScreen = fs.readFileSync(path.join(root, 'monster-hero/src/parts/71-screen-battle.jsx'), 'utf8');
+  const inScreen = (needle) => battleScreen.includes(needle);
+  check('予定ダメージのガードも、その枠の子で出す',
+    inScreen("guardValueOf(flat, mult, slotIdx)"));
+  check('枠に置いたガードカードの軽減量も、その枠の子で出す',
+    inScreen('GUARD_EVOLUTION[guardLevel].mult*gw*ge,i)'));
+  check('手札の合計ガードは、枠ごとに出して足す(平均で1回出さない)',
+    inScreen('const committedGuard=Array.isArray(tacticsUnits)?sumGuardBySlot():guardValueOf(guardFlat,guardMult);')
+      && inScreen('.reduce((sum,[slot,g])=>sum+guardValueOf(g.flat,g.mult,Number(slot)),0);'));
+  check('置く先が決まっている保留カードも、その子で足す',
+    inScreen('sumGuardBySlot({slot:pendingGuardSlot,'));
+  // ★「パーティ全体」の欄は消した(2026-09-22 ユーザー選択「消す」)。
+  //   ①を直したので、ちから・丈夫さはもうどこの判断にも使われていない
+  check('バトルの詳細に「パーティ全体」の欄を出さない',
+    !has('パーティ全体（カードの効きめを決める値）')
+      && has('{!isTacticsMode(runMode)&&<div className="grid grid-cols-2 gap-6 text-left">'));
+  // ★固有技の強化画面のガッツも1体ずつ。押せるかは前から1体ずつで見ていた
+  const upgradeScreen = fs.readFileSync(path.join(root, 'monster-hero/src/parts/68-screen-run-result.jsx'), 'utf8');
+  check('固有技の強化画面のガッツを枠ごとに出す',
+    upgradeScreen.includes('data-tactics-guts-recovery')
+      && upgradeScreen.includes('data-tactics-guts-slot={index}'));
+  check('既存5モードでは今までどおり合計を出す',
+    upgradeScreen.includes('<b className={gutsFull?\'text-amber-300\':\'text-white\'} style={{fontSize:\'17px\'}}>{guts}</b>'));
+}
+
 console.log(failed ? `\nNG ${failed}件` : '\nすべてOK');
 process.exit(failed ? 1 : 0);

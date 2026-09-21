@@ -9180,7 +9180,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // ここでは「どこで数えるか(cardHalveGroup)」と「対象外(アシストカード)」を渡すだけ
   const makeHalveCounter = () => makeCardHalveCounter(cardHalveGroup, isAssistCard);
   // flat は互換用（現行定義は0）。実質は「実効丈夫さ × 倍率の合計」。
-  const guardValueOf = (flat, mult) => (flat > 0 || mult > 0) ? Math.floor(flat + effectiveDef * mult) : 0;
+  // ★ガードの軽減量は「構えた子の丈夫さ」で決まる(タクティクス)。paramのslotIdxがnullなら
+  //   今までどおりパーティの値(既存5モード)。2026-09-22 ユーザー指摘で分かったとおり、
+  //   実際の計算(processTurnの新モード分岐)はその子の丈夫さを使っているのに、画面だけが
+  //   パーティの平均で出していた。硬い子が構えれば実際はもっと受け止めるので、数字が合わない
+  const guardDefFor = (slotIdx = null) => {
+    if (slotIdx == null || !isTacticsMode(runMode)) return effectiveDef;
+    const unit = tacticsUnitsRef.current?.[slotIdx];
+    return unit ? resolveEffectiveMaxStat(normalizeTacticsUnit(unit).def, getPermaBuff('defPct')) : effectiveDef;
+  };
+  const guardValueOf = (flat, mult, slotIdx = null) =>
+    (flat > 0 || mult > 0) ? Math.floor(flat + guardDefFor(slotIdx) * mult) : 0;
   // このカードを使うと、同じターンの「あとに続くカード」へ即座に乗る補正の生値(effMul適用前)。
   // ニコラオの力・ゴーレム・モッチー/ミタラシ・ききの応援は、説明どおり使ったターンから効く
   // (他の永続バフは次のターンから効く。詳細はヘルプ「ずっと続く効果は次のターンから」を参照)。
@@ -9676,9 +9686,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               }
               const own=slotGuards[slotIdx]||{flat:0,mult:0,weight:0};
               // ガードの軽減量も「その子の丈夫さ」から出す
-              const slotDef=tacticsUnitsRef.current[slotIdx]
-                ? resolveEffectiveMaxStat(normalizeTacticsUnit(tacticsUnitsRef.current[slotIdx]).def,getPermaBuff('defPct')) : effectiveDef;
-              const base=(own.flat>0||own.mult>0)?Math.floor(own.flat+slotDef*own.mult):0;
+              // 画面へ出すのと同じ guardValueOf を通す(別々に書くと予告と実際がずれる)
+              const base=guardValueOf(own.flat,own.mult,slotIdx);
               // 貫通撃はガードが効かない
               const slotGuard=intent.variant==='pierce'?0:base;
               // ★受けるダメージもその子の丈夫さで決まるので、狙われた子ごとに計算し直す
@@ -16778,6 +16787,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         <UpgradeSkillScreen
           canRecoverGutsWithPoint={canRecoverGutsWithPoint} continueAfterUniqueUpgrade={continueAfterUniqueUpgrade}
           effectiveMaxGuts={effectiveMaxGuts} guts={guts} recoverGutsWithPoint={recoverGutsWithPoint}
+          slots={slots} tacticsUnits={isTacticsMode(runMode)?tacticsUnits:null}
           uniqueUpgradeEntries={uniqueUpgradeEntries} uniqueUpgradeRow={uniqueUpgradeRow}
           upgradePoints={upgradePoints}
         />
@@ -17283,7 +17293,9 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
       <div className="mt-0.5 text-[9px] font-black text-cyan-300">この枠の距離適性 {aptPct>=0?'+':''}{Math.round(aptPct*10)/10}%</div>
     </div>);
   })}
-</div>)}{isTacticsMode(runMode)&&(<div className="text-left text-[9px] font-black uppercase tracking-widest text-slate-400">パーティ全体（カードの効きめを決める値）</div>)}<div className="grid grid-cols-2 gap-6 text-left"><div><div className="text-[9px] text-pink-400 font-black uppercase">ライフ</div><div className="text-xl font-mono font-black">{hp.toLocaleString()} / {effectiveMaxHp.toLocaleString()}</div></div><div><div className="text-[9px] text-red-400 font-black uppercase">攻撃力</div><div className="text-xl font-mono font-black">{atk}</div></div><div><div className="text-[9px] text-emerald-400 font-black uppercase">丈夫さ</div><div className="text-xl font-mono font-black">{effectiveDef}{getPermaBuff('defPct')>0&&<span className="text-[10px] text-emerald-400 ml-1">(基礎{def} DEF +{Math.round(getPermaBuff('defPct')*100)}%)</span>}{getPermaBuff('dmgCutPct')>0&&<span className="text-[10px] text-emerald-400 ml-1">(被ダメ -{Math.round(getPermaBuff('dmgCutPct')*100)}%)</span>}</div></div><div><div className="text-[9px] text-amber-400 font-black uppercase">ガッツ</div><div className="text-xl font-mono font-black">{guts} / {effectiveMaxGuts}</div></div></div><div className="bg-black/40 p-3 rounded-xl border border-indigo-500/30 text-left"><div className="text-[9px] text-indigo-400 uppercase font-black">勇者特性</div><div className="text-[11px] text-white font-bold leading-relaxed mt-1">{mainHero.traitDesc}</div></div><div className="text-left"><AssistantBubble scene="battleHelp" compact/></div></div></div></div>)}
+</div>)}{/* ★タクティクスは1体ずつなので、パーティの合計・平均の欄そのものを出さない
+                  (2026-09-22 ユーザー選択「消す」)。ちから・丈夫さは平均でしかなく、
+                  ダメージも被弾もガードも、いまは全部その子の値で決まる */}{!isTacticsMode(runMode)&&<div className="grid grid-cols-2 gap-6 text-left"><div><div className="text-[9px] text-pink-400 font-black uppercase">ライフ</div><div className="text-xl font-mono font-black">{hp.toLocaleString()} / {effectiveMaxHp.toLocaleString()}</div></div><div><div className="text-[9px] text-red-400 font-black uppercase">攻撃力</div><div className="text-xl font-mono font-black">{atk}</div></div><div><div className="text-[9px] text-emerald-400 font-black uppercase">丈夫さ</div><div className="text-xl font-mono font-black">{effectiveDef}{getPermaBuff('defPct')>0&&<span className="text-[10px] text-emerald-400 ml-1">(基礎{def} DEF +{Math.round(getPermaBuff('defPct')*100)}%)</span>}{getPermaBuff('dmgCutPct')>0&&<span className="text-[10px] text-emerald-400 ml-1">(被ダメ -{Math.round(getPermaBuff('dmgCutPct')*100)}%)</span>}</div></div><div><div className="text-[9px] text-amber-400 font-black uppercase">ガッツ</div><div className="text-xl font-mono font-black">{guts} / {effectiveMaxGuts}</div></div></div>}<div className="bg-black/40 p-3 rounded-xl border border-indigo-500/30 text-left"><div className="text-[9px] text-indigo-400 uppercase font-black">勇者特性</div><div className="text-[11px] text-white font-bold leading-relaxed mt-1">{mainHero.traitDesc}</div></div><div className="text-left"><AssistantBubble scene="battleHelp" compact/></div></div></div></div>)}
 
       {showSoulBattleEffects&&gameState==='BATTLE'&&(
         <SoulBattleEffects
