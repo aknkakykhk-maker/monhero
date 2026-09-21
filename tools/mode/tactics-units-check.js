@@ -395,9 +395,20 @@ check('割り当てられる子は「その子が払えるか」で決まる',
 // ★回復カードも「全体回復」なので、倒れた子へ向ける必要はない。
 //   どのカードも「立っていて、その子が払えるか」だけで決まる
 check('払い主に特別扱いは無い', !has('tacticsPayerSlot') && !has('tacticsReviveHelper'));
-// ★守り・回復まで「1体1枚」に数えると、供モンが居ないWAVE1で1ターン1枚しか使えなくなる
-check('枚数制限に数えるのは攻撃カードだけ',
-  has('if(isAttackCard(card)&&(attacks[slotIdx]||0)>=slotMaxUses(mon,slotIdx)) return;'));
+// ★「1体につき何枚まで」(slotMaxUses)は**アシストカード以外のすべて**に効く
+//   (2026-09-21 ユーザー指摘「パンドラに2枚カード使えるのはおかしい」)。
+//   攻撃カードだけ数えていたころは、守り・回復を何枚でも同じ子へ置けてしまい、
+//   👑(ハム・剣士モッチー)を持たない子にも2枚目が乗っていた。
+// ★全体の枚数(baseCardLimit)は「立っている人数＋👑」で決まるので、1体1枚に絞っても
+//   配り切れる。WAVE1で使える枚数も減らない(盤面1体なら全体も1枚)
+check('枚数制限はアシスト以外のすべてに効く',
+  has('if(!isAssistCard(card)&&(used[slotIdx]||0)>=slotMaxUses(mon,slotIdx)) return;')
+    && has('if(!isAssistCard(assigned)) used[slotIdx]=(used[slotIdx]||0)+1;'));
+// ★攻撃だけ数える書き方が戻っていないか。戻ると、守りと回復がまた数え落ちる
+check('攻撃カードだけ数える書き方が残っていない', !has('attacks[slotIdx]'));
+// ★「なぜ使えないか」を出すほうも同じ数え方にする。ずれると、置けないのに理由が出ない
+check('使えない理由も同じ数え方で出す',
+  (s => (s.match(/if\(!isAssistCard\(assigned\)\) used\[slotIdx\]=\(used\[slotIdx\]\|\|0\)\+1;/g) || []).length >= 2)(source));
 check('使える子が1体だけなら選ぶ手間を省く',
   has('if(tacticsMode&&usable.length===1){ setCardAssignments(p=>({...p,[i]:usable[0]})); }'));
 check('ドラッグでの割り当ても同じ判定を通す',
@@ -550,13 +561,27 @@ check('置けるかの判定も画面へ渡す', has('tacticsCanAssign={tacticsC
       && has("<div className=\"text-[8px] font-black text-emerald-400\">丈夫さ</div>"));
   // ★null のときだけ今までどおりの判定を使う。ここを間違えると既存モードの置き方が変わる
   // ★予告と実行で数え方がずれると「ガードしたのに予定より減った」になる
-  check('予告の予定ダメージも同じ関数を通る',
-    hasScreen("const previewGuard=enemyIntent.variant==='pierce'?0:guardValueOf(previewGuardFlat,previewGuardMult);")
-      && hasScreen('applyTurnDamageReduction(resolveTacticsGuardedHit(rawDmg,previewHits,previewGuard,tacticsGuardHits(previewGuardWeight)).taken)'));
-  // ★予告もガードの**枚数**を数える。厚さだけ数えていたころへ戻ると、2枚構えても予定が減らない
-  check('予告もガードの枚数を数える',
-    hasScreen('let previewGuardFlat=0, previewGuardMult=0, previewGuardWeight=0;')
-      && hasScreen('previewGuardWeight+=weight;'));
+  // ★数え方は1か所(plannedDamageFor)にまとめる。吹き出しと枠で別々に書くと、
+  //   ガードの数え方を直したときに片方だけ古くなる
+  check('予定ダメージの数え方は1か所にまとまっている',
+    hasScreen('const plannedDamageFor = (slotIdx) => {')
+      && hasScreen('const plannedDmg=plannedDamageFor(aimedSlot);')
+      && hasScreen('const slotPlanned=plannedDamageFor(i);'));
+  check('予定ダメージは本番と同じ受け方を通る',
+    hasScreen('return applyTurnDamageReduction(resolveTacticsGuardedHit(raw, hits, guard, tacticsGuardHits(weight)).taken);'));
+  // ★ガードの枚数を数えないと、2枚構えても予定が減らない
+  check('予定ダメージもガードの枚数を数える', hasScreen('weight += w;'));
+  // ★全体攻撃は立っている全員に当たり、受ける量は**その子の丈夫さ**で1体ずつ変わる。
+  //   ガードも枠ごとなので、その枠へ置いたぶんだけを数える
+  check('枠ごとに、その子へ置いたガードだけを数える',
+    hasScreen('if (!(slotIdx === null || cardAssignments[idx] === slotIdx)) return;'));
+  check('狙われている枠にその子の予定ダメージを出す',
+    hasScreen('data-tactics-aimed-damage={slotPlanned}')
+      && hasScreen('🎯{slotPlanned>0?` -${slotPlanned}`:\'\'}'));
+  // ★1つの数字にまとめると、どの子がどれだけ減るのか分からなくなる
+  check('全体攻撃は吹き出しに1つの数字を出さない',
+    hasScreen('const showPlannedInBubble=!enemyIntent.targetsAll;')
+      && hasScreen('{rawDmg>0&&showPlannedInBubble?` (予定: ${plannedDmg})`:\'\'}'));
   // ★連撃だと予告の時点で分かる(2026-09-21 ユーザー指摘「敵の連撃技が連撃表示になってない」)
   check('予告に何連撃かを出す', hasScreen('{previewHits>1?` ${previewHits}連撃`:\'\'}'));
   check('置けるかの判定は新モードだけ差し替える',

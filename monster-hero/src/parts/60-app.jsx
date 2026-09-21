@@ -8857,23 +8857,29 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 新モードで、このカードを割り当てられるスロットの一覧。
   // ★決めるのは「その子が払えるか」。合計のガッツでは決まらない。
   //   すでに選んだカードのぶんを引いてから見るので、同じ子に2枚寄せても正しく弾ける。
-  // ★攻撃カードだけは「1体につき何枚まで」のこれまでの決まりを引き継ぐ。
-  //   守り・回復・アシストまで数えると、供モンが居ないWAVE1で1ターン1枚しか使えなくなる
+  // ★「1体につき何枚まで」(slotMaxUses)は**アシストカード以外のすべて**に効く。
+  //   攻撃カードだけ数えていたころは、守り・回復を何枚でも同じ子へ置けてしまい、
+  //   👑(ハム・剣士モッチー)を持たない子にも2枚目が乗っていた
+  //   (2026-09-21 ユーザー指摘「パンドラに2枚カード使えるのはおかしい」)。
+  // ★全体の枚数(baseCardLimit)は「立っている人数＋👑」で決まるので、
+  //   1体1枚に絞っても配り切れる。WAVE1で使える枚数も減らない
+  //   (盤面1体なら全体も1枚、👑持ちなら全体2枚でその子が2枚使える)。
+  // ★アシストカード(助手の教え)は全体の枚数にも数えないので、ここでも数えない
   const tacticsUsableSlots = (card, excludeHandIndex = null) => {
     if(!isTacticsMode(runMode)||!card) return [];
-    const spent={}, attacks={};
+    const spent={}, used={};
     Object.entries(cardAssignments).forEach(([key,slotIdx])=>{
       const handIndex=Number(key);
       if(handIndex===excludeHandIndex) return;
       const assigned=hand[handIndex];
       spent[slotIdx]=(spent[slotIdx]||0)+getCardGuts(assigned,slotIdx);
-      if(isAttackCard(assigned)) attacks[slotIdx]=(attacks[slotIdx]||0)+1;
+      if(!isAssistCard(assigned)) used[slotIdx]=(used[slotIdx]||0)+1;
     });
     const usable=[];
     slots.forEach((mon,slotIdx)=>{
       if(!mon) return;
       if(card.type==='unique'&&card.ownerSlotIdx!==slotIdx) return;
-      if(isAttackCard(card)&&(attacks[slotIdx]||0)>=slotMaxUses(mon,slotIdx)) return;
+      if(!isAssistCard(card)&&(used[slotIdx]||0)>=slotMaxUses(mon,slotIdx)) return;
       // 回復カードも「全体回復」なので、倒れた子へ向ける必要はない。
       // どのカードも「立っていて、その子が払えるか」だけで決まる
       if(!canTacticsSlotPay(tacticsUnitsRef.current,slotIdx,(spent[slotIdx]||0)+getCardGuts(card,slotIdx))) return;
@@ -8896,13 +8902,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         : { ok:true, kind:null, short:null, why:null };
     }
     // ここから下は「使えない理由」を探すためだけに回す(使える子がいないときしか通らない)
-    const spent={}, attacks={};
+    const spent={}, used={};
     Object.entries(cardAssignments).forEach(([key,slotIdx])=>{
       const handIndex=Number(key);
       if(handIndex===cardIndex) return;
       const assigned=hand[handIndex];
       spent[slotIdx]=(spent[slotIdx]||0)+getCardGuts(assigned,slotIdx);
-      if(isAttackCard(assigned)) attacks[slotIdx]=(attacks[slotIdx]||0)+1;
+      if(!isAssistCard(assigned)) used[slotIdx]=(used[slotIdx]||0)+1;
     });
     const units=tacticsUnitsRef.current;
     let owner=null, alive=0, best=null;
@@ -8912,7 +8918,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       owner=owner||mon;
       if(!canTacticsSlotAct(units,slotIdx)) return;
       alive++;
-      if(isAttackCard(card)&&(attacks[slotIdx]||0)>=slotMaxUses(mon,slotIdx)) return;
+      if(!isAssistCard(card)&&(used[slotIdx]||0)>=slotMaxUses(mon,slotIdx)) return;
       const unit=normalizeTacticsUnit(Array.isArray(units)?units[slotIdx]:null);
       const need=getCardGuts(card,slotIdx);
       const left=Math.max(0,(unit?unit.guts:0)-(spent[slotIdx]||0));
