@@ -262,7 +262,7 @@ function ProfileScreen({
         {/* イベント回想: 見たことのある会話イベントを、あとから何度でも見返せる。
             見るだけで、初回閲覧フラグ・助手選択・仲良し度・通常のアップデート通知には一切影響しない */}
         {onboarded&&!onboardingPreview&&(()=>{
-          const list=(typeof EVENT_REPLAYS!=='undefined'&&EVENT_REPLAYS)||[];
+          const list=eventReplayList();
           if(list.length===0) return null;
           const unlockedCount=list.filter(isEventReplayUnlocked).length;
           return (

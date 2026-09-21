@@ -15566,7 +15566,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <h3 className="text-base font-black text-white mb-1 text-center">イベント回想</h3>
               <p className="text-[9px] text-slate-500 text-center mb-3 leading-tight">見たことのある会話イベントを、何度でも見返せます。</p>
               <div className="space-y-2 mb-3">
-                {((typeof EVENT_REPLAYS!=='undefined'&&EVENT_REPLAYS)||[]).map(event=>{
+                {eventReplayList().map(event=>{
                   const eventUnlocked=isEventReplayUnlocked(event);
                   if(!eventUnlocked){
                     return (
@@ -16077,7 +16077,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           (初回閲覧フラグ・助手選択・仲良し度・アップデート通知のどれも変えない)。
           gameStateを問わず(プロフィールから開くため)eventReplayの有無だけで出す */}
       {eventReplay!=null&&(()=>{
-        const list=(typeof EVENT_REPLAYS!=='undefined'&&EVENT_REPLAYS)||[];
+        const list=eventReplayList();
         const event=list.find(ev=>ev.id===eventReplay.id);
         const script=(event&&event.script)||[];
         if(script.length===0) return null;

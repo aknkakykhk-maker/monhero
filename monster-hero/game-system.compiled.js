@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 15e044202c29a361
+// source-sha256: c6842602b9fe4098
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 25f0177d63ffb789
+// generated-sha256: bc063fa2997c3a57
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-21 18:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-21 18:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -252,6 +252,16 @@ const TACTICS_MODE_PUBLIC_RELEASE = false;
 // 一度 true にしたあとは、実装側から勝手に false へ戻さない
 // (戻すと、すでに遊んだ人の全国ランキングだけが止まる)。
 const TACTICS_BETA_PRO_RELEASE = false;
+// イベント回想の出し分け。公開前の機能の会話は、一覧にも出さない
+// (モードが見えていないのに会話だけ並ぶと、何の話か分からないうえに中身が見えてしまう)。
+// EVENT_REPLAYS(data/assistants.js)は releaseFlag という「呼び名」しか持たないので、
+// その名前→公開しているか の対応をここで持つ。イベントを増やすときはここへ1行足す
+const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
+  tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE
+});
+const eventReplayReleased = event => !event?.releaseFlag || EVENT_REPLAY_RELEASE_FLAGS[event.releaseFlag] === true;
+// 画面に並べるイベント回想。3か所(プロフィール・回想一覧・再生)が同じ並びを見るための唯一の入口
+const eventReplayList = () => (typeof EVENT_REPLAYS !== 'undefined' && EVENT_REPLAYS || []).filter(eventReplayReleased);
 // 解放条件。チャレンジモードで Master / Grand Master / Hell / Legend のどれかを1回以上
 // クリアしていること。判定には既存の mh_clears_<難易度> をそのまま読むので、新しい解放フラグは
 // 作らない(旧セーブのプレイヤーもログインした時点で解放済みとして扱われる)。
@@ -29369,7 +29379,7 @@ function ProfileScreen({
     size: 16,
     className: "shrink-0 text-amber-400"
   })), onboarded && !onboardingPreview && (() => {
-    const list = typeof EVENT_REPLAYS !== 'undefined' && EVENT_REPLAYS || [];
+    const list = eventReplayList();
     if (list.length === 0) return null;
     const unlockedCount = list.filter(isEventReplayUnlocked).length;
     return /*#__PURE__*/React.createElement("button", {
@@ -66662,7 +66672,7 @@ function MonsterHeroGame() {
       className: "text-[9px] text-slate-500 text-center mb-3 leading-tight"
     }, "\u898B\u305F\u3053\u3068\u306E\u3042\u308B\u4F1A\u8A71\u30A4\u30D9\u30F3\u30C8\u3092\u3001\u4F55\u5EA6\u3067\u3082\u898B\u8FD4\u305B\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
       className: "space-y-2 mb-3"
-    }, (typeof EVENT_REPLAYS !== 'undefined' && EVENT_REPLAYS || []).map(event => {
+    }, eventReplayList().map(event => {
       const eventUnlocked = isEventReplayUnlocked(event);
       if (!eventUnlocked) {
         return /*#__PURE__*/React.createElement("div", {
@@ -67551,7 +67561,7 @@ function MonsterHeroGame() {
       updateGuidePage: updateGuidePage,
       updateGuideQueue: updateGuideQueue
     }), assistantUnlockNoticeNode(gameState === 'PROFILE' ? 'profile' : gameState === 'HOME' ? 'home' : null), eventReplay != null && (() => {
-      const list = typeof EVENT_REPLAYS !== 'undefined' && EVENT_REPLAYS || [];
+      const list = eventReplayList();
       const event = list.find(ev => ev.id === eventReplay.id);
       const script = event && event.script || [];
       if (script.length === 0) return null;
