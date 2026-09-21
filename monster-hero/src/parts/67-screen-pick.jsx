@@ -149,7 +149,7 @@ function PickHeroAllyScreen({
   getMasuMon, getUnlockedBaseMonsterList, heroPickTab, maxGuts, maxHp, monSelection, onBack,
   pickMode, proHeroPreset, renderMonsterCardBody, renderMonsterDetailModal, renderProMonsterRow,
   runMode, scenarioPicksHero, setAllyCardIndex, setCurrentPickingMon, setHeroPickTab,
-  setProHeroPreset, setupMon, slots, spendAptPoint, spendStatPoint, waveResult,
+  setProHeroPreset, setupMon, slots, spendAptPoint, spendStatPoint, tacticsUnits, waveResult,
 }) {
   return (
 
@@ -173,6 +173,36 @@ function PickHeroAllyScreen({
             return <div data-ultimate-join-status={joinRule} className="mb-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-[9px] font-black text-purple-100 flex flex-wrap justify-between gap-x-2"><span className="text-amber-300">{joinRule}補正</span><span>累計{totalTurns}T</span><span>加入ボーナス {precisePercent(multiplier)}（-{precisePercent(1-multiplier)}）{floorValue!=null?`／最低${specialRulePercent(floorValue)}`:''}</span></div>;
           })()}
           {(()=>{const rule=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);if(rule===NIGHTMARE_SETTING.id)return <div data-nightmare-join-status className="mb-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-[9px] font-black text-purple-100"><span className="text-amber-300">NIGHTMARE補正</span>　間合い適性：＋{specialRulePercent(extremeSpecialRule(rule,'positiveModifier'))} / －{specialRulePercent(extremeSpecialRule(rule,'negativeModifier'))}</div>;if(rule===CHAOS_SETTING.id)return <div data-chaos-join-status className="mb-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-[9px] font-black text-purple-100"><span className="text-amber-300">CHAOS補正</span>　加入ボーナス {specialRulePercent(extremeSpecialRule(rule,'allyJoinBonus'))}</div>;return null;})()}
+          {/* ★タクティクスはステータスを1体ずつ持つ(設計 4.4)。合計と平均が混ざった4つを
+              並べても読み取れないので、**立っている子ごと**に出す
+              (2026-09-21 ユーザー指示)。バトル画面の盤面と同じ並び(零・近・中・遠) */}
+          {Array.isArray(tacticsUnits)?(<>
+            <div className="text-[8px] font-black tracking-widest text-slate-500 text-left mb-1">いまの盤面（1体ずつ）</div>
+            <div data-tactics-board-status className="grid grid-cols-4 gap-1">
+              {RANGE_LABELS.map((label,idx)=>{
+                const mon=slots[idx];
+                const unit=tacticsUnits[idx];
+                const apt=distTotalBonus(idx);
+                return (
+                  <div key={label} data-tactics-board-slot={idx} className={`rounded-lg px-1 py-1 text-center ${mon&&unit?'bg-black/40':'bg-black/20'}`}>
+                    <span className="block text-[8px] font-black text-slate-500 leading-none">{label}</span>
+                    {mon&&unit?(<>
+                      <span className="block truncate text-[8px] font-black text-white leading-tight">{mon.masuName||mon.name}</span>
+                      <span className="block text-[10px] font-black font-mono leading-tight text-pink-300">{unit.hp}<span className="text-slate-500">/{unit.maxHp}</span></span>
+                      <span className="block text-[9px] font-black font-mono leading-tight text-red-300">力 {unit.atk}</span>
+                      <span className="block text-[9px] font-black font-mono leading-tight text-emerald-300">防 {unit.def}</span>
+                      <span className="block text-[9px] font-black font-mono leading-tight text-amber-300">G {unit.guts}<span className="text-slate-500">/{unit.maxGuts}</span></span>
+                      <span className={`block text-[9px] font-black font-mono leading-tight ${apt>0?'text-cyan-300':apt<0?'text-red-300':'text-slate-500'}`}>{formatAptPct(apt)}</span>
+                    </>):(
+                      /* ★空いている間合いを 0% と出すと「適性が0なのか、誰もいないのか」が
+                         見分けられない(2026-09-21 ユーザー指示) */
+                      <span className="block py-2 text-[9px] font-black leading-tight text-slate-600">空き</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </>):(<>
           <div className="text-[8px] font-black tracking-widest text-slate-500 text-left mb-1">現在のステータス</div>
           <div className="grid grid-cols-4 gap-1">
             {[['ライフ',maxHp,'text-pink-300'],['ちから',atk,'text-red-300'],['丈夫さ',def,'text-emerald-300'],['ガッツ',maxGuts,'text-amber-300']].map(([label,value,tint])=>(
@@ -191,6 +221,7 @@ function PickHeroAllyScreen({
               </div>
             );})}
           </div>
+          </>)}
         </div>
       )}
       {pickMode==='hero'&&(
