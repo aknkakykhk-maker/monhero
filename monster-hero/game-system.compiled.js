@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 77c56cbe1f844e2b
+// source-sha256: 8a3a8a8dfca180a2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5e647d8434f6b063
+// generated-sha256: e7d11d50dabcc026
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-22 10:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-22 11:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -54392,11 +54392,18 @@ function MonsterHeroGame() {
   };
   const guardValueOf = (flat, mult, slotIdx = null) => flat > 0 || mult > 0 ? Math.floor(flat + guardDefFor(slotIdx) * mult) : 0;
   // ★全体ガード(2体以上が別々に構えた)のとき、構えていない子にも付くガード力。
-  //   **ガードを1枚構えたのとまったく同じ計算**(2026-09-22 ユーザー指示
-  //   「クラシックと同じ仕様でいい」)。固定値(flat)も同じように通す。
-  //   ⚠️ いまは GUARD_EVOLUTION の flat が9段階とも0なので、実際は「丈夫さ×倍率」だけ。
+  //   計算はクラシックと同じ「固定値 + その子の丈夫さ × ガード段階の倍率」だが、
+  //   **2枚目以降のカードと同じ半減**がかかる(2026-09-22 ユーザー指示
+  //   「あくまでも個別での丈夫さをベースとしてだよ。かつ2枚目以降は半分になるからその補正値」)。
+  //   半減の率は本体の cardEffectMultiplier をそのまま通す(ここへ 0.5 を書き写さない)。
+  //   ⚠️ いまは GUARD_EVOLUTION の flat が9段階とも0なので、実際は「丈夫さ×倍率×半減」だけ。
   //     ここで 0 を直に書くと、将来 flat に値を入れたときだけ全体ガードが置いていかれる
-  const tacticsSpreadGuardValue = slotIdx => guardValueOf(GUARD_EVOLUTION[guardLevel].flat, GUARD_EVOLUTION[guardLevel].mult, slotIdx);
+  const tacticsSpreadGuardValue = slotIdx => {
+    const halvedRate = cardEffectMultiplier({
+      type: 'guard'
+    }, true);
+    return guardValueOf(GUARD_EVOLUTION[guardLevel].flat * halvedRate, GUARD_EVOLUTION[guardLevel].mult * halvedRate, slotIdx);
+  };
   // その枠のガード値。構えていれば自分のぶん、構えていなくても全体ガードなら丈夫さぶん
   const tacticsSlotGuardValue = (guardBySlot, slotIdx) => {
     const own = (guardBySlot || {})[slotIdx];

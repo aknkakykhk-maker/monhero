@@ -1049,12 +1049,20 @@ check('ガッツ回復は新モードだと合計を足さずに配る',
   check('構えていない枠は数に入れない', spread({ 0: { cards: 1 }, 1: { cards: 0 } }) === false);
   check('全体ガードになる人数は本体が持つ',
     api.TACTICS_SPREAD_GUARD_SLOTS === 2, `${api.TACTICS_SPREAD_GUARD_SLOTS}体`);
-  // ★構えていない子に付くのは「ガードを1枚構えたのとまったく同じ計算」
-  //   (2026-09-22 ユーザー指示「クラシックと同じ仕様でいい」)。固定値(flat)も同じように通す。
-  //   0 を直に書くと、将来 flat に値を入れたときだけ全体ガードが置いていかれる
-  check('構えていない子も、1枚構えたのと同じ計算にする',
-    has('    guardValueOf(GUARD_EVOLUTION[guardLevel].flat, GUARD_EVOLUTION[guardLevel].mult, slotIdx);')
+  // ★構えていない子に付くのは「その子の丈夫さをベースに、2枚目以降と同じ半減をかけた値」
+  //   (2026-09-22 ユーザー指示「あくまでも個別での丈夫さをベースとしてだよ。
+  //    かつ2枚目以降は半分になるからその補正値」)。
+  //   固定値(flat)もクラシックと同じように通す。0 を直に書くと、将来 flat に値を
+  //   入れたときだけ全体ガードが置いていかれる
+  check('構えていない子は、その子の丈夫さをベースにする',
+    has('GUARD_EVOLUTION[guardLevel].mult * halvedRate, slotIdx);')
       && !has('guardValueOf(0, GUARD_EVOLUTION[guardLevel].mult, slotIdx)'));
+  check('全体ガードのぶんには、2枚目以降と同じ半減をかける',
+    has("const halvedRate = cardEffectMultiplier({ type: 'guard' }, true);")
+      && has('guardValueOf(GUARD_EVOLUTION[guardLevel].flat * halvedRate,'));
+  // ★半減の率(0.5)を検査へ書き写さない。本体が率を変えたらここも一緒に動く
+  check('半減の率は本体の cardEffectMultiplier から取る',
+    !/halvedRate\s*=\s*0\.5/.test(source) && has("cardEffectMultiplier({ type: 'guard' }, true)"));
   check('構えていればその子のぶん、なければ全体ガードのぶん',
     has('if (own && (own.cards || 0) > 0) return guardValueOf(own.flat, own.mult, slotIdx);')
       && has('return isTacticsSpreadGuard(guardBySlot) ? tacticsSpreadGuardValue(slotIdx) : 0;'));
