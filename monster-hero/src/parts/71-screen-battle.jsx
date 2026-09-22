@@ -1126,7 +1126,10 @@ function BattleScreen({
                   const slotPlannedText=slotPlannedHit.parts.join('・');
                   return (<>
                     <div data-tactics-aimed-ring className="absolute inset-[2px] rounded-lg border-2 border-red-400/80 pointer-events-none z-[44] animate-pulse" style={{boxShadow:'inset 0 0 10px rgba(239,68,68,.55)'}}></div>
-                    <div data-tactics-aimed-damage={slotPlanned} className="absolute -top-1.5 -right-1 z-[66] rounded-full border border-red-300 bg-red-950 px-1 py-0.5 text-[9px] font-black leading-none text-red-100 shadow-[0_0_8px_rgba(239,68,68,.85)] animate-pulse">🎯{slotPlannedText?` -${slotPlannedText}`:''}</div>
+                    {/* ★名前の行(上から18px)には**かぶせない**(2026-09-22 ユーザー指摘「1番の枠だけ名前が
+                        予想ダメージのバッジに隠れる」)。枠の外へ出すと、すぐ上の強化の札にぶつかるので、
+                        名前の行の下・絵の右上へ置く。絵は64pxで枠より小さいので、頭にはかからない */}
+                    <div data-tactics-aimed-damage={slotPlanned} className="absolute top-[21px] right-0.5 z-[66] rounded-full border border-red-300 bg-red-950 px-1 py-0.5 text-[9px] font-black leading-none text-red-100 shadow-[0_0_8px_rgba(239,68,68,.85)] animate-pulse">🎯{slotPlannedText?` -${slotPlannedText}`:''}</div>
                   </>);
                 })()}
                 {distanceBroken&&<>
