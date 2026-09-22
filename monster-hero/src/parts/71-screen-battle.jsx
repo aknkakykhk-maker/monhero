@@ -31,7 +31,7 @@ function BattleScreen({
   popups, previewLocalBoosts, processTurn, quickRhythmIntroVisible, quickToRhythmButtonNode,
   renderQuickRunBattleBand, runMode, safeDifficulty, score, selectedCardGuts, selectedCards,
   setCardAssignments, setDragState, setFocusedCard, setPendingCard, setShowAutoBgmPicker,
-  setShowDeckInfo, setShowEnemyInfo, setShowHeroInfo, setShowQuitConfirm,
+  setShowBattleLog, setShowDeckInfo, setShowEnemyInfo, setShowHeroInfo, setShowQuitConfirm,
   setShowSoulBattleEffects, setSkillPicker, setSlotSettle, slotMaxUses, slotSettle, slotSkill,
   slotUniqueChoice, slots, soulBattleParty, soulCoordinationCardBonus, suppressCardClickRef,
   tacticsCanAssign, tacticsCardBlock, tacticsSlotFx, tacticsUnits,
@@ -207,6 +207,11 @@ function BattleScreen({
           <button onClick={()=>setShowHeroInfo(true)} className={`absolute left-2 top-10 flex flex-col items-center justify-center p-2 rounded-2xl border border-indigo-500 bg-indigo-950/30 active:scale-90 z-20 shadow-lg${battleTutorialSpotClass('heroStatus')}`}><Crown className="text-indigo-400 mb-0.5" size={14}/><span className="text-[10px] font-black text-white">ステータス</span></button>
           {battleSoulMasus.some(m=>normalizeSoulRankStage(m.soulRankStage)>0)&&<button data-soul-battle-effects-button type="button" onClick={()=>setShowSoulBattleEffects(true)} className="absolute right-2 top-10 min-h-[44px] min-w-[52px] flex flex-col items-center justify-center px-2 py-1 rounded-2xl border border-sky-400 bg-sky-950/60 active:scale-90 z-20 shadow-lg"><Sparkles className="text-sky-300 mb-0.5" size={14}/><span className="text-[10px] font-black text-white">魂格効果</span></button>}
           {turnCount===1&&battleSoulMasus.some(m=>normalizeSoulRankStage(m.soulRankStage)>0)&&!isBusy&&<div data-soul-battle-start-summary className="absolute left-1/2 top-2 -translate-x-1/2 z-10 max-w-[62%] truncate rounded-full border border-sky-400/30 bg-sky-950/75 px-2 py-1 text-[10px] font-black text-sky-100 pointer-events-none">魂格効果 発動中{Math.round(soulBattleParty.damageReduction*10)/10>0?` ・鉄壁${(Math.round(soulBattleParty.damageReduction*10)/10)}%`:''}{unifiedSpecialDefense.rate>0?` ・特殊防御${(Math.round(unifiedSpecialDefense.rate*10)/10)}%`:''}{battleIntimidate>0?` ・威圧${(Math.round(battleIntimidate*10)/10)}%`:''}{soulCoordinationCardBonus>0?' ・カード+1':''}</div>}
+          {/* バトルの記録(2026-09-22 ユーザー依頼「バトル中のログを付けることって可能？」)。
+              ★置き場所は敵の絵の右の空き(ユーザー指示「敵の両サイドに少し空きがあるから
+                そこにログボタンをつける」)。画面に帯を出さないので、狭い縦を1pxも奪わない。
+              ★「敵を見る」(top-24)の下にそろえる。左は勇者・緊急の操作、右は見るための入口 */}
+          <button data-battle-log-button type="button" onClick={()=>setShowBattleLog(true)} aria-label="バトルの記録を見る" title="バトルの記録" className="absolute right-2 top-40 flex min-h-[44px] min-w-[44px] flex-col items-center justify-center rounded-2xl border border-amber-500/70 bg-amber-950/30 p-2 shadow-lg active:scale-90 z-20"><span className="text-[13px] leading-none">📜</span><span className="mt-0.5 text-[10px] font-black text-white">ログ</span></button>
           <button onClick={useEmergency} disabled={isBusy||autoBattle||!battleTutorialAllowsEmergency} className={`absolute left-2 top-24 flex flex-col items-center justify-center p-2 rounded-2xl border border-blue-500 bg-blue-900/30 active:scale-90 disabled:opacity-20 z-20 shadow-lg${battleTutorialSpotClass('emergency')}`}><Activity className="text-blue-400 mb-0.5" size={16}/><span className="text-[10px] font-black text-white">緊急</span></button>
           <div className="mt-1 relative flex flex-col items-center">
             {enemySkillName&&(

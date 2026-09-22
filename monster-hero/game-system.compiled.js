@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 20f1949fe4ef249e
+// source-sha256: 196d0f324fba8745
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ac2a04ea84175cdb
+// generated-sha256: 74385d56f7253d0d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-22 09:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-22 09:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -17623,6 +17623,21 @@ const rpgStepDelay = battle => {
 // それも使えない場合のみメモリ内フォールバック(リロードで消える)にする。
 // 本番バトルとDEBUGで共用するパンドラの分身描画。中央像と左右2枚は同じ画像要素を
 // 複製し、雷も各分身体の内側に置くことで発射位置が中央1点にならないようにする。
+// バトルの記録(ログ)の色分け。何が起きた行なのかを、読む前に色で見分けられるようにする。
+// 分け方はRPGテストのメッセージ欄(会心・かわした・戦闘不能…)と同じ考え方にそろえてある。
+const BATTLE_LOG_TONE_STYLE = Object.freeze({
+  turn: 'border-indigo-400/40 bg-indigo-950/60 text-indigo-200 text-center tracking-[0.18em]',
+  card: 'border-violet-400/30 bg-violet-950/40 text-violet-100',
+  enemy: 'border-red-500/30 bg-red-950/40 text-red-200',
+  crit: 'border-amber-300/40 bg-amber-950/40 text-amber-200',
+  damage: 'border-white/10 bg-slate-900/70 text-slate-100',
+  miss: 'border-cyan-400/30 bg-cyan-950/40 text-cyan-200',
+  guard: 'border-emerald-400/30 bg-emerald-950/40 text-emerald-200',
+  heal: 'border-emerald-400/30 bg-emerald-950/40 text-emerald-200',
+  down: 'border-rose-500/40 bg-rose-950/50 text-rose-200',
+  default: 'border-white/10 bg-slate-900/70 text-slate-300'
+});
+
 // エイキの攻撃中だけ重ねる桜の花びら。
 // 常時アニメーションにはせず、攻撃モーションが出ているあいだ(isAnimating)だけ描く。
 // スマホの負荷を増やしすぎないよう、要素は固定12枚・CSSアニメーション1本だけにして、
@@ -37897,6 +37912,7 @@ function BattleScreen({
   setFocusedCard,
   setPendingCard,
   setShowAutoBgmPicker,
+  setShowBattleLog,
   setShowDeckInfo,
   setShowEnemyInfo,
   setShowHeroInfo,
@@ -38325,6 +38341,17 @@ function BattleScreen({
     "data-soul-battle-start-summary": true,
     className: "absolute left-1/2 top-2 -translate-x-1/2 z-10 max-w-[62%] truncate rounded-full border border-sky-400/30 bg-sky-950/75 px-2 py-1 text-[10px] font-black text-sky-100 pointer-events-none"
   }, "\u9B42\u683C\u52B9\u679C \u767A\u52D5\u4E2D", Math.round(soulBattleParty.damageReduction * 10) / 10 > 0 ? ` ・鉄壁${Math.round(soulBattleParty.damageReduction * 10) / 10}%` : '', unifiedSpecialDefense.rate > 0 ? ` ・特殊防御${Math.round(unifiedSpecialDefense.rate * 10) / 10}%` : '', battleIntimidate > 0 ? ` ・威圧${Math.round(battleIntimidate * 10) / 10}%` : '', soulCoordinationCardBonus > 0 ? ' ・カード+1' : ''), /*#__PURE__*/React.createElement("button", {
+    "data-battle-log-button": true,
+    type: "button",
+    onClick: () => setShowBattleLog(true),
+    "aria-label": "\u30D0\u30C8\u30EB\u306E\u8A18\u9332\u3092\u898B\u308B",
+    title: "\u30D0\u30C8\u30EB\u306E\u8A18\u9332",
+    className: "absolute right-2 top-40 flex min-h-[44px] min-w-[44px] flex-col items-center justify-center rounded-2xl border border-amber-500/70 bg-amber-950/30 p-2 shadow-lg active:scale-90 z-20"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[13px] leading-none"
+  }, "\uD83D\uDCDC"), /*#__PURE__*/React.createElement("span", {
+    className: "mt-0.5 text-[10px] font-black text-white"
+  }, "\u30ED\u30B0")), /*#__PURE__*/React.createElement("button", {
     onClick: useEmergency,
     disabled: isBusy || autoBattle || !battleTutorialAllowsEmergency,
     className: `absolute left-2 top-24 flex flex-col items-center justify-center p-2 rounded-2xl border border-blue-500 bg-blue-900/30 active:scale-90 disabled:opacity-20 z-20 shadow-lg${battleTutorialSpotClass('emergency')}`
@@ -42668,6 +42695,15 @@ function MonsterHeroGame() {
   const [showEnemyInfo, setShowEnemyInfo] = useState(false);
   const [showHeroInfo, setShowHeroInfo] = useState(false); // バトル中に勇者モンの特性を確認するオーバーレイ
   const [showSoulBattleEffects, setShowSoulBattleEffects] = useState(false); // バトル中の魂格効果一覧
+  // バトルの記録(2026-09-22 ユーザー依頼「バトル中のログ」)。
+  // ★画面には帯を出さず、敵の絵の右にある「ログ」ボタンからだけ開く
+  //   (ユーザー指示「敵の両サイドに少し空きがあるからそこにログボタンをつける」)。
+  //   AUTO・AUTO∞で速く流れても、あとから落ち着いて読み返せる
+  // ★ラン中だけの一時的な記録なので保存しない(mh_* のキーは増やさない)
+  const [battleLog, setBattleLog] = useState([]);
+  const [showBattleLog, setShowBattleLog] = useState(false);
+  // 行の見分け(Reactのkey)は通し番号で付ける。同じミリ秒に何行も入るので時刻では重なる
+  const battleLogSeqRef = useRef(0);
   const [showQuitConfirm, setShowQuitConfirm] = useState(false);
   const [gaveUp, setGaveUp] = useState(false); // ギブアップ確定後、最終リザルト画面を表示中かどうか
   const [lastActionSlot, setLastActionSlot] = useState(null);
@@ -42927,6 +42963,11 @@ function MonsterHeroGame() {
         if (!unit || !was) return;
         if (normalizeTacticsUnit(was).downed && !normalizeTacticsUnit(unit).downed) {
           addPopup(`${slots[index]?.masuName || slots[index]?.name || '仲間'}が起き上がった！`, 'hero', 'text-emerald-300 font-black text-2xl drop-shadow-md');
+        }
+        // ★倒れた瞬間も同じ1か所で拾う。枠の表示(×印)は一瞬で見落としやすいので、
+        //   記録には必ず残す(2026-09-22 ユーザー依頼のログ)
+        if (!normalizeTacticsUnit(was).downed && normalizeTacticsUnit(unit).downed) {
+          pushBattleLog(`${slots[index]?.masuName || slots[index]?.name || '仲間'}が倒れた`, 'down');
         }
       });
     }
@@ -53965,7 +54006,48 @@ function MonsterHeroGame() {
   // 順序で50%にならないため、実処理と予測表示の双方がこの入口を使う。
   const applyTurnDamageReduction = useCallback(damage => damage > 0 ? Math.max(1, Math.floor(damage * getTurnBuff('takenDamageMult', 1.0))) : 0, [turnBuffs]);
   const getPredictedDamage = useCallback(intent => applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(intent)), [getIncomingDamageBeforeTurnReduction, applyTurnDamageReduction]);
-  const addPopup = (text, side, color) => {
+
+  // ==== バトルの記録 ====
+  // 画面に浮かぶ数字は2.5秒で消えるので、速い進行では何が起きたのか読み切れない。
+  // 同じ出来事をそのまま1行ずつ残し、「ログ」ボタンから読み返せるようにする。
+  // ★出来事の出どころは addPopup。バトル中の吹き出しは88か所すべてここを通るので、
+  //   入口を1つにしておけば、あとから技を足しても書き漏れが起きない
+  const BATTLE_LOG_LIMIT = 60;
+  // 誰がやったかを名乗らせる。新モードはマスモンの名前、それ以外は種族の名前
+  const battleActorName = slotIdx => slots[slotIdx]?.masuName || slots[slotIdx]?.name || '味方';
+  // 数字だけの吹き出し(「1234」「-567」)は、誰から誰への数字なのかが文だけでは分からない。
+  // 出ている側から主語を補って、読める1行にする
+  const battleLogLineFromPopup = (text, side) => {
+    const raw = String(text ?? '').trim();
+    if (!raw) return '';
+    const toEnemy = side === 'enemy';
+    const numeric = raw.match(/^-?([\d,]+)(!!)?$/);
+    if (numeric) {
+      const amount = Number(numeric[1].replace(/,/g, ''));
+      const shown = Number.isFinite(amount) ? amount.toLocaleString() : numeric[1];
+      return toEnemy ? `敵に ${shown} ダメージ${numeric[2] ? '（会心）' : ''}` : `味方が ${shown} ダメージを受けた`;
+    }
+    return toEnemy ? `敵：${raw}` : raw;
+  };
+  // 色分けの手がかり。RPGテストのメッセージ欄と同じ分け方にそろえてある
+  const battleLogToneOf = line => line.includes('会心') ? 'crit' : /かわした|回避|当たらなかった|無傷|無効化/.test(line) ? 'miss' : /倒れた|戦闘不能|倒した/.test(line) ? 'down' : /ガード|守/.test(line) ? 'guard' : /回復|起き上がった|＋|\+\d/.test(line) ? 'heal' : /ダメージ/.test(line) ? 'damage' : '';
+  const pushBattleLog = (text, tone) => {
+    const line = String(text ?? '').trim();
+    if (!line) return;
+    battleLogSeqRef.current += 1;
+    const entry = {
+      id: battleLogSeqRef.current,
+      text: line,
+      tone: tone || battleLogToneOf(line)
+    };
+    // ★古い順に貯める。新しい順に並べると、1ターンの中が「結果→技→ターン見出し」と
+    //   さかさまに読めてしまい、何が原因でそうなったのかが追えない
+    setBattleLog(prev => [...prev, entry].slice(-BATTLE_LOG_LIMIT));
+  };
+
+  // log を渡すと、吹き出しとは別の文をログへ残す(数字だけの吹き出しに主語を足すときに使う)。
+  // log に false を渡すとログには残さない
+  const addPopup = (text, side, color, log) => {
     const id = Date.now() + Math.random();
     setPopups(prev => [...prev, {
       id,
@@ -53974,6 +54056,7 @@ function MonsterHeroGame() {
       color
     }]);
     setTimeout(() => setPopups(p => p.filter(x => x.id !== id)), battleMs(2500));
+    if (log !== false) pushBattleLog(typeof log === 'string' ? log : battleLogLineFromPopup(text, side));
   };
 
   // ブリーダー教えカード使用時の専用演出を発火
@@ -54521,6 +54604,7 @@ function MonsterHeroGame() {
       return false;
     }
     enemyDefeatResolvedRef.current = true;
+    pushBattleLog(`${enemy?.name || '敵'}を倒した！`, 'down');
     setEnemySkillName(null);
     if (!autoBattleRef.current || bgmArrangement.autoVictoryJingle === 'on') Audio_.playJingle('victory');
     const totalWaveDamage = currentWaveDamage + damage;
@@ -54651,6 +54735,8 @@ function MonsterHeroGame() {
       label: intent.label,
       icon: intent.icon
     });
+    // 敵の番の見出し。このあとの吹き出し(ダメージ・回避・ガード)が、どの技の結果なのかを結ぶ
+    pushBattleLog(`敵の行動：${intent.label}`, 'enemy');
     await battleWait(600);
     // 味方行動中の回復・自傷はsetHpの反映を待たず、呼び出し元で確定した値を受け取る。
     // この値から算出したremainingHpだけを表示・state更新・敗北判定に使う。
@@ -55035,6 +55121,12 @@ function MonsterHeroGame() {
               }
             }
             showTacticsSlotFx(Object.keys(slotFx).length ? slotFx : null);
+            // ★新モードは枠ごとに減るので、合計の吹き出しを出していない。
+            //   誰がどれだけ受けたかはログにだけ残す(画面の見え方は変えない)
+            Object.entries(slotFx).forEach(([key, fx]) => {
+              const taken = Number(fx?.dmg) || 0;
+              if (taken > 0) pushBattleLog(`${battleActorName(Number(key))}が ${taken.toLocaleString()} ダメージを受けた`);
+            });
             if (evadedSlot != null) {
               addPopup(`回避！ ${evadedName}`, 'hero', 'text-blue-400 font-black text-xl drop-shadow-lg');
               await battleWait(600);
@@ -55067,7 +55159,7 @@ function MonsterHeroGame() {
             //   (味方が敵へ連撃したときと同じ見せ方)
             if (rushSlot != null && dealt > 0) {
               await battleWait(150);
-              addPopup(`合計 ${dealt}`, 'hero', 'text-white text-3xl font-black drop-shadow-[0_0_20px_rgba(255,255,255,0.6)]');
+              addPopup(`合計 ${dealt}`, 'hero', 'text-white text-3xl font-black drop-shadow-[0_0_20px_rgba(255,255,255,0.6)]', `味方は 合計 ${dealt.toLocaleString()} ダメージを受けた`);
               await battleWait(400);
             }
             if (dealt <= 0 && saved <= 0 && evadedSlot == null && reflectedSlot == null) addPopup('無傷！', 'hero', 'text-emerald-300 font-black text-xl drop-shadow-md');
@@ -55312,6 +55404,8 @@ function MonsterHeroGame() {
     }
     setFocusedCard(null);
     setPendingCard(null);
+    // ターンの区切り。あとから読むとき、どこからどこまでが1ターンなのかの目印になる
+    pushBattleLog(`── ${turnCount}ターン目 ──`, 'turn');
     const usedCards = usedCardEntries.map(e => e.card);
     // 練習中は「何をしたか」を覚えておく。ガードを使ったら次へ、のように操作で進めるために使う。
     // 合図を出すのはターンがすべて終わってから(このあとの敵の行動まで見せてから進める)
@@ -55392,6 +55486,15 @@ function MonsterHeroGame() {
       if (isBreeder && !debugBattleRef.current) {
         const cardAssistant = assistantIdOfAssistCard(card.id);
         if (cardAssistant) addAssistantBondFor(cardAssistant, 'assistantCardUse');
+      }
+      // どの子がどの札を切ったかは、ここ1か所でログへ残す。
+      // ★効果ごとの分岐(攻撃UP・回復・固有技…)は40か所以上あり、そこへ書くと同じ文が散らばる
+      // ★攻撃の札は書かない。このあと「◯◯の しっぽアタック → 敵に177ダメージ」が出るので、
+      //   先に札の名前だけを出すと同じ技名が2行続く
+      // ★助手のアシストカードはモンスターが使うものではないので、名前を付けない
+      if (!isAttackCard(card)) {
+        const usedBy = entry.slotIdx != null ? entry.slotIdx : defaultSlot;
+        pushBattleLog(isBreeder ? `${card.name} を使った` : `${battleActorName(usedBy)}の ${card.name}`, 'card');
       }
       const halved = halveCounter.take(card, entry.slotIdx);
       // EXTREMEでは消費量・枚数でなく、教えカードから発生する効果量だけを半減する。
@@ -55857,7 +55960,9 @@ function MonsterHeroGame() {
             for (const h of group) {
               const hitColor = h.isCrit ? 'text-yellow-400 drop-shadow-[0_0_25px_rgba(250,204,21,0.9)] scale-110' : 'text-red-600 drop-shadow-[0_0_20px_rgba(220,38,38,0.8)]';
               if (h.isCrit) triggerShake();
-              addPopup(h.isCrit ? `${h.dmg}!!` : `${h.dmg}`, 'enemy', `${hitColor} text-5xl font-black animate-bounce`);
+              // ★ログには「誰の何の技で何点入ったか」を書く(吹き出しは数字だけなので、
+              //   あとから読むと誰の攻撃か分からない)
+              addPopup(h.isCrit ? `${h.dmg}!!` : `${h.dmg}`, 'enemy', `${hitColor} text-5xl font-black animate-bounce`, `${battleActorName(h.slotIdx)}${h.skillName ? `の ${h.skillName}` : 'の攻撃'} → 敵に ${h.dmg.toLocaleString()} ダメージ${h.isCrit ? '（会心）' : ''}`);
               setEnemy(prev => prev ? {
                 ...prev,
                 hp: Math.max(0, prev.hp - h.dmg)
@@ -55936,7 +56041,7 @@ function MonsterHeroGame() {
           }
           const hitColor = hit.isCrit ? 'text-yellow-400 drop-shadow-[0_0_25px_rgba(250,204,21,0.9)] scale-110' : 'text-red-600 drop-shadow-[0_0_20px_rgba(220,38,38,0.8)]';
           if (hit.isCrit) triggerShake();
-          addPopup(hit.isCrit ? `${hit.dmg}!!` : `${hit.dmg}`, 'enemy', `${hitColor} text-5xl font-black animate-bounce`);
+          addPopup(hit.isCrit ? `${hit.dmg}!!` : `${hit.dmg}`, 'enemy', `${hitColor} text-5xl font-black animate-bounce`, `${battleActorName(hit.slotIdx)}${hit.skillName ? `の ${hit.skillName}` : 'の攻撃'} → 敵に ${hit.dmg.toLocaleString()} ダメージ${hit.isCrit ? '（会心）' : ''}`);
           setEnemy(prev => prev ? {
             ...prev,
             hp: Math.max(0, prev.hp - hit.dmg)
@@ -55964,7 +56069,7 @@ function MonsterHeroGame() {
         // Show combined total for multi-hit
         if (multiHit) {
           await battleWait(150);
-          addPopup(`合計 ${totalDmg}`, 'enemy', `text-white text-3xl font-black drop-shadow-[0_0_20px_rgba(255,255,255,0.6)]`);
+          addPopup(`合計 ${totalDmg}`, 'enemy', `text-white text-3xl font-black drop-shadow-[0_0_20px_rgba(255,255,255,0.6)]`, `このターンで 敵に 合計 ${totalDmg.toLocaleString()} ダメージ`);
           await battleWait(600);
         }
       }
@@ -56358,7 +56463,7 @@ function MonsterHeroGame() {
   // 操作可能なBATTLEへ入った描画で1回だけAUTOを予約する。同期refを先に立てるため、
   // StrictModeや別stateの再描画が重なっても同じターンのprocessTurnを二重に開始しない。
   useEffect(() => {
-    const blocked = !runProgressAllowed || runStage !== 'BATTLE' || !enemy || enemy.hp <= 0 || isBusy || autoTurnRunningRef.current || autoTurnScheduledRef.current || !!battleScenarioRef.current || battleTutorialStep != null || !!skillPicker || !!showDeckInfo || !!showEnemyInfo || !!showHeroInfo || !!showQuitConfirm || !!skillEffectDetail ||
+    const blocked = !runProgressAllowed || runStage !== 'BATTLE' || !enemy || enemy.hp <= 0 || isBusy || autoTurnRunningRef.current || autoTurnScheduledRef.current || !!battleScenarioRef.current || battleTutorialStep != null || !!skillPicker || !!showDeckInfo || !!showEnemyInfo || !!showHeroInfo || !!showQuitConfirm || !!skillEffectDetail || !!showBattleLog ||
     // ★showAutoBgmPicker はここへ入れない。BGM/音量の設定を開いていても周回は進める。
     //   いちど「曲を選ぶ時間がない」への対策として止めたが、放置で回す超省エネでは
     //   曲を選んでいるあいだ周回が止まってしまい、かえって困る
@@ -56385,7 +56490,7 @@ function MonsterHeroGame() {
         if (autoBattleRef.current) setAutoTurnCycle(n => n + 1);
       }
     });
-  }, [autoBattle, autoTurnCycle, runStage, runProgressAllowed, enemy?.hp, isBusy, skillPicker, showDeckInfo, showEnemyInfo, showHeroInfo, showQuitConfirm, skillEffectDetail, ultimateDistanceBreakReveal, enemyRevivalReveal, extremeRuleOpen, effect, battleTutorialStep]);
+  }, [autoBattle, autoTurnCycle, runStage, runProgressAllowed, enemy?.hp, isBusy, skillPicker, showDeckInfo, showEnemyInfo, showHeroInfo, showQuitConfirm, showBattleLog, skillEffectDetail, ultimateDistanceBreakReveal, enemyRevivalReveal, extremeRuleOpen, effect, battleTutorialStep]);
 
   // WAVE 10のムー撃破後は同期ロックしたまま報酬計算とランキング保存を各1回だけ行う。
   // リザルトは先に表示するが、保存確定までは全面入力ロックで遷移・連打を通さない。
@@ -56934,6 +57039,12 @@ function MonsterHeroGame() {
     }), runMode);
     setEnemyIntent(firstIntent);
     reserveEnemyNextIntent(getNextEnemyAction(newEnemy, distAfterIntent(firstIntent, dist), firstIntent, actionState()));
+    // バトルの記録もWAVEの区切りを入れる。ランの1WAVE目では前のランのぶんを消す
+    if (w === 1) {
+      setBattleLog([]);
+      battleLogSeqRef.current = 0;
+    }
+    pushBattleLog(`── WAVE ${w}：${newEnemy.name} ──`, 'turn');
     setTurnCount(1);
     setSelectedCards([]);
     setLastActionSlot(null);
@@ -67995,6 +68106,7 @@ function MonsterHeroGame() {
       setFocusedCard: setFocusedCard,
       setPendingCard: setPendingCard,
       setShowAutoBgmPicker: setShowAutoBgmPicker,
+      setShowBattleLog: setShowBattleLog,
       setShowDeckInfo: setShowDeckInfo,
       setShowEnemyInfo: setShowEnemyInfo,
       setShowHeroInfo: setShowHeroInfo,
@@ -69764,7 +69876,42 @@ function MonsterHeroGame() {
           className: "w-full min-h-[48px] rounded-2xl bg-white text-black font-black text-sm active:scale-[.98] shrink-0"
         }, "\u3068\u3058\u308B")
       });
-    })(), renderFusionDetailModal(), showDeckInfo && /*#__PURE__*/React.createElement("div", {
+    })(), renderFusionDetailModal(), showBattleLog && /*#__PURE__*/React.createElement("div", {
+      className: "fixed inset-0 flex flex-col",
+      style: {
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: '#020617',
+        zIndex: 40000,
+        paddingTop: 'env(safe-area-inset-top)',
+        paddingBottom: 'env(safe-area-inset-bottom)'
+      },
+      role: "dialog",
+      "aria-modal": "true",
+      "aria-label": "\u30D0\u30C8\u30EB\u306E\u8A18\u9332"
+    }, /*#__PURE__*/React.createElement("header", {
+      className: "flex shrink-0 items-center justify-between gap-2 border-b border-white/10 bg-slate-950/95 px-5 py-3"
+    }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
+      className: "text-lg font-black italic uppercase text-amber-300"
+    }, "Battle Log"), /*#__PURE__*/React.createElement("small", {
+      className: "font-black text-slate-400"
+    }, "\u53E4\u3044\u9806\u30FB\u3044\u3061\u3070\u3093\u4E0B\u304C\u6700\u65B0\uFF08\u6700\u5927", BATTLE_LOG_LIMIT, "\u4EF6\uFF09")), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setShowBattleLog(false),
+      className: "min-h-[44px] rounded-full bg-white/10 px-6 text-[11px] text-white active:scale-90"
+    }, "\u623B\u308B")), /*#__PURE__*/React.createElement("div", {
+      "data-battle-log-list": true,
+      ref: el => {
+        if (el) el.scrollTop = el.scrollHeight;
+      },
+      className: "flex-1 min-h-0 overflow-y-auto mh-scroll px-4 py-3"
+    }, battleLog.length === 0 ? /*#__PURE__*/React.createElement("p", {
+      className: "mt-6 text-center text-[11px] font-black text-slate-500"
+    }, "\u307E\u3060\u8A18\u9332\u304C\u3042\u308A\u307E\u305B\u3093\u3002\u30AB\u30FC\u30C9\u3092\u4F7F\u3046\u3068\u3053\u3053\u306B\u6B8B\u308A\u307E\u3059\u3002") : /*#__PURE__*/React.createElement("ol", {
+      className: "mx-auto flex w-full max-w-md flex-col gap-1"
+    }, battleLog.map(line => /*#__PURE__*/React.createElement("li", {
+      key: line.id,
+      className: `rounded-lg border px-3 py-1.5 text-[11px] font-black leading-snug ${BATTLE_LOG_TONE_STYLE[line.tone] || BATTLE_LOG_TONE_STYLE.default}`
+    }, line.text))))), showDeckInfo && /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 z-[40000] p-4 flex flex-col",
       style: {
         position: 'fixed',

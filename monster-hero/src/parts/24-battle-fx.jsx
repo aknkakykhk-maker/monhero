@@ -3,6 +3,21 @@
 // それも使えない場合のみメモリ内フォールバック(リロードで消える)にする。
 // 本番バトルとDEBUGで共用するパンドラの分身描画。中央像と左右2枚は同じ画像要素を
 // 複製し、雷も各分身体の内側に置くことで発射位置が中央1点にならないようにする。
+// バトルの記録(ログ)の色分け。何が起きた行なのかを、読む前に色で見分けられるようにする。
+// 分け方はRPGテストのメッセージ欄(会心・かわした・戦闘不能…)と同じ考え方にそろえてある。
+const BATTLE_LOG_TONE_STYLE = Object.freeze({
+  turn:    'border-indigo-400/40 bg-indigo-950/60 text-indigo-200 text-center tracking-[0.18em]',
+  card:    'border-violet-400/30 bg-violet-950/40 text-violet-100',
+  enemy:   'border-red-500/30 bg-red-950/40 text-red-200',
+  crit:    'border-amber-300/40 bg-amber-950/40 text-amber-200',
+  damage:  'border-white/10 bg-slate-900/70 text-slate-100',
+  miss:    'border-cyan-400/30 bg-cyan-950/40 text-cyan-200',
+  guard:   'border-emerald-400/30 bg-emerald-950/40 text-emerald-200',
+  heal:    'border-emerald-400/30 bg-emerald-950/40 text-emerald-200',
+  down:    'border-rose-500/40 bg-rose-950/50 text-rose-200',
+  default: 'border-white/10 bg-slate-900/70 text-slate-300',
+});
+
 // エイキの攻撃中だけ重ねる桜の花びら。
 // 常時アニメーションにはせず、攻撃モーションが出ているあいだ(isAnimating)だけ描く。
 // スマホの負荷を増やしすぎないよう、要素は固定12枚・CSSアニメーション1本だけにして、

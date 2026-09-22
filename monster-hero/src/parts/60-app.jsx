@@ -746,6 +746,15 @@ function MonsterHeroGame() {
   const [showEnemyInfo, setShowEnemyInfo] = useState(false);
   const [showHeroInfo, setShowHeroInfo] = useState(false); // バトル中に勇者モンの特性を確認するオーバーレイ
   const [showSoulBattleEffects, setShowSoulBattleEffects] = useState(false); // バトル中の魂格効果一覧
+  // バトルの記録(2026-09-22 ユーザー依頼「バトル中のログ」)。
+  // ★画面には帯を出さず、敵の絵の右にある「ログ」ボタンからだけ開く
+  //   (ユーザー指示「敵の両サイドに少し空きがあるからそこにログボタンをつける」)。
+  //   AUTO・AUTO∞で速く流れても、あとから落ち着いて読み返せる
+  // ★ラン中だけの一時的な記録なので保存しない(mh_* のキーは増やさない)
+  const [battleLog, setBattleLog] = useState([]);
+  const [showBattleLog, setShowBattleLog] = useState(false);
+  // 行の見分け(Reactのkey)は通し番号で付ける。同じミリ秒に何行も入るので時刻では重なる
+  const battleLogSeqRef = useRef(0);
   const [showQuitConfirm, setShowQuitConfirm] = useState(false);
   const [gaveUp, setGaveUp] = useState(false); // ギブアップ確定後、最終リザルト画面を表示中かどうか
   const [lastActionSlot, setLastActionSlot] = useState(null);
@@ -982,6 +991,11 @@ function MonsterHeroGame() {
         if (normalizeTacticsUnit(was).downed && !normalizeTacticsUnit(unit).downed) {
           addPopup(`${slots[index]?.masuName || slots[index]?.name || '仲間'}が起き上がった！`,
             'hero', 'text-emerald-300 font-black text-2xl drop-shadow-md');
+        }
+        // ★倒れた瞬間も同じ1か所で拾う。枠の表示(×印)は一瞬で見落としやすいので、
+        //   記録には必ず残す(2026-09-22 ユーザー依頼のログ)
+        if (!normalizeTacticsUnit(was).downed && normalizeTacticsUnit(unit).downed) {
+          pushBattleLog(`${slots[index]?.masuName || slots[index]?.name || '仲間'}が倒れた`, 'down');
         }
       });
     }
@@ -8941,10 +8955,54 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     getIncomingDamageBeforeTurnReduction(intent)
   ), [getIncomingDamageBeforeTurnReduction,applyTurnDamageReduction]);
 
-  const addPopup = (text, side, color) => {
+  // ==== バトルの記録 ====
+  // 画面に浮かぶ数字は2.5秒で消えるので、速い進行では何が起きたのか読み切れない。
+  // 同じ出来事をそのまま1行ずつ残し、「ログ」ボタンから読み返せるようにする。
+  // ★出来事の出どころは addPopup。バトル中の吹き出しは88か所すべてここを通るので、
+  //   入口を1つにしておけば、あとから技を足しても書き漏れが起きない
+  const BATTLE_LOG_LIMIT = 60;
+  // 誰がやったかを名乗らせる。新モードはマスモンの名前、それ以外は種族の名前
+  const battleActorName = (slotIdx) => slots[slotIdx]?.masuName || slots[slotIdx]?.name || '味方';
+  // 数字だけの吹き出し(「1234」「-567」)は、誰から誰への数字なのかが文だけでは分からない。
+  // 出ている側から主語を補って、読める1行にする
+  const battleLogLineFromPopup = (text, side) => {
+    const raw = String(text ?? '').trim();
+    if (!raw) return '';
+    const toEnemy = side === 'enemy';
+    const numeric = raw.match(/^-?([\d,]+)(!!)?$/);
+    if (numeric) {
+      const amount = Number(numeric[1].replace(/,/g, ''));
+      const shown = Number.isFinite(amount) ? amount.toLocaleString() : numeric[1];
+      return toEnemy
+        ? `敵に ${shown} ダメージ${numeric[2] ? '（会心）' : ''}`
+        : `味方が ${shown} ダメージを受けた`;
+    }
+    return toEnemy ? `敵：${raw}` : raw;
+  };
+  // 色分けの手がかり。RPGテストのメッセージ欄と同じ分け方にそろえてある
+  const battleLogToneOf = (line) => line.includes('会心') ? 'crit'
+    : /かわした|回避|当たらなかった|無傷|無効化/.test(line) ? 'miss'
+    : /倒れた|戦闘不能|倒した/.test(line) ? 'down'
+    : /ガード|守/.test(line) ? 'guard'
+    : /回復|起き上がった|＋|\+\d/.test(line) ? 'heal'
+    : /ダメージ/.test(line) ? 'damage' : '';
+  const pushBattleLog = (text, tone) => {
+    const line = String(text ?? '').trim();
+    if (!line) return;
+    battleLogSeqRef.current += 1;
+    const entry = { id: battleLogSeqRef.current, text: line, tone: tone || battleLogToneOf(line) };
+    // ★古い順に貯める。新しい順に並べると、1ターンの中が「結果→技→ターン見出し」と
+    //   さかさまに読めてしまい、何が原因でそうなったのかが追えない
+    setBattleLog(prev => [...prev, entry].slice(-BATTLE_LOG_LIMIT));
+  };
+
+  // log を渡すと、吹き出しとは別の文をログへ残す(数字だけの吹き出しに主語を足すときに使う)。
+  // log に false を渡すとログには残さない
+  const addPopup = (text, side, color, log) => {
     const id = Date.now()+Math.random();
     setPopups(prev=>[...prev,{id,text,side,color}]);
     setTimeout(()=>setPopups(p=>p.filter(x=>x.id!==id)),battleMs(2500));
+    if (log !== false) pushBattleLog(typeof log === 'string' ? log : battleLogLineFromPopup(text, side));
   };
 
   // ブリーダー教えカード使用時の専用演出を発火
@@ -9346,6 +9404,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       return false;
     }
     enemyDefeatResolvedRef.current = true;
+    pushBattleLog(`${enemy?.name || '敵'}を倒した！`, 'down');
     setEnemySkillName(null);
     if (!autoBattleRef.current || bgmArrangement.autoVictoryJingle === 'on') Audio_.playJingle('victory');
     const totalWaveDamage=currentWaveDamage+damage;
@@ -9433,6 +9492,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if (!enemy) return;
     const intent = overrideIntent||enemyIntent;
     setEnemySkillName({label:intent.label, icon:intent.icon});
+    // 敵の番の見出し。このあとの吹き出し(ダメージ・回避・ガード)が、どの技の結果なのかを結ぶ
+    pushBattleLog(`敵の行動：${intent.label}`, 'enemy');
     await battleWait(600);
     // 味方行動中の回復・自傷はsetHpの反映を待たず、呼び出し元で確定した値を受け取る。
     // この値から算出したremainingHpだけを表示・state更新・敗北判定に使う。
@@ -9746,6 +9807,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               }
             }
             showTacticsSlotFx(Object.keys(slotFx).length?slotFx:null);
+            // ★新モードは枠ごとに減るので、合計の吹き出しを出していない。
+            //   誰がどれだけ受けたかはログにだけ残す(画面の見え方は変えない)
+            Object.entries(slotFx).forEach(([key,fx])=>{
+              const taken=Number(fx?.dmg)||0;
+              if(taken>0) pushBattleLog(`${battleActorName(Number(key))}が ${taken.toLocaleString()} ダメージを受けた`);
+            });
             if(evadedSlot!=null){
               addPopup(`回避！ ${evadedName}`,'hero','text-blue-400 font-black text-xl drop-shadow-lg');
               await battleWait(600);
@@ -9773,7 +9840,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             //   (味方が敵へ連撃したときと同じ見せ方)
             if(rushSlot!=null&&dealt>0){
               await battleWait(150);
-              addPopup(`合計 ${dealt}`,'hero','text-white text-3xl font-black drop-shadow-[0_0_20px_rgba(255,255,255,0.6)]');
+              addPopup(`合計 ${dealt}`,'hero','text-white text-3xl font-black drop-shadow-[0_0_20px_rgba(255,255,255,0.6)]',`味方は 合計 ${dealt.toLocaleString()} ダメージを受けた`);
               await battleWait(400);
             }
             if(dealt<=0&&saved<=0&&evadedSlot==null&&reflectedSlot==null) addPopup('無傷！','hero','text-emerald-300 font-black text-xl drop-shadow-md');
@@ -9943,6 +10010,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       setImmediateTurnBuff('stunEnemy',true);
     }
     setFocusedCard(null); setPendingCard(null);
+    // ターンの区切り。あとから読むとき、どこからどこまでが1ターンなのかの目印になる
+    pushBattleLog(`── ${turnCount}ターン目 ──`, 'turn');
     const usedCards=usedCardEntries.map(e=>e.card);
     // 練習中は「何をしたか」を覚えておく。ガードを使ったら次へ、のように操作で進めるために使う。
     // 合図を出すのはターンがすべて終わってから(このあとの敵の行動まで見せてから進める)
@@ -10001,6 +10070,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       // 手札にあるだけ・編成しているだけでは増えず、使ったここでだけ数える。
       // 増えるのは、いま選んでいる助手ではなく「そのカード本人」の仲良し度
       if(isBreeder&&!debugBattleRef.current){ const cardAssistant=assistantIdOfAssistCard(card.id); if(cardAssistant) addAssistantBondFor(cardAssistant,'assistantCardUse'); }
+      // どの子がどの札を切ったかは、ここ1か所でログへ残す。
+      // ★効果ごとの分岐(攻撃UP・回復・固有技…)は40か所以上あり、そこへ書くと同じ文が散らばる
+      // ★攻撃の札は書かない。このあと「◯◯の しっぽアタック → 敵に177ダメージ」が出るので、
+      //   先に札の名前だけを出すと同じ技名が2行続く
+      // ★助手のアシストカードはモンスターが使うものではないので、名前を付けない
+      if(!isAttackCard(card)){
+        const usedBy=entry.slotIdx!=null?entry.slotIdx:defaultSlot;
+        pushBattleLog(isBreeder?`${card.name} を使った`:`${battleActorName(usedBy)}の ${card.name}`, 'card');
+      }
       const halved=halveCounter.take(card,entry.slotIdx);
       // EXTREMEでは消費量・枚数でなく、教えカードから発生する効果量だけを半減する。
       const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
@@ -10254,7 +10332,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             for (const h of group) {
               const hitColor=h.isCrit?'text-yellow-400 drop-shadow-[0_0_25px_rgba(250,204,21,0.9)] scale-110':'text-red-600 drop-shadow-[0_0_20px_rgba(220,38,38,0.8)]';
               if(h.isCrit) triggerShake();
-              addPopup(h.isCrit?`${h.dmg}!!`:`${h.dmg}`,'enemy',`${hitColor} text-5xl font-black animate-bounce`);
+              // ★ログには「誰の何の技で何点入ったか」を書く(吹き出しは数字だけなので、
+              //   あとから読むと誰の攻撃か分からない)
+              addPopup(h.isCrit?`${h.dmg}!!`:`${h.dmg}`,'enemy',`${hitColor} text-5xl font-black animate-bounce`,
+                `${battleActorName(h.slotIdx)}${h.skillName?`の ${h.skillName}`:'の攻撃'} → 敵に ${h.dmg.toLocaleString()} ダメージ${h.isCrit?'（会心）':''}`);
               setEnemy(prev=>prev?{...prev,hp:Math.max(0,prev.hp-h.dmg)}:prev);
               await battleWait(comboStepMs);
             }
@@ -10306,7 +10387,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           }
           const hitColor=hit.isCrit?'text-yellow-400 drop-shadow-[0_0_25px_rgba(250,204,21,0.9)] scale-110':'text-red-600 drop-shadow-[0_0_20px_rgba(220,38,38,0.8)]';
           if(hit.isCrit) triggerShake();
-          addPopup(hit.isCrit?`${hit.dmg}!!`:`${hit.dmg}`,'enemy',`${hitColor} text-5xl font-black animate-bounce`);
+          addPopup(hit.isCrit?`${hit.dmg}!!`:`${hit.dmg}`,'enemy',`${hitColor} text-5xl font-black animate-bounce`,
+            `${battleActorName(hit.slotIdx)}${hit.skillName?`の ${hit.skillName}`:'の攻撃'} → 敵に ${hit.dmg.toLocaleString()} ダメージ${hit.isCrit?'（会心）':''}`);
           setEnemy(prev=>prev?{...prev,hp:Math.max(0,prev.hp-hit.dmg)}:prev); await battleWait(hit.noAnim?150:550);
           if (hit.rangeMoveTarget!=null) {
             setEnemyDist(hit.rangeMoveTarget);
@@ -10323,7 +10405,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // Show combined total for multi-hit
         if(multiHit){
           await battleWait(150);
-          addPopup(`合計 ${totalDmg}`,'enemy',`text-white text-3xl font-black drop-shadow-[0_0_20px_rgba(255,255,255,0.6)]`);
+          addPopup(`合計 ${totalDmg}`,'enemy',`text-white text-3xl font-black drop-shadow-[0_0_20px_rgba(255,255,255,0.6)]`,`このターンで 敵に 合計 ${totalDmg.toLocaleString()} ダメージ`);
           await battleWait(600);
         }
       }
@@ -10649,7 +10731,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   useEffect(()=>{
     const blocked=!runProgressAllowed||runStage!=='BATTLE'||!enemy||enemy.hp<=0||isBusy||
       autoTurnRunningRef.current||autoTurnScheduledRef.current||!!battleScenarioRef.current||battleTutorialStep!=null||
-      !!skillPicker||!!showDeckInfo||!!showEnemyInfo||!!showHeroInfo||!!showQuitConfirm||!!skillEffectDetail||
+      !!skillPicker||!!showDeckInfo||!!showEnemyInfo||!!showHeroInfo||!!showQuitConfirm||!!skillEffectDetail||!!showBattleLog||
       // ★showAutoBgmPicker はここへ入れない。BGM/音量の設定を開いていても周回は進める。
       //   いちど「曲を選ぶ時間がない」への対策として止めたが、放置で回す超省エネでは
       //   曲を選んでいるあいだ周回が止まってしまい、かえって困る
@@ -10676,7 +10758,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         if(autoBattleRef.current)setAutoTurnCycle(n=>n+1);
       }
     });
-  },[autoBattle,autoTurnCycle,runStage,runProgressAllowed,enemy?.hp,isBusy,skillPicker,showDeckInfo,showEnemyInfo,showHeroInfo,showQuitConfirm,skillEffectDetail,ultimateDistanceBreakReveal,enemyRevivalReveal,extremeRuleOpen,effect,battleTutorialStep]);
+  },[autoBattle,autoTurnCycle,runStage,runProgressAllowed,enemy?.hp,isBusy,skillPicker,showDeckInfo,showEnemyInfo,showHeroInfo,showQuitConfirm,showBattleLog,skillEffectDetail,ultimateDistanceBreakReveal,enemyRevivalReveal,extremeRuleOpen,effect,battleTutorialStep]);
 
   // WAVE 10のムー撃破後は同期ロックしたまま報酬計算とランキング保存を各1回だけ行う。
   // リザルトは先に表示するが、保存確定までは全面入力ロックで遷移・連打を通さない。
@@ -11045,6 +11127,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const firstIntent = aimTacticsIntent(getNextEnemyAction(newEnemy,dist,null,{unannounced:true,...actionState()}),runMode);
     setEnemyIntent(firstIntent);
     reserveEnemyNextIntent(getNextEnemyAction(newEnemy,distAfterIntent(firstIntent,dist),firstIntent,actionState()));
+    // バトルの記録もWAVEの区切りを入れる。ランの1WAVE目では前のランのぶんを消す
+    if (w === 1) { setBattleLog([]); battleLogSeqRef.current = 0; }
+    pushBattleLog(`── WAVE ${w}：${newEnemy.name} ──`, 'turn');
     setTurnCount(1); setSelectedCards([]); setLastActionSlot(null); setCardAssignments({}); setPendingCard(null); setCurrentWaveDamage(0); setWaveDistDamage([0,0,0,0]); setWaveBuffs({}); // WAVE毎リセットのバフ・デバフ(waveEnemyAtkDebuff/chuuniDmgCutUses/enemyTakenDmgBonus等)を全てクリア
     return dist;
   }, [getNextEnemyAction, difficulty, extremeDifficulty, totalTurnCount, highestWaves, quickHighestWaves, proHighestWaves, tacticsRecords, runMode]);
@@ -16114,6 +16199,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             score={score} selectedCardGuts={selectedCardGuts} selectedCards={selectedCards}
             setCardAssignments={setCardAssignments} setDragState={setDragState} setFocusedCard={setFocusedCard}
             setPendingCard={setPendingCard} setShowAutoBgmPicker={setShowAutoBgmPicker}
+            setShowBattleLog={setShowBattleLog}
             setShowDeckInfo={setShowDeckInfo} setShowEnemyInfo={setShowEnemyInfo} setShowHeroInfo={setShowHeroInfo}
             setShowQuitConfirm={setShowQuitConfirm} setShowSoulBattleEffects={setShowSoulBattleEffects}
             setSkillPicker={setSkillPicker} setSlotSettle={setSlotSettle} slotMaxUses={slotMaxUses}
@@ -17120,6 +17206,30 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
       {renderFusionDetailModal()}
 
       {/* DECK INFO */}
+      {/* バトルの記録(2026-09-22 ユーザー依頼)。敵の絵の右の「ログ」ボタンから開く。
+          ★画面には常時なにも出さない。浮かぶ数字で見落としたぶんを、ここで読み返す
+          ★新しいものが上。開いているあいだはAUTOの進行も止まる(上のblockedで見ている)ので、
+            AUTO∞で回していても落ち着いて読める */}
+      {showBattleLog&&(
+        <div className="fixed inset-0 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'#020617',zIndex:40000,paddingTop:'env(safe-area-inset-top)',paddingBottom:'env(safe-area-inset-bottom)'}} role="dialog" aria-modal="true" aria-label="バトルの記録">
+          <header className="flex shrink-0 items-center justify-between gap-2 border-b border-white/10 bg-slate-950/95 px-5 py-3">
+            <div>
+              <h3 className="text-lg font-black italic uppercase text-amber-300">Battle Log</h3>
+              <small className="font-black text-slate-400">古い順・いちばん下が最新（最大{BATTLE_LOG_LIMIT}件）</small>
+            </div>
+            <button onClick={()=>setShowBattleLog(false)} className="min-h-[44px] rounded-full bg-white/10 px-6 text-[11px] text-white active:scale-90">戻る</button>
+          </header>
+          <div data-battle-log-list ref={el=>{ if(el) el.scrollTop=el.scrollHeight; }} className="flex-1 min-h-0 overflow-y-auto mh-scroll px-4 py-3">
+            {battleLog.length===0
+              ? <p className="mt-6 text-center text-[11px] font-black text-slate-500">まだ記録がありません。カードを使うとここに残ります。</p>
+              : <ol className="mx-auto flex w-full max-w-md flex-col gap-1">
+                  {battleLog.map(line=>(
+                    <li key={line.id} className={`rounded-lg border px-3 py-1.5 text-[11px] font-black leading-snug ${BATTLE_LOG_TONE_STYLE[line.tone]||BATTLE_LOG_TONE_STYLE.default}`}>{line.text}</li>
+                  ))}
+                </ol>}
+          </div>
+        </div>
+      )}
       {showDeckInfo&&(<div className="fixed inset-0 z-[40000] p-4 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'#020617',zIndex:40000,paddingTop:'calc(1rem + env(safe-area-inset-top))'}}><div className="flex justify-between items-center mb-4 border-b border-white/10 pb-2"><h3 className="font-black italic uppercase text-indigo-400 text-base">Deck View</h3><button onClick={()=>setShowDeckInfo(false)} className="px-4 py-2 bg-white/10 rounded-full text-[11px] active:scale-90 text-white">閉じる</button></div><div className="flex-1 overflow-y-auto">{(()=>{
         const renderCard=(c,isUsed)=>(<button key={c.uid} onClick={()=>setFocusedCard(c)} style={TYPE_INLINE_STYLE[c.type]||{}} className={`relative w-full aspect-square rounded-xl border-2 p-1 flex flex-col items-center justify-between bg-gradient-to-b active:scale-95 transition-all ${TYPE_COLORS[c.type]} ${isUsed?'opacity-35 grayscale':''}`}>{isUsed&&<div className="absolute top-1 right-1 text-[6px] font-black text-white bg-black/60 px-1 rounded uppercase z-10">済</div>}<div className="text-3xl mt-1.5">{cardIconNode(c.icon,32,c.id)}</div><div className="w-full text-center flex flex-col justify-end gap-0.5"><div className="text-[9px] font-black leading-tight w-full whitespace-normal h-7 flex items-center justify-center overflow-hidden uppercase italic px-0.5">{c.name}</div><div className="text-[9px] font-black bg-black/40 text-white rounded py-1 flex items-center justify-center gap-0.5"><Zap size={9}/>{getCardGuts(c)}</div></div></button>);
         return(<>
