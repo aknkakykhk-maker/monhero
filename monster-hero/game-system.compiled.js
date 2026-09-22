@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bd192c2a9afdfb87
+// source-sha256: 7e818010ca092491
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9d7c20a848553e45
+// generated-sha256: 4f6e9d4c7fa004ff
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-22 16:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-22 17:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -39060,7 +39060,53 @@ function BattleScreen({
       style: compactPopupStyle,
       className: `text-center ${p.color} font-black whitespace-nowrap px-4 ${liteBattleView ? 'rounded-lg border border-white/20 bg-slate-950/95 py-1 text-base' : 'drop-shadow-[0_0_15px_rgba(0,0,0,1)]'}`
     }, p.text)));
-  })())), enemy && enemyIntent && !isBusy && (() => {
+  })())), Array.isArray(tacticsUnits) && enemy && (() => {
+    const moveTo = enemyNextIntent && enemyNextIntent.type === 'MOVE' && Number.isFinite(enemyNextIntent.targetDist) ? enemyNextIntent.targetDist : null;
+    const here = Number.isFinite(enemyDist) ? enemyDist : 0;
+    return /*#__PURE__*/React.createElement("div", {
+      "data-tactics-range-bar": here,
+      "data-tactics-range-move": moveTo != null ? String(moveTo) : undefined,
+      className: `shrink-0 w-full px-2 pt-1 pb-0.5 bg-slate-950 ${focusedCard ? 'invisible' : 'visible'}`
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "relative grid grid-cols-4 gap-1"
+    }, /*#__PURE__*/React.createElement("div", {
+      "aria-hidden": "true",
+      className: "pointer-events-none absolute top-[28px] h-[2px] rounded-full",
+      style: {
+        left: '12.5%',
+        right: '12.5%',
+        background: 'linear-gradient(to right,#ef4444,#eab308,#10b981,#3b82f6)',
+        opacity: .85
+      }
+    }), [0, 1, 2, 3].map(i => {
+      const unit = tacticsUnits[i];
+      const there = !!unit && !unit.downed;
+      const isHere = here === i;
+      const isMove = moveTo === i && !isHere;
+      return /*#__PURE__*/React.createElement("div", {
+        key: i,
+        "data-tactics-range-cell": i,
+        "data-tactics-range-enemy": isHere ? 'true' : undefined,
+        "data-tactics-range-ally": there ? 'true' : undefined,
+        className: "relative flex flex-col items-center"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "h-[22px] flex items-end justify-center"
+      }, (isHere || isMove) && /*#__PURE__*/React.createElement("div", {
+        className: `flex items-center justify-center rounded-full border ${isHere ? 'h-[20px] w-[20px] border-red-400 bg-black/75 shadow-[0_0_8px_rgba(239,68,68,.65)]' : 'h-[18px] w-[18px] border-dashed border-cyan-400/70 bg-black/40 opacity-70'}`
+      }, enemy.imgUrl ? /*#__PURE__*/React.createElement("img", {
+        src: enemy.imgUrl,
+        alt: "",
+        className: "h-[14px] w-[14px] object-contain"
+      }) : /*#__PURE__*/React.createElement(Skull, {
+        size: 11,
+        className: "text-red-300"
+      }))), /*#__PURE__*/React.createElement("div", {
+        className: `mt-[3px] h-[8px] w-[8px] rotate-45 rounded-[1px] border ${there ? `${RANGE_STYLES[i].border} ${RANGE_STYLES[i].labelBg}` : 'border-white/25 bg-slate-900'}`
+      }), /*#__PURE__*/React.createElement("span", {
+        className: `mt-[2px] rounded px-1 text-[10px] font-black leading-[13px] ${there ? `${RANGE_STYLES[i].labelBg} text-white` : 'text-slate-500'}`
+      }, RANGE_LABELS[i]));
+    })));
+  })(), enemy && enemyIntent && !isBusy && (() => {
     // ためる・待機・移動はダメージが無いので「予測」を出さない。
     // 出すと必ず0になり、ガードを構える判断の邪魔になる
     // 新モードは「狙われた子の丈夫さ」で受け、「その子が構えたガード」だけが効く。

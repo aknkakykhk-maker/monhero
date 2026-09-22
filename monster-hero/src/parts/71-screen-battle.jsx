@@ -525,6 +525,67 @@ function BattleScreen({
           </div>
           {/* 技詳細パネルはmain外(画面直下)に移動して、ムー画像と同階層でz-index勝負させる */}
         </main>
+        {/* 間合いバー(2026-09-22 ユーザー依頼「タクティクスバトルのUIレイアウトを良くしたい」)。
+            ★このモードの核は「敵と自分がどの間合いにいるか」なのに、敵の間合いは名前の横のバッジ、
+              味方の間合いは枠の下のラベルと、離れた2か所を見比べないと分からなかった。
+            ★置き場所は敵の絵の下の空き。main(flex-1)が縮むぶんを使うので、画面の縦は1pxも増えない。
+            ★列は下の味方の枠と同じ4分割にそろえる。真下の枠がその間合いの子になるので、
+              線の上の位置と枠が目で結びつく。
+            ★移動の予告が出ているときは、動く先を点線の印で同じ線の上に出す。
+              「次のターンに間合いが変わる」が、吹き出しを読まなくても分かる */}
+        {Array.isArray(tacticsUnits)&&enemy&&(()=>{
+          const moveTo=enemyNextIntent&&enemyNextIntent.type==='MOVE'&&Number.isFinite(enemyNextIntent.targetDist)
+            ?enemyNextIntent.targetDist:null;
+          const here=Number.isFinite(enemyDist)?enemyDist:0;
+          return (
+            <div data-tactics-range-bar={here} data-tactics-range-move={moveTo!=null?String(moveTo):undefined}
+              className={`shrink-0 w-full px-2 pt-1 pb-0.5 bg-slate-950 ${focusedCard?'invisible':'visible'}`}>
+              <div className="relative grid grid-cols-4 gap-1">
+                {/* 軸の線。印は各列の真ん中に立つので、線も列の中心から中心までで止める */}
+                <div aria-hidden="true" className="pointer-events-none absolute top-[28px] h-[2px] rounded-full"
+                  style={{left:'12.5%',right:'12.5%',background:'linear-gradient(to right,#ef4444,#eab308,#10b981,#3b82f6)',opacity:.85}}></div>
+                {[0,1,2,3].map(i=>{
+                  const unit=tacticsUnits[i];
+                  const there=!!unit&&!unit.downed;
+                  const isHere=here===i;
+                  const isMove=moveTo===i&&!isHere;
+                  return (
+                    <div key={i} data-tactics-range-cell={i} data-tactics-range-enemy={isHere?'true':undefined}
+                      data-tactics-range-ally={there?'true':undefined}
+                      className="relative flex flex-col items-center">
+                      {/* 敵の顔。いまいる間合いは実線の枠、次に動く先は点線の枠で出す。
+                          ★枠の色は間合いの色ではなく**赤で固定**する。間合いの色にすると、
+                            すぐ下の味方の印と同じ色になり、どちらが敵か形でしか分からなくなる */}
+                      <div className="h-[22px] flex items-end justify-center">
+                        {(isHere||isMove)&&(
+                          <div className={`flex items-center justify-center rounded-full border ${isHere
+                            ?'h-[20px] w-[20px] border-red-400 bg-black/75 shadow-[0_0_8px_rgba(239,68,68,.65)]'
+                            :'h-[18px] w-[18px] border-dashed border-cyan-400/70 bg-black/40 opacity-70'}`}>
+                            {enemy.imgUrl
+                              ?<img src={enemy.imgUrl} alt="" className="h-[14px] w-[14px] object-contain"/>
+                              :<Skull size={11} className="text-red-300"/>}
+                          </div>
+                        )}
+                      </div>
+                      {/* 目盛り。立っている子がいる間合いは塗り、空き・倒れている間合いは抜きで出す */}
+                      <div className={`mt-[3px] h-[8px] w-[8px] rotate-45 rounded-[1px] border ${there
+                        ?`${RANGE_STYLES[i].border} ${RANGE_STYLES[i].labelBg}`
+                        :'border-white/25 bg-slate-900'}`}></div>
+                      {/* 間合いの名前。立っている子がいる間合いだけ塗りのバッジにする。
+                          ★字の色を間合いの色にすると、零(赤)が敵の赤い光に埋もれて読めなかった。
+                            下の枠のラベルと同じ「塗り＋白字」にそろえる */}
+                      <span className={`mt-[2px] rounded px-1 text-[10px] font-black leading-[13px] ${there
+                        ?`${RANGE_STYLES[i].labelBg} text-white`
+                        :'text-slate-500'}`}>
+                        {RANGE_LABELS[i]}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
         {/* 敵が次に何をしてくるかの札(2026-09-19・ユーザー指摘「敵の行動予測が見えない」)。
             2026-09-18に「絵の直下へ寄せる」ため mt-auto(下端へ固定)を外したところ、
             敵の絵が大きい場面で main(overflow-y-auto)の表示の外へ押し出され、
