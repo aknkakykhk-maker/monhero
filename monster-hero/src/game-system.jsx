@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 91bd3123a688b54f
+// generated-sha256: ead20728dc2d9bc8
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -92,7 +92,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-22 20:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-22 21:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -25088,6 +25088,18 @@ function MonsterHeroGame() {
   //   そこより速いか遅いかでベース値より上下する(ボーナスがマイナスになるのではない)。
   //   ベース値は「これまでの合計ダメージ」なので、掛ける相手はこの倍率だけ
   const tacticsJoinDistCatchUpRef = useRef(1);
+  // ★3つを1へ戻すのは、この関数ひとつだけ。ランの状態を作り直すところ
+  //   (applyResetAllState / returnToHome)と、練習・デバッグの入口から必ず通す。
+  //   ⚠️ 2026-09-22に同じ不具合が再発している。1度目の修正で applyResetAllState へ
+  //   3行を足したが、returnToHome が同じ片付けを別に書いていて、そちらは1周前の
+  //   倍率を残したままだった。クイック周回を終えてHOMEへ戻り、そのまま
+  //   タクティクスプロを始めると、WAVE1の勇者モンが前の周回ぶんの追いつきを受けていた。
+  //   片付けを増やすときは、必ずここへ書く(呼び出し漏れは tactics-units-check が見張る)。
+  const resetTacticsJoinCatchUp = () => {
+    tacticsJoinCatchUpRef.current=1;
+    tacticsJoinCatchUpTurnsRef.current=0;
+    tacticsJoinDistCatchUpRef.current=1;
+  };
   // ULTIMATEのラン内だけで持つ永久弱体と、次WAVE開始時に一度だけ消費する発動予約。
   const [ultimateDistanceBreakLevels,setUltimateDistanceBreakLevels]=useState([0,0,0,0]);
   const ultimateDistanceBreakLevelsRef=useRef([0,0,0,0]);
@@ -32264,9 +32276,7 @@ function MonsterHeroGame() {
     // 新しいrunへ前周の絆報酬対象を持ち越さない。
     autoRepeatBondAwardMasuIdsRef.current = [];
     // あとから入る子の追いつき補正は1周ごとに数え直す(ステータスも間合いのボーナスも)
-    tacticsJoinCatchUpRef.current = 1;
-    tacticsJoinCatchUpTurnsRef.current = 0;
-    tacticsJoinDistCatchUpRef.current = 1;
+    resetTacticsJoinCatchUp();
     const s = resetAllState();
     setScore(s.score); setWave(s.wave); setHp(s.hp); setMaxHp(s.maxHp); setGuts(s.guts); setMaxGuts(s.maxGuts);
     setAtk(s.atk); setDef(s.def); applySlots(s.slots); setMainHero(s.mainHero); setHand(s.hand); setDeck(s.deck);
@@ -32896,6 +32906,10 @@ function MonsterHeroGame() {
     setDebugOutcome(null);
     beginNewRankingRun({ runIdRef, scoreSubmittedRef, runFinalizingRef, rewardsAwardedRef, clearRecordedRef });
     setRunFinalizing(false);
+    // ★HOMEへ戻ったらランは終わり。あとから入る子の追いつき補正もここで数え直す。
+    //   ここを書き忘れると、クイック周回のあとに始めたタクティクスのWAVE1へ
+    //   前の周回ぶんの倍率がそのまま乗る(2026-09-22の再発)
+    resetTacticsJoinCatchUp();
     const s = resetAllState();
     setScore(s.score); setWave(s.wave); setHp(s.hp); setMaxHp(s.maxHp); setGuts(s.guts); setMaxGuts(s.maxGuts);
     setAtk(s.atk); setDef(s.def); applySlots(s.slots); setMainHero(s.mainHero); setHand(s.hand); setDeck(s.deck);
@@ -33817,11 +33831,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     totalTurnCountRef.current=newTotalTurnCount;
     // ★あとから入る子の追いつき補正を、このWAVEぶん積む(2026-09-20 ユーザー指示)。
     //   率は残りターン×1%。1ターンで抜ければ+20%、11ターン(半分)で+10%、20ターンで+1%
-    tacticsJoinCatchUpRef.current=addTacticsJoinCatchUp(tacticsJoinCatchUpRef.current,remainingTurns);
-    tacticsJoinCatchUpTurnsRef.current+=Math.max(0,Number(remainingTurns)||0);
-    // ★間合いのボーナス側も同じように積む。こちらは残りターン10でベース値どおりになり、
-    //   速く抜ければベース値より上、手間取ればベース値より下になる(2026-09-21 ユーザー指示)
-    tacticsJoinDistCatchUpRef.current=addTacticsJoinDistCatchUp(tacticsJoinDistCatchUpRef.current,remainingTurns);
+    // ★積むのはタクティクスのランだけ。これはタクティクス専用の値で、ほかのモードでは
+    //   誰も読まない。モードを見ずに積むと、クラシック(とくにクイックの∞周回)で
+    //   10WAVEぶんが溜まり、そのあとに始めたタクティクスのWAVE1へそのまま乗る
+    //   (2026-09-22の再発。片付け漏れと、この積みっぱなしの両方が原因)
+    if(isTacticsMode(runMode)){
+      tacticsJoinCatchUpRef.current=addTacticsJoinCatchUp(tacticsJoinCatchUpRef.current,remainingTurns);
+      tacticsJoinCatchUpTurnsRef.current+=Math.max(0,Number(remainingTurns)||0);
+      // ★間合いのボーナス側も同じように積む。こちらは残りターン10でベース値どおりになり、
+      //   速く抜ければベース値より上、手間取ればベース値より下になる(2026-09-21 ユーザー指示)
+      tacticsJoinDistCatchUpRef.current=addTacticsJoinDistCatchUp(tacticsJoinDistCatchUpRef.current,remainingTurns);
+    }
     const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
     const distanceBreakThreshold=pendingUltimateDistanceBreak(newTotalTurnCount,ultimateDistanceBreakLevelsRef.current,wave,specialRuleDifficulty);
     if(distanceBreakThreshold){
@@ -35673,9 +35693,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     debugResultRef.current = false;
     setDebugBattle(true); setExtremeRun(false); setDebugOutcome(null); setGaveUp(false);
     setScore(0); setWaveHistory([]); setFinalRewardSummary(null);
-    tacticsJoinCatchUpRef.current=1; // あとから入る子の追いつき補正は1周ごとに数え直す
-    tacticsJoinCatchUpTurnsRef.current=0;
-    tacticsJoinDistCatchUpRef.current=1;
+    resetTacticsJoinCatchUp(); // あとから入る子の追いつき補正は1周ごとに数え直す
     writePermaBuffs({autoHpRecovery:0.1}); setWaveBuffs({}); setTurnBuffs({}); writeNextTurnBuffs({});
     setDistDmgBonus([0,0,0,0]); setTotalDistDamage([0,0,0,0]); writeTotalAllDamage(0); setTotalRecoveryDelta(0);
     setUpgradePoints(0); setAtkLevel(0); setGuardLevel(0); setGuardBonusCount(0);
@@ -35869,9 +35887,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     extremeRunRef.current = extreme;
     debugResultRef.current = false;
     setDebugBattle(true); setExtremeRun(extreme); setDebugOutcome(null); setGaveUp(false); setScore(0); setWaveHistory([]);
-    tacticsJoinCatchUpRef.current=1;
-    tacticsJoinCatchUpTurnsRef.current=0;
-    tacticsJoinDistCatchUpRef.current=1;
+    resetTacticsJoinCatchUp();
     writePermaBuffs({autoHpRecovery:0.1}); setWaveBuffs({}); setTurnBuffs({}); writeNextTurnBuffs({});
     setDistDmgBonus([0,0,0,0]); setTotalDistDamage([0,0,0,0]); writeTotalAllDamage(0); setTotalRecoveryDelta(0);
     setUpgradePoints(0); setAtkLevel(0); setGuardLevel(0); setGuardBonusCount(0); setFinalRewardSummary(null);

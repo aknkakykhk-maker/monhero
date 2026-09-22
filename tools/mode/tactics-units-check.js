@@ -517,9 +517,36 @@ check('加入した子へ積み上げた補正を掛ける',
 check('補正はWAVEを倒しきった瞬間に1回だけ積む',
   has('tacticsJoinCatchUpRef.current=addTacticsJoinCatchUp(tacticsJoinCatchUpRef.current,remainingTurns);')
     && has('const waveMult=1.0+(wave*0.1); const remainingTurns=Math.max(0,21-turnCount);'));
-check('積み上げは1周ごとに数え直す',
-  (source.match(/tacticsJoinCatchUpRef\.current=1;/g) || []).length === 2,
+// ★1へ戻すのは resetTacticsJoinCatchUp ひとつだけ。片付けを何か所にも書くと、
+//   片方だけ直して片方が残る(2026-09-22に実際そうなって再発した)
+check('積み上げを1へ戻すのは resetTacticsJoinCatchUp だけ',
+  (source.match(/tacticsJoinCatchUpRef\.current=1;/g) || []).length === 1
+    && has('const resetTacticsJoinCatchUp = () => {\n    tacticsJoinCatchUpRef.current=1;\n'
+      + '    tacticsJoinCatchUpTurnsRef.current=0;\n    tacticsJoinDistCatchUpRef.current=1;\n  };'),
   `戻す場所 ${(source.match(/tacticsJoinCatchUpRef\.current=1;/g) || []).length}か所`);
+// ★ランの状態を作り直すところは、必ず追いつき補正も数え直す。
+//   applyResetAllState だけに書いて returnToHome へ書き忘れたのが再発の原因
+check('ランの状態を作り直すところは、必ず追いつき補正も数え直す', (() => {
+  const starts = [];
+  const re = /resetAllState\(\)/g;
+  let m;
+  while ((m = re.exec(source))) {
+    // 定義そのもの(const resetAllState = () => ({ ... )は除く
+    if (source.slice(Math.max(0, m.index - 24), m.index).includes('const resetAllState')) continue;
+    starts.push(m.index);
+  }
+  if (!starts.length) return false;
+  return starts.every((at) => {
+    // その呼び出しを含む関数の頭(直前の「  const 名前 =」)から呼び出しまでを見る
+    const head = source.lastIndexOf('\n  const ', at);
+    if (head < 0) return false;
+    return source.slice(head, at).includes('resetTacticsJoinCatchUp()');
+  });
+})(), `resetAllState() を呼ぶ場所 ${(source.match(/resetAllState\(\)/g) || []).length}か所`);
+// ★タクティクス専用の値なので、ほかのモードでは積まない。
+//   モードを見ずに積むと、クイックの∞周回ぶんが次のタクティクスへ乗る
+check('積むのはタクティクスのランのときだけ',
+  has('if(isTacticsMode(runMode)){\n      tacticsJoinCatchUpRef.current=addTacticsJoinCatchUp('));
 check('加入ボーナス(plusStats)は新モードでは使わない',
   has("const nAtk=atk+joinBonus('atk'), nDef=def+joinBonus('def');")
     && has('if(!tacticsJoin){ setMaxHp(nMaxHp); setHp(p=>p+(nMaxHp-bHp)); setMaxGuts(nMaxGuts); setAtk(nAtk); setDef(nDef); }'));
@@ -687,7 +714,7 @@ check('置けるかの判定も画面へ渡す', has('tacticsCanAssign={tacticsC
   // ★貫通技準備だけ右上の札から外していたのも、まんなかの警告と被るためだった。
   //   そちらを止めたので、ここは全部の行動を同じ形で出す
   check('右上の札は全部の行動で出す',
-    hasScreen('&&Array.isArray(tacticsUnits)&&enemyIntent.notice&&(()=>{')
+    hasScreen('&&Array.isArray(tacticsUnits)&&!!enemyIntent.notice;')
       && !hasScreen("enemyIntent.notice&&enemyIntent.type!=='PIERCE_CHARGE'"));
   // ★札と吹き出しで同じことを言わない(2026-09-22 ユーザー指摘「他のにならってやると
   //   攻撃予測のとこをためるにして吹き出しを必殺技準備が正解なはず」)。
@@ -1111,7 +1138,7 @@ check('ガッツ回復は新モードだと合計を足さずに配る',
   check('WAVEを抜けるたびに積む',
     has('tacticsJoinDistCatchUpRef.current=addTacticsJoinDistCatchUp(tacticsJoinDistCatchUpRef.current,remainingTurns);'));
   check('周回のはじめに数え直す',
-    has('tacticsJoinCatchUpRef.current = 1;\n    tacticsJoinCatchUpTurnsRef.current = 0;\n    tacticsJoinDistCatchUpRef.current = 1;'));
+    has('    // あとから入る子の追いつき補正は1周ごとに数え直す(ステータスも間合いのボーナスも)\n    resetTacticsJoinCatchUp();'));
   check('供モン選びの画面にも同じ値を出す', has('distCatchUp: tacticsJoinDistCatchUpBonus()'));
 }
 
