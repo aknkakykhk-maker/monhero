@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ccf1c8875203b531
+// source-sha256: e739c52cdc83a925
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 02afcf13b789742f
+// generated-sha256: 324d4a3da33055c2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-22 19:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-22 19:33"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -37916,6 +37916,24 @@ function HomeUpdateGuideOverlay({
 //  食らったモンスターにエフェクトなどがつくようにしたい」)。
 // 色とアイコンはこの表だけに書き、出し方(フラッシュ・輪・縁・揺れ)は1か所にまとめる。
 // 新しい種類を足すときは、ここへ1行足して kindOfTacticsSlotFx が返す名前を増やす。
+// 手札のカードが「何をするものか」を一言で(2026-09-22 ユーザー指示。送られたイメージ画像の
+// カードには「中〜遠 攻撃」「ダメージ軽減」のような一行が入っている)。
+// ★カードのデータに説明文は無いので、種別から引く。名前だけでは、初めて見るカードが
+//   攻撃なのか守りなのか分からなかった。
+// ★距離撃は「敵を別の間合いへ動かす」技。行き先はカード名(零距離撃など)が持っているので、
+//   ここでは何をするものかだけを言う。
+const CARD_KIND_LABELS = Object.freeze({
+  atk: '攻撃',
+  range_atk: '間合いをずらす',
+  unique: '固有技',
+  guard: 'ダメージ軽減',
+  weak_guard: 'ダメージ軽減',
+  buff: '味方を強化',
+  debuff: '敵を弱める',
+  heal: '回復',
+  draw: '引き直し'
+});
+const cardKindLabel = type => CARD_KIND_LABELS[type] || '';
 const TACTICS_SLOT_FX_STYLE = Object.freeze({
   hit: {
     rgb: '239,68,68',
@@ -38598,7 +38616,7 @@ function BattleScreen({
     }, intentTitle), aimedName ? /*#__PURE__*/React.createElement("div", {
       className: "mt-0.5 truncate text-[9px] font-bold leading-none opacity-90"
     }, "\uD83C\uDFAF", aimedName) : null, rawDmg > 0 && showPlannedInBubble && plannedText ? /*#__PURE__*/React.createElement("div", {
-      className: "mt-1 rounded bg-black/55 px-1 py-1 text-center text-[13px] font-black leading-none tabular-nums"
+      className: "mt-1 rounded bg-black/55 px-1 py-1 text-center text-[12px] font-black leading-none tabular-nums"
     }, plannedText) : null);
   })(), turnCount === 1 && battleSoulMasus.some(m => normalizeSoulRankStage(m.soulRankStage) > 0) && !isBusy && /*#__PURE__*/React.createElement("div", {
     "data-soul-battle-start-summary": true,
@@ -39157,14 +39175,28 @@ function BattleScreen({
       className: "relative grid grid-cols-4 gap-1"
     }, /*#__PURE__*/React.createElement("div", {
       "aria-hidden": "true",
-      className: "pointer-events-none absolute top-[28px] h-[2px] rounded-full",
+      className: "pointer-events-none absolute top-[28px] h-[3px] rounded-full",
       style: {
         left: '12.5%',
         right: '12.5%',
         background: 'linear-gradient(to right,#ef4444,#eab308,#10b981,#3b82f6)',
-        opacity: .85
+        boxShadow: '0 0 8px rgba(120,160,255,.45)'
       }
-    }), [0, 1, 2, 3].map(i => {
+    }), /*#__PURE__*/React.createElement("div", {
+      "aria-hidden": "true",
+      className: "pointer-events-none absolute text-[11px] font-black leading-none text-red-400",
+      style: {
+        top: '24px',
+        left: 'calc(12.5% - 13px)'
+      }
+    }, "\u25C0"), /*#__PURE__*/React.createElement("div", {
+      "aria-hidden": "true",
+      className: "pointer-events-none absolute text-[11px] font-black leading-none text-blue-400",
+      style: {
+        top: '24px',
+        right: 'calc(12.5% - 13px)'
+      }
+    }, "\u25B6"), [0, 1, 2, 3].map(i => {
       const unit = tacticsUnits[i];
       const there = !!unit && !unit.downed;
       const isHere = here === i;
@@ -39192,7 +39224,7 @@ function BattleScreen({
       }, moveTo > here ? '→' : '←')), /*#__PURE__*/React.createElement("div", {
         className: `mt-[3px] h-[8px] w-[8px] rotate-45 rounded-[1px] border ${there ? `${RANGE_STYLES[i].border} ${RANGE_STYLES[i].labelBg}` : 'border-white/25 bg-slate-900'}`
       }), /*#__PURE__*/React.createElement("span", {
-        className: `mt-[2px] rounded px-1 text-[10px] font-black leading-[13px] ${there ? `${RANGE_STYLES[i].labelBg} text-white` : 'text-slate-500'}`
+        className: `mt-[2px] rounded px-1.5 text-[13px] font-black leading-[16px] ${there ? `${RANGE_STYLES[i].labelBg} text-white shadow-[0_0_10px_rgba(0,0,0,.6)]` : 'text-slate-500'}`
       }, RANGE_LABELS[i]));
     })));
   })(), (() => {
@@ -39944,8 +39976,10 @@ function BattleScreen({
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-2xl font-black"
     }, "\u26A0"))), /*#__PURE__*/React.createElement("div", {
-      className: `h-[18px] shrink-0 flex items-center justify-center px-1 border-b z-20 ${isHeroSlotMon(s) ? 'bg-amber-500/25 border-amber-300/50' : 'bg-black/60 border-white/10'}`
-    }, isHeroSlotMon(s) && /*#__PURE__*/React.createElement(Crown, {
+      className: `h-[18px] shrink-0 flex items-center justify-center gap-1 px-1 border-b z-20 ${isHeroSlotMon(s) ? 'bg-amber-500/25 border-amber-300/50' : 'bg-black/60 border-white/10'}`
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "shrink-0 flex h-[14px] w-[14px] items-center justify-center rounded border border-white/30 bg-black/60 text-[9px] font-black leading-none text-white/90"
+    }, i + 1), isHeroSlotMon(s) && /*#__PURE__*/React.createElement(Crown, {
       size: 8,
       className: "shrink-0 mr-0.5 text-amber-300"
     }), /*#__PURE__*/React.createElement("span", {
@@ -40405,10 +40439,13 @@ function BattleScreen({
           handIndex: i
         });
       },
-      className: `text-[11px] font-black leading-[13px] w-full whitespace-normal h-[39px] flex items-center justify-center overflow-hidden px-0.5 underline decoration-dotted decoration-white/60 underline-offset-2 active:opacity-60${battleTutorialNeedCard && tutorialTargeted ? ' is-battle-tutorial-spot' : ''}`
+      className: `text-[11px] font-black leading-[13px] w-full whitespace-normal h-[30px] flex items-center justify-center overflow-hidden px-0.5 underline decoration-dotted decoration-white/60 underline-offset-2 active:opacity-60${battleTutorialNeedCard && tutorialTargeted ? ' is-battle-tutorial-spot' : ''}`
     }, c.name) : /*#__PURE__*/React.createElement("div", {
-      className: "text-[11px] font-black leading-[13px] w-full whitespace-normal h-[39px] flex items-center justify-center overflow-hidden px-0.5"
-    }, c.name), /*#__PURE__*/React.createElement("div", {
+      className: "text-[11px] font-black leading-[13px] w-full whitespace-normal h-[30px] flex items-center justify-center overflow-hidden px-0.5"
+    }, c.name), cardKindLabel(c.type) ? /*#__PURE__*/React.createElement("div", {
+      "data-card-kind": c.type,
+      className: "w-full truncate rounded bg-black/40 px-0.5 text-[8px] font-black leading-[11px] text-white/85"
+    }, cardKindLabel(c.type)) : null, /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] font-black bg-black/40 text-white rounded py-1 flex items-center justify-center gap-0.5"
     }, /*#__PURE__*/React.createElement(Zap, {
       size: 9

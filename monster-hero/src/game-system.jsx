@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 02afcf13b789742f
+// generated-sha256: 324d4a3da33055c2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -92,7 +92,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-22 19:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-22 19:33"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -21684,6 +21684,19 @@ return(
 //  食らったモンスターにエフェクトなどがつくようにしたい」)。
 // 色とアイコンはこの表だけに書き、出し方(フラッシュ・輪・縁・揺れ)は1か所にまとめる。
 // 新しい種類を足すときは、ここへ1行足して kindOfTacticsSlotFx が返す名前を増やす。
+// 手札のカードが「何をするものか」を一言で(2026-09-22 ユーザー指示。送られたイメージ画像の
+// カードには「中〜遠 攻撃」「ダメージ軽減」のような一行が入っている)。
+// ★カードのデータに説明文は無いので、種別から引く。名前だけでは、初めて見るカードが
+//   攻撃なのか守りなのか分からなかった。
+// ★距離撃は「敵を別の間合いへ動かす」技。行き先はカード名(零距離撃など)が持っているので、
+//   ここでは何をするものかだけを言う。
+const CARD_KIND_LABELS = Object.freeze({
+  atk: '攻撃', range_atk: '間合いをずらす', unique: '固有技',
+  guard: 'ダメージ軽減', weak_guard: 'ダメージ軽減',
+  buff: '味方を強化', debuff: '敵を弱める', heal: '回復', draw: '引き直し',
+});
+const cardKindLabel = (type) => CARD_KIND_LABELS[type] || '';
+
 const TACTICS_SLOT_FX_STYLE = Object.freeze({
   hit:     { rgb: '239,68,68',  ring: 'border-red-200',     edge: 'border-red-400' },
   guard:   { rgb: '16,185,129', ring: 'border-emerald-200', edge: 'border-emerald-300' },
@@ -22019,7 +22032,7 @@ function BattleScreen({
                 <div className="mt-0.5 text-[11px] font-black leading-tight">{intentTitle}</div>
                 {aimedName?<div className="mt-0.5 truncate text-[9px] font-bold leading-none opacity-90">🎯{aimedName}</div>:null}
                 {rawDmg>0&&showPlannedInBubble&&plannedText?(
-                  <div className="mt-1 rounded bg-black/55 px-1 py-1 text-center text-[13px] font-black leading-none tabular-nums">{plannedText}</div>
+                  <div className="mt-1 rounded bg-black/55 px-1 py-1 text-center text-[12px] font-black leading-none tabular-nums">{plannedText}</div>
                 ):null}
               </div>
             );
@@ -22329,8 +22342,12 @@ function BattleScreen({
               className={`shrink-0 w-full px-2 pt-1 pb-0.5 bg-slate-950 ${focusedCard?'invisible':'visible'}`}>
               <div className="relative grid grid-cols-4 gap-1">
                 {/* 軸の線。印は各列の真ん中に立つので、線も列の中心から中心までで止める */}
-                <div aria-hidden="true" className="pointer-events-none absolute top-[28px] h-[2px] rounded-full"
-                  style={{left:'12.5%',right:'12.5%',background:'linear-gradient(to right,#ef4444,#eab308,#10b981,#3b82f6)',opacity:.85}}></div>
+                <div aria-hidden="true" className="pointer-events-none absolute top-[28px] h-[3px] rounded-full"
+                  style={{left:'12.5%',right:'12.5%',background:'linear-gradient(to right,#ef4444,#eab308,#10b981,#3b82f6)',
+                    boxShadow:'0 0 8px rgba(120,160,255,.45)'}}></div>
+                {/* 両端の矢印。零から遠まで一本の軸が続いていることを示す(2026-09-22 ユーザー指示) */}
+                <div aria-hidden="true" className="pointer-events-none absolute text-[11px] font-black leading-none text-red-400" style={{top:'24px',left:'calc(12.5% - 13px)'}}>◀</div>
+                <div aria-hidden="true" className="pointer-events-none absolute text-[11px] font-black leading-none text-blue-400" style={{top:'24px',right:'calc(12.5% - 13px)'}}>▶</div>
                 {[0,1,2,3].map(i=>{
                   const unit=tacticsUnits[i];
                   const there=!!unit&&!unit.downed;
@@ -22371,8 +22388,8 @@ function BattleScreen({
                       {/* 間合いの名前。立っている子がいる間合いだけ塗りのバッジにする。
                           ★字の色を間合いの色にすると、零(赤)が敵の赤い光に埋もれて読めなかった。
                             下の枠のラベルと同じ「塗り＋白字」にそろえる */}
-                      <span className={`mt-[2px] rounded px-1 text-[10px] font-black leading-[13px] ${there
-                        ?`${RANGE_STYLES[i].labelBg} text-white`
+                      <span className={`mt-[2px] rounded px-1.5 text-[13px] font-black leading-[16px] ${there
+                        ?`${RANGE_STYLES[i].labelBg} text-white shadow-[0_0_10px_rgba(0,0,0,.6)]`
                         :'text-slate-500'}`}>
                         {RANGE_LABELS[i]}
                       </span>
@@ -22808,7 +22825,11 @@ function BattleScreen({
                 </>}
                 {/* 名前の行。勇者モンには王冠を付ける。どれが勇者モンか分からないと
                     「勇者モン選択時だけ効く特性」が効いているのか判断できないため */}
-                <div className={`h-[18px] shrink-0 flex items-center justify-center px-1 border-b z-20 ${isHeroSlotMon(s)?'bg-amber-500/25 border-amber-300/50':'bg-black/60 border-white/10'}`}>{isHeroSlotMon(s)&&<Crown size={8} className="shrink-0 mr-0.5 text-amber-300"/>}<span className={`text-[10px] font-black truncate uppercase leading-none ${isHeroSlotMon(s)?'text-amber-100':'text-white'}`}>{s?.name||'---'}</span>{assignedCount>0&&<span className="ml-1 text-[10px] font-black text-indigo-300">×{assignedCount}</span>}{slotBuffMarks.map(mark=>(<span key={mark.text} data-tactics-slot-buff={mark.text} className={`ml-1 shrink-0 text-[8px] font-black leading-none ${mark.cls}`}>{mark.text}</span>))}</div>
+                {/* 枠の通し番号(2026-09-22 ユーザー指示。イメージ画像の味方カードには 1〜4 が振ってある)。
+                    ★名前の行へ**重ねずに並べる**。左上へ重ねて置いたら、名前が中央そろえなので
+                      「スエゾー」のような長さで隠れてしまった */}
+                <div className={`h-[18px] shrink-0 flex items-center justify-center gap-1 px-1 border-b z-20 ${isHeroSlotMon(s)?'bg-amber-500/25 border-amber-300/50':'bg-black/60 border-white/10'}`}>
+                  <span className="shrink-0 flex h-[14px] w-[14px] items-center justify-center rounded border border-white/30 bg-black/60 text-[9px] font-black leading-none text-white/90">{i+1}</span>{isHeroSlotMon(s)&&<Crown size={8} className="shrink-0 mr-0.5 text-amber-300"/>}<span className={`text-[10px] font-black truncate uppercase leading-none ${isHeroSlotMon(s)?'text-amber-100':'text-white'}`}>{s?.name||'---'}</span>{assignedCount>0&&<span className="ml-1 text-[10px] font-black text-indigo-300">×{assignedCount}</span>}{slotBuffMarks.map(mark=>(<span key={mark.text} data-tactics-slot-buff={mark.text} className={`ml-1 shrink-0 text-[8px] font-black leading-none ${mark.cls}`}>{mark.text}</span>))}</div>
                 {(()=>{const uOptions=getAvailableUniquesForSlot(s,ownedUniques,i); if(uOptions.length<2) return null; const curKey=activeSlotUniqueKey(slotUniqueChoice,i,s); const curIdx=Math.max(0,uOptions.findIndex(o=>o.key===curKey));
                   return(<div onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation(); if(isBusy||autoBattleRef.current)return; cycleActiveUniqueForSlot(i);}} className={`shrink-0 z-20 flex items-center justify-center gap-0.5 bg-purple-700/90 border-b border-purple-300/50 py-0.5 active:scale-95${autoBattle?' opacity-40':''}`}>
                     <RefreshCcw size={7} className="text-white"/><span className="text-[10px] font-black text-white leading-none">固有技 {curIdx+1}/{uOptions.length}</span>
@@ -23022,7 +23043,7 @@ function BattleScreen({
               }} style={{...(isDragging?{touchAction:'none',position:'fixed',left:dragState.x,top:dragState.y,transform:'translate(-50%,-50%) rotate(-3deg) scale(1.15)',zIndex:70000,width:'72px',pointerEvents:'none',transition:'none',filter:'drop-shadow(0 12px 18px rgba(0,0,0,0.65))'}:{touchAction:'none',boxShadow:'inset 0 1px 0 rgba(255,255,255,.30), inset 0 -10px 16px rgba(0,0,0,.32), 0 4px 10px rgba(0,0,0,.5)'}),...(TYPE_INLINE_STYLE[c.type]||{})}} className={`relative w-full rounded-xl border-2 p-1 flex flex-col items-center justify-between bg-gradient-to-b ${TYPE_COLORS[c.type]} ${isDragging?'ring-4 ring-white shadow-[0_0_24px_rgba(255,255,255,0.6)]':isSel?'transition-all -translate-y-1.5 ring-4 ring-cyan-300 z-20 scale-105 opacity-60 saturate-[0.7] shadow-[0_0_18px_rgba(103,232,249,0.6)]':'transition-all opacity-90'} ${isPending?'ring-4 ring-yellow-400 animate-pulse shadow-[0_0_20px_rgba(250,204,21,0.7)]':''} ${!isSelectable&&!isSel&&!isDragging?'grayscale opacity-50':''}${tutorialTargeted?' is-battle-tutorial-spot':''}${battleTutorialCardTarget&&!tutorialTargeted?' grayscale opacity-25':''}`}>
                 {isSel&&!assignedMon&&(<div className="absolute top-0.5 left-0.5 z-30 w-5 h-5 rounded-full bg-cyan-400 border-2 border-white flex items-center justify-center shadow-lg"><Check size={10} className="text-white" strokeWidth={4}/></div>)}
                 {assignedMon&&(<div className="absolute top-0.5 right-0.5 z-30 w-5 h-5 rounded-full bg-indigo-600 border-2 border-white flex items-center justify-center overflow-hidden shadow-lg">{assignedMon.imgUrl?<img src={assignedMon.imgUrl} alt="" className="w-full h-full object-contain"/>:<span className="text-[10px]">{assignedMon.emoji}</span>}</div>)}
-                <div className="text-3xl mt-1.5">{cardIconNode(c.icon,32,c.id)}</div><div className="w-full text-center flex flex-col justify-end gap-0.5">{['atk','range_atk','unique'].includes(c.type)?(<div onClick={(ev)=>{ev.stopPropagation(); if(isBusy||autoBattleRef.current||Date.now()<=suppressCardClickRef.current)return; setSkillPicker({handIndex:i});}} className={`text-[11px] font-black leading-[13px] w-full whitespace-normal h-[39px] flex items-center justify-center overflow-hidden px-0.5 underline decoration-dotted decoration-white/60 underline-offset-2 active:opacity-60${battleTutorialNeedCard&&tutorialTargeted?' is-battle-tutorial-spot':''}`}>{c.name}</div>):(<div className="text-[11px] font-black leading-[13px] w-full whitespace-normal h-[39px] flex items-center justify-center overflow-hidden px-0.5">{c.name}</div>)}<div className="text-[10px] font-black bg-black/40 text-white rounded py-1 flex items-center justify-center gap-0.5"><Zap size={9}/>{curGuts}</div></div></button>{cardBlock&&!cardBlock.ok&&cardBlock.short&&!isDragging&&(<div data-tactics-card-block={cardBlock.short} className="pointer-events-none absolute inset-x-0.5 top-1 z-30 rounded-md border border-rose-200 bg-rose-600 px-0.5 py-0.5 text-center text-[8px] font-black leading-tight text-white shadow-[0_2px_8px_rgba(0,0,0,.85)]">{cardBlock.short}</div>)}</div>);
+                <div className="text-3xl mt-1.5">{cardIconNode(c.icon,32,c.id)}</div><div className="w-full text-center flex flex-col justify-end gap-0.5">{['atk','range_atk','unique'].includes(c.type)?(<div onClick={(ev)=>{ev.stopPropagation(); if(isBusy||autoBattleRef.current||Date.now()<=suppressCardClickRef.current)return; setSkillPicker({handIndex:i});}} className={`text-[11px] font-black leading-[13px] w-full whitespace-normal h-[30px] flex items-center justify-center overflow-hidden px-0.5 underline decoration-dotted decoration-white/60 underline-offset-2 active:opacity-60${battleTutorialNeedCard&&tutorialTargeted?' is-battle-tutorial-spot':''}`}>{c.name}</div>):(<div className="text-[11px] font-black leading-[13px] w-full whitespace-normal h-[30px] flex items-center justify-center overflow-hidden px-0.5">{c.name}</div>)}{cardKindLabel(c.type)?<div data-card-kind={c.type} className="w-full truncate rounded bg-black/40 px-0.5 text-[8px] font-black leading-[11px] text-white/85">{cardKindLabel(c.type)}</div>:null}<div className="text-[10px] font-black bg-black/40 text-white rounded py-1 flex items-center justify-center gap-0.5"><Zap size={9}/>{curGuts}</div></div></button>{cardBlock&&!cardBlock.ok&&cardBlock.short&&!isDragging&&(<div data-tactics-card-block={cardBlock.short} className="pointer-events-none absolute inset-x-0.5 top-1 z-30 rounded-md border border-rose-200 bg-rose-600 px-0.5 py-0.5 text-center text-[8px] font-black leading-tight text-white shadow-[0_2px_8px_rgba(0,0,0,.85)]">{cardBlock.short}</div>)}</div>);
             })}
           </div>
         </div>
