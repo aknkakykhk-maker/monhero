@@ -1010,6 +1010,33 @@ const createAnimationStyle = () => {
       0%,100% { transform: scale(0.95) translateY(0) rotate(-4deg); opacity: 0.85; }
       50% { transform: scale(1.18) translateY(-3px) rotate(4deg); opacity: 1; }
     }
+    /* 誰が攻撃を食らったのかを、枠そのもので見せる(2026-09-22 ユーザー指示
+       「攻撃されたときに誰が攻撃されたかが分かりづらい 食らったモンスターに
+        エフェクトなどがつくようにしたい」)。浮かぶ数字だけでは、全体攻撃のときに
+       どこを見ればよいのか目が追いつかない。枠が揺れて光れば一目で分かる */
+    @keyframes tacticsHitShake {
+      0%,100% { transform: translate(0,0); }
+      15% { transform: translate(-4px,2px); }
+      30% { transform: translate(4px,-2px); }
+      45% { transform: translate(-3px,-2px); }
+      60% { transform: translate(3px,2px); }
+      80% { transform: translate(-2px,1px); }
+    }
+    @keyframes tacticsHitFlash {
+      0% { opacity: 0; }
+      18% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+    @keyframes tacticsHitRing {
+      0% { transform: scale(0.45); opacity: 0.95; }
+      100% { transform: scale(1.9); opacity: 0; }
+    }
+    @keyframes tacticsHitEdge {
+      0%,100% { opacity: 0; }
+      20% { opacity: 1; }
+      55% { opacity: 0.5; }
+      75% { opacity: 1; }
+    }
     /* 敵の右上に出す「何をする技か」の札。効果ごとに動きを変えて、
        色と文字を読む前に「攻めてくるのか・回復するのか」が分かるようにする
        (2026-09-22 ユーザー指示「吹き出しを効果によって変えると見た目がいい」) */

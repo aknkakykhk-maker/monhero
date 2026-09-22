@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 18c72922fee015d9
+// generated-sha256: 6eb7b051a4fc3078
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -92,7 +92,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-22 14:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-22 16:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -21674,6 +21674,30 @@ return(
 // ---- part: 71-screen-battle.jsx ----
 // ==== 画面: バトル ====
 //
+// 【誰が攻撃を食らったか】
+// 枠ごとに何が起きたか(tacticsSlotFx)を、浮かぶ数字だけでなく**枠そのもの**でも出す
+// (2026-09-22 ユーザー指示「攻撃されたときに誰が攻撃されたかが分かりづらい
+//  食らったモンスターにエフェクトなどがつくようにしたい」)。
+// 色とアイコンはこの表だけに書き、出し方(フラッシュ・輪・縁・揺れ)は1か所にまとめる。
+// 新しい種類を足すときは、ここへ1行足して kindOfTacticsSlotFx が返す名前を増やす。
+const TACTICS_SLOT_FX_STYLE = Object.freeze({
+  hit:     { rgb: '239,68,68',  ring: 'border-red-200',     edge: 'border-red-400' },
+  guard:   { rgb: '16,185,129', ring: 'border-emerald-200', edge: 'border-emerald-300' },
+  evade:   { rgb: '59,130,246', ring: 'border-sky-200',     edge: 'border-sky-300' },
+  reflect: { rgb: '168,85,247', ring: 'border-purple-200',  edge: 'border-purple-300' },
+});
+// その枠で「いちばん強く伝えたいこと」を1つだけ選ぶ。重ねると何色なのか読めなくなる。
+// ★順番に意味がある。かわした・返したは「食らっていない」ので先に見る。
+//   ガードは「狙われたが受け止めた」ので、ダメージが通っていなければガード色
+const kindOfTacticsSlotFx = (fx) => {
+  if (!fx) return null;
+  if (fx.evade) return 'evade';
+  if (fx.reflect) return 'reflect';
+  if (fx.dmg > 0) return 'hit';
+  if (fx.guard) return 'guard';
+  return null;
+};
+//
 // MonsterHeroGame から切り出した20本目・最後の1本(docs/refactor/REFACTOR_MASTER_PLAN.md STEP 6-13)。
 // バトル画面そのもの(87千字)と、バトル中にだけ重なる演出4つ。
 //
@@ -22499,6 +22523,12 @@ function BattleScreen({
               const slotGuardCards=guardPlanBySlot?(guardPlanBySlot[i]?.cards||0):0;
               const slotRushGuard=slotGuardCards>=TACTICS_RUSH_GUARD_CARDS;
               const slotSpreadGuard=!!guardPlanBySlot&&isTacticsSpreadGuard(guardPlanBySlot);
+              // ★このターン、この子に何が起きたか(食らった／受け止めた／かわした／返した)。
+              //   浮かぶ数字だけでは、全体攻撃のときにどこを見ればよいのか目が追いつかない
+              //   (2026-09-22 ユーザー指示「攻撃されたときに誰が攻撃されたかが分かりづらい」)
+              const slotHitKind=kindOfTacticsSlotFx(tacticsSlotFx&&tacticsSlotFx[i]);
+              // 揺れは省エネ表示では出さない(光と輪だけでも誰かは分かる)
+              const slotHitShake=slotHitKind&&!ecoBattleView?{animation:'tacticsHitShake 420ms ease-in-out'}:null;
               // ★「その子だけに効く」バフは、かかっている子の枠へ印を出す(タクティクス)。
               //   画面上の帯(Boost・会心予約…)では誰にかかっているのか分からない。
               //   みゃるの薬と、固有技の効果(消費0・会心確定・贖罪・共鳴)がここに出る
@@ -22605,9 +22635,25 @@ function BattleScreen({
                   setSlotSettle(i);
                   setTimeout(()=>{ setSlotSettle(null); }, 500);
                 }
-              }} disabled={isBusy||autoBattle} className={`relative rounded-xl border-2 flex flex-col items-stretch overflow-visible transition-all ${RANGE_STYLES[i].bg} ${distanceBroken?'border-red-400':' '+RANGE_STYLES[i].border} ${(canAssign||(dragState?.active&&dragOverSlot===i))?'ring-2 ring-yellow-400 scale-105 z-10 shadow-lg animate-pulse':'opacity-100'} ${assignedCount>0?'ring-2 ring-indigo-500':''} ${dragState?.active&&dragOverSlot===i?'ring-4 ring-green-400 scale-110':''} ${slotSettle===i?'ring-4 ring-white':''}`} style={isAnimating?{zIndex:9999, animation:attackMotionAnimation(attackAnim)}:(distanceBroken?{backgroundColor:distanceBreakLevel>=2?'rgb(12,2,5)':'rgb(24,5,25)',boxShadow:`inset 0 0 0 ${Math.min(4,distanceBreakLevel+1)}px rgba(248,113,113,.95), inset 0 0 ${28+distanceBreakLevel*8}px rgba(76,5,25,.98), 0 0 ${9+distanceBreakLevel*4}px rgba(220,38,38,.65)`}:(slotSettle===i?{animation:'slotSettle 400ms ease-out'}:undefined))}>
+              }} disabled={isBusy||autoBattle} className={`relative rounded-xl border-2 flex flex-col items-stretch overflow-visible transition-all ${RANGE_STYLES[i].bg} ${distanceBroken?'border-red-400':' '+RANGE_STYLES[i].border} ${(canAssign||(dragState?.active&&dragOverSlot===i))?'ring-2 ring-yellow-400 scale-105 z-10 shadow-lg animate-pulse':'opacity-100'} ${assignedCount>0?'ring-2 ring-indigo-500':''} ${dragState?.active&&dragOverSlot===i?'ring-4 ring-green-400 scale-110':''} ${slotSettle===i?'ring-4 ring-white':''}`} style={isAnimating?{zIndex:9999, animation:attackMotionAnimation(attackAnim)}:(distanceBroken?{backgroundColor:distanceBreakLevel>=2?'rgb(12,2,5)':'rgb(24,5,25)',boxShadow:`inset 0 0 0 ${Math.min(4,distanceBreakLevel+1)}px rgba(248,113,113,.95), inset 0 0 ${28+distanceBreakLevel*8}px rgba(76,5,25,.98), 0 0 ${9+distanceBreakLevel*4}px rgba(220,38,38,.65)`,...(slotHitShake||{})}:(slotSettle===i?{animation:'slotSettle 400ms ease-out'}:(slotHitShake||undefined)))}>
                 {/* ★狙われている枠。カードを置ける黄色の輪・ドラッグ中の緑の輪と重ならないよう、
                     輪ではなく枠の内側の線で出す(BREAKと同じ出し方)。全体攻撃なら全員に付く */}
+                {/* ★食らった子の枠そのものを光らせる。数字は一瞬で読み取れないので、
+                    色と輪で「どこを見ればよいか」を先に伝える(2026-09-22 ユーザー指示
+                    「食らったモンスターにエフェクトなどがつくようにしたい」)。
+                    数字(z-[70])より下へ重ねて、数字が読めなくならないようにする */}
+                {slotHitKind&&(()=>{
+                  const hitFx=TACTICS_SLOT_FX_STYLE[slotHitKind];
+                  return(<div data-tactics-hit-fx={slotHitKind} className="absolute inset-0 z-[58] pointer-events-none overflow-visible">
+                    <div className="absolute inset-0 rounded-xl" style={{background:`radial-gradient(circle at 50% 50%, rgba(${hitFx.rgb},0.65) 0%, rgba(${hitFx.rgb},0.3) 45%, rgba(0,0,0,0) 75%)`,animation:'tacticsHitFlash 520ms ease-out forwards'}}></div>
+                    <div className={`absolute inset-0 rounded-xl border-2 ${hitFx.edge}`} style={{animation:'tacticsHitEdge 620ms ease-out forwards'}}></div>
+                    <div className="absolute inset-0 flex items-center justify-center overflow-visible">
+                      <div className={`rounded-full border-2 ${hitFx.ring}`} style={{width:'44px',height:'44px',animation:'tacticsHitRing 520ms ease-out forwards'}}></div>
+                      {/* 輪を少し遅らせて2枚重ねると「衝撃が広がる」感じが出る。省エネ表示では1枚だけ */}
+                      {!ecoBattleView&&<div className={`absolute rounded-full border-2 ${hitFx.ring}`} style={{width:'44px',height:'44px',animation:'tacticsHitRing 520ms ease-out 110ms forwards'}}></div>}
+                    </div>
+                  </div>);
+                })()}
                 {/* ★このターン、この子に何が起きたか(2026-09-21 ユーザー指摘
                     「個別ダメージと全体ダメージで誰に何が起きてるか分かりにくい」)。
                     合計の数字は画面のまんなかに出したままなので、
@@ -42760,6 +42806,33 @@ const createAnimationStyle = () => {
     @keyframes idleExclaim {
       0%,100% { transform: scale(0.95) translateY(0) rotate(-4deg); opacity: 0.85; }
       50% { transform: scale(1.18) translateY(-3px) rotate(4deg); opacity: 1; }
+    }
+    /* 誰が攻撃を食らったのかを、枠そのもので見せる(2026-09-22 ユーザー指示
+       「攻撃されたときに誰が攻撃されたかが分かりづらい 食らったモンスターに
+        エフェクトなどがつくようにしたい」)。浮かぶ数字だけでは、全体攻撃のときに
+       どこを見ればよいのか目が追いつかない。枠が揺れて光れば一目で分かる */
+    @keyframes tacticsHitShake {
+      0%,100% { transform: translate(0,0); }
+      15% { transform: translate(-4px,2px); }
+      30% { transform: translate(4px,-2px); }
+      45% { transform: translate(-3px,-2px); }
+      60% { transform: translate(3px,2px); }
+      80% { transform: translate(-2px,1px); }
+    }
+    @keyframes tacticsHitFlash {
+      0% { opacity: 0; }
+      18% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+    @keyframes tacticsHitRing {
+      0% { transform: scale(0.45); opacity: 0.95; }
+      100% { transform: scale(1.9); opacity: 0; }
+    }
+    @keyframes tacticsHitEdge {
+      0%,100% { opacity: 0; }
+      20% { opacity: 1; }
+      55% { opacity: 0.5; }
+      75% { opacity: 1; }
     }
     /* 敵の右上に出す「何をする技か」の札。効果ごとに動きを変えて、
        色と文字を読む前に「攻めてくるのか・回復するのか」が分かるようにする
