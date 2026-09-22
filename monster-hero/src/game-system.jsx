@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9d7c20a848553e45
+// generated-sha256: 929310b6dffaa39e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -92,7 +92,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-22 16:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-22 18:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -16326,6 +16326,26 @@ const withTacticsTarget = (intent, units, random = Math.random, bias = TACTICS_T
   return targetSlot == null ? intent : { ...intent, targetSlot, targetName: tacticsTargetName(units, targetSlot) };
 };
 // その行動が実際に当たるスロット。予告と実行で同じ関数を通すので食い違わない
+// 間合い攻撃が「当たり」(×TACTICS_SWEEP_MULT)になる条件。
+// ★予告した間合いに**敵も味方も**いるときだけ。どちらか欠けたら外れ(×missMultiplier)。
+//   敵を距離撃でずらしても、味方がそこに立っていなくても、同じ「外れ」として扱う
+//   (2026-09-22 ユーザー指摘。それまでは敵がずれたときしか外れにならず、
+//    味方がいない間合いを予告したときはダメージそのものが起きなかった)。
+// ★盤面が空のとき(既存5モード)は true。間合い攻撃は新モードにしか無いので、
+//   ここで既存モードの振る舞いを変えない
+const isTacticsSweepOnSpot = (intent, units, enemyDist) => {
+  if (!intent || intent.variant !== 'sweep' || !Number.isInteger(intent.sweepDist)) return true;
+  if (enemyDist !== intent.sweepDist) return false;
+  const alive = tacticsAliveSlots(units);
+  return alive.length === 0 ? true : alive.includes(intent.sweepDist);
+};
+// 外れた間合い攻撃は威力を missValue へ落とす。★予告(画面)と実行(processTurn)が
+// この1つを通るので、「予定より減った・増えた」が起きない
+const tacticsSweepIntent = (intent, units, enemyDist) =>
+  (intent && intent.variant === 'sweep' && !isTacticsSweepOnSpot(intent, units, enemyDist))
+    ? { ...intent, value: Math.max(0, Math.floor(Number(intent.missValue) || 0)) }
+    : intent;
+
 const tacticsIntentTargets = (intent, units, enemyDist = null) => {
   const alive = tacticsAliveSlots(units);
   if (!intent || !alive.length) return [];
@@ -16337,7 +16357,16 @@ const tacticsIntentTargets = (intent, units, enemyDist = null) => {
   //   ここを enemyDist(いまの敵の間合い)にすると、ずらした先の**別の子**が食らってしまう
   if (intent.variant === 'sweep') {
     const dist = Number.isInteger(intent.sweepDist) ? intent.sweepDist : enemyDist;
-    return alive.filter(index => index === dist);
+    const onSpot = alive.filter(index => index === dist);
+    if (onSpot.length) return onSpot;
+    // ★予告した間合いに誰も立っていなくても、薙ぎ払いの端はいちばん近い子に届く
+    //   (2026-09-22 ユーザー指摘「敵が狙った距離にこっちがいない場合はダメージ喰らわない
+    //    ままになってた」)。決まりは「間合いが合えば1.2倍・合わなければ0.4倍」であって、
+    //   合わないと0になる、ではない。WAVE1のように盤面が1体だけだと、敵の間合いに
+    //   誰もいないことが当たり前に起きて、敵のターンが丸ごと無駄になっていた
+    const nearest = alive.reduce((best, index) =>
+      (best === null || Math.abs(index - dist) < Math.abs(best - dist)) ? index : best, null);
+    return nearest === null ? [] : [nearest];
   }
   return Number.isInteger(intent.targetSlot) && alive.includes(intent.targetSlot) ? [intent.targetSlot] : [];
 };
@@ -21788,7 +21817,10 @@ function BattleScreen({
   const plannedHitFor = (slotIdx) => {
     const none = { taken: 0, parts: [] };
     if (!enemyIntent) return none;
-    const raw = getIncomingDamageBeforeTurnReduction(enemyIntent, slotIdx);
+    // ★外れた間合い攻撃は予告の時点でも威力を落とす(実行と同じ tacticsSweepIntent を通す)。
+    //   予告だけ1.2倍のままだと「予定より少なかった」になる
+    const planIntent = Array.isArray(tacticsUnits) ? tacticsSweepIntent(enemyIntent, tacticsUnits, enemyDist) : enemyIntent;
+    const raw = getIncomingDamageBeforeTurnReduction(planIntent, slotIdx);
     if (!(raw > 0)) return none;
     const hits = enemyIntent.variant === 'rush' ? Math.max(1, Math.floor(Number(enemyIntent.hits) || 1)) : 1;
     let guard = 0, guardHits = 1;
@@ -33734,14 +33766,20 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // 距離撃で動かした先は setEnemyDist の反映を待たないため、呼び出し元が確定させた
         // 移動先(forcedMoveTarget)を優先して見る
         const actingEnemyDist = Number.isInteger(immediateEffects.forcedMoveTarget) ? immediateEffects.forcedMoveTarget : enemyDist;
-        const sweptAway = intent.variant==='sweep' && Number.isInteger(intent.sweepDist) && actingEnemyDist!==intent.sweepDist;
-        const actingIntent = sweptAway ? {...intent,value:Math.max(0,Math.floor(Number(intent.missValue)||0))} : intent;
+        // ★外れの決まりは1か所(isTacticsSweepOnSpot)。敵をずらしたときだけでなく、
+        //   予告した間合いに味方が立っていないときも「外れ」＝威力が落ちる
+        //   (2026-09-22 ユーザー指摘「敵が狙った距離にこっちがいない場合は
+        //    ダメージ喰らわないままになってた」)。0になるのではなく、下がる
+        const sweptAway = intent.variant==='sweep' && Number.isInteger(intent.sweepDist)
+          && !isTacticsSweepOnSpot(intent,tacticsUnitsRef.current,actingEnemyDist);
+        const actingIntent = tacticsSweepIntent(intent,tacticsUnitsRef.current,actingEnemyDist);
         // 表示と同じ guardFlat / guardMult 集計を実効丈夫さへ適用する。
         const baseGuardValue = (immediateEffects.guardFlat>0||immediateEffects.guardMult>0) ? Math.floor(immediateEffects.guardFlat + effectiveDef*immediateEffects.guardMult) : 0;
         // ★連撃は新モードの行動表にしかないので、ここ(既存モードの経路)には来ない。
         //   1ヒットぶんだけ受け止める数え方は、下の新モードの分岐が持つ
         const guardValue = intent.variant==='pierce' ? 0 : baseGuardValue;
-        if (sweptAway) { addPopup('間合い攻撃をかわした！','hero','text-cyan-300 font-black text-xl drop-shadow-md'); await battleWait(600); }
+        // ★「かわした」は嘘になる(外れても0.4倍は当たる)。何が起きたかをそのまま書く
+        if (sweptAway) { addPopup('間合いが外れた！ 威力ダウン','hero','text-cyan-300 font-black text-xl drop-shadow-md'); await battleWait(600); }
         else if (intent.variant==='pierce' && baseGuardValue>0) { addPopup('貫通！ ガードが効かない','enemy','text-rose-300 font-black text-xl drop-shadow-md'); await battleWait(600); }
         const incomingBeforeTurnReduction = getIncomingDamageBeforeTurnReduction(actingIntent);
         const incomingDmg = applyTurnDamageReduction(incomingBeforeTurnReduction);

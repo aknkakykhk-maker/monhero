@@ -210,8 +210,18 @@ check('ガードは厚さだけでなく枚数も数える',
 //   ガードしていないときも出す(前はガードして貫通したときだけ出ていた)
 check('連撃は何ヒットかを画面に出す',
   has('if(rushHits>1){') && has('addPopup(`連撃 ${rushHits}ヒット！${coverText}`'));
-check('間合い攻撃は間合いをずらすと威力が落ちる',
-  has("const sweptAway = intent.variant==='sweep'") && has('value:Math.max(0,Math.floor(Number(intent.missValue)||0))'));
+// ★外れの決まりは1か所(isTacticsSweepOnSpot / tacticsSweepIntent)。実行も予告も同じものを通す
+//   (2026-09-22 ユーザー指摘「敵が狙った距離にこっちがいない場合はダメージ喰らわないままになってた」)
+check('間合い攻撃は間合いが合わないと威力が落ちる',
+  has("const sweptAway = intent.variant==='sweep' && Number.isInteger(intent.sweepDist)")
+    && has('&& !isTacticsSweepOnSpot(intent,tacticsUnitsRef.current,actingEnemyDist);')
+    && has('const actingIntent = tacticsSweepIntent(intent,tacticsUnitsRef.current,actingEnemyDist);'));
+check('予告も同じ決まりで威力を落とす',
+  screen.includes('const planIntent = Array.isArray(tacticsUnits) ? tacticsSweepIntent(enemyIntent, tacticsUnits, enemyDist) : enemyIntent;')
+    && screen.includes('const raw = getIncomingDamageBeforeTurnReduction(planIntent, slotIdx);'));
+// ★「かわした」は嘘になる(外れても0.4倍は当たる)
+check('外したときの言い方が当たっている',
+  has("addPopup('間合いが外れた！ 威力ダウン'") && !has("addPopup('間合い攻撃をかわした！'"));
 check('間合い攻撃の判定は距離撃で動かした先を見る',
   has('Number.isInteger(immediateEffects.forcedMoveTarget) ? immediateEffects.forcedMoveTarget : enemyDist')
     && has('distLocked:forcedMoveTarget!=null,forcedMoveTarget,'));

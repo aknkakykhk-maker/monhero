@@ -48,6 +48,7 @@ vm.runInContext(
     + 'createTacticsUnit,normalizeTacticsUnit,applyTacticsDamage,healTacticsUnit,reviveTacticsUnit,'
     + 'payTacticsGuts,recoverTacticsGuts,tacticsAliveSlots,tacticsDownedSlots,isTacticsWipedOut,'
     + 'canTacticsSlotAct,chooseTacticsTarget,withTacticsTarget,tacticsIntentTargets,'
+    + 'isTacticsSweepOnSpot,tacticsSweepIntent,'
     + 'tacticsTotalHp,tacticsTotalMaxHp,tacticsTotalBaseMaxHp,scaleTacticsUnits,scaleTacticsUnitMaxHp,'
     + 'damageTacticsTargets,healTacticsBoard,rateHealTacticsBoard,rateHealTacticsAt,'
     + 'tacticsMaxDef,selfDamageTacticsBoard,'
@@ -1339,6 +1340,45 @@ check('固有技の効果も枠の印に出る',
   const quickRef = plan.slice(plan.indexOf('### 4.0 効き先の早見表'), plan.indexOf('### 4.1 '));
   const missing = keys.filter(key => !quickRef.includes(`\`${key}\``));
   check('枠ごとのバフはすべて早見表に載っている', missing.length === 0, missing.join(',') || 'すべてある');
+}
+
+// --- ㊲ 間合い攻撃は「合えば1.2倍・合わなければ0.4倍」。0にはならない ---
+// ★2026-09-22 ユーザー指摘「間合い攻撃で敵が狙った距離にこっちがいない場合は
+//   ダメージ喰らわないままになってた／距離があわないときはダメージが下がるって指示をしたはず」。
+//   予告した間合いに味方が立っていないと狙いが空になり、敵のターンが丸ごと無駄になっていた。
+//   WAVE1のように盤面が1体だけだと当たり前に起きる
+{
+  const board = [api.createTacticsUnit(mon()), null, api.createTacticsUnit(mon({ id: 'Golem' })), null];
+  const sweepAt = (dist) => ({ variant: 'sweep', sweepDist: dist, value: 120, missValue: 40 });
+  check('間合いも敵も合っていれば当たり',
+    api.isTacticsSweepOnSpot(sweepAt(0), board, 0) === true
+      && api.tacticsSweepIntent(sweepAt(0), board, 0).value === 120);
+  check('敵を距離撃でずらしたら外れ',
+    api.isTacticsSweepOnSpot(sweepAt(0), board, 2) === false
+      && api.tacticsSweepIntent(sweepAt(0), board, 2).value === 40);
+  check('その間合いに味方が立っていなくても外れ',
+    api.isTacticsSweepOnSpot(sweepAt(1), board, 1) === false
+      && api.tacticsSweepIntent(sweepAt(1), board, 1).value === 40);
+  // ★いちばん大事なところ。誰もいない間合いでも「いちばん近い子」が0.4倍で食らう
+  check('誰もいない間合いは、いちばん近い子へ届く',
+    api.tacticsIntentTargets(sweepAt(1), board, 1).join(',') === '0'
+      && api.tacticsIntentTargets(sweepAt(3), board, 3).join(',') === '2');
+  check('立っている間合いはその子だけ',
+    api.tacticsIntentTargets(sweepAt(0), board, 0).join(',') === '0'
+      && api.tacticsIntentTargets(sweepAt(2), board, 2).join(',') === '2');
+  check('全員倒れていれば誰にも当たらない',
+    api.tacticsIntentTargets(sweepAt(1), [null, null, null, null], 1).length === 0);
+  // ★倒れた子は「立っていない」。その間合いを予告されても、起きている子へ届く
+  const downed = api.damageTacticsTargets(board, [0], 9999);
+  check('倒れた子の間合いは、立っている子へ届く',
+    api.tacticsIntentTargets(sweepAt(0), downed, 0).join(',') === '2'
+      && api.isTacticsSweepOnSpot(sweepAt(0), downed, 0) === false);
+  // ★既存5モードは盤面を持たない。間合い攻撃も無いので、ここで振る舞いを変えない
+  check('盤面が無いときは今までどおり', api.isTacticsSweepOnSpot(sweepAt(0), null, 0) === true
+    && api.isTacticsSweepOnSpot(sweepAt(0), [], 0) === true);
+  check('間合い攻撃以外は素通し',
+    api.isTacticsSweepOnSpot({ variant: 'rush' }, board, 0) === true
+      && api.tacticsSweepIntent({ variant: 'rush', value: 99 }, board, 3).value === 99);
 }
 
 console.log(failed ? `\nNG ${failed}件` : '\nすべてOK');

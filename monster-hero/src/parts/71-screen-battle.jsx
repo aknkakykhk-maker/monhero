@@ -114,7 +114,10 @@ function BattleScreen({
   const plannedHitFor = (slotIdx) => {
     const none = { taken: 0, parts: [] };
     if (!enemyIntent) return none;
-    const raw = getIncomingDamageBeforeTurnReduction(enemyIntent, slotIdx);
+    // ★外れた間合い攻撃は予告の時点でも威力を落とす(実行と同じ tacticsSweepIntent を通す)。
+    //   予告だけ1.2倍のままだと「予定より少なかった」になる
+    const planIntent = Array.isArray(tacticsUnits) ? tacticsSweepIntent(enemyIntent, tacticsUnits, enemyDist) : enemyIntent;
+    const raw = getIncomingDamageBeforeTurnReduction(planIntent, slotIdx);
     if (!(raw > 0)) return none;
     const hits = enemyIntent.variant === 'rush' ? Math.max(1, Math.floor(Number(enemyIntent.hits) || 1)) : 1;
     let guard = 0, guardHits = 1;

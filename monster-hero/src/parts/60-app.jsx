@@ -9679,14 +9679,20 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // 距離撃で動かした先は setEnemyDist の反映を待たないため、呼び出し元が確定させた
         // 移動先(forcedMoveTarget)を優先して見る
         const actingEnemyDist = Number.isInteger(immediateEffects.forcedMoveTarget) ? immediateEffects.forcedMoveTarget : enemyDist;
-        const sweptAway = intent.variant==='sweep' && Number.isInteger(intent.sweepDist) && actingEnemyDist!==intent.sweepDist;
-        const actingIntent = sweptAway ? {...intent,value:Math.max(0,Math.floor(Number(intent.missValue)||0))} : intent;
+        // ★外れの決まりは1か所(isTacticsSweepOnSpot)。敵をずらしたときだけでなく、
+        //   予告した間合いに味方が立っていないときも「外れ」＝威力が落ちる
+        //   (2026-09-22 ユーザー指摘「敵が狙った距離にこっちがいない場合は
+        //    ダメージ喰らわないままになってた」)。0になるのではなく、下がる
+        const sweptAway = intent.variant==='sweep' && Number.isInteger(intent.sweepDist)
+          && !isTacticsSweepOnSpot(intent,tacticsUnitsRef.current,actingEnemyDist);
+        const actingIntent = tacticsSweepIntent(intent,tacticsUnitsRef.current,actingEnemyDist);
         // 表示と同じ guardFlat / guardMult 集計を実効丈夫さへ適用する。
         const baseGuardValue = (immediateEffects.guardFlat>0||immediateEffects.guardMult>0) ? Math.floor(immediateEffects.guardFlat + effectiveDef*immediateEffects.guardMult) : 0;
         // ★連撃は新モードの行動表にしかないので、ここ(既存モードの経路)には来ない。
         //   1ヒットぶんだけ受け止める数え方は、下の新モードの分岐が持つ
         const guardValue = intent.variant==='pierce' ? 0 : baseGuardValue;
-        if (sweptAway) { addPopup('間合い攻撃をかわした！','hero','text-cyan-300 font-black text-xl drop-shadow-md'); await battleWait(600); }
+        // ★「かわした」は嘘になる(外れても0.4倍は当たる)。何が起きたかをそのまま書く
+        if (sweptAway) { addPopup('間合いが外れた！ 威力ダウン','hero','text-cyan-300 font-black text-xl drop-shadow-md'); await battleWait(600); }
         else if (intent.variant==='pierce' && baseGuardValue>0) { addPopup('貫通！ ガードが効かない','enemy','text-rose-300 font-black text-xl drop-shadow-md'); await battleWait(600); }
         const incomingBeforeTurnReduction = getIncomingDamageBeforeTurnReduction(actingIntent);
         const incomingDmg = applyTurnDamageReduction(incomingBeforeTurnReduction);
