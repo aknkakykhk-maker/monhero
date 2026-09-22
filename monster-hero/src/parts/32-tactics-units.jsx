@@ -466,6 +466,26 @@ const withTacticsTarget = (intent, units, random = Math.random, bias = TACTICS_T
   return targetSlot == null ? intent : { ...intent, targetSlot, targetName: tacticsTargetName(units, targetSlot) };
 };
 // その行動が実際に当たるスロット。予告と実行で同じ関数を通すので食い違わない
+// 間合い攻撃が「当たり」(×TACTICS_SWEEP_MULT)になる条件。
+// ★予告した間合いに**敵も味方も**いるときだけ。どちらか欠けたら外れ(×missMultiplier)。
+//   敵を距離撃でずらしても、味方がそこに立っていなくても、同じ「外れ」として扱う
+//   (2026-09-22 ユーザー指摘。それまでは敵がずれたときしか外れにならず、
+//    味方がいない間合いを予告したときはダメージそのものが起きなかった)。
+// ★盤面が空のとき(既存5モード)は true。間合い攻撃は新モードにしか無いので、
+//   ここで既存モードの振る舞いを変えない
+const isTacticsSweepOnSpot = (intent, units, enemyDist) => {
+  if (!intent || intent.variant !== 'sweep' || !Number.isInteger(intent.sweepDist)) return true;
+  if (enemyDist !== intent.sweepDist) return false;
+  const alive = tacticsAliveSlots(units);
+  return alive.length === 0 ? true : alive.includes(intent.sweepDist);
+};
+// 外れた間合い攻撃は威力を missValue へ落とす。★予告(画面)と実行(processTurn)が
+// この1つを通るので、「予定より減った・増えた」が起きない
+const tacticsSweepIntent = (intent, units, enemyDist) =>
+  (intent && intent.variant === 'sweep' && !isTacticsSweepOnSpot(intent, units, enemyDist))
+    ? { ...intent, value: Math.max(0, Math.floor(Number(intent.missValue) || 0)) }
+    : intent;
+
 const tacticsIntentTargets = (intent, units, enemyDist = null) => {
   const alive = tacticsAliveSlots(units);
   if (!intent || !alive.length) return [];
@@ -477,7 +497,16 @@ const tacticsIntentTargets = (intent, units, enemyDist = null) => {
   //   ここを enemyDist(いまの敵の間合い)にすると、ずらした先の**別の子**が食らってしまう
   if (intent.variant === 'sweep') {
     const dist = Number.isInteger(intent.sweepDist) ? intent.sweepDist : enemyDist;
-    return alive.filter(index => index === dist);
+    const onSpot = alive.filter(index => index === dist);
+    if (onSpot.length) return onSpot;
+    // ★予告した間合いに誰も立っていなくても、薙ぎ払いの端はいちばん近い子に届く
+    //   (2026-09-22 ユーザー指摘「敵が狙った距離にこっちがいない場合はダメージ喰らわない
+    //    ままになってた」)。決まりは「間合いが合えば1.2倍・合わなければ0.4倍」であって、
+    //   合わないと0になる、ではない。WAVE1のように盤面が1体だけだと、敵の間合いに
+    //   誰もいないことが当たり前に起きて、敵のターンが丸ごと無駄になっていた
+    const nearest = alive.reduce((best, index) =>
+      (best === null || Math.abs(index - dist) < Math.abs(best - dist)) ? index : best, null);
+    return nearest === null ? [] : [nearest];
   }
   return Number.isInteger(intent.targetSlot) && alive.includes(intent.targetSlot) ? [intent.targetSlot] : [];
 };
