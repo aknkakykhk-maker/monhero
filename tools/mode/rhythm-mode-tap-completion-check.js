@@ -28,7 +28,9 @@ check('再開は同じoffsetから新しいBufferSourceを生成',game.includes(
 // ここで見たいのは「曲の時刻に Date.now() を混ぜていないこと」なので、待ち処理は外して見る
 const tapTestSource=(game.match(/const RhythmTapTest=[\s\S]*?\n};\n\nfunction MonsterHeroGame/)?.[0]||'')
   .replace(/const waitUntilPlayable=[\s\S]*?\n  \}\);\n/,'');
-check('ポーズ中songTimeは進まずAudioContext時刻を正本にする',game.includes('offsetSeconds+(playing?ctx.currentTime-startedAt:0)')&&!/Date\.now\(\)/.test(tapTestSource));
+// ★音が出るまでの遅れ(outputLatencySeconds)を引いた時刻が正本。ポーズ中は playing が
+//   false なので進まない
+check('ポーズ中songTimeは進まずAudioContext時刻を正本にする',game.includes('offsetSeconds+(playing?ctx.currentTime-startedAt-outputLatencySeconds:0)')&&!/Date\.now\(\)/.test(tapTestSource));
 check('PAUSEとリザルト再プレイは同じbeginRunを使用',game.includes('const restart=()=>')&&game.includes('beginRun(startBest)')&&game.includes('onClick={()=>beginRun(mergeRhythmBestRecord'));
 check('中断は保存せず共通disposeRunで停止',game.includes('const abort=()=>')&&game.includes('disposeRun();onExit()')&&!/const abort=[^;]*onComplete/.test(game));
 check('正常完走だけBEST保存しReact stateを即時更新',game.includes('onComplete(result,merged)')&&game.includes('saveRhythmBestRecord(rhythmBestRecords')&&game.includes('setRhythmBestRecords(records)'));
