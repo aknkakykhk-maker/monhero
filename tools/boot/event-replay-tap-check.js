@@ -64,6 +64,9 @@ const {useState}=React;
 const FACE='data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 const AssistantFace=({who,size})=>React.createElement('img',{src:FACE,style:{width:size,height:size,borderRadius:8,background:'#334155'}});
 const ASSISTANT_LIST=ASSISTANTS;
+// ★画面は「公開フラグでふるいにかけた一覧」(eventReplayList)を通す。
+//   定義していないと ReferenceError で描画ごと落ち、スキップのボタンも出ない
+const eventReplayList=()=>EVENT_REPLAYS;
 const assistantById=(id)=>ASSISTANTS.find(x=>x.id===id)||ASSISTANTS[0];
 const normalizeAssistantBond=()=>({points:0});
 const assistantBonds={},assistantCallStyles={};
