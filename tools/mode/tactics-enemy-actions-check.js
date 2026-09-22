@@ -595,8 +595,10 @@ check('実戦の行動表も難易度つきで引く',
       && battleScreen.includes('absolute -top-3 -right-2'));
   check('出すのはタクティクスだけ(既存5モードは今までどおり❗)',
     battleScreen.includes("enemyIntent.type==='ATTACK'&&!Array.isArray(tacticsUnits)&&"));
+  // ★札を出すかどうかは enemyNoticeShown 1か所で決める(ムーは丸枠の外、ほかは丸枠の右上へ
+  //   出すため、条件を2か所に書き写さない)。末尾の && まで見ると、まとめ方を変えただけで落ちる
   check('中央に大きく出ているときは、右上へ重ねない',
-    battleScreen.includes("enemyIntent.notice&&enemyIntent.type!=='PIERCE_CHARGE'&&"));
+    battleScreen.includes("enemyIntent.notice&&enemyIntent.type!=='PIERCE_CHARGE'"));
 }
 
 // --- 誰が食らったかを枠で見せる(2026-09-22 ユーザー指示) ---

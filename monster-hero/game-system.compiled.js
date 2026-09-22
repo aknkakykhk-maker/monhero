@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7e34cb49f0506231
+// source-sha256: 9b70c1c968720673
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f6229044d8126722
+// generated-sha256: fdd464388b22365a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-22 19:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-22 20:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -38224,6 +38224,34 @@ function BattleScreen({
     };
   };
   const plannedDamageFor = slotIdx => plannedHitFor(slotIdx).taken;
+  // ★敵が次に何をするかの札(「3連撃！」など)。作りはここ1か所にして、置き場所だけ変える。
+  //   ムーは丸枠の外、ほかの敵は丸枠の右上へ出すので、下の2か所から呼ぶ
+  const enemyNoticeShown = !ecoBattleView && !!enemy && !!enemyIntent && !isBusy && !enemyAttackFx && Array.isArray(tacticsUnits) && !!enemyIntent.notice && enemyIntent.type !== 'PIERCE_CHARGE';
+  const enemyNoticeCard = () => {
+    // ★色・動き・光り方を効果で変える(2026-09-22 ユーザー指示「吹き出しを
+    //   効果によって変えると見た目がいい」)。文字を読む前に、攻めてくるのか
+    //   回復するのかが見分けられるようにする
+    const noticeTone = enemyIntent.type === 'SPECIAL' ? 'bg-fuchsia-600 border-fuchsia-200 text-white shadow-[0_0_14px_rgba(217,70,239,0.85)]' : enemyIntent.type === 'CHARGE' ? 'bg-amber-500 border-amber-100 text-black shadow-[0_0_14px_rgba(251,191,36,0.85)]' : enemyIntent.type === 'PIERCE_CHARGE' ? 'bg-rose-600 border-rose-200 text-white shadow-[0_0_14px_rgba(244,63,94,0.85)]' : enemyIntent.type === 'MOVE' ? 'bg-cyan-600 border-cyan-100 text-white shadow-[0_0_12px_rgba(6,182,212,0.7)]' : enemyIntent.type === 'ROAR' ? 'bg-orange-600 border-orange-100 text-white shadow-[0_0_14px_rgba(249,115,22,0.85)]' : enemyIntent.type === 'REGEN' ? 'bg-emerald-600 border-emerald-100 text-white shadow-[0_0_14px_rgba(16,185,129,0.85)]' : enemyIntent.type === 'WAIT' ? 'bg-slate-600 border-slate-200 text-white shadow-[0_2px_10px_rgba(0,0,0,0.9)]' : 'bg-red-600 border-red-100 text-white shadow-[0_0_14px_rgba(239,68,68,0.85)]';
+    // 動きも効果ごと。殴ってくる技は小刻みに震え、回復はふわっと浮き、
+    // 攻撃力アップは左右に揺れ、ためるは膨らみ、様子見と移動は静かに明滅する
+    const noticeAnim = enemyIntent.type === 'REGEN' ? 'noticeHeal 1400ms ease-in-out infinite' : enemyIntent.type === 'ROAR' ? 'noticeShout 900ms ease-in-out infinite' : enemyIntent.type === 'CHARGE' ? 'noticeCharge 1100ms ease-in-out infinite' : enemyIntent.type === 'MOVE' || enemyIntent.type === 'WAIT' ? 'noticeCalm 1600ms ease-in-out infinite' : 'noticeHit 800ms ease-in-out infinite';
+    return /*#__PURE__*/React.createElement("div", {
+      "data-enemy-notice": enemyIntent.notice,
+      "data-enemy-notice-anim": noticeAnim.split(' ')[0],
+      className: `max-w-[170px] truncate rounded-2xl border-2 px-2 py-0.5 font-black leading-tight flex items-center gap-1 ${noticeTone}`,
+      style: {
+        fontSize: '11px',
+        animation: noticeAnim
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: '12px'
+      },
+      className: "leading-none shrink-0"
+    }, cardIconNode(enemyIntent.icon, 12)), /*#__PURE__*/React.createElement("span", {
+      className: "truncate"
+    }, enemyIntent.notice, "\uFF01"));
+  };
   return /*#__PURE__*/React.createElement("div", {
     className: "flex-1 flex flex-col h-full relative",
     "data-battle-speed": battleSpeed,
@@ -38777,7 +38805,15 @@ function BattleScreen({
     style: {
       animation: 'auraRing 650ms ease-out 120ms infinite'
     }
-  }))), /*#__PURE__*/React.createElement("div", {
+  }))), enemyNoticeShown && isMooBoss(enemy?.id) && /*#__PURE__*/React.createElement("div", {
+    "data-enemy-notice-moo": true,
+    className: "fixed left-1/2 pointer-events-none",
+    style: {
+      top: 'max(112px,16dvh)',
+      transform: 'translateX(calc(min(50vw, 300px) - 100% - 6px))',
+      zIndex: focusedCard ? 5 : 40
+    }
+  }, enemyNoticeCard()), /*#__PURE__*/React.createElement("div", {
     className: `rounded-full transition-all duration-500 border-4 relative ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border} ${RANGE_STYLES[enemyDist].shadow} ${RANGE_STYLES[enemyDist].glow} shadow-[0_0_50px]`,
     style: enemyAttackAnim && !ecoBattleView ? {
       padding: 'clamp(6px,1.5dvh,16px)',
@@ -38922,50 +38958,11 @@ function BattleScreen({
     style: {
       animation: 'idleExclaim 1100ms ease-in-out infinite'
     }
-  }, "\u2757")), !ecoBattleView && enemy && enemyIntent && !isBusy && !enemyAttackFx && Array.isArray(tacticsUnits) && enemyIntent.notice && enemyIntent.type !== 'PIERCE_CHARGE' && (() => {
-    // ★色・動き・光り方を効果で変える(2026-09-22 ユーザー指示「吹き出しを
-    //   効果によって変えると見た目がいい」)。文字を読む前に、攻めてくるのか
-    //   回復するのかが見分けられるようにする
-    const noticeTone = enemyIntent.type === 'SPECIAL' ? 'bg-fuchsia-600 border-fuchsia-200 text-white shadow-[0_0_14px_rgba(217,70,239,0.85)]' : enemyIntent.type === 'CHARGE' ? 'bg-amber-500 border-amber-100 text-black shadow-[0_0_14px_rgba(251,191,36,0.85)]' : enemyIntent.type === 'PIERCE_CHARGE' ? 'bg-rose-600 border-rose-200 text-white shadow-[0_0_14px_rgba(244,63,94,0.85)]' : enemyIntent.type === 'MOVE' ? 'bg-cyan-600 border-cyan-100 text-white shadow-[0_0_12px_rgba(6,182,212,0.7)]' : enemyIntent.type === 'ROAR' ? 'bg-orange-600 border-orange-100 text-white shadow-[0_0_14px_rgba(249,115,22,0.85)]' : enemyIntent.type === 'REGEN' ? 'bg-emerald-600 border-emerald-100 text-white shadow-[0_0_14px_rgba(16,185,129,0.85)]' : enemyIntent.type === 'WAIT' ? 'bg-slate-600 border-slate-200 text-white shadow-[0_2px_10px_rgba(0,0,0,0.9)]' : 'bg-red-600 border-red-100 text-white shadow-[0_0_14px_rgba(239,68,68,0.85)]';
-    // 動きも効果ごと。殴ってくる技は小刻みに震え、回復はふわっと浮き、
-    // 攻撃力アップは左右に揺れ、ためるは膨らみ、様子見と移動は静かに明滅する
-    const noticeAnim = enemyIntent.type === 'REGEN' ? 'noticeHeal 1400ms ease-in-out infinite' : enemyIntent.type === 'ROAR' ? 'noticeShout 900ms ease-in-out infinite' : enemyIntent.type === 'CHARGE' ? 'noticeCharge 1100ms ease-in-out infinite' : enemyIntent.type === 'MOVE' || enemyIntent.type === 'WAIT' ? 'noticeCalm 1600ms ease-in-out infinite' : 'noticeHit 800ms ease-in-out infinite';
-    const noticeCard = /*#__PURE__*/React.createElement("div", {
-      "data-enemy-notice": enemyIntent.notice,
-      "data-enemy-notice-anim": noticeAnim.split(' ')[0],
-      className: `max-w-[170px] truncate rounded-2xl border-2 px-2 py-0.5 font-black leading-tight flex items-center gap-1 ${noticeTone}`,
-      style: {
-        fontSize: '11px',
-        animation: noticeAnim
-      }
-    }, /*#__PURE__*/React.createElement("span", {
-      style: {
-        fontSize: '12px'
-      },
-      className: "leading-none shrink-0"
-    }, cardIconNode(enemyIntent.icon, 12)), /*#__PURE__*/React.createElement("span", {
-      className: "truncate"
-    }, enemyIntent.notice, "\uFF01"));
-    // ★ムーだけは本体が丸枠の外へ巨大表示される(fixed・z-30 で画面いっぱい)。
-    //   丸枠の右上へ置くと絵の下に隠れて1文字も見えない
-    //   (2026-09-22 ユーザー指摘「ムー戦の吹き出しが見えない」)。
-    //   ムーは画面を覆うので、画面の右上＝ムーの右上。敵のライフ帯のすぐ下へ固定で出す
-    if (isMooBoss(enemy?.id)) return /*#__PURE__*/React.createElement("div", {
-      "data-enemy-notice-moo": true,
-      className: "pointer-events-none",
-      style: {
-        position: 'fixed',
-        top: 'max(112px,16dvh)',
-        right: '6px',
-        zIndex: focusedCard ? 5 : 40
-      }
-    }, noticeCard);
-    return /*#__PURE__*/React.createElement("div", {
-      className: "absolute inset-0 pointer-events-none z-[9000]"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "absolute -top-3 -right-2"
-    }, noticeCard));
-  })(), !ecoBattleView && enemy && enemyAttackFx?.kind === 'charge' && /*#__PURE__*/React.createElement("div", {
+  }, "\u2757")), enemyNoticeShown && !isMooBoss(enemy?.id) && /*#__PURE__*/React.createElement("div", {
+    className: "absolute inset-0 pointer-events-none z-[9000]"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "absolute -top-3 -right-2"
+  }, enemyNoticeCard())), !ecoBattleView && enemy && enemyAttackFx?.kind === 'charge' && /*#__PURE__*/React.createElement("div", {
     className: "absolute inset-0 pointer-events-none z-[9000] flex items-center justify-center overflow-visible"
   }, /*#__PURE__*/React.createElement("div", {
     className: "absolute -inset-6 rounded-full",
