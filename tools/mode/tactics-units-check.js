@@ -6,7 +6,7 @@ const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分�
 //   ② 狙われた子だけがライフを減らし、0になったその子だけが倒れる
 //   ③ 倒れた子はカードを使えない。戻す手段は2つあり、戻るライフが違う
 //   ④ 全員倒れたときだけ全滅
-//   ⑤ 敵はライフの少ない子を狙いやすい。全体攻撃と間合い攻撃は狙いを決めない
+//   ⑤ 敵はライフの少ない子を狙いやすい。全体攻撃だけは狙いを決めない
 //   ⑥ 壊れた値が来ても落ちない
 //   ⑦ バトル本体へ結線されている(盤面が slots と一緒に動き、予告へ狙いが乗る)
 //   ⑧ パーティのライフは盤面の合計。増減が正しく振り分けられる(段階5)
@@ -170,8 +170,12 @@ check('全体攻撃は「全員」と出す',
   api.withTacticsTarget({ type: 'ATTACK', targetsAll: true }, board, () => 0).targetName === '全員');
 check('名前が無い子でも呼び名が空にならない',
   !!api.withTacticsTarget(attack, [api.createTacticsUnit({ id: 'X', baseHp: 10 }), null, null, null], () => 0).targetName);
-check('間合い攻撃は狙いを決めない（間合いで当たる相手が決まる）',
-  api.withTacticsTarget({ type: 'ATTACK', variant: 'sweep', sweepDist: 2 }, board, () => 0).targetSlot === undefined);
+// ★間合い攻撃も「誰を狙うか」を決める(2026-09-22 ユーザー指示「誰に攻撃するかが大事」)。
+//   予告した間合いに立っている子がいればその子、いなければほかの技と同じ決め方で1体
+check('間合い攻撃も狙いを決める',
+  api.withTacticsTarget({ type: 'ATTACK', variant: 'sweep', sweepDist: 2 }, board, () => 0).targetSlot === 2);
+check('その間合いに誰も立っていなければ、ほかの技と同じ決め方で選ぶ',
+  Number.isInteger(api.withTacticsTarget({ type: 'ATTACK', variant: 'sweep', sweepDist: 1 }, board, () => 0).targetSlot));
 
 // --- 実際に当たる相手 ---
 check('単体狙いは1体だけに当たる',
@@ -626,8 +630,16 @@ check('置けるかの判定も画面へ渡す', has('tacticsCanAssign={tacticsC
   check('帯も枠も同じ形で出す',
     hasScreen("const plannedText=plannedHit.parts.join('・');")
       && hasScreen("const slotPlannedText=slotPlannedHit.parts.join('・');")
-      && hasScreen('` (予定: ${plannedText})`')
-      && hasScreen('` -${slotPlannedText}`'));
+      && hasScreen('` (予定: ${plannedBubbleText})`'));
+  // ★1発ずつ並べると**合計がどこにも出ない**ので「結局いくつ食らうか」が読めなかった
+  //   (2026-09-22 ユーザー指摘「連撃ダメージで合計ダメージと軽減後の合計ダメージが
+  //    ないといくつくらうかわからない」)。ガードが効いていれば「軽減前→軽減後」で出す
+  check('連撃は合計も出す',
+    hasScreen("const plannedTotalText=plannedHit.raw>plannedDmg?`${plannedHit.raw}→${plannedDmg}`:`${plannedDmg}`;")
+      && hasScreen("const plannedBubbleText=plannedHit.parts.length>1?`合計 ${plannedTotalText} ＝ ${plannedText}`:plannedText;"));
+  check('軽減前の合計も持ち歩く',
+    hasScreen('return { taken, raw, parts: hits > 1 ? scaleTacticsHitAmounts')
+      && hasScreen('const none = { taken: 0, parts: [], raw: 0 };'));
   // ★ガードの枚数を数えないと、2枚構えても連撃ガードにならない
   check('予定ダメージもガードの枚数を数える', hasScreen('entry.cards += 1;'));
   // ★全体攻撃は立っている全員に当たり、受ける量は**その子の丈夫さ**で1体ずつ変わる。
@@ -636,13 +648,17 @@ check('置けるかの判定も画面へ渡す', has('tacticsCanAssign={tacticsC
   check('枠ごとにまとめてから数える',
     hasScreen('const plannedGuardBySlot = () => {')
       && hasScreen("guard = enemyIntent.variant === 'pierce' ? 0 : tacticsSlotGuardValue(bySlot, slotIdx);"));
+  // ★枠は「合計」を上の行に、1発ずつの内訳をその下へ小さく添える。
+  //   いちばん知りたいのは「結局いくつ食らうか」なので、合計を先に読ませる
   check('狙われている枠にその子の予定ダメージを出す',
     hasScreen('data-tactics-aimed-damage={slotPlanned}')
-      && hasScreen("🎯{slotPlannedText?` -${slotPlannedText}`:''}"));
+      && hasScreen("<span>🎯{slotPlanned>0?` -${slotPlanned}`:''}</span>")
+      && hasScreen('{slotMultiHit&&<span className="text-[8px] font-bold text-red-200/90">{slotPlannedText}</span>}')
+      && hasScreen('const slotMultiHit=slotPlannedHit.parts.length>1;'));
   // ★1つの数字にまとめると、どの子がどれだけ減るのか分からなくなる
   check('全体攻撃は吹き出しに1つの数字を出さない',
     hasScreen('const showPlannedInBubble=!enemyIntent.targetsAll;')
-      && hasScreen("{rawDmg>0&&showPlannedInBubble&&plannedText?` (予定: ${plannedText})`:''}"));
+      && hasScreen("{rawDmg>0&&showPlannedInBubble&&plannedBubbleText?` (予定: ${plannedBubbleText})`:''}"));
   // ★連撃だと予告の時点で分かる(2026-09-21 ユーザー指摘「敵の連撃技が連撃表示になってない」)
   check('予告に何連撃かを出す', hasScreen('{previewHits>1?` ${previewHits}連撃`:\'\'}'));
   check('置けるかの判定は新モードだけ差し替える',
@@ -1342,42 +1358,48 @@ check('固有技の効果も枠の印に出る',
   check('枠ごとのバフはすべて早見表に載っている', missing.length === 0, missing.join(',') || 'すべてある');
 }
 
-// --- ㊲ 間合い攻撃は「合えば1.2倍・合わなければ0.4倍」。0にはならない ---
-// ★2026-09-22 ユーザー指摘「間合い攻撃で敵が狙った距離にこっちがいない場合は
-//   ダメージ喰らわないままになってた／距離があわないときはダメージが下がるって指示をしたはず」。
-//   予告した間合いに味方が立っていないと狙いが空になり、敵のターンが丸ごと無駄になっていた。
-//   WAVE1のように盤面が1体だけだと当たり前に起きる
+// --- ㊲ 間合い攻撃は「誰を狙うか」を決めてから、距離を見て威力が決まる ---
+// ★2026-09-22 ユーザー指示「誰に攻撃するかが大事で、それに対して敵がどの距離で
+//   狙われた味方がどの距離かを見るんだよ」。見るのは**敵の距離**と**狙われた子の距離**の2つだけ。
+//   予告した間合い(sweepDist)は「敵がどこから薙ぐか」の見出しであって、当たり外れの材料ではない。
+//   sweepDist で狙い先を探していたころは、その間合いに誰も立っていないと攻撃そのものが起きなかった
 {
   const board = [api.createTacticsUnit(mon()), null, api.createTacticsUnit(mon({ id: 'Golem' })), null];
-  const sweepAt = (dist) => ({ variant: 'sweep', sweepDist: dist, value: 120, missValue: 40 });
-  check('間合いも敵も合っていれば当たり',
-    api.isTacticsSweepOnSpot(sweepAt(0), board, 0) === true
-      && api.tacticsSweepIntent(sweepAt(0), board, 0).value === 120);
-  check('敵を距離撃でずらしたら外れ',
-    api.isTacticsSweepOnSpot(sweepAt(0), board, 2) === false
-      && api.tacticsSweepIntent(sweepAt(0), board, 2).value === 40);
-  check('その間合いに味方が立っていなくても外れ',
-    api.isTacticsSweepOnSpot(sweepAt(1), board, 1) === false
-      && api.tacticsSweepIntent(sweepAt(1), board, 1).value === 40);
-  // ★いちばん大事なところ。誰もいない間合いでも「いちばん近い子」が0.4倍で食らう
-  check('誰もいない間合いは、いちばん近い子へ届く',
-    api.tacticsIntentTargets(sweepAt(1), board, 1).join(',') === '0'
-      && api.tacticsIntentTargets(sweepAt(3), board, 3).join(',') === '2');
-  check('立っている間合いはその子だけ',
-    api.tacticsIntentTargets(sweepAt(0), board, 0).join(',') === '0'
-      && api.tacticsIntentTargets(sweepAt(2), board, 2).join(',') === '2');
-  check('全員倒れていれば誰にも当たらない',
-    api.tacticsIntentTargets(sweepAt(1), [null, null, null, null], 1).length === 0);
-  // ★倒れた子は「立っていない」。その間合いを予告されても、起きている子へ届く
+  // 本番と同じ流れ。予告を作る → 狙いを付ける(withTacticsTarget) → 当たり外れを見る
+  const aimed = (dist, units = board) => api.withTacticsTarget(
+    { type: 'ATTACK', variant: 'sweep', sweepDist: dist, value: 120, missValue: 40 }, units, () => 0);
+  const onSpot = (intent, enemyDist, units = board) => api.isTacticsSweepOnSpot(intent, units, enemyDist);
+  const power = (intent, enemyDist, units = board) => api.tacticsSweepIntent(intent, units, enemyDist).value;
+
+  // 零に立っている子を狙い、敵も零 → 距離が同じなので当たり
+  const atZero = aimed(0);
+  check('狙った子と敵が同じ距離なら当たり', atZero.targetSlot === 0
+    && onSpot(atZero, 0) === true && power(atZero, 0) === 120);
+  // 距離撃で敵を中へ動かすと、狙われた子(零)と距離が違う → 外れ
+  check('敵を距離撃でずらしたら外れ', onSpot(atZero, 2) === false && power(atZero, 2) === 40);
+  // ★誰も立っていない間合いを予告しても、狙いは付く。その子の距離と敵の距離は違うので外れ
+  const atEmpty = aimed(1);
+  check('誰も立っていない間合いでも、必ず誰かを狙う', Number.isInteger(atEmpty.targetSlot)
+    && api.tacticsIntentTargets(atEmpty, board, 1).length === 1);
+  check('狙った子と敵の距離が違うので外れ(0にはならない)',
+    onSpot(atEmpty, 1) === false && power(atEmpty, 1) === 40);
+  // 狙い先はそのまま当たる相手になる
+  check('当たる相手は狙った子', api.tacticsIntentTargets(atZero, board, 0).join(',') === '0'
+    && api.tacticsIntentTargets(aimed(2), board, 2).join(',') === '2');
+  // ★倒れた子は「立っていない」。その間合いを予告されても、起きている子が狙われる
   const downed = api.damageTacticsTargets(board, [0], 9999);
-  check('倒れた子の間合いは、立っている子へ届く',
-    api.tacticsIntentTargets(sweepAt(0), downed, 0).join(',') === '2'
-      && api.isTacticsSweepOnSpot(sweepAt(0), downed, 0) === false);
-  // ★既存5モードは盤面を持たない。間合い攻撃も無いので、ここで振る舞いを変えない
-  check('盤面が無いときは今までどおり', api.isTacticsSweepOnSpot(sweepAt(0), null, 0) === true
-    && api.isTacticsSweepOnSpot(sweepAt(0), [], 0) === true);
+  const atDowned = aimed(0, downed);
+  check('倒れた子の間合いなら、立っている子が狙われる', atDowned.targetSlot === 2
+    && onSpot(atDowned, 0, downed) === false && power(atDowned, 0, downed) === 40);
+  check('その子の距離まで敵が動けば当たりに戻る', onSpot(atDowned, 2, downed) === true
+    && power(atDowned, 2, downed) === 120);
+  check('全員倒れていれば誰にも当たらない',
+    api.tacticsIntentTargets(aimed(1, [null, null, null, null]), [null, null, null, null], 1).length === 0);
+  // ★狙いが付いていない予告(既存5モード・古い保存)は当たり扱い。ここで振る舞いを変えない
+  check('狙いが付いていなければ今までどおり',
+    api.isTacticsSweepOnSpot({ variant: 'sweep', sweepDist: 0 }, board, 3) === true);
   check('間合い攻撃以外は素通し',
-    api.isTacticsSweepOnSpot({ variant: 'rush' }, board, 0) === true
+    api.isTacticsSweepOnSpot({ variant: 'rush', targetSlot: 0 }, board, 3) === true
       && api.tacticsSweepIntent({ variant: 'rush', value: 99 }, board, 3).value === 99);
 }
 

@@ -49,7 +49,9 @@ assert(source.includes("guard = enemyIntent.variant === 'pierce' ? 0 : tacticsSl
   && source.includes('const hit = resolveTacticsGuardedHit(raw, hits, guard, guardHits);')
   && source.includes('const taken = applyTurnDamageReduction(hit.taken, slotIdx);'),
   '敵の予定ダメージへガードとターン軽減を実処理と同じ順で反映する');
-assert(source.includes('(予定: ${plannedText})'), '敵予告は軽減後の予定値を表示する');
+// 2026-09-22: 連撃は1発ずつに加えて合計も出す(合計がどこにも出ず「結局いくつ食らうか」が読めなかった)
+assert(source.includes('(予定: ${plannedBubbleText})')
+  && source.includes('`合計 ${plannedTotalText} ＝ ${plannedText}`'), '敵予告は軽減後の予定値を表示する');
 
 const pandoraPredictedDmg=(baseDmg,comboDmgBonus=0)=>
   Math.floor(baseDmg*0.5)+Math.floor(baseDmg*(0.5+comboDmgBonus));

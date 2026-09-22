@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 929310b6dffaa39e
+// generated-sha256: 041156e9b3cba60f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -92,7 +92,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-22 18:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-22 19:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -16321,23 +16321,30 @@ const TACTICS_TARGETED_TYPES = ['ATTACK', 'SPECIAL'];
 const withTacticsTarget = (intent, units, random = Math.random, bias = TACTICS_TARGET_LOW_HP_BIAS) => {
   if (!intent || !TACTICS_TARGETED_TYPES.includes(intent.type)) return intent;
   if (intent.targetsAll) return { ...intent, targetName: TACTICS_ALL_TARGET_LABEL };
-  if (intent.variant === 'sweep') return intent;
-  const targetSlot = chooseTacticsTarget(units, random, bias);
+  // ★間合い攻撃も「誰を狙うか」を決める(2026-09-22 ユーザー指示「誰に攻撃するかが大事」)。
+  //   予告した間合いに立っている子がいればその子(敵と同じ距離なので当たり)。
+  //   いなければ、ほかの技と同じ決め方で1体選ぶ(そのときは距離が違うので威力が落ちる)。
+  //   以前はここで何も決めず、狙い先を「予告した間合いにいる子」から探していたため、
+  //   誰も立っていない間合いだと攻撃そのものが起きなかった
+  const sweepSlot = intent.variant === 'sweep' && Number.isInteger(intent.sweepDist)
+    && tacticsAliveSlots(units).includes(intent.sweepDist) ? intent.sweepDist : null;
+  const targetSlot = sweepSlot != null ? sweepSlot : chooseTacticsTarget(units, random, bias);
   return targetSlot == null ? intent : { ...intent, targetSlot, targetName: tacticsTargetName(units, targetSlot) };
 };
 // その行動が実際に当たるスロット。予告と実行で同じ関数を通すので食い違わない
 // 間合い攻撃が「当たり」(×TACTICS_SWEEP_MULT)になる条件。
-// ★予告した間合いに**敵も味方も**いるときだけ。どちらか欠けたら外れ(×missMultiplier)。
-//   敵を距離撃でずらしても、味方がそこに立っていなくても、同じ「外れ」として扱う
-//   (2026-09-22 ユーザー指摘。それまでは敵がずれたときしか外れにならず、
-//    味方がいない間合いを予告したときはダメージそのものが起きなかった)。
-// ★盤面が空のとき(既存5モード)は true。間合い攻撃は新モードにしか無いので、
-//   ここで既存モードの振る舞いを変えない
+// ★見るのは2つだけ。**敵がどの距離にいるか**と、**狙われた子がどの距離にいるか**
+//   (2026-09-22 ユーザー指示「誰に攻撃するかが大事で、それに対して敵がどの距離で
+//    狙われた味方がどの距離かを見るんだよ」)。同じならフルの威力、違えば威力が落ちる。
+//   味方の枠＝その子の間合いなので、狙われた子の距離は targetSlot そのもの。
+// ★予告した間合い(sweepDist)は「敵がどこから薙ぐか」の見出しであって、当たり外れの材料ではない。
+//   ここを sweepDist で見ていたころは、その間合いに誰も立っていないと狙いが空になり、
+//   ダメージそのものが起きなかった。
+// ★狙いが付いていない予告(既存5モード・古い保存)は true。ここで既存モードの振る舞いを変えない
 const isTacticsSweepOnSpot = (intent, units, enemyDist) => {
-  if (!intent || intent.variant !== 'sweep' || !Number.isInteger(intent.sweepDist)) return true;
-  if (enemyDist !== intent.sweepDist) return false;
-  const alive = tacticsAliveSlots(units);
-  return alive.length === 0 ? true : alive.includes(intent.sweepDist);
+  if (!intent || intent.variant !== 'sweep') return true;
+  if (!Number.isInteger(intent.targetSlot)) return true;
+  return enemyDist === intent.targetSlot;
 };
 // 外れた間合い攻撃は威力を missValue へ落とす。★予告(画面)と実行(processTurn)が
 // この1つを通るので、「予定より減った・増えた」が起きない
@@ -16355,15 +16362,12 @@ const tacticsIntentTargets = (intent, units, enemyDist = null) => {
   //   2026-09-22 ユーザー指摘「近距離にいる場合は1.2倍攻撃だけど敵を移動させて中距離とかに
   //   させたら狙われてるモンスターが0.4倍攻撃に変わるイメージ」。
   //   ここを enemyDist(いまの敵の間合い)にすると、ずらした先の**別の子**が食らってしまう
-  if (intent.variant === 'sweep') {
+  // ★間合い攻撃も、ほかの技と同じく「狙う子」(targetSlot)で決まる(2026-09-22 ユーザー指示)。
+  //   狙いが付いていない予告(古い保存など)だけ、不発にしないための保険を通す
+  if (intent.variant === 'sweep' && !Number.isInteger(intent.targetSlot)) {
     const dist = Number.isInteger(intent.sweepDist) ? intent.sweepDist : enemyDist;
     const onSpot = alive.filter(index => index === dist);
     if (onSpot.length) return onSpot;
-    // ★予告した間合いに誰も立っていなくても、薙ぎ払いの端はいちばん近い子に届く
-    //   (2026-09-22 ユーザー指摘「敵が狙った距離にこっちがいない場合はダメージ喰らわない
-    //    ままになってた」)。決まりは「間合いが合えば1.2倍・合わなければ0.4倍」であって、
-    //   合わないと0になる、ではない。WAVE1のように盤面が1体だけだと、敵の間合いに
-    //   誰もいないことが当たり前に起きて、敵のターンが丸ごと無駄になっていた
     const nearest = alive.reduce((best, index) =>
       (best === null || Math.abs(index - dist) < Math.abs(best - dist)) ? index : best, null);
     return nearest === null ? [] : [nearest];
@@ -21815,7 +21819,7 @@ function BattleScreen({
   //   受けたあとの表示と同じ splitTacticsHitAmounts を通すので、予告と実際で割り方がそろう。
   //   ガードで止めた発は通らないので、**通る発の数だけ**に割る(数字の数＝これから食らう回数)
   const plannedHitFor = (slotIdx) => {
-    const none = { taken: 0, parts: [] };
+    const none = { taken: 0, parts: [], raw: 0 };
     if (!enemyIntent) return none;
     // ★外れた間合い攻撃は予告の時点でも威力を落とす(実行と同じ tacticsSweepIntent を通す)。
     //   予告だけ1.2倍のままだと「予定より少なかった」になる
@@ -21848,10 +21852,12 @@ function BattleScreen({
     }
     const hit = resolveTacticsGuardedHit(raw, hits, guard, guardHits);
     const taken = applyTurnDamageReduction(hit.taken, slotIdx);
-    if (!(taken > 0)) return { taken: 0, parts: [] };
+    if (!(taken > 0)) return { taken: 0, parts: [], raw };
     // ★発ごとの通る量をそのまま出す。ガードが効いた発は小さく、効いていない発は大きい。
     //   止まった発(0)は数字を出さないので、数字の数＝これから食らう回数
-    return { taken, parts: hits > 1 ? scaleTacticsHitAmounts((hit.amounts || []).filter(value => value > 0), taken) : [taken] };
+    // ★raw(軽減前の合計)も返す。連撃は1発ずつ並べると**合計がどこにも出ない**ので、
+    //   「結局いくつ食らうのか」が読めなかった(2026-09-22 ユーザー指摘)
+    return { taken, raw, parts: hits > 1 ? scaleTacticsHitAmounts((hit.amounts || []).filter(value => value > 0), taken) : [taken] };
   };
   const plannedDamageFor = (slotIdx) => plannedHitFor(slotIdx).taken;
   return (
@@ -22250,6 +22256,11 @@ function BattleScreen({
             const plannedDmg=plannedHit.taken;
             // 連撃は「129・130」と1発ずつ。1発の技は今までどおり数字ひとつ
             const plannedText=plannedHit.parts.join('・');
+            // ★連撃は1発ずつ並べると合計がどこにも出ない(2026-09-22 ユーザー指摘
+            //   「連撃ダメージで合計ダメージと軽減後の合計ダメージがないといくつくらうかわからない」)。
+            //   ガードやターン軽減が効いていれば「軽減前→軽減後」で、効き目もそのまま読める
+            const plannedTotalText=plannedHit.raw>plannedDmg?`${plannedHit.raw}→${plannedDmg}`:`${plannedDmg}`;
+            const plannedBubbleText=plannedHit.parts.length>1?`合計 ${plannedTotalText} ＝ ${plannedText}`:plannedText;
             const previewHits=enemyIntent.variant==='rush'?Math.max(1,Math.floor(Number(enemyIntent.hits)||1)):1;
             // ★全体攻撃は受ける量が1体ずつ違う。1つの数字にまとめると、
             //   どの子がどれだけ減るのか分からなくなるので、吹き出しには出さず枠ごとに出す
@@ -22264,7 +22275,7 @@ function BattleScreen({
             // 余りの高さは、この下のバフ帯の mt-auto がまとめて吸う。
             // data-enemy-intent は検査の手がかり。どの行動が予告されているかは抽選なので、
             // 画面の文字から探すと「今回はためるだった」で落ちる
-            return <div data-enemy-intent className={`mt-1 mb-1 mx-auto w-fit max-w-full border p-1 px-4 rounded-full flex items-center gap-1.5 animate-pulse z-[45] shadow-lg shrink-0${battleTutorialSpotClass('enemyIntent')} ${focusedCard?'invisible':'visible'} ${tone}`}><Target size={12}/><div className="text-[10px] font-black uppercase tracking-tight">{enemyIntent.label}{previewHits>1?` ${previewHits}連撃`:''}{aimedName?` 🎯${aimedName}`:''}{rawDmg>0&&showPlannedInBubble&&plannedText?` (予定: ${plannedText})`:''}</div></div>;
+            return <div data-enemy-intent className={`mt-1 mb-1 mx-auto w-fit max-w-full border p-1 px-4 rounded-full flex items-center gap-1.5 animate-pulse z-[45] shadow-lg shrink-0${battleTutorialSpotClass('enemyIntent')} ${focusedCard?'invisible':'visible'} ${tone}`}><Target size={12}/><div className="text-[10px] font-black uppercase tracking-tight">{enemyIntent.label}{previewHits>1?` ${previewHits}連撃`:''}{aimedName?` 🎯${aimedName}`:''}{rawDmg>0&&showPlannedInBubble&&plannedBubbleText?` (予定: ${plannedBubbleText})`:''}</div></div>;
           })()}
         {/* 強化の札(2026-09-19・ユーザー指摘「バフデバフ欄が見にくくなってる」)。
             もとは敵のいる main の中に置いていたが、main は overflow-y-auto なので、
@@ -22714,9 +22725,13 @@ function BattleScreen({
                   const slotPlannedHit=plannedHitFor(i);
                   const slotPlanned=slotPlannedHit.taken;
                   const slotPlannedText=slotPlannedHit.parts.join('・');
+                  // ★連撃は1発ずつ並べると合計が読めない(2026-09-22 ユーザー指摘)。
+                  //   いちばん知りたいのは「結局いくつ食らうか」なので、合計を上の行に置き、
+                  //   1発ずつの内訳をその下へ小さく添える。1発の技は今までどおり1行
+                  const slotMultiHit=slotPlannedHit.parts.length>1;
                   return (<>
                     <div data-tactics-aimed-ring className="absolute inset-[2px] rounded-lg border-2 border-red-400/80 pointer-events-none z-[44] animate-pulse" style={{boxShadow:'inset 0 0 10px rgba(239,68,68,.55)'}}></div>
-                    <div data-tactics-aimed-damage={slotPlanned} className="absolute -top-1.5 -right-1 z-[66] rounded-full border border-red-300 bg-red-950 px-1 py-0.5 text-[9px] font-black leading-none text-red-100 shadow-[0_0_8px_rgba(239,68,68,.85)] animate-pulse">🎯{slotPlannedText?` -${slotPlannedText}`:''}</div>
+                    <div data-tactics-aimed-damage={slotPlanned} data-tactics-aimed-parts={slotMultiHit?slotPlannedText:undefined} className={`absolute -top-1.5 -right-1 z-[66] ${slotMultiHit?'rounded-lg':'rounded-full'} border border-red-300 bg-red-950 px-1 py-0.5 text-[9px] font-black leading-none text-red-100 shadow-[0_0_8px_rgba(239,68,68,.85)] animate-pulse flex flex-col items-center gap-0.5`}><span>🎯{slotPlanned>0?` -${slotPlanned}`:''}</span>{slotMultiHit&&<span className="text-[8px] font-bold text-red-200/90">{slotPlannedText}</span>}</div>
                   </>);
                 })()}
                 {distanceBroken&&<>
