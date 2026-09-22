@@ -588,5 +588,42 @@ check('実戦の行動表も難易度つきで引く',
     battleScreen.includes("enemyIntent.notice&&enemyIntent.type!=='PIERCE_CHARGE'&&"));
 }
 
+// --- 誰が食らったかを枠で見せる(2026-09-22 ユーザー指示) ---
+// ★「攻撃されたときに誰が攻撃されたかが分かりづらい 食らったモンスターに
+//   エフェクトなどがつくようにしたい」。浮かぶ数字は出ていたが、全体攻撃のときに
+//   どこを見ればよいのか目が追いつかなかった。枠そのものを光らせて揺らす。
+// ★見た目だけの部品なので、消えても例外は出ない。ここでしか気付けない
+{
+  // 種類の選び方は本体の純関数をそのまま動かす(検査へ書き写さない)
+  const kindSrc = src.slice(src.indexOf('const kindOfTacticsSlotFx = (fx) => {'),
+    src.indexOf('};', src.indexOf('const kindOfTacticsSlotFx = (fx) => {')) + 2);
+  check('枠の種類の選び方を切り出せる', kindSrc.includes('kindOfTacticsSlotFx'));
+  const kindOf = Function(`${kindSrc}\nreturn kindOfTacticsSlotFx;`)();
+  check('食らったら「食らった」を出す', kindOf({ dmg: 120 }) === 'hit');
+  // ★かわした・返したは「食らっていない」ので先に見る。ガードはダメージが通っていないときだけ
+  check('かわした・返したが先', kindOf({ evade: true, dmg: 120 }) === 'evade'
+    && kindOf({ reflect: true, dmg: 120 }) === 'reflect');
+  check('受け止めきったらガード色', kindOf({ guard: true, dmg: 0 }) === 'guard');
+  check('ガードしても通ったら「食らった」', kindOf({ guard: true, dmg: 30 }) === 'hit');
+  check('何も起きていない枠には出さない', kindOf(null) === null && kindOf({ heal: 40 }) === null);
+  // 色の表と、出し方(フラッシュ・縁・輪)の結線
+  const kinds = [...new Set([...screen.matchAll(/^\s{2}(hit|guard|evade|reflect):\s*\{ rgb:/gm)].map(m => m[1]))];
+  check('色の表に4種そろっている', kinds.length === 4, kinds.join(','));
+  check('枠を光らせる', screen.includes('data-tactics-hit-fx={slotHitKind}')
+    && screen.includes("animation:'tacticsHitFlash 520ms ease-out forwards'")
+    && screen.includes("animation:'tacticsHitEdge 620ms ease-out forwards'")
+    && screen.includes("animation:'tacticsHitRing 520ms ease-out forwards'"));
+  // ★数字(z-[70])より下へ重ねる。上に置くと数字が読めなくなる
+  check('光は数字より下へ重ねる', screen.includes('className="absolute inset-0 z-[58] pointer-events-none overflow-visible"'));
+  check('枠を揺らす', screen.includes("const slotHitShake=slotHitKind&&!ecoBattleView?{animation:'tacticsHitShake 420ms ease-in-out'}:null;"));
+  // ★省エネ表示では揺れも2枚目の輪も出さない(光と輪1枚でも誰かは分かる)
+  check('省エネ表示では軽くする', screen.includes('{!ecoBattleView&&<div className={`absolute rounded-full border-2 ${hitFx.ring}`}'));
+  // ★書いた動きがすべて定義されているか。1つでも無いと、そのエフェクトだけ静止する
+  const hitAnims = ['tacticsHitShake', 'tacticsHitFlash', 'tacticsHitRing', 'tacticsHitEdge'];
+  const boot = fs.readFileSync(path.join(root, 'monster-hero/src/parts/70-bootstrap.jsx'), 'utf8');
+  const missingHitAnim = hitAnims.filter(name => !boot.includes(`@keyframes ${name} {`));
+  check('被弾の動きがすべて定義されている', missingHitAnim.length === 0, missingHitAnim.join(',') || 'すべてある');
+}
+
 console.log(failed ? `\nNG ${failed}件` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
