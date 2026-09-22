@@ -25,7 +25,7 @@ function BattleScreen({
   extremeDifficulty, extremeRun, extremeRunRef, focusedCard, getAttackPredictedDmg,
   getAvailableUniquesForSlot, getCardGuts, getDmg, getIncomingDamageBeforeTurnReduction,
   getMasuMon, getNextTurnBuff, getPermaBuff, getTurnBuff, getWaveBuff, guardCardWeight, guardFx,
-  guardLevel, guardValueOf, guts, hand, heroCardBonus, heroDist, hp, iceLockActive,
+  guardLevel, guardValueOf, tacticsSlotGuardValue, guts, hand, heroCardBonus, heroDist, hp, iceLockActive,
   iceLockPreparing, iceLockTurns, isAssistCard, isAttackCard, isBusy, isHeroSlotMon,
   kikiCardBonus, liteBattleView, mainHero, openHelp, ownedUniques, pendingCard, pendingCardGuts,
   popups, previewLocalBoosts, processTurn, quickRhythmIntroVisible, quickToRhythmButtonNode,
@@ -61,29 +61,56 @@ function BattleScreen({
   // ★slotIdx が null のときは今までどおりパーティの値(既存5モード)
   // ★予告と実行で数え方がずれると「ガードしたのに予定より減った」になるので、
   //   受け方は本番と同じ resolveTacticsGuardedHit を通す
+  // ★ガードは枠ごとにまとめてから数える(2026-09-22 の新仕様)。全体ガードかどうかは
+  //   「何体が別々に構えたか」で決まるので、1枠だけ見ても分からない。
+  //   何枚目かの数え方はアプリ側(makeCardHalveCounter)が持つ。枠を絞るのは集計のときだけで、
+  //   半減の数えは全カードを順に通す
+  const plannedGuardBySlot = () => {
+    const bySlot = {};
+    const counter = makeCardHalveCounter();
+    selectedCards.forEach(idx => {
+      const card = hand[idx];
+      const slotIdx = cardAssignments[idx] != null ? cardAssignments[idx] : null;
+      const halved = counter.take(card, slotIdx);
+      const w = guardCardWeight(card);
+      if (!(w > 0) || slotIdx == null) return;
+      const effect = cardEffectMultiplier(card, halved);
+      const entry = bySlot[slotIdx] || (bySlot[slotIdx] = { flat: 0, mult: 0, weight: 0, cards: 0 });
+      entry.flat += GUARD_EVOLUTION[guardLevel].flat * w * effect;
+      entry.mult += GUARD_EVOLUTION[guardLevel].mult * w * effect;
+      entry.weight += w;
+      entry.cards += 1;
+    });
+    return bySlot;
+  };
   const plannedDamageFor = (slotIdx) => {
     if (!enemyIntent) return 0;
     const raw = getIncomingDamageBeforeTurnReduction(enemyIntent, slotIdx);
     if (!(raw > 0)) return 0;
-    let flat = 0, mult = 0, weight = 0;
-    // 何枚目かの数え方はアプリ側(makeCardHalveCounter)が持つ。
-    // 枠を絞るのは集計のときだけで、半減の数えは全カードを順に通す
+    const hits = enemyIntent.variant === 'rush' ? Math.max(1, Math.floor(Number(enemyIntent.hits) || 1)) : 1;
+    // ★タクティクスは枠ごと。構えていない子も、全体ガードなら丈夫さぶんが付く。
+    //   受け止めるヒット数は、その子へ何枚構えたかで決まる(2枚以上なら連撃の全部)
+    if (Array.isArray(tacticsUnits) && slotIdx !== null) {
+      const bySlot = plannedGuardBySlot();
+      const own = bySlot[slotIdx] || { cards: 0 };
+      const guard = enemyIntent.variant === 'pierce' ? 0 : tacticsSlotGuardValue(bySlot, slotIdx);
+      return applyTurnDamageReduction(
+        resolveTacticsGuardedHit(raw, hits, guard, tacticsGuardHits(own.cards, hits)).taken);
+    }
+    // 既存5モードは今までどおり、手札のガードをまとめて1つに数える
+    let flat = 0, mult = 0;
     const counter = makeCardHalveCounter();
     selectedCards.forEach(idx => {
       const card = hand[idx];
       const halved = counter.take(card, cardAssignments[idx] != null ? cardAssignments[idx] : null);
       const w = guardCardWeight(card);
       if (!(w > 0)) return;
-      if (!(slotIdx === null || cardAssignments[idx] === slotIdx)) return;
       const effect = cardEffectMultiplier(card, halved);
       flat += GUARD_EVOLUTION[guardLevel].flat * w * effect;
       mult += GUARD_EVOLUTION[guardLevel].mult * w * effect;
-      weight += w;
     });
-    // 貫通撃はガードが効かない。連撃はヒットに分かれ、ガード1枚につき1ヒットを受け止める
     const guard = enemyIntent.variant === 'pierce' ? 0 : guardValueOf(flat, mult, slotIdx);
-    const hits = enemyIntent.variant === 'rush' ? Math.max(1, Math.floor(Number(enemyIntent.hits) || 1)) : 1;
-    return applyTurnDamageReduction(resolveTacticsGuardedHit(raw, hits, guard, tacticsGuardHits(weight)).taken);
+    return applyTurnDamageReduction(resolveTacticsGuardedHit(raw, hits, guard, 1).taken);
   };
   return (
 
@@ -655,15 +682,18 @@ function BattleScreen({
                 guardFlat+=gf; guardMult+=gm;
                 // ★タクティクスは構えた子ごとに丈夫さが違う。枠ごとに分けて持っておき、
                 //   合計は「枠ごとに出した軽減量の足し算」にする(平均で1回出すとずれる)
-                if(slotIdx!=null){ const cur=guardBySlot[slotIdx]||{flat:0,mult:0};
-                  guardBySlot[slotIdx]={flat:cur.flat+gf,mult:cur.mult+gm}; } }
+                if(slotIdx!=null){ const cur=guardBySlot[slotIdx]||{flat:0,mult:0,cards:0};
+                  guardBySlot[slotIdx]={flat:cur.flat+gf,mult:cur.mult+gm,cards:(cur.cards||0)+1}; } }
             });
+            // ★全体ガード(2体以上が別々に構えた)なら、構えていない子にも丈夫さぶんが付く。
+            //   合計にもそれを含める(2026-09-22 の新仕様)
             const sumGuardBySlot=(extra=null)=>{
-              const merged={...guardBySlot};
-              if(extra&&extra.slot!=null){ const cur=merged[extra.slot]||{flat:0,mult:0};
-                merged[extra.slot]={flat:cur.flat+extra.flat,mult:cur.mult+extra.mult}; }
-              return Object.entries(merged)
-                .reduce((sum,[slot,g])=>sum+guardValueOf(g.flat,g.mult,Number(slot)),0);
+              const merged={};
+              Object.entries(guardBySlot).forEach(([slot,g])=>{ merged[slot]={...g}; });
+              if(extra&&extra.slot!=null){ const cur=merged[extra.slot]||{flat:0,mult:0,cards:0};
+                merged[extra.slot]={flat:cur.flat+extra.flat,mult:cur.mult+extra.mult,cards:(cur.cards||0)+1}; }
+              return (tacticsUnits||[]).reduce((sum,unit,slotIdx)=>
+                (unit&&!unit.downed ? sum+tacticsSlotGuardValue(merged,slotIdx) : sum),0);
             };
             const committedGuard=Array.isArray(tacticsUnits)?sumGuardBySlot():guardValueOf(guardFlat,guardMult);
             // 保留カードがガードなら、置いたあとの合計軽減も出す
@@ -883,6 +913,18 @@ function BattleScreen({
                     </div>
                   )}
                   <div className={`absolute inset-0 rounded-xl ${RANGE_STYLES[i].slotBg} opacity-20 pointer-events-none`}></div>
+                  {/* ★全体ガード(2体以上が別々に構えた)で、この子にも付いたガード力
+                      (2026-09-22 の新仕様)。自分でカードを構えていない枠にだけ出す。
+                      構えている枠は、下のカードの札に軽減量が出ている */}
+                  {Array.isArray(tacticsUnits)&&(()=>{
+                    const bySlot=plannedGuardBySlot();
+                    if((bySlot[i]?.cards||0)>0) return null;
+                    const gv=tacticsSlotGuardValue(bySlot,i);
+                    if(!(gv>0)) return null;
+                    return <div data-tactics-spread-guard={i}
+                      className="absolute bottom-0.5 left-0.5 z-[55] rounded border border-sky-300/60 bg-sky-800/90 px-1 py-0.5 font-black text-sky-50 leading-none pointer-events-none"
+                      style={{fontSize:'7px'}}>🛡 全体 {gv}</div>;
+                  })()}
                   {slotAssignedCards.length>0&&(
                     <div className="absolute top-0 left-0 right-0 flex flex-col gap-px items-center z-[55] pointer-events-none px-0.5">
                       {slotAssignedCards.map(({idx,card})=>{

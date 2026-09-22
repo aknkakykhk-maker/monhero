@@ -58,6 +58,7 @@ vm.runInContext(
     + 'TACTICS_ENEMY_POWER_MAX,applyTacticsTraining,tacticsPartyAtk,'
     + 'tacticsPartyDef,shrinkTacticsScore,TACTICS_SCORE_DIVISOR,'
     + 'splitTacticsGuardedHit,resolveTacticsGuardedHit,tacticsGuardHits,makeCardHalveCounter,'
+    + 'isTacticsSpreadGuard,TACTICS_RUSH_GUARD_CARDS,TACTICS_SPREAD_GUARD_SLOTS,'
     + 'regenDownedTacticsBoard,TACTICS_DOWNED_REGEN_RATE,rateHealTacticsBoard,splitTacticsHitAmounts,'
     + 'tacticsJoinWaveRate,addTacticsJoinCatchUp,applyTacticsJoinCatchUp,'
     + 'TACTICS_JOIN_RATE_PER_TURN,TACTICS_JOIN_DIST_BASE_TURNS,tacticsJoinDistWaveRate,'
@@ -583,13 +584,15 @@ check('置けるかの判定も画面へ渡す', has('tacticsCanAssign={tacticsC
       && hasScreen('const plannedDmg=plannedDamageFor(aimedSlot);')
       && hasScreen('const slotPlanned=plannedDamageFor(i);'));
   check('予定ダメージは本番と同じ受け方を通る',
-    hasScreen('return applyTurnDamageReduction(resolveTacticsGuardedHit(raw, hits, guard, tacticsGuardHits(weight)).taken);'));
-  // ★ガードの枚数を数えないと、2枚構えても予定が減らない
-  check('予定ダメージもガードの枚数を数える', hasScreen('weight += w;'));
+    hasScreen('resolveTacticsGuardedHit(raw, hits, guard, tacticsGuardHits(own.cards, hits)).taken);'));
+  // ★ガードの枚数を数えないと、2枚構えても連撃ガードにならない
+  check('予定ダメージもガードの枚数を数える', hasScreen('entry.cards += 1;'));
   // ★全体攻撃は立っている全員に当たり、受ける量は**その子の丈夫さ**で1体ずつ変わる。
   //   ガードも枠ごとなので、その枠へ置いたぶんだけを数える
-  check('枠ごとに、その子へ置いたガードだけを数える',
-    hasScreen('if (!(slotIdx === null || cardAssignments[idx] === slotIdx)) return;'));
+  // ★全体ガードかどうかは「何体が別々に構えたか」で決まるので、枠ごとにまとめてから数える
+  check('枠ごとにまとめてから数える',
+    hasScreen('const plannedGuardBySlot = () => {')
+      && hasScreen('const guard = enemyIntent.variant === \'pierce\' ? 0 : tacticsSlotGuardValue(bySlot, slotIdx);'));
   check('狙われている枠にその子の予定ダメージを出す',
     hasScreen('data-tactics-aimed-damage={slotPlanned}')
       && hasScreen('🎯{slotPlanned>0?` -${slotPlanned}`:\'\'}'));
@@ -704,26 +707,33 @@ check('ガッツ回復のボタンは1体ずつで出し分ける',
 check('ガッツ回復は新モードだと合計を足さずに配る',
   has('      gutsRecoveryLockRef.current = true;\n      // 新モードは立っている子へ配る(合計だけ増やすと、払える子が増えない)\n      gainGuts(GUTS_RECOVERY_AMOUNT);'));
 
-// --- ㉕ 連撃の受け方(2026-09-21 ユーザー指示) ---
-// 「連撃はガード1個で1個めのガードが出来て、2個使えば2個目までも出来る とかそういう感じだよ」
+// --- ㉕ 連撃の受け方(2026-09-22 ユーザー指示の新仕様) ---
+// 「同じモンスターに2枚以上使ったら連撃ガードに変わり連撃全部をガードの合計値分ガードする」
+// 「2体以上別々にガードを入れると全体ガードに変わる。ただし1枚目に選んでないモンスターは軽減値分」
 // ★ここは**実際に計算して**確かめる。文字列で見るだけだと、式を1つ書き換えただけで
 //   受け方が変わったことに気づけない。予告と実行が同じ関数を通ることは上で見ている
 {
   const HITS = 3, INCOMING = 300;              // 1ヒット = 100
-  const rush = (guard, weight) => api.resolveTacticsGuardedHit(INCOMING, HITS, guard, api.tacticsGuardHits(weight));
+  const rush = (guard, cards) => api.resolveTacticsGuardedHit(INCOMING, HITS, guard, api.tacticsGuardHits(cards, HITS));
   check('ガードが無ければ連撃は全部通る', rush(0, 0).taken === INCOMING, `${rush(0, 0).taken}`);
   check('ガード1枚で1ヒットぶんを受け止める',
     rush(150, 1).taken === 200 && rush(150, 1).covered === 1, `通ったぶん ${rush(150, 1).taken}`);
-  check('ガード2枚で2ヒットぶんまで受け止める',
-    rush(300, 2).taken === 100 && rush(300, 2).covered === 2, `通ったぶん ${rush(300, 2).taken}`);
-  check('ガード3枚で連撃を受け止めきる',
-    rush(450, 3).taken === 0 && rush(450, 3).covered === HITS, `通ったぶん ${rush(450, 3).taken}`);
-  // ★ここが肝。厚さをいくら積んでも、1枚では1ヒットしか止まらない
-  //   (「合計から引く」に戻すと、厚いガード1枚で連撃が完全に止まってしまう)
+  // ★2枚以上を同じ子へ構えると「連撃ガード」。全ヒットを受け止める
+  check('同じ子へ2枚構えると連撃の全ヒットを受け止める',
+    rush(300, 2).taken === 0 && rush(300, 2).covered === HITS, `通ったぶん ${rush(300, 2).taken}`);
+  // ★ガードは**1ヒットごと**に効く(ユーザー選択)。合計同士で引き算しない。
+  //   3連撃300(各100)をガード合計150で受けると、1ヒットずつ150が当たって全部止まる
+  check('ガードは1ヒットごとに効く(合計同士で引かない)',
+    rush(150, 2).taken === 0, `通ったぶん ${rush(150, 2).taken}`);
+  check('1ヒットぶんに足りなければ、その足りないぶんだけ通る',
+    rush(60, 2).taken === 120, `通ったぶん ${rush(60, 2).taken}`);
+  // ★1枚のままなら厚さをいくら積んでも1ヒットしか止まらない(ここは変えていない)
   check('厚いガード1枚では連撃は止まらない', rush(100000, 1).taken === 200, `通ったぶん ${rush(100000, 1).taken}`);
-  check('弱ガードは2枚でようやく1ヒットぶん',
-    api.tacticsGuardHits(0.5) === 1 && api.tacticsGuardHits(1.5) === 1 && api.tacticsGuardHits(2) === 2,
-    `0.5→${api.tacticsGuardHits(0.5)} / 1.5→${api.tacticsGuardHits(1.5)} / 2→${api.tacticsGuardHits(2)}`);
+  // 枚数の決めごとは本体の定数から読む(検査へ 2 を書き写さない)
+  check('連撃ガードになる枚数は本体が持つ',
+    api.tacticsGuardHits(api.TACTICS_RUSH_GUARD_CARDS - 1, HITS) === 1
+      && api.tacticsGuardHits(api.TACTICS_RUSH_GUARD_CARDS, HITS) === HITS,
+    `${api.TACTICS_RUSH_GUARD_CARDS}枚`);
   check('ヒット数を超えては数えない', rush(100000, 9).covered === HITS);
   check('受け止めたぶんと通ったぶんを足すと元の値に戻る',
     [0, 1, 2, 3, 9].every(w => { const r = rush(100000, w); return r.guarded + r.through === INCOMING; }));
@@ -994,8 +1004,9 @@ check('ガッツ回復は新モードだと合計を足さずに配る',
     has('if (slotIdx == null || !isTacticsMode(runMode)) return effectiveDef;'));
   check('枠を渡せばその子の丈夫さで出す',
     has('return unit ? resolveEffectiveMaxStat(normalizeTacticsUnit(unit).def, getPermaBuff(\'defPct\')) : effectiveDef;'));
-  check('実際に受け止める計算も同じ guardValueOf を通す',
-    has('const base=guardValueOf(own.flat,own.mult,slotIdx);'));
+  check('実際に受け止める計算も画面と同じ1か所を通る',
+    has('const base=tacticsSlotGuardValue(slotGuards,slotIdx);')
+      && has('const tacticsSlotGuardValue = (guardBySlot, slotIdx) => {'));
   // ★実際の計算だけが「その子」で、画面が平均のままだと、硬い子が構えたときに
   //   予定ダメージより実際が少なくなる(数字が合わない)
   const battleScreen = fs.readFileSync(path.join(root, 'monster-hero/src/parts/71-screen-battle.jsx'), 'utf8');
@@ -1006,7 +1017,7 @@ check('ガッツ回復は新モードだと合計を足さずに配る',
     inScreen('GUARD_EVOLUTION[guardLevel].mult*gw*ge,i)'));
   check('手札の合計ガードは、枠ごとに出して足す(平均で1回出さない)',
     inScreen('const committedGuard=Array.isArray(tacticsUnits)?sumGuardBySlot():guardValueOf(guardFlat,guardMult);')
-      && inScreen('.reduce((sum,[slot,g])=>sum+guardValueOf(g.flat,g.mult,Number(slot)),0);'));
+      && inScreen('(unit&&!unit.downed ? sum+tacticsSlotGuardValue(merged,slotIdx) : sum),0);'));
   check('置く先が決まっている保留カードも、その子で足す',
     inScreen('sumGuardBySlot({slot:pendingGuardSlot,'));
   // ★「パーティ全体」の欄は消した(2026-09-22 ユーザー選択「消す」)。
@@ -1021,6 +1032,37 @@ check('ガッツ回復は新モードだと合計を足さずに配る',
       && upgradeScreen.includes('data-tactics-guts-slot={index}'));
   check('既存5モードでは今までどおり合計を出す',
     upgradeScreen.includes('<b className={gutsFull?\'text-amber-300\':\'text-white\'} style={{fontSize:\'17px\'}}>{guts}</b>'));
+}
+
+// --- ㉜ 全体ガード(2026-09-22 ユーザー指示の新仕様) ---
+// 「2体以上別々にガードを入れると全体ガードに変わる。ただし1枚目に選んでないモンスターは軽減値分」
+// ★連撃ガード(同じ子へ2枚)と全体ガード(2体以上へ別々)は**同時に成り立つ**(ユーザー確認済み)
+{
+  const spread = (bySlot) => api.isTacticsSpreadGuard(bySlot);
+  check('1体だけが構えても全体ガードにならない', spread({ 0: { cards: 1 } }) === false);
+  check('同じ子へ2枚でも全体ガードにならない', spread({ 0: { cards: 2 } }) === false);
+  check('2体が別々に構えると全体ガードになる', spread({ 0: { cards: 1 }, 3: { cards: 1 } }) === true);
+  // ★ここが読み違えやすいところ。Aに2枚・Bに1枚なら両方成り立つ
+  check('連撃ガードと全体ガードは同時に成り立つ',
+    spread({ 0: { cards: 2 }, 1: { cards: 1 } }) === true
+      && api.tacticsGuardHits(2, 3) === 3 && api.tacticsGuardHits(1, 3) === 1);
+  check('構えていない枠は数に入れない', spread({ 0: { cards: 1 }, 1: { cards: 0 } }) === false);
+  check('全体ガードになる人数は本体が持つ',
+    api.TACTICS_SPREAD_GUARD_SLOTS === 2, `${api.TACTICS_SPREAD_GUARD_SLOTS}体`);
+  // ★構えていない子に付くのは「その子の丈夫さ × ガード段階の倍率」だけ。固定値は乗らない
+  //   (2026-09-22 ユーザー選択「その子の丈夫さ × 倍率（固定値なし）」)
+  check('構えていない子には固定値を乗せない',
+    has('const tacticsSpreadGuardValue = (slotIdx) => guardValueOf(0, GUARD_EVOLUTION[guardLevel].mult, slotIdx);'));
+  check('構えていればその子のぶん、なければ全体ガードのぶん',
+    has('if (own && (own.cards || 0) > 0) return guardValueOf(own.flat, own.mult, slotIdx);')
+      && has('return isTacticsSpreadGuard(guardBySlot) ? tacticsSpreadGuardValue(slotIdx) : 0;'));
+  // 画面にも出す。数字が出ないと、全体ガードになったことに気づけない
+  const battleScreenSpread = fs.readFileSync(path.join(root, 'monster-hero/src/parts/71-screen-battle.jsx'), 'utf8');
+  check('全体ガードで付いたぶんを枠へ出す',
+    battleScreenSpread.includes('data-tactics-spread-guard={i}')
+      && battleScreenSpread.includes('🛡 全体 {gv}'));
+  check('自分で構えている枠には出さない(カードの札と二重になる)',
+    battleScreenSpread.includes('if((bySlot[i]?.cards||0)>0) return null;'));
 }
 
 console.log(failed ? `\nNG ${failed}件` : '\nすべてOK');

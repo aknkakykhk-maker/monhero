@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0d9b967c70f62d1e
+// source-sha256: 6d9c54b3b456d583
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e95240601d8792b7
+// generated-sha256: f6e1d909ba95b044
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-22 07:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-22 08:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -27309,29 +27309,41 @@ const tacticsIntentTargets = (intent, units, enemyDist = null) => {
   return Number.isInteger(intent.targetSlot) && alive.includes(intent.targetSlot) ? [intent.targetSlot] : [];
 };
 
-// ===== 複数ヒットに分かれる攻撃(連撃)の、ガードが届くぶんと通るぶん =====
-// ★連撃は 0.4×3 の3ヒット。**ガードは1枚につき1ヒットを受け止める**
-//   (2026-09-21 ユーザー指示「連撃はガード1個で1個めのガードが出来て、
-//   2個使えば2個目までも出来る」)。3ヒット全部を止めるにはガード3枚が要るので、
-//   そのターンは攻めに回せる手が無くなる。止めるかどうかがそのまま読み合いになる。
-// ★厚さでは止まらない。1枚のガードをどれだけ厚くしても受け止められるのは1ヒットぶん。
-//   ここを「合計から引く」に戻すと、厚いガード1枚で連撃が完全に止まってしまう。
+// ===== ガードの数え方(2026-09-22 ユーザー指示の新仕様) =====
+// 決めごとは3つ。どれも「枚数をどう配ったか」で変わる。
+//
+//   ① ガードは **1ヒットごと** に効く。3連撃300(各100)をガード150で受け止めると、
+//      1ヒットずつ150が当たるので全部止まる(合計同士で引き算しない)
+//   ② 同じ子へ **2枚以上** 構えると「連撃ガード」。その子は連撃の **全ヒット** を、
+//      構えた値の合計で受け止める(1枚なら今までどおり1ヒットぶん)
+//   ③ **2体以上** へ別々に構えると「全体ガード」。構えていない子にも
+//      「その子の丈夫さ × ガード段階の倍率」ぶんのガードが付く(固定値は乗らない)
+//
+// ②と③は**同時に成り立つ**(ユーザー確認済み)。Aに2枚・Bに1枚なら、
+// Aは合計値の連撃ガード、Bは自分の1枚ぶん、残りの子は丈夫さぶん。
+//
 // ★端数は「通るぶん」へ寄せて、guarded + through が必ず元の合計と一致するようにする。
 // ★予告(予定ダメージ)と実行の両方がこの関数を通る。別々に数えると食い違う。
-// ガードが受け止められるヒット数。ガード1枚で1ヒット、弱ガードは0.5枚ぶんなので2枚で1ヒット。
-// ★ガードが無い(weight 0)ときも1を返すが、そのときは厚さが0なので結果は変わらない
-const tacticsGuardHits = weight => Math.max(1, Math.floor(Math.max(0, Number(weight) || 0)));
+const TACTICS_RUSH_GUARD_CARDS = 2; // 同じ子へこれだけ構えると連撃ガード
+const TACTICS_SPREAD_GUARD_SLOTS = 2; // これだけの子が別々に構えると全体ガード
+// その枠が受け止めるヒット数。2枚以上なら連撃の全部、1枚なら1ヒットぶん。
+// ★数えるのは**枚数**(cards)。厚さ(flat/mult)や重み(weight)では増えない
+const tacticsGuardHits = (cards, hits = 1) => Math.max(0, tacticsSafeInt(cards, 0)) >= TACTICS_RUSH_GUARD_CARDS ? Math.max(1, tacticsSafeInt(hits, 1)) : 1;
+// 全体ガードになっているか。2体以上が別々に構えているとき
+const isTacticsSpreadGuard = guardBySlot => Object.values(guardBySlot || {}).filter(entry => entry && tacticsSafeInt(entry.cards, 0) > 0).length >= TACTICS_SPREAD_GUARD_SLOTS;
 const splitTacticsGuardedHit = (incoming, hits, guardHits = 1) => {
   const total = Math.max(0, tacticsSafeInt(incoming, 0));
   const count = Math.max(1, tacticsSafeInt(hits, 1));
   // 受け止められるのは、構えた枚数ぶんのヒットまで(ヒット数を超えては数えない)
   const covered = Math.min(count, Math.max(1, tacticsSafeInt(guardHits, 1)));
-  const guarded = count > 1 ? Math.floor(total / count) * covered : total;
+  const perHit = count > 1 ? Math.floor(total / count) : total;
+  const guarded = perHit * covered;
   return {
     guarded,
     through: total - guarded,
     covered,
-    hits: count
+    hits: count,
+    perHit
   };
 };
 
@@ -27361,17 +27373,22 @@ const resolveTacticsGuardedHit = (incoming, hits, guard, guardHits = 1) => {
   const {
     guarded,
     through,
-    covered
+    covered,
+    perHit
   } = splitTacticsGuardedHit(incoming, hits, guardHits);
-  const left = Math.max(0, tacticsSafeInt(guard, 0)) - guarded;
+  // ★構えた値は「1ヒットごと」にまるごと当たる(2026-09-22 ユーザー指示)。
+  //   受け止めきれなかったぶんだけ、止めようとしたヒットの数だけ通る
+  const left = Math.max(0, tacticsSafeInt(guard, 0)) - perHit;
   if (left < 0) return {
-    taken: -left + through,
+    taken: -left * covered + through,
     saved: 0,
     guarded,
     through,
     covered,
     blocked: false
   };
+  // ★余りは1ヒットぶんで数える。受け止めたヒットの数だけ足すと、連撃を止めただけで
+  //   ライフとガッツが膨れ上がってしまう
   return through > 0 ? {
     taken: through,
     saved: 0,
@@ -37844,6 +37861,7 @@ function BattleScreen({
   guardFx,
   guardLevel,
   guardValueOf,
+  tacticsSlotGuardValue,
   guts,
   hand,
   heroCardBonus,
@@ -37927,31 +37945,63 @@ function BattleScreen({
   // ★slotIdx が null のときは今までどおりパーティの値(既存5モード)
   // ★予告と実行で数え方がずれると「ガードしたのに予定より減った」になるので、
   //   受け方は本番と同じ resolveTacticsGuardedHit を通す
+  // ★ガードは枠ごとにまとめてから数える(2026-09-22 の新仕様)。全体ガードかどうかは
+  //   「何体が別々に構えたか」で決まるので、1枠だけ見ても分からない。
+  //   何枚目かの数え方はアプリ側(makeCardHalveCounter)が持つ。枠を絞るのは集計のときだけで、
+  //   半減の数えは全カードを順に通す
+  const plannedGuardBySlot = () => {
+    const bySlot = {};
+    const counter = makeCardHalveCounter();
+    selectedCards.forEach(idx => {
+      const card = hand[idx];
+      const slotIdx = cardAssignments[idx] != null ? cardAssignments[idx] : null;
+      const halved = counter.take(card, slotIdx);
+      const w = guardCardWeight(card);
+      if (!(w > 0) || slotIdx == null) return;
+      const effect = cardEffectMultiplier(card, halved);
+      const entry = bySlot[slotIdx] || (bySlot[slotIdx] = {
+        flat: 0,
+        mult: 0,
+        weight: 0,
+        cards: 0
+      });
+      entry.flat += GUARD_EVOLUTION[guardLevel].flat * w * effect;
+      entry.mult += GUARD_EVOLUTION[guardLevel].mult * w * effect;
+      entry.weight += w;
+      entry.cards += 1;
+    });
+    return bySlot;
+  };
   const plannedDamageFor = slotIdx => {
     if (!enemyIntent) return 0;
     const raw = getIncomingDamageBeforeTurnReduction(enemyIntent, slotIdx);
     if (!(raw > 0)) return 0;
+    const hits = enemyIntent.variant === 'rush' ? Math.max(1, Math.floor(Number(enemyIntent.hits) || 1)) : 1;
+    // ★タクティクスは枠ごと。構えていない子も、全体ガードなら丈夫さぶんが付く。
+    //   受け止めるヒット数は、その子へ何枚構えたかで決まる(2枚以上なら連撃の全部)
+    if (Array.isArray(tacticsUnits) && slotIdx !== null) {
+      const bySlot = plannedGuardBySlot();
+      const own = bySlot[slotIdx] || {
+        cards: 0
+      };
+      const guard = enemyIntent.variant === 'pierce' ? 0 : tacticsSlotGuardValue(bySlot, slotIdx);
+      return applyTurnDamageReduction(resolveTacticsGuardedHit(raw, hits, guard, tacticsGuardHits(own.cards, hits)).taken);
+    }
+    // 既存5モードは今までどおり、手札のガードをまとめて1つに数える
     let flat = 0,
-      mult = 0,
-      weight = 0;
-    // 何枚目かの数え方はアプリ側(makeCardHalveCounter)が持つ。
-    // 枠を絞るのは集計のときだけで、半減の数えは全カードを順に通す
+      mult = 0;
     const counter = makeCardHalveCounter();
     selectedCards.forEach(idx => {
       const card = hand[idx];
       const halved = counter.take(card, cardAssignments[idx] != null ? cardAssignments[idx] : null);
       const w = guardCardWeight(card);
       if (!(w > 0)) return;
-      if (!(slotIdx === null || cardAssignments[idx] === slotIdx)) return;
       const effect = cardEffectMultiplier(card, halved);
       flat += GUARD_EVOLUTION[guardLevel].flat * w * effect;
       mult += GUARD_EVOLUTION[guardLevel].mult * w * effect;
-      weight += w;
     });
-    // 貫通撃はガードが効かない。連撃はヒットに分かれ、ガード1枚につき1ヒットを受け止める
     const guard = enemyIntent.variant === 'pierce' ? 0 : guardValueOf(flat, mult, slotIdx);
-    const hits = enemyIntent.variant === 'rush' ? Math.max(1, Math.floor(Number(enemyIntent.hits) || 1)) : 1;
-    return applyTurnDamageReduction(resolveTacticsGuardedHit(raw, hits, guard, tacticsGuardHits(weight)).taken);
+    return applyTurnDamageReduction(resolveTacticsGuardedHit(raw, hits, guard, 1).taken);
   };
   return /*#__PURE__*/React.createElement("div", {
     className: "flex-1 flex flex-col h-full relative",
@@ -39208,30 +39258,39 @@ function BattleScreen({
         if (slotIdx != null) {
           const cur = guardBySlot[slotIdx] || {
             flat: 0,
-            mult: 0
+            mult: 0,
+            cards: 0
           };
           guardBySlot[slotIdx] = {
             flat: cur.flat + gf,
-            mult: cur.mult + gm
+            mult: cur.mult + gm,
+            cards: (cur.cards || 0) + 1
           };
         }
       }
     });
+    // ★全体ガード(2体以上が別々に構えた)なら、構えていない子にも丈夫さぶんが付く。
+    //   合計にもそれを含める(2026-09-22 の新仕様)
     const sumGuardBySlot = (extra = null) => {
-      const merged = {
-        ...guardBySlot
-      };
+      const merged = {};
+      Object.entries(guardBySlot).forEach(([slot, g]) => {
+        merged[slot] = {
+          ...g
+        };
+      });
       if (extra && extra.slot != null) {
         const cur = merged[extra.slot] || {
           flat: 0,
-          mult: 0
+          mult: 0,
+          cards: 0
         };
         merged[extra.slot] = {
           flat: cur.flat + extra.flat,
-          mult: cur.mult + extra.mult
+          mult: cur.mult + extra.mult,
+          cards: (cur.cards || 0) + 1
         };
       }
-      return Object.entries(merged).reduce((sum, [slot, g]) => sum + guardValueOf(g.flat, g.mult, Number(slot)), 0);
+      return (tacticsUnits || []).reduce((sum, unit, slotIdx) => unit && !unit.downed ? sum + tacticsSlotGuardValue(merged, slotIdx) : sum, 0);
     };
     const committedGuard = Array.isArray(tacticsUnits) ? sumGuardBySlot() : guardValueOf(guardFlat, guardMult);
     // 保留カードがガードなら、置いたあとの合計軽減も出す
@@ -39567,7 +39626,19 @@ function BattleScreen({
       strokeWidth: 4
     }))), /*#__PURE__*/React.createElement("div", {
       className: `absolute inset-0 rounded-xl ${RANGE_STYLES[i].slotBg} opacity-20 pointer-events-none`
-    }), slotAssignedCards.length > 0 && /*#__PURE__*/React.createElement("div", {
+    }), Array.isArray(tacticsUnits) && (() => {
+      const bySlot = plannedGuardBySlot();
+      if ((bySlot[i]?.cards || 0) > 0) return null;
+      const gv = tacticsSlotGuardValue(bySlot, i);
+      if (!(gv > 0)) return null;
+      return /*#__PURE__*/React.createElement("div", {
+        "data-tactics-spread-guard": i,
+        className: "absolute bottom-0.5 left-0.5 z-[55] rounded border border-sky-300/60 bg-sky-800/90 px-1 py-0.5 font-black text-sky-50 leading-none pointer-events-none",
+        style: {
+          fontSize: '7px'
+        }
+      }, "\uD83D\uDEE1 \u5168\u4F53 ", gv);
+    })(), slotAssignedCards.length > 0 && /*#__PURE__*/React.createElement("div", {
       className: "absolute top-0 left-0 right-0 flex flex-col gap-px items-center z-[55] pointer-events-none px-0.5"
     }, slotAssignedCards.map(({
       idx,
@@ -54234,6 +54305,16 @@ function MonsterHeroGame() {
     return unit ? resolveEffectiveMaxStat(normalizeTacticsUnit(unit).def, getPermaBuff('defPct')) : effectiveDef;
   };
   const guardValueOf = (flat, mult, slotIdx = null) => flat > 0 || mult > 0 ? Math.floor(flat + guardDefFor(slotIdx) * mult) : 0;
+  // ★全体ガード(2体以上が別々に構えた)のとき、構えていない子にも付くガード力。
+  //   「その子の丈夫さ × ガード段階の倍率」だけで、固定値は乗らない
+  //   (2026-09-22 ユーザー選択「その子の丈夫さ × 倍率（固定値なし）」)
+  const tacticsSpreadGuardValue = slotIdx => guardValueOf(0, GUARD_EVOLUTION[guardLevel].mult, slotIdx);
+  // その枠のガード値。構えていれば自分のぶん、構えていなくても全体ガードなら丈夫さぶん
+  const tacticsSlotGuardValue = (guardBySlot, slotIdx) => {
+    const own = (guardBySlot || {})[slotIdx];
+    if (own && (own.cards || 0) > 0) return guardValueOf(own.flat, own.mult, slotIdx);
+    return isTacticsSpreadGuard(guardBySlot) ? tacticsSpreadGuardValue(slotIdx) : 0;
+  };
   // このカードを使うと、同じターンの「あとに続くカード」へ即座に乗る補正の生値(effMul適用前)。
   // ニコラオの力・ゴーレム・モッチー/ミタラシ・ききの応援は、説明どおり使ったターンから効く
   // (他の永続バフは次のターンから効く。詳細はヘルプ「ずっと続く効果は次のターンから」を参照)。
@@ -54888,17 +54969,18 @@ function MonsterHeroGame() {
               const own = slotGuards[slotIdx] || {
                 flat: 0,
                 mult: 0,
-                weight: 0
+                weight: 0,
+                cards: 0
               };
-              // ガードの軽減量も「その子の丈夫さ」から出す
-              // 画面へ出すのと同じ guardValueOf を通す(別々に書くと予告と実際がずれる)
-              const base = guardValueOf(own.flat, own.mult, slotIdx);
+              // ガードの軽減量も「その子の丈夫さ」から出す。構えていない子も、全体ガードなら
+              // 丈夫さぶんが付く。画面へ出すのと同じ関数を通す(別々に書くと予告と実際がずれる)
+              const base = tacticsSlotGuardValue(slotGuards, slotIdx);
               // 貫通撃はガードが効かない
               const slotGuard = intent.variant === 'pierce' ? 0 : base;
               // ★受けるダメージもその子の丈夫さで決まるので、狙われた子ごとに計算し直す
               const slotIncoming = getIncomingDamageBeforeTurnReduction(intent, slotIdx);
-              // ガードに当てるのは**構えた枚数ぶんのヒット**。数え方は予告と同じ関数を通す
-              const hit = resolveTacticsGuardedHit(slotIncoming, rushHits, slotGuard, tacticsGuardHits(own.weight));
+              // ★同じ子へ2枚以上構えていれば連撃の全ヒット、1枚なら1ヒットぶんを受け止める
+              const hit = resolveTacticsGuardedHit(slotIncoming, rushHits, slotGuard, tacticsGuardHits(own.cards, rushHits));
               throughTotal += hit.through;
               if (slotGuard > 0) coveredHits = Math.max(coveredHits, hit.covered);
               if (hit.blocked || slotGuard > 0) guardedCount++;
@@ -55265,18 +55347,21 @@ function MonsterHeroGame() {
     // 新モードは「ガードはカードを使った子自身を守る」。誰が構えたかをスロットごとに持つ。
     // 既存モードは今までどおり currentTurnGuardFlat / Mult の合計だけを見る
     const guardBySlot = {};
-    // ★厚さ(flat/mult)だけでなく**枚数**も数える。連撃はガード1枚につき1ヒットを受け止める
-    //   (2026-09-21 ユーザー指示)。数え方は予告と同じ guardCardWeight を通す
+    // ★厚さ(flat/mult)だけでなく**枚数**も数える。同じ子へ2枚以上構えると「連撃ガード」に
+    //   なり、連撃の全ヒットを合計値で受け止める(2026-09-22 ユーザー指示)。
+    //   弱ガードも厚さは半分だが**1枚**と数える(枚数で決まる決めごとなので)
     const addGuardForSlot = (idx, flat, mult, weight) => {
       if (!Number.isInteger(idx)) return;
       const entry = guardBySlot[idx] || (guardBySlot[idx] = {
         flat: 0,
         mult: 0,
-        weight: 0
+        weight: 0,
+        cards: 0
       });
       entry.flat += flat;
       entry.mult += mult;
       entry.weight += Math.max(0, Number(weight) || 0);
+      entry.cards += 1;
     };
     let hpBeforeEnemyAttack = hp;
     let activatedIceLockThisTurn = false;
@@ -67869,6 +67954,7 @@ function MonsterHeroGame() {
       guardFx: guardFx,
       guardLevel: guardLevel,
       guardValueOf: guardValueOf,
+      tacticsSlotGuardValue: tacticsSlotGuardValue,
       guts: guts,
       hand: hand,
       heroCardBonus: heroCardBonus,
