@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8ab2a45388374066
+// generated-sha256: 117e1bee4f92df90
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -92,7 +92,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-22 12:47"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-22 12:58"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -22433,6 +22433,14 @@ function BattleScreen({
               const slotGuardCards=guardPlanBySlot?(guardPlanBySlot[i]?.cards||0):0;
               const slotRushGuard=slotGuardCards>=TACTICS_RUSH_GUARD_CARDS;
               const slotSpreadGuard=!!guardPlanBySlot&&isTacticsSpreadGuard(guardPlanBySlot);
+              // ★みゃるの薬の攻撃バフは「飲んだ子だけ」に効く(タクティクス)。
+              //   全体の札(Boost)では誰にかかっているのか分からないので、枠へ出す
+              const slotAtkBoost=(()=>{
+                if(!Array.isArray(tacticsUnits)) return 0;
+                const bySlot=getTurnBuff('atkMultBySlot',null);
+                const value=bySlot?Number(bySlot[i]):NaN;
+                return Number.isFinite(value)&&value>1?value:0;
+              })();
               let canAssign=false;
               if(s && pendingCardObj){
                 // 新モードは「その子が払えるか」で決まる。倒れた子へは回復カードだけ置ける。
@@ -22565,7 +22573,7 @@ function BattleScreen({
                 </>}
                 {/* 名前の行。勇者モンには王冠を付ける。どれが勇者モンか分からないと
                     「勇者モン選択時だけ効く特性」が効いているのか判断できないため */}
-                <div className={`h-[18px] shrink-0 flex items-center justify-center px-1 border-b z-20 ${isHeroSlotMon(s)?'bg-amber-500/25 border-amber-300/50':'bg-black/60 border-white/10'}`}>{isHeroSlotMon(s)&&<Crown size={8} className="shrink-0 mr-0.5 text-amber-300"/>}<span className={`text-[10px] font-black truncate uppercase leading-none ${isHeroSlotMon(s)?'text-amber-100':'text-white'}`}>{s?.name||'---'}</span>{assignedCount>0&&<span className="ml-1 text-[10px] font-black text-indigo-300">×{assignedCount}</span>}</div>
+                <div className={`h-[18px] shrink-0 flex items-center justify-center px-1 border-b z-20 ${isHeroSlotMon(s)?'bg-amber-500/25 border-amber-300/50':'bg-black/60 border-white/10'}`}>{isHeroSlotMon(s)&&<Crown size={8} className="shrink-0 mr-0.5 text-amber-300"/>}<span className={`text-[10px] font-black truncate uppercase leading-none ${isHeroSlotMon(s)?'text-amber-100':'text-white'}`}>{s?.name||'---'}</span>{assignedCount>0&&<span className="ml-1 text-[10px] font-black text-indigo-300">×{assignedCount}</span>}{slotAtkBoost>0&&<span data-tactics-atk-boost={slotAtkBoost} className="ml-1 shrink-0 text-[9px] font-black text-red-300 leading-none">⚔×{slotAtkBoost.toFixed(1)}</span>}</div>
                 {(()=>{const uOptions=getAvailableUniquesForSlot(s,ownedUniques,i); if(uOptions.length<2) return null; const curKey=activeSlotUniqueKey(slotUniqueChoice,i,s); const curIdx=Math.max(0,uOptions.findIndex(o=>o.key===curKey));
                   return(<div onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation(); if(isBusy||autoBattleRef.current)return; cycleActiveUniqueForSlot(i);}} className={`shrink-0 z-20 flex items-center justify-center gap-0.5 bg-purple-700/90 border-b border-purple-300/50 py-0.5 active:scale-95${autoBattle?' opacity-40':''}`}>
                     <RefreshCcw size={7} className="text-white"/><span className="text-[10px] font-black text-white leading-none">固有技 {curIdx+1}/{uOptions.length}</span>
@@ -24816,6 +24824,22 @@ function MonsterHeroGame() {
   const getNextTurnBuff = (key, def) => nextTurnBuffs[key] ?? def;
   const setNextTurnBuff = (key, value) => writeNextTurnBuffs(p => ({ ...p, [key]: value }));
   const setImmediateTurnBuff = (key, value) => setTurnBuffs(p => ({ ...p, [key]: value })); // 次ターンへ持ち越さない、このターン限りの即時効果
+  // ★タクティクスの「その子だけに効く次ターンの攻撃バフ」(みゃるの薬)。
+  //   設計 4.4「全体で見てよいのは7つだけ。ほかはすべて1体ずつ」に従い、
+  //   パーティ全体の atkMult とは別の箱(枠ごと)へ入れる。
+  //   nextTurnBuffs の中に置くので、ターンの入れ替え(turnBuffs へ丸ごと移す)も
+  //   WAVEのリセット(setTurnBuffs({}))も今までの仕掛けがそのまま効く。
+  //   同じターンに2人が飲んでも消し合わないよう、枠ごとに足す
+  const setTacticsNextSlotAtkMult = (slotIdx, mult) => writeNextTurnBuffs(p => ({
+    ...p, atkMultBySlot: { ...(p.atkMultBySlot || {}), [slotIdx]: mult },
+  }));
+  // その枠にかかっている攻撃バフ。既存5モードと、飲んでいない子は 1.0
+  const tacticsSlotAtkMult = (slotIdx) => {
+    if (!isTacticsMode(runMode)) return 1.0;
+    const bySlot = getTurnBuff('atkMultBySlot', null);
+    const value = bySlot ? Number(bySlot[slotIdx]) : NaN;
+    return Number.isFinite(value) && value > 0 ? value : 1.0;
+  };
   // 丈夫さのバフは permaBuffs の 'defPct' に積む(基礎ステータスの def は書き換えない)。
   // 実際に計算へ使う値は effectiveDef で、被ダメージの軽減量とガードの軽減量の両方に効く。
   // 「被ダメージを◯%軽減する(dmgCutPct)」とは効き方が違うので、混ぜないこと。
@@ -33285,7 +33309,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       : distAptPct;
     const distBonusMult=1.0+(distDmgBonus[slotIdx]||0)+(aptForSlot[slotIdx]||0);
     const soulAttack=soulTraitAttackProfile(mon?.masuId?getMasuMon(mon.masuId):null,card,slotIdx);
-    const totalBuffMult=traitMult*getTurnBuff('atkMult',1.0)*(1.0+getPermaBuff('atkPct')+getPermaBuff('muaAtkPct')+additionalOryo)*distBonusMult*soulAttack.damageMultiplier;
+    // ★みゃるの薬の攻撃バフは、タクティクスでは「飲んだ子だけ」に乗る(設計 4.4)。
+    //   既存5モードは今までどおりパーティ全体(atkMult)。どちらか一方しか 1.0 以外にならない
+    const totalBuffMult=traitMult*getTurnBuff('atkMult',1.0)*tacticsSlotAtkMult(slotIdx)*(1.0+getPermaBuff('atkPct')+getPermaBuff('muaAtkPct')+additionalOryo)*distBonusMult*soulAttack.damageMultiplier;
     // 新モードは「攻撃したその子のちから」で殴る(設計 §4.1)。ほかのモードはパーティ共通のまま
     const attackerAtk=isTacticsMode(runMode)&&tacticsUnitsRef.current[slotIdx]
       ? Math.max(0,normalizeTacticsUnit(tacticsUnitsRef.current[slotIdx]).atk) : atk;
@@ -34061,7 +34087,20 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           totalDmg+=d; attackCount++; attackHits.push({dmg:d, isCrit:false, slotIdx});
           for (const hit of stunHits.slice(1)) { if (hit.crit) hasCrit=true; totalDmg+=hit.dmg; attackHits.push({dmg:hit.dmg, isCrit:hit.crit, slotIdx, isSpecial:true, skillName:hit.skillName, isUnique:false, ...(hit.noAnim?{noAnim:true}:{})}); }
         }
-        else if (card.subType==='buff_myaru') { setNextTurnBuff('atkMult',1+(card.baseValue-1)*effMul); const selfDmgAmt=Math.floor(hpBeforeEnemyAttack*myaruSelfDamageRate(card)*effMul); addPopup(`自傷-${selfDmgAmt}`,'hero','text-red-600 text-2xl font-black');
+        else if (card.subType==='buff_myaru') {
+          const myaruAtkMult=1+(card.baseValue-1)*effMul;
+          // ★タクティクスは「飲んだ子だけ」に効く(2026-09-22 ユーザー指摘
+          //   「みゃるの薬は使ったやつだけにきくバフだね 多分全体になってるよね？」)。
+          //   設計 4.4 のとおり、全体で見てよいものにターンバフは入っていない
+          if(isTacticsMode(runMode)) setTacticsNextSlotAtkMult(slotIdx,myaruAtkMult);
+          else setNextTurnBuff('atkMult',myaruAtkMult);
+          // ★自傷のもとになるライフも「飲んだ子の今のライフ」。
+          //   盤面の合計(hpBeforeEnemyAttack)から出していたので、4体いると
+          //   自分のライフの何倍もの自傷が来て、飲むたびに必ず1まで落ちていた
+          //   (2026-09-22 ユーザー指摘「ライフが劇的に減った。多分全体ライフを見てる？」)
+          const selfBaseHp=isTacticsMode(runMode)&&tacticsUnitsRef.current?.[slotIdx]
+            ? normalizeTacticsUnit(tacticsUnitsRef.current[slotIdx]).hp : hpBeforeEnemyAttack;
+          const selfDmgAmt=Math.floor(selfBaseHp*myaruSelfDamageRate(card)*effMul); addPopup(`自傷-${selfDmgAmt}`,'hero','text-red-600 text-2xl font-black');
           // 新モードは立っている子へ配る。★自傷では誰も倒れない(1体ずつ最低1を残す)
           const selfHurt=isTacticsMode(runMode)?commitTacticsUnits(selfDamageTacticsAt(tacticsUnitsRef.current,slotIdx,selfDmgAmt)):null;
           if(selfHurt!==null) hpBeforeEnemyAttack=selfHurt;
@@ -41321,6 +41360,9 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
             })()}
             {focusedCard.type==='range_atk'&&focusedCard.rangeIdx!=null&&(<div className="border-t border-white/10 pt-1 mt-1 text-[7px] text-cyan-200 font-bold"><span className="text-cyan-400">距離効果:</span> {RANGE_LABELS[focusedCard.rangeIdx]}距離で威力アップ。攻撃後、{RANGE_LABELS[focusedCard.rangeIdx]}距離へ移動する</div>)}
             {['buff','debuff','heal'].includes(focusedCard.type)&&(<div className="text-center italic text-amber-300 font-bold text-[7px] leading-tight">{getDynamicDesc(focusedCard,true,focusedCard.evoLevel||0)}</div>)}
+            {/* ★みゃるの薬は、タクティクスでは「飲んだ子だけ」に効く。自傷もその子のライフから引く
+                (2026-09-22 ユーザー指摘。それまでは盤面の合計ライフから引き、攻撃バフも全員に乗っていた) */}
+            {isTacticsMode(runMode)&&focusedCard.subType==='buff_myaru'&&(<div className="text-center text-[7px] font-bold leading-tight text-emerald-300">置いた子だけに効きます。自傷もその子の今のライフから引きます</div>)}
             {focusedCard.effectDesc&&<div className="border-t border-white/10 pt-1 mt-1 text-[7px] text-amber-200 font-bold"><span className="text-indigo-400">特殊効果:</span> {focusedCard.effectDesc}</div>}
           </div>
         </div>

@@ -894,6 +894,22 @@ function MonsterHeroGame() {
   const getNextTurnBuff = (key, def) => nextTurnBuffs[key] ?? def;
   const setNextTurnBuff = (key, value) => writeNextTurnBuffs(p => ({ ...p, [key]: value }));
   const setImmediateTurnBuff = (key, value) => setTurnBuffs(p => ({ ...p, [key]: value })); // 次ターンへ持ち越さない、このターン限りの即時効果
+  // ★タクティクスの「その子だけに効く次ターンの攻撃バフ」(みゃるの薬)。
+  //   設計 4.4「全体で見てよいのは7つだけ。ほかはすべて1体ずつ」に従い、
+  //   パーティ全体の atkMult とは別の箱(枠ごと)へ入れる。
+  //   nextTurnBuffs の中に置くので、ターンの入れ替え(turnBuffs へ丸ごと移す)も
+  //   WAVEのリセット(setTurnBuffs({}))も今までの仕掛けがそのまま効く。
+  //   同じターンに2人が飲んでも消し合わないよう、枠ごとに足す
+  const setTacticsNextSlotAtkMult = (slotIdx, mult) => writeNextTurnBuffs(p => ({
+    ...p, atkMultBySlot: { ...(p.atkMultBySlot || {}), [slotIdx]: mult },
+  }));
+  // その枠にかかっている攻撃バフ。既存5モードと、飲んでいない子は 1.0
+  const tacticsSlotAtkMult = (slotIdx) => {
+    if (!isTacticsMode(runMode)) return 1.0;
+    const bySlot = getTurnBuff('atkMultBySlot', null);
+    const value = bySlot ? Number(bySlot[slotIdx]) : NaN;
+    return Number.isFinite(value) && value > 0 ? value : 1.0;
+  };
   // 丈夫さのバフは permaBuffs の 'defPct' に積む(基礎ステータスの def は書き換えない)。
   // 実際に計算へ使う値は effectiveDef で、被ダメージの軽減量とガードの軽減量の両方に効く。
   // 「被ダメージを◯%軽減する(dmgCutPct)」とは効き方が違うので、混ぜないこと。
@@ -9363,7 +9379,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       : distAptPct;
     const distBonusMult=1.0+(distDmgBonus[slotIdx]||0)+(aptForSlot[slotIdx]||0);
     const soulAttack=soulTraitAttackProfile(mon?.masuId?getMasuMon(mon.masuId):null,card,slotIdx);
-    const totalBuffMult=traitMult*getTurnBuff('atkMult',1.0)*(1.0+getPermaBuff('atkPct')+getPermaBuff('muaAtkPct')+additionalOryo)*distBonusMult*soulAttack.damageMultiplier;
+    // ★みゃるの薬の攻撃バフは、タクティクスでは「飲んだ子だけ」に乗る(設計 4.4)。
+    //   既存5モードは今までどおりパーティ全体(atkMult)。どちらか一方しか 1.0 以外にならない
+    const totalBuffMult=traitMult*getTurnBuff('atkMult',1.0)*tacticsSlotAtkMult(slotIdx)*(1.0+getPermaBuff('atkPct')+getPermaBuff('muaAtkPct')+additionalOryo)*distBonusMult*soulAttack.damageMultiplier;
     // 新モードは「攻撃したその子のちから」で殴る(設計 §4.1)。ほかのモードはパーティ共通のまま
     const attackerAtk=isTacticsMode(runMode)&&tacticsUnitsRef.current[slotIdx]
       ? Math.max(0,normalizeTacticsUnit(tacticsUnitsRef.current[slotIdx]).atk) : atk;
@@ -10139,7 +10157,20 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           totalDmg+=d; attackCount++; attackHits.push({dmg:d, isCrit:false, slotIdx});
           for (const hit of stunHits.slice(1)) { if (hit.crit) hasCrit=true; totalDmg+=hit.dmg; attackHits.push({dmg:hit.dmg, isCrit:hit.crit, slotIdx, isSpecial:true, skillName:hit.skillName, isUnique:false, ...(hit.noAnim?{noAnim:true}:{})}); }
         }
-        else if (card.subType==='buff_myaru') { setNextTurnBuff('atkMult',1+(card.baseValue-1)*effMul); const selfDmgAmt=Math.floor(hpBeforeEnemyAttack*myaruSelfDamageRate(card)*effMul); addPopup(`自傷-${selfDmgAmt}`,'hero','text-red-600 text-2xl font-black');
+        else if (card.subType==='buff_myaru') {
+          const myaruAtkMult=1+(card.baseValue-1)*effMul;
+          // ★タクティクスは「飲んだ子だけ」に効く(2026-09-22 ユーザー指摘
+          //   「みゃるの薬は使ったやつだけにきくバフだね 多分全体になってるよね？」)。
+          //   設計 4.4 のとおり、全体で見てよいものにターンバフは入っていない
+          if(isTacticsMode(runMode)) setTacticsNextSlotAtkMult(slotIdx,myaruAtkMult);
+          else setNextTurnBuff('atkMult',myaruAtkMult);
+          // ★自傷のもとになるライフも「飲んだ子の今のライフ」。
+          //   盤面の合計(hpBeforeEnemyAttack)から出していたので、4体いると
+          //   自分のライフの何倍もの自傷が来て、飲むたびに必ず1まで落ちていた
+          //   (2026-09-22 ユーザー指摘「ライフが劇的に減った。多分全体ライフを見てる？」)
+          const selfBaseHp=isTacticsMode(runMode)&&tacticsUnitsRef.current?.[slotIdx]
+            ? normalizeTacticsUnit(tacticsUnitsRef.current[slotIdx]).hp : hpBeforeEnemyAttack;
+          const selfDmgAmt=Math.floor(selfBaseHp*myaruSelfDamageRate(card)*effMul); addPopup(`自傷-${selfDmgAmt}`,'hero','text-red-600 text-2xl font-black');
           // 新モードは立っている子へ配る。★自傷では誰も倒れない(1体ずつ最低1を残す)
           const selfHurt=isTacticsMode(runMode)?commitTacticsUnits(selfDamageTacticsAt(tacticsUnitsRef.current,slotIdx,selfDmgAmt)):null;
           if(selfHurt!==null) hpBeforeEnemyAttack=selfHurt;
@@ -17399,6 +17430,9 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
             })()}
             {focusedCard.type==='range_atk'&&focusedCard.rangeIdx!=null&&(<div className="border-t border-white/10 pt-1 mt-1 text-[7px] text-cyan-200 font-bold"><span className="text-cyan-400">距離効果:</span> {RANGE_LABELS[focusedCard.rangeIdx]}距離で威力アップ。攻撃後、{RANGE_LABELS[focusedCard.rangeIdx]}距離へ移動する</div>)}
             {['buff','debuff','heal'].includes(focusedCard.type)&&(<div className="text-center italic text-amber-300 font-bold text-[7px] leading-tight">{getDynamicDesc(focusedCard,true,focusedCard.evoLevel||0)}</div>)}
+            {/* ★みゃるの薬は、タクティクスでは「飲んだ子だけ」に効く。自傷もその子のライフから引く
+                (2026-09-22 ユーザー指摘。それまでは盤面の合計ライフから引き、攻撃バフも全員に乗っていた) */}
+            {isTacticsMode(runMode)&&focusedCard.subType==='buff_myaru'&&(<div className="text-center text-[7px] font-bold leading-tight text-emerald-300">置いた子だけに効きます。自傷もその子の今のライフから引きます</div>)}
             {focusedCard.effectDesc&&<div className="border-t border-white/10 pt-1 mt-1 text-[7px] text-amber-200 font-bold"><span className="text-indigo-400">特殊効果:</span> {focusedCard.effectDesc}</div>}
           </div>
         </div>
