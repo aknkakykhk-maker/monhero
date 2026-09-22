@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: df4434a893a57fde
+// generated-sha256: 70d8feefd0047fe0
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -92,7 +92,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-22 13:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-22 13:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -22022,7 +22022,9 @@ function BattleScreen({
                   <div data-enemy-notice={enemyIntent.notice} data-enemy-notice-anim={noticeAnim.split(' ')[0]}
                     className={`max-w-[170px] truncate rounded-2xl border-2 px-2 py-0.5 font-black leading-tight flex items-center gap-1 ${noticeTone}`}
                     style={{fontSize:'11px',animation:noticeAnim}}>
-                    <span style={{fontSize:'12px'}} className="leading-none shrink-0">{enemyIntent.icon}</span>
+                    {/* ★icon は必ず cardIconNode を通す。絵文字ならそのまま、画像なら <img> になる。
+                        素で置くと、あとで画像のアイコンを足したときに文字列がそのまま出る */}
+                    <span style={{fontSize:'12px'}} className="leading-none shrink-0">{cardIconNode(enemyIntent.icon,12)}</span>
                     <span className="truncate">{enemyIntent.notice}！</span>
                   </div>);
                 // ★ムーだけは本体が丸枠の外へ巨大表示される(fixed・z-30 で画面いっぱい)。
@@ -22622,15 +22624,18 @@ function BattleScreen({
                         // ガードは軽減量をその場で出す。2枚目以降なら半分になった値をそのまま表示する
                         const gw=guardCardWeight(card), ge=cardEffectMultiplier(card,halvedByIdx[idx]);
                         const gv=gw>0?guardValueOf(GUARD_EVOLUTION[guardLevel].flat*gw*ge,GUARD_EVOLUTION[guardLevel].mult*gw*ge,i):0;
-                        // ★全体ガードになった枠の札は「全体ハイガード」と名乗る(2026-09-22 ユーザー指示
-                        //   「ハイガード-71みたいになってるとこを全体ハイガードみたいに変えて」)。
-                        //   軽減量は上の🛡が立っている子全員に出すので、札には数字を重ねない。
+                        // ★ガードが連撃・全体に変わったら、札に印を付ける(2026-09-22 ユーザー選択
+                        //   「名前＋印に分ける」)。段階の名前は9つあり、後半は「ガード」が付かない
+                        //   (金剛不壊・万象拒絶…)ので、名前そのものは変えずにとなりへ印を出す。
+                        // ★全体ガードの枠は、軽減量を上の🛡が立っている子全員に出すので札には数字を重ねない。
                         //   連撃ガードの枠だけは1枚ずつの値が要る(合計は🛡に出るため)ので今までどおり
+                        const guardMark=gw>0?(slotRushGuard?'連撃':(slotSpreadGuard?'全体':'')):'';
                         const spreadGuardCard=gw>0&&slotSpreadGuard&&!slotRushGuard;
                         return(
                         <div key={idx} className={`flex items-center gap-0.5 px-1 rounded w-full justify-center min-w-0 ${cardNeedsMonster(card)?'bg-red-600/85':'bg-emerald-600/85'}`}>
                           <span style={{fontSize:'7px'}} className="leading-none shrink-0">{cardIconNode(card.icon,9,card.id)}</span>
-                          <span style={{fontSize:'7px'}} className="font-black text-white leading-none truncate min-w-0">{halvedByIdx[idx]?'½':''}{spreadGuardCard?'全体':''}{card.name}</span>
+                          {guardMark&&<span data-tactics-guard-mark={guardMark} style={{fontSize:'6px'}} className="shrink-0 rounded-sm border border-amber-200/70 bg-black/60 px-0.5 font-black leading-none text-amber-200">{guardMark}</span>}
+                          <span style={{fontSize:'7px'}} className="font-black text-white leading-none truncate min-w-0">{halvedByIdx[idx]?'½':''}{card.name}</span>
                           {gv>0&&!spreadGuardCard&&<span style={{fontSize:'7px'}} className="font-black text-emerald-100 leading-none shrink-0">-{gv}</span>}
                         </div>
                         );
@@ -33191,6 +33196,37 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // ★手動(tacticsUsableSlots)もAUTO(chooseAutoTurn の countsTowardSlotLimit)もここを通す。
   //   別々に持っていたころは、AUTOだけ回復もバフも何枚でも同じ子へ置けていた
   const countsTowardTacticsSlotLimit = (card) => !!card && !isAssistCard(card) && !(guardCardWeight(card) > 0);
+  // ★カードの「何をするカードか(ジャンル)」と「誰に効くか(範囲)」。カードの説明に出す。
+  //   タクティクスは1体ずつステータスを持つので、**置いた子だけに効くのか・味方ぜんぶに効くのか**
+  //   で置き方がまるごと変わる(2026-09-22 ユーザー指示「攻撃や回復や支援とかそれに
+  //   単体や全体など効果のジャンルが分かるようにしたい」)。
+  // ★1か所で決める。画面のあちこちで別々に判定すると、片方だけ古くなる
+  const cardGenreLabel = (card) => {
+    if (!card) return null;
+    if (card.type === 'guard' || card.type === 'weak_guard') return '守り';
+    if (card.type === 'heal') return '回復';
+    if (isAttackCard(card)) return '攻撃';
+    if (card.type === 'buff' || card.type === 'debuff') return '支援';
+    return null;
+  };
+  // ★単体に効くのは「ガード」と「みゃるの薬」だけ。回復カードも永続バフも立っている味方ぜんぶへ入る
+  //   (2026-09-19 ユーザーの整理「単体に効くのはガードの余りとドレインと吸収だけ」。
+  //    みゃるの薬は2026-09-22 に単体へ直した)。攻撃カードは味方には効かないので「敵へ」
+  const cardScopeLabel = (card) => {
+    if (!card || !isTacticsMode(runMode)) return null;
+    if (isAttackCard(card)) return '敵へ';
+    if (card.type === 'guard' || card.type === 'weak_guard' || card.subType === 'buff_myaru') return '単体';
+    return '全体';
+  };
+  // 色は「見た目だけ」。Tailwindは静的化してあるので、組み立てずにそのまま書く
+  const CARD_GENRE_TONE = { '攻撃':'border-red-400/60 bg-red-500/20 text-red-200',
+    '守り':'border-emerald-400/60 bg-emerald-500/20 text-emerald-200',
+    '回復':'border-rose-400/60 bg-rose-500/20 text-rose-200',
+    '支援':'border-amber-400/60 bg-amber-500/20 text-amber-200' };
+  const CARD_SCOPE_TONE = { '単体':'border-sky-400/60 bg-sky-500/20 text-sky-200',
+    '全体':'border-violet-400/60 bg-violet-500/20 text-violet-200',
+    '敵へ':'border-slate-400/60 bg-slate-500/20 text-slate-200' };
+  const CARD_SCOPE_NOTE = { '単体':'置いた子だけに効きます', '全体':'立っている味方ぜんぶに効きます', '敵へ':'置いた子のちからで殴ります' };
   const cardEffectMultiplier = (card, halved=false) => {
     const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
     return isAssistCard(card)&&specialRuleDifficulty ? extremeSpecialRule(specialRuleDifficulty,'assistCardEffect') : (halved?0.5:1);
@@ -41348,6 +41384,18 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
         <div className="fixed left-1/2 -translate-x-1/2 bg-slate-900/98 border-2 border-indigo-400 p-2.5 rounded-2xl w-[90%] max-w-[260px] shadow-[0_0_40px_rgba(0,0,0,0.9)] backdrop-blur-md" style={{bottom:'calc(34% + 80px)',zIndex:110000}} onClick={()=>setFocusedCard(null)}>
           <div className="flex items-center gap-2.5 mb-1 border-b border-white/10 pb-1"><span className="text-xl bg-indigo-500/20 p-1 rounded-xl">{cardIconNode(focusedCard.icon,22,focusedCard.id)}</span><div className="text-left flex-1 overflow-hidden"><div className="text-[9px] font-black text-white uppercase truncate">{focusedCard.name||focusedCard.baseName}</div><div className="text-[7px] font-bold text-indigo-400 flex items-center gap-1"><Zap size={7}/> {getCardGuts(focusedCard)} Guts</div></div></div>
           <div className="text-[8px] text-slate-200 font-medium leading-relaxed bg-black/50 p-1.5 rounded-lg border border-white/5 space-y-1">
+            {/* ★何をするカードか(ジャンル)と、誰に効くか(範囲)。タクティクスだけに出す。
+                1体ずつステータスを持つので、置いた子だけに効くのか味方ぜんぶに効くのかで
+                置き方がまるごと変わる(2026-09-22 ユーザー指示) */}
+            {(()=>{
+              const genre=cardGenreLabel(focusedCard), scope=cardScopeLabel(focusedCard);
+              if(!scope) return null;
+              return(<div data-card-genre={genre||''} data-card-scope={scope} className="flex items-center gap-1 flex-wrap">
+                {genre&&<span className={`rounded border px-1.5 py-0.5 text-[9px] font-black leading-none ${CARD_GENRE_TONE[genre]}`}>{genre}</span>}
+                <span className={`rounded border px-1.5 py-0.5 text-[9px] font-black leading-none ${CARD_SCOPE_TONE[scope]}`}>{scope}</span>
+                <span className="text-[8px] font-bold text-slate-400">{CARD_SCOPE_NOTE[scope]}</span>
+              </div>);
+            })()}
             {/* 新モードは合計のガッツでは払えない。使えないときは、ここで理由をはっきり出す */}
             {(()=>{const b=tacticsCardBlock(focusedCard,hand.findIndex(c=>c&&c.uid===focusedCard.uid)); return b&&!b.ok?(
               <div data-tactics-card-why className="rounded-lg border border-rose-400/70 bg-rose-950/70 px-1.5 py-1 text-[9px] font-black leading-snug text-rose-100"><span className="text-rose-300">いま使えない:</span> {b.why}</div>

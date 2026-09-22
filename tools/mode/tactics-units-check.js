@@ -1166,11 +1166,17 @@ check('ガッツ回復は新モードだと合計を足さずに配る',
   //   guardDefFor は unit の無い枠でパーティ平均の丈夫さを返すため、止めないと数字が作られる
   check('立っている子がいない枠にはガードが付かない',
     has('if (isTacticsMode(runMode) && !canTacticsSlotAct(tacticsUnitsRef.current, slotIdx)) return 0;'));
-  // ★全体ガードになった枠の札は「全体ハイガード」と名乗り、数字は枠の🛡にまかせる
-  //   (2026-09-22 ユーザー指示「ハイガード-71みたいになってるとこを全体ハイガードみたいに変えて」)
-  check('全体ガードの札は「全体◯◯」と名乗る',
+  // ★ガードが連撃・全体に変わったら、名前は変えずに**となりへ印**を出す
+  //   (2026-09-22 ユーザー選択「名前＋印に分ける」)。段階の名前は9つあり、後半は
+  //   「ガード」が付かない(金剛不壊・万象拒絶…)ので、頭に足すと言葉として読みにくい
+  check('連撃・全体になった札は名前のとなりに印を出す',
+    battleScreenSpread.includes("const guardMark=gw>0?(slotRushGuard?'連撃':(slotSpreadGuard?'全体':'')):'';")
+      && battleScreenSpread.includes('data-tactics-guard-mark={guardMark}')
+      && battleScreenSpread.includes("{halvedByIdx[idx]?'½':''}{card.name}")
+      && !battleScreenSpread.includes("{spreadGuardCard?'全体':''}{card.name}"));
+  // ★全体ガードの枠は、軽減量を🛡が立っている子全員に出すので、札に数字を重ねない
+  check('全体ガードの枠は札に数字を重ねない',
     battleScreenSpread.includes('const spreadGuardCard=gw>0&&slotSpreadGuard&&!slotRushGuard;')
-      && battleScreenSpread.includes("{spreadGuardCard?'全体':''}{card.name}")
       && battleScreenSpread.includes('{gv>0&&!spreadGuardCard&&<span'));
   // ★合計DMGの予測も、盤面のタップ判定とまったく同じ答えを使う。
   //   自前で枚数を数えていると、ガードを置いた子が「もう置けない子」に見えてずれる
@@ -1221,6 +1227,45 @@ check('枠ごとの攻撃バフは足していく',
 check('カードの説明にも「飲んだ子だけ」と書く',
   has("isTacticsMode(runMode)&&focusedCard.subType==='buff_myaru'")
     && has('置いた子だけに効きます。自傷もその子の今のライフから引きます'));
+
+// --- ㉞ カードの説明に「ジャンル」と「誰に効くか」を出す(2026-09-22 ユーザー指示) ---
+// ★タクティクスは1体ずつステータスを持つので、置いた子だけに効くのか味方ぜんぶに効くのかで
+//   置き方がまるごと変わる(ユーザー「攻撃や回復や支援とかそれに単体や全体など
+//   効果のジャンルが分かるようにしたい」)。決め方は本体から切り出してそのまま動かす
+{
+  const genreSrc = slice('const cardGenreLabel = (card) => {', '\n  };') + '\n  };';
+  const scopeSrc = slice('const cardScopeLabel = (card) => {', '\n  };') + '\n  };';
+  const attackSrc = slice('const isAttackCard = (card) =>', '\n');
+  const box = { __tactics: true };
+  vm.createContext(box);
+  vm.runInContext(
+    'const isTacticsMode=()=>__tactics; const runMode=null;'
+      + attackSrc.trim() + '\n' + genreSrc.trim() + '\n' + scopeSrc.trim()
+      + '\nglobalThis.genreOf=cardGenreLabel; globalThis.scopeOf=cardScopeLabel;', box);
+  const genreOf = box.genreOf, scopeOf = box.scopeOf;
+  // ★助手の教えカードの一覧も本体(data/breeder.js)から読む。検査へ書き写さない
+  const teachSrc = fs.readFileSync(path.join(root, 'monster-hero/data/breeder.js'), 'utf8');
+  const teachBlock = teachSrc.slice(teachSrc.indexOf('const TEACHING_CARDS'), teachSrc.indexOf('const STARTER_TEACHING_IDS'));
+  const teachings = [...teachBlock.matchAll(/\{\s*id:'([^']+)',[\s\S]*?[^b]type:'([^']+)',\s*subType:'([^']+)'/g)]
+    .map(m => ({ id: m[1], type: m[2], subType: m[3] }));
+  check('助手の教えカードを本体から読める', teachings.length >= 9, teachings.map(t => t.id).join(','));
+  const missing = teachings.filter(t => !genreOf(t) || !scopeOf(t));
+  check('助手の教えカードはどれもジャンルと効く先が出る', missing.length === 0, missing.map(t => t.id).join(','));
+  // ★単体に効くのはガードとみゃるの薬だけ(2026-09-19 ユーザーの整理
+  //   「単体に効くのはガードの余りとドレインと吸収だけ」／みゃるは2026-09-22に単体へ直した)
+  const singles = teachings.filter(t => scopeOf(t) === '単体').map(t => t.id);
+  check('助手の教えで単体なのはみゃるの薬だけ', singles.join(',') === 'myaru', singles.join(',') || 'なし');
+  check('ガードは守り・単体', genreOf({ type:'guard' }) === '守り' && scopeOf({ type:'guard' }) === '単体'
+    && genreOf({ type:'weak_guard' }) === '守り' && scopeOf({ type:'weak_guard' }) === '単体');
+  check('回復は回復・全体', genreOf({ type:'heal' }) === '回復' && scopeOf({ type:'heal' }) === '全体');
+  check('攻撃・固有技・距離撃は攻撃・敵へ',
+    ['atk', 'range_atk', 'unique'].every(type => genreOf({ type }) === '攻撃' && scopeOf({ type }) === '敵へ'));
+  box.__tactics = false;
+  check('既存5モードでは効く先を出さない', scopeOf({ type:'guard' }) === null);
+}
+check('カードの説明にジャンルと効く先を出す',
+  has('const genre=cardGenreLabel(focusedCard), scope=cardScopeLabel(focusedCard);')
+    && has("data-card-genre={genre||''} data-card-scope={scope}"));
 
 console.log(failed ? `\nNG ${failed}件` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
