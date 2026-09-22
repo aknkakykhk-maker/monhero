@@ -1322,5 +1322,24 @@ check('固有技の効果も枠の印に出る',
       && cleared[2] === undefined);
 }
 
+// --- ㊱ 「誰に効くか」の早見表が、本体に追いついているか ---
+// ★2026-09-22 に食い違いが4つ見つかった(みゃるの薬・固有技の効果・ガードの軽減量・
+//   連撃系の勇者特性)。どれも「全体か個別か」の取り違えだったので、結論だけを
+//   docs/spec/BATTLE_NEW_MODE_PLAN.md の §4.0 へ1枚にまとめた。
+//   枠ごとのバフを足したのに早見表へ書き忘れると、また同じ取り違えが起きる
+{
+  const plan = fs.readFileSync(path.join(root, 'docs/spec/BATTLE_NEW_MODE_PLAN.md'), 'utf8');
+  check('早見表がある', plan.includes('### 4.0 効き先の早見表')
+    && ['#### ① カードは誰に効くか', '#### ② 次のターンへ残る効果', '#### ③ 勇者特性は誰のものか',
+      '#### ④ ガードの置き方'].every(heading => plan.includes(heading)));
+  // ★本体が書き込んでいる「枠ごとのバフ」の鍵を全部拾い、早見表に載っているかを見る
+  const keys = [...new Set([...source.matchAll(/setTacticsNextSlotBuff\(slotIdx,'([A-Za-z]+)'/g)].map(m => m[1]))];
+  check('枠ごとのバフを本体から拾える', keys.length >= 6, keys.join(','));
+  // ★探すのは §4.0 の中だけ。ほかの節に出てくるだけでは「1枚にまとめた」ことにならない
+  const quickRef = plan.slice(plan.indexOf('### 4.0 効き先の早見表'), plan.indexOf('### 4.1 '));
+  const missing = keys.filter(key => !quickRef.includes(`\`${key}\``));
+  check('枠ごとのバフはすべて早見表に載っている', missing.length === 0, missing.join(',') || 'すべてある');
+}
+
 console.log(failed ? `\nNG ${failed}件` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
