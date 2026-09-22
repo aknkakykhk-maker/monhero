@@ -12947,7 +12947,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         器を増やさず**同じ要素のstyleを差し替えるだけ**にしてあるのは、
         切り替えた瞬間に中身が作り直されると演奏中の状態(音の時計・スコア・押している指)が
         飛んでしまうため。回していないときは今までと同じ style={{height:'100%'}} に戻る */}
-    <div data-mh-view-rotation={forcedRotationStyle?'true':'false'} data-mh-portrait-layout={portraitOnlyScreen?'true':'false'} onPointerDown={rippleOnPointerDown} onPointerMove={rippleOnPointerMove} onPointerUp={rippleOnPointerEnd} onPointerCancel={rippleOnPointerEnd} className="h-full w-full bg-slate-950 text-white overflow-hidden relative select-none font-sans" style={forcedRotationStyle||{height:'100%'}}>
+    <div data-mh-view-rotation={forcedRotationStyle?'true':'false'} data-mh-portrait-layout={portraitOnlyScreen?'true':'false'} onPointerDown={rippleOnPointerDown} onPointerMove={rippleOnPointerMove} onPointerUp={rippleOnPointerEnd} onPointerCancel={rippleOnPointerEnd} className="mh-app h-full w-full bg-slate-950 text-white overflow-hidden relative select-none font-sans" style={forcedRotationStyle||{height:'100%'}}>
       {/* タップ・スライドの波紋。押している場所を指すだけの見た目なのでタップ判定は奪わない */}
       <div style={{position:'absolute',inset:0,pointerEvents:'none',zIndex:2147483647,overflow:'hidden'}}>
         {ripples.map(r=>(
@@ -13164,7 +13164,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 </div>
               </section>
             </div>
-            <div className={SCREEN_FOOTER_CLASS}><button onClick={saveAutoSettings} className="w-full max-w-md mx-auto block min-h-[52px] rounded-2xl bg-indigo-600 text-white font-black text-sm shadow-lg active:scale-[.98]">決定</button></div>
+            <div className={SCREEN_FOOTER_CLASS}><button onClick={saveAutoSettings} className="mh-button mh-button-primary w-full max-w-md mx-auto block min-h-[52px] rounded-2xl bg-indigo-600 text-white font-black text-sm shadow-lg active:scale-[.98]">決定</button></div>
             {autoAllyDetail&&renderMonsterDetailModal({mon:autoAllyDetail.mon,masu:autoAllyDetail.masu,onClose:()=>setAutoAllyDetail(null),accent:'indigo',readOnly:true,label:`${autoAllyDetail.mon.name}の確認用詳細`})}
           </div>;
         })()}
@@ -15244,7 +15244,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     })}
                   </div>
                 </div>
-                <div className={SCREEN_FOOTER_CLASS}><button onClick={confirmMonsterRoster} disabled={draftMonsterRoster.length!==STARTER_MONSTER_IDS.length} className="block w-full max-w-md mx-auto min-h-[52px] rounded-2xl bg-indigo-500 text-white font-black text-sm shadow-lg active:scale-[.98] disabled:opacity-40">決定 ({draftMonsterRoster.length}/{STARTER_MONSTER_IDS.length})</button></div>
+                <div className={SCREEN_FOOTER_CLASS}><button onClick={confirmMonsterRoster} disabled={draftMonsterRoster.length!==STARTER_MONSTER_IDS.length} className="mh-button mh-button-primary block w-full max-w-md mx-auto min-h-[52px] rounded-2xl bg-indigo-500 text-white font-black text-sm shadow-lg active:scale-[.98] disabled:opacity-40">決定 ({draftMonsterRoster.length}/{STARTER_MONSTER_IDS.length})</button></div>
               </>
             ):(
               <>
@@ -15283,7 +15283,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     })}
                   </div>
                 </div>
-                <div className={SCREEN_FOOTER_CLASS}><button onClick={confirmTeachingRoster} disabled={draftTeachingRoster.length!==TEACHING_ROSTER_SIZE} className="block w-full max-w-md mx-auto min-h-[52px] rounded-2xl bg-purple-500 text-white font-black text-sm shadow-lg active:scale-[.98] disabled:opacity-40">決定 ({draftTeachingRoster.length}/{TEACHING_ROSTER_SIZE})</button></div>
+                <div className={SCREEN_FOOTER_CLASS}><button onClick={confirmTeachingRoster} disabled={draftTeachingRoster.length!==TEACHING_ROSTER_SIZE} className="mh-button mh-button-primary block w-full max-w-md mx-auto min-h-[52px] rounded-2xl bg-purple-500 text-white font-black text-sm shadow-lg active:scale-[.98] disabled:opacity-40">決定 ({draftTeachingRoster.length}/{TEACHING_ROSTER_SIZE})</button></div>
               </>
             )}
           </div>
@@ -15379,7 +15379,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 })}
               </div>
             </div>
-            <div className={SCREEN_FOOTER_CLASS}><button onClick={savePastureSettings} className="block w-full max-w-md mx-auto min-h-[52px] rounded-2xl bg-emerald-600 text-white font-black text-sm shadow-lg active:scale-[.98]">決定（{draftHomePastureIds.length}体）</button></div>
+            <div className={SCREEN_FOOTER_CLASS}><button onClick={savePastureSettings} className="mh-button mh-button-primary block w-full max-w-md mx-auto min-h-[52px] rounded-2xl bg-emerald-600 text-white font-black text-sm shadow-lg active:scale-[.98]">決定（{draftHomePastureIds.length}体）</button></div>
           </div>);
         })()}
 

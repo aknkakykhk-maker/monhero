@@ -127,8 +127,8 @@ function MasuEnhanceScreen({
                 <div className="text-[13px] font-black text-lime-200">💡 強化を毎回手で振るのが大変なら</div>
                 <div className="mt-1 text-[11px] font-bold text-slate-200 leading-relaxed">上の「オート強化」で、この子ごとに「どこまで上げてよいか」と「その中での優先順位」を決めておけます。強化ポイントが入るたび自動で振られるので、転生したあとの周回でも放っておくだけで元の形まで戻ります。</div>
                 <div className="mt-2 grid grid-cols-2 gap-2">
-                  <button type="button" onClick={()=>{onDismissAutoEnhanceIntro();onOpenAutoEnhance();}} className="min-h-[44px] rounded-xl bg-lime-500 text-slate-950 text-[12px] font-black active:scale-95">設定を開く</button>
-                  <button type="button" onClick={onDismissAutoEnhanceIntro} className="min-h-[44px] rounded-xl bg-slate-800 text-slate-300 text-[12px] font-black active:scale-95">あとで</button>
+                  <button type="button" onClick={()=>{onDismissAutoEnhanceIntro();onOpenAutoEnhance();}} className="mh-button mh-button-secondary min-h-[44px] rounded-xl bg-lime-500 text-slate-950 text-[12px] font-black active:scale-95">設定を開く</button>
+                  <button type="button" onClick={onDismissAutoEnhanceIntro} className="mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-800 text-slate-300 text-[12px] font-black active:scale-95">あとで</button>
                 </div>
               </div>
             )}
@@ -151,7 +151,7 @@ function MasuEnhanceScreen({
                   {[1,5,10,100,'MAX'].map(unit=><button type="button" key={unit} aria-pressed={bulkEnhanceUnit===unit} onClick={()=>setBulkEnhanceUnit(unit)} className={`min-h-[44px] rounded-xl text-[11px] font-black active:scale-95 ${bulkEnhanceUnit===unit?'bg-amber-500 text-slate-950 shadow':'bg-slate-800 text-slate-300'}`}>{unit==='MAX'?'MAX':`${unit}P`}</button>)}
                 </div>
                 {restoreDraft&&restoreDraft.requested>0&&<div className="mb-3 rounded-xl border border-cyan-400/40 bg-cyan-950/20 p-2">
-                  <button type="button" onClick={restoreResetAllocation} disabled={restoreDraft.restored<=0} className="w-full min-h-[44px] rounded-xl bg-slate-800 text-cyan-200 text-[12px] font-black active:scale-95 disabled:opacity-30">↩ リセット前の配分を復元</button>
+                  <button type="button" onClick={restoreResetAllocation} disabled={restoreDraft.restored<=0} className="mh-button mh-button-secondary w-full min-h-[44px] rounded-xl bg-slate-800 text-cyan-200 text-[12px] font-black active:scale-95 disabled:opacity-30">↩ リセット前の配分を復元</button>
                   <div className={`mt-1 text-[10px] font-bold text-center ${restoreDraft.omitted>0?'text-amber-300':'text-slate-400'}`}>{restoreDraft.omitted>0?`現行の上限・残りptに合わせ、${restoreDraft.restored}ptを仮配分（復元できない分 ${restoreDraft.omitted}pt）`:'保存は「強化する」を押した時だけです'}</div>
                 </div>}
                 <div className="mb-3">{renderPowerBadge(plannedMasuPowerOf(masu, plan), {before: currentPower, size:'md'})}</div>
@@ -189,13 +189,13 @@ function MasuEnhanceScreen({
               <div className="text-[11px] text-white font-bold mt-1">{ps.hp>0&&`HP+${ps.hp} `}{ps.atk>0&&`攻+${ps.atk} `}{ps.def>0&&`防+${ps.def} `}{ps.guts>0&&`G+${ps.guts} `}{!(ps.hp>0||ps.atk>0||ps.def>0||ps.guts>0)&&'なし'}</div>
             </div>
             <div className="text-[10px] text-slate-400 font-bold text-center px-2">強化は上の「まとめて強化」で下書きし、確定すると保存されます。</div>
-            <button type="button" onClick={backToDetail} className="w-full min-h-[48px] rounded-xl border border-white/10 bg-slate-800 text-slate-300 font-black text-[12px] active:scale-95 mt-2">完了</button>
+            <button type="button" onClick={backToDetail} className="mh-button mh-button-secondary w-full min-h-[48px] rounded-xl border border-white/10 bg-slate-800 text-slate-300 font-black text-[12px] active:scale-95 mt-2">完了</button>
           </div>
           {/* 確定は一覧の外に置く。中へ sticky で入れると、下の中身をスクロール中ずっと覆ってしまう */}
           {points>0&&(
             <div className={`${SCREEN_FOOTER_CLASS} w-full max-w-md mx-auto`} aria-label="強化の確定操作">
               <div className="flex items-center justify-between mb-2"><span className="text-[11px] font-black text-slate-300">残りpt</span><span className="font-mono font-black"><b className={planLeft>0?'text-amber-300':'text-slate-400'}>{planLeft}</b><small className="text-slate-400"> / {points} pt</small></span></div>
-              <div className="flex gap-2"><button type="button" disabled={planUsed<=0} onClick={()=>setBulkPlan(null)} className="min-h-[52px] px-3 rounded-xl font-black text-[12px] bg-slate-800 text-slate-300 active:scale-95 disabled:opacity-30">配分をすべて取消</button><button type="button" disabled={planUsed<=0} onClick={applyPlan} className="min-h-[52px] flex-1 rounded-xl font-black text-[13px] bg-gradient-to-r from-amber-600 to-orange-600 text-white active:scale-95 disabled:opacity-30 disabled:from-slate-700 disabled:to-slate-700">{planUsed>0?`${planUsed}ptを使って強化する`:'振り分けてください'}</button></div>
+              <div className="flex gap-2"><button type="button" disabled={planUsed<=0} onClick={()=>setBulkPlan(null)} className="mh-button mh-button-secondary min-h-[52px] px-3 rounded-xl font-black text-[12px] bg-slate-800 text-slate-300 active:scale-95 disabled:opacity-30">配分をすべて取消</button><button type="button" disabled={planUsed<=0} onClick={applyPlan} className="mh-button mh-button-primary min-h-[52px] flex-1 rounded-xl font-black text-[13px] bg-gradient-to-r from-amber-600 to-orange-600 text-white active:scale-95 disabled:opacity-30 disabled:from-slate-700 disabled:to-slate-700">{planUsed>0?`${planUsed}ptを使って強化する`:'振り分けてください'}</button></div>
             </div>
           )}
         </div>

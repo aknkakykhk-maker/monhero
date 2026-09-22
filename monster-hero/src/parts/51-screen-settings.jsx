@@ -20,7 +20,7 @@
 // ・メニューの1行は menuClass ひとつに寄せた。高さ(64px)・角丸・枠線・押した手応えを
 //   ここでだけ決める。「ゲームを更新」だけ余白と枠色がずれていたのも同じ型に入れた
 function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onOpenBackup, onOpenHelp, onOpenGameUpdate, gameUpdateDisabled, onReturnToTitle, updateNoticeStyle, onChangeUpdateNoticeStyle }) {
-  const menuClass = 'w-full min-h-[64px] flex items-center justify-center rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 font-black active:scale-[.98]';
+  const menuClass = 'mh-button mh-button-secondary w-full min-h-[64px] flex items-center justify-center rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 font-black active:scale-[.98]';
   return (
     <div data-mh-screen className={SCREEN_SHELL_CLASS}>
       <ScreenHead title="設定" accent="text-slate-200" onBack={onBack} backLabel="HOMEへ戻る"/>
@@ -56,7 +56,7 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
         {/* 「タイトルへ戻る」は後戻りの大きい操作なので、区切り線でメニューから切り離す */}
         <div className="border-t border-white/10 pt-6 space-y-3">
           <div className="text-center text-[10px] font-mono text-slate-400">BUILD {BUILD_DATE}</div>
-          <button type="button" onClick={onReturnToTitle} className="w-full min-h-[64px] flex items-center justify-center rounded-2xl border border-red-500/40 bg-red-950/50 px-4 py-3 font-black text-red-200 active:scale-[.98]">タイトルへ戻る</button>
+          <button type="button" onClick={onReturnToTitle} className="mh-button mh-button-danger w-full min-h-[64px] flex items-center justify-center rounded-2xl border border-red-500/40 bg-red-950/50 px-4 py-3 font-black text-red-200 active:scale-[.98]">タイトルへ戻る</button>
         </div>
       </div>
     </div>

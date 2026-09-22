@@ -139,7 +139,7 @@ function MasuFusionScreen({
               </div>
               {selectedSubs.length>0&&<div className="mt-2 max-h-16 overflow-y-auto mh-scroll space-y-1">{selectedSubs.map(sub=><div key={sub.id} className="flex justify-between gap-2 text-[11px] text-slate-200"><span className="truncate">{sub.name}・絆Lv.{masuBondLevelInfo(sub).level}</span><span className="shrink-0 text-cyan-300">+{cappedBondXp(sub).toLocaleString()} XP</span></div>)}</div>}
               {selectedSubs.length>1&&<div className="mt-2 rounded-xl border border-violet-500/60 bg-violet-950/40 px-3 py-2 text-[11px] leading-relaxed font-bold text-violet-200">複数副を選択順にまとめて合体します。固有技継承は確認画面で副ごとに選べ、Lv上限を超える場合は「限界突破して合体」も選べます。</div>}
-              <button onClick={continueWithFusionSubs} disabled={selectedSubs.length===0} className="mt-2 w-full min-h-[52px] rounded-xl bg-violet-600 text-white text-[13px] font-black disabled:bg-slate-800 disabled:text-slate-400 active:scale-95">{selectedSubs.length>0?`副${selectedSubs.length}体で確認へ`:'副を選択してください'}</button>
+              <button onClick={continueWithFusionSubs} disabled={selectedSubs.length===0} className="mh-button mh-button-primary mt-2 w-full min-h-[52px] rounded-xl bg-violet-600 text-white text-[13px] font-black disabled:bg-slate-800 disabled:text-slate-400 active:scale-95">{selectedSubs.length>0?`副${selectedSubs.length}体で確認へ`:'副を選択してください'}</button>
             </div>
             {fusionSortBar}
             <div className={SCREEN_LIST_CLASS}>
@@ -346,7 +346,7 @@ function MasuFusionScreen({
               const result = await executeMasuFusion(true);
               if (!result) return;
               setFusionResultData(result); setFusionStep('anim'); Audio_.se.fusion();
-            }} disabled={!!diamondShortage||!!soulProofShortage||!breakthroughPlan.canAfford||fusionProcessingRef.current} className="w-full min-h-[52px] py-2.5 rounded-xl font-black text-sm shadow-lg flex items-center justify-center gap-2 bg-amber-600 text-white active:scale-95 disabled:bg-slate-800 disabled:text-slate-400 disabled:opacity-50"><Star size={16}/><span>限界突破 ×{breakthroughPlan.count} して合体<span className="block text-[10px] font-bold opacity-80">{totalDiamondCost.toLocaleString()}ダイヤ消費 → 残り{Math.max(0, diamondAfter).toLocaleString()}</span></span></button>}
+            }} disabled={!!diamondShortage||!!soulProofShortage||!breakthroughPlan.canAfford||fusionProcessingRef.current} className="mh-button mh-button-primary w-full min-h-[52px] py-2.5 rounded-xl font-black text-sm shadow-lg flex items-center justify-center gap-2 bg-amber-600 text-white active:scale-95 disabled:bg-slate-800 disabled:text-slate-400 disabled:opacity-50"><Star size={16}/><span>限界突破 ×{breakthroughPlan.count} して合体<span className="block text-[10px] font-bold opacity-80">{totalDiamondCost.toLocaleString()}ダイヤ消費 → 残り{Math.max(0, diamondAfter).toLocaleString()}</span></span></button>}
             <button onClick={async()=>{
               if (!canAfford) return;
               const result = await executeMasuFusion(false);
@@ -354,7 +354,7 @@ function MasuFusionScreen({
               setFusionResultData(result);
               setFusionStep('anim');
               Audio_.se.fusion();
-            }} disabled={!canAfford||fusionProcessingRef.current} className={`w-full min-h-[52px] py-2.5 rounded-xl font-black text-sm shadow-lg flex items-center justify-center gap-2 active:scale-95 ${canAfford?'bg-violet-600 text-white':'bg-slate-800 text-slate-400'}`}><Sparkles size={16}/><span>{breakthroughPlan.count>0?'通常合体':'合体する'}<span className="block text-[10px] font-bold opacity-80">{normalTotalDiamondCost.toLocaleString()}ダイヤ消費{fusionInheritSoulRank&&soulHeroProofCost>0?` + 証${soulHeroProofCost}`:''} → 残り{Math.max(0, normalDiamondAfter).toLocaleString()}</span></span></button>
+            }} disabled={!canAfford||fusionProcessingRef.current} className={`mh-button mh-button-primary w-full min-h-[52px] py-2.5 rounded-xl font-black text-sm shadow-lg flex items-center justify-center gap-2 active:scale-95 ${canAfford?'bg-violet-600 text-white':'bg-slate-800 text-slate-400'}`}><Sparkles size={16}/><span>{breakthroughPlan.count>0?'通常合体':'合体する'}<span className="block text-[10px] font-bold opacity-80">{normalTotalDiamondCost.toLocaleString()}ダイヤ消費{fusionInheritSoulRank&&soulHeroProofCost>0?` + 証${soulHeroProofCost}`:''} → 残り{Math.max(0, normalDiamondAfter).toLocaleString()}</span></span></button>
             </div>
           </div>
         );
@@ -402,7 +402,7 @@ function MasuFusionScreen({
           {d.inherited&&(<div className="text-[11px] leading-relaxed text-amber-300 font-black bg-amber-950/50 border border-amber-500/60 rounded-xl px-3 py-2 mb-2">「{d.subName}」の固有技を継承データとして記録しました</div>)}
           {d.inheritedReincarnateCount>0&&(<div className="text-[11px] leading-relaxed text-amber-200 font-black bg-amber-950/50 border border-amber-500/60 rounded-xl px-3 py-2 mb-2">転生育成ボーナス {d.inheritedReincarnateCount}回分（強化ポイント +{d.inheritedReincarnatePoints}）を継承しました</div>)}
           <div className="text-[11px] text-slate-400 font-bold mb-4">ダイヤを{d.cost.toLocaleString()}消費しました</div>
-          <button onClick={continueFusionFlow} className="w-full max-w-xs min-h-[52px] bg-violet-600 text-white py-3.5 rounded-xl font-black text-sm shadow-lg active:scale-95">とじる</button>
+          <button onClick={continueFusionFlow} className="mh-button mh-button-primary w-full max-w-xs min-h-[52px] bg-violet-600 text-white py-3.5 rounded-xl font-black text-sm shadow-lg active:scale-95">とじる</button>
         </div>
       );
     
