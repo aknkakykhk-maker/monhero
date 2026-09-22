@@ -383,14 +383,38 @@ const check = (name, ok, detail = '') => {
     const buffOpen = await page.evaluate(() => {
       const el = document.querySelector('[data-battle-buffs]');
       if (!el) return null;
+      const list = document.querySelector('[data-battle-buff-list]');
+      // ★札を仮に30枚まで増やして、伸びきったときの高さを測る。実際にそこまで貯めるには
+      //   何WAVEもかかるが、見たいのは「どこで止まるか」なので、増やして測れば足りる
+      let grown = null;
+      if (list && list.children.length) {
+        const src = list.children[0];
+        const before = list.children.length;
+        while (list.children.length < 30) list.appendChild(src.cloneNode(true));
+        grown = { h: Math.round(el.getBoundingClientRect().height),
+          listH: Math.round(list.getBoundingClientRect().height),
+          maxH: getComputedStyle(list).maxHeight, overflow: getComputedStyle(list).overflowY,
+          scrollable: list.scrollHeight > list.clientHeight };
+        while (list.children.length > before) list.removeChild(list.lastChild);
+      }
       return { mode: el.getAttribute('data-battle-buffs-mode'), h: Math.round(el.getBoundingClientRect().height),
         list: document.querySelectorAll('[data-battle-buff-list] > div').length,
-        text: (document.querySelector('[data-battle-buff-list]')?.textContent || '').slice(0, 40) };
+        text: (document.querySelector('[data-battle-buff-list]')?.textContent || '').slice(0, 40), grown };
     });
     check('詳細を開くと数値つきの一覧になる',
       !!buffOpen && buffOpen.mode === 'detail' && buffOpen.list === (buffBox ? buffBox.n : -1) && /%/.test(buffOpen.text),
       JSON.stringify(buffOpen));
-    check('詳細を開いても高さは頭打ち', !!buffOpen && buffOpen.h <= 110, JSON.stringify(buffOpen));
+    check('詳細を開いても高さは頭打ち', !!buffOpen && buffOpen.h <= 110, JSON.stringify({h:buffOpen&&buffOpen.h}));
+    // ★伸びてよいのは**3段まで**(2026-09-22 ユーザー指示「最大3列ぐらいまで伸びて
+    //   あとはスクロールでみれるようにして」)。札は23px、2段目からの行送りは26pxなので
+    //   3段 = 23 + 26×2 = 75px。上限を切らないと、舞台の低い端末で敵の絵が切れ、
+    //   左下のステータスが絵に重なる(実測: 375×667 で舞台が120pxまで潰れた)
+    check('札が増えても3段までで止まる',
+      !!buffOpen && !!buffOpen.grown && buffOpen.grown.maxH === '75px' && buffOpen.grown.listH <= 75,
+      JSON.stringify(buffOpen && buffOpen.grown));
+    check('入り切らないぶんはスクロールで見られる',
+      !!buffOpen && !!buffOpen.grown && buffOpen.grown.overflow === 'auto' && buffOpen.grown.scrollable === true,
+      JSON.stringify(buffOpen && buffOpen.grown));
     await page.evaluate(() => { document.querySelector('[data-battle-buff-toggle]')?.click(); });
     await page.waitForTimeout(300);
 

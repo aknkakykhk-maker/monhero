@@ -750,9 +750,17 @@ function BattleScreen({
             return (
               <div data-battle-buffs={chips.length} data-battle-buffs-mode={buffDetail?'detail':'icon'}
                 className={`shrink-0 w-full max-w-[360px] mx-auto px-2 pt-1 pb-0.5 bg-slate-950 relative z-[40] ${focusedCard?'invisible':'visible'}`}>
+                {/* 「詳細」を開いたときに伸びてよいのは**3段まで**(2026-09-22 ユーザー指示
+                    「最大3列ぐらいまで伸びてあとはスクロールでみれるようにして」)。
+                    ★札は23px、2段目からの行送りは26px。3段 = 23 + 26×2 = 75px。
+                      それより下はこの中で縦スクロールする(スクロールバーは mh-scroll の6px)。
+                    ★伸びたぶんは敵の舞台が縮む。上限を切らないと、舞台の低い端末で絵が切れ、
+                      左下のステータスが絵に重なる(実測: 375×667 で舞台が120pxまで潰れた)。
+                    ★アイコン表示のほうは何個増えても1行のまま(横スクロール)なので、
+                      ふだんは距離帯との位置関係が動かない */}
                 <div className="flex items-start gap-1">
                   {buffDetail?(
-                    <div data-battle-buff-list className="flex-1 min-w-0 flex flex-wrap justify-center gap-1 overflow-y-auto mh-scroll" style={{maxHeight:'92px'}}>
+                    <div data-battle-buff-list className="flex-1 min-w-0 flex flex-wrap justify-center gap-1 overflow-y-auto mh-scroll" style={{maxHeight:'75px'}}>
                       {chips.map(c=>(<div key={c.key} className={`text-[11px] font-black bg-black/60 px-2 py-0.5 rounded border flex items-center gap-1 shadow-lg ${c.tone}${c.pulse?' animate-pulse':''}`}>{c.mark} {c.label}{c.value?` ${c.value}`:''}</div>))}
                     </div>
                   ):(
