@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f85a1c37fd128cbf
+// source-sha256: 6101fbd33d232e03
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6feab44441b50b0e
+// generated-sha256: 6a864257a9a79b84
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-22 20:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-22 20:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -27321,8 +27321,13 @@ const withTacticsTarget = (intent, units, random = Math.random, bias = TACTICS_T
     ...intent,
     targetName: TACTICS_ALL_TARGET_LABEL
   };
-  if (intent.variant === 'sweep') return intent;
-  const targetSlot = chooseTacticsTarget(units, random, bias);
+  // ★間合い攻撃も「誰を狙うか」を決める(2026-09-22 ユーザー指示「誰に攻撃するかが大事」)。
+  //   予告した間合いに立っている子がいればその子(敵と同じ距離なので当たり)。
+  //   いなければ、ほかの技と同じ決め方で1体選ぶ(そのときは距離が違うので威力が落ちる)。
+  //   以前はここで何も決めず、狙い先を「予告した間合いにいる子」から探していたため、
+  //   誰も立っていない間合いだと攻撃そのものが起きなかった
+  const sweepSlot = intent.variant === 'sweep' && Number.isInteger(intent.sweepDist) && tacticsAliveSlots(units).includes(intent.sweepDist) ? intent.sweepDist : null;
+  const targetSlot = sweepSlot != null ? sweepSlot : chooseTacticsTarget(units, random, bias);
   return targetSlot == null ? intent : {
     ...intent,
     targetSlot,
@@ -27330,6 +27335,26 @@ const withTacticsTarget = (intent, units, random = Math.random, bias = TACTICS_T
   };
 };
 // その行動が実際に当たるスロット。予告と実行で同じ関数を通すので食い違わない
+// 間合い攻撃が「当たり」(×TACTICS_SWEEP_MULT)になる条件。
+// ★見るのは2つだけ。**敵がどの距離にいるか**と、**狙われた子がどの距離にいるか**
+//   (2026-09-22 ユーザー指示「誰に攻撃するかが大事で、それに対して敵がどの距離で
+//    狙われた味方がどの距離かを見るんだよ」)。同じならフルの威力、違えば威力が落ちる。
+//   味方の枠＝その子の間合いなので、狙われた子の距離は targetSlot そのもの。
+// ★予告した間合い(sweepDist)は「敵がどこから薙ぐか」の見出しであって、当たり外れの材料ではない。
+//   ここを sweepDist で見ていたころは、その間合いに誰も立っていないと狙いが空になり、
+//   ダメージそのものが起きなかった。
+// ★狙いが付いていない予告(既存5モード・古い保存)は true。ここで既存モードの振る舞いを変えない
+const isTacticsSweepOnSpot = (intent, units, enemyDist) => {
+  if (!intent || intent.variant !== 'sweep') return true;
+  if (!Number.isInteger(intent.targetSlot)) return true;
+  return enemyDist === intent.targetSlot;
+};
+// 外れた間合い攻撃は威力を missValue へ落とす。★予告(画面)と実行(processTurn)が
+// この1つを通るので、「予定より減った・増えた」が起きない
+const tacticsSweepIntent = (intent, units, enemyDist) => intent && intent.variant === 'sweep' && !isTacticsSweepOnSpot(intent, units, enemyDist) ? {
+  ...intent,
+  value: Math.max(0, Math.floor(Number(intent.missValue) || 0))
+} : intent;
 const tacticsIntentTargets = (intent, units, enemyDist = null) => {
   const alive = tacticsAliveSlots(units);
   if (!intent || !alive.length) return [];
@@ -27339,9 +27364,14 @@ const tacticsIntentTargets = (intent, units, enemyDist = null) => {
   //   2026-09-22 ユーザー指摘「近距離にいる場合は1.2倍攻撃だけど敵を移動させて中距離とかに
   //   させたら狙われてるモンスターが0.4倍攻撃に変わるイメージ」。
   //   ここを enemyDist(いまの敵の間合い)にすると、ずらした先の**別の子**が食らってしまう
-  if (intent.variant === 'sweep') {
+  // ★間合い攻撃も、ほかの技と同じく「狙う子」(targetSlot)で決まる(2026-09-22 ユーザー指示)。
+  //   狙いが付いていない予告(古い保存など)だけ、不発にしないための保険を通す
+  if (intent.variant === 'sweep' && !Number.isInteger(intent.targetSlot)) {
     const dist = Number.isInteger(intent.sweepDist) ? intent.sweepDist : enemyDist;
-    return alive.filter(index => index === dist);
+    const onSpot = alive.filter(index => index === dist);
+    if (onSpot.length) return onSpot;
+    const nearest = alive.reduce((best, index) => best === null || Math.abs(index - dist) < Math.abs(best - dist) ? index : best, null);
+    return nearest === null ? [] : [nearest];
   }
   return Number.isInteger(intent.targetSlot) && alive.includes(intent.targetSlot) ? [intent.targetSlot] : [];
 };
@@ -38158,10 +38188,14 @@ function BattleScreen({
   const plannedHitFor = slotIdx => {
     const none = {
       taken: 0,
-      parts: []
+      parts: [],
+      raw: 0
     };
     if (!enemyIntent) return none;
-    const raw = getIncomingDamageBeforeTurnReduction(enemyIntent, slotIdx);
+    // ★外れた間合い攻撃は予告の時点でも威力を落とす(実行と同じ tacticsSweepIntent を通す)。
+    //   予告だけ1.2倍のままだと「予定より少なかった」になる
+    const planIntent = Array.isArray(tacticsUnits) ? tacticsSweepIntent(enemyIntent, tacticsUnits, enemyDist) : enemyIntent;
+    const raw = getIncomingDamageBeforeTurnReduction(planIntent, slotIdx);
     if (!(raw > 0)) return none;
     const hits = enemyIntent.variant === 'rush' ? Math.max(1, Math.floor(Number(enemyIntent.hits) || 1)) : 1;
     let guard = 0,
@@ -38195,12 +38229,16 @@ function BattleScreen({
     const taken = applyTurnDamageReduction(hit.taken, slotIdx);
     if (!(taken > 0)) return {
       taken: 0,
-      parts: []
+      parts: [],
+      raw
     };
     // ★発ごとの通る量をそのまま出す。ガードが効いた発は小さく、効いていない発は大きい。
     //   止まった発(0)は数字を出さないので、数字の数＝これから食らう回数
+    // ★raw(軽減前の合計)も返す。連撃は1発ずつ並べると**合計がどこにも出ない**ので、
+    //   「結局いくつ食らうのか」が読めなかった(2026-09-22 ユーザー指摘)
     return {
       taken,
+      raw,
       parts: hits > 1 ? scaleTacticsHitAmounts((hit.amounts || []).filter(value => value > 0), taken) : [taken]
     };
   };
@@ -38581,6 +38619,10 @@ function BattleScreen({
     const plannedDmg = plannedHit.taken;
     // 連撃は「129・130」と1発ずつ。1発の技は今までどおり数字ひとつ
     const plannedText = plannedHit.parts.join('・');
+    // ★連撃は1発ずつ並べると合計がどこにも出ない(2026-09-22 ユーザー指摘「連撃ダメージで
+    //   合計ダメージと軽減後の合計ダメージがないといくつくらうかわからない」)。
+    //   ガードやターン軽減が効いていれば「軽減前→軽減後」で、効き目もそのまま読める
+    const plannedTotalText = plannedHit.raw > plannedDmg ? `${plannedHit.raw}→${plannedDmg}` : `${plannedDmg}`;
     // ★全体攻撃は受ける量が1体ずつ違う。1つの数字にまとめると、
     //   どの子がどれだけ減るのか分からなくなるので、吹き出しには出さず枠ごとに出す
     const showPlannedInBubble = !enemyIntent.targetsAll;
@@ -38608,8 +38650,12 @@ function BattleScreen({
     }, intentTitle), aimedName ? /*#__PURE__*/React.createElement("div", {
       className: "mt-0.5 truncate text-[9px] font-bold leading-none opacity-90"
     }, "\uD83C\uDFAF", aimedName) : null, rawDmg > 0 && showPlannedInBubble && plannedText ? /*#__PURE__*/React.createElement("div", {
-      className: "mt-1 rounded bg-black/55 px-1 py-1 text-center text-[12px] font-black leading-none tabular-nums"
-    }, plannedText) : null);
+      className: "mt-1 rounded bg-black/55 px-1 py-1 text-center leading-none"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-[12px] font-black tabular-nums"
+    }, plannedTotalText), plannedHit.parts.length > 1 ? /*#__PURE__*/React.createElement("div", {
+      className: "mt-0.5 text-[9px] font-bold tabular-nums text-white/80"
+    }, plannedText) : null) : null);
   })(), turnCount === 1 && battleSoulMasus.some(m => normalizeSoulRankStage(m.soulRankStage) > 0) && !isBusy && /*#__PURE__*/React.createElement("div", {
     "data-soul-battle-start-summary": true,
     className: "absolute left-1/2 top-2 -translate-x-1/2 z-10 max-w-[62%] truncate rounded-full border border-sky-400/30 bg-sky-950/75 px-2 py-1 text-[10px] font-black text-sky-100 pointer-events-none"
@@ -39941,6 +39987,10 @@ function BattleScreen({
       const slotPlannedHit = plannedHitFor(i);
       const slotPlanned = slotPlannedHit.taken;
       const slotPlannedText = slotPlannedHit.parts.join('・');
+      // ★連撃は1発ずつ並べると合計が読めない(2026-09-22 ユーザー指摘)。
+      //   いちばん知りたいのは「結局いくつ食らうか」なので、合計を上の行に置き、
+      //   1発ずつの内訳をその下へ小さく添える。1発の技は今までどおり1行
+      const slotMultiHit = slotPlannedHit.parts.length > 1;
       return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
         "data-tactics-aimed-ring": true,
         className: "absolute inset-[2px] rounded-lg border-2 border-red-400/80 pointer-events-none z-[44] animate-pulse",
@@ -39949,8 +39999,11 @@ function BattleScreen({
         }
       }), /*#__PURE__*/React.createElement("div", {
         "data-tactics-aimed-damage": slotPlanned,
-        className: "absolute top-[21px] right-0.5 z-[66] rounded-full border border-red-300 bg-red-950 px-1 py-0.5 text-[9px] font-black leading-none text-red-100 shadow-[0_0_8px_rgba(239,68,68,.85)] animate-pulse"
-      }, "\uD83C\uDFAF", slotPlannedText ? ` -${slotPlannedText}` : ''));
+        "data-tactics-aimed-parts": slotMultiHit ? slotPlannedText : undefined,
+        className: `absolute top-[21px] right-0.5 z-[66] ${slotMultiHit ? 'rounded-lg' : 'rounded-full'} border border-red-300 bg-red-950 px-1 py-0.5 text-[9px] font-black leading-none text-red-100 shadow-[0_0_8px_rgba(239,68,68,.85)] animate-pulse flex flex-col items-center gap-0.5`
+      }, /*#__PURE__*/React.createElement("span", null, "\uD83C\uDFAF", slotPlanned > 0 ? ` -${slotPlanned}` : ''), slotMultiHit && /*#__PURE__*/React.createElement("span", {
+        className: "text-[8px] font-bold text-red-200/90"
+      }, slotPlannedText)));
     })(), distanceBroken && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
       className: "absolute inset-0 rounded-lg pointer-events-none z-[15]",
       style: {
@@ -52919,11 +52972,21 @@ function MonsterHeroGame() {
   // 既存の勇者特性/ききで許される枚数を土台にし、連携で増えた「追加の1枚」だけは
   // 連携を持つ本人へしか割り当てられない。全体cardLimitが1枚増えるだけなので複数所持でも重複しない。
   const slotMaxUses = (mon, slotIdx = null) => {
-    // ★タクティクスバトルは「持っている子が自分だけ1枚多く使える」(2026-09-20 ユーザー指示)。
-    //   勇者モンにしていなくても、盤面にいればその子の枚数が増える
-    const bonusOwner = isTacticsMode(runMode) ? heroCardBonusOf(mon?.id) > 0 : heroCardBonusOf(mainHero?.id) > 0 && mon?.id === mainHero?.id;
-    const base = bonusOwner || kikiCardBonus > 0 ? baseCardLimit : 1;
     const coordinationHolder = Number.isInteger(slotIdx) && soulCoordinationSlots.includes(slotIdx);
+    // ★タクティクスバトルは「ふつう1枚。👑(ハム・剣士モッチー)・きき・連携を持つ子だけ
+    //   1枚ずつ増える」(設計 4.6)。勇者モンにしていなくても、盤面にいればその子の枚数が増える。
+    // ⚠️ 足すのは**その子のぶんだけ**。baseCardLimit を土台にしていたので、盤面に👑が2体いると
+    //   その合計(heroCardBonus)まで1体に乗り、剣士モッチー1体で5枚まで使えていた
+    //   (2026-09-22 ユーザー指摘「剣士モッチーで攻撃カードが3枚使えた」)。
+    //   baseCardLimit は**そのターンに盤面ぜんぶで何枚使えるか**であって、1体ぶんの上限ではない
+    if (isTacticsMode(runMode)) {
+      const own = 1 + heroCardBonusOf(mon?.id) + kikiCardBonus + (coordinationHolder ? soulCoordinationCardBonus : 0);
+      return Math.min(cardLimit, own);
+    }
+    // 既存5モードは今までどおり。勇者モン本人ときき中は、そのターンの総数まで重ねられる
+    // (仕様 8.触らないもの。BATTLE_SYSTEM.md「剣士モッチーのカードだけ同じターンに複数枚」)
+    const bonusOwner = heroCardBonusOf(mainHero?.id) > 0 && mon?.id === mainHero?.id;
+    const base = bonusOwner || kikiCardBonus > 0 ? baseCardLimit : 1;
     return Math.min(cardLimit, base + (coordinationHolder ? soulCoordinationCardBonus : 0));
   };
   const getCardGuts = (card, slotIdx = null) => {
@@ -55456,18 +55519,20 @@ function MonsterHeroGame() {
         // 距離撃で動かした先は setEnemyDist の反映を待たないため、呼び出し元が確定させた
         // 移動先(forcedMoveTarget)を優先して見る
         const actingEnemyDist = Number.isInteger(immediateEffects.forcedMoveTarget) ? immediateEffects.forcedMoveTarget : enemyDist;
-        const sweptAway = intent.variant === 'sweep' && Number.isInteger(intent.sweepDist) && actingEnemyDist !== intent.sweepDist;
-        const actingIntent = sweptAway ? {
-          ...intent,
-          value: Math.max(0, Math.floor(Number(intent.missValue) || 0))
-        } : intent;
+        // ★外れの決まりは1か所(isTacticsSweepOnSpot)。敵をずらしたときだけでなく、
+        //   予告した間合いに味方が立っていないときも「外れ」＝威力が落ちる
+        //   (2026-09-22 ユーザー指摘「敵が狙った距離にこっちがいない場合は
+        //    ダメージ喰らわないままになってた」)。0になるのではなく、下がる
+        const sweptAway = intent.variant === 'sweep' && Number.isInteger(intent.sweepDist) && !isTacticsSweepOnSpot(intent, tacticsUnitsRef.current, actingEnemyDist);
+        const actingIntent = tacticsSweepIntent(intent, tacticsUnitsRef.current, actingEnemyDist);
         // 表示と同じ guardFlat / guardMult 集計を実効丈夫さへ適用する。
         const baseGuardValue = immediateEffects.guardFlat > 0 || immediateEffects.guardMult > 0 ? Math.floor(immediateEffects.guardFlat + effectiveDef * immediateEffects.guardMult) : 0;
         // ★連撃は新モードの行動表にしかないので、ここ(既存モードの経路)には来ない。
         //   1ヒットぶんだけ受け止める数え方は、下の新モードの分岐が持つ
         const guardValue = intent.variant === 'pierce' ? 0 : baseGuardValue;
+        // ★「かわした」は嘘になる(外れても0.4倍は当たる)。何が起きたかをそのまま書く
         if (sweptAway) {
-          addPopup('間合い攻撃をかわした！', 'hero', 'text-cyan-300 font-black text-xl drop-shadow-md');
+          addPopup('間合いが外れた！ 威力ダウン', 'hero', 'text-cyan-300 font-black text-xl drop-shadow-md');
           await battleWait(600);
         } else if (intent.variant === 'pierce' && baseGuardValue > 0) {
           addPopup('貫通！ ガードが効かない', 'enemy', 'text-rose-300 font-black text-xl drop-shadow-md');

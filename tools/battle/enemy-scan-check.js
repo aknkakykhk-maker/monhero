@@ -153,11 +153,11 @@ check('準備の予告に必殺技のオーラを流用しない',
 // ためるターンに攻撃の突進(mooAttackLunge)が出てしまう
 check('ムーの準備は突進せず、その場で溜める',
   has("enemyAttackFx?.kind==='charge'?'mooChargeGather") && has('@keyframes mooChargeGather'));
-// 解析ボタンは、吹き出し(画面の上から22%・右寄せ)と重ならない左の列へ移した(2026-09-22
-// ユーザー指示「敵周りのボタンを整理」)。右へ戻すとまた重なるので、左にあることを見張る
-check('解析ボタンは左の列にある',
-  /data-battle-side-buttons className="absolute left-\d/.test(src)
-    && /onClick=\{\(\)=>setShowEnemyInfo\(true\)\} className="flex w-\[\d+px\]/.test(src));
+// 解析ボタンは舞台の**右上**(2026-09-22 ユーザー指示「解析ボタンを右欄に置けばいい」)。
+// 一度は左の列へまとめたが、右を空けて敵の行動予測を置くことにしたので右へ戻した。
+// 吹き出し(画面の上から22%・右寄せ)とぶつからないことは move-hint-layout-check が位置の計算で見る
+check('解析ボタンは舞台の右上にある',
+  /onClick=\{\(\)=>setShowEnemyInfo\(true\)\}[^\n]{0,200}?absolute right-2 top-1\b/.test(src));
 // スタン・無効化・眼力・距離撃で敵の行動を止めたときは、その行動を「やらなかった」ことにする。
 // ここが抜けていると、必殺技の準備をスタンで止めたのに次のターンだけ必殺技が飛んでくる
 check('止められたターンは行動しなかった扱いにする',

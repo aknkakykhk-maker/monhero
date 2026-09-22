@@ -117,9 +117,12 @@ function BattleScreen({
   //   受けたあとの表示と同じ splitTacticsHitAmounts を通すので、予告と実際で割り方がそろう。
   //   ガードで止めた発は通らないので、**通る発の数だけ**に割る(数字の数＝これから食らう回数)
   const plannedHitFor = (slotIdx) => {
-    const none = { taken: 0, parts: [] };
+    const none = { taken: 0, parts: [], raw: 0 };
     if (!enemyIntent) return none;
-    const raw = getIncomingDamageBeforeTurnReduction(enemyIntent, slotIdx);
+    // ★外れた間合い攻撃は予告の時点でも威力を落とす(実行と同じ tacticsSweepIntent を通す)。
+    //   予告だけ1.2倍のままだと「予定より少なかった」になる
+    const planIntent = Array.isArray(tacticsUnits) ? tacticsSweepIntent(enemyIntent, tacticsUnits, enemyDist) : enemyIntent;
+    const raw = getIncomingDamageBeforeTurnReduction(planIntent, slotIdx);
     if (!(raw > 0)) return none;
     const hits = enemyIntent.variant === 'rush' ? Math.max(1, Math.floor(Number(enemyIntent.hits) || 1)) : 1;
     let guard = 0, guardHits = 1;
@@ -147,10 +150,12 @@ function BattleScreen({
     }
     const hit = resolveTacticsGuardedHit(raw, hits, guard, guardHits);
     const taken = applyTurnDamageReduction(hit.taken, slotIdx);
-    if (!(taken > 0)) return { taken: 0, parts: [] };
+    if (!(taken > 0)) return { taken: 0, parts: [], raw };
     // ★発ごとの通る量をそのまま出す。ガードが効いた発は小さく、効いていない発は大きい。
     //   止まった発(0)は数字を出さないので、数字の数＝これから食らう回数
-    return { taken, parts: hits > 1 ? scaleTacticsHitAmounts((hit.amounts || []).filter(value => value > 0), taken) : [taken] };
+    // ★raw(軽減前の合計)も返す。連撃は1発ずつ並べると**合計がどこにも出ない**ので、
+    //   「結局いくつ食らうのか」が読めなかった(2026-09-22 ユーザー指摘)
+    return { taken, raw, parts: hits > 1 ? scaleTacticsHitAmounts((hit.amounts || []).filter(value => value > 0), taken) : [taken] };
   };
   const plannedDamageFor = (slotIdx) => plannedHitFor(slotIdx).taken;
   return (
@@ -315,6 +320,10 @@ function BattleScreen({
             const plannedDmg=plannedHit.taken;
             // 連撃は「129・130」と1発ずつ。1発の技は今までどおり数字ひとつ
             const plannedText=plannedHit.parts.join('・');
+            // ★連撃は1発ずつ並べると合計がどこにも出ない(2026-09-22 ユーザー指摘「連撃ダメージで
+            //   合計ダメージと軽減後の合計ダメージがないといくつくらうかわからない」)。
+            //   ガードやターン軽減が効いていれば「軽減前→軽減後」で、効き目もそのまま読める
+            const plannedTotalText=plannedHit.raw>plannedDmg?`${plannedHit.raw}→${plannedDmg}`:`${plannedDmg}`;
             // ★全体攻撃は受ける量が1体ずつ違う。1つの数字にまとめると、
             //   どの子がどれだけ減るのか分からなくなるので、吹き出しには出さず枠ごとに出す
             const showPlannedInBubble=!enemyIntent.targetsAll;
@@ -341,7 +350,10 @@ function BattleScreen({
                 <div className="mt-0.5 text-[11px] font-black leading-tight">{intentTitle}</div>
                 {aimedName?<div className="mt-0.5 truncate text-[9px] font-bold leading-none opacity-90">🎯{aimedName}</div>:null}
                 {rawDmg>0&&showPlannedInBubble&&plannedText?(
-                  <div className="mt-1 rounded bg-black/55 px-1 py-1 text-center text-[12px] font-black leading-none tabular-nums">{plannedText}</div>
+                  <div className="mt-1 rounded bg-black/55 px-1 py-1 text-center leading-none">
+                    <div className="text-[12px] font-black tabular-nums">{plannedTotalText}</div>
+                    {plannedHit.parts.length>1?<div className="mt-0.5 text-[9px] font-bold tabular-nums text-white/80">{plannedText}</div>:null}
+                  </div>
                 ):null}
               </div>
             );
@@ -1124,12 +1136,16 @@ function BattleScreen({
                   const slotPlannedHit=plannedHitFor(i);
                   const slotPlanned=slotPlannedHit.taken;
                   const slotPlannedText=slotPlannedHit.parts.join('・');
+                  // ★連撃は1発ずつ並べると合計が読めない(2026-09-22 ユーザー指摘)。
+                  //   いちばん知りたいのは「結局いくつ食らうか」なので、合計を上の行に置き、
+                  //   1発ずつの内訳をその下へ小さく添える。1発の技は今までどおり1行
+                  const slotMultiHit=slotPlannedHit.parts.length>1;
                   return (<>
                     <div data-tactics-aimed-ring className="absolute inset-[2px] rounded-lg border-2 border-red-400/80 pointer-events-none z-[44] animate-pulse" style={{boxShadow:'inset 0 0 10px rgba(239,68,68,.55)'}}></div>
                     {/* ★名前の行(上から18px)には**かぶせない**(2026-09-22 ユーザー指摘「1番の枠だけ名前が
                         予想ダメージのバッジに隠れる」)。枠の外へ出すと、すぐ上の強化の札にぶつかるので、
                         名前の行の下・絵の右上へ置く。絵は64pxで枠より小さいので、頭にはかからない */}
-                    <div data-tactics-aimed-damage={slotPlanned} className="absolute top-[21px] right-0.5 z-[66] rounded-full border border-red-300 bg-red-950 px-1 py-0.5 text-[9px] font-black leading-none text-red-100 shadow-[0_0_8px_rgba(239,68,68,.85)] animate-pulse">🎯{slotPlannedText?` -${slotPlannedText}`:''}</div>
+                    <div data-tactics-aimed-damage={slotPlanned} data-tactics-aimed-parts={slotMultiHit?slotPlannedText:undefined} className={`absolute top-[21px] right-0.5 z-[66] ${slotMultiHit?'rounded-lg':'rounded-full'} border border-red-300 bg-red-950 px-1 py-0.5 text-[9px] font-black leading-none text-red-100 shadow-[0_0_8px_rgba(239,68,68,.85)] animate-pulse flex flex-col items-center gap-0.5`}><span>🎯{slotPlanned>0?` -${slotPlanned}`:''}</span>{slotMultiHit&&<span className="text-[8px] font-bold text-red-200/90">{slotPlannedText}</span>}</div>
                   </>);
                 })()}
                 {distanceBroken&&<>

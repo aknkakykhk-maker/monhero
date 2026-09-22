@@ -461,11 +461,38 @@ const TACTICS_TARGETED_TYPES = ['ATTACK', 'SPECIAL'];
 const withTacticsTarget = (intent, units, random = Math.random, bias = TACTICS_TARGET_LOW_HP_BIAS) => {
   if (!intent || !TACTICS_TARGETED_TYPES.includes(intent.type)) return intent;
   if (intent.targetsAll) return { ...intent, targetName: TACTICS_ALL_TARGET_LABEL };
-  if (intent.variant === 'sweep') return intent;
-  const targetSlot = chooseTacticsTarget(units, random, bias);
+  // ★間合い攻撃も「誰を狙うか」を決める(2026-09-22 ユーザー指示「誰に攻撃するかが大事」)。
+  //   予告した間合いに立っている子がいればその子(敵と同じ距離なので当たり)。
+  //   いなければ、ほかの技と同じ決め方で1体選ぶ(そのときは距離が違うので威力が落ちる)。
+  //   以前はここで何も決めず、狙い先を「予告した間合いにいる子」から探していたため、
+  //   誰も立っていない間合いだと攻撃そのものが起きなかった
+  const sweepSlot = intent.variant === 'sweep' && Number.isInteger(intent.sweepDist)
+    && tacticsAliveSlots(units).includes(intent.sweepDist) ? intent.sweepDist : null;
+  const targetSlot = sweepSlot != null ? sweepSlot : chooseTacticsTarget(units, random, bias);
   return targetSlot == null ? intent : { ...intent, targetSlot, targetName: tacticsTargetName(units, targetSlot) };
 };
 // その行動が実際に当たるスロット。予告と実行で同じ関数を通すので食い違わない
+// 間合い攻撃が「当たり」(×TACTICS_SWEEP_MULT)になる条件。
+// ★見るのは2つだけ。**敵がどの距離にいるか**と、**狙われた子がどの距離にいるか**
+//   (2026-09-22 ユーザー指示「誰に攻撃するかが大事で、それに対して敵がどの距離で
+//    狙われた味方がどの距離かを見るんだよ」)。同じならフルの威力、違えば威力が落ちる。
+//   味方の枠＝その子の間合いなので、狙われた子の距離は targetSlot そのもの。
+// ★予告した間合い(sweepDist)は「敵がどこから薙ぐか」の見出しであって、当たり外れの材料ではない。
+//   ここを sweepDist で見ていたころは、その間合いに誰も立っていないと狙いが空になり、
+//   ダメージそのものが起きなかった。
+// ★狙いが付いていない予告(既存5モード・古い保存)は true。ここで既存モードの振る舞いを変えない
+const isTacticsSweepOnSpot = (intent, units, enemyDist) => {
+  if (!intent || intent.variant !== 'sweep') return true;
+  if (!Number.isInteger(intent.targetSlot)) return true;
+  return enemyDist === intent.targetSlot;
+};
+// 外れた間合い攻撃は威力を missValue へ落とす。★予告(画面)と実行(processTurn)が
+// この1つを通るので、「予定より減った・増えた」が起きない
+const tacticsSweepIntent = (intent, units, enemyDist) =>
+  (intent && intent.variant === 'sweep' && !isTacticsSweepOnSpot(intent, units, enemyDist))
+    ? { ...intent, value: Math.max(0, Math.floor(Number(intent.missValue) || 0)) }
+    : intent;
+
 const tacticsIntentTargets = (intent, units, enemyDist = null) => {
   const alive = tacticsAliveSlots(units);
   if (!intent || !alive.length) return [];
@@ -475,9 +502,15 @@ const tacticsIntentTargets = (intent, units, enemyDist = null) => {
   //   2026-09-22 ユーザー指摘「近距離にいる場合は1.2倍攻撃だけど敵を移動させて中距離とかに
   //   させたら狙われてるモンスターが0.4倍攻撃に変わるイメージ」。
   //   ここを enemyDist(いまの敵の間合い)にすると、ずらした先の**別の子**が食らってしまう
-  if (intent.variant === 'sweep') {
+  // ★間合い攻撃も、ほかの技と同じく「狙う子」(targetSlot)で決まる(2026-09-22 ユーザー指示)。
+  //   狙いが付いていない予告(古い保存など)だけ、不発にしないための保険を通す
+  if (intent.variant === 'sweep' && !Number.isInteger(intent.targetSlot)) {
     const dist = Number.isInteger(intent.sweepDist) ? intent.sweepDist : enemyDist;
-    return alive.filter(index => index === dist);
+    const onSpot = alive.filter(index => index === dist);
+    if (onSpot.length) return onSpot;
+    const nearest = alive.reduce((best, index) =>
+      (best === null || Math.abs(index - dist) < Math.abs(best - dist)) ? index : best, null);
+    return nearest === null ? [] : [nearest];
   }
   return Number.isInteger(intent.targetSlot) && alive.includes(intent.targetSlot) ? [intent.targetSlot] : [];
 };

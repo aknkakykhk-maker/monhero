@@ -6,7 +6,7 @@ const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分�
 //   ② 狙われた子だけがライフを減らし、0になったその子だけが倒れる
 //   ③ 倒れた子はカードを使えない。戻す手段は2つあり、戻るライフが違う
 //   ④ 全員倒れたときだけ全滅
-//   ⑤ 敵はライフの少ない子を狙いやすい。全体攻撃と間合い攻撃は狙いを決めない
+//   ⑤ 敵はライフの少ない子を狙いやすい。全体攻撃だけは狙いを決めない
 //   ⑥ 壊れた値が来ても落ちない
 //   ⑦ バトル本体へ結線されている(盤面が slots と一緒に動き、予告へ狙いが乗る)
 //   ⑧ パーティのライフは盤面の合計。増減が正しく振り分けられる(段階5)
@@ -48,6 +48,7 @@ vm.runInContext(
     + 'createTacticsUnit,normalizeTacticsUnit,applyTacticsDamage,healTacticsUnit,reviveTacticsUnit,'
     + 'payTacticsGuts,recoverTacticsGuts,tacticsAliveSlots,tacticsDownedSlots,isTacticsWipedOut,'
     + 'canTacticsSlotAct,chooseTacticsTarget,withTacticsTarget,tacticsIntentTargets,'
+    + 'isTacticsSweepOnSpot,tacticsSweepIntent,'
     + 'tacticsTotalHp,tacticsTotalMaxHp,tacticsTotalBaseMaxHp,scaleTacticsUnits,scaleTacticsUnitMaxHp,'
     + 'damageTacticsTargets,healTacticsBoard,rateHealTacticsBoard,rateHealTacticsAt,'
     + 'tacticsMaxDef,selfDamageTacticsBoard,'
@@ -169,8 +170,12 @@ check('全体攻撃は「全員」と出す',
   api.withTacticsTarget({ type: 'ATTACK', targetsAll: true }, board, () => 0).targetName === '全員');
 check('名前が無い子でも呼び名が空にならない',
   !!api.withTacticsTarget(attack, [api.createTacticsUnit({ id: 'X', baseHp: 10 }), null, null, null], () => 0).targetName);
-check('間合い攻撃は狙いを決めない（間合いで当たる相手が決まる）',
-  api.withTacticsTarget({ type: 'ATTACK', variant: 'sweep', sweepDist: 2 }, board, () => 0).targetSlot === undefined);
+// ★間合い攻撃も「誰を狙うか」を決める(2026-09-22 ユーザー指示「誰に攻撃するかが大事」)。
+//   予告した間合いに立っている子がいればその子、いなければほかの技と同じ決め方で1体
+check('間合い攻撃も狙いを決める',
+  api.withTacticsTarget({ type: 'ATTACK', variant: 'sweep', sweepDist: 2 }, board, () => 0).targetSlot === 2);
+check('その間合いに誰も立っていなければ、ほかの技と同じ決め方で選ぶ',
+  Number.isInteger(api.withTacticsTarget({ type: 'ATTACK', variant: 'sweep', sweepDist: 1 }, board, () => 0).targetSlot));
 
 // --- 実際に当たる相手 ---
 check('単体狙いは1体だけに当たる',
@@ -632,7 +637,19 @@ check('置けるかの判定も画面へ渡す', has('tacticsCanAssign={tacticsC
     hasScreen("const plannedText=plannedHit.parts.join('・');")
       && hasScreen("const slotPlannedText=slotPlannedHit.parts.join('・');")
       && hasScreen('>{plannedText}</div>')
-      && hasScreen('` -${slotPlannedText}`'));
+      // ★枠のほうは 2026-09-22 に「🎯-合計」と1発ずつの内訳の2段になった(main 側の直し)
+      && hasScreen('>{slotPlannedText}</span>'));
+  // ★1発ずつ並べると**合計がどこにも出ない**ので「結局いくつ食らうか」が読めなかった
+  //   (2026-09-22 ユーザー指摘「連撃ダメージで合計ダメージと軽減後の合計ダメージが
+  //    ないといくつくらうかわからない」)。ガードが効いていれば「軽減前→軽減後」で出す。
+  // ★同じ日に予告を右下の札へ移したので、合計は札の大きい字、1発ずつの内訳はその下の小さい字になった
+  //   (吹き出し1本に詰めていたころの plannedBubbleText は、札の幅100pxでは折り返すのでやめた)
+  check('連撃は合計も出す',
+    hasScreen("const plannedTotalText=plannedHit.raw>plannedDmg?`${plannedHit.raw}→${plannedDmg}`:`${plannedDmg}`;")
+      && hasScreen('>{plannedTotalText}</div>'));
+  check('軽減前の合計も持ち歩く',
+    hasScreen('return { taken, raw, parts: hits > 1 ? scaleTacticsHitAmounts')
+      && hasScreen('const none = { taken: 0, parts: [], raw: 0 };'));
   // ★ガードの枚数を数えないと、2枚構えても連撃ガードにならない
   check('予定ダメージもガードの枚数を数える', hasScreen('entry.cards += 1;'));
   // ★全体攻撃は立っている全員に当たり、受ける量は**その子の丈夫さ**で1体ずつ変わる。
@@ -641,9 +658,13 @@ check('置けるかの判定も画面へ渡す', has('tacticsCanAssign={tacticsC
   check('枠ごとにまとめてから数える',
     hasScreen('const plannedGuardBySlot = () => {')
       && hasScreen("guard = enemyIntent.variant === 'pierce' ? 0 : tacticsSlotGuardValue(bySlot, slotIdx);"));
+  // ★枠は「合計」を上の行に、1発ずつの内訳をその下へ小さく添える。
+  //   いちばん知りたいのは「結局いくつ食らうか」なので、合計を先に読ませる
   check('狙われている枠にその子の予定ダメージを出す',
     hasScreen('data-tactics-aimed-damage={slotPlanned}')
-      && hasScreen("🎯{slotPlannedText?` -${slotPlannedText}`:''}"));
+      && hasScreen("<span>🎯{slotPlanned>0?` -${slotPlanned}`:''}</span>")
+      && hasScreen('{slotMultiHit&&<span className="text-[8px] font-bold text-red-200/90">{slotPlannedText}</span>}')
+      && hasScreen('const slotMultiHit=slotPlannedHit.parts.length>1;'));
   // ★1つの数字にまとめると、どの子がどれだけ減るのか分からなくなる
   check('全体攻撃は札に1つの数字を出さない',
     hasScreen('const showPlannedInBubble=!enemyIntent.targetsAll;')
@@ -1386,6 +1407,93 @@ check('固有技の効果も枠の印に出る',
   const quickRef = plan.slice(plan.indexOf('### 4.0 効き先の早見表'), plan.indexOf('### 4.1 '));
   const missing = keys.filter(key => !quickRef.includes(`\`${key}\``));
   check('枠ごとのバフはすべて早見表に載っている', missing.length === 0, missing.join(',') || 'すべてある');
+}
+
+// --- ㊲ 間合い攻撃は「誰を狙うか」を決めてから、距離を見て威力が決まる ---
+// ★2026-09-22 ユーザー指示「誰に攻撃するかが大事で、それに対して敵がどの距離で
+//   狙われた味方がどの距離かを見るんだよ」。見るのは**敵の距離**と**狙われた子の距離**の2つだけ。
+//   予告した間合い(sweepDist)は「敵がどこから薙ぐか」の見出しであって、当たり外れの材料ではない。
+//   sweepDist で狙い先を探していたころは、その間合いに誰も立っていないと攻撃そのものが起きなかった
+{
+  const board = [api.createTacticsUnit(mon()), null, api.createTacticsUnit(mon({ id: 'Golem' })), null];
+  // 本番と同じ流れ。予告を作る → 狙いを付ける(withTacticsTarget) → 当たり外れを見る
+  const aimed = (dist, units = board) => api.withTacticsTarget(
+    { type: 'ATTACK', variant: 'sweep', sweepDist: dist, value: 120, missValue: 40 }, units, () => 0);
+  const onSpot = (intent, enemyDist, units = board) => api.isTacticsSweepOnSpot(intent, units, enemyDist);
+  const power = (intent, enemyDist, units = board) => api.tacticsSweepIntent(intent, units, enemyDist).value;
+
+  // 零に立っている子を狙い、敵も零 → 距離が同じなので当たり
+  const atZero = aimed(0);
+  check('狙った子と敵が同じ距離なら当たり', atZero.targetSlot === 0
+    && onSpot(atZero, 0) === true && power(atZero, 0) === 120);
+  // 距離撃で敵を中へ動かすと、狙われた子(零)と距離が違う → 外れ
+  check('敵を距離撃でずらしたら外れ', onSpot(atZero, 2) === false && power(atZero, 2) === 40);
+  // ★誰も立っていない間合いを予告しても、狙いは付く。その子の距離と敵の距離は違うので外れ
+  const atEmpty = aimed(1);
+  check('誰も立っていない間合いでも、必ず誰かを狙う', Number.isInteger(atEmpty.targetSlot)
+    && api.tacticsIntentTargets(atEmpty, board, 1).length === 1);
+  check('狙った子と敵の距離が違うので外れ(0にはならない)',
+    onSpot(atEmpty, 1) === false && power(atEmpty, 1) === 40);
+  // 狙い先はそのまま当たる相手になる
+  check('当たる相手は狙った子', api.tacticsIntentTargets(atZero, board, 0).join(',') === '0'
+    && api.tacticsIntentTargets(aimed(2), board, 2).join(',') === '2');
+  // ★倒れた子は「立っていない」。その間合いを予告されても、起きている子が狙われる
+  const downed = api.damageTacticsTargets(board, [0], 9999);
+  const atDowned = aimed(0, downed);
+  check('倒れた子の間合いなら、立っている子が狙われる', atDowned.targetSlot === 2
+    && onSpot(atDowned, 0, downed) === false && power(atDowned, 0, downed) === 40);
+  check('その子の距離まで敵が動けば当たりに戻る', onSpot(atDowned, 2, downed) === true
+    && power(atDowned, 2, downed) === 120);
+  check('全員倒れていれば誰にも当たらない',
+    api.tacticsIntentTargets(aimed(1, [null, null, null, null]), [null, null, null, null], 1).length === 0);
+  // ★狙いが付いていない予告(既存5モード・古い保存)は当たり扱い。ここで振る舞いを変えない
+  check('狙いが付いていなければ今までどおり',
+    api.isTacticsSweepOnSpot({ variant: 'sweep', sweepDist: 0 }, board, 3) === true);
+  check('間合い攻撃以外は素通し',
+    api.isTacticsSweepOnSpot({ variant: 'rush', targetSlot: 0 }, board, 3) === true
+      && api.tacticsSweepIntent({ variant: 'rush', value: 99 }, board, 3).value === 99);
+}
+
+// --- ㊳ 1体が出せる枚数は「ふつう1枚。持っている子だけ1枚ずつ増える」 ---
+// ★2026-09-22 ユーザー指摘「剣士モッチーで攻撃カードが3枚使えたんだけど仕様あってないよね？」。
+//   slotMaxUses が baseCardLimit(＝そのターンに盤面ぜんぶで何枚使えるか)を土台にしていたので、
+//   盤面に👑が2体いると、その合計まで1体に乗って5枚まで使えていた。
+//   決めごとは設計 4.6「ふつう1枚。ハム本人・きき・連携持ちだけ増える」
+{
+  const usesSrc = slice('const slotMaxUses = (mon, slotIdx=null) => {', '\n  };') + '\n  };';
+  // 場面ごとに器を作り直す(外から値を差し替えると const が拾えないため)
+  const makeUses = (over = {}) => {
+    const cfg = Object.assign({ tactics: true, mainHero: null, owners: ['Ham', 'KenshiMocchi'],
+      kiki: 0, baseLimit: 5, cardLimit: 5, coordSlots: [], coordBonus: 0 }, over);
+    const box = { Math, Number, __cfg: cfg };
+    vm.createContext(box);
+    vm.runInContext(
+      'const isTacticsMode=()=>__cfg.tactics; const runMode=null; const mainHero=__cfg.mainHero;'
+        + 'const heroCardBonusOf=(id)=>(__cfg.owners.includes(id)?1:0);'
+        + 'const kikiCardBonus=__cfg.kiki; const baseCardLimit=__cfg.baseLimit; const cardLimit=__cfg.cardLimit;'
+        + 'const soulCoordinationSlots=__cfg.coordSlots; const soulCoordinationCardBonus=__cfg.coordBonus;'
+        + usesSrc.trim() + '\nglobalThis.f=slotMaxUses;', box);
+    return box.f;
+  };
+  // ★盤面に👑が2体(ハム・剣士モッチー)。そのターンの総数は5枚でも、1体は2枚まで
+  const plain = makeUses();
+  check('👑を持つ子は2枚まで', plain({ id: 'KenshiMocchi' }, 0) === 2, String(plain({ id: 'KenshiMocchi' }, 0)));
+  check('持っていない子は1枚まで', plain({ id: 'Pandora' }, 1) === 1, String(plain({ id: 'Pandora' }, 1)));
+  // きき(全体+1)は、どの子も1枚ずつ増える
+  const withKiki = makeUses({ kiki: 1 });
+  check('きき中はどの子も1枚増える', withKiki({ id: 'Pandora' }, 1) === 2
+    && withKiki({ id: 'KenshiMocchi' }, 0) === 3);
+  // 魂格の連携は持っている枠だけ
+  const withCoord = makeUses({ coordSlots: [2], coordBonus: 1 });
+  check('連携は持っている枠だけ増える', withCoord({ id: 'Pandora' }, 2) === 2
+    && withCoord({ id: 'Pandora' }, 1) === 1);
+  // ★そのターンの総数(cardLimit)を超えない
+  const tightTurn = makeUses({ kiki: 1, cardLimit: 2 });
+  check('そのターンの総数を超えない', tightTurn({ id: 'KenshiMocchi' }, 0) === 2);
+  // ★既存5モードは今までどおり(勇者モン本人ときき中はそのターンの総数まで重ねられる)
+  const legacy = makeUses({ tactics: false, mainHero: { id: 'KenshiMocchi' } });
+  check('既存5モードの勇者モンは今までどおり', legacy({ id: 'KenshiMocchi' }, 0) === 5
+    && legacy({ id: 'Pandora' }, 1) === 1);
 }
 
 console.log(failed ? `\nNG ${failed}件` : '\nすべてOK');

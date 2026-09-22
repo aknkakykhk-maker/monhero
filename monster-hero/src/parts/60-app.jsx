@@ -7888,13 +7888,21 @@ function MonsterHeroGame() {
   // 既存の勇者特性/ききで許される枚数を土台にし、連携で増えた「追加の1枚」だけは
   // 連携を持つ本人へしか割り当てられない。全体cardLimitが1枚増えるだけなので複数所持でも重複しない。
   const slotMaxUses = (mon, slotIdx=null) => {
-    // ★タクティクスバトルは「持っている子が自分だけ1枚多く使える」(2026-09-20 ユーザー指示)。
-    //   勇者モンにしていなくても、盤面にいればその子の枚数が増える
-    const bonusOwner=isTacticsMode(runMode)
-      ? heroCardBonusOf(mon?.id)>0
-      : (heroCardBonusOf(mainHero?.id)>0&&mon?.id===mainHero?.id);
-    const base=(bonusOwner||kikiCardBonus>0) ? baseCardLimit : 1;
     const coordinationHolder=Number.isInteger(slotIdx)&&soulCoordinationSlots.includes(slotIdx);
+    // ★タクティクスバトルは「ふつう1枚。👑(ハム・剣士モッチー)・きき・連携を持つ子だけ
+    //   1枚ずつ増える」(設計 4.6)。勇者モンにしていなくても、盤面にいればその子の枚数が増える。
+    // ⚠️ 足すのは**その子のぶんだけ**。baseCardLimit を土台にしていたので、盤面に👑が2体いると
+    //   その合計(heroCardBonus)まで1体に乗り、剣士モッチー1体で5枚まで使えていた
+    //   (2026-09-22 ユーザー指摘「剣士モッチーで攻撃カードが3枚使えた」)。
+    //   baseCardLimit は**そのターンに盤面ぜんぶで何枚使えるか**であって、1体ぶんの上限ではない
+    if(isTacticsMode(runMode)){
+      const own=1+heroCardBonusOf(mon?.id)+kikiCardBonus+(coordinationHolder?soulCoordinationCardBonus:0);
+      return Math.min(cardLimit,own);
+    }
+    // 既存5モードは今までどおり。勇者モン本人ときき中は、そのターンの総数まで重ねられる
+    // (仕様 8.触らないもの。BATTLE_SYSTEM.md「剣士モッチーのカードだけ同じターンに複数枚」)
+    const bonusOwner=heroCardBonusOf(mainHero?.id)>0&&mon?.id===mainHero?.id;
+    const base=(bonusOwner||kikiCardBonus>0) ? baseCardLimit : 1;
     return Math.min(cardLimit,base+(coordinationHolder?soulCoordinationCardBonus:0));
   };
 
@@ -9679,14 +9687,20 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // 距離撃で動かした先は setEnemyDist の反映を待たないため、呼び出し元が確定させた
         // 移動先(forcedMoveTarget)を優先して見る
         const actingEnemyDist = Number.isInteger(immediateEffects.forcedMoveTarget) ? immediateEffects.forcedMoveTarget : enemyDist;
-        const sweptAway = intent.variant==='sweep' && Number.isInteger(intent.sweepDist) && actingEnemyDist!==intent.sweepDist;
-        const actingIntent = sweptAway ? {...intent,value:Math.max(0,Math.floor(Number(intent.missValue)||0))} : intent;
+        // ★外れの決まりは1か所(isTacticsSweepOnSpot)。敵をずらしたときだけでなく、
+        //   予告した間合いに味方が立っていないときも「外れ」＝威力が落ちる
+        //   (2026-09-22 ユーザー指摘「敵が狙った距離にこっちがいない場合は
+        //    ダメージ喰らわないままになってた」)。0になるのではなく、下がる
+        const sweptAway = intent.variant==='sweep' && Number.isInteger(intent.sweepDist)
+          && !isTacticsSweepOnSpot(intent,tacticsUnitsRef.current,actingEnemyDist);
+        const actingIntent = tacticsSweepIntent(intent,tacticsUnitsRef.current,actingEnemyDist);
         // 表示と同じ guardFlat / guardMult 集計を実効丈夫さへ適用する。
         const baseGuardValue = (immediateEffects.guardFlat>0||immediateEffects.guardMult>0) ? Math.floor(immediateEffects.guardFlat + effectiveDef*immediateEffects.guardMult) : 0;
         // ★連撃は新モードの行動表にしかないので、ここ(既存モードの経路)には来ない。
         //   1ヒットぶんだけ受け止める数え方は、下の新モードの分岐が持つ
         const guardValue = intent.variant==='pierce' ? 0 : baseGuardValue;
-        if (sweptAway) { addPopup('間合い攻撃をかわした！','hero','text-cyan-300 font-black text-xl drop-shadow-md'); await battleWait(600); }
+        // ★「かわした」は嘘になる(外れても0.4倍は当たる)。何が起きたかをそのまま書く
+        if (sweptAway) { addPopup('間合いが外れた！ 威力ダウン','hero','text-cyan-300 font-black text-xl drop-shadow-md'); await battleWait(600); }
         else if (intent.variant==='pierce' && baseGuardValue>0) { addPopup('貫通！ ガードが効かない','enemy','text-rose-300 font-black text-xl drop-shadow-md'); await battleWait(600); }
         const incomingBeforeTurnReduction = getIncomingDamageBeforeTurnReduction(actingIntent);
         const incomingDmg = applyTurnDamageReduction(incomingBeforeTurnReduction);
