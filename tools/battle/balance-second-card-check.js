@@ -127,7 +127,7 @@ check('合計軽減は実処理と同じ式で出す',
 check('弱ガードの重みも合計に反映する', has("card?.type === 'weak_guard' ? 0.5 : 0"));
 // 2026-09-22: 全体ガードになった札は「全体ハイガード」と名乗り、数字は枠の🛡へまかせる
 check('スロットのガード表示に軽減量を出す', has('{gv>0&&!spreadGuardCard&&<span'));
-check('半減するカードには½を付ける', has("{halvedByIdx[idx]?'½':''}{spreadGuardCard?'全体':''}{card.name}"));
+check('半減するカードには½を付ける', has("{halvedByIdx[idx]?'½':''}{card.name}"));
 check('ガードのカード詳細も半減後の値を出す', has('（2枚目以降のため半減）') && has('Math.floor(halved?raw*0.5:raw)'));
 check('ドラッグ中のカードも「次の1枚」として半減判定する',
   has('if(pendingIdx!=null&&selectedCards.includes(pendingIdx)) halvedByIdx[pendingIdx]=counter.peek(hand[pendingIdx],cardAssignments[pendingIdx]!=null?cardAssignments[pendingIdx]:null);'));

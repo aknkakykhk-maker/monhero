@@ -401,7 +401,9 @@ function BattleScreen({
                   <div data-enemy-notice={enemyIntent.notice} data-enemy-notice-anim={noticeAnim.split(' ')[0]}
                     className={`max-w-[170px] truncate rounded-2xl border-2 px-2 py-0.5 font-black leading-tight flex items-center gap-1 ${noticeTone}`}
                     style={{fontSize:'11px',animation:noticeAnim}}>
-                    <span style={{fontSize:'12px'}} className="leading-none shrink-0">{enemyIntent.icon}</span>
+                    {/* ★icon は必ず cardIconNode を通す。絵文字ならそのまま、画像なら <img> になる。
+                        素で置くと、あとで画像のアイコンを足したときに文字列がそのまま出る */}
+                    <span style={{fontSize:'12px'}} className="leading-none shrink-0">{cardIconNode(enemyIntent.icon,12)}</span>
                     <span className="truncate">{enemyIntent.notice}！</span>
                   </div>);
                 // ★ムーだけは本体が丸枠の外へ巨大表示される(fixed・z-30 で画面いっぱい)。
@@ -1001,15 +1003,18 @@ function BattleScreen({
                         // ガードは軽減量をその場で出す。2枚目以降なら半分になった値をそのまま表示する
                         const gw=guardCardWeight(card), ge=cardEffectMultiplier(card,halvedByIdx[idx]);
                         const gv=gw>0?guardValueOf(GUARD_EVOLUTION[guardLevel].flat*gw*ge,GUARD_EVOLUTION[guardLevel].mult*gw*ge,i):0;
-                        // ★全体ガードになった枠の札は「全体ハイガード」と名乗る(2026-09-22 ユーザー指示
-                        //   「ハイガード-71みたいになってるとこを全体ハイガードみたいに変えて」)。
-                        //   軽減量は上の🛡が立っている子全員に出すので、札には数字を重ねない。
+                        // ★ガードが連撃・全体に変わったら、札に印を付ける(2026-09-22 ユーザー選択
+                        //   「名前＋印に分ける」)。段階の名前は9つあり、後半は「ガード」が付かない
+                        //   (金剛不壊・万象拒絶…)ので、名前そのものは変えずにとなりへ印を出す。
+                        // ★全体ガードの枠は、軽減量を上の🛡が立っている子全員に出すので札には数字を重ねない。
                         //   連撃ガードの枠だけは1枚ずつの値が要る(合計は🛡に出るため)ので今までどおり
+                        const guardMark=gw>0?(slotRushGuard?'連撃':(slotSpreadGuard?'全体':'')):'';
                         const spreadGuardCard=gw>0&&slotSpreadGuard&&!slotRushGuard;
                         return(
                         <div key={idx} className={`flex items-center gap-0.5 px-1 rounded w-full justify-center min-w-0 ${cardNeedsMonster(card)?'bg-red-600/85':'bg-emerald-600/85'}`}>
                           <span style={{fontSize:'7px'}} className="leading-none shrink-0">{cardIconNode(card.icon,9,card.id)}</span>
-                          <span style={{fontSize:'7px'}} className="font-black text-white leading-none truncate min-w-0">{halvedByIdx[idx]?'½':''}{spreadGuardCard?'全体':''}{card.name}</span>
+                          {guardMark&&<span data-tactics-guard-mark={guardMark} style={{fontSize:'6px'}} className="shrink-0 rounded-sm border border-amber-200/70 bg-black/60 px-0.5 font-black leading-none text-amber-200">{guardMark}</span>}
+                          <span style={{fontSize:'7px'}} className="font-black text-white leading-none truncate min-w-0">{halvedByIdx[idx]?'½':''}{card.name}</span>
                           {gv>0&&!spreadGuardCard&&<span style={{fontSize:'7px'}} className="font-black text-emerald-100 leading-none shrink-0">-{gv}</span>}
                         </div>
                         );

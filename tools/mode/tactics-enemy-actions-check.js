@@ -535,7 +535,9 @@ check('実戦の行動表も難易度つきで引く',
   check('効果ごとに動きを変えている', new Set(animNames).size >= 5, animNames.join(','));
   const missingAnim = [...new Set(animNames)].filter(name => !bootSource.includes(`@keyframes ${name} {`));
   check('書いた動きがすべて定義されている', missingAnim.length === 0, missingAnim.join(',') || 'すべてある');
-  check('札にその技のアイコンも出す', battleScreen.includes('{enemyIntent.icon}</span>'));
+  // ★アイコンは必ず cardIconNode を通す(絵文字はそのまま・画像は <img>)。
+  //   素で置くと、あとで画像のアイコンを足したときに文字列がそのまま出る
+  check('札にその技のアイコンも出す', battleScreen.includes('{cardIconNode(enemyIntent.icon,12)}</span>'));
   // ★貫通は「構え」と「貫通技準備」の2つの言い方が混ざっていた(2026-09-22 ユーザー指摘
   //   「予告は固有技で出て吹き出しで貫通の構えって出る…矛盾が感じる」)
   check('貫通の予告は「貫通技準備」でそろえる',
