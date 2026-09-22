@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3337a9ea9755e917
+// source-sha256: bd192c2a9afdfb87
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6eb7b051a4fc3078
+// generated-sha256: 9d7c20a848553e45
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-22 16:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-22 16:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15177,7 +15177,7 @@ const MarketProductCard = ({
     onClick: onBuy,
     disabled: disabled || !canBuy,
     "aria-label": `${item.name}${disabled ? '（デバッグのため購入不可）' : `を${priceLabel}で${usesHeroProof || usesHeroProofShard ? '交換' : '購入'}`}`,
-    className: `text-[11px] font-black px-2 min-h-[44px] w-full max-w-full rounded-xl flex items-center justify-center gap-1 whitespace-nowrap ${disabled || !canBuy ? 'bg-slate-800 text-slate-500' : usesPsyche ? 'bg-fuchsia-600 text-white active:scale-95' : 'bg-amber-500 text-black active:scale-95'}`
+    className: `mh-button mh-button-primary text-[11px] font-black px-2 min-h-[44px] w-full max-w-full rounded-xl flex items-center justify-center gap-1 whitespace-nowrap ${disabled || !canBuy ? 'bg-slate-800 text-slate-500' : usesPsyche ? 'bg-fuchsia-600 text-white active:scale-95' : 'bg-amber-500 text-black active:scale-95'}`
   }, usesHeroProofShard ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
     "aria-hidden": "true"
   }, "\uD83C\uDF96\uFE0F"), /*#__PURE__*/React.createElement("span", {
@@ -28060,13 +28060,13 @@ function useScreenEffects(scopeKey) {
 // 画面の根。管理系の画面はすべてこれを使う。
 //   <div data-mh-screen className={SCREEN_SHELL_CLASS}>
 // data-mh-screen は横画面の組み替えの目印なので、一覧を持つ画面では必ず付ける。
-const SCREEN_SHELL_CLASS = 'flex-1 flex flex-col h-full min-h-0 p-4';
+const SCREEN_SHELL_CLASS = 'mh-screen-shell flex-1 flex flex-col h-full min-h-0 p-4';
 
 // 画面の中に置くパネル(囲み)の型。角丸・枠線・背景はここだけで決める。
 //   SCREEN_PANEL_CLASS      … ふつうの囲み
 //   SCREEN_PANEL_FLAT_CLASS … 中に並べるもの用(背景を一段落とす)
-const SCREEN_PANEL_CLASS = 'rounded-2xl border border-white/10 bg-slate-900/70 p-3';
-const SCREEN_PANEL_FLAT_CLASS = 'rounded-xl border border-white/10 bg-black/30 px-3 py-2';
+const SCREEN_PANEL_CLASS = 'mh-panel rounded-2xl border border-white/10 bg-slate-900/70 p-3';
+const SCREEN_PANEL_FLAT_CLASS = 'mh-panel-flat rounded-xl border border-white/10 bg-black/30 px-3 py-2';
 
 // 一覧(スクロールする場所)の型。flex-1 min-h-0 が無いと、flex の子は中身なりに伸びて
 // スクロールが起きず、下が切れる(神殿の4つの一覧で実際に起きていた)。
@@ -28074,7 +28074,7 @@ const SCREEN_LIST_CLASS = 'flex-1 min-h-0 overflow-y-auto mh-scroll';
 
 // 画面のいちばん下に置く決定ボタンの帯。一覧の内側へ sticky で入れると、
 // その下にある中身をスクロール中ずっと覆ってしまう(強化画面で起きていた)。
-const SCREEN_FOOTER_CLASS = 'shrink-0 mt-2 border-t border-white/10 pt-2';
+const SCREEN_FOOTER_CLASS = 'mh-screen-footer shrink-0 mt-2 border-t border-white/10 pt-2';
 
 // 画面の頭。「← / 画面の名前 / (補足) / 右の付け足し」の順で、どの画面も同じ形にする。
 //   title    … 画面の名前(日本語)
@@ -28096,13 +28096,13 @@ const ScreenHead = ({
   right = null,
   disabled = false
 }) => /*#__PURE__*/React.createElement("header", {
-  className: "mb-3 flex shrink-0 items-center gap-1.5 border-b border-white/10 pb-2"
+  className: "mh-screen-head mb-3 flex shrink-0 items-center gap-1.5 border-b border-white/10 pb-2"
 }, onBack && /*#__PURE__*/React.createElement("button", {
   type: "button",
   "aria-label": backLabel,
   onClick: onBack,
   disabled: disabled,
-  className: "-ml-1 shrink-0 p-3 text-slate-400 active:scale-90 disabled:opacity-30"
+  className: "mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90 disabled:opacity-30"
 }, /*#__PURE__*/React.createElement(ArrowLeft, {
   size: 20
 })), /*#__PURE__*/React.createElement("div", {
@@ -28110,7 +28110,7 @@ const ScreenHead = ({
 }, /*#__PURE__*/React.createElement("h2", {
   className: `flex items-center gap-1.5 truncate text-xl font-black italic leading-tight ${accent}`
 }, icon, title), note && /*#__PURE__*/React.createElement("p", {
-  className: "mt-0.5 text-[10px] font-bold leading-snug text-slate-400"
+  className: "mh-screen-note mt-0.5 text-[10px] font-bold leading-snug text-slate-400"
 }, note)), right && /*#__PURE__*/React.createElement("div", {
   className: "shrink-0"
 }, right));
@@ -28120,7 +28120,7 @@ const ScreenHead = ({
 const ScreenLead = ({
   children
 }) => /*#__PURE__*/React.createElement("p", {
-  className: "mb-2 shrink-0 px-0.5 text-[10px] font-bold leading-relaxed text-slate-400"
+  className: "mh-screen-note mb-2 shrink-0 px-0.5 text-[10px] font-bold leading-relaxed text-slate-400"
 }, children);
 
 // 0件のときの表示。「無い」「素の1行」「絵文字つき」の3通りあったのを1つにする。
@@ -28148,13 +28148,13 @@ const ScreenEmpty = ({
 }, action));
 
 // タブの並び。数・文字の大きさ・すき間・押した手応えが画面ごとに違っていたのでまとめる。
-//   items  … [{ id, label, color, badge }]。color は選ばれているときの背景(省略時は藍)
+//   items  … [{ id, label, color, badge }]。color は識別色。省略時は共通の金色と濃い文字。
 //   value  … いま選ばれている id
 //   onChange … 押されたら呼ぶ
 // ★列の数は style で渡す。`grid-cols-${n}` のような組み立てたクラス名は
 //   静的CSS(tailwind.css)に入らないので効かない(UIルール「動的クラスだけに依存しない」)。
 // ★選ばれている側の背景も style で直に持たせる。同じ理由。
-const SCREEN_TAB_ACTIVE_FALLBACK = '#4f46e5';
+const SCREEN_TAB_ACTIVE_FALLBACK = 'var(--mh-gold, #e8bc62)';
 const ScreenTabs = ({
   items = [],
   value,
@@ -28174,10 +28174,10 @@ const ScreenTabs = ({
     role: "tab",
     "aria-selected": on,
     onClick: () => onChange(tab.id),
-    className: `relative min-h-[44px] rounded-xl px-1 text-[11px] font-black leading-tight active:scale-95 ${on ? 'text-white' : 'border border-white/10 bg-slate-900 text-slate-400'}`,
+    className: `mh-tab relative min-h-[44px] rounded-xl px-1 text-[11px] font-black leading-tight active:scale-95 ${on ? 'text-white' : 'border border-white/10 bg-slate-900 text-slate-400'}`,
     style: on ? {
       background: tab.color || SCREEN_TAB_ACTIVE_FALLBACK,
-      boxShadow: '0 3px 12px #0006'
+      color: tab.color ? undefined : 'var(--mh-on-gold, #211a0c)'
     } : undefined
   }, tab.label, tab.badge > 0 && typeof tabCountBadge === 'function' ? tabCountBadge(tab.badge) : null);
 }));
@@ -28332,7 +28332,7 @@ function SettingsScreen({
   updateNoticeStyle,
   onChangeUpdateNoticeStyle
 }) {
-  const menuClass = 'w-full min-h-[64px] flex items-center justify-center rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 font-black active:scale-[.98]';
+  const menuClass = 'mh-button mh-button-secondary w-full min-h-[64px] flex items-center justify-center rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 font-black active:scale-[.98]';
   return /*#__PURE__*/React.createElement("div", {
     "data-mh-screen": true,
     className: SCREEN_SHELL_CLASS
@@ -28401,7 +28401,7 @@ function SettingsScreen({
   }, "BUILD ", BUILD_DATE), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: onReturnToTitle,
-    className: "w-full min-h-[64px] flex items-center justify-center rounded-2xl border border-red-500/40 bg-red-950/50 px-4 py-3 font-black text-red-200 active:scale-[.98]"
+    className: "mh-button mh-button-danger w-full min-h-[64px] flex items-center justify-center rounded-2xl border border-red-500/40 bg-red-950/50 px-4 py-3 font-black text-red-200 active:scale-[.98]"
   }, "\u30BF\u30A4\u30C8\u30EB\u3078\u623B\u308B"))));
 }
 
@@ -28608,11 +28608,11 @@ function GiftBoxScreen({
     type: "button",
     disabled: !claimable.length,
     onClick: () => onClaim(claimable.map(g => g.id)),
-    className: "shrink-0 mb-2 min-h-[52px] rounded-xl bg-gradient-to-r from-cyan-600 to-indigo-600 text-[13px] font-black text-white shadow-lg active:scale-[.98] disabled:opacity-40"
+    className: "mh-button mh-button-primary shrink-0 mb-2 min-h-[52px] rounded-xl bg-gradient-to-r from-cyan-600 to-indigo-600 text-[13px] font-black text-white shadow-lg active:scale-[.98] disabled:opacity-40"
   }, "\u3059\u3079\u3066\u53D7\u3051\u53D6\u308B"), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: onOpenLoginBonusList,
-    className: "shrink-0 mb-2 min-h-[44px] rounded-xl bg-slate-800 border border-amber-400/60 text-amber-200 font-black text-[12px] active:scale-95"
+    className: "mh-button mh-button-secondary shrink-0 mb-2 min-h-[44px] rounded-xl bg-slate-800 border border-amber-400/60 text-amber-200 font-black text-[12px] active:scale-95"
   }, "\u30ED\u30B0\u30A4\u30F3\u30DC\u30FC\u30CA\u30B9\u4E00\u89A7\u3092\u898B\u308B"), /*#__PURE__*/React.createElement("div", {
     className: `mh-gift-list ${SCREEN_LIST_CLASS} pb-4`
   }, shown.length === 0 ? /*#__PURE__*/React.createElement(ScreenEmpty, {
@@ -28639,7 +28639,8 @@ function GiftBoxScreen({
     }, giftRewardText(r)))), !g.claimedAt && /*#__PURE__*/React.createElement("button", {
       type: "button",
       disabled: expired || !valid,
-      onClick: () => onClaim([g.id])
+      onClick: () => onClaim([g.id]),
+      className: "mh-button mh-button-primary"
     }, "\u53D7\u3051\u53D6\u308B")), /*#__PURE__*/React.createElement("div", {
       className: "mh-gift-deadline"
     }, g.claimedAt ? `受取日時: ${new Date(g.claimedAt).toLocaleString('ja-JP')}` : `受取期限: ${g.expiresAt ? new Date(g.expiresAt).toLocaleString('ja-JP') : '期限なし'}`));
@@ -29109,7 +29110,7 @@ function BreederMarketScreen({
         setEventQuantityOffer(offer);
         setEventQuantity(1);
       },
-      className: "min-h-[44px] rounded-xl bg-violet-500 px-4 text-[11px] font-black text-white active:scale-95 disabled:bg-slate-800 disabled:text-slate-500"
+      className: "mh-button mh-button-primary min-h-[44px] rounded-xl bg-violet-500 px-4 text-[11px] font-black text-white active:scale-95 disabled:bg-slate-800 disabled:text-slate-500"
     }, "\u4EA4\u63DB")));
   })))), eventQuantityOffer && (() => {
     const maxQuantity = Math.floor(safeEventPoints / eventQuantityOffer.cost);
@@ -29139,25 +29140,25 @@ function BreederMarketScreen({
     }, /*#__PURE__*/React.createElement("button", {
       disabled: quantity <= 1,
       onClick: () => changeQuantity(-10),
-      className: "min-h-[44px] rounded-xl bg-slate-800 font-black active:scale-95 disabled:opacity-40"
+      className: "mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-800 font-black active:scale-95 disabled:opacity-40"
     }, "-10"), /*#__PURE__*/React.createElement("button", {
       disabled: quantity <= 1,
       onClick: () => changeQuantity(-1),
-      className: "min-h-[44px] rounded-xl bg-slate-800 font-black active:scale-95 disabled:opacity-40"
+      className: "mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-800 font-black active:scale-95 disabled:opacity-40"
     }, "-1"), /*#__PURE__*/React.createElement("strong", {
       className: "text-center text-xl font-black font-mono"
     }, quantity), /*#__PURE__*/React.createElement("button", {
       disabled: quantity >= maxQuantity,
       onClick: () => changeQuantity(1),
-      className: "min-h-[44px] rounded-xl bg-slate-800 font-black active:scale-95 disabled:opacity-40"
+      className: "mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-800 font-black active:scale-95 disabled:opacity-40"
     }, "+1"), /*#__PURE__*/React.createElement("button", {
       disabled: quantity >= maxQuantity,
       onClick: () => changeQuantity(10),
-      className: "min-h-[44px] rounded-xl bg-slate-800 font-black active:scale-95 disabled:opacity-40"
+      className: "mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-800 font-black active:scale-95 disabled:opacity-40"
     }, "+10")), /*#__PURE__*/React.createElement("button", {
       disabled: maxQuantity <= 0,
       onClick: () => setEventQuantity(Math.max(1, maxQuantity)),
-      className: "mt-2 min-h-[44px] w-full rounded-xl bg-violet-900 font-black active:scale-95 disabled:opacity-40"
+      className: "mh-button mh-button-secondary mt-2 min-h-[44px] w-full rounded-xl bg-violet-900 font-black active:scale-95 disabled:opacity-40"
     }, "MAX\uFF08", Math.max(0, maxQuantity).toLocaleString(), "\u56DE\uFF09"), /*#__PURE__*/React.createElement("div", {
       className: "mt-3 space-y-1.5 rounded-2xl border border-white/10 bg-black/30 p-3 text-[12px] font-black"
     }, /*#__PURE__*/React.createElement("div", {
@@ -29192,11 +29193,11 @@ function BreederMarketScreen({
           setEventExchangePending(false);
         }
       },
-      className: "min-h-[52px] rounded-xl bg-violet-500 text-white font-black active:scale-[.98] disabled:bg-slate-800 disabled:text-slate-500"
+      className: "mh-button mh-button-primary min-h-[52px] rounded-xl bg-violet-500 text-white font-black active:scale-[.98] disabled:bg-slate-800 disabled:text-slate-500"
     }, "\u4EA4\u63DB\u3059\u308B"), /*#__PURE__*/React.createElement("button", {
       disabled: eventExchangePending,
       onClick: () => setEventQuantityOffer(null),
-      className: "min-h-[52px] rounded-xl border border-white/10 bg-slate-900 font-black active:scale-[.98] disabled:opacity-40"
+      className: "mh-button mh-button-secondary min-h-[52px] rounded-xl border border-white/10 bg-slate-900 font-black active:scale-[.98] disabled:opacity-40"
     }, "\u30AD\u30E3\u30F3\u30BB\u30EB"))));
   })());
 }
@@ -31968,7 +31969,7 @@ function MasuRebirthScreen({
     backLabel: "\u9650\u754C\u7A81\u7834\u306E\u4E00\u89A7\u3078\u623B\u308B",
     disabled: rebirthProcessingRef.current
   }), /*#__PURE__*/React.createElement("div", {
-    className: "shrink-0 mb-3 flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-900 p-3"
+    className: "shrink-0 mb-3 flex items-center gap-3 mh-panel rounded-2xl border border-white/10 bg-slate-900 p-3"
   }, /*#__PURE__*/React.createElement("div", {
     className: "relative w-20 h-20 rounded-full overflow-hidden"
   }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
@@ -32154,7 +32155,7 @@ function MasuReincarnateScreen({
     backLabel: "\u8EE2\u751F\u306E\u4E00\u89A7\u3078\u623B\u308B",
     disabled: reincarnateProcessingRef.current
   }), /*#__PURE__*/React.createElement("div", {
-    className: "shrink-0 mb-3 flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-900 p-3"
+    className: "shrink-0 mb-3 flex items-center gap-3 mh-panel rounded-2xl border border-white/10 bg-slate-900 p-3"
   }, /*#__PURE__*/React.createElement("div", {
     className: "relative w-20 h-20 rounded-full overflow-hidden"
   }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
@@ -32221,7 +32222,7 @@ function MasuReincarnateScreen({
   }, /*#__PURE__*/React.createElement("button", {
     disabled: reincarnateSkillKey == null || gold < cost || reincarnateProcessingRef.current,
     onClick: executeMasuReincarnation,
-    className: "w-full min-h-[52px] rounded-2xl bg-violet-600 text-sm font-black active:scale-[.98] disabled:opacity-30"
+    className: "mh-button mh-button-primary w-full min-h-[52px] rounded-2xl bg-violet-600 text-sm font-black active:scale-[.98] disabled:opacity-30"
   }, "\u8EE2\u751F\u3059\u308B")));
 }
 function MasuTranscendenceScreen({
@@ -32333,7 +32334,7 @@ function MasuTranscendenceScreen({
   }), /*#__PURE__*/React.createElement("div", {
     className: `${SCREEN_LIST_CLASS} space-y-2 pb-3`
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-900 p-3"
+    className: "flex items-center gap-3 mh-panel rounded-2xl border border-white/10 bg-slate-900 p-3"
   }, /*#__PURE__*/React.createElement("div", {
     className: "relative w-20 h-20 rounded-full overflow-visible shrink-0"
   }, /*#__PURE__*/React.createElement("div", {
@@ -32408,7 +32409,7 @@ function MasuTranscendenceScreen({
     "data-transcend-execute": true,
     disabled: !plan.ok || transcendProcessingRef.current,
     onClick: executeMasuTranscendence,
-    className: "min-h-[52px] w-full rounded-2xl bg-gradient-to-r from-amber-500 via-fuchsia-500 to-sky-400 text-slate-950 font-black text-sm disabled:opacity-40 disabled:from-slate-700 disabled:via-slate-700 disabled:to-slate-700 disabled:text-slate-400 active:scale-[.98]"
+    className: "mh-button mh-button-primary min-h-[52px] w-full rounded-2xl bg-gradient-to-r from-amber-500 via-fuchsia-500 to-sky-400 text-slate-950 font-black text-sm disabled:opacity-40 disabled:from-slate-700 disabled:via-slate-700 disabled:to-slate-700 disabled:text-slate-400 active:scale-[.98]"
   }, "\u8D85\u8D8A\u3059\u308B")));
 }
 function MasuSoulRankScreen({
@@ -32614,7 +32615,7 @@ function MasuSoulRankScreen({
     "data-soul-rank-execute": true,
     disabled: !plan.ok || soulRankProcessingRef.current,
     onClick: executeMasuSoulRankEvolution,
-    className: "min-h-[52px] w-full rounded-2xl text-slate-950 font-black text-sm disabled:opacity-35 active:scale-[.98]",
+    className: "mh-button mh-button-primary min-h-[52px] w-full rounded-2xl text-slate-950 font-black text-sm disabled:opacity-35 active:scale-[.98]",
     style: {
       background: next.stage === 5 ? 'linear-gradient(90deg,#60a5fa,#facc15,#4ade80,#f87171,#e879f9)' : next.accent
     }
@@ -33204,7 +33205,7 @@ function MasuSoulTraitsScreen({
       key: trait.id,
       "data-soul-trait-card": trait.id,
       onClick: () => openTrait(trait),
-      className: "w-full min-h-[72px] rounded-2xl border border-white/10 bg-slate-900 p-3 text-left active:scale-[.99]"
+      className: "w-full min-h-[72px] mh-panel rounded-2xl border border-white/10 bg-slate-900 p-3 text-left active:scale-[.99]"
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex items-start justify-between gap-2"
     }, /*#__PURE__*/React.createElement("div", {
@@ -33348,7 +33349,7 @@ function MasuSoulTraitsScreen({
     "data-soul-trait-learn-coordination": true,
     disabled: maxUpgrade <= 0 || soulTraitProcessingRef.current,
     onClick: () => commitSoulTraitUpgrade(masu.id, selected.id, 1),
-    className: "mt-3 min-h-[52px] w-full rounded-2xl bg-sky-500 text-slate-950 text-[12px] font-black active:scale-[.98] disabled:opacity-30"
+    className: "mh-button mh-button-primary mt-3 min-h-[52px] w-full rounded-2xl bg-sky-500 text-slate-950 text-[12px] font-black active:scale-[.98] disabled:opacity-30"
   }, currentLevel >= 1 ? '習得済み' : '習得する 200P') : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "mt-3 grid grid-cols-4 gap-1.5"
   }, /*#__PURE__*/React.createElement("button", {
@@ -33356,25 +33357,25 @@ function MasuSoulTraitsScreen({
     "data-soul-trait-minus-one": true,
     disabled: draft <= 0,
     onClick: () => addDraft(-1),
-    className: "min-h-[48px] rounded-xl bg-slate-700 text-[11px] font-black active:scale-95 disabled:opacity-30"
+    className: "mh-button mh-button-secondary min-h-[48px] rounded-xl bg-slate-700 text-[11px] font-black active:scale-95 disabled:opacity-30"
   }, "-1"), /*#__PURE__*/React.createElement("button", {
     type: "button",
     "data-soul-trait-plus-one": true,
     disabled: draft >= maxUpgrade,
     onClick: () => addDraft(1),
-    className: "min-h-[48px] rounded-xl bg-sky-800 text-[11px] font-black active:scale-95 disabled:opacity-30"
+    className: "mh-button mh-button-secondary min-h-[48px] rounded-xl bg-sky-800 text-[11px] font-black active:scale-95 disabled:opacity-30"
   }, "+1"), /*#__PURE__*/React.createElement("button", {
     type: "button",
     "data-soul-trait-plus-five": true,
     disabled: draft >= maxUpgrade,
     onClick: () => addDraft(5),
-    className: "min-h-[48px] rounded-xl bg-sky-700 text-[11px] font-black active:scale-95 disabled:opacity-30"
+    className: "mh-button mh-button-secondary min-h-[48px] rounded-xl bg-sky-700 text-[11px] font-black active:scale-95 disabled:opacity-30"
   }, "+5"), /*#__PURE__*/React.createElement("button", {
     type: "button",
     "data-soul-trait-max": true,
     disabled: maxUpgrade <= 0,
     onClick: () => setSoulTraitDraftLevels(maxUpgrade),
-    className: "min-h-[48px] rounded-xl bg-violet-700 text-[11px] font-black active:scale-95 disabled:opacity-30"
+    className: "mh-button mh-button-secondary min-h-[48px] rounded-xl bg-violet-700 text-[11px] font-black active:scale-95 disabled:opacity-30"
   }, "MAX")), /*#__PURE__*/React.createElement("div", {
     className: "my-2 text-center text-[11px] font-black text-sky-200"
   }, "\u4ECA\u56DE +", draft, "\u6BB5\u968E"), /*#__PURE__*/React.createElement("button", {
@@ -33382,7 +33383,7 @@ function MasuSoulTraitsScreen({
     "data-soul-trait-confirm": true,
     disabled: draft <= 0 || soulTraitProcessingRef.current,
     onClick: () => commitSoulTraitUpgrade(masu.id, selected.id, draft),
-    className: "min-h-[52px] w-full rounded-2xl bg-sky-500 text-slate-950 text-[12px] font-black active:scale-[.98] disabled:opacity-30"
+    className: "mh-button mh-button-primary min-h-[52px] w-full rounded-2xl bg-sky-500 text-slate-950 text-[12px] font-black active:scale-[.98] disabled:opacity-30"
   }, "\u5F37\u5316\u3092\u6C7A\u5B9A")))), soulTraitRespecOpen && /*#__PURE__*/React.createElement("div", {
     className: "fixed inset-0 z-[32100] flex items-center justify-center bg-black/80 p-4",
     role: "dialog",
@@ -33411,13 +33412,13 @@ function MasuSoulTraitsScreen({
     type: "button",
     disabled: soulTraitProcessingRef.current,
     onClick: () => setSoulTraitRespecOpen(false),
-    className: "min-h-[48px] rounded-xl bg-slate-700 text-[11px] font-black active:scale-95 disabled:opacity-30"
+    className: "mh-button mh-button-secondary min-h-[48px] rounded-xl bg-slate-700 text-[11px] font-black active:scale-95 disabled:opacity-30"
   }, "\u3084\u3081\u308B"), /*#__PURE__*/React.createElement("button", {
     type: "button",
     "data-soul-trait-respec-confirm": true,
     disabled: soulTraitProcessingRef.current,
     onClick: () => commitSoulTraitRespec(masu.id),
-    className: "min-h-[48px] rounded-xl bg-cyan-600 text-slate-950 text-[11px] font-black active:scale-95 disabled:opacity-30"
+    className: "mh-button mh-button-primary min-h-[48px] rounded-xl bg-cyan-600 text-slate-950 text-[11px] font-black active:scale-95 disabled:opacity-30"
   }, "1\u518A\u4F7F\u3063\u3066\u518D\u7DE8")))));
 }
 
@@ -33869,13 +33870,13 @@ function MasuTranscendEnhanceScreen({
     type: "button",
     onClick: () => setTranscendPlan(null),
     disabled: planUsed <= 0,
-    className: "min-h-[52px] rounded-xl bg-slate-800 text-slate-200 font-black text-[12px] disabled:opacity-30 active:scale-95"
+    className: "mh-button mh-button-secondary min-h-[52px] rounded-xl bg-slate-800 text-slate-200 font-black text-[12px] disabled:opacity-30 active:scale-95"
   }, "\u30AD\u30E3\u30F3\u30BB\u30EB"), /*#__PURE__*/React.createElement("button", {
     type: "button",
     "data-transcend-commit": true,
     disabled: planUsed <= 0,
     onClick: () => commitTranscendPlan(masu, plan),
-    className: "min-h-[52px] rounded-xl bg-sky-500 text-slate-950 font-black text-[13px] disabled:opacity-30 active:scale-95"
+    className: "mh-button mh-button-primary min-h-[52px] rounded-xl bg-sky-500 text-slate-950 font-black text-[13px] disabled:opacity-30 active:scale-95"
   }, "\u3053\u306E\u914D\u5206\u3067\u78BA\u5B9A\uFF08", planUsed, "P\uFF09")), transcendResetOpen && /*#__PURE__*/React.createElement("div", {
     "data-transcend-reset-sheet": true,
     role: "dialog",
@@ -33904,7 +33905,7 @@ function MasuTranscendEnhanceScreen({
     type: "button",
     "aria-label": "\u9589\u3058\u308B",
     onClick: () => setTranscendResetOpen(false),
-    className: "min-h-[44px] min-w-[44px] p-2 text-slate-400 active:scale-90"
+    className: "mh-button mh-button-secondary min-h-[44px] min-w-[44px] p-2 text-slate-400 active:scale-90"
   }, /*#__PURE__*/React.createElement(X, {
     size: 18
   }))), /*#__PURE__*/React.createElement("div", {
@@ -33944,13 +33945,13 @@ function MasuTranscendEnhanceScreen({
   }, /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setTranscendResetOpen(false),
-    className: "min-h-[52px] rounded-xl bg-slate-800 text-slate-200 font-black text-[12px] active:scale-95"
+    className: "mh-button mh-button-secondary min-h-[52px] rounded-xl bg-slate-800 text-slate-200 font-black text-[12px] active:scale-95"
   }, "\u3084\u3081\u308B"), /*#__PURE__*/React.createElement("button", {
     type: "button",
     "data-transcend-reset-commit": true,
     disabled: spentPoints <= 0 || resetScrollHave <= 0,
     onClick: runReset,
-    className: "min-h-[52px] rounded-xl bg-amber-500 text-slate-950 font-black text-[13px] disabled:opacity-30 active:scale-95"
+    className: "mh-button mh-button-primary min-h-[52px] rounded-xl bg-amber-500 text-slate-950 font-black text-[13px] disabled:opacity-30 active:scale-95"
   }, "\u66F8\u30921\u518A\u4F7F\u3063\u3066\u30EA\u30BB\u30C3\u30C8")))), transcendExchangeOpen && /*#__PURE__*/React.createElement("div", {
     "data-transcend-exchange-sheet": true,
     role: "dialog",
@@ -33979,7 +33980,7 @@ function MasuTranscendEnhanceScreen({
     type: "button",
     "aria-label": "\u9589\u3058\u308B",
     onClick: () => setTranscendExchangeOpen(false),
-    className: "min-h-[44px] min-w-[44px] p-2 text-slate-400 active:scale-90"
+    className: "mh-button mh-button-secondary min-h-[44px] min-w-[44px] p-2 text-slate-400 active:scale-90"
   }, /*#__PURE__*/React.createElement(X, {
     size: 18
   }))), /*#__PURE__*/React.createElement("div", {
@@ -34054,13 +34055,13 @@ function MasuTranscendEnhanceScreen({
   }, /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setTranscendExchangeOpen(false),
-    className: "min-h-[52px] rounded-xl bg-slate-800 text-slate-200 font-black text-[12px] active:scale-95"
+    className: "mh-button mh-button-secondary min-h-[52px] rounded-xl bg-slate-800 text-slate-200 font-black text-[12px] active:scale-95"
   }, "\u9589\u3058\u308B"), /*#__PURE__*/React.createElement("button", {
     type: "button",
     "data-transcend-exchange-commit": true,
     disabled: !exchangeQuote.ok,
     onClick: runExchange,
-    className: "min-h-[52px] rounded-xl bg-fuchsia-600 text-white font-black text-[13px] disabled:opacity-30 active:scale-95"
+    className: "mh-button mh-button-primary min-h-[52px] rounded-xl bg-fuchsia-600 text-white font-black text-[13px] disabled:opacity-30 active:scale-95"
   }, "\u3053\u306E\u5185\u5BB9\u3067\u5909\u63DB")))), transcendFruitOpen && /*#__PURE__*/React.createElement("div", {
     "data-transcend-fruit-sheet": true,
     role: "dialog",
@@ -34086,7 +34087,7 @@ function MasuTranscendEnhanceScreen({
   }, "\uD83C\uDF4E \u8D85\u8D8A\u306E\u5B9F\u3092\u4F7F\u3046"), /*#__PURE__*/React.createElement("button", {
     "aria-label": "\u9589\u3058\u308B",
     onClick: () => setTranscendFruitOpen(false),
-    className: "min-h-[44px] min-w-[44px] p-2 text-slate-400 active:scale-90"
+    className: "mh-button mh-button-secondary min-h-[44px] min-w-[44px] p-2 text-slate-400 active:scale-90"
   }, /*#__PURE__*/React.createElement(X, {
     size: 18
   }))), /*#__PURE__*/React.createElement("p", {
@@ -34107,7 +34108,7 @@ function MasuTranscendEnhanceScreen({
       setTranscendFruitConfirmAmount(0);
       setTranscendFruitError('');
     },
-    className: `min-h-[64px] rounded-xl border p-2 text-[11px] font-black active:scale-95 disabled:opacity-30 ${transcendFruitItemId === itemId ? 'border-emerald-200 bg-emerald-600 text-white ring-2 ring-emerald-200' : 'border-white/10 bg-slate-800 text-slate-200'}`
+    className: `mh-button mh-button-secondary min-h-[64px] rounded-xl border p-2 text-[11px] font-black active:scale-95 disabled:opacity-30 ${transcendFruitItemId === itemId ? 'border-emerald-200 bg-emerald-600 text-white ring-2 ring-emerald-200' : 'border-white/10 bg-slate-800 text-slate-200'}`
   }, /*#__PURE__*/React.createElement("span", {
     className: "block leading-tight"
   }, name), /*#__PURE__*/React.createElement("span", {
@@ -34148,18 +34149,18 @@ function MasuTranscendEnhanceScreen({
   }, /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setTranscendFruitConfirmAmount(0),
-    className: "min-h-[44px] rounded-xl bg-slate-700 text-[12px] font-black active:scale-95"
+    className: "mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-700 text-[12px] font-black active:scale-95"
   }, "\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
     type: "button",
     "data-transcend-fruit-commit": true,
     onClick: runFruitUse,
-    className: "min-h-[44px] rounded-xl bg-amber-500 text-slate-950 text-[12px] font-black active:scale-95"
+    className: "mh-button mh-button-primary min-h-[44px] rounded-xl bg-amber-500 text-slate-950 text-[12px] font-black active:scale-95"
   }, "\u4F7F\u7528\u3092\u78BA\u5B9A"))), transcendFruitError && /*#__PURE__*/React.createElement("div", {
     className: "text-[10px] font-black text-red-400"
   }, transcendFruitError), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setTranscendFruitOpen(false),
-    className: "min-h-[52px] w-full rounded-xl bg-slate-800 text-slate-200 text-[12px] font-black active:scale-95"
+    className: "mh-button mh-button-secondary min-h-[52px] w-full rounded-xl bg-slate-800 text-slate-200 text-[12px] font-black active:scale-95"
   }, "\u9589\u3058\u308B"))));
 }
 
@@ -34420,11 +34421,11 @@ function MasuEnhanceScreen({
       onDismissAutoEnhanceIntro();
       onOpenAutoEnhance();
     },
-    className: "min-h-[44px] rounded-xl bg-lime-500 text-slate-950 text-[12px] font-black active:scale-95"
+    className: "mh-button mh-button-secondary min-h-[44px] rounded-xl bg-lime-500 text-slate-950 text-[12px] font-black active:scale-95"
   }, "\u8A2D\u5B9A\u3092\u958B\u304F"), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: onDismissAutoEnhanceIntro,
-    className: "min-h-[44px] rounded-xl bg-slate-800 text-slate-300 text-[12px] font-black active:scale-95"
+    className: "mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-800 text-slate-300 text-[12px] font-black active:scale-95"
   }, "\u3042\u3068\u3067"))), autoEnhance.enabled && /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: onOpenAutoEnhance,
@@ -34461,7 +34462,7 @@ function MasuEnhanceScreen({
     type: "button",
     onClick: restoreResetAllocation,
     disabled: restoreDraft.restored <= 0,
-    className: "w-full min-h-[44px] rounded-xl bg-slate-800 text-cyan-200 text-[12px] font-black active:scale-95 disabled:opacity-30"
+    className: "mh-button mh-button-secondary w-full min-h-[44px] rounded-xl bg-slate-800 text-cyan-200 text-[12px] font-black active:scale-95 disabled:opacity-30"
   }, "\u21A9 \u30EA\u30BB\u30C3\u30C8\u524D\u306E\u914D\u5206\u3092\u5FA9\u5143"), /*#__PURE__*/React.createElement("div", {
     className: `mt-1 text-[10px] font-bold text-center ${restoreDraft.omitted > 0 ? 'text-amber-300' : 'text-slate-400'}`
   }, restoreDraft.omitted > 0 ? `現行の上限・残りptに合わせ、${restoreDraft.restored}ptを仮配分（復元できない分 ${restoreDraft.omitted}pt）` : '保存は「強化する」を押した時だけです')), /*#__PURE__*/React.createElement("div", {
@@ -34621,7 +34622,7 @@ function MasuEnhanceScreen({
   }, "\u5F37\u5316\u306F\u4E0A\u306E\u300C\u307E\u3068\u3081\u3066\u5F37\u5316\u300D\u3067\u4E0B\u66F8\u304D\u3057\u3001\u78BA\u5B9A\u3059\u308B\u3068\u4FDD\u5B58\u3055\u308C\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: backToDetail,
-    className: "w-full min-h-[48px] rounded-xl border border-white/10 bg-slate-800 text-slate-300 font-black text-[12px] active:scale-95 mt-2"
+    className: "mh-button mh-button-secondary w-full min-h-[48px] rounded-xl border border-white/10 bg-slate-800 text-slate-300 font-black text-[12px] active:scale-95 mt-2"
   }, "\u5B8C\u4E86")), points > 0 && /*#__PURE__*/React.createElement("div", {
     className: `${SCREEN_FOOTER_CLASS} w-full max-w-md mx-auto`,
     "aria-label": "\u5F37\u5316\u306E\u78BA\u5B9A\u64CD\u4F5C"
@@ -34641,12 +34642,12 @@ function MasuEnhanceScreen({
     type: "button",
     disabled: planUsed <= 0,
     onClick: () => setBulkPlan(null),
-    className: "min-h-[52px] px-3 rounded-xl font-black text-[12px] bg-slate-800 text-slate-300 active:scale-95 disabled:opacity-30"
+    className: "mh-button mh-button-secondary min-h-[52px] px-3 rounded-xl font-black text-[12px] bg-slate-800 text-slate-300 active:scale-95 disabled:opacity-30"
   }, "\u914D\u5206\u3092\u3059\u3079\u3066\u53D6\u6D88"), /*#__PURE__*/React.createElement("button", {
     type: "button",
     disabled: planUsed <= 0,
     onClick: applyPlan,
-    className: "min-h-[52px] flex-1 rounded-xl font-black text-[13px] bg-gradient-to-r from-amber-600 to-orange-600 text-white active:scale-95 disabled:opacity-30 disabled:from-slate-700 disabled:to-slate-700"
+    className: "mh-button mh-button-primary min-h-[52px] flex-1 rounded-xl font-black text-[13px] bg-gradient-to-r from-amber-600 to-orange-600 text-white active:scale-95 disabled:opacity-30 disabled:from-slate-700 disabled:to-slate-700"
   }, planUsed > 0 ? `${planUsed}ptを使って強化する` : '振り分けてください'))));
 }
 
@@ -34882,7 +34883,7 @@ function MasuFusionScreen({
     }, "\u8907\u6570\u526F\u3092\u9078\u629E\u9806\u306B\u307E\u3068\u3081\u3066\u5408\u4F53\u3057\u307E\u3059\u3002\u56FA\u6709\u6280\u7D99\u627F\u306F\u78BA\u8A8D\u753B\u9762\u3067\u526F\u3054\u3068\u306B\u9078\u3079\u3001Lv\u4E0A\u9650\u3092\u8D85\u3048\u308B\u5834\u5408\u306F\u300C\u9650\u754C\u7A81\u7834\u3057\u3066\u5408\u4F53\u300D\u3082\u9078\u3079\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("button", {
       onClick: continueWithFusionSubs,
       disabled: selectedSubs.length === 0,
-      className: "mt-2 w-full min-h-[52px] rounded-xl bg-violet-600 text-white text-[13px] font-black disabled:bg-slate-800 disabled:text-slate-400 active:scale-95"
+      className: "mh-button mh-button-primary mt-2 w-full min-h-[52px] rounded-xl bg-violet-600 text-white text-[13px] font-black disabled:bg-slate-800 disabled:text-slate-400 active:scale-95"
     }, selectedSubs.length > 0 ? `副${selectedSubs.length}体で確認へ` : '副を選択してください')), fusionSortBar, /*#__PURE__*/React.createElement("div", {
       className: SCREEN_LIST_CLASS
     }, candidates.length === 0 ? /*#__PURE__*/React.createElement(ScreenEmpty, {
@@ -35302,7 +35303,7 @@ function MasuFusionScreen({
         Audio_.se.fusion();
       },
       disabled: !!diamondShortage || !!soulProofShortage || !breakthroughPlan.canAfford || fusionProcessingRef.current,
-      className: "w-full min-h-[52px] py-2.5 rounded-xl font-black text-sm shadow-lg flex items-center justify-center gap-2 bg-amber-600 text-white active:scale-95 disabled:bg-slate-800 disabled:text-slate-400 disabled:opacity-50"
+      className: "mh-button mh-button-primary w-full min-h-[52px] py-2.5 rounded-xl font-black text-sm shadow-lg flex items-center justify-center gap-2 bg-amber-600 text-white active:scale-95 disabled:bg-slate-800 disabled:text-slate-400 disabled:opacity-50"
     }, /*#__PURE__*/React.createElement(Star, {
       size: 16
     }), /*#__PURE__*/React.createElement("span", null, "\u9650\u754C\u7A81\u7834 \xD7", breakthroughPlan.count, " \u3057\u3066\u5408\u4F53", /*#__PURE__*/React.createElement("span", {
@@ -35317,7 +35318,7 @@ function MasuFusionScreen({
         Audio_.se.fusion();
       },
       disabled: !canAfford || fusionProcessingRef.current,
-      className: `w-full min-h-[52px] py-2.5 rounded-xl font-black text-sm shadow-lg flex items-center justify-center gap-2 active:scale-95 ${canAfford ? 'bg-violet-600 text-white' : 'bg-slate-800 text-slate-400'}`
+      className: `mh-button mh-button-primary w-full min-h-[52px] py-2.5 rounded-xl font-black text-sm shadow-lg flex items-center justify-center gap-2 active:scale-95 ${canAfford ? 'bg-violet-600 text-white' : 'bg-slate-800 text-slate-400'}`
     }, /*#__PURE__*/React.createElement(Sparkles, {
       size: 16
     }), /*#__PURE__*/React.createElement("span", null, breakthroughPlan.count > 0 ? '通常合体' : '合体する', /*#__PURE__*/React.createElement("span", {
@@ -35441,7 +35442,7 @@ function MasuFusionScreen({
     className: "text-[11px] text-slate-400 font-bold mb-4"
   }, "\u30C0\u30A4\u30E4\u3092", d.cost.toLocaleString(), "\u6D88\u8CBB\u3057\u307E\u3057\u305F"), /*#__PURE__*/React.createElement("button", {
     onClick: continueFusionFlow,
-    className: "w-full max-w-xs min-h-[52px] bg-violet-600 text-white py-3.5 rounded-xl font-black text-sm shadow-lg active:scale-95"
+    className: "mh-button mh-button-primary w-full max-w-xs min-h-[52px] bg-violet-600 text-white py-3.5 rounded-xl font-black text-sm shadow-lg active:scale-95"
   }, "\u3068\u3058\u308B"));
 }
 
@@ -60602,7 +60603,7 @@ function MonsterHeroGame() {
       onPointerMove: rippleOnPointerMove,
       onPointerUp: rippleOnPointerEnd,
       onPointerCancel: rippleOnPointerEnd,
-      className: "h-full w-full bg-slate-950 text-white overflow-hidden relative select-none font-sans",
+      className: "mh-app h-full w-full bg-slate-950 text-white overflow-hidden relative select-none font-sans",
       style: forcedRotationStyle || {
         height: '100%'
       }
@@ -61495,7 +61496,7 @@ function MonsterHeroGame() {
         className: SCREEN_FOOTER_CLASS
       }, /*#__PURE__*/React.createElement("button", {
         onClick: saveAutoSettings,
-        className: "w-full max-w-md mx-auto block min-h-[52px] rounded-2xl bg-indigo-600 text-white font-black text-sm shadow-lg active:scale-[.98]"
+        className: "mh-button mh-button-primary w-full max-w-md mx-auto block min-h-[52px] rounded-2xl bg-indigo-600 text-white font-black text-sm shadow-lg active:scale-[.98]"
       }, "\u6C7A\u5B9A")), autoAllyDetail && renderMonsterDetailModal({
         mon: autoAllyDetail.mon,
         masu: autoAllyDetail.masu,
@@ -61504,93 +61505,86 @@ function MonsterHeroGame() {
         readOnly: true,
         label: `${autoAllyDetail.mon.name}の確認用詳細`
       }));
-    })(), gameState === 'TEMPLE' && /*#__PURE__*/React.createElement("div", {
-      "data-mh-screen": true,
-      className: "flex-1 flex flex-col h-full min-h-0 p-4",
-      style: {
-        paddingTop: 'calc(1rem + env(safe-area-inset-top))',
-        paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center gap-2 mb-5 shrink-0"
-    }, /*#__PURE__*/React.createElement("button", {
-      onClick: returnToHome,
-      className: "p-3 text-slate-400 active:scale-90"
-    }, /*#__PURE__*/React.createElement(ArrowLeft, {
-      size: 20
-    })), /*#__PURE__*/React.createElement("h2", {
-      className: "text-xl font-black italic text-violet-300"
-    }, "\u795E\u6BBF")), /*#__PURE__*/React.createElement("div", {
-      className: "shrink-0 w-full max-w-md mx-auto mb-3"
-    }, /*#__PURE__*/React.createElement(AssistantBubble, {
-      scene: "temple"
-    })), /*#__PURE__*/React.createElement("div", {
-      className: "w-full max-w-md mx-auto space-y-2 flex-1 min-h-0 overflow-y-auto mh-scroll"
-    }, /*#__PURE__*/React.createElement("button", {
-      onClick: () => {
+    })(), gameState === 'TEMPLE' && (() => {
+      const templeLink = (icon, label, desc, onClick, rest = {}) => /*#__PURE__*/React.createElement("button", _extends({
+        type: "button",
+        onClick: onClick
+      }, rest, {
+        className: `mh-temple-menu-card w-full min-h-[64px] rounded-xl px-3 py-2 text-left text-white active:scale-95 ${rest.className || ''}`
+      }), /*#__PURE__*/React.createElement("span", {
+        className: "flex items-center gap-2"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "mh-temple-menu-icon shrink-0 text-violet-200"
+      }, icon), /*#__PURE__*/React.createElement("span", {
+        className: "min-w-0 flex-1 text-[13px] font-black leading-tight"
+      }, label), /*#__PURE__*/React.createElement(ChevronRight, {
+        size: 16,
+        className: "shrink-0 text-violet-300/80"
+      })), /*#__PURE__*/React.createElement("small", {
+        className: "mt-0.5 block text-[10px] font-bold leading-relaxed text-violet-100/60"
+      }, desc));
+      return /*#__PURE__*/React.createElement("div", {
+        "data-mh-screen": true,
+        className: SCREEN_SHELL_CLASS
+      }, /*#__PURE__*/React.createElement(ScreenHead, {
+        title: "\u795E\u6BBF",
+        accent: "text-violet-300",
+        onBack: returnToHome,
+        backLabel: "HOME\u3078\u623B\u308B"
+      }), /*#__PURE__*/React.createElement("div", {
+        className: "shrink-0 w-full max-w-md mx-auto mb-2"
+      }, /*#__PURE__*/React.createElement(AssistantBubble, {
+        scene: "temple"
+      })), /*#__PURE__*/React.createElement("div", {
+        className: `w-full max-w-md mx-auto space-y-2 ${SCREEN_LIST_CLASS}`
+      }, templeLink(/*#__PURE__*/React.createElement(RotateCcw, {
+        size: 18
+      }), '再生', 'ベースモンから新しいマスモンを再生する', () => {
         setRegenerationSelectedId(null);
         setRegenerationResult(null);
         setGameState('MASU_REGENERATION');
-      },
-      className: "mh-management-link mh-temple-link"
-    }, /*#__PURE__*/React.createElement(RotateCcw, {
-      size: 18
-    }), "\u518D\u751F"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => {
+      }), templeLink(/*#__PURE__*/React.createElement(Sparkles, {
+        size: 18
+      }), '合体', '2体のマスモンを合体して新しい個体へつなぐ', () => {
         resetFusionFlow();
         setGameState('MASU_FUSION');
-      },
-      className: "mh-management-link mh-temple-link"
-    }, /*#__PURE__*/React.createElement(Sparkles, {
-      size: 18
-    }), "\u5408\u4F53"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => {
+      }), templeLink(/*#__PURE__*/React.createElement(Gem, {
+        size: 18
+      }), '寄付', 'マスモンを寄付して報酬を受け取る', () => {
         resetDonationFlow();
         setGameState('MASU_DONATION');
-      },
-      className: "mh-management-link mh-temple-link"
-    }, /*#__PURE__*/React.createElement(Gem, {
-      size: 18
-    }), "\u5BC4\u4ED8"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => {
+      }), templeLink(/*#__PURE__*/React.createElement(Star, {
+        size: 18
+      }), '限界突破', 'マスモンのレベル上限を引き上げる', () => {
         setRebirthSelectedId(null);
         setRebirthSkillKey(null);
         setRebirthError('');
         setGameState('MASU_REBIRTH');
-      },
-      className: "mh-management-link mh-temple-link"
-    }, /*#__PURE__*/React.createElement(Star, {
-      size: 18
-    }), "\u9650\u754C\u7A81\u7834"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => {
+      }), templeLink(/*#__PURE__*/React.createElement(RotateCcw, {
+        size: 18
+      }), '転生', 'Lvを99下げて強化Pを獲得し、育成を振り直す', () => {
         setReincarnateSelectedId(null);
         setReincarnateSkillKey(null);
         setReincarnateError('');
         setGameState('MASU_REINCARNATE');
-      },
-      className: "mh-management-link mh-temple-link"
-    }, /*#__PURE__*/React.createElement(RotateCcw, {
-      size: 18
-    }), "\u8EE2\u751F"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => {
+      }), templeLink(/*#__PURE__*/React.createElement(Sparkles, {
+        size: 18
+      }), '超越', 'さらなる成長へ進むための限界を超える', () => {
         setTranscendSelectedId(null);
         setTranscendError('');
         setGameState('MASU_TRANSCENDENCE');
-      },
-      className: "mh-management-link mh-temple-link mh-transcend-link"
-    }, /*#__PURE__*/React.createElement(Sparkles, {
-      size: 18
-    }), "\u8D85\u8D8A"), /*#__PURE__*/React.createElement("button", {
-      "data-soul-rank-link": true,
-      onClick: () => {
+      }, {
+        className: 'mh-transcend-link'
+      }), templeLink(/*#__PURE__*/React.createElement(Sparkles, {
+        size: 18
+      }), '魂格進化', '魂格を進めてLv上限をさらに解放する', () => {
         setSoulRankSelectedId(null);
         setSoulRankError('');
         setGameState('MASU_SOUL_RANK');
-      },
-      className: "mh-management-link mh-temple-link"
-    }, /*#__PURE__*/React.createElement(Sparkles, {
-      size: 18
-    }), "\u9B42\u683C\u9032\u5316"))), gameState === 'MASU_REGENERATION' && /*#__PURE__*/React.createElement(MasuRegenerationScreen, {
+      }, {
+        'data-soul-rank-link': true
+      })));
+    })(), gameState === 'MASU_REGENERATION' && /*#__PURE__*/React.createElement(MasuRegenerationScreen, {
       MONSTER_CARD_CLASS: MONSTER_CARD_CLASS,
       MONSTER_CARD_STYLE: MONSTER_CARD_STYLE,
       onBackToTemple: () => setGameState('TEMPLE'),
@@ -66615,7 +66609,7 @@ function MonsterHeroGame() {
     }, /*#__PURE__*/React.createElement("button", {
       onClick: confirmMonsterRoster,
       disabled: draftMonsterRoster.length !== STARTER_MONSTER_IDS.length,
-      className: "block w-full max-w-md mx-auto min-h-[52px] rounded-2xl bg-indigo-500 text-white font-black text-sm shadow-lg active:scale-[.98] disabled:opacity-40"
+      className: "mh-button mh-button-primary block w-full max-w-md mx-auto min-h-[52px] rounded-2xl bg-indigo-500 text-white font-black text-sm shadow-lg active:scale-[.98] disabled:opacity-40"
     }, "\u6C7A\u5B9A (", draftMonsterRoster.length, "/", STARTER_MONSTER_IDS.length, ")"))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
       className: "flex items-center gap-2 mb-2 shrink-0 bg-purple-950/30 border border-purple-500/30 rounded-2xl px-2 py-2"
     }, /*#__PURE__*/React.createElement("span", {
@@ -66677,7 +66671,7 @@ function MonsterHeroGame() {
     }, /*#__PURE__*/React.createElement("button", {
       onClick: confirmTeachingRoster,
       disabled: draftTeachingRoster.length !== TEACHING_ROSTER_SIZE,
-      className: "block w-full max-w-md mx-auto min-h-[52px] rounded-2xl bg-purple-500 text-white font-black text-sm shadow-lg active:scale-[.98] disabled:opacity-40"
+      className: "mh-button mh-button-primary block w-full max-w-md mx-auto min-h-[52px] rounded-2xl bg-purple-500 text-white font-black text-sm shadow-lg active:scale-[.98] disabled:opacity-40"
     }, "\u6C7A\u5B9A (", draftTeachingRoster.length, "/", TEACHING_ROSTER_SIZE, ")")))), rosterDetailMon && renderMonsterDetailModal({
       mon: rosterDetailMon,
       masu: rosterDetailMon.masuId ? getMasuMon(rosterDetailMon.masuId) : null,
@@ -66878,7 +66872,7 @@ function MonsterHeroGame() {
         className: SCREEN_FOOTER_CLASS
       }, /*#__PURE__*/React.createElement("button", {
         onClick: savePastureSettings,
-        className: "block w-full max-w-md mx-auto min-h-[52px] rounded-2xl bg-emerald-600 text-white font-black text-sm shadow-lg active:scale-[.98]"
+        className: "mh-button mh-button-primary block w-full max-w-md mx-auto min-h-[52px] rounded-2xl bg-emerald-600 text-white font-black text-sm shadow-lg active:scale-[.98]"
       }, "\u6C7A\u5B9A\uFF08", draftHomePastureIds.length, "\u4F53\uFF09")));
     })(), gameState === 'MASU_MONS' && /*#__PURE__*/React.createElement(MasuMonsScreen, {
       masuMons: masuMons,
@@ -72553,7 +72547,7 @@ const createAnimationStyle = () => {
     .mh-game-over-screen{padding:calc(24px + env(safe-area-inset-top)) 24px calc(24px + env(safe-area-inset-bottom))}.mh-game-over-head{width:100%}.mh-game-over-actions{padding-bottom:0}
     @media(max-height:620px){.mh-game-over-screen{padding-top:calc(14px + env(safe-area-inset-top));padding-bottom:calc(12px + env(safe-area-inset-bottom))}.mh-game-over-head>svg{width:38px;height:38px;margin-bottom:6px}.mh-game-over-head h2{font-size:20px}.mh-game-over-head>div{padding:10px;margin-top:7px;margin-bottom:7px}.mh-game-over-actions{gap:7px;margin-top:5px}.mh-game-over-actions button:first-child{padding-top:10px;padding-bottom:10px}.mh-game-over-actions button:last-child{padding-top:8px;padding-bottom:8px}}
     .mh-regeneration-animation{position:fixed;inset:0;z-index:52000;display:flex;align-items:center;justify-content:center;padding:calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));background:radial-gradient(circle,#4c1d95,#020617 65%)}.mh-regeneration-disc{position:absolute;width:170px;height:170px;object-fit:contain;animation:mhRegenerationDisc 1.5s ease-in forwards}.mh-regeneration-born{position:relative;width:min(330px,100%);padding:20px;border:2px solid #fbbf24;border-radius:24px;background:#0f172a;text-align:center;opacity:0;animation:mhRegenerationBorn .6s 1.4s ease-out forwards}.mh-regeneration-born h3{font-size:20px;font-weight:1000;color:#fde68a}.mh-regeneration-born b{float:right;color:#f9a8d4}@keyframes mhRegenerationDisc{0%{transform:rotate(0) scale(.7);opacity:1}85%{transform:rotate(1080deg) scale(1.15);opacity:1}100%{transform:rotate(1260deg) scale(.1);opacity:0}}@keyframes mhRegenerationBorn{to{opacity:1;transform:none}}
-    .mh-home-scene{position:relative;isolation:isolate;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:29%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:visible;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar.is-framed{border-color:transparent}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:7px;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:6px monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:auto 43px;grid-template-rows:1fr 1fr;width:139px;padding:4px;border-radius:14px}.mh-home-wallet>div{display:grid;grid-template-columns:14px 1fr auto;align-items:center;gap:2px;padding:1px 3px;color:#ffe08a}.mh-home-wallet>div b{font-size:8px;text-align:right}.mh-home-wallet>div small{font-size:6px;color:#f4e7c3}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:7px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;border:0;background:transparent;color:#fff;touch-action:manipulation}.mh-home-facility>span{position:absolute;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:0;top:14%;width:42%;height:34%}.mh-home-facility.management>span{left:6%;top:37%;border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}.mh-home-facility.temple{right:0;top:14%;width:42%;height:34%}.mh-home-facility.temple>span{right:7%;top:35%;border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}.mh-home-facility.market{right:0;top:45%;width:39%;height:30%}.mh-home-facility.market>span{right:5%;top:40%;border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}.mh-home-facility.battle{left:16%;right:16%;bottom:0;height:31%}.mh-home-facility.battle>span{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}.mh-home-facility.battle:active>span{transform:translateX(-50%) scale(.94)}.mh-home-gift{position:absolute;z-index:5;right:5%;top:73%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #67e8f9aa;border-radius:13px;background:#083344e8;color:#cffafe;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-gift em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-gift:active{transform:scale(.94);filter:brightness(1.25)}.mh-home-update{position:absolute;z-index:5;right:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-update:active{transform:scale(.94);filter:brightness(1.25)}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-rebirth-stars{display:flex;justify-content:center;align-items:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rainbow-breakthrough-star{display:block;width:1em;height:1em;object-fit:contain;transform:scale(1.07) translateY(-.06em)}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
+    .mh-home-scene{position:relative;isolation:isolate;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:29%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:visible;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar.is-framed{border-color:transparent}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:7px;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:6px monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:auto 43px;grid-template-rows:1fr 1fr;width:139px;padding:4px;border-radius:14px}.mh-home-wallet>div{display:grid;grid-template-columns:14px 1fr auto;align-items:center;gap:2px;padding:1px 3px;color:#ffe08a}.mh-home-wallet>div b{font-size:8px;text-align:right}.mh-home-wallet>div small{font-size:6px;color:#f4e7c3}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:7px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;border:0;background:transparent;color:#fff;touch-action:manipulation}.mh-home-facility>span{position:absolute;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:0;top:14%;width:42%;height:34%}.mh-home-facility.management>span{left:6%;top:37%;border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}.mh-home-facility.temple{right:0;top:14%;width:42%;height:34%}.mh-home-facility.temple>span{right:7%;top:35%;border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}.mh-home-facility.market{right:0;top:45%;width:39%;height:30%}.mh-home-facility.market>span{right:5%;top:40%;border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}.mh-home-facility.battle{left:16%;right:16%;bottom:0;height:31%}.mh-home-facility.battle>span{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}.mh-home-facility.battle:active>span{transform:translateX(-50%) scale(.94)}.mh-home-gift{position:absolute;z-index:5;right:5%;top:73%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #67e8f9aa;border-radius:13px;background:#083344e8;color:#cffafe;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-gift em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-gift:active{transform:scale(.94);filter:brightness(1.25)}.mh-home-update{position:absolute;z-index:5;right:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-update:active{transform:scale(.94);filter:brightness(1.25)}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-temple-menu-card{position:relative;border:1px solid #a78bfa80;background:linear-gradient(135deg,#2e1065d9 0%,#1e1b4bcc 58%,#312e81b3 100%);box-shadow:inset 0 1px 0 #ddd6fe18,0 5px 16px #0006,0 0 18px #7c3aed12}.mh-temple-menu-card:active{filter:brightness(1.16);transform:scale(.98)}.mh-temple-menu-icon{display:flex;width:30px;height:30px;align-items:center;justify-content:center;border:1px solid #c4b5fd38;border-radius:10px;background:#4c1d9566;box-shadow:inset 0 1px 0 #ede9fe18}.mh-rebirth-stars{display:flex;justify-content:center;align-items:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rainbow-breakthrough-star{display:block;width:1em;height:1em;object-fit:contain;transform:scale(1.07) translateY(-.06em)}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
     /* ==================== プロフィールフレーム(2026-09-15) ====================
        ブリーダーアイコンの外側へ重ねる飾り枠。アイコン画像そのものには触らない。
        ★太さを px で書かない。inset と mask を割合で書いてあるので、ランキングの 32px でも
@@ -72634,7 +72628,6 @@ const createAnimationStyle = () => {
     .mh-soul-rank-badge.is-stage-4{background:radial-gradient(circle at 33% 25%,#ffffffdd,#ffffff33 20%,transparent 46%),linear-gradient(150deg,#fda4af,#b91c1c 58%,#4c0519);box-shadow:inset 0 1px 1px #ffffffb3,inset 0 -2px 3px #00000066,0 0 9px #fb7185cc,0 0 17px #fcd34d99,0 1px 4px #020617}
     .mh-soul-rank-badge.is-stage-5{border-color:#fff;background:radial-gradient(circle at 34% 24%,#ffffffa6,#ffffff1a 15%,transparent 36%),conic-gradient(from 205deg,#ff5f6d,#ffc857,#5ef38c,#3ddcf7,#8b7bff,#ff6fd8,#ff5f6d);box-shadow:inset 0 1px 2px #ffffffcc,inset 0 -2px 3px #00000059,0 0 0 1.2px #7c3aed,0 0 11px #ff6fd8dd,0 0 20px #3ddcf7bb,0 1px 4px #020617}
     .mh-soul-rank-badge.is-stage-5::before{background:linear-gradient(180deg,#ffffff,#ffd7f5 34%,#8b7bff 68%,#3b2a8a);filter:drop-shadow(0 1px 2px #000a) drop-shadow(0 0 3px #ff6fd8)}
-    .mh-transcend-link{border-color:#fcd34daa;background:linear-gradient(135deg,#4c1d95aa,#78350faa)}
     /* 超越の演出。3〜5秒で一度だけ流す。終わったら要素ごと消えるので常時アニメは残らない */
     .mh-transcend-animation{position:fixed;inset:0;z-index:51500;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at 50% 46%,#3b0764 0,#0b0518 42%,#020617 76%);pointer-events:auto;touch-action:none;padding:calc(env(safe-area-inset-top) + 12px) 12px calc(env(safe-area-inset-bottom) + 12px)}
     .mh-transcend-converge{position:absolute;inset:0;z-index:1;pointer-events:none}
