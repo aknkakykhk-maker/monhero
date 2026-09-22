@@ -649,7 +649,13 @@ check('置けるかの判定も画面へ渡す', has('tacticsCanAssign={tacticsC
     hasScreen('const showPlannedInBubble=!enemyIntent.targetsAll;')
       && hasScreen('{rawDmg>0&&showPlannedInBubble&&plannedText?('));
   // ★連撃だと予告の時点で分かる(2026-09-21 ユーザー指摘「敵の連撃技が連撃表示になってない」)
-  check('予告に何連撃かを出す', hasScreen('{previewHits>1?` ${previewHits}連撃`:\'\'}'));
+  // ★連撃だと予告の時点で分かる(2026-09-21 ユーザー指摘「敵の連撃技が連撃表示になってない」)。
+  //   2026-09-22 から、何連撃かを出すのは**右上の吹き出し**(noticeLabel)だけにした
+  //   (ユーザー指摘「予測は攻撃名で吹き出しはその効果」)。両方に書くと同じことを2回言ううえ、
+  //   札の幅(100px)で技名が2行に折り返していた
+  check('連撃かどうかは吹き出しが出す',
+    has('noticeLabel:`${TACTICS_RUSH_HITS}連撃`')
+      && !hasScreen("{previewHits>1?` ${previewHits}連撃`:''}"));
   // ★同じことを2か所で言わない(2026-09-22 ユーザー指摘「必殺技のためると必殺準備が被って出てる。
   //   それって本来どっちかでいいはずだよね」)。画面まんなかの大きい警告(必殺技／ためる／
   //   貫通技準備)と、敵の絵の右上の札が、重なってどちらも読めなくなっていた。

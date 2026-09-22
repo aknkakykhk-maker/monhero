@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 188bd7d63ef220e2
+// source-sha256: e3818b7496208403
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2a9d00513614e9d1
+// generated-sha256: c725984c2034ebf7
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-22 18:02"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-22 18:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -38097,6 +38097,11 @@ function BattleScreen({
   // ★いくつ付いても高さが変わらないようにするための状態。ここが無いと、
   //   札が3行4行に伸びて敵の絵・緊急のボタン・与ダメの数字を押し出す
   const [buffDetail, setBuffDetail] = useState(false);
+  // バトル中の設定メニュー(2026-09-22 ユーザー指示「BGMは右上に設定ボタンみたいの作って
+  // そこにギブアップとかヘルプとかと一緒にまとめて」)。
+  // ★ヘッダーに3つ並べていた入口(ヘルプ・あきらめる)とBGMを1つにまとめる。
+  //   どれもバトル中に何度も押すものではないので、1枚めくる形にしても手が止まらない
+  const [showBattleMenu, setShowBattleMenu] = useState(false);
   // ★いま狙われている枠(2026-09-21 ユーザー指摘「誰に攻撃か分からない」)。
   //   間合い攻撃は相手を1体決めず「予告した間合いに立っている子」へ当たるので、
   //   ほかの技と違って targetName を持たない。予告を見ても間合いしか分からなかった。
@@ -38262,19 +38267,14 @@ function BattleScreen({
   }, "\xD7", battleSpeed, autoRepeat && /*#__PURE__*/React.createElement("span", {
     className: "ml-0.5 text-[10px]"
   }, "\u56FA\u5B9A")), /*#__PURE__*/React.createElement("button", {
-    onClick: () => openHelp(),
-    "aria-label": "\u30D8\u30EB\u30D7",
-    className: "shrink-0 w-[28px] h-[28px] flex items-center justify-center bg-slate-800 rounded text-emerald-400 active:scale-90"
-  }, /*#__PURE__*/React.createElement(HelpCircle, {
-    size: 14
-  })), /*#__PURE__*/React.createElement("button", {
-    "data-battle-quit": true,
-    disabled: !!battleTutorial,
-    onClick: () => setShowQuitConfirm(true),
-    "aria-label": "\u8AE6\u3081\u308B",
-    className: "shrink-0 w-[28px] h-[28px] flex items-center justify-center bg-slate-800 rounded text-slate-400 active:scale-90 disabled:opacity-25"
-  }, /*#__PURE__*/React.createElement(Flag, {
-    size: 14
+    "data-battle-menu-button": true,
+    type: "button",
+    onClick: () => setShowBattleMenu(true),
+    "aria-label": "\u8A2D\u5B9A\uFF08BGM\u30FB\u30D8\u30EB\u30D7\u30FB\u3042\u304D\u3089\u3081\u308B\uFF09",
+    title: "\u8A2D\u5B9A",
+    className: "shrink-0 w-[28px] h-[28px] flex items-center justify-center bg-slate-800 rounded text-slate-300 active:scale-90"
+  }, /*#__PURE__*/React.createElement(Settings, {
+    size: 15
   })))), ultraBattleView ? /*#__PURE__*/React.createElement("div", {
     "data-ultra-battle-view": true,
     className: "flex-1 min-h-0 flex flex-col bg-slate-950 text-slate-100"
@@ -38486,56 +38486,44 @@ function BattleScreen({
     style: {
       justifyContent: 'safe center'
     }
-  }, /*#__PURE__*/React.createElement("div", {
-    "data-battle-side-buttons": true,
-    className: "absolute left-2 top-1 z-20 flex w-[64px] flex-col items-stretch gap-1"
   }, /*#__PURE__*/React.createElement("button", {
+    "data-battle-log-button": true,
+    type: "button",
+    onClick: () => setShowBattleLog(true),
+    "aria-label": "\u30D0\u30C8\u30EB\u306E\u8A18\u9332\u3092\u898B\u308B",
+    title: "\u30D0\u30C8\u30EB\u306E\u8A18\u9332",
+    className: "absolute left-2 top-1 z-20 flex w-[64px] min-h-[44px] flex-col items-center justify-center rounded-2xl border border-amber-500/70 bg-amber-950/30 px-1 py-1 shadow-lg active:scale-90"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[13px] leading-none"
+  }, "\uD83D\uDCDC"), /*#__PURE__*/React.createElement("span", {
+    className: "mt-0.5 text-[10px] font-black leading-none text-white whitespace-nowrap"
+  }, "\u30ED\u30B0")), /*#__PURE__*/React.createElement("button", {
     onClick: () => setShowHeroInfo(true),
-    className: `flex w-[64px] min-h-[44px] flex-col items-center justify-center rounded-2xl px-1 py-1 border border-indigo-500 bg-indigo-950/30 active:scale-90 shadow-lg${battleTutorialSpotClass('heroStatus')}`
+    className: `absolute left-2 bottom-1 z-20 flex w-[64px] min-h-[44px] flex-col items-center justify-center rounded-2xl px-1 py-1 border border-indigo-500 bg-indigo-950/30 active:scale-90 shadow-lg${battleTutorialSpotClass('heroStatus')}`
   }, /*#__PURE__*/React.createElement(Crown, {
     className: "text-indigo-400 mb-0.5",
     size: 14
   }), /*#__PURE__*/React.createElement("span", {
     className: "text-[10px] font-black leading-none text-white whitespace-nowrap"
   }, "\u30B9\u30C6\u30FC\u30BF\u30B9")), /*#__PURE__*/React.createElement("button", {
-    onClick: useEmergency,
-    disabled: isBusy || autoBattle || !battleTutorialAllowsEmergency,
-    className: `flex w-[64px] min-h-[44px] flex-col items-center justify-center rounded-2xl px-1 py-1 border border-blue-500 bg-blue-900/30 active:scale-90 disabled:opacity-20 shadow-lg${battleTutorialSpotClass('emergency')}`
-  }, /*#__PURE__*/React.createElement(Activity, {
-    className: "text-blue-400 mb-0.5",
-    size: 16
-  }), /*#__PURE__*/React.createElement("span", {
-    className: "text-[10px] font-black leading-none text-white whitespace-nowrap"
-  }, "\u7DCA\u6025")), /*#__PURE__*/React.createElement("button", {
     onClick: () => setShowEnemyInfo(true),
-    className: "flex w-[64px] min-h-[44px] flex-col items-center justify-center rounded-2xl px-1 py-1 border border-red-500 bg-red-950/30 active:scale-90 shadow-lg"
+    className: "absolute right-2 top-1 z-20 flex w-[64px] min-h-[44px] flex-col items-center justify-center rounded-2xl px-1 py-1 border border-red-500 bg-red-950/30 active:scale-90 shadow-lg"
   }, /*#__PURE__*/React.createElement(Search, {
     className: "text-red-400 mb-0.5",
     size: 14
   }), /*#__PURE__*/React.createElement("span", {
     className: "text-[10px] font-black leading-none text-white whitespace-nowrap"
-  }, "\u89E3\u6790")), /*#__PURE__*/React.createElement("button", {
-    "data-battle-log-button": true,
-    type: "button",
-    onClick: () => setShowBattleLog(true),
-    "aria-label": "\u30D0\u30C8\u30EB\u306E\u8A18\u9332\u3092\u898B\u308B",
-    title: "\u30D0\u30C8\u30EB\u306E\u8A18\u9332",
-    className: "flex w-[64px] min-h-[44px] flex-col items-center justify-center rounded-2xl border border-amber-500/70 bg-amber-950/30 px-1 py-1 shadow-lg active:scale-90"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "text-[13px] leading-none"
-  }, "\uD83D\uDCDC"), /*#__PURE__*/React.createElement("span", {
-    className: "mt-0.5 text-[10px] font-black leading-none text-white whitespace-nowrap"
-  }, "\u30ED\u30B0")), battleSoulMasus.some(m => normalizeSoulRankStage(m.soulRankStage) > 0) && /*#__PURE__*/React.createElement("button", {
+  }, "\u89E3\u6790")), battleSoulMasus.some(m => normalizeSoulRankStage(m.soulRankStage) > 0) && /*#__PURE__*/React.createElement("button", {
     "data-soul-battle-effects-button": true,
     type: "button",
     onClick: () => setShowSoulBattleEffects(true),
-    className: "flex w-[64px] min-h-[44px] flex-col items-center justify-center rounded-2xl px-1 py-1 border border-sky-400 bg-sky-950/60 active:scale-90 shadow-lg"
+    className: "absolute right-2 top-[52px] z-20 flex w-[64px] min-h-[44px] flex-col items-center justify-center rounded-2xl px-1 py-1 border border-sky-400 bg-sky-950/60 active:scale-90 shadow-lg"
   }, /*#__PURE__*/React.createElement(Sparkles, {
     className: "text-sky-300 mb-0.5",
     size: 14
   }), /*#__PURE__*/React.createElement("span", {
     className: "text-[10px] font-black leading-none text-white whitespace-nowrap"
-  }, "\u9B42\u683C\u52B9\u679C"))), enemy && enemyIntent && !isBusy && (() => {
+  }, "\u9B42\u683C\u52B9\u679C")), enemy && enemyIntent && !isBusy && (() => {
     // ためる・待機・移動はダメージが無いので「予測」を出さない。
     // 出すと必ず0になり、ガードを構える判断の邪魔になる
     // 新モードは「狙われた子の丈夫さ」で受け、「その子が構えたガード」だけが効く。
@@ -38548,7 +38536,6 @@ function BattleScreen({
     const plannedDmg = plannedHit.taken;
     // 連撃は「129・130」と1発ずつ。1発の技は今までどおり数字ひとつ
     const plannedText = plannedHit.parts.join('・');
-    const previewHits = enemyIntent.variant === 'rush' ? Math.max(1, Math.floor(Number(enemyIntent.hits) || 1)) : 1;
     // ★全体攻撃は受ける量が1体ずつ違う。1つの数字にまとめると、
     //   どの子がどれだけ減るのか分からなくなるので、吹き出しには出さず枠ごとに出す
     const showPlannedInBubble = !enemyIntent.targetsAll;
@@ -38560,18 +38547,20 @@ function BattleScreen({
     //   説明文になり、右上の吹き出しの「必殺技準備」を長く言い直しただけになっていた
     //   (2026-09-22 ユーザー指摘「他のにならってやると攻撃予測のとこをためるにして
     //   吹き出しを必殺技準備が正解なはず」)。ほかの行動にならって短い呼び名にそろえる。
-    // ★貫通の構えは敵ごとに「◯◯の構え」という名前が付くので、label のままにする
+    // ★貫通の構えは敵ごとに「◯◯の構え」という名前が付くので、label のままにする。
+    // ★何連撃かはここへ書かない。右上の吹き出しが「3連撃！」と出す側で、
+    //   両方に書くと同じことを2回言ううえ、札の幅(100px)で名前が2行に折り返す
     const intentTitle = enemyIntent.type === 'CHARGE' && enemyIntent.category ? enemyIntent.category : enemyIntent.label;
     return /*#__PURE__*/React.createElement("div", {
       "data-enemy-intent": true,
-      className: `absolute right-2 top-2 z-[45] w-[100px] rounded-xl border px-1.5 py-1 shadow-lg animate-pulse${battleTutorialSpotClass('enemyIntent')} ${focusedCard ? 'invisible' : 'visible'} ${tone}`
+      className: `absolute right-2 bottom-1 z-[45] w-[100px] rounded-xl border px-1.5 py-1 shadow-lg animate-pulse${battleTutorialSpotClass('enemyIntent')} ${focusedCard ? 'invisible' : 'visible'} ${tone}`
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex items-center gap-1 text-[8px] font-black uppercase tracking-wider opacity-80"
     }, /*#__PURE__*/React.createElement(Target, {
       size: 9
     }), "\u6B21\u306E\u884C\u52D5"), /*#__PURE__*/React.createElement("div", {
       className: "mt-0.5 text-[11px] font-black leading-tight"
-    }, intentTitle, previewHits > 1 ? ` ${previewHits}連撃` : ''), aimedName ? /*#__PURE__*/React.createElement("div", {
+    }, intentTitle), aimedName ? /*#__PURE__*/React.createElement("div", {
       className: "mt-0.5 truncate text-[9px] font-bold leading-none opacity-90"
     }, "\uD83C\uDFAF", aimedName) : null, rawDmg > 0 && showPlannedInBubble && plannedText ? /*#__PURE__*/React.createElement("div", {
       className: "mt-1 rounded bg-black/55 px-1 py-0.5 text-center text-[11px] font-black leading-none tabular-nums"
@@ -40230,20 +40219,20 @@ function BattleScreen({
     size: 9
   }), /*#__PURE__*/React.createElement("span", {
     className: "text-[10px]"
-  }, "VIEW")), /*#__PURE__*/React.createElement("div", {
+  }, "VIEW")), /*#__PURE__*/React.createElement("button", {
+    onClick: useEmergency,
+    disabled: isBusy || autoBattle || !battleTutorialAllowsEmergency,
+    "aria-label": "\u7DCA\u6025\u56DE\u5FA9",
+    title: "\u7DCA\u6025\u56DE\u5FA9",
+    className: `shrink-0 flex h-8 w-[44px] flex-col items-center justify-center rounded-lg border-2 border-blue-400 bg-blue-900/70 leading-none active:scale-90 disabled:opacity-25${battleTutorialSpotClass('emergency')}`
+  }, /*#__PURE__*/React.createElement(Activity, {
+    size: 11,
+    className: "text-blue-300"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "mt-0.5 text-[10px] font-black text-blue-50"
+  }, "\u7DCA\u6025")), /*#__PURE__*/React.createElement("div", {
     className: "shrink-0 flex flex-col gap-0.5"
-  }, /*#__PURE__*/React.createElement("button", {
-    "data-auto-bgm-button": true,
-    type: "button",
-    onClick: () => setShowAutoBgmPicker(true),
-    "aria-label": "\u30D0\u30C8\u30EBBGM\u3068\u97F3\u91CF\u3092\u8ABF\u6574",
-    title: "BGM / \u97F3\u91CF",
-    className: "shrink-0 min-h-[32px] min-w-[42px] rounded-lg border border-indigo-400/50 bg-indigo-800 px-1.5 text-indigo-100 active:scale-90"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "block text-[13px] leading-none"
-  }, "\uD83C\uDFB5"), /*#__PURE__*/React.createElement("span", {
-    className: "mt-0.5 block text-[10px] font-black leading-none"
-  }, "BGM")), quickToRhythmButtonNode), /*#__PURE__*/React.createElement("div", {
+  }, quickToRhythmButtonNode), /*#__PURE__*/React.createElement("div", {
     className: "w-[44px] shrink-0 flex flex-col gap-0.5"
   }, /*#__PURE__*/React.createElement("button", {
     type: "button",
@@ -40376,7 +40365,50 @@ function BattleScreen({
       "data-tactics-card-block": cardBlock.short,
       className: "pointer-events-none absolute inset-x-0.5 top-1 z-30 rounded-md border border-rose-200 bg-rose-600 px-0.5 py-0.5 text-center text-[8px] font-black leading-tight text-white shadow-[0_2px_8px_rgba(0,0,0,.85)]"
     }, cardBlock.short));
-  })))));
+  })))), showBattleMenu && /*#__PURE__*/React.createElement("div", {
+    className: "fixed inset-0 z-[70000] flex items-start justify-end bg-black/70 p-2",
+    onClick: () => setShowBattleMenu(false)
+  }, /*#__PURE__*/React.createElement("div", {
+    "data-battle-menu": true,
+    className: "mt-11 flex w-[190px] flex-col gap-1.5 rounded-2xl border border-white/20 bg-slate-900 p-2 shadow-2xl",
+    onClick: e => e.stopPropagation()
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "px-1 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400"
+  }, "\u8A2D\u5B9A"), /*#__PURE__*/React.createElement("button", {
+    "data-auto-bgm-button": true,
+    type: "button",
+    onClick: () => {
+      setShowBattleMenu(false);
+      setShowAutoBgmPicker(true);
+    },
+    className: "flex min-h-[40px] items-center gap-2 rounded-lg border border-indigo-400/50 bg-indigo-950/60 px-2 text-[12px] font-black text-indigo-100 active:scale-95"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[14px] leading-none"
+  }, "\uD83C\uDFB5"), "BGM\u30FB\u97F3\u91CF"), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => {
+      setShowBattleMenu(false);
+      openHelp();
+    },
+    className: "flex min-h-[40px] items-center gap-2 rounded-lg border border-emerald-400/50 bg-emerald-950/60 px-2 text-[12px] font-black text-emerald-100 active:scale-95"
+  }, /*#__PURE__*/React.createElement(HelpCircle, {
+    size: 14
+  }), "\u30D8\u30EB\u30D7"), /*#__PURE__*/React.createElement("button", {
+    "data-battle-quit": true,
+    type: "button",
+    disabled: !!battleTutorial,
+    onClick: () => {
+      setShowBattleMenu(false);
+      setShowQuitConfirm(true);
+    },
+    className: "flex min-h-[40px] items-center gap-2 rounded-lg border border-red-400/50 bg-red-950/60 px-2 text-[12px] font-black text-red-100 active:scale-95 disabled:opacity-30"
+  }, /*#__PURE__*/React.createElement(Flag, {
+    size: 14
+  }), "\u3042\u304D\u3089\u3081\u308B"), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => setShowBattleMenu(false),
+    className: "min-h-[36px] rounded-lg border border-white/15 bg-slate-800 text-[11px] font-black text-slate-300 active:scale-95"
+  }, "\u3068\u3058\u308B"))));
 }
 function UltimateDistanceBreakReveal({
   difficulty,

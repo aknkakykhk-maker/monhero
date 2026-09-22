@@ -5795,7 +5795,7 @@ const ASSISTANT_BATTLE_TUTORIAL_BODY = [
   { id:'breederDo',    at:'BATTLE',        e:'wink',    title:'使ってみよう', t:'アシストカードを選んでACTION！ 攻撃UPの表示が出るよ♪', spot:['cards','action'], wait:'do', need:'teaching' },
   { id:'breederSeen',  at:'BATTLE',        e:'happy',   title:'攻撃アップ！', t:'「攻撃UP!」って出たでしょ？ この効果はバトルの最後まで続くよ♪', wait:'next' },
   // ④ 緊急回復と敵の移動
-  { id:'emergTalk',    at:'BATTLE',        e:'normal',  title:'緊急回復', t:'左の「緊急」はライフとガッツが3割もどるよ。そのターンは攻撃できないの。', spot:'emergency', wait:'next' },
+  { id:'emergTalk',    at:'BATTLE',        e:'normal',  title:'緊急回復', t:'下の「緊急」はライフとガッツが3割もどるよ。そのターンは攻撃できないの。', spot:'emergency', wait:'next' },
   { id:'emergDo',      at:'BATTLE',        e:'wink',    title:'押してみて', t:'「緊急」を押してみて！ 敵も動くから、そこも見ててね♪', spot:'emergency', wait:'do', need:'emergency' },
   { id:'moveTalk',     at:'BATTLE',        e:'surprise',title:'敵が動いた！', t:'敵は距離を変えてくるよ。離れられると攻撃が当たりにくくなるの。', spot:'enemyBar', wait:'next' },
   // ⑤ 距離技で引き戻す
@@ -5920,7 +5920,7 @@ const ASSISTANT_BATTLE_TUTORIAL_TACTICS_BODY = [
   { id:'tBreederDo',   at:'BATTLE',        e:'wink',    title:'使ってみよう', t:'アシストカードを選んで枠をタップ → ACTION！ 攻撃UPの表示が出るよ♪', spot:['cards','action'], wait:'do', need:'teaching' },
   { id:'tBreederSeen', at:'BATTLE',        e:'happy',   title:'攻撃アップ！', t:'「攻撃UP!」って出たでしょ？ この効果はバトルの最後まで続くよ♪', wait:'next' },
   // ④ 緊急回復と敵の移動
-  { id:'tEmergTalk',   at:'BATTLE',        e:'normal',  title:'緊急回復', t:'左の「緊急」は、みんなのライフとガッツが1体ずつ3割もどるよ。そのターンは攻撃できないの。', spot:'emergency', wait:'next' },
+  { id:'tEmergTalk',   at:'BATTLE',        e:'normal',  title:'緊急回復', t:'下の「緊急」は、みんなのライフとガッツが1体ずつ3割もどるよ。そのターンは攻撃できないの。', spot:'emergency', wait:'next' },
   { id:'tEmergDo',     at:'BATTLE',        e:'wink',    title:'押してみて', t:'「緊急」を押してみて！ 敵も動くから、そこも見ててね♪', spot:'emergency', wait:'do', need:'emergency' },
   { id:'tMoveTalk',    at:'BATTLE',        e:'surprise',title:'敵が動いた！', t:'敵は距離を変えてくるよ。離れられると攻撃が当たりにくくなるの。', spot:'enemyBar', wait:'next' },
   // ⑤ 距離技で引き戻す

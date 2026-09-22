@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2a9d00513614e9d1
+// generated-sha256: c725984c2034ebf7
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -92,7 +92,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-22 18:02"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-22 18:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -21744,6 +21744,11 @@ function BattleScreen({
   // ★いくつ付いても高さが変わらないようにするための状態。ここが無いと、
   //   札が3行4行に伸びて敵の絵・緊急のボタン・与ダメの数字を押し出す
   const [buffDetail, setBuffDetail] = useState(false);
+  // バトル中の設定メニュー(2026-09-22 ユーザー指示「BGMは右上に設定ボタンみたいの作って
+  // そこにギブアップとかヘルプとかと一緒にまとめて」)。
+  // ★ヘッダーに3つ並べていた入口(ヘルプ・あきらめる)とBGMを1つにまとめる。
+  //   どれもバトル中に何度も押すものではないので、1枚めくる形にしても手が止まらない
+  const [showBattleMenu, setShowBattleMenu] = useState(false);
   // ★いま狙われている枠(2026-09-21 ユーザー指摘「誰に攻撃か分からない」)。
   //   間合い攻撃は相手を1体決めず「予告した間合いに立っている子」へ当たるので、
   //   ほかの技と違って targetName を持たない。予告を見ても間合いしか分からなかった。
@@ -21836,7 +21841,7 @@ function BattleScreen({
             <div data-battle-turn className="flex flex-col items-center justify-center whitespace-nowrap font-black text-blue-400"><span className="flex items-center gap-0.5 text-[10px] tracking-wide"><Timer size={7}/>TURN</span><span className="mt-0.5 text-[10px] font-mono">{turnCount}/20</span></div>
             {!isQuickMode(runMode)&&<div data-battle-score className="flex min-w-[64px] flex-col items-end justify-center whitespace-nowrap font-mono font-black text-amber-500"><span className="flex items-center gap-0.5 text-[10px] tracking-wide"><Award size={7}/>SCORE</span><span data-battle-score-value className="mt-0.5 text-[10px] tabular-nums">{score.toLocaleString()}</span></div>}
           </div>
-          <div data-battle-controls className="flex shrink-0 items-center gap-0.5"><button type="button" disabled={!!battleTutorial||autoRepeat} onClick={cycleBattleSpeed} aria-label={battleTutorial?'バトルのれんしゅう中は1倍固定':autoRepeat?'∞周回中は4倍固定':`バトル速度、現在${battleSpeed}倍。タップで切り替え`} title={autoRepeat?'∞周回中は×4固定':undefined} className="shrink-0 min-w-[42px] h-[28px] px-1.5 rounded-lg border-2 font-black text-[11px] leading-none active:scale-90 disabled:cursor-not-allowed disabled:opacity-60" style={{color:'#fef3c7',borderColor:'#f59e0b',backgroundColor:'rgba(120,53,15,.72)',boxShadow:'0 0 9px rgba(245,158,11,.35)'}}>×{battleSpeed}{autoRepeat&&<span className="ml-0.5 text-[10px]">固定</span>}</button><button onClick={()=>openHelp()} aria-label="ヘルプ" className="shrink-0 w-[28px] h-[28px] flex items-center justify-center bg-slate-800 rounded text-emerald-400 active:scale-90"><HelpCircle size={14}/></button><button data-battle-quit disabled={!!battleTutorial} onClick={()=>setShowQuitConfirm(true)} aria-label="諦める" className="shrink-0 w-[28px] h-[28px] flex items-center justify-center bg-slate-800 rounded text-slate-400 active:scale-90 disabled:opacity-25"><Flag size={14}/></button></div>
+          <div data-battle-controls className="flex shrink-0 items-center gap-0.5"><button type="button" disabled={!!battleTutorial||autoRepeat} onClick={cycleBattleSpeed} aria-label={battleTutorial?'バトルのれんしゅう中は1倍固定':autoRepeat?'∞周回中は4倍固定':`バトル速度、現在${battleSpeed}倍。タップで切り替え`} title={autoRepeat?'∞周回中は×4固定':undefined} className="shrink-0 min-w-[42px] h-[28px] px-1.5 rounded-lg border-2 font-black text-[11px] leading-none active:scale-90 disabled:cursor-not-allowed disabled:opacity-60" style={{color:'#fef3c7',borderColor:'#f59e0b',backgroundColor:'rgba(120,53,15,.72)',boxShadow:'0 0 9px rgba(245,158,11,.35)'}}>×{battleSpeed}{autoRepeat&&<span className="ml-0.5 text-[10px]">固定</span>}</button><button data-battle-menu-button type="button" onClick={()=>setShowBattleMenu(true)} aria-label="設定（BGM・ヘルプ・あきらめる）" title="設定" className="shrink-0 w-[28px] h-[28px] flex items-center justify-center bg-slate-800 rounded text-slate-300 active:scale-90"><Settings size={15}/></button></div>
         </header>
         {ultraBattleView?(
           <div data-ultra-battle-view className="flex-1 min-h-0 flex flex-col bg-slate-950 text-slate-100">
@@ -21929,16 +21934,23 @@ function BattleScreen({
                 モンスターにかぶってるのは論外」)。絵に何かを重ねるのは無し。
                 入らないのは舞台そのものが低いからなので、**直すのは画面の縦の使い方**であって、
                 ボタンの並べ方ではない(行動予告を右へ出す・味方の段をまとめる、で縦を作る) */}
-          <div data-battle-side-buttons className="absolute left-2 top-1 z-20 flex w-[64px] flex-col items-stretch gap-1">
-            <button onClick={()=>setShowHeroInfo(true)} className={`flex w-[64px] min-h-[44px] flex-col items-center justify-center rounded-2xl px-1 py-1 border border-indigo-500 bg-indigo-950/30 active:scale-90 shadow-lg${battleTutorialSpotClass('heroStatus')}`}><Crown className="text-indigo-400 mb-0.5" size={14}/><span className="text-[10px] font-black leading-none text-white whitespace-nowrap">ステータス</span></button>
-            <button onClick={useEmergency} disabled={isBusy||autoBattle||!battleTutorialAllowsEmergency} className={`flex w-[64px] min-h-[44px] flex-col items-center justify-center rounded-2xl px-1 py-1 border border-blue-500 bg-blue-900/30 active:scale-90 disabled:opacity-20 shadow-lg${battleTutorialSpotClass('emergency')}`}><Activity className="text-blue-400 mb-0.5" size={16}/><span className="text-[10px] font-black leading-none text-white whitespace-nowrap">緊急</span></button>
-            <button onClick={()=>setShowEnemyInfo(true)} className="flex w-[64px] min-h-[44px] flex-col items-center justify-center rounded-2xl px-1 py-1 border border-red-500 bg-red-950/30 active:scale-90 shadow-lg"><Search className="text-red-400 mb-0.5" size={14}/><span className="text-[10px] font-black leading-none text-white whitespace-nowrap">解析</span></button>
-            <button data-battle-log-button type="button" onClick={()=>setShowBattleLog(true)} aria-label="バトルの記録を見る" title="バトルの記録" className="flex w-[64px] min-h-[44px] flex-col items-center justify-center rounded-2xl border border-amber-500/70 bg-amber-950/30 px-1 py-1 shadow-lg active:scale-90"><span className="text-[13px] leading-none">📜</span><span className="mt-0.5 text-[10px] font-black leading-none text-white whitespace-nowrap">ログ</span></button>
-            {battleSoulMasus.some(m=>normalizeSoulRankStage(m.soulRankStage)>0)&&<button data-soul-battle-effects-button type="button" onClick={()=>setShowSoulBattleEffects(true)} className="flex w-[64px] min-h-[44px] flex-col items-center justify-center rounded-2xl px-1 py-1 border border-sky-400 bg-sky-950/60 active:scale-90 shadow-lg"><Sparkles className="text-sky-300 mb-0.5" size={14}/><span className="text-[10px] font-black leading-none text-white whitespace-nowrap">魂格効果</span></button>}
-          </div>
+          {/* 敵のまわりの入口は、1列に積まず**舞台の四隅**へ置く(2026-09-22 ユーザー指示
+              「解析ボタンを右欄に置けばいい」「ログは左上」「ステータスは左エリアの
+              バフ帯の上に置くとかがよさそう」)。
+              ★1列に積むと、舞台が低い端末で下のほうが表示から外れる。四隅なら舞台の高さが
+                変わっても、上の2つは上に、下の2つは下に貼り付いたままになる。
+              ★下の2つは舞台の下端(bottom-1)。舞台の外にある間合いバーや強化の札とは重ならない。
+              ★右は上が「解析」、下が敵の行動予測。どちらも敵を読むためのものなので同じ側へ寄せた。
+              ★幅と高さはそろえるが、色は役割ごとに残す(青=勇者、赤=敵を見る、琥珀=記録)。
+                全部同じ色にすると、とっさに押し分けられなくなる */}
+          <button data-battle-log-button type="button" onClick={()=>setShowBattleLog(true)} aria-label="バトルの記録を見る" title="バトルの記録" className="absolute left-2 top-1 z-20 flex w-[64px] min-h-[44px] flex-col items-center justify-center rounded-2xl border border-amber-500/70 bg-amber-950/30 px-1 py-1 shadow-lg active:scale-90"><span className="text-[13px] leading-none">📜</span><span className="mt-0.5 text-[10px] font-black leading-none text-white whitespace-nowrap">ログ</span></button>
+          <button onClick={()=>setShowHeroInfo(true)} className={`absolute left-2 bottom-1 z-20 flex w-[64px] min-h-[44px] flex-col items-center justify-center rounded-2xl px-1 py-1 border border-indigo-500 bg-indigo-950/30 active:scale-90 shadow-lg${battleTutorialSpotClass('heroStatus')}`}><Crown className="text-indigo-400 mb-0.5" size={14}/><span className="text-[10px] font-black leading-none text-white whitespace-nowrap">ステータス</span></button>
+          <button onClick={()=>setShowEnemyInfo(true)} className="absolute right-2 top-1 z-20 flex w-[64px] min-h-[44px] flex-col items-center justify-center rounded-2xl px-1 py-1 border border-red-500 bg-red-950/30 active:scale-90 shadow-lg"><Search className="text-red-400 mb-0.5" size={14}/><span className="text-[10px] font-black leading-none text-white whitespace-nowrap">解析</span></button>
+          {battleSoulMasus.some(m=>normalizeSoulRankStage(m.soulRankStage)>0)&&<button data-soul-battle-effects-button type="button" onClick={()=>setShowSoulBattleEffects(true)} className="absolute right-2 top-[52px] z-20 flex w-[64px] min-h-[44px] flex-col items-center justify-center rounded-2xl px-1 py-1 border border-sky-400 bg-sky-950/60 active:scale-90 shadow-lg"><Sparkles className="text-sky-300 mb-0.5" size={14}/><span className="text-[10px] font-black leading-none text-white whitespace-nowrap">魂格効果</span></button>}
           {/* 敵が次に何をしてくるかの札(2026-09-19・ユーザー指摘「敵の行動予測が見えない」)。
-              ★置き場所は**敵の絵の右の空き**(2026-09-22 ユーザー指示「右があくからそこに
-                行動パネルを置ける」)。もとは絵の下に帯として出していたが、丸1本へ技名・連撃数・
+              ★置き場所は**敵の絵の右下**(2026-09-22 ユーザー指示「敵の行動予測は右下に出るほうが
+                良くない？ ただバフ帯と被らないように」)。舞台の下端に貼るので、舞台の外にある
+                強化の札とは重ならない。右の上には「解析」が居る。もとは絵の下に帯として出していたが、丸1本へ技名・連撃数・
                 狙われた子・予想ダメージを詰め込んでいたので、長い技名だと溢れていた。
                 行を分けると、読む順(何をしてくる→だれに→いくつ減る)がそのまま縦に並ぶ。
               ★帯をやめたぶん**画面の縦が25px空く**。間合いバーで使ったぶんをここで返す。
@@ -21959,7 +21971,6 @@ function BattleScreen({
             const plannedDmg=plannedHit.taken;
             // 連撃は「129・130」と1発ずつ。1発の技は今までどおり数字ひとつ
             const plannedText=plannedHit.parts.join('・');
-            const previewHits=enemyIntent.variant==='rush'?Math.max(1,Math.floor(Number(enemyIntent.hits)||1)):1;
             // ★全体攻撃は受ける量が1体ずつ違う。1つの数字にまとめると、
             //   どの子がどれだけ減るのか分からなくなるので、吹き出しには出さず枠ごとに出す
             const showPlannedInBubble=!enemyIntent.targetsAll;
@@ -21975,13 +21986,15 @@ function BattleScreen({
             //   説明文になり、右上の吹き出しの「必殺技準備」を長く言い直しただけになっていた
             //   (2026-09-22 ユーザー指摘「他のにならってやると攻撃予測のとこをためるにして
             //   吹き出しを必殺技準備が正解なはず」)。ほかの行動にならって短い呼び名にそろえる。
-            // ★貫通の構えは敵ごとに「◯◯の構え」という名前が付くので、label のままにする
+            // ★貫通の構えは敵ごとに「◯◯の構え」という名前が付くので、label のままにする。
+            // ★何連撃かはここへ書かない。右上の吹き出しが「3連撃！」と出す側で、
+            //   両方に書くと同じことを2回言ううえ、札の幅(100px)で名前が2行に折り返す
             const intentTitle=enemyIntent.type==='CHARGE'&&enemyIntent.category?enemyIntent.category:enemyIntent.label;
             return (
               <div data-enemy-intent
-                className={`absolute right-2 top-2 z-[45] w-[100px] rounded-xl border px-1.5 py-1 shadow-lg animate-pulse${battleTutorialSpotClass('enemyIntent')} ${focusedCard?'invisible':'visible'} ${tone}`}>
+                className={`absolute right-2 bottom-1 z-[45] w-[100px] rounded-xl border px-1.5 py-1 shadow-lg animate-pulse${battleTutorialSpotClass('enemyIntent')} ${focusedCard?'invisible':'visible'} ${tone}`}>
                 <div className="flex items-center gap-1 text-[8px] font-black uppercase tracking-wider opacity-80"><Target size={9}/>次の行動</div>
-                <div className="mt-0.5 text-[11px] font-black leading-tight">{intentTitle}{previewHits>1?` ${previewHits}連撃`:''}</div>
+                <div className="mt-0.5 text-[11px] font-black leading-tight">{intentTitle}</div>
                 {aimedName?<div className="mt-0.5 truncate text-[9px] font-bold leading-none opacity-90">🎯{aimedName}</div>:null}
                 {rawDmg>0&&showPlannedInBubble&&plannedText?(
                   <div className="mt-1 rounded bg-black/55 px-1 py-0.5 text-center text-[11px] font-black leading-none tabular-nums">{plannedText}</div>
@@ -22922,9 +22935,13 @@ function BattleScreen({
             <span className={`flex-1 min-w-0 flex flex-wrap items-center gap-x-1 gap-y-0.5${battleTutorialSpotClass('cardCount')}`}><span className="whitespace-nowrap">Action Cards</span> <span className="shrink-0 bg-white/10 text-white px-2 py-0.5 rounded-full font-mono">{selectedCards.length}/{cardLimit}</span>{heroCardBonus>0&&<span className="shrink-0 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-300/40 text-amber-200 whitespace-nowrap"><Crown size={8}/>+{heroCardBonus}</span>}{kikiCardBonus>0&&<span className="shrink-0 px-1.5 py-0.5 rounded-full bg-violet-500/20 border border-violet-300/40 text-violet-200 whitespace-nowrap">応援+1</span>}{soulCoordinationCardBonus>0&&<span data-soul-coordination-bonus className="shrink-0 px-1.5 py-0.5 rounded-full bg-sky-500/20 border border-sky-300/40 text-sky-200 whitespace-nowrap">魂格+1</span>}</span>
             <div className="flex items-center gap-0.5 shrink-0">
               <button onClick={()=>setShowDeckInfo(true)} className={`flex items-center gap-0.5 px-1.5 py-1 bg-white/5 rounded-lg border border-white/10 active:scale-95${battleTutorialSpotClass('deckView')}`}><Layers size={9}/><span className="text-[10px]">VIEW</span></button>
-              {/* 🎵の縦列。BGMの下にモンビーを並べる(どちらも音に関わる入口なので隣り合わせにする) */}
+              {/* 緊急回復(2026-09-22 ユーザー指示「緊急回復は手札側の効果だから位置を変えたい」)。
+                  ★もとは敵の絵の左に置いていたが、あの列は「敵や自分を見る」入口を並べた場所。
+                    緊急はその場で使う行動なので、カードと同じ操作の列へ移した。
+                  ★AUTO の左に置く。実行(Action)のすぐ隣だと押し間違える */}
+              <button onClick={useEmergency} disabled={isBusy||autoBattle||!battleTutorialAllowsEmergency} aria-label="緊急回復" title="緊急回復" className={`shrink-0 flex h-8 w-[44px] flex-col items-center justify-center rounded-lg border-2 border-blue-400 bg-blue-900/70 leading-none active:scale-90 disabled:opacity-25${battleTutorialSpotClass('emergency')}`}><Activity size={11} className="text-blue-300"/><span className="mt-0.5 text-[10px] font-black text-blue-50">緊急</span></button>
+              {/* モンビーへの入口(クイックモードだけ)。音に関わる入口なので、この並びに残す */}
               <div className="shrink-0 flex flex-col gap-0.5">
-                <button data-auto-bgm-button type="button" onClick={()=>setShowAutoBgmPicker(true)} aria-label="バトルBGMと音量を調整" title="BGM / 音量" className="shrink-0 min-h-[32px] min-w-[42px] rounded-lg border border-indigo-400/50 bg-indigo-800 px-1.5 text-indigo-100 active:scale-90"><span className="block text-[13px] leading-none">🎵</span><span className="mt-0.5 block text-[10px] font-black leading-none">BGM</span></button>
                 {quickToRhythmButtonNode}
               </div>
               <div className="w-[44px] shrink-0 flex flex-col gap-0.5">
@@ -22971,6 +22988,24 @@ function BattleScreen({
           </div>
         </div>
         </>)}
+        {/* バトル中の設定(2026-09-22 ユーザー指示「BGMは右上に設定ボタンみたいの作って
+            そこにギブアップとかヘルプとかと一緒にまとめて」)。
+            ★ヘッダーに入口を3つ並べると、WAVE名やモード名を押し出して読めなくなる。
+              どれもバトル中に何度も押すものではないので、1枚めくる形にした。
+            ★data-battle-quit / data-auto-bgm-button は検査の手がかり。
+              置き場所が変わっても名前は変えない。
+            ★背景を押しても閉じる。誤って開いたときに、指を上まで運ばずに戻れる */}
+        {showBattleMenu&&(
+          <div className="fixed inset-0 z-[70000] flex items-start justify-end bg-black/70 p-2" onClick={()=>setShowBattleMenu(false)}>
+            <div data-battle-menu className="mt-11 flex w-[190px] flex-col gap-1.5 rounded-2xl border border-white/20 bg-slate-900 p-2 shadow-2xl" onClick={e=>e.stopPropagation()}>
+              <div className="px-1 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">設定</div>
+              <button data-auto-bgm-button type="button" onClick={()=>{setShowBattleMenu(false);setShowAutoBgmPicker(true);}} className="flex min-h-[40px] items-center gap-2 rounded-lg border border-indigo-400/50 bg-indigo-950/60 px-2 text-[12px] font-black text-indigo-100 active:scale-95"><span className="text-[14px] leading-none">🎵</span>BGM・音量</button>
+              <button type="button" onClick={()=>{setShowBattleMenu(false);openHelp();}} className="flex min-h-[40px] items-center gap-2 rounded-lg border border-emerald-400/50 bg-emerald-950/60 px-2 text-[12px] font-black text-emerald-100 active:scale-95"><HelpCircle size={14}/>ヘルプ</button>
+              <button data-battle-quit type="button" disabled={!!battleTutorial} onClick={()=>{setShowBattleMenu(false);setShowQuitConfirm(true);}} className="flex min-h-[40px] items-center gap-2 rounded-lg border border-red-400/50 bg-red-950/60 px-2 text-[12px] font-black text-red-100 active:scale-95 disabled:opacity-30"><Flag size={14}/>あきらめる</button>
+              <button type="button" onClick={()=>setShowBattleMenu(false)} className="min-h-[36px] rounded-lg border border-white/15 bg-slate-800 text-[11px] font-black text-slate-300 active:scale-95">とじる</button>
+            </div>
+          </div>
+        )}
       </div>
     
   );
