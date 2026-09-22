@@ -9250,12 +9250,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const guardValueOf = (flat, mult, slotIdx = null) =>
     (flat > 0 || mult > 0) ? Math.floor(flat + guardDefFor(slotIdx) * mult) : 0;
   // ★全体ガード(2体以上が別々に構えた)のとき、構えていない子にも付くガード力。
-  //   **ガードを1枚構えたのとまったく同じ計算**(2026-09-22 ユーザー指示
-  //   「クラシックと同じ仕様でいい」)。固定値(flat)も同じように通す。
-  //   ⚠️ いまは GUARD_EVOLUTION の flat が9段階とも0なので、実際は「丈夫さ×倍率」だけ。
+  //   計算はクラシックと同じ「固定値 + その子の丈夫さ × ガード段階の倍率」だが、
+  //   **2枚目以降のカードと同じ半減**がかかる(2026-09-22 ユーザー指示
+  //   「あくまでも個別での丈夫さをベースとしてだよ。かつ2枚目以降は半分になるからその補正値」)。
+  //   半減の率は本体の cardEffectMultiplier をそのまま通す(ここへ 0.5 を書き写さない)。
+  //   ⚠️ いまは GUARD_EVOLUTION の flat が9段階とも0なので、実際は「丈夫さ×倍率×半減」だけ。
   //     ここで 0 を直に書くと、将来 flat に値を入れたときだけ全体ガードが置いていかれる
-  const tacticsSpreadGuardValue = (slotIdx) =>
-    guardValueOf(GUARD_EVOLUTION[guardLevel].flat, GUARD_EVOLUTION[guardLevel].mult, slotIdx);
+  const tacticsSpreadGuardValue = (slotIdx) => {
+    const halvedRate = cardEffectMultiplier({ type: 'guard' }, true);
+    return guardValueOf(GUARD_EVOLUTION[guardLevel].flat * halvedRate,
+      GUARD_EVOLUTION[guardLevel].mult * halvedRate, slotIdx);
+  };
   // その枠のガード値。構えていれば自分のぶん、構えていなくても全体ガードなら丈夫さぶん
   const tacticsSlotGuardValue = (guardBySlot, slotIdx) => {
     const own = (guardBySlot || {})[slotIdx];
