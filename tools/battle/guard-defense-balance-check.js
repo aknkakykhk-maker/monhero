@@ -113,5 +113,7 @@ assert(game.includes('Math.floor(immediateEffects.guardFlat + effectiveDef*immed
 assert(game.includes("guard = enemyIntent.variant === 'pierce' ? 0 : tacticsSlotGuardValue(bySlot, slotIdx);"));
 assert(game.includes("guard = enemyIntent.variant === 'pierce' ? 0 : guardValueOf(flat, mult, slotIdx);"));
 assert(game.includes('const hit = resolveTacticsGuardedHit(raw, hits, guard, guardHits);'));
-assert(game.includes('const taken = applyTurnDamageReduction(hit.taken);'));
+// 2026-09-22: ターン軽減も枠ごとになった(どの枠が受けるかで軽減が変わる)ので、
+// 枠の番号を一緒に渡している。検査の文字列だけ古いまま main で赤くなっていた
+assert(game.includes('const taken = applyTurnDamageReduction(hit.taken, slotIdx);'));
 console.log('guard defense balance checks passed');

@@ -642,7 +642,7 @@ check('置けるかの判定も画面へ渡す', has('tacticsCanAssign={tacticsC
     hasScreen('const plannedHitFor = (slotIdx) => {')
       && hasScreen('const plannedDamageFor = (slotIdx) => plannedHitFor(slotIdx).taken;')
       && hasScreen('const plannedHit=plannedHitFor(aimedSlot);')
-      && hasScreen('const slotPlannedHit=plannedHitFor(i);'));
+      && hasScreen('const slotAimHit=slotAimed?plannedHitFor(i):null;'));
   check('予定ダメージは本番と同じ受け方を通る',
     hasScreen('const hit = resolveTacticsGuardedHit(raw, hits, guard, guardHits);')
       && hasScreen('guardHits = tacticsGuardHits(own.cards, hits);'));
@@ -662,10 +662,9 @@ check('置けるかの判定も画面へ渡す', has('tacticsCanAssign={tacticsC
   // ★予告は丸1本の帯から、敵の絵の右の札へ変えた(2026-09-22)。数字の作り方は同じまま
   check('札も枠も同じ形で出す',
     hasScreen("const plannedText=plannedHit.parts.join('・');")
-      && hasScreen("const slotPlannedText=slotPlannedHit.parts.join('・');")
       && hasScreen('>{plannedText}</div>')
       // ★枠のほうは 2026-09-22 に「🎯-合計」と1発ずつの内訳の2段になった(main 側の直し)
-      && hasScreen('>{slotPlannedText}</span>'));
+      && hasScreen(">{slotAimHit.parts.join('・')}</span>"));
   // ★1発ずつ並べると**合計がどこにも出ない**ので「結局いくつ食らうか」が読めなかった
   //   (2026-09-22 ユーザー指摘「連撃ダメージで合計ダメージと軽減後の合計ダメージが
   //    ないといくつくらうかわからない」)。ガードが効いていれば「軽減前→軽減後」で出す。
@@ -688,10 +687,20 @@ check('置けるかの判定も画面へ渡す', has('tacticsCanAssign={tacticsC
   // ★枠は「合計」を上の行に、1発ずつの内訳をその下へ小さく添える。
   //   いちばん知りたいのは「結局いくつ食らうか」なので、合計を先に読ませる
   check('狙われている枠にその子の予定ダメージを出す',
-    hasScreen('data-tactics-aimed-damage={slotPlanned}')
-      && hasScreen("<span>🎯{slotPlanned>0?` -${slotPlanned}`:''}</span>")
-      && hasScreen('{slotMultiHit&&<span className="text-[8px] font-bold text-red-200/90">{slotPlannedText}</span>}')
-      && hasScreen('const slotMultiHit=slotPlannedHit.parts.length>1;'));
+    hasScreen('data-tactics-aimed-damage={slotAimHit.taken}')
+      && hasScreen("<span>🎯{slotAimHit.taken>0?`-${slotAimHit.taken}`:''}</span>")
+      && hasScreen("{slotAimHit.parts.length>1&&<span className=\"text-[7px] font-bold text-red-200/90\">{slotAimHit.parts.join('・')}</span>}"));
+  // ★枠の中に出すものは**1本の縦積み**に入れる(2026-09-23 ユーザー指摘「表示が被ってて見えない」)。
+  //   それまでは札ごとに top-0 / top-[18px] / top-[21px] と上からの距離で避けていて、
+  //   札が2枚になる・連撃で内訳が2行になると必ず重なった。位置で避ける書き方へ戻さない
+  check('枠の中の札は1本の縦積みにまとめる',
+    hasScreen('<div data-tactics-slot-marks className="absolute top-0 left-0 right-0 flex flex-col gap-px items-center z-[60] pointer-events-none px-0.5">')
+      && !hasScreen("${slotAssignedCards.length>0?'top-[18px]':'top-0'}")
+      && !hasScreen('absolute top-[21px] right-0.5'));
+  // ★合計DMG・合計軽減も浮かせない。枠の上に1行ぶんの場所を作る
+  check('合計の札は浮かせず、枠の上の行に置く',
+    hasScreen('<div data-battle-total-preview className="shrink-0 w-full flex flex-wrap')
+      && !hasScreen("style={{bottom:'calc(78% + 2px)'}}"));
   // ★1つの数字にまとめると、どの子がどれだけ減るのか分からなくなる
   check('全体攻撃は札に1つの数字を出さない',
     hasScreen('const showPlannedInBubble=!enemyIntent.targetsAll;')
@@ -1225,11 +1234,12 @@ check('ガッツ回復は新モードだと合計を足さずに配る',
   //   (2026-09-22 ユーザー指摘「ダメージは個別に見えるのにガード値は個別に分からない」)
   check('置き場所を選ぶとき、枠ごとのガード値を出す',
     battleScreenSpread.includes('data-tactics-guard-preview={previewGuard}')
-      && battleScreenSpread.includes('GUARD:{previewGuard}'));
+      // ★枠は87pxしかないので、2026-09-23に「GUARD:」から「守」へ縮めた(重なりを無くすため)
+      && battleScreenSpread.includes('守{previewGuard}'));
   check('枠ごとのガード値は、その子の丈夫さで出す',
     battleScreenSpread.includes('previewGuard=guardValueOf(GUARD_EVOLUTION[guardLevel].flat*gw*ge,GUARD_EVOLUTION[guardLevel].mult*gw*ge,i);'));
   check('2枚目以降は半分になることも枠に出す',
-    battleScreenSpread.includes("{isPendingGuardHalved?'½ ':''}GUARD:"));
+    battleScreenSpread.includes("{isPendingGuardHalved?'½':''}守"));
   // ★カードの説明は、パーティの平均で1つの数字を出さない(誰の数値か分からない)
   check('カードの説明は「その子の丈夫さ」で決まると書く',
     has('if(isTacticsMode(runMode)) return(<div className="text-center font-bold">敵の攻撃を軽減')

@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: dbc55e278cb556e3
+// source-sha256: df232c03ea915789
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: cd9284af581f94c6
+// generated-sha256: 5e16df515d0cfc78
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-23 00:02"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-23 01:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -39694,52 +39694,60 @@ function BattleScreen({
     const showDmg = committedTotal > 0 || showProjected;
     const showGuard = committedGuard > 0 || showGuardProjected;
     if (!showDmg && !showGuard) return null;
-    return /*#__PURE__*/React.createElement("div", {
-      className: "absolute left-1/2 -translate-x-1/2 z-[50] flex flex-col items-center justify-center gap-1 pointer-events-none",
-      style: {
-        bottom: 'calc(78% + 2px)'
-      }
-    }, showDmg && /*#__PURE__*/React.createElement("div", {
-      className: `flex items-center gap-2 px-3 py-0.5 rounded-full border shadow-lg ${showProjected ? 'bg-yellow-950/90 border-yellow-500/70' : 'bg-red-950/90 border-red-500/50'} backdrop-blur-sm`
-    }, /*#__PURE__*/React.createElement(Sword, {
-      size: 11,
-      className: showProjected ? 'text-yellow-400' : 'text-red-400'
-    }), /*#__PURE__*/React.createElement("span", {
-      className: "text-[10px] font-black uppercase tracking-widest text-slate-300"
-    }, "\u5408\u8A08DMG"), showProjected ? /*#__PURE__*/React.createElement("span", {
-      className: "text-[11px] font-black font-mono flex items-center gap-1"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "text-slate-400"
-    }, committedTotal), /*#__PURE__*/React.createElement("span", {
-      className: "text-yellow-400"
-    }, "+", pendingAdd), /*#__PURE__*/React.createElement(ChevronRight, {
-      size: 10,
-      className: "text-slate-500"
-    }), /*#__PURE__*/React.createElement("span", {
-      className: "text-yellow-300 drop-shadow-[0_0_6px_rgba(250,204,21,0.6)]"
-    }, projectedTotal)) : /*#__PURE__*/React.createElement("span", {
-      className: "text-[11px] font-black font-mono text-red-300 drop-shadow-[0_0_6px_rgba(248,113,113,0.5)]"
-    }, committedTotal)), showGuard && /*#__PURE__*/React.createElement("div", {
-      className: `flex items-center gap-2 px-3 py-0.5 rounded-full border shadow-lg ${showGuardProjected ? 'bg-yellow-950/90 border-yellow-500/70' : 'bg-emerald-950/90 border-emerald-500/50'} backdrop-blur-sm`
-    }, /*#__PURE__*/React.createElement(Shield, {
-      size: 11,
-      className: showGuardProjected ? 'text-yellow-400' : 'text-emerald-400'
-    }), /*#__PURE__*/React.createElement("span", {
-      className: "text-[10px] font-black uppercase tracking-widest text-slate-300"
-    }, "\u5408\u8A08\u8EFD\u6E1B"), showGuardProjected ? /*#__PURE__*/React.createElement("span", {
-      className: "text-[11px] font-black font-mono flex items-center gap-1"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "text-slate-400"
-    }, committedGuard), /*#__PURE__*/React.createElement("span", {
-      className: "text-yellow-400"
-    }, "+", projectedGuard - committedGuard), /*#__PURE__*/React.createElement(ChevronRight, {
-      size: 10,
-      className: "text-slate-500"
-    }), /*#__PURE__*/React.createElement("span", {
-      className: "text-yellow-300 drop-shadow-[0_0_6px_rgba(250,204,21,0.6)]"
-    }, projectedGuard)) : /*#__PURE__*/React.createElement("span", {
-      className: "text-[11px] font-black font-mono text-emerald-300 drop-shadow-[0_0_6px_rgba(52,211,153,0.5)]"
-    }, committedGuard)));
+    return (
+      /*#__PURE__*/
+      // ★浮かせない。ここは**流れの中の1行**として置く(2026-09-22 ユーザー指摘
+      //   「表示が被ってて見えない」)。それまでは枠の上へ absolute・bottom:78% で
+      //   浮かせていたので、味方の枠の高さが変わると枠の名前の上に乗っていた
+      //   (タクティクスはパーティのライフ帯が無いぶん枠が上がるので、必ず重なる)。
+      //   ★高さを持つのは出ているあいだだけ。空けておく場所は作らない(舞台が低い端末で
+      //     いちばん困るのは敵の絵なので、使わないときは敵へ返す)
+      //   ★2つは**横に並べて**折り返す。縦に積むと出た瞬間に舞台が46px縮む
+      React.createElement("div", {
+        "data-battle-total-preview": true,
+        className: "shrink-0 w-full flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 pb-0.5 pointer-events-none"
+      }, showDmg && /*#__PURE__*/React.createElement("div", {
+        className: `flex items-center gap-1.5 px-2 py-0.5 rounded-full border shadow-lg ${showProjected ? 'bg-yellow-950/90 border-yellow-500/70' : 'bg-red-950/90 border-red-500/50'} backdrop-blur-sm`
+      }, /*#__PURE__*/React.createElement(Sword, {
+        size: 11,
+        className: showProjected ? 'text-yellow-400' : 'text-red-400'
+      }), /*#__PURE__*/React.createElement("span", {
+        className: "text-[10px] font-black uppercase tracking-widest text-slate-300"
+      }, "\u5408\u8A08DMG"), showProjected ? /*#__PURE__*/React.createElement("span", {
+        className: "text-[11px] font-black font-mono flex items-center gap-1"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-slate-400"
+      }, committedTotal), /*#__PURE__*/React.createElement("span", {
+        className: "text-yellow-400"
+      }, "+", pendingAdd), /*#__PURE__*/React.createElement(ChevronRight, {
+        size: 10,
+        className: "text-slate-500"
+      }), /*#__PURE__*/React.createElement("span", {
+        className: "text-yellow-300 drop-shadow-[0_0_6px_rgba(250,204,21,0.6)]"
+      }, projectedTotal)) : /*#__PURE__*/React.createElement("span", {
+        className: "text-[11px] font-black font-mono text-red-300 drop-shadow-[0_0_6px_rgba(248,113,113,0.5)]"
+      }, committedTotal)), showGuard && /*#__PURE__*/React.createElement("div", {
+        className: `flex items-center gap-1.5 px-2 py-0.5 rounded-full border shadow-lg ${showGuardProjected ? 'bg-yellow-950/90 border-yellow-500/70' : 'bg-emerald-950/90 border-emerald-500/50'} backdrop-blur-sm`
+      }, /*#__PURE__*/React.createElement(Shield, {
+        size: 11,
+        className: showGuardProjected ? 'text-yellow-400' : 'text-emerald-400'
+      }), /*#__PURE__*/React.createElement("span", {
+        className: "text-[10px] font-black uppercase tracking-widest text-slate-300"
+      }, "\u5408\u8A08\u8EFD\u6E1B"), showGuardProjected ? /*#__PURE__*/React.createElement("span", {
+        className: "text-[11px] font-black font-mono flex items-center gap-1"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-slate-400"
+      }, committedGuard), /*#__PURE__*/React.createElement("span", {
+        className: "text-yellow-400"
+      }, "+", projectedGuard - committedGuard), /*#__PURE__*/React.createElement(ChevronRight, {
+        size: 10,
+        className: "text-slate-500"
+      }), /*#__PURE__*/React.createElement("span", {
+        className: "text-yellow-300 drop-shadow-[0_0_6px_rgba(250,204,21,0.6)]"
+      }, projectedGuard)) : /*#__PURE__*/React.createElement("span", {
+        className: "text-[11px] font-black font-mono text-emerald-300 drop-shadow-[0_0_6px_rgba(52,211,153,0.5)]"
+      }, committedGuard)))
+    );
   })(), /*#__PURE__*/React.createElement("div", {
     className: `grid grid-cols-4 gap-2 w-full relative shrink-0${battleTutorialSpotClass('battleSlots')}`,
     style: {
@@ -39913,6 +39921,11 @@ function BattleScreen({
     // ★この枠が狙われているか(2026-09-21 ユーザー指摘「誰に攻撃か分からない」)。
     //   名前だけでは4つの枠から自分で探すことになるので、枠のほうにも印を出す
     const slotAimed = aimedSlots.includes(i);
+    // ★その子の予定ダメージ。全体攻撃は丈夫さで1体ずつ変わるので枠ごとに出す
+    //   (2026-09-21 ユーザー依頼)。ガードを置けばその枠の数字だけが減る。
+    //   ★連撃は1発ずつ並べると合計が読めない(2026-09-22 ユーザー指摘)ので、
+    //     合計を先に出し、1発ずつの内訳を小さく添える
+    const slotAimHit = slotAimed ? plannedHitFor(i) : null;
     return /*#__PURE__*/React.createElement("button", {
       key: i,
       "data-slot-index": i,
@@ -40004,30 +40017,13 @@ function BattleScreen({
       }, "\u26A1 +", f.guts), f.revive > 0 && /*#__PURE__*/React.createElement("span", {
         className: "text-[12px] font-black text-teal-300 drop-shadow-[0_0_6px_rgba(0,0,0,.9)]"
       }, "\uD83D\uDCA4 +", f.revive)));
-    })(), slotAimed && (() => {
-      // ★その子の予定ダメージ。全体攻撃は丈夫さで1体ずつ変わるので、枠ごとに出す
-      //   (2026-09-21 ユーザー依頼)。ガードを置けばその枠の数字だけが減る
-      const slotPlannedHit = plannedHitFor(i);
-      const slotPlanned = slotPlannedHit.taken;
-      const slotPlannedText = slotPlannedHit.parts.join('・');
-      // ★連撃は1発ずつ並べると合計が読めない(2026-09-22 ユーザー指摘)。
-      //   いちばん知りたいのは「結局いくつ食らうか」なので、合計を上の行に置き、
-      //   1発ずつの内訳をその下へ小さく添える。1発の技は今までどおり1行
-      const slotMultiHit = slotPlannedHit.parts.length > 1;
-      return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-        "data-tactics-aimed-ring": true,
-        className: "absolute inset-[2px] rounded-lg border-2 border-red-400/80 pointer-events-none z-[44] animate-pulse",
-        style: {
-          boxShadow: 'inset 0 0 10px rgba(239,68,68,.55)'
-        }
-      }), /*#__PURE__*/React.createElement("div", {
-        "data-tactics-aimed-damage": slotPlanned,
-        "data-tactics-aimed-parts": slotMultiHit ? slotPlannedText : undefined,
-        className: `absolute top-[21px] right-0.5 z-[66] ${slotMultiHit ? 'rounded-lg' : 'rounded-full'} border border-red-300 bg-red-950 px-1 py-0.5 text-[9px] font-black leading-none text-red-100 shadow-[0_0_8px_rgba(239,68,68,.85)] animate-pulse flex flex-col items-center gap-0.5`
-      }, /*#__PURE__*/React.createElement("span", null, "\uD83C\uDFAF", slotPlanned > 0 ? ` -${slotPlanned}` : ''), slotMultiHit && /*#__PURE__*/React.createElement("span", {
-        className: "text-[8px] font-bold text-red-200/90"
-      }, slotPlannedText)));
-    })(), distanceBroken && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    })(), slotAimed && /*#__PURE__*/React.createElement("div", {
+      "data-tactics-aimed-ring": true,
+      className: "absolute inset-[2px] rounded-lg border-2 border-red-400/80 pointer-events-none z-[44] animate-pulse",
+      style: {
+        boxShadow: 'inset 0 0 10px rgba(239,68,68,.55)'
+      }
+    }), distanceBroken && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
       className: "absolute inset-0 rounded-lg pointer-events-none z-[15]",
       style: {
         background: `repeating-linear-gradient(${135 + distanceBreakLevel * 12}deg,rgba(0,0,0,.12) 0 ${Math.max(3, 8 - distanceBreakLevel)}px,rgba(127,29,29,${Math.min(.8, .28 + distanceBreakLevel * .14)}) ${Math.max(4, 9 - distanceBreakLevel)}px ${Math.max(5, 10 - distanceBreakLevel)}px),radial-gradient(circle at 50% 40%,rgba(${distanceBreakLevel >= 2 ? '69,10,10' : '88,28,135'},.55),rgba(5,0,2,.9))`
@@ -40116,8 +40112,9 @@ function BattleScreen({
           fontSize: '7px'
         }
       }, "\uD83D\uDEE1 ", slotRushGuard ? '連撃ガード' : '全体', " ", gv);
-    })(), slotAssignedCards.length > 0 && /*#__PURE__*/React.createElement("div", {
-      className: "absolute top-0 left-0 right-0 flex flex-col gap-px items-center z-[55] pointer-events-none px-0.5"
+    })(), (slotAssignedCards.length > 0 || previewDmg > 0 || previewGuard > 0 || slotAimHit) && /*#__PURE__*/React.createElement("div", {
+      "data-tactics-slot-marks": true,
+      className: "absolute top-0 left-0 right-0 flex flex-col gap-px items-center z-[60] pointer-events-none px-0.5"
     }, slotAssignedCards.map(({
       idx,
       card
@@ -40158,8 +40155,27 @@ function BattleScreen({
         },
         className: "font-black text-emerald-100 leading-none shrink-0"
       }, "-", gv));
-    })), !ecoBattleView && hasUniqueSet && /*#__PURE__*/React.createElement("div", {
-      className: "absolute inset-0 pointer-events-none z-40 flex items-center justify-center overflow-visible"
+    }), (previewDmg > 0 || previewGuard > 0 || slotAimHit) && /*#__PURE__*/React.createElement("div", {
+      className: "flex w-full flex-wrap items-start justify-between gap-0.5"
+    }, previewGuard > 0 && /*#__PURE__*/React.createElement("div", {
+      "data-tactics-guard-preview": previewGuard,
+      className: "rounded bg-emerald-500 px-0.5 py-0.5 text-[8px] font-black leading-none text-black shadow ring-1 ring-emerald-100"
+    }, isPendingGuardHalved ? '½' : '', "\u5B88", previewGuard), previewDmg > 0 && /*#__PURE__*/React.createElement("div", {
+      "data-tactics-damage-preview": previewDmg,
+      className: `rounded px-0.5 py-0.5 text-[8px] font-black leading-none shadow ring-1 ${isPendingPreview ? 'bg-yellow-500 text-black ring-yellow-200' : 'bg-red-600 text-white ring-white/50'}`
+    }, isPendingPreview && isPendingHalved ? '½' : '', "\u653B", previewDmg, isPendingPreview && previewSoulPct > 0 && /*#__PURE__*/React.createElement("span", {
+      "data-soul-damage-preview": true,
+      className: "ml-0.5 rounded bg-sky-950/80 px-0.5 text-[7px] text-sky-100"
+    }, "\u9B42\u683C+", previewSoulPct, "%")), slotAimHit && /*#__PURE__*/React.createElement("div", {
+      "data-tactics-aimed-damage": slotAimHit.taken,
+      "data-tactics-aimed-parts": slotAimHit.parts.length > 1 ? slotAimHit.parts.join('・') : undefined,
+      className: "ml-auto flex flex-col items-center gap-0.5 rounded border border-red-300 bg-red-950 px-0.5 py-0.5 text-[8px] font-black leading-none text-red-100 shadow-[0_0_8px_rgba(239,68,68,.85)] animate-pulse"
+    }, /*#__PURE__*/React.createElement("span", null, "\uD83C\uDFAF", slotAimHit.taken > 0 ? `-${slotAimHit.taken}` : ''), slotAimHit.parts.length > 1 && /*#__PURE__*/React.createElement("span", {
+      className: "text-[7px] font-bold text-red-200/90"
+    }, slotAimHit.parts.join('・'))))), !ecoBattleView && hasUniqueSet && /*#__PURE__*/React.createElement("div", {
+      "data-decoration": true,
+      "aria-hidden": "true",
+      className: "absolute inset-0 pointer-events-none z-[5] flex items-center justify-center overflow-visible"
     }, /*#__PURE__*/React.createElement("div", {
       className: "absolute inset-0 rounded-xl",
       style: {
@@ -40186,15 +40202,7 @@ function BattleScreen({
       }, /*#__PURE__*/React.createElement(Sword, {
         size: 5
       }), totalBonus > 0 ? '+' : '', (totalBonus * 100).toFixed(1), "%");
-    })(), previewGuard > 0 && /*#__PURE__*/React.createElement("div", {
-      "data-tactics-guard-preview": previewGuard,
-      className: `absolute ${slotAssignedCards.length > 0 ? 'top-[18px]' : 'top-0'} bg-emerald-500 text-black ring-emerald-100 text-[10px] font-black px-1.5 py-0.5 rounded shadow-lg z-50 animate-bounce ring-1`
-    }, isPendingGuardHalved ? '½ ' : '', "GUARD:", previewGuard), previewDmg > 0 && /*#__PURE__*/React.createElement("div", {
-      className: `absolute ${slotAssignedCards.length > 0 ? 'top-[18px]' : 'top-0'} ${isPendingPreview ? 'bg-yellow-500 text-black ring-yellow-200' : 'bg-red-600 text-white ring-white/50'} text-[10px] font-black px-1.5 py-0.5 rounded shadow-lg z-50 animate-bounce ring-1`
-    }, isPendingPreview && isPendingHalved ? '½ ' : '', "DMG:", previewDmg, isPendingPreview && previewSoulPct > 0 && /*#__PURE__*/React.createElement("span", {
-      "data-soul-damage-preview": true,
-      className: "ml-1 rounded bg-sky-950/80 px-1 py-0.5 text-[10px] text-sky-100"
-    }, "\u9B42\u683C +", previewSoulPct, "%")), s?.imgUrl ? isAnimating && s.id === 'Pandora' && attackAnim.motion === 'pandoraDualThunder' ? /*#__PURE__*/React.createElement(PandoraDualThunder, {
+    })(), s?.imgUrl ? isAnimating && s.id === 'Pandora' && attackAnim.motion === 'pandoraDualThunder' ? /*#__PURE__*/React.createElement(PandoraDualThunder, {
       image: /*#__PURE__*/React.createElement(DyedMonsterImage, {
         baseId: s.id,
         src: s.imgUrl,
@@ -40506,6 +40514,7 @@ function BattleScreen({
     }) : /*#__PURE__*/React.createElement("span", {
       className: "text-[10px]"
     }, assignedMon.emoji)), /*#__PURE__*/React.createElement("div", {
+      "data-decoration": true,
       className: "mt-1.5 flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full border border-white/30 bg-black/25",
       style: {
         boxShadow: 'inset 0 1px 0 rgba(255,255,255,.25), inset 0 -4px 8px rgba(0,0,0,.35)'

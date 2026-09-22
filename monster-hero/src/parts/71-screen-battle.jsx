@@ -946,9 +946,16 @@ function BattleScreen({
             const showGuard=committedGuard>0||showGuardProjected;
             if(!showDmg&&!showGuard) return null;
             return(
-              <div className="absolute left-1/2 -translate-x-1/2 z-[50] flex flex-col items-center justify-center gap-1 pointer-events-none" style={{bottom:'calc(78% + 2px)'}}>
+              // ★浮かせない。ここは**流れの中の1行**として置く(2026-09-22 ユーザー指摘
+              //   「表示が被ってて見えない」)。それまでは枠の上へ absolute・bottom:78% で
+              //   浮かせていたので、味方の枠の高さが変わると枠の名前の上に乗っていた
+              //   (タクティクスはパーティのライフ帯が無いぶん枠が上がるので、必ず重なる)。
+              //   ★高さを持つのは出ているあいだだけ。空けておく場所は作らない(舞台が低い端末で
+              //     いちばん困るのは敵の絵なので、使わないときは敵へ返す)
+              //   ★2つは**横に並べて**折り返す。縦に積むと出た瞬間に舞台が46px縮む
+              <div data-battle-total-preview className="shrink-0 w-full flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 pb-0.5 pointer-events-none">
                 {showDmg&&(
-                <div className={`flex items-center gap-2 px-3 py-0.5 rounded-full border shadow-lg ${showProjected?'bg-yellow-950/90 border-yellow-500/70':'bg-red-950/90 border-red-500/50'} backdrop-blur-sm`}>
+                <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border shadow-lg ${showProjected?'bg-yellow-950/90 border-yellow-500/70':'bg-red-950/90 border-red-500/50'} backdrop-blur-sm`}>
                   <Sword size={11} className={showProjected?'text-yellow-400':'text-red-400'}/>
                   <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">合計DMG</span>
                   {showProjected?(
@@ -964,7 +971,7 @@ function BattleScreen({
                 </div>
                 )}
                 {showGuard&&(
-                <div className={`flex items-center gap-2 px-3 py-0.5 rounded-full border shadow-lg ${showGuardProjected?'bg-yellow-950/90 border-yellow-500/70':'bg-emerald-950/90 border-emerald-500/50'} backdrop-blur-sm`}>
+                <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border shadow-lg ${showGuardProjected?'bg-yellow-950/90 border-yellow-500/70':'bg-emerald-950/90 border-emerald-500/50'} backdrop-blur-sm`}>
                   <Shield size={11} className={showGuardProjected?'text-yellow-400':'text-emerald-400'}/>
                   <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">合計軽減</span>
                   {showGuardProjected?(
@@ -1107,6 +1114,11 @@ function BattleScreen({
               // ★この枠が狙われているか(2026-09-21 ユーザー指摘「誰に攻撃か分からない」)。
               //   名前だけでは4つの枠から自分で探すことになるので、枠のほうにも印を出す
               const slotAimed=aimedSlots.includes(i);
+              // ★その子の予定ダメージ。全体攻撃は丈夫さで1体ずつ変わるので枠ごとに出す
+              //   (2026-09-21 ユーザー依頼)。ガードを置けばその枠の数字だけが減る。
+              //   ★連撃は1発ずつ並べると合計が読めない(2026-09-22 ユーザー指摘)ので、
+              //     合計を先に出し、1発ずつの内訳を小さく添える
+              const slotAimHit=slotAimed?plannedHitFor(i):null;
               return(<button key={i} data-slot-index={i} data-tactics-aimed={slotAimed?'true':undefined} data-distance-broken={distanceBroken?'true':undefined} data-distance-break-level={distanceBroken?distanceBreakLevel:undefined} aria-label={`${RANGE_LABELS[i]}距離${distanceBroken?`（BREAK Lv${distanceBreakLevel}・与ダメージ${distanceBreakPercent}%）`:''}`} onClick={()=>{
                 if(isBusy||autoBattleRef.current)return;
                 if(pendingCard!=null && canAssign){
@@ -1158,24 +1170,11 @@ function BattleScreen({
                       </>}
                   </div>);
                 })()}
-                {slotAimed&&(()=>{
-                  // ★その子の予定ダメージ。全体攻撃は丈夫さで1体ずつ変わるので、枠ごとに出す
-                  //   (2026-09-21 ユーザー依頼)。ガードを置けばその枠の数字だけが減る
-                  const slotPlannedHit=plannedHitFor(i);
-                  const slotPlanned=slotPlannedHit.taken;
-                  const slotPlannedText=slotPlannedHit.parts.join('・');
-                  // ★連撃は1発ずつ並べると合計が読めない(2026-09-22 ユーザー指摘)。
-                  //   いちばん知りたいのは「結局いくつ食らうか」なので、合計を上の行に置き、
-                  //   1発ずつの内訳をその下へ小さく添える。1発の技は今までどおり1行
-                  const slotMultiHit=slotPlannedHit.parts.length>1;
-                  return (<>
-                    <div data-tactics-aimed-ring className="absolute inset-[2px] rounded-lg border-2 border-red-400/80 pointer-events-none z-[44] animate-pulse" style={{boxShadow:'inset 0 0 10px rgba(239,68,68,.55)'}}></div>
-                    {/* ★名前の行(上から18px)には**かぶせない**(2026-09-22 ユーザー指摘「1番の枠だけ名前が
-                        予想ダメージのバッジに隠れる」)。枠の外へ出すと、すぐ上の強化の札にぶつかるので、
-                        名前の行の下・絵の右上へ置く。絵は64pxで枠より小さいので、頭にはかからない */}
-                    <div data-tactics-aimed-damage={slotPlanned} data-tactics-aimed-parts={slotMultiHit?slotPlannedText:undefined} className={`absolute top-[21px] right-0.5 z-[66] ${slotMultiHit?'rounded-lg':'rounded-full'} border border-red-300 bg-red-950 px-1 py-0.5 text-[9px] font-black leading-none text-red-100 shadow-[0_0_8px_rgba(239,68,68,.85)] animate-pulse flex flex-col items-center gap-0.5`}><span>🎯{slotPlanned>0?` -${slotPlanned}`:''}</span>{slotMultiHit&&<span className="text-[8px] font-bold text-red-200/90">{slotPlannedText}</span>}</div>
-                  </>);
-                })()}
+                {/* ★数字の札は下の「枠の中の札」へまとめてある。ここは輪だけ。
+                    それまでは狙いの札だけ枠の側に absolute で浮かせていたので、
+                    連撃で2行になると下の札(置いたカード・予想ダメージ)へ乗っていた
+                    (2026-09-22 ユーザー指摘「表示が被ってて見えない」) */}
+                {slotAimed&&<div data-tactics-aimed-ring className="absolute inset-[2px] rounded-lg border-2 border-red-400/80 pointer-events-none z-[44] animate-pulse" style={{boxShadow:'inset 0 0 10px rgba(239,68,68,.55)'}}></div>}
                 {distanceBroken&&<>
                   <div className="absolute inset-0 rounded-lg pointer-events-none z-[15]" style={{background:`repeating-linear-gradient(${135+distanceBreakLevel*12}deg,rgba(0,0,0,.12) 0 ${Math.max(3,8-distanceBreakLevel)}px,rgba(127,29,29,${Math.min(.8,.28+distanceBreakLevel*.14)}) ${Math.max(4,9-distanceBreakLevel)}px ${Math.max(5,10-distanceBreakLevel)}px),radial-gradient(circle at 50% 40%,rgba(${distanceBreakLevel>=2?'69,10,10':'88,28,135'},.55),rgba(5,0,2,.9))`}}></div>
                   <div className="absolute inset-[2px] rounded-lg border border-red-300/80 pointer-events-none z-[45]" style={{boxShadow:'inset 0 0 12px rgba(239,68,68,.7)'}}></div>
@@ -1216,8 +1215,15 @@ function BattleScreen({
                       className={`absolute bottom-0.5 left-0.5 z-[55] rounded border px-1 py-0.5 font-black leading-none pointer-events-none ${slotRushGuard?'border-amber-200 bg-amber-600/95 text-white':'border-sky-300/60 bg-sky-800/90 text-sky-50'}`}
                       style={{fontSize:'7px'}}>🛡 {slotRushGuard?'連撃ガード':'全体'} {gv}</div>;
                   })()}
-                  {slotAssignedCards.length>0&&(
-                    <div className="absolute top-0 left-0 right-0 flex flex-col gap-px items-center z-[55] pointer-events-none px-0.5">
+                  {/* ★枠の中に出すものは、ぜんぶこの1本の縦積みに入れる(2026-09-22 ユーザー指摘
+                      「表示が被ってて見えない」)。それまでは「置いたカードの札」「予想ダメージ」
+                      「狙われている印」を別々に absolute で置き、上からの距離(top-0 / top-[18px] /
+                      top-[21px])で避けていた。札が2枚になる・連撃で2行になると必ず重なる。
+                      縦積みなら、いくつ増えても順番に下へ伸びるだけで重ならない。
+                      ★絵の上には乗る。文字どうしが重ならなければ読めるので、
+                        覆ってよいのは絵だけ、という切り分けにしている */}
+                  {(slotAssignedCards.length>0||previewDmg>0||previewGuard>0||slotAimHit)&&(
+                    <div data-tactics-slot-marks className="absolute top-0 left-0 right-0 flex flex-col gap-px items-center z-[60] pointer-events-none px-0.5">
                       {slotAssignedCards.map(({idx,card})=>{
                         // ガードは軽減量をその場で出す。2枚目以降なら半分になった値をそのまま表示する
                         const gw=guardCardWeight(card), ge=cardEffectMultiplier(card,halvedByIdx[idx]);
@@ -1238,10 +1244,28 @@ function BattleScreen({
                         </div>
                         );
                       })}
+                      {/* 数字の段。左＝こちらが出すぶん、右＝相手から受けるぶん。
+                          横に並べて場所を分けるので、両方出ても重ならない */}
+                      {(previewDmg>0||previewGuard>0||slotAimHit)&&(
+                        <div className="flex w-full flex-wrap items-start justify-between gap-0.5">
+                          {/* ★枠は4つ並ぶので1つ87pxしかない。字を8pxまで落として、
+                              出すぶんと受けるぶんが**横1行に収まる**ようにしてある。
+                              入り切らなければ折り返すので、重なることはない */}
+                          {previewGuard>0&&(<div data-tactics-guard-preview={previewGuard}
+                            className="rounded bg-emerald-500 px-0.5 py-0.5 text-[8px] font-black leading-none text-black shadow ring-1 ring-emerald-100">{isPendingGuardHalved?'½':''}守{previewGuard}</div>)}
+                          {previewDmg>0&&(<div data-tactics-damage-preview={previewDmg}
+                            className={`rounded px-0.5 py-0.5 text-[8px] font-black leading-none shadow ring-1 ${isPendingPreview?'bg-yellow-500 text-black ring-yellow-200':'bg-red-600 text-white ring-white/50'}`}>{isPendingPreview&&isPendingHalved?'½':''}攻{previewDmg}{isPendingPreview&&previewSoulPct>0&&<span data-soul-damage-preview className="ml-0.5 rounded bg-sky-950/80 px-0.5 text-[7px] text-sky-100">魂格+{previewSoulPct}%</span>}</div>)}
+                          {slotAimHit&&(<div data-tactics-aimed-damage={slotAimHit.taken} data-tactics-aimed-parts={slotAimHit.parts.length>1?slotAimHit.parts.join('・'):undefined}
+                            className="ml-auto flex flex-col items-center gap-0.5 rounded border border-red-300 bg-red-950 px-0.5 py-0.5 text-[8px] font-black leading-none text-red-100 shadow-[0_0_8px_rgba(239,68,68,.85)] animate-pulse"><span>🎯{slotAimHit.taken>0?`-${slotAimHit.taken}`:''}</span>{slotAimHit.parts.length>1&&<span className="text-[7px] font-bold text-red-200/90">{slotAimHit.parts.join('・')}</span>}</div>)}
+                        </div>
+                      )}
                     </div>
                   )}
+                  {/* 固有技をセットした枠のオーラ。⚡は絵(飾り)なので data-decoration。
+                      ★重ね順は文字より下(z-[5])にする。それまでは z-40 で、置いたカードの札や
+                        間合いの補正の上を回っていた(2026-09-22 ユーザー指摘「表示が被ってて見えない」) */}
                   {!ecoBattleView&&hasUniqueSet&&(
-                    <div className="absolute inset-0 pointer-events-none z-40 flex items-center justify-center overflow-visible">
+                    <div data-decoration aria-hidden="true" className="absolute inset-0 pointer-events-none z-[5] flex items-center justify-center overflow-visible">
                       <div className="absolute inset-0 rounded-xl" style={{background:'radial-gradient(circle, rgba(168,85,247,0.45) 0%, rgba(99,102,241,0.28) 50%, rgba(0,0,0,0) 75%)', animation:'idleAuraPulse 1200ms ease-in-out infinite'}}></div>
                       <div className="absolute -inset-0.5 rounded-xl border-2 border-purple-400/80" style={{animation:'idleAuraPulse 1200ms ease-in-out infinite'}}></div>
                       {[0,90,180,270].map(deg=>(
@@ -1251,9 +1275,6 @@ function BattleScreen({
                   )}
                   {/* 距離補正は0%でも出す(「補正が無い」ことも情報なので、枠ごとに常に見えるようにする) */}
                   {(()=>{const totalBonus=distTotalBonus(i); return(<div className={`absolute bottom-0.5 right-0.5 text-[11px] font-black leading-none flex items-center gap-0.5 bg-black/50 px-1 py-0.5 rounded border z-30 ${totalBonus>0?'text-cyan-300 border-cyan-400/30':totalBonus<0?'text-red-300 border-red-400/30':'text-slate-300 border-white/20'}`}><Sword size={5}/>{totalBonus>0?'+':''}{(totalBonus*100).toFixed(1)}%</div>);})()}
-                  {previewGuard>0&&(<div data-tactics-guard-preview={previewGuard}
-                    className={`absolute ${slotAssignedCards.length>0?'top-[18px]':'top-0'} bg-emerald-500 text-black ring-emerald-100 text-[10px] font-black px-1.5 py-0.5 rounded shadow-lg z-50 animate-bounce ring-1`}>{isPendingGuardHalved?'½ ':''}GUARD:{previewGuard}</div>)}
-                  {previewDmg>0&&(<div className={`absolute ${slotAssignedCards.length>0?'top-[18px]':'top-0'} ${isPendingPreview?'bg-yellow-500 text-black ring-yellow-200':'bg-red-600 text-white ring-white/50'} text-[10px] font-black px-1.5 py-0.5 rounded shadow-lg z-50 animate-bounce ring-1`}>{isPendingPreview&&isPendingHalved?'½ ':''}DMG:{previewDmg}{isPendingPreview&&previewSoulPct>0&&<span data-soul-damage-preview className="ml-1 rounded bg-sky-950/80 px-1 py-0.5 text-[10px] text-sky-100">魂格 +{previewSoulPct}%</span>}</div>)}
                   {s?.imgUrl?(isAnimating&&s.id==='Pandora'&&attackAnim.motion==='pandoraDualThunder'
                     ?<PandoraDualThunder image={<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:'64px',height:'64px'}} className="object-contain drop-shadow-md"/>}/>
                     :isAnimating&&attackAnim.motion==='arkHolyRain'
@@ -1399,7 +1420,10 @@ function BattleScreen({
               }} style={{...(isDragging?{touchAction:'none',position:'fixed',left:dragState.x,top:dragState.y,transform:'translate(-50%,-50%) rotate(-3deg) scale(1.15)',zIndex:70000,width:'72px',pointerEvents:'none',transition:'none',filter:'drop-shadow(0 12px 18px rgba(0,0,0,0.65))'}:{touchAction:'none',boxShadow:`${(TYPE_INLINE_STYLE[c.type]||{}).borderColor?`0 0 12px ${(TYPE_INLINE_STYLE[c.type]||{}).borderColor}70, `:''}inset 0 1px 0 rgba(255,255,255,.34), inset 0 -10px 16px rgba(0,0,0,.30), 0 4px 10px rgba(0,0,0,.5)`}),...(TYPE_INLINE_STYLE[c.type]||{})}} className={`relative w-full rounded-xl border-2 p-1 flex flex-col items-center justify-between bg-gradient-to-b ${TYPE_COLORS[c.type]} ${isDragging?'ring-4 ring-white shadow-[0_0_24px_rgba(255,255,255,0.6)]':isSel?'transition-all -translate-y-1.5 ring-4 ring-cyan-300 z-20 scale-105 opacity-60 saturate-[0.7] shadow-[0_0_18px_rgba(103,232,249,0.6)]':'transition-all opacity-90'} ${isPending?'ring-4 ring-yellow-400 animate-pulse shadow-[0_0_20px_rgba(250,204,21,0.7)]':''} ${!isSelectable&&!isSel&&!isDragging?'grayscale opacity-50':''}${tutorialTargeted?' is-battle-tutorial-spot':''}${battleTutorialCardTarget&&!tutorialTargeted?' grayscale opacity-25':''}`}>
                 {isSel&&!assignedMon&&(<div className="absolute top-0.5 left-0.5 z-30 w-5 h-5 rounded-full bg-cyan-400 border-2 border-white flex items-center justify-center shadow-lg"><Check size={10} className="text-white" strokeWidth={4}/></div>)}
                 {assignedMon&&(<div className="absolute top-0.5 right-0.5 z-30 w-5 h-5 rounded-full bg-indigo-600 border-2 border-white flex items-center justify-center overflow-hidden shadow-lg">{assignedMon.imgUrl?<img src={assignedMon.imgUrl} alt="" className="w-full h-full object-contain"/>:<span className="text-[10px]">{assignedMon.emoji}</span>}</div>)}
-                <div className="mt-1.5 flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full border border-white/30 bg-black/25" style={{boxShadow:'inset 0 1px 0 rgba(255,255,255,.25), inset 0 -4px 8px rgba(0,0,0,.35)'}}>{cardIconNode(c.icon,26,c.id)}</div><div className="w-full text-center flex flex-col justify-end gap-0.5">{['atk','range_atk','unique'].includes(c.type)?(<div onClick={(ev)=>{ev.stopPropagation(); if(isBusy||autoBattleRef.current||Date.now()<=suppressCardClickRef.current)return; setSkillPicker({handIndex:i});}} className={`text-[11px] font-black leading-[13px] w-full whitespace-normal h-[30px] flex items-center justify-center overflow-hidden px-0.5 underline decoration-dotted decoration-white/60 underline-offset-2 active:opacity-60${battleTutorialNeedCard&&tutorialTargeted?' is-battle-tutorial-spot':''}`}>{c.name}</div>):(<div className="text-[11px] font-black leading-[13px] w-full whitespace-normal h-[30px] flex items-center justify-center overflow-hidden px-0.5">{c.name}</div>)}{(()=>{
+                {/* ★data-decoration は「これは絵であって読むものではない」という目じるし。
+                    使えないカードの赤い札(枚数上限など)をこの絵の上へわざと出すので、
+                    文字の重なりを見る検査ではこの中身を数えない */}
+                <div data-decoration className="mt-1.5 flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full border border-white/30 bg-black/25" style={{boxShadow:'inset 0 1px 0 rgba(255,255,255,.25), inset 0 -4px 8px rgba(0,0,0,.35)'}}>{cardIconNode(c.icon,26,c.id)}</div><div className="w-full text-center flex flex-col justify-end gap-0.5">{['atk','range_atk','unique'].includes(c.type)?(<div onClick={(ev)=>{ev.stopPropagation(); if(isBusy||autoBattleRef.current||Date.now()<=suppressCardClickRef.current)return; setSkillPicker({handIndex:i});}} className={`text-[11px] font-black leading-[13px] w-full whitespace-normal h-[30px] flex items-center justify-center overflow-hidden px-0.5 underline decoration-dotted decoration-white/60 underline-offset-2 active:opacity-60${battleTutorialNeedCard&&tutorialTargeted?' is-battle-tutorial-spot':''}`}>{c.name}</div>):(<div className="text-[11px] font-black leading-[13px] w-full whitespace-normal h-[30px] flex items-center justify-center overflow-hidden px-0.5">{c.name}</div>)}{(()=>{
                   // カードの表に「ジャンル」と「誰に効くか」を出す(仕様: BATTLE_NEW_MODE_PLAN.md 4.4
                   // 「単体効果と全体効果が分かるようにカード説明に表示するようにしたい」)。
                   // ★言葉はアプリ側の cardGenreLabel / cardScopeLabel から引く。カードをタップした
