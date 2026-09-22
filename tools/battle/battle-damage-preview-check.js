@@ -5,7 +5,9 @@ const source = fs.readFileSync('monster-hero/src/game-system.jsx', 'utf8');
 assert(source.includes('const getAttackPredictedDmg = useCallback'), '攻撃1枚の共通予測関数が必要');
 // 予測と実処理はヒット列の共通の正本 buildAttackHits を使う(分岐は ATTACK_COMBO_RULES にまとまっている)
 assert(source.includes('const buildAttackHits = ({') && (source.match(/buildAttackHits\(\{/g)||[]).length >= 2, '定義と、実処理・予測の2か所の呼び出しがある');
-assert(source.includes("if (heroId === 'Zan' && attackerId === 'Zan') combo(ATTACK_COMBO_RULES.zanHero + comboDmgBonus);"), 'ザン勇者特性の連撃');
+// 2026-09-22: ザンの連撃だけ「特性の持ち主(traitOwnerId)」で決まる。タクティクスでは供モンでも出る
+// (エイキ・パンドラ・剣士モッチーは勇者モン限定のまま。tactics-enemy-actions-check.js が見張る)
+assert(source.includes("if (traitOwnerId === 'Zan' && attackerId === 'Zan') combo(ATTACK_COMBO_RULES.zanHero + comboDmgBonus);"), 'ザン勇者特性の連撃');
 assert(source.includes("if (isUniqueOf('Zan')) combo(ATTACK_COMBO_RULES.zanUnique + comboDmgBonus);"), '連斬の連撃');
 assert(source.includes("if (heroId === 'Eiki' && attackerId === 'Eiki') {"), 'エイキ勇者特性の連撃');
 assert(source.includes("if (isUniqueOf('Eiki')) for (const rate of ATTACK_COMBO_RULES.eikiUnique) combo(rate + comboDmgBonus);"), 'エイキ固有技の連撃');

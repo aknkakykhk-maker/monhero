@@ -254,7 +254,7 @@ check('反射は狙われた子ごとに数え直す',
 // ★間合いをずらされた技は威力が落ちた actingIntent を見る(intent のままだと
 //   距離撃でずらしてもフルの量を返してしまう。2026-09-22 に直した)
 check('反射は狙われた全員ぶんを足して返す',
-  has('reflectSlots.reduce((sum,slotIdx)=>sum+applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(actingIntent,slotIdx)),0)'));
+  has('reflectSlots.reduce((sum,slotIdx)=>sum+applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(actingIntent,slotIdx),slotIdx),0)'));
 check('反射は返す量でスコアも撃破も決める',
   has('setCurrentWaveDamage(p=>p+reflectDmg);')
     && has('resolveEnemyDefeat({remainingHp:reflectedHp,damage:reflectDmg})')
@@ -275,7 +275,7 @@ check('避けた子・反射した子はダメージ処理を飛ばす',
   has('if(slotIdx===evadedSlot){ evadedName=tacticsTargetName(units,slotIdx); slotFx[slotIdx]={evade:true}; return; }')
     && has('if(slotIdx===reflectedSlot){') && has('slotFx[slotIdx]={reflect:true};'));
 check('確率で出た反射は、その子が受けるはずだった量を返す',
-  has('reflectBack+=applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(actingIntent,slotIdx));'));
+  has('reflectBack+=applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(actingIntent,slotIdx),slotIdx);'));
 check('返すのは味方の増減を確定させてから',
   src.indexOf('currentHp=commitTacticsUnits(units);\n            if(dealt>0)') < src.indexOf('if(reflectBack>0){'));
 check('確率で出た反射でも撃破を確定できる',
@@ -284,16 +284,45 @@ check('避けた子・反射した子がいるときは「無傷！」を出さ�
   has("if(dealt<=0&&saved<=0&&evadedSlot==null&&reflectedSlot==null) addPopup('無傷！'"));
 
 // --- 勇者特性は「その札を出した／狙われた、その子の能力」(2026-09-20 ユーザー提案) ---
-// ★ザン・エイキ・パンドラ・剣士モッチーの連撃はもともと attackerId を見て本人限定だったのに、
-//   被弾側(もち肌・中二病・俊足・反射・吸収)と攻撃側(怪力・魔力開放・禁忌解錠)は
+// ★被弾側(もち肌・中二病・俊足・反射・吸収)と攻撃側(怪力・魔力開放・禁忌解錠の+50%)は
 //   mainHero を見るだけ＝誰が狙われても／誰が攻撃しても効く、とちぐはぐだった。
 //   タクティクスバトルは1体ずつライフを持つので、特性も**その子のもの**にそろえる。
 //   効き目は勇者モンと同じ等倍。既存5モードはステータスがパーティ共通なので変えない(仕様 8.触らないもの)
-check('連撃系はもともと本人限定のまま',
-  entries.includes("heroId === 'Zan' && attackerId === 'Zan'")
-    && entries.includes("heroId === 'Eiki' && attackerId === 'Eiki'")
+// ★連撃系は2026-09-22にユーザーが2つへ分けた。きっかけは「パンドラが弱く感じた
+//   勇者特性がきいてないとか」。調べたら連撃系は**全部が勇者モン限定**で、
+//   「もともと本人限定」と書いてあった以前の記述のほうが誤りだった。
+//     ザンの連斬だけ「持ち主(traitOwnerId)」で見る … 供モンでも本人が殴れば出る
+//     エイキ・パンドラ・剣士モッチーは「勇者モン(heroId)」で見る
+//       … **勇者モンにしたからこそ強い**設定なので、供モンでは出さない
+check('ザンの連斬だけ持ち主で決まる',
+  entries.includes("traitOwnerId === 'Zan' && attackerId === 'Zan'")
+    && !entries.includes("heroId === 'Zan' && attackerId === 'Zan'"));
+check('エイキ・パンドラ・剣士モッチーの連撃は勇者モン限定のまま',
+  entries.includes("heroId === 'Eiki' && attackerId === 'Eiki'")
     && entries.includes("heroId === 'Pandora' && attackerId === 'Pandora'")
     && entries.includes("heroId === 'KenshiMocchi' && attackerId === 'KenshiMocchi'"));
+// ★持ち主を渡さなければ勇者モンと同じに倒れる。既存の呼び出し・検査はそのまま動く
+check('持ち主を渡さなければ勇者モンと同じ', entries.includes('traitOwnerId = heroId,'));
+// ★実際に動かして確かめる(数字を検査へ書き写さず、本体の正本をそのまま回す)。
+//   元ダメージ1000・供モン(勇者モンは別の子)のとき、ザンだけが勇者モンと同じ値になる
+{
+  const comboBlock = entries.slice(entries.indexOf('const ATTACK_COMBO_RULES = Object.freeze({'),
+    entries.indexOf('// 贖罪の追撃(アーク・イブリースの固有技)'));
+  const buildAttackHits = Function(`${comboBlock}\nreturn buildAttackHits;`)();
+  const totalOf = (monId, hero, card) =>
+    buildAttackHits({ d: 1000, card, attackerId: monId, heroId: hero, traitOwnerId: monId })
+      .reduce((sum, hit) => sum + hit.dmg, 0);
+  const uniqueOf = (id) => ({ type: 'unique', monId: id });
+  const asSub = (id) => totalOf(id, 'ほかの子', uniqueOf(id));
+  const asHero = (id) => totalOf(id, id, uniqueOf(id));
+  check('ザンの連斬は供モンでも勇者モンと同じ', asSub('Zan') === asHero('Zan'), `供モン${asSub('Zan')} / 勇者${asHero('Zan')}`);
+  check('エイキ・パンドラ・剣士モッチーは供モンだと連撃が出ない',
+    ['Eiki', 'Pandora', 'KenshiMocchi'].every(id => asSub(id) < asHero(id)),
+    ['Eiki', 'Pandora', 'KenshiMocchi'].map(id => `${id} 供モン${asSub(id)}/勇者${asHero(id)}`).join(' '));
+  // ★パンドラは差がいちばん大きい(自身の固有技が連撃100%なので、勇者モンだとちょうど2倍)
+  check('パンドラの固有技は勇者モンのときだけ2倍',
+    asHero('Pandora') === 2000 && asSub('Pandora') === 1000, `勇者${asHero('Pandora')} / 供モン${asSub('Pandora')}`);
+}
 check('被弾側は狙われた子自身の特性で効かせる',
   has('const traitHeroId = !isTacticsMode(runMode) ? mainHero?.id')
     && has('      : (Number.isInteger(targetSlot) ? (tacticsUnitsRef.current[targetSlot]?.id || null) : mainHero?.id);'));
@@ -301,8 +330,10 @@ check('もち肌・中二病は traitHeroId で見る',
   has("(traitHeroId==='Ark'||traitHeroId==='Iblis')")
     && has("((traitHeroId==='Mocchi'||traitHeroId==='Mitarashi')?0.8:1.0)")
     && !has("((mainHero?.id==='Mocchi'||mainHero?.id==='Mitarashi')?0.8:1.0)"));
+// ★2026-09-22: 勇者特性の「持ち主」を traitOwnerOf の1か所で決めるようにした
 check('攻撃側は札を出した子自身の特性が乗る',
-  has('const attackHeroId = !isTacticsMode(runMode) ? mainHero?.id : (mon?.id || null);')
+  has('const traitOwnerOf = (mon) => (isTacticsMode(runMode) ? (mon?.id || null) : (mainHero?.id || null));')
+    && has('const attackHeroId = traitOwnerOf(mon);')
     && has("let traitMult=(attackHeroId==='Golem'?1.2:1.0)")
     && has("if (attackHeroId==='Pandora' && card.type==='unique' && card.monId!=='Pandora') traitMult*=1.5;"));
 // ★回避・反射・吸収は「先に受ける子を1体決めて、その子の特性で表を作る」。

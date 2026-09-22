@@ -8968,6 +8968,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 順序で50%にならないため、実処理と予測表示の双方がこの入口を使う。
   // ★タクティクスは「狙われた子だけ」のぶんも掛ける(アーク/イブリースの贖罪。
   //   2026-09-22 ユーザー選択)。メロソの全体ぶん(takenDamageMult)は今までどおり全員に掛かる
+  // ★勇者特性の「持ち主」。既存5モードは勇者モン、タクティクスは**その札を出した子**
+  //   (設計 4.9「勇者モンにしていなくても、盤面にいればその子の特性が効く」)。
+  //   怪力・魔力開放・禁忌解錠の「引き継いだ固有技+50%」はここを通る。
+  // ⚠️ 連撃系は種類で分かれる(2026-09-22 ユーザー判断)。
+  //     ザンの連斬だけが**持ち主**で決まる。エイキの桜花連舞・パンドラの禁忌解錠の連撃・
+  //     剣士モッチーの二刀流は「勇者モンにしたからこそ強い」設定なので、
+  //     **勇者モンのときだけ**発動させる(buildAttackHits が heroId で見分ける)
+  const traitOwnerOf = (mon) => (isTacticsMode(runMode) ? (mon?.id || null) : (mainHero?.id || null));
   const applyTurnDamageReduction = useCallback((damage, slotIdx = null) => damage>0
     ? Math.max(1,Math.floor(damage*getTurnBuff('takenDamageMult',1.0)
       *tacticsSlotRate(isTacticsMode(runMode)?turnBuffs.bySlot:null,slotIdx,'takenDamageMult',1.0)))
@@ -9400,9 +9408,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     else if (card.type==='range_atk') { baseDmgMult=rangeAttackDamageMultiplier(card,attackStartDist); }
     else { baseDmgMult=card.mult||card.baseMult||1.0; }
     // ★タクティクスバトルは**攻撃した子自身の特性**が乗る(2026-09-20 ユーザー提案)。
-    //   ザン・エイキ・パンドラの連撃はもともと attackerId を見て本人のものになっている。
     //   既存5モードは今までどおり、勇者モンの特性が誰の攻撃にも乗る(仕様 8.触らないもの)
-    const attackHeroId = !isTacticsMode(runMode) ? mainHero?.id : (mon?.id || null);
+    const attackHeroId = traitOwnerOf(mon);
     let traitMult=(attackHeroId==='Golem'?1.2:1.0)*((attackHeroId==='Pixie'||attackHeroId==='Mia')&&card.type==='unique'?2.0:1.0);
     // 禁忌解錠: パンドラ勇者が使う『引き継いだ』固有技だけを1.5倍にする。
     // 技の出自はcard.monIdで判定し、自身の固有技へは適用しない。
@@ -9445,7 +9452,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // ヒット列は実処理(processTurn)と同じ buildAttackHits。予測では乱数会心を乗せず、確定会心(guaranteedCrit)だけを反映する。
     // あつの挑発(stun_atsu)は実処理と同じくメインに会心が乗らない(mainCanCrit:false)
     const soulAttack=soulTraitAttackProfile(mon?.masuId?getMasuMon(mon.masuId):null,card,null);
-    const hits=buildAttackHits({ d:baseDmg, card, attackerId:mon?.id, heroId:mainHero?.id, comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus:getPermaBuff('critDmgPct')+soulAttack.critDamageBonus, kenshiExtraCombos:getPermaBuff('kenshiExtraCombo'),
+    const hits=buildAttackHits({ d:baseDmg, card, attackerId:mon?.id, heroId:mainHero?.id, traitOwnerId:traitOwnerOf(mon), comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus:getPermaBuff('critDmgPct')+soulAttack.critDamageBonus, kenshiExtraCombos:getPermaBuff('kenshiExtraCombo'),
       guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit'), rollCrit:()=>false,
       globalComboRate:getPermaBuff('globalComboDmgPct')+additionalGlobalCombo, mainCanCrit:card.subType!=='stun_atsu',
       comboFinalMultiplier:soulAttack.comboFinalMultiplier });
@@ -10192,7 +10199,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // ヒット列は通常攻撃と同じ buildAttackHits。あつの挑発は固有技ではないのでメインに会心が乗らず(mainCanCrit:false)、
           // 連撃はザン(30%×1)・エイキ(10%×2)の勇者特性と、きき由来の全体連撃だけが付く。
           // 魂格の闘魂/距離補正はgetDmg、会心眼/会心極/連撃強化はここで本人分だけ適用する。
-          const stunHits=buildAttackHits({ d, card, attackerId:stunMon?.id, heroId:mainHero?.id, comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus:getPermaBuff('critDmgPct')+soulAttack.critDamageBonus, kenshiExtraCombos:getPermaBuff('kenshiExtraCombo'),
+          const stunHits=buildAttackHits({ d, card, attackerId:stunMon?.id, heroId:mainHero?.id, traitOwnerId:traitOwnerOf(stunMon), comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus:getPermaBuff('critDmgPct')+soulAttack.critDamageBonus, kenshiExtraCombos:getPermaBuff('kenshiExtraCombo'),
             guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit'), rollCrit:()=>Math.random()<Math.min(1,(card.crit||0.1)+getPermaBuff('critRatePct')+soulAttack.critRateBonus),
             globalComboRate:getPermaBuff('globalComboDmgPct')+localGlobalComboAdd, mainCanCrit:false, comboFinalMultiplier:soulAttack.comboFinalMultiplier });
           totalDmg+=d; attackCount++; attackHits.push({dmg:d, isCrit:false, slotIdx});
@@ -10301,7 +10308,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const critDmgBonus=getPermaBuff('critDmgPct')+soulAttack.critDamageBonus;
         // ヒット列(メイン・勇者特性と固有技の連撃・全体連撃)は予測表示と同じ buildAttackHits が作る。
         // 会心は 1 ヒットごとに独立して判定し、連撃は元ダメージ d を基準にする(メインの会心を二重に乗せない)。
-        const hits=buildAttackHits({ d, card, attackerId:activeMon.id, heroId:mainHero?.id, comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus, kenshiExtraCombos:getPermaBuff('kenshiExtraCombo'),
+        const hits=buildAttackHits({ d, card, attackerId:activeMon.id, heroId:mainHero?.id, traitOwnerId:traitOwnerOf(activeMon), comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus, kenshiExtraCombos:getPermaBuff('kenshiExtraCombo'),
           guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit'), rollCrit:()=>Math.random()<Math.min(1,(card.crit||0.1)+critRateBonus),
           globalComboRate:getPermaBuff('globalComboDmgPct')+localGlobalComboAdd, comboFinalMultiplier:soulAttack.comboFinalMultiplier });
         const isCrit=hits[0].crit; const finalD=hits[0].dmg; if(isCrit) hasCrit=true; totalDmg+=finalD;

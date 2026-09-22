@@ -450,7 +450,12 @@ const ATTACK_COMBO_RULES = Object.freeze({
 // ソードスキルの「連撃パワー」が満タンになる数。ここに達するたびに永久10%連撃が1本増え、0へ戻る
 const KENSHI_COMBO_POWER_MAX = 3;
 // mainCanCrit:false は「メインヒットには会心が乗らない」種類(あつの挑発)。連撃・全体連撃の会心判定は変わらない
-const buildAttackHits = ({ d, card, attackerId, heroId, comboDmgBonus = 0, critDmgBonus = 0, guaranteedCrit = false, rollCrit = () => false, globalComboRate = 0, mainCanCrit = true, kenshiExtraCombos = 0, comboFinalMultiplier = 1 }) => {
+// ★heroId … 勇者モンのid。traitOwnerId … 特性の「持ち主」(タクティクスでは札を出した子、
+//   既存5モードは勇者モンと同じ)。渡さなければ heroId と同じに倒れるので、今までの呼び出しは変わらない。
+//   連撃系はここで分かれる(2026-09-22 ユーザー判断)。
+//     ザンの連斬だけ traitOwnerId … 供モンでも本人が殴れば出る
+//     エイキ・パンドラ・剣士モッチー … heroId。**勇者モンにしたからこそ強い**設定なので出さない
+const buildAttackHits = ({ d, card, attackerId, heroId, traitOwnerId = heroId, comboDmgBonus = 0, critDmgBonus = 0, guaranteedCrit = false, rollCrit = () => false, globalComboRate = 0, mainCanCrit = true, kenshiExtraCombos = 0, comboFinalMultiplier = 1 }) => {
   const hits = [];
   const critMult = 1.5 + critDmgBonus;
   const isUniqueOf = (id) => card.type === 'unique' && card.monId === id;
@@ -476,7 +481,7 @@ const buildAttackHits = ({ d, card, attackerId, heroId, comboDmgBonus = 0, critD
     const safeComboFinalMultiplier = Math.max(0, Number(comboFinalMultiplier) || 0);
     hits.push({ kind: 'combo', crit, dmg: Math.floor(beforeSoulFinal * safeComboFinalMultiplier), skillName, noAnim });
   };
-  if (heroId === 'Zan' && attackerId === 'Zan') combo(ATTACK_COMBO_RULES.zanHero + comboDmgBonus);
+  if (traitOwnerId === 'Zan' && attackerId === 'Zan') combo(ATTACK_COMBO_RULES.zanHero + comboDmgBonus);
   if (isUniqueOf('Zan')) combo(ATTACK_COMBO_RULES.zanUnique + comboDmgBonus);
   if (heroId === 'Eiki' && attackerId === 'Eiki') {
     for (const rate of ATTACK_COMBO_RULES.eikiHero) combo(rate + comboDmgBonus);
