@@ -224,8 +224,14 @@ function BattleScreen({
           </div>
           <div data-battle-controls className="flex shrink-0 items-center gap-0.5"><button type="button" disabled={!!battleTutorial||autoRepeat} onClick={cycleBattleSpeed} aria-label={battleTutorial?'バトルのれんしゅう中は1倍固定':autoRepeat?'∞周回中は4倍固定':`バトル速度、現在${battleSpeed}倍。タップで切り替え`} title={autoRepeat?'∞周回中は×4固定':undefined} className="shrink-0 min-w-[42px] h-[28px] px-1.5 rounded-lg border-2 font-black text-[11px] leading-none active:scale-90 disabled:cursor-not-allowed disabled:opacity-60" style={{color:'#fef3c7',borderColor:'#f59e0b',backgroundColor:'rgba(120,53,15,.72)',boxShadow:'0 0 9px rgba(245,158,11,.35)'}}>×{battleSpeed}{autoRepeat&&<span className="ml-0.5 text-[10px]">固定</span>}</button><button data-battle-menu-button type="button" onClick={()=>setShowBattleMenu(true)} aria-label="設定（BGM・ヘルプ・あきらめる）" title="設定" className="shrink-0 w-[28px] h-[28px] flex items-center justify-center bg-slate-800 rounded text-slate-300 active:scale-90"><Settings size={15}/></button></div>
         </header>
+        {/* ★簡易画面には relative z-10 が要る。バトルの背景(data-battle-stage-bg)は
+              position:absolute の z-index:0 で、CSSでは「位置指定のある要素」が static より上に描かれる。
+              ここを static のままにすると簡易画面がまるごと背景の下へ潜り、
+              超省エネにした瞬間に画面が消える(2026-09-22・ユーザー報告
+              「超省エネにしたときだけ画面がなくなる」)。通常のバトル画面のほうは、
+              中の要素が個別に relative z-* を持っているので沈まない */}
         {ultraBattleView?(
-          <div data-ultra-battle-view className="flex-1 min-h-0 flex flex-col bg-slate-950 text-slate-100">
+          <div data-ultra-battle-view className="relative z-10 flex-1 min-h-0 flex flex-col bg-slate-950 text-slate-100">
             <div className="flex-1 min-h-0 px-2 py-1.5 flex flex-col gap-1.5 overflow-hidden">
               {enemy&&(
                 <section className="rounded-xl border border-red-900/70 bg-slate-900/95 px-2 py-1.5">
@@ -1416,7 +1422,12 @@ function BattleScreen({
             ★data-battle-quit / data-auto-bgm-button は検査の手がかり。
               置き場所が変わっても名前は変えない。
             ★背景を押しても閉じる。誤って開いたときに、指を上まで運ばずに戻れる */}
-        {showBattleMenu&&(
+        {/* ★body の直下へ出す(ReactDOM.createPortal)。ここへ素直に置くと、画面の揺れで位置がずれる
+              (2026-09-22・ユーザー報告「オートでオプション開くと行動によって位置ずれが起きる」)。
+              揺れは transform で作ってあり、**transform の掛かった要素は中の position:fixed の
+              基準になる**ため、揺れているあいだだけ viewport ではなく揺れる箱が基準になり、
+              iPhoneのノッチ(safe-area)ぶん約47px下へ落ちていた。実測でも 52px → 103px とずれる */}
+        {showBattleMenu&&ReactDOM.createPortal((
           <div className="fixed inset-0 z-[70000] flex items-start justify-end bg-black/70 p-2" onClick={()=>setShowBattleMenu(false)}>
             <div data-battle-menu className="mt-11 flex w-[190px] flex-col gap-1.5 rounded-2xl border border-white/20 bg-slate-900 p-2 shadow-2xl" onClick={e=>e.stopPropagation()}>
               <div className="px-1 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">設定</div>
@@ -1426,7 +1437,7 @@ function BattleScreen({
               <button type="button" onClick={()=>setShowBattleMenu(false)} className="min-h-[36px] rounded-lg border border-white/15 bg-slate-800 text-[11px] font-black text-slate-300 active:scale-95">とじる</button>
             </div>
           </div>
-        )}
+        ), document.body)}
       </div>
     
   );

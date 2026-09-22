@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 137042c3b3d9e642
+// source-sha256: dbc55e278cb556e3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ab73669ed0e61192
+// generated-sha256: cd9284af581f94c6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-23 00:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-23 00:02"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -38373,7 +38373,7 @@ function BattleScreen({
     size: 15
   })))), ultraBattleView ? /*#__PURE__*/React.createElement("div", {
     "data-ultra-battle-view": true,
-    className: "flex-1 min-h-0 flex flex-col bg-slate-950 text-slate-100"
+    className: "relative z-10 flex-1 min-h-0 flex flex-col bg-slate-950 text-slate-100"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex-1 min-h-0 px-2 py-1.5 flex flex-col gap-1.5 overflow-hidden"
   }, enemy && /*#__PURE__*/React.createElement("section", {
@@ -40546,7 +40546,7 @@ function BattleScreen({
       "data-tactics-card-block": cardBlock.short,
       className: "pointer-events-none absolute inset-x-0.5 top-1 z-30 rounded-md border border-rose-200 bg-rose-600 px-0.5 py-0.5 text-center text-[8px] font-black leading-tight text-white shadow-[0_2px_8px_rgba(0,0,0,.85)]"
     }, cardBlock.short));
-  })))), showBattleMenu && /*#__PURE__*/React.createElement("div", {
+  })))), showBattleMenu && ReactDOM.createPortal(/*#__PURE__*/React.createElement("div", {
     className: "fixed inset-0 z-[70000] flex items-start justify-end bg-black/70 p-2",
     onClick: () => setShowBattleMenu(false)
   }, /*#__PURE__*/React.createElement("div", {
@@ -40589,7 +40589,7 @@ function BattleScreen({
     type: "button",
     onClick: () => setShowBattleMenu(false),
     className: "min-h-[36px] rounded-lg border border-white/15 bg-slate-800 text-[11px] font-black text-slate-300 active:scale-95"
-  }, "\u3068\u3058\u308B"))));
+  }, "\u3068\u3058\u308B"))), document.body));
 }
 function UltimateDistanceBreakReveal({
   difficulty,
@@ -71272,7 +71272,7 @@ function MonsterHeroGame() {
       type: "button",
       onClick: endOnboardingPreview,
       className: "shrink-0 min-h-[32px] px-3 rounded-full bg-white text-fuchsia-800 text-[10px] font-black active:scale-95"
-    }, "\u518D\u751F\u3092\u3084\u3081\u308B")), showQuitConfirm && /*#__PURE__*/React.createElement("div", {
+    }, "\u518D\u751F\u3092\u3084\u3081\u308B")), showQuitConfirm && ReactDOM.createPortal(/*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 flex flex-col items-center justify-center p-8 text-center",
       style: {
         position: 'fixed',
@@ -71312,7 +71312,7 @@ function MonsterHeroGame() {
         pointerEvents: 'auto'
       },
       className: "w-full bg-slate-800 text-slate-300 py-3 rounded-2xl font-black uppercase text-sm active:scale-95"
-    }, "\u6226\u3044\u3092\u7D9A\u3051\u308B"))), debugBattle && debugOutcome && /*#__PURE__*/React.createElement("div", {
+    }, "\u6226\u3044\u3092\u7D9A\u3051\u308B"))), document.body), debugBattle && debugOutcome && /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 flex flex-col items-center justify-center p-6 text-center",
       style: {
         position: 'fixed',
