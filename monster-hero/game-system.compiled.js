@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6ce95f9a48002d97
+// source-sha256: ccf1c8875203b531
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: bf5aad99c0a977aa
+// generated-sha256: 02afcf13b789742f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-22 19:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-22 19:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -38598,7 +38598,7 @@ function BattleScreen({
     }, intentTitle), aimedName ? /*#__PURE__*/React.createElement("div", {
       className: "mt-0.5 truncate text-[9px] font-bold leading-none opacity-90"
     }, "\uD83C\uDFAF", aimedName) : null, rawDmg > 0 && showPlannedInBubble && plannedText ? /*#__PURE__*/React.createElement("div", {
-      className: "mt-1 rounded bg-black/55 px-1 py-0.5 text-center text-[11px] font-black leading-none tabular-nums"
+      className: "mt-1 rounded bg-black/55 px-1 py-1 text-center text-[13px] font-black leading-none tabular-nums"
     }, plannedText) : null);
   })(), turnCount === 1 && battleSoulMasus.some(m => normalizeSoulRankStage(m.soulRankStage) > 0) && !isBusy && /*#__PURE__*/React.createElement("div", {
     "data-soul-battle-start-summary": true,
@@ -38816,7 +38816,7 @@ function BattleScreen({
       animation: 'auraRing 650ms ease-out 120ms infinite'
     }
   }))), /*#__PURE__*/React.createElement("div", {
-    className: `rounded-full transition-all duration-500 border-4 relative ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border} ${RANGE_STYLES[enemyDist].shadow} ${RANGE_STYLES[enemyDist].glow} shadow-[0_0_50px]`,
+    className: `rounded-full transition-all duration-500 border-4 relative bg-black/35 ${RANGE_STYLES[enemyDist].border} ${RANGE_STYLES[enemyDist].shadow} ${RANGE_STYLES[enemyDist].glow} shadow-[0_0_50px]`,
     style: enemyAttackAnim && !ecoBattleView ? {
       padding: 'clamp(6px,1.5dvh,16px)',
       animation: enemyAttackFx?.kind === 'move' ? isMooBoss(enemy?.id) ? 'enemyMoveSlideMoo 1000ms ease-in-out forwards' : 'enemyMoveSlide 1000ms ease-in-out forwards' : enemyAttackFx?.kind === 'charge' ? 'enemyChargeShake 1100ms ease-in-out forwards' : 'enemyAttackFly 450ms ease-in forwards',
@@ -38832,7 +38832,17 @@ function BattleScreen({
         top: '3dvh'
       } : {})
     }
-  }, enemy?.imgUrl ? isMooBoss(enemy?.id) ? /*#__PURE__*/React.createElement("div", {
+  }, !ecoBattleView && /*#__PURE__*/React.createElement("div", {
+    "aria-hidden": "true",
+    className: "pointer-events-none absolute left-1/2 z-0 -translate-x-1/2",
+    style: {
+      bottom: '11%',
+      width: '64%',
+      height: '13%',
+      borderRadius: '50%',
+      background: 'radial-gradient(50% 50% at 50% 50%, rgba(0,0,0,.62) 0%, rgba(0,0,0,.28) 52%, rgba(0,0,0,0) 76%)'
+    }
+  }), enemy?.imgUrl ? isMooBoss(enemy?.id) ? /*#__PURE__*/React.createElement("div", {
     style: {
       width: 'clamp(92px,16dvh,142px)',
       height: 'clamp(86px,15dvh,132px)'
@@ -40178,7 +40188,7 @@ function BattleScreen({
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-[9px] text-pink-400"
       }, "\u2665"), /*#__PURE__*/React.createElement("span", {
-        className: "text-[10px] font-mono font-black text-pink-100"
+        className: "text-[11px] font-mono font-black text-pink-100"
       }, tacticsUnit.hp), /*#__PURE__*/React.createElement("span", {
         className: "text-[8px] font-mono text-slate-500"
       }, "/", tacticsUnit.maxHp)), /*#__PURE__*/React.createElement("div", {
@@ -40194,7 +40204,7 @@ function BattleScreen({
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-[9px] text-amber-400"
       }, "\u26A1"), /*#__PURE__*/React.createElement("span", {
-        className: "text-[10px] font-mono font-black text-amber-100"
+        className: "text-[11px] font-mono font-black text-amber-100"
       }, tacticsUnit.guts), /*#__PURE__*/React.createElement("span", {
         className: "text-[8px] font-mono text-slate-500"
       }, "/", tacticsUnit.maxGuts)), /*#__PURE__*/React.createElement("div", {
@@ -40363,7 +40373,8 @@ function BattleScreen({
           transition: 'none',
           filter: 'drop-shadow(0 12px 18px rgba(0,0,0,0.65))'
         } : {
-          touchAction: 'none'
+          touchAction: 'none',
+          boxShadow: 'inset 0 1px 0 rgba(255,255,255,.30), inset 0 -10px 16px rgba(0,0,0,.32), 0 4px 10px rgba(0,0,0,.5)'
         }),
         ...(TYPE_INLINE_STYLE[c.type] || {})
       },
