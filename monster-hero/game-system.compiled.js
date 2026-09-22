@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8542678f2f8012f4
+// source-sha256: 188bd7d63ef220e2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9cc4488b621f8f3b
+// generated-sha256: 2a9d00513614e9d1
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-22 17:32"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-22 18:02"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -16156,6 +16156,10 @@ const TACTICS_INTIMIDATE_RATE = 0.4;
 // ★noticeLabel … 敵の絵の右上へ出す「何をする技か」の吹き出し(2026-09-22 ユーザー指示
 //   「右上に必殺技！みたいに吹き出し出せばいい。3連撃！とか」)。技名だけでは何が起きるか
 //   覚えられないので、予告のあいだ出しっぱなしにする。書かなければ category を使う
+// ★category … 予告の札(攻撃予測)へ出す短い呼び名。予告そのものへ持たせて画面から引けるようにする。
+//   「ためる」は敵ごとの技名を持たないので label が「必殺技の準備をしている」という説明文になり、
+//   右上の吹き出しの「必殺技準備」を長く言い直しただけになっていた(2026-09-22 ユーザー指摘
+//   「攻撃予測のとこをためるにして吹き出しを必殺技準備が正解なはず」)
 const TACTICS_ACTION_DEFINITIONS = [{
   id: 'normal',
   type: 'ATTACK',
@@ -16523,6 +16527,7 @@ const chooseEnemyAction = (ent, currentDist, random = Math.random, state = {}) =
       targetDist,
       icon: ENEMY_ACTION_ICONS.MOVE,
       notice: enemyActionNoticeLabel(selected),
+      category: selected.category,
       actionId: selected.id
     };
   }
@@ -16539,6 +16544,7 @@ const chooseEnemyAction = (ent, currentDist, random = Math.random, state = {}) =
       label: `${enemyActionDisplayName(ent, selected)}: ${RANGE_LABELS[currentDist]}`,
       icon: TACTICS_VARIANT_ICONS.sweep,
       notice: enemyActionNoticeLabel(selected),
+      category: selected.category,
       actionId: selected.id
     };
   }
@@ -16556,6 +16562,7 @@ const chooseEnemyAction = (ent, currentDist, random = Math.random, state = {}) =
       label: enemyActionDisplayName(ent, selected),
       icon: TACTICS_VARIANT_ICONS[selected.variant] || ENEMY_ACTION_ICONS[selected.type] || '⏳',
       notice: enemyActionNoticeLabel(selected),
+      category: selected.category,
       actionId: selected.id
     };
   }
@@ -16565,6 +16572,7 @@ const chooseEnemyAction = (ent, currentDist, random = Math.random, state = {}) =
     label: enemyActionDisplayName(ent, selected),
     icon: ENEMY_ACTION_ICONS[selected.type] || '⏳',
     notice: enemyActionNoticeLabel(selected),
+    category: selected.category,
     actionId: selected.id
   };
 };
@@ -38480,7 +38488,7 @@ function BattleScreen({
     }
   }, /*#__PURE__*/React.createElement("div", {
     "data-battle-side-buttons": true,
-    className: "absolute left-2 top-2 bottom-1 z-20 flex flex-col flex-wrap content-start gap-1.5"
+    className: "absolute left-2 top-1 z-20 flex w-[64px] flex-col items-stretch gap-1"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => setShowHeroInfo(true),
     className: `flex w-[64px] min-h-[44px] flex-col items-center justify-center rounded-2xl px-1 py-1 border border-indigo-500 bg-indigo-950/30 active:scale-90 shadow-lg${battleTutorialSpotClass('heroStatus')}`
@@ -38527,7 +38535,48 @@ function BattleScreen({
     size: 14
   }), /*#__PURE__*/React.createElement("span", {
     className: "text-[10px] font-black leading-none text-white whitespace-nowrap"
-  }, "\u9B42\u683C\u52B9\u679C"))), turnCount === 1 && battleSoulMasus.some(m => normalizeSoulRankStage(m.soulRankStage) > 0) && !isBusy && /*#__PURE__*/React.createElement("div", {
+  }, "\u9B42\u683C\u52B9\u679C"))), enemy && enemyIntent && !isBusy && (() => {
+    // ためる・待機・移動はダメージが無いので「予測」を出さない。
+    // 出すと必ず0になり、ガードを構える判断の邪魔になる
+    // 新モードは「狙われた子の丈夫さ」で受け、「その子が構えたガード」だけが効く。
+    // ★targetSlot が無いモードでは今までどおりパーティの値で出る
+    const aimedSlot = Number.isInteger(enemyIntent.targetSlot) ? enemyIntent.targetSlot : null;
+    const rawDmg = getIncomingDamageBeforeTurnReduction(enemyIntent, aimedSlot);
+    // ★数え方は plannedDamageFor に1か所だけ置く(枠ごとの表示と同じ関数を通す)。
+    //   2か所に書くと、ガードの数え方を直したときに片方だけ古くなる
+    const plannedHit = plannedHitFor(aimedSlot);
+    const plannedDmg = plannedHit.taken;
+    // 連撃は「129・130」と1発ずつ。1発の技は今までどおり数字ひとつ
+    const plannedText = plannedHit.parts.join('・');
+    const previewHits = enemyIntent.variant === 'rush' ? Math.max(1, Math.floor(Number(enemyIntent.hits) || 1)) : 1;
+    // ★全体攻撃は受ける量が1体ずつ違う。1つの数字にまとめると、
+    //   どの子がどれだけ減るのか分からなくなるので、吹き出しには出さず枠ごとに出す
+    const showPlannedInBubble = !enemyIntent.targetsAll;
+    const tone = enemyIntent.type === 'SPECIAL' ? 'bg-fuchsia-950 border-fuchsia-500 text-fuchsia-300' : enemyIntent.type === 'CHARGE' ? 'bg-amber-950 border-amber-500 text-amber-400' : enemyIntent.type === 'PIERCE_CHARGE' ? 'bg-rose-950 border-rose-500 text-rose-300' : enemyIntent.type === 'MOVE' ? 'bg-cyan-950 border-cyan-500/60 text-cyan-300' : 'bg-red-950 border-red-600/50 text-red-400';
+    // 敵の絵のすぐ下へ置く(2026-09-18・ユーザー依頼)。mt-auto で下端へ押しやっていたため、
+    // 絵と「次に何をしてくるか」のあいだに200pxほどの空きができ、視線が大きく動いていた。
+    // 余りの高さは、この下のバフ帯の mt-auto がまとめて吸う。
+    // ★ためるだけは、敵ごとの技名を持たないので label が「必殺技の準備をしている」という
+    //   説明文になり、右上の吹き出しの「必殺技準備」を長く言い直しただけになっていた
+    //   (2026-09-22 ユーザー指摘「他のにならってやると攻撃予測のとこをためるにして
+    //   吹き出しを必殺技準備が正解なはず」)。ほかの行動にならって短い呼び名にそろえる。
+    // ★貫通の構えは敵ごとに「◯◯の構え」という名前が付くので、label のままにする
+    const intentTitle = enemyIntent.type === 'CHARGE' && enemyIntent.category ? enemyIntent.category : enemyIntent.label;
+    return /*#__PURE__*/React.createElement("div", {
+      "data-enemy-intent": true,
+      className: `absolute right-2 top-2 z-[45] w-[100px] rounded-xl border px-1.5 py-1 shadow-lg animate-pulse${battleTutorialSpotClass('enemyIntent')} ${focusedCard ? 'invisible' : 'visible'} ${tone}`
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-1 text-[8px] font-black uppercase tracking-wider opacity-80"
+    }, /*#__PURE__*/React.createElement(Target, {
+      size: 9
+    }), "\u6B21\u306E\u884C\u52D5"), /*#__PURE__*/React.createElement("div", {
+      className: "mt-0.5 text-[11px] font-black leading-tight"
+    }, intentTitle, previewHits > 1 ? ` ${previewHits}連撃` : ''), aimedName ? /*#__PURE__*/React.createElement("div", {
+      className: "mt-0.5 truncate text-[9px] font-bold leading-none opacity-90"
+    }, "\uD83C\uDFAF", aimedName) : null, rawDmg > 0 && showPlannedInBubble && plannedText ? /*#__PURE__*/React.createElement("div", {
+      className: "mt-1 rounded bg-black/55 px-1 py-0.5 text-center text-[11px] font-black leading-none tabular-nums"
+    }, plannedText) : null);
+  })(), turnCount === 1 && battleSoulMasus.some(m => normalizeSoulRankStage(m.soulRankStage) > 0) && !isBusy && /*#__PURE__*/React.createElement("div", {
     "data-soul-battle-start-summary": true,
     className: "absolute left-1/2 top-2 -translate-x-1/2 z-10 max-w-[62%] truncate rounded-full border border-sky-400/30 bg-sky-950/75 px-2 py-1 text-[10px] font-black text-sky-100 pointer-events-none"
   }, "\u9B42\u683C\u52B9\u679C \u767A\u52D5\u4E2D", Math.round(soulBattleParty.damageReduction * 10) / 10 > 0 ? ` ・鉄壁${Math.round(soulBattleParty.damageReduction * 10) / 10}%` : '', unifiedSpecialDefense.rate > 0 ? ` ・特殊防御${Math.round(unifiedSpecialDefense.rate * 10) / 10}%` : '', battleIntimidate > 0 ? ` ・威圧${Math.round(battleIntimidate * 10) / 10}%` : '', soulCoordinationCardBonus > 0 ? ' ・カード+1' : ''), /*#__PURE__*/React.createElement("div", {
@@ -38541,7 +38590,7 @@ function BattleScreen({
     }
   }, /*#__PURE__*/React.createElement("div", {
     className: "px-4 py-1.5 rounded-xl font-black text-[13px] bg-red-700 border-2 border-red-200 text-white shadow-[0_2px_16px_rgba(0,0,0,0.9)] flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement("span", null, cardIconNode(enemySkillName.icon, 16)), enemySkillName.label)), enemy && enemyIntent && !isBusy && !enemyAttackFx && enemyIntent.type === 'SPECIAL' && /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("span", null, cardIconNode(enemySkillName.icon, 16)), enemySkillName.label)), enemy && enemyIntent && !isBusy && !enemyAttackFx && !Array.isArray(tacticsUnits) && enemyIntent.type === 'SPECIAL' && /*#__PURE__*/React.createElement("div", {
     className: "fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1",
     style: {
       top: '11%',
@@ -38552,7 +38601,7 @@ function BattleScreen({
     className: "text-5xl drop-shadow-[0_0_20px_rgba(217,70,239,1)]"
   }, "\u2620\uFE0F"), /*#__PURE__*/React.createElement("div", {
     className: "px-3 py-1 rounded-lg bg-gradient-to-r from-purple-900 via-fuchsia-700 to-purple-900 border-2 border-fuchsia-300 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(217,70,239,0.9)]"
-  }, "\u5FC5 \u6BBA \u6280")), enemy && enemyIntent && !isBusy && !enemyAttackFx && enemyIntent.type === 'CHARGE' && /*#__PURE__*/React.createElement("div", {
+  }, "\u5FC5 \u6BBA \u6280")), enemy && enemyIntent && !isBusy && !enemyAttackFx && !Array.isArray(tacticsUnits) && enemyIntent.type === 'CHARGE' && /*#__PURE__*/React.createElement("div", {
     className: "fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1",
     style: {
       top: '11%',
@@ -38563,7 +38612,7 @@ function BattleScreen({
     className: "text-5xl drop-shadow-[0_0_20px_rgba(251,191,36,1)]"
   }, "\u2728"), /*#__PURE__*/React.createElement("div", {
     className: "px-3 py-1 rounded-lg bg-gradient-to-r from-amber-900 via-amber-600 to-amber-900 border-2 border-amber-200 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(251,191,36,0.9)]"
-  }, "\u305F \u3081 \u308B")), enemy && enemyIntent && !isBusy && !enemyAttackFx && enemyIntent.type === 'PIERCE_CHARGE' && /*#__PURE__*/React.createElement("div", {
+  }, "\u305F \u3081 \u308B")), enemy && enemyIntent && !isBusy && !enemyAttackFx && !Array.isArray(tacticsUnits) && enemyIntent.type === 'PIERCE_CHARGE' && /*#__PURE__*/React.createElement("div", {
     className: "fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1",
     style: {
       top: '11%',
@@ -38887,7 +38936,7 @@ function BattleScreen({
     style: {
       animation: 'idleExclaim 1100ms ease-in-out infinite'
     }
-  }, "\u2757")), !ecoBattleView && enemy && enemyIntent && !isBusy && !enemyAttackFx && Array.isArray(tacticsUnits) && enemyIntent.notice && enemyIntent.type !== 'PIERCE_CHARGE' && (() => {
+  }, "\u2757")), !ecoBattleView && enemy && enemyIntent && !isBusy && !enemyAttackFx && Array.isArray(tacticsUnits) && enemyIntent.notice && (() => {
     // ★色・動き・光り方を効果で変える(2026-09-22 ユーザー指示「吹き出しを
     //   効果によって変えると見た目がいい」)。文字を読む前に、攻めてくるのか
     //   回復するのかが見分けられるようにする
@@ -39112,37 +39161,6 @@ function BattleScreen({
         className: `mt-[2px] rounded px-1 text-[10px] font-black leading-[13px] ${there ? `${RANGE_STYLES[i].labelBg} text-white` : 'text-slate-500'}`
       }, RANGE_LABELS[i]));
     })));
-  })(), enemy && enemyIntent && !isBusy && (() => {
-    // ためる・待機・移動はダメージが無いので「予測」を出さない。
-    // 出すと必ず0になり、ガードを構える判断の邪魔になる
-    // 新モードは「狙われた子の丈夫さ」で受け、「その子が構えたガード」だけが効く。
-    // ★targetSlot が無いモードでは今までどおりパーティの値で出る
-    const aimedSlot = Number.isInteger(enemyIntent.targetSlot) ? enemyIntent.targetSlot : null;
-    const rawDmg = getIncomingDamageBeforeTurnReduction(enemyIntent, aimedSlot);
-    // ★数え方は plannedDamageFor に1か所だけ置く(枠ごとの表示と同じ関数を通す)。
-    //   2か所に書くと、ガードの数え方を直したときに片方だけ古くなる
-    const plannedHit = plannedHitFor(aimedSlot);
-    const plannedDmg = plannedHit.taken;
-    // 連撃は「129・130」と1発ずつ。1発の技は今までどおり数字ひとつ
-    const plannedText = plannedHit.parts.join('・');
-    const previewHits = enemyIntent.variant === 'rush' ? Math.max(1, Math.floor(Number(enemyIntent.hits) || 1)) : 1;
-    // ★全体攻撃は受ける量が1体ずつ違う。1つの数字にまとめると、
-    //   どの子がどれだけ減るのか分からなくなるので、吹き出しには出さず枠ごとに出す
-    const showPlannedInBubble = !enemyIntent.targetsAll;
-    const tone = enemyIntent.type === 'SPECIAL' ? 'bg-fuchsia-950 border-fuchsia-500 text-fuchsia-300' : enemyIntent.type === 'CHARGE' ? 'bg-amber-950 border-amber-500 text-amber-400' : enemyIntent.type === 'PIERCE_CHARGE' ? 'bg-rose-950 border-rose-500 text-rose-300' : enemyIntent.type === 'MOVE' ? 'bg-cyan-950 border-cyan-500/60 text-cyan-300' : 'bg-red-950 border-red-600/50 text-red-400';
-    // 敵の絵のすぐ下へ置く(2026-09-18・ユーザー依頼)。mt-auto で下端へ押しやっていたため、
-    // 絵と「次に何をしてくるか」のあいだに200pxほどの空きができ、視線が大きく動いていた。
-    // 余りの高さは、この下のバフ帯の mt-auto がまとめて吸う。
-    // data-enemy-intent は検査の手がかり。どの行動が予告されているかは抽選なので、
-    // 画面の文字から探すと「今回はためるだった」で落ちる
-    return /*#__PURE__*/React.createElement("div", {
-      "data-enemy-intent": true,
-      className: `mt-1 mb-1 mx-auto w-fit max-w-full border p-1 px-4 rounded-full flex items-center gap-1.5 animate-pulse z-[45] shadow-lg shrink-0${battleTutorialSpotClass('enemyIntent')} ${focusedCard ? 'invisible' : 'visible'} ${tone}`
-    }, /*#__PURE__*/React.createElement(Target, {
-      size: 12
-    }), /*#__PURE__*/React.createElement("div", {
-      className: "text-[10px] font-black uppercase tracking-tight"
-    }, enemyIntent.label, previewHits > 1 ? ` ${previewHits}連撃` : '', aimedName ? ` 🎯${aimedName}` : '', rawDmg > 0 && showPlannedInBubble && plannedText ? ` (予定: ${plannedText})` : ''));
   })(), (() => {
     // 強化の札(2026-09-20 ユーザー指摘「バフ欄が増えてくると敵や緊急回復等が見えなくなる」)。
     // ★もとは flex-wrap で何行にも伸びていた。強化が10個を超えると札だけで3行4行になり、
@@ -39348,11 +39366,8 @@ function BattleScreen({
       backgroundColor: liteBattleView ? 'rgba(2,6,23,0.95)' : 'rgba(2,6,23,0.55)'
     }
   }, p.text))), Array.isArray(tacticsUnits) ? /*#__PURE__*/React.createElement("div", {
-    "data-tactics-party": true,
-    className: `relative w-full grid grid-cols-4 gap-1${battleTutorialSpotClass('tacticsParty')}`
-  }, /*#__PURE__*/React.createElement("div", {
     "data-tactics-party-popups": true,
-    className: "absolute inset-x-0 -top-1 flex flex-col items-center gap-0.5 pointer-events-none",
+    className: "absolute inset-x-0 top-0 flex flex-col items-center gap-0.5 pointer-events-none",
     style: {
       zIndex: 210
     }
@@ -39362,60 +39377,7 @@ function BattleScreen({
     style: {
       backgroundColor: 'rgba(2,6,23,0.8)'
     }
-  }, p.text))), [0, 1, 2, 3].map(i => {
-    const u = tacticsUnits[i];
-    const mon = slots[i];
-    const hpPct = u && u.maxHp > 0 ? Math.max(0, Math.min(100, u.hp / u.maxHp * 100)) : 0;
-    const gutsPct = u && u.maxGuts > 0 ? Math.max(0, Math.min(100, u.guts / u.maxGuts * 100)) : 0;
-    return /*#__PURE__*/React.createElement("div", {
-      key: i,
-      "data-tactics-party-slot": i,
-      "data-tactics-hp": u ? `${u.hp}/${u.maxHp}` : undefined,
-      "data-tactics-guts": u ? `${u.guts}/${u.maxGuts}` : undefined,
-      "data-tactics-downed": u ? u.downed ? 'true' : 'false' : undefined,
-      className: `rounded-lg border px-1 py-0.5 ${u ? u.downed ? 'border-emerald-500/50 bg-emerald-950/40' : 'border-white/10 bg-black/45' : 'border-white/5 bg-black/20'}`
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center justify-between gap-0.5"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: `text-[9px] font-black leading-none truncate ${RANGE_STYLES[i].text || 'text-slate-300'}`
-    }, RANGE_LABELS[i]), u && u.downed && /*#__PURE__*/React.createElement("span", {
-      className: "text-[8px] font-black leading-none text-emerald-300 shrink-0"
-    }, "\u30C0\u30A6\u30F3")), u ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-      className: "mt-0.5 flex items-baseline justify-between gap-0.5"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "text-[9px] leading-none text-pink-400"
-    }, "\u2665"), /*#__PURE__*/React.createElement("span", {
-      className: "text-[11px] font-mono font-black leading-none text-pink-100"
-    }, u.hp), /*#__PURE__*/React.createElement("span", {
-      className: "text-[8px] font-mono leading-none text-slate-500"
-    }, "/", u.maxHp)), /*#__PURE__*/React.createElement("div", {
-      className: "mt-0.5 h-[5px] rounded-full bg-slate-900 overflow-hidden border border-white/10"
-    }, /*#__PURE__*/React.createElement("div", {
-      "data-tactics-hp-bar": true,
-      className: `h-full transition-all duration-1000 ${u.downed ? 'bg-gradient-to-r from-emerald-600 to-teal-300' : 'bg-gradient-to-r from-pink-600 to-rose-400'}`,
-      style: {
-        width: `${hpPct}%`
-      }
-    })), /*#__PURE__*/React.createElement("div", {
-      className: "mt-0.5 flex items-baseline justify-between gap-0.5"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "text-[9px] leading-none text-amber-400"
-    }, "\u26A1"), /*#__PURE__*/React.createElement("span", {
-      className: "text-[11px] font-mono font-black leading-none text-amber-100"
-    }, u.guts), /*#__PURE__*/React.createElement("span", {
-      className: "text-[8px] font-mono leading-none text-slate-500"
-    }, "/", u.maxGuts)), /*#__PURE__*/React.createElement("div", {
-      className: "mt-0.5 h-[5px] rounded-full bg-slate-900 overflow-hidden border border-white/10"
-    }, /*#__PURE__*/React.createElement("div", {
-      "data-tactics-guts-bar": true,
-      className: "h-full bg-gradient-to-r from-amber-600 to-yellow-300 transition-all duration-500",
-      style: {
-        width: `${gutsPct}%`
-      }
-    }))) : /*#__PURE__*/React.createElement("div", {
-      className: "py-2 text-center text-[9px] font-black leading-none text-slate-600"
-    }, "\u7A7A\u304D"));
-  })) : /*#__PURE__*/React.createElement("div", {
+  }, p.text))) : /*#__PURE__*/React.createElement("div", {
     className: "w-full space-y-0.5 px-2 py-0.5 bg-black/40 rounded-xl border border-white/5"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-2 relative"
@@ -39651,7 +39613,7 @@ function BattleScreen({
   })(), /*#__PURE__*/React.createElement("div", {
     className: `grid grid-cols-4 gap-2 w-full relative shrink-0${battleTutorialSpotClass('battleSlots')}`,
     style: {
-      height: 'clamp(112px,15dvh,132px)'
+      height: 'clamp(132px,16dvh,146px)'
     }
   }, slots.map((s, i) => {
     // Count how many cards already assigned to this slot
@@ -40175,7 +40137,49 @@ function BattleScreen({
       }, "\u30C0\u30A6\u30F3"), /*#__PURE__*/React.createElement("span", {
         className: "text-[9px] font-black text-emerald-300 leading-tight"
       }, "\u5FA9\u6D3B\u307E\u3067 ", 100 - revivePct, "%"));
-    })(), isAnimating && attackAnim.twinBlade && /*#__PURE__*/React.createElement(KenshiTwinSlash, null), isAnimating && attackAnim.sakura && /*#__PURE__*/React.createElement(EikiSakuraPetals, null)), /*#__PURE__*/React.createElement("div", {
+    })(), isAnimating && attackAnim.twinBlade && /*#__PURE__*/React.createElement(KenshiTwinSlash, null), isAnimating && attackAnim.sakura && /*#__PURE__*/React.createElement(EikiSakuraPetals, null)), tacticsUnit && (() => {
+      const hpPct = tacticsUnit.maxHp > 0 ? Math.max(0, Math.min(100, tacticsUnit.hp / tacticsUnit.maxHp * 100)) : 0;
+      const gutsPct = tacticsUnit.maxGuts > 0 ? Math.max(0, Math.min(100, tacticsUnit.guts / tacticsUnit.maxGuts * 100)) : 0;
+      return /*#__PURE__*/React.createElement("div", {
+        "data-tactics-party-slot": i,
+        "data-tactics-hp": `${tacticsUnit.hp}/${tacticsUnit.maxHp}`,
+        "data-tactics-guts": `${tacticsUnit.guts}/${tacticsUnit.maxGuts}`,
+        "data-tactics-downed": tacticsUnit.downed ? 'true' : 'false',
+        className: `shrink-0 z-20 border-t border-white/10 bg-black/55 px-1${battleTutorialSpotClass('tacticsParty')}`
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex items-baseline justify-between gap-0.5 leading-none"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-[9px] text-pink-400"
+      }, "\u2665"), /*#__PURE__*/React.createElement("span", {
+        className: "text-[10px] font-mono font-black text-pink-100"
+      }, tacticsUnit.hp), /*#__PURE__*/React.createElement("span", {
+        className: "text-[8px] font-mono text-slate-500"
+      }, "/", tacticsUnit.maxHp)), /*#__PURE__*/React.createElement("div", {
+        className: "h-[4px] rounded-full bg-slate-900 overflow-hidden"
+      }, /*#__PURE__*/React.createElement("div", {
+        "data-tactics-hp-bar": true,
+        className: `h-full transition-all duration-1000 ${tacticsUnit.downed ? 'bg-gradient-to-r from-emerald-600 to-teal-300' : 'bg-gradient-to-r from-pink-600 to-rose-400'}`,
+        style: {
+          width: `${hpPct}%`
+        }
+      })), /*#__PURE__*/React.createElement("div", {
+        className: "flex items-baseline justify-between gap-0.5 leading-none"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-[9px] text-amber-400"
+      }, "\u26A1"), /*#__PURE__*/React.createElement("span", {
+        className: "text-[10px] font-mono font-black text-amber-100"
+      }, tacticsUnit.guts), /*#__PURE__*/React.createElement("span", {
+        className: "text-[8px] font-mono text-slate-500"
+      }, "/", tacticsUnit.maxGuts)), /*#__PURE__*/React.createElement("div", {
+        className: "h-[4px] rounded-full bg-slate-900 overflow-hidden"
+      }, /*#__PURE__*/React.createElement("div", {
+        "data-tactics-guts-bar": true,
+        className: "h-full bg-gradient-to-r from-amber-600 to-yellow-300 transition-all duration-500",
+        style: {
+          width: `${gutsPct}%`
+        }
+      })));
+    })(), /*#__PURE__*/React.createElement("div", {
       className: `h-[20px] shrink-0 ${RANGE_STYLES[i].labelBg} flex items-center justify-center border-t border-white/20 z-20`
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-[10px] font-black uppercase tracking-tighter leading-none"

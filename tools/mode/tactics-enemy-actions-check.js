@@ -584,8 +584,17 @@ check('実戦の行動表も難易度つきで引く',
       && battleScreen.includes('absolute -top-3 -right-2'));
   check('出すのはタクティクスだけ(既存5モードは今までどおり❗)',
     battleScreen.includes("enemyIntent.type==='ATTACK'&&!Array.isArray(tacticsUnits)&&"));
-  check('中央に大きく出ているときは、右上へ重ねない',
-    battleScreen.includes("enemyIntent.notice&&enemyIntent.type!=='PIERCE_CHARGE'&&"));
+  // ★2026-09-22 ユーザー指摘「必殺技のためると必殺準備が被って出てる。それって本来
+  //   どっちかでいいはずだよね」。まんなかの大きい警告と右上の札が同じことを言ったうえ、
+  //   重なってどちらも読めなくなっていた。タクティクスは右上の札にまとめ、
+  //   まんなかの警告は札の無い既存5モードのために残す。
+  //   (それまでは貫通技準備だけ札から外して重なりを避けていた)
+  check('タクティクスではまんなかに大きく出さない',
+    ['SPECIAL', 'CHARGE', 'PIERCE_CHARGE'].every(type =>
+      battleScreen.includes(`!Array.isArray(tacticsUnits)&&enemyIntent.type==='${type}'&&(`)));
+  check('右上の札は貫通技準備も含めて全部の行動で出す',
+    battleScreen.includes('&&Array.isArray(tacticsUnits)&&enemyIntent.notice&&(()=>{')
+      && !battleScreen.includes("enemyIntent.notice&&enemyIntent.type!=='PIERCE_CHARGE'&&"));
 }
 
 // --- 誰が食らったかを枠で見せる(2026-09-22 ユーザー指示) ---

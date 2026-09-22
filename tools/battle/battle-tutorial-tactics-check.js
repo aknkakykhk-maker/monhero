@@ -121,7 +121,8 @@ const check = (name, ok, detail = '') => {
       .map(el => ({
         text: (el.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 20),
         action: !!el.closest('[data-battle-action]') || !!el.querySelector('[data-battle-action]'),
-        party: !!el.closest('[data-tactics-party]') || el.hasAttribute('data-tactics-party'),
+        // ★1体ずつのライフ・ガッツは枠の中へ入れた(2026-09-22)。光る印もそちらに付く
+        party: !!el.closest('[data-tactics-party-slot]') || el.hasAttribute('data-tactics-party-slot'),
       })));
 
     // --- ② タクティクスの中身を説明する ---
@@ -205,9 +206,9 @@ const check = (name, ok, detail = '') => {
     await page.waitForTimeout(1200);
     check('練習のままバトル画面まで進む', await page.locator('[data-battle-action]').count() >= 1);
     // ★このモードの盤面。1体ずつのライフとガッツを持つ枠が出ていること
+    //   (2026-09-22 に上の段をやめ、枠そのものの中へ入れた)
     check('1体ずつのライフの枠が出ている',
-      await page.locator('[data-tactics-party]').count() === 1
-        && await page.locator('[data-tactics-party-slot="1"][data-tactics-hp]').count() === 1,
+      await page.locator('[data-tactics-party-slot="1"][data-tactics-hp]').count() === 1,
       String(await page.locator('[data-tactics-party-slot="1"]').getAttribute('data-tactics-hp')));
 
     // --- ⑦ 1体ずつのライフの説明でその枠が光り、ガードまで進める ---
@@ -218,8 +219,9 @@ const check = (name, ok, detail = '') => {
       if (t && t.includes('ACTIONで実行')) { actionSpots = await spots(); break; }
       if (!(await tapNext())) break;
     }
+    // ★光るのは「立っている子の枠」ぶん。れんしゅうは1体だが、本番は最大4つ光る
     check('「1体ずつのライフ」の説明でその枠が光る',
-      Array.isArray(partySpots) && partySpots.length === 1 && partySpots[0].party === true,
+      Array.isArray(partySpots) && partySpots.length >= 1 && partySpots.every(spot => spot.party === true),
       JSON.stringify(partySpots));
     check('ACTIONの説明でACTIONボタンが光る',
       Array.isArray(actionSpots) && actionSpots.length === 1 && actionSpots[0].action === true,

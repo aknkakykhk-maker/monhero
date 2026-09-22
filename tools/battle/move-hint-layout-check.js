@@ -98,11 +98,11 @@ const page = `<!doctype html><meta charset="utf-8"><style>
         `吹き出しの中心 ${Math.round(hintCenter)} / 列の中央 ${Math.round(colCenter)}`);
       check(`${vp.name}: 敵の絵をほとんど隠さない`, overlap <= MAX_OVERLAP_RATIO,
         `${Math.round(overlap * 100)}% (上限 ${Math.round(MAX_OVERLAP_RATIO * 100)}%)`);
-      // 左のボタンの列と重ならないこと。列は入れ物の左端から幅64pxぶんを占め、
-      // 狭い端末では2列に折り返して倍の幅になるので、そのぶんも見る
-      const columnRight = r.col.x + SIDE_COLUMN_LEFT + SIDE_COLUMN_WIDTH * 2;
+      // 左のボタンの列と重ならないこと。列は入れ物の左端から幅64pxぶんを占める
+      // (折り返さないので、狭い端末でもこの幅のまま)
+      const columnRight = r.col.x + SIDE_COLUMN_LEFT + SIDE_COLUMN_WIDTH;
       check(`${vp.name}: 左のボタンの列と重ならない`, r.hint.x >= columnRight,
-        `吹き出しの左端 ${Math.round(r.hint.x)} / 列の右端(2列ぶん) ${Math.round(columnRight)}`);
+        `吹き出しの左端 ${Math.round(r.hint.x)} / 列の右端 ${Math.round(columnRight)}`);
       await tab.close();
     }
   } finally {
