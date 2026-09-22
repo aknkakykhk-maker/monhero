@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d692d8e0e15240f1
+// source-sha256: 6ce95f9a48002d97
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: dec60eb0eea70d43
+// generated-sha256: bf5aad99c0a977aa
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-22 18:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-22 19:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -38203,7 +38203,21 @@ function BattleScreen({
     className: "flex-1 flex flex-col h-full relative",
     "data-battle-speed": battleSpeed,
     "data-eco-view": ultraBattleView ? 'ultra' : liteBattleView ? 'lite' : 'off'
-  }, liteBattleView && /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("div", {
+    "data-battle-stage-bg": true,
+    "aria-hidden": "true",
+    className: "absolute inset-0 pointer-events-none",
+    style: {
+      zIndex: 0,
+      background: [
+      // 上からの光。敵の頭の高さを中心に、青白く落とす
+      'radial-gradient(116% 62% at 50% 20%, rgba(96,124,206,.34) 0%, rgba(30,38,72,.30) 46%, rgba(0,0,0,0) 72%)',
+      // 床の照り返し。間合いバーのあたりを薄く持ち上げて、立っている場所を感じさせる
+      'radial-gradient(72% 26% at 50% 78%, rgba(88,116,196,.20) 0%, rgba(0,0,0,0) 100%)',
+      // 周辺減光。四隅を落とすと、まんなかの敵に目が行く
+      'radial-gradient(120% 86% at 50% 38%, rgba(0,0,0,0) 38%, rgba(3,5,12,.72) 100%)', 'linear-gradient(180deg, #0a0e1e 0%, #070a16 62%, #05070f 100%)'].join(',')
+    }
+  }), liteBattleView && /*#__PURE__*/React.createElement("div", {
     "data-lite-eco-dimmer": true,
     className: "absolute inset-0 bg-black/20 pointer-events-none",
     style: {
@@ -38474,12 +38488,21 @@ function BattleScreen({
   }, "\u2744\uFE0F\u7D76\u6C37 ", iceLockPreparing ? '準備' : /*#__PURE__*/React.createElement(React.Fragment, null, iceLockTurns, "T\u3000\u2B0730%"))), /*#__PURE__*/React.createElement("span", {
     className: "text-red-500 flex items-center gap-1 font-mono drop-shadow-[0_1px_3px_rgba(0,0,0,1)]"
   }, Math.max(0, enemy.hp).toLocaleString(), " / ", enemy.maxHp.toLocaleString())), /*#__PURE__*/React.createElement("div", {
-    className: "h-2.5 bg-slate-900 rounded-full overflow-hidden border border-white/20 relative shadow-inner"
+    className: "relative h-[14px] overflow-hidden rounded-full border-2 border-white/25 bg-slate-950",
+    style: {
+      boxShadow: 'inset 0 2px 6px rgba(0,0,0,.85)'
+    }
   }, /*#__PURE__*/React.createElement("div", {
-    className: "h-full bg-gradient-to-r from-red-700 via-red-500 to-orange-400 transition-all duration-1000",
+    className: "h-full transition-all duration-1000",
     style: {
       width: `${Math.max(0, enemy.hp) / enemy.maxHp * 100}%`,
-      backgroundImage: 'linear-gradient(to right, #b91c1c, #ef4444, #fb923c)'
+      backgroundImage: 'linear-gradient(180deg,#fca5a5 0%,#ef4444 38%,#b91c1c 72%,#7f1d1d 100%)'
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    "aria-hidden": "true",
+    className: "pointer-events-none absolute inset-x-0 top-0 h-1/2",
+    style: {
+      background: 'linear-gradient(180deg,rgba(255,255,255,.30),rgba(255,255,255,0))'
     }
   }))), /*#__PURE__*/React.createElement("main", {
     className: "flex-1 relative flex flex-col items-center justify-start pt-3 pb-1 px-2 overflow-x-visible overflow-y-auto min-h-0",
@@ -38492,14 +38515,20 @@ function BattleScreen({
     onClick: () => setShowBattleLog(true),
     "aria-label": "\u30D0\u30C8\u30EB\u306E\u8A18\u9332\u3092\u898B\u308B",
     title: "\u30D0\u30C8\u30EB\u306E\u8A18\u9332",
-    className: "absolute left-2 top-1 z-20 flex w-[64px] min-h-[44px] flex-col items-center justify-center rounded-2xl border border-amber-500/70 bg-amber-950/30 px-1 py-1 shadow-lg active:scale-90"
+    className: "absolute left-2 top-1 z-20 flex w-[64px] min-h-[44px] flex-col items-center justify-center rounded-2xl border-2 border-amber-400/80 bg-amber-950/55 px-1 py-1 active:scale-90",
+    style: {
+      boxShadow: '0 2px 10px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.16)'
+    }
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-[13px] leading-none"
   }, "\uD83D\uDCDC"), /*#__PURE__*/React.createElement("span", {
     className: "mt-0.5 text-[10px] font-black leading-none text-white whitespace-nowrap"
   }, "\u30ED\u30B0")), /*#__PURE__*/React.createElement("button", {
     onClick: () => setShowHeroInfo(true),
-    className: `absolute left-2 bottom-1 z-20 flex w-[64px] min-h-[44px] flex-col items-center justify-center rounded-2xl px-1 py-1 border border-indigo-500 bg-indigo-950/30 active:scale-90 shadow-lg${battleTutorialSpotClass('heroStatus')}`
+    className: `absolute left-2 bottom-1 z-20 flex w-[64px] min-h-[44px] flex-col items-center justify-center rounded-2xl px-1 py-1 border-2 border-indigo-400/80 bg-indigo-950/55 active:scale-90${battleTutorialSpotClass('heroStatus')}`,
+    style: {
+      boxShadow: '0 2px 10px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.16)'
+    }
   }, /*#__PURE__*/React.createElement(Crown, {
     className: "text-indigo-400 mb-0.5",
     size: 14
@@ -38507,7 +38536,10 @@ function BattleScreen({
     className: "text-[10px] font-black leading-none text-white whitespace-nowrap"
   }, "\u30B9\u30C6\u30FC\u30BF\u30B9")), /*#__PURE__*/React.createElement("button", {
     onClick: () => setShowEnemyInfo(true),
-    className: "absolute right-2 top-1 z-20 flex w-[64px] min-h-[44px] flex-col items-center justify-center rounded-2xl px-1 py-1 border border-red-500 bg-red-950/30 active:scale-90 shadow-lg"
+    className: "absolute right-2 top-1 z-20 flex w-[64px] min-h-[44px] flex-col items-center justify-center rounded-2xl px-1 py-1 border-2 border-red-400/80 bg-red-950/55 active:scale-90",
+    style: {
+      boxShadow: '0 2px 10px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.16)'
+    }
   }, /*#__PURE__*/React.createElement(Search, {
     className: "text-red-400 mb-0.5",
     size: 14
@@ -38517,7 +38549,10 @@ function BattleScreen({
     "data-soul-battle-effects-button": true,
     type: "button",
     onClick: () => setShowSoulBattleEffects(true),
-    className: "absolute right-2 top-[52px] z-20 flex w-[64px] min-h-[44px] flex-col items-center justify-center rounded-2xl px-1 py-1 border border-sky-400 bg-sky-950/60 active:scale-90 shadow-lg"
+    className: "absolute right-2 top-[52px] z-20 flex w-[64px] min-h-[44px] flex-col items-center justify-center rounded-2xl px-1 py-1 border-2 border-sky-300/80 bg-sky-950/70 active:scale-90",
+    style: {
+      boxShadow: '0 2px 10px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.16)'
+    }
   }, /*#__PURE__*/React.createElement(Sparkles, {
     className: "text-sky-300 mb-0.5",
     size: 14
@@ -39341,7 +39376,10 @@ function BattleScreen({
       className: "shrink-0 min-h-[20px] px-1.5 rounded-full border border-white/25 bg-black/60 text-[9px] font-black leading-none text-slate-200 active:scale-90 flex items-center"
     }, buffDetail ? 'とじる' : `詳細 ${chips.length}`)));
   })(), /*#__PURE__*/React.createElement("div", {
-    className: "shrink-0 py-1.5 px-2 bg-slate-950 border-y border-white/5 flex flex-col items-center justify-center gap-1 z-10 relative"
+    className: "shrink-0 py-1.5 px-2 border-y border-white/10 flex flex-col items-center justify-center gap-1 z-10 relative",
+    style: {
+      backgroundImage: 'linear-gradient(180deg, rgba(14,19,38,.97) 0%, rgba(8,11,22,.98) 100%)'
+    }
   }, /*#__PURE__*/React.createElement("div", {
     className: "absolute inset-0 flex flex-col items-center justify-center pointer-events-none gap-1",
     style: {
@@ -39796,7 +39834,7 @@ function BattleScreen({
         }
       },
       disabled: isBusy || autoBattle,
-      className: `relative rounded-xl border-2 flex flex-col items-stretch overflow-visible transition-all ${RANGE_STYLES[i].bg} ${distanceBroken ? 'border-red-400' : ' ' + RANGE_STYLES[i].border} ${canAssign || dragState?.active && dragOverSlot === i ? 'ring-2 ring-yellow-400 scale-105 z-10 shadow-lg animate-pulse' : 'opacity-100'} ${assignedCount > 0 ? 'ring-2 ring-indigo-500' : ''} ${dragState?.active && dragOverSlot === i ? 'ring-4 ring-green-400 scale-110' : ''} ${slotSettle === i ? 'ring-4 ring-white' : ''}`,
+      className: `relative rounded-xl border-2 flex flex-col items-stretch overflow-visible transition-all shadow-[inset_0_1px_0_rgba(255,255,255,.18),0_4px_12px_rgba(0,0,0,.55)] ${RANGE_STYLES[i].bg} ${distanceBroken ? 'border-red-400' : ' ' + RANGE_STYLES[i].border} ${canAssign || dragState?.active && dragOverSlot === i ? 'ring-2 ring-yellow-400 scale-105 z-10 shadow-lg animate-pulse' : 'opacity-100'} ${assignedCount > 0 ? 'ring-2 ring-indigo-500' : ''} ${dragState?.active && dragOverSlot === i ? 'ring-4 ring-green-400 scale-110' : ''} ${slotSettle === i ? 'ring-4 ring-white' : ''}`,
       style: isAnimating ? {
         zIndex: 9999,
         animation: attackMotionAnimation(attackAnim)
@@ -40189,9 +40227,11 @@ function BattleScreen({
     "aria-label": "\u3053\u306E\u6848\u5185\u3092\u9589\u3058\u308B",
     className: "min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black"
   }, "\xD7"))), /*#__PURE__*/React.createElement("div", {
-    className: "shrink-0 bg-slate-900/95 p-1 flex flex-col relative border-t border-white/10",
+    className: "shrink-0 p-1 flex flex-col relative border-t border-white/15",
     style: {
-      height: 'clamp(172px,23dvh,196px)'
+      height: 'clamp(172px,23dvh,196px)',
+      backgroundImage: 'linear-gradient(180deg, rgba(30,41,74,.96) 0%, rgba(15,20,38,.97) 46%, rgba(9,12,24,.98) 100%)',
+      boxShadow: 'inset 0 1px 0 rgba(255,255,255,.10)'
     }
   }, /*#__PURE__*/React.createElement("div", {
     className: "text-[8px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-1 flex justify-between px-2 items-center gap-1"
