@@ -77,11 +77,14 @@ for (const file of files) {
     `Moo{${layoutOf('Moo')}} / AwakenedMoo{${layoutOf('AwakenedMoo')}}`);
 
   // ★技の吹き出し(何をする技か)が、巨大な立ち絵の下に隠れてはいけない
-  //   (2026-09-22 ユーザー指摘「ムー戦の吹き出しが見えない」)。
-  //   ラスボスの本体は丸枠の外へ fixed で出るので、丸枠の右上へ置くと絵に覆われて1文字も見えない。
-  //   ラスボスは画面を覆うので、画面の右上＝そのまま敵の右上になる
+  //   (2026-09-22 ユーザー指摘「ムー戦の吹き出しが見えない」「吹き出しが裏に回ってる」)。
+  //   ラスボスの本体は丸枠の外へ fixed で出るので、丸枠の中へ置くと絵に覆われて1文字も見えない。
+  //   ★fixed にするだけでは足りない。丸枠は光り方(filter)で重ね順の島を作るので、
+  //     島の中にいるかぎり z-index も position:fixed も外へ届かない。
+  //     丸枠の外に書いてあるかは tools/battle/moo-notice-visibility-check.js が見張る
+  // ★compiled は className={…} を className:… へ変える。どちらの書き方でも同じものとして見る
   check(`${label}: 技の吹き出しはラスボス用に画面へ固定して出す`,
-    /data-enemy-notice-moo[\s\S]{0,240}position:'fixed'/.test(compact));
+    /data-enemy-notice-moo[\s\S]{0,40}className[:=]"fixed/.test(compact));
   // ★重なり順は本体から読む(検査へ数字を書き写すと、本体を変えたとき検査だけ古くなる)
   const mooArtZ = Number((compact.match(/zIndex:focusedCard\?5:(\d+),width:'min\(108vw,560px\)'/) || [])[1]);
   const mooNoticeZ = Number((compact.match(/data-enemy-notice-moo[\s\S]{0,240}?zIndex:focusedCard\?5:(\d+)\}/) || [])[1]);

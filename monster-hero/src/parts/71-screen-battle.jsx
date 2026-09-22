@@ -158,6 +158,43 @@ function BattleScreen({
     return { taken, raw, parts: hits > 1 ? scaleTacticsHitAmounts((hit.amounts || []).filter(value => value > 0), taken) : [taken] };
   };
   const plannedDamageFor = (slotIdx) => plannedHitFor(slotIdx).taken;
+  // ★敵が次に何をするかの札(「3連撃！」など)。作りはここ1か所にして、置き場所だけ変える。
+  //   ムーは丸枠の外、ほかの敵は丸枠の右上へ出すので、下の2か所から呼ぶ
+  // ★貫通技準備もこの札で出す(2026-09-22 ユーザー指摘「必殺技のためると必殺準備が被って出てる。
+  //   それって本来どっちかでいいはずだよね」)。それまでは貫通技準備だけ札から外し、画面まんなかの
+  //   大きい警告に任せていたが、必殺技とためるは札と警告が二重に出て、重なってどちらも読めなかった。
+  //   タクティクスはこの札にまとめ、まんなかの警告は札の無い既存5モードのためにそちらへ残した
+  const enemyNoticeShown = !ecoBattleView&&!!enemy&&!!enemyIntent&&!isBusy&&!enemyAttackFx
+    &&Array.isArray(tacticsUnits)&&!!enemyIntent.notice;
+  const enemyNoticeCard = () => {
+    // ★色・動き・光り方を効果で変える(2026-09-22 ユーザー指示「吹き出しを
+    //   効果によって変えると見た目がいい」)。文字を読む前に、攻めてくるのか
+    //   回復するのかが見分けられるようにする
+    const noticeTone=enemyIntent.type==='SPECIAL'?'bg-fuchsia-600 border-fuchsia-200 text-white shadow-[0_0_14px_rgba(217,70,239,0.85)]'
+      :enemyIntent.type==='CHARGE'?'bg-amber-500 border-amber-100 text-black shadow-[0_0_14px_rgba(251,191,36,0.85)]'
+      :enemyIntent.type==='PIERCE_CHARGE'?'bg-rose-600 border-rose-200 text-white shadow-[0_0_14px_rgba(244,63,94,0.85)]'
+      :enemyIntent.type==='MOVE'?'bg-cyan-600 border-cyan-100 text-white shadow-[0_0_12px_rgba(6,182,212,0.7)]'
+      :enemyIntent.type==='ROAR'?'bg-orange-600 border-orange-100 text-white shadow-[0_0_14px_rgba(249,115,22,0.85)]'
+      :enemyIntent.type==='REGEN'?'bg-emerald-600 border-emerald-100 text-white shadow-[0_0_14px_rgba(16,185,129,0.85)]'
+      :enemyIntent.type==='WAIT'?'bg-slate-600 border-slate-200 text-white shadow-[0_2px_10px_rgba(0,0,0,0.9)]'
+      :'bg-red-600 border-red-100 text-white shadow-[0_0_14px_rgba(239,68,68,0.85)]';
+    // 動きも効果ごと。殴ってくる技は小刻みに震え、回復はふわっと浮き、
+    // 攻撃力アップは左右に揺れ、ためるは膨らみ、様子見と移動は静かに明滅する
+    const noticeAnim=enemyIntent.type==='REGEN'?'noticeHeal 1400ms ease-in-out infinite'
+      :enemyIntent.type==='ROAR'?'noticeShout 900ms ease-in-out infinite'
+      :enemyIntent.type==='CHARGE'?'noticeCharge 1100ms ease-in-out infinite'
+      :(enemyIntent.type==='MOVE'||enemyIntent.type==='WAIT')?'noticeCalm 1600ms ease-in-out infinite'
+      :'noticeHit 800ms ease-in-out infinite';
+    return (
+      <div data-enemy-notice={enemyIntent.notice} data-enemy-notice-anim={noticeAnim.split(' ')[0]}
+        className={`max-w-[170px] truncate rounded-2xl border-2 px-2 py-0.5 font-black leading-tight flex items-center gap-1 ${noticeTone}`}
+        style={{fontSize:'11px',animation:noticeAnim}}>
+        {/* ★icon は必ず cardIconNode を通す。絵文字ならそのまま、画像なら <img> になる。
+            素で置くと、あとで画像のアイコンを足したときに文字列がそのまま出る */}
+        <span style={{fontSize:'12px'}} className="leading-none shrink-0">{cardIconNode(enemyIntent.icon,12)}</span>
+        <span className="truncate">{enemyIntent.notice}！</span>
+      </div>);
+  };
   return (
 
       <div className="flex-1 flex flex-col h-full relative" data-battle-speed={battleSpeed} data-eco-view={ultraBattleView?'ultra':liteBattleView?'lite':'off'}>
@@ -461,6 +498,19 @@ function BattleScreen({
                 </div>
               </div>
             )}
+            {/* ★ムーの札だけは丸枠(敵の円)の外へ出す。丸枠には間合いごとの光り方
+                (RANGE_STYLES の drop-shadow ＝ CSSの filter)が掛かっていて、transform と同じく
+                **独自の重ね順の島**を作る。島の中に置くと z-index をいくつ上げても、枠の外へ
+                巨大に描くムーの立ち絵(z-30)の裏へ回ってしまう
+                (2026-09-22 ユーザー指摘「吹き出しが裏に回ってる」。同じ原因で3回目)。
+                必殺技の警告・移動の予告と同じこの階層＝丸枠の外なら前面に出る。
+                寄せ先は画面の右端ではなく遊ぶ列(最大600px)の右端にして、広い画面でも列に収める */}
+            {enemyNoticeShown&&isMooBoss(enemy?.id)&&(
+              <div data-enemy-notice-moo className="fixed left-1/2 pointer-events-none"
+                style={{top:'max(112px,16dvh)',transform:'translateX(calc(min(50vw, 300px) - 100% - 6px))',zIndex:focusedCard?5:40}}>
+                {enemyNoticeCard()}
+              </div>
+            )}
             {/* 行動予測ラベルはmain下部に移動 */}
             <div className={`rounded-full transition-all duration-500 border-4 relative bg-black/35 ${RANGE_STYLES[enemyDist].border} ${RANGE_STYLES[enemyDist].shadow} ${RANGE_STYLES[enemyDist].glow} shadow-[0_0_50px]`} style={enemyAttackAnim&&!ecoBattleView?{padding:'clamp(6px,1.5dvh,16px)',animation:(enemyAttackFx?.kind==='move'?(isMooBoss(enemy?.id)?'enemyMoveSlideMoo 1000ms ease-in-out forwards':'enemyMoveSlide 1000ms ease-in-out forwards'):enemyAttackFx?.kind==='charge'?'enemyChargeShake 1100ms ease-in-out forwards':'enemyAttackFly 450ms ease-in forwards'), ...(isMooBoss(enemy?.id)&&enemyAttackFx?.kind!=='move'?{top:'3dvh'}:{}),...(!isMooBoss(enemy?.id)&&enemyAttackFx?.kind!=='move'?{zIndex:9999}:{})}:{padding:'clamp(6px,1.5dvh,16px)',...(isMooBoss(enemy?.id)?{top:'3dvh'}:{})}}>
               {/* 足元の影(2026-09-22 ユーザー指示「全体的に安っぽい作りをなんとかしたい」)。
@@ -516,55 +566,12 @@ function BattleScreen({
                   みたいに吹き出し出せばいい。3連撃！とか」)。タクティクスの敵は技に固有の名前が
                   付いているので、名前だけでは連撃なのか回復なのか覚えられない。
                   予告が出ているあいだずっと見えるようにする(❗はこの札に置き換える)。
-                  ★**タクティクスではこの札だけを出す**(2026-09-22 ユーザー指摘「必殺技のためると
-                    必殺準備が被って出てる。それって本来どっちかでいいはず」)。画面まんなかの
-                    大きい警告(必殺技／ためる／貫通技準備)と同じことを2か所で言っていたうえ、
-                    重なって**どちらも読めなくなっていた**。まんなかの警告はこの札が無い
-                    既存5モードのためのものなので、そちらに残す。
-                  ★貫通技準備だけこの札から外していたのも、まんなかの警告と被るためだった。
-                    そちらを止めたので、ここは全部の行動を同じ形で出す */}
-              {!ecoBattleView&&enemy&&enemyIntent&&!isBusy&&!enemyAttackFx&&Array.isArray(tacticsUnits)&&enemyIntent.notice&&(()=>{
-                // ★色・動き・光り方を効果で変える(2026-09-22 ユーザー指示「吹き出しを
-                //   効果によって変えると見た目がいい」)。文字を読む前に、攻めてくるのか
-                //   回復するのかが見分けられるようにする
-                const noticeTone=enemyIntent.type==='SPECIAL'?'bg-fuchsia-600 border-fuchsia-200 text-white shadow-[0_0_14px_rgba(217,70,239,0.85)]'
-                  :enemyIntent.type==='CHARGE'?'bg-amber-500 border-amber-100 text-black shadow-[0_0_14px_rgba(251,191,36,0.85)]'
-                  :enemyIntent.type==='PIERCE_CHARGE'?'bg-rose-600 border-rose-200 text-white shadow-[0_0_14px_rgba(244,63,94,0.85)]'
-                  :enemyIntent.type==='MOVE'?'bg-cyan-600 border-cyan-100 text-white shadow-[0_0_12px_rgba(6,182,212,0.7)]'
-                  :enemyIntent.type==='ROAR'?'bg-orange-600 border-orange-100 text-white shadow-[0_0_14px_rgba(249,115,22,0.85)]'
-                  :enemyIntent.type==='REGEN'?'bg-emerald-600 border-emerald-100 text-white shadow-[0_0_14px_rgba(16,185,129,0.85)]'
-                  :enemyIntent.type==='WAIT'?'bg-slate-600 border-slate-200 text-white shadow-[0_2px_10px_rgba(0,0,0,0.9)]'
-                  :'bg-red-600 border-red-100 text-white shadow-[0_0_14px_rgba(239,68,68,0.85)]';
-                // 動きも効果ごと。殴ってくる技は小刻みに震え、回復はふわっと浮き、
-                // 攻撃力アップは左右に揺れ、ためるは膨らみ、様子見と移動は静かに明滅する
-                const noticeAnim=enemyIntent.type==='REGEN'?'noticeHeal 1400ms ease-in-out infinite'
-                  :enemyIntent.type==='ROAR'?'noticeShout 900ms ease-in-out infinite'
-                  :enemyIntent.type==='CHARGE'?'noticeCharge 1100ms ease-in-out infinite'
-                  :(enemyIntent.type==='MOVE'||enemyIntent.type==='WAIT')?'noticeCalm 1600ms ease-in-out infinite'
-                  :'noticeHit 800ms ease-in-out infinite';
-                const noticeCard=(
-                  <div data-enemy-notice={enemyIntent.notice} data-enemy-notice-anim={noticeAnim.split(' ')[0]}
-                    className={`max-w-[170px] truncate rounded-2xl border-2 px-2 py-0.5 font-black leading-tight flex items-center gap-1 ${noticeTone}`}
-                    style={{fontSize:'11px',animation:noticeAnim}}>
-                    {/* ★icon は必ず cardIconNode を通す。絵文字ならそのまま、画像なら <img> になる。
-                        素で置くと、あとで画像のアイコンを足したときに文字列がそのまま出る */}
-                    <span style={{fontSize:'12px'}} className="leading-none shrink-0">{cardIconNode(enemyIntent.icon,12)}</span>
-                    <span className="truncate">{enemyIntent.notice}！</span>
-                  </div>);
-                // ★ムーだけは本体が丸枠の外へ巨大表示される(fixed・z-30 で画面いっぱい)。
-                //   丸枠の右上へ置くと絵の下に隠れて1文字も見えない
-                //   (2026-09-22 ユーザー指摘「ムー戦の吹き出しが見えない」)。
-                //   ムーは画面を覆うので、画面の右上＝ムーの右上。敵のライフ帯のすぐ下へ固定で出す
-                if(isMooBoss(enemy?.id)) return (
-                  <div data-enemy-notice-moo className="pointer-events-none"
-                    style={{position:'fixed',top:'max(112px,16dvh)',right:'6px',zIndex:focusedCard?5:40}}>
-                    {noticeCard}
-                  </div>);
-                return (
+                  ★ムーだけはここへ置けない(丸枠の外へ出してある。少し上の data-enemy-notice-moo) */}
+              {enemyNoticeShown&&!isMooBoss(enemy?.id)&&(
                 <div className="absolute inset-0 pointer-events-none z-[9000]">
-                  <div className="absolute -top-3 -right-2">{noticeCard}</div>
-                </div>);
-              })()}
+                  <div className="absolute -top-3 -right-2">{enemyNoticeCard()}</div>
+                </div>
+              )}
               {/* ためている最中は、敵の周りにオーラが集まる */}
               {!ecoBattleView&&enemy&&enemyAttackFx?.kind==='charge'&&(
                 <div className="absolute inset-0 pointer-events-none z-[9000] flex items-center justify-center overflow-visible">
