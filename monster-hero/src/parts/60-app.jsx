@@ -9191,6 +9191,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   };
   const guardValueOf = (flat, mult, slotIdx = null) =>
     (flat > 0 || mult > 0) ? Math.floor(flat + guardDefFor(slotIdx) * mult) : 0;
+  // ★全体ガード(2体以上が別々に構えた)のとき、構えていない子にも付くガード力。
+  //   「その子の丈夫さ × ガード段階の倍率」だけで、固定値は乗らない
+  //   (2026-09-22 ユーザー選択「その子の丈夫さ × 倍率（固定値なし）」)
+  const tacticsSpreadGuardValue = (slotIdx) => guardValueOf(0, GUARD_EVOLUTION[guardLevel].mult, slotIdx);
+  // その枠のガード値。構えていれば自分のぶん、構えていなくても全体ガードなら丈夫さぶん
+  const tacticsSlotGuardValue = (guardBySlot, slotIdx) => {
+    const own = (guardBySlot || {})[slotIdx];
+    if (own && (own.cards || 0) > 0) return guardValueOf(own.flat, own.mult, slotIdx);
+    return isTacticsSpreadGuard(guardBySlot) ? tacticsSpreadGuardValue(slotIdx) : 0;
+  };
   // このカードを使うと、同じターンの「あとに続くカード」へ即座に乗る補正の生値(effMul適用前)。
   // ニコラオの力・ゴーレム・モッチー/ミタラシ・ききの応援は、説明どおり使ったターンから効く
   // (他の永続バフは次のターンから効く。詳細はヘルプ「ずっと続く効果は次のターンから」を参照)。
@@ -9684,16 +9694,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 slotFx[slotIdx]={reflect:true};
                 return;
               }
-              const own=slotGuards[slotIdx]||{flat:0,mult:0,weight:0};
-              // ガードの軽減量も「その子の丈夫さ」から出す
-              // 画面へ出すのと同じ guardValueOf を通す(別々に書くと予告と実際がずれる)
-              const base=guardValueOf(own.flat,own.mult,slotIdx);
+              const own=slotGuards[slotIdx]||{flat:0,mult:0,weight:0,cards:0};
+              // ガードの軽減量も「その子の丈夫さ」から出す。構えていない子も、全体ガードなら
+              // 丈夫さぶんが付く。画面へ出すのと同じ関数を通す(別々に書くと予告と実際がずれる)
+              const base=tacticsSlotGuardValue(slotGuards,slotIdx);
               // 貫通撃はガードが効かない
               const slotGuard=intent.variant==='pierce'?0:base;
               // ★受けるダメージもその子の丈夫さで決まるので、狙われた子ごとに計算し直す
               const slotIncoming=getIncomingDamageBeforeTurnReduction(intent,slotIdx);
-              // ガードに当てるのは**構えた枚数ぶんのヒット**。数え方は予告と同じ関数を通す
-              const hit=resolveTacticsGuardedHit(slotIncoming,rushHits,slotGuard,tacticsGuardHits(own.weight));
+              // ★同じ子へ2枚以上構えていれば連撃の全ヒット、1枚なら1ヒットぶんを受け止める
+              const hit=resolveTacticsGuardedHit(slotIncoming,rushHits,slotGuard,tacticsGuardHits(own.cards,rushHits));
               throughTotal+=hit.through;
               if(slotGuard>0) coveredHits=Math.max(coveredHits,hit.covered);
               if(hit.blocked||slotGuard>0) guardedCount++;
@@ -9958,12 +9968,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // 新モードは「ガードはカードを使った子自身を守る」。誰が構えたかをスロットごとに持つ。
     // 既存モードは今までどおり currentTurnGuardFlat / Mult の合計だけを見る
     const guardBySlot={};
-    // ★厚さ(flat/mult)だけでなく**枚数**も数える。連撃はガード1枚につき1ヒットを受け止める
-    //   (2026-09-21 ユーザー指示)。数え方は予告と同じ guardCardWeight を通す
+    // ★厚さ(flat/mult)だけでなく**枚数**も数える。同じ子へ2枚以上構えると「連撃ガード」に
+    //   なり、連撃の全ヒットを合計値で受け止める(2026-09-22 ユーザー指示)。
+    //   弱ガードも厚さは半分だが**1枚**と数える(枚数で決まる決めごとなので)
     const addGuardForSlot=(idx,flat,mult,weight)=>{
       if(!Number.isInteger(idx)) return;
-      const entry=guardBySlot[idx]||(guardBySlot[idx]={flat:0,mult:0,weight:0});
+      const entry=guardBySlot[idx]||(guardBySlot[idx]={flat:0,mult:0,weight:0,cards:0});
       entry.flat+=flat; entry.mult+=mult; entry.weight+=Math.max(0,Number(weight)||0);
+      entry.cards+=1;
     };
     let hpBeforeEnemyAttack=hp;
     let activatedIceLockThisTurn=false;
@@ -16087,7 +16099,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             getIncomingDamageBeforeTurnReduction={getIncomingDamageBeforeTurnReduction} getMasuMon={getMasuMon}
             getNextTurnBuff={getNextTurnBuff} getPermaBuff={getPermaBuff} getTurnBuff={getTurnBuff}
             getWaveBuff={getWaveBuff} guardCardWeight={guardCardWeight} guardFx={guardFx} guardLevel={guardLevel}
-            guardValueOf={guardValueOf} guts={guts} hand={hand} heroCardBonus={heroCardBonus} heroDist={heroDist}
+            guardValueOf={guardValueOf} tacticsSlotGuardValue={tacticsSlotGuardValue}
+            guts={guts} hand={hand} heroCardBonus={heroCardBonus} heroDist={heroDist}
             hp={hp} iceLockActive={iceLockActive} iceLockPreparing={iceLockPreparing} iceLockTurns={iceLockTurns}
             isAssistCard={isAssistCard} isAttackCard={isAttackCard} isBusy={isBusy} isHeroSlotMon={isHeroSlotMon}
             kikiCardBonus={kikiCardBonus} liteBattleView={liteBattleView} mainHero={mainHero} openHelp={openHelp}
