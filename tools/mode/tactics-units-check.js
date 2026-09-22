@@ -574,17 +574,22 @@ check('置けるかの判定も画面へ渡す', has('tacticsCanAssign={tacticsC
 {
   const screen = fs.readFileSync(path.join(root, 'monster-hero/src/parts/71-screen-battle.jsx'), 'utf8');
   const hasScreen = (needle) => screen.includes(needle);
-  // ★距離枠の上へ、下の枠と同じ4列でそろえて出す(2026-09-19 ユーザー依頼)。
-  //   スロットの中の小さい帯は、小さすぎて読めないのでやめた
-  check('距離枠の上に1体ずつの帯を出す',
-    // ★末尾の ${...} は、タクティクスのれんしゅうで光らせるための印(2026-09-21)
-    hasScreen('<div data-tactics-party className={`relative w-full grid grid-cols-4 gap-1${battleTutorialSpotClass(\'tacticsParty\')}`}>')
-      && hasScreen('data-tactics-hp={u?`${u.hp}/${u.maxHp}`:undefined}')
-      && hasScreen('data-tactics-guts={u?`${u.guts}/${u.maxGuts}`:undefined}'));
+  // ★1体ずつのライフ・ガッツは**枠の中**に出す(2026-09-22 ユーザー指摘「距離いれると縦が
+  //   狭くなりすぎる」)。もとは枠の上に別の段として4列並べていたが、同じ4列が2段あるだけで
+  //   枠1つぶん(55px)と余白を丸ごと使っていた。段を1つ減らして間合いバーのぶんを作った。
+  //   ※2026-09-19 に「スロットの中の小さい帯は小さすぎて読めない」としていったんやめているので、
+  //     数字は10pxまでにとどめ、縮めるのは帯の高さと余白のほうにする
+  check('距離枠の中に1体ずつのライフ・ガッツを出す',
+    hasScreen('data-tactics-hp={`${tacticsUnit.hp}/${tacticsUnit.maxHp}`}')
+      && hasScreen('data-tactics-guts={`${tacticsUnit.guts}/${tacticsUnit.maxGuts}`}')
+      // ★末尾の ${...} は、タクティクスのれんしゅうで光らせるための印(2026-09-21)。
+      //   帯を枠へ移したときに落とすと、案内が何も指さないまま進む
+      && hasScreen('px-1${battleTutorialSpotClass(\'tacticsParty\')}'));
+  check('1体ずつの帯を上の段としては出さない', !hasScreen('<div data-tactics-party className='));
   // ★ライフ・ガッツのポップアップ(吸収・ガードの余り・回復カード)は、合計の帯に重ねて出していた。
   //   その帯をやめたときに出す場所ごと消えていたので、1体ずつの帯の上へ置き直した(2026-09-20)
   check('ライフ・ガッツの数字が出る場所がある',
-    hasScreen('<div data-tactics-party-popups className="absolute inset-x-0 -top-1 flex flex-col items-center gap-0.5 pointer-events-none" style={{zIndex:210}}>')
+    hasScreen('<div data-tactics-party-popups className="absolute inset-x-0 top-0 flex flex-col items-center gap-0.5 pointer-events-none" style={{zIndex:210}}>')
       && hasScreen("popups.filter(p=>p.side==='life'||p.side==='guts')"));
   // ★合計のライフ・ガッツは出さない。個別と両方出すと読むものが増えるだけ
   check('新モードでは合計の帯を出さない', hasScreen('{Array.isArray(tacticsUnits)?(') && hasScreen('):('));
@@ -594,7 +599,7 @@ check('置けるかの判定も画面へ渡す', has('tacticsCanAssign={tacticsC
   check('復活まであとどれだけかを出す',
     hasScreen('data-tactics-revive={`${revivePct}`}') && hasScreen('復活まで {100-revivePct}%'));
   check('ダウン中の帯は復活ゲージとして色を変える',
-    hasScreen("u.downed?'bg-gradient-to-r from-emerald-600 to-teal-300'"));
+    hasScreen("tacticsUnit.downed?'bg-gradient-to-r from-emerald-500 to-teal-300'"));
   // 1体ずつのステータスは「ステータス」から見る(2026-09-19 ユーザーの質問)
   check('ステータスに1体ずつの値を出す',
     has('<div data-tactics-status className="space-y-1.5 text-left">')
@@ -627,16 +632,21 @@ check('置けるかの判定も画面へ渡す', has('tacticsCanAssign={tacticsC
   // 受けたあとの表示も、同じ「発ごとの量」を出す(予告と実際で割り方がそろう)
   check('受けたあとも発ごとの量をそのまま出す',
     has('fx.hits=scaleTacticsHitAmounts((hit.amounts||[]).filter(value=>value>0),fd);'));
-  check('帯も枠も同じ形で出す',
+  // ★予告は丸1本の帯から、敵の絵の右の札へ変えた(2026-09-22)。数字の作り方は同じまま
+  check('札も枠も同じ形で出す',
     hasScreen("const plannedText=plannedHit.parts.join('・');")
       && hasScreen("const slotPlannedText=slotPlannedHit.parts.join('・');")
-      && hasScreen('` (予定: ${plannedBubbleText})`'));
+      && hasScreen('>{plannedText}</div>')
+      // ★枠のほうは 2026-09-22 に「🎯-合計」と1発ずつの内訳の2段になった(main 側の直し)
+      && hasScreen('>{slotPlannedText}</span>'));
   // ★1発ずつ並べると**合計がどこにも出ない**ので「結局いくつ食らうか」が読めなかった
   //   (2026-09-22 ユーザー指摘「連撃ダメージで合計ダメージと軽減後の合計ダメージが
-  //    ないといくつくらうかわからない」)。ガードが効いていれば「軽減前→軽減後」で出す
+  //    ないといくつくらうかわからない」)。ガードが効いていれば「軽減前→軽減後」で出す。
+  // ★同じ日に予告を右下の札へ移したので、合計は札の大きい字、1発ずつの内訳はその下の小さい字になった
+  //   (吹き出し1本に詰めていたころの plannedBubbleText は、札の幅100pxでは折り返すのでやめた)
   check('連撃は合計も出す',
     hasScreen("const plannedTotalText=plannedHit.raw>plannedDmg?`${plannedHit.raw}→${plannedDmg}`:`${plannedDmg}`;")
-      && hasScreen("const plannedBubbleText=plannedHit.parts.length>1?`合計 ${plannedTotalText} ＝ ${plannedText}`:plannedText;"));
+      && hasScreen('>{plannedTotalText}</div>'));
   check('軽減前の合計も持ち歩く',
     hasScreen('return { taken, raw, parts: hits > 1 ? scaleTacticsHitAmounts')
       && hasScreen('const none = { taken: 0, parts: [], raw: 0 };'));
@@ -656,11 +666,37 @@ check('置けるかの判定も画面へ渡す', has('tacticsCanAssign={tacticsC
       && hasScreen('{slotMultiHit&&<span className="text-[8px] font-bold text-red-200/90">{slotPlannedText}</span>}')
       && hasScreen('const slotMultiHit=slotPlannedHit.parts.length>1;'));
   // ★1つの数字にまとめると、どの子がどれだけ減るのか分からなくなる
-  check('全体攻撃は吹き出しに1つの数字を出さない',
+  check('全体攻撃は札に1つの数字を出さない',
     hasScreen('const showPlannedInBubble=!enemyIntent.targetsAll;')
-      && hasScreen("{rawDmg>0&&showPlannedInBubble&&plannedBubbleText?` (予定: ${plannedBubbleText})`:''}"));
+      && hasScreen('{rawDmg>0&&showPlannedInBubble&&plannedText?('));
   // ★連撃だと予告の時点で分かる(2026-09-21 ユーザー指摘「敵の連撃技が連撃表示になってない」)
-  check('予告に何連撃かを出す', hasScreen('{previewHits>1?` ${previewHits}連撃`:\'\'}'));
+  // ★連撃だと予告の時点で分かる(2026-09-21 ユーザー指摘「敵の連撃技が連撃表示になってない」)。
+  //   2026-09-22 から、何連撃かを出すのは**右上の吹き出し**(noticeLabel)だけにした
+  //   (ユーザー指摘「予測は攻撃名で吹き出しはその効果」)。両方に書くと同じことを2回言ううえ、
+  //   札の幅(100px)で技名が2行に折り返していた
+  check('連撃かどうかは吹き出しが出す',
+    has('noticeLabel:`${TACTICS_RUSH_HITS}連撃`')
+      && !hasScreen("{previewHits>1?` ${previewHits}連撃`:''}"));
+  // ★同じことを2か所で言わない(2026-09-22 ユーザー指摘「必殺技のためると必殺準備が被って出てる。
+  //   それって本来どっちかでいいはずだよね」)。画面まんなかの大きい警告(必殺技／ためる／
+  //   貫通技準備)と、敵の絵の右上の札が、重なってどちらも読めなくなっていた。
+  //   タクティクスは右上の札にまとめ、まんなかの警告は札が無い既存5モードのために残す
+  check('タクティクスではまんなかの大きい警告を出さない',
+    ['SPECIAL', 'CHARGE', 'PIERCE_CHARGE'].every(type =>
+      hasScreen(`!Array.isArray(tacticsUnits)&&enemyIntent.type==='${type}'&&(`)));
+  // ★貫通技準備だけ右上の札から外していたのも、まんなかの警告と被るためだった。
+  //   そちらを止めたので、ここは全部の行動を同じ形で出す
+  check('右上の札は全部の行動で出す',
+    hasScreen('&&Array.isArray(tacticsUnits)&&enemyIntent.notice&&(()=>{')
+      && !hasScreen("enemyIntent.notice&&enemyIntent.type!=='PIERCE_CHARGE'"));
+  // ★札と吹き出しで同じことを言わない(2026-09-22 ユーザー指摘「他のにならってやると
+  //   攻撃予測のとこをためるにして吹き出しを必殺技準備が正解なはず」)。
+  //   ためるは敵ごとの技名を持たないので、label が「必殺技の準備をしている」という説明文になり、
+  //   吹き出しの「必殺技準備」を長く言い直すだけになっていた
+  check('ためるの予測は短い呼び名にそろえる',
+    hasScreen("const intentTitle=enemyIntent.type==='CHARGE'&&enemyIntent.category?enemyIntent.category:enemyIntent.label;")
+      && has('notice:enemyActionNoticeLabel(selected),category:selected.category'));
+  check('ためるの短い呼び名は「ためる」', has("{id:'charge',type:'CHARGE',category:'ためる',noticeLabel:'必殺技準備'"));
   check('置けるかの判定は新モードだけ差し替える',
     hasScreen('const tacticsAnswer=tacticsCanAssign?tacticsCanAssign(pendingCardObj,pendingIdx,i):null;')
       && hasScreen('if(tacticsAnswer===null||tacticsAnswer===undefined){'));
@@ -693,9 +729,11 @@ check('置けるかの判定も画面へ渡す', has('tacticsCanAssign={tacticsC
   check('カード詳細には理由の全文を出す', has('data-tactics-card-why'));
   // ★帯のアニメーションを外すと、回復もダメージも瞬間で増減して見える(2026-09-20 ユーザー指摘)。
   //   合計の帯と同じ速さ(ライフ1秒・ガッツ0.5秒)にそろえる
+  // ★帯そのものも光らせた(2026-09-22 ユーザー指摘「カードも距離枠も全て安っぽくない？」)。
+  //   見るのは色ではなく**動く速さ**。ここが消えると回復もダメージも瞬間で増減して見える
   check('1体ずつの帯は合計の帯と同じ速さで動く',
     hasScreen('data-tactics-hp-bar className={`h-full transition-all duration-1000 ')
-      && hasScreen('data-tactics-guts-bar className="h-full bg-gradient-to-r from-amber-600 to-yellow-300 transition-all duration-500"'));
+      && hasScreen('data-tactics-guts-bar className="h-full bg-gradient-to-r from-amber-500 to-yellow-300 transition-all duration-500"'));
   check('手札に検査の手がかりがある',
     hasScreen('data-hand-card={i}') && hasScreen('data-card-cost={requiredGuts}')
       && hasScreen("data-card-usable={isSelectable?'true':'false'}"));
@@ -708,7 +746,8 @@ check('置けるかの判定も画面へ渡す', has('tacticsCanAssign={tacticsC
 {
   const battleScreen = fs.readFileSync(path.join(root, 'monster-hero/src/parts/71-screen-battle.jsx'), 'utf8');
   const inScreen = (needle) => battleScreen.includes(needle);
-  check('予告の吹き出しに狙いを出す', inScreen("{aimedName?` 🎯${aimedName}`:''}"));
+  // ★丸1本の帯から右の札へ変えたので(2026-09-22)、狙いも1行として出すようになった
+  check('予告の札に狙いを出す', inScreen('>🎯{aimedName}</div>'));
   // ★数え方は本番と同じ関数を通す。別に書くと、距離撃でずらしたときに予告と実際がずれる
   check('狙いの数え方は本番と同じ関数を通す',
     inScreen('tacticsIntentTargets(enemyIntent, tacticsUnits, enemyDist)'));
@@ -1279,6 +1318,18 @@ check('カードの説明にも「飲んだ子だけ」と書く',
 check('カードの説明にジャンルと効く先を出す',
   has('const genre=cardGenreLabel(focusedCard), scope=cardScopeLabel(focusedCard);')
     && has("data-card-genre={genre||''} data-card-scope={scope}"));
+// ★手札の**表**にも同じことを出す(2026-09-22 ユーザー指示「ニコラオは単体支援とかにしない？
+//   それだと全体や単体とか効果わかりやすいし」)。カードを1枚ずつ開かなくても、
+//   守りが置いた子だけ・支援が味方ぜんぶ、と並べて見比べられる。
+// ★言葉はアプリ側の同じ関数から引く。画面側で別に書くと、説明と表で言い方がずれる
+check('手札の表にもジャンルと効く先を出す',
+  has('const genre=tacticsCardGenre?tacticsCardGenre(c):null;')
+    && has('const scope=tacticsCardScope?tacticsCardScope(c):null;')
+    && has('data-card-genre={genre} data-card-scope={scope||undefined}')
+    && has('tacticsCardGenre={cardGenreLabel} tacticsCardScope={cardScopeLabel}'));
+// ★攻撃だけは「攻撃・敵へ」にしない。味方に効かないのは攻撃カードの前提で、
+//   わざわざ言うと守り・支援の「単体／全体」が埋もれる
+check('攻撃の表に「敵へ」は出さない', has("scope&&scope!=='敵へ'?`${genre}・${scope}`:genre"));
 
 // --- ㉟ 固有技の効果も「使った子だけ」(2026-09-22 ユーザー選択) ---
 // ★ピクシー/ミーアの消費0・タイガーの会心確定・アーク/イブリースの贖罪・パンドラの共鳴は、

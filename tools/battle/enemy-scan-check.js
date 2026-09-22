@@ -106,7 +106,10 @@ check('予測ダメージが出るのは通常攻撃と必殺技だけ',
   has("if (!intent||(intent.type!=='ATTACK'&&intent.type!=='SPECIAL')) return 0;"));
 check('ためるターンは専用の演出でダメージを与えない',
   has("} else if (intent.type==='CHARGE') {") && has("setEnemyAttackFx({kind:'charge'})"));
-check('必殺技の警告は発動ターンの予告で出る', has("!enemyAttackFx&&enemyIntent.type==='SPECIAL'&&("));
+// ★2026-09-22 から、この大きな警告は**タクティクス以外のモードだけ**に出す。
+//   タクティクスには敵の絵の右上に出る札があり、同じことを2か所で言って重なっていた
+check('必殺技の警告は発動ターンの予告で出る',
+  has("!enemyAttackFx&&!Array.isArray(tacticsUnits)&&enemyIntent.type==='SPECIAL'&&("));
 // 準備のターンは、必殺技そのものの音と突進モーションを使わないこと。
 // 同じものを使うと「準備しただけなのに撃たれた」ように見え・聞こえる
 check('準備のターンは専用の音を鳴らす', has('Audio_.se.enemyCharge();') && has('enemyCharge: async () =>'));
@@ -150,9 +153,11 @@ check('準備の予告に必殺技のオーラを流用しない',
 // ためるターンに攻撃の突進(mooAttackLunge)が出てしまう
 check('ムーの準備は突進せず、その場で溜める',
   has("enemyAttackFx?.kind==='charge'?'mooChargeGather") && has('@keyframes mooChargeGather'));
-// 解析ボタンが吹き出し(画面の上から22%)と重なっていたので下げてある
-check('解析ボタンを吹き出しと重ならない高さへ下げている',
-  /onClick=\{\(\)=>setShowEnemyInfo\(true\)\} className="absolute right-2 top-24/.test(src));
+// 解析ボタンは舞台の**右上**(2026-09-22 ユーザー指示「解析ボタンを右欄に置けばいい」)。
+// 一度は左の列へまとめたが、右を空けて敵の行動予測を置くことにしたので右へ戻した。
+// 吹き出し(画面の上から22%・右寄せ)とぶつからないことは move-hint-layout-check が位置の計算で見る
+check('解析ボタンは舞台の右上にある',
+  /onClick=\{\(\)=>setShowEnemyInfo\(true\)\}[^\n]{0,200}?absolute right-2 top-1\b/.test(src));
 // スタン・無効化・眼力・距離撃で敵の行動を止めたときは、その行動を「やらなかった」ことにする。
 // ここが抜けていると、必殺技の準備をスタンで止めたのに次のターンだけ必殺技が飛んでくる
 check('止められたターンは行動しなかった扱いにする',

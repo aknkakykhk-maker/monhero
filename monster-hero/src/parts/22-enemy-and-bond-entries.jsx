@@ -92,6 +92,10 @@ const TACTICS_INTIMIDATE_RATE = 0.4;
 // ★noticeLabel … 敵の絵の右上へ出す「何をする技か」の吹き出し(2026-09-22 ユーザー指示
 //   「右上に必殺技！みたいに吹き出し出せばいい。3連撃！とか」)。技名だけでは何が起きるか
 //   覚えられないので、予告のあいだ出しっぱなしにする。書かなければ category を使う
+// ★category … 予告の札(攻撃予測)へ出す短い呼び名。予告そのものへ持たせて画面から引けるようにする。
+//   「ためる」は敵ごとの技名を持たないので label が「必殺技の準備をしている」という説明文になり、
+//   右上の吹き出しの「必殺技準備」を長く言い直しただけになっていた(2026-09-22 ユーザー指摘
+//   「攻撃予測のとこをためるにして吹き出しを必殺技準備が正解なはず」)
 const TACTICS_ACTION_DEFINITIONS = [
   {id:'normal',type:'ATTACK',category:'通常攻撃',noticeLabel:'通常攻撃',weight:30,multiplier:1,hits:1,range:'全間合い',condition:'常時',cooldown:0,useLimit:null},
   {id:'charge',type:'CHARGE',category:'ためる',noticeLabel:'必殺技準備',weight:12,multiplier:0,hits:0,range:'全間合い',condition:'常時',cooldown:0,useLimit:null},
@@ -260,7 +264,7 @@ const chooseEnemyAction = (ent,currentDist,random=Math.random,state={}) => {
     const targetDist=targets[Math.min(targets.length-1,Math.floor(random()*targets.length))];
     // 予告に出した移動先をそのまま持ち歩く。実行時はこの値だけを見るので、
     // 予告と実際の移動先が食い違うことはない
-    return {type:selected.type,value:0,label:`移動: ${RANGE_LABELS[targetDist]}`,targetDist,icon:ENEMY_ACTION_ICONS.MOVE,notice:enemyActionNoticeLabel(selected),actionId:selected.id};
+    return {type:selected.type,value:0,label:`移動: ${RANGE_LABELS[targetDist]}`,targetDist,icon:ENEMY_ACTION_ICONS.MOVE,notice:enemyActionNoticeLabel(selected),category:selected.category,actionId:selected.id};
   }
   // 間合い攻撃は「いまいる間合い」を狙うと予告する。実行までに距離撃でずらせば威力が落ちるので、
   // 予告を見てからガッツを距離撃へ回すかどうかの判断になる。
@@ -268,7 +272,7 @@ const chooseEnemyAction = (ent,currentDist,random=Math.random,state={}) => {
   if(selected.variant==='sweep'){
     return {type:selected.type,variant:selected.variant,sweepDist:currentDist,
       value:Math.floor(ent.atk*selected.multiplier),missValue:Math.floor(ent.atk*(selected.missMultiplier??1)),
-      label:`${enemyActionDisplayName(ent,selected)}: ${RANGE_LABELS[currentDist]}`,icon:TACTICS_VARIANT_ICONS.sweep,notice:enemyActionNoticeLabel(selected),actionId:selected.id};
+      label:`${enemyActionDisplayName(ent,selected)}: ${RANGE_LABELS[currentDist]}`,icon:TACTICS_VARIANT_ICONS.sweep,notice:enemyActionNoticeLabel(selected),category:selected.category,actionId:selected.id};
   }
   if(selected.variant){
     // 全体攻撃だけは狙いを決めない。予告の時点で「立っている全員」と決まっているので、
@@ -276,9 +280,9 @@ const chooseEnemyAction = (ent,currentDist,random=Math.random,state={}) => {
     return {type:selected.type,variant:selected.variant,hits:Math.max(1,Math.floor(Number(selected.hits)||1)),
       ...(selected.targetsAll?{targetsAll:true}:{}),
       value:Math.floor(ent.atk*selected.multiplier),label:enemyActionDisplayName(ent,selected),
-      icon:TACTICS_VARIANT_ICONS[selected.variant]||ENEMY_ACTION_ICONS[selected.type]||'⏳',notice:enemyActionNoticeLabel(selected),actionId:selected.id};
+      icon:TACTICS_VARIANT_ICONS[selected.variant]||ENEMY_ACTION_ICONS[selected.type]||'⏳',notice:enemyActionNoticeLabel(selected),category:selected.category,actionId:selected.id};
   }
-  return {type:selected.type,value:Math.floor(ent.atk*selected.multiplier),label:enemyActionDisplayName(ent,selected),icon:ENEMY_ACTION_ICONS[selected.type]||'⏳',notice:enemyActionNoticeLabel(selected),actionId:selected.id};
+  return {type:selected.type,value:Math.floor(ent.atk*selected.multiplier),label:enemyActionDisplayName(ent,selected),icon:ENEMY_ACTION_ICONS[selected.type]||'⏳',notice:enemyActionNoticeLabel(selected),category:selected.category,actionId:selected.id};
 };
 
 // 難易度選択プレビューと本番の敵生成が必ず同じ値になるための唯一の生成ヘルパー。

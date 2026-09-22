@@ -596,9 +596,19 @@ check('実戦の行動表も難易度つきで引く',
   check('出すのはタクティクスだけ(既存5モードは今までどおり❗)',
     battleScreen.includes("enemyIntent.type==='ATTACK'&&!Array.isArray(tacticsUnits)&&"));
   // ★札を出すかどうかは enemyNoticeShown 1か所で決める(ムーは丸枠の外、ほかは丸枠の右上へ
-  //   出すため、条件を2か所に書き写さない)。末尾の && まで見ると、まとめ方を変えただけで落ちる
-  check('中央に大きく出ているときは、右上へ重ねない',
-    battleScreen.includes("enemyIntent.notice&&enemyIntent.type!=='PIERCE_CHARGE'"));
+  //   出すため、条件を2か所に書き写さない)
+  // ★2026-09-22 ユーザー指摘「必殺技のためると必殺準備が被って出てる。それって本来
+  //   どっちかでいいはずだよね」。まんなかの大きい警告と札が同じことを言ったうえ、重なって
+  //   どちらも読めなくなっていた。タクティクスは**札にまとめ**、まんなかの警告は札の無い
+  //   既存5モードのために残す。貫通技準備だけ札から外していたのも、警告と被るためだった
+  check('札を出すかどうかは1か所で決める',
+    battleScreen.includes('const enemyNoticeShown = !ecoBattleView&&!!enemy&&!!enemyIntent&&!isBusy&&!enemyAttackFx')
+      && battleScreen.includes('&&Array.isArray(tacticsUnits)&&!!enemyIntent.notice;'));
+  check('札は貫通技準備も含めて全部の行動で出す',
+    !battleScreen.includes("enemyIntent.notice&&enemyIntent.type!=='PIERCE_CHARGE'"));
+  check('タクティクスではまんなかに大きく出さない',
+    ['SPECIAL', 'CHARGE', 'PIERCE_CHARGE'].every(type =>
+      battleScreen.includes(`!Array.isArray(tacticsUnits)&&enemyIntent.type==='${type}'&&(`)));
 }
 
 // --- 誰が食らったかを枠で見せる(2026-09-22 ユーザー指示) ---

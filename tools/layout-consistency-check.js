@@ -275,8 +275,11 @@ check('難易度タブは背の低い端末で縦スクロールできる',
 check('強化の札はふだんアイコン1行で出す',
   has('data-battle-buff-icons className="flex-1 min-w-0 flex items-center gap-1 overflow-x-auto scrollbar-hide"')
     && !has('flex flex-wrap justify-center gap-1 max-w-[340px] shrink-0 px-2 pt-1 pb-0.5 bg-slate-950'));
-check('強化の詳細は中でスクロールして高さが伸びない',
-  has('data-battle-buff-list className="flex-1 min-w-0 flex flex-wrap justify-center gap-1 overflow-y-auto mh-scroll" style={{maxHeight:\'92px\'}}'));
+// ★伸びてよいのは**3段まで**(2026-09-22 ユーザー指示「最大3列ぐらいまで伸びてあとは
+//   スクロールでみれるようにして」)。札は23px、2段目からの行送りは26pxなので 3段 = 75px。
+//   実際に3段で止まること・その先をスクロールで読めることは tactics-browser-check が実ブラウザで見る
+check('強化の詳細は3段までで、あとは中でスクロールする',
+  has('data-battle-buff-list className="flex-1 min-w-0 flex flex-wrap justify-center gap-1 overflow-y-auto mh-scroll" style={{maxHeight:\'75px\'}}'));
 check('強化の札は「詳細」で開け閉めできる',
   has('data-battle-buff-toggle={buffDetail?\'close\':\'open\'}')
     && has('const [buffDetail, setBuffDetail] = useState(false);'));

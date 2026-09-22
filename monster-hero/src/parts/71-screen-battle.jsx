@@ -58,7 +58,7 @@ function BattleScreen({
   setShowBattleLog, setShowDeckInfo, setShowEnemyInfo, setShowHeroInfo, setShowQuitConfirm,
   setShowSoulBattleEffects, setSkillPicker, setSlotSettle, slotMaxUses, slotSettle, slotSkill,
   slotUniqueChoice, slots, soulBattleParty, soulCoordinationCardBonus, suppressCardClickRef,
-  tacticsCanAssign, tacticsCardBlock, tacticsSlotFx, tacticsUnits,
+  tacticsCanAssign, tacticsCardBlock, tacticsCardGenre, tacticsCardScope, tacticsSlotFx, tacticsUnits,
   teachingFx, totalTurnCount, turnCount, ultimateDistanceBreakLevels, ultraBattleView,
   unifiedSpecialDefense, useEmergency, wave,
 }) {
@@ -66,6 +66,11 @@ function BattleScreen({
   // ★いくつ付いても高さが変わらないようにするための状態。ここが無いと、
   //   札が3行4行に伸びて敵の絵・緊急のボタン・与ダメの数字を押し出す
   const [buffDetail, setBuffDetail] = useState(false);
+  // バトル中の設定メニュー(2026-09-22 ユーザー指示「BGMは右上に設定ボタンみたいの作って
+  // そこにギブアップとかヘルプとかと一緒にまとめて」)。
+  // ★ヘッダーに3つ並べていた入口(ヘルプ・あきらめる)とBGMを1つにまとめる。
+  //   どれもバトル中に何度も押すものではないので、1枚めくる形にしても手が止まらない
+  const [showBattleMenu, setShowBattleMenu] = useState(false);
   // ★いま狙われている枠(2026-09-21 ユーザー指摘「誰に攻撃か分からない」)。
   //   間合い攻撃は相手を1体決めず「予告した間合いに立っている子」へ当たるので、
   //   ほかの技と違って targetName を持たない。予告を見ても間合いしか分からなかった。
@@ -155,8 +160,12 @@ function BattleScreen({
   const plannedDamageFor = (slotIdx) => plannedHitFor(slotIdx).taken;
   // ★敵が次に何をするかの札(「3連撃！」など)。作りはここ1か所にして、置き場所だけ変える。
   //   ムーは丸枠の外、ほかの敵は丸枠の右上へ出すので、下の2か所から呼ぶ
+  // ★貫通技準備もこの札で出す(2026-09-22 ユーザー指摘「必殺技のためると必殺準備が被って出てる。
+  //   それって本来どっちかでいいはずだよね」)。それまでは貫通技準備だけ札から外し、画面まんなかの
+  //   大きい警告に任せていたが、必殺技とためるは札と警告が二重に出て、重なってどちらも読めなかった。
+  //   タクティクスはこの札にまとめ、まんなかの警告は札の無い既存5モードのためにそちらへ残した
   const enemyNoticeShown = !ecoBattleView&&!!enemy&&!!enemyIntent&&!isBusy&&!enemyAttackFx
-    &&Array.isArray(tacticsUnits)&&!!enemyIntent.notice&&enemyIntent.type!=='PIERCE_CHARGE';
+    &&Array.isArray(tacticsUnits)&&!!enemyIntent.notice;
   const enemyNoticeCard = () => {
     // ★色・動き・光り方を効果で変える(2026-09-22 ユーザー指示「吹き出しを
     //   効果によって変えると見た目がいい」)。文字を読む前に、攻めてくるのか
@@ -189,6 +198,23 @@ function BattleScreen({
   return (
 
       <div className="flex-1 flex flex-col h-full relative" data-battle-speed={battleSpeed} data-eco-view={ultraBattleView?'ultra':liteBattleView?'lite':'off'}>
+        {/* 舞台の照明(2026-09-22 ユーザー指示「全体的に安っぽい作りをなんとかしたい。
+            イメージ画みたいにかっこよくできないかな？」)。
+            ★画像は足さない。スマホの通信量に直に効くうえ、敵ごとに背景を用意すると際限がない
+              (docs/rules/ASSETS.md)。上からの光・床の照り返し・周辺減光の3枚だけで奥行きを作る。
+            ★静止した塗りなので、描き直しも起きず省エネ表示でも負荷は変わらない。
+            ★いちばん後ろ(z-0)。この上に載る帯はどれも bg-slate-950 で塗ってあるので、
+              光が見えるのは敵のいる舞台だけになる */}
+        <div data-battle-stage-bg aria-hidden="true" className="absolute inset-0 pointer-events-none" style={{zIndex:0,
+          background:[
+            // 上からの光。敵の頭の高さを中心に、青白く落とす
+            'radial-gradient(116% 62% at 50% 20%, rgba(96,124,206,.34) 0%, rgba(30,38,72,.30) 46%, rgba(0,0,0,0) 72%)',
+            // 床の照り返し。間合いバーのあたりを薄く持ち上げて、立っている場所を感じさせる
+            'radial-gradient(72% 26% at 50% 78%, rgba(88,116,196,.20) 0%, rgba(0,0,0,0) 100%)',
+            // 周辺減光。四隅を落とすと、まんなかの敵に目が行く
+            'radial-gradient(120% 86% at 50% 38%, rgba(0,0,0,0) 38%, rgba(3,5,12,.72) 100%)',
+            'linear-gradient(180deg, #0a0e1e 0%, #070a16 62%, #05070f 100%)',
+          ].join(',')}}/>
         {liteBattleView&&<div data-lite-eco-dimmer className="absolute inset-0 bg-black/20 pointer-events-none" style={{zIndex:89999}} aria-hidden="true"/>}
         <header data-battle-header className="h-[5%] min-h-[40px] shrink-0 bg-slate-900 px-1.5 flex items-center border-b border-white/5 z-[6500] overflow-hidden">
           <div className={`flex flex-1 min-w-0 items-center gap-0.5 overflow-hidden${battleTutorialSpotClass('waveInfo')}`}>{debugBattle&&<span className="text-[7px] font-black text-fuchsia-300 border border-fuchsia-500/40 rounded px-1 py-0.5 tracking-widest">DEBUG</span>}<span className={`text-[8px] font-black bg-opacity-10 px-1 py-0.5 rounded border tracking-tight whitespace-nowrap ${difficulty==='Hard'?'text-red-400 bg-red-500 border-red-500':'text-indigo-400 bg-indigo-500 border-indigo-500'}`}>WAVE {wave}/10</span>{/* 狭い幅ではモード名だけを縮め、ターン・スコアと右側の操作領域は動かさない */}<span className="min-w-0 overflow-hidden text-ellipsis text-[7px] font-black px-1 py-0.5 rounded border whitespace-nowrap" style={{color:battleModeInfo(runMode).color,borderColor:`${battleModeInfo(runMode).color}66`,backgroundColor:'rgba(0,0,0,.35)'}}>{extremeRun?`極限チャレンジ / ${extremeDifficulty}`:<>{battleModeInfo(runMode).short} / {QUICK_DIFFICULTY_SETTINGS[safeDifficulty]?.label||safeDifficulty}</>}</span></div>
@@ -196,7 +222,7 @@ function BattleScreen({
             <div data-battle-turn className="flex flex-col items-center justify-center whitespace-nowrap font-black text-blue-400"><span className="flex items-center gap-0.5 text-[10px] tracking-wide"><Timer size={7}/>TURN</span><span className="mt-0.5 text-[10px] font-mono">{turnCount}/20</span></div>
             {!isQuickMode(runMode)&&<div data-battle-score className="flex min-w-[64px] flex-col items-end justify-center whitespace-nowrap font-mono font-black text-amber-500"><span className="flex items-center gap-0.5 text-[10px] tracking-wide"><Award size={7}/>SCORE</span><span data-battle-score-value className="mt-0.5 text-[10px] tabular-nums">{score.toLocaleString()}</span></div>}
           </div>
-          <div data-battle-controls className="flex shrink-0 items-center gap-0.5"><button type="button" disabled={!!battleTutorial||autoRepeat} onClick={cycleBattleSpeed} aria-label={battleTutorial?'バトルのれんしゅう中は1倍固定':autoRepeat?'∞周回中は4倍固定':`バトル速度、現在${battleSpeed}倍。タップで切り替え`} title={autoRepeat?'∞周回中は×4固定':undefined} className="shrink-0 min-w-[42px] h-[28px] px-1.5 rounded-lg border-2 font-black text-[11px] leading-none active:scale-90 disabled:cursor-not-allowed disabled:opacity-60" style={{color:'#fef3c7',borderColor:'#f59e0b',backgroundColor:'rgba(120,53,15,.72)',boxShadow:'0 0 9px rgba(245,158,11,.35)'}}>×{battleSpeed}{autoRepeat&&<span className="ml-0.5 text-[10px]">固定</span>}</button><button onClick={()=>openHelp()} aria-label="ヘルプ" className="shrink-0 w-[28px] h-[28px] flex items-center justify-center bg-slate-800 rounded text-emerald-400 active:scale-90"><HelpCircle size={14}/></button><button data-battle-quit disabled={!!battleTutorial} onClick={()=>setShowQuitConfirm(true)} aria-label="諦める" className="shrink-0 w-[28px] h-[28px] flex items-center justify-center bg-slate-800 rounded text-slate-400 active:scale-90 disabled:opacity-25"><Flag size={14}/></button></div>
+          <div data-battle-controls className="flex shrink-0 items-center gap-0.5"><button type="button" disabled={!!battleTutorial||autoRepeat} onClick={cycleBattleSpeed} aria-label={battleTutorial?'バトルのれんしゅう中は1倍固定':autoRepeat?'∞周回中は4倍固定':`バトル速度、現在${battleSpeed}倍。タップで切り替え`} title={autoRepeat?'∞周回中は×4固定':undefined} className="shrink-0 min-w-[42px] h-[28px] px-1.5 rounded-lg border-2 font-black text-[11px] leading-none active:scale-90 disabled:cursor-not-allowed disabled:opacity-60" style={{color:'#fef3c7',borderColor:'#f59e0b',backgroundColor:'rgba(120,53,15,.72)',boxShadow:'0 0 9px rgba(245,158,11,.35)'}}>×{battleSpeed}{autoRepeat&&<span className="ml-0.5 text-[10px]">固定</span>}</button><button data-battle-menu-button type="button" onClick={()=>setShowBattleMenu(true)} aria-label="設定（BGM・ヘルプ・あきらめる）" title="設定" className="shrink-0 w-[28px] h-[28px] flex items-center justify-center bg-slate-800 rounded text-slate-300 active:scale-90"><Settings size={15}/></button></div>
         </header>
         {ultraBattleView?(
           <div data-ultra-battle-view className="flex-1 min-h-0 flex flex-col bg-slate-950 text-slate-100">
@@ -266,8 +292,13 @@ function BattleScreen({
               <span className={`flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5 leading-none ${wave===10?'text-red-500 animate-pulse':'text-slate-200'}`}><Skull size={11} className="shrink-0"/><span className="max-w-[34vw] truncate">{enemy.name}</span><span className={`shrink-0 px-1.5 py-0.5 rounded-full text-[10px] text-white font-bold border ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border}`}>{RANGE_LABELS[enemyDist]}</span>{iceLockTurns>0&&<span data-ice-lock-status className="shrink-0 px-1 py-0.5 rounded-full border border-cyan-400/60 bg-cyan-950/80 text-[10px] not-italic tracking-tighter whitespace-nowrap text-cyan-100">❄️絶氷 {iceLockPreparing?'準備':<>{iceLockTurns}T　⬇30%</>}</span>}</span>
               <span className="text-red-500 flex items-center gap-1 font-mono drop-shadow-[0_1px_3px_rgba(0,0,0,1)]">{Math.max(0,enemy.hp).toLocaleString()} / {enemy.maxHp.toLocaleString()}</span>
             </div>
-            <div className="h-2.5 bg-slate-900 rounded-full overflow-hidden border border-white/20 relative shadow-inner">
-              <div className="h-full bg-gradient-to-r from-red-700 via-red-500 to-orange-400 transition-all duration-1000" style={{width:`${(Math.max(0,enemy.hp)/enemy.maxHp)*100}%`,backgroundImage:'linear-gradient(to right, #b91c1c, #ef4444, #fb923c)'}}></div>
+            {/* 敵のライフ(2026-09-22 ユーザー指示「全体的に安っぽい作りをなんとかしたい」)。
+                ★細い線だったものを、ガラスの筒に色が入っているように見せる。
+                  中身は上から下へ暗くなる縦のグラデーション、筒の上半分に白い照りを重ねる。
+                ★太くしたのは4pxだけ。ここは敵の名前と同じ帯なので、伸ばすと舞台が縮む */}
+            <div className="relative h-[14px] overflow-hidden rounded-full border-2 border-white/25 bg-slate-950" style={{boxShadow:'inset 0 2px 6px rgba(0,0,0,.85)'}}>
+              <div className="h-full transition-all duration-1000" style={{width:`${(Math.max(0,enemy.hp)/enemy.maxHp)*100}%`,backgroundImage:'linear-gradient(180deg,#fca5a5 0%,#ef4444 38%,#b91c1c 72%,#7f1d1d 100%)'}}></div>
+              <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-1/2" style={{background:'linear-gradient(180deg,rgba(255,255,255,.30),rgba(255,255,255,0))'}}></div>
             </div>
           </div>
         )}
@@ -276,30 +307,108 @@ function BattleScreen({
             (中央のままだと上へスクロールできず、頭の「!」や技名が読めなくなる)。
             safe を知らないブラウザは宣言ごと捨てるので、クラスの justify-start が残る */}
         <main className="flex-1 relative flex flex-col items-center justify-start pt-3 pb-1 px-2 overflow-x-visible overflow-y-auto min-h-0" style={{justifyContent:'safe center'}}>
-          {/* 移動の吹き出し(画面の上から22%)と重なるため、左の「緊急」と同じ高さまで下げている */}
-          <button onClick={()=>setShowEnemyInfo(true)} className="absolute right-2 top-24 flex flex-col items-center justify-center p-2 rounded-2xl border border-red-500 bg-red-950/30 active:scale-90 z-20 shadow-lg"><Search className="text-red-400 mb-0.5" size={14}/><span className="text-[10px] font-black text-white">解析</span></button>
-          <button onClick={()=>setShowHeroInfo(true)} className={`absolute left-2 top-10 flex flex-col items-center justify-center p-2 rounded-2xl border border-indigo-500 bg-indigo-950/30 active:scale-90 z-20 shadow-lg${battleTutorialSpotClass('heroStatus')}`}><Crown className="text-indigo-400 mb-0.5" size={14}/><span className="text-[10px] font-black text-white">ステータス</span></button>
-          {battleSoulMasus.some(m=>normalizeSoulRankStage(m.soulRankStage)>0)&&<button data-soul-battle-effects-button type="button" onClick={()=>setShowSoulBattleEffects(true)} className="absolute right-2 top-10 min-h-[44px] min-w-[52px] flex flex-col items-center justify-center px-2 py-1 rounded-2xl border border-sky-400 bg-sky-950/60 active:scale-90 z-20 shadow-lg"><Sparkles className="text-sky-300 mb-0.5" size={14}/><span className="text-[10px] font-black text-white">魂格効果</span></button>}
+          {/* 敵のまわりのボタンは左の1列にまとめる(2026-09-22 ユーザー指示
+              「敵周りのボタンを整理したほうがいい。添付イメージ画像のように左にきれいに並べるなど」)。
+              ★もとは左(ステータス・緊急)と右(解析・ログ・魂格効果)に分かれていて、敵の絵を両側から
+                削っていた。片側へ寄せると**右がまるごと空く**ので、そこへ敵の行動予告を置ける。
+              ★並びは今までの左の順(ステータス→緊急)を先に置き、右にあった2つをその下へ足す。
+                指が覚えている場所をできるだけ動かさない。
+              ★幅と高さはそろえるが、色は役割ごとに残す(青=勇者/緊急、赤=敵を見る、琥珀=記録)。
+                全部同じ色にすると、とっさに押し分けられなくなる。
+              ★**折り返さない。1列のまま。** 狭い端末で入り切らないぶんを2列へ回したことがあるが、
+                2列目がモンスターの絵に重なった(2026-09-22 ユーザー指摘「2列折り返しで
+                モンスターにかぶってるのは論外」)。絵に何かを重ねるのは無し。
+                入らないのは舞台そのものが低いからなので、**直すのは画面の縦の使い方**であって、
+                ボタンの並べ方ではない(行動予告を右へ出す・味方の段をまとめる、で縦を作る) */}
+          {/* 敵のまわりの入口は、1列に積まず**舞台の四隅**へ置く(2026-09-22 ユーザー指示
+              「解析ボタンを右欄に置けばいい」「ログは左上」「ステータスは左エリアの
+              バフ帯の上に置くとかがよさそう」)。
+              ★1列に積むと、舞台が低い端末で下のほうが表示から外れる。四隅なら舞台の高さが
+                変わっても、上の2つは上に、下の2つは下に貼り付いたままになる。
+              ★下の2つは舞台の下端(bottom-1)。舞台の外にある間合いバーや強化の札とは重ならない。
+              ★右は上が「解析」、下が敵の行動予測。どちらも敵を読むためのものなので同じ側へ寄せた。
+              ★幅と高さはそろえるが、色は役割ごとに残す(青=勇者、赤=敵を見る、琥珀=記録)。
+                全部同じ色にすると、とっさに押し分けられなくなる */}
+          <button data-battle-log-button type="button" onClick={()=>setShowBattleLog(true)} aria-label="バトルの記録を見る" title="バトルの記録" className="absolute left-2 top-1 z-20 flex w-[62px] flex-col items-center justify-center gap-0.5 rounded-2xl border border-white/20 bg-slate-900/85 py-1.5 active:scale-95" style={{boxShadow:'0 4px 14px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.16)'}}><BookOpen size={17} className="text-amber-300"/><span className="text-[10px] font-black leading-none text-white">ログ</span></button>
+          <button onClick={()=>setShowHeroInfo(true)} aria-label="勇者モンのステータス" className={`absolute left-2 bottom-1 z-20 flex w-[62px] flex-col items-center justify-center gap-0.5 rounded-2xl border border-white/20 bg-slate-900/85 py-1.5 active:scale-95${battleTutorialSpotClass('heroStatus')}`} style={{boxShadow:'0 4px 14px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.16)'}}><Crown size={17} className="text-indigo-300"/><span className="text-[10px] font-black leading-none text-white">ステータス</span></button>
+          <button onClick={()=>setShowEnemyInfo(true)} aria-label="敵を解析する" className="absolute right-2 top-1 z-20 flex w-[62px] flex-col items-center justify-center gap-0.5 rounded-2xl border border-white/20 bg-slate-900/85 py-1.5 active:scale-95" style={{boxShadow:'0 4px 14px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.16)'}}><Search size={17} className="text-red-300"/><span className="text-[10px] font-black leading-none text-white">解析</span></button>
+          {battleSoulMasus.some(m=>normalizeSoulRankStage(m.soulRankStage)>0)&&<button data-soul-battle-effects-button type="button" onClick={()=>setShowSoulBattleEffects(true)} aria-label="魂格効果" className="absolute right-2 top-[56px] z-20 flex w-[62px] flex-col items-center justify-center gap-0.5 rounded-2xl border border-white/20 bg-slate-900/85 py-1.5 active:scale-95" style={{boxShadow:'0 4px 14px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.16)'}}><Sparkles size={17} className="text-sky-300"/><span className="text-[10px] font-black leading-none text-white">魂格効果</span></button>}
+          {/* 敵が次に何をしてくるかの札(2026-09-19・ユーザー指摘「敵の行動予測が見えない」)。
+              ★置き場所は**敵の絵の右下**(2026-09-22 ユーザー指示「敵の行動予測は右下に出るほうが
+                良くない？ ただバフ帯と被らないように」)。舞台の下端に貼るので、舞台の外にある
+                強化の札とは重ならない。右の上には「解析」が居る。もとは絵の下に帯として出していたが、丸1本へ技名・連撃数・
+                狙われた子・予想ダメージを詰め込んでいたので、長い技名だと溢れていた。
+                行を分けると、読む順(何をしてくる→だれに→いくつ減る)がそのまま縦に並ぶ。
+              ★帯をやめたぶん**画面の縦が25px空く**。間合いバーで使ったぶんをここで返す。
+              ★絶対位置で置く。フローに置くと、絵が大きい場面で main(overflow-y-auto)の
+                外へ押し出されて消える(2026-09-18 に出した不具合)。絶対位置なら押し出されない。
+              ★data-enemy-intent は検査の手がかり。どの行動が予告されているかは抽選なので、
+                画面の文字から探すと「今回はためるだった」で落ちる */}
+          {enemy&&enemyIntent&&!isBusy&&(()=>{
+            // ためる・待機・移動はダメージが無いので「予測」を出さない。
+            // 出すと必ず0になり、ガードを構える判断の邪魔になる
+            // 新モードは「狙われた子の丈夫さ」で受け、「その子が構えたガード」だけが効く。
+            // ★targetSlot が無いモードでは今までどおりパーティの値で出る
+            const aimedSlot=Number.isInteger(enemyIntent.targetSlot)?enemyIntent.targetSlot:null;
+            const rawDmg=getIncomingDamageBeforeTurnReduction(enemyIntent,aimedSlot);
+            // ★数え方は plannedDamageFor に1か所だけ置く(枠ごとの表示と同じ関数を通す)。
+            //   2か所に書くと、ガードの数え方を直したときに片方だけ古くなる
+            const plannedHit=plannedHitFor(aimedSlot);
+            const plannedDmg=plannedHit.taken;
+            // 連撃は「129・130」と1発ずつ。1発の技は今までどおり数字ひとつ
+            const plannedText=plannedHit.parts.join('・');
+            // ★連撃は1発ずつ並べると合計がどこにも出ない(2026-09-22 ユーザー指摘「連撃ダメージで
+            //   合計ダメージと軽減後の合計ダメージがないといくつくらうかわからない」)。
+            //   ガードやターン軽減が効いていれば「軽減前→軽減後」で、効き目もそのまま読める
+            const plannedTotalText=plannedHit.raw>plannedDmg?`${plannedHit.raw}→${plannedDmg}`:`${plannedDmg}`;
+            // ★全体攻撃は受ける量が1体ずつ違う。1つの数字にまとめると、
+            //   どの子がどれだけ減るのか分からなくなるので、吹き出しには出さず枠ごとに出す
+            const showPlannedInBubble=!enemyIntent.targetsAll;
+            const tone=enemyIntent.type==='SPECIAL'?'bg-fuchsia-950 border-fuchsia-500 text-fuchsia-300'
+              :enemyIntent.type==='CHARGE'?'bg-amber-950 border-amber-500 text-amber-400'
+              :enemyIntent.type==='PIERCE_CHARGE'?'bg-rose-950 border-rose-500 text-rose-300'
+              :enemyIntent.type==='MOVE'?'bg-cyan-950 border-cyan-500/60 text-cyan-300'
+              :'bg-red-950 border-red-600/50 text-red-400';
+            // 敵の絵のすぐ下へ置く(2026-09-18・ユーザー依頼)。mt-auto で下端へ押しやっていたため、
+            // 絵と「次に何をしてくるか」のあいだに200pxほどの空きができ、視線が大きく動いていた。
+            // 余りの高さは、この下のバフ帯の mt-auto がまとめて吸う。
+            // ★ためるだけは、敵ごとの技名を持たないので label が「必殺技の準備をしている」という
+            //   説明文になり、右上の吹き出しの「必殺技準備」を長く言い直しただけになっていた
+            //   (2026-09-22 ユーザー指摘「他のにならってやると攻撃予測のとこをためるにして
+            //   吹き出しを必殺技準備が正解なはず」)。ほかの行動にならって短い呼び名にそろえる。
+            // ★貫通の構えは敵ごとに「◯◯の構え」という名前が付くので、label のままにする。
+            // ★何連撃かはここへ書かない。右上の吹き出しが「3連撃！」と出す側で、
+            //   両方に書くと同じことを2回言ううえ、札の幅(100px)で名前が2行に折り返す
+            const intentTitle=enemyIntent.type==='CHARGE'&&enemyIntent.category?enemyIntent.category:enemyIntent.label;
+            return (
+              <div data-enemy-intent
+                className={`absolute right-2 bottom-1 z-[45] w-[100px] rounded-xl border px-1.5 py-1 shadow-lg animate-pulse${battleTutorialSpotClass('enemyIntent')} ${focusedCard?'invisible':'visible'} ${tone}`}>
+                <div className="flex items-center gap-1 text-[8px] font-black uppercase tracking-wider opacity-80"><Target size={9}/>次の行動</div>
+                <div className="mt-0.5 text-[11px] font-black leading-tight">{intentTitle}</div>
+                {aimedName?<div className="mt-0.5 truncate text-[9px] font-bold leading-none opacity-90">🎯{aimedName}</div>:null}
+                {rawDmg>0&&showPlannedInBubble&&plannedText?(
+                  <div className="mt-1 rounded bg-black/55 px-1 py-1 text-center leading-none">
+                    <div className="text-[12px] font-black tabular-nums">{plannedTotalText}</div>
+                    {plannedHit.parts.length>1?<div className="mt-0.5 text-[9px] font-bold tabular-nums text-white/80">{plannedText}</div>:null}
+                  </div>
+                ):null}
+              </div>
+            );
+          })()}
           {turnCount===1&&battleSoulMasus.some(m=>normalizeSoulRankStage(m.soulRankStage)>0)&&!isBusy&&<div data-soul-battle-start-summary className="absolute left-1/2 top-2 -translate-x-1/2 z-10 max-w-[62%] truncate rounded-full border border-sky-400/30 bg-sky-950/75 px-2 py-1 text-[10px] font-black text-sky-100 pointer-events-none">魂格効果 発動中{Math.round(soulBattleParty.damageReduction*10)/10>0?` ・鉄壁${(Math.round(soulBattleParty.damageReduction*10)/10)}%`:''}{unifiedSpecialDefense.rate>0?` ・特殊防御${(Math.round(unifiedSpecialDefense.rate*10)/10)}%`:''}{battleIntimidate>0?` ・威圧${(Math.round(battleIntimidate*10)/10)}%`:''}{soulCoordinationCardBonus>0?' ・カード+1':''}</div>}
-          {/* バトルの記録(2026-09-22 ユーザー依頼「バトル中のログを付けることって可能？」)。
-              ★置き場所は敵の絵の右の空き(ユーザー指示「敵の両サイドに少し空きがあるから
-                そこにログボタンをつける」)。画面に帯を出さないので、狭い縦を1pxも奪わない。
-              ★「敵を見る」(top-24)の下にそろえる。左は勇者・緊急の操作、右は見るための入口 */}
-          <button data-battle-log-button type="button" onClick={()=>setShowBattleLog(true)} aria-label="バトルの記録を見る" title="バトルの記録" className="absolute right-2 top-40 flex min-h-[44px] min-w-[44px] flex-col items-center justify-center rounded-2xl border border-amber-500/70 bg-amber-950/30 p-2 shadow-lg active:scale-90 z-20"><span className="text-[13px] leading-none">📜</span><span className="mt-0.5 text-[10px] font-black text-white">ログ</span></button>
-          <button onClick={useEmergency} disabled={isBusy||autoBattle||!battleTutorialAllowsEmergency} className={`absolute left-2 top-24 flex flex-col items-center justify-center p-2 rounded-2xl border border-blue-500 bg-blue-900/30 active:scale-90 disabled:opacity-20 z-20 shadow-lg${battleTutorialSpotClass('emergency')}`}><Activity className="text-blue-400 mb-0.5" size={16}/><span className="text-[10px] font-black text-white">緊急</span></button>
           <div className="mt-1 relative flex flex-col items-center">
             {enemySkillName&&(
               <div className="fixed left-1/2 -translate-x-1/2 pointer-events-none whitespace-nowrap" style={{top:'14%',zIndex:65000,animation:liteBattleView?undefined:'skillNamePop 350ms ease-out forwards'}}>
                 <div className="px-4 py-1.5 rounded-xl font-black text-[13px] bg-red-700 border-2 border-red-200 text-white shadow-[0_2px_16px_rgba(0,0,0,0.9)] flex items-center gap-2"><span>{cardIconNode(enemySkillName.icon,16)}</span>{enemySkillName.label}</div>
               </div>
             )}
-            {enemy&&enemyIntent&&!isBusy&&!enemyAttackFx&&enemyIntent.type==='SPECIAL'&&(
+            {enemy&&enemyIntent&&!isBusy&&!enemyAttackFx&&!Array.isArray(tacticsUnits)&&enemyIntent.type==='SPECIAL'&&(
               <div className="fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1" style={{top:'11%',zIndex:65000,animation:'specialWarnFlash 500ms ease-in-out infinite'}}>
                 <div className="text-5xl drop-shadow-[0_0_20px_rgba(217,70,239,1)]">☠️</div>
                 <div className="px-3 py-1 rounded-lg bg-gradient-to-r from-purple-900 via-fuchsia-700 to-purple-900 border-2 border-fuchsia-300 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(217,70,239,0.9)]">必 殺 技</div>
               </div>
             )}
-            {enemy&&enemyIntent&&!isBusy&&!enemyAttackFx&&enemyIntent.type==='CHARGE'&&(
+            {enemy&&enemyIntent&&!isBusy&&!enemyAttackFx&&!Array.isArray(tacticsUnits)&&enemyIntent.type==='CHARGE'&&(
               <div className="fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1" style={{top:'11%',zIndex:65000,animation:'specialWarnFlash 700ms ease-in-out infinite'}}>
                 <div className="text-5xl drop-shadow-[0_0_20px_rgba(251,191,36,1)]">✨</div>
                 <div className="px-3 py-1 rounded-lg bg-gradient-to-r from-amber-900 via-amber-600 to-amber-900 border-2 border-amber-200 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(251,191,36,0.9)]">た め る</div>
@@ -311,7 +420,7 @@ function BattleScreen({
                 ★呼び名は「貫通の構え」から変えた(2026-09-22 ユーザー指示「吹き出しは
                 貫通技準備とかがいいかな？」)。予告の帯には敵ごとの技名(「◯◯の構え」)が
                 出るので、そこへ種別の「構え」を重ねると同じ言葉が2つ並んで読みにくかった */}
-            {enemy&&enemyIntent&&!isBusy&&!enemyAttackFx&&enemyIntent.type==='PIERCE_CHARGE'&&(
+            {enemy&&enemyIntent&&!isBusy&&!enemyAttackFx&&!Array.isArray(tacticsUnits)&&enemyIntent.type==='PIERCE_CHARGE'&&(
               <div className="fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1" style={{top:'11%',zIndex:65000,animation:'specialWarnFlash 700ms ease-in-out infinite'}}>
                 <div className="text-5xl drop-shadow-[0_0_20px_rgba(244,63,94,1)]">⚔️</div>
                 <div className="px-3 py-1 rounded-lg bg-gradient-to-r from-rose-900 via-rose-600 to-rose-900 border-2 border-rose-200 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(244,63,94,0.9)]">貫 通 技 準 備</div>
@@ -403,7 +512,11 @@ function BattleScreen({
               </div>
             )}
             {/* 行動予測ラベルはmain下部に移動 */}
-            <div className={`rounded-full transition-all duration-500 border-4 relative ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border} ${RANGE_STYLES[enemyDist].shadow} ${RANGE_STYLES[enemyDist].glow} shadow-[0_0_50px]`} style={enemyAttackAnim&&!ecoBattleView?{padding:'clamp(6px,1.5dvh,16px)',animation:(enemyAttackFx?.kind==='move'?(isMooBoss(enemy?.id)?'enemyMoveSlideMoo 1000ms ease-in-out forwards':'enemyMoveSlide 1000ms ease-in-out forwards'):enemyAttackFx?.kind==='charge'?'enemyChargeShake 1100ms ease-in-out forwards':'enemyAttackFly 450ms ease-in forwards'), ...(isMooBoss(enemy?.id)&&enemyAttackFx?.kind!=='move'?{top:'3dvh'}:{}),...(!isMooBoss(enemy?.id)&&enemyAttackFx?.kind!=='move'?{zIndex:9999}:{})}:{padding:'clamp(6px,1.5dvh,16px)',...(isMooBoss(enemy?.id)?{top:'3dvh'}:{})}}>
+            <div className={`rounded-full transition-all duration-500 border-4 relative bg-black/35 ${RANGE_STYLES[enemyDist].border} ${RANGE_STYLES[enemyDist].shadow} ${RANGE_STYLES[enemyDist].glow} shadow-[0_0_50px]`} style={enemyAttackAnim&&!ecoBattleView?{padding:'clamp(6px,1.5dvh,16px)',animation:(enemyAttackFx?.kind==='move'?(isMooBoss(enemy?.id)?'enemyMoveSlideMoo 1000ms ease-in-out forwards':'enemyMoveSlide 1000ms ease-in-out forwards'):enemyAttackFx?.kind==='charge'?'enemyChargeShake 1100ms ease-in-out forwards':'enemyAttackFly 450ms ease-in forwards'), ...(isMooBoss(enemy?.id)&&enemyAttackFx?.kind!=='move'?{top:'3dvh'}:{}),...(!isMooBoss(enemy?.id)&&enemyAttackFx?.kind!=='move'?{zIndex:9999}:{})}:{padding:'clamp(6px,1.5dvh,16px)',...(isMooBoss(enemy?.id)?{top:'3dvh'}:{})}}>
+              {/* 足元の影(2026-09-22 ユーザー指示「全体的に安っぽい作りをなんとかしたい」)。
+                  丸枠の塗りを落としたぶん、影が無いと宙に浮いて見える。絵(z-[1])より下へ敷く。
+                  ★丸枠は transform を持つので重ね順の島になる。この中に置けば絵の下に必ず入る */}
+              {!ecoBattleView&&<div aria-hidden="true" className="pointer-events-none absolute left-1/2 z-0 -translate-x-1/2" style={{bottom:'11%',width:'64%',height:'13%',borderRadius:'50%',background:'radial-gradient(50% 50% at 50% 50%, rgba(0,0,0,.62) 0%, rgba(0,0,0,.28) 52%, rgba(0,0,0,0) 76%)'}}></div>}
               {enemy?.imgUrl?(isMooBoss(enemy?.id)?<div style={{width:'clamp(92px,16dvh,142px)',height:'clamp(86px,15dvh,132px)'}}/>:<span className={extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?'mh-nightmare-enemy-aura-shell':'mh-extreme-enemy-aura-shell'):''} style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'clamp(92px,16dvh,142px)',height:'clamp(86px,15dvh,132px)'}}><img src={enemy.imgUrl} alt={enemy?.name} className={`relative z-[1] w-full h-full object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]${extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?' mh-nightmare-enemy-image':' mh-extreme-enemy-image'):''}`}/></span>):(<span className={extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?'mh-nightmare-enemy-aura-shell':'mh-extreme-enemy-aura-shell'):''}><div style={{fontSize:'clamp(58px,10.5dvh,96px)',lineHeight:1}} className={`relative z-[1] drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]${extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?' mh-nightmare-enemy-image':' mh-extreme-enemy-image'):''}`}>{enemy?.emoji}</div></span>)}
               {/* ラスボス・ムー: 丸枠内は台座オーラのみ（本体は枠外に巨大表示） */}
               {!ecoBattleView&&isMooBoss(enemy?.id)&&(
@@ -540,46 +653,81 @@ function BattleScreen({
           </div>
           {/* 技詳細パネルはmain外(画面直下)に移動して、ムー画像と同階層でz-index勝負させる */}
         </main>
-        {/* 敵が次に何をしてくるかの札(2026-09-19・ユーザー指摘「敵の行動予測が見えない」)。
-            2026-09-18に「絵の直下へ寄せる」ため mt-auto(下端へ固定)を外したところ、
-            敵の絵が大きい場面で main(overflow-y-auto)の表示の外へ押し出され、
-            画面の低い端末では見えなくなっていた。**私が持ち込んだ不具合**。
-            強化の札と同じく main の外へ出す。main の直後なので絵のすぐ下に出て、
-            しかも押し出されようがない。 */}
-          {enemy&&enemyIntent&&!isBusy&&(()=>{
-            // ためる・待機・移動はダメージが無いので「予測」を出さない。
-            // 出すと必ず0になり、ガードを構える判断の邪魔になる
-            // 新モードは「狙われた子の丈夫さ」で受け、「その子が構えたガード」だけが効く。
-            // ★targetSlot が無いモードでは今までどおりパーティの値で出る
-            const aimedSlot=Number.isInteger(enemyIntent.targetSlot)?enemyIntent.targetSlot:null;
-            const rawDmg=getIncomingDamageBeforeTurnReduction(enemyIntent,aimedSlot);
-            // ★数え方は plannedDamageFor に1か所だけ置く(枠ごとの表示と同じ関数を通す)。
-            //   2か所に書くと、ガードの数え方を直したときに片方だけ古くなる
-            const plannedHit=plannedHitFor(aimedSlot);
-            const plannedDmg=plannedHit.taken;
-            // 連撃は「129・130」と1発ずつ。1発の技は今までどおり数字ひとつ
-            const plannedText=plannedHit.parts.join('・');
-            // ★連撃は1発ずつ並べると合計がどこにも出ない(2026-09-22 ユーザー指摘
-            //   「連撃ダメージで合計ダメージと軽減後の合計ダメージがないといくつくらうかわからない」)。
-            //   ガードやターン軽減が効いていれば「軽減前→軽減後」で、効き目もそのまま読める
-            const plannedTotalText=plannedHit.raw>plannedDmg?`${plannedHit.raw}→${plannedDmg}`:`${plannedDmg}`;
-            const plannedBubbleText=plannedHit.parts.length>1?`合計 ${plannedTotalText} ＝ ${plannedText}`:plannedText;
-            const previewHits=enemyIntent.variant==='rush'?Math.max(1,Math.floor(Number(enemyIntent.hits)||1)):1;
-            // ★全体攻撃は受ける量が1体ずつ違う。1つの数字にまとめると、
-            //   どの子がどれだけ減るのか分からなくなるので、吹き出しには出さず枠ごとに出す
-            const showPlannedInBubble=!enemyIntent.targetsAll;
-            const tone=enemyIntent.type==='SPECIAL'?'bg-fuchsia-950 border-fuchsia-500 text-fuchsia-300'
-              :enemyIntent.type==='CHARGE'?'bg-amber-950 border-amber-500 text-amber-400'
-              :enemyIntent.type==='PIERCE_CHARGE'?'bg-rose-950 border-rose-500 text-rose-300'
-              :enemyIntent.type==='MOVE'?'bg-cyan-950 border-cyan-500/60 text-cyan-300'
-              :'bg-red-950 border-red-600/50 text-red-400';
-            // 敵の絵のすぐ下へ置く(2026-09-18・ユーザー依頼)。mt-auto で下端へ押しやっていたため、
-            // 絵と「次に何をしてくるか」のあいだに200pxほどの空きができ、視線が大きく動いていた。
-            // 余りの高さは、この下のバフ帯の mt-auto がまとめて吸う。
-            // data-enemy-intent は検査の手がかり。どの行動が予告されているかは抽選なので、
-            // 画面の文字から探すと「今回はためるだった」で落ちる
-            return <div data-enemy-intent className={`mt-1 mb-1 mx-auto w-fit max-w-full border p-1 px-4 rounded-full flex items-center gap-1.5 animate-pulse z-[45] shadow-lg shrink-0${battleTutorialSpotClass('enemyIntent')} ${focusedCard?'invisible':'visible'} ${tone}`}><Target size={12}/><div className="text-[10px] font-black uppercase tracking-tight">{enemyIntent.label}{previewHits>1?` ${previewHits}連撃`:''}{aimedName?` 🎯${aimedName}`:''}{rawDmg>0&&showPlannedInBubble&&plannedBubbleText?` (予定: ${plannedBubbleText})`:''}</div></div>;
-          })()}
+        {/* 間合いバー(2026-09-22 ユーザー依頼「タクティクスバトルのUIレイアウトを良くしたい」)。
+            ★このモードの核は「敵と自分がどの間合いにいるか」なのに、敵の間合いは名前の横のバッジ、
+              味方の間合いは枠の下のラベルと、離れた2か所を見比べないと分からなかった。
+            ★置き場所は敵の絵の下の空き。main(flex-1)が縮むぶんを使うので、画面の縦は1pxも増えない。
+            ★列は下の味方の枠と同じ4分割にそろえる。真下の枠がその間合いの子になるので、
+              線の上の位置と枠が目で結びつく。
+            ★移動の予告が出ているときは、動く先を点線の印で同じ線の上に出す。
+              「次のターンに間合いが変わる」が、吹き出しを読まなくても分かる */}
+        {Array.isArray(tacticsUnits)&&enemy&&(()=>{
+          const moveTo=enemyNextIntent&&enemyNextIntent.type==='MOVE'&&Number.isFinite(enemyNextIntent.targetDist)
+            ?enemyNextIntent.targetDist:null;
+          const here=Number.isFinite(enemyDist)?enemyDist:0;
+          return (
+            <div data-tactics-range-bar={here} data-tactics-range-move={moveTo!=null?String(moveTo):undefined}
+              className={`shrink-0 w-full px-2 pt-1 pb-0.5 bg-slate-950 ${focusedCard?'invisible':'visible'}`}>
+              <div className="relative grid grid-cols-4 gap-1">
+                {/* 軸の線。印は各列の真ん中に立つので、線も列の中心から中心までで止める */}
+                <div aria-hidden="true" className="pointer-events-none absolute top-[28px] h-[3px] rounded-full"
+                  style={{left:'12.5%',right:'12.5%',background:'linear-gradient(to right,#ef4444,#eab308,#10b981,#3b82f6)',
+                    boxShadow:'0 0 8px rgba(120,160,255,.45)'}}></div>
+                {/* 両端の矢印。零から遠まで一本の軸が続いていることを示す(2026-09-22 ユーザー指示) */}
+                <div aria-hidden="true" className="pointer-events-none absolute text-[11px] font-black leading-none text-red-400" style={{top:'24px',left:'calc(12.5% - 13px)'}}>◀</div>
+                <div aria-hidden="true" className="pointer-events-none absolute text-[11px] font-black leading-none text-blue-400" style={{top:'24px',right:'calc(12.5% - 13px)'}}>▶</div>
+                {[0,1,2,3].map(i=>{
+                  const unit=tacticsUnits[i];
+                  const there=!!unit&&!unit.downed;
+                  const isHere=here===i;
+                  const isMove=moveTo===i&&!isHere;
+                  return (
+                    <div key={i} data-tactics-range-cell={i} data-tactics-range-enemy={isHere?'true':undefined}
+                      data-tactics-range-ally={there?'true':undefined}
+                      className="relative flex flex-col items-center">
+                      {/* 敵の顔。いまいる間合いは実線の枠、次に動く先は点線の枠で出す。
+                          ★枠の色は間合いの色ではなく**赤で固定**する。間合いの色にすると、
+                            すぐ下の味方の印と同じ色になり、どちらが敵か形でしか分からなくなる */}
+                      <div className="relative h-[22px] flex items-end justify-center">
+                        {(isHere||isMove)&&(
+                          <div className={`flex items-center justify-center rounded-full border ${isHere
+                            ?'h-[20px] w-[20px] border-red-400 bg-black/75 shadow-[0_0_8px_rgba(239,68,68,.65)]'
+                            :'h-[18px] w-[18px] border-dashed border-cyan-400/70 bg-black/40 opacity-70'}`}>
+                            {enemy.imgUrl
+                              ?<img src={enemy.imgUrl} alt="" className="h-[14px] w-[14px] object-contain"/>
+                              :<Skull size={11} className="text-red-300"/>}
+                          </div>
+                        )}
+                        {/* 動く向きの矢印(2026-09-22 ユーザー指示「移動予告は矢印表記も足したいね」)。
+                            ★点線の丸だけでは「予定」とは読めても、どちらから来るのかが分からなかった。
+                            ★矢印は**来る側**の脇に出す。右へ動くなら丸の左に「→」が立つので、
+                              いまいる間合いから移動先へ視線がそのまま流れる */}
+                        {isMove&&(
+                          <span aria-hidden="true"
+                            className={`absolute bottom-[3px] animate-pulse text-[12px] font-black leading-none text-cyan-300 drop-shadow-[0_0_4px_rgba(34,211,238,.9)] ${moveTo>here?'right-full mr-[1px]':'left-full ml-[1px]'}`}>
+                            {moveTo>here?'→':'←'}
+                          </span>
+                        )}
+                      </div>
+                      {/* 目盛り。立っている子がいる間合いは塗り、空き・倒れている間合いは抜きで出す */}
+                      <div className={`mt-[3px] h-[8px] w-[8px] rotate-45 rounded-[1px] border ${there
+                        ?`${RANGE_STYLES[i].border} ${RANGE_STYLES[i].labelBg}`
+                        :'border-white/25 bg-slate-900'}`}></div>
+                      {/* 間合いの名前。立っている子がいる間合いだけ塗りのバッジにする。
+                          ★字の色を間合いの色にすると、零(赤)が敵の赤い光に埋もれて読めなかった。
+                            下の枠のラベルと同じ「塗り＋白字」にそろえる */}
+                      <span className={`mt-[2px] rounded px-1.5 text-[13px] font-black leading-[16px] ${there
+                        ?`${RANGE_STYLES[i].labelBg} text-white shadow-[0_0_10px_rgba(0,0,0,.6)]`
+                        :'text-slate-500'}`}>
+                        {RANGE_LABELS[i]}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
         {/* 強化の札(2026-09-19・ユーザー指摘「バフデバフ欄が見にくくなってる」)。
             もとは敵のいる main の中に置いていたが、main は overflow-y-auto なので、
             強化が増えて札が2行3行になると表示の外へ押し出され、下の味方バーに隠れて読めなくなっていた。
@@ -651,9 +799,17 @@ function BattleScreen({
             return (
               <div data-battle-buffs={chips.length} data-battle-buffs-mode={buffDetail?'detail':'icon'}
                 className={`shrink-0 w-full max-w-[360px] mx-auto px-2 pt-1 pb-0.5 bg-slate-950 relative z-[40] ${focusedCard?'invisible':'visible'}`}>
+                {/* 「詳細」を開いたときに伸びてよいのは**3段まで**(2026-09-22 ユーザー指示
+                    「最大3列ぐらいまで伸びてあとはスクロールでみれるようにして」)。
+                    ★札は23px、2段目からの行送りは26px。3段 = 23 + 26×2 = 75px。
+                      それより下はこの中で縦スクロールする(スクロールバーは mh-scroll の6px)。
+                    ★伸びたぶんは敵の舞台が縮む。上限を切らないと、舞台の低い端末で絵が切れ、
+                      左下のステータスが絵に重なる(実測: 375×667 で舞台が120pxまで潰れた)。
+                    ★アイコン表示のほうは何個増えても1行のまま(横スクロール)なので、
+                      ふだんは距離帯との位置関係が動かない */}
                 <div className="flex items-start gap-1">
                   {buffDetail?(
-                    <div data-battle-buff-list className="flex-1 min-w-0 flex flex-wrap justify-center gap-1 overflow-y-auto mh-scroll" style={{maxHeight:'92px'}}>
+                    <div data-battle-buff-list className="flex-1 min-w-0 flex flex-wrap justify-center gap-1 overflow-y-auto mh-scroll" style={{maxHeight:'75px'}}>
                       {chips.map(c=>(<div key={c.key} className={`text-[11px] font-black bg-black/60 px-2 py-0.5 rounded border flex items-center gap-1 shadow-lg ${c.tone}${c.pulse?' animate-pulse':''}`}>{c.mark} {c.label}{c.value?` ${c.value}`:''}</div>))}
                     </div>
                   ):(
@@ -670,60 +826,16 @@ function BattleScreen({
               </div>
             );
           })()}
-        <div className="shrink-0 py-1.5 px-2 bg-slate-950 border-y border-white/5 flex flex-col items-center justify-center gap-1 z-10 relative">
+        <div className="shrink-0 py-1.5 px-2 border-y border-white/10 flex flex-col items-center justify-center gap-1 z-10 relative" style={{backgroundImage:'linear-gradient(180deg, rgba(14,19,38,.97) 0%, rgba(8,11,22,.98) 100%)'}}>
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none gap-1" style={{zIndex:200}}>{popups.filter(p=>p.side==='hero').map((p)=>(<div key={p.id} data-lite-damage={liteBattleView?'true':undefined} className={`${p.color} font-black leading-tight px-2 py-0.5 rounded-lg ${liteBattleView?'border border-white/20 text-base':'drop-shadow-[0_2px_8px_rgba(0,0,0,1)]'}`} style={{backgroundColor:liteBattleView?'rgba(2,6,23,0.95)':'rgba(2,6,23,0.55)'}}>{p.text}</div>))}</div>
-          {/* 新モードは合計ではなく「1体ずつ」を出す(2026-09-19 ユーザー依頼)。
-              距離枠のすぐ上に、下の枠と同じ4列でそろえる。
-              ★合計のライフ・ガッツは出さない。個別と両方出すと読むものが増えるだけで、
-                どの子が瀕死かはこちらでしか分からない
-              ★帯は必ずアニメーションさせる(ライフ duration-1000 / ガッツ duration-500)。
-                合計の帯と同じ動きにしないと、回復もダメージも瞬間で増減して見える */}
+          {/* ライフ・ガッツのポップアップ(吸収・ガードの余り・回復カードなど)。
+              ★1体ずつの帯は**カードの中へ入れた**(2026-09-22 ユーザー指摘「距離いれると縦が
+                狭くなりすぎる」)。同じ4列が2段あるだけで枠1つぶんと余白を丸ごと使っていたため。
+              ★帯を消すときに、出す場所ごと消してはいけない(2026-09-20 に一度やって、回復も
+                ガードの余りもどこにも出なくなった)。入れ物だけここに残す */}
           {Array.isArray(tacticsUnits)?(
-            <div data-tactics-party className={`relative w-full grid grid-cols-4 gap-1${battleTutorialSpotClass('tacticsParty')}`}>
-              {/* ★ライフ・ガッツのポップアップ(吸収・ガードの余り・回復カードなど)は、
-                  合計の帯に重ねて出していた。その帯をやめたときに出す場所ごと消えていたので、
-                  1体ずつの帯の上へ置き直す(2026-09-20) */}
-              <div data-tactics-party-popups className="absolute inset-x-0 -top-1 flex flex-col items-center gap-0.5 pointer-events-none" style={{zIndex:210}}>
+            <div data-tactics-party-popups className="absolute inset-x-0 top-0 flex flex-col items-center gap-0.5 pointer-events-none" style={{zIndex:210}}>
                 {popups.filter(p=>p.side==='life'||p.side==='guts').map((p)=>(<div key={p.id} className={`${p.color} text-base font-black drop-shadow-[0_2px_8px_rgba(0,0,0,1)] whitespace-nowrap px-2 py-0.5 rounded-lg animate-bounce`} style={{backgroundColor:'rgba(2,6,23,0.8)'}}>{p.text}</div>))}
-              </div>
-              {[0,1,2,3].map(i=>{
-                const u=tacticsUnits[i];
-                const mon=slots[i];
-                const hpPct=u&&u.maxHp>0?Math.max(0,Math.min(100,(u.hp/u.maxHp)*100)):0;
-                const gutsPct=u&&u.maxGuts>0?Math.max(0,Math.min(100,(u.guts/u.maxGuts)*100)):0;
-                return(
-                  <div key={i} data-tactics-party-slot={i}
-                    data-tactics-hp={u?`${u.hp}/${u.maxHp}`:undefined}
-                    data-tactics-guts={u?`${u.guts}/${u.maxGuts}`:undefined}
-                    data-tactics-downed={u?(u.downed?'true':'false'):undefined}
-                    className={`rounded-lg border px-1 py-0.5 ${u?(u.downed?'border-emerald-500/50 bg-emerald-950/40':'border-white/10 bg-black/45'):'border-white/5 bg-black/20'}`}>
-                    <div className="flex items-center justify-between gap-0.5">
-                      <span className={`text-[9px] font-black leading-none truncate ${RANGE_STYLES[i].text||'text-slate-300'}`}>{RANGE_LABELS[i]}</span>
-                      {u&&u.downed&&<span className="text-[8px] font-black leading-none text-emerald-300 shrink-0">ダウン</span>}
-                    </div>
-                    {u?(<>
-                      <div className="mt-0.5 flex items-baseline justify-between gap-0.5">
-                        <span className="text-[9px] leading-none text-pink-400">♥</span>
-                        <span className="text-[11px] font-mono font-black leading-none text-pink-100">{u.hp}</span>
-                        <span className="text-[8px] font-mono leading-none text-slate-500">/{u.maxHp}</span>
-                      </div>
-                      <div className="mt-0.5 h-[5px] rounded-full bg-slate-900 overflow-hidden border border-white/10">
-                        <div data-tactics-hp-bar className={`h-full transition-all duration-1000 ${u.downed?'bg-gradient-to-r from-emerald-600 to-teal-300':'bg-gradient-to-r from-pink-600 to-rose-400'}`} style={{width:`${hpPct}%`}}></div>
-                      </div>
-                      <div className="mt-0.5 flex items-baseline justify-between gap-0.5">
-                        <span className="text-[9px] leading-none text-amber-400">⚡</span>
-                        <span className="text-[11px] font-mono font-black leading-none text-amber-100">{u.guts}</span>
-                        <span className="text-[8px] font-mono leading-none text-slate-500">/{u.maxGuts}</span>
-                      </div>
-                      <div className="mt-0.5 h-[5px] rounded-full bg-slate-900 overflow-hidden border border-white/10">
-                        <div data-tactics-guts-bar className="h-full bg-gradient-to-r from-amber-600 to-yellow-300 transition-all duration-500" style={{width:`${gutsPct}%`}}></div>
-                      </div>
-                    </>):(
-                      <div className="py-2 text-center text-[9px] font-black leading-none text-slate-600">空き</div>
-                    )}
-                  </div>
-                );
-              })}
             </div>
           ):(
           <div className="w-full space-y-0.5 px-2 py-0.5 bg-black/40 rounded-xl border border-white/5">
@@ -849,7 +961,10 @@ function BattleScreen({
               </div>
             );
           })()}
-          <div className={`grid grid-cols-4 gap-2 w-full relative shrink-0${battleTutorialSpotClass('battleSlots')}`} style={{height:'clamp(112px,15dvh,132px)'}}>
+          {/* 味方の枠。高さは中身の合計で決まる(名前18 + 絵64 + ライフ/ガッツ + 距離ラベル20)。
+              ★枠は overflow-visible なので、足りないと下へはみ出して手札の帯に食い込む。
+                ライフ・ガッツをラベル付きで整列させたとき(2026-09-22)に実際はみ出した */}
+          <div className={`grid grid-cols-4 gap-2 w-full relative shrink-0${battleTutorialSpotClass('battleSlots')}`} style={{height:'clamp(152px,18dvh,168px)'}}>
             {slots.map((s,i)=>{
               // Count how many cards already assigned to this slot
               const assignedCount=Object.values(cardAssignments).filter(v=>v===i).length;
@@ -981,7 +1096,7 @@ function BattleScreen({
                   setSlotSettle(i);
                   setTimeout(()=>{ setSlotSettle(null); }, 500);
                 }
-              }} disabled={isBusy||autoBattle} className={`relative rounded-xl border-2 flex flex-col items-stretch overflow-visible transition-all ${RANGE_STYLES[i].bg} ${distanceBroken?'border-red-400':' '+RANGE_STYLES[i].border} ${(canAssign||(dragState?.active&&dragOverSlot===i))?'ring-2 ring-yellow-400 scale-105 z-10 shadow-lg animate-pulse':'opacity-100'} ${assignedCount>0?'ring-2 ring-indigo-500':''} ${dragState?.active&&dragOverSlot===i?'ring-4 ring-green-400 scale-110':''} ${slotSettle===i?'ring-4 ring-white':''}`} style={isAnimating?{zIndex:9999, animation:attackMotionAnimation(attackAnim)}:(distanceBroken?{backgroundColor:distanceBreakLevel>=2?'rgb(12,2,5)':'rgb(24,5,25)',boxShadow:`inset 0 0 0 ${Math.min(4,distanceBreakLevel+1)}px rgba(248,113,113,.95), inset 0 0 ${28+distanceBreakLevel*8}px rgba(76,5,25,.98), 0 0 ${9+distanceBreakLevel*4}px rgba(220,38,38,.65)`,...(slotHitShake||{})}:(slotSettle===i?{animation:'slotSettle 400ms ease-out'}:(slotHitShake||undefined)))}>
+              }} disabled={isBusy||autoBattle} className={`relative rounded-2xl border-2 flex flex-col items-stretch overflow-visible transition-all ${RANGE_STYLES[i].slotGlow||''} ${RANGE_STYLES[i].bg} ${distanceBroken?'border-red-400':' '+RANGE_STYLES[i].border} ${(canAssign||(dragState?.active&&dragOverSlot===i))?'ring-2 ring-yellow-400 scale-105 z-10 shadow-lg animate-pulse':'opacity-100'} ${assignedCount>0?'ring-2 ring-indigo-500':''} ${dragState?.active&&dragOverSlot===i?'ring-4 ring-green-400 scale-110':''} ${slotSettle===i?'ring-4 ring-white':''}`} style={isAnimating?{zIndex:9999, animation:attackMotionAnimation(attackAnim)}:(distanceBroken?{backgroundColor:distanceBreakLevel>=2?'rgb(12,2,5)':'rgb(24,5,25)',boxShadow:`inset 0 0 0 ${Math.min(4,distanceBreakLevel+1)}px rgba(248,113,113,.95), inset 0 0 ${28+distanceBreakLevel*8}px rgba(76,5,25,.98), 0 0 ${9+distanceBreakLevel*4}px rgba(220,38,38,.65)`,...(slotHitShake||{})}:(slotSettle===i?{animation:'slotSettle 400ms ease-out'}:(slotHitShake||undefined)))}>
                 {/* ★狙われている枠。カードを置ける黄色の輪・ドラッグ中の緑の輪と重ならないよう、
                     輪ではなく枠の内側の線で出す(BREAKと同じ出し方)。全体攻撃なら全員に付く */}
                 {/* ★食らった子の枠そのものを光らせる。数字は一瞬で読み取れないので、
@@ -1034,7 +1149,10 @@ function BattleScreen({
                   const slotMultiHit=slotPlannedHit.parts.length>1;
                   return (<>
                     <div data-tactics-aimed-ring className="absolute inset-[2px] rounded-lg border-2 border-red-400/80 pointer-events-none z-[44] animate-pulse" style={{boxShadow:'inset 0 0 10px rgba(239,68,68,.55)'}}></div>
-                    <div data-tactics-aimed-damage={slotPlanned} data-tactics-aimed-parts={slotMultiHit?slotPlannedText:undefined} className={`absolute -top-1.5 -right-1 z-[66] ${slotMultiHit?'rounded-lg':'rounded-full'} border border-red-300 bg-red-950 px-1 py-0.5 text-[9px] font-black leading-none text-red-100 shadow-[0_0_8px_rgba(239,68,68,.85)] animate-pulse flex flex-col items-center gap-0.5`}><span>🎯{slotPlanned>0?` -${slotPlanned}`:''}</span>{slotMultiHit&&<span className="text-[8px] font-bold text-red-200/90">{slotPlannedText}</span>}</div>
+                    {/* ★名前の行(上から18px)には**かぶせない**(2026-09-22 ユーザー指摘「1番の枠だけ名前が
+                        予想ダメージのバッジに隠れる」)。枠の外へ出すと、すぐ上の強化の札にぶつかるので、
+                        名前の行の下・絵の右上へ置く。絵は64pxで枠より小さいので、頭にはかからない */}
+                    <div data-tactics-aimed-damage={slotPlanned} data-tactics-aimed-parts={slotMultiHit?slotPlannedText:undefined} className={`absolute top-[21px] right-0.5 z-[66] ${slotMultiHit?'rounded-lg':'rounded-full'} border border-red-300 bg-red-950 px-1 py-0.5 text-[9px] font-black leading-none text-red-100 shadow-[0_0_8px_rgba(239,68,68,.85)] animate-pulse flex flex-col items-center gap-0.5`}><span>🎯{slotPlanned>0?` -${slotPlanned}`:''}</span>{slotMultiHit&&<span className="text-[8px] font-bold text-red-200/90">{slotPlannedText}</span>}</div>
                   </>);
                 })()}
                 {distanceBroken&&<>
@@ -1148,6 +1266,46 @@ function BattleScreen({
                   {/* エイキの桜。攻撃モーションが出ているあいだだけ重ねる(常時アニメーションにしない) */}
                   {isAnimating&&attackAnim.sakura&&<EikiSakuraPetals/>}
                 </div>
+                {/* ライフとガッツ(2026-09-22 ユーザー指摘「距離いれると縦が狭くなりすぎる」)。
+                    ★もとは枠の上に**別の段**として4列並べていた。同じ4列が2段あるだけで、
+                      枠1つぶん(55px)と余白を丸ごと使っていたので、カードの中へ入れて段を1つ減らした。
+                    ★数字の大きさは前の段とほぼ同じ(10px)。小さくすると瀕死に気づけなくなるので、
+                      縮めるのは**帯の高さと余白のほう**にする。
+                    ★帯は必ずアニメーションさせる(ライフ duration-1000 / ガッツ duration-500)。
+                      でないと回復もダメージも瞬間で増減して見える。
+                    ★data-tactics-* は検査の手がかり。枠の位置が変わっても名前は変えない。
+                    ★末尾の battleTutorialSpotClass('tacticsParty') は、タクティクスのれんしゅうで
+                      「1体ずつのライフ」を説明するときに光らせる印。帯をカードへ入れたときに
+                      落とすと、案内が何も指さないまま進む */}
+                {tacticsUnit&&(()=>{
+                  const hpPct=tacticsUnit.maxHp>0?Math.max(0,Math.min(100,(tacticsUnit.hp/tacticsUnit.maxHp)*100)):0;
+                  const gutsPct=tacticsUnit.maxGuts>0?Math.max(0,Math.min(100,(tacticsUnit.guts/tacticsUnit.maxGuts)*100)):0;
+                  return(
+                    <div data-tactics-party-slot={i}
+                      data-tactics-hp={`${tacticsUnit.hp}/${tacticsUnit.maxHp}`}
+                      data-tactics-guts={`${tacticsUnit.guts}/${tacticsUnit.maxGuts}`}
+                      data-tactics-downed={tacticsUnit.downed?'true':'false'}
+                      className={`shrink-0 z-20 border-t border-white/10 bg-black/55 px-1${battleTutorialSpotClass('tacticsParty')}`}>
+                      {/* ★「♥ 500 /500」と左右へ散らしていたのを、ラベルと数値の2つにそろえた
+                          (2026-09-22 ユーザー指摘「カードも距離枠も全て安っぽくない？」)。
+                          読む順が「何の値か → いくつか」で固定され、4枚並べたときに縦がそろう */}
+                      <div className="flex items-baseline justify-between leading-none">
+                        <span className="text-[8px] font-black tracking-wider text-pink-300">HP</span>
+                        <span className="font-mono leading-none"><span className="text-[11px] font-black text-white">{tacticsUnit.hp}</span><span className="text-[8px] text-slate-400">/{tacticsUnit.maxHp}</span></span>
+                      </div>
+                      <div className="mt-[1px] h-[5px] overflow-hidden rounded-full bg-black/60" style={{boxShadow:'inset 0 1px 2px rgba(0,0,0,.9)'}}>
+                        <div data-tactics-hp-bar className={`h-full transition-all duration-1000 ${tacticsUnit.downed?'bg-gradient-to-r from-emerald-500 to-teal-300':'bg-gradient-to-r from-rose-500 to-pink-300'}`} style={{width:`${hpPct}%`,boxShadow:'0 0 6px rgba(244,114,182,.55)'}}></div>
+                      </div>
+                      <div className="mt-[1px] flex items-baseline justify-between leading-none">
+                        <span className="text-[8px] font-black tracking-wider text-amber-300">GUTS</span>
+                        <span className="font-mono leading-none"><span className="text-[11px] font-black text-white">{tacticsUnit.guts}</span><span className="text-[8px] text-slate-400">/{tacticsUnit.maxGuts}</span></span>
+                      </div>
+                      <div className="mt-[1px] h-[5px] overflow-hidden rounded-full bg-black/60" style={{boxShadow:'inset 0 1px 2px rgba(0,0,0,.9)'}}>
+                        <div data-tactics-guts-bar className="h-full bg-gradient-to-r from-amber-500 to-yellow-300 transition-all duration-500" style={{width:`${gutsPct}%`,boxShadow:'0 0 6px rgba(251,191,36,.55)'}}></div>
+                      </div>
+                    </div>
+                  );
+                })()}
                 <div className={`h-[20px] shrink-0 ${RANGE_STYLES[i].labelBg} flex items-center justify-center border-t border-white/20 z-20`}><span className="text-[10px] font-black uppercase tracking-tighter leading-none">{RANGE_LABELS[i]}距離</span></div>
               </button>);
             })}
@@ -1160,16 +1318,25 @@ function BattleScreen({
             <button type="button" onClick={dismissQuickRhythmIntro} aria-label="この案内を閉じる" className="min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black">×</button>
           </div>
         </div>}
-        <div className="shrink-0 bg-slate-900/95 p-1 flex flex-col relative border-t border-white/10" style={{height:'clamp(172px,23dvh,196px)'}}>
+        {/* 手札の帯(2026-09-22 ユーザー指示「全体的に安っぽい作りをなんとかしたい」)。
+            まっ黒なべた塗りだったので、上から下へわずかに起こし、上端に細い光を引いて
+            板が1枚手前にあるように見せる。塗りだけなので描き直しは起きない */}
+        <div className="shrink-0 p-1 flex flex-col relative border-t border-white/15" style={{height:'clamp(172px,23dvh,196px)',
+          backgroundImage:'linear-gradient(180deg, rgba(30,41,74,.96) 0%, rgba(15,20,38,.97) 46%, rgba(9,12,24,.98) 100%)',
+          boxShadow:'inset 0 1px 0 rgba(255,255,255,.10)'}}>
           <div className="text-[8px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-1 flex justify-between px-2 items-center gap-1">
             {/* 勇者モンの特性で枚数が増えているときは、その分を王冠付きで出す。
                 「勇者モンに選んだときだけ効く特性」が今効いていることを確かめられるようにする */}
             <span className={`flex-1 min-w-0 flex flex-wrap items-center gap-x-1 gap-y-0.5${battleTutorialSpotClass('cardCount')}`}><span className="whitespace-nowrap">Action Cards</span> <span className="shrink-0 bg-white/10 text-white px-2 py-0.5 rounded-full font-mono">{selectedCards.length}/{cardLimit}</span>{heroCardBonus>0&&<span className="shrink-0 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-300/40 text-amber-200 whitespace-nowrap"><Crown size={8}/>+{heroCardBonus}</span>}{kikiCardBonus>0&&<span className="shrink-0 px-1.5 py-0.5 rounded-full bg-violet-500/20 border border-violet-300/40 text-violet-200 whitespace-nowrap">応援+1</span>}{soulCoordinationCardBonus>0&&<span data-soul-coordination-bonus className="shrink-0 px-1.5 py-0.5 rounded-full bg-sky-500/20 border border-sky-300/40 text-sky-200 whitespace-nowrap">魂格+1</span>}</span>
             <div className="flex items-center gap-0.5 shrink-0">
               <button onClick={()=>setShowDeckInfo(true)} className={`flex items-center gap-0.5 px-1.5 py-1 bg-white/5 rounded-lg border border-white/10 active:scale-95${battleTutorialSpotClass('deckView')}`}><Layers size={9}/><span className="text-[10px]">VIEW</span></button>
-              {/* 🎵の縦列。BGMの下にモンビーを並べる(どちらも音に関わる入口なので隣り合わせにする) */}
+              {/* 緊急回復(2026-09-22 ユーザー指示「緊急回復は手札側の効果だから位置を変えたい」)。
+                  ★もとは敵の絵の左に置いていたが、あの列は「敵や自分を見る」入口を並べた場所。
+                    緊急はその場で使う行動なので、カードと同じ操作の列へ移した。
+                  ★AUTO の左に置く。実行(Action)のすぐ隣だと押し間違える */}
+              <button onClick={useEmergency} disabled={isBusy||autoBattle||!battleTutorialAllowsEmergency} aria-label="緊急回復" title="緊急回復" className={`shrink-0 flex h-8 w-[44px] flex-col items-center justify-center rounded-lg border-2 border-blue-400 bg-blue-900/70 leading-none active:scale-90 disabled:opacity-25${battleTutorialSpotClass('emergency')}`}><Activity size={11} className="text-blue-300"/><span className="mt-0.5 text-[10px] font-black text-blue-50">緊急</span></button>
+              {/* モンビーへの入口(クイックモードだけ)。音に関わる入口なので、この並びに残す */}
               <div className="shrink-0 flex flex-col gap-0.5">
-                <button data-auto-bgm-button type="button" onClick={()=>setShowAutoBgmPicker(true)} aria-label="バトルBGMと音量を調整" title="BGM / 音量" className="shrink-0 min-h-[32px] min-w-[42px] rounded-lg border border-indigo-400/50 bg-indigo-800 px-1.5 text-indigo-100 active:scale-90"><span className="block text-[13px] leading-none">🎵</span><span className="mt-0.5 block text-[10px] font-black leading-none">BGM</span></button>
                 {quickToRhythmButtonNode}
               </div>
               <div className="w-[44px] shrink-0 flex flex-col gap-0.5">
@@ -1208,14 +1375,43 @@ function BattleScreen({
                 const pt=e.touches?e.touches[0]:e;
                 cardDragActiveRef.current=false;
                 setDragState({cardIndex:i, x:pt.clientX, y:pt.clientY, active:false, card:c});
-              }} style={{...(isDragging?{touchAction:'none',position:'fixed',left:dragState.x,top:dragState.y,transform:'translate(-50%,-50%) rotate(-3deg) scale(1.15)',zIndex:70000,width:'72px',pointerEvents:'none',transition:'none',filter:'drop-shadow(0 12px 18px rgba(0,0,0,0.65))'}:{touchAction:'none'}),...(TYPE_INLINE_STYLE[c.type]||{})}} className={`relative w-full rounded-xl border-2 p-1 flex flex-col items-center justify-between bg-gradient-to-b ${TYPE_COLORS[c.type]} ${isDragging?'ring-4 ring-white shadow-[0_0_24px_rgba(255,255,255,0.6)]':isSel?'transition-all -translate-y-1.5 ring-4 ring-cyan-300 z-20 scale-105 opacity-60 saturate-[0.7] shadow-[0_0_18px_rgba(103,232,249,0.6)]':'transition-all opacity-90'} ${isPending?'ring-4 ring-yellow-400 animate-pulse shadow-[0_0_20px_rgba(250,204,21,0.7)]':''} ${!isSelectable&&!isSel&&!isDragging?'grayscale opacity-50':''}${tutorialTargeted?' is-battle-tutorial-spot':''}${battleTutorialCardTarget&&!tutorialTargeted?' grayscale opacity-25':''}`}>
+              }} style={{...(isDragging?{touchAction:'none',position:'fixed',left:dragState.x,top:dragState.y,transform:'translate(-50%,-50%) rotate(-3deg) scale(1.15)',zIndex:70000,width:'72px',pointerEvents:'none',transition:'none',filter:'drop-shadow(0 12px 18px rgba(0,0,0,0.65))'}:{touchAction:'none',boxShadow:`${(TYPE_INLINE_STYLE[c.type]||{}).borderColor?`0 0 12px ${(TYPE_INLINE_STYLE[c.type]||{}).borderColor}70, `:''}inset 0 1px 0 rgba(255,255,255,.34), inset 0 -10px 16px rgba(0,0,0,.30), 0 4px 10px rgba(0,0,0,.5)`}),...(TYPE_INLINE_STYLE[c.type]||{})}} className={`relative w-full rounded-xl border-2 p-1 flex flex-col items-center justify-between bg-gradient-to-b ${TYPE_COLORS[c.type]} ${isDragging?'ring-4 ring-white shadow-[0_0_24px_rgba(255,255,255,0.6)]':isSel?'transition-all -translate-y-1.5 ring-4 ring-cyan-300 z-20 scale-105 opacity-60 saturate-[0.7] shadow-[0_0_18px_rgba(103,232,249,0.6)]':'transition-all opacity-90'} ${isPending?'ring-4 ring-yellow-400 animate-pulse shadow-[0_0_20px_rgba(250,204,21,0.7)]':''} ${!isSelectable&&!isSel&&!isDragging?'grayscale opacity-50':''}${tutorialTargeted?' is-battle-tutorial-spot':''}${battleTutorialCardTarget&&!tutorialTargeted?' grayscale opacity-25':''}`}>
                 {isSel&&!assignedMon&&(<div className="absolute top-0.5 left-0.5 z-30 w-5 h-5 rounded-full bg-cyan-400 border-2 border-white flex items-center justify-center shadow-lg"><Check size={10} className="text-white" strokeWidth={4}/></div>)}
                 {assignedMon&&(<div className="absolute top-0.5 right-0.5 z-30 w-5 h-5 rounded-full bg-indigo-600 border-2 border-white flex items-center justify-center overflow-hidden shadow-lg">{assignedMon.imgUrl?<img src={assignedMon.imgUrl} alt="" className="w-full h-full object-contain"/>:<span className="text-[10px]">{assignedMon.emoji}</span>}</div>)}
-                <div className="text-3xl mt-1.5">{cardIconNode(c.icon,32,c.id)}</div><div className="w-full text-center flex flex-col justify-end gap-0.5">{['atk','range_atk','unique'].includes(c.type)?(<div onClick={(ev)=>{ev.stopPropagation(); if(isBusy||autoBattleRef.current||Date.now()<=suppressCardClickRef.current)return; setSkillPicker({handIndex:i});}} className={`text-[11px] font-black leading-[13px] w-full whitespace-normal h-[39px] flex items-center justify-center overflow-hidden px-0.5 underline decoration-dotted decoration-white/60 underline-offset-2 active:opacity-60${battleTutorialNeedCard&&tutorialTargeted?' is-battle-tutorial-spot':''}`}>{c.name}</div>):(<div className="text-[11px] font-black leading-[13px] w-full whitespace-normal h-[39px] flex items-center justify-center overflow-hidden px-0.5">{c.name}</div>)}<div className="text-[10px] font-black bg-black/40 text-white rounded py-1 flex items-center justify-center gap-0.5"><Zap size={9}/>{curGuts}</div></div></button>{cardBlock&&!cardBlock.ok&&cardBlock.short&&!isDragging&&(<div data-tactics-card-block={cardBlock.short} className="pointer-events-none absolute inset-x-0.5 top-1 z-30 rounded-md border border-rose-200 bg-rose-600 px-0.5 py-0.5 text-center text-[8px] font-black leading-tight text-white shadow-[0_2px_8px_rgba(0,0,0,.85)]">{cardBlock.short}</div>)}</div>);
+                <div className="mt-1.5 flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full border border-white/30 bg-black/25" style={{boxShadow:'inset 0 1px 0 rgba(255,255,255,.25), inset 0 -4px 8px rgba(0,0,0,.35)'}}>{cardIconNode(c.icon,26,c.id)}</div><div className="w-full text-center flex flex-col justify-end gap-0.5">{['atk','range_atk','unique'].includes(c.type)?(<div onClick={(ev)=>{ev.stopPropagation(); if(isBusy||autoBattleRef.current||Date.now()<=suppressCardClickRef.current)return; setSkillPicker({handIndex:i});}} className={`text-[11px] font-black leading-[13px] w-full whitespace-normal h-[30px] flex items-center justify-center overflow-hidden px-0.5 underline decoration-dotted decoration-white/60 underline-offset-2 active:opacity-60${battleTutorialNeedCard&&tutorialTargeted?' is-battle-tutorial-spot':''}`}>{c.name}</div>):(<div className="text-[11px] font-black leading-[13px] w-full whitespace-normal h-[30px] flex items-center justify-center overflow-hidden px-0.5">{c.name}</div>)}{(()=>{
+                  // カードの表に「ジャンル」と「誰に効くか」を出す(仕様: BATTLE_NEW_MODE_PLAN.md 4.4
+                  // 「単体効果と全体効果が分かるようにカード説明に表示するようにしたい」)。
+                  // ★言葉はアプリ側の cardGenreLabel / cardScopeLabel から引く。カードをタップした
+                  //   ときの説明が同じ関数を使っているので、表と中で言い方がずれない。
+                  // ★攻撃は「攻撃・敵へ」ではなく「攻撃」だけにする。味方に効かないのは攻撃カードの
+                  //   前提で、わざわざ言うと守り・支援の「単体／全体」が埋もれる
+                  const genre=tacticsCardGenre?tacticsCardGenre(c):null;
+                  const scope=tacticsCardScope?tacticsCardScope(c):null;
+                  const text=genre?(scope&&scope!=='敵へ'?`${genre}・${scope}`:genre):'';
+                  return text?<div data-card-genre={genre} data-card-scope={scope||undefined} className="w-full truncate rounded bg-black/40 px-0.5 text-[8px] font-black leading-[11px] text-white/85">{text}</div>:null;
+                })()}<div className="text-[10px] font-black bg-black/40 text-white rounded py-1 flex items-center justify-center gap-0.5"><Zap size={9}/>{curGuts}</div></div></button>{cardBlock&&!cardBlock.ok&&cardBlock.short&&!isDragging&&(<div data-tactics-card-block={cardBlock.short} className="pointer-events-none absolute inset-x-0.5 top-1 z-30 rounded-md border border-rose-200 bg-rose-600 px-0.5 py-0.5 text-center text-[8px] font-black leading-tight text-white shadow-[0_2px_8px_rgba(0,0,0,.85)]">{cardBlock.short}</div>)}</div>);
             })}
           </div>
         </div>
         </>)}
+        {/* バトル中の設定(2026-09-22 ユーザー指示「BGMは右上に設定ボタンみたいの作って
+            そこにギブアップとかヘルプとかと一緒にまとめて」)。
+            ★ヘッダーに入口を3つ並べると、WAVE名やモード名を押し出して読めなくなる。
+              どれもバトル中に何度も押すものではないので、1枚めくる形にした。
+            ★data-battle-quit / data-auto-bgm-button は検査の手がかり。
+              置き場所が変わっても名前は変えない。
+            ★背景を押しても閉じる。誤って開いたときに、指を上まで運ばずに戻れる */}
+        {showBattleMenu&&(
+          <div className="fixed inset-0 z-[70000] flex items-start justify-end bg-black/70 p-2" onClick={()=>setShowBattleMenu(false)}>
+            <div data-battle-menu className="mt-11 flex w-[190px] flex-col gap-1.5 rounded-2xl border border-white/20 bg-slate-900 p-2 shadow-2xl" onClick={e=>e.stopPropagation()}>
+              <div className="px-1 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">設定</div>
+              <button data-auto-bgm-button type="button" onClick={()=>{setShowBattleMenu(false);setShowAutoBgmPicker(true);}} className="flex min-h-[40px] items-center gap-2 rounded-lg border border-indigo-400/50 bg-indigo-950/60 px-2 text-[12px] font-black text-indigo-100 active:scale-95"><span className="text-[14px] leading-none">🎵</span>BGM・音量</button>
+              <button type="button" onClick={()=>{setShowBattleMenu(false);openHelp();}} className="flex min-h-[40px] items-center gap-2 rounded-lg border border-emerald-400/50 bg-emerald-950/60 px-2 text-[12px] font-black text-emerald-100 active:scale-95"><HelpCircle size={14}/>ヘルプ</button>
+              <button data-battle-quit type="button" disabled={!!battleTutorial} onClick={()=>{setShowBattleMenu(false);setShowQuitConfirm(true);}} className="flex min-h-[40px] items-center gap-2 rounded-lg border border-red-400/50 bg-red-950/60 px-2 text-[12px] font-black text-red-100 active:scale-95 disabled:opacity-30"><Flag size={14}/>あきらめる</button>
+              <button type="button" onClick={()=>setShowBattleMenu(false)} className="min-h-[36px] rounded-lg border border-white/15 bg-slate-800 text-[11px] font-black text-slate-300 active:scale-95">とじる</button>
+            </div>
+          </div>
+        )}
       </div>
     
   );
