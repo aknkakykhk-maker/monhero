@@ -251,8 +251,10 @@ check('強化の札に敵の咆哮を出す',
 check('反射は狙われた子ごとに数え直す',
   has('const reflectSlots=isTacticsMode(runMode)')
     && has('? tacticsIntentTargets(intent,tacticsUnitsRef.current,actingEnemyDist) : null;\n          const reflectDmg=reflectSlots'));
+// ★間合いをずらされた技は威力が落ちた actingIntent を見る(intent のままだと
+//   距離撃でずらしてもフルの量を返してしまう。2026-09-22 に直した)
 check('反射は狙われた全員ぶんを足して返す',
-  has('reflectSlots.reduce((sum,slotIdx)=>sum+applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(intent,slotIdx)),0)'));
+  has('reflectSlots.reduce((sum,slotIdx)=>sum+applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(actingIntent,slotIdx)),0)'));
 check('反射は返す量でスコアも撃破も決める',
   has('setCurrentWaveDamage(p=>p+reflectDmg);')
     && has('resolveEnemyDefeat({remainingHp:reflectedHp,damage:reflectDmg})')
@@ -273,7 +275,7 @@ check('避けた子・反射した子はダメージ処理を飛ばす',
   has('if(slotIdx===evadedSlot){ evadedName=tacticsTargetName(units,slotIdx); slotFx[slotIdx]={evade:true}; return; }')
     && has('if(slotIdx===reflectedSlot){') && has('slotFx[slotIdx]={reflect:true};'));
 check('確率で出た反射は、その子が受けるはずだった量を返す',
-  has('reflectBack+=applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(intent,slotIdx));'));
+  has('reflectBack+=applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(actingIntent,slotIdx));'));
 check('返すのは味方の増減を確定させてから',
   src.indexOf('currentHp=commitTacticsUnits(units);\n            if(dealt>0)') < src.indexOf('if(reflectBack>0){'));
 check('確率で出た反射でも撃破を確定できる',

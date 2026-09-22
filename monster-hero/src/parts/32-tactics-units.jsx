@@ -470,9 +470,13 @@ const tacticsIntentTargets = (intent, units, enemyDist = null) => {
   const alive = tacticsAliveSlots(units);
   if (!intent || !alive.length) return [];
   if (intent.targetsAll) return alive;
-  // 薙ぎ払いは「予告した間合いにいる子」。距離撃でずらせば誰にも当たらないこともある
+  // ★間合い攻撃は「**予告した間合い**にいる子」を狙う。距離撃で敵を動かしても狙いは変わらず、
+  //   威力だけが落ちる(missValue ＝ ×TACTICS_SWEEP_MISS_MULT)。
+  //   2026-09-22 ユーザー指摘「近距離にいる場合は1.2倍攻撃だけど敵を移動させて中距離とかに
+  //   させたら狙われてるモンスターが0.4倍攻撃に変わるイメージ」。
+  //   ここを enemyDist(いまの敵の間合い)にすると、ずらした先の**別の子**が食らってしまう
   if (intent.variant === 'sweep') {
-    const dist = Number.isInteger(enemyDist) ? enemyDist : intent.sweepDist;
+    const dist = Number.isInteger(intent.sweepDist) ? intent.sweepDist : enemyDist;
     return alive.filter(index => index === dist);
   }
   return Number.isInteger(intent.targetSlot) && alive.includes(intent.targetSlot) ? [intent.targetSlot] : [];
@@ -537,17 +541,46 @@ const splitTacticsHitAmounts = (total, count) => {
   return parts;
 };
 
+// 発ごとの通る量。ガードが当たった発は軽減され、当たらなかった発はそのまま通る。
+// ★端数は最後の発へ寄せて、足すと必ず元の合計に戻るようにする
+// ★ここを「合計を均等に割る」に戻すと、ガードが効いた発とそうでない発が同じ数字で出て、
+//   「ガードを入れたのに全部同じダメージ」に見える(2026-09-22 ユーザー指摘)
+const splitTacticsGuardedAmounts = (incoming, hits, guard, guardHits = 1) => {
+  const total = Math.max(0, tacticsSafeInt(incoming, 0));
+  const count = Math.max(1, tacticsSafeInt(hits, 1));
+  const { covered, perHit } = splitTacticsGuardedHit(total, count, guardHits);
+  const value = Math.max(0, tacticsSafeInt(guard, 0));
+  const amounts = [];
+  for (let i = 0; i < count; i += 1) {
+    const base = i === count - 1 ? total - perHit * (count - 1) : perHit;
+    amounts.push(i < covered ? Math.max(0, base - value) : base);
+  }
+  return amounts;
+};
+// 発ごとの通る量を、実際に受けた合計(ターン軽減のあと)へ合わせて割り直す。
+// 端数は最後の発へ寄せるので、足すと必ずその合計に戻る
+const scaleTacticsHitAmounts = (parts, total) => {
+  const list = (Array.isArray(parts) ? parts : []).map(value => Math.max(0, tacticsSafeInt(value, 0)));
+  const sum = list.reduce((acc, value) => acc + value, 0);
+  const goal = Math.max(0, tacticsSafeInt(total, 0));
+  if (!(sum > 0) || !(goal > 0)) return [];
+  const out = list.map(value => Math.floor(goal * value / sum));
+  out[out.length - 1] += goal - out.reduce((acc, value) => acc + value, 0);
+  return out;
+};
+
 const resolveTacticsGuardedHit = (incoming, hits, guard, guardHits = 1) => {
   const { guarded, through, covered, perHit } = splitTacticsGuardedHit(incoming, hits, guardHits);
   // ★構えた値は「1ヒットごと」にまるごと当たる(2026-09-22 ユーザー指示)。
   //   受け止めきれなかったぶんだけ、止めようとしたヒットの数だけ通る
+  const amounts = splitTacticsGuardedAmounts(incoming, hits, guard, guardHits);
   const left = Math.max(0, tacticsSafeInt(guard, 0)) - perHit;
-  if (left < 0) return { taken: (-left) * covered + through, saved: 0, guarded, through, covered, blocked: false };
+  if (left < 0) return { taken: (-left) * covered + through, saved: 0, guarded, through, covered, amounts, blocked: false };
   // ★余りは1ヒットぶんで数える。受け止めたヒットの数だけ足すと、連撃を止めただけで
   //   ライフとガッツが膨れ上がってしまう
   return through > 0
-    ? { taken: through, saved: 0, guarded, through, covered, blocked: true }
-    : { taken: 0, saved: left, guarded, through, covered, blocked: true };
+    ? { taken: through, saved: 0, guarded, through, covered, amounts, blocked: true }
+    : { taken: 0, saved: left, guarded, through, covered, amounts, blocked: true };
 };
 
 // ===== 「2枚目以降は効果半減」の数え方 =====

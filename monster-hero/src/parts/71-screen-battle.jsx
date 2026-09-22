@@ -83,35 +83,47 @@ function BattleScreen({
     });
     return bySlot;
   };
-  const plannedDamageFor = (slotIdx) => {
-    if (!enemyIntent) return 0;
+  // ★連撃は「1発ずつ」出す(2026-09-22 ユーザー指示「連撃ダメージ予測が合算分だから
+  //   分かりにくい ガード入れても合算計算だし うまくバラバラでわかるようにしたい」)。
+  //   受けたあとの表示と同じ splitTacticsHitAmounts を通すので、予告と実際で割り方がそろう。
+  //   ガードで止めた発は通らないので、**通る発の数だけ**に割る(数字の数＝これから食らう回数)
+  const plannedHitFor = (slotIdx) => {
+    const none = { taken: 0, parts: [] };
+    if (!enemyIntent) return none;
     const raw = getIncomingDamageBeforeTurnReduction(enemyIntent, slotIdx);
-    if (!(raw > 0)) return 0;
+    if (!(raw > 0)) return none;
     const hits = enemyIntent.variant === 'rush' ? Math.max(1, Math.floor(Number(enemyIntent.hits) || 1)) : 1;
+    let guard = 0, guardHits = 1;
     // ★タクティクスは枠ごと。構えていない子も、全体ガードなら丈夫さぶんが付く。
     //   受け止めるヒット数は、その子へ何枚構えたかで決まる(2枚以上なら連撃の全部)
     if (Array.isArray(tacticsUnits) && slotIdx !== null) {
       const bySlot = plannedGuardBySlot();
       const own = bySlot[slotIdx] || { cards: 0 };
-      const guard = enemyIntent.variant === 'pierce' ? 0 : tacticsSlotGuardValue(bySlot, slotIdx);
-      return applyTurnDamageReduction(
-        resolveTacticsGuardedHit(raw, hits, guard, tacticsGuardHits(own.cards, hits)).taken);
+      guard = enemyIntent.variant === 'pierce' ? 0 : tacticsSlotGuardValue(bySlot, slotIdx);
+      guardHits = tacticsGuardHits(own.cards, hits);
+    } else {
+      // 既存5モードは今までどおり、手札のガードをまとめて1つに数える
+      let flat = 0, mult = 0;
+      const counter = makeCardHalveCounter();
+      selectedCards.forEach(idx => {
+        const card = hand[idx];
+        const halved = counter.take(card, cardAssignments[idx] != null ? cardAssignments[idx] : null);
+        const w = guardCardWeight(card);
+        if (!(w > 0)) return;
+        const effect = cardEffectMultiplier(card, halved);
+        flat += GUARD_EVOLUTION[guardLevel].flat * w * effect;
+        mult += GUARD_EVOLUTION[guardLevel].mult * w * effect;
+      });
+      guard = enemyIntent.variant === 'pierce' ? 0 : guardValueOf(flat, mult, slotIdx);
     }
-    // 既存5モードは今までどおり、手札のガードをまとめて1つに数える
-    let flat = 0, mult = 0;
-    const counter = makeCardHalveCounter();
-    selectedCards.forEach(idx => {
-      const card = hand[idx];
-      const halved = counter.take(card, cardAssignments[idx] != null ? cardAssignments[idx] : null);
-      const w = guardCardWeight(card);
-      if (!(w > 0)) return;
-      const effect = cardEffectMultiplier(card, halved);
-      flat += GUARD_EVOLUTION[guardLevel].flat * w * effect;
-      mult += GUARD_EVOLUTION[guardLevel].mult * w * effect;
-    });
-    const guard = enemyIntent.variant === 'pierce' ? 0 : guardValueOf(flat, mult, slotIdx);
-    return applyTurnDamageReduction(resolveTacticsGuardedHit(raw, hits, guard, 1).taken);
+    const hit = resolveTacticsGuardedHit(raw, hits, guard, guardHits);
+    const taken = applyTurnDamageReduction(hit.taken);
+    if (!(taken > 0)) return { taken: 0, parts: [] };
+    // ★発ごとの通る量をそのまま出す。ガードが効いた発は小さく、効いていない発は大きい。
+    //   止まった発(0)は数字を出さないので、数字の数＝これから食らう回数
+    return { taken, parts: hits > 1 ? scaleTacticsHitAmounts((hit.amounts || []).filter(value => value > 0), taken) : [taken] };
   };
+  const plannedDamageFor = (slotIdx) => plannedHitFor(slotIdx).taken;
   return (
 
       <div className="flex-1 flex flex-col h-full relative" data-battle-speed={battleSpeed} data-eco-view={ultraBattleView?'ultra':liteBattleView?'lite':'off'}>
@@ -491,7 +503,10 @@ function BattleScreen({
             const rawDmg=getIncomingDamageBeforeTurnReduction(enemyIntent,aimedSlot);
             // ★数え方は plannedDamageFor に1か所だけ置く(枠ごとの表示と同じ関数を通す)。
             //   2か所に書くと、ガードの数え方を直したときに片方だけ古くなる
-            const plannedDmg=plannedDamageFor(aimedSlot);
+            const plannedHit=plannedHitFor(aimedSlot);
+            const plannedDmg=plannedHit.taken;
+            // 連撃は「129・130」と1発ずつ。1発の技は今までどおり数字ひとつ
+            const plannedText=plannedHit.parts.join('・');
             const previewHits=enemyIntent.variant==='rush'?Math.max(1,Math.floor(Number(enemyIntent.hits)||1)):1;
             // ★全体攻撃は受ける量が1体ずつ違う。1つの数字にまとめると、
             //   どの子がどれだけ減るのか分からなくなるので、吹き出しには出さず枠ごとに出す
@@ -506,7 +521,7 @@ function BattleScreen({
             // 余りの高さは、この下のバフ帯の mt-auto がまとめて吸う。
             // data-enemy-intent は検査の手がかり。どの行動が予告されているかは抽選なので、
             // 画面の文字から探すと「今回はためるだった」で落ちる
-            return <div data-enemy-intent className={`mt-1 mb-1 mx-auto w-fit max-w-full border p-1 px-4 rounded-full flex items-center gap-1.5 animate-pulse z-[45] shadow-lg shrink-0${battleTutorialSpotClass('enemyIntent')} ${focusedCard?'invisible':'visible'} ${tone}`}><Target size={12}/><div className="text-[10px] font-black uppercase tracking-tight">{enemyIntent.label}{previewHits>1?` ${previewHits}連撃`:''}{aimedName?` 🎯${aimedName}`:''}{rawDmg>0&&showPlannedInBubble?` (予定: ${plannedDmg})`:''}</div></div>;
+            return <div data-enemy-intent className={`mt-1 mb-1 mx-auto w-fit max-w-full border p-1 px-4 rounded-full flex items-center gap-1.5 animate-pulse z-[45] shadow-lg shrink-0${battleTutorialSpotClass('enemyIntent')} ${focusedCard?'invisible':'visible'} ${tone}`}><Target size={12}/><div className="text-[10px] font-black uppercase tracking-tight">{enemyIntent.label}{previewHits>1?` ${previewHits}連撃`:''}{aimedName?` 🎯${aimedName}`:''}{rawDmg>0&&showPlannedInBubble&&plannedText?` (予定: ${plannedText})`:''}</div></div>;
           })()}
         {/* 強化の札(2026-09-19・ユーザー指摘「バフデバフ欄が見にくくなってる」)。
             もとは敵のいる main の中に置いていたが、main は overflow-y-auto なので、
@@ -721,8 +736,14 @@ function BattleScreen({
               // find a slot it could legally hit (for unique: its own monster; else any occupied slot)
               for(let i=0;i<slots.length;i++){
                 const s=slots[i]; if(!s) continue;
-                const assignedCount=Object.values(cardAssignments).filter(v=>v===i).length;
-                const maxUses=slotMaxUses(s,i); if(assignedCount>=maxUses) continue;
+                // ★置ける枠かどうかは、盤面のタップ判定とまったく同じ答えを使う。
+                //   自前で枚数を数えていたころは、ガードを1枚置いた子が
+                //   「もう置けない子」に見えて、合計DMGの予測だけ別の子で出ていた
+                const tacticsAnswer=tacticsCanAssign?tacticsCanAssign(pendingCardObj,pendingIdx,i):null;
+                if(tacticsAnswer===null||tacticsAnswer===undefined){
+                  const assignedCount=Object.values(cardAssignments).filter(v=>v===i).length;
+                  const maxUses=slotMaxUses(s,i); if(assignedCount>=maxUses) continue;
+                } else if(!tacticsAnswer) continue;
                 if(pendingCardObj.type==='unique'&&pendingCardObj.ownerSlotIdx!==i) continue;
                 pendingValidSlot=i; const baseDmg=getDmg(pendingCardObj,i,s,boosts.forPending.oryo,boosts.forPending.dmgMod,committedCounter.peek(pendingCardObj,i)); pendingAdd=getAttackPredictedDmg(pendingCardObj,s,baseDmg,boosts.forPending.combo); break;
               }
@@ -785,6 +806,12 @@ function BattleScreen({
               // Can this slot accept the pending card?
               // 新モードはこの子のライフ・ガッツ・倒れたかどうかを持つ(ほかのモードでは null)
               const tacticsUnit=Array.isArray(tacticsUnits)?(tacticsUnits[i]||null):null;
+              // この枠のガードの状態。札の名前(全体ハイガード)と🛡のまとめが同じ答えを使えるよう、
+              // ガードのまとめは枠ごとに1回だけ作ってここから配る
+              const guardPlanBySlot=Array.isArray(tacticsUnits)?plannedGuardBySlot():null;
+              const slotGuardCards=guardPlanBySlot?(guardPlanBySlot[i]?.cards||0):0;
+              const slotRushGuard=slotGuardCards>=TACTICS_RUSH_GUARD_CARDS;
+              const slotSpreadGuard=!!guardPlanBySlot&&isTacticsSpreadGuard(guardPlanBySlot);
               let canAssign=false;
               if(s && pendingCardObj){
                 // 新モードは「その子が払えるか」で決まる。倒れた子へは回復カードだけ置ける。
@@ -811,6 +838,18 @@ function BattleScreen({
               // このスロットの予測にも反映する(合計DMG欄と同じpreviewLocalBoosts)。
               const slotBoosts=previewLocalBoosts(pendingIdx);
               let previewDmg=0; let isPendingPreview=false; let isPendingHalved=false; let previewSoulPct=0;
+              // ★ガードも枠ごとに「この子へ置いたらいくら受け止められるか」を出す
+              //   (2026-09-22 ユーザー指摘「ダメージは個別に見えるのにガード値は個別に
+              //    分からない…ダメージと同じような仕様にして」)。
+              //   受け止める量はその子の丈夫さで決まるので、置く先で変わる
+              let previewGuard=0; let isPendingGuardHalved=false;
+              if(s && pendingCardObj && canAssign && guardCardWeight(pendingCardObj)>0){
+                const guardCounter=makeCardHalveCounter();
+                selectedCards.forEach(idx=>{ if(idx===pendingIdx) return; guardCounter.take(hand[idx],cardAssignments[idx]!=null?cardAssignments[idx]:null); });
+                isPendingGuardHalved=guardCounter.peek(pendingCardObj,i);
+                const gw=guardCardWeight(pendingCardObj), ge=cardEffectMultiplier(pendingCardObj,isPendingGuardHalved);
+                previewGuard=guardValueOf(GUARD_EVOLUTION[guardLevel].flat*gw*ge,GUARD_EVOLUTION[guardLevel].mult*gw*ge,i);
+              }
               if(s && pendingCardObj && canAssign && isAttackCard(pendingCardObj)){
                 // 既に選んだぶんを数え、保留カードは「この枠へ置いた次の1枚」として扱う。
                 // ★新モードは同じ子の2枚目だけ半減なので、置き先(i)で数え方が変わる
@@ -889,10 +928,12 @@ function BattleScreen({
                 {slotAimed&&(()=>{
                   // ★その子の予定ダメージ。全体攻撃は丈夫さで1体ずつ変わるので、枠ごとに出す
                   //   (2026-09-21 ユーザー依頼)。ガードを置けばその枠の数字だけが減る
-                  const slotPlanned=plannedDamageFor(i);
+                  const slotPlannedHit=plannedHitFor(i);
+                  const slotPlanned=slotPlannedHit.taken;
+                  const slotPlannedText=slotPlannedHit.parts.join('・');
                   return (<>
                     <div data-tactics-aimed-ring className="absolute inset-[2px] rounded-lg border-2 border-red-400/80 pointer-events-none z-[44] animate-pulse" style={{boxShadow:'inset 0 0 10px rgba(239,68,68,.55)'}}></div>
-                    <div data-tactics-aimed-damage={slotPlanned} className="absolute -top-1.5 -right-1 z-[66] rounded-full border border-red-300 bg-red-950 px-1 py-0.5 text-[9px] font-black leading-none text-red-100 shadow-[0_0_8px_rgba(239,68,68,.85)] animate-pulse">🎯{slotPlanned>0?` -${slotPlanned}`:''}</div>
+                    <div data-tactics-aimed-damage={slotPlanned} className="absolute -top-1.5 -right-1 z-[66] rounded-full border border-red-300 bg-red-950 px-1 py-0.5 text-[9px] font-black leading-none text-red-100 shadow-[0_0_8px_rgba(239,68,68,.85)] animate-pulse">🎯{slotPlannedText?` -${slotPlannedText}`:''}</div>
                   </>);
                 })()}
                 {distanceBroken&&<>
@@ -922,18 +963,18 @@ function BattleScreen({
                       2枚以上構えた枠は連撃ガードなので**合計値**を出す(ユーザー指示
                       「連撃ガード1987が良いんだけどガードタップ時は単体数値がいくつかは
                       わかるようにして」…カードごとの単体値は下の札にそのまま残る)。
-                      構えていない枠は、全体ガードで付いたぶんを出す。
-                      1枚だけの枠はカードの札と同じ数字になるので出さない */}
-                  {Array.isArray(tacticsUnits)&&(()=>{
-                    const bySlot=plannedGuardBySlot();
-                    const guardCards=bySlot[i]?.cards||0;
-                    const rushGuard=guardCards>=TACTICS_RUSH_GUARD_CARDS;
-                    if(guardCards>0&&!rushGuard) return null;
-                    const gv=tacticsSlotGuardValue(bySlot,i);
+                      ★全体ガードになったら**立っている子全員**に出す(2026-09-22 ユーザー指示
+                      「全体ガードになったときは全味方モンスターに軽減値を出して」)。
+                      構えた子も構えていない子も、その子の丈夫さで軽減量が違うため。
+                      全体ガードでない1枚だけの枠は、カードの札と同じ数字になるので出さない。
+                      ★空き枠・倒れた子には出ない(tacticsSlotGuardValue が0を返す) */}
+                  {guardPlanBySlot&&(()=>{
+                    if(!slotRushGuard&&!slotSpreadGuard) return null;
+                    const gv=tacticsSlotGuardValue(guardPlanBySlot,i);
                     if(!(gv>0)) return null;
-                    return <div data-tactics-guard-total={gv} data-tactics-guard-kind={rushGuard?'rush':'spread'}
-                      className={`absolute bottom-0.5 left-0.5 z-[55] rounded border px-1 py-0.5 font-black leading-none pointer-events-none ${rushGuard?'border-amber-200 bg-amber-600/95 text-white':'border-sky-300/60 bg-sky-800/90 text-sky-50'}`}
-                      style={{fontSize:'7px'}}>🛡 {rushGuard?'連撃ガード':'全体'} {gv}</div>;
+                    return <div data-tactics-guard-total={gv} data-tactics-guard-kind={slotRushGuard?'rush':'spread'}
+                      className={`absolute bottom-0.5 left-0.5 z-[55] rounded border px-1 py-0.5 font-black leading-none pointer-events-none ${slotRushGuard?'border-amber-200 bg-amber-600/95 text-white':'border-sky-300/60 bg-sky-800/90 text-sky-50'}`}
+                      style={{fontSize:'7px'}}>🛡 {slotRushGuard?'連撃ガード':'全体'} {gv}</div>;
                   })()}
                   {slotAssignedCards.length>0&&(
                     <div className="absolute top-0 left-0 right-0 flex flex-col gap-px items-center z-[55] pointer-events-none px-0.5">
@@ -941,11 +982,16 @@ function BattleScreen({
                         // ガードは軽減量をその場で出す。2枚目以降なら半分になった値をそのまま表示する
                         const gw=guardCardWeight(card), ge=cardEffectMultiplier(card,halvedByIdx[idx]);
                         const gv=gw>0?guardValueOf(GUARD_EVOLUTION[guardLevel].flat*gw*ge,GUARD_EVOLUTION[guardLevel].mult*gw*ge,i):0;
+                        // ★全体ガードになった枠の札は「全体ハイガード」と名乗る(2026-09-22 ユーザー指示
+                        //   「ハイガード-71みたいになってるとこを全体ハイガードみたいに変えて」)。
+                        //   軽減量は上の🛡が立っている子全員に出すので、札には数字を重ねない。
+                        //   連撃ガードの枠だけは1枚ずつの値が要る(合計は🛡に出るため)ので今までどおり
+                        const spreadGuardCard=gw>0&&slotSpreadGuard&&!slotRushGuard;
                         return(
                         <div key={idx} className={`flex items-center gap-0.5 px-1 rounded w-full justify-center min-w-0 ${cardNeedsMonster(card)?'bg-red-600/85':'bg-emerald-600/85'}`}>
                           <span style={{fontSize:'7px'}} className="leading-none shrink-0">{cardIconNode(card.icon,9,card.id)}</span>
-                          <span style={{fontSize:'7px'}} className="font-black text-white leading-none truncate min-w-0">{halvedByIdx[idx]?'½':''}{card.name}</span>
-                          {gv>0&&<span style={{fontSize:'7px'}} className="font-black text-emerald-100 leading-none shrink-0">-{gv}</span>}
+                          <span style={{fontSize:'7px'}} className="font-black text-white leading-none truncate min-w-0">{halvedByIdx[idx]?'½':''}{spreadGuardCard?'全体':''}{card.name}</span>
+                          {gv>0&&!spreadGuardCard&&<span style={{fontSize:'7px'}} className="font-black text-emerald-100 leading-none shrink-0">-{gv}</span>}
                         </div>
                         );
                       })}
@@ -962,6 +1008,8 @@ function BattleScreen({
                   )}
                   {/* 距離補正は0%でも出す(「補正が無い」ことも情報なので、枠ごとに常に見えるようにする) */}
                   {(()=>{const totalBonus=distTotalBonus(i); return(<div className={`absolute bottom-0.5 right-0.5 text-[11px] font-black leading-none flex items-center gap-0.5 bg-black/50 px-1 py-0.5 rounded border z-30 ${totalBonus>0?'text-cyan-300 border-cyan-400/30':totalBonus<0?'text-red-300 border-red-400/30':'text-slate-300 border-white/20'}`}><Sword size={5}/>{totalBonus>0?'+':''}{(totalBonus*100).toFixed(1)}%</div>);})()}
+                  {previewGuard>0&&(<div data-tactics-guard-preview={previewGuard}
+                    className={`absolute ${slotAssignedCards.length>0?'top-[18px]':'top-0'} bg-emerald-500 text-black ring-emerald-100 text-[10px] font-black px-1.5 py-0.5 rounded shadow-lg z-50 animate-bounce ring-1`}>{isPendingGuardHalved?'½ ':''}GUARD:{previewGuard}</div>)}
                   {previewDmg>0&&(<div className={`absolute ${slotAssignedCards.length>0?'top-[18px]':'top-0'} ${isPendingPreview?'bg-yellow-500 text-black ring-yellow-200':'bg-red-600 text-white ring-white/50'} text-[10px] font-black px-1.5 py-0.5 rounded shadow-lg z-50 animate-bounce ring-1`}>{isPendingPreview&&isPendingHalved?'½ ':''}DMG:{previewDmg}{isPendingPreview&&previewSoulPct>0&&<span data-soul-damage-preview className="ml-1 rounded bg-sky-950/80 px-1 py-0.5 text-[10px] text-sky-100">魂格 +{previewSoulPct}%</span>}</div>)}
                   {s?.imgUrl?(isAnimating&&s.id==='Pandora'&&attackAnim.motion==='pandoraDualThunder'
                     ?<PandoraDualThunder image={<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:'64px',height:'64px'}} className="object-contain drop-shadow-md"/>}/>
