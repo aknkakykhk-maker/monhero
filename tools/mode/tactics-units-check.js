@@ -1049,20 +1049,27 @@ check('ガッツ回復は新モードだと合計を足さずに配る',
   check('構えていない枠は数に入れない', spread({ 0: { cards: 1 }, 1: { cards: 0 } }) === false);
   check('全体ガードになる人数は本体が持つ',
     api.TACTICS_SPREAD_GUARD_SLOTS === 2, `${api.TACTICS_SPREAD_GUARD_SLOTS}体`);
-  // ★構えていない子に付くのは「その子の丈夫さ × ガード段階の倍率」だけ。固定値は乗らない
-  //   (2026-09-22 ユーザー選択「その子の丈夫さ × 倍率（固定値なし）」)
-  check('構えていない子には固定値を乗せない',
-    has('const tacticsSpreadGuardValue = (slotIdx) => guardValueOf(0, GUARD_EVOLUTION[guardLevel].mult, slotIdx);'));
+  // ★構えていない子に付くのは「ガードを1枚構えたのとまったく同じ計算」
+  //   (2026-09-22 ユーザー指示「クラシックと同じ仕様でいい」)。固定値(flat)も同じように通す。
+  //   0 を直に書くと、将来 flat に値を入れたときだけ全体ガードが置いていかれる
+  check('構えていない子も、1枚構えたのと同じ計算にする',
+    has('    guardValueOf(GUARD_EVOLUTION[guardLevel].flat, GUARD_EVOLUTION[guardLevel].mult, slotIdx);')
+      && !has('guardValueOf(0, GUARD_EVOLUTION[guardLevel].mult, slotIdx)'));
   check('構えていればその子のぶん、なければ全体ガードのぶん',
     has('if (own && (own.cards || 0) > 0) return guardValueOf(own.flat, own.mult, slotIdx);')
       && has('return isTacticsSpreadGuard(guardBySlot) ? tacticsSpreadGuardValue(slotIdx) : 0;'));
   // 画面にも出す。数字が出ないと、全体ガードになったことに気づけない
   const battleScreenSpread = fs.readFileSync(path.join(root, 'monster-hero/src/parts/71-screen-battle.jsx'), 'utf8');
-  check('全体ガードで付いたぶんを枠へ出す',
-    battleScreenSpread.includes('data-tactics-spread-guard={i}')
-      && battleScreenSpread.includes('🛡 全体 {gv}'));
-  check('自分で構えている枠には出さない(カードの札と二重になる)',
-    battleScreenSpread.includes('if((bySlot[i]?.cards||0)>0) return null;'));
+  check('枠へガードのまとめを出す(連撃ガードは合計値)',
+    battleScreenSpread.includes('data-tactics-guard-total={gv}')
+      && battleScreenSpread.includes("data-tactics-guard-kind={rushGuard?'rush':'spread'}")
+      && battleScreenSpread.includes("🛡 {rushGuard?'連撃ガード':'全体'} {gv}"));
+  // ★1枚だけの枠はカードの札と同じ数字になるので、まとめは出さない(二重になる)。
+  //   2枚以上(連撃ガード)は合計値なので出す。カードごとの単体値は札にそのまま残る
+  check('1枚だけの枠にはまとめを出さない',
+    battleScreenSpread.includes('if(guardCards>0&&!rushGuard) return null;'));
+  check('連撃ガードかどうかは本体の枚数で決める',
+    battleScreenSpread.includes('const rushGuard=guardCards>=TACTICS_RUSH_GUARD_CARDS;'));
 }
 
 console.log(failed ? `\nNG ${failed}件` : '\nすべてOK');

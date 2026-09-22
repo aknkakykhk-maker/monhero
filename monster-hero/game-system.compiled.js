@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6d9c54b3b456d583
+// source-sha256: 20f1949fe4ef249e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f6e1d909ba95b044
+// generated-sha256: ac2a04ea84175cdb
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-22 08:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-22 09:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -39628,16 +39628,19 @@ function BattleScreen({
       className: `absolute inset-0 rounded-xl ${RANGE_STYLES[i].slotBg} opacity-20 pointer-events-none`
     }), Array.isArray(tacticsUnits) && (() => {
       const bySlot = plannedGuardBySlot();
-      if ((bySlot[i]?.cards || 0) > 0) return null;
+      const guardCards = bySlot[i]?.cards || 0;
+      const rushGuard = guardCards >= TACTICS_RUSH_GUARD_CARDS;
+      if (guardCards > 0 && !rushGuard) return null;
       const gv = tacticsSlotGuardValue(bySlot, i);
       if (!(gv > 0)) return null;
       return /*#__PURE__*/React.createElement("div", {
-        "data-tactics-spread-guard": i,
-        className: "absolute bottom-0.5 left-0.5 z-[55] rounded border border-sky-300/60 bg-sky-800/90 px-1 py-0.5 font-black text-sky-50 leading-none pointer-events-none",
+        "data-tactics-guard-total": gv,
+        "data-tactics-guard-kind": rushGuard ? 'rush' : 'spread',
+        className: `absolute bottom-0.5 left-0.5 z-[55] rounded border px-1 py-0.5 font-black leading-none pointer-events-none ${rushGuard ? 'border-amber-200 bg-amber-600/95 text-white' : 'border-sky-300/60 bg-sky-800/90 text-sky-50'}`,
         style: {
           fontSize: '7px'
         }
-      }, "\uD83D\uDEE1 \u5168\u4F53 ", gv);
+      }, "\uD83D\uDEE1 ", rushGuard ? '連撃ガード' : '全体', " ", gv);
     })(), slotAssignedCards.length > 0 && /*#__PURE__*/React.createElement("div", {
       className: "absolute top-0 left-0 right-0 flex flex-col gap-px items-center z-[55] pointer-events-none px-0.5"
     }, slotAssignedCards.map(({
@@ -54306,9 +54309,11 @@ function MonsterHeroGame() {
   };
   const guardValueOf = (flat, mult, slotIdx = null) => flat > 0 || mult > 0 ? Math.floor(flat + guardDefFor(slotIdx) * mult) : 0;
   // ★全体ガード(2体以上が別々に構えた)のとき、構えていない子にも付くガード力。
-  //   「その子の丈夫さ × ガード段階の倍率」だけで、固定値は乗らない
-  //   (2026-09-22 ユーザー選択「その子の丈夫さ × 倍率（固定値なし）」)
-  const tacticsSpreadGuardValue = slotIdx => guardValueOf(0, GUARD_EVOLUTION[guardLevel].mult, slotIdx);
+  //   **ガードを1枚構えたのとまったく同じ計算**(2026-09-22 ユーザー指示
+  //   「クラシックと同じ仕様でいい」)。固定値(flat)も同じように通す。
+  //   ⚠️ いまは GUARD_EVOLUTION の flat が9段階とも0なので、実際は「丈夫さ×倍率」だけ。
+  //     ここで 0 を直に書くと、将来 flat に値を入れたときだけ全体ガードが置いていかれる
+  const tacticsSpreadGuardValue = slotIdx => guardValueOf(GUARD_EVOLUTION[guardLevel].flat, GUARD_EVOLUTION[guardLevel].mult, slotIdx);
   // その枠のガード値。構えていれば自分のぶん、構えていなくても全体ガードなら丈夫さぶん
   const tacticsSlotGuardValue = (guardBySlot, slotIdx) => {
     const own = (guardBySlot || {})[slotIdx];
