@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d2ba3ac7d417250a
+// source-sha256: daea55cc96c3eb62
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 56649635afb9b45f
+// generated-sha256: 0906f6ab7f03edfe
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-22 13:52"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-22 14:14"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -16766,11 +16766,17 @@ const ATTACK_COMBO_RULES = Object.freeze({
 // ソードスキルの「連撃パワー」が満タンになる数。ここに達するたびに永久10%連撃が1本増え、0へ戻る
 const KENSHI_COMBO_POWER_MAX = 3;
 // mainCanCrit:false は「メインヒットには会心が乗らない」種類(あつの挑発)。連撃・全体連撃の会心判定は変わらない
+// ★heroId … 勇者モンのid。traitOwnerId … 特性の「持ち主」(タクティクスでは札を出した子、
+//   既存5モードは勇者モンと同じ)。渡さなければ heroId と同じに倒れるので、今までの呼び出しは変わらない。
+//   連撃系はここで分かれる(2026-09-22 ユーザー判断)。
+//     ザンの連斬だけ traitOwnerId … 供モンでも本人が殴れば出る
+//     エイキ・パンドラ・剣士モッチー … heroId。**勇者モンにしたからこそ強い**設定なので出さない
 const buildAttackHits = ({
   d,
   card,
   attackerId,
   heroId,
+  traitOwnerId = heroId,
   comboDmgBonus = 0,
   critDmgBonus = 0,
   guaranteedCrit = false,
@@ -16815,7 +16821,7 @@ const buildAttackHits = ({
       noAnim
     });
   };
-  if (heroId === 'Zan' && attackerId === 'Zan') combo(ATTACK_COMBO_RULES.zanHero + comboDmgBonus);
+  if (traitOwnerId === 'Zan' && attackerId === 'Zan') combo(ATTACK_COMBO_RULES.zanHero + comboDmgBonus);
   if (isUniqueOf('Zan')) combo(ATTACK_COMBO_RULES.zanUnique + comboDmgBonus);
   if (heroId === 'Eiki' && attackerId === 'Eiki') {
     for (const rate of ATTACK_COMBO_RULES.eikiHero) combo(rate + comboDmgBonus);
@@ -54247,6 +54253,14 @@ function MonsterHeroGame() {
   // 順序で50%にならないため、実処理と予測表示の双方がこの入口を使う。
   // ★タクティクスは「狙われた子だけ」のぶんも掛ける(アーク/イブリースの贖罪。
   //   2026-09-22 ユーザー選択)。メロソの全体ぶん(takenDamageMult)は今までどおり全員に掛かる
+  // ★勇者特性の「持ち主」。既存5モードは勇者モン、タクティクスは**その札を出した子**
+  //   (設計 4.9「勇者モンにしていなくても、盤面にいればその子の特性が効く」)。
+  //   怪力・魔力開放・禁忌解錠の「引き継いだ固有技+50%」はここを通る。
+  // ⚠️ 連撃系は種類で分かれる(2026-09-22 ユーザー判断)。
+  //     ザンの連斬だけが**持ち主**で決まる。エイキの桜花連舞・パンドラの禁忌解錠の連撃・
+  //     剣士モッチーの二刀流は「勇者モンにしたからこそ強い」設定なので、
+  //     **勇者モンのときだけ**発動させる(buildAttackHits が heroId で見分ける)
+  const traitOwnerOf = mon => isTacticsMode(runMode) ? mon?.id || null : mainHero?.id || null;
   const applyTurnDamageReduction = useCallback((damage, slotIdx = null) => damage > 0 ? Math.max(1, Math.floor(damage * getTurnBuff('takenDamageMult', 1.0) * tacticsSlotRate(isTacticsMode(runMode) ? turnBuffs.bySlot : null, slotIdx, 'takenDamageMult', 1.0))) : 0, [turnBuffs, runMode]);
   const getPredictedDamage = useCallback(intent => applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(intent)), [getIncomingDamageBeforeTurnReduction, applyTurnDamageReduction]);
 
@@ -54814,9 +54828,8 @@ function MonsterHeroGame() {
       baseDmgMult = card.mult || card.baseMult || 1.0;
     }
     // ★タクティクスバトルは**攻撃した子自身の特性**が乗る(2026-09-20 ユーザー提案)。
-    //   ザン・エイキ・パンドラの連撃はもともと attackerId を見て本人のものになっている。
     //   既存5モードは今までどおり、勇者モンの特性が誰の攻撃にも乗る(仕様 8.触らないもの)
-    const attackHeroId = !isTacticsMode(runMode) ? mainHero?.id : mon?.id || null;
+    const attackHeroId = traitOwnerOf(mon);
     let traitMult = (attackHeroId === 'Golem' ? 1.2 : 1.0) * ((attackHeroId === 'Pixie' || attackHeroId === 'Mia') && card.type === 'unique' ? 2.0 : 1.0);
     // 禁忌解錠: パンドラ勇者が使う『引き継いだ』固有技だけを1.5倍にする。
     // 技の出自はcard.monIdで判定し、自身の固有技へは適用しない。
@@ -54861,6 +54874,7 @@ function MonsterHeroGame() {
       card,
       attackerId: mon?.id,
       heroId: mainHero?.id,
+      traitOwnerId: traitOwnerOf(mon),
       comboDmgBonus: getPermaBuff('comboDmgPct'),
       critDmgBonus: getPermaBuff('critDmgPct') + soulAttack.critDamageBonus,
       kenshiExtraCombos: getPermaBuff('kenshiExtraCombo'),
@@ -55878,6 +55892,7 @@ function MonsterHeroGame() {
             card,
             attackerId: stunMon?.id,
             heroId: mainHero?.id,
+            traitOwnerId: traitOwnerOf(stunMon),
             comboDmgBonus: getPermaBuff('comboDmgPct'),
             critDmgBonus: getPermaBuff('critDmgPct') + soulAttack.critDamageBonus,
             kenshiExtraCombos: getPermaBuff('kenshiExtraCombo'),
@@ -56068,6 +56083,7 @@ function MonsterHeroGame() {
           card,
           attackerId: activeMon.id,
           heroId: mainHero?.id,
+          traitOwnerId: traitOwnerOf(activeMon),
           comboDmgBonus: getPermaBuff('comboDmgPct'),
           critDmgBonus,
           kenshiExtraCombos: getPermaBuff('kenshiExtraCombo'),

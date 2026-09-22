@@ -50,8 +50,12 @@ const makeIncoming = (deps) => new Function('d', `
 const traitBody = slice(
   '    // ★タクティクスバトルは**攻撃した子自身の特性**が乗る(2026-09-20 ユーザー提案)。',
   '    // 間合い適性は');
+// 2026-09-22: 特性の「持ち主」を決める1行も本体から取り出して持ち込む
+// (検査へ書き写すと、本体の決め方を変えたときに検査だけ古くなる)
+const traitOwnerSrc = `const traitOwnerOf = ${slice('const traitOwnerOf = ', '\n')}`;
 const makeTrait = (deps) => new Function('d', `
   const {isTacticsMode,runMode,mainHero} = d;
+  ${traitOwnerSrc}
   return (card, slotIdx, mon) => {${traitBody} return traitMult; };
 `)(deps);
 
