@@ -37,13 +37,13 @@
 // 画面の根。管理系の画面はすべてこれを使う。
 //   <div data-mh-screen className={SCREEN_SHELL_CLASS}>
 // data-mh-screen は横画面の組み替えの目印なので、一覧を持つ画面では必ず付ける。
-const SCREEN_SHELL_CLASS = 'flex-1 flex flex-col h-full min-h-0 p-4';
+const SCREEN_SHELL_CLASS = 'mh-screen-shell flex-1 flex flex-col h-full min-h-0 p-4';
 
 // 画面の中に置くパネル(囲み)の型。角丸・枠線・背景はここだけで決める。
 //   SCREEN_PANEL_CLASS      … ふつうの囲み
 //   SCREEN_PANEL_FLAT_CLASS … 中に並べるもの用(背景を一段落とす)
-const SCREEN_PANEL_CLASS = 'rounded-2xl border border-white/10 bg-slate-900/70 p-3';
-const SCREEN_PANEL_FLAT_CLASS = 'rounded-xl border border-white/10 bg-black/30 px-3 py-2';
+const SCREEN_PANEL_CLASS = 'mh-panel rounded-2xl border border-white/10 bg-slate-900/70 p-3';
+const SCREEN_PANEL_FLAT_CLASS = 'mh-panel-flat rounded-xl border border-white/10 bg-black/30 px-3 py-2';
 
 // 一覧(スクロールする場所)の型。flex-1 min-h-0 が無いと、flex の子は中身なりに伸びて
 // スクロールが起きず、下が切れる(神殿の4つの一覧で実際に起きていた)。
@@ -51,7 +51,7 @@ const SCREEN_LIST_CLASS = 'flex-1 min-h-0 overflow-y-auto mh-scroll';
 
 // 画面のいちばん下に置く決定ボタンの帯。一覧の内側へ sticky で入れると、
 // その下にある中身をスクロール中ずっと覆ってしまう(強化画面で起きていた)。
-const SCREEN_FOOTER_CLASS = 'shrink-0 mt-2 border-t border-white/10 pt-2';
+const SCREEN_FOOTER_CLASS = 'mh-screen-footer shrink-0 mt-2 border-t border-white/10 pt-2';
 
 // 画面の頭。「← / 画面の名前 / (補足) / 右の付け足し」の順で、どの画面も同じ形にする。
 //   title    … 画面の名前(日本語)
@@ -64,16 +64,16 @@ const SCREEN_FOOTER_CLASS = 'shrink-0 mt-2 border-t border-white/10 pt-2';
 // ★戻るは 44×44px(p-3 + 20px)を確保し、押した手応え(active:scale-90)を必ず付ける。
 //   「反応する戻る」と「反応しない戻る」が混ざっていると、押せていないように見える。
 const ScreenHead = ({ title, icon = null, accent = 'text-white', note = '', onBack = null, backLabel = '戻る', right = null, disabled = false }) => (
-  <header className="mb-3 flex shrink-0 items-center gap-1.5 border-b border-white/10 pb-2">
+  <header className="mh-screen-head mb-3 flex shrink-0 items-center gap-1.5 border-b border-white/10 pb-2">
     {onBack && (
       <button type="button" aria-label={backLabel} onClick={onBack} disabled={disabled}
-        className="-ml-1 shrink-0 p-3 text-slate-400 active:scale-90 disabled:opacity-30">
+        className="mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90 disabled:opacity-30">
         <ArrowLeft size={20}/>
       </button>
     )}
     <div className="min-w-0 flex-1">
       <h2 className={`flex items-center gap-1.5 truncate text-xl font-black italic leading-tight ${accent}`}>{icon}{title}</h2>
-      {note && <p className="mt-0.5 text-[10px] font-bold leading-snug text-slate-400">{note}</p>}
+      {note && <p className="mh-screen-note mt-0.5 text-[10px] font-bold leading-snug text-slate-400">{note}</p>}
     </div>
     {right && <div className="shrink-0">{right}</div>}
   </header>
@@ -82,7 +82,7 @@ const ScreenHead = ({ title, icon = null, accent = 'text-white', note = '', onBa
 // 画面の説明文(見出しの下に1〜2行)。各画面が同じ指定を手で書き写していたのでまとめる。
 // 補足は 10px より小さくしない(8px は実機では模様にしか見えない)。
 const ScreenLead = ({ children }) => (
-  <p className="mb-2 shrink-0 px-0.5 text-[10px] font-bold leading-relaxed text-slate-400">{children}</p>
+  <p className="mh-screen-note mb-2 shrink-0 px-0.5 text-[10px] font-bold leading-relaxed text-slate-400">{children}</p>
 );
 
 // 0件のときの表示。「無い」「素の1行」「絵文字つき」の3通りあったのを1つにする。
@@ -103,13 +103,13 @@ const ScreenEmpty = ({ emoji = '📭', lines = [], action = null }) => (
 );
 
 // タブの並び。数・文字の大きさ・すき間・押した手応えが画面ごとに違っていたのでまとめる。
-//   items  … [{ id, label, color, badge }]。color は選ばれているときの背景(省略時は藍)
+//   items  … [{ id, label, color, badge }]。color は識別色。省略時は共通の金色と濃い文字。
 //   value  … いま選ばれている id
 //   onChange … 押されたら呼ぶ
 // ★列の数は style で渡す。`grid-cols-${n}` のような組み立てたクラス名は
 //   静的CSS(tailwind.css)に入らないので効かない(UIルール「動的クラスだけに依存しない」)。
 // ★選ばれている側の背景も style で直に持たせる。同じ理由。
-const SCREEN_TAB_ACTIVE_FALLBACK = '#4f46e5';
+const SCREEN_TAB_ACTIVE_FALLBACK = 'var(--mh-gold, #e8bc62)';
 const ScreenTabs = ({ items = [], value, onChange, className = '' }) => (
   <div role="tablist" className={`mb-2 grid shrink-0 gap-2 ${className}`}
     style={{gridTemplateColumns:`repeat(${Math.max(1, items.length)},minmax(0,1fr))`}}>
@@ -117,8 +117,8 @@ const ScreenTabs = ({ items = [], value, onChange, className = '' }) => (
       const on = tab.id === value;
       return (
         <button key={tab.id} type="button" role="tab" aria-selected={on} onClick={() => onChange(tab.id)}
-          className={`relative min-h-[44px] rounded-xl px-1 text-[11px] font-black leading-tight active:scale-95 ${on ? 'text-white' : 'border border-white/10 bg-slate-900 text-slate-400'}`}
-          style={on ? {background: tab.color || SCREEN_TAB_ACTIVE_FALLBACK, boxShadow:'0 3px 12px #0006'} : undefined}>
+          className={`mh-tab relative min-h-[44px] rounded-xl px-1 text-[11px] font-black leading-tight active:scale-95 ${on ? 'text-white' : 'border border-white/10 bg-slate-900 text-slate-400'}`}
+          style={on ? {background: tab.color || SCREEN_TAB_ACTIVE_FALLBACK, color: tab.color ? undefined : 'var(--mh-on-gold, #211a0c)'} : undefined}>
           {tab.label}
           {tab.badge > 0 && typeof tabCountBadge === 'function' ? tabCountBadge(tab.badge) : null}
         </button>
