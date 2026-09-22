@@ -119,7 +119,7 @@ if (from >= 0 && to > from) {
   // 「本編で流したぶんを見たことにする」処理を使うようになった(2026-09-11)。
   // 名前を渡していないと ReferenceError で描画そのものが落ち、下の確認が1件も走らない
   const transformed = babel.transformSync(
-    'const Screen = ({ eventReplay, setEventReplay, EVENT_REPLAYS, ASSISTANT_LIST, assistantById, AssistantFace,\n'
+    'const Screen = ({ eventReplay, setEventReplay, EVENT_REPLAYS, eventReplayList, ASSISTANT_LIST, assistantById, AssistantFace,\n'
     + '  normalizeAssistantBond, assistantBonds, assistantCallStyles, assistantSpeakText, assistantBondLevelOf,\n'
     + '  breederName, markRhythmEventStorySeen, MONBEAT_CUP_STORY_ID }) => (<>\n'
     + replayBlock + '\n</>);\nmodule.exports = { Screen };',
@@ -130,6 +130,9 @@ if (from >= 0 && to > from) {
     eventReplay: { id: 'kiki_intro', step },
     setEventReplay: () => {},
     EVENT_REPLAYS: list,
+    // ★画面は「公開フラグでふるいにかけた一覧」(eventReplayList)を通すようになった。
+    //   渡していないと ReferenceError で描画そのものが落ちる
+    eventReplayList: () => list,
     ASSISTANT_LIST: ASSISTANTS,
     assistantById: (id) => ASSISTANTS.find(x => x.id === id) || ASSISTANTS[0],
     AssistantFace,
