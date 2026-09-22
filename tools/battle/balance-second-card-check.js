@@ -182,7 +182,11 @@ check('みゃるの薬の自傷率は現在ライフの50%', myaruRate({ ...myar
 check('みゃるの怪薬の自傷率は現在ライフの40%', myaruRate({ ...myaruCard, evoLevel: 1 }) === 0.4);
 check('みゃるの禁薬の自傷率は現在ライフの30%', myaruRate({ ...myaruCard, evoLevel: 2 }) === 0.3);
 check('みゃるの実戦処理は進化後の自傷率と既存の特殊ルール倍率を使う',
-  has('hpBeforeEnemyAttack*myaruSelfDamageRate(card)*effMul'));
+  has('const selfDmgAmt=Math.floor(selfBaseHp*myaruSelfDamageRate(card)*effMul);'));
+// 2026-09-22: タクティクスは自傷も「飲んだ子の今のライフ」から。既存5モードは盤面の合計のまま
+check('みゃるの自傷のもとになるライフは、タクティクスだけ飲んだ子のもの',
+  has('? normalizeTacticsUnit(tacticsUnitsRef.current[slotIdx]).hp : hpBeforeEnemyAttack;')
+    && !has('hpBeforeEnemyAttack*myaruSelfDamageRate(card)*effMul'));
 check('みゃるの表示は実戦処理と同じ自傷率を使う', has('pct(myaruSelfDamageRate(t,level))'));
 check('みゃるのLv1～Lv3表示',
   [0, 1, 2].map(level => otherDesc('myaru', level, { baseValue: 2.0, step: 0.5, selfDmg: 0.5, dmgStep: 0.1 }))

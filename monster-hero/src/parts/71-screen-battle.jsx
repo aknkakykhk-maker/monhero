@@ -812,6 +812,14 @@ function BattleScreen({
               const slotGuardCards=guardPlanBySlot?(guardPlanBySlot[i]?.cards||0):0;
               const slotRushGuard=slotGuardCards>=TACTICS_RUSH_GUARD_CARDS;
               const slotSpreadGuard=!!guardPlanBySlot&&isTacticsSpreadGuard(guardPlanBySlot);
+              // ★みゃるの薬の攻撃バフは「飲んだ子だけ」に効く(タクティクス)。
+              //   全体の札(Boost)では誰にかかっているのか分からないので、枠へ出す
+              const slotAtkBoost=(()=>{
+                if(!Array.isArray(tacticsUnits)) return 0;
+                const bySlot=getTurnBuff('atkMultBySlot',null);
+                const value=bySlot?Number(bySlot[i]):NaN;
+                return Number.isFinite(value)&&value>1?value:0;
+              })();
               let canAssign=false;
               if(s && pendingCardObj){
                 // 新モードは「その子が払えるか」で決まる。倒れた子へは回復カードだけ置ける。
@@ -944,7 +952,7 @@ function BattleScreen({
                 </>}
                 {/* 名前の行。勇者モンには王冠を付ける。どれが勇者モンか分からないと
                     「勇者モン選択時だけ効く特性」が効いているのか判断できないため */}
-                <div className={`h-[18px] shrink-0 flex items-center justify-center px-1 border-b z-20 ${isHeroSlotMon(s)?'bg-amber-500/25 border-amber-300/50':'bg-black/60 border-white/10'}`}>{isHeroSlotMon(s)&&<Crown size={8} className="shrink-0 mr-0.5 text-amber-300"/>}<span className={`text-[10px] font-black truncate uppercase leading-none ${isHeroSlotMon(s)?'text-amber-100':'text-white'}`}>{s?.name||'---'}</span>{assignedCount>0&&<span className="ml-1 text-[10px] font-black text-indigo-300">×{assignedCount}</span>}</div>
+                <div className={`h-[18px] shrink-0 flex items-center justify-center px-1 border-b z-20 ${isHeroSlotMon(s)?'bg-amber-500/25 border-amber-300/50':'bg-black/60 border-white/10'}`}>{isHeroSlotMon(s)&&<Crown size={8} className="shrink-0 mr-0.5 text-amber-300"/>}<span className={`text-[10px] font-black truncate uppercase leading-none ${isHeroSlotMon(s)?'text-amber-100':'text-white'}`}>{s?.name||'---'}</span>{assignedCount>0&&<span className="ml-1 text-[10px] font-black text-indigo-300">×{assignedCount}</span>}{slotAtkBoost>0&&<span data-tactics-atk-boost={slotAtkBoost} className="ml-1 shrink-0 text-[9px] font-black text-red-300 leading-none">⚔×{slotAtkBoost.toFixed(1)}</span>}</div>
                 {(()=>{const uOptions=getAvailableUniquesForSlot(s,ownedUniques,i); if(uOptions.length<2) return null; const curKey=activeSlotUniqueKey(slotUniqueChoice,i,s); const curIdx=Math.max(0,uOptions.findIndex(o=>o.key===curKey));
                   return(<div onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation(); if(isBusy||autoBattleRef.current)return; cycleActiveUniqueForSlot(i);}} className={`shrink-0 z-20 flex items-center justify-center gap-0.5 bg-purple-700/90 border-b border-purple-300/50 py-0.5 active:scale-95${autoBattle?' opacity-40':''}`}>
                     <RefreshCcw size={7} className="text-white"/><span className="text-[10px] font-black text-white leading-none">固有技 {curIdx+1}/{uOptions.length}</span>

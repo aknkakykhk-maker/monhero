@@ -1178,5 +1178,49 @@ check('ガッツ回復は新モードだと合計を足さずに配る',
     battleScreenSpread.includes('const tacticsAnswer=tacticsCanAssign?tacticsCanAssign(pendingCardObj,pendingIdx,i):null;\n                if(tacticsAnswer===null||tacticsAnswer===undefined){'));
 }
 
+// --- ㉝ みゃるの薬は「飲んだ子だけ」(2026-09-22 ユーザー指摘) ---
+// ★攻撃バフを全体(atkMult)へ置き、自傷を盤面の合計ライフから引いていた。
+//   4体いると自分のライフの何倍もの自傷が来るので、飲むたびに必ず1まで落ちていた
+//   (ユーザー「ライフが劇的に減った。多分全体ライフを見てる？」
+//     「みゃるの薬は使ったやつだけにきくバフだね 多分全体になってるよね？」)。
+check('みゃるの攻撃バフは、タクティクスだけ枠ごとに置く',
+  has('if(isTacticsMode(runMode)) setTacticsNextSlotAtkMult(slotIdx,myaruAtkMult);')
+    && has('else setNextTurnBuff(\'atkMult\',myaruAtkMult);'));
+check('枠ごとの攻撃バフがダメージへ効く',
+  has("getTurnBuff('atkMult',1.0)*tacticsSlotAtkMult(slotIdx)*"));
+// ★同じターンに2人が飲んでも消し合わない(枠ごとに足す)
+check('枠ごとの攻撃バフは足していく',
+  has('...p, atkMultBySlot: { ...(p.atkMultBySlot || {}), [slotIdx]: mult },'));
+// 読み出しの決まりは本体から切り出してそのまま動かす(検査へ書き写さない)
+{
+  const atkMultSrc = slice('const tacticsSlotAtkMult = (slotIdx) => {', '\n  };') + '\n  };';
+  const box = { Number, __turn: {}, __tactics: true };
+  vm.createContext(box);
+  vm.runInContext(
+    'const isTacticsMode=()=>__tactics; const runMode=null;'
+      + 'const getTurnBuff=(key,def)=>(key in __turn ? __turn[key] : def);'
+      + atkMultSrc.trim()
+      + '\nglobalThis.f=tacticsSlotAtkMult;', box);
+  const atkMultOf = box.f;
+  box.__turn = { atkMultBySlot: { 1: 2.0 } };
+  check('飲んだ子だけ攻撃が上がる', atkMultOf(1) === 2.0 && atkMultOf(0) === 1.0 && atkMultOf(3) === 1.0);
+  box.__turn = { atkMultBySlot: { 1: 'こわれた' } };
+  check('壊れた値が来ても等倍に倒す', atkMultOf(1) === 1.0);
+  box.__turn = {};
+  check('誰も飲んでいなければ等倍', atkMultOf(0) === 1.0);
+  box.__tactics = false; box.__turn = { atkMultBySlot: { 1: 2.0 } };
+  check('既存5モードは枠ごとのバフを見ない', atkMultOf(1) === 1.0);
+}
+// ★どの子にかかっているかを枠に出す。全体の札(Boost)では誰のものか分からない
+{
+  const battleScreenMyaru = fs.readFileSync(path.join(root, 'monster-hero/src/parts/71-screen-battle.jsx'), 'utf8');
+  check('薬がかかっている子の枠に印を出す',
+    battleScreenMyaru.includes("const bySlot=getTurnBuff('atkMultBySlot',null);")
+      && battleScreenMyaru.includes('data-tactics-atk-boost={slotAtkBoost}'));
+}
+check('カードの説明にも「飲んだ子だけ」と書く',
+  has("isTacticsMode(runMode)&&focusedCard.subType==='buff_myaru'")
+    && has('置いた子だけに効きます。自傷もその子の今のライフから引きます'));
+
 console.log(failed ? `\nNG ${failed}件` : '\nすべてOK');
 process.exit(failed ? 1 : 0);

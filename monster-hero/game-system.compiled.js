@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 28921b02b712db7c
+// source-sha256: 21100bb970e25b91
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8ab2a45388374066
+// generated-sha256: 117e1bee4f92df90
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-22 12:47"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-22 12:58"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -39498,6 +39498,14 @@ function BattleScreen({
     const slotGuardCards = guardPlanBySlot ? guardPlanBySlot[i]?.cards || 0 : 0;
     const slotRushGuard = slotGuardCards >= TACTICS_RUSH_GUARD_CARDS;
     const slotSpreadGuard = !!guardPlanBySlot && isTacticsSpreadGuard(guardPlanBySlot);
+    // ★みゃるの薬の攻撃バフは「飲んだ子だけ」に効く(タクティクス)。
+    //   全体の札(Boost)では誰にかかっているのか分からないので、枠へ出す
+    const slotAtkBoost = (() => {
+      if (!Array.isArray(tacticsUnits)) return 0;
+      const bySlot = getTurnBuff('atkMultBySlot', null);
+      const value = bySlot ? Number(bySlot[i]) : NaN;
+      return Number.isFinite(value) && value > 1 ? value : 0;
+    })();
     let canAssign = false;
     if (s && pendingCardObj) {
       // 新モードは「その子が払えるか」で決まる。倒れた子へは回復カードだけ置ける。
@@ -39701,7 +39709,10 @@ function BattleScreen({
       className: `text-[10px] font-black truncate uppercase leading-none ${isHeroSlotMon(s) ? 'text-amber-100' : 'text-white'}`
     }, s?.name || '---'), assignedCount > 0 && /*#__PURE__*/React.createElement("span", {
       className: "ml-1 text-[10px] font-black text-indigo-300"
-    }, "\xD7", assignedCount)), (() => {
+    }, "\xD7", assignedCount), slotAtkBoost > 0 && /*#__PURE__*/React.createElement("span", {
+      "data-tactics-atk-boost": slotAtkBoost,
+      className: "ml-1 shrink-0 text-[9px] font-black text-red-300 leading-none"
+    }, "\u2694\xD7", slotAtkBoost.toFixed(1))), (() => {
       const uOptions = getAvailableUniquesForSlot(s, ownedUniques, i);
       if (uOptions.length < 2) return null;
       const curKey = activeSlotUniqueKey(slotUniqueChoice, i, s);
@@ -42960,6 +42971,26 @@ function MonsterHeroGame() {
     ...p,
     [key]: value
   })); // 次ターンへ持ち越さない、このターン限りの即時効果
+  // ★タクティクスの「その子だけに効く次ターンの攻撃バフ」(みゃるの薬)。
+  //   設計 4.4「全体で見てよいのは7つだけ。ほかはすべて1体ずつ」に従い、
+  //   パーティ全体の atkMult とは別の箱(枠ごと)へ入れる。
+  //   nextTurnBuffs の中に置くので、ターンの入れ替え(turnBuffs へ丸ごと移す)も
+  //   WAVEのリセット(setTurnBuffs({}))も今までの仕掛けがそのまま効く。
+  //   同じターンに2人が飲んでも消し合わないよう、枠ごとに足す
+  const setTacticsNextSlotAtkMult = (slotIdx, mult) => writeNextTurnBuffs(p => ({
+    ...p,
+    atkMultBySlot: {
+      ...(p.atkMultBySlot || {}),
+      [slotIdx]: mult
+    }
+  }));
+  // その枠にかかっている攻撃バフ。既存5モードと、飲んでいない子は 1.0
+  const tacticsSlotAtkMult = slotIdx => {
+    if (!isTacticsMode(runMode)) return 1.0;
+    const bySlot = getTurnBuff('atkMultBySlot', null);
+    const value = bySlot ? Number(bySlot[slotIdx]) : NaN;
+    return Number.isFinite(value) && value > 0 ? value : 1.0;
+  };
   // 丈夫さのバフは permaBuffs の 'defPct' に積む(基礎ステータスの def は書き換えない)。
   // 実際に計算へ使う値は effectiveDef で、被ダメージの軽減量とガードの軽減量の両方に効く。
   // 「被ダメージを◯%軽減する(dmgCutPct)」とは効き方が違うので、混ぜないこと。
@@ -54646,7 +54677,9 @@ function MonsterHeroGame() {
     const aptForSlot = isTacticsMode(runMode) && mon ? getMonsterAptPct(mon, specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty), wave) : distAptPct;
     const distBonusMult = 1.0 + (distDmgBonus[slotIdx] || 0) + (aptForSlot[slotIdx] || 0);
     const soulAttack = soulTraitAttackProfile(mon?.masuId ? getMasuMon(mon.masuId) : null, card, slotIdx);
-    const totalBuffMult = traitMult * getTurnBuff('atkMult', 1.0) * (1.0 + getPermaBuff('atkPct') + getPermaBuff('muaAtkPct') + additionalOryo) * distBonusMult * soulAttack.damageMultiplier;
+    // ★みゃるの薬の攻撃バフは、タクティクスでは「飲んだ子だけ」に乗る(設計 4.4)。
+    //   既存5モードは今までどおりパーティ全体(atkMult)。どちらか一方しか 1.0 以外にならない
+    const totalBuffMult = traitMult * getTurnBuff('atkMult', 1.0) * tacticsSlotAtkMult(slotIdx) * (1.0 + getPermaBuff('atkPct') + getPermaBuff('muaAtkPct') + additionalOryo) * distBonusMult * soulAttack.damageMultiplier;
     // 新モードは「攻撃したその子のちから」で殴る(設計 §4.1)。ほかのモードはパーティ共通のまま
     const attackerAtk = isTacticsMode(runMode) && tacticsUnitsRef.current[slotIdx] ? Math.max(0, normalizeTacticsUnit(tacticsUnitsRef.current[slotIdx]).atk) : atk;
     let finalDmg = Math.floor(attackerAtk * distMult * baseDmgMult * totalBuffMult * (1.0 + getWaveBuff('enemyTakenDmgBonus') + additionalDmgMod));
@@ -55723,8 +55756,17 @@ function MonsterHeroGame() {
             });
           }
         } else if (card.subType === 'buff_myaru') {
-          setNextTurnBuff('atkMult', 1 + (card.baseValue - 1) * effMul);
-          const selfDmgAmt = Math.floor(hpBeforeEnemyAttack * myaruSelfDamageRate(card) * effMul);
+          const myaruAtkMult = 1 + (card.baseValue - 1) * effMul;
+          // ★タクティクスは「飲んだ子だけ」に効く(2026-09-22 ユーザー指摘
+          //   「みゃるの薬は使ったやつだけにきくバフだね 多分全体になってるよね？」)。
+          //   設計 4.4 のとおり、全体で見てよいものにターンバフは入っていない
+          if (isTacticsMode(runMode)) setTacticsNextSlotAtkMult(slotIdx, myaruAtkMult);else setNextTurnBuff('atkMult', myaruAtkMult);
+          // ★自傷のもとになるライフも「飲んだ子の今のライフ」。
+          //   盤面の合計(hpBeforeEnemyAttack)から出していたので、4体いると
+          //   自分のライフの何倍もの自傷が来て、飲むたびに必ず1まで落ちていた
+          //   (2026-09-22 ユーザー指摘「ライフが劇的に減った。多分全体ライフを見てる？」)
+          const selfBaseHp = isTacticsMode(runMode) && tacticsUnitsRef.current?.[slotIdx] ? normalizeTacticsUnit(tacticsUnitsRef.current[slotIdx]).hp : hpBeforeEnemyAttack;
+          const selfDmgAmt = Math.floor(selfBaseHp * myaruSelfDamageRate(card) * effMul);
           addPopup(`自傷-${selfDmgAmt}`, 'hero', 'text-red-600 text-2xl font-black');
           // 新モードは立っている子へ配る。★自傷では誰も倒れない(1体ずつ最低1を残す)
           const selfHurt = isTacticsMode(runMode) ? commitTacticsUnits(selfDamageTacticsAt(tacticsUnitsRef.current, slotIdx, selfDmgAmt)) : null;
@@ -70349,7 +70391,9 @@ function MonsterHeroGame() {
       className: "text-cyan-400"
     }, "\u8DDD\u96E2\u52B9\u679C:"), " ", RANGE_LABELS[focusedCard.rangeIdx], "\u8DDD\u96E2\u3067\u5A01\u529B\u30A2\u30C3\u30D7\u3002\u653B\u6483\u5F8C\u3001", RANGE_LABELS[focusedCard.rangeIdx], "\u8DDD\u96E2\u3078\u79FB\u52D5\u3059\u308B"), ['buff', 'debuff', 'heal'].includes(focusedCard.type) && /*#__PURE__*/React.createElement("div", {
       className: "text-center italic text-amber-300 font-bold text-[7px] leading-tight"
-    }, getDynamicDesc(focusedCard, true, focusedCard.evoLevel || 0)), focusedCard.effectDesc && /*#__PURE__*/React.createElement("div", {
+    }, getDynamicDesc(focusedCard, true, focusedCard.evoLevel || 0)), isTacticsMode(runMode) && focusedCard.subType === 'buff_myaru' && /*#__PURE__*/React.createElement("div", {
+      className: "text-center text-[7px] font-bold leading-tight text-emerald-300"
+    }, "\u7F6E\u3044\u305F\u5B50\u3060\u3051\u306B\u52B9\u304D\u307E\u3059\u3002\u81EA\u50B7\u3082\u305D\u306E\u5B50\u306E\u4ECA\u306E\u30E9\u30A4\u30D5\u304B\u3089\u5F15\u304D\u307E\u3059"), focusedCard.effectDesc && /*#__PURE__*/React.createElement("div", {
       className: "border-t border-white/10 pt-1 mt-1 text-[7px] text-amber-200 font-bold"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-indigo-400"
