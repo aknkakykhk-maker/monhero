@@ -9250,9 +9250,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const guardValueOf = (flat, mult, slotIdx = null) =>
     (flat > 0 || mult > 0) ? Math.floor(flat + guardDefFor(slotIdx) * mult) : 0;
   // ★全体ガード(2体以上が別々に構えた)のとき、構えていない子にも付くガード力。
-  //   「その子の丈夫さ × ガード段階の倍率」だけで、固定値は乗らない
-  //   (2026-09-22 ユーザー選択「その子の丈夫さ × 倍率（固定値なし）」)
-  const tacticsSpreadGuardValue = (slotIdx) => guardValueOf(0, GUARD_EVOLUTION[guardLevel].mult, slotIdx);
+  //   **ガードを1枚構えたのとまったく同じ計算**(2026-09-22 ユーザー指示
+  //   「クラシックと同じ仕様でいい」)。固定値(flat)も同じように通す。
+  //   ⚠️ いまは GUARD_EVOLUTION の flat が9段階とも0なので、実際は「丈夫さ×倍率」だけ。
+  //     ここで 0 を直に書くと、将来 flat に値を入れたときだけ全体ガードが置いていかれる
+  const tacticsSpreadGuardValue = (slotIdx) =>
+    guardValueOf(GUARD_EVOLUTION[guardLevel].flat, GUARD_EVOLUTION[guardLevel].mult, slotIdx);
   // その枠のガード値。構えていれば自分のぶん、構えていなくても全体ガードなら丈夫さぶん
   const tacticsSlotGuardValue = (guardBySlot, slotIdx) => {
     const own = (guardBySlot || {})[slotIdx];

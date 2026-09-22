@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e8c9a15cc2181257
+// generated-sha256: 74385d56f7253d0d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -92,7 +92,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-22 09:29"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-22 09:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -22506,17 +22506,22 @@ function BattleScreen({
                     </div>
                   )}
                   <div className={`absolute inset-0 rounded-xl ${RANGE_STYLES[i].slotBg} opacity-20 pointer-events-none`}></div>
-                  {/* ★全体ガード(2体以上が別々に構えた)で、この子にも付いたガード力
-                      (2026-09-22 の新仕様)。自分でカードを構えていない枠にだけ出す。
-                      構えている枠は、下のカードの札に軽減量が出ている */}
+                  {/* ★この枠のガードの「まとめ」(2026-09-22 の新仕様)。
+                      2枚以上構えた枠は連撃ガードなので**合計値**を出す(ユーザー指示
+                      「連撃ガード1987が良いんだけどガードタップ時は単体数値がいくつかは
+                      わかるようにして」…カードごとの単体値は下の札にそのまま残る)。
+                      構えていない枠は、全体ガードで付いたぶんを出す。
+                      1枚だけの枠はカードの札と同じ数字になるので出さない */}
                   {Array.isArray(tacticsUnits)&&(()=>{
                     const bySlot=plannedGuardBySlot();
-                    if((bySlot[i]?.cards||0)>0) return null;
+                    const guardCards=bySlot[i]?.cards||0;
+                    const rushGuard=guardCards>=TACTICS_RUSH_GUARD_CARDS;
+                    if(guardCards>0&&!rushGuard) return null;
                     const gv=tacticsSlotGuardValue(bySlot,i);
                     if(!(gv>0)) return null;
-                    return <div data-tactics-spread-guard={i}
-                      className="absolute bottom-0.5 left-0.5 z-[55] rounded border border-sky-300/60 bg-sky-800/90 px-1 py-0.5 font-black text-sky-50 leading-none pointer-events-none"
-                      style={{fontSize:'7px'}}>🛡 全体 {gv}</div>;
+                    return <div data-tactics-guard-total={gv} data-tactics-guard-kind={rushGuard?'rush':'spread'}
+                      className={`absolute bottom-0.5 left-0.5 z-[55] rounded border px-1 py-0.5 font-black leading-none pointer-events-none ${rushGuard?'border-amber-200 bg-amber-600/95 text-white':'border-sky-300/60 bg-sky-800/90 text-sky-50'}`}
+                      style={{fontSize:'7px'}}>🛡 {rushGuard?'連撃ガード':'全体'} {gv}</div>;
                   })()}
                   {slotAssignedCards.length>0&&(
                     <div className="absolute top-0 left-0 right-0 flex flex-col gap-px items-center z-[55] pointer-events-none px-0.5">
@@ -33086,9 +33091,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const guardValueOf = (flat, mult, slotIdx = null) =>
     (flat > 0 || mult > 0) ? Math.floor(flat + guardDefFor(slotIdx) * mult) : 0;
   // ★全体ガード(2体以上が別々に構えた)のとき、構えていない子にも付くガード力。
-  //   「その子の丈夫さ × ガード段階の倍率」だけで、固定値は乗らない
-  //   (2026-09-22 ユーザー選択「その子の丈夫さ × 倍率（固定値なし）」)
-  const tacticsSpreadGuardValue = (slotIdx) => guardValueOf(0, GUARD_EVOLUTION[guardLevel].mult, slotIdx);
+  //   **ガードを1枚構えたのとまったく同じ計算**(2026-09-22 ユーザー指示
+  //   「クラシックと同じ仕様でいい」)。固定値(flat)も同じように通す。
+  //   ⚠️ いまは GUARD_EVOLUTION の flat が9段階とも0なので、実際は「丈夫さ×倍率」だけ。
+  //     ここで 0 を直に書くと、将来 flat に値を入れたときだけ全体ガードが置いていかれる
+  const tacticsSpreadGuardValue = (slotIdx) =>
+    guardValueOf(GUARD_EVOLUTION[guardLevel].flat, GUARD_EVOLUTION[guardLevel].mult, slotIdx);
   // その枠のガード値。構えていれば自分のぶん、構えていなくても全体ガードなら丈夫さぶん
   const tacticsSlotGuardValue = (guardBySlot, slotIdx) => {
     const own = (guardBySlot || {})[slotIdx];

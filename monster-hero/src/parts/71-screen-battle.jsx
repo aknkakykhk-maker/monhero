@@ -918,17 +918,22 @@ function BattleScreen({
                     </div>
                   )}
                   <div className={`absolute inset-0 rounded-xl ${RANGE_STYLES[i].slotBg} opacity-20 pointer-events-none`}></div>
-                  {/* ★全体ガード(2体以上が別々に構えた)で、この子にも付いたガード力
-                      (2026-09-22 の新仕様)。自分でカードを構えていない枠にだけ出す。
-                      構えている枠は、下のカードの札に軽減量が出ている */}
+                  {/* ★この枠のガードの「まとめ」(2026-09-22 の新仕様)。
+                      2枚以上構えた枠は連撃ガードなので**合計値**を出す(ユーザー指示
+                      「連撃ガード1987が良いんだけどガードタップ時は単体数値がいくつかは
+                      わかるようにして」…カードごとの単体値は下の札にそのまま残る)。
+                      構えていない枠は、全体ガードで付いたぶんを出す。
+                      1枚だけの枠はカードの札と同じ数字になるので出さない */}
                   {Array.isArray(tacticsUnits)&&(()=>{
                     const bySlot=plannedGuardBySlot();
-                    if((bySlot[i]?.cards||0)>0) return null;
+                    const guardCards=bySlot[i]?.cards||0;
+                    const rushGuard=guardCards>=TACTICS_RUSH_GUARD_CARDS;
+                    if(guardCards>0&&!rushGuard) return null;
                     const gv=tacticsSlotGuardValue(bySlot,i);
                     if(!(gv>0)) return null;
-                    return <div data-tactics-spread-guard={i}
-                      className="absolute bottom-0.5 left-0.5 z-[55] rounded border border-sky-300/60 bg-sky-800/90 px-1 py-0.5 font-black text-sky-50 leading-none pointer-events-none"
-                      style={{fontSize:'7px'}}>🛡 全体 {gv}</div>;
+                    return <div data-tactics-guard-total={gv} data-tactics-guard-kind={rushGuard?'rush':'spread'}
+                      className={`absolute bottom-0.5 left-0.5 z-[55] rounded border px-1 py-0.5 font-black leading-none pointer-events-none ${rushGuard?'border-amber-200 bg-amber-600/95 text-white':'border-sky-300/60 bg-sky-800/90 text-sky-50'}`}
+                      style={{fontSize:'7px'}}>🛡 {rushGuard?'連撃ガード':'全体'} {gv}</div>;
                   })()}
                   {slotAssignedCards.length>0&&(
                     <div className="absolute top-0 left-0 right-0 flex flex-col gap-px items-center z-[55] pointer-events-none px-0.5">
