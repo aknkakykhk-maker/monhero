@@ -34,7 +34,7 @@ vm.runInContext(`${chunk};globalThis.api={ENEMY_ACTION_DEFINITIONS,TACTICS_ACTIO
   + `enemyActionStateFrom,enemyActionLabel,enemyActionDisplayName,tacticsEnemyActionIds,`
   + `TACTICS_DIFFICULTY_ACTION_DELTA,TACTICS_EXTRA_ACTION_ORDER,TACTICS_SUPPORT_ACTION_IDS,TACTICS_ROAR_MAX_STACKS,TACTICS_SWEEP_MULT,TACTICS_SWEEP_MISS_MULT,`
   + `TACTICS_RUSH_HITS,TACTICS_REGEN_HP_THRESHOLD,TACTICS_ALLOUT_MULT,TACTICS_PIERCE_MULT,TACTICS_RUSH_MULT,TACTICS_SWEEP_MULT,`
-  + `TACTICS_ROAR_ATK_RATE,TACTICS_REGEN_RATE};`, context);
+  + `TACTICS_ROAR_ATK_RATE,TACTICS_REGEN_RATE,tacticsRegenHealAmount};`, context);
 const api = context.api;
 
 let failed = 0;
@@ -247,6 +247,22 @@ check('攻撃力アップの説明は実データから作る(数字を書き写
     && roarDef.effectText.includes(String(api.TACTICS_ROAR_MAX_STACKS)),
   roarDef.effectText);
 check('再生に効果の説明がある', !!regenDef.effectText, regenDef.effectText || '(なし)');
+check('再生の説明も実データから作る(数字を書き写さない)',
+  regenDef.effectText.includes(`${Math.round(api.TACTICS_REGEN_RATE * 100)}%`), regenDef.effectText);
+// --- 再生の回復量を予測で出す(2026-09-22 ユーザー指示) ---
+// ★予測と実際を別々に数えると、出した予測が嘘になる。数えるのは tacticsRegenHealAmount だけ
+check('回復量を数えるのは tacticsRegenHealAmount ひとつだけ',
+  has('const healed=tacticsRegenHealAmount(enemy?.maxHp);')
+    && !has('Math.floor(Math.max(0,Number(enemy?.maxHp)||0)*TACTICS_REGEN_RATE)'));
+check('予告の札にも同じ関数で回復量を出す',
+  screen.includes("const regenHeal=enemyIntent.type==='REGEN'?tacticsRegenHealAmount(enemy?.maxHp):0;")
+    && screen.includes('data-enemy-regen-heal={regenHeal}'));
+check('回復の予測は赤で出さない(こちらが減る数字と取り違えない)',
+  screen.includes("enemyIntent.type==='REGEN'?'bg-emerald-950 border-emerald-500/60 text-emerald-300'"));
+check('回復量は最大ライフの割合から決まり、最低でも1は戻る',
+  api.tacticsRegenHealAmount(1000) === Math.floor(1000 * api.TACTICS_REGEN_RATE)
+    && api.tacticsRegenHealAmount(0) === 1 && api.tacticsRegenHealAmount(null) === 1,
+  `${api.tacticsRegenHealAmount(1000)} / ${api.tacticsRegenHealAmount(0)}`);
 check('ダメージだけの技に効果の説明は足さない',
   ['normal','sweep','rush','pierce','allout','wait'].every(id => !tacticsDef(id).effectText));
 check('いま何回咆哮したかを敵にも持たせる(refは画面から見えない)',
