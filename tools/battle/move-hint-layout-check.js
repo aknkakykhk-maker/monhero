@@ -26,8 +26,8 @@ const MAX_OVERLAP_RATIO = 0.12;
 // この吹き出しは画面の上から22%・右端に出るので、ぶつかる相手は**右上の解析**になる。
 // 実物を描けない環境なので、位置の計算だけをここで確かめる。
 const SIDE_COLUMN_LEFT = 8;      // left-2
-const SIDE_COLUMN_WIDTH = 64;    // ボタンの幅
-const SCAN_BUTTON_HEIGHT = 44;   // min-h-[44px]
+const SIDE_COLUMN_WIDTH = 62;    // ボタンの幅
+const SCAN_BUTTON_HEIGHT = 48;   // アイコン17 + 字10 + 余白と枠(実測)
 // 舞台の上端 = ヘッダー(42px) + 敵のライフ帯(38px)。実測は 844→80px / 667→77px
 const STAGE_TOP = 77;
 const REM = 16;
@@ -41,12 +41,12 @@ const check = (name, ok, detail = '') => {
 const css = src.slice(src.indexOf('.mh-enemy-move-hint {'), src.indexOf('@keyframes moveHintBob'));
 check('吹き出しのCSSを取り出せる', css.includes('.mh-enemy-move-hint'));
 // 「解析」は右上(top-NN)。Tailwindの top-NN は NN/4 rem
-const scanTopMatch = src.match(/setShowEnemyInfo\(true\)\} className="absolute right-2 top-(\d+)/);
+const scanTopMatch = src.match(/setShowEnemyInfo\(true\)[^\n]{0,120}?className="absolute right-2 top-(\d+)/);
 check('解析ボタンの高さを読み取れる', !!scanTopMatch, scanTopMatch ? `top-${scanTopMatch[1]}` : '見つからない');
 // 左の2つ(ログ・ステータス)が左端にあること
 check('ログは左上にある', /data-battle-log-button[^\n]{0,400}?absolute left-2 top-1\b/.test(src));
 check('ステータスは左下にある', /setShowHeroInfo\(true\)[^\n]{0,400}?absolute left-2 bottom-1\b/.test(src));
-const sideWidth = src.match(/<button[^\n]{0,400}?absolute (?:left|right)-2 [a-z0-9-\[\]]+ z-20 flex w-\[(\d+)px\] min-h-\[44px\]/);
+const sideWidth = src.match(/<button[^\n]{0,400}?absolute (?:left|right)-2 [a-z0-9-\[\]]+ z-20 flex w-\[(\d+)px\]/);
 check('四隅のボタンの幅を読み取れる', !!sideWidth && Number(sideWidth[1]) === SIDE_COLUMN_WIDTH,
   sideWidth ? `w-[${sideWidth[1]}px]` : '見つからない');
 // 画面側が使っている寄せ方をそのまま持ってくる(ここが変わったら測る位置も変える)

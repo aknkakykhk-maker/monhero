@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c98d85a95ea3e722
+// source-sha256: 77e0d246f6f1b5ed
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c6b299924a642519
+// generated-sha256: 2b62f2798732729b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-22 20:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-22 20:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -38521,49 +38521,53 @@ function BattleScreen({
     onClick: () => setShowBattleLog(true),
     "aria-label": "\u30D0\u30C8\u30EB\u306E\u8A18\u9332\u3092\u898B\u308B",
     title: "\u30D0\u30C8\u30EB\u306E\u8A18\u9332",
-    className: "absolute left-2 top-1 z-20 flex w-[64px] min-h-[44px] flex-col items-center justify-center rounded-2xl border-2 border-amber-400/80 bg-amber-950/55 px-1 py-1 active:scale-90",
+    className: "absolute left-2 top-1 z-20 flex w-[62px] flex-col items-center justify-center gap-0.5 rounded-2xl border border-white/20 bg-slate-900/85 py-1.5 active:scale-95",
     style: {
-      boxShadow: '0 2px 10px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.16)'
+      boxShadow: '0 4px 14px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.16)'
     }
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "text-[13px] leading-none"
-  }, "\uD83D\uDCDC"), /*#__PURE__*/React.createElement("span", {
-    className: "mt-0.5 text-[10px] font-black leading-none text-white whitespace-nowrap"
+  }, /*#__PURE__*/React.createElement(BookOpen, {
+    size: 17,
+    className: "text-amber-300"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] font-black leading-none text-white"
   }, "\u30ED\u30B0")), /*#__PURE__*/React.createElement("button", {
     onClick: () => setShowHeroInfo(true),
-    className: `absolute left-2 bottom-1 z-20 flex w-[64px] min-h-[44px] flex-col items-center justify-center rounded-2xl px-1 py-1 border-2 border-indigo-400/80 bg-indigo-950/55 active:scale-90${battleTutorialSpotClass('heroStatus')}`,
+    "aria-label": "\u52C7\u8005\u30E2\u30F3\u306E\u30B9\u30C6\u30FC\u30BF\u30B9",
+    className: `absolute left-2 bottom-1 z-20 flex w-[62px] flex-col items-center justify-center gap-0.5 rounded-2xl border border-white/20 bg-slate-900/85 py-1.5 active:scale-95${battleTutorialSpotClass('heroStatus')}`,
     style: {
-      boxShadow: '0 2px 10px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.16)'
+      boxShadow: '0 4px 14px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.16)'
     }
   }, /*#__PURE__*/React.createElement(Crown, {
-    className: "text-indigo-400 mb-0.5",
-    size: 14
+    size: 17,
+    className: "text-indigo-300"
   }), /*#__PURE__*/React.createElement("span", {
-    className: "text-[10px] font-black leading-none text-white whitespace-nowrap"
+    className: "text-[10px] font-black leading-none text-white"
   }, "\u30B9\u30C6\u30FC\u30BF\u30B9")), /*#__PURE__*/React.createElement("button", {
     onClick: () => setShowEnemyInfo(true),
-    className: "absolute right-2 top-1 z-20 flex w-[64px] min-h-[44px] flex-col items-center justify-center rounded-2xl px-1 py-1 border-2 border-red-400/80 bg-red-950/55 active:scale-90",
+    "aria-label": "\u6575\u3092\u89E3\u6790\u3059\u308B",
+    className: "absolute right-2 top-1 z-20 flex w-[62px] flex-col items-center justify-center gap-0.5 rounded-2xl border border-white/20 bg-slate-900/85 py-1.5 active:scale-95",
     style: {
-      boxShadow: '0 2px 10px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.16)'
+      boxShadow: '0 4px 14px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.16)'
     }
   }, /*#__PURE__*/React.createElement(Search, {
-    className: "text-red-400 mb-0.5",
-    size: 14
+    size: 17,
+    className: "text-red-300"
   }), /*#__PURE__*/React.createElement("span", {
-    className: "text-[10px] font-black leading-none text-white whitespace-nowrap"
+    className: "text-[10px] font-black leading-none text-white"
   }, "\u89E3\u6790")), battleSoulMasus.some(m => normalizeSoulRankStage(m.soulRankStage) > 0) && /*#__PURE__*/React.createElement("button", {
     "data-soul-battle-effects-button": true,
     type: "button",
     onClick: () => setShowSoulBattleEffects(true),
-    className: "absolute right-2 top-[52px] z-20 flex w-[64px] min-h-[44px] flex-col items-center justify-center rounded-2xl px-1 py-1 border-2 border-sky-300/80 bg-sky-950/70 active:scale-90",
+    "aria-label": "\u9B42\u683C\u52B9\u679C",
+    className: "absolute right-2 top-[56px] z-20 flex w-[62px] flex-col items-center justify-center gap-0.5 rounded-2xl border border-white/20 bg-slate-900/85 py-1.5 active:scale-95",
     style: {
-      boxShadow: '0 2px 10px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.16)'
+      boxShadow: '0 4px 14px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.16)'
     }
   }, /*#__PURE__*/React.createElement(Sparkles, {
-    className: "text-sky-300 mb-0.5",
-    size: 14
+    size: 17,
+    className: "text-sky-300"
   }), /*#__PURE__*/React.createElement("span", {
-    className: "text-[10px] font-black leading-none text-white whitespace-nowrap"
+    className: "text-[10px] font-black leading-none text-white"
   }, "\u9B42\u683C\u52B9\u679C")), enemy && enemyIntent && !isBusy && (() => {
     // ためる・待機・移動はダメージが無いので「予測」を出さない。
     // 出すと必ず0になり、ガードを構える判断の邪魔になる

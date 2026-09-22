@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c6b299924a642519
+// generated-sha256: 2b62f2798732729b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -92,7 +92,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-22 20:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-22 20:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -21965,10 +21965,10 @@ function BattleScreen({
               ★右は上が「解析」、下が敵の行動予測。どちらも敵を読むためのものなので同じ側へ寄せた。
               ★幅と高さはそろえるが、色は役割ごとに残す(青=勇者、赤=敵を見る、琥珀=記録)。
                 全部同じ色にすると、とっさに押し分けられなくなる */}
-          <button data-battle-log-button type="button" onClick={()=>setShowBattleLog(true)} aria-label="バトルの記録を見る" title="バトルの記録" className="absolute left-2 top-1 z-20 flex w-[64px] min-h-[44px] flex-col items-center justify-center rounded-2xl border-2 border-amber-400/80 bg-amber-950/55 px-1 py-1 active:scale-90" style={{boxShadow:'0 2px 10px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.16)'}}><span className="text-[13px] leading-none">📜</span><span className="mt-0.5 text-[10px] font-black leading-none text-white whitespace-nowrap">ログ</span></button>
-          <button onClick={()=>setShowHeroInfo(true)} className={`absolute left-2 bottom-1 z-20 flex w-[64px] min-h-[44px] flex-col items-center justify-center rounded-2xl px-1 py-1 border-2 border-indigo-400/80 bg-indigo-950/55 active:scale-90${battleTutorialSpotClass('heroStatus')}`} style={{boxShadow:'0 2px 10px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.16)'}}><Crown className="text-indigo-400 mb-0.5" size={14}/><span className="text-[10px] font-black leading-none text-white whitespace-nowrap">ステータス</span></button>
-          <button onClick={()=>setShowEnemyInfo(true)} className="absolute right-2 top-1 z-20 flex w-[64px] min-h-[44px] flex-col items-center justify-center rounded-2xl px-1 py-1 border-2 border-red-400/80 bg-red-950/55 active:scale-90" style={{boxShadow:'0 2px 10px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.16)'}}><Search className="text-red-400 mb-0.5" size={14}/><span className="text-[10px] font-black leading-none text-white whitespace-nowrap">解析</span></button>
-          {battleSoulMasus.some(m=>normalizeSoulRankStage(m.soulRankStage)>0)&&<button data-soul-battle-effects-button type="button" onClick={()=>setShowSoulBattleEffects(true)} className="absolute right-2 top-[52px] z-20 flex w-[64px] min-h-[44px] flex-col items-center justify-center rounded-2xl px-1 py-1 border-2 border-sky-300/80 bg-sky-950/70 active:scale-90" style={{boxShadow:'0 2px 10px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.16)'}}><Sparkles className="text-sky-300 mb-0.5" size={14}/><span className="text-[10px] font-black leading-none text-white whitespace-nowrap">魂格効果</span></button>}
+          <button data-battle-log-button type="button" onClick={()=>setShowBattleLog(true)} aria-label="バトルの記録を見る" title="バトルの記録" className="absolute left-2 top-1 z-20 flex w-[62px] flex-col items-center justify-center gap-0.5 rounded-2xl border border-white/20 bg-slate-900/85 py-1.5 active:scale-95" style={{boxShadow:'0 4px 14px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.16)'}}><BookOpen size={17} className="text-amber-300"/><span className="text-[10px] font-black leading-none text-white">ログ</span></button>
+          <button onClick={()=>setShowHeroInfo(true)} aria-label="勇者モンのステータス" className={`absolute left-2 bottom-1 z-20 flex w-[62px] flex-col items-center justify-center gap-0.5 rounded-2xl border border-white/20 bg-slate-900/85 py-1.5 active:scale-95${battleTutorialSpotClass('heroStatus')}`} style={{boxShadow:'0 4px 14px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.16)'}}><Crown size={17} className="text-indigo-300"/><span className="text-[10px] font-black leading-none text-white">ステータス</span></button>
+          <button onClick={()=>setShowEnemyInfo(true)} aria-label="敵を解析する" className="absolute right-2 top-1 z-20 flex w-[62px] flex-col items-center justify-center gap-0.5 rounded-2xl border border-white/20 bg-slate-900/85 py-1.5 active:scale-95" style={{boxShadow:'0 4px 14px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.16)'}}><Search size={17} className="text-red-300"/><span className="text-[10px] font-black leading-none text-white">解析</span></button>
+          {battleSoulMasus.some(m=>normalizeSoulRankStage(m.soulRankStage)>0)&&<button data-soul-battle-effects-button type="button" onClick={()=>setShowSoulBattleEffects(true)} aria-label="魂格効果" className="absolute right-2 top-[56px] z-20 flex w-[62px] flex-col items-center justify-center gap-0.5 rounded-2xl border border-white/20 bg-slate-900/85 py-1.5 active:scale-95" style={{boxShadow:'0 4px 14px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.16)'}}><Sparkles size={17} className="text-sky-300"/><span className="text-[10px] font-black leading-none text-white">魂格効果</span></button>}
           {/* 敵が次に何をしてくるかの札(2026-09-19・ユーザー指摘「敵の行動予測が見えない」)。
               ★置き場所は**敵の絵の右下**(2026-09-22 ユーザー指示「敵の行動予測は右下に出るほうが
                 良くない？ ただバフ帯と被らないように」)。舞台の下端に貼るので、舞台の外にある
