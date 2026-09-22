@@ -1403,5 +1403,47 @@ check('固有技の効果も枠の印に出る',
       && api.tacticsSweepIntent({ variant: 'rush', value: 99 }, board, 3).value === 99);
 }
 
+// --- ㊳ 1体が出せる枚数は「ふつう1枚。持っている子だけ1枚ずつ増える」 ---
+// ★2026-09-22 ユーザー指摘「剣士モッチーで攻撃カードが3枚使えたんだけど仕様あってないよね？」。
+//   slotMaxUses が baseCardLimit(＝そのターンに盤面ぜんぶで何枚使えるか)を土台にしていたので、
+//   盤面に👑が2体いると、その合計まで1体に乗って5枚まで使えていた。
+//   決めごとは設計 4.6「ふつう1枚。ハム本人・きき・連携持ちだけ増える」
+{
+  const usesSrc = slice('const slotMaxUses = (mon, slotIdx=null) => {', '\n  };') + '\n  };';
+  // 場面ごとに器を作り直す(外から値を差し替えると const が拾えないため)
+  const makeUses = (over = {}) => {
+    const cfg = Object.assign({ tactics: true, mainHero: null, owners: ['Ham', 'KenshiMocchi'],
+      kiki: 0, baseLimit: 5, cardLimit: 5, coordSlots: [], coordBonus: 0 }, over);
+    const box = { Math, Number, __cfg: cfg };
+    vm.createContext(box);
+    vm.runInContext(
+      'const isTacticsMode=()=>__cfg.tactics; const runMode=null; const mainHero=__cfg.mainHero;'
+        + 'const heroCardBonusOf=(id)=>(__cfg.owners.includes(id)?1:0);'
+        + 'const kikiCardBonus=__cfg.kiki; const baseCardLimit=__cfg.baseLimit; const cardLimit=__cfg.cardLimit;'
+        + 'const soulCoordinationSlots=__cfg.coordSlots; const soulCoordinationCardBonus=__cfg.coordBonus;'
+        + usesSrc.trim() + '\nglobalThis.f=slotMaxUses;', box);
+    return box.f;
+  };
+  // ★盤面に👑が2体(ハム・剣士モッチー)。そのターンの総数は5枚でも、1体は2枚まで
+  const plain = makeUses();
+  check('👑を持つ子は2枚まで', plain({ id: 'KenshiMocchi' }, 0) === 2, String(plain({ id: 'KenshiMocchi' }, 0)));
+  check('持っていない子は1枚まで', plain({ id: 'Pandora' }, 1) === 1, String(plain({ id: 'Pandora' }, 1)));
+  // きき(全体+1)は、どの子も1枚ずつ増える
+  const withKiki = makeUses({ kiki: 1 });
+  check('きき中はどの子も1枚増える', withKiki({ id: 'Pandora' }, 1) === 2
+    && withKiki({ id: 'KenshiMocchi' }, 0) === 3);
+  // 魂格の連携は持っている枠だけ
+  const withCoord = makeUses({ coordSlots: [2], coordBonus: 1 });
+  check('連携は持っている枠だけ増える', withCoord({ id: 'Pandora' }, 2) === 2
+    && withCoord({ id: 'Pandora' }, 1) === 1);
+  // ★そのターンの総数(cardLimit)を超えない
+  const tightTurn = makeUses({ kiki: 1, cardLimit: 2 });
+  check('そのターンの総数を超えない', tightTurn({ id: 'KenshiMocchi' }, 0) === 2);
+  // ★既存5モードは今までどおり(勇者モン本人ときき中はそのターンの総数まで重ねられる)
+  const legacy = makeUses({ tactics: false, mainHero: { id: 'KenshiMocchi' } });
+  check('既存5モードの勇者モンは今までどおり', legacy({ id: 'KenshiMocchi' }, 0) === 5
+    && legacy({ id: 'Pandora' }, 1) === 1);
+}
+
 console.log(failed ? `\nNG ${failed}件` : '\nすべてOK');
 process.exit(failed ? 1 : 0);

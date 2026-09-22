@@ -181,8 +181,11 @@ check('自動回復の率は既存モードだと従来のまま',
   has('tacticsRegen(autoHpRecoveryRate,isTacticsMode(runMode)?baseGutsRecoveryRate:soulAdjustedGutsRecoveryRate)'));
 check('威圧は既存モードだと編成から決まる',
   has("(!isTacticsMode(runMode)&&mainHero?.id==='Suezo')?40:0,"));
+// 2026-09-22: タクティクスは「1＋その子の👑＋きき＋連携」で数えるようになった。
+// 既存5モードは今までどおり、勇者モン本人ときき中がそのターンの総数まで重ねられる
 check('1枚多く使えるのは既存モードだと勇者モン本人だけ',
-  has('const bonusOwner=isTacticsMode(runMode)') && has('(heroCardBonusOf(mainHero?.id)>0&&mon?.id===mainHero?.id);'));
+  has('const bonusOwner=heroCardBonusOf(mainHero?.id)>0&&mon?.id===mainHero?.id;')
+    && has('const base=(bonusOwner||kikiCardBonus>0) ? baseCardLimit : 1;'));
 check('ガッツ回復のボタンは既存モードだと合計で見る',
   has('(isTacticsMode(runMode) ? tacticsHasGutsRoom(tacticsUnits) : guts < effectiveMaxGuts)'));
 check('味方全体の反射は既存モードだと今までどおり通る',

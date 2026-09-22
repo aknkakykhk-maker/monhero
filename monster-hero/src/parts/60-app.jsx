@@ -7888,13 +7888,21 @@ function MonsterHeroGame() {
   // 既存の勇者特性/ききで許される枚数を土台にし、連携で増えた「追加の1枚」だけは
   // 連携を持つ本人へしか割り当てられない。全体cardLimitが1枚増えるだけなので複数所持でも重複しない。
   const slotMaxUses = (mon, slotIdx=null) => {
-    // ★タクティクスバトルは「持っている子が自分だけ1枚多く使える」(2026-09-20 ユーザー指示)。
-    //   勇者モンにしていなくても、盤面にいればその子の枚数が増える
-    const bonusOwner=isTacticsMode(runMode)
-      ? heroCardBonusOf(mon?.id)>0
-      : (heroCardBonusOf(mainHero?.id)>0&&mon?.id===mainHero?.id);
-    const base=(bonusOwner||kikiCardBonus>0) ? baseCardLimit : 1;
     const coordinationHolder=Number.isInteger(slotIdx)&&soulCoordinationSlots.includes(slotIdx);
+    // ★タクティクスバトルは「ふつう1枚。👑(ハム・剣士モッチー)・きき・連携を持つ子だけ
+    //   1枚ずつ増える」(設計 4.6)。勇者モンにしていなくても、盤面にいればその子の枚数が増える。
+    // ⚠️ 足すのは**その子のぶんだけ**。baseCardLimit を土台にしていたので、盤面に👑が2体いると
+    //   その合計(heroCardBonus)まで1体に乗り、剣士モッチー1体で5枚まで使えていた
+    //   (2026-09-22 ユーザー指摘「剣士モッチーで攻撃カードが3枚使えた」)。
+    //   baseCardLimit は**そのターンに盤面ぜんぶで何枚使えるか**であって、1体ぶんの上限ではない
+    if(isTacticsMode(runMode)){
+      const own=1+heroCardBonusOf(mon?.id)+kikiCardBonus+(coordinationHolder?soulCoordinationCardBonus:0);
+      return Math.min(cardLimit,own);
+    }
+    // 既存5モードは今までどおり。勇者モン本人ときき中は、そのターンの総数まで重ねられる
+    // (仕様 8.触らないもの。BATTLE_SYSTEM.md「剣士モッチーのカードだけ同じターンに複数枚」)
+    const bonusOwner=heroCardBonusOf(mainHero?.id)>0&&mon?.id===mainHero?.id;
+    const base=(bonusOwner||kikiCardBonus>0) ? baseCardLimit : 1;
     return Math.min(cardLimit,base+(coordinationHolder?soulCoordinationCardBonus:0));
   };
 
