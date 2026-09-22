@@ -9667,7 +9667,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         await battleWait(200);
       } else if (intent.type==='REGEN') {
         // 新モードの再生。満タンに近いあいだは抽選に出ないので、ここでは必ず回復する
-        const healed=Math.max(1,Math.floor(Math.max(0,Number(enemy?.maxHp)||0)*TACTICS_REGEN_RATE));
+        const healed=tacticsRegenHealAmount(enemy?.maxHp);
         setEnemy(prev=>prev?{...prev,hp:Math.min(Number(prev.maxHp)||0,Math.max(0,Number(prev.hp)||0)+healed)}:prev);
         addPopup(`再生 +${healed}`,'enemy','text-emerald-300 font-black text-2xl drop-shadow-md');
         await battleWait(1000);

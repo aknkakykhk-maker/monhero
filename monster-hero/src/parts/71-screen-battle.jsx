@@ -364,10 +364,19 @@ function BattleScreen({
             // ★全体攻撃は受ける量が1体ずつ違う。1つの数字にまとめると、
             //   どの子がどれだけ減るのか分からなくなるので、吹き出しには出さず枠ごとに出す
             const showPlannedInBubble=!enemyIntent.targetsAll;
+            // ★再生も「いくつ戻るか」を数字で出す(2026-09-22 ユーザー指示「敵の回復時で
+            //   いくつ回復するかも数値を予測で出してほしい」)。ダメージだけ数字が出て、
+            //   回復は「回復」としか出ないので、あと何ターンで削り切れるかが読めなかった。
+            //   数えるのは tacticsRegenHealAmount ひとつだけ。実際に回復する量と同じ式を通す
+            //   (満タンで頭打ちになるぶんは敵のライフしだいなので、ここは振り込む量を出す)
+            const regenHeal=enemyIntent.type==='REGEN'?tacticsRegenHealAmount(enemy?.maxHp):0;
             const tone=enemyIntent.type==='SPECIAL'?'bg-fuchsia-950 border-fuchsia-500 text-fuchsia-300'
               :enemyIntent.type==='CHARGE'?'bg-amber-950 border-amber-500 text-amber-400'
               :enemyIntent.type==='PIERCE_CHARGE'?'bg-rose-950 border-rose-500 text-rose-300'
               :enemyIntent.type==='MOVE'?'bg-cyan-950 border-cyan-500/60 text-cyan-300'
+              // ★再生だけは赤にしない。こちらが減るのではなく敵が戻る数字なので、
+              //   右上の吹き出し(noticeHeal)と同じ緑にそろえて取り違えを防ぐ
+              :enemyIntent.type==='REGEN'?'bg-emerald-950 border-emerald-500/60 text-emerald-300'
               :'bg-red-950 border-red-600/50 text-red-400';
             // 敵の絵のすぐ下へ置く(2026-09-18・ユーザー依頼)。mt-auto で下端へ押しやっていたため、
             // 絵と「次に何をしてくるか」のあいだに200pxほどの空きができ、視線が大きく動いていた。
@@ -390,6 +399,12 @@ function BattleScreen({
                   <div className="mt-1 rounded bg-black/55 px-1 py-1 text-center leading-none">
                     <div className="text-[12px] font-black tabular-nums">{plannedTotalText}</div>
                     {plannedHit.parts.length>1?<div className="mt-0.5 text-[9px] font-bold tabular-nums text-white/80">{plannedText}</div>:null}
+                  </div>
+                ):null}
+                {regenHeal>0?(
+                  <div data-enemy-regen-heal={regenHeal} className="mt-1 rounded bg-black/55 px-1 py-1 text-center leading-none">
+                    <div className="text-[12px] font-black tabular-nums text-emerald-300">+{regenHeal}</div>
+                    <div className="mt-0.5 text-[9px] font-bold leading-none text-emerald-200/80">敵が回復</div>
                   </div>
                 ):null}
               </div>

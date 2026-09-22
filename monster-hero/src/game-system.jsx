@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ead20728dc2d9bc8
+// generated-sha256: ab73669ed0e61192
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -92,7 +92,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-22 21:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-23 00:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -9758,8 +9758,14 @@ const TACTICS_RUSH_HITS = 3;          // 威力をこの数で割ってヒット
 const TACTICS_PIERCE_MULT = 0.8;      // ガードを無視する。効かないぶん倍率で加減する
 const TACTICS_ROAR_ATK_RATE = 1.5;    // 次のターンから敵の攻撃が上がる
 const TACTICS_ROAR_MAX_STACKS = 2;    // 重ねがけの上限
-const TACTICS_REGEN_RATE = 0.5;       // 最大ライフに対する回復量。★与ダメを下げたぶん敵を落としにくくする
+// ★0.5 → 0.3(2026-09-22 ユーザー指示「50%はでかすぎた 30%に変更で」)。
+//   最大ライフの半分が一度に戻ると、削り切る前に必ず1回は振り出しへ近づいていた
+const TACTICS_REGEN_RATE = 0.3;       // 最大ライフに対する回復量。★与ダメを下げたぶん敵を落としにくくする
 const TACTICS_REGEN_HP_THRESHOLD = 0.9; // ライフがこの割合を下回ったときだけ使う
+// ★回復量を数えるのはこの関数だけ(2026-09-22 ユーザー指示「敵の回復時でいくつ回復するかも
+//   数値を予測で出してほしい」)。予告の札と実際の回復が別々に数えると、出した予測が嘘になる。
+//   満タンで止めるのは回復する側(上限は敵の最大ライフ)。ここは「振り込む量」だけを返す
+const tacticsRegenHealAmount = (maxHp) => Math.max(1, Math.floor(Math.max(0, Number(maxHp) || 0) * TACTICS_REGEN_RATE));
 // 全体攻撃(2026-09-19・設計 5.3)。
 // ★1体あたりの威力は通常攻撃より必ず低くする。同じか上にすると人数が増えるほど
 //   「全員を殴るほうが得」になり、狙いを読む意味も、供モンを連れる意味も消える。
@@ -22075,10 +22081,19 @@ function BattleScreen({
             // ★全体攻撃は受ける量が1体ずつ違う。1つの数字にまとめると、
             //   どの子がどれだけ減るのか分からなくなるので、吹き出しには出さず枠ごとに出す
             const showPlannedInBubble=!enemyIntent.targetsAll;
+            // ★再生も「いくつ戻るか」を数字で出す(2026-09-22 ユーザー指示「敵の回復時で
+            //   いくつ回復するかも数値を予測で出してほしい」)。ダメージだけ数字が出て、
+            //   回復は「回復」としか出ないので、あと何ターンで削り切れるかが読めなかった。
+            //   数えるのは tacticsRegenHealAmount ひとつだけ。実際に回復する量と同じ式を通す
+            //   (満タンで頭打ちになるぶんは敵のライフしだいなので、ここは振り込む量を出す)
+            const regenHeal=enemyIntent.type==='REGEN'?tacticsRegenHealAmount(enemy?.maxHp):0;
             const tone=enemyIntent.type==='SPECIAL'?'bg-fuchsia-950 border-fuchsia-500 text-fuchsia-300'
               :enemyIntent.type==='CHARGE'?'bg-amber-950 border-amber-500 text-amber-400'
               :enemyIntent.type==='PIERCE_CHARGE'?'bg-rose-950 border-rose-500 text-rose-300'
               :enemyIntent.type==='MOVE'?'bg-cyan-950 border-cyan-500/60 text-cyan-300'
+              // ★再生だけは赤にしない。こちらが減るのではなく敵が戻る数字なので、
+              //   右上の吹き出し(noticeHeal)と同じ緑にそろえて取り違えを防ぐ
+              :enemyIntent.type==='REGEN'?'bg-emerald-950 border-emerald-500/60 text-emerald-300'
               :'bg-red-950 border-red-600/50 text-red-400';
             // 敵の絵のすぐ下へ置く(2026-09-18・ユーザー依頼)。mt-auto で下端へ押しやっていたため、
             // 絵と「次に何をしてくるか」のあいだに200pxほどの空きができ、視線が大きく動いていた。
@@ -22101,6 +22116,12 @@ function BattleScreen({
                   <div className="mt-1 rounded bg-black/55 px-1 py-1 text-center leading-none">
                     <div className="text-[12px] font-black tabular-nums">{plannedTotalText}</div>
                     {plannedHit.parts.length>1?<div className="mt-0.5 text-[9px] font-bold tabular-nums text-white/80">{plannedText}</div>:null}
+                  </div>
+                ):null}
+                {regenHeal>0?(
+                  <div data-enemy-regen-heal={regenHeal} className="mt-1 rounded bg-black/55 px-1 py-1 text-center leading-none">
+                    <div className="text-[12px] font-black tabular-nums text-emerald-300">+{regenHeal}</div>
+                    <div className="mt-0.5 text-[9px] font-bold leading-none text-emerald-200/80">敵が回復</div>
                   </div>
                 ):null}
               </div>
@@ -33979,7 +34000,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         await battleWait(200);
       } else if (intent.type==='REGEN') {
         // 新モードの再生。満タンに近いあいだは抽選に出ないので、ここでは必ず回復する
-        const healed=Math.max(1,Math.floor(Math.max(0,Number(enemy?.maxHp)||0)*TACTICS_REGEN_RATE));
+        const healed=tacticsRegenHealAmount(enemy?.maxHp);
         setEnemy(prev=>prev?{...prev,hp:Math.min(Number(prev.maxHp)||0,Math.max(0,Number(prev.hp)||0)+healed)}:prev);
         addPopup(`再生 +${healed}`,'enemy','text-emerald-300 font-black text-2xl drop-shadow-md');
         await battleWait(1000);
