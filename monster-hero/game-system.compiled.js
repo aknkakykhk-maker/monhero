@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 21100bb970e25b91
+// source-sha256: 0a83487bcb68ad57
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 117e1bee4f92df90
+// generated-sha256: df4434a893a57fde
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-22 12:58"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-22 13:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -38640,7 +38640,7 @@ function BattleScreen({
       padding: 'clamp(6px,1.5dvh,16px)',
       animation: enemyAttackFx?.kind === 'move' ? isMooBoss(enemy?.id) ? 'enemyMoveSlideMoo 1000ms ease-in-out forwards' : 'enemyMoveSlide 1000ms ease-in-out forwards' : enemyAttackFx?.kind === 'charge' ? 'enemyChargeShake 1100ms ease-in-out forwards' : 'enemyAttackFly 450ms ease-in forwards',
       ...(isMooBoss(enemy?.id) && enemyAttackFx?.kind !== 'move' ? {
-        transform: 'translateY(3dvh)'
+        top: '3dvh'
       } : {}),
       ...(!isMooBoss(enemy?.id) && enemyAttackFx?.kind !== 'move' ? {
         zIndex: 9999
@@ -38648,7 +38648,7 @@ function BattleScreen({
     } : {
       padding: 'clamp(6px,1.5dvh,16px)',
       ...(isMooBoss(enemy?.id) ? {
-        transform: 'translateY(3dvh)'
+        top: '3dvh'
       } : {})
     }
   }, enemy?.imgUrl ? isMooBoss(enemy?.id) ? /*#__PURE__*/React.createElement("div", {
@@ -38787,12 +38787,10 @@ function BattleScreen({
     // 動きも効果ごと。殴ってくる技は小刻みに震え、回復はふわっと浮き、
     // 攻撃力アップは左右に揺れ、ためるは膨らみ、様子見と移動は静かに明滅する
     const noticeAnim = enemyIntent.type === 'REGEN' ? 'noticeHeal 1400ms ease-in-out infinite' : enemyIntent.type === 'ROAR' ? 'noticeShout 900ms ease-in-out infinite' : enemyIntent.type === 'CHARGE' ? 'noticeCharge 1100ms ease-in-out infinite' : enemyIntent.type === 'MOVE' || enemyIntent.type === 'WAIT' ? 'noticeCalm 1600ms ease-in-out infinite' : 'noticeHit 800ms ease-in-out infinite';
-    return /*#__PURE__*/React.createElement("div", {
-      className: "absolute inset-0 pointer-events-none z-[9000]"
-    }, /*#__PURE__*/React.createElement("div", {
+    const noticeCard = /*#__PURE__*/React.createElement("div", {
       "data-enemy-notice": enemyIntent.notice,
       "data-enemy-notice-anim": noticeAnim.split(' ')[0],
-      className: `absolute -top-3 -right-2 max-w-[170px] truncate rounded-2xl border-2 px-2 py-0.5 font-black leading-tight flex items-center gap-1 ${noticeTone}`,
+      className: `max-w-[170px] truncate rounded-2xl border-2 px-2 py-0.5 font-black leading-tight flex items-center gap-1 ${noticeTone}`,
       style: {
         fontSize: '11px',
         animation: noticeAnim
@@ -38804,7 +38802,26 @@ function BattleScreen({
       className: "leading-none shrink-0"
     }, enemyIntent.icon), /*#__PURE__*/React.createElement("span", {
       className: "truncate"
-    }, enemyIntent.notice, "\uFF01")));
+    }, enemyIntent.notice, "\uFF01"));
+    // ★ムーだけは本体が丸枠の外へ巨大表示される(fixed・z-30 で画面いっぱい)。
+    //   丸枠の右上へ置くと絵の下に隠れて1文字も見えない
+    //   (2026-09-22 ユーザー指摘「ムー戦の吹き出しが見えない」)。
+    //   ムーは画面を覆うので、画面の右上＝ムーの右上。敵のライフ帯のすぐ下へ固定で出す
+    if (isMooBoss(enemy?.id)) return /*#__PURE__*/React.createElement("div", {
+      "data-enemy-notice-moo": true,
+      className: "pointer-events-none",
+      style: {
+        position: 'fixed',
+        top: 'max(112px,16dvh)',
+        right: '6px',
+        zIndex: focusedCard ? 5 : 40
+      }
+    }, noticeCard);
+    return /*#__PURE__*/React.createElement("div", {
+      className: "absolute inset-0 pointer-events-none z-[9000]"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "absolute -top-3 -right-2"
+    }, noticeCard));
   })(), !ecoBattleView && enemy && enemyAttackFx?.kind === 'charge' && /*#__PURE__*/React.createElement("div", {
     className: "absolute inset-0 pointer-events-none z-[9000] flex items-center justify-center overflow-visible"
   }, /*#__PURE__*/React.createElement("div", {

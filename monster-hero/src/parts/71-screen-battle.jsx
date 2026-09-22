@@ -328,7 +328,7 @@ function BattleScreen({
               </div>
             )}
             {/* 行動予測ラベルはmain下部に移動 */}
-            <div className={`rounded-full transition-all duration-500 border-4 relative ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border} ${RANGE_STYLES[enemyDist].shadow} ${RANGE_STYLES[enemyDist].glow} shadow-[0_0_50px]`} style={enemyAttackAnim&&!ecoBattleView?{padding:'clamp(6px,1.5dvh,16px)',animation:(enemyAttackFx?.kind==='move'?(isMooBoss(enemy?.id)?'enemyMoveSlideMoo 1000ms ease-in-out forwards':'enemyMoveSlide 1000ms ease-in-out forwards'):enemyAttackFx?.kind==='charge'?'enemyChargeShake 1100ms ease-in-out forwards':'enemyAttackFly 450ms ease-in forwards'), ...(isMooBoss(enemy?.id)&&enemyAttackFx?.kind!=='move'?{transform:'translateY(3dvh)'}:{}),...(!isMooBoss(enemy?.id)&&enemyAttackFx?.kind!=='move'?{zIndex:9999}:{})}:{padding:'clamp(6px,1.5dvh,16px)',...(isMooBoss(enemy?.id)?{transform:'translateY(3dvh)'}:{})}}>
+            <div className={`rounded-full transition-all duration-500 border-4 relative ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border} ${RANGE_STYLES[enemyDist].shadow} ${RANGE_STYLES[enemyDist].glow} shadow-[0_0_50px]`} style={enemyAttackAnim&&!ecoBattleView?{padding:'clamp(6px,1.5dvh,16px)',animation:(enemyAttackFx?.kind==='move'?(isMooBoss(enemy?.id)?'enemyMoveSlideMoo 1000ms ease-in-out forwards':'enemyMoveSlide 1000ms ease-in-out forwards'):enemyAttackFx?.kind==='charge'?'enemyChargeShake 1100ms ease-in-out forwards':'enemyAttackFly 450ms ease-in forwards'), ...(isMooBoss(enemy?.id)&&enemyAttackFx?.kind!=='move'?{top:'3dvh'}:{}),...(!isMooBoss(enemy?.id)&&enemyAttackFx?.kind!=='move'?{zIndex:9999}:{})}:{padding:'clamp(6px,1.5dvh,16px)',...(isMooBoss(enemy?.id)?{top:'3dvh'}:{})}}>
               {enemy?.imgUrl?(isMooBoss(enemy?.id)?<div style={{width:'clamp(92px,16dvh,142px)',height:'clamp(86px,15dvh,132px)'}}/>:<span className={extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?'mh-nightmare-enemy-aura-shell':'mh-extreme-enemy-aura-shell'):''} style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'clamp(92px,16dvh,142px)',height:'clamp(86px,15dvh,132px)'}}><img src={enemy.imgUrl} alt={enemy?.name} className={`relative z-[1] w-full h-full object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]${extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?' mh-nightmare-enemy-image':' mh-extreme-enemy-image'):''}`}/></span>):(<span className={extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?'mh-nightmare-enemy-aura-shell':'mh-extreme-enemy-aura-shell'):''}><div style={{fontSize:'clamp(58px,10.5dvh,96px)',lineHeight:1}} className={`relative z-[1] drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]${extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?' mh-nightmare-enemy-image':' mh-extreme-enemy-image'):''}`}>{enemy?.emoji}</div></span>)}
               {/* ラスボス・ムー: 丸枠内は台座オーラのみ（本体は枠外に巨大表示） */}
               {!ecoBattleView&&isMooBoss(enemy?.id)&&(
@@ -397,14 +397,25 @@ function BattleScreen({
                   :enemyIntent.type==='CHARGE'?'noticeCharge 1100ms ease-in-out infinite'
                   :(enemyIntent.type==='MOVE'||enemyIntent.type==='WAIT')?'noticeCalm 1600ms ease-in-out infinite'
                   :'noticeHit 800ms ease-in-out infinite';
-                return (
-                <div className="absolute inset-0 pointer-events-none z-[9000]">
+                const noticeCard=(
                   <div data-enemy-notice={enemyIntent.notice} data-enemy-notice-anim={noticeAnim.split(' ')[0]}
-                    className={`absolute -top-3 -right-2 max-w-[170px] truncate rounded-2xl border-2 px-2 py-0.5 font-black leading-tight flex items-center gap-1 ${noticeTone}`}
+                    className={`max-w-[170px] truncate rounded-2xl border-2 px-2 py-0.5 font-black leading-tight flex items-center gap-1 ${noticeTone}`}
                     style={{fontSize:'11px',animation:noticeAnim}}>
                     <span style={{fontSize:'12px'}} className="leading-none shrink-0">{enemyIntent.icon}</span>
                     <span className="truncate">{enemyIntent.notice}！</span>
-                  </div>
+                  </div>);
+                // ★ムーだけは本体が丸枠の外へ巨大表示される(fixed・z-30 で画面いっぱい)。
+                //   丸枠の右上へ置くと絵の下に隠れて1文字も見えない
+                //   (2026-09-22 ユーザー指摘「ムー戦の吹き出しが見えない」)。
+                //   ムーは画面を覆うので、画面の右上＝ムーの右上。敵のライフ帯のすぐ下へ固定で出す
+                if(isMooBoss(enemy?.id)) return (
+                  <div data-enemy-notice-moo className="pointer-events-none"
+                    style={{position:'fixed',top:'max(112px,16dvh)',right:'6px',zIndex:focusedCard?5:40}}>
+                    {noticeCard}
+                  </div>);
+                return (
+                <div className="absolute inset-0 pointer-events-none z-[9000]">
+                  <div className="absolute -top-3 -right-2">{noticeCard}</div>
                 </div>);
               })()}
               {/* ためている最中は、敵の周りにオーラが集まる */}

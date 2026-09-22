@@ -76,6 +76,25 @@ for (const file of files) {
     layoutOf('Moo') !== '' && layoutOf('Moo') === layoutOf('AwakenedMoo'),
     `Moo{${layoutOf('Moo')}} / AwakenedMoo{${layoutOf('AwakenedMoo')}}`);
 
+  // ★技の吹き出し(何をする技か)が、巨大な立ち絵の下に隠れてはいけない
+  //   (2026-09-22 ユーザー指摘「ムー戦の吹き出しが見えない」)。
+  //   ラスボスの本体は丸枠の外へ fixed で出るので、丸枠の右上へ置くと絵に覆われて1文字も見えない。
+  //   ラスボスは画面を覆うので、画面の右上＝そのまま敵の右上になる
+  check(`${label}: 技の吹き出しはラスボス用に画面へ固定して出す`,
+    /data-enemy-notice-moo[\s\S]{0,240}position:'fixed'/.test(compact));
+  // ★重なり順は本体から読む(検査へ数字を書き写すと、本体を変えたとき検査だけ古くなる)
+  const mooArtZ = Number((compact.match(/zIndex:focusedCard\?5:(\d+),width:'min\(108vw,560px\)'/) || [])[1]);
+  const mooNoticeZ = Number((compact.match(/data-enemy-notice-moo[\s\S]{0,240}?zIndex:focusedCard\?5:(\d+)\}/) || [])[1]);
+  check(`${label}: 吹き出しは立ち絵より上に出す`,
+    Number.isFinite(mooArtZ) && Number.isFinite(mooNoticeZ) && mooNoticeZ > mooArtZ,
+    `絵=${mooArtZ} / 吹き出し=${mooNoticeZ}`);
+  // ★丸枠のずらしに transform を使うと、その中の z-index と position:fixed が閉じ込められる。
+  //   吹き出しが立ち絵の下へ潜り、必殺技予告の「全画面の危険ビネット」も丸枠の中だけになる。
+  //   同じだけずらすなら、スタッキング文脈を作らない top を使う
+  check(`${label}: 丸枠のずらしに transform を使わない`,
+    !compact.includes("transform:'translateY(3dvh)'")
+      && compact.includes("isMooBoss(enemy?.id)?{top:'3dvh'}"));
+
   // ★立ち絵の読み上げ。「ムー」で固定すると、覚醒ムーのときに違う名前を読む
   // ★compiled は alt={…} を alt:… へ変える。どちらの書き方でも同じものとして見る
   check(`${label}: 立ち絵の説明はその敵の名前で出す`,
