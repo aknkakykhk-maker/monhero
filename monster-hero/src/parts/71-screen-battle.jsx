@@ -1401,7 +1401,12 @@ function BattleScreen({
             ★data-battle-quit / data-auto-bgm-button は検査の手がかり。
               置き場所が変わっても名前は変えない。
             ★背景を押しても閉じる。誤って開いたときに、指を上まで運ばずに戻れる */}
-        {showBattleMenu&&(
+        {/* ★body の直下へ出す(ReactDOM.createPortal)。ここへ素直に置くと、画面の揺れで位置がずれる
+              (2026-09-22・ユーザー報告「オートでオプション開くと行動によって位置ずれが起きる」)。
+              揺れは transform で作ってあり、**transform の掛かった要素は中の position:fixed の
+              基準になる**ため、揺れているあいだだけ viewport ではなく揺れる箱が基準になり、
+              iPhoneのノッチ(safe-area)ぶん約47px下へ落ちていた。実測でも 52px → 103px とずれる */}
+        {showBattleMenu&&ReactDOM.createPortal((
           <div className="fixed inset-0 z-[70000] flex items-start justify-end bg-black/70 p-2" onClick={()=>setShowBattleMenu(false)}>
             <div data-battle-menu className="mt-11 flex w-[190px] flex-col gap-1.5 rounded-2xl border border-white/20 bg-slate-900 p-2 shadow-2xl" onClick={e=>e.stopPropagation()}>
               <div className="px-1 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">設定</div>
@@ -1411,7 +1416,7 @@ function BattleScreen({
               <button type="button" onClick={()=>setShowBattleMenu(false)} className="min-h-[36px] rounded-lg border border-white/15 bg-slate-800 text-[11px] font-black text-slate-300 active:scale-95">とじる</button>
             </div>
           </div>
-        )}
+        ), document.body)}
       </div>
     
   );

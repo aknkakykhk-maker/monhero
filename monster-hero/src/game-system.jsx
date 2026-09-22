@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ead20728dc2d9bc8
+// generated-sha256: 12678539e8e2f688
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -92,7 +92,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-22 21:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-22 22:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -23112,7 +23112,12 @@ function BattleScreen({
             ★data-battle-quit / data-auto-bgm-button は検査の手がかり。
               置き場所が変わっても名前は変えない。
             ★背景を押しても閉じる。誤って開いたときに、指を上まで運ばずに戻れる */}
-        {showBattleMenu&&(
+        {/* ★body の直下へ出す(ReactDOM.createPortal)。ここへ素直に置くと、画面の揺れで位置がずれる
+              (2026-09-22・ユーザー報告「オートでオプション開くと行動によって位置ずれが起きる」)。
+              揺れは transform で作ってあり、**transform の掛かった要素は中の position:fixed の
+              基準になる**ため、揺れているあいだだけ viewport ではなく揺れる箱が基準になり、
+              iPhoneのノッチ(safe-area)ぶん約47px下へ落ちていた。実測でも 52px → 103px とずれる */}
+        {showBattleMenu&&ReactDOM.createPortal((
           <div className="fixed inset-0 z-[70000] flex items-start justify-end bg-black/70 p-2" onClick={()=>setShowBattleMenu(false)}>
             <div data-battle-menu className="mt-11 flex w-[190px] flex-col gap-1.5 rounded-2xl border border-white/20 bg-slate-900 p-2 shadow-2xl" onClick={e=>e.stopPropagation()}>
               <div className="px-1 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">設定</div>
@@ -23122,7 +23127,7 @@ function BattleScreen({
               <button type="button" onClick={()=>setShowBattleMenu(false)} className="min-h-[36px] rounded-lg border border-white/15 bg-slate-800 text-[11px] font-black text-slate-300 active:scale-95">とじる</button>
             </div>
           </div>
-        )}
+        ), document.body)}
       </div>
     
   );
@@ -41958,7 +41963,10 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
       )}
 
       {/* QUIT CONFIRM */}
-      {showQuitConfirm&&(<div className="fixed inset-0 flex flex-col items-center justify-center p-8 text-center" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.94)',zIndex:95000,pointerEvents:'auto'}}><AlertCircle size={48} className="text-red-500 mb-4"/><h2 className="text-xl font-black text-white uppercase mb-2">降参しますか？</h2><p className="text-[11px] text-slate-400 mb-2">{debugBattle?'このデバッグ戦を終了します':<>現在のスコア {score.toLocaleString()} pt がランキングに記録されます</>}</p><div className="flex flex-col gap-3 w-full max-w-xs mt-4" style={{position:'relative',zIndex:95001}}><button type="button" onClick={handleGiveUp} style={{position:'relative',zIndex:95002,pointerEvents:'auto'}} className="w-full bg-red-600 text-white py-3 rounded-2xl font-black uppercase text-sm shadow-lg active:scale-95">降参する</button><button type="button" onClick={()=>setShowQuitConfirm(false)} style={{position:'relative',zIndex:95002,pointerEvents:'auto'}} className="w-full bg-slate-800 text-slate-300 py-3 rounded-2xl font-black uppercase text-sm active:scale-95">戦いを続ける</button></div></div>)}
+      {/* ★設定パネルと同じ理由で body の直下へ出す(2026-09-22)。
+             画面の揺れ(transform)の中に置くと、揺れているあいだ position:fixed の基準が
+             viewport ではなく揺れる箱になり、safe-area ぶん位置がずれる */}
+      {showQuitConfirm&&ReactDOM.createPortal((<div className="fixed inset-0 flex flex-col items-center justify-center p-8 text-center" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.94)',zIndex:95000,pointerEvents:'auto'}}><AlertCircle size={48} className="text-red-500 mb-4"/><h2 className="text-xl font-black text-white uppercase mb-2">降参しますか？</h2><p className="text-[11px] text-slate-400 mb-2">{debugBattle?'このデバッグ戦を終了します':<>現在のスコア {score.toLocaleString()} pt がランキングに記録されます</>}</p><div className="flex flex-col gap-3 w-full max-w-xs mt-4" style={{position:'relative',zIndex:95001}}><button type="button" onClick={handleGiveUp} style={{position:'relative',zIndex:95002,pointerEvents:'auto'}} className="w-full bg-red-600 text-white py-3 rounded-2xl font-black uppercase text-sm shadow-lg active:scale-95">降参する</button><button type="button" onClick={()=>setShowQuitConfirm(false)} style={{position:'relative',zIndex:95002,pointerEvents:'auto'}} className="w-full bg-slate-800 text-slate-300 py-3 rounded-2xl font-black uppercase text-sm active:scale-95">戦いを続ける</button></div></div>), document.body)}
 
       {debugBattle&&debugOutcome&&(
         <div className="fixed inset-0 flex flex-col items-center justify-center p-6 text-center" style={{position:'fixed',inset:0,zIndex:81000,backgroundColor:'rgba(2,6,23,.98)'}}>
