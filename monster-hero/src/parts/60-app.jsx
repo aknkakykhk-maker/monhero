@@ -13172,13 +13172,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {gameState==='TEMPLE'&&(()=>{
           const templeLink = (icon, label, desc, onClick, rest = {}) => (
             <button type="button" onClick={onClick} {...rest}
-              className={`w-full min-h-[64px] rounded-xl border border-violet-400/50 bg-violet-950/45 px-3 py-2 text-left text-white shadow-lg active:scale-95 ${rest.className||''}`}>
+              className={`mh-temple-menu-card w-full min-h-[64px] rounded-xl px-3 py-2 text-left text-white active:scale-95 ${rest.className||''}`}>
               <span className="flex items-center gap-2">
-                <span className="shrink-0 text-violet-200">{icon}</span>
+                <span className="mh-temple-menu-icon shrink-0 text-violet-200">{icon}</span>
                 <span className="min-w-0 flex-1 text-[13px] font-black leading-tight">{label}</span>
-                <ChevronRight size={16} className="shrink-0 text-violet-300"/>
+                <ChevronRight size={16} className="shrink-0 text-violet-300/80"/>
               </span>
-              <small className="mt-0.5 block text-[10px] font-bold leading-relaxed text-violet-100/55">{desc}</small>
+              <small className="mt-0.5 block text-[10px] font-bold leading-relaxed text-violet-100/60">{desc}</small>
             </button>
           );
           return (
