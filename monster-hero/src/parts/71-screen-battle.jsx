@@ -238,17 +238,27 @@ function BattleScreen({
             (中央のままだと上へスクロールできず、頭の「!」や技名が読めなくなる)。
             safe を知らないブラウザは宣言ごと捨てるので、クラスの justify-start が残る */}
         <main className="flex-1 relative flex flex-col items-center justify-start pt-3 pb-1 px-2 overflow-x-visible overflow-y-auto min-h-0" style={{justifyContent:'safe center'}}>
-          {/* 移動の吹き出し(画面の上から22%)と重なるため、左の「緊急」と同じ高さまで下げている */}
-          <button onClick={()=>setShowEnemyInfo(true)} className="absolute right-2 top-24 flex flex-col items-center justify-center p-2 rounded-2xl border border-red-500 bg-red-950/30 active:scale-90 z-20 shadow-lg"><Search className="text-red-400 mb-0.5" size={14}/><span className="text-[10px] font-black text-white">解析</span></button>
-          <button onClick={()=>setShowHeroInfo(true)} className={`absolute left-2 top-10 flex flex-col items-center justify-center p-2 rounded-2xl border border-indigo-500 bg-indigo-950/30 active:scale-90 z-20 shadow-lg${battleTutorialSpotClass('heroStatus')}`}><Crown className="text-indigo-400 mb-0.5" size={14}/><span className="text-[10px] font-black text-white">ステータス</span></button>
-          {battleSoulMasus.some(m=>normalizeSoulRankStage(m.soulRankStage)>0)&&<button data-soul-battle-effects-button type="button" onClick={()=>setShowSoulBattleEffects(true)} className="absolute right-2 top-10 min-h-[44px] min-w-[52px] flex flex-col items-center justify-center px-2 py-1 rounded-2xl border border-sky-400 bg-sky-950/60 active:scale-90 z-20 shadow-lg"><Sparkles className="text-sky-300 mb-0.5" size={14}/><span className="text-[10px] font-black text-white">魂格効果</span></button>}
+          {/* 敵のまわりのボタンは左の1列にまとめる(2026-09-22 ユーザー指示
+              「敵周りのボタンを整理したほうがいい。添付イメージ画像のように左にきれいに並べるなど」)。
+              ★もとは左(ステータス・緊急)と右(解析・ログ・魂格効果)に分かれていて、敵の絵を両側から
+                削っていた。片側へ寄せると**右がまるごと空く**ので、そこへ敵の行動予告を置ける。
+              ★並びは今までの左の順(ステータス→緊急)を先に置き、右にあった2つをその下へ足す。
+                指が覚えている場所をできるだけ動かさない。
+              ★幅と高さはそろえるが、色は役割ごとに残す(青=勇者/緊急、赤=敵を見る、琥珀=記録)。
+                全部同じ色にすると、とっさに押し分けられなくなる。
+              ★**狭い端末では2列に折り返す。** 375×667 のように舞台が低い端末では、縦に4つ並べると
+                下の2つが表示の外へ出て見えなくなる(列にする前も「ログ」は見えていなかった)。
+                高さを舞台いっぱい(top-2〜bottom-1)に決めたうえで flex-wrap にすると、入らないぶんが
+                自動で右の列へ回る。絵に少しかかるが、**押せないより見えるほうがよい**。
+                高い端末では 44px×5 を並べても余るので、今までどおり1列のままになる */}
+          <div data-battle-side-buttons className="absolute left-2 top-2 bottom-1 z-20 flex flex-col flex-wrap content-start gap-1.5">
+            <button onClick={()=>setShowHeroInfo(true)} className={`flex w-[64px] min-h-[44px] flex-col items-center justify-center rounded-2xl px-1 py-1 border border-indigo-500 bg-indigo-950/30 active:scale-90 shadow-lg${battleTutorialSpotClass('heroStatus')}`}><Crown className="text-indigo-400 mb-0.5" size={14}/><span className="text-[10px] font-black leading-none text-white whitespace-nowrap">ステータス</span></button>
+            <button onClick={useEmergency} disabled={isBusy||autoBattle||!battleTutorialAllowsEmergency} className={`flex w-[64px] min-h-[44px] flex-col items-center justify-center rounded-2xl px-1 py-1 border border-blue-500 bg-blue-900/30 active:scale-90 disabled:opacity-20 shadow-lg${battleTutorialSpotClass('emergency')}`}><Activity className="text-blue-400 mb-0.5" size={16}/><span className="text-[10px] font-black leading-none text-white whitespace-nowrap">緊急</span></button>
+            <button onClick={()=>setShowEnemyInfo(true)} className="flex w-[64px] min-h-[44px] flex-col items-center justify-center rounded-2xl px-1 py-1 border border-red-500 bg-red-950/30 active:scale-90 shadow-lg"><Search className="text-red-400 mb-0.5" size={14}/><span className="text-[10px] font-black leading-none text-white whitespace-nowrap">解析</span></button>
+            <button data-battle-log-button type="button" onClick={()=>setShowBattleLog(true)} aria-label="バトルの記録を見る" title="バトルの記録" className="flex w-[64px] min-h-[44px] flex-col items-center justify-center rounded-2xl border border-amber-500/70 bg-amber-950/30 px-1 py-1 shadow-lg active:scale-90"><span className="text-[13px] leading-none">📜</span><span className="mt-0.5 text-[10px] font-black leading-none text-white whitespace-nowrap">ログ</span></button>
+            {battleSoulMasus.some(m=>normalizeSoulRankStage(m.soulRankStage)>0)&&<button data-soul-battle-effects-button type="button" onClick={()=>setShowSoulBattleEffects(true)} className="flex w-[64px] min-h-[44px] flex-col items-center justify-center rounded-2xl px-1 py-1 border border-sky-400 bg-sky-950/60 active:scale-90 shadow-lg"><Sparkles className="text-sky-300 mb-0.5" size={14}/><span className="text-[10px] font-black leading-none text-white whitespace-nowrap">魂格効果</span></button>}
+          </div>
           {turnCount===1&&battleSoulMasus.some(m=>normalizeSoulRankStage(m.soulRankStage)>0)&&!isBusy&&<div data-soul-battle-start-summary className="absolute left-1/2 top-2 -translate-x-1/2 z-10 max-w-[62%] truncate rounded-full border border-sky-400/30 bg-sky-950/75 px-2 py-1 text-[10px] font-black text-sky-100 pointer-events-none">魂格効果 発動中{Math.round(soulBattleParty.damageReduction*10)/10>0?` ・鉄壁${(Math.round(soulBattleParty.damageReduction*10)/10)}%`:''}{unifiedSpecialDefense.rate>0?` ・特殊防御${(Math.round(unifiedSpecialDefense.rate*10)/10)}%`:''}{battleIntimidate>0?` ・威圧${(Math.round(battleIntimidate*10)/10)}%`:''}{soulCoordinationCardBonus>0?' ・カード+1':''}</div>}
-          {/* バトルの記録(2026-09-22 ユーザー依頼「バトル中のログを付けることって可能？」)。
-              ★置き場所は敵の絵の右の空き(ユーザー指示「敵の両サイドに少し空きがあるから
-                そこにログボタンをつける」)。画面に帯を出さないので、狭い縦を1pxも奪わない。
-              ★「敵を見る」(top-24)の下にそろえる。左は勇者・緊急の操作、右は見るための入口 */}
-          <button data-battle-log-button type="button" onClick={()=>setShowBattleLog(true)} aria-label="バトルの記録を見る" title="バトルの記録" className="absolute right-2 top-40 flex min-h-[44px] min-w-[44px] flex-col items-center justify-center rounded-2xl border border-amber-500/70 bg-amber-950/30 p-2 shadow-lg active:scale-90 z-20"><span className="text-[13px] leading-none">📜</span><span className="mt-0.5 text-[10px] font-black text-white">ログ</span></button>
-          <button onClick={useEmergency} disabled={isBusy||autoBattle||!battleTutorialAllowsEmergency} className={`absolute left-2 top-24 flex flex-col items-center justify-center p-2 rounded-2xl border border-blue-500 bg-blue-900/30 active:scale-90 disabled:opacity-20 z-20 shadow-lg${battleTutorialSpotClass('emergency')}`}><Activity className="text-blue-400 mb-0.5" size={16}/><span className="text-[10px] font-black text-white">緊急</span></button>
           <div className="mt-1 relative flex flex-col items-center">
             {enemySkillName&&(
               <div className="fixed left-1/2 -translate-x-1/2 pointer-events-none whitespace-nowrap" style={{top:'14%',zIndex:65000,animation:liteBattleView?undefined:'skillNamePop 350ms ease-out forwards'}}>
@@ -556,7 +566,7 @@ function BattleScreen({
                       {/* 敵の顔。いまいる間合いは実線の枠、次に動く先は点線の枠で出す。
                           ★枠の色は間合いの色ではなく**赤で固定**する。間合いの色にすると、
                             すぐ下の味方の印と同じ色になり、どちらが敵か形でしか分からなくなる */}
-                      <div className="h-[22px] flex items-end justify-center">
+                      <div className="relative h-[22px] flex items-end justify-center">
                         {(isHere||isMove)&&(
                           <div className={`flex items-center justify-center rounded-full border ${isHere
                             ?'h-[20px] w-[20px] border-red-400 bg-black/75 shadow-[0_0_8px_rgba(239,68,68,.65)]'
@@ -565,6 +575,16 @@ function BattleScreen({
                               ?<img src={enemy.imgUrl} alt="" className="h-[14px] w-[14px] object-contain"/>
                               :<Skull size={11} className="text-red-300"/>}
                           </div>
+                        )}
+                        {/* 動く向きの矢印(2026-09-22 ユーザー指示「移動予告は矢印表記も足したいね」)。
+                            ★点線の丸だけでは「予定」とは読めても、どちらから来るのかが分からなかった。
+                            ★矢印は**来る側**の脇に出す。右へ動くなら丸の左に「→」が立つので、
+                              いまいる間合いから移動先へ視線がそのまま流れる */}
+                        {isMove&&(
+                          <span aria-hidden="true"
+                            className={`absolute bottom-[3px] animate-pulse text-[12px] font-black leading-none text-cyan-300 drop-shadow-[0_0_4px_rgba(34,211,238,.9)] ${moveTo>here?'right-full mr-[1px]':'left-full ml-[1px]'}`}>
+                            {moveTo>here?'→':'←'}
+                          </span>
                         )}
                       </div>
                       {/* 目盛り。立っている子がいる間合いは塗り、空き・倒れている間合いは抜きで出す */}

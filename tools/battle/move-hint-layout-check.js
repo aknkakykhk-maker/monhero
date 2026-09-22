@@ -20,12 +20,12 @@ const MAX_HEIGHT_DIFF = 6;   // px
 const MAX_WIDTH_RATIO = 0.55; // 遊ぶ列の幅に対して
 // 敵の丸枠(180px)と重なってよい面積の割合
 const MAX_OVERLAP_RATIO = 0.12;
-// 「解析」ボタンは戦闘画面の入れ物からの絶対位置(Tailwindの top-NN)で置いている。
-// 入れ物の上端は画面の上から約15.5%(ヘッダーと敵のライフバーの下)。
-// この値は実機のスクリーンショットから測ったもので、Tailwindが読めないこの環境では
-// 実物を描けないため、位置の計算だけをここで確かめる
-const SCAN_BUTTON_CONTAINER_TOP_RATIO = 0.155;
-const REM = 16;
+// 敵のまわりのボタン(ステータス・緊急・解析・ログ・魂格効果)は**左の1列**にまとめてある
+// (2026-09-22 ユーザー指示「左にきれいに並べる」)。それまでは解析とログが右にあり、
+// 右端へ出るこの吹き出しと重なって文字が読めなくなる事故を起こしていた。
+// 列は入れ物の左端(left-2 = 8px)から幅64pxぶんを使う。吹き出しがここより左へ来ないかを見る
+const SIDE_COLUMN_LEFT = 8;
+const SIDE_COLUMN_WIDTH = 64;
 
 let failed = 0;
 const check = (name, ok, detail = '') => {
@@ -35,9 +35,18 @@ const check = (name, ok, detail = '') => {
 
 const css = src.slice(src.indexOf('.mh-enemy-move-hint {'), src.indexOf('@keyframes moveHintBob'));
 check('吹き出しのCSSを取り出せる', css.includes('.mh-enemy-move-hint'));
-// 「解析」ボタンの高さ(Tailwindの top-NN は NN/4 rem)
-const scanTopMatch = src.match(/setShowEnemyInfo\(true\)\} className="absolute right-2 top-(\d+)/);
-check('解析ボタンの高さを読み取れる', !!scanTopMatch, scanTopMatch ? `top-${scanTopMatch[1]}` : '見つからない');
+// 吹き出しの通り道(右端)に絶対位置のボタンを置き直していないか。
+// ★ここが空いていることが、この吹き出しを右へ寄せられる前提になっている
+const rightAbsButton = src.match(/<button[^\n]{0,400}?absolute right-2 top-\d+/);
+check('敵のまわりのボタンを右に置いていない', !rightAbsButton,
+  rightAbsButton ? rightAbsButton[0].slice(-60) : '左の1列にまとまっている');
+// 列そのものが左端にあること(幅は SIDE_COLUMN_WIDTH と同じ値で書かれているか)
+const sideColumn = src.match(/data-battle-side-buttons className="absolute left-(\d+)/);
+check('ボタンの列は左端にある', !!sideColumn && Number(sideColumn[1]) * 4 === SIDE_COLUMN_LEFT,
+  sideColumn ? `left-${sideColumn[1]}` : '見つからない');
+const sideWidth = src.match(/<button[^\n]{0,200}?flex w-\[(\d+)px\] min-h-\[44px\] flex-col/);
+check('列のボタンの幅を読み取れる', !!sideWidth && Number(sideWidth[1]) === SIDE_COLUMN_WIDTH,
+  sideWidth ? `w-[${sideWidth[1]}px]` : '見つからない');
 // 画面側が使っている寄せ方をそのまま持ってくる(ここが変わったら測る位置も変える)
 const shiftMatch = src.match(/transform:'(translateX\(calc\([^']+\))'/);
 check('右へ寄せる指定を読み取れる', !!shiftMatch, shiftMatch ? shiftMatch[1] : '見つからない');
@@ -89,13 +98,11 @@ const page = `<!doctype html><meta charset="utf-8"><style>
         `吹き出しの中心 ${Math.round(hintCenter)} / 列の中央 ${Math.round(colCenter)}`);
       check(`${vp.name}: 敵の絵をほとんど隠さない`, overlap <= MAX_OVERLAP_RATIO,
         `${Math.round(overlap * 100)}% (上限 ${Math.round(MAX_OVERLAP_RATIO * 100)}%)`);
-      // 「解析」ボタンの上端が、吹き出しの下端より下にあること。
-      // 実際に重なって文字が読めなくなっていたので、位置の計算で見張る
-      if (scanTopMatch) {
-        const scanTop = vp.height * SCAN_BUTTON_CONTAINER_TOP_RATIO + (Number(scanTopMatch[1]) / 4) * REM;
-        check(`${vp.name}: 解析ボタンが吹き出しと重ならない`, scanTop >= r.hint.bottom,
-          `解析の上端 ${Math.round(scanTop)} / 吹き出しの下端 ${Math.round(r.hint.bottom)}`);
-      }
+      // 左のボタンの列と重ならないこと。列は入れ物の左端から幅64pxぶんを占め、
+      // 狭い端末では2列に折り返して倍の幅になるので、そのぶんも見る
+      const columnRight = r.col.x + SIDE_COLUMN_LEFT + SIDE_COLUMN_WIDTH * 2;
+      check(`${vp.name}: 左のボタンの列と重ならない`, r.hint.x >= columnRight,
+        `吹き出しの左端 ${Math.round(r.hint.x)} / 列の右端(2列ぶん) ${Math.round(columnRight)}`);
       await tab.close();
     }
   } finally {

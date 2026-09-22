@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7e818010ca092491
+// source-sha256: 8542678f2f8012f4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4f6e9d4c7fa004ff
+// generated-sha256: 9cc4488b621f8f3b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-22 17:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-22 17:32"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -38478,56 +38478,59 @@ function BattleScreen({
     style: {
       justifyContent: 'safe center'
     }
+  }, /*#__PURE__*/React.createElement("div", {
+    "data-battle-side-buttons": true,
+    className: "absolute left-2 top-2 bottom-1 z-20 flex flex-col flex-wrap content-start gap-1.5"
   }, /*#__PURE__*/React.createElement("button", {
-    onClick: () => setShowEnemyInfo(true),
-    className: "absolute right-2 top-24 flex flex-col items-center justify-center p-2 rounded-2xl border border-red-500 bg-red-950/30 active:scale-90 z-20 shadow-lg"
-  }, /*#__PURE__*/React.createElement(Search, {
-    className: "text-red-400 mb-0.5",
-    size: 14
-  }), /*#__PURE__*/React.createElement("span", {
-    className: "text-[10px] font-black text-white"
-  }, "\u89E3\u6790")), /*#__PURE__*/React.createElement("button", {
     onClick: () => setShowHeroInfo(true),
-    className: `absolute left-2 top-10 flex flex-col items-center justify-center p-2 rounded-2xl border border-indigo-500 bg-indigo-950/30 active:scale-90 z-20 shadow-lg${battleTutorialSpotClass('heroStatus')}`
+    className: `flex w-[64px] min-h-[44px] flex-col items-center justify-center rounded-2xl px-1 py-1 border border-indigo-500 bg-indigo-950/30 active:scale-90 shadow-lg${battleTutorialSpotClass('heroStatus')}`
   }, /*#__PURE__*/React.createElement(Crown, {
     className: "text-indigo-400 mb-0.5",
     size: 14
   }), /*#__PURE__*/React.createElement("span", {
-    className: "text-[10px] font-black text-white"
-  }, "\u30B9\u30C6\u30FC\u30BF\u30B9")), battleSoulMasus.some(m => normalizeSoulRankStage(m.soulRankStage) > 0) && /*#__PURE__*/React.createElement("button", {
-    "data-soul-battle-effects-button": true,
-    type: "button",
-    onClick: () => setShowSoulBattleEffects(true),
-    className: "absolute right-2 top-10 min-h-[44px] min-w-[52px] flex flex-col items-center justify-center px-2 py-1 rounded-2xl border border-sky-400 bg-sky-950/60 active:scale-90 z-20 shadow-lg"
-  }, /*#__PURE__*/React.createElement(Sparkles, {
-    className: "text-sky-300 mb-0.5",
+    className: "text-[10px] font-black leading-none text-white whitespace-nowrap"
+  }, "\u30B9\u30C6\u30FC\u30BF\u30B9")), /*#__PURE__*/React.createElement("button", {
+    onClick: useEmergency,
+    disabled: isBusy || autoBattle || !battleTutorialAllowsEmergency,
+    className: `flex w-[64px] min-h-[44px] flex-col items-center justify-center rounded-2xl px-1 py-1 border border-blue-500 bg-blue-900/30 active:scale-90 disabled:opacity-20 shadow-lg${battleTutorialSpotClass('emergency')}`
+  }, /*#__PURE__*/React.createElement(Activity, {
+    className: "text-blue-400 mb-0.5",
+    size: 16
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] font-black leading-none text-white whitespace-nowrap"
+  }, "\u7DCA\u6025")), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setShowEnemyInfo(true),
+    className: "flex w-[64px] min-h-[44px] flex-col items-center justify-center rounded-2xl px-1 py-1 border border-red-500 bg-red-950/30 active:scale-90 shadow-lg"
+  }, /*#__PURE__*/React.createElement(Search, {
+    className: "text-red-400 mb-0.5",
     size: 14
   }), /*#__PURE__*/React.createElement("span", {
-    className: "text-[10px] font-black text-white"
-  }, "\u9B42\u683C\u52B9\u679C")), turnCount === 1 && battleSoulMasus.some(m => normalizeSoulRankStage(m.soulRankStage) > 0) && !isBusy && /*#__PURE__*/React.createElement("div", {
-    "data-soul-battle-start-summary": true,
-    className: "absolute left-1/2 top-2 -translate-x-1/2 z-10 max-w-[62%] truncate rounded-full border border-sky-400/30 bg-sky-950/75 px-2 py-1 text-[10px] font-black text-sky-100 pointer-events-none"
-  }, "\u9B42\u683C\u52B9\u679C \u767A\u52D5\u4E2D", Math.round(soulBattleParty.damageReduction * 10) / 10 > 0 ? ` ・鉄壁${Math.round(soulBattleParty.damageReduction * 10) / 10}%` : '', unifiedSpecialDefense.rate > 0 ? ` ・特殊防御${Math.round(unifiedSpecialDefense.rate * 10) / 10}%` : '', battleIntimidate > 0 ? ` ・威圧${Math.round(battleIntimidate * 10) / 10}%` : '', soulCoordinationCardBonus > 0 ? ' ・カード+1' : ''), /*#__PURE__*/React.createElement("button", {
+    className: "text-[10px] font-black leading-none text-white whitespace-nowrap"
+  }, "\u89E3\u6790")), /*#__PURE__*/React.createElement("button", {
     "data-battle-log-button": true,
     type: "button",
     onClick: () => setShowBattleLog(true),
     "aria-label": "\u30D0\u30C8\u30EB\u306E\u8A18\u9332\u3092\u898B\u308B",
     title: "\u30D0\u30C8\u30EB\u306E\u8A18\u9332",
-    className: "absolute right-2 top-40 flex min-h-[44px] min-w-[44px] flex-col items-center justify-center rounded-2xl border border-amber-500/70 bg-amber-950/30 p-2 shadow-lg active:scale-90 z-20"
+    className: "flex w-[64px] min-h-[44px] flex-col items-center justify-center rounded-2xl border border-amber-500/70 bg-amber-950/30 px-1 py-1 shadow-lg active:scale-90"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-[13px] leading-none"
   }, "\uD83D\uDCDC"), /*#__PURE__*/React.createElement("span", {
-    className: "mt-0.5 text-[10px] font-black text-white"
-  }, "\u30ED\u30B0")), /*#__PURE__*/React.createElement("button", {
-    onClick: useEmergency,
-    disabled: isBusy || autoBattle || !battleTutorialAllowsEmergency,
-    className: `absolute left-2 top-24 flex flex-col items-center justify-center p-2 rounded-2xl border border-blue-500 bg-blue-900/30 active:scale-90 disabled:opacity-20 z-20 shadow-lg${battleTutorialSpotClass('emergency')}`
-  }, /*#__PURE__*/React.createElement(Activity, {
-    className: "text-blue-400 mb-0.5",
-    size: 16
+    className: "mt-0.5 text-[10px] font-black leading-none text-white whitespace-nowrap"
+  }, "\u30ED\u30B0")), battleSoulMasus.some(m => normalizeSoulRankStage(m.soulRankStage) > 0) && /*#__PURE__*/React.createElement("button", {
+    "data-soul-battle-effects-button": true,
+    type: "button",
+    onClick: () => setShowSoulBattleEffects(true),
+    className: "flex w-[64px] min-h-[44px] flex-col items-center justify-center rounded-2xl px-1 py-1 border border-sky-400 bg-sky-950/60 active:scale-90 shadow-lg"
+  }, /*#__PURE__*/React.createElement(Sparkles, {
+    className: "text-sky-300 mb-0.5",
+    size: 14
   }), /*#__PURE__*/React.createElement("span", {
-    className: "text-[10px] font-black text-white"
-  }, "\u7DCA\u6025")), /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] font-black leading-none text-white whitespace-nowrap"
+  }, "\u9B42\u683C\u52B9\u679C"))), turnCount === 1 && battleSoulMasus.some(m => normalizeSoulRankStage(m.soulRankStage) > 0) && !isBusy && /*#__PURE__*/React.createElement("div", {
+    "data-soul-battle-start-summary": true,
+    className: "absolute left-1/2 top-2 -translate-x-1/2 z-10 max-w-[62%] truncate rounded-full border border-sky-400/30 bg-sky-950/75 px-2 py-1 text-[10px] font-black text-sky-100 pointer-events-none"
+  }, "\u9B42\u683C\u52B9\u679C \u767A\u52D5\u4E2D", Math.round(soulBattleParty.damageReduction * 10) / 10 > 0 ? ` ・鉄壁${Math.round(soulBattleParty.damageReduction * 10) / 10}%` : '', unifiedSpecialDefense.rate > 0 ? ` ・特殊防御${Math.round(unifiedSpecialDefense.rate * 10) / 10}%` : '', battleIntimidate > 0 ? ` ・威圧${Math.round(battleIntimidate * 10) / 10}%` : '', soulCoordinationCardBonus > 0 ? ' ・カード+1' : ''), /*#__PURE__*/React.createElement("div", {
     className: "mt-1 relative flex flex-col items-center"
   }, enemySkillName && /*#__PURE__*/React.createElement("div", {
     className: "fixed left-1/2 -translate-x-1/2 pointer-events-none whitespace-nowrap",
@@ -39090,7 +39093,7 @@ function BattleScreen({
         "data-tactics-range-ally": there ? 'true' : undefined,
         className: "relative flex flex-col items-center"
       }, /*#__PURE__*/React.createElement("div", {
-        className: "h-[22px] flex items-end justify-center"
+        className: "relative h-[22px] flex items-end justify-center"
       }, (isHere || isMove) && /*#__PURE__*/React.createElement("div", {
         className: `flex items-center justify-center rounded-full border ${isHere ? 'h-[20px] w-[20px] border-red-400 bg-black/75 shadow-[0_0_8px_rgba(239,68,68,.65)]' : 'h-[18px] w-[18px] border-dashed border-cyan-400/70 bg-black/40 opacity-70'}`
       }, enemy.imgUrl ? /*#__PURE__*/React.createElement("img", {
@@ -39100,7 +39103,10 @@ function BattleScreen({
       }) : /*#__PURE__*/React.createElement(Skull, {
         size: 11,
         className: "text-red-300"
-      }))), /*#__PURE__*/React.createElement("div", {
+      })), isMove && /*#__PURE__*/React.createElement("span", {
+        "aria-hidden": "true",
+        className: `absolute bottom-[3px] animate-pulse text-[12px] font-black leading-none text-cyan-300 drop-shadow-[0_0_4px_rgba(34,211,238,.9)] ${moveTo > here ? 'right-full mr-[1px]' : 'left-full ml-[1px]'}`
+      }, moveTo > here ? '→' : '←')), /*#__PURE__*/React.createElement("div", {
         className: `mt-[3px] h-[8px] w-[8px] rotate-45 rounded-[1px] border ${there ? `${RANGE_STYLES[i].border} ${RANGE_STYLES[i].labelBg}` : 'border-white/25 bg-slate-900'}`
       }), /*#__PURE__*/React.createElement("span", {
         className: `mt-[2px] rounded px-1 text-[10px] font-black leading-[13px] ${there ? `${RANGE_STYLES[i].labelBg} text-white` : 'text-slate-500'}`
