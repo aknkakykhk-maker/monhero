@@ -1295,6 +1295,18 @@ check('カードの説明にも「飲んだ子だけ」と書く',
 check('カードの説明にジャンルと効く先を出す',
   has('const genre=cardGenreLabel(focusedCard), scope=cardScopeLabel(focusedCard);')
     && has("data-card-genre={genre||''} data-card-scope={scope}"));
+// ★手札の**表**にも同じことを出す(2026-09-22 ユーザー指示「ニコラオは単体支援とかにしない？
+//   それだと全体や単体とか効果わかりやすいし」)。カードを1枚ずつ開かなくても、
+//   守りが置いた子だけ・支援が味方ぜんぶ、と並べて見比べられる。
+// ★言葉はアプリ側の同じ関数から引く。画面側で別に書くと、説明と表で言い方がずれる
+check('手札の表にもジャンルと効く先を出す',
+  has('const genre=tacticsCardGenre?tacticsCardGenre(c):null;')
+    && has('const scope=tacticsCardScope?tacticsCardScope(c):null;')
+    && has('data-card-genre={genre} data-card-scope={scope||undefined}')
+    && has('tacticsCardGenre={cardGenreLabel} tacticsCardScope={cardScopeLabel}'));
+// ★攻撃だけは「攻撃・敵へ」にしない。味方に効かないのは攻撃カードの前提で、
+//   わざわざ言うと守り・支援の「単体／全体」が埋もれる
+check('攻撃の表に「敵へ」は出さない', has("scope&&scope!=='敵へ'?`${genre}・${scope}`:genre"));
 
 // --- ㉟ 固有技の効果も「使った子だけ」(2026-09-22 ユーザー選択) ---
 // ★ピクシー/ミーアの消費0・タイガーの会心確定・アーク/イブリースの贖罪・パンドラの共鳴は、

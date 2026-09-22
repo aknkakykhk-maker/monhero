@@ -6,19 +6,6 @@
 //  食らったモンスターにエフェクトなどがつくようにしたい」)。
 // 色とアイコンはこの表だけに書き、出し方(フラッシュ・輪・縁・揺れ)は1か所にまとめる。
 // 新しい種類を足すときは、ここへ1行足して kindOfTacticsSlotFx が返す名前を増やす。
-// 手札のカードが「何をするものか」を一言で(2026-09-22 ユーザー指示。送られたイメージ画像の
-// カードには「中〜遠 攻撃」「ダメージ軽減」のような一行が入っている)。
-// ★カードのデータに説明文は無いので、種別から引く。名前だけでは、初めて見るカードが
-//   攻撃なのか守りなのか分からなかった。
-// ★距離撃は「敵を別の間合いへ動かす」技。行き先はカード名(零距離撃など)が持っているので、
-//   ここでは何をするものかだけを言う。
-const CARD_KIND_LABELS = Object.freeze({
-  atk: '攻撃', range_atk: '間合いをずらす', unique: '固有技',
-  guard: 'ダメージ軽減', weak_guard: 'ダメージ軽減',
-  buff: '味方を強化', debuff: '敵を弱める', heal: '回復', draw: '引き直し',
-});
-const cardKindLabel = (type) => CARD_KIND_LABELS[type] || '';
-
 const TACTICS_SLOT_FX_STYLE = Object.freeze({
   hit:     { rgb: '239,68,68',  ring: 'border-red-200',     edge: 'border-red-400' },
   guard:   { rgb: '16,185,129', ring: 'border-emerald-200', edge: 'border-emerald-300' },
@@ -71,7 +58,7 @@ function BattleScreen({
   setShowBattleLog, setShowDeckInfo, setShowEnemyInfo, setShowHeroInfo, setShowQuitConfirm,
   setShowSoulBattleEffects, setSkillPicker, setSlotSettle, slotMaxUses, slotSettle, slotSkill,
   slotUniqueChoice, slots, soulBattleParty, soulCoordinationCardBonus, suppressCardClickRef,
-  tacticsCanAssign, tacticsCardBlock, tacticsSlotFx, tacticsUnits,
+  tacticsCanAssign, tacticsCardBlock, tacticsCardGenre, tacticsCardScope, tacticsSlotFx, tacticsUnits,
   teachingFx, totalTurnCount, turnCount, ultimateDistanceBreakLevels, ultraBattleView,
   unifiedSpecialDefense, useEmergency, wave,
 }) {
@@ -1147,11 +1134,7 @@ function BattleScreen({
                 </>}
                 {/* 名前の行。勇者モンには王冠を付ける。どれが勇者モンか分からないと
                     「勇者モン選択時だけ効く特性」が効いているのか判断できないため */}
-                {/* 枠の通し番号(2026-09-22 ユーザー指示。イメージ画像の味方カードには 1〜4 が振ってある)。
-                    ★名前の行へ**重ねずに並べる**。左上へ重ねて置いたら、名前が中央そろえなので
-                      「スエゾー」のような長さで隠れてしまった */}
-                <div className={`h-[18px] shrink-0 flex items-center justify-center gap-1 px-1 border-b z-20 ${isHeroSlotMon(s)?'bg-amber-500/25 border-amber-300/50':'bg-black/60 border-white/10'}`}>
-                  <span className="shrink-0 flex h-[14px] w-[14px] items-center justify-center rounded border border-white/30 bg-black/60 text-[9px] font-black leading-none text-white/90">{i+1}</span>{isHeroSlotMon(s)&&<Crown size={8} className="shrink-0 mr-0.5 text-amber-300"/>}<span className={`text-[10px] font-black truncate uppercase leading-none ${isHeroSlotMon(s)?'text-amber-100':'text-white'}`}>{s?.name||'---'}</span>{assignedCount>0&&<span className="ml-1 text-[10px] font-black text-indigo-300">×{assignedCount}</span>}{slotBuffMarks.map(mark=>(<span key={mark.text} data-tactics-slot-buff={mark.text} className={`ml-1 shrink-0 text-[8px] font-black leading-none ${mark.cls}`}>{mark.text}</span>))}</div>
+                <div className={`h-[18px] shrink-0 flex items-center justify-center px-1 border-b z-20 ${isHeroSlotMon(s)?'bg-amber-500/25 border-amber-300/50':'bg-black/60 border-white/10'}`}>{isHeroSlotMon(s)&&<Crown size={8} className="shrink-0 mr-0.5 text-amber-300"/>}<span className={`text-[10px] font-black truncate uppercase leading-none ${isHeroSlotMon(s)?'text-amber-100':'text-white'}`}>{s?.name||'---'}</span>{assignedCount>0&&<span className="ml-1 text-[10px] font-black text-indigo-300">×{assignedCount}</span>}{slotBuffMarks.map(mark=>(<span key={mark.text} data-tactics-slot-buff={mark.text} className={`ml-1 shrink-0 text-[8px] font-black leading-none ${mark.cls}`}>{mark.text}</span>))}</div>
                 {(()=>{const uOptions=getAvailableUniquesForSlot(s,ownedUniques,i); if(uOptions.length<2) return null; const curKey=activeSlotUniqueKey(slotUniqueChoice,i,s); const curIdx=Math.max(0,uOptions.findIndex(o=>o.key===curKey));
                   return(<div onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation(); if(isBusy||autoBattleRef.current)return; cycleActiveUniqueForSlot(i);}} className={`shrink-0 z-20 flex items-center justify-center gap-0.5 bg-purple-700/90 border-b border-purple-300/50 py-0.5 active:scale-95${autoBattle?' opacity-40':''}`}>
                     <RefreshCcw size={7} className="text-white"/><span className="text-[10px] font-black text-white leading-none">固有技 {curIdx+1}/{uOptions.length}</span>
@@ -1365,7 +1348,18 @@ function BattleScreen({
               }} style={{...(isDragging?{touchAction:'none',position:'fixed',left:dragState.x,top:dragState.y,transform:'translate(-50%,-50%) rotate(-3deg) scale(1.15)',zIndex:70000,width:'72px',pointerEvents:'none',transition:'none',filter:'drop-shadow(0 12px 18px rgba(0,0,0,0.65))'}:{touchAction:'none',boxShadow:'inset 0 1px 0 rgba(255,255,255,.30), inset 0 -10px 16px rgba(0,0,0,.32), 0 4px 10px rgba(0,0,0,.5)'}),...(TYPE_INLINE_STYLE[c.type]||{})}} className={`relative w-full rounded-xl border-2 p-1 flex flex-col items-center justify-between bg-gradient-to-b ${TYPE_COLORS[c.type]} ${isDragging?'ring-4 ring-white shadow-[0_0_24px_rgba(255,255,255,0.6)]':isSel?'transition-all -translate-y-1.5 ring-4 ring-cyan-300 z-20 scale-105 opacity-60 saturate-[0.7] shadow-[0_0_18px_rgba(103,232,249,0.6)]':'transition-all opacity-90'} ${isPending?'ring-4 ring-yellow-400 animate-pulse shadow-[0_0_20px_rgba(250,204,21,0.7)]':''} ${!isSelectable&&!isSel&&!isDragging?'grayscale opacity-50':''}${tutorialTargeted?' is-battle-tutorial-spot':''}${battleTutorialCardTarget&&!tutorialTargeted?' grayscale opacity-25':''}`}>
                 {isSel&&!assignedMon&&(<div className="absolute top-0.5 left-0.5 z-30 w-5 h-5 rounded-full bg-cyan-400 border-2 border-white flex items-center justify-center shadow-lg"><Check size={10} className="text-white" strokeWidth={4}/></div>)}
                 {assignedMon&&(<div className="absolute top-0.5 right-0.5 z-30 w-5 h-5 rounded-full bg-indigo-600 border-2 border-white flex items-center justify-center overflow-hidden shadow-lg">{assignedMon.imgUrl?<img src={assignedMon.imgUrl} alt="" className="w-full h-full object-contain"/>:<span className="text-[10px]">{assignedMon.emoji}</span>}</div>)}
-                <div className="text-3xl mt-1.5">{cardIconNode(c.icon,32,c.id)}</div><div className="w-full text-center flex flex-col justify-end gap-0.5">{['atk','range_atk','unique'].includes(c.type)?(<div onClick={(ev)=>{ev.stopPropagation(); if(isBusy||autoBattleRef.current||Date.now()<=suppressCardClickRef.current)return; setSkillPicker({handIndex:i});}} className={`text-[11px] font-black leading-[13px] w-full whitespace-normal h-[30px] flex items-center justify-center overflow-hidden px-0.5 underline decoration-dotted decoration-white/60 underline-offset-2 active:opacity-60${battleTutorialNeedCard&&tutorialTargeted?' is-battle-tutorial-spot':''}`}>{c.name}</div>):(<div className="text-[11px] font-black leading-[13px] w-full whitespace-normal h-[30px] flex items-center justify-center overflow-hidden px-0.5">{c.name}</div>)}{cardKindLabel(c.type)?<div data-card-kind={c.type} className="w-full truncate rounded bg-black/40 px-0.5 text-[8px] font-black leading-[11px] text-white/85">{cardKindLabel(c.type)}</div>:null}<div className="text-[10px] font-black bg-black/40 text-white rounded py-1 flex items-center justify-center gap-0.5"><Zap size={9}/>{curGuts}</div></div></button>{cardBlock&&!cardBlock.ok&&cardBlock.short&&!isDragging&&(<div data-tactics-card-block={cardBlock.short} className="pointer-events-none absolute inset-x-0.5 top-1 z-30 rounded-md border border-rose-200 bg-rose-600 px-0.5 py-0.5 text-center text-[8px] font-black leading-tight text-white shadow-[0_2px_8px_rgba(0,0,0,.85)]">{cardBlock.short}</div>)}</div>);
+                <div className="text-3xl mt-1.5">{cardIconNode(c.icon,32,c.id)}</div><div className="w-full text-center flex flex-col justify-end gap-0.5">{['atk','range_atk','unique'].includes(c.type)?(<div onClick={(ev)=>{ev.stopPropagation(); if(isBusy||autoBattleRef.current||Date.now()<=suppressCardClickRef.current)return; setSkillPicker({handIndex:i});}} className={`text-[11px] font-black leading-[13px] w-full whitespace-normal h-[30px] flex items-center justify-center overflow-hidden px-0.5 underline decoration-dotted decoration-white/60 underline-offset-2 active:opacity-60${battleTutorialNeedCard&&tutorialTargeted?' is-battle-tutorial-spot':''}`}>{c.name}</div>):(<div className="text-[11px] font-black leading-[13px] w-full whitespace-normal h-[30px] flex items-center justify-center overflow-hidden px-0.5">{c.name}</div>)}{(()=>{
+                  // カードの表に「ジャンル」と「誰に効くか」を出す(仕様: BATTLE_NEW_MODE_PLAN.md 4.4
+                  // 「単体効果と全体効果が分かるようにカード説明に表示するようにしたい」)。
+                  // ★言葉はアプリ側の cardGenreLabel / cardScopeLabel から引く。カードをタップした
+                  //   ときの説明が同じ関数を使っているので、表と中で言い方がずれない。
+                  // ★攻撃は「攻撃・敵へ」ではなく「攻撃」だけにする。味方に効かないのは攻撃カードの
+                  //   前提で、わざわざ言うと守り・支援の「単体／全体」が埋もれる
+                  const genre=tacticsCardGenre?tacticsCardGenre(c):null;
+                  const scope=tacticsCardScope?tacticsCardScope(c):null;
+                  const text=genre?(scope&&scope!=='敵へ'?`${genre}・${scope}`:genre):'';
+                  return text?<div data-card-genre={genre} data-card-scope={scope||undefined} className="w-full truncate rounded bg-black/40 px-0.5 text-[8px] font-black leading-[11px] text-white/85">{text}</div>:null;
+                })()}<div className="text-[10px] font-black bg-black/40 text-white rounded py-1 flex items-center justify-center gap-0.5"><Zap size={9}/>{curGuts}</div></div></button>{cardBlock&&!cardBlock.ok&&cardBlock.short&&!isDragging&&(<div data-tactics-card-block={cardBlock.short} className="pointer-events-none absolute inset-x-0.5 top-1 z-30 rounded-md border border-rose-200 bg-rose-600 px-0.5 py-0.5 text-center text-[8px] font-black leading-tight text-white shadow-[0_2px_8px_rgba(0,0,0,.85)]">{cardBlock.short}</div>)}</div>);
             })}
           </div>
         </div>
