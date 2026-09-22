@@ -106,7 +106,8 @@ const pendingGuards = (source.match(/if\(idx===pendingIdx\) return;/g) || []).le
 check('予測は保留中のカードを枚数に数えない', pendingGuards >= 2, `${pendingGuards}か所`);
 check('スロット予測も保留中のカードを除く', has('selectedCards.forEach(idx=>{ if(idx===pendingIdx) return; pendingCounter.take(hand[idx],cardAssignments[idx]!=null?cardAssignments[idx]:null); });'));
 check('保留カードの判定にドラッグ中の手札位置も使う', has('dragState.cardIndex:null'));
-check('半減マークは保留カード自身の判定で出す', has("{isPendingPreview&&isPendingHalved?'½ ':''}DMG:"));
+// ★枠は87pxしかないので、2026-09-23に「DMG:」から「攻」へ縮めた(重なりを無くすため)
+check('半減マークは保留カード自身の判定で出す', has("{isPendingPreview&&isPendingHalved?'½':''}攻"));
 
 // ガードの見え方
 check('ガードの合計軽減を表示する', has('合計軽減')
