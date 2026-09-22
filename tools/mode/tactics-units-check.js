@@ -64,7 +64,9 @@ vm.runInContext(
     + 'tacticsJoinWaveRate,addTacticsJoinCatchUp,applyTacticsJoinCatchUp,'
     + 'TACTICS_JOIN_RATE_PER_TURN,TACTICS_JOIN_DIST_BASE_TURNS,tacticsJoinDistWaveRate,'
     + 'addTacticsJoinDistCatchUp,tacticsJoinDistBonus,applyTacticsJoinDistBonus,'
-    + 'isSameTacticsUnit,tacticsJoinedSlots};', sandbox);
+    + 'isSameTacticsUnit,tacticsJoinedSlots,'
+    + 'tacticsSlotFlag,tacticsSlotRate,tacticsSlotTurns,withTacticsSlotBuff,'
+    + 'carryTacticsSlotBuffs,clearTacticsSlotFlag};', sandbox);
 const api = sandbox.api;
 // ★合計へみゅあ補正を掛ける式は本体から切り出して動かす(検査へ書き写さない)。
 //   1体ずつは floor(素の上限×補正)、合計は floor(素の上限の合計×補正) なので、
@@ -1190,39 +1192,33 @@ check('ガッツ回復は新モードだと合計を足さずに配る',
 //   (ユーザー「ライフが劇的に減った。多分全体ライフを見てる？」
 //     「みゃるの薬は使ったやつだけにきくバフだね 多分全体になってるよね？」)。
 check('みゃるの攻撃バフは、タクティクスだけ枠ごとに置く',
-  has('if(isTacticsMode(runMode)) setTacticsNextSlotAtkMult(slotIdx,myaruAtkMult);')
+  has("if(isTacticsMode(runMode)) setTacticsNextSlotBuff(slotIdx,'atkMult',myaruAtkMult);")
     && has('else setNextTurnBuff(\'atkMult\',myaruAtkMult);'));
 check('枠ごとの攻撃バフがダメージへ効く',
   has("getTurnBuff('atkMult',1.0)*tacticsSlotAtkMult(slotIdx)*"));
-// ★同じターンに2人が飲んでも消し合わない(枠ごとに足す)
-check('枠ごとの攻撃バフは足していく',
-  has('...p, atkMultBySlot: { ...(p.atkMultBySlot || {}), [slotIdx]: mult },'));
-// 読み出しの決まりは本体から切り出してそのまま動かす(検査へ書き写さない)
+// ★同じターンに2人が使っても消し合わない(枠ごとに足す)。書き込みは1か所を通す
+check('枠ごとのバフは足していく',
+  has('...p, bySlot: withTacticsSlotBuff(p.bySlot, slotIdx, key, value),'));
+check('枠ごとのバフは、タクティクスのときだけ読む',
+  has("const tacticsSlotBuffs = () => (isTacticsMode(runMode) ? getTurnBuff('bySlot', null) : null);")
+    && has("const tacticsSlotAtkMult = (slotIdx) => tacticsSlotRate(tacticsSlotBuffs(), slotIdx, 'atkMult', 1.0);"));
+// 読み出しの決まりは本体の純関数をそのまま動かす(検査へ書き写さない)
 {
-  const atkMultSrc = slice('const tacticsSlotAtkMult = (slotIdx) => {', '\n  };') + '\n  };';
-  const box = { Number, __turn: {}, __tactics: true };
-  vm.createContext(box);
-  vm.runInContext(
-    'const isTacticsMode=()=>__tactics; const runMode=null;'
-      + 'const getTurnBuff=(key,def)=>(key in __turn ? __turn[key] : def);'
-      + atkMultSrc.trim()
-      + '\nglobalThis.f=tacticsSlotAtkMult;', box);
-  const atkMultOf = box.f;
-  box.__turn = { atkMultBySlot: { 1: 2.0 } };
-  check('飲んだ子だけ攻撃が上がる', atkMultOf(1) === 2.0 && atkMultOf(0) === 1.0 && atkMultOf(3) === 1.0);
-  box.__turn = { atkMultBySlot: { 1: 'こわれた' } };
-  check('壊れた値が来ても等倍に倒す', atkMultOf(1) === 1.0);
-  box.__turn = {};
-  check('誰も飲んでいなければ等倍', atkMultOf(0) === 1.0);
-  box.__tactics = false; box.__turn = { atkMultBySlot: { 1: 2.0 } };
-  check('既存5モードは枠ごとのバフを見ない', atkMultOf(1) === 1.0);
+  const bySlot = { 1: { atkMult: 2.0 } };
+  check('飲んだ子だけ攻撃が上がる', api.tacticsSlotRate(bySlot, 1, 'atkMult', 1) === 2.0
+    && api.tacticsSlotRate(bySlot, 0, 'atkMult', 1) === 1 && api.tacticsSlotRate(bySlot, 3, 'atkMult', 1) === 1);
+  check('壊れた値が来ても等倍に倒す', api.tacticsSlotRate({ 1: { atkMult: 'こわれた' } }, 1, 'atkMult', 1) === 1
+    && api.tacticsSlotRate({ 1: { atkMult: -3 } }, 1, 'atkMult', 1) === 1);
+  check('誰も飲んでいなければ等倍', api.tacticsSlotRate(null, 0, 'atkMult', 1) === 1
+    && api.tacticsSlotRate({}, 0, 'atkMult', 1) === 1);
 }
 // ★どの子にかかっているかを枠に出す。全体の札(Boost)では誰のものか分からない
 {
   const battleScreenMyaru = fs.readFileSync(path.join(root, 'monster-hero/src/parts/71-screen-battle.jsx'), 'utf8');
   check('薬がかかっている子の枠に印を出す',
-    battleScreenMyaru.includes("const bySlot=getTurnBuff('atkMultBySlot',null);")
-      && battleScreenMyaru.includes('data-tactics-atk-boost={slotAtkBoost}'));
+    battleScreenMyaru.includes("const bySlot=getTurnBuff('bySlot',null);")
+      && battleScreenMyaru.includes('data-tactics-slot-buff={mark.text}')
+      && battleScreenMyaru.includes("marks.push({text:`⚔×${atkMult.toFixed(1)}`,cls:'text-red-300'});"));
 }
 check('カードの説明にも「飲んだ子だけ」と書く',
   has("isTacticsMode(runMode)&&focusedCard.subType==='buff_myaru'")
@@ -1266,6 +1262,65 @@ check('カードの説明にも「飲んだ子だけ」と書く',
 check('カードの説明にジャンルと効く先を出す',
   has('const genre=cardGenreLabel(focusedCard), scope=cardScopeLabel(focusedCard);')
     && has("data-card-genre={genre||''} data-card-scope={scope}"));
+
+// --- ㉟ 固有技の効果も「使った子だけ」(2026-09-22 ユーザー選択) ---
+// ★ピクシー/ミーアの消費0・タイガーの会心確定・アーク/イブリースの贖罪・パンドラの共鳴は、
+//   クラシックの作りのまま**味方全員**にかかっていた。ステータスが1体ずつのタクティクスでは
+//   「全員がタダ」「全員が会心確定」になるので効きすぎる。
+// ★モノリスの反射は設計どおり味方全体のまま(§10 段階7)。
+//   メロソの被ダメ減もアシストカードなので全体のまま
+check('ピクシー/ミーアの消費0は使った子だけ',
+  has("if(isTacticsMode(runMode)) setTacticsNextSlotBuff(slotIdx,'zeroGuts',true); else setNextTurnBuff('zeroGuts',true);"));
+check('タイガーの会心確定は使った子だけ',
+  has("if(isTacticsMode(runMode)) setTacticsNextSlotBuff(slotIdx,'guaranteedCrit',true); else setNextTurnBuff('guaranteedCrit',true);"));
+check('アーク/イブリースの贖罪は、利点と欠点をまとめて使った子だけ',
+  has("if(isTacticsMode(runMode)){ setTacticsNextSlotBuff(slotIdx,'takenDamageMult',0.5); setTacticsNextSlotBuff(slotIdx,'gutsCostMult',1.15); }")
+    && has("else { setNextTurnBuff('takenDamageMult',0.5); setNextTurnBuff('gutsCostMult',1.15); }"));
+check('パンドラの共鳴は使った子だけ',
+  has("if(isTacticsMode(runMode)) setTacticsNextSlotBuff(slotIdx,'pandoraResonanceTurns',2);"));
+check('モノリスの反射は味方全体のまま',
+  has("setNextTurnBuff('reflect',true)") && !has("setTacticsNextSlotBuff(slotIdx,'reflect'"));
+check('メロソの被ダメ減も味方全体のまま',
+  has("setNextTurnBuff('takenDamageMult',1-0.5*effMul)") && !has("setTacticsNextSlotBuff(slotIdx,'takenDamageMult',1-"));
+// 効き先。全体のぶん(メロソ)と枠ごとのぶんは掛け合わせる
+check('消費ガッツは枠ごとのぶんも見る',
+  has("tacticsSlotFlag(slotBuffs, slotIdx, 'zeroGuts')")
+    && has("tacticsSlotRate(slotBuffs, slotIdx, 'gutsCostMult', 1.0)")
+    && has("tacticsSlotTurns(slotBuffs, slotIdx, 'pandoraResonanceTurns')"));
+check('被ダメ軽減は狙われた枠のぶんも掛ける',
+  has('const applyTurnDamageReduction = useCallback((damage, slotIdx = null) => damage>0')
+    && has("*tacticsSlotRate(isTacticsMode(runMode)?turnBuffs.bySlot:null,slotIdx,'takenDamageMult',1.0)"));
+// ★会心確定は「予測」「あつの挑発」「ふつうの攻撃」の3か所が同じ読み方をする。
+//   1か所でも漏らすと、予測と実際がずれる
+check('会心確定は予測も実処理も枠ごとのぶんを見る',
+  (source.match(/tacticsSlotFlag\(getTurnBuff\('bySlot',null\),slotIdx,'guaranteedCrit'\)/g) || []).length >= 3);
+check('固有技の効果も枠の印に出る',
+  ["tacticsSlotFlag(bySlot,i,'zeroGuts')", "tacticsSlotFlag(bySlot,i,'guaranteedCrit')",
+    "tacticsSlotRate(bySlot,i,'takenDamageMult',1.0)", "tacticsSlotRate(bySlot,i,'gutsCostMult',1.0)",
+    "tacticsSlotTurns(bySlot,i,'pandoraResonanceTurns')"].every(needle => has(needle)));
+// 枠ごとの入れ物そのもののふるまい。本体の純関数をそのまま動かす
+{
+  const written = api.withTacticsSlotBuff(api.withTacticsSlotBuff(null, 1, 'zeroGuts', true), 2, 'atkMult', 2.0);
+  check('2人ぶんを書いても消し合わない',
+    api.tacticsSlotFlag(written, 1, 'zeroGuts') === true && api.tacticsSlotRate(written, 2, 'atkMult', 1) === 2.0
+      && api.tacticsSlotFlag(written, 2, 'zeroGuts') === false);
+  const both = api.withTacticsSlotBuff(api.withTacticsSlotBuff(null, 1, 'takenDamageMult', 0.5), 1, 'gutsCostMult', 1.15);
+  check('同じ子へ2つ書いても両方残る',
+    api.tacticsSlotRate(both, 1, 'takenDamageMult', 1) === 0.5 && api.tacticsSlotRate(both, 1, 'gutsCostMult', 1) === 1.15);
+  const carried = api.carryTacticsSlotBuffs(null, { 1: { pandoraResonanceTurns: 2 } }, 'pandoraResonanceTurns');
+  check('共鳴は1ターンずつ減って持ち越す', api.tacticsSlotTurns(carried, 1, 'pandoraResonanceTurns') === 1);
+  check('共鳴は残り1で終わる',
+    Object.keys(api.carryTacticsSlotBuffs(null, { 1: { pandoraResonanceTurns: 1 } }, 'pandoraResonanceTurns')).length === 0);
+  const refreshed = api.carryTacticsSlotBuffs({ 1: { pandoraResonanceTurns: 2 } }, { 1: { pandoraResonanceTurns: 2 } }, 'pandoraResonanceTurns');
+  check('張り直したら新しい値が勝つ', api.tacticsSlotTurns(refreshed, 1, 'pandoraResonanceTurns') === 2);
+  // ★持ち越すのは共鳴だけ。次ターン1回きりの予約(消費0・会心確定)を持ち越すと永久に続く
+  check('1回きりの予約は持ち越さない',
+    Object.keys(api.carryTacticsSlotBuffs(null, { 1: { zeroGuts: true, guaranteedCrit: true } }, 'pandoraResonanceTurns')).length === 0);
+  const cleared = api.clearTacticsSlotFlag({ 1: { zeroGuts: true, atkMult: 2.0 }, 2: { zeroGuts: true } }, 'zeroGuts');
+  check('使い切った消費0だけ落ちる',
+    api.tacticsSlotFlag(cleared, 1, 'zeroGuts') === false && api.tacticsSlotRate(cleared, 1, 'atkMult', 1) === 2.0
+      && cleared[2] === undefined);
+}
 
 console.log(failed ? `\nNG ${failed}件` : '\nすべてOK');
 process.exit(failed ? 1 : 0);

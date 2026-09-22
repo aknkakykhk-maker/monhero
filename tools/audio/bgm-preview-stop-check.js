@@ -58,13 +58,17 @@ if (body) {
         connect() {}, disconnect() {}, start() { started.push(id); }, stop() { stopped.push(id); } };
     },
     createGain() { return { gain: { value: 1, setValueAtTime() {}, linearRampToValueAtTime() {}, cancelScheduledValues() {} }, connect() {}, disconnect() {} }; },
+    // ★本体の buildAudioGraph は解析器(モンヒロビートの波形表示用)も配線する。
+    //   ここに無いと new AudioContext() の直後で例外になり、音そのものが「使えない」扱いになる
+    createAnalyser() { return { fftSize: 2048, smoothingTimeConstant: 0, connect() {}, disconnect() {},
+      getFloatTimeDomainData() {}, getByteFrequencyData() {} }; },
     resume() { return Promise.resolve(); },
     decodeAudioData(_data, ok) { const buf = {}; if (typeof ok === 'function') { ok(buf); return undefined; } return Promise.resolve(buf); },
   };
   const LOAD_MS = 60; // 読み込みに時間がかかる状況(大きいMP3)を作る
   const sandbox = {
     console, Promise, setTimeout, clearTimeout, setInterval, clearInterval, Math, Number, Object, Array, JSON, String, Boolean, Error, Date,
-    ArrayBuffer, Uint8Array,
+    ArrayBuffer, Uint8Array, Float32Array,
     // 読み込み結果は曲ごとに覚えられる(2回目以降は即座に鳴る)。
     // 「読み込み中に押す」状況を作りたい場面ごとに、まだ一度も読んでいない曲を割り当てる
     BGM_TRACK_BY_ID: {
