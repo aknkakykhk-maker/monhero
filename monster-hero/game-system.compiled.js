@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7178c70b2be3fc18
+// source-sha256: c98d85a95ea3e722
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5b58ab41fb93b08d
+// generated-sha256: c6b299924a642519
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-22 19:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-22 20:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -12959,7 +12959,8 @@ const RANGE_STYLES = {
     shadow: "shadow-red-500/50",
     glow: "drop-shadow-[0_0_15px_rgba(239,68,68,0.9)]",
     slotBg: "bg-red-900/50",
-    labelBg: "bg-red-600 text-white"
+    labelBg: "bg-red-600 text-white",
+    slotGlow: "shadow-[inset_0_1px_0_rgba(255,255,255,.22),0_0_14px_rgba(239,68,68,0.38),0_4px_12px_rgba(0,0,0,.55)]"
   },
   1: {
     bg: "bg-yellow-950/90",
@@ -12968,7 +12969,8 @@ const RANGE_STYLES = {
     shadow: "shadow-yellow-500/50",
     glow: "drop-shadow-[0_0_15px_rgba(234,179,8,0.9)]",
     slotBg: "bg-yellow-900/50",
-    labelBg: "bg-yellow-600 text-black"
+    labelBg: "bg-yellow-600 text-black",
+    slotGlow: "shadow-[inset_0_1px_0_rgba(255,255,255,.22),0_0_14px_rgba(234,179,8,0.38),0_4px_12px_rgba(0,0,0,.55)]"
   },
   2: {
     bg: "bg-emerald-950/90",
@@ -12977,7 +12979,8 @@ const RANGE_STYLES = {
     shadow: "shadow-emerald-500/50",
     glow: "drop-shadow-[0_0_15px_rgba(16,185,129,0.9)]",
     slotBg: "bg-emerald-900/50",
-    labelBg: "bg-emerald-600 text-white"
+    labelBg: "bg-emerald-600 text-white",
+    slotGlow: "shadow-[inset_0_1px_0_rgba(255,255,255,.22),0_0_14px_rgba(16,185,129,0.38),0_4px_12px_rgba(0,0,0,.55)]"
   },
   3: {
     bg: "bg-blue-950/90",
@@ -12986,7 +12989,8 @@ const RANGE_STYLES = {
     shadow: "shadow-blue-500/50",
     glow: "drop-shadow-[0_0_15px_rgba(59,130,246,0.9)]",
     slotBg: "bg-blue-900/50",
-    labelBg: "bg-blue-600 text-white"
+    labelBg: "bg-blue-600 text-white",
+    slotGlow: "shadow-[inset_0_1px_0_rgba(255,255,255,.22),0_0_14px_rgba(59,130,246,0.38),0_4px_12px_rgba(0,0,0,.55)]"
   }
 };
 const AUTO_SETTINGS_KEY = 'mh_auto_settings_v1';
@@ -39666,7 +39670,7 @@ function BattleScreen({
   })(), /*#__PURE__*/React.createElement("div", {
     className: `grid grid-cols-4 gap-2 w-full relative shrink-0${battleTutorialSpotClass('battleSlots')}`,
     style: {
-      height: 'clamp(132px,16dvh,146px)'
+      height: 'clamp(152px,18dvh,168px)'
     }
   }, slots.map((s, i) => {
     // Count how many cards already assigned to this slot
@@ -39860,7 +39864,7 @@ function BattleScreen({
         }
       },
       disabled: isBusy || autoBattle,
-      className: `relative rounded-xl border-2 flex flex-col items-stretch overflow-visible transition-all shadow-[inset_0_1px_0_rgba(255,255,255,.18),0_4px_12px_rgba(0,0,0,.55)] ${RANGE_STYLES[i].bg} ${distanceBroken ? 'border-red-400' : ' ' + RANGE_STYLES[i].border} ${canAssign || dragState?.active && dragOverSlot === i ? 'ring-2 ring-yellow-400 scale-105 z-10 shadow-lg animate-pulse' : 'opacity-100'} ${assignedCount > 0 ? 'ring-2 ring-indigo-500' : ''} ${dragState?.active && dragOverSlot === i ? 'ring-4 ring-green-400 scale-110' : ''} ${slotSettle === i ? 'ring-4 ring-white' : ''}`,
+      className: `relative rounded-2xl border-2 flex flex-col items-stretch overflow-visible transition-all ${RANGE_STYLES[i].slotGlow || ''} ${RANGE_STYLES[i].bg} ${distanceBroken ? 'border-red-400' : ' ' + RANGE_STYLES[i].border} ${canAssign || dragState?.active && dragOverSlot === i ? 'ring-2 ring-yellow-400 scale-105 z-10 shadow-lg animate-pulse' : 'opacity-100'} ${assignedCount > 0 ? 'ring-2 ring-indigo-500' : ''} ${dragState?.active && dragOverSlot === i ? 'ring-4 ring-green-400 scale-110' : ''} ${slotSettle === i ? 'ring-4 ring-white' : ''}`,
       style: isAnimating ? {
         zIndex: 9999,
         animation: attackMotionAnimation(attackAnim)
@@ -40200,36 +40204,48 @@ function BattleScreen({
         "data-tactics-downed": tacticsUnit.downed ? 'true' : 'false',
         className: `shrink-0 z-20 border-t border-white/10 bg-black/55 px-1${battleTutorialSpotClass('tacticsParty')}`
       }, /*#__PURE__*/React.createElement("div", {
-        className: "flex items-baseline justify-between gap-0.5 leading-none"
+        className: "flex items-baseline justify-between leading-none"
       }, /*#__PURE__*/React.createElement("span", {
-        className: "text-[9px] text-pink-400"
-      }, "\u2665"), /*#__PURE__*/React.createElement("span", {
-        className: "text-[11px] font-mono font-black text-pink-100"
+        className: "text-[8px] font-black tracking-wider text-pink-300"
+      }, "HP"), /*#__PURE__*/React.createElement("span", {
+        className: "font-mono leading-none"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-[11px] font-black text-white"
       }, tacticsUnit.hp), /*#__PURE__*/React.createElement("span", {
-        className: "text-[8px] font-mono text-slate-500"
-      }, "/", tacticsUnit.maxHp)), /*#__PURE__*/React.createElement("div", {
-        className: "h-[4px] rounded-full bg-slate-900 overflow-hidden"
+        className: "text-[8px] text-slate-400"
+      }, "/", tacticsUnit.maxHp))), /*#__PURE__*/React.createElement("div", {
+        className: "mt-[1px] h-[5px] overflow-hidden rounded-full bg-black/60",
+        style: {
+          boxShadow: 'inset 0 1px 2px rgba(0,0,0,.9)'
+        }
       }, /*#__PURE__*/React.createElement("div", {
         "data-tactics-hp-bar": true,
-        className: `h-full transition-all duration-1000 ${tacticsUnit.downed ? 'bg-gradient-to-r from-emerald-600 to-teal-300' : 'bg-gradient-to-r from-pink-600 to-rose-400'}`,
+        className: `h-full transition-all duration-1000 ${tacticsUnit.downed ? 'bg-gradient-to-r from-emerald-500 to-teal-300' : 'bg-gradient-to-r from-rose-500 to-pink-300'}`,
         style: {
-          width: `${hpPct}%`
+          width: `${hpPct}%`,
+          boxShadow: '0 0 6px rgba(244,114,182,.55)'
         }
       })), /*#__PURE__*/React.createElement("div", {
-        className: "flex items-baseline justify-between gap-0.5 leading-none"
+        className: "mt-[1px] flex items-baseline justify-between leading-none"
       }, /*#__PURE__*/React.createElement("span", {
-        className: "text-[9px] text-amber-400"
-      }, "\u26A1"), /*#__PURE__*/React.createElement("span", {
-        className: "text-[11px] font-mono font-black text-amber-100"
+        className: "text-[8px] font-black tracking-wider text-amber-300"
+      }, "GUTS"), /*#__PURE__*/React.createElement("span", {
+        className: "font-mono leading-none"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-[11px] font-black text-white"
       }, tacticsUnit.guts), /*#__PURE__*/React.createElement("span", {
-        className: "text-[8px] font-mono text-slate-500"
-      }, "/", tacticsUnit.maxGuts)), /*#__PURE__*/React.createElement("div", {
-        className: "h-[4px] rounded-full bg-slate-900 overflow-hidden"
+        className: "text-[8px] text-slate-400"
+      }, "/", tacticsUnit.maxGuts))), /*#__PURE__*/React.createElement("div", {
+        className: "mt-[1px] h-[5px] overflow-hidden rounded-full bg-black/60",
+        style: {
+          boxShadow: 'inset 0 1px 2px rgba(0,0,0,.9)'
+        }
       }, /*#__PURE__*/React.createElement("div", {
         "data-tactics-guts-bar": true,
-        className: "h-full bg-gradient-to-r from-amber-600 to-yellow-300 transition-all duration-500",
+        className: "h-full bg-gradient-to-r from-amber-500 to-yellow-300 transition-all duration-500",
         style: {
-          width: `${gutsPct}%`
+          width: `${gutsPct}%`,
+          boxShadow: '0 0 6px rgba(251,191,36,.55)'
         }
       })));
     })(), /*#__PURE__*/React.createElement("div", {
@@ -40390,7 +40406,7 @@ function BattleScreen({
           filter: 'drop-shadow(0 12px 18px rgba(0,0,0,0.65))'
         } : {
           touchAction: 'none',
-          boxShadow: 'inset 0 1px 0 rgba(255,255,255,.30), inset 0 -10px 16px rgba(0,0,0,.32), 0 4px 10px rgba(0,0,0,.5)'
+          boxShadow: `${(TYPE_INLINE_STYLE[c.type] || {}).borderColor ? `0 0 12px ${(TYPE_INLINE_STYLE[c.type] || {}).borderColor}70, ` : ''}inset 0 1px 0 rgba(255,255,255,.34), inset 0 -10px 16px rgba(0,0,0,.30), 0 4px 10px rgba(0,0,0,.5)`
         }),
         ...(TYPE_INLINE_STYLE[c.type] || {})
       },
@@ -40410,8 +40426,11 @@ function BattleScreen({
     }) : /*#__PURE__*/React.createElement("span", {
       className: "text-[10px]"
     }, assignedMon.emoji)), /*#__PURE__*/React.createElement("div", {
-      className: "text-3xl mt-1.5"
-    }, cardIconNode(c.icon, 32, c.id)), /*#__PURE__*/React.createElement("div", {
+      className: "mt-1.5 flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full border border-white/30 bg-black/25",
+      style: {
+        boxShadow: 'inset 0 1px 0 rgba(255,255,255,.25), inset 0 -4px 8px rgba(0,0,0,.35)'
+      }
+    }, cardIconNode(c.icon, 26, c.id)), /*#__PURE__*/React.createElement("div", {
       className: "w-full text-center flex flex-col justify-end gap-0.5"
     }, ['atk', 'range_atk', 'unique'].includes(c.type) ? /*#__PURE__*/React.createElement("div", {
       onClick: ev => {

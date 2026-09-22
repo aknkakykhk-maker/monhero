@@ -594,7 +594,7 @@ check('置けるかの判定も画面へ渡す', has('tacticsCanAssign={tacticsC
   check('復活まであとどれだけかを出す',
     hasScreen('data-tactics-revive={`${revivePct}`}') && hasScreen('復活まで {100-revivePct}%'));
   check('ダウン中の帯は復活ゲージとして色を変える',
-    hasScreen("tacticsUnit.downed?'bg-gradient-to-r from-emerald-600 to-teal-300'"));
+    hasScreen("tacticsUnit.downed?'bg-gradient-to-r from-emerald-500 to-teal-300'"));
   // 1体ずつのステータスは「ステータス」から見る(2026-09-19 ユーザーの質問)
   check('ステータスに1体ずつの値を出す',
     has('<div data-tactics-status className="space-y-1.5 text-left">')
@@ -708,9 +708,11 @@ check('置けるかの判定も画面へ渡す', has('tacticsCanAssign={tacticsC
   check('カード詳細には理由の全文を出す', has('data-tactics-card-why'));
   // ★帯のアニメーションを外すと、回復もダメージも瞬間で増減して見える(2026-09-20 ユーザー指摘)。
   //   合計の帯と同じ速さ(ライフ1秒・ガッツ0.5秒)にそろえる
+  // ★帯そのものも光らせた(2026-09-22 ユーザー指摘「カードも距離枠も全て安っぽくない？」)。
+  //   見るのは色ではなく**動く速さ**。ここが消えると回復もダメージも瞬間で増減して見える
   check('1体ずつの帯は合計の帯と同じ速さで動く',
     hasScreen('data-tactics-hp-bar className={`h-full transition-all duration-1000 ')
-      && hasScreen('data-tactics-guts-bar className="h-full bg-gradient-to-r from-amber-600 to-yellow-300 transition-all duration-500"'));
+      && hasScreen('data-tactics-guts-bar className="h-full bg-gradient-to-r from-amber-500 to-yellow-300 transition-all duration-500"'));
   check('手札に検査の手がかりがある',
     hasScreen('data-hand-card={i}') && hasScreen('data-card-cost={requiredGuts}')
       && hasScreen("data-card-usable={isSelectable?'true':'false'}"));
