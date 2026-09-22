@@ -112,7 +112,7 @@ function BattleScreen({
   //   受けたあとの表示と同じ splitTacticsHitAmounts を通すので、予告と実際で割り方がそろう。
   //   ガードで止めた発は通らないので、**通る発の数だけ**に割る(数字の数＝これから食らう回数)
   const plannedHitFor = (slotIdx) => {
-    const none = { taken: 0, parts: [] };
+    const none = { taken: 0, parts: [], raw: 0 };
     if (!enemyIntent) return none;
     // ★外れた間合い攻撃は予告の時点でも威力を落とす(実行と同じ tacticsSweepIntent を通す)。
     //   予告だけ1.2倍のままだと「予定より少なかった」になる
@@ -145,10 +145,12 @@ function BattleScreen({
     }
     const hit = resolveTacticsGuardedHit(raw, hits, guard, guardHits);
     const taken = applyTurnDamageReduction(hit.taken, slotIdx);
-    if (!(taken > 0)) return { taken: 0, parts: [] };
+    if (!(taken > 0)) return { taken: 0, parts: [], raw };
     // ★発ごとの通る量をそのまま出す。ガードが効いた発は小さく、効いていない発は大きい。
     //   止まった発(0)は数字を出さないので、数字の数＝これから食らう回数
-    return { taken, parts: hits > 1 ? scaleTacticsHitAmounts((hit.amounts || []).filter(value => value > 0), taken) : [taken] };
+    // ★raw(軽減前の合計)も返す。連撃は1発ずつ並べると**合計がどこにも出ない**ので、
+    //   「結局いくつ食らうのか」が読めなかった(2026-09-22 ユーザー指摘)
+    return { taken, raw, parts: hits > 1 ? scaleTacticsHitAmounts((hit.amounts || []).filter(value => value > 0), taken) : [taken] };
   };
   const plannedDamageFor = (slotIdx) => plannedHitFor(slotIdx).taken;
   return (
@@ -547,6 +549,11 @@ function BattleScreen({
             const plannedDmg=plannedHit.taken;
             // 連撃は「129・130」と1発ずつ。1発の技は今までどおり数字ひとつ
             const plannedText=plannedHit.parts.join('・');
+            // ★連撃は1発ずつ並べると合計がどこにも出ない(2026-09-22 ユーザー指摘
+            //   「連撃ダメージで合計ダメージと軽減後の合計ダメージがないといくつくらうかわからない」)。
+            //   ガードやターン軽減が効いていれば「軽減前→軽減後」で、効き目もそのまま読める
+            const plannedTotalText=plannedHit.raw>plannedDmg?`${plannedHit.raw}→${plannedDmg}`:`${plannedDmg}`;
+            const plannedBubbleText=plannedHit.parts.length>1?`合計 ${plannedTotalText} ＝ ${plannedText}`:plannedText;
             const previewHits=enemyIntent.variant==='rush'?Math.max(1,Math.floor(Number(enemyIntent.hits)||1)):1;
             // ★全体攻撃は受ける量が1体ずつ違う。1つの数字にまとめると、
             //   どの子がどれだけ減るのか分からなくなるので、吹き出しには出さず枠ごとに出す
@@ -561,7 +568,7 @@ function BattleScreen({
             // 余りの高さは、この下のバフ帯の mt-auto がまとめて吸う。
             // data-enemy-intent は検査の手がかり。どの行動が予告されているかは抽選なので、
             // 画面の文字から探すと「今回はためるだった」で落ちる
-            return <div data-enemy-intent className={`mt-1 mb-1 mx-auto w-fit max-w-full border p-1 px-4 rounded-full flex items-center gap-1.5 animate-pulse z-[45] shadow-lg shrink-0${battleTutorialSpotClass('enemyIntent')} ${focusedCard?'invisible':'visible'} ${tone}`}><Target size={12}/><div className="text-[10px] font-black uppercase tracking-tight">{enemyIntent.label}{previewHits>1?` ${previewHits}連撃`:''}{aimedName?` 🎯${aimedName}`:''}{rawDmg>0&&showPlannedInBubble&&plannedText?` (予定: ${plannedText})`:''}</div></div>;
+            return <div data-enemy-intent className={`mt-1 mb-1 mx-auto w-fit max-w-full border p-1 px-4 rounded-full flex items-center gap-1.5 animate-pulse z-[45] shadow-lg shrink-0${battleTutorialSpotClass('enemyIntent')} ${focusedCard?'invisible':'visible'} ${tone}`}><Target size={12}/><div className="text-[10px] font-black uppercase tracking-tight">{enemyIntent.label}{previewHits>1?` ${previewHits}連撃`:''}{aimedName?` 🎯${aimedName}`:''}{rawDmg>0&&showPlannedInBubble&&plannedBubbleText?` (予定: ${plannedBubbleText})`:''}</div></div>;
           })()}
         {/* 強化の札(2026-09-19・ユーザー指摘「バフデバフ欄が見にくくなってる」)。
             もとは敵のいる main の中に置いていたが、main は overflow-y-auto なので、
@@ -1011,9 +1018,13 @@ function BattleScreen({
                   const slotPlannedHit=plannedHitFor(i);
                   const slotPlanned=slotPlannedHit.taken;
                   const slotPlannedText=slotPlannedHit.parts.join('・');
+                  // ★連撃は1発ずつ並べると合計が読めない(2026-09-22 ユーザー指摘)。
+                  //   いちばん知りたいのは「結局いくつ食らうか」なので、合計を上の行に置き、
+                  //   1発ずつの内訳をその下へ小さく添える。1発の技は今までどおり1行
+                  const slotMultiHit=slotPlannedHit.parts.length>1;
                   return (<>
                     <div data-tactics-aimed-ring className="absolute inset-[2px] rounded-lg border-2 border-red-400/80 pointer-events-none z-[44] animate-pulse" style={{boxShadow:'inset 0 0 10px rgba(239,68,68,.55)'}}></div>
-                    <div data-tactics-aimed-damage={slotPlanned} className="absolute -top-1.5 -right-1 z-[66] rounded-full border border-red-300 bg-red-950 px-1 py-0.5 text-[9px] font-black leading-none text-red-100 shadow-[0_0_8px_rgba(239,68,68,.85)] animate-pulse">🎯{slotPlannedText?` -${slotPlannedText}`:''}</div>
+                    <div data-tactics-aimed-damage={slotPlanned} data-tactics-aimed-parts={slotMultiHit?slotPlannedText:undefined} className={`absolute -top-1.5 -right-1 z-[66] ${slotMultiHit?'rounded-lg':'rounded-full'} border border-red-300 bg-red-950 px-1 py-0.5 text-[9px] font-black leading-none text-red-100 shadow-[0_0_8px_rgba(239,68,68,.85)] animate-pulse flex flex-col items-center gap-0.5`}><span>🎯{slotPlanned>0?` -${slotPlanned}`:''}</span>{slotMultiHit&&<span className="text-[8px] font-bold text-red-200/90">{slotPlannedText}</span>}</div>
                   </>);
                 })()}
                 {distanceBroken&&<>
