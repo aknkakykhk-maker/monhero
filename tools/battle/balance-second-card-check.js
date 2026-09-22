@@ -87,9 +87,11 @@ check('固有技の数値効果も半減する',
 check('半減したことを画面に出す',
   has("'2枚目以降 効果半減'") && has("isTacticsMode(runMode)?'同じ子の2枚目 効果半減'"));
 // ★予測も実処理と同じ器を通す。別々に数えると「予測より実際が弱い」が起きる
+// ★予測を出すところは、どれも同じ器(makeCardHalveCounter)で「何枚目か」を数える。
+//   自前で数え直すと、画面のどれか1つだけ半減がずれる
 check('ダメージ予測も同じ数え方を使う',
   has('const committedCounter=makeCardHalveCounter();')
-    && has('const previewCounter=makeCardHalveCounter();')
+    && has('const guardCounter=makeCardHalveCounter();')
     && has('const slotCounter=makeCardHalveCounter();')
     && has('const pendingCounter=makeCardHalveCounter();'));
 check('攻撃だけを数える古い判定が残っていない',
@@ -107,19 +109,25 @@ check('保留カードの判定にドラッグ中の手札位置も使う', has(
 check('半減マークは保留カード自身の判定で出す', has("{isPendingPreview&&isPendingHalved?'½ ':''}DMG:"));
 
 // ガードの見え方
-check('ガードの合計軽減を表示する', has('合計軽減') && has('const committedGuard=guardValueOf(guardFlat,guardMult);'));
+check('ガードの合計軽減を表示する', has('合計軽減')
+  && has('const committedGuard=Array.isArray(tacticsUnits)?sumGuardBySlot():guardValueOf(guardFlat,guardMult);'));
 check('合計軽減も置く前の予測を出す', has('const projectedGuard=') && has('showGuardProjected'));
 // 表示と実処理が同じ丈夫さを見ていること。丈夫さのバフ(defPct)を入れたとき、
 // 片方だけ実効値へ切り替えると「表示より実際のほうが硬い(柔らかい)」ことになる。
 // どの変数名を使うかはバフの持ち方で変わるので、名前ではなく「両方が同じもの」を見る
-const guardDefVar = (source.match(/const guardValueOf = \(flat, mult\) => \(flat > 0 \|\| mult > 0\) \? Math\.floor\(flat \+ (\w+) \* mult\) : 0;/) || [])[1];
+// 2026-09-22: タクティクスは「構えた子の丈夫さ」で軽減量が決まるので、guardValueOf は
+// guardDefFor(slotIdx) を通すようになった。既存5モード(slotIdx なし)のときに返る丈夫さが、
+// 実処理(processTurn)の見ている丈夫さと同じであることを見る
+const guardDefVar = (source.match(/if \(slotIdx == null \|\| !isTacticsMode\(runMode\)\) return (\w+);/) || [])[1];
 const enemyTurnDefVar = (source.match(/Math\.floor\(immediateEffects\.guardFlat \+ (\w+)\*immediateEffects\.guardMult\)/) || [])[1];
 check('合計軽減は実処理と同じ式で出す',
-  !!guardDefVar && guardDefVar === enemyTurnDefVar && has('const guardCardWeight = (card) =>'),
+  !!guardDefVar && guardDefVar === enemyTurnDefVar && has('const guardCardWeight = (card) =>')
+    && has('(flat > 0 || mult > 0) ? Math.floor(flat + guardDefFor(slotIdx) * mult) : 0;'),
   `表示=${guardDefVar} / 実処理=${enemyTurnDefVar}`);
 check('弱ガードの重みも合計に反映する', has("card?.type === 'weak_guard' ? 0.5 : 0"));
-check('スロットのガード表示に軽減量を出す', has('{gv>0&&<span'));
-check('半減するカードには½を付ける', has("{halvedByIdx[idx]?'½':''}{card.name}"));
+// 2026-09-22: 全体ガードになった札は「全体ハイガード」と名乗り、数字は枠の🛡へまかせる
+check('スロットのガード表示に軽減量を出す', has('{gv>0&&!spreadGuardCard&&<span'));
+check('半減するカードには½を付ける', has("{halvedByIdx[idx]?'½':''}{spreadGuardCard?'全体':''}{card.name}"));
 check('ガードのカード詳細も半減後の値を出す', has('（2枚目以降のため半減）') && has('Math.floor(halved?raw*0.5:raw)'));
 check('ドラッグ中のカードも「次の1枚」として半減判定する',
   has('if(pendingIdx!=null&&selectedCards.includes(pendingIdx)) halvedByIdx[pendingIdx]=counter.peek(hand[pendingIdx],cardAssignments[pendingIdx]!=null?cardAssignments[pendingIdx]:null);'));

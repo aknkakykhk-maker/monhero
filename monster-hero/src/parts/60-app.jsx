@@ -9054,14 +9054,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 新モードで、このカードを割り当てられるスロットの一覧。
   // ★決めるのは「その子が払えるか」。合計のガッツでは決まらない。
   //   すでに選んだカードのぶんを引いてから見るので、同じ子に2枚寄せても正しく弾ける。
-  // ★「1体につき何枚まで」(slotMaxUses)は**アシストカード以外のすべて**に効く。
-  //   攻撃カードだけ数えていたころは、守り・回復を何枚でも同じ子へ置けてしまい、
+  // ★「1体につき何枚まで」(slotMaxUses)に数えるかは countsTowardTacticsSlotLimit が決める。
+  //   数えないのはアシストカード(助手の教え)とガードカードだけ。
+  //   攻撃カードだけ数えていたころは、回復まで何枚でも同じ子へ置けてしまい、
   //   👑(ハム・剣士モッチー)を持たない子にも2枚目が乗っていた
   //   (2026-09-21 ユーザー指摘「パンドラに2枚カード使えるのはおかしい」)。
+  // ★ガードだけは2026-09-22に外した。同じ子へ2枚構えると連撃ガードになる決めごとを入れたのに、
+  //   1体1枚のままでは👑持ちの子しか連撃ガードにできなかった。
+  //   守りを何枚重ねてもそのターンの合計枚数(cardLimit)とその子のガッツで頭打ちになる。
   // ★全体の枚数(baseCardLimit)は「立っている人数＋👑」で決まるので、
-  //   1体1枚に絞っても配り切れる。WAVE1で使える枚数も減らない
+  //   攻撃を1体1枚に絞っても配り切れる。WAVE1で使える枚数も減らない
   //   (盤面1体なら全体も1枚、👑持ちなら全体2枚でその子が2枚使える)。
-  // ★アシストカード(助手の教え)は全体の枚数にも数えないので、ここでも数えない
   const tacticsUsableSlots = (card, excludeHandIndex = null) => {
     if(!isTacticsMode(runMode)||!card) return [];
     const spent={}, used={};
@@ -9070,13 +9073,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       if(handIndex===excludeHandIndex) return;
       const assigned=hand[handIndex];
       spent[slotIdx]=(spent[slotIdx]||0)+getCardGuts(assigned,slotIdx);
-      if(!isAssistCard(assigned)) used[slotIdx]=(used[slotIdx]||0)+1;
+      if(countsTowardTacticsSlotLimit(assigned)) used[slotIdx]=(used[slotIdx]||0)+1;
     });
     const usable=[];
     slots.forEach((mon,slotIdx)=>{
       if(!mon) return;
       if(card.type==='unique'&&card.ownerSlotIdx!==slotIdx) return;
-      if(!isAssistCard(card)&&(used[slotIdx]||0)>=slotMaxUses(mon,slotIdx)) return;
+      if(countsTowardTacticsSlotLimit(card)&&(used[slotIdx]||0)>=slotMaxUses(mon,slotIdx)) return;
       // 回復カードも「全体回復」なので、倒れた子へ向ける必要はない。
       // どのカードも「立っていて、その子が払えるか」だけで決まる
       if(!canTacticsSlotPay(tacticsUnitsRef.current,slotIdx,(spent[slotIdx]||0)+getCardGuts(card,slotIdx))) return;
@@ -9105,7 +9108,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       if(handIndex===cardIndex) return;
       const assigned=hand[handIndex];
       spent[slotIdx]=(spent[slotIdx]||0)+getCardGuts(assigned,slotIdx);
-      if(!isAssistCard(assigned)) used[slotIdx]=(used[slotIdx]||0)+1;
+      if(countsTowardTacticsSlotLimit(assigned)) used[slotIdx]=(used[slotIdx]||0)+1;
     });
     const units=tacticsUnitsRef.current;
     let owner=null, alive=0, best=null;
@@ -9115,7 +9118,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       owner=owner||mon;
       if(!canTacticsSlotAct(units,slotIdx)) return;
       alive++;
-      if(!isAssistCard(card)&&(used[slotIdx]||0)>=slotMaxUses(mon,slotIdx)) return;
+      if(countsTowardTacticsSlotLimit(card)&&(used[slotIdx]||0)>=slotMaxUses(mon,slotIdx)) return;
       const unit=normalizeTacticsUnit(Array.isArray(units)?units[slotIdx]:null);
       const need=getCardGuts(card,slotIdx);
       const left=Math.max(0,(unit?unit.guts:0)-(spent[slotIdx]||0));
@@ -9223,6 +9226,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const isAssistCard = (card) => !!card && TEACHING_CARDS.some(t => t.id === card.id);
   // ガードカードの重み(弱ガードは半分)。軽減量の合計表示と実処理で同じ式を使う。
   const guardCardWeight = (card) => card?.type === 'guard' || card?.subType === 'heal_guard_meloso' ? 1 : (card?.type === 'weak_guard' ? 0.5 : 0);
+  // 「1体につき何枚まで」(slotMaxUses)に数えるカードか。
+  // ★数えないのは2種類だけ。アシストカード(助手の教え)と**ガードカード**。
+  //   ガードを外したのは2026-09-22のユーザー指示「ガードは個別にも枚数制限ないようにして
+  //   連撃ガードがほとんどのモンスターができない」。同じ子へ2枚構えると連撃ガードになる
+  //   決めごとを入れたのに、1体1枚の制限のせいで👑持ちの子しか連撃ガードにできなかった。
+  // ★手動(tacticsUsableSlots)もAUTO(chooseAutoTurn の countsTowardSlotLimit)もここを通す。
+  //   別々に持っていたころは、AUTOだけ回復もバフも何枚でも同じ子へ置けていた
+  const countsTowardTacticsSlotLimit = (card) => !!card && !isAssistCard(card) && !(guardCardWeight(card) > 0);
   const cardEffectMultiplier = (card, halved=false) => {
     const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
     return isAssistCard(card)&&specialRuleDifficulty ? extremeSpecialRule(specialRuleDifficulty,'assistCardEffect') : (halved?0.5:1);
@@ -9261,8 +9272,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     return guardValueOf(GUARD_EVOLUTION[guardLevel].flat * halvedRate,
       GUARD_EVOLUTION[guardLevel].mult * halvedRate, slotIdx);
   };
-  // その枠のガード値。構えていれば自分のぶん、構えていなくても全体ガードなら丈夫さぶん
+  // その枠のガード値。構えていれば自分のぶん、構えていなくても全体ガードなら丈夫さぶん。
+  // ★立っている子がいない枠には付かない(2026-09-22 ユーザー提供の画面で発覚。
+  //   誰もいない枠にまで「🛡 全体 131」が出ていた)。guardDefFor は unit の無い枠で
+  //   パーティ平均の丈夫さを返すので、ここで止めないと空き枠ぶんの数字まで作られてしまう
   const tacticsSlotGuardValue = (guardBySlot, slotIdx) => {
+    if (isTacticsMode(runMode) && !canTacticsSlotAct(tacticsUnitsRef.current, slotIdx)) return 0;
     const own = (guardBySlot || {})[slotIdx];
     if (own && (own.cards || 0) > 0) return guardValueOf(own.flat, own.mult, slotIdx);
     return isTacticsSpreadGuard(guardBySlot) ? tacticsSpreadGuardValue(slotIdx) : 0;
@@ -9674,7 +9689,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const reflectSlots=isTacticsMode(runMode)
             ? tacticsIntentTargets(intent,tacticsUnitsRef.current,actingEnemyDist) : null;
           const reflectDmg=reflectSlots
-            ? reflectSlots.reduce((sum,slotIdx)=>sum+applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(intent,slotIdx)),0)
+            ? reflectSlots.reduce((sum,slotIdx)=>sum+applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(actingIntent,slotIdx)),0)
             : incomingDmg;
           addPopup("反射！",'hero','text-purple-400 font-black text-2xl drop-shadow-lg'); await battleWait(600);
           if(reflectDmg<=0){
@@ -9702,7 +9717,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             let units=tacticsUnitsRef.current, hpGain=0, gutsGain=0;
             if(absorbSlot!=null){
               // 受けるはずだったダメージも「その子の丈夫さ」で決まる
-              const gain=applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(intent,absorbSlot));
+              const gain=applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(actingIntent,absorbSlot));
               const guts=Math.floor(gain*0.1);
               hpGain=gain; gutsGain=guts;
               units=recoverTacticsGutsAt(healTacticsAt(units,absorbSlot,gain),absorbSlot,guts);
@@ -9759,7 +9774,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               if(slotIdx===evadedSlot){ evadedName=tacticsTargetName(units,slotIdx); slotFx[slotIdx]={evade:true}; return; }
               if(slotIdx===reflectedSlot){
                 reflectedName=tacticsTargetName(units,slotIdx);
-                reflectBack+=applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(intent,slotIdx));
+                reflectBack+=applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(actingIntent,slotIdx));
                 slotFx[slotIdx]={reflect:true};
                 return;
               }
@@ -9770,7 +9785,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               // 貫通撃はガードが効かない
               const slotGuard=intent.variant==='pierce'?0:base;
               // ★受けるダメージもその子の丈夫さで決まるので、狙われた子ごとに計算し直す
-              const slotIncoming=getIncomingDamageBeforeTurnReduction(intent,slotIdx);
+              // ★間合いをずらされた技は威力が落ちる(actingIntent が missValue を持つ)。
+              //   ここを intent のままにすると、距離撃でずらしてもフルダメージが入る
+              //   (2026-09-22 ユーザー指摘で見つかった)
+              const slotIncoming=getIncomingDamageBeforeTurnReduction(actingIntent,slotIdx);
               // ★同じ子へ2枚以上構えていれば連撃の全ヒット、1枚なら1ヒットぶんを受け止める
               const hit=resolveTacticsGuardedHit(slotIncoming,rushHits,slotGuard,tacticsGuardHits(own.cards,rushHits));
               throughTotal+=hit.through;
@@ -9782,11 +9800,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 const fd=applyTurnDamageReduction(hit.taken);
                 units=damageTacticsTargets(units,[slotIdx],fd); dealt+=fd;
                 fx.dmg=(fx.dmg||0)+fd;
-                // ★連撃は「通ったヒットの数」だけ数字を出す(60が3ヒットなら 20/20/20)。
-                //   ガードで受け止めたヒットは通っていないので数えない
-                const stoppedHits=hit.blocked?hit.covered:0;
-                const throughHits=Math.max(1,rushHits-stoppedHits);
-                if(rushHits>1) fx.hits=splitTacticsHitAmounts(fd,throughHits);
+                // ★連撃は**発ごとの通る量**をそのまま出す(2026-09-22 ユーザー指摘
+                //   「ガード1枚でしたけど連撃分全部のダメージが同じだった」)。
+                //   合計を均等に割ると、ガードが効いた発も効いていない発も同じ数字になり、
+                //   ガードが仕事をしたことが画面から読めなかった。
+                //   止まった発(0)は数字を出さない。数字の数＝実際に食らった回数
+                if(rushHits>1) fx.hits=scaleTacticsHitAmounts((hit.amounts||[]).filter(value=>value>0),fd);
               }
               if(hit.saved>0){
                 saved+=hit.saved;
@@ -10460,14 +10479,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 今回はUIやeffectから呼ばず、1ターン接続用の内部処理だけを用意する。
   const runAutoTurnOnce = () => {
     // 新モードは「倒れた子のスロットを空として渡す」だけで、倒れた子が選ばれなくなる。
-    // ガッツは1体ずつなので gutsForSlot で渡し、枚数制限は攻撃カードだけに効かせる
+    // ガッツは1体ずつなので gutsForSlot で渡し、枚数制限は手動と同じ
+    // countsTowardTacticsSlotLimit で数える(攻撃カードだけ数えていたころは、
+    // AUTOだけ回復もバフも何枚でも同じ子へ置けていた)
     const tacticsMode=isTacticsMode(runMode);
     const autoSlots=tacticsMode
       ? slots.map((mon,idx)=>(canTacticsSlotAct(tacticsUnitsRef.current,idx)?mon:null))
       : slots;
     const tacticsAutoOptions=tacticsMode?{
       gutsForSlot:(slotIdx)=>(tacticsUnitsRef.current[slotIdx]?.guts||0),
-      countsTowardSlotLimit:isAttackCard,
+      countsTowardSlotLimit:countsTowardTacticsSlotLimit,
       isAttackCardFn:isAttackCard,
     }:{};
     const entries=chooseAutoTurn({
@@ -17370,6 +17391,10 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
               selectedCards.forEach(idx=>{ if(idx===pendingCard) return; const c=hand[idx]; const sl=cardAssignments[idx]!=null?cardAssignments[idx]:null; if(idx===fIdx){ halved=counter.peek(c,sl); found=true; } counter.take(c,sl); });
               // まだ置いていないカードは「次に使う1枚」として判定する
               if(!found) halved=counter.peek(focusedCard,fIdx>=0&&cardAssignments[fIdx]!=null?cardAssignments[fIdx]:null);
+              // ★タクティクスは受け止める量が**置いた子の丈夫さ**で決まる。パーティの平均で
+              //   1つの数字を出すと「誰の数値なのか分からない」(2026-09-22 ユーザー指摘)。
+              //   数字は枠ごとの GUARD: に任せ、ここでは決まり方だけを書く
+              if(isTacticsMode(runMode)) return(<div className="text-center font-bold">敵の攻撃を軽減{halved&&<span className="text-amber-300 font-black">（2枚目以降のため半減）</span>}<span className="text-slate-400 font-normal">（{focusedCard.flat||0} ＋ その子の丈夫さ×{focusedCard.mult||0}{halved?' の半分':''}）</span><span className="block text-emerald-300 font-normal">置く子で変わります。盤面の枠に出る GUARD の数字で確かめられます</span></div>);
               return(<div className="text-center font-bold">敵の攻撃を最大 {Math.floor(halved?raw*0.5:raw)} 軽減{halved&&<span className="text-amber-300 font-black">（2枚目以降のため半減）</span>}<span className="text-slate-400 font-normal">（{focusedCard.flat||0} ＋ 丈夫さ×{focusedCard.mult||0}{halved?' の半分':''}）</span></div>);
             })()}
             {focusedCard.type==='range_atk'&&focusedCard.rangeIdx!=null&&(<div className="border-t border-white/10 pt-1 mt-1 text-[7px] text-cyan-200 font-bold"><span className="text-cyan-400">距離効果:</span> {RANGE_LABELS[focusedCard.rangeIdx]}距離で威力アップ。攻撃後、{RANGE_LABELS[focusedCard.rangeIdx]}距離へ移動する</div>)}
