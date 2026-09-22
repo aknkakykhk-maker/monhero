@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 70d8feefd0047fe0
+// generated-sha256: 56649635afb9b45f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -92,7 +92,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-22 13:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-22 13:52"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -16647,6 +16647,54 @@ const tacticsJoinedSlots = (units, nextSlots) => {
   return joined;
 };
 
+// ===== 枠ごとのターンバフ(タクティクスだけ) =====
+// ★「その子だけに効く」効果は nextTurnBuffs.bySlot = { 枠: {キー:値} } に置く。
+//   ターンの入れ替え(nextTurnBuffs を丸ごと turnBuffs へ移す)も、WAVEのリセット
+//   (setTurnBuffs({}))も今までの仕掛けがそのまま効くので、新しい state を増やさない。
+//   既存5モードはここを使わず、今までどおり全体のターンバフ(turnBuffs)だけを見る。
+// ★入っているもの(2026-09-22時点)
+//     atkMult               … みゃるの薬(次ターンの攻撃倍率)
+//     zeroGuts              … ピクシー/ミーアの固有技(次ターン、攻撃カードの消費0)
+//     guaranteedCrit        … タイガーの固有技(次ターン、会心確定)
+//     takenDamageMult       … アーク/イブリースの贖罪(次ターン、被ダメ半減)
+//     gutsCostMult          … 同上(次ターン、消費ガッツ+15%)
+//     pandoraResonanceTurns … パンドラの共鳴(2ターン、消費ガッツ半減)
+//   モノリスの反射とメロソの被ダメ減は**味方全体**のままなので、ここには入れない
+const tacticsSlotFlag = (bySlot, slotIndex, key) => ((bySlot || {})[slotIndex] || {})[key] === true;
+const tacticsSlotRate = (bySlot, slotIndex, key, fallback = 1) => {
+  const value = Number(((bySlot || {})[slotIndex] || {})[key]);
+  return Number.isFinite(value) && value > 0 ? value : fallback;
+};
+const tacticsSlotTurns = (bySlot, slotIndex, key) => {
+  const value = Math.floor(Number(((bySlot || {})[slotIndex] || {})[key]));
+  return Number.isFinite(value) && value > 0 ? value : 0;
+};
+// 枠ごとのバフを1つ書き込む。★同じターンに2人が使っても消し合わないよう、枠ごとに足す
+const withTacticsSlotBuff = (bySlot, slotIndex, key, value) => ({
+  ...(bySlot || {}),
+  [slotIndex]: { ...((bySlot || {})[slotIndex] || {}), [key]: value },
+});
+// ターンが変わるときの持ち越し。★複数ターン続くもの(パンドラの共鳴)だけ1ずつ減らして残す。
+//   同じ枠へ新しく予約が入っていたら、そちらを優先する(張り直し)
+const carryTacticsSlotBuffs = (nextBySlot, currentBySlot, key) => {
+  const merged = { ...(nextBySlot || {}) };
+  Object.entries(currentBySlot || {}).forEach(([slot, own]) => {
+    const left = Math.max(0, Math.floor(Number((own || {})[key]) || 0) - 1);
+    if (left > 0 && (merged[slot] || {})[key] == null) merged[slot] = { ...(merged[slot] || {}), [key]: left };
+  });
+  return merged;
+};
+// 使い切ったフラグを落とす(ピクシー/ミーアの消費0は、そのターンのカードを使ったら終わり)
+const clearTacticsSlotFlag = (bySlot, key) => {
+  const next = {};
+  Object.entries(bySlot || {}).forEach(([slot, own]) => {
+    const rest = { ...(own || {}) };
+    delete rest[key];
+    if (Object.keys(rest).length > 0) next[slot] = rest;
+  });
+  return next;
+};
+
 // ---- part: 40-screen-effects.jsx ----
 // ==== 画面ライフサイクル: タイマー・リスナーの登録簿(useScreenEffects) ====
 //
@@ -21738,7 +21786,7 @@ function BattleScreen({
       guard = enemyIntent.variant === 'pierce' ? 0 : guardValueOf(flat, mult, slotIdx);
     }
     const hit = resolveTacticsGuardedHit(raw, hits, guard, guardHits);
-    const taken = applyTurnDamageReduction(hit.taken);
+    const taken = applyTurnDamageReduction(hit.taken, slotIdx);
     if (!(taken > 0)) return { taken: 0, parts: [] };
     // ★発ごとの通る量をそのまま出す。ガードが効いた発は小さく、効いていない発は大きい。
     //   止まった発(0)は数字を出さないので、数字の数＝これから食らう回数
@@ -22329,7 +22377,7 @@ function BattleScreen({
               const card=hand[idx]; const slotIdx=cardAssignments[idx];
               const halved=committedCounter.take(card,slotIdx!=null?slotIdx:null);
               const b=boosts.perCard[idx]||{oryo:0,dmgMod:0,combo:0};
-              if(slotIdx!=null&&isAttackCard(card)){const baseDmg=getDmg(card,slotIdx,slots[slotIdx],b.oryo,b.dmgMod,halved); committedTotal+=getAttackPredictedDmg(card,slots[slotIdx],baseDmg,b.combo);}
+              if(slotIdx!=null&&isAttackCard(card)){const baseDmg=getDmg(card,slotIdx,slots[slotIdx],b.oryo,b.dmgMod,halved); committedTotal+=getAttackPredictedDmg(card,slots[slotIdx],baseDmg,b.combo,slotIdx);}
               const gw=guardCardWeight(card);
               if(gw>0){ const e=cardEffectMultiplier(card,halved);
                 const gf=GUARD_EVOLUTION[guardLevel].flat*gw*e, gm=GUARD_EVOLUTION[guardLevel].mult*gw*e;
@@ -22379,7 +22427,7 @@ function BattleScreen({
                   const maxUses=slotMaxUses(s,i); if(assignedCount>=maxUses) continue;
                 } else if(!tacticsAnswer) continue;
                 if(pendingCardObj.type==='unique'&&pendingCardObj.ownerSlotIdx!==i) continue;
-                pendingValidSlot=i; const baseDmg=getDmg(pendingCardObj,i,s,boosts.forPending.oryo,boosts.forPending.dmgMod,committedCounter.peek(pendingCardObj,i)); pendingAdd=getAttackPredictedDmg(pendingCardObj,s,baseDmg,boosts.forPending.combo); break;
+                pendingValidSlot=i; const baseDmg=getDmg(pendingCardObj,i,s,boosts.forPending.oryo,boosts.forPending.dmgMod,committedCounter.peek(pendingCardObj,i)); pendingAdd=getAttackPredictedDmg(pendingCardObj,s,baseDmg,boosts.forPending.combo,i); break;
               }
             }
             const projectedTotal=committedTotal+pendingAdd;
@@ -22446,13 +22494,23 @@ function BattleScreen({
               const slotGuardCards=guardPlanBySlot?(guardPlanBySlot[i]?.cards||0):0;
               const slotRushGuard=slotGuardCards>=TACTICS_RUSH_GUARD_CARDS;
               const slotSpreadGuard=!!guardPlanBySlot&&isTacticsSpreadGuard(guardPlanBySlot);
-              // ★みゃるの薬の攻撃バフは「飲んだ子だけ」に効く(タクティクス)。
-              //   全体の札(Boost)では誰にかかっているのか分からないので、枠へ出す
-              const slotAtkBoost=(()=>{
-                if(!Array.isArray(tacticsUnits)) return 0;
-                const bySlot=getTurnBuff('atkMultBySlot',null);
-                const value=bySlot?Number(bySlot[i]):NaN;
-                return Number.isFinite(value)&&value>1?value:0;
+              // ★「その子だけに効く」バフは、かかっている子の枠へ印を出す(タクティクス)。
+              //   画面上の帯(Boost・会心予約…)では誰にかかっているのか分からない。
+              //   みゃるの薬と、固有技の効果(消費0・会心確定・贖罪・共鳴)がここに出る
+              const slotBuffMarks=(()=>{
+                if(!Array.isArray(tacticsUnits)) return [];
+                const bySlot=getTurnBuff('bySlot',null);
+                const marks=[];
+                const atkMult=tacticsSlotRate(bySlot,i,'atkMult',1.0);
+                if(atkMult>1) marks.push({text:`⚔×${atkMult.toFixed(1)}`,cls:'text-red-300'});
+                if(tacticsSlotFlag(bySlot,i,'zeroGuts')) marks.push({text:'⚡0',cls:'text-blue-300'});
+                if(tacticsSlotFlag(bySlot,i,'guaranteedCrit')) marks.push({text:'★会心',cls:'text-yellow-300'});
+                const takenMult=tacticsSlotRate(bySlot,i,'takenDamageMult',1.0);
+                if(takenMult<1) marks.push({text:`🛡-${Math.round((1-takenMult)*100)}%`,cls:'text-pink-300'});
+                const costMult=tacticsSlotRate(bySlot,i,'gutsCostMult',1.0);
+                if(costMult>1) marks.push({text:`⚡+${Math.round((costMult-1)*100)}%`,cls:'text-amber-300'});
+                if(tacticsSlotTurns(bySlot,i,'pandoraResonanceTurns')>0) marks.push({text:'⚡½',cls:'text-cyan-300'});
+                return marks;
               })();
               let canAssign=false;
               if(s && pendingCardObj){
@@ -22499,7 +22557,7 @@ function BattleScreen({
                 selectedCards.forEach(idx=>{ if(idx===pendingIdx) return; pendingCounter.take(hand[idx],cardAssignments[idx]!=null?cardAssignments[idx]:null); });
                 const isSecondOrLater = pendingCounter.peek(pendingCardObj,i);
                 const baseDmg=getDmg(pendingCardObj,i,s,slotBoosts.forPending.oryo,slotBoosts.forPending.dmgMod,isSecondOrLater);
-                previewDmg=getAttackPredictedDmg(pendingCardObj,s,baseDmg,slotBoosts.forPending.combo);
+                previewDmg=getAttackPredictedDmg(pendingCardObj,s,baseDmg,slotBoosts.forPending.combo,i);
                 previewSoulPct=soulTraitAttackProfile(s?.masuId?getMasuMon(s.masuId):null,pendingCardObj,i).damagePct;
                 isPendingPreview=true; isPendingHalved=isSecondOrLater;
               } else if(s){
@@ -22512,7 +22570,7 @@ function BattleScreen({
                   if(cardAssignments[idx]===i){
                     const b=slotBoosts.perCard[idx]||{oryo:0,dmgMod:0,combo:0};
                     const baseDmg=getDmg(card,i,s,b.oryo,b.dmgMod,halved);
-                    previewDmg+=getAttackPredictedDmg(card,s,baseDmg,b.combo);
+                    previewDmg+=getAttackPredictedDmg(card,s,baseDmg,b.combo,i);
                   }
                 });
               }
@@ -22586,7 +22644,7 @@ function BattleScreen({
                 </>}
                 {/* 名前の行。勇者モンには王冠を付ける。どれが勇者モンか分からないと
                     「勇者モン選択時だけ効く特性」が効いているのか判断できないため */}
-                <div className={`h-[18px] shrink-0 flex items-center justify-center px-1 border-b z-20 ${isHeroSlotMon(s)?'bg-amber-500/25 border-amber-300/50':'bg-black/60 border-white/10'}`}>{isHeroSlotMon(s)&&<Crown size={8} className="shrink-0 mr-0.5 text-amber-300"/>}<span className={`text-[10px] font-black truncate uppercase leading-none ${isHeroSlotMon(s)?'text-amber-100':'text-white'}`}>{s?.name||'---'}</span>{assignedCount>0&&<span className="ml-1 text-[10px] font-black text-indigo-300">×{assignedCount}</span>}{slotAtkBoost>0&&<span data-tactics-atk-boost={slotAtkBoost} className="ml-1 shrink-0 text-[9px] font-black text-red-300 leading-none">⚔×{slotAtkBoost.toFixed(1)}</span>}</div>
+                <div className={`h-[18px] shrink-0 flex items-center justify-center px-1 border-b z-20 ${isHeroSlotMon(s)?'bg-amber-500/25 border-amber-300/50':'bg-black/60 border-white/10'}`}>{isHeroSlotMon(s)&&<Crown size={8} className="shrink-0 mr-0.5 text-amber-300"/>}<span className={`text-[10px] font-black truncate uppercase leading-none ${isHeroSlotMon(s)?'text-amber-100':'text-white'}`}>{s?.name||'---'}</span>{assignedCount>0&&<span className="ml-1 text-[10px] font-black text-indigo-300">×{assignedCount}</span>}{slotBuffMarks.map(mark=>(<span key={mark.text} data-tactics-slot-buff={mark.text} className={`ml-1 shrink-0 text-[8px] font-black leading-none ${mark.cls}`}>{mark.text}</span>))}</div>
                 {(()=>{const uOptions=getAvailableUniquesForSlot(s,ownedUniques,i); if(uOptions.length<2) return null; const curKey=activeSlotUniqueKey(slotUniqueChoice,i,s); const curIdx=Math.max(0,uOptions.findIndex(o=>o.key===curKey));
                   return(<div onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation(); if(isBusy||autoBattleRef.current)return; cycleActiveUniqueForSlot(i);}} className={`shrink-0 z-20 flex items-center justify-center gap-0.5 bg-purple-700/90 border-b border-purple-300/50 py-0.5 active:scale-95${autoBattle?' opacity-40':''}`}>
                     <RefreshCcw size={7} className="text-white"/><span className="text-[10px] font-black text-white leading-none">固有技 {curIdx+1}/{uOptions.length}</span>
@@ -24840,22 +24898,18 @@ function MonsterHeroGame() {
   const getNextTurnBuff = (key, def) => nextTurnBuffs[key] ?? def;
   const setNextTurnBuff = (key, value) => writeNextTurnBuffs(p => ({ ...p, [key]: value }));
   const setImmediateTurnBuff = (key, value) => setTurnBuffs(p => ({ ...p, [key]: value })); // 次ターンへ持ち越さない、このターン限りの即時効果
-  // ★タクティクスの「その子だけに効く次ターンの攻撃バフ」(みゃるの薬)。
+  // ★タクティクスの「その子だけに効く次ターンのバフ」(みゃるの薬・固有技の効果)。
   //   設計 4.4「全体で見てよいのは7つだけ。ほかはすべて1体ずつ」に従い、
-  //   パーティ全体の atkMult とは別の箱(枠ごと)へ入れる。
+  //   パーティ全体のターンバフとは別の箱(枠ごと)へ入れる。中身は 32-tactics-units.jsx。
   //   nextTurnBuffs の中に置くので、ターンの入れ替え(turnBuffs へ丸ごと移す)も
-  //   WAVEのリセット(setTurnBuffs({}))も今までの仕掛けがそのまま効く。
-  //   同じターンに2人が飲んでも消し合わないよう、枠ごとに足す
-  const setTacticsNextSlotAtkMult = (slotIdx, mult) => writeNextTurnBuffs(p => ({
-    ...p, atkMultBySlot: { ...(p.atkMultBySlot || {}), [slotIdx]: mult },
+  //   WAVEのリセット(setTurnBuffs({}))も今までの仕掛けがそのまま効く
+  const setTacticsNextSlotBuff = (slotIdx, key, value) => writeNextTurnBuffs(p => ({
+    ...p, bySlot: withTacticsSlotBuff(p.bySlot, slotIdx, key, value),
   }));
+  // いま効いている枠ごとのバフ。既存5モードでは常に空(全体のターンバフだけを見る)
+  const tacticsSlotBuffs = () => (isTacticsMode(runMode) ? getTurnBuff('bySlot', null) : null);
   // その枠にかかっている攻撃バフ。既存5モードと、飲んでいない子は 1.0
-  const tacticsSlotAtkMult = (slotIdx) => {
-    if (!isTacticsMode(runMode)) return 1.0;
-    const bySlot = getTurnBuff('atkMultBySlot', null);
-    const value = bySlot ? Number(bySlot[slotIdx]) : NaN;
-    return Number.isFinite(value) && value > 0 ? value : 1.0;
-  };
+  const tacticsSlotAtkMult = (slotIdx) => tacticsSlotRate(tacticsSlotBuffs(), slotIdx, 'atkMult', 1.0);
   // 丈夫さのバフは permaBuffs の 'defPct' に積む(基礎ステータスの def は書き換えない)。
   // 実際に計算へ使う値は effectiveDef で、被ダメージの軽減量とガードの軽減量の両方に効く。
   // 「被ダメージを◯%軽減する(dmgCutPct)」とは効き方が違うので、混ぜないこと。
@@ -31859,9 +31913,15 @@ function MonsterHeroGame() {
       // 中二病特性: 固有技使用のたびに永続で消費ガッツ+10%(重複可)
       if (card.type === 'unique' && (card.monId==='Ark'||card.monId==='Iblis')) cost = Math.floor(cost * (1 + 0.1*getPermaBuff('chuuniUniqueStack')));
     }
-    if (getTurnBuff('zeroGuts', false) && ['atk','range_atk','unique'].includes(card.type)) cost = 0;
-    cost = Math.floor(cost * getTurnBuff('gutsCostMult', 1.0));
-    if (cost>0 && getTurnBuff('pandoraResonanceTurns',0)>0) cost=Math.floor(cost*0.5);
+    // ★タクティクスは「その子だけ」のぶんも見る(2026-09-22 ユーザー選択)。
+    //   ピクシー/ミーアの消費0・アーク/イブリースの消費+15%・パンドラの共鳴は、
+    //   どれも使った子だけに効く。既存5モードは bySlot が空なので今までどおり
+    const slotBuffs = isTacticsMode(runMode) ? getTurnBuff('bySlot', null) : null;
+    if ((getTurnBuff('zeroGuts', false) || tacticsSlotFlag(slotBuffs, slotIdx, 'zeroGuts'))
+      && ['atk','range_atk','unique'].includes(card.type)) cost = 0;
+    cost = Math.floor(cost * getTurnBuff('gutsCostMult', 1.0) * tacticsSlotRate(slotBuffs, slotIdx, 'gutsCostMult', 1.0));
+    if (cost>0 && (getTurnBuff('pandoraResonanceTurns',0)>0
+      || tacticsSlotTurns(slotBuffs, slotIdx, 'pandoraResonanceTurns')>0)) cost=Math.floor(cost*0.5);
     // 絶氷の楔は使用後のカードすべてを3%ずつ軽くする。重ねすぎても負倍率にならないよう10%を下限にする。
     cost = Math.floor(cost * Math.max(0.1, 1 - 0.03*getPermaBuff('snegurochkaGutsDiscountStacks')));
     const soulOwner=Number.isInteger(slotIdx)&&slots[slotIdx]?.masuId?getMasuMon(slots[slotIdx].masuId):null;
@@ -32910,9 +32970,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 次ターン被ダメージ倍率は、丈夫さ・勇者特性・永続軽減・氷結・ガードをすべて
   // 適用したあとの実ダメージへ最後に掛ける。敵攻撃力へ途中適用すると丈夫さやガードとの
   // 順序で50%にならないため、実処理と予測表示の双方がこの入口を使う。
-  const applyTurnDamageReduction = useCallback((damage) => damage>0
-    ? Math.max(1,Math.floor(damage*getTurnBuff('takenDamageMult',1.0)))
-    : 0, [turnBuffs]);
+  // ★タクティクスは「狙われた子だけ」のぶんも掛ける(アーク/イブリースの贖罪。
+  //   2026-09-22 ユーザー選択)。メロソの全体ぶん(takenDamageMult)は今までどおり全員に掛かる
+  const applyTurnDamageReduction = useCallback((damage, slotIdx = null) => damage>0
+    ? Math.max(1,Math.floor(damage*getTurnBuff('takenDamageMult',1.0)
+      *tacticsSlotRate(isTacticsMode(runMode)?turnBuffs.bySlot:null,slotIdx,'takenDamageMult',1.0)))
+    : 0, [turnBuffs, runMode]);
   const getPredictedDamage = useCallback((intent) => applyTurnDamageReduction(
     getIncomingDamageBeforeTurnReduction(intent)
   ), [getIncomingDamageBeforeTurnReduction,applyTurnDamageReduction]);
@@ -33381,13 +33444,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // additionalGlobalCombo: カード選択中のプレビュー専用。previewLocalBoostsが計算した、
   // このカードより手前で使ったききの応援ぶんの全体連撃(まだstateに乗っていない同ターン分)。
   // processTurnの実行では渡さない(getPermaBuff('globalComboDmgPct')が既に確定値を持つため)。
-  const getAttackPredictedDmg = useCallback((card, mon, baseDmg, additionalGlobalCombo=0) => {
+  const getAttackPredictedDmg = useCallback((card, mon, baseDmg, additionalGlobalCombo=0, slotIdx=null) => {
     if (baseDmg<=0) return 0;
     // ヒット列は実処理(processTurn)と同じ buildAttackHits。予測では乱数会心を乗せず、確定会心(guaranteedCrit)だけを反映する。
     // あつの挑発(stun_atsu)は実処理と同じくメインに会心が乗らない(mainCanCrit:false)
     const soulAttack=soulTraitAttackProfile(mon?.masuId?getMasuMon(mon.masuId):null,card,null);
     const hits=buildAttackHits({ d:baseDmg, card, attackerId:mon?.id, heroId:mainHero?.id, comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus:getPermaBuff('critDmgPct')+soulAttack.critDamageBonus, kenshiExtraCombos:getPermaBuff('kenshiExtraCombo'),
-      guaranteedCrit:getTurnBuff('guaranteedCrit',false), rollCrit:()=>false,
+      guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit'), rollCrit:()=>false,
       globalComboRate:getPermaBuff('globalComboDmgPct')+additionalGlobalCombo, mainCanCrit:card.subType!=='stun_atsu',
       comboFinalMultiplier:soulAttack.comboFinalMultiplier });
     // 贖罪の追撃も「追撃」なので、連撃強化の最終倍率を同じく適用する。
@@ -33684,7 +33747,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const reflectSlots=isTacticsMode(runMode)
             ? tacticsIntentTargets(intent,tacticsUnitsRef.current,actingEnemyDist) : null;
           const reflectDmg=reflectSlots
-            ? reflectSlots.reduce((sum,slotIdx)=>sum+applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(actingIntent,slotIdx)),0)
+            ? reflectSlots.reduce((sum,slotIdx)=>sum+applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(actingIntent,slotIdx),slotIdx),0)
             : incomingDmg;
           addPopup("反射！",'hero','text-purple-400 font-black text-2xl drop-shadow-lg'); await battleWait(600);
           if(reflectDmg<=0){
@@ -33712,7 +33775,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             let units=tacticsUnitsRef.current, hpGain=0, gutsGain=0;
             if(absorbSlot!=null){
               // 受けるはずだったダメージも「その子の丈夫さ」で決まる
-              const gain=applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(actingIntent,absorbSlot));
+              const gain=applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(actingIntent,absorbSlot),absorbSlot);
               const guts=Math.floor(gain*0.1);
               hpGain=gain; gutsGain=guts;
               units=recoverTacticsGutsAt(healTacticsAt(units,absorbSlot,gain),absorbSlot,guts);
@@ -33769,7 +33832,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               if(slotIdx===evadedSlot){ evadedName=tacticsTargetName(units,slotIdx); slotFx[slotIdx]={evade:true}; return; }
               if(slotIdx===reflectedSlot){
                 reflectedName=tacticsTargetName(units,slotIdx);
-                reflectBack+=applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(actingIntent,slotIdx));
+                reflectBack+=applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(actingIntent,slotIdx),slotIdx);
                 slotFx[slotIdx]={reflect:true};
                 return;
               }
@@ -33792,7 +33855,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               const fx=slotFx[slotIdx]||(slotFx[slotIdx]={});
               if(slotGuard>0) fx.guard=true;
               if(hit.taken>0){
-                const fd=applyTurnDamageReduction(hit.taken);
+                const fd=applyTurnDamageReduction(hit.taken,slotIdx);
                 units=damageTacticsTargets(units,[slotIdx],fd); dealt+=fd;
                 fx.dmg=(fx.dmg||0)+fd;
                 // ★連撃は**発ごとの通る量**をそのまま出す(2026-09-22 ユーザー指摘
@@ -33971,6 +34034,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const resonanceRefresh=activeTurnBuffs.pandoraResonanceTurns;
     const resonanceCarry=Math.max(0,(turnBuffs.pandoraResonanceTurns||0)-1);
     if (resonanceRefresh==null && resonanceCarry>0) activeTurnBuffs.pandoraResonanceTurns=resonanceCarry;
+    // ★枠ごとの共鳴も同じように1ずつ減らして持ち越す(タクティクス)。
+    //   同じ枠へ新しく予約が入っていたら、そちらを優先する(張り直し)
+    const carriedBySlot=carryTacticsSlotBuffs(activeTurnBuffs.bySlot,turnBuffs.bySlot,'pandoraResonanceTurns');
+    if (Object.keys(carriedBySlot).length>0) activeTurnBuffs.bySlot=carriedBySlot;
+    else delete activeTurnBuffs.bySlot;
     setTurnBuffs(activeTurnBuffs);
     writeNextTurnBuffs({});
     const nextTurn=turnCount+1; setTurnCount(nextTurn); if(nextTurn>20){ if(tacticsWipe()===null) setHp(0); } setIsBusy(false);
@@ -34129,7 +34197,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 連撃はザン(30%×1)・エイキ(10%×2)の勇者特性と、きき由来の全体連撃だけが付く。
           // 魂格の闘魂/距離補正はgetDmg、会心眼/会心極/連撃強化はここで本人分だけ適用する。
           const stunHits=buildAttackHits({ d, card, attackerId:stunMon?.id, heroId:mainHero?.id, comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus:getPermaBuff('critDmgPct')+soulAttack.critDamageBonus, kenshiExtraCombos:getPermaBuff('kenshiExtraCombo'),
-            guaranteedCrit:getTurnBuff('guaranteedCrit',false), rollCrit:()=>Math.random()<Math.min(1,(card.crit||0.1)+getPermaBuff('critRatePct')+soulAttack.critRateBonus),
+            guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit'), rollCrit:()=>Math.random()<Math.min(1,(card.crit||0.1)+getPermaBuff('critRatePct')+soulAttack.critRateBonus),
             globalComboRate:getPermaBuff('globalComboDmgPct')+localGlobalComboAdd, mainCanCrit:false, comboFinalMultiplier:soulAttack.comboFinalMultiplier });
           totalDmg+=d; attackCount++; attackHits.push({dmg:d, isCrit:false, slotIdx});
           for (const hit of stunHits.slice(1)) { if (hit.crit) hasCrit=true; totalDmg+=hit.dmg; attackHits.push({dmg:hit.dmg, isCrit:hit.crit, slotIdx, isSpecial:true, skillName:hit.skillName, isUnique:false, ...(hit.noAnim?{noAnim:true}:{})}); }
@@ -34139,7 +34207,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // ★タクティクスは「飲んだ子だけ」に効く(2026-09-22 ユーザー指摘
           //   「みゃるの薬は使ったやつだけにきくバフだね 多分全体になってるよね？」)。
           //   設計 4.4 のとおり、全体で見てよいものにターンバフは入っていない
-          if(isTacticsMode(runMode)) setTacticsNextSlotAtkMult(slotIdx,myaruAtkMult);
+          if(isTacticsMode(runMode)) setTacticsNextSlotBuff(slotIdx,'atkMult',myaruAtkMult);
           else setNextTurnBuff('atkMult',myaruAtkMult);
           // ★自傷のもとになるライフも「飲んだ子の今のライフ」。
           //   盤面の合計(hpBeforeEnemyAttack)から出していたので、4体いると
@@ -34238,7 +34306,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // ヒット列(メイン・勇者特性と固有技の連撃・全体連撃)は予測表示と同じ buildAttackHits が作る。
         // 会心は 1 ヒットごとに独立して判定し、連撃は元ダメージ d を基準にする(メインの会心を二重に乗せない)。
         const hits=buildAttackHits({ d, card, attackerId:activeMon.id, heroId:mainHero?.id, comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus, kenshiExtraCombos:getPermaBuff('kenshiExtraCombo'),
-          guaranteedCrit:getTurnBuff('guaranteedCrit',false), rollCrit:()=>Math.random()<Math.min(1,(card.crit||0.1)+critRateBonus),
+          guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit'), rollCrit:()=>Math.random()<Math.min(1,(card.crit||0.1)+critRateBonus),
           globalComboRate:getPermaBuff('globalComboDmgPct')+localGlobalComboAdd, comboFinalMultiplier:soulAttack.comboFinalMultiplier });
         const isCrit=hits[0].crit; const finalD=hits[0].dmg; if(isCrit) hasCrit=true; totalDmg+=finalD;
         const rangeMoveTarget=card.type==='range_atk' && card.rangeIdx!=null ? card.rangeIdx : null;
@@ -34250,8 +34318,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 固有技の効果は技の出自(card.monId)で判定する(activeMon.idではない)。理由は上のコメントと同じ
           if(card.monId==='Ham'){immediateStun=true; setImmediateTurnBuff('stunEnemy',true); addPopup('スタン!','enemy','text-yellow-400 text-lg font-bold');}
           else if(card.monId==='Suezo'){const gRec=gainGutsByRate(slotIdx,0.5*effMul); if(gRec>0) addPopup(`⚡ ガッツ +${gRec}`,'guts','text-amber-400 text-xl font-black drop-shadow-md');}
-          else if(card.monId==='Pixie'||card.monId==='Mia'){setNextTurnBuff('zeroGuts',true); addPopup('次ターン消費0!','hero','text-blue-400 text-lg font-bold');}
-          else if(card.monId==='Tiger'){setNextTurnBuff('guaranteedCrit',true); addPermaBuff('critRatePct',0.02*effMul); addPermaBuff('critDmgPct',0.02*effMul); addPopup('次ターン会心確定!','hero','text-red-400 text-lg font-bold'); addPopup(`会心率+${(2*effMul).toFixed(effMul===1?0:1)}% 会心ダメ+${(2*effMul).toFixed(effMul===1?0:1)}%`,'hero','text-yellow-400 text-sm font-bold');}
+          // ★タクティクスは「使った子だけ」に効く(2026-09-22 ユーザー選択)。ステータスが
+          //   1体ずつなので、味方全員がタダになる・全員が会心確定になるのは効きすぎる。
+          //   既存5モードは今までどおりパーティ全体
+          else if(card.monId==='Pixie'||card.monId==='Mia'){if(isTacticsMode(runMode)) setTacticsNextSlotBuff(slotIdx,'zeroGuts',true); else setNextTurnBuff('zeroGuts',true); addPopup('次ターン消費0!','hero','text-blue-400 text-lg font-bold');}
+          else if(card.monId==='Tiger'){if(isTacticsMode(runMode)) setTacticsNextSlotBuff(slotIdx,'guaranteedCrit',true); else setNextTurnBuff('guaranteedCrit',true); addPermaBuff('critRatePct',0.02*effMul); addPermaBuff('critDmgPct',0.02*effMul); addPopup('次ターン会心確定!','hero','text-red-400 text-lg font-bold'); addPopup(`会心率+${(2*effMul).toFixed(effMul===1?0:1)}% 会心ダメ+${(2*effMul).toFixed(effMul===1?0:1)}%`,'hero','text-yellow-400 text-sm font-bold');}
           else if(card.monId==='Monol'){addPermaBuff('defPct',0.03*effMul); addWaveBuff('enemyAtkDebuffPct',0.10*effMul); setNextTurnBuff('reflect',true); addPopup('丈夫さUP!','hero','text-emerald-400 text-lg font-bold'); addPopup('次ターン反射！','hero','text-purple-400 text-lg font-bold');}
           else if(card.monId==='Oboro'||card.monId==='Plant'){const hRec=Math.floor(finalD*0.5); const gRec=Math.floor(finalD*0.05);
             if(isTacticsMode(runMode)) hpBeforeEnemyAttack=commitTacticsUnits(healTacticsAt(tacticsUnitsRef.current,slotIdx,hRec));
@@ -34264,12 +34335,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             // 中二病: 固有技使用のたびに永続で消費ガッツ+10%・ダメージ倍率+0.1(重複可)
             addPermaBuff('chuuniUniqueStack',1);
             // 贖罪: 次ターン消費ガッツ15%増・被ダメージ50%減(1回)
-            setNextTurnBuff('takenDamageMult',0.5); setNextTurnBuff('gutsCostMult',1.15);
+            // ★贖罪は「利点と欠点の組」。タクティクスでは両方とも使った子だけに効く
+            if(isTacticsMode(runMode)){ setTacticsNextSlotBuff(slotIdx,'takenDamageMult',0.5); setTacticsNextSlotBuff(slotIdx,'gutsCostMult',1.15); }
+            else { setNextTurnBuff('takenDamageMult',0.5); setNextTurnBuff('gutsCostMult',1.15); }
             addPopup('次ターン被ダメ50%減!','hero','text-pink-400 text-lg font-bold');
           }
           else if(card.monId==='Pandora'){
             // 双極共振は次ターンから2ターン。再使用時は加算せず2へ更新する。
-            setNextTurnBuff('pandoraResonanceTurns',2);
+            if(isTacticsMode(runMode)) setTacticsNextSlotBuff(slotIdx,'pandoraResonanceTurns',2);
+            else setNextTurnBuff('pandoraResonanceTurns',2);
             addPopup('双極共振！ 次の2ターン消費半減','hero','text-fuchsia-300 text-lg font-bold');
           }
           else if(isIceLockMonster(card.monId)){
@@ -34451,6 +34525,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     replenish(usedCardEntries.length+drawCount);
     while(nextHand.length<5&&(nextDeck.length>0||nextGraveyard.length>0))replenish(1);
     if(getTurnBuff('zeroGuts',false)) setImmediateTurnBuff('zeroGuts',false);
+    // ★枠ごとの消費0も、そのターンのカードを使ったら落とす(タクティクス)。
+    //   更新関数は「同じ入力なら同じ結果」でなければならないので、純関数を通す
+    if(isTacticsMode(runMode)) setTurnBuffs(p=>(p.bySlot?{...p,bySlot:clearTacticsSlotFlag(p.bySlot,'zeroGuts')}:p));
     writePermaBuffs(p=>p.kikiCardBonusTurns>0?({...p,kikiCardBonusTurns:Math.max(0,p.kikiCardBonusTurns-1)}):p);
     setHand(nextHand); setDeck(nextDeck); setGraveyard(nextGraveyard); setSelectedCards([]); setLastActionSlot(null); setCardAssignments({}); setPendingCard(null); setFocusedCard(null);
 

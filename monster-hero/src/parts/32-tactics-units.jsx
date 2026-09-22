@@ -791,3 +791,51 @@ const tacticsJoinedSlots = (units, nextSlots) => {
   });
   return joined;
 };
+
+// ===== 枠ごとのターンバフ(タクティクスだけ) =====
+// ★「その子だけに効く」効果は nextTurnBuffs.bySlot = { 枠: {キー:値} } に置く。
+//   ターンの入れ替え(nextTurnBuffs を丸ごと turnBuffs へ移す)も、WAVEのリセット
+//   (setTurnBuffs({}))も今までの仕掛けがそのまま効くので、新しい state を増やさない。
+//   既存5モードはここを使わず、今までどおり全体のターンバフ(turnBuffs)だけを見る。
+// ★入っているもの(2026-09-22時点)
+//     atkMult               … みゃるの薬(次ターンの攻撃倍率)
+//     zeroGuts              … ピクシー/ミーアの固有技(次ターン、攻撃カードの消費0)
+//     guaranteedCrit        … タイガーの固有技(次ターン、会心確定)
+//     takenDamageMult       … アーク/イブリースの贖罪(次ターン、被ダメ半減)
+//     gutsCostMult          … 同上(次ターン、消費ガッツ+15%)
+//     pandoraResonanceTurns … パンドラの共鳴(2ターン、消費ガッツ半減)
+//   モノリスの反射とメロソの被ダメ減は**味方全体**のままなので、ここには入れない
+const tacticsSlotFlag = (bySlot, slotIndex, key) => ((bySlot || {})[slotIndex] || {})[key] === true;
+const tacticsSlotRate = (bySlot, slotIndex, key, fallback = 1) => {
+  const value = Number(((bySlot || {})[slotIndex] || {})[key]);
+  return Number.isFinite(value) && value > 0 ? value : fallback;
+};
+const tacticsSlotTurns = (bySlot, slotIndex, key) => {
+  const value = Math.floor(Number(((bySlot || {})[slotIndex] || {})[key]));
+  return Number.isFinite(value) && value > 0 ? value : 0;
+};
+// 枠ごとのバフを1つ書き込む。★同じターンに2人が使っても消し合わないよう、枠ごとに足す
+const withTacticsSlotBuff = (bySlot, slotIndex, key, value) => ({
+  ...(bySlot || {}),
+  [slotIndex]: { ...((bySlot || {})[slotIndex] || {}), [key]: value },
+});
+// ターンが変わるときの持ち越し。★複数ターン続くもの(パンドラの共鳴)だけ1ずつ減らして残す。
+//   同じ枠へ新しく予約が入っていたら、そちらを優先する(張り直し)
+const carryTacticsSlotBuffs = (nextBySlot, currentBySlot, key) => {
+  const merged = { ...(nextBySlot || {}) };
+  Object.entries(currentBySlot || {}).forEach(([slot, own]) => {
+    const left = Math.max(0, Math.floor(Number((own || {})[key]) || 0) - 1);
+    if (left > 0 && (merged[slot] || {})[key] == null) merged[slot] = { ...(merged[slot] || {}), [key]: left };
+  });
+  return merged;
+};
+// 使い切ったフラグを落とす(ピクシー/ミーアの消費0は、そのターンのカードを使ったら終わり)
+const clearTacticsSlotFlag = (bySlot, key) => {
+  const next = {};
+  Object.entries(bySlot || {}).forEach(([slot, own]) => {
+    const rest = { ...(own || {}) };
+    delete rest[key];
+    if (Object.keys(rest).length > 0) next[slot] = rest;
+  });
+  return next;
+};

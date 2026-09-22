@@ -117,7 +117,7 @@ function BattleScreen({
       guard = enemyIntent.variant === 'pierce' ? 0 : guardValueOf(flat, mult, slotIdx);
     }
     const hit = resolveTacticsGuardedHit(raw, hits, guard, guardHits);
-    const taken = applyTurnDamageReduction(hit.taken);
+    const taken = applyTurnDamageReduction(hit.taken, slotIdx);
     if (!(taken > 0)) return { taken: 0, parts: [] };
     // ★発ごとの通る量をそのまま出す。ガードが効いた発は小さく、効いていない発は大きい。
     //   止まった発(0)は数字を出さないので、数字の数＝これから食らう回数
@@ -708,7 +708,7 @@ function BattleScreen({
               const card=hand[idx]; const slotIdx=cardAssignments[idx];
               const halved=committedCounter.take(card,slotIdx!=null?slotIdx:null);
               const b=boosts.perCard[idx]||{oryo:0,dmgMod:0,combo:0};
-              if(slotIdx!=null&&isAttackCard(card)){const baseDmg=getDmg(card,slotIdx,slots[slotIdx],b.oryo,b.dmgMod,halved); committedTotal+=getAttackPredictedDmg(card,slots[slotIdx],baseDmg,b.combo);}
+              if(slotIdx!=null&&isAttackCard(card)){const baseDmg=getDmg(card,slotIdx,slots[slotIdx],b.oryo,b.dmgMod,halved); committedTotal+=getAttackPredictedDmg(card,slots[slotIdx],baseDmg,b.combo,slotIdx);}
               const gw=guardCardWeight(card);
               if(gw>0){ const e=cardEffectMultiplier(card,halved);
                 const gf=GUARD_EVOLUTION[guardLevel].flat*gw*e, gm=GUARD_EVOLUTION[guardLevel].mult*gw*e;
@@ -758,7 +758,7 @@ function BattleScreen({
                   const maxUses=slotMaxUses(s,i); if(assignedCount>=maxUses) continue;
                 } else if(!tacticsAnswer) continue;
                 if(pendingCardObj.type==='unique'&&pendingCardObj.ownerSlotIdx!==i) continue;
-                pendingValidSlot=i; const baseDmg=getDmg(pendingCardObj,i,s,boosts.forPending.oryo,boosts.forPending.dmgMod,committedCounter.peek(pendingCardObj,i)); pendingAdd=getAttackPredictedDmg(pendingCardObj,s,baseDmg,boosts.forPending.combo); break;
+                pendingValidSlot=i; const baseDmg=getDmg(pendingCardObj,i,s,boosts.forPending.oryo,boosts.forPending.dmgMod,committedCounter.peek(pendingCardObj,i)); pendingAdd=getAttackPredictedDmg(pendingCardObj,s,baseDmg,boosts.forPending.combo,i); break;
               }
             }
             const projectedTotal=committedTotal+pendingAdd;
@@ -825,13 +825,23 @@ function BattleScreen({
               const slotGuardCards=guardPlanBySlot?(guardPlanBySlot[i]?.cards||0):0;
               const slotRushGuard=slotGuardCards>=TACTICS_RUSH_GUARD_CARDS;
               const slotSpreadGuard=!!guardPlanBySlot&&isTacticsSpreadGuard(guardPlanBySlot);
-              // ★みゃるの薬の攻撃バフは「飲んだ子だけ」に効く(タクティクス)。
-              //   全体の札(Boost)では誰にかかっているのか分からないので、枠へ出す
-              const slotAtkBoost=(()=>{
-                if(!Array.isArray(tacticsUnits)) return 0;
-                const bySlot=getTurnBuff('atkMultBySlot',null);
-                const value=bySlot?Number(bySlot[i]):NaN;
-                return Number.isFinite(value)&&value>1?value:0;
+              // ★「その子だけに効く」バフは、かかっている子の枠へ印を出す(タクティクス)。
+              //   画面上の帯(Boost・会心予約…)では誰にかかっているのか分からない。
+              //   みゃるの薬と、固有技の効果(消費0・会心確定・贖罪・共鳴)がここに出る
+              const slotBuffMarks=(()=>{
+                if(!Array.isArray(tacticsUnits)) return [];
+                const bySlot=getTurnBuff('bySlot',null);
+                const marks=[];
+                const atkMult=tacticsSlotRate(bySlot,i,'atkMult',1.0);
+                if(atkMult>1) marks.push({text:`⚔×${atkMult.toFixed(1)}`,cls:'text-red-300'});
+                if(tacticsSlotFlag(bySlot,i,'zeroGuts')) marks.push({text:'⚡0',cls:'text-blue-300'});
+                if(tacticsSlotFlag(bySlot,i,'guaranteedCrit')) marks.push({text:'★会心',cls:'text-yellow-300'});
+                const takenMult=tacticsSlotRate(bySlot,i,'takenDamageMult',1.0);
+                if(takenMult<1) marks.push({text:`🛡-${Math.round((1-takenMult)*100)}%`,cls:'text-pink-300'});
+                const costMult=tacticsSlotRate(bySlot,i,'gutsCostMult',1.0);
+                if(costMult>1) marks.push({text:`⚡+${Math.round((costMult-1)*100)}%`,cls:'text-amber-300'});
+                if(tacticsSlotTurns(bySlot,i,'pandoraResonanceTurns')>0) marks.push({text:'⚡½',cls:'text-cyan-300'});
+                return marks;
               })();
               let canAssign=false;
               if(s && pendingCardObj){
@@ -878,7 +888,7 @@ function BattleScreen({
                 selectedCards.forEach(idx=>{ if(idx===pendingIdx) return; pendingCounter.take(hand[idx],cardAssignments[idx]!=null?cardAssignments[idx]:null); });
                 const isSecondOrLater = pendingCounter.peek(pendingCardObj,i);
                 const baseDmg=getDmg(pendingCardObj,i,s,slotBoosts.forPending.oryo,slotBoosts.forPending.dmgMod,isSecondOrLater);
-                previewDmg=getAttackPredictedDmg(pendingCardObj,s,baseDmg,slotBoosts.forPending.combo);
+                previewDmg=getAttackPredictedDmg(pendingCardObj,s,baseDmg,slotBoosts.forPending.combo,i);
                 previewSoulPct=soulTraitAttackProfile(s?.masuId?getMasuMon(s.masuId):null,pendingCardObj,i).damagePct;
                 isPendingPreview=true; isPendingHalved=isSecondOrLater;
               } else if(s){
@@ -891,7 +901,7 @@ function BattleScreen({
                   if(cardAssignments[idx]===i){
                     const b=slotBoosts.perCard[idx]||{oryo:0,dmgMod:0,combo:0};
                     const baseDmg=getDmg(card,i,s,b.oryo,b.dmgMod,halved);
-                    previewDmg+=getAttackPredictedDmg(card,s,baseDmg,b.combo);
+                    previewDmg+=getAttackPredictedDmg(card,s,baseDmg,b.combo,i);
                   }
                 });
               }
@@ -965,7 +975,7 @@ function BattleScreen({
                 </>}
                 {/* 名前の行。勇者モンには王冠を付ける。どれが勇者モンか分からないと
                     「勇者モン選択時だけ効く特性」が効いているのか判断できないため */}
-                <div className={`h-[18px] shrink-0 flex items-center justify-center px-1 border-b z-20 ${isHeroSlotMon(s)?'bg-amber-500/25 border-amber-300/50':'bg-black/60 border-white/10'}`}>{isHeroSlotMon(s)&&<Crown size={8} className="shrink-0 mr-0.5 text-amber-300"/>}<span className={`text-[10px] font-black truncate uppercase leading-none ${isHeroSlotMon(s)?'text-amber-100':'text-white'}`}>{s?.name||'---'}</span>{assignedCount>0&&<span className="ml-1 text-[10px] font-black text-indigo-300">×{assignedCount}</span>}{slotAtkBoost>0&&<span data-tactics-atk-boost={slotAtkBoost} className="ml-1 shrink-0 text-[9px] font-black text-red-300 leading-none">⚔×{slotAtkBoost.toFixed(1)}</span>}</div>
+                <div className={`h-[18px] shrink-0 flex items-center justify-center px-1 border-b z-20 ${isHeroSlotMon(s)?'bg-amber-500/25 border-amber-300/50':'bg-black/60 border-white/10'}`}>{isHeroSlotMon(s)&&<Crown size={8} className="shrink-0 mr-0.5 text-amber-300"/>}<span className={`text-[10px] font-black truncate uppercase leading-none ${isHeroSlotMon(s)?'text-amber-100':'text-white'}`}>{s?.name||'---'}</span>{assignedCount>0&&<span className="ml-1 text-[10px] font-black text-indigo-300">×{assignedCount}</span>}{slotBuffMarks.map(mark=>(<span key={mark.text} data-tactics-slot-buff={mark.text} className={`ml-1 shrink-0 text-[8px] font-black leading-none ${mark.cls}`}>{mark.text}</span>))}</div>
                 {(()=>{const uOptions=getAvailableUniquesForSlot(s,ownedUniques,i); if(uOptions.length<2) return null; const curKey=activeSlotUniqueKey(slotUniqueChoice,i,s); const curIdx=Math.max(0,uOptions.findIndex(o=>o.key===curKey));
                   return(<div onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation(); if(isBusy||autoBattleRef.current)return; cycleActiveUniqueForSlot(i);}} className={`shrink-0 z-20 flex items-center justify-center gap-0.5 bg-purple-700/90 border-b border-purple-300/50 py-0.5 active:scale-95${autoBattle?' opacity-40':''}`}>
                     <RefreshCcw size={7} className="text-white"/><span className="text-[10px] font-black text-white leading-none">固有技 {curIdx+1}/{uOptions.length}</span>

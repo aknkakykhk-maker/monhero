@@ -40,10 +40,14 @@ assert(source.includes("if (!(card.type === 'unique' && (card.monId === 'Ark' ||
 assert((source.match(/getAttackPredictedDmg\(/g)||[]).length >= 4, '合計と個別表示が共通予測関数を使う');
 // 2026-09-20: 新モードの連撃を 0.6×3 の3ヒットにし、ガードが届くのは1ヒットぶんだけにした。
 // 予告も実処理と同じ splitTacticsGuardedHit を通す。「ガードを引いてからターン軽減」の順は変わらない
-assert(source.includes("const previewGuard=enemyIntent.variant==='pierce'?0:guardValueOf(previewGuardFlat,previewGuardMult);")
-  && source.includes('const plannedDmg=applyTurnDamageReduction(resolveTacticsGuardedHit(rawDmg,previewHits,previewGuard).taken);'),
+// 2026-09-22: 予告は枠ごとになった(全体攻撃は丈夫さで1体ずつ変わる)。ガードも枠ごとにまとめてから
+// 数え、被ダメ軽減へは狙われた枠を渡す(アーク/イブリースの贖罪が「その子だけ」になったため)
+assert(source.includes("guard = enemyIntent.variant === 'pierce' ? 0 : tacticsSlotGuardValue(bySlot, slotIdx);")
+  && source.includes("guard = enemyIntent.variant === 'pierce' ? 0 : guardValueOf(flat, mult, slotIdx);")
+  && source.includes('const hit = resolveTacticsGuardedHit(raw, hits, guard, guardHits);')
+  && source.includes('const taken = applyTurnDamageReduction(hit.taken, slotIdx);'),
   '敵の予定ダメージへガードとターン軽減を実処理と同じ順で反映する');
-assert(source.includes('(予定: ${plannedDmg})'), '敵予告は軽減後の予定値を表示する');
+assert(source.includes('(予定: ${plannedText})'), '敵予告は軽減後の予定値を表示する');
 
 const pandoraPredictedDmg=(baseDmg,comboDmgBonus=0)=>
   Math.floor(baseDmg*0.5)+Math.floor(baseDmg*(0.5+comboDmgBonus));

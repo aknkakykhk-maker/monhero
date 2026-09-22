@@ -40,13 +40,17 @@ const rules = slice('const ATTACK_COMBO_RULES = Object.freeze({', '\n// 贖罪�
 const atoneStart = source.indexOf('const attackAtonementDmg =');
 const atone = source.slice(atoneStart, source.indexOf('\n};', atoneStart) + 3);
 const shared = Function(`${rules.text}\n${atone}\nreturn { buildAttackHits, attackAtonementDmg, ATTACK_COMBO_RULES };`)();
-const makePredicted = (mainHero, getPermaBuff, getTurnBuff) => Function('mainHero', 'getPermaBuff', 'getTurnBuff', 'Math', 'buildAttackHits', 'attackAtonementDmg', 'soulTraitAttackProfile', 'getMasuMon', `return (${predictedArrow});`)(mainHero, getPermaBuff, getTurnBuff, Math, shared.buildAttackHits, shared.attackAtonementDmg, soulTraitAttackProfile, getMasuMon);
+// 2026-09-22: タクティクスの「その子だけに効く」会心確定を見るようになったので、
+// 本体から切り出して渡す(既存5モードは bySlot が空なので false に倒れる)
+const slotFlagSrc = slice('const tacticsSlotFlag = (bySlot, slotIndex, key) =>', '\n');
+const tacticsSlotFlag = Function(`${slotFlagSrc.text}\nreturn tacticsSlotFlag;`)();
+const makePredicted = (mainHero, getPermaBuff, getTurnBuff) => Function('mainHero', 'getPermaBuff', 'getTurnBuff', 'Math', 'buildAttackHits', 'attackAtonementDmg', 'soulTraitAttackProfile', 'getMasuMon', 'tacticsSlotFlag', `return (${predictedArrow});`)(mainHero, getPermaBuff, getTurnBuff, Math, shared.buildAttackHits, shared.attackAtonementDmg, soulTraitAttackProfile, getMasuMon, tacticsSlotFlag);
 
 // --- 実処理: processTurn の攻撃ブロック(会心判定 〜 全体連撃)を取り出す ---
 const anchor = source.indexOf("const d=getDmg(card,slotIdx,activeMon,localOryoAdd,localDmgModAdd,halved,attackStartDist)");
 if (anchor < 0) throw new Error('processTurn の攻撃ブロックが見つからない');
 const act = slice("const soulAttack=soulTraitAttackProfile(activeMon?.masuId?getMasuMon(activeMon.masuId):null,card,slotIdx);", 'if (rangeMoveTarget!=null)', anchor);
-const makeActual = (rng) => Function('d', 'card', 'activeMon', 'mainHero', 'getPermaBuff', 'getTurnBuff', 'localGlobalComboAdd', 'slotIdx', 'Math', 'buildAttackHits', 'soulTraitAttackProfile', 'getMasuMon', `
+const makeActual = (rng) => Function('d', 'card', 'activeMon', 'mainHero', 'getPermaBuff', 'getTurnBuff', 'localGlobalComboAdd', 'slotIdx', 'Math', 'buildAttackHits', 'soulTraitAttackProfile', 'getMasuMon', 'tacticsSlotFlag', `
   let totalDmg = 0, hasCrit = false; const attackHits = [];
   ${act.text}
   return { totalDmg, attackHits, hasCrit };
@@ -72,7 +76,7 @@ for (const heroId of heroes) for (const attackerId of [heroId, 'Suezo']) for (co
       const mainHero = { id: heroId }; const mon = { id: attackerId };
       const predicted = makePredicted(mainHero, getPermaBuff, getTurnBuff)(card, mon, d, localGlobal);
       const M = mathWith(() => 1); // 乱数会心は起きない(guaranteedCrit だけが会心)
-      const actual = makeActual()(d, card, mon, mainHero, getPermaBuff, getTurnBuff, localGlobal, 1, M, shared.buildAttackHits, soulTraitAttackProfile, getMasuMon);
+      const actual = makeActual()(d, card, mon, mainHero, getPermaBuff, getTurnBuff, localGlobal, 1, M, shared.buildAttackHits, soulTraitAttackProfile, getMasuMon, tacticsSlotFlag);
       // 贖罪の追撃は予測にだけ入っている(実処理では固有技の効果ブロック側)
       const atonement = card.type === 'unique' && (card.monId === 'Ark' || card.monId === 'Iblis')
         ? Math.floor((() => { const split = heroId === 'Pandora' && attackerId === 'Pandora' && ['atk', 'range_atk'].includes(card.type); const mb = split ? Math.floor(d * 0.5) : d; return turn.guaranteedCrit ? Math.floor(mb * 1.6) : mb; })() * 0.2)
@@ -86,7 +90,7 @@ check(`乱数を固定すると予測と実処理の合計が一致する(${case
 {
   const perma = { comboDmgPct: 0, globalComboDmgPct: 0.1, critDmgPct: 0, critRatePct: 0 };
   const getPermaBuff = (k, def = 0) => (k in perma ? perma[k] : def); const getTurnBuff = (k, def) => def;
-  const hits = makeActual()(100, { type: 'unique', monId: 'Eiki' }, { id: 'Eiki' }, { id: 'Eiki' }, getPermaBuff, getTurnBuff, 0, 1, mathWith(() => 1), shared.buildAttackHits, soulTraitAttackProfile, getMasuMon).attackHits;
+  const hits = makeActual()(100, { type: 'unique', monId: 'Eiki' }, { id: 'Eiki' }, { id: 'Eiki' }, getPermaBuff, getTurnBuff, 0, 1, mathWith(() => 1), shared.buildAttackHits, soulTraitAttackProfile, getMasuMon, tacticsSlotFlag).attackHits;
   const names = hits.map(h => h.skillName || 'main').join(',');
   check('エイキ勇者の固有技: メイン → 桜花連舞×2 → +30% → 緋桜連華×2 → 全体連撃 の順と本数', hits.length === 7 && hits[0].dmg === 100, names);
 }
@@ -101,7 +105,7 @@ check(`乱数を固定すると予測と実処理の合計が一致する(${case
     stun.text.includes('buildAttackHits({') && stun.text.includes('mainCanCrit:false') && !stun.text.includes('stunComboRates'));
   check('予測表示も同じ条件でメインの会心を外している', predictedArrow.includes("mainCanCrit:card.subType!=='stun_atsu'"));
   // 切り出した範囲は else-if ブロックの閉じ } で終わるので、その 1 文字だけ落として関数本体にする
-  const makeStun = () => Function('d0', 'card', 'stunMon0', 'mainHero', 'getPermaBuff', 'getTurnBuff', 'localGlobalComboAdd', 'slotIdx', 'Math', 'buildAttackHits', 'soulTraitAttackProfile', 'getMasuMon', `
+  const makeStun = () => Function('d0', 'card', 'stunMon0', 'mainHero', 'getPermaBuff', 'getTurnBuff', 'localGlobalComboAdd', 'slotIdx', 'Math', 'buildAttackHits', 'soulTraitAttackProfile', 'getMasuMon', 'tacticsSlotFlag', `
     let totalDmg = 0, hasCrit = false, attackCount = 0; const attackHits = [];
     const slots = { [slotIdx]: stunMon0 }; const effMul = 1; const localOryoAdd = 0, localDmgModAdd = 0;
     const getDmg = () => d0; const setImmediateTurnBuff = () => {};
@@ -119,7 +123,7 @@ check(`乱数を固定すると予測と実処理の合計が一致する(${case
         const getPermaBuff = (k, def = 0) => (k in perma ? perma[k] : def);
         const getTurnBuff = (k, def) => (k in turn ? turn[k] : def);
         const mainHero = { id: heroId }; const mon = { id: attackerId };
-        const actual = makeStun()(d, stunCard, mon, mainHero, getPermaBuff, getTurnBuff, localGlobal, 1, mathWith(() => 1), shared.buildAttackHits, soulTraitAttackProfile, getMasuMon);
+        const actual = makeStun()(d, stunCard, mon, mainHero, getPermaBuff, getTurnBuff, localGlobal, 1, mathWith(() => 1), shared.buildAttackHits, soulTraitAttackProfile, getMasuMon, tacticsSlotFlag);
         const predicted = makePredicted(mainHero, getPermaBuff, getTurnBuff)(stunCard, mon, d, localGlobal);
         // 予測側も mainCanCrit:false を渡すので、確定会心のときもメインには会心が乗らず、実処理と完全に一致する
         const knownGap = 0;
@@ -134,10 +138,10 @@ check(`乱数を固定すると予測と実処理の合計が一致する(${case
   check(`あつの挑発: 乱数を固定すると実処理の合計が予測と一致し、メインは会心なし(${stunCases} 通り)`, stunMismatches.length === 0, stunMismatches.slice(0, 5).join(' / '));
   const perma = { comboDmgPct: 0, globalComboDmgPct: 0.1, critDmgPct: 0, critRatePct: 0 };
   const getPermaBuff = (k, def = 0) => (k in perma ? perma[k] : def);
-  const zan = makeStun()(100, stunCard, { id: 'Zan' }, { id: 'Zan' }, getPermaBuff, (k, def) => def, 0, 1, mathWith(() => 1), shared.buildAttackHits, soulTraitAttackProfile, getMasuMon).attackHits;
+  const zan = makeStun()(100, stunCard, { id: 'Zan' }, { id: 'Zan' }, getPermaBuff, (k, def) => def, 0, 1, mathWith(() => 1), shared.buildAttackHits, soulTraitAttackProfile, getMasuMon, tacticsSlotFlag).attackHits;
   check('あつの挑発(ザン勇者): メイン → 連撃 30% → 全体連撃(noAnim)の順で 3 ヒット',
     zan.length === 3 && zan[0].dmg === 100 && zan[1].skillName === '連撃' && zan[1].dmg === 30 && zan[2].skillName === '全体連撃' && zan[2].dmg === 10 && zan[2].noAnim === true);
-  const eiki = makeStun()(100, stunCard, { id: 'Eiki' }, { id: 'Eiki' }, getPermaBuff, (k, def) => def, 0, 1, mathWith(() => 1), shared.buildAttackHits, soulTraitAttackProfile, getMasuMon).attackHits;
+  const eiki = makeStun()(100, stunCard, { id: 'Eiki' }, { id: 'Eiki' }, getPermaBuff, (k, def) => def, 0, 1, mathWith(() => 1), shared.buildAttackHits, soulTraitAttackProfile, getMasuMon, tacticsSlotFlag).attackHits;
   check('あつの挑発(エイキ勇者): メイン → 連撃 10%×2 → 全体連撃の 4 ヒット(固有技ぶんの 30% は付かない)',
     eiki.length === 4 && eiki[1].dmg === 10 && eiki[2].dmg === 10 && eiki[3].skillName === '全体連撃');
 }

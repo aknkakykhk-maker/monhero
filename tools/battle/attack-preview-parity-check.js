@@ -49,6 +49,8 @@ const battleAnims = (atkMotion, isUnique) => {
     setAttackAnim: (a) => { if(a) anims.push({...a}); },
     setSlotSkill: ()=>{}, setEnemy: ()=>{}, setEnemyDist: ()=>{}, syncAtkTierForDist: ()=>{},
     addPopup: ()=>{}, triggerShake: ()=>{}, battleWait: async()=>{},
+    // ★戦いの記録(ログ)は表示だけ。切り出したループが呼ぶので、素通しのスタブを置く
+    pushBattleLog: ()=>{}, battleActorName: ()=>'テスト',
     Audio_: { se: new Proxy({}, { get: () => () => {} }) },
     RANGE_LABELS: ['零','近','中','遠'],
     WATER_BURST_MOTION_MS:680, ARK_HOLY_RAIN_MOTION_MS:900, MIA_SONG_NOTES_MOTION_MS:760,
