@@ -59,7 +59,7 @@ function BattleScreen({
   setShowSoulBattleEffects, setSkillPicker, setSlotSettle, slotMaxUses, slotSettle, slotSkill,
   slotUniqueChoice, slots, soulBattleParty, soulCoordinationCardBonus, suppressCardClickRef,
   tacticsCanAssign, tacticsCardBlock, tacticsCardGenre, tacticsCardScope, tacticsSlotFx, tacticsUnits,
-  tacticsExInfo, activateTacticsEx, tacticsExCardLocked, tacticsExTurnUsed, passTacticsTurn, tacticsCoverSlot,
+  tacticsExInfo, activateTacticsEx, tacticsExTurnUsed, passTacticsTurn, tacticsCoverSlot,
   tacticsExIntroVisible, dismissTacticsExIntro,
   teachingFx, totalTurnCount, turnCount, ultimateDistanceBreakLevels, ultraBattleView,
   unifiedSpecialDefense, useEmergency, wave,
@@ -1418,7 +1418,7 @@ function BattleScreen({
                   ★もとは敵の絵の左に置いていたが、あの列は「敵や自分を見る」入口を並べた場所。
                     緊急はその場で使う行動なので、カードと同じ操作の列へ移した。
                   ★AUTO の左に置く。実行(Action)のすぐ隣だと押し間違える */}
-              <button onClick={useEmergency} disabled={isBusy||autoBattle||!battleTutorialAllowsEmergency||!!tacticsExCardLocked} aria-label="緊急回復" title="緊急回復" className={`shrink-0 flex h-8 w-[44px] flex-col items-center justify-center rounded-lg border-2 border-blue-400 bg-blue-900/70 leading-none active:scale-90 disabled:opacity-25${battleTutorialSpotClass('emergency')}`}><Activity size={11} className="text-blue-300"/><span className="mt-0.5 text-[10px] font-black text-blue-50">緊急</span></button>
+              <button onClick={useEmergency} disabled={isBusy||autoBattle||!battleTutorialAllowsEmergency} aria-label="緊急回復" title="緊急回復" className={`shrink-0 flex h-8 w-[44px] flex-col items-center justify-center rounded-lg border-2 border-blue-400 bg-blue-900/70 leading-none active:scale-90 disabled:opacity-25${battleTutorialSpotClass('emergency')}`}><Activity size={11} className="text-blue-300"/><span className="mt-0.5 text-[10px] font-black text-blue-50">緊急</span></button>
               {/* モンビーへの入口(クイックモードだけ)。音に関わる入口なので、この並びに残す */}
               <div className="shrink-0 flex flex-col gap-0.5">
                 {quickToRhythmButtonNode}
@@ -1518,7 +1518,7 @@ function BattleScreen({
                 <dt className="font-bold text-slate-400">使える回数</dt>
                 <dd data-tactics-ex-uses className="font-black text-white">{exPanel.remaining.unlimited?'無制限':`のこり ${exPanel.remaining.left} / ${exPanel.remaining.max}（このラン）`}</dd>
                 <dt className="font-bold text-slate-400">カード</dt>
-                <dd data-tactics-ex-with-cards={exPanel.def.withCards?'yes':'no'} className="font-black text-white">{exPanel.def.withCards?'同じターンに通常カードも使える':'使ったターンは他のカードを使えない'}</dd>
+                <dd data-tactics-ex-with-cards={exPanel.def.withCards?'yes':'no'} className="font-black text-white">{exPanel.def.withCards?'同じターンにこの子も通常カードを使える':'使ったターン、この子はカードを使えない（ほかの子は使える）'}</dd>
                 {exPanel.durationText&&<><dt className="font-bold text-slate-400">効果時間</dt><dd className="font-black text-white">{exPanel.durationText}</dd></>}
                 {exPanel.def.conditionText&&<><dt className="font-bold text-slate-400">条件</dt><dd className="font-black text-white">{exPanel.def.conditionText}</dd></>}
                 {exPanel.toggleLabel&&<><dt className="font-bold text-slate-400">いま</dt><dd data-tactics-ex-toggle className="font-black text-fuchsia-200">{exPanel.toggleLabel}</dd></>}

@@ -888,7 +888,9 @@ const clearTacticsSlotFlag = (bySlot, key) => {
 //   name      … 画面に出す名前
 //   desc      … 効果の説明(画面にそのまま出す)
 //   maxUses   … 1ランで使える回数。unlimited:true なら数えない
-//   withCards … 同じターンに通常カードも使えるか。false なら「使ったターンは他のカードを使えない」
+//   withCards … 同じターンにその子が通常カードも使えるか。false なら「使ったターン、**その子は**カードを使えない」
+//               ★止まるのは使った子だけ。ほかの子はいつもどおりカードを使える(2026-09-23 ユーザー指示
+//                 「EXで他行動禁止はそのモンスターだけ」)
 //   duration  … 効果の続く長さ。'turn'(発動ターン) / 'wave'(発動WAVEの終わりまで) / 'toggle'(もう一度使うまで)
 //   toggleLabels … duration:'toggle' のときの [切り替える前, 切り替えたあと] の呼び名
 //   conditions … 使うための追加の条件(TACTICS_EX_CONDITIONS のキー)。無ければ空
@@ -973,8 +975,8 @@ const isTacticsExEffectImplemented = (def, implemented = TACTICS_EX_IMPLEMENTED_
 //   effects[slot] = { monId, exId, duration, wave, turn, on }   いま載っている効果
 //   lastUse[slot] = { wave, turn }                  同じ子は1ターンに1回まで
 //   turnUsed      = { wave, turn }                  このターンにだれかがEXを使ったか
-//   cardLock      = { wave, turn }                  このターンは他のカードを使えない
-const createTacticsExState = () => ({ uses: {}, effects: {}, lastUse: {}, turnUsed: null, cardLock: null });
+//   cardLock[slot]= { wave, turn }                  このターン、その子はカードを使えない(使った子だけ)
+const createTacticsExState = () => ({ uses: {}, effects: {}, lastUse: {}, turnUsed: null, cardLock: {} });
 const normalizeTacticsExState = (state) => {
   const base = createTacticsExState();
   if (!state || typeof state !== 'object') return base;
@@ -982,7 +984,7 @@ const normalizeTacticsExState = (state) => {
   const stamp = (v) => (v && typeof v === 'object' && Number.isFinite(Number(v.wave)) && Number.isFinite(Number(v.turn))
     ? { wave: tacticsSafeInt(v.wave, 0), turn: tacticsSafeInt(v.turn, 0) } : null);
   return { uses: obj(state.uses), effects: obj(state.effects), lastUse: obj(state.lastUse),
-    turnUsed: stamp(state.turnUsed), cardLock: stamp(state.cardLock) };
+    turnUsed: stamp(state.turnUsed), cardLock: obj(state.cardLock) };
 };
 const sameTacticsExTurn = (stamp, now) => !!(stamp && now
   && tacticsSafeInt(stamp.wave, -1) === tacticsSafeInt(now.wave, -2)
@@ -1009,13 +1011,17 @@ const isTacticsExEffectActive = (state, slot, monId, now) => {
   return sameTacticsExTurn(effect, now);
 };
 // このターンは他のカードを使えないか(併用できないEXを使ったターン)
-const isTacticsExCardLocked = (state, now) => sameTacticsExTurn(normalizeTacticsExState(state).cardLock, now);
+// ★枠ごと。止まるのはEXを使った子だけ
+const isTacticsExCardLocked = (state, slot, now) => sameTacticsExTurn(normalizeTacticsExState(state).cardLock[slot], now);
+// このターンにカードを使えない枠の一覧
+const tacticsExLockedSlots = (state, now) => Object.keys(normalizeTacticsExState(state).cardLock)
+  .map(Number).filter(slot => Number.isInteger(slot) && isTacticsExCardLocked(state, slot, now));
 // このターンにだれかがEXを使ったか(カードを使わずにターンを進められるようにする)
 const isTacticsExTurnUsed = (state, now) => sameTacticsExTurn(normalizeTacticsExState(state).turnUsed, now);
 
 // 使えるかどうか。使えないときは理由を1つだけ返す(画面の灰色のボタンの下へ出す)。
 //   alive         … その子が立っているか(倒れた子はカードと同じくEXも使えない)
-//   selectedCount … このターンにもう選んでいるカードの枚数
+//   selectedCount … このターンに**その子へ**置いたカードの枚数(ほかの子へ置いたカードは数えない)
 //   busy          … 行動中・AUTO中
 const checkTacticsExUse = ({ def, state, slot, monId, alive, selectedCount = 0, now, busy = false } = {}) => {
   if (!def) return { ok: false, reason: 'EXスキルを持っていない' };
@@ -1026,7 +1032,7 @@ const checkTacticsExUse = ({ def, state, slot, monId, alive, selectedCount = 0, 
   if (!remaining.unlimited && remaining.left <= 0) return { ok: false, reason: 'このランで使える回数が残っていない' };
   if (sameTacticsExTurn(safe.lastUse[slot], now)) return { ok: false, reason: 'このターンはもう使った' };
   if (!def.withCards && Math.max(0, tacticsSafeInt(selectedCount, 0)) > 0) {
-    return { ok: false, reason: '他のカードと一緒に使えないEX。先にカードの選択を外す' };
+    return { ok: false, reason: 'この子にカードを置いていると使えないEX。先にこの子のカードを外す' };
   }
   const active = isTacticsExEffectActive(safe, slot, monId, now);
   for (const key of def.conditions || []) {
@@ -1052,7 +1058,7 @@ const applyTacticsExUse = (state, { def, slot, monId, now, snapshot = null } = {
       snapshot: snapshot && typeof snapshot === 'object' ? { ...snapshot } : null } },
     lastUse: { ...safe.lastUse, [slot]: stamp },
     turnUsed: stamp,
-    cardLock: def.withCards ? safe.cardLock : stamp,
+    cardLock: def.withCards ? safe.cardLock : { ...safe.cardLock, [slot]: stamp },
   };
 };
 // 切り替え式のEXが、いまどちらの状態か(画面に「いま：片手持ち」のように出す)

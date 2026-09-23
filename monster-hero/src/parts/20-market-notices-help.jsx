@@ -376,7 +376,7 @@ const helpDataRows = (id) => {
         const monName = ((typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[monId]) || {}).name || monId;
         const duration = { turn:'そのターン', wave:'そのWAVE', toggle:'切り替え' }[def.duration] || '';
         return [`${monName}「${def.name}」`,
-          `${def.unlimited ? '無制限' : `1ラン${def.maxUses}回`} ／ ${def.withCards ? 'カードと併用可' : 'そのターンはカード不可'} ／ ${duration}`];
+          `${def.unlimited ? '無制限' : `1ラン${def.maxUses}回`} ／ ${def.withCards ? 'カードと併用可' : 'その子はカード不可'} ／ ${duration}`];
       });
     // プロモードのランぶんに入るクイック周回数(2026-09-21)。
     // 難易度ごとの重さ(power)と同じ式から作るので、難易度を調整したときも自動で追随する

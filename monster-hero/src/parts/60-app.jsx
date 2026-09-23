@@ -9144,7 +9144,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   //   EXの効き目は「いま」を ref から読むので、どの描画の関数から呼ばれても同じ答えになる
   const tacticsExLiveRef = useRef({ enabled:false, now:{ wave:1, turn:1 } });
   tacticsExLiveRef.current = { enabled:tacticsExEnabled, now:tacticsExNow };
-  const tacticsExCardLocked = tacticsExEnabled && isTacticsExCardLocked(tacticsExState, tacticsExNow);
+  // 併用できないEXを使ったので、このターンはカードを使えない枠。★止まるのは使った子だけで、
+  //   ほかの子はいつもどおりカードを使える(2026-09-23 ユーザー指示「EXで他行動禁止はそのモンスターだけ」)
+  const tacticsExLocked = tacticsExEnabled ? tacticsExLockedSlots(tacticsExState, tacticsExNow) : [];
+  // その子へいま置いてあるカードの枚数(併用できないEXを使えるかの判定に使う)
+  const tacticsSlotCardCount = (slotIdx) => Object.values(cardAssignments).filter(v => v === slotIdx).length;
   const tacticsExTurnUsed = tacticsExEnabled && isTacticsExTurnUsed(tacticsExState, tacticsExNow);
   // ★EXの効き目を戦闘の計算へ渡す入口。モンスターのidではなく「いま効いている効果の種類」を見る。
   //   ref の最新値を読む(使った直後の同じ操作の中でも古い値を見ない)
@@ -9182,6 +9186,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     slots.forEach((mon,slotIdx)=>{
       if(!mon) return;
       if(card.type==='unique'&&card.ownerSlotIdx!==slotIdx) return;
+      // 併用できないEXを使った子は、このターンカードを使えない
+      if(tacticsExLocked.includes(slotIdx)) return;
       if(countsTowardTacticsSlotLimit(card)&&(used[slotIdx]||0)>=slotMaxUses(mon,slotIdx)) return;
       // 回復カードも「全体回復」なので、倒れた子へ向ける必要はない。
       // どのカードも「立っていて、その子が払えるか」だけで決まる
@@ -9197,8 +9203,6 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const tacticsCardBlock = (card, cardIndex = null) => {
     if(!isTacticsMode(runMode)||!card) return null;
     if(cardIndex!=null&&selectedCards.includes(cardIndex)) return { ok:true, kind:null, short:null, why:null };
-    // ★併用できないEXを使ったターンは、どのカードも選べない(理由を帯で出す)
-    if(tacticsExCardLocked) return { ok:false, kind:'ex', short:'EX使用', why:'他のカードと一緒に使えないEXスキルを使ったターンなので、カードは選べない' };
     if(tacticsUsableSlots(card,cardIndex).length>0){
       // ★1ターンに選べる枚数の上限は、いままでの5モードと同じ見え方(灰色だけ)にする。
       //   全部のカードへ赤い帯が出るとうるさいので、理由はカード詳細でだけ出す
@@ -9216,13 +9220,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       if(countsTowardTacticsSlotLimit(assigned)) used[slotIdx]=(used[slotIdx]||0)+1;
     });
     const units=tacticsUnitsRef.current;
-    let owner=null, alive=0, best=null;
+    let owner=null, alive=0, best=null, exLocked=0;
     slots.forEach((mon,slotIdx)=>{
       if(!mon) return;
       if(card.type==='unique'&&card.ownerSlotIdx!==slotIdx) return;
       owner=owner||mon;
       if(!canTacticsSlotAct(units,slotIdx)) return;
       alive++;
+      if(tacticsExLocked.includes(slotIdx)){ exLocked++; return; }
       if(countsTowardTacticsSlotLimit(card)&&(used[slotIdx]||0)>=slotMaxUses(mon,slotIdx)) return;
       const unit=normalizeTacticsUnit(Array.isArray(units)?units[slotIdx]:null);
       const need=getCardGuts(card,slotIdx);
@@ -9234,6 +9239,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if(alive===0) return { ok:false, kind:'down', short:'ダウン', why:card.type==='unique'
       ? `この技を使う ${owner.masuName||owner.name} が倒れている`
       : 'カードを使える子が全員倒れている' };
+    // 使える子が全員「併用できないEXを使った子」だけだったとき
+    if(!best&&exLocked>0) return { ok:false, kind:'ex', short:'EX使用', why:card.type==='unique'
+      ? `この技を使う ${owner.masuName||owner.name} は、このターンEXスキルを使ったのでカードを使えない`
+      : 'このターンEXスキルを使った子はカードを使えない。ほかに使える子がいない' };
     if(best) return { ok:false, kind:'guts', short:'ガッツ不足',
       why:`どの子もガッツが足りない（いちばん近いのは ${best.name} で ⚡${best.left}、必要なのは ⚡${best.need}）` };
     return { ok:false, kind:'uses', short:'枚数上限', why:'このターン、攻撃カードを出せる子がもう残っていない' };
@@ -9259,8 +9268,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       const usable=tacticsMode?tacticsUsableSlots(c):[];
       const curGuts=pendingCardGuts(c);
       const remainingGuts=guts-selectedCards.reduce((acc,idx)=>acc+selectedCardGuts(idx),0);
-      // ★併用できないEXを使ったターンは選べない(EXそのものは枚数に数えないので、cardLimit とは別に見る)
-      const isSelectable=(tacticsMode?usable.length>0:remainingGuts>=curGuts) && selectedCards.length<cardLimit && !tacticsExCardLocked;
+      // ★併用できないEXを使った子は tacticsUsableSlots が外すので、ここで別に見なくてよい
+      const isSelectable=(tacticsMode?usable.length>0:remainingGuts>=curGuts) && selectedCards.length<cardLimit;
       if(isSelectable){
         Audio_.se.card();
         setSelectedCards(p=>[...p,i]);
@@ -9278,7 +9287,6 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const dragAssignToSlot = (cardIndex, slotIdx) => {
     if(isBusy||autoBattleRef.current) return;
     const c=hand[cardIndex]; if(!c) return;
-    if(tacticsExCardLocked){ setFocusedCard(null); return; }
     const targetMon=slots[slotIdx];
     // 攻撃カード: モンスターのいるスロットに割り当て
     if(cardNeedsMonster(c)){
@@ -10145,8 +10153,6 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
   const useEmergency = async () => {
     if (isBusy||hp<=0) return;
-    // 併用できないEXを使ったターンは「行動不可」。緊急回復も使えない(ターンは「ターンを進める」で送る)
-    if (tacticsExCardLocked) return;
     setIsBusy(true);
     Audio_.se.heal();
     setEffect({type:'heal',label:"緊急回復",icon:"💊",monEmoji:mainHero?.emoji||"🏥",imgUrl:mainHero?.imgUrl,baseId:mainHero?.id,colors:mainHero?.colors});
@@ -10192,7 +10198,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const state=tacticsExState;
     const remaining=tacticsExRemaining(def,tacticsExUsesOf(state,slotIdx,mon.id));
     const check=checkTacticsExUse({ def, state, slot:slotIdx, monId:mon.id,
-      alive:canTacticsSlotAct(tacticsUnits,slotIdx), selectedCount:selectedCards.length,
+      alive:canTacticsSlotAct(tacticsUnits,slotIdx), selectedCount:tacticsSlotCardCount(slotIdx),
       now:tacticsExNow, busy:isBusy||autoBattle });
     return {
       slot:slotIdx, monName:mon.masuName||mon.name, def, remaining, check,
@@ -10225,7 +10231,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const state=tacticsExStateRef.current;
     // ★判定は ref の最新値でもう一度通す。連打で同じターンに2回使えないように
     const check=checkTacticsExUse({ def, state, slot:slotIdx, monId:mon.id,
-      alive:canTacticsSlotAct(tacticsUnitsRef.current,slotIdx), selectedCount:selectedCards.length,
+      alive:canTacticsSlotAct(tacticsUnitsRef.current,slotIdx), selectedCount:tacticsSlotCardCount(slotIdx),
       now:tacticsExNow, busy:false });
     if(!check.ok) return false;
     // 使った瞬間の値を控える(捨て身は「使ったときの丈夫さ」から力へ移す量を決める)
@@ -10246,7 +10252,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     return true;
   };
   // EXを使ったターンに、カードを使わずに敵の番へ進める。
-  // ★併用できないEXを使ったターンはカードを選べず、ACTION(カード1枚以上が要る)では進められないため。
+  // ★併用できないEXを使った子はカードを出せない。その子しか立っていないと ACTION(カード1枚以上が要る)では進められないため。
   //   中身は緊急回復の「回復のあと」と同じ(予告済みの行動をそのまま実行し、次の予告を1回だけ決める)
   const passTacticsTurn = async () => {
     if(!tacticsExTurnUsed||isBusy||!enemy||hp<=0||selectedCards.length>0) return;
@@ -10267,8 +10273,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         .map(entry=>({card:entry.card,handIndex:entry.handIndex,slotIdx:entry.slotIdx!=null?entry.slotIdx:null}))
       : selectedCards.map(i=>({card:hand[i],handIndex:i,slotIdx:cardAssignments[i]!=null?cardAssignments[i]:null}));
     if (isBusy||!enemy||usedCardEntries.length===0) return;
-    // 併用できないEXを使ったターンはカードを使えない(AUTOの明示の選択もここで止める)
-    if (tacticsExCardLocked) return;
+    // 併用できないEXを使った子のカードは使えない(AUTOの明示の選択もここで止める)。ほかの子のカードは使える
+    if (usedCardEntries.some(entry=>tacticsExLocked.includes(entry.slotIdx))) return;
     // ★タクティクスバトルの「眼力」は、スエゾーが攻撃したターンに引く(2026-09-20 ユーザー指示)。
     //   本人の能力なので勇者モンにしていなくても効く。1ターンに何枚使っても判定は1回
     //   (枚数で確率が上がらないように)。既存5モードは今までどおり敵のターンの頭に引く
@@ -10754,11 +10760,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // ガッツは1体ずつなので gutsForSlot で渡し、枚数制限は手動と同じ
     // countsTowardTacticsSlotLimit で数える(攻撃カードだけ数えていたころは、
     // AUTOだけ回復もバフも何枚でも同じ子へ置けていた)
-    // 併用できないEXを使ったターンは、カードを選ばずにそのまま敵の番へ進める
-    if(tacticsExCardLocked) return passTacticsTurn();
     const tacticsMode=isTacticsMode(runMode);
+    // 併用できないEXを使った子は、倒れた子と同じく空の枠として渡す(ほかの子はいつもどおり選ばれる)
     const autoSlots=tacticsMode
-      ? slots.map((mon,idx)=>(canTacticsSlotAct(tacticsUnitsRef.current,idx)?mon:null))
+      ? slots.map((mon,idx)=>(canTacticsSlotAct(tacticsUnitsRef.current,idx)&&!tacticsExLocked.includes(idx)?mon:null))
       : slots;
     const tacticsAutoOptions=tacticsMode?{
       gutsForSlot:(slotIdx)=>(tacticsUnitsRef.current[slotIdx]?.guts||0),
@@ -10770,6 +10775,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       getCardGuts, cardNeedsMonster, slotMaxUses, ...tacticsAutoOptions,
     });
     if(entries.length>0)return processTurn(entries);
+    // EXを使ったターンで、カードを出せる子が残っていなければ、そのまま敵の番へ進める
+    if(tacticsExTurnUsed)return passTacticsTurn();
     const lacksOnlyGuts=hasAutoTurnWithEnoughGuts({
       hand, slots:autoSlots, cardLimit, strategy:autoSettings.strategy,
       getCardGuts, cardNeedsMonster, slotMaxUses, ...tacticsAutoOptions,
@@ -16505,7 +16512,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             getNextTurnBuff={getNextTurnBuff} getPermaBuff={getPermaBuff} getTurnBuff={getTurnBuff}
             getWaveBuff={getWaveBuff} guardCardWeight={guardCardWeight} guardFx={guardFx} guardLevel={guardLevel}
             guardValueOf={guardValueOf} tacticsSlotGuardValue={tacticsSlotGuardValue}
-            tacticsExInfo={tacticsExInfo} activateTacticsEx={activateTacticsEx} tacticsExCardLocked={tacticsExCardLocked}
+            tacticsExInfo={tacticsExInfo} activateTacticsEx={activateTacticsEx}
             tacticsExIntroVisible={tacticsExIntroVisible} dismissTacticsExIntro={dismissTacticsExIntro}
             tacticsExTurnUsed={tacticsExTurnUsed} passTacticsTurn={passTacticsTurn} tacticsCoverSlot={tacticsExEnabled?tacticsExCoverSlot(tacticsExState,tacticsUnits,tacticsExNow):null}
             guts={guts} hand={hand} heroCardBonus={heroCardBonus} heroDist={heroDist}

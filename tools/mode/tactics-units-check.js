@@ -478,7 +478,8 @@ check('氷海ぶんは持っている子へだけ足す',
     && has('if (extra>0) gutsRegen+=gainGutsByRate(slotIdx,extra);'));
 // AUTO。倒れた子を空スロットとして渡し、ガッツは1体ずつ見る
 check('オートは倒れた子を選ばない',
-  has('? slots.map((mon,idx)=>(canTacticsSlotAct(tacticsUnitsRef.current,idx)?mon:null))'));
+  // ★EX(併用できない)を使った子も同じく空の枠として渡す(tactics-ex-skills-check が見る)
+  has('? slots.map((mon,idx)=>(canTacticsSlotAct(tacticsUnitsRef.current,idx)&&!tacticsExLocked.includes(idx)?mon:null))'));
 check('オートも1体ずつのガッツで選ぶ',
   has('gutsForSlot:(slotIdx)=>(tacticsUnitsRef.current[slotIdx]?.guts||0),'));
 // ★新モードは cardNeedsMonster がどのカードでも true になる。
@@ -633,8 +634,9 @@ check('置けるかの判定も画面へ渡す', has('tacticsCanAssign={tacticsC
     has('<div data-tactics-status className="space-y-1.5 text-left">')
       && has('data-tactics-status-slot={i}'));
   check('ちから・丈夫さ・距離適性まで出す',
-    has('この枠の距離適性') && has("<div className=\"text-[8px] font-black text-red-400\">ちから</div>")
-      && has("<div className=\"text-[8px] font-black text-emerald-400\">丈夫さ</div>"));
+    // ★ちから・丈夫さはEXで変わった値も出すので、1つの形(statCell)で描く
+    has('この枠の距離適性') && has("{statCell('ちから','text-red-400',u.atk,")
+      && has("{statCell('丈夫さ','text-emerald-400',u.def,"));
   // ★null のときだけ今までどおりの判定を使う。ここを間違えると既存モードの置き方が変わる
   // ★予告と実行で数え方がずれると「ガードしたのに予定より減った」になる
   // ★数え方は1か所(plannedDamageFor)にまとめる。吹き出しと枠で別々に書くと、
