@@ -1285,7 +1285,7 @@ function BattleScreen({
                       })}
                       {/* 数字の段。左＝こちらが出すぶん、右＝相手から受けるぶん。
                           横に並べて場所を分けるので、両方出ても重ならない */}
-                      {(previewDmg>0||previewGuard>0||slotAimHit)&&(
+                      {!tacticsDebugLayout&&(previewDmg>0||previewGuard>0||slotAimHit)&&(
                         <div className="flex w-full flex-wrap items-start justify-between gap-0.5">
                           {/* ★枠は4つ並ぶので1つ87pxしかない。字を8pxまで落として、
                               出すぶんと受けるぶんが**横1行に収まる**ようにしてある。
@@ -1312,7 +1312,7 @@ function BattleScreen({
                       ))}
                     </div>
                   )}
-                  {/* 距離補正は0%でも出す(「補正が無い」ことも情報なので、枠ごとに常に見えるようにする) */}
+                  {tacticsDebugLayout&&(previewDmg>0||previewGuard>0||slotAimHit)&&(<div data-tactics-image-previews className="absolute left-1 top-1 z-[63] flex max-w-[calc(100%-6px)] flex-wrap items-start gap-0.5 pointer-events-none">{previewDmg>0&&<span data-tactics-damage-preview={previewDmg} className={`rounded px-1 py-0.5 text-[8px] font-black leading-none shadow ring-1 ${isPendingPreview?'bg-yellow-500 text-black ring-yellow-200':'bg-red-600 text-white ring-white/50'}`}>{isPendingPreview&&isPendingHalved?'½':''}攻{previewDmg}</span>}{previewGuard>0&&<span data-tactics-guard-preview={previewGuard} className="rounded bg-emerald-600 px-1 py-0.5 text-[8px] font-black leading-none text-white shadow ring-1 ring-emerald-200">{isPendingGuardHalved?'½':''}守{previewGuard}</span>}{slotAimHit&&<span data-tactics-aimed-damage={slotAimHit.taken} className="rounded border border-red-300 bg-red-950 px-1 py-0.5 text-[8px] font-black leading-none text-red-100 shadow">🎯{slotAimHit.taken>0?`-${slotAimHit.taken}`:''}{slotAimHit.parts.length>1?<span className="ml-0.5 text-[7px] text-red-200/90">{slotAimHit.parts.join('・')}</span>:null}</span>}</div>)}{/* 距離補正は0%でも出す(「補正が無い」ことも情報なので、枠ごとに常に見えるようにする) */}
                   {(()=>{const totalBonus=distTotalBonus(i); return(<div className={`absolute bottom-0.5 right-0.5 text-[11px] font-black leading-none flex items-center gap-0.5 bg-black/50 px-1 py-0.5 rounded border z-30 ${totalBonus>0?'text-cyan-300 border-cyan-400/30':totalBonus<0?'text-red-300 border-red-400/30':'text-slate-300 border-white/20'}`}><Sword size={5}/>{totalBonus>0?'+':''}{(totalBonus*100).toFixed(1)}%</div>);})()}
                   {s?.imgUrl?(isAnimating&&s.id==='Pandora'&&attackAnim.motion==='pandoraDualThunder'
                     ?<PandoraDualThunder image={<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsDebugLayout?'58px':'64px',height:tacticsDebugLayout?'58px':'64px'}} className="object-contain drop-shadow-md"/>}/>
