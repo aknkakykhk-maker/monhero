@@ -30,6 +30,7 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
   check(`${label}: 共通表示に合流ボーナスがある`, body.includes('合流ボーナス') && body.includes('formatAptBonus(mon)'));
   check(`${label}: 共通表示に間合い適性がある`, body.includes('間合い適性') && body.includes('getDistAptitude(mon, idx)') || body.includes('getDistAptitude(mon,idx)'));
   check(`${label}: 共通表示に技セクションがある`, body.includes('renderSkillSection(mon)'));
+  check(`${label}: 共通詳細にEXスキル表示の土台がある`, body.includes('data-monster-detail-ex') && body.includes("tacticsExDefOf(mon.id)") && body.includes('EX《{exDef.name}》'));
   check(`${label}: 画面ごとの差分を引数で受け取る`,
     body.includes('statValues') && body.includes('aptExtra') && body.includes('aptPointsLabel'));
 
