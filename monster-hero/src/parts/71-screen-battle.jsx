@@ -1366,22 +1366,22 @@ function BattleScreen({
                       data-tactics-hp={`${tacticsUnit.hp}/${tacticsUnit.maxHp}`}
                       data-tactics-guts={`${tacticsUnit.guts}/${tacticsUnit.maxGuts}`}
                       data-tactics-downed={tacticsUnit.downed?'true':'false'}
-                      className={`${tacticsDebugLayout?'absolute right-0 bottom-0 w-[60%] min-w-0 border-l border-t flex flex-col justify-end pb-px px-2':'shrink-0 border-t px-1'} z-20 border-white/10 bg-black/55${battleTutorialSpotClass('tacticsParty')}`}>
+                      className={`${tacticsDebugLayout?'absolute right-0 bottom-0 w-[60%] min-w-0 border-l border-t flex flex-col justify-end py-px px-2 gap-0':'shrink-0 border-t px-1'} z-20 border-white/10 bg-black/55${battleTutorialSpotClass('tacticsParty')}`}>
                       {/* ★「♥ 500 /500」と左右へ散らしていたのを、ラベルと数値の2つにそろえた
                           (2026-09-22 ユーザー指摘「カードも距離枠も全て安っぽくない？」)。
                           読む順が「何の値か → いくつか」で固定され、4枚並べたときに縦がそろう */}
-                      <div className="flex items-baseline justify-between leading-none">
+                      <div className="flex h-[10px] items-center justify-between leading-none">
                         <span className="text-[8px] font-black tracking-wider text-pink-300">HP</span>
                         <span className="font-mono leading-none"><span className="text-[11px] font-black text-white">{tacticsUnit.hp}</span><span className="text-[8px] text-slate-400">/{tacticsUnit.maxHp}</span></span>
                       </div>
-                      <div className="h-[3px] overflow-hidden rounded-full bg-black/60" style={{boxShadow:'inset 0 1px 2px rgba(0,0,0,.9)'}}>
+                      <div className="h-[2px] overflow-hidden rounded-full bg-black/60" style={{boxShadow:'inset 0 1px 2px rgba(0,0,0,.9)'}}>
                         <div data-tactics-hp-bar className={`h-full transition-all duration-1000 ${tacticsUnit.downed?'bg-gradient-to-r from-emerald-500 to-teal-300':'bg-gradient-to-r from-rose-500 to-pink-300'}`} style={{width:`${hpPct}%`,boxShadow:'0 0 6px rgba(244,114,182,.55)'}}></div>
                       </div>
-                      <div className="flex items-baseline justify-between leading-none">
+                      <div className="flex h-[10px] items-center justify-between leading-none">
                         <span className="text-[8px] font-black tracking-wider text-amber-300">GUTS</span>
                         <span className="font-mono leading-none"><span className="text-[11px] font-black text-white">{tacticsUnit.guts}</span><span className="text-[8px] text-slate-400">/{tacticsUnit.maxGuts}</span></span>
                       </div>
-                      <div className="h-[3px] overflow-hidden rounded-full bg-black/60" style={{boxShadow:'inset 0 1px 2px rgba(0,0,0,.9)'}}>
+                      <div className="h-[2px] overflow-hidden rounded-full bg-black/60" style={{boxShadow:'inset 0 1px 2px rgba(0,0,0,.9)'}}>
                         <div data-tactics-guts-bar className="h-full bg-gradient-to-r from-amber-500 to-yellow-300 transition-all duration-500" style={{width:`${gutsPct}%`,boxShadow:'0 0 6px rgba(251,191,36,.55)'}}></div>
                       </div>
                     </div>
