@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5e16df515d0cfc78
+// generated-sha256: 18c6b416afe563f1
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -92,7 +92,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-23 01:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-23 10:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -739,6 +739,17 @@ const battleSystemComingSoon = (systemId, { debugBattle = false } = {}) =>
 // β版で開いている仕組み。中のモードが全部そろっていないことを入口で伝えるために使う
 const battleSystemBeta = (systemId, { debugBattle = false } = {}) => !debugBattle
   && systemId === BATTLE_SYSTEM_TACTICS && TACTICS_BETA_PRO_RELEASE && !TACTICS_MODE_PUBLIC_RELEASE;
+// タクティクス専用の EXスキル(設計: docs/spec/TACTICS_EX_SKILLS.md)を、プレイヤーへ出すかどうか。
+// false のあいだは**デバッグのバトル(バトルモード入口)でだけ**距離枠から開ける。
+// STEP1 は「回数・併用の決まり」だけを動かす共通基盤で、3体の効果そのものはまだ入っていない。
+// 「使ったのに何も起きない」をβ版で遊んでいる人へ出さないため、効果がそろうまで立てない。
+// ★タクティクスの公開フラグ(TACTICS_BETA_PRO_RELEASE ほか)とは別のスイッチ。あちらは触らない
+const TACTICS_EX_SKILLS_RELEASE = false;
+// EXスキルをいま出してよいか。見るのはここ1か所だけ(画面も本体も検査もここを通す)。
+// ★タクティクス以外のモードでは、フラグやデバッグに関係なく必ず false
+// ★練習(バトルのれんしゅう)では出さない。台本どおりに進める場面なので、別の操作を増やさない
+const tacticsExSkillsEnabled = (mode, { debugBattle = false, tutorial = false } = {}) =>
+  isTacticsMode(mode) && !tutorial && (TACTICS_EX_SKILLS_RELEASE || debugBattle === true);
 // 画面へ並べる仕組み。中に出せるモードが1つも無いものは、準備中の枠としてだけ出す
 const visibleBattleSystems = ({ debugBattle = false } = {}) =>
   BATTLE_SYSTEMS.filter(s => battleSystemModes(s.id, { debugBattle }).length > 0
@@ -16743,6 +16754,189 @@ const clearTacticsSlotFlag = (bySlot, key) => {
   return next;
 };
 
+// ==== タクティクス専用 EXスキル(STEP1: 共通基盤) ====
+//
+// 設計の正本: docs/spec/TACTICS_EX_SKILLS.md
+//
+// ★モンスターごとの if を本体へ書かない。1体ぶんの決めごとは TACTICS_EX_SKILLS の1行に書き、
+//   本体は「回数・併用・効果の続く長さ」をこの純関数で数えるだけにする。20体へ増やしても本体は変わらない
+// ★EXはカードではない。1ターンに選べる枚数(cardLimit)にも、👑の+1にも数えない
+// ★回数は1ランぶん。WAVEが変わっても戻らない。新しいランでは createTacticsExState からやり直す
+// ★保存はしない。ランそのものがメモリの中だけにあり(中断・再開の保存が無い)、それに合わせる
+//
+// 1体ぶんの項目:
+//   id        … EXスキルのid(あとから変えない。ログや今後の記録の手がかり)
+//   name      … 画面に出す名前
+//   desc      … 効果の説明(画面にそのまま出す)
+//   maxUses   … 1ランで使える回数。unlimited:true なら数えない
+//   withCards … 同じターンに通常カードも使えるか。false なら「使ったターンは他のカードを使えない」
+//   duration  … 効果の続く長さ。'turn'(発動ターン) / 'wave'(発動WAVEの終わりまで) / 'toggle'(もう一度使うまで)
+//   toggleLabels … duration:'toggle' のときの [切り替える前, 切り替えたあと] の呼び名
+//   conditions … 使うための追加の条件(TACTICS_EX_CONDITIONS のキー)。無ければ空
+//   conditionText … 条件を画面に出すときの文(任意)
+//   effect    … 効果の種類。中身は TACTICS_EX_IMPLEMENTED_EFFECTS に入ったものだけが動く
+const TACTICS_EX_DURATION_TEXT = Object.freeze({
+  turn: '発動したターンだけ',
+  wave: '発動したWAVEが終わるまで',
+  toggle: 'もう一度使って切り替えるまで',
+});
+const TACTICS_EX_SKILLS = Object.freeze({
+  Monol: Object.freeze({
+    id: 'monol_cover_all',
+    name: 'みんなをかばう',
+    desc: 'そのターンの敵の攻撃を、単体・全体・連撃までまとめてモノリスが引き受ける。',
+    maxUses: 3, unlimited: false, withCards: true, duration: 'turn',
+    effect: 'coverAll',
+  }),
+  Golem: Object.freeze({
+    id: 'golem_all_in',
+    name: '捨て身',
+    desc: '丈夫さを0にし、0にした丈夫さの50%を力へ加える。',
+    maxUses: 3, unlimited: false, withCards: false, duration: 'wave',
+    effect: 'allIn',
+  }),
+  KenshiMocchi: Object.freeze({
+    id: 'kenshi_mocchi_weapon_change',
+    name: '武器チェンジ',
+    desc: '二刀流と片手持ちを切り替える。片手持ちのあいだは力と同じ数値を丈夫さへ加える。固有技は使えるが、ソードスキルの効果は出ない。',
+    maxUses: 0, unlimited: true, withCards: false, duration: 'toggle',
+    toggleLabels: Object.freeze(['二刀流', '片手持ち']),
+    effect: 'weaponChange',
+  }),
+});
+// 追加の条件。ctx を受け取り、使えないときだけ理由の文を返す(使えるなら null)。
+// ctx: { active(その子のEXがいま効いているか) }
+// 条件の中身を本体へ書かずにここへ集めるので、EXを足すときは定義に名前を書くだけで済む
+const TACTICS_EX_CONDITIONS = Object.freeze({
+  notActive: (ctx) => (ctx && ctx.active ? '効果が続いているあいだは使えない' : null),
+});
+// 効果を実装済みの種類。★ここに無い effect は「回数と併用の決まりだけ動き、効果はまだ出ない」。
+//   画面は「開発中」と出す(使ったのに何も起きない、を黙って出さない)。
+//   STEP2 で効果を入れたら、ここへ名前を足す
+const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze([]);
+const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'toggle']);
+
+// 定義を安全な形へそろえる。壊れた項目があっても落とさず、いちばん控えめな既定値へ倒す
+const normalizeTacticsExDef = (raw) => {
+  if (!raw || typeof raw !== 'object' || typeof raw.id !== 'string' || !raw.id) return null;
+  const unlimited = raw.unlimited === true;
+  const duration = TACTICS_EX_DURATIONS.includes(raw.duration) ? raw.duration : 'turn';
+  const toggleLabels = Array.isArray(raw.toggleLabels) && raw.toggleLabels.length === 2
+    ? raw.toggleLabels.map(String) : ['OFF', 'ON'];
+  return {
+    id: raw.id,
+    name: String(raw.name || raw.id),
+    desc: String(raw.desc || ''),
+    maxUses: unlimited ? 0 : Math.max(0, tacticsSafeInt(raw.maxUses, 0)),
+    unlimited,
+    // ★併用できるかが書かれていなければ「併用できない」へ倒す(強すぎる側へ倒さない)
+    withCards: raw.withCards === true,
+    duration,
+    toggleLabels,
+    conditions: Array.isArray(raw.conditions) ? raw.conditions.filter(k => typeof TACTICS_EX_CONDITIONS[k] === 'function') : [],
+    conditionText: raw.conditionText ? String(raw.conditionText) : null,
+    effect: typeof raw.effect === 'string' ? raw.effect : null,
+  };
+};
+// そのモンスターのEX。持っていなければ null
+const tacticsExDefOf = (monId, table = TACTICS_EX_SKILLS) =>
+  (monId && table && Object.prototype.hasOwnProperty.call(table, monId) ? normalizeTacticsExDef(table[monId]) : null);
+const isTacticsExEffectImplemented = (def, implemented = TACTICS_EX_IMPLEMENTED_EFFECTS) =>
+  !!(def && def.effect && implemented.includes(def.effect));
+
+// ラン中の状態。枠(スロット)ごとに持つ(配置はラン中に変わらないので枠で数えてよい)。
+// ★念のため monId も持ち、枠の子が違えば「その子はまだ使っていない」として数える
+//   uses[slot]    = { monId, count }                1ランで使った回数
+//   effects[slot] = { monId, exId, duration, wave, turn, on }   いま載っている効果
+//   lastUse[slot] = { wave, turn }                  同じ子は1ターンに1回まで
+//   turnUsed      = { wave, turn }                  このターンにだれかがEXを使ったか
+//   cardLock      = { wave, turn }                  このターンは他のカードを使えない
+const createTacticsExState = () => ({ uses: {}, effects: {}, lastUse: {}, turnUsed: null, cardLock: null });
+const normalizeTacticsExState = (state) => {
+  const base = createTacticsExState();
+  if (!state || typeof state !== 'object') return base;
+  const obj = (v) => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
+  const stamp = (v) => (v && typeof v === 'object' && Number.isFinite(Number(v.wave)) && Number.isFinite(Number(v.turn))
+    ? { wave: tacticsSafeInt(v.wave, 0), turn: tacticsSafeInt(v.turn, 0) } : null);
+  return { uses: obj(state.uses), effects: obj(state.effects), lastUse: obj(state.lastUse),
+    turnUsed: stamp(state.turnUsed), cardLock: stamp(state.cardLock) };
+};
+const sameTacticsExTurn = (stamp, now) => !!(stamp && now
+  && tacticsSafeInt(stamp.wave, -1) === tacticsSafeInt(now.wave, -2)
+  && tacticsSafeInt(stamp.turn, -1) === tacticsSafeInt(now.turn, -2));
+const tacticsExUsesOf = (state, slot, monId) => {
+  const own = normalizeTacticsExState(state).uses[slot];
+  return own && own.monId === monId ? Math.max(0, tacticsSafeInt(own.count, 0)) : 0;
+};
+// 残りの回数。無制限なら left は Infinity(画面は「無制限」と出す)
+const tacticsExRemaining = (def, count) => {
+  if (!def) return { unlimited: false, max: 0, left: 0, used: 0 };
+  const used = Math.max(0, tacticsSafeInt(count, 0));
+  if (def.unlimited) return { unlimited: true, max: Infinity, left: Infinity, used };
+  return { unlimited: false, max: def.maxUses, left: Math.max(0, def.maxUses - used), used };
+};
+// その子のEXの効果が、いま(now = { wave, turn })効いているか。
+// ★時間で切れるものは「見るたびに数え直す」。WAVEの切り替わりで消す処理を別に持たないので、
+//   消し忘れで次のWAVEへ持ち越すことが起きない
+const isTacticsExEffectActive = (state, slot, monId, now) => {
+  const effect = normalizeTacticsExState(state).effects[slot];
+  if (!effect || effect.monId !== monId) return false;
+  if (effect.duration === 'toggle') return effect.on === true;
+  if (effect.duration === 'wave') return !!now && tacticsSafeInt(effect.wave, -1) === tacticsSafeInt(now.wave, -2);
+  return sameTacticsExTurn(effect, now);
+};
+// このターンは他のカードを使えないか(併用できないEXを使ったターン)
+const isTacticsExCardLocked = (state, now) => sameTacticsExTurn(normalizeTacticsExState(state).cardLock, now);
+// このターンにだれかがEXを使ったか(カードを使わずにターンを進められるようにする)
+const isTacticsExTurnUsed = (state, now) => sameTacticsExTurn(normalizeTacticsExState(state).turnUsed, now);
+
+// 使えるかどうか。使えないときは理由を1つだけ返す(画面の灰色のボタンの下へ出す)。
+//   alive         … その子が立っているか(倒れた子はカードと同じくEXも使えない)
+//   selectedCount … このターンにもう選んでいるカードの枚数
+//   busy          … 行動中・AUTO中
+const checkTacticsExUse = ({ def, state, slot, monId, alive, selectedCount = 0, now, busy = false } = {}) => {
+  if (!def) return { ok: false, reason: 'EXスキルを持っていない' };
+  if (busy) return { ok: false, reason: '行動中は使えない' };
+  if (!alive) return { ok: false, reason: '倒れているあいだは使えない' };
+  const safe = normalizeTacticsExState(state);
+  const remaining = tacticsExRemaining(def, tacticsExUsesOf(safe, slot, monId));
+  if (!remaining.unlimited && remaining.left <= 0) return { ok: false, reason: 'このランで使える回数が残っていない' };
+  if (sameTacticsExTurn(safe.lastUse[slot], now)) return { ok: false, reason: 'このターンはもう使った' };
+  if (!def.withCards && Math.max(0, tacticsSafeInt(selectedCount, 0)) > 0) {
+    return { ok: false, reason: '他のカードと一緒に使えないEX。先にカードの選択を外す' };
+  }
+  const active = isTacticsExEffectActive(safe, slot, monId, now);
+  for (const key of def.conditions || []) {
+    const why = TACTICS_EX_CONDITIONS[key] ? TACTICS_EX_CONDITIONS[key]({ active }) : null;
+    if (why) return { ok: false, reason: why };
+  }
+  return { ok: true, reason: null };
+};
+// 使ったあとの状態を返す(渡された state は書き換えない)。
+// ★回数を減らすのは無制限でないときだけ。無制限は数えるが、残りには効かない
+const applyTacticsExUse = (state, { def, slot, monId, now } = {}) => {
+  const safe = normalizeTacticsExState(state);
+  if (!def || !Number.isInteger(slot)) return safe;
+  const stamp = { wave: tacticsSafeInt(now && now.wave, 0), turn: tacticsSafeInt(now && now.turn, 0) };
+  const count = tacticsExUsesOf(safe, slot, monId) + 1;
+  const prev = safe.effects[slot];
+  const wasOn = !!(prev && prev.monId === monId && prev.duration === 'toggle' && prev.on === true);
+  return {
+    uses: { ...safe.uses, [slot]: { monId, count } },
+    effects: { ...safe.effects, [slot]: { monId, exId: def.id, duration: def.duration, wave: stamp.wave, turn: stamp.turn,
+      on: def.duration === 'toggle' ? !wasOn : true } },
+    lastUse: { ...safe.lastUse, [slot]: stamp },
+    turnUsed: stamp,
+    cardLock: def.withCards ? safe.cardLock : stamp,
+  };
+};
+// 切り替え式のEXが、いまどちらの状態か(画面に「いま：片手持ち」のように出す)
+const tacticsExToggleLabel = (def, state, slot, monId) => {
+  if (!def || def.duration !== 'toggle') return null;
+  return def.toggleLabels[isTacticsExEffectActive(state, slot, monId, null) ? 1 : 0];
+};
+// ==== タクティクス専用 EXスキルここまで ====
+
 // ---- part: 40-screen-effects.jsx ----
 // ==== 画面ライフサイクル: タイマー・リスナーの登録簿(useScreenEffects) ====
 //
@@ -21776,6 +21970,7 @@ function BattleScreen({
   setShowSoulBattleEffects, setSkillPicker, setSlotSettle, slotMaxUses, slotSettle, slotSkill,
   slotUniqueChoice, slots, soulBattleParty, soulCoordinationCardBonus, suppressCardClickRef,
   tacticsCanAssign, tacticsCardBlock, tacticsCardGenre, tacticsCardScope, tacticsSlotFx, tacticsUnits,
+  tacticsExInfo, activateTacticsEx, tacticsExCardLocked, tacticsExTurnUsed, passTacticsTurn,
   teachingFx, totalTurnCount, turnCount, ultimateDistanceBreakLevels, ultraBattleView,
   unifiedSpecialDefense, useEmergency, wave,
 }) {
@@ -21788,6 +21983,10 @@ function BattleScreen({
   // ★ヘッダーに3つ並べていた入口(ヘルプ・あきらめる)とBGMを1つにまとめる。
   //   どれもバトル中に何度も押すものではないので、1枚めくる形にしても手が止まらない
   const [showBattleMenu, setShowBattleMenu] = useState(false);
+  // ★タクティクス専用 EXスキルの詳細を開いている枠。距離枠をタップすると開く(開くだけで発動はしない)。
+  //   中身は毎回 tacticsExInfo から引き直す(回数・使えるかは開いたあとも変わるため、開いた時点の値を持たない)
+  const [exPanelSlot, setExPanelSlot] = useState(null);
+  const exPanel = exPanelSlot!=null&&tacticsExInfo ? tacticsExInfo(exPanelSlot) : null;
   // ★いま狙われている枠(2026-09-21 ユーザー指摘「誰に攻撃か分からない」)。
   //   間合い攻撃は相手を1体決めず「予告した間合いに立っている子」へ当たるので、
   //   ほかの技と違って targetName を持たない。予告を見ても間合いしか分からなかった。
@@ -22845,6 +23044,10 @@ function BattleScreen({
                   Audio_.se.card();
                   setSlotSettle(i);
                   setTimeout(()=>{ setSlotSettle(null); }, 500);
+                } else if(pendingCard==null && !dragState?.active && tacticsExInfo && tacticsExInfo(i)){
+                  // ★カードを置く途中でないときだけ、その子のEXスキルの詳細を開く(タクティクス専用)。
+                  //   カードの置き先を選んでいるときのタップは、今までどおりカードの置き場所の操作にする
+                  setExPanelSlot(i);
                 }
               }} disabled={isBusy||autoBattle} className={`relative rounded-2xl border-2 flex flex-col items-stretch overflow-visible transition-all ${RANGE_STYLES[i].slotGlow||''} ${RANGE_STYLES[i].bg} ${distanceBroken?'border-red-400':' '+RANGE_STYLES[i].border} ${(canAssign||(dragState?.active&&dragOverSlot===i))?'ring-2 ring-yellow-400 scale-105 z-10 shadow-lg animate-pulse':'opacity-100'} ${assignedCount>0?'ring-2 ring-indigo-500':''} ${dragState?.active&&dragOverSlot===i?'ring-4 ring-green-400 scale-110':''} ${slotSettle===i?'ring-4 ring-white':''}`} style={isAnimating?{zIndex:9999, animation:attackMotionAnimation(attackAnim)}:(distanceBroken?{backgroundColor:distanceBreakLevel>=2?'rgb(12,2,5)':'rgb(24,5,25)',boxShadow:`inset 0 0 0 ${Math.min(4,distanceBreakLevel+1)}px rgba(248,113,113,.95), inset 0 0 ${28+distanceBreakLevel*8}px rgba(76,5,25,.98), 0 0 ${9+distanceBreakLevel*4}px rgba(220,38,38,.65)`,...(slotHitShake||{})}:(slotSettle===i?{animation:'slotSettle 400ms ease-out'}:(slotHitShake||undefined)))}>
                 {/* ★狙われている枠。カードを置ける黄色の輪・ドラッグ中の緑の輪と重ならないよう、
@@ -22900,7 +23103,7 @@ function BattleScreen({
                 </>}
                 {/* 名前の行。勇者モンには王冠を付ける。どれが勇者モンか分からないと
                     「勇者モン選択時だけ効く特性」が効いているのか判断できないため */}
-                <div className={`h-[18px] shrink-0 flex items-center justify-center px-1 border-b z-20 ${isHeroSlotMon(s)?'bg-amber-500/25 border-amber-300/50':'bg-black/60 border-white/10'}`}>{isHeroSlotMon(s)&&<Crown size={8} className="shrink-0 mr-0.5 text-amber-300"/>}<span className={`text-[10px] font-black truncate uppercase leading-none ${isHeroSlotMon(s)?'text-amber-100':'text-white'}`}>{s?.name||'---'}</span>{assignedCount>0&&<span className="ml-1 text-[10px] font-black text-indigo-300">×{assignedCount}</span>}{slotBuffMarks.map(mark=>(<span key={mark.text} data-tactics-slot-buff={mark.text} className={`ml-1 shrink-0 text-[8px] font-black leading-none ${mark.cls}`}>{mark.text}</span>))}</div>
+                <div className={`h-[18px] shrink-0 flex items-center justify-center px-1 border-b z-20 ${isHeroSlotMon(s)?'bg-amber-500/25 border-amber-300/50':'bg-black/60 border-white/10'}`}>{isHeroSlotMon(s)&&<Crown size={8} className="shrink-0 mr-0.5 text-amber-300"/>}<span className={`text-[10px] font-black truncate uppercase leading-none ${isHeroSlotMon(s)?'text-amber-100':'text-white'}`}>{s?.name||'---'}</span>{assignedCount>0&&<span className="ml-1 text-[10px] font-black text-indigo-300">×{assignedCount}</span>}{tacticsExInfo&&tacticsExInfo(i)&&<span data-tactics-ex-mark={i} className="ml-1 shrink-0 text-[8px] font-black leading-none text-fuchsia-300">EX</span>}{slotBuffMarks.map(mark=>(<span key={mark.text} data-tactics-slot-buff={mark.text} className={`ml-1 shrink-0 text-[8px] font-black leading-none ${mark.cls}`}>{mark.text}</span>))}</div>
                 {(()=>{const uOptions=getAvailableUniquesForSlot(s,ownedUniques,i); if(uOptions.length<2) return null; const curKey=activeSlotUniqueKey(slotUniqueChoice,i,s); const curIdx=Math.max(0,uOptions.findIndex(o=>o.key===curKey));
                   return(<div onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation(); if(isBusy||autoBattleRef.current)return; cycleActiveUniqueForSlot(i);}} className={`shrink-0 z-20 flex items-center justify-center gap-0.5 bg-purple-700/90 border-b border-purple-300/50 py-0.5 active:scale-95${autoBattle?' opacity-40':''}`}>
                     <RefreshCcw size={7} className="text-white"/><span className="text-[10px] font-black text-white leading-none">固有技 {curIdx+1}/{uOptions.length}</span>
@@ -23093,7 +23296,7 @@ function BattleScreen({
                   ★もとは敵の絵の左に置いていたが、あの列は「敵や自分を見る」入口を並べた場所。
                     緊急はその場で使う行動なので、カードと同じ操作の列へ移した。
                   ★AUTO の左に置く。実行(Action)のすぐ隣だと押し間違える */}
-              <button onClick={useEmergency} disabled={isBusy||autoBattle||!battleTutorialAllowsEmergency} aria-label="緊急回復" title="緊急回復" className={`shrink-0 flex h-8 w-[44px] flex-col items-center justify-center rounded-lg border-2 border-blue-400 bg-blue-900/70 leading-none active:scale-90 disabled:opacity-25${battleTutorialSpotClass('emergency')}`}><Activity size={11} className="text-blue-300"/><span className="mt-0.5 text-[10px] font-black text-blue-50">緊急</span></button>
+              <button onClick={useEmergency} disabled={isBusy||autoBattle||!battleTutorialAllowsEmergency||!!tacticsExCardLocked} aria-label="緊急回復" title="緊急回復" className={`shrink-0 flex h-8 w-[44px] flex-col items-center justify-center rounded-lg border-2 border-blue-400 bg-blue-900/70 leading-none active:scale-90 disabled:opacity-25${battleTutorialSpotClass('emergency')}`}><Activity size={11} className="text-blue-300"/><span className="mt-0.5 text-[10px] font-black text-blue-50">緊急</span></button>
               {/* モンビーへの入口(クイックモードだけ)。音に関わる入口なので、この並びに残す */}
               <div className="shrink-0 flex flex-col gap-0.5">
                 {quickToRhythmButtonNode}
@@ -23107,6 +23310,11 @@ function BattleScreen({
                 // カードを選んだのに置き場所を決めていない、という取りこぼしに気づけなかった。
                 // 押せるときの字は Action のまま(検査がこの字でボタンを押している)。
                 const actionHint=canAct?null:(autoBattle||isBusy?null:(selectedCards.length===0?'カードを選ぶ':(!allAttackAssigned?'置き場所を選ぶ':null)));
+                // ★EXスキルを使ったターンは、カードを選ばずに敵の番へ進められる(タクティクス専用)。
+                //   併用できないEXを使ったターンはカードを選べないので、ここが無いとターンを終えられない
+                if(tacticsExTurnUsed&&passTacticsTurn&&selectedCards.length===0&&!autoBattle&&!isBusy&&pendingCard===null){
+                  return(<button data-tactics-ex-pass onClick={()=>passTacticsTurn()} className={`min-h-[44px] min-w-[96px] shrink-0 px-2 sm:px-5 rounded-full font-black text-[11px] sm:text-[13px] whitespace-nowrap active:scale-90 flex items-center justify-center gap-1 border-2 border-black tracking-wide transition-all${battleTutorialSpotClass('action')} bg-fuchsia-200 text-black shadow-[0_0_15px_rgba(232,121,249,0.45)]`}><Play fill="currentColor" size={12}/> ターンを進める</button>);
+                }
                 return(<button data-battle-action onClick={()=>processTurn()} disabled={!canAct} className={`min-h-[44px] min-w-[96px] shrink-0 px-2 sm:px-5 rounded-full font-black text-[11px] sm:text-[13px] whitespace-nowrap active:scale-90 flex items-center justify-center gap-1 border-2 border-black tracking-wide transition-all${actionHint?'':' uppercase'}${battleTutorialSpotClass('action')} ${canAct?'bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.4)]':(actionHint?'bg-slate-800 text-slate-300 border-white/20':'bg-slate-700 text-slate-500 opacity-50')}`}><Play fill="currentColor" size={12}/> {actionHint||'Action'}</button>);})()}
             </div>
           </div>
@@ -23168,6 +23376,40 @@ function BattleScreen({
               揺れは transform で作ってあり、**transform の掛かった要素は中の position:fixed の
               基準になる**ため、揺れているあいだだけ viewport ではなく揺れる箱が基準になり、
               iPhoneのノッチ(safe-area)ぶん約47px下へ落ちていた。実測でも 52px → 103px とずれる */}
+        {/* ★タクティクス専用 EXスキルの詳細(距離枠をタップすると開く)。
+            ★開いただけでは発動しない。使うのは「EXスキルを使用」を押したときだけ。
+            ★設定メニューと同じく body の直下へ出す(揺れの transform の中に置くと位置がずれる)。
+            ★スマホ縦を先に考えて、画面の下から出す。押すボタンは親指の届く下側にまとめ、
+              ホームインジケーターに掛からないよう safe-area のぶん下を空ける。背景を押しても閉じる */}
+        {exPanel&&ReactDOM.createPortal((
+          <div data-tactics-ex-panel={exPanel.slot} role="dialog" aria-modal="true" aria-label={`${exPanel.monName}のEXスキル`} className="fixed inset-0 z-[70000] flex items-end justify-center bg-black/70" style={{paddingTop:'calc(.75rem + env(safe-area-inset-top))'}} onClick={()=>setExPanelSlot(null)}>
+            <div className="w-full max-w-[440px] rounded-t-3xl border-2 border-b-0 border-fuchsia-400/60 bg-slate-900 px-4 pt-3 shadow-2xl text-white" style={{paddingBottom:'calc(.75rem + env(safe-area-inset-bottom))',maxHeight:'85vh',overflowY:'auto'}} onClick={e=>e.stopPropagation()}>
+              <div className="flex items-center gap-2">
+                <span className="shrink-0 rounded-md bg-fuchsia-600 px-1.5 py-0.5 text-[10px] font-black leading-none">EX</span>
+                <span data-tactics-ex-mon className="min-w-0 truncate text-[12px] font-black text-slate-300">{exPanel.monName}</span>
+                {!exPanel.implemented&&<span data-tactics-ex-dev className="ml-auto shrink-0 rounded-full border border-amber-300/60 bg-amber-900/60 px-2 py-0.5 text-[10px] font-black text-amber-100">開発中</span>}
+              </div>
+              <div data-tactics-ex-name className="mt-1 text-[18px] font-black leading-tight text-fuchsia-100">{exPanel.def.name}</div>
+              <p data-tactics-ex-desc className="mt-1.5 text-[12px] font-bold leading-relaxed text-slate-200">{exPanel.def.desc}</p>
+              {!exPanel.implemented&&<p className="mt-1.5 rounded-lg border border-amber-300/40 bg-amber-950/50 px-2 py-1.5 text-[11px] font-bold leading-snug text-amber-100">効果はまだ入っていません。使うと回数と「他のカードと一緒に使えるか」の決まりだけが動きます。</p>}
+              <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[12px]">
+                <dt className="font-bold text-slate-400">使える回数</dt>
+                <dd data-tactics-ex-uses className="font-black text-white">{exPanel.remaining.unlimited?'無制限':`のこり ${exPanel.remaining.left} / ${exPanel.remaining.max}（このラン）`}</dd>
+                <dt className="font-bold text-slate-400">カード</dt>
+                <dd data-tactics-ex-with-cards={exPanel.def.withCards?'yes':'no'} className="font-black text-white">{exPanel.def.withCards?'同じターンに通常カードも使える':'使ったターンは他のカードを使えない'}</dd>
+                {exPanel.durationText&&<><dt className="font-bold text-slate-400">効果時間</dt><dd className="font-black text-white">{exPanel.durationText}</dd></>}
+                {exPanel.def.conditionText&&<><dt className="font-bold text-slate-400">条件</dt><dd className="font-black text-white">{exPanel.def.conditionText}</dd></>}
+                {exPanel.toggleLabel&&<><dt className="font-bold text-slate-400">いま</dt><dd data-tactics-ex-toggle className="font-black text-fuchsia-200">{exPanel.toggleLabel}</dd></>}
+                {!exPanel.toggleLabel&&exPanel.active&&<><dt className="font-bold text-slate-400">いま</dt><dd data-tactics-ex-active className="font-black text-fuchsia-200">効果中</dd></>}
+              </dl>
+              {!exPanel.check.ok&&<p data-tactics-ex-why className="mt-2 text-[11px] font-bold leading-snug text-rose-200">{exPanel.check.reason}</p>}
+              <div className="mt-3 flex gap-2">
+                <button type="button" data-tactics-ex-close onClick={()=>setExPanelSlot(null)} className="min-h-[48px] flex-1 rounded-xl border border-white/20 bg-slate-800 text-[13px] font-black text-slate-200 active:scale-95">閉じる</button>
+                <button type="button" data-tactics-ex-use disabled={!exPanel.check.ok} onClick={()=>{ if(activateTacticsEx&&activateTacticsEx(exPanel.slot)) setExPanelSlot(null); }} className={`min-h-[48px] flex-[2] rounded-xl border-2 text-[14px] font-black active:scale-95 ${exPanel.check.ok?'border-fuchsia-300 bg-fuchsia-600 text-white shadow-[0_0_14px_rgba(217,70,239,.5)]':'border-slate-600 bg-slate-800 text-slate-500'}`}>EXスキルを使用</button>
+              </div>
+            </div>
+          </div>
+        ), document.body)}
         {showBattleMenu&&ReactDOM.createPortal((
           <div className="fixed inset-0 z-[70000] flex items-start justify-end bg-black/70 p-2" onClick={()=>setShowBattleMenu(false)}>
             <div data-battle-menu className="mt-11 flex w-[190px] flex-col gap-1.5 rounded-2xl border border-white/20 bg-slate-900 p-2 shadow-2xl" onClick={e=>e.stopPropagation()}>
@@ -25151,10 +25393,18 @@ function MonsterHeroGame() {
   //   倍率を残したままだった。クイック周回を終えてHOMEへ戻り、そのまま
   //   タクティクスプロを始めると、WAVE1の勇者モンが前の周回ぶんの追いつきを受けていた。
   //   片付けを増やすときは、必ずここへ書く(呼び出し漏れは tactics-units-check が見張る)。
+  // ★タクティクス専用 EXスキルのラン中の状態(回数・効果・このターンの併用制限)。
+  //   1ランぶんだけ持つ。WAVEが変わっても戻さず、ランを始めるとき(下の片付け)だけ作り直す。
+  //   ref でも持つのは、同じ操作の中で続けて読むとき(使った直後の判定)に古い値を見ないため
+  const [tacticsExState, setTacticsExState] = useState(createTacticsExState);
+  const tacticsExStateRef = useRef(tacticsExState);
+  const commitTacticsExState = (next) => { tacticsExStateRef.current=next; setTacticsExState(next); };
   const resetTacticsJoinCatchUp = () => {
     tacticsJoinCatchUpRef.current=1;
     tacticsJoinCatchUpTurnsRef.current=0;
     tacticsJoinDistCatchUpRef.current=1;
+    // EXの使用回数もランごとに数え直す(ランの片付けはここ1か所へ書く決まりなので、ここへ置く)
+    commitTacticsExState(createTacticsExState());
   };
   // ULTIMATEのラン内だけで持つ永久弱体と、次WAVE開始時に一度だけ消費する発動予約。
   const [ultimateDistanceBreakLevels,setUltimateDistanceBreakLevels]=useState([0,0,0,0]);
@@ -26346,7 +26596,8 @@ function MonsterHeroGame() {
   // debugBattleRef と分けてあるのは、難易度の「この難易度で挑戦」が
   // debugBattleRef を必ず false へ戻す(ふだんの周回を記録する側へ寄せる)ため。
   // これを共用すると、記録するかどうかの判定まで一緒に動いてしまう。
-  // ここでは「正式実装前のモンスター(debugOnly)を勇者モン選択に出すかどうか」だけに使い、
+  // ここでは「正式実装前のモンスター(debugOnly)を勇者モン選択に出すかどうか」と、
+  // 「公開前のタクティクスEXスキルを距離枠から開けるようにするか」(tacticsExEnabled)だけに使い、
   // 保存・スコア・ランキングの判定には一切使わない。HOMEへ戻ると落ちる
   const debugMonsterPreviewRef = useRef(false);
   const [extremeRun, setExtremeRun] = useState(false);
@@ -33484,6 +33735,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // ★全体の枚数(baseCardLimit)は「立っている人数＋👑」で決まるので、
   //   攻撃を1体1枚に絞っても配り切れる。WAVE1で使える枚数も減らない
   //   (盤面1体なら全体も1枚、👑持ちなら全体2枚でその子が2枚使える)。
+  // ★タクティクス専用 EXスキル(設計: docs/spec/TACTICS_EX_SKILLS.md)。出すかどうかは tacticsExSkillsEnabled 1か所で決める
+  //   (タクティクス以外では必ず false。公開前はデバッグのバトルでだけ true)
+  // ★デバッグの「⚔️ バトルモード」入口から始めた戦いは、難易度を決めた時点で debugBattle が false へ戻る。
+  //   入口から来たことは debugMonsterPreviewRef だけが覚えているので、公開前の先行表示はそちらも見る
+  const tacticsExEnabled = tacticsExSkillsEnabled(runMode, { debugBattle:debugBattle||debugMonsterPreviewRef.current, tutorial:!!battleScenarioRef.current });
+  // 「いま」= このWAVEの何ターン目か。EXの効果の長さと「このターン」の判定はこれで数える
+  const tacticsExNow = { wave, turn:turnCount };
+  const tacticsExCardLocked = tacticsExEnabled && isTacticsExCardLocked(tacticsExState, tacticsExNow);
+  const tacticsExTurnUsed = tacticsExEnabled && isTacticsExTurnUsed(tacticsExState, tacticsExNow);
   const tacticsUsableSlots = (card, excludeHandIndex = null) => {
     if(!isTacticsMode(runMode)||!card) return [];
     const spent={}, used={};
@@ -33513,6 +33773,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const tacticsCardBlock = (card, cardIndex = null) => {
     if(!isTacticsMode(runMode)||!card) return null;
     if(cardIndex!=null&&selectedCards.includes(cardIndex)) return { ok:true, kind:null, short:null, why:null };
+    // ★併用できないEXを使ったターンは、どのカードも選べない(理由を帯で出す)
+    if(tacticsExCardLocked) return { ok:false, kind:'ex', short:'EX使用', why:'他のカードと一緒に使えないEXスキルを使ったターンなので、カードは選べない' };
     if(tacticsUsableSlots(card,cardIndex).length>0){
       // ★1ターンに選べる枚数の上限は、いままでの5モードと同じ見え方(灰色だけ)にする。
       //   全部のカードへ赤い帯が出るとうるさいので、理由はカード詳細でだけ出す
@@ -33573,7 +33835,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       const usable=tacticsMode?tacticsUsableSlots(c):[];
       const curGuts=pendingCardGuts(c);
       const remainingGuts=guts-selectedCards.reduce((acc,idx)=>acc+selectedCardGuts(idx),0);
-      const isSelectable=(tacticsMode?usable.length>0:remainingGuts>=curGuts) && selectedCards.length<cardLimit;
+      // ★併用できないEXを使ったターンは選べない(EXそのものは枚数に数えないので、cardLimit とは別に見る)
+      const isSelectable=(tacticsMode?usable.length>0:remainingGuts>=curGuts) && selectedCards.length<cardLimit && !tacticsExCardLocked;
       if(isSelectable){
         Audio_.se.card();
         setSelectedCards(p=>[...p,i]);
@@ -33591,6 +33854,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const dragAssignToSlot = (cardIndex, slotIdx) => {
     if(isBusy||autoBattleRef.current) return;
     const c=hand[cardIndex]; if(!c) return;
+    if(tacticsExCardLocked){ setFocusedCard(null); return; }
     const targetMon=slots[slotIdx];
     // 攻撃カード: モンスターのいるスロットに割り当て
     if(cardNeedsMonster(c)){
@@ -34450,7 +34714,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   };
 
   const useEmergency = async () => {
-    if (isBusy||hp<=0) return; setIsBusy(true);
+    if (isBusy||hp<=0) return;
+    // 併用できないEXを使ったターンは「行動不可」。緊急回復も使えない(ターンは「ターンを進める」で送る)
+    if (tacticsExCardLocked) return;
+    setIsBusy(true);
     Audio_.se.heal();
     setEffect({type:'heal',label:"緊急回復",icon:"💊",monEmoji:mainHero?.emoji||"🏥",imgUrl:mainHero?.imgUrl,baseId:mainHero?.id,colors:mainHero?.colors});
     await battleWait(500); setEffect(null);
@@ -34485,6 +34752,66 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if (scenario) setBattleTutorialLastAction('emergency');
   };
 
+  // ==== タクティクス専用 EXスキル(STEP1: 共通基盤) ====
+  // 距離枠をタップしたときに出す中身。★タップしただけでは発動しない(使うのは詳細の「EXスキルを使用」だけ)。
+  // EXを持たない子・タクティクス以外・公開前の本番では null(画面は今までどおり何も開かない)
+  const tacticsExInfo = (slotIdx) => {
+    if(!tacticsExEnabled||!Number.isInteger(slotIdx)) return null;
+    const mon=slots[slotIdx]; if(!mon) return null;
+    const def=tacticsExDefOf(mon.id); if(!def) return null;
+    const state=tacticsExState;
+    const remaining=tacticsExRemaining(def,tacticsExUsesOf(state,slotIdx,mon.id));
+    const check=checkTacticsExUse({ def, state, slot:slotIdx, monId:mon.id,
+      alive:canTacticsSlotAct(tacticsUnits,slotIdx), selectedCount:selectedCards.length,
+      now:tacticsExNow, busy:isBusy||autoBattle });
+    return {
+      slot:slotIdx, monName:mon.masuName||mon.name, def, remaining, check,
+      active:isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow),
+      toggleLabel:tacticsExToggleLabel(def,state,slotIdx,mon.id),
+      durationText:TACTICS_EX_DURATION_TEXT[def.duration]||null,
+      implemented:isTacticsExEffectImplemented(def),
+    };
+  };
+  // 効果ごとの発動口。STEP2 ではここへ効果の中身を入れる(効果の種類ごとに1つ。モンスターごとの if にしない)。
+  // ★効き目そのもの(攻撃の引き受け・ステータスの上下・固有技の切り替え)は、戦闘の計算側で
+  //   isTacticsExEffectActive を見て決める。ここは「使った瞬間」に1度だけ起こすもの(演出・ログ)の置き場
+  const TACTICS_EX_ON_USE = {};
+  const activateTacticsEx = (slotIdx) => {
+    if(!tacticsExEnabled||isBusy||autoBattleRef.current) return false;
+    const mon=slots[slotIdx]; if(!mon) return false;
+    const def=tacticsExDefOf(mon.id); if(!def) return false;
+    const state=tacticsExStateRef.current;
+    // ★判定は ref の最新値でもう一度通す。連打で同じターンに2回使えないように
+    const check=checkTacticsExUse({ def, state, slot:slotIdx, monId:mon.id,
+      alive:canTacticsSlotAct(tacticsUnitsRef.current,slotIdx), selectedCount:selectedCards.length,
+      now:tacticsExNow, busy:false });
+    if(!check.ok) return false;
+    const next=applyTacticsExUse(state,{ def, slot:slotIdx, monId:mon.id, now:tacticsExNow });
+    commitTacticsExState(next);
+    Audio_.se.card();
+    const toggled=def.duration==='toggle'?`（${tacticsExToggleLabel(def,next,slotIdx,mon.id)}）`:'';
+    pushBattleLog(`EX ${mon.masuName||mon.name}「${def.name}」${toggled}`, 'ally');
+    const onUse=TACTICS_EX_ON_USE[def.effect];
+    if(isTacticsExEffectImplemented(def)&&typeof onUse==='function') onUse({ def, slotIdx, mon, state:next });
+    else pushBattleLog('（開発中）このEXの効果はまだ出ない。回数と併用のルールだけ動いている', 'info');
+    if(!def.withCards){ setPendingCard(null); setFocusedCard(null); }
+    return true;
+  };
+  // EXを使ったターンに、カードを使わずに敵の番へ進める。
+  // ★併用できないEXを使ったターンはカードを選べず、ACTION(カード1枚以上が要る)では進められないため。
+  //   中身は緊急回復の「回復のあと」と同じ(予告済みの行動をそのまま実行し、次の予告を1回だけ決める)
+  const passTacticsTurn = async () => {
+    if(!tacticsExTurnUsed||isBusy||!enemy||hp<=0||selectedCards.length>0) return;
+    setIsBusy(true);
+    setFocusedCard(null); setPendingCard(null);
+    pushBattleLog(`── ${turnCount}ターン目 ──`, 'turn');
+    const acting=enemyIntent;
+    await handleEnemyTurn('none',{},acting,hp);
+    const moveWasFrozen=acting&&acting.type==='MOVE'&&getWaveBuff('iceLockTurns')>0;
+    const distForNextPredict=acting&&acting.type==='MOVE'&&!moveWasFrozen?acting.targetDist:enemyDist;
+    setEnemyLastIntent(enemyActionPerformedRef.current?acting:null); advanceEnemyIntents(acting,distForNextPredict,enemyActionPerformedRef.current);
+  };
+
   const processTurn = async (explicitEntries = null) => {
     const hasExplicitEntries=Array.isArray(explicitEntries);
     const usedCardEntries=hasExplicitEntries
@@ -34492,6 +34819,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         .map(entry=>({card:entry.card,handIndex:entry.handIndex,slotIdx:entry.slotIdx!=null?entry.slotIdx:null}))
       : selectedCards.map(i=>({card:hand[i],handIndex:i,slotIdx:cardAssignments[i]!=null?cardAssignments[i]:null}));
     if (isBusy||!enemy||usedCardEntries.length===0) return;
+    // 併用できないEXを使ったターンはカードを使えない(AUTOの明示の選択もここで止める)
+    if (tacticsExCardLocked) return;
     // ★タクティクスバトルの「眼力」は、スエゾーが攻撃したターンに引く(2026-09-20 ユーザー指示)。
     //   本人の能力なので勇者モンにしていなくても効く。1ターンに何枚使っても判定は1回
     //   (枚数で確率が上がらないように)。既存5モードは今までどおり敵のターンの頭に引く
@@ -34972,6 +35301,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // ガッツは1体ずつなので gutsForSlot で渡し、枚数制限は手動と同じ
     // countsTowardTacticsSlotLimit で数える(攻撃カードだけ数えていたころは、
     // AUTOだけ回復もバフも何枚でも同じ子へ置けていた)
+    // 併用できないEXを使ったターンは、カードを選ばずにそのまま敵の番へ進める
+    if(tacticsExCardLocked) return passTacticsTurn();
     const tacticsMode=isTacticsMode(runMode);
     const autoSlots=tacticsMode
       ? slots.map((mon,idx)=>(canTacticsSlotAct(tacticsUnitsRef.current,idx)?mon:null))
@@ -40721,6 +41052,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             getNextTurnBuff={getNextTurnBuff} getPermaBuff={getPermaBuff} getTurnBuff={getTurnBuff}
             getWaveBuff={getWaveBuff} guardCardWeight={guardCardWeight} guardFx={guardFx} guardLevel={guardLevel}
             guardValueOf={guardValueOf} tacticsSlotGuardValue={tacticsSlotGuardValue}
+            tacticsExInfo={tacticsExInfo} activateTacticsEx={activateTacticsEx} tacticsExCardLocked={tacticsExCardLocked}
+            tacticsExTurnUsed={tacticsExTurnUsed} passTacticsTurn={passTacticsTurn}
             guts={guts} hand={hand} heroCardBonus={heroCardBonus} heroDist={heroDist}
             hp={hp} iceLockActive={iceLockActive} iceLockPreparing={iceLockPreparing} iceLockTurns={iceLockTurns}
             isAssistCard={isAssistCard} isAttackCard={isAttackCard} isBusy={isBusy} isHeroSlotMon={isHeroSlotMon}

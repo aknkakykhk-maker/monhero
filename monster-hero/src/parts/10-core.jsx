@@ -85,7 +85,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-23 01:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-23 10:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -732,6 +732,17 @@ const battleSystemComingSoon = (systemId, { debugBattle = false } = {}) =>
 // β版で開いている仕組み。中のモードが全部そろっていないことを入口で伝えるために使う
 const battleSystemBeta = (systemId, { debugBattle = false } = {}) => !debugBattle
   && systemId === BATTLE_SYSTEM_TACTICS && TACTICS_BETA_PRO_RELEASE && !TACTICS_MODE_PUBLIC_RELEASE;
+// タクティクス専用の EXスキル(設計: docs/spec/TACTICS_EX_SKILLS.md)を、プレイヤーへ出すかどうか。
+// false のあいだは**デバッグのバトル(バトルモード入口)でだけ**距離枠から開ける。
+// STEP1 は「回数・併用の決まり」だけを動かす共通基盤で、3体の効果そのものはまだ入っていない。
+// 「使ったのに何も起きない」をβ版で遊んでいる人へ出さないため、効果がそろうまで立てない。
+// ★タクティクスの公開フラグ(TACTICS_BETA_PRO_RELEASE ほか)とは別のスイッチ。あちらは触らない
+const TACTICS_EX_SKILLS_RELEASE = false;
+// EXスキルをいま出してよいか。見るのはここ1か所だけ(画面も本体も検査もここを通す)。
+// ★タクティクス以外のモードでは、フラグやデバッグに関係なく必ず false
+// ★練習(バトルのれんしゅう)では出さない。台本どおりに進める場面なので、別の操作を増やさない
+const tacticsExSkillsEnabled = (mode, { debugBattle = false, tutorial = false } = {}) =>
+  isTacticsMode(mode) && !tutorial && (TACTICS_EX_SKILLS_RELEASE || debugBattle === true);
 // 画面へ並べる仕組み。中に出せるモードが1つも無いものは、準備中の枠としてだけ出す
 const visibleBattleSystems = ({ debugBattle = false } = {}) =>
   BATTLE_SYSTEMS.filter(s => battleSystemModes(s.id, { debugBattle }).length > 0
