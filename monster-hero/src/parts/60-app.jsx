@@ -10201,6 +10201,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       durationText:TACTICS_EX_DURATION_TEXT[def.duration]||null,
       implemented:isTacticsExEffectImplemented(def),
       // いまの力・丈夫さ(EXが乗っていればそのぶんも)。捨て身・片手持ちの効き目を数字で確かめられるように
+      // 距離枠に出す短い札。切り替え式はいまの状態(二刀流／片手持ち)、効いている間は「◯◯中」、ふだんは「EX」
+      // (2026-09-23 ユーザー指示「現在二刀流中か片手持ち中か分かるようにしたい」)
+      badge:(()=>{
+        const toggle=tacticsExToggleLabel(def,state,slotIdx,mon.id);
+        if(toggle) return { text:toggle, active:isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow) };
+        if(isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)) return { text:`${def.name}中`, active:true };
+        return { text:'EX', active:false };
+      })(),
       stats:(()=>{ const u=tacticsUnits[slotIdx]; if(!u) return null;
         const b=applyTacticsExStats(normalizeTacticsUnit(u),state,slotIdx,tacticsExNow);
         return { atk:b.atk, def:b.def, changed:b.atk!==u.atk||b.def!==u.def }; })(),
@@ -17736,6 +17744,11 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
     const u=tacticsUnits[i];
     if(!mon||!u) return null;
     const aptPct=(getMonsterAptPct(mon,specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty),wave)[i]||0)*100;
+    // ★EXスキルで変わった力・丈夫さも、戦闘で実際に使う値で出す(2026-09-23 ユーザー指示
+    //   「ステータスにもわかるように反映させたい」)。変わっている値は色を変え、元の値を添える
+    const exInfo=tacticsExInfo(i);
+    const exStats=exInfo&&exInfo.stats&&exInfo.stats.changed?exInfo.stats:null;
+    const statCell=(label,cls,base,now,key)=>(<div><div className={`text-[8px] font-black ${cls}`}>{label}</div><div data-tactics-status-stat={key} className={`text-[12px] font-mono font-black ${now!==base?'text-fuchsia-200':''}`}>{now}{now!==base&&<span className="text-[8px] text-slate-400">（元{base}）</span>}</div></div>);
     return (<div key={i} data-tactics-status-slot={i} className={`rounded-2xl border px-2.5 py-1.5 ${u.downed?'border-emerald-500/50 bg-emerald-950/40':'border-white/10 bg-black/40'}`}>
       <div className="flex items-center justify-between gap-2">
         <b className="text-[12px] font-black truncate">{RANGE_LABELS[i]}距離・{mon.masuName||mon.name}</b>
@@ -17743,11 +17756,12 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
       </div>
       <div className="mt-1 grid grid-cols-4 gap-1 text-center">
         <div><div className="text-[8px] font-black text-pink-400">ライフ</div><div className="text-[12px] font-mono font-black">{u.hp}<span className="text-[9px] text-slate-500">/{u.maxHp}</span></div></div>
-        <div><div className="text-[8px] font-black text-red-400">ちから</div><div className="text-[12px] font-mono font-black">{u.atk}</div></div>
-        <div><div className="text-[8px] font-black text-emerald-400">丈夫さ</div><div className="text-[12px] font-mono font-black">{u.def}</div></div>
+        {statCell('ちから','text-red-400',u.atk,exStats?exStats.atk:u.atk,'atk')}
+        {statCell('丈夫さ','text-emerald-400',u.def,exStats?exStats.def:u.def,'def')}
         <div><div className="text-[8px] font-black text-amber-400">ガッツ</div><div className="text-[12px] font-mono font-black">{u.guts}<span className="text-[9px] text-slate-500">/{u.maxGuts}</span></div></div>
       </div>
       <div className="mt-0.5 text-[9px] font-black text-cyan-300">この枠の距離適性 {aptPct>=0?'+':''}{Math.round(aptPct*10)/10}%</div>
+      {exInfo&&<div data-tactics-status-ex={i} className="mt-0.5 text-[9px] font-black text-fuchsia-200">EX「{exInfo.def.name}」{exInfo.toggleLabel?`：いまは${exInfo.toggleLabel}`:(exInfo.active?'：効果中':'')}{exInfo.remaining.unlimited?'':`（のこり ${exInfo.remaining.left}/${exInfo.remaining.max}）`}</div>}
     </div>);
   })}
 </div>)}{/* ★タクティクスは1体ずつなので、パーティの合計・平均の欄そのものを出さない

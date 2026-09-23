@@ -265,6 +265,15 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
     if (dbg !== 'ok') throw new Error(dbg);
     const gSlot = await heroSlot();
     check('ゴーレムの枠にEXの印が出る', await page.locator(`[data-tactics-ex-mark="${gSlot}"]`).count() === 1, `枠${gSlot}`);
+    // ★名前の行へ札を入れると名前が切れる(2026-09-23 ユーザー指摘「名前が切れてる」)。
+    //   EXの札は枠の中の縦積みへ入れ、名前の行は今までどおり名前だけにする
+    const nameCut = await page.evaluate((slot) => {
+      const b = document.querySelector(`button[data-slot-index="${slot}"]`);
+      const row = b && b.querySelector('.truncate');
+      return row ? { text: row.textContent, cut: row.scrollWidth > row.clientWidth + 1, exInRow: !!row.parentElement.querySelector('[data-tactics-ex-mark]') } : null;
+    }, gSlot);
+    check('EXの札は名前の行に入らない(名前を押し出さない)', !!nameCut && !nameCut.exInRow, JSON.stringify(nameCut));
+    check('使う前の札は「EX」', await page.locator(`[data-tactics-ex-mark="${gSlot}"]`).getAttribute('data-tactics-ex-state') === 'EX');
     // 空いている枠(EXを持つ子がいない)をタップしても何も開かない
     const empty = [0, 1, 2, 3].find(i => i !== gSlot);
     await tapSlot(empty);
@@ -304,6 +313,23 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
     p = await panel();
     check('使うと残りが 3→2 に減る', !!p && /2 \/ 3/.test(p.uses), p && p.uses);
     if (released) check('捨て身: 力220/丈夫さ150 → 力295/丈夫さ0 になる', !!p && /295／0/.test(p.text), p && p.text.slice(0, 220));
+    await closePanel();
+    check('効いているあいだは枠の札が「捨て身中」になる', await page.locator(`[data-tactics-ex-mark="${gSlot}"]`).getAttribute('data-tactics-ex-state') === '捨て身中');
+    // ステータス画面(HERO SCAN)にも、戦闘で使う値で出る(2026-09-23 ユーザー指示)
+    await page.locator('button[aria-label="勇者モンのステータス"]').dispatchEvent('click');
+    await page.waitForTimeout(600);
+    const scan = await page.evaluate((slot) => {
+      const row = document.querySelector(`[data-tactics-status-slot="${slot}"]`);
+      if (!row) return null;
+      const t = (k) => (row.querySelector(`[data-tactics-status-stat="${k}"]`)?.textContent || '').trim();
+      return { atk: t('atk'), def: t('def'), ex: (row.querySelector('[data-tactics-status-ex]')?.textContent || '').trim() };
+    }, gSlot);
+    check('ステータス画面にも 力295(元220)・丈夫さ0(元150)・EXの状態が出る', !!scan && /^295/.test(scan.atk) && /元220/.test(scan.atk)
+      && /^0/.test(scan.def) && /元150/.test(scan.def) && /捨て身/.test(scan.ex) && /効果中/.test(scan.ex), JSON.stringify(scan));
+    await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => x.textContent.trim() === '戻る' && x.offsetParent); if (b) b.click(); });
+    await page.waitForTimeout(500);
+    await tapSlot(gSlot);
+    p = await panel();
     check('同じターンにもう一度は使えない', !!p && !p.canUse, p && p.why);
     await closePanel();
     const cardLimitAfter = await page.evaluate(() => (document.body.innerText.match(/Action Cards\s*\d+\/(\d+)/i) || [])[1]);

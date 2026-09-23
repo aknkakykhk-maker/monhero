@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a92815c0c8b04991
+// source-sha256: 66088057c9d8701f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4e1766997d5727cd
+// generated-sha256: 09c50015df1c7f4b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-23 11:31"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-23 12:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -40323,6 +40323,8 @@ function BattleScreen({
     //   ★連撃は1発ずつ並べると合計が読めない(2026-09-22 ユーザー指摘)ので、
     //     合計を先に出し、1発ずつの内訳を小さく添える
     const slotAimHit = slotAimed ? plannedHitWithCover(i) : null;
+    // この子のEXスキル(タクティクスだけ。持っていなければ null)
+    const slotExInfo = tacticsExInfo ? tacticsExInfo(i) : null;
     return /*#__PURE__*/React.createElement("button", {
       key: i,
       "data-slot-index": i,
@@ -40451,10 +40453,7 @@ function BattleScreen({
       className: `text-[10px] font-black truncate uppercase leading-none ${isHeroSlotMon(s) ? 'text-amber-100' : 'text-white'}`
     }, s?.name || '---'), assignedCount > 0 && /*#__PURE__*/React.createElement("span", {
       className: "ml-1 text-[10px] font-black text-indigo-300"
-    }, "\xD7", assignedCount), tacticsExInfo && tacticsExInfo(i) && /*#__PURE__*/React.createElement("span", {
-      "data-tactics-ex-mark": i,
-      className: "ml-1 shrink-0 text-[8px] font-black leading-none text-fuchsia-300"
-    }, "EX"), slotBuffMarks.map(mark => /*#__PURE__*/React.createElement("span", {
+    }, "\xD7", assignedCount), slotBuffMarks.map(mark => /*#__PURE__*/React.createElement("span", {
       key: mark.text,
       "data-tactics-slot-buff": mark.text,
       className: `ml-1 shrink-0 text-[8px] font-black leading-none ${mark.cls}`
@@ -40518,10 +40517,24 @@ function BattleScreen({
           fontSize: '7px'
         }
       }, "\uD83D\uDEE1 ", slotRushGuard ? '連撃ガード' : '全体', " ", gv);
-    })(), (slotAssignedCards.length > 0 || previewDmg > 0 || previewGuard > 0 || slotAimHit) && /*#__PURE__*/React.createElement("div", {
+    })(), (slotAssignedCards.length > 0 || previewDmg > 0 || previewGuard > 0 || slotAimHit || slotExInfo) && /*#__PURE__*/React.createElement("div", {
       "data-tactics-slot-marks": true,
       className: "absolute top-0 left-0 right-0 flex flex-col gap-px items-center z-[60] pointer-events-none px-0.5"
-    }, slotAssignedCards.map(({
+    }, slotExInfo && /*#__PURE__*/React.createElement("div", {
+      "data-tactics-ex-mark": i,
+      "data-tactics-ex-state": slotExInfo.badge.text,
+      className: `flex max-w-full items-center gap-0.5 rounded px-1 py-0.5 leading-none shadow ${slotExInfo.badge.active ? 'bg-fuchsia-600 text-white ring-1 ring-fuchsia-200' : 'bg-black/70 text-fuchsia-200 ring-1 ring-fuchsia-400/60'}`
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: '7px'
+      },
+      className: "shrink-0 font-black"
+    }, "EX"), slotExInfo.badge.text !== 'EX' && /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: '8px'
+      },
+      className: "truncate min-w-0 font-black"
+    }, slotExInfo.badge.text)), slotAssignedCards.map(({
       idx,
       card
     }) => {
@@ -56755,6 +56768,23 @@ function MonsterHeroGame() {
       durationText: TACTICS_EX_DURATION_TEXT[def.duration] || null,
       implemented: isTacticsExEffectImplemented(def),
       // いまの力・丈夫さ(EXが乗っていればそのぶんも)。捨て身・片手持ちの効き目を数字で確かめられるように
+      // 距離枠に出す短い札。切り替え式はいまの状態(二刀流／片手持ち)、効いている間は「◯◯中」、ふだんは「EX」
+      // (2026-09-23 ユーザー指示「現在二刀流中か片手持ち中か分かるようにしたい」)
+      badge: (() => {
+        const toggle = tacticsExToggleLabel(def, state, slotIdx, mon.id);
+        if (toggle) return {
+          text: toggle,
+          active: isTacticsExEffectActive(state, slotIdx, mon.id, tacticsExNow)
+        };
+        if (isTacticsExEffectActive(state, slotIdx, mon.id, tacticsExNow)) return {
+          text: `${def.name}中`,
+          active: true
+        };
+        return {
+          text: 'EX',
+          active: false
+        };
+      })(),
       stats: (() => {
         const u = tacticsUnits[slotIdx];
         if (!u) return null;
@@ -71922,6 +71952,18 @@ function MonsterHeroGame() {
       const u = tacticsUnits[i];
       if (!mon || !u) return null;
       const aptPct = (getMonsterAptPct(mon, specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty), wave)[i] || 0) * 100;
+      // ★EXスキルで変わった力・丈夫さも、戦闘で実際に使う値で出す(2026-09-23 ユーザー指示
+      //   「ステータスにもわかるように反映させたい」)。変わっている値は色を変え、元の値を添える
+      const exInfo = tacticsExInfo(i);
+      const exStats = exInfo && exInfo.stats && exInfo.stats.changed ? exInfo.stats : null;
+      const statCell = (label, cls, base, now, key) => /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+        className: `text-[8px] font-black ${cls}`
+      }, label), /*#__PURE__*/React.createElement("div", {
+        "data-tactics-status-stat": key,
+        className: `text-[12px] font-mono font-black ${now !== base ? 'text-fuchsia-200' : ''}`
+      }, now, now !== base && /*#__PURE__*/React.createElement("span", {
+        className: "text-[8px] text-slate-400"
+      }, "\uFF08\u5143", base, "\uFF09")));
       return /*#__PURE__*/React.createElement("div", {
         key: i,
         "data-tactics-status-slot": i,
@@ -71940,15 +71982,7 @@ function MonsterHeroGame() {
         className: "text-[12px] font-mono font-black"
       }, u.hp, /*#__PURE__*/React.createElement("span", {
         className: "text-[9px] text-slate-500"
-      }, "/", u.maxHp))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-        className: "text-[8px] font-black text-red-400"
-      }, "\u3061\u304B\u3089"), /*#__PURE__*/React.createElement("div", {
-        className: "text-[12px] font-mono font-black"
-      }, u.atk)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-        className: "text-[8px] font-black text-emerald-400"
-      }, "\u4E08\u592B\u3055"), /*#__PURE__*/React.createElement("div", {
-        className: "text-[12px] font-mono font-black"
-      }, u.def)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+      }, "/", u.maxHp))), statCell('ちから', 'text-red-400', u.atk, exStats ? exStats.atk : u.atk, 'atk'), statCell('丈夫さ', 'text-emerald-400', u.def, exStats ? exStats.def : u.def, 'def'), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
         className: "text-[8px] font-black text-amber-400"
       }, "\u30AC\u30C3\u30C4"), /*#__PURE__*/React.createElement("div", {
         className: "text-[12px] font-mono font-black"
@@ -71956,7 +71990,10 @@ function MonsterHeroGame() {
         className: "text-[9px] text-slate-500"
       }, "/", u.maxGuts)))), /*#__PURE__*/React.createElement("div", {
         className: "mt-0.5 text-[9px] font-black text-cyan-300"
-      }, "\u3053\u306E\u67A0\u306E\u8DDD\u96E2\u9069\u6027 ", aptPct >= 0 ? '+' : '', Math.round(aptPct * 10) / 10, "%"));
+      }, "\u3053\u306E\u67A0\u306E\u8DDD\u96E2\u9069\u6027 ", aptPct >= 0 ? '+' : '', Math.round(aptPct * 10) / 10, "%"), exInfo && /*#__PURE__*/React.createElement("div", {
+        "data-tactics-status-ex": i,
+        className: "mt-0.5 text-[9px] font-black text-fuchsia-200"
+      }, "EX\u300C", exInfo.def.name, "\u300D", exInfo.toggleLabel ? `：いまは${exInfo.toggleLabel}` : exInfo.active ? '：効果中' : '', exInfo.remaining.unlimited ? '' : `（のこり ${exInfo.remaining.left}/${exInfo.remaining.max}）`));
     })), !isTacticsMode(runMode) && /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-2 gap-6 text-left"
     }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
