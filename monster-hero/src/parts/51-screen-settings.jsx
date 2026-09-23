@@ -19,7 +19,7 @@
 //   (横画面で「左＝見出し・助手 / 右＝メニュー」に組み替わるのも、この形が条件)
 // ・メニューの1行は menuClass ひとつに寄せた。高さ(64px)・角丸・枠線・押した手応えを
 //   ここでだけ決める。「ゲームを更新」だけ余白と枠色がずれていたのも同じ型に入れた
-function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onOpenBackup, onOpenHelp, onOpenGameUpdate, gameUpdateDisabled, onReturnToTitle, updateNoticeStyle, onChangeUpdateNoticeStyle }) {
+function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onOpenBackup, onOpenHelp, onOpenGameUpdate, gameUpdateDisabled, onReturnToTitle, updateNoticeStyle, onChangeUpdateNoticeStyle, battleScreenStyle, onChangeBattleScreenStyle }) {
   const menuClass = 'mh-button mh-button-secondary w-full min-h-[64px] flex items-center justify-center rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 font-black active:scale-[.98]';
   return (
     <div data-mh-screen className={SCREEN_SHELL_CLASS}>
@@ -30,6 +30,21 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
         <button type="button" onClick={onOpenBgmArrangement} className={menuClass}>BGMアレンジ</button>
         <button type="button" onClick={onOpenBackup} className={menuClass}>データ引き継ぎ</button>
         <button type="button" onClick={onOpenHelp} className={menuClass}>ヘルプ</button>
+        <div data-battle-screen-setting className={`${SCREEN_PANEL_CLASS} w-full text-left`}>
+          <b className="block text-[13px] font-black text-slate-200">バトル画面</b>
+          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">使用するバトル画面を選びます。タクティクス旧／新は表示だけが切り替わり、戦闘ルールは共通です。</p>
+          <div className="mt-2 grid grid-cols-3 gap-2">
+            {BATTLE_SCREEN_STYLE_LABELS.map(option => (
+              <button key={option.id} type="button" data-battle-screen-style={option.id}
+                aria-pressed={battleScreenStyle === option.id}
+                onClick={() => onChangeBattleScreenStyle(option.id)}
+                className={`flex min-h-[58px] flex-col items-center justify-center rounded-xl px-1 py-1.5 text-[10px] font-black leading-tight active:scale-95 ${battleScreenStyle === option.id ? 'border border-cyan-400 bg-cyan-600 text-white' : 'border border-white/10 bg-slate-950 text-slate-300'}`}>
+                <span className="block">{option.label}</span>
+                <small className="mt-0.5 block text-[9px] font-bold opacity-80">{option.note}</small>
+              </button>
+            ))}
+          </div>
+        </div>
         <button type="button" onClick={onOpenGameUpdate} disabled={gameUpdateDisabled} className={`${menuClass} flex-col disabled:opacity-40`}><span className="block text-cyan-200">ゲームを更新</span><span className="mt-1 block text-[10px] text-slate-400">最新のゲームデータを読み込みます</span></button>
         {/* 新しいバージョンのお知らせ(画面へ出るバナー)の出し方。
             2026-09-12・ユーザー依頼「更新バナーのオンオフをゲーム上の設定で出来るようにしたい」。

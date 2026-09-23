@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4408c73f37252547
+// source-sha256: 48dcb9c4df1836f8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8cc41d8f570b6e26
+// generated-sha256: cab138ae7f060050
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -150,6 +150,22 @@ const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
 const UPDATE_NOTICE_STYLES = ['FULL', 'MINI', 'OFF'];
 const normalizeUpdateNoticeStyle = value => UPDATE_NOTICE_STYLES.includes(String(value)) ? String(value) : 'FULL';
 const UPDATE_NOTICE_STYLE_KEY = 'mh_update_notice_style_v1';
+const BATTLE_SCREEN_STYLES = ['CLASSIC', 'TACTICS_OLD', 'TACTICS_NEW'];
+const normalizeBattleScreenStyle = value => BATTLE_SCREEN_STYLES.includes(String(value)) ? String(value) : 'TACTICS_NEW';
+const BATTLE_SCREEN_STYLE_KEY = 'mh_battle_screen_style_v1';
+const BATTLE_SCREEN_STYLE_LABELS = Object.freeze([{
+  id: 'CLASSIC',
+  label: 'クラシック',
+  note: '従来のバトル画面'
+}, {
+  id: 'TACTICS_OLD',
+  label: 'タクティクス旧',
+  note: '従来のタクティクス表示'
+}, {
+  id: 'TACTICS_NEW',
+  label: 'タクティクス新',
+  note: '2×2の新しい表示'
+}]);
 const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   id: 'FULL',
   label: 'ふつう',
@@ -163,7 +179,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-23 22:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-23 23:02"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -28753,7 +28769,9 @@ function SettingsScreen({
   gameUpdateDisabled,
   onReturnToTitle,
   updateNoticeStyle,
-  onChangeUpdateNoticeStyle
+  onChangeUpdateNoticeStyle,
+  battleScreenStyle,
+  onChangeBattleScreenStyle
 }) {
   const menuClass = 'mh-button mh-button-secondary w-full min-h-[64px] flex items-center justify-center rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 font-black active:scale-[.98]';
   return /*#__PURE__*/React.createElement("div", {
@@ -28786,7 +28804,27 @@ function SettingsScreen({
     type: "button",
     onClick: onOpenHelp,
     className: menuClass
-  }, "\u30D8\u30EB\u30D7"), /*#__PURE__*/React.createElement("button", {
+  }, "\u30D8\u30EB\u30D7"), /*#__PURE__*/React.createElement("div", {
+    "data-battle-screen-setting": true,
+    className: `${SCREEN_PANEL_CLASS} w-full text-left`
+  }, /*#__PURE__*/React.createElement("b", {
+    className: "block text-[13px] font-black text-slate-200"
+  }, "\u30D0\u30C8\u30EB\u753B\u9762"), /*#__PURE__*/React.createElement("p", {
+    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
+  }, "\u4F7F\u7528\u3059\u308B\u30D0\u30C8\u30EB\u753B\u9762\u3092\u9078\u3073\u307E\u3059\u3002\u30BF\u30AF\u30C6\u30A3\u30AF\u30B9\u65E7\uFF0F\u65B0\u306F\u8868\u793A\u3060\u3051\u304C\u5207\u308A\u66FF\u308F\u308A\u3001\u6226\u95D8\u30EB\u30FC\u30EB\u306F\u5171\u901A\u3067\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
+    className: "mt-2 grid grid-cols-3 gap-2"
+  }, BATTLE_SCREEN_STYLE_LABELS.map(option => /*#__PURE__*/React.createElement("button", {
+    key: option.id,
+    type: "button",
+    "data-battle-screen-style": option.id,
+    "aria-pressed": battleScreenStyle === option.id,
+    onClick: () => onChangeBattleScreenStyle(option.id),
+    className: `flex min-h-[58px] flex-col items-center justify-center rounded-xl px-1 py-1.5 text-[10px] font-black leading-tight active:scale-95 ${battleScreenStyle === option.id ? 'border border-cyan-400 bg-cyan-600 text-white' : 'border border-white/10 bg-slate-950 text-slate-300'}`
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "block"
+  }, option.label), /*#__PURE__*/React.createElement("small", {
+    className: "mt-0.5 block text-[9px] font-bold opacity-80"
+  }, option.note))))), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: onOpenGameUpdate,
     disabled: gameUpdateDisabled,
@@ -38422,6 +38460,7 @@ function BattleScreen({
   battleIntimidate,
   battleScenarioRef,
   battleScreenActive,
+  battleScreenStyle,
   battleSoulMasus,
   battleSpeed,
   battleTutorial,
@@ -38566,10 +38605,9 @@ function BattleScreen({
   //   中身は毎回 tacticsExInfo から引き直す(回数・使えるかは開いたあとも変わるため、開いた時点の値を持たない)
   const [exPanelSlot, setExPanelSlot] = useState(null);
   const exPanel = exPanelSlot != null && tacticsExInfo ? tacticsExInfo(exPanelSlot) : null;
-  // 新タクティクスUIの確認版。デバッグ戦だけで有効にし、通常プレイの表示・挙動は一切変えない。
-  // タクティクス自体が現在はデバッグのバトルモード入口からだけ起動できるため、
-  // 途中で debugBattle が解除されても確認UIを維持する。公開時は専用フラグへ切り替える。
-  const tacticsDebugLayout = Array.isArray(tacticsUnits);
+  // タクティクスの戦闘ロジックは旧/新UIで共通。ここでは表示だけを設定値で切り替える。
+  // tacticsUnits の有無は「タクティクス戦か」の判定として維持し、CLASSICでは新UIを出さない。
+  const tacticsNewLayout = Array.isArray(tacticsUnits) && normalizeBattleScreenStyle(battleScreenStyle) === 'TACTICS_NEW';
   // ★いま狙われている枠(2026-09-21 ユーザー指摘「誰に攻撃か分からない」)。
   //   間合い攻撃は相手を1体決めず「予告した間合いに立っている子」へ当たるので、
   //   ほかの技と違って targetName を持たない。予告を見ても間合いしか分からなかった。
@@ -39131,7 +39169,7 @@ function BattleScreen({
     const intentTitle = enemyIntent.type === 'CHARGE' && enemyIntent.category ? enemyIntent.category : enemyIntent.label;
     return /*#__PURE__*/React.createElement("div", {
       "data-enemy-intent": true,
-      className: `absolute right-2 bottom-1 z-[45] w-[100px] rounded-xl border px-1.5 py-1 shadow-lg animate-pulse${battleTutorialSpotClass('enemyIntent')} ${focusedCard && !tacticsDebugLayout ? 'invisible' : 'visible'} ${tone}`
+      className: `absolute right-2 bottom-1 z-[45] w-[100px] rounded-xl border px-1.5 py-1 shadow-lg animate-pulse${battleTutorialSpotClass('enemyIntent')} ${focusedCard && !tacticsNewLayout ? 'invisible' : 'visible'} ${tone}`
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex items-center gap-1 text-[8px] font-black uppercase tracking-wider opacity-80"
     }, /*#__PURE__*/React.createElement(Target, {
@@ -39669,7 +39707,7 @@ function BattleScreen({
       style: compactPopupStyle,
       className: `text-center ${p.color} font-black whitespace-nowrap px-4 ${liteBattleView ? 'rounded-lg border border-white/20 bg-slate-950/95 py-1 text-base' : 'drop-shadow-[0_0_15px_rgba(0,0,0,1)]'}`
     }, p.text)));
-  })())), !tacticsDebugLayout && Array.isArray(tacticsUnits) && enemy && (() => {
+  })())), !tacticsNewLayout && Array.isArray(tacticsUnits) && enemy && (() => {
     const moveTo = enemyNextIntent && enemyNextIntent.type === 'MOVE' && Number.isFinite(enemyNextIntent.targetDist) ? enemyNextIntent.targetDist : null;
     const here = Number.isFinite(enemyDist) ? enemyDist : 0;
     return /*#__PURE__*/React.createElement("div", {
@@ -39895,9 +39933,9 @@ function BattleScreen({
     return /*#__PURE__*/React.createElement("div", {
       "data-battle-buffs": chips.length,
       "data-battle-buffs-mode": buffDetail ? 'detail' : 'icon',
-      className: `shrink-0 w-full max-w-[360px] mx-auto px-2 bg-slate-950 relative z-[40] flex flex-col justify-center pt-1 pb-0.5 ${focusedCard && !tacticsDebugLayout ? 'invisible' : 'visible'}`
+      className: `shrink-0 w-full max-w-[360px] mx-auto px-2 bg-slate-950 relative z-[40] flex flex-col justify-center pt-1 pb-0.5 ${focusedCard && !tacticsNewLayout ? 'invisible' : 'visible'}`
     }, /*#__PURE__*/React.createElement("div", {
-      className: `flex items-start gap-1 ${focusedCard && tacticsDebugLayout ? 'invisible' : 'visible'}`
+      className: `flex items-start gap-1 ${focusedCard && tacticsNewLayout ? 'invisible' : 'visible'}`
     }, buffDetail ? /*#__PURE__*/React.createElement("div", {
       "data-battle-buff-list": true,
       className: "flex-1 min-w-0 flex flex-wrap justify-center gap-1 overflow-y-auto mh-scroll",
@@ -40055,8 +40093,8 @@ function BattleScreen({
         //   ★2つは**横に並べて**折り返す。縦に積むと出た瞬間に舞台が46px縮む
         React.createElement("div", {
           "data-battle-total-preview": true,
-          "data-tactics-preview-band": tacticsDebugLayout ? 'buff-overlay' : undefined,
-          className: `${tacticsDebugLayout ? 'absolute left-1/2 top-0 z-[65] w-max max-w-[78%] -translate-x-1/2 -translate-y-full pb-1' : 'mt-1 w-full'} flex ${tacticsDebugLayout ? 'flex-col' : 'flex-wrap'} items-center justify-center gap-x-2 gap-y-0.5 pointer-events-none`
+          "data-tactics-preview-band": tacticsNewLayout ? 'buff-overlay' : undefined,
+          className: `${tacticsNewLayout ? 'absolute left-1/2 top-0 z-[65] w-max max-w-[78%] -translate-x-1/2 -translate-y-full pb-1' : 'mt-1 w-full'} flex ${tacticsNewLayout ? 'flex-col' : 'flex-wrap'} items-center justify-center gap-x-2 gap-y-0.5 pointer-events-none`
         }, showDmg && /*#__PURE__*/React.createElement("div", {
           className: `flex items-center gap-1.5 px-2 py-0.5 rounded-full border shadow-lg ${showProjected ? 'bg-yellow-950/90 border-yellow-500/70' : 'bg-red-950/90 border-red-500/50'} backdrop-blur-sm`
         }, /*#__PURE__*/React.createElement(Sword, {
@@ -40194,10 +40232,10 @@ function BattleScreen({
       backgroundColor: 'rgba(2,6,23,0.8)'
     }
   }, p.text))))), /*#__PURE__*/React.createElement("div", {
-    "data-tactics-debug-layout": tacticsDebugLayout ? '2x2' : undefined,
-    className: `grid ${tacticsDebugLayout ? 'grid-cols-2 grid-rows-2 gap-1.5' : 'grid-cols-4 gap-2'} w-full relative shrink-0${battleTutorialSpotClass('battleSlots')}`,
+    "data-tactics-debug-layout": tacticsNewLayout ? '2x2' : undefined,
+    className: `grid ${tacticsNewLayout ? 'grid-cols-2 grid-rows-2 gap-1.5' : 'grid-cols-4 gap-2'} w-full relative shrink-0${battleTutorialSpotClass('battleSlots')}`,
     style: {
-      height: tacticsDebugLayout ? 'clamp(196px,23dvh,214px)' : 'clamp(152px,18dvh,168px)'
+      height: tacticsNewLayout ? 'clamp(196px,23dvh,214px)' : 'clamp(152px,18dvh,168px)'
     }
   }, slots.map((s, i) => {
     // Count how many cards already assigned to this slot
@@ -40404,8 +40442,8 @@ function BattleScreen({
         }
       },
       disabled: isBusy || autoBattle,
-      className: `relative ${tacticsDebugLayout ? 'rounded-[18px] border grid grid-cols-[40%_60%] grid-rows-[18px_minmax(0,1fr)] items-stretch bg-[linear-gradient(145deg,rgba(15,23,42,.88),rgba(5,10,24,.96))] backdrop-blur-[3px] shadow-[inset_0_1px_0_rgba(255,255,255,.09),inset_0_0_18px_rgba(99,102,241,.035),0_7px_20px_rgba(0,0,0,.24)]' : 'rounded-2xl border-2 flex flex-col items-stretch'} overflow-visible transition-all ${RANGE_STYLES[i].slotGlow || ''} ${tacticsDebugLayout ? '' : RANGE_STYLES[i].bg} ${distanceBroken ? 'border-red-400' : tacticsDebugLayout ? 'border-white/[.10]' : ' ' + RANGE_STYLES[i].border} ${canAssign || dragState?.active && dragOverSlot === i ? 'ring-2 ring-yellow-400 scale-105 z-10 shadow-lg animate-pulse' : 'opacity-100'} ${assignedCount > 0 ? 'ring-2 ring-indigo-500/80' : ''} ${tacticsDebugLayout && !s ? 'opacity-65 shadow-none border-white/[.06]' : ''} ${dragState?.active && dragOverSlot === i ? 'ring-4 ring-green-400 scale-110' : ''} ${slotSettle === i ? 'ring-4 ring-white' : ''}`,
-      style: isAnimating && !tacticsDebugLayout ? {
+      className: `relative ${tacticsNewLayout ? 'rounded-[18px] border grid grid-cols-[40%_60%] grid-rows-[18px_minmax(0,1fr)] items-stretch bg-[linear-gradient(145deg,rgba(15,23,42,.88),rgba(5,10,24,.96))] backdrop-blur-[3px] shadow-[inset_0_1px_0_rgba(255,255,255,.09),inset_0_0_18px_rgba(99,102,241,.035),0_7px_20px_rgba(0,0,0,.24)]' : 'rounded-2xl border-2 flex flex-col items-stretch'} overflow-visible transition-all ${RANGE_STYLES[i].slotGlow || ''} ${tacticsNewLayout ? '' : RANGE_STYLES[i].bg} ${distanceBroken ? 'border-red-400' : tacticsNewLayout ? 'border-white/[.10]' : ' ' + RANGE_STYLES[i].border} ${canAssign || dragState?.active && dragOverSlot === i ? 'ring-2 ring-yellow-400 scale-105 z-10 shadow-lg animate-pulse' : 'opacity-100'} ${assignedCount > 0 ? 'ring-2 ring-indigo-500/80' : ''} ${tacticsNewLayout && !s ? 'opacity-65 shadow-none border-white/[.06]' : ''} ${dragState?.active && dragOverSlot === i ? 'ring-4 ring-green-400 scale-110' : ''} ${slotSettle === i ? 'ring-4 ring-white' : ''}`,
+      style: isAnimating && !tacticsNewLayout ? {
         zIndex: 9999,
         animation: attackMotionAnimation(attackAnim)
       } : distanceBroken ? {
@@ -40494,17 +40532,17 @@ function BattleScreen({
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-2xl font-black"
     }, "\u26A0"))), /*#__PURE__*/React.createElement("div", {
-      className: `${tacticsDebugLayout ? 'col-span-2 row-start-1 h-[18px] justify-start gap-0.5 pr-[72px] backdrop-blur-sm' : 'h-[18px] justify-center'} shrink-0 flex items-center px-1 border-b z-20 ${isHeroSlotMon(s) ? 'bg-amber-400/10 border-amber-200/20' : 'bg-white/[.025] border-white/[.055]'}`
-    }, tacticsDebugLayout && /*#__PURE__*/React.createElement("span", {
+      className: `${tacticsNewLayout ? 'col-span-2 row-start-1 h-[18px] justify-start gap-0.5 pr-[72px] backdrop-blur-sm' : 'h-[18px] justify-center'} shrink-0 flex items-center px-1 border-b z-20 ${isHeroSlotMon(s) ? 'bg-amber-400/10 border-amber-200/20' : 'bg-white/[.025] border-white/[.055]'}`
+    }, tacticsNewLayout && /*#__PURE__*/React.createElement("span", {
       className: `mr-1 shrink-0 rounded px-1 py-0.5 text-[8px] font-black leading-none ${RANGE_STYLES[i].labelBg}`
     }, RANGE_LABELS[i]), isHeroSlotMon(s) && /*#__PURE__*/React.createElement(Crown, {
       size: 8,
       className: "shrink-0 mr-0.5 text-amber-300"
     }), /*#__PURE__*/React.createElement("span", {
       className: `text-[10px] font-black truncate uppercase leading-none ${isHeroSlotMon(s) ? 'text-amber-100' : 'text-white'}`
-    }, s?.name || '---'), assignedCount > 0 && !tacticsDebugLayout && /*#__PURE__*/React.createElement("span", {
+    }, s?.name || '---'), assignedCount > 0 && !tacticsNewLayout && /*#__PURE__*/React.createElement("span", {
       className: "ml-1 text-[10px] font-black text-indigo-300"
-    }, "\xD7", assignedCount), tacticsDebugLayout && slotExInfo && /*#__PURE__*/React.createElement("span", {
+    }, "\xD7", assignedCount), tacticsNewLayout && slotExInfo && /*#__PURE__*/React.createElement("span", {
       "data-tactics-ex-mark": i,
       "data-tactics-ex-state": slotExInfo.badge.text,
       className: `absolute right-1 top-[3px] max-w-[68px] truncate rounded px-1 py-0.5 text-[8px] font-black leading-none ${slotExInfo.badge.active ? 'bg-fuchsia-600 text-white ring-1 ring-fuchsia-200' : 'bg-black/70 text-fuchsia-200 ring-1 ring-fuchsia-400/60'}`
@@ -40524,7 +40562,7 @@ function BattleScreen({
           if (isBusy || autoBattleRef.current) return;
           cycleActiveUniqueForSlot(i);
         },
-        className: `${tacticsDebugLayout ? 'absolute left-1 top-[20px]' : 'shrink-0'} z-20 flex items-center justify-center gap-0.5 bg-purple-700/90 border-b border-purple-300/50 py-0.5 active:scale-95${autoBattle ? ' opacity-40' : ''}`
+        className: `${tacticsNewLayout ? 'absolute left-1 top-[20px]' : 'shrink-0'} z-20 flex items-center justify-center gap-0.5 bg-purple-700/90 border-b border-purple-300/50 py-0.5 active:scale-95${autoBattle ? ' opacity-40' : ''}`
       }, /*#__PURE__*/React.createElement(RefreshCcw, {
         size: 7,
         className: "text-white"
@@ -40532,9 +40570,9 @@ function BattleScreen({
         className: "text-[10px] font-black text-white leading-none"
       }, "\u56FA\u6709\u6280 ", curIdx + 1, "/", uOptions.length));
     })(), /*#__PURE__*/React.createElement("div", {
-      "data-tactics-attack-content": tacticsDebugLayout ? 'content-only' : undefined,
-      className: `${tacticsDebugLayout ? 'col-start-1 row-start-2 min-h-0' : 'flex-1'} flex flex-col items-center justify-center relative`,
-      style: isAnimating && tacticsDebugLayout ? {
+      "data-tactics-attack-content": tacticsNewLayout ? 'content-only' : undefined,
+      className: `${tacticsNewLayout ? 'col-start-1 row-start-2 min-h-0' : 'flex-1'} flex flex-col items-center justify-center relative`,
+      style: isAnimating && tacticsNewLayout ? {
         zIndex: 9999,
         animation: attackMotionAnimation(attackAnim)
       } : undefined
@@ -40564,7 +40602,7 @@ function BattleScreen({
       className: "text-white",
       strokeWidth: 4
     }))), /*#__PURE__*/React.createElement("div", {
-      className: `absolute inset-0 rounded-[17px] ${RANGE_STYLES[i].slotBg} ${tacticsDebugLayout ? 'opacity-[.07]' : 'opacity-20'} pointer-events-none`
+      className: `absolute inset-0 rounded-[17px] ${RANGE_STYLES[i].slotBg} ${tacticsNewLayout ? 'opacity-[.07]' : 'opacity-20'} pointer-events-none`
     }), guardPlanBySlot && (() => {
       if (!slotRushGuard && !slotSpreadGuard) return null;
       const gv = tacticsSlotGuardValue(guardPlanBySlot, i);
@@ -40572,18 +40610,18 @@ function BattleScreen({
       return /*#__PURE__*/React.createElement("div", {
         "data-tactics-guard-total": gv,
         "data-tactics-guard-kind": slotRushGuard ? 'rush' : 'spread',
-        className: `absolute ${tacticsDebugLayout ? 'left-1 top-[22px]' : 'bottom-0.5 left-0.5'} z-[61] rounded border px-1 py-0.5 font-black leading-none pointer-events-none ${slotRushGuard ? 'border-amber-200 bg-amber-600/95 text-white' : 'border-sky-300/60 bg-sky-800/90 text-sky-50'}`,
+        className: `absolute ${tacticsNewLayout ? 'left-1 top-[22px]' : 'bottom-0.5 left-0.5'} z-[61] rounded border px-1 py-0.5 font-black leading-none pointer-events-none ${slotRushGuard ? 'border-amber-200 bg-amber-600/95 text-white' : 'border-sky-300/60 bg-sky-800/90 text-sky-50'}`,
         style: {
           fontSize: '7px'
         }
       }, "\uD83D\uDEE1 ", slotRushGuard ? '連撃ガード' : '全体', " ", gv);
     })(), (slotAssignedCards.length > 0 || previewDmg > 0 || previewGuard > 0 || slotAimHit || slotExInfo) && /*#__PURE__*/React.createElement("div", {
       "data-tactics-slot-marks": true,
-      className: `${tacticsDebugLayout ? 'absolute top-1 left-full h-[42px] w-[150%] overflow-hidden items-stretch justify-start px-2' : 'absolute top-0 left-0 right-0 items-center px-0.5'} flex flex-col gap-px z-[60] pointer-events-none`
-    }, tacticsDebugLayout && assignedCount > 0 && /*#__PURE__*/React.createElement("div", {
+      className: `${tacticsNewLayout ? 'absolute top-1 left-full h-[42px] w-[150%] overflow-hidden items-stretch justify-start px-2' : 'absolute top-0 left-0 right-0 items-center px-0.5'} flex flex-col gap-px z-[60] pointer-events-none`
+    }, tacticsNewLayout && assignedCount > 0 && /*#__PURE__*/React.createElement("div", {
       "data-tactics-assigned-count": assignedCount,
       className: "self-end rounded bg-indigo-950/85 px-1 py-0.5 text-[7px] font-black leading-none text-indigo-200 ring-1 ring-indigo-400/40"
-    }, "\u30AB\u30FC\u30C9\xD7", assignedCount), !tacticsDebugLayout && slotExInfo && /*#__PURE__*/React.createElement("div", {
+    }, "\u30AB\u30FC\u30C9\xD7", assignedCount), !tacticsNewLayout && slotExInfo && /*#__PURE__*/React.createElement("div", {
       "data-tactics-ex-mark": i,
       "data-tactics-ex-state": slotExInfo.badge.text,
       className: `flex max-w-full items-center gap-0.5 rounded px-1 py-0.5 leading-none shadow ${slotExInfo.badge.active ? 'bg-fuchsia-600 text-white ring-1 ring-fuchsia-200' : 'bg-black/70 text-fuchsia-200 ring-1 ring-fuchsia-400/60'}`
@@ -40637,7 +40675,7 @@ function BattleScreen({
         },
         className: "font-black text-emerald-100 leading-none shrink-0"
       }, "-", gv));
-    }), !tacticsDebugLayout && (previewDmg > 0 || previewGuard > 0 || slotAimHit) && /*#__PURE__*/React.createElement("div", {
+    }), !tacticsNewLayout && (previewDmg > 0 || previewGuard > 0 || slotAimHit) && /*#__PURE__*/React.createElement("div", {
       className: "flex w-full flex-wrap items-start justify-between gap-0.5"
     }, previewGuard > 0 && /*#__PURE__*/React.createElement("div", {
       "data-tactics-guard-preview": previewGuard,
@@ -40677,7 +40715,7 @@ function BattleScreen({
         animation: 'idleSpark 900ms ease-in-out infinite',
         animationDelay: `${deg * 2}ms`
       }
-    }, "\u26A1"))), tacticsDebugLayout && (previewDmg > 0 || previewGuard > 0 || slotAimHit) && /*#__PURE__*/React.createElement("div", {
+    }, "\u26A1"))), tacticsNewLayout && (previewDmg > 0 || previewGuard > 0 || slotAimHit) && /*#__PURE__*/React.createElement("div", {
       "data-tactics-image-previews": true,
       className: "absolute left-1 top-1 z-[63] flex max-w-[calc(100%-6px)] flex-wrap items-start gap-0.5 pointer-events-none"
     }, previewDmg > 0 && /*#__PURE__*/React.createElement("span", {
@@ -40705,8 +40743,8 @@ function BattleScreen({
         alt: s.name,
         masuColors: s.colors,
         style: {
-          width: tacticsDebugLayout ? '58px' : '64px',
-          height: tacticsDebugLayout ? '58px' : '64px'
+          width: tacticsNewLayout ? '58px' : '64px',
+          height: tacticsNewLayout ? '58px' : '64px'
         },
         className: "object-contain drop-shadow-md"
       })
@@ -40717,8 +40755,8 @@ function BattleScreen({
         alt: s.name,
         masuColors: s.colors,
         style: {
-          width: tacticsDebugLayout ? '58px' : '64px',
-          height: tacticsDebugLayout ? '58px' : '64px'
+          width: tacticsNewLayout ? '58px' : '64px',
+          height: tacticsNewLayout ? '58px' : '64px'
         },
         className: "z-10 object-contain drop-shadow-md"
       }),
@@ -40731,8 +40769,8 @@ function BattleScreen({
         alt: s.name,
         masuColors: s.colors,
         style: {
-          width: tacticsDebugLayout ? '58px' : '64px',
-          height: tacticsDebugLayout ? '58px' : '64px'
+          width: tacticsNewLayout ? '58px' : '64px',
+          height: tacticsNewLayout ? '58px' : '64px'
         },
         className: "z-10 object-contain drop-shadow-md"
       }),
@@ -40745,8 +40783,8 @@ function BattleScreen({
         alt: s.name,
         masuColors: s.colors,
         style: {
-          width: tacticsDebugLayout ? '58px' : '64px',
-          height: tacticsDebugLayout ? '58px' : '64px'
+          width: tacticsNewLayout ? '58px' : '64px',
+          height: tacticsNewLayout ? '58px' : '64px'
         },
         className: "z-10 object-contain drop-shadow-md"
       }),
@@ -40758,8 +40796,8 @@ function BattleScreen({
       alt: s.name,
       masuColors: s.colors,
       style: {
-        width: tacticsDebugLayout ? '58px' : '64px',
-        height: tacticsDebugLayout ? '58px' : '64px'
+        width: tacticsNewLayout ? '58px' : '64px',
+        height: tacticsNewLayout ? '58px' : '64px'
       },
       className: "z-10 object-contain drop-shadow-md"
     }) : /*#__PURE__*/React.createElement("span", {
@@ -40786,7 +40824,7 @@ function BattleScreen({
         "data-tactics-hp": `${tacticsUnit.hp}/${tacticsUnit.maxHp}`,
         "data-tactics-guts": `${tacticsUnit.guts}/${tacticsUnit.maxGuts}`,
         "data-tactics-downed": tacticsUnit.downed ? 'true' : 'false',
-        className: `${tacticsDebugLayout ? 'absolute right-0 bottom-[3px] w-[60%] min-w-0 border-l flex flex-col justify-end py-px px-2 gap-0 backdrop-blur-sm' : 'shrink-0 border-t px-1'} z-20 border-white/[.06] bg-[linear-gradient(90deg,rgba(8,15,31,.86),rgba(15,23,42,.72))]${battleTutorialSpotClass('tacticsParty')}`
+        className: `${tacticsNewLayout ? 'absolute right-0 bottom-[3px] w-[60%] min-w-0 border-l flex flex-col justify-end py-px px-2 gap-0 backdrop-blur-sm' : 'shrink-0 border-t px-1'} z-20 border-white/[.06] bg-[linear-gradient(90deg,rgba(8,15,31,.86),rgba(15,23,42,.72))]${battleTutorialSpotClass('tacticsParty')}`
       }, /*#__PURE__*/React.createElement("div", {
         className: "flex h-[10px] items-center justify-between leading-none"
       }, /*#__PURE__*/React.createElement("span", {
@@ -40832,7 +40870,7 @@ function BattleScreen({
           boxShadow: '0 0 6px rgba(251,191,36,.55)'
         }
       })));
-    })(), !tacticsDebugLayout && /*#__PURE__*/React.createElement("div", {
+    })(), !tacticsNewLayout && /*#__PURE__*/React.createElement("div", {
       className: "h-[20px] shrink-0 ${RANGE_STYLES[i].labelBg} flex items-center justify-center border-t border-white/20 z-20"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-[10px] font-black uppercase tracking-tighter leading-none"
@@ -41017,11 +41055,11 @@ function BattleScreen({
           filter: 'drop-shadow(0 12px 18px rgba(0,0,0,0.65))'
         } : {
           touchAction: 'none',
-          boxShadow: tacticsDebugLayout ? `${(TYPE_INLINE_STYLE[c.type] || {}).borderColor ? `0 -2px 10px ${(TYPE_INLINE_STYLE[c.type] || {}).borderColor}45, ` : ''}inset 0 1px 0 rgba(255,255,255,.08), 0 5px 12px rgba(0,0,0,.24)` : `${(TYPE_INLINE_STYLE[c.type] || {}).borderColor ? `0 0 12px ${(TYPE_INLINE_STYLE[c.type] || {}).borderColor}70, ` : ''}inset 0 1px 0 rgba(255,255,255,.34), inset 0 -10px 16px rgba(0,0,0,.30), 0 4px 10px rgba(0,0,0,.5)`
+          boxShadow: tacticsNewLayout ? `${(TYPE_INLINE_STYLE[c.type] || {}).borderColor ? `0 -2px 10px ${(TYPE_INLINE_STYLE[c.type] || {}).borderColor}45, ` : ''}inset 0 1px 0 rgba(255,255,255,.08), 0 5px 12px rgba(0,0,0,.24)` : `${(TYPE_INLINE_STYLE[c.type] || {}).borderColor ? `0 0 12px ${(TYPE_INLINE_STYLE[c.type] || {}).borderColor}70, ` : ''}inset 0 1px 0 rgba(255,255,255,.34), inset 0 -10px 16px rgba(0,0,0,.30), 0 4px 10px rgba(0,0,0,.5)`
         }),
         ...(TYPE_INLINE_STYLE[c.type] || {})
       },
-      className: `relative w-full ${tacticsDebugLayout ? 'rounded-[12px] border' : 'rounded-xl border-2'} p-1 flex flex-col items-center justify-between bg-gradient-to-b ${TYPE_COLORS[c.type]} ${isDragging ? 'ring-4 ring-white shadow-[0_0_24px_rgba(255,255,255,0.6)]' : isSel ? 'transition-all -translate-y-1.5 ring-2 ring-cyan-300 z-20 scale-[1.03] opacity-90 saturate-[0.95] shadow-[0_0_16px_rgba(103,232,249,0.45)]' : 'transition-all opacity-90'} ${isPending ? 'ring-4 ring-yellow-400 animate-pulse shadow-[0_0_20px_rgba(250,204,21,0.7)]' : ''} ${!isSelectable && !isSel && !isDragging ? 'grayscale opacity-50' : ''}${tutorialTargeted ? ' is-battle-tutorial-spot' : ''}${battleTutorialCardTarget && !tutorialTargeted ? ' grayscale opacity-25' : ''}`
+      className: `relative w-full ${tacticsNewLayout ? 'rounded-[12px] border' : 'rounded-xl border-2'} p-1 flex flex-col items-center justify-between bg-gradient-to-b ${TYPE_COLORS[c.type]} ${isDragging ? 'ring-4 ring-white shadow-[0_0_24px_rgba(255,255,255,0.6)]' : isSel ? 'transition-all -translate-y-1.5 ring-2 ring-cyan-300 z-20 scale-[1.03] opacity-90 saturate-[0.95] shadow-[0_0_16px_rgba(103,232,249,0.45)]' : 'transition-all opacity-90'} ${isPending ? 'ring-4 ring-yellow-400 animate-pulse shadow-[0_0_20px_rgba(250,204,21,0.7)]' : ''} ${!isSelectable && !isSel && !isDragging ? 'grayscale opacity-50' : ''}${tutorialTargeted ? ' is-battle-tutorial-spot' : ''}${battleTutorialCardTarget && !tutorialTargeted ? ' grayscale opacity-25' : ''}`
     }, isSel && !assignedMon && /*#__PURE__*/React.createElement("div", {
       className: "absolute top-0.5 left-0.5 z-30 w-5 h-5 rounded-full bg-cyan-400 border-2 border-white flex items-center justify-center shadow-lg"
     }, /*#__PURE__*/React.createElement(Check, {
@@ -44960,6 +44998,12 @@ function MonsterHeroGame() {
     setUpdateNoticeStyleState(value);
     storeSet(UPDATE_NOTICE_STYLE_KEY, value, false);
   };
+  const [battleScreenStyle, setBattleScreenStyleState] = useState('TACTICS_NEW');
+  const setBattleScreenStyle = next => {
+    const value = normalizeBattleScreenStyle(next);
+    setBattleScreenStyleState(value);
+    storeSet(BATTLE_SCREEN_STYLE_KEY, value, false);
+  };
   const [showGameUpdateConfirm, setShowGameUpdateConfirm] = useState(false);
   const [gameUpdatePending, setGameUpdatePending] = useState(false);
   const gameUpdatePendingRef = useRef(false);
@@ -48894,6 +48938,7 @@ function MonsterHeroGame() {
       battleSpeedRef.current = savedBattleSpeed;
       setBattleSpeed(savedBattleSpeed);
       setUpdateNoticeStyleState(normalizeUpdateNoticeStyle(await storeGet(UPDATE_NOTICE_STYLE_KEY, 'FULL', false)));
+      setBattleScreenStyleState(normalizeBattleScreenStyle(await storeGet(BATTLE_SCREEN_STYLE_KEY, 'TACTICS_NEW', false)));
       const savedSeVolume = await storeGet('mh_se_volume', DEFAULT_VOLUME, false);
       setSeVolumeState(savedSeVolume);
       const savedBgmVolume = await storeGet('mh_bgm_volume', DEFAULT_VOLUME, false);
@@ -64559,7 +64604,9 @@ function MonsterHeroGame() {
       gameUpdateDisabled: showGameUpdateConfirm || gameUpdatePending,
       onReturnToTitle: () => setShowOfficialTitleConfirm(true),
       updateNoticeStyle: updateNoticeStyle,
-      onChangeUpdateNoticeStyle: setUpdateNoticeStyle
+      onChangeUpdateNoticeStyle: setUpdateNoticeStyle,
+      battleScreenStyle: battleScreenStyle,
+      onChangeBattleScreenStyle: setBattleScreenStyle
     }), gameState === 'MASU_PATTERN_DEBUG' && (() => {
       // 所持しているマスモンに加えて、所持していない種も表示用の一時データで並べる
       // (2026-09-17・ユーザー指摘「今は見れないものが多い」)。模様は元から保存しないので、
@@ -69669,6 +69716,7 @@ function MonsterHeroGame() {
       battleIntimidate: battleIntimidate,
       battleScenarioRef: battleScenarioRef,
       battleScreenActive: gameState === 'BATTLE',
+      battleScreenStyle: battleScreenStyle,
       battleSoulMasus: battleSoulMasus,
       battleSpeed: battleSpeed,
       battleTutorial: battleTutorial,

@@ -80,12 +80,21 @@ const UPDATE_NOTICE_STYLES = ['FULL', 'MINI', 'OFF'];
 const normalizeUpdateNoticeStyle = (value) =>
   UPDATE_NOTICE_STYLES.includes(String(value)) ? String(value) : 'FULL';
 const UPDATE_NOTICE_STYLE_KEY = 'mh_update_notice_style_v1';
+const BATTLE_SCREEN_STYLES = ['CLASSIC', 'TACTICS_OLD', 'TACTICS_NEW'];
+const normalizeBattleScreenStyle = (value) =>
+  BATTLE_SCREEN_STYLES.includes(String(value)) ? String(value) : 'TACTICS_NEW';
+const BATTLE_SCREEN_STYLE_KEY = 'mh_battle_screen_style_v1';
+const BATTLE_SCREEN_STYLE_LABELS = Object.freeze([
+  { id:'CLASSIC', label:'クラシック', note:'従来のバトル画面' },
+  { id:'TACTICS_OLD', label:'タクティクス旧', note:'従来のタクティクス表示' },
+  { id:'TACTICS_NEW', label:'タクティクス新', note:'2×2の新しい表示' },
+]);
 const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'FULL', label: 'ふつう', note: '横いっぱいに出す' },
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-23 22:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-23 23:02"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない

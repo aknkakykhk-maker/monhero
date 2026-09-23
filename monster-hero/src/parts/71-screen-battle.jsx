@@ -38,7 +38,7 @@ const kindOfTacticsSlotFx = (fx) => {
 //   本体から battleScreenActive として渡している(綴りだけの違い)
 function BattleScreen({
   applyTurnDamageReduction, attackAnim, autoBattle, autoBattleRef, autoRepeat, battleIntimidate,
-  battleScenarioRef, battleScreenActive, battleSoulMasus, battleSpeed, battleTutorial,
+  battleScenarioRef, battleScreenActive, battleScreenStyle, battleSoulMasus, battleSpeed, battleTutorial,
   battleTutorialAllowsEmergency, battleTutorialCardAllowed, battleTutorialCardKind,
   battleTutorialCardTarget, battleTutorialNeed, battleTutorialNeedCard, battleTutorialSpotClass,
   battleTutorialStep, cardAssignments, cardDragActiveRef, cardEffectMultiplier, cardLimit, makeCardHalveCounter,
@@ -77,10 +77,9 @@ function BattleScreen({
   //   中身は毎回 tacticsExInfo から引き直す(回数・使えるかは開いたあとも変わるため、開いた時点の値を持たない)
   const [exPanelSlot, setExPanelSlot] = useState(null);
   const exPanel = exPanelSlot!=null&&tacticsExInfo ? tacticsExInfo(exPanelSlot) : null;
-  // 新タクティクスUIの確認版。デバッグ戦だけで有効にし、通常プレイの表示・挙動は一切変えない。
-  // タクティクス自体が現在はデバッグのバトルモード入口からだけ起動できるため、
-  // 途中で debugBattle が解除されても確認UIを維持する。公開時は専用フラグへ切り替える。
-  const tacticsDebugLayout = Array.isArray(tacticsUnits);
+  // タクティクスの戦闘ロジックは旧/新UIで共通。ここでは表示だけを設定値で切り替える。
+  // tacticsUnits の有無は「タクティクス戦か」の判定として維持し、CLASSICでは新UIを出さない。
+  const tacticsNewLayout = Array.isArray(tacticsUnits) && normalizeBattleScreenStyle(battleScreenStyle) === 'TACTICS_NEW';
   // ★いま狙われている枠(2026-09-21 ユーザー指摘「誰に攻撃か分からない」)。
   //   間合い攻撃は相手を1体決めず「予告した間合いに立っている子」へ当たるので、
   //   ほかの技と違って targetName を持たない。予告を見ても間合いしか分からなかった。
@@ -421,7 +420,7 @@ function BattleScreen({
             const intentTitle=enemyIntent.type==='CHARGE'&&enemyIntent.category?enemyIntent.category:enemyIntent.label;
             return (
               <div data-enemy-intent
-                className={`absolute right-2 bottom-1 z-[45] w-[100px] rounded-xl border px-1.5 py-1 shadow-lg animate-pulse${battleTutorialSpotClass('enemyIntent')} ${focusedCard&&!tacticsDebugLayout?'invisible':'visible'} ${tone}`}>
+                className={`absolute right-2 bottom-1 z-[45] w-[100px] rounded-xl border px-1.5 py-1 shadow-lg animate-pulse${battleTutorialSpotClass('enemyIntent')} ${focusedCard&&!tacticsNewLayout?'invisible':'visible'} ${tone}`}>
                 <div className="flex items-center gap-1 text-[8px] font-black uppercase tracking-wider opacity-80"><Target size={9}/>次の行動</div>
                 <div className="mt-0.5 text-[11px] font-black leading-tight">{intentTitle}</div>
                 {aimedName?<div className="mt-0.5 truncate text-[9px] font-bold leading-none opacity-90">🎯{aimedName}</div>:null}
@@ -706,7 +705,7 @@ function BattleScreen({
               線の上の位置と枠が目で結びつく。
             ★移動の予告が出ているときは、動く先を点線の印で同じ線の上に出す。
               「次のターンに間合いが変わる」が、吹き出しを読まなくても分かる */}
-        {!tacticsDebugLayout&&Array.isArray(tacticsUnits)&&enemy&&(()=>{
+        {!tacticsNewLayout&&Array.isArray(tacticsUnits)&&enemy&&(()=>{
           const moveTo=enemyNextIntent&&enemyNextIntent.type==='MOVE'&&Number.isFinite(enemyNextIntent.targetDist)
             ?enemyNextIntent.targetDist:null;
           const here=Number.isFinite(enemyDist)?enemyDist:0;
@@ -843,7 +842,7 @@ function BattleScreen({
             if(!chips.length) return null;
             return (
               <div data-battle-buffs={chips.length} data-battle-buffs-mode={buffDetail?'detail':'icon'}
-                className={`shrink-0 w-full max-w-[360px] mx-auto px-2 bg-slate-950 relative z-[40] flex flex-col justify-center pt-1 pb-0.5 ${focusedCard&&!tacticsDebugLayout?'invisible':'visible'}`}>
+                className={`shrink-0 w-full max-w-[360px] mx-auto px-2 bg-slate-950 relative z-[40] flex flex-col justify-center pt-1 pb-0.5 ${focusedCard&&!tacticsNewLayout?'invisible':'visible'}`}>
                 {/* 「詳細」を開いたときに伸びてよいのは**3段まで**(2026-09-22 ユーザー指示
                     「最大3列ぐらいまで伸びてあとはスクロールでみれるようにして」)。
                     ★札は23px、2段目からの行送りは26px。3段 = 23 + 26×2 = 75px。
@@ -852,7 +851,7 @@ function BattleScreen({
                       左下のステータスが絵に重なる(実測: 375×667 で舞台が120pxまで潰れた)。
                     ★アイコン表示のほうは何個増えても1行のまま(横スクロール)なので、
                       ふだんは距離帯との位置関係が動かない */}
-                <div className={`flex items-start gap-1 ${focusedCard&&tacticsDebugLayout?'invisible':'visible'}`}>
+                <div className={`flex items-start gap-1 ${focusedCard&&tacticsNewLayout?'invisible':'visible'}`}>
                   {buffDetail?(
                     <div data-battle-buff-list className="flex-1 min-w-0 flex flex-wrap justify-center gap-1 overflow-y-auto mh-scroll" style={{maxHeight:'75px'}}>
                       {chips.map(c=>(<div key={c.key} className={`text-[11px] font-black bg-black/60 px-2 py-0.5 rounded border flex items-center gap-1 shadow-lg ${c.tone}${c.pulse?' animate-pulse':''}`}>{c.mark} {c.label}{c.value?` ${c.value}`:''}</div>))}
@@ -957,7 +956,7 @@ function BattleScreen({
               //   ★高さを持つのは出ているあいだだけ。空けておく場所は作らない(舞台が低い端末で
               //     いちばん困るのは敵の絵なので、使わないときは敵へ返す)
               //   ★2つは**横に並べて**折り返す。縦に積むと出た瞬間に舞台が46px縮む
-              <div data-battle-total-preview data-tactics-preview-band={tacticsDebugLayout?'buff-overlay':undefined} className={`${tacticsDebugLayout?'absolute left-1/2 top-0 z-[65] w-max max-w-[78%] -translate-x-1/2 -translate-y-full pb-1':'mt-1 w-full'} flex ${tacticsDebugLayout?'flex-col':'flex-wrap'} items-center justify-center gap-x-2 gap-y-0.5 pointer-events-none`}>
+              <div data-battle-total-preview data-tactics-preview-band={tacticsNewLayout?'buff-overlay':undefined} className={`${tacticsNewLayout?'absolute left-1/2 top-0 z-[65] w-max max-w-[78%] -translate-x-1/2 -translate-y-full pb-1':'mt-1 w-full'} flex ${tacticsNewLayout?'flex-col':'flex-wrap'} items-center justify-center gap-x-2 gap-y-0.5 pointer-events-none`}>
                 {showDmg&&(
                 <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border shadow-lg ${showProjected?'bg-yellow-950/90 border-yellow-500/70':'bg-red-950/90 border-red-500/50'} backdrop-blur-sm`}>
                   <Sword size={11} className={showProjected?'text-yellow-400':'text-red-400'}/>
@@ -1016,7 +1015,7 @@ function BattleScreen({
           {/* 味方の枠。高さは中身の合計で決まる(名前18 + 絵64 + ライフ/ガッツ + 距離ラベル20)。
               ★枠は overflow-visible なので、足りないと下へはみ出して手札の帯に食い込む。
                 ライフ・ガッツをラベル付きで整列させたとき(2026-09-22)に実際はみ出した */}
-          <div data-tactics-debug-layout={tacticsDebugLayout?'2x2':undefined} className={`grid ${tacticsDebugLayout?'grid-cols-2 grid-rows-2 gap-1.5':'grid-cols-4 gap-2'} w-full relative shrink-0${battleTutorialSpotClass('battleSlots')}`} style={{height:tacticsDebugLayout?'clamp(196px,23dvh,214px)':'clamp(152px,18dvh,168px)'}}>
+          <div data-tactics-debug-layout={tacticsNewLayout?'2x2':undefined} className={`grid ${tacticsNewLayout?'grid-cols-2 grid-rows-2 gap-1.5':'grid-cols-4 gap-2'} w-full relative shrink-0${battleTutorialSpotClass('battleSlots')}`} style={{height:tacticsNewLayout?'clamp(196px,23dvh,214px)':'clamp(152px,18dvh,168px)'}}>
             {slots.map((s,i)=>{
               // Count how many cards already assigned to this slot
               const assignedCount=Object.values(cardAssignments).filter(v=>v===i).length;
@@ -1161,7 +1160,7 @@ function BattleScreen({
                   // 自分で開けたなら、使い方案内はもう要らない
                   if(tacticsExIntroVisible&&dismissTacticsExIntro) dismissTacticsExIntro();
                 }
-              }} disabled={isBusy||autoBattle} className={`relative ${tacticsDebugLayout?'rounded-[18px] border grid grid-cols-[40%_60%] grid-rows-[18px_minmax(0,1fr)] items-stretch bg-[linear-gradient(145deg,rgba(15,23,42,.88),rgba(5,10,24,.96))] backdrop-blur-[3px] shadow-[inset_0_1px_0_rgba(255,255,255,.09),inset_0_0_18px_rgba(99,102,241,.035),0_7px_20px_rgba(0,0,0,.24)]':'rounded-2xl border-2 flex flex-col items-stretch'} overflow-visible transition-all ${RANGE_STYLES[i].slotGlow||''} ${tacticsDebugLayout?'':RANGE_STYLES[i].bg} ${distanceBroken?'border-red-400':tacticsDebugLayout?'border-white/[.10]':' '+RANGE_STYLES[i].border} ${(canAssign||(dragState?.active&&dragOverSlot===i))?'ring-2 ring-yellow-400 scale-105 z-10 shadow-lg animate-pulse':'opacity-100'} ${assignedCount>0?'ring-2 ring-indigo-500/80':''} ${tacticsDebugLayout&&!s?'opacity-65 shadow-none border-white/[.06]':''} ${dragState?.active&&dragOverSlot===i?'ring-4 ring-green-400 scale-110':''} ${slotSettle===i?'ring-4 ring-white':''}`} style={isAnimating&&!tacticsDebugLayout?{zIndex:9999, animation:attackMotionAnimation(attackAnim)}:(distanceBroken?{backgroundColor:distanceBreakLevel>=2?'rgb(12,2,5)':'rgb(24,5,25)',boxShadow:`inset 0 0 0 ${Math.min(4,distanceBreakLevel+1)}px rgba(248,113,113,.95), inset 0 0 ${28+distanceBreakLevel*8}px rgba(76,5,25,.98), 0 0 ${9+distanceBreakLevel*4}px rgba(220,38,38,.65)`,...(slotHitShake||{})}:(slotSettle===i?{animation:'slotSettle 400ms ease-out'}:(slotHitShake||undefined)))}>
+              }} disabled={isBusy||autoBattle} className={`relative ${tacticsNewLayout?'rounded-[18px] border grid grid-cols-[40%_60%] grid-rows-[18px_minmax(0,1fr)] items-stretch bg-[linear-gradient(145deg,rgba(15,23,42,.88),rgba(5,10,24,.96))] backdrop-blur-[3px] shadow-[inset_0_1px_0_rgba(255,255,255,.09),inset_0_0_18px_rgba(99,102,241,.035),0_7px_20px_rgba(0,0,0,.24)]':'rounded-2xl border-2 flex flex-col items-stretch'} overflow-visible transition-all ${RANGE_STYLES[i].slotGlow||''} ${tacticsNewLayout?'':RANGE_STYLES[i].bg} ${distanceBroken?'border-red-400':tacticsNewLayout?'border-white/[.10]':' '+RANGE_STYLES[i].border} ${(canAssign||(dragState?.active&&dragOverSlot===i))?'ring-2 ring-yellow-400 scale-105 z-10 shadow-lg animate-pulse':'opacity-100'} ${assignedCount>0?'ring-2 ring-indigo-500/80':''} ${tacticsNewLayout&&!s?'opacity-65 shadow-none border-white/[.06]':''} ${dragState?.active&&dragOverSlot===i?'ring-4 ring-green-400 scale-110':''} ${slotSettle===i?'ring-4 ring-white':''}`} style={isAnimating&&!tacticsNewLayout?{zIndex:9999, animation:attackMotionAnimation(attackAnim)}:(distanceBroken?{backgroundColor:distanceBreakLevel>=2?'rgb(12,2,5)':'rgb(24,5,25)',boxShadow:`inset 0 0 0 ${Math.min(4,distanceBreakLevel+1)}px rgba(248,113,113,.95), inset 0 0 ${28+distanceBreakLevel*8}px rgba(76,5,25,.98), 0 0 ${9+distanceBreakLevel*4}px rgba(220,38,38,.65)`,...(slotHitShake||{})}:(slotSettle===i?{animation:'slotSettle 400ms ease-out'}:(slotHitShake||undefined)))}>
                 {/* ★狙われている枠。カードを置ける黄色の輪・ドラッグ中の緑の輪と重ならないよう、
                     輪ではなく枠の内側の線で出す(BREAKと同じ出し方)。全体攻撃なら全員に付く */}
                 {/* ★食らった子の枠そのものを光らせる。数字は一瞬で読み取れないので、
@@ -1215,13 +1214,13 @@ function BattleScreen({
                 </>}
                 {/* 名前の行。勇者モンには王冠を付ける。どれが勇者モンか分からないと
                     「勇者モン選択時だけ効く特性」が効いているのか判断できないため */}
-                <div className={`${tacticsDebugLayout?'col-span-2 row-start-1 h-[18px] justify-start gap-0.5 pr-[72px] backdrop-blur-sm':'h-[18px] justify-center'} shrink-0 flex items-center px-1 border-b z-20 ${isHeroSlotMon(s)?'bg-amber-400/10 border-amber-200/20':'bg-white/[.025] border-white/[.055]'}`}>{tacticsDebugLayout&&<span className={`mr-1 shrink-0 rounded px-1 py-0.5 text-[8px] font-black leading-none ${RANGE_STYLES[i].labelBg}`}>{RANGE_LABELS[i]}</span>}{isHeroSlotMon(s)&&<Crown size={8} className="shrink-0 mr-0.5 text-amber-300"/>}<span className={`text-[10px] font-black truncate uppercase leading-none ${isHeroSlotMon(s)?'text-amber-100':'text-white'}`}>{s?.name||'---'}</span>{assignedCount>0&&!tacticsDebugLayout&&<span className="ml-1 text-[10px] font-black text-indigo-300">×{assignedCount}</span>}{tacticsDebugLayout&&slotExInfo&&(<span data-tactics-ex-mark={i} data-tactics-ex-state={slotExInfo.badge.text} className={`absolute right-1 top-[3px] max-w-[68px] truncate rounded px-1 py-0.5 text-[8px] font-black leading-none ${slotExInfo.badge.active?'bg-fuchsia-600 text-white ring-1 ring-fuchsia-200':'bg-black/70 text-fuchsia-200 ring-1 ring-fuchsia-400/60'}`}>EX{slotExInfo.badge.text!=='EX'?` ${slotExInfo.badge.text}`:''}</span>)}{slotBuffMarks.map(mark=>(<span key={mark.text} data-tactics-slot-buff={mark.text} className={`ml-1 shrink-0 text-[8px] font-black leading-none ${mark.cls}`}>{mark.text}</span>))}</div>
+                <div className={`${tacticsNewLayout?'col-span-2 row-start-1 h-[18px] justify-start gap-0.5 pr-[72px] backdrop-blur-sm':'h-[18px] justify-center'} shrink-0 flex items-center px-1 border-b z-20 ${isHeroSlotMon(s)?'bg-amber-400/10 border-amber-200/20':'bg-white/[.025] border-white/[.055]'}`}>{tacticsNewLayout&&<span className={`mr-1 shrink-0 rounded px-1 py-0.5 text-[8px] font-black leading-none ${RANGE_STYLES[i].labelBg}`}>{RANGE_LABELS[i]}</span>}{isHeroSlotMon(s)&&<Crown size={8} className="shrink-0 mr-0.5 text-amber-300"/>}<span className={`text-[10px] font-black truncate uppercase leading-none ${isHeroSlotMon(s)?'text-amber-100':'text-white'}`}>{s?.name||'---'}</span>{assignedCount>0&&!tacticsNewLayout&&<span className="ml-1 text-[10px] font-black text-indigo-300">×{assignedCount}</span>}{tacticsNewLayout&&slotExInfo&&(<span data-tactics-ex-mark={i} data-tactics-ex-state={slotExInfo.badge.text} className={`absolute right-1 top-[3px] max-w-[68px] truncate rounded px-1 py-0.5 text-[8px] font-black leading-none ${slotExInfo.badge.active?'bg-fuchsia-600 text-white ring-1 ring-fuchsia-200':'bg-black/70 text-fuchsia-200 ring-1 ring-fuchsia-400/60'}`}>EX{slotExInfo.badge.text!=='EX'?` ${slotExInfo.badge.text}`:''}</span>)}{slotBuffMarks.map(mark=>(<span key={mark.text} data-tactics-slot-buff={mark.text} className={`ml-1 shrink-0 text-[8px] font-black leading-none ${mark.cls}`}>{mark.text}</span>))}</div>
                 {(()=>{const uOptions=getAvailableUniquesForSlot(s,ownedUniques,i); if(uOptions.length<2) return null; const curKey=activeSlotUniqueKey(slotUniqueChoice,i,s); const curIdx=Math.max(0,uOptions.findIndex(o=>o.key===curKey));
-                  return(<div onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation(); if(isBusy||autoBattleRef.current)return; cycleActiveUniqueForSlot(i);}} className={`${tacticsDebugLayout?'absolute left-1 top-[20px]':'shrink-0'} z-20 flex items-center justify-center gap-0.5 bg-purple-700/90 border-b border-purple-300/50 py-0.5 active:scale-95${autoBattle?' opacity-40':''}`}>
+                  return(<div onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation(); if(isBusy||autoBattleRef.current)return; cycleActiveUniqueForSlot(i);}} className={`${tacticsNewLayout?'absolute left-1 top-[20px]':'shrink-0'} z-20 flex items-center justify-center gap-0.5 bg-purple-700/90 border-b border-purple-300/50 py-0.5 active:scale-95${autoBattle?' opacity-40':''}`}>
                     <RefreshCcw size={7} className="text-white"/><span className="text-[10px] font-black text-white leading-none">固有技 {curIdx+1}/{uOptions.length}</span>
                   </div>);
                 })()}
-                <div data-tactics-attack-content={tacticsDebugLayout?'content-only':undefined} className={`${tacticsDebugLayout?'col-start-1 row-start-2 min-h-0':'flex-1'} flex flex-col items-center justify-center relative`} style={isAnimating&&tacticsDebugLayout?{zIndex:9999,animation:attackMotionAnimation(attackAnim)}:undefined}>
+                <div data-tactics-attack-content={tacticsNewLayout?'content-only':undefined} className={`${tacticsNewLayout?'col-start-1 row-start-2 min-h-0':'flex-1'} flex flex-col items-center justify-center relative`} style={isAnimating&&tacticsNewLayout?{zIndex:9999,animation:attackMotionAnimation(attackAnim)}:undefined}>
                   {slotSettle===i&&(
                     <div className="absolute inset-0 z-[60] pointer-events-none flex items-center justify-center overflow-visible">
                       <div className="absolute rounded-full border-4 border-cyan-300" style={{width:'40px',height:'40px',animation:'setRing 500ms ease-out forwards'}}></div>
@@ -1229,7 +1228,7 @@ function BattleScreen({
                       <div className="absolute w-8 h-8 rounded-full bg-cyan-400 border-2 border-white flex items-center justify-center shadow-[0_0_16px_rgba(103,232,249,0.9)]" style={{animation:'setPop 500ms cubic-bezier(.2,1.5,.4,1) forwards'}}><Check size={18} className="text-white" strokeWidth={4}/></div>
                     </div>
                   )}
-                  <div className={`absolute inset-0 rounded-[17px] ${RANGE_STYLES[i].slotBg} ${tacticsDebugLayout?'opacity-[.07]':'opacity-20'} pointer-events-none`}></div>
+                  <div className={`absolute inset-0 rounded-[17px] ${RANGE_STYLES[i].slotBg} ${tacticsNewLayout?'opacity-[.07]':'opacity-20'} pointer-events-none`}></div>
                   {/* ★この枠のガードの「まとめ」(2026-09-22 の新仕様)。
                       2枚以上構えた枠は連撃ガードなので**合計値**を出す(ユーザー指示
                       「連撃ガード1987が良いんだけどガードタップ時は単体数値がいくつかは
@@ -1244,7 +1243,7 @@ function BattleScreen({
                     const gv=tacticsSlotGuardValue(guardPlanBySlot,i);
                     if(!(gv>0)) return null;
                     return <div data-tactics-guard-total={gv} data-tactics-guard-kind={slotRushGuard?'rush':'spread'}
-                      className={`absolute ${tacticsDebugLayout?'left-1 top-[22px]':'bottom-0.5 left-0.5'} z-[61] rounded border px-1 py-0.5 font-black leading-none pointer-events-none ${slotRushGuard?'border-amber-200 bg-amber-600/95 text-white':'border-sky-300/60 bg-sky-800/90 text-sky-50'}`}
+                      className={`absolute ${tacticsNewLayout?'left-1 top-[22px]':'bottom-0.5 left-0.5'} z-[61] rounded border px-1 py-0.5 font-black leading-none pointer-events-none ${slotRushGuard?'border-amber-200 bg-amber-600/95 text-white':'border-sky-300/60 bg-sky-800/90 text-sky-50'}`}
                       style={{fontSize:'7px'}}>🛡 {slotRushGuard?'連撃ガード':'全体'} {gv}</div>;
                   })()}
                   {/* ★枠の中に出すものは、ぜんぶこの1本の縦積みに入れる(2026-09-22 ユーザー指摘
@@ -1257,8 +1256,8 @@ function BattleScreen({
                   {/* ★EXスキルの札も同じ縦積みの先頭に入れる。名前の行へ入れると名前が切れる
                       (2026-09-23 ユーザー指摘「名前が切れてる」)。二刀流／片手持ちのような「いまの状態」をここで出す */}
                   {(slotAssignedCards.length>0||previewDmg>0||previewGuard>0||slotAimHit||slotExInfo)&&(
-                    <div data-tactics-slot-marks className={`${tacticsDebugLayout?'absolute top-1 left-full h-[42px] w-[150%] overflow-hidden items-stretch justify-start px-2':'absolute top-0 left-0 right-0 items-center px-0.5'} flex flex-col gap-px z-[60] pointer-events-none`}>
-                      {tacticsDebugLayout&&assignedCount>0&&<div data-tactics-assigned-count={assignedCount} className="self-end rounded bg-indigo-950/85 px-1 py-0.5 text-[7px] font-black leading-none text-indigo-200 ring-1 ring-indigo-400/40">カード×{assignedCount}</div>}{!tacticsDebugLayout&&slotExInfo&&(<div data-tactics-ex-mark={i} data-tactics-ex-state={slotExInfo.badge.text}
+                    <div data-tactics-slot-marks className={`${tacticsNewLayout?'absolute top-1 left-full h-[42px] w-[150%] overflow-hidden items-stretch justify-start px-2':'absolute top-0 left-0 right-0 items-center px-0.5'} flex flex-col gap-px z-[60] pointer-events-none`}>
+                      {tacticsNewLayout&&assignedCount>0&&<div data-tactics-assigned-count={assignedCount} className="self-end rounded bg-indigo-950/85 px-1 py-0.5 text-[7px] font-black leading-none text-indigo-200 ring-1 ring-indigo-400/40">カード×{assignedCount}</div>}{!tacticsNewLayout&&slotExInfo&&(<div data-tactics-ex-mark={i} data-tactics-ex-state={slotExInfo.badge.text}
                         className={`flex max-w-full items-center gap-0.5 rounded px-1 py-0.5 leading-none shadow ${slotExInfo.badge.active?'bg-fuchsia-600 text-white ring-1 ring-fuchsia-200':'bg-black/70 text-fuchsia-200 ring-1 ring-fuchsia-400/60'}`}>
                         <span style={{fontSize:'7px'}} className="shrink-0 font-black">EX</span>
                         {slotExInfo.badge.text!=='EX'&&<span style={{fontSize:'8px'}} className="truncate min-w-0 font-black">{slotExInfo.badge.text}</span>}
@@ -1285,7 +1284,7 @@ function BattleScreen({
                       })}
                       {/* 数字の段。左＝こちらが出すぶん、右＝相手から受けるぶん。
                           横に並べて場所を分けるので、両方出ても重ならない */}
-                      {!tacticsDebugLayout&&(previewDmg>0||previewGuard>0||slotAimHit)&&(
+                      {!tacticsNewLayout&&(previewDmg>0||previewGuard>0||slotAimHit)&&(
                         <div className="flex w-full flex-wrap items-start justify-between gap-0.5">
                           {/* ★枠は4つ並ぶので1つ87pxしかない。字を8pxまで落として、
                               出すぶんと受けるぶんが**横1行に収まる**ようにしてある。
@@ -1312,26 +1311,26 @@ function BattleScreen({
                       ))}
                     </div>
                   )}
-                  {tacticsDebugLayout&&(previewDmg>0||previewGuard>0||slotAimHit)&&(<div data-tactics-image-previews className="absolute left-1 top-1 z-[63] flex max-w-[calc(100%-6px)] flex-wrap items-start gap-0.5 pointer-events-none">{previewDmg>0&&<span data-tactics-damage-preview={previewDmg} className={`rounded px-1 py-0.5 text-[8px] font-black leading-none shadow ring-1 ${isPendingPreview?'bg-yellow-500 text-black ring-yellow-200':'bg-red-600 text-white ring-white/50'}`}>{isPendingPreview&&isPendingHalved?'½':''}攻{previewDmg}</span>}{previewGuard>0&&<span data-tactics-guard-preview={previewGuard} className="rounded bg-emerald-600 px-1 py-0.5 text-[8px] font-black leading-none text-white shadow ring-1 ring-emerald-200">{isPendingGuardHalved?'½':''}守{previewGuard}</span>}{slotAimHit&&<span data-tactics-aimed-damage={slotAimHit.taken} className="rounded border border-red-300 bg-red-950 px-1 py-0.5 text-[8px] font-black leading-none text-red-100 shadow">🎯{slotAimHit.taken>0?`-${slotAimHit.taken}`:''}{slotAimHit.parts.length>1?<span className="ml-0.5 text-[7px] text-red-200/90">{slotAimHit.parts.join('・')}</span>:null}</span>}</div>)}{/* 距離補正は0%でも出す(「補正が無い」ことも情報なので、枠ごとに常に見えるようにする) */}
+                  {tacticsNewLayout&&(previewDmg>0||previewGuard>0||slotAimHit)&&(<div data-tactics-image-previews className="absolute left-1 top-1 z-[63] flex max-w-[calc(100%-6px)] flex-wrap items-start gap-0.5 pointer-events-none">{previewDmg>0&&<span data-tactics-damage-preview={previewDmg} className={`rounded px-1 py-0.5 text-[8px] font-black leading-none shadow ring-1 ${isPendingPreview?'bg-yellow-500 text-black ring-yellow-200':'bg-red-600 text-white ring-white/50'}`}>{isPendingPreview&&isPendingHalved?'½':''}攻{previewDmg}</span>}{previewGuard>0&&<span data-tactics-guard-preview={previewGuard} className="rounded bg-emerald-600 px-1 py-0.5 text-[8px] font-black leading-none text-white shadow ring-1 ring-emerald-200">{isPendingGuardHalved?'½':''}守{previewGuard}</span>}{slotAimHit&&<span data-tactics-aimed-damage={slotAimHit.taken} className="rounded border border-red-300 bg-red-950 px-1 py-0.5 text-[8px] font-black leading-none text-red-100 shadow">🎯{slotAimHit.taken>0?`-${slotAimHit.taken}`:''}{slotAimHit.parts.length>1?<span className="ml-0.5 text-[7px] text-red-200/90">{slotAimHit.parts.join('・')}</span>:null}</span>}</div>)}{/* 距離補正は0%でも出す(「補正が無い」ことも情報なので、枠ごとに常に見えるようにする) */}
                   {(()=>{const totalBonus=distTotalBonus(i); return(<div className={`absolute bottom-0.5 right-0.5 text-[11px] font-black leading-none flex items-center gap-0.5 bg-black/50 px-1 py-0.5 rounded border z-30 ${totalBonus>0?'text-cyan-300 border-cyan-400/30':totalBonus<0?'text-red-300 border-red-400/30':'text-slate-300 border-white/20'}`}><Sword size={5}/>{totalBonus>0?'+':''}{(totalBonus*100).toFixed(1)}%</div>);})()}
                   {s?.imgUrl?(isAnimating&&s.id==='Pandora'&&attackAnim.motion==='pandoraDualThunder'
-                    ?<PandoraDualThunder image={<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsDebugLayout?'58px':'64px',height:tacticsDebugLayout?'58px':'64px'}} className="object-contain drop-shadow-md"/>}/>
+                    ?<PandoraDualThunder image={<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="object-contain drop-shadow-md"/>}/>
                     :isAnimating&&attackAnim.motion==='arkHolyRain'
                       ?<ArkHolyRainMotion
-                        image={<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsDebugLayout?'58px':'64px',height:tacticsDebugLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>}
+                        image={<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>}
                         charging={attackAnim.charge===true}
                         empowered={attackAnim.charge===false}/>
                     :isAnimating&&attackAnim.motion==='waterBurst'
                       ?<WaterBurstMotion
-                        image={<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsDebugLayout?'58px':'64px',height:tacticsDebugLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>}
+                        image={<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>}
                         lunge={attackAnim.charge===false}
                         charging={attackAnim.charge===true}/>
                     :isAnimating&&attackAnim.motion==='miaSongNotes'
                       ?<MiaSongNotesMotion
-                        image={<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsDebugLayout?'58px':'64px',height:tacticsDebugLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>}
+                        image={<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>}
                         lunge={attackAnim.charge===false}
                         charging={attackAnim.charge===true}/>
-                      :<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsDebugLayout?'58px':'64px',height:tacticsDebugLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>):(<span style={{fontSize:'40px'}} className="z-10 drop-shadow-md">{s?.emoji||''}</span>)}
+                      :<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>):(<span style={{fontSize:'40px'}} className="z-10 drop-shadow-md">{s?.emoji||''}</span>)}
                   {/* 倒れた子。カードを置けないことが一目で分かるように覆う */}
                   {tacticsUnit&&tacticsUnit.downed&&(()=>{
                     const revivePct=tacticsUnit.maxHp>0?Math.floor((tacticsUnit.hp/tacticsUnit.maxHp)*100):0;
@@ -1366,7 +1365,7 @@ function BattleScreen({
                       data-tactics-hp={`${tacticsUnit.hp}/${tacticsUnit.maxHp}`}
                       data-tactics-guts={`${tacticsUnit.guts}/${tacticsUnit.maxGuts}`}
                       data-tactics-downed={tacticsUnit.downed?'true':'false'}
-                      className={`${tacticsDebugLayout?'absolute right-0 bottom-[3px] w-[60%] min-w-0 border-l flex flex-col justify-end py-px px-2 gap-0 backdrop-blur-sm':'shrink-0 border-t px-1'} z-20 border-white/[.06] bg-[linear-gradient(90deg,rgba(8,15,31,.86),rgba(15,23,42,.72))]${battleTutorialSpotClass('tacticsParty')}`}>
+                      className={`${tacticsNewLayout?'absolute right-0 bottom-[3px] w-[60%] min-w-0 border-l flex flex-col justify-end py-px px-2 gap-0 backdrop-blur-sm':'shrink-0 border-t px-1'} z-20 border-white/[.06] bg-[linear-gradient(90deg,rgba(8,15,31,.86),rgba(15,23,42,.72))]${battleTutorialSpotClass('tacticsParty')}`}>
                       {/* ★「♥ 500 /500」と左右へ散らしていたのを、ラベルと数値の2つにそろえた
                           (2026-09-22 ユーザー指摘「カードも距離枠も全て安っぽくない？」)。
                           読む順が「何の値か → いくつか」で固定され、4枚並べたときに縦がそろう */}
@@ -1387,7 +1386,7 @@ function BattleScreen({
                     </div>
                   );
                 })()}
-                {!tacticsDebugLayout&&<div className="h-[20px] shrink-0 ${RANGE_STYLES[i].labelBg} flex items-center justify-center border-t border-white/20 z-20"><span className="text-[10px] font-black uppercase tracking-tighter leading-none">{RANGE_LABELS[i]}距離</span></div>}
+                {!tacticsNewLayout&&<div className="h-[20px] shrink-0 ${RANGE_STYLES[i].labelBg} flex items-center justify-center border-t border-white/20 z-20"><span className="text-[10px] font-black uppercase tracking-tighter leading-none">{RANGE_LABELS[i]}距離</span></div>}
               </button>);
             })}
           </div>
@@ -1468,7 +1467,7 @@ function BattleScreen({
                 const pt=e.touches?e.touches[0]:e;
                 cardDragActiveRef.current=false;
                 setDragState({cardIndex:i, x:pt.clientX, y:pt.clientY, active:false, card:c});
-              }} style={{...(isDragging?{touchAction:'none',position:'fixed',left:dragState.x,top:dragState.y,transform:'translate(-50%,-50%) rotate(-3deg) scale(1.15)',zIndex:70000,width:'72px',pointerEvents:'none',transition:'none',filter:'drop-shadow(0 12px 18px rgba(0,0,0,0.65))'}:{touchAction:'none',boxShadow:tacticsDebugLayout?`${(TYPE_INLINE_STYLE[c.type]||{}).borderColor?`0 -2px 10px ${(TYPE_INLINE_STYLE[c.type]||{}).borderColor}45, `:''}inset 0 1px 0 rgba(255,255,255,.08), 0 5px 12px rgba(0,0,0,.24)`:`${(TYPE_INLINE_STYLE[c.type]||{}).borderColor?`0 0 12px ${(TYPE_INLINE_STYLE[c.type]||{}).borderColor}70, `:''}inset 0 1px 0 rgba(255,255,255,.34), inset 0 -10px 16px rgba(0,0,0,.30), 0 4px 10px rgba(0,0,0,.5)`}),...(TYPE_INLINE_STYLE[c.type]||{})}} className={`relative w-full ${tacticsDebugLayout?'rounded-[12px] border':'rounded-xl border-2'} p-1 flex flex-col items-center justify-between bg-gradient-to-b ${TYPE_COLORS[c.type]} ${isDragging?'ring-4 ring-white shadow-[0_0_24px_rgba(255,255,255,0.6)]':isSel?'transition-all -translate-y-1.5 ring-2 ring-cyan-300 z-20 scale-[1.03] opacity-90 saturate-[0.95] shadow-[0_0_16px_rgba(103,232,249,0.45)]':'transition-all opacity-90'} ${isPending?'ring-4 ring-yellow-400 animate-pulse shadow-[0_0_20px_rgba(250,204,21,0.7)]':''} ${!isSelectable&&!isSel&&!isDragging?'grayscale opacity-50':''}${tutorialTargeted?' is-battle-tutorial-spot':''}${battleTutorialCardTarget&&!tutorialTargeted?' grayscale opacity-25':''}`}>
+              }} style={{...(isDragging?{touchAction:'none',position:'fixed',left:dragState.x,top:dragState.y,transform:'translate(-50%,-50%) rotate(-3deg) scale(1.15)',zIndex:70000,width:'72px',pointerEvents:'none',transition:'none',filter:'drop-shadow(0 12px 18px rgba(0,0,0,0.65))'}:{touchAction:'none',boxShadow:tacticsNewLayout?`${(TYPE_INLINE_STYLE[c.type]||{}).borderColor?`0 -2px 10px ${(TYPE_INLINE_STYLE[c.type]||{}).borderColor}45, `:''}inset 0 1px 0 rgba(255,255,255,.08), 0 5px 12px rgba(0,0,0,.24)`:`${(TYPE_INLINE_STYLE[c.type]||{}).borderColor?`0 0 12px ${(TYPE_INLINE_STYLE[c.type]||{}).borderColor}70, `:''}inset 0 1px 0 rgba(255,255,255,.34), inset 0 -10px 16px rgba(0,0,0,.30), 0 4px 10px rgba(0,0,0,.5)`}),...(TYPE_INLINE_STYLE[c.type]||{})}} className={`relative w-full ${tacticsNewLayout?'rounded-[12px] border':'rounded-xl border-2'} p-1 flex flex-col items-center justify-between bg-gradient-to-b ${TYPE_COLORS[c.type]} ${isDragging?'ring-4 ring-white shadow-[0_0_24px_rgba(255,255,255,0.6)]':isSel?'transition-all -translate-y-1.5 ring-2 ring-cyan-300 z-20 scale-[1.03] opacity-90 saturate-[0.95] shadow-[0_0_16px_rgba(103,232,249,0.45)]':'transition-all opacity-90'} ${isPending?'ring-4 ring-yellow-400 animate-pulse shadow-[0_0_20px_rgba(250,204,21,0.7)]':''} ${!isSelectable&&!isSel&&!isDragging?'grayscale opacity-50':''}${tutorialTargeted?' is-battle-tutorial-spot':''}${battleTutorialCardTarget&&!tutorialTargeted?' grayscale opacity-25':''}`}>
                 {isSel&&!assignedMon&&(<div className="absolute top-0.5 left-0.5 z-30 w-5 h-5 rounded-full bg-cyan-400 border-2 border-white flex items-center justify-center shadow-lg"><Check size={10} className="text-white" strokeWidth={4}/></div>)}
                 {assignedMon&&(<div className="absolute top-0.5 right-0.5 z-30 w-5 h-5 rounded-full bg-indigo-600 border-2 border-white flex items-center justify-center overflow-hidden shadow-lg">{assignedMon.imgUrl?<img src={assignedMon.imgUrl} alt="" className="w-full h-full object-contain"/>:<span className="text-[10px]">{assignedMon.emoji}</span>}</div>)}
                 {/* ★data-decoration は「これは絵であって読むものではない」という目じるし。
