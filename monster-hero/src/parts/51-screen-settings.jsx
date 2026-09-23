@@ -31,9 +31,9 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
         <button type="button" onClick={onOpenBackup} className={menuClass}>データ引き継ぎ</button>
         <button type="button" onClick={onOpenHelp} className={menuClass}>ヘルプ</button>
         <div data-battle-screen-setting className={`${SCREEN_PANEL_CLASS} w-full text-left`}>
-          <b className="block text-[13px] font-black text-slate-200">バトル画面</b>
-          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">使用するバトル画面を選びます。タクティクス旧／新は表示だけが切り替わり、戦闘ルールは共通です。</p>
-          <div className="mt-2 grid grid-cols-3 gap-2">
+          <b className="block text-[13px] font-black text-slate-200">タクティクスバトル画面</b>
+          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">タクティクスバトルの表示を選びます。通常のクラシックバトルには影響しません。戦闘ルールは旧／新で共通です。</p>
+          <div className="mt-2 grid grid-cols-2 gap-2">
             {BATTLE_SCREEN_STYLE_LABELS.map(option => (
               <button key={option.id} type="button" data-battle-screen-style={option.id}
                 aria-pressed={battleScreenStyle === option.id}
