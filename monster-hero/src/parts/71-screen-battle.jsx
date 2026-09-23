@@ -1244,7 +1244,7 @@ function BattleScreen({
                     const gv=tacticsSlotGuardValue(guardPlanBySlot,i);
                     if(!(gv>0)) return null;
                     return <div data-tactics-guard-total={gv} data-tactics-guard-kind={slotRushGuard?'rush':'spread'}
-                      className={`absolute ${tacticsDebugLayout?'top-1 right-1':'bottom-0.5 left-0.5'} z-[55] rounded border px-1 py-0.5 font-black leading-none pointer-events-none ${slotRushGuard?'border-amber-200 bg-amber-600/95 text-white':'border-sky-300/60 bg-sky-800/90 text-sky-50'}`}
+                      className={`absolute ${tacticsDebugLayout?'right-1 bottom-[43px]':'bottom-0.5 left-0.5'} z-[61] rounded border px-1 py-0.5 font-black leading-none pointer-events-none ${slotRushGuard?'border-amber-200 bg-amber-600/95 text-white':'border-sky-300/60 bg-sky-800/90 text-sky-50'}`}
                       style={{fontSize:'7px'}}>🛡 {slotRushGuard?'連撃ガード':'全体'} {gv}</div>;
                   })()}
                   {/* ★枠の中に出すものは、ぜんぶこの1本の縦積みに入れる(2026-09-22 ユーザー指摘
@@ -1257,7 +1257,7 @@ function BattleScreen({
                   {/* ★EXスキルの札も同じ縦積みの先頭に入れる。名前の行へ入れると名前が切れる
                       (2026-09-23 ユーザー指摘「名前が切れてる」)。二刀流／片手持ちのような「いまの状態」をここで出す */}
                   {(slotAssignedCards.length>0||previewDmg>0||previewGuard>0||slotAimHit||slotExInfo)&&(
-                    <div data-tactics-slot-marks className={`${tacticsDebugLayout?'absolute top-1 right-1 w-[calc(60%-8px)] max-h-[54px] overflow-hidden items-stretch':'absolute top-0 left-0 right-0 items-center px-0.5'} flex flex-col gap-px z-[60] pointer-events-none`}>
+                    <div data-tactics-slot-marks className={`${tacticsDebugLayout?'absolute top-1 right-1 bottom-[43px] w-[calc(60%-8px)] overflow-y-auto mh-scroll items-stretch justify-end':'absolute top-0 left-0 right-0 items-center px-0.5'} flex flex-col gap-px z-[60] pointer-events-none`}>
                       {!tacticsDebugLayout&&slotExInfo&&(<div data-tactics-ex-mark={i} data-tactics-ex-state={slotExInfo.badge.text}
                         className={`flex max-w-full items-center gap-0.5 rounded px-1 py-0.5 leading-none shadow ${slotExInfo.badge.active?'bg-fuchsia-600 text-white ring-1 ring-fuchsia-200':'bg-black/70 text-fuchsia-200 ring-1 ring-fuchsia-400/60'}`}>
                         <span style={{fontSize:'7px'}} className="shrink-0 font-black">EX</span>
