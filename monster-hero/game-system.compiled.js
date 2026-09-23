@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: fd9688b928b63b00
+// source-sha256: b0fe685529190c5b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f254e8fd382bb88f
+// generated-sha256: d5128b7bdfcba2a5
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-23 20:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-23 20:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -39921,7 +39921,185 @@ function BattleScreen({
       onClick: () => setBuffDetail(v => !v),
       "aria-label": buffDetail ? '強化の詳細を閉じる' : `強化の詳細を見る（${chips.length}件）`,
       className: "shrink-0 min-h-[20px] px-1.5 rounded-full border border-white/25 bg-black/60 text-[9px] font-black leading-none text-slate-200 active:scale-90 flex items-center"
-    }, buffDetail ? 'とじる' : `詳細 ${chips.length}`)));
+    }, buffDetail ? 'とじる' : `詳細 ${chips.length}`)), (() => {
+      // Overall total damage across ALL monster slots, matching processTurn's global attack order.
+      // Existing total = sum of already-assigned attack cards.
+      // If a card is pending and validly assignable somewhere, also compute the projected new total.
+      // committed (already assigned) attack cards in selection order
+      // 2枚目以降のカードは効果半減。processTurnと同じく「アシストカード以外の枚数」で数える。
+      // 保留中(タップしただけでまだ置いていない)カードは、まだ使っていないので枚数に数えない。
+      // ここを数えてしまうと、1枚目なのに自分自身を2枚目とみなして半減表示になる。
+      const pendingCardObj = pendingCard != null ? hand[pendingCard] : dragState && dragState.active ? dragState.card : null;
+      const pendingIdx = pendingCard != null ? pendingCard : dragState && dragState.active ? dragState.cardIndex : null;
+      // ニコラオ・ゴーレム・モッチー/ミタラシ・ききは使ったターンからすぐ効くため、
+      // 先に選んだカードぶんの補正を、あとに続くカードの予測へも反映する
+      // (processTurnの実行順序と同じ数え方。localBoostFromCard/previewLocalBoosts参照)。
+      const boosts = previewLocalBoosts(pendingIdx);
+      let committedTotal = 0;
+      let guardFlat = 0;
+      let guardMult = 0;
+      const guardBySlot = {};
+      const committedCounter = makeCardHalveCounter();
+      selectedCards.forEach(idx => {
+        if (idx === pendingIdx) return;
+        const card = hand[idx];
+        const slotIdx = cardAssignments[idx];
+        const halved = committedCounter.take(card, slotIdx != null ? slotIdx : null);
+        const b = boosts.perCard[idx] || {
+          oryo: 0,
+          dmgMod: 0,
+          combo: 0
+        };
+        if (slotIdx != null && isAttackCard(card)) {
+          const baseDmg = getDmg(card, slotIdx, slots[slotIdx], b.oryo, b.dmgMod, halved);
+          committedTotal += getAttackPredictedDmg(card, slots[slotIdx], baseDmg, b.combo, slotIdx);
+        }
+        const gw = guardCardWeight(card);
+        if (gw > 0) {
+          const e = cardEffectMultiplier(card, halved);
+          const gf = GUARD_EVOLUTION[guardLevel].flat * gw * e,
+            gm = GUARD_EVOLUTION[guardLevel].mult * gw * e;
+          guardFlat += gf;
+          guardMult += gm;
+          // ★タクティクスは構えた子ごとに丈夫さが違う。枠ごとに分けて持っておき、
+          //   合計は「枠ごとに出した軽減量の足し算」にする(平均で1回出すとずれる)
+          if (slotIdx != null) {
+            const cur = guardBySlot[slotIdx] || {
+              flat: 0,
+              mult: 0,
+              cards: 0
+            };
+            guardBySlot[slotIdx] = {
+              flat: cur.flat + gf,
+              mult: cur.mult + gm,
+              cards: (cur.cards || 0) + 1
+            };
+          }
+        }
+      });
+      // ★全体ガード(2体以上が別々に構えた)なら、構えていない子にも丈夫さぶんが付く。
+      //   合計にもそれを含める(2026-09-22 の新仕様)
+      const sumGuardBySlot = (extra = null) => {
+        const merged = {};
+        Object.entries(guardBySlot).forEach(([slot, g]) => {
+          merged[slot] = {
+            ...g
+          };
+        });
+        if (extra && extra.slot != null) {
+          const cur = merged[extra.slot] || {
+            flat: 0,
+            mult: 0,
+            cards: 0
+          };
+          merged[extra.slot] = {
+            flat: cur.flat + extra.flat,
+            mult: cur.mult + extra.mult,
+            cards: (cur.cards || 0) + 1
+          };
+        }
+        return (tacticsUnits || []).reduce((sum, unit, slotIdx) => unit && !unit.downed ? sum + tacticsSlotGuardValue(merged, slotIdx) : sum, 0);
+      };
+      const committedGuard = Array.isArray(tacticsUnits) ? sumGuardBySlot() : guardValueOf(guardFlat, guardMult);
+      // 保留カードがガードなら、置いたあとの合計軽減も出す
+      const pendingGuardWeight = guardCardWeight(pendingCardObj);
+      const pendingGuardHalved = pendingGuardWeight > 0 && committedCounter.peek(pendingCardObj, pendingIdx != null && cardAssignments[pendingIdx] != null ? cardAssignments[pendingIdx] : null);
+      const pendingGuardEffect = cardEffectMultiplier(pendingCardObj, pendingGuardHalved);
+      // 置く先が決まっている保留カードは、その子の丈夫さで足す(タクティクス)
+      const pendingGuardSlot = pendingIdx != null && cardAssignments[pendingIdx] != null ? cardAssignments[pendingIdx] : null;
+      const projectedGuard = pendingGuardWeight > 0 ? Array.isArray(tacticsUnits) ? sumGuardBySlot({
+        slot: pendingGuardSlot,
+        flat: GUARD_EVOLUTION[guardLevel].flat * pendingGuardWeight * pendingGuardEffect,
+        mult: GUARD_EVOLUTION[guardLevel].mult * pendingGuardWeight * pendingGuardEffect
+      }) : guardValueOf(guardFlat + GUARD_EVOLUTION[guardLevel].flat * pendingGuardWeight * pendingGuardEffect, guardMult + GUARD_EVOLUTION[guardLevel].mult * pendingGuardWeight * pendingGuardEffect) : committedGuard;
+      const pendingIsAtk = isAttackCard(pendingCardObj);
+      // projected damage the pending card would add (as the next attack in order)
+      let pendingAdd = 0;
+      let pendingValidSlot = null;
+      if (pendingIsAtk) {
+        // find a slot it could legally hit (for unique: its own monster; else any occupied slot)
+        for (let i = 0; i < slots.length; i++) {
+          const s = slots[i];
+          if (!s) continue;
+          // ★置ける枠かどうかは、盤面のタップ判定とまったく同じ答えを使う。
+          //   自前で枚数を数えていたころは、ガードを1枚置いた子が
+          //   「もう置けない子」に見えて、合計DMGの予測だけ別の子で出ていた
+          const tacticsAnswer = tacticsCanAssign ? tacticsCanAssign(pendingCardObj, pendingIdx, i) : null;
+          if (tacticsAnswer === null || tacticsAnswer === undefined) {
+            const assignedCount = Object.values(cardAssignments).filter(v => v === i).length;
+            const maxUses = slotMaxUses(s, i);
+            if (assignedCount >= maxUses) continue;
+          } else if (!tacticsAnswer) continue;
+          if (pendingCardObj.type === 'unique' && pendingCardObj.ownerSlotIdx !== i) continue;
+          pendingValidSlot = i;
+          const baseDmg = getDmg(pendingCardObj, i, s, boosts.forPending.oryo, boosts.forPending.dmgMod, committedCounter.peek(pendingCardObj, i));
+          pendingAdd = getAttackPredictedDmg(pendingCardObj, s, baseDmg, boosts.forPending.combo, i);
+          break;
+        }
+      }
+      const projectedTotal = committedTotal + pendingAdd;
+      const showProjected = pendingIsAtk && pendingValidSlot != null && pendingAdd > 0;
+      // 合計軽減は、ガードを置いたぶんの合計。2枚目以降のガードは半分で計算される。
+      const showGuardProjected = pendingGuardWeight > 0 && projectedGuard > committedGuard;
+      const showDmg = committedTotal > 0 || showProjected;
+      const showGuard = committedGuard > 0 || showGuardProjected;
+      if (!showDmg && !showGuard) return null;
+      return (
+        /*#__PURE__*/
+        // ★浮かせない。ここは**流れの中の1行**として置く(2026-09-22 ユーザー指摘
+        //   「表示が被ってて見えない」)。それまでは枠の上へ absolute・bottom:78% で
+        //   浮かせていたので、味方の枠の高さが変わると枠の名前の上に乗っていた
+        //   (タクティクスはパーティのライフ帯が無いぶん枠が上がるので、必ず重なる)。
+        //   ★高さを持つのは出ているあいだだけ。空けておく場所は作らない(舞台が低い端末で
+        //     いちばん困るのは敵の絵なので、使わないときは敵へ返す)
+        //   ★2つは**横に並べて**折り返す。縦に積むと出た瞬間に舞台が46px縮む
+        React.createElement("div", {
+          "data-battle-total-preview": true,
+          "data-tactics-preview-band": tacticsDebugLayout ? 'buff-band' : undefined,
+          className: "mt-1 flex w-full flex-wrap items-center justify-center gap-x-2 gap-y-0.5 pointer-events-none"
+        }, showDmg && /*#__PURE__*/React.createElement("div", {
+          className: `flex items-center gap-1.5 px-2 py-0.5 rounded-full border shadow-lg ${showProjected ? 'bg-yellow-950/90 border-yellow-500/70' : 'bg-red-950/90 border-red-500/50'} backdrop-blur-sm`
+        }, /*#__PURE__*/React.createElement(Sword, {
+          size: 11,
+          className: showProjected ? 'text-yellow-400' : 'text-red-400'
+        }), /*#__PURE__*/React.createElement("span", {
+          className: "text-[10px] font-black uppercase tracking-widest text-slate-300"
+        }, "\u5408\u8A08DMG"), showProjected ? /*#__PURE__*/React.createElement("span", {
+          className: "text-[11px] font-black font-mono flex items-center gap-1"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "text-slate-400"
+        }, committedTotal), /*#__PURE__*/React.createElement("span", {
+          className: "text-yellow-400"
+        }, "+", pendingAdd), /*#__PURE__*/React.createElement(ChevronRight, {
+          size: 10,
+          className: "text-slate-500"
+        }), /*#__PURE__*/React.createElement("span", {
+          className: "text-yellow-300 drop-shadow-[0_0_6px_rgba(250,204,21,0.6)]"
+        }, projectedTotal)) : /*#__PURE__*/React.createElement("span", {
+          className: "text-[11px] font-black font-mono text-red-300 drop-shadow-[0_0_6px_rgba(248,113,113,0.5)]"
+        }, committedTotal)), showGuard && /*#__PURE__*/React.createElement("div", {
+          className: `flex items-center gap-1.5 px-2 py-0.5 rounded-full border shadow-lg ${showGuardProjected ? 'bg-yellow-950/90 border-yellow-500/70' : 'bg-emerald-950/90 border-emerald-500/50'} backdrop-blur-sm`
+        }, /*#__PURE__*/React.createElement(Shield, {
+          size: 11,
+          className: showGuardProjected ? 'text-yellow-400' : 'text-emerald-400'
+        }), /*#__PURE__*/React.createElement("span", {
+          className: "text-[10px] font-black uppercase tracking-widest text-slate-300"
+        }, "\u5408\u8A08\u8EFD\u6E1B"), showGuardProjected ? /*#__PURE__*/React.createElement("span", {
+          className: "text-[11px] font-black font-mono flex items-center gap-1"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "text-slate-400"
+        }, committedGuard), /*#__PURE__*/React.createElement("span", {
+          className: "text-yellow-400"
+        }, "+", projectedGuard - committedGuard), /*#__PURE__*/React.createElement(ChevronRight, {
+          size: 10,
+          className: "text-slate-500"
+        }), /*#__PURE__*/React.createElement("span", {
+          className: "text-yellow-300 drop-shadow-[0_0_6px_rgba(250,204,21,0.6)]"
+        }, projectedGuard)) : /*#__PURE__*/React.createElement("span", {
+          className: "text-[11px] font-black font-mono text-emerald-300 drop-shadow-[0_0_6px_rgba(52,211,153,0.5)]"
+        }, committedGuard)))
+      );
+    })());
   })(), /*#__PURE__*/React.createElement("div", {
     className: "shrink-0 py-1.5 px-2 border-y border-white/10 flex flex-col items-center justify-center gap-1 z-10 relative",
     style: {
@@ -40015,184 +40193,7 @@ function BattleScreen({
     style: {
       backgroundColor: 'rgba(2,6,23,0.8)'
     }
-  }, p.text))))), (() => {
-    // Overall total damage across ALL monster slots, matching processTurn's global attack order.
-    // Existing total = sum of already-assigned attack cards.
-    // If a card is pending and validly assignable somewhere, also compute the projected new total.
-    // committed (already assigned) attack cards in selection order
-    // 2枚目以降のカードは効果半減。processTurnと同じく「アシストカード以外の枚数」で数える。
-    // 保留中(タップしただけでまだ置いていない)カードは、まだ使っていないので枚数に数えない。
-    // ここを数えてしまうと、1枚目なのに自分自身を2枚目とみなして半減表示になる。
-    const pendingCardObj = pendingCard != null ? hand[pendingCard] : dragState && dragState.active ? dragState.card : null;
-    const pendingIdx = pendingCard != null ? pendingCard : dragState && dragState.active ? dragState.cardIndex : null;
-    // ニコラオ・ゴーレム・モッチー/ミタラシ・ききは使ったターンからすぐ効くため、
-    // 先に選んだカードぶんの補正を、あとに続くカードの予測へも反映する
-    // (processTurnの実行順序と同じ数え方。localBoostFromCard/previewLocalBoosts参照)。
-    const boosts = previewLocalBoosts(pendingIdx);
-    let committedTotal = 0;
-    let guardFlat = 0;
-    let guardMult = 0;
-    const guardBySlot = {};
-    const committedCounter = makeCardHalveCounter();
-    selectedCards.forEach(idx => {
-      if (idx === pendingIdx) return;
-      const card = hand[idx];
-      const slotIdx = cardAssignments[idx];
-      const halved = committedCounter.take(card, slotIdx != null ? slotIdx : null);
-      const b = boosts.perCard[idx] || {
-        oryo: 0,
-        dmgMod: 0,
-        combo: 0
-      };
-      if (slotIdx != null && isAttackCard(card)) {
-        const baseDmg = getDmg(card, slotIdx, slots[slotIdx], b.oryo, b.dmgMod, halved);
-        committedTotal += getAttackPredictedDmg(card, slots[slotIdx], baseDmg, b.combo, slotIdx);
-      }
-      const gw = guardCardWeight(card);
-      if (gw > 0) {
-        const e = cardEffectMultiplier(card, halved);
-        const gf = GUARD_EVOLUTION[guardLevel].flat * gw * e,
-          gm = GUARD_EVOLUTION[guardLevel].mult * gw * e;
-        guardFlat += gf;
-        guardMult += gm;
-        // ★タクティクスは構えた子ごとに丈夫さが違う。枠ごとに分けて持っておき、
-        //   合計は「枠ごとに出した軽減量の足し算」にする(平均で1回出すとずれる)
-        if (slotIdx != null) {
-          const cur = guardBySlot[slotIdx] || {
-            flat: 0,
-            mult: 0,
-            cards: 0
-          };
-          guardBySlot[slotIdx] = {
-            flat: cur.flat + gf,
-            mult: cur.mult + gm,
-            cards: (cur.cards || 0) + 1
-          };
-        }
-      }
-    });
-    // ★全体ガード(2体以上が別々に構えた)なら、構えていない子にも丈夫さぶんが付く。
-    //   合計にもそれを含める(2026-09-22 の新仕様)
-    const sumGuardBySlot = (extra = null) => {
-      const merged = {};
-      Object.entries(guardBySlot).forEach(([slot, g]) => {
-        merged[slot] = {
-          ...g
-        };
-      });
-      if (extra && extra.slot != null) {
-        const cur = merged[extra.slot] || {
-          flat: 0,
-          mult: 0,
-          cards: 0
-        };
-        merged[extra.slot] = {
-          flat: cur.flat + extra.flat,
-          mult: cur.mult + extra.mult,
-          cards: (cur.cards || 0) + 1
-        };
-      }
-      return (tacticsUnits || []).reduce((sum, unit, slotIdx) => unit && !unit.downed ? sum + tacticsSlotGuardValue(merged, slotIdx) : sum, 0);
-    };
-    const committedGuard = Array.isArray(tacticsUnits) ? sumGuardBySlot() : guardValueOf(guardFlat, guardMult);
-    // 保留カードがガードなら、置いたあとの合計軽減も出す
-    const pendingGuardWeight = guardCardWeight(pendingCardObj);
-    const pendingGuardHalved = pendingGuardWeight > 0 && committedCounter.peek(pendingCardObj, pendingIdx != null && cardAssignments[pendingIdx] != null ? cardAssignments[pendingIdx] : null);
-    const pendingGuardEffect = cardEffectMultiplier(pendingCardObj, pendingGuardHalved);
-    // 置く先が決まっている保留カードは、その子の丈夫さで足す(タクティクス)
-    const pendingGuardSlot = pendingIdx != null && cardAssignments[pendingIdx] != null ? cardAssignments[pendingIdx] : null;
-    const projectedGuard = pendingGuardWeight > 0 ? Array.isArray(tacticsUnits) ? sumGuardBySlot({
-      slot: pendingGuardSlot,
-      flat: GUARD_EVOLUTION[guardLevel].flat * pendingGuardWeight * pendingGuardEffect,
-      mult: GUARD_EVOLUTION[guardLevel].mult * pendingGuardWeight * pendingGuardEffect
-    }) : guardValueOf(guardFlat + GUARD_EVOLUTION[guardLevel].flat * pendingGuardWeight * pendingGuardEffect, guardMult + GUARD_EVOLUTION[guardLevel].mult * pendingGuardWeight * pendingGuardEffect) : committedGuard;
-    const pendingIsAtk = isAttackCard(pendingCardObj);
-    // projected damage the pending card would add (as the next attack in order)
-    let pendingAdd = 0;
-    let pendingValidSlot = null;
-    if (pendingIsAtk) {
-      // find a slot it could legally hit (for unique: its own monster; else any occupied slot)
-      for (let i = 0; i < slots.length; i++) {
-        const s = slots[i];
-        if (!s) continue;
-        // ★置ける枠かどうかは、盤面のタップ判定とまったく同じ答えを使う。
-        //   自前で枚数を数えていたころは、ガードを1枚置いた子が
-        //   「もう置けない子」に見えて、合計DMGの予測だけ別の子で出ていた
-        const tacticsAnswer = tacticsCanAssign ? tacticsCanAssign(pendingCardObj, pendingIdx, i) : null;
-        if (tacticsAnswer === null || tacticsAnswer === undefined) {
-          const assignedCount = Object.values(cardAssignments).filter(v => v === i).length;
-          const maxUses = slotMaxUses(s, i);
-          if (assignedCount >= maxUses) continue;
-        } else if (!tacticsAnswer) continue;
-        if (pendingCardObj.type === 'unique' && pendingCardObj.ownerSlotIdx !== i) continue;
-        pendingValidSlot = i;
-        const baseDmg = getDmg(pendingCardObj, i, s, boosts.forPending.oryo, boosts.forPending.dmgMod, committedCounter.peek(pendingCardObj, i));
-        pendingAdd = getAttackPredictedDmg(pendingCardObj, s, baseDmg, boosts.forPending.combo, i);
-        break;
-      }
-    }
-    const projectedTotal = committedTotal + pendingAdd;
-    const showProjected = pendingIsAtk && pendingValidSlot != null && pendingAdd > 0;
-    // 合計軽減は、ガードを置いたぶんの合計。2枚目以降のガードは半分で計算される。
-    const showGuardProjected = pendingGuardWeight > 0 && projectedGuard > committedGuard;
-    const showDmg = committedTotal > 0 || showProjected;
-    const showGuard = committedGuard > 0 || showGuardProjected;
-    if (!showDmg && !showGuard) return null;
-    return (
-      /*#__PURE__*/
-      // ★浮かせない。ここは**流れの中の1行**として置く(2026-09-22 ユーザー指摘
-      //   「表示が被ってて見えない」)。それまでは枠の上へ absolute・bottom:78% で
-      //   浮かせていたので、味方の枠の高さが変わると枠の名前の上に乗っていた
-      //   (タクティクスはパーティのライフ帯が無いぶん枠が上がるので、必ず重なる)。
-      //   ★高さを持つのは出ているあいだだけ。空けておく場所は作らない(舞台が低い端末で
-      //     いちばん困るのは敵の絵なので、使わないときは敵へ返す)
-      //   ★2つは**横に並べて**折り返す。縦に積むと出た瞬間に舞台が46px縮む
-      React.createElement("div", {
-        "data-battle-total-preview": true,
-        className: `${tacticsDebugLayout ? 'absolute left-1/2 -translate-x-1/2 bottom-0 z-[55] w-auto max-w-[78%] whitespace-nowrap' : 'shrink-0 w-full pb-0.5'} flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 pointer-events-none`
-      }, showDmg && /*#__PURE__*/React.createElement("div", {
-        className: `flex items-center gap-1.5 px-2 py-0.5 rounded-full border shadow-lg ${showProjected ? 'bg-yellow-950/90 border-yellow-500/70' : 'bg-red-950/90 border-red-500/50'} backdrop-blur-sm`
-      }, /*#__PURE__*/React.createElement(Sword, {
-        size: 11,
-        className: showProjected ? 'text-yellow-400' : 'text-red-400'
-      }), /*#__PURE__*/React.createElement("span", {
-        className: "text-[10px] font-black uppercase tracking-widest text-slate-300"
-      }, "\u5408\u8A08DMG"), showProjected ? /*#__PURE__*/React.createElement("span", {
-        className: "text-[11px] font-black font-mono flex items-center gap-1"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-slate-400"
-      }, committedTotal), /*#__PURE__*/React.createElement("span", {
-        className: "text-yellow-400"
-      }, "+", pendingAdd), /*#__PURE__*/React.createElement(ChevronRight, {
-        size: 10,
-        className: "text-slate-500"
-      }), /*#__PURE__*/React.createElement("span", {
-        className: "text-yellow-300 drop-shadow-[0_0_6px_rgba(250,204,21,0.6)]"
-      }, projectedTotal)) : /*#__PURE__*/React.createElement("span", {
-        className: "text-[11px] font-black font-mono text-red-300 drop-shadow-[0_0_6px_rgba(248,113,113,0.5)]"
-      }, committedTotal)), showGuard && /*#__PURE__*/React.createElement("div", {
-        className: `flex items-center gap-1.5 px-2 py-0.5 rounded-full border shadow-lg ${showGuardProjected ? 'bg-yellow-950/90 border-yellow-500/70' : 'bg-emerald-950/90 border-emerald-500/50'} backdrop-blur-sm`
-      }, /*#__PURE__*/React.createElement(Shield, {
-        size: 11,
-        className: showGuardProjected ? 'text-yellow-400' : 'text-emerald-400'
-      }), /*#__PURE__*/React.createElement("span", {
-        className: "text-[10px] font-black uppercase tracking-widest text-slate-300"
-      }, "\u5408\u8A08\u8EFD\u6E1B"), showGuardProjected ? /*#__PURE__*/React.createElement("span", {
-        className: "text-[11px] font-black font-mono flex items-center gap-1"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-slate-400"
-      }, committedGuard), /*#__PURE__*/React.createElement("span", {
-        className: "text-yellow-400"
-      }, "+", projectedGuard - committedGuard), /*#__PURE__*/React.createElement(ChevronRight, {
-        size: 10,
-        className: "text-slate-500"
-      }), /*#__PURE__*/React.createElement("span", {
-        className: "text-yellow-300 drop-shadow-[0_0_6px_rgba(250,204,21,0.6)]"
-      }, projectedGuard)) : /*#__PURE__*/React.createElement("span", {
-        className: "text-[11px] font-black font-mono text-emerald-300 drop-shadow-[0_0_6px_rgba(52,211,153,0.5)]"
-      }, committedGuard)))
-    );
-  })(), /*#__PURE__*/React.createElement("div", {
+  }, p.text))))), /*#__PURE__*/React.createElement("div", {
     "data-tactics-debug-layout": tacticsDebugLayout ? '2x2' : undefined,
     className: `grid ${tacticsDebugLayout ? 'grid-cols-2 grid-rows-2 gap-1.5' : 'grid-cols-4 gap-2'} w-full relative shrink-0${battleTutorialSpotClass('battleSlots')}`,
     style: {
@@ -40403,7 +40404,7 @@ function BattleScreen({
         }
       },
       disabled: isBusy || autoBattle,
-      className: `relative ${tacticsDebugLayout ? 'rounded-[18px] border grid grid-cols-[40%_60%] grid-rows-[18px_minmax(0,1fr)] items-stretch bg-[linear-gradient(145deg,rgba(15,23,42,.88),rgba(5,10,24,.96))] backdrop-blur-[3px] shadow-[inset_0_1px_0_rgba(255,255,255,.09),inset_0_0_18px_rgba(99,102,241,.035),0_7px_20px_rgba(0,0,0,.24)]' : 'rounded-2xl border-2 flex flex-col items-stretch'} overflow-visible transition-all ${RANGE_STYLES[i].slotGlow || ''} ${tacticsDebugLayout ? '' : RANGE_STYLES[i].bg} ${distanceBroken ? 'border-red-400' : tacticsDebugLayout ? 'border-white/[.10]' : ' ' + RANGE_STYLES[i].border} ${canAssign || dragState?.active && dragOverSlot === i ? 'ring-2 ring-yellow-400 scale-105 z-10 shadow-lg animate-pulse' : 'opacity-100'} ${assignedCount > 0 ? 'ring-2 ring-indigo-500/80' : ''} ${dragState?.active && dragOverSlot === i ? 'ring-4 ring-green-400 scale-110' : ''} ${slotSettle === i ? 'ring-4 ring-white' : ''}`,
+      className: `relative ${tacticsDebugLayout ? 'rounded-[18px] border grid grid-cols-[40%_60%] grid-rows-[18px_minmax(0,1fr)] items-stretch bg-[linear-gradient(145deg,rgba(15,23,42,.88),rgba(5,10,24,.96))] backdrop-blur-[3px] shadow-[inset_0_1px_0_rgba(255,255,255,.09),inset_0_0_18px_rgba(99,102,241,.035),0_7px_20px_rgba(0,0,0,.24)]' : 'rounded-2xl border-2 flex flex-col items-stretch'} overflow-visible transition-all ${RANGE_STYLES[i].slotGlow || ''} ${tacticsDebugLayout ? '' : RANGE_STYLES[i].bg} ${distanceBroken ? 'border-red-400' : tacticsDebugLayout ? 'border-white/[.10]' : ' ' + RANGE_STYLES[i].border} ${canAssign || dragState?.active && dragOverSlot === i ? 'ring-2 ring-yellow-400 scale-105 z-10 shadow-lg animate-pulse' : 'opacity-100'} ${assignedCount > 0 ? 'ring-2 ring-indigo-500/80' : ''} ${tacticsDebugLayout && !s ? 'opacity-65 shadow-none border-white/[.06]' : ''} ${dragState?.active && dragOverSlot === i ? 'ring-4 ring-green-400 scale-110' : ''} ${slotSettle === i ? 'ring-4 ring-white' : ''}`,
       style: isAnimating && !tacticsDebugLayout ? {
         zIndex: 9999,
         animation: attackMotionAnimation(attackAnim)
@@ -40785,7 +40786,7 @@ function BattleScreen({
         "data-tactics-hp": `${tacticsUnit.hp}/${tacticsUnit.maxHp}`,
         "data-tactics-guts": `${tacticsUnit.guts}/${tacticsUnit.maxGuts}`,
         "data-tactics-downed": tacticsUnit.downed ? 'true' : 'false',
-        className: `${tacticsDebugLayout ? 'absolute right-0 bottom-0 w-[60%] min-w-0 border-l flex flex-col justify-end py-px px-2 gap-0 backdrop-blur-sm' : 'shrink-0 border-t px-1'} z-20 border-white/[.06] bg-[linear-gradient(90deg,rgba(8,15,31,.86),rgba(15,23,42,.72))]${battleTutorialSpotClass('tacticsParty')}`
+        className: `${tacticsDebugLayout ? 'absolute right-0 bottom-[3px] w-[60%] min-w-0 border-l flex flex-col justify-end py-px px-2 gap-0 backdrop-blur-sm' : 'shrink-0 border-t px-1'} z-20 border-white/[.06] bg-[linear-gradient(90deg,rgba(8,15,31,.86),rgba(15,23,42,.72))]${battleTutorialSpotClass('tacticsParty')}`
       }, /*#__PURE__*/React.createElement("div", {
         className: "flex h-[10px] items-center justify-between leading-none"
       }, /*#__PURE__*/React.createElement("span", {
@@ -41020,7 +41021,7 @@ function BattleScreen({
         }),
         ...(TYPE_INLINE_STYLE[c.type] || {})
       },
-      className: `relative w-full ${tacticsDebugLayout ? 'rounded-[12px] border' : 'rounded-xl border-2'} p-1 flex flex-col items-center justify-between bg-gradient-to-b ${TYPE_COLORS[c.type]} ${isDragging ? 'ring-4 ring-white shadow-[0_0_24px_rgba(255,255,255,0.6)]' : isSel ? 'transition-all -translate-y-1.5 ring-4 ring-cyan-300 z-20 scale-105 opacity-60 saturate-[0.7] shadow-[0_0_18px_rgba(103,232,249,0.6)]' : 'transition-all opacity-90'} ${isPending ? 'ring-4 ring-yellow-400 animate-pulse shadow-[0_0_20px_rgba(250,204,21,0.7)]' : ''} ${!isSelectable && !isSel && !isDragging ? 'grayscale opacity-50' : ''}${tutorialTargeted ? ' is-battle-tutorial-spot' : ''}${battleTutorialCardTarget && !tutorialTargeted ? ' grayscale opacity-25' : ''}`
+      className: `relative w-full ${tacticsDebugLayout ? 'rounded-[12px] border' : 'rounded-xl border-2'} p-1 flex flex-col items-center justify-between bg-gradient-to-b ${TYPE_COLORS[c.type]} ${isDragging ? 'ring-4 ring-white shadow-[0_0_24px_rgba(255,255,255,0.6)]' : isSel ? 'transition-all -translate-y-1.5 ring-2 ring-cyan-300 z-20 scale-[1.03] opacity-90 saturate-[0.95] shadow-[0_0_16px_rgba(103,232,249,0.45)]' : 'transition-all opacity-90'} ${isPending ? 'ring-4 ring-yellow-400 animate-pulse shadow-[0_0_20px_rgba(250,204,21,0.7)]' : ''} ${!isSelectable && !isSel && !isDragging ? 'grayscale opacity-50' : ''}${tutorialTargeted ? ' is-battle-tutorial-spot' : ''}${battleTutorialCardTarget && !tutorialTargeted ? ' grayscale opacity-25' : ''}`
     }, isSel && !assignedMon && /*#__PURE__*/React.createElement("div", {
       className: "absolute top-0.5 left-0.5 z-30 w-5 h-5 rounded-full bg-cyan-400 border-2 border-white flex items-center justify-center shadow-lg"
     }, /*#__PURE__*/React.createElement(Check, {
