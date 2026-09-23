@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: cab138ae7f060050
+// generated-sha256: 99cc28f09f1b46f1
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -87,12 +87,11 @@ const UPDATE_NOTICE_STYLES = ['FULL', 'MINI', 'OFF'];
 const normalizeUpdateNoticeStyle = (value) =>
   UPDATE_NOTICE_STYLES.includes(String(value)) ? String(value) : 'FULL';
 const UPDATE_NOTICE_STYLE_KEY = 'mh_update_notice_style_v1';
-const BATTLE_SCREEN_STYLES = ['CLASSIC', 'TACTICS_OLD', 'TACTICS_NEW'];
+const BATTLE_SCREEN_STYLES = ['TACTICS_OLD', 'TACTICS_NEW'];
 const normalizeBattleScreenStyle = (value) =>
   BATTLE_SCREEN_STYLES.includes(String(value)) ? String(value) : 'TACTICS_NEW';
 const BATTLE_SCREEN_STYLE_KEY = 'mh_battle_screen_style_v1';
 const BATTLE_SCREEN_STYLE_LABELS = Object.freeze([
-  { id:'CLASSIC', label:'クラシック', note:'従来のバトル画面' },
   { id:'TACTICS_OLD', label:'タクティクス旧', note:'従来のタクティクス表示' },
   { id:'TACTICS_NEW', label:'タクティクス新', note:'2×2の新しい表示' },
 ]);
@@ -101,7 +100,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-23 23:02"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-23 23:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -17412,9 +17411,9 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
         <button type="button" onClick={onOpenBackup} className={menuClass}>データ引き継ぎ</button>
         <button type="button" onClick={onOpenHelp} className={menuClass}>ヘルプ</button>
         <div data-battle-screen-setting className={`${SCREEN_PANEL_CLASS} w-full text-left`}>
-          <b className="block text-[13px] font-black text-slate-200">バトル画面</b>
-          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">使用するバトル画面を選びます。タクティクス旧／新は表示だけが切り替わり、戦闘ルールは共通です。</p>
-          <div className="mt-2 grid grid-cols-3 gap-2">
+          <b className="block text-[13px] font-black text-slate-200">タクティクスバトル画面</b>
+          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">タクティクスバトルの表示を選びます。通常のクラシックバトルには影響しません。戦闘ルールは旧／新で共通です。</p>
+          <div className="mt-2 grid grid-cols-2 gap-2">
             {BATTLE_SCREEN_STYLE_LABELS.map(option => (
               <button key={option.id} type="button" data-battle-screen-style={option.id}
                 aria-pressed={battleScreenStyle === option.id}

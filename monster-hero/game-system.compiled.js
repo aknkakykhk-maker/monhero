@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 48dcb9c4df1836f8
+// source-sha256: 87c043ecaa968a45
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: cab138ae7f060050
+// generated-sha256: 99cc28f09f1b46f1
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -150,14 +150,10 @@ const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
 const UPDATE_NOTICE_STYLES = ['FULL', 'MINI', 'OFF'];
 const normalizeUpdateNoticeStyle = value => UPDATE_NOTICE_STYLES.includes(String(value)) ? String(value) : 'FULL';
 const UPDATE_NOTICE_STYLE_KEY = 'mh_update_notice_style_v1';
-const BATTLE_SCREEN_STYLES = ['CLASSIC', 'TACTICS_OLD', 'TACTICS_NEW'];
+const BATTLE_SCREEN_STYLES = ['TACTICS_OLD', 'TACTICS_NEW'];
 const normalizeBattleScreenStyle = value => BATTLE_SCREEN_STYLES.includes(String(value)) ? String(value) : 'TACTICS_NEW';
 const BATTLE_SCREEN_STYLE_KEY = 'mh_battle_screen_style_v1';
 const BATTLE_SCREEN_STYLE_LABELS = Object.freeze([{
-  id: 'CLASSIC',
-  label: 'クラシック',
-  note: '従来のバトル画面'
-}, {
   id: 'TACTICS_OLD',
   label: 'タクティクス旧',
   note: '従来のタクティクス表示'
@@ -179,7 +175,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-23 23:02"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-23 23:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -28809,10 +28805,10 @@ function SettingsScreen({
     className: `${SCREEN_PANEL_CLASS} w-full text-left`
   }, /*#__PURE__*/React.createElement("b", {
     className: "block text-[13px] font-black text-slate-200"
-  }, "\u30D0\u30C8\u30EB\u753B\u9762"), /*#__PURE__*/React.createElement("p", {
+  }, "\u30BF\u30AF\u30C6\u30A3\u30AF\u30B9\u30D0\u30C8\u30EB\u753B\u9762"), /*#__PURE__*/React.createElement("p", {
     className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "\u4F7F\u7528\u3059\u308B\u30D0\u30C8\u30EB\u753B\u9762\u3092\u9078\u3073\u307E\u3059\u3002\u30BF\u30AF\u30C6\u30A3\u30AF\u30B9\u65E7\uFF0F\u65B0\u306F\u8868\u793A\u3060\u3051\u304C\u5207\u308A\u66FF\u308F\u308A\u3001\u6226\u95D8\u30EB\u30FC\u30EB\u306F\u5171\u901A\u3067\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
-    className: "mt-2 grid grid-cols-3 gap-2"
+  }, "\u30BF\u30AF\u30C6\u30A3\u30AF\u30B9\u30D0\u30C8\u30EB\u306E\u8868\u793A\u3092\u9078\u3073\u307E\u3059\u3002\u901A\u5E38\u306E\u30AF\u30E9\u30B7\u30C3\u30AF\u30D0\u30C8\u30EB\u306B\u306F\u5F71\u97FF\u3057\u307E\u305B\u3093\u3002\u6226\u95D8\u30EB\u30FC\u30EB\u306F\u65E7\uFF0F\u65B0\u3067\u5171\u901A\u3067\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
+    className: "mt-2 grid grid-cols-2 gap-2"
   }, BATTLE_SCREEN_STYLE_LABELS.map(option => /*#__PURE__*/React.createElement("button", {
     key: option.id,
     type: "button",
