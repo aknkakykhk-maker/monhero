@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9246f92cc3473945
+// source-sha256: 38d618082791ff7c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d81e8375b8a1efc6
+// generated-sha256: a49dc50486f288e5
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-23 19:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-23 20:02"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -40404,7 +40404,7 @@ function BattleScreen({
       },
       disabled: isBusy || autoBattle,
       className: `relative ${tacticsDebugLayout ? 'rounded-[18px] border grid grid-cols-[40%_60%] grid-rows-[18px_minmax(0,1fr)] items-stretch bg-slate-950/72 backdrop-blur-[2px] shadow-[inset_0_1px_0_rgba(255,255,255,.08),0_8px_22px_rgba(0,0,0,.22)]' : 'rounded-2xl border-2 flex flex-col items-stretch'} overflow-visible transition-all ${RANGE_STYLES[i].slotGlow || ''} ${tacticsDebugLayout ? '' : RANGE_STYLES[i].bg} ${distanceBroken ? 'border-red-400' : tacticsDebugLayout ? 'border-white/15' : ' ' + RANGE_STYLES[i].border} ${canAssign || dragState?.active && dragOverSlot === i ? 'ring-2 ring-yellow-400 scale-105 z-10 shadow-lg animate-pulse' : 'opacity-100'} ${assignedCount > 0 ? 'ring-2 ring-indigo-500/80' : ''} ${dragState?.active && dragOverSlot === i ? 'ring-4 ring-green-400 scale-110' : ''} ${slotSettle === i ? 'ring-4 ring-white' : ''}`,
-      style: isAnimating ? {
+      style: isAnimating && !tacticsDebugLayout ? {
         zIndex: 9999,
         animation: attackMotionAnimation(attackAnim)
       } : distanceBroken ? {
@@ -40531,7 +40531,12 @@ function BattleScreen({
         className: "text-[10px] font-black text-white leading-none"
       }, "\u56FA\u6709\u6280 ", curIdx + 1, "/", uOptions.length));
     })(), /*#__PURE__*/React.createElement("div", {
-      className: `${tacticsDebugLayout ? 'col-start-1 row-start-2 min-h-0' : 'flex-1'} flex flex-col items-center justify-center relative`
+      "data-tactics-attack-content": tacticsDebugLayout ? 'content-only' : undefined,
+      className: `${tacticsDebugLayout ? 'col-start-1 row-start-2 min-h-0' : 'flex-1'} flex flex-col items-center justify-center relative`,
+      style: isAnimating && tacticsDebugLayout ? {
+        zIndex: 9999,
+        animation: attackMotionAnimation(attackAnim)
+      } : undefined
     }, slotSettle === i && /*#__PURE__*/React.createElement("div", {
       className: "absolute inset-0 z-[60] pointer-events-none flex items-center justify-center overflow-visible"
     }, /*#__PURE__*/React.createElement("div", {

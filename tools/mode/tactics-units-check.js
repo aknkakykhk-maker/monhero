@@ -1563,6 +1563,10 @@ check('固有技の効果も枠の印に出る',
   check('HP/GUTS帯の上枠線を重ねない',
     battleScreen.includes("w-[60%] min-w-0 border-l flex flex-col justify-end")
       && !battleScreen.includes("w-[60%] min-w-0 border-l border-t flex flex-col justify-end"));
+  check('タクティクス攻撃モーションでスロット外枠を動かさない',
+    battleScreen.includes("isAnimating&&!tacticsDebugLayout?{zIndex:9999, animation:attackMotionAnimation(attackAnim)}")
+      && battleScreen.includes("data-tactics-attack-content={tacticsDebugLayout?'content-only':undefined}")
+      && battleScreen.includes("isAnimating&&tacticsDebugLayout?{zIndex:9999,animation:attackMotionAnimation(attackAnim)}:undefined"));
 }
 
 console.log(failed ? `\nNG ${failed}件` : '\nすべてOK');
