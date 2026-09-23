@@ -1587,7 +1587,8 @@ check('固有技の効果も枠の印に出る',
   check('ドラッグ中も手札カードを残して追従ゴーストを別表示する',
     battleScreen.includes('data-tactics-drag-card-ghost')
       && battleScreen.includes('isDragging&&ReactDOM.createPortal')
-      && !battleScreen.includes("isDragging?{touchAction:'none',position:'fixed'"));
+      && battleScreen.includes('data-tactics-drag-card-placeholder')
+      && battleScreen.includes("isDragging?{touchAction:'none',position:'fixed'"));
 
 
 }
