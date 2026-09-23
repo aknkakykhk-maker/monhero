@@ -103,7 +103,7 @@
 | --- | --- | --- |
 | `mh_audio_muted` | boolean / `false` | ミュート状態 |
 | `mh_battle_speed_v1` | string | バトル速度(`normalizeBattleSpeed` で既定へ) |
-| `mh_battle_screen_style_v1` | `'CLASSIC'` / `'TACTICS_OLD'` / `'TACTICS_NEW'` / `'TACTICS_NEW'` | バトル画面の表示設定。未保存・不正値は新タクティクスUIへ正規化。既存のバトル記録・モード保存キーとは独立 |
+| `mh_battle_screen_style_v1` | string / `'TACTICS_NEW'` | タクティクス画面の表示設定（`TACTICS_OLD` / `TACTICS_NEW`）。未保存・旧`CLASSIC`値・不正値は新タクティクスUIへ正規化。通常のクラシックバトルには影響しない |
 | `mh_login_bonus` | object / `LOGIN_BONUS_DEFAULT` | ログインボーナスの受取状況(期間キーと日数) |
 | `mh_playtime_v1` | object | プレイ時間の累計と日別(`normalizePlaytime`) |
 | `mh_player_id` | string | ランキング送信に使う端末ID。`localStorage` 直接アクセス(`storeGet` を通さない) |
