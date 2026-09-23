@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0745a1fcc7649771
+// source-sha256: d61e90bf80c5fc71
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 475b113167439f8c
+// generated-sha256: 5007c05a716aa02e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-23 14:01"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-23 15:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -38566,6 +38566,8 @@ function BattleScreen({
   //   中身は毎回 tacticsExInfo から引き直す(回数・使えるかは開いたあとも変わるため、開いた時点の値を持たない)
   const [exPanelSlot, setExPanelSlot] = useState(null);
   const exPanel = exPanelSlot != null && tacticsExInfo ? tacticsExInfo(exPanelSlot) : null;
+  // 新タクティクスUIの確認版。デバッグ戦だけで有効にし、通常プレイの表示・挙動は一切変えない。
+  const tacticsDebugLayout = debugBattle && Array.isArray(tacticsUnits);
   // ★いま狙われている枠(2026-09-21 ユーザー指摘「誰に攻撃か分からない」)。
   //   間合い攻撃は相手を1体決めず「予告した間合いに立っている子」へ当たるので、
   //   ほかの技と違って targetName を持たない。予告を見ても間合いしか分からなかった。
@@ -39665,7 +39667,7 @@ function BattleScreen({
       style: compactPopupStyle,
       className: `text-center ${p.color} font-black whitespace-nowrap px-4 ${liteBattleView ? 'rounded-lg border border-white/20 bg-slate-950/95 py-1 text-base' : 'drop-shadow-[0_0_15px_rgba(0,0,0,1)]'}`
     }, p.text)));
-  })())), Array.isArray(tacticsUnits) && enemy && (() => {
+  })())), !tacticsDebugLayout && Array.isArray(tacticsUnits) && enemy && (() => {
     const moveTo = enemyNextIntent && enemyNextIntent.type === 'MOVE' && Number.isFinite(enemyNextIntent.targetDist) ? enemyNextIntent.targetDist : null;
     const here = Number.isFinite(enemyDist) ? enemyDist : 0;
     return /*#__PURE__*/React.createElement("div", {
@@ -39891,7 +39893,7 @@ function BattleScreen({
     return /*#__PURE__*/React.createElement("div", {
       "data-battle-buffs": chips.length,
       "data-battle-buffs-mode": buffDetail ? 'detail' : 'icon',
-      className: `shrink-0 w-full max-w-[360px] mx-auto px-2 pt-1 pb-0.5 bg-slate-950 relative z-[40] ${focusedCard ? 'invisible' : 'visible'}`
+      className: `shrink-0 w-full max-w-[360px] mx-auto px-2 bg-slate-950 relative z-[40] flex flex-col justify-center ${tacticsDebugLayout ? 'min-h-[58px] py-1.5 border-y border-white/10' : 'pt-1 pb-0.5'} ${focusedCard ? 'invisible' : 'visible'}`
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex items-start gap-1"
     }, buffDetail ? /*#__PURE__*/React.createElement("div", {
@@ -40189,9 +40191,10 @@ function BattleScreen({
       }, committedGuard)))
     );
   })(), /*#__PURE__*/React.createElement("div", {
-    className: `grid grid-cols-4 gap-2 w-full relative shrink-0${battleTutorialSpotClass('battleSlots')}`,
+    "data-tactics-debug-layout": tacticsDebugLayout ? '2x2' : undefined,
+    className: `grid ${tacticsDebugLayout ? 'grid-cols-2 grid-rows-2 gap-1.5' : 'grid-cols-4 gap-2'} w-full relative shrink-0${battleTutorialSpotClass('battleSlots')}`,
     style: {
-      height: 'clamp(152px,18dvh,168px)'
+      height: tacticsDebugLayout ? 'clamp(210px,25dvh,228px)' : 'clamp(152px,18dvh,168px)'
     }
   }, slots.map((s, i) => {
     // Count how many cards already assigned to this slot
@@ -40488,7 +40491,7 @@ function BattleScreen({
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-2xl font-black"
     }, "\u26A0"))), /*#__PURE__*/React.createElement("div", {
-      className: `h-[18px] shrink-0 flex items-center justify-center px-1 border-b z-20 ${isHeroSlotMon(s) ? 'bg-amber-500/25 border-amber-300/50' : 'bg-black/60 border-white/10'}`
+      className: `${tacticsDebugLayout ? 'h-[16px]' : 'h-[18px]'} shrink-0 flex items-center justify-center px-1 border-b z-20 ${isHeroSlotMon(s) ? 'bg-amber-500/25 border-amber-300/50' : 'bg-black/60 border-white/10'}`
     }, isHeroSlotMon(s) && /*#__PURE__*/React.createElement(Crown, {
       size: 8,
       className: "shrink-0 mr-0.5 text-amber-300"
@@ -40671,8 +40674,8 @@ function BattleScreen({
         alt: s.name,
         masuColors: s.colors,
         style: {
-          width: '64px',
-          height: '64px'
+          width: tacticsDebugLayout ? '42px' : '64px',
+          height: tacticsDebugLayout ? '42px' : '64px'
         },
         className: "object-contain drop-shadow-md"
       })
@@ -40683,8 +40686,8 @@ function BattleScreen({
         alt: s.name,
         masuColors: s.colors,
         style: {
-          width: '64px',
-          height: '64px'
+          width: tacticsDebugLayout ? '42px' : '64px',
+          height: tacticsDebugLayout ? '42px' : '64px'
         },
         className: "z-10 object-contain drop-shadow-md"
       }),
@@ -40697,8 +40700,8 @@ function BattleScreen({
         alt: s.name,
         masuColors: s.colors,
         style: {
-          width: '64px',
-          height: '64px'
+          width: tacticsDebugLayout ? '42px' : '64px',
+          height: tacticsDebugLayout ? '42px' : '64px'
         },
         className: "z-10 object-contain drop-shadow-md"
       }),
@@ -40711,8 +40714,8 @@ function BattleScreen({
         alt: s.name,
         masuColors: s.colors,
         style: {
-          width: '64px',
-          height: '64px'
+          width: tacticsDebugLayout ? '42px' : '64px',
+          height: tacticsDebugLayout ? '42px' : '64px'
         },
         className: "z-10 object-contain drop-shadow-md"
       }),
@@ -40724,8 +40727,8 @@ function BattleScreen({
       alt: s.name,
       masuColors: s.colors,
       style: {
-        width: '64px',
-        height: '64px'
+        width: tacticsDebugLayout ? '42px' : '64px',
+        height: tacticsDebugLayout ? '42px' : '64px'
       },
       className: "z-10 object-contain drop-shadow-md"
     }) : /*#__PURE__*/React.createElement("span", {
@@ -40799,7 +40802,7 @@ function BattleScreen({
         }
       })));
     })(), /*#__PURE__*/React.createElement("div", {
-      className: `h-[20px] shrink-0 ${RANGE_STYLES[i].labelBg} flex items-center justify-center border-t border-white/20 z-20`
+      className: `${tacticsDebugLayout ? 'h-[16px]' : 'h-[20px]'} shrink-0 ${RANGE_STYLES[i].labelBg} flex items-center justify-center border-t border-white/20 z-20`
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-[10px] font-black uppercase tracking-tighter leading-none"
     }, RANGE_LABELS[i], "\u8DDD\u96E2")));
