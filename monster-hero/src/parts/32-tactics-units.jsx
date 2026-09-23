@@ -872,3 +872,186 @@ const clearTacticsSlotFlag = (bySlot, key) => {
   });
   return next;
 };
+
+// ==== タクティクス専用 EXスキル(STEP1: 共通基盤) ====
+//
+// 設計の正本: docs/spec/TACTICS_EX_SKILLS.md
+//
+// ★モンスターごとの if を本体へ書かない。1体ぶんの決めごとは TACTICS_EX_SKILLS の1行に書き、
+//   本体は「回数・併用・効果の続く長さ」をこの純関数で数えるだけにする。20体へ増やしても本体は変わらない
+// ★EXはカードではない。1ターンに選べる枚数(cardLimit)にも、👑の+1にも数えない
+// ★回数は1ランぶん。WAVEが変わっても戻らない。新しいランでは createTacticsExState からやり直す
+// ★保存はしない。ランそのものがメモリの中だけにあり(中断・再開の保存が無い)、それに合わせる
+//
+// 1体ぶんの項目:
+//   id        … EXスキルのid(あとから変えない。ログや今後の記録の手がかり)
+//   name      … 画面に出す名前
+//   desc      … 効果の説明(画面にそのまま出す)
+//   maxUses   … 1ランで使える回数。unlimited:true なら数えない
+//   withCards … 同じターンに通常カードも使えるか。false なら「使ったターンは他のカードを使えない」
+//   duration  … 効果の続く長さ。'turn'(発動ターン) / 'wave'(発動WAVEの終わりまで) / 'toggle'(もう一度使うまで)
+//   toggleLabels … duration:'toggle' のときの [切り替える前, 切り替えたあと] の呼び名
+//   conditions … 使うための追加の条件(TACTICS_EX_CONDITIONS のキー)。無ければ空
+//   conditionText … 条件を画面に出すときの文(任意)
+//   effect    … 効果の種類。中身は TACTICS_EX_IMPLEMENTED_EFFECTS に入ったものだけが動く
+const TACTICS_EX_DURATION_TEXT = Object.freeze({
+  turn: '発動したターンだけ',
+  wave: '発動したWAVEが終わるまで',
+  toggle: 'もう一度使って切り替えるまで',
+});
+const TACTICS_EX_SKILLS = Object.freeze({
+  Monol: Object.freeze({
+    id: 'monol_cover_all',
+    name: 'みんなをかばう',
+    desc: 'そのターンの敵の攻撃を、単体・全体・連撃までまとめてモノリスが引き受ける。',
+    maxUses: 3, unlimited: false, withCards: true, duration: 'turn',
+    effect: 'coverAll',
+  }),
+  Golem: Object.freeze({
+    id: 'golem_all_in',
+    name: '捨て身',
+    desc: '丈夫さを0にし、0にした丈夫さの50%を力へ加える。',
+    maxUses: 3, unlimited: false, withCards: false, duration: 'wave',
+    effect: 'allIn',
+  }),
+  KenshiMocchi: Object.freeze({
+    id: 'kenshi_mocchi_weapon_change',
+    name: '武器チェンジ',
+    desc: '二刀流と片手持ちを切り替える。片手持ちのあいだは力と同じ数値を丈夫さへ加える。固有技は使えるが、ソードスキルの効果は出ない。',
+    maxUses: 0, unlimited: true, withCards: false, duration: 'toggle',
+    toggleLabels: Object.freeze(['二刀流', '片手持ち']),
+    effect: 'weaponChange',
+  }),
+});
+// 追加の条件。ctx を受け取り、使えないときだけ理由の文を返す(使えるなら null)。
+// ctx: { active(その子のEXがいま効いているか) }
+// 条件の中身を本体へ書かずにここへ集めるので、EXを足すときは定義に名前を書くだけで済む
+const TACTICS_EX_CONDITIONS = Object.freeze({
+  notActive: (ctx) => (ctx && ctx.active ? '効果が続いているあいだは使えない' : null),
+});
+// 効果を実装済みの種類。★ここに無い effect は「回数と併用の決まりだけ動き、効果はまだ出ない」。
+//   画面は「開発中」と出す(使ったのに何も起きない、を黙って出さない)。
+//   STEP2 で効果を入れたら、ここへ名前を足す
+const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze([]);
+const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'toggle']);
+
+// 定義を安全な形へそろえる。壊れた項目があっても落とさず、いちばん控えめな既定値へ倒す
+const normalizeTacticsExDef = (raw) => {
+  if (!raw || typeof raw !== 'object' || typeof raw.id !== 'string' || !raw.id) return null;
+  const unlimited = raw.unlimited === true;
+  const duration = TACTICS_EX_DURATIONS.includes(raw.duration) ? raw.duration : 'turn';
+  const toggleLabels = Array.isArray(raw.toggleLabels) && raw.toggleLabels.length === 2
+    ? raw.toggleLabels.map(String) : ['OFF', 'ON'];
+  return {
+    id: raw.id,
+    name: String(raw.name || raw.id),
+    desc: String(raw.desc || ''),
+    maxUses: unlimited ? 0 : Math.max(0, tacticsSafeInt(raw.maxUses, 0)),
+    unlimited,
+    // ★併用できるかが書かれていなければ「併用できない」へ倒す(強すぎる側へ倒さない)
+    withCards: raw.withCards === true,
+    duration,
+    toggleLabels,
+    conditions: Array.isArray(raw.conditions) ? raw.conditions.filter(k => typeof TACTICS_EX_CONDITIONS[k] === 'function') : [],
+    conditionText: raw.conditionText ? String(raw.conditionText) : null,
+    effect: typeof raw.effect === 'string' ? raw.effect : null,
+  };
+};
+// そのモンスターのEX。持っていなければ null
+const tacticsExDefOf = (monId, table = TACTICS_EX_SKILLS) =>
+  (monId && table && Object.prototype.hasOwnProperty.call(table, monId) ? normalizeTacticsExDef(table[monId]) : null);
+const isTacticsExEffectImplemented = (def, implemented = TACTICS_EX_IMPLEMENTED_EFFECTS) =>
+  !!(def && def.effect && implemented.includes(def.effect));
+
+// ラン中の状態。枠(スロット)ごとに持つ(配置はラン中に変わらないので枠で数えてよい)。
+// ★念のため monId も持ち、枠の子が違えば「その子はまだ使っていない」として数える
+//   uses[slot]    = { monId, count }                1ランで使った回数
+//   effects[slot] = { monId, exId, duration, wave, turn, on }   いま載っている効果
+//   lastUse[slot] = { wave, turn }                  同じ子は1ターンに1回まで
+//   turnUsed      = { wave, turn }                  このターンにだれかがEXを使ったか
+//   cardLock      = { wave, turn }                  このターンは他のカードを使えない
+const createTacticsExState = () => ({ uses: {}, effects: {}, lastUse: {}, turnUsed: null, cardLock: null });
+const normalizeTacticsExState = (state) => {
+  const base = createTacticsExState();
+  if (!state || typeof state !== 'object') return base;
+  const obj = (v) => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
+  const stamp = (v) => (v && typeof v === 'object' && Number.isFinite(Number(v.wave)) && Number.isFinite(Number(v.turn))
+    ? { wave: tacticsSafeInt(v.wave, 0), turn: tacticsSafeInt(v.turn, 0) } : null);
+  return { uses: obj(state.uses), effects: obj(state.effects), lastUse: obj(state.lastUse),
+    turnUsed: stamp(state.turnUsed), cardLock: stamp(state.cardLock) };
+};
+const sameTacticsExTurn = (stamp, now) => !!(stamp && now
+  && tacticsSafeInt(stamp.wave, -1) === tacticsSafeInt(now.wave, -2)
+  && tacticsSafeInt(stamp.turn, -1) === tacticsSafeInt(now.turn, -2));
+const tacticsExUsesOf = (state, slot, monId) => {
+  const own = normalizeTacticsExState(state).uses[slot];
+  return own && own.monId === monId ? Math.max(0, tacticsSafeInt(own.count, 0)) : 0;
+};
+// 残りの回数。無制限なら left は Infinity(画面は「無制限」と出す)
+const tacticsExRemaining = (def, count) => {
+  if (!def) return { unlimited: false, max: 0, left: 0, used: 0 };
+  const used = Math.max(0, tacticsSafeInt(count, 0));
+  if (def.unlimited) return { unlimited: true, max: Infinity, left: Infinity, used };
+  return { unlimited: false, max: def.maxUses, left: Math.max(0, def.maxUses - used), used };
+};
+// その子のEXの効果が、いま(now = { wave, turn })効いているか。
+// ★時間で切れるものは「見るたびに数え直す」。WAVEの切り替わりで消す処理を別に持たないので、
+//   消し忘れで次のWAVEへ持ち越すことが起きない
+const isTacticsExEffectActive = (state, slot, monId, now) => {
+  const effect = normalizeTacticsExState(state).effects[slot];
+  if (!effect || effect.monId !== monId) return false;
+  if (effect.duration === 'toggle') return effect.on === true;
+  if (effect.duration === 'wave') return !!now && tacticsSafeInt(effect.wave, -1) === tacticsSafeInt(now.wave, -2);
+  return sameTacticsExTurn(effect, now);
+};
+// このターンは他のカードを使えないか(併用できないEXを使ったターン)
+const isTacticsExCardLocked = (state, now) => sameTacticsExTurn(normalizeTacticsExState(state).cardLock, now);
+// このターンにだれかがEXを使ったか(カードを使わずにターンを進められるようにする)
+const isTacticsExTurnUsed = (state, now) => sameTacticsExTurn(normalizeTacticsExState(state).turnUsed, now);
+
+// 使えるかどうか。使えないときは理由を1つだけ返す(画面の灰色のボタンの下へ出す)。
+//   alive         … その子が立っているか(倒れた子はカードと同じくEXも使えない)
+//   selectedCount … このターンにもう選んでいるカードの枚数
+//   busy          … 行動中・AUTO中
+const checkTacticsExUse = ({ def, state, slot, monId, alive, selectedCount = 0, now, busy = false } = {}) => {
+  if (!def) return { ok: false, reason: 'EXスキルを持っていない' };
+  if (busy) return { ok: false, reason: '行動中は使えない' };
+  if (!alive) return { ok: false, reason: '倒れているあいだは使えない' };
+  const safe = normalizeTacticsExState(state);
+  const remaining = tacticsExRemaining(def, tacticsExUsesOf(safe, slot, monId));
+  if (!remaining.unlimited && remaining.left <= 0) return { ok: false, reason: 'このランで使える回数が残っていない' };
+  if (sameTacticsExTurn(safe.lastUse[slot], now)) return { ok: false, reason: 'このターンはもう使った' };
+  if (!def.withCards && Math.max(0, tacticsSafeInt(selectedCount, 0)) > 0) {
+    return { ok: false, reason: '他のカードと一緒に使えないEX。先にカードの選択を外す' };
+  }
+  const active = isTacticsExEffectActive(safe, slot, monId, now);
+  for (const key of def.conditions || []) {
+    const why = TACTICS_EX_CONDITIONS[key] ? TACTICS_EX_CONDITIONS[key]({ active }) : null;
+    if (why) return { ok: false, reason: why };
+  }
+  return { ok: true, reason: null };
+};
+// 使ったあとの状態を返す(渡された state は書き換えない)。
+// ★回数を減らすのは無制限でないときだけ。無制限は数えるが、残りには効かない
+const applyTacticsExUse = (state, { def, slot, monId, now } = {}) => {
+  const safe = normalizeTacticsExState(state);
+  if (!def || !Number.isInteger(slot)) return safe;
+  const stamp = { wave: tacticsSafeInt(now && now.wave, 0), turn: tacticsSafeInt(now && now.turn, 0) };
+  const count = tacticsExUsesOf(safe, slot, monId) + 1;
+  const prev = safe.effects[slot];
+  const wasOn = !!(prev && prev.monId === monId && prev.duration === 'toggle' && prev.on === true);
+  return {
+    uses: { ...safe.uses, [slot]: { monId, count } },
+    effects: { ...safe.effects, [slot]: { monId, exId: def.id, duration: def.duration, wave: stamp.wave, turn: stamp.turn,
+      on: def.duration === 'toggle' ? !wasOn : true } },
+    lastUse: { ...safe.lastUse, [slot]: stamp },
+    turnUsed: stamp,
+    cardLock: def.withCards ? safe.cardLock : stamp,
+  };
+};
+// 切り替え式のEXが、いまどちらの状態か(画面に「いま：片手持ち」のように出す)
+const tacticsExToggleLabel = (def, state, slot, monId) => {
+  if (!def || def.duration !== 'toggle') return null;
+  return def.toggleLabels[isTacticsExEffectActive(state, slot, monId, null) ? 1 : 0];
+};
+// ==== タクティクス専用 EXスキルここまで ====

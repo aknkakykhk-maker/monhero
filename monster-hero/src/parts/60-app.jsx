@@ -783,10 +783,18 @@ function MonsterHeroGame() {
   //   倍率を残したままだった。クイック周回を終えてHOMEへ戻り、そのまま
   //   タクティクスプロを始めると、WAVE1の勇者モンが前の周回ぶんの追いつきを受けていた。
   //   片付けを増やすときは、必ずここへ書く(呼び出し漏れは tactics-units-check が見張る)。
+  // ★タクティクス専用 EXスキルのラン中の状態(回数・効果・このターンの併用制限)。
+  //   1ランぶんだけ持つ。WAVEが変わっても戻さず、ランを始めるとき(下の片付け)だけ作り直す。
+  //   ref でも持つのは、同じ操作の中で続けて読むとき(使った直後の判定)に古い値を見ないため
+  const [tacticsExState, setTacticsExState] = useState(createTacticsExState);
+  const tacticsExStateRef = useRef(tacticsExState);
+  const commitTacticsExState = (next) => { tacticsExStateRef.current=next; setTacticsExState(next); };
   const resetTacticsJoinCatchUp = () => {
     tacticsJoinCatchUpRef.current=1;
     tacticsJoinCatchUpTurnsRef.current=0;
     tacticsJoinDistCatchUpRef.current=1;
+    // EXの使用回数もランごとに数え直す(ランの片付けはここ1か所へ書く決まりなので、ここへ置く)
+    commitTacticsExState(createTacticsExState());
   };
   // ULTIMATEのラン内だけで持つ永久弱体と、次WAVE開始時に一度だけ消費する発動予約。
   const [ultimateDistanceBreakLevels,setUltimateDistanceBreakLevels]=useState([0,0,0,0]);
@@ -1978,7 +1986,8 @@ function MonsterHeroGame() {
   // debugBattleRef と分けてあるのは、難易度の「この難易度で挑戦」が
   // debugBattleRef を必ず false へ戻す(ふだんの周回を記録する側へ寄せる)ため。
   // これを共用すると、記録するかどうかの判定まで一緒に動いてしまう。
-  // ここでは「正式実装前のモンスター(debugOnly)を勇者モン選択に出すかどうか」だけに使い、
+  // ここでは「正式実装前のモンスター(debugOnly)を勇者モン選択に出すかどうか」と、
+  // 「公開前のタクティクスEXスキルを距離枠から開けるようにするか」(tacticsExEnabled)だけに使い、
   // 保存・スコア・ランキングの判定には一切使わない。HOMEへ戻ると落ちる
   const debugMonsterPreviewRef = useRef(false);
   const [extremeRun, setExtremeRun] = useState(false);
@@ -9116,6 +9125,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // ★全体の枚数(baseCardLimit)は「立っている人数＋👑」で決まるので、
   //   攻撃を1体1枚に絞っても配り切れる。WAVE1で使える枚数も減らない
   //   (盤面1体なら全体も1枚、👑持ちなら全体2枚でその子が2枚使える)。
+  // ★タクティクス専用 EXスキル(設計: docs/spec/TACTICS_EX_SKILLS.md)。出すかどうかは tacticsExSkillsEnabled 1か所で決める
+  //   (タクティクス以外では必ず false。公開前はデバッグのバトルでだけ true)
+  // ★デバッグの「⚔️ バトルモード」入口から始めた戦いは、難易度を決めた時点で debugBattle が false へ戻る。
+  //   入口から来たことは debugMonsterPreviewRef だけが覚えているので、公開前の先行表示はそちらも見る
+  const tacticsExEnabled = tacticsExSkillsEnabled(runMode, { debugBattle:debugBattle||debugMonsterPreviewRef.current, tutorial:!!battleScenarioRef.current });
+  // 「いま」= このWAVEの何ターン目か。EXの効果の長さと「このターン」の判定はこれで数える
+  const tacticsExNow = { wave, turn:turnCount };
+  const tacticsExCardLocked = tacticsExEnabled && isTacticsExCardLocked(tacticsExState, tacticsExNow);
+  const tacticsExTurnUsed = tacticsExEnabled && isTacticsExTurnUsed(tacticsExState, tacticsExNow);
   const tacticsUsableSlots = (card, excludeHandIndex = null) => {
     if(!isTacticsMode(runMode)||!card) return [];
     const spent={}, used={};
@@ -9145,6 +9163,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const tacticsCardBlock = (card, cardIndex = null) => {
     if(!isTacticsMode(runMode)||!card) return null;
     if(cardIndex!=null&&selectedCards.includes(cardIndex)) return { ok:true, kind:null, short:null, why:null };
+    // ★併用できないEXを使ったターンは、どのカードも選べない(理由を帯で出す)
+    if(tacticsExCardLocked) return { ok:false, kind:'ex', short:'EX使用', why:'他のカードと一緒に使えないEXスキルを使ったターンなので、カードは選べない' };
     if(tacticsUsableSlots(card,cardIndex).length>0){
       // ★1ターンに選べる枚数の上限は、いままでの5モードと同じ見え方(灰色だけ)にする。
       //   全部のカードへ赤い帯が出るとうるさいので、理由はカード詳細でだけ出す
@@ -9205,7 +9225,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       const usable=tacticsMode?tacticsUsableSlots(c):[];
       const curGuts=pendingCardGuts(c);
       const remainingGuts=guts-selectedCards.reduce((acc,idx)=>acc+selectedCardGuts(idx),0);
-      const isSelectable=(tacticsMode?usable.length>0:remainingGuts>=curGuts) && selectedCards.length<cardLimit;
+      // ★併用できないEXを使ったターンは選べない(EXそのものは枚数に数えないので、cardLimit とは別に見る)
+      const isSelectable=(tacticsMode?usable.length>0:remainingGuts>=curGuts) && selectedCards.length<cardLimit && !tacticsExCardLocked;
       if(isSelectable){
         Audio_.se.card();
         setSelectedCards(p=>[...p,i]);
@@ -9223,6 +9244,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const dragAssignToSlot = (cardIndex, slotIdx) => {
     if(isBusy||autoBattleRef.current) return;
     const c=hand[cardIndex]; if(!c) return;
+    if(tacticsExCardLocked){ setFocusedCard(null); return; }
     const targetMon=slots[slotIdx];
     // 攻撃カード: モンスターのいるスロットに割り当て
     if(cardNeedsMonster(c)){
@@ -10082,7 +10104,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   };
 
   const useEmergency = async () => {
-    if (isBusy||hp<=0) return; setIsBusy(true);
+    if (isBusy||hp<=0) return;
+    // 併用できないEXを使ったターンは「行動不可」。緊急回復も使えない(ターンは「ターンを進める」で送る)
+    if (tacticsExCardLocked) return;
+    setIsBusy(true);
     Audio_.se.heal();
     setEffect({type:'heal',label:"緊急回復",icon:"💊",monEmoji:mainHero?.emoji||"🏥",imgUrl:mainHero?.imgUrl,baseId:mainHero?.id,colors:mainHero?.colors});
     await battleWait(500); setEffect(null);
@@ -10117,6 +10142,66 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if (scenario) setBattleTutorialLastAction('emergency');
   };
 
+  // ==== タクティクス専用 EXスキル(STEP1: 共通基盤) ====
+  // 距離枠をタップしたときに出す中身。★タップしただけでは発動しない(使うのは詳細の「EXスキルを使用」だけ)。
+  // EXを持たない子・タクティクス以外・公開前の本番では null(画面は今までどおり何も開かない)
+  const tacticsExInfo = (slotIdx) => {
+    if(!tacticsExEnabled||!Number.isInteger(slotIdx)) return null;
+    const mon=slots[slotIdx]; if(!mon) return null;
+    const def=tacticsExDefOf(mon.id); if(!def) return null;
+    const state=tacticsExState;
+    const remaining=tacticsExRemaining(def,tacticsExUsesOf(state,slotIdx,mon.id));
+    const check=checkTacticsExUse({ def, state, slot:slotIdx, monId:mon.id,
+      alive:canTacticsSlotAct(tacticsUnits,slotIdx), selectedCount:selectedCards.length,
+      now:tacticsExNow, busy:isBusy||autoBattle });
+    return {
+      slot:slotIdx, monName:mon.masuName||mon.name, def, remaining, check,
+      active:isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow),
+      toggleLabel:tacticsExToggleLabel(def,state,slotIdx,mon.id),
+      durationText:TACTICS_EX_DURATION_TEXT[def.duration]||null,
+      implemented:isTacticsExEffectImplemented(def),
+    };
+  };
+  // 効果ごとの発動口。STEP2 ではここへ効果の中身を入れる(効果の種類ごとに1つ。モンスターごとの if にしない)。
+  // ★効き目そのもの(攻撃の引き受け・ステータスの上下・固有技の切り替え)は、戦闘の計算側で
+  //   isTacticsExEffectActive を見て決める。ここは「使った瞬間」に1度だけ起こすもの(演出・ログ)の置き場
+  const TACTICS_EX_ON_USE = {};
+  const activateTacticsEx = (slotIdx) => {
+    if(!tacticsExEnabled||isBusy||autoBattleRef.current) return false;
+    const mon=slots[slotIdx]; if(!mon) return false;
+    const def=tacticsExDefOf(mon.id); if(!def) return false;
+    const state=tacticsExStateRef.current;
+    // ★判定は ref の最新値でもう一度通す。連打で同じターンに2回使えないように
+    const check=checkTacticsExUse({ def, state, slot:slotIdx, monId:mon.id,
+      alive:canTacticsSlotAct(tacticsUnitsRef.current,slotIdx), selectedCount:selectedCards.length,
+      now:tacticsExNow, busy:false });
+    if(!check.ok) return false;
+    const next=applyTacticsExUse(state,{ def, slot:slotIdx, monId:mon.id, now:tacticsExNow });
+    commitTacticsExState(next);
+    Audio_.se.card();
+    const toggled=def.duration==='toggle'?`（${tacticsExToggleLabel(def,next,slotIdx,mon.id)}）`:'';
+    pushBattleLog(`EX ${mon.masuName||mon.name}「${def.name}」${toggled}`, 'ally');
+    const onUse=TACTICS_EX_ON_USE[def.effect];
+    if(isTacticsExEffectImplemented(def)&&typeof onUse==='function') onUse({ def, slotIdx, mon, state:next });
+    else pushBattleLog('（開発中）このEXの効果はまだ出ない。回数と併用のルールだけ動いている', 'info');
+    if(!def.withCards){ setPendingCard(null); setFocusedCard(null); }
+    return true;
+  };
+  // EXを使ったターンに、カードを使わずに敵の番へ進める。
+  // ★併用できないEXを使ったターンはカードを選べず、ACTION(カード1枚以上が要る)では進められないため。
+  //   中身は緊急回復の「回復のあと」と同じ(予告済みの行動をそのまま実行し、次の予告を1回だけ決める)
+  const passTacticsTurn = async () => {
+    if(!tacticsExTurnUsed||isBusy||!enemy||hp<=0||selectedCards.length>0) return;
+    setIsBusy(true);
+    setFocusedCard(null); setPendingCard(null);
+    pushBattleLog(`── ${turnCount}ターン目 ──`, 'turn');
+    const acting=enemyIntent;
+    await handleEnemyTurn('none',{},acting,hp);
+    const moveWasFrozen=acting&&acting.type==='MOVE'&&getWaveBuff('iceLockTurns')>0;
+    const distForNextPredict=acting&&acting.type==='MOVE'&&!moveWasFrozen?acting.targetDist:enemyDist;
+    setEnemyLastIntent(enemyActionPerformedRef.current?acting:null); advanceEnemyIntents(acting,distForNextPredict,enemyActionPerformedRef.current);
+  };
+
   const processTurn = async (explicitEntries = null) => {
     const hasExplicitEntries=Array.isArray(explicitEntries);
     const usedCardEntries=hasExplicitEntries
@@ -10124,6 +10209,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         .map(entry=>({card:entry.card,handIndex:entry.handIndex,slotIdx:entry.slotIdx!=null?entry.slotIdx:null}))
       : selectedCards.map(i=>({card:hand[i],handIndex:i,slotIdx:cardAssignments[i]!=null?cardAssignments[i]:null}));
     if (isBusy||!enemy||usedCardEntries.length===0) return;
+    // 併用できないEXを使ったターンはカードを使えない(AUTOの明示の選択もここで止める)
+    if (tacticsExCardLocked) return;
     // ★タクティクスバトルの「眼力」は、スエゾーが攻撃したターンに引く(2026-09-20 ユーザー指示)。
     //   本人の能力なので勇者モンにしていなくても効く。1ターンに何枚使っても判定は1回
     //   (枚数で確率が上がらないように)。既存5モードは今までどおり敵のターンの頭に引く
@@ -10604,6 +10691,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // ガッツは1体ずつなので gutsForSlot で渡し、枚数制限は手動と同じ
     // countsTowardTacticsSlotLimit で数える(攻撃カードだけ数えていたころは、
     // AUTOだけ回復もバフも何枚でも同じ子へ置けていた)
+    // 併用できないEXを使ったターンは、カードを選ばずにそのまま敵の番へ進める
+    if(tacticsExCardLocked) return passTacticsTurn();
     const tacticsMode=isTacticsMode(runMode);
     const autoSlots=tacticsMode
       ? slots.map((mon,idx)=>(canTacticsSlotAct(tacticsUnitsRef.current,idx)?mon:null))
@@ -16353,6 +16442,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             getNextTurnBuff={getNextTurnBuff} getPermaBuff={getPermaBuff} getTurnBuff={getTurnBuff}
             getWaveBuff={getWaveBuff} guardCardWeight={guardCardWeight} guardFx={guardFx} guardLevel={guardLevel}
             guardValueOf={guardValueOf} tacticsSlotGuardValue={tacticsSlotGuardValue}
+            tacticsExInfo={tacticsExInfo} activateTacticsEx={activateTacticsEx} tacticsExCardLocked={tacticsExCardLocked}
+            tacticsExTurnUsed={tacticsExTurnUsed} passTacticsTurn={passTacticsTurn}
             guts={guts} hand={hand} heroCardBonus={heroCardBonus} heroDist={heroDist}
             hp={hp} iceLockActive={iceLockActive} iceLockPreparing={iceLockPreparing} iceLockTurns={iceLockTurns}
             isAssistCard={isAssistCard} isAttackCard={isAttackCard} isBusy={isBusy} isHeroSlotMon={isHeroSlotMon}

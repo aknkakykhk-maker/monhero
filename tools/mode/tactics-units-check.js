@@ -521,8 +521,9 @@ check('補正はWAVEを倒しきった瞬間に1回だけ積む',
 //   片方だけ直して片方が残る(2026-09-22に実際そうなって再発した)
 check('積み上げを1へ戻すのは resetTacticsJoinCatchUp だけ',
   (source.match(/tacticsJoinCatchUpRef\.current=1;/g) || []).length === 1
+    // ★頭の3行だけを見る。同じ片付けに EXスキルの回数の作り直しも入っている(tactics-ex-skills-check が見る)
     && has('const resetTacticsJoinCatchUp = () => {\n    tacticsJoinCatchUpRef.current=1;\n'
-      + '    tacticsJoinCatchUpTurnsRef.current=0;\n    tacticsJoinDistCatchUpRef.current=1;\n  };'),
+      + '    tacticsJoinCatchUpTurnsRef.current=0;\n    tacticsJoinDistCatchUpRef.current=1;\n'),
   `戻す場所 ${(source.match(/tacticsJoinCatchUpRef\.current=1;/g) || []).length}か所`);
 // ★ランの状態を作り直すところは、必ず追いつき補正も数え直す。
 //   applyResetAllState だけに書いて returnToHome へ書き忘れたのが再発の原因
