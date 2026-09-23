@@ -641,9 +641,11 @@ check('置けるかの判定も画面へ渡す', has('tacticsCanAssign={tacticsC
   //   ガードの数え方を直したときに片方だけ古くなる
   check('予定ダメージの数え方は1か所にまとまっている',
     hasScreen('const plannedHitFor = (slotIdx) => {')
-      && hasScreen('const plannedDamageFor = (slotIdx) => plannedHitFor(slotIdx).taken;')
-      && hasScreen('const plannedHit=plannedHitFor(aimedSlot);')
-      && hasScreen('const slotAimHit=slotAimed?plannedHitFor(i):null;'));
+      // ★EX「みんなをかばう」のターンは、かばう子が人数ぶんを受ける。plannedHitFor を包む1つだけを通す
+      && hasScreen('const hit = plannedHitFor(slotIdx);')
+      && hasScreen('const plannedDamageFor = (slotIdx) => plannedHitWithCover(slotIdx).taken;')
+      && hasScreen('const plannedHit=plannedHitWithCover(aimedSlot);')
+      && hasScreen('const slotAimHit=slotAimed?plannedHitWithCover(i):null;'));
   check('予定ダメージは本番と同じ受け方を通る',
     hasScreen('const hit = resolveTacticsGuardedHit(raw, hits, guard, guardHits);')
       && hasScreen('guardHits = tacticsGuardHits(own.cards, hits);'));
@@ -704,7 +706,8 @@ check('置けるかの判定も画面へ渡す', has('tacticsCanAssign={tacticsC
       && !hasScreen("style={{bottom:'calc(78% + 2px)'}}"));
   // ★1つの数字にまとめると、どの子がどれだけ減るのか分からなくなる
   check('全体攻撃は札に1つの数字を出さない',
-    hasScreen('const showPlannedInBubble=!enemyIntent.targetsAll;')
+    // かばっているターンだけは受けるのが1体なので出してよい
+    hasScreen('const showPlannedInBubble=coverActive||!enemyIntent.targetsAll;')
       && hasScreen('{rawDmg>0&&showPlannedInBubble&&plannedText?('));
   // ★連撃だと予告の時点で分かる(2026-09-21 ユーザー指摘「敵の連撃技が連撃表示になってない」)
   // ★連撃だと予告の時点で分かる(2026-09-21 ユーザー指摘「敵の連撃技が連撃表示になってない」)。

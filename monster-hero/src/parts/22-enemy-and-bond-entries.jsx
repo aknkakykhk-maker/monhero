@@ -465,7 +465,7 @@ const KENSHI_COMBO_POWER_MAX = 3;
 //   連撃系はここで分かれる(2026-09-22 ユーザー判断)。
 //     ザンの連斬だけ traitOwnerId … 供モンでも本人が殴れば出る
 //     エイキ・パンドラ・剣士モッチー … heroId。**勇者モンにしたからこそ強い**設定なので出さない
-const buildAttackHits = ({ d, card, attackerId, heroId, traitOwnerId = heroId, comboDmgBonus = 0, critDmgBonus = 0, guaranteedCrit = false, rollCrit = () => false, globalComboRate = 0, mainCanCrit = true, kenshiExtraCombos = 0, comboFinalMultiplier = 1 }) => {
+const buildAttackHits = ({ d, card, attackerId, heroId, traitOwnerId = heroId, comboDmgBonus = 0, critDmgBonus = 0, guaranteedCrit = false, rollCrit = () => false, globalComboRate = 0, mainCanCrit = true, kenshiExtraCombos = 0, comboFinalMultiplier = 1, swordSkill = true }) => {
   const hits = [];
   const critMult = 1.5 + critDmgBonus;
   const isUniqueOf = (id) => card.type === 'unique' && card.monId === id;
@@ -504,7 +504,9 @@ const buildAttackHits = ({ d, card, attackerId, heroId, traitOwnerId = heroId, c
   if (kenshiSplitNormal) combo(ATTACK_COMBO_RULES.kenshiSplitNormal + comboDmgBonus);
   if (kenshiHero && isUniqueOf('KenshiMocchi')) for (const rate of ATTACK_COMBO_RULES.kenshiHeroUnique) combo(rate + comboDmgBonus);
   // 固有効果「ソードスキル」: 技の出自が剣士モッチーなら誰が使っても(合体で引き継いだ場合も)
-  if (isUniqueOf('KenshiMocchi')) for (const rate of ATTACK_COMBO_RULES.kenshiUnique) combo(rate + comboDmgBonus);
+  // ★swordSkill:false … タクティクスのEX「武器チェンジ」で片手持ちの剣士モッチーが使ったとき。
+  //   固有技そのものは使えるが、ソードスキルの連撃は出ない(ほかのモードは渡さないので常に true)
+  if (swordSkill && isUniqueOf('KenshiMocchi')) for (const rate of ATTACK_COMBO_RULES.kenshiUnique) combo(rate + comboDmgBonus);
   // ソードスキルの連撃パワーが3充填されるたびに1本ずつ増える永久連撃。
   // 本数に上限は設けない。率にも連撃ダメージ補正(comboDmgBonus)が乗る
   if (attackerId === 'KenshiMocchi') {

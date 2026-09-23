@@ -48,7 +48,7 @@ const tacticsSlotFlag = Function(`${slotFlagSrc.text}\nreturn tacticsSlotFlag;`)
 // この検査が見るのは**既存5モードのぶん**なので、持ち主は勇者モンで固定する。
 // タクティクスで「札を出した子」になることは tools/mode/tactics-enemy-actions-check.js が見る
 const traitOwnerOfFor = (mainHero) => () => (mainHero && mainHero.id) || null;
-const makePredicted = (mainHero, getPermaBuff, getTurnBuff) => Function('mainHero', 'getPermaBuff', 'getTurnBuff', 'Math', 'buildAttackHits', 'attackAtonementDmg', 'soulTraitAttackProfile', 'getMasuMon', 'tacticsSlotFlag', 'traitOwnerOf', `return (${predictedArrow});`)(mainHero, getPermaBuff, getTurnBuff, Math, shared.buildAttackHits, shared.attackAtonementDmg, soulTraitAttackProfile, getMasuMon, tacticsSlotFlag, traitOwnerOfFor(mainHero));
+const makePredicted = (mainHero, getPermaBuff, getTurnBuff) => Function('mainHero', 'getPermaBuff', 'getTurnBuff', 'Math', 'buildAttackHits', 'attackAtonementDmg', 'soulTraitAttackProfile', 'getMasuMon', 'tacticsSlotFlag', 'traitOwnerOf', `const tacticsExEffectAt = () => null; // タクティクスのEX(片手持ち)は既存5モードでは効かない\nreturn (${predictedArrow});`)(mainHero, getPermaBuff, getTurnBuff, Math, shared.buildAttackHits, shared.attackAtonementDmg, soulTraitAttackProfile, getMasuMon, tacticsSlotFlag, traitOwnerOfFor(mainHero));
 
 // --- 実処理: processTurn の攻撃ブロック(会心判定 〜 全体連撃)を取り出す ---
 const anchor = source.indexOf("const d=getDmg(card,slotIdx,activeMon,localOryoAdd,localDmgModAdd,halved,attackStartDist)");
@@ -56,6 +56,7 @@ if (anchor < 0) throw new Error('processTurn の攻撃ブロックが見つか�
 const act = slice("const soulAttack=soulTraitAttackProfile(activeMon?.masuId?getMasuMon(activeMon.masuId):null,card,slotIdx);", 'if (rangeMoveTarget!=null)', anchor);
 const makeActual = (rng) => Function('d', 'card', 'activeMon', 'mainHero', 'getPermaBuff', 'getTurnBuff', 'localGlobalComboAdd', 'slotIdx', 'Math', 'buildAttackHits', 'soulTraitAttackProfile', 'getMasuMon', 'tacticsSlotFlag', 'traitOwnerOf', `
   let totalDmg = 0, hasCrit = false; const attackHits = [];
+  const tacticsExEffectAt = () => null; // タクティクスのEX(片手持ち)は既存5モードでは効かない
   ${act.text}
   return { totalDmg, attackHits, hasCrit };
 `)

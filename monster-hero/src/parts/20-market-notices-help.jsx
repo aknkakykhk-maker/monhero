@@ -368,6 +368,16 @@ const helpDataRows = (id) => {
           action.multiplier > 0
             ? `威力 ×${action.multiplier}${action.hits > 1 ? `（${action.hits}ヒット）` : ''}`
             : 'ダメージなし']);
+    // タクティクスのEXスキル(2026-09-23)。持っている子・名前・回数・カードとの併用・効果時間を定義から作る。
+    // ★EXを足したときにヘルプが古いままにならないよう、行を書き写さない。2列目は短く(help-render-check)
+    case 'tacticsExSkills':
+      return Object.keys((typeof TACTICS_EX_SKILLS !== 'undefined' && TACTICS_EX_SKILLS) || {}).map(monId => {
+        const def = tacticsExDefOf(monId);
+        const monName = ((typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[monId]) || {}).name || monId;
+        const duration = { turn:'そのターン', wave:'そのWAVE', toggle:'切り替え' }[def.duration] || '';
+        return [`${monName}「${def.name}」`,
+          `${def.unlimited ? '無制限' : `1ラン${def.maxUses}回`} ／ ${def.withCards ? 'カードと併用可' : 'そのターンはカード不可'} ／ ${duration}`];
+      });
     // プロモードのランぶんに入るクイック周回数(2026-09-21)。
     // 難易度ごとの重さ(power)と同じ式から作るので、難易度を調整したときも自動で追随する
     // (ヘルプへ9行書き写すと、必ずどこかが古いままになる)
@@ -595,6 +605,7 @@ const helpDataRows = (id) => {
 const HELP_DATA_TITLES = {
   difficulties: '難易度と倍率',
   tacticsEnemyActions: 'タクティクスバトルの敵が使う技',
+  tacticsExSkills: 'タクティクスバトルのEXスキル',
   proQuickLoops: 'プロモードで入るクイック周回数',
   extremeDifficulties: '極限チャレンジの難易度',
   rhythmEventPlayBonus: 'イベントの回数ボーナス（1回あたり）',

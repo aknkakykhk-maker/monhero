@@ -59,7 +59,8 @@ function BattleScreen({
   setShowSoulBattleEffects, setSkillPicker, setSlotSettle, slotMaxUses, slotSettle, slotSkill,
   slotUniqueChoice, slots, soulBattleParty, soulCoordinationCardBonus, suppressCardClickRef,
   tacticsCanAssign, tacticsCardBlock, tacticsCardGenre, tacticsCardScope, tacticsSlotFx, tacticsUnits,
-  tacticsExInfo, activateTacticsEx, tacticsExCardLocked, tacticsExTurnUsed, passTacticsTurn,
+  tacticsExInfo, activateTacticsEx, tacticsExCardLocked, tacticsExTurnUsed, passTacticsTurn, tacticsCoverSlot,
+  tacticsExIntroVisible, dismissTacticsExIntro,
   teachingFx, totalTurnCount, turnCount, ultimateDistanceBreakLevels, ultraBattleView,
   unifiedSpecialDefense, useEmergency, wave,
 }) {
@@ -81,9 +82,15 @@ function BattleScreen({
   //   ほかの技と違って targetName を持たない。予告を見ても間合いしか分からなかった。
   // ★数え方は本番と同じ tacticsIntentTargets を通す。別に書くと、距離撃でずらしたときに
   //   予告と実際がずれる(「当たらないはずの枠が光る」)
-  const aimedSlots = Array.isArray(tacticsUnits) && enemyIntent
+  const rawAimedSlots = Array.isArray(tacticsUnits) && enemyIntent
     ? tacticsIntentTargets(enemyIntent, tacticsUnits, enemyDist) : [];
-  const aimedName = enemyIntent?.targetName
+  // ★EX「みんなをかばう」が効いているターンは、狙いがかばう子へまとまる(本番と同じ coverTacticsTargets)。
+  //   全体攻撃なら、本来当たるはずだった人数ぶんをその子が受ける
+  const coverActive = Number.isInteger(tacticsCoverSlot) && rawAimedSlots.length > 0;
+  const coverHitCount = coverActive ? rawAimedSlots.length : 1;
+  const aimedSlots = coverActive ? [tacticsCoverSlot] : rawAimedSlots;
+  const aimedName = (coverActive ? `${tacticsTargetName(tacticsUnits, tacticsCoverSlot)}（かばう）` : null)
+    || enemyIntent?.targetName
     || (aimedSlots.length ? aimedSlots.map(idx => tacticsTargetName(tacticsUnits, idx)).join('・')
       : (enemyIntent?.variant === 'sweep' ? 'だれもいない' : ''));
   // 1体ぶんの「このターン減る量」。予告の吹き出しと、枠ごとの表示の両方がここを通る。
@@ -162,7 +169,14 @@ function BattleScreen({
     //   「結局いくつ食らうのか」が読めなかった(2026-09-22 ユーザー指摘)
     return { taken, raw, parts: hits > 1 ? scaleTacticsHitAmounts((hit.amounts || []).filter(value => value > 0), taken) : [taken] };
   };
-  const plannedDamageFor = (slotIdx) => plannedHitFor(slotIdx).taken;
+  // かばう子は、まとめて引き受けたぶん(人数ぶん)を受ける
+  const plannedHitWithCover = (slotIdx) => {
+    const hit = plannedHitFor(slotIdx);
+    if (!coverActive || slotIdx !== tacticsCoverSlot || coverHitCount <= 1 || !(hit.taken > 0)) return hit;
+    return { taken: hit.taken * coverHitCount, raw: hit.raw * coverHitCount,
+      parts: Array.from({ length: coverHitCount }, () => hit.parts).flat() };
+  };
+  const plannedDamageFor = (slotIdx) => plannedHitWithCover(slotIdx).taken;
   // ★敵が次に何をするかの札(「3連撃！」など)。作りはここ1か所にして、置き場所だけ変える。
   //   ムーは丸枠の外、ほかの敵は丸枠の右上へ出すので、下の2か所から呼ぶ
   // ★貫通技準備もこの札で出す(2026-09-22 ユーザー指摘「必殺技のためると必殺準備が被って出てる。
@@ -360,11 +374,11 @@ function BattleScreen({
             // 出すと必ず0になり、ガードを構える判断の邪魔になる
             // 新モードは「狙われた子の丈夫さ」で受け、「その子が構えたガード」だけが効く。
             // ★targetSlot が無いモードでは今までどおりパーティの値で出る
-            const aimedSlot=Number.isInteger(enemyIntent.targetSlot)?enemyIntent.targetSlot:null;
+            const aimedSlot=coverActive?tacticsCoverSlot:(Number.isInteger(enemyIntent.targetSlot)?enemyIntent.targetSlot:null);
             const rawDmg=getIncomingDamageBeforeTurnReduction(enemyIntent,aimedSlot);
             // ★数え方は plannedDamageFor に1か所だけ置く(枠ごとの表示と同じ関数を通す)。
             //   2か所に書くと、ガードの数え方を直したときに片方だけ古くなる
-            const plannedHit=plannedHitFor(aimedSlot);
+            const plannedHit=plannedHitWithCover(aimedSlot);
             const plannedDmg=plannedHit.taken;
             // 連撃は「129・130」と1発ずつ。1発の技は今までどおり数字ひとつ
             const plannedText=plannedHit.parts.join('・');
@@ -374,7 +388,8 @@ function BattleScreen({
             const plannedTotalText=plannedHit.raw>plannedDmg?`${plannedHit.raw}→${plannedDmg}`:`${plannedDmg}`;
             // ★全体攻撃は受ける量が1体ずつ違う。1つの数字にまとめると、
             //   どの子がどれだけ減るのか分からなくなるので、吹き出しには出さず枠ごとに出す
-            const showPlannedInBubble=!enemyIntent.targetsAll;
+            // かばっているターンは受けるのが1体だけなので、全体攻撃でも吹き出しに出せる
+            const showPlannedInBubble=coverActive||!enemyIntent.targetsAll;
             // ★再生も「いくつ戻るか」を数字で出す(2026-09-22 ユーザー指示「敵の回復時で
             //   いくつ回復するかも数値を予測で出してほしい」)。ダメージだけ数字が出て、
             //   回復は「回復」としか出ないので、あと何ターンで削り切れるかが読めなかった。
@@ -1123,7 +1138,7 @@ function BattleScreen({
               //   (2026-09-21 ユーザー依頼)。ガードを置けばその枠の数字だけが減る。
               //   ★連撃は1発ずつ並べると合計が読めない(2026-09-22 ユーザー指摘)ので、
               //     合計を先に出し、1発ずつの内訳を小さく添える
-              const slotAimHit=slotAimed?plannedHitFor(i):null;
+              const slotAimHit=slotAimed?plannedHitWithCover(i):null;
               return(<button key={i} data-slot-index={i} data-tactics-aimed={slotAimed?'true':undefined} data-distance-broken={distanceBroken?'true':undefined} data-distance-break-level={distanceBroken?distanceBreakLevel:undefined} aria-label={`${RANGE_LABELS[i]}距離${distanceBroken?`（BREAK Lv${distanceBreakLevel}・与ダメージ${distanceBreakPercent}%）`:''}`} onClick={()=>{
                 if(isBusy||autoBattleRef.current)return;
                 if(pendingCard!=null && canAssign){
@@ -1137,6 +1152,8 @@ function BattleScreen({
                   // ★カードを置く途中でないときだけ、その子のEXスキルの詳細を開く(タクティクス専用)。
                   //   カードの置き先を選んでいるときのタップは、今までどおりカードの置き場所の操作にする
                   setExPanelSlot(i);
+                  // 自分で開けたなら、使い方案内はもう要らない
+                  if(tacticsExIntroVisible&&dismissTacticsExIntro) dismissTacticsExIntro();
                 }
               }} disabled={isBusy||autoBattle} className={`relative rounded-2xl border-2 flex flex-col items-stretch overflow-visible transition-all ${RANGE_STYLES[i].slotGlow||''} ${RANGE_STYLES[i].bg} ${distanceBroken?'border-red-400':' '+RANGE_STYLES[i].border} ${(canAssign||(dragState?.active&&dragOverSlot===i))?'ring-2 ring-yellow-400 scale-105 z-10 shadow-lg animate-pulse':'opacity-100'} ${assignedCount>0?'ring-2 ring-indigo-500':''} ${dragState?.active&&dragOverSlot===i?'ring-4 ring-green-400 scale-110':''} ${slotSettle===i?'ring-4 ring-white':''}`} style={isAnimating?{zIndex:9999, animation:attackMotionAnimation(attackAnim)}:(distanceBroken?{backgroundColor:distanceBreakLevel>=2?'rgb(12,2,5)':'rgb(24,5,25)',boxShadow:`inset 0 0 0 ${Math.min(4,distanceBreakLevel+1)}px rgba(248,113,113,.95), inset 0 0 ${28+distanceBreakLevel*8}px rgba(76,5,25,.98), 0 0 ${9+distanceBreakLevel*4}px rgba(220,38,38,.65)`,...(slotHitShake||{})}:(slotSettle===i?{animation:'slotSettle 400ms ease-out'}:(slotHitShake||undefined)))}>
                 {/* ★狙われている枠。カードを置ける黄色の輪・ドラッグ中の緑の輪と重ならないよう、
@@ -1362,6 +1379,13 @@ function BattleScreen({
             })}
           </div>
         </div>
+        {/* タクティクスのEXスキルを持つ子がいる最初のバトルで1度だけ、距離枠から開けることを伝える */}
+        {tacticsExIntroVisible&&<div data-tactics-ex-intro className="shrink-0 border-t border-fuchsia-400/30 bg-slate-950/95 px-2 py-1">
+          <div className="flex items-start gap-1">
+            <div className="min-w-0 flex-1"><AssistantBubble scene="tacticsExIntro" compact/></div>
+            <button type="button" onClick={dismissTacticsExIntro} aria-label="この案内を閉じる" className="min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black">×</button>
+          </div>
+        </div>}
         {/* ∞周回にした最初の1回だけ、モンビーへ行けることを伝える(PR8) */}
         {quickRhythmIntroVisible&&<div data-quick-rhythm-intro className="shrink-0 border-t border-fuchsia-400/30 bg-slate-950/95 px-2 py-1">
           <div className="flex items-start gap-1">
@@ -1490,6 +1514,7 @@ function BattleScreen({
                 {exPanel.def.conditionText&&<><dt className="font-bold text-slate-400">条件</dt><dd className="font-black text-white">{exPanel.def.conditionText}</dd></>}
                 {exPanel.toggleLabel&&<><dt className="font-bold text-slate-400">いま</dt><dd data-tactics-ex-toggle className="font-black text-fuchsia-200">{exPanel.toggleLabel}</dd></>}
                 {!exPanel.toggleLabel&&exPanel.active&&<><dt className="font-bold text-slate-400">いま</dt><dd data-tactics-ex-active className="font-black text-fuchsia-200">効果中</dd></>}
+                {exPanel.stats&&<><dt className="font-bold text-slate-400">力／丈夫さ</dt><dd data-tactics-ex-stats className={`font-black ${exPanel.stats.changed?'text-fuchsia-200':'text-white'}`}>{exPanel.stats.atk}／{exPanel.stats.def}{exPanel.stats.changed?'（EXで変化中）':''}</dd></>}
               </dl>
               {!exPanel.check.ok&&<p data-tactics-ex-why className="mt-2 text-[11px] font-bold leading-snug text-rose-200">{exPanel.check.reason}</p>}
               <div className="mt-3 flex gap-2">

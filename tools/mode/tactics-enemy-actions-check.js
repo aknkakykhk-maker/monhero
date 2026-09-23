@@ -276,7 +276,8 @@ check('強化の札に敵の咆哮を出す',
 // ★incomingDmg はパーティの丈夫さから出した値。1体ずつにした今は実際に受ける量とずれる
 check('反射は狙われた子ごとに数え直す',
   has('const reflectSlots=isTacticsMode(runMode)')
-    && has('? tacticsIntentTargets(intent,tacticsUnitsRef.current,actingEnemyDist) : null;\n          const reflectDmg=reflectSlots'));
+    // ★当たり先は tacticsTargetsNow(EX「みんなをかばう」を通した当たり先)。中身は tacticsIntentTargets のまま
+    && has('? tacticsTargetsNow(intent,actingEnemyDist) : null;\n          const reflectDmg=reflectSlots'));
 // ★間合いをずらされた技は威力が落ちた actingIntent を見る(intent のままだと
 //   距離撃でずらしてもフルの量を返してしまう。2026-09-22 に直した)
 check('反射は狙われた全員ぶんを足して返す',

@@ -1118,7 +1118,7 @@ function MonsterHeroGame() {
   // 挙動をまったく書き換えずに済む(ガード・反射・吸収の分岐もそのまま)
   const tacticsDamage = (damage, intent, actingDist) => {
     if (!isTacticsMode(runMode)) return null;
-    const targets = tacticsIntentTargets(intent, tacticsUnitsRef.current, actingDist);
+    const targets = tacticsTargetsNow(intent, actingDist);
     return commitTacticsUnits(damageTacticsTargets(tacticsUnitsRef.current, targets, damage));
   };
   const tacticsHeal = (amount) => isTacticsMode(runMode)
@@ -3643,6 +3643,13 @@ function MonsterHeroGame() {
   const [autoEnhanceIntroSeen, setAutoEnhanceIntroSeen] = useState(true);
   const autoEnhanceIntroVisible = !autoEnhanceIntroSeen;
   const dismissAutoEnhanceIntro = () => { setAutoEnhanceIntroSeen(true); storeSet(AUTO_ENHANCE_INTRO_KEY, true, false); };
+  // ---- タクティクスEXスキルの使い方案内(CLAUDE.md ⑤。2026-09-23 β版でお試し公開) ----
+  // 「距離枠をタップするとEXが開く」は遊んでいるだけでは気づけないので、EXを持つ子が
+  // 盤面にいるバトルで1度だけ伝える。出す条件は tacticsExIntroVisible(EXの判定のあと)で決める。
+  // ★保存キーは新しく足す(既存の mh_* は触らない・CLAUDE.md ⑦)。公開フラグ(tacticsExSkills)と同じで出し入れする
+  const TACTICS_EX_INTRO_KEY = 'mh_tactics_ex_intro_seen_v1';
+  const [tacticsExIntroSeen, setTacticsExIntroSeen] = useState(true);
+  const dismissTacticsExIntro = () => { setTacticsExIntroSeen(true); storeSet(TACTICS_EX_INTRO_KEY, true, false); };
   // ---- 曲えらびでの「今週の対象曲」案内(docs/spec/RHYTHM_RANKING.md §10.2) ----
   // ヘルプと更新履歴は探しに行った人しか読まない。週間ランキングは
   // 「開いて初めて気づく」仕組みなので、曲えらびでも1度だけみゅあが伝える(CLAUDE.md ⑤)。
@@ -4717,6 +4724,7 @@ function MonsterHeroGame() {
       // オート強化の使い方案内。★保存が無いとき(既存ユーザー・新規ともに)は「まだ見ていない」。
       //   既定値を true にすると、保存が無い＝見た扱いになり、案内が一度も出ない
       setAutoEnhanceIntroSeen(await storeGet(AUTO_ENHANCE_INTRO_KEY, false, false) === true);
+      setTacticsExIntroSeen(await storeGet(TACTICS_EX_INTRO_KEY, false, false) === true);
       // イベントの会話ストーリーを見たかどうか。流すかどうかの判定は、
       // wasOnboarded が決まったあと(きき・ももすけの会話と同じところ)で行う
       {
@@ -8984,7 +8992,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     //   呼び出しが無いので実害は出ていないが、増えた瞬間に既存モードの被ダメが変わる。
     //   isTacticsMode で締めて、既存モードは必ず effectiveDef(パーティの丈夫さ)を通す
     const targetUnit = isTacticsMode(runMode) && Number.isInteger(targetSlot)
-      ? tacticsUnitsRef.current[targetSlot] : null;
+      ? tacticsBattleUnit(targetSlot) : null;
     const defVal = targetUnit
       ? resolveEffectiveMaxStat(normalizeTacticsUnit(targetUnit).def, getPermaBuff('defPct')) : effectiveDef;
     // 丈夫さは固定軽減(×0.5)のあと、0.015%/pt（上限50%）を乗算する。
@@ -9132,8 +9140,34 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const tacticsExEnabled = tacticsExSkillsEnabled(runMode, { debugBattle:debugBattle||debugMonsterPreviewRef.current, tutorial:!!battleScenarioRef.current });
   // 「いま」= このWAVEの何ターン目か。EXの効果の長さと「このターン」の判定はこれで数える
   const tacticsExNow = { wave, turn:turnCount };
+  // ★ダメージの式は useCallback で古い描画の関数が残ることがある(依存に wave・turnCount が無いものもある)。
+  //   EXの効き目は「いま」を ref から読むので、どの描画の関数から呼ばれても同じ答えになる
+  const tacticsExLiveRef = useRef({ enabled:false, now:{ wave:1, turn:1 } });
+  tacticsExLiveRef.current = { enabled:tacticsExEnabled, now:tacticsExNow };
   const tacticsExCardLocked = tacticsExEnabled && isTacticsExCardLocked(tacticsExState, tacticsExNow);
   const tacticsExTurnUsed = tacticsExEnabled && isTacticsExTurnUsed(tacticsExState, tacticsExNow);
+  // ★EXの効き目を戦闘の計算へ渡す入口。モンスターのidではなく「いま効いている効果の種類」を見る。
+  //   ref の最新値を読む(使った直後の同じ操作の中でも古い値を見ない)
+  const tacticsExEffectAt = (slotIdx) => {
+    const live=tacticsExLiveRef.current;
+    if(!live.enabled||!Number.isInteger(slotIdx)) return null;
+    const unit=tacticsUnitsRef.current?.[slotIdx];
+    return unit ? tacticsExActiveEffect(tacticsExStateRef.current,slotIdx,unit.id,live.now) : null;
+  };
+  // 戦闘で使う1体ぶん(捨て身・片手持ちの力と丈夫さを乗せる)。盤面の値そのものは書き換えない
+  const tacticsBattleUnit = (slotIdx) => {
+    const unit=tacticsUnitsRef.current?.[slotIdx];
+    if(!unit) return unit;
+    const live=tacticsExLiveRef.current;
+    return live.enabled ? applyTacticsExStats(normalizeTacticsUnit(unit),tacticsExStateRef.current,slotIdx,live.now) : unit;
+  };
+  // 敵の攻撃の当たり先。「みんなをかばう」が効いていれば、当たる回数はそのままでかばう子へ集める
+  const tacticsCoverSlotNow = () => { const live=tacticsExLiveRef.current;
+    return live.enabled ? tacticsExCoverSlot(tacticsExStateRef.current,tacticsUnitsRef.current,live.now) : null; };
+  // 使い方案内を出すか。EXを持つ子が盤面にいるバトルで、まだ見ていないときだけ
+  const tacticsExIntroVisible = RELEASE_FLAGS.tacticsExSkills === true && !tacticsExIntroSeen
+    && gameState === 'BATTLE' && tacticsExEnabled && slots.some(mon => mon && tacticsExDefOf(mon.id));
+  const tacticsTargetsNow = (intent, dist) => coverTacticsTargets(tacticsIntentTargets(intent,tacticsUnitsRef.current,dist), tacticsCoverSlotNow());
   const tacticsUsableSlots = (card, excludeHandIndex = null) => {
     if(!isTacticsMode(runMode)||!card) return [];
     const spent={}, used={};
@@ -9359,7 +9393,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   //   パーティの平均で出していた。硬い子が構えれば実際はもっと受け止めるので、数字が合わない
   const guardDefFor = (slotIdx = null) => {
     if (slotIdx == null || !isTacticsMode(runMode)) return effectiveDef;
-    const unit = tacticsUnitsRef.current?.[slotIdx];
+    const unit = tacticsBattleUnit(slotIdx);
     return unit ? resolveEffectiveMaxStat(normalizeTacticsUnit(unit).def, getPermaBuff('defPct')) : effectiveDef;
   };
   const guardValueOf = (flat, mult, slotIdx = null) =>
@@ -9471,7 +9505,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const totalBuffMult=traitMult*getTurnBuff('atkMult',1.0)*tacticsSlotAtkMult(slotIdx)*(1.0+getPermaBuff('atkPct')+getPermaBuff('muaAtkPct')+additionalOryo)*distBonusMult*soulAttack.damageMultiplier;
     // 新モードは「攻撃したその子のちから」で殴る(設計 §4.1)。ほかのモードはパーティ共通のまま
     const attackerAtk=isTacticsMode(runMode)&&tacticsUnitsRef.current[slotIdx]
-      ? Math.max(0,normalizeTacticsUnit(tacticsUnitsRef.current[slotIdx]).atk) : atk;
+      ? Math.max(0,normalizeTacticsUnit(tacticsBattleUnit(slotIdx)).atk) : atk;
     let finalDmg=Math.floor(attackerAtk*distMult*baseDmgMult*totalBuffMult*(1.0+getWaveBuff('enemyTakenDmgBonus')+additionalDmgMod));
     if (isSecondOrLaterAtk) finalDmg=Math.floor(finalDmg*0.5);
     const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
@@ -9499,7 +9533,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const hits=buildAttackHits({ d:baseDmg, card, attackerId:mon?.id, heroId:mainHero?.id, traitOwnerId:traitOwnerOf(mon), comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus:getPermaBuff('critDmgPct')+soulAttack.critDamageBonus, kenshiExtraCombos:getPermaBuff('kenshiExtraCombo'),
       guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit'), rollCrit:()=>false,
       globalComboRate:getPermaBuff('globalComboDmgPct')+additionalGlobalCombo, mainCanCrit:card.subType!=='stun_atsu',
-      comboFinalMultiplier:soulAttack.comboFinalMultiplier });
+      comboFinalMultiplier:soulAttack.comboFinalMultiplier, swordSkill:tacticsExEffectAt(slotIdx)!=='weaponChange' });
     // 贖罪の追撃も「追撃」なので、連撃強化の最終倍率を同じく適用する。
     return hits.reduce((sum,hit)=>sum+hit.dmg,0)+attackAtonementDmg(card, hits[0].dmg, soulAttack.comboFinalMultiplier);
   }, [mainHero, turnBuffs, permaBuffs]);
@@ -9751,7 +9785,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         //   こうすると「表を引いた子」と「避けた子」が必ず同じになる。
         //   魂格由来のぶんは編成全体のものなので、誰が受けても乗る
         const aimedSlots = isTacticsMode(runMode)
-          ? tacticsIntentTargets(intent,tacticsUnitsRef.current,actingEnemyDist) : null;
+          ? tacticsTargetsNow(intent,actingEnemyDist) : null;
         const defenseSlot = aimedSlots && aimedSlots.length
           ? aimedSlots[Math.floor(Math.random()*aimedSlots.length)] : null;
         const defenseHeroId = !isTacticsMode(runMode) ? mainHero?.id
@@ -9804,7 +9838,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           //   実際に受ける量とずれる。吸収と同じ数え方にそろえる。
           //   全体攻撃なら狙われた全員ぶんを足して返す(誰にも当たらなければ0)
           const reflectSlots=isTacticsMode(runMode)
-            ? tacticsIntentTargets(intent,tacticsUnitsRef.current,actingEnemyDist) : null;
+            ? tacticsTargetsNow(intent,actingEnemyDist) : null;
           const reflectDmg=reflectSlots
             ? reflectSlots.reduce((sum,slotIdx)=>sum+applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(actingIntent,slotIdx),slotIdx),0)
             : incomingDmg;
@@ -9861,7 +9895,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           //   誰かが構えたガードが全員を守ってしまうと、狙いを読む意味が消える。
           // ★全体攻撃は狙われた全員が、それぞれ自分のガードで受ける。
           tookEnemyAttack=true;
-          const targets=tacticsIntentTargets(intent,tacticsUnitsRef.current,actingEnemyDist);
+          const targets=tacticsTargetsNow(intent,actingEnemyDist);
+          const coverSlot=tacticsCoverSlotNow();
+          if(coverSlot!=null&&targets.length){
+            addPopup(`かばう！ ${tacticsTargetName(tacticsUnitsRef.current,coverSlot)}`,'hero','text-sky-300 font-black text-xl drop-shadow-md');
+            pushBattleLog(`${battleActorName(coverSlot)}が攻撃をすべて引き受けた`);
+            await battleWait(600);
+          }
           if(!targets.length){
             addPopup('当たらなかった！','hero','text-cyan-300 font-black text-xl drop-shadow-md');
             await battleWait(700);
@@ -10160,6 +10200,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       toggleLabel:tacticsExToggleLabel(def,state,slotIdx,mon.id),
       durationText:TACTICS_EX_DURATION_TEXT[def.duration]||null,
       implemented:isTacticsExEffectImplemented(def),
+      // いまの力・丈夫さ(EXが乗っていればそのぶんも)。捨て身・片手持ちの効き目を数字で確かめられるように
+      stats:(()=>{ const u=tacticsUnits[slotIdx]; if(!u) return null;
+        const b=applyTacticsExStats(normalizeTacticsUnit(u),state,slotIdx,tacticsExNow);
+        return { atk:b.atk, def:b.def, changed:b.atk!==u.atk||b.def!==u.def }; })(),
     };
   };
   // 効果ごとの発動口。STEP2 ではここへ効果の中身を入れる(効果の種類ごとに1つ。モンスターごとの if にしない)。
@@ -10176,13 +10220,19 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       alive:canTacticsSlotAct(tacticsUnitsRef.current,slotIdx), selectedCount:selectedCards.length,
       now:tacticsExNow, busy:false });
     if(!check.ok) return false;
-    const next=applyTacticsExUse(state,{ def, slot:slotIdx, monId:mon.id, now:tacticsExNow });
+    // 使った瞬間の値を控える(捨て身は「使ったときの丈夫さ」から力へ移す量を決める)
+    const usedUnit=normalizeTacticsUnit(tacticsUnitsRef.current[slotIdx]);
+    const next=applyTacticsExUse(state,{ def, slot:slotIdx, monId:mon.id, now:tacticsExNow,
+      snapshot:usedUnit?{ atk:usedUnit.atk, def:usedUnit.def }:null });
     commitTacticsExState(next);
     Audio_.se.card();
     const toggled=def.duration==='toggle'?`（${tacticsExToggleLabel(def,next,slotIdx,mon.id)}）`:'';
     pushBattleLog(`EX ${mon.masuName||mon.name}「${def.name}」${toggled}`, 'ally');
     const onUse=TACTICS_EX_ON_USE[def.effect];
-    if(isTacticsExEffectImplemented(def)&&typeof onUse==='function') onUse({ def, slotIdx, mon, state:next });
+    if(isTacticsExEffectImplemented(def)){
+      addPopup(`EX ${def.name}！${toggled}`,'hero','text-fuchsia-300 font-black text-xl drop-shadow-md');
+      if(typeof onUse==='function') onUse({ def, slotIdx, mon, state:next });
+    }
     else pushBattleLog('（開発中）このEXの効果はまだ出ない。回数と併用のルールだけ動いている', 'info');
     if(!def.withCards){ setPendingCard(null); setFocusedCard(null); }
     return true;
@@ -10410,6 +10460,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // それに加えて「連撃パワー」を1貯め、3たまるごとに永久10%連撃(kenshiExtraCombo)を1本増やして0へ戻す。
           // どちらも addPermaBuff / writePermaBuffs なので「永続・重複可・次のターンから」になり、
           // 本数にも +3% の回数にも上限は設けない。ヒット列側(buildAttackHits)がこの本数を読む
+          // ★タクティクスのEX「武器チェンジ」で片手持ちの剣士モッチー本人が使ったときは、ソードスキルが出ない
+          else if(card.monId==='KenshiMocchi'&&tacticsExEffectAt(slotIdx)==='weaponChange'){
+            addPopup('片手持ち：ソードスキルなし','hero','text-slate-300 text-sm font-bold');
+          }
           else if(card.monId==='KenshiMocchi'){
             addPermaBuff('comboDmgPct',0.03*effMul);
             const nextPower=livePermaBuff('kenshiComboPower')+1;
@@ -10431,7 +10485,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // 会心は 1 ヒットごとに独立して判定し、連撃は元ダメージ d を基準にする(メインの会心を二重に乗せない)。
         const hits=buildAttackHits({ d, card, attackerId:activeMon.id, heroId:mainHero?.id, traitOwnerId:traitOwnerOf(activeMon), comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus, kenshiExtraCombos:getPermaBuff('kenshiExtraCombo'),
           guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit'), rollCrit:()=>Math.random()<Math.min(1,(card.crit||0.1)+critRateBonus),
-          globalComboRate:getPermaBuff('globalComboDmgPct')+localGlobalComboAdd, comboFinalMultiplier:soulAttack.comboFinalMultiplier });
+          globalComboRate:getPermaBuff('globalComboDmgPct')+localGlobalComboAdd, comboFinalMultiplier:soulAttack.comboFinalMultiplier,
+          swordSkill:tacticsExEffectAt(slotIdx)!=='weaponChange' });
         const isCrit=hits[0].crit; const finalD=hits[0].dmg; if(isCrit) hasCrit=true; totalDmg+=finalD;
         const rangeMoveTarget=card.type==='range_atk' && card.rangeIdx!=null ? card.rangeIdx : null;
         attackHits.push({dmg:finalD, isCrit, slotIdx, isSpecial:(card.type==='unique'||card.type==='range_atk'), skillName:(card.name||card.baseName), isUnique:card.type==='unique', monId:card.type==='unique'?card.monId:undefined, rangeMoveTarget});
@@ -16443,7 +16498,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             getWaveBuff={getWaveBuff} guardCardWeight={guardCardWeight} guardFx={guardFx} guardLevel={guardLevel}
             guardValueOf={guardValueOf} tacticsSlotGuardValue={tacticsSlotGuardValue}
             tacticsExInfo={tacticsExInfo} activateTacticsEx={activateTacticsEx} tacticsExCardLocked={tacticsExCardLocked}
-            tacticsExTurnUsed={tacticsExTurnUsed} passTacticsTurn={passTacticsTurn}
+            tacticsExIntroVisible={tacticsExIntroVisible} dismissTacticsExIntro={dismissTacticsExIntro}
+            tacticsExTurnUsed={tacticsExTurnUsed} passTacticsTurn={passTacticsTurn} tacticsCoverSlot={tacticsExEnabled?tacticsExCoverSlot(tacticsExState,tacticsUnits,tacticsExNow):null}
             guts={guts} hand={hand} heroCardBonus={heroCardBonus} heroDist={heroDist}
             hp={hp} iceLockActive={iceLockActive} iceLockPreparing={iceLockPreparing} iceLockTurns={iceLockTurns}
             isAssistCard={isAssistCard} isAttackCard={isAttackCard} isBusy={isBusy} isHeroSlotMon={isHeroSlotMon}

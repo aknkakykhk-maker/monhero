@@ -912,6 +912,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
     name: '捨て身',
     desc: '丈夫さを0にし、0にした丈夫さの50%を力へ加える。',
     maxUses: 3, unlimited: false, withCards: false, duration: 'wave',
+    // ★効果中にもう一度使っても何も変わらない(丈夫さはもう0)。回数だけ減るのを防ぐ
+    conditions: Object.freeze(['notActive']),
     effect: 'allIn',
   }),
   KenshiMocchi: Object.freeze({
@@ -932,7 +934,9 @@ const TACTICS_EX_CONDITIONS = Object.freeze({
 // 効果を実装済みの種類。★ここに無い effect は「回数と併用の決まりだけ動き、効果はまだ出ない」。
 //   画面は「開発中」と出す(使ったのに何も起きない、を黙って出さない)。
 //   STEP2 で効果を入れたら、ここへ名前を足す
-const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze([]);
+const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange']);
+// 捨て身で力へ移す割合(0にした丈夫さの50%)
+const TACTICS_EX_ALL_IN_ATK_RATE = 0.5;
 const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'toggle']);
 
 // 定義を安全な形へそろえる。壊れた項目があっても落とさず、いちばん控えめな既定値へ倒す
@@ -1033,7 +1037,8 @@ const checkTacticsExUse = ({ def, state, slot, monId, alive, selectedCount = 0, 
 };
 // 使ったあとの状態を返す(渡された state は書き換えない)。
 // ★回数を減らすのは無制限でないときだけ。無制限は数えるが、残りには効かない
-const applyTacticsExUse = (state, { def, slot, monId, now } = {}) => {
+// snapshot … 使った瞬間の値(捨て身なら使ったときの丈夫さ)。効果の計算はこの値から出す
+const applyTacticsExUse = (state, { def, slot, monId, now, snapshot = null } = {}) => {
   const safe = normalizeTacticsExState(state);
   if (!def || !Number.isInteger(slot)) return safe;
   const stamp = { wave: tacticsSafeInt(now && now.wave, 0), turn: tacticsSafeInt(now && now.turn, 0) };
@@ -1042,8 +1047,9 @@ const applyTacticsExUse = (state, { def, slot, monId, now } = {}) => {
   const wasOn = !!(prev && prev.monId === monId && prev.duration === 'toggle' && prev.on === true);
   return {
     uses: { ...safe.uses, [slot]: { monId, count } },
-    effects: { ...safe.effects, [slot]: { monId, exId: def.id, duration: def.duration, wave: stamp.wave, turn: stamp.turn,
-      on: def.duration === 'toggle' ? !wasOn : true } },
+    effects: { ...safe.effects, [slot]: { monId, exId: def.id, effect: def.effect, duration: def.duration, wave: stamp.wave, turn: stamp.turn,
+      on: def.duration === 'toggle' ? !wasOn : true,
+      snapshot: snapshot && typeof snapshot === 'object' ? { ...snapshot } : null } },
     lastUse: { ...safe.lastUse, [slot]: stamp },
     turnUsed: stamp,
     cardLock: def.withCards ? safe.cardLock : stamp,
@@ -1054,4 +1060,47 @@ const tacticsExToggleLabel = (def, state, slot, monId) => {
   if (!def || def.duration !== 'toggle') return null;
   return def.toggleLabels[isTacticsExEffectActive(state, slot, monId, null) ? 1 : 0];
 };
+// その枠で、いま効いている効果の種類(effect)。効いていなければ null。
+// ★戦闘の計算側はモンスターのidではなく、これを見る(モンスターごとの if を増やさない)
+const tacticsExActiveEffect = (state, slot, monId, now) => {
+  const effect = normalizeTacticsExState(state).effects[slot];
+  if (!effect || !isTacticsExEffectActive(state, slot, monId, now)) return null;
+  return typeof effect.effect === 'string' ? effect.effect : null;
+};
+// EXで変わる力・丈夫さを乗せた1体ぶんを返す(盤面の値そのものは書き換えない)。
+// ★読むときに上乗せするだけなので、効果が切れた瞬間(WAVEが変わる・切り替えで戻す)に
+//   何もしなくても元の値へ戻る。トレーニングで伸ばした値も失われない
+//   捨て身(allIn)     … 丈夫さ0。使ったときの丈夫さの50%を力へ足す
+//   武器チェンジ(weaponChange) の片手持ち … いまの力と同じ数値を丈夫さへ足す(力は減らない)
+const applyTacticsExStats = (unit, state, slot, now) => {
+  if (!unit || typeof unit !== 'object') return unit;
+  const kind = tacticsExActiveEffect(state, slot, unit.id, now);
+  if (kind === 'allIn') {
+    const snap = normalizeTacticsExState(state).effects[slot].snapshot;
+    const usedDef = Math.max(0, tacticsSafeInt(snap && snap.def, tacticsSafeInt(unit.def, 0)));
+    return { ...unit, atk: Math.max(0, tacticsSafeInt(unit.atk, 0)) + Math.floor(usedDef * TACTICS_EX_ALL_IN_ATK_RATE), def: 0 };
+  }
+  if (kind === 'weaponChange') {
+    const atk = Math.max(0, tacticsSafeInt(unit.atk, 0));
+    return { ...unit, def: Math.max(0, tacticsSafeInt(unit.def, 0)) + atk };
+  }
+  return unit;
+};
+// 「みんなをかばう」が効いている枠(立っている子だけ)。無ければ null
+const tacticsExCoverSlot = (state, units, now) => {
+  const safe = normalizeTacticsExState(state);
+  const alive = tacticsAliveSlots(units);
+  for (const key of Object.keys(safe.effects)) {
+    const slot = Number(key);
+    const unit = Array.isArray(units) ? units[slot] : null;
+    if (!unit || !alive.includes(slot)) continue;
+    if (tacticsExActiveEffect(safe, slot, unit.id, now) === 'coverAll') return slot;
+  }
+  return null;
+};
+// 敵の攻撃の当たり先を、かばう子へ集める。★当たる回数はそのまま
+// (全体攻撃で3体に当たるはずなら、かばう子が3回受ける。連撃は連撃のまま)。
+// 攻撃の性質(貫通ならガードが効かない、など)は変えない
+const coverTacticsTargets = (targets, coverSlot) => (Number.isInteger(coverSlot) && Array.isArray(targets) && targets.length
+  ? targets.map(() => coverSlot) : (Array.isArray(targets) ? targets : []));
 // ==== タクティクス専用 EXスキルここまで ====

@@ -69,6 +69,9 @@ const dataTablePrelude = [
   // タクティクスバトルの敵の技の表。倍率と行動表を実データから作るので、その材料も持ち込む
   // (持ち込まないと helpDataRows が空の表を返し、「本文が最後まで描けない」で落ちる)
   grab(source, 'const TACTICS_SWEEP_MULT', 'const TACTICS_ENEMY_ACTION_IDS'),
+  // タクティクスのEXスキルの表(2026-09-23)。定義と、定義をそろえる関数を持ち込む
+  grab(source, 'const tacticsSafeInt', 'const tacticsClamp'),
+  grab(source, '// ==== タクティクス専用 EXスキル(STEP1: 共通基盤) ====', '// ==== タクティクス専用 EXスキルここまで ===='),
   // 曲一覧が使う曲名の組み立て。helpDataRows より前にあるので、別に持ち込む
   grab(source, 'const rhythmSongFullName =', 'const helpDataRows = (id)'),
   grab(source, 'const helpDataRows = (id)', '// ===== 助手(ナビゲーター) ここから ====='),
