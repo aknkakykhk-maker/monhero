@@ -1554,6 +1554,8 @@ check('固有技の効果も枠の印に出る',
   check('タクティクスのカード詳細は味方枠より上へ出す',
     appSource.includes("data-tactics-card-detail={isTacticsMode(runMode)?'raised':undefined}")
       && appSource.includes("top:'max(calc(env(safe-area-inset-top) + 96px),14dvh)'"));
+  check('カード詳細中もタクティクスの敵行動予測を隠さない',
+    battleScreen.includes("focusedCard&&!tacticsDebugLayout?'invisible':'visible'"));
 }
 
 console.log(failed ? `\nNG ${failed}件` : '\nすべてOK');

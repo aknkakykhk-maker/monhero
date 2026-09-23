@@ -421,7 +421,7 @@ function BattleScreen({
             const intentTitle=enemyIntent.type==='CHARGE'&&enemyIntent.category?enemyIntent.category:enemyIntent.label;
             return (
               <div data-enemy-intent
-                className={`absolute right-2 bottom-1 z-[45] w-[100px] rounded-xl border px-1.5 py-1 shadow-lg animate-pulse${battleTutorialSpotClass('enemyIntent')} ${focusedCard?'invisible':'visible'} ${tone}`}>
+                className={`absolute right-2 bottom-1 z-[45] w-[100px] rounded-xl border px-1.5 py-1 shadow-lg animate-pulse${battleTutorialSpotClass('enemyIntent')} ${focusedCard&&!tacticsDebugLayout?'invisible':'visible'} ${tone}`}>
                 <div className="flex items-center gap-1 text-[8px] font-black uppercase tracking-wider opacity-80"><Target size={9}/>次の行動</div>
                 <div className="mt-0.5 text-[11px] font-black leading-tight">{intentTitle}</div>
                 {aimedName?<div className="mt-0.5 truncate text-[9px] font-bold leading-none opacity-90">🎯{aimedName}</div>:null}
