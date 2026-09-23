@@ -1257,7 +1257,7 @@ function BattleScreen({
                   {/* ★EXスキルの札も同じ縦積みの先頭に入れる。名前の行へ入れると名前が切れる
                       (2026-09-23 ユーザー指摘「名前が切れてる」)。二刀流／片手持ちのような「いまの状態」をここで出す */}
                   {(slotAssignedCards.length>0||previewDmg>0||previewGuard>0||slotAimHit||slotExInfo)&&(
-                    <div data-tactics-slot-marks className={`${tacticsDebugLayout?'absolute top-1 left-full bottom-[35px] w-[150%] overflow-hidden items-stretch justify-end px-2':'absolute top-0 left-0 right-0 items-center px-0.5'} flex flex-col gap-px z-[60] pointer-events-none`}>
+                    <div data-tactics-slot-marks className={`${tacticsDebugLayout?'absolute top-1 left-full h-[42px] w-[150%] overflow-hidden items-stretch justify-start px-2':'absolute top-0 left-0 right-0 items-center px-0.5'} flex flex-col gap-px z-[60] pointer-events-none`}>
                       {tacticsDebugLayout&&assignedCount>0&&<div data-tactics-assigned-count={assignedCount} className="self-end rounded bg-indigo-950/85 px-1 py-0.5 text-[7px] font-black leading-none text-indigo-200 ring-1 ring-indigo-400/40">カード×{assignedCount}</div>}{!tacticsDebugLayout&&slotExInfo&&(<div data-tactics-ex-mark={i} data-tactics-ex-state={slotExInfo.badge.text}
                         className={`flex max-w-full items-center gap-0.5 rounded px-1 py-0.5 leading-none shadow ${slotExInfo.badge.active?'bg-fuchsia-600 text-white ring-1 ring-fuchsia-200':'bg-black/70 text-fuchsia-200 ring-1 ring-fuchsia-400/60'}`}>
                         <span style={{fontSize:'7px'}} className="shrink-0 font-black">EX</span>
@@ -1366,7 +1366,7 @@ function BattleScreen({
                       data-tactics-hp={`${tacticsUnit.hp}/${tacticsUnit.maxHp}`}
                       data-tactics-guts={`${tacticsUnit.guts}/${tacticsUnit.maxGuts}`}
                       data-tactics-downed={tacticsUnit.downed?'true':'false'}
-                      className={`${tacticsDebugLayout?'col-start-2 row-start-2 self-stretch min-w-0 border-l flex flex-col justify-end pb-0.5 px-2':'shrink-0 border-t px-1'} z-20 border-white/10 bg-black/55${battleTutorialSpotClass('tacticsParty')}`}>
+                      className={`${tacticsDebugLayout?'absolute right-0 bottom-0 w-[60%] min-w-0 border-l border-t flex flex-col justify-end pb-px px-2':'shrink-0 border-t px-1'} z-20 border-white/10 bg-black/55${battleTutorialSpotClass('tacticsParty')}`}>
                       {/* ★「♥ 500 /500」と左右へ散らしていたのを、ラベルと数値の2つにそろえた
                           (2026-09-22 ユーザー指摘「カードも距離枠も全て安っぽくない？」)。
                           読む順が「何の値か → いくつか」で固定され、4枚並べたときに縦がそろう */}
@@ -1374,14 +1374,14 @@ function BattleScreen({
                         <span className="text-[8px] font-black tracking-wider text-pink-300">HP</span>
                         <span className="font-mono leading-none"><span className="text-[11px] font-black text-white">{tacticsUnit.hp}</span><span className="text-[8px] text-slate-400">/{tacticsUnit.maxHp}</span></span>
                       </div>
-                      <div className="mt-px h-[4px] overflow-hidden rounded-full bg-black/60" style={{boxShadow:'inset 0 1px 2px rgba(0,0,0,.9)'}}>
+                      <div className="h-[3px] overflow-hidden rounded-full bg-black/60" style={{boxShadow:'inset 0 1px 2px rgba(0,0,0,.9)'}}>
                         <div data-tactics-hp-bar className={`h-full transition-all duration-1000 ${tacticsUnit.downed?'bg-gradient-to-r from-emerald-500 to-teal-300':'bg-gradient-to-r from-rose-500 to-pink-300'}`} style={{width:`${hpPct}%`,boxShadow:'0 0 6px rgba(244,114,182,.55)'}}></div>
                       </div>
-                      <div className="mt-px flex items-baseline justify-between leading-none">
+                      <div className="flex items-baseline justify-between leading-none">
                         <span className="text-[8px] font-black tracking-wider text-amber-300">GUTS</span>
                         <span className="font-mono leading-none"><span className="text-[11px] font-black text-white">{tacticsUnit.guts}</span><span className="text-[8px] text-slate-400">/{tacticsUnit.maxGuts}</span></span>
                       </div>
-                      <div className="mt-px h-[4px] overflow-hidden rounded-full bg-black/60" style={{boxShadow:'inset 0 1px 2px rgba(0,0,0,.9)'}}>
+                      <div className="h-[3px] overflow-hidden rounded-full bg-black/60" style={{boxShadow:'inset 0 1px 2px rgba(0,0,0,.9)'}}>
                         <div data-tactics-guts-bar className="h-full bg-gradient-to-r from-amber-500 to-yellow-300 transition-all duration-500" style={{width:`${gutsPct}%`,boxShadow:'0 0 6px rgba(251,191,36,.55)'}}></div>
                       </div>
                     </div>
