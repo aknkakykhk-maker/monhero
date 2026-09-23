@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 54e893ff33152658
+// source-sha256: b0516f18cf51e0da
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 91bd108145c468f2
+// generated-sha256: 29b25ad699349058
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-23 16:42"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-23 16:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -40501,7 +40501,7 @@ function BattleScreen({
       className: "shrink-0 mr-0.5 text-amber-300"
     }), /*#__PURE__*/React.createElement("span", {
       className: `text-[10px] font-black truncate uppercase leading-none ${isHeroSlotMon(s) ? 'text-amber-100' : 'text-white'}`
-    }, s?.name || '---'), assignedCount > 0 && /*#__PURE__*/React.createElement("span", {
+    }, s?.name || '---'), assignedCount > 0 && !tacticsDebugLayout && /*#__PURE__*/React.createElement("span", {
       className: "ml-1 text-[10px] font-black text-indigo-300"
     }, "\xD7", assignedCount), tacticsDebugLayout && slotExInfo && /*#__PURE__*/React.createElement("span", {
       "data-tactics-ex-mark": i,
@@ -40566,15 +40566,18 @@ function BattleScreen({
       return /*#__PURE__*/React.createElement("div", {
         "data-tactics-guard-total": gv,
         "data-tactics-guard-kind": slotRushGuard ? 'rush' : 'spread',
-        className: `absolute ${tacticsDebugLayout ? 'right-1 bottom-[43px]' : 'bottom-0.5 left-0.5'} z-[61] rounded border px-1 py-0.5 font-black leading-none pointer-events-none ${slotRushGuard ? 'border-amber-200 bg-amber-600/95 text-white' : 'border-sky-300/60 bg-sky-800/90 text-sky-50'}`,
+        className: `absolute ${tacticsDebugLayout ? 'left-full bottom-[43px] ml-2' : 'bottom-0.5 left-0.5'} z-[61] rounded border px-1 py-0.5 font-black leading-none pointer-events-none ${slotRushGuard ? 'border-amber-200 bg-amber-600/95 text-white' : 'border-sky-300/60 bg-sky-800/90 text-sky-50'}`,
         style: {
           fontSize: '7px'
         }
       }, "\uD83D\uDEE1 ", slotRushGuard ? '連撃ガード' : '全体', " ", gv);
     })(), (slotAssignedCards.length > 0 || previewDmg > 0 || previewGuard > 0 || slotAimHit || slotExInfo) && /*#__PURE__*/React.createElement("div", {
       "data-tactics-slot-marks": true,
-      className: `${tacticsDebugLayout ? 'absolute top-1 right-1 bottom-[43px] w-[calc(60%-8px)] overflow-y-auto mh-scroll items-stretch justify-end' : 'absolute top-0 left-0 right-0 items-center px-0.5'} flex flex-col gap-px z-[60] pointer-events-none`
-    }, !tacticsDebugLayout && slotExInfo && /*#__PURE__*/React.createElement("div", {
+      className: `${tacticsDebugLayout ? 'absolute top-1 left-full bottom-[43px] w-[150%] overflow-y-auto mh-scroll items-stretch justify-end px-2' : 'absolute top-0 left-0 right-0 items-center px-0.5'} flex flex-col gap-px z-[60] pointer-events-none`
+    }, tacticsDebugLayout && assignedCount > 0 && /*#__PURE__*/React.createElement("div", {
+      "data-tactics-assigned-count": assignedCount,
+      className: "self-end rounded bg-indigo-950/85 px-1 py-0.5 text-[7px] font-black leading-none text-indigo-200 ring-1 ring-indigo-400/40"
+    }, "\u30AB\u30FC\u30C9\xD7", assignedCount), !tacticsDebugLayout && slotExInfo && /*#__PURE__*/React.createElement("div", {
       "data-tactics-ex-mark": i,
       "data-tactics-ex-state": slotExInfo.badge.text,
       className: `flex max-w-full items-center gap-0.5 rounded px-1 py-0.5 leading-none shadow ${slotExInfo.badge.active ? 'bg-fuchsia-600 text-white ring-1 ring-fuchsia-200' : 'bg-black/70 text-fuchsia-200 ring-1 ring-fuchsia-400/60'}`
