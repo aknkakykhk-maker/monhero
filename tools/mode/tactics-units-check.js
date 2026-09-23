@@ -1572,10 +1572,14 @@ check('固有技の効果も枠の印に出る',
       && battleScreen.includes("tacticsDebugLayout?'rounded-[12px] border':'rounded-xl border-2'")
       && battleScreen.includes("rounded-[11px] border border-white/[.16] bg-black/20"));
   check('タクティクス合計予測はバフ帯へ統合する',
-    battleScreen.includes("data-tactics-preview-band={tacticsDebugLayout?'buff-band':undefined}")
+    battleScreen.includes("data-tactics-preview-band={tacticsDebugLayout?'buff-overlay':undefined}")
       && !battleScreen.includes("absolute left-1/2 -translate-x-1/2 bottom-0 z-[55]"));
   check('タクティクスGUTS表示を下端から離して欠けを防ぐ',
     battleScreen.includes("absolute right-0 bottom-[3px] w-[60%]"));
+  check('カード詳細中も合計予測をバフ帯上へ残す',
+    battleScreen.includes("focusedCard&&!tacticsDebugLayout?'invisible':'visible'")
+      && battleScreen.includes("focusedCard&&tacticsDebugLayout?'invisible':'visible'")
+      && battleScreen.includes("absolute left-1/2 top-0 z-[65] w-max max-w-[94vw] -translate-x-1/2 -translate-y-full pb-1"));
   check('選択済みカードの文字を暗くしすぎない',
     battleScreen.includes("opacity-90 saturate-[0.95]"));
 

@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b0fe685529190c5b
+// source-sha256: 2ef75669458e567a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d5128b7bdfcba2a5
+// generated-sha256: 2c76ac0fe0d67158
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-23 20:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-23 20:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -39895,9 +39895,9 @@ function BattleScreen({
     return /*#__PURE__*/React.createElement("div", {
       "data-battle-buffs": chips.length,
       "data-battle-buffs-mode": buffDetail ? 'detail' : 'icon',
-      className: `shrink-0 w-full max-w-[360px] mx-auto px-2 bg-slate-950 relative z-[40] flex flex-col justify-center pt-1 pb-0.5 ${focusedCard ? 'invisible' : 'visible'}`
+      className: `shrink-0 w-full max-w-[360px] mx-auto px-2 bg-slate-950 relative z-[40] flex flex-col justify-center pt-1 pb-0.5 ${focusedCard && !tacticsDebugLayout ? 'invisible' : 'visible'}`
     }, /*#__PURE__*/React.createElement("div", {
-      className: "flex items-start gap-1"
+      className: `flex items-start gap-1 ${focusedCard && tacticsDebugLayout ? 'invisible' : 'visible'}`
     }, buffDetail ? /*#__PURE__*/React.createElement("div", {
       "data-battle-buff-list": true,
       className: "flex-1 min-w-0 flex flex-wrap justify-center gap-1 overflow-y-auto mh-scroll",
@@ -40055,8 +40055,8 @@ function BattleScreen({
         //   ★2つは**横に並べて**折り返す。縦に積むと出た瞬間に舞台が46px縮む
         React.createElement("div", {
           "data-battle-total-preview": true,
-          "data-tactics-preview-band": tacticsDebugLayout ? 'buff-band' : undefined,
-          className: "mt-1 flex w-full flex-wrap items-center justify-center gap-x-2 gap-y-0.5 pointer-events-none"
+          "data-tactics-preview-band": tacticsDebugLayout ? 'buff-overlay' : undefined,
+          className: `${tacticsDebugLayout ? 'absolute left-1/2 top-0 z-[65] w-max max-w-[94vw] -translate-x-1/2 -translate-y-full pb-1' : 'mt-1 w-full'} flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 pointer-events-none`
         }, showDmg && /*#__PURE__*/React.createElement("div", {
           className: `flex items-center gap-1.5 px-2 py-0.5 rounded-full border shadow-lg ${showProjected ? 'bg-yellow-950/90 border-yellow-500/70' : 'bg-red-950/90 border-red-500/50'} backdrop-blur-sm`
         }, /*#__PURE__*/React.createElement(Sword, {
