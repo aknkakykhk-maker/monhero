@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2eea27329b7e544c
+// source-sha256: 45d089d4ef5f58b6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 55fe113a876fca2f
+// generated-sha256: 90d7b3c4d75b5dcc
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-23 12:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-23 12:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -41013,16 +41013,17 @@ function BattleScreen({
     role: "dialog",
     "aria-modal": "true",
     "aria-label": `${exPanel.monName}のEXスキル`,
-    className: "fixed inset-0 z-[70000] flex items-end justify-center bg-black/70",
+    className: "fixed inset-0 z-[70000] flex items-center justify-center bg-black/70 px-4",
     style: {
-      paddingTop: 'calc(.75rem + env(safe-area-inset-top))'
+      paddingTop: 'calc(1rem + env(safe-area-inset-top))',
+      paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
     },
     onClick: () => setExPanelSlot(null)
   }, /*#__PURE__*/React.createElement("div", {
-    className: "w-full max-w-[440px] rounded-t-3xl border-2 border-b-0 border-fuchsia-400/60 bg-slate-900 px-4 pt-3 shadow-2xl text-white",
+    "data-tactics-ex-card": true,
+    className: "w-full max-w-[340px] rounded-3xl border-2 border-fuchsia-400/60 bg-slate-900 px-4 py-3 shadow-2xl text-white",
     style: {
-      paddingBottom: 'calc(.75rem + env(safe-area-inset-bottom))',
-      maxHeight: '85vh',
+      maxHeight: '100%',
       overflowY: 'auto'
     },
     onClick: e => e.stopPropagation()
@@ -41088,7 +41089,7 @@ function BattleScreen({
     type: "button",
     "data-tactics-ex-close": true,
     onClick: () => setExPanelSlot(null),
-    className: "min-h-[48px] flex-1 rounded-xl border border-white/20 bg-slate-800 text-[13px] font-black text-slate-200 active:scale-95"
+    className: "min-h-[44px] flex-1 rounded-xl border border-white/20 bg-slate-800 text-[13px] font-black text-slate-200 active:scale-95"
   }, "\u9589\u3058\u308B"), /*#__PURE__*/React.createElement("button", {
     type: "button",
     "data-tactics-ex-use": true,
@@ -41096,7 +41097,7 @@ function BattleScreen({
     onClick: () => {
       if (activateTacticsEx && activateTacticsEx(exPanel.slot)) setExPanelSlot(null);
     },
-    className: `min-h-[48px] flex-[2] rounded-xl border-2 text-[14px] font-black active:scale-95 ${exPanel.check.ok ? 'border-fuchsia-300 bg-fuchsia-600 text-white shadow-[0_0_14px_rgba(217,70,239,.5)]' : 'border-slate-600 bg-slate-800 text-slate-500'}`
+    className: `min-h-[44px] flex-[2] rounded-xl border-2 text-[14px] font-black active:scale-95 ${exPanel.check.ok ? 'border-fuchsia-300 bg-fuchsia-600 text-white shadow-[0_0_14px_rgba(217,70,239,.5)]' : 'border-slate-600 bg-slate-800 text-slate-500'}`
   }, "EX\u30B9\u30AD\u30EB\u3092\u4F7F\u7528")))), document.body), showBattleMenu && ReactDOM.createPortal(/*#__PURE__*/React.createElement("div", {
     className: "fixed inset-0 z-[70000] flex items-start justify-end bg-black/70 p-2",
     onClick: () => setShowBattleMenu(false)

@@ -1504,8 +1504,10 @@ function BattleScreen({
             ★スマホ縦を先に考えて、画面の下から出す。押すボタンは親指の届く下側にまとめ、
               ホームインジケーターに掛からないよう safe-area のぶん下を空ける。背景を押しても閉じる */}
         {exPanel&&ReactDOM.createPortal((
-          <div data-tactics-ex-panel={exPanel.slot} role="dialog" aria-modal="true" aria-label={`${exPanel.monName}のEXスキル`} className="fixed inset-0 z-[70000] flex items-end justify-center bg-black/70" style={{paddingTop:'calc(.75rem + env(safe-area-inset-top))'}} onClick={()=>setExPanelSlot(null)}>
-            <div className="w-full max-w-[440px] rounded-t-3xl border-2 border-b-0 border-fuchsia-400/60 bg-slate-900 px-4 pt-3 shadow-2xl text-white" style={{paddingBottom:'calc(.75rem + env(safe-area-inset-bottom))',maxHeight:'85vh',overflowY:'auto'}} onClick={e=>e.stopPropagation()}>
+          <div data-tactics-ex-panel={exPanel.slot} role="dialog" aria-modal="true" aria-label={`${exPanel.monName}のEXスキル`} className="fixed inset-0 z-[70000] flex items-center justify-center bg-black/70 px-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}} onClick={()=>setExPanelSlot(null)}>
+            {/* ★画面の真ん中に出す、ほかのダイアログと同じ大きさのカード(2026-09-23 ユーザー指摘「枠のサイズ感おかしくない？」)。
+                下から出す形は横幅いっぱいで枠線が画面の端で切れ、下の余白もホームバーのぶんが二重に空いていた */}
+            <div data-tactics-ex-card className="w-full max-w-[340px] rounded-3xl border-2 border-fuchsia-400/60 bg-slate-900 px-4 py-3 shadow-2xl text-white" style={{maxHeight:'100%',overflowY:'auto'}} onClick={e=>e.stopPropagation()}>
               <div className="flex items-center gap-2">
                 <span className="shrink-0 rounded-md bg-fuchsia-600 px-1.5 py-0.5 text-[10px] font-black leading-none">EX</span>
                 <span data-tactics-ex-mon className="min-w-0 truncate text-[12px] font-black text-slate-300">{exPanel.monName}</span>
@@ -1527,8 +1529,8 @@ function BattleScreen({
               </dl>
               {!exPanel.check.ok&&<p data-tactics-ex-why className="mt-2 text-[11px] font-bold leading-snug text-rose-200">{exPanel.check.reason}</p>}
               <div className="mt-3 flex gap-2">
-                <button type="button" data-tactics-ex-close onClick={()=>setExPanelSlot(null)} className="min-h-[48px] flex-1 rounded-xl border border-white/20 bg-slate-800 text-[13px] font-black text-slate-200 active:scale-95">閉じる</button>
-                <button type="button" data-tactics-ex-use disabled={!exPanel.check.ok} onClick={()=>{ if(activateTacticsEx&&activateTacticsEx(exPanel.slot)) setExPanelSlot(null); }} className={`min-h-[48px] flex-[2] rounded-xl border-2 text-[14px] font-black active:scale-95 ${exPanel.check.ok?'border-fuchsia-300 bg-fuchsia-600 text-white shadow-[0_0_14px_rgba(217,70,239,.5)]':'border-slate-600 bg-slate-800 text-slate-500'}`}>EXスキルを使用</button>
+                <button type="button" data-tactics-ex-close onClick={()=>setExPanelSlot(null)} className="min-h-[44px] flex-1 rounded-xl border border-white/20 bg-slate-800 text-[13px] font-black text-slate-200 active:scale-95">閉じる</button>
+                <button type="button" data-tactics-ex-use disabled={!exPanel.check.ok} onClick={()=>{ if(activateTacticsEx&&activateTacticsEx(exPanel.slot)) setExPanelSlot(null); }} className={`min-h-[44px] flex-[2] rounded-xl border-2 text-[14px] font-black active:scale-95 ${exPanel.check.ok?'border-fuchsia-300 bg-fuchsia-600 text-white shadow-[0_0_14px_rgba(217,70,239,.5)]':'border-slate-600 bg-slate-800 text-slate-500'}`}>EXスキルを使用</button>
               </div>
             </div>
           </div>
