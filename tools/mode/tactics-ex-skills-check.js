@@ -8,7 +8,7 @@ const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分�
 //   ② 定義: 3体(モノリス・ゴーレム・剣士モッチー)の回数・併用・効果時間が仕様どおり
 //   ③ 回数: 使うと1減る／0になったら使えない／無制限は減らない
 //   ④ WAVEが変わっても回数は戻らない。新しいランの状態は初期値
-//   ⑤ 併用: 併用できないEXはカードを選んでいると使えず、使ったターンはカードを選べない
+//   ⑤ 併用: 併用できないEXはその子にカードを置いていると使えず、使ったターンは**その子だけ**カードを選べない
 //            併用できるEXは使ってもカードを選べる。どちらも次のターンには解ける
 //   ⑥ 倒れた子は使えない(カードと同じ決まり)。同じ子は1ターンに1回まで
 //   ⑦ 効果の長さ: 発動ターン／発動WAVE／切り替え(もう一度使うまで)が、見るたびに正しく数え直される
@@ -62,7 +62,7 @@ vm.runInContext([
   slice('// ==== タクティクス専用 EXスキル(STEP1: 共通基盤) ====', '// ==== タクティクス専用 EXスキルここまで ===='),
   'globalThis.ex={TACTICS_EX_SKILLS,TACTICS_EX_DURATION_TEXT,TACTICS_EX_IMPLEMENTED_EFFECTS,normalizeTacticsExDef,'
     + 'tacticsExDefOf,isTacticsExEffectImplemented,createTacticsExState,normalizeTacticsExState,tacticsExUsesOf,'
-    + 'tacticsExRemaining,isTacticsExEffectActive,isTacticsExCardLocked,isTacticsExTurnUsed,checkTacticsExUse,'
+    + 'tacticsExRemaining,isTacticsExEffectActive,isTacticsExCardLocked,tacticsExLockedSlots,isTacticsExTurnUsed,checkTacticsExUse,'
     + 'applyTacticsExUse,tacticsExToggleLabel,tacticsExActiveEffect,applyTacticsExStats,tacticsExCoverSlot,coverTacticsTargets};',
 ].join('\n'), sandbox);
 const { gate, modes, ex } = sandbox;
@@ -139,7 +139,7 @@ const use = (state, def, slot, monId, now, extra = {}) => {
   check('枠の子が違えば、その子はまだ使っていない扱い', ex.tacticsExUsesOf(s, 1, 'Golem') === 0);
   const fresh = ex.createTacticsExState();
   check('新しいランを作り直すと初期値に戻る', ex.tacticsExUsesOf(fresh, 1, 'Monol') === 0
-    && !ex.isTacticsExCardLocked(fresh, T(1, 1)) && !ex.isTacticsExTurnUsed(fresh, T(1, 1)));
+    && !ex.isTacticsExCardLocked(fresh, 1, T(1, 1)) && !ex.isTacticsExTurnUsed(fresh, T(1, 1)));
   // 無制限
   let k = ex.createTacticsExState();
   let okAll = true;
@@ -155,14 +155,17 @@ const use = (state, def, slot, monId, now, extra = {}) => {
 {
   const s0 = ex.createTacticsExState();
   const blocked = ex.checkTacticsExUse({ def: golem, state: s0, slot: 2, monId: 'Golem', alive: true, selectedCount: 1, now: T(1, 3) });
-  check('併用できないEXは、カードを選んでいると使えない', !blocked.ok && /カード/.test(blocked.reason), blocked.reason);
+  check('併用できないEXは、その子にカードを置いていると使えない', !blocked.ok && /カード/.test(blocked.reason), blocked.reason);
   const g = use(s0, golem, 2, 'Golem', T(1, 3)).state;
-  check('併用できないEXを使ったターンは、カードを選べない', ex.isTacticsExCardLocked(g, T(1, 3)));
-  check('次のターンにはカードを選べる', !ex.isTacticsExCardLocked(g, T(1, 4)));
-  check('次のWAVEの同じターン数でも解けている', !ex.isTacticsExCardLocked(g, T(2, 3)));
+  check('併用できないEXを使ったターンは、使った子はカードを選べない', ex.isTacticsExCardLocked(g, 2, T(1, 3)));
+  // ★止まるのは使った子だけ(2026-09-23 ユーザー指示「EXで他行動禁止はそのモンスターだけ」)
+  check('ほかの子は同じターンでもカードを使える', [0, 1, 3].every(slot => !ex.isTacticsExCardLocked(g, slot, T(1, 3)))
+    && JSON.stringify(ex.tacticsExLockedSlots(g, T(1, 3))) === '[2]');
+  check('次のターンにはカードを選べる', !ex.isTacticsExCardLocked(g, 2, T(1, 4)) && ex.tacticsExLockedSlots(g, T(1, 4)).length === 0);
+  check('次のWAVEの同じターン数でも解けている', !ex.isTacticsExCardLocked(g, 2, T(2, 3)));
   const m = use(s0, monol, 1, 'Monol', T(1, 3), { selectedCount: 2 });
   check('併用できるEXは、カードを選んでいても使える', m.check.ok);
-  check('併用できるEXを使っても、カードは選べる', !ex.isTacticsExCardLocked(m.state, T(1, 3)));
+  check('併用できるEXを使っても、カードは選べる', !ex.isTacticsExCardLocked(m.state, 1, T(1, 3)));
   check('EXを使ったターンだと分かる(カードを使わずにターンを進められる)', ex.isTacticsExTurnUsed(m.state, T(1, 3))
     && !ex.isTacticsExTurnUsed(m.state, T(1, 4)));
   const again = ex.checkTacticsExUse({ def: monol, state: m.state, slot: 1, monId: 'Monol', alive: true, now: T(1, 3) });
@@ -176,7 +179,7 @@ const use = (state, def, slot, monId, now, extra = {}) => {
   check('行動中・AUTO中は使えない', !busy.ok);
   const both = use(m.state, golem, 2, 'Golem', T(1, 3));
   check('併用できるEXのあとでも、カードを選んでいなければ併用できないEXを使える', both.check.ok
-    && ex.isTacticsExCardLocked(both.state, T(1, 3)));
+    && ex.isTacticsExCardLocked(both.state, 2, T(1, 3)) && !ex.isTacticsExCardLocked(both.state, 1, T(1, 3)));
 }
 
 // ---------- ⑦ 効果の長さ ----------
@@ -256,7 +259,7 @@ const use = (state, def, slot, monId, now, extra = {}) => {
     try {
       const n = ex.normalizeTacticsExState(bad);
       fine = fine && typeof n.uses === 'object' && ex.tacticsExUsesOf(bad, 0, 'Monol') === 0
-        && ex.isTacticsExCardLocked(bad, T(1, 1)) === false;
+        && ex.isTacticsExCardLocked(bad, 0, T(1, 1)) === false;
       ex.checkTacticsExUse({ def: monol, state: bad, slot: 0, monId: 'Monol', alive: true, now: T(1, 1) });
       ex.applyTacticsExUse(bad, { def: monol, slot: 0, monId: 'Monol', now: T(1, 1) });
     } catch (e) { fine = false; }
@@ -280,13 +283,17 @@ const use = (state, def, slot, monId, now, extra = {}) => {
   // EXは枚数(cardLimit)の計算に入らない
   const limitBlock = app.slice(app.indexOf('const baseCardLimit'), app.indexOf('const slotMaxUses'));
   check('EXは1ターンに選べる枚数(cardLimit・👑の+1)の計算に入っていない', !/tacticsEx/.test(limitBlock));
-  check('手動の選択・スワイプ・ACTION・AUTOが、併用できないEXのターンを止める',
-    /selectedCards\.length<cardLimit && !tacticsExCardLocked/.test(app)
-    && /const dragAssignToSlot[\s\S]{0,200}if\(tacticsExCardLocked\)/.test(app)
-    && /usedCardEntries\.length===0\) return;\s*\/\/[^\n]*\n\s*if \(tacticsExCardLocked\) return;/.test(app)
-    && /if\(tacticsExCardLocked\) return passTacticsTurn\(\);/.test(app));
-  check('緊急回復も、併用できないEXのターンは使えない', /const useEmergency = async \(\) => \{[\s\S]{0,200}if \(tacticsExCardLocked\) return;/.test(app)
-    && /onClick=\{useEmergency\} disabled=\{[^}]*tacticsExCardLocked/.test(screen));
+  // ★止めるのは使った子だけ。置ける子の一覧(tacticsUsableSlots)から外すので、手動の選択・スワイプ・枠のタップが一度に止まる
+  check('併用できないEXを使った子は、置ける子の一覧(手動・スワイプ・枠のタップ)から外れる',
+    /if\(tacticsExLocked\.includes\(slotIdx\)\) return;\n\s*if\(countsTowardTacticsSlotLimit\(card\)/.test(app)
+    && !/tacticsExCardLocked/.test(app) && !/tacticsExCardLocked/.test(screen));
+  check('ACTION・AUTOも、その子のカードだけ止める(ほかの子のカードは通す)',
+    /if \(usedCardEntries\.some\(entry=>tacticsExLocked\.includes\(entry\.slotIdx\)\)\) return;/.test(app)
+    && /canTacticsSlotAct\(tacticsUnitsRef\.current,idx\)&&!tacticsExLocked\.includes\(idx\)\?mon:null/.test(app)
+    && /if\(tacticsExTurnUsed\)return passTacticsTurn\(\);/.test(app));
+  check('緊急回復は止めない(止まるのはEXを使った子のカードだけ)', !/const useEmergency = async \(\) => \{[\s\S]{0,200}tacticsEx/.test(app));
+  check('併用できないEXの判定は「その子へ置いたカード」だけを数える',
+    (app.match(/selectedCount:tacticsSlotCardCount\(slotIdx\)/g) || []).length === 2);
   // 距離枠のタップ: カードを置く途中ならカードの操作、そうでなければ詳細を開くだけ(使うのは詳細のボタン)
   const slotClick = screen.slice(screen.indexOf('if(pendingCard!=null && canAssign){'), screen.indexOf('}}', screen.indexOf('if(pendingCard!=null && canAssign){')));
   check('距離枠のタップは、カードの置き場所の操作を先に見る', slotClick.indexOf('setCardAssignments') < slotClick.indexOf('setExPanelSlot'));

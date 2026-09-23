@@ -336,10 +336,12 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
     check('EXは通常カードの使用枚数を消費しない(上限の数が変わらない)', cardLimitBefore === cardLimitAfter, `${cardLimitBefore}→${cardLimitAfter}`);
     const usableAfterLock = await page.evaluate(() => document.querySelectorAll('[data-hand-card][data-card-usable="true"]').length);
     await tapFirstCard();
-    check('併用できないEXを使ったターンは、カードを選べない', (await selectedCount()) === 0 && usableAfterLock === 0, `使えるカード${usableAfterLock}枚`);
+    // WAVE1 は盤面がゴーレム1体だけなので、使った子が止まる＝カードを出せる子がいない
+    check('併用できないEXを使った子(ゴーレム1体だけの盤面)はカードを選べない', (await selectedCount()) === 0 && usableAfterLock === 0, `使えるカード${usableAfterLock}枚`);
     const blockBand = await page.evaluate(() => [...document.querySelectorAll('[data-tactics-card-block]')].some(x => /EX/.test(x.textContent)));
     check('使えない理由(EX使用)がカードに出る', blockBand);
-    check('緊急回復も押せない(行動不可)', await page.locator('button[aria-label="緊急回復"]').isDisabled());
+    // ★止まるのはEXを使った子のカードだけ(2026-09-23 ユーザー指示)。緊急回復は止めない
+    check('緊急回復は押せる(止まるのは使った子のカードだけ)', !(await page.locator('button[aria-label="緊急回復"]').isDisabled()));
     const pass = page.locator('[data-tactics-ex-pass]');
     check('「ターンを進める」が出る', await pass.count() === 1);
     await pass.click();

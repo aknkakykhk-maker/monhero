@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 66088057c9d8701f
+// source-sha256: 2eea27329b7e544c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 09c50015df1c7f4b
+// generated-sha256: 55fe113a876fca2f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-23 12:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-23 12:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15377,7 +15377,7 @@ const helpDataRows = id => {
           wave: 'そのWAVE',
           toggle: '切り替え'
         }[def.duration] || '';
-        return [`${monName}「${def.name}」`, `${def.unlimited ? '無制限' : `1ラン${def.maxUses}回`} ／ ${def.withCards ? 'カードと併用可' : 'そのターンはカード不可'} ／ ${duration}`];
+        return [`${monName}「${def.name}」`, `${def.unlimited ? '無制限' : `1ラン${def.maxUses}回`} ／ ${def.withCards ? 'カードと併用可' : 'その子はカード不可'} ／ ${duration}`];
       });
     // プロモードのランぶんに入るクイック周回数(2026-09-21)。
     // 難易度ごとの重さ(power)と同じ式から作るので、難易度を調整したときも自動で追随する
@@ -27852,7 +27852,9 @@ const clearTacticsSlotFlag = (bySlot, key) => {
 //   name      … 画面に出す名前
 //   desc      … 効果の説明(画面にそのまま出す)
 //   maxUses   … 1ランで使える回数。unlimited:true なら数えない
-//   withCards … 同じターンに通常カードも使えるか。false なら「使ったターンは他のカードを使えない」
+//   withCards … 同じターンにその子が通常カードも使えるか。false なら「使ったターン、**その子は**カードを使えない」
+//               ★止まるのは使った子だけ。ほかの子はいつもどおりカードを使える(2026-09-23 ユーザー指示
+//                 「EXで他行動禁止はそのモンスターだけ」)
 //   duration  … 効果の続く長さ。'turn'(発動ターン) / 'wave'(発動WAVEの終わりまで) / 'toggle'(もう一度使うまで)
 //   toggleLabels … duration:'toggle' のときの [切り替える前, 切り替えたあと] の呼び名
 //   conditions … 使うための追加の条件(TACTICS_EX_CONDITIONS のキー)。無ければ空
@@ -27943,13 +27945,13 @@ const isTacticsExEffectImplemented = (def, implemented = TACTICS_EX_IMPLEMENTED_
 //   effects[slot] = { monId, exId, duration, wave, turn, on }   いま載っている効果
 //   lastUse[slot] = { wave, turn }                  同じ子は1ターンに1回まで
 //   turnUsed      = { wave, turn }                  このターンにだれかがEXを使ったか
-//   cardLock      = { wave, turn }                  このターンは他のカードを使えない
+//   cardLock[slot]= { wave, turn }                  このターン、その子はカードを使えない(使った子だけ)
 const createTacticsExState = () => ({
   uses: {},
   effects: {},
   lastUse: {},
   turnUsed: null,
-  cardLock: null
+  cardLock: {}
 });
 const normalizeTacticsExState = state => {
   const base = createTacticsExState();
@@ -27964,7 +27966,7 @@ const normalizeTacticsExState = state => {
     effects: obj(state.effects),
     lastUse: obj(state.lastUse),
     turnUsed: stamp(state.turnUsed),
-    cardLock: stamp(state.cardLock)
+    cardLock: obj(state.cardLock)
   };
 };
 const sameTacticsExTurn = (stamp, now) => !!(stamp && now && tacticsSafeInt(stamp.wave, -1) === tacticsSafeInt(now.wave, -2) && tacticsSafeInt(stamp.turn, -1) === tacticsSafeInt(now.turn, -2));
@@ -28005,13 +28007,16 @@ const isTacticsExEffectActive = (state, slot, monId, now) => {
   return sameTacticsExTurn(effect, now);
 };
 // このターンは他のカードを使えないか(併用できないEXを使ったターン)
-const isTacticsExCardLocked = (state, now) => sameTacticsExTurn(normalizeTacticsExState(state).cardLock, now);
+// ★枠ごと。止まるのはEXを使った子だけ
+const isTacticsExCardLocked = (state, slot, now) => sameTacticsExTurn(normalizeTacticsExState(state).cardLock[slot], now);
+// このターンにカードを使えない枠の一覧
+const tacticsExLockedSlots = (state, now) => Object.keys(normalizeTacticsExState(state).cardLock).map(Number).filter(slot => Number.isInteger(slot) && isTacticsExCardLocked(state, slot, now));
 // このターンにだれかがEXを使ったか(カードを使わずにターンを進められるようにする)
 const isTacticsExTurnUsed = (state, now) => sameTacticsExTurn(normalizeTacticsExState(state).turnUsed, now);
 
 // 使えるかどうか。使えないときは理由を1つだけ返す(画面の灰色のボタンの下へ出す)。
 //   alive         … その子が立っているか(倒れた子はカードと同じくEXも使えない)
-//   selectedCount … このターンにもう選んでいるカードの枚数
+//   selectedCount … このターンに**その子へ**置いたカードの枚数(ほかの子へ置いたカードは数えない)
 //   busy          … 行動中・AUTO中
 const checkTacticsExUse = ({
   def,
@@ -28048,7 +28053,7 @@ const checkTacticsExUse = ({
   if (!def.withCards && Math.max(0, tacticsSafeInt(selectedCount, 0)) > 0) {
     return {
       ok: false,
-      reason: '他のカードと一緒に使えないEX。先にカードの選択を外す'
+      reason: 'この子にカードを置いていると使えないEX。先にこの子のカードを外す'
     };
   }
   const active = isTacticsExEffectActive(safe, slot, monId, now);
@@ -28113,7 +28118,10 @@ const applyTacticsExUse = (state, {
       [slot]: stamp
     },
     turnUsed: stamp,
-    cardLock: def.withCards ? safe.cardLock : stamp
+    cardLock: def.withCards ? safe.cardLock : {
+      ...safe.cardLock,
+      [slot]: stamp
+    }
   };
 };
 // 切り替え式のEXが、いまどちらの状態か(画面に「いま：片手持ち」のように出す)
@@ -38495,7 +38503,6 @@ function BattleScreen({
   tacticsUnits,
   tacticsExInfo,
   activateTacticsEx,
-  tacticsExCardLocked,
   tacticsExTurnUsed,
   passTacticsTurn,
   tacticsCoverSlot,
@@ -40825,7 +40832,7 @@ function BattleScreen({
     className: "text-[10px]"
   }, "VIEW")), /*#__PURE__*/React.createElement("button", {
     onClick: useEmergency,
-    disabled: isBusy || autoBattle || !battleTutorialAllowsEmergency || !!tacticsExCardLocked,
+    disabled: isBusy || autoBattle || !battleTutorialAllowsEmergency,
     "aria-label": "\u7DCA\u6025\u56DE\u5FA9",
     title: "\u7DCA\u6025\u56DE\u5FA9",
     className: `shrink-0 flex h-8 w-[44px] flex-col items-center justify-center rounded-lg border-2 border-blue-400 bg-blue-900/70 leading-none active:scale-90 disabled:opacity-25${battleTutorialSpotClass('emergency')}`
@@ -41049,7 +41056,7 @@ function BattleScreen({
   }, "\u30AB\u30FC\u30C9"), /*#__PURE__*/React.createElement("dd", {
     "data-tactics-ex-with-cards": exPanel.def.withCards ? 'yes' : 'no',
     className: "font-black text-white"
-  }, exPanel.def.withCards ? '同じターンに通常カードも使える' : '使ったターンは他のカードを使えない'), exPanel.durationText && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("dt", {
+  }, exPanel.def.withCards ? '同じターンにこの子も通常カードを使える' : '使ったターン、この子はカードを使えない（ほかの子は使える）'), exPanel.durationText && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("dt", {
     className: "font-bold text-slate-400"
   }, "\u52B9\u679C\u6642\u9593"), /*#__PURE__*/React.createElement("dd", {
     className: "font-black text-white"
@@ -55348,7 +55355,11 @@ function MonsterHeroGame() {
     enabled: tacticsExEnabled,
     now: tacticsExNow
   };
-  const tacticsExCardLocked = tacticsExEnabled && isTacticsExCardLocked(tacticsExState, tacticsExNow);
+  // 併用できないEXを使ったので、このターンはカードを使えない枠。★止まるのは使った子だけで、
+  //   ほかの子はいつもどおりカードを使える(2026-09-23 ユーザー指示「EXで他行動禁止はそのモンスターだけ」)
+  const tacticsExLocked = tacticsExEnabled ? tacticsExLockedSlots(tacticsExState, tacticsExNow) : [];
+  // その子へいま置いてあるカードの枚数(併用できないEXを使えるかの判定に使う)
+  const tacticsSlotCardCount = slotIdx => Object.values(cardAssignments).filter(v => v === slotIdx).length;
   const tacticsExTurnUsed = tacticsExEnabled && isTacticsExTurnUsed(tacticsExState, tacticsExNow);
   // ★EXの効き目を戦闘の計算へ渡す入口。モンスターのidではなく「いま効いている効果の種類」を見る。
   //   ref の最新値を読む(使った直後の同じ操作の中でも古い値を見ない)
@@ -55388,6 +55399,8 @@ function MonsterHeroGame() {
     slots.forEach((mon, slotIdx) => {
       if (!mon) return;
       if (card.type === 'unique' && card.ownerSlotIdx !== slotIdx) return;
+      // 併用できないEXを使った子は、このターンカードを使えない
+      if (tacticsExLocked.includes(slotIdx)) return;
       if (countsTowardTacticsSlotLimit(card) && (used[slotIdx] || 0) >= slotMaxUses(mon, slotIdx)) return;
       // 回復カードも「全体回復」なので、倒れた子へ向ける必要はない。
       // どのカードも「立っていて、その子が払えるか」だけで決まる
@@ -55407,13 +55420,6 @@ function MonsterHeroGame() {
       kind: null,
       short: null,
       why: null
-    };
-    // ★併用できないEXを使ったターンは、どのカードも選べない(理由を帯で出す)
-    if (tacticsExCardLocked) return {
-      ok: false,
-      kind: 'ex',
-      short: 'EX使用',
-      why: '他のカードと一緒に使えないEXスキルを使ったターンなので、カードは選べない'
     };
     if (tacticsUsableSlots(card, cardIndex).length > 0) {
       // ★1ターンに選べる枚数の上限は、いままでの5モードと同じ見え方(灰色だけ)にする。
@@ -55443,13 +55449,18 @@ function MonsterHeroGame() {
     const units = tacticsUnitsRef.current;
     let owner = null,
       alive = 0,
-      best = null;
+      best = null,
+      exLocked = 0;
     slots.forEach((mon, slotIdx) => {
       if (!mon) return;
       if (card.type === 'unique' && card.ownerSlotIdx !== slotIdx) return;
       owner = owner || mon;
       if (!canTacticsSlotAct(units, slotIdx)) return;
       alive++;
+      if (tacticsExLocked.includes(slotIdx)) {
+        exLocked++;
+        return;
+      }
       if (countsTowardTacticsSlotLimit(card) && (used[slotIdx] || 0) >= slotMaxUses(mon, slotIdx)) return;
       const unit = normalizeTacticsUnit(Array.isArray(units) ? units[slotIdx] : null);
       const need = getCardGuts(card, slotIdx);
@@ -55472,6 +55483,13 @@ function MonsterHeroGame() {
       kind: 'down',
       short: 'ダウン',
       why: card.type === 'unique' ? `この技を使う ${owner.masuName || owner.name} が倒れている` : 'カードを使える子が全員倒れている'
+    };
+    // 使える子が全員「併用できないEXを使った子」だけだったとき
+    if (!best && exLocked > 0) return {
+      ok: false,
+      kind: 'ex',
+      short: 'EX使用',
+      why: card.type === 'unique' ? `この技を使う ${owner.masuName || owner.name} は、このターンEXスキルを使ったのでカードを使えない` : 'このターンEXスキルを使った子はカードを使えない。ほかに使える子がいない'
     };
     if (best) return {
       ok: false,
@@ -55517,8 +55535,8 @@ function MonsterHeroGame() {
       const usable = tacticsMode ? tacticsUsableSlots(c) : [];
       const curGuts = pendingCardGuts(c);
       const remainingGuts = guts - selectedCards.reduce((acc, idx) => acc + selectedCardGuts(idx), 0);
-      // ★併用できないEXを使ったターンは選べない(EXそのものは枚数に数えないので、cardLimit とは別に見る)
-      const isSelectable = (tacticsMode ? usable.length > 0 : remainingGuts >= curGuts) && selectedCards.length < cardLimit && !tacticsExCardLocked;
+      // ★併用できないEXを使った子は tacticsUsableSlots が外すので、ここで別に見なくてよい
+      const isSelectable = (tacticsMode ? usable.length > 0 : remainingGuts >= curGuts) && selectedCards.length < cardLimit;
       if (isSelectable) {
         Audio_.se.card();
         setSelectedCards(p => [...p, i]);
@@ -55545,10 +55563,6 @@ function MonsterHeroGame() {
     if (isBusy || autoBattleRef.current) return;
     const c = hand[cardIndex];
     if (!c) return;
-    if (tacticsExCardLocked) {
-      setFocusedCard(null);
-      return;
-    }
     const targetMon = slots[slotIdx];
     // 攻撃カード: モンスターのいるスロットに割り当て
     if (cardNeedsMonster(c)) {
@@ -56684,8 +56698,6 @@ function MonsterHeroGame() {
   };
   const useEmergency = async () => {
     if (isBusy || hp <= 0) return;
-    // 併用できないEXを使ったターンは「行動不可」。緊急回復も使えない(ターンは「ターンを進める」で送る)
-    if (tacticsExCardLocked) return;
     setIsBusy(true);
     Audio_.se.heal();
     setEffect({
@@ -56753,7 +56765,7 @@ function MonsterHeroGame() {
       slot: slotIdx,
       monId: mon.id,
       alive: canTacticsSlotAct(tacticsUnits, slotIdx),
-      selectedCount: selectedCards.length,
+      selectedCount: tacticsSlotCardCount(slotIdx),
       now: tacticsExNow,
       busy: isBusy || autoBattle
     });
@@ -56815,7 +56827,7 @@ function MonsterHeroGame() {
       slot: slotIdx,
       monId: mon.id,
       alive: canTacticsSlotAct(tacticsUnitsRef.current, slotIdx),
-      selectedCount: selectedCards.length,
+      selectedCount: tacticsSlotCardCount(slotIdx),
       now: tacticsExNow,
       busy: false
     });
@@ -56853,7 +56865,7 @@ function MonsterHeroGame() {
     return true;
   };
   // EXを使ったターンに、カードを使わずに敵の番へ進める。
-  // ★併用できないEXを使ったターンはカードを選べず、ACTION(カード1枚以上が要る)では進められないため。
+  // ★併用できないEXを使った子はカードを出せない。その子しか立っていないと ACTION(カード1枚以上が要る)では進められないため。
   //   中身は緊急回復の「回復のあと」と同じ(予告済みの行動をそのまま実行し、次の予告を1回だけ決める)
   const passTacticsTurn = async () => {
     if (!tacticsExTurnUsed || isBusy || !enemy || hp <= 0 || selectedCards.length > 0) return;
@@ -56880,8 +56892,8 @@ function MonsterHeroGame() {
       slotIdx: cardAssignments[i] != null ? cardAssignments[i] : null
     }));
     if (isBusy || !enemy || usedCardEntries.length === 0) return;
-    // 併用できないEXを使ったターンはカードを使えない(AUTOの明示の選択もここで止める)
-    if (tacticsExCardLocked) return;
+    // 併用できないEXを使った子のカードは使えない(AUTOの明示の選択もここで止める)。ほかの子のカードは使える
+    if (usedCardEntries.some(entry => tacticsExLocked.includes(entry.slotIdx))) return;
     // ★タクティクスバトルの「眼力」は、スエゾーが攻撃したターンに引く(2026-09-20 ユーザー指示)。
     //   本人の能力なので勇者モンにしていなくても効く。1ターンに何枚使っても判定は1回
     //   (枚数で確率が上がらないように)。既存5モードは今までどおり敵のターンの頭に引く
@@ -57679,10 +57691,9 @@ function MonsterHeroGame() {
     // ガッツは1体ずつなので gutsForSlot で渡し、枚数制限は手動と同じ
     // countsTowardTacticsSlotLimit で数える(攻撃カードだけ数えていたころは、
     // AUTOだけ回復もバフも何枚でも同じ子へ置けていた)
-    // 併用できないEXを使ったターンは、カードを選ばずにそのまま敵の番へ進める
-    if (tacticsExCardLocked) return passTacticsTurn();
     const tacticsMode = isTacticsMode(runMode);
-    const autoSlots = tacticsMode ? slots.map((mon, idx) => canTacticsSlotAct(tacticsUnitsRef.current, idx) ? mon : null) : slots;
+    // 併用できないEXを使った子は、倒れた子と同じく空の枠として渡す(ほかの子はいつもどおり選ばれる)
+    const autoSlots = tacticsMode ? slots.map((mon, idx) => canTacticsSlotAct(tacticsUnitsRef.current, idx) && !tacticsExLocked.includes(idx) ? mon : null) : slots;
     const tacticsAutoOptions = tacticsMode ? {
       gutsForSlot: slotIdx => tacticsUnitsRef.current[slotIdx]?.guts || 0,
       countsTowardSlotLimit: countsTowardTacticsSlotLimit,
@@ -57700,6 +57711,8 @@ function MonsterHeroGame() {
       ...tacticsAutoOptions
     });
     if (entries.length > 0) return processTurn(entries);
+    // EXを使ったターンで、カードを出せる子が残っていなければ、そのまま敵の番へ進める
+    if (tacticsExTurnUsed) return passTacticsTurn();
     const lacksOnlyGuts = hasAutoTurnWithEnoughGuts({
       hand,
       slots: autoSlots,
@@ -69583,7 +69596,6 @@ function MonsterHeroGame() {
       tacticsSlotGuardValue: tacticsSlotGuardValue,
       tacticsExInfo: tacticsExInfo,
       activateTacticsEx: activateTacticsEx,
-      tacticsExCardLocked: tacticsExCardLocked,
       tacticsExIntroVisible: tacticsExIntroVisible,
       dismissTacticsExIntro: dismissTacticsExIntro,
       tacticsExTurnUsed: tacticsExTurnUsed,
