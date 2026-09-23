@@ -12389,6 +12389,21 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           ? <button type="button" data-growth-apt-cell={idx} aria-expanded={aptOpen} aria-label={`${label}距離の間合い適性の内訳を${aptOpen?'閉じる':'開く'}`} onClick={()=>setGrowthAptOpen(aptOpen?null:openKey)} className={`w-full min-w-0 flex flex-col items-center gap-0.5 rounded-xl border px-1 py-1 active:scale-95 ${aptOpen?'border-fuchsia-400/70 bg-fuchsia-950/40':'border-white/10 bg-black/20'}`}>{cell}</button>
           : cell}{aptExtra?aptExtra(idx,grade):null}</div>);})}</div>{openAptEntry&&renderGrowthAptDetail(openAptEntry)}<div className="text-[10px] text-slate-500 font-bold mt-1 leading-tight">置く距離に関係なく、このモンスターの補正が4距離すべてに加算されます</div></div>
       {renderSkillSection(mon)}
+      {(()=>{
+        const exDef=typeof tacticsExDefOf==='function'?tacticsExDefOf(mon.id):null;
+        if(!exDef)return null;
+        const durationLabel={turn:'そのターン',wave:'そのWAVE',toggle:'再使用まで'}[exDef.duration]||String(exDef.duration||'—');
+        return <div data-monster-detail-ex className="rounded-xl border border-violet-400/40 bg-violet-950/25 p-2 min-w-0">
+          <div className="flex items-center justify-between gap-2"><div className="text-[10px] font-black uppercase tracking-widest text-violet-300">EXスキル</div><div className="text-[9px] font-black text-violet-200/80">タクティクス専用</div></div>
+          <div className="mt-0.5 text-[12px] font-black text-white">EX《{exDef.name}》</div>
+          <div className="mt-1 text-[10px] font-bold leading-relaxed text-slate-200">{exDef.desc}</div>
+          <div className="mt-1.5 grid grid-cols-3 gap-1 text-center text-[9px] font-black">
+            <div className="rounded-lg bg-black/30 px-1 py-1 text-slate-300">回数<span className="block text-white">{exDef.unlimited?'無制限':`${exDef.maxUses}回`}</span></div>
+            <div className="rounded-lg bg-black/30 px-1 py-1 text-slate-300">効果時間<span className="block text-white">{durationLabel}</span></div>
+            <div className="rounded-lg bg-black/30 px-1 py-1 text-slate-300">通常カード<span className="block text-white">{exDef.withCards?'併用可':'併用不可'}</span></div>
+          </div>
+        </div>;
+      })()}
       {/* ② 選び方で決まる効果。個体そのものの強さ(総合力)とは別物なので見出しで分ける */}
       {renderDetailSectionLabel('選び方で決まる効果', '総合力には含みません')}
       <div className="grid grid-cols-2 gap-2 shrink-0">
