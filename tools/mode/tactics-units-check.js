@@ -1584,6 +1584,11 @@ check('固有技の効果も枠の印に出る',
     battleScreen.includes("flex ${tacticsDebugLayout?'flex-col':'flex-wrap'} items-center justify-center"));
   check('選択済みカードの文字を暗くしすぎない',
     battleScreen.includes("opacity-90 saturate-[0.95]"));
+  check('ドラッグ中も手札カードを残して追従ゴーストを別表示する',
+    battleScreen.includes('data-tactics-drag-card-ghost')
+      && battleScreen.includes('isDragging&&ReactDOM.createPortal')
+      && !battleScreen.includes("isDragging?{touchAction:'none',position:'fixed'"));
+
 
 }
 
