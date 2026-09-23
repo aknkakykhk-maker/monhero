@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 90d7b3c4d75b5dcc
+// generated-sha256: 3bc4ec79664e8be3
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -92,7 +92,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-23 12:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-23 13:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -10210,7 +10210,7 @@ const buildAttackHits = ({ d, card, attackerId, heroId, traitOwnerId = heroId, c
   if (kenshiSplitNormal) combo(ATTACK_COMBO_RULES.kenshiSplitNormal + comboDmgBonus);
   if (kenshiHero && isUniqueOf('KenshiMocchi')) for (const rate of ATTACK_COMBO_RULES.kenshiHeroUnique) combo(rate + comboDmgBonus);
   // 固有効果「ソードスキル」: 技の出自が剣士モッチーなら誰が使っても(合体で引き継いだ場合も)
-  // ★swordSkill:false … タクティクスのEX「武器チェンジ」で片手持ちの剣士モッチーが使ったとき。
+  // ★swordSkill:false … タクティクスのEX「ソード・コンバージョン」で片手持ちの剣士モッチーが使ったとき。
   //   固有技そのものは使えるが、ソードスキルの連撃は出ない(ほかのモードは渡さないので常に true)
   if (swordSkill && isUniqueOf('KenshiMocchi')) for (const rate of ATTACK_COMBO_RULES.kenshiUnique) combo(rate + comboDmgBonus);
   // ソードスキルの連撃パワーが3充填されるたびに1本ずつ増える永久連撃。
@@ -16816,7 +16816,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
   }),
   KenshiMocchi: Object.freeze({
     id: 'kenshi_mocchi_weapon_change',
-    name: '武器チェンジ',
+    name: 'ソード・コンバージョン',
     desc: '二刀流と片手持ちを切り替える。片手持ちのあいだは力と同じ数値を丈夫さへ加える。固有技は使えるが、ソードスキルの効果は出ない。',
     maxUses: 0, unlimited: true, withCards: false, duration: 'toggle',
     toggleLabels: Object.freeze(['二刀流', '片手持ち']),
@@ -16973,7 +16973,7 @@ const tacticsExActiveEffect = (state, slot, monId, now) => {
 // ★読むときに上乗せするだけなので、効果が切れた瞬間(WAVEが変わる・切り替えで戻す)に
 //   何もしなくても元の値へ戻る。トレーニングで伸ばした値も失われない
 //   捨て身(allIn)     … 丈夫さ0。使ったときの丈夫さの50%を力へ足す
-//   武器チェンジ(weaponChange) の片手持ち … いまの力と同じ数値を丈夫さへ足す(力は減らない)
+//   ソード・コンバージョン(weaponChange) の片手持ち … いまの力と同じ数値を丈夫さへ足す(力は減らない)
 const applyTacticsExStats = (unit, state, slot, now) => {
   if (!unit || typeof unit !== 'object') return unit;
   const kind = tacticsExActiveEffect(state, slot, unit.id, now);
