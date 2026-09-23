@@ -1556,6 +1556,10 @@ check('固有技の効果も枠の印に出る',
       && appSource.includes("top:'max(calc(env(safe-area-inset-top) + 96px),14dvh)'"));
   check('カード詳細中もタクティクスの敵行動予測を隠さない',
     battleScreen.includes("focusedCard&&!tacticsDebugLayout?'invisible':'visible'"));
+  check('タクティクス確認UIは細い枠と半透明HUDで表示する',
+    battleScreen.includes("rounded-[18px] border grid grid-cols-[40%_60%]")
+      && battleScreen.includes("bg-slate-950/72 backdrop-blur-[2px]")
+      && battleScreen.includes("tacticsDebugLayout?'rounded-[14px] border':'rounded-xl border-2'"));
 }
 
 console.log(failed ? `\nNG ${failed}件` : '\nすべてOK');
