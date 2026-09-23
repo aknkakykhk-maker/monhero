@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1434d1ec5505587a
+// generated-sha256: 7a083411b1a8fb90
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -92,7 +92,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-23 17:33"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-23 18:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -23353,22 +23353,22 @@ function BattleScreen({
                       data-tactics-hp={`${tacticsUnit.hp}/${tacticsUnit.maxHp}`}
                       data-tactics-guts={`${tacticsUnit.guts}/${tacticsUnit.maxGuts}`}
                       data-tactics-downed={tacticsUnit.downed?'true':'false'}
-                      className={`${tacticsDebugLayout?'absolute right-0 bottom-0 w-[60%] min-w-0 border-l border-t flex flex-col justify-end pb-px px-2':'shrink-0 border-t px-1'} z-20 border-white/10 bg-black/55${battleTutorialSpotClass('tacticsParty')}`}>
+                      className={`${tacticsDebugLayout?'absolute right-0 bottom-0 w-[60%] min-w-0 border-l border-t flex flex-col justify-end py-px px-2 gap-0':'shrink-0 border-t px-1'} z-20 border-white/10 bg-black/55${battleTutorialSpotClass('tacticsParty')}`}>
                       {/* ★「♥ 500 /500」と左右へ散らしていたのを、ラベルと数値の2つにそろえた
                           (2026-09-22 ユーザー指摘「カードも距離枠も全て安っぽくない？」)。
                           読む順が「何の値か → いくつか」で固定され、4枚並べたときに縦がそろう */}
-                      <div className="flex items-baseline justify-between leading-none">
+                      <div className="flex h-[10px] items-center justify-between leading-none">
                         <span className="text-[8px] font-black tracking-wider text-pink-300">HP</span>
                         <span className="font-mono leading-none"><span className="text-[11px] font-black text-white">{tacticsUnit.hp}</span><span className="text-[8px] text-slate-400">/{tacticsUnit.maxHp}</span></span>
                       </div>
-                      <div className="h-[3px] overflow-hidden rounded-full bg-black/60" style={{boxShadow:'inset 0 1px 2px rgba(0,0,0,.9)'}}>
+                      <div className="h-[2px] overflow-hidden rounded-full bg-black/60" style={{boxShadow:'inset 0 1px 2px rgba(0,0,0,.9)'}}>
                         <div data-tactics-hp-bar className={`h-full transition-all duration-1000 ${tacticsUnit.downed?'bg-gradient-to-r from-emerald-500 to-teal-300':'bg-gradient-to-r from-rose-500 to-pink-300'}`} style={{width:`${hpPct}%`,boxShadow:'0 0 6px rgba(244,114,182,.55)'}}></div>
                       </div>
-                      <div className="flex items-baseline justify-between leading-none">
+                      <div className="flex h-[10px] items-center justify-between leading-none">
                         <span className="text-[8px] font-black tracking-wider text-amber-300">GUTS</span>
                         <span className="font-mono leading-none"><span className="text-[11px] font-black text-white">{tacticsUnit.guts}</span><span className="text-[8px] text-slate-400">/{tacticsUnit.maxGuts}</span></span>
                       </div>
-                      <div className="h-[3px] overflow-hidden rounded-full bg-black/60" style={{boxShadow:'inset 0 1px 2px rgba(0,0,0,.9)'}}>
+                      <div className="h-[2px] overflow-hidden rounded-full bg-black/60" style={{boxShadow:'inset 0 1px 2px rgba(0,0,0,.9)'}}>
                         <div data-tactics-guts-bar className="h-full bg-gradient-to-r from-amber-500 to-yellow-300 transition-all duration-500" style={{width:`${gutsPct}%`,boxShadow:'0 0 6px rgba(251,191,36,.55)'}}></div>
                       </div>
                     </div>
@@ -42415,7 +42415,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
         );
       })()}
       {focusedCard&&(
-        <div className="fixed left-1/2 -translate-x-1/2 bg-slate-900/98 border-2 border-indigo-400 p-2.5 rounded-2xl w-[90%] max-w-[260px] shadow-[0_0_40px_rgba(0,0,0,0.9)] backdrop-blur-md" style={{bottom:'calc(34% + 80px)',zIndex:110000}} onClick={()=>setFocusedCard(null)}>
+        <div data-tactics-card-detail={isTacticsMode(runMode)?'raised':undefined} className="fixed left-1/2 -translate-x-1/2 bg-slate-900/98 border-2 border-indigo-400 p-2.5 rounded-2xl w-[90%] max-w-[260px] shadow-[0_0_40px_rgba(0,0,0,0.9)] backdrop-blur-md" style={isTacticsMode(runMode)?{top:'max(calc(env(safe-area-inset-top) + 96px),14dvh)',zIndex:110000}:{bottom:'calc(34% + 80px)',zIndex:110000}} onClick={()=>setFocusedCard(null)}>
           <div className="flex items-center gap-2.5 mb-1 border-b border-white/10 pb-1"><span className="text-xl bg-indigo-500/20 p-1 rounded-xl">{cardIconNode(focusedCard.icon,22,focusedCard.id)}</span><div className="text-left flex-1 overflow-hidden"><div className="text-[9px] font-black text-white uppercase truncate">{focusedCard.name||focusedCard.baseName}</div><div className="text-[7px] font-bold text-indigo-400 flex items-center gap-1"><Zap size={7}/> {getCardGuts(focusedCard)} Guts</div></div></div>
           <div className="text-[8px] text-slate-200 font-medium leading-relaxed bg-black/50 p-1.5 rounded-lg border border-white/5 space-y-1">
             {/* ★何をするカードか(ジャンル)と、誰に効くか(範囲)。タクティクスだけに出す。

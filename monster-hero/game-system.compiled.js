@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 28171345c82f6aba
+// source-sha256: 00598121193a6862
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1434d1ec5505587a
+// generated-sha256: 7a083411b1a8fb90
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-23 17:33"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-23 18:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -40780,9 +40780,9 @@ function BattleScreen({
         "data-tactics-hp": `${tacticsUnit.hp}/${tacticsUnit.maxHp}`,
         "data-tactics-guts": `${tacticsUnit.guts}/${tacticsUnit.maxGuts}`,
         "data-tactics-downed": tacticsUnit.downed ? 'true' : 'false',
-        className: `${tacticsDebugLayout ? 'absolute right-0 bottom-0 w-[60%] min-w-0 border-l border-t flex flex-col justify-end pb-px px-2' : 'shrink-0 border-t px-1'} z-20 border-white/10 bg-black/55${battleTutorialSpotClass('tacticsParty')}`
+        className: `${tacticsDebugLayout ? 'absolute right-0 bottom-0 w-[60%] min-w-0 border-l border-t flex flex-col justify-end py-px px-2 gap-0' : 'shrink-0 border-t px-1'} z-20 border-white/10 bg-black/55${battleTutorialSpotClass('tacticsParty')}`
       }, /*#__PURE__*/React.createElement("div", {
-        className: "flex items-baseline justify-between leading-none"
+        className: "flex h-[10px] items-center justify-between leading-none"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-[8px] font-black tracking-wider text-pink-300"
       }, "HP"), /*#__PURE__*/React.createElement("span", {
@@ -40792,7 +40792,7 @@ function BattleScreen({
       }, tacticsUnit.hp), /*#__PURE__*/React.createElement("span", {
         className: "text-[8px] text-slate-400"
       }, "/", tacticsUnit.maxHp))), /*#__PURE__*/React.createElement("div", {
-        className: "h-[3px] overflow-hidden rounded-full bg-black/60",
+        className: "h-[2px] overflow-hidden rounded-full bg-black/60",
         style: {
           boxShadow: 'inset 0 1px 2px rgba(0,0,0,.9)'
         }
@@ -40804,7 +40804,7 @@ function BattleScreen({
           boxShadow: '0 0 6px rgba(244,114,182,.55)'
         }
       })), /*#__PURE__*/React.createElement("div", {
-        className: "flex items-baseline justify-between leading-none"
+        className: "flex h-[10px] items-center justify-between leading-none"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-[8px] font-black tracking-wider text-amber-300"
       }, "GUTS"), /*#__PURE__*/React.createElement("span", {
@@ -40814,7 +40814,7 @@ function BattleScreen({
       }, tacticsUnit.guts), /*#__PURE__*/React.createElement("span", {
         className: "text-[8px] text-slate-400"
       }, "/", tacticsUnit.maxGuts))), /*#__PURE__*/React.createElement("div", {
-        className: "h-[3px] overflow-hidden rounded-full bg-black/60",
+        className: "h-[2px] overflow-hidden rounded-full bg-black/60",
         style: {
           boxShadow: 'inset 0 1px 2px rgba(0,0,0,.9)'
         }
@@ -71769,8 +71769,12 @@ function MonsterHeroGame() {
         className: "text-[8px] text-slate-500 text-center pt-1 shrink-0"
       }, "\u56FA\u6709\u6280\u306E\u5F37\u5316(\u5F37\u5316\u30DD\u30A4\u30F3\u30C8)\u3067\u4E0A\u4F4D\u30EC\u30D9\u30EB\u304C\u89E3\u653E\u3055\u308C\u307E\u3059")));
     })(), focusedCard && /*#__PURE__*/React.createElement("div", {
+      "data-tactics-card-detail": isTacticsMode(runMode) ? 'raised' : undefined,
       className: "fixed left-1/2 -translate-x-1/2 bg-slate-900/98 border-2 border-indigo-400 p-2.5 rounded-2xl w-[90%] max-w-[260px] shadow-[0_0_40px_rgba(0,0,0,0.9)] backdrop-blur-md",
-      style: {
+      style: isTacticsMode(runMode) ? {
+        top: 'max(calc(env(safe-area-inset-top) + 96px),14dvh)',
+        zIndex: 110000
+      } : {
         bottom: 'calc(34% + 80px)',
         zIndex: 110000
       },

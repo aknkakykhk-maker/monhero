@@ -1547,6 +1547,13 @@ check('固有技の効果も枠の印に出る',
   check('タクティクス戦では2x2確認UIを維持する',
     battleScreen.includes('const tacticsDebugLayout = Array.isArray(tacticsUnits);')
       && battleScreen.includes('data-tactics-debug-layout={tacticsDebugLayout?\'2x2\':undefined}'));
+  check('タクティクスのHP/GUTS帯を詰める',
+    battleScreen.includes('flex h-[10px] items-center justify-between leading-none')
+      && battleScreen.includes('h-[2px] overflow-hidden rounded-full bg-black/60'));
+  const appSource = fs.readFileSync(path.join(root, 'monster-hero/src/parts/60-app.jsx'), 'utf8');
+  check('タクティクスのカード詳細は味方枠より上へ出す',
+    appSource.includes("data-tactics-card-detail={isTacticsMode(runMode)?'raised':undefined}")
+      && appSource.includes("top:'max(calc(env(safe-area-inset-top) + 96px),14dvh)'"));
 }
 
 console.log(failed ? `\nNG ${failed}件` : '\nすべてOK');
