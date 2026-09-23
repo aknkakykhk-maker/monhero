@@ -1662,6 +1662,12 @@ function MonsterHeroGame() {
     setUpdateNoticeStyleState(value);
     storeSet(UPDATE_NOTICE_STYLE_KEY, value, false);
   };
+  const [battleScreenStyle, setBattleScreenStyleState] = useState('TACTICS_NEW');
+  const setBattleScreenStyle = (next) => {
+    const value = normalizeBattleScreenStyle(next);
+    setBattleScreenStyleState(value);
+    storeSet(BATTLE_SCREEN_STYLE_KEY, value, false);
+  };
   const [showGameUpdateConfirm, setShowGameUpdateConfirm] = useState(false);
   const [gameUpdatePending, setGameUpdatePending] = useState(false);
   const gameUpdatePendingRef = useRef(false);
@@ -4589,6 +4595,7 @@ function MonsterHeroGame() {
       battleSpeedRef.current = savedBattleSpeed;
       setBattleSpeed(savedBattleSpeed);
       setUpdateNoticeStyleState(normalizeUpdateNoticeStyle(await storeGet(UPDATE_NOTICE_STYLE_KEY, 'FULL', false)));
+      setBattleScreenStyleState(normalizeBattleScreenStyle(await storeGet(BATTLE_SCREEN_STYLE_KEY, 'TACTICS_NEW', false)));
       const savedSeVolume = await storeGet('mh_se_volume', DEFAULT_VOLUME, false);
       setSeVolumeState(savedSeVolume);
       const savedBgmVolume = await storeGet('mh_bgm_volume', DEFAULT_VOLUME, false);
@@ -14197,6 +14204,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onReturnToTitle={()=>setShowOfficialTitleConfirm(true)}
             updateNoticeStyle={updateNoticeStyle}
             onChangeUpdateNoticeStyle={setUpdateNoticeStyle}
+            battleScreenStyle={battleScreenStyle}
+            onChangeBattleScreenStyle={setBattleScreenStyle}
           />
         )}
 
@@ -16504,7 +16513,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <BattleScreen
             applyTurnDamageReduction={applyTurnDamageReduction} attackAnim={attackAnim} autoBattle={autoBattle}
             autoBattleRef={autoBattleRef} autoRepeat={autoRepeat} battleIntimidate={battleIntimidate}
-            battleScenarioRef={battleScenarioRef} battleScreenActive={gameState==='BATTLE'}
+            battleScenarioRef={battleScenarioRef} battleScreenActive={gameState==='BATTLE'} battleScreenStyle={battleScreenStyle}
             battleSoulMasus={battleSoulMasus} battleSpeed={battleSpeed} battleTutorial={battleTutorial}
             battleTutorialAllowsEmergency={battleTutorialAllowsEmergency}
             battleTutorialCardAllowed={battleTutorialCardAllowed} battleTutorialCardKind={battleTutorialCardKind}
