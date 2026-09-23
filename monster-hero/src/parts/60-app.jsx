@@ -722,6 +722,10 @@ function MonsterHeroGame() {
   const [ownedTeachings, setOwnedTeachings] = useState([]);
   const [teachingPool, setTeachingPool] = useState([]);
   const [popups, setPopups] = useState([]);
+  // ★タクティクスで、いまどの子の効果を出しているか(2026-09-23 ユーザー指示「敵への効果は敵の辺り、
+  //   味方への効果は対象の味方や使ったモンスター」)。カードの効果は40か所以上から addPopup を呼ぶので、
+  //   1つずつ枠を渡さず、カードを1枚処理しているあいだだけここへ使った子の枠を置く
+  const popupSlotRef = useRef(null);
   const [effect, setEffect] = useState(null);
   const [enemyIntent, setEnemyIntent] = useState(null);
   // 直前に敵が実行した行動。SCANが「ためた直後なので次は必殺技で確定」「移動した直後なので
@@ -1022,7 +1026,7 @@ function MonsterHeroGame() {
         if (!unit || !was) return;
         if (normalizeTacticsUnit(was).downed && !normalizeTacticsUnit(unit).downed) {
           addPopup(`${slots[index]?.masuName || slots[index]?.name || '仲間'}が起き上がった！`,
-            'hero', 'text-emerald-300 font-black text-2xl drop-shadow-md');
+            'hero', 'text-emerald-300 font-black text-2xl drop-shadow-md', undefined, index);
         }
         // ★倒れた瞬間も同じ1か所で拾う。枠の表示(×印)は一瞬で見落としやすいので、
         //   記録には必ず残す(2026-09-22 ユーザー依頼のログ)
@@ -9073,9 +9077,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
   // log を渡すと、吹き出しとは別の文をログへ残す(数字だけの吹き出しに主語を足すときに使う)。
   // log に false を渡すとログには残さない
-  const addPopup = (text, side, color, log) => {
+  // slot を渡すと、タクティクスではその子の枠の中へ出す(渡さなければカード処理中の子の枠)。
+  // 誰のものでもない吹き出し(合計・回避の名乗りなど)は slot を持たない
+  const addPopup = (text, side, color, log, slot) => {
     const id = Date.now()+Math.random();
-    setPopups(prev=>[...prev,{id,text,side,color}]);
+    const slotOf = slot !== undefined ? slot : popupSlotRef.current;
+    const popupSlot = isTacticsMode(runMode) && side !== 'enemy' && Number.isInteger(slotOf) ? slotOf : null;
+    setPopups(prev=>[...prev,{id,text,side,color,slot:popupSlot}]);
     setTimeout(()=>setPopups(p=>p.filter(x=>x.id!==id)),battleMs(2500));
     if (log !== false) pushBattleLog(typeof log === 'string' ? log : battleLogLineFromPopup(text, side));
   };
@@ -10251,7 +10259,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     pushBattleLog(`EX ${mon.masuName||mon.name}「${def.name}」${toggled}`, 'ally');
     const onUse=TACTICS_EX_ON_USE[def.effect];
     if(isTacticsExEffectImplemented(def)){
-      addPopup(`EX ${def.name}！${toggled}`,'hero','text-fuchsia-300 font-black text-xl drop-shadow-md');
+      addPopup(`EX ${def.name}！${toggled}`,'hero','text-fuchsia-300 font-black text-xl drop-shadow-md',undefined,slotIdx);
       if(typeof onUse==='function') onUse({ def, slotIdx, mon, state:next });
     }
     else pushBattleLog('（開発中）このEXの効果はまだ出ない。回数と併用のルールだけ動いている', 'info');
@@ -10342,6 +10350,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const halveCounter=makeHalveCounter(); // 何枚目かの数え方は cardHalveGroup が決める
     for (const entry of usedCardEntries) {
       const card=entry.card;
+      popupSlotRef.current=entry.slotIdx!=null?entry.slotIdx:defaultSlot;
       const totalHealBeforeCard=totalHeal, totalHealRateBeforeCard=totalHealRate;
       // 2枚目以降のカードは効果が半減する。アシストカードは対象外で、枚数にも数えない。
       const isBreeder=isAssistCard(card);
@@ -10576,6 +10585,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       // 回復・自傷など、このカード自身の増減を次のカード消費より先に描画する。
       await battleWait(250);
     }
+    popupSlotRef.current=null;
 
     if (totalDmg>0) {
       if(totalDmg>0){
