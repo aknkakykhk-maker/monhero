@@ -1,3 +1,4 @@
+// バトル画面3択の保存・設定画面・タクティクス旧新UI描画の接続を固定する回帰検査。
 const fs = require('fs');
 const path = require('path');
 
