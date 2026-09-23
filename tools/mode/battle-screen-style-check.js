@@ -15,13 +15,14 @@ const check = (name, ok) => {
   if (!ok) failed++;
 };
 
-check('3種類の画面設定を定義',
-  core.includes("const BATTLE_SCREEN_STYLES = ['CLASSIC', 'TACTICS_OLD', 'TACTICS_NEW'];"));
+check('タクティクス旧／新の2種類だけを画面設定として定義',
+  core.includes("const BATTLE_SCREEN_STYLES = ['TACTICS_OLD', 'TACTICS_NEW'];") &&
+  !core.includes("id:'CLASSIC', label:'クラシック'"));
 check('未保存・不正値は新タクティクスUI',
   core.includes("BATTLE_SCREEN_STYLES.includes(String(value)) ? String(value) : 'TACTICS_NEW'"));
 check('専用の新規保存キー',
   core.includes("const BATTLE_SCREEN_STYLE_KEY = 'mh_battle_screen_style_v1';"));
-check('設定画面に3択を表示',
+check('設定画面にタクティクス旧／新の2択を表示',
   settings.includes('BATTLE_SCREEN_STYLE_LABELS.map') &&
   settings.includes('battleScreenStyle') &&
   settings.includes('onChangeBattleScreenStyle'));
