@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1941beedce897a44
+// source-sha256: c0cbe5d2d82d259e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9022d99f7bcde54a
+// generated-sha256: 3a9f529ac96a19be
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-23 15:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-23 16:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -39895,7 +39895,7 @@ function BattleScreen({
     return /*#__PURE__*/React.createElement("div", {
       "data-battle-buffs": chips.length,
       "data-battle-buffs-mode": buffDetail ? 'detail' : 'icon',
-      className: `shrink-0 w-full max-w-[360px] mx-auto px-2 bg-slate-950 relative z-[40] flex flex-col justify-center ${tacticsDebugLayout ? 'min-h-[58px] py-1.5 border-y border-white/10' : 'pt-1 pb-0.5'} ${focusedCard ? 'invisible' : 'visible'}`
+      className: `shrink-0 w-full max-w-[360px] mx-auto px-2 bg-slate-950 relative z-[40] flex flex-col justify-center pt-1 pb-0.5 ${focusedCard ? 'invisible' : 'visible'}`
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex items-start gap-1"
     }, buffDetail ? /*#__PURE__*/React.createElement("div", {
@@ -40196,7 +40196,7 @@ function BattleScreen({
     "data-tactics-debug-layout": tacticsDebugLayout ? '2x2' : undefined,
     className: `grid ${tacticsDebugLayout ? 'grid-cols-2 grid-rows-2 gap-1.5' : 'grid-cols-4 gap-2'} w-full relative shrink-0${battleTutorialSpotClass('battleSlots')}`,
     style: {
-      height: tacticsDebugLayout ? 'clamp(210px,25dvh,228px)' : 'clamp(152px,18dvh,168px)'
+      height: tacticsDebugLayout ? 'clamp(196px,23dvh,214px)' : 'clamp(152px,18dvh,168px)'
     }
   }, slots.map((s, i) => {
     // Count how many cards already assigned to this slot
@@ -40403,7 +40403,7 @@ function BattleScreen({
         }
       },
       disabled: isBusy || autoBattle,
-      className: `relative rounded-2xl border-2 flex flex-col items-stretch overflow-visible transition-all ${RANGE_STYLES[i].slotGlow || ''} ${RANGE_STYLES[i].bg} ${distanceBroken ? 'border-red-400' : ' ' + RANGE_STYLES[i].border} ${canAssign || dragState?.active && dragOverSlot === i ? 'ring-2 ring-yellow-400 scale-105 z-10 shadow-lg animate-pulse' : 'opacity-100'} ${assignedCount > 0 ? 'ring-2 ring-indigo-500' : ''} ${dragState?.active && dragOverSlot === i ? 'ring-4 ring-green-400 scale-110' : ''} ${slotSettle === i ? 'ring-4 ring-white' : ''}`,
+      className: `relative rounded-2xl border-2 ${tacticsDebugLayout ? 'grid grid-cols-[40%_60%] grid-rows-[18px_minmax(0,1fr)] items-stretch' : 'flex flex-col items-stretch'} overflow-visible transition-all ${RANGE_STYLES[i].slotGlow || ''} ${RANGE_STYLES[i].bg} ${distanceBroken ? 'border-red-400' : ' ' + RANGE_STYLES[i].border} ${canAssign || dragState?.active && dragOverSlot === i ? 'ring-2 ring-yellow-400 scale-105 z-10 shadow-lg animate-pulse' : 'opacity-100'} ${assignedCount > 0 ? 'ring-2 ring-indigo-500' : ''} ${dragState?.active && dragOverSlot === i ? 'ring-4 ring-green-400 scale-110' : ''} ${slotSettle === i ? 'ring-4 ring-white' : ''}`,
       style: isAnimating ? {
         zIndex: 9999,
         animation: attackMotionAnimation(attackAnim)
@@ -40493,8 +40493,10 @@ function BattleScreen({
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-2xl font-black"
     }, "\u26A0"))), /*#__PURE__*/React.createElement("div", {
-      className: `${tacticsDebugLayout ? 'h-[16px]' : 'h-[18px]'} shrink-0 flex items-center justify-center px-1 border-b z-20 ${isHeroSlotMon(s) ? 'bg-amber-500/25 border-amber-300/50' : 'bg-black/60 border-white/10'}`
-    }, isHeroSlotMon(s) && /*#__PURE__*/React.createElement(Crown, {
+      className: `${tacticsDebugLayout ? 'col-span-2 row-start-1 h-[18px] justify-start gap-0.5' : 'h-[18px] justify-center'} shrink-0 flex items-center px-1 border-b z-20 ${isHeroSlotMon(s) ? 'bg-amber-500/25 border-amber-300/50' : 'bg-black/60 border-white/10'}`
+    }, tacticsDebugLayout && /*#__PURE__*/React.createElement("span", {
+      className: `mr-1 shrink-0 rounded px-1 py-0.5 text-[8px] font-black leading-none ${RANGE_STYLES[i].labelBg}`
+    }, RANGE_LABELS[i]), isHeroSlotMon(s) && /*#__PURE__*/React.createElement(Crown, {
       size: 8,
       className: "shrink-0 mr-0.5 text-amber-300"
     }), /*#__PURE__*/React.createElement("span", {
@@ -40517,7 +40519,7 @@ function BattleScreen({
           if (isBusy || autoBattleRef.current) return;
           cycleActiveUniqueForSlot(i);
         },
-        className: `shrink-0 z-20 flex items-center justify-center gap-0.5 bg-purple-700/90 border-b border-purple-300/50 py-0.5 active:scale-95${autoBattle ? ' opacity-40' : ''}`
+        className: `${tacticsDebugLayout ? 'absolute left-1 top-[20px]' : 'shrink-0'} z-20 flex items-center justify-center gap-0.5 bg-purple-700/90 border-b border-purple-300/50 py-0.5 active:scale-95${autoBattle ? ' opacity-40' : ''}`
       }, /*#__PURE__*/React.createElement(RefreshCcw, {
         size: 7,
         className: "text-white"
@@ -40525,7 +40527,7 @@ function BattleScreen({
         className: "text-[10px] font-black text-white leading-none"
       }, "\u56FA\u6709\u6280 ", curIdx + 1, "/", uOptions.length));
     })(), /*#__PURE__*/React.createElement("div", {
-      className: "flex-1 flex flex-col items-center justify-center relative"
+      className: `${tacticsDebugLayout ? 'col-start-1 row-start-2 min-h-0' : 'flex-1'} flex flex-col items-center justify-center relative`
     }, slotSettle === i && /*#__PURE__*/React.createElement("div", {
       className: "absolute inset-0 z-[60] pointer-events-none flex items-center justify-center overflow-visible"
     }, /*#__PURE__*/React.createElement("div", {
@@ -40676,8 +40678,8 @@ function BattleScreen({
         alt: s.name,
         masuColors: s.colors,
         style: {
-          width: tacticsDebugLayout ? '42px' : '64px',
-          height: tacticsDebugLayout ? '42px' : '64px'
+          width: tacticsDebugLayout ? '58px' : '64px',
+          height: tacticsDebugLayout ? '58px' : '64px'
         },
         className: "object-contain drop-shadow-md"
       })
@@ -40688,8 +40690,8 @@ function BattleScreen({
         alt: s.name,
         masuColors: s.colors,
         style: {
-          width: tacticsDebugLayout ? '42px' : '64px',
-          height: tacticsDebugLayout ? '42px' : '64px'
+          width: tacticsDebugLayout ? '58px' : '64px',
+          height: tacticsDebugLayout ? '58px' : '64px'
         },
         className: "z-10 object-contain drop-shadow-md"
       }),
@@ -40702,8 +40704,8 @@ function BattleScreen({
         alt: s.name,
         masuColors: s.colors,
         style: {
-          width: tacticsDebugLayout ? '42px' : '64px',
-          height: tacticsDebugLayout ? '42px' : '64px'
+          width: tacticsDebugLayout ? '58px' : '64px',
+          height: tacticsDebugLayout ? '58px' : '64px'
         },
         className: "z-10 object-contain drop-shadow-md"
       }),
@@ -40716,8 +40718,8 @@ function BattleScreen({
         alt: s.name,
         masuColors: s.colors,
         style: {
-          width: tacticsDebugLayout ? '42px' : '64px',
-          height: tacticsDebugLayout ? '42px' : '64px'
+          width: tacticsDebugLayout ? '58px' : '64px',
+          height: tacticsDebugLayout ? '58px' : '64px'
         },
         className: "z-10 object-contain drop-shadow-md"
       }),
@@ -40729,8 +40731,8 @@ function BattleScreen({
       alt: s.name,
       masuColors: s.colors,
       style: {
-        width: tacticsDebugLayout ? '42px' : '64px',
-        height: tacticsDebugLayout ? '42px' : '64px'
+        width: tacticsDebugLayout ? '58px' : '64px',
+        height: tacticsDebugLayout ? '58px' : '64px'
       },
       className: "z-10 object-contain drop-shadow-md"
     }) : /*#__PURE__*/React.createElement("span", {
@@ -40757,7 +40759,7 @@ function BattleScreen({
         "data-tactics-hp": `${tacticsUnit.hp}/${tacticsUnit.maxHp}`,
         "data-tactics-guts": `${tacticsUnit.guts}/${tacticsUnit.maxGuts}`,
         "data-tactics-downed": tacticsUnit.downed ? 'true' : 'false',
-        className: `shrink-0 z-20 border-t border-white/10 bg-black/55 px-1${battleTutorialSpotClass('tacticsParty')}`
+        className: `${tacticsDebugLayout ? 'col-start-2 row-start-2 self-stretch min-w-0 border-l flex flex-col justify-center px-2' : 'shrink-0 border-t px-1'} z-20 border-white/10 bg-black/55${battleTutorialSpotClass('tacticsParty')}`
       }, /*#__PURE__*/React.createElement("div", {
         className: "flex items-baseline justify-between leading-none"
       }, /*#__PURE__*/React.createElement("span", {
@@ -40803,8 +40805,8 @@ function BattleScreen({
           boxShadow: '0 0 6px rgba(251,191,36,.55)'
         }
       })));
-    })(), /*#__PURE__*/React.createElement("div", {
-      className: `${tacticsDebugLayout ? 'h-[16px]' : 'h-[20px]'} shrink-0 ${RANGE_STYLES[i].labelBg} flex items-center justify-center border-t border-white/20 z-20`
+    })(), !tacticsDebugLayout && /*#__PURE__*/React.createElement("div", {
+      className: "h-[20px] shrink-0 ${RANGE_STYLES[i].labelBg} flex items-center justify-center border-t border-white/20 z-20"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-[10px] font-black uppercase tracking-tighter leading-none"
     }, RANGE_LABELS[i], "\u8DDD\u96E2")));
