@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 99cc28f09f1b46f1
+// generated-sha256: 39b3d76d72801fe1
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -100,7 +100,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-23 23:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 08:01"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -22025,6 +22025,29 @@ const TACTICS_SLOT_FX_STYLE = Object.freeze({
 // その枠で「いちばん強く伝えたいこと」を1つだけ選ぶ。重ねると何色なのか読めなくなる。
 // ★順番に意味がある。かわした・返したは「食らっていない」ので先に見る。
 //   ガードは「狙われたが受け止めた」ので、ダメージが通っていなければガード色
+// 吹き出しの色づけだけを借りる(大きさ・影・背景・揺れは出す場所の側で決める)。
+// ★addPopup の色指定は既存モードの「画面のまんなかに大きく出す」前提で text-4xl などが
+//   入っている。枠の中へそのまま入れると1つで枠が埋まるので、色と太さ以外は落とす
+const tacticsPopupTone = (color) => String(color || '').split(/\s+/)
+  .filter(c => c && !/^(text-(xs|sm|base|lg|xl|\d+xl|\[[^\]]*\])|drop-shadow.*|animate-.*|bg-.*|p[xytblr]?-.*|italic)$/.test(c))
+  .join(' ');
+// 狙いの印(🎯)に出す数字。★枠の絵の列(幅70pxほど)の中で1行に収める
+// (2026-09-23 ユーザー指示「内訳を小さく1行に。ダメージが5桁やそれ以上になることも想定して」)。
+// limit 未満はそのまま、それ以上は「1.2万」「35万」「1.2億」のように縮める
+const tacticsAimNum = (value, limit = 100000) => {
+  const n = Math.max(0, Math.floor(Number(value) || 0));
+  if (n < limit) return String(n);
+  const unit = n >= 1e8 ? [1e8, '億'] : [1e4, '万'];
+  const v = n / unit[0];
+  return `${v < 10 ? Math.floor(v * 10) / 10 : Math.floor(v)}${unit[1]}`;
+};
+// 連撃の内訳。全部同じなら「27×3」、違えば「27・27・0」
+const tacticsAimParts = (parts) => {
+  const list = Array.isArray(parts) ? parts : [];
+  if (list.length <= 1) return '';
+  const same = list.every(v => v === list[0]);
+  return same ? `${tacticsAimNum(list[0], 10000)}×${list.length}` : list.map(v => tacticsAimNum(v, 10000)).join('・');
+};
 const kindOfTacticsSlotFx = (fx) => {
   if (!fx) return null;
   if (fx.evade) return 'evade';
@@ -22497,11 +22520,15 @@ function BattleScreen({
                 </div>
               </div>
             )}
+            {/* ★新しい盤面(2×2)では技名を枠の中へ出す(下の data-tactics-slot-popups)。
+                この固定位置は4列に並んでいた前提で、2×2では別の枠の上に出ていた */}
+            {!tacticsNewLayout&&(<>
             {slotSkill&&(
               <div className="fixed -translate-x-1/2 pointer-events-none whitespace-nowrap" style={{left:`${12.5+slotSkill.slotIndex*25}%`,bottom:'30%',zIndex:65000,animation:liteBattleView?undefined:'skillNamePop 350ms ease-out forwards'}}>
                 <div className={`px-3 py-1 rounded-xl font-black text-[12px] border-2 shadow-[0_2px_16px_rgba(0,0,0,0.9)] ${slotSkill.type==='unique'?'bg-purple-700 border-purple-200 text-white drop-shadow-[0_0_10px_rgba(217,70,239,0.9)]':slotSkill.type==='special'?'bg-amber-600 border-amber-200 text-white':'bg-red-700 border-red-200 text-white'}`}>{slotSkill.name}</div>
               </div>
             )}
+            </>)}
             {!ecoBattleView&&guardFx&&(
               <div className="fixed inset-0 pointer-events-none flex items-center justify-center" style={{zIndex:64000}}>
                 <div className="absolute" style={{animation:'guardShine 550ms ease-out forwards'}}>
@@ -23006,7 +23033,21 @@ function BattleScreen({
             );
           })()}
         <div className="shrink-0 py-1.5 px-2 border-y border-white/10 flex flex-col items-center justify-center gap-1 z-10 relative" style={{backgroundImage:'linear-gradient(180deg, rgba(14,19,38,.97) 0%, rgba(8,11,22,.98) 100%)'}}>
+          {/* ★新しい盤面(2×2)では、ここ(盤面のまんなか)へ出すと4枠の境目に乗り、
+              どの子のライフも読めなくなっていた(2026-09-23 ユーザー指示「敵への効果は敵の辺り、
+              味方への効果は対象の味方や使ったモンスター」)。
+              誰の効果か決まっているもの(slot を持つもの)はその子の枠の中へ、
+              誰のものでもないもの(合計・回避の名乗り・AUTO停止など)は盤面の**上の縁**へ出す。
+              上へ積むので、何個出ても盤面には降りてこない */}
+          {tacticsNewLayout?(
+            <div data-tactics-board-popups className="absolute inset-x-0 bottom-full mb-1 flex flex-col items-center justify-end gap-0.5 pointer-events-none" style={{zIndex:200}}>
+              {popups.filter(p=>['hero','life','guts'].includes(p.side)&&!Number.isInteger(p.slot)).slice(-3).map((p)=>(<div key={p.id} data-lite-damage={liteBattleView?'true':undefined}
+                className={`${tacticsPopupTone(p.color)} max-w-[92%] truncate whitespace-nowrap rounded-full border border-white/15 bg-slate-950/90 px-3 py-0.5 text-[15px] font-black leading-tight shadow-[0_4px_14px_rgba(0,0,0,.6)]`}
+                style={{animation:liteBattleView?undefined:'tacticsPopupRise 240ms ease-out'}}>{p.text}</div>))}
+            </div>
+          ):(
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none gap-1" style={{zIndex:200}}>{popups.filter(p=>p.side==='hero').map((p)=>(<div key={p.id} data-lite-damage={liteBattleView?'true':undefined} className={`${p.color} font-black leading-tight px-2 py-0.5 rounded-lg ${liteBattleView?'border border-white/20 text-base':'drop-shadow-[0_2px_8px_rgba(0,0,0,1)]'}`} style={{backgroundColor:liteBattleView?'rgba(2,6,23,0.95)':'rgba(2,6,23,0.55)'}}>{p.text}</div>))}</div>
+          )}
           {/* ライフ・ガッツのポップアップ(吸収・ガードの余り・回復カードなど)。
               ★1体ずつの帯は**カードの中へ入れた**(2026-09-22 ユーザー指摘「距離いれると縦が
                 狭くなりすぎる」)。同じ4列が2段あるだけで枠1つぶんと余白を丸ごと使っていたため。
@@ -23014,7 +23055,8 @@ function BattleScreen({
                 ガードの余りもどこにも出なくなった)。入れ物だけここに残す */}
           {Array.isArray(tacticsUnits)?(
             <div data-tactics-party-popups className="absolute inset-x-0 top-0 flex flex-col items-center gap-0.5 pointer-events-none" style={{zIndex:210}}>
-                {popups.filter(p=>p.side==='life'||p.side==='guts').map((p)=>(<div key={p.id} className={`${p.color} text-base font-black drop-shadow-[0_2px_8px_rgba(0,0,0,1)] whitespace-nowrap px-2 py-0.5 rounded-lg animate-bounce`} style={{backgroundColor:'rgba(2,6,23,0.8)'}}>{p.text}</div>))}
+                {/* 新しい盤面では上の data-tactics-board-popups と枠の中へ出すので、ここは古い盤面だけ */}
+                {!tacticsNewLayout&&popups.filter(p=>p.side==='life'||p.side==='guts').map((p)=>(<div key={p.id} className={`${p.color} text-base font-black drop-shadow-[0_2px_8px_rgba(0,0,0,1)] whitespace-nowrap px-2 py-0.5 rounded-lg animate-bounce`} style={{backgroundColor:'rgba(2,6,23,0.8)'}}>{p.text}</div>))}
             </div>
           ):(
           <div className="w-full space-y-0.5 px-2 py-0.5 bg-black/40 rounded-xl border border-white/5">
@@ -23193,23 +23235,47 @@ function BattleScreen({
                     「個別ダメージと全体ダメージで誰に何が起きてるか分かりにくい」)。
                     合計の数字は画面のまんなかに出したままなので、
                     「全体で何点減ったか」と「誰が減ったか」の両方が読める */}
-                {tacticsSlotFx&&tacticsSlotFx[i]&&(()=>{
+                {/* ★新しい盤面(2×2)では、このターンの出来事・技名・その子の効果の吹き出しを
+                    **ライフ・ガッツの行より上**の1本の縦積みにまとめる(2026-09-23 ユーザー指示
+                    「敵への効果は敵の辺り、味方への効果は対象の味方や使ったモンスター」)。
+                    それまでは技名が4列前提の固定位置に、効果の吹き出しが盤面のまんなかに出ていて、
+                    別の子の枠やライフの数字に乗っていた。覆ってよいのは絵と札だけ */}
+                {(()=>{
+                const slotFxEl=tacticsSlotFx&&tacticsSlotFx[i]&&(()=>{
                   const f=tacticsSlotFx[i];
-                  return (<div data-tactics-slot-fx={i} className="absolute inset-x-0 top-1/2 -translate-y-1/2 z-[70] pointer-events-none flex flex-col items-center gap-0.5">
+                  const hitSpans=Array.isArray(f.hits)&&f.hits.length>1
+                    ? f.hits.map((value,hitIndex)=><span key={hitIndex} className={`${tacticsNewLayout?'text-[14px]':'text-[15px]'} font-black text-pink-400 leading-none drop-shadow-[0_0_6px_rgba(0,0,0,.95)]`}>-{value}</span>)
+                    : null;
+                  return (<div data-tactics-slot-fx={i} className={`${tacticsNewLayout?'relative max-w-full':'absolute inset-x-0 top-1/2 -translate-y-1/2 z-[70]'} pointer-events-none flex flex-col items-center gap-0.5`}>
                     {f.evade?<span className="text-[11px] font-black text-blue-300 drop-shadow-[0_0_6px_rgba(0,0,0,.9)]">回避！</span>
                       :f.reflect?<span className="text-[11px] font-black text-purple-300 drop-shadow-[0_0_6px_rgba(0,0,0,.9)]">反射！</span>
                       :<>
                         {f.guard&&<span className="text-[11px] font-black text-emerald-300 drop-shadow-[0_0_6px_rgba(0,0,0,.9)]">🛡</span>}
                         {/* ★連撃は1ヒットずつ並べる(60が3ヒットなら 20/20/20)。
                             まとめて1つの数字にすると、3回殴られたことが読めない */}
-                        {Array.isArray(f.hits)&&f.hits.length>1
-                          ? f.hits.map((value,hitIndex)=><span key={hitIndex} className="text-[15px] font-black text-pink-400 leading-none drop-shadow-[0_0_6px_rgba(0,0,0,.95)]">-{value}</span>)
+                        {/* 新しい盤面は横へ並べる(縦に積むと3ヒットでライフの行まで届く) */}
+                        {hitSpans
+                          ? (tacticsNewLayout?<span className="flex max-w-full flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5">{hitSpans}</span>:hitSpans)
                           : (f.dmg>0&&<span className="text-[17px] font-black text-pink-400 drop-shadow-[0_0_6px_rgba(0,0,0,.95)]">-{f.dmg}</span>)}
                         {f.heal>0&&<span className="text-[11px] font-black text-emerald-300 drop-shadow-[0_0_6px_rgba(0,0,0,.9)]">💚 +{f.heal}</span>}
                         {f.guts>0&&<span className="text-[10px] font-black text-amber-300 drop-shadow-[0_0_6px_rgba(0,0,0,.9)]">⚡ +{f.guts}</span>}
                         {f.revive>0&&<span className="text-[12px] font-black text-teal-300 drop-shadow-[0_0_6px_rgba(0,0,0,.9)]">💤 +{f.revive}</span>}
                       </>}
                   </div>);
+                })();
+                if(!tacticsNewLayout) return slotFxEl;
+                const skillHere=slotSkill&&slotSkill.slotIndex===i?slotSkill:null;
+                // ライフの行より上に収まるのは2段まで。技名やこのターンの出来事が出ているときは
+                // 吹き出しを最新の1つにする(3段にすると上が切れて読めなかった)。残りはログで読める
+                const ownPopups=popups.filter(p=>p.slot===i&&p.side!=='enemy').slice((skillHere||slotFxEl)?-1:-2);
+                if(!slotFxEl&&!skillHere&&!ownPopups.length) return null;
+                return (<div data-tactics-slot-popups={i} className="absolute inset-x-1 top-[20px] bottom-[34px] z-[70] pointer-events-none flex flex-col items-center justify-end gap-0.5 overflow-hidden">
+                  {skillHere&&<div data-tactics-slot-skill={i} className={`max-w-full truncate rounded-lg border px-2 py-0.5 text-[11px] font-black leading-tight shadow-[0_2px_10px_rgba(0,0,0,.7)] ${skillHere.type==='unique'?'bg-purple-700 border-purple-200 text-white':skillHere.type==='special'?'bg-amber-600 border-amber-200 text-white':'bg-red-700 border-red-200 text-white'}`}
+                    style={{animation:liteBattleView?undefined:'tacticsPopupRise 220ms ease-out'}}>{skillHere.name}</div>}
+                  {slotFxEl}
+                  {ownPopups.map(p=>(<div key={p.id} className={`${tacticsPopupTone(p.color)} max-w-full truncate whitespace-nowrap rounded-full border border-white/15 bg-slate-950/90 px-2 py-0.5 text-[11px] font-black leading-tight shadow-[0_2px_10px_rgba(0,0,0,.6)]`}
+                    style={{animation:liteBattleView?undefined:'tacticsPopupRise 240ms ease-out'}}>{p.text}</div>))}
+                </div>);
                 })()}
                 {/* ★数字の札は下の「枠の中の札」へまとめてある。ここは輪だけ。
                     それまでは狙いの札だけ枠の側に absolute で浮かせていたので、
@@ -23321,7 +23387,7 @@ function BattleScreen({
                       ))}
                     </div>
                   )}
-                  {tacticsNewLayout&&(previewDmg>0||previewGuard>0||slotAimHit)&&(<div data-tactics-image-previews className="absolute left-1 top-1 z-[63] flex max-w-[calc(100%-6px)] flex-wrap items-start gap-0.5 pointer-events-none">{previewDmg>0&&<span data-tactics-damage-preview={previewDmg} className={`rounded px-1 py-0.5 text-[8px] font-black leading-none shadow ring-1 ${isPendingPreview?'bg-yellow-500 text-black ring-yellow-200':'bg-red-600 text-white ring-white/50'}`}>{isPendingPreview&&isPendingHalved?'½':''}攻{previewDmg}</span>}{previewGuard>0&&<span data-tactics-guard-preview={previewGuard} className="rounded bg-emerald-600 px-1 py-0.5 text-[8px] font-black leading-none text-white shadow ring-1 ring-emerald-200">{isPendingGuardHalved?'½':''}守{previewGuard}</span>}{slotAimHit&&<span data-tactics-aimed-damage={slotAimHit.taken} className="rounded border border-red-300 bg-red-950 px-1 py-0.5 text-[8px] font-black leading-none text-red-100 shadow">🎯{slotAimHit.taken>0?`-${slotAimHit.taken}`:''}{slotAimHit.parts.length>1?<span className="ml-0.5 text-[7px] text-red-200/90">{slotAimHit.parts.join('・')}</span>:null}</span>}</div>)}{/* 距離補正は0%でも出す(「補正が無い」ことも情報なので、枠ごとに常に見えるようにする) */}
+                  {tacticsNewLayout&&(previewDmg>0||previewGuard>0||slotAimHit)&&(<div data-tactics-image-previews className="absolute left-1 top-1 z-[63] flex max-w-[calc(100%-6px)] flex-wrap items-start gap-0.5 pointer-events-none">{previewDmg>0&&<span data-tactics-damage-preview={previewDmg} className={`rounded px-1 py-0.5 text-[8px] font-black leading-none shadow ring-1 ${isPendingPreview?'bg-yellow-500 text-black ring-yellow-200':'bg-red-600 text-white ring-white/50'}`}>{isPendingPreview&&isPendingHalved?'½':''}攻{previewDmg}</span>}{previewGuard>0&&<span data-tactics-guard-preview={previewGuard} className="rounded bg-emerald-600 px-1 py-0.5 text-[8px] font-black leading-none text-white shadow ring-1 ring-emerald-200">{isPendingGuardHalved?'½':''}守{previewGuard}</span>}{slotAimHit&&<span data-tactics-aimed-damage={slotAimHit.taken} data-tactics-aimed-parts={slotAimHit.parts.length>1?slotAimHit.parts.join('/'):undefined} className="inline-flex max-w-full items-baseline gap-0.5 overflow-hidden whitespace-nowrap rounded border border-red-300 bg-red-950 px-1 py-0.5 text-[9px] font-black leading-none text-red-100 shadow">🎯{slotAimHit.taken>0?`-${tacticsAimNum(slotAimHit.taken)}`:''}{slotAimHit.parts.length>1?<span className="min-w-0 truncate text-[7px] font-bold text-red-200/85">{tacticsAimParts(slotAimHit.parts)}</span>:null}</span>}</div>)}{/* 距離補正は0%でも出す(「補正が無い」ことも情報なので、枠ごとに常に見えるようにする) */}
                   {(()=>{const totalBonus=distTotalBonus(i); return(<div className={`absolute bottom-0.5 right-0.5 text-[11px] font-black leading-none flex items-center gap-0.5 bg-black/50 px-1 py-0.5 rounded border z-30 ${totalBonus>0?'text-cyan-300 border-cyan-400/30':totalBonus<0?'text-red-300 border-red-400/30':'text-slate-300 border-white/20'}`}><Sword size={5}/>{totalBonus>0?'+':''}{(totalBonus*100).toFixed(1)}%</div>);})()}
                   {s?.imgUrl?(isAnimating&&s.id==='Pandora'&&attackAnim.motion==='pandoraDualThunder'
                     ?<PandoraDualThunder image={<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="object-contain drop-shadow-md"/>}/>
@@ -25470,6 +25536,10 @@ function MonsterHeroGame() {
   const [ownedTeachings, setOwnedTeachings] = useState([]);
   const [teachingPool, setTeachingPool] = useState([]);
   const [popups, setPopups] = useState([]);
+  // ★タクティクスで、いまどの子の効果を出しているか(2026-09-23 ユーザー指示「敵への効果は敵の辺り、
+  //   味方への効果は対象の味方や使ったモンスター」)。カードの効果は40か所以上から addPopup を呼ぶので、
+  //   1つずつ枠を渡さず、カードを1枚処理しているあいだだけここへ使った子の枠を置く
+  const popupSlotRef = useRef(null);
   const [effect, setEffect] = useState(null);
   const [enemyIntent, setEnemyIntent] = useState(null);
   // 直前に敵が実行した行動。SCANが「ためた直後なので次は必殺技で確定」「移動した直後なので
@@ -25770,7 +25840,7 @@ function MonsterHeroGame() {
         if (!unit || !was) return;
         if (normalizeTacticsUnit(was).downed && !normalizeTacticsUnit(unit).downed) {
           addPopup(`${slots[index]?.masuName || slots[index]?.name || '仲間'}が起き上がった！`,
-            'hero', 'text-emerald-300 font-black text-2xl drop-shadow-md');
+            'hero', 'text-emerald-300 font-black text-2xl drop-shadow-md', undefined, index);
         }
         // ★倒れた瞬間も同じ1か所で拾う。枠の表示(×印)は一瞬で見落としやすいので、
         //   記録には必ず残す(2026-09-22 ユーザー依頼のログ)
@@ -33821,9 +33891,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
   // log を渡すと、吹き出しとは別の文をログへ残す(数字だけの吹き出しに主語を足すときに使う)。
   // log に false を渡すとログには残さない
-  const addPopup = (text, side, color, log) => {
+  // slot を渡すと、タクティクスではその子の枠の中へ出す(渡さなければカード処理中の子の枠)。
+  // 誰のものでもない吹き出し(合計・回避の名乗りなど)は slot を持たない
+  const addPopup = (text, side, color, log, slot) => {
     const id = Date.now()+Math.random();
-    setPopups(prev=>[...prev,{id,text,side,color}]);
+    const slotOf = slot !== undefined ? slot : popupSlotRef.current;
+    const popupSlot = isTacticsMode(runMode) && side !== 'enemy' && Number.isInteger(slotOf) ? slotOf : null;
+    setPopups(prev=>[...prev,{id,text,side,color,slot:popupSlot}]);
     setTimeout(()=>setPopups(p=>p.filter(x=>x.id!==id)),battleMs(2500));
     if (log !== false) pushBattleLog(typeof log === 'string' ? log : battleLogLineFromPopup(text, side));
   };
@@ -34999,7 +35073,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     pushBattleLog(`EX ${mon.masuName||mon.name}「${def.name}」${toggled}`, 'ally');
     const onUse=TACTICS_EX_ON_USE[def.effect];
     if(isTacticsExEffectImplemented(def)){
-      addPopup(`EX ${def.name}！${toggled}`,'hero','text-fuchsia-300 font-black text-xl drop-shadow-md');
+      addPopup(`EX ${def.name}！${toggled}`,'hero','text-fuchsia-300 font-black text-xl drop-shadow-md',undefined,slotIdx);
       if(typeof onUse==='function') onUse({ def, slotIdx, mon, state:next });
     }
     else pushBattleLog('（開発中）このEXの効果はまだ出ない。回数と併用のルールだけ動いている', 'info');
@@ -35090,6 +35164,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const halveCounter=makeHalveCounter(); // 何枚目かの数え方は cardHalveGroup が決める
     for (const entry of usedCardEntries) {
       const card=entry.card;
+      popupSlotRef.current=entry.slotIdx!=null?entry.slotIdx:defaultSlot;
       const totalHealBeforeCard=totalHeal, totalHealRateBeforeCard=totalHealRate;
       // 2枚目以降のカードは効果が半減する。アシストカードは対象外で、枚数にも数えない。
       const isBreeder=isAssistCard(card);
@@ -35324,6 +35399,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       // 回復・自傷など、このカード自身の増減を次のカード消費より先に描画する。
       await battleWait(250);
     }
+    popupSlotRef.current=null;
 
     if (totalDmg>0) {
       if(totalDmg>0){
@@ -43559,6 +43635,11 @@ const createAnimationStyle = () => {
     @keyframes skillNamePop {
       0% { opacity: 0; }
       100% { opacity: 1; }
+    }
+    /* タクティクスの枠の中・盤面の上に出す吹き出し。下から少し浮かせて出す */
+    @keyframes tacticsPopupRise {
+      0% { opacity: 0; transform: translateY(6px) scale(0.92); }
+      100% { opacity: 1; transform: translateY(0) scale(1); }
     }
     @keyframes dragGrab {
       0% { transform: translate(-50%,-100%) scale(0.6); opacity: 0.4; }
