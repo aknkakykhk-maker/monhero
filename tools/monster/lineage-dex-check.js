@@ -336,5 +336,8 @@ check('仕様書に血統と図鑑を書いてある', spec.includes('主血統'
 check('仕様書のモンスター数が実データと合っている',
   spec.includes(`${monsters.length}種`), `実データは${monsters.length}種`);
 
+check('図鑑の技タブにEXスキル表示の土台がある', source.includes('data-dex-ex-skill') && source.includes("tacticsExDefOf(mon.id)") && source.includes('EX《{exDef.name}》'));
+check('図鑑のEXスキルは既存定義から回数・効果時間・通常カード併用可否を表示する', source.includes("exDef.unlimited?'無制限'") && source.includes('exDef.maxUses') && source.includes('exDef.duration') && source.includes("exDef.withCards?'併用可':'併用不可'"));
+
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
