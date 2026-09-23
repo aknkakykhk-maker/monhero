@@ -78,7 +78,7 @@ function BattleScreen({
   const [exPanelSlot, setExPanelSlot] = useState(null);
   const exPanel = exPanelSlot!=null&&tacticsExInfo ? tacticsExInfo(exPanelSlot) : null;
   // 新タクティクスUIの確認版。デバッグ戦だけで有効にし、通常プレイの表示・挙動は一切変えない。
-  const tacticsDebugLayout = debugBattle && Array.isArray(tacticsUnits);
+  // タクティクス自体が現在はデバッグのバトルモード入口からだけ起動できるため、\n  // 途中で debugBattle が解除されても確認UIを維持する。公開時は専用フラグへ切り替える。\n  const tacticsDebugLayout = Array.isArray(tacticsUnits);
   // ★いま狙われている枠(2026-09-21 ユーザー指摘「誰に攻撃か分からない」)。
   //   間合い攻撃は相手を1体決めず「予告した間合いに立っている子」へ当たるので、
   //   ほかの技と違って targetName を持たない。予告を見ても間合いしか分からなかった。
